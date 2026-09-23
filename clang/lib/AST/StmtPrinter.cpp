@@ -1817,8 +1817,6 @@ void StmtPrinter::VisitOMPIteratorExpr(OMPIteratorExpr *Node) {
 void StmtPrinter::VisitOMPNumArgsExpr(OMPNumArgsExpr *Node) {
   OS << "omp_num_args";
   if (Expr *Offset = Node->getOffset()) {
-    // No surrounding spaces, so that the sign of the logical offset cannot be
-    // misread as part of a neighbouring parameter range colon.
     OS << (Node->isSubtraction() ? "-" : "+");
     PrintExpr(Offset);
   }

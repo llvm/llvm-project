@@ -7903,8 +7903,7 @@ static bool checkPreferTypeArgs(SemaOpenMP &S, const OMPInteropInfo &Info) {
 enum class OMPAdjustArgsVal { Known, Dependent, Invalid };
 
 /// Check one 'adjust_args' integer expression for the constant property plus
-/// either the positive or the non-negative property (OpenMP 6.0 [5.2.1] p162
-/// L32-33, p163 L1).
+/// either the positive or the non-negative property (OpenMP 6.0 [5.2.1]).
 static OMPAdjustArgsVal checkOMPAdjustArgsValue(SemaOpenMP &S, Expr *E,
                                                 bool StrictlyPositive,
                                                 llvm::APSInt &Result) {
@@ -7922,15 +7921,15 @@ static OMPAdjustArgsVal checkOMPAdjustArgsValue(SemaOpenMP &S, Expr *E,
   return OMPAdjustArgsVal::Known;
 }
 
-/// Check both bounds of a parameter range 'lb:ub' (OpenMP 6.0 [5.2.1]
-/// p162-163). A plain bound has the positive property, checked below via
+/// Check both bounds of a parameter range 'lb:ub' (OpenMP 6.0 [5.2.1]).
+/// A plain bound has the positive property, checked below via
 /// checkOMPAdjustArgsValue. An 'omp_num_args' bound's logical_offset has the
 /// non-negative property instead; its constant property was already checked
 /// when it was parsed (ActOnOMPNumArgsExpr), so only the sign is checked here
 /// via a direct read of the already-verified value.
 ///
 /// Deliberately does not diagnose 'lb > ub': an empty range specifies no
-/// parameters, which OpenMP 6.0 [5.2.1] p163's "as if specified individually"
+/// parameters, which OpenMP 6.0 [5.2.1]'s "as if specified individually"
 /// makes harmless, and the spec places no restriction on it.
 static bool checkOMPAdjustArgsRange(SemaOpenMP &S,
                                     OMPArgumentRangeExpr *Range) {
@@ -7995,13 +7994,9 @@ void SemaOpenMP::ActOnOpenMPDeclareVariantDirective(
     }
   }
 
-  // OpenMP 6.0 [5.2.1] Restrictions (p162): unless otherwise specified, any
-  // given parameter list item can only be specified once across all clauses
-  // of the same type in a given directive. The subject is the *item*, not the
-  // parameter it identifies, so a range never participates in the check below
-  // and a name does not collide with a position that happens to resolve to
-  // it. In 5.1 this restriction lived in the declare variant directive's own
-  // restrictions and was worded per-argument rather than per-item.
+  // OpenMP 6.0 [5.2.1]: each parameter list item may be specified only once
+  // per directive. The subject is the item, so a range is exempt and a name
+  // does not collide with a position that resolves to the same parameter.
   llvm::SmallPtrSet<const VarDecl *, 4> AdjustVars; // named items
   llvm::SmallSet<uint64_t, 4> AdjustPositions;      // literal positional items
 
@@ -8032,7 +8027,7 @@ void SemaOpenMP::ActOnOpenMPDeclareVariantDirective(
       return;
     }
 
-    // OpenMP 6.0 [5.2.1] p162 L32-33: a parameter range 'lb:ub'. A range is
+    // OpenMP 6.0 [5.2.1]: a parameter range 'lb:ub'. A range is
     // exempt from the duplicate restriction above — it is one item
     // identifying one or more parameters — so nothing is recorded for dedup.
     if (auto *Range = dyn_cast<OMPArgumentRangeExpr>(Item)) {
@@ -8046,7 +8041,7 @@ void SemaOpenMP::ActOnOpenMPDeclareVariantDirective(
     // above.
     assert(!isa<OMPNumArgsExpr>(Item) && "bare omp_num_args reached Sema");
 
-    // OpenMP 6.0 [5.2.1] p162 L30-31: the position of a parameter, given as a
+    // OpenMP 6.0 [5.2.1]: the position of a parameter, given as a
     // positive constant integer expression. A dependent item is skipped here
     // and rechecked when the template is instantiated.
     if (Item->getType()->isIntegerType()) {
@@ -8068,12 +8063,12 @@ void SemaOpenMP::ActOnOpenMPDeclareVariantDirective(
     }
 
     // Not a name, a range, or a position: none of the three forms OpenMP 6.0
-    // [5.2.1] p162 L28-33 allows.
+    // [5.2.1] allows.
     Diag(Item->getExprLoc(), diag::err_omp_adjust_args_invalid_item);
     return;
   }
 
-  // OpenMP 6.0 [9.6.2] p332 L31-33: if the need_device_addr adjust-op modifier
+  // OpenMP 6.0 [9.6.2]: if the need_device_addr adjust-op modifier
   // is present, each list item that appears in the clause must refer to an
   // argument in the declaration of the function variant that has a reference
   // type. Unlike the need_device_ptr restriction, this one is not scoped to
@@ -8084,16 +8079,16 @@ void SemaOpenMP::ActOnOpenMPDeclareVariantDirective(
     for (Expr *E : AdjustArgsNeedDeviceAddr) {
       SmallVector<unsigned, 8> Positions;
       // With no call site in hand, 'omp_num_args' is the declared parameter
-      // count (OpenMP 6.0 [20.1] p534). Positions past it denote variadic
+      // count (OpenMP 6.0 [20.1]). Positions past it denote variadic
       // actuals, which have no declared parameter to check against, and are
-      // dropped by the resolver (OpenMP 6.0 [9.6.2] p332 L1-2).
+      // dropped by the resolver (OpenMP 6.0 [9.6.2]).
       resolveOMPAdjustArgsItem(E->IgnoreParenImpCasts(), FD, FD->getNumParams(),
                                getASTContext(), Positions);
       for (unsigned Pos : Positions) {
         if (!FD->getParamDecl(Pos - 1)->getType()->isReferenceType()) {
           Diag(E->getExprLoc(),
                diag::err_omp_non_by_ref_need_device_addr_modifier_argument);
-          break; // One diagnostic per written item, not per swept position.
+          break; // One diagnostic per written item.
         }
       }
     }
@@ -27102,8 +27097,6 @@ ExprResult SemaOpenMP::ActOnOMPNumArgsExpr(SourceLocation NumArgsLoc,
       return ExprError();
     Offset = Res.get();
   }
-  // The value stands for a number of arguments, so the expression is an int
-  // even though it cannot be evaluated until the parameter list is consumed.
   return new (Context)
       OMPNumArgsExpr(Context.IntTy, NumArgsLoc, OpLoc, IsSubtraction, Offset);
 }

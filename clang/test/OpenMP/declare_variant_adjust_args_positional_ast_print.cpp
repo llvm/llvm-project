@@ -75,7 +75,7 @@ void variadic(int *A, int *B, int *C, int *D, ...);
   adjust_args(nothing: omp_num_args-2:omp_num_args, omp_num_args+1:)
 void offset(int *A, int *B, int *C, ...);
 
-// OpenMP 6.0 [5.2.1] p163: an omitted 'lb' stands for 1. As the first list item
+// OpenMP 6.0 [5.2.1]: an omitted 'lb' stands for 1. As the first list item
 // it must still be separated from the adjust-op colon, or the two colons would
 // lex as a single '::' and the printed clause would not parse back.
 // PRINT: #pragma omp declare variant(v_lb) match(construct={dispatch}) adjust_args(need_device_ptr: :2)

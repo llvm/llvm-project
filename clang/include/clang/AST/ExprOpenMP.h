@@ -302,13 +302,6 @@ public:
 /// \code
 /// omp_num_args [ ('+' | '-') logical_offset ]
 /// \endcode
-/// 'omp_num_args' is not a declaration and is never looked up; it stands for
-/// the number of arguments at a call site, which by OpenMP 6.0 [20.1] is the
-/// number of parameters of the associated declaration plus any variadic
-/// arguments actually passed. For a non-variadic callee that is a compile-time
-/// constant, so only a variadic callee makes the value call-site dependent.
-/// The node is therefore left unresolved in the AST; whoever consumes the
-/// 'adjust_args' parameter list substitutes the value.
 class OMPNumArgsExpr final : public Expr {
   friend class ASTStmtReader;
   friend class ASTStmtWriter;

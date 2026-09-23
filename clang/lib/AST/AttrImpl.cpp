@@ -213,8 +213,6 @@ void OMPDeclareVariantAttr::printPrettyPragma(
     if (Begin != End) {
       if (const auto *Range = dyn_cast<OMPArgumentRangeExpr>(*Begin);
           Range && !Range->getLowerBound())
-        // A first item with an omitted lower bound starts with ':', which
-        // would form a '::' token together with the adjust-op separator.
         OS << " ";
     }
     llvm::interleave(

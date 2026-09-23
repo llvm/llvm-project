@@ -19,7 +19,7 @@ void tmpl_pos(int *aaa, int *bbb, ...) {}
 // Clean once substituted: position 2 is 'bbb', a valid, positive position.
 template void tmpl_pos<2>(int *, int *, ...);
 
-// The positive property (OpenMP 6.0 [5.2.1] p162 L30-31) is only checkable
+// The positive property (OpenMP 6.0 [5.2.1]) is only checkable
 // once 'N' is substituted.
 // expected-error@15 {{argument to 'adjust_args' clause must be a strictly positive integer value}}
 // expected-note@+1 {{in instantiation of function template specialization 'tmpl_pos<0>' requested here}}
@@ -55,7 +55,7 @@ void tmpl_offset(int *aaa, int *bbb, ...) {}
 // Clean once substituted: offset 1 is non-negative.
 template void tmpl_offset<1>(int *, int *, ...);
 
-// The non-negative property on the offset (OpenMP 6.0 [5.2.1] p163 L1) is
+// The non-negative property on the offset (OpenMP 6.0 [5.2.1]) is
 // likewise only checkable once 'N' is substituted.
 // expected-error@51 {{argument to 'adjust_args' clause must be a non-negative integer value}}
 // expected-note@+1 {{in instantiation of function template specialization 'tmpl_offset<-1>' requested here}}

@@ -3320,7 +3320,7 @@ bool clang::resolveOMPAdjustArgsItem(const Expr *Item, const FunctionDecl *FD,
   }
 
   // A parameter range 'lb:ub'. An omitted lb defaults to 1, an omitted ub to
-  // 'NumArgs' (OpenMP 6.0 [5.2.1] p163).
+  // 'NumArgs' (OpenMP 6.0 [5.2.1]).
   if (const auto *Range = dyn_cast<OMPArgumentRangeExpr>(Item)) {
     int64_t Lower = 1;
     if (const Expr *LB = Range->getLowerBound()) {
@@ -3332,8 +3332,7 @@ bool clang::resolveOMPAdjustArgsItem(const Expr *Item, const FunctionDecl *FD,
       if (!evalOMPAdjustArgsBound(UB, NumArgs, Ctx, Upper))
         return false;
     }
-    // Clamp before looping, not just inside it: an out-of-range literal bound
-    // (e.g. 'omp_num_args-1:9223372036854775807') must not turn this into an
+    // An out-of-range literal bound must not turn this into an
     // unbounded loop.
     Lower = std::max<int64_t>(Lower, 1);
     Upper = std::min<int64_t>(Upper, NumArgs);

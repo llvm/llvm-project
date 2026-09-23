@@ -13,7 +13,7 @@ void v1(int *aaa, int *bbb, ...);
 
 #ifndef OMP51
 
-// OpenMP 6.0 [5.2.1] p162: 'omp_num_args' may only be followed by a signed
+// OpenMP 6.0 [5.2.1]: 'omp_num_args' may only be followed by a signed
 // constant logical offset, so no other operator may continue the bound.
 // expected-error@+2 {{'omp_num_args' may only be followed by '+' or '-' and a constant logical offset}}
 #pragma omp declare variant(v1) match(construct={dispatch}) \
@@ -60,7 +60,7 @@ void f7(int *aaa, int *bbb, ...);
   adjust_args(need_device_ptr: omp_num_args-1.5:omp_num_args)
 void f8(int *aaa, int *bbb, ...);
 
-// OpenMP 6.0 [5.2.1] p162 lists three forms of parameter list item, and a bare
+// OpenMP 6.0 [5.2.1] lists three forms of parameter list item, and a bare
 // 'omp_num_args' is not one of them: it is legal only as a range bound.
 // expected-error@+2 {{'omp_num_args' is only allowed as a bound of a parameter range}}
 #pragma omp declare variant(v1) match(construct={dispatch}) \
@@ -86,7 +86,7 @@ void f11(int *aaa, int *bbb, ...);
 void f12(int *aaa, int *bbb, ...);
 
 // A non-constant, non-parameter item is still not a position: it must be a
-// constant integer expression (OpenMP 6.0 [5.2.1] p162 L30-31).
+// constant integer expression (OpenMP 6.0 [5.2.1]).
 // expected-error@+3 {{expression is not an integral constant expression}}
 // expected-note@+2 {{read of non-const variable 'G' is not allowed in a constant expression}}
 #pragma omp declare variant(v1) match(construct={dispatch}) \
@@ -126,7 +126,7 @@ void f17(int *aaa, int *bbb, ...);
   adjust_args(need_device_ptr: omp_num_args, 2)
 void f18(int *aaa, int *bbb, ...);
 
-// OpenMP 6.0 [5.2.1] p162 L30-31: a position has the positive property.
+// OpenMP 6.0 [5.2.1]: a position has the positive property.
 // expected-error@+2 {{argument to 'adjust_args' clause must be a strictly positive integer value}}
 #pragma omp declare variant(v1) match(construct={dispatch}) \
   adjust_args(need_device_ptr: 0)
@@ -144,13 +144,13 @@ void h2(int *aaa, int *bbb, ...);
 void h3(int *aaa, int *bbb, ...);
 
 // The logical offset has the non-negative property, checked independently of
-// its already-verified constant property (OpenMP 6.0 [5.2.1] p163 L1).
+// its already-verified constant property (OpenMP 6.0 [5.2.1]).
 // expected-error@+2 {{argument to 'adjust_args' clause must be a non-negative integer value}}
 #pragma omp declare variant(v1) match(construct={dispatch}) \
   adjust_args(need_device_ptr: omp_num_args-(-1):omp_num_args)
 void h4(int *aaa, int *bbb, ...);
 
-// The duplicate restriction (OpenMP 6.0 [5.2.1] p162) applies to positions,
+// The duplicate restriction (OpenMP 6.0 [5.2.1]) applies to positions,
 // not only to names.
 // expected-error@+2 {{'adjust_arg' argument 2 used in multiple clauses}}
 #pragma omp declare variant(v1) match(construct={dispatch}) \
@@ -158,7 +158,7 @@ void h4(int *aaa, int *bbb, ...);
 void h5(int *aaa, int *bbb, ...);
 
 // A name and a position that happen to resolve to the same parameter are two
-// distinct items (OpenMP 6.0 [5.2.1] p162), so this is accepted, not a
+// distinct items (OpenMP 6.0 [5.2.1]), so this is accepted, not a
 // duplicate.
 #pragma omp declare variant(v1) match(construct={dispatch}) \
   adjust_args(need_device_ptr: aaa, 1)
@@ -171,14 +171,14 @@ void h6(int *aaa, int *bbb, ...);
 void h7(int *aaa, int *bbb, ...);
 
 // need_device_addr's reference-type restriction is not scoped to named items
-// (OpenMP 6.0 [9.6.2] p332 L31-33), so a position is checked too.
+// (OpenMP 6.0 [9.6.2]), so a position is checked too.
 // expected-error@+2 {{expected reference type argument on 'adjust_args' clause with 'need_device_addr' modifier}}
 #pragma omp declare variant(v1) match(construct={dispatch}) \
   adjust_args(need_device_addr: 1)
 void h8(int *aaa, int *bbb, ...);
 
 // A huge literal upper bound must not turn range resolution into an unbounded
-// loop: out-of-range positions are dropped (OpenMP 6.0 [9.6.2] p332 L1-2), not
+// loop: out-of-range positions are dropped (OpenMP 6.0 [9.6.2]), not
 // enumerated one at a time up to the written value.
 void v2(int &aaa, int &bbb, ...);
 #pragma omp declare variant(v2) match(construct={dispatch}) \
@@ -187,14 +187,14 @@ void h9(int &aaa, int &bbb, ...);
 
 // need_device_addr's reference-type check via a range covers every position
 // it sweeps, but reports only one diagnostic per written item, not one per
-// position (OpenMP 6.0 [9.6.2] p332 L31-33).
+// position (OpenMP 6.0 [9.6.2]).
 // expected-error@+2 {{expected reference type argument on 'adjust_args' clause with 'need_device_addr' modifier}}
 #pragma omp declare variant(v1) match(construct={dispatch}) \
   adjust_args(need_device_addr: 1:2)
 void h10(int *aaa, int *bbb, ...);
 
 // 'lb > ub' specifies no parameters and is accepted silently: the spec places
-// no restriction on it (OpenMP 6.0 [5.2.1] p163).
+// no restriction on it (OpenMP 6.0 [5.2.1]).
 #pragma omp declare variant(v1) match(construct={dispatch}) \
   adjust_args(need_device_ptr: 5:2)
 void h11(int *aaa, int *bbb, ...);
