@@ -1,4 +1,7 @@
 // REQUIRES: asserts
+// https://github.com/llvm/llvm-project/issues/124541
+// XFAIL: target-x86
+
 // RUN: mlir-opt %s --pass-pipeline="builtin.module(llvm.func(sroa))" --split-input-file --mlir-pass-statistics 2>&1 >/dev/null | FileCheck %s
 
 // CHECK: SROA

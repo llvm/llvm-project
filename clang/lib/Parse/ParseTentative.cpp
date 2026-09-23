@@ -35,45 +35,59 @@ bool Parser::isCXXDeclarationStatement(
   case tok::coloncolon:
   case tok::identifier: {
     if (DisambiguatingWithExpression) {
+      {
+        // Suppress access checks: the declaration context of an out-of-line
+        // member is not known yet. On the recognized declaration shapes below
+        // the real parse redoes the checks from the unannotated tokens.
+        RevertingTentativeParsingAction TPA(*this, /*Unannotated=*/true);
+        SuppressAccessChecks AccessSuppressor(*this, /*activate=*/true);
+        // Parse the C++ scope specifier.
+        CXXScopeSpec SS;
+        ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
+                                       /*ObjectHasErrors=*/false,
+                                       /*EnteringContext=*/true);
+
+        switch (Tok.getKind()) {
+        case tok::identifier: {
+          IdentifierInfo *II = Tok.getIdentifierInfo();
+          bool isDeductionGuide = Actions.isDeductionGuideName(
+              getCurScope(), *II, Tok.getLocation(), SS, /*Template=*/nullptr);
+          if (Actions.isCurrentClassName(*II, getCurScope(), &SS) ||
+              isDeductionGuide) {
+            if (isConstructorDeclarator(
+                    /*Unqualified=*/SS.isEmpty(), isDeductionGuide,
+                    /*IsFriend=*/DeclSpec::FriendSpecified::No))
+              return true;
+          } else if (SS.isNotEmpty()) {
+            // If the scope is not empty, it could alternatively be something
+            // like a typedef or using declaration. That declaration might be
+            // private in the global context, which would be diagnosed by
+            // calling into isCXXSimpleDeclaration, but may actually be fine in
+            // the context of member functions and static variable definitions.
+            // Check if the next token is also an identifier and assume a
+            // declaration. We cannot check if the scopes match because the
+            // declarations could involve namespaces and friend declarations.
+            if (NextToken().is(tok::identifier))
+              return true;
+          }
+          break;
+        }
+        case tok::kw_operator:
+          return true;
+        case tok::tilde:
+          return true;
+        default:
+          break;
+        }
+      }
+      // Not a recognized declaration shape. Parse the scope specifier again
+      // without suppression, so qualifier access diagnoses as it does for a
+      // statement, and keep the annotations for the checks below.
       RevertingTentativeParsingAction TPA(*this);
-      // Parse the C++ scope specifier.
       CXXScopeSpec SS;
       ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
                                      /*ObjectHasErrors=*/false,
                                      /*EnteringContext=*/true);
-
-      switch (Tok.getKind()) {
-      case tok::identifier: {
-        IdentifierInfo *II = Tok.getIdentifierInfo();
-        bool isDeductionGuide = Actions.isDeductionGuideName(
-            getCurScope(), *II, Tok.getLocation(), SS, /*Template=*/nullptr);
-        if (Actions.isCurrentClassName(*II, getCurScope(), &SS) ||
-            isDeductionGuide) {
-          if (isConstructorDeclarator(
-                  /*Unqualified=*/SS.isEmpty(), isDeductionGuide,
-                  /*IsFriend=*/DeclSpec::FriendSpecified::No))
-            return true;
-        } else if (SS.isNotEmpty()) {
-          // If the scope is not empty, it could alternatively be something like
-          // a typedef or using declaration. That declaration might be private
-          // in the global context, which would be diagnosed by calling into
-          // isCXXSimpleDeclaration, but may actually be fine in the context of
-          // member functions and static variable definitions. Check if the next
-          // token is also an identifier and assume a declaration.
-          // We cannot check if the scopes match because the declarations could
-          // involve namespaces and friend declarations.
-          if (NextToken().is(tok::identifier))
-            return true;
-        }
-        break;
-      }
-      case tok::kw_operator:
-        return true;
-      case tok::tilde:
-        return true;
-      default:
-        break;
-      }
     }
   }
     [[fallthrough]];
@@ -782,6 +796,34 @@ bool Parser::TrySkipAttributes() {
   return true;
 }
 
+bool Parser::hasLambdaLikeContinuation() {
+  RevertingTentativeParsingAction TPA(*this);
+  ConsumeBracket();
+  if (!SkipUntil(tok::r_square, StopAtSemi | StopAtCodeCompletion))
+    return false;
+
+  // Consume tokens that could also begin the declaration following a
+  // Microsoft attribute. Require a lambda-like continuation after them.
+  while (true) {
+    if (!TrySkipAttributes())
+      return false;
+
+    if (Tok.isOneOf(tok::l_paren, tok::l_brace, tok::less, tok::arrow,
+                    tok::kw_requires, tok::kw_noexcept))
+      return true;
+
+    // CUDA and HIP permit the __noinline__ keyword among attributes after the
+    // capture list. TrySkipAttributes does not recognize this keyword form.
+    if (getLangOpts().CUDA && TryConsumeToken(tok::kw___noinline__))
+      continue;
+
+    if (!isLambdaSpecifier())
+      return false;
+
+    ConsumeToken();
+  }
+}
+
 Parser::TPResult Parser::TryParsePtrOperatorSeq() {
   while (true) {
     if (TryAnnotateOptionalCXXScopeToken(true))
@@ -843,6 +885,13 @@ Parser::TPResult Parser::TryParseOperatorId() {
       return TPResult::True;
     }
     break;
+
+  case tok::lesslessless:
+    // In CUDA/HIP mode the lexer merges <<< into a single token. Inside
+    // operator<<<T> this can only be operator<< followed by a template-arg <,
+    // so treat it as a valid operator-function-id during tentative parsing.
+    ConsumeToken();
+    return TPResult::True;
 
   default:
     break;
@@ -1144,8 +1193,6 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
                                      BracedCastResult, InvalidAsDeclSpec);
 
   case tok::kw_auto: {
-    if (!getLangOpts().CPlusPlus23)
-      return TPResult::True;
     if (NextToken().is(tok::l_brace))
       return TPResult::False;
     if (NextToken().is(tok::l_paren))
@@ -1762,6 +1809,10 @@ Parser::TPResult Parser::TryParseParameterDeclarationClause(
                                   /*OuterMightBeMessageSend*/ true) !=
         CXX11AttributeKind::NotAttributeSpecifier)
       return TPResult::True;
+
+    if ((getLangOpts().MicrosoftExt || getLangOpts().HLSL) &&
+        Tok.is(tok::l_square) && hasLambdaLikeContinuation())
+      return TPResult::False;
 
     ParsedAttributes attrs(AttrFactory);
     MaybeParseMicrosoftAttributes(attrs);

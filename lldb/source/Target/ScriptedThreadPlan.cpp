@@ -109,7 +109,7 @@ bool ScriptedThreadPlan::ShouldStop(Event *event_ptr) {
     auto should_stop_or_err = m_interface->ShouldStop(event_ptr);
     if (!should_stop_or_err) {
       LLDB_LOG_ERROR(GetLog(LLDBLog::Thread), should_stop_or_err.takeError(),
-                     "Can't call ScriptedThreadPlan::ShouldStop.");
+                     "Can't call ScriptedThreadPlan::ShouldStop: {0}");
       SetPlanComplete(false);
     } else
       should_stop = *should_stop_or_err;
@@ -126,7 +126,7 @@ bool ScriptedThreadPlan::IsPlanStale() {
     auto is_stale_or_err = m_interface->IsStale();
     if (!is_stale_or_err) {
       LLDB_LOG_ERROR(GetLog(LLDBLog::Thread), is_stale_or_err.takeError(),
-                     "Can't call ScriptedThreadPlan::IsStale.");
+                     "Can't call ScriptedThreadPlan::IsStale: {0}");
       SetPlanComplete(false);
     } else
       is_stale = *is_stale_or_err;
@@ -144,7 +144,7 @@ bool ScriptedThreadPlan::DoPlanExplainsStop(Event *event_ptr) {
     if (!explains_stop_or_error) {
       LLDB_LOG_ERROR(GetLog(LLDBLog::Thread),
                      explains_stop_or_error.takeError(),
-                     "Can't call ScriptedThreadPlan::ExplainsStop.");
+                     "Can't call ScriptedThreadPlan::ExplainsStop: {0}");
       SetPlanComplete(false);
     } else
       explains_stop = *explains_stop_or_error;
