@@ -20707,7 +20707,7 @@ RCPair ARMTargetLowering::getRegForInlineAsmConstraint(
 
   // r14 is an alias of lr.
   if (StringRef("{r14}").equals_insensitive(Constraint))
-    return std::make_pair(unsigned(ARM::LR), getRegClassFor(MVT::i32));
+    Constraint = "{lr}";
 
   auto RCP = TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
   if (isIncompatibleReg(RCP.first, VT))
