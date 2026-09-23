@@ -261,10 +261,11 @@ static llvm::Expected<Value> Evaluate(llvm::ArrayRef<uint8_t> expr,
                                       lldb::ModuleSP module_sp = {},
                                       DWARFExpression::Delegate *unit = nullptr,
                                       ExecutionContext *exe_ctx = nullptr,
-                                      RegisterContext *reg_ctx = nullptr) {
+                                      RegisterContext *reg_ctx = nullptr,
+                                      uint8_t address_size = 4) {
   DataExtractor extractor(
       expr.data(), expr.size(), lldb::eByteOrderLittle,
-      /*addr_size*/ exe_ctx ? exe_ctx->GetAddressByteSize() : 4);
+      /*addr_size*/ exe_ctx ? exe_ctx->GetAddressByteSize() : address_size);
 
   return DWARFExpression::Evaluate(exe_ctx, reg_ctx, module_sp, extractor, unit,
                                    lldb::eRegisterKindLLDB,
@@ -1089,6 +1090,18 @@ TEST(DWARFExpression, DW_OP_abs) {
       Evaluate({DW_OP_const1s, static_cast<uint8_t>(-5), DW_OP_abs}),
       ExpectScalar(5));
   EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit5, DW_OP_abs}), ExpectScalar(5));
+
+  // Generic values have unspecified signedness, but DW_OP_abs interprets its
+  // operand as signed.
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_const4u, 0xff, 0xff, 0xff, 0xff,
+                                 DW_OP_abs, DW_OP_stack_value}),
+                       ExpectScalar(32, 1, false));
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_const8u, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+                DW_OP_abs, DW_OP_stack_value},
+               {}, nullptr, nullptr, nullptr,
+               /*address_size=*/8),
+      ExpectScalar(64, 1, false));
 }
 
 TEST(DWARFExpression, DW_OP_div_int_min_by_neg_one) {
