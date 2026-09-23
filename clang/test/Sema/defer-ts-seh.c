@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c23 -fdefer-ts -fms-compatibility -triple x86_64-windows-msvc -fsyntax-only -verify %s
+// RUN: %clang_cc1 -std=c23 -fdefer-ts -Wno-redundant-defer -fms-compatibility -triple x86_64-windows-msvc -fsyntax-only -verify %s
 
 void f() {
   __try {
