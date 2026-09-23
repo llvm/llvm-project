@@ -2530,7 +2530,7 @@ bool llvm::collectCompressedPtrs(
   // Over-approximates the conditional induction as a SCEVAddRec assuming the
   // condition is always true.
   const SCEV *ApproximatePhiSCEV = SE.getAddRecExpr(
-      CondID.getStartSCEV(), CondID.getStepSCEV(), &L, SCEV::FlagAnyWrap);
+      CondID.getStartSCEV(), CondID.getStepSCEV(), &L, SCEV::FlagNone);
 
   // TODO: Take into account the non-wrap flags of the MD when rewriting the
   // SCEV expressions for pointers. This should allow folding away zext/sext
