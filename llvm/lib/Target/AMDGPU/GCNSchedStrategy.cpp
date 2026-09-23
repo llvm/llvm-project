@@ -1852,13 +1852,18 @@ bool GCNSchedStage::initGCNRegion() {
         std::min(DAG.MinOccupancy,
                  PressureBefore.getOccupancy(ST, DynamicVGPRBlockSize));
 
-    // Pending describes resource readiness; selecting a pending node can raise
-    // or lower pressure. In the motivating gfx950 case, resource-based pending
-    // selection lengthened a result's live range and worsened final allocation.
-    // Conservatively restrict those resource preferences near an occupancy
-    // boundary. Round the estimate to the hardware allocation granule and keep
-    // the final block for the current occupancy in reserve. At one wave there
-    // is no lower occupancy to protect.
+    // Pending status does not predict whether scheduling a node raises or
+    // lowers pressure. tryPendingCandidate still honors physical-register and
+    // thresholded excess/critical-pressure preferences before this guard, but
+    // it does not classify every pressure change. In the motivating gfx950
+    // case, resource-based pending selection worsened final allocation despite
+    // unchanged estimated region pressure.
+    //
+    // Restrict resource preferences near an occupancy boundary. Round the
+    // region estimate to the hardware allocation granule and reserve its final
+    // block. At one wave there is no lower occupancy to protect, and the
+    // estimate does not show whether restricting pending choices reduces
+    // spilling, so leave resource preferences unchanged.
     if (RegionOccupancy > 1) {
       unsigned UnifiedVGPRPressure =
           PressureBefore.getVGPRNum(/*UnifiedVGPRFile=*/true);

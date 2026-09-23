@@ -1,8 +1,10 @@
 # RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -run-pass=machine-scheduler -misched-prera-direction=topdown -verify-machineinstrs -verify-misched -debug-only=machine-scheduler -o /dev/null %s 2>&1 | FileCheck %s
 # REQUIRES: asserts
 
-# A pending MFMA ends both matrix-input live ranges. Waiting for that MFMA
-# before scheduling the independent LDS load preserves occupancy in this region.
+# A pending MFMA ends both matrix-input live ranges. Preserve this existing
+# pressure-driven pending choice when resource preferences are restricted near
+# an occupancy boundary. The IR occupancy test checks the changed allocation.
+# Waiting for the MFMA before the independent LDS load preserves occupancy here.
 # The 42 VGPRs kept live across the region make its original peak 62 VGPRs.
 # Suppressing all pending candidates instead creates a 66-VGPR schedule, which
 # the scheduler must revert. Check the initial schedule to expose this loss of
