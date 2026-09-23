@@ -1079,6 +1079,26 @@ __packed_binary_builtin_mixed(mulu_w11_u64, uint64_t, uint32x2_t, uint32x2_t, __
 __packed_binary_builtin_mixed(mulsu_w00_i64, int64_t, int32x2_t, uint32x2_t, __builtin_riscv_mulsu_w00_i64)
 __packed_binary_builtin_mixed(mulsu_w11_i64, int64_t, int32x2_t, uint32x2_t, __builtin_riscv_mulsu_w11_i64)
 
+/* Packed Multiply High Parts (32-bit) */
+__packed_binary_builtin_mixed(pmulh_b0_i16x2, int16x2_t, int16x2_t, int8x4_t, __builtin_riscv_pmulh_b0_i16x2)
+__packed_binary_builtin_mixed(pmulh_b1_i16x2, int16x2_t, int16x2_t, int8x4_t, __builtin_riscv_pmulh_b1_i16x2)
+__packed_binary_builtin_mixed(pmulhsu_b0_i16x2, int16x2_t, int16x2_t, uint8x4_t, __builtin_riscv_pmulhsu_b0_i16x2)
+__packed_binary_builtin_mixed(pmulhsu_b1_i16x2, int16x2_t, int16x2_t, uint8x4_t, __builtin_riscv_pmulhsu_b1_i16x2)
+__packed_binary_builtin_mixed(mulh_h0_i32, int32_t, int32_t, int16x2_t, __builtin_riscv_mulh_h0_i32)
+__packed_binary_builtin_mixed(mulh_h1_i32, int32_t, int32_t, int16x2_t, __builtin_riscv_mulh_h1_i32)
+__packed_binary_builtin_mixed(mulhsu_h0_i32, int32_t, int32_t, uint16x2_t, __builtin_riscv_mulhsu_h0_i32)
+__packed_binary_builtin_mixed(mulhsu_h1_i32, int32_t, int32_t, uint16x2_t, __builtin_riscv_mulhsu_h1_i32)
+
+/* Packed Multiply High Parts (64-bit) */
+__packed_binary_builtin_mixed(pmulh_b0_i16x4, int16x4_t, int16x4_t, int8x8_t, __builtin_riscv_pmulh_b0_i16x4)
+__packed_binary_builtin_mixed(pmulh_b1_i16x4, int16x4_t, int16x4_t, int8x8_t, __builtin_riscv_pmulh_b1_i16x4)
+__packed_binary_builtin_mixed(pmulhsu_b0_i16x4, int16x4_t, int16x4_t, uint8x8_t, __builtin_riscv_pmulhsu_b0_i16x4)
+__packed_binary_builtin_mixed(pmulhsu_b1_i16x4, int16x4_t, int16x4_t, uint8x8_t, __builtin_riscv_pmulhsu_b1_i16x4)
+__packed_binary_builtin_mixed(pmulh_h0_i32x2, int32x2_t, int32x2_t, int16x4_t, __builtin_riscv_pmulh_h0_i32x2)
+__packed_binary_builtin_mixed(pmulh_h1_i32x2, int32x2_t, int32x2_t, int16x4_t, __builtin_riscv_pmulh_h1_i32x2)
+__packed_binary_builtin_mixed(pmulhsu_h0_i32x2, int32x2_t, int32x2_t, uint16x4_t, __builtin_riscv_pmulhsu_h0_i32x2)
+__packed_binary_builtin_mixed(pmulhsu_h1_i32x2, int32x2_t, int32x2_t, uint16x4_t, __builtin_riscv_pmulhsu_h1_i32x2)
+
 /* Packed "Q-format" Multiply Parts Accumulate (32-bit) */
 __packed_ternary_builtin_cast(mqacc_h00_i32, int, int16x2_t, __builtin_riscv_mqacc_h00_i32)
 __packed_ternary_builtin_cast(mqacc_h01_i32, int, int16x2_t, __builtin_riscv_mqacc_h01_i32)

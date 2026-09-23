@@ -140,7 +140,7 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
     if (!L)
       return SE.getCouldNotCompute();
     return SE.getAddRecExpr(SE.getZero(RV->getType()), SE.getOne(RV->getType()),
-                            L, SCEV::FlagAnyWrap);
+                            L, SCEV::FlagNone);
   }
 
   if (isa<VPIRValue, VPSymbolicValue>(V)) {
@@ -167,16 +167,16 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
   VPValue *LHSVal, *RHSVal;
   if (match(V, m_Add(m_VPValue(LHSVal), m_VPValue(RHSVal))))
     return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<SCEVUse> Ops) {
-      return SE.getAddExpr(Ops[0], Ops[1], SCEV::FlagAnyWrap, 0);
+      return SE.getAddExpr(Ops[0], Ops[1], SCEV::FlagNone, 0);
     });
   if (match(V, m_BinaryOr(m_VPValue(LHSVal), m_VPValue(RHSVal))))
     if (cast<VPRecipeWithIRFlags>(V->getDefiningRecipe())->isDisjoint())
       return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<SCEVUse> Ops) {
-        return SE.getAddExpr(Ops[0], Ops[1], SCEV::FlagAnyWrap, 0);
+        return SE.getAddExpr(Ops[0], Ops[1], SCEV::FlagNone, 0);
       });
   if (match(V, m_Sub(m_VPValue(LHSVal), m_VPValue(RHSVal))))
     return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<SCEVUse> Ops) {
-      return SE.getMinusSCEV(Ops[0], Ops[1], SCEV::FlagAnyWrap, 0);
+      return SE.getMinusSCEV(Ops[0], Ops[1], SCEV::FlagNone, 0);
     });
   if (match(V, m_Not(m_VPValue(LHSVal)))) {
     // not X = xor X, -1 = -1 - X
@@ -186,7 +186,7 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
   }
   if (match(V, m_Mul(m_VPValue(LHSVal), m_VPValue(RHSVal))))
     return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<SCEVUse> Ops) {
-      return SE.getMulExpr(Ops[0], Ops[1], SCEV::FlagAnyWrap, 0);
+      return SE.getMulExpr(Ops[0], Ops[1], SCEV::FlagNone, 0);
     });
   // Handle shl by constant: x << c is equivalent to x * (1 << c). A shift
   // amount >= the bit width produces poison; do not rewrite it, as
@@ -321,7 +321,7 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
             const SCEV *Start =
                 getSCEVExprForVPValue(R->getStartValue(), PSE, L);
             const SCEV *AddRec =
-                SE.getAddRecExpr(Start, Step, L, SCEV::FlagAnyWrap);
+                SE.getAddRecExpr(Start, Step, L, SCEV::FlagNone);
             if (R->getTruncInst())
               return SE.getTruncateExpr(AddRec, R->getScalarType());
             return AddRec;
@@ -335,7 +335,7 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
             const SCEV *Step = getSCEVExprForVPValue(R->getStepValue(), PSE, L);
             if (isa<SCEVCouldNotCompute>(Step))
               return SE.getCouldNotCompute();
-            return SE.getAddRecExpr(Start, Step, L, SCEV::FlagAnyWrap);
+            return SE.getAddRecExpr(Start, Step, L, SCEV::FlagNone);
           })
           .Case([&SE, &PSE, L](const VPDerivedIVRecipe *R) -> const SCEV * {
             const SCEV *Start = getSCEVExprForVPValue(R->getOperand(0), PSE, L);

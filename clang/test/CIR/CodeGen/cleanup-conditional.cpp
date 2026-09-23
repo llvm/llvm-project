@@ -1003,3 +1003,162 @@ void test_combined_cleanups(bool c) {
 // OGCG:   store ptr %[[TMP_LE]], ptr %[[R]]
 // OGCG:   call void @_ZN2LED1Ev(ptr {{.*}} %[[TMP_LE]])
 // OGCG:   ret void
+
+struct Payload { ~Payload(); };
+Payload globalPayload;
+struct Holder { Holder(); Holder(Payload); };
+struct Guard { Guard(); ~Guard(); operator bool(); };
+
+// The condition of this conditional materializes its own temporary (Guard),
+// whose destructor is emitted as a cir.cleanup.scope nested inside the
+// full-expression scope. That scope is created after the conditional
+// evaluation begins, so it is appended to the block that the Payload
+// temporary's active flag must be cleared in.
+//
+// The clear must be anchored ahead of that nested scope. If it is instead
+// appended to the end of the block, it lands after the conditional and
+// overwrites the "true" store in the taken arm, leaving ~Payload unreachable
+// and the temporary leaked.
+void test_flag_cleared_before_cond_cleanup() {
+  Guard() ? Holder() : globalPayload;
+}
+// CIR-LABEL: @_Z37test_flag_cleared_before_cond_cleanupv
+// CIR:   %[[REF_TMP:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_Guard>
+// CIR:   %[[ACTIVE:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
+// CIR:   %[[AGG_TMP:.*]] = cir.alloca "agg.tmp0" {{.*}} : !cir.ptr<!rec_Payload>
+// CIR:   cir.cleanup.scope {
+// The clear precedes both the Guard constructor and the nested cleanup scope.
+// CIR:     %[[FALSE:.*]] = cir.const #false
+// CIR:     cir.store %[[FALSE]], %[[ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
+// CIR:     cir.call @_ZN5GuardC1Ev(%[[REF_TMP]])
+// CIR:     cir.cleanup.scope {
+// CIR:       %[[COND:.*]] = cir.call @_ZN5GuardcvbEv(%[[REF_TMP]])
+// CIR:       cir.if %[[COND]] {
+// CIR:         cir.call @_ZN6HolderC1Ev(%{{.*}})
+// CIR:       } else {
+// CIR:         %[[TRUE:.*]] = cir.const #true
+// CIR:         cir.store %[[TRUE]], %[[ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
+// CIR:         cir.call @_ZN6HolderC1E7Payload(%{{.*}}, %[[AGG_TMP]])
+// CIR:       }
+// CIR:     } cleanup normal {
+// CIR:       cir.call @_ZN5GuardD1Ev(%[[REF_TMP]])
+// CIR:     }
+// CIR:   } cleanup normal {
+// CIR:     %[[IS_ACTIVE:.*]] = cir.load{{.*}} %[[ACTIVE]]
+// CIR:     cir.if %[[IS_ACTIVE]] {
+// CIR:       cir.call @_ZN7PayloadD1Ev(%[[AGG_TMP]])
+// CIR:     }
+// CIR:   }
+
+// LLVM-LABEL: define dso_local void @_Z37test_flag_cleared_before_cond_cleanupv(
+// LLVM:         %[[REF_TMP:.*]] = alloca %struct.Guard
+// LLVMCIR:      %[[ACTIVE:.*]] = alloca i8
+// LLVM:         %[[AGG_TMP:.*]] = alloca %struct.Payload
+// OGCG:         %[[ACTIVE:.*]] = alloca i1
+// LLVMCIR:      store i8 0, ptr %[[ACTIVE]]
+// LLVM:         call void @_ZN5GuardC1Ev(ptr {{.*}} %[[REF_TMP]])
+// LLVM:         %[[COND:.*]] = call {{.*}} i1 @_ZN5GuardcvbEv(ptr {{.*}} %[[REF_TMP]])
+// OGCG:         store i1 false, ptr %[[ACTIVE]]
+// LLVM:         br i1 %[[COND]], label %[[TRUE_BR:.*]], label %[[FALSE_BR:.*]]
+// LLVM:       [[FALSE_BR]]:
+// LLVMCIR:      store i8 1, ptr %[[ACTIVE]]
+// FIXME: CIR destroys Guard before Payload; reverse-of-construction order
+// requires ~Payload to run first, as OGCG below does. Tracked separately from
+// the active-flag placement this test covers.
+// LLVMCIR:      call void @_ZN5GuardD1Ev(ptr {{.*}} %[[REF_TMP]])
+// LLVMCIR:      %[[ACTIVE_BYTE:.*]] = load i8, ptr %[[ACTIVE]]
+// LLVMCIR:      %[[ACTIVE_BOOL:.*]] = trunc i8 %[[ACTIVE_BYTE]] to i1
+// LLVMCIR:      br i1 %[[ACTIVE_BOOL]], label %[[DTOR:.*]], label %[[SKIP:.*]]
+// OGCG:         store i1 true, ptr %[[ACTIVE]]
+// OGCG:         %[[IS_ACTIVE:.*]] = load i1, ptr %[[ACTIVE]]
+// OGCG:         br i1 %[[IS_ACTIVE]], label %[[DTOR:.*]], label %[[DONE:.*]]
+// LLVM:       [[DTOR]]:
+// LLVM:         call void @_ZN7PayloadD1Ev(ptr {{.*}} %[[AGG_TMP]])
+// OGCG:       [[DONE]]:
+// OGCG:         call void @_ZN5GuardD1Ev(ptr {{.*}} %[[REF_TMP]])
+
+struct Q { Q(); ~Q(); int get() const; };
+bool pred(int);
+
+// The right-hand side of a short-circuiting || is conditionally evaluated, so
+// the temporaries created by the nested conditional inside it get active
+// flags. Those flags are read by the full-expression cleanup scope, which
+// sits outside the ||, so they must be cleared outside the || as well. If the
+// clears were emitted inside the right-hand side, short-circuiting on a true
+// left-hand side would skip them and the cleanup would read uninitialized
+// stack, destroying objects that were never constructed.
+void test_short_circuit_cond_temp(bool always, bool c, int n) {
+  if (always || (n != (c ? Q().get() : Q().get())))
+    pred(n);
+}
+// CIR-LABEL: @_Z28test_short_circuit_cond_tempbbi
+// CIR:   %[[REF_TMP0:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_Q>
+// CIR:   %[[ACTIVE0:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
+// CIR:   %[[REF_TMP1:.*]] = cir.alloca "ref.tmp1" {{.*}} : !cir.ptr<!rec_Q>
+// CIR:   %[[ACTIVE1:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
+// CIR:   cir.cleanup.scope {
+// CIR:     %[[ALWAYS:.*]] = cir.load{{.*}} %{{.*}}
+// Both clears are emitted before the || ternary, not inside its false region.
+// CIR:     %[[FALSE0:.*]] = cir.const #false
+// CIR:     cir.store %[[FALSE0]], %[[ACTIVE0]] : !cir.bool, !cir.ptr<!cir.bool>
+// CIR:     %[[FALSE1:.*]] = cir.const #false
+// CIR:     cir.store %[[FALSE1]], %[[ACTIVE1]] : !cir.bool, !cir.ptr<!cir.bool>
+// CIR:     %{{.*}} = cir.ternary(%[[ALWAYS]], true {
+// CIR:       %[[TRUE:.*]] = cir.const #true
+// CIR:       cir.yield %[[TRUE]] : !cir.bool
+// CIR:     }, false {
+// CIR:       %{{.*}} = cir.ternary(%{{.*}}, true {
+// CIR:         cir.call @_ZN1QC1Ev(%[[REF_TMP0]])
+// CIR:         %[[SET0:.*]] = cir.const #true
+// CIR:         cir.store %[[SET0]], %[[ACTIVE0]] : !cir.bool, !cir.ptr<!cir.bool>
+// CIR:       }, false {
+// CIR:         cir.call @_ZN1QC1Ev(%[[REF_TMP1]])
+// CIR:         %[[SET1:.*]] = cir.const #true
+// CIR:         cir.store %[[SET1]], %[[ACTIVE1]] : !cir.bool, !cir.ptr<!cir.bool>
+// CIR:       })
+// CIR:     })
+// CIR:   } cleanup normal {
+// CIR:     %[[IS_ACTIVE1:.*]] = cir.load{{.*}} %[[ACTIVE1]]
+// CIR:     cir.if %[[IS_ACTIVE1]] {
+// CIR:       cir.call @_ZN1QD1Ev(%[[REF_TMP1]])
+// CIR:     }
+// CIR:     %[[IS_ACTIVE0:.*]] = cir.load{{.*}} %[[ACTIVE0]]
+// CIR:     cir.if %[[IS_ACTIVE0]] {
+// CIR:       cir.call @_ZN1QD1Ev(%[[REF_TMP0]])
+// CIR:     }
+// CIR:   }
+
+// LLVMCIR-LABEL: define dso_local void @_Z28test_short_circuit_cond_tempbbi(
+// LLVMCIR:         %[[REF_TMP0:.*]] = alloca %struct.Q
+// LLVMCIR:         %[[ACTIVE0:.*]] = alloca i8
+// LLVMCIR:         %[[REF_TMP1:.*]] = alloca %struct.Q
+// LLVMCIR:         %[[ACTIVE1:.*]] = alloca i8
+// The clears dominate the short-circuit branch.
+// LLVMCIR:         store i8 0, ptr %[[ACTIVE0]]
+// LLVMCIR:         store i8 0, ptr %[[ACTIVE1]]
+// LLVMCIR:         br i1 %{{.*}}, label %[[LOR_SKIP:.*]], label %[[LOR_RHS:.*]]
+// LLVMCIR:       [[LOR_RHS]]:
+// LLVMCIR:         br i1 %{{.*}}, label %[[COND_TRUE:.*]], label %[[COND_FALSE:.*]]
+// LLVMCIR:       [[COND_TRUE]]:
+// LLVMCIR:         call void @_ZN1QC1Ev(ptr {{.*}} %[[REF_TMP0]])
+// LLVMCIR:         store i8 1, ptr %[[ACTIVE0]]
+// LLVMCIR:       [[COND_FALSE]]:
+// LLVMCIR:         call void @_ZN1QC1Ev(ptr {{.*}} %[[REF_TMP1]])
+// LLVMCIR:         store i8 1, ptr %[[ACTIVE1]]
+
+// OGCG-LABEL: define dso_local void @_Z28test_short_circuit_cond_tempbbi(
+// OGCG:         %[[REF_TMP0:.*]] = alloca %struct.Q
+// OGCG:         %[[ACTIVE0:.*]] = alloca i1
+// OGCG:         %[[REF_TMP1:.*]] = alloca %struct.Q
+// OGCG:         %[[ACTIVE1:.*]] = alloca i1
+// OGCG:         store i1 false, ptr %[[ACTIVE0]]
+// OGCG:         store i1 false, ptr %[[ACTIVE1]]
+// OGCG:         br i1 %{{.*}}, label %[[LOR_END:.*]], label %[[LOR_RHS:.*]]
+// OGCG:       [[LOR_RHS]]:
+// OGCG:         br i1 %{{.*}}, label %[[COND_TRUE:.*]], label %[[COND_FALSE:.*]]
+// OGCG:       [[COND_TRUE]]:
+// OGCG:         call void @_ZN1QC1Ev(ptr {{.*}} %[[REF_TMP0]])
+// OGCG:         store i1 true, ptr %[[ACTIVE0]]
+// OGCG:       [[COND_FALSE]]:
+// OGCG:         call void @_ZN1QC1Ev(ptr {{.*}} %[[REF_TMP1]])
+// OGCG:         store i1 true, ptr %[[ACTIVE1]]

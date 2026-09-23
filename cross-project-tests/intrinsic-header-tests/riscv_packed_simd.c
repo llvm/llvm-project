@@ -4260,6 +4260,114 @@ int64_t test_mulsu_w11_i64(int32x2_t a, uint32x2_t b) {
   return __riscv_mulsu_w11_i64(a, b);
 }
 
+// CHECK-LABEL: test_pmulh_b0_i16x2:
+// CHECK:       pmulh.h.b0
+int16x2_t test_pmulh_b0_i16x2(int16x2_t a, int8x4_t b) {
+  return __riscv_pmulh_b0_i16x2(a, b);
+}
+
+// CHECK-LABEL: test_pmulh_b1_i16x2:
+// CHECK:       pmulh.h.b1
+int16x2_t test_pmulh_b1_i16x2(int16x2_t a, int8x4_t b) {
+  return __riscv_pmulh_b1_i16x2(a, b);
+}
+
+// CHECK-LABEL: test_pmulhsu_b0_i16x2:
+// CHECK:       pmulhsu.h.b0
+int16x2_t test_pmulhsu_b0_i16x2(int16x2_t a, uint8x4_t b) {
+  return __riscv_pmulhsu_b0_i16x2(a, b);
+}
+
+// CHECK-LABEL: test_pmulhsu_b1_i16x2:
+// CHECK:       pmulhsu.h.b1
+int16x2_t test_pmulhsu_b1_i16x2(int16x2_t a, uint8x4_t b) {
+  return __riscv_pmulhsu_b1_i16x2(a, b);
+}
+
+// CHECK-LABEL: test_mulh_h0_i32:
+// RV32:        mulh.h0
+// RV64:        pmulh.w.h0
+int32_t test_mulh_h0_i32(int32_t a, int16x2_t b) {
+  return __riscv_mulh_h0_i32(a, b);
+}
+
+// CHECK-LABEL: test_mulh_h1_i32:
+// RV32:        mulh.h1
+// RV64:        pmulh.w.h1
+int32_t test_mulh_h1_i32(int32_t a, int16x2_t b) {
+  return __riscv_mulh_h1_i32(a, b);
+}
+
+// CHECK-LABEL: test_mulhsu_h0_i32:
+// RV32:        mulhsu.h0
+// RV64:        pmulhsu.w.h0
+int32_t test_mulhsu_h0_i32(int32_t a, uint16x2_t b) {
+  return __riscv_mulhsu_h0_i32(a, b);
+}
+
+// CHECK-LABEL: test_mulhsu_h1_i32:
+// RV32:        mulhsu.h1
+// RV64:        pmulhsu.w.h1
+int32_t test_mulhsu_h1_i32(int32_t a, uint16x2_t b) {
+  return __riscv_mulhsu_h1_i32(a, b);
+}
+
+// CHECK-LABEL: test_pmulh_b0_i16x4:
+// RV32-COUNT-2: pmulh.h.b0
+// RV64:         pmulh.h.b0
+int16x4_t test_pmulh_b0_i16x4(int16x4_t a, int8x8_t b) {
+  return __riscv_pmulh_b0_i16x4(a, b);
+}
+
+// CHECK-LABEL: test_pmulh_b1_i16x4:
+// RV32-COUNT-2: pmulh.h.b1
+// RV64:         pmulh.h.b1
+int16x4_t test_pmulh_b1_i16x4(int16x4_t a, int8x8_t b) {
+  return __riscv_pmulh_b1_i16x4(a, b);
+}
+
+// CHECK-LABEL: test_pmulhsu_b0_i16x4:
+// RV32-COUNT-2: pmulhsu.h.b0
+// RV64:         pmulhsu.h.b0
+int16x4_t test_pmulhsu_b0_i16x4(int16x4_t a, uint8x8_t b) {
+  return __riscv_pmulhsu_b0_i16x4(a, b);
+}
+
+// CHECK-LABEL: test_pmulhsu_b1_i16x4:
+// RV32-COUNT-2: pmulhsu.h.b1
+// RV64:         pmulhsu.h.b1
+int16x4_t test_pmulhsu_b1_i16x4(int16x4_t a, uint8x8_t b) {
+  return __riscv_pmulhsu_b1_i16x4(a, b);
+}
+
+// CHECK-LABEL: test_pmulh_h0_i32x2:
+// RV32-COUNT-2: mulh.h0
+// RV64:         pmulh.w.h0
+int32x2_t test_pmulh_h0_i32x2(int32x2_t a, int16x4_t b) {
+  return __riscv_pmulh_h0_i32x2(a, b);
+}
+
+// CHECK-LABEL: test_pmulh_h1_i32x2:
+// RV32-COUNT-2: mulh.h1
+// RV64:         pmulh.w.h1
+int32x2_t test_pmulh_h1_i32x2(int32x2_t a, int16x4_t b) {
+  return __riscv_pmulh_h1_i32x2(a, b);
+}
+
+// CHECK-LABEL: test_pmulhsu_h0_i32x2:
+// RV32-COUNT-2: mulhsu.h0
+// RV64:         pmulhsu.w.h0
+int32x2_t test_pmulhsu_h0_i32x2(int32x2_t a, uint16x4_t b) {
+  return __riscv_pmulhsu_h0_i32x2(a, b);
+}
+
+// CHECK-LABEL: test_pmulhsu_h1_i32x2:
+// RV32-COUNT-2: mulhsu.h1
+// RV64:         pmulhsu.w.h1
+int32x2_t test_pmulhsu_h1_i32x2(int32x2_t a, uint16x4_t b) {
+  return __riscv_pmulhsu_h1_i32x2(a, b);
+}
+
 // CHECK-LABEL: test_pget_i8x4_i8:
 // CHECK:       srai
 int8_t test_pget_i8x4_i8(int8x4_t v) { return __riscv_pget_i8x4_i8(v, 3); }
