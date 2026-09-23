@@ -82,3 +82,95 @@ entry:
   store double %v6_3, ptr %op3, align 8
   ret void
 }
+
+; The operand gather [%c, %z1] of the splat gather subtree for %s7 and %s2
+; matches the first two lanes of the main tree gather [%z1, %c, %d, %a] in the
+; swapped order. The subtree gathers are not used as shuffle sources, so they
+; must not define the order of the main tree: the reorder shuffle made the
+; whole tree unprofitable.
+
+define void @subtree_gathers_do_not_define_order(ptr %out, ptr %in, double %a, double %b, double %c, double %d) {
+; CHECK-LABEL: define void @subtree_gathers_do_not_define_order(
+; CHECK-SAME: ptr [[OUT:%.*]], ptr [[IN:%.*]], double [[A:%.*]], double [[B:%.*]], double [[C:%.*]], double [[D:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[Z1:%.*]] = load double, ptr [[IN]], align 8
+; CHECK-NEXT:    [[S2:%.*]] = fadd double [[Z1]], [[A]]
+; CHECK-NEXT:    [[S5:%.*]] = fadd double [[A]], 1.000000e+00
+; CHECK-NEXT:    [[V0_1:%.*]] = fadd double [[C]], [[Z1]]
+; CHECK-NEXT:    [[V1_2:%.*]] = fadd double [[D]], 1.250000e+00
+; CHECK-NEXT:    [[V2_2:%.*]] = fadd double [[V1_2]], 1.000000e+00
+; CHECK-NEXT:    [[V0_3:%.*]] = fadd double [[A]], 1.250000e+00
+; CHECK-NEXT:    [[V2_3:%.*]] = fsub double [[V0_3]], [[A]]
+; CHECK-NEXT:    [[V2_0:%.*]] = fadd double [[Z1]], 1.000000e+00
+; CHECK-NEXT:    [[S7:%.*]] = fmul double [[C]], [[A]]
+; CHECK-NEXT:    [[V3_0:%.*]] = fsub double [[V2_0]], [[S7]]
+; CHECK-NEXT:    [[V1_1:%.*]] = fadd double [[V0_1]], [[A]]
+; CHECK-NEXT:    [[V3_1:%.*]] = fsub double [[V1_1]], [[S7]]
+; CHECK-NEXT:    [[V4_1:%.*]] = fadd double [[V3_1]], 1.000000e+00
+; CHECK-NEXT:    [[V3_2:%.*]] = fsub double [[V2_2]], [[S7]]
+; CHECK-NEXT:    [[V4_2:%.*]] = fadd double [[V3_2]], 1.000000e+00
+; CHECK-NEXT:    [[V3_3:%.*]] = fsub double [[V2_3]], [[S7]]
+; CHECK-NEXT:    [[V4_3:%.*]] = fadd double [[V3_3]], [[A]]
+; CHECK-NEXT:    [[V4_0:%.*]] = fadd double [[V3_0]], [[C]]
+; CHECK-NEXT:    [[V5_0:%.*]] = fmul double [[V4_0]], [[A]]
+; CHECK-NEXT:    [[V6_0:%.*]] = fmul double [[V5_0]], [[S2]]
+; CHECK-NEXT:    [[V7_0:%.*]] = fsub double [[V6_0]], [[S5]]
+; CHECK-NEXT:    store double [[V7_0]], ptr [[OUT]], align 8
+; CHECK-NEXT:    [[V5_1:%.*]] = fmul double [[V4_1]], [[A]]
+; CHECK-NEXT:    [[V6_1:%.*]] = fmul double [[V5_1]], [[S2]]
+; CHECK-NEXT:    [[V7_1:%.*]] = fsub double [[V6_1]], [[S5]]
+; CHECK-NEXT:    [[OP1:%.*]] = getelementptr i8, ptr [[OUT]], i64 8
+; CHECK-NEXT:    store double [[V7_1]], ptr [[OP1]], align 8
+; CHECK-NEXT:    [[V5_2:%.*]] = fmul double [[V4_2]], [[A]]
+; CHECK-NEXT:    [[V6_2:%.*]] = fmul double [[V5_2]], [[S2]]
+; CHECK-NEXT:    [[V7_2:%.*]] = fsub double [[V6_2]], [[A]]
+; CHECK-NEXT:    [[OP2:%.*]] = getelementptr i8, ptr [[OUT]], i64 16
+; CHECK-NEXT:    store double [[V7_2]], ptr [[OP2]], align 8
+; CHECK-NEXT:    [[V5_3:%.*]] = fmul double [[V4_3]], [[A]]
+; CHECK-NEXT:    [[V6_3:%.*]] = fmul double [[V5_3]], [[S2]]
+; CHECK-NEXT:    [[V7_3:%.*]] = fsub double [[V6_3]], [[B]]
+; CHECK-NEXT:    [[OP3:%.*]] = getelementptr i8, ptr [[OUT]], i64 24
+; CHECK-NEXT:    store double [[V7_3]], ptr [[OP3]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  %z1 = load double, ptr %in, align 8
+  %s2 = fadd double %z1, %a
+  %s5 = fadd double %a, 1.000000e+00
+  %v0_1 = fadd double %c, %z1
+  %v1_2 = fadd double %d, 1.250000e+00
+  %v2_2 = fadd double %v1_2, 1.000000e+00
+  %v0_3 = fadd double %a, 1.250000e+00
+  %v2_3 = fsub double %v0_3, %a
+  %v2_0 = fadd double %z1, 1.000000e+00
+  %s7 = fmul double %c, %a
+  %v3_0 = fsub double %v2_0, %s7
+  %v1_1 = fadd double %v0_1, %a
+  %v3_1 = fsub double %v1_1, %s7
+  %v4_1 = fadd double %v3_1, 1.000000e+00
+  %v3_2 = fsub double %v2_2, %s7
+  %v4_2 = fadd double %v3_2, 1.000000e+00
+  %v3_3 = fsub double %v2_3, %s7
+  %v4_3 = fadd double %v3_3, %a
+  %v4_0 = fadd double %v3_0, %c
+  %v5_0 = fmul double %v4_0, %a
+  %v6_0 = fmul double %v5_0, %s2
+  %v7_0 = fsub double %v6_0, %s5
+  store double %v7_0, ptr %out, align 8
+  %v5_1 = fmul double %v4_1, %a
+  %v6_1 = fmul double %v5_1, %s2
+  %v7_1 = fsub double %v6_1, %s5
+  %op1 = getelementptr i8, ptr %out, i64 8
+  store double %v7_1, ptr %op1, align 8
+  %v5_2 = fmul double %v4_2, %a
+  %v6_2 = fmul double %v5_2, %s2
+  %v7_2 = fsub double %v6_2, %a
+  %op2 = getelementptr i8, ptr %out, i64 16
+  store double %v7_2, ptr %op2, align 8
+  %v5_3 = fmul double %v4_3, %a
+  %v6_3 = fmul double %v5_3, %s2
+  %v7_3 = fsub double %v6_3, %b
+  %op3 = getelementptr i8, ptr %out, i64 24
+  store double %v7_3, ptr %op3, align 8
+  ret void
+}
