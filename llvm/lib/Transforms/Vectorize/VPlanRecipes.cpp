@@ -1177,10 +1177,9 @@ InstructionCost VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
   case Instruction::Or:
   case Instruction::Xor: {
     // Certain instructions can be cheaper if they have a constant second
-    // operand. One example of this are shifts on x86. FNeg is the only unary
-    // opcode handled here and has no second operand.
+    // operand. One example of this are shifts on x86.
     TargetTransformInfo::OperandValueInfo RHSInfo;
-    if (Opcode != Instruction::FNeg) {
+    if (Instruction::isBinaryOp(Opcode)) {
       RHSInfo = Ctx.getOperandInfo(getOperand(1));
       if (RHSInfo.Kind == TargetTransformInfo::OK_AnyValue &&
           getOperand(1)->isDefinedOutsideLoopRegions())
@@ -1376,13 +1375,6 @@ InstructionCost VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
 
 InstructionCost VPInstruction::computeCost(ElementCount VF,
                                            VPCostContext &Ctx) const {
-  // A scalar cost is only computed for VPlan0, which has no vector-only
-  // opcodes.
-  assert(!(VF.isScalar() &&
-           (isVectorToScalar() ||
-            getOpcode() == VPInstruction::FirstOrderRecurrenceSplice)) &&
-         "unexpected vector-only opcode at scalar VF");
-
   // NOTE: At the moment it seems only possible to expose this path for
   // the trunc, zext and sext opcodes.
   // TODO: Update VF arg to use onlyFirstLaneUsed once WidenCast is unified.
