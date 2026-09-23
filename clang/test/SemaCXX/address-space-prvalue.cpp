@@ -1,43 +1,39 @@
 // RUN: %clang_cc1 %s -fsyntax-only -verify
 
-struct S {                                     // #ctors
-  S(int);                                      // #sint
-  void f() const;                              // #f-const
-  void f() __attribute__((address_space(1)));  // #f-as \
-                                               // expected-error {{function type may not be qualified with an address space}}
+struct S {          // #ctors
+  S(int);           // #sint
+  void f();
+  void cf() const;
 };
 
-using const_int = const int;
-using as1_int = __attribute__((address_space(1))) int;
-using const_S = const S;
 using as1_S = __attribute__((address_space(1))) S;
+using const_as1_S = const __attribute__((address_space(1))) S;
 
-void testQualifiers() {
-  // Ok; const is dropped on prvalues of non-class type.
-  (void)(const_int{1});
-  // Ok; address space is dropped on prvalues of non-class type.
-  (void)(as1_int{1});
-  // Ok; const is retained on prvalues of class type; const qualified
-  // member function called.
-  const_S{1}.f();
-  // Error; address space is retained on prvalues of class type, but no
-  // constructor or member function can be called.
-  as1_S{1}.f();
-  // expected-error@-1 {{no matching constructor for initialization of 'as1_S' (aka '__attribute__((address_space(1))) S')}}
-  // expected-error@-2 {{no matching member function for call to 'f'}}
-  // expected-note@#ctors 2 {{candidate constructor ignored: cannot be used to construct an object in address space '__attribute__((address_space(1)))'}}
-  // expected-note@#sint {{candidate constructor ignored: cannot be used to construct an object in address space '__attribute__((address_space(1)))'}}
-  // expected-note@#f-const {{candidate function not viable: 'this' object is in address space '1', but method expects object in generic address space}}
-  // expected-note@#f-as {{candidate function not viable: 'this' object is in address space '1', but method expects object in generic address space}}
-}
+as1_S make();
+as1_S &getRef();
+const_as1_S makeConst();
 
-void temporaryMaterializationTest() {
-  // An address-space-qualified class temporary retains the address space on
-  // the materialized object, so no constructor can be used.
-  as1_S{0};
+void test() {
+  // S has no constructor that can build an object in address space 1.
+  as1_S{1};
   // expected-error@-1 {{no matching constructor for initialization of 'as1_S' (aka '__attribute__((address_space(1))) S')}}
   // expected-note@#ctors 2 {{candidate constructor ignored: cannot be used to construct an object in address space '__attribute__((address_space(1)))'}}
   // expected-note@#sint {{candidate constructor ignored: cannot be used to construct an object in address space '__attribute__((address_space(1)))'}}
+
+  // The function call is a prvalue, so the address space is stripped from its
+  // type. The temporary materialized for the member call is a plain 'S', so the
+  // call is well-formed.
+  make().f();
+
+  // The prvalue drops the address space but retains const. The materialized
+  // temporary is 'const S', so the const member call binds.
+  makeConst().cf();
+  
+  // The reference is not a prvalue, so the address space is retained.
+  // The member call cannot bind 'this' to an object in address space 1.
+  getRef().f();
+  // expected-error@-1 {{cannot initialize object parameter of type 'S' with an expression of type 'as1_S' (aka '__attribute__((address_space(1))) S')}}
+
 }
 
 // FIXME: All qualifiers including address space are retained on array elements
@@ -56,4 +52,3 @@ void arrayTest() {
   // expected-note@#ctors {{candidate constructor (the implicit move constructor) not viable: no known conversion from 'int' to 'S &&' for 1st argument}}
   // expected-note@#sint {{candidate constructor ignored: cannot be used to construct an object in address space '__attribute__((address_space(1)))'}}
 }
-

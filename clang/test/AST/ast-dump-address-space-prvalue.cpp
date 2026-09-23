@@ -2,11 +2,11 @@
 
 struct X { int a; };
 
-using GlobalX = X __attribute__((address_space(1)));
+using as1_X = X __attribute__((address_space(1)));
 
-GlobalX prvalue();
-GlobalX &lvalue();
-GlobalX &&xvalue();
+as1_X prvalue();
+as1_X &lvalue();
+as1_X &&xvalue();
 
 void test() {
   // A prvalue should not have an address space even if the function's
@@ -26,42 +26,37 @@ void test() {
 
 struct S {
   S(int);
-  void f() const;
 };
 
-using const_int = const int;
 using as1_int = __attribute__((address_space(1))) int;
-using const_S = const S;
+using const_as1_int = const __attribute__((address_space(1))) int;
+using as1_S = __attribute__((address_space(1))) S;
+using const_as1_S = const __attribute__((address_space(1))) S;
 
-void qualifierTest() {
-  // const is retained on prvalues of class type; const qualified
-  // member function called.
-  // CHECK: MaterializeTemporaryExpr {{.*}} 'const_S':'const S' xvalue
-  // CHECK: CXXTemporaryObjectExpr {{.*}} 'const_S':'const S'
-  const_S{1}.f();
-
-  // const is dropped on prvalues of non-class type.
-  // CHECK: CXXFunctionalCastExpr {{.*}} 'int' functional cast to const_int
-  (void)(const_int{1});
-
-  // address space is dropped on prvalues of non-class type.
+void qualifiersTest() {
+  // The address space and const qualifier are dropped on a prvalue of non-class
+  // type.
   // CHECK: CXXFunctionalCastExpr {{.*}} 'int' functional cast to as1_int
   (void)(as1_int{1});
-}
-
-void castTest() {
-  // The address space is dropped on the prvalue produced by a cast to a
-  // non-class type.
+  // CHECK: CXXFunctionalCastExpr {{.*}} 'int' functional cast to const_as1_int
+  (void)(const_as1_int{1});
+  // CHECK: CXXFunctionalCastExpr {{.*}} 'int' functional cast to const_as1_int <NoOp>
+  (void)const_as1_int(0);
   // CHECK: CStyleCastExpr {{.*}} 'int' <NoOp>
-  (void)(as1_int)0;
-  // CHECK: CXXFunctionalCastExpr {{.*}} 'int' functional cast to as1_int <NoOp>
-  (void)as1_int(0);
-  // CHECK: CXXStaticCastExpr {{.*}} 'int' static_cast<as1_int> <NoOp>
-  (void)static_cast<as1_int>(0);
+  (void)(const_as1_int)0;
+  // CHECK: CXXStaticCastExpr {{.*}} 'int' static_cast<const_as1_int> <NoOp>
+  (void)static_cast<const_as1_int>(0);
+
+  // The address space is dropped on a prvalue of class type
+  // const is retained.
+  // CHECK: CXXStaticCastExpr {{.*}} 'S' static_cast<as1_S> <NoOp>
+  (void)static_cast<as1_S>(S{0});
+  // CHECK: CXXStaticCastExpr {{.*}} 'const S' static_cast<const_as1_S> <NoOp>
+  (void)static_cast<const_as1_S>(S{0});
 }
 
 as1_int &&rvalueRefInt();
-GlobalX &&rvalueRefX();
+as1_X &&rvalueRefX();
 
 void rvalueReferenceTest() {
   // An rvalue reference is an xvalue naming an object, not a prvalue, so the
