@@ -40,7 +40,7 @@ define i1 @abs_plus_one_min_is_poison(i32 noundef %arg) {
 ; CHECK-LABEL: define i1 @abs_plus_one_min_is_poison(
 ; CHECK-SAME: i32 noundef [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[ABS:%.*]] = tail call i32 @llvm.abs.i32(i32 [[ARG]], i1 true)
-; CHECK-NEXT:    [[ABS_PLUS_ONE:%.*]] = add nsw i32 [[ABS]], 1
+; CHECK-NEXT:    [[ABS_PLUS_ONE:%.*]] = add nuw nsw i32 [[ABS]], 1
 ; CHECK-NEXT:    ret i1 true
 ;
   %abs = tail call i32 @llvm.abs.i32(i32 %arg, i1 true)

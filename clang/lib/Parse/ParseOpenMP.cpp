@@ -389,7 +389,7 @@ void Parser::ParseOpenMPReductionInitializerForDecl(VarDecl *OmpPrivParm) {
     }
   } else if (getLangOpts().CPlusPlus11 && Tok.is(tok::l_brace)) {
     // Parse C++0x braced-init-list.
-    Diag(Tok, diag::warn_cxx98_compat_generalized_initializer_lists);
+    Diag(Tok, diag::compat_cxx11_generalized_initializer_lists);
 
     ExprResult Init(ParseBraceInitializer());
 
@@ -3282,6 +3282,7 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
   case OMPC_nocontext:
   case OMPC_filter:
   case OMPC_partial:
+  case OMPC_depth:
   case OMPC_align:
   case OMPC_message:
   case OMPC_ompx_dyn_cgroup_mem:

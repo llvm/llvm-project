@@ -10,4 +10,5 @@
 
 #include "src/math/fmaximum_numf16.h"
 
-LIST_FMAXIMUM_NUM_TESTS(float16, LIBC_NAMESPACE::fmaximum_numf16)
+LIST_FMAXIMUM_NUM_TESTS(FmaximumNumf16, float16,
+                        LIBC_NAMESPACE::fmaximum_numf16)

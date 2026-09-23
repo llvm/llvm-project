@@ -1079,19 +1079,18 @@ Error ASTNodeImporter::ImportConstraintSatisfaction(
   ToSat.ContainsErrors = FromSat.ContainsErrors;
   if (!ToSat.IsSatisfied) {
     for (auto Record = FromSat.begin(); Record != FromSat.end(); ++Record) {
-      if (const Expr *E = Record->dyn_cast<const Expr *>()) {
+      if (const Expr *E = dyn_cast<const Expr *>(*Record)) {
         ExpectedExpr ToSecondExpr = import(E);
         if (!ToSecondExpr)
           return ToSecondExpr.takeError();
         ToSat.Details.emplace_back(ToSecondExpr.get());
-      } else if (auto CR = Record->dyn_cast<const ConceptReference *>()) {
+      } else if (auto CR = dyn_cast<const ConceptReference *>(*Record)) {
         Expected<ConceptReference *> ToCROrErr = import(CR);
         if (!ToCROrErr)
           return ToCROrErr.takeError();
         ToSat.Details.emplace_back(ToCROrErr.get());
       } else {
-        auto Pair =
-            Record->dyn_cast<const ConstraintSubstitutionDiagnostic *>();
+        auto Pair = dyn_cast<const ConstraintSubstitutionDiagnostic *>(*Record);
 
         ExpectedSLoc ToPairFirst = import(Pair->first);
         if (!ToPairFirst)
@@ -1638,16 +1637,18 @@ ASTNodeImporter::VisitFunctionProtoType(const FunctionProtoType *T) {
 
 ExpectedType ASTNodeImporter::VisitUnresolvedUsingType(
     const UnresolvedUsingType *T) {
-  Error Err = Error::success();
-  auto ToQualifier = importChecked(Err, T->getQualifier());
-  auto *ToD = importChecked(Err, T->getDecl());
-  if (Err)
-    return std::move(Err);
+  auto ToQualifierOrErr = import(T->getQualifier());
+  if (!ToQualifierOrErr)
+    return ToQualifierOrErr.takeError();
+  auto ToDeclOrErr = import(T->getDecl());
+  if (!ToDeclOrErr)
+    return ToDeclOrErr.takeError();
 
   if (T->isCanonicalUnqualified())
-    return Importer.getToContext().getCanonicalUnresolvedUsingType(ToD);
-  return Importer.getToContext().getUnresolvedUsingType(T->getKeyword(),
-                                                        ToQualifier, ToD);
+    return Importer.getToContext().getCanonicalUnresolvedUsingType(
+        *ToDeclOrErr);
+  return Importer.getToContext().getUnresolvedUsingType(
+      T->getKeyword(), *ToQualifierOrErr, *ToDeclOrErr);
 }
 
 ExpectedType ASTNodeImporter::VisitParenType(const ParenType *T) {
@@ -1704,14 +1705,18 @@ ExpectedType ASTNodeImporter::VisitTypeOfType(const TypeOfType *T) {
 }
 
 ExpectedType ASTNodeImporter::VisitUsingType(const UsingType *T) {
-  Error Err = Error::success();
-  auto ToQualifier = importChecked(Err, T->getQualifier());
-  auto *ToD = importChecked(Err, T->getDecl());
-  QualType ToT = importChecked(Err, T->desugar());
-  if (Err)
-    return std::move(Err);
-  return Importer.getToContext().getUsingType(T->getKeyword(), ToQualifier, ToD,
-                                              ToT);
+  auto ToQualifierOrErr = import(T->getQualifier());
+  if (!ToQualifierOrErr)
+    return ToQualifierOrErr.takeError();
+  auto ToDeclOrErr = import(T->getDecl());
+  if (!ToDeclOrErr)
+    return ToDeclOrErr.takeError();
+
+  ExpectedType ToTypeOrErr = import(T->desugar());
+  if (!ToTypeOrErr)
+    return ToTypeOrErr.takeError();
+  return Importer.getToContext().getUsingType(
+      T->getKeyword(), *ToQualifierOrErr, *ToDeclOrErr, *ToTypeOrErr);
 }
 
 ExpectedType ASTNodeImporter::VisitDecltypeType(const DecltypeType *T) {

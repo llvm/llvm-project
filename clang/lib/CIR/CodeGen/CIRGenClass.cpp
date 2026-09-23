@@ -14,12 +14,13 @@
 #include "CIRGenFunction.h"
 #include "CIRGenValue.h"
 
-#include "clang/AST/EvaluatedExprVisitor.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/Type.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "clang/CodeGenUtils/ClassUtils.h"
+#include "clang/CodeGenUtils/CodeGenUtils.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -154,12 +155,6 @@ static void emitMemberInitializer(CIRGenFunction &cgf,
   cgf.emitInitializerForField(field, lhs, memberInit->getInit());
 }
 
-static bool isInitializerOfDynamicClass(const CXXCtorInitializer *baseInit) {
-  const Type *baseType = baseInit->getBaseClass();
-  const auto *baseClassDecl = baseType->castAsCXXRecordDecl();
-  return baseClassDecl->isDynamicClass();
-}
-
 namespace {
 /// Call the destructor for a direct base class.
 struct CallBaseDtor final : EHScopeStack::Cleanup {
@@ -178,8 +173,8 @@ struct CallBaseDtor final : EHScopeStack::Cleanup {
     QualType thisTy = d->getFunctionObjectParameterType();
     assert(cgf.currSrcLoc && "expected source location");
     Address addr = cgf.getAddressOfDirectBaseInCompleteClass(
-        *cgf.currSrcLoc, cgf.loadCXXThisAddress(), derivedClass, baseClass,
-        baseIsVirtual);
+        cgf.getLoc(*cgf.currSrcLoc), cgf.loadCXXThisAddress(), derivedClass,
+        baseClass, baseIsVirtual);
     cgf.emitCXXDestructorCall(d, Dtor_Base, baseIsVirtual,
                               /*delegating=*/false, addr, thisTy);
   }
@@ -204,30 +199,7 @@ struct CallDelegatingCtorDtor final : EHScopeStack::Cleanup {
   }
 };
 
-/// A visitor which checks whether an initializer uses 'this' in a
-/// way which requires the vtable to be properly set.
-struct DynamicThisUseChecker
-    : ConstEvaluatedExprVisitor<DynamicThisUseChecker> {
-  using super = ConstEvaluatedExprVisitor<DynamicThisUseChecker>;
-
-  bool usesThis = false;
-
-  DynamicThisUseChecker(const ASTContext &c) : super(c) {}
-
-  // Black-list all explicit and implicit references to 'this'.
-  //
-  // Do we need to worry about external references to 'this' derived
-  // from arbitrary code? If so, then anything which runs arbitrary
-  // external code might potentially access the vtable.
-  void VisitCXXThisExpr(const CXXThisExpr *e) { usesThis = true; }
-};
 } // end anonymous namespace
-
-static bool baseInitializerUsesThis(ASTContext &c, const Expr *init) {
-  DynamicThisUseChecker checker(c);
-  checker.Visit(init);
-  return checker.usesThis;
-}
 
 /// Gets the address of a direct base class within a complete object.
 /// This should only be used for (1) non-virtual bases or (2) virtual bases
@@ -271,7 +243,7 @@ void CIRGenFunction::emitBaseInitializer(mlir::Location loc,
   // If the initializer for the base (other than the constructor
   // itself) accesses 'this' in any way, we need to initialize the
   // vtables.
-  if (baseInitializerUsesThis(getContext(), baseInit->getInit()))
+  if (CodeGenUtils::baseInitializerUsesThis(getContext(), baseInit->getInit()))
     initializeVTablePointers(loc, classDecl);
 
   // We can pretend to be a complete class because it only matters for
@@ -344,7 +316,7 @@ void CIRGenFunction::emitCtorPrologue(const CXXConstructorDecl *cd,
   auto emitInitializer = [&](CXXCtorInitializer *baseInit) {
     if (cgm.getCodeGenOpts().StrictVTablePointers &&
         cgm.getCodeGenOpts().OptimizationLevel > 0 &&
-        isInitializerOfDynamicClass(baseInit)) {
+        CodeGenUtils::isInitializerOfDynamicClass(baseInit)) {
       // It's OK to continue after emitting the error here. The missing code
       // just "launders" the 'this' pointer.
       cgm.errorNYI(cd->getSourceRange(),
@@ -779,7 +751,7 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
   CharUnits eltAlignment = arrayBase.getAlignment().alignmentOfArrayElement(
       getContext().getTypeSizeInChars(type));
 
-  mlir::Location loc = *currSrcLoc;
+  mlir::Location loc = getLoc(*currSrcLoc);
 
   mlir::Value dynamicElPtr;
   if (useDynamicArrayCtor)
@@ -952,9 +924,9 @@ void CIRGenFunction::emitForwardingCallToLambda(
         resultType->isObjCRetainableType())
       cgm.errorNYI(callOperator->getSourceRange(),
                    "emitForwardingCallToLambda: ObjCAutoRefCount");
-    emitReturnOfRValue(*currSrcLoc, rv, resultType);
+    emitReturnOfRValue(getLoc(*currSrcLoc), rv, resultType);
   } else {
-    cir::ReturnOp::create(builder, *currSrcLoc);
+    cir::ReturnOp::create(builder, getLoc(*currSrcLoc));
   }
 }
 
@@ -1542,7 +1514,7 @@ void CIRGenFunction::emitCXXConstructorCall(
   CIRGenCallee callee = CIRGenCallee::forDirect(calleePtr, GlobalDecl(d, type));
   cir::CIRCallOpInterface c;
   emitCall(info, callee, ReturnValueSlot(), args, &c, /*isMustTail=*/false,
-           getLoc(loc));
+           loc);
 
   if (cgm.getCodeGenOpts().OptimizationLevel != 0 && !crd->isDynamicClass() &&
       type != Ctor_Base && cgm.getCodeGenOpts().StrictVTablePointers)

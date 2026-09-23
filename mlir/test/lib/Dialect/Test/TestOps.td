@@ -489,10 +489,20 @@ def PromisedInterfacesOp : TEST_Op<"promised_interfaces"> {
 // Define the enum attribute.
 def TestEnumAttr : EnumAttr<Test_Dialect, TestEnum, "enum">;
 
+def TestPrettyEnumAttr
+    : EnumAttr<Test_Dialect, TestPrettyEnum, "pretty_enum">;
+
 // Define an op that contains the enum attribute.
 def OpWithEnum : TEST_Op<"op_with_enum"> {
   let arguments = (ins TestEnumAttr:$value, OptionalAttr<AnyAttr>:$tag);
-  let assemblyFormat = "$value (`tag` $tag^)? attr-dict";
+  let assemblyFormat = "enum($value) (`tag` $tag^)? attr-dict";
+}
+
+// Define an op that prints just the symbolic value of an enum attribute whose
+// own assembly format includes angle brackets.
+def OpWithEnumDirective : TEST_Op<"op_with_enum_directive"> {
+  let arguments = (ins TestPrettyEnumAttr:$value);
+  let assemblyFormat = "enum($value) attr-dict";
 }
 
 // Define a pattern that matches and creates an enum attribute.
@@ -572,9 +582,7 @@ def OpWithSimpleEnum16Prop : TEST_Op<"op_with_simple_enum_16_prop"> {
 //===----------------------------------------------------------------------===//
 
 // Define the enum attribute.
-def TestBitEnumAttr : EnumAttr<Test_Dialect, TestBitEnum, "bit_enum"> {
-  let assemblyFormat = "`<` $value `>`";
-}
+def TestBitEnumAttr : EnumAttr<Test_Dialect, TestBitEnum, "bit_enum">;
 
 // Define an op that contains the enum attribute.
 def OpWithBitEnum : TEST_Op<"op_with_bit_enum"> {
@@ -583,15 +591,24 @@ def OpWithBitEnum : TEST_Op<"op_with_bit_enum"> {
 }
 
 def TestBitEnumVerticalBarAttr
-    : EnumAttr<Test_Dialect, TestBitEnumVerticalBar, "bit_enum_vbar"> {
-  let assemblyFormat = "`<` $value `>`";
-}
+    : EnumAttr<Test_Dialect, TestBitEnumVerticalBar, "bit_enum_vbar">;
 
 // Define an op that contains the enum attribute.
 def OpWithBitEnumVerticalBar : TEST_Op<"op_with_bit_enum_vbar"> {
   let arguments = (ins TestBitEnumVerticalBarAttr:$value,
                    OptionalAttr<AnyAttr>:$tag);
   let assemblyFormat = "$value (`tag` $tag^)? attr-dict";
+}
+
+def OpWithBitEnumDirective : TEST_Op<"op_with_bit_enum_directive"> {
+  let arguments = (ins TestBitEnumAttr:$value);
+  let assemblyFormat = "enum($value) attr-dict";
+}
+
+def OpWithBitEnumVerticalBarDirective
+    : TEST_Op<"op_with_bit_enum_vbar_directive"> {
+  let arguments = (ins TestBitEnumVerticalBarAttr:$value);
+  let assemblyFormat = "enum($value) attr-dict";
 }
 
 // Define a pattern that matches and creates a bit enum attribute.
@@ -2349,6 +2366,11 @@ def BlackHoleOp : TEST_Op<"blackhole">,
 //===----------------------------------------------------------------------===//
 
 def TestRegionBuilderOp : TEST_Op<"region_builder">;
+def TestSegmentedReturnOp : TEST_Op<"segmented_return", [
+    Pure, ReturnLike, Terminator, AttrSizedOperandSegments]> {
+  let arguments = (ins Variadic<AnyType>:$first, Variadic<AnyType>:$second);
+}
+
 def TestReturnOp : TEST_Op<"return", [Pure, ReturnLike, Terminator]> {
   let arguments = (ins Variadic<AnyType>);
   let builders = [OpBuilder<(ins),
@@ -2779,6 +2801,49 @@ def CompareOp : TEST_Op<"compare"> {
 //===----------------------------------------------------------------------===//
 // Test RegionBranchOpInterface
 //===----------------------------------------------------------------------===//
+
+def SegmentedRegionBranchOp : TEST_Op<"segmented_region_branch", [
+    AttrSizedOperandSegments,
+    DeclareOpInterfaceMethods<RegionBranchOpInterface,
+        ["getEntrySuccessorOperands", "getSuccessorInputs"]>]> {
+  let description = [{
+    Select one of two regions and pass the corresponding operand segment to
+    its block arguments. Each region can branch to either region or exit.
+    The control operands are not successor operands.
+  }];
+  let arguments = (ins I1:$condition, Variadic<AnyType>:$first,
+                       Variadic<AnyType>:$second, Optional<I1>:$exitCondition);
+  let regions = (region SizedRegion<1>:$firstRegion,
+                        SizedRegion<1>:$secondRegion);
+  let hasCanonicalizer = 1;
+}
+
+def SegmentedRegionBranchTerminatorOp
+    : TEST_Op<"segmented_region_branch_terminator", [
+        AttrSizedOperandSegments, Terminator,
+        HasParent<"SegmentedRegionBranchOp">,
+        DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface,
+            ["getMutableSuccessorOperands"]>]> {
+  let arguments = (ins I1:$condition, Variadic<AnyType>:$first,
+                       Variadic<AnyType>:$second, Optional<I1>:$exitCondition);
+}
+
+def IsolatedRegionBranchOp : TEST_Op<"isolated_region_branch", [
+    IsolatedFromAbove, RecursiveMemoryEffects,
+    DeclareOpInterfaceMethods<RegionBranchOpInterface,
+        ["getEntrySuccessorOperands", "getSuccessorInputs"]>]> {
+  let arguments = (ins Variadic<AnyType>:$inputs);
+  let results = (outs Variadic<AnyType>:$outputs);
+  let regions = (region VariadicRegion<SizedRegion<1>>:$branches);
+  let hasCanonicalizer = 1;
+}
+
+def IsolatedRegionYieldOp : TEST_Op<"isolated_region_yield", [
+    Pure, ReturnLike, Terminator,
+    DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface,
+        ["getMutableSuccessorOperands"]>]> {
+  let arguments = (ins Variadic<AnyType>:$values);
+}
 
 def RegionIfYieldOp : TEST_Op<"region_if_yield",
       [NoMemoryEffect, ReturnLike, Terminator]> {
@@ -3741,6 +3806,12 @@ def TestOpWithCustomAttrPropDict
     OptionalAttr<TestEnumAttr>:$optionalAttr,
     I64Prop:$prop
   );
+}
+
+def TestOpWithCustomBitEnumAttrPropDict
+    : TEST_Op<"with_custom_bit_enum_attr_prop_dict"> {
+  let assemblyFormat = "prop-dict attr-dict";
+  let arguments = (ins TestBitEnumAttr:$flags, I64Attr:$next);
 }
 
 def TestOpWithPropertiesAndInferredType

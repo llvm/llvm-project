@@ -26,6 +26,10 @@ def CIR_Dialect : Dialect {
 
   let useDefaultAttributePrinterParser = 1;
 
+  let hasOperationAttrVerify = 1;
+  let hasRegionArgAttrVerify = 1;
+  let hasRegionResultAttrVerify = 1;
+
   // Enable constant materialization for the CIR dialect. This generates a
   // declaration for the cir::CIRDialect::materializeConstant function. This
   // hook is necessary for canonicalization to properly handle attributes
@@ -42,17 +46,23 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getCalleeAttrName() { return "callee"; }
     static llvm::StringRef getNoThrowAttrName() { return "nothrow"; }
     static llvm::StringRef getNoReturnAttrName() { return "noreturn"; }
-    static llvm::StringRef getSideEffectAttrName() { return "side_effect"; }
+    static llvm::StringRef getMemoryEffectsAttrName() { return "memory_effects"; }
     static llvm::StringRef getReturnsTwiceAttrName() { return "returns_twice"; }
     static llvm::StringRef getColdAttrName() { return "cold"; }
     static llvm::StringRef getHotAttrName() { return "hot"; }
     static llvm::StringRef getStrictFPAttrName() { return "strictfp"; }
     static llvm::StringRef getNoDuplicatesAttrName() { return "noduplicate"; }
     static llvm::StringRef getConvergentAttrName() { return "convergent"; }
+    static llvm::StringRef getNoRecurseAttrName() { return "norecurse"; }
+    static llvm::StringRef getMustProgressAttrName() { return "mustprogress"; }
+    static llvm::StringRef getSYCLModuleIdAttrName() { return "sycl-module-id"; }
     static llvm::StringRef getNoUnwindAttrName() { return "nounwind"; }
+    static llvm::StringRef getWillReturnAttrName() { return "willreturn"; }
     static llvm::StringRef getModuleLevelAsmAttrName() { return "cir.module_asm"; }
     static llvm::StringRef getGlobalCtorsAttrName() { return "cir.global_ctors"; }
     static llvm::StringRef getGlobalDtorsAttrName() { return "cir.global_dtors"; }
+    static llvm::StringRef getOffloadContainerAttrName() { return "cir.offload.container"; }
+    static llvm::StringRef getOffloadKindAttrName() { return "cir.offload.kind"; }
     static llvm::StringRef getOperandSegmentSizesAttrName() { return "operandSegmentSizes"; }
     static llvm::StringRef getNoCallerSavedRegsAttrName() { return "no_caller_saved_registers"; }
     static llvm::StringRef getNoCallbackAttrName() { return "nocallback"; }
@@ -76,6 +86,7 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getZeroCallUsedRegsAttrName() { return "zero_call_used_regs"; }
     static llvm::StringRef getSaveRegParamsAttrName() { return "save_reg_params"; }
     static llvm::StringRef getDefaultFuncAttrsAttrName() { return "default_func_attrs"; }
+    static llvm::StringRef getUniformWorkGroupSizeAttrName() { return "uniform_work_group_size"; }
     static llvm::StringRef getResAttrsAttrName() { return "res_attrs"; }
     static llvm::StringRef getArgAttrsAttrName() { return "arg_attrs"; }
     static llvm::StringRef getRecordLayoutsAttrName() { return "cir.record_layouts"; }
@@ -86,6 +97,10 @@ def CIR_Dialect : Dialect {
     // Mangled symbol name of the C++20 named-module initializer function,
     // precomputed by CIRGen so later passes don't need a live ASTContext.
     static llvm::StringRef getCXXModuleInitFnNameAttrName() { return "cir.cxx_module_init_fn_name"; }
+    // LangOptions facts that post-CIRGen lowering consumes, serialized by
+    // CIRGen so a reloaded .cir module is self-describing without a live
+    // clang::LangOptions. See #cir.lowering_lang_options.
+    static llvm::StringRef getLoweringLangOptionsAttrName() { return "cir.lowering_lang_options"; }
     static llvm::StringRef getMustTailAttrName() { return "musttail"; }
     static llvm::StringRef getCatchCopyThunkAttrName() { return "cir.eh.catch_copy_thunk"; }
 
@@ -94,6 +109,8 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getAMDGPUXnackAttrName() { return "cir.amdgpu_xnack"; }
     static llvm::StringRef getAMDGPUSramEccAttrName() { return "cir.amdgpu_sramecc"; }
     static llvm::StringRef getOpenCLKernelArgMetadataAttrName() { return "cir.cl.kernel_arg_metadata"; }
+    static llvm::StringRef getOpenCLVersionAttrName() { return "cir.cl.version"; }
+    static llvm::StringRef getOpenCLCXXVersionAttrName() { return "cir.cl.cxx.version"; }
     static llvm::StringRef getDefaultTlsModelAttrName() { return "cir.default_tls_model"; }
 
     void registerAttributes();

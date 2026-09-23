@@ -498,8 +498,6 @@ class FenceInst : public Instruction {
 
   constexpr static IntrusiveOperandsAllocMarker AllocMarker{0};
 
-  void Init(AtomicOrdering Ordering, SyncScope::ID SSID);
-
 protected:
   // Note: Instruction needs to be a friend here to call cloneImpl.
   friend class Instruction;
@@ -5197,6 +5195,8 @@ protected:
   LLVM_ABI AddrSpaceCastInst *cloneImpl() const;
 
 public:
+  enum { NonNull = (1 << 0) };
+
   /// Constructor with insert-before-instruction semantics
   LLVM_ABI AddrSpaceCastInst(
       Value *S,                  ///< The value to be casted
@@ -5213,6 +5213,14 @@ public:
   static bool classof(const Value *V) {
     return isa<Instruction>(V) && classof(cast<Instruction>(V));
   }
+
+  void setNonNull(bool B = true) {
+    SubclassOptionalData = (SubclassOptionalData & ~NonNull) | (B * NonNull);
+  }
+
+  /// Test whether the source is known not to be the null value of its
+  /// address space.
+  bool hasNonNull() const { return (SubclassOptionalData & NonNull) != 0; }
 
   /// Gets the pointer operand.
   Value *getPointerOperand() {

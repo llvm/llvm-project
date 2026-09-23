@@ -37,6 +37,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/KnownFPClass.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/TargetParser/AtomicScope.h"
 #include <optional>
@@ -146,6 +147,7 @@ private:
   NVPTX::Scope getAtomicScope(const MemSDNode *N) const;
 
   bool SelectADDR(SDValue Addr, SDValue &Base, SDValue &Offset);
+  bool SelectFAbs(SDValue N, SDValue &Src);
   SDValue getPTXCmpMode(const CondCodeSDNode &CondCode);
   SDValue selectPossiblyImm(SDValue V);
 
@@ -676,9 +678,16 @@ static NVPTX::Scope resolveScope(NVPTX::Scope S, const NVPTXSubtarget *T) {
 }
 
 NVPTX::Scope NVPTXDAGToDAGISel::getAtomicScope(const MemSDNode *N) const {
-  if (!Subtarget->hasAtomScope())
+  NVPTX::Scope Scope = resolveScope(Scopes[N->getSyncScopeID()], Subtarget);
+  if (!Subtarget->hasAtomScope()) {
+    if (Scope == NVPTX::Scope::System)
+      CurDAG->getContext()->diagnose(DiagnosticInfoUnsupported(
+          CurDAG->getMachineFunction().getFunction(),
+          "NVPTX system scope atomics require sm_60 or later",
+          N->getDebugLoc()));
     return NVPTX::Scope::DefaultDevice;
-  return resolveScope(Scopes[N->getSyncScopeID()], Subtarget);
+  }
+  return Scope;
 }
 
 namespace {
@@ -709,7 +718,9 @@ getOperationOrderings(MemSDNode *N, const NVPTXSubtarget *Subtarget) {
   // | No      | No       | All                | plain      | .weak                        |
   // | No      | Yes      | Generic,Shared,    | .volatile  | .volatile                    |
   // |         |          | Global [0]         |            |                              |
-  // | No      | Yes      | Local,Const,Param  | plain [1]  | .weak [1]                    |
+  // | No      | Yes      | Local (PTX 9.0-)   | plain [1]  | .weak [1]                    |
+  // | No      | Yes      | Local (PTX 9.1+)   | .volatile  | .volatile                    |
+  // | No      | Yes      | Const,Param        | plain [1]  | .weak [1]                    |
   // | Unorder | Yes/No   | All                | == Relaxed | == Relaxed                   |
   // | Relaxed | No       | Generic,Shared,    | .volatile  | <atomic sem>                 |
   // |         |          | Global [0]         |            |                              |
@@ -719,7 +730,9 @@ getOperationOrderings(MemSDNode *N, const NVPTXSubtarget *Subtarget) {
   // | Relaxed | Yes      | Generic,Shared [0] | .volatile  | .volatile                    |
   // | Relaxed | Yes      | Global [0]         | .volatile  | .mmio.relaxed.sys (PTX 8.2+) |
   // |         |          |                    |            |  or .volatile (PTX 8.1-)     |
-  // | Relaxed | Yes      | Local,Const,Param  | plain [1]  | .weak [1]                    |
+  // | Yes     | Yes      | Local (PTX 9.0-)   | plain [1]  | .weak [1]                    |
+  // | Yes     | Yes      | Local (PTX 9.1+)   | .volatile  | .volatile                    |
+  // | Relaxed | Yes      | Const,Param        | plain [1]  | .weak [1]                    |
   // | Other   | Yes      | Generic, Shared,   | Error [2]  | <atomic sem> [3]             |
   // |         |          | / Global [0]       |            |                              |
 
@@ -746,6 +759,7 @@ getOperationOrderings(MemSDNode *N, const NVPTXSubtarget *Subtarget) {
 
   // [0]: volatile and atomics are only supported on global or shared
   //      memory locations, accessed via generic/shared/global pointers.
+  //      PTX 9.1 adds volatile support on local ld/st.
   //      MMIO is only supported on global memory locations,
   //      accessed via generic/global pointers.
   // TODO: Implement MMIO access via generic pointer to global.
@@ -776,13 +790,19 @@ getOperationOrderings(MemSDNode *N, const NVPTXSubtarget *Subtarget) {
   //      behavior due to lack of Independent Forward Progress. Lowering these
   //      to weak memory operations in sm_60- is therefore fine.
   //
-  //      TODO: lower atomic and volatile operations to memory locations
-  //      in local, const, and param to two PTX instructions in sm_70+:
-  //        - the "weak" memory instruction we are currently lowering to, and
-  //        - some other instruction that preserves the side-effect, e.g.,
-  //          a dead dummy volatile load.
-  if (CodeAddrSpace == NVPTX::AddressSpace::Local ||
-      CodeAddrSpace == NVPTX::AddressSpace::Const ||
+  //      TODO: Where direct volatile or atomic operations are unsupported,
+  //      preserve the side-effect using the weak memory instruction and
+  //      another instruction, such as a dead dummy volatile load.
+
+  if (CodeAddrSpace == NVPTX::AddressSpace::Local) {
+    // Local memory is private to a thread. Drop atomic ordering but preserve
+    // volatile accesses where supported.
+    return Subtarget->hasLocalVolatile() && N->isVolatile()
+               ? NVPTX::Ordering::Volatile
+               : NVPTX::Ordering::NotAtomic;
+  }
+
+  if (CodeAddrSpace == NVPTX::AddressSpace::Const ||
       CodeAddrSpace == NVPTX::AddressSpace::EntryParam ||
       CodeAddrSpace == NVPTX::AddressSpace::DeviceParam) {
     return NVPTX::Ordering::NotAtomic;
@@ -804,16 +824,14 @@ getOperationOrderings(MemSDNode *N, const NVPTXSubtarget *Subtarget) {
   // [3]: TODO: these should eventually use .mmio<.atomic sem>; for now we drop
   // the volatile semantics and preserve the atomic ones.
 
-  // PTX volatile and PTX atomics are not available for statespace that differ
-  // from .generic, .global, or .shared. The behavior of PTX volatile and PTX
-  // atomics is undefined if the generic address does not refer to a .global or
-  // .shared memory location.
-  bool AddrGenericOrGlobalOrShared =
+  // Apart from local volatile accesses handled above, PTX atomics and volatile
+  // operations are only available in generic, global, or shared memory.
+  bool AddrSupportsVolatileOrAtomic =
       (CodeAddrSpace == NVPTX::AddressSpace::Generic ||
        CodeAddrSpace == NVPTX::AddressSpace::Global ||
        CodeAddrSpace == NVPTX::AddressSpace::Shared ||
        CodeAddrSpace == NVPTX::AddressSpace::SharedCluster);
-  if (!AddrGenericOrGlobalOrShared)
+  if (!AddrSupportsVolatileOrAtomic)
     return NVPTX::Ordering::NotAtomic;
 
   bool UseRelaxedMMIO =
@@ -2023,6 +2041,20 @@ bool NVPTXDAGToDAGISel::tryBF16ArithToFMA(SDNode *N) {
   int Opcode = IsVec ? NVPTX::FMA_BF16x2rrr : NVPTX::FMA_BF16rrr;
   MachineSDNode *FMA = CurDAG->getMachineNode(Opcode, DL, VT, Operands);
   ReplaceNode(N, FMA);
+  return true;
+}
+
+// The min/max .abs modifier also accepts operands already known to have no
+// negative values (not even -0). NaN signs are immaterial to these
+// instructions.
+bool NVPTXDAGToDAGISel::SelectFAbs(SDValue N, SDValue &Src) {
+  if (N.getOpcode() == ISD::FABS)
+    Src = N.getOperand(0);
+  else if (CurDAG->computeKnownFPClass(N, fcNegative).signBitIsZeroOrNaN())
+    Src = N;
+  else
+    return false;
+  Src = selectPossiblyImm(Src);
   return true;
 }
 

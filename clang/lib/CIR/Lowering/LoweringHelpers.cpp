@@ -36,6 +36,31 @@ bool isSplitStorageBitInt(cir::IntType ty, const mlir::DataLayout &dataLayout) {
 }
 } // namespace
 
+mlir::Attribute getBitIntStorageAttr(mlir::ConversionPatternRewriter &rewriter,
+                                     cir::IntAttr attr,
+                                     const mlir::DataLayout &dataLayout) {
+  auto intTy = mlir::cast<cir::IntType>(attr.getType());
+  unsigned storageBits = intTy.getStorageTypeWidth(dataLayout);
+  llvm::APInt val = attr.getValue();
+  val = intTy.isSigned() ? val.sext(storageBits) : val.zext(storageBits);
+
+  if (!isSplitStorageBitInt(intTy, dataLayout))
+    return rewriter.getIntegerAttr(
+        mlir::IntegerType::get(intTy.getContext(), storageBits), val);
+
+  // If we have to do split storage, we are an array of bytes.  Split this up
+  // into the array that matches convertTypeForMemory.
+  unsigned numBytes = storageBits / 8;
+  llvm::SmallVector<mlir::APInt> bytes;
+  bytes.reserve(numBytes);
+  for (unsigned i = 0; i != numBytes; ++i)
+    bytes.emplace_back(8, val.extractBitsAsZExtValue(8, i * 8));
+
+  auto i8Ty = mlir::IntegerType::get(intTy.getContext(), 8);
+  return mlir::DenseElementsAttr::get(
+      mlir::RankedTensorType::get({numBytes}, i8Ty), bytes);
+}
+
 mlir::Type convertTypeForMemory(const mlir::TypeConverter &converter,
                                 mlir::DataLayout const &dataLayout,
                                 mlir::Type type) {
@@ -57,18 +82,34 @@ mlir::Type convertTypeForMemory(const mlir::TypeConverter &converter,
 
   // _BitInt(N) keeps its literal width as a value but is stored in a padded
   // integer iM in memory, the same way bool is i1 as a value and i8 in
-  // memory. The byte-array storage form for wide split widths is not
-  // implemented; a null return signals that, and op lowerings turn it into
-  // errorNYI.
+  // memory. When iM's own LLVM alloc size would overshoot the AST-exact
+  // M/8 byte count (isSplitStorageBitInt), use a byte array instead so the
+  // size stays exact.
   if (auto intTy = mlir::dyn_cast<cir::IntType>(type);
       intTy && intTy.isBitInt()) {
     if (isSplitStorageBitInt(intTy, dataLayout))
-      return {};
+      return mlir::LLVM::LLVMArrayType::get(
+          mlir::IntegerType::get(type.getContext(), 8),
+          intTy.getStorageTypeWidth(dataLayout) / 8);
     return mlir::IntegerType::get(type.getContext(),
                                   intTy.getStorageTypeWidth(dataLayout));
   }
 
   return converter.convertType(type);
+}
+
+mlir::Type convertTypeForLoadStore(const mlir::TypeConverter &converter,
+                                   mlir::DataLayout const &dataLayout,
+                                   mlir::Type type) {
+  // A split-storage _BitInt's memory type is a byte array (see
+  // convertTypeForMemory), but a load/store must still access the whole
+  // integer as-is.
+  if (auto intTy = mlir::dyn_cast<cir::IntType>(type);
+      intTy && intTy.isBitInt())
+    return mlir::IntegerType::get(type.getContext(),
+                                  intTy.getStorageTypeWidth(dataLayout));
+
+  return convertTypeForMemory(converter, dataLayout, type);
 }
 
 static unsigned getIntOrBoolBitWidth(mlir::Type ty) {
@@ -124,7 +165,7 @@ template <> mlir::APFloat getZeroInitFromType(mlir::Type ty) {
 /// \param dimIndex the current dimension we're processing
 /// \param currentIndex the current index in the values array
 template <typename AttrTy, typename StorageTy>
-void convertToDenseElementsAttrImpl(
+bool convertToDenseElementsAttrImpl(
     cir::ConstArrayAttr attr, llvm::SmallVectorImpl<StorageTy> &values,
     const llvm::SmallVectorImpl<int64_t> &currentDims, int64_t dimIndex,
     int64_t currentIndex) {
@@ -136,7 +177,7 @@ void convertToDenseElementsAttrImpl(
       }
       // Remaining slots are trailing zeros; values was zero-initialized.
       currentIndex += attr.getTrailingZerosNum();
-      return;
+      return true;
     }
   }
 
@@ -171,12 +212,18 @@ void convertToDenseElementsAttrImpl(
       continue;
     }
 
+    // A global view can be the result of pointer conversions, so we can't
+    // represent them as an APInt/APFloat.  So give up if we see one.
+    if (auto global = mlir::dyn_cast<cir::GlobalViewAttr>(eltAttr))
+      return false;
+
     llvm_unreachable("unknown element in ConstArrayAttr");
   }
+  return true;
 }
 
 template <typename AttrTy, typename StorageTy>
-mlir::DenseElementsAttr convertToDenseElementsAttr(
+std::optional<mlir::DenseElementsAttr> convertToDenseElementsAttr(
     cir::ConstArrayAttr attr, const llvm::SmallVectorImpl<int64_t> &dims,
     mlir::Type elementType, mlir::Type convertedElementType) {
   unsigned vectorSize = 1;
@@ -184,8 +231,12 @@ mlir::DenseElementsAttr convertToDenseElementsAttr(
     vectorSize *= dim;
   auto values = llvm::SmallVector<StorageTy, 8>(
       vectorSize, getZeroInitFromType<StorageTy>(elementType));
-  convertToDenseElementsAttrImpl<AttrTy>(attr, values, dims, /*currentDim=*/0,
-                                         /*initialIndex=*/0);
+
+  if (!convertToDenseElementsAttrImpl<AttrTy>(attr, values, dims,
+                                              /*currentDim=*/0,
+                                              /*initialIndex=*/0))
+    return std::nullopt;
+
   return mlir::DenseElementsAttr::get(
       mlir::RankedTensorType::get(dims, convertedElementType),
       llvm::ArrayRef(values));
