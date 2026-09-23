@@ -242,6 +242,12 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .customFor(ST.is64Bit() && ST.hasStdExtZbkc(), {s32})
       .unsupported();
 
+  // CLMULR is Zbc-only; Zbkc is a subset that has CLMUL/CLMULH but not CLMULR.
+  getActionDefinitionsBuilder(G_CLMULR)
+      .legalFor(ST.hasStdExtZbc(), {sXLen})
+      .customFor(ST.is64Bit() && ST.hasStdExtZbc(), {s32})
+      .unsupported();
+
   auto &CountZerosActions = getActionDefinitionsBuilder({G_CTLZ, G_CTTZ});
   auto &CountZerosPoisonActions =
       getActionDefinitionsBuilder({G_CTLZ_ZERO_POISON, G_CTTZ_ZERO_POISON});
@@ -865,6 +871,11 @@ bool RISCVLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return false;
   case Intrinsic::riscv_clmulh:
     Helper.MIRBuilder.buildInstr(TargetOpcode::G_CLMULH, {MI.getOperand(0)},
+                                 {MI.getOperand(2), MI.getOperand(3)});
+    MI.eraseFromParent();
+    return true;
+  case Intrinsic::riscv_clmulr:
+    Helper.MIRBuilder.buildInstr(TargetOpcode::G_CLMULR, {MI.getOperand(0)},
                                  {MI.getOperand(2), MI.getOperand(3)});
     MI.eraseFromParent();
     return true;
@@ -1626,18 +1637,20 @@ bool RISCVLegalizerInfo::legalizeCustom(
     return false;
   case TargetOpcode::G_ABS:
     return Helper.lowerAbsToMaxNeg(MI);
-  case TargetOpcode::G_CLMULH: {
+  case TargetOpcode::G_CLMULH:
+  case TargetOpcode::G_CLMULR: {
     assert(STI.is64Bit() &&
            MRI.getType(MI.getOperand(0).getReg()) == LLT::scalar(32) &&
            "Unexpected custom legalization");
     // Shift both inputs by 32 so the full product has 64 trailing zeros.
-    // CLMULH then returns the original 64-bit product. Extract its high half.
+    // Perform CLMULH or CLMULR on the shifted inputs, then extract the upper
+    // 32 bits of the result.
     auto Shift = MIRBuilder.buildConstant(sXLen, 32);
     auto LHS = MIRBuilder.buildAnyExt(sXLen, MI.getOperand(1));
     auto RHS = MIRBuilder.buildAnyExt(sXLen, MI.getOperand(2));
     auto ShiftedLHS = MIRBuilder.buildShl(sXLen, LHS, Shift);
     auto ShiftedRHS = MIRBuilder.buildShl(sXLen, RHS, Shift);
-    auto Product = MIRBuilder.buildInstr(TargetOpcode::G_CLMULH, {sXLen},
+    auto Product = MIRBuilder.buildInstr(MI.getOpcode(), {sXLen},
                                          {ShiftedLHS, ShiftedRHS});
     auto High = MIRBuilder.buildLShr(sXLen, Product, Shift);
     MIRBuilder.buildTrunc(MI.getOperand(0), High);

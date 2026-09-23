@@ -5726,7 +5726,14 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
     const MCSchedModel &Sched = ST->getSchedModel();
     const TargetInstrInfo *TII = ST->getInstrInfo();
     unsigned SchedClass = TII->get(Inst).getSchedClass();
-    const MCSchedClassDesc *SCD = Sched.getSchedClassDesc(SchedClass);
+    const MCSchedClassDesc *SCD = Sched.hasInstrSchedModel()
+                                      ? Sched.getSchedClassDesc(SchedClass)
+                                      : nullptr;
+    // If the cpu has no scheduling model, or it doesn't describe the load, then
+    // fall back to the default load latency. Variant scheduling classes can't
+    // be resolved without a MachineInstr, so treat them the same way.
+    if (!SCD || !SCD->isValid() || SCD->isVariant())
+      return (LT.first - 1) + ST->getLoadLatency();
     // We need to convert the number of loads before the last to a float here,
     // as the reciprocal throughput may be fractional.
     float NumLoads = (LT.first - 1).getValue();
@@ -6941,12 +6948,11 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
                                         BinOp, CostKind, FMF);
 }
 
-InstructionCost
-AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
-                               VectorType *SrcTy, TTI::TargetCostKind CostKind,
-                               ArrayRef<int> Mask, int Index, VectorType *SubTp,
-                               ArrayRef<const Value *> Args,
-                               const Instruction *CxtI) const {
+InstructionCost AArch64TTIImpl::getShuffleCost(
+    TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+    TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
+    VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CxtI,
+    TTI::VectorInstrContext VIC) const {
   assert((Mask.empty() || DstTy->isScalableTy() ||
           Mask.size() == DstTy->getElementCount().getKnownMinValue()) &&
          "Expected the Mask to match the return size if given");
@@ -8005,4 +8011,38 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
     return false;
   }
   return false;
+}
+
+bool AArch64TTIImpl::isLegalMaskedCompressStore(Type *DataType,
+                                                Align Alignment) const {
+  if (!(ST->isSVEAvailable() ||
+        (ST->isSVEorStreamingSVEAvailable() && ST->hasSME2p2())))
+    return false;
+
+  if (isa<FixedVectorType>(DataType) &&
+      DataType->getPrimitiveSizeInBits().getFixedValue() < 128)
+    return false;
+
+  if (!isa<VectorType>(DataType))
+    return isElementTypeLegalForScalableVector(DataType);
+
+  auto LT = getTypeLegalizationCost(DataType);
+  if (!LT.first.isValid())
+    return false;
+
+  // Use the i32 or i64 compact instructions for f16/bf16 unpacked types.
+  LLVMContext &Ctx = DataType->getContext();
+  switch (LT.second.SimpleTy) {
+  case MVT::nxv2f16:
+  case MVT::nxv2bf16:
+    return isElementTypeLegalForCompressStore(Type::getInt64Ty(Ctx));
+  case MVT::nxv4f16:
+  case MVT::nxv4bf16:
+    return isElementTypeLegalForCompressStore(Type::getInt32Ty(Ctx));
+  default:
+    break;
+  }
+
+  return isElementTypeLegalForCompressStore(
+      EVT(LT.second.getScalarType()).getTypeForEVT(Ctx));
 }

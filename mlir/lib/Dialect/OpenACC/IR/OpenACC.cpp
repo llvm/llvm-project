@@ -279,7 +279,7 @@ struct MemRefPointerLikeModel
     return {};
   }
 
-  bool isDeviceData(Type pointer, Value var) const {
+  bool isDeviceAccessible(Type pointer, Value var) const {
     auto memrefTy = cast<T>(pointer);
     Attribute memSpace = memrefTy.getMemorySpace();
     return isa_and_nonnull<gpu::AddressSpaceAttr>(memSpace);
@@ -405,10 +405,17 @@ struct MemrefGlobalVariableModel
     return nullptr;
   }
 
-  bool isDeviceData(Operation *op) const {
+  bool isDeviceAccessible(Operation *op) const {
     auto globalOp = cast<memref::GlobalOp>(op);
     Attribute memSpace = globalOp.getType().getMemorySpace();
     return isa_and_nonnull<gpu::AddressSpaceAttr>(memSpace);
+  }
+
+  bool isInDeviceMemory(Operation *op) const {
+    // A memref address space models storage that is physically resident on the
+    // device, so a device-accessible global is also in device memory. (There
+    // is no host-shared/migratable address space to exclude here.)
+    return isDeviceAccessible(op);
   }
 
   bool isCompilerGenerated(Operation *op) const { return false; }
@@ -2415,9 +2422,9 @@ void ParallelOp::build(mlir::OpBuilder &odsBuilder,
       /*numGangsDeviceType=*/nullptr, numWorkers,
       /*numWorkersDeviceType=*/nullptr, vectorLength,
       /*vectorLengthDeviceType=*/nullptr, ifCond, selfCond,
-      /*selfAttr=*/nullptr, reductionOperands, gangPrivateOperands,
+      /*selfAttr=*/false, reductionOperands, gangPrivateOperands,
       gangFirstPrivateOperands, dataClauseOperands,
-      /*defaultAttr=*/nullptr, /*combined=*/nullptr);
+      /*defaultAttr=*/nullptr, /*combined=*/false);
 }
 
 void acc::ParallelOp::addNumWorkersOperand(
@@ -5491,6 +5498,13 @@ bool mlir::acc::getImplicitFlag(mlir::Operation *accDataEntryOp) {
         return bitEnumContainsAny(mapInfo.getMapFlags(),
                                   mlir::acc::MapFlags::implicit);
       })
+      .Default([&](mlir::Operation *) { return false; });
+}
+
+bool mlir::acc::getSyntheticFlag(mlir::Operation *accDataClauseOp) {
+  return llvm::TypeSwitch<mlir::Operation *, bool>(accDataClauseOp)
+      .Case<ACC_DATA_CLAUSE_OPS>(
+          [&](auto dataClause) { return dataClause.getSynthetic(); })
       .Default([&](mlir::Operation *) { return false; });
 }
 

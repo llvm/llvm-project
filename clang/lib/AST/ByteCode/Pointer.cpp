@@ -999,6 +999,7 @@ bool Pointer::hasSameBase(const Pointer &A, const Pointer &B) {
                  B.Opaque.Base.asVarDecl()->getMostRecentDecl();
     return false;
   }
+  llvm_unreachable("should have been handled by the fully covered switch");
 }
 
 bool Pointer::pointToSameBlock(const Pointer &A, const Pointer &B) {
@@ -1370,6 +1371,10 @@ IntPointer IntPointer::baseCast(const interp::Context &Ctx,
 
   QualType CurType = getPointeeType();
   if (CurType.isNull() || !CurType->isRecordType())
+    return *this;
+
+  // null pointers stay null during a cast, per conv.ptr
+  if (Value == 0)
     return *this;
 
   const Record *R = Ctx.getRecord(CurType->getAsRecordDecl());

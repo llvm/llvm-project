@@ -134,3 +134,32 @@ cir.func @nested_try_in_filter() {
 // CHECK:         cir.eh.unexpected %[[OVT]] : !cir.eh_token
 // CHECK:       ^[[OUTER_CONTINUE]]:
 // CHECK:         cir.return
+
+// void target() noexcept
+// A terminate scope catches everything, so its dispatch has no type test and
+// no continue-unwinding edge.
+cir.func @terminate_scope() {
+  cir.try {
+    cir.call @_Z8externalv() : () -> ()
+    cir.yield
+  } catch all (%eh_token : !cir.eh_token) {
+    cir.eh.terminate %eh_token : !cir.eh_token
+  }
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @terminate_scope()
+// CHECK:         cir.try_call @_Z8externalv() ^[[NORMAL:bb[0-9]+]], ^[[UNWIND:bb[0-9]+]]
+// CHECK:       ^[[NORMAL]]:
+// CHECK:         cir.br ^[[CONTINUE:bb[0-9]+]]
+// CHECK:       ^[[UNWIND]]:
+// CHECK:         %[[EH:.*]] = cir.eh.initiate : !cir.eh_token
+// CHECK:         cir.br ^[[DISPATCH:bb[0-9]+]](%[[EH]] : !cir.eh_token)
+// CHECK:       ^[[DISPATCH]](%[[DT:.*]]: !cir.eh_token):
+// CHECK:         cir.eh.dispatch %[[DT]] : !cir.eh_token [
+// CHECK-NEXT:      catch_all : ^[[TERMINATE:bb[0-9]+]]
+// CHECK-NEXT:    ]
+// CHECK:       ^[[TERMINATE]](%[[TT:.*]]: !cir.eh_token):
+// CHECK:         cir.eh.terminate %[[TT]] : !cir.eh_token
+// CHECK:       ^[[CONTINUE]]:
+// CHECK:         cir.return
