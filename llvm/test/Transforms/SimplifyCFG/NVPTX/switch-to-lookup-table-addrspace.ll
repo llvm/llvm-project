@@ -605,24 +605,16 @@ return:
   ret ptr %r
 }
 
-; Known trade-off: SimplifyCFG screens switch-to-select candidates with the same
-; TTI hook, so a small switch over .shared symbols is no longer folded into a
-; select either, even though a select materializes no initializer at all. ARM's
-; ROPI/RWPI override behaves the same way.
+; A small switch over .shared symbols can still fold to selects, which do not
+; need a global initializer.
 define ptr addrspace(3) @shared_two_cases(i32 %i) {
 ; CHECK-LABEL: define ptr addrspace(3) @shared_two_cases(
 ; CHECK-SAME: i32 [[I:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    switch i32 [[I]], label %[[SW_DEFAULT:.*]] [
-; CHECK-NEXT:      i32 0, label %[[RETURN:.*]]
-; CHECK-NEXT:      i32 1, label %[[SW_BB1:.*]]
-; CHECK-NEXT:    ]
-; CHECK:       [[SW_BB1]]:
-; CHECK-NEXT:    br label %[[RETURN]]
-; CHECK:       [[SW_DEFAULT]]:
-; CHECK-NEXT:    br label %[[RETURN]]
-; CHECK:       [[RETURN]]:
-; CHECK-NEXT:    [[R:%.*]] = phi ptr addrspace(3) [ null, %[[SW_DEFAULT]] ], [ @buf1, %[[SW_BB1]] ], [ @buf0, %[[ENTRY]] ]
+; CHECK-NEXT:  [[RETURN:.*:]]
+; CHECK-NEXT:    [[SWITCH_SELECTCMP:%.*]] = icmp eq i32 [[I]], 1
+; CHECK-NEXT:    [[SWITCH_SELECT:%.*]] = select i1 [[SWITCH_SELECTCMP]], ptr addrspace(3) @buf1, ptr addrspace(3) null
+; CHECK-NEXT:    [[SWITCH_SELECTCMP1:%.*]] = icmp eq i32 [[I]], 0
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[SWITCH_SELECTCMP1]], ptr addrspace(3) @buf0, ptr addrspace(3) [[SWITCH_SELECT]]
 ; CHECK-NEXT:    ret ptr addrspace(3) [[R]]
 ;
 entry:
