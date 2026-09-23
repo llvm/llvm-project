@@ -20,6 +20,8 @@ namespace clang::tidy::bugprone {
 
 namespace {
 
+// Preserve same name as AST_MATCHER(isCompleteAndHasNoZeroValue)
+// NOLINTNEXTLINE(llvm-prefer-static-over-anonymous-namespace)
 bool isCompleteAndHasNoZeroValue(const EnumDecl *D) {
   const EnumDecl *Definition = D->getDefinition();
   return Definition && Definition->isComplete() &&
@@ -39,10 +41,10 @@ AST_MATCHER(EnumDecl, isCompleteAndHasNoZeroValue) {
 AST_MATCHER(Expr, isEmptyInit) {
   if (isa<CXXScalarValueInitExpr, ImplicitValueInitExpr>(&Node))
     return true;
-  if (const auto *Init = dyn_cast<InitListExpr>(&Node)) {
-    if (Init->getNumInits() == 0)
-      return true;
-  }
+  if (const auto *Init = dyn_cast<InitListExpr>(&Node);
+      Init && Init->getNumInits() == 0)
+    return true;
+
   return false;
 }
 
@@ -79,7 +81,7 @@ public:
     const RecordDecl *RD = T->getDecl()->getDefinition();
     if (!RD || RD->isUnion())
       return false;
-    auto VisitField = [this](const FieldDecl *F) {
+    const auto VisitField = [this](const FieldDecl *F) {
       return Visit(F->getType().getTypePtr());
     };
     return llvm::any_of(RD->fields(), VisitField);
@@ -106,9 +108,9 @@ void InvalidEnumDefaultInitializationCheck::registerMatchers(
     MatchFinder *Finder) {
   auto EnumWithoutZeroValue = enumType(hasDeclaration(
       enumDecl(isCompleteAndHasNoZeroValue(),
-               unless(matchers::matchesAnyListedName(IgnoredEnums)))
+               unless(matchers::matchesAnyListedRegexName(IgnoredEnums)))
           .bind("enum")));
-  auto EnumOrArrayOfEnum = qualType(hasUnqualifiedDesugaredType(
+  const auto EnumOrArrayOfEnum = qualType(hasUnqualifiedDesugaredType(
       anyOf(EnumWithoutZeroValue,
             arrayType(hasElementType(qualType(
                 hasUnqualifiedDesugaredType(EnumWithoutZeroValue)))))));
@@ -149,7 +151,7 @@ void InvalidEnumDefaultInitializationCheck::check(
   SourceLocation Loc = InitExpr->getExprLoc();
   if (Loc.isInvalid()) {
     if (isa<ImplicitValueInitExpr, InitListExpr>(InitExpr)) {
-      DynTypedNodeList Parents = ACtx.getParents(*InitExpr);
+      const DynTypedNodeList Parents = ACtx.getParents(*InitExpr);
       if (Parents.empty())
         return;
 
@@ -168,7 +170,7 @@ void InvalidEnumDefaultInitializationCheck::check(
         // The expression may be implicitly generated for an initialization.
         // Search for a parent initialization list with valid source location.
         while (InitList->getExprLoc().isInvalid()) {
-          DynTypedNodeList Parents = ACtx.getParents(*InitList);
+          const DynTypedNodeList Parents = ACtx.getParents(*InitList);
           if (Parents.empty())
             return;
           InitList = Parents[0].get<InitListExpr>();

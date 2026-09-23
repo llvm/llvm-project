@@ -32,6 +32,7 @@ class StepAvoidsNoDebugTestCase(TestBase):
     @expectedFailureAll(
         archs=["aarch64"], oslist=["windows"], bugnumber="llvm.org/pr56292"
     )
+    @expectedFailureAll(archs=["arm64e"])
     def test_step_over_with_python(self):
         """Test stepping over using avoid-no-debug with dwarf."""
         self.build()
@@ -50,6 +51,7 @@ class StepAvoidsNoDebugTestCase(TestBase):
     @expectedFailureAll(
         archs=["aarch64"], oslist=["windows"], bugnumber="llvm.org/pr56292"
     )
+    @expectedFailureAll(archs=["arm64e"])
     def test_step_in_with_python(self):
         """Test stepping in using avoid-no-debug with dwarf."""
         self.build()
@@ -90,28 +92,9 @@ class StepAvoidsNoDebugTestCase(TestBase):
         )
 
     def get_to_starting_point(self):
-        exe = self.getBuildArtifact("a.out")
-        error = lldb.SBError()
-
-        self.target = self.dbg.CreateTarget(exe)
-        self.assertTrue(self.target, VALID_TARGET)
-
-        inner_bkpt = self.target.BreakpointCreateBySourceRegex(
-            "Stop here and step out of me", self.main_source_spec
+        self.target, self.process, self.thread, _ = lldbutil.run_to_source_breakpoint(
+            self, "Stop here and step out of me", self.main_source_spec
         )
-        self.assertTrue(inner_bkpt, VALID_BREAKPOINT)
-
-        # Now launch the process, and do not stop at entry point.
-        self.process = self.target.LaunchSimple(
-            None, None, self.get_process_working_directory()
-        )
-
-        self.assertTrue(self.process, PROCESS_IS_VALID)
-
-        # Now finish, and make sure the return value is correct.
-        threads = lldbutil.get_threads_stopped_at_breakpoint(self.process, inner_bkpt)
-        self.assertEqual(len(threads), 1, "Stopped at inner breakpoint.")
-        self.thread = threads[0]
 
     def do_step_out_past_nodebug(self):
         # The first step out takes us to the called_from_nodebug frame, just to make sure setting

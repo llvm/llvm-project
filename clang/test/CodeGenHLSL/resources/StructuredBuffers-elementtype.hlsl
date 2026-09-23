@@ -1,25 +1,25 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.2-compute -finclude-default-header -fnative-half-type \
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.2-compute -finclude-default-header -fnative-half-type -fnative-int16-type \
 // RUN: -emit-llvm -o - -DRESOURCE=StructuredBuffer %s | FileCheck %s -DRESOURCE=StructuredBuffer -check-prefixes=DXIL-RO
 
-// RUN: %clang_cc1 -triple spirv-unknown-vulkan1.3-compute -finclude-default-header -fnative-half-type \
+// RUN: %clang_cc1 -triple spirv-unknown-vulkan1.3-compute -finclude-default-header -fnative-half-type -fnative-int16-type \
 // RUN: -emit-llvm -o - -DRESOURCE=StructuredBuffer %s | FileCheck %s -DRESOURCE=StructuredBuffer -check-prefixes=SPV-RO
 
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.2-compute -finclude-default-header -fnative-half-type \
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.2-compute -finclude-default-header -fnative-half-type -fnative-int16-type \
 // RUN: -emit-llvm -o - -DRESOURCE=RWStructuredBuffer %s | FileCheck %s -DRESOURCE=RWStructuredBuffer -check-prefixes=DXIL-RW
 
-// RUN: %clang_cc1 -triple spirv-unknown-vulkan1.3-compute -finclude-default-header -fnative-half-type \
+// RUN: %clang_cc1 -triple spirv-unknown-vulkan1.3-compute -finclude-default-header -fnative-half-type -fnative-int16-type \
 // RUN: -emit-llvm -o - -DRESOURCE=RWStructuredBuffer %s | FileCheck %s -DRESOURCE=RWStructuredBuffer -check-prefixes=SPV-RW
 
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.2-compute -finclude-default-header -fnative-half-type \
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.2-compute -finclude-default-header -fnative-half-type -fnative-int16-type \
 // RUN: -emit-llvm -o - -DRESOURCE=AppendStructuredBuffer %s | FileCheck %s -DRESOURCE=AppendStructuredBuffer -check-prefixes=DXIL-RW
 
-// RUN: %clang_cc1 -triple spirv-unknown-vulkan1.3-compute -finclude-default-header -fnative-half-type \
+// RUN: %clang_cc1 -triple spirv-unknown-vulkan1.3-compute -finclude-default-header -fnative-half-type -fnative-int16-type \
 // RUN: -emit-llvm -o - -DRESOURCE=AppendStructuredBuffer %s | FileCheck %s -DRESOURCE=AppendStructuredBuffer -check-prefixes=SPV-RW
 
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.2-compute -finclude-default-header -fnative-half-type \
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.2-compute -finclude-default-header -fnative-half-type -fnative-int16-type \
 // RUN: -emit-llvm -o - -DRESOURCE=ConsumeStructuredBuffer %s | FileCheck %s -DRESOURCE=ConsumeStructuredBuffer -check-prefixes=DXIL-RW
 
-// RUN: %clang_cc1 -triple spirv-unknown-vulkan1.3-compute -finclude-default-header -fnative-half-type \
+// RUN: %clang_cc1 -triple spirv-unknown-vulkan1.3-compute -finclude-default-header -fnative-half-type -fnative-int16-type \
 // RUN: -emit-llvm -o - -DRESOURCE=ConsumeStructuredBuffer %s | FileCheck %s -DRESOURCE=ConsumeStructuredBuffer -check-prefixes=SPV-RW
 
 // DXIL-RO: %"class.hlsl::[[RESOURCE]]" = type { target("dx.RawBuffer", i16, 0, 0) }

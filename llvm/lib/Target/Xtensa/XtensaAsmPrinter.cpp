@@ -85,7 +85,7 @@ void XtensaAsmPrinter::emitMachineConstantPoolValue(
 
     if (XtensaSym->isPrivateLinkage()) {
       const DataLayout &DL = getDataLayout();
-      MCSym = OutContext.getOrCreateSymbol(Twine(DL.getPrivateGlobalPrefix()) +
+      MCSym = OutContext.getOrCreateSymbol(Twine(DL.getInternalSymbolPrefix()) +
                                            SymName);
     } else {
       MCSym = OutContext.getOrCreateSymbol(SymName);
@@ -96,13 +96,6 @@ void XtensaAsmPrinter::emitMachineConstantPoolValue(
   auto *TS =
       static_cast<XtensaTargetStreamer *>(OutStreamer->getTargetStreamer());
   auto Spec = getModifierSpecifier(XtensaCPV->getModifier());
-
-  if (XtensaCPV->getModifier() != XtensaCP::no_modifier) {
-    std::string SymName(MCSym->getName());
-    StringRef Modifier = XtensaCPV->getModifierText();
-    SymName += Modifier;
-    MCSym = OutContext.getOrCreateSymbol(SymName);
-  }
 
   const MCExpr *Expr = MCSymbolRefExpr::create(MCSym, Spec, OutContext);
   TS->emitLiteral(LblSym, Expr, false);

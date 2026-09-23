@@ -9,6 +9,8 @@ from lldbsuite.test import lldbutil
 
 
 class CppValueCastTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     @skipIf(bugnumber="llvm.org/PR36714")
     @add_test_categories(["pyapi"])
     def test_value_cast_with_virtual_inheritance(self):
@@ -41,22 +43,9 @@ class CppValueCastTestCase(TestBase):
 
     def do_sbvalue_cast(self, exe_name):
         """Test SBValue::Cast(SBType) API for C++ types."""
-        exe = self.getBuildArtifact(exe_name)
-
-        # Create a target from the debugger.
-
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        # Set up our breakpoints:
-
-        breakpoint = target.BreakpointCreateByLocation(self.source, self.line)
-        self.assertTrue(breakpoint, VALID_BREAKPOINT)
-
-        # Now launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-
-        self.assertState(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
+        target, process, thread, breakpoint = lldbutil.run_to_line_breakpoint(
+            self, lldb.SBFileSpec(self.source), self.line, exe_name=exe_name
+        )
 
         # Find DerivedA and DerivedB types.
         typeA = target.FindFirstType("DerivedA")
@@ -68,9 +57,6 @@ class CppValueCastTestCase(TestBase):
         error = lldb.SBError()
 
         # First stop is for DerivedA instance.
-        threads = lldbutil.get_threads_stopped_at_breakpoint(process, breakpoint)
-        self.assertEqual(len(threads), 1)
-        thread = threads[0]
         frame0 = thread.GetFrameAtIndex(0)
 
         tellerA = frame0.FindVariable("teller", lldb.eNoDynamicValues)

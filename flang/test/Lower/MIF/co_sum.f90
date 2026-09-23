@@ -36,7 +36,7 @@ program test_co_sum
   ! CHECK: %[[V1:.*]] = fir.embox %[[ARRAY_I:.*]]#0(%[[SHAPE_2]]) : (!fir.ref<!fir.array<2xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<2xi32>>
   ! CHECK: mif.co_sum %[[V1]] : (!fir.box<!fir.array<2xi32>>)
   call co_sum(array_i)
-   
+
   ! CHECK: %[[SHAPE_2:.*]] = fir.shape %[[C2_2:.*]] : (index) -> !fir.shape<1>
   ! CHECK: %[[V1:.*]] = fir.embox %[[ARRAY_D:.*]]#0(%[[SHAPE_2]]) : (!fir.ref<!fir.array<2xf64>>, !fir.shape<1>) -> !fir.box<!fir.array<2xf64>>
   ! CHECK: mif.co_sum %[[V1]] result %[[C1_i32:.*]] stat %[[STATUS:.*]]#0 : (!fir.box<!fir.array<2xf64>>, i32, !fir.ref<i32>)

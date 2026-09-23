@@ -9,8 +9,7 @@
 
 #
 # This script performs a monolithic build of the monorepo and runs the tests of
-# most projects on Linux. This should be replaced by per-project scripts that
-# run only the relevant tests.
+# most projects on Linux.
 #
 
 source .ci/utils.sh
@@ -30,6 +29,14 @@ runtime_targets_needs_reconfig="${5}"
 enable_cir="${6}"
 
 lit_args="-v --xunit-xml-output ${BUILD_DIR}/test-results.xml --use-unique-output-file-name --timeout=1200 --time-tests --succinct"
+
+runtime_cmake_args=()
+if [[ " ${runtime_targets} " == *" check-libclc "* ]]; then
+  runtime_cmake_args+=(
+    -D RUNTIMES_amdgcn-amd-amdhsa-llvm_LLVM_ENABLE_RUNTIMES=libclc
+    -D LLVM_RUNTIME_TARGETS="default;amdgcn-amd-amdhsa-llvm"
+  )
+fi
 
 start-group "CMake"
 
@@ -54,21 +61,26 @@ cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D CMAKE_CXX_FLAGS=-gmlt \
       -D CMAKE_C_COMPILER_LAUNCHER=sccache \
       -D CMAKE_CXX_COMPILER_LAUNCHER=sccache \
+      -D CMAKE_DISABLE_PRECOMPILE_HEADERS=ON \
       -D LIBCXX_CXX_ABI=libcxxabi \
       -D MLIR_ENABLE_BINDINGS_PYTHON=ON \
       -D LLDB_ENABLE_PYTHON=ON \
       -D LLDB_ENFORCE_STRICT_TEST_REQUIREMENTS=ON \
       -D CMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
       -D CMAKE_EXE_LINKER_FLAGS="-no-pie" \
-      -D LLVM_ENABLE_WERROR=ON
+      -D LLVM_ENABLE_WERROR=ON \
+      -D LLVM_BINUTILS_INCDIR=/usr \
+      "${runtime_cmake_args[@]}"
 
 start-group "ninja"
 
-# Targets are not escaped as they are passed as separate arguments.
-ninja -C "${BUILD_DIR}" -k 0 ${targets} |& tee ninja.log
-cp ${BUILD_DIR}/.ninja_log ninja.ninja_log
+if [[ -n "${targets}" ]]; then
+  # Targets are not escaped as they are passed as separate arguments.
+  ninja -C "${BUILD_DIR}" -k 0 ${targets} |& tee ninja.log
+  cp ${BUILD_DIR}/.ninja_log ninja.ninja_log
+fi
 
-if [[ "${runtime_targets}" != "" ]]; then
+if [[ -n "${runtime_targets}" ]]; then
   start-group "ninja Runtimes"
 
   ninja -C "${BUILD_DIR}" ${runtime_targets} |& tee ninja_runtimes.log
@@ -77,7 +89,7 @@ fi
 
 # Compiling runtimes with just-built Clang and running their tests
 # as an additional testing for Clang.
-if [[ "${runtime_targets_needs_reconfig}" != "" ]]; then
+if [[ -n "${runtime_targets_needs_reconfig}" ]]; then
   start-group "CMake Runtimes C++26"
 
   cmake \

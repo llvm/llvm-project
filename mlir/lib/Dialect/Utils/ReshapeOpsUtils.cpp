@@ -13,6 +13,7 @@
 #include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 
 #include <numeric>
 #include <optional>
@@ -422,11 +423,10 @@ static unsigned getMaxPosOfType(ArrayRef<ReassociationExprs> exprArrays) {
 
 ArrayAttr mlir::getReassociationIndicesAttribute(
     Builder &b, ArrayRef<ReassociationIndices> reassociation) {
-  SmallVector<Attribute, 4> reassociationAttr =
-      llvm::to_vector<4>(llvm::map_range(
-          reassociation, [&](const ReassociationIndices &indices) -> Attribute {
-            return cast<Attribute>(b.getI64ArrayAttr(indices));
-          }));
+  SmallVector<Attribute, 4> reassociationAttr = llvm::map_to_vector<4>(
+      reassociation, [&](const ReassociationIndices &indices) -> Attribute {
+        return cast<Attribute>(b.getI64ArrayAttr(indices));
+      });
   return b.getArrayAttr(reassociationAttr);
 }
 

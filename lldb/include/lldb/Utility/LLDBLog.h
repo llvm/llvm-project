@@ -50,12 +50,17 @@ enum class LLDBLog : Log::MaskType {
   OnDemand = Log::ChannelFlag<31>,
   Source = Log::ChannelFlag<32>,
   Disassembler = Log::ChannelFlag<33>,
-  LLVM_MARK_AS_BITMASK_ENUM(Disassembler),
+  InstrumentationRuntime = Log::ChannelFlag<34>,
+  LLVM_MARK_AS_BITMASK_ENUM(InstrumentationRuntime),
 };
 
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 
-void InitializeLldbChannel();
+class LLDBLogChannel {
+public:
+  static void Initialize();
+  static void Terminate();
+};
 
 template <> Log::Channel &LogChannelFor<LLDBLog>();
 } // namespace lldb_private

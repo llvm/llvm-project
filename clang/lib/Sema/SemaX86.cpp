@@ -343,6 +343,46 @@ bool SemaX86::CheckBuiltinRoundingOrSAE(unsigned BuiltinID, CallExpr *TheCall) {
          << Arg->getSourceRange();
 }
 
+bool SemaX86::CheckBuiltinVUnpackBImm(CallExpr *TheCall) {
+  const unsigned ArgNum = 1;
+
+  // Note that we don't force a hard error on the range check here, allowing
+  // template-generated or macro-generated dead code to potentially have out-of-
+  // range values. These need to code generate, but don't need to necessarily
+  // make any sense. We use a warning that defaults to an error.
+  if (SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, 0, 63,
+                                      /*RangeIsError*/ false))
+    return true;
+
+  llvm::APSInt Result;
+
+  // We can't check the value of a dependent argument.
+  Expr *Arg = TheCall->getArg(ArgNum);
+  if (Arg->isTypeDependent() || Arg->isValueDependent())
+    return false;
+
+  // Check constant-ness first.
+  if (SemaRef.BuiltinConstantArg(TheCall, ArgNum, Result))
+    return true;
+
+  uint64_t Imm = Result.getZExtValue();
+  // Skip reserved-encoding checks when the range check already diagnosed
+  // the immediate.
+  if (Imm > 63)
+    return false;
+
+  // Make sure size (imm[4:2]) and start (imm[1:0]) form a defined pairing.
+  unsigned Size = (Imm >> 2) & 0x7;
+  unsigned Start = Imm & 0x3;
+  if (Size == 2 || ((Size == 3 || Size == 4) && Start <= 1) ||
+      (Size >= 5 && Start == 0))
+    return false;
+
+  return Diag(TheCall->getBeginLoc(),
+              diag::err_x86_builtin_reserved_vunpackb_imm)
+         << toString(Result, 10) << Arg->getSourceRange();
+}
+
 // Check if the gather/scatter scale is legal.
 bool SemaX86::CheckBuiltinGatherScatterScale(unsigned BuiltinID,
                                              CallExpr *TheCall) {
@@ -489,14 +529,6 @@ bool SemaX86::CheckBuiltinTileArguments(unsigned BuiltinID, CallExpr *TheCall) {
   case X86::BI__builtin_ia32_tileloaddrst164:
   case X86::BI__builtin_ia32_tilestored64:
   case X86::BI__builtin_ia32_tilezero:
-  case X86::BI__builtin_ia32_t2rpntlvwz0:
-  case X86::BI__builtin_ia32_t2rpntlvwz0t1:
-  case X86::BI__builtin_ia32_t2rpntlvwz1:
-  case X86::BI__builtin_ia32_t2rpntlvwz1t1:
-  case X86::BI__builtin_ia32_t2rpntlvwz0rst1:
-  case X86::BI__builtin_ia32_t2rpntlvwz1rs:
-  case X86::BI__builtin_ia32_t2rpntlvwz1rst1:
-  case X86::BI__builtin_ia32_t2rpntlvwz0rs:
   case X86::BI__builtin_ia32_tcvtrowps2bf16h:
   case X86::BI__builtin_ia32_tcvtrowps2bf16l:
   case X86::BI__builtin_ia32_tcvtrowps2phh:
@@ -516,17 +548,16 @@ bool SemaX86::CheckBuiltinTileArguments(unsigned BuiltinID, CallExpr *TheCall) {
   case X86::BI__builtin_ia32_tdpbhf8ps:
   case X86::BI__builtin_ia32_tdphbf8ps:
   case X86::BI__builtin_ia32_tdphf8ps:
-  case X86::BI__builtin_ia32_ttdpbf16ps:
-  case X86::BI__builtin_ia32_ttdpfp16ps:
-  case X86::BI__builtin_ia32_ttcmmimfp16ps:
-  case X86::BI__builtin_ia32_ttcmmrlfp16ps:
-  case X86::BI__builtin_ia32_tconjtcmmimfp16ps:
-  case X86::BI__builtin_ia32_tmmultf32ps:
-  case X86::BI__builtin_ia32_ttmmultf32ps:
     return CheckBuiltinTileRangeAndDuplicate(TheCall, {0, 1, 2});
-  case X86::BI__builtin_ia32_ttransposed:
-  case X86::BI__builtin_ia32_tconjtfp16:
-    return CheckBuiltinTileArgumentsRange(TheCall, {0, 1});
+  case X86::BI__builtin_ia32_tcvtrowps2bf16hi:
+  case X86::BI__builtin_ia32_tcvtrowps2bf16li:
+  case X86::BI__builtin_ia32_tcvtrowps2phhi:
+  case X86::BI__builtin_ia32_tcvtrowps2phli:
+  case X86::BI__builtin_ia32_tcvtrowd2psi:
+  case X86::BI__builtin_ia32_tilemovrowi:
+    return CheckBuiltinTileArgumentsRange(TheCall, 0) ||
+           SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 255,
+                                           /*RangeIsError=*/false);
   }
 }
 static bool isX86_32Builtin(unsigned BuiltinID) {
@@ -730,6 +761,10 @@ bool SemaX86::CheckBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
     l = 0;
     u = 31;
     break;
+  case X86::BI__builtin_ia32_vunpackb128:
+  case X86::BI__builtin_ia32_vunpackb256:
+  case X86::BI__builtin_ia32_vunpackb512:
+    return CheckBuiltinVUnpackBImm(TheCall);
   case X86::BI__builtin_ia32_cmpps:
   case X86::BI__builtin_ia32_cmpss:
   case X86::BI__builtin_ia32_cmppd:
@@ -1061,9 +1096,10 @@ void SemaX86::handleForceAlignArgPointerAttr(Decl *D, const ParsedAttr &AL) {
                  X86ForceAlignArgPointerAttr(getASTContext(), AL));
 }
 
-bool SemaX86::checkTargetClonesAttr(
-    SmallVectorImpl<StringRef> &Params, SmallVectorImpl<SourceLocation> &Locs,
-    SmallVectorImpl<SmallString<64>> &NewParams) {
+bool SemaX86::checkTargetClonesAttr(const SmallVectorImpl<StringRef> &Params,
+                                    const SmallVectorImpl<SourceLocation> &Locs,
+                                    SmallVectorImpl<SmallString<64>> &NewParams,
+                                    SourceLocation AttrLoc) {
   using namespace DiagAttrParams;
 
   assert(Params.size() == Locs.size() &&
@@ -1113,7 +1149,7 @@ bool SemaX86::checkTargetClonesAttr(
     Diag(Locs[0], diag::warn_target_clone_mixed_values);
 
   if (!HasDefault)
-    return Diag(Locs[0], diag::err_target_clone_must_have_default);
+    return Diag(AttrLoc, diag::err_target_clone_must_have_default);
 
   return false;
 }

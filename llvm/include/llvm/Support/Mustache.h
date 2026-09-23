@@ -78,7 +78,6 @@
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/StringSaver.h"
 #include <functional>
-#include <vector>
 
 namespace llvm::mustache {
 

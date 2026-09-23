@@ -22,6 +22,7 @@
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 class _LIBCPP_EXPORTED_FROM_ABI system_error : public runtime_error {
   error_code __ec_;
@@ -36,7 +37,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI system_error(const system_error&) _NOEXCEPT = default;
   ~system_error() _NOEXCEPT override;
 
-  _LIBCPP_HIDE_FROM_ABI const error_code& code() const _NOEXCEPT { return __ec_; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const error_code& code() const _NOEXCEPT { return __ec_; }
 };
 
 // __ev is expected to be an error in the generic_category domain (e.g. from
@@ -52,6 +53,7 @@ public:
 #endif
 }
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___SYSTEM_ERROR_SYSTEM_ERROR_H

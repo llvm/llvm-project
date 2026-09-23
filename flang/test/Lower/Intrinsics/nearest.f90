@@ -4,8 +4,8 @@
   ! CHECK:     %[[V_0:[0-9]+]] = fir.dummy_scope : !fir.dscope
   ! CHECK:     %[[V_1:[0-9]+]] = fir.alloca f16 {bindc_name = "res", uniq_name = "_QFnearest_test1Eres"}
   ! CHECK:     %[[V_2:[0-9]+]] = fir.declare %[[V_1]] {uniq_name = "_QFnearest_test1Eres"} : (!fir.ref<f16>) -> !fir.ref<f16>
-  ! CHECK:     %[[V_3:[0-9]+]] = fir.declare %arg1 dummy_scope %[[V_0]] {uniq_name = "_QFnearest_test1Es"} : (!fir.ref<f16>, !fir.dscope) -> !fir.ref<f16>
-  ! CHECK:     %[[V_4:[0-9]+]] = fir.declare %arg0 dummy_scope %[[V_0]] {uniq_name = "_QFnearest_test1Ex"} : (!fir.ref<f16>, !fir.dscope) -> !fir.ref<f16>
+  ! CHECK:     %[[V_3:[0-9]+]] = fir.declare %arg1 dummy_scope %[[V_0]] arg {{[0-9]+}} {uniq_name = "_QFnearest_test1Es"} : (!fir.ref<f16>, !fir.dscope) -> !fir.ref<f16>
+  ! CHECK:     %[[V_4:[0-9]+]] = fir.declare %arg0 dummy_scope %[[V_0]] arg {{[0-9]+}} {uniq_name = "_QFnearest_test1Ex"} : (!fir.ref<f16>, !fir.dscope) -> !fir.ref<f16>
   ! CHECK:     %[[V_5:[0-9]+]] = fir.load %[[V_4]] : !fir.ref<f16>
   ! CHECK:     %[[V_6:[0-9]+]] = fir.load %[[V_3]] : !fir.ref<f16>
   ! CHECK:     %[[V_7:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_5]]) <{bit = 3 : i32}> : (f16) -> i1
@@ -63,8 +63,8 @@ end
   ! CHECK:     %[[V_0:[0-9]+]] = fir.dummy_scope : !fir.dscope
   ! CHECK:     %[[V_1:[0-9]+]] = fir.alloca bf16 {bindc_name = "res", uniq_name = "_QFnearest_test2Eres"}
   ! CHECK:     %[[V_2:[0-9]+]] = fir.declare %[[V_1]] {uniq_name = "_QFnearest_test2Eres"} : (!fir.ref<bf16>) -> !fir.ref<bf16>
-  ! CHECK:     %[[V_3:[0-9]+]] = fir.declare %arg1 dummy_scope %[[V_0]] {uniq_name = "_QFnearest_test2Es"} : (!fir.ref<bf16>, !fir.dscope) -> !fir.ref<bf16>
-  ! CHECK:     %[[V_4:[0-9]+]] = fir.declare %arg0 dummy_scope %[[V_0]] {uniq_name = "_QFnearest_test2Ex"} : (!fir.ref<bf16>, !fir.dscope) -> !fir.ref<bf16>
+  ! CHECK:     %[[V_3:[0-9]+]] = fir.declare %arg1 dummy_scope %[[V_0]] arg {{[0-9]+}} {uniq_name = "_QFnearest_test2Es"} : (!fir.ref<bf16>, !fir.dscope) -> !fir.ref<bf16>
+  ! CHECK:     %[[V_4:[0-9]+]] = fir.declare %arg0 dummy_scope %[[V_0]] arg {{[0-9]+}} {uniq_name = "_QFnearest_test2Ex"} : (!fir.ref<bf16>, !fir.dscope) -> !fir.ref<bf16>
   ! CHECK:     %[[V_5:[0-9]+]] = fir.load %[[V_4]] : !fir.ref<bf16>
   ! CHECK:     %[[V_6:[0-9]+]] = fir.load %[[V_3]] : !fir.ref<bf16>
   ! CHECK:     %[[V_7:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_5]]) <{bit = 3 : i32}> : (bf16) -> i1
@@ -126,8 +126,8 @@ end
   ! CHECK:     %[[V_0:[0-9]+]] = fir.dummy_scope : !fir.dscope
   ! CHECK:     %[[V_1:[0-9]+]] = fir.alloca f32 {bindc_name = "res", uniq_name = "_QFnearest_test3Eres"}
   ! CHECK:     %[[V_2:[0-9]+]] = fir.declare %[[V_1]] {uniq_name = "_QFnearest_test3Eres"} : (!fir.ref<f32>) -> !fir.ref<f32>
-  ! CHECK:     %[[V_3:[0-9]+]] = fir.declare %arg1 dummy_scope %[[V_0]] {uniq_name = "_QFnearest_test3Es"} : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
-  ! CHECK:     %[[V_4:[0-9]+]] = fir.declare %arg0 dummy_scope %[[V_0]] {uniq_name = "_QFnearest_test3Ex"} : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
+  ! CHECK:     %[[V_3:[0-9]+]] = fir.declare %arg1 dummy_scope %[[V_0]] arg {{[0-9]+}} {uniq_name = "_QFnearest_test3Es"} : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
+  ! CHECK:     %[[V_4:[0-9]+]] = fir.declare %arg0 dummy_scope %[[V_0]] arg {{[0-9]+}} {uniq_name = "_QFnearest_test3Ex"} : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
   ! CHECK:     %[[V_5:[0-9]+]] = fir.load %[[V_4]] : !fir.ref<f32>
   ! CHECK:     %[[V_6:[0-9]+]] = fir.load %[[V_3]] : !fir.ref<f32>
   ! CHECK:     %[[V_7:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_5]]) <{bit = 3 : i32}> : (f32) -> i1
@@ -185,8 +185,8 @@ end
   ! CHECK:     %[[V_0:[0-9]+]] = fir.dummy_scope : !fir.dscope
   ! CHECK:     %[[V_1:[0-9]+]] = fir.alloca f64 {bindc_name = "res", uniq_name = "_QFnearest_test4Eres"}
   ! CHECK:     %[[V_2:[0-9]+]] = fir.declare %[[V_1]] {uniq_name = "_QFnearest_test4Eres"} : (!fir.ref<f64>) -> !fir.ref<f64>
-  ! CHECK:     %[[V_3:[0-9]+]] = fir.declare %arg1 dummy_scope %[[V_0]] {uniq_name = "_QFnearest_test4Es"} : (!fir.ref<f64>, !fir.dscope) -> !fir.ref<f64>
-  ! CHECK:     %[[V_4:[0-9]+]] = fir.declare %arg0 dummy_scope %[[V_0]] {uniq_name = "_QFnearest_test4Ex"} : (!fir.ref<f64>, !fir.dscope) -> !fir.ref<f64>
+  ! CHECK:     %[[V_3:[0-9]+]] = fir.declare %arg1 dummy_scope %[[V_0]] arg {{[0-9]+}} {uniq_name = "_QFnearest_test4Es"} : (!fir.ref<f64>, !fir.dscope) -> !fir.ref<f64>
+  ! CHECK:     %[[V_4:[0-9]+]] = fir.declare %arg0 dummy_scope %[[V_0]] arg {{[0-9]+}} {uniq_name = "_QFnearest_test4Ex"} : (!fir.ref<f64>, !fir.dscope) -> !fir.ref<f64>
   ! CHECK:     %[[V_5:[0-9]+]] = fir.load %[[V_4]] : !fir.ref<f64>
   ! CHECK:     %[[V_6:[0-9]+]] = fir.load %[[V_3]] : !fir.ref<f64>
   ! CHECK:     %[[V_7:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_5]]) <{bit = 3 : i32}> : (f64) -> i1
@@ -244,8 +244,8 @@ end
   ! CHECK-KIND10:     %[[V_0:[0-9]+]] = fir.dummy_scope : !fir.dscope
   ! CHECK-KIND10:     %[[V_1:[0-9]+]] = fir.alloca f80 {bindc_name = "res", uniq_name = "_QFnearest_test5Eres"}
   ! CHECK-KIND10:     %[[V_2:[0-9]+]] = fir.declare %[[V_1]] {uniq_name = "_QFnearest_test5Eres"} : (!fir.ref<f80>) -> !fir.ref<f80>
-  ! CHECK-KIND10:     %[[V_3:[0-9]+]] = fir.declare %arg1 dummy_scope %[[V_0]] {uniq_name = "_QFnearest_test5Es"} : (!fir.ref<f80>, !fir.dscope) -> !fir.ref<f80>
-  ! CHECK-KIND10:     %[[V_4:[0-9]+]] = fir.declare %arg0 dummy_scope %[[V_0]] {uniq_name = "_QFnearest_test5Ex"} : (!fir.ref<f80>, !fir.dscope) -> !fir.ref<f80>
+  ! CHECK-KIND10:     %[[V_3:[0-9]+]] = fir.declare %arg1 dummy_scope %[[V_0]] arg {{[0-9]+}} {uniq_name = "_QFnearest_test5Es"} : (!fir.ref<f80>, !fir.dscope) -> !fir.ref<f80>
+  ! CHECK-KIND10:     %[[V_4:[0-9]+]] = fir.declare %arg0 dummy_scope %[[V_0]] arg {{[0-9]+}} {uniq_name = "_QFnearest_test5Ex"} : (!fir.ref<f80>, !fir.dscope) -> !fir.ref<f80>
   ! CHECK-KIND10:     %[[V_5:[0-9]+]] = fir.load %[[V_4]] : !fir.ref<f80>
   ! CHECK-KIND10:     %[[V_6:[0-9]+]] = fir.load %[[V_3]] : !fir.ref<f80>
   ! CHECK-KIND10:     %[[V_7:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_5]]) <{bit = 3 : i32}> : (f80) -> i1
@@ -291,8 +291,8 @@ end
   ! CHECK-KIND16:     %[[V_0:[0-9]+]] = fir.dummy_scope : !fir.dscope
   ! CHECK-KIND16:     %[[V_1:[0-9]+]] = fir.alloca f128 {bindc_name = "res", uniq_name = "_QFnearest_test6Eres"}
   ! CHECK-KIND16:     %[[V_2:[0-9]+]] = fir.declare %[[V_1]] {uniq_name = "_QFnearest_test6Eres"} : (!fir.ref<f128>) -> !fir.ref<f128>
-  ! CHECK-KIND16:     %[[V_3:[0-9]+]] = fir.declare %arg1 dummy_scope %[[V_0]] {uniq_name = "_QFnearest_test6Es"} : (!fir.ref<f128>, !fir.dscope) -> !fir.ref<f128>
-  ! CHECK-KIND16:     %[[V_4:[0-9]+]] = fir.declare %arg0 dummy_scope %[[V_0]] {uniq_name = "_QFnearest_test6Ex"} : (!fir.ref<f128>, !fir.dscope) -> !fir.ref<f128>
+  ! CHECK-KIND16:     %[[V_3:[0-9]+]] = fir.declare %arg1 dummy_scope %[[V_0]] arg {{[0-9]+}} {uniq_name = "_QFnearest_test6Es"} : (!fir.ref<f128>, !fir.dscope) -> !fir.ref<f128>
+  ! CHECK-KIND16:     %[[V_4:[0-9]+]] = fir.declare %arg0 dummy_scope %[[V_0]] arg {{[0-9]+}} {uniq_name = "_QFnearest_test6Ex"} : (!fir.ref<f128>, !fir.dscope) -> !fir.ref<f128>
   ! CHECK-KIND16:     %[[V_5:[0-9]+]] = fir.load %[[V_4]] : !fir.ref<f128>
   ! CHECK-KIND16:     %[[V_6:[0-9]+]] = fir.load %[[V_3]] : !fir.ref<f128>
   ! CHECK-KIND16:     %[[V_7:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_5]]) <{bit = 3 : i32}> : (f128) -> i1
@@ -351,8 +351,8 @@ end
   ! CHECK-KIND16:     %[[V_0:[0-9]+]] = fir.dummy_scope : !fir.dscope
   ! CHECK-KIND16:     %[[V_1:[0-9]+]] = fir.alloca f128 {bindc_name = "res", uniq_name = "_QFnearest_test7Eres"}
   ! CHECK-KIND16:     %[[V_2:[0-9]+]] = fir.declare %[[V_1]] {uniq_name = "_QFnearest_test7Eres"} : (!fir.ref<f128>) -> !fir.ref<f128>
-  ! CHECK-KIND16:     %[[V_3:[0-9]+]] = fir.declare %arg1 dummy_scope %[[V_0]] {uniq_name = "_QFnearest_test7Es"} : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
-  ! CHECK-KIND16:     %[[V_4:[0-9]+]] = fir.declare %arg0 dummy_scope %[[V_0]] {uniq_name = "_QFnearest_test7Ex"} : (!fir.ref<f128>, !fir.dscope) -> !fir.ref<f128>
+  ! CHECK-KIND16:     %[[V_3:[0-9]+]] = fir.declare %arg1 dummy_scope %[[V_0]] arg {{[0-9]+}} {uniq_name = "_QFnearest_test7Es"} : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
+  ! CHECK-KIND16:     %[[V_4:[0-9]+]] = fir.declare %arg0 dummy_scope %[[V_0]] arg {{[0-9]+}} {uniq_name = "_QFnearest_test7Ex"} : (!fir.ref<f128>, !fir.dscope) -> !fir.ref<f128>
   ! CHECK-KIND16:     %[[V_5:[0-9]+]] = fir.load %[[V_4]] : !fir.ref<f128>
   ! CHECK-KIND16:     %[[V_6:[0-9]+]] = fir.load %[[V_3]] : !fir.ref<f32>
   ! CHECK-KIND16:     %[[V_7:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_5]]) <{bit = 3 : i32}> : (f128) -> i1

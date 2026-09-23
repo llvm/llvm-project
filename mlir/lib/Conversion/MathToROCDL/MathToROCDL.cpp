@@ -12,7 +12,8 @@
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Conversion/LLVMCommon/VectorPattern.h"
 #include "mlir/Dialect/AMDGPU/Utils/Chipset.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Func/IR/FuncDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
 #include "mlir/Dialect/Math/IR/Math.h"
@@ -68,7 +69,7 @@ struct ClampFOpConversion final
       return LLVM::detail::handleMultidimensionalVectors(
           op.getOperation(), adaptor.getOperands(), *getTypeConverter(),
           [&](Type llvm1DVectorTy, ValueRange operands) -> Value {
-            typename math::ClampFOp::Adaptor adaptor(operands);
+            math::ClampFOp::Adaptor adaptor(operands);
             return ROCDL::FMed3Op::create(rewriter, op.getLoc(), llvm1DVectorTy,
                                           adaptor.getValue(), adaptor.getMin(),
                                           adaptor.getMax());

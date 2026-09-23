@@ -1,4 +1,4 @@
-// RUN: fir-opt --cuf-convert %s | FileCheck %s
+// RUN: fir-opt --cuf-convert --cuf-allocation-convert %s | FileCheck %s
 
 module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<f80, dense<128> : vector<2xi64>>, #dlti.dl_entry<i128, dense<128> : vector<2xi64>>, #dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr<272>, dense<64> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<271>, dense<32> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<270>, dense<32> : vector<4xi64>>, #dlti.dl_entry<f128, dense<128> : vector<2xi64>>, #dlti.dl_entry<f64, dense<64> : vector<2xi64>>, #dlti.dl_entry<f16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i32, dense<32> : vector<2xi64>>, #dlti.dl_entry<i16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<i1, dense<8> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<"dlti.endianness", "little">, #dlti.dl_entry<"dlti.stack_alignment", 128 : i64>>} {
 
@@ -93,5 +93,53 @@ func.func @_QQalloc_char() attributes {fir.bindc_name = "alloc_char"} {
 // CHECK: %[[BYTES:.*]] = arith.muli %c10{{.*}}, %c1{{.*}} : index
 // CHECK: %[[BYTES_CONV:.*]] = fir.convert %[[BYTES]] : (index) -> i64
 // CHECK: fir.call @_FortranACUFMemAlloc(%[[BYTES_CONV]], %c0{{.*}}, %{{.*}}, %{{.*}}) {cuf.data_attr = #cuf.cuda<device>} : (i64, i32, !fir.ref<i8>, i32) -> !fir.llvm_ptr<i8>
+
+
+func.func @_QQalloc_char2() {
+  %c4 = arith.constant 4 : index
+  %1 = cuf.alloc !fir.char<1,4>(%c4 : index) {bindc_name = "b", data_attr = #cuf.cuda<device>, uniq_name = "_QFsub1Eb"} -> !fir.ref<!fir.char<1,4>>
+  %2 = cuf.alloc !fir.char<2,4>(%c4 : index) {bindc_name = "c", data_attr = #cuf.cuda<device>, uniq_name = "_QFsub1Ec"} -> !fir.ref<!fir.char<2,4>>
+  %c10 = arith.constant 4 : index
+  %3 = cuf.alloc !fir.char<4,10>(%c10 : index) {bindc_name = "d", data_attr = #cuf.cuda<device>, uniq_name = "_QFsub1Ed"} -> !fir.ref<!fir.char<4,10>>
+  return
+}
+
+// CHECK-LABEL: func.func @_QQalloc_char2()
+// CHECK: %[[BYTES_4:.*]] = fir.convert %c4{{.*}} : (index) -> i64
+// CHECK: %{{.*}} = fir.call @_FortranACUFMemAlloc(%[[BYTES_4]], %{{.*}}, %{{.*}}, %{{.*}}) {cuf.data_attr = #cuf.cuda<device>} : (i64, i32, !fir.ref<i8>, i32) -> !fir.llvm_ptr<i8>
+
+// CHECK: %[[BYTES_8:.*]] = fir.convert %c8{{.*}} : (index) -> i64
+// CHECK: %{{.*}} = fir.call @_FortranACUFMemAlloc(%[[BYTES_8]], %{{.*}}, %{{.*}}, %{{.*}}) {cuf.data_attr = #cuf.cuda<device>} : (i64, i32, !fir.ref<i8>, i32) -> !fir.llvm_ptr<i8>
+
+// CHECK: %[[BYTES_40:.*]] = fir.convert %c40{{.*}} : (index) -> i64
+// CHECK: %{{.*}} = fir.call @_FortranACUFMemAlloc(%[[BYTES_40]], %{{.*}}, %{{.*}}, %{{.*}}) {cuf.data_attr = #cuf.cuda<device>} : (i64, i32, !fir.ref<i8>, i32) -> !fir.llvm_ptr<i8>
+
+// Test that cuf.alloc with mixed constant and dynamic extents includes
+// the constant extents in the allocation size. For dimension(n, 4, m),
+// size must be n * m * 4(constant) * 4(bytes), not n * m * 4(bytes).
+func.func @_QPsub_mixed(%arg0: !fir.ref<i32>, %arg1: !fir.ref<i32>) {
+  %0 = fir.load %arg0 : !fir.ref<i32>
+  %1 = fir.convert %0 : (i32) -> index
+  %c0 = arith.constant 0 : index
+  %2 = arith.cmpi sgt, %1, %c0 : index
+  %n = arith.select %2, %1, %c0 : index
+  %3 = fir.load %arg1 : !fir.ref<i32>
+  %4 = fir.convert %3 : (i32) -> index
+  %5 = arith.cmpi sgt, %4, %c0 : index
+  %m = arith.select %5, %4, %c0 : index
+  %6 = cuf.alloc !fir.array<?x4x?xf32>, %n, %m : index, index {bindc_name = "arr", data_attr = #cuf.cuda<device>, uniq_name = "_QFsub_mixedEarr"} -> !fir.ref<!fir.array<?x4x?xf32>>
+  cuf.free %6 : !fir.ref<!fir.array<?x4x?xf32>> {data_attr = #cuf.cuda<device>}
+  return
+}
+
+// CHECK-LABEL: func.func @_QPsub_mixed
+// CHECK: %[[N:.*]] = arith.select
+// CHECK: %[[M:.*]] = arith.select
+// CHECK: %[[NM:.*]] = arith.muli %[[N]], %[[M]] : index
+// CHECK: %[[NM4:.*]] = arith.muli %[[NM]], %c4{{.*}} : index
+// CHECK: %[[BYTES:.*]] = arith.muli %[[NM4]], %c4{{.*}} : index
+// CHECK: %[[CONV:.*]] = fir.convert %[[BYTES]] : (index) -> i64
+// CHECK: fir.call @_FortranACUFMemAlloc(%[[CONV]], %c0{{.*}}, %{{.*}}, %{{.*}}) {cuf.data_attr = #cuf.cuda<device>}
+// CHECK: fir.call @_FortranACUFMemFree
 
 } // end module

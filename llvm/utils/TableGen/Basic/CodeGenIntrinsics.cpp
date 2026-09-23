@@ -13,12 +13,16 @@
 #include "CodeGenIntrinsics.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include <algorithm>
 #include <cassert>
+#include <limits>
 using namespace llvm;
 
 // As the type of more than one return values is represented as an anonymous
@@ -27,6 +31,38 @@ using namespace llvm;
 // (encoded as 255). So, the maximum number of values that an intrinsic can
 // return is 257.
 static constexpr unsigned MaxNumReturn = 257;
+
+using ImmArgRange = CodeGenIntrinsic::ImmArgRangeSet::Range;
+using ImmArgRangeList = CodeGenIntrinsic::ImmArgRangeSet::RangeList;
+
+static ImmArgRange getHalfOpenRange(const Record *R, const ListInit *Range,
+                                    StringRef AttrName) {
+  auto GetBound = [&](const Init *Bound) -> int64_t {
+    if (const auto *II = dyn_cast<IntInit>(Bound))
+      return II->getValue();
+    PrintFatalError(R->getLoc(),
+                    Twine(AttrName) +
+                        " bound is not an integer: " + Bound->getAsString());
+  };
+
+  int64_t Lower = GetBound(Range->getElement(0));
+  int64_t Upper = GetBound(Range->getElement(1));
+  if (Upper == std::numeric_limits<int64_t>::max())
+    PrintFatalError(R->getLoc(),
+                    Twine(AttrName) + " closed upper bound is too large");
+  return ImmArgRange(Lower, Upper + 1);
+}
+
+static void appendHalfOpenRange(SmallVectorImpl<ImmArgRange> &Ranges,
+                                ImmArgRange Range) {
+  if (!Ranges.empty()) {
+    if (Range.first == Ranges.back().second) {
+      Ranges.back().second = Range.second;
+      return;
+    }
+  }
+  Ranges.push_back(Range);
+}
 
 //===----------------------------------------------------------------------===//
 // CodeGenIntrinsic Implementation
@@ -274,6 +310,7 @@ CodeGenIntrinsic::CodeGenIntrinsic(const Record *R,
       R->getValueAsOptionalString("ClangBuiltinName").value_or("");
   // Ignore a missing MSBuiltinName field.
   MSBuiltinName = R->getValueAsOptionalString("MSBuiltinName").value_or("");
+  TargetFeatures = R->getValueAsString("TargetFeatures");
 
   TargetPrefix = R->getValueAsString("TargetPrefix");
   Name = R->getValueAsString("LLVMName").str();
@@ -306,6 +343,8 @@ CodeGenIntrinsic::CodeGenIntrinsic(const Record *R,
   }
 
   unsigned NumRet = R->getValueAsListInit("RetTypes")->size();
+  unsigned NumParam = R->getValueAsListInit("ParamTypes")->size();
+
   if (NumRet > MaxNumReturn)
     PrintFatalError(DefLoc, "intrinsics can only return upto " +
                                 Twine(MaxNumReturn) + " values, '" + DefName +
@@ -317,15 +356,50 @@ CodeGenIntrinsic::CodeGenIntrinsic(const Record *R,
                                 " should be of subclass of TypeInfoGen!");
 
   isOverloaded = TypeInfo->getValueAsBit("isOverloaded");
-  const ListInit *TypeList = TypeInfo->getValueAsListInit("Types");
+  std::vector<const Record *> AllTypes =
+      TypeInfo->getValueAsListOfDefs("AllTypes");
+
+  // Validate overload index values in dependent types.
+  if (isOverloaded) {
+    const ListInit *OverloadedTypes =
+        TypeInfo->getValueAsListInit("OverloadTypes");
+    unsigned NumOverloadedTypes = OverloadedTypes->size();
+    for (const auto &[Idx, Ty] : enumerate(AllTypes)) {
+      if (!Ty->isSubClassOf("LLVMDependentType"))
+        continue;
+      unsigned OverloadIndex = Ty->getValueAsInt("OverloadIndex");
+      if (OverloadIndex >= NumOverloadedTypes)
+        PrintFatalError(
+            Ty, formatv("for intrinsic {} overload index {} is invalid, "
+                        "intrinsic only has {} overloaded types",
+                        DefName, OverloadIndex, NumOverloadedTypes));
+      const Record *OTy = OverloadedTypes->getElementAsRecord(OverloadIndex);
+      if (!OTy->isSubClassOf("LLVMAnyType"))
+        PrintFatalError(Ty, formatv("for intrinsic {} overload index {} is "
+                                    "invalid, dependent types must reference "
+                                    "an overload index of an \'llvm_any\' type",
+                                    DefName, OverloadIndex));
+
+      // Replace the dependent type with the overloaded type it references.
+      AllTypes[Idx] = OTy;
+    }
+  }
+
+  ArrayRef<const Record *> AllTypesRef = AllTypes;
 
   // Types field is a concatenation of Return types followed by Param types.
-  unsigned Idx = 0;
-  for (; Idx < NumRet; ++Idx)
-    IS.RetTys.push_back(TypeList->getElementAsRecord(Idx));
+  for (const Record *RetTy : AllTypesRef.take_front(NumRet)) {
+    if (RetTy->getName() == "llvm_vararg_ty")
+      PrintFatalError(DefLoc, "cannot use llvm_vararg_ty as a return type");
+    IS.RetTys.push_back(RetTy);
+  }
 
-  for (unsigned E = TypeList->size(); Idx < E; ++Idx)
-    IS.ParamTys.push_back(TypeList->getElementAsRecord(Idx));
+  for (const auto &[Idx, ParamTy] : enumerate(AllTypesRef.drop_front(NumRet))) {
+    if (Idx != NumParam - 1 && ParamTy->getName() == "llvm_vararg_ty")
+      PrintFatalError(DefLoc,
+                      "llvm_vararg_ty can only be the last parameter type");
+    IS.ParamTys.push_back(ParamTy);
+  }
 
   // Parse the intrinsic properties.
   const ListInit *PropList = R->getValueAsListInit("IntrProperties");
@@ -346,6 +420,44 @@ CodeGenIntrinsic::CodeGenIntrinsic(const Record *R,
   // Sort the argument attributes for later benefit.
   for (auto &Attrs : ArgumentAttributes)
     llvm::sort(Attrs);
+
+  for (const ImmArgRangeSet &RangeSet : ImmArgRangeSets)
+    if (!isParamImmArg(RangeSet.ArgNo))
+      PrintFatalError(
+          TheDef->getLoc(),
+          formatv("RangeSet requires ImmArg for argument {}", RangeSet.ArgNo));
+
+  unsigned NumParams = IS.ParamTys.size();
+  bool SeenDefault = false;
+  for (unsigned i = 0; i < NumParams; ++i) {
+    bool HasDefault =
+        (i < ParamDefaultValues.size() && ParamDefaultValues[i].has_value());
+    if (HasDefault) {
+      SeenDefault = true;
+    } else if (SeenDefault) {
+      PrintFatalError(TheDef->getLoc(),
+                      "missing default argument on parameter " + Twine(i));
+    }
+  }
+
+  for (unsigned i = 0; i < ParamDefaultValues.size(); ++i) {
+    if (!ParamDefaultValues[i].has_value())
+      continue;
+    const Record *VT = IS.ParamTys[i]->getValueAsDef("VT");
+    if (!VT->getValueAsBit("isInteger")) {
+      PrintFatalError(TheDef->getLoc(),
+                      "default argument on parameter " + Twine(i) +
+                          " requires an integer parameter type");
+    }
+    unsigned Width = VT->getValueAsInt("Size");
+    uint64_t Value = *ParamDefaultValues[i];
+    if (!isUIntN(Width, Value)) {
+      PrintFatalError(TheDef->getLoc(),
+                      "default argument value " + Twine(Value) +
+                          " out of range for i" + Twine(Width) + " parameter " +
+                          Twine(i));
+    }
+  }
 }
 
 void CodeGenIntrinsic::setDefaultProperties(
@@ -377,7 +489,19 @@ void CodeGenIntrinsic::setProperty(const Record *R) {
     ME &= MemoryEffects::argMemOnly();
   else if (R->getName() == "IntrInaccessibleMemOnly")
     ME &= MemoryEffects::inaccessibleMemOnly();
-  else if (R->getName() == "IntrInaccessibleMemOrArgMemOnly")
+  else if (R->isSubClassOf("IntrRead")) {
+    MemoryEffects ReadMask = MemoryEffects::writeOnly();
+    for (const Record *RLoc : R->getValueAsListOfDefs("MemLoc"))
+      ReadMask = ReadMask.getWithModRef(getValueAsIRMemLocation(RLoc),
+                                        ModRefInfo::ModRef);
+    ME &= ReadMask;
+  } else if (R->isSubClassOf("IntrWrite")) {
+    MemoryEffects WriteMask = MemoryEffects::readOnly();
+    for (const Record *WLoc : R->getValueAsListOfDefs("MemLoc"))
+      WriteMask = WriteMask.getWithModRef(getValueAsIRMemLocation(WLoc),
+                                          ModRefInfo::ModRef);
+    ME &= WriteMask;
+  } else if (R->getName() == "IntrInaccessibleMemOrArgMemOnly")
     ME &= MemoryEffects::inaccessibleOrArgMemOnly();
   else if (R->getName() == "Commutative")
     isCommutative = true;
@@ -407,6 +531,10 @@ void CodeGenIntrinsic::setProperty(const Record *R) {
     hasSideEffects = true;
   else if (R->getName() == "IntrStrictFP")
     isStrictFP = true;
+  else if (R->getName() == "IntrNoCreateUndefOrPoison")
+    isNoCreateUndefOrPoison = true;
+  else if (R->getName() == "IntrTriviallyScalarizable")
+    isTriviallyScalarizable = true;
   else if (R->isSubClassOf("NoCapture")) {
     unsigned ArgNo = R->getValueAsInt("ArgNo");
     addArgAttribute(ArgNo, NoCapture);
@@ -434,6 +562,18 @@ void CodeGenIntrinsic::setProperty(const Record *R) {
   } else if (R->isSubClassOf("ImmArg")) {
     unsigned ArgNo = R->getValueAsInt("ArgNo");
     addArgAttribute(ArgNo, ImmArg);
+
+    const Record *DefaultField = R->getValueAsDef("Default");
+    const RecordVal *ValueField = DefaultField->getValue("Value");
+    if (ValueField && !isa<UnsetInit>(ValueField->getValue())) {
+      int64_t Value = DefaultField->getValueAsInt("Value");
+      if (Value < 0)
+        PrintFatalError(TheDef->getLoc(), "default argument value " +
+                                              Twine(Value) + " on parameter " +
+                                              Twine(ArgNo - 1) +
+                                              " must be non-negative");
+      addDefaultArgValue(ArgNo - 1, Value);
+    }
   } else if (R->isSubClassOf("Align")) {
     unsigned ArgNo = R->getValueAsInt("ArgNo");
     uint64_t Align = R->getValueAsInt("Align");
@@ -447,9 +587,71 @@ void CodeGenIntrinsic::setProperty(const Record *R) {
     int64_t Lower = R->getValueAsInt("Lower");
     int64_t Upper = R->getValueAsInt("Upper");
     addArgAttribute(ArgNo, Range, Lower, Upper);
+  } else if (R->isSubClassOf("RangeSet")) {
+    unsigned ArgNo = R->getValueAsInt("ArgNo");
+    const ListInit *RangeList = R->getValueAsListInit("Ranges");
+    ImmArgRangeList Ranges;
+
+    if (ArgNo < 1)
+      PrintFatalError(R->getLoc(), "RangeSet should only apply to arguments");
+    unsigned ParamNo = ArgNo - 1;
+
+    for (const ImmArgRangeSet &RangeSet : ImmArgRangeSets)
+      if (RangeSet.ArgNo == ParamNo)
+        PrintFatalError(
+            R->getLoc(),
+            formatv("RangeSet for argument {} already specified", ParamNo));
+
+    for (const Init *Range : RangeList->getElements())
+      appendHalfOpenRange(
+          Ranges, getHalfOpenRange(R, cast<ListInit>(Range), "RangeSet"));
+    addImmArgRangeSet(ParamNo, std::move(Ranges));
+  } else if (R->isSubClassOf("NoFreeObj")) {
+    unsigned ArgNo = R->getValueAsInt("ArgNo");
+    addArgAttribute(ArgNo, NoFreeObj);
+  } else if (R->isSubClassOf("ArgInfo")) {
+    unsigned ArgNo = R->getValueAsInt("ArgNo");
+    if (ArgNo < 1)
+      PrintFatalError(R->getLoc(),
+                      "ArgInfo requires ArgNo >= 1 (0 is return value)");
+    const ListInit *Properties = R->getValueAsListInit("Properties");
+    StringRef ArgName;
+    StringRef FuncName;
+
+    for (const Init *PropInit : Properties->getElements()) {
+      if (const auto *PropDef = dyn_cast<DefInit>(PropInit)) {
+        const Record *PropRec = PropDef->getDef();
+
+        if (PropRec->isSubClassOf("ArgName"))
+          ArgName = PropRec->getValueAsString("Name");
+        else if (PropRec->isSubClassOf("ImmArgPrinter"))
+          FuncName = PropRec->getValueAsString("FuncName");
+        else
+          PrintFatalError(PropRec->getLoc(),
+                          "Unknown ArgProperty type: " + PropRec->getName());
+      }
+    }
+    addPrettyPrintFunction(ArgNo - 1, ArgName, FuncName);
   } else {
     llvm_unreachable("Unknown property!");
   }
+}
+
+llvm::IRMemLocation
+CodeGenIntrinsic::getValueAsIRMemLocation(const Record *R) const {
+  StringRef Name = R->getName();
+  IRMemLocation Loc =
+      StringSwitch<IRMemLocation>(Name)
+          .Case("ArgMem", IRMemLocation::ArgMem)
+          .Case("TargetMem0", IRMemLocation::TargetMem0)
+          .Case("TargetMem1", IRMemLocation::TargetMem1)
+          .Case("InaccessibleMem", IRMemLocation::InaccessibleMem)
+          .Default(IRMemLocation::Other); // fallback enum
+
+  if (Loc == IRMemLocation::Other)
+    PrintFatalError(R->getLoc(), "unknown IRMemLocation: " + Name);
+
+  return Loc;
 }
 
 bool CodeGenIntrinsic::isParamAPointer(unsigned ParamIdx) const {
@@ -473,4 +675,34 @@ void CodeGenIntrinsic::addArgAttribute(unsigned Idx, ArgAttrKind AK, uint64_t V,
   if (Idx >= ArgumentAttributes.size())
     ArgumentAttributes.resize(Idx + 1);
   ArgumentAttributes[Idx].emplace_back(AK, V, V2);
+}
+
+void CodeGenIntrinsic::addImmArgRangeSet(unsigned ArgNo,
+                                         ImmArgRangeSet::RangeList Ranges) {
+  ImmArgRangeSets.push_back({ArgNo, std::move(Ranges)});
+}
+
+void CodeGenIntrinsic::addPrettyPrintFunction(unsigned ArgIdx,
+                                              StringRef ArgName,
+                                              StringRef FuncName) {
+  auto It = llvm::find_if(PrettyPrintFunctions, [ArgIdx](const auto &Info) {
+    return Info.ArgIdx == ArgIdx;
+  });
+  if (It != PrettyPrintFunctions.end())
+    PrintFatalError(TheDef->getLoc(), "ArgInfo for argument " + Twine(ArgIdx) +
+                                          " is already defined as '" +
+                                          It->FuncName + "'");
+  PrettyPrintFunctions.emplace_back(ArgIdx, ArgName, FuncName);
+}
+
+void CodeGenIntrinsic::addDefaultArgValue(unsigned ArgIdx, uint64_t Value) {
+  if (ArgIdx >= ParamDefaultValues.size())
+    ParamDefaultValues.resize(ArgIdx + 1, std::nullopt);
+
+  if (ParamDefaultValues[ArgIdx].has_value())
+    PrintFatalError(TheDef->getLoc(), "Default value for argument " +
+                                          Twine(ArgIdx) +
+                                          " is already defined");
+
+  ParamDefaultValues[ArgIdx] = Value;
 }

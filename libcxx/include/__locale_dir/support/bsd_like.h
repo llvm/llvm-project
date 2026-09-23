@@ -15,6 +15,7 @@
 #include <__utility/forward.h>
 #include <clocale> // std::lconv
 #include <ctype.h>
+#include <langinfo.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -24,7 +25,9 @@
 #  include <wctype.h>
 #endif
 
-#include <xlocale.h>
+#if __has_include(<xlocale.h>)
+#  include <xlocale.h>
+#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -62,6 +65,16 @@ inline _LIBCPP_HIDE_FROM_ABI char* __setlocale(int __category, char const* __loc
 inline _LIBCPP_HIDE_FROM_ABI __lconv_t* __localeconv(__locale_t& __loc) { return ::localeconv_l(__loc); }
 #endif // _LIBCPP_BUILDING_LIBRARY
 
+inline __locale_t __get_c_locale() {
+#if defined(__APPLE__) || defined(__FreeBSD__)
+  return 0;
+#elif defined(__NetBSD__)
+  return LC_C_LOCALE;
+#else
+#  error "BSD-like platforms need to extend this list."
+#endif
+}
+
 //
 // Strtonum functions
 //
@@ -77,22 +90,9 @@ inline _LIBCPP_HIDE_FROM_ABI long double __strtold(const char* __nptr, char** __
   return ::strtold_l(__nptr, __endptr, __loc);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI long long __strtoll(const char* __nptr, char** __endptr, int __base, __locale_t __loc) {
-  return ::strtoll_l(__nptr, __endptr, __base, __loc);
-}
-
-inline _LIBCPP_HIDE_FROM_ABI unsigned long long
-__strtoull(const char* __nptr, char** __endptr, int __base, __locale_t __loc) {
-  return ::strtoull_l(__nptr, __endptr, __base, __loc);
-}
-
 //
 // Character manipulation functions
 //
-inline _LIBCPP_HIDE_FROM_ABI int __isdigit(int __c, __locale_t __loc) { return ::isdigit_l(__c, __loc); }
-
-inline _LIBCPP_HIDE_FROM_ABI int __isxdigit(int __c, __locale_t __loc) { return ::isxdigit_l(__c, __loc); }
-
 #if defined(_LIBCPP_BUILDING_LIBRARY)
 inline _LIBCPP_HIDE_FROM_ABI int __toupper(int __c, __locale_t __loc) { return ::toupper_l(__c, __loc); }
 
@@ -144,8 +144,8 @@ inline _LIBCPP_HIDE_FROM_ABI size_t __wcsxfrm(wchar_t* __dest, const wchar_t* __
 }
 #  endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
-inline _LIBCPP_HIDE_FROM_ABI size_t
-__strftime(char* __s, size_t __max, const char* __format, const struct tm* __tm, __locale_t __loc) {
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_ATTRIBUTE_FORMAT(__strftime__, 3, 0) size_t
+    __strftime(char* __s, size_t __max, const char* __format, const struct tm* __tm, __locale_t __loc) {
   return ::strftime_l(__s, __max, __format, __tm, __loc);
 }
 
@@ -191,7 +191,11 @@ __mbsrtowcs(wchar_t* __dest, const char** __src, size_t __len, mbstate_t* __ps, 
   return ::mbsrtowcs_l(__dest, __src, __len, __ps, __loc);
 }
 #  endif // _LIBCPP_HAS_WIDE_CHARACTERS
-#endif   // _LIBCPP_BUILDING_LIBRARY
+
+inline _LIBCPP_HIDE_FROM_ABI const char* __get_locale_encoding(__locale_t __loc) {
+  return ::nl_langinfo_l(CODESET, __loc);
+}
+#endif // _LIBCPP_BUILDING_LIBRARY
 
 _LIBCPP_DIAGNOSTIC_PUSH
 _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wgcc-compat")
@@ -213,16 +217,12 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_VARIADIC_ATTRIBUTE_FORMAT(__printf__, 3, 4) int __
     char** __s, __locale_t __loc, const char* __format, _Args&&... __args) {
   return ::asprintf_l(__s, __loc, __format, std::forward<_Args>(__args)...); // non-standard
 }
-
-template <class... _Args>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_VARIADIC_ATTRIBUTE_FORMAT(__scanf__, 3, 4) int __sscanf(
-    const char* __s, __locale_t __loc, const char* __format, _Args&&... __args) {
-  return ::sscanf_l(__s, __loc, __format, std::forward<_Args>(__args)...);
-}
 _LIBCPP_DIAGNOSTIC_POP
 #undef _LIBCPP_VARIADIC_ATTRIBUTE_FORMAT
 
 } // namespace __locale
 _LIBCPP_END_NAMESPACE_STD
+
+#define _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE 0
 
 #endif // _LIBCPP___LOCALE_DIR_SUPPORT_BSD_LIKE_H

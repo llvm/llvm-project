@@ -22,17 +22,23 @@ if (CMAKE_CROSSCOMPILING)
   return ()
 endif ()
 
-if (NOT TARGET llvm_gtest)
-  message(WARNING "Flang-RT unittests disabled due to GTest being unavailable; "
-                  "Try LLVM_INSTALL_GTEST=ON for the LLVM build")
-  return ()
-endif ()
-
+# Make the targets default_gtest and default_gtest_main available.
+build_gtest()
 
 add_dependencies(flang-rt-test-depends
   FlangRTUnitTests
   flang_rt.runtime.unittest
 )
+
+# Unittests are C++ binaries. CMake still treats flang_rt.runtime as a Fortran
+# target, so it appends the Fortran compiler's implicit link libraries, which
+# include -lflang_rt.runtime. When the shared runtime is built, that flag
+# resolves to the shared library in the compiler's resource directory, which is
+# not a loader search path, so record that directory in the RPATH of the
+# unittests.
+if (FLANG_RT_ENABLE_SHARED)
+  list(APPEND CMAKE_BUILD_RPATH "${RUNTIMES_OUTPUT_RESOURCE_LIB_DIR}")
+endif ()
 
 if (CXX_SUPPORTS_SUGGEST_OVERRIDE_FLAG)
   add_compile_options("-Wno-suggest-override")
@@ -44,18 +50,6 @@ function(add_flangrt_unittest_offload_properties target)
   if (FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT STREQUAL "CUDA")
     set_target_properties(${target}
       PROPERTIES CUDA_RESOLVE_DEVICE_SYMBOLS ON
-      )
-  endif()
-  # Enable OpenMP offload during linking. We may need to replace
-  # LINK_OPTIONS with COMPILE_OPTIONS when there are OpenMP offload
-  # unittests.
-  #
-  # FIXME: replace 'native' in --offload-arch option with the list
-  #        of targets that Fortran Runtime was built for.
-  if (FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT STREQUAL "OpenMP")
-    set_target_properties(${target}
-      PROPERTIES LINK_OPTIONS
-      "-fopenmp;--offload-arch=native"
       )
   endif()
 endfunction()

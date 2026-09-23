@@ -42,7 +42,7 @@ program acc_atomic_update_test
 !CHECK: }
 
     !$acc atomic update
-        a = a + b 
+        a = a + b
 
 !CHECK: {{.*}} = arith.constant 1 : i32
 !CHECK: acc.atomic.update %[[Y_DECL]]#0 : !fir.ref<i32> {
@@ -56,10 +56,10 @@ program acc_atomic_update_test
 !CHECK:    %[[RESULT:.*]] = arith.muli %[[LOADED_X]], %[[ARG]] : i32
 !CHECK:    acc.yield %[[RESULT]] : i32
 !CHECK:  }
-    !$acc atomic 
+    !$acc atomic
         y = y + 1
     !$acc atomic update
-        z = x * z 
+        z = x * z
 
 !CHECK:  %[[C1_VAL:.*]] = arith.constant 1 : i32
 !CHECK:  acc.atomic.update %[[I1_DECL]]#0 : !fir.ref<i8> {

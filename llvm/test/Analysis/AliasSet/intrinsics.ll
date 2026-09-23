@@ -1,4 +1,4 @@
-; RUN: opt -passes=print-alias-sets -S -o - < %s 2>&1 | FileCheck %s --implicit-check-not="Unknown instructions"
+; RUN: opt -passes='print<alias-sets>' -S -o - < %s 2>&1 | FileCheck %s --implicit-check-not="Unknown instructions"
 
 ; CHECK: Alias sets for function 'test1':
 ; CHECK: Alias Set Tracker: 2 alias sets for 2 pointer values.

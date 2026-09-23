@@ -15,6 +15,7 @@
 #include "lldb/Breakpoint/BreakpointResolver.h"
 #include "lldb/Breakpoint/BreakpointResolverFileLine.h"
 #include "lldb/Core/Address.h"
+#include "lldb/Core/Architecture.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
@@ -88,7 +89,7 @@ StructuredData::ObjectSP Breakpoint::SerializeToStructuredData() {
 
   if (!m_name_list.empty()) {
     StructuredData::ArraySP names_array_sp(new StructuredData::Array());
-    for (auto name : m_name_list) {
+    for (auto name : m_name_list.keys()) {
       names_array_sp->AddItem(std::make_shared<StructuredData::String>(name));
     }
     breakpoint_contents_sp->AddItem(Breakpoint::GetKey(OptionNames::Names),
@@ -304,7 +305,12 @@ llvm::Error Breakpoint::SetIsHardware(bool is_hardware) {
 
 BreakpointLocationSP Breakpoint::AddLocation(const Address &addr,
                                              bool *new_location) {
-  return m_locations.AddLocation(addr, m_resolve_indirect_symbols,
+  // A breakpoint must be set on an executable instruction, not on a function's
+  // non-instruction header.
+  Address bp_addr = addr;
+  if (Architecture *arch = m_target.GetArchitecturePlugin())
+    bp_addr = arch->SkipFunctionHeader(bp_addr);
+  return m_locations.AddLocation(bp_addr, m_resolve_indirect_symbols,
                                  new_location);
 }
 
@@ -988,7 +994,7 @@ void Breakpoint::GetDescriptionForType(Stream *s, lldb::DescriptionLevel level,
       // don't generally know how to set them until the target is run.
       if (m_resolver_sp->getResolverID() !=
           BreakpointResolver::ExceptionResolver)
-        s->Printf(", locations = 0 (pending)");
+        s->PutCString(", locations = 0 (pending)");
     }
 
     m_options.GetDescription(s, level);
@@ -1000,12 +1006,12 @@ void Breakpoint::GetDescriptionForType(Stream *s, lldb::DescriptionLevel level,
       if (!m_name_list.empty()) {
         s->EOL();
         s->Indent();
-        s->Printf("Names:");
+        s->PutCString("Names:");
         s->EOL();
         s->IndentMore();
-        for (const std::string &name : m_name_list) {
+        for (llvm::StringRef name : m_name_list.keys()) {
           s->Indent();
-          s->Printf("%s\n", name.c_str());
+          s->Format("{0}\n", name);
         }
         s->IndentLess();
       }
@@ -1017,7 +1023,7 @@ void Breakpoint::GetDescriptionForType(Stream *s, lldb::DescriptionLevel level,
   case lldb::eDescriptionLevelInitial:
     s->Printf("Breakpoint %i: ", GetID());
     if (num_locations == 0) {
-      s->Printf("no locations (pending).");
+      s->PutCString("no locations (pending).");
     } else if (num_locations == 1 && !show_locations) {
       // There is only one location, so we'll just print that location
       // information.
@@ -1045,9 +1051,9 @@ void Breakpoint::GetDescriptionForType(Stream *s, lldb::DescriptionLevel level,
   if (show_locations && level != lldb::eDescriptionLevelBrief) {
     if ((display_type & eDisplayHeader) != 0) {
       if ((display_type & eDisplayFacade) != 0)
-        s->Printf("Facade locations:\n");
+        s->PutCString("Facade locations:\n");
       else
-        s->Printf("Implementation Locations\n");
+        s->PutCString("Implementation Locations\n");
     }
     s->IndentMore();
     for (size_t i = 0; i < num_locations; ++i) {
@@ -1064,7 +1070,8 @@ void Breakpoint::GetResolverDescription(Stream *s) {
     m_resolver_sp->GetDescription(s);
 }
 
-bool Breakpoint::GetMatchingFileLine(ConstString filename, uint32_t line_number,
+bool Breakpoint::GetMatchingFileLine(llvm::StringRef filename,
+                                     uint32_t line_number,
                                      BreakpointLocationCollection &loc_coll) {
   // TODO: To be correct, this method needs to fill the breakpoint location
   // collection
@@ -1098,14 +1105,9 @@ bool Breakpoint::EvaluatePrecondition(StoppointCallbackContext &context) {
 }
 
 void Breakpoint::SendBreakpointChangedEvent(
-    lldb::BreakpointEventType eventKind) {
-  if (!IsInternal() && GetTarget().EventTypeHasListeners(
-                           Target::eBroadcastBitBreakpointChanged)) {
-    std::shared_ptr<BreakpointEventData> data =
-        std::make_shared<BreakpointEventData>(eventKind, shared_from_this());
-
-    GetTarget().BroadcastEvent(Target::eBroadcastBitBreakpointChanged, data);
-  }
+    lldb::BreakpointEventType event_kind) {
+  if (!IsInternal())
+    GetTarget().NotifyBreakpointChanged(*this, event_kind);
 }
 
 void Breakpoint::SendBreakpointChangedEvent(
@@ -1113,10 +1115,8 @@ void Breakpoint::SendBreakpointChangedEvent(
   if (!breakpoint_data_sp)
     return;
 
-  if (!IsInternal() &&
-      GetTarget().EventTypeHasListeners(Target::eBroadcastBitBreakpointChanged))
-    GetTarget().BroadcastEvent(Target::eBroadcastBitBreakpointChanged,
-                               breakpoint_data_sp);
+  if (!IsInternal())
+    GetTarget().NotifyBreakpointChanged(*this, breakpoint_data_sp);
 }
 
 const char *Breakpoint::BreakpointEventTypeAsCString(BreakpointEventType type) {

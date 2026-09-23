@@ -9,40 +9,40 @@ define <32 x i32> @f0(ptr %a0, i32 %a1) #0 {
 ; CHECK-NEXT:     r0 = add(r1,r0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r7 = #8
+; CHECK-NEXT:     allocframe(r29,#128):raw
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r4 = ##.LCPI0_0
+; CHECK-NEXT:     r2 = add(r0,#136)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r2 = #-1
+; CHECK-NEXT:     r29 = and(r29,#-128)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v0 = vmem(r0+#1)
+; CHECK-NEXT:     v1 = vmem(r0+#1)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v1 = vmem(r0+#2)
+; CHECK-NEXT:     v0 = vmemu(r2+#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r0 = add(r0,#128)
+; CHECK-NEXT:     r4 = add(r29,#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v1 = valign(v1,v0,r7)
+; CHECK-NEXT:     v0.w = vadd(v1.w,v0.w)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v2 = vmem(r4+#0)
+; CHECK-NEXT:     vmem(r4+#0) = v0
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     q0 = vand(v2,r2)
+; CHECK-NEXT:     r2 = memw(r4+#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v0.w = vadd(v0.w,v1.w)
+; CHECK-NEXT:     r3 = memw(r4+#4)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     if (q0) vmem(r0+#0) = v0
+; CHECK-NEXT:     memd(r0+#128) = r3:2
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     jumpr r31
+; CHECK-NEXT:     r31:30 = dealloc_return(r30):raw
 ; CHECK-NEXT:    }
 b0:
   %v0 = add i32 %a1, 128

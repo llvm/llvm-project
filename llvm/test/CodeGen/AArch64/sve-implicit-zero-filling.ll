@@ -211,11 +211,8 @@ define <vscale x 2 x i64> @zero_fill_no_zero_upper_lanes(<vscale x 2 x i1> %pg, 
 ; CHECK-LABEL: zero_fill_no_zero_upper_lanes:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    umin z0.d, p0/m, z0.d, z0.d
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    ptrue p0.d, vl1
 ; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    mov z1.d, p0/m, x8
-; CHECK-NEXT:    mov z0.d, z1.d
+; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    ret
   %t1 = call <vscale x 2 x i64> @llvm.aarch64.sve.umin.nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a, <vscale x 2 x i64> %a)
   %t2 = extractelement <vscale x 2 x i64> %t1, i64 0

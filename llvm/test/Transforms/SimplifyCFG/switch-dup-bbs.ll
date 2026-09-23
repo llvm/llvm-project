@@ -72,16 +72,14 @@ define i32 @switch_duplicate_arms_multipred(i1 %0, i32 %1, i32 %2, i32 %3, i32 %
 ; SIMPLIFY-CFG-SAME: i1 [[TMP0:%.*]], i32 [[TMP1:%.*]], i32 [[TMP2:%.*]], i32 [[TMP3:%.*]], i32 [[TMP4:%.*]]) {
 ; SIMPLIFY-CFG-NEXT:    br i1 [[TMP0]], label %[[BB6:.*]], label %[[BB7:.*]]
 ; SIMPLIFY-CFG:       [[BB6]]:
-; SIMPLIFY-CFG-NEXT:    switch i32 [[TMP2]], label %[[BB9:.*]] [
+; SIMPLIFY-CFG-NEXT:    switch i32 [[TMP2]], label %[[BB8:.*]] [
 ; SIMPLIFY-CFG-NEXT:      i32 0, label %[[BB7]]
-; SIMPLIFY-CFG-NEXT:      i32 1, label %[[BB8:.*]]
+; SIMPLIFY-CFG-NEXT:      i32 1, label %[[BB7]]
 ; SIMPLIFY-CFG-NEXT:    ]
 ; SIMPLIFY-CFG:       [[BB7]]:
-; SIMPLIFY-CFG-NEXT:    br label %[[BB9]]
+; SIMPLIFY-CFG-NEXT:    br label %[[BB8]]
 ; SIMPLIFY-CFG:       [[BB8]]:
-; SIMPLIFY-CFG-NEXT:    br label %[[BB9]]
-; SIMPLIFY-CFG:       [[BB9]]:
-; SIMPLIFY-CFG-NEXT:    [[TMP10:%.*]] = phi i32 [ [[TMP4]], %[[BB6]] ], [ [[TMP3]], %[[BB8]] ], [ [[TMP3]], %[[BB7]] ]
+; SIMPLIFY-CFG-NEXT:    [[TMP10:%.*]] = phi i32 [ [[TMP4]], %[[BB6]] ], [ [[TMP3]], %[[BB7]] ]
 ; SIMPLIFY-CFG-NEXT:    ret i32 [[TMP10]]
 ;
   br i1 %0, label %6, label %7
@@ -142,7 +140,7 @@ define i32 @switch_dup_exit(i32 %val) {
 ; SIMPLIFY-CFG:       [[DEFAULT]]:
 ; SIMPLIFY-CFG-NEXT:    br label %[[EXIT]]
 ; SIMPLIFY-CFG:       [[EXIT]]:
-; SIMPLIFY-CFG-NEXT:    [[RET:%.*]] = phi i32 [ 0, %[[DEFAULT]] ], [ 3, %[[BB1]] ], [ 1, %[[ENTRY]] ], [ 1, %[[ENTRY]] ]
+; SIMPLIFY-CFG-NEXT:    [[RET:%.*]] = phi i32 [ 0, %[[DEFAULT]] ], [ 1, %[[ENTRY]] ], [ 3, %[[BB1]] ], [ 1, %[[ENTRY]] ]
 ; SIMPLIFY-CFG-NEXT:    ret i32 [[RET]]
 ;
 entry:

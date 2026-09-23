@@ -18,8 +18,10 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
+#include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Bitcode/BitcodeWriterPass.h"
+#include "llvm/CodeGen/LibcallLoweringInfo.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/LLVMContext.h"
@@ -28,8 +30,8 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRPrinter/IRPrintingPasses.h"
 #include "llvm/Passes/PassBuilder.h"
-#include "llvm/Passes/PassPlugin.h"
 #include "llvm/Passes/StandardInstrumentations.h"
+#include "llvm/Plugins/PassPlugin.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/ToolOutputFile.h"
@@ -39,6 +41,7 @@
 #include "llvm/Transforms/IPO/ThinLTOBitcodeWriter.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizer.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
+#include "llvm/Transforms/Utils/AssignGUID.h"
 #include "llvm/Transforms/Utils/Debugify.h"
 #include "llvm/Transforms/Utils/ProfileVerify.h"
 
@@ -161,6 +164,18 @@ static cl::opt<std::string> FullLinkTimeOptimizationLastEPPipeline(
     "passes-ep-full-link-time-optimization-last",
     cl::desc("A textual description of the module pass pipeline inserted at "
              "the FullLinkTimeOptimizationLast extension point into default "
+             "pipelines"),
+    cl::Hidden);
+static cl::opt<std::string> ThinLinkTimeOptimizationEarlyEPPipeline(
+    "passes-ep-thin-link-time-optimization-early",
+    cl::desc("A textual description of the module pass pipeline inserted at "
+             "the ThinLinkTimeOptimizationEarly extension point into default "
+             "pipelines"),
+    cl::Hidden);
+static cl::opt<std::string> ThinLinkTimeOptimizationLastEPPipeline(
+    "passes-ep-thin-link-time-optimization-last",
+    cl::desc("A textual description of the module pass pipeline inserted at "
+             "the ThinLinkTimeOptimizationLast extension point into default "
              "pipelines"),
     cl::Hidden);
 /// @}}
@@ -342,6 +357,23 @@ static void registerEPCallbacks(PassBuilder &PB) {
               "Unable to parse FullLinkTimeOptimizationLastEP pipeline: ");
           Err(PB.parsePassPipeline(PM, FullLinkTimeOptimizationLastEPPipeline));
         });
+  if (tryParsePipelineText<ModulePassManager>(
+          PB, ThinLinkTimeOptimizationEarlyEPPipeline))
+    PB.registerThinLinkTimeOptimizationEarlyEPCallback(
+        [&PB](ModulePassManager &PM, OptimizationLevel) {
+          ExitOnError Err(
+              "Unable to parse ThinLinkTimeOptimizationEarlyEP pipeline: ");
+          Err(PB.parsePassPipeline(PM,
+                                   ThinLinkTimeOptimizationEarlyEPPipeline));
+        });
+  if (tryParsePipelineText<ModulePassManager>(
+          PB, ThinLinkTimeOptimizationLastEPPipeline))
+    PB.registerThinLinkTimeOptimizationLastEPCallback(
+        [&PB](ModulePassManager &PM, OptimizationLevel) {
+          ExitOnError Err(
+              "Unable to parse ThinLinkTimeOptimizationLastEP pipeline: ");
+          Err(PB.parsePassPipeline(PM, ThinLinkTimeOptimizationLastEPPipeline));
+        });
 }
 
 #define HANDLE_EXTENSION(Ext)                                                  \
@@ -409,13 +441,20 @@ bool llvm::runPassPipeline(
       P->CSAction = PGOOptions::CSIRUse;
     }
   }
-  if (TM)
-    TM->setPGOOption(P);
 
   LoopAnalysisManager LAM;
   FunctionAnalysisManager FAM;
   CGSCCAnalysisManager CGAM;
   ModuleAnalysisManager MAM;
+
+  if (TM) {
+    TM->setPGOOption(P);
+
+    MAM.registerPass([&] {
+      const TargetOptions &Options = TM->Options;
+      return RuntimeLibraryAnalysis(Options.MCOptions.ABIName, Options.VecLib);
+    });
+  }
 
   PassInstrumentationCallbacks PIC;
   PrintPassOptions PrintPassOpts;
@@ -507,21 +546,29 @@ bool llvm::runPassPipeline(
         false, "", nullptr, DebugifyMode::OriginalDebugInfo,
         &DebugInfoBeforePass, VerifyDIPreserveExport));
   if (EnableProfcheck)
-    MPM.addPass(createModuleToFunctionPassAdaptor(ProfileVerifierPass()));
+    MPM.addPass(ProfileVerifierPass());
 
   // Add any relevant output pass at the end of the pipeline.
   switch (OK) {
   case OK_NoOutput:
     break; // No output pass needed.
   case OK_OutputAssembly:
+    if (EmitSummaryIndex) {
+      MPM.addPass(AssignGUIDPass());
+    }
     MPM.addPass(PrintModulePass(
-        Out->os(), "", ShouldPreserveAssemblyUseListOrder, EmitSummaryIndex));
+        Out->os(), "", ShouldPreserveAssemblyUseListOrder, EmitSummaryIndex,
+        /*ShouldRenumberMetadata=*/true));
     break;
   case OK_OutputBitcode:
+    if (EmitSummaryIndex) {
+      MPM.addPass(AssignGUIDPass());
+    }
     MPM.addPass(BitcodeWriterPass(Out->os(), ShouldPreserveBitcodeUseListOrder,
                                   EmitSummaryIndex, EmitModuleHash));
     break;
   case OK_OutputThinLTOBitcode:
+    MPM.addPass(AssignGUIDPass());
     MPM.addPass(ThinLTOBitcodeWriterPass(
         Out->os(), ThinLTOLinkOut ? &ThinLTOLinkOut->os() : nullptr,
         ShouldPreserveBitcodeUseListOrder));
@@ -540,7 +587,7 @@ bool llvm::runPassPipeline(
       auto PassName = PIC.getPassNameForClassName(ClassName);
       return PassName.empty() ? ClassName : PassName;
     });
-    outs() << Pipeline;
+    printFormattedPipelinePasses(outs(), Pipeline, *PrintPipelinePasses);
     outs() << "\n";
 
     if (!DisablePipelineVerification) {
@@ -559,6 +606,13 @@ bool llvm::runPassPipeline(
 
   // Now that we have all of the passes ready, run them.
   MPM.run(M, MAM);
+
+  // If a pass reported an error via LLVMContext::emitError, fail without
+  // writing the output module.
+  if (auto *DH = M.getContext().getDiagHandlerPtr()) {
+    if (DH->HasErrors)
+      return false;
+  }
 
   // Declare success.
   if (OK != OK_NoOutput) {

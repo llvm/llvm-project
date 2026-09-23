@@ -54,7 +54,8 @@ int bar() {
 // ITANIUM: ret ptr @_ZN1S3fooEi.sse4.2
 // ITANIUM: ret ptr @_ZN1S3fooEi
 
-// WINDOWS: define weak_odr dso_local i32 @"?foo@S@@QEAAHH@Z.resolver"(ptr %0, i32 %1) comdat
+// WINDOWS: define weak_odr dso_local i32 @"?foo@S@@QEAAHH@Z.resolver"(ptr %0, i32 %1) 
+// WINDOWS-SAME: comdat
 // WINDOWS: call i32 @"?foo@S@@QEAAHH@Z.arch_sandybridge"(ptr %0, i32 %1)
 // WINDOWS: call i32 @"?foo@S@@QEAAHH@Z.arch_ivybridge"(ptr %0, i32 %1)
 // WINDOWS: call i32 @"?foo@S@@QEAAHH@Z.sse4.2"(ptr %0, i32 %1)

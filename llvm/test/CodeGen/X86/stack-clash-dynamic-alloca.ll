@@ -16,12 +16,12 @@ define i32 @foo(i32 %n) local_unnamed_addr #0 {
 ; CHECK-X86-64-NEXT:    andq $-16, %rcx
 ; CHECK-X86-64-NEXT:    subq %rcx, %rax
 ; CHECK-X86-64-NEXT:    cmpq %rsp, %rax
-; CHECK-X86-64-NEXT:    jge .LBB0_3
+; CHECK-X86-64-NEXT:    jae .LBB0_3
 ; CHECK-X86-64-NEXT:  .LBB0_2: # =>This Inner Loop Header: Depth=1
 ; CHECK-X86-64-NEXT:    xorq $0, (%rsp)
 ; CHECK-X86-64-NEXT:    subq $4096, %rsp # imm = 0x1000
 ; CHECK-X86-64-NEXT:    cmpq %rsp, %rax
-; CHECK-X86-64-NEXT:    jl .LBB0_2
+; CHECK-X86-64-NEXT:    jb .LBB0_2
 ; CHECK-X86-64-NEXT:  .LBB0_3:
 ; CHECK-X86-64-NEXT:    movq %rax, %rsp
 ; CHECK-X86-64-NEXT:    movl $1, 4792(%rax)
@@ -45,12 +45,12 @@ define i32 @foo(i32 %n) local_unnamed_addr #0 {
 ; CHECK-X86-32-NEXT:    andl $-16, %ecx
 ; CHECK-X86-32-NEXT:    subl %ecx, %eax
 ; CHECK-X86-32-NEXT:    cmpl %esp, %eax
-; CHECK-X86-32-NEXT:    jge .LBB0_3
+; CHECK-X86-32-NEXT:    jae .LBB0_3
 ; CHECK-X86-32-NEXT:  .LBB0_2: # =>This Inner Loop Header: Depth=1
 ; CHECK-X86-32-NEXT:    xorl $0, (%esp)
 ; CHECK-X86-32-NEXT:    subl $4096, %esp # imm = 0x1000
 ; CHECK-X86-32-NEXT:    cmpl %esp, %eax
-; CHECK-X86-32-NEXT:    jl .LBB0_2
+; CHECK-X86-32-NEXT:    jb .LBB0_2
 ; CHECK-X86-32-NEXT:  .LBB0_3:
 ; CHECK-X86-32-NEXT:    movl %eax, %esp
 ; CHECK-X86-32-NEXT:    movl $1, 4792(%eax)

@@ -8,6 +8,7 @@
 * }
 */
 	.file	"regs_int_params.c"
+	.att_syntax
 	.text
 	.globl	regs_int_params                 # -- Begin function regs_int_params
 	.p2align	4

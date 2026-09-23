@@ -1,12 +1,12 @@
-; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa -polly-invariant-load-hoisting=true '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa -polly-invariant-load-hoisting=true '-passes=polly-custom<scops>' -polly-print-scops -disable-output < %s 2>&1 | FileCheck %s
 
 ; void f(long A[], int N, int *init_ptr) {
 ;   long i, j;
 ;
 ;   for (i = 0; i < N; ++i) {
 ;     init = *init_ptr;
-;     for (i = 0; i < N; ++i) {
-;       A[i] = init + 2;
+;     for (j = 0; j < N; ++j) {
+;       A[j] = init + 2;
 ;     }
 ;   }
 ; }

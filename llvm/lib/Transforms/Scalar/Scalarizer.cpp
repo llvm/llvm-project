@@ -252,7 +252,14 @@ static Value *concatenate(IRBuilder<> &Builder, ArrayRef<Value *> Fragments,
       Res = Builder.CreateInsertElement(Res, Fragment, I * VS.NumPacked,
                                         Name + ".upto" + Twine(I));
     } else {
-      Fragment = Builder.CreateShuffleVector(Fragment, Fragment, ExtendMask);
+      if (NumPacked < VS.NumPacked) {
+        // If last pack of remained bits not match current ExtendMask size.
+        ExtendMask.truncate(NumPacked);
+        ExtendMask.resize(NumElements, -1);
+      }
+
+      Fragment = Builder.CreateShuffleVector(
+          Fragment, PoisonValue::get(Fragment->getType()), ExtendMask);
       if (I == 0) {
         Res = Fragment;
       } else {
@@ -357,6 +364,7 @@ char ScalarizerLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(ScalarizerLegacyPass, "scalarizer",
                       "Scalarize vector operations", false, false)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_END(ScalarizerLegacyPass, "scalarizer",
                     "Scalarize vector operations", false, false)
 
@@ -704,7 +712,7 @@ bool ScalarizerVisitor::splitCall(CallInst &CI) {
 
   Intrinsic::ID ID = F->getIntrinsicID();
 
-  if (ID == Intrinsic::not_intrinsic || !isTriviallyScalarizable(ID, TTI))
+  if (ID == Intrinsic::not_intrinsic || !isTriviallyScalarizable(ID))
     return false;
 
   // unsigned NumElems = VT->getNumElements();
@@ -936,6 +944,46 @@ bool ScalarizerVisitor::visitCastInst(CastInst &CI) {
 bool ScalarizerVisitor::visitBitCastInst(BitCastInst &BCI) {
   std::optional<VectorSplit> DstVS = getVectorSplit(BCI.getDestTy());
   std::optional<VectorSplit> SrcVS = getVectorSplit(BCI.getSrcTy());
+
+  if (DstVS && !SrcVS && BCI.getSrcTy()->isIntegerTy() && !DstVS->RemainderTy &&
+      DstVS->NumPacked == 1 && DstVS->SplitTy->isIntegerTy()) {
+    IRBuilder<> Builder(&BCI);
+    Builder.SetCurrentDebugLocation(BCI.getDebugLoc());
+    ValueVector Res(DstVS->NumFragments);
+    unsigned FragmentBits = DstVS->SplitTy->getPrimitiveSizeInBits();
+    bool IsBigEndian = BCI.getDataLayout().isBigEndian();
+    for (unsigned I = 0; I < DstVS->NumFragments; ++I) {
+      unsigned FragmentIndex = IsBigEndian ? DstVS->NumFragments - I - 1 : I;
+      Value *Fragment = BCI.getOperand(0);
+      if (FragmentIndex)
+        Fragment = Builder.CreateLShr(Fragment, FragmentIndex * FragmentBits);
+      Res[I] = Builder.CreateTruncOrBitCast(Fragment, DstVS->getFragmentType(I),
+                                            BCI.getName() + ".i" + Twine(I));
+    }
+    gather(&BCI, Res, *DstVS);
+    return true;
+  }
+
+  if (!DstVS && SrcVS && BCI.getDestTy()->isIntegerTy() &&
+      !SrcVS->RemainderTy && SrcVS->NumPacked == 1 &&
+      SrcVS->SplitTy->isIntegerTy()) {
+    IRBuilder<> Builder(&BCI);
+    Builder.SetCurrentDebugLocation(BCI.getDebugLoc());
+    Scatterer Op0 = scatter(&BCI, BCI.getOperand(0), *SrcVS);
+    Value *Result = nullptr;
+    unsigned FragmentBits = SrcVS->SplitTy->getPrimitiveSizeInBits();
+    bool IsBigEndian = BCI.getDataLayout().isBigEndian();
+    for (unsigned I = 0; I < SrcVS->NumFragments; ++I) {
+      unsigned FragmentIndex = IsBigEndian ? SrcVS->NumFragments - I - 1 : I;
+      Value *Fragment = Builder.CreateZExtOrTrunc(Op0[I], BCI.getDestTy());
+      if (FragmentIndex)
+        Fragment = Builder.CreateShl(Fragment, FragmentIndex * FragmentBits);
+      Result = Result ? Builder.CreateOr(Result, Fragment) : Fragment;
+    }
+    replaceUses(&BCI, Result);
+    return true;
+  }
+
   if (!DstVS || !SrcVS || DstVS->RemainderTy || SrcVS->RemainderTy)
     return false;
 
@@ -1076,7 +1124,7 @@ bool ScalarizerVisitor::visitExtractValueInst(ExtractValueInst &EVI) {
     if (!F)
       return false;
     Intrinsic::ID ID = F->getIntrinsicID();
-    if (ID == Intrinsic::not_intrinsic || !isTriviallyScalarizable(ID, TTI))
+    if (ID == Intrinsic::not_intrinsic || !isTriviallyScalarizable(ID))
       return false;
     // Note: Fall through means Operand is a`CallInst` and it is defined in
     // `isTriviallyScalarizable`.
@@ -1126,6 +1174,8 @@ bool ScalarizerVisitor::visitExtractElementInst(ExtractElementInst &EEI) {
 
   if (auto *CI = dyn_cast<ConstantInt>(ExtIdx)) {
     unsigned Idx = CI->getZExtValue();
+    if (Idx >= VS->VecTy->getNumElements())
+      return false;
     unsigned Fragment = Idx / VS->NumPacked;
     Value *Res = Op0[Fragment];
     bool IsPacked = VS->NumPacked > 1;

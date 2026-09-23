@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++2b %s -fsyntax-only -verify
+// RUN: %clang_cc1 -std=c++2b %s -fsyntax-only -verify -Wno-coroutines-unsupported-target
 
 #include "Inputs/std-coroutine.h"
 

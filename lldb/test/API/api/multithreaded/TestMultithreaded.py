@@ -8,33 +8,22 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@requireThreadSupport
 @skipIfNoSBHeaders
 class SBBreakpointCallbackCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
     NO_DEBUG_INFO_TESTCASE = True
 
     def setUp(self):
         TestBase.setUp(self)
-        self.generateSource("driver.cpp")
-        self.generateSource("listener_test.cpp")
-        self.generateSource("test_breakpoint_callback.cpp")
-        self.generateSource("test_breakpoint_location_callback.cpp")
-        self.generateSource("test_listener_event_description.cpp")
-        self.generateSource("test_listener_event_process_state.cpp")
-        self.generateSource("test_listener_resume.cpp")
-        self.generateSource("test_stop-hook.cpp")
-        self.generateSource("test_concurrent_unwind.cpp")
 
     @skipIfRemote
-    # clang-cl does not support throw or catch (llvm.org/pr24538)
-    @skipIfWindows
     @skipIfHostIncompatibleWithTarget
     def test_python_stop_hook(self):
         """Test that you can run a python command in a stop-hook when stdin is File based."""
         self.build_and_test("driver.cpp test_stop-hook.cpp", "test_python_stop_hook")
 
     @skipIfRemote
-    # clang-cl does not support throw or catch (llvm.org/pr24538)
-    @skipIfWindows
     @skipIfHostIncompatibleWithTarget
     def test_breakpoint_callback(self):
         """Test the that SBBreakpoint callback is invoked when a breakpoint is hit."""
@@ -43,8 +32,7 @@ class SBBreakpointCallbackCase(TestBase):
         )
 
     @skipIfRemote
-    # clang-cl does not support throw or catch (llvm.org/pr24538)
-    @skipIfWindows
+    @skipIfWindows  # https://github.com/llvm/llvm-project/issues/224303
     @skipIfHostIncompatibleWithTarget
     def test_breakpoint_location_callback(self):
         """Test the that SBBreakpointLocation callback is invoked when a breakpoint is hit."""
@@ -54,8 +42,6 @@ class SBBreakpointCallbackCase(TestBase):
         )
 
     @skipIfRemote
-    # clang-cl does not support throw or catch (llvm.org/pr24538)
-    @skipIfWindows
     @expectedFlakeyFreeBSD
     @skipIfHostIncompatibleWithTarget
     def test_sb_api_listener_event_description(self):
@@ -66,8 +52,6 @@ class SBBreakpointCallbackCase(TestBase):
         )
 
     @skipIfRemote
-    # clang-cl does not support throw or catch (llvm.org/pr24538)
-    @skipIfWindows
     @expectedFlakeyFreeBSD
     @skipIfHostIncompatibleWithTarget
     def test_sb_api_listener_event_process_state(self):
@@ -80,8 +64,6 @@ class SBBreakpointCallbackCase(TestBase):
         )
 
     @skipIfRemote
-    # clang-cl does not support throw or catch (llvm.org/pr24538)
-    @skipIfWindows
     @expectedFlakeyFreeBSD
     @skipIf(oslist=["linux"])  # flakey
     @skipIfHostIncompatibleWithTarget
@@ -93,8 +75,6 @@ class SBBreakpointCallbackCase(TestBase):
         )
 
     @skipIfRemote
-    # clang-cl does not support throw or catch (llvm.org/pr24538)
-    @skipIfWindows
     @skipIfHostIncompatibleWithTarget
     def test_concurrent_unwind(self):
         """Test that you can run a python command in a stop-hook when stdin is File based."""
@@ -126,10 +106,15 @@ class SBBreakpointCallbackCase(TestBase):
         test_exe = self.getBuildArtifact(test_name)
         exe = [test_exe, self.getBuildArtifact(self.inferior)]
 
+        # Tests locate their support files (e.g. test_stop-hook.cpp's
+        # some_cmd.py) via the LLDB_TEST_SOURCE_DIR environment variable.
+        env = dict(os.environ)
+        env["LLDB_TEST_SOURCE_DIR"] = self.getSourceDir()
+
         # check_call will raise a CalledProcessError if the executable doesn't
         # return exit code 0 to indicate success.  We can let this exception go
         # - the test harness will recognize it as a test failure.
-        subprocess.check_call(exe)
+        subprocess.check_call(exe, env=env)
 
     def build_program(self, sources, program):
         return self.buildDriver(sources, program)

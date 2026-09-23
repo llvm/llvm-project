@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <utility>
+
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 
 #include "mlir/IR/Diagnostics.h"
@@ -46,8 +48,6 @@ static bool happensBefore(Operation *a, Operation *b) {
 //===----------------------------------------------------------------------===//
 // TransformState
 //===----------------------------------------------------------------------===//
-
-constexpr const Value transform::TransformState::kTopLevelValue;
 
 transform::TransformState::TransformState(
     Region *region, Operation *payloadRoot,
@@ -556,8 +556,7 @@ void transform::TransformState::recordValueHandleInvalidationByOpHandleOne(
       auto arg = llvm::cast<BlockArgument>(payloadValue);
       definingOp = arg.getParentBlock()->getParentOp();
       argumentNo = arg.getArgNumber();
-      blockNo = std::distance(arg.getOwner()->getParent()->begin(),
-                              arg.getOwner()->getIterator());
+      blockNo = arg.getOwner()->computeBlockNumber();
       regionNo = arg.getOwner()->getParent()->getRegionNumber();
     }
     assert(definingOp && "expected the value to be defined by an op as result "
@@ -812,7 +811,7 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
   LDBG() << "applying: "
          << OpWithFlags(transform, OpPrintingFlags().skipRegions());
   FULL_LDBG() << "Top-level payload before application:\n" << *getTopLevel();
-  auto printOnFailureRAII = llvm::make_scope_exit([this] {
+  llvm::scope_exit printOnFailureRAII([this] {
     (void)this;
     LDBG() << "Failing Top-level payload:\n"
            << OpWithFlags(getTopLevel(),
@@ -1174,7 +1173,8 @@ bool transform::TransformResults::isSet(unsigned resultNumber) const {
 transform::TrackingListener::TrackingListener(TransformState &state,
                                               TransformOpInterface op,
                                               TrackingListenerConfig config)
-    : TransformState::Extension(state), transformOp(op), config(config) {
+    : TransformState::Extension(state), transformOp(op),
+      config(std::move(config)) {
   if (op) {
     for (OpOperand *opOperand : transformOp.getConsumedHandleOpOperands()) {
       consumedHandles.insert(opOperand->get());
@@ -1307,8 +1307,8 @@ void transform::TrackingListener::notifyOperationReplaced(
   // Check if there are any handles that must be updated.
   Value aliveHandle;
   if (config.skipHandleFn) {
-    auto it = llvm::find_if(opHandles,
-                            [&](Value v) { return !config.skipHandleFn(v); });
+    auto *it = llvm::find_if(opHandles,
+                             [&](Value v) { return !config.skipHandleFn(v); });
     if (it != opHandles.end())
       aliveHandle = *it;
   } else if (!opHandles.empty()) {
@@ -1497,8 +1497,7 @@ transform::detail::checkApplyToOne(Operation *transformOp,
 
 template <typename T>
 static SmallVector<T> castVector(ArrayRef<transform::MappedValue> range) {
-  return llvm::to_vector(llvm::map_range(
-      range, [](transform::MappedValue value) { return cast<T>(value); }));
+  return llvm::map_to_vector(range, llvm::CastTo<T>);
 }
 
 void transform::detail::setApplyToOneResults(
@@ -1989,6 +1988,45 @@ LogicalResult transform::detail::verifyTransformOpInterface(Operation *op) {
 }
 
 //===----------------------------------------------------------------------===//
+// Normal form utilities.
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure transform::detail::checkNormalForms(
+    ArrayRef<NormalFormAttrInterface> normalForms,
+    ArrayRef<Operation *> payload) {
+  // Return any definite failure or the first silenceable failure.
+  auto overallResult = DiagnosedSilenceableFailure::success();
+  for (Operation *op : payload) {
+    for (NormalFormAttrInterface normalForm : normalForms) {
+      DiagnosedSilenceableFailure result = normalForm.checkOperation(op);
+      if (result.isDefiniteFailure())
+        return result;
+      if (result.isSilenceableFailure() && overallResult.succeeded())
+        overallResult = std::move(result);
+    }
+  }
+  return overallResult;
+}
+
+LogicalResult transform::detail::verifyNormalFormList(
+    function_ref<InFlightDiagnostic()> emitError,
+    ArrayRef<NormalFormAttrInterface> normalForms) {
+  llvm::DenseMap<TypeID, NormalFormAttrInterface> seen;
+  for (NormalFormAttrInterface normalForm : normalForms) {
+    auto [previous, inserted] =
+        seen.try_emplace(normalForm.getTypeID(), normalForm);
+    if (!inserted) {
+      InFlightDiagnostic diag = emitError()
+                                << "duplicate normal form: " << normalForm;
+      diag.attachNote() << "previous instance: " << previous->second;
+      return diag;
+    }
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // Entry point.
 //===----------------------------------------------------------------------===//
 
@@ -2024,5 +2062,6 @@ LogicalResult transform::applyTransforms(
 // Generated interface implementation.
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Transform/Interfaces/TransformAttrInterfaces.cpp.inc"
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.cpp.inc"
 #include "mlir/Dialect/Transform/Interfaces/TransformTypeInterfaces.cpp.inc"

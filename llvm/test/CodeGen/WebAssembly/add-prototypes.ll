@@ -1,4 +1,5 @@
 ; RUN: opt -S -wasm-add-missing-prototypes %s | FileCheck %s
+; RUN: opt -S -passes=wasm-add-missing-prototypes %s | FileCheck %s
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"

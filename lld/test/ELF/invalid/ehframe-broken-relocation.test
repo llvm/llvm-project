@@ -1,6 +1,6 @@
 # RUN: yaml2obj %s -o %t.o
 # RUN: not ld.lld --icf=all %t.o -o /dev/null 2>&1 | FileCheck %s
-# CHECK: .eh_frame: relocation is not in any piece
+# CHECK: error: .eh_frame: relocation is not in any piece
 
 !ELF
 FileHeader:

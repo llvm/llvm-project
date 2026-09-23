@@ -11,15 +11,15 @@ body: |
     ; CHECK: liveins: $x0, $x1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %ptr:_(p0) = COPY $x0
-    ; CHECK-NEXT: %val:_(s64) = COPY $x1
-    ; CHECK-NEXT: %offset:_(s64) = G_CONSTANT i64 8
-    ; CHECK-NEXT: %writeback:_(p0) = G_INDEXED_STORE %val(s64), %ptr, %offset(s64), 0 :: (store (s64))
+    ; CHECK-NEXT: %val:_(i64) = COPY $x1
+    ; CHECK-NEXT: %offset:_(i64) = G_CONSTANT i64 8
+    ; CHECK-NEXT: %writeback:_(p0) = G_INDEXED_STORE %val(i64), %ptr, %offset(i64), 0 :: (store (i64))
     ; CHECK-NEXT: $x0 = COPY %writeback(p0)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %ptr:_(p0) = COPY $x0
-    %val:_(s64) = COPY $x1
-    %offset:_(s64) = G_CONSTANT i64 8
-    %writeback:_(p0) = G_INDEXED_STORE %val, %ptr, %offset, 0 :: (store (s64), align 8)
+    %val:_(i64) = COPY $x1
+    %offset:_(i64) = G_CONSTANT i64 8
+    %writeback:_(p0) = G_INDEXED_STORE %val, %ptr, %offset, 0 :: (store (i64), align 8)
     $x0 = COPY %writeback
     RET_ReallyLR implicit $x0
 ...
@@ -33,15 +33,15 @@ body: |
     ; CHECK: liveins: $x0, $q0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %ptr:_(p0) = COPY $x0
-    ; CHECK-NEXT: %val:_(<2 x s64>) = COPY $q0
-    ; CHECK-NEXT: %offset:_(s64) = G_CONSTANT i64 8
-    ; CHECK-NEXT: %writeback:_(p0) = G_INDEXED_STORE %val(<2 x s64>), %ptr, %offset(s64), 0 :: (store (<2 x s64>), align 8)
+    ; CHECK-NEXT: %val:_(<2 x i64>) = COPY $q0
+    ; CHECK-NEXT: %offset:_(i64) = G_CONSTANT i64 8
+    ; CHECK-NEXT: %writeback:_(p0) = G_INDEXED_STORE %val(<2 x i64>), %ptr, %offset(i64), 0 :: (store (<2 x i64>), align 8)
     ; CHECK-NEXT: $x0 = COPY %writeback(p0)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %ptr:_(p0) = COPY $x0
-    %val:_(<2 x s64>) = COPY $q0
-    %offset:_(s64) = G_CONSTANT i64 8
-    %writeback:_(p0) = G_INDEXED_STORE %val, %ptr, %offset, 0 :: (store (<2 x s64>), align 8)
+    %val:_(<2 x i64>) = COPY $q0
+    %offset:_(i64) = G_CONSTANT i64 8
+    %writeback:_(p0) = G_INDEXED_STORE %val, %ptr, %offset, 0 :: (store (<2 x i64>), align 8)
     $x0 = COPY %writeback
     RET_ReallyLR implicit $x0
 ...
@@ -55,13 +55,13 @@ body: |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %ptr:_(p0) = COPY $x0
-    ; CHECK-NEXT: %offset:_(s64) = G_CONSTANT i64 8
-    ; CHECK-NEXT: %dst:_(s64), %writeback:_(p0) = G_INDEXED_LOAD %ptr, %offset(s64), 0 :: (load (s64))
+    ; CHECK-NEXT: %offset:_(i64) = G_CONSTANT i64 8
+    ; CHECK-NEXT: %dst:_(i64), %writeback:_(p0) = G_INDEXED_LOAD %ptr, %offset(i64), 0 :: (load (i64))
     ; CHECK-NEXT: $x0 = COPY %writeback(p0)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %ptr:_(p0) = COPY $x0
-    %offset:_(s64) = G_CONSTANT i64 8
-    %dst:_(s64), %writeback:_(p0) = G_INDEXED_LOAD %ptr, %offset, 0 :: (load (s64), align 8)
+    %offset:_(i64) = G_CONSTANT i64 8
+    %dst:_(i64), %writeback:_(p0) = G_INDEXED_LOAD %ptr, %offset, 0 :: (load (i64), align 8)
     $x0 = COPY %writeback
     RET_ReallyLR implicit $x0
 ...
@@ -75,14 +75,14 @@ body: |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %ptr:_(p0) = COPY $x0
-    ; CHECK-NEXT: %offset:_(s64) = G_CONSTANT i64 8
-    ; CHECK-NEXT: %dst:_(<2 x s64>), %writeback:_(p0) = G_INDEXED_LOAD %ptr, %offset(s64), 0 :: (load (s64))
+    ; CHECK-NEXT: %offset:_(i64) = G_CONSTANT i64 8
+    ; CHECK-NEXT: %dst:_(<2 x i64>), %writeback:_(p0) = G_INDEXED_LOAD %ptr, %offset(i64), 0 :: (load (i64))
     ; CHECK-NEXT: $x0 = COPY %writeback(p0)
-    ; CHECK-NEXT: $q0 = COPY %dst(<2 x s64>)
+    ; CHECK-NEXT: $q0 = COPY %dst(<2 x i64>)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0, implicit $q0
     %ptr:_(p0) = COPY $x0
-    %offset:_(s64) = G_CONSTANT i64 8
-    %dst:_(<2 x s64>), %writeback:_(p0) = G_INDEXED_LOAD %ptr, %offset, 0 :: (load (s64), align 8)
+    %offset:_(i64) = G_CONSTANT i64 8
+    %dst:_(<2 x i64>), %writeback:_(p0) = G_INDEXED_LOAD %ptr, %offset, 0 :: (load (i64), align 8)
     $x0 = COPY %writeback
     $q0 = COPY %dst
     RET_ReallyLR implicit $x0, implicit $q0
@@ -97,15 +97,15 @@ body: |
     ; CHECK: liveins: $x0, $x1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %ptr:_(p0) = COPY $x0
-    ; CHECK-NEXT: %val:_(s64) = COPY $x1
-    ; CHECK-NEXT: %offset:_(s64) = G_CONSTANT i64 8
-    ; CHECK-NEXT: %writeback:_(p0) = G_INDEXED_STORE %val(s64), %ptr, %offset(s64), 1 :: (store (s64))
+    ; CHECK-NEXT: %val:_(i64) = COPY $x1
+    ; CHECK-NEXT: %offset:_(i64) = G_CONSTANT i64 8
+    ; CHECK-NEXT: %writeback:_(p0) = G_INDEXED_STORE %val(i64), %ptr, %offset(i64), 1 :: (store (i64))
     ; CHECK-NEXT: $x0 = COPY %writeback(p0)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %ptr:_(p0) = COPY $x0
-    %val:_(s64) = COPY $x1
-    %offset:_(s64) = G_CONSTANT i64 8
-    %writeback:_(p0) = G_INDEXED_STORE %val, %ptr, %offset, 1 :: (store (s64), align 8)
+    %val:_(i64) = COPY $x1
+    %offset:_(i64) = G_CONSTANT i64 8
+    %writeback:_(p0) = G_INDEXED_STORE %val, %ptr, %offset, 1 :: (store (i64), align 8)
     $x0 = COPY %writeback
     RET_ReallyLR implicit $x0
 ...
@@ -119,13 +119,13 @@ body: |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %ptr:_(p0) = COPY $x0
-    ; CHECK-NEXT: %offset:_(s64) = G_CONSTANT i64 8
-    ; CHECK-NEXT: %dst:_(s64), %writeback:_(p0) = G_INDEXED_ZEXTLOAD %ptr, %offset(s64), 0 :: (load (s8), align 8)
+    ; CHECK-NEXT: %offset:_(i64) = G_CONSTANT i64 8
+    ; CHECK-NEXT: %dst:_(i64), %writeback:_(p0) = G_INDEXED_ZEXTLOAD %ptr, %offset(i64), 0 :: (load (i8), align 8)
     ; CHECK-NEXT: $x0 = COPY %writeback(p0)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %ptr:_(p0) = COPY $x0
-    %offset:_(s64) = G_CONSTANT i64 8
-    %dst:_(s64), %writeback:_(p0) = G_INDEXED_ZEXTLOAD %ptr, %offset, 0 :: (load (s8), align 8)
+    %offset:_(i64) = G_CONSTANT i64 8
+    %dst:_(i64), %writeback:_(p0) = G_INDEXED_ZEXTLOAD %ptr, %offset, 0 :: (load (i8), align 8)
     $x0 = COPY %writeback
     RET_ReallyLR implicit $x0
 ...
@@ -139,13 +139,13 @@ body: |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %ptr:_(p0) = COPY $x0
-    ; CHECK-NEXT: %offset:_(s64) = G_CONSTANT i64 8
-    ; CHECK-NEXT: %dst:_(s64), %writeback:_(p0) = G_INDEXED_SEXTLOAD %ptr, %offset(s64), 0 :: (load (s8), align 8)
+    ; CHECK-NEXT: %offset:_(i64) = G_CONSTANT i64 8
+    ; CHECK-NEXT: %dst:_(i64), %writeback:_(p0) = G_INDEXED_SEXTLOAD %ptr, %offset(i64), 0 :: (load (i8), align 8)
     ; CHECK-NEXT: $x0 = COPY %writeback(p0)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %ptr:_(p0) = COPY $x0
-    %offset:_(s64) = G_CONSTANT i64 8
-    %dst:_(s64), %writeback:_(p0) = G_INDEXED_SEXTLOAD %ptr, %offset, 0 :: (load (s8), align 8)
+    %offset:_(i64) = G_CONSTANT i64 8
+    %dst:_(i64), %writeback:_(p0) = G_INDEXED_SEXTLOAD %ptr, %offset, 0 :: (load (i8), align 8)
     $x0 = COPY %writeback
     RET_ReallyLR implicit $x0
 ...
@@ -159,13 +159,13 @@ body: |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %ptr:_(p0) = COPY $x0
-    ; CHECK-NEXT: %offset:_(s64) = G_CONSTANT i64 8
-    ; CHECK-NEXT: %dst:_(s64), %writeback:_(p0) = G_INDEXED_SEXTLOAD %ptr, %offset(s64), 0 :: (load (s32), align 8)
+    ; CHECK-NEXT: %offset:_(i64) = G_CONSTANT i64 8
+    ; CHECK-NEXT: %dst:_(i64), %writeback:_(p0) = G_INDEXED_SEXTLOAD %ptr, %offset(i64), 0 :: (load (i32), align 8)
     ; CHECK-NEXT: $x0 = COPY %writeback(p0)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %ptr:_(p0) = COPY $x0
-    %offset:_(s64) = G_CONSTANT i64 8
-    %dst:_(s64), %writeback:_(p0) = G_INDEXED_SEXTLOAD %ptr, %offset, 0 :: (load (s32), align 8)
+    %offset:_(i64) = G_CONSTANT i64 8
+    %dst:_(i64), %writeback:_(p0) = G_INDEXED_SEXTLOAD %ptr, %offset, 0 :: (load (i32), align 8)
     $x0 = COPY %writeback
     RET_ReallyLR implicit $x0
 ...
@@ -179,13 +179,13 @@ body: |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %ptr:_(p0) = COPY $x0
-    ; CHECK-NEXT: %offset:_(s64) = G_CONSTANT i64 8
-    ; CHECK-NEXT: %dst:_(s64), %writeback:_(p0) = G_INDEXED_ZEXTLOAD %ptr, %offset(s64), 0 :: (load (s32), align 8)
+    ; CHECK-NEXT: %offset:_(i64) = G_CONSTANT i64 8
+    ; CHECK-NEXT: %dst:_(i64), %writeback:_(p0) = G_INDEXED_ZEXTLOAD %ptr, %offset(i64), 0 :: (load (i32), align 8)
     ; CHECK-NEXT: $x0 = COPY %writeback(p0)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %ptr:_(p0) = COPY $x0
-    %offset:_(s64) = G_CONSTANT i64 8
-    %dst:_(s64), %writeback:_(p0) = G_INDEXED_ZEXTLOAD %ptr, %offset, 0 :: (load (s32), align 8)
+    %offset:_(i64) = G_CONSTANT i64 8
+    %dst:_(i64), %writeback:_(p0) = G_INDEXED_ZEXTLOAD %ptr, %offset, 0 :: (load (i32), align 8)
     $x0 = COPY %writeback
     RET_ReallyLR implicit $x0
 ...

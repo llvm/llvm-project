@@ -15,21 +15,25 @@
 
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 
+#define GET_SDNODE_ENUM
+#include "BPFGenSDNodeInfo.inc"
+
 namespace llvm {
 
-class BPFSelectionDAGInfo : public SelectionDAGTargetInfo {
+class BPFSelectionDAGInfo : public SelectionDAGGenTargetInfo {
 public:
+  BPFSelectionDAGInfo();
+
   SDValue EmitTargetCodeForMemcpy(SelectionDAG &DAG, const SDLoc &dl,
                                   SDValue Chain, SDValue Dst, SDValue Src,
-                                  SDValue Size, Align Alignment,
+                                  SDValue Size, Align DstAlign, Align SrcAlign,
                                   bool isVolatile, bool AlwaysInline,
                                   MachinePointerInfo DstPtrInfo,
                                   MachinePointerInfo SrcPtrInfo) const override;
 
-  unsigned getCommonMaxStoresPerMemFunc() const { return 128; }
-
+  unsigned getCommonMaxStoresPerMemFunc() const;
 };
 
-}
+} // namespace llvm
 
 #endif

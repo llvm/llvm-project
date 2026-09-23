@@ -168,6 +168,11 @@ updateReturnOps(func::FuncOp func, ArrayRef<BlockArgument> appendedEntryArgs,
     }
     OpBuilder builder(op);
     SmallVector<SmallVector<Value>> dynamicSizes;
+    // Map each returned memref to its primary out parameter.
+    DenseMap<Value, BlockArgument> primaryArgs;
+    // Delay erasure until all return operands have been inspected because an
+    // allocation may be returned multiple times.
+    SetVector<Operation *> toErase;
     for (auto [orig, arg] : llvm::zip(copyIntoOutParams, appendedEntryArgs)) {
       bool hoistStaticAllocs =
           options.hoistStaticAllocs &&
@@ -178,17 +183,31 @@ updateReturnOps(func::FuncOp func, ArrayRef<BlockArgument> appendedEntryArgs,
       if ((hoistStaticAllocs || hoistDynamicAllocs) &&
           isa_and_nonnull<bufferization::AllocationOpInterface>(
               orig.getDefiningOp())) {
-        orig.replaceAllUsesWith(arg);
         if (hoistDynamicAllocs) {
           SmallVector<Value> dynamicSize = getDynamicSize(orig, func);
           dynamicSizes.push_back(dynamicSize);
         }
-        orig.getDefiningOp()->erase();
-      } else {
+
+        auto [it, inserted] = primaryArgs.try_emplace(orig, arg);
+        // Repeated returns of the same allocation reuse the primary out
+        // parameter; copy its contents into the out parameter for this
+        // occurrence.
+        if (!inserted) {
+          if (failed(options.memCpyFn(builder, op->getLoc(), it->second, arg)))
+            return WalkResult::interrupt();
+          continue;
+        }
+        orig.replaceAllUsesWith(arg);
+        toErase.insert(orig.getDefiningOp());
+      } else if (orig != arg) {
         if (failed(options.memCpyFn(builder, op.getLoc(), orig, arg)))
           return WalkResult::interrupt();
       }
     }
+
+    for (Operation *eraseOp : toErase)
+      eraseOp->erase();
+
     func::ReturnOp::create(builder, op.getLoc(), keepAsReturnOperands);
     op.erase();
     auto dynamicSizePair =
@@ -217,7 +236,9 @@ updateCalls(ModuleOp module, const AllocDynamicSizesMap &map,
     }
     if (!options.filterFn(&callee))
       return;
-    if (callee.isExternal() || callee.isPublic())
+    if (callee.isPublic() && !options.modifyPublicFunctions)
+      return;
+    if (callee.isExternal())
       return;
 
     SmallVector<Value, 6> replaceWithNewCallResults;
@@ -276,8 +297,8 @@ updateCalls(ModuleOp module, const AllocDynamicSizesMap &map,
 
     auto newOperands = llvm::to_vector<6>(op.getOperands());
     newOperands.append(outParams.begin(), outParams.end());
-    auto newResultTypes = llvm::to_vector<6>(llvm::map_range(
-        replaceWithNewCallResults, [](Value v) { return v.getType(); }));
+    auto newResultTypes = llvm::map_to_vector<6>(
+        replaceWithNewCallResults, [](Value v) { return v.getType(); });
     auto newCall = func::CallOp::create(
         builder, op.getLoc(), op.getCalleeAttr(), newResultTypes, newOperands);
     for (auto t : llvm::zip(replaceWithNewCallResults, newCall.getResults()))
@@ -295,7 +316,9 @@ LogicalResult mlir::bufferization::promoteBufferResultsToOutParams(
   // function.
   AllocDynamicSizesMap map;
   for (auto func : module.getOps<func::FuncOp>()) {
-    if (func.isExternal() || func.isPublic())
+    if (func.isPublic() && !options.modifyPublicFunctions)
+      continue;
+    if (func.isExternal())
       continue;
     if (!options.filterFn(&func))
       continue;
@@ -326,6 +349,8 @@ struct BufferResultsToOutParamsPass
       options.hoistStaticAllocs = true;
     if (hoistDynamicAllocs)
       options.hoistDynamicAllocs = true;
+    if (modifyPublicFunctions)
+      options.modifyPublicFunctions = true;
 
     if (failed(bufferization::promoteBufferResultsToOutParams(getOperation(),
                                                               options)))

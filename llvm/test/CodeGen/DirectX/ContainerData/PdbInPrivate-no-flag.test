@@ -1,0 +1,5 @@
+## Check that PRIV is not emitted unless --dx-pdb-in-private is specified.
+
+# RUN: llc %S/Inputs/SourceInfo.ll --filetype=obj -o - | obj2yaml | FileCheck %s --implicit-check-not='PRIV'
+
+# CHECK: - Name: DXIL

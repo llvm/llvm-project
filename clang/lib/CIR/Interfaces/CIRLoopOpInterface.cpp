@@ -17,37 +17,73 @@ namespace cir {
 void LoopOpInterface::getLoopOpSuccessorRegions(
     LoopOpInterface op, mlir::RegionBranchPoint point,
     llvm::SmallVectorImpl<mlir::RegionSuccessor> &regions) {
-  assert(point.isParent() || point.getRegionOrNull());
+  assert(point.isParent() || point.getTerminatorPredecessorOrNull());
 
   // Branching to first region: go to condition or body (do-while).
   if (point.isParent()) {
-    regions.emplace_back(&op.getEntry(), op.getEntry().getArguments());
+    regions.emplace_back(&op.getEntry());
     return;
   }
 
-  // Branching from condition: go to body or exit.
-  if (&op.getCond() == point.getRegionOrNull()) {
-    regions.emplace_back(mlir::RegionSuccessor(op->getResults()));
-    regions.emplace_back(&op.getBody(), op.getBody().getArguments());
+  mlir::Region *parentRegion =
+      point.getTerminatorPredecessorOrNull()->getParentRegion();
+
+  mlir::Region *step = op.maybeGetStep();
+  mlir::Region *cleanup = op.maybeGetCleanup();
+
+  // Branching from condition: go to body, or (on the false edge) route
+  // through the cleanup region if present, otherwise exit the loop.
+  if (&op.getCond() == parentRegion) {
+    if (cleanup)
+      regions.emplace_back(cleanup);
+    else
+      regions.emplace_back(op);
+    regions.emplace_back(&op.getBody());
     return;
   }
 
-  // Branching from body: go to step (for) or condition.
-  if (&op.getBody() == point.getRegionOrNull()) {
+  // Branching from body: go to step (for), otherwise route through the
+  // cleanup region if present, otherwise go back to the condition.
+  if (&op.getBody() == parentRegion) {
     // FIXME(cir): Should we consider break/continue statements here?
-    mlir::Region *afterBody =
-        (op.maybeGetStep() ? op.maybeGetStep() : &op.getCond());
-    regions.emplace_back(afterBody, afterBody->getArguments());
+    if (step)
+      regions.emplace_back(step);
+    else if (cleanup)
+      regions.emplace_back(cleanup);
+    else
+      regions.emplace_back(&op.getCond());
     return;
   }
 
-  // Branching from step: go to condition.
-  if (op.maybeGetStep() == point.getRegionOrNull()) {
-    regions.emplace_back(&op.getCond(), op.getCond().getArguments());
+  // Branching from step: route through the cleanup region if present,
+  // otherwise go back to the condition.
+  if (step == parentRegion) {
+    if (cleanup)
+      regions.emplace_back(cleanup);
+    else
+      regions.emplace_back(&op.getCond());
+    return;
+  }
+
+  // Branching from cleanup: either loop back to the condition (normal
+  // end-of-iteration) or exit the loop (condition-false edge).
+  if (cleanup == parentRegion) {
+    regions.emplace_back(&op.getCond());
+    regions.emplace_back(op);
     return;
   }
 
   llvm_unreachable("unexpected branch origin");
+}
+
+mlir::ValueRange
+LoopOpInterface::getLoopOpSuccessorInputs(LoopOpInterface op,
+                                          mlir::RegionSuccessor successor) {
+  if (successor.isOperation())
+    return op->getResults();
+  if (mlir::Region *region = successor.getSuccessor())
+    return region->getArguments();
+  llvm_unreachable("invalid region successor");
 }
 
 /// Verify invariants of the LoopOpInterface.

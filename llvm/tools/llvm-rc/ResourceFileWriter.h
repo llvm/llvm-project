@@ -19,6 +19,8 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Endian.h"
 
+#include <map>
+
 namespace llvm {
 
 class MemoryBuffer;
@@ -39,6 +41,7 @@ struct WriterParams {
   bool NoInclude;                     // Ignore the INCLUDE variable.
   StringRef InputFilePath;            // The full path of the input file.
   int CodePage = CpAcp;               // The codepage for interpreting characters.
+  bool ShowIncludes = false;          // Report resource-file dependencies.
 };
 
 class ResourceFileWriter : public Visitor {

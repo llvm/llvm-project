@@ -92,7 +92,7 @@ body:             |
     ; RV32I-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[AND]](s32)
     ; RV32I-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[SUB]], [[C1]]
     ; RV32I-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY]], [[AND1]](s32)
-    ; RV32I-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[SHL]], [[LSHR]]
+    ; RV32I-NEXT: [[OR:%[0-9]+]]:_(s32) = disjoint G_OR [[SHL]], [[LSHR]]
     ; RV32I-NEXT: $x10 = COPY [[OR]](s32)
     ; RV32I-NEXT: PseudoRET implicit $x10
     ;
@@ -257,7 +257,7 @@ body:             |
     ; RV32I-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY]], [[AND]](s32)
     ; RV32I-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[SUB]], [[C1]]
     ; RV32I-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[AND1]](s32)
-    ; RV32I-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[LSHR]], [[SHL]]
+    ; RV32I-NEXT: [[OR:%[0-9]+]]:_(s32) = disjoint G_OR [[LSHR]], [[SHL]]
     ; RV32I-NEXT: $x10 = COPY [[OR]](s32)
     ; RV32I-NEXT: PseudoRET implicit $x10
     ;

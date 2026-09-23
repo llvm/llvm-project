@@ -24,7 +24,7 @@
   _obj1.get().method();
   (*_obj2).method();
   _obj3->method();
-  // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+  // expected-warning@-1{{Function argument 'self->_obj3' (parameter 'this' to 'RefCountable::method') is a raw pointer to RefPtr-capable type 'RefCountable'}}
 }
 
 - (RefPtr<RefCountable>)_protectedRefCountable {

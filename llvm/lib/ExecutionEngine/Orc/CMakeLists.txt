@@ -8,26 +8,29 @@ endif()
 
 add_llvm_component_library(LLVMOrcJIT
   AbsoluteSymbols.cpp
+  BacktraceTools.cpp
   COFF.cpp
+  COFFAutoImportGenerator.cpp
   COFFVCRuntimeSupport.cpp
   COFFPlatform.cpp
   CompileOnDemandLayer.cpp
   CompileUtils.cpp
   Core.cpp
-  DebugObjectManagerPlugin.cpp
   DebugUtils.cpp
   EHFrameRegistrationPlugin.cpp
   EPCDynamicLibrarySearchGenerator.cpp
-  EPCDebugObjectRegistrar.cpp
   EPCGenericDylibManager.cpp
+  EPCGenericDylibManagerSPS.cpp
   EPCGenericJITLinkMemoryManager.cpp
+  EPCGenericJITLinkMemoryManagerSPS.cpp
+  EPCGenericMemoryAccessSPS.cpp
   EPCGenericRTDyldMemoryManager.cpp
   EPCIndirectionUtils.cpp
   ExecutionUtils.cpp
   ExecutorResolutionGenerator.cpp
   ObjectFileInterface.cpp
-  GetDylibInterface.cpp
   IndirectionUtils.cpp
+  InProcessEPC.cpp
   InProcessMemoryAccess.cpp
   IRCompileLayer.cpp
   IRTransformLayer.cpp
@@ -40,7 +43,7 @@ add_llvm_component_library(LLVMOrcJIT
   LinkGraphLayer.cpp
   LinkGraphLinkingLayer.cpp
   LoadLinkableFile.cpp
-  LookupAndRecordAddrs.cpp
+  LookupAndApply.cpp
   LLJIT.cpp
   MachO.cpp
   MachOPlatform.cpp
@@ -55,6 +58,8 @@ add_llvm_component_library(LLVMOrcJIT
   RTDyldObjectLinkingLayer.cpp
   SectCreate.cpp
   SelfExecutorProcessControl.cpp
+  SharedMemoryMapSPS.cpp
+  SimpleMemoryMapSPS.cpp
   SimpleRemoteEPC.cpp
   SimpleRemoteMemoryMapper.cpp
   Speculation.cpp

@@ -18,7 +18,7 @@ public:
   explicit DependencyInfo(std::string DependencyInfoPath)
       : DependencyInfoPath(DependencyInfoPath) {}
 
-  virtual ~DependencyInfo(){};
+  virtual ~DependencyInfo() = default;
 
   virtual void addMissingInput(llvm::StringRef Path) {
     NotFounds.insert(Path.str());

@@ -293,7 +293,7 @@ const char **Args::GetConstArgumentVector() const {
 }
 
 void Args::Shift() {
-  // Don't pop the last NULL terminator from the argv array
+  // Don't pop the last null terminator from the argv array
   if (m_entries.empty())
     return;
   m_argv.erase(m_argv.begin());
@@ -407,7 +407,7 @@ std::string Args::GetShellSafeArgument(const FileSpec &shell,
   // safe minimal set
   llvm::StringRef escapables = " '\"";
 
-  auto basename = shell.GetFilename().GetStringRef();
+  auto basename = shell.GetFilename();
   if (!basename.empty()) {
     for (const auto &Shell : g_Shells) {
       if (Shell.m_basename == basename) {
@@ -441,11 +441,11 @@ lldb::Encoding Args::StringToEncoding(llvm::StringRef s,
 uint32_t Args::StringToGenericRegister(llvm::StringRef s) {
   if (s.empty())
     return LLDB_INVALID_REGNUM;
-  uint32_t result = llvm::StringSwitch<uint32_t>(s)
+  uint32_t result = llvm::StringSwitch<uint32_t>(s.lower())
                         .Case("pc", LLDB_REGNUM_GENERIC_PC)
                         .Case("sp", LLDB_REGNUM_GENERIC_SP)
                         .Case("fp", LLDB_REGNUM_GENERIC_FP)
-                        .Cases("ra", "lr", LLDB_REGNUM_GENERIC_RA)
+                        .Cases({"ra", "lr"}, LLDB_REGNUM_GENERIC_RA)
                         .Case("flags", LLDB_REGNUM_GENERIC_FLAGS)
                         .Case("arg1", LLDB_REGNUM_GENERIC_ARG1)
                         .Case("arg2", LLDB_REGNUM_GENERIC_ARG2)
@@ -533,7 +533,7 @@ void Args::EncodeEscapeSequences(const char *src, std::string &dst) {
             ++p; // Skip the 'x'
 
             // Make a string that can hold onto two hex chars plus a
-            // NULL terminator
+            // null terminator
             char hex_str[3] = {*p, '\0', '\0'};
             if (isxdigit(p[1])) {
               ++p; // Skip the first of the two hex chars

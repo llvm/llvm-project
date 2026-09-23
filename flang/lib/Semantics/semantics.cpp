@@ -160,22 +160,23 @@ private:
   SemanticsContext &context_;
 };
 
+static bool WasDefined(const SemanticsContext &context, const Symbol &symbol) {
+  return context.IsSymbolDefined(symbol) ||
+      IsInitialized(symbol, /*ignoreDataStatements=*/true,
+          /*ignoreAllocatable=*/true, /*ignorePointer=*/true);
+}
+
 static void WarnUndefinedFunctionResult(
     SemanticsContext &context, const Scope &scope) {
-  auto WasDefined{[&context](const Symbol &symbol) {
-    return context.IsSymbolDefined(symbol) ||
-        IsInitialized(symbol, /*ignoreDataStatements=*/true,
-            /*ignoreAllocatable=*/true, /*ignorePointer=*/true);
-  }};
   if (const Symbol * symbol{scope.symbol()}) {
     if (const auto *subp{symbol->detailsIf<SubprogramDetails>()}) {
       if (subp->isFunction() && !subp->isInterface() && !subp->stmtFunction()) {
-        bool wasDefined{WasDefined(subp->result())};
+        bool wasDefined{WasDefined(context, subp->result())};
         if (!wasDefined) {
           // Definitions of ENTRY result variables also count.
           for (const auto &pair : scope) {
             const Symbol &local{*pair.second};
-            if (IsFunctionResult(local) && WasDefined(local)) {
+            if (IsFunctionResult(local) && WasDefined(context, local)) {
               wasDefined = true;
               break;
             }
@@ -191,6 +192,43 @@ static void WarnUndefinedFunctionResult(
   if (!scope.IsModuleFile()) {
     for (const Scope &child : scope.children()) {
       WarnUndefinedFunctionResult(context, child);
+    }
+  }
+}
+
+static void WarnUnusedOrUndefinedLocal(
+    SemanticsContext &context, const Scope &scope) {
+  if (scope.kind() == Scope::Kind::Subprogram ||
+      scope.kind() == Scope::Kind::MainProgram ||
+      scope.kind() == Scope::Kind::BlockConstruct) {
+    for (const auto &[_, symbolRef] : scope) {
+      const Symbol &symbol{*symbolRef};
+      if ((symbol.has<semantics::ObjectEntityDetails>() ||
+              (symbol.has<semantics::ProcEntityDetails>() &&
+                  IsProcedurePointer(symbol))) &&
+          !IsFunctionResult(symbol) && !IsNamedConstant(symbol) &&
+          !IsDummy(symbol) && !FindEquivalenceSet(symbol) &&
+          !FindCommonBlockContaining(symbol)) {
+        if (context.IsSymbolUsed(symbol)) {
+          if (!WasDefined(context, symbol)) {
+            context.Warn(common::UsageWarning::UsedUndefinedVariable,
+                symbol.name(),
+                "Value of uninitialized local variable '%s' is used but never defined"_warn_en_US,
+                symbol.name());
+          }
+        } else {
+          if (!context.IsSymbolDefined(symbol)) { // ignore initialization
+            context.Warn(common::UsageWarning::UnusedVariable, symbol.name(),
+                "Value of local variable '%s' is never used"_warn_en_US,
+                symbol.name());
+          }
+        }
+      }
+    }
+  }
+  if (!scope.IsModuleFile()) {
+    for (const Scope &child : scope.children()) {
+      WarnUnusedOrUndefinedLocal(context, child);
     }
   }
 }
@@ -223,10 +261,17 @@ static bool PerformStatementSemantics(
   }
   if (!context.messages().AnyFatalError()) {
     WarnUndefinedFunctionResult(context, context.globalScope());
-  }
-  if (!context.AnyFatalError()) {
     pass2.CompileDataInitializationsIntoInitializers();
+    WarnUnusedOrUndefinedLocal(context, context.globalScope());
   }
+  // Unlike the other checks above, this one is not skipped when an
+  // unrelated fatal error has already occurred elsewhere in the file: it
+  // only reads symbol initializer values (falling back to conservatively
+  // treating an appearance as conflicting, rather than duplicate, if those
+  // are not available because DATA statement compilation above was
+  // skipped), so it can still usefully report on COMMON blocks that are
+  // unaffected by the unrelated error.
+  context.CheckCommonBlockInitializationConflicts();
   return !context.AnyFatalError();
 }
 
@@ -266,18 +311,33 @@ public:
       if (isInitialized) {
         if (info.initialization.has_value() &&
             &**info.initialization != &common) {
-          // Use the location of the initialization in the error message because
-          // common block symbols may have no location if they are blank
-          // commons.
-          const Symbol &previousInit{
-              DEREF(CommonBlockIsInitialized(**info.initialization))};
-          context
-              .Say(isInitialized->name(),
-                  "Multiple initialization of COMMON block /%s/"_err_en_US,
-                  common.name())
-              .Attach(previousInit.name(),
-                  "Previous initialization of COMMON block /%s/"_en_US,
-                  common.name());
+          if (!context.IsEnabled(
+                  common::LanguageFeature::MultipleCommonBlockInit)) {
+            // Use the location of the initialization in the error message
+            // because common block symbols may have no location if they are
+            // blank commons.
+            const Symbol &previousInit{
+                DEREF(CommonBlockIsInitialized(**info.initialization))};
+            context
+                .Say(isInitialized->name(),
+                    "Multiple initialization of COMMON block /%s/"_err_en_US,
+                    common.name())
+                .Attach(previousInit.name(),
+                    "Previous initialization of COMMON block /%s/"_en_US,
+                    (*info.initialization)->name());
+          } else {
+            // Some compilers accept initialization (via DATA statements or
+            // declaration initializers) of the same named COMMON block
+            // appearing in more than one program unit as a nonstandard
+            // extension, so long as the values agree everywhere the block
+            // is initialized -- a duplicate, redundant initialization is
+            // accepted, but a genuine conflict is still a hard error. DATA
+            // statement values are not yet known at this point in
+            // compilation, so the decision is deferred; see
+            // CheckDeferredConflicts(), which runs after DATA statement
+            // compilation.
+            pendingInitConflicts_.emplace_back(common, **info.initialization);
+          }
         } else {
           info.initialization = common;
         }
@@ -309,7 +369,116 @@ public:
     return result;
   }
 
+  // Resolves the multiple-initialization conflicts that were deferred by
+  // MapCommonBlockAndCheckConflicts() because the DATA statement values
+  // were not yet known. Must be called after DATA statement initializations
+  // have been compiled into symbol initializer values.
+  void CheckDeferredConflicts(SemanticsContext &context) const {
+    for (const auto &[common, previous] : pendingInitConflicts_) {
+      // Use the location of the initialization in the error message because
+      // common block symbols may have no location if they are blank
+      // commons.
+      const Symbol &isInitialized{DEREF(CommonBlockIsInitialized(common))};
+      const Symbol &previousInit{DEREF(CommonBlockIsInitialized(previous))};
+      if (AreCommonBlockInitializationsDuplicate(common, previous)) {
+        if (auto *msg{context.Warn(
+                common::LanguageFeature::MultipleCommonBlockInit,
+                isInitialized.name(),
+                "Multiple initialization of COMMON block /%s/ is not standard; this appearance duplicates the previous initialization"_port_en_US,
+                common->name())}) {
+          msg->Attach(previousInit.name(),
+              "Previous initialization of COMMON block /%s/"_en_US,
+              previous->name());
+        }
+      } else {
+        context
+            .Say(isInitialized.name(),
+                "Multiple initialization of COMMON block /%s/"_err_en_US,
+                common->name())
+            .Attach(previousInit.name(),
+                "Previous initialization of COMMON block /%s/"_en_US,
+                previous->name());
+      }
+    }
+  }
+
 private:
+  // True if some other object in an equivalence set containing "member" is
+  // initialized. This covers the case of a COMMON block member that is
+  // itself never directly initialized (no DATA statement, no declaration
+  // initializer) but is nonetheless indirectly initialized because it is
+  // equivalenced with an object that is.
+  static bool IsIndirectlyInitializedViaEquivalence(const Symbol &member) {
+    if (const Symbol *common{FindCommonBlockContaining(member)}) {
+      for (const Fortran::semantics::EquivalenceSet &set :
+          common->owner().equivalenceSets()) {
+        bool containsMember{false};
+        for (const Fortran::semantics::EquivalenceObject &obj : set) {
+          if (&obj.symbol == &member) {
+            containsMember = true;
+            break;
+          }
+        }
+        if (containsMember) {
+          for (const Fortran::semantics::EquivalenceObject &obj : set) {
+            if (&obj.symbol != &member && IsInitialized(obj.symbol)) {
+              return true;
+            }
+          }
+        }
+      }
+    }
+    return false;
+  }
+
+  // True if every member position that is initialized in either common
+  // block appearance is also initialized, with an identical value, in the
+  // other appearance -- i.e., the two appearances are a duplicate,
+  // redundant initialization of the block rather than a genuine conflict.
+  // Positions initialized in neither appearance are not compared. Members
+  // whose initial value cannot be directly compared (e.g., procedure
+  // pointers, indirect initialization via an equivalenced object, or
+  // default component initialization of a derived type without an
+  // explicit initializer) are conservatively treated as non-duplicate.
+  static bool AreCommonBlockInitializationsDuplicate(
+      const Symbol &common1, const Symbol &common2) {
+    const auto &objects1{
+        common1.get<Fortran::semantics::CommonBlockDetails>().objects()};
+    const auto &objects2{
+        common2.get<Fortran::semantics::CommonBlockDetails>().objects()};
+    if (objects1.size() != objects2.size()) {
+      return false;
+    }
+    auto iter2{objects2.begin()};
+    for (auto iter1{objects1.begin()}; iter1 != objects1.end();
+        ++iter1, ++iter2) {
+      const Symbol &member1{**iter1};
+      const Symbol &member2{**iter2};
+      bool initialized1{IsInitialized(member1) ||
+          IsIndirectlyInitializedViaEquivalence(member1)};
+      bool initialized2{IsInitialized(member2) ||
+          IsIndirectlyInitializedViaEquivalence(member2)};
+      if (initialized1 != initialized2) {
+        return false;
+      }
+      if (initialized1) {
+        if (IsIndirectlyInitializedViaEquivalence(member1) ||
+            IsIndirectlyInitializedViaEquivalence(member2)) {
+          return false;
+        }
+        const auto *object1{member1.detailsIf<ObjectEntityDetails>()};
+        const auto *object2{member2.detailsIf<ObjectEntityDetails>()};
+        if (!object1 || !object2 || !object1->init() || !object2->init()) {
+          return false;
+        }
+        if (!(*object1->init() == *object2->init())) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
   /// Return the symbol of an initialized member if a COMMON block
   /// is initalized. Otherwise, return nullptr.
   static Symbol *CommonBlockIsInitialized(const Symbol &common) {
@@ -338,20 +507,26 @@ private:
   }
 
   std::map<std::string, CommonBlockInfo> commonBlocks_;
+  std::vector<std::pair<SymbolRef, SymbolRef>> pendingInitConflicts_;
 };
 
 SemanticsContext::SemanticsContext(
     const common::IntrinsicTypeDefaultKinds &defaultKinds,
     const common::LanguageFeatureControl &languageFeatures,
     const common::LangOptions &langOpts,
-    parser::AllCookedSources &allCookedSources)
+    parser::AllCookedSources &allCookedSources,
+    common::FPMaxminBehavior fpMaxminBehavior)
     : defaultKinds_{defaultKinds}, languageFeatures_{languageFeatures},
       langOpts_{langOpts}, allCookedSources_{allCookedSources},
+      openAccDefaultNoneScalarsStrictDisableOption_{"-fno-"s +
+          std::string{languageFeatures_.getDefaultCliSpelling(
+              common::LanguageFeature::OpenAccDefaultNoneScalarsStrict)}},
       intrinsics_{evaluate::IntrinsicProcTable::Configure(defaultKinds_)},
       globalScope_{*this}, intrinsicModulesScope_{globalScope_.MakeScope(
                                Scope::Kind::IntrinsicModules, nullptr)},
       foldingContext_{parser::ContextualMessages{&messages_}, defaultKinds_,
-          intrinsics_, targetCharacteristics_, languageFeatures_, tempNames_} {}
+          intrinsics_, targetCharacteristics_, languageFeatures_, tempNames_,
+          fpMaxminBehavior} {}
 
 SemanticsContext::~SemanticsContext() {}
 
@@ -587,20 +762,31 @@ void SemanticsContext::UsePPCBuiltinTypesModule() {
   }
 }
 
-const Scope &SemanticsContext::GetCUDABuiltinsScope() {
-  if (!cudaBuiltinsScope_) {
-    cudaBuiltinsScope_ = GetBuiltinModule("__cuda_builtins");
-    CHECK(cudaBuiltinsScope_.value() != nullptr);
-  }
-  return **cudaBuiltinsScope_;
+static void SayMissingCUDAIntrinsicModule(
+    SemanticsContext &context, const char *moduleName) {
+  context.messages().Say(context.location().value_or(parser::CharBlock{}),
+      "Cannot read required CUDA intrinsic module '%s'; check -fintrinsic-modules-path or rebuild the Fortran intrinsic modules"_err_en_US,
+      moduleName);
 }
 
-const Scope &SemanticsContext::GetCUDADeviceScope() {
+const Scope *SemanticsContext::GetCUDABuiltinsScope() {
+  if (!cudaBuiltinsScope_) {
+    cudaBuiltinsScope_ = GetBuiltinModule("__cuda_builtins");
+    if (cudaBuiltinsScope_.value() == nullptr) {
+      SayMissingCUDAIntrinsicModule(*this, "__cuda_builtins");
+    }
+  }
+  return cudaBuiltinsScope_.value();
+}
+
+const Scope *SemanticsContext::GetCUDADeviceScope() {
   if (!cudaDeviceScope_) {
     cudaDeviceScope_ = GetBuiltinModule("cudadevice");
-    CHECK(cudaDeviceScope_.value() != nullptr);
+    if (cudaDeviceScope_.value() == nullptr) {
+      SayMissingCUDAIntrinsicModule(*this, "cudadevice");
+    }
   }
-  return **cudaDeviceScope_;
+  return cudaDeviceScope_.value();
 }
 
 void SemanticsContext::UsePPCBuiltinsModule() {
@@ -621,12 +807,15 @@ bool Semantics::Perform() {
     const auto *frontModule{std::get_if<common::Indirection<parser::Module>>(
         &program_.v.front().u)};
     if (frontModule &&
-        (std::get<parser::Statement<parser::ModuleStmt>>(frontModule->value().t)
-                    .statement.v.source == "__fortran_builtins" ||
-            std::get<parser::Statement<parser::ModuleStmt>>(
-                frontModule->value().t)
-                    .statement.v.source == "__ppc_types")) {
+        std::get<parser::Statement<parser::ModuleStmt>>(frontModule->value().t)
+                .statement.v.source == "__fortran_builtins") {
       // Don't try to read the builtins module when we're actually building it.
+    } else if (frontModule &&
+        std::get<parser::Statement<parser::ModuleStmt>>(frontModule->value().t)
+                .statement.v.source == "__ppc_types") {
+      // Don't try to read the UsePPCBuiltinTypesModule() we are currently
+      // building, but __fortran_builtins is needed to build it.
+      context_.UseFortranBuiltinsModule();
     } else if (frontModule &&
         (std::get<parser::Statement<parser::ModuleStmt>>(frontModule->value().t)
                     .statement.v.source == "__ppc_intrinsics" ||
@@ -646,15 +835,24 @@ bool Semantics::Perform() {
       }
     }
   }
-  return ValidateLabels(context_, program_) &&
-      parser::CanonicalizeDo(program_) && // force line break
-      CanonicalizeAcc(context_.messages(), program_) &&
-      CanonicalizeOmp(context_, program_) && CanonicalizeCUDA(program_) &&
-      PerformStatementSemantics(context_, program_) &&
-      CanonicalizeDirectives(context_.messages(), program_) &&
-      ModFileWriter{context_}
-          .set_hermeticModuleFileOutput(hermeticModuleFileOutput_)
-          .WriteAll();
+  if (!(AnalyzeLabels(context_, program_) &&
+          parser::CanonicalizeDo(program_) && // force line break
+          CanonicalizeAcc(context_.messages(), program_) &&
+          CanonicalizeOmp(context_, program_) && CanonicalizeCUDA(program_) &&
+          PerformStatementSemantics(context_, program_) &&
+          CanonicalizeDirectives(context_.messages(), program_))) {
+    return false;
+  }
+
+  // When compiling with offloading, write only the host's module file. The
+  // device invocations would otherwise overwrite the host's mod file.
+  if (context_.langOptions().OffloadDevice) {
+    return true;
+  }
+
+  return ModFileWriter{context_}
+      .set_hermeticModuleFileOutput(hermeticModuleFileOutput_)
+      .WriteAll();
 }
 
 void Semantics::EmitMessages(llvm::raw_ostream &os) {
@@ -771,12 +969,31 @@ CommonBlockList SemanticsContext::GetCommonBlocks() const {
   return {};
 }
 
+void SemanticsContext::CheckCommonBlockInitializationConflicts() {
+  if (commonBlockMap_) {
+    commonBlockMap_->CheckDeferredConflicts(*this);
+  }
+}
+
 void SemanticsContext::NoteDefinedSymbol(const Symbol &symbol) {
   isDefined_.insert(symbol);
 }
 
 bool SemanticsContext::IsSymbolDefined(const Symbol &symbol) const {
   return isDefined_.find(symbol) != isDefined_.end();
+}
+
+void SemanticsContext::NoteUsedSymbol(const Symbol &symbol) {
+  isUsed_.insert(symbol);
+}
+void SemanticsContext::NoteUsedSymbols(const UnorderedSymbolSet &set) {
+  for (const Symbol &symbol : set) {
+    NoteUsedSymbol(symbol);
+  }
+}
+
+bool SemanticsContext::IsSymbolUsed(const Symbol &symbol) const {
+  return isUsed_.find(symbol) != isUsed_.end();
 }
 
 } // namespace Fortran::semantics

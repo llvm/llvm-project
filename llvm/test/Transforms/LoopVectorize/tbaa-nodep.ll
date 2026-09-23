@@ -1,5 +1,5 @@
-; RUN: opt < %s  -aa-pipeline=tbaa,basic-aa -passes=loop-vectorize,dce,instcombine,simplifycfg -force-vector-interleave=1 -force-vector-width=4 -simplifycfg-require-and-preserve-domtree=1 -S | FileCheck %s
-; RUN: opt < %s  -aa-pipeline=basic-aa -passes=loop-vectorize,dce,instcombine,simplifycfg -force-vector-interleave=1 -force-vector-width=4 -simplifycfg-require-and-preserve-domtree=1 -S | FileCheck %s --check-prefix=CHECK-NOTBAA
+; RUN: opt < %s  -aa-pipeline=tbaa,basic-aa -passes=loop-vectorize -force-vector-interleave=1 -force-vector-width=4 -S | FileCheck %s
+; RUN: opt < %s  -aa-pipeline=basic-aa -passes=loop-vectorize -force-vector-interleave=1 -force-vector-width=4 -S | FileCheck %s --check-prefix=CHECK-NOTBAA
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; TBAA partitions the accesses in this loop, so it can be vectorized without
@@ -7,7 +7,6 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 define i32 @test1(ptr nocapture %a, ptr nocapture readonly %b) {
 ; CHECK-LABEL: @test1
 ; CHECK: entry:
-; CHECK-NEXT: br label %vector.body
 ; CHECK: vector.body:
 
 ; CHECK: load <4 x float>, ptr %{{.*}}, align 4, !tbaa
@@ -19,7 +18,7 @@ define i32 @test1(ptr nocapture %a, ptr nocapture readonly %b) {
 ; CHECK-NOTBAA: entry:
 ; CHECK-NOTBAA: icmp ult i64
 ; CHECK-NOTBAA-NOT: icmp
-; CHECK-NOTBAA: br i1 {{.+}}, label %for.body, label %vector.body
+; CHECK-NOTBAA: vector.body:
 
 ; CHECK-NOTBAA: load <4 x float>, ptr %{{.*}}, align 4, !tbaa
 ; CHECK-NOTBAA: store <4 x i32> %{{.*}}, ptr %{{.*}}, align 4, !tbaa
@@ -29,7 +28,7 @@ define i32 @test1(ptr nocapture %a, ptr nocapture readonly %b) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %b, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4, !tbaa !0
@@ -40,7 +39,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i64 %indvars.iv.next, 1600
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret i32 0
 }
 
@@ -51,7 +50,7 @@ define i32 @test2(ptr nocapture readonly %a, ptr nocapture readonly %b, ptr noca
 ; CHECK: entry:
 ; CHECK: icmp ult i64
 ; CHECK-NOT: icmp
-; CHECK: br i1 {{.+}}, label %for.body, label %vector.body
+; CHECK: vector.body:
 
 ; CHECK: load <4 x float>, ptr %{{.*}}, align 4, !tbaa
 ; CHECK: store <4 x float> %{{.*}}, ptr %{{.*}}, align 4, !tbaa
@@ -63,7 +62,7 @@ define i32 @test2(ptr nocapture readonly %a, ptr nocapture readonly %b, ptr noca
 ; CHECK-NOTBAA: icmp ult i64
 ; CHECK-NOTBAA: icmp ult i64
 ; CHECK-NOTBAA-NOT: icmp
-; CHECK-NOTBAA: br i1 {{.+}}, label %for.body, label %vector.body
+; CHECK-NOTBAA: vector.body:
 
 ; CHECK-NOTBAA: load <4 x float>, ptr %{{.*}}, align 4, !tbaa
 ; CHECK-NOTBAA: store <4 x float> %{{.*}}, ptr %{{.*}}, align 4, !tbaa
@@ -73,7 +72,7 @@ define i32 @test2(ptr nocapture readonly %a, ptr nocapture readonly %b, ptr noca
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %b, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4, !tbaa !0
@@ -87,7 +86,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i64 %indvars.iv.next, 1600
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret i32 0
 }
 

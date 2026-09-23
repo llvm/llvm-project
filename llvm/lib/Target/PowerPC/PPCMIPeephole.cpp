@@ -34,7 +34,6 @@
 #include "PPCMachineFunctionInfo.h"
 #include "PPCTargetMachine.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -42,7 +41,9 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugCounter.h"
 
@@ -110,7 +111,6 @@ struct PPCMIPeephole : public MachineFunctionPass {
   const PPCInstrInfo *TII;
   MachineFunction *MF;
   MachineRegisterInfo *MRI;
-  LiveVariables *LV;
 
   PPCMIPeephole() : MachineFunctionPass(ID) {}
 
@@ -137,10 +137,10 @@ private:
                       MachineInstr *MI);
 
   // A number of transformations will eliminate the definition of a register
-  // as all of its uses will be removed. However, this leaves a register
-  // without a definition for LiveVariables. Such transformations should
-  // use this function to provide a dummy definition of the register that
-  // will simply be removed by DCE.
+  // as all of its uses will be removed. However, this can leave a register
+  // used with no reaching definition until DCE removes the dead uses. Such
+  // transformations should use this function to provide a dummy definition of
+  // the register that will simply be removed by DCE.
   void addDummyDef(MachineBasicBlock &MBB, MachineInstr *At, Register Reg) {
     BuildMI(MBB, At, At->getDebugLoc(), TII->get(PPC::IMPLICIT_DEF), Reg);
   }
@@ -150,16 +150,14 @@ private:
                               Register Dst);
 
 public:
-
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<LiveVariablesWrapperPass>();
     AU.addRequired<MachineDominatorTreeWrapperPass>();
     AU.addRequired<MachinePostDominatorTreeWrapperPass>();
     AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
-    AU.addPreserved<LiveVariablesWrapperPass>();
     AU.addPreserved<MachineDominatorTreeWrapperPass>();
     AU.addPreserved<MachinePostDominatorTreeWrapperPass>();
     AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -173,13 +171,7 @@ public:
            "TOC pointer used in a function using PC-Relative addressing!");
     if (skipFunction(MF.getFunction()))
       return false;
-    bool Changed = simplifyCode();
-#ifndef NDEBUG
-    if (Changed)
-      MF.verify(this, "Error in PowerPC MI Peephole optimization, compile with "
-                      "-mllvm -disable-ppc-peephole");
-#endif
-    return Changed;
+    return simplifyCode();
   }
 };
 
@@ -199,7 +191,6 @@ void PPCMIPeephole::initialize(MachineFunction &MFParm) {
   MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   MPDT = &getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
   MBFI = &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
-  LV = &getAnalysis<LiveVariablesWrapperPass>().getLV();
   EntryFreq = MBFI->getEntryFreq();
   TII = MF->getSubtarget<PPCSubtarget>().getInstrInfo();
   RegsToUpdate.clear();
@@ -501,12 +492,11 @@ bool PPCMIPeephole::simplifyCode() {
     } while (SomethingChanged && FixedPointRegToImm);
   }
 
-  // Since we are deleting this instruction, we need to run LiveVariables
-  // on any of its definitions that are marked as needing an update since
-  // we can't run LiveVariables on a deleted register. This only needs
-  // to be done for defs since uses will have their own defining
-  // instructions so we won't be running LiveVariables on a deleted reg.
-  auto recomputeLVForDyingInstr = [&]() {
+  // Since we are deleting this instruction, clear the kill flags on any of its
+  // definitions that are marked as needing an update: the transforms only ever
+  // invalidate kill flags by removing uses (turning a non-last use into the
+  // last one), so a conservative clear is sufficient.
+  auto clearKillsForDyingInstr = [&]() {
     if (RegsToUpdate.empty())
       return;
     for (MachineOperand &MO : ToErase->operands()) {
@@ -519,7 +509,9 @@ bool PPCMIPeephole::simplifyCode() {
       // a def of an invalid register as the instruction is going away.
       if (!MRI->getUniqueVRegDef(RegToUpdate))
         MO.setReg(PPC::NoRegister);
-      LV->recomputeForSingleDefVirtReg(RegToUpdate);
+      MRI->clearKillFlags(RegToUpdate);
+      for (MachineOperand &Def : MRI->def_operands(RegToUpdate))
+        Def.setIsDead(false);
     }
   };
 
@@ -531,7 +523,7 @@ bool PPCMIPeephole::simplifyCode() {
       if (ToErase) {
         LLVM_DEBUG(dbgs() << "Deleting instruction: ");
         LLVM_DEBUG(ToErase->dump());
-        recomputeLVForDyingInstr();
+        clearKillsForDyingInstr();
         ToErase->eraseFromParent();
         ToErase = nullptr;
       }
@@ -731,6 +723,7 @@ bool PPCMIPeephole::simplifyCode() {
             LLVM_DEBUG(dbgs() << "Optimizing swap/swap => copy: ");
             LLVM_DEBUG(MI.dump());
             addRegToUpdate(MI.getOperand(1).getReg());
+
             BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(PPC::COPY),
                     MI.getOperand(0).getReg())
                 .add(DefMI->getOperand(1));
@@ -743,7 +736,9 @@ bool PPCMIPeephole::simplifyCode() {
                    DefOpc == PPC::XXPERMDIs &&
                    (DefMI->getOperand(2).getImm() == 0 ||
                     DefMI->getOperand(2).getImm() == 3)) {
-          ToErase = &MI;
+
+          if (!MRI->hasOneNonDBGUser(DefMI->getOperand(0).getReg()))
+            break;
           Simplified = true;
           // Swap of a splat, convert to copy.
           if (Immed == 2) {
@@ -753,10 +748,12 @@ bool PPCMIPeephole::simplifyCode() {
                     MI.getOperand(0).getReg())
                 .add(MI.getOperand(1));
             addRegToUpdate(MI.getOperand(1).getReg());
+            ToErase = &MI;
             break;
           }
           // Splat fed by another splat - switch the output of the first
           // and remove the second.
+          ToErase = &MI;
           DefMI->getOperand(0).setReg(MI.getOperand(0).getReg());
           LLVM_DEBUG(dbgs() << "Removing redundant splat: ");
           LLVM_DEBUG(MI.dump());
@@ -797,6 +794,7 @@ bool PPCMIPeephole::simplifyCode() {
       case PPC::VSPLTH:
       case PPC::XXSPLTW: {
         unsigned MyOpcode = MI.getOpcode();
+        // The operand number of the source register in the splat instruction.
         unsigned OpNo = MyOpcode == PPC::XXSPLTW ? 1 : 2;
         Register TrueReg =
           TRI->lookThruCopyLike(MI.getOperand(OpNo).getReg(), MRI);
@@ -823,6 +821,7 @@ bool PPCMIPeephole::simplifyCode() {
           (MyOpcode == PPC::XXSPLTW && DefOpcode == PPC::LXVWSX) ||
           (MyOpcode == PPC::XXSPLTW && DefOpcode == PPC::MTVSRWS)||
           (MyOpcode == PPC::XXSPLTW && isConvertOfSplat());
+
         // If the instruction[s] that feed this splat have already splat
         // the value, this splat is redundant.
         if (AlreadySplat) {
@@ -835,30 +834,58 @@ bool PPCMIPeephole::simplifyCode() {
           ToErase = &MI;
           Simplified = true;
         }
+
         // Splat fed by a shift. Usually when we align value to splat into
         // vector element zero.
         if (DefOpcode == PPC::XXSLDWI) {
-          Register ShiftRes = DefMI->getOperand(0).getReg();
           Register ShiftOp1 = DefMI->getOperand(1).getReg();
-          Register ShiftOp2 = DefMI->getOperand(2).getReg();
-          unsigned ShiftImm = DefMI->getOperand(3).getImm();
-          unsigned SplatImm =
-              MI.getOperand(MyOpcode == PPC::XXSPLTW ? 2 : 1).getImm();
-          if (ShiftOp1 == ShiftOp2) {
-            unsigned NewElem = (SplatImm + ShiftImm) & 0x3;
-            if (MRI->hasOneNonDBGUse(ShiftRes)) {
+
+          if (ShiftOp1 == DefMI->getOperand(2).getReg()) {
+            // For example, We can erase XXSLDWI from in following:
+            //    %2:vrrc = XXSLDWI killed %1:vrrc, %1:vrrc, 1
+            //    %6:vrrc = VSPLTB 15, killed %2:vrrc
+            //    %7:vsrc = XXLAND killed %6:vrrc, killed %1:vrrc
+            //
+            // --->
+            //
+            //     %6:vrrc = VSPLTB 3, killed %1:vrrc
+            //     %7:vsrc = XXLAND killed %6:vrrc, killed %1:vrrc
+
+            if (MRI->hasOneNonDBGUse(DefMI->getOperand(0).getReg())) {
               LLVM_DEBUG(dbgs() << "Removing redundant shift: ");
               LLVM_DEBUG(DefMI->dump());
               ToErase = DefMI;
             }
             Simplified = true;
+            unsigned ShiftImm = DefMI->getOperand(3).getImm();
+            // The operand number of the splat Imm in the instruction.
+            unsigned SplatImmNo = MyOpcode == PPC::XXSPLTW ? 2 : 1;
+            unsigned SplatImm = MI.getOperand(SplatImmNo).getImm();
+
+            // Calculate the new splat-element immediate. We need to convert the
+            // element index into the proper unit (byte for VSPLTB, halfword for
+            // VSPLTH, word for VSPLTW) because PPC::XXSLDWI interprets its
+            // ShiftImm in 32-bit word units.
+            auto CalculateNewElementIdx = [&](unsigned Opcode) {
+              if (Opcode == PPC::VSPLTB)
+                return (SplatImm + ShiftImm * 4) & 0xF;
+              else if (Opcode == PPC::VSPLTH)
+                return (SplatImm + ShiftImm * 2) & 0x7;
+              else
+                return (SplatImm + ShiftImm) & 0x3;
+            };
+
+            unsigned NewElem = CalculateNewElementIdx(MyOpcode);
+
             LLVM_DEBUG(dbgs() << "Changing splat immediate from " << SplatImm
                               << " to " << NewElem << " in instruction: ");
             LLVM_DEBUG(MI.dump());
+            if (!MRI->constrainRegClass(ShiftOp1, &PPC::VRRCRegClass))
+              llvm_unreachable("Can't fail because vrrc is subset of vsrc");
             addRegToUpdate(MI.getOperand(OpNo).getReg());
             addRegToUpdate(ShiftOp1);
             MI.getOperand(OpNo).setReg(ShiftOp1);
-            MI.getOperand(2).setImm(NewElem);
+            MI.getOperand(SplatImmNo).setImm(NewElem);
           }
         }
         break;
@@ -1056,7 +1083,7 @@ bool PPCMIPeephole::simplifyCode() {
           // chain used to deduce sign extension to eliminate the 'extsw' will
           // need to be promoted to 64-bit pseudo instructions when the 'extsw'
           // is eliminated.
-          TII->promoteInstr32To64ForElimEXTSW(NarrowReg, MRI, 0, LV);
+          TII->promoteInstr32To64ForElimEXTSW(NarrowReg, MRI, 0);
 
           LLVM_DEBUG(dbgs() << "Removing redundant sign-extension\n");
           Register TmpReg =
@@ -1354,7 +1381,7 @@ bool PPCMIPeephole::simplifyCode() {
     // If the last instruction was marked for elimination,
     // remove it now.
     if (ToErase) {
-      recomputeLVForDyingInstr();
+      clearKillsForDyingInstr();
       ToErase->eraseFromParent();
       ToErase = nullptr;
     }
@@ -1373,11 +1400,16 @@ bool PPCMIPeephole::simplifyCode() {
   Simplified |= eliminateRedundantCompare();
 
   // If we have made any modifications and added any registers to the set of
-  // registers for which we need to update the kill flags, do so by recomputing
-  // LiveVariables for those registers.
+  // registers whose liveness flags may now be stale, clear those flags. A
+  // transform may remove a use (leaving a stale kill on an earlier use) or add
+  // a use of a previously dead def (leaving a stale dead flag), so clear both
+  // kinds conservatively.
   for (Register Reg : RegsToUpdate) {
-    if (!MRI->reg_empty(Reg))
-      LV->recomputeForSingleDefVirtReg(Reg);
+    if (MRI->reg_empty(Reg))
+      continue;
+    MRI->clearKillFlags(Reg);
+    for (MachineOperand &Def : MRI->def_operands(Reg))
+      Def.setIsDead(false);
   }
   return Simplified;
 }
@@ -2042,7 +2074,6 @@ INITIALIZE_PASS_BEGIN(PPCMIPeephole, DEBUG_TYPE,
 INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LiveVariablesWrapperPass)
 INITIALIZE_PASS_END(PPCMIPeephole, DEBUG_TYPE,
                     "PowerPC MI Peephole Optimization", false, false)
 

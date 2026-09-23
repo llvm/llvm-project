@@ -1,6 +1,5 @@
 #include <initializer_list>
 #include <string>
-#include <vector>
 
 int main() {
   std::initializer_list<int> ili{1, 2, 3, 4, 5};

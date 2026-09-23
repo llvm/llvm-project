@@ -1,4 +1,4 @@
-; RUN: opt %s -mtriple amdgcn-- -passes='print<uniformity>' -disable-output 2>&1 | FileCheck %s
+; RUN: opt %s -mtriple amdgpu7.00-- -passes='print<uniformity>' -disable-output 2>&1 | FileCheck %s
 
 ; CHECK=LABEL: UniformityInfo for function 'basic':
 ; CHECK-NOT: CYCLES ASSUMED DIVERGENT:
@@ -41,7 +41,7 @@ exit:
 ; CHECK-LABEL: UniformityInfo for function 'outer_reducible':
 ; CHECK-NOT: CYCLES ASSUMED DIVERGENT:
 ; CHECK: CYCLES WITH DIVERGENT EXIT:
-; CHECK:   depth=1: entries(H) P T R Q
+; CHECK:   depth=1: entries(H) P Q R T
 define amdgpu_kernel void @outer_reducible(i32 %a, i32 %b, i32 %c) {
 entry:
  %cond.uni = icmp slt i32 %a, 0

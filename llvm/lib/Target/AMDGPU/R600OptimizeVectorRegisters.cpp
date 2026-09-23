@@ -31,7 +31,6 @@
 #include "R600Defines.h"
 #include "R600Subtarget.h"
 #include "llvm/CodeGen/MachineDominators.h"
-#include "llvm/CodeGen/MachineLoopInfo.h"
 
 using namespace llvm;
 
@@ -103,10 +102,6 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addRequired<MachineDominatorTreeWrapperPass>();
-    AU.addPreserved<MachineDominatorTreeWrapperPass>();
-    AU.addRequired<MachineLoopInfoWrapperPass>();
-    AU.addPreserved<MachineLoopInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -150,8 +145,7 @@ bool R600VectorRegMerger::tryMergeVector(const RegSeqInfo *Untouched,
     const {
   unsigned CurrentUndexIdx = 0;
   for (auto &It : ToMerge->RegToChan) {
-    DenseMap<Register, unsigned>::const_iterator PosInUntouched =
-        Untouched->RegToChan.find(It.first);
+    auto PosInUntouched = Untouched->RegToChan.find(It.first);
     if (PosInUntouched != Untouched->RegToChan.end()) {
       Remap.emplace_back(It.second, (*PosInUntouched).second);
       continue;
@@ -181,7 +175,7 @@ MachineInstr *R600VectorRegMerger::RebuildVector(
   Register Reg = RSI->Instr->getOperand(0).getReg();
   MachineBasicBlock::iterator Pos = RSI->Instr;
   MachineBasicBlock &MBB = *Pos->getParent();
-  DebugLoc DL = Pos->getDebugLoc();
+  const DebugLoc &DL = Pos->getDebugLoc();
 
   Register SrcVec = BaseRSI->Instr->getOperand(0).getReg();
   DenseMap<Register, unsigned> UpdatedRegToChan = BaseRSI->RegToChan;
@@ -222,8 +216,8 @@ MachineInstr *R600VectorRegMerger::RebuildVector(
 
   // Update RSI
   RSI->Instr = NewMI;
-  RSI->RegToChan = UpdatedRegToChan;
-  RSI->UndefReg = UpdatedUndef;
+  RSI->RegToChan = std::move(UpdatedRegToChan);
+  RSI->UndefReg = std::move(UpdatedUndef);
 
   return NewMI;
 }

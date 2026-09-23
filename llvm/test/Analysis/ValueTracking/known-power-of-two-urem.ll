@@ -228,7 +228,7 @@ define i64 @known_power_of_two_urem_loop_lshr(i64 %size, i64 %a) {
 ; CHECK-NEXT:    [[UREM:%.*]] = and i64 [[SIZE:%.*]], [[TMP0]]
 ; CHECK-NEXT:    [[ADD]] = add nuw i64 [[SUM]], [[UREM]]
 ; CHECK-NEXT:    [[I]] = lshr i64 [[PHI]], 1
-; CHECK-NEXT:    [[ICMP_NOT:%.*]] = icmp ult i64 [[PHI]], 2
+; CHECK-NEXT:    [[ICMP_NOT:%.*]] = icmp eq i64 [[I]], 0
 ; CHECK-NEXT:    br i1 [[ICMP_NOT]], label [[FOR_END:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret i64 [[SUM]]
@@ -328,7 +328,7 @@ define i64 @known_power_of_two_urem_loop_ashr_negative_2(i64 %size, i64 %a) {
 ; CHECK-NEXT:    [[UREM:%.*]] = urem i64 [[SIZE:%.*]], [[PHI]]
 ; CHECK-NEXT:    [[ADD]] = add nsw i64 [[SUM]], [[UREM]]
 ; CHECK-NEXT:    [[I]] = ashr i64 [[PHI]], 2
-; CHECK-NEXT:    [[ICMP_NOT:%.*]] = icmp ult i64 [[PHI]], 4
+; CHECK-NEXT:    [[ICMP_NOT:%.*]] = icmp eq i64 [[I]], 0
 ; CHECK-NEXT:    br i1 [[ICMP_NOT]], label [[FOR_END:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret i64 [[SUM]]

@@ -338,8 +338,7 @@ ret <vscale x 2 x double> %sel
 define <vscale x 8 x half> @sel_merge_nxv8f16_negative_zero(<vscale x 8 x i1> %p, <vscale x 8 x half> %in) {
 ; CHECK-LABEL: sel_merge_nxv8f16_negative_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #32768 // =0x8000
-; CHECK-NEXT:    mov z1.h, w8
+; CHECK-NEXT:    dupm z1.h, #0x8000
 ; CHECK-NEXT:    mov z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
 %sel = select <vscale x 8 x i1> %p, <vscale x 8 x half> splat (half -0.0), <vscale x 8 x half> %in
@@ -349,8 +348,7 @@ ret <vscale x 8 x half> %sel
 define <vscale x 4 x half> @sel_merge_nx4f16_negative_zero(<vscale x 4 x i1> %p, <vscale x 4 x half> %in) {
 ; CHECK-LABEL: sel_merge_nx4f16_negative_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #32768 // =0x8000
-; CHECK-NEXT:    mov z1.h, w8
+; CHECK-NEXT:    dupm z1.h, #0x8000
 ; CHECK-NEXT:    mov z0.s, p0/m, z1.s
 ; CHECK-NEXT:    ret
 %sel = select <vscale x 4 x i1> %p, <vscale x 4 x half> splat (half -0.0), <vscale x 4 x half> %in
@@ -360,8 +358,7 @@ ret <vscale x 4 x half> %sel
 define <vscale x 2 x half> @sel_merge_nx2f16_negative_zero(<vscale x 2 x i1> %p, <vscale x 2 x half> %in) {
 ; CHECK-LABEL: sel_merge_nx2f16_negative_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #32768 // =0x8000
-; CHECK-NEXT:    mov z1.h, w8
+; CHECK-NEXT:    dupm z1.h, #0x8000
 ; CHECK-NEXT:    mov z0.d, p0/m, z1.d
 ; CHECK-NEXT:    ret
 %sel = select <vscale x 2 x i1> %p, <vscale x 2 x half> splat (half -0.0), <vscale x 2 x half> %in
@@ -371,8 +368,7 @@ ret <vscale x 2 x half> %sel
 define <vscale x 4 x float> @sel_merge_nx4f32_negative_zero(<vscale x 4 x i1> %p, <vscale x 4 x float> %in) {
 ; CHECK-LABEL: sel_merge_nx4f32_negative_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-2147483648 // =0x80000000
-; CHECK-NEXT:    mov z1.s, w8
+; CHECK-NEXT:    mov z1.s, #0x80000000
 ; CHECK-NEXT:    mov z0.s, p0/m, z1.s
 ; CHECK-NEXT:    ret
 %sel = select <vscale x 4 x i1> %p, <vscale x 4 x float> splat (float -0.0), <vscale x 4 x float> %in
@@ -382,8 +378,7 @@ ret <vscale x 4 x float> %sel
 define <vscale x 2 x float> @sel_merge_nx2f32_negative_zero(<vscale x 2 x i1> %p, <vscale x 2 x float> %in) {
 ; CHECK-LABEL: sel_merge_nx2f32_negative_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-2147483648 // =0x80000000
-; CHECK-NEXT:    mov z1.s, w8
+; CHECK-NEXT:    mov z1.s, #0x80000000
 ; CHECK-NEXT:    mov z0.d, p0/m, z1.d
 ; CHECK-NEXT:    ret
 %sel = select <vscale x 2 x i1> %p, <vscale x 2 x float> splat (float -0.0), <vscale x 2 x float> %in
@@ -393,8 +388,7 @@ ret <vscale x 2 x float> %sel
 define <vscale x 2 x double> @sel_merge_nx2f64_negative_zero(<vscale x 2 x i1> %p, <vscale x 2 x double> %in) {
 ; CHECK-LABEL: sel_merge_nx2f64_negative_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #-9223372036854775808 // =0x8000000000000000
-; CHECK-NEXT:    mov z1.d, x8
+; CHECK-NEXT:    mov z1.d, #0x8000000000000000
 ; CHECK-NEXT:    mov z0.d, p0/m, z1.d
 ; CHECK-NEXT:    ret
 %sel = select <vscale x 2 x i1> %p, <vscale x 2 x double> splat (double -0.0), <vscale x 2 x double> %in

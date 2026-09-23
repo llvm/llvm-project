@@ -49,15 +49,26 @@ class Expr;
 /// represents ref-counted object during the traversal we return relevant
 /// sub-expression and true.
 ///
-/// Calls \p callback with the subexpression that we traversed to and if \p
-/// StopAtFirstRefCountedObj is true we also specify whether we stopped early.
-/// Returns false if any of calls to callbacks returned false. Otherwise true.
+/// Calls \p callback for each origin the traversal reaches, passing the
+/// subexpression, whether the traversal recognized it as a safe origin,
+/// whether the path to it passed through a temporary that dies at the end of
+/// the full-expression (in that case the origin's lifetime guarantee cannot
+/// be assumed to extend past the full-expression), and whether the path to it
+/// followed at least one [[clang::lifetimebound]] edge. Returns false if any
+/// of calls to callbacks returned false. Otherwise true.
+///
+/// If \p FollowLifetimeBound is true, f(x [[clang::lifetimebound]])
+/// traverses into x.
 bool tryToFindPtrOrigin(
     const clang::Expr *E, bool StopAtFirstRefCountedObj,
+    bool FollowLifetimeBound,
     std::function<bool(const clang::CXXRecordDecl *)> isSafePtr,
     std::function<bool(const clang::QualType)> isSafePtrType,
     std::function<bool(const clang::Decl *)> isSafeGlobalDecl,
-    std::function<bool(const clang::Expr *, bool)> callback);
+    std::function<bool(const clang::Expr *, bool /*IsSafe*/,
+                       bool /*OriginDependsOnFullExpressionTemporary*/,
+                       bool /*PtrIsLifetimeBoundToOrigin*/)>
+        callback);
 
 /// For \p E referring to a ref-countable/-counted pointer/reference we return
 /// whether it's a safe call argument. Examples: function parameter or
@@ -76,6 +87,13 @@ bool isConstOwnerPtrMemberExpr(const clang::Expr *E);
 /// \returns true if E is a MemberExpr accessing a member variable which
 /// supports CheckedPtr.
 bool isExprToGetCheckedPtrCapableMember(const clang::Expr *E);
+
+/// \returns true if \p E is a [[alloc] init] pattern expression.
+/// Sets \p InnerExpr to the inner function call or selector invocation.
+bool isAllocInit(const Expr *E, const Expr **InnerExpr = nullptr);
+
+/// \returns ObjCInterfaceDecl from a pointer type.
+ObjCInterfaceDecl *getObjCDeclFromObjCPtr(const Type *TypePtr);
 
 /// \returns true if E is a CXXMemberCallExpr which returns a const smart
 /// pointer type.

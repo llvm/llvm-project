@@ -6,6 +6,7 @@
 
 
 declare i32 @target_func()
+@global_func_ptr = external dso_local local_unnamed_addr global ptr, align 8
 
 
 ; Test that Control Flow Guard checks are not added on calls with the "guard_nocf" attribute.
@@ -19,9 +20,9 @@ entry:
 
   ; CHECK-LABEL: func_guard_nocf
   ; CHECK:       adrp x8, target_func
-	; CHECK:       add x8, x8, :lo12:target_func
+  ; CHECK-NEXT:  add x8, x8, :lo12:target_func
   ; CHECK-NOT:   __guard_check_icall_fptr
-	; CHECK:       blr x8
+  ; CHECK:       blr x8
 }
 attributes #0 = { "guard_nocf" }
 
@@ -37,14 +38,14 @@ entry:
 
   ; The call to __guard_check_icall_fptr should come immediately before the call to the target function.
   ; CHECK-LABEL: func_optnone_cf
-	; CHECK:        adrp x8, target_func
-	; CHECK:        add x8, x8, :lo12:target_func
-	; CHECK:        adrp x9, __guard_check_icall_fptr
-	; CHECK:        add x9, x9, :lo12:__guard_check_icall_fptr
-	; CHECK:        ldr x9, [x9]
-	; CHECK:        mov x15, x8
-	; CHECK:        blr x9
-	; CHECK-NEXT:   blr x8
+  ; CHECK:        adrp x8, target_func
+  ; CHECK-NEXT:   add x8, x8, :lo12:target_func
+  ; CHECK-NEXT:   str x8, [sp, #8]
+  ; CHECK-NEXT:   ldr x15, [sp, #8]
+  ; CHECK-NEXT:   adrp x8, __guard_check_icall_fptr
+  ; CHECK-NEXT:   ldr x8, [x8, :lo12:__guard_check_icall_fptr]
+  ; CHECK-NEXT:   blr x8
+  ; CHECK-NEXT:   blr x15
 }
 attributes #1 = { noinline optnone }
 
@@ -61,12 +62,12 @@ entry:
   ; The call to __guard_check_icall_fptr should come immediately before the call to the target function.
   ; CHECK-LABEL: func_cf
   ; CHECK:        adrp x8, __guard_check_icall_fptr
-	; CHECK:        ldr x9, [x8, :lo12:__guard_check_icall_fptr]
-	; CHECK:        adrp x8, target_func
-	; CHECK:        add x8, x8, :lo12:target_func
-	; CHECK:        mov x15, x8
-	; CHECK: 	     	blr x9
-	; CHECK-NEXT:   blr x8
+  ; CHECK-NEXT:   adrp x15, target_func
+  ; CHECK-NEXT:   add x15, x15, :lo12:target_func
+  ; CHECK-NEXT:   ldr x8, [x8, :lo12:__guard_check_icall_fptr]
+  ; CHECK-NEXT:   str x15, [sp, #8]
+  ; CHECK-NEXT:   blr x8
+  ; CHECK-NEXT:   blr x15
 }
 
 
@@ -90,15 +91,50 @@ lpad:                                             ; preds = %entry
   ; The call to __guard_check_icall_fptr should come immediately before the call to the target function.
   ; CHECK-LABEL: func_cf_invoke
   ; CHECK:        adrp x8, __guard_check_icall_fptr
-	; CHECK:        ldr x9, [x8, :lo12:__guard_check_icall_fptr]
-	; CHECK:        adrp x8, target_func
-	; CHECK:        add x8, x8, :lo12:target_func
-	; CHECK:        mov x15, x8
-	; CHECK:        blr x9
+  ; CHECK-NEXT:   adrp x15, target_func
+  ; CHECK-NEXT:   add x15, x15, :lo12:target_func
+  ; CHECK-NEXT:   ldr x8, [x8, :lo12:__guard_check_icall_fptr]
+  ; CHECK-NEXT:   str x15, [sp, #8]
+  ; CHECK-NEXT:   blr x8
   ; CHECK-NEXT:   .Ltmp0:
-	; CHECK-NEXT:   blr x8
+  ; CHECK-NEXT:   blr x15
   ; CHECK:       // %common.ret
   ; CHECK:       // %lpad
+}
+
+
+; Test CFG in the case where the pointer being called is already in a register
+define i32 @func_cf_param(ptr %func_ptr) {
+entry:
+  %0 = load ptr, ptr %func_ptr, align 8
+  %1 = call i32 %0()
+  ret i32 %1
+
+  ; The call to __guard_check_icall_fptr should come immediately before the call to the target function.
+  ; CHECK-LABEL: func_cf_param
+  ; CHECK:        adrp x8, __guard_check_icall_fptr
+  ; CHECK-NEXT:   ldr x15, [x0]
+  ; CHECK-NEXT:   ldr x8, [x8, :lo12:__guard_check_icall_fptr]
+  ; CHECK-NEXT:   blr x8
+  ; CHECK-NEXT:   blr x15
+}
+
+
+; Test CFG in the case where the pointer being called is a GlobalValue
+define i32 @func_cf_global() {
+entry:
+  %0 = load ptr, ptr @global_func_ptr, align 8
+  %1 = call i32 %0()
+  ret i32 %1
+
+  ; The call to __guard_check_icall_fptr should come immediately before the call to the target function.
+  ; CHECK-LABEL: func_cf_global
+  ; CHECK:        adrp x8, global_func_ptr
+  ; CHECK-NEXT:   adrp x9, __guard_check_icall_fptr
+  ; CHECK-NEXT:   ldr x15, [x8, :lo12:global_func_ptr]
+  ; CHECK-NEXT:   ldr x8, [x9, :lo12:__guard_check_icall_fptr]
+  ; CHECK-NEXT:   blr x8
+  ; CHECK-NEXT:   blr x15
 }
 
 declare void @h()

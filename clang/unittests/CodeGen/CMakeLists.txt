@@ -1,8 +1,10 @@
 add_clang_unittest(ClangCodeGenTests
   BufferSourceTest.cpp
   CodeGenExternalTest.cpp
+  DemangleTrapReasonInDebugInfo.cpp
   TBAAMetadataTest.cpp
   CheckTargetFeaturesTest.cpp
+  QualTypeMapperTest.cpp
   CLANG_LIBS
   clangAST
   clangBasic
@@ -11,7 +13,9 @@ add_clang_unittest(ClangCodeGenTests
   clangLex
   clangParse
   clangSerialization
+  clangTesting
   LLVM_COMPONENTS
+  ABI
   Core
   Support
   TargetParser

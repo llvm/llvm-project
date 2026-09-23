@@ -17,13 +17,15 @@ namespace clang::tidy::bugprone {
 
 namespace {
 
-AST_MATCHER(clang::VarDecl, hasConstantDeclaration) {
+AST_MATCHER(VarDecl, hasConstantDeclaration) {
+  if (Node.isConstexpr() || Node.hasAttr<ConstInitAttr>())
+    return true;
+  if (const VarDecl *Def = Node.getDefinition();
+      Def && (Def->isConstexpr() || Def->hasAttr<ConstInitAttr>()))
+    return true;
   const Expr *Init = Node.getInit();
-  if (Init && !Init->isValueDependent()) {
-    if (Node.isConstexpr())
-      return true;
+  if (Init && !Init->isValueDependent())
     return Node.evaluateValue();
-  }
   return false;
 }
 
@@ -31,8 +33,7 @@ AST_MATCHER(clang::VarDecl, hasConstantDeclaration) {
 
 DynamicStaticInitializersCheck::DynamicStaticInitializersCheck(
     StringRef Name, ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context),
-      HeaderFileExtensions(Context->getHeaderFileExtensions()) {}
+    : ClangTidyCheck(Name, Context) {}
 
 void DynamicStaticInitializersCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
@@ -43,9 +44,10 @@ void DynamicStaticInitializersCheck::registerMatchers(MatchFinder *Finder) {
 void DynamicStaticInitializersCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *Var = Result.Nodes.getNodeAs<VarDecl>("var");
-  SourceLocation Loc = Var->getLocation();
-  if (!Loc.isValid() || !utils::isPresumedLocInHeaderFile(
-                            Loc, *Result.SourceManager, HeaderFileExtensions))
+  const SourceLocation Loc = Var->getLocation();
+  if (!Loc.isValid() ||
+      !utils::isPresumedLocInHeaderFile(Loc, *Result.SourceManager,
+                                        getHeaderFileExtensions()))
     return;
   // If the initializer is a constant expression, then the compiler
   // doesn't have to dynamically initialize it.

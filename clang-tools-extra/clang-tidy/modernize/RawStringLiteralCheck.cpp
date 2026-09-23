@@ -40,6 +40,19 @@ static bool isRawStringLiteral(StringRef Text) {
   return (QuotePos > 0) && (Text[QuotePos - 1] == 'R');
 }
 
+// Clang synthesizes StringLiteral nodes that are not spelled as a string in
+// the source, e.g. the argument of a raw literal operator call (`12_w` is
+// treated as `operator""_w("12")`). Such a node points at a non-string token,
+// so its source text must not be analyzed as a string literal.
+static bool isSpelledAsStringLiteral(const StringLiteral *Literal,
+                                     const SourceManager &SM,
+                                     const LangOptions &LangOpts) {
+  Token T;
+  if (Lexer::getRawToken(Literal->getBeginLoc(), T, SM, LangOpts))
+    return false;
+  return tok::isStringLiteral(T.getKind());
+}
+
 static bool containsEscapedCharacters(const MatchFinder::MatchResult &Result,
                                       const StringLiteral *Literal,
                                       const CharsBitSet &DisallowedChars) {
@@ -51,11 +64,15 @@ static bool containsEscapedCharacters(const MatchFinder::MatchResult &Result,
     if (DisallowedChars.test(C))
       return false;
 
-  CharSourceRange CharRange = Lexer::makeFileCharRange(
+  if (!isSpelledAsStringLiteral(Literal, *Result.SourceManager,
+                                Result.Context->getLangOpts()))
+    return false;
+
+  const CharSourceRange CharRange = Lexer::makeFileCharRange(
       CharSourceRange::getTokenRange(Literal->getSourceRange()),
       *Result.SourceManager, Result.Context->getLangOpts());
-  StringRef Text = Lexer::getSourceText(CharRange, *Result.SourceManager,
-                                        Result.Context->getLangOpts());
+  const StringRef Text = Lexer::getSourceText(CharRange, *Result.SourceManager,
+                                              Result.Context->getLangOpts());
   if (Text.empty() || isRawStringLiteral(Text))
     return false;
 
@@ -63,9 +80,8 @@ static bool containsEscapedCharacters(const MatchFinder::MatchResult &Result,
 }
 
 static bool containsDelimiter(StringRef Bytes, const std::string &Delimiter) {
-  return Bytes.find(Delimiter.empty()
-                        ? std::string(R"lit()")lit")
-                        : (")" + Delimiter + R"(")")) != StringRef::npos;
+  return Bytes.contains(Delimiter.empty() ? std::string(R"lit()")lit")
+                                          : (")" + Delimiter + R"(")"));
 }
 
 RawStringLiteralCheck::RawStringLiteralCheck(StringRef Name,
@@ -116,7 +132,7 @@ createUserDefinedSuffix(const StringLiteral *Literal, const SourceManager &SM,
   const CharSourceRange CharRange =
       Lexer::makeFileCharRange(TokenRange, SM, LangOpts);
   if (T.hasUDSuffix()) {
-    StringRef Text = Lexer::getSourceText(CharRange, SM, LangOpts);
+    const StringRef Text = Lexer::getSourceText(CharRange, SM, LangOpts);
     const size_t UDSuffixPos = Text.find_last_of('"');
     if (UDSuffixPos == StringRef::npos)
       return std::nullopt;
@@ -131,11 +147,10 @@ static std::string createRawStringLiteral(const StringLiteral *Literal,
                                           const LangOptions &LangOpts) {
   const StringRef Bytes = Literal->getBytes();
   std::string Delimiter;
-  for (int I = 0; containsDelimiter(Bytes, Delimiter); ++I) {
+  for (int I = 0; containsDelimiter(Bytes, Delimiter); ++I)
     Delimiter = (I == 0) ? DelimiterStem : DelimiterStem + std::to_string(I);
-  }
 
-  std::optional<StringRef> UserDefinedSuffix =
+  const std::optional<StringRef> UserDefinedSuffix =
       createUserDefinedSuffix(Literal, SM, LangOpts);
 
   if (Delimiter.empty())

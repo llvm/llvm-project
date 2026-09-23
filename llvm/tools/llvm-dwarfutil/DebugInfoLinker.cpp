@@ -15,7 +15,11 @@
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/ThreadPool.h"
+#include "llvm/Support/Threading.h"
 #include <memory>
+#include <optional>
 #include <vector>
 
 namespace llvm {
@@ -345,6 +349,11 @@ Error linkDebugInfoImpl(object::ObjectFile &File, const Options &Options,
   else
     return StreamerOrErr.takeError();
 
+  // The parallel linker links the object files on this pool; it must outlive
+  // link() below. The classic linker ignores it.
+  DefaultThreadPool ThreadPool(hardware_concurrency(Options.NumThreads));
+  DebugInfoLinker->setThreadPool(&ThreadPool);
+
   if constexpr (std::is_same<Linker,
                              dwarf_linker::parallel::DWARFLinker>::value) {
     DebugInfoLinker->setOutputDWARFHandler(
@@ -354,8 +363,9 @@ Error linkDebugInfoImpl(object::ObjectFile &File, const Options &Options,
           Streamer->emitSectionContents(Section->getContents(),
                                         Section->getKind());
         });
-  } else
+  } else {
     DebugInfoLinker->setOutputDWARFEmitter(Streamer.get());
+  }
 
   DebugInfoLinker->setEstimatedObjfilesAmount(1);
   DebugInfoLinker->setNumThreads(Options.NumThreads);

@@ -291,12 +291,12 @@ void SparseSolver<LatticeKey, LatticeVal, KeyInfo>::getFeasibleSuccessors(
   if (TI.getNumSuccessors() == 0)
     return;
 
-  if (BranchInst *BI = dyn_cast<BranchInst>(&TI)) {
-    if (BI->isUnconditional()) {
-      Succs[0] = true;
-      return;
-    }
+  if (isa<UncondBrInst>(&TI)) {
+    Succs[0] = true;
+    return;
+  }
 
+  if (CondBrInst *BI = dyn_cast<CondBrInst>(&TI)) {
     LatticeVal BCValue;
     if (AggressiveUndef)
       BCValue =

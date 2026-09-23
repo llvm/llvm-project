@@ -547,7 +547,6 @@ TEST_F(OrcCAPITestBase, DISABLED_EnableDebugSupport) {
 #else
 static LLVM_ATTRIBUTE_USED void linkComponents() {
   errs() << "Linking in runtime functions\n"
-         << (void *)&llvm_orc_registerJITLoaderGDBWrapper << '\n'
          << (void *)&llvm_orc_registerJITLoaderGDBAllocAction << '\n';
 }
 TEST_F(OrcCAPITestBase, EnableDebugSupport) {
@@ -594,7 +593,9 @@ TEST_F(OrcCAPITestBase, ExecutionTest) {
   if (LLVMErrorRef E = LLVMOrcLLJITLookup(Jit, &TestFnAddr, "sum"))
     FAIL() << "Symbol \"sum\" was not added into JIT (triple = " << TargetTriple
            << "): " << toString(E);
-  auto *SumFn = (SumFunctionType)(TestFnAddr);
+  // FIXME: We use ExecutorAddr::toPtr here to sign arm64e pointers. We should
+  //        develop a C API solution for this.
+  auto *SumFn = ExecutorAddr(TestFnAddr).toPtr<SumFunctionType>();
   int32_t Result = SumFn(1, 1);
   ASSERT_EQ(2, Result);
 }

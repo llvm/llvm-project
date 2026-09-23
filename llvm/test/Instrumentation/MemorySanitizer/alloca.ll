@@ -79,7 +79,7 @@ entry:
 }
 
 ; CHECK-LABEL: define void @array_non_const(
-; CHECK: %[[A:.*]] = mul i64 4, %cnt
+; CHECK: %[[A:.*]] = mul i64 %cnt, 4
 ; INLINE: call void @llvm.memset.p0.i64(ptr align 4 {{.*}}, i8 -1, i64 %[[A]], i1 false)
 ; CALL: call void @__msan_poison_stack(ptr {{.*}}, i64 %[[A]])
 ; ORIGIN: call void @__msan_set_alloca_origin_with_descr(ptr {{.*}}, i64 %[[A]],
@@ -95,7 +95,7 @@ entry:
 
 ; CHECK-LABEL: define void @array_non_const32(
 ; CHECK: %[[Z:.*]] = zext i32 %cnt to i64
-; CHECK: %[[A:.*]] = mul i64 4, %[[Z]]
+; CHECK: %[[A:.*]] = mul i64 %[[Z]], 4
 ; INLINE: call void @llvm.memset.p0.i64(ptr align 4 {{.*}}, i8 -1, i64 %[[A]], i1 false)
 ; CALL: call void @__msan_poison_stack(ptr {{.*}}, i64 %[[A]])
 ; ORIGIN: call void @__msan_set_alloca_origin_with_descr(ptr {{.*}}, i64 %[[A]],
@@ -169,7 +169,7 @@ entry:
 ; CHECK-LABEL: entry:
 ; CHECK: %x = alloca i32, i64 %cnt
 ; CHECK: call void @llvm.lifetime.start
-; CHECK: %[[A:.*]] = mul i64 4, %cnt
+; CHECK: %[[A:.*]] = mul i64 %cnt, 4
 ; INLINE: call void @llvm.memset.p0.i64(ptr align 4 {{.*}}, i8 -1, i64 %[[A]], i1 false)
 ; CALL: call void @__msan_poison_stack(ptr {{.*}}, i64 %[[A]])
 ; ORIGIN: call void @__msan_set_alloca_origin_with_descr(ptr {{.*}}, i64 %[[A]],

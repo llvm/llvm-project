@@ -17,22 +17,27 @@
 
 #include "llvm/CodeGen/EarlyIfConversion.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SparseSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineTraceMetrics.h"
+#include "llvm/CodeGen/PseudoSourceValue.h"
 #include "llvm/CodeGen/Register.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -55,10 +60,32 @@ BlockInstrLimit("early-ifcvt-limit", cl::init(30), cl::Hidden,
 static cl::opt<bool> Stress("stress-early-ifcvt", cl::Hidden,
   cl::desc("Turn all knobs to 11"));
 
+// Enable analysis of data dependent branches (conditions derived from loads).
+static cl::opt<bool> EnableDataDependentBranchAnalysis(
+    "enable-early-ifcvt-data-dependent", cl::Hidden, cl::init(false),
+    cl::desc("Enable hard-to-predict branch analysis for if-conversion"));
+
+// Limit the number steps we take when searching conditions that depend on
+// values recently loaded from memory.
+static cl::opt<unsigned>
+    MaxNumSteps("early-ifcvt-max-steps", cl::Hidden, cl::init(16),
+                cl::desc("Limit the number of steps taken when searching for a "
+                         "recently loaded value"));
+
+// Limit the work done when looking for calls between a load and the condition
+// it feeds.
+static cl::opt<unsigned> MaxRegionInstrs(
+    "early-ifcvt-max-region-instrs", cl::Hidden, cl::init(64),
+    cl::desc("Limit the number of blocks and instructions examined when "
+             "searching for calls between a load and the condition it feeds"));
+
 STATISTIC(NumDiamondsSeen,  "Number of diamonds");
 STATISTIC(NumDiamondsConv,  "Number of diamonds converted");
 STATISTIC(NumTrianglesSeen, "Number of triangles");
 STATISTIC(NumTrianglesConv, "Number of triangles converted");
+STATISTIC(NumDataDependant,
+          "Number of data dependent conditional branches encountered");
+STATISTIC(NumLikelyBiased, "Number of branches with a hot path encountered");
 
 //===----------------------------------------------------------------------===//
 //                                 SSAIfConv
@@ -134,7 +161,7 @@ private:
   BitVector ClobberedRegUnits;
 
   // Scratch pad for findInsertionPoint.
-  SparseSet<unsigned> LiveRegUnits;
+  SparseSet<MCRegUnit, MCRegUnit, MCRegUnitToIndex> LiveRegUnits;
 
   /// Insertion point in Head for speculatively executed instructions form TBB
   /// and FBB.
@@ -271,7 +298,7 @@ bool SSAIfConv::InstrDependenciesAllowIfConv(MachineInstr *I) {
     // Remember clobbered regunits.
     if (MO.isDef() && Reg.isPhysical())
       for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg()))
-        ClobberedRegUnits.set(Unit);
+        ClobberedRegUnits.set(static_cast<unsigned>(Unit));
 
     if (!MO.readsReg() || !Reg.isVirtual())
       continue;
@@ -409,7 +436,7 @@ bool SSAIfConv::findInsertionPoint() {
     // Anything read by I is live before I.
     while (!Reads.empty())
       for (MCRegUnit Unit : TRI->regunits(Reads.pop_back_val()))
-        if (ClobberedRegUnits.test(Unit))
+        if (ClobberedRegUnits.test(static_cast<unsigned>(Unit)))
           LiveRegUnits.insert(Unit);
 
     // We can't insert before a terminator.
@@ -421,7 +448,7 @@ bool SSAIfConv::findInsertionPoint() {
     if (!LiveRegUnits.empty()) {
       LLVM_DEBUG({
         dbgs() << "Would clobber";
-        for (unsigned LRU : LiveRegUnits)
+        for (MCRegUnit LRU : LiveRegUnits)
           dbgs() << ' ' << printRegUnit(LRU, TRI);
         dbgs() << " live before " << *I;
       });
@@ -803,18 +830,23 @@ namespace {
 class EarlyIfConverter {
   const TargetInstrInfo *TII = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
-  MCSchedModel SchedModel;
+  const TargetSubtargetInfo *STI = nullptr;
   MachineRegisterInfo *MRI = nullptr;
   MachineDominatorTree *DomTree = nullptr;
   MachineLoopInfo *Loops = nullptr;
   MachineTraceMetrics *Traces = nullptr;
   MachineTraceMetrics::Ensemble *MinInstr = nullptr;
+  MachineBranchProbabilityInfo *MBPI = nullptr;
   SSAIfConv IfConv;
+
+  /// Cache of basic blocks verified to contain no call instructions, mapping
+  /// each block to the number of instructions scanned in it.
+  DenseMap<const MachineBasicBlock *, unsigned> NoCallBlocksCache;
 
 public:
   EarlyIfConverter(MachineDominatorTree &DT, MachineLoopInfo &LI,
-                   MachineTraceMetrics &MTM)
-      : DomTree(&DT), Loops(&LI), Traces(&MTM) {}
+                   MachineTraceMetrics &MTM, MachineBranchProbabilityInfo *MBPI)
+      : DomTree(&DT), Loops(&LI), Traces(&MTM), MBPI(MBPI) {}
   EarlyIfConverter() = delete;
 
   bool run(MachineFunction &MF);
@@ -823,6 +855,9 @@ private:
   bool tryConvertIf(MachineBasicBlock *);
   void invalidateTraces();
   bool shouldConvertIf();
+  bool isConditionDataDependent();
+  bool doOperandsComeFromMemory(const MachineInstr *ConditionDef);
+  bool hasCallOrLoopInRange(const MachineInstr *From, const MachineInstr *To);
 };
 
 class EarlyIfConverterLegacy : public MachineFunctionPass {
@@ -847,6 +882,7 @@ INITIALIZE_PASS_END(EarlyIfConverterLegacy, DEBUG_TYPE, "Early If Converter",
                     false, false)
 
 void EarlyIfConverterLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
+  AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
   AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
   AU.addRequired<MachineDominatorTreeWrapperPass>();
   AU.addPreserved<MachineDominatorTreeWrapperPass>();
@@ -868,9 +904,9 @@ void updateDomTree(MachineDominatorTree *DomTree, const SSAIfConv &IfConv,
   for (auto *B : Removed) {
     MachineDomTreeNode *Node = DomTree->getNode(B);
     assert(Node != HeadNode && "Cannot erase the head node");
-    while (Node->getNumChildren()) {
+    while (!Node->isLeaf()) {
       assert(Node->getBlock() == IfConv.Tail && "Unexpected children");
-      DomTree->changeImmediateDominator(Node->back(), HeadNode);
+      DomTree->changeImmediateDominator(*Node->begin(), HeadNode);
     }
     DomTree->eraseNode(B);
   }
@@ -894,6 +930,230 @@ void EarlyIfConverter::invalidateTraces() {
   Traces->invalidate(IfConv.TBB);
   Traces->invalidate(IfConv.FBB);
   Traces->verifyAnalysis();
+}
+
+static bool isConstantPoolLoad(const MachineInstr *MI) {
+  return MI->mayLoad() && any_of(MI->memoperands(), [](MachineMemOperand *MOp) {
+           const PseudoSourceValue *PSV = MOp->getPseudoValue();
+           return PSV && PSV->isConstantPool();
+         });
+}
+
+/// Check whether the load in From and the condition in To are far apart, i.e.
+/// whether a call or a loop can be executed between them. This is done by first
+/// scanning the instructions within From and To MBBs. If no call is found, we
+/// then scan all blocks which are dominated by From (the load) and can reach To
+/// (the condition), looking for calls and for blocks belonging to a loop the
+/// condition is not part of.
+bool EarlyIfConverter::hasCallOrLoopInRange(const MachineInstr *From,
+                                            const MachineInstr *To) {
+  if (From == To)
+    return false;
+
+  LLVM_DEBUG(dbgs() << "  checking for a call or loop between " << *From
+                    << "  and " << *To);
+  assert(DomTree->dominates(From, To) && "From is expected to dominate To");
+
+  const MachineBasicBlock *FromBB = From->getParent();
+  const MachineBasicBlock *ToBB = To->getParent();
+
+  unsigned NumScanned = 0;
+  auto HitSearchLimit = [&](unsigned N) {
+    NumScanned += N;
+    if (NumScanned <= MaxRegionInstrs)
+      return false;
+    LLVM_DEBUG(dbgs() << "  hasCallOrLoopInRange scanned more than "
+                      << MaxRegionInstrs << " instructions\n");
+    return true;
+  };
+  auto FoundCall = [](const MachineInstr &MI) {
+    LLVM_DEBUG(dbgs() << "  found a call before the condition: " << MI);
+    return true;
+  };
+  auto IsCallOrHitSearchLimit = [&](const MachineInstr &MI) {
+    if (HitSearchLimit(1))
+      return true;
+    if (!MI.isCall())
+      return false;
+    return FoundCall(MI);
+  };
+
+  // If From and To are in the same block, just check (From, To).
+  if (FromBB == ToBB) {
+    for (const MachineInstr &MI :
+         make_range(std::next(From->getIterator()), To->getIterator()))
+      if (IsCallOrHitSearchLimit(MI))
+        return true;
+    return false;
+  }
+
+  // Check (From, end of From's block] and [start of To's block, To).
+  for (const MachineInstr &MI :
+       make_range(std::next(From->getIterator()), FromBB->instr_end()))
+    if (IsCallOrHitSearchLimit(MI))
+      return true;
+  for (const MachineInstr &MI :
+       make_range(ToBB->instr_begin(), To->getIterator()))
+    if (IsCallOrHitSearchLimit(MI))
+      return true;
+
+  // Enqueued guards the traversal: the endpoint blocks are traversed through
+  // but their instructions were already handled above.
+  SmallPtrSet<const MachineBasicBlock *, 16> Enqueued = {FromBB, ToBB};
+  SmallVector<const MachineBasicBlock *, 16> Worklist;
+  auto Enqueue = [&](const MachineBasicBlock *BB) {
+    if (DomTree->dominates(FromBB, BB) && Enqueued.insert(BB).second)
+      Worklist.push_back(BB);
+  };
+
+  for (const MachineBasicBlock *Pred : ToBB->predecessors())
+    Enqueue(Pred);
+
+  while (!Worklist.empty()) {
+    const MachineBasicBlock *BB = Worklist.pop_back_val();
+
+    // If the block belongs to a loop containing neither the load nor the
+    // condition, that loop is executed entirely between the two, so consider
+    // them far apart.
+    if (const MachineLoop *BBLoop = Loops->getLoopFor(BB)) {
+      if (!BBLoop->contains(ToBB) && !BBLoop->contains(FromBB)) {
+        LLVM_DEBUG(dbgs() << "  found a loop before the condition in "
+                          << printMBBReference(*BB) << '\n');
+        return true;
+      }
+    }
+
+    // Next check for calls in the block.
+    auto CacheIt = NoCallBlocksCache.find(BB);
+    if (CacheIt != NoCallBlocksCache.end()) {
+      if (HitSearchLimit(CacheIt->second))
+        return true;
+    } else {
+      for (const MachineInstr &MI : *BB)
+        if (IsCallOrHitSearchLimit(MI))
+          return true;
+      NoCallBlocksCache[BB] = BB->size();
+    }
+
+    for (const MachineBasicBlock *Pred : BB->predecessors())
+      Enqueue(Pred);
+  }
+
+  return false;
+}
+
+/// Check if a register's value comes from a memory load by walking the
+/// def-use chain. We want to prioritize converting branches which
+/// depend on values loaded from memory (unless they are loop invariant,
+/// or come from a constant pool). The walk starts from the definition of
+/// ConditionDef's first operand, which is not ConditionDef itself for
+/// instructions such as FCMPSrr, where that operand is a use.
+bool EarlyIfConverter::doOperandsComeFromMemory(
+    const MachineInstr *ConditionDef) {
+  Register Reg = ConditionDef->getOperand(0).getReg();
+  if (!Reg.isVirtual())
+    return false;
+
+  LLVM_DEBUG(dbgs() << "  doOperandsComeFromMemory starting from reg "
+                    << printReg(Reg) << "\n");
+
+  // The condition is consumed by the branch terminating Head, so this is the
+  // end of the interval a load has to survive without a call in between.
+  const MachineInstr *Br = &*IfConv.Head->getFirstTerminator();
+  MachineLoop *IfConvLoop = Loops->getLoopFor(IfConv.Head);
+
+  // Walk the def-use chain.
+  SmallPtrSet<const MachineInstr *, 8> VisitedInstrs;
+  SmallVector<const MachineInstr *> Worklist;
+
+  MachineInstr *DefMI = MRI->getVRegDef(Reg);
+  // The operand is defined outside of the function - it does not
+  // come from memory access.
+  if (!DefMI)
+    return false;
+
+  Worklist.push_back(DefMI);
+
+  while (!Worklist.empty() && VisitedInstrs.size() < MaxNumSteps) {
+    const MachineInstr *MI = Worklist.pop_back_val();
+    if (!VisitedInstrs.insert(MI).second)
+      continue;
+
+    // Don't walk through PHIs: a value arriving on a back edge is loaded in a
+    // previous iteration, so the interval between the load and the branch is
+    // not the one hasCallOrLoopInRange measures.
+    if (MI->isPHI())
+      continue;
+
+    const MachineBasicBlock *Parent = MI->getParent();
+    MachineLoop *ParentLoop = Loops->getLoopFor(Parent);
+
+    // If the instruction is outside the loop, skip it (loop-invariant).
+    if (IfConvLoop && ParentLoop != IfConvLoop)
+      continue;
+
+    // Check if this instruction is a load, and there are no calls or loops
+    // between the load and the condition (which would break the "close in
+    // time" assumption).
+    if (MI->mayLoad() && !isConstantPoolLoad(MI) &&
+        !MI->isDereferenceableInvariantLoad()) {
+      // If the load doesn't dominate the branch (e.g., comes after it in
+      // the same block via a loop back-edge), it can't affect this iteration.
+      // If not - check if there is a call or a loop between the load
+      // instruction and the branch.
+      if (!DomTree->dominates(MI, Br) || hasCallOrLoopInRange(MI, Br))
+        continue;
+
+      return true;
+    }
+
+    // Walk through all register use operands and find their definitions.
+    for (const MachineOperand &MO : MI->operands()) {
+      if (!MO.isReg() || !MO.isUse())
+        continue;
+      Register UseReg = MO.getReg();
+      if (!UseReg.isVirtual())
+        continue;
+
+      if (MachineInstr *UseDef = MRI->getVRegDef(UseReg)) {
+        if (!VisitedInstrs.count(UseDef)) {
+          Worklist.push_back(UseDef);
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
+/// Check if the branch condition is data-dependent (comes from memory loads).
+bool EarlyIfConverter::isConditionDataDependent() {
+  TargetInstrInfo::MachineBranchPredicate MBP;
+  if (TII->analyzeBranchPredicate(*IfConv.Head, MBP, /*AllowModify=*/false))
+    return false;
+
+  if (!MBP.ConditionDef)
+    return false;
+
+  // If the branch is biased (not 50/50), don't consider it data dependent.
+  // This is to prevent converting unprofitable checks such as
+  // `x[i] != 0;`
+  auto TBBProb = MBPI->getEdgeProbability(IfConv.Head, IfConv.TBB);
+  auto FBBProb = MBPI->getEdgeProbability(IfConv.Head, IfConv.FBB);
+  if (TBBProb != FBBProb) {
+    ++NumLikelyBiased;
+    return false;
+  }
+
+  // Check if operands used to compute the branch condition were loaded recently
+  // from memory, starting by the ConditionDef itself and walking up the use-def
+  // chain.
+  if (doOperandsComeFromMemory(MBP.ConditionDef)) {
+    ++NumDataDependant;
+    return true;
+  }
+
+  return false;
 }
 
 // Adjust cycles with downward saturation.
@@ -942,9 +1202,9 @@ bool EarlyIfConverter::shouldConvertIf() {
                all_of(Def->operands(), [&](MachineOperand &Op) {
                  if (Op.isImm())
                    return true;
-                 if (!MO.isReg() || !MO.isUse())
-                   return false;
-                 Register Reg = MO.getReg();
+                 if (!Op.isReg() || !Op.isUse())
+                   return true;
+                 Register Reg = Op.getReg();
                  if (Reg.isPhysical())
                    return false;
 
@@ -964,10 +1224,29 @@ bool EarlyIfConverter::shouldConvertIf() {
                               FBBTrace.getCriticalPath());
 
   // Set a somewhat arbitrary limit on the critical path extension we accept.
-  unsigned CritLimit = SchedModel.MispredictPenalty/2;
+  // When hard-to-predict analysis is enabled, use full MispredictPenalty for
+  // hard-to-predict branches, half for others. Otherwise use half for all.
+  bool DataDependent = false;
+  if (EnableDataDependentBranchAnalysis)
+    DataDependent = isConditionDataDependent();
+
+  unsigned CritLimit = DataDependent ? STI->getMispredictionPenalty()
+                                     : STI->getMispredictionPenalty() / 2;
 
   MachineBasicBlock &MBB = *IfConv.Head;
   MachineOptimizationRemarkEmitter MORE(*MBB.getParent(), nullptr);
+
+  // Emit analysis remark about data-dependent condition.
+  if (DataDependent) {
+    MORE.emit([&]() {
+      return MachineOptimizationRemarkAnalysis(DEBUG_TYPE,
+                                               "DataDependentCondition",
+                                               MBB.back().getDebugLoc(), &MBB)
+             << "branch condition is data-dependent (from memory load), "
+             << "using higher CritLimit of " << ore::NV("CritLimit", CritLimit)
+             << " cycles";
+    });
+  }
 
   // If-conversion only makes sense when there is unexploited ILP. Compute the
   // maximum-ILP resource length of the trace after if-conversion. Compare it
@@ -1119,9 +1398,14 @@ bool EarlyIfConverter::tryConvertIf(MachineBasicBlock *MBB) {
     IfConv.convertIf(RemoveBlocks);
     Changed = true;
     updateDomTree(DomTree, IfConv, RemoveBlocks);
-    for (MachineBasicBlock *MBB : RemoveBlocks)
-      MBB->eraseFromParent();
     updateLoops(Loops, RemoveBlocks);
+    // Head absorbs the instructions of the removed blocks, including any calls,
+    // so a Head cached as call-free may no longer be.
+    NoCallBlocksCache.erase(IfConv.Head);
+    for (MachineBasicBlock *MBB : RemoveBlocks) {
+      NoCallBlocksCache.erase(MBB);
+      MBB->eraseFromParent();
+    }
   }
   return Changed;
 }
@@ -1130,14 +1414,13 @@ bool EarlyIfConverter::run(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "********** EARLY IF-CONVERSION **********\n"
                     << "********** Function: " << MF.getName() << '\n');
 
+  STI = &MF.getSubtarget();
   // Only run if conversion if the target wants it.
-  const TargetSubtargetInfo &STI = MF.getSubtarget();
-  if (!STI.enableEarlyIfConversion())
+  if (!STI->enableEarlyIfConversion())
     return false;
 
-  TII = STI.getInstrInfo();
-  TRI = STI.getRegisterInfo();
-  SchedModel = STI.getSchedModel();
+  TII = STI->getInstrInfo();
+  TRI = STI->getRegisterInfo();
   MRI = &MF.getRegInfo();
   MinInstr = nullptr;
 
@@ -1161,8 +1444,11 @@ EarlyIfConverterPass::run(MachineFunction &MF,
   MachineDominatorTree &MDT = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
   MachineLoopInfo &LI = MFAM.getResult<MachineLoopAnalysis>(MF);
   MachineTraceMetrics &MTM = MFAM.getResult<MachineTraceMetricsAnalysis>(MF);
+  MachineBranchProbabilityInfo *MBPI = nullptr;
+  if (EnableDataDependentBranchAnalysis)
+    MBPI = &MFAM.getResult<MachineBranchProbabilityAnalysis>(MF);
 
-  EarlyIfConverter Impl(MDT, LI, MTM);
+  EarlyIfConverter Impl(MDT, LI, MTM, MBPI);
   bool Changed = Impl.run(MF);
   if (!Changed)
     return PreservedAnalyses::all();
@@ -1183,8 +1469,11 @@ bool EarlyIfConverterLegacy::runOnMachineFunction(MachineFunction &MF) {
   MachineLoopInfo &LI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   MachineTraceMetrics &MTM =
       getAnalysis<MachineTraceMetricsWrapperPass>().getMTM();
+  MachineBranchProbabilityInfo *MBPI = nullptr;
+  if (EnableDataDependentBranchAnalysis)
+    MBPI = &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
 
-  return EarlyIfConverter(MDT, LI, MTM).run(MF);
+  return EarlyIfConverter(MDT, LI, MTM, MBPI).run(MF);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1286,9 +1575,9 @@ bool EarlyIfPredicator::tryConvertIf(MachineBasicBlock *MBB) {
     IfConv.convertIf(RemoveBlocks, /*Predicate*/ true);
     Changed = true;
     updateDomTree(DomTree, IfConv, RemoveBlocks);
+    updateLoops(Loops, RemoveBlocks);
     for (MachineBasicBlock *MBB : RemoveBlocks)
       MBB->eraseFromParent();
-    updateLoops(Loops, RemoveBlocks);
   }
   return Changed;
 }

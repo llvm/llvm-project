@@ -48,6 +48,10 @@ public:
   Preprocessor &preprocessor() { return preprocessor_; }
   common::LanguageFeatureControl &features() { return features_; }
 
+  Prescanner &set_preprocessingEnabled(bool yes) {
+    preprocessingEnabled_ = yes;
+    return *this;
+  }
   Prescanner &set_preprocessingOnly(bool yes) {
     preprocessingOnly_ = yes;
     return *this;
@@ -81,6 +85,9 @@ public:
   TokenSequence TokenizePreprocessorDirective();
   Provenance GetCurrentProvenance() const { return GetProvenance(at_); }
 
+  std::optional<CharBlock> GetKeywordMacroName(const char *) const;
+  TokenSequence ExpandKeywordMacro(CharBlock, Provenance) const;
+
   const char *IsCompilerDirectiveSentinel(const char *, std::size_t) const;
   const char *IsCompilerDirectiveSentinel(CharBlock) const;
   // 'first' is the sentinel, 'second' is beginning of payload
@@ -90,7 +97,6 @@ public:
   template <typename... A> Message &Say(A &&...a) {
     return messages_.Say(std::forward<A>(a)...);
   }
-
   template <typename... A>
   Message *Warn(common::UsageWarning warning, A &&...a) {
     return messages_.Warn(false, features_, warning, std::forward<A>(a)...);
@@ -110,6 +116,7 @@ private:
       PreprocessorDirective,
       IncludeLine, // Fortran INCLUDE
       CompilerDirective,
+      CompilerDirectiveAfterMacroExpansion, // !MACRO -> !$OMP ...
       Source
     };
     LineClassification(Kind k, std::size_t po = 0, const char *s = nullptr)
@@ -157,7 +164,7 @@ private:
   }
 
   void EmitInsertedChar(TokenSequence &tokens, char ch) {
-    Provenance provenance{allSources_.CompilerInsertionProvenance(ch)};
+    Provenance provenance{allSources().CompilerInsertionProvenance(ch)};
     tokens.PutNextTokenChar(ch, provenance);
   }
 
@@ -167,21 +174,43 @@ private:
     return *at_;
   }
 
+  bool IsOpenMPConditionalLine(const char *sentinel) const {
+    return sentinel && sentinel[0] == '$' && !sentinel[1];
+  }
+  bool IsOpenACCConditionalLine(const char *sentinel) const {
+    return sentinel && sentinel[0] == '@' && sentinel[1] == 'a' &&
+        sentinel[2] == 'c' && sentinel[3] == 'c' && sentinel[4] == '\0';
+  }
+  bool IsCUDAConditionalLine(const char *sentinel) const {
+    return sentinel && sentinel[0] == '@' && sentinel[1] == 'c' &&
+        sentinel[2] == 'u' && sentinel[3] == 'f' && sentinel[4] == '\0';
+  }
   bool InCompilerDirective() const { return directiveSentinel_ != nullptr; }
   bool InOpenMPConditionalLine() const {
-    return directiveSentinel_ && directiveSentinel_[0] == '$' &&
-        !directiveSentinel_[1];
+    return IsOpenMPConditionalLine(directiveSentinel_);
+  }
+  bool InOpenACCConditionalLine() const {
+    return IsOpenACCConditionalLine(directiveSentinel_);
+  }
+  bool InCUDAConditionalLine() const {
+    return IsCUDAConditionalLine(directiveSentinel_);
   }
   bool InOpenACCOrCUDAConditionalLine() const {
-    return directiveSentinel_ && directiveSentinel_[0] == '@' &&
-        ((directiveSentinel_[1] == 'a' && directiveSentinel_[2] == 'c' &&
-             directiveSentinel_[3] == 'c') ||
-            (directiveSentinel_[1] == 'c' && directiveSentinel_[2] == 'u' &&
-                directiveSentinel_[3] == 'f')) &&
-        directiveSentinel_[4] == '\0';
+    return InOpenACCConditionalLine() || InCUDAConditionalLine();
   }
   bool InConditionalLine() const {
     return InOpenMPConditionalLine() || InOpenACCOrCUDAConditionalLine();
+  }
+  bool IsOpenMPDirective() const {
+    return directiveSentinel_ &&
+        (std::strcmp(directiveSentinel_, "$omp") == 0 ||
+            // Implementation-defined extension sentinels (OpenMP 5.2, 3.1):
+            // "$omx" (fixed form) and "$ompx" (free form).  The form is
+            // enforced during recognition (IsCompilerDirectiveSentinel), so a
+            // wrong-form spelling is treated as a comment and never reaches
+            // here.
+            std::strcmp(directiveSentinel_, "$omx") == 0 ||
+            std::strcmp(directiveSentinel_, "$ompx") == 0);
   }
   bool InFixedFormSource() const {
     return inFixedForm_ && !inPreprocessorDirective_ && !InCompilerDirective();
@@ -203,12 +232,15 @@ private:
   void NextChar();
   // True when input flowed to a continuation line
   bool SkipToNextSignificantCharacter();
-  void SkipCComments();
+  void SkipCComments(bool reportUnterminated);
+  void WarnCComment(const char *at);
   void SkipSpaces();
   static const char *SkipWhiteSpace(const char *);
-  const char *SkipWhiteSpaceIncludingEmptyMacros(const char *) const;
+  const char *SkipWhiteSpaceIncludingEmptyMacros(
+      const char *, const char **) const;
   const char *SkipWhiteSpaceAndCComments(const char *) const;
   const char *SkipCComment(const char *) const;
+  void UpdateSourcePositionAfterSkip(const char *);
   bool NextToken(TokenSequence &);
   bool HandleExponent(TokenSequence &);
   bool HandleKindSuffix(TokenSequence &);
@@ -222,7 +254,9 @@ private:
   std::optional<std::size_t> IsIncludeLine(const char *) const;
   void FortranInclude(const char *quote);
   const char *IsPreprocessorDirectiveLine(const char *) const;
-  const char *FixedFormContinuationLine(bool atNewline);
+  const char *FixedFormContinuationLine(
+      bool atNewline, const char *&cComment, const char *&unterminatedCComment);
+  const char *GetFreeFormContinuationLine(bool ampersand, const char *p);
   const char *FreeFormContinuationLine(bool ampersand);
   bool IsImplicitContinuation() const;
   bool FixedFormContinuation(bool atNewline);
@@ -238,12 +272,15 @@ private:
   bool SourceFormChange(std::string &&);
   bool CompilerDirectiveContinuation(TokenSequence &, const char *sentinel);
   bool SourceLineContinuation(TokenSequence &);
+  std::optional<LineClassification>
+  IsCompilerDirectiveSentinelAfterKeywordMacro(const char *p) const;
 
   Messages &messages_;
   CookedSource &cooked_;
   Preprocessor &preprocessor_;
   AllSources &allSources_;
   common::LanguageFeatureControl features_;
+  bool preprocessingEnabled_{false};
   bool preprocessingOnly_{false};
   bool expandIncludeLines_{true};
   bool isNestedInIncludeDirective_{false};
@@ -296,9 +333,9 @@ private:
   const std::size_t firstCookedCharacterOffset_{cooked_.BufferedBytes()};
 
   const Provenance spaceProvenance_{
-      allSources_.CompilerInsertionProvenance(' ')};
+      allSources().CompilerInsertionProvenance(' ')};
   const Provenance backslashProvenance_{
-      allSources_.CompilerInsertionProvenance('\\')};
+      allSources().CompilerInsertionProvenance('\\')};
 
   // To avoid probing the set of active compiler directive sentinel strings
   // on every comment line, they're checked first with a cheap Bloom filter.

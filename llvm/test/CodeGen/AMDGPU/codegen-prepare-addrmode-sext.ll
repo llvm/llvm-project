@@ -1,5 +1,5 @@
-; RUN: opt -mtriple=amdgcn-- -codegenprepare -S < %s | FileCheck -check-prefix=OPT %s
-; RUN: llc -mtriple=amdgcn -mcpu=verde < %s | FileCheck -check-prefix=SI-LLC %s
+; RUN: opt -mtriple=amdgpu-- -codegenprepare -S < %s | FileCheck -check-prefix=OPT %s
+; RUN: llc -mtriple=amdgpu6.01 < %s | FileCheck -check-prefix=SI-LLC %s
 
 ; OPT-LABEL: @test(
 ; OPT: mul nsw i32

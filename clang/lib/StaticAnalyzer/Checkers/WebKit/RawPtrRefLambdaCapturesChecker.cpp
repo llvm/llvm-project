@@ -1,4 +1,4 @@
-//=======- UncountedLambdaCapturesChecker.cpp --------------------*- C++ -*-==//
+//=======- RawPtrRefLambdaCapturesChecker.cpp --------------------*- C++ -*-==//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,6 +9,7 @@
 #include "ASTUtils.h"
 #include "DiagOutputUtils.h"
 #include "PtrTypesSemantics.h"
+#include "RawPtrRefSafetyModel.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
@@ -28,15 +29,20 @@ private:
   TrivialFunctionAnalysis TFA;
 
 protected:
-  mutable std::optional<RetainTypeChecker> RTC;
+  const std::unique_ptr<PtrRefSafetyModel> Model;
 
 public:
-  RawPtrRefLambdaCapturesChecker(const char *description)
-      : Bug(this, description, "WebKit coding guidelines") {}
+  RawPtrRefLambdaCapturesChecker(const char *description,
+                                 std::unique_ptr<PtrRefSafetyModel> Model)
+      : Bug(this, description, "WebKit coding guidelines"),
+        Model(std::move(Model)) {}
 
-  virtual std::optional<bool> isUnsafePtr(QualType) const = 0;
-  virtual bool isPtrType(const std::string &) const = 0;
-  virtual const char *ptrKind(QualType QT) const = 0;
+  std::optional<bool> isUnsafePtr(QualType QT) const {
+    return isUnsafePtrForStorage(*Model, QT);
+  }
+  bool isPtrType(const std::string &Name) const {
+    return Model->isPtrType(Name);
+  }
 
   void checkASTDecl(const TranslationUnitDecl *TUD, AnalysisManager &MGR,
                     BugReporter &BRArg) const {
@@ -52,7 +58,8 @@ public:
       llvm::DenseSet<const ValueDecl *> ProtectedThisDecls;
       llvm::DenseSet<const CallExpr *> CallToIgnore;
       llvm::DenseSet<const CXXConstructExpr *> ConstructToIgnore;
-      llvm::DenseMap<const VarDecl *, const LambdaExpr *> LambdaOwnerMap;
+      llvm::DenseMap<const VarDecl *, SmallVector<const LambdaExpr *>>
+          LambdaOwnerMap;
 
       QualType ClsType;
 
@@ -63,9 +70,36 @@ public:
         ShouldVisitImplicitCode = false;
       }
 
+      bool TraverseDecl(Decl *D) override {
+        // A template pattern is checked through its instantiations, which are
+        // traversed from the TemplateDecl itself. In the pattern the callee of
+        // a call may still be an unresolved overload set, so whether a lambda
+        // argument can escape isn't known, and a lambda in a pattern which is
+        // never instantiated is never used. Don't enter it at all.
+        if (D && !isa<TemplateDecl>(D) && D->isTemplated())
+          return true;
+        return DynamicRecursiveASTVisitor::TraverseDecl(D);
+      }
+
+      bool TraverseCXXConstructorDecl(CXXConstructorDecl *Ctor) override {
+        llvm::SaveAndRestore SavedDecl(ClsType);
+        ClsType = Ctor->getThisType();
+        return DynamicRecursiveASTVisitor::TraverseCXXConstructorDecl(Ctor);
+      }
+
+      bool TraverseCXXDestructorDecl(CXXDestructorDecl *Dtor) override {
+        llvm::SaveAndRestore SavedDecl(ClsType);
+        ClsType = Dtor->getThisType();
+        return DynamicRecursiveASTVisitor::TraverseCXXDestructorDecl(Dtor);
+      }
+
       bool TraverseCXXMethodDecl(CXXMethodDecl *CXXMD) override {
         llvm::SaveAndRestore SavedDecl(ClsType);
-        if (CXXMD->isInstance())
+        // 'this' in the body of a lambda's call operator refers to the object
+        // of the enclosing method, so keep the class of that method. This
+        // matters for the instantiations of a generic lambda, which are
+        // traversed as declarations rather than as a body.
+        if (CXXMD->isInstance() && !CXXMD->getParent()->isLambda())
           ClsType = CXXMD->getThisType();
         return DynamicRecursiveASTVisitor::TraverseCXXMethodDecl(CXXMD);
       }
@@ -80,8 +114,8 @@ public:
       }
 
       bool VisitTypedefDecl(TypedefDecl *TD) override {
-        if (Checker->RTC)
-          Checker->RTC->visitTypedef(TD);
+        if (auto *RTC = Checker->Model->retainTypeChecker())
+          RTC->visitTypedef(TD);
         return true;
       }
 
@@ -97,6 +131,30 @@ public:
         Checker->visitLambdaExpr(L, shouldCheckThis() && !hasProtectedThis(L),
                                  ClsType);
         return true;
+      }
+
+      bool TraverseLambdaExpr(LambdaExpr *L) override {
+        auto *FTD = L->getLambdaClass()->getDependentLambdaCallOperator();
+        if (!FTD)
+          return DynamicRecursiveASTVisitor::TraverseLambdaExpr(L);
+        // The body of a generic lambda is the pattern of its call operator,
+        // but it is reached from the LambdaExpr as a statement, so TraverseDecl
+        // never gets to skip it. Visit the lambda itself, traverse the capture
+        // initializers, which are evaluated in the enclosing scope, and then
+        // the call operator, of which the pattern is skipped like any other and
+        // the instantiations are traversed. The initializers are traversed as
+        // expressions because the variable of an init capture is declared in
+        // the pattern.
+        if (!VisitLambdaExpr(L))
+          return false;
+        for (unsigned I = 0, N = L->capture_size(); I != N; ++I) {
+          if (!(L->capture_begin() + I)->isExplicit())
+            continue;
+          if (auto *Init = L->capture_init_begin()[I];
+              Init && !TraverseStmt(Init))
+            return false;
+        }
+        return TraverseDecl(FTD);
       }
 
       bool VisitVarDecl(VarDecl *VD) override {
@@ -121,21 +179,15 @@ public:
               auto *Arg = CE->getArg(0);
               if (auto *E = dyn_cast<MaterializeTemporaryExpr>(Arg))
                 Arg = E->getSubExpr();
-              if (auto *L = dyn_cast<LambdaExpr>(Arg)) {
-                LambdaOwnerMap.insert(std::make_pair(VD, L));
-                CallToIgnore.insert(CE);
-                LambdasToIgnore.insert(L);
-              }
+              if (auto *L = dyn_cast<LambdaExpr>(Arg))
+                addLambdaOwner(VD, CE, L);
             } else if (FnName == "makeVisitor") {
               for (unsigned ArgIndex = 0; ArgIndex < ArgCnt; ++ArgIndex) {
                 auto *Arg = CE->getArg(ArgIndex);
                 if (auto *E = dyn_cast<MaterializeTemporaryExpr>(Arg))
                   Arg = E->getSubExpr();
-                if (auto *L = dyn_cast<LambdaExpr>(Arg)) {
-                  LambdaOwnerMap.insert(std::make_pair(VD, L));
-                  CallToIgnore.insert(CE);
-                  LambdasToIgnore.insert(L);
-                }
+                if (auto *L = dyn_cast<LambdaExpr>(Arg))
+                  addLambdaOwner(VD, CE, L);
               }
             }
           }
@@ -148,16 +200,31 @@ public:
                 auto *Arg = CE->getArg(0);
                 if (auto *E = dyn_cast<MaterializeTemporaryExpr>(Arg))
                   Arg = E->getSubExpr();
-                if (auto *L = dyn_cast<LambdaExpr>(Arg)) {
-                  LambdaOwnerMap.insert(std::make_pair(VD, L));
-                  ConstructToIgnore.insert(CE);
-                  LambdasToIgnore.insert(L);
-                }
+                if (auto *L = dyn_cast<LambdaExpr>(Arg))
+                  addLambdaOwner(VD, CE, L);
               }
             }
           }
         }
         return true;
+      }
+
+      void addLambdaOwner(VarDecl *VD, CallExpr *CE, LambdaExpr *L) {
+        auto result = LambdaOwnerMap.insert(
+            std::make_pair(VD, SmallVector<const LambdaExpr *>{L}));
+        if (!result.second)
+          result.first->second.push_back(L);
+        CallToIgnore.insert(CE);
+        LambdasToIgnore.insert(L);
+      }
+
+      void addLambdaOwner(VarDecl *VD, CXXConstructExpr *CE, LambdaExpr *L) {
+        auto result = LambdaOwnerMap.insert(
+            std::make_pair(VD, SmallVector<const LambdaExpr *>{L}));
+        if (!result.second)
+          result.first->second.push_back(L);
+        ConstructToIgnore.insert(CE);
+        LambdasToIgnore.insert(L);
       }
 
       bool VisitDeclRefExpr(DeclRefExpr *DRE) override {
@@ -167,9 +234,10 @@ public:
         if (!VD)
           return true;
         if (auto It = LambdaOwnerMap.find(VD); It != LambdaOwnerMap.end()) {
-          auto *L = It->second;
-          Checker->visitLambdaExpr(L, shouldCheckThis() && !hasProtectedThis(L),
-                                   ClsType);
+          for (auto *L : It->second) {
+            Checker->visitLambdaExpr(
+                L, shouldCheckThis() && !hasProtectedThis(L), ClsType);
+          }
           return true;
         }
         auto *Init = VD->getInit();
@@ -189,6 +257,8 @@ public:
         for (auto *Decl = FDecl->getParent(); Decl; Decl = Decl->getParent()) {
           if (!isa<NamespaceDecl>(Decl) && !isa<CXXRecordDecl>(Decl))
             return false;
+          if (auto *NS = dyn_cast<NamespaceDecl>(Decl); NS && NS->isInline())
+            continue;
           auto Name = safeGetName(Decl);
           // WTF::switchOn(T, F... f) is a variadic template function and
           // couldn't be annotated with NOESCAPE. We hard code it here to
@@ -343,6 +413,17 @@ public:
         auto *Callee = CE->getCallee();
         if (!Callee)
           return;
+        Callee = Callee->IgnoreParenCasts();
+        if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(Callee)) {
+          Callee = MTE->getSubExpr();
+          if (!Callee)
+            return;
+          Callee = Callee->IgnoreParenCasts();
+        }
+        if (auto *L = dyn_cast<LambdaExpr>(Callee)) {
+          LambdasToIgnore.insert(L); // Calling a lambda upon creation is safe.
+          return;
+        }
         auto *DRE = dyn_cast<DeclRefExpr>(Callee->IgnoreParenCasts());
         if (!DRE)
           return;
@@ -399,8 +480,8 @@ public:
             auto *Ctor = CE->getConstructor();
             if (!Ctor)
               return false;
-            auto clsName = safeGetName(Ctor->getParent());
-            if (Checker->isPtrType(clsName) && CE->getNumArgs()) {
+            auto ArgClsTy = dyn_cast_or_null<CXXRecordDecl>(Ctor->getParent());
+            if (Checker->Model->isSafePtr(ArgClsTy) && CE->getNumArgs()) {
               Arg = CE->getArg(0)->IgnoreParenCasts();
               continue;
             }
@@ -416,12 +497,9 @@ public:
             return false;
           }
           if (auto *CE = dyn_cast<CallExpr>(Arg)) {
-            if (CE->isCallToStdMove() && CE->getNumArgs() == 1) {
-              Arg = CE->getArg(0)->IgnoreParenCasts();
-              continue;
-            }
             if (auto *Callee = CE->getDirectCallee()) {
-              if (isCtorOfSafePtr(Callee) && CE->getNumArgs() == 1) {
+              if ((isStdOrWTFMove(Callee) || isCtorOfSafePtr(Callee)) &&
+                  CE->getNumArgs() == 1) {
                 Arg = CE->getArg(0)->IgnoreParenCasts();
                 continue;
               }
@@ -463,7 +541,7 @@ public:
     };
 
     LocalVisitor visitor(this);
-    if (RTC)
+    if (auto *RTC = Model->retainTypeChecker())
       RTC->visitTranslationUnitDecl(TUD);
     visitor.TraverseDecl(const_cast<TranslationUnitDecl *>(TUD));
   }
@@ -511,19 +589,20 @@ public:
     SmallString<100> Buf;
     llvm::raw_svector_ostream Os(Buf);
 
-    if (Capture.isExplicit()) {
+    if (Capture.isExplicit())
       Os << "Captured ";
-    } else {
+    else
       Os << "Implicitly captured ";
-    }
-    if (isa<PointerType>(T) || isa<ObjCObjectPointerType>(T)) {
-      Os << "raw-pointer ";
-    } else {
-      Os << "reference ";
-    }
-
+    Os << "variable ";
     printQuotedQualifiedName(Os, CapturedVar);
-    Os << " to " << ptrKind(T) << " type is unsafe.";
+
+    bool IsUnsafePtr = CapturedVar->getType() == T;
+    if (IsUnsafePtr)
+      Os << " is a ";
+    else
+      Os << " contains a ";
+    auto *CapturedType = T.getTypePtrOrNull();
+    printPointer(Os, CapturedType);
 
     PathDiagnosticLocation BSLoc(Location, BR->getSourceManager());
     auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
@@ -541,60 +620,78 @@ public:
       Os << "Implicitly captured ";
     }
 
-    Os << "raw-pointer 'this' to " << ptrKind(T) << " type is unsafe.";
+    Os << "variable 'this' is a raw pointer to " << Model->typeName();
+    if (auto *RD = T->getPointeeCXXRecordDecl()) {
+      Os << " ";
+      printQuotedQualifiedName(Os, RD);
+    }
 
     PathDiagnosticLocation BSLoc(Capture.getLocation(), BR->getSourceManager());
     auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
     BR->emitReport(std::move(Report));
+  }
+
+  void printPointer(llvm::raw_svector_ostream &Os, const Type *T) const {
+    if (Model->retainTypeChecker()) {
+      // An OS object may be spelled as an id qualified by an OS_-prefixed
+      // protocol; print that protocol name.
+      if (auto *ObjCPtr = dyn_cast<ObjCObjectPointerType>(T)) {
+        for (ObjCProtocolDecl *P : ObjCPtr->quals()) {
+          if (const auto *II = P->getIdentifier()) {
+            auto Name = II->getName();
+            if (Name.starts_with("OS_")) {
+              Os << Model->typeName() << " ";
+              printQuotedQualifiedName(Os, P);
+              return;
+            }
+          }
+        }
+      }
+      // Retain/OS types are frequently spelled through a typedef (e.g.
+      // CFXXXRef); print the typedef name rather than desugaring.
+      if (!isa<ObjCObjectPointerType>(T) && T->getAs<TypedefType>()) {
+        auto Typedef = T->getAs<TypedefType>();
+        assert(Typedef);
+        Os << Model->typeName() << " ";
+        printQuotedQualifiedName(Os, Typedef->getDecl());
+        return;
+      }
+    }
+    T = T->getUnqualifiedDesugaredType();
+    bool IsPtr = isa<PointerType>(T) || isa<ObjCObjectPointerType>(T);
+    Os << (IsPtr ? "raw pointer" : "raw reference") << " to ";
+    Os << Model->typeName();
+
+    if (auto *RD = T->getPointeeType()->getAsRecordDecl()) {
+      Os << " ";
+      printQuotedQualifiedName(Os, RD);
+    } else if (auto *ObjCDecl = getObjCDeclFromObjCPtr(T)) {
+      Os << " ";
+      printQuotedQualifiedName(Os, ObjCDecl);
+    }
   }
 };
 
 class UncountedLambdaCapturesChecker : public RawPtrRefLambdaCapturesChecker {
 public:
   UncountedLambdaCapturesChecker()
-      : RawPtrRefLambdaCapturesChecker("Lambda capture of uncounted or "
-                                       "unchecked variable") {}
+      : RawPtrRefLambdaCapturesChecker("Lambda capture of uncounted variable",
+                                       makeRefPtrSafetyModel()) {}
+};
 
-  std::optional<bool> isUnsafePtr(QualType QT) const final {
-    auto result1 = isUncountedPtr(QT);
-    auto result2 = isUncheckedPtr(QT);
-    if (result1 && *result1)
-      return true;
-    if (result2 && *result2)
-      return true;
-    if (result1)
-      return *result1;
-    return result2;
-  }
-
-  virtual bool isPtrType(const std::string &Name) const final {
-    return isRefType(Name) || isCheckedPtr(Name);
-  }
-
-  const char *ptrKind(QualType QT) const final {
-    if (isUncounted(QT))
-      return "uncounted";
-    return "unchecked";
-  }
+class UncheckedLambdaCapturesChecker : public RawPtrRefLambdaCapturesChecker {
+public:
+  UncheckedLambdaCapturesChecker()
+      : RawPtrRefLambdaCapturesChecker("Lambda capture of unchecked variable",
+                                       makeCheckedPtrSafetyModel()) {}
 };
 
 class UnretainedLambdaCapturesChecker : public RawPtrRefLambdaCapturesChecker {
 public:
   UnretainedLambdaCapturesChecker()
       : RawPtrRefLambdaCapturesChecker("Lambda capture of unretained "
-                                       "variables") {
-    RTC = RetainTypeChecker();
-  }
-
-  std::optional<bool> isUnsafePtr(QualType QT) const final {
-    return RTC->isUnretained(QT);
-  }
-
-  virtual bool isPtrType(const std::string &Name) const final {
-    return isRetainPtrOrOSPtr(Name);
-  }
-
-  const char *ptrKind(QualType QT) const final { return "unretained"; }
+                                       "variables",
+                                       makeRetainPtrSafetyModel()) {}
 };
 
 } // namespace
@@ -604,6 +701,15 @@ void ento::registerUncountedLambdaCapturesChecker(CheckerManager &Mgr) {
 }
 
 bool ento::shouldRegisterUncountedLambdaCapturesChecker(
+    const CheckerManager &mgr) {
+  return true;
+}
+
+void ento::registerUncheckedLambdaCapturesChecker(CheckerManager &Mgr) {
+  Mgr.registerChecker<UncheckedLambdaCapturesChecker>();
+}
+
+bool ento::shouldRegisterUncheckedLambdaCapturesChecker(
     const CheckerManager &mgr) {
   return true;
 }

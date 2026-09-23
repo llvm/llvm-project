@@ -10,6 +10,7 @@
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Dialect/Bufferization/IR/AllocationOpInterface.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
 #include "mlir/Interfaces/RuntimeVerifiableOpInterface.h"
@@ -54,8 +55,9 @@ void mlir::memref::MemRefDialect::initialize() {
   declarePromisedInterfaces<RuntimeVerifiableOpInterface, AssumeAlignmentOp,
                             AtomicRMWOp, CastOp, CopyOp, DimOp, ExpandShapeOp,
                             GenericAtomicRMWOp, LoadOp, StoreOp, SubViewOp>();
-  declarePromisedInterfaces<ValueBoundsOpInterface, AllocOp, AllocaOp, CastOp,
-                            DimOp, GetGlobalOp, RankOp, SubViewOp>();
+  declarePromisedInterfaces<
+      ValueBoundsOpInterface, AllocOp, AllocaOp, AssumeAlignmentOp, CastOp,
+      DimOp, ExtractStridedMetadataOp, GetGlobalOp, RankOp, SubViewOp>();
   declarePromisedInterface<DestructurableTypeInterface, MemRefType>();
 }
 

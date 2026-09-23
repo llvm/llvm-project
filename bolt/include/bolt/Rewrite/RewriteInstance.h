@@ -23,8 +23,10 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Regex.h"
 #include <map>
+#include <optional>
 #include <set>
 #include <unordered_map>
+#include <utility>
 
 namespace llvm {
 
@@ -93,14 +95,23 @@ private:
   /// section allocations if found.
   void discoverBOLTReserved();
 
+  /// Check whether we should use DT_INIT or DT_INIT_ARRAY for instrumentation.
+  /// DT_INIT is preferred; DT_INIT_ARRAY is only used when no DT_INIT entry was
+  /// found.
+  Error discoverRtInitAddress();
+
   /// Check whether we should use DT_FINI or DT_FINI_ARRAY for instrumentation.
   /// DT_FINI is preferred; DT_FINI_ARRAY is only used when no DT_FINI entry was
   /// found.
   Error discoverRtFiniAddress();
 
+  /// If DT_INIT_ARRAY is used for instrumentation, update the relocation of its
+  /// first entry to point to the instrumentation library's init address.
+  Error updateRtInitReloc();
+
   /// If DT_FINI_ARRAY is used for instrumentation, update the relocation of its
   /// first entry to point to the instrumentation library's fini address.
-  void updateRtFiniReloc();
+  Error updateRtFiniReloc();
 
   /// Create and initialize metadata rewriters for this instance.
   void initializeMetadataManager();
@@ -127,6 +138,11 @@ private:
   /// Read relocations from a given RELR section.
   void readDynamicRelrRelocations(BinarySection &Section);
 
+  /// Process relative dynamic relocations targeting code. This happens in code
+  /// using indirect goto.
+  void handleRelativeDynamicRelocation(uint64_t RelOffset,
+                                       uint64_t ReferencedAddress);
+
   /// Print relocation information.
   void printRelocationInfo(const RelocationRef &Rel, StringRef SymbolName,
                            uint64_t SymbolAddress, uint64_t Addend,
@@ -138,6 +154,9 @@ private:
   /// Handle one relocation.
   void handleRelocation(const object::SectionRef &RelocatedSection,
                         const RelocationRef &Rel);
+
+  /// Collect functions that are specified to be bumped.
+  void selectFunctionsToPrint();
 
   /// Mark functions that are not meant for processing as ignored.
   void selectFunctionsToProcess();
@@ -175,9 +194,6 @@ private:
   /// performing final relaxation.
   void emitAndLink();
 
-  /// Link additional runtime code to support instrumentation.
-  void linkRuntime();
-
   /// Process metadata in sections before functions are discovered.
   void processSectionMetadata();
 
@@ -205,6 +221,11 @@ private:
   /// Map code without relocating sections.
   void mapCodeSectionsInPlace(BOLTLinker::SectionMapper MapSection);
 
+  /// Fold every section in \p CodeSections into a single output section named
+  /// ".text". Sections in \p CodeSections form one contiguous address range
+  /// and their relative order is kept unchanged.
+  void mergeCodeSections(const std::vector<BinarySection *> &CodeSections);
+
   /// Map the rest of allocatable sections.
   void mapAllocatableSections(BOLTLinker::SectionMapper MapSection);
 
@@ -218,6 +239,20 @@ private:
   /// disassembleFunctions(), also preserve the original version.
   void rewriteFile();
 
+  /// Rewrite functions in place by overwriting their original locations.
+  /// Used by non-relocation mode and for patched functions.
+  void rewriteFunctionsInPlace(raw_fd_ostream &OS);
+
+  /// Return the input file range [Start, End) that BOLT reuses for new
+  /// content (like with --use-old-text). Return std::nullopt when no input
+  /// region is being reused.
+  std::optional<std::pair<uint64_t, uint64_t>> getReusedInputFileRange() const;
+
+  /// When certain input file region is reused (like with --use-old-text),
+  /// overwrite every byte of that region not covered by newly written content
+  /// so the output does not retain stale bytes from the input binary.
+  void zeroStaleBytesInReusedRegion(raw_fd_ostream &OS);
+
   /// Return address of a function in the new binary corresponding to
   /// \p OldAddress address in the original binary.
   uint64_t getNewFunctionAddress(uint64_t OldAddress);
@@ -229,19 +264,39 @@ private:
   /// Return value for the symbol \p Name in the output.
   uint64_t getNewValueForSymbol(const StringRef Name);
 
+  /// ELF-specific part. TODO: refactor into new class.
+#define ELF_FUNCTION(TYPE, FUNC)                                               \
+  template <typename ELFT> TYPE FUNC(object::ELFObjectFile<ELFT> *Obj);        \
+  TYPE FUNC() {                                                                \
+    if (auto *ELF32LE = dyn_cast<object::ELF32LEObjectFile>(InputFile))        \
+      return FUNC(ELF32LE);                                                    \
+    if (auto *ELF64LE = dyn_cast<object::ELF64LEObjectFile>(InputFile))        \
+      return FUNC(ELF64LE);                                                    \
+    if (auto *ELF32BE = dyn_cast<object::ELF32BEObjectFile>(InputFile))        \
+      return FUNC(ELF32BE);                                                    \
+    auto *ELF64BE = cast<object::ELF64BEObjectFile>(InputFile);                \
+    return FUNC(ELF64BE);                                                      \
+  }
+
   /// Check for PT_GNU_RELRO segment presence, mark covered sections as
   /// (dynamically) read-only (written once), as specified in LSB Chapter 12:
   /// "segment which may be made read-only after relocations have been
   /// processed".
-  void markGnuRelroSections();
+  ELF_FUNCTION(void, markGnuRelroSections);
 
   /// Detect addresses and offsets available in the binary for allocating
   /// new sections.
-  Error discoverStorage();
+  ELF_FUNCTION(Error, discoverStorage);
 
   /// Adjust function sizes and set proper maximum size values after the whole
   /// symbol table has been processed.
   void adjustFunctionBoundaries(DenseMap<uint64_t, MarkerSymType> &MarkerSyms);
+
+  /// Promote unmarked executable regions after CFI-bounded functions into
+  /// separate BinaryFunction objects (__BOLT_FDE_FUNC* or named symbols
+  /// whose FDE range matches their size).
+  void
+  splitUnmarkedTailFunctions(DenseMap<uint64_t, MarkerSymType> &MarkerSyms);
 
   /// Make .eh_frame section relocatable.
   void relocateEHFrameSection();
@@ -256,7 +311,7 @@ private:
                          uint64_t &ExtractedValue) const;
 
   /// Rewrite non-allocatable sections with modifications.
-  void rewriteNoteSections();
+  ELF_FUNCTION(void, rewriteNoteSections);
 
   /// Write .eh_frame_hdr.
   void writeEHFrameHeader();
@@ -285,25 +340,11 @@ private:
   /// Disassemble riscv-specific .plt \p Section auxiliary function
   void disassemblePLTSectionRISCV(BinarySection &Section);
 
-  /// ELF-specific part. TODO: refactor into new class.
-#define ELF_FUNCTION(TYPE, FUNC)                                               \
-  template <typename ELFT> TYPE FUNC(object::ELFObjectFile<ELFT> *Obj);        \
-  TYPE FUNC() {                                                                \
-    if (auto *ELF32LE = dyn_cast<object::ELF32LEObjectFile>(InputFile))        \
-      return FUNC(ELF32LE);                                                    \
-    if (auto *ELF64LE = dyn_cast<object::ELF64LEObjectFile>(InputFile))        \
-      return FUNC(ELF64LE);                                                    \
-    if (auto *ELF32BE = dyn_cast<object::ELF32BEObjectFile>(InputFile))        \
-      return FUNC(ELF32BE);                                                    \
-    auto *ELF64BE = cast<object::ELF64BEObjectFile>(InputFile);                \
-    return FUNC(ELF64BE);                                                      \
-  }
-
   /// Update loadable segment information based on new sections.
   void updateSegmentInfo();
 
   /// Patch ELF book-keeping info.
-  void patchELFPHDRTable();
+  ELF_FUNCTION(void, patchELFPHDRTable);
 
   /// Create section header table.
   ELF_FUNCTION(void, patchELFSectionHeaderTable);
@@ -393,6 +434,9 @@ public:
   /// Return true if the section holds debug information.
   static bool isDebugSection(StringRef SectionName);
 
+  /// Return true if a debug section is compressed (by SHF_COMPRESSED flag).
+  static bool isCompressedDebugSection(const object::SectionRef &Section);
+
   /// Adds Debug section to overwrite.
   static void addToDebugSectionsToOverwrite(const char *Section) {
     DebugSectionsToOverwrite.emplace_back(Section);
@@ -469,6 +513,22 @@ private:
   uint64_t NewTextSegmentOffset{0};
   uint64_t NewTextSegmentSize{0};
 
+  /// Bookkeeping for --merge-text-sections.
+  BinarySection *MergedTextSection{nullptr};
+  uint64_t MergedTextSize{0};
+  std::vector<BinarySection *> MergedAwayTextSections;
+
+  /// Original name and start address of each code section folded into the
+  /// merged .text, captured before the headers are dropped. Emitted as local
+  /// marker symbols so the pre-merge section layout stays recoverable. The
+  /// symbols are sizeless to keep symbolizers from attributing the range to
+  /// them instead of to the functions it contains.
+  struct MergedTextMarker {
+    std::string Name;
+    uint64_t Address;
+  };
+  std::vector<MergedTextMarker> MergedTextMarkers;
+
   /// New writable segment info.
   uint64_t NewWritableSegmentAddress{0};
   uint64_t NewWritableSegmentSize{0};
@@ -490,8 +550,8 @@ private:
   std::optional<uint64_t> PLTRelocationsAddress;
   uint64_t PLTRelocationsSize{0};
 
-  /// True if relocation of specified type came from .rela.plt
-  DenseMap<uint64_t, bool> IsJmpRelocation;
+  /// Number of relocations read from DT_JMPREL.
+  uint32_t NumJmpRelocations{0};
 
   /// Index of specified symbol in the dynamic symbol table. NOTE Currently it
   /// is filled and used only with the relocations-related symbols.
@@ -532,7 +592,8 @@ private:
       {".plt"}, {".plt.got"}, {".iplt"}, {nullptr}};
 
   /// RISCV PLT sections.
-  const PLTSectionInfo RISCV_PLTSections[2] = {{".plt"}, {nullptr}};
+  const PLTSectionInfo RISCV_PLTSections[3] = {
+      {".plt", 16}, {".iplt", 16}, {nullptr}};
 
   /// Return PLT information for a section with \p SectionName or nullptr
   /// if the section is not PLT.
@@ -587,6 +648,8 @@ private:
 
   friend class RewriteInstanceDiff;
 };
+
+#undef ELF_FUNCTION
 
 MCPlusBuilder *createMCPlusBuilder(const Triple::ArchType Arch,
                                    const MCInstrAnalysis *Analysis,

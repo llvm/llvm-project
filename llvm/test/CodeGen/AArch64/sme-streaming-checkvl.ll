@@ -35,13 +35,13 @@ define void @foo_non_streaming_pass_arg(ptr %arg) {
 ; CHECK-NEXT:    .cfi_offset b14, -88
 ; CHECK-NEXT:    .cfi_offset b15, -96
 ; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    ldr z0, [x0]
 ; CHECK-NEXT:    rdvl x8, #1
 ; CHECK-NEXT:    addsvl x8, x8, #-1
 ; CHECK-NEXT:    cbz x8, .LBB0_2
 ; CHECK-NEXT:  // %bb.1: // %entry
 ; CHECK-NEXT:    brk #0x1
 ; CHECK-NEXT:  .LBB0_2: // %entry
-; CHECK-NEXT:    ldr z0, [x0]
 ; CHECK-NEXT:    sub x8, x29, #64
 ; CHECK-NEXT:    str z0, [x8, #-1, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    smstart sm
@@ -51,7 +51,7 @@ define void @foo_non_streaming_pass_arg(ptr %arg) {
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    .cfi_def_cfa wsp, 96
 ; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x28, [sp, #88] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x28, [sp, #88] // 8-byte Reload
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
@@ -87,11 +87,11 @@ define void @foo_streaming_compatible_pass_arg(ptr %arg) #1 {
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    str x29, [sp, #1088] // 8-byte Folded Spill
-; CHECK-NEXT:    str x30, [sp, #1096] // 8-byte Folded Spill
-; CHECK-NEXT:    str x9, [sp, #1104] // 8-byte Folded Spill
-; CHECK-NEXT:    str x28, [sp, #1112] // 8-byte Folded Spill
-; CHECK-NEXT:    str x19, [sp, #1120] // 8-byte Folded Spill
+; CHECK-NEXT:    str x29, [sp, #1088] // 8-byte Spill
+; CHECK-NEXT:    str x30, [sp, #1096] // 8-byte Spill
+; CHECK-NEXT:    str x9, [sp, #1104] // 8-byte Spill
+; CHECK-NEXT:    str x28, [sp, #1112] // 8-byte Spill
+; CHECK-NEXT:    str x19, [sp, #1120] // 8-byte Spill
 ; CHECK-NEXT:    add x29, sp, #1088
 ; CHECK-NEXT:    .cfi_def_cfa w29, 48
 ; CHECK-NEXT:    .cfi_offset w19, -16
@@ -109,14 +109,14 @@ define void @foo_streaming_compatible_pass_arg(ptr %arg) #1 {
 ; CHECK-NEXT:    .cfi_offset b15, -1136
 ; CHECK-NEXT:    sub sp, sp, #1024
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    rdvl x8, #1
 ; CHECK-NEXT:    mrs x19, SVCR
+; CHECK-NEXT:    ldr z0, [x0]
+; CHECK-NEXT:    rdvl x8, #1
 ; CHECK-NEXT:    addsvl x8, x8, #-1
 ; CHECK-NEXT:    cbz x8, .LBB1_2
 ; CHECK-NEXT:  // %bb.1: // %entry
 ; CHECK-NEXT:    brk #0x1
 ; CHECK-NEXT:  .LBB1_2: // %entry
-; CHECK-NEXT:    ldr z0, [x0]
 ; CHECK-NEXT:    sub x8, x29, #1088
 ; CHECK-NEXT:    str z0, [x8, #-1, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    tbnz w19, #0, .LBB1_4
@@ -133,11 +133,11 @@ define void @foo_streaming_compatible_pass_arg(ptr %arg) #1 {
 ; CHECK-NEXT:    add sp, sp, #1024
 ; CHECK-NEXT:    .cfi_def_cfa wsp, 1136
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #1120] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x19, [sp, #1120] // 8-byte Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x28, [sp, #1112] // 8-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp, #1096] // 8-byte Folded Reload
-; CHECK-NEXT:    ldr x29, [sp, #1088] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x28, [sp, #1112] // 8-byte Reload
+; CHECK-NEXT:    ldr x30, [sp, #1096] // 8-byte Reload
+; CHECK-NEXT:    ldr x29, [sp, #1088] // 8-byte Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d15, d14, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    add sp, sp, #1136
@@ -173,10 +173,12 @@ define void @foo_streaming_pass_arg(ptr %arg) #0 {
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    str x29, [sp, #1088] // 8-byte Folded Spill
-; CHECK-NEXT:    str x30, [sp, #1096] // 8-byte Folded Spill
-; CHECK-NEXT:    str x9, [sp, #1104] // 8-byte Folded Spill
-; CHECK-NEXT:    str x28, [sp, #1112] // 8-byte Folded Spill
+; CHECK-NEXT:    str x29, [sp, #1088] // 8-byte Spill
+; CHECK-NEXT:    str x30, [sp, #1096] // 8-byte Spill
+; CHECK-NEXT:    str x9, [sp, #1104] // 8-byte Spill
+; CHECK-NEXT:    str x28, [sp, #1112] // 8-byte Spill
+; CHECK-NEXT:    add x29, sp, #1088
+; CHECK-NEXT:    .cfi_def_cfa w29, 32
 ; CHECK-NEXT:    .cfi_offset w28, -8
 ; CHECK-NEXT:    .cfi_offset vg, -16
 ; CHECK-NEXT:    .cfi_offset w30, -24
@@ -190,7 +192,10 @@ define void @foo_streaming_pass_arg(ptr %arg) #0 {
 ; CHECK-NEXT:    .cfi_offset b14, -1112
 ; CHECK-NEXT:    .cfi_offset b15, -1120
 ; CHECK-NEXT:    sub sp, sp, #1024
-; CHECK-NEXT:    .cfi_def_cfa_offset 2144
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    ldr z0, [x0]
+; CHECK-NEXT:    sub x8, x29, #1088
+; CHECK-NEXT:    str z0, [x8, #-1, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    rdvl x8, #1
 ; CHECK-NEXT:    addsvl x8, x8, #-1
@@ -198,16 +203,18 @@ define void @foo_streaming_pass_arg(ptr %arg) #0 {
 ; CHECK-NEXT:  // %bb.1: // %entry
 ; CHECK-NEXT:    brk #0x1
 ; CHECK-NEXT:  .LBB2_2: // %entry
-; CHECK-NEXT:    ldr z0, [x0]
+; CHECK-NEXT:    sub x8, x29, #1088
+; CHECK-NEXT:    ldr z0, [x8, #-1, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    bl bar
 ; CHECK-NEXT:    smstart sm
+; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    add sp, sp, #1024
-; CHECK-NEXT:    .cfi_def_cfa_offset 1120
+; CHECK-NEXT:    .cfi_def_cfa wsp, 1120
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x28, [sp, #1112] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x28, [sp, #1112] // 8-byte Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp, #1096] // 8-byte Folded Reload
-; CHECK-NEXT:    ldr x29, [sp, #1088] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #1096] // 8-byte Reload
+; CHECK-NEXT:    ldr x29, [sp, #1088] // 8-byte Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d15, d14, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    add sp, sp, #1120
@@ -242,7 +249,7 @@ define void @foo_non_streaming_retval(ptr %ptr) {
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    str x9, [sp, #80] // 8-byte Folded Spill
+; CHECK-NEXT:    str x9, [sp, #80] // 8-byte Spill
 ; CHECK-NEXT:    stp x28, x19, [sp, #96] // 16-byte Folded Spill
 ; CHECK-NEXT:    add x29, sp, #64
 ; CHECK-NEXT:    .cfi_def_cfa w29, 48
@@ -314,12 +321,12 @@ define void @foo_streaming_compatible_retval(ptr %ptr) #1 {
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    str x29, [sp, #1088] // 8-byte Folded Spill
-; CHECK-NEXT:    str x30, [sp, #1096] // 8-byte Folded Spill
-; CHECK-NEXT:    str x9, [sp, #1104] // 8-byte Folded Spill
-; CHECK-NEXT:    str x28, [sp, #1112] // 8-byte Folded Spill
-; CHECK-NEXT:    str x20, [sp, #1120] // 8-byte Folded Spill
-; CHECK-NEXT:    str x19, [sp, #1128] // 8-byte Folded Spill
+; CHECK-NEXT:    str x29, [sp, #1088] // 8-byte Spill
+; CHECK-NEXT:    str x30, [sp, #1096] // 8-byte Spill
+; CHECK-NEXT:    str x9, [sp, #1104] // 8-byte Spill
+; CHECK-NEXT:    str x28, [sp, #1112] // 8-byte Spill
+; CHECK-NEXT:    str x20, [sp, #1120] // 8-byte Spill
+; CHECK-NEXT:    str x19, [sp, #1128] // 8-byte Spill
 ; CHECK-NEXT:    add x29, sp, #1088
 ; CHECK-NEXT:    .cfi_def_cfa w29, 48
 ; CHECK-NEXT:    .cfi_offset w19, -8
@@ -363,12 +370,12 @@ define void @foo_streaming_compatible_retval(ptr %ptr) #1 {
 ; CHECK-NEXT:    add sp, sp, #1024
 ; CHECK-NEXT:    .cfi_def_cfa wsp, 1136
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #1128] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x19, [sp, #1128] // 8-byte Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x20, [sp, #1120] // 8-byte Folded Reload
-; CHECK-NEXT:    ldr x28, [sp, #1112] // 8-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp, #1096] // 8-byte Folded Reload
-; CHECK-NEXT:    ldr x29, [sp, #1088] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x20, [sp, #1120] // 8-byte Reload
+; CHECK-NEXT:    ldr x28, [sp, #1112] // 8-byte Reload
+; CHECK-NEXT:    ldr x30, [sp, #1096] // 8-byte Reload
+; CHECK-NEXT:    ldr x29, [sp, #1088] // 8-byte Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d15, d14, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    add sp, sp, #1136
@@ -405,11 +412,11 @@ define void @foo_streaming_retval(ptr %ptr) #0 {
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    str x29, [sp, #1088] // 8-byte Folded Spill
-; CHECK-NEXT:    str x30, [sp, #1096] // 8-byte Folded Spill
-; CHECK-NEXT:    str x9, [sp, #1104] // 8-byte Folded Spill
-; CHECK-NEXT:    str x28, [sp, #1112] // 8-byte Folded Spill
-; CHECK-NEXT:    str x19, [sp, #1120] // 8-byte Folded Spill
+; CHECK-NEXT:    str x29, [sp, #1088] // 8-byte Spill
+; CHECK-NEXT:    str x30, [sp, #1096] // 8-byte Spill
+; CHECK-NEXT:    str x9, [sp, #1104] // 8-byte Spill
+; CHECK-NEXT:    str x28, [sp, #1112] // 8-byte Spill
+; CHECK-NEXT:    str x19, [sp, #1120] // 8-byte Spill
 ; CHECK-NEXT:    add x29, sp, #1088
 ; CHECK-NEXT:    .cfi_def_cfa w29, 48
 ; CHECK-NEXT:    .cfi_offset w19, -16
@@ -445,11 +452,11 @@ define void @foo_streaming_retval(ptr %ptr) #0 {
 ; CHECK-NEXT:    add sp, sp, #1024
 ; CHECK-NEXT:    .cfi_def_cfa wsp, 1136
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #1120] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x19, [sp, #1120] // 8-byte Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x28, [sp, #1112] // 8-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp, #1096] // 8-byte Folded Reload
-; CHECK-NEXT:    ldr x29, [sp, #1088] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x28, [sp, #1112] // 8-byte Reload
+; CHECK-NEXT:    ldr x30, [sp, #1096] // 8-byte Reload
+; CHECK-NEXT:    ldr x29, [sp, #1088] // 8-byte Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d15, d14, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    add sp, sp, #1136

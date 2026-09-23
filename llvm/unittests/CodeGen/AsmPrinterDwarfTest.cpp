@@ -383,7 +383,7 @@ class AsmPrinterHandlerTest : public AsmPrinterFixtureBase {
 
   public:
     TestHandler(AsmPrinterHandlerTest &Test) : Test(Test) {}
-    ~TestHandler() override {}
+    ~TestHandler() override = default;
     void setSymbolSize(const MCSymbol *Sym, uint64_t Size) override {}
     void beginModule(Module *M) override { Test.BeginCount++; }
     void endModule() override { Test.EndCount++; }
@@ -407,7 +407,7 @@ protected:
     PM.add(TestPrinter->releaseAP()); // Takes ownership of destroying AP
     LLVMContext Context;
     std::unique_ptr<Module> M(new Module("TestModule", Context));
-    M->setDataLayout(TM->createDataLayout());
+    M->setDataLayout(TM->getTargetTriple().computeDataLayout());
     PM.run(*M);
     // Now check that we can run it twice.
     AP->addAsmPrinterHandler(std::make_unique<TestHandler>(*this));

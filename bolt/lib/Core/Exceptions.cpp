@@ -463,10 +463,11 @@ void BinaryFunction::updateEHRanges() {
 const uint8_t DWARF_CFI_PRIMARY_OPCODE_MASK = 0xc0;
 
 CFIReaderWriter::CFIReaderWriter(BinaryContext &BC,
-                                 const DWARFDebugFrame &EHFrame)
-    : BC(BC) {
+                                 std::unique_ptr<DWARFDebugFrame> Frame,
+                                 DWARFDataExtractor Data)
+    : BC(BC), EHFrame(std::move(Frame)), EHFrameData(std::move(Data)) {
   // Prepare FDEs for fast lookup
-  for (const dwarf::FrameEntry &Entry : EHFrame.entries()) {
+  for (const dwarf::FrameEntry &Entry : EHFrame->entries()) {
     const auto *CurFDE = dyn_cast<dwarf::FDE>(&Entry);
     // Skip CIEs.
     if (!CurFDE)
@@ -572,7 +573,7 @@ bool CFIReaderWriter::fillCFIInfoFor(BinaryFunction &Function) const {
       if (Function.getBinaryContext().isAArch64()) {
         // Support for pointer authentication:
         // We need to annotate instructions that modify the RA State, to work
-        // out the state of each instruction in MarkRAStates Pass.
+        // out the state of each instruction in PointerAuthCFIAnalyzer Pass.
         if (Offset != 0)
           Function.setInstModifiesRAState(DW_CFA_remember_state, Offset);
       }
@@ -583,7 +584,7 @@ bool CFIReaderWriter::fillCFIInfoFor(BinaryFunction &Function) const {
       if (Function.getBinaryContext().isAArch64()) {
         // Support for pointer authentication:
         // We need to annotate instructions that modify the RA State, to work
-        // out the state of each instruction in MarkRAStates Pass.
+        // out the state of each instruction in PointerAuthCFIAnalyzer Pass.
         if (Offset != 0)
           Function.setInstModifiesRAState(DW_CFA_restore_state, Offset);
       }
@@ -652,7 +653,7 @@ bool CFIReaderWriter::fillCFIInfoFor(BinaryFunction &Function) const {
         // BasicBlocks, which changes during optimizations. Instead of adding
         // OpNegateRAState CFIs, an annotation is added to the instruction, to
         // mark that the instruction modifies the RA State. The actual state for
-        // instructions are worked out in MarkRAStates based on these
+        // instructions are worked out in PointerAuthCFIAnalyzer based on these
         // annotations.
         if (Offset != 0)
           Function.setInstModifiesRAState(DW_CFA_AARCH64_negate_ra_state,
@@ -660,7 +661,7 @@ bool CFIReaderWriter::fillCFIInfoFor(BinaryFunction &Function) const {
         else
           // We cannot Annotate an instruction at Offset == 0.
           // Instead, we save the initial (Signed) state, and push it to
-          // MarkRAStates' RAStateStack.
+          // PointerAuthCFIAnalyzer's RAStateStack.
           Function.setInitialRAState(true);
         break;
       }
@@ -682,13 +683,41 @@ bool CFIReaderWriter::fillCFIInfoFor(BinaryFunction &Function) const {
     return true;
   };
 
-  for (const CFIProgram::Instruction &Instr : CurFDE.getLinkedCIE()->cfis())
-    if (!decodeFrameInstruction(Instr))
-      return false;
+  // The CFI instruction programs were not decoded during the initial
+  // (index-only) parse of .eh_frame. Parse the CIE's and this FDE's programs on
+  // demand now, so that only the functions we actually process pay the cost and
+  // the decoded instructions are discarded as soon as they are consumed.
+  const Triple::ArchType Arch = BC.TheTriple->getArch();
+  auto decodeInstructions = [&](const CFIProgram &Program) {
+    for (const CFIProgram::Instruction &Instr : Program)
+      if (!decodeFrameInstruction(Instr))
+        return false;
+    return true;
+  };
+  auto decodeProgram = [&](const dwarf::FrameEntry &Entry) -> bool {
+    // An entry that carries no offset to parse from already holds its decoded
+    // program: either the section was parsed eagerly, or the entry has no
+    // instructions at all.
+    const std::optional<uint64_t> CFIStartOffset =
+        Entry.getUnparsedCFIStartOffset();
+    if (!CFIStartOffset)
+      return decodeInstructions(Entry.cfis());
 
-  for (const CFIProgram::Instruction &Instr : CurFDE.cfis())
-    if (!decodeFrameInstruction(Instr))
+    DWARFDataExtractor Data = EHFrameData;
+    CFIProgram Program(CodeAlignment, DataAlignment, Arch);
+    uint64_t CFIOffset = *CFIStartOffset;
+    if (Error E = Program.parse(Data, &CFIOffset, Entry.getEndOffset())) {
+      consumeError(std::move(E));
       return false;
+    }
+    return decodeInstructions(Program);
+  };
+
+  if (!decodeProgram(*CurFDE.getLinkedCIE()))
+    return false;
+
+  if (!decodeProgram(CurFDE))
+    return false;
 
   return true;
 }

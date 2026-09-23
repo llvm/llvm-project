@@ -41,14 +41,28 @@ def BPFcallseq_start: SDNode<"ISD::CALLSEQ_START", SDT_BPFCallSeqStart,
                              [SDNPHasChain, SDNPOutGlue]>;
 def BPFcallseq_end  : SDNode<"ISD::CALLSEQ_END",   SDT_BPFCallSeqEnd,
                              [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
-def BPFbrcc         : SDNode<"BPFISD::BR_CC", SDT_BPFBrCC,
-                             [SDNPHasChain, SDNPOutGlue, SDNPInGlue]>;
+def BPFbrcc         : SDNode<"BPFISD::BR_CC", SDT_BPFBrCC, [SDNPHasChain]>;
+
+def SDT_BPFLoadStackArg : SDTypeProfile<1, 1, [
+  SDTCisVT<0, i64>,  // result value
+  SDTCisVT<1, i64>   // operand: offset
+]>;
+def SDT_BPFStoreStackArg : SDTypeProfile<0, 2, [
+  SDTCisVT<0, i64>,  // operand 0: offset
+  SDTCisVT<1, i64>   // operand 1: stored value
+]>;
+
+def BPFload_stack_arg : SDNode<"BPFISD::LOAD_STACK_ARG",
+                               SDT_BPFLoadStackArg,
+                               [SDNPHasChain, SDNPMayLoad]>;
+def BPFstore_stack_arg : SDNode<"BPFISD::STORE_STACK_ARG",
+                                SDT_BPFStoreStackArg,
+                                [SDNPHasChain, SDNPMayStore]>;
 
 def BPFselectcc     : SDNode<"BPFISD::SELECT_CC", SDT_BPFSelectCC>;
 def BPFWrapper      : SDNode<"BPFISD::Wrapper", SDT_BPFWrapper>;
 def BPFmemcpy       : SDNode<"BPFISD::MEMCPY", SDT_BPFMEMCPY,
-                             [SDNPHasChain, SDNPInGlue, SDNPOutGlue,
-                              SDNPMayStore, SDNPMayLoad]>;
+                             [SDNPHasChain, SDNPMayStore, SDNPMayLoad]>;
 def BPFIsLittleEndian : Predicate<"Subtarget->isLittleEndian()">;
 def BPFIsBigEndian    : Predicate<"!Subtarget->isLittleEndian()">;
 def BPFHasALU32 : Predicate<"Subtarget->getHasAlu32()">;
@@ -300,6 +314,22 @@ let Predicates = [BPFHasGotox] in {
     def JX : JMP_IND<BPF_JA, "gotox", [(brind i64:$dst)]>;
   }
 }
+}
+
+let hasSideEffects = 1, mayLoad = 1 in {
+  def LOAD_STACK_ARG_PSEUDO
+    : Pseudo<(outs GPR:$dst), (ins s16imm:$off),
+             "load_stack_arg\t$dst, $off", []>;
+}
+
+let hasSideEffects = 1, mayStore = 1 in {
+  def STORE_STACK_ARG_PSEUDO
+    : Pseudo<(outs), (ins s16imm:$off, GPR:$src),
+             "store_stack_arg\t$off, $src", []>;
+
+  def STORE_STACK_ARG_IMM_PSEUDO
+    : Pseudo<(outs), (ins s16imm:$off, i32imm:$val),
+             "store_stack_arg_imm\t$off, $val", []>;
 }
 
 // ALU instructions
@@ -1345,17 +1375,17 @@ let Predicates = [BPFHasALU32] in {
   }
 
   def : Pat<(i64 (zextloadi8  ADDRri:$src)),
-            (SUBREG_TO_REG (i64 0), (LDB32 ADDRri:$src), sub_32)>;
+            (SUBREG_TO_REG (LDB32 ADDRri:$src), sub_32)>;
   def : Pat<(i64 (zextloadi16 ADDRri:$src)),
-            (SUBREG_TO_REG (i64 0), (LDH32 ADDRri:$src), sub_32)>;
+            (SUBREG_TO_REG (LDH32 ADDRri:$src), sub_32)>;
   def : Pat<(i64 (zextloadi32 ADDRri:$src)),
-            (SUBREG_TO_REG (i64 0), (LDW32 ADDRri:$src), sub_32)>;
+            (SUBREG_TO_REG (LDW32 ADDRri:$src), sub_32)>;
   def : Pat<(i64 (extloadi8  ADDRri:$src)),
-            (SUBREG_TO_REG (i64 0), (LDB32 ADDRri:$src), sub_32)>;
+            (SUBREG_TO_REG (LDB32 ADDRri:$src), sub_32)>;
   def : Pat<(i64 (extloadi16 ADDRri:$src)),
-            (SUBREG_TO_REG (i64 0), (LDH32 ADDRri:$src), sub_32)>;
+            (SUBREG_TO_REG (LDH32 ADDRri:$src), sub_32)>;
   def : Pat<(i64 (extloadi32 ADDRri:$src)),
-            (SUBREG_TO_REG (i64 0), (LDW32 ADDRri:$src), sub_32)>;
+            (SUBREG_TO_REG (LDW32 ADDRri:$src), sub_32)>;
 
   let Predicates = [BPFHasLoadAcqStoreRel] in {
     foreach P = [[relaxed_load<atomic_load_nonext_32>, LDW32],

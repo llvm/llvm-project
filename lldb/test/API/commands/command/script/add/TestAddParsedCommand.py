@@ -305,6 +305,13 @@ class ParsedCommandTestCase(TestBase):
         matches.AppendList(["answer ", "correct_answer"], 2)
         self.handle_completion(cmd_str, 1, matches, descriptions, False)
 
+        # Test completion for a command with arguments but NO options:
+        cmd_str = "one-arg-no-opt nonexistent_file_xyz"
+        matches.Clear()
+        descriptions.Clear()
+        matches.AppendString("")
+        self.handle_completion(cmd_str, 0, matches, descriptions, False)
+
         # Now make sure get_repeat_command works properly:
 
         # no-args turns off auto-repeat
@@ -324,3 +331,8 @@ class ParsedCommandTestCase(TestBase):
             results.count("SECOND_ARG"), 2, "Passed second arg to both commands"
         )
         self.assertEqual(results.count("THIRD_ARG"), 1, "Passed third arg in repeat")
+
+        # Verify lldb did not register the 'fail_cmd'.
+        self.expect(
+            "fail_cmd", substrs=["'fail_cmd' is not a valid command"], error=True
+        )

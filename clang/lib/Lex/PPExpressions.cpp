@@ -328,12 +328,13 @@ static bool EvaluateValue(PPValue &Result, Token &PeekTok, DefinedTracker &DT,
     }
 
     // 'z/uz' literals are a C++23 feature.
-    if (Literal.isSizeT)
-      PP.Diag(PeekTok, PP.getLangOpts().CPlusPlus
-                           ? PP.getLangOpts().CPlusPlus23
-                                 ? diag::warn_cxx20_compat_size_t_suffix
-                                 : diag::ext_cxx23_size_t_suffix
-                           : diag::err_cxx23_size_t_suffix);
+    if (Literal.isSizeT) {
+      if (PP.getLangOpts().CPlusPlus) {
+        PP.DiagCompat(PeekTok, diag_compat::size_t_suffix);
+      } else {
+        PP.Diag(PeekTok, diag::err_cxx23_size_t_suffix);
+      }
+    }
 
     // 'wb/uwb' literals are a C23 feature.
     // '__wb/__uwb' are a C++ extension.
@@ -429,7 +430,7 @@ static bool EvaluateValue(PPValue &Result, Token &PeekTok, DefinedTracker &DT,
     } else {
       assert(Result.Val.getBitWidth() == Val.getBitWidth() &&
              "intmax_t smaller than char/wchar_t?");
-      Result.Val = Val;
+      Result.Val = std::move(Val);
     }
 
     // Consume the token.
@@ -593,11 +594,13 @@ static bool EvaluateDirectiveSubExpr(PPValue &LHS, unsigned MinPrec,
                                      Token &PeekTok, bool ValueLive,
                                      bool &IncludedUndefinedIds,
                                      Preprocessor &PP) {
-  if (PP.getPreprocessorOpts().SingleFileParseMode && IncludedUndefinedIds) {
-    // The single-file parse mode behavior kicks in as soon as single identifier
-    // is undefined. If we've already seen one, there's no point in continuing
-    // with the rest of the expression. Besides saving work, this also prevents
-    // calling undefined function-like macros.
+  if ((PP.getPreprocessorOpts().SingleFileParseMode ||
+       PP.getPreprocessorOpts().SingleModuleParseMode) &&
+      IncludedUndefinedIds) {
+    // The single-{file,module}-parse mode behavior kicks in as soon as single
+    // identifier is undefined. If we've already seen one, there's no point in
+    // continuing with the rest of the expression. Besides saving work, this
+    // also prevents calling undefined function-like macros.
     PP.DiscardUntilEndOfDirective(PeekTok);
     return true;
   }
@@ -981,9 +984,9 @@ Preprocessor::EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
 }
 
 static std::optional<CXXStandardLibraryVersionInfo>
-getCXXStandardLibraryVersion(Preprocessor &PP, StringRef MacroName,
+getCXXStandardLibraryVersion(Preprocessor &PP, IdentifierInfo *MacroName,
                              CXXStandardLibraryVersionInfo::Library Lib) {
-  MacroInfo *Macro = PP.getMacroInfo(PP.getIdentifierInfo(MacroName));
+  MacroInfo *Macro = PP.getMacroInfo(MacroName);
   if (!Macro || Macro->getNumTokens() != 1 || !Macro->isObjectLike())
     return std::nullopt;
 
@@ -1006,7 +1009,7 @@ getCXXStandardLibraryVersion(Preprocessor &PP, StringRef MacroName,
 std::optional<uint64_t> Preprocessor::getStdLibCxxVersion() {
   if (!CXXStandardLibraryVersion)
     CXXStandardLibraryVersion = getCXXStandardLibraryVersion(
-        *this, "__GLIBCXX__", CXXStandardLibraryVersionInfo::LibStdCXX);
+        *this, Ident__GLIBCXX__, CXXStandardLibraryVersionInfo::LibStdCXX);
   if (!CXXStandardLibraryVersion)
     return std::nullopt;
 
@@ -1014,6 +1017,13 @@ std::optional<uint64_t> Preprocessor::getStdLibCxxVersion() {
       CXXStandardLibraryVersionInfo::LibStdCXX)
     return CXXStandardLibraryVersion->Version;
   return std::nullopt;
+}
+
+void Preprocessor::setStdLibCxxVersion(std::uint64_t Version) {
+  CXXStandardLibraryVersion = {
+      CXXStandardLibraryVersionInfo::LibStdCXX,
+      Version,
+  };
 }
 
 bool Preprocessor::NeedsStdLibCxxWorkaroundBefore(uint64_t FixedVersion) {

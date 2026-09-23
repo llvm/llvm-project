@@ -1,4 +1,4 @@
-; RUN: opt < %s -scalable-vectorization=on -force-target-supports-scalable-vectors=true -passes=loop-vectorize -force-vector-width=4 -force-vector-interleave=2  -S | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize -force-vector-width="vscale x 4" -force-vector-interleave=2  -S | FileCheck %s
 
 define void @test1(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) {
 entry:
@@ -13,7 +13,7 @@ entry:
 ; CHECK-NOT: @llvm.experimental.noalias.scope.decl
 ; CHECK: ret void
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %b, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
@@ -24,13 +24,12 @@ for.body:                                         ; preds = %for.body, %entry
   store float %add, ptr %arrayidx5, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv, 1599
-  br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !5
+  br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 
-declare void @llvm.experimental.noalias.scope.decl(metadata)
 
 %struct.data = type { ptr, ptr }
 
@@ -52,7 +51,7 @@ entry:
   %maskcond4 = icmp eq i64 %ptrint2, 0
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   tail call void @llvm.experimental.noalias.scope.decl(metadata !0)
   %arrayidx = getelementptr inbounds float, ptr %b, i64 %indvars.iv
@@ -63,9 +62,9 @@ for.body:                                         ; preds = %for.body, %entry
   store float %add, ptr %arrayidx5, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv, 1599
-  br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !5
+  br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 
@@ -87,17 +86,17 @@ define void @predicated_noalias_scope_decl(ptr noalias nocapture readonly %a, pt
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %if.end5
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %if.end5 ]
   %cmp1 = icmp ult i64 %indvars.iv, 495616
   br i1 %cmp1, label %if.end5, label %if.else
 
-if.else:                                          ; preds = %for.body
+if.else:
   %cmp2 = icmp ult i64 %indvars.iv, 991232
   tail call void @llvm.experimental.noalias.scope.decl(metadata !0)
   br label %if.end5
 
-if.end5:                                          ; preds = %for.body, %if.else
+if.end5:
   %x.0 = phi float [ 4.200000e+01, %if.else ], [ 2.300000e+01, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %a, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
@@ -106,9 +105,9 @@ if.end5:                                          ; preds = %for.body, %if.else
   store float %mul, ptr %arrayidx7, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %cmp = icmp eq i64 %indvars.iv.next, %n
-  br i1 %cmp, label %for.cond.cleanup, label %for.body, !llvm.loop !5
+  br i1 %cmp, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %if.end5
+for.cond.cleanup:
   ret void
 }
 
@@ -117,8 +116,6 @@ for.cond.cleanup:                                 ; preds = %if.end5
 !2 = distinct !{ !2 }
 !3 = distinct !{ !3, !2 }
 !4 = !{ !3 }
-!5 = distinct !{!5, !6}
-!6 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
 
 ; CHECK: [[SCOPE0_LIST]] = !{[[SCOPE0:!.*]]}
 ; CHECK: [[SCOPE0]] = distinct !{[[SCOPE0]], [[SCOPE0_DOM:!.*]]}

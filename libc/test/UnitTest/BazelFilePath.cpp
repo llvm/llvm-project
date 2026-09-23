@@ -8,20 +8,34 @@
 
 #include "LibcTest.h"
 
-#include <stdlib.h>
-
 #include "src/__support/CPP/string.h"
 #include "src/__support/c_string.h"
 #include "src/__support/macros/config.h"
+
+#ifdef LIBC_FULL_BUILD
+#include "src/stdlib/getenv.h"
+
+#define LIBC_IMPL LIBC_NAMESPACE
+
+#else // Overlay mode
+#include <stdlib.h>
+
+#define LIBC_IMPL
+#endif
 
 namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 
 CString libc_make_test_file_path_func(const char *file_name) {
   // This is the path to the folder bazel wants the test outputs written to.
-  const char *UNDECLARED_OUTPUTS_PATH = getenv("TEST_UNDECLARED_OUTPUTS_DIR");
+  const char *UNDECLARED_OUTPUTS_PATH =
+      LIBC_IMPL::getenv("TEST_UNDECLARED_OUTPUTS_DIR");
+  // Do something sensible if not run under bazel, otherwise this may segfault
+  // when constructing the string.
+  if (UNDECLARED_OUTPUTS_PATH == nullptr)
+    return cpp::string(file_name);
 
-  return cpp::string(UNDECLARED_OUTPUTS_PATH) + file_name;
+  return cpp::string(UNDECLARED_OUTPUTS_PATH) + "/" + file_name;
 }
 
 } // namespace testing

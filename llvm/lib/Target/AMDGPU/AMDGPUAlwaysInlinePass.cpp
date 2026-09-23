@@ -65,7 +65,7 @@ recursivelyVisitUsers(GlobalValue &GV,
       continue;
 
     if (Instruction *I = dyn_cast<Instruction>(U)) {
-      Function *F = I->getParent()->getParent();
+      Function *F = I->getFunction();
       if (!AMDGPU::isEntryFunctionCC(F->getCallingConv())) {
         // FIXME: This is a horrible hack. We should always respect noinline,
         // and just let us hit the error when we can't handle this.

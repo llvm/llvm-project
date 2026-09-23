@@ -1,0 +1,37 @@
+# Check that ObjectYAML throws an error if shader kind in DXIL ProgramHeader
+# differs from shader kind in ILDB ProgramHeader
+
+# RUN: yaml2obj %s | not obj2yaml -o /dev/null 2>&1 | FileCheck %s
+
+# CHECK: ILDB part shader kind does not match DXIL part shader kind
+
+--- !dxcontainer
+Header:
+  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+  Version:
+    Major:           1
+    Minor:           0
+  PartCount:         2
+Parts:
+  - Name:            DXIL
+    Size:            24
+    Program:
+      MajorVersion:    6
+      MinorVersion:    0
+      ShaderKind:      4
+      Size:            6
+      DXILMajorVersion: 0
+      DXILMinorVersion: 1
+      DXILSize:        0
+  - Name:            ILDB
+    Size:            24
+    Program:
+      MajorVersion:    6
+      MinorVersion:    0
+      ShaderKind:      5
+      Size:            6
+      DXILMajorVersion: 0
+      DXILMinorVersion: 1
+      DXILSize:        0
+...

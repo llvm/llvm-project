@@ -10,11 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Affine/IR/AffineDialect.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/GPU/IR/GPUDialectDecl.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/Hoisting.h"
@@ -229,7 +229,7 @@ static void applyDecomposeWinogradOps(func::FuncOp funcOp) {
 
 static void applyFoldIntoPackAndUnpackPatterns(
     Operation *rootOp,
-    linalg::ControlFoldIntoPackUnpackFn controlFn = nullptr) {
+    const linalg::ControlFoldIntoPackUnpackFn &controlFn = nullptr) {
   RewritePatternSet patterns(rootOp->getContext());
   linalg::populateFoldIntoPackAndUnpackPatterns(patterns, controlFn);
   (void)applyPatternsGreedily(rootOp, std::move(patterns));

@@ -19,6 +19,7 @@
 #include "almost_satisfies_types.h"
 #include "test_iterators.h"
 #include "test_macros.h"
+#include "type_algorithms.h"
 
 //
 // Testing constraints

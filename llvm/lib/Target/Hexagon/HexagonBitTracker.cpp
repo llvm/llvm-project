@@ -105,10 +105,10 @@ uint16_t HexagonEvaluator::getPhysRegBitWidth(MCRegister Reg) const {
   using namespace Hexagon;
   const auto &HST = MF.getSubtarget<HexagonSubtarget>();
   if (HST.useHVXOps()) {
-    for (auto &RC : {HvxVRRegClass, HvxWRRegClass, HvxQRRegClass,
-                     HvxVQRRegClass})
-      if (RC.contains(Reg))
-        return TRI.getRegSizeInBits(RC);
+    for (auto *RC :
+         {&HvxVRRegClass, &HvxWRRegClass, &HvxQRRegClass, &HvxVQRRegClass})
+      if (RC->contains(Reg))
+        return TRI.getRegSizeInBits(*RC);
   }
   // Default treatment for other physical registers.
   if (const TargetRegisterClass *RC = TRI.getMinimalPhysRegClass(Reg))

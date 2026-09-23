@@ -15,8 +15,11 @@
 
 #include "flang/Lower/LoweringOptions.h"
 #include "flang/Lower/PFTDefs.h"
+#include "flang/Lower/StatementContext.h"
 #include "flang/Lower/Support/Utils.h"
+#include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
+#include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Support/Fortran.h"
@@ -33,7 +36,6 @@ class StateStack;
 
 namespace fir {
 class KindMapping;
-class FirOpBuilder;
 } // namespace fir
 
 namespace Fortran {
@@ -271,9 +273,22 @@ public:
   virtual bool
   isRegisteredDummySymbol(Fortran::semantics::SymbolRef symRef) const = 0;
 
+  /// Get the source-level argument position (1-based) for a dummy symbol.
+  /// Returns 0 if the symbol is not a registered dummy or position is unknown.
+  /// Can only be used reliably during the instantiation of variables.
+  virtual unsigned
+  getDummyArgPosition(const Fortran::semantics::Symbol &sym) const = 0;
+
   /// Returns the FunctionLikeUnit being lowered, if any.
   virtual const Fortran::lower::pft::FunctionLikeUnit *
   getCurrentFunctionUnit() const = 0;
+
+  /// Returns true if \p sym is the target of a Cray pointer association that
+  /// is visible in the procedure being lowered. Such symbols are given the
+  /// TARGET attribute in FIR so that the aliasing between the Cray pointee and
+  /// the target is visible to all FIR passes.
+  virtual bool
+  isVisibleCrayPointerTarget(const Fortran::semantics::Symbol &sym) const = 0;
 
   /// Check support of Multi-image features if -fcoarray is provided
   virtual void checkCoarrayEnabled() = 0;
@@ -350,6 +365,12 @@ public:
   virtual const fir::KindMapping &getKindMap() = 0;
 
   virtual Fortran::lower::StatementContext &getFctCtx() = 0;
+  virtual Fortran::lower::StatementContext &getCudaCleanupCtx() = 0;
+
+  /// Generate STAT and ERRMSG from a list of StatOrErrmsg
+  virtual std::pair<mlir::Value, mlir::Value>
+  genStatAndErrmsg(mlir::Location loc,
+                   const std::list<Fortran::parser::StatOrErrmsg> &) = 0;
 
   AbstractConverter(const Fortran::lower::LoweringOptions &loweringOptions)
       : loweringOptions(loweringOptions) {}

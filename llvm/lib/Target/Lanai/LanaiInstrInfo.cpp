@@ -27,7 +27,8 @@ using namespace llvm;
 #include "LanaiGenInstrInfo.inc"
 
 LanaiInstrInfo::LanaiInstrInfo(const LanaiSubtarget &STI)
-    : LanaiGenInstrInfo(STI, Lanai::ADJCALLSTACKDOWN, Lanai::ADJCALLSTACKUP),
+    : LanaiGenInstrInfo(STI, RegisterInfo, Lanai::ADJCALLSTACKDOWN,
+                        Lanai::ADJCALLSTACKUP),
       RegisterInfo() {}
 
 void LanaiInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
@@ -48,8 +49,7 @@ void LanaiInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 void LanaiInstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator Position,
     Register SourceRegister, bool IsKill, int FrameIndex,
-    const TargetRegisterClass *RegisterClass,
-    const TargetRegisterInfo * /*RegisterInfo*/, Register /*VReg*/,
+    const TargetRegisterClass *RegisterClass, Register /*VReg*/,
     MachineInstr::MIFlag /*Flags*/) const {
   DebugLoc DL;
   if (Position != MBB.end()) {
@@ -69,9 +69,8 @@ void LanaiInstrInfo::storeRegToStackSlot(
 void LanaiInstrInfo::loadRegFromStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator Position,
     Register DestinationRegister, int FrameIndex,
-    const TargetRegisterClass *RegisterClass,
-    const TargetRegisterInfo * /*RegisterInfo*/, Register /*VReg*/,
-    MachineInstr::MIFlag /*Flags*/) const {
+    const TargetRegisterClass *RegisterClass, Register /*VReg*/,
+    unsigned /*SubReg*/, MachineInstr::MIFlag /*Flags*/) const {
   DebugLoc DL;
   if (Position != MBB.end()) {
     DL = Position->getDebugLoc();
@@ -434,23 +433,6 @@ bool LanaiInstrInfo::optimizeCompareInstr(
     return true;
   }
 
-  return false;
-}
-
-bool LanaiInstrInfo::analyzeSelect(const MachineInstr &MI,
-                                   SmallVectorImpl<MachineOperand> &Cond,
-                                   unsigned &TrueOp, unsigned &FalseOp,
-                                   bool &Optimizable) const {
-  assert(MI.getOpcode() == Lanai::SELECT && "unknown select instruction");
-  // Select operands:
-  // 0: Def.
-  // 1: True use.
-  // 2: False use.
-  // 3: Condition code.
-  TrueOp = 1;
-  FalseOp = 2;
-  Cond.push_back(MI.getOperand(3));
-  Optimizable = true;
   return false;
 }
 

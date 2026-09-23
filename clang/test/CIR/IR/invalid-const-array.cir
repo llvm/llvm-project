@@ -1,0 +1,6 @@
+// RUN: cir-opt %s -verify-diagnostics
+
+!s32i = !cir.int<s, 32>
+
+// expected-error @below {{constant array has 4 values but array type has size 2}}
+cir.global external @a = #cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<0> : !s32i, #cir.int<0> : !s32i]> : !cir.array<!s32i x 2>

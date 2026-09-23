@@ -1,8 +1,7 @@
 ; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; Check that the vsplat instruction is generated
-; CHECK: r[[V:[0-9]+]] = #16752
-; CHECK: vsplat(r[[V]])
+; CHECK: vsplat(r{{[0-9]+}})
 
 target datalayout = "e-m:e-p:32:32:32-a:0-n16:32-i64:64:64-i32:32:32-i16:16:16-i1:8:8-f32:32:32-f64:64:64-v32:32:32-v64:64:64-v512:512:512-v1024:1024:1024-v2048:2048:2048"
 target triple = "hexagon"
@@ -54,4 +53,4 @@ define dso_local i32 @foo(ptr nocapture %0, i32 %1) local_unnamed_addr #0 {
   br i1 %27, label %22, label %23
 }
 
-attributes #0 = { nofree norecurse nounwind writeonly "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="hexagonv69" "target-features"="+hvx-length128b,+hvxv69,+v69,-long-calls" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nofree norecurse nounwind writeonly "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="hexagonv69" "target-features"="+hvx-length128b,+hvxv69,+v69,-long-calls" "use-soft-float"="false" }

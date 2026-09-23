@@ -511,6 +511,8 @@ functions:
     in-latest-posix: ""
   chown:
     in-latest-posix: ""
+  chroot:
+    in-latest-posix: ""
   close:
     in-latest-posix: ""
   confstr:
@@ -576,6 +578,8 @@ functions:
   gethostid:
     in-latest-posix: ""
   gethostname:
+    in-latest-posix: ""
+  getpagesize:
     in-latest-posix: ""
   getlogin:
     in-latest-posix: ""

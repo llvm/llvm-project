@@ -124,7 +124,7 @@ View the diff from {self.name} here.
         import github
         from github import IssueComment, PullRequest
 
-        repo = github.Github(args.token).get_repo(args.repo)
+        repo = github.Github(auth=github.Auth.Token(args.token)).get_repo(args.repo)
         pr = repo.get_issue(args.issue_number).as_pull_request()
 
         comment_text = self.comment_tag + "\n\n" + comment_text
@@ -423,11 +423,11 @@ You can test this locally with the following command:
             match = re.match("a/([^ ]+)", lines[0] if lines else "")
             filename = match[1] if match else ""
             if filename.endswith(".ll"):
-                undef_regex = r"(?<!%)\bundef\b"
+                undef_regex = r"^[+][^;\n]*(?<!%)\bundef\b"
             else:
-                undef_regex = r"UndefValue::get"
+                undef_regex = r"^[+].*UndefValue::get"
             # search for additions of undef
-            if re.search(r"^[+].*" + undef_regex, file, re.MULTILINE):
+            if re.search(undef_regex, file, re.MULTILINE):
                 files.append(filename)
 
         if not files:
@@ -486,8 +486,6 @@ def hook_main():
         if fmt.has_tool():
             if not fmt.run(args.changed_files, args):
                 failed_fmts.append(fmt.name)
-            if fmt.comment:
-                comments.append(fmt.comment)
         else:
             print(f"Couldn't find {fmt.name}, can't check " + fmt.friendly_name.lower())
 
@@ -508,7 +506,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--token", type=str, required=True, help="GitHub authentiation token"
+        "--token", type=str, required=True, help="GitHub authentication token"
     )
     parser.add_argument(
         "--repo",

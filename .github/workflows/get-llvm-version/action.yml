@@ -13,14 +13,29 @@ outputs:
   patch:
     description: LLVM patch version
     value: ${{ steps.version.outputs.patch }}
+  full-no-suffix:
+    description: |
+      The full LLVM vesion without any suffixes like `-rc` or `git`.  This will be `$major.$minor.$patch`
+    value: ${{ steps.version.outputs.full-no-suffix }}
 
 runs:
   using: "composite"
   steps:
+    - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      with:
+        persist-credentials: false
+        path: get-llvm-version
+        sparse-checkout: |
+          llvm/utils/release/get-llvm-version.sh
+          cmake/Modules/LLVMVersion.cmake
+        sparse-checkout-cone-mode: false
+
     - name: Get Version
       shell: bash
       id: version
       run: |
         for v in major minor patch; do
-          echo "$v=`llvm/utils/release/get-llvm-version.sh --$v`" >> $GITHUB_OUTPUT
+          echo "$v=`./get-llvm-version/llvm/utils/release/get-llvm-version.sh --$v`" >> $GITHUB_OUTPUT
         done
+
+        echo "full-no-suffix=$(./get-llvm-version/llvm/utils/release/get-llvm-version.sh)" >> $GITHUB_OUTPUT

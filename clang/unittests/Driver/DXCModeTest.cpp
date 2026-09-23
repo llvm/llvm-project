@@ -13,8 +13,10 @@
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Basic/OffloadArch.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Driver/Compilation.h"
+#include "clang/Driver/CreateInvocationFromArgs.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/ToolChain.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -128,11 +130,11 @@ TEST(DxcModeTest, ValidatorVersionValidation) {
     DAL->append(A);
 
   std::unique_ptr<llvm::opt::DerivedArgList> TranslatedArgs{
-      TC.TranslateArgs(*DAL, "0", Action::OffloadKind::OFK_None)};
+      TC.TranslateArgs(*DAL, BoundArch("0"), Action::OffloadKind::OFK_None)};
   EXPECT_NE(TranslatedArgs, nullptr);
   if (TranslatedArgs) {
-    auto *A = TranslatedArgs->getLastArg(
-        clang::driver::options::OPT_dxil_validator_version);
+    auto *A =
+        TranslatedArgs->getLastArg(clang::options::OPT_dxil_validator_version);
     EXPECT_NE(A, nullptr);
     if (A) {
       EXPECT_STREQ(A->getValue(), "1.1");
@@ -149,7 +151,7 @@ TEST(DxcModeTest, ValidatorVersionValidation) {
     DAL->append(A);
 
   TranslatedArgs.reset(
-      TC.TranslateArgs(*DAL, "0", Action::OffloadKind::OFK_None));
+      TC.TranslateArgs(*DAL, BoundArch("0"), Action::OffloadKind::OFK_None));
   EXPECT_EQ(Diags.getNumErrors(), 1u);
   EXPECT_STREQ(
       DiagConsumer->Errors.back().c_str(),
@@ -165,7 +167,7 @@ TEST(DxcModeTest, ValidatorVersionValidation) {
     DAL->append(A);
 
   TranslatedArgs.reset(
-      TC.TranslateArgs(*DAL, "0", Action::OffloadKind::OFK_None));
+      TC.TranslateArgs(*DAL, BoundArch("0"), Action::OffloadKind::OFK_None));
   EXPECT_EQ(Diags.getNumErrors(), 2u);
   EXPECT_STREQ(DiagConsumer->Errors.back().c_str(),
                "invalid validator version : 1; format of validator version is "
@@ -180,7 +182,7 @@ TEST(DxcModeTest, ValidatorVersionValidation) {
     DAL->append(A);
 
   TranslatedArgs.reset(
-      TC.TranslateArgs(*DAL, "0", Action::OffloadKind::OFK_None));
+      TC.TranslateArgs(*DAL, BoundArch("0"), Action::OffloadKind::OFK_None));
   EXPECT_EQ(Diags.getNumErrors(), 3u);
   EXPECT_STREQ(
       DiagConsumer->Errors.back().c_str(),
@@ -196,7 +198,7 @@ TEST(DxcModeTest, ValidatorVersionValidation) {
     DAL->append(A);
 
   TranslatedArgs.reset(
-      TC.TranslateArgs(*DAL, "0", Action::OffloadKind::OFK_None));
+      TC.TranslateArgs(*DAL, BoundArch("0"), Action::OffloadKind::OFK_None));
   EXPECT_EQ(Diags.getNumErrors(), 4u);
   EXPECT_STREQ(
       DiagConsumer->Errors.back().c_str(),

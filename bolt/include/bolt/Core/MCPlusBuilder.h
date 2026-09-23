@@ -14,7 +14,6 @@
 #ifndef BOLT_CORE_MCPLUSBUILDER_H
 #define BOLT_CORE_MCPLUSBUILDER_H
 
-#include "bolt/Core/BinaryBasicBlock.h"
 #include "bolt/Core/MCPlus.h"
 #include "bolt/Core/Relocation.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -64,6 +63,14 @@ enum class IndirectBranchType : char {
   POSSIBLE_FIXED_BRANCH,   /// Possibly an indirect branch to a fixed location.
   POSSIBLE_PIC_FIXED_BRANCH, /// Possibly an indirect jump to a fixed entry in a
                              /// PIC jump table.
+};
+
+/// Enum used for readability when describing different BTI instruction
+/// variants. The variant is encoded as an immediate of the instruction in LLVM.
+enum BTIKind {
+  C, /// Accepting calls, and jumps using x16/x17.
+  J, /// Accepting jumps.
+  JC /// Accepting both.
 };
 
 class MCPlusBuilder {
@@ -131,10 +138,8 @@ private:
 
   MCInst::iterator getAnnotationInstOp(MCInst &Inst) const {
     for (MCInst::iterator Iter = Inst.begin(); Iter != Inst.end(); ++Iter) {
-      if (Iter->isInst()) {
-        assert(Iter->getInst() == nullptr && "Empty instruction expected.");
+      if (MCPlus::isAnnotationSentinel(*Iter))
         return Iter;
-      }
     }
     return Inst.end();
   }
@@ -470,7 +475,8 @@ public:
   }
 
   /// Check whether this conditional branch can be reversed
-  virtual bool isReversibleBranch(const MCInst &Inst) const {
+  virtual bool isReversibleBranch(const MCInst &Inst,
+                                  bool MustPreserveFlags = true) const {
     assert(!isUnsupportedInstruction(Inst) && isConditionalBranch(Inst) &&
            "Instruction is not known conditional branch");
 
@@ -535,6 +541,11 @@ public:
 
   virtual void createDirectCall(MCInst &Inst, const MCSymbol *Target,
                                 MCContext *Ctx, bool IsTailCall) {
+    llvm_unreachable("not implemented");
+  }
+
+  virtual void createDirectBranch(MCInst &Inst, const MCSymbol *Target,
+                                  MCContext *Ctx) {
     llvm_unreachable("not implemented");
   }
 
@@ -630,6 +641,12 @@ public:
   virtual bool isPAuthAndRet(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return false;
+  }
+
+  /// Generate the matching pointer authentication instruction from a fused
+  /// pauth-and-return instruction.
+  virtual void createMatchingAuth(const MCInst &AuthAndRet, MCInst &Auth) {
+    llvm_unreachable("not implemented");
   }
 
   /// Returns the register used as a return address. Returns std::nullopt if
@@ -784,6 +801,11 @@ public:
 
   virtual bool isPop(const MCInst &Inst) const { return false; }
 
+  /// Determine if a basic block looks like an epilogue. For now it is only
+  /// called at the final stage of building CFG to check basic block ending
+  /// with an indirect call that has unknown control flow attribute.
+  virtual bool isEpilogue(const BinaryBasicBlock &BB) const { return false; }
+
   /// Return true if the instruction is used to terminate an indirect branch.
   virtual bool isTerminateBranch(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
@@ -840,6 +862,11 @@ public:
     return false;
   }
 
+  virtual bool isLoadLiteralGPR(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
   virtual bool isMOVW(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return false;
@@ -870,7 +897,7 @@ public:
     return false;
   }
 
-  virtual bool isCleanRegXOR(const MCInst &Inst) const {
+  virtual bool isCleanReg(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return false;
   }
@@ -1361,20 +1388,13 @@ public:
   /// Return true if \p Inst has RestoreState annotation.
   bool hasRestoreState(const MCInst &Inst) const;
 
-  /// Stores RA Signed annotation on \p Inst.
-  void setRASigned(MCInst &Inst) const;
+  /// Sets kRASigned or kRAUnsigned annotation on \p Inst.
+  /// Fails if \p Inst has either annotation already set.
+  void setRAState(MCInst &Inst, bool State) const;
 
-  /// Return true if \p Inst has Signed RA annotation.
-  bool isRASigned(const MCInst &Inst) const;
-
-  /// Stores RA Unsigned annotation on \p Inst.
-  void setRAUnsigned(MCInst &Inst) const;
-
-  /// Return true if \p Inst has Unsigned RA annotation.
-  bool isRAUnsigned(const MCInst &Inst) const;
-
-  /// Return true if \p Inst doesn't have any annotation related to RA state.
-  bool isRAStateUnknown(const MCInst &Inst) const;
+  /// Return true if \p Inst has kRASigned annotation, false if it has
+  /// kRAUnsigned annotation, and std::nullopt if neither annotation is set.
+  std::optional<bool> getRAState(const MCInst &Inst) const;
 
   /// Return true if the instruction is a call with an exception handling info.
   virtual bool isInvoke(const MCInst &Inst) const {
@@ -1569,13 +1589,18 @@ public:
     llvm_unreachable("not implemented");
   }
 
-  /// Similar to getDefaultDefIn
+  /// Registers which may contain a meaningful value after a function returns.
   virtual void getDefaultLiveOut(BitVector &Regs) const {
     llvm_unreachable("not implemented");
   }
 
   /// Change \p Regs with a bitmask with all general purpose regs
   virtual void getGPRegs(BitVector &Regs, bool IncludeAlias = true) const {
+    llvm_unreachable("not implemented");
+  }
+
+  /// Remove non scavengeable special registers from \p Regs
+  virtual void removeNonScavengeableRegs(BitVector &Regs) const {
     llvm_unreachable("not implemented");
   }
 
@@ -1726,6 +1751,12 @@ public:
     return false;
   }
 
+  /// AArch64 uses this to perform diagnostics in the LongJmp pass.
+  virtual bool isShortRangeBranch(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
   /// Receives a list of MCInst of the basic block to analyze and interpret the
   /// terminators of this basic block. TBB must be initialized with the original
   /// fall-through for this BB.
@@ -1762,6 +1793,30 @@ public:
     return 0;
   }
 
+  virtual void patchPLTEntryForBTI(BinaryFunction &PLTFunction, MCInst &Call) {
+    llvm_unreachable("not implemented");
+  }
+
+  virtual void patchFunctionEntryForBTI(BinaryFunction &Function,
+                                        MCInst &Call) {
+    llvm_unreachable("not implemented");
+  }
+
+  virtual void applyBTIFixupToTarget(BinaryBasicBlock &StubBB) {
+    llvm_unreachable("not implemented");
+  }
+
+  virtual void applyBTIFixupToSymbol(BinaryContext &BC, const MCSymbol *Symbol,
+                                     MCInst &Call) {
+    llvm_unreachable("not implemented");
+  }
+
+  virtual void applyBTIFixupCommon(const MCSymbol *RealTargetSym,
+                                   BinaryFunction *TgtFunction,
+                                   BinaryBasicBlock *TgtBB, MCInst &Call) {
+    llvm_unreachable("not implemented");
+  }
+
   virtual bool analyzeVirtualMethodCall(InstructionIterator Begin,
                                         InstructionIterator End,
                                         std::vector<MCInst *> &MethodFetchInsns,
@@ -1786,6 +1841,19 @@ public:
   /// ADRP+ADD instruction sequence.
   virtual InstructionListType undoAdrpAddRelaxation(const MCInst &ADRInst,
                                                     MCContext *Ctx) const {
+    llvm_unreachable("not implemented");
+  }
+
+  /// Take \p LDRInst and return ADRP+LDR instruction sequence - for
+  ///
+  ///     ldr  x0, [label]
+  ///
+  /// the following sequence will be generated:
+  ///
+  ///     adrp x0, PageBase(label)
+  ///     ldr  x0, [x0, PageOffset(label)]
+  virtual InstructionListType createAdrpLdr(const MCInst &LDRInst,
+                                            MCContext *Ctx) const {
     llvm_unreachable("not implemented");
   }
 
@@ -1818,6 +1886,14 @@ public:
     llvm_unreachable("not implemented");
   }
 
+  /// Match Cortex-A53 erratum 843419 workaround veneer. Such veneers have
+  /// exactly one BB with two instructions: a load/store and an unconditional
+  /// branch back to the call site. Returns true if BF matches this pattern
+  /// (name e843419* or __CortexA53843419_*, 2-instruction body).
+  virtual bool matchE843419Veneer(const BinaryFunction &BF) const {
+    return false;
+  }
+
   virtual bool matchAdrpAddPair(const MCInst &Adrp, const MCInst &Add) const {
     llvm_unreachable("not implemented");
     return false;
@@ -1842,11 +1918,51 @@ public:
     llvm_unreachable("not implemented");
   }
 
+  /// Check if an Instruction is a BTI landing pad with the required properties.
+  /// Takes both explicit and implicit BTIs into account.
+  virtual bool isBTILandingPad(MCInst &Inst, BTIKind BTI) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
+  /// Check if an Instruction is an implicit BTI c landing pad.
+  virtual bool isImplicitBTIC(MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
+  /// Create a BTI landing pad instruction.
+  virtual void createBTI(MCInst &Inst, BTIKind BTI) const {
+    llvm_unreachable("not implemented");
+  }
+
+  /// Checks if the indirect call / jump is accepted by the landing pad at the
+  /// start of the target BasicBlock.
+  virtual bool isCallCoveredByBTI(MCInst &Call, MCInst &Pad) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
+  /// Inserts a BTI landing pad to the start of the BB, that matches the
+  /// indirect call inst used to call the BB.
+  virtual void insertBTI(BinaryBasicBlock &BB, MCInst &Call) const {
+    llvm_unreachable("not implemented");
+  }
+
   /// Store \p Target absolute address to \p RegName
   virtual InstructionListType materializeAddress(const MCSymbol *Target,
                                                  MCContext *Ctx,
                                                  MCPhysReg RegName,
                                                  int64_t Addend = 0) const {
+    llvm_unreachable("not implemented");
+    return {};
+  }
+
+  /// Materializing \p ConstantData value in the target register of \p Inst
+  virtual InstructionListType materializeConstant(BinaryContext &BC,
+                                                  const MCInst &Inst,
+                                                  StringRef ConstantData,
+                                                  uint64_t Offset) const {
     llvm_unreachable("not implemented");
     return {};
   }
@@ -1886,6 +2002,11 @@ public:
 
   /// Creates a trap instruction in Inst.
   virtual void createTrap(MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+  }
+
+  /// Creates a breakpoint instruction in Inst.
+  virtual void createBreakpoint(MCInst &Inst) const {
     llvm_unreachable("not implemented");
   }
 
@@ -1971,12 +2092,22 @@ public:
     return {};
   }
 
+  /// Create a sequence of instructions to compare contents of a register
+  /// \p Reg1 to a register \p Reg2 and jump to \p Target if they are different.
+  virtual InstructionListType createCmpJNEWithReg(MCPhysReg Reg1,
+                                                  MCPhysReg Reg2,
+                                                  const MCSymbol *Target,
+                                                  MCContext *Ctx) const {
+    llvm_unreachable("not implemented");
+    return {};
+  }
+
   /// Find memcpy size in bytes by using preceding instructions.
   /// Returns std::nullopt if size cannot be determined (no-op for most
   /// targets).
   virtual std::optional<uint64_t>
   findMemcpySizeInBytes(const BinaryBasicBlock &BB,
-                        BinaryBasicBlock::iterator CallInst) const {
+                        InstructionListType::iterator CallInst) const {
     return std::nullopt;
   }
 
@@ -2029,9 +2160,13 @@ public:
     llvm_unreachable("not implemented");
   }
 
-  /// Reverses the branch condition in Inst and update its taken target to TBB.
-  virtual void reverseBranchCondition(MCInst &Inst, const MCSymbol *TBB,
-                                      MCContext *Ctx) const {
+  /// Return the instruction sequence for the reversed branch condition of
+  /// \p Inst and update its taken target to \p TBB. Assumes that the branch is
+  /// reversible. It may replace Inst with a longer instruction sequence on some
+  /// targets.
+  virtual InstructionListType
+  reverseBranchCondition(MCInst Inst, const MCSymbol *TBB, MCContext *Ctx,
+                         bool MustPreserveFlags = true) const {
     llvm_unreachable("not implemented");
   }
 
@@ -2309,7 +2444,7 @@ public:
 
   virtual InstructionListType
   createInstrumentedIndirectCall(MCInst &&CallInst, MCSymbol *HandlerFuncAddr,
-                                 int CallSiteID, MCContext *Ctx) {
+                                 size_t CallSiteID, MCContext *Ctx) {
     llvm_unreachable("not implemented");
     return InstructionListType();
   }
@@ -2395,7 +2530,7 @@ public:
   };
 
   virtual BlocksVectorTy indirectCallPromotion(
-      const MCInst &CallInst,
+      const MCInst &CallInst, MCPhysReg Reg,
       const std::vector<std::pair<MCSymbol *, uint64_t>> &Targets,
       const std::vector<std::pair<MCSymbol *, uint64_t>> &VtableSyms,
       const std::vector<MCInst *> &MethodFetchInsns,

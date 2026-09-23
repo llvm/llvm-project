@@ -9,6 +9,9 @@
 // Fails on some Darwin bots, probably iOS.
 // XFAIL: ios
 
+// Strict init order checking is not supported on AIX
+// UNSUPPORTED: target={{.*aix.*}}
+
 #include <stdio.h>
 
 extern int y;

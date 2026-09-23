@@ -22,7 +22,7 @@
 // CHECK:           %[[VAL_13:.*]] = sparse_tensor.storage_specifier.init
 // CHECK:           %[[VAL_14:.*]] = sparse_tensor.storage_specifier.set %[[VAL_13]]  lvl_sz at 0 with %[[VAL_4]]
 // CHECK:           %[[VAL_15:.*]] = sparse_tensor.storage_specifier.set %[[VAL_14]]  pos_mem_sz at 0 with %[[VAL_3]]
-// CHECK:           %[[VAL_16:.*]] = tensor.extract %[[VAL_1]]{{\[}}%[[VAL_5]]] : tensor<2xindex>
+// CHECK:           %[[VAL_16:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_5]]] : memref<2xindex>
 // CHECK:           %[[VAL_17:.*]] = arith.muli %[[VAL_16]], %[[VAL_3]] : index
 // CHECK:           %[[VAL_18:.*]] = sparse_tensor.storage_specifier.set %[[VAL_15]]  crd_mem_sz at 0 with %[[VAL_17]]
 // CHECK:           %[[VAL_19:.*]] = sparse_tensor.storage_specifier.set %[[VAL_18]]  lvl_sz at 1 with %[[VAL_4]]
@@ -75,4 +75,22 @@ func.func @sparse_unpack(%sp : tensor<100x100xf64, #COO>,
                                  out_vals(%od : tensor<6xf64>)
                                  -> (tensor<2xindex>, tensor<6x2xi32>), tensor<6xf64>, (index, index), index
   return %rd, %rp, %ri : tensor<6xf64>, tensor<2xindex>, tensor<6x2xi32>
+}
+
+// Tests that the codegen does not crash when the sparse encoding has more
+// levels than dimensions (e.g. a blocked map using floordiv/mod).
+// See https://github.com/llvm/llvm-project/issues/203225
+
+#BSR = #sparse_tensor.encoding<{
+  map = (d0, d1) -> (d0 floordiv 2 : dense, d1 floordiv 2 : compressed, d0 mod 2 : dense, d1 mod 2 : dense)
+}>
+
+// Just check that codegen succeeds (no out-of-bounds crash); the exact
+// lowering is not the point of this regression test.
+// CHECK-LABEL:   func.func @sparse_pack_blocked
+func.func @sparse_pack_blocked(%values: tensor<?xf64>, %pos: tensor<?xindex>, %coordinates: tensor<?xindex>)
+                    -> tensor<2x4xf64, #BSR> {
+  %0 = sparse_tensor.assemble (%pos, %coordinates), %values
+     : (tensor<?xindex>, tensor<?xindex>), tensor<?xf64> to tensor<2x4xf64, #BSR>
+  return %0 : tensor<2x4xf64, #BSR>
 }

@@ -45,3 +45,47 @@ define <8 x i32>@test_int_x86_avx_vpdpbusds_256(<8 x i32> %x0, <8 x i32> %x1, <8
     %res = call <8 x i32> @llvm.x86.avx512.vpdpbusds.256(<8 x i32> %x0, <8 x i32> %x1, <8 x i32> %x2)
     ret <8 x i32> %res
 }
+
+declare <4 x i32> @llvm.x86.avx512.vpdpwssd.128(<4 x i32>, <4 x i32>, <4 x i32>)
+
+define <4 x i32>@test_int_x86_avx_vpdpwssd_128(<4 x i32> %x0, <4 x i32> %x1, <4 x i32> %x2) {
+; CHECK-LABEL: test_int_x86_avx_vpdpwssd_128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    {vex} vpdpwssd %xmm2, %xmm1, %xmm0 # encoding: [0xc4,0xe2,0x71,0x52,0xc2]
+; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+    %res = call <4 x i32> @llvm.x86.avx512.vpdpwssd.128(<4 x i32> %x0, <4 x i32> %x1, <4 x i32> %x2)
+    ret <4 x i32> %res
+}
+
+declare <8 x i32> @llvm.x86.avx512.vpdpwssd.256(<8 x i32>, <8 x i32>, <8 x i32>)
+
+define <8 x i32>@test_int_x86_avx_vpdpwssd_256(<8 x i32> %x0, <8 x i32> %x1, <8 x i32> %x2) {
+; CHECK-LABEL: test_int_x86_avx_vpdpwssd_256:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    {vex} vpdpwssd %ymm2, %ymm1, %ymm0 # encoding: [0xc4,0xe2,0x75,0x52,0xc2]
+; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+    %res = call <8 x i32> @llvm.x86.avx512.vpdpwssd.256(<8 x i32> %x0, <8 x i32> %x1, <8 x i32> %x2)
+    ret <8 x i32> %res
+}
+
+declare <4 x i32> @llvm.x86.avx512.vpdpwssds.128(<4 x i32>, <4 x i32>, <4 x i32>)
+
+define <4 x i32>@test_int_x86_avx_vpdpwssds_128(<4 x i32> %x0, <4 x i32> %x1, <4 x i32> %x2) {
+; CHECK-LABEL: test_int_x86_avx_vpdpwssds_128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    {vex} vpdpwssds %xmm2, %xmm1, %xmm0 # encoding: [0xc4,0xe2,0x71,0x53,0xc2]
+; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+    %res = call <4 x i32> @llvm.x86.avx512.vpdpwssds.128(<4 x i32> %x0, <4 x i32> %x1, <4 x i32> %x2)
+    ret <4 x i32> %res
+}
+
+declare <8 x i32> @llvm.x86.avx512.vpdpwssds.256(<8 x i32>, <8 x i32>, <8 x i32>)
+
+define <8 x i32>@test_int_x86_avx_vpdpwssds_256(<8 x i32> %x0, <8 x i32> %x1, <8 x i32> %x2) {
+; CHECK-LABEL: test_int_x86_avx_vpdpwssds_256:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    {vex} vpdpwssds %ymm2, %ymm1, %ymm0 # encoding: [0xc4,0xe2,0x75,0x53,0xc2]
+; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+    %res = call <8 x i32> @llvm.x86.avx512.vpdpwssds.256(<8 x i32> %x0, <8 x i32> %x1, <8 x i32> %x2)
+    ret <8 x i32> %res
+}

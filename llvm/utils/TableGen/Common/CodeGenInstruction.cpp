@@ -120,8 +120,7 @@ CGIOperandList::CGIOperandList(const Record *R) : TheDef(R) {
       continue;
     } else if (Rec->isSubClassOf("RegisterClassLike")) {
       OperandType = "OPERAND_REGISTER";
-    } else if (!Rec->isSubClassOf("PointerLikeRegClass") &&
-               !Rec->isSubClassOf("unknown_class")) {
+    } else if (!Rec->isSubClassOf("unknown_class")) {
       PrintFatalError(R->getLoc(), "Unknown operand class '" + Rec->getName() +
                                        "' in '" + R->getName() +
                                        "' instruction!");
@@ -499,7 +498,7 @@ CodeGenInstruction::CodeGenInstruction(const Record *R)
 /// HasOneImplicitDefWithKnownVT - If the instruction has at least one
 /// implicit def and it has a known VT, return the VT, otherwise return
 /// MVT::Other.
-MVT::SimpleValueType CodeGenInstruction::HasOneImplicitDefWithKnownVT(
+MVT CodeGenInstruction::HasOneImplicitDefWithKnownVT(
     const CodeGenTarget &TargetInfo) const {
   if (ImplicitDefs.empty())
     return MVT::Other;
@@ -510,7 +509,7 @@ MVT::SimpleValueType CodeGenInstruction::HasOneImplicitDefWithKnownVT(
   const std::vector<ValueTypeByHwMode> &RegVTs =
       TargetInfo.getRegisterVTs(FirstImplicitDef);
   if (RegVTs.size() == 1 && RegVTs[0].isSimple())
-    return RegVTs[0].getSimple().SimpleTy;
+    return RegVTs[0].getSimple();
   return MVT::Other;
 }
 

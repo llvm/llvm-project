@@ -16,6 +16,7 @@
 #include <vector>
 
 #include <benchmark/benchmark.h>
+#include "test_macros.h"
 
 int main(int argc, char** argv) {
   auto std_distance = [](auto first, auto last) { return std::distance(first, last); };
@@ -25,7 +26,7 @@ int main(int argc, char** argv) {
     auto bm = [](std::string name, auto distance) {
       benchmark::RegisterBenchmark(
           name,
-          [distance](auto& st) {
+          [distance](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             std::deque<int> c(size, 1);
 
@@ -41,7 +42,6 @@ int main(int argc, char** argv) {
           ->Arg(8192);
     };
     bm.operator()("std::distance(deque<int>)", std_distance);
-    bm.operator()("rng::distance(deque<int>)", std::ranges::distance);
   }
 
   // {std,ranges}::distance(std::join_view)
@@ -49,7 +49,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto distance, std::size_t seg_size) {
       benchmark::RegisterBenchmark(
           name,
-          [distance, seg_size](auto& st) {
+          [distance, seg_size](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size     = st.range(0);
             std::size_t const segments = (size + seg_size - 1) / seg_size;
             Container c(segments);
@@ -73,8 +73,6 @@ int main(int argc, char** argv) {
           ->Arg(8192);
     };
     bm.operator()<std::vector<std::vector<int>>>("std::distance(join_view(vector<vector<int>>))", std_distance, 256);
-    bm.operator()<std::vector<std::vector<int>>>(
-        "rng::distance(join_view(vector<vector<int>>)", std::ranges::distance, 256);
   }
 
   benchmark::Initialize(&argc, argv);

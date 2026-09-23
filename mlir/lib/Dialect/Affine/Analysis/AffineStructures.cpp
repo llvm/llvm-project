@@ -29,6 +29,15 @@ using namespace mlir;
 using namespace affine;
 using namespace presburger;
 
+FailureOr<FlatAffineValueConstraints>
+FlatAffineValueConstraints::create(IntegerSet set, ValueRange operands) {
+  bool error = false;
+  FlatAffineValueConstraints cst(set, operands, &error);
+  if (error)
+    return failure();
+  return cst;
+}
+
 LogicalResult
 FlatAffineValueConstraints::addInductionVarOrTerminalSymbol(Value val) {
   if (containsVar(val))
@@ -133,14 +142,14 @@ LogicalResult FlatAffineValueConstraints::addAffineParallelOpDomain(
     }
 
     AffineMap lowerBound = parallelOp.getLowerBoundMap(ivPos);
-    if (lowerBound.isConstant())
+    if (lowerBound.isSingleConstant())
       addBound(BoundType::LB, pos, lowerBound.getSingleConstantResult());
     else if (failed(addBound(BoundType::LB, pos, lowerBound,
                              parallelOp.getLowerBoundsOperands())))
       return failure();
 
     auto upperBound = parallelOp.getUpperBoundMap(ivPos);
-    if (upperBound.isConstant())
+    if (upperBound.isSingleConstant())
       addBound(BoundType::UB, pos, upperBound.getSingleConstantResult() - 1);
     else if (failed(addBound(BoundType::UB, pos, upperBound,
                              parallelOp.getUpperBoundsOperands())))
@@ -208,13 +217,18 @@ void FlatAffineValueConstraints::addAffineIfOpDomain(AffineIfOp ifOp) {
   canonicalizeSetAndOperands(&set, &operands);
 
   // Create the base constraints from the integer set attached to ifOp.
-  FlatAffineValueConstraints cst(set, operands);
+  FailureOr<FlatAffineValueConstraints> cst =
+      FlatAffineValueConstraints::create(set, operands);
+  if (failed(cst)) {
+    assert(false && "semi-affine integer sets are unsupported here");
+    return;
+  }
 
   // Merge the constraints from ifOp to the current domain. We need first merge
   // and align the IDs from both constraints, and then append the constraints
   // from the ifOp into the current one.
-  mergeAndAlignVarsWithOther(0, &cst);
-  append(cst);
+  mergeAndAlignVarsWithOther(0, &*cst);
+  append(*cst);
 }
 
 LogicalResult FlatAffineValueConstraints::addBound(BoundType type, unsigned pos,
@@ -342,8 +356,7 @@ void FlatAffineValueConstraints::getIneqAsAffineValueMap(
 
   if (inequality[pos] > 0)
     // Lower bound.
-    std::transform(bound.begin(), bound.end(), bound.begin(),
-                   std::negate<int64_t>());
+    llvm::transform(bound, bound.begin(), std::negate<int64_t>());
   else
     // Upper bound (which is exclusive).
     bound.back() += 1;

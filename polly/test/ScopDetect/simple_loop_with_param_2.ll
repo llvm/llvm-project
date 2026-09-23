@@ -1,12 +1,12 @@
-; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa '-passes=print<polly-detect>' -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa '-passes=polly-custom<detect>' -polly-print-detect -disable-output < %s 2>&1 | FileCheck %s
 
 ; void f(long A[], int N, int *init_ptr) {
 ;   long i, j;
 ;
 ;   for (i = 0; i < N; ++i) {
 ;     init = *init_ptr;
-;     for (i = 0; i < N; ++i) {
-;       A[i] = init + 2;
+;     for (j = 0; j < N; ++j) {
+;       A[j] = init + 2;
 ;     }
 ;   }
 ; }

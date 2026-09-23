@@ -28,7 +28,6 @@
 #include "llvm/Support/Error.h"
 
 #include <cstdint>
-#include <map>
 #include <vector>
 
 namespace llvm {
@@ -76,7 +75,7 @@ private:
 // Tokens returned by this function hold only references to the parts
 // of the Input. Memory buffer containing Input cannot be freed,
 // modified or reallocated.
-Expected<std::vector<RCToken>> tokenizeRC(StringRef Input);
+Expected<std::vector<RCToken>> tokenizeRC(StringRef Input, bool IsWindres);
 
 } // namespace llvm
 

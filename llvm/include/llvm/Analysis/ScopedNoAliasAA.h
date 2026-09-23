@@ -22,6 +22,7 @@
 
 namespace llvm {
 
+class FenceInst;
 class Function;
 class MDNode;
 class MemoryLocation;
@@ -37,21 +38,26 @@ public:
     return false;
   }
 
+  LLVM_ABI static AliasResult alias(const MemoryLocation &LocA,
+                                    const MemoryLocation &LocB);
   LLVM_ABI AliasResult alias(const MemoryLocation &LocA,
-                             const MemoryLocation &LocB, AAQueryInfo &AAQI,
-                             const Instruction *CtxI);
+                             const MemoryLocation &LocB, AAQueryInfo &,
+                             const Instruction *);
   LLVM_ABI ModRefInfo getModRefInfo(const CallBase *Call,
                                     const MemoryLocation &Loc,
                                     AAQueryInfo &AAQI);
   LLVM_ABI ModRefInfo getModRefInfo(const CallBase *Call1,
                                     const CallBase *Call2, AAQueryInfo &AAQI);
+  LLVM_ABI ModRefInfo getModRefInfo(const FenceInst *F,
+                                    const MemoryLocation &Loc,
+                                    AAQueryInfo &AAQI);
 
-  LLVM_ABI void
+  LLVM_ABI static void
   collectScopedDomains(const MDNode *NoAlias,
-                       SmallPtrSetImpl<const MDNode *> &Domains) const;
+                       SmallPtrSetImpl<const MDNode *> &Domains);
 
-private:
-  bool mayAliasInScopes(const MDNode *Scopes, const MDNode *NoAlias) const;
+  LLVM_ABI static bool mayAliasInScopes(const MDNode *Scopes,
+                                        const MDNode *NoAlias);
 };
 
 /// Analysis pass providing a never-invalidated alias analysis result.

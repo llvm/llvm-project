@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "EmulateInstructionRISCV.h"
+#include "Plugins/Process/Utility/RegisterInfoInterface.h"
+#include "Plugins/Process/Utility/RegisterInfoPOSIX_riscv32.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_riscv64.h"
 #include "Plugins/Process/Utility/lldb-riscv-register-enums.h"
 #include "RISCVCInstructions.h"
@@ -22,6 +24,7 @@
 #include "lldb/Utility/Stream.h"
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/MathExtras.h"
 #include <optional>
 
@@ -1328,32 +1331,36 @@ public:
         m_emu, inst, 8, ZextD,
         [](uint64_t a, uint64_t b) { return std::max(a, b); });
   }
-  template <typename T>
-  bool F_Load(T inst, const fltSemantics &(*semantics)(),
-              unsigned int numBits) {
+  template <typename I, typename T>
+  bool F_Load(I inst, const fltSemantics &(*semantics)()) {
     return transformOptional(inst.rs1.Read(m_emu),
                              [&](auto &&rs1) {
-                               uint64_t addr = rs1 + uint64_t(inst.imm);
-                               uint64_t bits = *m_emu.ReadMem<uint64_t>(addr);
+                               uint64_t addr =
+                                   rs1 + uint64_t(SignExt(inst.imm));
+                               uint64_t bits = *m_emu.ReadMem<T>(addr);
+                               unsigned numBits = sizeof(T) * 8;
                                APFloat f(semantics(), APInt(numBits, bits));
                                return inst.rd.WriteAPFloat(m_emu, f);
                              })
         .value_or(false);
   }
-  bool operator()(FLW inst) { return F_Load(inst, &APFloat::IEEEsingle, 32); }
-  template <typename T> bool F_Store(T inst, bool isDouble) {
+  bool operator()(FLW inst) {
+    return F_Load<FLW, uint32_t>(inst, &APFloat::IEEEsingle);
+  }
+  template <typename I, typename T> bool F_Store(I inst, bool isDouble) {
     return transformOptional(zipOpt(inst.rs1.Read(m_emu),
                                     inst.rs2.ReadAPFloat(m_emu, isDouble)),
                              [&](auto &&tup) {
                                auto [rs1, rs2] = tup;
-                               uint64_t addr = rs1 + uint64_t(inst.imm);
+                               uint64_t addr =
+                                   rs1 + uint64_t(SignExt(inst.imm));
                                uint64_t bits =
                                    rs2.bitcastToAPInt().getZExtValue();
-                               return m_emu.WriteMem<uint64_t>(addr, bits);
+                               return m_emu.WriteMem<T>(addr, bits);
                              })
         .value_or(false);
   }
-  bool operator()(FSW inst) { return F_Store(inst, false); }
+  bool operator()(FSW inst) { return F_Store<FSW, uint32_t>(inst, false); }
   std::tuple<bool, APFloat> FusedMultiplyAdd(APFloat rs1, APFloat rs2,
                                              APFloat rs3) {
     auto opStatus = rs1.fusedMultiplyAdd(rs2, rs3, m_emu.GetRoundingMode());
@@ -1616,8 +1623,10 @@ public:
   bool operator()(FCVT_S_LU inst) {
     return FCVT_f2i(inst, &Rs::Read, APFloat::IEEEsingle());
   }
-  bool operator()(FLD inst) { return F_Load(inst, &APFloat::IEEEdouble, 64); }
-  bool operator()(FSD inst) { return F_Store(inst, true); }
+  bool operator()(FLD inst) {
+    return F_Load<FLD, uint64_t>(inst, &APFloat::IEEEdouble);
+  }
+  bool operator()(FSD inst) { return F_Store<FSD, uint64_t>(inst, true); }
   bool operator()(FMADD_D inst) { return FMA(inst, true, 1.0f, 1.0f); }
   bool operator()(FMSUB_D inst) { return FMA(inst, true, 1.0f, -1.0f); }
   bool operator()(FNMSUB_D inst) { return FMA(inst, true, -1.0f, 1.0f); }
@@ -1831,10 +1840,23 @@ EmulateInstructionRISCV::GetRegisterInfo(RegisterKind reg_kind,
     }
   }
 
-  RegisterInfoPOSIX_riscv64 reg_info(m_arch,
-                                     RegisterInfoPOSIX_riscv64::eRegsetMaskAll);
-  const RegisterInfo *array = reg_info.GetRegisterInfo();
-  const uint32_t length = reg_info.GetRegisterCount();
+  std::unique_ptr<RegisterInfoInterface> reg_info;
+  switch (m_arch.GetTriple().getArch()) {
+  case llvm::Triple::riscv32:
+    reg_info = std::make_unique<RegisterInfoPOSIX_riscv32>(
+        m_arch, RegisterInfoPOSIX_riscv32::eRegsetMaskAll);
+    break;
+  case llvm::Triple::riscv64:
+    reg_info = std::make_unique<RegisterInfoPOSIX_riscv64>(
+        m_arch, RegisterInfoPOSIX_riscv64::eRegsetMaskAll);
+    break;
+  default:
+    assert(false && "unsupported triple");
+    return {};
+  }
+
+  const RegisterInfo *array = reg_info->GetRegisterInfo();
+  const uint32_t length = reg_info->GetRegisterCount();
 
   if (reg_index >= length || reg_kind != eRegisterKindLLDB)
     return {};
@@ -1930,27 +1952,23 @@ bool EmulateInstructionRISCV::SupportsThisArch(const ArchSpec &arch) {
   return arch.GetTriple().isRISCV();
 }
 
-BreakpointLocations
-RISCVSingleStepBreakpointLocationsPredictor::GetBreakpointLocations(
-    Status &status) {
+llvm::Expected<BreakpointLocations>
+RISCVSingleStepBreakpointLocationsPredictor::GetBreakpointLocations() {
   EmulateInstructionRISCV *riscv_emulator =
       static_cast<EmulateInstructionRISCV *>(m_emulator_up.get());
 
-  auto pc = riscv_emulator->ReadPC();
-  if (!pc) {
-    status = Status("Can't read PC");
-    return {};
-  }
+  std::optional<addr_t> pc = riscv_emulator->ReadPC();
+  if (!pc)
+    return llvm::createStringError("Can't read PC");
 
   auto inst = riscv_emulator->ReadInstructionAt(*pc);
   if (!inst) {
     // Can't read instruction. Try default handler.
-    return SingleStepBreakpointLocationsPredictor::GetBreakpointLocations(
-        status);
+    return SingleStepBreakpointLocationsPredictor::GetBreakpointLocations();
   }
 
   if (FoundLoadReserve(inst->decoded))
-    return HandleAtomicSequence(*pc, status);
+    return HandleAtomicSequence(*pc);
 
   if (FoundStoreConditional(inst->decoded)) {
     // Ill-formed atomic sequence (SC doesn't have corresponding LR
@@ -1961,10 +1979,10 @@ RISCVSingleStepBreakpointLocationsPredictor::GetBreakpointLocations(
               "RISCVSingleStepBreakpointLocationsPredictor::%s: can't find "
               "corresponding load reserve instruction",
               __FUNCTION__);
-    return {*pc + (inst->is_rvc ? 2u : 4u)};
+    return BreakpointLocations{*pc + (inst->is_rvc ? 2u : 4u)};
   }
 
-  return SingleStepBreakpointLocationsPredictor::GetBreakpointLocations(status);
+  return SingleStepBreakpointLocationsPredictor::GetBreakpointLocations();
 }
 
 llvm::Expected<unsigned>
@@ -1985,9 +2003,9 @@ RISCVSingleStepBreakpointLocationsPredictor::GetBreakpointSize(
   return 4;
 }
 
-BreakpointLocations
+llvm::Expected<BreakpointLocations>
 RISCVSingleStepBreakpointLocationsPredictor::HandleAtomicSequence(
-    lldb::addr_t pc, Status &error) {
+    lldb::addr_t pc) {
   EmulateInstructionRISCV *riscv_emulator =
       static_cast<EmulateInstructionRISCV *>(m_emulator_up.get());
 
@@ -2003,10 +2021,8 @@ RISCVSingleStepBreakpointLocationsPredictor::HandleAtomicSequence(
   std::vector<lldb::addr_t> bp_addrs;
   do {
     inst = riscv_emulator->ReadInstructionAt(pc);
-    if (!inst) {
-      error = Status("Can't read instruction");
-      return {};
-    }
+    if (!inst)
+      return llvm::createStringError("Can't read instruction");
 
     if (B *branch = std::get_if<B>(&inst->decoded))
       bp_addrs.push_back(pc + SignExt(branch->imm));
@@ -2026,7 +2042,7 @@ RISCVSingleStepBreakpointLocationsPredictor::HandleAtomicSequence(
               "RISCVSingleStepBreakpointLocationsPredictor::%s: can't find "
               "corresponding store conditional instruction",
               __FUNCTION__);
-    return {entry_pc + (lr_inst->is_rvc ? 2u : 4u)};
+    return BreakpointLocations{entry_pc + (lr_inst->is_rvc ? 2u : 4u)};
   }
 
   lldb::addr_t exit_pc = pc;

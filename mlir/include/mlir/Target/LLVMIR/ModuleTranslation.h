@@ -19,6 +19,7 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Value.h"
+#include "mlir/Support/LLVM.h"
 #include "mlir/Support/StateStack.h"
 #include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Target/LLVMIR/LLVMTranslationInterface.h"
@@ -27,6 +28,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/IR/FPEnv.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/VirtualFileSystemFwd.h"
 
 namespace llvm {
 class BasicBlock;
@@ -34,6 +36,7 @@ class CallBase;
 class CanonicalLoopInfo;
 class Function;
 class IRBuilderBase;
+class Metadata;
 class OpenMPIRBuilder;
 class Value;
 } // namespace llvm
@@ -64,7 +67,7 @@ class ComdatSelectorOp;
 class ModuleTranslation {
   friend std::unique_ptr<llvm::Module>
   mlir::translateModuleToLLVMIR(Operation *, llvm::LLVMContext &, StringRef,
-                                bool);
+                                bool, llvm::vfs::FileSystem *);
 
 public:
   /// Stores the mapping between a function name and its LLVM IR representation.
@@ -96,6 +99,11 @@ public:
   llvm::Value *lookupValue(Value value) const {
     return valueMapping.lookup(value);
   }
+
+  /// Remap old value with new value in the MLIR-to-LLVM value map so later
+  /// translations use the replacement. Existing LLVM instructions are not
+  /// rewritten.
+  void remapAllValuesWith(llvm::Value *oldValue, llvm::Value *newValue);
 
   /// Looks up remapped a list of remapped values.
   SmallVector<llvm::Value *> lookupValues(ValueRange values);
@@ -202,6 +210,9 @@ public:
   /// in these blocks.
   void forgetMapping(Region &region);
 
+  /// Removes the mapping for the given value.
+  void forgetMapping(Value value) { valueMapping.erase(value); }
+
   /// Returns the LLVM metadata corresponding to a mlir LLVM dialect alias scope
   /// attribute. Creates the metadata node if it has not been converted before.
   llvm::MDNode *getOrCreateAliasScope(AliasScopeAttr aliasScopeAttr);
@@ -256,6 +267,11 @@ public:
     return globalsMapping.lookup(op);
   }
 
+  /// Finds an LLVM IR global value by the mlir.global symbol name.
+  llvm::GlobalValue *lookupGlobal(StringRef name) const {
+    return globalsByNameMapping.lookup(name);
+  }
+
   /// Finds an LLVM IR global value that corresponds to the given MLIR operation
   /// defining a global alias value.
   llvm::GlobalValue *lookupAlias(Operation *op) {
@@ -271,6 +287,10 @@ public:
   /// Returns the OpenMP IR builder associated with the LLVM IR module being
   /// constructed.
   llvm::OpenMPIRBuilder *getOpenMPBuilder();
+
+  /// Returns the virtual filesystem to use for file operations. Falls back to
+  /// the real filesystem if none was provided.
+  llvm::vfs::FileSystem &getFileSystem();
 
   /// Returns the LLVM module in which the IR is being constructed.
   llvm::Module *getLLVMModule() { return llvmModule.get(); }
@@ -308,6 +328,13 @@ public:
                             /*recordInsertions=*/false);
   }
 
+  /// Converts the given MLIR operation into LLVM IR using this translator. It
+  /// is up to the caller to ensure that all operands have been mapped before
+  /// calling this function.
+  LogicalResult convertOperation(Operation &op, llvm::IRBuilderBase &builder) {
+    return convertOperationImpl(op, builder, /*recordInsertions=*/false);
+  }
+
   /// Converts argument and result attributes from `attrsOp` to LLVM IR
   /// attributes on the `call` instruction. Returns failure if conversion fails.
   /// The `immArgPositions` parameter is only relevant for intrinsics. It
@@ -322,6 +349,13 @@ public:
   /// Gets the named metadata in the LLVM IR module being constructed, creating
   /// it if it does not exist.
   llvm::NamedMDNode *getOrInsertNamedModuleMetadata(StringRef name);
+
+  /// Converts an LLVM dialect metadata attribute to LLVM IR metadata.
+  /// Returns failure and emits a diagnostic using `emitError` if the attribute
+  /// cannot be converted.
+  FailureOr<llvm::Metadata *>
+  convertMetadataAttr(Attribute attr,
+                      function_ref<InFlightDiagnostic()> emitError);
 
   /// Creates a stack frame of type `T` on ModuleTranslation stack. `T` must
   /// be derived from `StackFrameBase<T>` and constructible from the provided
@@ -349,15 +383,43 @@ public:
 
   SymbolTableCollection &symbolTable() { return symbolTableCollection; }
 
+  // A helper callback that takes an attribute, and if it is a StringAttr,
+  // properly converts it to the 'no-builtin-VALUE' form.
+  static std::optional<llvm::Attribute> convertNoBuiltin(llvm::LLVMContext &ctx,
+                                                         mlir::Attribute a);
+
+  static std::optional<llvm::Attribute>
+  convertDefaultFuncAttr(llvm::LLVMContext &ctx,
+                         mlir::NamedAttribute namedAttr);
+
+  /// A template that takes a collection-like attribute, and converts it via a
+  /// user provided callback, then adds each element as function attributes to
+  /// the provided operation.
+  template <typename AttrsTy, typename Operation, typename Converter>
+  void convertFunctionAttrCollection(AttrsTy attrs, Operation *op,
+                                     const Converter &conv) {
+    if (!attrs)
+      return;
+    for (auto elt : attrs) {
+      std::optional<llvm::Attribute> result = conv(getLLVMContext(), elt);
+      if (result)
+        op->addFnAttr(*result);
+    }
+  }
+
+  llvm::Attribute convertAllocsizeAttr(DenseI32ArrayAttr allocsizeAttr);
+
 private:
-  ModuleTranslation(Operation *module,
-                    std::unique_ptr<llvm::Module> llvmModule);
+  ModuleTranslation(Operation *module, std::unique_ptr<llvm::Module> llvmModule,
+                    llvm::vfs::FileSystem *fs = nullptr);
   ~ModuleTranslation();
 
   /// Converts individual components.
-  LogicalResult convertOperation(Operation &op, llvm::IRBuilderBase &builder,
-                                 bool recordInsertions = false);
+  LogicalResult convertOperationImpl(Operation &op,
+                                     llvm::IRBuilderBase &builder,
+                                     bool recordInsertions = false);
   LogicalResult convertFunctionSignatures();
+  LogicalResult convertFunctionMetadata();
   LogicalResult convertFunctions();
   LogicalResult convertIFuncs();
   LogicalResult convertComdats();
@@ -369,7 +431,18 @@ private:
   /// - Create named global variables that correspond to llvm.mlir.global
   /// definitions, similarly Convert llvm.global_ctors and global_dtors ops.
   /// - Create global alias that correspond to llvm.mlir.alias.
+  /// Global metadata that can reference other global objects (including
+  /// ifuncs) is converted later by `convertGlobalMetadata`.
   LogicalResult convertGlobalsAndAliases();
+
+  /// Attach metadata on LLVM globals after all global objects exist so that
+  /// symbol references (globals, aliases, functions, and ifuncs) can be
+  /// resolved.
+  LogicalResult convertGlobalMetadata();
+  /// Converts a symbol ref to LLVM IR metadata, or fails if unresolved.
+  FailureOr<llvm::Metadata *>
+  convertSymbolRefToMetadata(FlatSymbolRefAttr name,
+                             function_ref<InFlightDiagnostic()> emitError);
   LogicalResult convertOneFunction(LLVMFuncOp func);
   LogicalResult convertBlockImpl(Block &bb, bool ignoreArguments,
                                  llvm::IRBuilderBase &builder,
@@ -419,8 +492,18 @@ private:
   /// Builder for LLVM IR generation of OpenMP constructs.
   std::unique_ptr<llvm::OpenMPIRBuilder> ompBuilder;
 
+  /// Optional virtual filesystem for file operations. When null, the real
+  /// filesystem is used (via getFileSystem()). Not owned.
+  llvm::vfs::FileSystem *fileSystem = nullptr;
+
   /// Mappings between llvm.mlir.global definitions and corresponding globals.
   DenseMap<Operation *, llvm::GlobalValue *> globalsMapping;
+
+  /// Name-keyed mirror of `globalsMapping`, populated alongside it during
+  /// `convertGlobalsAndAliases`.  Lets `getLLVMConstant` resolve
+  /// `FlatSymbolRefAttr` leaves of aggregate constants that name a global
+  /// (mirroring how `functionMapping` resolves function names).
+  llvm::StringMap<llvm::GlobalValue *> globalsByNameMapping;
 
   /// Mappings between llvm.mlir.alias definitions and corresponding global
   /// aliases.
@@ -511,6 +594,15 @@ llvm::CallInst *createIntrinsicCall(llvm::IRBuilderBase &builder,
                                     llvm::Intrinsic::ID intrinsic,
                                     ArrayRef<llvm::Value *> args = {},
                                     ArrayRef<llvm::Type *> tys = {});
+
+/// Creates a call to an LLVM IR intrinsic function with the given return type
+/// and arguments. If the intrinsic is overloaded, the function signature will
+/// be automatically resolved based on the provided return type and argument
+/// types.
+llvm::CallInst *createIntrinsicCall(llvm::IRBuilderBase &builder,
+                                    llvm::Intrinsic::ID intrinsic,
+                                    llvm::Type *retTy,
+                                    ArrayRef<llvm::Value *> args);
 
 /// Creates a call to a LLVM IR intrinsic defined by LLVM_IntrOpBase. This
 /// resolves the overloads, and maps mixed MLIR value and attribute arguments to

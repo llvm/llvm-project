@@ -23,10 +23,12 @@
 
 #include <algorithm>
 #include <array>
+#include <cassert>
 #include <ranges>
 
 #include "almost_satisfies_types.h"
 #include "test_iterators.h"
+#include "type_algorithms.h"
 
 template <class Iter1, class Sent1 = Iter1, class Iter2 = int*, class Sent2 = Iter2>
 concept HasStartsWithIt = requires(Iter1 first1, Sent1 last1, Iter2 first2, Sent2 last2) {

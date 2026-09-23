@@ -13,8 +13,8 @@
 #include "LoongArchTargetMachine.h"
 #include "LoongArch.h"
 #include "LoongArchMachineFunctionInfo.h"
+#include "LoongArchTargetObjectFile.h"
 #include "LoongArchTargetTransformInfo.h"
-#include "MCTargetDesc/LoongArchBaseInfo.h"
 #include "TargetInfo/LoongArchTargetInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/Passes.h"
@@ -37,12 +37,14 @@ LLVMInitializeLoongArchTarget() {
   RegisterTargetMachine<LoongArchTargetMachine> Y(getTheLoongArch64Target());
   auto *PR = PassRegistry::getPassRegistry();
   initializeLoongArchDeadRegisterDefinitionsPass(*PR);
+  initializeLoongArchMemoryBarrierOptPass(*PR);
   initializeLoongArchMergeBaseOffsetOptPass(*PR);
   initializeLoongArchOptWInstrsPass(*PR);
   initializeLoongArchPreRAExpandPseudoPass(*PR);
   initializeLoongArchExpandPseudoPass(*PR);
   initializeLoongArchDAGToDAGISelLegacyPass(*PR);
   initializeLoongArchExpandAtomicPseudoPass(*PR);
+  initializeLoongArchLateBranchOptPass(*PR);
 }
 
 static cl::opt<bool> EnableLoongArchDeadRegisterElimination(
@@ -62,6 +64,11 @@ static cl::opt<bool>
                           cl::desc("Enable the merge base offset pass"),
                           cl::init(true), cl::Hidden);
 
+static cl::opt<bool>
+    EnableSinkFold("loongarch-enable-sink-fold",
+                   cl::desc("Enable sinking and folding of instruction copies"),
+                   cl::init(true), cl::Hidden);
+
 static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
   return RM.value_or(Reloc::Static);
 }
@@ -74,11 +81,11 @@ getEffectiveLoongArchCodeModel(const Triple &TT,
 
   switch (*CM) {
   case CodeModel::Small:
-    return *CM;
   case CodeModel::Medium:
+    return *CM;
   case CodeModel::Large:
     if (!TT.isArch64Bit())
-      report_fatal_error("Medium/Large code model requires LA64");
+      report_fatal_error("Large code model requires LA64");
     return *CM;
   default:
     report_fatal_error(
@@ -90,10 +97,10 @@ LoongArchTargetMachine::LoongArchTargetMachine(
     const Target &T, const Triple &TT, StringRef CPU, StringRef FS,
     const TargetOptions &Options, std::optional<Reloc::Model> RM,
     std::optional<CodeModel::Model> CM, CodeGenOptLevel OL, bool JIT)
-    : CodeGenTargetMachineImpl(T, TT.computeDataLayout(), TT, CPU, FS, Options,
+    : CodeGenTargetMachineImpl(T, TT, CPU, FS, Options,
                                getEffectiveRelocModel(RM),
                                getEffectiveLoongArchCodeModel(TT, CM), OL),
-      TLOF(std::make_unique<TargetLoweringObjectFileELF>()) {
+      TLOF(std::make_unique<LoongArchELFTargetObjectFile>()) {
   initAsmInfo();
 }
 
@@ -115,20 +122,7 @@ LoongArchTargetMachine::getSubtargetImpl(const Function &F) const {
   std::string Key = CPU + TuneCPU + FS;
   auto &I = SubtargetMap[Key];
   if (!I) {
-    // This needs to be done before we create a new subtarget since any
-    // creation will depend on the TM and the code generation flags on the
-    // function that reside in TargetOptions.
-    resetTargetOptions(F);
-    auto ABIName = Options.MCOptions.getABIName();
-    if (const MDString *ModuleTargetABI = dyn_cast_or_null<MDString>(
-            F.getParent()->getModuleFlag("target-abi"))) {
-      auto TargetABI = LoongArchABI::getTargetABI(ABIName);
-      if (TargetABI != LoongArchABI::ABI_Unknown &&
-          ModuleTargetABI->getString() != ABIName) {
-        report_fatal_error("-target-abi option != target-abi module flag");
-      }
-      ABIName = ModuleTargetABI->getString();
-    }
+    StringRef ABIName = getTargetABIName(*F.getParent());
     I = std::make_unique<LoongArchSubtarget>(TargetTriple, CPU, TuneCPU, FS,
                                              ABIName, *this);
   }
@@ -146,7 +140,9 @@ namespace {
 class LoongArchPassConfig : public TargetPassConfig {
 public:
   LoongArchPassConfig(LoongArchTargetMachine &TM, PassManagerBase &PM)
-      : TargetPassConfig(TM, PM) {}
+      : TargetPassConfig(TM, PM) {
+    setEnableSinkAndFold(EnableSinkFold);
+  }
 
   LoongArchTargetMachine &getLoongArchTargetMachine() const {
     return getTM<LoongArchTargetMachine>();
@@ -161,6 +157,7 @@ public:
   void addPreRegAlloc() override;
   bool addRegAssignAndRewriteFast() override;
   bool addRegAssignAndRewriteOptimized() override;
+  void addMachineLateOptimization() override;
 };
 } // end namespace
 
@@ -206,6 +203,8 @@ void LoongArchPassConfig::addPreEmitPass2() {
   // avoiding the possibility for other passes to break the requirements for
   // forward progress in the LL/SC block.
   addPass(createLoongArchExpandAtomicPseudoPass());
+  if (TM->getOptLevel() != CodeGenOptLevel::None)
+    addPass(createLoongArchMemoryBarrierOptPass());
 }
 
 void LoongArchPassConfig::addMachineSSAOptimization() {
@@ -234,4 +233,10 @@ bool LoongArchPassConfig::addRegAssignAndRewriteOptimized() {
       EnableLoongArchDeadRegisterElimination)
     addPass(createLoongArchDeadRegisterDefinitionsPass());
   return TargetPassConfig::addRegAssignAndRewriteOptimized();
+}
+
+void LoongArchPassConfig::addMachineLateOptimization() {
+  if (TM->getOptLevel() != CodeGenOptLevel::None)
+    addPass(createLoongArchLateBranchOptPass());
+  TargetPassConfig::addMachineLateOptimization();
 }

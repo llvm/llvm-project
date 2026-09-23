@@ -14,11 +14,12 @@ mlir_target_link_libraries(MLIRVectorTestPasses PUBLIC
   MLIRLinalgTransforms
   MLIRLLVMDialect
   MLIRMemRefDialect
+  MLIRNVGPUDialect
   MLIRPass
   MLIRSCFDialect
   MLIRTensorDialect
   MLIRTransformUtils
   MLIRVectorDialect
   MLIRVectorToSCF
-  MLIRX86VectorDialect
+  MLIRX86Dialect
   )

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PORTABILITY_RESTRICTINCLUDESSCHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PORTABILITY_RESTRICTINCLUDESSCHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PORTABILITY_RESTRICTSYSTEMINCLUDESCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PORTABILITY_RESTRICTSYSTEMINCLUDESCHECK_H
 
 #include "../ClangTidyCheck.h"
 #include "../GlobList.h"
@@ -23,7 +23,7 @@ namespace clang::tidy::portability {
 class RestrictSystemIncludesCheck : public ClangTidyCheck {
 public:
   RestrictSystemIncludesCheck(StringRef Name, ClangTidyContext *Context,
-                              std::string DefaultAllowedIncludes = "*")
+                              StringRef DefaultAllowedIncludes = "*")
       : ClangTidyCheck(Name, Context),
         AllowedIncludes(Options.get("Includes", DefaultAllowedIncludes)),
         AllowedIncludesGlobList(AllowedIncludes) {}
@@ -36,7 +36,7 @@ public:
   }
 
 private:
-  std::string AllowedIncludes;
+  StringRef AllowedIncludes;
   GlobList AllowedIncludesGlobList;
 };
 
@@ -70,7 +70,7 @@ private:
     bool IsInMainFile;       // Whether or not the include is in the main file
   };
 
-  using FileIncludes = llvm::SmallVector<IncludeDirective, 8>;
+  using FileIncludes = SmallVector<IncludeDirective, 8>;
   llvm::SmallDenseMap<FileID, FileIncludes> IncludeDirectives;
 
   RestrictSystemIncludesCheck &Check;
@@ -79,4 +79,4 @@ private:
 
 } // namespace clang::tidy::portability
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PORTABILITY_RESTRICTINCLUDESSCHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PORTABILITY_RESTRICTSYSTEMINCLUDESCHECK_H

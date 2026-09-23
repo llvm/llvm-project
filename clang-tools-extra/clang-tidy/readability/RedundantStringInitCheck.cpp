@@ -1,4 +1,4 @@
-//===- RedundantStringInitCheck.cpp - clang-tidy ----------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,13 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "RedundantStringInitCheck.h"
-#include "../utils/Matchers.h"
 #include "../utils/OptionsUtils.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include <optional>
 
 using namespace clang::ast_matchers;
-using namespace clang::tidy::matchers;
 
 namespace clang::tidy::readability {
 
@@ -23,8 +21,8 @@ const char DefaultStringNames[] =
 static std::vector<StringRef> removeNamespaces(ArrayRef<StringRef> Names) {
   std::vector<StringRef> Result;
   Result.reserve(Names.size());
-  for (StringRef Name : Names) {
-    StringRef::size_type ColonPos = Name.rfind(':');
+  for (const StringRef Name : Names) {
+    const StringRef::size_type ColonPos = Name.rfind(':');
     Result.push_back(
         Name.drop_front(ColonPos == StringRef::npos ? 0 : ColonPos + 1));
   }
@@ -125,31 +123,31 @@ void RedundantStringInitCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *VDecl = Result.Nodes.getNodeAs<VarDecl>("vardecl")) {
     // VarDecl's getSourceRange() spans 'string foo = ""' or 'string bar("")'.
     // So start at getLocation() to span just 'foo = ""' or 'bar("")'.
-    SourceRange ReplaceRange(VDecl->getLocation(), VDecl->getEndLoc());
+    const SourceRange ReplaceRange(VDecl->getLocation(), VDecl->getEndLoc());
     diag(VDecl->getLocation(), "redundant string initialization")
         << FixItHint::CreateReplacement(ReplaceRange, VDecl->getName());
   }
   if (const auto *FDecl = Result.Nodes.getNodeAs<FieldDecl>("fieldDecl")) {
     // FieldDecl's getSourceRange() spans 'string foo = ""'.
     // So start at getLocation() to span just 'foo = ""'.
-    SourceRange ReplaceRange(FDecl->getLocation(), FDecl->getEndLoc());
+    const SourceRange ReplaceRange(FDecl->getLocation(), FDecl->getEndLoc());
     diag(FDecl->getLocation(), "redundant string initialization")
         << FixItHint::CreateReplacement(ReplaceRange, FDecl->getName());
   }
   if (const auto *CtorInit =
           Result.Nodes.getNodeAs<CXXCtorInitializer>("ctorInit")) {
-    if (const FieldDecl *Member = CtorInit->getMember()) {
-      if (!Member->hasInClassInitializer() ||
-          Result.Nodes.getNodeAs<Expr>("empty_init")) {
-        // The String isn't declared in the class with an initializer or its
-        // declared with a redundant initializer, which will be removed. Either
-        // way the string will be default initialized, therefore we can remove
-        // the constructor initializer entirely.
-        diag(CtorInit->getMemberLocation(), "redundant string initialization")
-            << FixItHint::CreateRemoval(CtorInit->getSourceRange());
-        return;
-      }
+    if (const FieldDecl *Member = CtorInit->getMember();
+        Member && (!Member->hasInClassInitializer() ||
+                   Result.Nodes.getNodeAs<Expr>("empty_init"))) {
+      // The String isn't declared in the class with an initializer or its
+      // declared with a redundant initializer, which will be removed. Either
+      // way the string will be default initialized, therefore we can remove
+      // the constructor initializer entirely.
+      diag(CtorInit->getMemberLocation(), "redundant string initialization")
+          << FixItHint::CreateRemoval(CtorInit->getSourceRange());
+      return;
     }
+
     const CXXConstructExpr *Construct = getConstructExpr(*CtorInit);
     if (!Construct)
       return;

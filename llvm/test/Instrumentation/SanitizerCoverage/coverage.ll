@@ -17,57 +17,6 @@ entry:
   ret void
 }
 
-; CHECK0-NOT: @llvm.global_ctors = {{.*}}{ i32 2, ptr @sancov.module_ctor }
-; CHECK1: @llvm.global_ctors = {{.*}}{ i32 2, ptr @sancov.module_ctor, ptr null }
-; CHECK2: @llvm.global_ctors = {{.*}}{ i32 2, ptr @sancov.module_ctor, ptr null }
-
-; CHECK0-NOT: call void @__sanitizer_cov(
-; CHECK0-NOT: call void @__sanitizer_cov_module_init(
-
-; CHECK1-LABEL: define void @foo
-; CHECK1: %0 = load atomic i32, ptr {{.*}} monotonic, align 4, !nosanitize
-; CHECK1: %1 = icmp sge i32 0, %0
-; CHECK1: br i1 %1, label %2, label %3
-; CHECK1: call void @__sanitizer_cov(ptr{{.*}})
-; CHECK1: call void asm sideeffect "", ""()
-; CHECK1-NOT: call void @__sanitizer_cov
-; CHECK1: ret void
-
-; CHECK1-LABEL: define internal void @sancov.module_ctor
-; CHECK1-NOT: ret
-; CHECK1: call void @__sanitizer_cov_module_init({{.*}}, i64 2, {{.*}}@__sancov_gen_modname
-; CHECK1: ret
-
-; CHECK_WITH_CHECK-LABEL: define void @foo
-; CHECK_WITH_CHECK: __sanitizer_cov_with_check
-; CHECK_WITH_CHECK: ret void
-; CHECK_WITH_CHECK-LABEL: define internal void @sancov.module_ctor
-; CHECK_WITH_CHECK-NOT: ret
-; CHECK_WITH_CHECK: call void @__sanitizer_cov_module_init({{.*}}, i64 3,
-; CHECK_WITH_CHECK: ret
-
-; CHECK2-LABEL: define void @foo
-; CHECK2: call void @__sanitizer_cov
-; CHECK2: call void asm sideeffect "", ""()
-; CHECK2: call void @__sanitizer_cov
-; CHECK2: call void asm sideeffect "", ""()
-; CHECK2: call void asm sideeffect "", ""()
-; CHECK2-NOT: call void @__sanitizer_cov
-; CHECK2: ret void
-
-; CHECK2-LABEL: define internal void @sancov.module_ctor
-; CHECK2-NOT: ret
-; CHECK2: call void @__sanitizer_cov_module_init({{.*}}, i64 3,
-; CHECK2: ret
-
-; CHECK3-LABEL: define void @foo
-; CHECK3: call void @__sanitizer_cov
-; CHECK3: call void @__sanitizer_cov
-; CHECK3-NOT: ret void
-; CHECK3: call void @__sanitizer_cov
-; CHECK3-NOT: call void @__sanitizer_cov
-; CHECK3: ret void
-
 %struct.StructWithVptr = type { ptr }
 
 define void @CallViaVptr(ptr %foo) uwtable sanitize_address {
@@ -81,6 +30,8 @@ entry:
 }
 
 ; CHECK_TRACE_PC-LABEL: define void @foo
+; CHECK_TRACE_PC: call void @__sanitizer_cov_trace_pc
+; CHECK_TRACE_PC: call void @__sanitizer_cov_trace_pc
 ; CHECK_TRACE_PC: call void @__sanitizer_cov_trace_pc
 ; CHECK_TRACE_PC: ret void
 

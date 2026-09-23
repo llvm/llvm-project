@@ -196,6 +196,11 @@
 
   Write BOLT Address Translation tables
 
+- `--fix-branches-with-liveness`
+
+  Use liveness analysis to decide whether AArch64 branch inversion must
+  preserve condition flags
+
 - `--force-data-relocations`
 
   Force relocations to data sections to always be processed
@@ -380,11 +385,6 @@
 - `-v <uint>`
 
   Set verbosity level for diagnostic output
-
-- `--write-dwp`
-
-  Output a single dwarf package file (dwp) instead of multiple non-relocatable
-  dwarf object files (dwo).
 
 ### BOLT optimization options:
 
@@ -729,7 +729,7 @@
 
 - `--plt=<value>`
 
-  Optimize PLT calls (requires linking with -znow)
+  Optimize PLT calls (requires linking with -znow on non-x86 architectures)
   - `none`: do not optimize PLT calls
   - `hot`: optimize executed (hot) PLT calls
   - `all`: optimize all PLT calls
@@ -815,6 +815,15 @@
 - `--runtime-instrumentation-lib=<string>`
 
   Specify file name of the runtime instrumentation library
+
+- `--runtime-lib-init-hook=<value>`
+
+  Primary target for hooking runtime library initialization, used in
+  fallback order of availability in input binary (entry_point -> init
+   -> init_array) (default: entry_point)
+  - `entry_point`: use ELF Header Entry Point
+  - `init`: use ELF DT_INIT entry
+  - `init_array`: use ELF .init_array entry
 
 - `--sctc-mode=<value>`
 

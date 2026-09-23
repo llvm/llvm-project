@@ -46,6 +46,9 @@ struct UncheckedOptionalAccessModelOptions {
   /// are confident in this const accessor caching, we shouldn't need the
   /// IgnoreSmartPointerDereference option anymore.
   bool IgnoreSmartPointerDereference = false;
+
+  /// In generating diagnostics, ignore calls to `optional::value()`.
+  bool IgnoreValueCalls = false;
 };
 
 using UncheckedOptionalAccessLattice = CachedConstAccessorsLattice<NoopLattice>;
@@ -59,8 +62,9 @@ class UncheckedOptionalAccessModel
 public:
   UncheckedOptionalAccessModel(ASTContext &Ctx, dataflow::Environment &Env);
 
-  /// Returns a matcher for the optional classes covered by this model.
-  static ast_matchers::DeclarationMatcher optionalClassDecl();
+  /// Returns a matcher for calls to optional classes diagnosed by this model.
+  static ast_matchers::StatementMatcher memberCallToOptionalClass();
+  static ast_matchers::StatementMatcher operatorCallToOptionalClass();
 
   static UncheckedOptionalAccessLattice initialElement() { return {}; }
 

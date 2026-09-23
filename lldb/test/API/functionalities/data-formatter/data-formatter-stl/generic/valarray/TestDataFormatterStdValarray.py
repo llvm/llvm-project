@@ -9,11 +9,10 @@ from lldbsuite.test import lldbutil
 
 
 class StdValarrayDataFormatterTestCase(TestBase):
-    def do_test(self):
-        (self.target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
-            self, "break here", lldb.SBFileSpec("main.cpp", False)
-        )
+    SHARED_BUILD_TESTCASE = False
+    TEST_WITH_PDB_DEBUG_INFO = True
 
+    def check_valarray(self, process, bkpt):
         #
         # std::valarray
         #
@@ -22,6 +21,18 @@ class StdValarrayDataFormatterTestCase(TestBase):
             "frame variable va_int",
             substrs=[
                 "va_int = size=4",
+                "[0] = 0",
+                "[1] = 0",
+                "[2] = 0",
+                "[3] = 0",
+                "}",
+            ],
+        )
+        self.expect("frame variable va_empty", substrs=["va_empty = size=0"])
+        self.expect(
+            "frame variable va_ref",
+            patterns=[r"va_ref = (0x[0-9a-fA-F]+ )?size=4"],
+            substrs=[
                 "[0] = 0",
                 "[1] = 0",
                 "[2] = 0",
@@ -42,6 +53,17 @@ class StdValarrayDataFormatterTestCase(TestBase):
                 "}",
             ],
         )
+        self.expect(
+            "frame variable va_ref",
+            patterns=[r"va_ref = (0x[0-9a-fA-F]+ )?size=4"],
+            substrs=[
+                "[0] = 1",
+                "[1] = 12",
+                "[2] = 123",
+                "[3] = 1234",
+                "}",
+            ],
+        )
 
         # check access-by-index
         self.expect("frame variable va_int[0]", substrs=["1"])
@@ -51,7 +73,7 @@ class StdValarrayDataFormatterTestCase(TestBase):
         self.expect(
             "frame variable va_int[4]",
             error=True,
-            substrs=['array index 4 is not valid for "(valarray<int>) va_int"'],
+            substrs=['array index 4 is not valid for "(valarray'],
         )
 
         self.expect(
@@ -74,8 +96,14 @@ class StdValarrayDataFormatterTestCase(TestBase):
         self.expect(
             "frame variable va_double[4]",
             error=True,
-            substrs=['array index 4 is not valid for "(valarray<double>) va_double"'],
+            substrs=['array index 4 is not valid for "(valarray'],
         )
+
+    def do_test(self):
+        (self.target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
+            self, "break here", lldb.SBFileSpec("main.cpp", False)
+        )
+        self.check_valarray(process, bkpt)
 
         #
         # std::slice_array
@@ -101,7 +129,7 @@ class StdValarrayDataFormatterTestCase(TestBase):
         self.expect(
             "frame variable sa[4]",
             error=True,
-            substrs=['array index 4 is not valid for "(slice_array<int>) sa"'],
+            substrs=['array index 4 is not valid for "(slice_array'],
         )
 
         #
@@ -126,7 +154,7 @@ class StdValarrayDataFormatterTestCase(TestBase):
         self.expect(
             "frame variable ga[3]",
             error=True,
-            substrs=['array index 3 is not valid for "(gslice_array<int>) ga"'],
+            substrs=['array index 3 is not valid for "(gslice_array'],
         )
         #
         # std::mask_array
@@ -148,7 +176,7 @@ class StdValarrayDataFormatterTestCase(TestBase):
         self.expect(
             "frame variable ma[2]",
             error=True,
-            substrs=['array index 2 is not valid for "(mask_array<int>) ma"'],
+            substrs=['array index 2 is not valid for "(mask_array'],
         )
 
         #
@@ -173,10 +201,28 @@ class StdValarrayDataFormatterTestCase(TestBase):
         self.expect(
             "frame variable ia[3]",
             error=True,
-            substrs=['array index 3 is not valid for "(indirect_array<int>) ia"'],
+            substrs=['array index 3 is not valid for "(indirect_array'],
         )
 
     @add_test_categories(["libc++"])
     def test_libcxx(self):
         self.build(dictionary={"USE_LIBCPP": 1})
         self.do_test()
+
+    @add_test_categories(["libstdcxx"])
+    def test_libstdcxx_not_stolen_by_msvc(self):
+        """libstdc++ valarray must not get the MSVC size=raw-field-count summary."""
+        self.build(dictionary={"USE_LIBSTDCPP": 1})
+        lldbutil.run_to_source_breakpoint(
+            self, "break here", lldb.SBFileSpec("main.cpp", False)
+        )
+        va = self.expect_var_path("va_int")
+        self.assertNotEqual(va.summary, "size=2")
+
+    @add_test_categories(["msvcstl"])
+    def test_msvcstl(self):
+        self.build()
+        (self.target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
+            self, "break here", lldb.SBFileSpec("main.cpp", False)
+        )
+        self.check_valarray(process, bkpt)

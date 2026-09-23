@@ -66,12 +66,7 @@ define internal void @bar() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[BEGIN:%.*]] = load ptr addrspace(1), ptr addrspace(1) @__fini_array_start, align 8
 ; CHECK-NEXT:    [[STOP:%.*]] = load ptr addrspace(1), ptr addrspace(1) @__fini_array_end, align 8
-; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr addrspace(1) [[BEGIN]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(1) [[STOP]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], [[TMP0]]
-; CHECK-NEXT:    [[OFFSET:%.*]] = ashr exact i64 [[TMP2]], 3
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr ptr, ptr addrspace(1) [[BEGIN]], i64 [[OFFSET]]
-; CHECK-NEXT:    [[START:%.*]] = getelementptr inbounds ptr, ptr addrspace(1) [[TMP3]], i64 -1
+; CHECK-NEXT:    [[START:%.*]] = getelementptr inbounds ptr, ptr addrspace(1) [[STOP]], i64 -1
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp uge ptr addrspace(1) [[START]], [[BEGIN]]
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[WHILE_ENTRY:%.*]], label [[WHILE_END:%.*]]
 ; CHECK:       while.entry:

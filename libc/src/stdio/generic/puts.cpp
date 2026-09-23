@@ -13,30 +13,19 @@
 #include "hdr/types/FILE.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
+#include "src/stdio/stdout.h"
 #include <stddef.h>
 
 namespace LIBC_NAMESPACE_DECL {
 
-namespace {
-
-// Simple helper to unlock the file once destroyed.
-struct ScopedLock {
-  ScopedLock(LIBC_NAMESPACE::File *stream) : stream(stream) { stream->lock(); }
-  ~ScopedLock() { stream->unlock(); }
-
-private:
-  LIBC_NAMESPACE::File *stream;
-};
-
-} // namespace
-
 LLVM_LIBC_FUNCTION(int, puts, (const char *__restrict str)) {
   cpp::string_view str_view(str);
 
+  File *file = reinterpret_cast<File *>(stdout);
   // We need to lock the stream to ensure the newline is always appended.
-  ScopedLock lock(LIBC_NAMESPACE::stdout);
+  File::FileLock lock(file);
 
-  auto result = LIBC_NAMESPACE::stdout->write_unlocked(str, str_view.size());
+  auto result = file->write_unlocked(str, str_view.size());
   if (result.has_error())
     libc_errno = result.error;
   size_t written = result.value;
@@ -44,7 +33,7 @@ LLVM_LIBC_FUNCTION(int, puts, (const char *__restrict str)) {
     // The stream should be in an error state in this case.
     return EOF;
   }
-  result = LIBC_NAMESPACE::stdout->write_unlocked("\n", 1);
+  result = file->write_unlocked("\n", 1);
   if (result.has_error())
     libc_errno = result.error;
   written = result.value;

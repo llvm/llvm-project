@@ -202,7 +202,7 @@ multiclass ACC_UM_M244_XO46<bits<6> opcode, bits<8> xo, dag IOL, string asmbase,
     RegConstraint<"@earlyclobber $AT">;
   def PM#NAME#WPP :
     MMIRR_XX3Form_XY4P2_XAB6<
-      opcode, !or(xo, 0x20), (outs acc:$AT),
+      opcode, !or(xo, 0x20), (outs wacc:$AT),
       !con((ins wacc:$ATi),
            !con(IOL, (ins u4imm:$XMSK, u4imm:$YMSK, u2imm:$PMSK))),
       !strconcat("pm"#asmbase#"pp ", asmstr#", $XMSK, $YMSK, $PMSK"),
@@ -503,11 +503,10 @@ let Predicates = [MMA, IsNotISAFuture] in {
               IIC_VecGeneral,
               [(set v512i1:$AT, (int_ppc_mma_xxmtacc v512i1:$ATi))]>,
               RegConstraint<"$ATi = $AT">;
-  def KILL_PAIR : PPCPostRAExpPseudo<(outs vsrprc:$XTp), (ins vsrprc:$XSp),
-                                      "#KILL_PAIR", []>,
+  def KILL_PAIR : PPCPostRAExpPseudo<(outs vsrprc:$XTp), (ins vsrprc:$XSp)>,
                                       RegConstraint<"$XTp = $XSp">;
-  def BUILD_UACC : PPCPostRAExpPseudo<(outs acc:$AT), (ins uacc:$AS),
-                                      "#BUILD_UACC $AT, $AS", []>;
+  def BUILD_UACC : PPCPostRAExpPseudo<(outs acc:$AT), (ins uacc:$AS), [],
+                                      "#BUILD_UACC $AT, $AS">;
   // We define XXSETACCZ as rematerializable to undo CSE of that intrinsic in
   // the backend. We avoid CSE here because it generates a copy of the acc
   // register and this copy is more expensive than calling the intrinsic again.
@@ -765,7 +764,7 @@ let Predicates = [MMA, IsISAFuture] in {
   def : Pat<(v512i1 (int_ppc_mma_xvf64gerpn v512i1:$ATi, v256i1:$XA, v16i8:$XB)),
             (XVF64GERWPN $ATi, $XA, RCCp.BToVSRC)>;
   def : Pat<(v512i1 (int_ppc_mma_xvf64gernp v512i1:$ATi, v256i1:$XA, v16i8:$XB)),
-            (XVF64GERNP $ATi, $XA, RCCp.BToVSRC)>;
+            (XVF64GERWNP $ATi, $XA, RCCp.BToVSRC)>;
   def : Pat<(v512i1 (int_ppc_mma_xvf64gernn v512i1:$ATi, v256i1:$XA, v16i8:$XB)),
             (XVF64GERWNN $ATi, $XA, RCCp.BToVSRC)>;
 

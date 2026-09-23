@@ -2,7 +2,7 @@
 ;
 ; RUN: llc < %s -mtriple=s390x-ibm-zos -mcpu=z13 | FileCheck %s
 
-; CHECK-LABEL: call_i128:
+; CHECK-LABEL: call_i128 DS 0H
 ; CHECK-DAG: larl    1,L#CPI0_0
 ; CHECK-DAG: vl      0,0(1),3
 ; CHECK-DAG: vst     0,2256(4),3
@@ -19,7 +19,7 @@ entry:
   ret i128 %retval
 }
 
-; CHECK-LABEL: pass_i128:
+; CHECK-LABEL: pass_i128 DS 0H
 ; CHECK: vl      0,0(3),3
 ; CHECK: vl      1,0(2),3
 ; CHECK: vaq     0,1,0

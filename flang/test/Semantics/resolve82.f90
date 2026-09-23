@@ -1,12 +1,12 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
-! C815 An entity shall not be explicitly given any attribute more than once in 
+! C815 An entity shall not be explicitly given any attribute more than once in
 ! a scoping unit.
 !
 ! R1512 procedure-declaration-stmt ->
 !         PROCEDURE ( [proc-interface] ) [[, proc-attr-spec]... ::]
 !         proc-decl-list
 !  proc-attr-spec values are:
-!    PUBLIC, PRIVATE, BIND(C), INTENT (intent-spec), OPTIONAL, POINTER, 
+!    PUBLIC, PRIVATE, BIND(C), INTENT (intent-spec), OPTIONAL, POINTER,
 !    PROTECTED, SAVE
 module m
   abstract interface

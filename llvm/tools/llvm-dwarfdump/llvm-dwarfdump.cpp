@@ -14,6 +14,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
@@ -242,6 +243,15 @@ static opt<bool>
                 cat(DwarfDumpCategory));
 static alias ShowParentsAlias("p", desc("Alias for --show-parents."),
                               aliasopt(ShowParents), cl::NotHidden);
+
+static list<std::string> FilterChildTag(
+    "filter-child-tag",
+    desc("When --show-children is specified, show only DIEs with the "
+         "specified DWARF tags."),
+    value_desc("list of DWARF tags"), cat(DwarfDumpCategory));
+static alias FilterChildTagAlias("t", desc("Alias for --filter-child-tag."),
+                                 aliasopt(FilterChildTag), cl::NotHidden);
+
 static opt<bool>
     ShowForm("show-form",
              desc("Show DWARF form types after the DWARF attribute types."),
@@ -324,11 +334,46 @@ static opt<bool> Verbose("verbose",
                          cat(DwarfDumpCategory));
 static alias VerboseAlias("v", desc("Alias for --verbose."), aliasopt(Verbose),
                           cat(DwarfDumpCategory), cl::NotHidden);
+static opt<bool>
+    ShowVariableCoverage("show-variable-coverage",
+                         desc("Show per-variable coverage metrics."),
+                         cat(DwarfDumpCategory));
+static opt<std::string>
+    CoverageBaseline("coverage-baseline",
+                     desc("File to use as the baseline for variable coverage "
+                          "statistics (implies --show-variable-coverage)"),
+                     value_desc("filename"), cat(DwarfDumpCategory));
+static opt<std::string>
+    BitcodeFile("variable-coverage-bitcode-file",
+                desc("File containing LLVM IR (bitcode or textual) used for "
+                     "calculating variable definedness in coverage statistics "
+                     "(implies --show-variable-coverage)"),
+                value_desc("filename"), cat(DwarfDumpCategory));
+static opt<bool> MaybeUndefined(
+    "variable-coverage-maybe-undefined",
+    desc("Use with --show-variable-coverage and "
+         "--variable-coverage-bitcode-file to consider variables live if they "
+         "are defined on at least one path (default behaviour is to require a "
+         "variable to be defined on all paths to be counted)"),
+    cat(DwarfDumpCategory));
+static opt<bool> CombineInstances(
+    "combine-inline-variable-instances",
+    desc(
+        "Use with --show-variable-coverage to average variable coverage across "
+        "inlined subroutine instances instead of printing them separately."),
+    cat(DwarfDumpCategory));
 static cl::extrahelp
     HelpResponse("\nPass @FILE as argument to read options from FILE.\n");
 } // namespace
 /// @}
 //===----------------------------------------------------------------------===//
+
+static llvm::SmallVector<unsigned>
+makeTagVector(const list<std::string> &TagStrings) {
+  return llvm::map_to_vector(TagStrings, [](const std::string &Tag) {
+    return llvm::dwarf::getTag(Tag);
+  });
+}
 
 static void error(Error Err) {
   if (!Err)
@@ -356,6 +401,7 @@ static DIDumpOptions getDumpOpts(DWARFContext &C) {
   DumpOpts.ShowAddresses = !Diff;
   DumpOpts.ShowChildren = ShowChildren;
   DumpOpts.ShowParents = ShowParents;
+  DumpOpts.FilterChildTag = makeTagVector(FilterChildTag);
   DumpOpts.ShowForm = ShowForm;
   DumpOpts.SummarizeTypes = SummarizeTypes;
   DumpOpts.Verbose = Verbose;
@@ -453,11 +499,20 @@ static void filterByName(
     filterDieNames(CU.get());
     if (DumpNonSkeleton) {
       // If we have split DWARF, then recurse down into the .dwo files as well.
+      // Matching DIEs are printed as they are found and nothing here outlives
+      // them, so the split unit can be released instead of keeping every .dwo
+      // context resident until the end of the search.
+      const bool HadDWO = CU->getDWO();
       DWARFDie CUDie = CU->getUnitDIE(false);
       DWARFDie CUNonSkeletonDie = CU->getNonSkeletonUnitDIE(false);
       // If we have a DWO file, we need to search it as well
       if (CUNonSkeletonDie && CUDie != CUNonSkeletonDie)
         filterDieNames(CUNonSkeletonDie.getDwarfUnit());
+      const DWARFUnit *DWO = CU->getDWO();
+      // Don't release a DWP context -- it is the same for every non-skeleton CU
+      // and we benefit from keeping it resident to avoid the re-parse.
+      if (!HadDWO && DWO && !DWO->getContext().isDWP())
+        CU->clearDWO();
     }
   }
 }
@@ -690,7 +745,7 @@ static bool dumpObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
   if (!MCRegInfo)
     logAllUnhandledErrors(createStringError(inconvertibleErrorCode(),
                                             "Error in creating MCRegInfo"),
-                          errs(), Filename.str() + ": ");
+                          errs(), Filename + ": ");
 
   auto GetRegName = [&MCRegInfo](uint64_t DwarfRegNum, bool IsEH) -> StringRef {
     if (!MCRegInfo)
@@ -887,7 +942,8 @@ int main(int argc, char **argv) {
     DumpType |= DIDT_UUID;
   if (DumpAll)
     DumpType = DIDT_All;
-  if (DumpType == DIDT_Null) {
+  if (DumpType == DIDT_Null && !ShowVariableCoverage &&
+      CoverageBaseline.empty() && BitcodeFile.empty()) {
     if (Verbose || Verify)
       DumpType = DIDT_All;
     else
@@ -937,6 +993,31 @@ int main(int argc, char **argv) {
   } else {
     for (StringRef Object : Objects)
       Success &= handleFile(Object, dumpObjectFile, OutputFile.os());
+  }
+
+  if (!CoverageBaseline.empty()) {
+    auto handleBaseline = [&](ObjectFile &BaselineObj,
+                              DWARFContext &BaselineCtx, const Twine &Filename,
+                              raw_ostream &OS) {
+      auto showCoverage = [&](ObjectFile &Obj, DWARFContext &DICtx,
+                              const Twine &Filename, raw_ostream &OS) {
+        return showVariableCoverage(Obj, DICtx, &BaselineObj, &BaselineCtx,
+                                    BitcodeFile, MaybeUndefined,
+                                    CombineInstances, OS);
+      };
+      for (StringRef Object : Objects)
+        Success &= handleFile(Object, showCoverage, OutputFile.os());
+      return true;
+    };
+    Success &= handleFile(CoverageBaseline, handleBaseline, OutputFile.os());
+  } else if (ShowVariableCoverage || !BitcodeFile.empty()) {
+    auto showCoverage = [&](ObjectFile &Obj, DWARFContext &DICtx,
+                            const Twine &Filename, raw_ostream &OS) {
+      return showVariableCoverage(Obj, DICtx, nullptr, nullptr, BitcodeFile,
+                                  MaybeUndefined, CombineInstances, OS);
+    };
+    for (StringRef Object : Objects)
+      Success &= handleFile(Object, showCoverage, OutputFile.os());
   }
 
   return Success ? EXIT_SUCCESS : EXIT_FAILURE;

@@ -12,13 +12,16 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Overload.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
 
@@ -391,6 +394,7 @@ CheckExtVectorComponent(Sema &S, QualType baseType, ExprValueKind &VK,
   // indicating that it is a string of hex values to be used as vector indices.
   bool HexSwizzle = (*compStr == 's' || *compStr == 'S') && compStr[1];
 
+  bool PointAccessor = false;
   bool HasRepeated = false;
   bool HasIndex[16] = {};
 
@@ -403,6 +407,7 @@ CheckExtVectorComponent(Sema &S, QualType baseType, ExprValueKind &VK,
     HalvingSwizzle = true;
   } else if (!HexSwizzle &&
              (Idx = vecType->getPointAccessorIdx(*compStr)) != -1) {
+    PointAccessor = true;
     bool HasRGBA = IsRGBA(*compStr);
     do {
       // Ensure that xyzw and rgba components don't intermingle.
@@ -439,6 +444,18 @@ CheckExtVectorComponent(Sema &S, QualType baseType, ExprValueKind &VK,
     S.Diag(OpLoc.getLocWithOffset(Offset),
            diag::err_ext_vector_component_name_illegal)
         << StringRef(Fmt, 3) << SourceRange(CompLoc);
+    return QualType();
+  }
+
+  if (S.getLangOpts().HLSL && !PointAccessor) {
+    S.Diag(OpLoc, diag::err_ext_vector_component_name_illegal)
+        << CompName << SourceRange(CompLoc);
+    return QualType();
+  }
+
+  if (S.getLangOpts().HLSL && PointAccessor && vecType->getNumElements() > 4) {
+    S.Diag(OpLoc, diag::err_hlsl_long_vector_swizzle)
+        << CompName << SourceRange(CompLoc);
     return QualType();
   }
 
@@ -1289,6 +1306,20 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
         BaseExpr.get()->getValueKind(), FPOptionsOverride());
   }
 
+  // In HLSL, the member access on a ConstantBuffer<T> access the members of
+  // through the handle in the ConstantBuffer<T>. If BaseType is a
+  // ConstantBuffer, the conversion function to type T is called before trying
+  // to access the member.
+  if (S.getLangOpts().HLSL && BaseType->isHLSLResourceRecord()) {
+    if (std::optional<ExprResult> ConvBase =
+            S.HLSL().tryPerformConstantBufferConversion(BaseExpr.get())) {
+      assert(!ConvBase->isInvalid());
+      BaseExpr = *ConvBase;
+      BaseType = BaseExpr.get()->getType();
+      IsArrow = false;
+    }
+  }
+
   // Handle field access to simple records.
   if (BaseType->getAsRecordDecl()) {
     if (LookupMemberExprInRecord(S, R, BaseExpr.get(), BaseType, OpLoc, IsArrow,
@@ -1617,6 +1648,21 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
         ExtVectorElementExpr(ret, VK, BaseExpr.get(), *Member, MemberLoc);
   }
 
+  if (S.getLangOpts().HLSL && BaseType->isConstantMatrixType()) {
+    IdentifierInfo *Member = MemberName.getAsIdentifierInfo();
+    ExprValueKind VK = BaseExpr.get()->getValueKind();
+    QualType Ret = S.HLSL().checkMatrixComponent(S, BaseType, VK, OpLoc, Member,
+                                                 MemberLoc);
+    if (Ret.isNull())
+      return ExprError();
+    Qualifiers BaseQ =
+        S.Context.getCanonicalType(BaseExpr.get()->getType()).getQualifiers();
+    Ret = S.Context.getQualifiedType(Ret, BaseQ);
+
+    return new (S.Context)
+        MatrixElementExpr(Ret, VK, BaseExpr.get(), *Member, MemberLoc);
+  }
+
   // Adjust builtin-sel to the appropriate redefinition type if that's
   // not just a pointer to builtin-sel again.
   if (IsArrow && BaseType->isSpecificBuiltinType(BuiltinType::ObjCSel) &&
@@ -1720,9 +1766,18 @@ ExprResult Sema::ActOnMemberAccessExpr(Scope *S, Expr *Base,
       Base, Base->getType(), OpLoc, IsArrow, SS, TemplateKWLoc,
       FirstQualifierInScope, NameInfo, TemplateArgs, S, &ExtraArgs);
 
-  if (!Res.isInvalid() && isa<MemberExpr>(Res.get()))
-    CheckMemberAccessOfNoDeref(cast<MemberExpr>(Res.get()));
+  if (!Res.isInvalid()) {
+    if (MemberExpr *ME = dyn_cast<MemberExpr>(Res.get())) {
+      CheckMemberAccessOfNoDeref(ME);
 
+      if (getLangOpts().HLSL) {
+        QualType Ty = Res.get()->getType();
+        if (Ty->isHLSLResourceRecord() || Ty->isHLSLResourceRecordArray())
+          if (!HLSL().ActOnResourceMemberAccessExpr(ME))
+            Res = ExprError();
+      }
+    }
+  }
   return Res;
 }
 
@@ -1795,6 +1850,12 @@ Sema::BuildFieldReferenceExpr(Expr *BaseExpr, bool IsArrow,
     // except that 'mutable' members don't pick up 'const'.
     if (Field->isMutable()) BaseQuals.removeConst();
 
+    // HLSL resource types do not pick up address space qualifiers from the
+    // base.
+    if (getLangOpts().HLSL && (MemberType->isHLSLResourceRecord() ||
+                               MemberType->isHLSLResourceRecordArray()))
+      BaseQuals.removeAddressSpace();
+
     Qualifiers MemberQuals =
         Context.getCanonicalType(MemberType).getQualifiers();
 
@@ -1818,7 +1879,7 @@ Sema::BuildFieldReferenceExpr(Expr *BaseExpr, bool IsArrow,
     if (!Method || !Method->isDefaulted())
       return false;
 
-    return getDefaultedFunctionKind(Method).isSpecialMember();
+    return Method->getDefaultedFunctionKind().isSpecialMember();
   };
 
   // Implicit special members should not mark fields as used.

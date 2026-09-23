@@ -11,8 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/ModuleUtils.h"
-#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
@@ -21,7 +21,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Support/xxhash.h"
+#include "llvm/Transforms/Utils/KCFIHash.h"
 
 using namespace llvm;
 
@@ -208,10 +208,16 @@ void llvm::setKCFIType(Module &M, Function &F, StringRef MangledType) {
   std::string Type = MangledType.str();
   if (M.getModuleFlag("cfi-normalize-integers"))
     Type += ".normalized";
+
+  // Determine which hash algorithm to use
+  auto *MD = dyn_cast_or_null<MDString>(M.getModuleFlag("kcfi-hash"));
+  KCFIHashAlgorithm Algorithm =
+      parseKCFIHashAlgorithm(MD ? MD->getString() : "");
+
   F.setMetadata(LLVMContext::MD_kcfi_type,
                 MDNode::get(Ctx, MDB.createConstant(ConstantInt::get(
                                      Type::getInt32Ty(Ctx),
-                                     static_cast<uint32_t>(xxHash64(Type))))));
+                                     getKCFITypeID(Type, Algorithm)))));
   // If the module was compiled with -fpatchable-function-entry, ensure
   // we use the same patchable-function-prefix.
   if (auto *MD = mdconst::extract_or_null<ConstantInt>(
@@ -375,8 +381,10 @@ std::string llvm::getUniqueModuleId(Module *M) {
   return ("." + Str).str();
 }
 
-void llvm::embedBufferInModule(Module &M, MemoryBufferRef Buf,
-                               StringRef SectionName, Align Alignment) {
+GlobalVariable *llvm::embedBufferInModule(Module &M, MemoryBufferRef Buf,
+                                          StringRef SectionName,
+                                          Align Alignment,
+                                          bool SectionExclude) {
   // Embed the memory buffer into the module.
   Constant *ModuleConstant = ConstantDataArray::get(
       M.getContext(), ArrayRef(Buf.getBufferStart(), Buf.getBufferSize()));
@@ -390,11 +398,16 @@ void llvm::embedBufferInModule(Module &M, MemoryBufferRef Buf,
   NamedMDNode *MD = M.getOrInsertNamedMetadata("llvm.embedded.objects");
   Metadata *MDVals[] = {ConstantAsMetadata::get(GV),
                         MDString::get(Ctx, SectionName)};
-
   MD->addOperand(llvm::MDNode::get(Ctx, MDVals));
-  GV->setMetadata(LLVMContext::MD_exclude, llvm::MDNode::get(Ctx, {}));
+
+  if (SectionExclude)
+    GV->setMetadata(LLVMContext::MD_exclude, llvm::MDNode::get(Ctx, {}));
+  else
+    GV->setMetadata(LLVMContext::MD_metadata_section_kind,
+                    llvm::MDNode::get(Ctx, {}));
 
   appendToCompilerUsed(M, GV);
+  return GV;
 }
 
 bool llvm::lowerGlobalIFuncUsersAsGlobalCtor(

@@ -40,7 +40,7 @@ void SARIFDiagnosticPrinter::EndSourceFile() {
   assert(SARIFDiag && "SARIFDiagnostic has not been set.");
   Writer->endRun();
   llvm::json::Value Value(Writer->createDocument());
-  OS << "\n" << Value << "\n\n";
+  OS << llvm::formatv("\n{0:2}\n\n", Value);
   OS.flush();
   SARIFDiag.reset();
 }

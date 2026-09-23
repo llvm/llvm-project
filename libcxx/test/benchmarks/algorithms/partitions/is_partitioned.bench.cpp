@@ -18,6 +18,7 @@
 #include <vector>
 
 #include "benchmark/benchmark.h"
+#include "test_macros.h"
 #include "../../GenerateInput.h"
 
 auto compute_median(auto first, auto last) {
@@ -33,7 +34,7 @@ int main(int argc, char** argv) {
   auto bm = []<class Container, bool Partitioned>(std::string name, auto is_partitioned) {
     benchmark::RegisterBenchmark(
         name,
-        [is_partitioned](auto& st) {
+        [is_partitioned](auto& st) TEST_ALIGN_BENCHMARK {
           std::size_t const size = st.range(0);
           using ValueType        = typename Container::value_type;
           Container c;
@@ -77,17 +78,6 @@ int main(int argc, char** argv) {
 
   bm.operator()<std::list<int>, true>("std::is_partitioned(list<int>) (partitioned)", std_is_partitioned);
   bm.operator()<std::list<int>, false>("std::is_partitioned(list<int>) (unpartitioned)", std_is_partitioned);
-
-  // ranges::is_partitioned
-  bm.operator()<std::vector<int>, true>("rng::is_partitioned(vector<int>) (partitioned)", std::ranges::is_partitioned);
-  bm.operator()<std::vector<int>, false>(
-      "rng::is_partitioned(vector<int>) (unpartitioned)", std::ranges::is_partitioned);
-
-  bm.operator()<std::deque<int>, true>("rng::is_partitioned(deque<int>) (partitioned)", std::ranges::is_partitioned);
-  bm.operator()<std::deque<int>, false>("rng::is_partitioned(deque<int>) (unpartitioned)", std::ranges::is_partitioned);
-
-  bm.operator()<std::list<int>, true>("rng::is_partitioned(list<int>) (partitioned)", std::ranges::is_partitioned);
-  bm.operator()<std::list<int>, false>("rng::is_partitioned(list<int>) (unpartitioned)", std::ranges::is_partitioned);
 
   benchmark::Initialize(&argc, argv);
   benchmark::RunSpecifiedBenchmarks();

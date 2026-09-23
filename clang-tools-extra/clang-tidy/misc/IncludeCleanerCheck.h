@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_INCLUDECLEANER_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_INCLUDECLEANER_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_INCLUDECLEANERCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_INCLUDECLEANERCHECK_H
 
 #include "../ClangTidyCheck.h"
 #include "../ClangTidyDiagnosticConsumer.h"
@@ -51,10 +51,10 @@ private:
   const bool UnusedIncludes;
   // Whether to report missing includes.
   const bool MissingIncludes;
-  llvm::SmallVector<llvm::Regex> IgnoreHeadersRegex;
+  SmallVector<llvm::Regex> IgnoreHeadersRegex;
   bool shouldIgnore(const include_cleaner::Header &H);
 };
 
 } // namespace clang::tidy::misc
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_INCLUDECLEANER_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_INCLUDECLEANERCHECK_H

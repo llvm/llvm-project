@@ -35,7 +35,7 @@ public:
   /// such, whenever a client has an instance of instruction info, it should
   /// always be able to get register info as well (through this method).
   ///
-  const ARMRegisterInfo &getRegisterInfo() const override { return RI; }
+  const ARMRegisterInfo &getRegisterInfo() const { return RI; }
 
 private:
   void expandLoadStackGuard(MachineBasicBlock::iterator MI) const override;

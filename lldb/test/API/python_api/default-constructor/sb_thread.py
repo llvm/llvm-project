@@ -10,6 +10,7 @@ def fuzz_obj(obj):
     obj.GetStopReasonDataCount()
     obj.GetStopReasonDataAtIndex(100)
     obj.GetStopDescription(256)
+    obj.GetStopDescription(lldb.SBStream())
     obj.GetThreadID()
     obj.GetIndexID()
     obj.GetName()

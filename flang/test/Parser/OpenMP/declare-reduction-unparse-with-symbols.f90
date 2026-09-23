@@ -8,6 +8,6 @@ end
 
 !CHECK: !DEF: /f00 (Subroutine) Subprogram
 !CHECK: subroutine f00
-!CHECK: !$omp declare reduction(fred:integer,real: omp_out = omp_in+omp_out)
+!CHECK: !$omp declare reduction(fred:integer, real: omp_out = omp_in + omp_out)
 !CHECK: end subroutine
 

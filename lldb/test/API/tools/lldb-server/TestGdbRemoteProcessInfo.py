@@ -5,6 +5,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfMTE  # MTE security transition shims restrict socket operations.
 class TestGdbRemoteProcessInfo(gdbremote_testcase.GdbRemoteTestCaseBase):
     def test_qProcessInfo_returns_running_process(self):
         self.build()

@@ -11,15 +11,18 @@ tablegen(LLVM SystemZGenDisassemblerTables.inc -gen-disassembler)
 tablegen(LLVM SystemZGenInstrInfo.inc -gen-instr-info)
 tablegen(LLVM SystemZGenMCCodeEmitter.inc -gen-emitter)
 tablegen(LLVM SystemZGenRegisterInfo.inc -gen-register-info)
+tablegen(LLVM SystemZGenSDNodeInfo.inc -gen-sd-node-info)
 tablegen(LLVM SystemZGenSubtargetInfo.inc -gen-subtarget)
 
 add_public_tablegen_target(SystemZCommonTableGen)
 
 add_llvm_target(SystemZCodeGen
   SystemZAsmPrinter.cpp
+  SystemZAlignGlobals.cpp
   SystemZCallingConv.cpp
   SystemZConstantPoolValue.cpp
   SystemZCopyPhysRegs.cpp
+  SystemZELFAsmPrinter.cpp
   SystemZElimCompare.cpp
   SystemZFrameLowering.cpp
   SystemZHazardRecognizer.cpp
@@ -40,6 +43,7 @@ add_llvm_target(SystemZCodeGen
   SystemZTargetObjectFile.cpp
   SystemZTargetTransformInfo.cpp
   SystemZTDC.cpp
+  SystemZXPLINKAsmPrinter.cpp
 
   LINK_COMPONENTS
   Analysis

@@ -1,16 +1,20 @@
-! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
-! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir %s -o - | FileCheck %s
 
-! CHECK-LABEL: dshiftl1_test
+! CHECK-LABEL: func.func @_QPdshiftl1_test(
 ! CHECK-SAME: %[[A:.*]]: !fir.ref<i8>{{.*}}, %[[B:.*]]: !fir.ref<i8>{{.*}}, %[[S:.*]]: !fir.ref<i32>{{.*}}, %[[C:.*]]: !fir.ref<i8>{{.*}}
 subroutine dshiftl1_test(a, b, s, c)
   integer(kind=1) :: a, b
   integer :: s
   integer(kind=1) :: c
 
-  ! CHECK: %[[A_VAL:.*]] = fir.load %[[A]] : !fir.ref<i8>
-  ! CHECK: %[[B_VAL:.*]] = fir.load %[[B]] : !fir.ref<i8>
-  ! CHECK: %[[S_VAL:.*]] = fir.load %[[S]] : !fir.ref<i32>
+  ! CHECK: %[[DS:.*]] = fir.dummy_scope : !fir.dscope
+  ! CHECK: %[[A_DECL:.*]]:2 = hlfir.declare %[[A]] dummy_scope %[[DS]]
+  ! CHECK: %[[B_DECL:.*]]:2 = hlfir.declare %[[B]] dummy_scope %[[DS]]
+  ! CHECK: %[[C_DECL:.*]]:2 = hlfir.declare %[[C]] dummy_scope %[[DS]]
+  ! CHECK: %[[S_DECL:.*]]:2 = hlfir.declare %[[S]] dummy_scope %[[DS]]
+  ! CHECK: %[[A_VAL:.*]] = fir.load %[[A_DECL]]#0 : !fir.ref<i8>
+  ! CHECK: %[[B_VAL:.*]] = fir.load %[[B_DECL]]#0 : !fir.ref<i8>
+  ! CHECK: %[[S_VAL:.*]] = fir.load %[[S_DECL]]#0 : !fir.ref<i32>
   c = dshiftl(a, b, s)
   ! CHECK: %[[S_CONV:.*]] = fir.convert %[[S_VAL]] : (i32) -> i8
   ! CHECK: %[[C_BITS:.*]] = arith.constant 8 : i8
@@ -30,18 +34,24 @@ subroutine dshiftl1_test(a, b, s, c)
   ! CHECK: %[[SHR:.*]] = arith.shrui %[[B_VAL]], %[[DIFF]] : i8
   ! CHECK: %[[RGT:.*]] = arith.select %[[INV_R]], %[[C_0_R]], %[[SHR]] : i8
   ! CHECK: %[[SHIFT:.*]] = arith.ori %[[LFT]], %[[RGT]] : i8
+  ! CHECK: hlfir.assign %[[SHIFT]] to %[[C_DECL]]#0 : i8, !fir.ref<i8>
 end subroutine dshiftl1_test
 
-! CHECK-LABEL: dshiftl2_test
+! CHECK-LABEL: func.func @_QPdshiftl2_test(
 ! CHECK-SAME: %[[A:.*]]: !fir.ref<i16>{{.*}}, %[[B:.*]]: !fir.ref<i16>{{.*}}, %[[S:.*]]: !fir.ref<i32>{{.*}}, %[[C:.*]]: !fir.ref<i16>{{.*}}
 subroutine dshiftl2_test(a, b, s, c)
   integer(kind=2) :: a, b
   integer :: s
   integer(kind=2) :: c
 
-  ! CHECK: %[[A_VAL:.*]] = fir.load %[[A]] : !fir.ref<i16>
-  ! CHECK: %[[B_VAL:.*]] = fir.load %[[B]] : !fir.ref<i16>
-  ! CHECK: %[[S_VAL:.*]] = fir.load %[[S]] : !fir.ref<i32>
+  ! CHECK: %[[DS:.*]] = fir.dummy_scope : !fir.dscope
+  ! CHECK: %[[A_DECL:.*]]:2 = hlfir.declare %[[A]] dummy_scope %[[DS]]
+  ! CHECK: %[[B_DECL:.*]]:2 = hlfir.declare %[[B]] dummy_scope %[[DS]]
+  ! CHECK: %[[C_DECL:.*]]:2 = hlfir.declare %[[C]] dummy_scope %[[DS]]
+  ! CHECK: %[[S_DECL:.*]]:2 = hlfir.declare %[[S]] dummy_scope %[[DS]]
+  ! CHECK: %[[A_VAL:.*]] = fir.load %[[A_DECL]]#0 : !fir.ref<i16>
+  ! CHECK: %[[B_VAL:.*]] = fir.load %[[B_DECL]]#0 : !fir.ref<i16>
+  ! CHECK: %[[S_VAL:.*]] = fir.load %[[S_DECL]]#0 : !fir.ref<i32>
   c = dshiftl(a, b, s)
   ! CHECK: %[[S_CONV:.*]] = fir.convert %[[S_VAL]] : (i32) -> i16
   ! CHECK: %[[C_BITS:.*]] = arith.constant 16 : i16
@@ -61,18 +71,24 @@ subroutine dshiftl2_test(a, b, s, c)
   ! CHECK: %[[SHR:.*]] = arith.shrui %[[B_VAL]], %[[DIFF]] : i16
   ! CHECK: %[[RGT:.*]] = arith.select %[[INV_R]], %[[C_0_R]], %[[SHR]] : i16
   ! CHECK: %[[SHIFT:.*]] = arith.ori %[[LFT]], %[[RGT]] : i16
+  ! CHECK: hlfir.assign %[[SHIFT]] to %[[C_DECL]]#0 : i16, !fir.ref<i16>
 end subroutine dshiftl2_test
 
-! CHECK-LABEL: dshiftl4_test
+! CHECK-LABEL: func.func @_QPdshiftl4_test(
 ! CHECK-SAME: %[[A:.*]]: !fir.ref<i32>{{.*}}, %[[B:.*]]: !fir.ref<i32>{{.*}}, %[[S:.*]]: !fir.ref<i32>{{.*}}, %[[C:.*]]: !fir.ref<i32>{{.*}}
 subroutine dshiftl4_test(a, b, s, c)
   integer(kind=4) :: a, b
   integer :: s
   integer(kind=4) :: c
 
-  ! CHECK: %[[A_VAL:.*]] = fir.load %[[A]] : !fir.ref<i32>
-  ! CHECK: %[[B_VAL:.*]] = fir.load %[[B]] : !fir.ref<i32>
-  ! CHECK: %[[S_VAL:.*]] = fir.load %[[S]] : !fir.ref<i32>
+  ! CHECK: %[[DS:.*]] = fir.dummy_scope : !fir.dscope
+  ! CHECK: %[[A_DECL:.*]]:2 = hlfir.declare %[[A]] dummy_scope %[[DS]]
+  ! CHECK: %[[B_DECL:.*]]:2 = hlfir.declare %[[B]] dummy_scope %[[DS]]
+  ! CHECK: %[[C_DECL:.*]]:2 = hlfir.declare %[[C]] dummy_scope %[[DS]]
+  ! CHECK: %[[S_DECL:.*]]:2 = hlfir.declare %[[S]] dummy_scope %[[DS]]
+  ! CHECK: %[[A_VAL:.*]] = fir.load %[[A_DECL]]#0 : !fir.ref<i32>
+  ! CHECK: %[[B_VAL:.*]] = fir.load %[[B_DECL]]#0 : !fir.ref<i32>
+  ! CHECK: %[[S_VAL:.*]] = fir.load %[[S_DECL]]#0 : !fir.ref<i32>
   c = dshiftl(a, b, s)
   ! CHECK: %[[C_BITS:.*]] = arith.constant 32 : i32
   ! CHECK: %[[DIFF:.*]] = arith.subi %[[C_BITS]], %[[S_VAL]] : i32
@@ -91,18 +107,24 @@ subroutine dshiftl4_test(a, b, s, c)
   ! CHECK: %[[SHR:.*]] = arith.shrui %[[B_VAL]], %[[DIFF]] : i32
   ! CHECK: %[[RGT:.*]] = arith.select %[[INV_R]], %[[C_0_R]], %[[SHR]] : i32
   ! CHECK: %[[SHIFT:.*]] = arith.ori %[[LFT]], %[[RGT]] : i32
+  ! CHECK: hlfir.assign %[[SHIFT]] to %[[C_DECL]]#0 : i32, !fir.ref<i32>
 end subroutine dshiftl4_test
 
-! CHECK-LABEL: dshiftl8_test
+! CHECK-LABEL: func.func @_QPdshiftl8_test(
 ! CHECK-SAME: %[[A:.*]]: !fir.ref<i64>{{.*}}, %[[B:.*]]: !fir.ref<i64>{{.*}}, %[[S:.*]]: !fir.ref<i32>{{.*}}, %[[C:.*]]: !fir.ref<i64>{{.*}}
 subroutine dshiftl8_test(a, b, s, c)
   integer(kind=8) :: a, b
   integer :: s
   integer(kind=8) :: c
 
-  ! CHECK: %[[A_VAL:.*]] = fir.load %[[A]] : !fir.ref<i64>
-  ! CHECK: %[[B_VAL:.*]] = fir.load %[[B]] : !fir.ref<i64>
-  ! CHECK: %[[S_VAL:.*]] = fir.load %[[S]] : !fir.ref<i32>
+  ! CHECK: %[[DS:.*]] = fir.dummy_scope : !fir.dscope
+  ! CHECK: %[[A_DECL:.*]]:2 = hlfir.declare %[[A]] dummy_scope %[[DS]]
+  ! CHECK: %[[B_DECL:.*]]:2 = hlfir.declare %[[B]] dummy_scope %[[DS]]
+  ! CHECK: %[[C_DECL:.*]]:2 = hlfir.declare %[[C]] dummy_scope %[[DS]]
+  ! CHECK: %[[S_DECL:.*]]:2 = hlfir.declare %[[S]] dummy_scope %[[DS]]
+  ! CHECK: %[[A_VAL:.*]] = fir.load %[[A_DECL]]#0 : !fir.ref<i64>
+  ! CHECK: %[[B_VAL:.*]] = fir.load %[[B_DECL]]#0 : !fir.ref<i64>
+  ! CHECK: %[[S_VAL:.*]] = fir.load %[[S_DECL]]#0 : !fir.ref<i32>
   c = dshiftl(a, b, s)
   ! CHECK: %[[S_CONV:.*]] = fir.convert %[[S_VAL]] : (i32) -> i64
   ! CHECK: %[[C_BITS:.*]] = arith.constant 64 : i64
@@ -122,18 +144,24 @@ subroutine dshiftl8_test(a, b, s, c)
   ! CHECK: %[[SHR:.*]] = arith.shrui %[[B_VAL]], %[[DIFF]] : i64
   ! CHECK: %[[RGT:.*]] = arith.select %[[INV_R]], %[[C_0_R]], %[[SHR]] : i64
   ! CHECK: %[[SHIFT:.*]] = arith.ori %[[LFT]], %[[RGT]] : i64
+  ! CHECK: hlfir.assign %[[SHIFT]] to %[[C_DECL]]#0 : i64, !fir.ref<i64>
 end subroutine dshiftl8_test
 
-! CHECK-LABEL: dshiftl16_test
+! CHECK-LABEL: func.func @_QPdshiftl16_test(
 ! CHECK-SAME: %[[A:.*]]: !fir.ref<i128>{{.*}}, %[[B:.*]]: !fir.ref<i128>{{.*}}, %[[S:.*]]: !fir.ref<i32>{{.*}}, %[[C:.*]]: !fir.ref<i128>{{.*}}
 subroutine dshiftl16_test(a, b, s, c)
   integer(kind=16) :: a, b
   integer :: s
   integer(kind=16) :: c
 
-  ! CHECK: %[[A_VAL:.*]] = fir.load %[[A]] : !fir.ref<i128>
-  ! CHECK: %[[B_VAL:.*]] = fir.load %[[B]] : !fir.ref<i128>
-  ! CHECK: %[[S_VAL:.*]] = fir.load %[[S]] : !fir.ref<i32>
+  ! CHECK: %[[DS:.*]] = fir.dummy_scope : !fir.dscope
+  ! CHECK: %[[A_DECL:.*]]:2 = hlfir.declare %[[A]] dummy_scope %[[DS]]
+  ! CHECK: %[[B_DECL:.*]]:2 = hlfir.declare %[[B]] dummy_scope %[[DS]]
+  ! CHECK: %[[C_DECL:.*]]:2 = hlfir.declare %[[C]] dummy_scope %[[DS]]
+  ! CHECK: %[[S_DECL:.*]]:2 = hlfir.declare %[[S]] dummy_scope %[[DS]]
+  ! CHECK: %[[A_VAL:.*]] = fir.load %[[A_DECL]]#0 : !fir.ref<i128>
+  ! CHECK: %[[B_VAL:.*]] = fir.load %[[B_DECL]]#0 : !fir.ref<i128>
+  ! CHECK: %[[S_VAL:.*]] = fir.load %[[S_DECL]]#0 : !fir.ref<i32>
   c = dshiftl(a, b, s)
   ! CHECK: %[[S_CONV:.*]] = fir.convert %[[S_VAL]] : (i32) -> i128
   ! CHECK: %[[C_BITS:.*]] = arith.constant 128 : i128
@@ -153,4 +181,5 @@ subroutine dshiftl16_test(a, b, s, c)
   ! CHECK: %[[SHR:.*]] = arith.shrui %[[B_VAL]], %[[DIFF]] : i128
   ! CHECK: %[[RGT:.*]] = arith.select %[[INV_R]], %[[C_0_R]], %[[SHR]] : i128
   ! CHECK: %[[SHIFT:.*]] = arith.ori %[[LFT]], %[[RGT]] : i128
+  ! CHECK: hlfir.assign %[[SHIFT]] to %[[C_DECL]]#0 : i128, !fir.ref<i128>
 end subroutine dshiftl16_test

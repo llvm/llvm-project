@@ -2745,6 +2745,23 @@ declare spir_func <16 x i8> @_Z11bit_reverseDv16_h(<16 x i8> noundef)
 
 attributes #2 = { convergent nounwind willreturn memory(none) }
 
+; CHECK-EXTENSION: %[[#]] = OpFunction %[[#]] None %[[#]]
+; CHECK-EXTENSION: %[[#reversebase:]] = OpFunctionParameter %[[#]]
+; CHECK-EXTENSION: %[[#]] = OpBitReverse %[[#]] %[[#reversebase]]
+; OpenCL equivalent.
+; kernel void testBitReverse_uchar16(uchar16 b, global uchar16 *res) {
+;   *res = bit_reverse(b);
+; }
+
+define dso_local spir_kernel void @testBitReverse_uchar16_intrinsic(<16 x i8> noundef %b, ptr addrspace(1) nocapture noundef writeonly align 16 initializes((0, 16)) %res) {
+entry:
+  %call = tail call spir_func <16 x i8> @llvm.bitreverse(<16 x i8> noundef %b) #2
+  store <16 x i8> %call, ptr addrspace(1) %res, align 16, !tbaa !22
+  ret void
+}
+
+declare spir_func <16 x i8> @llvm.bitreverse(<16 x i8> noundef)
+
 !llvm.module.flags = !{!0}
 !opencl.ocl.version = !{!1}
 !opencl.spir.version = !{!1}

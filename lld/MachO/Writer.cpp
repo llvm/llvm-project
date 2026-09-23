@@ -663,7 +663,7 @@ void Writer::treatSpecialUndefineds() {
 }
 
 static void prepareSymbolRelocation(Symbol *sym, const InputSection *isec,
-                                    const lld::macho::Reloc &r) {
+                                    const Relocation &r) {
   if (!sym->isLive()) {
     if (Defined *defined = dyn_cast<Defined>(sym)) {
       if (config->emitInitOffsets &&
@@ -707,7 +707,7 @@ void Writer::scanRelocations() {
       continue;
 
     for (auto it = isec->relocs.begin(); it != isec->relocs.end(); ++it) {
-      lld::macho::Reloc &r = *it;
+      Relocation &r = *it;
 
       // Canonicalize the referent so that later accesses in Writer won't
       // have to worry about it.
@@ -971,6 +971,45 @@ template <class LP> void Writer::createLoadCommands() {
                               : 0));
 }
 
+// __objc_stubs is synthetic, so the input section sorting in
+// sortSegmentsAndSections() does not reach its entries. Order each stub by the
+// priority of the earliest-laid-out section that calls it, which keeps the
+// stubs reached during startup together.
+static void orderObjCStubsByCallerPriority(
+    const DenseMap<const InputSection *, int> &priorities) {
+  if (priorities.empty() || !in.objcStubs->isNeeded())
+    return;
+
+  // ICF may make the prioritized section differ from the section whose
+  // relocations describe the original calls. Use the canonical section for
+  // priority lookup, but scan the original section's relocations.
+  DenseMap<const Symbol *, int> stubPriority;
+  for (const ConcatInputSection *isec : inputSections) {
+    if (!isCodeSection(isec))
+      continue;
+    const auto *priorityIsec = cast<ConcatInputSection>(isec->canonical());
+    if (priorityIsec->shouldOmitFromOutput())
+      continue;
+    auto prio = priorities.find(priorityIsec);
+    if (prio == priorities.end())
+      continue;
+    for (const Relocation &r : isec->relocs) {
+      if (!target->hasAttr(r.type, RelocAttrBits::BRANCH))
+        continue;
+      auto *stub = dyn_cast_if_present<Symbol *>(r.referent);
+      if (!stub || !ObjCStubsSection::isObjCStubSymbol(stub))
+        continue;
+      auto [it, inserted] = stubPriority.try_emplace(stub, prio->second);
+      if (!inserted)
+        it->second = std::min(it->second, prio->second);
+    }
+  }
+  if (stubPriority.empty())
+    return;
+
+  in.objcStubs->sortSymbols(stubPriority);
+}
+
 // Sorting only can happen once all outputs have been collected. Here we sort
 // segments, output sections within each segment, and input sections within each
 // output segment.
@@ -980,6 +1019,8 @@ static void sortSegmentsAndSections() {
 
   DenseMap<const InputSection *, int> isecPriorities =
       priorityBuilder.buildInputSectionPriorities();
+
+  orderObjCStubsByCallerPriority(isecPriorities);
 
   uint32_t sectionIndex = 0;
   for (OutputSegment *seg : outputSegments) {
@@ -1007,12 +1048,16 @@ static void sortSegmentsAndSections() {
         osec->align = tlvAlign;
       }
 
-      if (!isecPriorities.empty()) {
-        if (auto *merged = dyn_cast<ConcatOutputSection>(osec)) {
-          llvm::stable_sort(
-              merged->inputs, [&](InputSection *a, InputSection *b) {
-                return isecPriorities.lookup(a) < isecPriorities.lookup(b);
-              });
+      if (auto *merged = dyn_cast<ConcatOutputSection>(osec)) {
+        auto coldIt = std::stable_partition(
+            merged->inputs.begin(), merged->inputs.end(),
+            [](InputSection *isec) { return !isec->isCold; });
+        if (!isecPriorities.empty()) {
+          std::stable_sort(merged->inputs.begin(), coldIt,
+                           [&](InputSection *a, InputSection *b) {
+                             return isecPriorities.lookup(a) <
+                                    isecPriorities.lookup(b);
+                           });
         }
       }
     }

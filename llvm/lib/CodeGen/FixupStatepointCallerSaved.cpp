@@ -67,10 +67,7 @@ class FixupStatepointCallerSavedLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  FixupStatepointCallerSavedLegacy() : MachineFunctionPass(ID) {
-    initializeFixupStatepointCallerSavedLegacyPass(
-        *PassRegistry::getPassRegistry());
-  }
+  FixupStatepointCallerSavedLegacy() : MachineFunctionPass(ID) {}
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
     MachineFunctionPass::getAnalysisUsage(AU);
@@ -420,7 +417,7 @@ public:
 
       LLVM_DEBUG(dbgs() << "Insert spill before " << *InsertBefore);
       TII.storeRegToStackSlot(*MI.getParent(), InsertBefore, Reg, IsKill, FI,
-                              RC, &TRI, Register());
+                              RC, Register());
     }
   }
 
@@ -429,7 +426,7 @@ public:
     const TargetRegisterClass *RC = TRI.getMinimalPhysRegClass(Reg);
     int FI = RegToSlotIdx[Reg];
     if (It != MBB->end()) {
-      TII.loadRegFromStackSlot(*MBB, It, Reg, FI, RC, &TRI, Register());
+      TII.loadRegFromStackSlot(*MBB, It, Reg, FI, RC, Register());
       return;
     }
 
@@ -437,7 +434,7 @@ public:
     // and then swap them.
     assert(!MBB->empty() && "Empty block");
     --It;
-    TII.loadRegFromStackSlot(*MBB, It, Reg, FI, RC, &TRI, Register());
+    TII.loadRegFromStackSlot(*MBB, It, Reg, FI, RC, Register());
     MachineInstr *Reload = It->getPrevNode();
     int Dummy = 0;
     (void)Dummy;

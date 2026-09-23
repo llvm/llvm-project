@@ -29,4 +29,4 @@ foo:
 # CHECK-NEXT:        Index:           0
 # CHECK-NEXT:      - Name:            __start_foo
 # CHECK-NEXT:        Kind:            GLOBAL
-# CHECK-NEXT:        Index:           1
+# CHECK-NEXT:        Index:           0

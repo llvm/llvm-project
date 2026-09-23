@@ -156,6 +156,11 @@ mlir::nvgpu::optimizeSharedMemoryReadsAndWrites(Operation *parentOp,
   if (memRefType.getRank() == 0)
     return failure();
 
+  // Only support memrefs with scalar element types (i.e., int or float).
+  // Memrefs with vector element types are not supported.
+  if (!memRefType.getElementType().isIntOrFloat())
+    return failure();
+
   // Abort if the given value has any sub-views; we do not do any alias
   // analysis.
   bool hasSubView = false;
@@ -166,6 +171,9 @@ mlir::nvgpu::optimizeSharedMemoryReadsAndWrites(Operation *parentOp,
   // Check if this is necessary given the assumption of 128b accesses:
   // If dim[rank-1] is small enough to fit 8 rows in a 128B line.
   const int64_t rowSize = memRefType.getDimSize(memRefType.getRank() - 1);
+  if (ShapedType::isDynamic(rowSize) || rowSize == 0)
+    return failure();
+
   const int64_t rowsPerLine =
       (8 * kSharedMemoryLineSizeBytes / memRefType.getElementTypeBitWidth()) /
       rowSize;

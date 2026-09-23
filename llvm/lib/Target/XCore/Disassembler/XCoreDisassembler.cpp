@@ -69,7 +69,7 @@ static bool readInstruction32(ArrayRef<uint8_t> Bytes, uint64_t Address,
   return true;
 }
 
-static unsigned getReg(const MCDisassembler *D, unsigned RC, unsigned RegNo) {
+static MCRegister getReg(const MCDisassembler *D, unsigned RC, unsigned RegNo) {
   const MCRegisterInfo *RegInfo = D->getContext().getRegisterInfo();
   return RegInfo->getRegClass(RC).getRegister(RegNo);
 }
@@ -79,7 +79,7 @@ static DecodeStatus DecodeGRRegsRegisterClass(MCInst &Inst, unsigned RegNo,
                                               const MCDisassembler *Decoder) {
   if (RegNo > 11)
     return MCDisassembler::Fail;
-  unsigned Reg = getReg(Decoder, XCore::GRRegsRegClassID, RegNo);
+  MCRegister Reg = getReg(Decoder, XCore::GRRegsRegClassID, RegNo);
   Inst.addOperand(MCOperand::createReg(Reg));
   return MCDisassembler::Success;
 }
@@ -89,7 +89,7 @@ static DecodeStatus DecodeRRegsRegisterClass(MCInst &Inst, unsigned RegNo,
                                              const MCDisassembler *Decoder) {
   if (RegNo > 15)
     return MCDisassembler::Fail;
-  unsigned Reg = getReg(Decoder, XCore::RRegsRegClassID, RegNo);
+  MCRegister Reg = getReg(Decoder, XCore::RRegsRegClassID, RegNo);
   Inst.addOperand(MCOperand::createReg(Reg));
   return MCDisassembler::Success;
 }

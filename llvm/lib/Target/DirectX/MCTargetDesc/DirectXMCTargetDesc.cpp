@@ -94,7 +94,7 @@ public:
 class DirectXMCAsmInfo : public MCAsmInfo {
 public:
   explicit DirectXMCAsmInfo(const Triple &TT, const MCTargetOptions &Options)
-      : MCAsmInfo() {}
+      : MCAsmInfo(Options) {}
 };
 
 } // namespace
@@ -132,7 +132,8 @@ static MCRegisterInfo *createDirectXMCRegisterInfo(const Triple &Triple) {
 
 static MCInstrInfo *createDirectXMCInstrInfo() { return new MCInstrInfo(); }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeDirectXTargetMC() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeDirectXTargetMC() {
   Target &T = getTheDirectXTarget();
   RegisterMCAsmInfo<DirectXMCAsmInfo> X(T);
   TargetRegistry::RegisterMCInstrInfo(T, createDirectXMCInstrInfo);

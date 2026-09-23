@@ -121,6 +121,13 @@ multiclass RVVVQMACCQOQBuiltinSet<list<list<string>> suffixes_prototypes> {
     defm NAME : RVVOutOp1Op2BuiltinSet<NAME, "s", suffixes_prototypes>;
 }
 
+multiclass RVVVFEXPBuiltinSet<list<list<string>> suffixes_prototypes, string type_range> {
+  let UnMaskedPolicyScheme = HasPassthruOperand,
+      OverloadedName = NAME,
+      Log2LMUL = [-2, -1, 0, 1, 2, 3] in
+    defm NAME : RVVOutBuiltinSet<NAME, type_range, suffixes_prototypes>;
+}
+
 multiclass RVVVFNRCLIPBuiltinSet<string suffix, string prototype, string type_range> {
   let Log2LMUL = [-3, -2, -1, 0, 1, 2],
       Name = NAME,
@@ -144,6 +151,26 @@ let UnMaskedPolicyScheme = HasPolicyOperand in
     defm sf_vqmaccus_4x8x4 : RVVVQMACCQOQBuiltinSet<[["", "w", "ww(FixedSEW:8)SUv(FixedSEW:8)v"]]>;
     defm sf_vqmaccsu_4x8x4 : RVVVQMACCQOQBuiltinSet<[["", "w", "ww(FixedSEW:8)Sv(FixedSEW:8)Uv"]]>;
   }
+
+let RequiredFeatures = ["xsfvfbfexp16e"] in {
+  defm sf_vfexp : RVVVFEXPBuiltinSet<[["v", "v", "vv"]], "y">;
+}
+
+let RequiredFeatures = ["xsfvfexp16e"] in {
+  defm sf_vfexp : RVVVFEXPBuiltinSet<[["v", "v", "vv"]], "x">;
+}
+
+let RequiredFeatures = ["xsfvfexp32e"] in {
+  defm sf_vfexp : RVVVFEXPBuiltinSet<[["v", "v", "vv"]], "f">;
+}
+
+let RequiredFeatures = ["xsfvfexpa"] in {
+  defm sf_vfexpa : RVVVFEXPBuiltinSet<[["v", "v", "vv"]], "xf">;
+}
+
+let RequiredFeatures = ["xsfvfexpa64e"] in {
+  defm sf_vfexpa : RVVVFEXPBuiltinSet<[["v", "v", "vv"]], "d">;
+}
 
 let UnMaskedPolicyScheme = HasPolicyOperand in
   let RequiredFeatures = ["xsfvfwmaccqqq"] in
@@ -231,6 +258,8 @@ multiclass RVVSFTileMoveBuiltinSet<list<list<string>> suffixes_prototypes,
     let RequiredFeatures = !listconcat(RequiredFeatures,
                                        !cond(!eq(type, "x"): ["zvfhmin"],
                                              !eq(type, "y"): ["zvfbfmin"],
+                                             !eq(type, "a"): ["zvfofp8min"],
+                                             !eq(type, "b"): ["zvfofp8min"],
                                              true:           []<string>)),
         SupportOverloading = false,
         HasMasked = false,
@@ -247,7 +276,7 @@ multiclass RVVSFTileMoveVTBuiltinSet<list<string> RequiredFeatures = []> {
     defm NAME :
         RVVSFTileMoveBuiltinSet<[["v", "vz"], ["Uv", "Uvz"]], [-1], type,
                                 RequiredFeatures>;
-  foreach type = ["x", "y", "f", "d"] in
+  foreach type = ["x", "y", "f", "d", "a", "b"] in
     defm NAME :
         RVVSFTileMoveBuiltinSet<[["v", "vz"]], [-1], type, RequiredFeatures>;
 }
@@ -258,7 +287,7 @@ multiclass RVVSFTileMoveTVBuiltinSet<list<string> RequiredFeatures = []> {
       defm NAME :
           RVVSFTileMoveBuiltinSet<[["v", "0zv"], ["Uv", "0zUv"]], [1], type,
                                   RequiredFeatures>;
-    foreach type = ["x", "y", "f", "d"] in
+    foreach type = ["x", "y", "f", "d", "a", "b"] in
       defm NAME :
           RVVSFTileMoveBuiltinSet<[["v", "0zv"]], [1], type, RequiredFeatures>;
   }
@@ -271,7 +300,7 @@ multiclass RVVOp0Op1Op2BuiltinSet<string intrinsic_name, string type_range,
 multiclass RVVSFMatMulBuiltinSet<string prototype, string suffix,
                                  string type_range, list<int> widens> {
   foreach widen = widens in
-    let OverloadedName = NAME,
+    let OverloadedName = "sf_mm_w" # !cast<string>(widen),
         TWiden = widen,
         HasVL = false,
         Log2LMUL = [3],
@@ -284,7 +313,7 @@ multiclass RVVSFMatMulFloatBuiltinSet<string name, string prototype, string suff
                                       list<string> type_range, int widen> {
   // Currently the XSfmm spec doesn't support w8.
   foreach type = type_range in
-    let OverloadedName = name # !strconcat("_w", !cast<string>(widen)),
+    let OverloadedName = "sf_mm_w" # !cast<string>(widen),
         TWiden = widen,
         HasVL = false,
         Log2LMUL = [3],
@@ -361,10 +390,11 @@ let RequiredFeatures = ["xsfmm32a32f"] in
 let RequiredFeatures = ["xsfmm32a8f"] in
   foreach e1 = [5, 4] in
     foreach e2 = [5, 4] in
-      let OverloadedName = "sf_mm_e" # e1 # "m" # !sub(7, e1) # "_e" # e2 # "m" # !sub(7, e2) in
-        defm : RVVSFMatMulFloatBuiltinSet<
-            "sf_mm_e" # e1 # "m" # !sub(7, e1) # "_e" # e2 # "m" # !sub(7, e2),
-            "0KzUvUvzzz", "UvUv", ["c"], 4>;
+      defm : RVVSFMatMulFloatBuiltinSet<
+          "sf_mm_e" # e1 # "m" # !sub(7, e1) # "_e" # e2 # "m" # !sub(7, e2),
+          !if(!eq(e1, e2), "0Kzvvzzz", "0KzvAvzzz"),
+          !if(!eq(e1, e2), "vv", "vAv"),
+          [!if(!eq(e1, 5), "b", "a")], 4>;
 
 let RequiredFeatures = ["xsfmm64a64f"] in
   defm : RVVSFMatMulFloatBuiltinSet<"sf_mm_f_f", "0Kzvvzzz", "v", ["d"], 1>;

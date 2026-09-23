@@ -132,9 +132,9 @@ void Process::GetTimeUsage(TimePoint<> &elapsed,
 #include <mach/mach.h>
 #endif
 
-// Some LLVM programs such as bugpoint produce core files as a normal part of
-// their operation. To prevent the disk from filling up, this function
-// does what's necessary to prevent their generation.
+// Some LLVM programs such as llvm-reduce produce core files as a normal part of
+// their operation. To prevent the disk from filling up, this function does
+// what's necessary to prevent their generation.
 void Process::PreventCoreFiles() {
   struct rlimit rlim;
   getrlimit(RLIMIT_CORE, &rlim);
@@ -348,8 +348,11 @@ static bool terminalHasColors() {
   // ANSI color escape codes.
   if (const char *TermStr = std::getenv("TERM")) {
     return StringSwitch<bool>(TermStr)
+        .Case("alacritty", true)
         .Case("ansi", true)
         .Case("cygwin", true)
+        .Case("ghostty", true)
+        .Case("kitty", true)
         .Case("linux", true)
         .StartsWith("screen", true)
         .StartsWith("xterm", true)

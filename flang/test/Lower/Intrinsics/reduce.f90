@@ -19,7 +19,7 @@ end type
 
   integer, parameter :: kind10 = merge(10, 4, selected_real_kind(p=18).eq.10)
   integer, parameter :: kind16 = merge(16, 4, selected_real_kind(p=33).eq.16)
-  
+
 
 contains
 
@@ -46,11 +46,11 @@ subroutine integer1(a, id, d1, d2)
   res = reduce(a, red_int1)
 
   res = reduce(a, red_int1, identity=id)
-  
+
   res = reduce(a, red_int1, identity=id, ordered = .true.)
 
   res = reduce(a, red_int1, [.true., .true., .false.])
-  
+
   res = reduce(a, red_int1_value)
 
   fptr => red_int1

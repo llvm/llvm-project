@@ -26,7 +26,7 @@
 #include "test_allocator.h"
 
 template <class KeyContainer>
-void test() {
+constexpr void test() {
   using Key = typename KeyContainer::value_type;
   using M   = std::flat_multiset<Key, std::less<Key>, KeyContainer>;
   {
@@ -53,16 +53,24 @@ void test() {
   }
 }
 
-void test() {
+constexpr bool test() {
   test<std::vector<int>>();
   test<std::vector<double>>();
-  test<std::deque<int>>();
+#ifndef __cpp_lib_constexpr_deque
+  if (!TEST_IS_CONSTANT_EVALUATED)
+#endif
+    test<std::deque<int>>();
   test<MinSequenceContainer<int>>();
   test<std::vector<int, min_allocator<int>>>();
+
+  return true;
 }
 
 int main(int, char**) {
   test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

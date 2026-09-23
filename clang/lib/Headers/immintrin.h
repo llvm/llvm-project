@@ -58,6 +58,10 @@
 
 #include <avx512bitalgintrin.h>
 
+#include <avx512bmmintrin.h>
+
+#include <avx512bmmvlintrin.h>
+
 #include <avx512cdintrin.h>
 
 #include <avx512vpopcntdqintrin.h>
@@ -475,23 +479,9 @@ _storebe_i64(void * __P, long long __D) {
 
 #include <amxfp8intrin.h>
 
-#include <amxtransposeintrin.h>
-
 #include <amxmovrsintrin.h>
 
-#include <amxmovrstransposeintrin.h>
-
 #include <amxavx512intrin.h>
-
-#include <amxtf32intrin.h>
-
-#include <amxtf32transposeintrin.h>
-
-#include <amxbf16transposeintrin.h>
-
-#include <amxfp16transposeintrin.h>
-
-#include <amxcomplextransposeintrin.h>
 
 #include <avx512vp2intersectintrin.h>
 
@@ -511,6 +501,9 @@ _storebe_i64(void * __P, long long __D) {
 #include <avx10_2_512niintrin.h>
 #include <avx10_2_512satcvtdsintrin.h>
 #include <avx10_2_512satcvtintrin.h>
+
+#include <avx10v2aux_512intrin.h>
+#include <avx10v2auxintrin.h>
 
 #include <sm4evexintrin.h>
 

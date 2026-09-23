@@ -63,8 +63,8 @@ define hidden i32 @f(i32 %n) local_unnamed_addr #0 {
 ; CHECK-NEXT:    subs r0, #4
 ; CHECK-NEXT:    sub.w r3, r4, #16
 ; CHECK-NEXT:    add.w lr, r2, r0, lsr #2
-; CHECK-NEXT:    movs r2, #0
 ; CHECK-NEXT:    movs r0, #0
+; CHECK-NEXT:    movs r2, #0
 ; CHECK-NEXT:  .LBB0_5: @ %for.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldr r5, [r3, #16]!

@@ -13,6 +13,7 @@ contains
 
   subroutine f00
     type(t) :: x
+  !ERROR: A variable that is part of another variable cannot appear on the REDUCTION clause
   !ERROR: The base expression of an array element or section in REDUCTION clause must be an identifier
   !$omp do reduction (+ : x%a(2))
     do i = 1, 10
@@ -22,6 +23,7 @@ contains
 
   subroutine f01
     type(t) :: x
+  !ERROR: A variable that is part of another variable cannot appear on the REDUCTION clause
   !ERROR: The base expression of an array element or section in REDUCTION clause must be an identifier
   !$omp do reduction (+ : x%a(1:10))
     do i = 1, 10

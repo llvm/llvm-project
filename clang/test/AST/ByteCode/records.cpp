@@ -466,7 +466,14 @@ namespace ConditionalInit {
 
   static_assert(getS(true).a == 12, "");
   static_assert(getS(false).a == 13, "");
-};
+
+  struct T {
+    virtual ~T() = default;
+  };
+  struct D : T {};
+  void foo() { const T &t = true ? (const T)(D()) : D(); }
+}
+
 namespace DeclRefs {
   struct A{ int m; const int &f = m; };
 
@@ -602,6 +609,15 @@ namespace Destructors {
   }
   static_assert(testS() == 1); // both-error {{not an integral constant expression}} \
                                // both-note {{in call to 'testS()'}}
+
+  struct A { int n; };
+  constexpr void double_destroy() {
+    A a; // both-note {{declared here}}
+    a.~A();
+    a.~A(); // both-note {{destruction of object outside its lifetime}}
+  }
+  static_assert((double_destroy(), true)); // both-error {{not an integral constant expression}} \
+                                           // both-note {{in call to}}
 }
 
 namespace BaseToDerived {
@@ -1235,6 +1251,41 @@ namespace InheritedConstructor {
 
     constexpr S s(1);
   }
+
+  namespace GH158529 {
+    /// Used to assert when popping the variadic arguments of an inherited
+    /// constructor, since the call site is a CXXInheritedCtorInitExpr.
+    struct foo {
+      constexpr foo(int, ...) {}
+    };
+    struct boo : foo {
+      using foo::foo;
+    };
+    struct bar : boo {
+      using boo::boo;
+    };
+    bar u(0, 1);
+
+    struct A {
+      int a;
+      constexpr A(int a, ...) : a(a) {}
+    };
+    struct B : A { using A::A; };
+    struct C : B { using B::B; };
+
+    constexpr B b(1, 2);
+    static_assert(b.a == 1, "");
+    constexpr C c(3, 4, 5);
+    static_assert(c.a == 3, "");
+    constexpr C c2(6, 7.5, 'c', 8L);
+    static_assert(c2.a == 6, "");
+
+    constexpr int f() {
+      C x(9, 10);
+      return x.a;
+    }
+    static_assert(f() == 9, "");
+  }
 }
 
 namespace InvalidCtorInitializer {
@@ -1286,11 +1337,34 @@ namespace {
   };
   constexpr int a() {
     int x = 1;
-    int f = B{x}.x;
-    B{x}; // both-warning {{expression result unused}}
-
-    return 1;
+    {
+      B b{x};
+    }
+    return x;
   }
+  static_assert(a() == 0);
+
+  constexpr int discarded() {
+    int x = 1;
+    B{x}; // both-warning {{expression result unused}}
+    return x;
+  }
+
+  /// The temporary 'A' created by the default member initializer is destroyed
+  /// at the end of the full-expression containing the aggregate initialization
+  /// (see https://github.com/llvm/llvm-project/issues/85601).
+  static_assert(discarded() == 0);
+
+  /// A const-qualified composite result is writable while under construction.
+  constexpr int decrement(int &x) {
+    return --x;
+  }
+  struct DMIConstComposite {
+    int a;
+    int b = decrement(a);
+  };
+  constexpr DMIConstComposite c{1};
+  static_assert(c.a == 0);
 }
 #endif
 
@@ -1318,12 +1392,27 @@ namespace pr18633 {
   }
 }
 
-namespace {
+namespace MemberExprOnStatic {
   struct F {
     static constexpr int Z = 12;
   };
   F f;
   static_assert(f.Z == 12, "");
+
+  template<int I>
+  struct S {
+    static constexpr const auto &k = I;
+    int a;
+  };
+
+  S<10> s{12};
+  static_assert(s.k == 10, "");
+
+  constexpr int foo() {
+    S<100> s{12};
+    return s.k;
+  }
+  static_assert(foo() == 100, "");
 }
 
 namespace UnnamedBitFields {
@@ -1881,4 +1970,156 @@ namespace MethodWillHaveBody {
     return t;
   }
   int n = f(0); // both-note {{instantiation of}}
+}
+
+namespace StaticRedecl {
+  struct T {
+    static T tt;
+    constexpr T() : p(&tt) {}
+    T *p;
+  };
+  T T::tt;
+  constexpr T t;
+  static_assert(t.p == &T::tt, "");
+}
+
+namespace VirtCallNoRecord {
+  struct S {
+    virtual int foo();
+  };
+  int bar(int{((S *const)0)->foo()});
+}
+
+namespace ErroneousVoidDecl {
+#if __cplusplus >= 201703L
+  struct S {};
+  template <auto V> struct M;
+  template <typename C, int N1, int N2> auto f(const C &, M<N1> *, M<N1> *) {} // both-note {{couldn't infer template argument}}
+
+  template <typename F, typename C, typename N1, typename N2>
+  constexpr bool check(const C &c, N1 *n1, N2 *n2) {
+    decltype(f(c, n1, n2)) *chk{}; // both-error {{no matching function}} \
+                                   // ref-note {{destroying object 'chk' whose lifetime has already ended}}
+    return true;
+  }
+
+  template <int N> constexpr M<N> *bar() { return nullptr; }
+  static_assert(check<S>([](int n) constexpr {}, bar<1u>(), bar<1u>())); // both-note {{in instantiation}} \
+                                                                         // ref-error {{not an integral constant expression}} \
+                                                                         // ref-note {{in call to}}
+#endif
+}
+
+namespace FieldLifetimeNotStarted {
+  struct R { // both-note {{during field initialization in the implicit default constructor}}
+    struct Inner { constexpr int f() const { return 0; } };
+    int a = b.f(); // both-warning {{field 'b' is uninitialized when used here}} \
+                   // both-note {{member call on object outside its lifetime}}
+    Inner b;
+  };
+  constexpr R r; // both-error {{constant expression}} \
+                 // both-note {{in call to}} \
+                 // both-note {{declared here}} \
+                 // both-note {{in implicit default constructor for 'FieldLifetimeNotStarted::R' first required here}}
+}
+
+namespace EmptyRecords {
+  struct E1 {} e1;
+  union E2 {} e2; // both-note 4{{here}}
+  struct E3 : E1 {} e3;
+
+  template<typename E>
+  constexpr int f(E &a, int kind) {
+    switch (kind) {
+    case 0: { E e(a); return 0; } // both-note {{read}} \
+                                  // both-note {{in call}}
+    case 1: { E e(static_cast<E&&>(a)); return 0; } // both-note {{read}} \
+                                                    // both-note {{in call}}
+    case 2: { E e; e = a; return 0; } // both-note {{read}} \
+                                      // both-note {{in call}}
+    case 3: { E e; e = static_cast<E&&>(a); return 0; } // both-note {{read}} \
+                                                        // both-note {{in call}}
+    }
+  }
+  constexpr int test1 = f(e1, 0);
+  constexpr int test2 = f(e2, 0); // both-error {{constant expression}} \
+                                  // both-note {{in call}}
+  constexpr int test3 = f(e3, 0);
+  constexpr int test4 = f(e1, 1);
+  constexpr int test5 = f(e2, 1); // both-error {{constant expression}} \
+                                  // both-note {{in call}}
+  constexpr int test6 = f(e3, 1);
+  constexpr int test7 = f(e1, 2);
+  constexpr int test8 = f(e2, 2); // both-error {{constant expression}} \
+                                  // both-note {{in call}}
+  constexpr int test9 = f(e3, 2);
+  constexpr int testa = f(e1, 3);
+  constexpr int testb = f(e2, 3); // both-error {{constant expression}} \
+                                  // both-note {{in call}}
+  constexpr int testc = f(e3, 3);
+}
+
+namespace RVOPtrIsExtern {
+  struct __ph {
+  } extern const _1;
+  constexpr void test(__ph) {}
+  constexpr bool test_all() {
+    test(_1);
+    return true;
+  }
+  static_assert(test_all(), "");
+}
+
+namespace MutableInMemcpy {
+  union H {
+    mutable struct {} gx; // both-note {{declared here}}
+  };
+  constexpr H h1 = {};
+  constexpr H h2 = h1; // both-error {{must be initialized by a constant expression}} \
+                       // both-note {{read of mutable member 'gx' is not allowed in a constant expression}} \
+                       // both-note {{in call}}
+}
+
+namespace StaticMemberRedecl {
+  class S {
+    public:
+    static const int m;
+  };
+  constexpr int getM() { return S::m; }
+  const int S::m = 10;
+  static_assert(getM() == 10, "");
+}
+
+namespace VariadicCtorStartsLifetime {
+  struct S {
+    constexpr S(int, ...) {}
+  };
+  class C {
+  public:
+    S s;
+    constexpr C() : s(1,1) {}
+  };
+  /// Used to not start the lifetime of 's'.
+  constexpr C c;
+}
+
+namespace BaseInitViaDIE {
+  struct S {
+    int a = 42, b = a;
+  };
+
+  struct SS : S {};
+  constexpr SS ss {};
+  static_assert(ss.b == 42, "");
+}
+
+namespace OPEOpaque {
+  struct S {char c[14];};
+  extern S s;
+  static_assert((&s + 1) - &s == 1, "");
+
+  extern int a[12];
+  static_assert ((&a + 12 - &a) == 12, ""); // both-error {{not an integral constant expression}} \
+                                            // both-note {{cannot refer to element 12 of non-array object in a constant expression}}
+
 }

@@ -19,11 +19,14 @@ template <class K>
 struct support::adapt_operations<std::unordered_set<K>> {
   using ValueType = typename std::unordered_set<K>::value_type;
   using KeyType   = typename std::unordered_set<K>::key_type;
-  static ValueType value_from_key(KeyType const& k) { return k; }
-  static KeyType key_from_value(ValueType const& value) { return value; }
+  static ValueType make_value_from_key(KeyType const& k) { return k; }
+  static KeyType const& key_from_value(ValueType const& value) { return value; }
 
   using InsertionResult = std::pair<typename std::unordered_set<K>::iterator, bool>;
   static auto get_iterator(InsertionResult const& result) { return result.first; }
+
+  template <class Allocator>
+  using rebind_alloc = std::unordered_set<K, std::hash<K>, std::equal_to<K>, Allocator>;
 };
 
 int main(int argc, char** argv) {

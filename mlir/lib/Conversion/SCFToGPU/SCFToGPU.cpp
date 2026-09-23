@@ -1,4 +1,4 @@
-//===- SCFToGPU.cpp - Convert an affine loop nest to a GPU kernel -------===//
+//===- SCFToGPU.cpp - Convert an affine loop nest to a GPU kernel ---------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,12 +14,13 @@
 
 #include "mlir/Conversion/SCFToGPU/SCFToGPU.h"
 
+#include "mlir/Analysis/AliasAnalysis/LocalAliasAnalysis.h"
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Transforms/ParallelLoopMapper.h"
-#include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/MemRef/IR/MemRefDialect.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/Builders.h"
@@ -27,6 +28,7 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/RegionUtils.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/DebugLog.h"
 #include <optional>
 
@@ -39,7 +41,7 @@ using namespace mlir::scf;
 // Name of internal attribute to mark visited operations during conversion.
 //
 // NOTE: The conversion originally used the following legality criteria:
-//   `!parallelOp->hasAttr(gpu::getMappingAttrName())`
+//   `!parallelOp->hasDiscardableAttr(gpu::getMappingAttrName())`
 // But the provided pattern might reject some cases based on more detailed
 // analysis of the `mapping` attribute.
 // To avoid dialect conversion failure due to non-converted illegal operation
@@ -182,6 +184,12 @@ AffineLoopToGpuConverter::collectBounds(AffineForOp forOp, unsigned numLoops) {
   steps.reserve(numLoops);
   AffineForOp currentLoop = forOp;
   for (unsigned i = 0; i < numLoops; ++i) {
+    if (currentLoop.getNumIterOperands() > 0) {
+      currentLoop.emitError(
+          "affine loop with iter_args cannot be converted to GPU kernel");
+      return std::nullopt;
+    }
+
     Value lowerBound = getOrEmitLowerBound(currentLoop, builder);
     Value upperBound = getOrEmitUpperBound(currentLoop, builder);
     if (!lowerBound || !upperBound) {
@@ -331,12 +339,10 @@ static Value deriveStaticUpperBound(Value upperBound,
   }
 
   if (auto multiplyOp = upperBound.getDefiningOp<arith::MulIOp>()) {
-    if (auto lhs = dyn_cast_or_null<arith::ConstantIndexOp>(
-            deriveStaticUpperBound(multiplyOp.getOperand(0), rewriter)
-                .getDefiningOp()))
-      if (auto rhs = dyn_cast_or_null<arith::ConstantIndexOp>(
-              deriveStaticUpperBound(multiplyOp.getOperand(1), rewriter)
-                  .getDefiningOp())) {
+    if (auto lhs = deriveStaticUpperBound(multiplyOp.getOperand(0), rewriter)
+                       .getDefiningOp<arith::ConstantIndexOp>())
+      if (auto rhs = deriveStaticUpperBound(multiplyOp.getOperand(1), rewriter)
+                         .getDefiningOp<arith::ConstantIndexOp>()) {
         // Assumptions about the upper bound of minimum computations no longer
         // work if multiplied by mixed signs, so abort in this case.
         if ((lhs.value() < 0) != (rhs.value() < 0))
@@ -402,8 +408,8 @@ static LogicalResult processParallelLoop(
     DenseMap<gpu::Processor, Value> &bounds, PatternRewriter &rewriter) {
   // TODO: Verify that this is a valid GPU mapping.
   // processor ids: 0-2 block [x/y/z], 3-5 -> thread [x/y/z], 6-> sequential
-  ArrayAttr mapping =
-      parallelOp->getAttrOfType<ArrayAttr>(gpu::getMappingAttrName());
+  ArrayAttr mapping = parallelOp->getDiscardableAttrOfType<ArrayAttr>(
+      gpu::getMappingAttrName());
 
   // TODO: Support multiple reductions.
   if (!mapping || parallelOp.getNumResults() > 1)
@@ -419,9 +425,9 @@ static LogicalResult processParallelLoop(
                                   launchIndependent](Value val) -> Value {
     if (launchIndependent(val))
       return val;
-    if (auto constOp = val.getDefiningOp<arith::ConstantOp>())
-      return arith::ConstantOp::create(rewriter, constOp.getLoc(),
-                                       constOp.getValue());
+    if (std::optional<int64_t> constOp = getConstantIntValue(val))
+      return arith::ConstantIndexOp::create(rewriter, val.getLoc(),
+                                            constOp.value());
     return {};
   };
 
@@ -451,10 +457,24 @@ static LogicalResult processParallelLoop(
           1, 2,
           rewriter.getAffineDimExpr(0) * rewriter.getAffineSymbolExpr(0) +
               rewriter.getAffineSymbolExpr(1));
+      // Map through cloningMap first so we use values valid at the launch
+      // scope, then ensure they are launch-independent (or cloned constants).
+      Value mappedStep = cloningMap.lookupOrDefault(step);
+      Value mappedLowerBound = cloningMap.lookupOrDefault(lowerBound);
+
+      mappedStep = ensureLaunchIndependent(mappedStep);
+      mappedLowerBound = ensureLaunchIndependent(mappedLowerBound);
+
+      // If either cannot be made available above the launch, fail gracefully.
+      if (!mappedStep || !mappedLowerBound) {
+        return rewriter.notifyMatchFailure(
+            parallelOp, "lower bound / step must be constant or defined above "
+                        "the gpu.launch");
+      }
+
       newIndex = AffineApplyOp::create(
           rewriter, loc, annotation.getMap().compose(lowerAndStep),
-          ValueRange{operand, ensureLaunchIndependent(step),
-                     ensureLaunchIndependent(lowerBound)});
+          ValueRange{operand, mappedStep, mappedLowerBound});
       // If there was also a bound, insert that, too.
       // TODO: Check that we do not assign bounds twice.
       if (annotation.getBound()) {
@@ -466,17 +486,15 @@ static LogicalResult processParallelLoop(
         // conditional. If the lower-bound is constant or defined before the
         // launch, we can use it in the launch bounds. Otherwise fail.
         if (!launchIndependent(lowerBound) &&
-            !isa_and_nonnull<arith::ConstantOp>(lowerBound.getDefiningOp()))
+            !getConstantIntValue(lowerBound).has_value())
           return failure();
         // The step must also be constant or defined outside of the loop nest.
-        if (!launchIndependent(step) &&
-            !isa_and_nonnull<arith::ConstantOp>(step.getDefiningOp()))
+        if (!launchIndependent(step) && !getConstantIntValue(step).has_value())
           return failure();
         // If the upper-bound is constant or defined before the launch, we can
         // use it in the launch bounds directly. Otherwise try derive a bound.
-        bool boundIsPrecise =
-            launchIndependent(upperBound) ||
-            isa_and_nonnull<arith::ConstantOp>(upperBound.getDefiningOp());
+        bool boundIsPrecise = launchIndependent(upperBound) ||
+                              getConstantIntValue(upperBound).has_value();
         {
           PatternRewriter::InsertionGuard guard(rewriter);
           rewriter.setInsertionPoint(launchOp);
@@ -544,11 +562,11 @@ static LogicalResult processParallelLoop(
 
   // Propagate custom user defined optional attributes, that can be used at
   // later stage, such as extension data for GPU kernel dispatch
-  for (const auto &namedAttr : parallelOp->getAttrs()) {
-    if (namedAttr.getName() == gpu::getMappingAttrName() ||
-        namedAttr.getName() == ParallelOp::getOperandSegmentSizeAttr())
+  for (const auto &namedAttr :
+       parallelOp->getDiscardableAttrDictionary().getValue()) {
+    if (namedAttr.getName() == gpu::getMappingAttrName())
       continue;
-    launchOp->setAttr(namedAttr.getName(), namedAttr.getValue());
+    launchOp->setDiscardableAttr(namedAttr.getName(), namedAttr.getValue());
   }
 
   Block *body = parallelOp.getBody();
@@ -596,7 +614,7 @@ LogicalResult
 ParallelToGpuLaunchLowering::matchAndRewrite(ParallelOp parallelOp,
                                              PatternRewriter &rewriter) const {
   // Mark the operation as visited for recursive legality check.
-  parallelOp->setAttr(kVisitedAttrName, rewriter.getUnitAttr());
+  parallelOp->setDiscardableAttr(kVisitedAttrName, rewriter.getUnitAttr());
 
   // We can only transform starting at the outer-most loop. Launches inside of
   // parallel loops are not supported.
@@ -605,11 +623,10 @@ ParallelToGpuLaunchLowering::matchAndRewrite(ParallelOp parallelOp,
   // Create a launch operation. We start with bound one for all grid/block
   // sizes. Those will be refined later as we discover them from mappings.
   Location loc = parallelOp.getLoc();
-  Value constantOne =
-      arith::ConstantIndexOp::create(rewriter, parallelOp.getLoc(), 1);
-  gpu::LaunchOp launchOp = gpu::LaunchOp::create(
-      rewriter, parallelOp.getLoc(), constantOne, constantOne, constantOne,
-      constantOne, constantOne, constantOne);
+  Value constantOne = arith::ConstantIndexOp::create(rewriter, loc, 1);
+  gpu::LaunchOp launchOp =
+      gpu::LaunchOp::create(rewriter, loc, constantOne, constantOne,
+                            constantOne, constantOne, constantOne, constantOne);
   rewriter.setInsertionPointToEnd(&launchOp.getBody().front());
   gpu::TerminatorOp::create(rewriter, loc);
   rewriter.setInsertionPointToStart(&launchOp.getBody().front());
@@ -625,18 +642,49 @@ ParallelToGpuLaunchLowering::matchAndRewrite(ParallelOp parallelOp,
   bool seenSideeffects = false;
   // Whether we have left a nesting scope (and hence are no longer innermost).
   bool leftNestingScope = false;
+  LocalAliasAnalysis aliasAnalysis;
+  llvm::DenseSet<Value> writtenBuffer;
   while (!worklist.empty()) {
     Operation *op = worklist.pop_back_val();
     // Now walk over the body and clone it.
     // TODO: This is only correct if there either is no further scf.parallel
-    //       nested or this code is side-effect free. Otherwise we might need
-    //       predication. We are overly conservative for now and only allow
-    //       side-effects in the innermost scope.
+    //       nested or this code has side-effect but the memory buffer is not
+    //       alias to inner loop access buffer. Otherwise we might need
+    //       predication.
     if (auto nestedParallel = dyn_cast<ParallelOp>(op)) {
       // Before entering a nested scope, make sure there have been no
-      // sideeffects until now.
-      if (seenSideeffects)
-        return failure();
+      // sideeffects until now or the nested operations do not access the
+      // buffer written by outer scope.
+      if (seenSideeffects) {
+        WalkResult walkRes = nestedParallel.walk([&](Operation *nestedOp) {
+          if (isMemoryEffectFree(nestedOp))
+            return WalkResult::advance();
+
+          auto memEffectInterface = dyn_cast<MemoryEffectOpInterface>(nestedOp);
+          if (!memEffectInterface)
+            return WalkResult::advance();
+
+          SmallVector<MemoryEffects::EffectInstance> effects;
+          memEffectInterface.getEffects(effects);
+          for (const MemoryEffects::EffectInstance &effect : effects) {
+            if (isa<MemoryEffects::Read>(effect.getEffect()) ||
+                isa<MemoryEffects::Write>(effect.getEffect())) {
+              Value baseBuffer = effect.getValue();
+              if (!baseBuffer)
+                return WalkResult::interrupt();
+              for (Value val : writtenBuffer) {
+                if (aliasAnalysis.alias(baseBuffer, val) !=
+                    AliasResult::NoAlias) {
+                  return WalkResult::interrupt();
+                }
+              }
+            }
+          }
+          return WalkResult::advance();
+        });
+        if (walkRes.wasInterrupted())
+          return failure();
+      }
       // A nested scf.parallel needs insertion of code to compute indices.
       // Insert that now. This will also update the worklist with the loops
       // body.
@@ -650,6 +698,7 @@ ParallelToGpuLaunchLowering::matchAndRewrite(ParallelOp parallelOp,
       rewriter.setInsertionPointAfter(parent);
       leftNestingScope = true;
       seenSideeffects = false;
+      writtenBuffer.clear();
     } else if (auto reduceOp = dyn_cast<scf::ReduceOp>(op)) {
       // Convert scf.reduction op
       auto parentLoop = op->getParentOfType<ParallelOp>();
@@ -662,10 +711,11 @@ ParallelToGpuLaunchLowering::matchAndRewrite(ParallelOp parallelOp,
       // Ensure reduction region is isolated from above.
       llvm::SetVector<Value> externalValues;
       getUsedValuesDefinedAbove(reduceOp.getRegion(0), externalValues);
-      if (externalValues.size())
+      if (!externalValues.empty())
         return failure();
       // Replace by gpu.all_reduce.
-      auto gpuRedOp = gpu::AllReduceOp::create(rewriter, loc, newValue);
+      auto gpuRedOp = gpu::AllReduceOp::create(
+          rewriter, loc, newValue, /*op=*/nullptr, /*uniform=*/false);
       cloningMap.map(parentLoop->getResult(0), gpuRedOp.getResult());
       // Copy region.
       rewriter.inlineRegionBefore(reduceOp.getRegion(0), gpuRedOp.getRegion(),
@@ -682,6 +732,24 @@ ParallelToGpuLaunchLowering::matchAndRewrite(ParallelOp parallelOp,
       Operation *clone = rewriter.clone(*op, cloningMap);
       cloningMap.map(op->getResults(), clone->getResults());
       // Check for side effects.
+      if (!isMemoryEffectFree(clone)) {
+        // Record the buffer accessed by the operations with write effects.
+        if (auto memEffectInterface =
+                dyn_cast<MemoryEffectOpInterface>(clone)) {
+          SmallVector<MemoryEffects::EffectInstance> effects;
+          memEffectInterface.getEffects(effects);
+          for (const MemoryEffects::EffectInstance &effect : effects) {
+            if (isa<MemoryEffects::Write>(effect.getEffect())) {
+              Value writtenBase = effect.getValue();
+              // Conservatively return failure if we cannot find the written
+              // address.
+              if (!writtenBase)
+                return failure();
+              writtenBuffer.insert(writtenBase);
+            }
+          }
+        }
+      }
       // TODO: Handle region side effects properly.
       seenSideeffects |=
           !isMemoryEffectFree(clone) || clone->getNumRegions() != 0;
@@ -693,9 +761,8 @@ ParallelToGpuLaunchLowering::matchAndRewrite(ParallelOp parallelOp,
 
   // Now that we succeeded creating the launch operation, also update the
   // bounds.
-  for (auto bound : launchBounds)
-    launchOp.setOperand(getLaunchOpArgumentNum(std::get<0>(bound)),
-                        std::get<1>(bound));
+  for (const auto &[processor, bound] : launchBounds)
+    launchOp.setOperand(getLaunchOpArgumentNum(processor), bound);
 
   rewriter.eraseOp(parallelOp);
   return success();
@@ -708,13 +775,13 @@ void mlir::populateParallelLoopToGPUPatterns(RewritePatternSet &patterns) {
 void mlir::configureParallelLoopToGPULegality(ConversionTarget &target) {
   target.addLegalDialect<memref::MemRefDialect>();
   target.addDynamicallyLegalOp<scf::ParallelOp>([](scf::ParallelOp parallelOp) {
-    return !parallelOp->hasAttr(gpu::getMappingAttrName()) ||
-           parallelOp->hasAttr(kVisitedAttrName);
+    return !parallelOp->hasDiscardableAttr(gpu::getMappingAttrName()) ||
+           parallelOp->hasDiscardableAttr(kVisitedAttrName);
   });
 }
 
 void mlir::finalizeParallelLoopToGPUConversion(Operation *op) {
   op->walk([](scf::ParallelOp parallelOp) {
-    parallelOp->removeAttr(kVisitedAttrName);
+    parallelOp->removeDiscardableAttr(kVisitedAttrName);
   });
 }

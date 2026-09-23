@@ -23,13 +23,13 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/StringSaver.h"
+#include "llvm/Support/VirtualFileSystemFwd.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <climits>
@@ -42,11 +42,8 @@
 
 namespace llvm {
 
-namespace vfs {
-class FileSystem;
-}
-
 class StringSaver;
+class ElementCount;
 
 /// This namespace contains all of the command line option processing machinery.
 /// It is intentionally a short name to make qualified usage concise.
@@ -164,7 +161,6 @@ enum FormattingFlags {
 enum MiscFlags {             // Miscellaneous flags to adjust argument
   CommaSeparated = 0x01,     // Should this cl::list split between commas?
   PositionalEatsArgs = 0x02, // Should this positional cl::list eat -args?
-  Sink = 0x04,               // Should this cl::list eat all unknown options?
 
   // Can this option group with other options?
   // If this is enabled, multiple letter options are allowed to bunch together
@@ -232,8 +228,7 @@ public:
   StringRef getDescription() const { return Description; }
 
   SmallVector<Option *, 4> PositionalOpts;
-  SmallVector<Option *, 4> SinkOpts;
-  StringMap<Option *> OptionsMap;
+  DenseMap<StringRef, Option *> OptionsMap;
 
   Option *ConsumeAfterOpt = nullptr; // The ConsumeAfter option if it exists.
 };
@@ -278,7 +273,6 @@ class LLVM_ABI Option {
   uint16_t Misc : 5;
   uint16_t FullyInitialized : 1; // Has addArgument been called?
   uint16_t Position;             // Position of last occurrence of the option
-  uint16_t AdditionalVals;       // Greater than 0 for multi-valued option.
 
 public:
   StringRef ArgStr;   // The argument string itself (ex: "help", "o")
@@ -306,12 +300,10 @@ public:
 
   inline unsigned getMiscFlags() const { return Misc; }
   inline unsigned getPosition() const { return Position; }
-  inline unsigned getNumAdditionalVals() const { return AdditionalVals; }
 
   // Return true if the argstr != ""
   bool hasArgStr() const { return !ArgStr.empty(); }
   bool isPositional() const { return getFormattingFlag() == cl::Positional; }
-  bool isSink() const { return getMiscFlags() & cl::Sink; }
   bool isDefaultOption() const { return getMiscFlags() & cl::DefaultOption; }
 
   bool isConsumeAfter() const {
@@ -335,14 +327,7 @@ public:
 
 protected:
   explicit Option(enum NumOccurrencesFlag OccurrencesFlag,
-                  enum OptionHidden Hidden)
-      : NumOccurrences(0), Occurrences(OccurrencesFlag), Value(0),
-        HiddenFlag(Hidden), Formatting(NormalFormatting), Misc(0),
-        FullyInitialized(false), Position(0), AdditionalVals(0) {
-    Categories.push_back(&getGeneralCategory());
-  }
-
-  inline void setNumAdditionalVals(unsigned n) { AdditionalVals = n; }
+                  enum OptionHidden Hidden);
 
 public:
   virtual ~Option() = default;
@@ -389,8 +374,7 @@ public:
 
   // Wrapper around handleOccurrence that enforces Flags.
   //
-  virtual bool addOccurrence(unsigned pos, StringRef ArgName, StringRef Value,
-                             bool MultiArg = false);
+  virtual bool addOccurrence(unsigned pos, StringRef ArgName, StringRef Value);
 
   // Prints option name followed by message.  Always returns true.
   bool error(const Twine &Message, StringRef ArgName = StringRef(), raw_ostream &Errs = llvm::errs());
@@ -636,7 +620,7 @@ struct OptionValue final
 };
 
 // Other safe-to-copy-by-value common option types.
-enum boolOrDefault { BOU_UNSET, BOU_TRUE, BOU_FALSE };
+enum class boolOrDefault { BOU_UNSET, BOU_TRUE, BOU_FALSE };
 template <>
 struct LLVM_ABI OptionValue<cl::boolOrDefault> final
     : OptionValueCopy<cl::boolOrDefault> {
@@ -1241,6 +1225,28 @@ public:
 };
 
 //--------------------------------------------------
+
+extern template class LLVM_TEMPLATE_ABI basic_parser<ElementCount>;
+
+template <>
+class LLVM_ABI parser<ElementCount> : public basic_parser<ElementCount> {
+public:
+  parser(Option &O) : basic_parser(O) {}
+
+  // Return true on error.
+  bool parse(Option &O, StringRef ArgName, StringRef Arg, ElementCount &Value);
+
+  // Overload in subclass to provide a better default value.
+  StringRef getValueName() const override { return "ElementCount"; }
+
+  void printOptionDiff(const Option &O, ElementCount V, OptVal Default,
+                       size_t GlobalWidth) const;
+
+  // An out-of-line virtual method to provide a 'home' for this class.
+  void anchor() override;
+};
+
+//--------------------------------------------------
 // This collection of wrappers is the intermediary between class opt and class
 // parser to handle all the template nastiness.
 
@@ -1463,7 +1469,8 @@ class opt
       return true; // Parse error!
     this->setValue(Val);
     this->setPosition(pos);
-    Callback(Val);
+    if (Callback)
+      Callback(Val);
     return false;
   }
 
@@ -1518,13 +1525,15 @@ public:
 
   template <class T> DataType &operator=(const T &Val) {
     this->setValue(Val);
-    Callback(Val);
+    if (Callback)
+      Callback(Val);
     return this->getValue();
   }
 
   template <class T> DataType &operator=(T &&Val) {
     this->getValue() = std::forward<T>(Val);
-    Callback(this->getValue());
+    if (Callback)
+      Callback(this->getValue());
     return this->getValue();
   }
 
@@ -1540,8 +1549,7 @@ public:
     Callback = CB;
   }
 
-  std::function<void(const typename ParserClass::parser_data_type &)> Callback =
-      [](const typename ParserClass::parser_data_type &) {};
+  std::function<void(const typename ParserClass::parser_data_type &)> Callback;
 };
 
 #if !(defined(LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS) && defined(_MSC_VER))
@@ -1718,7 +1726,8 @@ class list : public Option, public list_storage<DataType, StorageClass> {
     list_storage<DataType, StorageClass>::addValue(Val);
     setPosition(pos);
     Positions.push_back(pos);
-    Callback(Val);
+    if (Callback)
+      Callback(Val);
     return false;
   }
 
@@ -1773,8 +1782,6 @@ public:
       list_storage<DataType, StorageClass>::addValue(Val, true);
   }
 
-  void setNumAdditionalVals(unsigned n) { Option::setNumAdditionalVals(n); }
-
   template <class... Mods>
   explicit list(const Mods &... Ms)
       : Option(ZeroOrMore, NotHidden), Parser(*this) {
@@ -1787,19 +1794,7 @@ public:
     Callback = CB;
   }
 
-  std::function<void(const typename ParserClass::parser_data_type &)> Callback =
-      [](const typename ParserClass::parser_data_type &) {};
-};
-
-// Modifier to set the number of additional values.
-struct multi_val {
-  unsigned AdditionalVals;
-  explicit multi_val(unsigned N) : AdditionalVals(N) {}
-
-  template <typename D, typename S, typename P>
-  void apply(list<D, S, P> &L) const {
-    L.setNumAdditionalVals(AdditionalVals);
-  }
+  std::function<void(const typename ParserClass::parser_data_type &)> Callback;
 };
 
 //===----------------------------------------------------------------------===//
@@ -1895,7 +1890,8 @@ class bits : public Option, public bits_storage<DataType, Storage> {
     this->addValue(Val);
     setPosition(pos);
     Positions.push_back(pos);
-    Callback(Val);
+    if (Callback)
+      Callback(Val);
     return false;
   }
 
@@ -1943,8 +1939,7 @@ public:
     Callback = CB;
   }
 
-  std::function<void(const typename ParserClass::parser_data_type &)> Callback =
-      [](const typename ParserClass::parser_data_type &) {};
+  std::function<void(const typename ParserClass::parser_data_type &)> Callback;
 };
 
 //===----------------------------------------------------------------------===//
@@ -1959,9 +1954,9 @@ class LLVM_ABI alias : public Option {
     return AliasFor->handleOccurrence(pos, AliasFor->ArgStr, Arg);
   }
 
-  bool addOccurrence(unsigned pos, StringRef /*ArgName*/, StringRef Value,
-                     bool MultiArg = false) override {
-    return AliasFor->addOccurrence(pos, AliasFor->ArgStr, Value, MultiArg);
+  bool addOccurrence(unsigned pos, StringRef /*ArgName*/,
+                     StringRef Value) override {
+    return AliasFor->addOccurrence(pos, AliasFor->ArgStr, Value);
   }
 
   // Handle printing stuff...
@@ -2050,10 +2045,10 @@ LLVM_ABI void printBuildConfig(raw_ostream &OS);
 // Public interface for accessing registered options.
 //
 
-/// Use this to get a StringMap to all registered named options
+/// Use this to get a map of all registered named options
 /// (e.g. -help).
 ///
-/// \return A reference to the StringMap used by the cl APIs to parse options.
+/// \return A reference to the map used by the cl APIs to parse options.
 ///
 /// Access to unnamed arguments (i.e. positional) are not provided because
 /// it is expected that the client already has access to these.
@@ -2061,7 +2056,8 @@ LLVM_ABI void printBuildConfig(raw_ostream &OS);
 /// Typical usage:
 /// \code
 /// main(int argc,char* argv[]) {
-/// StringMap<llvm::cl::Option*> &opts = llvm::cl::getRegisteredOptions();
+/// DenseMap<llvm::StringRef, llvm::cl::Option*> &opts =
+///     llvm::cl::getRegisteredOptions();
 /// assert(opts.count("help") == 1)
 /// opts["help"]->setDescription("Show alphabetical help information")
 /// // More code
@@ -2077,7 +2073,7 @@ LLVM_ABI void printBuildConfig(raw_ostream &OS);
 /// Hopefully this API can be deprecated soon. Any situation where options need
 /// to be modified by tools or libraries should be handled by sane APIs rather
 /// than just handing around a global list.
-LLVM_ABI StringMap<Option *> &
+LLVM_ABI DenseMap<StringRef, Option *> &
 getRegisteredOptions(SubCommand &Sub = SubCommand::getTopLevel());
 
 /// Use this to get all registered SubCommands from the provided parser.
@@ -2099,7 +2095,7 @@ getRegisteredOptions(SubCommand &Sub = SubCommand::getTopLevel());
 ///
 /// This interface is useful for defining subcommands in libraries and
 /// the dispatch from a single point (like in the main function).
-LLVM_ABI iterator_range<typename SmallPtrSet<SubCommand *, 4>::iterator>
+LLVM_ABI iterator_range<SmallPtrSet<SubCommand *, 4>::iterator>
 getRegisteredSubcommands();
 
 //===----------------------------------------------------------------------===//
@@ -2274,14 +2270,6 @@ public:
   /// Expands constructs "@file" in the provided array of arguments recursively.
   LLVM_ABI Error expandResponseFiles(SmallVectorImpl<const char *> &Argv);
 };
-
-/// A convenience helper which concatenates the options specified by the
-/// environment variable EnvVar and command line options, then expands
-/// response files recursively.
-/// \return true if all @files were expanded successfully or there were none.
-LLVM_ABI bool expandResponseFiles(int Argc, const char *const *Argv,
-                                  const char *EnvVar,
-                                  SmallVectorImpl<const char *> &NewArgv);
 
 /// A convenience helper which supports the typical use case of expansion
 /// function call.

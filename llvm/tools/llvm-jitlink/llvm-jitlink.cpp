@@ -13,21 +13,23 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm-jitlink.h"
+#include "ConnectionUtils.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX, LLVM_ENABLE_THREADS
 #include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
+#include "llvm/ExecutionEngine/Orc/BacktraceTools.h"
+#include "llvm/ExecutionEngine/Orc/COFFAutoImportGenerator.h"
 #include "llvm/ExecutionEngine/Orc/COFFPlatform.h"
-#include "llvm/ExecutionEngine/Orc/DebugObjectManagerPlugin.h"
 #include "llvm/ExecutionEngine/Orc/Debugging/DebugInfoSupport.h"
 #include "llvm/ExecutionEngine/Orc/Debugging/DebuggerSupportPlugin.h"
+#include "llvm/ExecutionEngine/Orc/Debugging/ELFDebugObjectPlugin.h"
 #include "llvm/ExecutionEngine/Orc/Debugging/PerfSupportPlugin.h"
 #include "llvm/ExecutionEngine/Orc/Debugging/VTuneSupportPlugin.h"
 #include "llvm/ExecutionEngine/Orc/EHFrameRegistrationPlugin.h"
 #include "llvm/ExecutionEngine/Orc/ELFNixPlatform.h"
-#include "llvm/ExecutionEngine/Orc/EPCDebugObjectRegistrar.h"
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
-#include "llvm/ExecutionEngine/Orc/GetDylibInterface.h"
 #include "llvm/ExecutionEngine/Orc/IndirectionUtils.h"
 #include "llvm/ExecutionEngine/Orc/JITLinkRedirectableSymbolManager.h"
 #include "llvm/ExecutionEngine/Orc/JITLinkReentryTrampolines.h"
@@ -39,7 +41,10 @@
 #include "llvm/ExecutionEngine/Orc/ObjectFileInterface.h"
 #include "llvm/ExecutionEngine/Orc/SectCreate.h"
 #include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
+#include "llvm/ExecutionEngine/Orc/Shared/ConnectionSpec.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
+#include "llvm/ExecutionEngine/Orc/SharedMemoryMapSPS.h"
+#include "llvm/ExecutionEngine/Orc/SimpleMemoryMapSPS.h"
 #include "llvm/ExecutionEngine/Orc/SimpleRemoteMemoryMapper.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderPerf.h"
@@ -62,19 +67,20 @@
 #include "llvm/Object/TapiUniversal.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ExponentialBackoff.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/Timer.h"
+#include <chrono>
 #include <cstring>
 #include <deque>
 #include <string>
 
 #ifdef LLVM_ON_UNIX
-#include <netdb.h>
-#include <netinet/in.h>
+#include <fcntl.h>
 #include <sys/socket.h>
 #include <unistd.h>
 #endif // LLVM_ON_UNIX
@@ -87,8 +93,7 @@ using namespace llvm::orc;
 
 static cl::OptionCategory JITLinkCategory("JITLink Options");
 
-static cl::list<std::string> InputFiles(cl::Positional, cl::OneOrMore,
-                                        cl::desc("input files"),
+static cl::list<std::string> InputFiles(cl::Positional, cl::desc("input files"),
                                         cl::cat(JITLinkCategory));
 
 static cl::list<bool> LazyLink("lazy",
@@ -142,6 +147,18 @@ static cl::list<std::string>
                cl::desc("Link against library X with hidden visibility"),
                cl::cat(JITLinkCategory));
 
+static cl::opt<std::string>
+    WriteSymbolTableTo("write-symtab",
+                       cl::desc("Write the symbol table for the JIT'd program "
+                                "to the specified file"),
+                       cl::cat(JITLinkCategory));
+
+static cl::opt<std::string> SymbolicateWith(
+    "symbolicate-with",
+    cl::desc("Given a path to a symbol table file, symbolicate the given "
+             "backtrace(s)"),
+    cl::cat(JITLinkCategory));
+
 static cl::list<std::string>
     LibrariesWeak("weak-l",
                   cl::desc("Emulate weak link against library X. Must resolve "
@@ -155,6 +172,12 @@ static cl::list<std::string> WeakLibraries(
              "TextAPI file, and all symbols in the interface will "
              "resolve to null"),
     cl::cat(JITLinkCategory));
+
+static cl::list<std::string>
+    LibrariesAuto("auto-l",
+                  cl::desc("Link against library X in the library search paths "
+                           "(auto-generate corresponding import library)"),
+                  cl::Prefix, cl::cat(JITLinkCategory));
 
 static cl::opt<bool> SearchSystemLibrary(
     "search-sys-lib",
@@ -290,13 +313,12 @@ static cl::opt<bool> PhonyExternals(
     cl::desc("resolve all otherwise unresolved externals to null"),
     cl::init(false), cl::cat(JITLinkCategory));
 
-static cl::opt<std::string> OutOfProcessExecutor(
-    "oop-executor", cl::desc("Launch an out-of-process executor to run code"),
+static cl::opt<std::string> OutOfProcessLaunch(
+    "oop-launch", cl::desc("Launch an out-of-process executor to run code"),
     cl::ValueOptional, cl::cat(JITLinkCategory));
 
-static cl::opt<std::string> OutOfProcessExecutorConnect(
-    "oop-executor-connect",
-    cl::desc("Connect to an out-of-process executor via TCP"),
+static cl::opt<std::string> OutOfProcessConnect(
+    "oop-connect", cl::desc("How to connect to the out-of-process executor"),
     cl::cat(JITLinkCategory));
 
 static cl::opt<std::string>
@@ -342,13 +364,22 @@ static cl::opt<bool> ForceLoadObjC(
              "classes or extensions"),
     cl::init(false), cl::cat(JITLinkCategory));
 
+static cl::opt<std::string> WaitingOnGraphCapture(
+    "waiting-on-graph-capture",
+    cl::desc("Record WaitingOnGraph operations to the given file"),
+    cl::init(""), cl::cat(JITLinkCategory));
+
+static cl::opt<std::string> WaitingOnGraphReplay(
+    "waiting-on-graph-replay",
+    cl::desc("Replay WaitingOnGraph operations from the given file"),
+    cl::init(""), cl::cat(JITLinkCategory));
+
 static ExitOnError ExitOnErr;
 
 static LLVM_ATTRIBUTE_USED void linkComponents() {
   errs() << "Linking in runtime functions\n"
          << (void *)&llvm_orc_registerEHFrameSectionAllocAction << '\n'
          << (void *)&llvm_orc_deregisterEHFrameSectionAllocAction << '\n'
-         << (void *)&llvm_orc_registerJITLoaderGDBWrapper << '\n'
          << (void *)&llvm_orc_registerJITLoaderGDBAllocAction << '\n'
          << (void *)&llvm_orc_registerJITLoaderPerfStart << '\n'
          << (void *)&llvm_orc_registerJITLoaderPerfEnd << '\n'
@@ -371,9 +402,7 @@ static Error addSelfRelocations(LinkGraph &G);
 
 namespace {
 
-template <typename ErrT>
-
-class ConditionalPrintErr {
+template <typename ErrT> class ConditionalPrintErr {
 public:
   ConditionalPrintErr(bool C) : C(C) {}
   void operator()(ErrT &EI) {
@@ -408,11 +437,16 @@ namespace llvm {
 
 static raw_ostream &
 operator<<(raw_ostream &OS, const Session::MemoryRegionInfo &MRI) {
-  return OS << "target addr = "
-            << format("0x%016" PRIx64, MRI.getTargetAddress())
-            << ", content: " << (const void *)MRI.getContent().data() << " -- "
-            << (const void *)(MRI.getContent().data() + MRI.getContent().size())
-            << " (" << MRI.getContent().size() << " bytes)";
+  OS << "target addr = " << format("0x%016" PRIx64, MRI.getTargetAddress());
+
+  if (MRI.isZeroFill())
+    OS << ", zero-fill: " << MRI.getZeroFillLength() << " bytes";
+  else
+    OS << ", content: " << (const void *)MRI.getContent().data() << " -- "
+       << (const void *)(MRI.getContent().data() + MRI.getContent().size())
+       << " (" << MRI.getContent().size() << " bytes)";
+
+  return OS;
 }
 
 static raw_ostream &
@@ -728,40 +762,26 @@ static std::unique_ptr<JITLinkMemoryManager> createInProcessMemoryManager() {
 }
 
 Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
-createSimpleRemoteMemoryManager(SimpleRemoteEPC &SREPC) {
-  SimpleRemoteMemoryMapper::SymbolAddrs SAs;
-  if (auto Err = SREPC.getBootstrapSymbols(
-          {{SAs.Instance, rt::SimpleExecutorMemoryManagerInstanceName},
-           {SAs.Reserve, rt::SimpleExecutorMemoryManagerReserveWrapperName},
-           {SAs.Initialize,
-            rt::SimpleExecutorMemoryManagerInitializeWrapperName},
-           {SAs.Deinitialize,
-            rt::SimpleExecutorMemoryManagerDeinitializeWrapperName},
-           {SAs.Release, rt::SimpleExecutorMemoryManagerReleaseWrapperName}}))
-    return std::move(Err);
+createSimpleRemoteMemoryManager(ExecutorProcessControl &EPC) {
+  auto &ES = EPC.getExecutionSession();
+  auto B = sps::createSimpleMemoryMapBindings(ES);
+  if (!B)
+    return B.takeError();
 #ifdef _WIN32
   size_t SlabSize = 1024 * 1024;
 #else
   size_t SlabSize = 1024 * 1024 * 1024;
 #endif
   return MapperJITLinkMemoryManager::CreateWithMapper<SimpleRemoteMemoryMapper>(
-      SlabSize, SREPC, SAs);
+      SlabSize, ES, std::move(*B));
 }
 
 Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
-createSharedMemoryManager(SimpleRemoteEPC &SREPC) {
-  SharedMemoryMapper::SymbolAddrs SAs;
-  if (auto Err = SREPC.getBootstrapSymbols(
-          {{SAs.Instance, rt::ExecutorSharedMemoryMapperServiceInstanceName},
-           {SAs.Reserve,
-            rt::ExecutorSharedMemoryMapperServiceReserveWrapperName},
-           {SAs.Initialize,
-            rt::ExecutorSharedMemoryMapperServiceInitializeWrapperName},
-           {SAs.Deinitialize,
-            rt::ExecutorSharedMemoryMapperServiceDeinitializeWrapperName},
-           {SAs.Release,
-            rt::ExecutorSharedMemoryMapperServiceReleaseWrapperName}}))
-    return std::move(Err);
+createSharedMemoryManager(ExecutorProcessControl &EPC) {
+  auto &ES = EPC.getExecutionSession();
+  auto B = sps::createSharedMemoryMapBindings(ES);
+  if (!B)
+    return B.takeError();
 
 #ifdef _WIN32
   size_t SlabSize = 1024 * 1024;
@@ -773,21 +793,26 @@ createSharedMemoryManager(SimpleRemoteEPC &SREPC) {
     SlabSize = ExitOnErr(getSlabAllocSize(SlabAllocateSizeString));
 
   return MapperJITLinkMemoryManager::CreateWithMapper<SharedMemoryMapper>(
-      SlabSize, SREPC, SAs);
+      SlabSize, ES, std::move(*B));
 }
 
-static void setupEPCRemoteMemoryManager(SimpleRemoteEPC::Setup &S) {
-  switch (UseMemMgr) {
-  case MemMgr::Default:
-  case MemMgr::Generic:
-    break;
-  case MemMgr::SimpleRemote:
-    S.CreateMemoryManager = createSimpleRemoteMemoryManager;
-    break;
-  case MemMgr::Shared:
-    S.CreateMemoryManager = createSharedMemoryManager;
-    break;
+static Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
+createMemoryManager(ExecutorProcessControl &EPC) {
+  if (OutOfProcessLaunch.getNumOccurrences() ||
+      OutOfProcessConnect.getNumOccurrences()) {
+
+    switch (UseMemMgr) {
+    case MemMgr::Default:
+    case MemMgr::Generic:
+      return EPC.createDefaultMemoryManager();
+    case MemMgr::SimpleRemote:
+      return createSimpleRemoteMemoryManager(EPC);
+    case MemMgr::Shared:
+      return createSharedMemoryManager(EPC);
+    }
   }
+
+  return createInProcessMemoryManager();
 }
 
 static Expected<MaterializationUnit::Interface>
@@ -864,7 +889,7 @@ static Error loadProcessSymbols(Session &S) {
       };
   S.ProcessSymsJD->addGenerator(
       ExitOnErr(orc::EPCDynamicLibrarySearchGenerator::GetForTargetProcess(
-          S.ES, std::move(FilterMainEntryPoint))));
+          S.ES, *S.DylibMgr, std::move(FilterMainEntryPoint))));
 
   return Error::success();
 }
@@ -881,168 +906,266 @@ static Error loadDylibs(Session &S) {
   return Error::success();
 }
 
-static Expected<std::unique_ptr<ExecutorProcessControl>> launchExecutor() {
+// maybe_unused because some configurations, e.g. LLVM_ENABLE_THREADS=Off,
+// eliminate all callsites.
+[[maybe_unused]] static Error launchExecutor(std::vector<std::string> Args) {
 #ifndef LLVM_ON_UNIX
-  // FIXME: Add support for Windows.
-  return make_error<StringError>("-" + OutOfProcessExecutor.ArgStr +
+  // FIXME: Add out-of-process support for Windows.
+  return make_error<StringError>("-" + OutOfProcessLaunch.ArgStr +
+                                     " not supported on non-unix platforms",
+                                 inconvertibleErrorCode());
+#else
+  std::string ProgName = OutOfProcessLaunch;
+  std::vector<char *> ExecvpArgs;
+  ExecvpArgs.push_back(ProgName.data());
+  for (auto &Arg : Args)
+    ExecvpArgs.push_back(Arg.data());
+  ExecvpArgs.push_back(nullptr);
+
+  pid_t ChildPID;
+  ChildPID = fork();
+
+  if (ChildPID == 0) {
+    int RC = execvp(OutOfProcessLaunch.data(), ExecvpArgs.data());
+    if (RC != 0) {
+      errs() << "Could not launch out-of-process executor " << ProgName << ": "
+             << strerror(errno) << "\n";
+      exit(1);
+    }
+  }
+
+  return Error::success();
+#endif // LLVM_ON_UNIX
+}
+
+static Expected<std::unique_ptr<ExecutorProcessControl>>
+launchExecutorWithDefaultConnect() {
+#ifndef LLVM_ON_UNIX
+  // FIXME: Add out-of-process support for Windows.
+  return make_error<StringError>("-" + OutOfProcessLaunch.ArgStr +
                                      " not supported on non-unix platforms",
                                  inconvertibleErrorCode());
 #elif !LLVM_ENABLE_THREADS
   // Out of process mode using SimpleRemoteEPC depends on threads.
   return make_error<StringError>(
-      "-" + OutOfProcessExecutor.ArgStr +
+      "-" + OutOfProcessLaunch.ArgStr +
           " requires threads, but LLVM was built with "
           "LLVM_ENABLE_THREADS=Off",
       inconvertibleErrorCode());
 #else
-
-  constexpr int ReadEnd = 0;
-  constexpr int WriteEnd = 1;
-
-  // Pipe FDs.
-  int ToExecutor[2];
-  int FromExecutor[2];
-
-  pid_t ChildPID;
-
-  // Create pipes to/from the executor..
-  if (pipe(ToExecutor) != 0 || pipe(FromExecutor) != 0)
-    return make_error<StringError>("Unable to create pipe for executor",
-                                   inconvertibleErrorCode());
-
-  ChildPID = fork();
-
-  if (ChildPID == 0) {
-    // In the child...
-
-    // Close the parent ends of the pipes
-    close(ToExecutor[WriteEnd]);
-    close(FromExecutor[ReadEnd]);
-
-    // Execute the child process.
-    std::unique_ptr<char[]> ExecutorPath, FDSpecifier;
+  constexpr int ParentSocket = 0, ChildSocket = 1;
+  int Sockets[2];
+  if (socketpair(AF_UNIX, SOCK_STREAM, 0, Sockets) == -1)
+    return make_error<StringError>(
+        Twine("Unable to create socket for executor: ") + strerror(errno),
+        inconvertibleErrorCode());
+  {
+    auto CloseChildSocket = scope_exit([&]() { close(Sockets[ChildSocket]); });
+    auto CloseParentSocket =
+        scope_exit([&]() { close(Sockets[ParentSocket]); });
     {
-      ExecutorPath = std::make_unique<char[]>(OutOfProcessExecutor.size() + 1);
-      strcpy(ExecutorPath.get(), OutOfProcessExecutor.data());
-
-      std::string FDSpecifierStr("filedescs=");
-      FDSpecifierStr += utostr(ToExecutor[ReadEnd]);
-      FDSpecifierStr += ',';
-      FDSpecifierStr += utostr(FromExecutor[WriteEnd]);
-      FDSpecifier = std::make_unique<char[]>(FDSpecifierStr.size() + 1);
-      strcpy(FDSpecifier.get(), FDSpecifierStr.c_str());
+      // Set CLOEXEC on the parent socket.
+      int Flags = fcntl(Sockets[ParentSocket], F_GETFD);
+      if (Flags == -1)
+        return make_error<StringError>(
+            StringRef("Could not get flags for parent socket: ") +
+                strerror(errno),
+            inconvertibleErrorCode());
+      Flags |= FD_CLOEXEC;
+      if (fcntl(Sockets[ParentSocket], F_SETFD, Flags) == -1)
+        return make_error<StringError>(
+            StringRef("Could not set flags for parent socket: ") +
+                strerror(errno),
+            inconvertibleErrorCode());
     }
 
-    char *const Args[] = {ExecutorPath.get(), FDSpecifier.get(), nullptr};
-    int RC = execvp(ExecutorPath.get(), Args);
-    if (RC != 0) {
-      errs() << "unable to launch out-of-process executor \""
-             << ExecutorPath.get() << "\"\n";
-      exit(1);
-    }
+    std::string ConnSpec = "socket:adopt=";
+    ConnSpec += std::to_string(Sockets[ChildSocket]);
+    if (auto Err = launchExecutor({ConnSpec}))
+      return std::move(Err);
+
+    // Success. Hold on to the parent socket, let child socket close.
+    CloseParentSocket.release();
   }
-  // else we're the parent...
-
-  // Close the child ends of the pipes
-  close(ToExecutor[ReadEnd]);
-  close(FromExecutor[WriteEnd]);
-
-  auto S = SimpleRemoteEPC::Setup();
-  setupEPCRemoteMemoryManager(S);
-
   return SimpleRemoteEPC::Create<FDSimpleRemoteEPCTransport>(
       std::make_unique<DynamicThreadPoolTaskDispatcher>(MaterializationThreads),
-      std::move(S), FromExecutor[ReadEnd], ToExecutor[WriteEnd]);
-#endif
+      Sockets[ParentSocket], Sockets[ParentSocket]);
+#endif // LLVM_ON_UNIX
 }
 
 #if LLVM_ON_UNIX && LLVM_ENABLE_THREADS
 static Error createTCPSocketError(Twine Details) {
   return make_error<StringError>(
-      formatv("Failed to connect TCP socket '{0}': {1}",
-              OutOfProcessExecutorConnect, Details),
+      formatv("Failed to set up TCP socket for '{0}': {1}", OutOfProcessConnect,
+              Details),
       inconvertibleErrorCode());
-}
-
-static Expected<int> connectTCPSocket(std::string Host, std::string PortStr) {
-  addrinfo *AI;
-  addrinfo Hints{};
-  Hints.ai_family = AF_INET;
-  Hints.ai_socktype = SOCK_STREAM;
-  Hints.ai_flags = AI_NUMERICSERV;
-
-  if (int EC = getaddrinfo(Host.c_str(), PortStr.c_str(), &Hints, &AI))
-    return createTCPSocketError("Address resolution failed (" +
-                                StringRef(gai_strerror(EC)) + ")");
-
-  // Cycle through the returned addrinfo structures and connect to the first
-  // reachable endpoint.
-  int SockFD;
-  addrinfo *Server;
-  for (Server = AI; Server != nullptr; Server = Server->ai_next) {
-    // socket might fail, e.g. if the address family is not supported. Skip to
-    // the next addrinfo structure in such a case.
-    if ((SockFD = socket(AI->ai_family, AI->ai_socktype, AI->ai_protocol)) < 0)
-      continue;
-
-    // If connect returns null, we exit the loop with a working socket.
-    if (connect(SockFD, Server->ai_addr, Server->ai_addrlen) == 0)
-      break;
-
-    close(SockFD);
-  }
-  freeaddrinfo(AI);
-
-  // If we reached the end of the loop without connecting to a valid endpoint,
-  // dump the last error that was logged in socket() or connect().
-  if (Server == nullptr)
-    return createTCPSocketError(std::strerror(errno));
-
-  return SockFD;
 }
 #endif
 
-static Expected<std::unique_ptr<ExecutorProcessControl>> connectToExecutor() {
+static Expected<std::unique_ptr<ExecutorProcessControl>>
+connectToExecutorWithTCPConnect(const ConnectionSpec &CS) {
 #ifndef LLVM_ON_UNIX
   // FIXME: Add TCP support for Windows.
-  return make_error<StringError>("-" + OutOfProcessExecutorConnect.ArgStr +
+  return make_error<StringError>("-" + OutOfProcessConnect.ArgStr +
                                      " not supported on non-unix platforms",
                                  inconvertibleErrorCode());
 #elif !LLVM_ENABLE_THREADS
   // Out of process mode using SimpleRemoteEPC depends on threads.
   return make_error<StringError>(
-      "-" + OutOfProcessExecutorConnect.ArgStr +
+      "-" + OutOfProcessConnect.ArgStr +
           " requires threads, but LLVM was built with "
           "LLVM_ENABLE_THREADS=Off",
       inconvertibleErrorCode());
 #else
 
   StringRef Host, PortStr;
-  std::tie(Host, PortStr) = StringRef(OutOfProcessExecutorConnect).split(':');
+  std::tie(Host, PortStr) = StringRef(CS.getDescriptor()).split(':');
   if (Host.empty())
-    return createTCPSocketError("Host name for -" +
-                                OutOfProcessExecutorConnect.ArgStr +
+    return createTCPSocketError("Host name for -" + OutOfProcessConnect.ArgStr +
                                 " can not be empty");
   if (PortStr.empty())
-    return createTCPSocketError("Port number in -" +
-                                OutOfProcessExecutorConnect.ArgStr +
-                                " can not be empty");
+    return createTCPSocketError(
+        "Port number in -" + OutOfProcessConnect.ArgStr + " can not be empty");
   int Port = 0;
   if (PortStr.getAsInteger(10, Port))
     return createTCPSocketError("Port number '" + PortStr +
                                 "' is not a valid integer");
 
-  Expected<int> SockFD = connectTCPSocket(Host.str(), PortStr.str());
-  if (!SockFD)
-    return SockFD.takeError();
+  std::unique_ptr<ExponentialBackoff> Retry;
+  if (OutOfProcessLaunch.getNumOccurrences()) {
+    // Launch the executor and attempt to connect with exponential backoff.
+    if (auto Err =
+            launchExecutor({{("tcp:listen=" + Host + ":" + PortStr).str()}}))
+      return std::move(Err);
+    using namespace std::chrono_literals;
+    Retry = std::make_unique<ExponentialBackoff>(10s);
+  }
 
-  auto S = SimpleRemoteEPC::Setup();
-  setupEPCRemoteMemoryManager(S);
+  auto SockFD = connectWithRetry(
+      [&]() { return connectTCPSocket(Host, PortStr); }, std::move(Retry));
+  if (!SockFD)
+    return createTCPSocketError(toString(SockFD.takeError()));
 
   return SimpleRemoteEPC::Create<FDSimpleRemoteEPCTransport>(
-      std::make_unique<DynamicThreadPoolTaskDispatcher>(std::nullopt),
-      std::move(S), *SockFD, *SockFD);
+      std::make_unique<DynamicThreadPoolTaskDispatcher>(MaterializationThreads),
+      *SockFD, *SockFD);
 #endif
+}
+
+static Expected<std::unique_ptr<ExecutorProcessControl>>
+connectToExecutorWithTCPListen(const ConnectionSpec &CS) {
+#ifndef LLVM_ON_UNIX
+  // FIXME: Add TCP support for Windows.
+  return make_error<StringError>("-" + OutOfProcessConnect.ArgStr +
+                                     " not supported on non-unix platforms",
+                                 inconvertibleErrorCode());
+#elif !LLVM_ENABLE_THREADS
+  // Out of process mode using SimpleRemoteEPC depends on threads.
+  return make_error<StringError>(
+      "-" + OutOfProcessConnect.ArgStr +
+          " requires threads, but LLVM was built with "
+          "LLVM_ENABLE_THREADS=Off",
+      inconvertibleErrorCode());
+#else
+
+  StringRef Host, PortStr;
+  std::tie(Host, PortStr) = StringRef(CS.getDescriptor()).split(':');
+  if (PortStr.empty())
+    return createTCPSocketError(
+        "Port number in -" + OutOfProcessConnect.ArgStr + " can not be empty");
+  int Port = 0;
+  if (PortStr.getAsInteger(10, Port))
+    return createTCPSocketError("Port number '" + PortStr +
+                                "' is not a valid integer");
+
+  // Bind and listen before launching the executor.
+  std::string ResolvedPortStr;
+  auto ListenFD = listenTCPSocket(Host, PortStr, &ResolvedPortStr);
+  if (!ListenFD)
+    return createTCPSocketError(toString(ListenFD.takeError()));
+
+  if (OutOfProcessLaunch.getNumOccurrences()) {
+    // An empty host means we bound the wildcard address; loopback is always
+    // reachable on that, so use it as the address the executor dials back
+    // into.
+    StringRef DialBackHost = Host.empty() ? StringRef("127.0.0.1") : Host;
+    if (auto Err = launchExecutor(
+            {("tcp:connect=" + DialBackHost + ":" + ResolvedPortStr).str()}))
+      return std::move(Err);
+  }
+
+  auto SockFD = acceptTCPConnection(*ListenFD);
+  if (!SockFD)
+    return createTCPSocketError(toString(SockFD.takeError()));
+
+  return SimpleRemoteEPC::Create<FDSimpleRemoteEPCTransport>(
+      std::make_unique<DynamicThreadPoolTaskDispatcher>(MaterializationThreads),
+      *SockFD, *SockFD);
+#endif
+}
+
+static Expected<std::unique_ptr<ExecutorProcessControl>>
+connectToExecutorWithTCP(const ConnectionSpec &CS) {
+  if (CS.getAction() == "connect")
+    return connectToExecutorWithTCPConnect(CS);
+  if (CS.getAction() == "listen")
+    return connectToExecutorWithTCPListen(CS);
+
+  return make_error<StringError>(CS.getAction() +
+                                     " is not a recognized action for tcp",
+                                 inconvertibleErrorCode());
+}
+
+static Expected<std::unique_ptr<ExecutorProcessControl>>
+connectToExecutor(const ConnectionSpec &CS) {
+  if (CS.getTransport() == "tcp")
+    return connectToExecutorWithTCP(CS);
+
+  return make_error<StringError>(CS.getTransport() +
+                                     " is not a recognized transport",
+                                 inconvertibleErrorCode());
+}
+
+static Expected<std::unique_ptr<ExecutorProcessControl>>
+setupOutOfProcessExecutor() {
+  if (!OutOfProcessConnect.getNumOccurrences())
+    return launchExecutorWithDefaultConnect();
+
+  auto ConnSpec = ConnectionSpec::parse(OutOfProcessConnect);
+  if (!ConnSpec)
+    return ConnSpec.takeError();
+  return connectToExecutor(*ConnSpec);
+}
+
+static Expected<std::unique_ptr<ExecutorProcessControl>>
+createInProcessExecutorEPC(Triple TT) {
+  /// Otherwise use SelfExecutorProcessControl to target the current process.
+  auto PageSize = sys::Process::getPageSize();
+  if (!PageSize)
+    return PageSize.takeError();
+  std::unique_ptr<TaskDispatcher> Dispatcher;
+  if (MaterializationThreads == 0)
+    Dispatcher = std::make_unique<InPlaceTaskDispatcher>();
+  else {
+#if LLVM_ENABLE_THREADS
+    Dispatcher = std::make_unique<DynamicThreadPoolTaskDispatcher>(
+        MaterializationThreads);
+#else
+    llvm_unreachable("MaterializationThreads should be 0");
+#endif
+  }
+  return std::make_unique<SelfExecutorProcessControl>(
+      std::make_shared<SymbolStringPool>(), std::move(Dispatcher),
+      std::move(TT), *PageSize);
+}
+
+static Expected<std::unique_ptr<ExecutorProcessControl>>
+createExecutorProcessControl(Triple TT) {
+  if (OutOfProcessLaunch.getNumOccurrences() ||
+      OutOfProcessConnect.getNumOccurrences())
+    return setupOutOfProcessExecutor();
+  else
+    return createInProcessExecutorEPC(TT);
 }
 
 class PhonyExternalsGenerator : public DefinitionGenerator {
@@ -1059,7 +1182,12 @@ public:
 
 Expected<std::unique_ptr<Session::LazyLinkingSupport>>
 createLazyLinkingSupport(Session &S) {
-  auto RSMgr = JITLinkRedirectableSymbolManager::Create(S.ObjLayer);
+  auto MemAccess = S.ES.getExecutorProcessControl().createDefaultMemoryAccess();
+  if (!MemAccess)
+    return MemAccess.takeError();
+
+  auto RSMgr =
+      JITLinkRedirectableSymbolManager::Create(*S.ObjLayer, **MemAccess);
   if (!RSMgr)
     return RSMgr.takeError();
 
@@ -1081,12 +1209,13 @@ createLazyLinkingSupport(Session &S) {
   }
 
   auto LRMgr = createJITLinkLazyReexportsManager(
-      S.ObjLayer, **RSMgr, *S.PlatformJD, Speculator.get());
+      *S.ObjLayer, **RSMgr, *S.PlatformJD, Speculator.get());
   if (!LRMgr)
     return LRMgr.takeError();
 
   return std::make_unique<Session::LazyLinkingSupport>(
-      std::move(*RSMgr), std::move(Speculator), std::move(*LRMgr), S.ObjLayer);
+      std::move(*MemAccess), std::move(*RSMgr), std::move(Speculator),
+      std::move(*LRMgr), *S.ObjLayer);
 }
 
 static Error writeLazyExecOrder(Session &S) {
@@ -1106,44 +1235,12 @@ static Error writeLazyExecOrder(Session &S) {
 
 Expected<std::unique_ptr<Session>> Session::Create(Triple TT,
                                                    SubtargetFeatures Features) {
-
-  std::unique_ptr<ExecutorProcessControl> EPC;
-  if (OutOfProcessExecutor.getNumOccurrences()) {
-    /// If -oop-executor is passed then launch the executor.
-    if (auto REPC = launchExecutor())
-      EPC = std::move(*REPC);
-    else
-      return REPC.takeError();
-  } else if (OutOfProcessExecutorConnect.getNumOccurrences()) {
-    /// If -oop-executor-connect is passed then connect to the executor.
-    if (auto REPC = connectToExecutor())
-      EPC = std::move(*REPC);
-    else
-      return REPC.takeError();
-  } else {
-    /// Otherwise use SelfExecutorProcessControl to target the current process.
-    auto PageSize = sys::Process::getPageSize();
-    if (!PageSize)
-      return PageSize.takeError();
-    std::unique_ptr<TaskDispatcher> Dispatcher;
-    if (MaterializationThreads == 0)
-      Dispatcher = std::make_unique<InPlaceTaskDispatcher>();
-    else {
-#if LLVM_ENABLE_THREADS
-      Dispatcher = std::make_unique<DynamicThreadPoolTaskDispatcher>(
-          MaterializationThreads);
-#else
-      llvm_unreachable("MaterializationThreads should be 0");
-#endif
-    }
-
-    EPC = std::make_unique<SelfExecutorProcessControl>(
-        std::make_shared<SymbolStringPool>(), std::move(Dispatcher),
-        std::move(TT), *PageSize, createInProcessMemoryManager());
-  }
+  auto EPC = createExecutorProcessControl(TT);
+  if (!EPC)
+    return EPC.takeError();
 
   Error Err = Error::success();
-  std::unique_ptr<Session> S(new Session(std::move(EPC), Err));
+  std::unique_ptr<Session> S(new Session(std::move(*EPC), Err));
   if (Err)
     return std::move(Err);
   S->Features = std::move(Features);
@@ -1167,8 +1264,7 @@ Session::~Session() {
 }
 
 Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
-    : ES(std::move(EPC)),
-      ObjLayer(ES, ES.getExecutorProcessControl().getMemMgr()) {
+    : ES(std::move(EPC)) {
 
   /// Local ObjectLinkingLayer::Plugin class to forward modifyPassConfig to the
   /// Session.
@@ -1195,7 +1291,34 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
 
   ErrorAsOutParameter _(&Err);
 
+  if (auto MM = createMemoryManager(ES.getExecutorProcessControl())) {
+    MemoryMgr = std::move(*MM);
+    ObjLayer = std::make_unique<orc::ObjectLinkingLayer>(ES, *MemoryMgr);
+  } else {
+    Err = MM.takeError();
+    return;
+  }
+
+  if (auto DM = ES.getExecutorProcessControl().createDefaultDylibMgr())
+    DylibMgr = std::move(*DM);
+  else {
+    Err = DM.takeError();
+    return;
+  }
+
   ES.setErrorReporter(reportLLVMJITLinkError);
+
+  // Attach WaitingOnGraph recorder if requested.
+  if (!WaitingOnGraphCapture.empty()) {
+    if (auto GRecorderOrErr =
+            WaitingOnGraphOpRecorder::Create(WaitingOnGraphCapture)) {
+      GOpRecorder = std::move(*GRecorderOrErr);
+      ES.setWaitingOnGraphOpRecorder(*GOpRecorder);
+    } else {
+      Err = GRecorderOrErr.takeError();
+      return;
+    }
+  }
 
   if (!NoProcessSymbols)
     ExitOnErr(loadProcessSymbols(*this));
@@ -1204,14 +1327,18 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
 
   auto &TT = ES.getTargetTriple();
 
-  if (DebuggerSupport && TT.isOSBinFormatMachO()) {
-    if (!ProcessSymsJD) {
-      Err = make_error<StringError>("MachO debugging requires process symbols",
-                                    inconvertibleErrorCode());
+  if (!WriteSymbolTableTo.empty()) {
+    if (auto STDump = SymbolTableDumpPlugin::Create(WriteSymbolTableTo))
+      ObjLayer->addPlugin(std::move(*STDump));
+    else {
+      Err = STDump.takeError();
       return;
     }
-    ObjLayer.addPlugin(ExitOnErr(GDBJITDebugInfoRegistrationPlugin::Create(
-        this->ES, *ProcessSymsJD, TT)));
+  }
+
+  if (DebuggerSupport && TT.isOSBinFormatMachO()) {
+    ObjLayer->addPlugin(ExitOnErr(GDBJITDebugInfoRegistrationPlugin::Create(
+        this->ES, this->ES.getBootstrapJITDylib())));
   }
 
   if (PerfSupport && TT.isOSBinFormatELF()) {
@@ -1220,14 +1347,14 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
                                     inconvertibleErrorCode());
       return;
     }
-    ObjLayer.addPlugin(ExitOnErr(DebugInfoPreservationPlugin::Create()));
-    ObjLayer.addPlugin(ExitOnErr(PerfSupportPlugin::Create(
+    ObjLayer->addPlugin(ExitOnErr(DebugInfoPreservationPlugin::Create()));
+    ObjLayer->addPlugin(ExitOnErr(PerfSupportPlugin::Create(
         this->ES.getExecutorProcessControl(), *ProcessSymsJD, true, true)));
   }
 
   if (VTuneSupport && TT.isOSBinFormatELF()) {
-    ObjLayer.addPlugin(ExitOnErr(DebugInfoPreservationPlugin::Create()));
-    ObjLayer.addPlugin(ExitOnErr(
+    ObjLayer->addPlugin(ExitOnErr(DebugInfoPreservationPlugin::Create()));
+    ObjLayer->addPlugin(ExitOnErr(
         VTuneSupportPlugin::Create(this->ES.getExecutorProcessControl(),
                                    *ProcessSymsJD, /*EmitDebugInfo=*/true,
                                    /*TestMode=*/true)));
@@ -1241,15 +1368,15 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
 
     if (TT.isOSBinFormatMachO()) {
       if (auto P =
-              MachOPlatform::Create(ObjLayer, *PlatformJD, OrcRuntime.c_str()))
+              MachOPlatform::Create(*ObjLayer, *PlatformJD, OrcRuntime.c_str()))
         ES.setPlatform(std::move(*P));
       else {
         Err = P.takeError();
         return;
       }
     } else if (TT.isOSBinFormatELF()) {
-      if (auto P =
-              ELFNixPlatform::Create(ObjLayer, *PlatformJD, OrcRuntime.c_str()))
+      if (auto P = ELFNixPlatform::Create(*ObjLayer, *PlatformJD,
+                                          OrcRuntime.c_str()))
         ES.setPlatform(std::move(*P));
       else {
         Err = P.takeError();
@@ -1265,7 +1392,7 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
       };
 
       if (auto P =
-              COFFPlatform::Create(ObjLayer, *PlatformJD, OrcRuntime.c_str(),
+              COFFPlatform::Create(*ObjLayer, *PlatformJD, OrcRuntime.c_str(),
                                    std::move(LoadDynLibrary)))
         ES.setPlatform(std::move(*P));
       else {
@@ -1288,16 +1415,24 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
         return;
       bool UseEHFrames = ForceEHFrames.value_or(false);
       if (!UseEHFrames)
-        ObjLayer.addPlugin(ExitOnErr(UnwindInfoRegistrationPlugin::Create(ES)));
+        ObjLayer->addPlugin(
+            ExitOnErr(UnwindInfoRegistrationPlugin::Create(ES)));
       else
-        ObjLayer.addPlugin(ExitOnErr(EHFrameRegistrationPlugin::Create(ES)));
+        ObjLayer->addPlugin(ExitOnErr(EHFrameRegistrationPlugin::Create(ES)));
     }
   } else if (TT.isOSBinFormatELF()) {
     if (!NoExec)
-      ObjLayer.addPlugin(ExitOnErr(EHFrameRegistrationPlugin::Create(ES)));
-    if (DebuggerSupport)
-      ObjLayer.addPlugin(std::make_unique<DebugObjectManagerPlugin>(
-          ES, ExitOnErr(createJITLoaderGDBRegistrar(this->ES)), true, true));
+      ObjLayer->addPlugin(ExitOnErr(EHFrameRegistrationPlugin::Create(ES)));
+    if (DebuggerSupport) {
+      Error TargetSymErr = Error::success();
+      auto Plugin =
+          std::make_unique<ELFDebugObjectPlugin>(ES, true, TargetSymErr);
+      if (!TargetSymErr)
+        ObjLayer->addPlugin(std::move(Plugin));
+      else
+        logAllUnhandledErrors(std::move(TargetSymErr), errs(),
+                              "Debugger support not available: ");
+    }
   }
 
   if (auto MainJDOrErr = ES.createJITDylib("main"))
@@ -1318,7 +1453,7 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
     MainJD->addToLinkOrder(TestResultJD);
   }
 
-  ObjLayer.addPlugin(std::make_unique<JITLinkSessionPlugin>(*this));
+  ObjLayer->addPlugin(std::make_unique<JITLinkSessionPlugin>(*this));
 
   // Process any harness files.
   for (auto &HarnessFile : TestHarnesses) {
@@ -1368,7 +1503,7 @@ void Session::modifyPassConfig(LinkGraph &G, PassConfiguration &PassConfig) {
   if (ShowLinkedFiles)
     outs() << "Linking " << G.getName() << "\n";
 
-  if (!CheckFiles.empty())
+  if (!CheckFiles.empty() || ShowAddrs)
     PassConfig.PostFixupPasses.push_back([this](LinkGraph &G) {
       if (ES.getTargetTriple().getObjectFormat() == Triple::ELF)
         return registerELFGraphInfo(*this, G);
@@ -1425,10 +1560,10 @@ void Session::modifyPassConfig(LinkGraph &G, PassConfiguration &PassConfig) {
 
 Expected<JITDylib *> Session::getOrLoadDynamicLibrary(StringRef LibPath) {
   auto It = DynLibJDs.find(LibPath);
-  if (It != DynLibJDs.end()) {
+  if (It != DynLibJDs.end())
     return It->second;
-  }
-  auto G = EPCDynamicLibrarySearchGenerator::Load(ES, LibPath.data());
+  auto G =
+      EPCDynamicLibrarySearchGenerator::Load(ES, *DylibMgr, LibPath.data());
   if (!G)
     return G.takeError();
   auto JD = &ES.createBareJITDylib(LibPath.str());
@@ -1450,6 +1585,37 @@ Error Session::loadAndLinkDynamicLibrary(JITDylib &JD, StringRef LibPath) {
   LLVM_DEBUG({
     dbgs() << "Linking dynamic library " << LibPath << " to " << JD.getName()
            << "\n";
+  });
+  return Error::success();
+}
+
+Expected<JITDylib *> Session::getOrLoadAutoImportDLL(StringRef LibPath) {
+  auto It = AutoImportJDs.find(LibPath);
+  if (It != AutoImportJDs.end())
+    return It->second;
+  auto G = orc::COFFAutoImportGenerator::Load(ES, *ObjLayer, *DylibMgr,
+                                              LibPath.data());
+  if (!G)
+    return G.takeError();
+  auto JD = &ES.createBareJITDylib(LibPath.str());
+
+  JD->addGenerator(std::move(*G));
+  AutoImportJDs.emplace(LibPath.str(), JD);
+  LLVM_DEBUG({
+    dbgs() << "Loaded auto-import dynamic library " << LibPath.data() << " for "
+           << LibPath << "\n";
+  });
+  return JD;
+}
+
+Error Session::loadAndLinkAutoImportDLL(JITDylib &JD, StringRef LibPath) {
+  auto DL = getOrLoadAutoImportDLL(LibPath);
+  if (!DL)
+    return DL.takeError();
+  JD.addToLinkOrder(**DL);
+  LLVM_DEBUG({
+    dbgs() << "Linking auto-import dynamic library " << LibPath << " to "
+           << JD.getName() << "\n";
   });
   return Error::success();
 }
@@ -1660,6 +1826,12 @@ Session::findSymbolInfo(const orc::SymbolStringPtr &SymbolName,
 } // end namespace llvm
 
 static std::pair<Triple, SubtargetFeatures> getFirstFileTripleAndFeatures() {
+
+  // If we're running in symbolicate mode then just use the process triple.
+  if (!SymbolicateWith.empty())
+    return std::make_pair(Triple(sys::getProcessTriple()), SubtargetFeatures());
+
+  // Otherwise we need to inspect the input files.
   static std::pair<Triple, SubtargetFeatures> FirstTTAndFeatures = []() {
     assert(!InputFiles.empty() && "InputFiles can not be empty");
 
@@ -1718,6 +1890,15 @@ static std::pair<Triple, SubtargetFeatures> getFirstFileTripleAndFeatures() {
 
 static Error sanitizeArguments(const Triple &TT, const char *ArgV0) {
 
+  if (InputFiles.empty())
+    return make_error<StringError>(
+        "Not enough positional command line arguments specified! (see "
+        "llvm-jitlink --help)",
+        inconvertibleErrorCode());
+
+  // If we're in replay mode we should never get here.
+  assert(WaitingOnGraphReplay.empty());
+
   // -noexec and --args should not be used together.
   if (NoExec && !InputArgv.empty())
     errs() << "Warning: --args passed to -noexec run will be ignored.\n";
@@ -1735,15 +1916,14 @@ static Error sanitizeArguments(const Triple &TT, const char *ArgV0) {
                                    inconvertibleErrorCode());
 
   // If -slab-allocate is passed, check that we're not trying to use it in
-  // -oop-executor or -oop-executor-connect mode.
+  // -oop-launch or -oop-connect mode.
   //
   // FIXME: Remove once we enable remote slab allocation.
   if (SlabAllocateSizeString != "") {
-    if (OutOfProcessExecutor.getNumOccurrences() ||
-        OutOfProcessExecutorConnect.getNumOccurrences())
+    if (OutOfProcessLaunch.getNumOccurrences() ||
+        OutOfProcessConnect.getNumOccurrences())
       return make_error<StringError>(
-          "-slab-allocate cannot be used with -oop-executor or "
-          "-oop-executor-connect",
+          "-slab-allocate cannot be used with -oop-launch or -oop-connect",
           inconvertibleErrorCode());
   }
 
@@ -1803,18 +1983,18 @@ static Error sanitizeArguments(const Triple &TT, const char *ArgV0) {
   MaterializationThreads = 0;
 #endif
 
-  if (!!OutOfProcessExecutor.getNumOccurrences() ||
-      !!OutOfProcessExecutorConnect.getNumOccurrences()) {
+  if (!!OutOfProcessLaunch.getNumOccurrences() ||
+      !!OutOfProcessConnect.getNumOccurrences()) {
     if (NoExec)
       return make_error<StringError>("-noexec cannot be used with " +
-                                         OutOfProcessExecutor.ArgStr + " or " +
-                                         OutOfProcessExecutorConnect.ArgStr,
+                                         OutOfProcessLaunch.ArgStr + " or " +
+                                         OutOfProcessConnect.ArgStr,
                                      inconvertibleErrorCode());
 
     if (MaterializationThreads == 0)
       return make_error<StringError>("-threads=0 cannot be used with " +
-                                         OutOfProcessExecutor.ArgStr + " or " +
-                                         OutOfProcessExecutorConnect.ArgStr,
+                                         OutOfProcessLaunch.ArgStr + " or " +
+                                         OutOfProcessConnect.ArgStr,
                                      inconvertibleErrorCode());
   }
 
@@ -1824,23 +2004,14 @@ static Error sanitizeArguments(const Triple &TT, const char *ArgV0) {
               "Use -num-threads=0 to stabilize output.\n";
 #endif // NDEBUG
 
-  // Only one of -oop-executor and -oop-executor-connect can be used.
-  if (!!OutOfProcessExecutor.getNumOccurrences() &&
-      !!OutOfProcessExecutorConnect.getNumOccurrences())
-    return make_error<StringError>(
-        "Only one of -" + OutOfProcessExecutor.ArgStr + " and -" +
-            OutOfProcessExecutorConnect.ArgStr + " can be specified",
-        inconvertibleErrorCode());
-
-  // If -oop-executor was used but no value was specified then use a sensible
+  // If -oop-launch was used but no value was specified then use a sensible
   // default.
-  if (!!OutOfProcessExecutor.getNumOccurrences() &&
-      OutOfProcessExecutor.empty()) {
+  if (!!OutOfProcessLaunch.getNumOccurrences() && OutOfProcessLaunch.empty()) {
     SmallString<256> OOPExecutorPath(sys::fs::getMainExecutable(
         ArgV0, reinterpret_cast<void *>(&sanitizeArguments)));
     sys::path::remove_filename(OOPExecutorPath);
     sys::path::append(OOPExecutorPath, "llvm-jitlink-executor");
-    OutOfProcessExecutor = OOPExecutorPath.str().str();
+    OutOfProcessLaunch = OOPExecutorPath.str().str();
   }
 
   // If lazy linking is requested then check compatibility with other options.
@@ -1870,6 +2041,14 @@ static Error sanitizeArguments(const Triple &TT, const char *ArgV0) {
                 "disabled\n";
       RecordLazyExecs = "";
     }
+  }
+
+  if (!SymbolicateWith.empty()) {
+    if (!WriteSymbolTableTo.empty())
+      errs() << WriteSymbolTableTo.ArgStr << " specified with "
+             << SymbolicateWith.ArgStr << ", ignoring.";
+    if (InputFiles.empty())
+      InputFiles.push_back("-");
   }
 
   return Error::success();
@@ -2071,7 +2250,7 @@ static Error addSectCreates(Session &S,
     }
 
     if (auto Err = JD.define(std::make_unique<SectCreateMaterializationUnit>(
-            S.ObjLayer, SectName.str(), MemProt::Read, 16, std::move(*Content),
+            *S.ObjLayer, SectName.str(), MemProt::Read, 16, std::move(*Content),
             std::move(ExtraSymbols))))
       return Err;
   }
@@ -2087,7 +2266,7 @@ static Error addTestHarnesses(Session &S) {
                                      LoadArchives::Never);
     if (!Linkable)
       return Linkable.takeError();
-    if (auto Err = S.ObjLayer.add(*S.MainJD, std::move(Linkable->first)))
+    if (auto Err = S.ObjLayer->add(*S.MainJD, std::move(Linkable->first)))
       return Err;
   }
   return Error::success();
@@ -2129,8 +2308,8 @@ static Error addObjects(Session &S,
       if (!ObjInterface)
         return ObjInterface.takeError();
 
-      if (auto Err = S.ObjLayer.add(JD, std::move(ObjBuffer->first),
-                                    std::move(*ObjInterface)))
+      if (auto Err = S.ObjLayer->add(JD, std::move(ObjBuffer->first),
+                                     std::move(*ObjInterface)))
         return Err;
     }
   }
@@ -2167,7 +2346,8 @@ LoadLibraryWeak(Session &S, StringRef Path) {
     return Symbols.takeError();
 
   return std::make_unique<EPCDynamicLibrarySearchGenerator>(
-      S.ES, [Symbols = std::move(*Symbols)](const SymbolStringPtr &Sym) {
+      S.ES, *S.DylibMgr,
+      [Symbols = std::move(*Symbols)](const SymbolStringPtr &Sym) {
         return Symbols.count(Sym);
       });
 }
@@ -2214,7 +2394,7 @@ static Error addLibraries(Session &S,
     bool IsPath = false;
     unsigned Position;
     ArrayRef<StringRef> CandidateExtensions;
-    enum { Standard, Hidden, Weak } Modifier;
+    enum { Standard, Hidden, Weak, Auto } Modifier;
   };
 
   // Queue to load library as in the order as it appears in the argument list.
@@ -2300,6 +2480,18 @@ static Error addLibraries(Session &S,
     LibraryLoadQueue.push_back(std::move(LL));
   }
 
+  // Add -auto-lx arguments to LibraryLoads.
+  for (auto LibAutoItr = LibrariesAuto.begin(),
+            LibAutoEnd = LibrariesAuto.end();
+       LibAutoItr != LibAutoEnd; ++LibAutoItr) {
+    LibraryLoad LL;
+    LL.LibName = *LibAutoItr;
+    LL.Position = LibrariesAuto.getPosition(LibAutoItr - LibrariesAuto.begin());
+    LL.CandidateExtensions = DynLibExtensionsOnly;
+    LL.Modifier = LibraryLoad::Auto;
+    LibraryLoadQueue.push_back(std::move(LL));
+  }
+
   // Sort library loads by position in the argument list.
   llvm::sort(LibraryLoadQueue,
              [](const LibraryLoad &LHS, const LibraryLoad &RHS) {
@@ -2320,6 +2512,7 @@ static Error addLibraries(Session &S,
       S.HiddenArchives.insert(Path);
       break;
     case LibraryLoad::Weak:
+    case LibraryLoad::Auto:
       llvm_unreachable("Unsupported");
       break;
     }
@@ -2391,6 +2584,10 @@ static Error addLibraries(Session &S,
             "Can't use -weak-lx or -weak_library to load JITDylib " +
                 LL.LibName,
             inconvertibleErrorCode());
+      if (LL.Modifier == LibraryLoad::Auto)
+        return make_error<StringError>("Can't use -auto-lx to load JITDylib " +
+                                           LL.LibName,
+                                       inconvertibleErrorCode());
       JD.addToLinkOrder(*LJD);
       continue;
     }
@@ -2461,6 +2658,9 @@ static Error addLibraries(Session &S,
               JD.addGenerator(std::move(*G));
             else
               return G.takeError();
+          } else if (LL.Modifier == LibraryLoad::Auto) {
+            if (auto Err = S.loadAndLinkAutoImportDLL(JD, LibPath.data()))
+              return Err;
           } else {
             if (auto Err = S.loadAndLinkDynamicLibrary(JD, LibPath.data()))
               return Err;
@@ -2658,8 +2858,7 @@ getTargetInfo(const Triple &TT,
         make_error<StringError>("Unable to create target asm info " + TT.str(),
                                 inconvertibleErrorCode()));
 
-  auto Ctx = std::make_unique<MCContext>(Triple(TT.str()), MAI.get(), MRI.get(),
-                                         STI.get());
+  auto Ctx = std::make_unique<MCContext>(Triple(TT.str()), *MAI, *MRI, *STI);
 
   std::unique_ptr<MCDisassembler> Disassembler(
       TheTarget->createMCDisassembler(*STI, *Ctx));
@@ -2700,12 +2899,12 @@ static Error runChecks(Session &S, Triple TT, SubtargetFeatures Features) {
   LLVM_DEBUG(dbgs() << "Running checks...\n");
 
   auto IsSymbolValid = [&S](StringRef Symbol) {
-    auto InternedSymbol = S.ES.getSymbolStringPool()->intern(Symbol);
+    auto InternedSymbol = S.ES.intern(Symbol);
     return S.isSymbolRegistered(InternedSymbol);
   };
 
   auto GetSymbolInfo = [&S](StringRef Symbol) {
-    auto InternedSymbol = S.ES.getSymbolStringPool()->intern(Symbol);
+    auto InternedSymbol = S.ES.intern(Symbol);
     return S.findSymbolInfo(InternedSymbol, "Can not get symbol info");
   };
 
@@ -2811,6 +3010,77 @@ static Expected<int> runWithoutRuntime(Session &S,
   return S.ES.getExecutorProcessControl().runAsMain(EntryPointAddr, InputArgv);
 }
 
+static Error symbolicateBacktraces() {
+  auto Symtab = DumpedSymbolTable::Create(SymbolicateWith);
+  if (!Symtab)
+    return Symtab.takeError();
+
+  for (auto InputFile : InputFiles) {
+    auto BacktraceBuffer = MemoryBuffer::getFileOrSTDIN(InputFile);
+    if (!BacktraceBuffer)
+      return createFileError(InputFile, BacktraceBuffer.getError());
+
+    outs() << Symtab->symbolicate((*BacktraceBuffer)->getBuffer());
+  }
+
+  return Error::success();
+}
+
+static Error waitingOnGraphReplay() {
+  // Warn about ignored options.
+  {
+    bool PrintedHeader = false;
+    for (auto &[OptName, Opt] : cl::getRegisteredOptions()) {
+      if (Opt == &WaitingOnGraphReplay)
+        continue;
+      if (Opt->getNumOccurrences()) {
+        if (!PrintedHeader) {
+          errs() << "Warning: Running in -waiting-on-graph-replay mode. "
+                    "The following options will be ignored:\n";
+          PrintedHeader = true;
+        }
+        errs() << "  " << OptName << "\n";
+      }
+    }
+  }
+
+  // Read the replay buffer file.
+  auto GraphOpsBuffer = getFile(WaitingOnGraphReplay);
+  if (!GraphOpsBuffer)
+    return GraphOpsBuffer.takeError();
+
+  using Replay = orc::detail::WaitingOnGraphOpReplay<uintptr_t, uintptr_t>;
+  using Graph = typename Replay::Graph;
+  using Replayer = typename Replay::Replayer;
+
+  std::vector<typename Replay::Op> RecordedOps;
+
+  // First read the buffer to build the Ops vector. Doing this up-front allows
+  // us to avoid polluting the timings below with the cost of parsing.
+  Error Err = Error::success();
+  for (auto &Op :
+       orc::detail::readWaitingOnGraphOpsFromBuffer<uintptr_t, uintptr_t>(
+           (*GraphOpsBuffer)->getBuffer(), Err))
+    RecordedOps.push_back(std::move(Op));
+  if (Err)
+    return Err;
+
+  // Now replay the Ops:
+  Graph G;
+  Replayer R(G);
+
+  outs() << "Replaying WaitingOnGraph operations from " << WaitingOnGraphReplay
+         << "...\n";
+  auto ReplayStart = std::chrono::high_resolution_clock::now();
+  for (auto &Op : RecordedOps)
+    R.replay(std::move(Op));
+  auto ReplayEnd = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> ReplayDiff = ReplayEnd - ReplayStart;
+  outs() << ReplayDiff.count() << "s to replay " << RecordedOps.size()
+         << " ops (wall-clock time)\n";
+  return Error::success();
+}
+
 namespace {
 struct JITLinkTimers {
   TimerGroup JITLinkTG{"llvm-jitlink timers", "timers for llvm-jitlink phases"};
@@ -2831,12 +3101,23 @@ int main(int argc, char *argv[]) {
   cl::ParseCommandLineOptions(argc, argv, "llvm jitlink tool");
   ExitOnErr.setBanner(std::string(argv[0]) + ": ");
 
+  // Check for WaitingOnGraph replay mode.
+  if (!WaitingOnGraphReplay.empty()) {
+    ExitOnErr(waitingOnGraphReplay());
+    return 0;
+  }
+
   /// If timers are enabled, create a JITLinkTimers instance.
   std::unique_ptr<JITLinkTimers> Timers =
       ShowTimes ? std::make_unique<JITLinkTimers>() : nullptr;
 
   auto [TT, Features] = getFirstFileTripleAndFeatures();
   ExitOnErr(sanitizeArguments(TT, argv[0]));
+
+  if (!SymbolicateWith.empty()) {
+    ExitOnErr(symbolicateBacktraces());
+    return 0;
+  }
 
   auto S = ExitOnErr(Session::Create(TT, Features));
 
@@ -2882,11 +3163,9 @@ int main(int argc, char *argv[]) {
     LLVM_DEBUG(dbgs() << "Running \"" << EntryPointName << "\"...\n");
     TimeRegion TR(Timers ? &Timers->RunTimer : nullptr);
     if (!OrcRuntime.empty())
-      Result =
-          ExitOnErr(runWithRuntime(*S, ExecutorAddr(EntryPoint->getAddress())));
+      Result = ExitOnErr(runWithRuntime(*S, EntryPoint->getAddress()));
     else
-      Result = ExitOnErr(
-          runWithoutRuntime(*S, ExecutorAddr(EntryPoint->getAddress())));
+      Result = ExitOnErr(runWithoutRuntime(*S, EntryPoint->getAddress()));
   }
 
   // Destroy the session.

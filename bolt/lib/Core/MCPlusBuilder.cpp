@@ -186,26 +186,21 @@ bool MCPlusBuilder::hasRestoreState(const MCInst &Inst) const {
   return hasAnnotation(Inst, MCAnnotation::kRestoreState);
 }
 
-void MCPlusBuilder::setRASigned(MCInst &Inst) const {
+void MCPlusBuilder::setRAState(MCInst &Inst, bool State) const {
   assert(!hasAnnotation(Inst, MCAnnotation::kRASigned));
-  setAnnotationOpValue(Inst, MCAnnotation::kRASigned, true);
-}
-
-bool MCPlusBuilder::isRASigned(const MCInst &Inst) const {
-  return hasAnnotation(Inst, MCAnnotation::kRASigned);
-}
-
-void MCPlusBuilder::setRAUnsigned(MCInst &Inst) const {
   assert(!hasAnnotation(Inst, MCAnnotation::kRAUnsigned));
-  setAnnotationOpValue(Inst, MCAnnotation::kRAUnsigned, true);
+  if (State)
+    setAnnotationOpValue(Inst, MCAnnotation::kRASigned, true);
+  else
+    setAnnotationOpValue(Inst, MCAnnotation::kRAUnsigned, true);
 }
 
-bool MCPlusBuilder::isRAUnsigned(const MCInst &Inst) const {
-  return hasAnnotation(Inst, MCAnnotation::kRAUnsigned);
-}
-
-bool MCPlusBuilder::isRAStateUnknown(const MCInst &Inst) const {
-  return !(isRAUnsigned(Inst) || isRASigned(Inst));
+std::optional<bool> MCPlusBuilder::getRAState(const MCInst &Inst) const {
+  if (hasAnnotation(Inst, MCAnnotation::kRASigned))
+    return true;
+  if (hasAnnotation(Inst, MCAnnotation::kRAUnsigned))
+    return false;
+  return std::nullopt;
 }
 
 std::optional<MCLandingPad> MCPlusBuilder::getEHInfo(const MCInst &Inst) const {
@@ -608,7 +603,7 @@ void MCPlusBuilder::initAliases() {
 void MCPlusBuilder::initSizeMap() {
   SizeMap.resize(RegInfo->getNumRegs());
   // Build size map
-  for (auto RC : RegInfo->regclasses())
+  for (const auto &RC : RegInfo->regclasses())
     for (MCPhysReg Reg : RC)
       SizeMap[Reg] = RC.getSizeInBits() / 8;
 }

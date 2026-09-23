@@ -300,7 +300,3 @@ define double @minnum_f64_fast(double %x, double %y) nounwind {
   ret double %r
 }
 
-declare float @llvm.maxnum.f32(float, float)
-declare double @llvm.maxnum.f64(double, double)
-declare float @llvm.minnum.f32(float, float)
-declare double @llvm.minnum.f64(double, double)

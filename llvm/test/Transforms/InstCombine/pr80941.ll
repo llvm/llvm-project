@@ -5,7 +5,7 @@ define float @pr80941(float %arg) {
 ; CHECK-LABEL: define float @pr80941(
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[COND:%.*]] = tail call i1 @llvm.is.fpclass.f32(float [[ARG]], i32 144)
+; CHECK-NEXT:    [[COND:%.*]] = tail call i1 @llvm.is.fpclass.f32(float [[ARG]], /* (sub) */ i32 144)
 ; CHECK-NEXT:    br i1 [[COND]], label [[IF_THEN:%.*]], label [[IF_EXIT:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[FPEXT:%.*]] = fpext float [[ARG]] to double

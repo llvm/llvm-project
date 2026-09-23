@@ -2,8 +2,6 @@
 ; RUN: llc < %s -mtriple=riscv64 | FileCheck %s
 ; RUN: llc < %s -mtriple=riscv32 | FileCheck %s
 
-declare ptr @llvm.thread.pointer()
-
 define ptr @thread_pointer() nounwind {
 ; CHECK-LABEL: thread_pointer:
 ; CHECK:       # %bb.0:

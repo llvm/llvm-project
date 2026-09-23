@@ -5,10 +5,6 @@
 # This one has the scripting bridge enabled.
 
 import sys
-if sys.version_info < (3, 6):
-    print "set-xcode-analyzer requires Python 3.6 or later"
-    sys.exit(1)
-
 import os
 import subprocess
 import re
@@ -18,7 +14,7 @@ import stat
 from AppKit import *
 
 def FindClangSpecs(path):
-  print "(+) Searching for xcspec file in: ", path
+  print("(+) Searching for xcspec file in: ", path)
   for root, dirs, files in os.walk(path):
     for f in files:
       if f.endswith(".xcspec") and f.startswith("Clang LLVM"):
@@ -49,14 +45,14 @@ def ModifySpec(path, isBuiltinAnalyzer, pathToChecker):
           foundAnalyzer = False
       t.write(line)
   t.close()
-  print "(+) processing:", path
+  print("(+) processing:", path)
   try:
     shutil.copy(t.name, path)
     os.chmod(path, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH)
-  except IOError, why:
-    print "    (-) Cannot update file:", why, "\n"
-  except OSError, why:
-    print "    (-) Cannot update file:", why, "\n"
+  except IOError as why:
+    print("    (-) Cannot update file:", why, "\n")
+  except OSError as why:
+    print("    (-) Cannot update file:", why, "\n")
   os.unlink(t.name)
 
 def main():
@@ -75,7 +71,7 @@ def main():
   # determine if Xcode is running
   for x in NSWorkspace.sharedWorkspace().runningApplications():
     if x.localizedName().find("Xcode") >= 0:
-      print "(-) You must quit Xcode first before modifying its configuration files."
+      print("(-) You must quit Xcode first before modifying its configuration files.")
       sys.exit(1)
 
   isBuiltinAnalyzer = False
@@ -83,12 +79,12 @@ def main():
     # Expand tildes.
     path = os.path.expanduser(options.path)
     if not path.endswith("clang"):
-      print "(+) Using Clang bundled with checker build:", path
+      print("(+) Using Clang bundled with checker build:", path)
       path = os.path.join(path, "bin", "clang");
     else:
-      print "(+) Using Clang located at:", path
+      print("(+) Using Clang located at:", path)
   else:
-    print "(+) Using the Clang bundled with Xcode"
+    print("(+) Using the Clang bundled with Xcode")
     path = options.default
     isBuiltinAnalyzer = True
 
@@ -108,7 +104,7 @@ def main():
     ModifySpec(x, isBuiltinAnalyzer, path)
 
   if not foundSpec:
-      print "(-) No compiler configuration file was found.  Xcode's analyzer has not been updated."
+      print("(-) No compiler configuration file was found.  Xcode's analyzer has not been updated.")
 
 if __name__ == '__main__':
   main()

@@ -25,6 +25,15 @@ add_libc_fuzzer(
     -D__LIBC_EXPLICIT_SIMD_OPT
 )
 
+add_libc_fuzzer(
+  weak_avl_fuzz
+  SRCS
+    weak_avl_fuzz.cpp
+  DEPENDS
+    libc.src.__support.weak_avl
+    libc.src.__support.CPP.optional
+)
+
 # TODO: FreeListHeap uses the _end symbol which conflicts with the _end symbol
 # defined by GPU start.cpp files so for now we exclude this fuzzer on GPU.
 if(LLVM_LIBC_FULL_BUILD AND NOT LIBC_TARGET_OS_IS_GPU)
@@ -35,11 +44,25 @@ if(LLVM_LIBC_FULL_BUILD AND NOT LIBC_TARGET_OS_IS_GPU)
     DEPENDS
       libc.src.__support.freelist_heap
   )
+  # Same fuzzer, but with the heap rotating between several free stores, so
+  # that both configurations get covered by a single build.
+  add_libc_fuzzer(
+    freelist_heap_rotation_fuzz
+    SRCS
+      freelist_heap_fuzz.cpp
+    COMPILE_OPTIONS
+      -DLIBC_COPT_BAREMETAL_HEAP_ENABLE_FREESTORE_ROTATION
+    DEPENDS
+      libc.src.__support.freelist_heap
+  )
   # TODO(#119995): Remove this once sccache on Windows no longer requires
   # the use of -DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded.
   get_fq_target_name(freelist_heap_fuzz freelist_heap_fuzz_target_name)
+  get_fq_target_name(freelist_heap_rotation_fuzz
+                     freelist_heap_rotation_fuzz_target_name)
   set_target_properties(
     ${freelist_heap_fuzz_target_name}
+    ${freelist_heap_rotation_fuzz_target_name}
     PROPERTIES
       MSVC_DEBUG_INFORMATION_FORMAT ""
   )

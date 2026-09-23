@@ -15,10 +15,10 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::readability {
 
 static constexpr char IgnoreMacrosName[] = "IgnoreMacros";
-static const bool IgnoreMacrosDefault = true;
+static constexpr bool IgnoreMacrosDefault = true;
 
 static constexpr char StrictModeName[] = "StrictMode";
-static const bool StrictModeDefault = true;
+static constexpr bool StrictModeDefault = true;
 
 AvoidReturnWithVoidValueCheck::AvoidReturnWithVoidValueCheck(
     StringRef Name, ClangTidyContext *Context)
@@ -47,9 +47,9 @@ void AvoidReturnWithVoidValueCheck::check(
       Result.Nodes.getNodeAs<CompoundStmt>("compound_parent");
   if (!StrictMode && !SurroundingBlock)
     return;
-  DiagnosticBuilder Diag = diag(VoidReturn->getBeginLoc(),
-                                "return statement within a void function "
-                                "should not have a specified return value");
+  const DiagnosticBuilder Diag = diag(
+      VoidReturn->getBeginLoc(), "return statement within a void function "
+                                 "should not have a specified return value");
   const SourceLocation SemicolonPos = utils::lexer::findNextTerminator(
       VoidReturn->getEndLoc(), *Result.SourceManager, getLangOpts());
   if (SemicolonPos.isInvalid())

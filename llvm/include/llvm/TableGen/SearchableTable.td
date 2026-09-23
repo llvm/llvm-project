@@ -47,6 +47,12 @@ class GenericEnum {
   // If ValueField is not set, enum values will be assigned automatically,
   // starting at 0, according to a lexicographical sort of the entry names.
   string ValueField;
+
+  // (Optional) Underlying C++ data type of the enum.
+  //
+  // If UnderlyingType is not set, there will be no specification in
+  // the generated enum.
+  string UnderlyingType;
 }
 
 // Define a record derived from this class to generate a generic table. This
@@ -119,6 +125,13 @@ class GenericTable {
   // iterator range of pointers giving the starting and end value of the range.
   // e.g. lookupSysRegByEncoding returns multiple CSRs for same encoding.
   bit PrimaryKeyReturnRange = false;
+
+  // Opt out of emitting the primary table as a direct-lookup sparse array
+  // indexed by the primary key value.
+  // TODO: Eventually this should default to `false`, so it is up to heuristics
+  // in the emitter to pick the best lookup scheme. It will then be used to
+  // override that logic and force an emission of non-sparse array.
+  bit DisallowSparseTable = true;
 }
 
 // Define a record derived from this class to generate an additional search

@@ -30,6 +30,7 @@ def ansi_color_surround_regex(inner_regex_text):
 
 class SourceManagerTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
+    SHARED_BUILD_TESTCASE = False
 
     def setUp(self):
         # Call super's setUp().

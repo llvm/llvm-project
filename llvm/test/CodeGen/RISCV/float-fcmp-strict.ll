@@ -50,7 +50,6 @@ define i32 @fcmp_oeq(float %a, float %b) nounwind strictfp {
   %2 = zext i1 %1 to i32
   ret i32 %2
 }
-declare i1 @llvm.experimental.constrained.fcmp.f32(float, float, metadata, metadata)
 
 define i32 @fcmp_ogt(float %a, float %b) nounwind strictfp {
 ; CHECKIF-LABEL: fcmp_ogt:
@@ -63,11 +62,11 @@ define i32 @fcmp_ogt(float %a, float %b) nounwind strictfp {
 ;
 ; CHECKIZFINX-LABEL: fcmp_ogt:
 ; CHECKIZFINX:       # %bb.0:
+; CHECKIZFINX-NEXT:    mv a2, a0
 ; CHECKIZFINX-NEXT:    frflags a3
-; CHECKIZFINX-NEXT:    flt.s a2, a1, a0
+; CHECKIZFINX-NEXT:    flt.s a0, a1, a0
 ; CHECKIZFINX-NEXT:    fsflags a3
-; CHECKIZFINX-NEXT:    feq.s zero, a1, a0
-; CHECKIZFINX-NEXT:    mv a0, a2
+; CHECKIZFINX-NEXT:    feq.s zero, a1, a2
 ; CHECKIZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fcmp_ogt:
@@ -105,11 +104,11 @@ define i32 @fcmp_oge(float %a, float %b) nounwind strictfp {
 ;
 ; CHECKIZFINX-LABEL: fcmp_oge:
 ; CHECKIZFINX:       # %bb.0:
+; CHECKIZFINX-NEXT:    mv a2, a0
 ; CHECKIZFINX-NEXT:    frflags a3
-; CHECKIZFINX-NEXT:    fle.s a2, a1, a0
+; CHECKIZFINX-NEXT:    fle.s a0, a1, a0
 ; CHECKIZFINX-NEXT:    fsflags a3
-; CHECKIZFINX-NEXT:    feq.s zero, a1, a0
-; CHECKIZFINX-NEXT:    mv a0, a2
+; CHECKIZFINX-NEXT:    feq.s zero, a1, a2
 ; CHECKIZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fcmp_oge:
@@ -149,11 +148,11 @@ define i32 @fcmp_olt(float %a, float %b) nounwind strictfp {
 ;
 ; CHECKIZFINX-LABEL: fcmp_olt:
 ; CHECKIZFINX:       # %bb.0:
+; CHECKIZFINX-NEXT:    mv a2, a0
 ; CHECKIZFINX-NEXT:    frflags a3
-; CHECKIZFINX-NEXT:    flt.s a2, a0, a1
+; CHECKIZFINX-NEXT:    flt.s a0, a0, a1
 ; CHECKIZFINX-NEXT:    fsflags a3
-; CHECKIZFINX-NEXT:    feq.s zero, a0, a1
-; CHECKIZFINX-NEXT:    mv a0, a2
+; CHECKIZFINX-NEXT:    feq.s zero, a2, a1
 ; CHECKIZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fcmp_olt:
@@ -191,11 +190,11 @@ define i32 @fcmp_ole(float %a, float %b) nounwind strictfp {
 ;
 ; CHECKIZFINX-LABEL: fcmp_ole:
 ; CHECKIZFINX:       # %bb.0:
+; CHECKIZFINX-NEXT:    mv a2, a0
 ; CHECKIZFINX-NEXT:    frflags a3
-; CHECKIZFINX-NEXT:    fle.s a2, a0, a1
+; CHECKIZFINX-NEXT:    fle.s a0, a0, a1
 ; CHECKIZFINX-NEXT:    fsflags a3
-; CHECKIZFINX-NEXT:    feq.s zero, a0, a1
-; CHECKIZFINX-NEXT:    mv a0, a2
+; CHECKIZFINX-NEXT:    feq.s zero, a2, a1
 ; CHECKIZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fcmp_ole:
@@ -231,25 +230,25 @@ define i32 @fcmp_one(float %a, float %b) nounwind strictfp {
 ; CHECKIF-NEXT:    flt.s a1, fa0, fa1
 ; CHECKIF-NEXT:    fsflags a0
 ; CHECKIF-NEXT:    feq.s zero, fa0, fa1
-; CHECKIF-NEXT:    frflags a0
-; CHECKIF-NEXT:    flt.s a2, fa1, fa0
-; CHECKIF-NEXT:    fsflags a0
-; CHECKIF-NEXT:    or a0, a2, a1
+; CHECKIF-NEXT:    frflags a2
+; CHECKIF-NEXT:    flt.s a0, fa1, fa0
+; CHECKIF-NEXT:    or a0, a0, a1
+; CHECKIF-NEXT:    fsflags a2
 ; CHECKIF-NEXT:    feq.s zero, fa1, fa0
 ; CHECKIF-NEXT:    ret
 ;
 ; CHECKIZFINX-LABEL: fcmp_one:
 ; CHECKIZFINX:       # %bb.0:
-; CHECKIZFINX-NEXT:    frflags a2
-; CHECKIZFINX-NEXT:    flt.s a3, a0, a1
-; CHECKIZFINX-NEXT:    fsflags a2
-; CHECKIZFINX-NEXT:    feq.s zero, a0, a1
-; CHECKIZFINX-NEXT:    frflags a2
-; CHECKIZFINX-NEXT:    flt.s a4, a1, a0
-; CHECKIZFINX-NEXT:    fsflags a2
-; CHECKIZFINX-NEXT:    or a2, a4, a3
-; CHECKIZFINX-NEXT:    feq.s zero, a1, a0
-; CHECKIZFINX-NEXT:    mv a0, a2
+; CHECKIZFINX-NEXT:    mv a2, a0
+; CHECKIZFINX-NEXT:    frflags a0
+; CHECKIZFINX-NEXT:    flt.s a3, a2, a1
+; CHECKIZFINX-NEXT:    fsflags a0
+; CHECKIZFINX-NEXT:    feq.s zero, a2, a1
+; CHECKIZFINX-NEXT:    frflags a4
+; CHECKIZFINX-NEXT:    flt.s a0, a1, a2
+; CHECKIZFINX-NEXT:    or a0, a0, a3
+; CHECKIZFINX-NEXT:    fsflags a4
+; CHECKIZFINX-NEXT:    feq.s zero, a1, a2
 ; CHECKIZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fcmp_one:
@@ -350,27 +349,27 @@ define i32 @fcmp_ueq(float %a, float %b) nounwind strictfp {
 ; CHECKIF-NEXT:    flt.s a1, fa0, fa1
 ; CHECKIF-NEXT:    fsflags a0
 ; CHECKIF-NEXT:    feq.s zero, fa0, fa1
-; CHECKIF-NEXT:    frflags a0
-; CHECKIF-NEXT:    flt.s a2, fa1, fa0
-; CHECKIF-NEXT:    fsflags a0
-; CHECKIF-NEXT:    or a1, a2, a1
-; CHECKIF-NEXT:    xori a0, a1, 1
+; CHECKIF-NEXT:    frflags a2
+; CHECKIF-NEXT:    flt.s a0, fa1, fa0
+; CHECKIF-NEXT:    or a0, a0, a1
+; CHECKIF-NEXT:    xori a0, a0, 1
+; CHECKIF-NEXT:    fsflags a2
 ; CHECKIF-NEXT:    feq.s zero, fa1, fa0
 ; CHECKIF-NEXT:    ret
 ;
 ; CHECKIZFINX-LABEL: fcmp_ueq:
 ; CHECKIZFINX:       # %bb.0:
-; CHECKIZFINX-NEXT:    frflags a2
-; CHECKIZFINX-NEXT:    flt.s a3, a0, a1
-; CHECKIZFINX-NEXT:    fsflags a2
-; CHECKIZFINX-NEXT:    feq.s zero, a0, a1
-; CHECKIZFINX-NEXT:    frflags a2
-; CHECKIZFINX-NEXT:    flt.s a4, a1, a0
-; CHECKIZFINX-NEXT:    fsflags a2
-; CHECKIZFINX-NEXT:    or a3, a4, a3
-; CHECKIZFINX-NEXT:    xori a2, a3, 1
-; CHECKIZFINX-NEXT:    feq.s zero, a1, a0
-; CHECKIZFINX-NEXT:    mv a0, a2
+; CHECKIZFINX-NEXT:    mv a2, a0
+; CHECKIZFINX-NEXT:    frflags a0
+; CHECKIZFINX-NEXT:    flt.s a3, a2, a1
+; CHECKIZFINX-NEXT:    fsflags a0
+; CHECKIZFINX-NEXT:    feq.s zero, a2, a1
+; CHECKIZFINX-NEXT:    frflags a4
+; CHECKIZFINX-NEXT:    flt.s a0, a1, a2
+; CHECKIZFINX-NEXT:    or a0, a0, a3
+; CHECKIZFINX-NEXT:    xori a0, a0, 1
+; CHECKIZFINX-NEXT:    fsflags a4
+; CHECKIZFINX-NEXT:    feq.s zero, a1, a2
 ; CHECKIZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fcmp_ueq:
@@ -426,21 +425,21 @@ define i32 @fcmp_ueq(float %a, float %b) nounwind strictfp {
 define i32 @fcmp_ugt(float %a, float %b) nounwind strictfp {
 ; CHECKIF-LABEL: fcmp_ugt:
 ; CHECKIF:       # %bb.0:
-; CHECKIF-NEXT:    frflags a0
-; CHECKIF-NEXT:    fle.s a1, fa0, fa1
-; CHECKIF-NEXT:    fsflags a0
-; CHECKIF-NEXT:    xori a0, a1, 1
+; CHECKIF-NEXT:    frflags a1
+; CHECKIF-NEXT:    fle.s a0, fa0, fa1
+; CHECKIF-NEXT:    xori a0, a0, 1
+; CHECKIF-NEXT:    fsflags a1
 ; CHECKIF-NEXT:    feq.s zero, fa0, fa1
 ; CHECKIF-NEXT:    ret
 ;
 ; CHECKIZFINX-LABEL: fcmp_ugt:
 ; CHECKIZFINX:       # %bb.0:
-; CHECKIZFINX-NEXT:    frflags a2
-; CHECKIZFINX-NEXT:    fle.s a3, a0, a1
-; CHECKIZFINX-NEXT:    fsflags a2
-; CHECKIZFINX-NEXT:    xori a2, a3, 1
-; CHECKIZFINX-NEXT:    feq.s zero, a0, a1
-; CHECKIZFINX-NEXT:    mv a0, a2
+; CHECKIZFINX-NEXT:    mv a2, a0
+; CHECKIZFINX-NEXT:    frflags a3
+; CHECKIZFINX-NEXT:    fle.s a0, a0, a1
+; CHECKIZFINX-NEXT:    xori a0, a0, 1
+; CHECKIZFINX-NEXT:    fsflags a3
+; CHECKIZFINX-NEXT:    feq.s zero, a2, a1
 ; CHECKIZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fcmp_ugt:
@@ -470,21 +469,21 @@ define i32 @fcmp_ugt(float %a, float %b) nounwind strictfp {
 define i32 @fcmp_uge(float %a, float %b) nounwind strictfp {
 ; CHECKIF-LABEL: fcmp_uge:
 ; CHECKIF:       # %bb.0:
-; CHECKIF-NEXT:    frflags a0
-; CHECKIF-NEXT:    flt.s a1, fa0, fa1
-; CHECKIF-NEXT:    fsflags a0
-; CHECKIF-NEXT:    xori a0, a1, 1
+; CHECKIF-NEXT:    frflags a1
+; CHECKIF-NEXT:    flt.s a0, fa0, fa1
+; CHECKIF-NEXT:    xori a0, a0, 1
+; CHECKIF-NEXT:    fsflags a1
 ; CHECKIF-NEXT:    feq.s zero, fa0, fa1
 ; CHECKIF-NEXT:    ret
 ;
 ; CHECKIZFINX-LABEL: fcmp_uge:
 ; CHECKIZFINX:       # %bb.0:
-; CHECKIZFINX-NEXT:    frflags a2
-; CHECKIZFINX-NEXT:    flt.s a3, a0, a1
-; CHECKIZFINX-NEXT:    fsflags a2
-; CHECKIZFINX-NEXT:    xori a2, a3, 1
-; CHECKIZFINX-NEXT:    feq.s zero, a0, a1
-; CHECKIZFINX-NEXT:    mv a0, a2
+; CHECKIZFINX-NEXT:    mv a2, a0
+; CHECKIZFINX-NEXT:    frflags a3
+; CHECKIZFINX-NEXT:    flt.s a0, a0, a1
+; CHECKIZFINX-NEXT:    xori a0, a0, 1
+; CHECKIZFINX-NEXT:    fsflags a3
+; CHECKIZFINX-NEXT:    feq.s zero, a2, a1
 ; CHECKIZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fcmp_uge:
@@ -516,21 +515,21 @@ define i32 @fcmp_uge(float %a, float %b) nounwind strictfp {
 define i32 @fcmp_ult(float %a, float %b) nounwind strictfp {
 ; CHECKIF-LABEL: fcmp_ult:
 ; CHECKIF:       # %bb.0:
-; CHECKIF-NEXT:    frflags a0
-; CHECKIF-NEXT:    fle.s a1, fa1, fa0
-; CHECKIF-NEXT:    fsflags a0
-; CHECKIF-NEXT:    xori a0, a1, 1
+; CHECKIF-NEXT:    frflags a1
+; CHECKIF-NEXT:    fle.s a0, fa1, fa0
+; CHECKIF-NEXT:    xori a0, a0, 1
+; CHECKIF-NEXT:    fsflags a1
 ; CHECKIF-NEXT:    feq.s zero, fa1, fa0
 ; CHECKIF-NEXT:    ret
 ;
 ; CHECKIZFINX-LABEL: fcmp_ult:
 ; CHECKIZFINX:       # %bb.0:
-; CHECKIZFINX-NEXT:    frflags a2
-; CHECKIZFINX-NEXT:    fle.s a3, a1, a0
-; CHECKIZFINX-NEXT:    fsflags a2
-; CHECKIZFINX-NEXT:    xori a2, a3, 1
-; CHECKIZFINX-NEXT:    feq.s zero, a1, a0
-; CHECKIZFINX-NEXT:    mv a0, a2
+; CHECKIZFINX-NEXT:    mv a2, a0
+; CHECKIZFINX-NEXT:    frflags a3
+; CHECKIZFINX-NEXT:    fle.s a0, a1, a0
+; CHECKIZFINX-NEXT:    xori a0, a0, 1
+; CHECKIZFINX-NEXT:    fsflags a3
+; CHECKIZFINX-NEXT:    feq.s zero, a1, a2
 ; CHECKIZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fcmp_ult:
@@ -560,21 +559,21 @@ define i32 @fcmp_ult(float %a, float %b) nounwind strictfp {
 define i32 @fcmp_ule(float %a, float %b) nounwind strictfp {
 ; CHECKIF-LABEL: fcmp_ule:
 ; CHECKIF:       # %bb.0:
-; CHECKIF-NEXT:    frflags a0
-; CHECKIF-NEXT:    flt.s a1, fa1, fa0
-; CHECKIF-NEXT:    fsflags a0
-; CHECKIF-NEXT:    xori a0, a1, 1
+; CHECKIF-NEXT:    frflags a1
+; CHECKIF-NEXT:    flt.s a0, fa1, fa0
+; CHECKIF-NEXT:    xori a0, a0, 1
+; CHECKIF-NEXT:    fsflags a1
 ; CHECKIF-NEXT:    feq.s zero, fa1, fa0
 ; CHECKIF-NEXT:    ret
 ;
 ; CHECKIZFINX-LABEL: fcmp_ule:
 ; CHECKIZFINX:       # %bb.0:
-; CHECKIZFINX-NEXT:    frflags a2
-; CHECKIZFINX-NEXT:    flt.s a3, a1, a0
-; CHECKIZFINX-NEXT:    fsflags a2
-; CHECKIZFINX-NEXT:    xori a2, a3, 1
-; CHECKIZFINX-NEXT:    feq.s zero, a1, a0
-; CHECKIZFINX-NEXT:    mv a0, a2
+; CHECKIZFINX-NEXT:    mv a2, a0
+; CHECKIZFINX-NEXT:    frflags a3
+; CHECKIZFINX-NEXT:    flt.s a0, a1, a0
+; CHECKIZFINX-NEXT:    xori a0, a0, 1
+; CHECKIZFINX-NEXT:    fsflags a3
+; CHECKIZFINX-NEXT:    feq.s zero, a1, a2
 ; CHECKIZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fcmp_ule:
@@ -717,7 +716,6 @@ define i32 @fcmps_oeq(float %a, float %b) nounwind strictfp {
   %2 = zext i1 %1 to i32
   ret i32 %2
 }
-declare i1 @llvm.experimental.constrained.fcmps.f32(float, float, metadata, metadata)
 
 define i32 @fcmps_ogt(float %a, float %b) nounwind strictfp {
 ; CHECKIF-LABEL: fcmps_ogt:

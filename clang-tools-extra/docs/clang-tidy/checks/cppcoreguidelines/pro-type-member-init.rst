@@ -20,18 +20,19 @@ account but generates false positives for fields initialized in
 methods invoked in the constructor body.
 
 The check also flags variables with automatic storage duration that have record
-types without a user-provided constructor and are not initialized. The suggested
-fix is to zero initialize the variable via ``{}`` for C++11 and beyond or ``=
-{}`` for older language versions.
+types without a user-provided constructor and are not initialized. The
+suggested fix is to zero initialize the variable via ``{}`` for C++11 and
+beyond or ``= {}`` for older language versions.
 
 Options
 -------
 
 .. option:: IgnoreArrays
 
-   If set to `true`, the check will not warn about array members that are not
-   zero-initialized during construction. For performance critical code, it may
-   be important to not initialize fixed-size array members. Default is `false`.
+   If set to `true`, the check will not warn about array members (including
+   C arrays and ``std::array``) that are not zero-initialized during
+   construction. For performance critical code, it may be important to not
+   initialize fixed-size array members. Default is `false`.
 
 .. option:: UseAssignment
 
@@ -40,5 +41,5 @@ Options
    Default is `false`.
 
 This rule is part of the `Type safety (Type.6)
-<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Pro-type-memberinit>`_
+<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#pro-type-memberinit>`_
 profile from the C++ Core Guidelines.

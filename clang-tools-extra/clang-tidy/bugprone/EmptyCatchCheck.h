@@ -28,8 +28,8 @@ public:
   std::optional<TraversalKind> getCheckTraversalKind() const override;
 
 private:
-  std::vector<llvm::StringRef> IgnoreCatchWithKeywords;
-  std::vector<llvm::StringRef> AllowEmptyCatchForExceptions;
+  std::vector<StringRef> IgnoreCatchWithKeywords;
+  std::vector<StringRef> AllowEmptyCatchForExceptions;
 };
 
 } // namespace clang::tidy::bugprone

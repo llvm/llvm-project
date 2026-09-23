@@ -7,9 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/TargetProcess/SimpleExecutorMemoryManager.h"
+#include "llvm/ExecutionEngine/Orc/Shared/Mangler.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 
 #include "llvm/ADT/ScopeExit.h"
-#include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
+#include "llvm/ExecutionEngine/Orc/Shared/SPSCI/SimpleNativeMemoryMapSPSCI.h"
 #include "llvm/Support/FormatVariadic.h"
 
 #define DEBUG_TYPE "orc"
@@ -36,8 +39,6 @@ Expected<ExecutorAddr> SimpleExecutorMemoryManager::reserve(uint64_t Size) {
 
 Expected<ExecutorAddr>
 SimpleExecutorMemoryManager::initialize(tpctypes::FinalizeRequest &FR) {
-  std::vector<shared::WrapperFunctionCall> DeallocationActions;
-
   if (FR.Segments.empty()) {
     if (FR.Actions.empty())
       return make_error<StringError>("Finalization request is empty",
@@ -51,7 +52,7 @@ SimpleExecutorMemoryManager::initialize(tpctypes::FinalizeRequest &FR) {
   ExecutorAddrRange RR(FR.Segments.front().Addr, FR.Segments.front().Addr);
 
   std::vector<sys::MemoryBlock> MBsToReset;
-  auto ResetMBs = make_scope_exit([&]() {
+  llvm::scope_exit ResetMBs([&]() {
     for (auto &MB : MBsToReset)
       sys::Memory::protectMappedMemory(MB, sys::Memory::MF_READ |
                                                sys::Memory::MF_WRITE);
@@ -200,15 +201,18 @@ Error SimpleExecutorMemoryManager::shutdown() {
 
 void SimpleExecutorMemoryManager::addBootstrapSymbols(
     StringMap<ExecutorAddr> &M) {
-  M[rt::SimpleExecutorMemoryManagerInstanceName] = ExecutorAddr::fromPtr(this);
-  M[rt::SimpleExecutorMemoryManagerReserveWrapperName] =
-      ExecutorAddr::fromPtr(&reserveWrapper);
-  M[rt::SimpleExecutorMemoryManagerInitializeWrapperName] =
-      ExecutorAddr::fromPtr(&initializeWrapper);
-  M[rt::SimpleExecutorMemoryManagerDeinitializeWrapperName] =
-      ExecutorAddr::fromPtr(&deinitializeWrapper);
-  M[rt::SimpleExecutorMemoryManagerReleaseWrapperName] =
-      ExecutorAddr::fromPtr(&releaseWrapper);
+  Mangler Mangle{Triple(sys::getProcessTriple())};
+  namespace sps_ci = rt::sps_ci;
+  M[Mangle.mangledCopy(sps_ci::SimpleNativeMemoryMapInstanceName)] =
+      ExecutorAddr::fromPtr(this);
+  M[Mangle.mangledCopy(sps_ci::MemMgrReserve::Name)] =
+      ExecutorAddr::fromPtr(reserveWrapper);
+  M[Mangle.mangledCopy(sps_ci::MemMgrInitialize::Name)] =
+      ExecutorAddr::fromPtr(initializeWrapper);
+  M[Mangle.mangledCopy(sps_ci::MemMgrDeinitialize::Name)] =
+      ExecutorAddr::fromPtr(deinitializeWrapper);
+  M[Mangle.mangledCopy(sps_ci::MemMgrRelease::Name)] =
+      ExecutorAddr::fromPtr(releaseWrapper);
 }
 
 Expected<SimpleExecutorMemoryManager::SlabInfo &>
@@ -308,46 +312,44 @@ SimpleExecutorMemoryManager::getRegionInfo(ExecutorAddr A, StringRef Context) {
   return getRegionInfo(*Slab, A, Context);
 }
 
-llvm::orc::shared::CWrapperFunctionResult
+llvm::orc::shared::CWrapperFunctionBuffer
 SimpleExecutorMemoryManager::reserveWrapper(const char *ArgData,
                                             size_t ArgSize) {
-  return shared::WrapperFunction<rt::SPSSimpleRemoteMemoryMapReserveSignature>::
-      handle(ArgData, ArgSize,
+  return shared::WrapperFunction<rt::sps_ci::MemMgrReserve::SPSSig>::handle(
+             ArgData, ArgSize,
              shared::makeMethodWrapperHandler(
                  &SimpleExecutorMemoryManager::reserve))
-          .release();
+      .release();
 }
 
-llvm::orc::shared::CWrapperFunctionResult
+llvm::orc::shared::CWrapperFunctionBuffer
 SimpleExecutorMemoryManager::initializeWrapper(const char *ArgData,
                                                size_t ArgSize) {
-  return shared::
-      WrapperFunction<rt::SPSSimpleRemoteMemoryMapInitializeSignature>::handle(
+  return shared::WrapperFunction<rt::sps_ci::MemMgrInitialize::SPSSig>::handle(
              ArgData, ArgSize,
              shared::makeMethodWrapperHandler(
                  &SimpleExecutorMemoryManager::initialize))
-          .release();
+      .release();
 }
 
-llvm::orc::shared::CWrapperFunctionResult
+llvm::orc::shared::CWrapperFunctionBuffer
 SimpleExecutorMemoryManager::deinitializeWrapper(const char *ArgData,
                                                  size_t ArgSize) {
-  return shared::WrapperFunction<
-             rt::SPSSimpleRemoteMemoryMapDeinitializeSignature>::
+  return shared::WrapperFunction<rt::sps_ci::MemMgrDeinitialize::SPSSig>::
       handle(ArgData, ArgSize,
              shared::makeMethodWrapperHandler(
                  &SimpleExecutorMemoryManager::deinitialize))
           .release();
 }
 
-llvm::orc::shared::CWrapperFunctionResult
+llvm::orc::shared::CWrapperFunctionBuffer
 SimpleExecutorMemoryManager::releaseWrapper(const char *ArgData,
                                             size_t ArgSize) {
-  return shared::WrapperFunction<rt::SPSSimpleRemoteMemoryMapReleaseSignature>::
-      handle(ArgData, ArgSize,
+  return shared::WrapperFunction<rt::sps_ci::MemMgrRelease::SPSSig>::handle(
+             ArgData, ArgSize,
              shared::makeMethodWrapperHandler(
                  &SimpleExecutorMemoryManager::release))
-          .release();
+      .release();
 }
 
 } // namespace rt_bootstrap

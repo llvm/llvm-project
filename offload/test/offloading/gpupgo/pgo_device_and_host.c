@@ -50,7 +50,6 @@
 
 // REQUIRES: amdgpu
 // REQUIRES: pgo
-// XFAIL: amdgpu
 
 int main() {
   int host_var = 0;

@@ -21,12 +21,12 @@
 #ifndef POLLY_ISLAST_H
 #define POLLY_ISLAST_H
 
-#include "polly/ScopPass.h"
+#include "polly/DependenceInfo.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/IR/PassManager.h"
 #include "isl/ctx.h"
 
 namespace polly {
+using llvm::raw_ostream;
 using llvm::SmallPtrSet;
 
 class Dependences;
@@ -163,55 +163,8 @@ public:
   ///}
 };
 
-struct IslAstAnalysis : AnalysisInfoMixin<IslAstAnalysis> {
-  static AnalysisKey Key;
-
-  using Result = IslAstInfo;
-
-  IslAstInfo run(Scop &S, ScopAnalysisManager &SAM,
-                 ScopStandardAnalysisResults &SAR);
-};
-
-class IslAstInfoWrapperPass final : public ScopPass {
-  std::unique_ptr<IslAstInfo> Ast;
-
-public:
-  static char ID;
-
-  IslAstInfoWrapperPass() : ScopPass(ID) {}
-
-  IslAstInfo &getAI() { return *Ast; }
-  const IslAstInfo &getAI() const { return *Ast; }
-
-  /// Build the AST for the given SCoP @p S.
-  bool runOnScop(Scop &S) override;
-
-  /// Register all analyses and transformation required.
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-
-  /// Release the internal memory.
-  void releaseMemory() override;
-
-  /// Print a source code representation of the program.
-  void printScop(raw_ostream &OS, Scop &S) const override;
-};
-
-llvm::Pass *createIslAstInfoWrapperPassPass();
-llvm::Pass *createIslAstInfoPrinterLegacyPass(llvm::raw_ostream &OS);
-
-struct IslAstPrinterPass final : PassInfoMixin<IslAstPrinterPass> {
-  IslAstPrinterPass(raw_ostream &OS) : OS(OS) {}
-
-  PreservedAnalyses run(Scop &S, ScopAnalysisManager &SAM,
-                        ScopStandardAnalysisResults &, SPMUpdater &U);
-
-  raw_ostream &OS;
-};
+std::unique_ptr<IslAstInfo> runIslAstGen(Scop &S,
+                                         DependenceAnalysis::Result &DA);
 } // namespace polly
-
-namespace llvm {
-void initializeIslAstInfoWrapperPassPass(llvm::PassRegistry &);
-void initializeIslAstInfoPrinterLegacyPassPass(llvm::PassRegistry &);
-} // namespace llvm
 
 #endif // POLLY_ISLAST_H

@@ -22,7 +22,8 @@ namespace llvm {
 
 class MachineFunction;
 class RegScavenger;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class Triple;
 
 class WebAssemblyRegisterInfo final : public WebAssemblyGenRegisterInfo {
@@ -41,10 +42,14 @@ public:
   // Debug information queries.
   Register getFrameRegister(const MachineFunction &MF) const override;
 
-  const TargetRegisterClass *
-  getPointerRegClass(unsigned Kind = 0) const override;
   // This does not apply to wasm.
   const uint32_t *getNoPreservedMask() const override { return nullptr; }
+
+  const TargetRegisterClass *
+  getConstrainedRegClassForReg(Register Reg,
+                               const MachineRegisterInfo &MRI) const override;
+
+  const Triple &getTargetTriple() const { return TT; }
 };
 
 } // end namespace llvm

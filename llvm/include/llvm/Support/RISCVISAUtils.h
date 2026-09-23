@@ -21,7 +21,7 @@
 namespace llvm {
 
 namespace RISCVISAUtils {
-constexpr StringLiteral AllStdExts = "mafdqlcbkjtpvnh";
+constexpr StringLiteral AllStdExts = "mafdqlcbkjtvph";
 
 /// Represents the major and version number components of a RISC-V extension.
 struct ExtensionVersion {
@@ -40,8 +40,8 @@ struct ExtensionComparator {
 
 /// OrderedExtensionMap is std::map, it's specialized to keep entries
 /// in canonical order of extension.
-typedef std::map<std::string, ExtensionVersion, ExtensionComparator>
-    OrderedExtensionMap;
+using OrderedExtensionMap =
+    std::map<std::string, ExtensionVersion, ExtensionComparator>;
 
 } // namespace RISCVISAUtils
 

@@ -37,11 +37,11 @@ class MachineRegisterInfo;
 class RegisterClassInfo;
 
 struct VRegMaskOrUnit {
-  Register RegUnit; ///< Virtual register or register unit.
+  VirtRegOrUnit VRegOrUnit;
   LaneBitmask LaneMask;
 
-  VRegMaskOrUnit(Register RegUnit, LaneBitmask LaneMask)
-      : RegUnit(RegUnit), LaneMask(LaneMask) {}
+  VRegMaskOrUnit(VirtRegOrUnit VRegOrUnit, LaneBitmask LaneMask)
+      : VRegOrUnit(VRegOrUnit), LaneMask(LaneMask) {}
 };
 
 /// Base class for register pressure results.
@@ -157,7 +157,7 @@ public:
   const_iterator begin() const { return &PressureChanges[0]; }
   const_iterator end() const { return &PressureChanges[MaxPSets]; }
 
-  LLVM_ABI void addPressureChange(Register RegUnit, bool IsDec,
+  LLVM_ABI void addPressureChange(VirtRegOrUnit VRegOrUnit, bool IsDec,
                                   const MachineRegisterInfo *MRI);
 
   LLVM_ABI void dump(const TargetRegisterInfo &TRI) const;
@@ -172,7 +172,10 @@ public:
   /// instruction which are not dead.
   SmallVector<VRegMaskOrUnit, 8> Defs;
   /// List of virtual registers and register units defined by the
-  /// instruction but dead.
+  /// instruction but dead. Dead definitions should not necessarily be marked
+  /// with a dead flag. In this context a dead definition is just a definition
+  /// which doesn't define any register lane that remains live after the
+  /// defining instruction.
   SmallVector<VRegMaskOrUnit, 8> DeadDefs;
 
   /// Analyze the given instruction \p MI and fill in the Uses, Defs and
@@ -181,19 +184,35 @@ public:
                         const MachineRegisterInfo &MRI, bool TrackLaneMasks,
                         bool IgnoreDead);
 
-  /// Use liveness information to find dead defs not marked with a dead flag
-  /// and move them to the DeadDefs vector.
-  LLVM_ABI void detectDeadDefs(const MachineInstr &MI,
-                               const LiveIntervals &LIS);
+  /// Use liveness information to find dead defs at \p MI's dead slot not marked
+  /// with a dead flag and move them to the DeadDefs vector. This only considers
+  /// the merged live interval for defs, not the per-lane sub-ranges.
+  LLVM_ABI void detectDeadDefs(const MachineInstr &MI, const LiveIntervals &LIS,
+                               const MachineRegisterInfo &MRI);
 
   /// Use liveness information to find out which uses/defs are partially
-  /// undefined/dead and adjust the VRegMaskOrUnits accordingly.
-  /// If \p AddFlagsMI is given then missing read-undef and dead flags will be
-  /// added to the instruction.
+  /// undefined/dead at \p Pos and adjust the VRegMaskOrUnits accordingly.
   LLVM_ABI void adjustLaneLiveness(const LiveIntervals &LIS,
                                    const MachineRegisterInfo &MRI,
-                                   SlotIndex Pos,
-                                   MachineInstr *AddFlagsMI = nullptr);
+                                   SlotIndex Pos);
+
+  /// Use liveness information to find out which uses/defs are partially
+  /// undefined/dead at the \p MI's position and adjust the VRegMaskOrUnits
+  /// accordingly. Missing read-undef and dead flags are added to \p MI.
+  LLVM_ABI void adjustLaneLiveness(const LiveIntervals &LIS,
+                                   const MachineRegisterInfo &MRI,
+                                   MachineInstr &MI);
+
+private:
+  /// Adjusts the \p Def based on \p LiveAfterDef. The \p Def is moved from the
+  /// Defs vector to the DeadDefs vector when no defined lane remains live after
+  /// the def. Returns a pointer to the next definition to process in order in
+  /// the Defs vector.
+  VRegMaskOrUnit *adjustDef(VRegMaskOrUnit &Def, LaneBitmask LiveAfterDef);
+
+  /// Use liveness information at \p Pos to adjust the lanemask of all uses.
+  void adjustUses(const LiveIntervals &LIS, const MachineRegisterInfo &MRI,
+                  SlotIndex Pos);
 };
 
 /// Array of PressureDiffs.
@@ -279,25 +298,25 @@ private:
   RegSet Regs;
   unsigned NumRegUnits = 0u;
 
-  unsigned getSparseIndexFromReg(Register Reg) const {
-    if (Reg.isVirtual())
-      return Reg.virtRegIndex() + NumRegUnits;
-    assert(Reg < NumRegUnits);
-    return Reg.id();
+  unsigned getSparseIndexFromVirtRegOrUnit(VirtRegOrUnit VRegOrUnit) const {
+    if (VRegOrUnit.isVirtualReg())
+      return VRegOrUnit.asVirtualReg().virtRegIndex() + NumRegUnits;
+    assert(static_cast<unsigned>(VRegOrUnit.asMCRegUnit()) < NumRegUnits);
+    return static_cast<unsigned>(VRegOrUnit.asMCRegUnit());
   }
 
-  Register getRegFromSparseIndex(unsigned SparseIndex) const {
+  VirtRegOrUnit getVirtRegOrUnitFromSparseIndex(unsigned SparseIndex) const {
     if (SparseIndex >= NumRegUnits)
-      return Register::index2VirtReg(SparseIndex - NumRegUnits);
-    return Register(SparseIndex);
+      return VirtRegOrUnit(Register::index2VirtReg(SparseIndex - NumRegUnits));
+    return VirtRegOrUnit(static_cast<MCRegUnit>(SparseIndex));
   }
 
 public:
   LLVM_ABI void clear();
   LLVM_ABI void init(const MachineRegisterInfo &MRI);
 
-  LaneBitmask contains(Register Reg) const {
-    unsigned SparseIndex = getSparseIndexFromReg(Reg);
+  LaneBitmask contains(VirtRegOrUnit VRegOrUnit) const {
+    unsigned SparseIndex = getSparseIndexFromVirtRegOrUnit(VRegOrUnit);
     RegSet::const_iterator I = Regs.find(SparseIndex);
     if (I == Regs.end())
       return LaneBitmask::getNone();
@@ -307,7 +326,7 @@ public:
   /// Mark the \p Pair.LaneMask lanes of \p Pair.Reg as live.
   /// Returns the previously live lanes of \p Pair.Reg.
   LaneBitmask insert(VRegMaskOrUnit Pair) {
-    unsigned SparseIndex = getSparseIndexFromReg(Pair.RegUnit);
+    unsigned SparseIndex = getSparseIndexFromVirtRegOrUnit(Pair.VRegOrUnit);
     auto InsertRes = Regs.insert(IndexMaskPair(SparseIndex, Pair.LaneMask));
     if (!InsertRes.second) {
       LaneBitmask PrevMask = InsertRes.first->LaneMask;
@@ -320,7 +339,7 @@ public:
   /// Clears the \p Pair.LaneMask lanes of \p Pair.Reg (mark them as dead).
   /// Returns the previously live lanes of \p Pair.Reg.
   LaneBitmask erase(VRegMaskOrUnit Pair) {
-    unsigned SparseIndex = getSparseIndexFromReg(Pair.RegUnit);
+    unsigned SparseIndex = getSparseIndexFromVirtRegOrUnit(Pair.VRegOrUnit);
     RegSet::iterator I = Regs.find(SparseIndex);
     if (I == Regs.end())
       return LaneBitmask::getNone();
@@ -335,9 +354,9 @@ public:
 
   void appendTo(SmallVectorImpl<VRegMaskOrUnit> &To) const {
     for (const IndexMaskPair &P : Regs) {
-      Register Reg = getRegFromSparseIndex(P.Index);
+      VirtRegOrUnit VRegOrUnit = getVirtRegOrUnitFromSparseIndex(P.Index);
       if (P.LaneMask.any())
-        To.emplace_back(Reg, P.LaneMask);
+        To.emplace_back(VRegOrUnit, P.LaneMask);
     }
   }
 };
@@ -541,9 +560,11 @@ public:
 
   LLVM_ABI void dump() const;
 
-  LLVM_ABI void increaseRegPressure(Register RegUnit, LaneBitmask PreviousMask,
+  LLVM_ABI void increaseRegPressure(VirtRegOrUnit VRegOrUnit,
+                                    LaneBitmask PreviousMask,
                                     LaneBitmask NewMask);
-  LLVM_ABI void decreaseRegPressure(Register RegUnit, LaneBitmask PreviousMask,
+  LLVM_ABI void decreaseRegPressure(VirtRegOrUnit VRegOrUnit,
+                                    LaneBitmask PreviousMask,
                                     LaneBitmask NewMask);
 
 protected:
@@ -565,9 +586,12 @@ protected:
   discoverLiveInOrOut(VRegMaskOrUnit Pair,
                       SmallVectorImpl<VRegMaskOrUnit> &LiveInOrOut);
 
-  LLVM_ABI LaneBitmask getLastUsedLanes(Register RegUnit, SlotIndex Pos) const;
-  LLVM_ABI LaneBitmask getLiveLanesAt(Register RegUnit, SlotIndex Pos) const;
-  LLVM_ABI LaneBitmask getLiveThroughAt(Register RegUnit, SlotIndex Pos) const;
+  LLVM_ABI LaneBitmask getLastUsedLanes(VirtRegOrUnit VRegOrUnit,
+                                        SlotIndex Pos) const;
+  LLVM_ABI LaneBitmask getLiveLanesAt(VirtRegOrUnit VRegOrUnit,
+                                      SlotIndex Pos) const;
+  LLVM_ABI LaneBitmask getLiveThroughAt(VirtRegOrUnit VRegOrUnit,
+                                        SlotIndex Pos) const;
 };
 
 LLVM_ABI void dumpRegSetPressure(ArrayRef<unsigned> SetPressure,

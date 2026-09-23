@@ -79,6 +79,7 @@ TEST_F(BasicAATest, AliasInstWithObjectOfImpreciseSize) {
 
   BasicBlock *Entry(BasicBlock::Create(C, "", F));
   B.SetInsertPoint(Entry);
+  B.CreateRetVoid();
 
   Value *IncomingI32Ptr = F->arg_begin();
 
@@ -119,6 +120,7 @@ TEST_F(BasicAATest, AliasInstWithFullObjectOfImpreciseSize) {
   AllocaInst *I8 = B.CreateAlloca(B.getInt8Ty(), B.getInt32(2));
   auto *I8AtUncertainOffset =
       cast<GetElementPtrInst>(B.CreatePtrAdd(I8, ArbitraryI32));
+  B.CreateRetVoid();
 
   auto &AllAnalyses = setupAnalyses();
   BasicAAResult &BasicAA = AllAnalyses.BAA;

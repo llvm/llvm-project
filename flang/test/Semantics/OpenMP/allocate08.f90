@@ -1,11 +1,11 @@
 ! REQUIRES: openmp_runtime
 
-! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags
-! OpenMP Version 5.0
+! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags -fopenmp-version=51
+! OpenMP Version 5.1
 ! 2.11.3 allocate Directive
 ! If list items within the ALLOCATE directive have the SAVE attribute, are a
-! common block name, or are declared in the scope of a module, then only
-! predefined memory allocator parameters can be used in the allocator clause
+! common block name, then only predefined memory allocator parameters can be
+! used in the allocator clause
 
 module AllocateModule
   INTEGER :: z
