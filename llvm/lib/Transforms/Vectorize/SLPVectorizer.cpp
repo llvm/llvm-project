@@ -3555,6 +3555,23 @@ private:
   /// before the root node.
   SmallVector<TreeEntry *> SplatGatheredScalarsRoots;
 
+  /// Checks if any of \p Entries is an internal gather of a splat gather
+  /// subtree.
+  bool hasSplatSubtreeGather(
+      ArrayRef<SmallVector<const TreeEntry *>> Entries) const {
+    if (SplatGatheredScalarsRoots.empty())
+      return false;
+    return any_of(Entries, [&](ArrayRef<const TreeEntry *> TEs) {
+      return any_of(TEs, [&](const TreeEntry *TE) {
+        if (!TE->isGather())
+          return false;
+        while (TE->UserTreeIndex)
+          TE = TE->UserTreeIndex.UserTE;
+        return is_contained(SplatGatheredScalarsRoots, TE);
+      });
+    });
+  }
+
   /// Number of tree entries added while building the splat gather subtrees.
   /// The subtrees are auxiliary and must not inflate the tree size recorded
   /// for failed store chain attempts.
@@ -5592,6 +5609,12 @@ BoUpSLP::findReusedOrderedScalars(const BoUpSLP::TreeEntry &TE,
   SmallVector<std::optional<TargetTransformInfo::ShuffleKind>> GatherShuffles =
       isGatherShuffledEntry(&TE, GatheredScalars, Mask, Entries, NumParts,
                             /*ForOrder=*/true);
+  // The internal gathers of the splat gather subtrees are not used as shuffle
+  // sources, do not reorder the tree to match them.
+  if (hasSplatSubtreeGather(Entries)) {
+    GatherShuffles.clear();
+    Entries.clear();
+  }
   // No shuffled operands - ignore.
   if (GatherShuffles.empty() && ExtractShuffles.empty())
     return std::nullopt;
@@ -22720,23 +22743,10 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
     // The splat gather subtrees are speculative: the keep/drop check may
     // delete them and does not track reuse of their internal gathers by other
     // gathers.
-    if (!GatherShuffles.empty() && !SplatGatheredScalarsRoots.empty()) {
-      auto IsSplatSubtreeGather = [&](const TreeEntry *MTE) {
-        if (!MTE->isGather())
-          return false;
-        for (const TreeEntry *U = MTE; U && U->UserTreeIndex;
-             U = U->UserTreeIndex.UserTE)
-          if (is_contained(SplatGatheredScalarsRoots, U->UserTreeIndex.UserTE))
-            return true;
-        return false;
-      };
-      if (any_of(Entries, [&](ArrayRef<const TreeEntry *> TEs) {
-            return any_of(TEs, IsSplatSubtreeGather);
-          })) {
-        GatherShuffles.clear();
-        Entries.clear();
-        std::fill(Mask.begin(), Mask.end(), PoisonMaskElem);
-      }
+    if (hasSplatSubtreeGather(Entries)) {
+      GatherShuffles.clear();
+      Entries.clear();
+      std::fill(Mask.begin(), Mask.end(), PoisonMaskElem);
     }
     if (!GatherShuffles.empty()) {
       if (std::optional<ResTy> Delayed =

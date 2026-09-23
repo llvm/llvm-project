@@ -432,8 +432,6 @@ private:
       MachineInstr *MI,
       SmallVector<MachineInstr *, HEXAGON_PACKET_SIZE> &Bundle);
 
-  bool CanPromoteToDotNew(MachineInstr *MI, unsigned Reg);
-
   bool pullUpPeelBBLoop(MachineBasicBlock *PredBB, MachineBasicBlock *LoopBB);
 
   MachineInstr *findBundleAndBranch(MachineBasicBlock *BB,
