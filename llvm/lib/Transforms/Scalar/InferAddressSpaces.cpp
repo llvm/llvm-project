@@ -1033,6 +1033,14 @@ Value *InferAddressSpacesImpl::cloneConstantExprWithNewAddressSpace(
       NewOperands.push_back(cast<Constant>(NewOperand));
       continue;
     }
+
+    // Avoid rewriting operands that are not the pointer, because they are not
+    // related and NewAddrSpace for the expression may not be valid for them.
+    if (CE->getOpcode() == Instruction::GetElementPtr && Index != 0) {
+      NewOperands.push_back(Operand);
+      continue;
+    }
+
     if (auto *CExpr = dyn_cast<ConstantExpr>(Operand))
       if (Value *NewOperand = cloneConstantExprWithNewAddressSpace(
               CExpr, NewAddrSpace, ValueWithNewAddrSpace, DL, TTI)) {
