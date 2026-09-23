@@ -1703,6 +1703,7 @@ def OMP_DoSimd : Directive<[Spelling<"do simd">]> {
     VersionedClause<OMPC_If, 50>,
     VersionedClause<OMPC_LastPrivate>,
     VersionedClause<OMPC_Linear>,
+    VersionedClause<OMPC_NonTemporal, 50>,
     VersionedClause<OMPC_Private>,
     VersionedClause<OMPC_Reduction>,
   ];

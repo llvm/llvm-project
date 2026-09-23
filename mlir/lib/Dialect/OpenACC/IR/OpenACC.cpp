@@ -5501,6 +5501,13 @@ bool mlir::acc::getImplicitFlag(mlir::Operation *accDataEntryOp) {
       .Default([&](mlir::Operation *) { return false; });
 }
 
+bool mlir::acc::getSyntheticFlag(mlir::Operation *accDataClauseOp) {
+  return llvm::TypeSwitch<mlir::Operation *, bool>(accDataClauseOp)
+      .Case<ACC_DATA_CLAUSE_OPS>(
+          [&](auto dataClause) { return dataClause.getSynthetic(); })
+      .Default([&](mlir::Operation *) { return false; });
+}
+
 mlir::ValueRange mlir::acc::getDataOperands(mlir::Operation *accOp) {
   auto dataOperands{
       llvm::TypeSwitch<mlir::Operation *, mlir::ValueRange>(accOp)
