@@ -1478,6 +1478,30 @@ Error __ol_tgt_minimalOlInit(llvm::SmallVector<GenericPluginTy *> &LoadedPlugins
 
   return Error::success();
 }
+
+Expected<ol_device_handle_t> __ol_tgt_deviceInit(GenericPluginTy *Plugin, int32_t RTLDeviceID) {
+  std::lock_guard<std::mutex> Lock(OffloadContextValMutex);
+  OffloadContext &Ctx = OffloadContext::get();
+
+  for (auto &Platform : Ctx.Platforms) {
+    if (Platform->Plugin.get() == Plugin) {
+      if (llvm::Error Err = Plugin->initDevice(RTLDeviceID))
+        return Err;
+
+      GenericDeviceTy *Device = &Plugin->getDevice(RTLDeviceID);
+      llvm::Expected<InfoTreeNode> Info = Device->obtainInfo();
+      if (llvm::Error Err = Info.takeError())
+        return Err;
+      Platform->Devices.emplace_back(std::make_unique<ol_device_impl_t>(
+          RTLDeviceID, Device, *Platform, std::move(*Info)));
+      return Platform->Devices.back().get();
+    }
+  }
+
+  return createOffloadError(error::ErrorCode::INVALID_ARGUMENT,
+                            "Platform not found for the given RTL");
+}
+
 } // namespace tmp
 
 } // namespace offload

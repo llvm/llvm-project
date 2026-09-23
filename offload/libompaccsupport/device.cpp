@@ -80,12 +80,18 @@ DeviceTy::~DeviceTy() {
   dumpTargetPointerMappings(&Loc, *this);
 }
 
+namespace llvm::offload::tmp {
+Expected<ol_device_handle_t> __ol_tgt_deviceInit(GenericPluginTy *RTL, int32_t RTLDeviceID);
+} // namespace llvm::offload::tmp
+
 llvm::Error DeviceTy::init() {
-  int32_t Ret = RTL->init_device(RTLDeviceID);
-  if (Ret != OFFLOAD_SUCCESS)
+
+  auto HandleOrErr = llvm::offload::tmp::__ol_tgt_deviceInit(RTL, RTLDeviceID);
+  if (!HandleOrErr)
     return error::createOffloadError(error::ErrorCode::BACKEND_FAILURE,
                                      "failed to initialize device %d\n",
                                      DeviceID);
+  DeviceHandle = *HandleOrErr;
 
   // Enables recording kernels if set.
   BoolEnvar OMPX_RecordKernel("LIBOMPTARGET_RECORD", false);
@@ -105,7 +111,7 @@ llvm::Error DeviceTy::init() {
     bool EmitReport =
         OMPX_EmitRecordReport || !OMPX_RecordReportFilename.get().empty();
 
-    Ret = RTL->initialize_record_replay(
+    int32_t Ret = RTL->initialize_record_replay(
         RTLDeviceID, OMPX_RecordMemSize, nullptr,
         /*IsRecord=*/true, /*IsNative=*/true, OMPX_RecordOutput, EmitReport,
         OMPX_RecordReportFilename.get().c_str(),
