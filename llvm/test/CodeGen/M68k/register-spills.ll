@@ -155,15 +155,13 @@ define void @test_force_spill_16() {
 ; CHECK-LABEL: test_force_spill_16:
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  ; %bb.0: ; %start
-; CHECK-NEXT:    suba.l #116, %sp
-; CHECK-NEXT:    .cfi_def_cfa_offset -120
-; CHECK-NEXT:    movem.l %d2-%d7/%a2-%a6, (72,%sp) ; 48-byte Folded Spill
+; CHECK-NEXT:    suba.l #108, %sp
+; CHECK-NEXT:    .cfi_def_cfa_offset -112
+; CHECK-NEXT:    movem.l %d2-%d7, (84,%sp) ; 28-byte Folded Spill
 ; CHECK-NEXT:    jsr get16
-; CHECK-NEXT:    movem.w %d0, (70,%sp)
+; CHECK-NEXT:    movem.w %d0, (82,%sp)
 ; CHECK-NEXT:    jsr get16
 ; CHECK-NEXT:    movem.w %d0, (66,%sp)
-; CHECK-NEXT:    jsr get16
-; CHECK-NEXT:    movem.w %d0, (64,%sp)
 ; CHECK-NEXT:    jsr get16
 ; CHECK-NEXT:    move.w %d0, %d2
 ; CHECK-NEXT:    jsr get16
@@ -177,19 +175,20 @@ define void @test_force_spill_16() {
 ; CHECK-NEXT:    jsr get16
 ; CHECK-NEXT:    move.w %d0, %d7
 ; CHECK-NEXT:    jsr get16
-; CHECK-NEXT:    move.w %d0, %a2
+; CHECK-NEXT:    movem.w %d0, (80,%sp)
 ; CHECK-NEXT:    jsr get16
-; CHECK-NEXT:    move.w %d0, %a3
+; CHECK-NEXT:    movem.w %d0, (78,%sp)
 ; CHECK-NEXT:    jsr get16
-; CHECK-NEXT:    move.w %d0, %a4
+; CHECK-NEXT:    movem.w %d0, (76,%sp)
 ; CHECK-NEXT:    jsr get16
-; CHECK-NEXT:    move.w %d0, %a5
+; CHECK-NEXT:    movem.w %d0, (74,%sp)
 ; CHECK-NEXT:    jsr get16
-; CHECK-NEXT:    move.w %d0, %a6
+; CHECK-NEXT:    movem.w %d0, (72,%sp)
+; CHECK-NEXT:    jsr get16
+; CHECK-NEXT:    movem.w %d0, (70,%sp)
 ; CHECK-NEXT:    jsr get16
 ; CHECK-NEXT:    movem.w %d0, (68,%sp)
 ; CHECK-NEXT:    jsr get16
-; CHECK-NEXT:    movem.w (64,%sp), %a1
 ; CHECK-NEXT:    movem.w (66,%sp), %d1
 ; CHECK-NEXT:    swap %d0
 ; CHECK-NEXT:    clr.w %d0
@@ -202,42 +201,60 @@ define void @test_force_spill_16() {
 ; CHECK-NEXT:    swap %d0
 ; CHECK-NEXT:    move.l %d0, (56,%a0)
 ; CHECK-NEXT:    movem.w (70,%sp), %d0
-; CHECK-NEXT:    and.l #65535, %a6
-; CHECK-NEXT:    move.l %a6, (52,%a0)
-; CHECK-NEXT:    and.l #65535, %a5
-; CHECK-NEXT:    move.l %a5, (48,%a0)
-; CHECK-NEXT:    and.l #65535, %a4
-; CHECK-NEXT:    move.l %a4, (44,%a0)
-; CHECK-NEXT:    and.l #65535, %a3
-; CHECK-NEXT:    move.l %a3, (40,%a0)
-; CHECK-NEXT:    and.l #65535, %a2
-; CHECK-NEXT:    move.l %a2, (36,%a0)
+; CHECK-NEXT:    swap %d0
+; CHECK-NEXT:    clr.w %d0
+; CHECK-NEXT:    swap %d0
+; CHECK-NEXT:    move.l %d0, (52,%a0)
+; CHECK-NEXT:    movem.w (72,%sp), %d0
+; CHECK-NEXT:    swap %d0
+; CHECK-NEXT:    clr.w %d0
+; CHECK-NEXT:    swap %d0
+; CHECK-NEXT:    move.l %d0, (48,%a0)
+; CHECK-NEXT:    movem.w (74,%sp), %d0
+; CHECK-NEXT:    swap %d0
+; CHECK-NEXT:    clr.w %d0
+; CHECK-NEXT:    swap %d0
+; CHECK-NEXT:    move.l %d0, (44,%a0)
+; CHECK-NEXT:    movem.w (76,%sp), %d0
+; CHECK-NEXT:    swap %d0
+; CHECK-NEXT:    clr.w %d0
+; CHECK-NEXT:    swap %d0
+; CHECK-NEXT:    move.l %d0, (40,%a0)
+; CHECK-NEXT:    movem.w (78,%sp), %d0
+; CHECK-NEXT:    swap %d0
+; CHECK-NEXT:    clr.w %d0
+; CHECK-NEXT:    swap %d0
+; CHECK-NEXT:    move.l %d0, (36,%a0)
+; CHECK-NEXT:    movem.w (80,%sp), %d0
+; CHECK-NEXT:    swap %d0
+; CHECK-NEXT:    clr.w %d0
+; CHECK-NEXT:    swap %d0
+; CHECK-NEXT:    move.l %d0, (32,%a0)
+; CHECK-NEXT:    movem.w (82,%sp), %d0
 ; CHECK-NEXT:    swap %d7
 ; CHECK-NEXT:    clr.w %d7
 ; CHECK-NEXT:    swap %d7
-; CHECK-NEXT:    move.l %d7, (32,%a0)
+; CHECK-NEXT:    move.l %d7, (28,%a0)
 ; CHECK-NEXT:    swap %d6
 ; CHECK-NEXT:    clr.w %d6
 ; CHECK-NEXT:    swap %d6
-; CHECK-NEXT:    move.l %d6, (28,%a0)
+; CHECK-NEXT:    move.l %d6, (24,%a0)
 ; CHECK-NEXT:    swap %d5
 ; CHECK-NEXT:    clr.w %d5
 ; CHECK-NEXT:    swap %d5
-; CHECK-NEXT:    move.l %d5, (24,%a0)
+; CHECK-NEXT:    move.l %d5, (20,%a0)
 ; CHECK-NEXT:    swap %d4
 ; CHECK-NEXT:    clr.w %d4
 ; CHECK-NEXT:    swap %d4
-; CHECK-NEXT:    move.l %d4, (20,%a0)
+; CHECK-NEXT:    move.l %d4, (16,%a0)
 ; CHECK-NEXT:    swap %d3
 ; CHECK-NEXT:    clr.w %d3
 ; CHECK-NEXT:    swap %d3
-; CHECK-NEXT:    move.l %d3, (16,%a0)
+; CHECK-NEXT:    move.l %d3, (12,%a0)
 ; CHECK-NEXT:    swap %d2
 ; CHECK-NEXT:    clr.w %d2
 ; CHECK-NEXT:    swap %d2
-; CHECK-NEXT:    move.l %d2, (12,%a0)
-; CHECK-NEXT:    and.l #65535, %a1
-; CHECK-NEXT:    move.l %a1, (8,%a0)
+; CHECK-NEXT:    move.l %d2, (8,%a0)
 ; CHECK-NEXT:    swap %d1
 ; CHECK-NEXT:    clr.w %d1
 ; CHECK-NEXT:    swap %d1
@@ -247,8 +264,8 @@ define void @test_force_spill_16() {
 ; CHECK-NEXT:    swap %d0
 ; CHECK-NEXT:    move.l %d0, (%a0)
 ; CHECK-NEXT:    jsr test_force_spill_16_consumer
-; CHECK-NEXT:    movem.l (72,%sp), %d2-%d7/%a2-%a6 ; 48-byte Folded Reload
-; CHECK-NEXT:    adda.l #116, %sp
+; CHECK-NEXT:    movem.l (84,%sp), %d2-%d7 ; 28-byte Folded Reload
+; CHECK-NEXT:    adda.l #108, %sp
 ; CHECK-NEXT:    rts
   start:
     %r0 = call i16 @get16()
@@ -363,9 +380,9 @@ define void @test_force_spill_mixed() {
 ; CHECK-LABEL: test_force_spill_mixed:
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  ; %bb.0: ; %start
-; CHECK-NEXT:    suba.l #148, %sp
-; CHECK-NEXT:    .cfi_def_cfa_offset -152
-; CHECK-NEXT:    movem.l %d2-%d7/%a2-%a6, (104,%sp) ; 48-byte Folded Spill
+; CHECK-NEXT:    suba.l #140, %sp
+; CHECK-NEXT:    .cfi_def_cfa_offset -144
+; CHECK-NEXT:    movem.l %d2-%d7/%a2-%a4, (104,%sp) ; 40-byte Folded Spill
 ; CHECK-NEXT:    jsr get8
 ; CHECK-NEXT:    movem.w %d0, (102,%sp)
 ; CHECK-NEXT:    jsr get16
@@ -385,17 +402,9 @@ define void @test_force_spill_mixed() {
 ; CHECK-NEXT:    jsr get8
 ; CHECK-NEXT:    move.b %d0, %d7
 ; CHECK-NEXT:    jsr get16
-; CHECK-NEXT:    move.w %d0, %a2
-; CHECK-NEXT:    jsr get32
-; CHECK-NEXT:    move.l %d0, %a3
-; CHECK-NEXT:    jsr get16
-; CHECK-NEXT:    move.w %d0, %a4
-; CHECK-NEXT:    jsr get8
 ; CHECK-NEXT:    movem.w %d0, (100,%sp)
-; CHECK-NEXT:    jsr get16
-; CHECK-NEXT:    move.w %d0, %a5
 ; CHECK-NEXT:    jsr get32
-; CHECK-NEXT:    move.l %d0, %a6
+; CHECK-NEXT:    move.l %d0, %a2
 ; CHECK-NEXT:    jsr get16
 ; CHECK-NEXT:    movem.w %d0, (98,%sp)
 ; CHECK-NEXT:    jsr get8
@@ -403,7 +412,15 @@ define void @test_force_spill_mixed() {
 ; CHECK-NEXT:    jsr get16
 ; CHECK-NEXT:    movem.w %d0, (94,%sp)
 ; CHECK-NEXT:    jsr get32
-; CHECK-NEXT:    movem.l %d0, (88,%sp)
+; CHECK-NEXT:    move.l %d0, %a3
+; CHECK-NEXT:    jsr get16
+; CHECK-NEXT:    movem.w %d0, (92,%sp)
+; CHECK-NEXT:    jsr get8
+; CHECK-NEXT:    movem.w %d0, (90,%sp)
+; CHECK-NEXT:    jsr get16
+; CHECK-NEXT:    movem.w %d0, (88,%sp)
+; CHECK-NEXT:    jsr get32
+; CHECK-NEXT:    move.l %d0, %a4
 ; CHECK-NEXT:    jsr get16
 ; CHECK-NEXT:    movem.l (80,%sp), %a1
 ; CHECK-NEXT:    movem.w (86,%sp), %d1
@@ -412,33 +429,41 @@ define void @test_force_spill_mixed() {
 ; CHECK-NEXT:    swap %d0
 ; CHECK-NEXT:    move.l %sp, %a0
 ; CHECK-NEXT:    move.l %d0, (76,%a0)
-; CHECK-NEXT:    movem.l (88,%sp), %d0
-; CHECK-NEXT:    move.l %d0, (72,%a0)
-; CHECK-NEXT:    movem.w (94,%sp), %d0
+; CHECK-NEXT:    movem.w (88,%sp), %d0
+; CHECK-NEXT:    move.l %a4, (72,%a0)
 ; CHECK-NEXT:    swap %d0
 ; CHECK-NEXT:    clr.w %d0
 ; CHECK-NEXT:    swap %d0
 ; CHECK-NEXT:    move.l %d0, (68,%a0)
-; CHECK-NEXT:    movem.w (96,%sp), %d0
+; CHECK-NEXT:    movem.w (90,%sp), %d0
 ; CHECK-NEXT:    and.l #255, %d0
 ; CHECK-NEXT:    move.l %d0, (64,%a0)
-; CHECK-NEXT:    movem.w (98,%sp), %d0
+; CHECK-NEXT:    movem.w (92,%sp), %d0
 ; CHECK-NEXT:    swap %d0
 ; CHECK-NEXT:    clr.w %d0
 ; CHECK-NEXT:    swap %d0
 ; CHECK-NEXT:    move.l %d0, (60,%a0)
-; CHECK-NEXT:    movem.w (100,%sp), %d0
-; CHECK-NEXT:    move.l %a6, (56,%a0)
-; CHECK-NEXT:    and.l #65535, %a5
-; CHECK-NEXT:    move.l %a5, (52,%a0)
+; CHECK-NEXT:    movem.w (94,%sp), %d0
+; CHECK-NEXT:    move.l %a3, (56,%a0)
+; CHECK-NEXT:    swap %d0
+; CHECK-NEXT:    clr.w %d0
+; CHECK-NEXT:    swap %d0
+; CHECK-NEXT:    move.l %d0, (52,%a0)
+; CHECK-NEXT:    movem.w (96,%sp), %d0
 ; CHECK-NEXT:    and.l #255, %d0
 ; CHECK-NEXT:    move.l %d0, (48,%a0)
+; CHECK-NEXT:    movem.w (98,%sp), %d0
+; CHECK-NEXT:    swap %d0
+; CHECK-NEXT:    clr.w %d0
+; CHECK-NEXT:    swap %d0
+; CHECK-NEXT:    move.l %d0, (44,%a0)
+; CHECK-NEXT:    movem.w (100,%sp), %d0
+; CHECK-NEXT:    move.l %a2, (40,%a0)
+; CHECK-NEXT:    swap %d0
+; CHECK-NEXT:    clr.w %d0
+; CHECK-NEXT:    swap %d0
+; CHECK-NEXT:    move.l %d0, (36,%a0)
 ; CHECK-NEXT:    movem.w (102,%sp), %d0
-; CHECK-NEXT:    and.l #65535, %a4
-; CHECK-NEXT:    move.l %a4, (44,%a0)
-; CHECK-NEXT:    move.l %a3, (40,%a0)
-; CHECK-NEXT:    and.l #65535, %a2
-; CHECK-NEXT:    move.l %a2, (36,%a0)
 ; CHECK-NEXT:    and.l #255, %d7
 ; CHECK-NEXT:    move.l %d7, (32,%a0)
 ; CHECK-NEXT:    swap %d6
@@ -464,8 +489,8 @@ define void @test_force_spill_mixed() {
 ; CHECK-NEXT:    and.l #255, %d0
 ; CHECK-NEXT:    move.l %d0, (%a0)
 ; CHECK-NEXT:    jsr test_force_spill_mixed_consumer
-; CHECK-NEXT:    movem.l (104,%sp), %d2-%d7/%a2-%a6 ; 48-byte Folded Reload
-; CHECK-NEXT:    adda.l #148, %sp
+; CHECK-NEXT:    movem.l (104,%sp), %d2-%d7/%a2-%a4 ; 40-byte Folded Reload
+; CHECK-NEXT:    adda.l #140, %sp
 ; CHECK-NEXT:    rts
   start:
     %r0 = call i8 @get8()
