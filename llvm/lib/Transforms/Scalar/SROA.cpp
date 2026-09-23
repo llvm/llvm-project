@@ -4476,9 +4476,9 @@ private:
     Instruction *Sel = dyn_cast<SelectInst>(PtrOp->stripPointerCasts());
     bool CrossesAddressSpace =
         Sel && PtrOp->getType()->getPointerAddressSpace() !=
-            Sel->getType()->getPointerAddressSpace();
+                   Sel->getType()->getPointerAddressSpace();
     unsigned SelOpNum = 0;
-    for (auto& Op : GEPI.indices()) {
+    for (auto &Op : GEPI.indices()) {
       if (auto *SI = dyn_cast<SelectInst>(Op)) {
         if (Sel)
           return false;
@@ -4509,8 +4509,7 @@ private:
 
     // Do not duplicate address-space casts for volatile accesses. Unfolding the
     // GEP can increase code size and register pressure.
-    if (CrossesAddressSpace &&
-        any_of(GEPI.users(), [](User *U) {
+    if (CrossesAddressSpace && any_of(GEPI.users(), [](User *U) {
           auto *I = dyn_cast<Instruction>(U);
           return I && I->isVolatile();
         }))
