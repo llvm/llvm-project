@@ -40,7 +40,7 @@ jobs:
   # dispatch jobs.
   select-machines:
     if: github.repository_owner == 'llvm'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     outputs:
       matrix: ${{ steps.select.outputs.matrix }}
     steps:
@@ -74,7 +74,7 @@ jobs:
         include: ${{ fromJSON(needs.select-machines.outputs.matrix) }}
       fail-fast: false
     name: "Request ${{ matrix.machine }}"
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 30
     env:
       MACHINE: ${{ matrix.machine }}
