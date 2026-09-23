@@ -7,3 +7,12 @@ void stmtexprs(int i) {
   // expected-warning@+1 {{assumption is ignored because it contains (potential) side-effects}}
   __builtin_assume( ({ if (i) ({ stmtexpr_fn(); }); 1; }) );
 }
+
+struct S {
+  unsigned b : 3;
+};
+
+void test_bitfield_promotion(struct S s) {
+  _Static_assert(_Generic(+({ s.b; }), int: 1, unsigned: 2) == 1,
+                 "bit-field in statement expression should be promoted");
+}
