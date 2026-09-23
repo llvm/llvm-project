@@ -655,12 +655,12 @@ LLVM_ABI std::error_code is_other(const Twine &path, bool &result);
 LLVM_ABI std::error_code status(const Twine &path, file_status &result,
                                 bool follow = true);
 
-/// A version for when a file descriptor is already available.
-LLVM_ABI std::error_code status(int FD, file_status &Result);
+/// A version for when a file handle is already available.
+LLVM_ABI std::error_code status(file_t F, file_status &Result);
 
 #ifdef _WIN32
 /// A version for when a file descriptor is already available.
-LLVM_ABI std::error_code status(file_t FD, file_status &Result);
+LLVM_ABI std::error_code status(int FD, file_status &Result);
 #endif
 
 /// Get file creation mode mask of the process.
@@ -751,14 +751,6 @@ inline std::error_code setLastAccessAndModificationTime(const Twine &Path,
 /// @param s Input file status.
 /// @returns True if status() != status_error.
 LLVM_ABI bool status_known(const basic_file_status &s);
-
-/// Is status available?
-///
-/// @param path Input path.
-/// @param result Set to true if status() != status_error.
-/// @returns errc::success if result has been successfully set, otherwise a
-///          platform-specific error_code.
-LLVM_ABI std::error_code status_known(const Twine &path, bool &result);
 
 enum CreationDisposition : unsigned {
   /// CD_CreateAlways - When opening a file:

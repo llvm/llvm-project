@@ -24,6 +24,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/Location.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "llvm/ADT/StringRef.h"
 #include <string>
@@ -31,6 +32,14 @@
 #include "flang/Optimizer/CodeGen/TypeConverter.h"
 
 namespace fir {
+/// Return the line of a location, or 1 if it does not carry one.
+inline uint32_t getLineFromLoc(mlir::Location loc) {
+  uint32_t line = 1;
+  if (auto fileLoc = mlir::dyn_cast<mlir::FileLineColLoc>(loc))
+    line = fileLoc.getLine();
+  return line;
+}
+
 /// Return the integer value of a arith::ConstantOp.
 inline std::int64_t toInt(mlir::arith::ConstantOp cop) {
   return mlir::cast<mlir::IntegerAttr>(cop.getValue())
@@ -246,8 +255,19 @@ mlir::Value integerCast(const fir::LLVMTypeConverter &converter,
 /// otherwise it returns std::nullopt.
 std::optional<bool> isNewAllocationResult(mlir::OpResult result);
 
+/// The procedure \p func stands for in diagnostics and remarks: itself, or the
+/// procedure it is a compiler-made copy of (the device copy of a CUDA Fortran
+/// host_device procedure) when that one can be found.
+mlir::FunctionOpInterface getPresentedFunction(mlir::FunctionOpInterface func);
+
+/// Same for the callee of \p call named by \p callee; null if it does not
+/// resolve to a function.
+mlir::FunctionOpInterface getPresentedCallee(mlir::Operation *call,
+                                             mlir::SymbolRefAttr callee);
+
 /// Used to obtain user-facing function name that can be used in
-/// diagnostics and remarks without mangling or underscores.
+/// diagnostics and remarks without mangling or underscores. Compiler-made
+/// copies are reported under the name of the procedure they copy.
 std::string getPresentableFunctionName(mlir::FunctionOpInterface func);
 } // namespace fir
 

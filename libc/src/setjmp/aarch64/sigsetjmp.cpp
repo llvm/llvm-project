@@ -17,8 +17,9 @@ namespace LIBC_NAMESPACE_DECL {
 [[gnu::naked]]
 LLVM_LIBC_FUNCTION(int, sigsetjmp, (sigjmp_buf, int)) {
   asm(R"(
-      cbz w1, %c[setjmp]
-
+      cbnz w1, 1f
+      b %c[setjmp]
+1:
       str x30, [x0, %c[retaddr]]
       str x19, [x0, %c[extra]]
       mov x19, x0

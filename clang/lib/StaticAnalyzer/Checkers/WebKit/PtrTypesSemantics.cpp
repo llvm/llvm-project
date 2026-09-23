@@ -30,6 +30,15 @@ bool hasPublicMethodInBaseClass(const CXXRecordDecl *R, StringRef NameToMatch) {
     if (MethodName == NameToMatch && MD->getAccess() == AS_public)
       return true;
   }
+
+  for (const Decl *D : R->decls()) {
+    const auto *Shadow = dyn_cast<UsingShadowDecl>(D);
+    if (!Shadow || Shadow->getAccess() != AS_public)
+      continue;
+    const auto *MD = dyn_cast<CXXMethodDecl>(Shadow->getTargetDecl());
+    if (MD && safeGetName(MD) == NameToMatch)
+      return true;
+  }
   return false;
 }
 
@@ -64,55 +73,53 @@ hasPublicMethodInBase(const CXXBaseSpecifier *Base, StringRef NameToMatch) {
   return hasPublicMethodInBaseClass(R, NameToMatch) ? R : nullptr;
 }
 
-std::optional<bool> isSmartPtrCompatible(const CXXRecordDecl *R,
-                                         StringRef IncMethodName,
-                                         StringRef DecMethodName) {
+static std::optional<bool> hasPublicMethodInHierarchy(const CXXRecordDecl *R,
+                                                      StringRef MethodName) {
   assert(R);
 
   R = R->getDefinition();
   if (!R)
     return std::nullopt;
 
-  bool hasRef = hasPublicMethodInBaseClass(R, IncMethodName);
-  bool hasDeref = hasPublicMethodInBaseClass(R, DecMethodName);
-  if (hasRef && hasDeref)
+  if (hasPublicMethodInBaseClass(R, MethodName))
     return true;
 
   CXXBasePaths Paths;
   Paths.setOrigin(const_cast<CXXRecordDecl *>(R));
 
   bool AnyInconclusiveBase = false;
-  const auto hasPublicRefInBase = [&](const CXXBaseSpecifier *Base,
-                                      CXXBasePath &) {
-    auto hasRefInBase = clang::hasPublicMethodInBase(Base, IncMethodName);
-    if (!hasRefInBase) {
+  const auto hasPublicMethod = [&](const CXXBaseSpecifier *Base,
+                                   CXXBasePath &) {
+    auto HasMethodInBase = clang::hasPublicMethodInBase(Base, MethodName);
+    if (!HasMethodInBase) {
       AnyInconclusiveBase = true;
       return false;
     }
-    return (*hasRefInBase) != nullptr;
+    return (*HasMethodInBase) != nullptr;
   };
 
-  hasRef = hasRef || R->lookupInBases(hasPublicRefInBase, Paths,
-                                      /*LookupInDependent =*/true);
+  bool Found = R->lookupInBases(hasPublicMethod, Paths,
+                                /*LookupInDependent =*/true);
   if (AnyInconclusiveBase)
     return std::nullopt;
 
-  Paths.clear();
-  const auto hasPublicDerefInBase = [&](const CXXBaseSpecifier *Base,
-                                        CXXBasePath &) {
-    auto hasDerefInBase = clang::hasPublicMethodInBase(Base, DecMethodName);
-    if (!hasDerefInBase) {
-      AnyInconclusiveBase = true;
-      return false;
-    }
-    return (*hasDerefInBase) != nullptr;
-  };
-  hasDeref = hasDeref || R->lookupInBases(hasPublicDerefInBase, Paths,
-                                          /*LookupInDependent =*/true);
-  if (AnyInconclusiveBase)
+  return Found;
+}
+
+std::optional<bool> isSmartPtrCompatible(const CXXRecordDecl *R,
+                                         StringRef IncMethodName,
+                                         StringRef DecMethodName) {
+  assert(R);
+
+  auto HasInc = hasPublicMethodInHierarchy(R, IncMethodName);
+  if (!HasInc)
     return std::nullopt;
 
-  return hasRef && hasDeref;
+  auto HasDec = hasPublicMethodInHierarchy(R, DecMethodName);
+  if (!HasDec)
+    return std::nullopt;
+
+  return *HasInc && *HasDec;
 }
 
 std::optional<bool> isRefCountable(const clang::CXXRecordDecl *R) {
@@ -138,9 +145,13 @@ bool isCheckedPtr(const std::string &Name) {
   return Name == "CheckedPtr" || Name == "CheckedRef";
 }
 
+bool isUniquePtr(const std::string &Name) {
+  return Name == "unique_ptr" || Name == "UniqueRef" || Name == "LazyUniqueRef";
+}
+
 bool isOwnerPtr(const std::string &Name) {
   return isRefType(Name) || isCheckedPtr(Name) || isRetainPtrOrOSPtr(Name) ||
-         Name == "unique_ptr" || Name == "UniqueRef" || Name == "LazyUniqueRef";
+         isUniquePtr(Name);
 }
 
 static bool isWeakPtrClass(const std::string &Name) {
@@ -218,6 +229,9 @@ static bool isPtrOfType(const clang::QualType T, Predicate Pred) {
       return Decl && Pred(Decl->getNameAsString());
     } else if (auto *DTS = type->getAs<DeducedTemplateSpecializationType>()) {
       auto *Decl = DTS->getTemplateName().getAsTemplateDecl();
+      return Decl && Pred(Decl->getNameAsString());
+    } else if (auto *RD = type->getAs<RecordType>()) {
+      auto *Decl = RD->getDecl();
       return Decl && Pred(Decl->getNameAsString());
     } else
       break;
@@ -357,10 +371,13 @@ std::optional<bool> isGetterOfSafePtr(const CXXMethodDecl *M) {
   std::string className = safeGetName(calleeMethodsClass);
   std::string method = safeGetName(M);
 
-  if (isCheckedPtr(className) && (method == "get" || method == "ptr"))
+  auto OpType = M->getOverloadedOperator();
+  if (isCheckedPtr(className) &&
+      (method == "get" || method == "ptr" || OpType == OO_Star))
     return true;
 
-  if ((isRefType(className) && (method == "get" || method == "ptr")) ||
+  if ((isRefType(className) &&
+       (method == "get" || method == "ptr" || OpType == OO_Star)) ||
       ((className == "String" || className == "AtomString" ||
         className == "AtomStringImpl" || className == "UniqueString" ||
         className == "UniqueStringImpl" || className == "Identifier") &&
@@ -395,6 +412,20 @@ std::optional<bool> isGetterOfSafePtr(const CXXMethodDecl *M) {
       return T && (T->isPointerType() || T->isReferenceType() ||
                    T->isObjCObjectPointerType());
     }
+  }
+  return false;
+}
+
+bool isGetterOfUniquePtr(const CXXMethodDecl *M) {
+  assert(M);
+  if (!isUniquePtr(safeGetName(M->getParent())))
+    return false;
+  auto method = safeGetName(M);
+  if (method == "get" || method == "ptr")
+    return true;
+  if (auto *conversion = dyn_cast<CXXConversionDecl>(M)) {
+    const Type *T = conversion->getConversionType().getTypePtrOrNull();
+    return T && (T->isPointerType() || T->isReferenceType());
   }
   return false;
 }
@@ -967,8 +998,10 @@ public:
     Arg = Arg->IgnoreParenCasts();
     if (!Arg->isPRValue())
       return Visit(Arg);
-    if (auto *ExprWithClean = dyn_cast<ExprWithCleanups>(Arg))
-      Arg = ExprWithClean->getSubExpr()->IgnoreParenCasts();
+    if (auto *Init = dyn_cast<InitListExpr>(Arg)) {
+      if (Init->getNumInits() == 1)
+        Arg = Init->getInit(0);
+    }
     if (auto *BTE = dyn_cast<CXXBindTemporaryExpr>(Arg)) {
       // Only elide when the temporary *is* the returned object, i.e. it has the
       // same smart-pointer type as the return value. Compare canonical,
@@ -982,6 +1015,22 @@ public:
   }
 
   bool VisitCXXConstructExpr(const CXXConstructExpr *CE) {
+    if (CE->getNumArgs() == 1) {
+      auto *InnerArg = CE->getArg(0);
+      if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(InnerArg)) {
+        auto *InnerExpr = MTE->getSubExpr();
+        if (auto *BTE = dyn_cast<CXXBindTemporaryExpr>(InnerExpr))
+          InnerExpr = BTE->getSubExpr();
+        auto InnerQT = InnerExpr->getType();
+        if (auto *InnerDecl = InnerQT->getAsCXXRecordDecl()) {
+          auto *OuterCls = CE->getConstructor()->getParent();
+          if (isRefType(safeGetName(OuterCls)) &&
+              isRefType(safeGetName(InnerDecl)))
+            return Visit(InnerExpr);
+        }
+      }
+    }
+
     for (const Expr *Arg : CE->arguments()) {
       if (Arg && !Visit(Arg))
         return false;

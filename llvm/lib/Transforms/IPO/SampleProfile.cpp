@@ -1410,11 +1410,8 @@ bool SampleProfileLoader::inlineHotFunctionsWithPriority(
   CandidateQueue CQueue;
   InlineCandidate NewCandidate;
   for (auto &BB : F) {
-    for (auto &I : BB) {
-      auto *CB = dyn_cast<CallBase>(&I);
-      if (!CB)
-        continue;
-      if (getInlineCandidate(&NewCandidate, CB))
+    for (CallBase &CB : make_isa_range<CallBase>(BB)) {
+      if (getInlineCandidate(&NewCandidate, &CB))
         CQueue.push(NewCandidate);
     }
   }
@@ -2205,9 +2202,8 @@ bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager &AM,
 
   // Account for cold calls not inlined....
   if (!FunctionSamples::ProfileIsCS)
-    for (const std::pair<Function *, NotInlinedProfileInfo> &pair :
-         notInlinedCallInfo)
-      updateProfileCallee(pair.first, pair.second.entryCount);
+    for (const auto &[Fn, Info] : notInlinedCallInfo)
+      updateProfileCallee(Fn, Info.entryCount);
 
   if (RemoveProbeAfterProfileAnnotation &&
       FunctionSamples::ProfileIsProbeBased) {

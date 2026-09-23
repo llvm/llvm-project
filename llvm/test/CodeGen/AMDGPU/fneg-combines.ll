@@ -1037,7 +1037,7 @@ define amdgpu_ps float @fneg_fadd_0_safe(float inreg %tmp2, float inreg %tmp6, <
   %tmp11 = fneg float %.i188
   %.i092 = select i1 %tmp10, float %tmp2, float %tmp11
   %tmp12 = fcmp ule float %.i092, 0.000000e+00
-  %.i198 = select i1 %tmp12, float 0.000000e+00, float 0x7FF8000000000000
+  %.i198 = select i1 %tmp12, float 0.000000e+00, float +qnan
   ret float %.i198
 }
 
@@ -1062,7 +1062,7 @@ define amdgpu_ps float @fneg_fadd_0_nsz(float inreg %tmp2, float inreg %tmp6, <4
   %tmp11 = fneg float %.i188
   %.i092 = select i1 %tmp10, float %tmp2, float %tmp11
   %tmp12 = fcmp ule float %.i092, 0.000000e+00
-  %.i198 = select i1 %tmp12, float 0.000000e+00, float 0x7FF8000000000000
+  %.i198 = select i1 %tmp12, float 0.000000e+00, float +qnan
   ret float %.i198
 }
 

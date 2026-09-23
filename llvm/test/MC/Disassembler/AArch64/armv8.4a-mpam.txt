@@ -65,7 +65,7 @@
 #CHECK:  mrs x0, MPAMVPM7_EL2
 #CHECK:  mrs x0, MPAMIDR_EL1
 
-// Available outside MPAM from Armv9.7
+# Available outside MPAM from Armv9.7
 #CHECK-NOV84: msr MPAM0_EL1, x0
 #CHECK-NOV84: msr MPAM1_EL1, x0
 #CHECK-NOV84: msr MPAM2_EL2, x0
@@ -83,7 +83,7 @@
 #CHECK-NOV84:  msr MPAMVPM6_EL2, x0
 #CHECK-NOV84:  msr MPAMVPM7_EL2, x0
 
-// Available outside MPAM from Armv9.7
+# Available outside MPAM from Armv9.7
 #CHECK-NOV84: mrs x0, MPAM0_EL1
 #CHECK-NOV84: mrs x0, MPAM1_EL1
 #CHECK-NOV84: mrs x0, MPAM2_EL2
