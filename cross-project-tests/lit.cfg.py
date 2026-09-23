@@ -438,20 +438,19 @@ else:
 if dwarf_version_string and gdb_version_string:
     if int(dwarf_version_string) >= 5:
         try:
-            gdb_too_old = parse_version(gdb_version_string) < parse_version("10.1")
+            if parse_version(gdb_version_string) < parse_version("10.1"):
+                # Example for llgdb-tests, which use lldb on darwin but gdb elsewhere:
+                # XFAIL: !system-darwin && gdb-clang-incompatibility
+                config.available_features.add("gdb-clang-incompatibility")
+                print(
+                    "XFAIL some tests: use gdb version >= 10.1 to restore test coverage",
+                    file=sys.stderr,
+                )
         except ValueError as e:
             lit_config.warning(
-                f"Assuming GDB {gdb_version_string} is incompatible with DWARF v5: {e}"
+                f"Assuming GDB {gdb_version_string} is incompatible with DWARF version {dwarf_version_string}: {e}"
             )
-            gdb_too_old = True
-        if gdb_too_old:
-            # Example for llgdb-tests, which use lldb on darwin but gdb elsewhere:
-            # XFAIL: !system-darwin && gdb-clang-incompatibility
             config.available_features.add("gdb-clang-incompatibility")
-            print(
-                "XFAIL some tests: use gdb version >= 10.1 to restore test coverage",
-                file=sys.stderr,
-            )
 
 try:
     set_lldb_formatters_compatibility_feature()
