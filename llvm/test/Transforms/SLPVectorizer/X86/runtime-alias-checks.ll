@@ -1561,6 +1561,68 @@ entry:
   store i32 %d7, ptr %dst7, align 4
   ret void
 }
+
+; The base object of the loads is reached through an addrspacecast from a
+; differently-sized address space, so the block cannot be versioned.
+define void @addrspacecast_base(ptr %p, ptr addrspace(270) %qas) {
+; CHECK-LABEL: define void @addrspacecast_base(
+; CHECK-SAME: ptr [[P:%.*]], ptr addrspace(270) [[QAS:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[Q:%.*]] = addrspacecast ptr addrspace(270) [[QAS]] to ptr
+; CHECK-NEXT:    [[Q0:%.*]] = load i32, ptr [[Q]], align 4
+; CHECK-NEXT:    store i32 [[Q0]], ptr [[P]], align 4
+; CHECK-NEXT:    [[PQ1:%.*]] = getelementptr inbounds i32, ptr [[Q]], i64 1
+; CHECK-NEXT:    [[Q1:%.*]] = load i32, ptr [[PQ1]], align 4
+; CHECK-NEXT:    [[PP1:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 1
+; CHECK-NEXT:    store i32 [[Q1]], ptr [[PP1]], align 4
+; CHECK-NEXT:    [[PQ2:%.*]] = getelementptr inbounds i32, ptr [[Q]], i64 2
+; CHECK-NEXT:    [[Q2:%.*]] = load i32, ptr [[PQ2]], align 4
+; CHECK-NEXT:    [[PP2:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 2
+; CHECK-NEXT:    store i32 [[Q2]], ptr [[PP2]], align 4
+; CHECK-NEXT:    [[PQ3:%.*]] = getelementptr inbounds i32, ptr [[Q]], i64 3
+; CHECK-NEXT:    [[Q3:%.*]] = load i32, ptr [[PQ3]], align 4
+; CHECK-NEXT:    [[PP3:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 3
+; CHECK-NEXT:    store i32 [[Q3]], ptr [[PP3]], align 4
+; CHECK-NEXT:    ret void
+;
+; NOCHK-LABEL: define void @addrspacecast_base(
+; NOCHK-SAME: ptr [[P:%.*]], ptr addrspace(270) [[QAS:%.*]]) #[[ATTR1]] {
+; NOCHK-NEXT:  [[ENTRY:.*:]]
+; NOCHK-NEXT:    [[Q:%.*]] = addrspacecast ptr addrspace(270) [[QAS]] to ptr
+; NOCHK-NEXT:    [[Q0:%.*]] = load i32, ptr [[Q]], align 4
+; NOCHK-NEXT:    store i32 [[Q0]], ptr [[P]], align 4
+; NOCHK-NEXT:    [[PQ1:%.*]] = getelementptr inbounds i32, ptr [[Q]], i64 1
+; NOCHK-NEXT:    [[Q1:%.*]] = load i32, ptr [[PQ1]], align 4
+; NOCHK-NEXT:    [[PP1:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 1
+; NOCHK-NEXT:    store i32 [[Q1]], ptr [[PP1]], align 4
+; NOCHK-NEXT:    [[PQ2:%.*]] = getelementptr inbounds i32, ptr [[Q]], i64 2
+; NOCHK-NEXT:    [[Q2:%.*]] = load i32, ptr [[PQ2]], align 4
+; NOCHK-NEXT:    [[PP2:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 2
+; NOCHK-NEXT:    store i32 [[Q2]], ptr [[PP2]], align 4
+; NOCHK-NEXT:    [[PQ3:%.*]] = getelementptr inbounds i32, ptr [[Q]], i64 3
+; NOCHK-NEXT:    [[Q3:%.*]] = load i32, ptr [[PQ3]], align 4
+; NOCHK-NEXT:    [[PP3:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 3
+; NOCHK-NEXT:    store i32 [[Q3]], ptr [[PP3]], align 4
+; NOCHK-NEXT:    ret void
+;
+entry:
+  %q = addrspacecast ptr addrspace(270) %qas to ptr
+  %q0 = load i32, ptr %q, align 4
+  store i32 %q0, ptr %p, align 4
+  %pq1 = getelementptr inbounds i32, ptr %q, i64 1
+  %q1 = load i32, ptr %pq1, align 4
+  %pp1 = getelementptr inbounds i32, ptr %p, i64 1
+  store i32 %q1, ptr %pp1, align 4
+  %pq2 = getelementptr inbounds i32, ptr %q, i64 2
+  %q2 = load i32, ptr %pq2, align 4
+  %pp2 = getelementptr inbounds i32, ptr %p, i64 2
+  store i32 %q2, ptr %pp2, align 4
+  %pq3 = getelementptr inbounds i32, ptr %q, i64 3
+  %q3 = load i32, ptr %pq3, align 4
+  %pp3 = getelementptr inbounds i32, ptr %p, i64 3
+  store i32 %q3, ptr %pp3, align 4
+  ret void
+}
 ;.
 ; CHECK: [[PROF0]] = !{!"branch_weights", i32 1, i32 1048575}
 ;.

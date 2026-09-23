@@ -1,0 +1,33 @@
+// RUN: cir-opt %s -cir-to-llvm -o - | FileCheck %s -check-prefix=MLIR
+// RUN: cir-translate %s -cir-to-llvmir --target x86_64-unknown-linux-gnu --disable-cc-lowering  | FileCheck %s -check-prefix=LLVM
+
+!s128i = !cir.int<s, 128>
+!u128i = !cir.int<u, 128>
+
+module attributes { cir.triple = "x86_64-unknown-linux-gnu" } {
+cir.func @signed(%arg: !s128i) -> !s128i {
+  %inverted = cir.not %arg : !s128i
+  cir.return %inverted : !s128i
+}
+// MLIR: llvm.func @signed(%[[ARG:.*]]:  i128) -> i128
+// MLIR: %[[NEG_ONE:.*]] = llvm.mlir.constant(-1 : i128) : i128
+// MLIR: %[[INVERT:.*]] = llvm.xor %[[ARG]], %[[NEG_ONE]] : i128
+// MLIR: llvm.return %[[INVERT]] : i128
+
+// LLVM: define i128 @signed(i128 %[[ARG:.*]])
+// LLVM: %[[INVERT:.*]] = xor i128 %[[ARG]], -1  
+// LLVM: ret i128 %[[INVERT]]
+
+cir.func @unsigned(%arg: !u128i) -> !u128i {
+  %inverted = cir.not %arg : !u128i
+  cir.return %inverted : !u128i
+}
+// MLIR: llvm.func @unsigned(%[[ARG:.*]]: i128) -> i128
+// MLIR: %[[NEG_ONE:.*]] = llvm.mlir.constant(-1 : i128) : i128
+// MLIR: %[[INVERT:.*]] = llvm.xor %[[ARG]], %[[NEG_ONE]] : i128
+// MLIR: llvm.return %[[INVERT]] : i128
+
+// LLVM: define i128 @unsigned(i128 %[[ARG:.*]])
+// LLVM: %[[INVERT:.*]] = xor i128 %[[ARG]], -1 
+// LLVM: ret i128 %[[INVERT]]
+}
