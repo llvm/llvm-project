@@ -643,8 +643,18 @@ void __tgt_taskgraph_emit_target_update(
 /// where its return value is fed back to __tgt_taskgraph_start as \p ByteSize.
 size_t __tgt_taskgraph_end(void *Graph);
 
-/// Destroy a taskgraph.  Must be called before libomp frees the captured node
-/// payloads referenced by the graph.
+/// Build the executable form (delegates to the active plugin).  Returns
+/// OFFLOAD_SUCCESS iff a plugin claimed the graph and will execute it.  On
+/// OFFLOAD_FAIL, execution will fall back to libomp: target regions will be
+/// run synchronously.
+int __tgt_taskgraph_finalize(int64_t DeviceId, void *Graph);
+
+/// Replay a finalized taskgraph: relocate captures, re-resolve device args,
+/// then dispatch to the plugin.  Returns OFFLOAD_SUCCESS / OFFLOAD_FAIL.
+int __tgt_taskgraph_replay(void *Graph, void *TaskgraphArgs, void *HostCtx);
+
+/// Destroy a finalized taskgraph.  Must be called before libomp frees the
+/// captured node payloads referenced by the graph.
 void __tgt_taskgraph_destroy(void *Graph);
 
 /// Duplicate kernel args at capture time.  Uses a two-pass measure/allocate
