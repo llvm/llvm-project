@@ -823,7 +823,9 @@ def GPU_LaunchOp : GPU_Op<"launch", [
                OptionalAttr<FlatSymbolRefAttr>:$module,
                OptionalAttr<FlatSymbolRefAttr>:$function,
                OptionalAttr<ConfinedAttr<I64Attr, [IntNonNegative]>>:$workgroup_attributions,
-               Optional<AnyType>:$asyncObject)>,
+               Optional<AnyType>:$asyncObject,
+               Variadic<AnyType>:$calling_convention,
+               OptionalAttr<DictArrayAttr>:$arg_attrs)>,
     Results<(outs Optional<GPU_AsyncToken>:$asyncToken)> {
   let summary = "GPU kernel launch operation";
 
@@ -856,6 +858,15 @@ def GPU_LaunchOp : GPU_Op<"launch", [
     The `function` and `module` attributes are optional and specifies
     the kernel name and a module in which the kernel should be outlined.
 
+    `calling_convention` is an explicit, ordered list of values captured from
+    outside the launch region. Each listed value must be used inside the launch
+    region. When the launch is outlined, these values are intended to become
+    the first kernel arguments in the order specified on `gpu.launch`. Values
+    captured by the launch but not listed in `calling_convention` may still be
+    handled separately by outlining. When present, `arg_attrs` contains one
+    dictionary per `calling_convention` operand and carries the per-argument
+    attributes associated with that operand.
+
     Syntax:
 
     ```
@@ -866,9 +877,12 @@ def GPU_LaunchOp : GPU_Op<"launch", [
                              (dynamic_shared_memory_size ssa-use)?
                              (`module(` symbol-ref-id `)`)?
                              (`function(` symbol-ref-id `)`)?
+                             (`calling_convention` `(` calling-convention-args `)`)?
                              memory-attribution
                              region attr-dict?
     ssa-reassignment ::= `(` ssa-id `=` ssa-use (`,` ssa-id `=` ssa-use)* `)`
+    calling-convention-args ::= ssa-use `:` type attr-dict?
+                                (`,` ssa-use `:` type attr-dict?)*
     memory-attribution ::= (`workgroup` `(` ssa-id-and-type-list `)`)?
                            (`private` `(` ssa-id-and-type-list `)`)?
     ```
@@ -900,6 +914,15 @@ def GPU_LaunchOp : GPU_Op<"launch", [
          %num_tx : index, %num_ty : index, %num_tz : index)
       "some_op"(%bx, %tx) : (index, index) -> ()
       %3 = "memref.load"(%val1, %bx) : (memref<?xf32, 1>, index) -> f32
+    }
+
+    // Launch with explicit kernel arguments and per-argument attributes.
+    gpu.launch blocks(%bx, %by, %bz) in (%sz_bx = %0, %sz_by = %1, %sz_bz = %2)
+               threads(%tx, %ty, %tz) in (%sz_tx = %3, %sz_ty = %4, %sz_tz = %5)
+               calling_convention(%value0 : i32 {test.attr = 42 : i32},
+                                  %value1 : f32) {
+      "some_op"(%value0, %value1) : (i32, f32) -> ()
+      gpu.terminator
     }
 
     // Launch with memory attributions.
@@ -962,6 +985,12 @@ def GPU_LaunchOp : GPU_Op<"launch", [
   ];
 
   let extraClassDeclaration = [{
+    /// Add a value to the kernel calling convention.
+    void addCallingConventionArg(Value value, DictionaryAttr attrs = {});
+
+    /// Remove the calling convention argument at `index`.
+    void removeCallingConventionArg(unsigned index);
+
     /// Get the SSA values corresponding to kernel block identifiers.
     KernelDim3 getBlockIds();
     /// Get the SSA values corresponding to kernel thread identifiers.
