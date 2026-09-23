@@ -151,6 +151,7 @@ typedef enum {
   LLVMDWARFSourceLanguageErlang,
   LLVMDWARFSourceLanguageElixir,
   LLVMDWARFSourceLanguageGleam,
+  LLVMDWARFSourceLanguageRoc,
 
   // Vendor extensions:
   LLVMDWARFSourceLanguageMips_Assembler,
