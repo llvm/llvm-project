@@ -313,11 +313,11 @@ are commonly used on Windows.
   installed, used as a hint when locating Python. For example,
   `C:\Python311`. Windows requires Python 3.11 or later.
 - `LLDB_EMBED_PYTHON_HOME` (Default=1 on Windows): When this is 1, LLDB will bind
-  statically to the location specified in the `PYTHON_HOME` CMake variable,
-  ignoring any value of `PYTHONHOME` set in the environment. This is most
-  useful for developers who simply want to run LLDB after they build it. If you
-  wish to move a build of LLDB to a different machine where Python will be in a
-  different location, setting `LLDB_EMBED_PYTHON_HOME` to 0 will cause
+  statically to the location specified in the `LLDB_PYTHON_HOME` CMake variable
+  (see below), ignoring any value of `PYTHONHOME` set in the environment. This is
+  most useful for developers who simply want to run LLDB after they build it. If
+  you wish to move a build of LLDB to a different machine where Python will be in
+  a different location, setting `LLDB_EMBED_PYTHON_HOME` to 0 will cause
   Python to use its default mechanism for finding the python installation at
   runtime (looking for installed Pythons, or using the `PYTHONHOME`
   environment variable if it is specified).
@@ -330,6 +330,16 @@ are commonly used on Windows.
   links against the stable-ABI `python3.dll` instead and locates it at runtime
   through `PATH`. The `LLDB_PYTHON_LIBRARY` environment variable overrides that
   search with an absolute path to the versioned Python DLL.
+- `LLDB_PYTHON_HOME` (Only created when `LLDB_EMBED_PYTHON_HOME` is 1): The path
+  baked in as `PYTHONHOME`. It defaults to the directory holding the Python
+  interpreter that CMake found. For a Windows install, it's the same as
+  `PYTHON_HOME`. A relative path is resolved at runtime against liblldb's
+  directory, which is how a distribution bundle can ship its own Python
+  alongside LLDB.
+- `LLDB_PYTHON_DLL_RELATIVE_PATH` (Windows only, unset by default): Path from the
+  directory holding the running LLDB executable to the directory holding the
+  Python DLL. It is tried only after loading the DLL by bare name has failed, so
+  it acts as a fallback for the OS search order rather than overriding it.
 
 Sample command line:
 
