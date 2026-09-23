@@ -3493,11 +3493,17 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                                                     Shift, false, 0,
                                                     /*AllowSpill=*/false);
             if (!NewDest) {
-              if (!CanUseFrameRegAsSGPRScratch)
-                report_fatal_error("Cannot scavenge register while SCC is live "
-                                   "in FI elimination!");
-              NewDest = FrameReg;
-              RestoreFrameReg = true;
+              if (CanUseFrameRegAsSGPRScratch) {
+                NewDest = FrameReg;
+                RestoreFrameReg = true;
+              } else {
+                // Nothing is left to scale in place, so fall back to the SGPR
+                // spill even though it clobbers SCC.
+                emitUnsupportedError(MF->getFunction(), *MI,
+                                     "unhandled SGPR spill to memory");
+                NewDest = RS->scavengeRegisterBackwards(
+                    AMDGPU::SReg_32_XM0RegClass, Shift, false, 0);
+              }
             }
           }
           BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32), NewDest)
@@ -3623,11 +3629,16 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                   AMDGPU::SReg_32_XM0RegClass, *Add, false, 0,
                   /*AllowSpill=*/false);
               if (!NewDest) {
-                if (!CanUseFrameRegAsSGPRScratch)
-                  report_fatal_error("Cannot scavenge register while SCC is "
-                                     "live in FI elimination!");
-                NewDest = FrameReg;
-                RestoreFrameReg = true;
+                if (CanUseFrameRegAsSGPRScratch) {
+                  NewDest = FrameReg;
+                  RestoreFrameReg = true;
+                } else {
+                  // As above, fall back to the SCC-clobbering SGPR spill.
+                  emitUnsupportedError(MF->getFunction(), *MI,
+                                       "unhandled SGPR spill to memory");
+                  NewDest = RS->scavengeRegisterBackwards(
+                      AMDGPU::SReg_32_XM0RegClass, *Add, false, 0);
+                }
               }
             }
 
