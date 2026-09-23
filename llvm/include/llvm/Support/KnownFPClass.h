@@ -89,24 +89,21 @@ constexpr FPClassMask toFPClassMask(FPClassTest Classes) {
   return Mask;
 }
 
-constexpr FPClassMask toFPClassMask(FPClassTest Classes,
-                                    std::optional<bool> SignBit) {
+constexpr FPClassMask toFPClassMask(FPClassTest Classes, bool SignBit) {
   FPClassMask Mask = toFPClassMask(Classes);
 
   // This is the only way to generate a NaN with a specific sign from
   // FPClassTest. SignBit must agree with the input classes.
-  if (SignBit) {
-    if (!*SignBit) {
-      Mask &= ~kfcNegNan;
-      // If the SignBit is false, then we should not have any negative classes.
-      if (!(Mask & kfcNegSignBit))
-        return Mask;
-    } else {
-      Mask &= ~kfcPosNan;
-      // If the SignBit is true, then we should not have any positive classes.
-      if (!(Mask & kfcPosSignBit))
-        return Mask;
-    }
+  if (!SignBit) {
+    Mask &= ~kfcNegNan;
+    // If the SignBit is false, then we should not have any negative classes.
+    if (!(Mask & kfcNegSignBit))
+      return Mask;
+  } else {
+    Mask &= ~kfcPosNan;
+    // If the SignBit is true, then we should not have any positive classes.
+    if (!(Mask & kfcPosSignBit))
+      return Mask;
   }
 
   // SignBit is unknown or inconsistent with the input classes. Expand the
@@ -156,18 +153,15 @@ constexpr FPClassTest toFPClassTest(FPClassMask Mask) {
   return Classes;
 }
 
-struct KnownFPClass {
+class KnownFPClass {
   FPClassMask KnownFPMask = kfcAllFlags;
 
+public:
   /// Floating-point classes the value could be one of.
   FPClassTest getKnownFPClasses() const { return toFPClassTest(KnownFPMask); }
 
   void setKnownFPClasses(FPClassTest Classes) {
     KnownFPMask = toFPClassMask(Classes);
-  }
-
-  void setKnownFPClasses(FPClassTest Classes, std::optional<bool> Sign) {
-    KnownFPMask = toFPClassMask(Classes, Sign);
   }
 
   /// std::nullopt if the sign bit is unknown, true if the sign bit is
@@ -211,7 +205,7 @@ struct KnownFPClass {
 
   KnownFPClass(FPClassMask Known = kfcAllFlags) : KnownFPMask(Known) {}
   KnownFPClass(FPClassTest Known) : KnownFPMask(toFPClassMask(Known)) {}
-  KnownFPClass(FPClassTest Known, std::optional<bool> Sign)
+  KnownFPClass(FPClassTest Known, bool Sign)
       : KnownFPMask(toFPClassMask(Known, Sign)) {}
   LLVM_ABI KnownFPClass(const APFloat &C);
 
