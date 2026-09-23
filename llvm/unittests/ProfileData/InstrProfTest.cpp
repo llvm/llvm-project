@@ -112,6 +112,66 @@ static const auto Err = [](Error E) {
   FAIL();
 };
 
+TEST_F(InstrProfTest, WaveCountsRoundTripAndMerge) {
+  NamedInstrProfRecord A("wave", 123, {6400, 3200});
+  A.WaveCounts = {100, 100};
+  Writer.addRecord(std::move(A), Err);
+  NamedInstrProfRecord B("wave", 123, {640, 320});
+  B.WaveCounts = {10, 10};
+  Writer.addRecord(std::move(B), 2, Err);
+  Writer.addRecord({"plain", 124, {42}}, Err);
+  readProfile(Writer.writeBuffer());
+  auto R = Reader->getInstrProfRecord("wave", 123);
+  ASSERT_THAT_ERROR(R.takeError(), Succeeded());
+  EXPECT_THAT(R->Counts, ElementsAre(7680, 3840));
+  EXPECT_THAT(R->WaveCounts, ElementsAre(120, 120));
+  auto Plain = Reader->getInstrProfRecord("plain", 124);
+  ASSERT_THAT_ERROR(Plain.takeError(), Succeeded());
+  EXPECT_TRUE(Plain->WaveCounts.empty());
+  InstrProfWriter Again;
+  for (auto &Record : *Reader)
+    Again.addRecord(NamedInstrProfRecord(Record), Err);
+  readProfile(Again.writeBuffer());
+  R = Reader->getInstrProfRecord("wave", 123);
+  ASSERT_THAT_ERROR(R.takeError(), Succeeded());
+  EXPECT_THAT(R->WaveCounts, ElementsAre(120, 120));
+}
+
+TEST_F(InstrProfTest, WaveCountsMismatchDoesNotMutate) {
+  InstrProfRecord A({64});
+  A.WaveCounts = {1};
+  InstrProfRecord B({128});
+  bool Warned = false;
+  A.merge(B, 1, [&](instrprof_error E) {
+    EXPECT_EQ(E, instrprof_error::count_mismatch);
+    Warned = true;
+  });
+  EXPECT_TRUE(Warned);
+  EXPECT_THAT(A.Counts, ElementsAre(64));
+  EXPECT_THAT(A.WaveCounts, ElementsAre(1));
+}
+
+TEST_F(InstrProfTest, WaveCountsScaleCopyClearAndOverflow) {
+  InstrProfRecord A({64, 128});
+  A.WaveCounts = {2, 4};
+  A.scale(3, 2, [](instrprof_error) { FAIL(); });
+  EXPECT_THAT(A.WaveCounts, ElementsAre(3, 6));
+  InstrProfRecord B(A), C;
+  C = B;
+  EXPECT_EQ(C.WaveCounts, A.WaveCounts);
+  C.Clear();
+  EXPECT_TRUE(C.WaveCounts.empty());
+  A.WaveCounts = {getInstrMaxCountValue(), 1};
+  B.WaveCounts = {1, 1};
+  bool Overflowed = false;
+  A.merge(B, 1, [&](instrprof_error E) {
+    EXPECT_EQ(E, instrprof_error::counter_overflow);
+    Overflowed = true;
+  });
+  EXPECT_TRUE(Overflowed);
+  EXPECT_THAT(A.WaveCounts, ElementsAre(getInstrMaxCountValue(), 2));
+}
+
 TEST_P(MaybeSparseInstrProfTest, write_and_read_one_function) {
   Writer.addRecord({"foo", 0x1234, {1, 2, 3, 4}}, Err);
   auto Profile = Writer.writeBuffer();

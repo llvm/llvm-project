@@ -1,0 +1,50 @@
+# RUN: split-file %s %t
+# RUN: %python %t/raw.py little 2 > %t/little.raw
+# RUN: %python %t/raw.py big 2 > %t/big.raw
+# RUN: llvm-profdata merge %t/little.raw -o %t/one.profdata
+# RUN: llvm-profdata show --all-functions --counts %t/one.profdata | FileCheck %s --check-prefix=ONE
+# RUN: llvm-profdata merge %t/one.profdata --weighted-input=2,%t/big.raw -o %t/three.profdata
+# RUN: llvm-profdata show --all-functions --counts %t/three.profdata | FileCheck %s --check-prefix=THREE
+# RUN: not llvm-profdata merge --text %t/one.profdata -o %t/out.txt 2>&1 | FileCheck %s --check-prefix=TEXT
+# RUN: not llvm-profdata show --all-functions --text %t/one.profdata -o %t/show.txt 2>&1 | FileCheck %s --check-prefix=TEXT
+# RUN: not llvm-profdata show --all-functions --text %t/little.raw -o %t/show-raw.txt 2>&1 | FileCheck %s --check-prefix=TEXT
+# RUN: not llvm-profdata merge --write-prev-version %t/one.profdata -o %t/old.profdata 2>&1 | FileCheck %s --check-prefix=OLD
+# RUN: %python %t/raw.py little 5 > %t/bad.raw
+# RUN: not llvm-profdata merge %t/bad.raw -o %t/bad.profdata 2>&1 | FileCheck %s --check-prefix=BAD
+# RUN: %python %t/raw.py little 4 > %t/all-wave.raw
+# RUN: not llvm-profdata merge %t/all-wave.raw -o %t/bad.profdata 2>&1 | FileCheck %s --check-prefix=BAD
+
+# ONE: Block counts: [6400, 3200]
+# ONE: Block wave counts: [100, 100]
+# THREE: Block counts: [19200, 9600]
+# THREE: Block wave counts: [300, 300]
+# TEXT: text profiles do not support wave counts
+# OLD: wave counts require indexed profile version 15
+# BAD: invalid number of wave counters
+
+#--- raw.py
+import hashlib
+import struct
+import sys
+
+endian = '<' if sys.argv[1] == 'little' else '>'
+num_wave = int(sys.argv[2])
+name = b'wave'
+name_ref = int.from_bytes(hashlib.md5(name).digest()[:8], 'little')
+# Raw v12: 80-byte record, 4 counters (2 lane + 2 wave), 2 uniforms.
+record_size = 80
+counter_delta = record_size
+uniform_delta = counter_delta + 4 * 8
+names_delta = uniform_delta + 2 * 8
+names = bytes([len(name), 0]) + name
+header = [0xff6c70726f667281, 12 | (1 << 56), 0, 1, 0, 4, 0, 0, 0,
+          2, 0, uniform_delta, len(names), counter_delta, uniform_delta,
+          names_delta, 0, 0, 2]
+record = struct.pack(endian + '7QI4HII4x', name_ref, 123,
+                     counter_delta, uniform_delta, 0, 0, 0,
+                     4, 0, 0, 0, 64, 0, num_wave)
+assert len(record) == record_size
+sys.stdout.buffer.write(struct.pack(endian + '19Q', *header) + record +
+                        struct.pack(endian + '6Q', 6400, 3200,
+                                    100, 100, 6400, 0) +
+                        names + bytes((-len(names)) % 8))

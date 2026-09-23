@@ -874,7 +874,7 @@ Error RawInstrProfReader<IntPtrT>::readRawUniformCounters(
   if (UniformCountersStart == UniformCountersEnd)
     return success();
 
-  uint32_t NumCounters = swap(Data->NumCounters);
+  uint32_t NumCounters = swap(Data->NumCounters) - swap(Data->NumWaveCounters);
 
   ptrdiff_t UniformCounterOffset =
       swap(Data->UniformCounterPtr) - UniformCountersDelta;
@@ -963,6 +963,14 @@ Error RawInstrProfReader<IntPtrT>::readNextRecord(NamedInstrProfRecord &Record) 
   // Read raw counts and set Record.
   if (Error E = readRawCounts(Record))
     return error(std::move(E));
+
+  uint32_t NumWaveCounters = swap(Data->NumWaveCounters);
+  if (NumWaveCounters && NumWaveCounters >= Record.Counts.size())
+    return error(instrprof_error::malformed, "invalid number of wave counters");
+  size_t NumLaneCounters = Record.Counts.size() - NumWaveCounters;
+  Record.WaveCounts.assign(Record.Counts.begin() + NumLaneCounters,
+                           Record.Counts.end());
+  Record.Counts.resize(NumLaneCounters);
 
   // Read raw bitmap bytes and set Record.
   if (Error E = readRawBitmapBytes(Record))
@@ -1114,6 +1122,21 @@ data_type InstrProfLookupTrait::ReadData(StringRef K, const unsigned char *D,
     DataBuffer.emplace_back(K, Hash, std::move(CounterBuffer),
                             std::move(BitmapByteBuffer),
                             std::move(UniformityBitsBuffer));
+
+    if (GET_VERSION(FormatVersion) >=
+        IndexedInstrProf::ProfVersion::Version15) {
+      if (End - D < ptrdiff_t(sizeof(uint64_t)))
+        return data_type();
+      uint64_t NumWaveCounters =
+          endian::readNext<uint64_t, llvm::endianness::little>(D);
+      if (NumWaveCounters > uint64_t(End - D) / sizeof(uint64_t))
+        return data_type();
+      auto &WaveCounts = DataBuffer.back().WaveCounts;
+      WaveCounts.reserve(NumWaveCounters);
+      for (uint64_t I = 0; I < NumWaveCounters; ++I)
+        WaveCounts.push_back(
+            endian::readNext<uint64_t, llvm::endianness::little>(D));
+    }
 
     // Read value profiling data.
     if (GET_VERSION(FormatVersion) > IndexedInstrProf::ProfVersion::Version2 &&

@@ -5,7 +5,7 @@
 // TODO: use a builtin version of printf
 UNSUPPORTED: system-windows, system-zos
 RUN: printf '\201rforpl\377' > %t-foo.profraw
-RUN: printf '\13\0\0\0\0\0\0\0' >> %t-foo.profraw
+RUN: printf '\14\0\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\1\0\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t-foo.profraw
@@ -32,13 +32,13 @@ RUN: printf '\0\0\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\1\0\0\0\0\0\0\0' >> %t-foo.profraw
-RUN: printf '\0\0\0\0\0\0\0\0' >> %t-foo.profraw
+RUN: printf '\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0' >> %t-foo.profraw
 
 RUN: printf '\023\0\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\3\0foo\0\0\0' >> %t-foo.profraw
 
 RUN: printf '\201rforpl\377' > %t-bar.profraw
-RUN: printf '\13\0\0\0\0\0\0\0' >> %t-bar.profraw
+RUN: printf '\14\0\0\0\0\0\0\0' >> %t-bar.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t-bar.profraw
 RUN: printf '\1\0\0\0\0\0\0\0' >> %t-bar.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t-bar.profraw
@@ -65,7 +65,7 @@ RUN: printf '\0\0\0\0\0\0\0\0' >> %t-bar.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t-bar.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t-bar.profraw
 RUN: printf '\02\0\0\0\0\0\0\0' >> %t-bar.profraw
-RUN: printf '\0\0\0\0\0\0\0\0' >> %t-bar.profraw
+RUN: printf '\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0' >> %t-bar.profraw
 
 RUN: printf '\067\0\0\0\0\0\0\0' >> %t-bar.profraw
 RUN: printf '\101\0\0\0\0\0\0\0' >> %t-bar.profraw

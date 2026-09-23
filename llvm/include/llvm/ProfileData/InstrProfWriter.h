@@ -153,10 +153,10 @@ public:
   LLVM_ABI Error validateRecord(const InstrProfRecord &Func);
 
   /// Write \c Record in text format to \c OS
-  LLVM_ABI static void writeRecordInText(StringRef Name, uint64_t Hash,
-                                         const InstrProfRecord &Counters,
-                                         InstrProfSymtab &Symtab,
-                                         raw_fd_ostream &OS);
+  LLVM_ABI static Error writeRecordInText(StringRef Name, uint64_t Hash,
+                                          const InstrProfRecord &Counters,
+                                          InstrProfSymtab &Symtab,
+                                          raw_fd_ostream &OS);
 
   /// Write the profile, returning the raw data. For testing.
   LLVM_ABI std::unique_ptr<MemoryBuffer> writeBuffer();

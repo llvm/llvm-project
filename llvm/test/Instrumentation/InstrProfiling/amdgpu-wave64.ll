@@ -16,9 +16,9 @@ declare void @llvm.instrprof.increment(ptr, i64, i32, i32)
 attributes #0 = { "target-cpu"="gfx908" }
 
 ;; Per-function comdat counters
-; CHECK: @__profc_kernel_w64 = linkonce_odr protected addrspace(1) global [1 x i64]
+; CHECK: @__profc_kernel_w64 = linkonce_odr protected addrspace(1) global [2 x i64]
 ; CHECK: @__llvm_prf_unifcnt_kernel_w64 = linkonce_odr protected addrspace(1) global [1 x i64]
-; CHECK: @__profd_kernel_w64 = linkonce_odr protected addrspace(1) global { {{.*}} i16 0, i32 0 }
+; CHECK: @__profd_kernel_w64 = linkonce_odr protected addrspace(1) global { {{.*}} i16 0, i32 0, i32 1 }
 
 ;; Check wave size stored via intrinsic
 ; CHECK: %wavesize.i16 = trunc i32 %{{.*}} to i16
@@ -31,4 +31,4 @@ attributes #0 = { "target-cpu"="gfx908" }
 
 ;; Check library call
 ; CHECK: po_then:
-; CHECK: call void @__llvm_profile_instrument_gpu(ptr addrspacecast (ptr addrspace(1) @__profc_kernel_w64 to ptr), ptr addrspacecast (ptr addrspace(1) @__llvm_prf_unifcnt_kernel_w64 to ptr), i64 1)
+; CHECK: call void @__llvm_profile_instrument_gpu(ptr addrspacecast (ptr addrspace(1) @__profc_kernel_w64 to ptr), ptr addrspacecast (ptr addrspace(1) @__llvm_prf_unifcnt_kernel_w64 to ptr), i64 1, ptr addrspacecast (ptr addrspace(1) getelementptr inbounds ([2 x i64], ptr addrspace(1) @__profc_kernel_w64, i32 0, i32 1) to ptr))

@@ -5,7 +5,7 @@
 // TODO: use a builtin version of printf
 UNSUPPORTED: system-windows, system-zos
 RUN: printf '\377lprofr\201' > %t
-RUN: printf '\0\0\0\0\0\0\0\13' >> %t
+RUN: printf '\0\0\0\0\0\0\0\14' >> %t
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 RUN: printf '\0\0\0\0\0\0\0\2' >> %t
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
@@ -32,17 +32,17 @@ RUN: printf '\0\0\0\3\0\4\0\0' >> %t
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 RUN: printf '\0\0\0\1\0\0\0\0' >> %t
-RUN: printf '\0\0\0\0\0\0\0\3' >> %t
+RUN: printf '\0\0\0\0\0\0\0\3\0\0\0\0\0\0\0\0' >> %t
 
 RUN: printf '\344\023\165\112\031\035\265\067' >> %t
 RUN: printf '\0\0\0\0\0\0\0\2' >> %t
-RUN: printf '\0\0\0\1\0\3\377\300' >> %t
+RUN: printf '\0\0\0\1\0\3\377\270' >> %t
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
-RUN: printf '\0\0\0\3\0\3\377\273' >> %t
+RUN: printf '\0\0\0\3\0\3\377\263' >> %t
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 RUN: printf '\0\0\0\2\0\0\0\0' >> %t
-RUN: printf '\0\0\0\0\0\0\0\1' >> %t
+RUN: printf '\0\0\0\0\0\0\0\1\0\0\0\0\0\0\0\0' >> %t
 
 RUN: printf '\0\0\0\0\0\0\0\023' >> %t
 RUN: printf '\0\0\0\0\0\0\0\067' >> %t

@@ -83,6 +83,7 @@ public:
         M += alignTo(ProfRecord.BitmapBytes.size(), sizeof(uint64_t));
         M += sizeof(uint64_t); // The size of the UniformityBits vector
         M += alignTo(ProfRecord.UniformityBits.size(), sizeof(uint64_t));
+        M += sizeof(uint64_t) * (1 + ProfRecord.WaveCounts.size());
       }
 
       // Value data
@@ -135,6 +136,10 @@ public:
              I < alignTo(ProfRecord.UniformityBits.size(), sizeof(uint64_t));
              ++I)
           LE.write<uint8_t>(0);
+
+        LE.write<uint64_t>(ProfRecord.WaveCounts.size());
+        for (uint64_t Count : ProfRecord.WaveCounts)
+          LE.write<uint64_t>(Count);
       }
 
       // Write value data
@@ -539,6 +544,16 @@ Error InstrProfWriter::writeVTableNames(ProfOStream &OS) {
 }
 
 Error InstrProfWriter::writeImpl(ProfOStream &OS) {
+  if (WritePrevVersion) {
+    for (const auto &Function : FunctionData) {
+      for (const auto &Record : Function.getValue()) {
+        if (!Record.second.WaveCounts.empty())
+          return make_error<InstrProfError>(
+              instrprof_error::unsupported_version,
+              "wave counts require indexed profile version 15");
+      }
+    }
+  }
   using namespace IndexedInstrProf;
   using namespace support;
 
@@ -567,7 +582,7 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   // The WritePrevVersion handling will either need to be removed or updated
   // if the version is advanced beyond 12.
   static_assert(IndexedInstrProf::ProfVersion::CurrentVersion ==
-                IndexedInstrProf::ProfVersion::Version14);
+                IndexedInstrProf::ProfVersion::Version15);
   if (static_cast<bool>(ProfileKind & InstrProfKind::IRInstrumentation))
     Header.Version |= VARIANT_MASK_IR_PROF;
   if (static_cast<bool>(ProfileKind & InstrProfKind::ContextSensitive))
@@ -730,10 +745,15 @@ Error InstrProfWriter::validateRecord(const InstrProfRecord &Func) {
   return Error::success();
 }
 
-void InstrProfWriter::writeRecordInText(StringRef Name, uint64_t Hash,
-                                        const InstrProfRecord &Func,
-                                        InstrProfSymtab &Symtab,
-                                        raw_fd_ostream &OS) {
+Error InstrProfWriter::writeRecordInText(StringRef Name, uint64_t Hash,
+                                         const InstrProfRecord &Func,
+                                         InstrProfSymtab &Symtab,
+                                         raw_fd_ostream &OS) {
+  if (!Func.WaveCounts.empty())
+    return make_error<InstrProfError>(
+        instrprof_error::unsupported_version,
+        "text profiles do not support wave counts");
+
   OS << Name << "\n";
   OS << "# Func Hash:\n" << Hash << "\n";
   OS << "# Num Counters:\n" << Func.Counts.size() << "\n";
@@ -755,7 +775,7 @@ void InstrProfWriter::writeRecordInText(StringRef Name, uint64_t Hash,
   uint32_t NumValueKinds = Func.getNumValueKinds();
   if (!NumValueKinds) {
     OS << "\n";
-    return;
+    return Error::success();
   }
 
   OS << "# Num Value Kinds:\n" << Func.getNumValueKinds() << "\n";
@@ -779,6 +799,7 @@ void InstrProfWriter::writeRecordInText(StringRef Name, uint64_t Hash,
   }
 
   OS << "\n";
+  return Error::success();
 }
 
 Error InstrProfWriter::writeText(raw_fd_ostream &OS) {
@@ -827,7 +848,8 @@ Error InstrProfWriter::writeText(raw_fd_ostream &OS) {
   for (const auto &record : OrderedFuncData) {
     const StringRef &Name = record.first;
     const FuncPair &Func = record.second;
-    writeRecordInText(Name, Func.first, Func.second, Symtab, OS);
+    if (Error E = writeRecordInText(Name, Func.first, Func.second, Symtab, OS))
+      return E;
   }
 
   for (const auto &record : OrderedFuncData) {

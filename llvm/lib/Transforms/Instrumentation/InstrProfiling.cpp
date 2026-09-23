@@ -301,8 +301,15 @@ private:
     GlobalVariable *DataVar = nullptr;
     GlobalVariable *RegionBitmaps = nullptr;
     uint32_t NumBitmapBytes = 0;
+    // GPU region counters contain lane counts followed by one wave count for
+    // each lane-counter index. Other targets have no wave counters.
+    uint32_t NumWaveCounters = 0;
 
     PerFunctionProfileData() = default;
+
+    uint64_t getNumRegionCounters() const {
+      return cast<ArrayType>(RegionCounters->getValueType())->getNumElements();
+    }
   };
   DenseMap<GlobalVariable *, PerFunctionProfileData> ProfileDataMap;
   // Key is virtual table variable, value is 'VTableProfData' in the form of
@@ -1056,6 +1063,10 @@ bool InstrLowerer::lower() {
     InstrProfCntrInstBase *FirstProfInst = nullptr;
     for (BasicBlock &BB : F) {
       for (auto I = BB.begin(), E = BB.end(); I != E; I++) {
+        if (isGPUProfTarget(M) &&
+            (isa<InstrProfCoverInst>(I) || isa<InstrProfTimestampInst>(I)))
+          report_fatal_error("wave counts require ordinary counter increments",
+                             false);
         if (auto *Ind = dyn_cast<InstrProfValueProfileInst>(I))
           computeNumValueSiteCounts(Ind);
         else {
@@ -1071,9 +1082,8 @@ bool InstrLowerer::lower() {
 
     // Use a profile intrinsic to create the region counters and data variable.
     // Also create the data variable based on the MCDCParams.
-    if (FirstProfInst != nullptr) {
+    if (FirstProfInst != nullptr)
       static_cast<void>(getOrCreateRegionCounters(FirstProfInst));
-    }
   }
 
   if (EnableVTableValueProfiling)
@@ -1340,14 +1350,13 @@ void InstrLowerer::lowerIncrement(InstrProfIncrementInst *Inc) {
     auto *PtrTy = PointerType::getUnqual(Context);
 
     auto *Addr = getCounterAddress(Inc);
+    auto &PD = ProfileDataMap[Inc->getName()];
 
     // Store the device wave/warp size into the profile data struct once per
     // function. AMDGPU folds llvm.amdgcn.wavefrontsize to the subtarget's
     // constant; other GPUs use their fixed warp size.
     if (!Inv.WaveSizeStored) {
       Inv.WaveSizeStored = true;
-      GlobalVariable *NamePtr = Inc->getName();
-      auto &PD = ProfileDataMap[NamePtr];
       if (PD.DataVar) {
         IRBuilder<> EntryBuilder(&*F->getEntryBlock().getFirstInsertionPt());
         Value *WaveSize16 = nullptr;
@@ -1373,22 +1382,26 @@ void InstrLowerer::lowerIncrement(InstrProfIncrementInst *Inc) {
       }
     }
 
-    GlobalVariable *UniformCounters = getOrCreateUniformCounters(Inc);
-    Value *UniformAddrArg = ConstantPointerNull::get(PtrTy);
-    if (UniformCounters) {
-      Value *UniformIndices[] = {Builder.getInt32(0), Inc->getIndex()};
-      Value *UniformAddr = Builder.CreateInBoundsGEP(
-          UniformCounters->getValueType(), UniformCounters, UniformIndices,
-          "unifctr.addr");
-      UniformAddrArg =
-          Builder.CreatePointerBitCastOrAddrSpaceCast(UniformAddr, PtrTy);
-    }
+    // getCounterAddress creates the lane, uniform, and wave counters together.
+    GlobalVariable *UniformCounters = PD.UniformCounters;
+    Value *UniformIndices[] = {Builder.getInt32(0), Inc->getIndex()};
+    Value *UniformAddr = Builder.CreateInBoundsGEP(
+        UniformCounters->getValueType(), UniformCounters, UniformIndices,
+        "unifctr.addr");
+    Value *UniformAddrArg =
+        Builder.CreatePointerBitCastOrAddrSpaceCast(UniformAddr, PtrTy);
     Value *CastAddr = Builder.CreatePointerBitCastOrAddrSpaceCast(Addr, PtrTy);
     Value *StepI64 =
         Builder.CreateZExtOrTrunc(Inc->getStep(), Int64Ty, "step.i64");
 
+    uint32_t WaveOffset = PD.getNumRegionCounters() - PD.NumWaveCounters;
+    uint32_t WaveIndex = WaveOffset + Inc->getIndex()->getZExtValue();
+    Value *WaveAddr = Builder.CreateConstInBoundsGEP2_32(
+        PD.RegionCounters->getValueType(), PD.RegionCounters, 0, WaveIndex);
+    WaveAddr = Builder.CreatePointerBitCastOrAddrSpaceCast(WaveAddr, PtrTy);
+
     auto *CalleeTy = FunctionType::get(Type::getVoidTy(Context),
-                                       {PtrTy, PtrTy, Int64Ty}, false);
+                                       {PtrTy, PtrTy, Int64Ty, PtrTy}, false);
     FunctionCallee Callee =
         M.getOrInsertFunction(RTLIB::RuntimeLibcallsInfo::getLibcallImplName(
                                   RTLIB::impl___llvm_profile_instrument_gpu),
@@ -1405,10 +1418,11 @@ void InstrLowerer::lowerIncrement(InstrProfIncrementInst *Inc) {
       HeadBuilder.CreateCondBr(Inv.Matched, ThenBB, ContBB);
 
       IRBuilder<> ThenBuilder(ThenBB);
-      ThenBuilder.CreateCall(Callee, {CastAddr, UniformAddrArg, StepI64});
+      ThenBuilder.CreateCall(Callee,
+                             {CastAddr, UniformAddrArg, StepI64, WaveAddr});
       ThenBuilder.CreateBr(ContBB);
     } else {
-      Builder.CreateCall(Callee, {CastAddr, UniformAddrArg, StepI64});
+      Builder.CreateCall(Callee, {CastAddr, UniformAddrArg, StepI64, WaveAddr});
     }
     Inc->eraseFromParent();
     return;
@@ -1919,7 +1933,8 @@ InstrLowerer::getOrCreateRegionBitmaps(InstrProfMCDCBitmapInstBase *Inc) {
 GlobalVariable *
 InstrLowerer::createRegionCounters(InstrProfCntrInstBase *Inc, StringRef Name,
                                    GlobalValue::LinkageTypes Linkage) {
-  uint64_t NumCounters = Inc->getNumCounters()->getZExtValue();
+  uint64_t NumCounters = Inc->getNumCounters()->getZExtValue() +
+                         ProfileDataMap[Inc->getName()].NumWaveCounters;
   auto &Ctx = M.getContext();
   GlobalVariable *GV;
   if (isa<InstrProfCoverInst>(Inc)) {
@@ -1947,6 +1962,20 @@ InstrLowerer::getOrCreateRegionCounters(InstrProfCntrInstBase *Inc) {
   auto &PD = ProfileDataMap[NamePtr];
   if (PD.RegionCounters)
     return PD.RegionCounters;
+
+  if (isGPUProfTarget(M)) {
+    if (!isa<InstrProfIncrementInst>(Inc) || IsCS)
+      report_fatal_error("wave counts require ordinary counter increments",
+                         false);
+    if (ProfileCorrelate != InstrProfCorrelator::NONE || isSamplingEnabled())
+      report_fatal_error("wave counts do not support profile correlation "
+                         "or lane-level instrumentation sampling",
+                         false);
+    uint64_t NumCounters = Inc->getNumCounters()->getZExtValue();
+    if (NumCounters > UINT32_MAX / 2)
+      report_fatal_error("too many wave profiling counters", false);
+    PD.NumWaveCounters = NumCounters;
+  }
 
   // If RegionCounters doesn't already exist, create it by first setting up
   // the corresponding profile section.
@@ -2098,7 +2127,8 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
         ValuesVar, PointerType::get(Fn->getContext(), 0));
   }
 
-  uint64_t NumCounters = Inc->getNumCounters()->getZExtValue();
+  uint32_t NumWaveCounters = PD.NumWaveCounters;
+  uint64_t NumCounters = PD.getNumRegionCounters();
 
   Constant *CounterPtr = PD.RegionCounters;
   Constant *UniformCounterPtr = PD.UniformCounters;
