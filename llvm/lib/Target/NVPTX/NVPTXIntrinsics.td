@@ -7695,183 +7695,145 @@ foreach space = ["tensor", "shared"] in {
   } // cta_group
 } // space
 
-def SPModifiers : Operand<i32> {
-  let PrintMethod = "printSPModifiers";
-}
-
-class SPRegList<int NumRegs, string Prefix> {
-  list<string> Names = !foreach(I, !range(NumRegs), Prefix # I);
+class SPRegList<int NumRegs, string Prefix, int Offset = 0> {
+  list<string> Names =
+      !foreach(RegIdx, !range(NumRegs), Prefix # !add(Offset, RegIdx));
   dag Outs = !dag(outs, !listsplat(B32, NumRegs), Names);
   dag Ins = !dag(ins, !listsplat(B32, NumRegs), Names);
   dag Set = !dag(set, !listsplat(B32, NumRegs), Names);
+  string Asm = "{{$" # !interleave(Names, ", $") # "}}";
 }
 
-class SPLayout<int ResultRegs, int InputRegs> {
-  int NumResultRegs = ResultRegs;
-  int NumInputRegs = InputRegs;
+class SPLayout<int NumMetadataRegs, int NumCompressedDataRegs,
+               int NumDataRegs, bit Compress> {
+  int MetadataSize = NumMetadataRegs;
+  int CompressedDataSize = NumCompressedDataRegs;
+  int DataSize = NumDataRegs;
+  int NumResultRegs = !if(Compress, !add(NumMetadataRegs, NumCompressedDataRegs),
+                                    NumDataRegs);
+  int NumInputRegs = !if(Compress, !add(NumDataRegs, 1),
+                                   !add(NumMetadataRegs, NumCompressedDataRegs));
+  bit IsCompress = Compress;
 }
 
 class SPCeilDiv<int Numerator, int Denominator> {
   int Value = !div(!add(Numerator, !sub(Denominator, 1)), Denominator);
 }
 
-// The SelectionDAG nodes have varying result and operand counts. Give each
-// legal layout a fixed profile so instruction selection does not need a
-// variadic machine instruction.
-class SPTypeProfile<SPLayout Layout, int NumQualifiers>
+defvar SPQualifierNames =
+    ["elem_size", "idx_size", "repeat_factor", "num_src", "num_tgt"];
+
+class SPTypeProfile<SPLayout Layout>
     : SDTypeProfile<
           Layout.NumResultRegs, -1,
-          !foreach(I,
-                   !range(!add(Layout.NumResultRegs, NumQualifiers,
+          !foreach(OpIdx,
+                   !range(!add(Layout.NumResultRegs, !size(SPQualifierNames),
                                Layout.NumInputRegs)),
-                   SDTCisVT<I, i32>)>;
+                   SDTCisVT<OpIdx, i32>)>;
 
-class SPNode<string Opcode, SPLayout Layout, int NumQualifiers>
-    : SDNode<Opcode, SPTypeProfile<Layout, NumQualifiers>>;
-
+// Nodes with the same result count may have different input counts.
 class SPExactMatch<dag Operands, dag Fragment, int NumOperands>
     : PatFrag<Operands, Fragment,
               [{ return N->getNumOperands() == }]
                   # !cast<string>(NumOperands) # [{; }]>;
 
-defvar SP_ELEM_SIZES = [8, 16];
-defvar SP_IDX_SIZES = [2, 4];
-defvar SP_REPEAT_FACTORS = [1, 2, 4, 8, 16, 32, 64];
+class SPInst<string Op, SPLayout Layout>
+    : NVPTXInst<(outs), (ins), "?", []> {
+  defvar Results = SPRegList<Layout.NumResultRegs, "r">;
+  defvar Inputs = SPRegList<Layout.NumInputRegs, "i">;
+  defvar NumQualifiers = !size(SPQualifierNames);
+  defvar OperandNames = !listconcat(SPQualifierNames, Inputs.Names);
+  defvar NumOperands = !size(OperandNames);
+  defvar Opcode = SDNode<"NVPTXISD::" # !toupper(Op) # "_R"
+                             # Layout.NumResultRegs,
+                         SPTypeProfile<Layout>>;
+  defvar Match = SPExactMatch<
+      !dag(ops, !listsplat(node, NumOperands), OperandNames),
+      !dag(Opcode, !listsplat(node, NumOperands), OperandNames), NumOperands>;
+  defvar Ins =
+      !con(!dag(ins, !listsplat(i32imm, NumQualifiers), SPQualifierNames),
+           Inputs.Ins);
+  defvar Args = !if(Layout.IsCompress,
+                    [SPRegList<Layout.MetadataSize, "r">.Asm,
+                     SPRegList<Layout.CompressedDataSize, "r",
+                               Layout.MetadataSize>.Asm,
+                     SPRegList<Layout.DataSize, "i">.Asm,
+                     "$i" # Layout.DataSize],
+                    [SPRegList<Layout.DataSize, "r">.Asm,
+                     SPRegList<Layout.MetadataSize, "i">.Asm,
+                     SPRegList<Layout.CompressedDataSize, "i",
+                               Layout.MetadataSize>.Asm]);
 
-// mdata + cdata = ceil(repeat_factor * idx_size / elem_size) + repeat_factor;
-// spdesc + data = 1 + 2 * repeat_factor.
-defset list<SPLayout> SPCOMPRESS_LAYOUT_SET = {
-  foreach ElemSize = SP_ELEM_SIZES in
-    foreach IdxSize = SP_IDX_SIZES in
-      foreach RepeatFactor = SP_REPEAT_FACTORS in {
-        defvar ResultRegs =
-            !add(SPCeilDiv<!mul(RepeatFactor, IdxSize), ElemSize>.Value,
-                 RepeatFactor);
-        defvar InputRegs = !add(1, !mul(2, RepeatFactor));
-        defvar Name = "SPCompressLayout_" # ResultRegs # _ # InputRegs;
-        if !not(!exists<SPLayout>(Name)) then
-          def Name : SPLayout<ResultRegs, InputRegs>;
-      }
+  dag IntrinsicPattern = BuildPattern<Match, Ins>.ret;
+
+  let OutOperandList = Results.Outs;
+  let InOperandList = Ins;
+  let AsmString = Op
+                  # ".b$elem_size.b$idx_size.sp::$num_src:$num_tgt"
+                    ".x$repeat_factor "
+                  # !interleave(Args, ", ") # ";";
+  let Pattern = [!con(Results.Set, (set IntrinsicPattern))];
+  let Predicates = [hasSPCompress];
 }
 
-defvar SP_NUM_SRC = [1, 2, 4];
-defvar SP_NUM_TGT = [2, 4, 8, 16];
+defvar SPElemSizes = [8, 16];
+defvar SPIdxSizes = [2, 4];
+defvar SPRepeatFactors = [1, 2, 4, 8, 16, 32, 64];
+
+// Different qualifier combinations may share a register layout, and thus an
+// instruction, so define each layout only once.
+// mdata = ceil(repeat_factor * idx_size / elem_size);
+// cdata = repeat_factor; data = 2 * repeat_factor.
+foreach ElemSize = SPElemSizes in {
+  foreach IdxSize = SPIdxSizes in {
+    foreach RepeatFactor = SPRepeatFactors in {
+      defvar MetadataSize =
+          SPCeilDiv<!mul(RepeatFactor, IdxSize), ElemSize>.Value;
+      defvar DataSize = !mul(2, RepeatFactor);
+      defvar Name = "SPCOMPRESS_M" # MetadataSize # "_C" # RepeatFactor
+                    # "_D" # DataSize;
+      if !not(!exists<NVPTXInst>(Name)) then
+        def Name : SPInst<"spcompress",
+                          SPLayout<MetadataSize, RepeatFactor, DataSize,
+                                   true>>;
+    } // RepeatFactor
+  } // IdxSize
+} // ElemSize
+
+defvar SPNumSrcs = [1, 2, 4];
+defvar SPNumTgts = [2, 4, 8, 16];
 
 // data = ceil(num_tgt * elem_size * repeat_factor / 32);
 // mdata = ceil(num_src * idx_size * repeat_factor / 32);
 // cdata = ceil(num_src * elem_size * repeat_factor / 32).
-defset list<SPLayout> SPDECOMPRESS_LAYOUT_SET = {
-  foreach NumSrc = SP_NUM_SRC in
-    foreach NumTgt = SP_NUM_TGT in
-      if !lt(NumSrc, NumTgt) then
-        foreach ElemSize = SP_ELEM_SIZES in
-          foreach IdxSize = SP_IDX_SIZES in
-            foreach RepeatFactor = SP_REPEAT_FACTORS in {
-              defvar DataBits = !mul(NumTgt, ElemSize, RepeatFactor);
-              if !and(!le(!mul(NumSrc, ElemSize), 32),
-                      !or(!ne(IdxSize, 2), !le(NumTgt, 4)),
-                      !ge(DataBits, 32), !le(DataBits, 4096)) then {
-                defvar ResultRegs = SPCeilDiv<DataBits, 32>.Value;
-                defvar InputRegs =
-                    !add(SPCeilDiv<!mul(NumSrc, IdxSize, RepeatFactor),
-                                   32>.Value,
-                         SPCeilDiv<!mul(NumSrc, ElemSize, RepeatFactor),
-                                   32>.Value);
-                defvar Name =
-                    "SPDecompressLayout_" # ResultRegs # _ # InputRegs;
-                if !not(!exists<SPLayout>(Name)) then
-                  def Name : SPLayout<ResultRegs, InputRegs>;
-              }
-            }
-}
-
-class SPCOMPRESS_INST<SPLayout Layout>
-    : NVPTXInst<(outs), (ins), "?", []> {
-  SPRegList Results = SPRegList<Layout.NumResultRegs, "r">;
-  SPRegList Inputs = SPRegList<Layout.NumInputRegs, "i">;
-  SDNode Opcode = SPNode<"NVPTXISD::SPCOMPRESS_R" # Layout.NumResultRegs,
-                         Layout, 5>;
-  list<string> OperandNames =
-      !listconcat(["elem_size", "idx_size", "repeat_factor", "num_src",
-                   "num_tgt"],
-                  Inputs.Names);
-  int NumOperands = !size(OperandNames);
-  dag FragmentQualifierPattern =
-      (Opcode node:$elem_size, node:$idx_size, node:$repeat_factor,
-              node:$num_src, node:$num_tgt);
-  dag FragmentInputPattern =
-      !dag(Opcode, !listsplat(node, Layout.NumInputRegs), Inputs.Names);
-  PatFrag Match = SPExactMatch<
-      !dag(ops, !listsplat(node, NumOperands), OperandNames),
-      !con(FragmentQualifierPattern, FragmentInputPattern), NumOperands>;
-  dag MatchQualifierPattern =
-      (Match timm:$elem_size, timm:$idx_size, timm:$repeat_factor,
-             timm:$num_src, timm:$num_tgt);
-  dag MatchInputPattern = !dag(Match, !listsplat(i32, Layout.NumInputRegs),
-                               Inputs.Names);
-
-  let OutOperandList = Results.Outs;
-  let InOperandList = !con((ins SPModifiers:$elem_size,
-                                SPModifiers:$idx_size,
-                                SPModifiers:$repeat_factor,
-                                SPModifiers:$num_src,
-                                SPModifiers:$num_tgt),
-                           Inputs.Ins);
-  let AsmString = "spcompress${elem_size:elem_size}${idx_size:idx_size}"
-                  "${num_src:spfactor}${repeat_factor:repeat_factor} "
-                  "${elem_size:spcompress_ops};";
-  let Pattern = [!con(Results.Set,
-                      (set !con(MatchQualifierPattern, MatchInputPattern)))];
-  let Predicates = [hasSPCompress];
-}
-
-foreach Layout = SPCOMPRESS_LAYOUT_SET in
-  def SPCOMPRESS_OUT_ # Layout.NumResultRegs # _IN_ # Layout.NumInputRegs
-      : SPCOMPRESS_INST<Layout>;
-
-class SPDECOMPRESS_INST<SPLayout Layout>
-    : NVPTXInst<(outs), (ins), "?", []> {
-  SPRegList Results = SPRegList<Layout.NumResultRegs, "r">;
-  SPRegList Inputs = SPRegList<Layout.NumInputRegs, "i">;
-  SDNode Opcode = SPNode<"NVPTXISD::SPDECOMPRESS_R" # Layout.NumResultRegs,
-                         Layout, 5>;
-  list<string> OperandNames =
-      !listconcat(["elem_size", "idx_size", "repeat_factor", "num_src",
-                   "num_tgt"],
-                  Inputs.Names);
-  int NumOperands = !size(OperandNames);
-  dag FragmentQualifierPattern =
-      (Opcode node:$elem_size, node:$idx_size, node:$repeat_factor,
-              node:$num_src, node:$num_tgt);
-  dag FragmentInputPattern =
-      !dag(Opcode, !listsplat(node, Layout.NumInputRegs), Inputs.Names);
-  PatFrag Match = SPExactMatch<
-      !dag(ops, !listsplat(node, NumOperands), OperandNames),
-      !con(FragmentQualifierPattern, FragmentInputPattern), NumOperands>;
-  dag MatchQualifierPattern =
-      (Match timm:$elem_size, timm:$idx_size, timm:$repeat_factor,
-             timm:$num_src, timm:$num_tgt);
-  dag MatchInputPattern = !dag(Match, !listsplat(i32, Layout.NumInputRegs),
-                               Inputs.Names);
-
-  let OutOperandList = Results.Outs;
-  let InOperandList = !con((ins SPModifiers:$elem_size,
-                                SPModifiers:$idx_size,
-                                SPModifiers:$repeat_factor,
-                                SPModifiers:$num_src,
-                                SPModifiers:$num_tgt),
-                           Inputs.Ins);
-  let AsmString = "spdecompress${elem_size:elem_size}${idx_size:idx_size}"
-                  "${num_src:spfactor}${repeat_factor:repeat_factor} "
-                  "${elem_size:spdecompress_ops};";
-  let Pattern = [!con(Results.Set,
-                      (set !con(MatchQualifierPattern, MatchInputPattern)))];
-  let Predicates = [hasSPCompress];
-}
-
-foreach Layout = SPDECOMPRESS_LAYOUT_SET in
-  def SPDECOMPRESS_OUT_ # Layout.NumResultRegs # _IN_ # Layout.NumInputRegs
-      : SPDECOMPRESS_INST<Layout>;
+foreach NumSrc = SPNumSrcs in {
+  foreach NumTgt = SPNumTgts in {
+    foreach ElemSize = SPElemSizes in {
+      foreach IdxSize = SPIdxSizes in {
+        foreach RepeatFactor = SPRepeatFactors in {
+          defvar DataBits = !mul(NumTgt, ElemSize, RepeatFactor);
+          defvar IsExpanding = !lt(NumSrc, NumTgt);
+          defvar IdxCoversTgt = !le(NumTgt, !shl(1, IdxSize));
+          defvar SrcFitsReg = !le(!mul(NumSrc, ElemSize), 32);
+          defvar DataFitsRegs = !and(!ge(DataBits, 32), !le(DataBits, 4096));
+          if !and(IsExpanding, IdxCoversTgt, SrcFitsReg, DataFitsRegs) then {
+            defvar MetadataSize =
+                SPCeilDiv<!mul(NumSrc, IdxSize, RepeatFactor), 32>.Value;
+            defvar CompressedDataSize =
+                SPCeilDiv<!mul(NumSrc, ElemSize, RepeatFactor), 32>.Value;
+            defvar DataSize = SPCeilDiv<DataBits, 32>.Value;
+            defvar Name = "SPDECOMPRESS_M" # MetadataSize # "_C"
+                          # CompressedDataSize # "_D" # DataSize;
+            if !not(!exists<NVPTXInst>(Name)) then
+              def Name : SPInst<"spdecompress",
+                                SPLayout<MetadataSize, CompressedDataSize,
+                                         DataSize, false>>;
+          }
+        } // RepeatFactor
+      } // IdxSize
+    } // ElemSize
+  } // NumTgt
+} // NumSrc
 
 //
 // tensormap.replace Instructions
