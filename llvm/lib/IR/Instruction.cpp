@@ -111,10 +111,6 @@ BasicBlock::iterator Instruction::eraseFromParent() {
   return getParent()->getInstList().erase(getIterator());
 }
 
-void Instruction::insertBefore(Instruction *InsertPos) {
-  insertBefore(InsertPos->getIterator());
-}
-
 /// Insert an unlinked instruction into a basic block immediately before the
 /// specified instruction.
 void Instruction::insertBefore(BasicBlock::iterator InsertPos) {
@@ -182,16 +178,8 @@ void Instruction::insertBefore(BasicBlock &BB,
 
 /// Unlink this instruction from its current basic block and insert it into the
 /// basic block that MovePos lives in, right before MovePos.
-void Instruction::moveBefore(Instruction *MovePos) {
-  moveBeforeImpl(*MovePos->getParent(), MovePos->getIterator(), false);
-}
-
 void Instruction::moveBefore(BasicBlock::iterator MovePos) {
   moveBeforeImpl(*MovePos->getParent(), MovePos, false);
-}
-
-void Instruction::moveBeforePreserving(Instruction *MovePos) {
-  moveBeforeImpl(*MovePos->getParent(), MovePos->getIterator(), true);
 }
 
 void Instruction::moveBeforePreserving(BasicBlock::iterator MovePos) {
@@ -475,6 +463,10 @@ void Instruction::dropPoisonGeneratingFlags() {
     cast<ICmpInst>(this)->setSameSign(false);
     break;
 
+  case Instruction::AddrSpaceCast:
+    cast<AddrSpaceCastInst>(this)->setNonNull(false);
+    break;
+
   case Instruction::Call: {
     if (auto *II = dyn_cast<IntrinsicInst>(this)) {
       switch (II->getIntrinsicID()) {
@@ -595,8 +587,7 @@ void Instruction::dropUBImplyingAttrsAndMetadata(ArrayRef<unsigned> Keep) {
       LLVMContext::MD_mem_cache_hint, LLVMContext::MD_nofpclass};
   SmallVector<unsigned> KeepIDs;
   KeepIDs.reserve(Keep.size() + std::size(KnownIDs));
-  append_range(KeepIDs, (!ProfcheckDisableMetadataFixes ? KnownIDs
-                                                        : drop_end(KnownIDs)));
+  append_range(KeepIDs, KnownIDs);
   append_range(KeepIDs, Keep);
   dropUBImplyingAttrsAndUnknownMetadata(KeepIDs);
 }
@@ -766,6 +757,14 @@ void Instruction::copyIRFlags(const Value *V, bool IncludeWrapFlags) {
   if (auto *SrcICmp = dyn_cast<ICmpInst>(V))
     if (auto *DestICmp = dyn_cast<ICmpInst>(this))
       DestICmp->setSameSign(SrcICmp->hasSameSign());
+
+  if (auto *SrcASC = dyn_cast<AddrSpaceCastInst>(V))
+    if (auto *DestASC = dyn_cast<AddrSpaceCastInst>(this)) {
+      assert(DestASC->getSrcAddressSpace() == SrcASC->getSrcAddressSpace() &&
+             "nonull flag cannot be safely preserved with different source "
+             "address spaces");
+      DestASC->setNonNull(SrcASC->hasNonNull());
+    }
 }
 
 void Instruction::andIRFlags(const Value *V) {
@@ -811,6 +810,14 @@ void Instruction::andIRFlags(const Value *V) {
   if (auto *SrcICmp = dyn_cast<ICmpInst>(V))
     if (auto *DestICmp = dyn_cast<ICmpInst>(this))
       DestICmp->setSameSign(DestICmp->hasSameSign() && SrcICmp->hasSameSign());
+
+  if (auto *SrcASC = dyn_cast<AddrSpaceCastInst>(V))
+    if (auto *DestASC = dyn_cast<AddrSpaceCastInst>(this)) {
+      assert(DestASC->getSrcAddressSpace() == SrcASC->getSrcAddressSpace() &&
+             "nonull flag cannot be safely preserved with different source "
+             "address spaces");
+      DestASC->setNonNull(DestASC->hasNonNull() && SrcASC->hasNonNull());
+    }
 }
 
 const char *Instruction::getOpcodeName(unsigned OpCode) {
@@ -931,6 +938,7 @@ bool Instruction::hasSameSpecialState(const Instruction *I2,
            LI->getSyncScopeID() == cast<LoadInst>(I2)->getSyncScopeID();
   if (const StoreInst *SI = dyn_cast<StoreInst>(I1))
     return SI->isVolatile() == cast<StoreInst>(I2)->isVolatile() &&
+           SI->isElementwise() == cast<StoreInst>(I2)->isElementwise() &&
            (SI->getAlign() == cast<StoreInst>(I2)->getAlign() ||
             IgnoreAlignment) &&
            SI->getOrdering() == cast<StoreInst>(I2)->getOrdering() &&
@@ -1030,6 +1038,7 @@ bool Instruction::isSameOperationAs(const Instruction *I,
   bool IgnoreAlignment = flags & CompareIgnoringAlignment;
   bool UseScalarTypes = flags & CompareUsingScalarTypes;
   bool IntersectAttrs = flags & CompareUsingIntersectedAttrs;
+  bool CheckCallTargets = flags & CompareCallTargets;
 
   if (getOpcode() != I->getOpcode() ||
       getNumOperands() != I->getNumOperands() ||
@@ -1046,6 +1055,11 @@ bool Instruction::isSameOperationAs(const Instruction *I,
           I->getOperand(i)->getType()->getScalarType() :
         getOperand(i)->getType() != I->getOperand(i)->getType())
       return false;
+
+  if (CheckCallTargets)
+    if (const auto *CB = dyn_cast<CallBase>(this))
+      if (CB->getCalledOperand() != cast<CallBase>(I)->getCalledOperand())
+        return false;
 
   return this->hasSameSpecialState(I, IgnoreAlignment, IntersectAttrs);
 }
@@ -1110,7 +1124,7 @@ MemoryEffects Instruction::getMemoryEffects() const {
   }
   case Instruction::AtomicCmpXchg: {
     auto *CX = cast<AtomicCmpXchgInst>(this);
-    return GetEffects(ModRefInfo::ModRef, CX->getSuccessOrdering(),
+    return GetEffects(ModRefInfo::ModRef, CX->getMergedOrdering(),
                       CX->isVolatile());
   }
   }

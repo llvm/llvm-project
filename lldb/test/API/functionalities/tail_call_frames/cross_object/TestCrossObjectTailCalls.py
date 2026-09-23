@@ -7,26 +7,17 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@skipIfWasm  # no unwinder support for tail-call frames
+@requireNotWasm("no unwinder support for tail-call frames")
 class TestCrossObjectTailCalls(TestBase):
     @skipIf(compiler="clang", compiler_version=["<", "22.0"])
     @skipIf(dwarf_version=["<", "4"])
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr26265")
     def test_cross_object_tail_calls(self):
         self.build()
-        exe = self.getBuildArtifact("a.out")
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        lldbutil.run_break_set_by_source_regexp(
-            self, "// break here", extra_options="-f Two.c"
-        )
-
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        self.assertTrue(process, PROCESS_IS_VALID)
-
         # We should be stopped in the second dylib.
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
+        _, _, thread, _ = lldbutil.run_to_source_breakpoint(
+            self, "// break here", lldb.SBFileSpec("Two.c")
+        )
 
         # Debug helper:
         # self.runCmd("log enable -f /tmp/lldb.log lldb step")

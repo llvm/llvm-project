@@ -105,6 +105,7 @@ static_assert(sizeof(OptPrimType) == sizeof(PrimType));
 enum class CastKind : uint8_t {
   Reinterpret,
   ReinterpretLike,
+  ReinterpretPtrToInt,
   Volatile,
   Dynamic,
 };
@@ -113,6 +114,7 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
                                      interp::CastKind CK) {
   switch (CK) {
   case interp::CastKind::Reinterpret:
+  case interp::CastKind::ReinterpretPtrToInt:
     OS << "reinterpret_cast";
     break;
   case interp::CastKind::ReinterpretLike:
@@ -139,6 +141,16 @@ constexpr bool needsAlloc(PrimType T) {
 
 template <typename T> constexpr bool isIntegralOrPointer() {
   return std::is_same_v<T, Integral<16, false>> ||
+         std::is_same_v<T, Integral<16, true>> ||
+         std::is_same_v<T, Integral<32, false>> ||
+         std::is_same_v<T, Integral<32, true>> ||
+         std::is_same_v<T, Integral<64, false>> ||
+         std::is_same_v<T, Integral<64, true>>;
+}
+
+template <typename T> constexpr bool isFixedSizeIntegralType() {
+  return std::is_same_v<T, Char<false>> || std::is_same_v<T, Char<true>> ||
+         std::is_same_v<T, Integral<16, false>> ||
          std::is_same_v<T, Integral<16, true>> ||
          std::is_same_v<T, Integral<32, false>> ||
          std::is_same_v<T, Integral<32, true>> ||

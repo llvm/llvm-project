@@ -889,28 +889,20 @@ define double @s64_to_d(i64 %a) nounwind {
 ;
 ; AVX512F_32-LABEL: s64_to_d:
 ; AVX512F_32:       # %bb.0:
-; AVX512F_32-NEXT:    pushl %ebp
-; AVX512F_32-NEXT:    movl %esp, %ebp
-; AVX512F_32-NEXT:    andl $-8, %esp
 ; AVX512F_32-NEXT:    subl $8, %esp
-; AVX512F_32-NEXT:    fildll 8(%ebp)
+; AVX512F_32-NEXT:    fildll {{[0-9]+}}(%esp)
 ; AVX512F_32-NEXT:    fstpl (%esp)
 ; AVX512F_32-NEXT:    fldl (%esp)
-; AVX512F_32-NEXT:    movl %ebp, %esp
-; AVX512F_32-NEXT:    popl %ebp
+; AVX512F_32-NEXT:    addl $8, %esp
 ; AVX512F_32-NEXT:    retl
 ;
 ; SSE2_32-LABEL: s64_to_d:
 ; SSE2_32:       # %bb.0:
-; SSE2_32-NEXT:    pushl %ebp
-; SSE2_32-NEXT:    movl %esp, %ebp
-; SSE2_32-NEXT:    andl $-8, %esp
 ; SSE2_32-NEXT:    subl $8, %esp
-; SSE2_32-NEXT:    fildll 8(%ebp)
+; SSE2_32-NEXT:    fildll {{[0-9]+}}(%esp)
 ; SSE2_32-NEXT:    fstpl (%esp)
 ; SSE2_32-NEXT:    fldl (%esp)
-; SSE2_32-NEXT:    movl %ebp, %esp
-; SSE2_32-NEXT:    popl %ebp
+; SSE2_32-NEXT:    addl $8, %esp
 ; SSE2_32-NEXT:    retl
 ;
 ; SSE2_64-LABEL: s64_to_d:
@@ -990,10 +982,10 @@ define double @s64_to_d_2(i64 %a) nounwind {
 ; AVX512F_32-NEXT:    adcl $0, %ecx
 ; AVX512F_32-NEXT:    vmovd %eax, %xmm0
 ; AVX512F_32-NEXT:    vpinsrd $1, %ecx, %xmm0, %xmm0
-; AVX512F_32-NEXT:    vmovq %xmm0, {{[0-9]+}}(%esp)
-; AVX512F_32-NEXT:    fildll {{[0-9]+}}(%esp)
-; AVX512F_32-NEXT:    fstpl (%esp)
-; AVX512F_32-NEXT:    fldl (%esp)
+; AVX512F_32-NEXT:    vmovq %xmm0, (%esp)
+; AVX512F_32-NEXT:    fildll (%esp)
+; AVX512F_32-NEXT:    fstpl {{[0-9]+}}(%esp)
+; AVX512F_32-NEXT:    fldl {{[0-9]+}}(%esp)
 ; AVX512F_32-NEXT:    movl %ebp, %esp
 ; AVX512F_32-NEXT:    popl %ebp
 ; AVX512F_32-NEXT:    retl
@@ -1011,10 +1003,10 @@ define double @s64_to_d_2(i64 %a) nounwind {
 ; SSE2_32-NEXT:    movd %ecx, %xmm0
 ; SSE2_32-NEXT:    movd %eax, %xmm1
 ; SSE2_32-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; SSE2_32-NEXT:    movq %xmm1, {{[0-9]+}}(%esp)
-; SSE2_32-NEXT:    fildll {{[0-9]+}}(%esp)
-; SSE2_32-NEXT:    fstpl (%esp)
-; SSE2_32-NEXT:    fldl (%esp)
+; SSE2_32-NEXT:    movq %xmm1, (%esp)
+; SSE2_32-NEXT:    fildll (%esp)
+; SSE2_32-NEXT:    fstpl {{[0-9]+}}(%esp)
+; SSE2_32-NEXT:    fldl {{[0-9]+}}(%esp)
 ; SSE2_32-NEXT:    movl %ebp, %esp
 ; SSE2_32-NEXT:    popl %ebp
 ; SSE2_32-NEXT:    retl
