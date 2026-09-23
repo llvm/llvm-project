@@ -29488,6 +29488,7 @@ bool StoreChainContext::vectorizeOneVF(
                                            unsigned, unsigned &)>
         VectorizeStoreChain) {
   bool AnyProfitableGraph = false;
+  bool PreferWideSlices = false;
   unsigned FirstUnvecStore = getFirstUnvecStore();
 
   // Form slices of size VF starting from FirstUnvecStore and try to
@@ -29520,6 +29521,43 @@ bool StoreChainContext::vectorizeOneVF(
           continue;
         }
       }
+      auto MarkVectorized = [&](unsigned Len) {
+        // Mark the vectorized stores so that we don't vectorize them
+        // again.
+        VectorizedStores.insert_range(
+            ArrayRef(Operands).slice(SliceStartIdx, Len));
+        AnyProfitableGraph = RepeatChanged = Changed = true;
+        // If we vectorized initial block, no need to try to vectorize
+        // it again.
+        markRangeVectorized(SliceStartIdx, Len, FirstUnvecStore, MaxSliceEnd);
+        SliceStartIdx += Len;
+        ++NumStoreChains;
+        if (Stride > 1)
+          ++NumStridedStoreChains;
+        NumVectorizedStores += Len;
+      };
+      // With the register VF 2 the instruction count check may reject the
+      // leading slice, shifting it strands its stores and the wider VFs are
+      // tried only if nothing is vectorized: try the wider slice at the same
+      // position. Once the chain took the wider slices, try them first.
+      auto TryWideSlice = [&]() {
+        if (MaxRegVF != 2 || VF != MaxRegVF ||
+            SliceStartIdx != FirstUnvecStore ||
+            SliceStartIdx + 2 * VF > MaxSliceEnd)
+          return false;
+        unsigned WideTreeSize;
+        if (!VectorizeStoreChain(
+                 ArrayRef(Operands).slice(SliceStartIdx, 2 * VF), SliceStartIdx,
+                 MinVF, WideTreeSize)
+                 .value_or(false))
+          return false;
+        MarkVectorized(2 * VF);
+        return true;
+      };
+      const bool WideFirst = PreferWideSlices;
+      if (WideFirst && TryWideSlice())
+        continue;
+      PreferWideSlices = false;
       unsigned TreeSize;
       std::optional<bool> Res =
           VectorizeStoreChain(Slice, SliceStartIdx, MinVF, TreeSize);
@@ -29530,18 +29568,11 @@ bool StoreChainContext::vectorizeOneVF(
             .first->getSecond()
             .second = VF;
       } else if (*Res) {
-        // Mark the vectorized stores so that we don't vectorize them
-        // again.
-        VectorizedStores.insert_range(Slice);
-        AnyProfitableGraph = RepeatChanged = Changed = true;
-        // If we vectorized initial block, no need to try to vectorize
-        // it again.
-        markRangeVectorized(SliceStartIdx, VF, FirstUnvecStore, MaxSliceEnd);
-        SliceStartIdx += VF;
-        ++NumStoreChains;
-        if (Stride > 1)
-          ++NumStridedStoreChains;
-        NumVectorizedStores += VF;
+        MarkVectorized(VF);
+        continue;
+      }
+      if (Res && !WideFirst && TryWideSlice()) {
+        PreferWideSlices = true;
         continue;
       }
       if (VF > 2 && Res && !allOfRangeProfitable(SliceStartIdx, VF, TreeSize)) {

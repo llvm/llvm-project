@@ -167,6 +167,7 @@ jobs:
           BENCHMARK_SUITE_VERSION: ${{ matrix.benchmark-suite-version }}
           COMMIT: ${{ inputs.commit }}
           FILTER: ${{ inputs.filter }}
+          LIT_PARAMS: ${{ join(matrix.lit-params, ' ') }}
           LNT_MACHINE: ${{ matrix.lnt-machine }}
         run: |
           source .venv/bin/activate
@@ -174,6 +175,12 @@ jobs:
           if [ -n "${FILTER}" ]; then
             filter_arg=(--filter "${FILTER}")
           fi
+
+          read -ra configured_params <<< "${LIT_PARAMS}"
+          lit_params=()
+          for param in "${configured_params[@]}"; do
+            lit_params+=(--param "${param}")
+          done
 
           # If the library build failed, still create an install directory so we
           # run the benchmarks. The benchmarks will fail, and we'll submit an empty
@@ -187,7 +194,8 @@ jobs:
             --benchmark-commit "${COMMIT}"                              \
             --libcxx-installation "${INSTALL_DIR}"                      \
             "${filter_arg[@]}"                                          \
-            --output "${COMMIT}.json"
+            --output "${COMMIT}.json"                                   \
+            -- "${lit_params[@]}"
 
           cat "${COMMIT}.json"
 
