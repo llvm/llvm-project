@@ -41,19 +41,21 @@ operation belonging to it.
 
 ### Stage Masks
 
-Both intrinsics take a *stage mask*: an 11-bit value in which a set bit means
-"do not participate". In particular, an asyncmark *omits* the stages its 
-mask names, and a wait *ignores* them. The mask `0` therefore names no stage 
-and so omits/ignores none.
+Both intrinsics take a *stage mask*: an 11-bit value in which a set bit names a
+stage.
 
-Bits not specified in this table are reserved future use. While it is not
-statically forbidden to set them, doing so risks the possibility that an async
-operation currently assigned to one of the listed stages will be moved into a
-reserved stage on a future architecture. Setting reserved bits is an acceptance
-of that risk, but will also guarantee that the addition of future async stages
-will not modify program behavior.
+The mask `0` which names no stage is given the special meaning "every stage".
+This ensures if new stages are added that programs will continue to wait on all
+stages, if that was their intention.
 
-Bits set that are neither supported nor reserved is an error.
+Bits not specified in the table above are reserved for future use. It is not an
+error to set them, but it could mean you have more conservative waits than
+necessary when the future stages are added.
+
+Setting a bit that is neither listed nor reserved is an error.
+
+Users are strongly advised to keep bitmasks disjoint in asyncmark/wait_asyncmark
+operations, or else the resulting program may become rather confusing for them.
 
 ### Current Sequence
 
@@ -65,21 +67,20 @@ the function is called the *current sequence of* `S`.
 
 The sequences of distinct stages are independent: appending to one does not
 affect the length or contents of any other, even though multiple sequences may
-be appended to with a single call to asyncmark (by choosing to not *omit* 
-multiple stages).
+be appended to with a single call to asyncmark (by naming multiple stages).
 
 ### `@llvm.amdgcn.asyncmark(i32 %K)`
 
-Produces an asyncmark in every stage that the mask `K` does not *omit*, and
-appends it to the current sequence of each. The sequences of the stages 
-*omitted* by `K` are unaffected. `K` must be a constant stage mask.
+Produces an asyncmark in every stage named by the mask `K`, and appends it to
+the current sequence of each. The sequences of the stages `K` does not name are
+unaffected. `K` must be a constant stage mask.
 
 ### `@llvm.amdgcn.wait.asyncmark(i16 %N, i32 %K)`
 
-For every stage that the mask `K` does not *ignore*, ensures that the length
-of the current sequence of that stage is at most `N` by removing asyncmarks
-from the start of that sequence if it is more than `N`. The sequences of the 
-stages *not ignored* by `K` are unaffected. `K` must be a constant stage mask.
+For every stage named by the mask `K`, ensures that the length of the current
+sequence of that stage is at most `N` by removing asyncmarks from the start of
+that sequence if it is longer than `N`. The sequences of the stages `K` does not
+name are unaffected. `K` must be a constant stage mask.
 
 ### Completion of Asyncmarks
 
@@ -87,7 +88,7 @@ An asyncmark `M`, produced by an `asyncmark` operation `X`, is *completed-at*
 a `wait.asyncmark()` operation `Y` with mask `B` in the same function body if:
 
 - `X` is *program-ordered* before `Y`, and
-- `B` does not ignore the stage of the sequence that `M` belongs to, and
+- `B` names the stage of the sequence that `M` belongs to, and
 - `M` is not in the current sequence at any operation `Z` that
   immediately follows `Y` in *program-order*.
 
@@ -209,30 +210,27 @@ void foo(global int *g, local int *l) {
 ### Interleaved stages
 
 Two kinds of async operation are in flight at once. Each is marked with a mask
-that leaves out the other, so each can be waited for without waiting for the
+naming only its own stage, so each can be waited for without waiting for the
 other.
-
-The masks below are written with shorthand as `only(...)`, meaning the mask
-that names every stage except the ones listed, so that only those are left in.
 
 ```c++
 void foo(global int *g, local int *l, tensor_desc t) {
   // Start a long tensor load and mark it in the TENSOR stage alone.
   tensor_load_to_lds(l, t);
-  asyncmark(only(TENSOR));
+  asyncmark(TENSOR);
 
   // Start a short LDS load and mark it in its own stage alone.
   async_load_to_lds(l, g);
-  asyncmark(only(GLOBAL_LOAD_ASYNC_TO_LDS));
+  asyncmark(GLOBAL_LOAD_ASYNC_TO_LDS);
 
   // Wait for the LDS load only. The tensor load is still in flight: this wait
-  // leaves out TENSOR, so it neither counts nor removes that asyncmark.
-  wait.asyncmark(0, only(GLOBAL_LOAD_ASYNC_TO_LDS));
+  // does not name TENSOR, so it neither counts nor removes that asyncmark.
+  wait.asyncmark(0, GLOBAL_LOAD_ASYNC_TO_LDS);
 
   // perform synchronization / use the data loaded by async_load_to_lds
 
   // Now wait for the tensor load.
-  wait.asyncmark(0, only(TENSOR));
+  wait.asyncmark(0, TENSOR);
 }
 ```
 
@@ -245,20 +243,20 @@ use the async counter, but the sequences are still separate:
 ```c++
 void foo(global int *g, local int *l) {
   async_load_to_lds(l, g);
-  asyncmark(only(GLOBAL_LOAD_ASYNC_TO_LDS));    // X
+  asyncmark(GLOBAL_LOAD_ASYNC_TO_LDS);    // X
 
   async_store_from_lds(g, l);
-  asyncmark(only(GLOBAL_STORE_ASYNC_FROM_LDS)); // Y
+  asyncmark(GLOBAL_STORE_ASYNC_FROM_LDS); // Y
 
   // Completes X. Y is in a different sequence and is not completed here, even
   // though both stages are tracked by the same counter.
-  wait.asyncmark(0, only(GLOBAL_LOAD_ASYNC_TO_LDS));
+  wait.asyncmark(0, GLOBAL_LOAD_ASYNC_TO_LDS);
 }
 ```
 
-A mask need not leave in just one stage. An asyncmark whose mask leaves in
-several is appended to each of their sequences, and a wait whose mask leaves in
-several trims each of them:
+A mask need not name just one stage. An asyncmark whose mask names several is
+appended to each of their sequences, and a wait whose mask names several trims
+each of them:
 
 ```c++
 void foo(global int *g, local int *l, tensor_desc t) {
@@ -266,14 +264,14 @@ void foo(global int *g, local int *l, tensor_desc t) {
   async_load_to_lds(l, g);
 
   // One asyncmark, appended to both sequences.
-  asyncmark(only(TENSOR, GLOBAL_LOAD_ASYNC_TO_LDS));
+  asyncmark(TENSOR | GLOBAL_LOAD_ASYNC_TO_LDS);
 
-  // Removes the copy in GLOBAL_LOAD_ASYNC_TO_LDS. The copy in TENSOR is a
+  // Removes the mark in GLOBAL_LOAD_ASYNC_TO_LDS. The mark in TENSOR is a
   // separate asyncmark and stays where it is.
-  wait.asyncmark(0, only(GLOBAL_LOAD_ASYNC_TO_LDS));
+  wait.asyncmark(0, GLOBAL_LOAD_ASYNC_TO_LDS);
 
-  // Removes the copy in TENSOR.
-  wait.asyncmark(0, only(TENSOR));
+  // Removes the mark in TENSOR.
+  wait.asyncmark(0, TENSOR);
 }
 ```
 

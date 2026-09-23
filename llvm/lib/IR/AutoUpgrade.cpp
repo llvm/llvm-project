@@ -5265,7 +5265,7 @@ static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
   };
 
   // Legacy asyncmark intrinsics missed the stage mask operand. Append an empty
-  // mask, which omits/ignores no stage and so preserves the behavior they had.
+  // mask, which names every stage and so preserves the behavior they had.
   if ((F->getIntrinsicID() == Intrinsic::amdgcn_asyncmark && CI->arg_empty()) ||
       (F->getIntrinsicID() == Intrinsic::amdgcn_wait_asyncmark &&
        CI->arg_size() == 1)) {

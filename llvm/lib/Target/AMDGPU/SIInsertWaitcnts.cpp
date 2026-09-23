@@ -621,14 +621,14 @@ public:
                                       MCPhysReg Reg) const;
   void determineWaitForLDSDMA(AMDGPU::InstCounterType T, VMEMID TID,
                               AMDGPU::Waitcnt &Wait) const;
-  AMDGPU::Waitcnt determineAsyncWait(unsigned N, uint32_t IgnoreMask);
+  AMDGPU::Waitcnt determineAsyncWait(unsigned N, uint32_t StageMask);
   void tryClearSCCWriteEvent(MachineInstr *Inst);
 
   void applyWaitcnt(const AMDGPU::Waitcnt &Wait);
   void applyWaitcnt(AMDGPU::InstCounterType T, unsigned Count);
   void applyWaitcnt(const AMDGPU::Waitcnt &Wait, AMDGPU::InstCounterType T);
   void updateByEvent(HWEvents E, MachineInstr &MI);
-  void recordAsyncMark(MachineInstr &MI, uint32_t OmitMask);
+  void recordAsyncMark(MachineInstr &MI, uint32_t StageMask);
 
   HWEvents getPendingEvents() const { return PendingEvents; }
   bool hasPendingEvent() const { return PendingEvents.any(); }
@@ -1143,21 +1143,21 @@ void WaitcntBrackets::updateByEvent(HWEvents E, MachineInstr &Inst) {
   }
 }
 
-void WaitcntBrackets::recordAsyncMark(MachineInstr &Inst, uint32_t OmitMask) {
+void WaitcntBrackets::recordAsyncMark(MachineInstr &Inst, uint32_t StageMask) {
   // In the absence of loops, AsyncMarks can grow linearly with the program
   // until we encounter an ASYNCMARK_WAIT. We could drop the oldest mark above a
   // limit every time we push a new mark, but that seems like unnecessary work
   // in practical cases. We do separately truncate the array when processing a
   // loop, which should be sufficient.
   //
-  // The mark joins every stage it does not omit. Each stage gets its own copy
-  // of the score, so the copies are consumed independently by later waits.
+  // The mark joins every stage it names. Each stage gets its own copy of the
+  // score, so the copies are consumed independently by later waits.
   LLVM_DEBUG(dbgs() << "recordAsyncMark(stages="
-                    << AMDGPU::AsyncStage::getCoveredStagesString(OmitMask)
+                    << AMDGPU::AsyncStage::getCoveredStagesString(StageMask)
                     << "):\n"
                     << Inst);
   for (AMDGPU::AsyncStage::Stage S : AMDGPU::AsyncStage::stages()) {
-    if (!AMDGPU::AsyncStage::participates(OmitMask, S))
+    if (!AMDGPU::AsyncStage::participates(StageMask, S))
       continue;
     AsyncMarks[S].push_back(AsyncScore[S]);
     LLVM_DEBUG({
@@ -1444,13 +1444,13 @@ void WaitcntBrackets::determineWaitForScore(AMDGPU::InstCounterType T,
 }
 
 AMDGPU::Waitcnt WaitcntBrackets::determineAsyncWait(unsigned N,
-                                                    uint32_t IgnoreMask) {
-  // Trim each stage the wait does not ignore down to at most N marks. The waits
+                                                    uint32_t StageMask) {
+  // Trim each stage the wait names down to at most N marks. The waits
   // implied by the marks dropped from each stage accumulate into one Waitcnt,
   // so a wait covering several stages is the union of their requirements.
   AMDGPU::Waitcnt Wait;
   for (AMDGPU::AsyncStage::Stage S : AMDGPU::AsyncStage::stages()) {
-    if (!AMDGPU::AsyncStage::participates(IgnoreMask, S))
+    if (!AMDGPU::AsyncStage::participates(StageMask, S))
       continue;
 
     auto &StageMarks = AsyncMarks[S];

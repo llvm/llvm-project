@@ -18,7 +18,7 @@ void test_mask_out_of_range() {
 }
 
 // Every combination of in-range bits is accepted, including bits of the
-// reserved stages: leaving out a stage whose operations do not exist yet is
+// reserved stages: naming a stage whose operations do not exist yet is
 // harmless, and keeps masks portable as the reserved slots are filled in.
 
 void test_mask_reserved_bits_ok() {

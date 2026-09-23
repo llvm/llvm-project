@@ -43,7 +43,6 @@ const char AsyncStageImmPrefix = '.';
 constexpr StringLiteral AsyncStageDelim(".");
 constexpr StringLiteral ReservedStagePrefix("RES");
 constexpr StringLiteral AllStages("AllStages");
-constexpr StringLiteral NoStages("NoStages");
 
 void AMDGPUMIRFormatter::printSWaitAluImm(uint64_t Imm, raw_ostream &OS) const {
   bool NonePrinted = true;
@@ -119,8 +118,6 @@ void AMDGPUMIRFormatter::printSWaitLoadcntDscntImm(uint64_t Imm,
 
 void AMDGPUMIRFormatter::printAsyncStageMaskImm(int64_t Imm,
                                                 raw_ostream &OS) const {
-  // The mask is inverted: a set bit names a stage that does not take part.
-  // Print the stages that do, which is what the operand actually means.
   if (Imm < 0 || !AMDGPU::AsyncStage::isValidMask(Imm)) {
     OS << Imm;
     return;
@@ -128,13 +125,11 @@ void AMDGPUMIRFormatter::printAsyncStageMaskImm(int64_t Imm,
 
   OS << AsyncStageImmPrefix;
   uint32_t Mask = Imm;
-  if (!(Mask & AMDGPU::AsyncStage::MaskAllStages)) {
+  // The empty mask names every stage. Spell that out rather than printing an
+  // empty list. The saturated mask means the same thing but is a different
+  // immediate, so it keeps its spelled-out list to stay round-trippable.
+  if (!Mask) {
     OS << AllStages;
-    return;
-  }
-  if ((Mask & AMDGPU::AsyncStage::MaskAllStages) ==
-      AMDGPU::AsyncStage::MaskAllStages) {
-    OS << NoStages;
     return;
   }
 
@@ -143,7 +138,7 @@ void AMDGPUMIRFormatter::printAsyncStageMaskImm(int64_t Imm,
   uint32_t Reserved = 0;
   ListSeparator Delim(AsyncStageDelim);
   for (AMDGPU::AsyncStage::Stage S : AMDGPU::AsyncStage::stages()) {
-    if (!AMDGPU::AsyncStage::participates(Mask, S))
+    if (!(Mask & (1 << S)))
       continue;
     if (AMDGPU::AsyncStage::isReservedStage(S))
       Reserved |= 1 << S;
@@ -548,9 +543,8 @@ bool AMDGPUMIRFormatter::parseSDelayAluImmMnemonic(
   return false;
 }
 
-// Parse the async stage mask of asyncmark/wait_asyncmark.
-// The pneumonic names stages that are NOT omitted/ignored. An immediate is a
-// mask of stages that ARE omitted/ignored.
+// Parse the async stage mask of asyncmark/wait_asyncmark. The mnemonic names
+// the stages the mask names.
 bool AMDGPUMIRFormatter::parseAsyncStageMaskImmMnemonic(
     const unsigned int OpIdx, int64_t &Imm, StringRef &Src,
     MIRFormatter::ErrorCallbackType &ErrorCallback) const {
@@ -562,18 +556,12 @@ bool AMDGPUMIRFormatter::parseAsyncStageMaskImmMnemonic(
   if (Src.empty())
     return ErrorCallback(Src.begin(), "expected <StageName>");
 
-  // The printed form lists the participating stages, but the operand names the
-  // omitted ones, so start from every stage omitted and clear as names arrive.
-  if (Src == NoStages) {
-    Imm = AMDGPU::AsyncStage::MaskAllStages;
-    return false;
-  }
   if (Src == AllStages) {
     Imm = 0;
     return false;
   }
 
-  uint32_t IgnoresMask = AMDGPU::AsyncStage::MaskAllStages;
+  uint32_t StageMask = 0;
   while (!Src.empty()) {
     StringRef Name = Src.substr(0, Src.find(AsyncStageDelim));
     StringRef::iterator NamePos = Src.begin();
@@ -581,7 +569,6 @@ bool AMDGPUMIRFormatter::parseAsyncStageMaskImmMnemonic(
     Src.consume_front(AsyncStageDelim);
 
     // The reserved stages arrive together as one hex bitmask.
-    // Unset bits that aren't present.
     StringRef Bits = Name;
     if (Bits.consume_front(ReservedStagePrefix)) {
       uint32_t Mask;
@@ -594,8 +581,7 @@ bool AMDGPUMIRFormatter::parseAsyncStageMaskImmMnemonic(
           return ErrorCallback(NamePos,
                                "async stage mask names a non-reserved stage");
       }
-      // Everything not present in Mask is ignored.
-      IgnoresMask &= ~Mask;
+      StageMask |= Mask;
       continue;
     }
 
@@ -606,10 +592,10 @@ bool AMDGPUMIRFormatter::parseAsyncStageMaskImmMnemonic(
     }
     if (S == AMDGPU::AsyncStage::NUM_STAGES)
       return ErrorCallback(NamePos, "invalid async stage name");
-    IgnoresMask &= ~(1 << S);
+    StageMask |= 1 << S;
   }
 
-  Imm = IgnoresMask;
+  Imm = StageMask;
   return false;
 }
 

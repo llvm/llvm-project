@@ -54,11 +54,11 @@ define amdgpu_kernel void @stage_buffer_global_load(<4 x i32> %rsrc, ptr addrspa
 ; GISEL-NEXT:    s_endpgm
 entry:
   call void @llvm.amdgcn.raw.buffer.load.async.lds(<4 x i32> %rsrc, ptr addrspace(3) %lds, i32 4, i32 0, i32 0, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark(i32 2015)
+  call void @llvm.amdgcn.asyncmark(i32 32)
   call void @llvm.amdgcn.raw.buffer.load.async.lds(<4 x i32> %rsrc, ptr addrspace(3) %lds, i32 4, i32 0, i32 0, i32 4, i32 1)
-  call void @llvm.amdgcn.asyncmark(i32 2015)
+  call void @llvm.amdgcn.asyncmark(i32 32)
   call void @llvm.amdgcn.raw.buffer.load.async.lds(<4 x i32> %rsrc, ptr addrspace(3) %lds, i32 4, i32 0, i32 0, i32 8, i32 2)
-  call void @llvm.amdgcn.wait.asyncmark(i16 1, i32 2015)
+  call void @llvm.amdgcn.wait.asyncmark(i16 1, i32 32)
   %v = load i32, ptr addrspace(3) %lds
   store i32 %v, ptr addrspace(1) %out
   ret void
@@ -103,8 +103,8 @@ define amdgpu_kernel void @wait_on_empty_stage(<4 x i32> %rsrc, ptr addrspace(3)
 ; GISEL-NEXT:    s_endpgm
 entry:
   call void @llvm.amdgcn.raw.buffer.load.async.lds(<4 x i32> %rsrc, ptr addrspace(3) %lds, i32 4, i32 0, i32 0, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark(i32 2046)
-  call void @llvm.amdgcn.wait.asyncmark(i16 0, i32 2015)
+  call void @llvm.amdgcn.asyncmark(i32 1)
+  call void @llvm.amdgcn.wait.asyncmark(i16 0, i32 32)
   %v = load i32, ptr addrspace(3) %lds
   store i32 %v, ptr addrspace(1) %out
   ret void

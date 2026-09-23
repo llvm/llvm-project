@@ -26,11 +26,6 @@ namespace AsyncStage {
 // Async stages tracked by the asyncmark / wait_asyncmark intrinsics. Each stage
 // has its own independent sequence of marks.
 //
-// The intrinsics do not name a stage directly. They take a bitmask in which a
-// set bit means "do not participate": asyncmark omits the stages it names, and
-// wait_asyncmark ignores them. A mask of 0 therefore covers every stage, which
-// is the behavior of the original stage-less intrinsics.
-//
 // Do not renumber. Some values are RESERVED for later use.
 enum Stage : uint32_t {
   // Tensor loads to LDS and tensor stores from LDS.
@@ -54,7 +49,7 @@ enum Stage : uint32_t {
   NUM_STAGES = STAGE_LAST + 1
 };
 
-// Bits that a mask may legally set. Reserved stages are included: omitting a
+// Bits that a mask may legally set. Reserved stages are included: naming a
 // stage whose operations do not exist yet is harmless, and accepting the bit
 // keeps masks portable as stages are filled in.
 constexpr uint32_t MaskAllStages = (1 << NUM_STAGES) - 1;
@@ -63,9 +58,10 @@ constexpr bool isValidMask(uint32_t Mask) {
   return (Mask & ~MaskAllStages) == 0;
 }
 
-// A stage participates in an operation unless the mask names it.
+// A stage participates when the mask names it. The empty mask is the one
+// exception: it names every stage rather than none.
 constexpr bool participates(uint32_t Mask, uint32_t S) {
-  return !(Mask & (1 << S));
+  return !Mask || (Mask & (1 << S));
 }
 
 constexpr bool isReservedStage(uint32_t S) {
@@ -115,14 +111,10 @@ constexpr const char *getStageName(uint32_t S) {
   llvm_unreachable("Unhandled stage");
 }
 
-// Render the stages a mask leaves in as a '|'-separated list. Masks usually
-// name many more stages than they leave out, so listing the stages that
-// participate keeps the rendering short and says what actually happens.
+// Render the stages a mask names as a '|'-separated list.
 inline std::string getCoveredStagesString(uint32_t Mask) {
-  if (!(Mask & MaskAllStages))
+  if (!(Mask & MaskAllStages) || (Mask & MaskAllStages) == MaskAllStages)
     return "all";
-  if ((Mask & MaskAllStages) == MaskAllStages)
-    return "none";
   std::string Result;
   for (uint32_t S = 0; S != NUM_STAGES; ++S) {
     if (!participates(Mask, S))

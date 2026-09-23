@@ -5,8 +5,8 @@
 # mark sequence. Saturating one stage must not perturb another.
 
 ---
-# Mask 2045 covers only GLOBAL_LOAD_ASYNC_TO_LDS, which receives 20 marks, well
-# past the cap. Mask 2046 covers only TENSOR, which receives exactly one. The
+# Mask 2 covers only GLOBAL_LOAD_ASYNC_TO_LDS, which receives 20 marks, well
+# past the cap. Mask 1 covers only TENSOR, which receives exactly one. The
 # wait covering TENSOR must still find its single mark and produce an exact
 # tensorcnt wait: it is not affected by the other stage's truncation.
 name:            saturate_one_stage_only
@@ -68,50 +68,50 @@ body:             |
     ; CHECK-NEXT: S_WAIT_TENSORCNT 0, implicit-def $tensorcnt, implicit $tensorcnt
     ; CHECK-NEXT: S_ENDPGM 0
     TENSOR_LOAD_TO_LDS_d2 $sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15, 0, 0, implicit-def $tensorcnt, implicit $exec, implicit $tensorcnt
-    ASYNCMARK 2046
+    ASYNCMARK 1
     GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
-    ASYNCMARK 2045
+    ASYNCMARK 2
     GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
-    ASYNCMARK 2045
+    ASYNCMARK 2
     GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
-    ASYNCMARK 2045
+    ASYNCMARK 2
     GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
-    ASYNCMARK 2045
+    ASYNCMARK 2
     GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
-    ASYNCMARK 2045
+    ASYNCMARK 2
     GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
-    ASYNCMARK 2045
+    ASYNCMARK 2
     GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
-    ASYNCMARK 2045
+    ASYNCMARK 2
     GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
-    ASYNCMARK 2045
+    ASYNCMARK 2
     GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
-    ASYNCMARK 2045
+    ASYNCMARK 2
     GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
-    ASYNCMARK 2045
+    ASYNCMARK 2
     GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
-    ASYNCMARK 2045
+    ASYNCMARK 2
     GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
-    ASYNCMARK 2045
+    ASYNCMARK 2
     GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
-    ASYNCMARK 2045
+    ASYNCMARK 2
     GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
-    ASYNCMARK 2045
+    ASYNCMARK 2
     GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
-    ASYNCMARK 2045
+    ASYNCMARK 2
     GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
-    ASYNCMARK 2045
+    ASYNCMARK 2
     GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
-    ASYNCMARK 2045
+    ASYNCMARK 2
     GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
-    ASYNCMARK 2045
+    ASYNCMARK 2
     GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
-    ASYNCMARK 2045
+    ASYNCMARK 2
     GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
-    ASYNCMARK 2045
+    ASYNCMARK 2
 
     ; TENSOR has one mark; counting back 0 reaches it exactly.
-    WAIT_ASYNCMARK 0, 2046
+    WAIT_ASYNCMARK 0, 1
     S_ENDPGM 0
 ...
 ---
@@ -174,46 +174,46 @@ body:             |
     ; CHECK-NEXT: S_WAIT_ASYNCCNT 18, implicit-def $asynccnt, implicit $asynccnt
     ; CHECK-NEXT: S_ENDPGM 0
     GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
-    ASYNCMARK 2045
+    ASYNCMARK 2
     GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
-    ASYNCMARK 2045
+    ASYNCMARK 2
     GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
-    ASYNCMARK 2045
+    ASYNCMARK 2
     GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
-    ASYNCMARK 2045
+    ASYNCMARK 2
     GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
-    ASYNCMARK 2045
+    ASYNCMARK 2
     GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
-    ASYNCMARK 2045
+    ASYNCMARK 2
     GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
-    ASYNCMARK 2045
+    ASYNCMARK 2
     GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
-    ASYNCMARK 2045
+    ASYNCMARK 2
     GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
-    ASYNCMARK 2045
+    ASYNCMARK 2
     GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
-    ASYNCMARK 2045
+    ASYNCMARK 2
     GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
-    ASYNCMARK 2045
+    ASYNCMARK 2
     GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
-    ASYNCMARK 2045
+    ASYNCMARK 2
     GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
-    ASYNCMARK 2045
+    ASYNCMARK 2
     GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
-    ASYNCMARK 2045
+    ASYNCMARK 2
     GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
-    ASYNCMARK 2045
+    ASYNCMARK 2
     GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
-    ASYNCMARK 2045
+    ASYNCMARK 2
     GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
-    ASYNCMARK 2045
+    ASYNCMARK 2
     GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
-    ASYNCMARK 2045
+    ASYNCMARK 2
     GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
-    ASYNCMARK 2045
+    ASYNCMARK 2
     GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
-    ASYNCMARK 2045
+    ASYNCMARK 2
 
-    WAIT_ASYNCMARK 18, 2045
+    WAIT_ASYNCMARK 18, 2
     S_ENDPGM 0
 ...

@@ -3,9 +3,9 @@
 ; RUN: llc -verify-machineinstrs -global-isel=1 -mtriple=amdgpu12.50 < %s | FileCheck %s -check-prefixes=GISEL
 
 ; Each async stage has its own sequence of marks. The intrinsics take a mask of
-; the stages to leave out: asyncmark omits them, wait_asyncmark disregards them.
-; The masks below are written as the complement of the stages they cover, e.g.
-; 2046 = 0x7fe omits every stage but TENSOR.
+; the stages to act on: asyncmark marks them, wait_asyncmark waits on them. So
+; 1 covers TENSOR alone, and 2 covers GLOBAL_LOAD_ASYNC_TO_LDS alone. An empty
+; mask is special and covers every stage.
 
 ; The over-waiting fix. Tensor DMA (TENSOR_CNT) and async global-to-LDS
 ; (ASYNC_CNT) are interleaved, each marked into its own stage. A wait covering
@@ -60,13 +60,13 @@ define amdgpu_kernel void @wait_tensor_ignores_async(<4 x i32> %sd, <8 x i32> %t
 ; GISEL-NEXT:    s_endpgm
 entry:
   call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> %sd, <8 x i32> %td, <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <8 x i32> zeroinitializer, i32 0)
-  call void @llvm.amdgcn.asyncmark(i32 2046)
+  call void @llvm.amdgcn.asyncmark(i32 1)
 
   call void @llvm.amdgcn.global.load.async.to.lds.b32(ptr addrspace(1) %glb, ptr addrspace(3) %lds, i32 4, i32 0)
-  call void @llvm.amdgcn.asyncmark(i32 2045)
+  call void @llvm.amdgcn.asyncmark(i32 2)
 
   ; Waits for the tensor DMA only. No s_wait_asynccnt may be emitted here.
-  call void @llvm.amdgcn.wait.asyncmark(i16 0, i32 2046)
+  call void @llvm.amdgcn.wait.asyncmark(i16 0, i32 1)
   %v = load i32, ptr addrspace(3) %lds
   store i32 %v, ptr addrspace(1) %glb
   ret void
@@ -123,12 +123,12 @@ define amdgpu_kernel void @wait_async_ignores_tensor(<4 x i32> %sd, <8 x i32> %t
 ; GISEL-NEXT:    s_endpgm
 entry:
   call void @llvm.amdgcn.global.load.async.to.lds.b32(ptr addrspace(1) %glb, ptr addrspace(3) %lds, i32 4, i32 0)
-  call void @llvm.amdgcn.asyncmark(i32 2045)
+  call void @llvm.amdgcn.asyncmark(i32 2)
 
   call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> %sd, <8 x i32> %td, <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <8 x i32> zeroinitializer, i32 0)
-  call void @llvm.amdgcn.asyncmark(i32 2046)
+  call void @llvm.amdgcn.asyncmark(i32 1)
 
-  call void @llvm.amdgcn.wait.asyncmark(i16 0, i32 2045)
+  call void @llvm.amdgcn.wait.asyncmark(i16 0, i32 2)
   %v = load i32, ptr addrspace(3) %lds
   store i32 %v, ptr addrspace(1) %glb
   ret void
@@ -199,26 +199,26 @@ entry:
 
   ; GLOBAL_LOAD_ASYNC_TO_LDS mark #0.
   call void @llvm.amdgcn.global.load.async.to.lds.b32(ptr addrspace(1) %glb, ptr addrspace(3) %lds, i32 4, i32 0)
-  call void @llvm.amdgcn.asyncmark(i32 2045)
+  call void @llvm.amdgcn.asyncmark(i32 2)
 
   ; GLOBAL_STORE_ASYNC_FROM_LDS mark #0. Same counter, different sequence.
   call void @llvm.amdgcn.global.store.async.from.lds.b32(ptr addrspace(1) %glb, ptr addrspace(3) %lds1, i32 4, i32 0)
-  call void @llvm.amdgcn.asyncmark(i32 2039)
+  call void @llvm.amdgcn.asyncmark(i32 8)
 
   ; GLOBAL_LOAD_ASYNC_TO_LDS mark #1.
   call void @llvm.amdgcn.global.load.async.to.lds.b32(ptr addrspace(1) %glb, ptr addrspace(3) %lds2, i32 4, i32 0)
-  call void @llvm.amdgcn.asyncmark(i32 2045)
+  call void @llvm.amdgcn.asyncmark(i32 2)
 
   ; Counts back one mark in the load stage, skipping the store stage's mark.
-  call void @llvm.amdgcn.wait.asyncmark(i16 1, i32 2045)
+  call void @llvm.amdgcn.wait.asyncmark(i16 1, i32 2)
   %v = load i32, ptr addrspace(3) %lds
   store i32 %v, ptr addrspace(1) %glb
   ret void
 }
 
-; An empty mask omits nothing, so the mark joins every stage and the wait covers
-; every stage. This is the behavior of the original stage-less intrinsics, and is
-; what old IR auto-upgrades to.
+; An empty mask names every stage, so the mark joins every stage and the wait
+; covers every stage. This is the behavior of the original stage-less
+; intrinsics, and is what old IR auto-upgrades to.
 
 define amdgpu_kernel void @empty_mask_covers_everything(<4 x i32> %sd, <8 x i32> %td, ptr addrspace(1) %glb, ptr addrspace(3) %lds) {
 ; SDAG-LABEL: empty_mask_covers_everything:
@@ -316,10 +316,10 @@ define amdgpu_kernel void @wait_on_empty_stage(ptr addrspace(1) %glb, ptr addrsp
 ; GISEL-NEXT:    s_endpgm
 entry:
   call void @llvm.amdgcn.global.load.async.to.lds.b32(ptr addrspace(1) %glb, ptr addrspace(3) %lds, i32 4, i32 0)
-  call void @llvm.amdgcn.asyncmark(i32 2045)
+  call void @llvm.amdgcn.asyncmark(i32 2)
 
   ; TENSOR never had a mark, so this waits for nothing.
-  call void @llvm.amdgcn.wait.asyncmark(i16 0, i32 2046)
+  call void @llvm.amdgcn.wait.asyncmark(i16 0, i32 1)
   %v = load i32, ptr addrspace(3) %lds
   store i32 %v, ptr addrspace(1) %glb
   ret void
@@ -381,21 +381,21 @@ entry:
 
   ; GLOBAL_LOAD_ASYNC_TO_LDS mark.
   call void @llvm.amdgcn.global.load.async.to.lds.b32(ptr addrspace(1) %glb, ptr addrspace(3) %lds, i32 4, i32 0)
-  call void @llvm.amdgcn.asyncmark(i32 2045)
+  call void @llvm.amdgcn.asyncmark(i32 2)
 
   ; GLOBAL_LOAD_ASYNC_TO_LDS_MCAST mark. Same counter, own sequence.
   call void @llvm.amdgcn.cluster.load.async.to.lds.b32(ptr addrspace(1) %glb, ptr addrspace(3) %lds1, i32 4, i32 0, i32 %mask)
-  call void @llvm.amdgcn.asyncmark(i32 2043)
+  call void @llvm.amdgcn.asyncmark(i32 4)
 
   ; Drains the multicast stage only. The plain load's mark is in another
   ; sequence.
-  call void @llvm.amdgcn.wait.asyncmark(i16 0, i32 2043)
+  call void @llvm.amdgcn.wait.asyncmark(i16 0, i32 4)
   %v = load i32, ptr addrspace(3) %lds1
   store i32 %v, ptr addrspace(1) %glb
   ret void
 }
 
-; A mark that omits nothing relevant joins several stages at once, and each
+; A mark whose mask names several stages joins all of them at once, and each
 ; stage keeps its own copy. Here one mark covers both TENSOR and
 ; GLOBAL_LOAD_ASYNC_TO_LDS, so a wait on either one alone finds it.
 
@@ -448,11 +448,11 @@ entry:
   call void @llvm.amdgcn.global.load.async.to.lds.b32(ptr addrspace(1) %glb, ptr addrspace(3) %lds, i32 4, i32 0)
 
   ; Joins TENSOR and GLOBAL_LOAD_ASYNC_TO_LDS.
-  call void @llvm.amdgcn.asyncmark(i32 2044)
+  call void @llvm.amdgcn.asyncmark(i32 3)
 
   ; Consumes the TENSOR copy. The GLOBAL_LOAD_ASYNC_TO_LDS copy is untouched, so
   ; only tensorcnt is waited on.
-  call void @llvm.amdgcn.wait.asyncmark(i16 0, i32 2046)
+  call void @llvm.amdgcn.wait.asyncmark(i16 0, i32 1)
   %v = load i32, ptr addrspace(3) %lds
   store i32 %v, ptr addrspace(1) %glb
   ret void
@@ -526,17 +526,17 @@ entry:
   %lds1 = getelementptr i32, ptr addrspace(3) %lds, i32 1
 
   call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> %sd, <8 x i32> %td, <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <8 x i32> zeroinitializer, i32 0)
-  call void @llvm.amdgcn.asyncmark(i32 2046)
+  call void @llvm.amdgcn.asyncmark(i32 1)
 
   call void @llvm.amdgcn.global.store.async.from.lds.b32(ptr addrspace(1) %glb, ptr addrspace(3) %lds1, i32 4, i32 0)
-  call void @llvm.amdgcn.asyncmark(i32 2039)
+  call void @llvm.amdgcn.asyncmark(i32 8)
 
   ; This async load is marked into neither stage, so neither wait covers it.
   call void @llvm.amdgcn.global.load.async.to.lds.b32(ptr addrspace(1) %glb, ptr addrspace(3) %lds, i32 4, i32 0)
-  call void @llvm.amdgcn.asyncmark(i32 2045)
+  call void @llvm.amdgcn.asyncmark(i32 2)
 
   ; Covers TENSOR and GLOBAL_STORE_ASYNC_FROM_LDS together.
-  call void @llvm.amdgcn.wait.asyncmark(i16 0, i32 2038)
+  call void @llvm.amdgcn.wait.asyncmark(i16 0, i32 9)
   %v = load i32, ptr addrspace(3) %lds
   store i32 %v, ptr addrspace(1) %glb
   ret void

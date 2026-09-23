@@ -5,8 +5,8 @@
 ; The stage mask operand carries a Range covering the bits of the defined
 ; stages, so the IR verifier rejects a mask naming a stage that does not exist
 ; before instruction selection. Bits of reserved stages are inside the range and
-; so are accepted: omitting a stage whose operations do not exist yet is
-; harmless, and keeps masks portable as the reserved slots are filled in.
+; so are accepted: naming a stage whose operations do not exist yet is harmless,
+; and keeps masks portable as the reserved slots are filled in.
 
 ;--- mark.ll
 ; 2048 is the bit just past the last stage, and 4096 is further out still.

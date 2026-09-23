@@ -224,8 +224,9 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(const TargetInfo &TI,
     if (!IsMark && SemaRef.BuiltinConstantArg(TheCall, 0, NumMarks))
       return true;
 
-    // The stage mask names the stages to leave out, so every combination of
-    // known stage bits is meaningful, including none of them.
+    // The stage mask names the stages to act on, so every combination of known
+    // stage bits is meaningful, including none of them: the empty mask names
+    // every stage.
     unsigned MaskArgNum = IsMark ? 0 : 1;
     return SemaRef.BuiltinConstantArgRange(
         TheCall, MaskArgNum, 0, llvm::AMDGPU::AsyncStage::MaskAllStages);
