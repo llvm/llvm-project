@@ -103,6 +103,13 @@ static cl::opt<bool> DisableRewriteMFMAFormSchedStage(
     "amdgpu-disable-rewrite-mfma-form-sched-stage", cl::Hidden,
     cl::desc("Disable rewrite mfma rewrite scheduling stage"), cl::init(true));
 
+/// Cost of a spill/restore pair relative to TargetRegisterClass::getCopyCost.
+/// A spill goes to scratch memory, a bridge copy does not.
+static constexpr int64_t SpillVsCopyCostRatio = 10;
+
+/// Credit per AGPR the rewrite puts to use, on the scale of one bridge copy.
+static constexpr int64_t AGPRUtilizationBonus = 4;
+
 namespace {
 
 struct VGPRThresholdParser : public cl::parser<unsigned> {
@@ -2544,6 +2551,9 @@ int64_t RewriteMFMAFormStage::getRewriteCost(
   unsigned AGPRThreshold = MaxVectorRegs.second;
   unsigned CombinedThreshold = ST.getMaxNumVGPRs(MF);
 
+  // Peak AGPR pressure over the regions we are trying to fix.
+  unsigned MaxAGPRAfter = 0;
+
   for (unsigned Region = 0; Region < DAG.Regions.size(); Region++) {
     if (!RegionsWithExcessArchVGPR[Region])
       continue;
@@ -2560,6 +2570,8 @@ int64_t RewriteMFMAFormStage::getRewriteCost(
     unsigned SpillCostAfter = PressureAfter.getVGPRSpills(
         MF, ArchVGPRThreshold, AGPRThreshold, CombinedThreshold);
 
+    MaxAGPRAfter = std::max(MaxAGPRAfter, PressureAfter.getAGPRNum());
+
     uint64_t BlockFreq =
         MBFI->getBlockFreq(DAG.Regions[Region].first->getParent())
             .getFrequency();
@@ -2572,7 +2584,8 @@ int64_t RewriteMFMAFormStage::getRewriteCost(
 
     // This assumes perfect spilling / splitting -- using one spill / copy
     // instruction and one restoreFrom / copy for each excess register,
-    int64_t SpillCost = ((int)SpillCostAfter - (int)SpillCostBefore) * 2;
+    int64_t SpillCost =
+        ((int)SpillCostAfter - (int)SpillCostBefore) * 2 * SpillVsCopyCostRatio;
 
     // Also account for the block frequency.
     if (RelativeFreqIsDenom)
@@ -2621,13 +2634,28 @@ int64_t RewriteMFMAFormStage::getRewriteCost(
     }
   }
 
+  // Reward AGPR utilization. We want the AGPR bank reasonably used and as many
+  // ArchVGPRs as possible freed up, which gives the scheduler more room than
+  // the spill term alone can express. The credit stops at a soft limit so that
+  // the AGPR bank is not filled to the point where the spilling merely moves
+  // from one bank to the other.
+  int64_t AGPRBonus = 0;
+  unsigned AGPRSoftLimit = AGPRThreshold * 7 / 8;
+  if (MaxAGPRAfter && MaxAGPRAfter <= AGPRSoftLimit)
+    AGPRBonus = -static_cast<int64_t>(MaxAGPRAfter) * AGPRUtilizationBonus;
+
+  LLVM_DEBUG(dbgs() << "RewriteMFMA cost: spill=" << Cost
+                    << " copy=" << CopyCost << " agpr=" << AGPRBonus
+                    << " (peak AGPR " << MaxAGPRAfter << "/" << AGPRSoftLimit
+                    << ") total=" << (Cost + CopyCost + AGPRBonus) << '\n');
+
   // Reset the classes that were changed to AGPR for better register bank
   // analysis. We must do rewriting after copy-insertion, as some defs of the
   // register may require VGPR.  Additionally, if we bail out and don't perform
   // the rewrite then these need to be restored anyway.
   resetRewriteCandsToVGPR(RewriteCands);
 
-  return Cost + CopyCost;
+  return Cost + CopyCost + AGPRBonus;
 }
 
 bool RewriteMFMAFormStage::rewrite(
