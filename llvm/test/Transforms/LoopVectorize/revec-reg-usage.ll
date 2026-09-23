@@ -1,8 +1,8 @@
 ; REQUIRES: asserts
-; RUN: opt -disable-output -passes=loop-vectorize -vectorize-vector-loops \
+; RUN: opt -disable-output -passes=loop-vectorize -vectorize-vector-loops -interleave-revec-loops \
 ; RUN:     -force-vector-width=1 -debug-only=vplan < %s 2>&1 \
 ; RUN:     | FileCheck %s
-; RUN: opt -disable-output -passes=loop-vectorize -vectorize-vector-loops \
+; RUN: opt -disable-output -passes=loop-vectorize -vectorize-vector-loops -interleave-revec-loops \
 ; RUN:     -force-vector-width="vscale x 1" -debug-only=vplan < %s 2>&1 \
 ; RUN:     | FileCheck %s
 
