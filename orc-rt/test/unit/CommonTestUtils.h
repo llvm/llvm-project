@@ -9,14 +9,16 @@
 #ifndef ORC_RT_UNITTEST_COMMONTESTUTILS_H
 #define ORC_RT_UNITTEST_COMMONTESTUTILS_H
 
-#include "orc-rt/Error.h"
-#include "orc-rt/ExecutorProcessInfo.h"
-#include "orc-rt/Session.h"
-#include "orc-rt/WrapperFunction.h"
-#include "orc-rt/move_only_function.h"
+// Helpers here must not depend on Bedrock: this header is included by
+// SupportTests translation units, which link Support alone. Bedrock-dependent
+// helpers belong in BedrockTestUtils.h.
 
-#include "orc-rt-c/CoreTypes.h"
-#include "orc-rt-c/WrapperFunction.h"
+#include "orc-rt/support/Error.h"
+#include "orc-rt/support/WrapperFunction.h"
+#include "orc-rt/support/move_only_function.h"
+
+#include "orc-rt-c/support/CoreTypes.h"
+#include "orc-rt-c/support/WrapperFunction.h"
 
 #include <cassert>
 #include <cstddef>
@@ -27,7 +29,9 @@
 
 #include "gtest/gtest.h"
 
-inline void noErrors(orc_rt::Error Err) { orc_rt::cantFail(std::move(Err)); }
+namespace orc_rt::test {
+
+inline void noErrors(Error Err) noexcept { cantFail(std::move(Err)); }
 
 /// ReportError callback for tests that records the message of every reported
 /// error, in the order reported.
@@ -35,31 +39,13 @@ class AccumulateErrors {
 public:
   AccumulateErrors(std::vector<std::string> &ErrMsgs) : ErrMsgs(ErrMsgs) {}
 
-  void operator()(orc_rt::Error Err) {
-    ErrMsgs.push_back(orc_rt::toString(std::move(Err)));
+  void operator()(Error Err) noexcept {
+    ErrMsgs.push_back(toString(std::move(Err)));
   }
 
 private:
   std::vector<std::string> &ErrMsgs;
 };
-
-inline orc_rt::ExecutorProcessInfo mockExecutorProcessInfo() noexcept {
-  return orc_rt::ExecutorProcessInfo("arm64-apple-darwin", 16384,
-                                     "+neon, +fullfp16");
-}
-
-/// DispatchFn for tests that should never dispatch a task. Records a test
-/// failure on invocation, then runs the task inline so that any caller
-/// awaiting a result unblocks (rather than hanging) and the managed-code token
-/// is released, even in -Asserts builds or when the dispatch arrives on a
-/// non-test thread.
-inline void noDispatch(orc_rt::Session::Task T) {
-  ADD_FAILURE() << "unexpected dispatch in a no-dispatch session";
-  T();
-}
-
-/// DispatchFn that runs tasks on the current thread.
-inline void inlineDispatch(orc_rt::Session::Task T) { T(); }
 
 template <size_t Idx = 0> class OpCounter {
 public:
@@ -114,17 +100,18 @@ template <size_t Idx> size_t OpCounter<Idx>::MoveConstructions = 0;
 template <size_t Idx> size_t OpCounter<Idx>::MoveAssignments = 0;
 template <size_t Idx> size_t OpCounter<Idx>::Destructions = 0;
 
-template <typename T>
-orc_rt::move_only_function<void(T)> waitFor(std::future<T> &F) {
+template <typename T> move_only_function<void(T)> waitFor(std::future<T> &F) {
   std::promise<T> P;
   F = P.get_future();
   return [P = std::move(P)](T Val) mutable { P.set_value(std::move(Val)); };
 }
 
-inline orc_rt::move_only_function<void()> waitFor(std::future<void> &F) {
+inline move_only_function<void()> waitFor(std::future<void> &F) {
   std::promise<void> P;
   F = P.get_future();
   return [P = std::move(P)]() mutable { P.set_value(); };
 }
+
+} // namespace orc_rt::test
 
 #endif // ORC_RT_UNITTEST_COMMONTESTUTILS_H

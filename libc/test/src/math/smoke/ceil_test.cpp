@@ -10,4 +10,4 @@
 
 #include "src/math/ceil.h"
 
-LIST_CEIL_TESTS(double, LIBC_NAMESPACE::ceil)
+LIST_CEIL_TESTS(Ceil, double, LIBC_NAMESPACE::ceil)

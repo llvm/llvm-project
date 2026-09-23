@@ -5,9 +5,9 @@ This directory contains utilities for continuous benchmarking of libc++ with LNT
 ## Gathering historical performance data
 
 When generating historical performance data, benchmarking every commit of libc++
-is prohibitively expensive since a single run of the benchmark suite takes a few
-hours. Furthermore, generating this data from scratch is expected to be common,
-since it must happen whenever a fixed parameter like the compiler or the OS changes.
+is prohibitively expensive. Furthermore, generating this data from scratch is
+expected  to be common, since it must happen whenever a fixed parameter like the
+compiler or the OS changes.
 
 Instead, the tools in this directory aim to make it possible to generate historical
 performance data quickly with coarse granularity, with the goal of then generating
@@ -37,13 +37,12 @@ select-anchor-commits --since 2023-01-02 --every week > anchor-commits.txt
 
 # What is missing from LNT (we want at least 3 samples for each commit).
 plan-benchmarks --commit-list anchor-commits.txt                                \
-                --lnt-url http://lnt.llvm.org --test-suite libcxx               \
+                --lnt-url https://lnt.llvm.org --test-suite libcxx              \
                 --machine <machine> --samples 3 > plan.jsonl
 
 # Request the corresponding workflow runs, at most 4 at a time to be a good citizen.
 export GITHUB_TOKEN=$(gh auth token)
-dispatch-benchmarks --work-items plan.jsonl --test-suite-commit <benchmark suite SHA>   \
-                    --max-in-flight 4 --dry-run
+dispatch-benchmarks --work-items plan.jsonl --max-in-flight 4 --dry-run
 ```
 
 In a nutshell, `select-anchor-commits` produces the list of anchor commits that we want
@@ -58,6 +57,16 @@ Note that since `dispatch-benchmarks` both reads and creates workflow runs, it r
 GitHub token with write access to the repository. That token can either be passed as an
 argument or picked up from the `GITHUB_TOKEN` environment variable.
 
+In production, this pipeline is run by the `libcxx-benchmark-cron.yml` workflow, which runs
+it for each machine defined in `machines.json` on a schedule.
+
+## Configuring the benchmark machines
+
+`machines.json` describes the machines we benchmark on and their configuration. It is the
+single source of truth for all workflows that run benchmarks (PR benchmarking, running
+historical benchmarks, etc). Each entry contains variables used by the various workflows
+and the LNT machine name that the results will be reported under.
+
 ## Running benchmarks locally
 
 On GitHub, the `libcxx-benchmark-commit.yml` workflow is used to run benchmarks and report
@@ -67,12 +76,14 @@ which can be used to benchmark locally:
 ```
 run-benchmarks --test-suite-commit <SHA1> --machine <MACHINE>    \
                --compiler clang++ --benchmark-commit <SHA2>      \
-               --output result.json
+               --libcxx-installation <PATH>                      \
+               --output result.json                              \
+               -- --param std=c++26 --param optimization=speed
 ```
 
-This will run the benchmarks (using the test suite at the specified `SHA1`) against libc++
-as-of the specified `SHA2`, and produce a LNT-ready JSON report. The results can then be
-submitted to a LNT instance if desired.
+This will run the benchmarks (using the test suite at the specified `SHA1`) against the installation
+of libc++ at `PATH` (which is assumed to be libc++ as-of `SHA2`), and produce a LNT-ready JSON report.
+The results can then be submitted to a LNT instance if desired.
 
 ## Setting up a local LNT instance
 

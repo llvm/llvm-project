@@ -21,7 +21,7 @@ define void @test_tcgen05_commit_cg1(ptr %bar_addr) {
 ; CHECK_PTX64-NEXT:    .reg .b64 %rd<2>;
 ; CHECK_PTX64-EMPTY:
 ; CHECK_PTX64-NEXT:  // %bb.0:
-; CHECK_PTX64-NEXT:    ld.param.b64 %rd1, [test_tcgen05_commit_cg1_param_0];
+; CHECK_PTX64-NEXT:    ld.param::func.b64 %rd1, [test_tcgen05_commit_cg1_param_0];
 ; CHECK_PTX64-NEXT:    tcgen05.commit.cta_group::1.mbarrier::arrive::one.shared::cluster.b64 [%rd1];
 ; CHECK_PTX64-NEXT:    ret;
 ;
@@ -30,7 +30,7 @@ define void @test_tcgen05_commit_cg1(ptr %bar_addr) {
 ; CHECK_PTX64_SHARED32-NEXT:    .reg .b64 %rd<2>;
 ; CHECK_PTX64_SHARED32-EMPTY:
 ; CHECK_PTX64_SHARED32-NEXT:  // %bb.0:
-; CHECK_PTX64_SHARED32-NEXT:    ld.param.b64 %rd1, [test_tcgen05_commit_cg1_param_0];
+; CHECK_PTX64_SHARED32-NEXT:    ld.param::func.b64 %rd1, [test_tcgen05_commit_cg1_param_0];
 ; CHECK_PTX64_SHARED32-NEXT:    tcgen05.commit.cta_group::1.mbarrier::arrive::one.shared::cluster.b64 [%rd1];
 ; CHECK_PTX64_SHARED32-NEXT:    ret;
   call void @llvm.nvvm.tcgen05.commit.cg1.p0(ptr %bar_addr)
@@ -44,7 +44,7 @@ define void @test_tcgen05_commit_cg2(ptr %bar_addr) {
 ; CHECK_PTX64-NEXT:    .reg .b64 %rd<2>;
 ; CHECK_PTX64-EMPTY:
 ; CHECK_PTX64-NEXT:  // %bb.0:
-; CHECK_PTX64-NEXT:    ld.param.b64 %rd1, [test_tcgen05_commit_cg2_param_0];
+; CHECK_PTX64-NEXT:    ld.param::func.b64 %rd1, [test_tcgen05_commit_cg2_param_0];
 ; CHECK_PTX64-NEXT:    tcgen05.commit.cta_group::2.mbarrier::arrive::one.shared::cluster.b64 [%rd1];
 ; CHECK_PTX64-NEXT:    ret;
 ;
@@ -53,7 +53,7 @@ define void @test_tcgen05_commit_cg2(ptr %bar_addr) {
 ; CHECK_PTX64_SHARED32-NEXT:    .reg .b64 %rd<2>;
 ; CHECK_PTX64_SHARED32-EMPTY:
 ; CHECK_PTX64_SHARED32-NEXT:  // %bb.0:
-; CHECK_PTX64_SHARED32-NEXT:    ld.param.b64 %rd1, [test_tcgen05_commit_cg2_param_0];
+; CHECK_PTX64_SHARED32-NEXT:    ld.param::func.b64 %rd1, [test_tcgen05_commit_cg2_param_0];
 ; CHECK_PTX64_SHARED32-NEXT:    tcgen05.commit.cta_group::2.mbarrier::arrive::one.shared::cluster.b64 [%rd1];
 ; CHECK_PTX64_SHARED32-NEXT:    ret;
   call void @llvm.nvvm.tcgen05.commit.cg2.p0(ptr %bar_addr)
@@ -67,7 +67,7 @@ define void @test_tcgen05_commit_shared_cg1(ptr addrspace(3) %bar_addr) {
 ; CHECK_PTX64-NEXT:    .reg .b64 %rd<2>;
 ; CHECK_PTX64-EMPTY:
 ; CHECK_PTX64-NEXT:  // %bb.0:
-; CHECK_PTX64-NEXT:    ld.param.b64 %rd1, [test_tcgen05_commit_shared_cg1_param_0];
+; CHECK_PTX64-NEXT:    ld.param::func.b64 %rd1, [test_tcgen05_commit_shared_cg1_param_0];
 ; CHECK_PTX64-NEXT:    tcgen05.commit.cta_group::1.mbarrier::arrive::one.shared::cluster.b64 [%rd1];
 ; CHECK_PTX64-NEXT:    ret;
 ;
@@ -76,7 +76,7 @@ define void @test_tcgen05_commit_shared_cg1(ptr addrspace(3) %bar_addr) {
 ; CHECK_PTX64_SHARED32-NEXT:    .reg .b32 %r<2>;
 ; CHECK_PTX64_SHARED32-EMPTY:
 ; CHECK_PTX64_SHARED32-NEXT:  // %bb.0:
-; CHECK_PTX64_SHARED32-NEXT:    ld.param.b32 %r1, [test_tcgen05_commit_shared_cg1_param_0];
+; CHECK_PTX64_SHARED32-NEXT:    ld.param::func.b32 %r1, [test_tcgen05_commit_shared_cg1_param_0];
 ; CHECK_PTX64_SHARED32-NEXT:    tcgen05.commit.cta_group::1.mbarrier::arrive::one.shared::cluster.b64 [%r1];
 ; CHECK_PTX64_SHARED32-NEXT:    ret;
   call void @llvm.nvvm.tcgen05.commit.cg1.p3(ptr addrspace(3) %bar_addr)
@@ -90,7 +90,7 @@ define void @test_tcgen05_commit_shared_cg2(ptr addrspace(3) %bar_addr) {
 ; CHECK_PTX64-NEXT:    .reg .b64 %rd<2>;
 ; CHECK_PTX64-EMPTY:
 ; CHECK_PTX64-NEXT:  // %bb.0:
-; CHECK_PTX64-NEXT:    ld.param.b64 %rd1, [test_tcgen05_commit_shared_cg2_param_0];
+; CHECK_PTX64-NEXT:    ld.param::func.b64 %rd1, [test_tcgen05_commit_shared_cg2_param_0];
 ; CHECK_PTX64-NEXT:    tcgen05.commit.cta_group::2.mbarrier::arrive::one.shared::cluster.b64 [%rd1];
 ; CHECK_PTX64-NEXT:    ret;
 ;
@@ -99,7 +99,7 @@ define void @test_tcgen05_commit_shared_cg2(ptr addrspace(3) %bar_addr) {
 ; CHECK_PTX64_SHARED32-NEXT:    .reg .b32 %r<2>;
 ; CHECK_PTX64_SHARED32-EMPTY:
 ; CHECK_PTX64_SHARED32-NEXT:  // %bb.0:
-; CHECK_PTX64_SHARED32-NEXT:    ld.param.b32 %r1, [test_tcgen05_commit_shared_cg2_param_0];
+; CHECK_PTX64_SHARED32-NEXT:    ld.param::func.b32 %r1, [test_tcgen05_commit_shared_cg2_param_0];
 ; CHECK_PTX64_SHARED32-NEXT:    tcgen05.commit.cta_group::2.mbarrier::arrive::one.shared::cluster.b64 [%r1];
 ; CHECK_PTX64_SHARED32-NEXT:    ret;
   call void @llvm.nvvm.tcgen05.commit.cg2.p3(ptr addrspace(3) %bar_addr)
@@ -119,8 +119,8 @@ define void @test_tcgen05_commit_mc_cg1(ptr %bar_addr, i16 %cta_mask) {
 ; CHECK_PTX64-NEXT:    .reg .b64 %rd<2>;
 ; CHECK_PTX64-EMPTY:
 ; CHECK_PTX64-NEXT:  // %bb.0:
-; CHECK_PTX64-NEXT:    ld.param.b64 %rd1, [test_tcgen05_commit_mc_cg1_param_0];
-; CHECK_PTX64-NEXT:    ld.param.b16 %rs1, [test_tcgen05_commit_mc_cg1_param_1];
+; CHECK_PTX64-NEXT:    ld.param::func.b64 %rd1, [test_tcgen05_commit_mc_cg1_param_0];
+; CHECK_PTX64-NEXT:    ld.param::func.b16 %rs1, [test_tcgen05_commit_mc_cg1_param_1];
 ; CHECK_PTX64-NEXT:    tcgen05.commit.cta_group::1.mbarrier::arrive::one.shared::cluster.multicast::cluster.b64 [%rd1], %rs1;
 ; CHECK_PTX64-NEXT:    ret;
 ;
@@ -130,8 +130,8 @@ define void @test_tcgen05_commit_mc_cg1(ptr %bar_addr, i16 %cta_mask) {
 ; CHECK_PTX64_SHARED32-NEXT:    .reg .b64 %rd<2>;
 ; CHECK_PTX64_SHARED32-EMPTY:
 ; CHECK_PTX64_SHARED32-NEXT:  // %bb.0:
-; CHECK_PTX64_SHARED32-NEXT:    ld.param.b64 %rd1, [test_tcgen05_commit_mc_cg1_param_0];
-; CHECK_PTX64_SHARED32-NEXT:    ld.param.b16 %rs1, [test_tcgen05_commit_mc_cg1_param_1];
+; CHECK_PTX64_SHARED32-NEXT:    ld.param::func.b64 %rd1, [test_tcgen05_commit_mc_cg1_param_0];
+; CHECK_PTX64_SHARED32-NEXT:    ld.param::func.b16 %rs1, [test_tcgen05_commit_mc_cg1_param_1];
 ; CHECK_PTX64_SHARED32-NEXT:    tcgen05.commit.cta_group::1.mbarrier::arrive::one.shared::cluster.multicast::cluster.b64 [%rd1], %rs1;
 ; CHECK_PTX64_SHARED32-NEXT:    ret;
   call void @llvm.nvvm.tcgen05.commit.mc.cg1.p0.i16(ptr %bar_addr, i16 %cta_mask)
@@ -145,8 +145,8 @@ define void @test_tcgen05_commit_mc_cg2(ptr %bar_addr, i16 %cta_mask) {
 ; CHECK_PTX64-NEXT:    .reg .b64 %rd<2>;
 ; CHECK_PTX64-EMPTY:
 ; CHECK_PTX64-NEXT:  // %bb.0:
-; CHECK_PTX64-NEXT:    ld.param.b64 %rd1, [test_tcgen05_commit_mc_cg2_param_0];
-; CHECK_PTX64-NEXT:    ld.param.b16 %rs1, [test_tcgen05_commit_mc_cg2_param_1];
+; CHECK_PTX64-NEXT:    ld.param::func.b64 %rd1, [test_tcgen05_commit_mc_cg2_param_0];
+; CHECK_PTX64-NEXT:    ld.param::func.b16 %rs1, [test_tcgen05_commit_mc_cg2_param_1];
 ; CHECK_PTX64-NEXT:    tcgen05.commit.cta_group::2.mbarrier::arrive::one.shared::cluster.multicast::cluster.b64 [%rd1], %rs1;
 ; CHECK_PTX64-NEXT:    ret;
 ;
@@ -156,8 +156,8 @@ define void @test_tcgen05_commit_mc_cg2(ptr %bar_addr, i16 %cta_mask) {
 ; CHECK_PTX64_SHARED32-NEXT:    .reg .b64 %rd<2>;
 ; CHECK_PTX64_SHARED32-EMPTY:
 ; CHECK_PTX64_SHARED32-NEXT:  // %bb.0:
-; CHECK_PTX64_SHARED32-NEXT:    ld.param.b64 %rd1, [test_tcgen05_commit_mc_cg2_param_0];
-; CHECK_PTX64_SHARED32-NEXT:    ld.param.b16 %rs1, [test_tcgen05_commit_mc_cg2_param_1];
+; CHECK_PTX64_SHARED32-NEXT:    ld.param::func.b64 %rd1, [test_tcgen05_commit_mc_cg2_param_0];
+; CHECK_PTX64_SHARED32-NEXT:    ld.param::func.b16 %rs1, [test_tcgen05_commit_mc_cg2_param_1];
 ; CHECK_PTX64_SHARED32-NEXT:    tcgen05.commit.cta_group::2.mbarrier::arrive::one.shared::cluster.multicast::cluster.b64 [%rd1], %rs1;
 ; CHECK_PTX64_SHARED32-NEXT:    ret;
   call void @llvm.nvvm.tcgen05.commit.mc.cg2.p0.i16(ptr %bar_addr, i16 %cta_mask)
@@ -171,8 +171,8 @@ define void @test_tcgen05_commit_mc_shared_cg1(ptr addrspace(3) %bar_addr, i16 %
 ; CHECK_PTX64-NEXT:    .reg .b64 %rd<2>;
 ; CHECK_PTX64-EMPTY:
 ; CHECK_PTX64-NEXT:  // %bb.0:
-; CHECK_PTX64-NEXT:    ld.param.b64 %rd1, [test_tcgen05_commit_mc_shared_cg1_param_0];
-; CHECK_PTX64-NEXT:    ld.param.b16 %rs1, [test_tcgen05_commit_mc_shared_cg1_param_1];
+; CHECK_PTX64-NEXT:    ld.param::func.b64 %rd1, [test_tcgen05_commit_mc_shared_cg1_param_0];
+; CHECK_PTX64-NEXT:    ld.param::func.b16 %rs1, [test_tcgen05_commit_mc_shared_cg1_param_1];
 ; CHECK_PTX64-NEXT:    tcgen05.commit.cta_group::1.mbarrier::arrive::one.shared::cluster.multicast::cluster.b64 [%rd1], %rs1;
 ; CHECK_PTX64-NEXT:    ret;
 ;
@@ -182,8 +182,8 @@ define void @test_tcgen05_commit_mc_shared_cg1(ptr addrspace(3) %bar_addr, i16 %
 ; CHECK_PTX64_SHARED32-NEXT:    .reg .b32 %r<2>;
 ; CHECK_PTX64_SHARED32-EMPTY:
 ; CHECK_PTX64_SHARED32-NEXT:  // %bb.0:
-; CHECK_PTX64_SHARED32-NEXT:    ld.param.b32 %r1, [test_tcgen05_commit_mc_shared_cg1_param_0];
-; CHECK_PTX64_SHARED32-NEXT:    ld.param.b16 %rs1, [test_tcgen05_commit_mc_shared_cg1_param_1];
+; CHECK_PTX64_SHARED32-NEXT:    ld.param::func.b32 %r1, [test_tcgen05_commit_mc_shared_cg1_param_0];
+; CHECK_PTX64_SHARED32-NEXT:    ld.param::func.b16 %rs1, [test_tcgen05_commit_mc_shared_cg1_param_1];
 ; CHECK_PTX64_SHARED32-NEXT:    tcgen05.commit.cta_group::1.mbarrier::arrive::one.shared::cluster.multicast::cluster.b64 [%r1], %rs1;
 ; CHECK_PTX64_SHARED32-NEXT:    ret;
   call void @llvm.nvvm.tcgen05.commit.mc.cg1.p3.i16(ptr addrspace(3) %bar_addr, i16 %cta_mask)
@@ -197,8 +197,8 @@ define void @test_tcgen05_commit_mc_shared_cg2(ptr addrspace(3) %bar_addr, i16 %
 ; CHECK_PTX64-NEXT:    .reg .b64 %rd<2>;
 ; CHECK_PTX64-EMPTY:
 ; CHECK_PTX64-NEXT:  // %bb.0:
-; CHECK_PTX64-NEXT:    ld.param.b64 %rd1, [test_tcgen05_commit_mc_shared_cg2_param_0];
-; CHECK_PTX64-NEXT:    ld.param.b16 %rs1, [test_tcgen05_commit_mc_shared_cg2_param_1];
+; CHECK_PTX64-NEXT:    ld.param::func.b64 %rd1, [test_tcgen05_commit_mc_shared_cg2_param_0];
+; CHECK_PTX64-NEXT:    ld.param::func.b16 %rs1, [test_tcgen05_commit_mc_shared_cg2_param_1];
 ; CHECK_PTX64-NEXT:    tcgen05.commit.cta_group::2.mbarrier::arrive::one.shared::cluster.multicast::cluster.b64 [%rd1], %rs1;
 ; CHECK_PTX64-NEXT:    ret;
 ;
@@ -208,8 +208,8 @@ define void @test_tcgen05_commit_mc_shared_cg2(ptr addrspace(3) %bar_addr, i16 %
 ; CHECK_PTX64_SHARED32-NEXT:    .reg .b32 %r<2>;
 ; CHECK_PTX64_SHARED32-EMPTY:
 ; CHECK_PTX64_SHARED32-NEXT:  // %bb.0:
-; CHECK_PTX64_SHARED32-NEXT:    ld.param.b32 %r1, [test_tcgen05_commit_mc_shared_cg2_param_0];
-; CHECK_PTX64_SHARED32-NEXT:    ld.param.b16 %rs1, [test_tcgen05_commit_mc_shared_cg2_param_1];
+; CHECK_PTX64_SHARED32-NEXT:    ld.param::func.b32 %r1, [test_tcgen05_commit_mc_shared_cg2_param_0];
+; CHECK_PTX64_SHARED32-NEXT:    ld.param::func.b16 %rs1, [test_tcgen05_commit_mc_shared_cg2_param_1];
 ; CHECK_PTX64_SHARED32-NEXT:    tcgen05.commit.cta_group::2.mbarrier::arrive::one.shared::cluster.multicast::cluster.b64 [%r1], %rs1;
 ; CHECK_PTX64_SHARED32-NEXT:    ret;
   call void @llvm.nvvm.tcgen05.commit.mc.cg2.p3.i16(ptr addrspace(3) %bar_addr, i16 %cta_mask)

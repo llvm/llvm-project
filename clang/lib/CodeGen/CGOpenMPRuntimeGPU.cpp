@@ -562,7 +562,8 @@ static bool hasNestedSPMDDirective(ASTContext &Ctx,
     case OMPD_parallel_for_simd:
     case OMPD_cancel:
     case OMPD_cancellation_point:
-    case OMPD_ordered:
+    case OMPD_ordered_standalone:
+    case OMPD_ordered_blockassoc:
     case OMPD_threadprivate:
     case OMPD_allocate:
     case OMPD_task:
@@ -650,7 +651,8 @@ static bool supportsSPMDExecutionMode(ASTContext &Ctx,
   case OMPD_parallel_for_simd:
   case OMPD_cancel:
   case OMPD_cancellation_point:
-  case OMPD_ordered:
+  case OMPD_ordered_standalone:
+  case OMPD_ordered_blockassoc:
   case OMPD_threadprivate:
   case OMPD_allocate:
   case OMPD_task:
@@ -745,6 +747,18 @@ void CGOpenMPRuntimeGPU::emitNonSPMDKernel(const OMPExecutableDirective &D,
   IsInTTDRegion = false;
 }
 
+void CGOpenMPRuntimeGPU::emitBareKernelEnvironment(
+    const OMPExecutableDirective &D, CodeGenFunction &CGF) {
+  // Bare kernels manage their own initialization and never call
+  // __kmpc_target_init, but the runtime still needs a
+  // '<kernel>_kernel_environment' global to know how the kernel was
+  // configured, so emit it directly here.
+  llvm::OpenMPIRBuilder::TargetKernelDefaultAttrs Attrs;
+  Attrs.ExecFlags = llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_BARE;
+  CGBuilderTy &Bld = CGF.Builder;
+  OMPBuilder.emitKernelEnvironment(Bld, Attrs);
+}
+
 void CGOpenMPRuntimeGPU::emitKernelInit(const OMPExecutableDirective &D,
                                         CodeGenFunction &CGF,
                                         EntryFunctionState &EST, bool IsSPMD) {
@@ -823,6 +837,7 @@ void CGOpenMPRuntimeGPU::emitSPMDKernel(const OMPExecutableDirective &D,
     void Enter(CodeGenFunction &CGF) override {
       if (IsBareKernel) {
         RT.CurrentDataSharingMode = DataSharingMode::DS_CUDA;
+        RT.emitBareKernelEnvironment(D, CGF);
         return;
       }
       RT.emitKernelInit(D, CGF, EST, /* IsSPMD */ true);
@@ -1825,6 +1840,13 @@ void CGOpenMPRuntimeGPU::emitReduction(
       auto *CurFn = CGF.CurFn;
       CGF.CurFn = NewFunc;
 
+      // The helper has no DISubprogram of its own, so a debug location here
+      // would name the enclosing function's scope, which is invalid IR.
+      // Suppress them, as the other OpenMPIRBuilder-generated helpers do.
+      llvm::DebugLoc SavedDebugLoc = CGF.Builder.getCurrentDebugLocation();
+      CGF.Builder.SetCurrentDebugLocation(llvm::DebugLoc());
+      CGF.disableDebugInfo();
+
       *LHSPtr = CGF.GetAddrOfLocalVar(
                        cast<VarDecl>(cast<DeclRefExpr>(LHSExprs[I])->getDecl()))
                     .emitRawPointer(CGF);
@@ -1836,6 +1858,8 @@ void CGOpenMPRuntimeGPU::emitReduction(
                                   cast<DeclRefExpr>(LHSExprs[I]),
                                   cast<DeclRefExpr>(RHSExprs[I]));
 
+      CGF.enableDebugInfo();
+      CGF.Builder.SetCurrentDebugLocation(SavedDebugLoc);
       CGF.CurFn = CurFn;
 
       return InsertPointTy(CGF.Builder.GetInsertBlock(),
@@ -2023,7 +2047,6 @@ llvm::Function *CGOpenMPRuntimeGPU::createParallelDataSharingWrapper(
 
   CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, CGFI);
   Fn->setLinkage(llvm::GlobalValue::InternalLinkage);
-  Fn->setDoesNotRecurse();
 
   CodeGenFunction CGF(CGM, /*suppressNewContext=*/true);
   CGF.StartFunction(GlobalDecl(), Ctx.VoidTy, Fn, CGFI, WrapperArgs,

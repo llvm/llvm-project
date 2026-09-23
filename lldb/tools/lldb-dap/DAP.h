@@ -15,13 +15,13 @@
 #include "FunctionBreakpoint.h"
 #include "InstructionBreakpoint.h"
 #include "OutputRedirector.h"
-#include "ProgressEvent.h"
 #include "Protocol/ProtocolBase.h"
 #include "Protocol/ProtocolRequests.h"
 #include "Protocol/ProtocolTypes.h"
 #include "SourceBreakpoint.h"
 #include "Transport.h"
 #include "Variables.h"
+#include "Watchpoint.h"
 #include "lldb/API/SBBroadcaster.h"
 #include "lldb/API/SBCommandInterpreter.h"
 #include "lldb/API/SBDebugger.h"
@@ -63,6 +63,7 @@ typedef std::map<std::pair<uint32_t, uint32_t>, SourceBreakpoint>
 typedef llvm::StringMap<FunctionBreakpoint> FunctionBreakpointMap;
 typedef llvm::DenseMap<lldb::addr_t, InstructionBreakpoint>
     InstructionBreakpointMap;
+typedef llvm::DenseMap<lldb::addr_t, Watchpoint> WatchpointMap;
 
 using AdapterFeature = protocol::AdapterFeature;
 using ClientFeature = protocol::ClientFeature;
@@ -107,6 +108,7 @@ struct DAP final : public DAPTransport::MessageHandler {
   FunctionBreakpointMap function_breakpoints;
   InstructionBreakpointMap instruction_breakpoints;
   std::vector<ExceptionBreakpoint> exception_breakpoints;
+  WatchpointMap data_breakpoints;
 
   /// Map step in target id to list of function targets that user can choose.
   llvm::DenseMap<lldb::addr_t, std::string> step_in_targets;
@@ -133,7 +135,6 @@ struct DAP final : public DAPTransport::MessageHandler {
   bool configuration_done;
 
   std::mutex call_mutex;
-  ProgressEventReporter progress_event_reporter;
 
   /// Keep track of the last stop thread index IDs as threads won't go away
   /// unless we send a "thread" event to indicate the thread exited.
@@ -232,12 +233,9 @@ struct DAP final : public DAPTransport::MessageHandler {
 
   void SendOutput(OutputType o, const llvm::StringRef output);
 
-  void SendProgressEvent(uint64_t progress_id, const char *message,
-                         uint64_t completed, uint64_t total);
+  src_ref_t CreateSourceReference(lldb::addr_t address);
 
-  int32_t CreateSourceReference(lldb::addr_t address);
-
-  std::optional<lldb::addr_t> GetSourceReferenceAddress(int32_t reference);
+  std::optional<lldb::addr_t> GetSourceReferenceAddress(src_ref_t reference);
 
   ExceptionBreakpoint *GetExceptionBPFromStopReason(lldb::SBThread &thread);
 
@@ -509,7 +507,7 @@ private:
   const protocol::Request *m_active_request;
 
   llvm::StringMap<SourceBreakpointMap> m_source_breakpoints;
-  llvm::DenseMap<int64_t, SourceBreakpointMap> m_source_assembly_breakpoints;
+  llvm::DenseMap<src_ref_t, SourceBreakpointMap> m_source_assembly_breakpoints;
 };
 
 } // namespace lldb_dap

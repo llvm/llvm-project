@@ -696,8 +696,7 @@ static const Value *stripPointerCastsAndOffsets(
         // but it can't be marked with returned attribute, that's why it needs
         // special case.
         if (StripKind == PSK_ForAliasAnalysis &&
-            (Call->getIntrinsicID() == Intrinsic::launder_invariant_group ||
-             Call->getIntrinsicID() == Intrinsic::strip_invariant_group)) {
+            Call->getIntrinsicID() == Intrinsic::launder_invariant_group) {
           V = Call->getArgOperand(0);
           continue;
         }
@@ -797,7 +796,8 @@ const Value *Value::stripAndAccumulateConstantOffsets(
     } else if (const auto *Call = dyn_cast<CallBase>(V)) {
       if (const Value *RV = Call->getReturnedArgOperand())
         V = RV;
-      if (AllowInvariantGroup && Call->isLaunderOrStripInvariantGroup())
+      if (AllowInvariantGroup &&
+          Call->getIntrinsicID() == Intrinsic::launder_invariant_group)
         V = Call->getArgOperand(0);
     } else if (auto *Int2Ptr = dyn_cast<Operator>(V)) {
       // Try to accumulate across (inttoptr (add (ptrtoint p), off)).
@@ -861,11 +861,20 @@ bool Value::canBeFreed() const {
     // another pointer to the same allocation. Readonly implies nofree.
     if ((A->hasNoFreeAttr() || A->onlyReadsMemory()) && A->hasNoAliasAttr())
       return false;
+
+    // nofreeobj means that the underlying object cannot be freed, even
+    // through a different pointer.
+    if (A->hasAttribute(Attribute::NoFreeObj))
+      return false;
   }
 
   if (auto *ITP = dyn_cast<IntToPtrInst>(this);
-      ITP && ITP->hasMetadata(LLVMContext::MD_nofree))
+      ITP && ITP->hasMetadata(LLVMContext::MD_nofreeobj))
     return false;
+
+  if (auto *CB = dyn_cast<CallBase>(this))
+    if (CB->hasRetAttr(Attribute::NoFreeObj))
+      return false;
 
   const Function *F = nullptr;
   if (auto *I = dyn_cast<Instruction>(this))

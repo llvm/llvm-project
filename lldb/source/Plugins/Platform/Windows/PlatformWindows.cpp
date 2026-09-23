@@ -39,6 +39,8 @@
 
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
 
 using namespace lldb;
@@ -50,7 +52,9 @@ static uint32_t g_initialize_count = 0;
 
 // Upper bound on the timeout used when running a utility expression with
 // only one thread allowed to run.
-static constexpr std::chrono::seconds g_max_one_thread_timeout(5);
+static std::chrono::microseconds GetLoaderOneThreadTimeout(Process *process) {
+  return std::chrono::microseconds(process->GetUtilityExpressionTimeout()) / 2;
+}
 
 namespace {
 
@@ -429,8 +433,7 @@ uint32_t PlatformWindows::DoLoadImage(Process *process,
   // handle currently.
   options.SetTrapExceptions(false);
   options.SetTimeout(process->GetUtilityExpressionTimeout());
-  options.SetOneThreadTimeout(std::min<std::chrono::microseconds>(
-      g_max_one_thread_timeout, process->GetUtilityExpressionTimeout() / 2));
+  options.SetOneThreadTimeout(GetLoaderOneThreadTimeout(process));
   options.SetIsForUtilityExpr(true);
 
   ExpressionResults result =
@@ -447,12 +450,15 @@ uint32_t PlatformWindows::DoLoadImage(Process *process,
   }
 
   /* Read result */
-  lldb::addr_t token = process->ReadPointerFromMemory(injected_result, status);
-  if (status.Fail()) {
-    error = Status::FromErrorStringWithFormat(
-        "LoadLibrary error: could not read the result: %s", status.AsCString());
+  llvm::Expected<lldb::addr_t> token_or_err =
+      process->ReadPointerFromMemory(injected_result);
+  if (!token_or_err) {
+    error = Status::FromErrorStringWithFormatv(
+        "LoadLibrary error: could not read the result: {0}",
+        llvm::fmt_consume(token_or_err.takeError()));
     return LLDB_INVALID_IMAGE_TOKEN;
   }
+  lldb::addr_t token = *token_or_err;
 
   if (!token) {
     // ErrorCode is a 4-byte `unsigned` field in __lldb_LoadLibraryResult.
@@ -942,8 +948,7 @@ extern "C" {
   // handle currently.
   options.SetTrapExceptions(false);
   options.SetTimeout(process->GetUtilityExpressionTimeout());
-  options.SetOneThreadTimeout(std::min<std::chrono::microseconds>(
-      g_max_one_thread_timeout, process->GetUtilityExpressionTimeout() / 2));
+  options.SetOneThreadTimeout(GetLoaderOneThreadTimeout(process));
 
   ExpressionResults result = UserExpression::Evaluate(
       context, options, expression, kLoaderDecls, value);

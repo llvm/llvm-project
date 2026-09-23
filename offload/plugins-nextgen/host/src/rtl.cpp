@@ -12,6 +12,8 @@
 
 #include <cassert>
 #include <cstddef>
+#include <map>
+#include <mutex>
 #include <string>
 #include <unordered_map>
 
@@ -182,8 +184,8 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
 
   /// Load the binary image into the device and allocate an image object.
   Expected<DeviceImageTy *>
-  loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage,
-                 int32_t ImageId) override {
+  loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage, int32_t ImageId,
+                 PluginContextTy * /*Context*/) override {
     // Allocate and initialize the image object.
     GenELF64DeviceImageTy *Image = Plugin.allocate<GenELF64DeviceImageTy>();
     new (Image) GenELF64DeviceImageTy(ImageId, *this, std::move(TgtImage));
@@ -328,11 +330,6 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
                        bool *IsQueueWorkCompleted) override {
     if (IsQueueWorkCompleted)
       *IsQueueWorkCompleted = true;
-    return Plugin::success();
-  }
-
-  /// This plugin does not support interoperability
-  Error initAsyncInfoImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) override {
     return Plugin::success();
   }
 
@@ -487,6 +484,61 @@ public:
   }
 };
 
+struct GenELF64PluginContextTy final : public PluginContextTy {
+  using PluginContextTy::PluginContextTy;
+
+  Error initAsyncInfoImpl(GenericDeviceTy &, AsyncInfoWrapperTy &) override {
+    return Plugin::success();
+  }
+
+  Expected<void *> allocate(GenericDeviceTy &Device, int64_t Size,
+                            void *HostPtr, TargetAllocTy Kind,
+                            size_t Alignment) override {
+    auto PtrOrErr =
+        PluginContextTy::allocate(Device, Size, HostPtr, Kind, Alignment);
+    if (!PtrOrErr)
+      return PtrOrErr.takeError();
+    void *Ptr = *PtrOrErr;
+    std::lock_guard<std::mutex> Lock(AllocsMutex);
+    Allocs[Ptr] = Entry{&Device, Kind, static_cast<size_t>(Size)};
+    return Ptr;
+  }
+
+  Error deallocate(GenericDeviceTy &Device, void *Ptr,
+                   TargetAllocTy Kind) override {
+    {
+      std::lock_guard<std::mutex> Lock(AllocsMutex);
+      Allocs.erase(Ptr);
+    }
+    return PluginContextTy::deallocate(Device, Ptr, Kind);
+  }
+
+  Expected<PluginAllocInfoTy> getAllocInfo(const void *Ptr) override {
+    std::lock_guard<std::mutex> Lock(AllocsMutex);
+    auto It = Allocs.upper_bound(const_cast<void *>(Ptr));
+    if (It == Allocs.begin())
+      return Plugin::error(error::ErrorCode::NOT_FOUND,
+                           "pointer is not a known allocation in this context");
+    --It;
+    void *Base = It->first;
+    const Entry &E = It->second;
+    if (reinterpret_cast<const char *>(Ptr) >=
+        reinterpret_cast<char *>(Base) + E.Size)
+      return Plugin::error(error::ErrorCode::NOT_FOUND,
+                           "pointer is not a known allocation in this context");
+    return PluginAllocInfoTy{E.Device, E.Kind, Base, E.Size};
+  }
+
+private:
+  struct Entry {
+    GenericDeviceTy *Device;
+    TargetAllocTy Kind;
+    size_t Size;
+  };
+  std::map<void *, Entry> Allocs;
+  std::mutex AllocsMutex;
+};
+
 /// Class implementing the plugin functionalities for GenELF64.
 struct GenELF64PluginTy final : public GenericPluginTy {
   /// Create the GenELF64 plugin.
@@ -510,6 +562,11 @@ struct GenELF64PluginTy final : public GenericPluginTy {
   GenericDeviceTy *createDevice(GenericPluginTy &Plugin, int32_t DeviceId,
                                 int32_t NumDevices) override {
     return new GenELF64DeviceTy(Plugin, DeviceId, NumDevices);
+  }
+
+  Expected<std::unique_ptr<PluginContextTy>>
+  createPluginContext(llvm::ArrayRef<GenericDeviceTy *> Devices) override {
+    return std::make_unique<GenELF64PluginContextTy>(*this, Devices);
   }
 
   /// Creates a generic global handler.

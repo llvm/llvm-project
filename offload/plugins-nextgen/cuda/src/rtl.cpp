@@ -561,8 +561,8 @@ struct CUDADeviceTy : public GenericDeviceTy {
 
   /// Load the binary image into the device and allocate an image object.
   Expected<DeviceImageTy *>
-  loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage,
-                 int32_t ImageId) override {
+  loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage, int32_t ImageId,
+                 PluginContextTy * /*Context*/) override {
     if (auto Err = setContext())
       return std::move(Err);
 
@@ -590,7 +590,7 @@ struct CUDADeviceTy : public GenericDeviceTy {
     CUdeviceptr DevicePtr;
     CUresult Res;
 
-    if (Alignment > 0 && Alignment > Granularity) {
+    if (Alignment > Granularity) {
       return Plugin::error(ErrorCode::UNSUPPORTED,
                            "requested alignment (%lu) larger than maximum "
                            "supported alignment (%lu)",
@@ -963,18 +963,6 @@ struct CUDADeviceTy : public GenericDeviceTy {
       if (auto Err = Plugin::check(Res, "error in cuMemPrefetchAsync: %s"))
         return Err;
     }
-    return Plugin::success();
-  }
-
-  /// Initialize the async info for interoperability purposes.
-  Error initAsyncInfoImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) override {
-    if (auto Err = setContext())
-      return Err;
-
-    CUstream Stream;
-    if (auto Err = getStream(AsyncInfoWrapper, Stream))
-      return Err;
-
     return Plugin::success();
   }
 
@@ -1674,6 +1662,75 @@ public:
   }
 };
 
+struct CUDAPluginContextTy final : public PluginContextTy {
+  using PluginContextTy::PluginContextTy;
+
+  Error initAsyncInfoImpl(GenericDeviceTy &Device,
+                          AsyncInfoWrapperTy &AsyncInfoWrapper) override {
+    auto &CUDADevice = static_cast<CUDADeviceTy &>(Device);
+    if (auto Err = CUDADevice.setContext())
+      return Err;
+
+    CUstream Stream;
+    return CUDADevice.getStream(AsyncInfoWrapper, Stream);
+  }
+
+  Expected<PluginAllocInfoTy> getAllocInfo(const void *Ptr) override {
+    if (Devices.empty())
+      return Plugin::error(error::ErrorCode::NOT_FOUND,
+                           "pointer is not a known allocation in this context");
+
+    // Any device in the context can service the query; use the first.
+    auto &Ctx0 = static_cast<CUDADeviceTy &>(*Devices.front());
+    if (auto Err = Ctx0.setContext())
+      return std::move(Err);
+
+    CUdeviceptr CUPtr = reinterpret_cast<CUdeviceptr>(Ptr);
+
+    CUpointer_attribute Attrs[] = {
+        CU_POINTER_ATTRIBUTE_MEMORY_TYPE,
+        CU_POINTER_ATTRIBUTE_IS_MANAGED,
+        CU_POINTER_ATTRIBUTE_DEVICE_ORDINAL,
+        CU_POINTER_ATTRIBUTE_RANGE_START_ADDR,
+        CU_POINTER_ATTRIBUTE_RANGE_SIZE,
+    };
+    unsigned MemType = 0;
+    int IsManaged = 0;
+    int Ordinal = -1;
+    CUdeviceptr RangeStart = 0;
+    size_t RangeSize = 0;
+    void *Data[] = {&MemType, &IsManaged, &Ordinal, &RangeStart, &RangeSize};
+    if (CUresult Res = cuPointerGetAttributes(sizeof(Attrs) / sizeof(Attrs[0]),
+                                              Attrs, Data, CUPtr))
+      return Plugin::error(error::ErrorCode::NOT_FOUND,
+                           "cuPointerGetAttributes failed: %d", Res);
+
+    TargetAllocTy Kind = TARGET_ALLOC_DEVICE;
+    if (IsManaged)
+      Kind = TARGET_ALLOC_SHARED;
+    else if (MemType == CU_MEMORYTYPE_HOST)
+      Kind = TARGET_ALLOC_HOST;
+
+    // Ordinal is the CUDA driver ordinal (matches CUdevice); compare against
+    // that rather than the offload-side device index, which can differ under
+    // CUDA_VISIBLE_DEVICES or plugin-side device filtering.
+    GenericDeviceTy *OwnerDevice = nullptr;
+    for (auto *D : Devices) {
+      auto &CD = static_cast<CUDADeviceTy &>(*D);
+      if (static_cast<int>(CD.getCUDADevice()) == Ordinal) {
+        OwnerDevice = D;
+        break;
+      }
+    }
+    if (!OwnerDevice)
+      return Plugin::error(error::ErrorCode::NOT_FOUND,
+                           "allocation owner is not a device of this context");
+
+    return PluginAllocInfoTy{OwnerDevice, Kind,
+                             reinterpret_cast<void *>(RangeStart), RangeSize};
+  }
+};
+
 /// Class implementing the CUDA-specific functionalities of the plugin.
 struct CUDAPluginTy final : public GenericPluginTy {
   /// Create a CUDA plugin.
@@ -1737,6 +1794,11 @@ struct CUDAPluginTy final : public GenericPluginTy {
   GenericDeviceTy *createDevice(GenericPluginTy &Plugin, int32_t DeviceId,
                                 int32_t NumDevices) override {
     return new CUDADeviceTy(Plugin, DeviceId, NumDevices);
+  }
+
+  Expected<std::unique_ptr<PluginContextTy>>
+  createPluginContext(llvm::ArrayRef<GenericDeviceTy *> Devices) override {
+    return std::make_unique<CUDAPluginContextTy>(*this, Devices);
   }
 
   /// Creates a CUDA global handler.

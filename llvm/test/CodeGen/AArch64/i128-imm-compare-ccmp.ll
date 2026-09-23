@@ -201,3 +201,20 @@ define i1 @uge_imm(i128 %x) {
   %cmp = icmp uge i128 %x, 5
   ret i1 %cmp
 }
+
+define i1 @f1(i65 %loadedv) {
+; CHECK-LABEL: f1:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mvn w8, w1
+; CHECK-NEXT:    orn w8, w8, w0
+; CHECK-NEXT:    orr x8, x8, #0xfffffffffffffffe
+; CHECK-NEXT:    cmp x8, #0
+; CHECK-NEXT:    cset w0, eq
+; CHECK-NEXT:    ret
+entry:
+  %conv2 = zext i65 %loadedv to i113
+  %not = xor i113 %conv2, -1
+  %conv3 = trunc i113 %not to i96
+  %cmp4 = icmp eq i96 %conv3, 0
+  ret i1 %cmp4
+}

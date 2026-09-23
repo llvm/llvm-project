@@ -45,7 +45,7 @@ if (C_SUPPORTS_NODEFAULTLIBS_FLAG)
   endif ()
   if (COMPILER_RT_USE_BUILTINS_LIBRARY)
     # TODO: remote this check once we address PR51389.
-    if (${COMPILER_RT_BUILTINS_LIBRARY})
+    if (COMPILER_RT_BUILTINS_LIBRARY)
       list(APPEND CMAKE_REQUIRED_LIBRARIES "${COMPILER_RT_BUILTINS_LIBRARY}")
     endif()
   elseif (COMPILER_RT_HAS_GCC_S_LIB)
@@ -445,7 +445,7 @@ if(APPLE)
 
   if(COMPILER_RT_ENABLE_IOS)
     list(APPEND DARWIN_EMBEDDED_PLATFORMS ios)
-    set(DARWIN_ios_MIN_VER 9.0)
+    set(DARWIN_ios_MIN_VER 15.0)
     set(DARWIN_ios_MIN_VER_FLAG -miphoneos-version-min)
     set(DARWIN_ios_SANITIZER_MIN_VER_FLAG
       ${DARWIN_ios_MIN_VER_FLAG}=${DARWIN_ios_MIN_VER})
@@ -455,7 +455,7 @@ if(APPLE)
   endif()
   if(COMPILER_RT_ENABLE_WATCHOS)
     list(APPEND DARWIN_EMBEDDED_PLATFORMS watchos)
-    set(DARWIN_watchos_MIN_VER 2.0)
+    set(DARWIN_watchos_MIN_VER 8.0)
     set(DARWIN_watchos_MIN_VER_FLAG -mwatchos-version-min)
     set(DARWIN_watchos_SANITIZER_MIN_VER_FLAG
       ${DARWIN_watchos_MIN_VER_FLAG}=${DARWIN_watchos_MIN_VER})
@@ -465,7 +465,7 @@ if(APPLE)
   endif()
   if(COMPILER_RT_ENABLE_TVOS)
     list(APPEND DARWIN_EMBEDDED_PLATFORMS tvos)
-    set(DARWIN_tvos_MIN_VER 9.0)
+    set(DARWIN_tvos_MIN_VER 15.0)
     set(DARWIN_tvos_MIN_VER_FLAG -mtvos-version-min)
     set(DARWIN_tvos_SANITIZER_MIN_VER_FLAG
       ${DARWIN_tvos_MIN_VER_FLAG}=${DARWIN_tvos_MIN_VER})
@@ -491,7 +491,7 @@ if(APPLE)
     set(ORC_SUPPORTED_OS osx)
   endif()
 
-  set(DEFAULT_SANITIZER_MIN_OSX_VERSION 10.13)
+  set(DEFAULT_SANITIZER_MIN_OSX_VERSION 11.0)
   set(DARWIN_osx_MIN_VER_FLAG "-mmacosx-version-min")
 
   string(REGEX MATCH "${DARWIN_osx_MIN_VER_FLAG}=([.0-9]+)"
@@ -740,6 +740,8 @@ else()
   filter_available_targets(GWP_ASAN_SUPPORTED_ARCH ${ALL_GWP_ASAN_SUPPORTED_ARCH})
   filter_available_targets(NSAN_SUPPORTED_ARCH ${ALL_NSAN_SUPPORTED_ARCH})
   filter_available_targets(ORC_SUPPORTED_ARCH ${ALL_ORC_SUPPORTED_ARCH})
+  filter_available_targets(COPYPROF_SUPPORTED_ARCH ${ALL_COPYPROF_SUPPORTED_ARCH})
+
 endif()
 
 if (MSVC)
@@ -887,8 +889,9 @@ else()
   set(COMPILER_RT_TSAN_HAS_STATIC_RUNTIME FALSE)
 endif()
 
-if (COMPILER_RT_HAS_SANITIZER_COMMON AND UBSAN_SUPPORTED_ARCH AND
-    OS_NAME MATCHES "Darwin|Linux|FreeBSD|NetBSD|Windows|Android|Fuchsia|SunOS|Haiku")
+if ((COMPILER_RT_HAS_SANITIZER_COMMON AND UBSAN_SUPPORTED_ARCH AND
+     OS_NAME MATCHES "Darwin|Linux|FreeBSD|NetBSD|Windows|Android|Fuchsia|SunOS|Haiku")
+    OR (COMPILER_RT_GPU_BUILD AND UBSAN_SUPPORTED_ARCH))
   set(COMPILER_RT_HAS_UBSAN TRUE)
 else()
   set(COMPILER_RT_HAS_UBSAN FALSE)
@@ -913,6 +916,13 @@ if (COMPILER_RT_HAS_SANITIZER_COMMON AND CFI_SUPPORTED_ARCH)
   set(COMPILER_RT_HAS_CFI TRUE)
 else()
   set(COMPILER_RT_HAS_CFI FALSE)
+endif()
+
+if (COMPILER_RT_HAS_SANITIZER_COMMON AND COPYPROF_SUPPORTED_ARCH AND
+    OS_NAME MATCHES "Linux")
+  set(COMPILER_RT_HAS_COPYPROF TRUE)
+else()
+  set(COMPILER_RT_HAS_COPYPROF FALSE)
 endif()
 
 #TODO(kostyak): add back Android & Fuchsia when the code settles a bit.

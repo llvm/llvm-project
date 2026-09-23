@@ -14,7 +14,6 @@
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
@@ -172,7 +171,7 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
       BasicBlock *OldDest = Cond->getZExtValue() ? Dest2 : Dest1;
 
       // Let the basic block know that we are letting go of it.  Based on this,
-      // it will adjust it's PHI nodes.
+      // it will adjust its PHI nodes.
       OldDest->removePredecessor(BB);
 
       // Replace the conditional branch with an unconditional one.
@@ -255,8 +254,8 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
       }
 
       // Otherwise, check to see if the switch only branches to one destination.
-      // We do this by reseting "TheOnlyDest" to null when we find two non-equal
-      // destinations.
+      // We do this by resetting "TheOnlyDest" to null when we find two
+      // non-equal destinations.
       if (It->getCaseSuccessor() != TheOnlyDest)
         TheOnlyDest = nullptr;
 
@@ -404,18 +403,6 @@ bool llvm::isInstructionTriviallyDead(Instruction *I,
                                       const TargetLibraryInfo *TLI) {
   if (!I->use_empty())
     return false;
-  return wouldInstructionBeTriviallyDead(I, TLI);
-}
-
-bool llvm::wouldInstructionBeTriviallyDeadOnUnusedPaths(
-    Instruction *I, const TargetLibraryInfo *TLI) {
-  // Instructions that are "markers" and have implied meaning on code around
-  // them (without explicit uses), are not dead on unused paths.
-  if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I))
-    if (II->getIntrinsicID() == Intrinsic::stacksave ||
-        II->getIntrinsicID() == Intrinsic::launder_invariant_group ||
-        II->isLifetimeStartOrEnd())
-      return false;
   return wouldInstructionBeTriviallyDead(I, TLI);
 }
 
@@ -609,21 +596,13 @@ void llvm::RecursivelyDeleteTriviallyDeadInstructions(
   }
 }
 
-bool llvm::replaceDbgUsesWithUndef(Instruction *I) {
-  SmallVector<DbgVariableRecord *, 1> DPUsers;
-  findDbgUsers(I, DPUsers);
-  for (auto *DVR : DPUsers)
-    DVR->setKillLocation();
-  return !DPUsers.empty();
-}
-
 /// areAllUsesEqual - Check whether the uses of a value are all the same.
 /// This is similar to Instruction::hasOneUse() except this will also return
 /// true when there are no uses or multiple uses that all refer to the same
 /// value.
 static bool areAllUsesEqual(Instruction *I) {
-  Value::user_iterator UI = I->user_begin();
-  Value::user_iterator UE = I->user_end();
+  Instruction::user_iterator UI = I->user_begin();
+  Instruction::user_iterator UE = I->user_end();
   if (UI == UE)
     return true;
 
@@ -1225,7 +1204,7 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
                       << " and " << Succ->getName() << " : "
                       << CommonPred->getName() << "\n");
 
-  // 'BB' and 'BB->Pred' are loop latches, bail out to presrve inner loop
+  // 'BB' and 'BB->Pred' are loop latches, bail out to preserve inner loop
   // metadata.
   //
   // FIXME: This is a stop-gap solution to preserve inner-loop metadata given
@@ -1252,7 +1231,7 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
   //
   // CFG Before
   //
-  // BB is while.cond.exit, attached with loop metdata md2.
+  // BB is while.cond.exit, attached with loop metadata md2.
   // BB->Pred is for.body, attached with loop metadata md1.
   //
   //      entry
@@ -1277,7 +1256,7 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
   // for.body is attached with md2, and md1 is dropped.
   // If LoopSimplify runs later (as a part of loop pass), it could create
   // dedicated exits for inner-loop (essentially adding `while.cond.exit`
-  // back), but won't it won't see 'md1' nor restore it for the inner-loop.
+  // back), but it won't see 'md1' nor restore it for the inner-loop.
   //
   //       entry
   //         |
@@ -1680,6 +1659,9 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableRecord *DVR,
   auto *DIExpr = DVR->getExpression();
   Value *DV = SI->getValueOperand();
 
+  if (isa<UndefValue>(DV) && !isa<PoisonValue>(DV))
+    return;
+
   DebugLoc NewLoc = getDebugValueLoc(DVR);
 
   // If the alloca describes the variable itself, i.e. the expression in the
@@ -2030,35 +2012,36 @@ void llvm::replaceDbgValueForAlloca(AllocaInst *AI, Value *NewAllocaAddress,
                                Builder, Offset);
 }
 
-/// Where possible to salvage debug information for \p I do so.
-/// If not possible mark undef.
 void llvm::salvageDebugInfo(Instruction &I) {
-  SmallVector<DbgVariableRecord *, 1> DPUsers;
-  findDbgUsers(&I, DPUsers);
-  salvageDebugInfoForDbgValues(I, DPUsers);
+  SmallVector<DbgVariableRecord *, 1> DbgRecords;
+  findDbgUsers(&I, DbgRecords);
+  salvageDebugInfoForDbgValues(I, DbgRecords);
 }
 
-template <typename T> static void salvageDbgAssignAddress(T *Assign) {
-  Instruction *I = dyn_cast<Instruction>(Assign->getAddress());
-  // Only instructions can be salvaged at the moment.
-  if (!I)
-    return;
-
-  assert(!Assign->getAddressExpression()->getFragmentInfo().has_value() &&
+/// Salvage the address of \p Assign, which the caller has checked is \p I. An
+/// address we cannot salvage stays as it is rather than stopping the caller,
+/// which counts the record as processed either way and goes on to salvage its
+/// variable location.
+static void salvageDbgAssignAddress(Instruction &I, DbgVariableRecord &Assign) {
+  assert(Assign.isDbgAssign() && Assign.getAddress() == &I &&
+         "dbg.assign must use salvaged instruction as its address");
+  assert(!Assign.getAddressExpression()->getFragmentInfo().has_value() &&
          "address-expression shouldn't have fragment info");
 
   // The address component of a dbg.assign cannot be variadic.
   uint64_t CurrentLocOps = 0;
   SmallVector<Value *, 4> AdditionalValues;
   SmallVector<uint64_t, 16> Ops;
-  Value *NewV = salvageDebugInfoImpl(*I, CurrentLocOps, Ops, AdditionalValues);
+  Value *NewAddress =
+      salvageDebugInfoImpl(I, CurrentLocOps, Ops, AdditionalValues);
 
-  // Check if the salvage failed.
-  if (!NewV)
+  // Keep an address we cannot salvage. If I is deleted, its remaining metadata
+  // use is replaced with poison.
+  if (!NewAddress)
     return;
 
   DIExpression *SalvagedExpr = DIExpression::appendOpsToArg(
-      Assign->getAddressExpression(), Ops, 0, /*StackValue=*/false);
+      Assign.getAddressExpression(), Ops, 0, /*StackValue=*/false);
   assert(!SalvagedExpr->getFragmentInfo().has_value() &&
          "address-expression shouldn't have fragment info");
 
@@ -2066,91 +2049,99 @@ template <typename T> static void salvageDbgAssignAddress(T *Assign) {
 
   // Salvage succeeds if no additional values are required.
   if (AdditionalValues.empty()) {
-    Assign->setAddress(NewV);
-    Assign->setAddressExpression(SalvagedExpr);
+    Assign.setAddress(NewAddress);
+    Assign.setAddressExpression(SalvagedExpr);
   } else {
-    Assign->setKillAddress();
+    Assign.setKillAddress();
   }
 }
 
-void llvm::salvageDebugInfoForDbgValues(Instruction &I,
-                                        ArrayRef<DbgVariableRecord *> DPUsers) {
+/// Rewrite \p DVR's variable location in terms of \p I's operands. Return false
+/// and leave the record alone when the instruction cannot be salvaged. Return
+/// true once it can, including when the location ends up killed.
+static bool salvageDbgVariableLocation(Instruction &I, DbgVariableRecord &DVR) {
   // These are arbitrary chosen limits on the maximum number of values and the
   // maximum size of a debug expression we can salvage up to, used for
   // performance reasons.
   const unsigned MaxDebugArgs = 16;
   const unsigned MaxExpressionSize = 128;
-  bool Salvaged = false;
 
-  for (auto *DVR : DPUsers) {
+  // Do not add DW_OP_stack_value for DbgDeclare and DbgAddr, because they
+  // are implicitly pointing out the value as a DWARF memory location
+  // description.
+  const bool StackValue = !DVR.isAddressOfVariable();
+  auto LocationOps = DVR.location_ops();
+  assert(is_contained(LocationOps, &I) &&
+         "DbgVariableRecord must use salvaged instruction as its location");
+  SmallVector<Value *, 4> AdditionalValues;
+  // 'I' may appear more than once in DVR's location ops, and each use of 'I'
+  // must be updated in the DIExpression and potentially have additional
+  // values added; thus we call salvageDebugInfoImpl for each 'I' instance in
+  // LocationOps.
+  Value *Replacement = nullptr;
+  DIExpression *SalvagedExpr = DVR.getExpression();
+  auto LocIt = find(LocationOps, &I);
+  while (SalvagedExpr && LocIt != LocationOps.end()) {
+    SmallVector<uint64_t, 16> Ops;
+    unsigned LocationIndex = std::distance(LocationOps.begin(), LocIt);
+    uint64_t CurrentLocOps = SalvagedExpr->getNumLocationOperands();
+    Replacement = salvageDebugInfoImpl(I, CurrentLocOps, Ops, AdditionalValues);
+    if (!Replacement)
+      break;
+    SalvagedExpr = DIExpression::appendOpsToArg(SalvagedExpr, Ops,
+                                                LocationIndex, StackValue);
+    LocIt = std::find(++LocIt, LocationOps.end(), &I);
+  }
+  // The failure conditions in salvageDebugInfoImpl do not depend on
+  // CurrentLocOps, so failure can only occur on the first occurrence.
+  if (!Replacement)
+    return false;
+
+  SalvagedExpr = SalvagedExpr->foldConstantMath();
+  DVR.replaceVariableLocationOp(&I, Replacement);
+  const bool FitsExpressionLimit =
+      SalvagedExpr->getNumElements() <= MaxExpressionSize;
+  if (AdditionalValues.empty() && FitsExpressionLimit) {
+    DVR.setExpression(SalvagedExpr);
+  } else if (!DVR.isAddressOfVariable() && FitsExpressionLimit &&
+             DVR.getNumVariableLocationOps() + AdditionalValues.size() <=
+                 MaxDebugArgs) {
+    DVR.addVariableLocationOps(AdditionalValues, SalvagedExpr);
+  } else {
+    // Do not salvage using DIArgList for dbg.addr/dbg.declare, as it is
+    // currently only valid for stack value expressions.
+    // Also do not salvage if the resulting DIArgList would contain an
+    // unreasonably large number of values.
+    DVR.setKillLocation();
+  }
+  LLVM_DEBUG(dbgs() << "SALVAGE: " << DVR << '\n');
+  return true;
+}
+
+void llvm::salvageDebugInfoForDbgValues(
+    Instruction &I, ArrayRef<DbgVariableRecord *> DbgRecords) {
+  bool ProcessedAnyUse = false;
+
+  for (auto *DVR : DbgRecords) {
+    // replaceVariableLocationOp also updates a matching dbg.assign address, so
+    // salvage the address before changing the variable location.
     if (DVR->isDbgAssign()) {
       if (DVR->getAddress() == &I) {
-        salvageDbgAssignAddress(DVR);
-        Salvaged = true;
+        salvageDbgAssignAddress(I, *DVR);
+        ProcessedAnyUse = true;
       }
       if (DVR->getValue() != &I)
         continue;
     }
-
-    // Do not add DW_OP_stack_value for DbgDeclare and DbgAddr, because they
-    // are implicitly pointing out the value as a DWARF memory location
-    // description.
-    bool StackValue =
-        DVR->getType() != DbgVariableRecord::LocationType::Declare;
-    auto DVRLocation = DVR->location_ops();
-    assert(
-        is_contained(DVRLocation, &I) &&
-        "DbgVariableIntrinsic must use salvaged instruction as its location");
-    SmallVector<Value *, 4> AdditionalValues;
-    // 'I' may appear more than once in DVR's location ops, and each use of 'I'
-    // must be updated in the DIExpression and potentially have additional
-    // values added; thus we call salvageDebugInfoImpl for each 'I' instance in
-    // DVRLocation.
-    Value *Op0 = nullptr;
-    DIExpression *SalvagedExpr = DVR->getExpression();
-    auto LocItr = find(DVRLocation, &I);
-    while (SalvagedExpr && LocItr != DVRLocation.end()) {
-      SmallVector<uint64_t, 16> Ops;
-      unsigned LocNo = std::distance(DVRLocation.begin(), LocItr);
-      uint64_t CurrentLocOps = SalvagedExpr->getNumLocationOperands();
-      Op0 = salvageDebugInfoImpl(I, CurrentLocOps, Ops, AdditionalValues);
-      if (!Op0)
-        break;
-      SalvagedExpr =
-          DIExpression::appendOpsToArg(SalvagedExpr, Ops, LocNo, StackValue);
-      LocItr = std::find(++LocItr, DVRLocation.end(), &I);
-    }
-    // salvageDebugInfoImpl should fail on examining the first element of
-    // DbgUsers, or none of them.
-    if (!Op0)
+    if (!salvageDbgVariableLocation(I, *DVR))
       break;
-
-    SalvagedExpr = SalvagedExpr->foldConstantMath();
-    DVR->replaceVariableLocationOp(&I, Op0);
-    bool IsValidSalvageExpr =
-        SalvagedExpr->getNumElements() <= MaxExpressionSize;
-    if (AdditionalValues.empty() && IsValidSalvageExpr) {
-      DVR->setExpression(SalvagedExpr);
-    } else if (DVR->getType() != DbgVariableRecord::LocationType::Declare &&
-               IsValidSalvageExpr &&
-               DVR->getNumVariableLocationOps() + AdditionalValues.size() <=
-                   MaxDebugArgs) {
-      DVR->addVariableLocationOps(AdditionalValues, SalvagedExpr);
-    } else {
-      // Do not salvage using DIArgList for dbg.addr/dbg.declare, as it is
-      // currently only valid for stack value expressions.
-      // Also do not salvage if the resulting DIArgList would contain an
-      // unreasonably large number of values.
-      DVR->setKillLocation();
-    }
-    LLVM_DEBUG(dbgs() << "SALVAGE: " << DVR << '\n');
-    Salvaged = true;
+    ProcessedAnyUse = true;
   }
 
-  if (Salvaged)
+  if (ProcessedAnyUse)
     return;
 
-  for (auto *DVR : DPUsers)
+  for (auto *DVR : DbgRecords)
     DVR->setKillLocation();
 }
 
@@ -2597,7 +2588,6 @@ CallInst *llvm::createCallMatchingInvoke(InvokeInst *II) {
                                        II->getCalledOperand(), Args, OpBundles);
   NewCall->setCallingConv(II->getCallingConv());
   NewCall->setAttributes(II->getAttributes());
-  NewCall->setDebugLoc(II->getDebugLoc());
   NewCall->copyMetadata(*II);
 
   // If the invoke had profile metadata, try converting them for CallInst.
@@ -2862,7 +2852,7 @@ static bool markAliveBlocks(Function &F, SmallVectorImpl<bool> &Reachable,
         }
         if (DTU) {
           std::vector<DominatorTree::UpdateType> Updates;
-          for (const std::pair<BasicBlock *, int> &I : NumPerSuccessorCases)
+          for (const auto &I : NumPerSuccessorCases)
             if (I.second == 0)
               Updates.push_back({DominatorTree::Delete, BB, I.first});
           DTU->applyUpdates(Updates);
@@ -3343,12 +3333,7 @@ bool llvm::callsGCLeafFunction(const CallBase *Call,
   // Lib calls can be materialized by some passes, and won't be
   // marked as 'gc-leaf-function.' All available Libcalls are
   // GC-leaf.
-  LibFunc LF;
-  if (TLI.getLibFunc(*Call, LF)) {
-    return TLI.has(LF);
-  }
-
-  return false;
+  return TLI.has(TLI.getLibFunc(*Call));
 }
 
 void llvm::copyNonnullMetadata(const LoadInst &OldLI, MDNode *N,
@@ -3544,7 +3529,7 @@ struct BitPart {
 /// bitnumber to bitnumber. It is the caller's responsibility to validate that
 /// the bitnumber to bitnumber mapping is correct for a bswap or bitreverse.
 ///
-/// For example, if the current subexpression if "(shl i32 %X, 24)" then we know
+/// For example, if the current subexpression is "(shl i32 %X, 24)" then we know
 /// that the expression deposits the low byte of %X into the high byte of the
 /// result and that all other bits are zero. This expression is accepted and a
 /// BitPart is returned with Provider set to %X and Provenance[24-31] set to
@@ -3558,8 +3543,8 @@ struct BitPart {
 /// provided map. To avoid unnecessary copying of BitParts, BitParts are
 /// constructed in-place in the \c BPS map. Because of this \c BPS needs to
 /// store BitParts objects, not pointers. As we need the concept of a nullptr
-/// BitParts (Value has been analyzed and the analysis failed), we an Optional
-/// type instead to provide the same functionality.
+/// BitParts (Value has been analyzed and the analysis failed), we use an
+/// Optional type instead to provide the same functionality.
 ///
 /// Because we pass around references into \c BPS, we must use a container that
 /// does not invalidate internal references (std::map instead of DenseMap).
@@ -3702,7 +3687,7 @@ collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
       return Result;
     }
 
-    // BITREVERSE - most likely due to us previous matching a partial
+    // BITREVERSE - most likely due to us previously matching a partial
     // bitreverse.
     if (match(V, m_BitReverse(m_Value(X)))) {
       const auto &Res = collectBitParts(X, MatchBSwaps, MatchBitReversals, BPS,
@@ -3716,7 +3701,7 @@ collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
       return Result;
     }
 
-    // BSWAP - most likely due to us previous matching a partial bswap.
+    // BSWAP - most likely due to us previously matching a partial bswap.
     if (match(V, m_BSwap(m_Value(X)))) {
       const auto &Res = collectBitParts(X, MatchBSwaps, MatchBitReversals, BPS,
                                         Depth + 1, FoundRoot);
@@ -3907,9 +3892,8 @@ bool llvm::recognizeBSwapOrBitReverseIdiom(
 void llvm::maybeMarkSanitizerLibraryCallNoBuiltin(
     CallInst *CI, const TargetLibraryInfo *TLI) {
   Function *F = CI->getCalledFunction();
-  LibFunc Func;
   if (F && !F->hasLocalLinkage() && F->hasName() &&
-      TLI->getLibFunc(F->getName(), Func) && TLI->hasOptimizedCodeGen(Func) &&
+      TLI->hasOptimizedCodeGen(TLI->getLibFunc(F->getName())) &&
       !F->doesNotAccessMemory())
     CI->addFnAttr(Attribute::NoBuiltin);
 }

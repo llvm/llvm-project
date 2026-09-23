@@ -225,3 +225,40 @@ TEST(LockedTest, ExclusiveAccessOnRWMutex) {
   writer->value = 11;
   EXPECT_EQ(widget.value, 11);
 }
+
+// Guarded is neither copyable nor movable.
+static_assert(!std::is_copy_constructible_v<Guarded<Widget>>);
+static_assert(!std::is_move_constructible_v<Guarded<Widget>>);
+
+TEST(LockedTest, GuardedDefaultConstructed) {
+  Guarded<Widget> guarded;
+  EXPECT_EQ(guarded.Lock()->value, 0);
+}
+
+TEST(LockedTest, GuardedValueConstructed) {
+  Guarded<Widget> guarded(Widget{42});
+  EXPECT_EQ(guarded.Lock()->value, 42);
+}
+
+TEST(LockedTest, GuardedExclusiveAccessMutatesValue) {
+  Guarded<Widget> guarded;
+  guarded.Lock()->value = 7;
+  EXPECT_EQ(guarded.Lock()->value, 7);
+}
+
+TEST(LockedTest, GuardedSharedAccessIsReadOnly) {
+  Guarded<Widget> guarded(Widget{5});
+  SharedLocked<const Widget *, llvm::sys::RWMutex> reader =
+      guarded.LockShared();
+  EXPECT_EQ(reader->value, 5);
+  static_assert(std::is_same_v<decltype(reader.get()), const Widget *>,
+                "shared access borrows a const-qualified pointer");
+}
+
+// std::shared_mutex satisfies SharedLockable too, so Guarded works with it
+// as a drop-in replacement for llvm::sys::RWMutex.
+TEST(LockedTest, GuardedWorksWithStdSharedMutex) {
+  Guarded<Widget, std::shared_mutex> guarded;
+  guarded.Lock()->value = 3;
+  EXPECT_EQ(guarded.LockShared()->value, 3);
+}

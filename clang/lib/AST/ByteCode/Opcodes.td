@@ -56,6 +56,7 @@ def ArgFixedPoint : ArgType { let Name = "FixedPoint"; let AsRef = true; }
 def ArgFunction : ArgType { let Name = "const Function *"; }
 def ArgFunctionDecl : ArgType { let Name = "const FunctionDecl *"; }
 def ArgRecordDecl : ArgType { let Name = "const RecordDecl *"; }
+def ArgCXXRecordDecl : ArgType { let Name = "const CXXRecordDecl *"; }
 def ArgRecordField : ArgType { let Name = "const Record::Field *"; }
 def ArgFltSemantics : ArgType { let Name = "const llvm::fltSemantics *"; }
 def ArgRoundingMode : ArgType { let Name = "llvm::RoundingMode"; }
@@ -74,6 +75,8 @@ def ArgEnumDecl : ArgType { let Name = "const EnumDecl *"; }
 def ArgTypePtr : ArgType { let Name = "const Type *"; }
 def ArgVoidPtr : ArgType { let Name = "const void *"; }
 def ArgReflectionKind : ArgType { let Name = "ReflectionKind"; }
+def ArgDeclOrExpr : ArgType { let Name = "DeclOrExpr"; }
+def ArgCtorDecl : ArgType { let Name = "const CXXConstructorDecl *"; }
 
 //===----------------------------------------------------------------------===//
 // Classes of types instructions operate on.
@@ -190,6 +193,9 @@ def PushIgnoreDiags : SuccessOpcode;
 def PopIgnoreDiags : SuccessOpcode;
 
 def StartInit : SuccessOpcode;
+def StartFieldInit : SuccessOpcode {
+  let Args = [ArgUint32];
+}
 def EndInit : SuccessOpcode;
 
 def StartSpeculation : SuccessOpcode;
@@ -324,12 +330,18 @@ def Null : SuccessOpcode {
   let HasGroup = 1;
 }
 
+def CastAddressSpace : Opcode {
+  let Args = [ArgUint64, ArgTypePtr];
+}
+
 //===----------------------------------------------------------------------===//
 // Pointer generation
 //===----------------------------------------------------------------------===//
 class OffsetOpcode : Opcode {
   let Args = [ArgUint32];
 }
+
+def AddrOf : Opcode;
 
 // [] -> [Pointer]
 def GetPtrLocal : OffsetOpcode {
@@ -386,11 +398,11 @@ def GetPtrDerivedPop : Opcode { let Args = [ArgUint32, ArgBool, ArgTypePtr]; }
 // [Pointer] -> [Pointer]
 def GetPtrVirtBasePop : Opcode {
   // RecordDecl of base class.
-  let Args = [ArgRecordDecl];
+  let Args = [ArgCXXRecordDecl];
 }
 def GetPtrVirtBase : Opcode {
   // RecordDecl of base class.
-  let Args = [ArgRecordDecl];
+  let Args = [ArgCXXRecordDecl];
 }
 
 def IsBaseClass : SuccessOpcode;
@@ -404,7 +416,7 @@ def GetPtrThisBase : Opcode {
 // [] -> [Pointer]
 def GetPtrThisVirtBase : Opcode {
   // RecordDecl of base class.
-  let Args = [ArgRecordDecl];
+  let Args = [ArgCXXRecordDecl];
 }
 // [] -> [Pointer]
 def This : Opcode;
@@ -482,6 +494,10 @@ def StartThisLifetime1 : Opcode {
   let NeedsOpPC = 0;
 }
 
+def DefaultInit : Opcode {
+  let Args = [ArgCtorDecl];
+}
+
 def CheckDecl : Opcode {
   let Args = [ArgVarDecl];
   let NeedsOpPC = 0;
@@ -541,11 +557,6 @@ def GetFieldPop : AccessOpcode;
 // [] -> [Value]
 def GetThisField : AccessOpcode;
 
-// [Pointer, Value] -> [Pointer]
-def SetField : AccessOpcode;
-// [Value] -> []
-def SetThisField : AccessOpcode;
-
 // [Value] -> []
 def InitThisField : AccessOpcode;
 def InitThisFieldActivate : AccessOpcode;
@@ -571,6 +582,7 @@ class LoadOpcode : Opcode {
 def Load : LoadOpcode {}
 // [Pointer] -> [Value]
 def LoadPop : LoadOpcode {}
+def LoadPopL : Opcode {}
 
 class StoreOpcode : Opcode {
   let Types = [AllTypeClass];
@@ -624,6 +636,11 @@ def AddOffset : Opcode {
   let Types = [IntegralTypeClass];
   let HasGroup = 1;
 }
+
+def GetOpaquePtr : SuccessOpcode {
+  let Args = [ArgDeclOrExpr, ArgBool];
+}
+
 // [Pointer, Integral] -> [Pointer]
 def SubOffset : Opcode {
   let Types = [IntegralTypeClass];
@@ -862,7 +879,7 @@ def ShiftFixedPoint : Opcode {
 }
 
 def PtrPtrCast : Opcode {
-  let Args = [ArgBool];
+  let Args = [ArgBool, ArgTypePtr];
 
 }
 
@@ -961,6 +978,9 @@ def CheckNonNullArg : Opcode {
 }
 
 def Memcpy : Opcode;
+def TrivialCopy : Opcode {
+  let Args = [ArgBool, ArgFunction];
+}
 
 def ToMemberPtr : SuccessOpcode;
 def CastMemberPtrPtr : Opcode;
@@ -1050,3 +1070,7 @@ def PushCC : SuccessOpcode {
 def PopCC : SuccessOpcode;
 def PushMSVCCE : SuccessOpcode;
 def PopMSVCCE : SuccessOpcode;
+
+def GetStringPtr : SuccessOpcode {
+  let Args = [ArgExpr];
+}

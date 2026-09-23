@@ -339,7 +339,7 @@ struct AMDGPUMemoryPoolTy {
     // compared with the alignment of the memory allocated using the given pool.
     // If the default alignment is greater than or equal to the alignment
     // requested by the user, it would still meet the user's requirements.
-    if (Alignment > 0 && Alignment > PoolAllocationAlignment) {
+    if (Alignment > PoolAllocationAlignment) {
       return Plugin::error(ErrorCode::UNSUPPORTED,
                            "requested alignment (%lu) larger than maximum "
                            "supported pool alignment (%lu)",
@@ -2686,8 +2686,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
   /// Load the binary image into the device and allocate an image object.
   Expected<DeviceImageTy *>
-  loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage,
-                 int32_t ImageId) override {
+  loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage, int32_t ImageId,
+                 PluginContextTy * /*Context*/) override {
     // Allocate and initialize the image object.
     AMDGPUDeviceImageTy *AMDImage = Plugin.allocate<AMDGPUDeviceImageTy>();
     new (AMDImage) AMDGPUDeviceImageTy(ImageId, *this, std::move(TgtImage));
@@ -2728,6 +2728,12 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     if (!MemoryPool)
       return Plugin::error(ErrorCode::OUT_OF_RESOURCES,
                            "no memory pool for the specified allocation kind");
+
+    // See allocate() for the registration of host / shared memory as pinned
+    // memory.
+    if (Kind == TARGET_ALLOC_HOST || Kind == TARGET_ALLOC_SHARED)
+      if (auto Err = PinnedAllocs.unregisterHostBuffer(TgtPtr))
+        return Err;
 
     if (auto Err = MemoryPool->deallocate(TgtPtr))
       return Err;
@@ -3093,12 +3099,6 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     return Stream->pushMemoryCopyH2DAsync(TgtPtr, PatternPtr, PinnedPtr,
                                           PatternSize, PinnedMemoryManager,
                                           Size / PatternSize);
-  }
-
-  /// Initialize the async info
-  Error initAsyncInfoImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) override {
-    // TODO: Implement this function.
-    return Plugin::success();
   }
 
   interop_spec_t selectInteropPreference(int32_t InteropType,
@@ -3979,6 +3979,33 @@ private:
   }
 };
 
+struct AMDGPUPluginContextTy final : public PluginContextTy {
+  using PluginContextTy::PluginContextTy;
+
+  Error initAsyncInfoImpl(GenericDeviceTy &, AsyncInfoWrapperTy &) override {
+    // TODO: Implement this function.
+    return Plugin::success();
+  }
+
+  Expected<void *> allocate(GenericDeviceTy &Device, int64_t Size,
+                            void *HostPtr, TargetAllocTy Kind,
+                            size_t Alignment) override;
+  Error deallocate(GenericDeviceTy &Device, void *Ptr,
+                   TargetAllocTy Kind) override;
+  Expected<PluginAllocInfoTy> getAllocInfo(const void *Ptr) override;
+
+private:
+  // Track each allocation's Kind so we can tell HOST from SHARED — HSA
+  // backs both with the same host fine-grained pool.
+  // TODO: drop once TARGET_ALLOC_SHARED has its own backing pool.
+  struct AllocInfo {
+    TargetAllocTy Kind;
+    GenericDeviceTy *Device;
+  };
+  llvm::DenseMap<const void *, AllocInfo> Allocations;
+  std::mutex AllocationsMutex;
+};
+
 /// Class implementing the AMDGPU-specific functionalities of the plugin.
 struct AMDGPUPluginTy final : public GenericPluginTy {
   /// Create an AMDGPU plugin and initialize the AMDGPU driver.
@@ -4081,6 +4108,11 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
                                 int32_t NumDevices) override {
     return new AMDGPUDeviceTy(Plugin, DeviceId, NumDevices, getHostDevice(),
                               getKernelAgent(DeviceId));
+  }
+
+  Expected<std::unique_ptr<PluginContextTy>>
+  createPluginContext(llvm::ArrayRef<GenericDeviceTy *> Devices) override {
+    return std::make_unique<AMDGPUPluginContextTy>(*this, Devices);
   }
 
   /// Creates an AMDGPU global handler.
@@ -4281,6 +4313,58 @@ private:
   AMDHostDeviceTy *HostDevice;
 };
 
+Expected<void *> AMDGPUPluginContextTy::allocate(GenericDeviceTy &Device,
+                                                 int64_t Size, void *HostPtr,
+                                                 TargetAllocTy Kind,
+                                                 size_t Alignment) {
+  auto PtrOrErr =
+      PluginContextTy::allocate(Device, Size, HostPtr, Kind, Alignment);
+  if (!PtrOrErr || !*PtrOrErr)
+    return PtrOrErr;
+  std::lock_guard<std::mutex> Lock(AllocationsMutex);
+  Allocations[*PtrOrErr] = {Kind, &Device};
+  return PtrOrErr;
+}
+
+Error AMDGPUPluginContextTy::deallocate(GenericDeviceTy &Device, void *Ptr,
+                                        TargetAllocTy Kind) {
+  // Erase before base deallocate: once Ptr returns to the MM freelist a
+  // concurrent alloc could reuse it and re-populate Allocations. On failure
+  // Ptr is in an undetermined state (maybe freed, maybe not) so we don't
+  // re-add it either.
+  {
+    std::lock_guard<std::mutex> Lock(AllocationsMutex);
+    Allocations.erase(Ptr);
+  }
+  return PluginContextTy::deallocate(Device, Ptr, Kind);
+}
+
+Expected<PluginAllocInfoTy>
+AMDGPUPluginContextTy::getAllocInfo(const void *Ptr) {
+  // HSA gives the base of the region containing Ptr, so interior pointers
+  // resolve to the same tracker entry.
+  hsa_amd_pointer_info_t HsaInfo{};
+  HsaInfo.size = sizeof(hsa_amd_pointer_info_t);
+  hsa_status_t Status = hsa_amd_pointer_info(
+      const_cast<void *>(Ptr), &HsaInfo, /*Allocator=*/nullptr,
+      /*num_agents_accessible=*/nullptr, /*accessible=*/nullptr);
+  if (auto Err = Plugin::check(Status, "error in hsa_amd_pointer_info: %s"))
+    return std::move(Err);
+
+  AllocInfo Info;
+  {
+    std::lock_guard<std::mutex> Lock(AllocationsMutex);
+    auto It = Allocations.find(HsaInfo.agentBaseAddress);
+    if (It == Allocations.end())
+      return Plugin::error(ErrorCode::NOT_FOUND,
+                           "pointer is not a known allocation in this context");
+    Info = It->second;
+  }
+
+  return PluginAllocInfoTy{Info.Device, Info.Kind, HsaInfo.agentBaseAddress,
+                           HsaInfo.sizeInBytes};
+}
+
 Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                                  uint32_t NumThreads[3], uint32_t NumBlocks[3],
                                  uint32_t DynBlockMemSize,
@@ -4364,7 +4448,7 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                                : 1 + (NumBlocks[1] * NumThreads[1] != 1));
 
     hsa_utils::initImplArg(ImplArgs, &ImplArgsTy::DynamicLdsSize, ImplArgsSize,
-                           LaunchArgs.DynCGroupMem);
+                           DynBlockMemSize);
   }
 
   // HSA requires the group segment size to include both static and dynamic.
@@ -4527,6 +4611,12 @@ Expected<void *> AMDGPUDeviceTy::allocate(size_t Size, void *,
     // Enable all valid kernel agents to access the buffer.
     if (auto Err = MemoryPool->enableAccess(Alloc, Size, Agents))
       return std::move(Err);
+
+    // Register host / shared memory as pinned memory, so that transfers reading
+    // from it can take a device-accessible path.
+    if (Kind == TARGET_ALLOC_HOST || Kind == TARGET_ALLOC_SHARED)
+      if (auto Err = PinnedAllocs.registerHostBuffer(Alloc, Alloc, Size))
+        return std::move(Err);
   }
 
   return Alloc;

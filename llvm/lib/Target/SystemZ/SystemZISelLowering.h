@@ -226,12 +226,14 @@ public:
   /// If a physical register, this returns the register that receives the
   /// exception address on entry to an EH pad.
   Register
-  getExceptionPointerRegister(const Constant *PersonalityFn) const override;
+  getExceptionPointerRegister(ExceptionHandling EH,
+                              const Constant *PersonalityFn) const override;
 
   /// If a physical register, this returns the register that receives the
   /// exception typeid on entry to a landing pad.
   Register
-  getExceptionSelectorRegister(const Constant *PersonalityFn) const override;
+  getExceptionSelectorRegister(ExceptionHandling EH,
+                               const Constant *PersonalityFn) const override;
 
   /// Override to support customized stack guard loading.
   bool useLoadStackGuardNode(const Module &M) const override { return true; }
@@ -435,15 +437,6 @@ private:
   SDValue combineINTRINSIC(SDNode *N, DAGCombinerInfo &DCI) const;
 
   SDValue unwrapAddress(SDValue N) const override;
-
-  // If the last instruction before MBBI in MBB was some form of COMPARE,
-  // try to replace it with a COMPARE AND BRANCH just before MBBI.
-  // CCMask and Target are the BRC-like operands for the branch.
-  // Return true if the change was made.
-  bool convertPrevCompareToBranch(MachineBasicBlock *MBB,
-                                  MachineBasicBlock::iterator MBBI,
-                                  unsigned CCMask,
-                                  MachineBasicBlock *Target) const;
 
   // Implement EmitInstrWithCustomInserter for individual operation types.
   MachineBasicBlock *emitAdjCallStack(MachineInstr &MI,

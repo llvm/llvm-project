@@ -81,6 +81,7 @@
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <set>
 #include <sstream>
 
 using namespace lldb;
@@ -2738,15 +2739,11 @@ Target::GetScratchTypeSystemForLanguage(lldb::LanguageType language,
                                                             create_on_demand);
 }
 
-CompilerType
-Target::GetRegisterType(const std::string &name,
-                        const lldb_private::RegisterType &type_info,
-                        uint32_t byte_size) {
+CompilerType Target::GetRegisterType(const RegisterInfo &reg_info) {
   if (!m_register_type_builder_sp)
     m_register_type_builder_sp = PluginManager::GetRegisterTypeBuilder(*this);
   assert(m_register_type_builder_sp);
-  return m_register_type_builder_sp->GetRegisterType(name, type_info,
-                                                     byte_size);
+  return m_register_type_builder_sp->GetRegisterType(reg_info);
 }
 
 std::vector<lldb::TypeSystemSP>
@@ -2757,7 +2754,14 @@ Target::GetScratchTypeSystems(bool create_on_demand) {
   // Some TypeSystem instances are associated with several LanguageTypes so
   // they will show up several times in the loop below. The SetVector filters
   // out all duplicates as they serve no use for the caller.
-  std::vector<lldb::TypeSystemSP> scratch_type_systems;
+  //
+  // The insertion order matters: callers such as SBTarget::GetBasicType query
+  // the TypeSystems in order and use the first one that can answer, so the
+  // result has to be a function of the languages and not of where the
+  // instances happen to live in memory.
+  llvm::SetVector<lldb::TypeSystemSP, std::vector<lldb::TypeSystemSP>,
+                  std::set<lldb::TypeSystemSP>>
+      scratch_type_systems;
 
   LanguageSet languages_for_expressions =
       Language::GetLanguagesSupportingTypeSystemsForExpressions();
@@ -2772,15 +2776,11 @@ Target::GetScratchTypeSystems(bool create_on_demand) {
           "Language '{1}' has expression support but no scratch type "
           "system available: {0}",
           Language::GetNameForLanguageType(language));
-    else
-      if (auto ts = *type_system_or_err)
-        scratch_type_systems.push_back(ts);
+    else if (auto ts = *type_system_or_err)
+      scratch_type_systems.insert(ts);
   }
 
-  std::sort(scratch_type_systems.begin(), scratch_type_systems.end());
-  scratch_type_systems.erase(llvm::unique(scratch_type_systems),
-                             scratch_type_systems.end());
-  return scratch_type_systems;
+  return scratch_type_systems.takeVector();
 }
 
 PersistentExpressionState *
@@ -3653,8 +3653,8 @@ Status Target::Launch(ProcessLaunchInfo &launch_info, Stream *stream) {
   // its own hijacking listener or if the process is created by the target
   // manually, without the platform).
   if (!launch_info.GetHijackListener())
-    launch_info.SetHijackListener(Listener::MakeListener(
-        Process::LaunchSynchronousHijackListenerName.data()));
+    launch_info.SetHijackListener(
+        Listener::MakeListener(Process::LaunchSynchronousHijackListenerName));
 
   // If we're not already connected to the process, and if we have a platform
   // that can launch a process for debugging, go ahead and do that here.
@@ -3835,8 +3835,8 @@ Status Target::Attach(ProcessAttachInfo &attach_info, Stream *stream) {
   ListenerSP hijack_listener_sp;
   const bool async = attach_info.GetAsync();
   if (!async) {
-    hijack_listener_sp = Listener::MakeListener(
-        Process::AttachSynchronousHijackListenerName.data());
+    hijack_listener_sp =
+        Listener::MakeListener(Process::AttachSynchronousHijackListenerName);
     attach_info.SetHijackListener(hijack_listener_sp);
   }
 
@@ -4364,6 +4364,25 @@ Status Target::StopHookScripted::SetScriptCallback(
   return {};
 }
 
+/// Report a failing scripted hook callback to the user, the way a
+/// command-based hook reports a failing command. \a what names the hook, e.g.
+/// "stop hook 1".
+static void ReportScriptedHookError(llvm::Error error, llvm::StringRef what,
+                                    Debugger &debugger, StreamSP output_sp) {
+  if (!error)
+    return;
+
+  // Stringify before logging: LLDB_LOG doesn't evaluate its arguments when the
+  // channel is disabled, which would leave the error unchecked.
+  std::string err_msg = llvm::toString(std::move(error));
+  LLDB_LOG(GetLog(LLDBLog::Target), "{0} failed: {1}", what, err_msg);
+
+  CommandReturnObject result(debugger.GetUseColor());
+  result.SetImmediateOutputStream(output_sp);
+  result.SetImmediateErrorStream(output_sp);
+  result.AppendErrorWithFormatv("{0} failed: {1}", what, err_msg);
+}
+
 Target::StopHook::StopHookResult
 Target::StopHookScripted::HandleStop(ExecutionContext &exc_ctx,
                                      StreamSP output_sp) {
@@ -4378,8 +4397,9 @@ Target::StopHookScripted::HandleStop(ExecutionContext &exc_ctx,
   output_sp->PutCString(
       reinterpret_cast<StreamString *>(stream.get())->GetData());
   if (!should_stop_or_err) {
-    LLDB_LOG_ERROR(GetLog(LLDBLog::Target), should_stop_or_err.takeError(),
-                   "scripted stop hook HandleStop failed: {0}");
+    ReportScriptedHookError(should_stop_or_err.takeError(),
+                            llvm::formatv("stop hook {0}", GetID()).str(),
+                            exc_ctx.GetTargetPtr()->GetDebugger(), output_sp);
     return StopHookResult::KeepStopped;
   }
 
@@ -4689,18 +4709,32 @@ void Target::HookScripted::HandleModuleLoaded(StreamSP output_sp) {
   if (!m_interface_sp)
     return;
 
+  TargetSP target_sp = GetTarget();
+  if (!target_sp)
+    return;
+
   StreamSP stream = std::make_shared<StreamString>();
-  m_interface_sp->HandleModuleLoaded(stream);
+  llvm::Error error = m_interface_sp->HandleModuleLoaded(stream);
   output_sp->PutCString(static_cast<StreamString *>(stream.get())->GetData());
+  ReportScriptedHookError(std::move(error),
+                          llvm::formatv("hook {0}", GetID()).str(),
+                          target_sp->GetDebugger(), output_sp);
 }
 
 void Target::HookScripted::HandleModuleUnloaded(StreamSP output_sp) {
   if (!m_interface_sp)
     return;
 
+  TargetSP target_sp = GetTarget();
+  if (!target_sp)
+    return;
+
   StreamSP stream = std::make_shared<StreamString>();
-  m_interface_sp->HandleModuleUnloaded(stream);
+  llvm::Error error = m_interface_sp->HandleModuleUnloaded(stream);
   output_sp->PutCString(static_cast<StreamString *>(stream.get())->GetData());
+  ReportScriptedHookError(std::move(error),
+                          llvm::formatv("hook {0}", GetID()).str(),
+                          target_sp->GetDebugger(), output_sp);
 }
 
 Target::StopHook::StopHookResult
@@ -4715,8 +4749,12 @@ Target::HookScripted::HandleStop(ExecutionContext &exc_ctx,
   lldb::StreamSP stream = std::make_shared<lldb_private::StreamString>();
   auto should_stop_or_err = m_interface_sp->HandleStop(exc_ctx, stream);
   output_sp->PutCString(static_cast<StreamString *>(stream.get())->GetData());
-  if (!should_stop_or_err)
+  if (!should_stop_or_err) {
+    ReportScriptedHookError(should_stop_or_err.takeError(),
+                            llvm::formatv("hook {0}", GetID()).str(),
+                            exc_ctx.GetTargetPtr()->GetDebugger(), output_sp);
     return StopHook::StopHookResult::KeepStopped;
+  }
 
   return *should_stop_or_err ? StopHook::StopHookResult::KeepStopped
                              : StopHook::StopHookResult::RequestContinue;
@@ -5221,6 +5259,28 @@ void TargetProperties::SetUseDIL(ExecutionContext *exe_ctx, bool b) {
       exp_property->GetValue()->GetAsProperties();
   if (exp_values)
     exp_values->SetPropertyAtIndex(ePropertyUseDIL, true, exe_ctx);
+}
+
+bool TargetProperties::GetUseDILForCreatingValues() const {
+  const Property *exp_property =
+      m_collection_sp->GetPropertyAtIndex(ePropertyExperimental);
+  OptionValueProperties *exp_values =
+      exp_property->GetValue()->GetAsProperties();
+  if (exp_values)
+    return exp_values
+        ->GetPropertyAtIndexAs<bool>(ePropertyUseDILForCreatingValues)
+        .value_or(false);
+  else
+    return true;
+}
+
+void TargetProperties::SetUseDILForCreatingValues(bool b) {
+  const Property *exp_property =
+      m_collection_sp->GetPropertyAtIndex(ePropertyExperimental);
+  OptionValueProperties *exp_values =
+      exp_property->GetValue()->GetAsProperties();
+  if (exp_values)
+    exp_values->SetPropertyAtIndex(ePropertyUseDILForCreatingValues, b);
 }
 
 ArchSpec TargetProperties::GetDefaultArchitecture() const {
@@ -6024,12 +6084,15 @@ Target::TargetEventData::GetModuleListFromEvent(const Event *event_ptr) {
   return module_list;
 }
 
-std::recursive_mutex &Target::GetAPIMutex() {
-  Policy policy = PolicyStack::Get().Current();
-  if (policy.view == Policy::View::Private)
-    return m_private_mutex;
+TargetAPIMutex Target::GetAPIMutex() {
+  return TargetAPIMutex(shared_from_this());
+}
 
-  return m_mutex;
+std::recursive_mutex *Target::GetAPIMutexForCurrentPolicy() {
+  Policy policy = PolicyStack::Get().Current();
+  if (policy.capabilities.can_bypass_target_api_mutex)
+    return nullptr;
+  return policy.view == Policy::View::Private ? &m_private_mutex : &m_mutex;
 }
 
 /// Get metrics associated with this target in JSON format.

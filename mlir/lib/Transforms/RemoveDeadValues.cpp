@@ -335,8 +335,10 @@ static void processFuncOp(FunctionOpInterface funcOp,
   size_t numReturns = funcOp.getNumResults();
   BitVector nonLiveRets(numReturns, true);
   for (Operation *callOp : users) {
-    assert(isa<CallOpInterface>(callOp) && "expected a call-like user");
-    BitVector liveCallRets = markLives(callOp->getResults(), nonLiveSet, la);
+    // Only the forwarded results of a call receive the values returned by the
+    // callee; any other result is produced by the call operation itself.
+    BitVector liveCallRets = markLives(
+        cast<CallOpInterface>(callOp).getForwardedResults(), nonLiveSet, la);
     nonLiveRets &= liveCallRets.flip();
   }
 
@@ -358,9 +360,16 @@ static void processFuncOp(FunctionOpInterface funcOp,
   if (numReturns == 0)
     return;
   for (Operation *callOp : users) {
-    assert(isa<CallOpInterface>(callOp) && "expected a call-like user");
-    cl.results.push_back({callOp, nonLiveRets});
-    collectNonLiveValues(nonLiveSet, callOp->getResults(), nonLiveRets);
+    // `nonLiveRets` is indexed by callee result. Translate it into the index
+    // space of all results of the call operation, which is what the cleanup
+    // works on.
+    ResultRange forwardedResults =
+        cast<CallOpInterface>(callOp).getForwardedResults();
+    BitVector nonLiveCallResults(callOp->getNumResults(), false);
+    for (int index : nonLiveRets.set_bits())
+      nonLiveCallResults.set(forwardedResults[index].getResultNumber());
+    cl.results.push_back({callOp, nonLiveCallResults});
+    collectNonLiveValues(nonLiveSet, callOp->getResults(), nonLiveCallResults);
   }
 }
 
@@ -704,7 +713,7 @@ static void cleanUpDeadVals(MLIRContext *ctx, RDVFinalCleanupList &list) {
            << OpWithFlags(o.op,
                           OpPrintingFlags().skipRegions().printGenericOpForm());
       });
-      o.op->eraseOperands(o.nonLive);
+      rewriter.eraseOperands(o.op, o.nonLive);
     }
   }
 
@@ -777,14 +786,14 @@ struct RemoveDeadValues
 
 void RemoveDeadValues::runOnOperation() {
   auto &la = getAnalysis<RunLivenessAnalysis>();
-  Operation *module = getOperation();
+  Operation *root = getOperation();
 
   // Build a symbol user map once up front so that processFuncOp can look up the
   // callers of each function in O(1). Otherwise, each call would walk the
-  // entire module to find the callers, making the pass O(numFunctions *
+  // entire root to find the callers, making the pass O(numFunctions *
   // numOperations).
   SymbolTableCollection symbolTableCollection;
-  SymbolUserMap symbolUserMap(symbolTableCollection, module);
+  SymbolUserMap symbolUserMap(symbolTableCollection, root);
 
   // Tracks values eligible for erasure - complements liveness analysis to
   // identify "droppable" values.
@@ -794,7 +803,12 @@ void RemoveDeadValues::runOnOperation() {
   // end of this pass.
   RDVFinalCleanupList finalCleanupList;
 
-  module->walk([&](Operation *op) {
+  root->walk([&](Operation *op) {
+    // Do not erase the pass root or change its operands and results. In
+    // particular, the symbol user map cannot see callers outside the root, so
+    // changing a root function's signature would leave those calls invalid.
+    if (op == root)
+      return;
     if (auto funcOp = dyn_cast<FunctionOpInterface>(op)) {
       processFuncOp(funcOp, symbolUserMap, la, deadVals, finalCleanupList);
     } else if (auto regionBranchOp = dyn_cast<RegionBranchOpInterface>(op)) {
@@ -812,27 +826,39 @@ void RemoveDeadValues::runOnOperation() {
     }
   });
 
-  MLIRContext *context = module->getContext();
+  MLIRContext *context = root->getContext();
   cleanUpDeadVals(context, finalCleanupList);
 
   if (!canonicalize)
     return;
 
-  // Canonicalize all region branch ops.
-  SmallVector<Operation *> opsToCanonicalize;
-  module->walk([&](RegionBranchOpInterface regionBranchOp) {
-    opsToCanonicalize.push_back(regionBranchOp.getOperation());
-  });
-  // Collect all canonicalization patterns for region branch ops.
+  // Collect and freeze the patterns once for all root regions.
   RewritePatternSet owningPatterns(context);
   DenseSet<RegisteredOperationName> populatedPatterns;
-  for (Operation *op : opsToCanonicalize)
+  root->walk([&](RegionBranchOpInterface regionBranchOp) {
+    Operation *op = regionBranchOp.getOperation();
+    if (op == root)
+      return;
     if (std::optional<RegisteredOperationName> info = op->getRegisteredInfo())
       if (populatedPatterns.insert(*info).second)
         info->getCanonicalizationPatterns(owningPatterns, context);
-  if (failed(applyOpPatternsGreedily(opsToCanonicalize,
-                                     std::move(owningPatterns)))) {
-    module->emitError("greedy pattern rewrite failed to converge");
-    signalPassFailure();
+  });
+  FrozenRewritePatternSet patterns(std::move(owningPatterns));
+
+  // Process each root region separately. For operations in different root
+  // regions, the inferred common scope can contain the root itself.
+  for (Region &region : root->getRegions()) {
+    SmallVector<Operation *> opsToCanonicalize;
+    region.walk([&](RegionBranchOpInterface regionBranchOp) {
+      opsToCanonicalize.push_back(regionBranchOp.getOperation());
+    });
+    // The greedy driver can add ancestors to its worklist. Set an explicit
+    // scope so that it cannot rewrite the root or operations outside the root.
+    GreedyRewriteConfig config;
+    config.setScope(&region);
+    if (failed(applyOpPatternsGreedily(opsToCanonicalize, patterns, config))) {
+      root->emitError("greedy pattern rewrite failed to converge");
+      return signalPassFailure();
+    }
   }
 }

@@ -163,6 +163,20 @@ TEST(ProtocolTypesTest, SourceBreakpoint) {
   EXPECT_EQ(source_breakpoint.mode, deserialized_source_breakpoint->mode);
 }
 
+TEST(ProtocolTypesTest, SourceBreakpointOptionalLogMessage) {
+  for (StringRef json :
+       {R"({"line": 0})", R"({"line": 0, "logMessage": ""})"}) {
+    Expected<SourceBreakpoint> source_breakpoint =
+        parse<SourceBreakpoint>(json);
+    ASSERT_THAT_EXPECTED(source_breakpoint, Succeeded());
+    EXPECT_EQ(source_breakpoint->line, 0u);
+    EXPECT_TRUE(source_breakpoint->logMessage.empty());
+  }
+
+  EXPECT_THAT_EXPECTED(
+      parse<SourceBreakpoint>(R"({"line": 0, "logMessage": null})"), Failed());
+}
+
 TEST(ProtocolTypesTest, FunctionBreakpoint) {
   FunctionBreakpoint function_breakpoint;
   function_breakpoint.name = "myFunction";
@@ -312,8 +326,7 @@ TEST(ProtocolTypesTest, Scope) {
   ASSERT_THAT_EXPECTED(deserialized_scope, llvm::Succeeded());
   EXPECT_EQ(scope.name, deserialized_scope->name);
   EXPECT_EQ(scope.presentationHint, deserialized_scope->presentationHint);
-  EXPECT_EQ(scope.variablesReference.AsUInt32(),
-            deserialized_scope->variablesReference.AsUInt32());
+  EXPECT_EQ(scope.variablesReference, deserialized_scope->variablesReference);
   EXPECT_EQ(scope.namedVariables, deserialized_scope->namedVariables);
   EXPECT_EQ(scope.indexedVariables, deserialized_scope->indexedVariables);
   EXPECT_EQ(scope.expensive, deserialized_scope->expensive);
@@ -1266,6 +1279,24 @@ TEST(ProtocolTypesTest, StackFrame) {
     "canRestart": true,
     "instructionPointerReference": "0x3039",
     "presentationHint": "subtle"
+  })");
+
+  ASSERT_THAT_EXPECTED(expected_frame, llvm::Succeeded());
+  EXPECT_EQ(PrettyPrint(*expected_frame), PrettyPrint(frame));
+
+  frame.id = 3;
+  frame.canRestart = false;
+  frame.instructionPointerReference = LLDB_INVALID_ADDRESS;
+  frame.presentationHint = StackFrame::ePresentationHintNone;
+  frame.moduleId = "2E6A5E9A-1D0C-3B2C-9C3E-8A6F0B1D2E3F";
+  frame.compileUnitId = 7;
+  expected_frame = parse(R"({
+    "id": 3,
+    "name": "foo",
+    "line": 0,
+    "column": 0,
+    "moduleId": "2E6A5E9A-1D0C-3B2C-9C3E-8A6F0B1D2E3F",
+    "compileUnitId": 7
   })");
 
   ASSERT_THAT_EXPECTED(expected_frame, llvm::Succeeded());

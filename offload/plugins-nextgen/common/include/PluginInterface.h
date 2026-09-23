@@ -168,9 +168,9 @@ struct AsyncInfoWrapperTy {
 
   /// Register \p Ptr as an associated allocation that is freed after
   /// finalization.
-  void freeAllocationAfterSynchronization(void *Ptr) {
+  void freeAllocationAfterSynchronization(void *Ptr, TargetAllocTy Kind) {
     std::lock_guard<std::mutex> AllocationGuard(AsyncInfoPtr->Mutex);
-    AsyncInfoPtr->AssociatedAllocations.push_back(Ptr);
+    AsyncInfoPtr->AssociatedAllocations.push_back({Ptr, Kind});
   }
 
 private:
@@ -288,7 +288,11 @@ private:
             else if constexpr (std::is_same_v<T, std::monostate>) {
               // Do nothing
             } else
-              static_assert(false, "doPrint visit not exhaustive");
+              // Use a type-dependent condition so the assert only fires when
+              // this branch is actually instantiated. GCC < 13 does not
+              // implement CWG2518 and rejects a non-dependent
+              // static_assert(false) even in a discarded constexpr branch.
+              static_assert(!sizeof(T *), "doPrint visit not exhaustive");
           },
           Value);
       llvm::outs() << (Units.empty() ? "" : " ") << Units << "\n";
@@ -456,11 +460,12 @@ struct KernelLaunchArgsTy {
   uint32_t UserThreadLimit[3] = {0, 0, 0};
   struct {
     uint64_t Cooperative : 1; // Was this kernel spawned as cooperative.
-    uint64_t StrictBlocksAndThreads
-        : 1; // The user-requested number of blocks and threads are strict.
+    uint64_t StrictBlocks : 1; // The user-requested number of blocks is strict.
+    uint64_t StrictThreads
+        : 1; // The user-requested number of threads is strict.
     uint64_t DynCGroupMemFallback : 2; // The fallback for dynamic cgroup mem.
     uint64_t Unused : 60;
-  } Flags = {0, 0, 0, 0};
+  } Flags = {0, 0, 0, 0, 0};
   /// Set by the caller when replaying a previously recorded kernel launch, so
   /// the plugin can report the outcome back; null for a normal launch.
   KernelReplayOutcomeTy *ReplayOutcome = nullptr;
@@ -600,6 +605,7 @@ private:
   uint32_t getEffectiveNumBlocks(GenericDeviceTy &GenericDevice,
                                  uint32_t UserNumBlocks, uint64_t LoopTripCount,
                                  uint32_t &EffectiveNumThreads,
+                                 bool IsNumThreadsStrict,
                                  bool IsNumThreadsFromUser) const;
 
   /// Indicate if the kernel works in Generic SPMD, Generic, No-Loop
@@ -894,10 +900,15 @@ public:
   }
 };
 
-/// A plugin-side context grouping a set of devices. Plugins that need to hold
-/// native context state (e.g. Level Zero's ze_context_handle_t) override this
-/// through GenericPluginTy::createPluginContext. The base class is a plain
-/// device set used by plugins that do not need native context state.
+/// Description of an allocation: owning device, kind, base address and size.
+struct PluginAllocInfoTy {
+  GenericDeviceTy *Device;
+  TargetAllocTy Kind;
+  void *Base;
+  size_t Size;
+};
+
+/// A plugin-side context grouping a set of devices.
 struct PluginContextTy {
   PluginContextTy(GenericPluginTy &Plugin,
                   llvm::ArrayRef<GenericDeviceTy *> Devices)
@@ -908,14 +919,78 @@ struct PluginContextTy {
   PluginContextTy(PluginContextTy &&) = delete;
   PluginContextTy &operator=(PluginContextTy &&) = delete;
 
-  virtual ~PluginContextTy() = default;
+  virtual ~PluginContextTy();
+
+  /// Release resources owned by this context. Called from olDestroyContext
+  /// before the object is destroyed so that errors are propagated instead of
+  /// being swallowed in the destructor.
+  virtual llvm::Error deinit() { return llvm::Error::success(); }
 
   llvm::ArrayRef<GenericDeviceTy *> getDevices() const { return Devices; }
   GenericPluginTy &getPlugin() const { return Plugin; }
 
+  /// Initialize a __tgt_async_info structure on \p Device.
+  Error initAsyncInfo(GenericDeviceTy &Device, __tgt_async_info **AsyncInfoPtr);
+  virtual Error initAsyncInfoImpl(GenericDeviceTy &Device,
+                                  AsyncInfoWrapperTy &AsyncInfoWrapper) = 0;
+
+  /// Allocate Size bytes of Kind memory accessible from Device. HostPtr is an
+  /// optional hint (e.g. for pinned-buffer registration); pass nullptr when
+  /// unused.
+  virtual llvm::Expected<void *> allocate(GenericDeviceTy &Device, int64_t Size,
+                                          void *HostPtr, TargetAllocTy Kind,
+                                          size_t Alignment);
+
+  /// Free a pointer returned by allocate; resolves owner/kind via
+  /// getAllocInfo. Requires a non-empty device set, so this is only valid on
+  /// user-created contexts (not on the per-plugin default context, which
+  /// carries no devices).
+  virtual llvm::Error deallocate(void *Ptr);
+
+  /// Free a pointer when the caller already knows the owning device and kind.
+  virtual llvm::Error deallocate(GenericDeviceTy &Device, void *Ptr,
+                                 TargetAllocTy Kind);
+
+  /// Look up the allocation containing Ptr. Returns NOT_FOUND when Ptr is not
+  /// known to this context. Only valid on user-created contexts.
+  virtual llvm::Expected<PluginAllocInfoTy> getAllocInfo(const void *Ptr) = 0;
+
 protected:
   GenericPluginTy &Plugin;
   llvm::SmallVector<GenericDeviceTy *> Devices;
+
+private:
+  MemoryManagerTy *getDeviceMemoryManagerFor(GenericDeviceTy &Device,
+                                             TargetAllocTy Kind);
+  MemoryManagerTy *getHostMemoryManager();
+
+  llvm::DenseMap<std::pair<GenericDeviceTy *, int>,
+                 std::unique_ptr<MemoryManagerTy>>
+      DeviceMemoryManagers;
+  std::unique_ptr<MemoryManagerTy> HostMemoryManager;
+  std::mutex MemoryManagersMutex;
+};
+
+/// Default plugin context: a device-less placeholder used as the per-plugin
+/// MemoryManager dispatcher for libomptarget. Allocations made through this
+/// context are pooled but not tracked per-pointer, so getAllocInfo is not
+/// supported.
+struct DefaultPluginContextTy : public PluginContextTy {
+  DefaultPluginContextTy(GenericPluginTy &Plugin)
+      : PluginContextTy(Plugin, llvm::ArrayRef<GenericDeviceTy *>{}) {}
+
+  llvm::Expected<PluginAllocInfoTy>
+  getAllocInfo(const void * /*Ptr*/) override {
+    return Plugin::error(error::ErrorCode::UNSUPPORTED,
+                         "getAllocInfo is not supported on the default "
+                         "plugin context");
+  }
+
+  Error initAsyncInfoImpl(GenericDeviceTy & /*Device*/,
+                          AsyncInfoWrapperTy & /*AsyncInfoWrapper*/) override {
+    return Plugin::error(error::ErrorCode::UNSUPPORTED,
+                         "default plugin context cannot initialize async info");
+  }
 };
 
 /// Class implementing common functionalities of offload devices. Each plugin
@@ -952,6 +1027,8 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// this id is not unique between different plugins; they may overlap.
   int32_t getDeviceId() const { return DeviceId; }
 
+  virtual uint32_t getDriverId() const { return 0; }
+
   /// Get the unique identifier of the device.
   const char *getDeviceUid() const { return DeviceUid.c_str(); }
 
@@ -974,11 +1051,14 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   Error deinit(GenericPluginTy &Plugin);
   virtual Error deinitImpl() = 0;
 
-  /// Load the binary image into the device and return the target table.
+  /// Load the binary image into the device and return the target table. When
+  /// \p Context is null the plugin's driver-scoped default context is used.
   Expected<DeviceImageTy *> loadBinary(GenericPluginTy &Plugin,
-                                       StringRef TgtImage);
+                                       StringRef TgtImage,
+                                       PluginContextTy *Context);
   virtual Expected<DeviceImageTy *>
-  loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage, int32_t ImageId) = 0;
+  loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage, int32_t ImageId,
+                 PluginContextTy *Context) = 0;
 
   /// Unload a previously loaded Image from the device
   Error unloadBinary(DeviceImageTy *Image);
@@ -1144,10 +1224,6 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   Error launchKernel(void *EntryPtr, KernelLaunchArgsTy &LaunchArgs,
                      __tgt_async_info *AsyncInfo);
 
-  /// Initialize a __tgt_async_info structure.
-  Error initAsyncInfo(__tgt_async_info **AsyncInfoPtr);
-  virtual Error initAsyncInfoImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) = 0;
-
   /// Enqueue a host call to AsyncInfo
   Error enqueueHostCall(void (*Callback)(void *), void *UserData,
                         __tgt_async_info *AsyncInfo);
@@ -1292,7 +1368,8 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
   virtual Expected<omp_interop_val_t *>
   createInterop(int32_t InteropType, interop_spec_t &InteropSpec) {
-    return nullptr;
+    return Plugin::error(error::ErrorCode::UNSUPPORTED,
+                         "%s not supported by platform", __func__);
   }
 
   virtual Error releaseInterop(omp_interop_val_t *Interop) {
@@ -1392,6 +1469,9 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// deallocated by the allocator.
   llvm::SmallVector<DeviceImageTy *> LoadedImages;
 
+  /// Per device setting of MemoryManager's Threshold
+  virtual size_t getMemoryManagerSizeThreshold() { return 0; }
+
 private:
   /// Get and set the stack size and heap size for the device. If not used, the
   /// plugin can implement the setters as no-op and setting the output
@@ -1401,12 +1481,6 @@ private:
   /// Indicate whether or not the device should setup the RPC server. This is
   /// only necessary for unhosted targets like the GPU.
   virtual bool shouldSetupRPCServer() const { return false; }
-
-  /// Pointer to the memory manager or nullptr if not available.
-  MemoryManagerTy *MemoryManager;
-
-  /// Per device setting of MemoryManager's Threshold
-  virtual size_t getMemoryManagerSizeThreshold() { return 0; }
 
   virtual Expected<bool> isAccessiblePtrImpl(const void *Ptr, size_t Size) {
     return false;
@@ -1654,14 +1728,19 @@ struct GenericPluginTy {
                          "async_barrier not supported");
   }
 
-  /// Create a plugin-side context grouping the given devices. The default
-  /// implementation returns a plain PluginContextTy that only tracks the
-  /// device set. Plugins that own native context state (e.g. Level Zero)
-  /// override this to instantiate a plugin-specific subclass.
+  /// Create a plugin-side context grouping the given devices.
   virtual Expected<std::unique_ptr<PluginContextTy>>
-  createPluginContext(llvm::ArrayRef<GenericDeviceTy *> Devices) {
-    return std::make_unique<PluginContextTy>(*this, Devices);
-  }
+  createPluginContext(llvm::ArrayRef<GenericDeviceTy *> Devices) = 0;
+
+  /// Create the per-plugin default context returned by getDefaultContext.
+  /// The default builds a plain PluginContextTy with no devices, which is
+  /// sufficient for plugins where the default is just a MemoryManager
+  /// dispatcher.
+  virtual Expected<std::unique_ptr<PluginContextTy>>
+  createDefaultPluginContext();
+
+  /// Return the default context that services Device.
+  virtual PluginContextTy &getDefaultContext(GenericDeviceTy &Device);
 
 protected:
   /// Indicate whether a device id is valid.
@@ -1794,9 +1873,6 @@ public:
   /// Remove the event from the plugin.
   void set_info_flag(uint32_t NewInfoLevel);
 
-  /// Creates an asynchronous queue for the given plugin.
-  int32_t init_async_info(int32_t DeviceId, __tgt_async_info **AsyncInfoPtr);
-
   /// Sets the offset into the devices for use by OMPT.
   int32_t set_device_identifier(int32_t UserId, int32_t DeviceId);
 
@@ -1875,6 +1951,10 @@ private:
 
   /// The interface between the plugin and the GPU for host services.
   RPCServerTy *RPCServer;
+
+  /// The default plugin context returned by getDefaultContext, used by
+  /// libomptarget.
+  std::unique_ptr<PluginContextTy> DefaultContext;
 };
 
 /// Auxiliary interface class for GenericDeviceResourceManagerTy. This class

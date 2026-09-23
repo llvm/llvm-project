@@ -9,7 +9,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@skipIfTargetDoesNotSupportThreads()
+@requireThreadSupport
 class TestMultipleSimultaneousDebuggers(TestBase):
     SHARED_BUILD_TESTCASE = False
     NO_DEBUG_INFO_TESTCASE = True
@@ -19,7 +19,6 @@ class TestMultipleSimultaneousDebuggers(TestBase):
     # https://github.com/llvm/llvm-project/issues/101162
     @skipIfLinux
     @skipIfNoSBHeaders
-    @skipIfWindows
     @skipIfHostIncompatibleWithTarget
     def test_multiple_debuggers(self):
         self.driver_exe = self.getBuildArtifact("multi-process-driver")
