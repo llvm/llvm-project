@@ -91,6 +91,9 @@ static LogicalResult transferPreconditions(PatternRewriter &rewriter,
   auto srcTy = dyn_cast<MemRefType>(xferOp.getShapedType());
   if (!srcTy)
     return rewriter.notifyMatchFailure(xferOp, "Expects memref source");
+  if (isa<VectorType>(srcTy.getElementType()))
+    return rewriter.notifyMatchFailure(xferOp,
+                                       "Expects a memref of scalar elements");
 
   // Validate further transfer op semantics.
   SmallVector<int64_t> strides;
@@ -110,11 +113,14 @@ static LogicalResult transferPreconditions(PatternRewriter &rewriter,
     return rewriter.notifyMatchFailure(xferOp, "0D vectors are not supported");
 
   AffineMap map = xferOp.getPermutationMap();
-  if (!map.isProjectedPermutation(/*allowZeroInResults=*/false))
+  if (!map.isProjectedPermutation(/*allowZeroInResults=*/true))
     return rewriter.notifyMatchFailure(xferOp, "Unsupported permutation map");
   unsigned numInputDims = map.getNumInputs();
   for (AffineExpr expr : map.getResults().take_back(vecRank)) {
+    // A broadcast result names no source dimension, so it constrains nothing.
     auto dim = dyn_cast<AffineDimExpr>(expr);
+    if (!dim)
+      continue;
     if (dim.getPosition() < (numInputDims - vecRank))
       return rewriter.notifyMatchFailure(
           xferOp, "Only the innermost dimensions can be accessed");
@@ -616,6 +622,79 @@ static LogicalResult lowerToScatteredLoadOp(vector::TransferReadOp readOp,
   return success();
 }
 
+// Lowers a transfer whose permutation map broadcasts some of the vector
+// dimensions into a narrower transfer plus a vector.broadcast. For example
+//
+//   %r = vector.transfer_read %src[%i0, %i1, %i2], %pad
+//     {permutation_map = affine_map<(d0, d1, d2) -> (d2, 0)>,
+//      in_bounds = [false, false]} : memref<256x32x512xf16>, vector<64x64xf16>
+//
+// becomes
+//
+//   %v = vector.transfer_read %src[%i0, %i1, %i2], %pad
+//     {permutation_map = affine_map<(d0, d1, d2) -> (d2, d1)>,
+//      in_bounds = [false, true]} : memref<256x32x512xf16>, vector<64x1xf16>
+//   %r = vector.broadcast %v : vector<64x1xf16> to vector<64x64xf16>
+//
+// Each map result is either a source dimension d<k>, which reads real data, or
+// the constant 0 - a broadcast, along which that data only repeats. Only the
+// innermost `vecRank` source dimensions can be named, `dimOffset` being the
+// first of them and `isNamed` tracking which are taken. Result i of the
+// narrower transfer is built as:
+//
+//   d<k>: readExprs[i] keeps d<k>, readShape[i] keeps the vector's extent, and
+//         readInBounds[i] keeps the transfer's own bounds check.
+//   0:    readExprs[i] takes the lowest source dimension `isNamed` still has
+//         free, so that the map stays a permutation; readShape[i] becomes 1,
+//         and readInBounds[i] becomes true, as a single element at that
+//         dimension's own index needs no bounds check.
+//
+// Any mix works: the map names one source dimension per non-broadcast result,
+// so a spare one is always left for each broadcast result. What remains is a
+// plain permutation, which the other paths lower as usual.
+static LogicalResult lowerBroadcastRead(vector::TransferReadOp readOp,
+                                        PatternRewriter &rewriter) {
+  VectorType vecTy = readOp.getVectorType();
+  AffineMap map = readOp.getPermutationMap();
+  int64_t vecRank = vecTy.getRank();
+  int64_t dimOffset = map.getNumInputs() - vecRank;
+
+  SmallVector<int64_t> readShape(vecTy.getShape());
+  SmallVector<bool> readInBounds(vecRank, true);
+  SmallVector<AffineExpr> readExprs(map.getResults());
+  SmallVector<bool> isNamed(vecRank, false);
+  for (int64_t i = 0; i < vecRank; ++i) {
+    if (auto dim = dyn_cast<AffineDimExpr>(readExprs[i])) {
+      readInBounds[i] = readOp.isDimInBounds(i);
+      isNamed[dim.getPosition() - dimOffset] = true;
+    }
+  }
+
+  for (int64_t i = 0, leftoverDim = 0; i < vecRank; ++i) {
+    if (isa<AffineDimExpr>(readExprs[i]))
+      continue;
+    while (isNamed[leftoverDim])
+      ++leftoverDim;
+    isNamed[leftoverDim] = true;
+    readShape[i] = 1;
+    readExprs[i] = rewriter.getAffineDimExpr(dimOffset + leftoverDim);
+  }
+
+  auto readTy = VectorType::get(readShape, vecTy.getElementType());
+  Value read = vector::TransferReadOp::create(
+      rewriter, readOp.getLoc(), readTy, readOp.getBase(), readOp.getIndices(),
+      AffineMapAttr::get(
+          AffineMap::get(map.getNumInputs(), 0, readExprs, map.getContext())),
+      readOp.getPadding(), /*mask=*/Value(),
+      rewriter.getBoolArrayAttr(readInBounds));
+
+  if (readTy == vecTy)
+    rewriter.replaceOp(readOp, read);
+  else
+    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(readOp, vecTy, read);
+  return success();
+}
+
 static LogicalResult lowerToScatteredStoreOp(vector::TransferWriteOp writeOp,
                                              PatternRewriter &rewriter) {
 
@@ -655,6 +734,10 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
 
     if (failed(transferPreconditions(rewriter, readOp)))
       return failure();
+
+    if (!readOp.getPermutationMap().getBroadcastDims().empty())
+      return lowerBroadcastRead(readOp, rewriter);
+
     auto readMemTy = cast<MemRefType>(readOp.getShapedType());
     VectorType loadedVecTy = readOp.getVectorType();
     bool isOutOfBounds = readOp.hasOutOfBoundsDim();

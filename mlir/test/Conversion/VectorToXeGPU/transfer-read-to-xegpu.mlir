@@ -204,6 +204,67 @@ gpu.func @load_rotated_dims(%source: memref<32x64x128xf32>,
 }
 
 // -----
+// A broadcast dimension holds no data of its own, so the load shrinks to a
+// single element along it - here a 1x64 block over (d1, d2), transposed into
+// the vector order the map asks for - and a vector.broadcast stretches it back.
+gpu.module @xevm_module {
+gpu.func @load_broadcast_innermost_dim(%source: memref<256x32x512xf16>,
+    %e: index, %g: index, %n: index) -> vector<64x64xf16> {
+  %c0 = arith.constant 0.0 : f16
+  %0 = vector.transfer_read %source[%e, %g, %n], %c0
+    {permutation_map = affine_map<(d0, d1, d2) -> (d2, 0)>,
+    in_bounds = [true, true]} : memref<256x32x512xf16>, vector<64x64xf16>
+  gpu.return %0 : vector<64x64xf16>
+}
+
+// LOAD-ND-LABEL:  @load_broadcast_innermost_dim(
+// LOAD-ND-SAME:   %[[SRC:.+]]: memref<256x32x512xf16>,
+// LOAD-ND-SAME:   %[[E:.+]]: index, %[[G:.+]]: index, %[[N:.+]]: index
+// LOAD-ND:        %[[COLLAPSED:.+]] = memref.subview %[[SRC]][%[[E]], 0, 0] [1, 32, 512] [1, 1, 1] : memref<256x32x512xf16> to memref<32x512xf16, strided<[512, 1], offset: ?>>
+// LOAD-ND:        %[[DESC:.+]] = xegpu.create_nd_tdesc %[[COLLAPSED]]
+// LOAD-ND-SAME:     -> !xegpu.tensor_desc<1x64xf16, #xegpu.block_tdesc_attr<boundary_check = false>>
+// LOAD-ND:        %[[VEC:.+]] = xegpu.load_nd %[[DESC]][%[[G]], %[[N]]]
+// LOAD-ND-SAME:     -> vector<1x64xf16>
+// LOAD-ND:        %[[TRANS:.+]] = vector.transpose %[[VEC]], [1, 0] : vector<1x64xf16> to vector<64x1xf16>
+// LOAD-ND:        %[[BCAST:.+]] = vector.broadcast %[[TRANS]] : vector<64x1xf16> to vector<64x64xf16>
+// LOAD-ND:        return %[[BCAST]]
+
+// LOAD-GATHER-LABEL:  @load_broadcast_innermost_dim(
+// LOAD-GATHER:        %[[VEC:.+]] = xegpu.load {{.*}} : i64, vector<64x1xindex>, vector<64x1xi1> -> vector<64x1xf16>
+// LOAD-GATHER:        %[[BCAST:.+]] = vector.broadcast %[[VEC]] : vector<64x1xf16> to vector<64x64xf16>
+// LOAD-GATHER:        return %[[BCAST]]
+}
+
+// -----
+// The dimension that does hold data need not be the innermost one; the load is
+// then a column, which needs no transpose.
+gpu.module @xevm_module {
+gpu.func @load_broadcast_outer_dim(%source: memref<256x512x32xf16>,
+    %e: index, %n: index, %g: index) -> vector<64x16xf16> {
+  %c0 = arith.constant 0.0 : f16
+  %0 = vector.transfer_read %source[%e, %n, %g], %c0
+    {permutation_map = affine_map<(d0, d1, d2) -> (d1, 0)>,
+    in_bounds = [true, true]} : memref<256x512x32xf16>, vector<64x16xf16>
+  gpu.return %0 : vector<64x16xf16>
+}
+
+// LOAD-ND-LABEL:  @load_broadcast_outer_dim(
+// LOAD-ND-SAME:   %[[SRC:.+]]: memref<256x512x32xf16>,
+// LOAD-ND-SAME:   %[[E:.+]]: index, %[[N:.+]]: index, %[[G:.+]]: index
+// LOAD-ND:        %[[COLLAPSED:.+]] = memref.subview %[[SRC]][%[[E]], 0, 0] [1, 512, 32] [1, 1, 1]
+// LOAD-ND:        %[[DESC:.+]] = xegpu.create_nd_tdesc %[[COLLAPSED]]
+// LOAD-ND-SAME:     -> !xegpu.tensor_desc<64x1xf16, #xegpu.block_tdesc_attr<boundary_check = false>>
+// LOAD-ND:        %[[VEC:.+]] = xegpu.load_nd %[[DESC]][%[[N]], %[[G]]]
+// LOAD-ND-SAME:     -> vector<64x1xf16>
+// LOAD-ND-NOT:    vector.transpose
+// LOAD-ND:        vector.broadcast %[[VEC]] : vector<64x1xf16> to vector<64x16xf16>
+
+// LOAD-GATHER-LABEL:  @load_broadcast_outer_dim(
+// LOAD-GATHER:        %[[VEC:.+]] = xegpu.load {{.*}} -> vector<64x1xf16>
+// LOAD-GATHER:        vector.broadcast %[[VEC]] : vector<64x1xf16> to vector<64x16xf16>
+}
+
+// -----
 gpu.module @xevm_module {
 gpu.func @load_dynamic_source(%source: memref<?x?x?xf32>,
     %i: index, %j: index, %k: index) -> vector<8x16xf32> {
