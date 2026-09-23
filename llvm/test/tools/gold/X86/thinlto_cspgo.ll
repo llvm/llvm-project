@@ -4,7 +4,7 @@
 ; RUN: llvm-profdata merge -o %t.profdata %p/Inputs/cspgo.proftext
 
 ; RUN: rm -f %t1.o.4.opt.bc
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN: %ld_bfd -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    -m elf_x86_64 \
 ; RUN:    --plugin-opt=thinlto \
 ; RUN:    --plugin-opt=save-temps \

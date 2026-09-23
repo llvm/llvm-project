@@ -786,6 +786,7 @@ public:
     if (E->isStoredAsBoolean())
       return llvm::ConstantInt::get(ConvertType(E->getType()),
                                     E->getBoolValue());
+    assert(E->getType()->isIntegerType() && "not a scalar type trait");
     assert(E->getAPValue().isInt() && "APValue type not supported");
     return llvm::ConstantInt::get(ConvertType(E->getType()),
                                   E->getAPValue().getInt());
@@ -4105,17 +4106,42 @@ LValue ScalarExprEmitter::EmitCompoundAssignLValue(
     // the loaded integer to double, performing FP arithmetics, and truncation
     // back as a single atomic operation. Integer promotion is still
     // semantically safe.
-    bool CanEmitAtomicRMW =
-        !AtomicValueTy->isBooleanType() && AtomicValueTy->isIntegerType() &&
-        ResultTy->isIntegerType() &&
-        !(AtomicValueTy->isUnsignedIntegerType() &&
-          CGF.SanOpts.has(SanitizerKind::UnsignedIntegerOverflow)) &&
-        CGF.getLangOpts().getSignedOverflowBehavior() !=
-            LangOptions::SOB_Trapping;
+    bool CanEmitAtomicRMW;
+    if (AtomicValueTy->isFloatingType()) {
+      llvm::Type *IRTy = CGF.ConvertType(AtomicValueTy);
+      uint64_t StoreBits = CGF.CGM.getDataLayout().getTypeStoreSizeInBits(IRTy);
+      // Floating atomicrmw operations cannot model constrained FP semantics.
+      CanEmitAtomicRMW =
+          !OpInfo.FPFeatures.isFPConstrained() &&
+          CGF.getContext().hasSameUnqualifiedType(AtomicValueTy, ResultTy) &&
+          llvm::isPowerOf2_64(StoreBits);
+    } else {
+      CanEmitAtomicRMW =
+          !AtomicValueTy->isBooleanType() && AtomicValueTy->isIntegerType() &&
+          ResultTy->isIntegerType() &&
+          !(AtomicValueTy->isUnsignedIntegerType() &&
+            CGF.SanOpts.has(SanitizerKind::UnsignedIntegerOverflow)) &&
+          CGF.getLangOpts().getSignedOverflowBehavior() !=
+              LangOptions::SOB_Trapping;
+    }
     if (CanEmitAtomicRMW) {
       llvm::AtomicRMWInst::BinOp AtomicOp = llvm::AtomicRMWInst::BAD_BINOP;
       llvm::Instruction::BinaryOps Op;
-      switch (OpInfo.Opcode) {
+      if (AtomicValueTy->isFloatingType()) {
+        switch (OpInfo.Opcode) {
+        case BO_AddAssign:
+          AtomicOp = llvm::AtomicRMWInst::FAdd;
+          Op = llvm::Instruction::FAdd;
+          break;
+        case BO_SubAssign:
+          AtomicOp = llvm::AtomicRMWInst::FSub;
+          Op = llvm::Instruction::FSub;
+          break;
+        default:
+          break;
+        }
+      } else {
+        switch (OpInfo.Opcode) {
         // We don't have atomicrmw operands for *, %, /, <<, >>
         case BO_MulAssign: case BO_DivAssign:
         case BO_RemAssign:
@@ -4144,6 +4170,7 @@ LValue ScalarExprEmitter::EmitCompoundAssignLValue(
           break;
         default:
           llvm_unreachable("Invalid compound assignment type");
+        }
       }
       if (AtomicOp != llvm::AtomicRMWInst::BAD_BINOP) {
         llvm::Value *Amt = CGF.EmitToMemory(
@@ -4981,11 +5008,21 @@ Value *ScalarExprEmitter::EmitSub(const BinOpInfo &op) {
 
   // Otherwise, this is a pointer subtraction.
 
-  // Do the raw subtraction part.
-  llvm::Value *LHS
-    = Builder.CreatePtrToInt(op.LHS, CGF.PtrDiffTy, "sub.ptr.lhs.cast");
-  llvm::Value *RHS
-    = Builder.CreatePtrToInt(op.RHS, CGF.PtrDiffTy, "sub.ptr.rhs.cast");
+  // Do the raw subtraction part. When pointer overflow is defined, use ptrtoint
+  // as the pointer difference can be used to obtain the pointer without basing
+  // it on one of the pointers (e.g. via -(nullptr - ptr)).
+  Value *LHS, *RHS;
+  if (CGF.getLangOpts().PointerOverflowDefined) {
+    LHS = Builder.CreatePtrToInt(op.LHS, CGF.PtrDiffTy, "sub.ptr.lhs.cast");
+    RHS = Builder.CreatePtrToInt(op.RHS, CGF.PtrDiffTy, "sub.ptr.rhs.cast");
+  } else {
+    LHS = Builder.CreatePtrToAddr(op.LHS, "sub.ptr.lhs.cast");
+    RHS = Builder.CreatePtrToAddr(op.RHS, "sub.ptr.rhs.cast");
+    if (LHS->getType() != CGF.PtrDiffTy)
+      LHS = Builder.CreateZExtOrTrunc(LHS, CGF.PtrDiffTy, "sub.ptr.lhs.ext");
+    if (RHS->getType() != CGF.PtrDiffTy)
+      RHS = Builder.CreateZExtOrTrunc(RHS, CGF.PtrDiffTy, "sub.ptr.lhs.ext");
+  }
   Value *diffInChars = Builder.CreateSub(LHS, RHS, "sub.ptr.sub");
 
   // Okay, figure out the element size.
@@ -5367,6 +5404,9 @@ Value *ScalarExprEmitter::EmitCompare(const BinaryOperator *E,
     // vector integer type and return it (don't convert to bool).
     if (LHSTy->isVectorType() || LHSTy->isSveVLSBuiltinType())
       return Builder.CreateSExt(Result, ConvertType(E->getType()), "sext");
+
+    if (LHSTy->isMatrixType())
+      return Result;
 
   } else {
     // Complex Comparison: can only be an equality comparison.
@@ -6321,37 +6361,20 @@ struct GEPOffsetAndOverflow {
   llvm::Value *OffsetOverflows;
 };
 
-/// Evaluate given GEPVal, which is either an inbounds GEP, or a constant,
-/// and compute the total offset it applies from it's base pointer BasePtr.
+/// Compute the total offset in bytes that indexing BasePtr with ElemTy and
+/// IdxList applies, using checked arithmetic.
 /// Returns offset in bytes and a boolean flag whether an overflow happened
 /// during evaluation.
-static GEPOffsetAndOverflow EmitGEPOffsetInBytes(Value *BasePtr, Value *GEPVal,
-                                                 llvm::LLVMContext &VMContext,
-                                                 CodeGenModule &CGM,
-                                                 CGBuilderTy &Builder) {
+static GEPOffsetAndOverflow
+EmitGEPOffsetInBytes(Value *BasePtr, llvm::Type *ElemTy,
+                     ArrayRef<Value *> IdxList, llvm::LLVMContext &VMContext,
+                     CodeGenModule &CGM, CGBuilderTy &Builder) {
   const auto &DL = CGM.getDataLayout();
 
   // The total (signed) byte offset for the GEP.
   llvm::Value *TotalOffset = nullptr;
 
-  // Was the GEP already reduced to a constant?
-  if (isa<llvm::Constant>(GEPVal)) {
-    // Compute the offset by casting both pointers to integers and subtracting:
-    // GEPVal = BasePtr + ptr(Offset) <--> Offset = int(GEPVal) - int(BasePtr)
-    Value *BasePtr_int =
-        Builder.CreatePtrToInt(BasePtr, DL.getIntPtrType(BasePtr->getType()));
-    Value *GEPVal_int =
-        Builder.CreatePtrToInt(GEPVal, DL.getIntPtrType(GEPVal->getType()));
-    TotalOffset = Builder.CreateSub(GEPVal_int, BasePtr_int);
-    return {TotalOffset, /*OffsetOverflows=*/Builder.getFalse()};
-  }
-
-  auto *GEP = cast<llvm::GEPOperator>(GEPVal);
-  assert(GEP->getPointerOperand() == BasePtr &&
-         "BasePtr must be the base of the GEP.");
-  assert(GEP->isInBounds() && "Expected inbounds GEP");
-
-  auto *IntPtrTy = DL.getIntPtrType(GEP->getPointerOperandType());
+  auto *IntPtrTy = DL.getAddressType(BasePtr->getType());
 
   // Grab references to the signed add/mul overflow intrinsics for intptr_t.
   auto *Zero = llvm::ConstantInt::getNullValue(IntPtrTy);
@@ -6389,7 +6412,8 @@ static GEPOffsetAndOverflow EmitGEPOffsetInBytes(Value *BasePtr, Value *GEPVal,
   };
 
   // Determine the total byte offset by looking at each GEP operand.
-  for (auto GTI = llvm::gep_type_begin(GEP), GTE = llvm::gep_type_end(GEP);
+  for (auto GTI = llvm::gep_type_begin(ElemTy, IdxList),
+            GTE = llvm::gep_type_end(ElemTy, IdxList);
        GTI != GTE; ++GTI) {
     llvm::Value *LocalOffset;
     auto *Index = GTI.getOperand();
@@ -6453,10 +6477,10 @@ CodeGenFunction::EmitCheckedInBoundsGEP(llvm::Type *ElemTy, Value *Ptr,
   auto CheckOrdinal = SanitizerKind::SO_PointerOverflow;
   auto CheckHandler = SanitizerHandler::PointerOverflow;
   SanitizerDebugLocation SanScope(this, {CheckOrdinal}, CheckHandler);
-  llvm::Type *IntPtrTy = DL.getIntPtrType(PtrTy);
+  llvm::Type *IntPtrTy = DL.getAddressType(PtrTy);
 
-  GEPOffsetAndOverflow EvaluatedGEP =
-      EmitGEPOffsetInBytes(Ptr, GEPVal, getLLVMContext(), CGM, Builder);
+  GEPOffsetAndOverflow EvaluatedGEP = EmitGEPOffsetInBytes(
+      Ptr, ElemTy, IdxList, getLLVMContext(), CGM, Builder);
 
   auto *Zero = llvm::ConstantInt::getNullValue(IntPtrTy);
 
@@ -6468,7 +6492,7 @@ CodeGenFunction::EmitCheckedInBoundsGEP(llvm::Type *ElemTy, Value *Ptr,
 
   // Now that we've computed the total offset, add it to the base pointer (with
   // wrapping semantics).
-  auto *IntPtr = Builder.CreatePtrToInt(Ptr, IntPtrTy);
+  auto *IntPtr = Builder.CreatePtrToAddr(Ptr);
   auto *ComputedGEP = Builder.CreateAdd(IntPtr, EvaluatedGEP.TotalOffset);
 
   llvm::SmallVector<std::pair<llvm::Value *, SanitizerKind::SanitizerOrdinal>,

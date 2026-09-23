@@ -425,7 +425,7 @@ static void __kmp_bitset_clearall(kmp_bitset_t *bitset) {
     memset(bitset->bits, 0, sizeof(kmp_int64) * bitset->num_chunks);
 }
 
-static void __kmp_bitset_setall(kmp_bitset_t *bitset) {
+[[maybe_unused]] static void __kmp_bitset_setall(kmp_bitset_t *bitset) {
   for (kmp_int32 chunk = 0; chunk < bitset->num_chunks - 1; chunk++)
     bitset->bits[chunk] = ~(kmp_uint64)0;
   kmp_int32 last_chunk_numbits = bitset->bitsize & 63;
@@ -443,8 +443,8 @@ static void __kmp_bitset_copy(kmp_bitset_t *dst, const kmp_bitset_t *src) {
 
 /// Return TRUE if \c b is a subset of \c a.
 
-static bool __kmp_bitset_subset_p(const kmp_bitset_t *a,
-                                  const kmp_bitset_t *b) {
+[[maybe_unused]] static bool __kmp_bitset_subset_p(const kmp_bitset_t *a,
+                                                   const kmp_bitset_t *b) {
   if (!b)
     return true;
   kmp_size_t chunk_max = std::max(a->num_chunks, b->num_chunks);
@@ -457,8 +457,8 @@ static bool __kmp_bitset_subset_p(const kmp_bitset_t *a,
   return true;
 }
 
-static void __kmp_bitset_and(kmp_bitset_t *a, kmp_bitset_t *b,
-                             kmp_bitset_t *c) {
+[[maybe_unused]] static void __kmp_bitset_and(kmp_bitset_t *a, kmp_bitset_t *b,
+                                              kmp_bitset_t *c) {
   kmp_size_t chunk_max = std::max(b->num_chunks, c->num_chunks);
   for (kmp_size_t chunk = 0; chunk < chunk_max; chunk++) {
     kmp_uint64 b_bits = chunk < b->num_chunks ? b->bits[chunk] : 0;
@@ -929,7 +929,7 @@ kmp_taskgraph_region::kmp_taskgraph_region(
   alloc_chain = &this->alloc_chain;
 }
 
-static kmp_taskgraph_region_t *__kmp_taskgraph_region_alloc(
+[[maybe_unused]] static kmp_taskgraph_region_t *__kmp_taskgraph_region_alloc(
     kmp_info_t *thread, kmp_taskgraph_record_t *taskgraph,
     kmp_taskgraph_region_t **&alloc_chain, kmp_taskgraph_node_t *node,
     kmp_taskgraph_region_t *parent) {
@@ -1359,8 +1359,6 @@ static bool __kmp_taskgraph_collapse_par_exclusive(
   TGDBG("found %d predecessor-predecessors\n", num_pps);
   TGDBG("highest pred level: %d\n", highest_level);
 
-  kmp_int32 pp_idx = 0;
-
   bool changed = false;
 
   for (kmp_taskgraph_region_dep_t *pp = pred_preds; pp; pp = pp->next) {
@@ -1527,8 +1525,8 @@ static bool __kmp_taskgraph_collapse_par_exclusive(
   return changed;
 }
 
-static void __kmp_taskgraph_region_dot(kmp_taskgraph_region_t *region,
-                                       const char *name) {
+[[maybe_unused]] static void
+__kmp_taskgraph_region_dot(kmp_taskgraph_region_t *region, const char *name) {
   fprintf(stderr, "digraph %s {\n", name);
   for (kmp_taskgraph_region_t *r = region; r; r = r->next) {
     if (r->mark == TASKGRAPH_DELETED) {
@@ -1962,12 +1960,15 @@ static bool __kmp_taskgraph_rewrite_irreducible(
 
   bool regions_combined_p = false;
 
+  struct kmp_dom_group_t {
+    kmp_taskgraph_region_t *dom;
+    kmp_int32 count;
+  };
+  kmp_dom_group_t *dom_groups =
+      (kmp_dom_group_t *)KMP_ALLOCA(worklist_length * sizeof(kmp_dom_group_t));
+
   for (kmp_int32 i = 0; i < worklist_length; i++) {
     kmp_taskgraph_region_t *region = order[i];
-    struct {
-      kmp_taskgraph_region_t *dom;
-      kmp_int32 count;
-    } dom_groups[worklist_length];
     kmp_int32 num_groups = 0;
     kmp_int32 npreds = __kmp_region_deplist_len(region->predecessors);
     if (npreds >= 2) {
@@ -2152,7 +2153,7 @@ static bool __kmp_taskgraph_rewrite_irreducible(
   // collapse to pick up on the next pass.  Each carve replaces a knot with a
   // single IRREDUCIBLE atom (fewer live regions), so the build loop makes
   // monotone progress and terminates.
-  bool carved = __kmp_taskgraph_carve_sese(
+  [[maybe_unused]] bool carved = __kmp_taskgraph_carve_sese(
       thread, taskgraph, alloc_chain, order, doms, worklist_length, exitregion);
 
   assert(carved);
@@ -2977,7 +2978,8 @@ kmp_int32 __kmp_build_taskgraph(kmp_int32 gtid,
     }
   }
 
-  kmp_taskgraph_region_t *order_out[numregions];
+  kmp_taskgraph_region_t **order_out = (kmp_taskgraph_region_t **)KMP_ALLOCA(
+      numregions * sizeof(kmp_taskgraph_region_t *));
   kmp_int32 outidx = 0;
 
   kmp_taskgraph_region_t *initial_regions =
@@ -3151,8 +3153,8 @@ kmp_int32 __kmp_build_taskgraph(kmp_int32 gtid,
   taskgraph->recycled_deps = nullptr;
 
   if (__kmp_taskgraph_trace()) {
-    fprintf(stderr, "Processed taskgraph %p (graph_id %" PRIx64 "):\n",
-            taskgraph, taskgraph->graph_id);
+    fprintf(stderr, "Processed taskgraph %p (graph_id %d):\n", taskgraph,
+            taskgraph->graph_id);
     __kmp_dump_taskgraph_regions(stderr, root_region);
   }
 
