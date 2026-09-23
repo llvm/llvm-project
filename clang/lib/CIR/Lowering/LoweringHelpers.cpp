@@ -55,15 +55,16 @@ mlir::Attribute getBitIntStorageAttr(mlir::ConversionPatternRewriter &rewriter,
     return rewriter.getIntegerAttr(
         mlir::IntegerType::get(intTy.getContext(), storageBits), val);
 
+  if (isBigEndian(dataLayout))
+    val = val.byteSwap();
+
   // If we have to do split storage, we are an array of bytes.  Split this up
   // into the array that matches convertTypeForMemory.
   unsigned numBytes = storageBits / 8;
-  bool bigEndian = isBigEndian(dataLayout);
   llvm::SmallVector<mlir::APInt> bytes;
   bytes.reserve(numBytes);
   for (unsigned i = 0; i != numBytes; ++i) {
-    unsigned byteIndex = bigEndian ? numBytes - 1 - i : i;
-    bytes.emplace_back(8, val.extractBitsAsZExtValue(8, byteIndex * 8));
+    bytes.emplace_back(8, val.extractBitsAsZExtValue(8, i * 8));
   }
 
   auto i8Ty = mlir::IntegerType::get(intTy.getContext(), 8);
