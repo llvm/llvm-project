@@ -138,6 +138,17 @@ As of this writing, Clang is able to compile a simple ATL hello world
 application. There are still issues parsing WRL headers for modern Windows 8
 apps, but they should be addressed soon.
 
+## Enum typedef names
+
+MSVC accepts an elaborated `enum` specifier that names a typedef for an
+enumeration. The name may be found by unqualified lookup in class scope or
+written with a possibly dependent qualifier. Clang accepts this in C++ under
+`-fms-compatibility` outside function parameter declarations and diagnoses it
+with `-Wmicrosoft-enum-typedef`. An unqualified use in a declaration whose
+`friend` specifier precedes it remains ill-formed. MSVC treats an unqualified
+name introduced by a namespace using-declaration, or found only through a
+using-directive, as declaring a new enum tag; Clang rejects such uses.
+
 ## \_\_forceinline behavior
 
 `__forceinline` behaves like `[[clang::always_inline]]`.

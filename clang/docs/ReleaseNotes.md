@@ -832,6 +832,12 @@ features cannot lower the translation-unit ABI level;
 
 #### Windows Support
 
+- In C++ with Microsoft compatibility mode, Clang now accepts an elaborated
+  ``enum`` specifier that names a typedef for an enumeration, found either by
+  unqualified lookup in class scope or through a possibly dependent qualifier,
+  except in function parameter declarations. This is diagnosed by
+  ``-Wmicrosoft-enum-typedef``.
+
 - Clang now accepts ``_except`` as an alias for ``__except`` in SEH handler
   position when ``-fms-compatibility`` is enabled, matching the existing
   ``_try``, ``_finally``, and ``_leave`` aliases. ``_except`` remains an ordinary

@@ -1608,6 +1608,8 @@ private:
   /// The parser maintains this state here.
   Scope *CurScope;
 
+  bool InFunctionParameterTypeInstantiation = false;
+
   mutable IdentifierInfo *Ident_super;
 
   std::unique_ptr<SemaAMDGPU> AMDGPUPtr;
@@ -4373,17 +4375,24 @@ public:
   ///
   /// \param SkipBody If non-null, will be set to indicate if the caller should
   /// skip the definition of this tag and treat it as if it were a declaration.
-  DeclResult ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
-                      SourceLocation KWLoc, CXXScopeSpec &SS,
-                      IdentifierInfo *Name, SourceLocation NameLoc,
-                      const ParsedAttributesView &Attr, AccessSpecifier AS,
-                      SourceLocation ModulePrivateLoc,
-                      MultiTemplateParamsArg TemplateParameterLists,
-                      bool &OwnedDecl, bool &IsDependent,
-                      SourceLocation ScopedEnumKWLoc,
-                      bool ScopedEnumUsesClassTag, TypeResult UnderlyingType,
-                      bool IsTypeSpecifier, bool IsTemplateParamOrArg,
-                      OffsetOfKind OOK, SkipBodyInfo *SkipBody = nullptr);
+  ///
+  /// \param MSVCEnumType If non-null and the specifier names an enum typedef
+  /// accepted in MSVC compatibility mode, will be set to that type. In that
+  /// case, this function succeeds with a null declaration.
+  ///
+  /// \param IsFriend Whether a friend specifier has already been parsed in the
+  /// declaration containing this tag.
+  DeclResult
+  ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
+           CXXScopeSpec &SS, IdentifierInfo *Name, SourceLocation NameLoc,
+           const ParsedAttributesView &Attr, AccessSpecifier AS,
+           SourceLocation ModulePrivateLoc,
+           MultiTemplateParamsArg TemplateParameterLists, bool &OwnedDecl,
+           bool &IsDependent, SourceLocation ScopedEnumKWLoc,
+           bool ScopedEnumUsesClassTag, TypeResult UnderlyingType,
+           bool IsTypeSpecifier, bool IsTemplateParamOrArg, OffsetOfKind OOK,
+           SkipBodyInfo *SkipBody = nullptr, TypeResult *MSVCEnumType = nullptr,
+           bool IsFriend = false);
 
   /// ActOnField - Each field of a C struct/union is passed into this in order
   /// to create a FieldDecl object for it.
@@ -12418,6 +12427,20 @@ public:
                              NestedNameSpecifierLoc QualifierLoc,
                              const IdentifierInfo &II, SourceLocation IILoc,
                              bool DeducedTSTContext = true);
+
+  /// Builds and diagnoses an MSVC-compatible elaborated enum typedef type.
+  ///
+  /// Unqualified scope restrictions are enforced by the caller.
+  ///
+  /// \returns A null type, without diagnosing, if this is not MSVC-compatible
+  /// C++, if this occurs in a function prototype, if \p Keyword is not \c enum,
+  /// if \p Found does not name an enum typedef, or if the typedef and its
+  /// underlying tag share a name in the same redeclaration context.
+  QualType BuildMSVCEnumTypedefType(NamedDecl *Found,
+                                    ElaboratedTypeKeyword Keyword,
+                                    NestedNameSpecifier Qualifier,
+                                    SourceLocation NameLoc,
+                                    bool InFunctionPrototype = false);
 
   /// Rebuilds a type within the context of the current instantiation.
   ///

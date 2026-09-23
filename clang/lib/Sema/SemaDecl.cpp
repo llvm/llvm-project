@@ -18170,6 +18170,30 @@ static bool isAcceptableTagRedeclContext(Sema &S, DeclContext *OldDC,
   return false;
 }
 
+QualType Sema::BuildMSVCEnumTypedefType(NamedDecl *Found,
+                                        ElaboratedTypeKeyword Keyword,
+                                        NestedNameSpecifier Qualifier,
+                                        SourceLocation NameLoc,
+                                        bool InFunctionPrototype) {
+  if (Qualifier)
+    Found = Found->getUnderlyingDecl();
+  auto *TD = dyn_cast<TypedefNameDecl>(Found);
+  if (!getLangOpts().CPlusPlus || !getLangOpts().MSVCCompat ||
+      InFunctionPrototype || InFunctionParameterTypeInstantiation || !TD ||
+      Keyword != ElaboratedTypeKeyword::Enum ||
+      !TD->getUnderlyingType()->isEnumeralType())
+    return QualType();
+  if (TagDecl *Tag = TD->getUnderlyingType()->getAsTagDecl())
+    if (Tag->getDeclName() == TD->getDeclName() &&
+        Tag->getDeclContext()->getRedeclContext()->Equals(
+            TD->getDeclContext()->getRedeclContext()))
+      return QualType();
+
+  checkTypeDeclType(nullptr, DiagCtorKind::None, TD, NameLoc);
+  Diag(NameLoc, diag::ext_ms_enum_typedef) << isa<TypeAliasDecl>(TD);
+  return Context.getTypedefType(Keyword, Qualifier, TD);
+}
+
 DeclResult
 Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
                CXXScopeSpec &SS, IdentifierInfo *Name, SourceLocation NameLoc,
@@ -18179,7 +18203,8 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
                bool &IsDependent, SourceLocation ScopedEnumKWLoc,
                bool ScopedEnumUsesClassTag, TypeResult UnderlyingType,
                bool IsTypeSpecifier, bool IsTemplateParamOrArg,
-               OffsetOfKind OOK, SkipBodyInfo *SkipBody) {
+               OffsetOfKind OOK, SkipBodyInfo *SkipBody,
+               TypeResult *MSVCEnumType, bool IsFriend) {
   // If this is not a definition, it must have a name.
   IdentifierInfo *OrigName = Name;
   assert((Name != nullptr || TUK == TagUseKind::Definition) &&
@@ -18189,6 +18214,42 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
   OwnedDecl = false;
   TagTypeKind Kind = TypeWithKeyword::getTagTypeKindForTypeSpec(TagSpec);
   bool ScopedEnum = ScopedEnumKWLoc.isValid();
+
+  auto SetMSVCEnumType = [&](NamedDecl *Found) {
+    NamedDecl *TypeDecl = Found;
+    if (!SS.isEmpty() ||
+        (isa<UsingShadowDecl>(Found) && Found->getDeclContext()->isRecord()))
+      TypeDecl = Found->getUnderlyingDecl();
+    auto *TD = dyn_cast<TypedefNameDecl>(TypeDecl);
+    if (!MSVCEnumType || !TD || Kind != TagTypeKind::Enum ||
+        TUK != TagUseKind::Reference || (S && S->containedInPrototypeScope()))
+      return false;
+    // MSVC accepts an unqualified typedef only in class scope and not after a
+    // friend specifier.
+    if (SS.isEmpty()) {
+      if (IsFriend)
+        return false;
+      auto *CurRecord = dyn_cast<CXXRecordDecl>(CurContext);
+      if (!CurRecord)
+        return false;
+      DeclContext *TDContext = TD->getDeclContext();
+      auto *TDRecord = dyn_cast<CXXRecordDecl>(TDContext);
+      if (!TDContext->Encloses(CurContext) &&
+          !(TDRecord && CurRecord->isDerivedFrom(TDRecord)))
+        return false;
+    }
+
+    NestedNameSpecifier Qualifier = SS.getScopeRep();
+    NestedNameSpecifierLoc QualifierLoc = SS.getWithLocInContext(Context);
+    QualType T = BuildMSVCEnumTypedefType(TypeDecl, ElaboratedTypeKeyword::Enum,
+                                          Qualifier, NameLoc);
+    if (T.isNull())
+      return false;
+    TypeLocBuilder TLB;
+    TLB.push<TypedefTypeLoc>(T).set(KWLoc, QualifierLoc, NameLoc);
+    *MSVCEnumType = CreateParsedType(T, TLB.getTypeSourceInfo(Context, T));
+    return true;
+  };
 
   // FIXME: Check member specializations more carefully.
   bool isMemberSpecialization = false;
@@ -18658,6 +18719,8 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
     // okay according to the likely resolution of an open issue;
     // see http://www.open-std.org/jtc1/sc22/wg21/docs/cwg_active.html#407
     if (getLangOpts().CPlusPlus) {
+      if (SetMSVCEnumType(DirectPrevDecl))
+        return (Decl *)nullptr;
       if (TypedefNameDecl *TD = dyn_cast<TypedefNameDecl>(PrevDecl)) {
         if (TagDecl *Tag = TD->getUnderlyingType()->getAsTagDecl()) {
           if (Tag->getDeclName() == Name &&

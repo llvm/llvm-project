@@ -1680,6 +1680,7 @@ def MicrosoftInconsistentDllImport : DiagGroup<"inconsistent-dllimport">;
 def MicrosoftRedeclareStatic : DiagGroup<"microsoft-redeclare-static">;
 def MicrosoftEnumForwardReference :
     DiagGroup<"microsoft-enum-forward-reference">;
+def MicrosoftEnumTypedef : DiagGroup<"microsoft-enum-typedef">;
 def MicrosoftGoto : DiagGroup<"microsoft-goto">;
 def MicrosoftFlexibleArray : DiagGroup<"microsoft-flexible-array">;
 def MicrosoftExtraQualification : DiagGroup<"microsoft-extra-qualification">;
@@ -1710,10 +1711,11 @@ def Microsoft : DiagGroup<"microsoft",
      MicrosoftMutableReference, MicrosoftPureDefinition,
      MicrosoftUnionMemberReference, MicrosoftExplicitConstructorCall,
      MicrosoftEnumValue, MicrosoftDefaultArgRedefinition, MicrosoftTemplate,
-     MicrosoftRedeclareStatic, MicrosoftEnumForwardReference, MicrosoftGoto,
-     MicrosoftFlexibleArray, MicrosoftExtraQualification, MicrosoftCast,
-     MicrosoftConstInit, MicrosoftVoidPseudoDtor, MicrosoftAnonTag,
-     MicrosoftCommentPaste, MicrosoftEndOfFile,
+     MicrosoftRedeclareStatic, MicrosoftEnumForwardReference,
+     MicrosoftEnumTypedef, MicrosoftGoto, MicrosoftFlexibleArray,
+     MicrosoftExtraQualification, MicrosoftCast, MicrosoftConstInit,
+     MicrosoftVoidPseudoDtor, MicrosoftAnonTag, MicrosoftCommentPaste,
+     MicrosoftEndOfFile,
      MicrosoftInitFromPredefined, MicrosoftStringLiteralFromPredefined,
      MicrosoftInconsistentDllImport, MicrosoftInlineOnNonFunction,
      MicrosoftEmptyEnum]>;

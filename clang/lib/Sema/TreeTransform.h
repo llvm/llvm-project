@@ -49,6 +49,7 @@
 #include "clang/Sema/Template.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include <algorithm>
 #include <optional>
 
@@ -148,6 +149,7 @@ class TreeTransform {
 
 protected:
   Sema &SemaRef;
+  bool TransformingFunctionParameterType = false;
 
   /// The set of local declarations that have been transformed, for
   /// cases where we are forced to build new declarations within the transformer
@@ -172,6 +174,10 @@ public:
   /// Retrieves a reference to the semantic analysis object used for
   /// this tree transform.
   Sema &getSema() const { return SemaRef; }
+
+  bool isTransformingFunctionParameterType() const {
+    return TransformingFunctionParameterType;
+  }
 
   /// Whether the transformation should always rebuild AST nodes, even
   /// if none of the children have changed.
@@ -1250,6 +1256,11 @@ public:
       case LookupResultKind::FoundOverloaded:
       case LookupResultKind::FoundUnresolvedValue: {
         NamedDecl *SomeDecl = Result.getRepresentativeDecl();
+        if (QualType T = SemaRef.BuildMSVCEnumTypedefType(
+                SomeDecl, Keyword, QualifierLoc.getNestedNameSpecifier(), IdLoc,
+                getDerived().isTransformingFunctionParameterType());
+            !T.isNull())
+          return T;
         NonTagKind NTK = SemaRef.getNonTagTypeDeclKind(SomeDecl, Kind);
         SemaRef.Diag(IdLoc, diag::err_tag_reference_non_tag)
             << SomeDecl << NTK << Kind;
@@ -6518,6 +6529,8 @@ bool TreeTransform<Derived>::TransformFunctionTypeParams(
     SmallVectorImpl<ParmVarDecl *> *PVars,
     Sema::ExtParameterInfoBuilder &PInfos,
     unsigned *LastParamTransformed) {
+  llvm::SaveAndRestore TransformingParameter(TransformingFunctionParameterType,
+                                             true);
   int indexAdjustment = 0;
 
   unsigned NumParams = Params.size();

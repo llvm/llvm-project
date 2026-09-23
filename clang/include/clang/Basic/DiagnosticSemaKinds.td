@@ -6700,6 +6700,10 @@ def err_forward_ref_enum : Error<
 def ext_ms_forward_ref_enum : ExtWarn<
   "forward references to 'enum' types are a Microsoft extension">,
   InGroup<MicrosoftEnumForwardReference>;
+def ext_ms_enum_typedef : ExtWarn<
+  "using an 'enum' specifier with a %select{typedef|type alias}0 name is a "
+  "Microsoft extension">,
+  InGroup<MicrosoftEnumTypedef>;
 def ext_forward_ref_enum_def : Extension<
   "redeclaration of already-defined enum %0 is a GNU extension">,
   InGroup<GNURedeclaredEnum>;
