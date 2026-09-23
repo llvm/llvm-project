@@ -1274,15 +1274,15 @@ define void @histogram_nxv4i32(<vscale x 4 x ptr> %buckets, <vscale x 4 x i1> %m
 
 define void @histogram_nxv8i16(<vscale x 8 x ptr> %buckets, <vscale x 8 x i1> %mask) #3 {
 ; CHECK-VSCALE-1-LABEL: 'histogram_nxv8i16'
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:162 CodeSize:162 Lat:402 SizeLat:162 for: call void @llvm.experimental.vector.histogram.add.nxv8p0.i16(<vscale x 8 x ptr> %buckets, i16 1, <vscale x 8 x i1> %mask)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:164 CodeSize:164 Lat:404 SizeLat:164 for: call void @llvm.experimental.vector.histogram.add.nxv8p0.i16(<vscale x 8 x ptr> %buckets, i16 1, <vscale x 8 x i1> %mask)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-VSCALE-2-LABEL: 'histogram_nxv8i16'
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:324 CodeSize:324 Lat:804 SizeLat:324 for: call void @llvm.experimental.vector.histogram.add.nxv8p0.i16(<vscale x 8 x ptr> %buckets, i16 1, <vscale x 8 x i1> %mask)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:326 CodeSize:326 Lat:806 SizeLat:326 for: call void @llvm.experimental.vector.histogram.add.nxv8p0.i16(<vscale x 8 x ptr> %buckets, i16 1, <vscale x 8 x i1> %mask)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; TYPE_BASED_ONLY-LABEL: 'histogram_nxv8i16'
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:162 CodeSize:162 Lat:402 SizeLat:162 for: call void @llvm.experimental.vector.histogram.add.nxv8p0.i16(<vscale x 8 x ptr> %buckets, i16 1, <vscale x 8 x i1> %mask)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:164 CodeSize:164 Lat:404 SizeLat:164 for: call void @llvm.experimental.vector.histogram.add.nxv8p0.i16(<vscale x 8 x ptr> %buckets, i16 1, <vscale x 8 x i1> %mask)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   call void @llvm.experimental.vector.histogram.add.nxv8p0.i16(<vscale x 8 x ptr> %buckets, i16 1, <vscale x 8 x i1> %mask)
@@ -1291,15 +1291,15 @@ define void @histogram_nxv8i16(<vscale x 8 x ptr> %buckets, <vscale x 8 x i1> %m
 
 define void @histogram_nxv16i8(<vscale x 16 x ptr> %buckets, <vscale x 16 x i1> %mask) #3 {
 ; CHECK-VSCALE-1-LABEL: 'histogram_nxv16i8'
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:324 CodeSize:324 Lat:804 SizeLat:324 for: call void @llvm.experimental.vector.histogram.add.nxv16p0.i8(<vscale x 16 x ptr> %buckets, i8 1, <vscale x 16 x i1> %mask)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:328 CodeSize:328 Lat:808 SizeLat:328 for: call void @llvm.experimental.vector.histogram.add.nxv16p0.i8(<vscale x 16 x ptr> %buckets, i8 1, <vscale x 16 x i1> %mask)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-VSCALE-2-LABEL: 'histogram_nxv16i8'
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:648 CodeSize:648 Lat:1608 SizeLat:648 for: call void @llvm.experimental.vector.histogram.add.nxv16p0.i8(<vscale x 16 x ptr> %buckets, i8 1, <vscale x 16 x i1> %mask)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:652 CodeSize:652 Lat:1612 SizeLat:652 for: call void @llvm.experimental.vector.histogram.add.nxv16p0.i8(<vscale x 16 x ptr> %buckets, i8 1, <vscale x 16 x i1> %mask)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; TYPE_BASED_ONLY-LABEL: 'histogram_nxv16i8'
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:324 CodeSize:324 Lat:804 SizeLat:324 for: call void @llvm.experimental.vector.histogram.add.nxv16p0.i8(<vscale x 16 x ptr> %buckets, i8 1, <vscale x 16 x i1> %mask)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:328 CodeSize:328 Lat:808 SizeLat:328 for: call void @llvm.experimental.vector.histogram.add.nxv16p0.i8(<vscale x 16 x ptr> %buckets, i8 1, <vscale x 16 x i1> %mask)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   call void @llvm.experimental.vector.histogram.add.nxv16p0.i64(<vscale x 16 x ptr> %buckets, i8 1, <vscale x 16 x i1> %mask)

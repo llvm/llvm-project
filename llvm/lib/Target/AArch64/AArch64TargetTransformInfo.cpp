@@ -597,8 +597,8 @@ AArch64TTIImpl::getHistogramCost(const AArch64Subtarget *ST,
   // FIXME: We should be able to generate histcnt for fixed-length vectors
   //        using ptrue with a specific VL.
   if (VectorType *VTy = dyn_cast<VectorType>(BucketPtrsTy)) {
-    unsigned EC = VTy->getElementCount().getKnownMinValue();
-    if (!isPowerOf2_64(EC) || !VTy->isScalableTy() || EC == 1)
+    unsigned MinEC = VTy->getElementCount().getKnownMinValue();
+    if (!isPowerOf2_64(MinEC) || !VTy->isScalableTy() || MinEC == 1)
       return InstructionCost::getInvalid();
 
     // HistCnt only supports 32b and 64b element types
@@ -608,10 +608,16 @@ AArch64TTIImpl::getHistogramCost(const AArch64Subtarget *ST,
     // but will likely increase on wider vector types. Multiply by vscale as
     // a quick estimate.
     unsigned VScale = ST->getVScaleForTuning();
-    unsigned NaturalVectorWidth = AArch64::SVEBitsPerBlock / LegalEltSize;
-    unsigned TotalHistCnts = EC / NaturalVectorWidth;
+    unsigned NaturalMinEC = AArch64::SVEBitsPerBlock / LegalEltSize;
+    unsigned TotalHistCnts = MinEC / NaturalMinEC;
+    Cost += VScale * TotalHistCnts;
 
-    return Cost + VScale * TotalHistCnts;
+    // If the element size is smaller than legal, add in an extension cost.
+    // Assume we need an extension for each histcnt instruction.
+    if (LegalEltSize != EltSize)
+      Cost += TotalHistCnts;
+
+    return Cost;
   }
 
   return InstructionCost::getInvalid();
