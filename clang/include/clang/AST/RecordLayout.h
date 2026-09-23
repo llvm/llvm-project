@@ -84,6 +84,10 @@ private:
   /// the __declspec(align()) trumps #pramga pack and must always be obeyed.
   CharUnits RequiredAlignment;
 
+  /// Natural alignment of pragma-pack-resistant fields (vectors, x87 fp80),
+  /// or zero if none.
+  CharUnits PragmaPackResistantAlignment;
+
   /// FieldOffsets - Array of field offsets in bits.
   ASTVector<uint64_t> FieldOffsets;
 
@@ -157,7 +161,8 @@ private:
 
   ASTRecordLayout(const ASTContext &Ctx, CharUnits size, CharUnits alignment,
                   CharUnits preferredAlignment, CharUnits unadjustedAlignment,
-                  CharUnits requiredAlignment, CharUnits datasize,
+                  CharUnits requiredAlignment,
+                  CharUnits pragmaPackResistantAlignment, CharUnits datasize,
                   ArrayRef<uint64_t> fieldoffsets);
 
   using BaseOffsetsMapTy = CXXRecordLayoutInfo::BaseOffsetsMapTy;
@@ -165,7 +170,8 @@ private:
   // Constructor for C++ records.
   ASTRecordLayout(const ASTContext &Ctx, CharUnits size, CharUnits alignment,
                   CharUnits preferredAlignment, CharUnits unadjustedAlignment,
-                  CharUnits requiredAlignment, bool hasOwnVFPtr,
+                  CharUnits requiredAlignment,
+                  CharUnits pragmaPackResistantAlignment, bool hasOwnVFPtr,
                   bool hasExtendableVFPtr, CharUnits vbptroffset,
                   CharUnits datasize, ArrayRef<uint64_t> fieldoffsets,
                   CharUnits nonvirtualsize, CharUnits nonvirtualalignment,
@@ -326,6 +332,11 @@ public:
   }
 
   CharUnits getRequiredAlignment() const { return RequiredAlignment; }
+
+  /// Get the natural alignment of pragma-pack-resistant fields.
+  CharUnits getPragmaPackResistantAlignment() const {
+    return PragmaPackResistantAlignment;
+  }
 
   bool endsWithZeroSizedObject() const {
     return CXXInfo && CXXInfo->EndsWithZeroSizedObject;

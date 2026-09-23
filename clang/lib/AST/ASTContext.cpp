@@ -2059,11 +2059,7 @@ bool ASTContext::isPromotableIntegerType(QualType T) const {
 }
 
 bool ASTContext::isAlignmentRequired(const Type *T) const {
-  AlignRequirementKind Kind = getTypeInfo(T).AlignRequirement;
-  // ResistPragmaPack is only meant to resist #pragma pack in MSVC record
-  // layout, not to trigger other "aligned attribute" behaviors.
-  return Kind != AlignRequirementKind::None &&
-         Kind != AlignRequirementKind::ResistPragmaPack;
+  return getTypeInfo(T).isAlignRequired();
 }
 
 bool ASTContext::isAlignmentRequired(QualType T) const {
@@ -2558,19 +2554,15 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     const ASTRecordLayout &Layout = getASTRecordLayout(RD);
     Width = toBits(Layout.getSize());
     Align = toBits(Layout.getAlignment());
-    if (RD->hasAttr<AlignedAttr>()) {
+    if (RD->hasAttr<AlignedAttr>())
       AlignRequirement = AlignRequirementKind::RequiredByRecord;
-    } else if (llvm::any_of(RD->fields(), [this](const FieldDecl *FD) {
-                 return getTypeInfo(FD->getType()).AlignRequirement ==
-                        AlignRequirementKind::ResistPragmaPack;
-               })) {
-      // Propagate ResistPragmaPack if any field has that requirement, so
-      // pragma pack applied to enclosing records won't reduce alignment for
-      // records containing vector or x87 fp80 types.
+    else if (!Layout.getPragmaPackResistantAlignment().isZero())
+      // Propagate ResistPragmaPack so pragma pack applied to enclosing
+      // records won't reduce alignment for records containing vector or
+      // x87 fp80 types.
       AlignRequirement = AlignRequirementKind::ResistPragmaPack;
-    } else {
+    else
       AlignRequirement = AlignRequirementKind::None;
-    }
     break;
   }
 
