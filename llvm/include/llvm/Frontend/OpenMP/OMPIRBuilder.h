@@ -3838,8 +3838,8 @@ public:
   ///        outlined function. If this is empty, such code is emitted without a
   ///        debug location.
   /// \param RTLocOverride Optional runtime source-location identifier to report
-  ///        to the offload runtime for the kernel launch. When null, the
-  ///        identifier is derived from \p Loc.
+  ///        to the offload runtime for the kernel launch. When null, a default
+  ///        source-location identifier is used.
   LLVM_ABI InsertPointOrErrorTy createTarget(
       const LocationDescription &Loc, bool IsOffloadEntry,
       OpenMPIRBuilder::InsertPointTy AllocaIP,

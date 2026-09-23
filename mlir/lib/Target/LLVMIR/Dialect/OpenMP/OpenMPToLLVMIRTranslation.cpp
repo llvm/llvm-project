@@ -8680,6 +8680,8 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
 
   // Pass the region's source location to the runtime, taken from the op's own
   // location; only offloading entries emit the mapper calls that consume it.
+  // No need to also guard on !isTargetDevice here: this function bails out
+  // earlier for the target device, so isOffloadEntry alone is sufficient.
   llvm::Value *srcLocOverride =
       isOffloadEntry ? getSourceLocIdentFromOp(builder, *ompBuilder, op)
                      : nullptr;
