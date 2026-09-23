@@ -9,8 +9,10 @@ define fastcc <256 x i32> @test_vp_srem_v256i32_vv(<256 x i32> %i0, <256 x i32> 
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lvl %s0
 ; CHECK-NEXT:    vdivs.w.sx %v2, %v0, %v1, %vm1
-; CHECK-NEXT:    vmuls.w.sx %v1, %v1, %v2, %vm1
-; CHECK-NEXT:    vsubs.w.sx %v0, %v0, %v1, %vm1
+; CHECK-NEXT:    lea %s0, 256
+; CHECK-NEXT:    lvl %s0
+; CHECK-NEXT:    vmuls.w.sx %v1, %v1, %v2
+; CHECK-NEXT:    vsubs.w.sx %v0, %v0, %v1
 ; CHECK-NEXT:    b.l.t (, %s10)
   %r0 = call <256 x i32> @llvm.vp.srem.v256i32(<256 x i32> %i0, <256 x i32> %i1, <256 x i1> %m, i32 %n)
   ret <256 x i32> %r0
@@ -23,8 +25,10 @@ define fastcc <256 x i32> @test_vp_srem_v256i32_rv(i32 %s0, <256 x i32> %i1, <25
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lvl %s1
 ; CHECK-NEXT:    vdivs.w.sx %v1, %s0, %v0, %vm1
-; CHECK-NEXT:    vmuls.w.sx %v0, %v0, %v1, %vm1
-; CHECK-NEXT:    vsubs.w.sx %v0, %s0, %v0, %vm1
+; CHECK-NEXT:    lea %s1, 256
+; CHECK-NEXT:    lvl %s1
+; CHECK-NEXT:    vmuls.w.sx %v0, %v0, %v1
+; CHECK-NEXT:    vsubs.w.sx %v0, %s0, %v0
 ; CHECK-NEXT:    b.l.t (, %s10)
   %xins = insertelement <256 x i32> undef, i32 %s0, i32 0
   %i0 = shufflevector <256 x i32> %xins, <256 x i32> undef, <256 x i32> zeroinitializer
@@ -39,8 +43,10 @@ define fastcc <256 x i32> @test_vp_srem_v256i32_vr(<256 x i32> %i0, i32 %s1, <25
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lvl %s1
 ; CHECK-NEXT:    vdivs.w.sx %v1, %v0, %s0, %vm1
-; CHECK-NEXT:    vmuls.w.sx %v1, %s0, %v1, %vm1
-; CHECK-NEXT:    vsubs.w.sx %v0, %v0, %v1, %vm1
+; CHECK-NEXT:    lea %s1, 256
+; CHECK-NEXT:    lvl %s1
+; CHECK-NEXT:    vmuls.w.sx %v1, %s0, %v1
+; CHECK-NEXT:    vsubs.w.sx %v0, %v0, %v1
 ; CHECK-NEXT:    b.l.t (, %s10)
   %yins = insertelement <256 x i32> undef, i32 %s1, i32 0
   %i1 = shufflevector <256 x i32> %yins, <256 x i32> undef, <256 x i32> zeroinitializer
@@ -57,8 +63,10 @@ define fastcc <256 x i64> @test_vp_int_v256i64_vv(<256 x i64> %i0, <256 x i64> %
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lvl %s0
 ; CHECK-NEXT:    vdivs.l %v2, %v0, %v1, %vm1
-; CHECK-NEXT:    vmuls.l %v1, %v1, %v2, %vm1
-; CHECK-NEXT:    vsubs.l %v0, %v0, %v1, %vm1
+; CHECK-NEXT:    lea %s0, 256
+; CHECK-NEXT:    lvl %s0
+; CHECK-NEXT:    vmuls.l %v1, %v1, %v2
+; CHECK-NEXT:    vsubs.l %v0, %v0, %v1
 ; CHECK-NEXT:    b.l.t (, %s10)
   %r0 = call <256 x i64> @llvm.vp.srem.v256i64(<256 x i64> %i0, <256 x i64> %i1, <256 x i1> %m, i32 %n)
   ret <256 x i64> %r0
@@ -70,8 +78,10 @@ define fastcc <256 x i64> @test_vp_srem_v256i64_rv(i64 %s0, <256 x i64> %i1, <25
 ; CHECK-NEXT:    and %s1, %s1, (32)0
 ; CHECK-NEXT:    lvl %s1
 ; CHECK-NEXT:    vdivs.l %v1, %s0, %v0, %vm1
-; CHECK-NEXT:    vmuls.l %v0, %v0, %v1, %vm1
-; CHECK-NEXT:    vsubs.l %v0, %s0, %v0, %vm1
+; CHECK-NEXT:    lea %s1, 256
+; CHECK-NEXT:    lvl %s1
+; CHECK-NEXT:    vmuls.l %v0, %v0, %v1
+; CHECK-NEXT:    vsubs.l %v0, %s0, %v0
 ; CHECK-NEXT:    b.l.t (, %s10)
   %xins = insertelement <256 x i64> undef, i64 %s0, i32 0
   %i0 = shufflevector <256 x i64> %xins, <256 x i64> undef, <256 x i32> zeroinitializer
@@ -85,8 +95,10 @@ define fastcc <256 x i64> @test_vp_srem_v256i64_vr(<256 x i64> %i0, i64 %s1, <25
 ; CHECK-NEXT:    and %s1, %s1, (32)0
 ; CHECK-NEXT:    lvl %s1
 ; CHECK-NEXT:    vdivs.l %v1, %v0, %s0, %vm1
-; CHECK-NEXT:    vmuls.l %v1, %s0, %v1, %vm1
-; CHECK-NEXT:    vsubs.l %v0, %v0, %v1, %vm1
+; CHECK-NEXT:    lea %s1, 256
+; CHECK-NEXT:    lvl %s1
+; CHECK-NEXT:    vmuls.l %v1, %s0, %v1
+; CHECK-NEXT:    vsubs.l %v0, %v0, %v1
 ; CHECK-NEXT:    b.l.t (, %s10)
   %yins = insertelement <256 x i64> undef, i64 %s1, i32 0
   %i1 = shufflevector <256 x i64> %yins, <256 x i64> undef, <256 x i32> zeroinitializer

@@ -601,6 +601,7 @@ PreservedAnalyses HipStdParMathFixupPass::run(Module &M,
     case Intrinsic::atan2:
     case Intrinsic::cosh:
     case Intrinsic::modf:
+    case Intrinsic::sincos:
     case Intrinsic::sinh:
     case Intrinsic::tan:
     case Intrinsic::tanh:
