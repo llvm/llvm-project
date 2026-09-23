@@ -91,7 +91,7 @@ GenericKernelTy::getKernelLaunchEnvironment(
     return nullptr;
 
   const bool NeedsReductionBuffer =
-      LaunchArgs.KernelEnvironment.ReductionDataSize != 0;
+      LaunchArgs.KernelLaunchInfo.ReductionDataSize != 0;
   if (NeedsReductionBuffer && LaunchArgs.OmpABIVersion < OMP_KERNEL_ARG_VERSION)
     return Plugin::error(ErrorCode::INVALID_BINARY,
                          "kernel was built against an older OpenMP "
@@ -124,7 +124,7 @@ GenericKernelTy::getKernelLaunchEnvironment(
   if (NeedsReductionBuffer) {
     // Use number of teams many buffer elements.
     auto AllocOrErr = GenericDevice.dataAlloc(
-        uint64_t(LaunchArgs.KernelEnvironment.ReductionDataSize) * NumBlocks0,
+        uint64_t(LaunchArgs.KernelLaunchInfo.ReductionDataSize) * NumBlocks0,
         /*HostPtr=*/nullptr, TargetAllocTy::TARGET_ALLOC_DEVICE,
         /*Alignment=*/0);
     if (!AllocOrErr)
@@ -158,7 +158,7 @@ Error GenericKernelTy::printLaunchInfo(GenericDeviceTy &GenericDevice,
        "%s mode\n",
        getName(), NumBlocks[0], NumBlocks[1], NumBlocks[2], NumThreads[0],
        NumThreads[1], NumThreads[2],
-       LaunchArgs.KernelEnvironment.getExecutionModeName());
+       LaunchArgs.KernelLaunchInfo.getExecutionModeName());
   return printLaunchInfoDetails(GenericDevice, LaunchArgs, NumThreads,
                                 NumBlocks);
 }
@@ -227,7 +227,7 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice,
                                     LaunchArgs.UserNumBlocks[2]};
 
   // Multidimensional is only supported with bare mode for now.
-  assert(LaunchArgs.KernelEnvironment.isBareMode() ||
+  assert(LaunchArgs.KernelLaunchInfo.isBareMode() ||
          EffectiveNumThreads[1] == 1 && EffectiveNumThreads[2] == 1 &&
              EffectiveNumBlocks[1] == 1 && EffectiveNumBlocks[2] == 1 &&
              "Non-bare mode should only use the first thread and block "
@@ -316,16 +316,16 @@ uint32_t
 GenericKernelTy::getEffectiveNumThreads(GenericDeviceTy &GenericDevice,
                                         uint32_t UserThreadLimit,
                                         const KernelLaunchArgsTy &LaunchArgs) {
-  assert(!LaunchArgs.KernelEnvironment.isBareMode() &&
+  assert(!LaunchArgs.KernelLaunchInfo.isBareMode() &&
          "bare kernel should not call this function");
 
-  if (UserThreadLimit > 0 && LaunchArgs.KernelEnvironment.isGenericMode())
+  if (UserThreadLimit > 0 && LaunchArgs.KernelLaunchInfo.isGenericMode())
     UserThreadLimit += GenericDevice.getWarpSize();
 
-  return std::min(LaunchArgs.KernelEnvironment.MaxNumThreads,
+  return std::min(LaunchArgs.KernelLaunchInfo.MaxNumThreads,
                   (UserThreadLimit > 0)
                       ? UserThreadLimit
-                      : LaunchArgs.KernelEnvironment.PreferredNumThreads);
+                      : LaunchArgs.KernelLaunchInfo.PreferredNumThreads);
 }
 
 uint32_t GenericKernelTy::getEffectiveNumBlocks(
@@ -333,7 +333,7 @@ uint32_t GenericKernelTy::getEffectiveNumBlocks(
     uint64_t LoopTripCount, uint32_t &EffectiveNumThreads,
     bool IsNumThreadsStrict, bool IsNumThreadsFromUser,
     const KernelLaunchArgsTy &LaunchArgs) {
-  assert(!LaunchArgs.KernelEnvironment.isBareMode() &&
+  assert(!LaunchArgs.KernelLaunchInfo.isBareMode() &&
          "bare kernel should not call this function");
 
   // NOTE: This clamps the user-requested number of blocks to the device limit
@@ -345,14 +345,14 @@ uint32_t GenericKernelTy::getEffectiveNumBlocks(
                     GenericDevice.getBlockLimit(EffectiveNumThreads));
 
   // Return the number of blocks required to cover the loop iterations.
-  if (LaunchArgs.KernelEnvironment.isNoLoopMode())
+  if (LaunchArgs.KernelLaunchInfo.isNoLoopMode())
     return LoopTripCount > 0 ? (((LoopTripCount - 1) / EffectiveNumThreads) + 1)
                              : 1;
 
   uint64_t DefaultNumBlocks = GenericDevice.getDefaultNumBlocks();
   uint64_t TripCountNumBlocks = std::numeric_limits<uint64_t>::max();
   if (LoopTripCount > 0) {
-    if (LaunchArgs.KernelEnvironment.isSPMDMode()) {
+    if (LaunchArgs.KernelLaunchInfo.isSPMDMode()) {
       // We have a combined construct, i.e. `target teams distribute
       // parallel for [simd]`. We launch so many blocks so that each thread
       // will execute one iteration of the loop; rounded up to the nearest
@@ -397,8 +397,8 @@ uint32_t GenericKernelTy::getEffectiveNumBlocks(
       assert(OldNumThreads >= EffectiveNumThreads &&
              "Number of threads cannot be increased!");
     } else {
-      assert((LaunchArgs.KernelEnvironment.isGenericMode() ||
-              LaunchArgs.KernelEnvironment.isGenericSPMDMode()) &&
+      assert((LaunchArgs.KernelLaunchInfo.isGenericMode() ||
+              LaunchArgs.KernelLaunchInfo.isGenericSPMDMode()) &&
              "Unexpected execution mode!");
       // If we reach this point, then we have a non-combined construct, i.e.
       // `teams distribute` with a nested `parallel for` and each block is

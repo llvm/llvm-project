@@ -407,7 +407,7 @@ int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
   LaunchArgs.Flags.StrictBlocks = KernelArgs.Flags.StrictBlocks;
   LaunchArgs.Flags.StrictThreads = KernelArgs.Flags.StrictThreads;
   LaunchArgs.Flags.DynCGroupMemFallback = KernelArgs.Flags.DynCGroupMemFallback;
-  LaunchArgs.KernelEnvironment = getKernelLaunchInfo(TgtEntryPtr);
+  LaunchArgs.KernelLaunchInfo = getKernelLaunchInfo(TgtEntryPtr);
 
   if (KernelArgs.Flags.IsCUDA) {
     // Kernel languages (CUDA/HIP) pass an already-flattened argument-pointer
