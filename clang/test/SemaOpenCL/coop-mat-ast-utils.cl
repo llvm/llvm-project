@@ -41,7 +41,7 @@ typedef float __attribute__((coop_mat(SCOPE, 16, 16, USE_C))) MatC_t;
 
 // ── 3a. Mangling — function with a coop-mat parameter gets a mangled name
 //        that contains the vendor-extended "coop_mat" marker.
-kernel void test_mangling(MatA_t a) { (void)a; }
+void test_mangling(MatA_t a) { (void)a; }
 
 // MANGLE: @{{.*}}test_mangling{{.*}}(
 
