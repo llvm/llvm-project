@@ -75,7 +75,9 @@ static cl::opt<bool>
 
 static cl::opt<bool> GCNTrackers(
     "amdgpu-use-amdgpu-trackers", cl::Hidden,
-    cl::desc("Use the AMDGPU specific RPTrackers during scheduling"),
+    cl::desc("Use the AMDGPU specific RPTrackers during scheduling. Can be "
+             "overridden by the \"amdgpu-use-amdgpu-trackers\" "
+             "function attribute."),
     cl::init(false));
 
 static cl::opt<unsigned> PendingQueueLimit(
@@ -135,8 +137,14 @@ const unsigned ScheduleMetrics::ScaleFactor = 100;
 GCNSchedStrategy::GCNSchedStrategy(const MachineSchedContext *C)
     : GenericScheduler(C), TargetOccupancy(0), MF(nullptr),
       DownwardTracker(*C->LIS), UpwardTracker(*C->LIS), HasHighPressure(false) {
-  if (GCNTrackers.getNumOccurrences() > 0)
+  Attribute UseGCNTrackersAttr =
+      C->MF->getFunction().getFnAttribute("amdgpu-use-amdgpu-trackers");
+  if (UseGCNTrackersAttr.isValid()) {
+    // This attribute is set per-function and is not propagated across calls.
+    GCNTrackersOverride = UseGCNTrackersAttr.getValueAsBool();
+  } else if (GCNTrackers.getNumOccurrences() > 0) {
     GCNTrackersOverride = GCNTrackers;
+  }
 }
 
 void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
