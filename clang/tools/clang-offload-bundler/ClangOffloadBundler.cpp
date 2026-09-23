@@ -145,7 +145,7 @@ int main(int argc, const char **argv) {
                         cl::init(false), cl::cat(ClangOffloadBundlerCategory));
   cl::opt<int> CompressionLevel(
       "compression-level", cl::desc("Specify the compression level (integer)"),
-      cl::value_desc("n"), cl::Optional, cl::cat(ClangOffloadBundlerCategory));
+      cl::value_desc("n"), cl::cat(ClangOffloadBundlerCategory));
 
   // Process commandline options and report errors
   sys::PrintStackTraceOnErrorSignal(argv[0]);

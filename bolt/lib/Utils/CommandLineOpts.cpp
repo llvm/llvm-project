@@ -102,7 +102,7 @@ AggregateOnly("aggregate-only",
 cl::opt<unsigned>
     BucketsPerLine("line-size",
                    cl::desc("number of entries per line (default 256)"),
-                   cl::init(256), cl::Optional, cl::cat(HeatmapCategory));
+                   cl::init(256), cl::cat(HeatmapCategory));
 
 cl::opt<bool>
     CompactCodeModel("compact-code-model",
@@ -238,22 +238,22 @@ cl::opt<int> HeatmapCdfPct(
 cl::opt<unsigned long long> HeatmapMaxAddress(
     "max-address", cl::init(0xffffffff),
     cl::desc("maximum address considered valid for heatmap (default 4GB)"),
-    cl::Optional, cl::cat(HeatmapCategory));
+    cl::cat(HeatmapCategory));
 
 cl::opt<unsigned long long> HeatmapMinAddress(
     "min-address", cl::init(0x0),
     cl::desc("minimum address considered valid for heatmap (default 0)"),
-    cl::Optional, cl::cat(HeatmapCategory));
+    cl::cat(HeatmapCategory));
 
 cl::opt<bool> HeatmapPrintMappings(
     "print-mappings", cl::init(false),
     cl::desc("print mappings in the legend, between characters/blocks and text "
              "sections (default false)"),
-    cl::Optional, cl::cat(HeatmapCategory));
+    cl::cat(HeatmapCategory));
 
 cl::opt<std::string> HeatmapOutput("heatmap",
                                    cl::desc("print heatmap to a given file"),
-                                   cl::Optional, cl::cat(HeatmapCategory));
+                                   cl::cat(HeatmapCategory));
 
 cl::opt<bool> HotData("hot-data",
                       cl::desc("hot data symbols support (relocation mode)"),
@@ -297,7 +297,6 @@ cl::opt<bool> Lite("lite", cl::desc("skip processing of cold functions"),
 cl::opt<std::string>
 OutputFilename("o",
   cl::desc("<output file>"),
-  cl::Optional,
   cl::cat(BoltOutputCategory));
 
 cl::list<std::string> PerfData("perfdata", cl::CommaSeparated,
@@ -350,7 +349,7 @@ cl::opt<std::string> SaveProfile("w",
 
 cl::opt<bool> ShowDensity("show-density",
                           cl::desc("show profile density details"),
-                          cl::Optional, cl::cat(AggregatorCategory));
+                          cl::cat(AggregatorCategory));
 
 cl::opt<bool> SplitEH("split-eh", cl::desc("split C++ exception handling code"),
                       cl::Hidden, cl::cat(BoltOptCategory));
