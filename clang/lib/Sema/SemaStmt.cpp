@@ -471,14 +471,10 @@ StmtResult Sema::ActOnCompoundStmt(SourceLocation L, SourceLocation R,
   }
 
   // Find defer statements that immediately precede a break/continue statement.
-  std::optional<SourceLocation> DeferLoc = std::nullopt;
-  for (unsigned i = 0; i != NumElts; ++i) {
-    if (DeferLoc && isa<BreakStmt, ContinueStmt>(Elts[i]))
-      Diag(DeferLoc.value(), diag::warn_redundant_defer)
+  for (unsigned i = 0; i != NumElts - 1; ++i) {
+    if (isa<DeferStmt>(Elts[i]) && isa<BreakStmt, ContinueStmt>(Elts[i+1]))
+      Diag(Elts[i]->getBeginLoc(), diag::warn_redundant_defer)
           << Elts[i]->getSourceRange();
-    DeferLoc = isa<DeferStmt>(Elts[i])
-                   ? std::optional<SourceLocation>(Elts[i]->getBeginLoc())
-                   : std::nullopt;
   }
 
   // Check for defer as last statement.
