@@ -7897,6 +7897,53 @@ section is not marked as readable or writable and it uses the section flag
 !0 = !{}
 ```
 
+(md_wave_profile)=
+
+#### '`wave.profile`' Metadata
+
+`wave.profile` records measured GPU wave visits on a function definition.
+A divergent wave can visit both successors and reconverge once, so these
+counts do not obey scalar flow conservation. They are profiling hints for
+profitability, not guarantees that justify correctness transformations.
+
+The function node contains `i64` operands: format version 2, a function
+identity given by the XXH3 64-bit hash of its complete name (including any
+promotion or specialization suffix), and a table of unsigned wave counts
+indexed by block identity. Renaming invalidates the profile. Identity zero
+holds the measured original entry count.
+A producer must omit the profile if that entry count is unavailable; it must
+not infer wave counts from lane counts or branch weights.
+
+Each profiled block's terminator has `wave.profile.block` metadata with
+`i64` operands: version 2, the function identity, the block identity, a
+zero-or-one measured flag, and the identities of its successors in order.
+A measured zero is an observation. A zero measured flag marks a missing or
+invalidated count; consumers must ignore the table entry in that case. Blocks
+without measurements use a zero placeholder, including blocks without
+instrumentation and blocks created by later transformations.
+
+Block identities refer to the original count table, independent of block
+layout. Extraction checks the function identity, unique block identities,
+and recorded edges. Exact extraction requires a complete mapping. Partial
+extraction retains unambiguous blocks and invalidates the source and old and
+new targets of a changed edge. Missing or duplicated identities also
+invalidate affected blocks. Unsupported versions, conflicting function
+records, and stale mappings remain valid IR but must not supply usable counts.
+
+A transform may preserve counts only for the same execution events. It may
+refresh the edge snapshot after validating the incoming mapping, keeping
+original identities and assigning unmeasured identities to new blocks. It
+must not restore already invalid counts or transfer a measured count to a
+block that gains executions, such as a new loop header. Transforms may drop
+the metadata. Cloning or inlining does not establish a valid count mapping.
+
+The original entry count remains the normalization anchor if that block is
+removed. It is separate from the mapped count of the current entry block.
+Consumers must handle missing or unmeasured data and a zero normalization
+count, and must not assume an IR count applies to every machine block
+generated from that IR block. Wave visits do not by themselves measure
+memory traffic, occupancy, or the complete cost of a spill.
+
 (md_uniformity_profile)=
 
 #### '`uniformity.profile`' Metadata

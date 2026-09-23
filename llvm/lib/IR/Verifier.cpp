@@ -591,6 +591,11 @@ void Verifier::visitGlobalValue(const GlobalValue &GV) {
     if (GO->hasMetadata(LLVMContext::MD_uniformity_profile))
       Check(isa<Function>(GO) && !GO->isDeclaration(),
             "uniformity.profile is only valid on function definitions", GO);
+    if (GO->hasMetadata(LLVMContext::MD_wave_profile))
+      Check(isa<Function>(GO) && !GO->isDeclaration(),
+            "wave.profile is only valid on function definitions", GO);
+    Check(!GO->hasMetadata(LLVMContext::MD_wave_profile_block),
+          "wave.profile.block is only valid on terminators", GO);
 
     if (const MDNode *Associated =
             GO->getMetadata(LLVMContext::MD_associated)) {
@@ -2818,6 +2823,16 @@ void Verifier::verifyUnknownProfileMetadata(MDNode *MD) {
 void Verifier::verifyFunctionMetadata(
     ArrayRef<std::pair<unsigned, MDNode *>> MDs) {
   for (const auto &Pair : MDs) {
+    if (Pair.first == LLVMContext::MD_wave_profile) {
+      Check(Pair.second->getNumOperands() >= 3,
+            "wave.profile requires a version, function ID, and wave counts",
+            Pair.second);
+      for (const MDOperand &Op : Pair.second->operands()) {
+        const auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(Op);
+        Check(CI && CI->getType()->isIntegerTy(64),
+              "wave.profile operands must be i64", Pair.second);
+      }
+    }
     if (Pair.first == LLVMContext::MD_uniformity_profile)
       Check(Pair.second->getNumOperands() == 0,
             "uniformity.profile must be an empty node", Pair.second);
@@ -6112,6 +6127,21 @@ void Verifier::visitInstruction(Instruction &I) {
 
   Check(!I.getMetadata(LLVMContext::MD_uniformity_profile),
         "uniformity.profile is only valid on function definitions", &I);
+  Check(!I.getMetadata(LLVMContext::MD_wave_profile),
+        "wave.profile is only valid on function definitions", &I);
+  if (MDNode *MD = I.getMetadata(LLVMContext::MD_wave_profile_block)) {
+    Check(I.isTerminator(), "wave.profile.block is only valid on terminators",
+          &I);
+    Check(MD->getNumOperands() >= 4,
+          "wave.profile.block requires a version, function ID, block ID, and "
+          "count-valid flag",
+          MD);
+    for (const MDOperand &Op : MD->operands()) {
+      const auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(Op);
+      Check(CI && CI->getType()->isIntegerTy(64),
+            "wave.profile.block operands must be i64", MD);
+    }
+  }
 
   if (MDNode *MD = I.getMetadata(LLVMContext::MD_branch_uniformity_profile)) {
     Check(isa<CondBrInst>(I),
