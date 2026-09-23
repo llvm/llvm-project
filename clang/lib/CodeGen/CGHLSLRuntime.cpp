@@ -1127,6 +1127,19 @@ static llvm::Value *createSPIRVBuiltinLoad(IRBuilder<> &B, llvm::Module &M,
   return B.CreateLoad(Ty, GV);
 }
 
+// For Vulkan builtins which begin counting from a driver-supplied base offset,
+// where corresponding HLSL system value is always zero-based within current
+// draw call.
+static llvm::Value *createSPIRVBuiltinDelta(IRBuilder<> &B, llvm::Module &M,
+                                            llvm::Type *Ty, const Twine &Name,
+                                            unsigned BuiltInID,
+                                            unsigned BaseBuiltInID) {
+  llvm::Value *Value = createSPIRVBuiltinLoad(B, M, Ty, Name, BuiltInID);
+  llvm::Value *Base =
+      createSPIRVBuiltinLoad(B, M, Ty, Name + Twine(".base"), BaseBuiltInID);
+  return B.CreateSub(Value, Base);
+}
+
 static llvm::Value *createSPIRVLocationLoad(IRBuilder<> &B, llvm::Module &M,
                                             llvm::Type *Ty, unsigned Location,
                                             StringRef Name, bool NeedsFlat) {
@@ -1540,9 +1553,10 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
            "SV_InstanceID is in an unavailable stage and should have been "
            "diagnosed by Sema");
     if (CGM.getTarget().getTriple().isSPIRV())
-      return createSPIRVBuiltinLoad(B, CGM.getModule(), Type,
-                                    Semantic->getAttrName()->getName(),
-                                    /* BuiltIn::InstanceIndex */ 43);
+      return createSPIRVBuiltinDelta(B, CGM.getModule(), Type,
+                                     Semantic->getAttrName()->getName(),
+                                     /* BuiltIn::InstanceIndex */ 43,
+                                     /* BuiltIn::BaseInstance */ 4425);
     if (CGM.getTarget().getTriple().isDXIL())
       return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index,
                                       Signature);
