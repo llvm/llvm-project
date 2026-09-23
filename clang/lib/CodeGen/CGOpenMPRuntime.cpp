@@ -2445,10 +2445,13 @@ void CGOpenMPRuntime::emitTaskgraphCall(CodeGenFunction &CGF,
       D.getSingleClause<OMPGraphResetClause>();
   llvm::Value *GraphReset;
   if (GraphResetClause) {
-    const Expr *Cond = GraphResetClause->getCondition();
-    llvm::Value *CondVal = CGF.EvaluateExprAsBool(Cond);
-    GraphReset =
-        CGF.Builder.CreateIntCast(CondVal, CGF.IntTy, /*isSigned=*/true);
+    if (const Expr *Cond = GraphResetClause->getCondition()) {
+      llvm::Value *CondVal = CGF.EvaluateExprAsBool(Cond);
+      GraphReset =
+          CGF.Builder.CreateIntCast(CondVal, CGF.IntTy, /*isSigned=*/false);
+    } else {
+      GraphReset = CGF.Builder.getInt32(1);
+    }
   } else {
     GraphReset = CGF.Builder.getInt32(0);
   }
