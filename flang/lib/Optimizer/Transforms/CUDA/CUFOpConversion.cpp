@@ -131,6 +131,21 @@ static mlir::Value getShapeFromDecl(mlir::Value src) {
   return mlir::Value{};
 }
 
+// hlfir.assign rejects a raw !fir.ref<!fir.array<?xT>> because a dynamic-size
+// array is not an HLFIR variable unless it is boxed. Use the transfer shape
+// (or a declare's shape) to build a descriptor.
+static mlir::Value asHLFIREntity(mlir::PatternRewriter &rewriter,
+                                 mlir::Location loc, mlir::Value val,
+                                 mlir::Value shape) {
+  if (hlfir::isFortranEntity(val))
+    return val;
+  mlir::Type unwrapped = fir::unwrapRefType(val.getType());
+  if (!shape)
+    shape = getShapeFromDecl(val);
+  auto boxTy = fir::BoxType::get(unwrapped);
+  return fir::EmboxOp::create(rewriter, loc, boxTy, val, shape);
+}
+
 static mlir::Value emboxSrc(mlir::PatternRewriter &rewriter,
                             cuf::DataTransferOp op,
                             const mlir::SymbolTable &symtab,
@@ -230,6 +245,9 @@ struct CUFDataTransferOpConversion
         src = createConvertOp(rewriter, loc, dstTy, src);
         fir::StoreOp::create(rewriter, loc, src, dst);
       } else {
+        mlir::Value shape = op.getShape();
+        src = asHLFIREntity(rewriter, loc, src, shape);
+        dst = asHLFIREntity(rewriter, loc, dst, shape);
         hlfir::AssignOp::create(rewriter, loc, src, dst);
       }
       rewriter.eraseOp(op);
