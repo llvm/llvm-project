@@ -344,6 +344,7 @@ libc_support_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
+        ":__support_macros_attributes",
         ":__support_macros_config",
         ":__support_macros_properties_architectures",
         ":hdr_stdint_proxy",
