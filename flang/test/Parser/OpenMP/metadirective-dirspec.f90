@@ -31,13 +31,16 @@ end
 
 subroutine f01(x)
   integer :: x
-  !$omp metadirective when(user={condition(.true.)}: &
+  ! condition(.false.) prevents block-associated variant from being
+  ! selected so the semantic check does not fire, while still testing
+  ! directive-specification parsing with an argument and ResolveCriticalName.
+  !$omp metadirective when(user={condition(.false.)}: &
   !$omp & critical(x))
 end
 
 !UNPARSE: SUBROUTINE f01 (x)
 !UNPARSE:  INTEGER x
-!UNPARSE: !$OMP METADIRECTIVE WHEN(USER={CONDITION(.true._4)}: CRITICAL(x))
+!UNPARSE: !$OMP METADIRECTIVE WHEN(USER={CONDITION(.false._4)}: CRITICAL(x))
 !UNPARSE: END SUBROUTINE
 
 !PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpMetadirectiveDirective
@@ -47,9 +50,9 @@ end
 !PARSE-TREE: | | | OmpTraitSelector
 !PARSE-TREE: | | | | OmpTraitSelectorName -> Value = Condition
 !PARSE-TREE: | | | | Properties
-!PARSE-TREE: | | | | | OmpTraitProperty -> Scalar -> Expr = '.true._4'
+!PARSE-TREE: | | | | | OmpTraitProperty -> Scalar -> Expr = '.false._4'
 !PARSE-TREE: | | | | | | LiteralConstant -> LogicalLiteralConstant
-!PARSE-TREE: | | | | | | | bool = 'true'
+!PARSE-TREE: | | | | | | | bool = 'false'
 !PARSE-TREE: | | OmpDirectiveSpecification
 !PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = critical
 !PARSE-TREE: | | | OmpArgumentList -> OmpArgument -> OmpObject -> Designator -> DataRef -> Name = 'x'
