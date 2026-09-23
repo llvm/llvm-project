@@ -242,12 +242,15 @@ public:
                             PatternRewriter &rewriter) const override {
     Type resultType =
         writeOp.getResult() ? writeOp.getResult().getType() : Type();
+    Value mask = maskingOp.getMask();
+    if (Value innerMask = writeOp.getMask())
+      mask = arith::AndIOp::create(rewriter, writeOp.getLoc(), mask, innerMask);
 
     // Replace the `vector.mask` operation.
     rewriter.replaceOpWithNewOp<TransferWriteOp>(
         maskingOp.getOperation(), resultType, writeOp.getVector(),
         writeOp.getBase(), writeOp.getIndices(), writeOp.getPermutationMap(),
-        maskingOp.getMask(), writeOp.getInBounds());
+        mask, writeOp.getInBounds());
     return success();
   }
 };

@@ -34,6 +34,26 @@ func.func @vector_transfer_write_on_memref(%val: vector<16xf32>, %t0: memref<?xf
 
 // -----
 
+func.func @vector_transfer_write_with_inner_mask(%value: vector<4xi32>, %dest: memref<4xi32>, %inner: vector<4xi1>, %outer: vector<4xi1>) {
+  %c0 = arith.constant 0 : index
+  vector.mask %outer {
+    vector.transfer_write %value, %dest[%c0], %inner {in_bounds = [true]}
+      : vector<4xi32>, memref<4xi32>
+  } : vector<4xi1>
+  return
+}
+
+// CHECK-LABEL: func.func @vector_transfer_write_with_inner_mask(
+// CHECK-SAME: %[[VALUE:.*]]: vector<4xi32>,
+// CHECK-SAME: %[[DEST:.*]]: memref<4xi32>,
+// CHECK-SAME: %[[INNER:.*]]: vector<4xi1>,
+// CHECK-SAME: %[[OUTER:.*]]: vector<4xi1>) {
+// CHECK-NOT: vector.mask
+// CHECK: %[[COMBINED:.*]] = arith.andi %[[OUTER]], %[[INNER]] : vector<4xi1>
+// CHECK: vector.transfer_write %[[VALUE]], %[[DEST]]{{.*}}, %[[COMBINED]] {in_bounds = [true]} : vector<4xi32>, memref<4xi32>
+
+// -----
+
 func.func @vector_transfer_write_on_tensor(%val: vector<16xf32>, %t0: tensor<?xf32>, %idx: index, %m0: vector<16xi1>) -> tensor<?xf32> {
   %res = vector.mask %m0 { vector.transfer_write %val, %t0[%idx] : vector<16xf32>, tensor<?xf32> } : vector<16xi1> -> tensor<?xf32>
   return %res : tensor<?xf32>
