@@ -317,8 +317,8 @@ unsigned TargetTransformInfo::getFlatAddressSpace() const {
 }
 
 SmallVector<unsigned, 2>
-TargetTransformInfo::getRefinableAddressSpaces() const {
-  return TTIImpl->getRefinableAddressSpaces();
+TargetTransformInfo::getAdditionalRefinableAddressSpaces() const {
+  return TTIImpl->getAdditionalRefinableAddressSpaces();
 }
 
 unsigned TargetTransformInfo::getAddressSpaceJoin(unsigned AS1,

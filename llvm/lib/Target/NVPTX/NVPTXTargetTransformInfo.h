@@ -54,9 +54,9 @@ public:
     return AddressSpace::ADDRESS_SPACE_GENERIC;
   }
 
-  SmallVector<unsigned, 2> getRefinableAddressSpaces() const override {
-    return {AddressSpace::ADDRESS_SPACE_GENERIC,
-            AddressSpace::ADDRESS_SPACE_SHARED_CLUSTER};
+  SmallVector<unsigned, 2>
+  getAdditionalRefinableAddressSpaces() const override {
+    return {AddressSpace::ADDRESS_SPACE_SHARED_CLUSTER};
   }
 
   unsigned getAddressSpaceJoin(unsigned AS1, unsigned AS2) const override {

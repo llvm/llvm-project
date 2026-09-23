@@ -567,13 +567,14 @@ public:
   /// optimize away.
   LLVM_ABI unsigned getFlatAddressSpace() const;
 
-  /// Return address spaces whose pointers should be considered for refinement
-  /// to a more specific address space when their origins permit it. Each space
-  /// must be convertible to getFlatAddressSpace() with addrspacecast, with
-  /// containment described by getAddressSpaceJoin(). The default contains
-  /// getFlatAddressSpace(), or is empty if the target has no flat address
-  /// space. An empty list disables address space inference.
-  LLVM_ABI SmallVector<unsigned, 2> getRefinableAddressSpaces() const;
+  /// Return address spaces in addition to getFlatAddressSpace() whose pointers
+  /// should be considered for refinement to a more specific address space when
+  /// their origins permit it. The default is empty, leaving only the flat
+  /// address space eligible for refinement.
+  ///
+  /// Pointers in these spaces must be convertible to getFlatAddressSpace()
+  /// with addrspacecast, with containment described by getAddressSpaceJoin().
+  LLVM_ABI SmallVector<unsigned, 2> getAdditionalRefinableAddressSpaces() const;
 
   /// Return the most specific common address space containing AS1 and AS2.
   /// AS1 and AS2 must be distinct, and pointers from both spaces must be

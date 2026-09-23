@@ -196,10 +196,11 @@ class InferAddressSpacesImpl {
   /// mainly for test purpose.
   const bool AssumeDefaultIsFlatAddressSpace = false;
 
-  SmallVector<unsigned, 2> RefinableAddrSpaces;
+  SmallVector<unsigned, 2> AdditionalRefinableAddrSpaces;
 
   bool isRefinableAddressSpace(unsigned AS) const {
-    return is_contained(RefinableAddrSpaces, AS);
+    return AS == FlatAddrSpace ||
+           is_contained(AdditionalRefinableAddrSpaces, AS);
   }
 
   bool canRefineAddressSpace(unsigned FromAS, unsigned ToAS) const {
@@ -1135,12 +1136,8 @@ bool InferAddressSpacesImpl::run(Function &CurFn) {
     FlatAddrSpace = TTI->getFlatAddressSpace();
     if (FlatAddrSpace == UninitializedAddressSpace)
       return false;
-    RefinableAddrSpaces = TTI->getRefinableAddressSpaces();
-  } else {
-    RefinableAddrSpaces = {FlatAddrSpace};
+    AdditionalRefinableAddrSpaces = TTI->getAdditionalRefinableAddressSpaces();
   }
-  if (RefinableAddrSpaces.empty())
-    return false;
 
   collectIntToPtrPointerOperand();
   // Collects all refinable address expressions in postorder.
