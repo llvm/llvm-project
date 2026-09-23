@@ -1253,14 +1253,18 @@ Value *LoopIdiomVectorize::expandFindFirstByte(
   if (auto ParentLoop = CurLoop->getParentLoop()) {
     ParentLoop->addBasicBlockToLoop(BB0, *LI);
     ParentLoop->addChildLoop(OuterLoop);
-    // BB4 branches only to ExitSucc, so it belongs to the parent loop only when
-    // that exit is itself inside the parent loop. Otherwise BB4 always leaves,
-    // which would leave a parent block with no in-loop successor.
-    if (ParentLoop->contains(ExitSucc))
-      ParentLoop->addBasicBlockToLoop(BB4, *LI);
   } else {
     LI->addTopLevelLoop(OuterLoop);
   }
+
+  // BB4 branches only to ExitSucc, so it belongs to the innermost enclosing
+  // loop that contains ExitSucc. That is not necessarily CurLoop's parent: a
+  // match can exit several levels out, or out of every loop.
+  Loop *ExitLoop = CurLoop->getParentLoop();
+  while (ExitLoop && !ExitLoop->contains(ExitSucc))
+    ExitLoop = ExitLoop->getParentLoop();
+  if (ExitLoop)
+    ExitLoop->addBasicBlockToLoop(BB4, *LI);
 
   // Add the inner loop to the outer.
   OuterLoop->addChildLoop(InnerLoop);
