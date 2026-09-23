@@ -311,18 +311,6 @@ CodeGenIntrinsic::CodeGenIntrinsic(const Record *R,
   // Ignore a missing MSBuiltinName field.
   MSBuiltinName = R->getValueAsOptionalString("MSBuiltinName").value_or("");
   TargetFeatures = R->getValueAsString("TargetFeatures");
-  constexpr StringLiteral CustomTargetFeatures = "$custom";
-  constexpr StringLiteral CustomTargetFeaturesSuffix = ",$custom";
-  if (TargetFeatures.contains(CustomTargetFeatures) &&
-      TargetFeatures != CustomTargetFeatures) {
-    StringRef StaticFeatures = TargetFeatures;
-    if (!StaticFeatures.consume_back(CustomTargetFeaturesSuffix) ||
-        StaticFeatures.empty() || StaticFeatures.contains(CustomTargetFeatures))
-      PrintFatalError(
-          R->getLoc(),
-          "$custom must be the entire target feature expression or its final "
-          "comma-separated term");
-  }
 
   TargetPrefix = R->getValueAsString("TargetPrefix");
   Name = R->getValueAsString("LLVMName").str();

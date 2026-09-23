@@ -27,6 +27,7 @@
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/TargetParser/AMDGPUTargetParser.h"
@@ -60,17 +61,15 @@ GCNSubtarget::~GCNSubtarget() = default;
 
 std::optional<StringRef>
 GCNSubtarget::getCustomRequiredTargetFeaturesForIntrinsic(
-    unsigned IntrinsicID, const FunctionType *FTy) const {
+    unsigned IntrinsicID, const CallBase &CB) const {
   if (IntrinsicID == Intrinsic::amdgcn_ballot) {
-    if (!FTy)
-      return std::nullopt;
-    if (FTy->getReturnType()->isIntegerTy(32))
+    if (CB.getType()->isIntegerTy(32))
       return "wavefrontsize32";
     return StringRef();
   }
 
   return TargetSubtargetInfo::getCustomRequiredTargetFeaturesForIntrinsic(
-      IntrinsicID, FTy);
+      IntrinsicID, CB);
 }
 
 static AMDGPUSubtarget::Generation computeDefaultGeneration(const Triple &TT) {

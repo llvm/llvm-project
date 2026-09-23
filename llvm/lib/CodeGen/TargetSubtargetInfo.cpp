@@ -41,39 +41,45 @@ bool TargetSubtargetInfo::isIntrinsicSupported(unsigned IntrinsicID) const {
   return It->second;
 }
 
-bool TargetSubtargetInfo::isIntrinsicSupported(unsigned IntrinsicID,
-                                               const FunctionType *FTy) const {
+bool TargetSubtargetInfo::isIntrinsicSupported(
+    unsigned IntrinsicID, const CallBase &CB,
+    std::optional<StringRef> &RequiredFeatures) const {
+  RequiredFeatures.reset();
   if (isIntrinsicSupported(IntrinsicID))
     return true;
 
-  std::optional<StringRef> RequiredFeatures =
-      getRequiredTargetFeaturesForIntrinsic(IntrinsicID, FTy);
-  return RequiredFeatures && (RequiredFeatures->empty() ||
-                              checkFeatureExpression(*RequiredFeatures));
-}
-
-std::optional<StringRef>
-TargetSubtargetInfo::getRequiredTargetFeaturesForIntrinsic(
-    unsigned IntrinsicID, const FunctionType *FTy) const {
-  StringRef RequiredFeatures = Intrinsic::getRequiredTargetFeatures(
+  StringRef FeatureExpression = Intrinsic::getRequiredTargetFeatures(
       static_cast<Intrinsic::ID>(IntrinsicID));
-  if (!RequiredFeatures.contains(Intrinsic::CustomTargetFeatures))
-    return RequiredFeatures;
+  if (!FeatureExpression.contains(Intrinsic::CustomTargetFeatures)) {
+    RequiredFeatures = FeatureExpression;
+    return false;
+  }
 
-  StringRef StaticRequiredFeatures =
-      RequiredFeatures == Intrinsic::CustomTargetFeatures
-          ? StringRef()
-          : RequiredFeatures.drop_back(Intrinsic::CustomTargetFeatures.size() +
-                                       1);
-  if (!StaticRequiredFeatures.empty() &&
-      !checkFeatureExpression(StaticRequiredFeatures))
-    return StaticRequiredFeatures;
-  return getCustomRequiredTargetFeaturesForIntrinsic(IntrinsicID, FTy);
+  std::optional<StringRef> CustomRequiredFeatures =
+      getCustomRequiredTargetFeaturesForIntrinsic(IntrinsicID, CB);
+  bool CustomSupported =
+      CustomRequiredFeatures && checkFeatureExpression(*CustomRequiredFeatures);
+  auto CheckWithCustom = [&](bool Supported) {
+    return checkFeatureExpression(FeatureExpression,
+                                  [&](StringRef Term) -> std::optional<bool> {
+                                    if (Term == Intrinsic::CustomTargetFeatures)
+                                      return Supported;
+                                    return std::nullopt;
+                                  });
+  };
+  if (CheckWithCustom(CustomSupported))
+    return true;
+
+  // Only report the custom check's requirement when satisfying that check
+  // would make the complete feature expression true.
+  if (!CustomSupported && CheckWithCustom(true))
+    RequiredFeatures = CustomRequiredFeatures;
+  return false;
 }
 
 std::optional<StringRef>
 TargetSubtargetInfo::getCustomRequiredTargetFeaturesForIntrinsic(
-    unsigned, const FunctionType *) const {
+    unsigned, const CallBase &) const {
   return std::nullopt;
 }
 

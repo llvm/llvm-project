@@ -33,7 +33,7 @@ namespace llvm {
 
 class APInt;
 class BitVector;
-class FunctionType;
+class CallBase;
 class MachineFunction;
 class ScheduleDAGMutation;
 class CallLowering;
@@ -100,25 +100,11 @@ public:
   /// subtarget.
   bool isIntrinsicSupported(unsigned IntrinsicID) const;
 
-  /// Like the overload above, but uses \p FTy to resolve the feature expression
-  /// for intrinsics marked as requiring custom target features.
-  bool isIntrinsicSupported(unsigned IntrinsicID,
-                            const FunctionType *FTy) const;
-
-  /// Returns the feature expression that makes target intrinsic \p IntrinsicID
-  /// with signature \p FTy unsupported. An empty expression means no features
-  /// are required; \c std::nullopt means no feature expression supports the
-  /// intrinsic.
-  std::optional<StringRef>
-  getRequiredTargetFeaturesForIntrinsic(unsigned IntrinsicID,
-                                        const FunctionType *FTy) const;
-
-  /// Returns the overload-dependent target features for an intrinsic whose
-  /// target feature expression contains \c $custom. Targets override this to
-  /// implement the custom part of the support check.
-  virtual std::optional<StringRef>
-  getCustomRequiredTargetFeaturesForIntrinsic(unsigned IntrinsicID,
-                                              const FunctionType *FTy) const;
+  /// Checks whether the target intrinsic \p IntrinsicID used by \p CB is
+  /// supported. Sets \p RequiredFeatures when the intrinsic is unsupported
+  /// because a feature is missing.
+  bool isIntrinsicSupported(unsigned IntrinsicID, const CallBase &CB,
+                            std::optional<StringRef> &RequiredFeatures) const;
 
   // Interfaces to the major aspects of target machine information:
   //
@@ -419,6 +405,14 @@ public:
   virtual const FeatureBitset &getInlineInverseFeatures() const = 0;
   /// Target features where all mismatches prevent inlining.
   virtual const FeatureBitset &getInlineMustMatchFeatures() const = 0;
+
+protected:
+  /// Returns the call-dependent target features required by an intrinsic whose
+  /// target feature expression contains \c $custom. An empty expression means
+  /// no features are required; \c std::nullopt means the call is unsupported.
+  virtual std::optional<StringRef>
+  getCustomRequiredTargetFeaturesForIntrinsic(unsigned IntrinsicID,
+                                              const CallBase &CB) const;
 
 private:
   /// Lazy, incrementally-populated cache for isIntrinsicSupported().

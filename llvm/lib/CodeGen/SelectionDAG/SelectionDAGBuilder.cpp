@@ -5578,14 +5578,10 @@ void SelectionDAGBuilder::visitTargetIntrinsic(const CallInst &I,
   auto [HasChain, OnlyLoad] = getTargetIntrinsicCallProperties(I);
   Intrinsic::ID IntrinsicID = static_cast<Intrinsic::ID>(Intrinsic);
 
+  std::optional<StringRef> RequiredFeatures;
   if (!DAG.getMachineFunction().getSubtarget().isIntrinsicSupported(
-          Intrinsic, I.getFunctionType())) {
+          Intrinsic, I, RequiredFeatures)) {
     SDLoc DL = getCurSDLoc();
-    std::optional<StringRef> RequiredFeatures =
-        DAG.getMachineFunction()
-            .getSubtarget()
-            .getRequiredTargetFeaturesForIntrinsic(Intrinsic,
-                                                   I.getFunctionType());
     DAG.getContext()->diagnose(DiagnosticInfoUnsupportedTargetIntrinsic(
         *I.getFunction(), IntrinsicID, I.getFunctionType(), DL.getDebugLoc(),
         RequiredFeatures));
