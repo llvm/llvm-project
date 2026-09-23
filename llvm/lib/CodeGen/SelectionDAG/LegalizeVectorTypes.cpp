@@ -3492,8 +3492,7 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_REPEAT(SDNode *N, SDValue &Lo,
                                                  SDValue &Hi) {
   EVT VT = N->getValueType(0);
   SDValue Src = N->getOperand(0);
-  EVT LoVT, HiVT;
-  std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(VT);
+  auto [LoVT, HiVT] = DAG.GetSplitDestVTs(VT);
   assert(LoVT == HiVT && "Expected equal split types");
 
   // Use smaller even/odd source vectors so their broadcasts can be

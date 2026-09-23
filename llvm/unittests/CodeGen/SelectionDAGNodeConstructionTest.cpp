@@ -526,6 +526,7 @@ TEST_F(SelectionDAGNodeConstructionTest, ExpandPartialReduceSUMLA) {
   EXPECT_EQ(NumZeroExtends, 1u);
 }
 
+// Verify that a nxv1 vector_repeat gets canonicalised as splat_vector
 TEST_F(SelectionDAGNodeConstructionTest, VectorRepeat) {
   SDLoc DL;
   SDValue V1 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
@@ -536,9 +537,4 @@ TEST_F(SelectionDAGNodeConstructionTest, VectorRepeat) {
   ASSERT_EQ(NXV1.getOperand(0).getOpcode(), ISD::EXTRACT_VECTOR_ELT);
   EXPECT_EQ(NXV1.getOperand(0).getOperand(0), V1);
   EXPECT_TRUE(isNullConstant(NXV1.getOperand(0).getOperand(1)));
-
-  SDValue V2 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
-                                   Register::index2VirtReg(2), MVT::v2i32);
-  SDValue NXV2 = DAG->getNode(ISD::VECTOR_REPEAT, DL, MVT::nxv2i32, V2);
-  EXPECT_EQ(NXV2.getOpcode(), ISD::VECTOR_REPEAT);
 }

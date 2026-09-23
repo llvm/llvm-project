@@ -7449,7 +7449,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
            "VECTOR_REPEAT requires a fixed-length vector operand");
     assert(VT.isScalableVector() &&
            "VECTOR_REPEAT requires a scalable vector result");
-    assert(N1.getValueType().getVectorMinNumElements() ==
+    assert(N1.getValueType().getVectorNumElements() ==
                VT.getVectorMinNumElements() &&
            "VECTOR_REPEAT operand and result element counts must match");
     if (VT.getVectorMinNumElements() == 1)

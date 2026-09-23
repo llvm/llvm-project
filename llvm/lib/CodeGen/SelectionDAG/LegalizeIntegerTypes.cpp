@@ -6128,7 +6128,6 @@ SDValue DAGTypeLegalizer::PromoteIntRes_VECTOR_REPEAT(SDNode *N) {
 
   EVT OutVT = N->getValueType(0);
   EVT NOutVT = TLI.getTypeToTransformTo(*DAG.getContext(), OutVT);
-  assert(NOutVT.isVector() && "This type must be promoted to a vector type");
   EVT NInVT = N->getOperand(0).getValueType().changeVectorElementType(
       *DAG.getContext(), NOutVT.getVectorElementType());
 

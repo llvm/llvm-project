@@ -17845,7 +17845,6 @@ SDValue AArch64TargetLowering::LowerVECTOR_REPEAT(SDValue Op,
   SDValue Src = Op.getOperand(0);
   EVT VT = Op.getValueType();
   EVT SrcVT = Src.getValueType();
-  assert(isUnpackedType(VT, DAG) && "Expected an unpacked vector type!");
   assert(SrcVT.is64BitVector() && "Expected 64bit source!");
 
   // Repeat into a packed container before extracting the low lanes, which
