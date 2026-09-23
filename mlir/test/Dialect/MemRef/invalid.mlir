@@ -261,6 +261,14 @@ func.func @memref_reshape_dst_ranked_shape_unranked(
 
 // -----
 
+func.func @memref_reshape_dst_unranked_shape_ranked(
+       %buf: memref<*xf32>, %shape: memref<1xi32>) {
+  // expected-error @+1 {{cannot use shape operand with static length to reshape to unranked memref type}}
+  memref.reshape %buf(%shape) : (memref<*xf32>, memref<1xi32>) -> memref<*xf32>
+}
+
+// -----
+
 func.func @memref_reshape_dst_shape_rank_mismatch(
        %buf: memref<*xf32>, %shape: memref<1xi32>) {
   // expected-error @+1 {{length of shape operand differs from the result's memref rank}}
