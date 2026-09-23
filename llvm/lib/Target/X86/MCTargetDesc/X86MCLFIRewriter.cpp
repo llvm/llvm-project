@@ -228,6 +228,19 @@ void X86::X86MCLFIRewriter::rewriteDirectCall(const MCInst &Inst,
 // addq %r14, %r11
 // jmpq *%r11
 // .bundle_unlock
+//
+// A return with an immediate additionally pops the immediate off the stack
+// after loading the return address.
+//
+// retq $16
+// ->
+// popq %r11
+// addq $16, %rsp
+// .bundle_lock
+// andl $-32, %r11d
+// addq %r14, %r11
+// jmpq *%r11
+// .bundle_unlock
 void X86::X86MCLFIRewriter::rewriteReturn(const MCInst &Inst, MCStreamer &Out,
                                           const MCSubtargetInfo &STI) {
   if (Inst.getOpcode() != X86::RET64 && Inst.getOpcode() != X86::RETI64)
