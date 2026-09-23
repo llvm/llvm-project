@@ -39,6 +39,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: @switch.table.covered_switch_with_bit_tests = private unnamed_addr constant [8 x i8] [i8 2, i8 2, i8 poison, i8 poison, i8 poison, i8 poison, i8 1, i8 1], align 4
 ; CHECK: @switch.table.signed_overflow1 = private unnamed_addr constant [4 x i16] [i16 3333, i16 4444, i16 1111, i16 2222], align 4
 ; CHECK: @switch.table.signed_overflow2 = private unnamed_addr constant [4 x i16] [i16 3333, i16 4444, i16 poison, i16 2222], align 4
+; CHECK: @switch.table.signed_overflow3 = private unnamed_addr constant [4 x i16] [i16 3333, i16 4444, i16 poison, i16 2222], align 4
 ; CHECK: @switch.table.constant_hole_unreachable_default_firstundef = private unnamed_addr constant [5 x i8] [i8 undef, i8 poison, i8 1, i8 1, i8 1], align 4
 ; CHECK: @switch.table.constant_hole_unreachable_default_lastundef = private unnamed_addr constant [5 x i8] [i8 1, i8 poison, i8 1, i8 1, i8 undef], align 4
 ; CHECK: @switch.table.linearmap_hole_unreachable_default = private unnamed_addr constant [5 x i8] [i8 1, i8 poison, i8 5, i8 7, i8 9], align 4
@@ -1807,24 +1808,18 @@ define i32 @signed_overflow3(i8 %n) {
 ; CHECK-LABEL: @signed_overflow3(
 ; CHECK-NEXT:  start:
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[N:%.*]] to i2
-; CHECK-NEXT:    switch i2 [[TRUNC]], label [[START_UNREACHABLEDEFAULT:%.*]] [
-; CHECK-NEXT:      i2 1, label [[BB6:%.*]]
-; CHECK-NEXT:      i2 -2, label [[BB4:%.*]]
-; CHECK-NEXT:      i2 -1, label [[BB5:%.*]]
-; CHECK-NEXT:      i2 0, label [[BB1:%.*]]
-; CHECK-NEXT:    ]
-; CHECK:       start.unreachabledefault:
-; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i2 [[TRUNC]], 0
+; CHECK-NEXT:    br i1 [[COND]], label [[BB1:%.*]], label [[START_LOOKUP:%.*]]
+; CHECK:       start.lookup:
+; CHECK-NEXT:    [[SWITCH_TABLEIDX:%.*]] = sub i2 [[TRUNC]], -2
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i2 [[SWITCH_TABLEIDX]] to i64
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [4 x i16], ptr @switch.table.signed_overflow3, i64 0, i64 [[TMP0]]
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i16, ptr [[SWITCH_GEP]], align 2
+; CHECK-NEXT:    [[SWITCH_EXT:%.*]] = zext i16 [[SWITCH_LOAD]] to i32
+; CHECK-NEXT:    ret i32 [[SWITCH_EXT]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    call void @exit(i32 1)
 ; CHECK-NEXT:    unreachable
-; CHECK:       bb4:
-; CHECK-NEXT:    br label [[BB6]]
-; CHECK:       bb5:
-; CHECK-NEXT:    br label [[BB6]]
-; CHECK:       bb6:
-; CHECK-NEXT:    [[DOTSROA_0_0:%.*]] = phi i32 [ 4444, [[BB5]] ], [ 3333, [[BB4]] ], [ 2222, [[START:%.*]] ]
-; CHECK-NEXT:    ret i32 [[DOTSROA_0_0]]
 ;
 start:
   %trunc = trunc i8 %n to i2
