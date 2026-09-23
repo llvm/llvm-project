@@ -212,7 +212,8 @@ bool Pointer::operator==(const Pointer &P) const {
 
   switch (StorageKind) {
   case Storage::Int:
-    return P.Int.Value == Int.Value && P.Int.Ty == Int.Ty && P.Offset == Offset;
+    return P.Int.Value == Int.Value && P.Int.getType() == Int.getType() &&
+           P.Offset == Offset;
   case Storage::Block:
     return P.view() == view();
   case Storage::Fn:
@@ -477,7 +478,8 @@ void Pointer::print(llvm::raw_ostream &OS) const {
     OS << "}";
   } break;
   case Storage::Int:
-    OS << "(Int) {" << Int.Value << " + " << Offset << ", " << Int.Ty << "}";
+    OS << "(Int) {" << Int.Value << " + " << Offset << ", " << Int.getType()
+       << ", " << (Int.isNull() ? "null" : "nonnull") << '}';
     break;
   case Storage::Fn:
     OS << "(Fn) { " << Fn.Func << " + " << Offset << " }";
@@ -1361,12 +1363,13 @@ std::optional<IntPointer> IntPointer::atOffset(const interp::Context &Ctx,
       ASTCtx.toCharUnitsFromBits(Layout.getFieldOffset(FieldIndex))
           .getQuantity();
 
-  return IntPointer{FD->getType().getTypePtr(), this->Value + FieldOffset};
+  uint64_t NewValue = this->Value + FieldOffset;
+  return IntPointer{{FD->getType().getTypePtr(), NewValue == 0}, NewValue};
 }
 
 IntPointer IntPointer::baseCast(const interp::Context &Ctx,
                                 unsigned BaseOffset) const {
-  if (!Ty)
+  if (!getType())
     return *this;
 
   QualType CurType = getPointeeType();
@@ -1395,7 +1398,8 @@ IntPointer IntPointer::baseCast(const interp::Context &Ctx,
   const RecordDecl *RD = BaseDesc->ElemRecord->getDecl();
   QualType T = RD->getASTContext().getTagType(ElaboratedTypeKeyword::None,
                                               std::nullopt, RD, false);
-  return {T.getTypePtr(), Value + BaseLayoutOffset.getQuantity()};
+  uint64_t NewValue = Value + BaseLayoutOffset.getQuantity();
+  return {{T.getTypePtr(), NewValue == 0}, NewValue};
 }
 
 std::optional<size_t>
