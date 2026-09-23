@@ -1,6 +1,7 @@
-; RUN: llvm-as < %s 2>&1
+; RUN: not llvm-as -disable-output < %s 2>&1 | FileCheck %s
 
-; FIXME: The verifer should reject the invalid !tbaa.struct nodes below.
+; FIXME: The verifier does not yet reject the overlapping-region (@test_overlapping_regions)
+; or null-tag (@test_tbaa_missing) nodes below.
 
 define void @test_overlapping_regions(ptr %a1) {
   %ld = load i8, ptr %a1, align 1, !tbaa.struct !0
@@ -8,11 +9,13 @@ define void @test_overlapping_regions(ptr %a1) {
 }
 
 define void @test_size_not_integer(ptr %a1) {
+; CHECK-DAG: !tbaa.struct field size must be a constant integer
   store i8 1, ptr %a1, align 1, !tbaa.struct !5
   ret void
 }
 
 define void @test_offset_not_integer(ptr %a1, ptr %a2) {
+; CHECK-DAG: !tbaa.struct field offset must be a constant integer
   tail call void @llvm.memcpy.p0.p0.i64(ptr align 8 %a1, ptr align 8 %a2, i64 16, i1 false), !tbaa.struct !6
   ret void
 }
@@ -23,6 +26,7 @@ define void @test_tbaa_missing(ptr %a1, ptr %a2) {
 }
 
 define void @test_tbaa_invalid(ptr %a1) {
+; CHECK-DAG: Old-style TBAA is no longer allowed
   store i8 1, ptr %a1, align 1, !tbaa.struct !8
   ret void
 }
