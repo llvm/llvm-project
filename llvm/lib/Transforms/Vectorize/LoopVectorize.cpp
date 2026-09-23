@@ -6499,9 +6499,10 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
             ? UncountableExitStyle::MaskedHandleExitInScalarLoop
             : UncountableExitStyle::ReadOnly;
     if (!RUN_VPLAN_PASS(VPlanTransforms::handleUncountableEarlyExits, *VPlan0,
-                        OrigLoop, PSE, *DT, Legal->getAssumptionCache(),
-                        EEStyle))
+                        ORE, OrigLoop, PSE, *DT, Legal->getAssumptionCache(),
+                        EEStyle)) {
       return nullptr;
+    }
   } else {
     RUN_VPLAN_PASS(VPlanTransforms::handleCountableEarlyExits, *VPlan0);
   }
