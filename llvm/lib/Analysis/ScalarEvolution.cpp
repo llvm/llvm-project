@@ -6942,12 +6942,11 @@ const ConstantRange &ScalarEvolution::getRangeRef(
     // sign bits than for the value of those sign bits.
     unsigned NS = ComputeNumSignBits(V, DL, &AC, nullptr, &DT);
     if (U->getType()->isPointerTy()) {
-      // If the pointer size is larger than the index size type, this can cause
-      // NS to be larger than BitWidth. So compensate for this.
-      unsigned ptrSize = DL.getPointerTypeSizeInBits(U->getType());
-      int ptrIdxDiff = ptrSize - BitWidth;
-      if (ptrIdxDiff > 0 && ptrSize > BitWidth && NS > (unsigned)ptrIdxDiff)
-        NS -= ptrIdxDiff;
+      // NS counts the sign bits of the whole pointer; drop those above the
+      // index bits.
+      unsigned PtrIdxDiff =
+          DL.getPointerTypeSizeInBits(U->getType()) - BitWidth;
+      NS = NS > PtrIdxDiff ? NS - PtrIdxDiff : 1;
     }
 
     if (NS > 1) {
