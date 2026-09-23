@@ -1670,6 +1670,8 @@ struct RegGroupInfo {
     return Reg2.isValid() && Reg3.isValid() && Reg4.isValid();
   }
 
+  bool isGrouped() const { return isPaired() || isQuad(); }
+
   unsigned getNumRegs() const {
     if (isQuad())
       return 4;
@@ -1901,17 +1903,13 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
     //
     // The order of the registers in the list is controlled by
     // getCalleeSavedRegs(), so they will always be in-order, as well.
-    assert((!RGI.isPaired() ||
-            (CSI[i].getFrameIdx() + RegInc == CSI[i + RegInc].getFrameIdx())) &&
-           "Out of order callee saved regs!");
 
-    assert((!RGI.isQuad() ||
-            ((CSI[i].getFrameIdx() + RegInc == CSI[i + RegInc].getFrameIdx()) &&
-             (CSI[i + RegInc].getFrameIdx() + RegInc ==
-              CSI[i + RegInc * 2].getFrameIdx()) &&
-             (CSI[i + RegInc * 2].getFrameIdx() + RegInc ==
-              CSI[i + RegInc * 3].getFrameIdx()))) &&
-           "Out of order callee saved regs!");
+    bool RegsOrdered = all_of(seq(RGI.getNumRegs() - 1), [&](int RegOffset) {
+      return CSI[i + RegInc * RegOffset].getFrameIdx() + RegInc ==
+             CSI[i + RegInc * RegOffset + RegInc].getFrameIdx();
+    });
+    assert(RegsOrdered && "Out of order callee saved regs!");
+    (void)RegsOrdered;
 
     assert((!RGI.isQuad() || RGI.Type == RegGroupInfo::ZPR) &&
            "Currently only ZPR's support four-register spills");
@@ -1968,7 +1966,7 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
     // Round up size of non-pair to pair size if we need to pad the
     // callee-save area to ensure 16-byte alignment.
     if (NeedGapToAlignStack && !IsWindows && !RGI.isScalable() &&
-        RGI.Type != RegGroupInfo::FPR128 && !RGI.isPaired() &&
+        RGI.Type != RegGroupInfo::FPR128 && !RGI.isGrouped() &&
         ByteOffset % 16 != 0) {
       ByteOffset += 8 * StackFillDir;
       assert(MFI.getObjectAlign(RGI.FrameIdx) <= Align(16));
@@ -2156,14 +2154,14 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
 
     LLVM_DEBUG({
       dbgs() << "CSR spill: (" << printReg(Reg1, TRI);
-      if (RGI.isPaired() || RGI.isQuad())
+      if (RGI.isGrouped())
         dbgs() << ", " << printReg(Reg2, TRI);
       if (RGI.isQuad()) {
         dbgs() << ", " << printReg(Reg3, TRI);
         dbgs() << ", " << printReg(Reg4, TRI);
       }
       dbgs() << ") -> fi#(" << RGI.FrameIdx;
-      if (RGI.isPaired() || RGI.isQuad())
+      if (RGI.isGrouped())
         dbgs() << ", " << RGI.FrameIdx + 1;
       if (RGI.isQuad()) {
         dbgs() << ", " << RGI.FrameIdx + 2;
@@ -2175,25 +2173,14 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
     assert((!isTargetWindows(MF) ||
             !(Reg1 == AArch64::LR && Reg2 == AArch64::FP)) &&
            "Windows unwdinding requires a consecutive (FP,LR) pair");
-    // Windows unwind codes require consecutive registers if registers are
-    // paired.  Make the switch here, so that the code below will save (x,x+1)
-    // and not (x+1,x).
     unsigned FrameIdxReg1 = RGI.FrameIdx;
     unsigned FrameIdxReg2 = RGI.FrameIdx + 1;
     unsigned FrameIdxReg3 = RGI.FrameIdx + 2;
     unsigned FrameIdxReg4 = RGI.FrameIdx + 3;
 
-    if (isTargetWindows(MF) && RGI.isPaired()) {
-      std::swap(Reg1, Reg2);
-      std::swap(FrameIdxReg1, FrameIdxReg2);
-    } else if (isTargetWindows(MF) && RGI.isQuad()) {
-      std::swap(Reg1, Reg4);
-      std::swap(Reg2, Reg3);
-      std::swap(FrameIdxReg1, FrameIdxReg4);
-      std::swap(FrameIdxReg2, FrameIdxReg3);
-    }
-
-    if ((RGI.isQuad() || RGI.isPaired()) && RGI.isScalable()) {
+    if ((RGI.isGrouped()) && RGI.isScalable()) {
+      assert(!NeedsWinCFI &&
+             "Scalable register groups are not supported by Windows WinCFI");
       [[maybe_unused]] const AArch64Subtarget &Subtarget =
                               MF.getSubtarget<AArch64Subtarget>();
       AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
@@ -2251,9 +2238,14 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
       MIB.addMemOperand(MF.getMachineMemOperand(
           MachinePointerInfo::getFixedStack(MF, FrameIdxReg1),
           MachineMemOperand::MOStore, Size, Alignment));
-      if (NeedsWinCFI)
-        insertSEH(MIB, TII, MachineInstr::FrameSetup);
-    } else { // The code when the pair of ZReg is not present
+    } else {
+      // Windows unwind codes require consecutive registers if registers are
+      // paired.  Make the switch here, so that the code below will save (x,x+1)
+      // and not (x+1,x).
+      if (isTargetWindows(MF) && RGI.isPaired()) {
+        std::swap(Reg1, Reg2);
+        std::swap(FrameIdxReg1, FrameIdxReg2);
+      }
       MachineInstrBuilder MIB = BuildMI(MBB, MI, DL, TII.get(StrOpc));
       if (!MRI.isReserved(Reg1))
         MBB.addLiveIn(Reg1);
@@ -2280,7 +2272,7 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
     MachineFrameInfo &MFI = MF.getFrameInfo();
     if (RGI.Type == RegGroupInfo::ZPR) {
       MFI.setStackID(FrameIdxReg1, TargetStackID::ScalableVector);
-      if (RGI.isPaired() || RGI.isQuad())
+      if (RGI.isGrouped())
         MFI.setStackID(FrameIdxReg2, TargetStackID::ScalableVector);
       if (RGI.isQuad()) {
         MFI.setStackID(FrameIdxReg3, TargetStackID::ScalableVector);
@@ -2288,7 +2280,7 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
       }
     } else if (RGI.Type == RegGroupInfo::PPR) {
       MFI.setStackID(FrameIdxReg1, TargetStackID::ScalablePredicateVector);
-      if (RGI.isPaired() || RGI.isQuad())
+      if (RGI.isGrouped())
         MFI.setStackID(FrameIdxReg2, TargetStackID::ScalablePredicateVector);
       if (RGI.isQuad()) {
         MFI.setStackID(FrameIdxReg3, TargetStackID::ScalablePredicateVector);
@@ -2378,14 +2370,14 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
     }
     LLVM_DEBUG({
       dbgs() << "CSR restore: (" << printReg(Reg1, TRI);
-      if (RGI.isPaired() || RGI.isQuad())
+      if (RGI.isGrouped())
         dbgs() << ", " << printReg(Reg2, TRI);
       if (RGI.isQuad()) {
         dbgs() << ", " << printReg(Reg3, TRI);
         dbgs() << ", " << printReg(Reg4, TRI);
       }
       dbgs() << ") -> fi#(" << RGI.FrameIdx;
-      if (RGI.isPaired() || RGI.isQuad())
+      if (RGI.isGrouped())
         dbgs() << ", " << RGI.FrameIdx + 1;
       if (RGI.isQuad()) {
         dbgs() << ", " << RGI.FrameIdx + 2;
@@ -2394,28 +2386,15 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
       dbgs() << ")\n";
     });
 
-    // Windows unwind codes require consecutive registers if registers are
-    // paired.  Make the switch here, so that the code below will save (x,x+1)
-    // and not (x+1,x).
     unsigned FrameIdxReg1 = RGI.FrameIdx;
     unsigned FrameIdxReg2 = RGI.FrameIdx + 1;
     unsigned FrameIdxReg3 = RGI.FrameIdx + 2;
     unsigned FrameIdxReg4 = RGI.FrameIdx + 3;
 
-    if (isTargetWindows(MF)) {
-      if (RGI.isPaired()) {
-        std::swap(Reg1, Reg2);
-        std::swap(FrameIdxReg1, FrameIdxReg2);
-      } else if (RGI.isQuad()) {
-        std::swap(Reg1, Reg4);
-        std::swap(Reg2, Reg3);
-        std::swap(FrameIdxReg1, FrameIdxReg4);
-        std::swap(FrameIdxReg2, FrameIdxReg3);
-      }
-    }
-
     AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
-    if ((RGI.isQuad() || RGI.isPaired()) && RGI.isScalable()) {
+    if ((RGI.isGrouped()) && RGI.isScalable()) {
+      assert(!NeedsWinCFI &&
+             "Scalable register groups are not supported by Windows WinCFI");
       [[maybe_unused]] const AArch64Subtarget &Subtarget =
                               MF.getSubtarget<AArch64Subtarget>();
       unsigned PnReg = AFI->getPredicateRegForFillSpill();
@@ -2455,9 +2434,14 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
       MIB.addMemOperand(MF.getMachineMemOperand(
           MachinePointerInfo::getFixedStack(MF, FrameIdxReg1),
           MachineMemOperand::MOLoad, Size, Alignment));
-      if (NeedsWinCFI)
-        insertSEH(MIB, TII, MachineInstr::FrameDestroy);
     } else {
+      // Windows unwind codes require consecutive registers if registers are
+      // paired.  Make the switch here, so that the code below will save (x,x+1)
+      // and not (x+1,x).
+      if (isTargetWindows(MF) && RGI.isPaired()) {
+        std::swap(Reg1, Reg2);
+        std::swap(FrameIdxReg1, FrameIdxReg2);
+      }
       MachineInstrBuilder MIB = BuildMI(MBB, MBBI, DL, TII.get(LdrOpc));
       if (RGI.isPaired()) {
         MIB.addReg(Reg2, getDefRegState(true));
