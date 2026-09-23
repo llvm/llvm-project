@@ -4487,6 +4487,10 @@ __kmp_taskgraph_topological_order(kmp_taskgraph_region_t *region,
 // True if the user asked for tracing of taskgraph structure and replay via the
 // KMP_TASKGRAPH_TRACE environment variable.
 extern bool __kmp_taskgraph_trace();
+// An optional runtime verification check for taskgraph lifetime: make sure that
+// in-progress replays don't have their taskgraph record freed from underneath
+// them.
+extern bool __kmp_taskgraph_check_lifetime();
 #endif
 
 KMP_EXPORT kmp_int32 __kmpc_cancel(ident_t *loc_ref, kmp_int32 gtid,
