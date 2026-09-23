@@ -30,6 +30,9 @@
 # TODO: Investigate why this doesn't work on Picolibc once the locale base API is refactored
 # UNSUPPORTED: LIBCXX-PICOLIBC-FIXME
 
+# TODO: Fix the <wchar.h> redefinitions on WASI
+# UNSUPPORTED: LIBCXX-WASI-FIXME
+
 # TODO: Fix seemingly circular inclusion or <wchar.h> on AIX
 # UNSUPPORTED: LIBCXX-AIX-FIXME
 
