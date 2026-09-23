@@ -8,11 +8,14 @@
 
 #include "OrcTestCommon.h"
 
-#include "llvm/ExecutionEngine/Orc/EPCGenericDylibManager.h"
+#include "llvm/ExecutionEngine/Orc/EPCGenericDylibManagerSPS.h"
+#include "llvm/ExecutionEngine/Orc/Shared/Mangler.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
-#include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
+#include "llvm/ExecutionEngine/Orc/Shared/SPSCI/NativeDylibManagerSPSCI.h"
 #include "llvm/Testing/Support/Error.h"
 
 using namespace llvm;
@@ -32,21 +35,22 @@ TEST(EPCGenericDylibManagerTest, CreateFromExecutionSession) {
     }
   };
 
-  auto &SNs = rt::orc_rt_NativeDylibManagerSPSSymbols;
-
   ExecutorAddr InstanceAddr(1), OpenAddr(2), ResolveAddr(3);
 
   StringMap<ExecutorAddr> BootstrapSyms;
-  BootstrapSyms[SNs.InstanceName] = InstanceAddr;
-  BootstrapSyms[SNs.OpenName] = OpenAddr;
-  BootstrapSyms[SNs.ResolveName] = ResolveAddr;
+  Mangler Mangle{Triple(sys::getProcessTriple())};
+  BootstrapSyms[Mangle.mangledCopy(
+      rt::sps_ci::NativeDylibManagerInstanceName)] = InstanceAddr;
+  BootstrapSyms[Mangle.mangledCopy(rt::sps_ci::DylibMgrOpen::Name)] = OpenAddr;
+  BootstrapSyms[Mangle.mangledCopy(rt::sps_ci::DylibMgrResolve::Name)] =
+      ResolveAddr;
 
   auto SSP = std::make_shared<SymbolStringPool>();
   auto EPC =
       std::make_unique<EPCWithBootstrapSymbols>(SSP, std::move(BootstrapSyms));
   ExecutionSession ES(std::move(EPC));
 
-  auto Result = EPCGenericDylibManager::Create(ES, SNs);
+  auto Result = sps::createEPCGenericDylibManager(ES);
   EXPECT_THAT_EXPECTED(Result, Succeeded());
 
   cantFail(ES.endSession());

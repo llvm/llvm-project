@@ -83,16 +83,6 @@ extern char **environ;
 #include <sys/mount.h>
 #include <sys/param.h>
 #elif defined(__linux__) || defined(__managarm__)
-#if defined(HAVE_LINUX_MAGIC_H)
-#include <linux/magic.h>
-#else
-#if defined(HAVE_LINUX_NFS_FS_H)
-#include <linux/nfs_fs.h>
-#endif
-#if defined(HAVE_LINUX_SMB_H)
-#include <linux/smb.h>
-#endif
-#endif
 #include <sys/vfs.h>
 #elif defined(_AIX)
 #include <sys/statfs.h>
@@ -125,7 +115,8 @@ namespace fs {
 
 const file_t kInvalidFile = -1;
 
-#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) ||     \
+#if defined(__FreeBSD__) || defined(__NetBSD__) ||                             \
+    (defined(__OpenBSD__) && !defined(HAVE_GETEXECPATH)) ||                    \
     defined(__FreeBSD_kernel__) || defined(__linux__) ||                       \
     defined(__CYGWIN__) || defined(__DragonFly__) || defined(_AIX) ||          \
     defined(__GNU__) ||                                                        \
@@ -287,7 +278,16 @@ std::string getMainExecutable(const char *argv0, void *MainAddr) {
   // Fall back to the classical detection.
   if (getprogpath(exe_path, argv0))
     return exe_path;
-#elif defined(__OpenBSD__) || defined(__HAIKU__)
+#elif defined(__OpenBSD__)
+  char exe_path[PATH_MAX];
+#ifdef HAVE_GETEXECPATH
+  if (getexecpath(exe_path, sizeof(exe_path)) == 0)
+    return exe_path;
+#else
+  if (getprogpath(exe_path, argv0) != NULL)
+    return exe_path;
+#endif
+#elif defined(__HAIKU__)
   char exe_path[PATH_MAX];
   // argv[0] only
   if (getprogpath(exe_path, argv0) != NULL)
@@ -1027,11 +1027,9 @@ ErrorOr<basic_file_status> directory_entry::status() const {
   return s;
 }
 
-//
-// FreeBSD optionally provides /proc/self/fd, but it is incompatible with
-// Linux. The thing to use is realpath.
-//
-#if !defined(__FreeBSD__) && !defined(__OpenBSD__)
+// Only enable on OSes that have the /proc filesystem, /proc/self/fd,
+// and semantics compatible with Linux.
+#if defined(__linux__)
 #define TRY_PROC_SELF_FD
 #endif
 

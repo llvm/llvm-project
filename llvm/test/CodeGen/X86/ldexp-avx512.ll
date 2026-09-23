@@ -62,15 +62,20 @@ entry:
 }
 declare double @ldexp(double, i32) memory(none)
 
-define fp128 @testExpl(fp128 %x, i32 %exp) nounwind {
-; CHECK-LABEL: testExpl:
+define x86_fp80 @test_fp80(x86_fp80 %x, i32 %exp) nounwind {
+; CHECK-LABEL: test_fp80:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    jmp ldexpl@PLT # TAILCALL
+; CHECK-NEXT:    subq $24, %rsp
+; CHECK-NEXT:    fldt {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    fstpt (%rsp)
+; CHECK-NEXT:    callq ldexpl@PLT
+; CHECK-NEXT:    addq $24, %rsp
+; CHECK-NEXT:    retq
 entry:
-  %r = tail call fast fp128 @ldexpl(fp128 %x, i32 %exp)
-  ret fp128 %r
+  %r = tail call x86_fp80 @llvm.ldexp.f80.i32(x86_fp80 %x, i32 %exp)
+  ret x86_fp80 %r
 }
-declare fp128 @ldexpl(fp128, i32) memory(none)
+declare x86_fp80 @llvm.ldexp.f80.i32(x86_fp80, i32) memory(none)
 
 define <8 x half> @test_ldexp_8xhalf(<8 x half> %x, <8 x i16> %exp) nounwind {
 ; AVX512F-LABEL: test_ldexp_8xhalf:

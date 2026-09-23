@@ -179,6 +179,8 @@ struct is_hashable_data : std::bool_constant<((is_integral_or_enum<T>::value ||
                                                std::is_pointer<T>::value) &&
                                               64 % sizeof(T) == 0)> {};
 
+template <typename T> struct is_hashable_data<const T> : is_hashable_data<T> {};
+
 // Special case std::pair to detect when both types are viable and when there
 // is no alignment-derived padding in the pair. This is a bit of a lie because
 // std::pair isn't truly POD, but it's close enough in all reasonable
