@@ -946,6 +946,8 @@ MachineInstr *SIWholeQuadMode::lowerKillF32(MachineInstr &MI) {
   LIS->InsertMachineInstrInMaps(*EarlyTermMI);
   LIS->InsertMachineInstrInMaps(*ExecMaskMI);
 
+  LIS->removeAllRegUnitsForPhysReg(AMDGPU::VCC);
+
   return ExecMaskMI;
 }
 
