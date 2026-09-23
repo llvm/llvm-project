@@ -2082,7 +2082,7 @@ public:
       return thisT()->getShuffleCost(
           TTI::SK_Splice, cast<VectorType>(RetTy),
           cast<VectorType>(Args[0]->getType()), CostKind, {},
-          IID == Intrinsic::vector_splice_left ? Index : -Index,
+          IID == Intrinsic::vector_splice_left ? static_cast<int>(Index) : -static_cast<int>(Index),
           cast<VectorType>(RetTy));
     }
     case Intrinsic::vector_reduce_add:

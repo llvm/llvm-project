@@ -1581,7 +1581,7 @@ Error MachOPlatform::MachOPlatformPlugin::populateObjCRuntimeObject(
 
       SecBlock.addEdge(PointerEdge,
                        RecordOffset + ((char *)&SD.Sec.addr - (char *)&SD.Sec),
-                       *ObjCImageInfoSym, -SecBlock.getAddress().getValue());
+                       *ObjCImageInfoSym, - static_cast<int64_t>(SecBlock.getAddress().getValue()));
     };
   }
 

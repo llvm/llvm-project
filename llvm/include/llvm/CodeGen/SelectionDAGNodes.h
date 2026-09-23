@@ -1277,7 +1277,7 @@ inline SDValue::SDValue(SDNode *node, unsigned resno)
   // combines.
   assert((!Node || !ResNo || ResNo < Node->getNumValues()) &&
          "Invalid result number for the given node!");
-  assert(ResNo < -2U && "Cannot use result numbers reserved for DenseMaps.");
+  assert(ResNo < ~1U && "Cannot use result numbers reserved for DenseMaps.");
 }
 
 inline unsigned SDValue::getOpcode() const {
