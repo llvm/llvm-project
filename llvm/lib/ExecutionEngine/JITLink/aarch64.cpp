@@ -316,12 +316,11 @@ Error lowerPointer64AuthEdgesToSigningFunction(LinkGraph &G) {
   auto &SigningFunctionBlock = SigningFunctionSym.getBlock();
   auto SigningFunctionBuf = SigningFunctionBlock.getAlreadyMutableContent();
 
-  // Write the instructions to the block content. A64 instructions are always
-  // little-endian encoded regardless of the graph's data endianness (BE8).
+  // Write the instructions to the block content.
   BinaryStreamWriter InstrWriter(
       {reinterpret_cast<uint8_t *>(SigningFunctionBuf.data()),
        SigningFunctionBuf.size()},
-      llvm::endianness::little);
+      G.getEndianness());
 
   auto AppendInstr = [&](uint32_t Instr) {
     return InstrWriter.writeInteger(Instr);
