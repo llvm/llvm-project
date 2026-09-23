@@ -12,6 +12,8 @@
 ;; `nozero-initialized-in-bss` as bss symbols drop the extra information
 ;; as there are no label defs in CSECTs mapped into the bss section.
 
+%struct.Example = type { i32, i8 }
+
 @a = internal global i32 1, align 4
 @b = internal global i32 2, align 4
 @c = internal global i32 3, align 4
