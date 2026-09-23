@@ -77,10 +77,9 @@ protected:
         [&] { EXPECT_THAT(LIBC_NAMESPACE::remove(TEST_FILE), Succeeds(0)); });
     // Flush and close the writer before the following checks.
     {
-      scope_exit close_file(
-          [&] { EXPECT_THAT(LIBC_NAMESPACE::fclose(file), Succeeds(0)); });
       ASSERT_EQ(LIBC_NAMESPACE::fwrite(CONTENT, 1, sizeof(CONTENT) - 1, file),
                 sizeof(CONTENT) - 1);
+      EXPECT_THAT(LIBC_NAMESPACE::fclose(file), Succeeds(0));
     }
 
     FILE *existing = LIBC_NAMESPACE::fopen(TEST_FILE, mode);
