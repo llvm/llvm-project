@@ -694,8 +694,8 @@ SmallVector<T> applyPermutationMap(AffineMap map, llvm::ArrayRef<T> source) {
 /// Calculates maximum dimension and symbol positions from the expressions
 /// in `exprsLists` and stores them in `maxDim` and `maxSym` respectively.
 template <typename AffineExprContainer>
-static void getMaxDimAndSymbol(ArrayRef<AffineExprContainer> exprsList,
-                               int64_t &maxDim, int64_t &maxSym) {
+void getMaxDimAndSymbol(ArrayRef<AffineExprContainer> exprsList,
+                        int64_t &maxDim, int64_t &maxSym) {
   for (const auto &exprs : exprsList) {
     for (auto expr : exprs) {
       expr.walk([&maxDim, &maxSym](AffineExpr e) {

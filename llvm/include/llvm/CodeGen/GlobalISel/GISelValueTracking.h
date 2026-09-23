@@ -76,8 +76,6 @@ public:
   KnownBits getKnownBits(Register R, const APInt &DemandedElts,
                          unsigned Depth = 0);
 
-  // Calls getKnownBits for first operand def of MI.
-  KnownBits getKnownBits(MachineInstr &MI);
   APInt getKnownZeroes(Register R);
   APInt getKnownOnes(Register R);
 
@@ -101,11 +99,6 @@ public:
   bool isKnownNeverZero(Register R, unsigned Depth = 0);
   bool isKnownNeverZero(Register R, const APInt &DemandedElts,
                         unsigned Depth = 0);
-
-  static void computeKnownBitsForAlignment(KnownBits &Known, Align Alignment) {
-    // The low bits are known zero if the pointer is aligned.
-    Known.Zero.setLowBits(Log2(Alignment));
-  }
 
   /// \return The known alignment for the pointer-like value \p R.
   Align computeKnownAlignment(Register R, unsigned Depth = 0);
@@ -159,6 +152,10 @@ public:
 
   /// Returns true if \p Val can be assumed to never be a signaling NaN.
   bool isKnownNeverSNaN(Register Val) { return isKnownNeverNaN(Val, true); }
+
+  /// Returns true if \p Val can be assumed to never be a zero, accounting for
+  /// denormal flushing of the containing function.
+  bool isKnownNeverLogicalZero(Register Val, unsigned Depth = 0);
 
   // Observer API. No-op for non-caching implementation.
   void erasingInstr(MachineInstr &MI) override {}

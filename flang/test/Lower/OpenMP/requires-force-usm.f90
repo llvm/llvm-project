@@ -7,7 +7,7 @@
 ! -fopenmp-force-usm is set, even when other requires directives are present
 
 !CHECK:      module attributes {
-!CHECK-SAME: omp.requires = #omp<clause_requires reverse_offload|unified_shared_memory>
+!CHECK-SAME: omp.requires = #omp.clause_requires<reverse_offload|unified_shared_memory>
 program requires
   !$omp requires reverse_offload
   !$omp target

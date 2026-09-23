@@ -53,6 +53,28 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fmemopen
+  SRCS
+    fmemopen.cpp
+  HDRS
+    fmemopen.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.stdio_macros
+    libc.hdr.types.FILE
+    libc.hdr.types.off_t
+    libc.hdr.types.size_t
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.CPP.new
+    libc.src.__support.File.file
+    libc.src.__support.alloc_checker
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.null_check
+    libc.src.string.memory_utils.inline_memcpy
+)
+
+add_entrypoint_object(
   fopencookie
   SRCS
     fopencookie.cpp
@@ -256,6 +278,13 @@ add_entrypoint_object(
     .${LIBC_TARGET_OS}.fdopen
 )
 
+add_entrypoint_object(
+  tmpfile
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.tmpfile
+)
+
 # These entrypoints have multiple potential implementations.
 add_stdio_entrypoint_object(feof)
 add_stdio_entrypoint_object(feof_unlocked)
@@ -271,6 +300,7 @@ add_stdio_entrypoint_object(fflush)
 add_stdio_entrypoint_object(clearerr)
 add_stdio_entrypoint_object(clearerr_unlocked)
 add_stdio_entrypoint_object(fopen)
+add_stdio_entrypoint_object(freopen)
 add_stdio_entrypoint_object(fclose)
 add_stdio_entrypoint_object(fread_unlocked)
 add_stdio_entrypoint_object(fread)
