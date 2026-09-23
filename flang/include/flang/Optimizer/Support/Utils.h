@@ -155,7 +155,7 @@ inline void intrinsicTypeTODO2(mlir::Type type1, mlir::Type type2,
                                mlir::Location loc,
                                const llvm::Twine &intrinsicName) {
   TODO(loc, "intrinsic: {" +
-                fir::mlirTypeToIntrinsicFortran(type2, loc, intrinsicName) +
+                fir::mlirTypeToIntrinsicFortran(type1, loc, intrinsicName) +
                 ", " +
                 fir::mlirTypeToIntrinsicFortran(type2, loc, intrinsicName) +
                 "} in " + intrinsicName);
