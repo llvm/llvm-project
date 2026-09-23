@@ -1503,6 +1503,31 @@ int OnExit() {
     return __msan_memcpy(to, from, size);                   \
   }
 
+// The "_chk" variants forward to dedicated __msan_*_chk helpers (defined below)
+// that mirror the plain __msan_mem* handlers while calling the fortified
+// REAL(__*_chk). These are only expanded by the glibc-gated interceptors in the
+// memintrinsics .inc file.
+#define COMMON_INTERCEPTOR_MEMSET_CHK_IMPL(ctx, dest, c, n, dest_size) \
+  {                                                                    \
+    (void)ctx;                                                         \
+    return __msan_memset_chk(dest, c, n, dest_size);                   \
+  }
+#define COMMON_INTERCEPTOR_MEMMOVE_CHK_IMPL(ctx, dest, src, n, dest_size) \
+  {                                                                       \
+    (void)ctx;                                                            \
+    return __msan_memmove_chk(dest, src, n, dest_size);                   \
+  }
+#define COMMON_INTERCEPTOR_MEMCPY_CHK_IMPL(ctx, dest, src, n, dest_size) \
+  {                                                                      \
+    (void)ctx;                                                           \
+    return __msan_memcpy_chk(dest, src, n, dest_size);                   \
+  }
+#define COMMON_INTERCEPTOR_MEMPCPY_CHK_IMPL(ctx, dest, src, n, dest_size) \
+  {                                                                       \
+    (void)ctx;                                                            \
+    return (char*)__msan_memcpy_chk(dest, src, n, dest_size) + n;         \
+  }
+
 #define COMMON_INTERCEPTOR_COPY_STRING(ctx, to, from, size) \
   do {                                                      \
     GET_STORE_STACK_TRACE;                                  \
@@ -1515,6 +1540,18 @@ int OnExit() {
   do {                                                                         \
     return mmap_interceptor(REAL(mmap), addr, sz, prot, flags, fd, off);       \
   } while (false)
+
+#if SANITIZER_GLIBC
+// Forward declarations for the fortified "_chk" helpers used by the
+// memintrinsic interceptors below. They are defined after the interceptors that
+// provide the REAL(__*_chk) pointers, and are intentionally not part of the
+// public MSan interface (hence not declared in the interface header).
+static void* __msan_memset_chk(void* dest, int c, SIZE_T n, SIZE_T dest_size);
+static void* __msan_memmove_chk(void* dest, const void* src, SIZE_T n,
+                                SIZE_T dest_size);
+static void* __msan_memcpy_chk(void* dest, const void* src, SIZE_T n,
+                               SIZE_T dest_size);
+#endif  // SANITIZER_GLIBC
 
 #include "sanitizer_common/sanitizer_platform_interceptors.h"
 #include "sanitizer_common/sanitizer_common_interceptors_memintrinsics.inc"
@@ -1781,6 +1818,60 @@ void *__msan_memmove(void *dest, const void *src, SIZE_T n) {
   MoveShadowAndOrigin(dest, src, n, &stack);
   return res;
 }
+
+#if SANITIZER_GLIBC
+// Fortified "_chk" helpers. These mirror the plain __msan_mem* handlers above
+// but call the corresponding REAL(__*_chk) so that glibc's _FORTIFY_SOURCE
+// overflow checks are preserved. They have internal linkage and are not part of
+// the MSan interface.
+//
+// REAL() is not resolved before initialization completes, so the bound is
+// enforced with CHECK_LE there instead, matching the default implementations in
+// sanitizer_common_interceptors_memintrinsics.inc. Truncating to dest_size
+// would silently hide the overflow that these functions exist to report.
+static void* __msan_memset_chk(void* dest, int c, SIZE_T n, SIZE_T dest_size) {
+  if (!msan_inited) {
+    CHECK_LE(n, dest_size);
+    return internal_memset(dest, c, n);
+  }
+  if (msan_init_is_running)
+    return REAL(__memset_chk)(dest, c, n, dest_size);
+  ENSURE_MSAN_INITED();
+  void* res = REAL(__memset_chk)(dest, c, n, dest_size);
+  __msan_unpoison(dest, n);
+  return res;
+}
+
+static void* __msan_memmove_chk(void* dest, const void* src, SIZE_T n,
+                                SIZE_T dest_size) {
+  if (!msan_inited) {
+    CHECK_LE(n, dest_size);
+    return internal_memmove(dest, src, n);
+  }
+  if (msan_init_is_running)
+    return REAL(__memmove_chk)(dest, src, n, dest_size);
+  ENSURE_MSAN_INITED();
+  GET_STORE_STACK_TRACE;
+  void* res = REAL(__memmove_chk)(dest, src, n, dest_size);
+  MoveShadowAndOrigin(dest, src, n, &stack);
+  return res;
+}
+
+static void* __msan_memcpy_chk(void* dest, const void* src, SIZE_T n,
+                               SIZE_T dest_size) {
+  if (!msan_inited) {
+    CHECK_LE(n, dest_size);
+    return internal_memcpy(dest, src, n);
+  }
+  if (msan_init_is_running || __msan::IsInSymbolizerOrUnwider())
+    return REAL(__memcpy_chk)(dest, src, n, dest_size);
+  ENSURE_MSAN_INITED();
+  GET_STORE_STACK_TRACE;
+  void* res = REAL(__memcpy_chk)(dest, src, n, dest_size);
+  CopyShadowAndOrigin(dest, src, n, &stack);
+  return res;
+}
+#endif  // SANITIZER_GLIBC
 
 void __msan_unpoison_string(const char* s) {
   if (!MEM_IS_APP(s)) return;
