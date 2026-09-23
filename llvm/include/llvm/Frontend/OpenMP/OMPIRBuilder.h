@@ -2611,6 +2611,19 @@ public:
                                           Value *NumThreads, Value *HostPtr,
                                           ArrayRef<Value *> KernelArgs);
 
+  /// Allocate and populate a \c __tgt_kernel_arguments struct from \p
+  /// KernelArgs, returning a pointer to it. This is the storage that
+  /// emitTargetKernel passes to \c __tgt_target_kernel; it is exposed so that
+  /// alternative callers (e.g. taskgraph recording) can pass the same struct to
+  /// a different runtime entry point.
+  ///
+  /// \param Loc The location at which the request originated and is fulfilled.
+  /// \param AllocaIP The insertion point to be used for alloca instructions.
+  /// \param KernelArgs Array of arguments to the kernel.
+  LLVM_ABI Value *emitKernelArgsStruct(const LocationDescription &Loc,
+                                       InsertPointTy AllocaIP,
+                                       ArrayRef<Value *> KernelArgs);
+
   /// Generate a flush runtime call.
   ///
   /// \param Loc The location at which the request originated and is fulfilled.

@@ -90,6 +90,97 @@ enum tgt_map_type : uint64_t {
   OMP_TGT_MAPTYPE_MEMBER_OF = 0xffff000000000000
 };
 
+#ifdef __cplusplus
+/// Map-type accessor helpers.
+///
+/// Plugins need to inspect data mappings in their taskgraph lowering
+/// implementations in order to determine how to abstractly interpret memory
+/// operations and translate them into whichever form is needed for the (graph)
+/// API they are targeting.  Here, we provide a set of light-weight accessors to
+/// hide the details of bit encodings, etc. from the plugins so that we only
+/// have to maintain that information in libomptarget proper.
+namespace omptarget {
+namespace maptype {
+
+/// Copy host->device on region entry (the "to" map modifier).
+inline bool isTo(int64_t MapType) { return MapType & OMP_TGT_MAPTYPE_TO; }
+/// Copy device->host on region exit (the "from" map modifier).
+inline bool isFrom(int64_t MapType) { return MapType & OMP_TGT_MAPTYPE_FROM; }
+/// Transfer regardless of the reference count ("always").
+inline bool isAlways(int64_t MapType) {
+  return MapType & OMP_TGT_MAPTYPE_ALWAYS;
+}
+/// Force unmapping / deletion of the device allocation.
+inline bool isDelete(int64_t MapType) {
+  return MapType & OMP_TGT_MAPTYPE_DELETE;
+}
+/// The argument is passed to the kernel (its device base address is an arg).
+inline bool isTargetParam(int64_t MapType) {
+  return MapType & OMP_TGT_MAPTYPE_TARGET_PARAM;
+}
+/// Pointer-and-pointee map (both the pointer and what it points at are mapped).
+inline bool isPtrAndObj(int64_t MapType) {
+  return MapType & OMP_TGT_MAPTYPE_PTR_AND_OBJ;
+}
+/// Return the device base address of the mapped data to the host.
+inline bool isReturnParam(int64_t MapType) {
+  return MapType & OMP_TGT_MAPTYPE_RETURN_PARAM;
+}
+/// Private (firstprivate aggregate) variable -- not mapped, needs its own
+/// per-launch device storage.
+inline bool isPrivate(int64_t MapType) {
+  return MapType & OMP_TGT_MAPTYPE_PRIVATE;
+}
+/// Pass-by-value literal -- the argument *is* the value (no device pointer).
+inline bool isLiteral(int64_t MapType) {
+  return MapType & OMP_TGT_MAPTYPE_LITERAL;
+}
+/// The mapping was added implicitly by the compiler.
+inline bool isImplicit(int64_t MapType) {
+  return MapType & OMP_TGT_MAPTYPE_IMPLICIT;
+}
+/// Runtime error if the data is not already present on the device.
+inline bool isPresent(int64_t MapType) {
+  return MapType & OMP_TGT_MAPTYPE_PRESENT;
+}
+/// Attach-pointer map (pointer attachment, processed after all other maps).
+inline bool isAttach(int64_t MapType) {
+  return MapType & OMP_TGT_MAPTYPE_ATTACH;
+}
+/// Non-contiguous descriptor (used by non-contiguous target update).
+inline bool isNonContig(int64_t MapType) {
+  return MapType & OMP_TGT_MAPTYPE_NON_CONTIG;
+}
+/// True iff this map is a member of a struct (the struct index is encoded in
+/// the top 16 bits).
+inline bool isMemberOf(int64_t MapType) {
+  return MapType & OMP_TGT_MAPTYPE_MEMBER_OF;
+}
+
+/// Direction of the data movement implied by a map clause, derived once from
+/// the to/from bits, for consumers that want to build transfer nodes.
+enum class TransferDir {
+  None, ///< neither to nor from (alloc-only / pass-by-value / private).
+  H2D,  ///< host -> device (to, but not from).
+  D2H,  ///< device -> host (from, but not to).
+  Both, ///< to and from (copy in before, copy out after).
+};
+
+inline TransferDir transferDir(int64_t MapType) {
+  bool T = isTo(MapType), F = isFrom(MapType);
+  if (T && F)
+    return TransferDir::Both;
+  if (T)
+    return TransferDir::H2D;
+  if (F)
+    return TransferDir::D2H;
+  return TransferDir::None;
+}
+
+} // namespace maptype
+} // namespace omptarget
+#endif // __cplusplus
+
 /// Flags for offload entries.
 enum OpenMPOffloadingDeclareTargetFlags {
   /// Mark the entry global as having a 'link' attribute.
