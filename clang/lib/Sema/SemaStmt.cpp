@@ -470,6 +470,23 @@ StmtResult Sema::ActOnCompoundStmt(SourceLocation L, SourceLocation R,
       DiagnoseEmptyLoopBody(Elts[i], Elts[i + 1]);
   }
 
+  // Find defer statements that immediately precede a break/continue statement.
+  std::optional<SourceLocation> DeferLoc = std::nullopt;
+  for (unsigned i = 0; i != NumElts; ++i) {
+    if (DeferLoc && isa<BreakStmt, ContinueStmt>(Elts[i]))
+      Diag(DeferLoc.value(), diag::warn_redundant_defer)
+          << Elts[i]->getSourceRange();
+    DeferLoc = isa<DeferStmt>(Elts[i])
+                   ? std::optional<SourceLocation>(Elts[i]->getBeginLoc())
+                   : std::nullopt;
+  }
+
+  // Check for defer as last statement.
+  Stmt *Back = NumElts > 0 ? Elts[NumElts - 1] : nullptr;
+  if (Back && isa<DeferStmt>(Back))
+    Diag(Back->getBeginLoc(), diag::warn_redundant_defer)
+        << Back->getSourceRange();
+
   // Calculate difference between FP options in this compound statement and in
   // the enclosing one. If this is a function body, take the difference against
   // default options. In this case the difference will indicate options that are
@@ -996,6 +1013,14 @@ StmtResult Sema::ActOnIfStmt(SourceLocation IfLoc,
 
   if (!ConstevalOrNegatedConsteval && !elseStmt)
     DiagnoseEmptyStmtBody(RParenLoc, thenStmt, diag::warn_empty_if_body);
+
+  if (isa<DeferStmt>(thenStmt))
+    Diag(thenStmt->getBeginLoc(), diag::warn_redundant_defer)
+        << thenStmt->getSourceRange();
+
+  if (elseStmt && isa<DeferStmt>(elseStmt))
+    Diag(elseStmt->getBeginLoc(), diag::warn_redundant_defer)
+        << elseStmt->getSourceRange();
 
   if (ConstevalOrNegatedConsteval ||
       StatementKind == IfStatementKind::Constexpr) {
@@ -1837,6 +1862,9 @@ StmtResult Sema::ActOnWhileStmt(SourceLocation WhileLoc,
 
   if (isa<NullStmt>(Body))
     getCurCompoundScope().setHasEmptyLoopBodies();
+  else if (isa<DeferStmt>(Body))
+    Diag(Body->getBeginLoc(), diag::warn_redundant_defer)
+        << Body->getSourceRange();
 
   return WhileStmt::Create(Context, CondVal.first, CondVal.second, Body,
                            WhileLoc, LParenLoc, RParenLoc);
@@ -2328,6 +2356,9 @@ StmtResult Sema::ActOnForStmt(SourceLocation ForLoc, SourceLocation LParenLoc,
   Expr *Third  = third.release().getAs<Expr>();
   if (isa<NullStmt>(Body))
     getCurCompoundScope().setHasEmptyLoopBodies();
+  else if (isa<DeferStmt>(Body))
+    Diag(Body->getBeginLoc(), diag::warn_redundant_defer)
+        << Body->getSourceRange();
 
   return new (Context)
       ForStmt(Context, First, Second.get().second, Second.get().first, Third,
@@ -4033,11 +4064,17 @@ void Sema::ActOnDeferStmtError([[maybe_unused]] Scope *CurScope) {
   CurrentDefer.pop_back();
 }
 
-StmtResult Sema::ActOnEndOfDeferStmt(Stmt *Body,
-                                     [[maybe_unused]] Scope *CurScope) {
+StmtResult Sema::ActOnEndOfDeferStmt(Stmt *Body, Scope *CurScope) {
   assert(!CurrentDefer.empty() && CurrentDefer.back().first == CurScope);
+
   SourceLocation DeferLoc = CurrentDefer.pop_back_val().second;
   DiagnoseEmptyStmtBody(DeferLoc, Body, diag::warn_empty_defer_body);
+
+  // Check for superfluous nested defer.
+  if (isa<DeferStmt>(Body))
+    Diag(Body->getBeginLoc(), diag::warn_redundant_defer)
+        << Body->getSourceRange();
+
   setFunctionHasBranchProtectedScope();
   return DeferStmt::Create(Context, DeferLoc, Body);
 }

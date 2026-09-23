@@ -11342,6 +11342,10 @@ def warn_empty_defer_body : Warning<
 def note_empty_body_on_separate_line : Note<
   "put the semicolon on a separate line to silence this warning">;
 
+def warn_redundant_defer: Warning<
+  "redundant use of defer; the deferred statement is executed immediately">,
+  InGroup<RedundantDefer>, DefaultIgnore;
+
 def err_va_start_captured_stmt : Error<
   "'va_start' cannot be used in a captured statement">;
 def err_va_start_outside_function : Error<
