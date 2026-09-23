@@ -32,6 +32,7 @@
 #include "llvm/ADT/bit.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/SaveAndRestore.h"
 
 #include <cassert>
 #include <cstdint>
@@ -2320,11 +2321,11 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
 
   PrivateArgumentManagerTy PrivateArgumentManager(Device, AsyncInfo);
 
-  int NumClangLaunchArgs = KernelArgs.NumArgs;
+  llvm::SaveAndRestore<uint32_t> NumClangLaunchArgs(KernelArgs.NumArgs);
   int Ret = OFFLOAD_SUCCESS;
-  if (NumClangLaunchArgs) {
+  if (NumClangLaunchArgs.get()) {
     // Process data, such as data mapping, before launching the kernel
-    Ret = processDataBefore(Loc, DeviceId, HostPtr, NumClangLaunchArgs,
+    Ret = processDataBefore(Loc, DeviceId, HostPtr, NumClangLaunchArgs.get(),
                             KernelArgs.ArgBasePtrs, KernelArgs.ArgPtrs,
                             KernelArgs.ArgSizes, KernelArgs.ArgTypes,
                             KernelArgs.ArgNames, KernelArgs.ArgMappers, TgtArgs,
@@ -2374,10 +2375,10 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
     return OFFLOAD_FAIL;
   }
 
-  if (NumClangLaunchArgs) {
+  if (NumClangLaunchArgs.get()) {
     // Transfer data back and deallocate target memory for (first-)private
     // variables
-    Ret = processDataAfter(Loc, DeviceId, HostPtr, NumClangLaunchArgs,
+    Ret = processDataAfter(Loc, DeviceId, HostPtr, NumClangLaunchArgs.get(),
                            KernelArgs.ArgBasePtrs, KernelArgs.ArgPtrs,
                            KernelArgs.ArgSizes, KernelArgs.ArgTypes,
                            KernelArgs.ArgNames, KernelArgs.ArgMappers,
@@ -2389,6 +2390,24 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
   }
 
   return OFFLOAD_SUCCESS;
+}
+
+/// Resolve the device-side kernel entry for a host function pointer (see
+/// private.h).  Mirrors the table lookup target() performs before launch, but
+/// without touching any data mappings -- the taskgraph backend only needs the
+/// device entry handle at finalize.  getTableMap has internal linkage but is in
+/// scope here (same translation unit).
+void *getDeviceKernelEntry(int32_t DeviceId, void *HostPtr) {
+  TableMap *TM = getTableMap(HostPtr);
+  if (!TM)
+    return nullptr;
+  std::lock_guard<std::mutex> TrlTblLock(PM->TrlTblMtx);
+  if (TM->Table->TargetsTable.size() <= static_cast<size_t>(DeviceId))
+    return nullptr;
+  __tgt_target_table *TargetTable = TM->Table->TargetsTable[DeviceId];
+  if (!TargetTable)
+    return nullptr;
+  return TargetTable->EntriesBegin[TM->Index].Address;
 }
 
 /// Enables the record replay mechanism by pre-allocating MemorySize
