@@ -107,6 +107,9 @@ jobs:
     runs-on: ${{ matrix.runner }}
     env:
       COMPILER: ${{ matrix.cxx }}
+      # Where we install the library. This lives inside the workspace so that actions/checkout
+      # cleans it up between runs on self-hosted runners.
+      INSTALL_DIR: ${{ github.workspace }}/install
     steps:
       - name: Checkout the LLVM monorepo
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -146,10 +149,22 @@ jobs:
           source .venv/bin/activate
           pip install -r libcxx/utils/ci/lnt/requirements.txt
 
+      # Build the library.
+      #
+      # A build failure is tolerated on purpose, since the library doesn't build at every historical commit.
+      # We still submit an empty run for such commits.
+      - name: Build libc++ at ${{ inputs.commit }}
+        continue-on-error: true
+        uses: ./.github/workflows/libcxx/build-at-commit
+        with:
+          commit: ${{ inputs.commit }}
+          install-dir: ${{ env.INSTALL_DIR }}
+          compiler: ${{ matrix.cxx }}
+          cmake-cache: ${{ matrix.cmake-cache }}
+
       - name: Run the benchmarks
         env:
           BENCHMARK_SUITE_VERSION: ${{ matrix.benchmark-suite-version }}
-          CMAKE_CACHE: ${{ matrix.cmake-cache }}
           COMMIT: ${{ inputs.commit }}
           FILTER: ${{ inputs.filter }}
           LNT_MACHINE: ${{ matrix.lnt-machine }}
@@ -159,12 +174,18 @@ jobs:
           if [ -n "${FILTER}" ]; then
             filter_arg=(--filter "${FILTER}")
           fi
+
+          # If the library build failed, still create an install directory so we
+          # run the benchmarks. The benchmarks will fail, and we'll submit an empty
+          # LNT report.
+          mkdir -p "${INSTALL_DIR}"
+
           libcxx/utils/ci/lnt/run-benchmarks                            \
             --test-suite-commit "${BENCHMARK_SUITE_VERSION}"            \
             --machine "${LNT_MACHINE}"                                  \
             --compiler "${COMPILER}"                                    \
             --benchmark-commit "${COMMIT}"                              \
-            --cmake-cache "${CMAKE_CACHE}"                              \
+            --libcxx-installation "${INSTALL_DIR}"                      \
             "${filter_arg[@]}"                                          \
             --output "${COMMIT}.json"
 

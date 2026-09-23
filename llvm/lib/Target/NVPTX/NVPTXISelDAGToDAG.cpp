@@ -706,12 +706,6 @@ getOperationOrderings(MemSDNode *N, const NVPTXSubtarget *Subtarget) {
 
   bool HasMemoryOrdering = Subtarget->hasMemoryOrdering();
   bool HasRelaxedMMIO = Subtarget->hasRelaxedMMIO();
-  bool IsSupportedLocalVolatile = CodeAddrSpace == NVPTX::AddressSpace::Local &&
-                                  Subtarget->hasFeature(NVPTX::PTX91) &&
-                                  N->isVolatile() &&
-                                  (Ordering == AtomicOrdering::NotAtomic ||
-                                   Ordering == AtomicOrdering::Unordered ||
-                                   Ordering == AtomicOrdering::Monotonic);
 
   // clang-format off
 
@@ -736,8 +730,8 @@ getOperationOrderings(MemSDNode *N, const NVPTXSubtarget *Subtarget) {
   // | Relaxed | Yes      | Generic,Shared [0] | .volatile  | .volatile                    |
   // | Relaxed | Yes      | Global [0]         | .volatile  | .mmio.relaxed.sys (PTX 8.2+) |
   // |         |          |                    |            |  or .volatile (PTX 8.1-)     |
-  // | Relaxed | Yes      | Local (PTX 9.0-)   | plain [1]  | .weak [1]                    |
-  // | Relaxed | Yes      | Local (PTX 9.1+)   | .volatile  | .volatile                    |
+  // | Yes     | Yes      | Local (PTX 9.0-)   | plain [1]  | .weak [1]                    |
+  // | Yes     | Yes      | Local (PTX 9.1+)   | .volatile  | .volatile                    |
   // | Relaxed | Yes      | Const,Param        | plain [1]  | .weak [1]                    |
   // | Other   | Yes      | Generic, Shared,   | Error [2]  | <atomic sem> [3]             |
   // |         |          | / Global [0]       |            |                              |
@@ -800,9 +794,15 @@ getOperationOrderings(MemSDNode *N, const NVPTXSubtarget *Subtarget) {
   //      preserve the side-effect using the weak memory instruction and
   //      another instruction, such as a dead dummy volatile load.
 
-  if ((CodeAddrSpace == NVPTX::AddressSpace::Local &&
-       !IsSupportedLocalVolatile) ||
-      CodeAddrSpace == NVPTX::AddressSpace::Const ||
+  if (CodeAddrSpace == NVPTX::AddressSpace::Local) {
+    // Local memory is private to a thread. Drop atomic ordering but preserve
+    // volatile accesses where supported.
+    return Subtarget->hasLocalVolatile() && N->isVolatile()
+               ? NVPTX::Ordering::Volatile
+               : NVPTX::Ordering::NotAtomic;
+  }
+
+  if (CodeAddrSpace == NVPTX::AddressSpace::Const ||
       CodeAddrSpace == NVPTX::AddressSpace::EntryParam ||
       CodeAddrSpace == NVPTX::AddressSpace::DeviceParam) {
     return NVPTX::Ordering::NotAtomic;
@@ -824,11 +824,10 @@ getOperationOrderings(MemSDNode *N, const NVPTXSubtarget *Subtarget) {
   // [3]: TODO: these should eventually use .mmio<.atomic sem>; for now we drop
   // the volatile semantics and preserve the atomic ones.
 
-  // PTX atomics are not available outside generic, global, or shared memory.
-  // PTX volatile operations additionally support local memory in PTX 9.1+.
+  // Apart from local volatile accesses handled above, PTX atomics and volatile
+  // operations are only available in generic, global, or shared memory.
   bool AddrSupportsVolatileOrAtomic =
-      (IsSupportedLocalVolatile ||
-       CodeAddrSpace == NVPTX::AddressSpace::Generic ||
+      (CodeAddrSpace == NVPTX::AddressSpace::Generic ||
        CodeAddrSpace == NVPTX::AddressSpace::Global ||
        CodeAddrSpace == NVPTX::AddressSpace::Shared ||
        CodeAddrSpace == NVPTX::AddressSpace::SharedCluster);

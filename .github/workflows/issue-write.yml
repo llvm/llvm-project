@@ -11,6 +11,7 @@ on:
       - "Test Issue Write"
       - "Check LLVM ABI annotations"
       - "Diff test-suite codegen"
+      - "Flang integration test check"
     types:
       - completed
 

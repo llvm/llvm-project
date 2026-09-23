@@ -32,9 +32,15 @@ define void @d() {
   ret void
 }
 
-define void @e() {
+define void @e() personality ptr @__gxx_personality_v0 {
   invoke void @c()
-  to label %L unwind label %L
+  to label %OK unwind label %L
+OK:
+  ret void
 L:
+  %exn = landingpad {ptr, i32} cleanup
+
   ret void
 }
+
+declare i32 @__gxx_personality_v0(...)
