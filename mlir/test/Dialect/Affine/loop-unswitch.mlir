@@ -261,7 +261,7 @@ func.func private @external()
 // CHECK-LABEL: affine_parallel
 func.func @affine_parallel(%arg0: memref<35xf32>) -> memref<35xf32> {
   %0 = llvm.mlir.constant(1.000000e+00 : f32) : f32
-  %alloc = memref.alloc() {alignment = 64 : i64} : memref<35xf32>
+  %alloc = memref.alloc() alignment = 64 : memref<35xf32>
   // CHECK: affine.parallel
   affine.parallel (%arg1) = (0) to (35) step (32) {
     // This can't be hoisted further.

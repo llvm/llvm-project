@@ -163,7 +163,7 @@ def AOp : NS_Op<"a_op", []> {
 
 // DEF:      void AOp::build(
 // DEF:        ::llvm::ArrayRef<::mlir::NamedAttribute> attributes
-// DEF:      odsState.addAttributes(attributes);
+// DEF:      buildPropertiesAndDiscardableAttributes(odsState, attributes);
 
 // DEF:      void AOp::build(
 // DEF-SAME:   const Properties &properties,
@@ -283,7 +283,7 @@ def AgetOp : Op<Test2_Dialect, "a_get_op", []> {
 
 // DEF:      void AgetOp::build(
 // DEF:        ::llvm::ArrayRef<::mlir::NamedAttribute> attributes
-// DEF:      odsState.addAttributes(attributes);
+// DEF:      buildPropertiesAndDiscardableAttributes(odsState, attributes);
 
 // DEF:      void AgetOp::build(
 // DEF-SAME:   const Properties &properties

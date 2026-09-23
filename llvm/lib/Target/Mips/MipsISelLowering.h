@@ -144,15 +144,17 @@ using TargetRegisterClass = MCRegisterClass;
     /// If a physical register, this returns the register that receives the
     /// exception address on entry to an EH pad.
     Register
-    getExceptionPointerRegister(const Constant *PersonalityFn) const override {
-      return ABI.IsN64() ? Mips::A0_64 : Mips::A0;
+    getExceptionPointerRegister(ExceptionHandling EH,
+                                const Constant *PersonalityFn) const override {
+      return ABI.getArgRegPtr(0);
     }
 
     /// If a physical register, this returns the register that receives the
     /// exception typeid on entry to a landing pad.
     Register
-    getExceptionSelectorRegister(const Constant *PersonalityFn) const override {
-      return ABI.IsN64() ? Mips::A1_64 : Mips::A1;
+    getExceptionSelectorRegister(ExceptionHandling EH,
+                                 const Constant *PersonalityFn) const override {
+      return ABI.getArgRegPtr(1);
     }
 
     bool isJumpTableRelative() const override {
@@ -505,8 +507,6 @@ using TargetRegisterClass = MCRegisterClass;
     bool shouldInsertFencesForAtomic(const Instruction *I) const override {
       return true;
     }
-
-    int getCPURegisterIndex(StringRef Name) const;
 
     ArrayRef<MCPhysReg> getRoundingControlRegisters() const override;
 

@@ -950,11 +950,6 @@ class Predicate<code cond> {
   bit RecomputePerFunction = false;
 }
 
-/// NoHonorSignDependentRounding - This predicate is true if support for
-/// sign-dependent-rounding is not enabled.
-def NoHonorSignDependentRounding
- : Predicate<"!TM.Options.HonorSignDependentRoundingFPMath()">;
-
 class Requires<list<Predicate> preds> {
   list<Predicate> Predicates = preds;
 }
@@ -1006,23 +1001,6 @@ def slice;
 def encoder;
 def decoder;
 
-/// PointerLikeRegClass - Pseudoinstruction operands that are designed
-/// to have pointer width are derived from this. This should only be
-/// used by StandardPseudoInstruction instructions. No target specific
-/// instruction should use this.
-class PointerLikeRegClass<int Kind> {
-  int RegClassKind = Kind;
-}
-
-/// ptr_rc definition - Mark this operand as being a pointer value
-/// whose register class needs to be defined by the target. Targets
-/// should provide instruction definition overrides which substitute
-/// the uses of this with the backend defined RegisterClass or
-/// RegClassByHwMode to use for pointer virtual registers for a
-/// particular opcode (typically by defining a subsitute instruction
-/// with RemapPointerOperands).
-def ptr_rc : PointerLikeRegClass<0>;
-
 /// RegClassByHwMode - Operands that change the register class based
 /// on the subtarget are derived from this. TableGen
 /// treats the register class as having a symbolic kind that it
@@ -1035,6 +1013,13 @@ class RegClassByHwMode<list<HwMode> Modes,
   : HwModeSelect<Modes, !size(RegClasses)>, RegisterClassLike {
   list<RegisterClass> Objects = RegClasses;
 }
+
+/// ptr_rc - Placeholder pointer operand for the generic
+/// StandardPseudoInstructions. It has no register classes of its own; each
+/// target must substitute a real RegClassByHwMode (or RegisterClass) via
+/// RemapPointerOperands (typically RemapAllTargetPseudoPointerOperands). An
+/// unremapped ptr_rc reaching the instruction-info emitter is an error.
+def ptr_rc : RegClassByHwMode<[], []>;
 
 /// unknown definition - Mark this operand as being of unknown type, causing
 /// it to be resolved by inference in the context it is used.
@@ -1243,8 +1228,10 @@ let IsPointer = true in {
 
 // untyped_imm is for operands where isImm() will be true. It currently has no
 // special behaviour and is only used for clarity.
-def untyped_imm_0 : TypedOperand<"OPERAND_GENERIC_IMM_0"> {
-  let IsImmediate = true;
+let IsImmediate = true in {
+  def untyped_imm_0 : TypedOperand<"OPERAND_GENERIC_IMM_0">;
+  def untyped_imm_1 : TypedOperand<"OPERAND_GENERIC_IMM_1">;
+  def untyped_imm_2 : TypedOperand<"OPERAND_GENERIC_IMM_2">;
 }
 
 /// zero_reg definition - Special node to stand for the zero register.
@@ -1764,7 +1751,7 @@ defvar PseudosWithPtrOps = [
 ];
 
 
-/// Replace PointerLikeRegClass operands in OperandList with new_rc.
+/// Replace ptr_rc placeholder operands in OperandList with new_rc.
 class RemapPointerOperandList<dag OperandList, RegisterClassLike new_rc> {
   // Collect the set of names so we can query and rewrite them.
   list<string> op_names = !foreach(i, !range(!size(OperandList)),
@@ -1780,7 +1767,7 @@ class RemapPointerOperandList<dag OperandList, RegisterClassLike new_rc> {
   dag ret =
     !foldl(OperandList, op_names, acc, name,
       !cond(
-        !initialized(!getdagarg<PointerLikeRegClass>(OperandList, name))
+        !initialized(!getdagarg<RegClassByHwMode>(OperandList, name))
           : !setdagarg(acc, name, new_rc),
         !initialized(!getdagarg<unknown_class>(OperandList, name)) : acc,
         !initialized(!getdagarg<DAGOperand>(OperandList, name)) : acc
@@ -1845,6 +1832,11 @@ class AsmParser {
   // their aliases. This function will fail when called on targets where
   // several registers share the same alias (i.e. not a 1:1 mapping).
   bit ShouldEmitMatchRegisterAltName = false;
+
+  // Generate MatchRegisterAltName(StringRef Name, unsigned AltIdx), matching
+  // only explicit names for AltIdx, without fallback. Duplicate names are
+  // checked per index, subject to AllowDuplicateRegisterNames.
+  bit ShouldEmitMatchRegisterAltNameWithIndex = false;
 
   // Set to true if MatchRegisterName and MatchRegisterAltName functions
   // should be generated even if there are duplicate register names. The

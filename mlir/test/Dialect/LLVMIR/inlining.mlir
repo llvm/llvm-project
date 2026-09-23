@@ -8,8 +8,8 @@
 func.func @inner_func_inlinable(%ptr : !llvm.ptr) -> i32 {
   %0 = llvm.mlir.constant(42 : i32) : i32
   %stack = llvm.intr.stacksave : !llvm.ptr
-  llvm.store %0, %ptr { alignment = 8 } : i32, !llvm.ptr
-  %1 = llvm.load %ptr { alignment = 8 } : !llvm.ptr -> i32
+  llvm.store %0, %ptr <alignment = 8> : i32, !llvm.ptr
+  %1 = llvm.load %ptr <alignment = 8> : !llvm.ptr -> i32
   llvm.intr.dbg.value #variable = %0 : i32
   llvm.intr.dbg.declare #variableAddr = %ptr : !llvm.ptr
   llvm.intr.dbg.label #label
@@ -647,7 +647,7 @@ llvm.func @test_disallow_arg_attr(%ptr : !llvm.ptr) {
 #caller = #llvm.access_group<id = distinct[1]<>>
 
 llvm.func @inlinee(%ptr : !llvm.ptr) -> i32 {
-  %0 = llvm.load %ptr { access_groups = [#callee] } : !llvm.ptr -> i32
+  %0 = llvm.load %ptr <access_groups = [#callee]> : !llvm.ptr -> i32
   llvm.return %0 : i32
 }
 
@@ -681,7 +681,7 @@ llvm.func @inlinee(%ptr : !llvm.ptr) -> i32 {
 llvm.func @caller(%ptr : !llvm.ptr) -> i32 {
   %c5 = llvm.mlir.constant(5 : i32) : i32
   %0 = llvm.call @inlinee(%ptr) { access_groups = [#caller] } : (!llvm.ptr) -> (i32)
-  llvm.store %c5, %ptr { access_groups = [#caller] } : i32, !llvm.ptr
+  llvm.store %c5, %ptr <access_groups = [#caller]> : i32, !llvm.ptr
   llvm.return %0 : i32
 }
 
