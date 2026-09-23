@@ -106,6 +106,23 @@ func.func @max_pool(%arg0: tensor<1x6x34x62xf32>) -> () {
   return
 }
 
+// -----
+
+// Lower constant adaptive pooling parameters, including nonzero padding,
+// through max_pool2d in PROPAGATE mode.
+// CHECK-LABEL: @max_pool_adaptive_propagate
+func.func @max_pool_adaptive_propagate(%arg0: tensor<1x5x6x2xf32>) -> tensor<1x3x3x2xf32> {
+  // CHECK-NOT: tosa.max_pool2d_adaptive
+  // CHECK: linalg.pooling_nhwc_max {dilations = dense<1> : vector<2xi64>, strides = dense<2> : vector<2xi64>}
+  // CHECK-SAME: tensor<1x6x8x2xf32>, tensor<2x4xf32>
+  %kernel = tosa.const_shape values(dense<[2, 4]> : tensor<2xindex>) : () -> !tosa.shape<2>
+  %stride = tosa.const_shape values(dense<2> : tensor<2xindex>) : () -> !tosa.shape<2>
+  %pad = tosa.const_shape values(dense<[1, 0, 1, 1]> : tensor<4xindex>) : () -> !tosa.shape<4>
+  %0 = tosa.max_pool2d_adaptive %arg0, %kernel, %stride, %pad nan_mode<PROPAGATE> :
+    (tensor<1x5x6x2xf32>, !tosa.shape<2>, !tosa.shape<2>, !tosa.shape<4>) -> tensor<1x3x3x2xf32>
+  return %0 : tensor<1x3x3x2xf32>
+}
+
 // CHECK-LABEL: @max_pool_padded
 func.func @max_pool_padded(%arg0: tensor<1x6x34x62xf32>) -> () {
   // CHECK-DAG: [[CONST:%.+]] = arith.constant -3.40282347E+38 : f32
