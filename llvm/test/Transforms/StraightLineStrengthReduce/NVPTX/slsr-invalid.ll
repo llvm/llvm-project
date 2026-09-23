@@ -138,3 +138,71 @@ define void @invalid_add_reuse(i64 %0, ptr writeonly align 256 captures(none) de
 
 declare i64 @foo(i64)
 declare i64 @bar(i64)
+declare void @use(i32)
+
+define i32 @invalid_var_delta_or_disjoint(i32 %a, i32 %b, i32 %idx, i1 %cond) {
+; CHECK-LABEL: define i32 @invalid_var_delta_or_disjoint(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i32 [[IDX:%.*]], i1 [[COND:%.*]]) {
+; CHECK-NEXT:    [[A_MINUS_3:%.*]] = add i32 [[A]], -3
+; CHECK-NEXT:    [[BASIS:%.*]] = add i32 [[A_MINUS_3]], [[B]]
+; CHECK-NEXT:    [[OR_DISJOINT:%.*]] = or disjoint i32 [[IDX]], -2
+; CHECK-NEXT:    [[USE_OR:%.*]] = add i32 [[A]], [[OR_DISJOINT]]
+; CHECK-NEXT:    br i1 [[COND]], label %[[THEN:.*]], label %[[ELSE:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    call void @use(i32 [[USE_OR]])
+; CHECK-NEXT:    br label %[[ELSE]]
+; CHECK:       [[ELSE]]:
+; CHECK-NEXT:    [[IDX_MINUS_5:%.*]] = add i32 [[IDX]], -5
+; CHECK-NEXT:    [[T1:%.*]] = add i32 [[IDX_MINUS_5]], [[A]]
+; CHECK-NEXT:    [[RES:%.*]] = add i32 [[T1]], [[B]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %a_minus_3 = add i32 %a, -3
+  %basis = add i32 %a_minus_3, %b
+  %or_disjoint = or disjoint i32 %idx, -2
+  %use_or = add i32 %a, %or_disjoint
+  br i1 %cond, label %then, label %else
+
+then:
+  call void @use(i32 %use_or)
+  br label %else
+
+else:
+  %idx_minus_5 = add i32 %idx, -5
+  %t1 = add i32 %idx_minus_5, %a
+  %res = add i32 %t1, %b
+  ret i32 %res
+}
+
+define i32 @var_delta_drop_poison_flags(i32 %a, i32 %b, i32 %idx, i1 %cond) {
+; CHECK-LABEL: define i32 @var_delta_drop_poison_flags(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i32 [[IDX:%.*]], i1 [[COND:%.*]]) {
+; CHECK-NEXT:    [[A_MINUS_3:%.*]] = add i32 [[A]], -3
+; CHECK-NEXT:    [[BASIS:%.*]] = add i32 [[A_MINUS_3]], [[B]]
+; CHECK-NEXT:    [[ADD_NSW:%.*]] = add i32 [[IDX]], -2
+; CHECK-NEXT:    [[USE_ADD:%.*]] = add i32 [[A]], [[ADD_NSW]]
+; CHECK-NEXT:    br i1 [[COND]], label %[[THEN:.*]], label %[[ELSE:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    call void @use(i32 [[USE_ADD]])
+; CHECK-NEXT:    br label %[[ELSE]]
+; CHECK:       [[ELSE]]:
+; CHECK-NEXT:    [[RES:%.*]] = add i32 [[BASIS]], [[ADD_NSW]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %a_minus_3 = add i32 %a, -3
+  %basis = add i32 %a_minus_3, %b
+  %add_nsw = add nsw i32 %idx, -2
+  %use_add = add i32 %a, %add_nsw
+  br i1 %cond, label %then, label %else
+
+then:
+  call void @use(i32 %use_add)
+  br label %else
+
+else:
+  %idx_minus_5 = add i32 %idx, -5
+  %t1 = add i32 %idx_minus_5, %a
+  %res = add i32 %t1, %b
+  ret i32 %res
+}
+
