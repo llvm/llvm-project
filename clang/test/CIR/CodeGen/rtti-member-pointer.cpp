@@ -23,8 +23,8 @@ void throw_data_member_ptr() {
 
 // CIR-DAG: cir.throw %{{.*}} : !cir.ptr<!s64i>, @_ZTIM1Ai
 
-// LLVM-DAG: @_ZTSM1Ai = linkonce_odr global [5 x i8] c"M1Ai\00", comdat
-// LLVM-DAG: @_ZTS1A = linkonce_odr global [3 x i8] c"1A\00", comdat
+// LLVM-DAG: @_ZTSM1Ai = linkonce_odr constant [5 x i8] c"M1Ai\00", comdat
+// LLVM-DAG: @_ZTS1A = linkonce_odr constant [3 x i8] c"1A\00", comdat
 // LLVM-DAG: @_ZTI1A = linkonce_odr constant { ptr, ptr } { ptr getelementptr (i8, ptr @_ZTVN10__cxxabiv117__class_type_infoE, i64 16), ptr @_ZTS1A }, comdat
 // LLVM-DAG: @_ZTIM1Ai = linkonce_odr constant { ptr, ptr, i32, ptr, ptr } { ptr getelementptr (i8, ptr @_ZTVN10__cxxabiv129__pointer_to_member_type_infoE, i64 16), ptr @_ZTSM1Ai, i32 0, ptr @_ZTIi, ptr @_ZTI1A }, comdat
 // LLVM-DAG: call void @__cxa_throw(ptr %{{.*}}, ptr @_ZTIM1Ai, ptr null)
@@ -45,8 +45,8 @@ void throw_member_fn_ptr() {
 // CIR-DAG: cir.global {{.*}} @_ZTIFvvE = #cir.typeinfo<{#cir.global_view<@_ZTVN10__cxxabiv120__function_type_infoE, [2 : i32]> : !cir.ptr<!u8i>, #cir.global_view<@_ZTSFvvE> : !cir.ptr<!u8i>}>
 // CIR-DAG: cir.global {{.*}} @_ZTIM1AFvvE = #cir.typeinfo<{#cir.global_view<@_ZTVN10__cxxabiv129__pointer_to_member_type_infoE, [2 : i32]> : !cir.ptr<!u8i>, #cir.global_view<@_ZTSM1AFvvE> : !cir.ptr<!u8i>, #cir.int<0> : !u32i, #cir.global_view<@_ZTIFvvE> : !cir.ptr<!u8i>, #cir.global_view<@_ZTI1A> : !cir.ptr<!u8i>}>
 
-// LLVM-DAG: @_ZTSM1AFvvE = linkonce_odr global [8 x i8] c"M1AFvvE\00", comdat
-// LLVM-DAG: @_ZTSFvvE = linkonce_odr global [5 x i8] c"FvvE\00", comdat
+// LLVM-DAG: @_ZTSM1AFvvE = linkonce_odr constant [8 x i8] c"M1AFvvE\00", comdat
+// LLVM-DAG: @_ZTSFvvE = linkonce_odr constant [5 x i8] c"FvvE\00", comdat
 // LLVM-DAG: @_ZTIFvvE = linkonce_odr constant { ptr, ptr } { ptr getelementptr (i8, ptr @_ZTVN10__cxxabiv120__function_type_infoE, i64 16), ptr @_ZTSFvvE }, comdat
 // LLVM-DAG: @_ZTIM1AFvvE = linkonce_odr constant { ptr, ptr, i32, ptr, ptr } { ptr getelementptr (i8, ptr @_ZTVN10__cxxabiv129__pointer_to_member_type_infoE, i64 16), ptr @_ZTSM1AFvvE, i32 0, ptr @_ZTIFvvE, ptr @_ZTI1A }, comdat
 // LLVM-DAG: call void @__cxa_throw(ptr %{{.*}}, ptr @_ZTIM1AFvvE, ptr null)

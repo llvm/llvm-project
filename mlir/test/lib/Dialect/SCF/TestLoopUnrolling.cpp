@@ -42,10 +42,12 @@ struct TestLoopUnrollingPass
   TestLoopUnrollingPass(const TestLoopUnrollingPass &) {}
   explicit TestLoopUnrollingPass(uint64_t unrollFactorParam,
                                  unsigned loopDepthParam,
-                                 bool annotateLoopParam) {
+                                 bool annotateLoopParam,
+                                 bool promoteSingleIterationParam) {
     unrollFactor = unrollFactorParam;
     loopDepth = loopDepthParam;
     annotateLoop = annotateLoopParam;
+    promoteSingleIteration = promoteSingleIterationParam;
   }
 
   void getDependentDialects(DialectRegistry &registry) const override {
@@ -66,14 +68,15 @@ struct TestLoopUnrollingPass
     });
     auto annotateFn = [this](unsigned i, Operation *op, OpBuilder b) {
       if (annotateLoop) {
-        op->setAttr("unrolled_iteration", b.getUI32IntegerAttr(i));
+        op->setDiscardableAttr("unrolled_iteration", b.getUI32IntegerAttr(i));
       }
     };
     for (auto loop : loops) {
       if (unrollFactor.getValue() == -1)
         (void)loopUnrollFull(loop);
       else
-        (void)loopUnrollByFactor(loop, unrollFactor, annotateFn);
+        (void)loopUnrollByFactor(loop, unrollFactor, annotateFn,
+                                 promoteSingleIteration);
     }
   }
   Option<int64_t> unrollFactor{
@@ -89,6 +92,10 @@ struct TestLoopUnrollingPass
                                 llvm::cl::init(false)};
   Option<unsigned> loopDepth{*this, "loop-depth", llvm::cl::desc("Loop depth."),
                              llvm::cl::init(0)};
+  Option<bool> promoteSingleIteration{
+      *this, "promote-single-iteration",
+      llvm::cl::desc("Promote single-iteration loops after unrolling."),
+      llvm::cl::init(true)};
 };
 } // namespace
 

@@ -13,7 +13,6 @@
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
-#include "llvm/IR/LLVMContext.h" // Explicitly include for LLVMContext
 #include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
@@ -34,17 +33,12 @@ SPIRVCombinerHelper::SPIRVCombinerHelper(
 ///           (vXf32 X) (vXf32 Y)))
 ///
 bool SPIRVCombinerHelper::matchLengthToDistance(MachineInstr &MI) const {
-  if (MI.getOpcode() != TargetOpcode::G_INTRINSIC ||
-      cast<GIntrinsic>(MI).getIntrinsicID() != Intrinsic::spv_length)
+  if (!mi_match(MI, MRI, m_GIntrinsic<Intrinsic::spv_length>()))
     return false;
 
   // First operand of MI is `G_INTRINSIC` so start at operand 2.
   Register SubReg = MI.getOperand(2).getReg();
-  MachineInstr *SubInstr = MRI.getVRegDef(SubReg);
-  if (SubInstr->getOpcode() != TargetOpcode::G_FSUB)
-    return false;
-
-  return true;
+  return mi_match(SubReg, MRI, m_GFSub(m_Reg(), m_Reg()));
 }
 
 void SPIRVCombinerHelper::applySPIRVDistance(MachineInstr &MI) const {
@@ -59,6 +53,55 @@ void SPIRVCombinerHelper::applySPIRVDistance(MachineInstr &MI) const {
   Builder.buildIntrinsic(Intrinsic::spv_distance, ResultReg)
       .addUse(SubOperand1)
       .addUse(SubOperand2);
+
+  MI.eraseFromParent();
+}
+
+/// This match is part of a combine that
+/// rewrites X / length(X) to normalize(X)
+///   (vXf32 (g_fdiv
+///             (vXf32 X)
+///             (vXf32 splat
+///                    (f32 (g_intrinsic length (vXf32 X))))))
+/// ->
+///   (vXf32 (g_intrinsic normalize (vXf32 X)))
+///
+bool SPIRVCombinerHelper::matchFDivToNormalize(MachineInstr &MI) const {
+  Register NumeratorReg = MI.getOperand(1).getReg();
+  Register DivisorReg = MI.getOperand(2).getReg();
+
+  // Match the divisor as a splat of length, inserted into lane 0.
+  MachineInstr *ShuffleInstr = MRI.getVRegDef(DivisorReg);
+  if (ShuffleInstr->getOpcode() != TargetOpcode::G_SHUFFLE_VECTOR)
+    return false;
+  if (!all_of(cast<GShuffleVector>(ShuffleInstr)->getMask(),
+              [](int M) { return M == 0; }))
+    return false;
+
+  MachineInstr *InsertInstr =
+      MRI.getVRegDef(ShuffleInstr->getOperand(1).getReg());
+  if (!isSpvIntrinsic(*InsertInstr, Intrinsic::spv_insertelt))
+    return false;
+  if (!mi_match(InsertInstr->getOperand(4).getReg(), MRI, m_ZeroInt()))
+    return false;
+
+  MachineInstr *LengthInstr =
+      MRI.getVRegDef(InsertInstr->getOperand(3).getReg());
+  if (!isSpvIntrinsic(*LengthInstr, Intrinsic::spv_length))
+    return false;
+
+  // Check that length's argument is the same as the numerator.
+  return LengthInstr->getOperand(2).getReg() == NumeratorReg;
+}
+
+void SPIRVCombinerHelper::applySPIRVNormalize(MachineInstr &MI) const {
+  // Extract the operand for X from the match criteria.
+  Register NumeratorReg = MI.getOperand(1).getReg();
+  Register ResultReg = MI.getOperand(0).getReg();
+
+  Builder.setInstrAndDebugLoc(MI);
+  Builder.buildIntrinsic(Intrinsic::spv_normalize, ResultReg)
+      .addUse(NumeratorReg);
 
   MI.eraseFromParent();
 }
@@ -99,9 +142,7 @@ bool SPIRVCombinerHelper::matchSelectToFaceForward(MachineInstr &MI) const {
     return false;
 
   // Check if FCMP is a comparison between a dot product and 0.
-  MachineInstr *DotInstr = MRI.getVRegDef(DotReg);
-  if (DotInstr->getOpcode() != TargetOpcode::G_INTRINSIC ||
-      cast<GIntrinsic>(DotInstr)->getIntrinsicID() != Intrinsic::spv_fdot) {
+  if (!mi_match(DotReg, MRI, m_GIntrinsic<Intrinsic::spv_fdot>())) {
     Register DotOperand1, DotOperand2;
     // Check for scalar dot product.
     if (!mi_match(DotReg, MRI,
@@ -129,10 +170,9 @@ bool SPIRVCombinerHelper::matchSelectToFaceForward(MachineInstr &MI) const {
   if (!mi_match(TrueReg, MRI, m_GFNeg(m_SpecificReg(FalseReg))) &&
       !mi_match(FalseReg, MRI, m_GFNeg(m_SpecificReg(TrueReg)))) {
     std::optional<FPValueAndVReg> MulConstant;
-    MachineInstr *TrueInstr = MRI.getVRegDef(TrueReg);
-    MachineInstr *FalseInstr = MRI.getVRegDef(FalseReg);
-    if (TrueInstr->getOpcode() == TargetOpcode::G_BUILD_VECTOR &&
-        FalseInstr->getOpcode() == TargetOpcode::G_BUILD_VECTOR &&
+    GBuildVector *TrueInstr, *FalseInstr;
+    if (mi_match(TrueReg, MRI, m_GBuildVector(TrueInstr)) &&
+        mi_match(FalseReg, MRI, m_GBuildVector(FalseInstr)) &&
         TrueInstr->getNumOperands() == FalseInstr->getNumOperands()) {
       for (unsigned I = 1; I < TrueInstr->getNumOperands(); ++I)
         if (!AreNegatedConstantsOrSplats(TrueInstr->getOperand(I).getReg(),
@@ -193,11 +233,6 @@ void SPIRVCombinerHelper::applySPIRVFaceForward(MachineInstr &MI) const {
   MI.eraseFromParent();
 }
 
-bool SPIRVCombinerHelper::matchMatrixTranspose(MachineInstr &MI) const {
-  return MI.getOpcode() == TargetOpcode::G_INTRINSIC &&
-         cast<GIntrinsic>(MI).getIntrinsicID() == Intrinsic::matrix_transpose;
-}
-
 void SPIRVCombinerHelper::applyMatrixTranspose(MachineInstr &MI) const {
   Register ResReg = MI.getOperand(0).getReg();
   Register InReg = MI.getOperand(2).getReg();
@@ -222,11 +257,6 @@ void SPIRVCombinerHelper::applyMatrixTranspose(MachineInstr &MI) const {
 
   Builder.buildShuffleVector(ResReg, InReg, InReg, Mask);
   MI.eraseFromParent();
-}
-
-bool SPIRVCombinerHelper::matchMatrixMultiply(MachineInstr &MI) const {
-  return MI.getOpcode() == TargetOpcode::G_INTRINSIC &&
-         cast<GIntrinsic>(MI).getIntrinsicID() == Intrinsic::matrix_multiply;
 }
 
 SmallVector<Register, 4>
@@ -258,7 +288,7 @@ SPIRVCombinerHelper::extractRows(Register MatrixReg, uint32_t NumRows,
   // If there is only one column, then each row is a scalar that needs
   // to be extracted.
   if (NumCols == 1) {
-    assert(SpvRowType->getOpcode() != SPIRV::OpTypeVector);
+    assert(!isVectorType(SpvRowType));
     for (uint32_t I = 0; I < NumRows; ++I)
       Rows.push_back(MRI.createGenericVirtualRegister(VecTy));
     Builder.buildUnmerge(Rows, MatrixReg);
@@ -289,13 +319,12 @@ SPIRVCombinerHelper::extractRows(Register MatrixReg, uint32_t NumRows,
 Register SPIRVCombinerHelper::computeDotProduct(Register RowA, Register ColB,
                                                 SPIRVTypeInst SpvVecType,
                                                 SPIRVGlobalRegistry *GR) const {
-  bool IsVectorOp = SpvVecType->getOpcode() == SPIRV::OpTypeVector;
   SPIRVTypeInst SpvScalarType = GR->getScalarOrVectorComponentType(SpvVecType);
   bool IsFloatOp = SpvScalarType->getOpcode() == SPIRV::OpTypeFloat;
   LLT VecTy = GR->getRegType(SpvVecType);
 
   Register DotRes;
-  if (IsVectorOp) {
+  if (isVectorType(SpvVecType)) {
     LLT ScalarTy = VecTy.getElementType();
     Intrinsic::SPVIntrinsics DotIntrinsic =
         (IsFloatOp ? Intrinsic::spv_fdot : Intrinsic::spv_udot);

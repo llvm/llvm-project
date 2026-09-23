@@ -40,28 +40,13 @@ enum ObjcopyID {
 };
 
 namespace objcopy_opt {
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_CODE
 #include "ObjcopyOpts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
-
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "ObjcopyOpts.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-static constexpr opt::OptTable::Info ObjcopyInfoTable[] = {
-#define OPTION(...)                                                            \
-  LLVM_CONSTRUCT_OPT_INFO_WITH_ID_PREFIX(OBJCOPY_, __VA_ARGS__),
-#include "ObjcopyOpts.inc"
-#undef OPTION
-};
 } // namespace objcopy_opt
 
-class ObjcopyOptTable : public opt::GenericOptTable {
+class ObjcopyOptTable : public opt::OptTable {
 public:
-  ObjcopyOptTable()
-      : opt::GenericOptTable(objcopy_opt::OptionStrTable,
-                             objcopy_opt::OptionPrefixesTable,
-                             objcopy_opt::ObjcopyInfoTable) {
+  ObjcopyOptTable() : opt::OptTable(objcopy_opt::optionTables()) {
     setGroupedShortOptions(true);
     setDashDashParsing(true);
   }
@@ -76,28 +61,13 @@ enum InstallNameToolID {
 };
 
 namespace install_name_tool {
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_CODE
 #include "InstallNameToolOpts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
-
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "InstallNameToolOpts.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-static constexpr opt::OptTable::Info InstallNameToolInfoTable[] = {
-#define OPTION(...)                                                            \
-  LLVM_CONSTRUCT_OPT_INFO_WITH_ID_PREFIX(INSTALL_NAME_TOOL_, __VA_ARGS__),
-#include "InstallNameToolOpts.inc"
-#undef OPTION
-};
 } // namespace install_name_tool
 
-class InstallNameToolOptTable : public opt::GenericOptTable {
+class InstallNameToolOptTable : public opt::OptTable {
 public:
-  InstallNameToolOptTable()
-      : GenericOptTable(install_name_tool::OptionStrTable,
-                        install_name_tool::OptionPrefixesTable,
-                        install_name_tool::InstallNameToolInfoTable) {}
+  InstallNameToolOptTable() : OptTable(install_name_tool::optionTables()) {}
 };
 
 enum BitcodeStripID {
@@ -109,28 +79,13 @@ enum BitcodeStripID {
 };
 
 namespace bitcode_strip {
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_CODE
 #include "BitcodeStripOpts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
-
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "BitcodeStripOpts.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-static constexpr opt::OptTable::Info BitcodeStripInfoTable[] = {
-#define OPTION(...)                                                            \
-  LLVM_CONSTRUCT_OPT_INFO_WITH_ID_PREFIX(BITCODE_STRIP_, __VA_ARGS__),
-#include "BitcodeStripOpts.inc"
-#undef OPTION
-};
 } // namespace bitcode_strip
 
-class BitcodeStripOptTable : public opt::GenericOptTable {
+class BitcodeStripOptTable : public opt::OptTable {
 public:
-  BitcodeStripOptTable()
-      : opt::GenericOptTable(bitcode_strip::OptionStrTable,
-                             bitcode_strip::OptionPrefixesTable,
-                             bitcode_strip::BitcodeStripInfoTable) {}
+  BitcodeStripOptTable() : opt::OptTable(bitcode_strip::optionTables()) {}
 };
 
 enum StripID {
@@ -141,26 +96,13 @@ enum StripID {
 };
 
 namespace strip {
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_CODE
 #include "StripOpts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
-
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "StripOpts.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-static constexpr opt::OptTable::Info StripInfoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO_WITH_ID_PREFIX(STRIP_, __VA_ARGS__),
-#include "StripOpts.inc"
-#undef OPTION
-};
 } // namespace strip
 
-class StripOptTable : public opt::GenericOptTable {
+class StripOptTable : public opt::OptTable {
 public:
-  StripOptTable()
-      : GenericOptTable(strip::OptionStrTable, strip::OptionPrefixesTable,
-                        strip::StripInfoTable) {
+  StripOptTable() : OptTable(strip::optionTables()) {
     setGroupedShortOptions(true);
   }
 };
@@ -174,28 +116,14 @@ enum ExtractBundleEntryID {
 };
 
 namespace extract_bundle_entry {
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_CODE
 #include "ExtractBundleEntryOpts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
-
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "ExtractBundleEntryOpts.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-static constexpr opt::OptTable::Info ExtractBundleEntryInfoTable[] = {
-#define OPTION(...)                                                            \
-  LLVM_CONSTRUCT_OPT_INFO_WITH_ID_PREFIX(EXTRACT_BUNDLE_ENTRY_, __VA_ARGS__),
-#include "ExtractBundleEntryOpts.inc"
-#undef OPTION
-};
 } // namespace extract_bundle_entry
 
-class ExtractBundleEntryOptTable : public opt::GenericOptTable {
+class ExtractBundleEntryOptTable : public opt::OptTable {
 public:
   ExtractBundleEntryOptTable()
-      : GenericOptTable(extract_bundle_entry::OptionStrTable,
-                        extract_bundle_entry::OptionPrefixesTable,
-                        extract_bundle_entry::ExtractBundleEntryInfoTable) {
+      : OptTable(extract_bundle_entry::optionTables()) {
     setGroupedShortOptions(true);
   }
 };
