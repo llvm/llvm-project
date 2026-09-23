@@ -60,6 +60,7 @@
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Stmt.h"
+#include "clang/Analysis/Analyses/ExprMutationAnalyzer.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
@@ -737,12 +738,27 @@ CapturedZoneInfo captureZoneInfo(const ExtractionZone &ExtZone) {
   return Result;
 }
 
+// Whether VD is mutated anywhere within the extraction zone. If not, the
+// corresponding parameter can safely be made const, even though it's still
+// passed by reference.
+// FIXME: Pass non-mutated parameters of built-in type by value.
+bool isCapturedDeclMutated(const ValueDecl *VD, const ExtractionZone &ExtZone) {
+  ASTContext &Context = ExtZone.EnclosingFunction->getASTContext();
+  for (const Stmt *RootStmt : ExtZone.RootStmts) {
+    ExprMutationAnalyzer Analyzer(*RootStmt, Context);
+    if (Analyzer.isMutated(VD))
+      return true;
+  }
+  return false;
+}
+
 // Adds parameters to ExtractedFunc.
 // Returns true if able to find the parameters successfully and no hoisting
 // needed.
 // FIXME: Check if the declaration has a local/anonymous type
 bool createParameters(NewFunction &ExtractedFunc,
-                      const CapturedZoneInfo &CapturedInfo) {
+                      const CapturedZoneInfo &CapturedInfo,
+                      const ExtractionZone &ExtZone) {
   for (const auto &KeyVal : CapturedInfo.DeclInfoMap) {
     const auto &DeclInfo = KeyVal.second;
     // If a Decl was Declared in zone and referenced in post zone, it
@@ -764,11 +780,11 @@ bool createParameters(NewFunction &ExtractedFunc,
       return false;
     // Parameter qualifiers are same as the Decl's qualifiers.
     QualType TypeInfo = VD->getType().getNonReferenceType();
-    // FIXME: Need better qualifier checks: check mutated status for
-    // Decl(e.g. was it assigned, passed as nonconst argument, etc)
-    // FIXME: check if parameter will be a non l-value reference.
-    // FIXME: We don't want to always pass variables of types like int,
-    // pointers, etc by reference.
+    // Add const if it's not mutated in the zone: it's still passed by
+    // reference to avoid a copy, but the reference doesn't need to be
+    // mutable.
+    if (!isCapturedDeclMutated(VD, ExtZone))
+      TypeInfo.addConst();
     bool IsPassedByReference = true;
     // We use the index of declaration as the ordering priority for parameters.
     ExtractedFunc.Parameters.push_back({std::string(VD->getName()), TypeInfo,
@@ -868,7 +884,7 @@ llvm::Expected<NewFunction> getExtractedFunction(ExtractionZone &ExtZone,
   ExtractedFunc.DefinitionPoint = ExtZone.getInsertionPoint();
 
   ExtractedFunc.CallerReturnsValue = CapturedInfo.AlwaysReturns;
-  if (!createParameters(ExtractedFunc, CapturedInfo) ||
+  if (!createParameters(ExtractedFunc, CapturedInfo, ExtZone) ||
       !generateReturnProperties(ExtractedFunc, *ExtZone.EnclosingFunction,
                                 CapturedInfo))
     return error("Too complex to extract.");

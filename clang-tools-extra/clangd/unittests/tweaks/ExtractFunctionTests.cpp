@@ -61,7 +61,9 @@ TEST_F(ExtractFunctionTest, FunctionTest) {
 }
 
 TEST_F(ExtractFunctionTest, FileTest) {
-  // Check all parameters are in order
+  // Check all parameters are in order. `a` and `ptr` are mutated in the
+  // zone (`+=` and postfix `++` respectively), so stay non-const; `b` and
+  // `foo` are only read, so become const references.
   std::string ParameterCheckInput = R"cpp(
 struct Foo {
   int x;
@@ -77,7 +79,7 @@ void f(int a) {
 struct Foo {
   int x;
 };
-void extracted(int &a, int &b, int * &ptr, Foo &foo) {
+void extracted(int &a, const int &b, int * &ptr, const Foo &foo) {
 a += foo.x + b;
   *ptr++;
 }
@@ -574,7 +576,7 @@ TEST_F(ExtractFunctionTest, ExistingReturnStatement) {
   // FIXME: avoid emitting redundant braces
   const char *After = R"cpp(
     bool lucky(int N);
-    int extracted(int &Min, int &Max) {
+    int extracted(const int &Min, const int &Max) {
 {
         for (int I = Min; I <= Max; ++I)
           if (lucky(I))
@@ -775,6 +777,60 @@ TEST_F(ExtractFunctionTest, VarDeclInitializer) {
     void f() { [[int A = func();]] }
   )cpp"),
               HasSubstr("extracted"));
+}
+
+TEST_F(ExtractFunctionTest, ConstParameters) {
+  Context = File;
+  // A captured variable that's only read becomes a const reference.
+  EXPECT_THAT(apply(R"cpp(
+    void use(int);
+    void f(int x) { [[use(x);]] }
+  )cpp"),
+              HasSubstr("void extracted(const int &x)"));
+  // Direct assignment: stays non-const.
+  EXPECT_THAT(apply("void f(int x) { [[x = 1;]] }"),
+              HasSubstr("void extracted(int &x)"));
+  // Compound assignment: stays non-const.
+  EXPECT_THAT(apply("void f(int x) { [[x += 1;]] }"),
+              HasSubstr("void extracted(int &x)"));
+  // Increment/decrement: stays non-const.
+  EXPECT_THAT(apply("void f(int x) { [[++x;]] }"),
+              HasSubstr("void extracted(int &x)"));
+  // A non-const method call may mutate the object: stays non-const.
+  EXPECT_THAT(apply(R"cpp(
+    struct S { void mutate(); };
+    void f(S s) { [[s.mutate();]] }
+  )cpp"),
+              HasSubstr("void extracted(S &s)"));
+  // A const method call cannot mutate the object: becomes const.
+  EXPECT_THAT(apply(R"cpp(
+    struct S { void inspect() const; };
+    void f(S s) { [[s.inspect();]] }
+  )cpp"),
+              HasSubstr("void extracted(const S &s)"));
+  // Passed to a parameter taking a non-const reference: stays non-const,
+  // since the callee could mutate it through that reference.
+  EXPECT_THAT(apply(R"cpp(
+    void mayMutate(int &);
+    void f(int x) { [[mayMutate(x);]] }
+  )cpp"),
+              HasSubstr("void extracted(int &x)"));
+  // Passed to a parameter taking a const reference or by value: becomes
+  // const, since neither can mutate the caller's variable.
+  EXPECT_THAT(apply(R"cpp(
+    void readOnly(const int &);
+    void f(int x) { [[readOnly(x);]] }
+  )cpp"),
+              HasSubstr("void extracted(const int &x)"));
+  EXPECT_THAT(apply(R"cpp(
+    void byValue(int);
+    void f(int x) { [[byValue(x);]] }
+  )cpp"),
+              HasSubstr("void extracted(const int &x)"));
+  // A parameter that's already declared const stays as-is (no double
+  // const).
+  EXPECT_THAT(apply("void use(int); void f(const int x) { [[use(x);]] }"),
+              HasSubstr("void extracted(const int &x)"));
 }
 
 } // namespace

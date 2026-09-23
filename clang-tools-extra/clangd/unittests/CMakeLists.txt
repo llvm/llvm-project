@@ -160,6 +160,7 @@ target_include_directories(ClangdTests PUBLIC
 
 clang_target_link_libraries(ClangdTests
   PRIVATE
+  clangAnalysis
   clangAST
   clangASTMatchers
   clangBasic

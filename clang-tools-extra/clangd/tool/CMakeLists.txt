@@ -46,6 +46,7 @@ target_link_libraries(clangdMain
 
 clang_target_link_libraries(clangd
   PRIVATE
+  clangAnalysis
   clangAST
   clangBasic
   clangLex
