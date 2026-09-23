@@ -1,12 +1,11 @@
-You need a checkout of clang with compiler-rt to generate the
-binary file here.  These shell commands can be used to regenerate
-it.
-$ SRC=path/to/llvm
-$ CFE=$SRC/tools/clang
-$ TESTDIR=$SRC/test/tools/llvm-profdata
-$ CFE_TESTDIR=$CFE/test/Profile
-$ clang -o a.out -fprofile-instr-generate $CFE_TESTDIR/c-general.c
-$ LLVM_PROFILE_FILE=$TESTDIR/Inputs/compressed.profraw ./a.out
+Generate this fixture with a matching Clang and compiler-rt that support zlib.
+Use a local source filename to keep machine paths out of the profile names.
+
+$ SRC=/path/to/llvm-project
+$ cp "$SRC/clang/test/Profile/c-general.c" c-general.c
+$ clang -fprofile-instr-generate c-general.c -o c-general
+$ LLVM_PROFILE_FILE=compressed.profraw ./c-general
+$ cp compressed.profraw "$SRC/llvm/test/tools/llvm-profdata/Inputs/"
 
 RUN: not llvm-profdata show %p/Inputs/compressed.profraw -o %t 2>&1 | FileCheck %s
 

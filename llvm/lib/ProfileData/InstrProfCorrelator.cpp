@@ -346,6 +346,7 @@ void InstrProfCorrelatorImpl<IntPtrT>::addDataProbe(
       /*NumValueSites=*/{maybeSwap<uint16_t>(0), maybeSwap<uint16_t>(0)},
       /*OffloadDeviceWaveSize=*/maybeSwap<uint16_t>(0),
       maybeSwap<uint32_t>(NumBitmapBytes),
+      /*NumWaveCounters=*/maybeSwap<uint32_t>(0),
   });
 }
 
