@@ -235,6 +235,10 @@ void *strStr(const char *const Haystack, const char *const Needle) {
   return nullptr;
 }
 
+// Diagnostic helpers allocate a large on-stack scratch buffer. Keep them
+// out of line: if inlined, the buffer is reserved in every caller frame and
+// can overflow small thread stacks even when the report is never emitted.
+__attribute__((noinline))
 void reportNumber(const char *Msg, uint64_t Num, uint32_t Base) {
 #if !defined(ANDROID_AARCH64)
   char Buf[BufSize];
@@ -326,9 +330,10 @@ void reportError(const char *Msg, uint64_t Size) {
 #endif
 }
 
-void assert(bool Assertion, const char *Msg) {
-  if (Assertion)
-    return;
+// Failure path of assert() kept out of line so its large on-stack buffer is
+// not reserved in every inlined caller frame (see reportNumber above).
+__attribute__((noinline))
+void reportAssertFailure(const char *Msg) {
 #if defined(ANDROID_AARCH64)
   (void)Msg;
   boltHandleFatalAndRecover();
@@ -340,6 +345,11 @@ void assert(bool Assertion, const char *Msg) {
   Ptr = strCopy(Ptr, "\n");
   reportError(Buf, Ptr - Buf);
 #endif
+}
+
+void assert(bool Assertion, const char *Msg) {
+  if (!Assertion)
+    reportAssertFailure(Msg);
 }
 
 #define SIG_BLOCK 0
