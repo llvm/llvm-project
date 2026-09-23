@@ -81,6 +81,7 @@ private:
                                 Register UnpackedDstReg,
                                 AMDGPU::OpName SrcName,
                                 AMDGPU::OpName ModsName) const;
+  bool hasUnsupportedVPKMovModifiers(const MachineInstr &MI) const;
   // Unpack and insert F32 packed instructions, such as V_PK_MUL, V_PK_ADD, and
   // V_PK_FMA. Currently, only V_PK_MUL, V_PK_ADD, V_PK_FMA are supported for
   // this transformation.
@@ -618,6 +619,19 @@ bool SIPreEmitPeephole::canSourceClobberRegister(
   return TRI->regsOverlap(UnpackedDstReg, HiSrcReg);
 }
 
+bool SIPreEmitPeephole::hasUnsupportedVPKMovModifiers(
+    const MachineInstr &MI) const {
+  unsigned Src0Mods =
+      TII->getNamedOperand(MI, AMDGPU::OpName::src0_modifiers)->getImm();
+  unsigned Src1Mods =
+      TII->getNamedOperand(MI, AMDGPU::OpName::src1_modifiers)->getImm();
+  unsigned NegMask0 =
+      (Src0Mods & SISrcMods::OP_SEL_0) ? SISrcMods::NEG_HI : SISrcMods::NEG;
+  unsigned NegMask1 =
+      (Src1Mods & SISrcMods::OP_SEL_1) ? SISrcMods::NEG_HI : SISrcMods::NEG;
+  return (Src0Mods & NegMask0) || (Src1Mods & NegMask1);
+}
+
 bool SIPreEmitPeephole::canUnpackingClobberRegister(const MachineInstr &MI) {
   unsigned OpCode = MI.getOpcode();
   Register DstReg = MI.getOperand(0).getReg();
@@ -706,7 +720,7 @@ void SIPreEmitPeephole::addOperandAndMods(MachineInstrBuilder &NewMI,
   // modifier for the higher 32 bits. Unpacked VOP3 instructions support
   // ABS, but do not support NEG_HI. Therefore we need to explicitly add the
   // NEG modifier if present in the packed instruction.
-  bool IsSrcModifidiersSupported =
+  bool IsSrcModifiersSupported =
       AMDGPU::hasNamedOperand(NewOpCode, AMDGPU::OpName::src0_modifiers);
   bool UnpackedInstHasOneSrcOp =
       !AMDGPU::hasNamedOperand(NewOpCode, AMDGPU::OpName::src1);
@@ -716,7 +730,7 @@ void SIPreEmitPeephole::addOperandAndMods(MachineInstrBuilder &NewMI,
   // Src modifiers. Only negative modifiers are added if needed. Unpacked
   // operations do not have op_sel, therefore it must be handled explicitly as
   // done below.
-  if (IsSrcModifidiersSupported)
+  if (IsSrcModifiersSupported)
     NewMI.addImm(NewSrcMods);
   if (SrcMO.isImm()) {
     NewMI.addImm(SrcMO.getImm());
@@ -806,18 +820,10 @@ void SIPreEmitPeephole::collectUnpackingCandidates(
     // Packed instructions do not specify ABS modifiers, so we can safely ignore
     // those.
     if (!AMDGPU::hasNamedOperand(UnpackedOpCode,
-                                 AMDGPU::OpName::src0_modifiers)) {
-      unsigned Src0Mods =
-          TII->getNamedOperand(Instr, AMDGPU::OpName::src0_modifiers)->getImm();
-      unsigned Src1Mods =
-          TII->getNamedOperand(Instr, AMDGPU::OpName::src1_modifiers)->getImm();
-      unsigned negMask0 =
-          (Src0Mods & SISrcMods::OP_SEL_0) ? SISrcMods::NEG_HI : SISrcMods::NEG;
-      unsigned negMask1 =
-          (Src1Mods & SISrcMods::OP_SEL_1) ? SISrcMods::NEG_HI : SISrcMods::NEG;
-      if ((Src0Mods & negMask0) || (Src1Mods & negMask1))
-        return;
-    }
+                                 AMDGPU::OpName::src0_modifiers) &&
+        hasUnsupportedVPKMovModifiers(Instr))
+      return;
+
     if (canUnpackingClobberRegister(Instr))
       return;
     // If it's a packed instruction, adjust latency: remove the packed
