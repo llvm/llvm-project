@@ -3997,34 +3997,64 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     // When going from a fixed vector to a scalable vector, types that get
     // promoted will have associated unpacking costs that would not otherwise be
     // present.
-    static const TypeConversionCostTblEntry FixedToScalablePackUnpackTbl[] = {
-        // f16 unpack
+    static const TypeConversionCostTblEntry ScalablePackUnpackTbl[] = {
+        // SVE: to f16
+        {ISD::UINT_TO_FP, MVT::nxv8f16, MVT::nxv8i1, SVE_UNPACK_ONCE},
         {ISD::UINT_TO_FP, MVT::nxv8f16, MVT::nxv8i8, SVE_UNPACK_ONCE},
+        {ISD::UINT_TO_FP, MVT::nxv4f16, MVT::nxv4i32, 1}, // uzp
+        {ISD::UINT_TO_FP, MVT::nxv2f16, MVT::nxv2i64, 2}, // 2 uzp
+
+        {ISD::SINT_TO_FP, MVT::nxv8f16, MVT::nxv8i1, SVE_UNPACK_ONCE},
         {ISD::SINT_TO_FP, MVT::nxv8f16, MVT::nxv8i8, SVE_UNPACK_ONCE},
-        // f32 unpack
-        {ISD::UINT_TO_FP, MVT::nxv4f32, MVT::nxv4i8, SVE_UNPACK_ONCE},
+        {ISD::SINT_TO_FP, MVT::nxv4f16, MVT::nxv4i32, 1}, // uzp
+        {ISD::SINT_TO_FP, MVT::nxv2f16, MVT::nxv2i64, 2}, // 2 uzp
+        // SVE: to f32
+        {ISD::UINT_TO_FP, MVT::nxv4f32, MVT::nxv4i1, SVE_UNPACK_TWICE},
+        {ISD::UINT_TO_FP, MVT::nxv4f32, MVT::nxv4i8, SVE_UNPACK_TWICE},
         {ISD::UINT_TO_FP, MVT::nxv4f32, MVT::nxv4i16, SVE_UNPACK_ONCE},
-        {ISD::SINT_TO_FP, MVT::nxv4f32, MVT::nxv4i8, SVE_UNPACK_ONCE},
+        {ISD::UINT_TO_FP, MVT::nxv2f32, MVT::nxv2i64, 1}, // uzp
+
+        {ISD::SINT_TO_FP, MVT::nxv4f32, MVT::nxv4i1, SVE_UNPACK_TWICE},
+        {ISD::SINT_TO_FP, MVT::nxv4f32, MVT::nxv4i8, SVE_UNPACK_TWICE},
         {ISD::SINT_TO_FP, MVT::nxv4f32, MVT::nxv4i16, SVE_UNPACK_ONCE},
-        // f64 unpack
+        {ISD::SINT_TO_FP, MVT::nxv2f32, MVT::nxv2i64, 1}, // uzp
+        // SVE: to f64
+        {ISD::UINT_TO_FP, MVT::nxv2f64, MVT::nxv2i1, SVE_UNPACK_TWICE},
         {ISD::UINT_TO_FP, MVT::nxv2f64, MVT::nxv2i8, SVE_UNPACK_TWICE},
         {ISD::UINT_TO_FP, MVT::nxv2f64, MVT::nxv2i16, SVE_UNPACK_TWICE},
         {ISD::UINT_TO_FP, MVT::nxv2f64, MVT::nxv2i32, SVE_UNPACK_ONCE},
+
+        {ISD::SINT_TO_FP, MVT::nxv2f64, MVT::nxv2i1, SVE_UNPACK_TWICE},
         {ISD::SINT_TO_FP, MVT::nxv2f64, MVT::nxv2i8, SVE_UNPACK_TWICE},
         {ISD::SINT_TO_FP, MVT::nxv2f64, MVT::nxv2i16, SVE_UNPACK_TWICE},
         {ISD::SINT_TO_FP, MVT::nxv2f64, MVT::nxv2i32, SVE_UNPACK_ONCE},
-        // f16 pack
+        // SVE: from f16
+        {ISD::FP_TO_UINT, MVT::nxv2i64, MVT::nxv2f16, SVE_UNPACK_TWICE},
+        {ISD::FP_TO_UINT, MVT::nxv4i32, MVT::nxv4f16, SVE_UNPACK_ONCE},
+        {ISD::FP_TO_UINT, MVT::nxv8i1, MVT::nxv8f16, 1}, // uzp
         {ISD::FP_TO_UINT, MVT::nxv8i8, MVT::nxv8f16, 1}, // uzp
+
+        {ISD::FP_TO_SINT, MVT::nxv2i64, MVT::nxv2f16, SVE_UNPACK_TWICE},
+        {ISD::FP_TO_SINT, MVT::nxv4i32, MVT::nxv4f16, SVE_UNPACK_ONCE},
+        {ISD::FP_TO_SINT, MVT::nxv8i1, MVT::nxv8f16, 1}, // uzp
         {ISD::FP_TO_SINT, MVT::nxv8i8, MVT::nxv8f16, 1}, // uzp
-        // f32 pack
+        // SVE: from f32
+        {ISD::FP_TO_UINT, MVT::nxv2i64, MVT::nxv2f32, SVE_UNPACK_ONCE},
+        {ISD::FP_TO_UINT, MVT::nxv4i1, MVT::nxv4f32, 2},  // 2 uzp
         {ISD::FP_TO_UINT, MVT::nxv4i8, MVT::nxv4f32, 2},  // 2 uzp
         {ISD::FP_TO_UINT, MVT::nxv4i16, MVT::nxv4f32, 1}, // uzp
+
+        {ISD::FP_TO_SINT, MVT::nxv2i64, MVT::nxv2f32, SVE_UNPACK_ONCE},
+        {ISD::FP_TO_SINT, MVT::nxv4i1, MVT::nxv4f32, 2},  // 2 uzp
         {ISD::FP_TO_SINT, MVT::nxv4i8, MVT::nxv4f32, 2},  // 2 uzp
         {ISD::FP_TO_SINT, MVT::nxv4i16, MVT::nxv4f32, 1}, // uzp
-        // f64 pack
+        // SVE: from f64
+        {ISD::FP_TO_UINT, MVT::nxv2i1, MVT::nxv2f64, 2},  // 2 uzp
         {ISD::FP_TO_UINT, MVT::nxv2i8, MVT::nxv2f64, 2},  // 2 uzp
         {ISD::FP_TO_UINT, MVT::nxv2i16, MVT::nxv2f64, 2}, // 2 uzp
         {ISD::FP_TO_UINT, MVT::nxv2i32, MVT::nxv2f64, 1}, // uzp
+
+        {ISD::FP_TO_SINT, MVT::nxv2i1, MVT::nxv2f64, 2},  // 2 uzp
         {ISD::FP_TO_SINT, MVT::nxv2i8, MVT::nxv2f64, 2},  // 2 uzp
         {ISD::FP_TO_SINT, MVT::nxv2i16, MVT::nxv2f64, 2}, // 2 uzp
         {ISD::FP_TO_SINT, MVT::nxv2i32, MVT::nxv2f64, 1}, // uzp
@@ -4042,7 +4072,7 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     InstructionCost ConversionCost =
         getCastInstrCost(Opcode, DstScalabeTy, SrcScalabeTy, CCH, CostKind, I);
     if (const auto *Entry = ConvertCostTableLookup(
-            FixedToScalablePackUnpackTbl, ISD,
+            ScalablePackUnpackTbl, ISD,
             TLI->getValueType(DL, DstScalabeTy).getSimpleVT(),
             TLI->getValueType(DL, SrcScalabeTy).getSimpleVT()))
       return Cost * (ConversionCost + Entry->Cost);
