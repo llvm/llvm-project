@@ -81,12 +81,6 @@ struct LoopInvariantCodeMotion
 /// on its own.
 static bool isNonOptionalScalar(Value location) {
   while (true) {
-    // A compute-region argument forwards a mapped input. Recover its storage
-    // provenance before checking whether a speculative scalar read is safe.
-    if (Value operand = acc::getACCOperandForBlockArg(location)) {
-      location = operand;
-      continue;
-    }
     LDBG() << "Checking location:\n" << location;
     Type dataType = fir::unwrapRefType(location.getType());
     if (!isa<fir::BaseBoxType>(location.getType()) &&
@@ -98,6 +92,12 @@ static bool isNonOptionalScalar(Value location) {
     }
     Operation *defOp = location.getDefiningOp();
     if (!defOp) {
+      // A compute-region argument forwards a mapped input. Recover its storage
+      // provenance before checking whether a speculative scalar read is safe.
+      if (Value operand = acc::getACCOperandForBlockArg(location)) {
+        location = operand;
+        continue;
+      }
       // If this is a function argument
       auto blockArg = cast<BlockArgument>(location);
       Block *block = blockArg.getOwner();
@@ -393,8 +393,10 @@ void LoopInvariantCodeMotion::runOnOperation() {
       Operation *scope = loopLike->getParentOp();
       while (scope != function && scope->getName() != *scopeOpName)
         scope = scope->getParentOp();
-      if (scope->getName() != *scopeOpName)
+      if (scope->getName() != *scopeOpName) {
+        LDBG() << "Skipping loop-like without " << *scopeOpName << " parent";
         return;
+      }
     }
     if (!fir::canMoveOutOf(loopLike, nullptr)) {
       LDBG() << "Cannot hoist anything out of loop operation: ";
