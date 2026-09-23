@@ -8,10 +8,12 @@
 
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/VecUtils.h"
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/SandboxIR/Instruction.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/Debug.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/InstrMaps.h"
 
 namespace llvm::sandboxir {
@@ -103,6 +105,64 @@ unsigned VecUtils::getFloorPowerOf2(unsigned Num) {
   return Num & ~Mask;
 }
 
+template <typename T>
+void VecUtils::DeadInstructionMorgue::collectPotentiallyDeadInstrs(
+    ArrayRef<T *> Bndl) {
+  for (T *V : Bndl) {
+    assert(isa<Instruction>(V) && "Only works with instructions");
+    DeadInstrCandidates.insert(cast<Instruction>(V));
+  }
+  // Also collect the GEPs of vectorized loads and stores.
+  auto Opcode = cast<Instruction>(Bndl[0])->getOpcode();
+  switch (Opcode) {
+  case Instruction::Opcode::Load: {
+    for (T *V : drop_begin(Bndl))
+      if (auto *Ptr =
+              dyn_cast<Instruction>(cast<LoadInst>(V)->getPointerOperand()))
+        DeadInstrCandidates.insert(Ptr);
+    break;
+  }
+  case Instruction::Opcode::Store: {
+    for (T *V : drop_begin(Bndl))
+      if (auto *Ptr =
+              dyn_cast<Instruction>(cast<StoreInst>(V)->getPointerOperand()))
+        DeadInstrCandidates.insert(Ptr);
+    break;
+  }
+  default:
+    break;
+  }
+}
+
+template void
+    VecUtils::DeadInstructionMorgue::collectPotentiallyDeadInstrs<Value>(
+        ArrayRef<Value *>);
+template void
+    VecUtils::DeadInstructionMorgue::collectPotentiallyDeadInstrs<Instruction>(
+        ArrayRef<Instruction *>);
+
+void VecUtils::DeadInstructionMorgue::tryEraseDeadInstrs() {
+  DenseMap<BasicBlock *, SmallVector<Instruction *>> SortedDeadInstrCandidates;
+  // The dead instrs could span BBs, so we need to collect and sort them per BB.
+  for (auto *V : DeadInstrCandidates) {
+    auto *DeadI = cast<Instruction>(V);
+    SortedDeadInstrCandidates[DeadI->getParent()].push_back(DeadI);
+  }
+  for (auto &Pair : SortedDeadInstrCandidates)
+    sort(Pair.second,
+         [](Instruction *I1, Instruction *I2) { return I1->comesBefore(I2); });
+  for (const auto &Pair : SortedDeadInstrCandidates) {
+    for (Instruction *I : reverse(Pair.second)) {
+      if (I->hasNUses(0)) {
+        // Erase the dead instructions bottom-to-top.
+        LLVM_DEBUG(dbgs() << DEBUG_PREFIX << "Erase dead: " << *I << "\n");
+        I->eraseFromParent();
+      }
+    }
+  }
+  DeadInstrCandidates.clear();
+}
+
 #ifndef NDEBUG
 template <typename T> static void dumpImpl(ArrayRef<T *> Bndl) {
   for (auto [Idx, V] : enumerate(Bndl))
@@ -110,6 +170,15 @@ template <typename T> static void dumpImpl(ArrayRef<T *> Bndl) {
 }
 void VecUtils::dump(ArrayRef<Value *> Bndl) { dumpImpl(Bndl); }
 void VecUtils::dump(ArrayRef<Instruction *> Bndl) { dumpImpl(Bndl); }
+
+template <typename T> void BndlRef<T>::dump() const {
+  print(dbgs());
+  dbgs() << "\n";
+}
+// Explicit instantiation for commonly used types.
+template class BndlRef<Instruction *>;
+template class BndlRef<Value *>;
+
 #endif // NDEBUG
 
 } // namespace llvm::sandboxir

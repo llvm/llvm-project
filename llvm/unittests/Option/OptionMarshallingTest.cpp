@@ -12,7 +12,6 @@
 
 #define OPTTABLE_STR_TABLE_CODE
 #include "Opts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
 
 struct OptionWithMarshallingInfo {
   int PrefixedNameOffset;

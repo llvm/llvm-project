@@ -1291,11 +1291,9 @@ static bool isFileNotFound(std::error_code EC,
 
 RedirectingFileSystem::RedirectingFileSystem(IntrusiveRefCntPtr<FileSystem> FS)
     : ExternalFS(std::move(FS)) {
-  if (ExternalFS)
-    if (auto ExternalWorkingDirectory =
-            ExternalFS->getCurrentWorkingDirectory()) {
-      WorkingDirectory = *ExternalWorkingDirectory;
-    }
+  assert(ExternalFS && "RedirectingFileSystem requires an external FS");
+  if (auto ExternalWorkingDirectory = ExternalFS->getCurrentWorkingDirectory())
+    WorkingDirectory = *ExternalWorkingDirectory;
 }
 
 /// Directory iterator implementation for \c RedirectingFileSystem's
@@ -2996,3 +2994,16 @@ const char OverlayFileSystem::ID = 0;
 const char ProxyFileSystem::ID = 0;
 const char InMemoryFileSystem::ID = 0;
 const char RedirectingFileSystem::ID = 0;
+
+unsigned ::llvm::IntrusiveRefCntPtrInfo<FileSystem>::useCount(
+    const FileSystem *FS) {
+  return FS->UseCount();
+}
+
+void ::llvm::IntrusiveRefCntPtrInfo<FileSystem>::retain(FileSystem *FS) {
+  FS->Retain();
+}
+
+void ::llvm::IntrusiveRefCntPtrInfo<FileSystem>::release(FileSystem *FS) {
+  FS->Release();
+}

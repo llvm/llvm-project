@@ -22,7 +22,7 @@ struct olMemcpyGlobalTest : OffloadGlobalTest {
         olGetSymbol(Program, "read", OL_SYMBOL_KIND_KERNEL, &ReadKernel));
     ASSERT_SUCCESS(
         olGetSymbol(Program, "write", OL_SYMBOL_KIND_KERNEL, &WriteKernel));
-    ASSERT_SUCCESS(olCreateQueue(Device, &Queue));
+    ASSERT_SUCCESS(olCreateQueue(Context, Device, &Queue));
     ASSERT_SUCCESS(olGetSymbolInfo(
         Global, OL_SYMBOL_INFO_GLOBAL_VARIABLE_ADDRESS, sizeof(Addr), &Addr));
 
