@@ -828,9 +828,10 @@ module attributes {
   // CHECK-NEXT:    cir.return
 
   // The byval pointee names the padded storage type (i256), not the literal
-  // i200, since that is what the copy is sized from and what the load below
-  // reads: a byval(i200) would tell the backend to reserve a 25-byte copy
-  // while the body reads 32 bytes through it.
+  // i200, since that is what the copy is sized from and what a body reading
+  // the parameter goes through: a byval(i200) would tell the backend to
+  // reserve a 25-byte copy while @take_b200_spilled below reads 32 bytes
+  // through the same pointer.
   // LLVM-LABEL: define void @take_b200(
   // LLVM-SAME:    ptr noundef byval(i256) align 8 %{{[0-9]+}})
   // LLVM-NEXT:    ret void
@@ -876,9 +877,10 @@ module attributes {
   // LLVM-SAME:    ptr noundef byval(i256) align 8 %{{[0-9]+}})
   // LLVM-NEXT:    ret void
 
-  // A spilled _BitInt keeps the load and store rather than taking a byte
-  // copy: they are its conversion between the i256 in memory and the i200
-  // value, and a copy would leave the high bits unnormalized.
+  // A spilled _BitInt keeps its slot, and the load and store that fill it:
+  // handing the slot over to the incoming pointer is gated on the parameter
+  // being a record, and for a _BitInt the pair is its conversion between the
+  // i256 in memory and the i200 value.
   cir.func @take_b200_spilled(%arg0: !b200i) {
     %0 = cir.alloca "x" align(8) : !cir.ptr<!b200i>
     cir.store %arg0, %0 : !b200i, !cir.ptr<!b200i>

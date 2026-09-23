@@ -74,9 +74,10 @@ module attributes {
   // CHECK:   %[[ICAST:.*]] = cir.cast bitcast %arg0 : !cir.ptr<!cir.func<(!rec_Empty, !s32i) -> !s32i>> -> !cir.ptr<!cir.func<(!s32i) -> !s32i>>
   // CHECK:   cir.call %[[ICAST]](%arg1) : (!cir.ptr<!cir.func<(!s32i) -> !s32i>>, !s32i) -> !s32i
 
-  // Indirect call with a by-value (byval) struct argument: the argument is
-  // spilled to a stack slot and the callee pointer is bitcast to the coerced
-  // signature before the call is rebuilt.
+  // Indirect call with a by-value (byval) struct argument: byval is copied at
+  // the call boundary, so the argument's own storage is handed on, and the
+  // callee pointer is bitcast to the coerced signature before the call is
+  // rebuilt.
   cir.func @call_byval(%fp: !cir.ptr<!cir.func<(!rec_Big) -> !s64i>>) -> !s64i {
     %0 = cir.alloca "b" align(8) : !cir.ptr<!rec_Big>
     %1 = cir.load %0 : !cir.ptr<!rec_Big>, !rec_Big
@@ -87,10 +88,9 @@ module attributes {
 
   // CHECK: cir.func{{.*}} @call_byval(%arg0: !cir.ptr<!cir.func<(!rec_Big) -> !s64i>>)
   // CHECK:   %[[B:.*]] = cir.alloca "b" align(8) : !cir.ptr<!rec_Big>
-  // CHECK:   %[[SLOT:.*]] = cir.alloca "byval" align(8) : !cir.ptr<!rec_Big>
-  // CHECK:   cir.copy %[[B]] to %[[SLOT]] align(8) : !cir.ptr<!rec_Big>
+  // CHECK-NOT: cir.alloca "byval"
   // CHECK:   %[[CAST:.*]] = cir.cast bitcast %arg0 : !cir.ptr<!cir.func<(!rec_Big) -> !s64i>> -> !cir.ptr<!cir.func<(!cir.ptr<!rec_Big>) -> !s64i>>
-  // CHECK:   cir.call %[[CAST]](%[[SLOT]]) : (!cir.ptr<!cir.func<(!cir.ptr<!rec_Big>) -> !s64i>>, !cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noundef}) -> !s64i
+  // CHECK-NEXT: cir.call %[[CAST]](%[[B]]) : (!cir.ptr<!cir.func<(!cir.ptr<!rec_Big>) -> !s64i>>, !cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noundef}) -> !s64i
 
   // Indirect call returning a large struct: an sret pointer slot is prepended
   // and the callee is bitcast to the void-returning sret signature.

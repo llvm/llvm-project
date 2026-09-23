@@ -893,8 +893,9 @@ module attributes {
 // LLVM: define void @ret_nua_empty_only()
 // LLVM: define void @call_nua_empty_int(i32 %{{[^,)]+}})
 // LLVM:   call void @take_nua_empty_int(i32 %{{[^,)]+}})
-// LLVM: define void @call_nua_big_empty_int(ptr noundef byval(%union.UNuaBigEmptyInt) align 32 %{{[^,)]+}})
-// LLVM:   call void @take_nua_big_empty_int(ptr noundef byval(%union.UNuaBigEmptyInt) align 32 %{{[^,)]+}})
+// LLVM: define void @call_nua_big_empty_int(ptr noundef byval(%union.UNuaBigEmptyInt) align 32 %[[NUABIG:[^,)]+]])
+// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 32 %[[NUABIGSLOT:[^,]+]], ptr align 32 %[[NUABIG]], i64 32, i1 false)
+// LLVM:   call void @take_nua_big_empty_int(ptr noundef byval(%union.UNuaBigEmptyInt) align 32 %[[NUABIGSLOT]])
 // LLVM: define <2 x float> @ret_nua_empty_floats(<2 x float> %{{[^,)]+}})
 // LLVM: define { i64, i64 } @ret_nua_empty_two_eightbytes(i64 %{{[^,)]+}}, i64 %{{[^,)]+}})
 // LLVM: define void @call_nua_empty_two_eightbytes(i64 %{{[^,)]+}}, i64 %{{[^,)]+}})
@@ -907,7 +908,11 @@ module attributes {
 // LLVM: define void @take_bit_no_regs(ptr nofreeobj noundef align 4 dereferenceable(4) %{{[^,)]+}})
 // LLVM: define void @take_struct_with_union(i64 %{{.+}})
 // LLVM: define i32 @ret_int_float(i32 %{{.+}})
-// LLVM: define void @ret_big(ptr dead_on_unwind noalias writable sret(%union.UBig) align 1 %{{.+}}, ptr noundef byval(%union.UBig) align 8 %{{.+}})
+// The sret pointer is a block argument with no slot behind it, so the copy
+// filling it states no alignment of its own and lowering falls back to the
+// union's ABI alignment of 1.
+// LLVM: define void @ret_big(ptr dead_on_unwind noalias writable sret(%union.UBig) align 1 %[[UBIGRET:[^,]+]], ptr noundef byval(%union.UBig) align 8 %[[UBIGARG:.+]])
+// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[UBIGRET]], ptr align 8 %[[UBIGARG]], i64 32, i1 false)
 // LLVM: define void @call_int_float(i32 %{{.+}})
 // LLVM:   call void @take_int_float(i32 %{{.+}})
 // LLVM: define void @call_two_eightbytes(i64 %{{.+}}, i64 %{{.+}})

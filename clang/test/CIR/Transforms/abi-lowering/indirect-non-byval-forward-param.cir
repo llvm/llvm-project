@@ -546,11 +546,9 @@ module attributes {
 
   // CHECK:      cir.func{{.*}} @unloaded_param_to_byval(%[[PTR:.*]]: !cir.ptr<!rec_Big>
   // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
-  // CHECK:        %[[VAL:.*]] = cir.load align(8) %[[PTR]] : !cir.ptr<!rec_Big>, !rec_Big
+  // CHECK-NOT:    cir.alloca
   // CHECK-NOT:    cir.load
-  // CHECK:        %[[COPY:.*]] = cir.alloca "byval" align(8) : !cir.ptr<!rec_Big>
-  // CHECK:        cir.store %[[VAL]], %[[COPY]] : !rec_Big, !cir.ptr<!rec_Big>
-  // CHECK:        cir.call @takes_big_byval(%[[COPY]]) :
+  // CHECK:        cir.call @takes_big_byval(%[[PTR]]) :
   // CHECK-SAME:     (!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noundef}) -> ()
 
 }
@@ -632,11 +630,9 @@ module attributes {
 
   // CHECK:      cir.func{{.*}} @unloaded_param_to_two_calls(%[[PTR:.*]]: !cir.ptr<!rec_Big>
   // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
-  // CHECK:        %[[VAL:.*]] = cir.load align(8) %[[PTR]] : !cir.ptr<!rec_Big>, !rec_Big
-  // CHECK-NOT:    cir.load
-  // CHECK:        cir.call @takes_big_non_byval(%[[PTR]]) :
   // CHECK:        %[[COPY:.*]] = cir.alloca "byval" align(8) : !cir.ptr<!rec_Big>
-  // CHECK:        cir.store %[[VAL]], %[[COPY]] : !rec_Big, !cir.ptr<!rec_Big>
+  // CHECK:        cir.copy %[[PTR]] align(8) to %[[COPY]] align(8) : !cir.ptr<!rec_Big>
+  // CHECK:        cir.call @takes_big_non_byval(%[[PTR]]) :
   // CHECK:        cir.call @takes_big_byval(%[[COPY]]) :
 
   cir.func private @takes_big_non_byval(%arg0: !rec_Big)
@@ -720,11 +716,10 @@ module attributes {
 
   // CHECK:      cir.func{{.*}} @unloaded_param_read_before_overwrite(%[[PTR:.*]]: !cir.ptr<!rec_Big>
   // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
-  // CHECK:        %[[VAL:.*]] = cir.load align(8) %[[PTR]] : !cir.ptr<!rec_Big>, !rec_Big
+  // CHECK:        %[[COPY:.*]] = cir.alloca "byval" align(8) : !cir.ptr<!rec_Big>
+  // CHECK:        cir.copy %[[PTR]] align(8) to %[[COPY]] align(8) : !cir.ptr<!rec_Big>
   // CHECK:        %[[ZERO:.*]] = cir.const #cir.zero : !rec_Big
   // CHECK:        cir.store %[[ZERO]], %[[PTR]] : !rec_Big, !cir.ptr<!rec_Big>
-  // CHECK:        %[[COPY:.*]] = cir.alloca "byval" align(8) : !cir.ptr<!rec_Big>
-  // CHECK:        cir.store %[[VAL]], %[[COPY]] : !rec_Big, !cir.ptr<!rec_Big>
   // CHECK:        cir.call @takes_big_byval(%[[COPY]]) :
 
   cir.func private @takes_big_byval(%arg0: !rec_Big)
@@ -844,8 +839,9 @@ module attributes {
     #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
 } {
 
-  // The slot is aligned above what the parameter promises, so the read of it
-  // may only claim the promise.  A byval callee keeps the read alive to check.
+  // The slot is aligned above what the parameter promises, so whatever stands
+  // in for it may only claim the promise.  The byval callee is handed the
+  // incoming pointer, which carries the promise and not the slot's alignment.
   cir.func @unloaded_param_over_overaligned_slot(%arg0: !rec_Big)
       attributes { test_classify = #non_byval_arg } {
     %spill = cir.alloca "arg0" align(16) init const : !cir.ptr<!rec_Big>
@@ -856,8 +852,9 @@ module attributes {
 
   // CHECK:      cir.func{{.*}} @unloaded_param_over_overaligned_slot(%[[PTR:.*]]: !cir.ptr<!rec_Big>
   // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
-  // CHECK:        %[[VAL:.*]] = cir.load align(8) %[[PTR]] : !cir.ptr<!rec_Big>, !rec_Big
-  // CHECK:        cir.store %[[VAL]], %{{.*}} : !rec_Big, !cir.ptr<!rec_Big>
+  // CHECK-NOT:    cir.alloca
+  // CHECK-NOT:    align(16)
+  // CHECK:        cir.call @takes_big_byval(%[[PTR]]) :
 
   cir.func private @takes_big_byval(%arg0: !rec_Big)
       attributes { test_classify = #byval_arg }
@@ -997,10 +994,8 @@ module attributes {
   // CHECK:      cir.func{{.*}} @unspilled_param_to_byval(%[[PTR:.*]]: !cir.ptr<!rec_Big>
   // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
   // CHECK-NOT:    cir.alloca
-  // CHECK:        %[[VAL:.*]] = cir.load align(8) %[[PTR]] : !cir.ptr<!rec_Big>, !rec_Big
-  // CHECK:        %[[COPY:.*]] = cir.alloca "byval" align(8) : !cir.ptr<!rec_Big>
-  // CHECK:        cir.store %[[VAL]], %[[COPY]] : !rec_Big, !cir.ptr<!rec_Big>
-  // CHECK:        cir.call @takes_big_byval(%[[COPY]]) :
+  // CHECK-NOT:    cir.load
+  // CHECK:        cir.call @takes_big_byval(%[[PTR]]) :
 
 }
 
@@ -1025,7 +1020,7 @@ module attributes {
 } {
 
   // The argument sits inside a nested region, which is where a full-expression
-  // scope puts it.  The read stays at the spill, outside the region.
+  // scope puts it.  The copy is taken at the spill, outside the region.
   cir.func @unloaded_param_read_in_scope(%arg0: !rec_Big)
       attributes { test_classify = #non_byval_arg } {
     %spill = cir.alloca "arg0" align(8) init const : !cir.ptr<!rec_Big>
@@ -1038,10 +1033,9 @@ module attributes {
 
   // CHECK:      cir.func{{.*}} @unloaded_param_read_in_scope(%[[PTR:.*]]: !cir.ptr<!rec_Big>
   // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
-  // CHECK:        %[[VAL:.*]] = cir.load align(8) %[[PTR]] : !cir.ptr<!rec_Big>, !rec_Big
+  // CHECK:        %[[COPY:.*]] = cir.alloca "byval" align(8) : !cir.ptr<!rec_Big>
+  // CHECK:        cir.copy %[[PTR]] align(8) to %[[COPY]] align(8) : !cir.ptr<!rec_Big>
   // CHECK:        cir.scope {
-  // CHECK:          %[[COPY:.*]] = cir.alloca "byval" align(8) : !cir.ptr<!rec_Big>
-  // CHECK:          cir.store %[[VAL]], %[[COPY]] : !rec_Big, !cir.ptr<!rec_Big>
   // CHECK:          cir.call @takes_big_byval(%[[COPY]]) :
 
   cir.func private @takes_big_byval(%arg0: !rec_Big)

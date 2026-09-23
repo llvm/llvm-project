@@ -67,6 +67,11 @@
   args   = [ { kind = "indirect", indirect_align = 16, byval = false } ]
 }
 
+#byval_arg_align16 = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 16 } ]
+}
+
 #passthrough = {
   return = { kind = "direct" },
   args   = [ ]
@@ -122,7 +127,7 @@ module attributes {
   // CHECK:      cir.func{{.*}} @takes_big_decl(!cir.ptr<!rec_Big>
   // CHECK-SAME:     llvm.byval = !rec_Big, llvm.noundef
 
-  // Caller: byval argument is copied into a fresh alloca.
+  // An operand that names no storage is stored into a fresh alloca.
   cir.func @caller(%s: !rec_Big) -> !s32i
       attributes { test_classify = #passthrough } {
     %r = cir.call @takes_big(%s) : (!rec_Big) -> !s32i
@@ -133,6 +138,92 @@ module attributes {
   // CHECK:        %[[SLOT:.*]] = cir.alloca "byval" align(8) : !cir.ptr<!rec_Big>
   // CHECK-NEXT:   cir.store %[[S]], %[[SLOT]] : !rec_Big, !cir.ptr<!rec_Big>
   // CHECK-NEXT:   %{{.*}} = cir.call @takes_big(%[[SLOT]]) :
+  // CHECK-SAME:     llvm.byval = !rec_Big, llvm.noundef
+
+  // An operand loaded from a sufficiently aligned alloca is forwarded: byval
+  // is copied at the call boundary, so the callee still works on a copy.
+  cir.func @caller_byval_forward(%s: !rec_Big) -> !s32i
+      attributes { test_classify = #passthrough } {
+    %tmp = cir.alloca "agg.tmp" align(8) : !cir.ptr<!rec_Big>
+    cir.store %s, %tmp : !rec_Big, !cir.ptr<!rec_Big>
+    %v = cir.load %tmp : !cir.ptr<!rec_Big>, !rec_Big
+    %r = cir.call @takes_big(%v) : (!rec_Big) -> !s32i
+    cir.return %r : !s32i
+  }
+
+  // CHECK:      cir.func{{.*}} @caller_byval_forward(%[[S:.*]]: !rec_Big) -> !s32i
+  // CHECK:        %[[TMP:.*]] = cir.alloca "agg.tmp" align(8) : !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   cir.store %[[S]], %[[TMP]] : !rec_Big, !cir.ptr<!rec_Big>
+  // CHECK-NOT:    cir.alloca "byval"
+  // CHECK-NOT:    cir.load
+  // CHECK:        %{{.*}} = cir.call @takes_big(%[[TMP]]) :
+  // CHECK-SAME:     llvm.byval = !rec_Big, llvm.noundef
+
+  // Storage aligned below what the callee is told to expect cannot be handed
+  // on, so the argument gets a slot that states the promised alignment.  The
+  // copy filling it reads at the alignment the load stated, not the one the
+  // slot promises.
+  cir.func @caller_byval_underaligned(%s: !rec_Big) -> !s32i
+      attributes { test_classify = #passthrough } {
+    %tmp = cir.alloca "agg.tmp" align(1) : !cir.ptr<!rec_Big>
+    cir.store %s, %tmp : !rec_Big, !cir.ptr<!rec_Big>
+    %v = cir.load align(1) %tmp : !cir.ptr<!rec_Big>, !rec_Big
+    %r = cir.call @takes_big(%v) : (!rec_Big) -> !s32i
+    cir.return %r : !s32i
+  }
+
+  // CHECK:      cir.func{{.*}} @caller_byval_underaligned(%[[S:.*]]: !rec_Big) -> !s32i
+  // CHECK:        %[[TMP:.*]] = cir.alloca "agg.tmp" align(1) : !cir.ptr<!rec_Big>
+  // CHECK:        %[[SLOT:.*]] = cir.alloca "byval" align(8) : !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   cir.copy %[[TMP]] align(1) to %[[SLOT]] align(8) : !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   %{{.*}} = cir.call @takes_big(%[[SLOT]]) :
+  // CHECK-SAME:     llvm.byval = !rec_Big, llvm.noundef
+
+  // The copy into the slot stands in for the load, so it is taken where the
+  // load was rather than at the call: a store in between must not be what it
+  // reads.
+  cir.func @caller_byval_copy_store_between(%s: !rec_Big, %t: !rec_Big) -> !s32i
+      attributes { test_classify = #passthrough } {
+    %tmp = cir.alloca "agg.tmp" align(1) : !cir.ptr<!rec_Big>
+    cir.store %s, %tmp : !rec_Big, !cir.ptr<!rec_Big>
+    %v = cir.load align(1) %tmp : !cir.ptr<!rec_Big>, !rec_Big
+    cir.store %t, %tmp : !rec_Big, !cir.ptr<!rec_Big>
+    %r = cir.call @takes_big(%v) : (!rec_Big) -> !s32i
+    cir.return %r : !s32i
+  }
+
+  // CHECK:      cir.func{{.*}} @caller_byval_copy_store_between(%[[S:[^:]+]]: !rec_Big, %[[T:[^:]+]]: !rec_Big)
+  // CHECK:        %[[TMP:.*]] = cir.alloca "agg.tmp" align(1) : !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   cir.store %[[S]], %[[TMP]] : !rec_Big, !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   %[[SLOT:.*]] = cir.alloca "byval" align(8) : !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   cir.copy %[[TMP]] align(1) to %[[SLOT]] align(8) : !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   cir.store %[[T]], %[[TMP]] : !rec_Big, !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   %{{.*}} = cir.call @takes_big(%[[SLOT]]) :
+  // CHECK-SAME:     llvm.byval = !rec_Big, llvm.noundef
+
+  // A store between the load and the call stops the operand's own storage
+  // from being handed on: byval takes the callee's copy at the call, while
+  // the operand holds the value as of the load.  The copy is taken where the
+  // load was instead, so the callee sees the loaded value and not the stored
+  // one.
+  cir.func @caller_byval_store_between(%s: !rec_Big, %t: !rec_Big) -> !s32i
+      attributes { test_classify = #passthrough } {
+    %tmp = cir.alloca "agg.tmp" align(8) : !cir.ptr<!rec_Big>
+    cir.store %s, %tmp : !rec_Big, !cir.ptr<!rec_Big>
+    %v = cir.load %tmp : !cir.ptr<!rec_Big>, !rec_Big
+    cir.store %t, %tmp : !rec_Big, !cir.ptr<!rec_Big>
+    %r = cir.call @takes_big(%v) : (!rec_Big) -> !s32i
+    cir.return %r : !s32i
+  }
+
+  // CHECK:      cir.func{{.*}} @caller_byval_store_between(%[[S:.*]]: !rec_Big, %[[T:.*]]: !rec_Big)
+  // CHECK:        %[[TMP:.*]] = cir.alloca "agg.tmp" align(8) : !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   cir.store %[[S]], %[[TMP]] : !rec_Big, !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   %[[SLOT:.*]] = cir.alloca "byval" align(8) : !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   cir.copy %[[TMP]] align(8) to %[[SLOT]] align(8) : !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   cir.store %[[T]], %[[TMP]] : !rec_Big, !cir.ptr<!rec_Big>
+  // CHECK-NOT:    cir.load
+  // CHECK:        %{{.*}} = cir.call @takes_big(%[[SLOT]]) :
   // CHECK-SAME:     llvm.byval = !rec_Big, llvm.noundef
 
   // A body that actually uses the byval arg value: the existing use in
@@ -147,19 +238,23 @@ module attributes {
   // CHECK:        %[[LOADED:.*]] = cir.load %[[PTR]] : !cir.ptr<!rec_Big>, !rec_Big
   // CHECK-NEXT:   cir.return %[[LOADED]] : !rec_Big
 
-  // Two byval arguments: each gets its own alloca at the call site, and both
-  // block args are changed to pointers with loads at the callee entry.
+  // Two byval arguments: an operand that names no storage gets its own
+  // alloca at the call site, and both block args are changed to pointers.
+  // Only the second is read, so only it gets a load at the callee entry.
   cir.func @two_byval(%a: !rec_Big, %b: !rec_Big) -> !rec_Big
       attributes { test_classify = #two_byval } {
     cir.return %b : !rec_Big
   }
 
   // Match the two slots in appearance order.
-  // CHECK:      cir.func{{.*}} @two_byval(
-  // CHECK-SAME:     !cir.ptr<!rec_Big>
+  // CHECK:      cir.func{{.*}} @two_byval(%[[A:[^:]+]]: !cir.ptr<!rec_Big>
   // CHECK-SAME:     llvm.byval = !rec_Big, llvm.noundef
-  // CHECK-SAME:     !cir.ptr<!rec_Big>
+  // CHECK-SAME:     %[[B:[^:]+]]: !cir.ptr<!rec_Big>
   // CHECK-SAME:     llvm.byval = !rec_Big, llvm.noundef
+  // The entry holds one load and the return, so the unused first parameter
+  // got nothing.
+  // CHECK-NEXT:   %[[LOADED:.*]] = cir.load %[[B]] : !cir.ptr<!rec_Big>, !rec_Big
+  // CHECK-NEXT:   cir.return %[[LOADED]] : !rec_Big
 
   cir.func @caller_two(%s: !rec_Big, %t: !rec_Big) -> !rec_Big
       attributes { test_classify = #passthrough } {
@@ -195,6 +290,28 @@ module attributes {
   // CHECK-NOT:    -> !rec_Big
   // CHECK:        cir.store %{{.*}}, %{{.*}} : !rec_Big, !cir.ptr<!rec_Big>
   // CHECK:        cir.return
+
+  // The same pairing at a call site.  The forward arm hands the operand's own
+  // storage on, and the byval attributes still land on the argument slot the
+  // sret pointer displaced.
+  cir.func @caller_byval_and_sret(%s: !rec_Big) -> !rec_Big
+      attributes { test_classify = #passthrough } {
+    %tmp = cir.alloca "agg.tmp" align(8) : !cir.ptr<!rec_Big>
+    cir.store %s, %tmp : !rec_Big, !cir.ptr<!rec_Big>
+    %v = cir.load %tmp : !cir.ptr<!rec_Big>, !rec_Big
+    %r = cir.call @byval_and_sret(%v) : (!rec_Big) -> !rec_Big
+    cir.return %r : !rec_Big
+  }
+
+  // CHECK:      cir.func{{.*}} @caller_byval_and_sret
+  // CHECK:        %[[TMP:.*]] = cir.alloca "agg.tmp" align(8) : !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   cir.store %{{.*}}, %[[TMP]] : !rec_Big, !cir.ptr<!rec_Big>
+  // CHECK-NOT:    cir.alloca "byval"
+  // CHECK:        %[[RET:.*]] = cir.alloca "sret" align(8) : !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   cir.call @byval_and_sret(%[[RET]], %[[TMP]]) :
+  // CHECK-SAME:     llvm.sret = !rec_Big
+  // CHECK-SAME:     !cir.ptr<!rec_Big> {llvm.align = 8 : i64
+  // CHECK-SAME:     llvm.byval = !rec_Big, llvm.noundef})
 
   // Non-byval callee.  CIRGen spills the by-value param into a local alloca.
   // The rewriter rewires that alloca to the incoming pointer, with no entry
@@ -432,5 +549,90 @@ module attributes {
   // CHECK-NOT:    cir.load
   // CHECK:        cir.call @takes_big_non_byval16(%[[TMP]]) :
   // CHECK-SAME:     {llvm.align = 16 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
+
+  // A non-byval parameter's slot stands in for the incoming pointer until
+  // finalizeParameterSlots, so the call ends up naming that pointer.
+  cir.func @fwd_non_byval_param(%arg0: !rec_Big)
+      attributes { test_classify = #non_byval_arg } {
+    %0 = cir.alloca "x" align(8) init : !cir.ptr<!rec_Big>
+    cir.store %arg0, %0 : !rec_Big, !cir.ptr<!rec_Big>
+    %1 = cir.load %0 : !cir.ptr<!rec_Big>, !rec_Big
+    %2 = cir.call @takes_big_decl(%1) : (!rec_Big) -> !s32i
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @fwd_non_byval_param(%[[P:[a-z0-9]+]]: !cir.ptr<!rec_Big>
+  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
+  // CHECK-NOT:    cir.alloca
+  // CHECK-NOT:    cir.copy
+  // CHECK:        %{{.*}} = cir.call @takes_big_decl(%[[P]]) : (!cir.ptr<!rec_Big>
+  // CHECK-SAME:     llvm.byval = !rec_Big, llvm.noundef
+
+  // The storage is aligned below what the callee requires, so it cannot be
+  // handed on and a slot that does promise the alignment is filled.
+  cir.func private @takes_big_align16(%arg0: !rec_Big)
+      attributes { test_classify = #byval_arg_align16 }
+
+  cir.func @fwd_underaligned_param(%arg0: !rec_Big)
+      attributes { test_classify = #byval_arg } {
+    %0 = cir.alloca "x" align(8) init : !cir.ptr<!rec_Big>
+    cir.store %arg0, %0 : !rec_Big, !cir.ptr<!rec_Big>
+    %1 = cir.load %0 : !cir.ptr<!rec_Big>, !rec_Big
+    cir.call @takes_big_align16(%1) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @fwd_underaligned_param(%[[P:[a-z0-9]+]]: !cir.ptr<!rec_Big>
+  // CHECK-SAME:     llvm.align = 8 : i64
+  // CHECK:        %[[X:.*]] = cir.alloca "x" align(8) init : !cir.ptr<!rec_Big>
+  // CHECK:        %[[SLOT:.*]] = cir.alloca "byval" align(16) : !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   cir.copy %[[X]] align(8) to %[[SLOT]] align(16) : !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   cir.call @takes_big_align16(%[[SLOT]]) : (!cir.ptr<!rec_Big>
+  // CHECK-SAME:     llvm.align = 16 : i64, llvm.byval = !rec_Big, llvm.noundef
+
+  // The slot underneath the cast is aligned well enough, but the rewritten
+  // parameter is a pointer in the default address space, so the operand
+  // cannot be handed on and a slot of its own is filled instead.
+  cir.func @caller_byval_through_addrspace(%s: !rec_Big)
+      attributes { test_classify = #passthrough } {
+    %raw = cir.alloca "raw" align(8) : !cir.ptr<!rec_Big>
+    %slot = cir.cast address_space %raw
+        : !cir.ptr<!rec_Big> -> !cir.ptr<!rec_Big, target_address_space(5)>
+    cir.store %s, %slot : !rec_Big, !cir.ptr<!rec_Big, target_address_space(5)>
+    %asload = cir.load %slot
+        : !cir.ptr<!rec_Big, target_address_space(5)>, !rec_Big
+    %r = cir.call @takes_big(%asload) : (!rec_Big) -> !s32i
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @caller_byval_through_addrspace
+  // CHECK:        %[[RAW:.*]] = cir.alloca "raw" align(8) : !cir.ptr<!rec_Big>
+  // CHECK:        %[[AS:.*]] = cir.cast address_space %[[RAW]]
+  // CHECK:        %[[SLOT:.*]] = cir.alloca "byval" align(8) : !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   cir.copy %[[AS]] align(8) to %[[SLOT]] align(8)
+  // CHECK-SAME:     : !cir.ptr<!rec_Big, target_address_space(5)>, !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   %{{.*}} = cir.call @takes_big(%[[SLOT]]) :
+  // CHECK-SAME:     llvm.byval = !rec_Big, llvm.noundef
+
+  // One load feeding both byval operands is forwarded to both, and erased
+  // once, since neither hand-off reads it.  byval makes each callee a copy
+  // of its own at the call boundary, so the two arguments sharing an address
+  // is not something the callee can observe.
+  cir.func @caller_two_from_one_load(%s: !rec_Big) -> !rec_Big
+      attributes { test_classify = #passthrough } {
+    %tmp = cir.alloca "agg.tmp" align(8) : !cir.ptr<!rec_Big>
+    cir.store %s, %tmp : !rec_Big, !cir.ptr<!rec_Big>
+    %v = cir.load %tmp : !cir.ptr<!rec_Big>, !rec_Big
+    %r = cir.call @two_byval(%v, %v) : (!rec_Big, !rec_Big) -> !rec_Big
+    cir.return %r : !rec_Big
+  }
+
+  // CHECK:      cir.func{{.*}} @caller_two_from_one_load(%[[S:.*]]: !rec_Big)
+  // CHECK:        %[[TMP:.*]] = cir.alloca "agg.tmp" align(8) : !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   cir.store %[[S]], %[[TMP]] : !rec_Big, !cir.ptr<!rec_Big>
+  // CHECK-NOT:    cir.alloca "byval"
+  // CHECK-NOT:    cir.load
+  // CHECK:        %{{.*}} = cir.call @two_byval(%[[TMP]], %[[TMP]]) :
+  // CHECK-SAME:     llvm.byval = !rec_Big, llvm.noundef
 
 }
