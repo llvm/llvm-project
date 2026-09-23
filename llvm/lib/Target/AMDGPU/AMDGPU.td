@@ -510,6 +510,10 @@ defm GFX940Insts : AMDGPUSubtargetFeature<"gfx940-insts",
   /*GenPredicate=*/0
 >;
 
+defm BufferInvInst : AMDGPUSubtargetFeature<"buffer-inv-inst",
+  "Has buffer_inv instruction"
+>;
+
 defm Permlane16Insts : AMDGPUSubtargetFeature<"permlane16-insts",
   "Has v_permlane16_b32/v_permlanex16_b32 instructions"
 >;
@@ -2079,6 +2083,7 @@ def FeatureISAVersion9_4_Common : FeatureSet<
    FeatureAGPRAlloc,
    FeatureTgSplitSupport,
    FeatureGFX940Insts,
+   FeatureBufferInvInst,
    FeatureRequiresAlignedVGPRs,
    FeatureFmaMixInsts,
    FeatureDLInsts,
@@ -3324,7 +3329,8 @@ def AMDGPUFrontendVisibleFeatures {
   FeatureAtomicFaddRtnInsts, FeatureAtomicFlatPkAdd16Insts, FeatureAtomicGlobalPkAddBF16Inst,
   FeatureBF16ConversionInsts,
   FeatureBF16PackedInsts, FeatureBF16TransInsts, FeatureBF8ConversionScaleInsts,
-  FeatureBVHRayTracingInsts, FeatureBitOp3Insts, FeatureCIInsts,
+  FeatureBVHRayTracingInsts, FeatureBitOp3Insts, FeatureBufferInvInst,
+  FeatureCIInsts,
   FeatureClusters, FeatureCubeInsts, FeatureCvtPkNormVOP2Insts,
   FeatureCvtSrPkBF16F32Inst, FeatureDLInsts, FeatureDPP,
   FeatureDot10Insts, FeatureDot11Insts, FeatureDot12Insts,
