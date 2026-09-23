@@ -236,6 +236,14 @@ struct VPlanTransforms {
   static void attachCheckBlock(VPlan &Plan, Value *Cond, BasicBlock *CheckBlock,
                                bool AddBranchWeights);
 
+  /// Model the blocks the executed \p MainPlan generated for the main vector
+  /// loop in \p EpiPlan during epilogue vectorization, wrapping each in a
+  /// VPIRBasicBlock, with \p EnteredFrom the block \p EpiPlan is entered from.
+  /// Edges from blocks bypassing both vector loops are redirected to \p
+  /// EpiPlan's scalar preheader, all others are mirrored.
+  static void modelGeneratedMainLoopBlocks(VPlan &EpiPlan, VPlan &MainPlan,
+                                           VPIRBasicBlock *EnteredFrom);
+
   /// Replaces the VPInstructions in \p Plan with corresponding
   /// widen recipes. Returns false if any VPInstructions could not be converted
   /// to a wide recipe if needed. Uses \p PSE to detect contiguous memory
@@ -628,6 +636,15 @@ struct VPlanTransforms {
   static void makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
                                         VPRecipeBuilder &RecipeBuilder,
                                         VPCostContext &CostCtx);
+
+  /// Replace truncates of a wide induction, or of that induction's increment,
+  /// by a VPWidenIntOrFpInductionRecipe producing the truncated type directly.
+  /// The canonical induction is narrowed even when the target reports the
+  /// truncate as free. If narrowing is only profitable for a subset of VFs in
+  /// \p Range, Range.End is updated.
+  static void narrowInductionTruncates(VPlan &Plan, VFRange &Range,
+                                       const TargetTransformInfo &TTI,
+                                       PredicatedScalarEvolution &PSE);
 };
 
 } // namespace llvm

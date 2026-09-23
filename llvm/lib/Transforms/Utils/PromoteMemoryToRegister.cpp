@@ -810,14 +810,19 @@ void PromoteMem2Reg::run() {
 
   NoSignedZeros = F.getFnAttribute("no-signed-zeros-fp-math").getValueAsBool();
 
-  for (unsigned AllocaNum = 0; AllocaNum != Allocas.size(); ++AllocaNum) {
-    AllocaInst *AI = Allocas[AllocaNum];
-
+  // removeIntrinsicUsers inserts StoreInst(undef). A cache miss on
+  // LBI.getInstructionIndex lookup causes a full O(|BB|) basic block rescan.
+  // Doing all inserts in advance lets us capture all the new instructions in
+  // just a single rescan.
+  for (AllocaInst *AI : Allocas) {
     assert(isAllocaPromotable(AI) && "Cannot promote non-promotable alloca!");
     assert(AI->getParent()->getParent() == &F &&
            "All allocas should be in the same function, which is same as DF!");
-
     removeIntrinsicUsers(AI);
+  }
+
+  for (unsigned AllocaNum = 0; AllocaNum != Allocas.size(); ++AllocaNum) {
+    AllocaInst *AI = Allocas[AllocaNum];
 
     if (AI->use_empty()) {
       // If there are no uses of the alloca, just delete it now.

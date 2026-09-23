@@ -4286,12 +4286,7 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     const unsigned Index = Op.getConstantOperandVal(1);
     const unsigned EltBitWidth = Op.getValueSizeInBits();
 
-    // Remove low part of known bits mask
-    Known.Zero = Known.Zero.getHiBits(Known.getBitWidth() - Index * EltBitWidth);
-    Known.One = Known.One.getHiBits(Known.getBitWidth() - Index * EltBitWidth);
-
-    // Remove high part of known bit mask
-    Known = Known.trunc(EltBitWidth);
+    Known = Known.extractBits(EltBitWidth, Index * EltBitWidth);
     break;
   }
   case ISD::EXTRACT_VECTOR_ELT: {
@@ -4320,6 +4315,14 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     Known = computeKnownBits(InVec, DemandedSrcElts, Depth + 1);
     if (BitWidth > EltBitWidth)
       Known = Known.anyext(BitWidth);
+    break;
+  }
+  case ISD::BUILD_PAIR: {
+    // Operand 0 is the low half and operand 1 the high half,
+    // KnownBits::concat places its argument in the low bits.
+    Known = computeKnownBits(Op.getOperand(0), Depth + 1);
+    Known2 = computeKnownBits(Op.getOperand(1), Depth + 1);
+    Known = Known2.concat(Known);
     break;
   }
   case ISD::INSERT_VECTOR_ELT: {
@@ -5814,8 +5817,8 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
   }
 
   case ISD::SCALAR_TO_VECTOR:
-    // Check upper (known undef) elements.
-    if (DemandedElts.ugt(1) && includesUndef(Kind))
+    // Check upper (known poison) elements.
+    if (DemandedElts.ugt(1) && includesPoison(Kind))
       return false;
     // Check element zero.
     if (DemandedElts[0] &&
@@ -6092,8 +6095,8 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
            !isKnownNeverZero(Op.getOperand(0), Depth + 1);
 
   case ISD::SCALAR_TO_VECTOR:
-    // Check if we demand any upper (undef) elements.
-    return includesUndef(Kind) && DemandedElts.ugt(1);
+    // Check if we demand any upper (poison) elements.
+    return includesPoison(Kind) && DemandedElts.ugt(1);
 
   case ISD::INSERT_VECTOR_ELT:
   case ISD::EXTRACT_VECTOR_ELT: {

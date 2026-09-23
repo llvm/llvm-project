@@ -530,7 +530,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::AVGFLOORS, ISD::AVGFLOORU}, MVT::i32, Legal);
   }
 
-  if (Subtarget.hasStdExtZbc() || Subtarget.hasStdExtZbkc()) {
+  if (Subtarget.hasStdExtZbkc()) {
     setOperationAction({ISD::CLMUL, ISD::CLMULH}, XLenVT, Legal);
     if (Subtarget.hasStdExtZbc())
       setOperationAction(ISD::CLMULR, XLenVT, Legal);
@@ -729,6 +729,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   }
 
   if (Subtarget.hasStdExtZfbfmin()) {
+    setOperationAction({ISD::UNDEF, ISD::POISON}, MVT::bf16, Expand);
     setOperationAction(ISD::BITCAST, MVT::i16, Custom);
     setOperationAction(ISD::ConstantFP, MVT::bf16, Expand);
     setOperationAction(ISD::SELECT_CC, MVT::bf16, Expand);
@@ -744,6 +745,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   }
 
   if (Subtarget.hasStdExtZfhminOrZhinxmin()) {
+    if (Subtarget.hasStdExtZfhmin())
+      setOperationAction({ISD::UNDEF, ISD::POISON}, MVT::f16, Expand);
     if (Subtarget.hasStdExtZfhOrZhinx()) {
       setOperationAction(FPLegalNodeTypes, MVT::f16, Legal);
       setOperationAction(FPRndMode, MVT::f16,
@@ -808,6 +811,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   }
 
   if (Subtarget.hasStdExtFOrZfinx()) {
+    if (Subtarget.hasStdExtF())
+      setOperationAction({ISD::UNDEF, ISD::POISON}, MVT::f32, Expand);
     setOperationAction(FPLegalNodeTypes, MVT::f32, Legal);
     setOperationAction(FPRndMode, MVT::f32,
                        Subtarget.hasStdExtZfa() ? Legal : Custom);
@@ -843,6 +848,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BITCAST, MVT::i32, Custom);
 
   if (Subtarget.hasStdExtDOrZdinx()) {
+    if (Subtarget.hasStdExtD())
+      setOperationAction({ISD::UNDEF, ISD::POISON}, MVT::f64, Expand);
     setOperationAction(FPLegalNodeTypes, MVT::f64, Legal);
 
     if (!Subtarget.is64Bit())
@@ -19601,6 +19608,31 @@ static SDValue performORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   return combineSelectAndUseCommutative(N, DAG, /*AllOnes*/ false, Subtarget);
 }
 
+// Fold (vmxor_vl (setcc_vl a, b, cc), vmset_vl) -> (setcc_vl a, b, !cc) for
+// integer compares. The NOT also flips the masked-off lanes, which the inverted
+// compare copies unchanged from the passthru. So the passthru must be undef,
+// but any mask is fine.
+static SDValue combineVMNOTOfSetCC(SDNode *N, SelectionDAG &DAG) {
+  SDValue Cmp = N->getOperand(0);
+  if (Cmp.getOpcode() != RISCVISD::VMSET_VL &&
+      N->getOperand(1).getOpcode() != RISCVISD::VMSET_VL)
+    return SDValue();
+
+  if (Cmp.getOpcode() == RISCVISD::VMSET_VL)
+    Cmp = N->getOperand(1);
+
+  if (Cmp.getOpcode() != RISCVISD::SETCC_VL || !Cmp.hasOneUse() ||
+      !Cmp.getOperand(0).getValueType().isInteger() ||
+      !Cmp.getOperand(3).isUndef())
+    return SDValue();
+
+  ISD::CondCode CC = cast<CondCodeSDNode>(Cmp.getOperand(2))->get();
+  CC = ISD::getSetCCInverse(CC, Cmp.getOperand(0).getValueType());
+  return DAG.getNode(RISCVISD::SETCC_VL, SDLoc(N), Cmp.getValueType(),
+                     {Cmp.getOperand(0), Cmp.getOperand(1), DAG.getCondCode(CC),
+                      Cmp.getOperand(3), Cmp.getOperand(4), Cmp.getOperand(5)});
+}
+
 static SDValue performXORCombine(SDNode *N, SelectionDAG &DAG,
                                  const RISCVSubtarget &Subtarget) {
   SDValue N0 = N->getOperand(0);
@@ -22263,6 +22295,75 @@ static SDValue performVECTOR_INTERLEAVECombine(SDNode *N, SelectionDAG &DAG) {
                                           I * VecVT.getVectorMinNumElements());
 
   return DAG.getMergeValues(Operands, DL);
+}
+
+static SDValue performVSlideUpDownCombine(SDNode *N, SelectionDAG &DAG,
+                                          const RISCVSubtarget &Subtarget) {
+  unsigned Opcode = N->getOpcode();
+  assert(Opcode == RISCVISD::VSLIDEUP_VL || Opcode == RISCVISD::VSLIDEDOWN_VL);
+
+  // Trivial case.
+  if (N->getOperand(1)->isUndef())
+    return N->getOperand(0);
+
+  SDValue SlideDown = N->getOperand(1);
+  SDValue SlideUpOffset = N->getOperand(2);
+  SDValue SlideUpMask = N->getOperand(3);
+  SDValue SlideUpVL = N->getOperand(4);
+
+  // Given this pattern
+  // ```
+  //   %down = RISCVISD::VSLIDEDOWN_VL undef, %val, %offset, %mask, %vl0
+  // %up = RISCVISD::VSLIDEUP_VL %val, %down, %offset, %mask, %vl1
+  // ```
+  // We can simplify it with `%val`, as it's doing redundant shifting.
+  if (Opcode != RISCVISD::VSLIDEUP_VL ||
+      SlideDown.getOpcode() != RISCVISD::VSLIDEDOWN_VL)
+    return SDValue();
+
+  SDValue SlideDownPassthru = SlideDown->getOperand(0);
+  SDValue SlideDownVal = SlideDown->getOperand(1);
+  SDValue SlideDownOffset = SlideDown->getOperand(2);
+  SDValue SlideDownMask = SlideDown->getOperand(3);
+  SDValue SlideDownVL = SlideDown->getOperand(4);
+  if (!SlideDownPassthru.isUndef() || SlideDownVal != N->getOperand(0) ||
+      SlideDownOffset != SlideUpOffset)
+    return SDValue();
+
+  auto isVLMax = [](SDValue VL) {
+    return (isa<RegisterSDNode>(VL) &&
+            cast<RegisterSDNode>(VL)->getReg() == RISCV::X0) ||
+           isAllOnesConstant(VL);
+  };
+
+  // Check VLs.
+  // First, we need to worry about the zeros shifted into VSLIDEDOWN_VL. In this
+  // scenario, the worst case would be %vl0 = VLMAX, as %down is guaranteed to
+  // have those zeros. Our goal here is to ensure elements from %down that are
+  // actually inserted into %up are not those zeros. The number of %down that
+  // are actually inserted would be `%vl1 - %offset`, and the number of non-zero
+  // elements from %down would be `VLMAX - %offset`. Therefore, the invariant
+  // would be
+  // `%vl1 - %offset <= VLMAX - %offset` ---> `%vl1 <= VLMAX`
+  // Thus, we will never read those zeros that are shifted in by VSLIDEDOWN_VL.
+  // Second, we don't want slideup to read past the result produced by
+  // slidedown. So the condition for this case would be `%vl0 + %offset >=
+  // %vl1`.
+  if (!isVLMax(SlideDownVL)) {
+    KnownBits DownVLKB = DAG.computeKnownBits(SlideDownVL);
+    KnownBits UpVLKB = DAG.computeKnownBits(SlideUpVL);
+    KnownBits OffsetKB = DAG.computeKnownBits(SlideDownOffset);
+    if (!KnownBits::uge(KnownBits::add(DownVLKB, OffsetKB), UpVLKB)
+             .value_or(false))
+      return SDValue();
+  }
+
+  // Check if they are both all-ones masks.
+  if (SlideDownMask.getOpcode() != RISCVISD::VMSET_VL ||
+      SlideUpMask.getOpcode() != RISCVISD::VMSET_VL)
+    return SDValue();
+
+  return SlideDownVal;
 }
 
 // Convert from one FMA opcode to another based on whether we are negating the
@@ -25522,6 +25623,8 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       return N->getOperand(0);
     break;
   }
+  case RISCVISD::VMXOR_VL:
+    return combineVMNOTOfSetCC(N, DAG);
   case RISCVISD::VMERGE_VL: {
     // vmerge_vl allones, x, y, passthru, vl -> vmv_v_v passthru, x, vl
     SDValue Mask = N->getOperand(0);
@@ -25562,9 +25665,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
   }
   case RISCVISD::VSLIDEDOWN_VL:
   case RISCVISD::VSLIDEUP_VL:
-    if (N->getOperand(1)->isUndef())
-      return N->getOperand(0);
-    break;
+    return performVSlideUpDownCombine(N, DAG, Subtarget);
   case RISCVISD::VSLIDE1UP_VL:
   case RISCVISD::VFSLIDE1UP_VL: {
     using namespace SDPatternMatch;

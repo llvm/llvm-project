@@ -2326,7 +2326,7 @@ SIFoldOperandsImpl::isClamp(const MachineInstr &MI) const {
         (Op == AMDGPU::V_PK_MAX_F16 || Op == AMDGPU::V_PK_MAX_NUM_BF16)
             ? SISrcMods::OP_SEL_1
             : 0u;
-    if (Src0Mods != UnsetMods && Src1Mods != UnsetMods)
+    if (Src0Mods != UnsetMods || Src1Mods != UnsetMods)
       return nullptr;
     return Src0;
   }
