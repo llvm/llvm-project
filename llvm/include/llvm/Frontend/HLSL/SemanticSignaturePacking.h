@@ -106,8 +106,8 @@ packSignatureIndexed(MutableArrayRef<SemanticSignatureElement> Elements,
                      Triple::EnvironmentType ShaderStage, IOType IOTy);
 
 /// Packs eligible signature elements in an optimized order by reordering
-/// elements into a optimal packind order and allowing clip/cull to share
-/// comapatible rows. Only StartRow and StartCol are modified
+/// elements into an optimal packing order and allowing clip/cull to share
+/// compatible rows. Only StartRow and StartCol are modified.
 ///
 /// See llvm/docs/DirectX/SemanticSignatures.md#optimized-packing for details.
 ///
