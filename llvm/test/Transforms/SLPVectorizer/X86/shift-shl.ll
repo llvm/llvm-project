@@ -9,7 +9,7 @@
 ; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=c86-4g-m7 -mattr=+prefer-256-bit -passes=slp-vectorizer -S | FileCheck %s --check-prefixes=AVX
 ; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=c86-4g-m8 -mattr=-prefer-256-bit -passes=slp-vectorizer -S | FileCheck %s --check-prefix=AVX512
 ; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=c86-4g-m8 -mattr=+prefer-256-bit -passes=slp-vectorizer -S | FileCheck %s --check-prefixes=AVX
-; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=bdver4 -mattr=-prefer-128-bit -passes=slp-vectorizer -S | FileCheck %s --check-prefix=XOP
+; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=bdver4 -passes=slp-vectorizer -S | FileCheck %s --check-prefix=XOP
 
 @a64 = common global [8 x i64] zeroinitializer, align 64
 @b64 = common global [8 x i64] zeroinitializer, align 64
@@ -63,14 +63,22 @@ define void @shl_v8i64() {
 ; AVX512-NEXT:    ret void
 ;
 ; XOP-LABEL: @shl_v8i64(
-; XOP-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr @a64, align 8
-; XOP-NEXT:    [[TMP2:%.*]] = load <4 x i64>, ptr @b64, align 8
-; XOP-NEXT:    [[TMP3:%.*]] = shl <4 x i64> [[TMP1]], [[TMP2]]
-; XOP-NEXT:    store <4 x i64> [[TMP3]], ptr @c64, align 8
-; XOP-NEXT:    [[TMP4:%.*]] = load <4 x i64>, ptr getelementptr inbounds ([8 x i64], ptr @a64, i32 0, i64 4), align 8
-; XOP-NEXT:    [[TMP5:%.*]] = load <4 x i64>, ptr getelementptr inbounds ([8 x i64], ptr @b64, i32 0, i64 4), align 8
-; XOP-NEXT:    [[TMP6:%.*]] = shl <4 x i64> [[TMP4]], [[TMP5]]
-; XOP-NEXT:    store <4 x i64> [[TMP6]], ptr getelementptr inbounds ([8 x i64], ptr @c64, i32 0, i64 4), align 8
+; XOP-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr @a64, align 8
+; XOP-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr @b64, align 8
+; XOP-NEXT:    [[TMP3:%.*]] = shl <2 x i64> [[TMP1]], [[TMP2]]
+; XOP-NEXT:    store <2 x i64> [[TMP3]], ptr @c64, align 8
+; XOP-NEXT:    [[TMP4:%.*]] = load <2 x i64>, ptr getelementptr inbounds ([8 x i64], ptr @a64, i32 0, i64 2), align 8
+; XOP-NEXT:    [[TMP5:%.*]] = load <2 x i64>, ptr getelementptr inbounds ([8 x i64], ptr @b64, i32 0, i64 2), align 8
+; XOP-NEXT:    [[TMP6:%.*]] = shl <2 x i64> [[TMP4]], [[TMP5]]
+; XOP-NEXT:    store <2 x i64> [[TMP6]], ptr getelementptr inbounds ([8 x i64], ptr @c64, i32 0, i64 2), align 8
+; XOP-NEXT:    [[TMP7:%.*]] = load <2 x i64>, ptr getelementptr inbounds ([8 x i64], ptr @a64, i32 0, i64 4), align 8
+; XOP-NEXT:    [[TMP8:%.*]] = load <2 x i64>, ptr getelementptr inbounds ([8 x i64], ptr @b64, i32 0, i64 4), align 8
+; XOP-NEXT:    [[TMP9:%.*]] = shl <2 x i64> [[TMP7]], [[TMP8]]
+; XOP-NEXT:    store <2 x i64> [[TMP9]], ptr getelementptr inbounds ([8 x i64], ptr @c64, i32 0, i64 4), align 8
+; XOP-NEXT:    [[TMP10:%.*]] = load <2 x i64>, ptr getelementptr inbounds ([8 x i64], ptr @a64, i32 0, i64 6), align 8
+; XOP-NEXT:    [[TMP11:%.*]] = load <2 x i64>, ptr getelementptr inbounds ([8 x i64], ptr @b64, i32 0, i64 6), align 8
+; XOP-NEXT:    [[TMP12:%.*]] = shl <2 x i64> [[TMP10]], [[TMP11]]
+; XOP-NEXT:    store <2 x i64> [[TMP12]], ptr getelementptr inbounds ([8 x i64], ptr @c64, i32 0, i64 6), align 8
 ; XOP-NEXT:    ret void
 ;
   %a0 = load i64, ptr @a64, align 8
@@ -195,14 +203,22 @@ define void @shl_v16i32() {
 ; AVX512-NEXT:    ret void
 ;
 ; XOP-LABEL: @shl_v16i32(
-; XOP-NEXT:    [[TMP1:%.*]] = load <8 x i32>, ptr @a32, align 4
-; XOP-NEXT:    [[TMP2:%.*]] = load <8 x i32>, ptr @b32, align 4
-; XOP-NEXT:    [[TMP3:%.*]] = shl <8 x i32> [[TMP1]], [[TMP2]]
-; XOP-NEXT:    store <8 x i32> [[TMP3]], ptr @c32, align 4
-; XOP-NEXT:    [[TMP4:%.*]] = load <8 x i32>, ptr getelementptr inbounds ([16 x i32], ptr @a32, i32 0, i64 8), align 4
-; XOP-NEXT:    [[TMP5:%.*]] = load <8 x i32>, ptr getelementptr inbounds ([16 x i32], ptr @b32, i32 0, i64 8), align 4
-; XOP-NEXT:    [[TMP6:%.*]] = shl <8 x i32> [[TMP4]], [[TMP5]]
-; XOP-NEXT:    store <8 x i32> [[TMP6]], ptr getelementptr inbounds ([16 x i32], ptr @c32, i32 0, i64 8), align 4
+; XOP-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @a32, align 4
+; XOP-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr @b32, align 4
+; XOP-NEXT:    [[TMP3:%.*]] = shl <4 x i32> [[TMP1]], [[TMP2]]
+; XOP-NEXT:    store <4 x i32> [[TMP3]], ptr @c32, align 4
+; XOP-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr getelementptr inbounds ([16 x i32], ptr @a32, i32 0, i64 4), align 4
+; XOP-NEXT:    [[TMP5:%.*]] = load <4 x i32>, ptr getelementptr inbounds ([16 x i32], ptr @b32, i32 0, i64 4), align 4
+; XOP-NEXT:    [[TMP6:%.*]] = shl <4 x i32> [[TMP4]], [[TMP5]]
+; XOP-NEXT:    store <4 x i32> [[TMP6]], ptr getelementptr inbounds ([16 x i32], ptr @c32, i32 0, i64 4), align 4
+; XOP-NEXT:    [[TMP7:%.*]] = load <4 x i32>, ptr getelementptr inbounds ([16 x i32], ptr @a32, i32 0, i64 8), align 4
+; XOP-NEXT:    [[TMP8:%.*]] = load <4 x i32>, ptr getelementptr inbounds ([16 x i32], ptr @b32, i32 0, i64 8), align 4
+; XOP-NEXT:    [[TMP9:%.*]] = shl <4 x i32> [[TMP7]], [[TMP8]]
+; XOP-NEXT:    store <4 x i32> [[TMP9]], ptr getelementptr inbounds ([16 x i32], ptr @c32, i32 0, i64 8), align 4
+; XOP-NEXT:    [[TMP10:%.*]] = load <4 x i32>, ptr getelementptr inbounds ([16 x i32], ptr @a32, i32 0, i64 12), align 4
+; XOP-NEXT:    [[TMP11:%.*]] = load <4 x i32>, ptr getelementptr inbounds ([16 x i32], ptr @b32, i32 0, i64 12), align 4
+; XOP-NEXT:    [[TMP12:%.*]] = shl <4 x i32> [[TMP10]], [[TMP11]]
+; XOP-NEXT:    store <4 x i32> [[TMP12]], ptr getelementptr inbounds ([16 x i32], ptr @c32, i32 0, i64 12), align 4
 ; XOP-NEXT:    ret void
 ;
   %a0  = load i32, ptr getelementptr inbounds ([16 x i32], ptr @a32, i32 0, i64 0 ), align 4
@@ -311,14 +327,22 @@ define void @shl_v32i16() {
 ; AVX512-NEXT:    ret void
 ;
 ; XOP-LABEL: @shl_v32i16(
-; XOP-NEXT:    [[TMP1:%.*]] = load <16 x i16>, ptr @a16, align 2
-; XOP-NEXT:    [[TMP2:%.*]] = load <16 x i16>, ptr @b16, align 2
-; XOP-NEXT:    [[TMP3:%.*]] = shl <16 x i16> [[TMP1]], [[TMP2]]
-; XOP-NEXT:    store <16 x i16> [[TMP3]], ptr @c16, align 2
-; XOP-NEXT:    [[TMP4:%.*]] = load <16 x i16>, ptr getelementptr inbounds ([32 x i16], ptr @a16, i32 0, i64 16), align 2
-; XOP-NEXT:    [[TMP5:%.*]] = load <16 x i16>, ptr getelementptr inbounds ([32 x i16], ptr @b16, i32 0, i64 16), align 2
-; XOP-NEXT:    [[TMP6:%.*]] = shl <16 x i16> [[TMP4]], [[TMP5]]
-; XOP-NEXT:    store <16 x i16> [[TMP6]], ptr getelementptr inbounds ([32 x i16], ptr @c16, i32 0, i64 16), align 2
+; XOP-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr @a16, align 2
+; XOP-NEXT:    [[TMP2:%.*]] = load <8 x i16>, ptr @b16, align 2
+; XOP-NEXT:    [[TMP3:%.*]] = shl <8 x i16> [[TMP1]], [[TMP2]]
+; XOP-NEXT:    store <8 x i16> [[TMP3]], ptr @c16, align 2
+; XOP-NEXT:    [[TMP4:%.*]] = load <8 x i16>, ptr getelementptr inbounds ([32 x i16], ptr @a16, i32 0, i64 8), align 2
+; XOP-NEXT:    [[TMP5:%.*]] = load <8 x i16>, ptr getelementptr inbounds ([32 x i16], ptr @b16, i32 0, i64 8), align 2
+; XOP-NEXT:    [[TMP6:%.*]] = shl <8 x i16> [[TMP4]], [[TMP5]]
+; XOP-NEXT:    store <8 x i16> [[TMP6]], ptr getelementptr inbounds ([32 x i16], ptr @c16, i32 0, i64 8), align 2
+; XOP-NEXT:    [[TMP7:%.*]] = load <8 x i16>, ptr getelementptr inbounds ([32 x i16], ptr @a16, i32 0, i64 16), align 2
+; XOP-NEXT:    [[TMP8:%.*]] = load <8 x i16>, ptr getelementptr inbounds ([32 x i16], ptr @b16, i32 0, i64 16), align 2
+; XOP-NEXT:    [[TMP9:%.*]] = shl <8 x i16> [[TMP7]], [[TMP8]]
+; XOP-NEXT:    store <8 x i16> [[TMP9]], ptr getelementptr inbounds ([32 x i16], ptr @c16, i32 0, i64 16), align 2
+; XOP-NEXT:    [[TMP10:%.*]] = load <8 x i16>, ptr getelementptr inbounds ([32 x i16], ptr @a16, i32 0, i64 24), align 2
+; XOP-NEXT:    [[TMP11:%.*]] = load <8 x i16>, ptr getelementptr inbounds ([32 x i16], ptr @b16, i32 0, i64 24), align 2
+; XOP-NEXT:    [[TMP12:%.*]] = shl <8 x i16> [[TMP10]], [[TMP11]]
+; XOP-NEXT:    store <8 x i16> [[TMP12]], ptr getelementptr inbounds ([32 x i16], ptr @c16, i32 0, i64 24), align 2
 ; XOP-NEXT:    ret void
 ;
   %a0  = load i16, ptr getelementptr inbounds ([32 x i16], ptr @a16, i32 0, i64 0 ), align 2
@@ -491,14 +515,22 @@ define void @shl_v64i8() {
 ; AVX512-NEXT:    ret void
 ;
 ; XOP-LABEL: @shl_v64i8(
-; XOP-NEXT:    [[TMP1:%.*]] = load <32 x i8>, ptr @a8, align 1
-; XOP-NEXT:    [[TMP2:%.*]] = load <32 x i8>, ptr @b8, align 1
-; XOP-NEXT:    [[TMP3:%.*]] = shl <32 x i8> [[TMP1]], [[TMP2]]
-; XOP-NEXT:    store <32 x i8> [[TMP3]], ptr @c8, align 1
-; XOP-NEXT:    [[TMP4:%.*]] = load <32 x i8>, ptr getelementptr inbounds ([64 x i8], ptr @a8, i32 0, i64 32), align 1
-; XOP-NEXT:    [[TMP5:%.*]] = load <32 x i8>, ptr getelementptr inbounds ([64 x i8], ptr @b8, i32 0, i64 32), align 1
-; XOP-NEXT:    [[TMP6:%.*]] = shl <32 x i8> [[TMP4]], [[TMP5]]
-; XOP-NEXT:    store <32 x i8> [[TMP6]], ptr getelementptr inbounds ([64 x i8], ptr @c8, i32 0, i64 32), align 1
+; XOP-NEXT:    [[TMP1:%.*]] = load <16 x i8>, ptr @a8, align 1
+; XOP-NEXT:    [[TMP2:%.*]] = load <16 x i8>, ptr @b8, align 1
+; XOP-NEXT:    [[TMP3:%.*]] = shl <16 x i8> [[TMP1]], [[TMP2]]
+; XOP-NEXT:    store <16 x i8> [[TMP3]], ptr @c8, align 1
+; XOP-NEXT:    [[TMP4:%.*]] = load <16 x i8>, ptr getelementptr inbounds ([64 x i8], ptr @a8, i32 0, i64 16), align 1
+; XOP-NEXT:    [[TMP5:%.*]] = load <16 x i8>, ptr getelementptr inbounds ([64 x i8], ptr @b8, i32 0, i64 16), align 1
+; XOP-NEXT:    [[TMP6:%.*]] = shl <16 x i8> [[TMP4]], [[TMP5]]
+; XOP-NEXT:    store <16 x i8> [[TMP6]], ptr getelementptr inbounds ([64 x i8], ptr @c8, i32 0, i64 16), align 1
+; XOP-NEXT:    [[TMP7:%.*]] = load <16 x i8>, ptr getelementptr inbounds ([64 x i8], ptr @a8, i32 0, i64 32), align 1
+; XOP-NEXT:    [[TMP8:%.*]] = load <16 x i8>, ptr getelementptr inbounds ([64 x i8], ptr @b8, i32 0, i64 32), align 1
+; XOP-NEXT:    [[TMP9:%.*]] = shl <16 x i8> [[TMP7]], [[TMP8]]
+; XOP-NEXT:    store <16 x i8> [[TMP9]], ptr getelementptr inbounds ([64 x i8], ptr @c8, i32 0, i64 32), align 1
+; XOP-NEXT:    [[TMP10:%.*]] = load <16 x i8>, ptr getelementptr inbounds ([64 x i8], ptr @a8, i32 0, i64 48), align 1
+; XOP-NEXT:    [[TMP11:%.*]] = load <16 x i8>, ptr getelementptr inbounds ([64 x i8], ptr @b8, i32 0, i64 48), align 1
+; XOP-NEXT:    [[TMP12:%.*]] = shl <16 x i8> [[TMP10]], [[TMP11]]
+; XOP-NEXT:    store <16 x i8> [[TMP12]], ptr getelementptr inbounds ([64 x i8], ptr @c8, i32 0, i64 48), align 1
 ; XOP-NEXT:    ret void
 ;
   %a0  = load i8, ptr getelementptr inbounds ([64 x i8], ptr @a8, i32 0, i64 0 ), align 1

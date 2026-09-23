@@ -2,8 +2,8 @@
 ; RUN: opt < %s -mtriple=x86_64-unknown -passes=slp-vectorizer -S | FileCheck %s --check-prefix=CHECK --check-prefix=SSE
 ; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=corei7-avx -passes=slp-vectorizer -S | FileCheck %s --check-prefix=CHECK --check-prefix=AVX
 ; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=core-avx2 -passes=slp-vectorizer -S | FileCheck %s --check-prefix=CHECK --check-prefix=AVX
-; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=bdver2 -mattr=-prefer-128-bit -passes=slp-vectorizer -S | FileCheck %s --check-prefix=CHECK --check-prefix=XOP
-; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=bdver4 -mattr=-prefer-128-bit -passes=slp-vectorizer -S | FileCheck %s --check-prefix=CHECK --check-prefix=XOP
+; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=bdver2 -passes=slp-vectorizer -S | FileCheck %s --check-prefix=CHECK --check-prefix=XOP
+; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=bdver4 -passes=slp-vectorizer -S | FileCheck %s --check-prefix=CHECK --check-prefix=XOP
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
@@ -54,9 +54,12 @@ define void @bitreverse_4i64() #0 {
 ; AVX-NEXT:    ret void
 ;
 ; XOP-LABEL: @bitreverse_4i64(
-; XOP-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr @src64, align 4
-; XOP-NEXT:    [[TMP2:%.*]] = call <4 x i64> @llvm.bitreverse.v4i64(<4 x i64> [[TMP1]])
-; XOP-NEXT:    store <4 x i64> [[TMP2]], ptr @dst64, align 4
+; XOP-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr @src64, align 4
+; XOP-NEXT:    [[TMP2:%.*]] = call <2 x i64> @llvm.bitreverse.v2i64(<2 x i64> [[TMP1]])
+; XOP-NEXT:    store <2 x i64> [[TMP2]], ptr @dst64, align 4
+; XOP-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr getelementptr inbounds ([4 x i64], ptr @src64, i64 0, i64 2), align 4
+; XOP-NEXT:    [[TMP4:%.*]] = call <2 x i64> @llvm.bitreverse.v2i64(<2 x i64> [[TMP3]])
+; XOP-NEXT:    store <2 x i64> [[TMP4]], ptr getelementptr inbounds ([4 x i64], ptr @dst64, i64 0, i64 2), align 4
 ; XOP-NEXT:    ret void
 ;
   %ld0 = load i64, ptr @src64, align 4
@@ -113,9 +116,12 @@ define void @bitreverse_8i32() #0 {
 ; AVX-NEXT:    ret void
 ;
 ; XOP-LABEL: @bitreverse_8i32(
-; XOP-NEXT:    [[TMP1:%.*]] = load <8 x i32>, ptr @src32, align 2
-; XOP-NEXT:    [[TMP2:%.*]] = call <8 x i32> @llvm.bitreverse.v8i32(<8 x i32> [[TMP1]])
-; XOP-NEXT:    store <8 x i32> [[TMP2]], ptr @dst32, align 2
+; XOP-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @src32, align 2
+; XOP-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.bitreverse.v4i32(<4 x i32> [[TMP1]])
+; XOP-NEXT:    store <4 x i32> [[TMP2]], ptr @dst32, align 2
+; XOP-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr getelementptr inbounds ([8 x i32], ptr @src32, i32 0, i64 4), align 2
+; XOP-NEXT:    [[TMP4:%.*]] = call <4 x i32> @llvm.bitreverse.v4i32(<4 x i32> [[TMP3]])
+; XOP-NEXT:    store <4 x i32> [[TMP4]], ptr getelementptr inbounds ([8 x i32], ptr @dst32, i32 0, i64 4), align 2
 ; XOP-NEXT:    ret void
 ;
   %ld0 = load i32, ptr @src32, align 2
@@ -196,9 +202,12 @@ define void @bitreverse_16i16() #0 {
 ; AVX-NEXT:    ret void
 ;
 ; XOP-LABEL: @bitreverse_16i16(
-; XOP-NEXT:    [[TMP1:%.*]] = load <16 x i16>, ptr @src16, align 2
-; XOP-NEXT:    [[TMP2:%.*]] = call <16 x i16> @llvm.bitreverse.v16i16(<16 x i16> [[TMP1]])
-; XOP-NEXT:    store <16 x i16> [[TMP2]], ptr @dst16, align 2
+; XOP-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr @src16, align 2
+; XOP-NEXT:    [[TMP2:%.*]] = call <8 x i16> @llvm.bitreverse.v8i16(<8 x i16> [[TMP1]])
+; XOP-NEXT:    store <8 x i16> [[TMP2]], ptr @dst16, align 2
+; XOP-NEXT:    [[TMP3:%.*]] = load <8 x i16>, ptr getelementptr inbounds ([16 x i16], ptr @src16, i16 0, i64 8), align 2
+; XOP-NEXT:    [[TMP4:%.*]] = call <8 x i16> @llvm.bitreverse.v8i16(<8 x i16> [[TMP3]])
+; XOP-NEXT:    store <8 x i16> [[TMP4]], ptr getelementptr inbounds ([16 x i16], ptr @dst16, i16 0, i64 8), align 2
 ; XOP-NEXT:    ret void
 ;
   %ld0  = load i16, ptr @src16, align 2
@@ -327,9 +336,12 @@ define void @bitreverse_32i8() #0 {
 ; AVX-NEXT:    ret void
 ;
 ; XOP-LABEL: @bitreverse_32i8(
-; XOP-NEXT:    [[TMP1:%.*]] = load <32 x i8>, ptr @src8, align 1
-; XOP-NEXT:    [[TMP2:%.*]] = call <32 x i8> @llvm.bitreverse.v32i8(<32 x i8> [[TMP1]])
-; XOP-NEXT:    store <32 x i8> [[TMP2]], ptr @dst8, align 1
+; XOP-NEXT:    [[TMP1:%.*]] = load <16 x i8>, ptr @src8, align 1
+; XOP-NEXT:    [[TMP2:%.*]] = call <16 x i8> @llvm.bitreverse.v16i8(<16 x i8> [[TMP1]])
+; XOP-NEXT:    store <16 x i8> [[TMP2]], ptr @dst8, align 1
+; XOP-NEXT:    [[TMP3:%.*]] = load <16 x i8>, ptr getelementptr inbounds ([32 x i8], ptr @src8, i8 0, i64 16), align 1
+; XOP-NEXT:    [[TMP4:%.*]] = call <16 x i8> @llvm.bitreverse.v16i8(<16 x i8> [[TMP3]])
+; XOP-NEXT:    store <16 x i8> [[TMP4]], ptr getelementptr inbounds ([32 x i8], ptr @dst8, i8 0, i64 16), align 1
 ; XOP-NEXT:    ret void
 ;
   %ld0  = load i8, ptr @src8, align 1
