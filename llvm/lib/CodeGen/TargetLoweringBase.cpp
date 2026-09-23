@@ -951,7 +951,9 @@ void TargetLoweringBase::initActions() {
                        Expand);
 
     // Only some target support these vector operations. Default them to Expand.
-    setOperationAction({ISD::VECTOR_COMPRESS, ISD::VECTOR_MATCH}, VT, Expand);
+    setOperationAction(
+        {ISD::VECTOR_COMPRESS, ISD::VECTOR_MATCH, ISD::VECTOR_SHUFFLE_VAR}, VT,
+        Expand);
     setOperationAction({ISD::CTTZ_ELTS, ISD::CTTZ_ELTS_ZERO_POISON}, VT,
                        Expand);
     setOperationAction(ISD::GET_ACTIVE_LANE_MASK, VT, Expand);
