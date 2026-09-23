@@ -48,15 +48,36 @@
 #    error "__cpp_lib_inplace_vector should not be defined before c++26"
 #  endif
 
-#elif TEST_STD_VER > 23
+#elif TEST_STD_VER == 26
 
-#  ifndef __cpp_lib_inplace_vector
-#    error "__cpp_lib_inplace_vector should be defined in c++26"
-#  endif
-#  if __cpp_lib_inplace_vector != 202603L
-#    error "__cpp_lib_inplace_vector should have the value 202603L in c++26"
+#  if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_EXPERIMENTAL_INPLACE_VECTOR
+#    ifndef __cpp_lib_inplace_vector
+#      error "__cpp_lib_inplace_vector should be defined in c++26"
+#    endif
+#    if __cpp_lib_inplace_vector != 202603L
+#      error "__cpp_lib_inplace_vector should have the value 202603L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_inplace_vector
+#      error "__cpp_lib_inplace_vector should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_EXPERIMENTAL_INPLACE_VECTOR' is not met!"
+#    endif
 #  endif
 
-#endif // TEST_STD_VER > 23
+#elif TEST_STD_VER > 26
+
+#  if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_EXPERIMENTAL_INPLACE_VECTOR
+#    ifndef __cpp_lib_inplace_vector
+#      error "__cpp_lib_inplace_vector should be defined in c++29"
+#    endif
+#    if __cpp_lib_inplace_vector != 202603L
+#      error "__cpp_lib_inplace_vector should have the value 202603L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_inplace_vector
+#      error "__cpp_lib_inplace_vector should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_EXPERIMENTAL_INPLACE_VECTOR' is not met!"
+#    endif
+#  endif
+
+#endif // TEST_STD_VER > 26
 
 // clang-format on

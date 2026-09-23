@@ -613,8 +613,8 @@ __cpp_lib_void_t                                        201411L <type_traits>
 // # define __cpp_lib_generate_random                      202403L
 // # define __cpp_lib_hazard_pointer                       202306L
 # if _LIBCPP_HAS_EXPERIMENTAL_INPLACE_VECTOR
-# define __cpp_lib_inplace_vector                       202603L
-#endif
+#   define __cpp_lib_inplace_vector                     202603L
+# endif
 # undef  __cpp_lib_integer_sequence
 # define __cpp_lib_integer_sequence                     202511L
 # define __cpp_lib_is_sufficiently_aligned              202411L

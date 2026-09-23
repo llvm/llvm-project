@@ -7485,11 +7485,17 @@
 #    error "__cpp_lib_initializer_list should have the value 202511L in c++26"
 #  endif
 
-#  ifndef __cpp_lib_inplace_vector
-#    error "__cpp_lib_inplace_vector should be defined in c++26"
-#  endif
-#  if __cpp_lib_inplace_vector != 202603L
-#    error "__cpp_lib_inplace_vector should have the value 202603L in c++26"
+#  if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_EXPERIMENTAL_INPLACE_VECTOR
+#    ifndef __cpp_lib_inplace_vector
+#      error "__cpp_lib_inplace_vector should be defined in c++26"
+#    endif
+#    if __cpp_lib_inplace_vector != 202603L
+#      error "__cpp_lib_inplace_vector should have the value 202603L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_inplace_vector
+#      error "__cpp_lib_inplace_vector should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_EXPERIMENTAL_INPLACE_VECTOR' is not met!"
+#    endif
 #  endif
 
 #  ifndef __cpp_lib_int_pow2
@@ -9565,16 +9571,16 @@
 #    error "__cpp_lib_initializer_list should have the value 202511L in c++29"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
+#  if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_EXPERIMENTAL_INPLACE_VECTOR
 #    ifndef __cpp_lib_inplace_vector
 #      error "__cpp_lib_inplace_vector should be defined in c++29"
 #    endif
-#    if __cpp_lib_inplace_vector != 202406L
-#      error "__cpp_lib_inplace_vector should have the value 202406L in c++29"
+#    if __cpp_lib_inplace_vector != 202603L
+#      error "__cpp_lib_inplace_vector should have the value 202603L in c++29"
 #    endif
 #  else
 #    ifdef __cpp_lib_inplace_vector
-#      error "__cpp_lib_inplace_vector should not be defined because it is unimplemented in libc++!"
+#      error "__cpp_lib_inplace_vector should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_EXPERIMENTAL_INPLACE_VECTOR' is not met!"
 #    endif
 #  endif
 
