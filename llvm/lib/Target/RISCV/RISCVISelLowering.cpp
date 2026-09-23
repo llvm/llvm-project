@@ -22290,6 +22290,12 @@ static SDValue performVECTOR_INTERLEAVECombine(SDNode *N, SelectionDAG &DAG) {
   return DAG.getMergeValues(Operands, DL);
 }
 
+static bool isVLMax(SDValue VL) {
+  return (isa<RegisterSDNode>(VL) &&
+          cast<RegisterSDNode>(VL)->getReg() == RISCV::X0) ||
+         isAllOnesConstant(VL);
+}
+
 static SDValue performVSlideUpDownCombine(SDNode *N, SelectionDAG &DAG,
                                           const RISCVSubtarget &Subtarget) {
   unsigned Opcode = N->getOpcode();
@@ -22298,12 +22304,6 @@ static SDValue performVSlideUpDownCombine(SDNode *N, SelectionDAG &DAG,
   // Trivial case.
   if (N->getOperand(1)->isUndef())
     return N->getOperand(0);
-
-  auto isVLMax = [](SDValue VL) {
-    return (isa<RegisterSDNode>(VL) &&
-            cast<RegisterSDNode>(VL)->getReg() == RISCV::X0) ||
-           isAllOnesConstant(VL);
-  };
 
   // Given this pattern
   // ```
@@ -23859,10 +23859,7 @@ static SDValue combineTruncOfSraSext(SDNode *N, SelectionDAG &DAG) {
   SDValue Mask = N->getOperand(1);
   SDValue VL = N->getOperand(2);
 
-  bool IsVLMAX = isAllOnesConstant(VL) ||
-                 (isa<RegisterSDNode>(VL) &&
-                  cast<RegisterSDNode>(VL)->getReg() == RISCV::X0);
-  if (!IsVLMAX || Mask.getOpcode() != RISCVISD::VMSET_VL ||
+  if (!isVLMax(VL) || Mask.getOpcode() != RISCVISD::VMSET_VL ||
       Mask.getOperand(0) != VL)
     return SDValue();
 
