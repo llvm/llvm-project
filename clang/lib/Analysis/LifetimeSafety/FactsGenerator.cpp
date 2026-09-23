@@ -288,10 +288,12 @@ void FactsGenerator::VisitCXXNullPtrLiteralExpr(
 }
 
 void FactsGenerator::VisitCastExpr(const CastExpr *CE) {
+  const Expr *SubExpr = CE->getSubExpr();
+  if (CE->getCastKind() == CK_Dynamic)
+    handleUse(SubExpr);
   OriginList *Dest = getOriginsList(*CE);
   if (!Dest)
     return;
-  const Expr *SubExpr = CE->getSubExpr();
   OriginList *Src = getOriginsList(*SubExpr);
 
   switch (CE->getCastKind()) {
@@ -702,6 +704,8 @@ void FactsGenerator::VisitLambdaExpr(const LambdaExpr *LE) {
   for (const Expr *Init : LE->capture_inits()) {
     if (!Init)
       continue;
+    // The lambda body may dereference a capture to any depth.
+    handleUse(Init);
     OriginList *InitList = getOriginsList(*Init);
     if (!InitList)
       continue;
@@ -758,6 +762,8 @@ bool FactsGenerator::handlePlacementNew(const CXXNewExpr *NE,
   // FIXME: General placement arguments need separate handling to overwrite
   // the right origins.
 
+  handleUse(PlacementArg);
+
   // The pointer returned by placement new comes from the placement
   // argument.
   if (PlacementList)
@@ -796,7 +802,28 @@ void FactsGenerator::VisitCXXNewExpr(const CXXNewExpr *NE) {
     flow(NewList, InitList, true);
 }
 
+// TODO: An escape fact may fit `throw` and asm better than a use.
+void FactsGenerator::VisitCXXThrowExpr(const CXXThrowExpr *TE) {
+  if (const Expr *Sub = TE->getSubExpr())
+    handleUse(Sub);
+}
+
+void FactsGenerator::VisitGCCAsmStmt(const GCCAsmStmt *AS) {
+  for (const Expr *Input : AS->inputs())
+    handleUse(Input);
+  for (unsigned I = 0, N = AS->getNumOutputs(); I != N; ++I)
+    if (AS->isOutputPlusConstraint(I)) // Also read.
+      handleUse(AS->getOutputExpr(I));
+}
+
+void FactsGenerator::VisitCXXTypeidExpr(const CXXTypeidExpr *TE) {
+  if (TE->isPotentiallyEvaluated())
+    handleUse(TE->getExprOperand());
+}
+
 void FactsGenerator::VisitCXXDeleteExpr(const CXXDeleteExpr *DE) {
+  // The destructor may dereference to any depth.
+  handleUse(DE->getArgument());
   OriginList *List = getOriginsList(*DE->getArgument());
   CurrentBlockFacts.push_back(
       FactMgr.createFact<InvalidateOriginFact>(List->getOuterOriginID(), DE));
@@ -1083,18 +1110,17 @@ void FactsGenerator::handleLifetimeCaptureBy(const FunctionDecl *FD,
 void FactsGenerator::handleFunctionCall(const Expr *Call,
                                         bool IsGslConstruction) {
   FunctionCallInfo CallInfo(Call);
-  if (!CallInfo.FD)
-    return;
-  const FunctionDecl *FD = CallInfo.FD;
   llvm::ArrayRef<const Expr *> Args = CallInfo.Args;
-  OriginList *CallList = getOriginsList(*Call);
-  // Ignore functions returning values with no origin.
-  FD = getDeclWithMergedLifetimeBoundAttrs(FD);
-  if (!FD)
-    return;
-  // All arguments to a function are a use of the corresponding expressions.
+  // The callee may dereference any argument to any depth.
   for (const Expr *Arg : Args)
     handleUse(Arg);
+  if (!CallInfo.FD)
+    return;
+  OriginList *CallList = getOriginsList(*Call);
+  // Ignore functions returning values with no origin.
+  const FunctionDecl *FD = getDeclWithMergedLifetimeBoundAttrs(CallInfo.FD);
+  if (!FD)
+    return;
   handleInvalidatingCall(Call, FD, Args);
   handleDestructiveCall(Call, FD, Args);
   handleMovedArgsInCall(FD, Args);

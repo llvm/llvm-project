@@ -4316,3 +4316,128 @@ void foo() {
     use(*p);                // expected-note {{later used here}}
 }
 } // namespace TakeOwnershipTests
+
+//===----------------------------------------------------------------------===//
+// Uses by code the analysis cannot see into
+//
+// Opaque code may dereference whatever it is handed. These are uses in their
+// own right, not only because every DeclRefExpr is currently one.
+//===----------------------------------------------------------------------===//
+
+namespace std { class type_info; }
+
+namespace what_is_a_use {
+struct Node {
+  int id;
+  Node *next;
+};
+
+// Opaque code may dereference what it is handed, so every argument is a use --
+// including when there is no FunctionDecl to inspect.
+namespace opaque_callees {
+void (*g_fp)(Node *);
+struct Callable { void m(Node *); };
+
+void through_function_pointer(void (*fp)(Node *)) {
+  Node *p;
+  {
+    Node local;
+    p = &local;   // expected-warning {{local variable 'local' does not live long enough}}
+  }               // expected-note {{local variable 'local' is destroyed here}}
+  fp(p);          // expected-note {{later used here}}
+}
+
+void through_global_function_pointer() {
+  Node *p;
+  {
+    Node local;
+    p = &local;   // expected-warning {{local variable 'local' does not live long enough}}
+  }               // expected-note {{local variable 'local' is destroyed here}}
+  g_fp(p);        // expected-note {{later used here}}
+}
+
+void through_pointer_to_member(Callable &c, void (Callable::*pmf)(Node *)) {
+  Node *p;
+  {
+    Node local;
+    p = &local;   // expected-warning {{local variable 'local' does not live long enough}}
+  }               // expected-note {{local variable 'local' is destroyed here}}
+  (c.*pmf)(p);    // expected-note {{later used here}}
+}
+
+// A view has no lvalue-to-rvalue conversion of its own, so the argument rule is
+// the only thing covering it.
+void view_through_function_pointer(void (*fp)(View)) {
+  View v;
+  {
+    MyObj local;
+    v = local;    // expected-warning {{local variable 'local' does not live long enough}}
+  }               // expected-note {{local variable 'local' is destroyed here}}
+  fp(v);          // expected-note {{later used here}}
+}
+
+#ifdef __cpp_exceptions
+void through_throw() {
+  Node *p;
+  {
+    Node local;
+    p = &local;   // expected-warning {{local variable 'local' does not live long enough}}
+  }               // expected-note {{local variable 'local' is destroyed here}}
+  throw p;        // expected-note {{later used here}}
+}
+#endif
+
+void through_inline_asm() {
+  Node *p;
+  {
+    Node local;
+    p = &local;   // expected-warning {{local variable 'local' does not live long enough}}
+  }               // expected-note {{local variable 'local' is destroyed here}}
+  asm volatile("" :: "r"(p)); // expected-note {{later used here}}
+}
+
+void through_placement_new() {
+  Node *p;
+  {
+    Node local;
+    p = &local;          // expected-warning {{local variable 'local' does not live long enough}}
+  }                      // expected-note {{local variable 'local' is destroyed here}}
+  new (p) Node;          // expected-note {{later used here}}
+}
+
+} // namespace opaque_callees
+
+// Reads with no lvalue-to-rvalue conversion in the AST.
+namespace class_reads {
+struct Base { virtual ~Base(); };
+struct Derived : Base {};
+
+void dynamic_cast_reads_the_object() {
+  Base *b;
+  {
+    Derived local;
+    b = &local;   // expected-warning {{local variable 'local' does not live long enough}}
+  }               // expected-note {{local variable 'local' is destroyed here}}
+  Derived *d = dynamic_cast<Derived *>(b); // expected-note {{later used here}}
+  (void)d;
+}
+
+void typeid_reads_the_object() {
+  Base *b;
+  {
+    Derived local;
+    b = &local;   // expected-warning {{local variable 'local' does not live long enough}}
+  }               // expected-note {{local variable 'local' is destroyed here}}
+  (void)typeid(*b); // expected-note {{later used here}}
+}
+
+void asm_inout_operand_is_read() {
+  Node *p;
+  {
+    Node local;
+    p = &local;   // expected-warning {{local variable 'local' does not live long enough}}
+  }               // expected-note {{local variable 'local' is destroyed here}}
+  asm volatile("" : "+r"(p)); // expected-note {{later used here}}
+}
+} // namespace class_reads
+} // namespace what_is_a_use

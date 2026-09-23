@@ -57,6 +57,9 @@ public:
   void VisitArraySubscriptExpr(const ArraySubscriptExpr *ASE);
   void VisitCXXNewExpr(const CXXNewExpr *NE);
   void VisitCXXDeleteExpr(const CXXDeleteExpr *DE);
+  void VisitCXXThrowExpr(const CXXThrowExpr *TE);
+  void VisitGCCAsmStmt(const GCCAsmStmt *AS);
+  void VisitCXXTypeidExpr(const CXXTypeidExpr *TE);
   void VisitStmtExpr(const StmtExpr *SE);
 
 private:
