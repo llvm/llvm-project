@@ -38,8 +38,10 @@ kernel void test_load(__global float *ptr) {
 // ---------------------------------------------------------------------------
 // 5b. coop_mat_store -> __spirv_CooperativeMatrixStoreKHR
 // ---------------------------------------------------------------------------
-kernel void test_store(__global float *ptr, MatA_t a) {
+kernel void test_store(__global float *ptr) {
+    MatA_t a;
     coop_mat_store(ptr, a, ROW_MAJOR, 16);
+    (void)a;
 }
 // CHECK-LABEL: @__clang_ocl_kern_imp_test_store
 // CHECK: call {{.*}} @__spirv_CooperativeMatrixStoreKHR
