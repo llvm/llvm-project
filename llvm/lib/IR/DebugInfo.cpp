@@ -954,16 +954,6 @@ void DebugTypeInfoRemoval::traverse(MDNode *N) {
 bool llvm::stripNonLineTableDebugInfo(Module &M) {
   bool Changed = false;
 
-  // Delete non-CU debug info named metadata nodes.
-  for (auto NMI = M.named_metadata_begin(), NME = M.named_metadata_end();
-       NMI != NME;) {
-    NamedMDNode *NMD = &*NMI;
-    ++NMI;
-    // Specifically keep dbg.cu around.
-    if (NMD->getName() == "llvm.dbg.cu")
-      continue;
-  }
-
   // Drop all dbg attachments from global variables.
   for (auto &GV : M.globals())
     GV.eraseMetadata(LLVMContext::MD_dbg);
@@ -1022,6 +1012,9 @@ bool llvm::stripNonLineTableDebugInfo(Module &M) {
   // Create a new llvm.dbg.cu, which is equivalent to the one
   // -gline-tables-only would have created.
   for (auto &NMD : M.named_metadata()) {
+    if (!NMD.getName().starts_with("llvm.dbg.") && NMD.getName() != "llvm.gcov")
+      continue;
+
     SmallVector<MDNode *, 8> Ops;
     for (MDNode *Op : NMD.operands())
       Ops.push_back(remap(Op));
