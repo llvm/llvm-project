@@ -5283,8 +5283,6 @@ void ASTWriter::WriteDeclsWithEffectsToVerify(Sema &SemaRef) {
 
 /// Write the OpenMP 'requires' directives seen in this translation unit.
 void ASTWriter::WriteOpenMPRequiresDecls(Sema &SemaRef) {
-  if (!SemaRef.getLangOpts().OpenMP)
-    return;
   ArrayRef<const OMPRequiresDecl *> Decls = SemaRef.OpenMP().getRequiresDecls();
   if (Decls.empty())
     return;
