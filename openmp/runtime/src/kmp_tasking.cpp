@@ -5947,14 +5947,19 @@ bool __kmpc_omp_has_task_team(kmp_int32 gtid) {
 
 #if OMP_TASKGRAPH_EXPERIMENTAL
 
+// Reset a taskgraph record so that it can be reused without allocating a fresh
+// one.  The KEEP_RECYCLED_DEPS flag can be set to reuse the previous record's
+// recycled dep list into the new record.
 static void __kmp_taskgraph_reset(kmp_taskgraph_record_t *rec, kmp_int32 gtid,
-                                  kmp_intptr_t graph_id) {
+                                  kmp_intptr_t graph_id,
+                                  bool keep_recycled_deps = false) {
   rec->status = KMP_TDG_RECORDING;
   rec->gtid = gtid;
   rec->graph_id = graph_id;
   rec->record_map = nullptr;
   rec->alloc_root = nullptr;
-  rec->recycled_deps = nullptr;
+  if (!keep_recycled_deps)
+    rec->recycled_deps = nullptr;
   rec->num_tasks = 0;
   rec->nodes_allocated = 0;
   rec->num_mutexes = 0;
@@ -5971,13 +5976,27 @@ static kmp_taskgraph_record_t *__kmp_taskgraph_alloc(kmp_int32 gtid,
       (kmp_taskgraph_record_t *)__kmp_fast_allocate(
           thread, sizeof(kmp_taskgraph_record_t));
   __kmp_init_lock(&new_rec->map_lock);
-  __kmp_taskgraph_reset(new_rec, gtid, graph_id);
+  __kmp_taskgraph_reset(new_rec, gtid, graph_id,
+                        /*keep_recycled_deps=*/false);
   return new_rec;
 }
 
+// Recursively release metadata hanging off a taskgraph region (owned by the
+// region).  The RECYCLED pointer is used to gather dependency-edge lists from
+// any irreducible regions found within.
 static void
 __kmp_taskgraph_free_region_metadata(kmp_info_t *thread,
-                                     kmp_taskgraph_region_t *region) {
+                                     kmp_taskgraph_region_t *region,
+                                     kmp_taskgraph_region_dep_t **recycled) {
+  if (recycled) {
+    __kmp_region_deplist_recycle(recycled, region->predecessors);
+    __kmp_region_deplist_recycle(recycled, region->successors);
+  } else {
+    __kmp_region_deplist_free(thread, region->predecessors);
+    __kmp_region_deplist_free(thread, region->successors);
+  }
+  region->predecessors = nullptr;
+  region->successors = nullptr;
   if (region->reduce_input) {
     __kmp_fast_free(thread, region->reduce_input->reduce_data);
     __kmp_fast_free(thread, region->reduce_input);
@@ -5996,7 +6015,8 @@ __kmp_taskgraph_free_region_metadata(kmp_info_t *thread,
   case TASKGRAPH_REGION_EXCLUSIVE:
   case TASKGRAPH_REGION_IRREDUCIBLE: {
     for (int k = 0; k < region->inner.num_children; k++) {
-      __kmp_taskgraph_free_region_metadata(thread, region->inner.children[k]);
+      __kmp_taskgraph_free_region_metadata(thread, region->inner.children[k],
+                                           recycled);
     }
     break;
   }
@@ -6010,7 +6030,8 @@ static void __kmp_taskgraph_free(kmp_int32 gtid, kmp_taskgraph_record_t *rec,
   kmp_info_t *thread = __kmp_threads[gtid];
 
   if (rec->root)
-    __kmp_taskgraph_free_region_metadata(thread, rec->root);
+    __kmp_taskgraph_free_region_metadata(
+        thread, rec->root, keep_rec ? &rec->recycled_deps : nullptr);
 
   for (size_t task = 0; task < rec->num_tasks; task++) {
     // Skip entries that don't have an associated task (e.g. taskwait nodes
@@ -6041,20 +6062,11 @@ static void __kmp_taskgraph_free(kmp_int32 gtid, kmp_taskgraph_record_t *rec,
   if (rec->record_map)
     __kmp_thread_free(thread, rec->record_map);
 
+  // This loop frees region storage only: any linked data has already been freed
+  // by __kmp_taskgraph_free_region_metadata above.
   kmp_taskgraph_region_t *region = rec->alloc_root;
   while (region) {
     kmp_taskgraph_region_t *next_region = region->alloc_chain;
-    // Children of a carved IRREDUCIBLE region retain their intra-kernel edge
-    // lists past build (the exec-DAG builder reads them on first replay); for
-    // all other regions these lists were already freed in
-    // __kmp_build_taskgraph.
-    if (keep_rec) {
-      __kmp_region_deplist_recycle(&rec->recycled_deps, region->predecessors);
-      __kmp_region_deplist_recycle(&rec->recycled_deps, region->successors);
-    } else {
-      __kmp_region_deplist_free(thread, region->predecessors);
-      __kmp_region_deplist_free(thread, region->successors);
-    }
     __kmp_fast_free(thread, region);
     region = next_region;
   }
@@ -6206,7 +6218,8 @@ void __kmpc_taskgraph(ident_t *loc_ref, kmp_int32 gtid,
   if (!record) {
     if (reuse_record) {
       record = reuse_record;
-      __kmp_taskgraph_reset(record, gtid, graph_id);
+      __kmp_taskgraph_reset(record, gtid, graph_id,
+                            /*keep_recycled_deps=*/true);
     } else
       record = __kmp_taskgraph_alloc(gtid, graph_id);
     // We record 'nogroup' here.  We always create a group for recording the

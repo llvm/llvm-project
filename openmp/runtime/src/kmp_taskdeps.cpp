@@ -1029,6 +1029,33 @@ void __kmp_region_deplist_recycle(kmp_taskgraph_region_dep_t **recycled,
   }
 }
 
+// Release the dependency lists of every region in the finished region tree.
+//
+// The direct children of an IRREDUCIBLE region keep their lists.  We release
+// those when we free the recorded taskgraph (in
+// __kmp_taskgraph_free_region_metadata).
+static void
+__kmp_taskgraph_free_built_region_deps(kmp_info_t *thread,
+                                       kmp_taskgraph_region_t *region) {
+  if (!region->parent || region->parent->type != TASKGRAPH_REGION_IRREDUCIBLE) {
+    __kmp_region_deplist_free(thread, region->predecessors);
+    __kmp_region_deplist_free(thread, region->successors);
+    region->predecessors = nullptr;
+    region->successors = nullptr;
+  }
+  switch (region->type) {
+  case TASKGRAPH_REGION_PARALLEL:
+  case TASKGRAPH_REGION_SEQUENTIAL:
+  case TASKGRAPH_REGION_EXCLUSIVE:
+  case TASKGRAPH_REGION_IRREDUCIBLE:
+    for (kmp_int32 k = 0; k < region->inner.num_children; k++)
+      __kmp_taskgraph_free_built_region_deps(thread, region->inner.children[k]);
+    break;
+  default:
+    break;
+  }
+}
+
 static bool __kmp_taskgraph_collapse_sequence(
     kmp_info_t *thread, kmp_taskgraph_record_t *taskgraph,
     kmp_taskgraph_region_t **&alloc_chain, kmp_taskgraph_region_t **region_p,
@@ -1520,6 +1547,8 @@ static bool __kmp_taskgraph_collapse_par_exclusive(
       }
     }
   }
+
+  __kmp_region_deplist_recycle(&taskgraph->recycled_deps, pred_preds);
 
   return changed;
 }
@@ -2591,6 +2620,7 @@ static void __kmp_taskgraph_exclusive_regions(
                                          region_p);
   kmp_int32 num_mutexes = __kmp_taskgraph_strip_mutex_sets(thread, *region_p);
   taskgraph->num_mutexes = num_mutexes;
+  __kmp_bitset_free(thread, top);
 }
 
 static const char *
@@ -3047,6 +3077,19 @@ kmp_int32 __kmp_build_taskgraph(kmp_int32 gtid,
   }
 
   __kmp_dephash_free<false>(thread, hash);
+
+  // We don't use the runtime refcounting mechanism for these depnodes, so
+  // free them explicitly here.
+  for (kmp_int32 i = 0; i < numnodes; i++) {
+    kmp_depnode_list_t *succ = all_depnodes[i].dn.successors;
+    while (succ) {
+      kmp_depnode_list_t *next = succ->next;
+      __kmp_fast_free(thread, succ);
+      succ = next;
+    }
+    all_depnodes[i].dn.successors = nullptr;
+  }
+
   __kmp_thread_free(thread, all_depnodes_misaligned);
 
   // We're done with the "unresolved" data now.
@@ -3124,24 +3167,23 @@ kmp_int32 __kmp_build_taskgraph(kmp_int32 gtid,
   taskgraph->root = root_region;
   taskgraph->alloc_root = initial_regions;
 
-  // Free dependency lists and deleted regions.
+  // Free the dependency lists of the regions that made it into the tree.
+  __kmp_taskgraph_free_built_region_deps(thread, root_region);
+
+  // The entry and exit regions don't get added to the region tree, so free
+  // their dependency lists here.
+  __kmp_taskgraph_free_built_region_deps(thread, &initial_regions[entryregion]);
+  __kmp_taskgraph_free_built_region_deps(thread, &initial_regions[exitregion]);
+
+  // Free remaining regions that didn't end up in the region tree.
   kmp_taskgraph_region_t **regp = &taskgraph->alloc_root;
   while (*regp) {
     kmp_taskgraph_region_t *reg = *regp;
-    // The direct children of a carved IRREDUCIBLE region keep their
-    // predecessor / successor lists alive.  They are freed at record teardown
-    // (__kmp_free_taskgraph_record).
-    bool keep_edges =
-        reg->parent && reg->parent->type == TASKGRAPH_REGION_IRREDUCIBLE;
-    if (!keep_edges) {
-      __kmp_region_deplist_free(thread, reg->predecessors);
-      __kmp_region_deplist_free(thread, reg->successors);
-      reg->predecessors = nullptr;
-      reg->successors = nullptr;
-    }
     if (reg->mark == TASKGRAPH_DELETED) {
       kmp_taskgraph_region_t *chain_next = reg->alloc_chain;
       TGDBG("deleted region from alloc chain: %p\n", reg);
+      __kmp_region_deplist_free(thread, reg->predecessors);
+      __kmp_region_deplist_free(thread, reg->successors);
       __kmp_fast_free(thread, reg);
       *regp = chain_next;
     } else {
