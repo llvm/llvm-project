@@ -1746,7 +1746,6 @@ static bool canConstantFoldIntrinsic(Intrinsic::ID ID, bool IsStrictFP) {
   case Intrinsic::pdep:
   case Intrinsic::pext:
   case Intrinsic::launder_invariant_group:
-  case Intrinsic::strip_invariant_group:
   case Intrinsic::masked_load:
   case Intrinsic::get_active_lane_mask:
   case Intrinsic::abs:
@@ -2634,15 +2633,13 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       return Constant::getNullValue(Ty);
     if (IntrinsicID == Intrinsic::bswap ||
         IntrinsicID == Intrinsic::bitreverse ||
-        IntrinsicID == Intrinsic::launder_invariant_group ||
-        IntrinsicID == Intrinsic::strip_invariant_group)
+        IntrinsicID == Intrinsic::launder_invariant_group)
       return Operands[0];
   }
 
   if (isa<ConstantPointerNull>(Operands[0])) {
-    // launder(null) == null == strip(null) iff in addrspace 0
-    if (IntrinsicID == Intrinsic::launder_invariant_group ||
-        IntrinsicID == Intrinsic::strip_invariant_group) {
+    // launder(null) == null iff in addrspace 0
+    if (IntrinsicID == Intrinsic::launder_invariant_group) {
       // If instruction is not yet put in a basic block (e.g. when cloning
       // a function during inlining), Call's caller may not be available.
       // So check Call's BB first before querying Call->getCaller.
