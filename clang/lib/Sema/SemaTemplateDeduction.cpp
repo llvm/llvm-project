@@ -3650,6 +3650,7 @@ TemplateDeductionResult Sema::SubstituteExplicitTemplateArguments(
   MultiLevelTemplateArgumentList MLTAL(FunctionTemplate,
                                        SugaredExplicitArgumentList->asArray(),
                                        /*Final=*/true);
+  MLTAL.addOuterRetainedLevels(TemplateParams->getDepth());
 
   // Instantiate the types of each of the function parameters given the
   // explicitly-specified template arguments. If the function has a trailing
@@ -4013,6 +4014,8 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
   MultiLevelTemplateArgumentList SubstArgs(
       FunctionTemplate, CanonicalDeducedArgumentList->asArray(),
       /*Final=*/false);
+  SubstArgs.addOuterRetainedLevels(
+      FunctionTemplate->getTemplateParameters()->getDepth());
   Specialization = cast_or_null<FunctionDecl>(
       SubstDecl(FD, Owner, SubstArgs));
   if (!Specialization || Specialization->isInvalidDecl())
