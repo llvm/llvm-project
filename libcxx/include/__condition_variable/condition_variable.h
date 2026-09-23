@@ -90,16 +90,14 @@ inline _LIBCPP_HIDE_FROM_ABI chrono::nanoseconds __safe_nanosecond_cast(chrono::
 template <class _Duration>
 _LIBCPP_HIDE_FROM_ABI chrono::steady_clock::time_point __rel_to_abs(const _Duration& __rel_time) {
   using namespace chrono;
-  
   if (__rel_time <= _Duration::zero())
     return steady_clock::time_point::min();
 
   steady_clock::time_point __now = steady_clock::now();
-  nanoseconds __d_ns = std::__safe_nanosecond_cast(chrono::__ceil<steady_clock::duration>(__rel_time));
-  
+  nanoseconds __d_ns             = std::__safe_nanosecond_cast(chrono::__ceil<steady_clock::duration>(__rel_time));
   if (__d_ns > nanoseconds::max() - __now.time_since_epoch())
     return steady_clock::time_point::max();
-    
+
   return __now + __d_ns;
 }
 
@@ -215,7 +213,28 @@ inline void condition_variable::__do_timed_wait(
 template <class _Clock>
 inline void condition_variable::__do_timed_wait(unique_lock<mutex>& __lk,
                                                 chrono::time_point<_Clock, chrono::nanoseconds> __tp) _NOEXCEPT {
-  wait_for(__lk, __tp - _Clock::now());
+  using namespace chrono;
+  nanoseconds __d = __tp - _Clock::now();
+  if (__d <= __d.zero())
+    return;
+  using __ns_rep = nanoseconds::rep;
+
+#  if _LIBCPP_HAS_COND_CLOCKWAIT
+  steady_clock::time_point __c_now = steady_clock::now();
+  using __clock_tp_ns              = time_point<steady_clock, nanoseconds>;
+  __ns_rep __now_count_ns          = std::__safe_nanosecond_cast(__c_now.time_since_epoch()).count();
+#  else
+  using __clock_tp_ns     = time_point<system_clock, nanoseconds>;
+  __ns_rep __now_count_ns = std::__safe_nanosecond_cast(system_clock::now().time_since_epoch()).count();
+#  endif
+
+  __ns_rep __d_ns_count = std::__safe_nanosecond_cast(__d).count();
+
+  if (__now_count_ns > numeric_limits<__ns_rep>::max() - __d_ns_count) {
+    __do_timed_wait(__lk, __clock_tp_ns::max());
+  } else {
+    __do_timed_wait(__lk, __clock_tp_ns(nanoseconds(__now_count_ns + __d_ns_count)));
+  }
 }
 
 _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
