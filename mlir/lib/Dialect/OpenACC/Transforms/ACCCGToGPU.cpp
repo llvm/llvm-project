@@ -2048,7 +2048,7 @@ void ACCCGToGPULowering::createBarrierAfterSeqLoop(Operation *loopOp) {
       return;
     mlir::acc::GPUParallelDimsAttr parDimsAttr =
         mlir::acc::getParDimsAttr(blockLoop);
-    if (parDimsAttr.hasOnlyBlockLevel())
+    if (parDimsAttr && parDimsAttr.hasOnlyBlockLevel())
       createBarrier(loopOp->getLoc(), parDimsAttr);
     return;
   }
@@ -2072,9 +2072,9 @@ void ACCCGToGPULowering::createBarrierAfterSeqLoop(Operation *loopOp) {
           seqLoop->getParentOfType<scf::ParallelOp>()) {
     mlir::acc::GPUParallelDimsAttr parDimsAttr =
         mlir::acc::getParDimsAttr(outerParLoop);
-    if (parDimsAttr.hasOnlyBlockLevel()) {
+    if (parDimsAttr && parDimsAttr.hasOnlyBlockLevel()) {
       createBarrier(loopOp->getLoc(), parDimsAttr);
-    } else if (parDimsAttr.hasOnlyThreadYLevel()) {
+    } else if (parDimsAttr && parDimsAttr.hasOnlyThreadYLevel()) {
       createPerRowBarrier(loopOp->getLoc());
     } else if (parDimsAttr && parDimsAttr.isSeq()) {
       // outerParLoop is a sequential grid-stride remainder of a partitioned
