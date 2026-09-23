@@ -52,8 +52,11 @@ bool isRefcountedStringsHack(const VarDecl *V) {
 
 struct GuardianVisitor : DynamicRecursiveASTVisitor {
   const VarDecl *Guardian{nullptr};
+  bool GuardianIsRawPtrOrRef{false};
 
-  explicit GuardianVisitor(const VarDecl *Guardian) : Guardian(Guardian) {
+  explicit GuardianVisitor(const VarDecl *Guardian,
+                           bool GuardianIsRawPtrOrRef = false)
+      : Guardian(Guardian), GuardianIsRawPtrOrRef(GuardianIsRawPtrOrRef) {
     assert(Guardian);
   }
 
@@ -110,6 +113,8 @@ struct GuardianVisitor : DynamicRecursiveASTVisitor {
   }
 
   bool VisitCXXMemberCallExpr(CXXMemberCallExpr *MCE) override {
+    if (GuardianIsRawPtrOrRef)
+      return true;
     auto *Method = MCE->getMethodDecl();
     auto ObjType = MCE->getObjectType();
     if (ObjType.isConstQualified())
@@ -125,14 +130,29 @@ struct GuardianVisitor : DynamicRecursiveASTVisitor {
 private:
   bool mutatesGuardian(const Expr *Arg, const ParmVarDecl *ParmDecl) {
     Arg = Arg->IgnoreParenCasts();
-    if (auto *VarRef = dyn_cast<DeclRefExpr>(Arg)) {
-      if (VarRef->getDecl() == Guardian) {
-        auto ArgType = ParmDecl ? ParmDecl->getType() : Arg->getType();
-        if (!ArgType.isConstQualified())
-          return true;
-      }
+    auto ArgType = ParmDecl ? ParmDecl->getType() : Arg->getType();
+    bool IsAddressOf = false;
+    if (auto *UO = dyn_cast<UnaryOperator>(Arg);
+        UO && UO->getOpcode() == UO_AddrOf) {
+      Arg = UO->getSubExpr()->IgnoreParenCasts();
+      IsAddressOf = true;
     }
-    return false;
+    auto *VarRef = dyn_cast<DeclRefExpr>(Arg);
+    if (!VarRef || VarRef->getDecl() != Guardian)
+      return false;
+    if (GuardianIsRawPtrOrRef && !Guardian->getType()->isPointerType())
+      return false;
+    if (IsAddressOf) {
+      if (!ArgType->isPointerType())
+        return false;
+      return !ArgType->getPointeeType().isConstQualified();
+    }
+    if (GuardianIsRawPtrOrRef) {
+      if (!ArgType->isReferenceType())
+        return false;
+      return !ArgType.getNonReferenceType().isConstQualified();
+    }
+    return !ArgType.isConstQualified();
   }
 };
 
@@ -192,6 +212,25 @@ bool isGuardedScopeEmbeddedInGuardianScope(const VarDecl *Guarded,
   }
 
   return false;
+}
+
+static const VarDecl *findAssignedVar(const Expr *DestExpr) {
+  while (DestExpr) {
+    DestExpr = DestExpr->IgnoreParenCasts();
+    if (auto *DRE = dyn_cast<DeclRefExpr>(DestExpr))
+      return dyn_cast_or_null<VarDecl>(DRE->getDecl());
+    if (auto *UO = dyn_cast<UnaryOperator>(DestExpr);
+        UO && UO->getOpcode() == UO_Deref) {
+      DestExpr = UO->getSubExpr();
+      continue;
+    }
+    if (auto *ASE = dyn_cast<ArraySubscriptExpr>(DestExpr)) {
+      DestExpr = ASE->getBase();
+      continue;
+    }
+    return nullptr;
+  }
+  return nullptr;
 }
 
 class RawPtrRefLocalVarsChecker
@@ -255,7 +294,11 @@ public:
 
       bool VisitBinaryOperator(BinaryOperator *BO) override {
         if (BO->isAssignmentOp()) {
-          if (auto *VarRef = dyn_cast<DeclRefExpr>(BO->getLHS())) {
+          if (Checker->Model->recognizesIndirectStores()) {
+            if (auto *V = findAssignedVar(BO->getLHS()))
+              Checker->visitVarDecl(V, BO->getLHS()->getType(), BO->getRHS(),
+                                    DeclWithIssue);
+          } else if (auto *VarRef = dyn_cast<DeclRefExpr>(BO->getLHS())) {
             if (auto *V = dyn_cast<VarDecl>(VarRef->getDecl()))
               Checker->visitVarDecl(V, V->getType(), BO->getRHS(),
                                     DeclWithIssue);
@@ -321,29 +364,48 @@ public:
       return;
 
     if (auto *DD = dyn_cast<DecompositionDecl>(V)) {
+      const auto *InitList =
+          Value ? dyn_cast<InitListExpr>(Value->IgnoreParenCasts()) : nullptr;
+      if (InitList && InitList->getNumInits() != DD->bindings().size())
+        InitList = nullptr;
+
+      unsigned BindingIndex = 0;
       for (auto *BD : DD->bindings()) {
+        const unsigned Index = BindingIndex++;
         auto *Binding = BD->getBinding();
         if (!Binding)
           continue;
         std::optional<bool> IsUncountedPtr = isUnsafePtr(Binding->getType());
         if (!IsUncountedPtr || !*IsUncountedPtr)
           continue;
-        reportBug(V, V->getType(), nullptr, BD, DeclWithIssue);
+
+        const Expr *Origin = nullptr;
+        if (Model->checksForInteriorDestruction()) {
+          const Expr *Source = InitList ? InitList->getInit(Index) : Value;
+          if (isPtrOriginSafe(V, Source, DeclWithIssue, Origin))
+            continue;
+        }
+        reportBug(V, V->getType(), nullptr, BD, DeclWithIssue, Origin);
       }
     }
 
     std::optional<bool> IsUncountedPtr = isUnsafePtr(SinkType);
     if (IsUncountedPtr && *IsUncountedPtr) {
-      if (Value && isPtrOriginSafe(V, Value, DeclWithIssue))
+      const Expr *Origin = nullptr;
+      if (Value) {
+        if (isPtrOriginSafe(V, Value, DeclWithIssue, Origin))
+          return;
+      } else if (Model->checksForInteriorDestruction())
         return;
-      reportBug(V, SinkType, Value, nullptr, DeclWithIssue);
+      reportBug(V, SinkType, Value, nullptr, DeclWithIssue, Origin);
     }
   }
 
   bool isPtrOriginSafe(const VarDecl *V, const Expr *Value,
-                       const Decl *DeclWithIssue) const {
+                       const Decl *DeclWithIssue, const Expr *&Origin) const {
     return tryToFindPtrOrigin(
         Value, /*StopAtFirstRefCountedObj=*/false,
+        Model->checksForInteriorDestruction(),
         [&](const clang::CXXRecordDecl *Record) {
           return Model->isSafePtr(Record);
         },
@@ -352,12 +414,18 @@ public:
           return Model->isSafeDecl(D, BR->getSourceManager());
         },
         [&](const clang::Expr *InitArgOrigin, bool IsSafe,
-            bool OriginDependsOnFullExpressionTemporary) {
+            bool OriginDependsOnFullExpressionTemporary,
+            bool PtrIsLifetimeBoundToOrigin) {
           if (!InitArgOrigin)
             return true;
 
-          if (IsSafe)
-            return !OriginDependsOnFullExpressionTemporary;
+          if (IsSafe) {
+            if (!OriginDependsOnFullExpressionTemporary)
+              return true;
+            if (!Origin)
+              Origin = InitArgOrigin;
+            return false;
+          }
 
           if (isa<CXXThisExpr>(InitArgOrigin))
             return true;
@@ -374,12 +442,15 @@ public:
           if (EFA.isACallToEnsureFn(InitArgOrigin))
             return true;
 
-          if (Model->isSafeExpr(InitArgOrigin))
+          if (Model->isSafeExpr(InitArgOrigin, PtrIsLifetimeBoundToOrigin))
             return true;
 
-          if (hasGuardian(V, InitArgOrigin, DeclWithIssue))
+          if (!Model->checksForInteriorDestruction() &&
+              hasGuardian(V, InitArgOrigin, DeclWithIssue))
             return true;
 
+          if (!Origin)
+            Origin = InitArgOrigin;
           return false;
         });
   }
@@ -406,10 +477,12 @@ public:
     }
 
     if (isa<ParmVarDecl>(MaybeGuardian)) {
+      bool IsRawPtrOrRef = isUnsafePtr(GuardianType).value_or(false);
+      GuardianVisitor Visitor{MaybeGuardian, IsRawPtrOrRef};
       if (auto *FD = dyn_cast<FunctionDecl>(DeclWithIssue))
-        return GuardianVisitor{MaybeGuardian}.TraverseStmt(FD->getBody());
+        return Visitor.TraverseStmt(FD->getBody());
       if (auto *MD = dyn_cast<ObjCMethodDecl>(DeclWithIssue))
-        return GuardianVisitor{MaybeGuardian}.TraverseStmt(MD->getBody());
+        return Visitor.TraverseStmt(MD->getBody());
     }
 
     return false;
@@ -425,7 +498,8 @@ public:
   }
 
   void reportBug(const VarDecl *V, QualType SinkType, const Expr *Value,
-                 const Decl *BindingDecl, const Decl *DeclWithIssue) const {
+                 const Decl *BindingDecl, const Decl *DeclWithIssue,
+                 const Expr *Origin) const {
     assert(V);
     SmallString<100> Buf;
     llvm::raw_svector_ostream Os(Buf);
@@ -434,7 +508,7 @@ public:
       Os << "Parameter ";
       printQuotedQualifiedName(Os, V);
       Os << " is a ";
-      printPointerTypeAndType(Os, SinkType);
+      Model->describeHazard(Os, Origin, SinkType);
 
       SourceLocation ExprLoc = (Value) ? Value->getExprLoc() : V->getLocation();
       PathDiagnosticLocation BSLoc(ExprLoc, BR->getSourceManager());
@@ -457,35 +531,13 @@ public:
       else
         printQuotedQualifiedName(Os, V);
       Os << " is a ";
-      printPointerTypeAndType(Os, SinkType);
+      Model->describeHazard(Os, Origin, SinkType);
 
       PathDiagnosticLocation BSLoc(V->getLocation(), BR->getSourceManager());
       auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
       Report->addRange(V->getSourceRange());
       Report->setDeclWithIssue(DeclWithIssue);
       BR->emitReport(std::move(Report));
-    }
-  }
-
-  void printPointerTypeAndType(llvm::raw_svector_ostream &Os,
-                               QualType QT) const {
-    auto *VarType = QT.getTypePtr();
-    auto *RTC = Model->retainTypeChecker();
-    if (RTC && isa<TypedefType>(VarType)) {
-      Os << Model->typeName() << " ";
-      if (auto *Decl = RTC->getCanonicalDecl(QT)) {
-        printQuotedQualifiedName(Os, Decl);
-      } else {
-        auto Typedef = VarType->getAs<TypedefType>();
-        assert(Typedef);
-        printQuotedQualifiedName(Os, Typedef->getDecl());
-      }
-    } else {
-      auto *DesugaredType = VarType->getUnqualifiedDesugaredType();
-      bool IsPtr = isa<PointerType, ObjCObjectPointerType>(DesugaredType);
-      Os << "raw " << (IsPtr ? "pointer" : "reference") << " to ";
-      Os << Model->typeName() << " ";
-      printTypeName(Os, QT);
     }
   }
 };
@@ -514,6 +566,14 @@ public:
                                   makeRetainPtrSafetyModel()) {}
 };
 
+class UnborrowedLocalVarsChecker final : public RawPtrRefLocalVarsChecker {
+public:
+  UnborrowedLocalVarsChecker()
+      : RawPtrRefLocalVarsChecker("Loan on a CanBorrow object not guarded by "
+                                  "a Borrow",
+                                  makeBorrowSafetyModel()) {}
+};
+
 } // namespace
 
 void ento::registerUncountedLocalVarsChecker(CheckerManager &Mgr) {
@@ -537,5 +597,13 @@ void ento::registerUnretainedLocalVarsChecker(CheckerManager &Mgr) {
 }
 
 bool ento::shouldRegisterUnretainedLocalVarsChecker(const CheckerManager &) {
+  return true;
+}
+
+void ento::registerUnborrowedLocalVarsChecker(CheckerManager &Mgr) {
+  Mgr.registerChecker<UnborrowedLocalVarsChecker>();
+}
+
+bool ento::shouldRegisterUnborrowedLocalVarsChecker(const CheckerManager &) {
   return true;
 }

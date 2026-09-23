@@ -2,6 +2,10 @@ name: "Check LLVM ABI annotations"
 
 on:
   pull_request:
+    paths:
+      - 'llvm/**'
+      - '.github/workflows/ids-check.yml'
+      - '!llvm/docs/**'
 
 permissions:
   contents: read
@@ -94,4 +98,4 @@ jobs:
         with:
           name: workflow-args
           path: |
-            llvm-project/comments
+            comments

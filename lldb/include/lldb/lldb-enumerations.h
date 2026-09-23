@@ -198,7 +198,7 @@ enum Format {
   /// Floating point complex type
   eFormatComplex,
   eFormatComplexFloat = eFormatComplex,
-  /// NULL terminated C strings
+  /// Null-terminated C strings
   eFormatCString,
   eFormatDecimal,
   eFormatEnum,

@@ -31749,7 +31749,8 @@ public:
         // The accumulator replaces the root on the edges carrying it and is
         // reduced once in the exit block. The values bypassing the loop never
         // went through the reduction operations and must stay exact: the
-        // scalar phi keeps them and they are selected past the reduction.
+        // scalar phi keeps them and they are selected past the reduction
+        // without its fast-math flags.
         unsigned NumIncoming = ExitPhi->getNumIncomingValues();
         auto *VExit = PHINode::Create(VecTy, NumIncoming, "slprdx.exit",
                                       ExitPhi->getIterator());
@@ -31776,8 +31777,8 @@ public:
           R.eraseInstruction(ExitPhi);
           continue;
         }
-        Value *Sel = XB.CreateSelectWithUnknownProfile(
-            FromLoop, Res, ExitPhi, DEBUG_TYPE, "slprdx.sel");
+        Value *Sel = XB.CreateSelectFMFWithUnknownProfile(
+            FromLoop, Res, ExitPhi, FastMathFlags(), DEBUG_TYPE, "slprdx.sel");
         ExitPhi->replaceUsesWithIf(
             Sel, [Sel](Use &U) { return U.getUser() != Sel; });
       }
@@ -32536,6 +32537,13 @@ public:
 
         Builder.setFastMathFlags(RdxFMF);
 
+        // Match the bitmask form of the first vector part before the
+        // vectorization, which drops the operands of the vectorized leaves.
+        BoolBitmask BitmaskMatch =
+            VectorValuesAndScales.empty()
+                ? isBoolBitmaskRdx(RdxKind, NarrowedLeafShifts, DL)
+                : BoolBitmask::None;
+
         // Vectorize a tree.
         Value *VectorizedRoot = V.vectorizeTree(
             LocalExternallyUsedValues, InsertPt, VectorValuesAndScales);
@@ -32607,8 +32615,8 @@ public:
             }
           }
           if (Value *Bitmask = tryEmitBoolBitmaskRdx(
-                  Builder, V, *TTI, DL, VectorizedRoot, VL, TrackedToOrig, Pos,
-                  MaskConsts, GroupRdxFMF)) {
+                  Builder, V, *TTI, BitmaskMatch, VectorizedRoot, VL,
+                  TrackedToOrig, Pos, MaskConsts, GroupRdxFMF)) {
             VectorizedRoot = Bitmask;
           } else {
             if (AnyMask) {
@@ -33310,7 +33318,7 @@ private:
   /// reduction sequence. Returns nullptr otherwise.
   Value *tryEmitBoolBitmaskRdx(IRBuilderBase &Builder, const BoUpSLP &R,
                                const TargetTransformInfo &TTI,
-                               const DataLayout &DL, Value *VectorizedRoot,
+                               BoolBitmask Match, Value *VectorizedRoot,
                                ArrayRef<Value *> VL,
                                ArrayRef<Value *> TrackedToOrig, unsigned Pos,
                                ArrayRef<Constant *> MaskConsts,
@@ -33326,7 +33334,6 @@ private:
         !VectorValuesAndScales.empty() ||
         !R.getRootNode().ReuseShuffleIndices.empty())
       return nullptr;
-    BoolBitmask Match = isBoolBitmaskRdx(RdxKind, NarrowedLeafShifts, DL);
     if (Match == BoolBitmask::None)
       return nullptr;
     SmallVector<int> PermMask =

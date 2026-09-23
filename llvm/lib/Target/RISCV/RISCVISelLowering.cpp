@@ -729,6 +729,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   }
 
   if (Subtarget.hasStdExtZfbfmin()) {
+    setOperationAction({ISD::UNDEF, ISD::POISON}, MVT::bf16, Expand);
     setOperationAction(ISD::BITCAST, MVT::i16, Custom);
     setOperationAction(ISD::ConstantFP, MVT::bf16, Expand);
     setOperationAction(ISD::SELECT_CC, MVT::bf16, Expand);
@@ -744,6 +745,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   }
 
   if (Subtarget.hasStdExtZfhminOrZhinxmin()) {
+    if (Subtarget.hasStdExtZfhmin())
+      setOperationAction({ISD::UNDEF, ISD::POISON}, MVT::f16, Expand);
     if (Subtarget.hasStdExtZfhOrZhinx()) {
       setOperationAction(FPLegalNodeTypes, MVT::f16, Legal);
       setOperationAction(FPRndMode, MVT::f16,
@@ -808,6 +811,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   }
 
   if (Subtarget.hasStdExtFOrZfinx()) {
+    if (Subtarget.hasStdExtF())
+      setOperationAction({ISD::UNDEF, ISD::POISON}, MVT::f32, Expand);
     setOperationAction(FPLegalNodeTypes, MVT::f32, Legal);
     setOperationAction(FPRndMode, MVT::f32,
                        Subtarget.hasStdExtZfa() ? Legal : Custom);
@@ -843,6 +848,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BITCAST, MVT::i32, Custom);
 
   if (Subtarget.hasStdExtDOrZdinx()) {
+    if (Subtarget.hasStdExtD())
+      setOperationAction({ISD::UNDEF, ISD::POISON}, MVT::f64, Expand);
     setOperationAction(FPLegalNodeTypes, MVT::f64, Legal);
 
     if (!Subtarget.is64Bit())
@@ -12372,6 +12379,68 @@ static unsigned getRVPMulHighAccumulateOpcode(unsigned IntNo) {
   }
 }
 
+/// Return the multiply-high-parts node for a multiply-high-parts intrinsic.
+/// The scalar spelling maps to the same node; its product is the first
+/// element.
+static unsigned getRVPMulHighPartsOpcode(unsigned IntNo) {
+  switch (IntNo) {
+  default:
+    llvm_unreachable("Unexpected RISC-V multiply-high-parts intrinsic");
+  case Intrinsic::riscv_pmulh_b0:
+    return RISCVISD::PMULH_H_B0;
+  case Intrinsic::riscv_pmulh_b1:
+    return RISCVISD::PMULH_H_B1;
+  case Intrinsic::riscv_pmulhsu_b0:
+    return RISCVISD::PMULHSU_H_B0;
+  case Intrinsic::riscv_pmulhsu_b1:
+    return RISCVISD::PMULHSU_H_B1;
+  }
+}
+
+/// Return the word multiply-high-parts node for a word multiply-high-parts
+/// intrinsic. The scalar spelling maps to the same node; its product is the
+/// first element.
+static unsigned getRVPMulHighPartsWOpcode(unsigned IntNo) {
+  switch (IntNo) {
+  default:
+    llvm_unreachable("Unexpected RISC-V word multiply-high-parts intrinsic");
+  case Intrinsic::riscv_pmulh_h0:
+  case Intrinsic::riscv_mulh_h0:
+    return RISCVISD::PMULH_W_H0;
+  case Intrinsic::riscv_pmulh_h1:
+  case Intrinsic::riscv_mulh_h1:
+    return RISCVISD::PMULH_W_H1;
+  case Intrinsic::riscv_pmulhsu_h0:
+  case Intrinsic::riscv_mulhsu_h0:
+    return RISCVISD::PMULHSU_W_H0;
+  case Intrinsic::riscv_pmulhsu_h1:
+  case Intrinsic::riscv_mulhsu_h1:
+    return RISCVISD::PMULHSU_W_H1;
+  }
+}
+
+/// Return the scalar halfword multiply-high-parts node for \p IntNo (RV32
+/// mulh.h0/h1). The packed word spelling maps to the same node; its product
+/// is the first element.
+static unsigned getRVPScalarMulHighPartsOpcode(unsigned IntNo) {
+  switch (IntNo) {
+  default:
+    llvm_unreachable("Unexpected RISC-V scalar multiply-high-parts intrinsic");
+  case Intrinsic::riscv_pmulh_h0:
+  case Intrinsic::riscv_mulh_h0:
+    return RISCVISD::MULH_H0;
+  case Intrinsic::riscv_pmulh_h1:
+  case Intrinsic::riscv_mulh_h1:
+    return RISCVISD::MULH_H1;
+  case Intrinsic::riscv_pmulhsu_h0:
+  case Intrinsic::riscv_mulhsu_h0:
+    return RISCVISD::MULHSU_H0;
+  case Intrinsic::riscv_pmulhsu_h1:
+  case Intrinsic::riscv_mulhsu_h1:
+    return RISCVISD::MULHSU_H1;
+  }
+}
+
 static unsigned getRVPQFormatAccScalarOpcode(Intrinsic::ID IntNo) {
   switch (IntNo) {
   default:
@@ -13213,6 +13282,70 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     }
 
     return DAG.getNode(MulOpc, DL, VT, Rd, Rs1, Rs2);
+  }
+  case Intrinsic::riscv_pmulh_b0:
+  case Intrinsic::riscv_pmulh_b1:
+  case Intrinsic::riscv_pmulhsu_b0:
+  case Intrinsic::riscv_pmulhsu_b1: {
+    EVT VT = Op.getValueType();
+    SDValue Rs1 = Op.getOperand(1);
+    SDValue Rs2 = Op.getOperand(2);
+    unsigned Opc = getRVPMulHighPartsOpcode(IntNo);
+
+    // RV32 has no single instruction for a 64-bit packed multiply-high parts.
+    // Split v4i16 into two v2i16 packed operations.
+    if (!Subtarget.is64Bit() && VT == MVT::v4i16) {
+      auto [Rs1Lo, Rs1Hi] = DAG.SplitVector(Rs1, DL);
+      auto [Rs2Lo, Rs2Hi] = DAG.SplitVector(Rs2, DL);
+      SDValue Lo = DAG.getNode(Opc, DL, MVT::v2i16, Rs1Lo, Rs2Lo);
+      SDValue Hi = DAG.getNode(Opc, DL, MVT::v2i16, Rs1Hi, Rs2Hi);
+      return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Lo, Hi);
+    }
+
+    return DAG.getNode(Opc, DL, VT, Rs1, Rs2);
+  }
+  case Intrinsic::riscv_pmulh_h0:
+  case Intrinsic::riscv_pmulh_h1:
+  case Intrinsic::riscv_pmulhsu_h0:
+  case Intrinsic::riscv_pmulhsu_h1: {
+    EVT VT = Op.getValueType();
+    SDValue Rs1 = Op.getOperand(1);
+    SDValue Rs2 = Op.getOperand(2);
+    unsigned Opc = getRVPMulHighPartsWOpcode(IntNo);
+
+    // RV32 has no single instruction for a 64-bit packed word multiply-high
+    // parts. Split v2i32 into two scalar operations, one per result word.
+    if (!Subtarget.is64Bit() && VT == MVT::v2i32) {
+      auto Extract = [&](SDValue V, unsigned Idx) {
+        return DAG.getExtractVectorElt(DL, MVT::i32, V, Idx);
+      };
+      auto [Rs2Lo, Rs2Hi] = DAG.SplitVector(Rs2, DL);
+      unsigned SOpc = getRVPScalarMulHighPartsOpcode(IntNo);
+      SDValue Lo = DAG.getNode(SOpc, DL, MVT::i32, Extract(Rs1, 0), Rs2Lo);
+      SDValue Hi = DAG.getNode(SOpc, DL, MVT::i32, Extract(Rs1, 1), Rs2Hi);
+      return DAG.getNode(ISD::BUILD_VECTOR, DL, VT, Lo, Hi);
+    }
+
+    if (Subtarget.is64Bit())
+      return DAG.getNode(Opc, DL, VT, Rs1, Rs2);
+
+    return SDValue();
+  }
+  case Intrinsic::riscv_mulh_h0:
+  case Intrinsic::riscv_mulh_h1:
+  case Intrinsic::riscv_mulhsu_h0:
+  case Intrinsic::riscv_mulhsu_h1: {
+    // mulh.h0/h1 exist only on RV32 and pmulh.w.h0/h1 only on RV64; the
+    // other XLEN lowers the scalar intrinsic via the packed form in
+    // ReplaceNodeResults.
+    EVT VT = Op.getValueType();
+    if (VT != MVT::i32 || Subtarget.is64Bit())
+      return SDValue();
+
+    SDValue Rs1 = Op.getOperand(1);
+    SDValue Rs2 = Op.getOperand(2);
+    unsigned Opc = getRVPScalarMulHighPartsOpcode(IntNo);
+    return DAG.getNode(Opc, DL, VT, Rs1, Rs2);
   }
   case Intrinsic::riscv_pm4add:
   case Intrinsic::riscv_pm2add:
@@ -17459,6 +17592,51 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
         return;
       }
       reportFatalUsageError("unsupported llvm.riscv multiply-parts intrinsic");
+    }
+    case Intrinsic::riscv_pmulh_b0:
+    case Intrinsic::riscv_pmulh_b1:
+    case Intrinsic::riscv_pmulhsu_b0:
+    case Intrinsic::riscv_pmulhsu_b1: {
+      // A 32-bit result has no legal container on RV64; widen the result and
+      // both sources to the 64-bit packed form.
+      EVT VT = N->getValueType(0);
+      if (!Subtarget.is64Bit() || VT != MVT::v2i16)
+        return;
+
+      SDValue Undef = DAG.getUNDEF(VT);
+      SDValue Rs1 = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v4i16,
+                                N->getOperand(1), Undef);
+      SDValue Src2 = N->getOperand(2);
+      SDValue Rs2 = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v8i8, Src2,
+                                DAG.getUNDEF(Src2.getValueType()));
+      SDValue Res = DAG.getNode(getRVPMulHighPartsOpcode(IntNo), DL, MVT::v4i16,
+                                Rs1, Rs2);
+      Results.push_back(DAG.getExtractSubvector(DL, VT, Res, 0));
+      return;
+    }
+    case Intrinsic::riscv_mulh_h0:
+    case Intrinsic::riscv_mulh_h1:
+    case Intrinsic::riscv_mulhsu_h0:
+    case Intrinsic::riscv_mulhsu_h1: {
+      // mulh.h0/h1 exist only on RV32 and pmulh.w.h0/h1 only on RV64; the
+      // other XLEN has to build the product here.
+      MVT VT = N->getSimpleValueType(0);
+      MVT SrcVT = N->getOperand(2).getSimpleValueType();
+      if (Subtarget.hasStdExtP() && Subtarget.is64Bit() && VT == MVT::i32 &&
+          SrcVT == MVT::v2i16) {
+        // The halfword product is the first element of the packed one.
+        SDValue Rd = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i32,
+                                 N->getOperand(1));
+        SDValue Undef = DAG.getUNDEF(SrcVT);
+        SDValue Rs1 = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v4i16,
+                                  N->getOperand(2), Undef);
+        SDValue Res = DAG.getNode(getRVPMulHighPartsWOpcode(IntNo), DL,
+                                  MVT::v2i32, Rd, Rs1);
+        Results.push_back(DAG.getExtractVectorElt(DL, MVT::i32, Res, 0));
+        return;
+      }
+      reportFatalUsageError(
+          "unsupported llvm.riscv multiply-high-parts intrinsic");
     }
     case Intrinsic::riscv_macc_00:
     case Intrinsic::riscv_macc_01:
