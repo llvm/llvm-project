@@ -369,7 +369,7 @@ void GOFFWriter::defineSectionSymbols(const MCSectionGOFF &Section) {
                   Parent->getOrdinal(), Parent->getEDAttributes(),
                   Parent->getEDAlignment(), Section.getPRAttributes());
     PR.SectionLength = Asm.getSectionAddressSize(Section);
-    if (Section.requiresNonZeroLength()) {
+    if (Section.requiresNonZeroLength() || Section.isBSS()) {
       // We cannot have a zero-length section for data.  If we do,
       // artificially inflate it. Use 2 bytes to avoid odd alignments. Note:
       // if this is ever changed, you will need to update the code in
