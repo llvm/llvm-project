@@ -92,7 +92,8 @@ transposePackedMatmul(RewriterBase &rewriter, linalg::LinalgOp linalgOp,
                       linalg::PackOp packOp, AffineMap operandMap,
                       ArrayRef<unsigned> blocksStartDimPos,
                       bool transposeOuterBlocks, bool transposeInnerBlocks) {
-  // TODO: Support Memref PackOp. Temporarily return failure.
+  // Pack/unpack transformations operate at tensor level. The memref form is
+  // only for inline bufferization and scalar lowering, see #225650 for details.
   if (!packOp.hasPureTensorSemantics())
     return failure();
 

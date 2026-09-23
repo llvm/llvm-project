@@ -1937,7 +1937,8 @@ vectorizeDynamicLinalgOpPrecondition(linalg::LinalgOp op,
 static LogicalResult
 vectorizeUnPackOpPrecondition(linalg::UnPackOp unpackOp,
                               ArrayRef<int64_t> inputVectorSizes) {
-  // TODO: Support Memref UnPackOp. Temporarily return failure.
+  // Pack/unpack transformations operate at tensor level. The memref form is
+  // only for inline bufferization and scalar lowering, see #225650 for details.
   if (!unpackOp.hasPureTensorSemantics())
     return failure();
 
@@ -2315,7 +2316,8 @@ static LogicalResult vectorizeLinalgOpPrecondition(
 static LogicalResult
 vectorizePackOpPrecondition(linalg::PackOp packOp,
                             ArrayRef<int64_t> inputVectorSizes) {
-  // TODO: Support Memref PackOp. Temporarily return failure.
+  // Pack/unpack transformations operate at tensor level. The memref form is
+  // only for inline bufferization and scalar lowering, see #225650 for details.
   if (!packOp.hasPureTensorSemantics())
     return failure();
 

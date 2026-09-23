@@ -1130,7 +1130,9 @@ struct PackOpTiling
                          ArrayRef<OpFoldResult> offsets,
                          ArrayRef<OpFoldResult> sizes) const {
     auto packOp = cast<PackOp>(op);
-    // TODO: Support Memref PackOp. Temporarily return failure.
+    // Pack/unpack transformations operate at tensor level. The memref form is
+    // only for inline bufferization and scalar lowering, see #225650 for
+    // details.
     if (!packOp.hasPureTensorSemantics())
       return failure();
 
@@ -1505,7 +1507,9 @@ struct PackOpTiling
     ArrayRef<OpFoldResult> sizes(allSizes[0]);
 
     auto packOp = cast<PackOp>(op);
-    // TODO: Support Memref UnPackOp. Temporarily return failure.
+    // Pack/unpack transformations operate at tensor level. The memref form is
+    // only for inline bufferization and scalar lowering, see #225650 for
+    // details.
     if (!packOp.hasPureTensorSemantics())
       return failure();
 
@@ -1723,7 +1727,9 @@ struct UnPackOpTiling
       ArrayRef<OpFoldResult> sizes,
       ArrayRef<InnerTileAlignment> innerTileAlignments) const {
     auto unpackOp = cast<UnPackOp>(op);
-    // TODO: Support Memref UnPackOp. Temporarily return failure.
+    // Pack/unpack transformations operate at tensor level. The memref form is
+    // only for inline bufferization and scalar lowering, see #225650 for
+    // details.
     if (!unpackOp.hasPureTensorSemantics())
       return failure();
 
@@ -1976,7 +1982,9 @@ struct UnPackOpTiling
       return failure();
     }
     auto unPackOp = cast<UnPackOp>(op);
-    // TODO: Support Memref UnPackOp. Temporarily return failure.
+    // Pack/unpack transformations operate at tensor level. The memref form is
+    // only for inline bufferization and scalar lowering, see #225650 for
+    // details.
     if (!unPackOp.hasPureTensorSemantics())
       return failure();
 

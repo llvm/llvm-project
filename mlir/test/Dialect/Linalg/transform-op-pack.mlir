@@ -455,9 +455,47 @@ func.func @matmul_unsupported_memref_pack(%A: memref<?x?xf32>,
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
       %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-      // expected-error @below {{data tiling failed}}
+      // expected-error @below {{structured.pack only supports tensor semantics. The target has memref operands}}
       %1 = transform.structured.pack %0 packed_sizes = [2, 3, 4]
         : (!transform.any_op) -> (!transform.op<"linalg.generic">)
+        transform.yield
+  }
+}
+
+// -----
+
+func.func @pack_unsupported_memref_tile_using_for(%arg0: memref<128x256xf32>, %arg1: memref<4x8x32x32xf32>) {
+  // expected-note @below {{target op}}
+  linalg.pack %arg0 inner_dims_pos = [0, 1] inner_tiles = [32, 32] into %arg1
+    : memref<128x256xf32> -> memref<4x8x32x32xf32>
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+      %0 = transform.structured.match ops{["linalg.pack"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+      // expected-error @below {{tiling only supports tensor semantics for linalg.pack / linalg.unpack. The target has memref operands}}
+      %1, %loops:2 = transform.structured.tile_using_for %0 tile_sizes [2, 4]
+        : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+        transform.yield
+  }
+}
+
+// -----
+
+func.func @pack_unsupported_memref_tile_using_forall(%arg0: memref<128x256xf32>, %arg1: memref<4x8x32x32xf32>) {
+  // expected-note @below {{target op}}
+  linalg.pack %arg0 inner_dims_pos = [0, 1] inner_tiles = [32, 32] into %arg1
+    : memref<128x256xf32> -> memref<4x8x32x32xf32>
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+      %0 = transform.structured.match ops{["linalg.pack"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+      // expected-error @below {{tiling only supports tensor semantics for linalg.pack / linalg.unpack. The target has memref operands}}
+      %1:2 = transform.structured.tile_using_forall %0 num_threads [2, 4]
+        : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
         transform.yield
   }
 }

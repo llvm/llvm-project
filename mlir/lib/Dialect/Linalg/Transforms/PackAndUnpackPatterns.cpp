@@ -154,7 +154,9 @@ struct SimplifyPackToExpandShape : public OpRewritePattern<PackOp> {
                                 PatternRewriter &rewriter) const override {
     if (packOp.getPaddingValue())
       return rewriter.notifyMatchFailure(packOp, "expects no padding value");
-    // TODO: Support Memref PackOp. Temporarily return failure.
+    // Pack/unpack transformations operate at tensor level. The memref form is
+    // only for inline bufferization and scalar lowering, see #225650 for
+    // details.
     if (!packOp.hasPureTensorSemantics())
       return failure();
 
@@ -219,7 +221,9 @@ struct SimplifyUnPackToCollapseShape : public OpRewritePattern<UnPackOp> {
 
   LogicalResult matchAndRewrite(UnPackOp unpackOp,
                                 PatternRewriter &rewriter) const override {
-    // TODO: Support Memref UnPackOp. Temporarily return failure.
+    // Pack/unpack transformations operate at tensor level. The memref form is
+    // only for inline bufferization and scalar lowering, see #225650 for
+    // details.
     if (!unpackOp.hasPureTensorSemantics())
       return failure();
 
@@ -323,7 +327,9 @@ public:
     if (!unpackOp)
       return failure();
 
-    // TODO: Support Memref UnPackOp. Temporarily return failure.
+    // Pack/unpack transformations operate at tensor level. The memref form is
+    // only for inline bufferization and scalar lowering, see #225650 for
+    // details.
     if (!unpackOp.hasPureTensorSemantics())
       return failure();
 
@@ -389,7 +395,9 @@ public:
     if (!packOp)
       return failure();
 
-    // TODO: Support Memref PackOp. Temporarily return failure.
+    // Pack/unpack transformations operate at tensor level. The memref form is
+    // only for inline bufferization and scalar lowering, see #225650 for
+    // details.
     if (!packOp.hasPureTensorSemantics())
       return failure();
 
@@ -452,7 +460,9 @@ public:
 
   LogicalResult matchAndRewrite(PackOp packOp,
                                 PatternRewriter &rewriter) const override {
-    // TODO: Support Memref PackOp. Temporarily return failure.
+    // Pack/unpack transformations operate at tensor level. The memref form is
+    // only for inline bufferization and scalar lowering, see #225650 for
+    // details.
     if (!packOp.hasPureTensorSemantics())
       return failure();
 
@@ -517,7 +527,9 @@ public:
     if (!unPackOp)
       return failure();
 
-    // TODO: Support Memref UnPackOp. Temporarily return failure.
+    // Pack/unpack transformations operate at tensor level. The memref form is
+    // only for inline bufferization and scalar lowering, see #225650 for
+    // details.
     if (!unPackOp.hasPureTensorSemantics())
       return failure();
 
@@ -569,7 +581,9 @@ public:
 
   LogicalResult matchAndRewrite(UnPackOp unPackOp,
                                 PatternRewriter &rewriter) const override {
-    // TODO: Support Memref UnPackOp. Temporarily return failure.
+    // Pack/unpack transformations operate at tensor level. The memref form is
+    // only for inline bufferization and scalar lowering, see #225650 for
+    // details.
     if (!unPackOp.hasPureTensorSemantics())
       return failure();
 
@@ -637,7 +651,9 @@ struct FoldEmptyTensorWithPackOp : public OpRewritePattern<PackOp> {
 
   LogicalResult matchAndRewrite(PackOp packOp,
                                 PatternRewriter &rewriter) const override {
-    // TODO: Support Memref PackOp. Temporarily return failure.
+    // Pack/unpack transformations operate at tensor level. The memref form is
+    // only for inline bufferization and scalar lowering, see #225650 for
+    // details.
     if (!packOp.hasPureTensorSemantics())
       return failure();
 
@@ -665,7 +681,9 @@ struct FoldEmptyTensorWithUnPackOp : public OpRewritePattern<UnPackOp> {
 
   LogicalResult matchAndRewrite(UnPackOp unPackOp,
                                 PatternRewriter &rewriter) const override {
-    // TODO: Support Memref UnPackOp. Temporarily return failure.
+    // Pack/unpack transformations operate at tensor level. The memref form is
+    // only for inline bufferization and scalar lowering, see #225650 for
+    // details.
     if (!unPackOp.hasPureTensorSemantics())
       return failure();
 

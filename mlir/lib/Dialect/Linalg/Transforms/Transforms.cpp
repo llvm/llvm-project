@@ -221,7 +221,8 @@ private:
 FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
                                              linalg::PackOp packOp,
                                              bool lowerPadLikeWithInsertSlice) {
-  // TODO: Support Memref PackOp. Temporarily return failure.
+  // Pack/unpack transformations operate at tensor level. The memref form is
+  // only for inline bufferization and scalar lowering, see #225650 for details.
   if (!packOp.hasPureTensorSemantics())
     return failure();
 
@@ -355,7 +356,8 @@ FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
 FailureOr<LowerUnPackOpResult>
 linalg::lowerUnPack(RewriterBase &rewriter, linalg::UnPackOp unPackOp,
                     bool lowerUnpadLikeWithExtractSlice) {
-  // TODO: Support Memref UnPackOp. Temporarily return failure.
+  // Pack/unpack transformations operate at tensor level. The memref form is
+  // only for inline bufferization and scalar lowering, see #225650 for details.
   if (!unPackOp.hasPureTensorSemantics())
     return failure();
 
@@ -1044,7 +1046,8 @@ LogicalResult ExtractSliceOfPadTensorSwapPattern::matchAndRewrite(
 static Value getPackOpSourceOrPaddedSource(OpBuilder &builder,
                                            linalg::PackOp packOp) {
   Value input = packOp.getSource();
-  // TODO: Support Memref PackOp. Temporarily return just Op Source.
+  // Pack/unpack transformations operate at tensor level. The memref form is
+  // only for inline bufferization and scalar lowering, see #225650 for details.
   if (!packOp.hasPureTensorSemantics())
     return input;
 
@@ -1164,7 +1167,8 @@ getPackUnpackRankReducedPerm(ArrayRef<int64_t> shape,
 
 LogicalResult DecomposeOuterUnitDimsPackOpPattern::matchAndRewrite(
     linalg::PackOp packOp, PatternRewriter &rewriter) const {
-  // TODO: Support Memref PackOp. Temporarily return failure.
+  // Pack/unpack transformations operate at tensor level. The memref form is
+  // only for inline bufferization and scalar lowering, see #225650 for details.
   if (!packOp.hasPureTensorSemantics())
     return failure();
 
