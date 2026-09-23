@@ -12,9 +12,11 @@
 
 #include "llvm/IR/ProfDataUtils.h"
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
@@ -22,11 +24,405 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/xxhash.h"
+#include <optional>
 
 using namespace llvm;
 
 namespace llvm {
 extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+}
+
+static uint64_t getWaveProfileFunctionId(const Function &F) {
+  return xxh3_64bits(F.getName());
+}
+
+static const MDNode *getWaveProfileTable(const Function &F) {
+  SmallVector<MDNode *> Profiles;
+  F.getMetadata(LLVMContext::MD_wave_profile, Profiles);
+  if (F.isDeclaration() || Profiles.size() != 1)
+    return nullptr;
+  const MDNode *MD = Profiles.front();
+  if (MD->getNumOperands() < 3)
+    return nullptr;
+  for (const MDOperand &Op : MD->operands()) {
+    const auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(Op);
+    if (!CI || !CI->getType()->isIntegerTy(64))
+      return nullptr;
+  }
+  if (mdconst::extract<ConstantInt>(MD->getOperand(0))->getZExtValue() != 2 ||
+      mdconst::extract<ConstantInt>(MD->getOperand(1))->getZExtValue() !=
+          getWaveProfileFunctionId(F))
+    return nullptr;
+  return MD;
+}
+
+namespace {
+struct BlockWaveProfile {
+  uint64_t FunctionId;
+  uint64_t Id;
+  bool HasCount;
+  SmallVector<uint64_t, 2> Successors;
+};
+} // namespace
+
+static std::optional<BlockWaveProfile> getBlockWaveProfile(const MDNode *MD) {
+  if (!MD || MD->getNumOperands() < 4)
+    return std::nullopt;
+  for (const MDOperand &Op : MD->operands()) {
+    const auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(Op);
+    if (!CI || !CI->getType()->isIntegerTy(64))
+      return std::nullopt;
+  }
+  auto GetInt = [&](unsigned I) {
+    return mdconst::extract<ConstantInt>(MD->getOperand(I))->getZExtValue();
+  };
+  if (GetInt(0) != 2 || GetInt(3) > 1)
+    return std::nullopt;
+  BlockWaveProfile Profile{GetInt(1), GetInt(2), GetInt(3) != 0, {}};
+  for (unsigned I = 4, E = MD->getNumOperands(); I != E; ++I)
+    Profile.Successors.push_back(GetInt(I));
+  return Profile;
+}
+
+void llvm::swapBlockWaveCountSuccessors(CondBrInst &BI) {
+  MDNode *MD = BI.getMetadata(LLVMContext::MD_wave_profile_block);
+  std::optional<BlockWaveProfile> Profile = getBlockWaveProfile(MD);
+  if (!Profile || Profile->Successors.size() != 2)
+    return;
+  SmallVector<Metadata *> Ops(MD->op_begin(), MD->op_end());
+  std::swap(Ops[4], Ops[5]);
+  BI.setMetadata(LLVMContext::MD_wave_profile_block,
+                 MDNode::get(BI.getContext(), Ops));
+}
+
+void llvm::clearBlockWaveCounts(Function &F) {
+  F.setMetadata(LLVMContext::MD_wave_profile, nullptr);
+  for (BasicBlock &BB : F)
+    BB.getTerminator()->setMetadata(LLVMContext::MD_wave_profile_block,
+                                    nullptr);
+}
+
+static Metadata *getWaveProfileInt(LLVMContext &Context, uint64_t Value) {
+  return ConstantAsMetadata::get(
+      ConstantInt::get(Type::getInt64Ty(Context), Value));
+}
+
+static void writeWaveProfile(Function &F, ArrayRef<Metadata *> Table,
+                             const DenseMap<const BasicBlock *, unsigned> &Ids,
+                             const BitVector &HasCounts) {
+  LLVMContext &Context = F.getContext();
+  for (auto [Index, BB] : enumerate(F)) {
+    SmallVector<Metadata *> Ops{Table[0], Table[1],
+                                getWaveProfileInt(Context, Ids.lookup(&BB)),
+                                getWaveProfileInt(Context, HasCounts[Index])};
+    for (const BasicBlock *Succ : successors(&BB))
+      Ops.push_back(getWaveProfileInt(Context, Ids.lookup(Succ)));
+    BB.getTerminator()->setMetadata(LLVMContext::MD_wave_profile_block,
+                                    MDNode::get(Context, Ops));
+  }
+  // Every update invalidates older snapshots, even if only block records
+  // changed and their terminators are subsequently removed.
+  F.setMetadata(LLVMContext::MD_wave_profile,
+                MDNode::getDistinct(Context, Table));
+}
+
+void llvm::setBlockWaveCounts(Function &F, ArrayRef<uint64_t> Counts) {
+  BitVector HasCounts(Counts.size(), true);
+  setBlockWaveCounts(F, Counts, HasCounts);
+}
+
+void llvm::setBlockWaveCounts(Function &F, ArrayRef<uint64_t> Counts,
+                              const BitVector &HasCounts) {
+  assert(Counts.size() == F.size() && "one wave counter per IR block");
+  assert(HasCounts.size() == F.size() &&
+         "one wave-count validity bit per IR block");
+  assert(!Counts.empty() && HasCounts.test(0) &&
+         "entry wave count must be measured");
+  clearBlockWaveCounts(F);
+
+  LLVMContext &Context = F.getContext();
+  SmallVector<Metadata *> Table{
+      getWaveProfileInt(Context, 2),
+      getWaveProfileInt(Context, getWaveProfileFunctionId(F))};
+  for (uint64_t Count : Counts)
+    Table.push_back(getWaveProfileInt(Context, Count));
+
+  DenseMap<const BasicBlock *, unsigned> Ids;
+  for (const BasicBlock &BB : F)
+    Ids.try_emplace(&BB, Ids.size());
+  writeWaveProfile(F, Table, Ids, HasCounts);
+}
+
+bool llvm::extractBlockWaveCounts(const Function &F,
+                                  SmallVectorImpl<uint64_t> &Counts,
+                                  BitVector *HasCounts) {
+  Counts.clear();
+  if (HasCounts)
+    HasCounts->clear();
+  auto Fail = [&]() {
+    Counts.clear();
+    if (HasCounts)
+      HasCounts->clear();
+    return false;
+  };
+  const MDNode *MD = getWaveProfileTable(F);
+  if (!MD || MD->getNumOperands() != F.size() + 2)
+    return Fail();
+  const uint64_t FunctionId =
+      mdconst::extract<ConstantInt>(MD->getOperand(1))->getZExtValue();
+
+  SmallVector<const BasicBlock *> BlocksById(F.size());
+  SmallVector<BlockWaveProfile> BlockProfiles;
+  for (const BasicBlock &BB : F) {
+    auto Block = getBlockWaveProfile(
+        BB.getTerminator()->getMetadata(LLVMContext::MD_wave_profile_block));
+    if (!Block || Block->FunctionId != FunctionId ||
+        Block->Id >= BlocksById.size() || BlocksById[Block->Id])
+      return Fail();
+    BlocksById[Block->Id] = &BB;
+    BlockProfiles.push_back(std::move(*Block));
+  }
+  if (BlocksById[0] != &F.getEntryBlock())
+    return Fail();
+
+  BitVector ExtractedHasCounts;
+  for (auto [BB, Block] : zip(F, BlockProfiles)) {
+    if (Block.Successors.size() != BB.getTerminator()->getNumSuccessors())
+      return Fail();
+    for (auto [Succ, ExpectedId] : zip(successors(&BB), Block.Successors))
+      if (ExpectedId >= BlocksById.size() || BlocksById[ExpectedId] != Succ)
+        return Fail();
+    Counts.push_back(mdconst::extract<ConstantInt>(MD->getOperand(Block.Id + 2))
+                         ->getZExtValue());
+    ExtractedHasCounts.push_back(Block.HasCount);
+  }
+  if (!HasCounts && ExtractedHasCounts.count() != ExtractedHasCounts.size())
+    return Fail();
+  if (!ExtractedHasCounts.test(0))
+    return Fail();
+  if (HasCounts)
+    *HasCounts = std::move(ExtractedHasCounts);
+  return true;
+}
+
+namespace {
+struct WaveProfileMapping {
+  const MDNode *Table;
+  SmallVector<unsigned> BlockIds;
+  BitVector HasCounts;
+  BitVector DuplicateIds;
+
+  WaveProfileMapping(const MDNode *Table, unsigned NumBlocks)
+      : Table(Table), BlockIds(NumBlocks, Table->getNumOperands() - 2),
+        HasCounts(NumBlocks), DuplicateIds(Table->getNumOperands() - 2) {}
+};
+} // namespace
+
+static std::optional<WaveProfileMapping> mapBlockWaveCounts(const Function &F) {
+  const MDNode *MD = getWaveProfileTable(F);
+  if (!MD)
+    return std::nullopt;
+  const uint64_t FunctionId =
+      mdconst::extract<ConstantInt>(MD->getOperand(1))->getZExtValue();
+
+  const unsigned NumProfileBlocks = MD->getNumOperands() - 2;
+  WaveProfileMapping Result(MD, F.size());
+  SmallVector<std::optional<BlockWaveProfile>> BlockProfiles(F.size());
+  SmallVector<const BasicBlock *> BlocksById(NumProfileBlocks);
+  DenseMap<const BasicBlock *, unsigned> CurrentIndices;
+  for (auto [Index, BB] : enumerate(F)) {
+    CurrentIndices.try_emplace(&BB, Index);
+    const MDNode *BlockMD =
+        BB.getTerminator()->getMetadata(LLVMContext::MD_wave_profile_block);
+    if (!BlockMD)
+      continue;
+    auto Block = getBlockWaveProfile(BlockMD);
+    if (!Block || Block->FunctionId != FunctionId ||
+        Block->Id >= NumProfileBlocks)
+      return std::nullopt;
+    unsigned BlockId = Block->Id;
+    BlockProfiles[Index] = std::move(Block);
+    Result.BlockIds[Index] = BlockId;
+    if (BlocksById[BlockId])
+      Result.DuplicateIds.set(BlockId);
+    else
+      BlocksById[BlockId] = &BB;
+  }
+
+  for (auto [Index, BB] : enumerate(F)) {
+    const auto &Block = BlockProfiles[Index];
+    if (!Block || Result.DuplicateIds.test(Result.BlockIds[Index]))
+      continue;
+    Result.HasCounts[Index] = Block->HasCount;
+  }
+
+  // A changed edge makes the source count and both the old and new target
+  // counts ambiguous. Invalidate that local neighborhood while retaining
+  // independent blocks whose recorded execution event still matches.
+  auto Invalidate = [&](const BasicBlock *BB) {
+    auto It = CurrentIndices.find(BB);
+    if (It != CurrentIndices.end())
+      Result.HasCounts.reset(It->second);
+  };
+  for (auto [Index, BB] : enumerate(F)) {
+    const auto &Block = BlockProfiles[Index];
+    if (!Block || Result.DuplicateIds.test(Result.BlockIds[Index])) {
+      for (const BasicBlock *Succ : successors(&BB))
+        Invalidate(Succ);
+      continue;
+    }
+
+    if (Block->Successors.size() != BB.getTerminator()->getNumSuccessors()) {
+      Result.HasCounts.reset(Index);
+      for (const BasicBlock *Succ : successors(&BB))
+        Invalidate(Succ);
+      for (uint64_t OldSuccId : Block->Successors) {
+        if (OldSuccId < BlocksById.size() &&
+            !Result.DuplicateIds.test(OldSuccId))
+          Invalidate(BlocksById[OldSuccId]);
+      }
+      continue;
+    }
+
+    for (auto [Succ, OldSuccId] : zip(successors(&BB), Block->Successors)) {
+      auto Current = CurrentIndices.find(Succ);
+      unsigned SuccId = Current == CurrentIndices.end()
+                            ? NumProfileBlocks
+                            : Result.BlockIds[Current->second];
+      if (SuccId < NumProfileBlocks && !Result.DuplicateIds.test(SuccId) &&
+          OldSuccId == SuccId)
+        continue;
+
+      Result.HasCounts.reset(Index);
+      Invalidate(Succ);
+      if (OldSuccId < BlocksById.size() && !Result.DuplicateIds.test(OldSuccId))
+        Invalidate(BlocksById[OldSuccId]);
+    }
+  }
+
+  if (Result.DuplicateIds.test(0))
+    return std::nullopt;
+  if (const BasicBlock *OriginalEntry = BlocksById[0]) {
+    unsigned EntryIndex = CurrentIndices.lookup(OriginalEntry);
+    if (!BlockProfiles[EntryIndex]->HasCount)
+      return std::nullopt;
+  }
+  return Result;
+}
+
+bool llvm::extractMappedBlockWaveCounts(const Function &F,
+                                        SmallVectorImpl<uint64_t> &Counts,
+                                        BitVector &HasCounts,
+                                        uint64_t &EntryCount) {
+  Counts.clear();
+  HasCounts.clear();
+  EntryCount = 0;
+  auto Mapping = mapBlockWaveCounts(F);
+  if (!Mapping)
+    return false;
+
+  unsigned NumProfileBlocks = Mapping->Table->getNumOperands() - 2;
+  for (unsigned Id : Mapping->BlockIds)
+    Counts.push_back(
+        Id < NumProfileBlocks && !Mapping->DuplicateIds.test(Id)
+            ? mdconst::extract<ConstantInt>(Mapping->Table->getOperand(Id + 2))
+                  ->getZExtValue()
+            : 0);
+  HasCounts = std::move(Mapping->HasCounts);
+  EntryCount = mdconst::extract<ConstantInt>(Mapping->Table->getOperand(2))
+                   ->getZExtValue();
+  return true;
+}
+
+// Wave records contain only constants. Save their operands by value because a
+// tracking reference follows in-place edits rather than preserving old values.
+static bool hasWaveProfileOperands(const MDNode *MD,
+                                   ArrayRef<Metadata *> Operands) {
+  return MD && equal(MD->operands(), Operands,
+                     [](const MDOperand &Op, Metadata *Saved) {
+                       return Op.get() == Saved;
+                     });
+}
+
+BlockWaveCountPreserver::BlockWaveCountPreserver(Function &F) : F(F) {
+  auto Mapping = mapBlockWaveCounts(F);
+  if (!Mapping)
+    return;
+  Profile.reset(F.getMetadata(LLVMContext::MD_wave_profile));
+  ProfileOperands.assign(Profile->op_begin(), Profile->op_end());
+  for (auto [Index, BB] : enumerate(F)) {
+    Instruction *Term = BB.getTerminator();
+    MDNode *MD = Term->getMetadata(LLVMContext::MD_wave_profile_block);
+    SmallVector<Metadata *, 6> Operands;
+    if (MD)
+      Operands.assign(MD->op_begin(), MD->op_end());
+    Blocks.push_back({&BB, Term, TrackingMDNodeRef(MD), std::move(Operands),
+                      Mapping->BlockIds[Index], Mapping->HasCounts[Index]});
+  }
+}
+
+void BlockWaveCountPreserver::invalidate(const BasicBlock &BB) {
+  for (BlockProfile &Block : Blocks)
+    if (Block.Block == &BB) {
+      Block.HasCount = false;
+      Invalidated = true;
+    }
+}
+
+void BlockWaveCountPreserver::restore() {
+  TrackingMDNodeRef SavedProfile(std::move(Profile));
+  if (!SavedProfile)
+    return;
+  auto Abandon = [&]() {
+    // Skipping reconstruction must not leave invalidated counts readable.
+    if (Invalidated)
+      clearBlockWaveCounts(F);
+  };
+  if (getWaveProfileTable(F) != SavedProfile ||
+      !hasWaveProfileOperands(SavedProfile, ProfileOperands))
+    return Abandon();
+
+  DenseMap<const BasicBlock *, const BlockProfile *> Saved;
+  for (const BlockProfile &Block : Blocks) {
+    Value *V = Block.Block;
+    auto *BB = dyn_cast_or_null<BasicBlock>(V);
+    if (!BB || BB->getParent() != &F)
+      continue;
+    if (Block.Metadata &&
+        !hasWaveProfileOperands(Block.Metadata, Block.Operands))
+      return Abandon();
+    Instruction *Term = BB->getTerminator();
+    MDNode *MD = Term->getMetadata(LLVMContext::MD_wave_profile_block);
+    // Missing metadata is expected on a replacement terminator, but clearing
+    // metadata on a surviving terminator is an independent invalidation.
+    if (MD != Block.Metadata && (MD || Term == Block.Terminator))
+      return Abandon();
+    Saved.try_emplace(BB, &Block);
+  }
+
+  SmallVector<Metadata *> Table(SavedProfile->op_begin(),
+                                SavedProfile->op_end());
+  unsigned NumOriginalIds = Table.size() - 2;
+  BitVector UsedIds(NumOriginalIds);
+  DenseMap<const BasicBlock *, unsigned> Ids;
+  BitVector HasCounts;
+  for (const BasicBlock &BB : F) {
+    const BlockProfile *Block = Saved.lookup(&BB);
+    unsigned Id = Block ? Block->Id : NumOriginalIds;
+    // ID zero owns the normalization count. An invalid current block must not
+    // turn that anchor into an unmeasured count.
+    if (Id >= NumOriginalIds || UsedIds[Id] || (Id == 0 && !Block->HasCount)) {
+      Id = Table.size() - 2;
+      Table.push_back(getWaveProfileInt(F.getContext(), 0));
+    } else {
+      UsedIds.set(Id);
+    }
+    Ids[&BB] = Id;
+    HasCounts.push_back(Block && Block->HasCount);
+  }
+
+  writeWaveProfile(F, Table, Ids, HasCounts);
 }
 
 // MD_prof nodes have the following layout

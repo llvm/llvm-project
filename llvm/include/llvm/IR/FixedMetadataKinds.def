@@ -71,3 +71,5 @@ LLVM_FIXED_MD_KIND(MD_atomic_ignore_denormal_mode, "atomic.ignore.denormal.mode"
 LLVM_FIXED_MD_KIND(MD_branch_uniformity_profile, "branch.uniformity.profile",
                    57)
 LLVM_FIXED_MD_KIND(MD_uniformity_profile, "uniformity.profile", 58)
+LLVM_FIXED_MD_KIND(MD_wave_profile, "wave.profile", 59)
+LLVM_FIXED_MD_KIND(MD_wave_profile_block, "wave.profile.block", 60)

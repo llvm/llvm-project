@@ -15,15 +15,19 @@
 #ifndef LLVM_IR_PROFDATAUTILS_H
 #define LLVM_IR_PROFDATAUTILS_H
 
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/TrackingMDRef.h"
+#include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include <cstddef>
 #include <type_traits>
 
 namespace llvm {
+class CondBrInst;
 struct MDProfLabels {
   LLVM_ABI static const char *BranchWeights;
   LLVM_ABI static const char *ValueProfile;
@@ -34,6 +38,76 @@ struct MDProfLabels {
 };
 
 extern LLVM_ABI cl::opt<bool> ProfcheckDisableMetadataFixes;
+
+/// Attach direct wave visits to stable block identities. These counts do not
+/// obey scalar flow conservation. The original entry count must be measured.
+LLVM_ABI void setBlockWaveCounts(Function &F, ArrayRef<uint64_t> Counts);
+
+/// Attach direct wave visits and identify which blocks have measured counts.
+/// Unmeasured blocks use a zero placeholder in \p Counts and must be ignored by
+/// consumers.
+LLVM_ABI void setBlockWaveCounts(Function &F, ArrayRef<uint64_t> Counts,
+                                 const BitVector &HasCounts);
+
+/// Remove direct wave visits and their block identities.
+LLVM_ABI void clearBlockWaveCounts(Function &F);
+
+/// Extract wave visits in current function block order when every recorded
+/// block identity and control-flow edge still matches. If \p HasCounts is
+/// provided, it identifies measured blocks; otherwise profiles containing an
+/// unmeasured block are rejected. Clear outputs and return false for missing,
+/// stale, or unsupported metadata.
+LLVM_ABI bool extractBlockWaveCounts(const Function &F,
+                                     SmallVectorImpl<uint64_t> &Counts,
+                                     BitVector *HasCounts = nullptr);
+
+/// Extract wave visits for the subset of current blocks whose recorded
+/// identity and local control flow remain unambiguous. Missing, duplicated, or
+/// redirected blocks are returned as unmeasured instead of rejecting the
+/// complete function profile. \p EntryCount remains valid as the function
+/// invocation count even if the original entry block no longer exists. It is
+/// separate from the current entry block's mapped count and is required to
+/// normalize the other block counts.
+LLVM_ABI bool extractMappedBlockWaveCounts(const Function &F,
+                                           SmallVectorImpl<uint64_t> &Counts,
+                                           BitVector &HasCounts,
+                                           uint64_t &EntryCount);
+
+/// Update the recorded successor order after swapping a conditional branch's
+/// successors. Ignore malformed or unsupported block metadata.
+LLVM_ABI void swapBlockWaveCountSuccessors(CondBrInst &BI);
+
+/// Preserve validated wave counts across a CFG rewrite that retains the
+/// execution events of existing blocks. Call invalidate() for a surviving
+/// block whose executions change, then restore() after completing the rewrite.
+/// New blocks acquire unmeasured identities; previously invalid counts are
+/// never made valid. The original normalization count and identity space remain
+/// intact, including when the original entry has disappeared. A snapshot is
+/// consumed by restore(). Later helper updates and direct metadata edits take
+/// precedence; if restoration conflicts with pending invalidations, the whole
+/// profile is cleared. Missing metadata on replacement terminators is restored.
+/// Call invalidate() before discarding an independently edited block record;
+/// restoration cannot observe an attachment that has already been removed.
+class LLVM_ABI BlockWaveCountPreserver {
+  struct BlockProfile {
+    WeakVH Block;
+    WeakVH Terminator;
+    TrackingMDNodeRef Metadata;
+    SmallVector<llvm::Metadata *, 6> Operands;
+    unsigned Id;
+    bool HasCount;
+  };
+  Function &F;
+  TrackingMDNodeRef Profile;
+  SmallVector<Metadata *, 8> ProfileOperands;
+  SmallVector<BlockProfile> Blocks;
+  bool Invalidated = false;
+
+public:
+  explicit BlockWaveCountPreserver(Function &F);
+  void invalidate(const BasicBlock &BB);
+  void restore();
+};
 
 /// Profile-based loop metadata that should be accessed only by using
 /// \c llvm::getLoopEstimatedTripCount and \c llvm::setLoopEstimatedTripCount.
