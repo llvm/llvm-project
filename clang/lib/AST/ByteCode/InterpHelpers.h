@@ -76,6 +76,8 @@ inline bool CheckMutable(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 /// Checks if a value can be loaded from a block.
 bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                AccessKinds AK = AK_Read);
+bool CheckLoad(InterpState &S, CodePtr OpPC, PtrView Ptr,
+               AccessKinds AK = AK_Read);
 
 /// Diagnose mismatched new[]/delete or new/delete[] pairs.
 bool CheckNewDeleteForms(InterpState &S, CodePtr OpPC,

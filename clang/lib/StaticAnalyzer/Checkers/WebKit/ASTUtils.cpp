@@ -14,6 +14,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
 #include <optional>
 #include <utility>
 
@@ -24,14 +25,102 @@ bool isSafePtr(clang::CXXRecordDecl *Decl) {
 }
 
 static bool tryToFindPtrOriginImpl(
-    const Expr *E, bool StopAtFirstRefCountedObj,
+    const Expr *E, bool StopAtFirstRefCountedObj, bool FollowLifetimeBound,
     std::function<bool(const clang::CXXRecordDecl *)> isSafePtr,
     std::function<bool(const clang::QualType)> isSafePtrType,
     std::function<bool(const clang::Decl *)> isSafeGlobalDecl,
     std::function<bool(const clang::Expr *, bool /*IsSafe*/,
-                       bool /*OriginDependsOnFullExpressionTemporary*/)>
+                       bool /*OriginDependsOnFullExpressionTemporary*/,
+                       bool /*PtrIsLifetimeBoundToOrigin*/)>
         callback,
-    bool OriginDependsOnFullExpressionTemporary) {
+    bool OriginDependsOnFullExpressionTemporary,
+    bool PtrIsLifetimeBoundToOrigin);
+
+namespace {
+
+/// Collects the entries of \p Args that \p Callee declares
+/// [[clang::lifetimebound]].
+void findLifetimeBoundArgs(const FunctionDecl *Callee,
+                           ArrayRef<const Expr *> Args,
+                           SmallVectorImpl<const Expr *> &BoundArgs) {
+  if (!Callee)
+    return;
+  const FunctionDecl *Canon =
+      lifetimes::getDeclWithMergedLifetimeBoundAttrs(Callee);
+  unsigned Count = std::min<unsigned>(Canon->getNumParams(), Args.size());
+  for (unsigned I = 0; I < Count; ++I) {
+    if (Canon->getParamDecl(I)->hasAttr<LifetimeBoundAttr>())
+      BoundArgs.push_back(Args[I]);
+  }
+}
+
+/// Collects the arguments that \p Construct declares [[clang::lifetimebound]].
+void findLifetimeBoundArgs(const CXXConstructExpr *Construct,
+                           SmallVectorImpl<const Expr *> &BoundArgs) {
+  findLifetimeBoundArgs(
+      Construct->getConstructor(),
+      ArrayRef<const Expr *>(Construct->getArgs(), Construct->getNumArgs()),
+      BoundArgs);
+}
+
+/// Collects the arguments that \p Call declares [[clang::lifetimebound]],
+/// including the implicit 'this' argument.
+void findLifetimeBoundArgs(const CallExpr *Call,
+                           SmallVectorImpl<const Expr *> &BoundArgs) {
+  const FunctionDecl *Callee = Call->getDirectCallee();
+
+  const Expr *ObjectArg = nullptr;
+  unsigned ArgOffset = 0;
+  if (isa<CXXOperatorCallExpr>(Call) && Callee &&
+      Callee->isCXXInstanceMember() && Call->getNumArgs()) {
+    ObjectArg = Call->getArg(0);
+    ArgOffset = 1;
+  } else if (auto *MemberCall = dyn_cast<CXXMemberCallExpr>(Call))
+    ObjectArg = MemberCall->getImplicitObjectArgument();
+
+  if (auto *MD = dyn_cast_or_null<CXXMethodDecl>(Callee)) {
+    if (ObjectArg && lifetimes::implicitObjectParamIsLifetimeBound(MD))
+      BoundArgs.push_back(ObjectArg);
+  }
+
+  findLifetimeBoundArgs(Callee,
+                        ArrayRef<const Expr *>(Call->getArgs() + ArgOffset,
+                                               Call->getNumArgs() - ArgOffset),
+                        BoundArgs);
+}
+
+/// Traces each of \p Args independently and requires every one to be safe.
+bool tryToFindPtrOriginOfEach(
+    ArrayRef<const Expr *> Args, bool StopAtFirstRefCountedObj,
+    const std::function<bool(const clang::CXXRecordDecl *)> &isSafePtr,
+    const std::function<bool(const clang::QualType)> &isSafePtrType,
+    const std::function<bool(const clang::Decl *)> &isSafeGlobalDecl,
+    const std::function<bool(const clang::Expr *, bool, bool, bool)> &callback,
+    bool OriginDependsOnFullExpressionTemporary,
+    bool PtrIsLifetimeBoundToOrigin) {
+  for (const Expr *Arg : Args) {
+    if (!tryToFindPtrOriginImpl(
+            Arg, StopAtFirstRefCountedObj, /*FollowLifetimeBound=*/true,
+            isSafePtr, isSafePtrType, isSafeGlobalDecl, callback,
+            OriginDependsOnFullExpressionTemporary, PtrIsLifetimeBoundToOrigin))
+      return false;
+  }
+  return true;
+}
+
+} // namespace
+
+static bool tryToFindPtrOriginImpl(
+    const Expr *E, bool StopAtFirstRefCountedObj, bool FollowLifetimeBound,
+    std::function<bool(const clang::CXXRecordDecl *)> isSafePtr,
+    std::function<bool(const clang::QualType)> isSafePtrType,
+    std::function<bool(const clang::Decl *)> isSafeGlobalDecl,
+    std::function<bool(const clang::Expr *, bool /*IsSafe*/,
+                       bool /*OriginDependsOnFullExpressionTemporary*/,
+                       bool /*PtrIsLifetimeBoundToOrigin*/)>
+        callback,
+    bool OriginDependsOnFullExpressionTemporary,
+    bool PtrIsLifetimeBoundToOrigin) {
   while (E) {
     if (auto *DRE = dyn_cast<DeclRefExpr>(E)) {
       if (auto *VD = dyn_cast_or_null<VarDecl>(DRE->getDecl())) {
@@ -39,10 +128,19 @@ static bool tryToFindPtrOriginImpl(
         auto IsImmortal = safeGetName(VD) == "NSApp";
         if (VD->hasGlobalStorage() && (IsImmortal || QT.isConstQualified()))
           return callback(E, /*IsSafe=*/true,
-                          OriginDependsOnFullExpressionTemporary);
+                          OriginDependsOnFullExpressionTemporary,
+                          PtrIsLifetimeBoundToOrigin);
         if (VD->hasGlobalStorage() && isSafeGlobalDecl(VD))
           return callback(E, /*IsSafe=*/true,
-                          OriginDependsOnFullExpressionTemporary);
+                          OriginDependsOnFullExpressionTemporary,
+                          PtrIsLifetimeBoundToOrigin);
+
+        if (FollowLifetimeBound && VD->isImplicit() && VD->isLocalVarDecl()) {
+          if (auto *Init = VD->getInit()) {
+            E = Init;
+            continue;
+          }
+        }
       }
     }
     if (auto *Cleanups = dyn_cast<ExprWithCleanups>(E)) {
@@ -63,14 +161,33 @@ static bool tryToFindPtrOriginImpl(
       if (auto *C = tempExpr->getConstructor()) {
         if (auto *Class = C->getParent(); Class && isSafePtr(Class))
           return callback(E, /*IsSafe=*/true,
-                          OriginDependsOnFullExpressionTemporary);
+                          OriginDependsOnFullExpressionTemporary,
+                          PtrIsLifetimeBoundToOrigin);
+
+        if (FollowLifetimeBound) {
+          SmallVector<const Expr *, 2> BoundArgs;
+          findLifetimeBoundArgs(tempExpr, BoundArgs);
+          if (!BoundArgs.empty())
+            PtrIsLifetimeBoundToOrigin = true;
+          if (BoundArgs.size() == 1) {
+            E = BoundArgs.front();
+            continue;
+          }
+          if (BoundArgs.size() > 1)
+            return tryToFindPtrOriginOfEach(
+                BoundArgs, StopAtFirstRefCountedObj, isSafePtr, isSafePtrType,
+                isSafeGlobalDecl, callback,
+                OriginDependsOnFullExpressionTemporary,
+                PtrIsLifetimeBoundToOrigin);
+        }
         break;
       }
     }
     if (auto *TempExpr = dyn_cast<CXXUnresolvedConstructExpr>(E)) {
       if (isSafePtrType(TempExpr->getTypeAsWritten()))
         return callback(TempExpr, /*IsSafe=*/true,
-                        OriginDependsOnFullExpressionTemporary);
+                        OriginDependsOnFullExpressionTemporary,
+                        PtrIsLifetimeBoundToOrigin);
     }
     if (auto *POE = dyn_cast<PseudoObjectExpr>(E)) {
       if (auto *RF = POE->getResultExpr()) {
@@ -88,13 +205,17 @@ static bool tryToFindPtrOriginImpl(
     }
     if (auto *Expr = dyn_cast<ConditionalOperator>(E)) {
       return tryToFindPtrOriginImpl(Expr->getTrueExpr(),
-                                    StopAtFirstRefCountedObj, isSafePtr,
+                                    StopAtFirstRefCountedObj,
+                                    FollowLifetimeBound, isSafePtr,
                                     isSafePtrType, isSafeGlobalDecl, callback,
-                                    OriginDependsOnFullExpressionTemporary) &&
+                                    OriginDependsOnFullExpressionTemporary,
+                                    PtrIsLifetimeBoundToOrigin) &&
              tryToFindPtrOriginImpl(Expr->getFalseExpr(),
-                                    StopAtFirstRefCountedObj, isSafePtr,
+                                    StopAtFirstRefCountedObj,
+                                    FollowLifetimeBound, isSafePtr,
                                     isSafePtrType, isSafeGlobalDecl, callback,
-                                    OriginDependsOnFullExpressionTemporary);
+                                    OriginDependsOnFullExpressionTemporary,
+                                    PtrIsLifetimeBoundToOrigin);
     }
     if (auto *cast = dyn_cast<CastExpr>(E)) {
       if (StopAtFirstRefCountedObj) {
@@ -102,11 +223,13 @@ static bool tryToFindPtrOriginImpl(
                 dyn_cast_or_null<FunctionDecl>(cast->getConversionFunction())) {
           if (isCtorOfSafePtr(ConversionFunc))
             return callback(E, /*IsSafe=*/true,
-                            OriginDependsOnFullExpressionTemporary);
+                            OriginDependsOnFullExpressionTemporary,
+                            PtrIsLifetimeBoundToOrigin);
         }
         if (isa<CXXFunctionalCastExpr>(E) && isSafePtrType(cast->getType()))
           return callback(E, /*IsSafe=*/true,
-                          OriginDependsOnFullExpressionTemporary);
+                          OriginDependsOnFullExpressionTemporary,
+                          PtrIsLifetimeBoundToOrigin);
       }
       // FIXME: This can give false "origin" that would lead to false negatives
       // in checkers. See https://reviews.llvm.org/D37023 for reference.
@@ -119,13 +242,15 @@ static bool tryToFindPtrOriginImpl(
             Callee->hasAttr<NSReturnsRetainedAttr>() ||
             Callee->hasAttr<NSReturnsAutoreleasedAttr>()) {
           return callback(E, /*IsSafe=*/true,
-                          OriginDependsOnFullExpressionTemporary);
+                          OriginDependsOnFullExpressionTemporary,
+                          PtrIsLifetimeBoundToOrigin);
         }
       }
 
       if (isSafePtrType(call->getType()))
         return callback(E, /*IsSafe=*/true,
-                        OriginDependsOnFullExpressionTemporary);
+                        OriginDependsOnFullExpressionTemporary,
+                        PtrIsLifetimeBoundToOrigin);
 
       if (auto *memberCall = dyn_cast<CXXMemberCallExpr>(call)) {
         if (auto *decl = memberCall->getMethodDecl()) {
@@ -134,7 +259,8 @@ static bool tryToFindPtrOriginImpl(
             E = memberCall->getImplicitObjectArgument();
             if (StopAtFirstRefCountedObj) {
               return callback(E, /*IsSafe=*/true,
-                              OriginDependsOnFullExpressionTemporary);
+                              OriginDependsOnFullExpressionTemporary,
+                              PtrIsLifetimeBoundToOrigin);
             }
             continue;
           }
@@ -164,7 +290,8 @@ static bool tryToFindPtrOriginImpl(
         if (isCtorOfSafePtr(callee)) {
           if (StopAtFirstRefCountedObj)
             return callback(E, /*IsSafe=*/true,
-                            OriginDependsOnFullExpressionTemporary);
+                            OriginDependsOnFullExpressionTemporary,
+                            PtrIsLifetimeBoundToOrigin);
 
           E = call->getArg(0);
           continue;
@@ -177,11 +304,13 @@ static bool tryToFindPtrOriginImpl(
 
         if (isSafePtrType(callee->getReturnType()))
           return callback(E, /*IsSafe=*/true,
-                          OriginDependsOnFullExpressionTemporary);
+                          OriginDependsOnFullExpressionTemporary,
+                          PtrIsLifetimeBoundToOrigin);
 
         if (isSingleton(callee))
           return callback(E, /*IsSafe=*/true,
-                          OriginDependsOnFullExpressionTemporary);
+                          OriginDependsOnFullExpressionTemporary,
+                          PtrIsLifetimeBoundToOrigin);
 
         if (callee->isInStdNamespace() && safeGetName(callee) == "forward") {
           E = call->getArg(0);
@@ -199,12 +328,14 @@ static bool tryToFindPtrOriginImpl(
             Name == "NSStringFromClass" || Name == "NSClassFromString" ||
             Name == "NSStringFromProtocol" || Name == "NSProtocolFromString")
           return callback(E, /*IsSafe=*/true,
-                          OriginDependsOnFullExpressionTemporary);
+                          OriginDependsOnFullExpressionTemporary,
+                          PtrIsLifetimeBoundToOrigin);
       } else if (auto *CalleeE = call->getCallee()) {
         if (auto *E = dyn_cast<DeclRefExpr>(CalleeE->IgnoreParenCasts())) {
           if (isSingleton(E->getFoundDecl()))
             return callback(E, /*IsSafe=*/true,
-                            OriginDependsOnFullExpressionTemporary);
+                            OriginDependsOnFullExpressionTemporary,
+                            PtrIsLifetimeBoundToOrigin);
         }
 
         if (auto *MemberExpr = dyn_cast<CXXDependentScopeMemberExpr>(CalleeE)) {
@@ -213,7 +344,8 @@ static bool tryToFindPtrOriginImpl(
           bool IsGetter = MemberName == "get" || MemberName == "ptr";
           if (Base && isSafePtrType(Base->getType()) && IsGetter)
             return callback(E, /*IsSafe=*/true,
-                            OriginDependsOnFullExpressionTemporary);
+                            OriginDependsOnFullExpressionTemporary,
+                            PtrIsLifetimeBoundToOrigin);
         }
       }
 
@@ -229,38 +361,62 @@ static bool tryToFindPtrOriginImpl(
                 if (auto *CXX = dyn_cast<CXXRecordDecl>(RD->getDecl()))
                   if (isSafePtr(CXX))
                     return callback(E, /*IsSafe=*/true,
-                                    OriginDependsOnFullExpressionTemporary);
+                                    OriginDependsOnFullExpressionTemporary,
+                                    PtrIsLifetimeBoundToOrigin);
               }
             }
           }
         }
+      }
+
+      if (FollowLifetimeBound) {
+        SmallVector<const Expr *, 2> BoundArgs;
+        findLifetimeBoundArgs(call, BoundArgs);
+        if (!BoundArgs.empty())
+          PtrIsLifetimeBoundToOrigin = true;
+        if (BoundArgs.size() == 1) {
+          E = BoundArgs.front();
+          continue;
+        }
+        if (BoundArgs.size() > 1)
+          return tryToFindPtrOriginOfEach(
+              BoundArgs, StopAtFirstRefCountedObj, isSafePtr, isSafePtrType,
+              isSafeGlobalDecl, callback,
+              OriginDependsOnFullExpressionTemporary,
+              PtrIsLifetimeBoundToOrigin);
       }
     }
     if (auto *ObjCMsgExpr = dyn_cast<ObjCMessageExpr>(E)) {
       if (auto *Method = ObjCMsgExpr->getMethodDecl()) {
         if (isSafePtrType(Method->getReturnType()))
           return callback(E, /*IsSafe=*/true,
-                          OriginDependsOnFullExpressionTemporary);
+                          OriginDependsOnFullExpressionTemporary,
+                          PtrIsLifetimeBoundToOrigin);
       }
       auto Selector = ObjCMsgExpr->getSelector();
       auto NameForFirstSlot = Selector.getNameForSlot(0);
       if ((NameForFirstSlot == "class" || NameForFirstSlot == "superclass") &&
           !Selector.getNumArgs())
         return callback(E, /*IsSafe=*/true,
-                        OriginDependsOnFullExpressionTemporary);
+                        OriginDependsOnFullExpressionTemporary,
+                        PtrIsLifetimeBoundToOrigin);
     }
     if (auto *ObjCProtocol = dyn_cast<ObjCProtocolExpr>(E))
       return callback(ObjCProtocol, /*IsSafe=*/true,
-                      OriginDependsOnFullExpressionTemporary);
+                      OriginDependsOnFullExpressionTemporary,
+                      PtrIsLifetimeBoundToOrigin);
     if (auto *ObjCDict = dyn_cast<ObjCDictionaryLiteral>(E))
       return callback(ObjCDict, /*IsSafe=*/true,
-                      OriginDependsOnFullExpressionTemporary);
+                      OriginDependsOnFullExpressionTemporary,
+                      PtrIsLifetimeBoundToOrigin);
     if (auto *ObjCArray = dyn_cast<ObjCArrayLiteral>(E))
       return callback(ObjCArray, /*IsSafe=*/true,
-                      OriginDependsOnFullExpressionTemporary);
+                      OriginDependsOnFullExpressionTemporary,
+                      PtrIsLifetimeBoundToOrigin);
     if (auto *ObjCStr = dyn_cast<ObjCStringLiteral>(E))
       return callback(ObjCStr, /*IsSafe=*/true,
-                      OriginDependsOnFullExpressionTemporary);
+                      OriginDependsOnFullExpressionTemporary,
+                      PtrIsLifetimeBoundToOrigin);
     if (auto *unaryOp = dyn_cast<UnaryOperator>(E)) {
       // FIXME: Currently accepts ANY unary operator. Is it OK?
       E = unaryOp->getSubExpr();
@@ -269,29 +425,33 @@ static bool tryToFindPtrOriginImpl(
     if (auto *BoxedExpr = dyn_cast<ObjCBoxedExpr>(E)) {
       if (StopAtFirstRefCountedObj)
         return callback(BoxedExpr, /*IsSafe=*/true,
-                        OriginDependsOnFullExpressionTemporary);
+                        OriginDependsOnFullExpressionTemporary,
+                        PtrIsLifetimeBoundToOrigin);
       E = BoxedExpr->getSubExpr();
       continue;
     }
     break;
   }
   // Some other expression.
-  return callback(E, /*IsSafe=*/false, OriginDependsOnFullExpressionTemporary);
+  return callback(E, /*IsSafe=*/false, OriginDependsOnFullExpressionTemporary,
+                  PtrIsLifetimeBoundToOrigin);
 }
 
 bool tryToFindPtrOrigin(
-    const Expr *E, bool StopAtFirstRefCountedObj,
+    const Expr *E, bool StopAtFirstRefCountedObj, bool FollowLifetimeBound,
     std::function<bool(const clang::CXXRecordDecl *)> isSafePtr,
     std::function<bool(const clang::QualType)> isSafePtrType,
     std::function<bool(const clang::Decl *)> isSafeGlobalDecl,
     std::function<bool(const clang::Expr *, bool /*IsSafe*/,
-                       bool /*OriginDependsOnFullExpressionTemporary*/)>
+                       bool /*OriginDependsOnFullExpressionTemporary*/,
+                       bool /*PtrIsLifetimeBoundToOrigin*/)>
         callback) {
   return tryToFindPtrOriginImpl(
-      E, StopAtFirstRefCountedObj, std::move(isSafePtr),
+      E, StopAtFirstRefCountedObj, FollowLifetimeBound, std::move(isSafePtr),
       std::move(isSafePtrType), std::move(isSafeGlobalDecl),
       std::move(callback),
-      /*OriginDependsOnFullExpressionTemporary=*/false);
+      /*OriginDependsOnFullExpressionTemporary=*/false,
+      /*PtrIsLifetimeBoundToOrigin=*/false);
 }
 
 bool isASafeCallArg(const Expr *E) {

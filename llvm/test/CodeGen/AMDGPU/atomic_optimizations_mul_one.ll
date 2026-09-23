@@ -23,8 +23,7 @@ define amdgpu_cs void @atomic_add_i32_constant_1(<4 x i32> inreg %arg)  {
 ; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
 ; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
-; IR-NEXT:    [[TMP6:%.*]] = call i64 @llvm.ctpop.i64(i64 [[TMP0]])
-; IR-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i32
+; IR-NEXT:    [[TMP7:%.*]] = call i32 @llvm.amdgcn.wave.reduce.add.i32(i32 1, i32 1)
 ; IR-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP8]], label %[[BB9:.*]], label %[[BB11:.*]]
 ; IR:       [[BB9]]:
@@ -35,14 +34,14 @@ define amdgpu_cs void @atomic_add_i32_constant_1(<4 x i32> inreg %arg)  {
 ;
 ; GCN-LABEL: atomic_add_i32_constant_1:
 ; GCN:       ; %bb.0: ; %.entry
+; GCN-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, exec_lo, 0
+; GCN-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, exec_hi, v0
 ; GCN-NEXT:    s_mov_b64 s[4:5], exec
-; GCN-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, s4, 0
-; GCN-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, s5, v0
+; GCN-NEXT:    s_bcnt1_i32_b64 s4, s[4:5]
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GCN-NEXT:    s_and_saveexec_b64 s[6:7], vcc
 ; GCN-NEXT:    s_cbranch_execz .LBB0_2
 ; GCN-NEXT:  ; %bb.1:
-; GCN-NEXT:    s_bcnt1_i32_b64 s4, s[4:5]
 ; GCN-NEXT:    v_mov_b32_e32 v0, s4
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    buffer_atomic_add v0, v1, s[0:3], 0 idxen
@@ -63,9 +62,7 @@ define amdgpu_cs void @atomic_add_i32_constant_0(<4 x i32> inreg %arg)  {
 ; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
 ; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
-; IR-NEXT:    [[TMP6:%.*]] = call i64 @llvm.ctpop.i64(i64 [[TMP0]])
-; IR-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i32
-; IR-NEXT:    [[TMP8:%.*]] = mul i32 0, [[TMP7]]
+; IR-NEXT:    [[TMP8:%.*]] = call i32 @llvm.amdgcn.wave.reduce.add.i32(i32 0, i32 1)
 ; IR-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP9]], label %[[BB10:.*]], label %[[BB12:.*]]
 ; IR:       [[BB10]]:
@@ -101,7 +98,7 @@ define amdgpu_cs void @atomic_add_i64_constant_1(<4 x i32> inreg %arg)  {
 ; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
 ; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
-; IR-NEXT:    [[TMP6:%.*]] = call i64 @llvm.ctpop.i64(i64 [[TMP0]])
+; IR-NEXT:    [[TMP6:%.*]] = call i64 @llvm.amdgcn.wave.reduce.add.i64(i64 1, i32 1)
 ; IR-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP7]], label %[[BB8:.*]], label %[[BB10:.*]]
 ; IR:       [[BB8]]:
@@ -112,15 +109,15 @@ define amdgpu_cs void @atomic_add_i64_constant_1(<4 x i32> inreg %arg)  {
 ;
 ; GCN-LABEL: atomic_add_i64_constant_1:
 ; GCN:       ; %bb.0: ; %.entry
+; GCN-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, exec_lo, 0
+; GCN-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, exec_hi, v0
 ; GCN-NEXT:    s_mov_b64 s[6:7], exec
-; GCN-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, s6, 0
-; GCN-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, s7, v0
 ; GCN-NEXT:    s_mov_b32 s5, 0
+; GCN-NEXT:    s_bcnt1_i32_b64 s4, s[6:7]
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
-; GCN-NEXT:    s_and_saveexec_b64 s[8:9], vcc
+; GCN-NEXT:    s_and_saveexec_b64 s[6:7], vcc
 ; GCN-NEXT:    s_cbranch_execz .LBB2_2
 ; GCN-NEXT:  ; %bb.1:
-; GCN-NEXT:    s_bcnt1_i32_b64 s4, s[6:7]
 ; GCN-NEXT:    v_mov_b32_e32 v0, s4
 ; GCN-NEXT:    v_mov_b32_e32 v1, s5
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
@@ -142,8 +139,7 @@ define amdgpu_cs void @atomic_add_i64_constant_0(<4 x i32> inreg %arg)  {
 ; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
 ; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
-; IR-NEXT:    [[TMP6:%.*]] = call i64 @llvm.ctpop.i64(i64 [[TMP0]])
-; IR-NEXT:    [[TMP7:%.*]] = mul i64 0, [[TMP6]]
+; IR-NEXT:    [[TMP7:%.*]] = call i64 @llvm.amdgcn.wave.reduce.add.i64(i64 0, i32 1)
 ; IR-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP8]], label %[[BB9:.*]], label %[[BB11:.*]]
 ; IR:       [[BB9]]:
@@ -174,22 +170,21 @@ define amdgpu_cs void @atomic_add_i64_constant_0(<4 x i32> inreg %arg)  {
 define amdgpu_cs void @atomic_add_and_format(<4 x i32> inreg %arg) {
 ; IR-LABEL: define amdgpu_cs void @atomic_add_and_format(
 ; IR-SAME: <4 x i32> inreg [[ARG:%.*]]) {
-; IR-NEXT:  [[_ENTRY:.*:]]
+; IR-NEXT:  [[_ENTRY:.*]]:
 ; IR-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
 ; IR-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
 ; IR-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
 ; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
 ; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
-; IR-NEXT:    [[TMP6:%.*]] = call i64 @llvm.ctpop.i64(i64 [[TMP0]])
-; IR-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i32
+; IR-NEXT:    [[TMP7:%.*]] = call i32 @llvm.amdgcn.wave.reduce.add.i32(i32 1, i32 1)
 ; IR-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP8]], label %[[TMP9:.*]], label %[[BB11:.*]]
 ; IR:       [[TMP9]]:
 ; IR-NEXT:    [[TMP10:%.*]] = call i32 @llvm.amdgcn.struct.buffer.atomic.add.i32(i32 [[TMP7]], <4 x i32> [[ARG]], i32 0, i32 0, i32 0, i32 0)
 ; IR-NEXT:    br label %[[BB11]]
 ; IR:       [[BB11]]:
-; IR-NEXT:    [[TMP12:%.*]] = phi i32 [ poison, [[DOTENTRY:%.*]] ], [ [[TMP10]], %[[TMP9]] ]
+; IR-NEXT:    [[TMP12:%.*]] = phi i32 [ poison, %[[_ENTRY]] ], [ [[TMP10]], %[[TMP9]] ]
 ; IR-NEXT:    [[TMP13:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[TMP12]])
 ; IR-NEXT:    [[TMP14:%.*]] = add i32 [[TMP13]], [[TMP5]]
 ; IR-NEXT:    call void @llvm.amdgcn.struct.buffer.store.format.v4i32(<4 x i32> [[ARG]], <4 x i32> [[ARG]], i32 [[TMP14]], i32 0, i32 0, i32 0)
@@ -197,15 +192,15 @@ define amdgpu_cs void @atomic_add_and_format(<4 x i32> inreg %arg) {
 ;
 ; GCN-LABEL: atomic_add_and_format:
 ; GCN:       ; %bb.0: ; %.entry
-; GCN-NEXT:    s_mov_b64 s[6:7], exec
-; GCN-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, s6, 0
-; GCN-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, s7, v0
+; GCN-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, exec_lo, 0
+; GCN-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, exec_hi, v0
+; GCN-NEXT:    s_mov_b64 s[4:5], exec
+; GCN-NEXT:    s_bcnt1_i32_b64 s6, s[4:5]
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GCN-NEXT:    ; implicit-def: $vgpr1
 ; GCN-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN-NEXT:    s_cbranch_execz .LBB4_2
 ; GCN-NEXT:  ; %bb.1:
-; GCN-NEXT:    s_bcnt1_i32_b64 s6, s[6:7]
 ; GCN-NEXT:    v_mov_b32_e32 v1, s6
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN-NEXT:    buffer_atomic_add v1, v2, s[0:3], 0 idxen glc
@@ -237,8 +232,7 @@ define amdgpu_cs void @atomic_sub_i32_constant_1(<4 x i32> inreg %arg)  {
 ; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
 ; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
-; IR-NEXT:    [[TMP6:%.*]] = call i64 @llvm.ctpop.i64(i64 [[TMP0]])
-; IR-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i32
+; IR-NEXT:    [[TMP7:%.*]] = call i32 @llvm.amdgcn.wave.reduce.add.i32(i32 1, i32 1)
 ; IR-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP8]], label %[[BB9:.*]], label %[[BB11:.*]]
 ; IR:       [[BB9]]:
@@ -249,14 +243,14 @@ define amdgpu_cs void @atomic_sub_i32_constant_1(<4 x i32> inreg %arg)  {
 ;
 ; GCN-LABEL: atomic_sub_i32_constant_1:
 ; GCN:       ; %bb.0: ; %.entry
+; GCN-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, exec_lo, 0
+; GCN-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, exec_hi, v0
 ; GCN-NEXT:    s_mov_b64 s[4:5], exec
-; GCN-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, s4, 0
-; GCN-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, s5, v0
+; GCN-NEXT:    s_bcnt1_i32_b64 s4, s[4:5]
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GCN-NEXT:    s_and_saveexec_b64 s[6:7], vcc
 ; GCN-NEXT:    s_cbranch_execz .LBB5_2
 ; GCN-NEXT:  ; %bb.1:
-; GCN-NEXT:    s_bcnt1_i32_b64 s4, s[4:5]
 ; GCN-NEXT:    v_mov_b32_e32 v0, s4
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    buffer_atomic_sub v0, v1, s[0:3], 0 idxen
@@ -277,9 +271,7 @@ define amdgpu_cs void @atomic_sub_i32_constant_0(<4 x i32> inreg %arg)  {
 ; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
 ; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
-; IR-NEXT:    [[TMP6:%.*]] = call i64 @llvm.ctpop.i64(i64 [[TMP0]])
-; IR-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i32
-; IR-NEXT:    [[TMP8:%.*]] = mul i32 0, [[TMP7]]
+; IR-NEXT:    [[TMP8:%.*]] = call i32 @llvm.amdgcn.wave.reduce.add.i32(i32 0, i32 1)
 ; IR-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP9]], label %[[BB10:.*]], label %[[BB12:.*]]
 ; IR:       [[BB10]]:
@@ -315,7 +307,7 @@ define amdgpu_cs void @atomic_sub_i64_constant_1(<4 x i32> inreg %arg)  {
 ; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
 ; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
-; IR-NEXT:    [[TMP6:%.*]] = call i64 @llvm.ctpop.i64(i64 [[TMP0]])
+; IR-NEXT:    [[TMP6:%.*]] = call i64 @llvm.amdgcn.wave.reduce.add.i64(i64 1, i32 1)
 ; IR-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP7]], label %[[BB8:.*]], label %[[BB10:.*]]
 ; IR:       [[BB8]]:
@@ -326,15 +318,15 @@ define amdgpu_cs void @atomic_sub_i64_constant_1(<4 x i32> inreg %arg)  {
 ;
 ; GCN-LABEL: atomic_sub_i64_constant_1:
 ; GCN:       ; %bb.0: ; %.entry
+; GCN-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, exec_lo, 0
+; GCN-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, exec_hi, v0
 ; GCN-NEXT:    s_mov_b64 s[6:7], exec
-; GCN-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, s6, 0
-; GCN-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, s7, v0
 ; GCN-NEXT:    s_mov_b32 s5, 0
+; GCN-NEXT:    s_bcnt1_i32_b64 s4, s[6:7]
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
-; GCN-NEXT:    s_and_saveexec_b64 s[8:9], vcc
+; GCN-NEXT:    s_and_saveexec_b64 s[6:7], vcc
 ; GCN-NEXT:    s_cbranch_execz .LBB7_2
 ; GCN-NEXT:  ; %bb.1:
-; GCN-NEXT:    s_bcnt1_i32_b64 s4, s[6:7]
 ; GCN-NEXT:    v_mov_b32_e32 v0, s4
 ; GCN-NEXT:    v_mov_b32_e32 v1, s5
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
@@ -356,8 +348,7 @@ define amdgpu_cs void @atomic_sub_i64_constant_0(<4 x i32> inreg %arg)  {
 ; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
 ; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
-; IR-NEXT:    [[TMP6:%.*]] = call i64 @llvm.ctpop.i64(i64 [[TMP0]])
-; IR-NEXT:    [[TMP7:%.*]] = mul i64 0, [[TMP6]]
+; IR-NEXT:    [[TMP7:%.*]] = call i64 @llvm.amdgcn.wave.reduce.add.i64(i64 0, i32 1)
 ; IR-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP8]], label %[[BB9:.*]], label %[[BB11:.*]]
 ; IR:       [[BB9]]:
@@ -388,22 +379,21 @@ define amdgpu_cs void @atomic_sub_i64_constant_0(<4 x i32> inreg %arg)  {
 define amdgpu_cs void @atomic_sub_and_format(<4 x i32> inreg %arg) {
 ; IR-LABEL: define amdgpu_cs void @atomic_sub_and_format(
 ; IR-SAME: <4 x i32> inreg [[ARG:%.*]]) {
-; IR-NEXT:  [[_ENTRY:.*:]]
+; IR-NEXT:  [[_ENTRY:.*]]:
 ; IR-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
 ; IR-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
 ; IR-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
 ; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
 ; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
-; IR-NEXT:    [[TMP6:%.*]] = call i64 @llvm.ctpop.i64(i64 [[TMP0]])
-; IR-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i32
+; IR-NEXT:    [[TMP7:%.*]] = call i32 @llvm.amdgcn.wave.reduce.add.i32(i32 1, i32 1)
 ; IR-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP8]], label %[[TMP9:.*]], label %[[BB11:.*]]
 ; IR:       [[TMP9]]:
 ; IR-NEXT:    [[TMP10:%.*]] = call i32 @llvm.amdgcn.struct.buffer.atomic.sub.i32(i32 [[TMP7]], <4 x i32> [[ARG]], i32 0, i32 0, i32 0, i32 0)
 ; IR-NEXT:    br label %[[BB11]]
 ; IR:       [[BB11]]:
-; IR-NEXT:    [[TMP12:%.*]] = phi i32 [ poison, [[DOTENTRY:%.*]] ], [ [[TMP10]], %[[TMP9]] ]
+; IR-NEXT:    [[TMP12:%.*]] = phi i32 [ poison, %[[_ENTRY]] ], [ [[TMP10]], %[[TMP9]] ]
 ; IR-NEXT:    [[TMP13:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[TMP12]])
 ; IR-NEXT:    [[TMP14:%.*]] = sub i32 [[TMP13]], [[TMP5]]
 ; IR-NEXT:    call void @llvm.amdgcn.struct.buffer.store.format.v4i32(<4 x i32> [[ARG]], <4 x i32> [[ARG]], i32 [[TMP14]], i32 0, i32 0, i32 0)
@@ -411,15 +401,15 @@ define amdgpu_cs void @atomic_sub_and_format(<4 x i32> inreg %arg) {
 ;
 ; GCN-LABEL: atomic_sub_and_format:
 ; GCN:       ; %bb.0: ; %.entry
-; GCN-NEXT:    s_mov_b64 s[6:7], exec
-; GCN-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, s6, 0
-; GCN-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, s7, v0
+; GCN-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, exec_lo, 0
+; GCN-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, exec_hi, v0
+; GCN-NEXT:    s_mov_b64 s[4:5], exec
+; GCN-NEXT:    s_bcnt1_i32_b64 s6, s[4:5]
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GCN-NEXT:    ; implicit-def: $vgpr1
 ; GCN-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN-NEXT:    s_cbranch_execz .LBB9_2
 ; GCN-NEXT:  ; %bb.1:
-; GCN-NEXT:    s_bcnt1_i32_b64 s6, s[6:7]
 ; GCN-NEXT:    v_mov_b32_e32 v1, s6
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN-NEXT:    buffer_atomic_sub v1, v2, s[0:3], 0 idxen glc
@@ -451,9 +441,7 @@ define amdgpu_cs void @atomic_xor_i32_constant_1(<4 x i32> inreg %arg)  {
 ; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
 ; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
-; IR-NEXT:    [[TMP6:%.*]] = call i64 @llvm.ctpop.i64(i64 [[TMP0]])
-; IR-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i32
-; IR-NEXT:    [[TMP8:%.*]] = and i32 [[TMP7]], 1
+; IR-NEXT:    [[TMP8:%.*]] = call i32 @llvm.amdgcn.wave.reduce.xor.i32(i32 1, i32 1)
 ; IR-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP9]], label %[[BB10:.*]], label %[[BB12:.*]]
 ; IR:       [[BB10]]:
@@ -464,14 +452,14 @@ define amdgpu_cs void @atomic_xor_i32_constant_1(<4 x i32> inreg %arg)  {
 ;
 ; GCN-LABEL: atomic_xor_i32_constant_1:
 ; GCN:       ; %bb.0: ; %.entry
+; GCN-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, exec_lo, 0
+; GCN-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, exec_hi, v0
 ; GCN-NEXT:    s_mov_b64 s[4:5], exec
-; GCN-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, s4, 0
-; GCN-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, s5, v0
+; GCN-NEXT:    s_bcnt1_i32_b64 s4, s[4:5]
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GCN-NEXT:    s_and_saveexec_b64 s[6:7], vcc
 ; GCN-NEXT:    s_cbranch_execz .LBB10_2
 ; GCN-NEXT:  ; %bb.1:
-; GCN-NEXT:    s_bcnt1_i32_b64 s4, s[4:5]
 ; GCN-NEXT:    s_and_b32 s4, s4, 1
 ; GCN-NEXT:    v_mov_b32_e32 v0, s4
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
@@ -493,10 +481,7 @@ define amdgpu_cs void @atomic_xor_i32_constant_0(<4 x i32> inreg %arg)  {
 ; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
 ; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
-; IR-NEXT:    [[TMP6:%.*]] = call i64 @llvm.ctpop.i64(i64 [[TMP0]])
-; IR-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i32
-; IR-NEXT:    [[TMP8:%.*]] = and i32 [[TMP7]], 1
-; IR-NEXT:    [[TMP9:%.*]] = mul i32 0, [[TMP8]]
+; IR-NEXT:    [[TMP9:%.*]] = call i32 @llvm.amdgcn.wave.reduce.xor.i32(i32 0, i32 1)
 ; IR-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP10]], label %[[BB11:.*]], label %[[BB13:.*]]
 ; IR:       [[BB11]]:
@@ -532,9 +517,7 @@ define amdgpu_cs void @atomic_xor_i64_constant_0(<4 x i32> inreg %arg)  {
 ; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
 ; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
-; IR-NEXT:    [[TMP6:%.*]] = call i64 @llvm.ctpop.i64(i64 [[TMP0]])
-; IR-NEXT:    [[TMP7:%.*]] = and i64 [[TMP6]], 1
-; IR-NEXT:    [[TMP8:%.*]] = mul i64 0, [[TMP7]]
+; IR-NEXT:    [[TMP8:%.*]] = call i64 @llvm.amdgcn.wave.reduce.xor.i64(i64 0, i32 1)
 ; IR-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP9]], label %[[BB10:.*]], label %[[BB12:.*]]
 ; IR:       [[BB10]]:
@@ -572,8 +555,7 @@ define amdgpu_cs void @atomic_xor_i64_constant_1(<4 x i32> inreg %arg)  {
 ; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
 ; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
-; IR-NEXT:    [[TMP6:%.*]] = call i64 @llvm.ctpop.i64(i64 [[TMP0]])
-; IR-NEXT:    [[TMP7:%.*]] = and i64 [[TMP6]], 1
+; IR-NEXT:    [[TMP7:%.*]] = call i64 @llvm.amdgcn.wave.reduce.xor.i64(i64 1, i32 1)
 ; IR-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP8]], label %[[BB9:.*]], label %[[BB11:.*]]
 ; IR:       [[BB9]]:
@@ -584,16 +566,16 @@ define amdgpu_cs void @atomic_xor_i64_constant_1(<4 x i32> inreg %arg)  {
 ;
 ; GCN-LABEL: atomic_xor_i64_constant_1:
 ; GCN:       ; %bb.0: ; %.entry
+; GCN-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, exec_lo, 0
+; GCN-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, exec_hi, v0
 ; GCN-NEXT:    s_mov_b64 s[6:7], exec
-; GCN-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, s6, 0
-; GCN-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, s7, v0
 ; GCN-NEXT:    s_mov_b32 s5, 0
+; GCN-NEXT:    s_bcnt1_i32_b64 s4, s[6:7]
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
-; GCN-NEXT:    s_and_saveexec_b64 s[8:9], vcc
+; GCN-NEXT:    s_and_saveexec_b64 s[6:7], vcc
 ; GCN-NEXT:    s_cbranch_execz .LBB13_2
 ; GCN-NEXT:  ; %bb.1:
-; GCN-NEXT:    s_bcnt1_i32_b64 s4, s[6:7]
-; GCN-NEXT:    s_and_b64 s[4:5], s[4:5], 1
+; GCN-NEXT:    s_and_b32 s4, s4, 1
 ; GCN-NEXT:    v_mov_b32_e32 v0, s4
 ; GCN-NEXT:    v_mov_b32_e32 v1, s5
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
@@ -608,23 +590,21 @@ define amdgpu_cs void @atomic_xor_i64_constant_1(<4 x i32> inreg %arg)  {
 define amdgpu_cs void @atomic_xor_and_format(<4 x i32> inreg %arg) {
 ; IR-LABEL: define amdgpu_cs void @atomic_xor_and_format(
 ; IR-SAME: <4 x i32> inreg [[ARG:%.*]]) {
-; IR-NEXT:  [[_ENTRY:.*:]]
+; IR-NEXT:  [[_ENTRY:.*]]:
 ; IR-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
 ; IR-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
 ; IR-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
 ; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
 ; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
-; IR-NEXT:    [[TMP6:%.*]] = call i64 @llvm.ctpop.i64(i64 [[TMP0]])
-; IR-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i32
-; IR-NEXT:    [[TMP8:%.*]] = and i32 [[TMP7]], 1
+; IR-NEXT:    [[TMP8:%.*]] = call i32 @llvm.amdgcn.wave.reduce.xor.i32(i32 1, i32 1)
 ; IR-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP9]], label %[[TMP10:.*]], label %[[BB12:.*]]
 ; IR:       [[TMP10]]:
 ; IR-NEXT:    [[TMP11:%.*]] = call i32 @llvm.amdgcn.struct.buffer.atomic.xor.i32(i32 [[TMP8]], <4 x i32> [[ARG]], i32 0, i32 0, i32 0, i32 0)
 ; IR-NEXT:    br label %[[BB12]]
 ; IR:       [[BB12]]:
-; IR-NEXT:    [[TMP13:%.*]] = phi i32 [ poison, [[DOTENTRY:%.*]] ], [ [[TMP11]], %[[TMP10]] ]
+; IR-NEXT:    [[TMP13:%.*]] = phi i32 [ poison, %[[_ENTRY]] ], [ [[TMP11]], %[[TMP10]] ]
 ; IR-NEXT:    [[TMP14:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[TMP13]])
 ; IR-NEXT:    [[TMP15:%.*]] = and i32 [[TMP5]], 1
 ; IR-NEXT:    [[TMP16:%.*]] = xor i32 [[TMP14]], [[TMP15]]
@@ -633,15 +613,15 @@ define amdgpu_cs void @atomic_xor_and_format(<4 x i32> inreg %arg) {
 ;
 ; GCN-LABEL: atomic_xor_and_format:
 ; GCN:       ; %bb.0: ; %.entry
-; GCN-NEXT:    s_mov_b64 s[6:7], exec
-; GCN-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, s6, 0
-; GCN-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, s7, v0
+; GCN-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, exec_lo, 0
+; GCN-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, exec_hi, v0
+; GCN-NEXT:    s_mov_b64 s[4:5], exec
+; GCN-NEXT:    s_bcnt1_i32_b64 s6, s[4:5]
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GCN-NEXT:    ; implicit-def: $vgpr1
 ; GCN-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN-NEXT:    s_cbranch_execz .LBB14_2
 ; GCN-NEXT:  ; %bb.1:
-; GCN-NEXT:    s_bcnt1_i32_b64 s6, s[6:7]
 ; GCN-NEXT:    s_and_b32 s6, s6, 1
 ; GCN-NEXT:    v_mov_b32_e32 v1, s6
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
@@ -675,8 +655,7 @@ define amdgpu_cs void @atomic_ptr_add(ptr addrspace(8) inreg %arg)  {
 ; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
 ; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
-; IR-NEXT:    [[TMP6:%.*]] = call i64 @llvm.ctpop.i64(i64 [[TMP0]])
-; IR-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i32
+; IR-NEXT:    [[TMP7:%.*]] = call i32 @llvm.amdgcn.wave.reduce.add.i32(i32 1, i32 1)
 ; IR-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP8]], label %[[BB9:.*]], label %[[BB11:.*]]
 ; IR:       [[BB9]]:
@@ -687,14 +666,14 @@ define amdgpu_cs void @atomic_ptr_add(ptr addrspace(8) inreg %arg)  {
 ;
 ; GCN-LABEL: atomic_ptr_add:
 ; GCN:       ; %bb.0: ; %.entry
+; GCN-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, exec_lo, 0
+; GCN-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, exec_hi, v0
 ; GCN-NEXT:    s_mov_b64 s[4:5], exec
-; GCN-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, s4, 0
-; GCN-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, s5, v0
+; GCN-NEXT:    s_bcnt1_i32_b64 s4, s[4:5]
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GCN-NEXT:    s_and_saveexec_b64 s[6:7], vcc
 ; GCN-NEXT:    s_cbranch_execz .LBB15_2
 ; GCN-NEXT:  ; %bb.1:
-; GCN-NEXT:    s_bcnt1_i32_b64 s4, s[4:5]
 ; GCN-NEXT:    v_mov_b32_e32 v0, s4
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    buffer_atomic_add v0, v1, s[0:3], 0 idxen
@@ -708,22 +687,21 @@ define amdgpu_cs void @atomic_ptr_add(ptr addrspace(8) inreg %arg)  {
 define amdgpu_cs void @atomic_ptr_add_and_format(ptr addrspace(8) inreg %arg) {
 ; IR-LABEL: define amdgpu_cs void @atomic_ptr_add_and_format(
 ; IR-SAME: ptr addrspace(8) inreg [[ARG:%.*]]) {
-; IR-NEXT:  [[_ENTRY:.*:]]
+; IR-NEXT:  [[_ENTRY:.*]]:
 ; IR-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
 ; IR-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
 ; IR-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
 ; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
 ; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
-; IR-NEXT:    [[TMP6:%.*]] = call i64 @llvm.ctpop.i64(i64 [[TMP0]])
-; IR-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i32
+; IR-NEXT:    [[TMP7:%.*]] = call i32 @llvm.amdgcn.wave.reduce.add.i32(i32 1, i32 1)
 ; IR-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP8]], label %[[TMP9:.*]], label %[[BB11:.*]]
 ; IR:       [[TMP9]]:
 ; IR-NEXT:    [[TMP10:%.*]] = call i32 @llvm.amdgcn.struct.ptr.buffer.atomic.add.i32(i32 [[TMP7]], ptr addrspace(8) [[ARG]], i32 0, i32 0, i32 0, i32 0)
 ; IR-NEXT:    br label %[[BB11]]
 ; IR:       [[BB11]]:
-; IR-NEXT:    [[TMP12:%.*]] = phi i32 [ poison, [[DOTENTRY:%.*]] ], [ [[TMP10]], %[[TMP9]] ]
+; IR-NEXT:    [[TMP12:%.*]] = phi i32 [ poison, %[[_ENTRY]] ], [ [[TMP10]], %[[TMP9]] ]
 ; IR-NEXT:    [[TMP13:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[TMP12]])
 ; IR-NEXT:    [[TMP14:%.*]] = add i32 [[TMP13]], [[TMP5]]
 ; IR-NEXT:    [[ARG_INT:%.*]] = ptrtoint ptr addrspace(8) [[ARG]] to i128
@@ -733,15 +711,15 @@ define amdgpu_cs void @atomic_ptr_add_and_format(ptr addrspace(8) inreg %arg) {
 ;
 ; GCN-LABEL: atomic_ptr_add_and_format:
 ; GCN:       ; %bb.0: ; %.entry
-; GCN-NEXT:    s_mov_b64 s[6:7], exec
-; GCN-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, s6, 0
-; GCN-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, s7, v0
+; GCN-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, exec_lo, 0
+; GCN-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, exec_hi, v0
+; GCN-NEXT:    s_mov_b64 s[4:5], exec
+; GCN-NEXT:    s_bcnt1_i32_b64 s6, s[4:5]
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GCN-NEXT:    ; implicit-def: $vgpr1
 ; GCN-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN-NEXT:    s_cbranch_execz .LBB16_2
 ; GCN-NEXT:  ; %bb.1:
-; GCN-NEXT:    s_bcnt1_i32_b64 s6, s[6:7]
 ; GCN-NEXT:    v_mov_b32_e32 v1, s6
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN-NEXT:    buffer_atomic_add v1, v2, s[0:3], 0 idxen glc
@@ -775,8 +753,7 @@ define amdgpu_cs void @atomic_ptr_sub(ptr addrspace(8) inreg %arg)  {
 ; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
 ; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
-; IR-NEXT:    [[TMP6:%.*]] = call i64 @llvm.ctpop.i64(i64 [[TMP0]])
-; IR-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i32
+; IR-NEXT:    [[TMP7:%.*]] = call i32 @llvm.amdgcn.wave.reduce.add.i32(i32 1, i32 1)
 ; IR-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP8]], label %[[BB9:.*]], label %[[BB11:.*]]
 ; IR:       [[BB9]]:
@@ -787,14 +764,14 @@ define amdgpu_cs void @atomic_ptr_sub(ptr addrspace(8) inreg %arg)  {
 ;
 ; GCN-LABEL: atomic_ptr_sub:
 ; GCN:       ; %bb.0: ; %.entry
+; GCN-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, exec_lo, 0
+; GCN-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, exec_hi, v0
 ; GCN-NEXT:    s_mov_b64 s[4:5], exec
-; GCN-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, s4, 0
-; GCN-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, s5, v0
+; GCN-NEXT:    s_bcnt1_i32_b64 s4, s[4:5]
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GCN-NEXT:    s_and_saveexec_b64 s[6:7], vcc
 ; GCN-NEXT:    s_cbranch_execz .LBB17_2
 ; GCN-NEXT:  ; %bb.1:
-; GCN-NEXT:    s_bcnt1_i32_b64 s4, s[4:5]
 ; GCN-NEXT:    v_mov_b32_e32 v0, s4
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    buffer_atomic_sub v0, v1, s[0:3], 0 idxen
@@ -808,22 +785,21 @@ define amdgpu_cs void @atomic_ptr_sub(ptr addrspace(8) inreg %arg)  {
 define amdgpu_cs void @atomic_ptr_sub_and_format(ptr addrspace(8) inreg %arg) {
 ; IR-LABEL: define amdgpu_cs void @atomic_ptr_sub_and_format(
 ; IR-SAME: ptr addrspace(8) inreg [[ARG:%.*]]) {
-; IR-NEXT:  [[_ENTRY:.*:]]
+; IR-NEXT:  [[_ENTRY:.*]]:
 ; IR-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
 ; IR-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
 ; IR-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
 ; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
 ; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
-; IR-NEXT:    [[TMP6:%.*]] = call i64 @llvm.ctpop.i64(i64 [[TMP0]])
-; IR-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i32
+; IR-NEXT:    [[TMP7:%.*]] = call i32 @llvm.amdgcn.wave.reduce.add.i32(i32 1, i32 1)
 ; IR-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP8]], label %[[TMP9:.*]], label %[[BB11:.*]]
 ; IR:       [[TMP9]]:
 ; IR-NEXT:    [[TMP10:%.*]] = call i32 @llvm.amdgcn.struct.ptr.buffer.atomic.sub.i32(i32 [[TMP7]], ptr addrspace(8) [[ARG]], i32 0, i32 0, i32 0, i32 0)
 ; IR-NEXT:    br label %[[BB11]]
 ; IR:       [[BB11]]:
-; IR-NEXT:    [[TMP12:%.*]] = phi i32 [ poison, [[DOTENTRY:%.*]] ], [ [[TMP10]], %[[TMP9]] ]
+; IR-NEXT:    [[TMP12:%.*]] = phi i32 [ poison, %[[_ENTRY]] ], [ [[TMP10]], %[[TMP9]] ]
 ; IR-NEXT:    [[TMP13:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[TMP12]])
 ; IR-NEXT:    [[TMP14:%.*]] = sub i32 [[TMP13]], [[TMP5]]
 ; IR-NEXT:    [[ARG_INT:%.*]] = ptrtoint ptr addrspace(8) [[ARG]] to i128
@@ -833,15 +809,15 @@ define amdgpu_cs void @atomic_ptr_sub_and_format(ptr addrspace(8) inreg %arg) {
 ;
 ; GCN-LABEL: atomic_ptr_sub_and_format:
 ; GCN:       ; %bb.0: ; %.entry
-; GCN-NEXT:    s_mov_b64 s[6:7], exec
-; GCN-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, s6, 0
-; GCN-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, s7, v0
+; GCN-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, exec_lo, 0
+; GCN-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, exec_hi, v0
+; GCN-NEXT:    s_mov_b64 s[4:5], exec
+; GCN-NEXT:    s_bcnt1_i32_b64 s6, s[4:5]
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GCN-NEXT:    ; implicit-def: $vgpr1
 ; GCN-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN-NEXT:    s_cbranch_execz .LBB18_2
 ; GCN-NEXT:  ; %bb.1:
-; GCN-NEXT:    s_bcnt1_i32_b64 s6, s[6:7]
 ; GCN-NEXT:    v_mov_b32_e32 v1, s6
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN-NEXT:    buffer_atomic_sub v1, v2, s[0:3], 0 idxen glc
@@ -875,9 +851,7 @@ define amdgpu_cs void @atomic_ptr_xor(ptr addrspace(8) inreg %arg)  {
 ; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
 ; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
-; IR-NEXT:    [[TMP6:%.*]] = call i64 @llvm.ctpop.i64(i64 [[TMP0]])
-; IR-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i32
-; IR-NEXT:    [[TMP8:%.*]] = and i32 [[TMP7]], 1
+; IR-NEXT:    [[TMP8:%.*]] = call i32 @llvm.amdgcn.wave.reduce.xor.i32(i32 1, i32 1)
 ; IR-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP9]], label %[[BB10:.*]], label %[[BB12:.*]]
 ; IR:       [[BB10]]:
@@ -888,14 +862,14 @@ define amdgpu_cs void @atomic_ptr_xor(ptr addrspace(8) inreg %arg)  {
 ;
 ; GCN-LABEL: atomic_ptr_xor:
 ; GCN:       ; %bb.0: ; %.entry
+; GCN-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, exec_lo, 0
+; GCN-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, exec_hi, v0
 ; GCN-NEXT:    s_mov_b64 s[4:5], exec
-; GCN-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, s4, 0
-; GCN-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, s5, v0
+; GCN-NEXT:    s_bcnt1_i32_b64 s4, s[4:5]
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GCN-NEXT:    s_and_saveexec_b64 s[6:7], vcc
 ; GCN-NEXT:    s_cbranch_execz .LBB19_2
 ; GCN-NEXT:  ; %bb.1:
-; GCN-NEXT:    s_bcnt1_i32_b64 s4, s[4:5]
 ; GCN-NEXT:    s_and_b32 s4, s4, 1
 ; GCN-NEXT:    v_mov_b32_e32 v0, s4
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
@@ -910,23 +884,21 @@ define amdgpu_cs void @atomic_ptr_xor(ptr addrspace(8) inreg %arg)  {
 define amdgpu_cs void @atomic_ptr_xor_and_format(ptr addrspace(8) inreg %arg) {
 ; IR-LABEL: define amdgpu_cs void @atomic_ptr_xor_and_format(
 ; IR-SAME: ptr addrspace(8) inreg [[ARG:%.*]]) {
-; IR-NEXT:  [[_ENTRY:.*:]]
+; IR-NEXT:  [[_ENTRY:.*]]:
 ; IR-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
 ; IR-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
 ; IR-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
 ; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
 ; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
-; IR-NEXT:    [[TMP6:%.*]] = call i64 @llvm.ctpop.i64(i64 [[TMP0]])
-; IR-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i32
-; IR-NEXT:    [[TMP8:%.*]] = and i32 [[TMP7]], 1
+; IR-NEXT:    [[TMP8:%.*]] = call i32 @llvm.amdgcn.wave.reduce.xor.i32(i32 1, i32 1)
 ; IR-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP9]], label %[[TMP10:.*]], label %[[BB12:.*]]
 ; IR:       [[TMP10]]:
 ; IR-NEXT:    [[TMP11:%.*]] = call i32 @llvm.amdgcn.struct.ptr.buffer.atomic.xor.i32(i32 [[TMP8]], ptr addrspace(8) [[ARG]], i32 0, i32 0, i32 0, i32 0)
 ; IR-NEXT:    br label %[[BB12]]
 ; IR:       [[BB12]]:
-; IR-NEXT:    [[TMP13:%.*]] = phi i32 [ poison, [[DOTENTRY:%.*]] ], [ [[TMP11]], %[[TMP10]] ]
+; IR-NEXT:    [[TMP13:%.*]] = phi i32 [ poison, %[[_ENTRY]] ], [ [[TMP11]], %[[TMP10]] ]
 ; IR-NEXT:    [[TMP14:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[TMP13]])
 ; IR-NEXT:    [[TMP15:%.*]] = and i32 [[TMP5]], 1
 ; IR-NEXT:    [[TMP16:%.*]] = xor i32 [[TMP14]], [[TMP15]]
@@ -937,15 +909,15 @@ define amdgpu_cs void @atomic_ptr_xor_and_format(ptr addrspace(8) inreg %arg) {
 ;
 ; GCN-LABEL: atomic_ptr_xor_and_format:
 ; GCN:       ; %bb.0: ; %.entry
-; GCN-NEXT:    s_mov_b64 s[6:7], exec
-; GCN-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, s6, 0
-; GCN-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, s7, v0
+; GCN-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, exec_lo, 0
+; GCN-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, exec_hi, v0
+; GCN-NEXT:    s_mov_b64 s[4:5], exec
+; GCN-NEXT:    s_bcnt1_i32_b64 s6, s[4:5]
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GCN-NEXT:    ; implicit-def: $vgpr1
 ; GCN-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN-NEXT:    s_cbranch_execz .LBB20_2
 ; GCN-NEXT:  ; %bb.1:
-; GCN-NEXT:    s_bcnt1_i32_b64 s6, s[6:7]
 ; GCN-NEXT:    s_and_b32 s6, s6, 1
 ; GCN-NEXT:    v_mov_b32_e32 v1, s6
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
