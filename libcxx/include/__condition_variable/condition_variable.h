@@ -40,11 +40,6 @@ _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_DECLARE_STRONG_ENUM(cv_status){no_timeout, timeout};
 _LIBCPP_DECLARE_STRONG_ENUM_EPILOG(cv_status)
 
-template <class _Duration>
-_LIBCPP_HIDE_FROM_ABI chrono::steady_clock::time_point __rel_to_abs(const _Duration& __rel_time) {
-  return chrono::steady_clock::now() + chrono::__ceil<chrono::steady_clock::duration>(__rel_time);
-}
-
 template <class _Rep, class _Period, __enable_if_t<is_floating_point<_Rep>::value, int> = 0>
 inline _LIBCPP_HIDE_FROM_ABI chrono::nanoseconds __safe_nanosecond_cast(chrono::duration<_Rep, _Period> __d) {
   using namespace chrono;
@@ -90,6 +85,22 @@ inline _LIBCPP_HIDE_FROM_ABI chrono::nanoseconds __safe_nanosecond_cast(chrono::
   }
 
   return nanoseconds(__result);
+}
+
+template <class _Duration>
+_LIBCPP_HIDE_FROM_ABI chrono::steady_clock::time_point __rel_to_abs(const _Duration& __rel_time) {
+  using namespace chrono;
+  
+  if (__rel_time <= _Duration::zero())
+    return steady_clock::time_point::min();
+
+  steady_clock::time_point __now = steady_clock::now();
+  nanoseconds __d_ns = std::__safe_nanosecond_cast(chrono::__ceil<steady_clock::duration>(__rel_time));
+  
+  if (__d_ns > nanoseconds::max() - __now.time_since_epoch())
+    return steady_clock::time_point::max();
+    
+  return __now + __d_ns;
 }
 
 class _LIBCPP_EXPORTED_FROM_ABI condition_variable {
@@ -146,29 +157,7 @@ public:
 
   template <class _Rep, class _Period>
   _LIBCPP_HIDE_FROM_ABI cv_status wait_for(unique_lock<mutex>& __lk, const chrono::duration<_Rep, _Period>& __d) {
-    using namespace chrono;
-    if (__d <= __d.zero())
-      return cv_status::timeout;
-    using __ns_rep                   = nanoseconds::rep;
-    steady_clock::time_point __c_now = steady_clock::now();
-
-#  if _LIBCPP_HAS_COND_CLOCKWAIT
-    using __clock_tp_ns     = time_point<steady_clock, nanoseconds>;
-    __ns_rep __now_count_ns = std::__safe_nanosecond_cast(__c_now.time_since_epoch()).count();
-#  else
-    using __clock_tp_ns     = time_point<system_clock, nanoseconds>;
-    __ns_rep __now_count_ns = std::__safe_nanosecond_cast(system_clock::now().time_since_epoch()).count();
-#  endif
-
-    __ns_rep __d_ns_count = std::__safe_nanosecond_cast(chrono::__ceil<steady_clock::duration>(__d)).count();
-
-    if (__now_count_ns > numeric_limits<__ns_rep>::max() - __d_ns_count) {
-      __do_timed_wait(__lk, __clock_tp_ns::max());
-    } else {
-      __do_timed_wait(__lk, __clock_tp_ns(nanoseconds(__now_count_ns + __d_ns_count)));
-    }
-
-    return steady_clock::now() - __c_now < __d ? cv_status::no_timeout : cv_status::timeout;
+    return wait_until(__lk, std::__rel_to_abs(__d));
   }
 
   template <class _Rep, class _Period, class _Predicate>
