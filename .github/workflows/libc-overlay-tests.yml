@@ -23,14 +23,14 @@ jobs:
           # TODO: add linux gcc when it is fixed
           - name: linux-x86_64
             os: llvm-premerge-linux-32-runners
-            container: 'ghcr.io/llvm/libc-ubuntu-24.04:latest@sha256:c6e2ee2a9bf5cebd51fd27dd8e85381c2f73d90e091c764082f8ad528ee18918'
+            container: 'ghcr.io/llvm/libc-ubuntu-26.04:latest@sha256:fffa8d515b48be0367b0bd09ef8cf64c622367e3b0e3426e4c4f12c8fa667063'
             compiler:
               c_compiler: clang-23
               cpp_compiler: clang++-23
             linker: lld-23
           - name: linux-aarch64
             os: ubuntu-24.04-arm
-            container: 'ghcr.io/llvm/arm64v8/libc-ubuntu-24.04:latest@sha256:138636a45bb70f7b51a858b282e66291cb3c5c85371afee09032a5e09b263395'
+            container: 'ghcr.io/llvm/arm64v8/libc-ubuntu-26.04:latest@sha256:8597b484c4041a6f61374ad12820d7786e3279111a94dc13ccba0b57a3c508da'
             compiler:
               c_compiler: clang-23
               cpp_compiler: clang++-23

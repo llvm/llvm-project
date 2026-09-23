@@ -6,37 +6,17 @@
 define void @test(i64 %0, ptr %1) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: i64 [[TMP0:%.*]], ptr [[TMP1:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr @r, align 1
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc i8 [[TMP3]] to i1
-; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i64 [[TMP0]], i64 0
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr @r, i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP6]], align 1
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp ule i8 [[TMP3]], [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = sext i1 [[TMP8]] to i32
-; CHECK-NEXT:    [[TMP10:%.*]] = load i8, ptr getelementptr (i8, ptr @r, i64 -8049), align 1
-; CHECK-NEXT:    [[TMP11:%.*]] = trunc i8 [[TMP10]] to i1
-; CHECK-NEXT:    [[TMP12:%.*]] = select i1 [[TMP11]], i64 [[TMP0]], i64 0
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr @r, i64 [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = load i8, ptr [[TMP13]], align 1
-; CHECK-NEXT:    [[TMP15:%.*]] = icmp ule i8 [[TMP10]], [[TMP14]]
-; CHECK-NEXT:    [[TMP16:%.*]] = sext i1 [[TMP15]] to i32
-; CHECK-NEXT:    [[TMP17:%.*]] = add i32 [[TMP9]], [[TMP16]]
-; CHECK-NEXT:    [[TMP18:%.*]] = load i8, ptr getelementptr (i8, ptr @r, i64 -16098), align 1
-; CHECK-NEXT:    [[TMP19:%.*]] = trunc i8 [[TMP18]] to i1
-; CHECK-NEXT:    [[TMP20:%.*]] = select i1 [[TMP19]], i64 [[TMP0]], i64 0
-; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr i8, ptr @r, i64 [[TMP20]]
-; CHECK-NEXT:    [[TMP22:%.*]] = load i8, ptr [[TMP21]], align 1
-; CHECK-NEXT:    [[TMP23:%.*]] = icmp ule i8 [[TMP18]], [[TMP22]]
-; CHECK-NEXT:    [[TMP24:%.*]] = sext i1 [[TMP23]] to i32
-; CHECK-NEXT:    [[TMP25:%.*]] = add i32 [[TMP17]], [[TMP24]]
-; CHECK-NEXT:    [[TMP26:%.*]] = load i8, ptr getelementptr (i8, ptr @r, i64 -24147), align 1
-; CHECK-NEXT:    [[TMP27:%.*]] = trunc i8 [[TMP26]] to i1
-; CHECK-NEXT:    [[TMP28:%.*]] = select i1 [[TMP27]], i64 [[TMP0]], i64 0
-; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr i8, ptr @r, i64 [[TMP28]]
-; CHECK-NEXT:    [[TMP30:%.*]] = load i8, ptr [[TMP29]], align 1
-; CHECK-NEXT:    [[TMP31:%.*]] = icmp ule i8 [[TMP26]], [[TMP30]]
-; CHECK-NEXT:    [[TMP32:%.*]] = sext i1 [[TMP31]] to i32
-; CHECK-NEXT:    [[TMP33:%.*]] = add i32 [[TMP25]], [[TMP32]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call <4 x i8> @llvm.experimental.vp.strided.load.v4i8.p0.i64(ptr align 1 getelementptr (i8, ptr @r, i64 -24147), i64 8049, <4 x i1> splat (i1 true), i32 4)
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc <4 x i8> [[TMP3]] to <4 x i1>
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i64> poison, i64 [[TMP0]], i64 0
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i64> [[TMP5]], <4 x i64> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = select <4 x i1> [[TMP4]], <4 x i64> [[TMP6]], <4 x i64> zeroinitializer
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, <4 x ptr> <ptr @r, ptr @r, ptr @r, ptr @r>, <4 x i64> [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = call <4 x i8> @llvm.masked.gather.v4i8.v4p0(<4 x ptr> align 1 [[TMP8]], <4 x i1> splat (i1 true), <4 x i8> poison)
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp ule <4 x i8> [[TMP3]], [[TMP9]]
+; CHECK-NEXT:    [[TMP11:%.*]] = sext <4 x i1> [[TMP10]] to <4 x i8>
+; CHECK-NEXT:    [[TMP12:%.*]] = call i8 @llvm.vector.reduce.add.v4i8(<4 x i8> [[TMP11]])
+; CHECK-NEXT:    [[TMP33:%.*]] = sext i8 [[TMP12]] to i32
 ; CHECK-NEXT:    store i32 [[TMP33]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    ret void
 ;
