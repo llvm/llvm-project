@@ -10,10 +10,11 @@ func.func @remove_deadargs_generic_basic(%arg0: tensor<?xf32>) -> (tensor<?xf32>
   %3 = linalg.generic {indexing_maps = [#map0, #map0, #map0], iterator_types=["parallel"]} ins(%arg0, %1 : tensor<?xf32>, tensor<?xf32>) outs (%2:tensor<?xf32>) {
   ^bb0(%arg1: f32, %arg2: f32, %arg3: f32):
     %4 = arith.addf  %arg1, %cst : f32
-        linalg.yield %4 : f32
+    linalg.yield %4 : f32
   } -> tensor<?xf32>
   return %3 : tensor<?xf32>
 }
+
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
