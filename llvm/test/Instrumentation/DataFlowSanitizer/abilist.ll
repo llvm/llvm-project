@@ -33,13 +33,13 @@ define void @f(i32 %x) {
   ; CHECK: %[[LABELVA1:.*]] = alloca [2 x i8]
   ; CHECK: %[[LABELRETURN:.*]] = alloca i8
 
-  ; CHECK: call void @__dfsw_custom1(i32 1, i32 2, i8 zeroext 0, i8 zeroext 0)
+  ; CHECK: call void @__dfsw_custom1(i32 1, i32 2, i8 0, i8 0)
   call void @custom1(i32 1, i32 2)
 
-  ; CHECK: call i32 @__dfsw_custom2(i32 1, i32 2, i8 zeroext 0, i8 zeroext 0, ptr %[[LABELRETURN]])
+  ; CHECK: call i32 @__dfsw_custom2(i32 1, i32 2, i8 0, i8 0, ptr %[[LABELRETURN]])
   call i32 @custom2(i32 1, i32 2)
 
-  ; CHECK: call void @__dfsw_customcb({{.*}} @cb.dfsan, i8 zeroext 0)
+  ; CHECK: call void @__dfsw_customcb({{.*}} @cb.dfsan, i8 0)
   call void @customcb(ptr @cb)
 
   ; CHECK: %[[LABELVA1_0:.*]] = getelementptr inbounds nuw [2 x i8], ptr %[[LABELVA1]], i32 0, i32 0
@@ -47,13 +47,13 @@ define void @f(i32 %x) {
   ; CHECK: %[[LABELVA1_1:.*]] = getelementptr inbounds nuw [2 x i8], ptr %[[LABELVA1]], i32 0, i32 1
   ; CHECK: store i8 %{{.*}}, ptr %[[LABELVA1_1]]
   ; CHECK: %[[LABELVA1_0A:.*]] = getelementptr inbounds nuw [2 x i8], ptr %[[LABELVA1]], i32 0, i32 0
-  ; CHECK: call void (i32, i8, ptr, ...) @__dfsw_custom3(i32 1, i8 zeroext 0, ptr %[[LABELVA1_0A]], i32 2, i32 %{{.*}})
+  ; CHECK: call void (i32, i8, ptr, ...) @__dfsw_custom3(i32 1, i8 0, ptr %[[LABELVA1_0A]], i32 2, i32 %{{.*}})
 
   call void (i32, ...) @custom3(i32 1, i32 2, i32 %x)
 
   ; CHECK: %[[LABELVA2_0:.*]] = getelementptr inbounds nuw [2 x i8], ptr %[[LABELVA2]], i32 0, i32 0
   ; CHECK: %[[LABELVA2_0A:.*]] = getelementptr inbounds nuw [2 x i8], ptr %[[LABELVA2]], i32 0, i32 0
-  ; CHECK: call i32 (i32, i8, ptr, ptr, ...) @__dfsw_custom4(i32 1, i8 zeroext 0, ptr %[[LABELVA2_0A]], ptr %[[LABELRETURN]], i32 2, i32 3)
+  ; CHECK: call i32 (i32, i8, ptr, ptr, ...) @__dfsw_custom4(i32 1, i8 0, ptr %[[LABELVA2_0A]], ptr %[[LABELRETURN]], i32 2, i32 3)
   call i32 (i32, ...) @custom4(i32 1, i32 2, i32 3)
 
   ret void
@@ -88,8 +88,8 @@ define ptr @g(i32) {
 
 ; CHECK: define linkonce_odr i32 @"dfsw$custom4"(i32 %0, ...)
 
-; CHECK: declare void @__dfsw_custom1(i32 zeroext, i32 zeroext, i8 zeroext, i8 zeroext)
-; CHECK: declare i32 @__dfsw_custom2(i32 zeroext, i32 zeroext, i8 zeroext, i8 zeroext, ptr)
+; CHECK: declare void @__dfsw_custom1(i32, i32, i8, i8)
+; CHECK: declare i32 @__dfsw_custom2(i32, i32, i8, i8, ptr)
 
-; CHECK: declare void @__dfsw_custom3(i32 zeroext, i8 zeroext, ptr, ...)
-; CHECK: declare i32 @__dfsw_custom4(i32 zeroext, i8 zeroext, ptr, ptr, ...)
+; CHECK: declare void @__dfsw_custom3(i32, i8, ptr, ...)
+; CHECK: declare i32 @__dfsw_custom4(i32, i8, ptr, ptr, ...)
