@@ -155,13 +155,12 @@ define { { i32, i32 }, i32 } @select_unknown_cond_nested() {
   ret { { i32, i32 }, i32 } %s
 }
 
-; An undef condition is resolved to overdefined by resolvedUndefsIn.
-define { i32, i32 } @select_undef_cond() {
-; CHECK-LABEL: define { i32, i32 } @select_undef_cond() {
-; CHECK-NEXT:    [[S:%.*]] = select i1 undef, { i32, i32 } { i32 1, i32 2 }, { i32, i32 } { i32 3, i32 4 }
+define { i32, i32 } @select_poison_cond() {
+; CHECK-LABEL: define { i32, i32 } @select_poison_cond() {
+; CHECK-NEXT:    [[S:%.*]] = select i1 poison, { i32, i32 } { i32 1, i32 2 }, { i32, i32 } { i32 3, i32 4 }
 ; CHECK-NEXT:    ret { i32, i32 } [[S]]
 ;
-  %s = select i1 undef, { i32, i32 } { i32 1, i32 2 }, { i32, i32 } { i32 3, i32 4 }
+  %s = select i1 poison, { i32, i32 } { i32 1, i32 2 }, { i32, i32 } { i32 3, i32 4 }
   ret { i32, i32 } %s
 }
 
