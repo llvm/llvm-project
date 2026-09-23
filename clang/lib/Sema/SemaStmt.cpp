@@ -77,10 +77,9 @@ StmtResult Sema::ActOnDeclStmt(DeclGroupPtrTy dg, SourceLocation StartLoc,
                                SourceLocation EndLoc) {
   DeclGroupRef DG = dg.get();
 
-  // No declarations, so no statement. This is not an error: `int;` only warns,
-  // and a group emptied by an error was already diagnosed.
+  // If we have an invalid decl, just return an error.
   if (DG.isNull())
-    return StmtEmpty();
+    return StmtError();
 
   return new (Context) DeclStmt(DG, StartLoc, EndLoc);
 }

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -verify -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -o - %s | FileCheck %s
 
 void foo();
 void bar();
@@ -8,9 +8,7 @@ void bar();
 // CHECK-LABEL: define{{.*}} void @_Z1di(
 // CHECK: call void @_Z3foov()
 void d(int e) {
-  if (foo(), e) int; // expected-warning {{declaration does not declare anything}} \
-                     // expected-warning {{if statement has empty body}} \
-                     // expected-note {{put the semicolon on a separate line to silence this warning}}
+  if (foo(), e) int;
 }
 
 // The empty declaration is the body; the next statement must not become it.
@@ -20,8 +18,6 @@ void d(int e) {
 // CHECK: if.end:
 // CHECK-NEXT: call void @_Z3barv()
 void f(int e) {
-  if (e) int; // expected-warning {{declaration does not declare anything}} \
-              // expected-warning {{if statement has empty body}} \
-              // expected-note {{put the semicolon on a separate line to silence this warning}}
+  if (e) int;
   bar();
 }

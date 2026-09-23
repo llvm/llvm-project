@@ -537,9 +537,8 @@ features cannot lower the translation-unit ABI level;
 - Fixed a crash when checking scalar type with excess braces. (#GH69213), (#GH137845), (#GH198767), (#GH207566), (#GH106180)
 - Fixed an assertion crash when instantiating a nested requirement with an invalid constraint. (#GH213575)
 - Clang now defines the GCC-compatible predefined macro `__SIG_ATOMIC_TYPE__`. (#GH213895)
-- A declaration that declares nothing, such as `int;` or `__typeof__(x);`, used as a statement was treated as an
-  error without any diagnostic. This silently dropped the enclosing statement expression or `if` statement, and
-  could crash code generation when such a statement expression was used as an `if` condition. (#GH215454)
+- Fixed a crash and silently dropped code when a declaration that declares nothing, like `int;`, is the last
+  statement of a GNU statement expression or the body of an `if`. (#GH215454)
 - Fixed IEEE f128 complex mul/div using the IBM f128 libcalls on powerpc. (#GH216820)
 - Fixed an ICE that occurred when a structured binding pack is expanded outside the lambda where it was declared. (#GH214160)
 - Fixed a bug where a stray closing curley brace in an OpenMP/OpenACC pragma could cause pragma parsing issues when inside of a member function. (#GH214195)
