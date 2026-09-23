@@ -235,7 +235,7 @@ void AMDGPUMachineFunctionInfo::setDynLDSAlign(const Function &F,
   if (Dyn) {
     unsigned Offset = LDSSize; // return this?
     std::optional<uint32_t> Expect =
-        get32BitAbsoluteAddress(GV, AMDGPUAS::LOCAL_ADDRESS);
+        get32BitAbsoluteAddress(*Dyn, AMDGPUAS::LOCAL_ADDRESS);
     if (!Expect || (Offset != *Expect)) {
       report_fatal_error("Inconsistent metadata on dynamic LDS variable");
     }
