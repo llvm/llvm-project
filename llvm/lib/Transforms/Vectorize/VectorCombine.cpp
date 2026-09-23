@@ -306,7 +306,7 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   assert(isa<PointerType>(SrcPtr->getType()) && "Expected a pointer type");
 
   unsigned MinVecNumElts = MinVectorSize / OriginalScalarSizeInBits;
-  auto *MinVecTy = VectorType::get(OriginalScalarTy, MinVecNumElts, false);
+  auto *MinVecTy = FixedVectorType::get(OriginalScalarTy, MinVecNumElts);
 
   unsigned OffsetEltIndex = 0;
   // An aligned scalar occupies one vector element. Unaligned accesses below
@@ -349,7 +349,7 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
       NumScalarChunks = OriginalScalarSizeInBytes / ChunkSizeInBytes;
       MinVecNumElts = MinVectorSize / ChunkSizeInBits;
       Type *ChunkTy = Type::getIntNTy(I.getContext(), ChunkSizeInBits);
-      auto *ChunkVecTy = VectorType::get(ChunkTy, MinVecNumElts, false);
+      auto *ChunkVecTy = FixedVectorType::get(ChunkTy, MinVecNumElts);
 
       // The chunk vector is later bitcast, so its total width must not change.
       if (DL->getTypeSizeInBits(ChunkVecTy) !=
