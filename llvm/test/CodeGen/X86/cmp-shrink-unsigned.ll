@@ -8,17 +8,14 @@ define void @gt_u8(i32 %a, i32 %b) {
 ; X86-LABEL: gt_u8:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    cmpl %eax, %ecx
+; X86-NEXT:    cmpb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    ja ext@PLT # TAILCALL
 ; X86-NEXT:  # %bb.1: # %end
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: gt_u8:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movzbl %dil, %eax
-; X64-NEXT:    movzbl %sil, %ecx
-; X64-NEXT:    cmpl %ecx, %eax
+; X64-NEXT:    cmpb %sil, %dil
 ; X64-NEXT:    ja ext@PLT # TAILCALL
 ; X64-NEXT:  # %bb.1: # %end
 ; X64-NEXT:    retq
@@ -46,9 +43,7 @@ define void @gt_u16(i32 %a, i32 %b) {
 ;
 ; X64-LABEL: gt_u16:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movzwl %di, %eax
-; X64-NEXT:    movzwl %si, %ecx
-; X64-NEXT:    cmpl %ecx, %eax
+; X64-NEXT:    cmpw %si, %di
 ; X64-NEXT:    ja ext@PLT # TAILCALL
 ; X64-NEXT:  # %bb.1: # %end
 ; X64-NEXT:    retq
@@ -76,9 +71,7 @@ define void @gt_u16_zext(i16 %a, i16 %b) {
 ;
 ; X64-LABEL: gt_u16_zext:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movzwl %di, %eax
-; X64-NEXT:    movzwl %si, %ecx
-; X64-NEXT:    cmpl %ecx, %eax
+; X64-NEXT:    cmpw %si, %di
 ; X64-NEXT:    ja ext@PLT # TAILCALL
 ; X64-NEXT:  # %bb.1: # %end
 ; X64-NEXT:    retq
@@ -106,9 +99,7 @@ define void @gt_u16_wide_mask(i32 %a, i32 %b) {
 ;
 ; X64-LABEL: gt_u16_wide_mask:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movzwl %di, %eax
-; X64-NEXT:    movzwl %si, %ecx
-; X64-NEXT:    cmpl %ecx, %eax
+; X64-NEXT:    cmpw %si, %di
 ; X64-NEXT:    ja ext@PLT # TAILCALL
 ; X64-NEXT:  # %bb.1: # %end
 ; X64-NEXT:    retq
