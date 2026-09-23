@@ -18,6 +18,14 @@ divs.l	%d1, %d0
 ; CHECK:	divu.l	%d1, %d0
 ; CHECK-SAME:	encoding: [0x4c,0x41,0x00,0x00]
 divu.l	%d1, %d0
+; A destination other than %d0, so that a Dr field left at 0 does not
+; coincide with Dq.
+; CHECK:	divs.l	%d1, %d3
+; CHECK-SAME:	encoding: [0x4c,0x41,0x38,0x03]
+divs.l	%d1, %d3
+; CHECK:	divu.l	%d1, %d3
+; CHECK-SAME:	encoding: [0x4c,0x41,0x30,0x03]
+divu.l	%d1, %d3
 ; CHECK:      muls  %d1, %d0
 ; CHECK-SAME: encoding: [0xc1,0xc1]
 muls	%d1, %d0
