@@ -3152,8 +3152,8 @@ kmp_int32 __kmp_build_taskgraph(kmp_int32 gtid,
   taskgraph->recycled_deps = nullptr;
 
   if (__kmp_taskgraph_trace()) {
-    fprintf(stderr, "Processed taskgraph %p (graph_id %d):\n", taskgraph,
-            taskgraph->graph_id);
+    fprintf(stderr, "Processed taskgraph %p (graph_id %" PRIx64 "):\n",
+            taskgraph, taskgraph->graph_id);
     __kmp_dump_taskgraph_regions(stderr, root_region);
   }
 
