@@ -524,25 +524,25 @@ Descriptor::DynAllocKind Descriptor::getDynAllocKindForExpr(const Expr *E) {
 
 uint64_t Descriptor::computeAlignForDynamicAlloc(const ASTContext &Ctx) const {
   const Expr *AllocExpr = asExpr();
-  const QualType AllocType = getDataType(Ctx);
+  QualType AllocType = getDataType(Ctx);
 
   const TargetInfo &TI = Ctx.getTargetInfo();
 
-  const uint64_t DefaultNewAlign = TI.getNewAlign();
-  const uint64_t MaxFundamentalAlign =
+  uint64_t DefaultNewAlign = TI.getNewAlign();
+  uint64_t MaxFundamentalAlign =
       std::max(TI.getLongLongAlign(), TI.getLongDoubleAlign());
 
-  const DynAllocKind AllocKind = getDynAllocKindForExpr(AllocExpr);
+  DynAllocKind AllocKind = getDynAllocKindForExpr(AllocExpr);
   assert((AllocKind != DynAllocKind::None) &&
          "should only be called on dynamically allocated blocks");
   assert((AllocKind != DynAllocKind::BuiltinOperatorNew) &&
          "__builtin_operator_new should have been allowed only from "
          "std::allocator::allocate");
 
-  const uint64_t TypeAlignment = Ctx.getTypeAlign(AllocType);
+  uint64_t TypeAlignment = Ctx.getTypeAlign(AllocType);
   assert(TypeAlignment > 0 && "Unknown alignment for allocated type!");
 
-  const uint64_t AllocSize = Ctx.getTypeSize(AllocType);
+  uint64_t AllocSize = Ctx.getTypeSize(AllocType);
 
   if (AllocSize == 0) {
     switch (AllocKind) {

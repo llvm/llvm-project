@@ -81,7 +81,7 @@ public:
   bool isTemporary() const { return Desc->IsTemporary; }
   bool isWeak() const { return AccessFlags & WeakFlag; }
   bool isDynamic() const {
-    const bool Result = (DynAllocId != std::nullopt);
+    bool Result = (DynAllocId != std::nullopt);
     assert((Result == Desc->isDynAlloc()) &&
            "Inconsistent block/descriptor dynamic alloc state");
     return Result;

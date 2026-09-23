@@ -64,37 +64,39 @@ public:
 
 /// Symbolic representation of a dynamic allocation.
 class DynamicAllocLValue {
+public:
+  static constexpr int NumLowBitsAvailable = 2;
+  static constexpr int NumAlignmentBits = 5;
+
+private:
   // lower NumAlignmentBits: alignment exponent
   // remaining bits: allocation index incremented by one
   // value of zero indicates distinct empty state
-  uintptr_t AlignAndIndex;
+  uintptr_t Align : NumAlignmentBits;
+  uintptr_t Index : sizeof(uintptr_t) * CHAR_BIT - NumAlignmentBits;
 
 public:
-  DynamicAllocLValue() : AlignAndIndex(0) {}
-  explicit DynamicAllocLValue(unsigned Index, uint64_t Align) {
+  DynamicAllocLValue() : Align(0), Index(0) {}
+  explicit DynamicAllocLValue(unsigned Idx, uint64_t Align)
+      : Align(llvm::countr_zero(Align)), Index(Idx + 1) {
     assert(Align > 0 && "Invalid alignment for DynamicAllocLValue constructor");
-    AlignAndIndex =
-        ((Index + 1) << NumAlignmentBits) + llvm::countr_zero(Align);
+    assert(Idx <= getMaxIndex() && "Index is out of range");
   }
-  unsigned getIndex() const { return (AlignAndIndex >> NumAlignmentBits) - 1; }
-  unsigned getAlignExponent() const {
-    return AlignAndIndex & ((1U << NumAlignmentBits) - 1);
-  }
-  uint64_t getAlign() const {
-    const unsigned AlignExponent = getAlignExponent();
-    assert(AlignExponent < 64 && "Invalid alignment in DynamicAllocLValue.");
-    return uint64_t{1} << AlignExponent;
-  }
+  unsigned getIndex() const { return Index - 1; }
+  uint64_t getAlign() const { return uint64_t{1} << Align; }
 
-  explicit operator bool() const { return AlignAndIndex != 0; }
+  explicit operator bool() const { return Index != 0 && Align != 0; }
 
   const void *getOpaqueValue() const {
-    return reinterpret_cast<const void *>(static_cast<uintptr_t>(AlignAndIndex)
+    return reinterpret_cast<const void *>((Index << NumAlignmentBits | Align)
                                           << NumLowBitsAvailable);
   }
   static DynamicAllocLValue getFromOpaqueValue(const void *Value) {
     DynamicAllocLValue V;
-    V.AlignAndIndex = reinterpret_cast<uintptr_t>(Value) >> NumLowBitsAvailable;
+    uintptr_t Combined =
+        reinterpret_cast<uintptr_t>(Value) >> NumLowBitsAvailable;
+    V.Align = Combined & (1 << NumAlignmentBits) - 1;
+    V.Index = Combined >> NumAlignmentBits;
     return V;
   }
 
@@ -103,10 +105,8 @@ public:
             (NumLowBitsAvailable + NumAlignmentBits)) -
            1;
   }
-
-  static constexpr int NumLowBitsAvailable = 2;
-  static constexpr int NumAlignmentBits = 5;
 };
+static_assert(sizeof(DynamicAllocLValue) == sizeof(uintptr_t));
 }
 
 namespace llvm {

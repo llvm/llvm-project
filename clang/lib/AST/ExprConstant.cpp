@@ -1861,15 +1861,15 @@ APValue &CallStackFrame::createLocal(APValue::LValueBase Base, const void *Key,
 uint64_t GetAlignOfDynamicAlloc(const ASTContext &Ctx, QualType AllocType,
                                 const Expr *AllocExpr) {
   const TargetInfo &TI = Ctx.getTargetInfo();
-  const uint64_t DefaultNewAlign = TI.getNewAlign();
-  const uint64_t MaxFundamentalAlign =
+  uint64_t DefaultNewAlign = TI.getNewAlign();
+  uint64_t MaxFundamentalAlign =
       std::max(TI.getLongLongAlign(), TI.getLongDoubleAlign());
-  const DynAlloc::Kind AllocKind = DynAlloc::kindOfExpr(AllocExpr);
+  DynAlloc::Kind AllocKind = DynAlloc::kindOfExpr(AllocExpr);
 
-  const uint64_t TypeAlignment = Ctx.getTypeAlign(AllocType);
+  uint64_t TypeAlignment = Ctx.getTypeAlign(AllocType);
   assert(TypeAlignment > 0 && "Unknown alignment for allocated type!");
 
-  const uint64_t AllocSize = Ctx.getTypeSize(AllocType);
+  uint64_t AllocSize = Ctx.getTypeSize(AllocType);
 
   if (AllocSize == 0) {
     switch (AllocKind) {
