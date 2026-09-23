@@ -284,18 +284,18 @@ static_assert(__is_same_as(int, helper<int>));
 } // namespace GH138018
 
 namespace GH172814 {
-auto f() {
+auto a() {
   int x = 0;
   return [](auto w = [&] { x += w(); }); // expected-error {{lambda expression in default argument cannot capture any entity}} \
                                          // expected-error {{expected body of lambda expression}}
 }
 
-auto t() {
+auto b() {
   int x = 0;
   return [](auto w = [&] { return x; }) { }; // expected-error {{lambda expression in default argument cannot capture any entity}}
 };
 
-auto g() {
+auto c() {
   int x = 0;
   return []<class T>(T w = [&] { return x; }) {}; // expected-error {{lambda expression in default argument cannot capture any entity}}
 }
@@ -332,36 +332,61 @@ struct S {
 }
 
 namespace GH48768 {
-
 auto a(auto x = 1, auto = []<auto = x> {}());               // expected-error {{default argument references parameter 'x'}}
 void b(auto x, auto = []<auto = x> {});                     // expected-error {{default argument references parameter 'x'}}
 auto c = [](auto x, int = []<auto = x> { return 0; }()) {}; // expected-error {{default argument references parameter 'x'}}
+void d(auto x, auto = []<template<auto = x> class> {});     // expected-error {{default argument references parameter 'x'}}
 
-constexpr int d(auto x, int n = []<auto N = sizeof(x)> { return N; }()) {
+constexpr int e(int x, auto y, auto z, int n = [](auto x) { return sizeof(x); }(123)) {
+  return x + y + z + n;
+}
+static_assert(e(1, 2, char(3)) == 6 + sizeof(int));
+
+constexpr int f(auto *x, int n = []<class T = decltype(*x), auto N = sizeof(T)> { return N; }()) noexcept([]<class T = decltype(*x)> { return sizeof(T) == 1; }()) {
   return n;
 }
+static_assert(f(static_cast<int *>(nullptr)) == sizeof(int));
+static_assert(f(static_cast<char *>(nullptr)) == 1);
+static_assert(noexcept(f(static_cast<char *>(nullptr), 0)));
+static_assert(!noexcept(f(static_cast<int *>(nullptr), 0)));
 
-constexpr int e(auto x, int n = []<class T = decltype(x)> { return sizeof(T); }()) {
+constexpr int g(auto, int n = []<class T, unsigned N>(const T (&)[N]) { return sizeof(T) + N; }("abc")) {
   return n;
 }
+static_assert(g(0) == 5);
 
-constexpr auto f = [](auto x, int n = []<auto N = sizeof(x)> { return N; }()) {
+template <class T>
+constexpr int h(T x, auto y, int n = []<auto N = sizeof(x) + sizeof(y)> { return N; }()) {
   return n;
-};
+}
+static_assert(h('a', 0) == 1 + sizeof(int));
 
-constexpr auto g = [](auto x, int n = []<class T = decltype(x)> { return sizeof(T); }()) {
-  return n;
+auto i = [](auto x) {
+  return [](auto y, int n = []<class T = decltype(y), auto N = 2 * sizeof(x) + sizeof(T)> { return N; }()) { return n; };
 };
+static_assert(i(0)('a') == 2 * sizeof(int) + 1);
+static_assert(i('a')(0) == 2 + sizeof(int));
 
-constexpr auto h = [](auto x) {
-  return [](auto y, int n = []<auto N = sizeof(y)> { return N; }()) {
-    return n;
-  };
+template <auto> struct A {};
+template <class> constexpr auto j() noexcept {
+  return [](auto x, int n = [](auto) noexcept { return 0; }(123)) noexcept([]<class T = decltype(x)> { return sizeof(T) == 1; }()) -> A<[]<auto N = sizeof(x)> { return N; }()> { return {}; };
+}
+static_assert(__is_same(decltype(j<void>()('a')), A<sizeof(char)>));
+static_assert(__is_same(decltype(j<void>()(0)), A<sizeof(int)>));
+static_assert(noexcept(j<void>()('a')) && !noexcept(j<void>()(0)));
+
+template <class T> struct B { // expected-note {{B defined here}}
+  static constexpr int a(auto x);
+  void b(auto) requires ([](auto) { return true; }(T{}));
 };
+template <class T> constexpr int B<T>::a(auto x) {
+  return [](auto y) { return sizeof(y) + sizeof(T); }(x);
+}
+static_assert(B<char>::a(0) == 1 + sizeof(int));
 
-static_assert(d(0) == sizeof(int));
-static_assert(e(0) == sizeof(int));
-static_assert(f(0) == sizeof(int));
-static_assert(g(0) == sizeof(int));
-static_assert(h(0)('a') == 1);
+template <class T>
+void B<T>::b(auto) requires ([](auto) { return true; }(T{})) {} // expected-error {{out-of-line definition of 'b' does not match any declaration}}
+
+template <template <class T> requires requires(T t) { t; } class> struct C {};
+static_assert([](auto x) { return x; }(1) == 1);
 }

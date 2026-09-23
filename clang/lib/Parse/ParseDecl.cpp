@@ -2187,11 +2187,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
       ;
 
   if (Tok.is(tok::kw_requires)) {
-    TemplateParameterDepthRAII CurTemplateDepthTracker(TemplateParameterDepth);
-    // With abbreviated function templates - we need to explicitly add depth to
-    // account for the implicit template parameter list induced by the template.
-    if (!TemplateInfo.TemplateParams && D.getInventedTemplateParameterList())
-      ++CurTemplateDepthTracker;
+    ReenterTemplateScopeRAII InTemplateScope(*this, D);
     ParseTrailingRequiresClauseWithScope(D);
   }
 
@@ -6943,6 +6939,10 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
   while (true) {
     if (Tok.is(tok::l_paren)) {
       bool IsFunctionDeclaration = D.isFunctionDeclaratorAFunctionDeclaration();
+      ParseScope ImplicitTemplateScope(this, Scope::NoScope,
+                                       getLangOpts().CPlusPlus &&
+                                           IsFunctionDeclaration);
+
       // Enter function-declaration scope, limiting any declarators to the
       // function prototype scope, including parameter declarators.
       ParseScope PrototypeScope(
@@ -7280,6 +7280,7 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
                                      BalancedDelimiterTracker &Tracker,
                                      bool IsAmbiguous,
                                      bool RequiresArg) {
+  llvm::SaveAndRestore<unsigned> SavedTemplateDepth(TemplateParameterDepth);
   assert(getCurScope()->isFunctionPrototypeScope() &&
          "Should call from a Function scope");
   // lparen is already consumed!
@@ -7723,8 +7724,12 @@ void Parser::ParseParameterDeclarationClause(
 
       // Inform the actions module about the parameter declarator, so it gets
       // added to the current scope.
+      Scope *TemplateScope = getCurScope()->getTemplateParamParent();
       Decl *Param =
           Actions.ActOnParamDeclarator(getCurScope(), ParmDeclarator, ThisLoc);
+
+      if (getCurScope()->getTemplateParamParent() != TemplateScope)
+        ++TemplateParameterDepth;
       // Parse the default argument, if any. We parse the default
       // arguments in all dialects; the semantic analysis in
       // ActOnParamDefaultArgument will reject the default argument in
@@ -7755,16 +7760,6 @@ void Parser::ParseParameterDeclarationClause(
           // name or other parameters).
           DelayTemplateIdDestructionRAII DontDestructTemplateIds(
               *this, /*DelayTemplateIdDestruction=*/true);
-
-          // Include the template level introduced by 'auto' parameters:
-          //   void f(auto x, int = []<auto N = sizeof(x)>() { return N; }());
-          // The type parameter for x has depth 0, so N starts at depth 1.
-          // Otherwise, instantiation would reduce N's depth to -1.
-          TemplateParameterDepthRAII CurTemplateDepthTracker(
-              TemplateParameterDepth);
-          unsigned Depth = Actions.getTemplateDepth(getCurScope());
-          if (Depth > TemplateParameterDepth)
-            CurTemplateDepthTracker.addDepth(Depth - TemplateParameterDepth);
 
           // The argument isn't actually potentially evaluated unless it is
           // used.

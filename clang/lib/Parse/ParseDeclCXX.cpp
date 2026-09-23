@@ -2600,12 +2600,7 @@ bool Parser::ParseCXXMemberDeclaratorBeforeInitializer(
     if (BitfieldSize.isInvalid())
       SkipUntil(tok::comma, StopAtSemi | StopBeforeMatch);
   } else if (Tok.is(tok::kw_requires)) {
-    TemplateParameterDepthRAII CurTemplateDepthTracker(TemplateParameterDepth);
-    // With abbreviated function templates - we need to explicitly add depth to
-    // account for the implicit template parameter list induced by the template.
-    if (DeclaratorInfo.getTemplateParameterLists().empty() &&
-        DeclaratorInfo.getInventedTemplateParameterList())
-      ++CurTemplateDepthTracker;
+    ReenterTemplateScopeRAII InTemplateScope(*this, DeclaratorInfo);
     ParseTrailingRequiresClauseWithScope(DeclaratorInfo);
   } else {
     ParseOptionalCXX11VirtSpecifierSeq(

@@ -1339,10 +1339,6 @@ private:
   typedef SmallVector<LateParsedDeclaration *, 2>
       LateParsedDeclarationsContainer;
 
-  /// Utility to re-enter a possibly-templated scope while parsing its
-  /// late-parsed components.
-  struct ReenterTemplateScopeRAII;
-
   /// Utility to re-enter a class scope while parsing its late-parsed
   /// components.
   struct ReenterClassScopeRAII;
@@ -7941,13 +7937,18 @@ private:
       Depth += D;
       AddedLevels += D;
     }
-    void setAddedDepth(unsigned D) {
-      Depth = Depth - AddedLevels + D;
-      AddedLevels = D;
-    }
-
     unsigned getDepth() const { return Depth; }
-    unsigned getOriginalDepth() const { return Depth - AddedLevels; }
+  };
+
+  /// Utility to re-enter a possibly-templated scope while parsing its
+  /// late-parsed components.
+  struct ReenterTemplateScopeRAII {
+    MultiParseScope Scopes;
+    TemplateParameterDepthRAII CurTemplateDepthTracker;
+
+    ReenterTemplateScopeRAII(Parser &P, Decl *MaybeTemplated,
+                             bool Enter = true);
+    ReenterTemplateScopeRAII(Parser &P, const Declarator &D);
   };
 
   /// Gathers and cleans up TemplateIdAnnotations when parsing of a

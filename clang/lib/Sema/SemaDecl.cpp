@@ -16399,14 +16399,8 @@ LambdaScopeInfo *Sema::RebuildLambdaScopeInfo(CXXMethodDecl *CallOperator) {
   LSI->AfterParameterList = CurContext == CallOperator;
   LSI->BeforeCompoundStatement = false;
 
-  // GLTemplateParameterList is necessary for getCurGenericLambda() which is
-  // used at the point of dealing with potential captures.
-  //
-  // We don't use LambdaClass->isGenericLambda() because this value doesn't
-  // flip for instantiated generic lambdas, where no FunctionTemplateDecls are
-  // associated. (Technically, we could recover that list from their
-  // instantiation patterns, but for now, the GLTemplateParameterList seems
-  // unnecessary in these cases.)
+  // A generic lambda's call operator specialization has no template parameter
+  // list, even though the closure is still marked as generic.
   if (FunctionTemplateDecl *FTD = CallOperator->getDescribedFunctionTemplate())
     LSI->GLTemplateParameterList = FTD->getTemplateParameters();
   const LambdaCaptureDefault LCD = LambdaClass->getLambdaCaptureDefault();

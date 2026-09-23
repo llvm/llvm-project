@@ -63,34 +63,8 @@ unsigned Sema::getTemplateDepth(Scope *S) const {
   // Each template parameter scope represents one level of template parameter
   // depth.
   for (Scope *TempParamScope = S->getTemplateParamParent(); TempParamScope;
-       TempParamScope = TempParamScope->getParent()->getTemplateParamParent()) {
+       TempParamScope = TempParamScope->getParent()->getTemplateParamParent())
     ++Depth;
-  }
-
-  // Note that there are template parameters with the given depth.
-  auto ParamsAtDepth = [&](unsigned D) { Depth = std::max(Depth, D + 1); };
-
-  // Look for parameters of an enclosing generic lambda. We don't create a
-  // template parameter scope for these.
-  for (FunctionScopeInfo *FSI : getFunctionScopes()) {
-    if (auto *LSI = dyn_cast<LambdaScopeInfo>(FSI)) {
-      if (!LSI->TemplateParams.empty()) {
-        ParamsAtDepth(LSI->AutoTemplateParameterDepth);
-      } else if (LSI->GLTemplateParameterList) {
-        ParamsAtDepth(LSI->GLTemplateParameterList->getDepth());
-      }
-    }
-  }
-
-  // Look for parameters of an enclosing terse function template. We don't
-  // create a template parameter scope for these either.
-  for (const InventedTemplateParameterInfo &Info :
-       getInventedParameterInfos()) {
-    if (!Info.TemplateParams.empty()) {
-      ParamsAtDepth(Info.AutoTemplateParameterDepth);
-      break;
-    }
-  }
 
   return Depth;
 }

@@ -1185,7 +1185,7 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
   // Poison SEH identifiers so they are flagged as illegal in function bodies.
   PoisonSEHIdentifiersRAIIObject PoisonSEHIdentifiers(*this, true);
   const DeclaratorChunk::FunctionTypeInfo &FTI = D.getFunctionTypeInfo();
-  TemplateParameterDepthRAII CurTemplateDepthTracker(TemplateParameterDepth);
+  ReenterTemplateScopeRAII InTemplateScope(*this, D);
 
   // If this is C89 and the declspecs were completely missing, fudge in an
   // implicit int.  We do this here because this is the only place where
@@ -1370,15 +1370,6 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
     Actions.ActOnFinishFunctionBody(Res, GeneratedBody, false);
     return Res;
   }
-
-  // With abbreviated function templates - we need to explicitly add depth to
-  // account for the implicit template parameter list induced by the template.
-  if (const auto *Template = dyn_cast_if_present<FunctionTemplateDecl>(Res);
-      Template && Template->isAbbreviated() &&
-      Template->getTemplateParameters()->getParam(0)->isImplicit())
-    // First template parameter is implicit - meaning no explicit template
-    // parameter list was specified.
-    CurTemplateDepthTracker.addDepth(1);
 
   // Late attributes are parsed in the same scope as the function body.
   if (LateParsedAttrs)
