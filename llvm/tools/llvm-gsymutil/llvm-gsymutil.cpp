@@ -17,10 +17,11 @@
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Driver.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/JSON.h"
-#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -69,24 +70,12 @@ enum ID {
 #undef OPTION
 };
 
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_CODE
 #include "Opts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
 
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "Opts.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-const opt::OptTable::Info InfoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
-#include "Opts.inc"
-#undef OPTION
-};
-
-class GSYMUtilOptTable : public llvm::opt::GenericOptTable {
+class GSYMUtilOptTable : public llvm::opt::OptTable {
 public:
-  GSYMUtilOptTable()
-      : GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {
+  GSYMUtilOptTable() : OptTable(optionTables()) {
     setGroupedShortOptions(true);
   }
 };
@@ -476,10 +465,10 @@ static llvm::Error handleObjectFile(ObjectFile &Obj, ObjectFile *SymtabObj,
   std::unique_ptr<GsymCreator> GsymPtr;
   switch (OutputVersion) {
   case Header::getVersion():
-    GsymPtr = std::make_unique<GsymCreatorV1>(Quiet);
+    GsymPtr = std::make_unique<GsymCreatorV1>();
     break;
   case HeaderV2::getVersion():
-    GsymPtr = std::make_unique<GsymCreatorV2>(Quiet);
+    GsymPtr = std::make_unique<GsymCreatorV2>();
     break;
   default:
     return createStringError(std::errc::invalid_argument,
@@ -758,6 +747,11 @@ static void doLookup(GsymReader &Gsym, uint64_t Addr, raw_ostream &OS) {
         if (i != Results->size() - 1)
           OS << "\n";
       }
+    } else {
+      if (Verbose)
+        OS << "\nLookupResult for " << HEX64(Addr) << ":\n";
+      OS << HEX64(Addr) << ": ";
+      logAllUnhandledErrors(Results.takeError(), OS, "error: ");
     }
   } else { /* UseMergedFunctions == false */
     if (auto Result = Gsym.lookup(Addr)) {
@@ -824,7 +818,7 @@ int llvm_gsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
     return EXIT_SUCCESS;
   }
 
-  OutputAggregator Aggregation(&OS);
+  OutputAggregator Aggregation(&OS, Quiet);
   if (!ConvertFilename.empty()) {
     // Convert DWARF to GSYM
     if (!InputFilenames.empty()) {

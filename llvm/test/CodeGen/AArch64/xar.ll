@@ -134,7 +134,7 @@ define <4 x i32> @xar_instead_of_or_v4i32(<4 x i32> %r) {
 ; SVE2-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE2-NEXT:    ret
 entry:
-  %or = call <4 x i32> @llvm.fshl.v2i32(<4 x i32> %r, <4 x i32> %r, <4 x i32> splat (i32 25))
+  %or = call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %r, <4 x i32> %r, <4 x i32> splat (i32 25))
   ret <4 x i32> %or
 }
 
@@ -161,7 +161,7 @@ define <8 x i16> @xar_instead_of_or_v8i16(<8 x i16> %r) {
 ; SVE2-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE2-NEXT:    ret
 entry:
-  %or = call <8 x i16> @llvm.fshl.v2i16(<8 x i16> %r, <8 x i16> %r, <8 x i16> splat (i16 25))
+  %or = call <8 x i16> @llvm.fshl.v8i16(<8 x i16> %r, <8 x i16> %r, <8 x i16> splat (i16 25))
   ret <8 x i16> %or
 }
 
@@ -188,7 +188,7 @@ define <16 x i8> @xar_instead_of_or_v16i8(<16 x i8> %r) {
 ; SVE2-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE2-NEXT:    ret
 entry:
-  %or = call <16 x i8> @llvm.fshl.v2i8(<16 x i8> %r, <16 x i8> %r, <16 x i8> splat (i8 25))
+  %or = call <16 x i8> @llvm.fshl.v16i8(<16 x i8> %r, <16 x i8> %r, <16 x i8> splat (i8 25))
   ret <16 x i8> %or
 }
 
@@ -448,8 +448,3 @@ define <4 x i16> @rev16_v4i16_shifts_r(<4 x i16> %a) {
   %or = or <4 x i16> %shr, %shl
   ret <4 x i16> %or
 }
-
-declare <2 x i64> @llvm.fshl.v2i64(<2 x i64>, <2 x i64>, <2 x i64>)
-declare <4 x i32> @llvm.fshl.v4i32(<4 x i32>, <4 x i32>, <4 x i32>)
-declare <8 x i16> @llvm.fshl.v8i16(<8 x i16>, <8 x i16>, <8 x i16>)
-declare <16 x i8> @llvm.fshl.v16i8(<16 x i8>, <16 x i8>, <16 x i8>)

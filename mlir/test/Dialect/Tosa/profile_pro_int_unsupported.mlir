@@ -251,28 +251,28 @@ func.func @test_resize(%arg0: tensor<1x32x32x8xi8>) -> tensor<1x64x64x8xi32> {
 // -----
 func.func @test_cast_i1_i8(%arg0: tensor<13x21x3xi1>) -> tensor<13x21x3xi8> {
   // expected-error@+1 {{'tosa.cast' op illegal: requires any of [pro_int] profiles/extensions to be specified in the target environment}}
-  %0 = tosa.cast %arg0 : (tensor<13x21x3xi1>) -> tensor<13x21x3xi8>
+  %0 = tosa.cast %arg0 {input_unsigned = false} : (tensor<13x21x3xi1>) -> tensor<13x21x3xi8>
   return %0 : tensor<13x21x3xi8>
 }
 
 // -----
 func.func @test_cast_i8_i32(%arg0: tensor<13x21x3xi8>) -> tensor<13x21x3xi32> {
   // expected-error@+1 {{'tosa.cast' op illegal: requires any of [pro_int] profiles/extensions to be specified in the target environment}}
-  %0 = tosa.cast %arg0 : (tensor<13x21x3xi8>) -> tensor<13x21x3xi32>
+  %0 = tosa.cast %arg0 {input_unsigned = false} : (tensor<13x21x3xi8>) -> tensor<13x21x3xi32>
   return %0 : tensor<13x21x3xi32>
 }
 
 // -----
 func.func @test_cast_i16_i8(%arg0: tensor<13x21x3xi16>) -> tensor<13x21x3xi8> {
   // expected-error@+1 {{'tosa.cast' op illegal: requires any of [pro_int] profiles/extensions to be specified in the target environment}}
-  %0 = tosa.cast %arg0 : (tensor<13x21x3xi16>) -> tensor<13x21x3xi8>
+  %0 = tosa.cast %arg0 {input_unsigned = false} : (tensor<13x21x3xi16>) -> tensor<13x21x3xi8>
   return %0 : tensor<13x21x3xi8>
 }
 
 // -----
 func.func @test_cast_i32_i16(%arg0: tensor<13x21x3xi32>) -> tensor<13x21x3xi16> {
   // expected-error@+1 {{'tosa.cast' op illegal: requires any of [pro_int] profiles/extensions to be specified in the target environment}}
-  %0 = tosa.cast %arg0 : (tensor<13x21x3xi32>) -> tensor<13x21x3xi16>
+  %0 = tosa.cast %arg0 {input_unsigned = false} : (tensor<13x21x3xi32>) -> tensor<13x21x3xi16>
   return %0 : tensor<13x21x3xi16>
 }
 
