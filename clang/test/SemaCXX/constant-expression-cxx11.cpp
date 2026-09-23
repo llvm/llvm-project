@@ -1945,6 +1945,81 @@ namespace InitializerList {
   }
 }
 
+namespace ConstexprForRangeVar {
+  void invalid() {
+    for (constexpr auto x : {1, 2, 3}) {} // expected-error {{constexpr variable 'x' must be initialized by a constant expression}} expected-note-re {{read of implicit variable '__begin{{[0-9]+}}' of range-based 'for' loop is not allowed in a constant expression}}
+  }
+
+  struct S {
+    struct iterator {
+      constexpr iterator operator++() const { return {}; }
+      constexpr bool operator!=(const iterator &) const { return false; }
+      constexpr int operator*() const { return 42; }
+    };
+    static constexpr iterator begin() { return iterator(); }
+    static constexpr iterator end() { return iterator(); }
+  };
+
+  template <int x> constexpr int g() { return x; }
+
+  void valid() {
+    for (constexpr int x : S()) {
+      static_assert(x == 42, "");
+      static_assert(g<x>() == 42, "");
+    }
+  }
+
+  struct T {
+    struct iterator {
+      int n;
+      constexpr iterator operator++() const { return {n + 1}; }
+      constexpr bool operator!=(const iterator &o) const { return n != o.n; }
+      constexpr int operator*() const { return n; } // #member-read
+    };
+    static constexpr iterator begin() { return {0}; }
+    static constexpr iterator end() { return {3}; }
+  };
+
+  void member_read() {
+    for (constexpr int x : T()) {} // expected-error {{constexpr variable 'x' must be initialized by a constant expression}} \
+                                   // expected-note-re {{in call to '__begin{{[0-9]+}}.operator*()'}} \
+                                   // expected-note-re@#member-read {{read of implicit variable '__begin{{[0-9]+}}' of range-based 'for' loop is not allowed in a constant expression}}
+  }
+
+#if __cplusplus >= 202002L
+  struct Sentinel {
+    struct iterator {
+      friend consteval bool operator!=(const iterator &, const iterator &end) { return end.b; } // #sentinel-read
+      int operator*();
+      void operator++();
+      bool b;
+    };
+    iterator begin();
+    iterator end();
+  };
+
+  void end_var() {
+    Sentinel s = {};
+    for (int n : s) {} // cxx20_23-error-re {{call to consteval function '{{.*}}operator!=' is not a constant expression}} \
+                       // cxx20_23-note-re {{in call to '{{.*}}operator!=({{.*}})'}} \
+                       // cxx20_23-note-re@#sentinel-read {{read of implicit variable '__end{{[0-9]+}}' of range-based 'for' loop is not allowed in a constant expression}}
+  }
+#endif
+
+#if __cplusplus >= 202302L
+  struct ByValueBegin { int *p; };
+  consteval int *begin(ByValueBegin r) { return r.p; }
+  int *end(ByValueBegin r);
+
+  void range_var() {
+    ByValueBegin r = {nullptr};
+    for (int n : r) {} // cxx23-error-re {{call to consteval function '{{.*}}begin' is not a constant expression}} \
+                       // cxx23-note-re {{in call to 'ByValueBegin(__range{{[0-9]+}})'}} \
+                       // cxx23-note-re {{read of implicit variable '__range{{[0-9]+}}' of range-based 'for' loop is not allowed in a constant expression}}
+  }
+#endif
+}
+
 namespace StmtExpr {
   struct A { int k; };
   void f() {

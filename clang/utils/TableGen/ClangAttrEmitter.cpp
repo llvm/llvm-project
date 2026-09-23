@@ -5485,7 +5485,7 @@ public:
 static void WriteCategoryHeader(const Record *DocCategory,
                                 raw_ostream &OS) {
   const StringRef Name = DocCategory->getValueAsString("Name");
-  OS << Name << "\n" << std::string(Name.size(), '=') << "\n";
+  OS << "## " << Name << "\n\n";
 
   // If there is content, print that as well.
   const StringRef ContentStr = DocCategory->getValueAsString("Content");
@@ -5560,18 +5560,24 @@ static void WriteDocumentation(const RecordKeeper &Records,
                                const DocumentationData &Doc, raw_ostream &OS) {
   if (StringRef Label = Doc.Documentation->getValueAsString("Label");
       !Label.empty())
-    OS << ".. _" << Label << ":\n\n";
-  OS << Doc.Heading << "\n" << std::string(Doc.Heading.length(), '-') << "\n";
+    OS << "(" << Label << ")=\n\n";
+  OS << "### " << Doc.Heading << "\n\n";
 
   if (Doc.SupportedSpellings.hasSpelling()) {
     // List what spelling syntaxes the attribute supports.
     // Note: "#pragma clang attribute" is handled outside the spelling kinds
     // loop so it must be last.
-    OS << ".. csv-table:: Supported Syntaxes\n";
-    OS << "   :header: \"GNU\", \"C++11\", \"C23\", \"``__declspec``\",";
-    OS << " \"Keyword\", \"``#pragma``\", \"HLSL Annotation\", \"``#pragma "
-          "clang ";
-    OS << "attribute``\"\n\n   \"";
+    OS << ":::{list-table} Supported Syntaxes\n";
+    OS << ":header-rows: 1\n\n";
+    OS << "* - GNU\n";
+    OS << "  - C++11\n";
+    OS << "  - C23\n";
+    OS << "  - `__declspec`\n";
+    OS << "  - Keyword\n";
+    OS << "  - `#pragma`\n";
+    OS << "  - HLSL Annotation\n";
+    OS << "  - `#pragma clang attribute`\n";
+    OS << "*";
     for (size_t Kind = 0; Kind != NumSpellingKinds; ++Kind) {
       SpellingKind K = (SpellingKind)Kind;
       // TODO: List Microsoft (IDL-style attribute) spellings once we fully
@@ -5579,21 +5585,23 @@ static void WriteDocumentation(const RecordKeeper &Records,
       if (K == SpellingKind::Microsoft)
         continue;
 
+      OS << " - ";
       bool PrintedAny = false;
       for (StringRef Spelling : Doc.SupportedSpellings[K]) {
         if (PrintedAny)
-          OS << " |br| ";
-        OS << "``" << Spelling << "``";
+          OS << " <br/> ";
+        OS << "`" << Spelling << "`";
         PrintedAny = true;
       }
 
-      OS << "\",\"";
+      OS << "\n ";
     }
 
+    OS << " - ";
     if (getPragmaAttributeSupport(Records).isAttributedSupported(
             *Doc.Attribute))
       OS << "Yes";
-    OS << "\"\n\n";
+    OS << "\n:::\n\n";
   }
 
   // If the attribute is deprecated, print a message about it, and possibly
@@ -5604,8 +5612,7 @@ static void WriteDocumentation(const RecordKeeper &Records,
     const Record &Deprecated = *Doc.Documentation->getValueAsDef("Deprecated");
     const StringRef Replacement = Deprecated.getValueAsString("Replacement");
     if (!Replacement.empty())
-      OS << "  This attribute has been superseded by ``" << Replacement
-         << "``.";
+      OS << "  This attribute has been superseded by `" << Replacement << "`.";
     OS << "\n\n";
   }
 

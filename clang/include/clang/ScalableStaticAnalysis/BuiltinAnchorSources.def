@@ -19,6 +19,7 @@
 ANCHOR(AnalysisRegistryAnchorSource)
 ANCHOR(CallGraphExtractorAnchorSource)
 ANCHOR(CallGraphJSONFormatAnchorSource)
+ANCHOR(CppBoundedBuffersAnchorSource)
 ANCHOR(EntitySourceLocationExtractorAnchorSource)
 ANCHOR(JSONFormatAnchorSource)
 ANCHOR(TypeConstrainedPointersAnchorSource)

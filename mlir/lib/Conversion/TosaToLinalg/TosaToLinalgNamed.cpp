@@ -135,7 +135,9 @@ static mlir::Value linalgBroadcastAndMaybeExt(PatternRewriter &rewriter,
                if (resType != biasVal.getType()) {
                  biasVal =
                      resultTy.getElementType().isFloat()
-                         ? arith::ExtFOp::create(builder, loc, resType, biasVal)
+                         ? arith::ExtFOp::create(
+                               builder, loc, TypeRange{resType},
+                               ValueRange{biasVal}, arith::ExtFOp::Properties{})
                                .getResult()
                          : arith::ExtSIOp::create(builder, loc, resType,
                                                   biasVal)
@@ -445,9 +447,9 @@ public:
     Type inputETy = inputTy.getElementType();
     Type resultETy = resultTy.getElementType();
 
-    auto padAttr = cast<DenseI64ArrayAttr>(op->getAttr("pad"));
-    auto strideTosaAttr = cast<DenseI64ArrayAttr>(op->getAttr("stride"));
-    auto dilationTosaAttr = cast<DenseI64ArrayAttr>(op->getAttr("dilation"));
+    auto padAttr = op.getPadAttr();
+    auto strideTosaAttr = op.getStrideAttr();
+    auto dilationTosaAttr = op.getDilationAttr();
 
     Type accETy = op.getAccType();
 
