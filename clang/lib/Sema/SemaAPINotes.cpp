@@ -138,24 +138,68 @@ template <typename A> struct AttrKindFor {};
     static const attr::Kind value = attr::X;                                   \
   };
 #include "clang/Basic/AttrList.inc"
+} // namespace
+
+static bool isSwiftAvailabilityAttr(const Attr *A) {
+  if (const auto *AA = dyn_cast<AvailabilityAttr>(A))
+    if (const auto *II = AA->getPlatform())
+      return II->isStr("swift");
+  return false;
+}
+
+static bool isSwiftSafetyAttr(const Attr *A) {
+  if (const auto *SA = dyn_cast<SwiftAttrAttr>(A))
+    return SA->getAttribute() == "safe" || SA->getAttribute() == "unsafe";
+  return false;
+}
+
+static bool isRetainCountConventionAttr(const Attr *A) {
+  return isa<CFUnknownTransferAttr, CFReturnsRetainedAttr,
+             CFReturnsNotRetainedAttr, NSReturnsRetainedAttr,
+             NSReturnsNotRetainedAttr, CFAuditedTransferAttr>(A);
+}
+
+/// Whether an API note of kind \p Kind displaces the existing attribute \p A.
+static bool isDisplacedBy(const Attr *A, attr::Kind Kind) {
+  switch (Kind) {
+  case attr::Availability:
+    return isSwiftAvailabilityAttr(A);
+  case attr::SwiftAttr:
+    return isSwiftSafetyAttr(A);
+  case attr::CFUnknownTransfer:
+  case attr::CFReturnsRetained:
+  case attr::CFReturnsNotRetained:
+  case attr::NSReturnsRetained:
+  case attr::NSReturnsNotRetained:
+    return isRetainCountConventionAttr(A);
+  default:
+    return A->getKind() == Kind;
+  }
+}
+
+static Decl::attr_iterator findAttrDisplacedBy(const Decl *D, attr::Kind Kind) {
+  return llvm::find_if(D->attrs(), [Kind](const Attr *Next) {
+    return isDisplacedBy(Next, Kind);
+  });
+}
 
 /// Handle an attribute introduced by API notes.
 ///
 /// \param IsAddition Whether we should add a new attribute
 /// (otherwise, we might remove an existing attribute).
+/// \param Kind The attribute kind to add or remove.
 /// \param CreateAttr Create the new attribute to be added.
-template <typename A>
-void handleAPINotedAttribute(
-    Sema &S, Decl *D, bool IsAddition, VersionedInfoMetadata Metadata,
-    llvm::function_ref<A *()> CreateAttr,
-    llvm::function_ref<Decl::attr_iterator(const Decl *)> GetExistingAttr) {
+static void
+handleAPINotedAttributeImpl(ASTContext &Ctx, Decl *D, bool IsAddition,
+                            VersionedInfoMetadata Metadata, attr::Kind Kind,
+                            llvm::function_ref<Attr *()> CreateAttr) {
   if (Metadata.IsActive) {
-    auto Existing = GetExistingAttr(D);
+    const auto *Existing = findAttrDisplacedBy(D, Kind);
     if (Existing != D->attr_end()) {
       // Remove the existing attribute, and treat it as a superseded
       // non-versioned attribute.
       auto *Versioned = SwiftVersionedAdditionAttr::CreateImplicit(
-          S.Context, Metadata.Version, *Existing, /*IsReplacedByActive*/ true,
+          Ctx, Metadata.Version, *Existing, /*IsReplacedByActive*/ true,
           Metadata.SliceGroup);
 
       D->getAttrs().erase(Existing);
@@ -164,16 +208,16 @@ void handleAPINotedAttribute(
 
     // If we're supposed to add a new attribute, do so.
     if (IsAddition) {
-      if (auto Attr = CreateAttr())
+      if (auto *Attr = CreateAttr())
         D->addAttr(Attr);
     }
 
     return;
   }
   if (IsAddition) {
-    if (auto Attr = CreateAttr()) {
+    if (auto *Attr = CreateAttr()) {
       auto *Versioned = SwiftVersionedAdditionAttr::CreateImplicit(
-          S.Context, Metadata.Version, Attr,
+          Ctx, Metadata.Version, Attr,
           /*IsReplacedByActive*/ Metadata.IsReplacement, Metadata.SliceGroup);
       D->addAttr(Versioned);
     }
@@ -182,23 +226,19 @@ void handleAPINotedAttribute(
     // availability, where we're trying to remove a /specific/ kind of
     // attribute.
     auto *Versioned = SwiftVersionedRemovalAttr::CreateImplicit(
-        S.Context, Metadata.Version, AttrKindFor<A>::value,
+        Ctx, Metadata.Version, Kind,
         /*IsReplacedByActive*/ Metadata.IsReplacement, Metadata.SliceGroup);
     D->addAttr(Versioned);
   }
 }
 
 template <typename A>
-void handleAPINotedAttribute(Sema &S, Decl *D, bool ShouldAddAttribute,
-                             VersionedInfoMetadata Metadata,
-                             llvm::function_ref<A *()> CreateAttr) {
-  handleAPINotedAttribute<A>(
-      S, D, ShouldAddAttribute, Metadata, CreateAttr, [](const Decl *D) {
-        return llvm::find_if(D->attrs(),
-                             [](const Attr *Next) { return isa<A>(Next); });
-      });
+static void handleAPINotedAttribute(Sema &S, Decl *D, bool IsAddition,
+                                    VersionedInfoMetadata Metadata,
+                                    llvm::function_ref<A *()> CreateAttr) {
+  handleAPINotedAttributeImpl(S.Context, D, IsAddition, Metadata,
+                              AttrKindFor<A>::value, CreateAttr);
 }
-} // namespace
 
 template <typename A>
 static void handleAPINotedRetainCountAttribute(Sema &S, Decl *D,
@@ -206,18 +246,9 @@ static void handleAPINotedRetainCountAttribute(Sema &S, Decl *D,
                                                VersionedInfoMetadata Metadata) {
   // The template argument has a default to make the "removal" case more
   // concise; it doesn't matter /which/ attribute is being removed.
-  handleAPINotedAttribute<A>(
-      S, D, ShouldAddAttribute, Metadata,
-      [&] { return new (S.Context) A(S.Context, getPlaceholderAttrInfo()); },
-      [](const Decl *D) -> Decl::attr_iterator {
-        return llvm::find_if(D->attrs(), [](const Attr *Next) -> bool {
-          return isa<CFReturnsRetainedAttr>(Next) ||
-                 isa<CFReturnsNotRetainedAttr>(Next) ||
-                 isa<NSReturnsRetainedAttr>(Next) ||
-                 isa<NSReturnsNotRetainedAttr>(Next) ||
-                 isa<CFAuditedTransferAttr>(Next);
-        });
-      });
+  handleAPINotedAttribute<A>(S, D, ShouldAddAttribute, Metadata, [&] {
+    return new (S.Context) A(S.Context, getPlaceholderAttrInfo());
+  });
 }
 
 static void handleAPINotedRetainCountConvention(
@@ -276,28 +307,17 @@ static void ProcessAPINotes(Sema &S, Decl *D,
   }
 
   if (Info.UnavailableInSwift) {
-    handleAPINotedAttribute<AvailabilityAttr>(
-        S, D, true, Metadata,
-        [&] {
-          return new (S.Context) AvailabilityAttr(
-              S.Context, getPlaceholderAttrInfo(),
-              &S.Context.Idents.get("swift"), VersionTuple(), VersionTuple(),
-              VersionTuple(),
-              /*Unavailable=*/true,
-              ASTAllocateString(S.Context, Info.UnavailableMsg),
-              /*Strict=*/false,
-              /*Replacement=*/StringRef(),
-              /*Priority=*/Sema::AP_Explicit,
-              /*Environment=*/nullptr);
-        },
-        [](const Decl *D) {
-          return llvm::find_if(D->attrs(), [](const Attr *next) -> bool {
-            if (const auto *AA = dyn_cast<AvailabilityAttr>(next))
-              if (const auto *II = AA->getPlatform())
-                return II->isStr("swift");
-            return false;
-          });
-        });
+    handleAPINotedAttribute<AvailabilityAttr>(S, D, true, Metadata, [&] {
+      return new (S.Context) AvailabilityAttr(
+          S.Context, getPlaceholderAttrInfo(), &S.Context.Idents.get("swift"),
+          VersionTuple(), VersionTuple(), VersionTuple(),
+          /*Unavailable=*/true,
+          ASTAllocateString(S.Context, Info.UnavailableMsg),
+          /*Strict=*/false,
+          /*Replacement=*/StringRef(),
+          /*Priority=*/Sema::AP_Explicit,
+          /*Environment=*/nullptr);
+    });
   }
 
   // swift_private
@@ -312,24 +332,11 @@ static void ProcessAPINotes(Sema &S, Decl *D,
   // swift_safety
   if (auto SafetyKind = Info.getSwiftSafety()) {
     bool Addition = *SafetyKind != api_notes::SwiftSafetyKind::Unspecified;
-    handleAPINotedAttribute<SwiftAttrAttr>(
-        S, D, Addition, Metadata,
-        [&] {
-          return SwiftAttrAttr::Create(
-              S.Context, *SafetyKind == api_notes::SwiftSafetyKind::Safe
-                             ? "safe"
-                             : "unsafe");
-        },
-        [](const Decl *D) {
-          return llvm::find_if(D->attrs(), [](const Attr *attr) {
-            if (const auto *swiftAttr = dyn_cast<SwiftAttrAttr>(attr)) {
-              if (swiftAttr->getAttribute() == "safe" ||
-                  swiftAttr->getAttribute() == "unsafe")
-                return true;
-            }
-            return false;
-          });
-        });
+    handleAPINotedAttribute<SwiftAttrAttr>(S, D, Addition, Metadata, [&] {
+      return SwiftAttrAttr::Create(
+          S.Context,
+          *SafetyKind == api_notes::SwiftSafetyKind::Safe ? "safe" : "unsafe");
+    });
   }
 
   // swift_name
