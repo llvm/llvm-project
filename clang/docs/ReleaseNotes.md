@@ -303,6 +303,11 @@ features cannot lower the translation-unit ABI level;
   `-pedantic` or when that group is enabled explicitly, matching how the `_BitInt`
   type itself is already handled.
 
+- Fixed a Clang 23 regression where `#pragma clang diagnostic ignored
+  "-Wdeprecated-declarations"` at the point of instantiation no longer
+  silenced deprecation warnings emitted from a template defined in a system
+  header. (#GH219685)
+
 - Fixed bug in `-Wdocumentation` so that it correctly handles explicit
   function template instantiations (#64087).
 
