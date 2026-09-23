@@ -401,6 +401,26 @@ define i1 @neg_sdiv_strict_needs_divisor_gt_one(i32 noundef %x, i32 noundef %n) 
   ret i1 %c
 }
 
+; A positive dividend and a divisor s> 1 do not imply a positive result
+define i1 @neg_sdiv_strict_quotient_may_be_zero(i32 noundef %x, i32 noundef %n) {
+; CHECK-LABEL: define i1 @neg_sdiv_strict_quotient_may_be_zero(
+; CHECK-SAME: i32 noundef [[X:%.*]], i32 noundef [[N:%.*]]) {
+; CHECK-NEXT:    [[POS:%.*]] = icmp sgt i32 [[X]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[POS]])
+; CHECK-NEXT:    [[GT1:%.*]] = icmp sgt i32 [[N]], 1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[GT1]])
+; CHECK-NEXT:    [[Q:%.*]] = sdiv i32 [[X]], [[N]]
+; CHECK-NEXT:    ret i1 true
+;
+  %pos = icmp sgt i32 %x, 0
+  call void @llvm.assume(i1 %pos)
+  %gt1 = icmp sgt i32 %n, 1
+  call void @llvm.assume(i1 %gt1)
+  %q = sdiv i32 %x, %n
+  %c = icmp sgt i32 %q, 0
+  ret i1 %c
+}
+
 ; The second lane divides by -2, so the quotient is not non-negative there.
 define <2 x i1> @neg_sdiv_vector_negative_lane(<2 x i32> noundef %y) {
 ; CHECK-LABEL: define <2 x i1> @neg_sdiv_vector_negative_lane(
