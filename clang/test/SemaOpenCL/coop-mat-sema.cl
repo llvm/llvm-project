@@ -25,7 +25,7 @@ typedef float __attribute__((coop_mat(SCOPE, 16, 16, USE_C))) MatC_t;
 // ---------------------------------------------------------------------------
 // 4b. load builtin -- return type is fixed up by AddInitializerToDecl to
 //     match the LHS variable type.  Declare first, then assign so that
-//     Sema's IsCoopMatrixBuiltin path fires correctly.
+//     Sema's BuiltinReturnsCoopMatrix path fires correctly.
 // ---------------------------------------------------------------------------
 kernel void test_load_store(__global float *ptr,
                             __global float *out_ptr) {
