@@ -1,13 +1,25 @@
 // RUN: %clang_cc1 -triple riscv32 -target-feature +experimental-p \
-// RUN:   -fsyntax-only -verify -verify-ignore-unexpected=note %s
+// RUN:   -fsyntax-only -verify %s
 // RUN: %clang_cc1 -triple riscv64 -target-feature +experimental-p \
-// RUN:   -fsyntax-only -verify -verify-ignore-unexpected=note %s
+// RUN:   -fsyntax-only -verify %s
 
 #include <riscv_packed_simd.h>
 
 int16x2_t test_psati_i16x2_nonconstant(int16x2_t v, unsigned width) {
   // expected-error@+1 {{argument to '__builtin_riscv_psati_i16x2' must be a constant integer}}
   return __riscv_psati_i16x2(v, width);
+}
+
+int16x2_t test_psati_i16x2_min_width(int16x2_t v) {
+  return __riscv_psati_i16x2(v, 1);
+}
+
+int16x2_t test_psati_i16x2_max_width(int16x2_t v) {
+  return __riscv_psati_i16x2(v, 16);
+}
+
+uint16x2_t test_pusati_u16x2_max_width(int16x2_t v) {
+  return __riscv_pusati_u16x2(v, 15);
 }
 
 int16x2_t test_psati_i16x2_out_of_range(int16x2_t v) {

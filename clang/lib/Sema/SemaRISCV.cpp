@@ -968,7 +968,7 @@ bool SemaRISCV::CheckBuiltinFunctionCall(const TargetInfo &TI,
   case RISCV::BI__builtin_riscv_sm4ks:
   case RISCV::BI__builtin_riscv_sm4ed:
     return SemaRef.BuiltinConstantArgRange(TheCall, 2, 0, 3);
-  // Check the saturation width for the packed saturating instructions.
+  // Check the psati/pusati saturation width.
   case RISCV::BI__builtin_riscv_psati_i16x2:
   case RISCV::BI__builtin_riscv_psati_i16x4:
     return SemaRef.BuiltinConstantArgRange(TheCall, 1, 1, 16);
