@@ -44,10 +44,15 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.fcntl.openat
     libc.src.fcntl.posix_fadvise
     libc.src.fcntl.posix_fadvise64
+    libc.src.fcntl.posix_fallocate
 
     # grp.h entrypoints
     libc.src.grp.endgrent
     libc.src.grp.getgrent
+    libc.src.grp.getgrgid
+    libc.src.grp.getgrgid_r
+    libc.src.grp.getgrnam
+    libc.src.grp.getgrnam_r
     libc.src.grp.setgrent
 
     # poll.h entrypoints
@@ -356,11 +361,14 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.stat.fchmod
     libc.src.sys.stat.fchmodat
     libc.src.sys.stat.fstat
+    libc.src.sys.stat.fstatat
     libc.src.sys.stat.futimens
     libc.src.sys.stat.lstat
     libc.src.sys.stat.mkdir
     libc.src.sys.stat.mkdirat
     libc.src.sys.stat.mkfifo
+    libc.src.sys.stat.mkfifoat
+    libc.src.sys.stat.mknodat
     libc.src.sys.stat.stat
     libc.src.sys.stat.umask
     libc.src.sys.stat.utimensat
@@ -454,6 +462,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.lseek
     libc.src.unistd.nice
     libc.src.unistd.pathconf
+    libc.src.unistd.pause
     libc.src.unistd.pipe
     libc.src.unistd.pipe2
     libc.src.unistd.pread
@@ -1127,6 +1136,8 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.netinet.in6addr_loopback
 
     # pthread.h entrypoints
+    libc.src.pthread.__pthread_cleanup_pop
+    libc.src.pthread.__pthread_cleanup_push
     libc.src.pthread.pthread_atfork
     libc.src.pthread.pthread_attr_destroy
     libc.src.pthread.pthread_attr_getdetachstate
@@ -1215,6 +1226,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_setspecific
 
     # sched.h entrypoints
+    libc.src.sched.clone
     libc.src.sched.__sched_andcpuset
     libc.src.sched.__sched_clrcpuset
     libc.src.sched.__sched_cpualloc
@@ -1304,6 +1316,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdlib.exit
     libc.src.stdlib.getenv
     libc.src.stdlib.putenv
+    libc.src.stdlib.secure_getenv
     libc.src.stdlib.setenv
     libc.src.stdlib.system
     libc.src.stdlib.unsetenv

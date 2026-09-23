@@ -10,7 +10,7 @@
 ## Description
 
 Utility for displaying information from, and converting between different
-{doc}`remark <../Remarks>` formats.
+[remark](../Remarks.md) formats.
 
 ## Subcommands
 

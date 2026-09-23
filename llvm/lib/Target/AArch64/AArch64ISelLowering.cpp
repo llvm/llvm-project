@@ -10366,8 +10366,9 @@ void AArch64TargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
 
     // The SVE vector length can change when entering/leaving streaming mode.
     // FPMR is set to 0 when entering/leaving streaming mode.
-    if (MI.getOperand(0).getImm() == AArch64SVCR::SVCRSM ||
-        MI.getOperand(0).getImm() == AArch64SVCR::SVCRSMZA) {
+    if (MI.getOpcode() == AArch64::MSRpstatesvcrImm1 &&
+        (MI.getOperand(0).getImm() == AArch64SVCR::SVCRSM ||
+         MI.getOperand(0).getImm() == AArch64SVCR::SVCRSMZA)) {
       MI.addOperand(MachineOperand::CreateReg(AArch64::VG, /*IsDef=*/false,
                                               /*IsImplicit=*/true));
       MI.addOperand(MachineOperand::CreateReg(AArch64::VG, /*IsDef=*/true,
@@ -10598,6 +10599,19 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (IsTailCall) {
     // Check if it's really possible to do a tail call.
     IsTailCall = isEligibleForTailCallOptimization(CLI);
+
+    // If we have a tail-call, it's safe to drop ZAMarkerNode since
+    // 1. INOUT_ZA_USE is the only marker node that can reach this point
+    // (otherwise, the call is not elegible for tail call optimization at all),
+    // and
+    // 2. INOUT_ZA_USE is redunant on a tail call, since a tail call is a return
+    // for which MachineSMEABIPass requires an acitve ZA state anyway, the
+    // marker node doesn't add anything.
+    if (IsTailCall && ZAMarkerNode) {
+      assert(ZAMarkerNode == AArch64ISD::INOUT_ZA_USE &&
+             "Unexpected SME ZA marker node");
+      ZAMarkerNode = std::nullopt;
+    }
 
     // A sibling call is one where we're under the usual C ABI and not planning
     // to change that but can still do a tail call:
