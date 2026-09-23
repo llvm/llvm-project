@@ -418,13 +418,8 @@ void SafeStack::findInsts(Function &F,
   for (Argument &Arg : F.args()) {
     if (!Arg.hasByValAttr())
       continue;
-    TypeSize Size = DL.getTypeStoreSize(Arg.getParamByValType());
-    // The unsafe stack frame is laid out at compile time, so an argument of a
-    // scalable type has no place on it. Leave it on the regular stack rather
-    // than reject a function that is otherwise valid.
-    if (Size.isScalable())
-      continue;
-    if (IsSafeStackAlloca(&Arg, Size.getFixedValue()))
+    uint64_t Size = DL.getTypeStoreSize(Arg.getParamByValType());
+    if (IsSafeStackAlloca(&Arg, Size))
       continue;
 
     ++NumUnsafeByValArguments;
