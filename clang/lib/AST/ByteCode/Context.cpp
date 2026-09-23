@@ -107,8 +107,10 @@ bool Context::evaluate(State &Parent, const Expr *E, APValue &Result,
   size_t StackSizeBefore = Stk.size();
   Compiler<EvalEmitter> C(*this, *P, Parent, Stk, FrameAlloc);
 
+  // The object of an initializer outlives the evaluation.
   auto Res = C.interpretExpr(E, /*ConvertResultToRValue=*/false,
-                             /*DestroyToplevelScope=*/true);
+                             /*DestroyToplevelScope=*/Kind !=
+                                 ConstantExprKind::Initializer);
   if (Res.isInvalid()) {
     C.cleanup();
     Stk.clearTo(StackSizeBefore);
