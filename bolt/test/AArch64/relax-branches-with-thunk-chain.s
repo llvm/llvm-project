@@ -22,10 +22,11 @@
 # RUN: %clang %cflags -Wl,-q -Wl,-e,A %s -o %t -nostdlib
 # RUN: link_fdata --no-lbr %s %t %t.fdata
 # RUN: llvm-strip --strip-unneeded %t
-# RUN: llvm-bolt %t -o %t.bolt --data %t.fdata --split-functions --relax-exp \
+# RUN: llvm-bolt %t -o %t.bolt --data %t.fdata --split-functions \
+# RUN:   --compact-code-model --relax-exp \
 # RUN:   | FileCheck %s --check-prefix=CHECK-BOLT
 # RUN: llvm-bolt %t -o %t.hfe.bolt --data %t.fdata --split-functions \
-# RUN:   --relax-exp --hot-functions-at-end \
+# RUN:   --compact-code-model --relax-exp --hot-functions-at-end \
 # RUN:   | FileCheck %s --check-prefix=CHECK-BOLT-HFE
 # RUN: llvm-readelf -S %t.bolt | FileCheck %s --check-prefix=CHECK-SECTIONS
 # RUN: llvm-objdump -d \
@@ -38,19 +39,13 @@
 # CHECK-BOLT: BOLT-INFO: built 3 function fragment cluster(s)
 # CHECK-BOLT-NEXT: BOLT-INFO: cluster: 0
 # CHECK-BOLT-NEXT: BOLT-INFO:   4 fragment(s)
-# CHECK-BOLT-NEXT: BOLT-INFO:   117440604 estimated bytes without thunks
-# CHECK-BOLT-NEXT: BOLT-INFO:   8 estimated thunk bytes
-# CHECK-BOLT-NEXT: BOLT-INFO:   8 actual thunk bytes
+# CHECK-BOLT-NEXT: BOLT-INFO:   117440568 estimated bytes
 # CHECK-BOLT-NEXT: BOLT-INFO: cluster: 1
 # CHECK-BOLT-NEXT: BOLT-INFO:   4 fragment(s)
-# CHECK-BOLT-NEXT: BOLT-INFO:   117440584 estimated bytes without thunks
-# CHECK-BOLT-NEXT: BOLT-INFO:   24 estimated thunk bytes
-# CHECK-BOLT-NEXT: BOLT-INFO:   16 actual thunk bytes
+# CHECK-BOLT-NEXT: BOLT-INFO:   117440560 estimated bytes
 # CHECK-BOLT-NEXT: BOLT-INFO: cluster: 2
 # CHECK-BOLT-NEXT: BOLT-INFO:   4 fragment(s)
-# CHECK-BOLT-NEXT: BOLT-INFO:   67108944 estimated bytes without thunks
-# CHECK-BOLT-NEXT: BOLT-INFO:   16 estimated thunk bytes
-# CHECK-BOLT-NEXT: BOLT-INFO:   8 actual thunk bytes
+# CHECK-BOLT-NEXT: BOLT-INFO:   67108896 estimated bytes
 # CHECK-BOLT: BOLT-INFO: relaxed 7 unconditional branches
 # CHECK-BOLT: BOLT-INFO: 8 branch thunks created
 # CHECK-BOLT: BOLT-INFO: 2 branch thunks reused
@@ -58,19 +53,13 @@
 # CHECK-BOLT-HFE: BOLT-INFO: built 3 function fragment cluster(s)
 # CHECK-BOLT-HFE-NEXT: BOLT-INFO: cluster: 0
 # CHECK-BOLT-HFE-NEXT: BOLT-INFO:   4 fragment(s)
-# CHECK-BOLT-HFE-NEXT: BOLT-INFO:   67108944 estimated bytes without thunks
-# CHECK-BOLT-HFE-NEXT: BOLT-INFO:   16 estimated thunk bytes
-# CHECK-BOLT-HFE-NEXT: BOLT-INFO:   8 actual thunk bytes
+# CHECK-BOLT-HFE-NEXT: BOLT-INFO:   67108896 estimated bytes
 # CHECK-BOLT-HFE-NEXT: BOLT-INFO: cluster: 1
 # CHECK-BOLT-HFE-NEXT: BOLT-INFO:   4 fragment(s)
-# CHECK-BOLT-HFE-NEXT: BOLT-INFO:   117440604 estimated bytes without thunks
-# CHECK-BOLT-HFE-NEXT: BOLT-INFO:   24 estimated thunk bytes
-# CHECK-BOLT-HFE-NEXT: BOLT-INFO:   12 actual thunk bytes
+# CHECK-BOLT-HFE-NEXT: BOLT-INFO:   117440568 estimated bytes
 # CHECK-BOLT-HFE-NEXT: BOLT-INFO: cluster: 2
 # CHECK-BOLT-HFE-NEXT: BOLT-INFO:   4 fragment(s)
-# CHECK-BOLT-HFE-NEXT: BOLT-INFO:   117440584 estimated bytes without thunks
-# CHECK-BOLT-HFE-NEXT: BOLT-INFO:   8 estimated thunk bytes
-# CHECK-BOLT-HFE-NEXT: BOLT-INFO:   4 actual thunk bytes
+# CHECK-BOLT-HFE-NEXT: BOLT-INFO:   117440560 estimated bytes
 # CHECK-BOLT-HFE: BOLT-INFO: relaxed 4 unconditional branches
 # CHECK-BOLT-HFE: BOLT-INFO: 6 branch thunks created
 
