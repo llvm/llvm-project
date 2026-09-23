@@ -602,6 +602,14 @@ public:
                                          const SimplifyQuery &Q,
                                          unsigned Depth = 0);
 
+  /// Check if a wide add/mul has only users that demand the lower bits.
+  bool canReplaceWideOverflowIdiomUsers(Value *WideOp, unsigned NarrowWidth,
+                                        User *Exclude = nullptr);
+
+  /// Replace the valid users of WideOp with NarrowVal.
+  void replaceWideOverflowIdiomUsers(Value *WideOp, unsigned NarrowWidth,
+                                     Value *NarrowVal, User *Exclude = nullptr);
+
   /// Helper routine of SimplifyDemandedUseBits. It tries to simplify demanded
   /// bit for "r1 = shr x, c1; r2 = shl r1, c2" instruction sequence.
   Value *simplifyShrShlDemandedBits(
