@@ -287,6 +287,18 @@ class ExceptionScriptedStopHook:
         raise RuntimeError("intentional exception from handle_stop()")
 
 
+class NoneReturningScriptedStopHook:
+    """`handle_stop` returns None, which is not an error: it means the hook
+    has no opinion on whether to stay stopped."""
+
+    def __init__(self, target, args):
+        self.target = target
+        self.args = args
+
+    def handle_stop(self, exe_ctx, stream):
+        stream.Print("NoneReturningScriptedStopHook ran\n")
+
+
 # ---------------------------------------------------------------------------
 # Scripted Stack Frame Recognizer
 # ---------------------------------------------------------------------------

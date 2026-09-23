@@ -302,6 +302,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  pause
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.pause
+)
+
+add_entrypoint_object(
   pipe
   ALIAS
   DEPENDS

@@ -59,12 +59,12 @@ size_t Stream::PutULEB128(uint64_t uval) {
     return Printf("0x%" PRIx64, uval);
 }
 
-// Print a raw NULL terminated C string to the stream.
+// Print a raw null-terminated C string to the stream.
 size_t Stream::PutCString(llvm::StringRef str) {
   size_t bytes_written = 0;
   bytes_written = Write(str.data(), str.size());
 
-  // when in binary mode, emit the NULL terminator
+  // when in binary mode, emit the null terminator
   if (m_flags.Test(eBinary))
     bytes_written += PutChar('\0');
   return bytes_written;
@@ -97,7 +97,7 @@ void Stream::PutCStringColorHighlighted(
     PutCString(remaining);
 }
 
-// Print a double quoted NULL terminated C string to the stream using the
+// Print a double quoted null-terminated C string to the stream using the
 // printf format in "format".
 void Stream::QuotedCString(const char *cstr, const char *format) {
   Printf(format, cstr);
@@ -144,7 +144,7 @@ size_t Stream::PrintfVarArg(const char *format, va_list args) {
   llvm::SmallString<1024> buf;
   VASprintf(buf, format, args);
 
-  // Include the NULL termination byte for binary output
+  // Include the null terminator for binary output
   size_t length = buf.size();
   if (m_flags.Test(eBinary))
     ++length;
@@ -166,7 +166,7 @@ Stream &Stream::operator<<(char ch) {
   return *this;
 }
 
-// Stream the NULL terminated C string out to this stream.
+// Stream the null-terminated C string out to this stream.
 Stream &Stream::operator<<(const char *s) {
   Printf("%s", s);
   return *this;
