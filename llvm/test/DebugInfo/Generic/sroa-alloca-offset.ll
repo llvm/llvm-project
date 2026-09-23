@@ -204,6 +204,21 @@ entry:
   ret i32 %2
 }
 
+; COMMON-LABEL: @fun5
+define i32 @fun5(ptr %source) !dbg !70 {
+entry:
+  %t = alloca %struct.four, align 4
+    #dbg_declare_value(ptr %t, !74, !DIExpression(DW_OP_plus_uconst, 8), !75)
+  ; COMMON: [[FUN5_LOCAL:%.*]] = alloca %struct.two, align 8
+  ; COMMON: #dbg_declare_value(ptr [[FUN5_LOCAL]], ![[t:[0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 0, 64),
+  ; COMMON-NOT: #dbg_assign
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %t, ptr align 4 %source, i64 16, i1 false)
+  %1 = getelementptr inbounds %struct.four, ptr %t, i32 0, i32 0
+  %2 = getelementptr inbounds %struct.two, ptr %1, i32 0, i32 1
+  %3 = load i32, ptr %2, align 4
+  ret i32 %3
+}
+
 ; COMMON-DAG: ![[x0]] = !DILocalVariable(name: "x",
 ; COMMON-DAG: ![[y0]] = !DILocalVariable(name: "y",
 ; COMMON-DAG: ![[A0]] = !DILocalVariable(scope:
@@ -220,6 +235,8 @@ entry:
 ; COMMON-DAG: ![[p]] = !DILocalVariable(name: "p"
 ; COMMON-DAG: ![[q]] = !DILocalVariable(name: "q"
 ; COMMON-DAG: ![[r]] = !DILocalVariable(name: "r"
+
+; COMMON-DAG: ![[t]] = !DILocalVariable(name: "t"
 
 declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg)
 
@@ -273,3 +290,7 @@ declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias
 !67 = !DILocalVariable(name: "p", scope: !65, file: !3, line: 9, type: !13)
 !68 = !DILocalVariable(name: "q", scope: !65, file: !3, line: 9, type: !13)
 !69 = !DILocalVariable(name: "r", scope: !65, file: !3, line: 9, type: !13)
+!70 = distinct !DISubprogram(name: "fun5", scope: !3, file: !3, line: 1, type: !24, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !2)
+!73 = !DICompositeType(tag: DW_TAG_structure_type, name: "declare_value", size: 256)
+!74 = !DILocalVariable(name: "t", scope: !70, file: !3, line: 1, type: !73)
+!75 = !DILocation(line: 1, column: 1, scope: !70)

@@ -5946,6 +5946,14 @@ insertNewDbgInst(DIBuilder &DIB, DbgVariableRecord *Orig, AllocaInst *NewAddr,
     return;
   }
 
+  if (Orig->isDbgDeclareValue()) {
+    DbgVariableRecord *DVR = DbgVariableRecord::createDVRDeclareValue(
+        NewAddr, Orig->getVariable(), NewFragmentExpr, Orig->getDebugLoc());
+    BeforeInst->getParent()->insertDbgRecordBefore(DVR,
+                                                   BeforeInst->getIterator());
+    return;
+  }
+
   // Apply a DIAssignID to the store if it doesn't already have it.
   if (!NewAddr->hasMetadata(LLVMContext::MD_DIAssignID)) {
     NewAddr->setMetadata(LLVMContext::MD_DIAssignID,
