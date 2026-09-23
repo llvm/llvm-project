@@ -22,11 +22,11 @@ define i32 @test(ptr %arg, ptr %arg1, ptr %arg2) #0 !dbg !6 {
 ; CHECK-NEXT:    mov.w r9, #1
 ; CHECK-NEXT:    movw r12, #4100
 ; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    cmp.w lr, #0
 ; CHECK-NEXT:  LBB0_1: @ %bb3
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    adds r5, r3, #1
+; CHECK-NEXT:    add.w r5, r3, #1
 ; CHECK-NEXT:    str.w lr, [r2]
-; CHECK-NEXT:    cmp.w lr, #0
 ; CHECK-NEXT:    add.w r4, r0, r5, lsl #2
 ; CHECK-NEXT:    add.w r8, r4, r12
 ; CHECK-NEXT:    lsl.w r4, r9, r3
@@ -36,11 +36,11 @@ define i32 @test(ptr %arg, ptr %arg1, ptr %arg2) #0 !dbg !6 {
 ; CHECK-NEXT:    movne r6, #0
 ; CHECK-NEXT:  Ltmp0:
 ; CHECK-NEXT:    @DEBUG_VALUE: test:this <- [DW_OP_LLVM_arg 0, DW_OP_plus_uconst 135168, DW_OP_LLVM_arg 1, DW_OP_constu 4, DW_OP_mul, DW_OP_plus, DW_OP_plus_uconst 4, DW_OP_stack_value] $r0, $r5
-; CHECK-NEXT:    .loc 1 28 24 prologue_end @ test.cpp:28:24
+; CHECK-NEXT:    .loc 1 28 24 prologue_end @ test.cpp:28:24 @[ test.cpp:204:23 ]
 ; CHECK-NEXT:    strne.w r6, [r8]
 ; CHECK-NEXT:    moveq r6, #1
 ; CHECK-NEXT:    ldr r4, [r4, #4]
-; CHECK-NEXT:    orrs r4, r6
+; CHECK-NEXT:    orr.w r4, r4, r6
 ; CHECK-NEXT:    str.w r4, [r8]
 ; CHECK-NEXT:    b LBB0_1
 ; CHECK-NEXT:  Ltmp1:
