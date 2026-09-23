@@ -6219,9 +6219,6 @@ void __kmpc_taskgraph(ident_t *loc_ref, kmp_int32 gtid,
     // taskgroup.
     KMP_ATOMIC_ST_REL(&taskgroup->taskgraph.recording, record);
   }
-  // Keep the current taskgraph invocation's outlined-entry args for
-  // replay-time relocation of by-reference captures.
-  record->taskgraph_args = args;
   __kmp_release_lock(&header->header_lock, gtid);
 
   kmp_taskgraph_status_t status = KMP_ATOMIC_LD_ACQ(&record->status);
@@ -6239,6 +6236,11 @@ void __kmpc_taskgraph(ident_t *loc_ref, kmp_int32 gtid,
       fprintf(stderr, "Replay taskgraph %p from task %p\n", record,
               KMP_TASKDATA_TO_TASK(current_taskdata));
     __kmp_acquire_lock(&record->map_lock, gtid);
+    // Args must be captured under the above lock, else we can hit a race
+    // condition here.  This is used to relocate host addresses in the
+    // taskgraph's initiating context, i.e. thread/stack frame., which may be
+    // different from the addresses seen at record time.
+    record->taskgraph_args = args;
     __kmp_replay_taskgraph(gtid, current_taskdata, record, graph_id, taskgroup);
     __kmpc_end_taskgroup(loc_ref, gtid);
     __kmp_release_lock(&record->map_lock, gtid);
