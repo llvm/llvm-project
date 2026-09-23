@@ -2076,6 +2076,11 @@ class RVPBinaryIntrinsic
   def int_riscv_psshl  : RVPShiftIntrinsic;
   def int_riscv_psshlr : RVPShiftIntrinsic;
 
+  // Packed Shift.
+  def int_riscv_psll   : RVPShiftIntrinsic;
+  def int_riscv_psrl   : RVPShiftIntrinsic;
+  def int_riscv_psra   : RVPShiftIntrinsic;
+
   // Packed Exchanged Addition and Subtraction.
   def int_riscv_pas  : RVPBinaryIntrinsic;
   def int_riscv_psa  : RVPBinaryIntrinsic;

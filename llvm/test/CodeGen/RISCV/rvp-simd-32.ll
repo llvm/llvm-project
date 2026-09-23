@@ -1263,6 +1263,60 @@ define <4 x i8> @test_psra_bs_vec_shamt(<4 x i8> %a, <4 x i8> %b) {
   ret <4 x i8> %res
 }
 
+define <4 x i8> @test_psll_s_u8x4(<4 x i8> %a, i32 %shamt) {
+; CHECK-LABEL: test_psll_s_u8x4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    psll.bs a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call <4 x i8> @llvm.riscv.psll.v4i8(<4 x i8> %a, i32 %shamt)
+  ret <4 x i8> %res
+}
+
+define <2 x i16> @test_psll_s_u16x2(<2 x i16> %a, i32 %shamt) {
+; CHECK-LABEL: test_psll_s_u16x2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    psll.hs a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.psll.v2i16(<2 x i16> %a, i32 %shamt)
+  ret <2 x i16> %res
+}
+
+define <4 x i8> @test_psrl_s_u8x4(<4 x i8> %a, i32 %shamt) {
+; CHECK-LABEL: test_psrl_s_u8x4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    psrl.bs a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call <4 x i8> @llvm.riscv.psrl.v4i8(<4 x i8> %a, i32 %shamt)
+  ret <4 x i8> %res
+}
+
+define <2 x i16> @test_psrl_s_u16x2(<2 x i16> %a, i32 %shamt) {
+; CHECK-LABEL: test_psrl_s_u16x2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    psrl.hs a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.psrl.v2i16(<2 x i16> %a, i32 %shamt)
+  ret <2 x i16> %res
+}
+
+define <4 x i8> @test_psra_s_i8x4(<4 x i8> %a, i32 %shamt) {
+; CHECK-LABEL: test_psra_s_i8x4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    psra.bs a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call <4 x i8> @llvm.riscv.psra.v4i8(<4 x i8> %a, i32 %shamt)
+  ret <4 x i8> %res
+}
+
+define <2 x i16> @test_psra_s_i16x2(<2 x i16> %a, i32 %shamt) {
+; CHECK-LABEL: test_psra_s_i16x2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    psra.hs a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.psra.v2i16(<2 x i16> %a, i32 %shamt)
+  ret <2 x i16> %res
+}
+
 ; Packed saturating and rounding shifts
 define <2 x i16> @test_pssha_s_i16x2(<2 x i16> %a, i32 %shamt) {
 ; CHECK-LABEL: test_pssha_s_i16x2:
@@ -2554,10 +2608,10 @@ define <2 x i16> @test_select_v2i16(i1 %cond, <2 x i16> %a, <2 x i16> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a0, 1
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    bnez a3, [[SELECT_BB:.LBB[0-9]+_2]]
+; CHECK-NEXT:    bnez a3, .LBB184_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:  [[SELECT_BB]]:
+; CHECK-NEXT:  .LBB184_2:
 ; CHECK-NEXT:    ret
   %res = select i1 %cond, <2 x i16> %a, <2 x i16> %b
   ret <2 x i16> %res
@@ -2568,10 +2622,10 @@ define <4 x i8> @test_select_v4i8(i1 %cond, <4 x i8> %a, <4 x i8> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a0, 1
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    bnez a3, [[SELECT_BB:.LBB[0-9]+_2]]
+; CHECK-NEXT:    bnez a3, .LBB185_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:  [[SELECT_BB]]:
+; CHECK-NEXT:  .LBB185_2:
 ; CHECK-NEXT:    ret
   %res = select i1 %cond, <4 x i8> %a, <4 x i8> %b
   ret <4 x i8> %res
