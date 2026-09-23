@@ -20,6 +20,7 @@ include "mlir/IR/OpBase.td"
 
 def Ptr_Dialect : Dialect {
   let name = "ptr";
+  let useStrictPropertiesInAssemblyFormat = 1;
   let summary = "Pointer dialect";
   let description = [{
     The pointer dialect provides types and operations for representing and

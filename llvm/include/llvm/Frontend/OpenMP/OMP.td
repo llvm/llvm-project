@@ -24,7 +24,7 @@ def OpenMP : DirectiveLanguage {
   let loopModifierPrefix = "OMPLM_";
   let makeEnumAvailableInNamespace = true;
   let enableBitmaskEnumInNamespace = true;
-  let clauseEnumSetClass = "llvm::omp::ClauseSet";
+  let clauseEnumSetClass = "llvm::omp::Clauses";
   let flangClauseBaseClass = "OmpClause";
 }
 
@@ -500,6 +500,8 @@ def OMPC_Reduction : Clause<[Spelling<"reduction">]> {
   let clangClass = "OMPReductionClause";
   let flangClass = "OmpReductionClause";
 }
+def OMPC_ReductionKind : Clause<[Spelling<"reduction_kind">]> {
+}
 def OMPC_Relaxed : Clause<[Spelling<"relaxed">]> {
   let clangClass = "OMPRelaxedClause";
 }
@@ -559,6 +561,8 @@ def OMPC_Severity : Clause<[Spelling<"severity">]> {
 def OMPC_Shared : Clause<[Spelling<"shared">]> {
   let clangClass = "OMPSharedClause";
   let flangClass = "OmpObjectList";
+}
+def OMPC_Shift : Clause<[Spelling<"shift">]> {
 }
 def OMPC_Simd : Clause<[Spelling<"simd">]> {
   let clangClass = "OMPSIMDClause";
@@ -644,6 +648,7 @@ def OMPC_UseDevicePtr : Clause<[Spelling<"use_device_ptr">]> {
 }
 def OMPC_UsesAllocators : Clause<[Spelling<"uses_allocators">]> {
   let clangClass = "OMPUsesAllocatorsClause";
+  let flangClass = "OmpUsesAllocatorsClause";
 }
 def OMPC_Weak : Clause<[Spelling<"weak">]> {
   let clangClass = "OMPWeakClause";
@@ -666,8 +671,9 @@ def OMP_Allocate : Directive<[Spelling<"allocate">]> {
     VersionedClause<OMPC_Align, 51>,
     VersionedClause<OMPC_Allocator>,
   ];
-  let association = AS_None;
+  let association = AS_Explicit;
   let category = CA_Declarative;
+  let pureSince = 50;
 }
 def OMP_Allocators : Directive<[Spelling<"allocators">]> {
   let allowedClauses = [
@@ -688,6 +694,7 @@ def OMP_Assumes : Directive<[Spelling<"assumes">]> {
     VersionedClause<OMPC_NoOpenMPRoutines, 51>,
     VersionedClause<OMPC_NoParallelism, 51>,
   ];
+  let pureSince = 52;
 }
 def OMP_Assume : Directive<[Spelling<"assume">]> {
   let association = AS_Block;
@@ -701,6 +708,7 @@ def OMP_Assume : Directive<[Spelling<"assume">]> {
     VersionedClause<OMPC_NoOpenMPRoutines, 51>,
     VersionedClause<OMPC_NoParallelism, 51>,
   ];
+  let pureSince = 52;
 }
 def OMP_Atomic : Directive<[Spelling<"atomic">]> {
   let allowedOnceClauses = [
@@ -756,12 +764,14 @@ def OMP_BeginDeclareTarget : Directive<[Spelling<"begin declare target", 1, 52>,
   let association = AS_Delimited;
   let category = CA_Declarative;
   let languages = [L_C];
+  let pureSince = 45;
 }
 def OMP_EndDeclareTarget : Directive<[Spelling<"end declare target", 1, 52>,
                                       Spelling<"end declare_target", 60>]> {
   let association = AS_Delimited;
   let category = OMP_BeginDeclareTarget.category;
   let languages = OMP_BeginDeclareTarget.languages;
+  let pureSince = OMP_BeginDeclareTarget.pureSince;
 }
 def OMP_BeginDeclareVariant
     : Directive<[Spelling<"begin declare variant", 1, 52>,
@@ -769,12 +779,14 @@ def OMP_BeginDeclareVariant
   let association = AS_Delimited;
   let category = CA_Declarative;
   let languages = [L_C];
+  let pureSince = 50;
 }
 def OMP_EndDeclareVariant : Directive<[Spelling<"end declare variant", 1, 52>,
                                        Spelling<"end declare_variant", 60>]> {
   let association = AS_Delimited;
   let category = OMP_BeginDeclareVariant.category;
   let languages = OMP_BeginDeclareVariant.languages;
+  let pureSince = OMP_BeginDeclareVariant.pureSince;
 }
 def OMP_Cancel : Directive<[Spelling<"cancel">]> {
   let allowedClauses = [
@@ -808,6 +820,7 @@ def OMP_DeclareInduction : Directive<[Spelling<"declare_induction">]> {
   ];
   let association = AS_None;
   let category = CA_Declarative;
+  let pureSince = 50;
 }
 def OMP_DeclareMapper : Directive<[Spelling<"declare mapper", 1, 52>,
                                    Spelling<"declare_mapper", 60>]> {
@@ -816,6 +829,7 @@ def OMP_DeclareMapper : Directive<[Spelling<"declare mapper", 1, 52>,
   ];
   let association = AS_None;
   let category = CA_Declarative;
+  let pureSince = 50;
 }
 def OMP_DeclareReduction : Directive<[Spelling<"declare reduction", 1, 52>,
                                       Spelling<"declare_reduction", 60>]> {
@@ -825,6 +839,7 @@ def OMP_DeclareReduction : Directive<[Spelling<"declare reduction", 1, 52>,
   ];
   let association = AS_None;
   let category = CA_Declarative;
+  let pureSince = 50;
 }
 def OMP_DeclareSimd : Directive<[Spelling<"declare simd", 1, 52>,
                                  Spelling<"declare_simd", 60>]> {
@@ -842,6 +857,7 @@ def OMP_DeclareSimd : Directive<[Spelling<"declare simd", 1, 52>,
   ];
   let association = AS_Declaration;
   let category = CA_Declarative;
+  let pureSince = 50;
 }
 def OMP_DeclareTarget : Directive<[Spelling<"declare target", 1, 52>,
                                    Spelling<"declare_target", 60>]> {
@@ -855,8 +871,9 @@ def OMP_DeclareTarget : Directive<[Spelling<"declare target", 1, 52>,
     VersionedClause<OMPC_DeviceType, 50>,
     VersionedClause<OMPC_Indirect, 51>,
   ];
-  let association = AS_None;
+  let association = AS_Explicit;
   let category = CA_Declarative;
+  let pureSince = 45;
 }
 def OMP_DeclareVariant : Directive<[Spelling<"declare variant", 1, 52>,
                                     Spelling<"declare_variant", 60>]> {
@@ -870,6 +887,7 @@ def OMP_DeclareVariant : Directive<[Spelling<"declare variant", 1, 52>,
   let association = AS_Declaration;
   let category = CA_Declarative;
   let languages = [L_C];
+  let pureSince = 50;
 }
 def OMP_Depobj : Directive<[Spelling<"depobj">]> {
   let allowedClauses = [
@@ -944,6 +962,7 @@ def OMP_Error : Directive<[Spelling<"error">]> {
   ];
   let association = AS_None;
   let category = CA_Utility;
+  let pureSince = 52;
 }
 def OMP_Flatten : Directive<[Spelling<"flatten">]> {
   let allowedClauses = [
@@ -995,9 +1014,10 @@ def OMP_Groupprivate : Directive<[Spelling<"groupprivate">]> {
   let allowedOnceClauses = [
     VersionedClause<OMPC_DeviceType>,
   ];
-  let association = AS_None;
+  let association = AS_Explicit;
   let category = CA_Declarative;
   let languages = [L_C, L_Fortran];
+  let pureSince = 50;
 }
 def OMP_Fuse : Directive<[Spelling<"fuse">]> {
   let allowedClauses = [
@@ -1012,6 +1032,7 @@ def OMP_Fuse : Directive<[Spelling<"fuse">]> {
   let allowedLoopModifiers = [
     LM_Fused,
   ];
+  let pureSince = 60;
 }
 def OMP_Interchange : Directive<[Spelling<"interchange">]> {
   let allowedClauses = [
@@ -1025,6 +1046,7 @@ def OMP_Interchange : Directive<[Spelling<"interchange">]> {
   let allowedLoopModifiers = [
     LM_Interchanged,
   ];
+  let pureSince = 60;
 }
 def OMP_interop : Directive<[Spelling<"interop">]> {
   let allowedClauses = [
@@ -1075,6 +1097,7 @@ def OMP_Metadirective : Directive<[Spelling<"metadirective">]> {
   ];
   let association = AS_None;
   let category = CA_Meta;
+  let pureSince = 52;
 }
 def OMP_Nothing : Directive<[Spelling<"nothing">]> {
   let allowedClauses = [
@@ -1085,18 +1108,24 @@ def OMP_Nothing : Directive<[Spelling<"nothing">]> {
   let allowedLoopModifiers = [
     LM_Identity,
   ];
+  let pureSince = 52;
 }
-def OMP_Ordered : Directive<[Spelling<"ordered">]> {
+def OMP_OrderedStandalone : Directive<[Spelling<"ordered">]> {
+  let name = "ordered_standalone";
   let allowedClauses = [
     VersionedClause<OMPC_Depend>,
     VersionedClause<OMPC_Doacross, 52>,
   ];
+  let association = AS_None;
+  let category = CA_Executable;
+}
+def OMP_OrderedBlockassoc : Directive<[Spelling<"ordered">]> {
+  let name = "ordered_blockassoc";
   let allowedOnceClauses = [
     VersionedClause<OMPC_Simd>,
     VersionedClause<OMPC_Threads>,
   ];
-  let association = AS_None;
-  // There is also a block-associated "ordered" directive.
+  let association = AS_Block;
   let category = CA_Executable;
 }
 def OMP_Parallel : Directive<[Spelling<"parallel">]> {
@@ -1132,6 +1161,7 @@ def OMP_Requires : Directive<[Spelling<"requires">]> {
   ];
   let association = AS_None;
   let category = CA_Informational;
+  let pureSince = 50;
 }
 def OMP_Reverse : Directive<[Spelling<"reverse">]> {
   let allowedClauses = [
@@ -1142,6 +1172,7 @@ def OMP_Reverse : Directive<[Spelling<"reverse">]> {
   let allowedLoopModifiers = [
     LM_Reversed,
   ];
+  let pureSince = 60;
 }
 def OMP_Scan : Directive<[Spelling<"scan">]> {
   let allowedOnceClauses = [
@@ -1150,6 +1181,7 @@ def OMP_Scan : Directive<[Spelling<"scan">]> {
   ];
   let association = AS_Separating;
   let category = CA_Subsidiary;
+  let pureSince = 60;
 }
 def OMP_Scope : Directive<[Spelling<"scope">]> {
   let allowedClauses = [
@@ -1201,6 +1233,7 @@ def OMP_Simd : Directive<[Spelling<"simd">]> {
   ];
   let association = AS_LoopNest;
   let category = CA_Executable;
+  let pureSince = 45;
 }
 def OMP_Single : Directive<[Spelling<"single">]> {
   let allowedClauses = [
@@ -1421,7 +1454,8 @@ def OMP_Teams : Directive<[Spelling<"teams">]> {
   let category = CA_Executable;
 }
 def OMP_ThreadPrivate : Directive<[Spelling<"threadprivate">]> {
-  let association = AS_None;
+  let pureSince = 50;
+  let association = AS_Explicit;
   let category = CA_Declarative;
 }
 def OMP_Tile : Directive<[Spelling<"tile">]> {
@@ -1440,6 +1474,7 @@ def OMP_Tile : Directive<[Spelling<"tile">]> {
     LM_Grid,
     LM_Intratile,
   ];
+  let pureSince = 52;
 }
 def OMP_Stripe : Directive<[Spelling<"stripe">]> {
   let allowedClauses = [
@@ -1454,6 +1489,7 @@ def OMP_Stripe : Directive<[Spelling<"stripe">]> {
     LM_Grid,
     LM_Offsets,
   ];
+  let pureSince = 60;
 }
 def OMP_Split : Directive<[Spelling<"split">]> {
   let allowedClauses = [
@@ -1470,6 +1506,7 @@ def OMP_Split : Directive<[Spelling<"split">]> {
   let allowedLoopModifiers = [
     LM_Split,
   ];
+  let pureSince = 60;
 }
 def OMP_Unknown : Directive<[Spelling<"unknown">]> {
   let isDefault = true;
@@ -1480,7 +1517,7 @@ def OMP_Unroll : Directive<[Spelling<"unroll">]> {
   let allowedClauses = [
     VersionedClause<OMPC_Apply, 60>,
   ];
-  let allowedOnceClauses = [
+  let allowedExclusiveClauses = [
     VersionedClause<OMPC_Full, 51>,
     VersionedClause<OMPC_Partial, 51>,
   ];
@@ -1489,6 +1526,7 @@ def OMP_Unroll : Directive<[Spelling<"unroll">]> {
   let allowedLoopModifiers = [
     LM_Unrolled,
   ];
+  let pureSince = 52;
 }
 def OMP_Workshare : Directive<[Spelling<"workshare">]> {
   let allowedOnceClauses = [
@@ -1588,6 +1626,7 @@ def OMP_DistributeParallelFor
     VersionedClause<OMPC_Message, 60>,
     VersionedClause<OMPC_NumThreads>,
     VersionedClause<OMPC_Order, 50>,
+    VersionedClause<OMPC_Ordered>,
     VersionedClause<OMPC_ProcBind>,
     VersionedClause<OMPC_Schedule>,
     VersionedClause<OMPC_Severity, 60>,
@@ -1619,6 +1658,7 @@ def OMP_DistributeParallelForSimd
     VersionedClause<OMPC_Message, 60>,
     VersionedClause<OMPC_NumThreads>,
     VersionedClause<OMPC_Order, 50>,
+    VersionedClause<OMPC_Ordered>,
     VersionedClause<OMPC_ProcBind>,
     VersionedClause<OMPC_SafeLen>,
     VersionedClause<OMPC_Schedule>,
@@ -2652,6 +2692,7 @@ def OMP_TargetTeamsDistributeParallelFor
     VersionedClause<OMPC_NumThreads>,
     VersionedClause<OMPC_OMPX_DynCGroupMem>,
     VersionedClause<OMPC_Order, 50>,
+    VersionedClause<OMPC_Ordered>,
     VersionedClause<OMPC_ProcBind>,
     VersionedClause<OMPC_Schedule>,
     VersionedClause<OMPC_Severity, 60>,
@@ -2695,6 +2736,7 @@ def OMP_TargetTeamsDistributeParallelForSimd
     VersionedClause<OMPC_NumThreads>,
     VersionedClause<OMPC_OMPX_DynCGroupMem>,
     VersionedClause<OMPC_Order, 50>,
+    VersionedClause<OMPC_Ordered>,
     VersionedClause<OMPC_ProcBind>,
     VersionedClause<OMPC_SafeLen>,
     VersionedClause<OMPC_Schedule>,
@@ -2950,6 +2992,7 @@ def OMP_TeamsDistributeParallelFor
     VersionedClause<OMPC_NumTeams>,
     VersionedClause<OMPC_NumThreads>,
     VersionedClause<OMPC_Order, 50>,
+    VersionedClause<OMPC_Ordered>,
     VersionedClause<OMPC_ProcBind>,
     VersionedClause<OMPC_Schedule>,
     VersionedClause<OMPC_Severity, 60>,
@@ -2983,6 +3026,7 @@ def OMP_TeamsDistributeParallelForSimd
     VersionedClause<OMPC_NumTeams>,
     VersionedClause<OMPC_NumThreads>,
     VersionedClause<OMPC_Order, 50>,
+    VersionedClause<OMPC_Ordered>,
     VersionedClause<OMPC_ProcBind>,
     VersionedClause<OMPC_SafeLen>,
     VersionedClause<OMPC_Schedule>,

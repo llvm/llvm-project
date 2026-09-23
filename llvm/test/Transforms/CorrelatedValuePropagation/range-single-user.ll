@@ -8,7 +8,7 @@ define i8 @refine_add_single_cross_block_user(i8 %a) {
 ; CHECK-LABEL: define i8 @refine_add_single_cross_block_user(
 ; CHECK-SAME: i8 [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[C:%.*]] = add i8 [[A]], 3
+; CHECK-NEXT:    [[C:%.*]] = add nuw nsw i8 [[A]], 3
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A]], 93
@@ -92,7 +92,7 @@ define i8 @no_refine_multiple_users(i8 %a) {
 ; CHECK-LABEL: define i8 @no_refine_multiple_users(
 ; CHECK-SAME: i8 [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[C:%.*]] = add i8 [[A]], 3
+; CHECK-NEXT:    [[C:%.*]] = add nuw nsw i8 [[A]], 3
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A]], 93
@@ -324,3 +324,163 @@ exit:
 }
 
 declare void @foo(i32)
+
+; %a == 93 is known at %e. %c and %d are speculatable with a single user each,
+; so they could be sunk to %e and %c can be refined.
+define i8 @refine_add_transitive_single_user(i8 %a) {
+; CHECK-LABEL: define i8 @refine_add_transitive_single_user(
+; CHECK-SAME: i8 [[A:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[C:%.*]] = add nuw nsw i8 [[A]], 3
+; CHECK-NEXT:    [[D:%.*]] = xor i8 [[C]], 1
+; CHECK-NEXT:    br label %[[DISPATCH:.*]]
+; CHECK:       [[DISPATCH]]:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A]], 93
+; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[DISPATCH]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[E:%.*]] = add nuw nsw i8 [[D]], 1
+; CHECK-NEXT:    ret i8 98
+;
+entry:
+  %c = add i8 %a, 3
+  %d = xor i8 %c, 1
+  br label %dispatch
+
+dispatch:
+  %cmp = icmp eq i8 %a, 93
+  br i1 %cmp, label %exit, label %dispatch
+
+exit:
+  %e = add i8 %d, 1
+  ret i8 %e
+}
+
+; Same as above, but with the intermediate in a block of its own.
+define i8 @refine_add_transitive_single_user_three_blocks(i8 %a) {
+; CHECK-LABEL: define i8 @refine_add_transitive_single_user_three_blocks(
+; CHECK-SAME: i8 [[A:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[C:%.*]] = add nuw nsw i8 [[A]], 3
+; CHECK-NEXT:    br label %[[NEXT:.*]]
+; CHECK:       [[NEXT]]:
+; CHECK-NEXT:    [[D:%.*]] = xor i8 [[C]], 1
+; CHECK-NEXT:    br label %[[DISPATCH:.*]]
+; CHECK:       [[DISPATCH]]:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A]], 93
+; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[DISPATCH]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[E:%.*]] = add nuw nsw i8 [[D]], 1
+; CHECK-NEXT:    ret i8 98
+;
+entry:
+  %c = add i8 %a, 3
+  br label %next
+
+next:
+  %d = xor i8 %c, 1
+  br label %dispatch
+
+dispatch:
+  %cmp = icmp eq i8 %a, 93
+  br i1 %cmp, label %exit, label %dispatch
+
+exit:
+  %e = add i8 %d, 1
+  ret i8 %e
+}
+
+; The intermediate may divide by zero, so it cannot be sunk and the chain must
+; not be followed.
+define i8 @no_refine_transitive_unsafe_intermediate(i8 %a, i8 %x) {
+; CHECK-LABEL: define i8 @no_refine_transitive_unsafe_intermediate(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[X:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[C:%.*]] = add i8 [[A]], 3
+; CHECK-NEXT:    [[D:%.*]] = udiv i8 [[C]], [[X]]
+; CHECK-NEXT:    br label %[[DISPATCH:.*]]
+; CHECK:       [[DISPATCH]]:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A]], 93
+; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[DISPATCH]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[E:%.*]] = add i8 [[D]], 1
+; CHECK-NEXT:    ret i8 [[E]]
+;
+entry:
+  %c = add i8 %a, 3
+  %d = udiv i8 %c, %x
+  br label %dispatch
+
+dispatch:
+  %cmp = icmp eq i8 %a, 93
+  br i1 %cmp, label %exit, label %dispatch
+
+exit:
+  %e = add i8 %d, 1
+  ret i8 %e
+}
+
+; The intermediate has multiple users, so the chain must not be followed.
+define i8 @no_refine_transitive_multi_use_intermediate(i8 %a) {
+; CHECK-LABEL: define i8 @no_refine_transitive_multi_use_intermediate(
+; CHECK-SAME: i8 [[A:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[C:%.*]] = add i8 [[A]], 3
+; CHECK-NEXT:    [[D:%.*]] = xor i8 [[C]], 1
+; CHECK-NEXT:    call void @use.i8(i8 [[D]])
+; CHECK-NEXT:    br label %[[DISPATCH:.*]]
+; CHECK:       [[DISPATCH]]:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A]], 93
+; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[DISPATCH]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[E:%.*]] = add nuw nsw i8 [[D]], 1
+; CHECK-NEXT:    ret i8 98
+;
+entry:
+  %c = add i8 %a, 3
+  %d = xor i8 %c, 1
+  call void @use.i8(i8 %d)
+  br label %dispatch
+
+dispatch:
+  %cmp = icmp eq i8 %a, 93
+  br i1 %cmp, label %exit, label %dispatch
+
+exit:
+  %e = add i8 %d, 1
+  ret i8 %e
+}
+
+; The transitive user is a phi, which must not be used as context.
+define i8 @no_refine_transitive_phi_user(i8 %a, i1 %g) {
+; CHECK-LABEL: define i8 @no_refine_transitive_phi_user(
+; CHECK-SAME: i8 [[A:%.*]], i1 [[G:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[C:%.*]] = add i8 [[A]], 3
+; CHECK-NEXT:    [[D:%.*]] = xor i8 [[C]], 1
+; CHECK-NEXT:    br i1 [[G]], label %[[THEN:.*]], label %[[EXIT:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[P:%.*]] = phi i8 [ [[D]], %[[ENTRY]] ], [ 0, %[[THEN]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A]], 93
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[E:%.*]] = add i8 [[P]], 1
+; CHECK-NEXT:    ret i8 [[E]]
+;
+entry:
+  %c = add i8 %a, 3
+  %d = xor i8 %c, 1
+  br i1 %g, label %then, label %exit
+
+then:
+  br label %exit
+
+exit:
+  %p = phi i8 [ %d, %entry ], [ 0, %then ]
+  %cmp = icmp eq i8 %a, 93
+  call void @llvm.assume(i1 %cmp)
+  %e = add i8 %p, 1
+  ret i8 %e
+}
+
+declare void @use.i8(i8)

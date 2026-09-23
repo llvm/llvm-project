@@ -20,7 +20,6 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Pass.h"
 
 using namespace llvm;
 

@@ -10,4 +10,4 @@
 
 #include "src/math/nexttowardl.h"
 
-LIST_NEXTTOWARD_TESTS(long double, LIBC_NAMESPACE::nexttowardl)
+LIST_NEXTTOWARD_TESTS(Nexttowardl, long double, LIBC_NAMESPACE::nexttowardl)

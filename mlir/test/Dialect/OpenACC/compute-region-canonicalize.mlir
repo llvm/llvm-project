@@ -13,11 +13,41 @@ func.func @merge_duplicate_ins() -> i32 {
     %x = arith.addi %v, %c1 : i32
     memref.store %x, %a[] : memref<i32>
     acc.yield
-  } {origin = "acc.serial"}
+  } <{origin = "acc.serial"}>
   %r = memref.load %m[] : memref<i32>
   return %r : i32
 }
 // CHECK: acc.compute_region ins({{.*}}) : (memref<i32>) {
+
+// -----
+
+// CHECK-LABEL: func @merge_duplicate_ins_with_stream
+// CHECK-SAME: (%[[M:.*]]: memref<i32>, %[[STREAM:.*]]: !gpu.async.token)
+func.func @merge_duplicate_ins_with_stream(%m: memref<i32>, %stream: !gpu.async.token) {
+  // CHECK: acc.compute_region stream(%[[STREAM]] : !gpu.async.token) ins({{.*}} = %[[M]]) : (memref<i32>) {
+  acc.compute_region stream(%stream : !gpu.async.token) ins(%a = %m, %b = %m) : (memref<i32>, memref<i32>) {
+    %va = memref.load %a[] : memref<i32>
+    %vb = memref.load %b[] : memref<i32>
+    %sum = arith.addi %va, %vb : i32
+    memref.store %sum, %a[] : memref<i32>
+    acc.yield
+  } <{origin = "acc.serial"}>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @drop_unused_ins_with_stream
+// CHECK-SAME: (%[[USED:.*]]: memref<i32>, %{{.*}}: memref<i32>, %[[STREAM:.*]]: !gpu.async.token)
+func.func @drop_unused_ins_with_stream(%used: memref<i32>, %unused: memref<i32>, %stream: !gpu.async.token) {
+  // CHECK: acc.compute_region stream(%[[STREAM]] : !gpu.async.token) ins({{.*}} = %[[USED]]) : (memref<i32>) {
+  acc.compute_region stream(%stream : !gpu.async.token) ins(%a = %used, %b = %unused) : (memref<i32>, memref<i32>) {
+    %v = memref.load %a[] : memref<i32>
+    memref.store %v, %a[] : memref<i32>
+    acc.yield
+  } <{origin = "acc.serial"}>
+  return
+}
 
 // -----
 
@@ -48,7 +78,7 @@ func.func @merge_duplicate_ins_complex_pattern() -> i32 {
     %out = arith.addi %sum6, %one : i32
     memref.store %out, %a0[] : memref<i32>
     acc.yield
-  } {origin = "acc.serial"}
+  } <{origin = "acc.serial"}>
   %r = memref.load %ma[] : memref<i32>
   return %r : i32
 }
@@ -71,7 +101,7 @@ func.func @drop_unused_ins() -> i32 {
     %x = arith.addi %v, %c1 : i32
     memref.store %x, %a[] : memref<i32>
     acc.yield
-  } {origin = "acc.serial"}
+  } <{origin = "acc.serial"}>
   %r = memref.load %ma[] : memref<i32>
   return %r : i32
 }
