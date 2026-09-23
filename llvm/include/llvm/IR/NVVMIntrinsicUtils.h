@@ -15,7 +15,6 @@
 #ifndef LLVM_IR_NVVMINTRINSICUTILS_H
 #define LLVM_IR_NVVMINTRINSICUTILS_H
 
-#include <optional>
 #include <stdint.h>
 
 #include "llvm/ADT/APFloat.h"
@@ -24,7 +23,6 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
@@ -216,80 +214,6 @@ enum class MBarrierLayout : uint8_t {
   V0 = 0,
   V1 = 1,
 };
-
-// Sparse intrinsic layouts are shared by the IR verifier and the NVPTX
-// instruction printer.
-struct SPOperandLayout {
-  unsigned MetadataSize;
-  unsigned CompressedDataSize;
-  unsigned DataSize;
-};
-
-// PTX limits the combined vector size of the mdata, cdata, and data operands
-// of spcompress and spdecompress to 253 32-bit registers.
-inline constexpr unsigned MaxSPOperandRegisters = 253;
-
-inline bool isValidSPElemSize(unsigned ElemSize) {
-  return ElemSize == 8 || ElemSize == 16;
-}
-
-inline bool isValidSPIdxSize(unsigned IdxSize) {
-  return IdxSize == 2 || IdxSize == 4;
-}
-
-inline bool isValidSPRepeatFactor(unsigned RepeatFactor) {
-  return isPowerOf2_32(RepeatFactor) && RepeatFactor <= 64;
-}
-
-inline bool isValidSPDecompressFactor(unsigned NumSrc, unsigned NumTgt) {
-  switch (NumSrc) {
-  case 1:
-    return NumTgt == 2 || NumTgt == 4 || NumTgt == 8 || NumTgt == 16;
-  case 2:
-    return NumTgt == 4 || NumTgt == 8 || NumTgt == 16;
-  case 4:
-    return NumTgt == 8 || NumTgt == 16;
-  default:
-    return false;
-  }
-}
-
-inline std::optional<SPOperandLayout>
-getSPCompressLayout(unsigned ElemSize, unsigned IdxSize,
-                    unsigned RepeatFactor) {
-  if (!isValidSPElemSize(ElemSize) || !isValidSPIdxSize(IdxSize) ||
-      !isValidSPRepeatFactor(RepeatFactor))
-    return std::nullopt;
-
-  SPOperandLayout Layout = {divideCeil(RepeatFactor * IdxSize, ElemSize),
-                            RepeatFactor, RepeatFactor * 2};
-  if (Layout.MetadataSize + Layout.CompressedDataSize + Layout.DataSize >
-      MaxSPOperandRegisters)
-    return std::nullopt;
-  return Layout;
-}
-
-inline std::optional<SPOperandLayout>
-getSPDecompressLayout(unsigned NumSrc, unsigned NumTgt, unsigned ElemSize,
-                      unsigned IdxSize, unsigned RepeatFactor) {
-  if (!isValidSPDecompressFactor(NumSrc, NumTgt) ||
-      !isValidSPElemSize(ElemSize) || !isValidSPIdxSize(IdxSize) ||
-      !isValidSPRepeatFactor(RepeatFactor) || NumSrc * ElemSize > 32 ||
-      (IdxSize == 2 && NumTgt > 4))
-    return std::nullopt;
-
-  unsigned DataBits = NumTgt * ElemSize * RepeatFactor;
-  if (DataBits < 32 || DataBits > 4096)
-    return std::nullopt;
-
-  SPOperandLayout Layout = {divideCeil(NumSrc * IdxSize * RepeatFactor, 32),
-                            divideCeil(NumSrc * ElemSize * RepeatFactor, 32),
-                            divideCeil(DataBits, 32)};
-  if (Layout.MetadataSize + Layout.CompressedDataSize + Layout.DataSize >
-      MaxSPOperandRegisters)
-    return std::nullopt;
-  return Layout;
-}
 
 LLVM_ABI void printTcgen05MMAKind(raw_ostream &OS, const Constant *ImmArgVal);
 

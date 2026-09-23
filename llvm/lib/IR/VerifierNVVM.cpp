@@ -16,7 +16,6 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
-#include "llvm/IR/NVVMIntrinsicUtils.h"
 #include "llvm/Support/MathExtras.h"
 #include <optional>
 
@@ -38,7 +37,80 @@ struct SPVectorInfo {
   unsigned NumRegisters;
 };
 
+// Register layout of the sparse intrinsic operands, used by the IR verifier.
+struct SPOperandLayout {
+  unsigned MetadataSize;
+  unsigned CompressedDataSize;
+  unsigned DataSize;
+};
+
 } // namespace
+
+// PTX limits the combined vector size of the mdata, cdata, and data operands
+// of spcompress and spdecompress to 253 32-bit registers.
+constexpr unsigned MaxSPOperandRegisters = 253;
+
+static bool isValidSPElemSize(unsigned ElemSize) {
+  return ElemSize == 8 || ElemSize == 16;
+}
+
+static bool isValidSPIdxSize(unsigned IdxSize) {
+  return IdxSize == 2 || IdxSize == 4;
+}
+
+static bool isValidSPRepeatFactor(unsigned RepeatFactor) {
+  return isPowerOf2_32(RepeatFactor) && RepeatFactor <= 64;
+}
+
+static bool isValidSPDecompressFactor(unsigned NumSrc, unsigned NumTgt) {
+  switch (NumSrc) {
+  case 1:
+    return NumTgt == 2 || NumTgt == 4 || NumTgt == 8 || NumTgt == 16;
+  case 2:
+    return NumTgt == 4 || NumTgt == 8 || NumTgt == 16;
+  case 4:
+    return NumTgt == 8 || NumTgt == 16;
+  default:
+    return false;
+  }
+}
+
+static std::optional<SPOperandLayout>
+getSPCompressLayout(unsigned ElemSize, unsigned IdxSize,
+                    unsigned RepeatFactor) {
+  if (!isValidSPElemSize(ElemSize) || !isValidSPIdxSize(IdxSize) ||
+      !isValidSPRepeatFactor(RepeatFactor))
+    return std::nullopt;
+
+  SPOperandLayout Layout = {divideCeil(RepeatFactor * IdxSize, ElemSize),
+                            RepeatFactor, RepeatFactor * 2};
+  if (Layout.MetadataSize + Layout.CompressedDataSize + Layout.DataSize >
+      MaxSPOperandRegisters)
+    return std::nullopt;
+  return Layout;
+}
+
+static std::optional<SPOperandLayout>
+getSPDecompressLayout(unsigned NumSrc, unsigned NumTgt, unsigned ElemSize,
+                      unsigned IdxSize, unsigned RepeatFactor) {
+  if (!isValidSPDecompressFactor(NumSrc, NumTgt) ||
+      !isValidSPElemSize(ElemSize) || !isValidSPIdxSize(IdxSize) ||
+      !isValidSPRepeatFactor(RepeatFactor) || NumSrc * ElemSize > 32 ||
+      (IdxSize == 2 && NumTgt > 4))
+    return std::nullopt;
+
+  unsigned DataBits = NumTgt * ElemSize * RepeatFactor;
+  if (DataBits < 32 || DataBits > 4096)
+    return std::nullopt;
+
+  SPOperandLayout Layout = {divideCeil(NumSrc * IdxSize * RepeatFactor, 32),
+                            divideCeil(NumSrc * ElemSize * RepeatFactor, 32),
+                            divideCeil(DataBits, 32)};
+  if (Layout.MetadataSize + Layout.CompressedDataSize + Layout.DataSize >
+      MaxSPOperandRegisters)
+    return std::nullopt;
+  return Layout;
+}
 
 static std::optional<SPVectorInfo> getSPVectorInfo(Type *Ty) {
   auto *VT = dyn_cast<FixedVectorType>(Ty);
@@ -83,8 +155,7 @@ static void verifySPCompress(VerifierSupport &VS, CallBase &Call) {
         "invalid llvm.nvvm.spcompress layout", &Call);
 
   unsigned RepeatFactor = Data->NumRegisters / 2;
-  auto Layout =
-      nvvm::getSPCompressLayout(Data->ElemSize, IdxSize, RepeatFactor);
+  auto Layout = getSPCompressLayout(Data->ElemSize, IdxSize, RepeatFactor);
   Check(Layout && *MDataRegs == Layout->MetadataSize &&
             CData->NumRegisters == Layout->CompressedDataSize &&
             Data->NumRegisters == Layout->DataSize,
@@ -108,8 +179,8 @@ static void verifySPDecompress(VerifierSupport &VS, CallBase &Call) {
         "invalid llvm.nvvm.spdecompress layout", &Call);
 
   unsigned NumSrc = CData->NumElements / RepeatFactor;
-  auto Layout = nvvm::getSPDecompressLayout(NumSrc, NumTgt, Data->ElemSize,
-                                            IdxSize, RepeatFactor);
+  auto Layout = getSPDecompressLayout(NumSrc, NumTgt, Data->ElemSize, IdxSize,
+                                      RepeatFactor);
   Check(Layout && *MDataRegs == Layout->MetadataSize &&
             CData->NumRegisters == Layout->CompressedDataSize &&
             Data->NumRegisters == Layout->DataSize,
