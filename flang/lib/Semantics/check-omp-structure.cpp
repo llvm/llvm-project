@@ -3253,8 +3253,10 @@ struct TaskgraphVisitor {
       }
     }
 
-    // Only visit top-level constructs.
-    return false;
+    // A TARGET DATA region's structured block is executed by the encountering
+    // task, so the constructs in it are encountered as part of the TASKGRAPH
+    // region too and the restrictions reach them.
+    return leafs[0] == llvm::omp::Directive::OMPD_target_data;
   }
 
 private:
