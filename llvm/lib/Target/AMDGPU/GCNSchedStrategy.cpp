@@ -608,13 +608,16 @@ SUnit *GCNSchedStrategy::pickNodeBidirectional(bool &IsTopNode,
   // Pick best from BotCand and TopCand.
   LLVM_DEBUG(dbgs() << "Top Cand: "; traceCandidate(TopCand);
              dbgs() << "Bot Cand: "; traceCandidate(BotCand););
+  // Cached candidates may have moved between the available and pending queues
+  // since they were last picked.
+  BotPending = Bot.Pending.isInQueue(BotCand.SU);
+  TopPending = Top.Pending.isInQueue(TopCand.SU);
   SchedCandidate Cand = BotPending ? TopCand : BotCand;
   SchedCandidate TryCand = BotPending ? BotCand : TopCand;
-  PickedPending = BotPending && TopPending;
 
   TryCand.Reason = NoCand;
   if (BotPending || TopPending) {
-    PickedPending |= tryPendingCandidate(Cand, TopCand, nullptr);
+    tryPendingCandidate(Cand, TryCand, nullptr);
   } else {
     tryCandidate(Cand, TryCand, nullptr);
   }
@@ -622,6 +625,7 @@ SUnit *GCNSchedStrategy::pickNodeBidirectional(bool &IsTopNode,
   if (TryCand.Reason != NoCand) {
     Cand.setBest(TryCand);
   }
+  PickedPending = Cand.AtTop ? TopPending : BotPending;
 
   LLVM_DEBUG(dbgs() << "Picking: "; traceCandidate(Cand););
 

@@ -1,0 +1,33 @@
+# RUN: llc -mtriple=amdgpu9.08 -run-pass=machine-scheduler -misched-prera-direction=bidirectional -misched-limit=1 -verify-machineinstrs -debug-only=machine-scheduler -o /dev/null %s 2>&1 | FileCheck %s
+# REQUIRES: asserts
+
+# The physical-register COPY is bottom-ready but pending because the one-slot
+# available queue is full. It must win the cross-boundary PhysReg comparison.
+# CHECK-LABEL: pending_physreg_cross_boundary:%bb.0
+# CHECK: Queue BotQ.P: 8
+# CHECK: Top Cand:   Cand SU(0) FIRST
+# CHECK-NEXT: Bot Cand:   Cand SU(8) PHYS-REG
+# CHECK-NEXT: Picking:   Cand SU(8) PHYS-REG
+
+---
+name: pending_physreg_cross_boundary
+tracksRegLiveness: true
+registers:
+  - { id: 99, class: vgpr_32 }
+body: |
+  bb.0:
+    liveins: $sgpr4_sgpr5
+
+    %2:sgpr_128 = IMPLICIT_DEF
+    %14:vgpr_32 = IMPLICIT_DEF
+    %15:vgpr_32 = IMPLICIT_DEF
+    %18:areg_512 = IMPLICIT_DEF
+    %18:areg_512 = V_MFMA_F32_16X16X1F32_mac_e64 %15, %14, %18, 0, 0, 0, implicit $mode, implicit $exec
+    %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2, 0, 0, 0, 0, implicit $exec
+    %18:areg_512 = V_MFMA_F32_16X16X1F32_mac_e64 %15, %14, %18, 0, 0, 0, implicit $mode, implicit $exec
+    undef %84.sub0:vreg_128_align2 = V_ADD_U32_e32 %5.sub0, %14, implicit $exec
+    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = COPY %18, implicit-def %99
+    SCHED_BARRIER 0
+    S_NOP 0, implicit %18, implicit %84, implicit %99, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    S_ENDPGM 0
+...

@@ -1,5 +1,6 @@
 # REQUIRES: asserts
 # RUN: llc -mtriple=amdgpu9.50-amd-amdhsa \
+# RUN:   -enable-misched=false \
 # RUN:   -start-before=register-coalescer \
 # RUN:   -stop-after=amdgpu-rewrite-agpr-copy-mfma \
 # RUN:   -debug-only=amdgpu-rewrite-agpr-copy-mfma -filetype=null %s 2>&1 \
@@ -8,6 +9,7 @@
 # It is legal for a spill reload to not be jointly dominated by the slot's
 # spill stores. The AGPR rewrite pass must not unspill such a slot into a
 # vreg, otherwise the compiler will crash.
+# Disable machine scheduling to preserve the spill layout exercising this case.
 
 # CHECK: Skipping ${{[a-zA-Z0-9_]+}}: some reachable load not jointly dominated by stores
 
