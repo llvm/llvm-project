@@ -3526,12 +3526,12 @@ void Driver::handleArguments(Compilation &C, DerivedArgList &Args,
                 Args.getLastArg(options::OPT_M, options::OPT_MM)) &&
                getPreprocessedType(InputType) == types::TY_INVALID)
         Diag(clang::diag::warn_drv_preprocessed_input_file_unused)
-            << InputArg->getAsString(Args) << !!FinalPhaseArg
+            << InputArg->getAsString(Args) << !FinalPhaseArg
             << (FinalPhaseArg ? FinalPhaseArg->getOption().getName() : "");
       else
         Diag(clang::diag::warn_drv_input_file_unused)
             << InputArg->getAsString(Args) << getPhaseName(InitialPhase)
-            << !!FinalPhaseArg
+            << !FinalPhaseArg
             << (FinalPhaseArg ? FinalPhaseArg->getOption().getName() : "");
       continue;
     }
