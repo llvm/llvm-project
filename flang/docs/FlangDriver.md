@@ -8,11 +8,6 @@
 
 # Flang drivers
 
-```{contents}
----
-local:
----
-```
 
 There are two main drivers in Flang:
 * the compiler driver, `flang`

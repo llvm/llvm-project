@@ -35,12 +35,15 @@ ScriptedStringSummaryPythonInterface::CreatePluginObject(
 
 llvm::Expected<std::string> ScriptedStringSummaryPythonInterface::GetSummary(
     ValueObject &valobj, const TypeSummaryOptions &options) {
-  Status error;
-  StructuredData::ObjectSP obj =
-      Dispatch("get_summary", error, valobj.GetSP(), options);
-  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
-                                                    error))
-    return error.ToError();
+  llvm::Expected<StructuredData::ObjectSP> obj_or_err =
+      Dispatch("get_summary", valobj.GetSP(), options);
+  if (!obj_or_err)
+    return obj_or_err.takeError();
+
+  StructuredData::ObjectSP obj = *obj_or_err;
+  if (!obj || !obj->IsValid())
+    return llvm::createStringError("get_summary returned no summary string");
+
   return obj->GetStringValue().str();
 }
 

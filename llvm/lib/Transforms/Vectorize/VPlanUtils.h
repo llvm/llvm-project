@@ -48,6 +48,13 @@ const SCEV *getSCEVExprForVPValue(const VPValue *V,
                                   PredicatedScalarEvolution &PSE,
                                   const Loop *L = nullptr);
 
+/// If the pointer operand \p Addr of a memory access is an affine AddRec
+/// w.r.t. \p L with a constant stride, return the stride in units of
+/// \p AccessTy. Otherwise return std::nullopt.
+std::optional<int64_t> getConstantStride(VPValue *Addr, Type *AccessTy,
+                                         PredicatedScalarEvolution &PSE,
+                                         const Loop *L);
+
 /// Returns true if \p Addr is an address SCEV that can be passed to
 /// TTI::getAddressComputationCost, i.e. the address SCEV is loop invariant, an
 /// affine AddRec (i.e. induction ), or an add expression of such operands or a
@@ -326,11 +333,8 @@ public:
     assert(!NewBlock->hasSuccessors() && !NewBlock->hasPredecessors() &&
            "Can't insert new block with predecessors or successors.");
     NewBlock->setParent(BlockPtr->getParent());
-    for (VPBlockBase *Pred : to_vector(BlockPtr->predecessors())) {
-      Pred->replaceSuccessor(BlockPtr, NewBlock);
-      NewBlock->appendPredecessor(Pred);
-    }
-    BlockPtr->clearPredecessors();
+    for (VPBlockBase *Pred : to_vector(BlockPtr->predecessors()))
+      replaceSuccessor(Pred, BlockPtr, NewBlock);
     connectBlocks(NewBlock, BlockPtr);
   }
 
@@ -380,6 +384,16 @@ public:
     assert(To && "Successor to disconnect is null.");
     From->removeSuccessor(To);
     To->removePredecessor(From);
+  }
+
+  /// Redirect the edge from \p From to \p OldSucc to \p NewSucc, keeping \p
+  /// From's successor order. \p From is removed from \p OldSucc's predecessors
+  /// and appended to \p NewSucc's.
+  static void replaceSuccessor(VPBlockBase *From, VPBlockBase *OldSucc,
+                               VPBlockBase *NewSucc) {
+    From->replaceSuccessor(OldSucc, NewSucc);
+    OldSucc->removePredecessor(From);
+    NewSucc->appendPredecessor(From);
   }
 
   /// Reassociate all the blocks connected to \p Old so that they now point to

@@ -432,6 +432,7 @@ CodeGenModule::getLLVMABITargetInfo(llvm::abi::TypeBuilder &TB) {
       Opts.Kind = llvm::abi::AArch64ABIKind::AAPCS;
 
     Opts.IsILP32 = T.getArch() == llvm::Triple::aarch64_32;
+    Opts.IsCXX = getLangOpts().CPlusPlus;
     Opts.IsMicrosoftCXXABI = getTarget().getCXXABI().isMicrosoft();
 
     initializeCommonABICompatInfo(Opts.CompatInfo,
