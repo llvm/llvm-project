@@ -9,6 +9,8 @@
 // RUN:   | FileCheck %t/implied-all.td -DFILE=%t/implied-all.td --implicit-check-not="error:"
 // RUN: not llvm-tblgen -gen-amdgpu-target-def -I %t -I %p/../../include -I %p/../../lib/Target/AMDGPU %t/missing-private.td 2>&1 \
 // RUN:   | FileCheck %t/missing-private.td -DFILE=%t/missing-private.td --implicit-check-not="error:"
+// RUN: not llvm-tblgen -gen-amdgpu-target-def -I %t -I %p/../../include -I %p/../../lib/Target/AMDGPU %t/implied-private.td 2>&1 \
+// RUN:   | FileCheck %t/implied-private.td -DFILE=%t/implied-private.td --implicit-check-not="error:"
 // RUN: not llvm-tblgen -gen-amdgpu-target-def -I %t -I %p/../../include -I %p/../../lib/Target/AMDGPU %t/numeric-mismatch.td 2>&1 \
 // RUN:   | FileCheck %t/numeric-mismatch.td -DFILE=%t/numeric-mismatch.td --implicit-check-not="error:"
 // RUN: not llvm-tblgen -gen-amdgpu-target-def -I %t -I %p/../../include -I %p/../../lib/Target/AMDGPU %t/empty-members.td 2>&1 \
@@ -25,6 +27,8 @@
 // RUN:   | FileCheck %t/r600-member.td -DFILE=%t/r600-member.td --implicit-check-not="error:"
 
 //--- common.td
+// Exercise the validation rules with small synthetic targets. The real targets
+// are validated when AMDGPUTargetParserDef.inc is generated during the build.
 include "llvm/Target/Target.td"
 include "AMDGPUTargetParser.td"
 def MyTarget : Target;
@@ -37,7 +41,13 @@ class NumericFeature<int value> : AMDGPUGenericAnyFeature<
 def FeatureAnySmall : NumericFeature<4>;
 def FeatureAnyB : NumericFeature<8>;
 def FeatureAnyLarge : NumericFeature<16>;
-def FeaturePrivate : AMDGPUGenericAnyFeature<"private", "HasPrivate", "true", "">;
+// Classification inherited through a subclass also applies to backend-only
+// features, which must participate in validation without being emitted.
+class PrivateFeature : AMDGPUGenericAnyFeature<
+    "private", "HasPrivate", "true", "">;
+def FeaturePrivate : PrivateFeature;
+def FeatureImpliesPrivate : SubtargetFeature<
+    "implies-private", "HasImpliesPrivate", "true", "", [FeaturePrivate]>;
 def FeatureImpliesA : SubtargetFeature<
     "implies-a", "HasImpliesA", "true", "", [FeatureAnyA]>;
 def FeatureImpliesB : SubtargetFeature<
@@ -55,7 +65,7 @@ include "common.td"
 def GFX900 : AMDGPUProcessorModel<"gfx900", NoSchedModel,
     [FeatureAll, FeatureAnyA, FeatureAnySmall], [9, 0, 0]>;
 def GFX901 : AMDGPUProcessorModel<"gfx901", NoSchedModel,
-    [FeatureAll, FeatureImpliesB, FeaturePrivate], [9, 0, 1]>;
+    [FeatureAll, FeatureImpliesB, FeatureImpliesPrivate], [9, 0, 1]>;
 // Different members supply different marked features. Follow Implies on both
 // the generic and the members, and check marked backend-only features too.
 def : AMDGPUProcessorModel<"gfx9-generic", NoSchedModel,
@@ -100,6 +110,15 @@ def GFX900 : AMDGPUProcessorModel<"gfx900", NoSchedModel, [], [9, 0, 0]>;
 // Explicitly marked features are checked even outside the frontend-visible set.
 // CHECK: [[FILE]]:[[#@LINE+1]]:1: error: generic target 'gfx9-generic' exposes feature 'private' not supported by any covered GPU
 def : AMDGPUProcessorModel<"gfx9-generic", NoSchedModel, [FeaturePrivate], [9, 0, 0]> {
+  let CoveredGPUs = [GFX900];
+}
+
+//--- implied-private.td
+include "common.td"
+def GFX900 : AMDGPUProcessorModel<"gfx900", NoSchedModel, [], [9, 0, 0]>;
+// An unclassified backend-only parent must not hide a classified dependency.
+// CHECK: [[FILE]]:[[#@LINE+1]]:1: error: generic target 'gfx9-generic' exposes feature 'private' not supported by any covered GPU
+def : AMDGPUProcessorModel<"gfx9-generic", NoSchedModel, [FeatureImpliesPrivate], [9, 0, 0]> {
   let CoveredGPUs = [GFX900];
 }
 
