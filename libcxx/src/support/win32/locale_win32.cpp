@@ -31,7 +31,7 @@ __locale_t __newlocale(int /*mask*/, const char* locale, __locale_t /*base*/) {
   return {::_create_locale(LC_ALL, locale), locale};
 }
 
-__lconv_t* __localeconv(__locale_t& loc) {
+__lconv_t* __localeconv(__locale_t loc) {
   __locale_guard __current(loc);
   lconv* lc = std::localeconv();
   if (!lc)
@@ -300,13 +300,13 @@ const char* __get_locale_encoding(__locale_t loc) {
 //
 #if !defined(_LIBCPP_MSVCRT)
 template <>
-float __locale::__str_to_float_c_locale<float>(const char* nptr, char** endptr) {
+float __str_to_float_c_locale<float>(const char* nptr, char** endptr) {
   __locale_guard __current(__get_c_locale());
   return std::strtof(nptr, endptr);
 }
 
 template <>
-long double __locale::__str_to_float_c_locale<long double>(const char* nptr, char** endptr) {
+long double __str_to_float_c_locale<long double>(const char* nptr, char** endptr) {
   __locale_guard __current(__get_c_locale());
   return std::strtold(nptr, endptr);
 }
