@@ -739,12 +739,6 @@ static RValue emitSuspendExpr(CIRGenFunction &cgf,
   RValue rval;
   mlir::Location scopeLoc = cgf.getLoc(e.getSourceRange());
 
-  if (!ignoreResult && aggSlot.isIgnored() &&
-      cgf.getEvaluationKind(e.getType()) == cir::TEK_Aggregate) {
-    aggSlot = cgf.createAggTemp(e.getType(), scopeLoc,
-                                cgf.getCounterAggTmpAsString());
-  }
-
   // Since we model suspend / resume as an inner region, we must store
   // resume scalar results in a tmp alloca, and load it after we build the
   // suspend expression. An alternative way to do this would be to make
