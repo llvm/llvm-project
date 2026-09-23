@@ -1,10 +1,10 @@
-sphinx==7.2.6
-docutils==0.20.1
+sphinx==9.1.0
+docutils==0.22.4
 sphinx-markdown-tables==0.0.17
 recommonmark==0.7.1
-sphinx-automodapi==0.17.0
+sphinx-automodapi==0.22.0
 sphinx-bootstrap-theme==0.8.1
-sphinxcontrib-applehelp==1.0.8
-sphinx-reredirects==0.1.2
-furo==2024.1.29
-myst-parser==2.0.0
+sphinxcontrib-applehelp==2.0.0
+sphinx-reredirects==1.1.0
+furo==2025.12.19
+myst-parser==5.1.0

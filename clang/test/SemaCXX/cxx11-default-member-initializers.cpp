@@ -17,6 +17,20 @@ namespace PR31692 {
   static_assert(__is_constructible(A::X), "");
 }
 
+namespace PR215166 {
+  // Same as above, but with a class template.
+  struct A {
+    template<typename T> struct X { int n = 0; };
+    X<int> x;
+    // Trigger construction of X<int>() from a SFINAE context. This must not mark
+    // any part of X<int> as invalid.
+    static_assert(!__is_constructible(X<int>), "");
+    // Check that X<int>::n is not marked invalid.
+    double &r = x.n; // expected-error {{non-const lvalue reference to type 'double' cannot bind to a value of unrelated type 'int'}}
+  };
+  // A::X can now be default-constructed.
+  static_assert(__is_constructible(A::X<int>), "");
+}
 
 struct S {
 } constexpr s;

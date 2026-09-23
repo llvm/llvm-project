@@ -181,7 +181,7 @@ void bad_attributes_in_do_while() {
                        // expected-error@-1 {{expected ';' after do/while}}
 } // expected-error 2{{expected ')'}} expected-error {{expected expression}}
 
-[[]] using T = int; // expected-error {{an attribute list cannot appear here}}
+[[]] using T = int; // expected-error {{misplaced attributes; expected attributes here}}
 using T [[]] = int; // ok
 template<typename T> using U [[]] = T;
 using ns::i [[]];
@@ -199,6 +199,10 @@ using T [[unknown]] = int; // expected-warning {{unknown attribute 'unknown' ign
 using T [[noreturn]] = int; // expected-error {{'noreturn' attribute only applies to functions}}
 using V = int; // expected-note {{previous}}
 using V [[gnu::vector_size(16)]] = int; // expected-error {{redefinition with different types}}
+
+void using_alias_in_block() {
+  [[maybe_unused]] using BlockAlias = int; // expected-error {{misplaced attributes; expected attributes here}}
+}
 
 auto trailing() -> [[]] const int; // expected-error {{an attribute list cannot appear here}}
 auto trailing() -> const [[]] int; // expected-error {{an attribute list cannot appear here}}
@@ -355,7 +359,7 @@ unsigned [[gnu::used]] static int [[gnu::unused]] v1; // expected-error {{'gnu::
            expected-error {{an attribute list cannot appear here}}
 typedef [[gnu::used]] unsigned long [[gnu::unused]] v2; // expected-error {{'gnu::unused' attribute cannot be applied to types}} \
           expected-error {{an attribute list cannot appear here}}
-int [[carries_dependency]] foo(int [[carries_dependency]] x); // expected-error 2{{'carries_dependency' attribute cannot be applied to types}}
+int [[deprecated]] foo(int [[deprecated]] x); // expected-error 2{{'deprecated' attribute cannot be applied to types}}
 
 // Forbid [[gnu::...]] attributes on declarator chunks.
 int *[[gnu::unused]] v3; // expected-warning {{attribute 'gnu::unused' ignored}}
@@ -364,7 +368,8 @@ int v5()[[gnu::unused]]; // expected-warning {{attribute 'gnu::unused' ignored}}
 
 [[attribute_declaration]]; // expected-warning {{unknown attribute 'attribute_declaration' ignored}}
 [[noreturn]]; // expected-error {{'noreturn' attribute only applies to functions}}
-[[carries_dependency]]; // expected-error {{'carries_dependency' attribute only applies to parameters, Objective-C methods, and functions}}
+// carries_dependency was removed from the standard by P3475R2.
+[[carries_dependency]]; // expected-warning {{unknown attribute 'carries_dependency' ignored}}
 
 class A {
   A([[gnu::unused]] int a);

@@ -31,8 +31,10 @@ define <vscale x 16 x i8> @uabs_nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i8
 define <vscale x 8 x i16> @sabs_nxv16i8_wide_add(<vscale x 8 x i16> %acc, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
 ; SVE2-LABEL: sabs_nxv16i8_wide_add:
 ; SVE2:       // %bb.0:
-; SVE2-NEXT:    sabalb z0.h, z1.b, z2.b
-; SVE2-NEXT:    sabalt z0.h, z1.b, z2.b
+; SVE2-NEXT:    ptrue p0.b
+; SVE2-NEXT:    sabd z1.b, p0/m, z1.b, z2.b
+; SVE2-NEXT:    ptrue p0.h
+; SVE2-NEXT:    uadalp z0.h, p0/m, z1.b
 ; SVE2-NEXT:    ret
 ;
 ; SVE2p3-LABEL: sabs_nxv16i8_wide_add:
@@ -50,8 +52,10 @@ define <vscale x 8 x i16> @sabs_nxv16i8_wide_add(<vscale x 8 x i16> %acc, <vscal
 define <vscale x 4 x i32> @sabs_nxv8i16_wide_add(<vscale x 4 x i32> %acc, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
 ; SVE2-LABEL: sabs_nxv8i16_wide_add:
 ; SVE2:       // %bb.0:
-; SVE2-NEXT:    sabalb z0.s, z1.h, z2.h
-; SVE2-NEXT:    sabalt z0.s, z1.h, z2.h
+; SVE2-NEXT:    ptrue p0.h
+; SVE2-NEXT:    sabd z1.h, p0/m, z1.h, z2.h
+; SVE2-NEXT:    ptrue p0.s
+; SVE2-NEXT:    uadalp z0.s, p0/m, z1.h
 ; SVE2-NEXT:    ret
 ;
 ; SVE2p3-LABEL: sabs_nxv8i16_wide_add:
@@ -69,8 +73,10 @@ define <vscale x 4 x i32> @sabs_nxv8i16_wide_add(<vscale x 4 x i32> %acc, <vscal
 define <vscale x 2 x i64> @sabs_nxv4i32_wide_add(<vscale x 2 x i64> %acc, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
 ; SVE2-LABEL: sabs_nxv4i32_wide_add:
 ; SVE2:       // %bb.0:
-; SVE2-NEXT:    sabalb z0.d, z1.s, z2.s
-; SVE2-NEXT:    sabalt z0.d, z1.s, z2.s
+; SVE2-NEXT:    ptrue p0.s
+; SVE2-NEXT:    sabd z1.s, p0/m, z1.s, z2.s
+; SVE2-NEXT:    ptrue p0.d
+; SVE2-NEXT:    uadalp z0.d, p0/m, z1.s
 ; SVE2-NEXT:    ret
 ;
 ; SVE2p3-LABEL: sabs_nxv4i32_wide_add:
@@ -126,8 +132,10 @@ define <16 x i8> @uabs_v16i8(<16 x i8> %a, <16 x i8> %b) {
 define <vscale x 8 x i16> @uabs_nxv16i8_wide_add(<vscale x 8 x i16> %acc, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
 ; SVE2-LABEL: uabs_nxv16i8_wide_add:
 ; SVE2:       // %bb.0:
-; SVE2-NEXT:    uabalb z0.h, z1.b, z2.b
-; SVE2-NEXT:    uabalt z0.h, z1.b, z2.b
+; SVE2-NEXT:    ptrue p0.b
+; SVE2-NEXT:    uabd z1.b, p0/m, z1.b, z2.b
+; SVE2-NEXT:    ptrue p0.h
+; SVE2-NEXT:    uadalp z0.h, p0/m, z1.b
 ; SVE2-NEXT:    ret
 ;
 ; SVE2p3-LABEL: uabs_nxv16i8_wide_add:
@@ -145,8 +153,10 @@ define <vscale x 8 x i16> @uabs_nxv16i8_wide_add(<vscale x 8 x i16> %acc, <vscal
 define <vscale x 4 x i32> @uabs_nxv8i16_wide_add(<vscale x 4 x i32> %acc, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
 ; SVE2-LABEL: uabs_nxv8i16_wide_add:
 ; SVE2:       // %bb.0:
-; SVE2-NEXT:    uabalb z0.s, z1.h, z2.h
-; SVE2-NEXT:    uabalt z0.s, z1.h, z2.h
+; SVE2-NEXT:    ptrue p0.h
+; SVE2-NEXT:    uabd z1.h, p0/m, z1.h, z2.h
+; SVE2-NEXT:    ptrue p0.s
+; SVE2-NEXT:    uadalp z0.s, p0/m, z1.h
 ; SVE2-NEXT:    ret
 ;
 ; SVE2p3-LABEL: uabs_nxv8i16_wide_add:
@@ -164,8 +174,10 @@ define <vscale x 4 x i32> @uabs_nxv8i16_wide_add(<vscale x 4 x i32> %acc, <vscal
 define <vscale x 2 x i64> @uabs_nxv4i32_wide_add(<vscale x 2 x i64> %acc, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
 ; SVE2-LABEL: uabs_nxv4i32_wide_add:
 ; SVE2:       // %bb.0:
-; SVE2-NEXT:    uabalb z0.d, z1.s, z2.s
-; SVE2-NEXT:    uabalt z0.d, z1.s, z2.s
+; SVE2-NEXT:    ptrue p0.s
+; SVE2-NEXT:    uabd z1.s, p0/m, z1.s, z2.s
+; SVE2-NEXT:    ptrue p0.d
+; SVE2-NEXT:    uadalp z0.d, p0/m, z1.s
 ; SVE2-NEXT:    ret
 ;
 ; SVE2p3-LABEL: uabs_nxv4i32_wide_add:

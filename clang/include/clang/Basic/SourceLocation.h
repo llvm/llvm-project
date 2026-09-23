@@ -53,7 +53,13 @@ public:
   bool operator>=(const FileID &RHS) const { return RHS <= *this; }
 
   static FileID getSentinel() { return get(-1); }
-  unsigned getHashValue() const { return static_cast<unsigned>(ID); }
+  unsigned getHashValue() const {
+    // Multiply by 37 to spread the keys to avoid clustering in DenseMap.
+    return static_cast<unsigned>(ID) * 37U;
+  }
+
+  /// Returns the raw integer representation of this FileID.
+  int getOpaqueValue() const { return ID; }
 
 private:
   friend class ASTWriter;
@@ -66,8 +72,6 @@ private:
     F.ID = V;
     return F;
   }
-
-  int getOpaqueValue() const { return ID; }
 };
 
 using FileIDAndOffset = std::pair<FileID, unsigned>;

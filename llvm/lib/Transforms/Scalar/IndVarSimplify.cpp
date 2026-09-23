@@ -53,7 +53,6 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
@@ -642,10 +641,11 @@ static void visitIVCast(CastInst *Cast, WideIVInfo &WI,
   // because at least an ADD is required to increment the induction variable. We
   // could compute more comprehensively the cost of all instructions on the
   // induction variable when necessary.
-  if (TTI &&
-      TTI->getArithmeticInstrCost(Instruction::Add, Ty) >
-          TTI->getArithmeticInstrCost(Instruction::Add,
-                                      Cast->getOperand(0)->getType())) {
+  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+  if (TTI && TTI->getArithmeticInstrCost(Instruction::Add, Ty, CostKind) >
+                 TTI->getArithmeticInstrCost(Instruction::Add,
+                                             Cast->getOperand(0)->getType(),
+                                             CostKind)) {
     return;
   }
 
@@ -1211,6 +1211,7 @@ bool IndVarSimplify::sinkUnusedInvariants(Loop *L) {
   if (!Preheader) return false;
 
   bool MadeAnyChanges = false;
+  SmallVector<Value *, 16> SunkInsts;
   for (Instruction &I : llvm::make_early_inc_range(llvm::reverse(*Preheader))) {
 
     // Skip BB Terminator.
@@ -1268,9 +1269,12 @@ bool IndVarSimplify::sinkUnusedInvariants(Loop *L) {
 
     // Otherwise, sink it to the exit block.
     I.moveBefore(ExitBlock->getFirstInsertionPt());
-    SE->forgetValue(&I);
+    SunkInsts.push_back(&I);
     MadeAnyChanges = true;
   }
+
+  if (!SunkInsts.empty())
+    SE->forgetValues(SunkInsts);
 
   return MadeAnyChanges;
 }
