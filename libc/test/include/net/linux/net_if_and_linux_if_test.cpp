@@ -7,15 +7,21 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Definition of struct ifreq.
+/// Unittests for net/if.h and linux/if.h compatibility.
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_TYPES_STRUCT_IFREQ_H
-#define LLVM_LIBC_TYPES_STRUCT_IFREQ_H
+// Include our header first.
+#include <net/if.h>
 
-#if defined(__linux__)
-#include "linux/struct_ifreq.h"
-#endif
+// And Linux header afterwards. The blank line prevents clang-format from
+// reordering these.
+#include <linux/if.h>
 
-#endif // LLVM_LIBC_TYPES_STRUCT_IFREQ_H
+#include "test/UnitTest/Test.h"
+
+TEST(LlvmLibcNetIfAndLinuxIfTest, LinuxIfAfterNetIf) {
+  // Test that <linux/if.h> can be included after <net/if.h>.
+  struct ifreq ifr;
+  (void)ifr;
+}

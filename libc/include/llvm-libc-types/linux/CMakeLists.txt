@@ -9,3 +9,12 @@ add_header(
   HDR
     struct_sysinfo.h
 )
+
+add_header(
+  struct_ifreq
+  HDR
+    struct_ifreq.h
+  DEPENDS
+    libc.include.llvm-libc-macros.net_if_macros
+    libc.include.llvm-libc-types.struct_sockaddr
+)

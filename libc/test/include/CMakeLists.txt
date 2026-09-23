@@ -246,6 +246,8 @@ add_libc_test(
     libc.include.llvm-libc-macros.netinet_in_macros
 )
 
+add_subdirectory(net)
+
 add_libc_test(
   signbit_test
   SUITE
