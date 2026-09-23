@@ -162,7 +162,8 @@ multiclass SIRegLoHi16 <string n, bits<10> regIdx, bit ArtificialHigh = 1,
 // Special Registers
 defm VCC_LO : SIRegLoHi16<"vcc_lo", 106, /*ArtificialHigh=*/1, /*isVGPR=*/0,
                           /*isAGPR=*/0, /*DwarfEncodings=*/[512, 512]>;
-defm VCC_HI : SIRegLoHi16<"vcc_hi", 107>;
+defm VCC_HI : SIRegLoHi16<"vcc_hi", 107, /*ArtificialHigh=*/1, /*isVGPR=*/0,
+                          /*isAGPR=*/0, /*DwarfEncodings=*/[513, 513]>;
 
 // Pseudo-registers: Used as placeholders during isel and immediately
 // replaced, never seeing the verifier.

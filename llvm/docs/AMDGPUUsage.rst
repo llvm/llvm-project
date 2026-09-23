@@ -4034,7 +4034,11 @@ mapping.
    128            STATUS            32       Status Register.
    129-511        *Reserved*                 *Reserved for future Scalar
                                              Architectural Registers.*
-   512            VCC_32            32       Vector Condition Code Register
+   512            VCC_32_LO         32       Vector Condition Code Register
+                                             when executing in wavefront 32
+                                             mode.
+   513            VCC_32_HI         32       General purpose high bits of
+                                             Vector Condition Code Register
                                              when executing in wavefront 32
                                              mode.
    513-767        *Reserved*                 *Reserved for future Vector
