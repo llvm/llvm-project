@@ -21,7 +21,7 @@ $vp_inline = comdat any
 
 ; STATIC:     @__profvp_foo = {{.*}} zeroinitializer, section "__llvm_prf_vals"
 
-; LOWER:      @__profd_foo =
+; LOWER:      @__profd_foo = private
 ; LOWER-SAME:   ptr @__profc_foo
 ; STATIC-SAME:  ptr @__profvp_foo
 ; DYNAMIC-SAME: ptr null
