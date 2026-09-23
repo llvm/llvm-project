@@ -103,6 +103,18 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice,
                                  EffectiveNumBlocks))
     return Err;
 
+  uint32_t MaxBlockMemSize = GenericDevice.getMaxBlockSharedMemSize();
+  // No enough block memory to cover the static one. Cannot run the kernel.
+  if (StaticBlockMemSize > MaxBlockMemSize)
+    return error::createOffloadError(
+        error::ErrorCode::INVALID_ARGUMENT,
+        "Static block memory size exceeds maximum");
+  // No enough block memory to cover dynamic one
+  if (StaticBlockMemSize + LaunchArgs.DynCGroupMem > MaxBlockMemSize)
+    return error::createOffloadError(
+        error::ErrorCode::INVALID_ARGUMENT,
+        "Requested block memory size (static + dynamic) exceeds maximum");
+
   RecordReplayTy::HandleTy RRHandle;
   RecordReplayTy *RecordReplay = GenericDevice.getRecordReplay();
   if (RecordReplay) {

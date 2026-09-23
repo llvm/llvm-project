@@ -410,23 +410,17 @@ prepareBlockMemory(GenericDeviceTy &GenericDevice,
                    const KernelLaunchInfoTy &KernelEnv, uint32_t DynCGroupMem,
                    DynCGroupMemFallbackType DynCGroupMemFallback,
                    uint32_t NumBlocks) {
+
+  // If the fallback is abort, don't try to adjust the block memory size.
+  if (DynCGroupMemFallback == DynCGroupMemFallbackType::Abort)
+    return DynBlockMemConfTy{DynCGroupMem, DynCGroupMem,
+                             DynCGroupMemFallbackType::Abort, nullptr};
+
   uint32_t MaxBlockMemSize = GenericDevice.getMaxBlockSharedMemSize();
   uint32_t DynBlockMemSize = DynCGroupMem;
   uint32_t TotalBlockMemSize = KernelEnv.StaticBlockMemSize + DynBlockMemSize;
   uint32_t DynNativeBlockMemSize = DynBlockMemSize;
   void *DynFallbackPtr = nullptr;
-
-  // No enough block memory to cover the static one. Cannot run the kernel.
-  if (KernelEnv.StaticBlockMemSize > MaxBlockMemSize)
-    return error::createOffloadError(
-        error::ErrorCode::INVALID_ARGUMENT,
-        "Static block memory size exceeds maximum");
-  // No enough block memory to cover dynamic one, and the fallback is aborting.
-  if (DynCGroupMemFallback == DynCGroupMemFallbackType::Abort &&
-      TotalBlockMemSize > MaxBlockMemSize)
-    return error::createOffloadError(
-        error::ErrorCode::INVALID_ARGUMENT,
-        "Requested block memory size (static + dynamic) exceeds maximum");
 
   DynCGroupMemFallbackType DynFallback = DynCGroupMemFallbackType::None;
   if (DynBlockMemSize && TotalBlockMemSize > MaxBlockMemSize) {
