@@ -435,20 +435,20 @@ foldExtractOfStridedPointerVector(ExtractElementInst &EI,
     Value *Elt = findScalarElement(EI.getVectorOperand(), I);
     if (!Elt)
       return nullptr;
+    Value *EltBase;
+    const APInt *C;
     APInt Offset(IdxWidth, 0);
-    Value *EltBase = Elt->stripAndAccumulateConstantOffsets(
-        DL, Offset, /*AllowNonInbounds=*/true);
+    // m_Value may bind even when the offset is not constant, so reset it.
+    if (match(Elt, m_PtrAdd(m_Value(EltBase), m_APInt(C))))
+      Offset = C->sextOrTrunc(IdxWidth);
+    else
+      EltBase = Elt;
     if (I == 0)
       Base = EltBase;
     else if (Base != EltBase)
       return nullptr;
     Offsets.push_back(Offset);
   }
-
-  // Stripping walks through addrspacecasts, so the base may live in a
-  // different address space than the pointer the extract produces.
-  if (Base->getType() != VecTy->getElementType())
-    return nullptr;
 
   // The offsets must form an arithmetic sequence.
   APInt Stride = Offsets[1] - Offsets[0];
@@ -458,13 +458,12 @@ foldExtractOfStridedPointerVector(ExtractElementInst &EI,
 
   // Index off the common base, not off element 0: an element may be poison in
   // a lane the extract never selects. The base is an operand of every element
-  // and the new GEP has no flags, so the result is never more poisonous.
+  // and the new GEPs have no flags, so the result is never more poisonous.
   Type *IdxTy = DL.getIndexType(VecTy->getElementType());
   Value *Idx = Builder.CreateZExtOrTrunc(EI.getIndexOperand(), IdxTy);
-  Value *ByteOff =
-      Builder.CreateAdd(Builder.CreateMul(Idx, ConstantInt::get(IdxTy, Stride)),
-                        ConstantInt::get(IdxTy, Offsets[0]));
-  return Builder.CreateGEP(Builder.getInt8Ty(), Base, ByteOff);
+  Value *Ptr = Builder.CreatePtrAdd(
+      Base, Builder.CreateMul(Idx, ConstantInt::get(IdxTy, Stride)));
+  return Builder.CreatePtrAdd(Ptr, ConstantInt::get(IdxTy, Offsets[0]));
 }
 
 Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {

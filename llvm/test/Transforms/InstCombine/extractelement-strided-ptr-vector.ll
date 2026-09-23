@@ -51,10 +51,10 @@ define ptr @strided_negative_poison_base(ptr %b, i32 %i) {
 ; CHECK-LABEL: define ptr @strided_negative_poison_base(
 ; CHECK-SAME: ptr [[B:%.*]], i32 [[I:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[I]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[TMP1]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = sub nsw i64 6, [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nsw i64 [[TMP1]], -2
 ; CHECK-NEXT:    [[R:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP3]]
-; CHECK-NEXT:    ret ptr [[R]]
+; CHECK-NEXT:    [[R1:%.*]] = getelementptr i8, ptr [[R]], i64 6
+; CHECK-NEXT:    ret ptr [[R1]]
 ;
   %g0 = getelementptr inbounds i8, ptr %b, i64 6
   %g1 = getelementptr inbounds i8, ptr %b, i64 4
@@ -80,21 +80,42 @@ define ptr @zero_stride_poison_base(ptr %b, i32 %i) {
   ret ptr %r
 }
 
-; Negative: stripping the addrspacecast leaves a base in another address space.
+; The addrspacecast itself is the common base and already lives in the address
+; space of the result.
 define ptr @addrspacecast_base(ptr addrspace(1) %b, i32 %i) {
 ; CHECK-LABEL: define ptr @addrspacecast_base(
 ; CHECK-SAME: ptr addrspace(1) [[B:%.*]], i32 [[I:%.*]]) {
 ; CHECK-NEXT:    [[C:%.*]] = addrspacecast ptr addrspace(1) [[B]] to ptr
-; CHECK-NEXT:    [[G1:%.*]] = getelementptr i8, ptr [[C]], i64 8
-; CHECK-NEXT:    [[V0:%.*]] = insertelement <2 x ptr> poison, ptr [[C]], i64 0
-; CHECK-NEXT:    [[V1:%.*]] = insertelement <2 x ptr> [[V0]], ptr [[G1]], i64 1
-; CHECK-NEXT:    [[R:%.*]] = extractelement <2 x ptr> [[V1]], i32 [[I]]
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[I]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[TMP1]], 3
+; CHECK-NEXT:    [[R:%.*]] = getelementptr i8, ptr [[C]], i64 [[TMP2]]
 ; CHECK-NEXT:    ret ptr [[R]]
 ;
   %c = addrspacecast ptr addrspace(1) %b to ptr
   %g1 = getelementptr i8, ptr %c, i64 8
   %v0 = insertelement <2 x ptr> poison, ptr %c, i64 0
   %v1 = insertelement <2 x ptr> %v0, ptr %g1, i64 1
+  %r = extractelement <2 x ptr> %v1, i32 %i
+  ret ptr %r
+}
+
+; Negative: each element is cast separately, so there is no common base.
+define ptr @addrspacecast_per_element(ptr addrspace(1) %b, i32 %i) {
+; CHECK-LABEL: define ptr @addrspacecast_per_element(
+; CHECK-SAME: ptr addrspace(1) [[B:%.*]], i32 [[I:%.*]]) {
+; CHECK-NEXT:    [[G1:%.*]] = getelementptr i8, ptr addrspace(1) [[B]], i64 8
+; CHECK-NEXT:    [[C0:%.*]] = addrspacecast ptr addrspace(1) [[B]] to ptr
+; CHECK-NEXT:    [[C1:%.*]] = addrspacecast ptr addrspace(1) [[G1]] to ptr
+; CHECK-NEXT:    [[V0:%.*]] = insertelement <2 x ptr> poison, ptr [[C0]], i64 0
+; CHECK-NEXT:    [[V1:%.*]] = insertelement <2 x ptr> [[V0]], ptr [[C1]], i64 1
+; CHECK-NEXT:    [[R:%.*]] = extractelement <2 x ptr> [[V1]], i32 [[I]]
+; CHECK-NEXT:    ret ptr [[R]]
+;
+  %g1 = getelementptr i8, ptr addrspace(1) %b, i64 8
+  %c0 = addrspacecast ptr addrspace(1) %b to ptr
+  %c1 = addrspacecast ptr addrspace(1) %g1 to ptr
+  %v0 = insertelement <2 x ptr> poison, ptr %c0, i64 0
+  %v1 = insertelement <2 x ptr> %v0, ptr %c1, i64 1
   %r = extractelement <2 x ptr> %v1, i32 %i
   ret ptr %r
 }
@@ -134,10 +155,10 @@ define ptr @strided_through_shuffle(ptr %b, i32 %i) {
 ; CHECK-LABEL: define ptr @strided_through_shuffle(
 ; CHECK-SAME: ptr [[B:%.*]], i32 [[I:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[I]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[TMP1]], 3
-; CHECK-NEXT:    [[TMP3:%.*]] = sub nsw i64 8, [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nsw i64 [[TMP1]], -8
 ; CHECK-NEXT:    [[R:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP3]]
-; CHECK-NEXT:    ret ptr [[R]]
+; CHECK-NEXT:    [[R1:%.*]] = getelementptr i8, ptr [[R]], i64 8
+; CHECK-NEXT:    ret ptr [[R1]]
 ;
   %g1 = getelementptr i8, ptr %b, i64 8
   %v0 = insertelement <2 x ptr> poison, ptr %b, i64 0
