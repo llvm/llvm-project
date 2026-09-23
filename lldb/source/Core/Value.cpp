@@ -497,7 +497,7 @@ Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
         // ValueObjectRegister stores structured register types in target byte
         // order and all other register buffers in host byte order.
         if (m_context_type == ContextType::RegisterInfo &&
-            !llvm::isa_and_present<RegisterTypeVector, RegisterTypeUnion>(
+            !llvm::isa_and_present<RegisterTypeComposite>(
                 GetRegisterInfo()->register_type))
           byte_order = endian::InlHostByteOrder();
         data.SetByteOrder(byte_order);

@@ -47,6 +47,8 @@ static size_t GetNameSize(const RegisterInfo *reg_info, bool use_primary_name) {
   return reg_name ? strlen(reg_name) : 0;
 }
 
+// Return the exact register and an empty path, the longest register-name prefix
+// and its remaining path, or {nullptr, {}} when no register matches.
 static std::pair<const RegisterInfo *, llvm::StringRef>
 FindRegisterWithExpressionPath(RegisterContext &reg_ctx, llvm::StringRef name) {
   if (const RegisterInfo *reg_info = reg_ctx.GetRegisterInfoByName(name))
@@ -65,41 +67,54 @@ FindRegisterWithExpressionPath(RegisterContext &reg_ctx, llvm::StringRef name) {
   return {nullptr, {}};
 }
 
-static bool HasValidRegisterIndexes(ValueObjectSP value,
-                                    llvm::StringRef expression_path) {
+static ValueObjectSP
+ResolveRegisterExpressionPath(ValueObjectSP value,
+                              llvm::StringRef expression_path) {
+  // Generic expression paths permit out-of-bounds synthetic array members,
+  // but register paths must stay within the bytes supplied by the target.
   size_t search_from = 0;
   while (true) {
     size_t open_bracket = expression_path.find('[', search_from);
     if (open_bracket == llvm::StringRef::npos)
-      return true;
+      break;
 
     size_t close_bracket = expression_path.find(']', open_bracket + 1);
     if (close_bracket == llvm::StringRef::npos)
-      return false;
+      return {};
 
     uint32_t index;
     if (expression_path.slice(open_bracket + 1, close_bracket)
             .getAsInteger(0, index))
-      return false;
+      return {};
 
     llvm::StringRef parent_path = expression_path.take_front(open_bracket);
     ValueObjectSP parent = parent_path.empty()
                                ? value
                                : value->GetValueForExpressionPath(parent_path);
     if (!parent)
-      return false;
+      return {};
 
     llvm::Expected<uint32_t> num_children = parent->GetNumChildren();
     if (!num_children) {
       llvm::consumeError(num_children.takeError());
-      return false;
+      return {};
     }
     if (index >= *num_children)
-      return false;
+      return {};
 
     search_from = close_bracket + 1;
   }
-  return true;
+
+  ValueObject::ExpressionPathScanEndReason reason =
+      ValueObject::eExpressionPathScanEndReasonUnknown;
+  ValueObject::ExpressionPathEndResultType result_type =
+      ValueObject::eExpressionPathEndResultTypeInvalid;
+  ValueObjectSP child =
+      value->GetValueForExpressionPath(expression_path, &reason, &result_type);
+  if (reason != ValueObject::eExpressionPathScanEndReasonEndOfString ||
+      result_type != ValueObject::eExpressionPathEndResultTypePlain)
+    return {};
+  return child;
 }
 
 static size_t ComputeLongestRegisterName(RegisterContext *reg_ctx,
@@ -228,8 +243,7 @@ public:
                          llvm::StringRef expression_path,
                          size_t reg_name_right_align_at,
                          CommandReturnObject &result) {
-    if (!llvm::isa_and_present<RegisterTypeUnion, RegisterTypeVector>(
-            reg_info.register_type)) {
+    if (!llvm::isa_and_present<RegisterTypeComposite>(reg_info.register_type)) {
       result.AppendErrorWithFormat(
           "Register '%s' does not have a structured type", reg_info.name);
       return false;
@@ -241,19 +255,9 @@ public:
     lldb::RegisterContextSP reg_ctx_sp = frame->GetRegisterContextSP();
     ValueObjectSP register_value =
         ValueObjectRegister::Create(frame, reg_ctx_sp, &reg_info);
-    ValueObject::ExpressionPathScanEndReason reason =
-        ValueObject::eExpressionPathScanEndReasonUnknown;
-    ValueObject::ExpressionPathEndResultType result_type =
-        ValueObject::eExpressionPathEndResultTypeInvalid;
-    ValueObjectSP child;
-    // Generic expression paths permit out-of-bounds synthetic array members,
-    // but register paths must stay within the bytes supplied by the target.
-    if (HasValidRegisterIndexes(register_value, expression_path))
-      child = register_value->GetValueForExpressionPath(expression_path,
-                                                        &reason, &result_type);
-    if (!child ||
-        reason != ValueObject::eExpressionPathScanEndReasonEndOfString ||
-        result_type != ValueObject::eExpressionPathEndResultTypePlain) {
+    ValueObjectSP child =
+        ResolveRegisterExpressionPath(register_value, expression_path);
+    if (!child) {
       llvm::StringRef error_path = expression_path;
       error_path.consume_front(".");
       result.AppendErrorWithFormat("No field path '%s' in register '%s'",

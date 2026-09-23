@@ -81,6 +81,18 @@ private:
   std::vector<const RegisterType *> m_dependencies;
 };
 
+/// A register type whose value is interpreted as a structured layout.
+class RegisterTypeComposite : public RegisterType {
+public:
+  static bool classof(const RegisterType *type) {
+    return type->getKind() == eRegisterTypeKindVector ||
+           type->getKind() == eRegisterTypeKindUnion;
+  }
+
+protected:
+  RegisterTypeComposite(RegisterTypeKind kind, std::string id);
+};
+
 /// A predefined GDB target-description type. Builtin types are referenced by
 /// name and are not emitted as XML definitions.
 class RegisterTypeBuiltin : public RegisterType {
@@ -109,7 +121,7 @@ private:
 };
 
 /// A GDB target-description vector type. The element type must outlive it.
-class RegisterTypeVector : public RegisterType {
+class RegisterTypeVector : public RegisterTypeComposite {
 public:
   RegisterTypeVector(std::string id, const RegisterType *element_type,
                      uint32_t count);
@@ -135,7 +147,7 @@ private:
 
 /// A GDB target-description union type. Each field is an alternative view of
 /// the same register data. Referenced field types must outlive the union.
-class RegisterTypeUnion : public RegisterType {
+class RegisterTypeUnion : public RegisterTypeComposite {
 public:
   class Field {
   public:

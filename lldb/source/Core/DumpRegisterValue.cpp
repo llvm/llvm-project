@@ -143,8 +143,7 @@ void lldb_private::DumpRegisterValue(const RegisterValue &reg_val, Stream &s,
   const RegisterTypeFlags *flags_type =
       llvm::dyn_cast_if_present<RegisterTypeFlags>(reg_info.register_type);
   if (!flags_type &&
-      !llvm::isa_and_present<RegisterTypeVector, RegisterTypeUnion>(
-          reg_info.register_type))
+      !llvm::isa_and_present<RegisterTypeComposite>(reg_info.register_type))
     return;
   if (flags_type && reg_info.byte_size != 4 && reg_info.byte_size != 8)
     return;

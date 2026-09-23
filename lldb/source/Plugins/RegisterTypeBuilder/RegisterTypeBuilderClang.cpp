@@ -306,6 +306,8 @@ std::optional<uint32_t> RegisterTypeBuilderClang::GetTargetByteSize(
   }
   case RegisterType::eRegisterTypeKindEnum:
   case RegisterType::eRegisterTypeKindFlags:
+    // Enum and flags use dedicated top-level builders. They are not supported
+    // when recursively building vector or union members.
     return std::nullopt;
   }
 }

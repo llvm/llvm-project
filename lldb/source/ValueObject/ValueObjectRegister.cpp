@@ -229,8 +229,8 @@ CompilerType ValueObjectRegister::GetCompilerTypeImpl() {
   if (!target)
     return {};
 
-  if (llvm::isa_and_present<RegisterTypeBuiltin, RegisterTypeVector,
-                            RegisterTypeUnion>(m_reg_info.register_type)) {
+  if (llvm::isa_and_present<RegisterTypeBuiltin, RegisterTypeComposite>(
+          m_reg_info.register_type)) {
     m_compiler_type = target->GetRegisterType(m_reg_info);
     if (m_compiler_type.IsValid())
       return m_compiler_type;
@@ -285,7 +285,7 @@ bool ValueObjectRegister::UpdateValue() {
     if (m_reg_ctx_sp->ReadRegister(&m_reg_info, m_reg_value)) {
       Target *target = exe_ctx.GetTargetPtr();
       const bool has_structured_type =
-          llvm::isa_and_present<RegisterTypeVector, RegisterTypeUnion>(
+          llvm::isa_and_present<RegisterTypeComposite>(
               m_reg_info.register_type);
       // Scalar registers remain in host byte order, while CompilerType
       // children need target-order bytes to interpret structured layouts.
