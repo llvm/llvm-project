@@ -104,7 +104,7 @@ using namespace llvm;
 static cl::opt<bool>
     EnableCSEInIRTranslator("enable-cse-in-irtranslator",
                             cl::desc("Should enable CSE in irtranslator"),
-                            cl::Optional, cl::init(false));
+                            cl::init(false));
 
 namespace llvm {
 
@@ -3287,7 +3287,6 @@ bool IRTranslatorImpl::translateKnownIntrinsic(const CallInst &CI,
   case Intrinsic::annotation:
   case Intrinsic::ptr_annotation:
   case Intrinsic::launder_invariant_group:
-  case Intrinsic::strip_invariant_group:
   case Intrinsic::threadlocal_address: {
     // Drop the intrinsic, but forward the value.
     MIRBuilder.buildCopy(getOrCreateVReg(CI),

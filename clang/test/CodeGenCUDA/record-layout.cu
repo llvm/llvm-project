@@ -45,8 +45,8 @@ struct C : A, B {
 
 // HOST: @0 = private constant { [4 x ptr] } { [4 x ptr] [ptr @"??_R4J@@6B@", ptr @"?f@J@@UEAAXXZ", ptr null, ptr @"?h@J@@UEAAXXZ"] }, comdat($"??_7J@@6B@")
 // HOST: @1 = private constant { [4 x ptr] } { [4 x ptr] [ptr @"??_R4I@@6B@", ptr @_purecall, ptr null, ptr @_purecall] }, comdat($"??_7I@@6B@")
-// HOST: @"??_7J@@6B@" = alias ptr, getelementptr inbounds ({ [4 x ptr] }, ptr @0, i32 0, i32 0, i32 1)
-// HOST: @"??_7I@@6B@" = alias ptr, getelementptr inbounds ({ [4 x ptr] }, ptr @1, i32 0, i32 0, i32 1)
+// HOST: @"??_7J@@6B@" = alias ptr, getelementptr inbounds (i8, ptr @0, i64 8)
+// HOST: @"??_7I@@6B@" = alias ptr, getelementptr inbounds (i8, ptr @1, i64 8)
 
 // DEV: @_ZTV1J = linkonce_odr unnamed_addr addrspace(1) constant { [5 x ptr addrspace(1)] } { [5 x ptr addrspace(1)] [ptr addrspace(1) null, ptr addrspace(1) null, ptr addrspace(1) null, ptr addrspace(1) addrspacecast (ptr @_ZN1J1gEv to ptr addrspace(1)), ptr addrspace(1) addrspacecast (ptr @_ZN1J1hEv to ptr addrspace(1))] }, comdat, align 8
 // DEV: @_ZTV1I = linkonce_odr unnamed_addr addrspace(1) constant { [5 x ptr addrspace(1)] } { [5 x ptr addrspace(1)] [ptr addrspace(1) null, ptr addrspace(1) null, ptr addrspace(1) null, ptr addrspace(1) addrspacecast (ptr @__cxa_pure_virtual to ptr addrspace(1)), ptr addrspace(1) addrspacecast (ptr @__cxa_pure_virtual to ptr addrspace(1))] }, comdat, align 8
@@ -189,11 +189,11 @@ void test_J() {
 // DEV:  store ptr %this, ptr %this.addr.ascast, align 8
 // DEV:  %this1 = load ptr, ptr %this.addr.ascast, align 8
 // DEV:  call void @_ZN1IC2Ev(ptr noundef nonnull align 8 dereferenceable(16) %this1)
-// DEV:  store ptr addrspace(1) getelementptr inbounds inrange(-16, 24) ({ [5 x ptr addrspace(1)] }, ptr addrspace(1) @_ZTV1J, i32 0, i32 0, i32 2), ptr %this1, align 8
+// DEV:  store ptr addrspace(1) getelementptr inbounds inrange(-16, 24) (i8, ptr addrspace(1) @_ZTV1J, i64 16), ptr %this1, align 8
 
 // DEV: define linkonce_odr void @_ZN1IC2Ev(ptr noundef nonnull align 8 dereferenceable(16) %this)
 // DEV:  %this.addr = alloca ptr, align 8, addrspace(5)
 // DEV:  %this.addr.ascast = addrspacecast ptr addrspace(5) %this.addr to ptr
 // DEV:  store ptr %this, ptr %this.addr.ascast, align 8
 // DEV:  %this1 = load ptr, ptr %this.addr.ascast, align 8
-// DEV:  store ptr addrspace(1) getelementptr inbounds inrange(-16, 24) ({ [5 x ptr addrspace(1)] }, ptr addrspace(1) @_ZTV1I, i32 0, i32 0, i32 2), ptr %this1, align 8
+// DEV:  store ptr addrspace(1) getelementptr inbounds inrange(-16, 24) (i8, ptr addrspace(1) @_ZTV1I, i64 16), ptr %this1, align 8

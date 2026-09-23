@@ -579,7 +579,8 @@ void GotSection::finalizeContents() {
 bool GotSection::isNeeded() const {
   // Needed if the GOT symbol is used or the number of entries is more than just
   // the header. A GOT with just the header may not be needed.
-  return hasGotOffRel || numEntries > ctx.target->gotHeaderEntriesNum;
+  return hasGotOffRel || hasDeferredEntries ||
+         numEntries > ctx.target->gotHeaderEntriesNum;
 }
 
 void GotSection::writeTo(uint8_t *buf) {
@@ -1330,6 +1331,12 @@ DynamicSection<ELFT>::computeContents() {
       break;
     }
     addInt(DT_PLTREL, ctx.arg.isRela ? DT_RELA : DT_REL);
+  }
+
+  if (ctx.arg.zMarkPlt && ctx.in.plt->isNeeded()) {
+    addInSec(DT_X86_64_PLT, *ctx.in.plt);
+    addInt(DT_X86_64_PLTSZ, ctx.in.plt->getSize());
+    addInt(DT_X86_64_PLTENT, ctx.target->pltEntrySize);
   }
 
   if (ctx.arg.emachine == EM_AARCH64) {

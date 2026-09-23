@@ -28,7 +28,7 @@
 using namespace llvm;
 
 cl::opt<CompactBranchPolicy> MipsCompactBranchPolicy(
-    "mips-compact-branches", cl::Optional, cl::init(CB_Optimal),
+    "mips-compact-branches", cl::init(CB_Optimal),
     cl::desc("MIPS Specific: Compact branch policy."),
     cl::values(clEnumValN(CB_Never, "never",
                           "Do not use compact branches if possible."),

@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cstring>
 #include <functional>
 #include <string>
 #include <vector>

@@ -748,6 +748,35 @@ TEST_F(ExtractFunctionTest, RangeBasedFor) {
               HasSubstr("extracted"));
 }
 
+TEST_F(ExtractFunctionTest, VarDeclInitializer) {
+  Context = File;
+  // The initializer of a variable declaration is not a discardable
+  // statement either: its value is required to initialize the variable, so
+  // replacing it with a call to a void-returning extracted function would
+  // not compile. Ascending from the initializer lands on the VarDecl itself (a
+  // Decl, not a Stmt or Expr), which the general "is this a genuine statement"
+  // check must also reject.
+  EXPECT_EQ(apply(R"cpp(
+    int func();
+    void f() { auto A = [[func()]]; }
+  )cpp"),
+            "unavailable");
+  // Same without `auto`: the type doesn't matter, only that a value is
+  // required.
+  EXPECT_EQ(apply(R"cpp(
+    int func();
+    void f() { int A = [[func()]]; }
+  )cpp"),
+            "unavailable");
+  // Sanity check: extracting the whole declaration statement (as opposed to
+  // just its initializer) is unaffected.
+  EXPECT_THAT(apply(R"cpp(
+    int func();
+    void f() { [[int A = func();]] }
+  )cpp"),
+              HasSubstr("extracted"));
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang
