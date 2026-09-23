@@ -14,11 +14,12 @@
 #include <chrono>
 
 #include "benchmark/benchmark.h"
+#include "test_macros.h"
 
 // Benchmarks the performance of the UTC <-> system time conversions. These
 // operations determine the sum of leap second insertions at a specific time.
 
-static void BM_from_sys(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void BM_from_sys(benchmark::State& state) {
   std::chrono::sys_days date{std::chrono::July / 1 / state.range(0)};
   for (auto _ : state)
     benchmark::DoNotOptimize(std::chrono::utc_clock::from_sys(date));
@@ -33,7 +34,7 @@ BENCHMARK(BM_from_sys)
 BENCHMARK(BM_from_sys)->Arg(1970)->Arg(1979)->Arg(1993)->Arg(2100)->Threads(4);
 BENCHMARK(BM_from_sys)->Arg(1970)->Arg(1979)->Arg(1993)->Arg(2100)->Threads(16);
 
-static void BM_to_sys(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void BM_to_sys(benchmark::State& state) {
   // 59 sec offset means we pass th UTC offset for the leap second; assuming
   // there won't be more than 59 leap seconds ever.
   std::chrono::utc_seconds date{

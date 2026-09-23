@@ -20,22 +20,24 @@
 #include "GCNSubtarget.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/CSEMIRBuilder.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineUniformityAnalysis.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/InitializePasses.h"
 
-#define DEBUG_TYPE "amdgpu-regbankselect"
+#define DEBUG_TYPE "amdgpu-reg-bank-select"
 
 using namespace llvm;
 using namespace AMDGPU;
 
 namespace {
 
-class AMDGPURegBankSelect : public MachineFunctionPass {
+class AMDGPURegBankSelectLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  AMDGPURegBankSelect() : MachineFunctionPass(ID) {}
+  AMDGPURegBankSelectLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -59,20 +61,20 @@ public:
 
 } // End anonymous namespace.
 
-INITIALIZE_PASS_BEGIN(AMDGPURegBankSelect, DEBUG_TYPE,
+INITIALIZE_PASS_BEGIN(AMDGPURegBankSelectLegacy, DEBUG_TYPE,
                       "AMDGPU Register Bank Select", false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_DEPENDENCY(GISelCSEAnalysisWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineUniformityAnalysisPass)
-INITIALIZE_PASS_END(AMDGPURegBankSelect, DEBUG_TYPE,
+INITIALIZE_PASS_END(AMDGPURegBankSelectLegacy, DEBUG_TYPE,
                     "AMDGPU Register Bank Select", false, false)
 
-char AMDGPURegBankSelect::ID = 0;
+char AMDGPURegBankSelectLegacy::ID = 0;
 
-char &llvm::AMDGPURegBankSelectID = AMDGPURegBankSelect::ID;
+char &llvm::AMDGPURegBankSelectLegacyID = AMDGPURegBankSelectLegacy::ID;
 
-FunctionPass *llvm::createAMDGPURegBankSelectPass() {
-  return new AMDGPURegBankSelect();
+FunctionPass *llvm::createAMDGPURegBankSelectLegacyPass() {
+  return new AMDGPURegBankSelectLegacy();
 }
 
 class RegBankSelectHelper {
@@ -197,15 +199,16 @@ static Register getVReg(MachineOperand &Op) {
   return Reg;
 }
 
-bool AMDGPURegBankSelect::runOnMachineFunction(MachineFunction &MF) {
+static bool
+runRegBankSelect(MachineFunction &MF, function_ref<GISelCSEInfo *()> GetCSEInfo,
+                 function_ref<const MachineUniformityInfo *()> GetMUI) {
   if (MF.getProperties().hasFailedISel())
     return false;
 
+  GISelCSEInfo &CSEInfo = *GetCSEInfo();
+  const MachineUniformityInfo &MUI = *GetMUI();
+
   // Setup the instruction builder with CSE.
-  const TargetPassConfig &TPC = getAnalysis<TargetPassConfig>();
-  GISelCSEAnalysisWrapper &Wrapper =
-      getAnalysis<GISelCSEAnalysisWrapperPass>().getCSEWrapper();
-  GISelCSEInfo &CSEInfo = Wrapper.get(TPC.getCSEConfig());
   GISelObserverWrapper Observer;
   Observer.addObserver(&CSEInfo);
 
@@ -217,8 +220,6 @@ bool AMDGPURegBankSelect::runOnMachineFunction(MachineFunction &MF) {
   RAIIMFObserverInstaller MFObserverInstaller(MF, Observer);
 
   IntrinsicLaneMaskAnalyzer ILMA(MF);
-  MachineUniformityInfo &MUI =
-      getAnalysis<MachineUniformityAnalysisPass>().getUniformityInfo();
   MachineRegisterInfo &MRI = *B.getMRI();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   RegBankSelectHelper RBSHelper(B, ILMA, MUI, *ST.getRegisterInfo(),
@@ -288,4 +289,31 @@ bool AMDGPURegBankSelect::runOnMachineFunction(MachineFunction &MF) {
   }
 
   return true;
+}
+
+bool AMDGPURegBankSelectLegacy::runOnMachineFunction(MachineFunction &MF) {
+  return runRegBankSelect(
+      MF,
+      [&]() {
+        GISelCSEAnalysisWrapper &Wrapper =
+            getAnalysis<GISelCSEAnalysisWrapperPass>().getCSEWrapper();
+        return &Wrapper.get(getAnalysis<TargetPassConfig>().getCSEConfig());
+      },
+      [&]() {
+        return &getAnalysis<MachineUniformityAnalysisPass>()
+                    .getUniformityInfo();
+      });
+}
+
+PreservedAnalyses
+AMDGPURegBankSelectPass::run(MachineFunction &MF,
+                             MachineFunctionAnalysisManager &MFAM) {
+  MFPropsModifier _(*this, MF);
+
+  if (!runRegBankSelect(
+          MF, [&]() { return MFAM.getResult<GISelCSEAnalysis>(MF).get(); },
+          [&]() { return &MFAM.getResult<MachineUniformityAnalysis>(MF); }))
+    return PreservedAnalyses::all();
+
+  return getMachineFunctionPassPreservedAnalyses();
 }
