@@ -1284,6 +1284,7 @@ def OMP_TargetData : Directive<[Spelling<"target data", 1, 52>,
   let allowedOnceClauses = [
     VersionedClause<OMPC_Default, 60>,
     VersionedClause<OMPC_Device>,
+    VersionedClause<OMPC_Replayable, 60>,
     VersionedClause<OMPC_Transparent, 60>,
   ];
   let requiredClauses = [
