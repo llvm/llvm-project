@@ -1342,7 +1342,6 @@ static bool isCallPromotable(CallInst *CI) {
   case Intrinsic::invariant_start:
   case Intrinsic::invariant_end:
   case Intrinsic::launder_invariant_group:
-  case Intrinsic::strip_invariant_group:
   case Intrinsic::objectsize:
     return true;
   default:
@@ -1749,8 +1748,7 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(
     }
     case Intrinsic::invariant_start:
     case Intrinsic::invariant_end:
-    case Intrinsic::launder_invariant_group:
-    case Intrinsic::strip_invariant_group: {
+    case Intrinsic::launder_invariant_group: {
       assert(Intr->getArgOperand(Intr->arg_size() - 1)->getType() == NewPtrTy &&
              "pointer operand should already have been promoted");
       Function *NewF = Intrinsic::getOrInsertDeclaration(

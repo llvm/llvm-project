@@ -1239,9 +1239,15 @@ public:
   }
   std::string
   mangleName(const Fortran::semantics::Symbol &symbol) override final {
-    return Fortran::lower::mangle::mangleName(
+    std::string mangledName = Fortran::lower::mangle::mangleName(
         symbol, scopeBlockIdMap, /*keepExternalInScope=*/false,
         getLoweringOptions().getUnderscoring());
+    const std::string &hash = bridge.getModuleNameHash();
+    if (!hash.empty() &&
+        Fortran::semantics::ClassifyProcedure(symbol) ==
+            Fortran::semantics::ProcedureDefinitionClass::Internal)
+      mangledName += hash;
+    return mangledName;
   }
   std::string mangleName(
       const Fortran::semantics::DerivedTypeSpec &derivedType) override final {
@@ -1336,6 +1342,11 @@ public:
   const Fortran::lower::pft::FunctionLikeUnit *
   getCurrentFunctionUnit() const override final {
     return currentFunctionUnit;
+  }
+
+  bool isVisibleCrayPointerTarget(
+      const Fortran::semantics::Symbol &sym) const override final {
+    return visibleCrayPointerTargets.contains(&sym.GetUltimate());
   }
 
   void checkCoarrayEnabled() override final {
@@ -6653,10 +6664,66 @@ private:
     }
   }
 
+  /// Collect entities used in visible Cray pointer associations.
+  void collectVisibleCrayPointerTargets(
+      Fortran::lower::pft::EvaluationList &evaluationList) {
+    for (Fortran::lower::pft::Evaluation &eval : evaluationList) {
+      eval.visit(Fortran::common::visitors{
+          [&](const Fortran::parser::AssignmentStmt &stmt) {
+            if (!stmt.typedAssignment || !stmt.typedAssignment->v)
+              return;
+            const Fortran::evaluate::Assignment &assignment =
+                *stmt.typedAssignment->v;
+            const Fortran::semantics::Symbol *pointer =
+                Fortran::evaluate::GetLastSymbol(assignment.lhs);
+            if (!pointer || !pointer->GetUltimate().test(
+                                Fortran::semantics::Symbol::Flag::CrayPointer))
+              return;
+
+            const Fortran::evaluate::ProcedureRef *procedure =
+                Fortran::evaluate::UnwrapProcedureRef(assignment.rhs);
+            const Fortran::evaluate::SpecificIntrinsic *intrinsic =
+                procedure ? procedure->proc().GetSpecificIntrinsic() : nullptr;
+            if (!intrinsic || intrinsic->name != "loc" ||
+                procedure->arguments().size() != 1 ||
+                !procedure->arguments()[0])
+              return;
+
+            const Fortran::lower::SomeExpr *targetExpr =
+                procedure->arguments()[0]->UnwrapExpr();
+            const Fortran::semantics::Symbol *target =
+                targetExpr ? Fortran::evaluate::GetFirstSymbol(*targetExpr)
+                           : nullptr;
+            if (!target)
+              return;
+
+            visibleCrayPointerTargets.insert(&target->GetUltimate());
+          },
+          [](const auto &) {}});
+      if (eval.hasNestedEvaluations())
+        collectVisibleCrayPointerTargets(eval.getNestedEvaluations());
+    }
+  }
+
+  /// Return whether \p scope declares or imports a Cray pointer.
+  bool hasCrayPointer(const Fortran::semantics::Scope &scope) {
+    if (!scope.crayPointers().empty())
+      return true;
+    for (Fortran::semantics::SymbolRef symbol : scope.GetSymbols())
+      if (symbol->GetUltimate().test(
+              Fortran::semantics::Symbol::Flag::CrayPointer))
+        return true;
+    return false;
+  }
+
   /// Lower a procedure (nest).
   void lowerFunc(Fortran::lower::pft::FunctionLikeUnit &funit) {
     setCurrentPosition(funit.getStartingSourceLoc());
     setCurrentFunctionUnit(&funit);
+    assert(visibleCrayPointerTargets.empty() &&
+           "Cray pointer targets must not outlive a procedure");
+    if (hasCrayPointer(funit.getScope()))
+      collectVisibleCrayPointerTargets(funit.evaluationList);
     for (int entryIndex = 0, last = funit.entryPointList.size();
          entryIndex < last; ++entryIndex) {
       funit.setActiveEntry(entryIndex);
@@ -6680,6 +6747,7 @@ private:
     }
     funit.setActiveEntry(0);
     setCurrentFunctionUnit(nullptr);
+    visibleCrayPointerTargets.clear();
     for (Fortran::lower::pft::ContainedUnit &unit : funit.containedUnitList)
       if (auto *f = std::get_if<Fortran::lower::pft::FunctionLikeUnit>(&unit))
         lowerFunc(*f); // internal procedure
@@ -6867,6 +6935,10 @@ private:
   Fortran::lower::SymMap localSymbols;
   Fortran::parser::CharBlock currentPosition;
   TypeInfoConverter typeInfoConverter;
+
+  /// Symbols associated with Cray pointers in the current procedure.
+  llvm::SmallPtrSet<const Fortran::semantics::Symbol *, 4>
+      visibleCrayPointerTargets;
 
   /// Counter of `scf.execute_region` ops created when
   /// `--wrap-unstructured-constructs-in-execute-region` is enabled for the
@@ -7070,6 +7142,13 @@ Fortran::lower::LoweringBridge::LoweringBridge(
   else if (languageFeatures.IsEnabled(
                Fortran::common::LanguageFeature::CudaManaged))
     fir::setCudaHeapAllocMode(*module, fir::CudaHeapAllocMode::Managed);
+
+  if (cgOpts.UniqueInternalLinkageNames) {
+    if (auto fileLoc = mlir::dyn_cast<mlir::FileLineColLoc>(module->getLoc())) {
+      moduleNameHash =
+          llvm::getUniqueInternalLinkagePostfix(fileLoc.getFilename());
+    }
+  }
 }
 
 Fortran::lower::LoweringBridge::~LoweringBridge() {

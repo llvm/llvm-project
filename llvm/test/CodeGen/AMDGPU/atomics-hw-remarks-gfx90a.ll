@@ -11,7 +11,7 @@
 ; GFX90A-HW: Hardware instruction generated for atomic fadd operation at memory scope singlethread-one-as due to an unsafe request.
 
 ; GFX90A-HW-LABEL: atomic_add_unsafe_hw:
-; GFX90A-HW:    ds_add_f64 v2, v[0:1]
+; GFX90A-HW:    ds_add_f64 v0, v[2:3]
 ; GFX90A-HW:    s_endpgm
 define amdgpu_kernel void @atomic_add_unsafe_hw(ptr addrspace(3) %ptr) #0 {
 main_body:

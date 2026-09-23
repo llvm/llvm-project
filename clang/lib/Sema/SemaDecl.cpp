@@ -8988,6 +8988,10 @@ static bool CheckC23ConstexprVarType(Sema &SemaRef, SourceLocation VarLoc,
   return false;
 }
 
+static bool isSYCLAddressSpace(LangAS AS) {
+  return AS >= LangAS::sycl_global && AS <= LangAS::sycl_constant;
+}
+
 void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
   // If the decl is already known invalid, don't check it.
   if (NewVD->isInvalidDecl())
@@ -9007,6 +9011,18 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
       << FixItHint::CreateInsertion(NewVD->getLocation(), "*");
     T = Context.getObjCObjectPointerType(T);
     NewVD->setType(T);
+  }
+
+  // The top-level type of a variable declaration cannot have a SYCL address
+  // space qualifier.
+  if (getLangOpts().isSYCL()) {
+    LangAS AS = Context.getBaseElementType(T).getAddressSpace();
+    if (isSYCLAddressSpace(AS)) {
+      Diag(NewVD->getLocation(), diag::err_sycl_address_space_qualified_object)
+          << Qualifiers::getAddrSpaceAsString(AS);
+      NewVD->setInvalidDecl();
+      return;
+    }
   }
 
   // Emit an error if an address space was applied to decl with local storage.
@@ -19173,7 +19189,12 @@ CreateNewDecl:
   if (!Invalid && SearchDC->isRecord())
     SetMemberAccessSpecifier(New, PrevDecl, AS);
 
-  if (PrevDecl)
+  // FIXME: An elaborated-type-specifier referring to an existing tag should
+  // ideally not introduce a redeclaration. ActOnTag currently creates one, so
+  // avoid diagnosing it as a redeclaration across module boundaries.
+  //
+  // See https://github.com/llvm/llvm-project/pull/194546 for full background.
+  if (PrevDecl && TUK != TagUseKind::Reference)
     CheckRedeclarationInModule(New, PrevDecl);
 
   if (TUK == TagUseKind::Definition) {
