@@ -43,19 +43,6 @@ cl::opt<CompactBranchPolicy> MipsCompactBranchPolicy(
 #define GET_SUBTARGETINFO_CTOR
 #include "MipsGenSubtargetInfo.inc"
 
-// FIXME: Maybe this should be on by default when Mips16 is specified
-//
-static cl::opt<bool>
-    Mixed16_32("mips-mixed-16-32", cl::init(false),
-               cl::desc("Allow for a mixture of Mips16 "
-                        "and Mips32 code in a single output file"),
-               cl::Hidden);
-
-static cl::opt<bool> Mips_Os16("mips-os16", cl::init(false),
-                               cl::desc("Compile all functions that don't use "
-                                        "floating point as Mips 16"),
-                               cl::Hidden);
-
 static cl::opt<bool> Mips16HardFloat("mips16-hard-float", cl::NotHidden,
                                      cl::desc("Enable mips16 hard float."),
                                      cl::init(false));
@@ -89,10 +76,9 @@ MipsSubtarget::MipsSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
       HasMips4_32(false), HasMips4_32r2(false), HasMips5_32r2(false),
       InMips16Mode(false), InMips16HardFloat(Mips16HardFloat),
       InMicroMipsMode(false), HasDSP(false), HasDSPR2(false), HasDSPR3(false),
-      AllowMixed16_32(Mixed16_32 || Mips_Os16), Os16(Mips_Os16), HasMSA(false),
-      UseTCCInDIV(false), HasSym32(false), HasEVA(false), DisableMadd4(false),
-      HasMT(false), HasCRC(false), HasVirt(false), HasGINV(false),
-      UseIndirectJumpsHazard(false), StrictAlign(false),
+      HasMSA(false), UseTCCInDIV(false), HasSym32(false), HasEVA(false),
+      DisableMadd4(false), HasMT(false), HasCRC(false), HasVirt(false),
+      HasGINV(false), UseIndirectJumpsHazard(false), StrictAlign(false),
       UseCompactBranches(MipsCompactBranchPolicy != CB_Never),
       StackAlignOverride(StackAlignOverride), TM(TM), TargetTriple(TT),
       InstrInfo(
