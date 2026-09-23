@@ -30,6 +30,7 @@ add_llvm_target(XtensaCodeGen
   LINK_COMPONENTS
   AsmPrinter
   CodeGen
+  CodeGenTypes
   Core
   MC
   SelectionDAG

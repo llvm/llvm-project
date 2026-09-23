@@ -8,7 +8,7 @@ define void @load_extract_insert_store_const_idx(ptr %A) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[EXT_0:%.*]] = load double, ptr [[TMP0:%.*]], align 8
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul double 2.000000e+01, [[EXT_0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <225 x double>, ptr [[TMP0]], i32 0, i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <225 x double>, ptr [[TMP0]], i64 0, i64 1
 ; CHECK-NEXT:    [[EXT_1:%.*]] = load double, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[SUB:%.*]] = fsub double [[EXT_1]], [[MUL]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <225 x double>, ptr [[TMP0]], i64 0, i64 1
@@ -33,10 +33,10 @@ define void @load_extract_insert_store_var_idx_assume_valid(i64 %idx.1, i64 %idx
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_1]])
 ; CHECK-NEXT:    [[CMP_2:%.*]] = icmp ult i64 [[IDX_2:%.*]], 225
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_2]])
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <225 x double>, ptr [[A:%.*]], i32 0, i64 [[IDX_1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <225 x double>, ptr [[A:%.*]], i64 0, i64 [[IDX_1]]
 ; CHECK-NEXT:    [[EXT_0:%.*]] = load double, ptr [[TMP0]], align 8
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul double 2.000000e+01, [[EXT_0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <225 x double>, ptr [[A]], i32 0, i64 [[IDX_2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <225 x double>, ptr [[A]], i64 0, i64 [[IDX_2]]
 ; CHECK-NEXT:    [[EXT_1:%.*]] = load double, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[SUB:%.*]] = fsub double [[EXT_1]], [[MUL]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <225 x double>, ptr [[A]], i64 0, i64 [[IDX_1]]
@@ -70,10 +70,10 @@ define void @load_extract_insert_store_var_idx_assume_valid_in_dominating_block(
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_2]])
 ; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[LOOP:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <225 x double>, ptr [[A:%.*]], i32 0, i64 [[IDX_1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <225 x double>, ptr [[A:%.*]], i64 0, i64 [[IDX_1]]
 ; CHECK-NEXT:    [[EXT_0:%.*]] = load double, ptr [[TMP0]], align 8
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul double 2.000000e+01, [[EXT_0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <225 x double>, ptr [[A]], i32 0, i64 [[IDX_2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <225 x double>, ptr [[A]], i64 0, i64 [[IDX_2]]
 ; CHECK-NEXT:    [[EXT_1:%.*]] = load double, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[SUB:%.*]] = fsub double [[EXT_1]], [[MUL]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <225 x double>, ptr [[A]], i64 0, i64 [[IDX_1]]

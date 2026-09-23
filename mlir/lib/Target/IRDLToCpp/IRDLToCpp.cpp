@@ -500,9 +500,9 @@ void {0}::build(::mlir::OpBuilder &opBuilder, ::mlir::OperationState &opState, {
 {0} {0}::create(::mlir::OpBuilder &opBuilder, ::mlir::Location location, {1} {2} ::llvm::ArrayRef<::mlir::NamedAttribute> attributes) {{
   ::mlir::OperationState __state__(location, getOperationName());
   build(opBuilder, __state__, {5} {6} attributes);
-  auto __res__ = ::llvm::dyn_cast<{0}>(opBuilder.create(__state__));
-  assert(__res__ && "builder didn't return the right type");
-  return __res__;
+  auto __res__ = opBuilder.create(__state__);
+  assert((::llvm::isa<{0}>(__res__)) && "builder didn't return the right type");
+  return ::llvm::cast<{0}>(__res__);
 }
 
 {0} {0}::create(::mlir::ImplicitLocOpBuilder &opBuilder, {1} {2} ::llvm::ArrayRef<::mlir::NamedAttribute> attributes) {{
@@ -723,12 +723,12 @@ irdl::translateIRDLDialectToCpp(llvm::ArrayRef<irdl::DialectOp> dialects,
 
     DialectStrings dialectStrings;
     dialectStrings.dialectName = dialectName;
-    dialectStrings.dialectBaseTypeName = dialectBaseTypeName;
-    dialectStrings.dialectCppName = cppName;
-    dialectStrings.dialectCppShortName = cppShortName;
-    dialectStrings.namespaceOpen = namespaceOpen;
-    dialectStrings.namespaceClose = namespaceClose;
-    dialectStrings.namespacePath = namespacePath;
+    dialectStrings.dialectBaseTypeName = std::move(dialectBaseTypeName);
+    dialectStrings.dialectCppName = std::move(cppName);
+    dialectStrings.dialectCppShortName = std::move(cppShortName);
+    dialectStrings.namespaceOpen = std::move(namespaceOpen);
+    dialectStrings.namespaceClose = std::move(namespaceClose);
+    dialectStrings.namespacePath = std::move(namespacePath);
 
     dialectStringTable[dialect] = std::move(dialectStrings);
   }
