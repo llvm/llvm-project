@@ -2,14 +2,16 @@
 // RUN:   -config='{CheckOptions: { \
 // RUN:     bugprone-use-after-move.InvalidationFunctions: "::std::move;::std::forward;::Database<>::StaticCloseConnection;Database<>::CloseConnection;FriendCloseConnection;FreeCloseConnection;::handle_accessor::Resource::invalidate;::argument_invalidation::Manager::close(0);::argument_invalidation::freeClose(0);::argument_invalidation::Manager::resetAt(1);::handle_accessor::Manager::release(0)", \
 // RUN:     bugprone-use-after-move.ReinitializationFunctions: "::Database<>::Reset;::Database<>::StaticReset;::FriendReset;::RegularReset", \
-// RUN:     bugprone-use-after-move.ReportAccessOnlyUseForTypes: "::report_access_only::AccessOnly;::report_access_only::HandleBase;::report_access_only::SmartHandle" \
+// RUN:     bugprone-use-after-move.ReportAccessOnlyUseForTypes: "::report_access_only::AccessOnly;::report_access_only::HandleBase;::report_access_only::SmartHandle;::handle_accessor::HandleBase", \
+// RUN:     bugprone-use-after-move.HandleAccessorFunctions: "::handle_accessor::HandleBase::operator->;::handle_accessor::HandleBase::getResource" \
 // RUN:   }}' -- \
 // RUN:   -fno-delayed-template-parsing
 // RUN: %check_clang_tidy -std=c++17-or-later %s bugprone-use-after-move %t -- \
 // RUN:   -config='{CheckOptions: { \
 // RUN:     bugprone-use-after-move.InvalidationFunctions: "::std::move;::std::forward;::Database<>::StaticCloseConnection;Database<>::CloseConnection;FriendCloseConnection;FreeCloseConnection;::handle_accessor::Resource::invalidate;::argument_invalidation::Manager::close(0);::argument_invalidation::freeClose(0);::argument_invalidation::Manager::resetAt(1);::handle_accessor::Manager::release(0)", \
 // RUN:     bugprone-use-after-move.ReinitializationFunctions: "::Database<>::Reset;::Database<>::StaticReset;::FriendReset;::RegularReset", \
-// RUN:     bugprone-use-after-move.ReportAccessOnlyUseForTypes: "::report_access_only::AccessOnly;::report_access_only::HandleBase;::report_access_only::SmartHandle" \
+// RUN:     bugprone-use-after-move.ReportAccessOnlyUseForTypes: "::report_access_only::AccessOnly;::report_access_only::HandleBase;::report_access_only::SmartHandle;::handle_accessor::HandleBase", \
+// RUN:     bugprone-use-after-move.HandleAccessorFunctions: "::handle_accessor::HandleBase::operator->;::handle_accessor::HandleBase::getResource" \
 // RUN:   }}' -- \
 // RUN:   -fno-delayed-template-parsing
 
@@ -2254,3 +2256,124 @@ void unconfiguredFunctionDoesNotInvalidate() {
 }
 
 } // namespace argument_invalidation
+
+////////////////////////////////////////////////////////////////////////////////
+// Tests for the HandleAccessorFunctions option
+//
+// A handle accessor unwraps a handle object to the underlying resource that
+// gets invalidated (for example, an `operator->` or a `getResource()` that
+// returns the wrapped resource). When the invalidated object or argument is
+// such an accessor call, the check tracks the handle variable passed to the
+// accessor instead of the unwrapped resource. This lets the check flag uses of
+// a handle after the resource it refers to has been invalidated.
+
+namespace handle_accessor {
+
+struct Resource {
+  void invalidate();
+  void use();
+};
+
+struct HandleBase {
+  Resource *operator->() const { return resource; }
+  Resource *getResource() const { return resource; }
+  Resource *resource;
+};
+
+struct Handle : HandleBase {};
+
+struct Manager {
+  void release(Resource *resource);
+};
+
+void takeHandle(Handle);
+
+// A type with look-alike accessors that is not a configured handle type.
+struct NotAHandle {
+  Resource *operator->() const { return resource; }
+  Resource *getResource() const { return resource; }
+  Resource *resource;
+};
+
+// Invalidating through `operator->` tracks the handle, so a later use of the
+// handle is flagged.
+void arrowAccessorInvalidatesHandle() {
+  Handle h;
+  h->invalidate();
+  h->use();
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'h' used after it was invalidated by 'invalidate'
+  // CHECK-NOTES: [[@LINE-3]]:6: note: invalidation occurred here
+}
+
+// Invalidating through a named accessor (`getResource()`) also tracks the
+// handle.
+void namedAccessorInvalidatesHandle() {
+  Handle h;
+  h.getResource()->invalidate();
+  h->use();
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'h' used after it was invalidated by 'invalidate'
+  // CHECK-NOTES: [[@LINE-3]]:20: note: invalidation occurred here
+}
+
+// A function that invalidates one of its arguments also looks through the
+// accessor to the handle.
+void argumentInvalidationThroughAccessor() {
+  Manager mgr;
+  Handle h;
+  mgr.release(h.getResource());
+  h->use();
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'h' used after it was invalidated by 'release'
+  // CHECK-NOTES: [[@LINE-3]]:7: note: invalidation occurred here
+}
+
+// Reassigning the handle to a new one makes the later use safe.
+void reassignAfterInvalidateIsSafe(Handle other) {
+  Handle h;
+  h->invalidate();
+  h = other;
+  h->use();
+}
+
+// Using the handle before it is invalidated is fine.
+void useBeforeInvalidateIsSafe() {
+  Handle h;
+  h->use();
+  h->invalidate();
+}
+
+// Because the handle type is access-only, passing the handle to a function is
+// not counted as a use.
+void handlePassIsNotUse() {
+  Handle h;
+  h->invalidate();
+  takeHandle(h);
+}
+
+// A use in a later loop iteration than the invalidation is flagged.
+void useAndInvalidateInLoop(int n) {
+  Handle h;
+  for (int i = 0; i < n; ++i) {
+    h->use();
+    // CHECK-NOTES: [[@LINE-1]]:5: warning: 'h' used after it was invalidated by 'invalidate'
+    // CHECK-NOTES: [[@LINE+2]]:8: note: invalidation occurred here
+    // CHECK-NOTES: [[@LINE-3]]:5: note: the use happens in a later loop iteration than the invalidation
+    h->invalidate();
+  }
+}
+
+// `operator->` on a type that is not a configured handle is not tracked.
+void nonHandleArrowNotFlagged() {
+  NotAHandle h;
+  h->invalidate();
+  h->use();
+}
+
+// `getResource()` on a type that is not a configured handle is not tracked.
+void nonHandleNamedAccessorNotFlagged() {
+  NotAHandle h;
+  h.getResource()->invalidate();
+  h->use();
+}
+
+} // namespace handle_accessor
+

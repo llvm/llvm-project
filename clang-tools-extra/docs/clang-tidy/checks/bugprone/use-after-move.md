@@ -285,3 +285,14 @@ dereference (`*p`), or a subscript (`p[i]`). Other references to the variable
 (such as passing it as an argument, comparing it, or copying it) are not
 reported. Default value is an empty string.
 ```
+
+```{option} HandleAccessorFunctions
+A semicolon-separated list of regular expressions matching names of accessor
+functions that unwrap a handle object to the underlying resource that gets
+invalidated (for example, `HandleBase::operator->` or
+`HandleBase::getResource`). When the invalidated object or argument is a
+call to one of these accessors, the check tracks the handle variable passed to
+the accessor instead of the unwrapped resource. This lets the check flag uses
+of a handle after the resource it refers to has been invalidated. Default value
+is an empty string.
+```

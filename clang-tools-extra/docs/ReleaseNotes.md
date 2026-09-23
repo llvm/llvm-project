@@ -246,7 +246,10 @@ infrastructure are described first, followed by tool-specific sections.
   `::std::move;::std::forward`; custom values replace this default, so list
   these functions explicitly to continue checking them. Entries may specify
   an explicit argument index to model functions that invalidate a specific
-  argument.
+  argument. The {option}`HandleAccessorFunctions` has also been added, which
+  unwraps a handle object to the underlying resource that gets invalidated
+  (for example, an `operator->` or a `getResource()` that returns the wrapped
+  resource).
 
 - Improved {doc}`cppcoreguidelines-missing-std-forward
   <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check by diagnosing
