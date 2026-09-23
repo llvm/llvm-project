@@ -57,9 +57,11 @@ private:
                          uint32_t expected_byte_size,
                          lldb::TypeSystemClangSP type_system);
 
+  /// Return the target-resolved byte size of \p register_type. Builders verify
+  /// the resulting Clang type has this size.
   std::optional<uint32_t>
-  GetTargetByteSize(const RegisterType *register_type,
-                    lldb::TypeSystemClangSP type_system);
+  GetExpectedByteSize(const RegisterType *register_type,
+                      lldb::TypeSystemClangSP type_system);
 
   Target &m_target;
 
