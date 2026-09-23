@@ -7,16 +7,19 @@
 define i32 @countable_early_exit(ptr noalias %b) {
 ; NO-EPILOGUE-LABEL: define i32 @countable_early_exit(
 ; NO-EPILOGUE-SAME: ptr noalias [[B:%.*]]) #[[ATTR0:[0-9]+]] {
-; NO-EPILOGUE-NEXT:  [[ENTRY:.*:]]
-; NO-EPILOGUE-NEXT:    br label %[[VECTOR_PH:.*]]
-; NO-EPILOGUE:       [[VECTOR_PH]]:
+; NO-EPILOGUE-NEXT:  [[VECTOR_PH:.*]]:
 ; NO-EPILOGUE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; NO-EPILOGUE:       [[VECTOR_BODY]]:
-; NO-EPILOGUE-NEXT:    store <4 x i32> splat (i32 1), ptr [[B]], align 4
-; NO-EPILOGUE-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
+; NO-EPILOGUE-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[IV_NEXT:%.*]], %[[MIDDLE_BLOCK:.*]] ]
+; NO-EPILOGUE-NEXT:    [[C:%.*]] = icmp eq i64 [[IV]], 3
+; NO-EPILOGUE-NEXT:    br i1 [[C]], label %[[EXIT1:.*]], label %[[MIDDLE_BLOCK]]
 ; NO-EPILOGUE:       [[MIDDLE_BLOCK]]:
-; NO-EPILOGUE-NEXT:    br label %[[EXIT2:.*]]
-; NO-EPILOGUE:       [[EXIT1:.*:]]
+; NO-EPILOGUE-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[IV]]
+; NO-EPILOGUE-NEXT:    store i32 1, ptr [[GEP]], align 4
+; NO-EPILOGUE-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; NO-EPILOGUE-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 100
+; NO-EPILOGUE-NEXT:    br i1 [[EC]], label %[[EXIT2:.*]], label %[[VECTOR_BODY]]
+; NO-EPILOGUE:       [[EXIT1]]:
 ; NO-EPILOGUE-NEXT:    ret i32 1
 ; NO-EPILOGUE:       [[EXIT2]]:
 ; NO-EPILOGUE-NEXT:    ret i32 2
