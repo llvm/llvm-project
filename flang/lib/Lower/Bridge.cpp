@@ -1239,9 +1239,15 @@ public:
   }
   std::string
   mangleName(const Fortran::semantics::Symbol &symbol) override final {
-    return Fortran::lower::mangle::mangleName(
+    std::string mangledName = Fortran::lower::mangle::mangleName(
         symbol, scopeBlockIdMap, /*keepExternalInScope=*/false,
         getLoweringOptions().getUnderscoring());
+    const std::string &hash = bridge.getModuleNameHash();
+    if (!hash.empty() &&
+        Fortran::semantics::ClassifyProcedure(symbol) ==
+            Fortran::semantics::ProcedureDefinitionClass::Internal)
+      mangledName += hash;
+    return mangledName;
   }
   std::string mangleName(
       const Fortran::semantics::DerivedTypeSpec &derivedType) override final {
@@ -1336,6 +1342,11 @@ public:
   const Fortran::lower::pft::FunctionLikeUnit *
   getCurrentFunctionUnit() const override final {
     return currentFunctionUnit;
+  }
+
+  bool isVisibleCrayPointerTarget(
+      const Fortran::semantics::Symbol &sym) const override final {
+    return visibleCrayPointerTargets.contains(&sym.GetUltimate());
   }
 
   void checkCoarrayEnabled() override final {
@@ -3482,6 +3493,68 @@ private:
     attachToDoStmt(e);
   }
 
+  /// Diagnose each evaluation in \p skipped: these are evaluations that
+  /// were skipped over while descending a collapsed or tiled loop nest to
+  /// find the next inner DO CONSTRUCT (see findNestedDoConstructEvaluation).
+  ///
+  /// The NonLabelDoStmt heading the level being searched is always present
+  /// and is silently expected. A compiler directive (e.g. !DIR$ IVDEP) is
+  /// the only other kind of skipped evaluation known to legitimately
+  /// appear here (OpenACC's collapse/tile clauses do not otherwise require
+  /// the loop nest to be tightly nested, unlike e.g. CUDA Fortran's
+  /// `!$cuf kernel do`; an ordinary statement between loop levels is
+  /// already rejected earlier, in semantic analysis). A directive is
+  /// neither part of the collapsed loop's body nor attached to a DO
+  /// statement that is separately lowered, so it has no effect: warn about
+  /// it rather than silently dropping it.
+  ///
+  /// A directive on the outer loop of a construct is moved ahead of the
+  /// OpenACC directive during parse-tree canonicalization (#106522) and
+  /// can be attached to the resulting acc.loop as a real annotation via
+  /// attachDirectiveToLoop (#216769). A directive between inner loop
+  /// levels, as handled here, cannot be moved that way -- it must stay
+  /// directly above the loop it modifies -- so it is only warned about for
+  /// now. Propagating it onto the acc.loop the same way outer-loop
+  /// directives are, instead of only warning, would be worth doing later.
+  ///
+  /// Anything else means the loop nest was not tightly nested in a way
+  /// this code does not know how to handle -- rather than silently
+  /// discarding unknown statements (the original failure mode this whole
+  /// descent fix addresses), fail loudly with TODO so an unsupported case
+  /// gets reported instead of miscompiled.
+  ///
+  /// This uses mlir::emitWarning rather than SemanticsContext::Warn:
+  /// SemanticsContext::EmitMessages runs once, immediately after semantic
+  /// analysis and before lowering ever starts (see FrontendAction.cpp and
+  /// bbc.cpp), so a Warn() call made here during lowering would be buffered
+  /// into the SemanticsContext's message list and never flushed to output.
+  void diagnoseSkippedEvaluations(
+      llvm::ArrayRef<Fortran::lower::pft::Evaluation *> skipped) {
+    for (Fortran::lower::pft::Evaluation *e : skipped) {
+      // The NonLabelDoStmt heading the level being searched is always a
+      // sibling of whatever comes next (a directive, or the inner
+      // DoConstruct) and is expected here on every call, not just when a
+      // directive is present.
+      if (e->isA<Fortran::parser::NonLabelDoStmt>())
+        continue;
+      if (e->isDirective()) {
+        // Directive evaluations carry no position (enterConstructOrDirective
+        // in PFTBuilder.cpp creates them without one), so e->position maps to
+        // an unknown location; point the warning at the directive's own
+        // source text instead.
+        mlir::Location loc = genLocation(e->position);
+        if (const auto *dir = e->getIf<Fortran::parser::CompilerDirective>())
+          loc = genLocation(dir->source);
+        mlir::emitWarning(loc, "compiler directive ignored: it appears between "
+                               "loop levels of a collapsed or tiled loop nest");
+        continue;
+      }
+      TODO(genLocation(e->position),
+           "unsupported statement between the levels of a collapsed or "
+           "tiled loop nest");
+    }
+  }
+
   void markCurrentFuncAsAlwaysInline(
       const Fortran::parser::CompilerDirective::InlineAlways &dir) {
     mlir::func::FuncOp func = builder->getFunction();
@@ -3655,13 +3728,22 @@ private:
       if (curEval->lowerAsStructured()) {
         curEval = &curEval->getFirstNestedEvaluation();
         // A DO CONCURRENT holds all controls in one construct; the per-level
-        // descent would overshoot into its body and drop it.
+        // descent would overshoot into its body and drop it. collapse(force:
+        // ...) explicitly allows prologue/epilogue statements between loop
+        // levels and has its own descent below to sink them, so this
+        // strict per-level descent -- which does not expect them -- must
+        // not run for it; curEval's value here is unused in that case.
         const auto *outerDo = curEval->getIf<Fortran::parser::DoConstruct>();
-        if (!(outerDo && outerDo->IsDoConcurrent()))
+        if (!collapseForce && !(outerDo && outerDo->IsDoConcurrent()))
           for (uint64_t i = 1; i < loopCount; i++) {
-            if (!curEval->hasNestedEvaluations())
+            llvm::SmallVector<Fortran::lower::pft::Evaluation *> skipped;
+            Fortran::lower::pft::Evaluation *nextDo =
+                Fortran::lower::findNestedDoConstructEvaluation(*curEval,
+                                                                &skipped);
+            diagnoseSkippedEvaluations(skipped);
+            if (!nextDo)
               break;
-            curEval = &*std::next(curEval->getNestedEvaluations().begin());
+            curEval = nextDo;
           }
       }
     }
@@ -4004,8 +4086,15 @@ private:
 
         ivTypes.push_back(idxTy);
         ivLocs.push_back(crtLoc);
-        if (i < nestedLoops - 1)
-          loopEval = &*std::next(loopEval->getNestedEvaluations().begin());
+        if (i < nestedLoops - 1) {
+          llvm::SmallVector<Fortran::lower::pft::Evaluation *> skipped;
+          Fortran::lower::pft::Evaluation *nextDo =
+              Fortran::lower::findNestedDoConstructEvaluation(*loopEval,
+                                                              &skipped);
+          diagnoseSkippedEvaluations(skipped);
+          assert(nextDo && "expected a nested DO CONSTRUCT");
+          loopEval = nextDo;
+        }
       }
     }
 
@@ -4033,8 +4122,16 @@ private:
     if (crtEval->lowerAsStructured()) {
       crtEval = &crtEval->getFirstNestedEvaluation();
       if (!outerDoConstruct->IsDoConcurrent())
-        for (int64_t i = 1; i < nestedLoops; i++)
-          crtEval = &*std::next(crtEval->getNestedEvaluations().begin());
+        for (int64_t i = 1; i < nestedLoops; i++) {
+          llvm::SmallVector<Fortran::lower::pft::Evaluation *> skipped;
+          Fortran::lower::pft::Evaluation *nextDo =
+              Fortran::lower::findNestedDoConstructEvaluation(*crtEval,
+                                                              &skipped);
+          diagnoseSkippedEvaluations(skipped);
+          if (!nextDo)
+            break;
+          crtEval = nextDo;
+        }
     }
 
     // Generate loop body
@@ -6567,10 +6664,66 @@ private:
     }
   }
 
+  /// Collect entities used in visible Cray pointer associations.
+  void collectVisibleCrayPointerTargets(
+      Fortran::lower::pft::EvaluationList &evaluationList) {
+    for (Fortran::lower::pft::Evaluation &eval : evaluationList) {
+      eval.visit(Fortran::common::visitors{
+          [&](const Fortran::parser::AssignmentStmt &stmt) {
+            if (!stmt.typedAssignment || !stmt.typedAssignment->v)
+              return;
+            const Fortran::evaluate::Assignment &assignment =
+                *stmt.typedAssignment->v;
+            const Fortran::semantics::Symbol *pointer =
+                Fortran::evaluate::GetLastSymbol(assignment.lhs);
+            if (!pointer || !pointer->GetUltimate().test(
+                                Fortran::semantics::Symbol::Flag::CrayPointer))
+              return;
+
+            const Fortran::evaluate::ProcedureRef *procedure =
+                Fortran::evaluate::UnwrapProcedureRef(assignment.rhs);
+            const Fortran::evaluate::SpecificIntrinsic *intrinsic =
+                procedure ? procedure->proc().GetSpecificIntrinsic() : nullptr;
+            if (!intrinsic || intrinsic->name != "loc" ||
+                procedure->arguments().size() != 1 ||
+                !procedure->arguments()[0])
+              return;
+
+            const Fortran::lower::SomeExpr *targetExpr =
+                procedure->arguments()[0]->UnwrapExpr();
+            const Fortran::semantics::Symbol *target =
+                targetExpr ? Fortran::evaluate::GetFirstSymbol(*targetExpr)
+                           : nullptr;
+            if (!target)
+              return;
+
+            visibleCrayPointerTargets.insert(&target->GetUltimate());
+          },
+          [](const auto &) {}});
+      if (eval.hasNestedEvaluations())
+        collectVisibleCrayPointerTargets(eval.getNestedEvaluations());
+    }
+  }
+
+  /// Return whether \p scope declares or imports a Cray pointer.
+  bool hasCrayPointer(const Fortran::semantics::Scope &scope) {
+    if (!scope.crayPointers().empty())
+      return true;
+    for (Fortran::semantics::SymbolRef symbol : scope.GetSymbols())
+      if (symbol->GetUltimate().test(
+              Fortran::semantics::Symbol::Flag::CrayPointer))
+        return true;
+    return false;
+  }
+
   /// Lower a procedure (nest).
   void lowerFunc(Fortran::lower::pft::FunctionLikeUnit &funit) {
     setCurrentPosition(funit.getStartingSourceLoc());
     setCurrentFunctionUnit(&funit);
+    assert(visibleCrayPointerTargets.empty() &&
+           "Cray pointer targets must not outlive a procedure");
+    if (hasCrayPointer(funit.getScope()))
+      collectVisibleCrayPointerTargets(funit.evaluationList);
     for (int entryIndex = 0, last = funit.entryPointList.size();
          entryIndex < last; ++entryIndex) {
       funit.setActiveEntry(entryIndex);
@@ -6594,6 +6747,7 @@ private:
     }
     funit.setActiveEntry(0);
     setCurrentFunctionUnit(nullptr);
+    visibleCrayPointerTargets.clear();
     for (Fortran::lower::pft::ContainedUnit &unit : funit.containedUnitList)
       if (auto *f = std::get_if<Fortran::lower::pft::FunctionLikeUnit>(&unit))
         lowerFunc(*f); // internal procedure
@@ -6782,6 +6936,10 @@ private:
   Fortran::parser::CharBlock currentPosition;
   TypeInfoConverter typeInfoConverter;
 
+  /// Symbols associated with Cray pointers in the current procedure.
+  llvm::SmallPtrSet<const Fortran::semantics::Symbol *, 4>
+      visibleCrayPointerTargets;
+
   /// Counter of `scf.execute_region` ops created when
   /// `--wrap-unstructured-constructs-in-execute-region` is enabled for the
   /// currently-lowered function.
@@ -6966,7 +7124,10 @@ Fortran::lower::LoweringBridge::LoweringBridge(
   fir::setAtomicRemoteMemory(*module, targetOpts.atomicRemoteMemory);
   fir::setTargetFeatures(*module, targetMachine.getTargetFeatureString());
   fir::setTargetABI(*module, targetOpts.abi);
-  fir::support::setMLIRDataLayout(*module, targetMachine.createDataLayout());
+  fir::support::setMLIRDataLayout(
+      *module,
+      llvm::DataLayout(
+          targetMachine.getTargetTriple().computeDataLayout(targetOpts.abi)));
   fir::setIdent(*module, Fortran::common::getFlangFullVersion());
   fir::setRelocationModel(*module, cgOpts.getRelocationModel());
   fir::setIsPIE(*module, cgOpts.IsPIE);
@@ -6981,6 +7142,13 @@ Fortran::lower::LoweringBridge::LoweringBridge(
   else if (languageFeatures.IsEnabled(
                Fortran::common::LanguageFeature::CudaManaged))
     fir::setCudaHeapAllocMode(*module, fir::CudaHeapAllocMode::Managed);
+
+  if (cgOpts.UniqueInternalLinkageNames) {
+    if (auto fileLoc = mlir::dyn_cast<mlir::FileLineColLoc>(module->getLoc())) {
+      moduleNameHash =
+          llvm::getUniqueInternalLinkagePostfix(fileLoc.getFilename());
+    }
+  }
 }
 
 Fortran::lower::LoweringBridge::~LoweringBridge() {

@@ -481,7 +481,7 @@ class WMMA_REGS<string Geom, string Frag, string PtxEltType, bit IsSparse = fals
       !eq(gf,"m16n16:x1") : !listsplat(llvm_i32_ty, 2),
       !eq(gf,"m16n16:x2") : !listsplat(llvm_i32_ty, 4),
 
-      // ldmatrix b8x16.b6x16_p32, b8x16.b4x16_p64 -> s32 @ m8n16
+      // ldmatrix b8x16.b6x16_p32, b8x16.b4x16_p64, s8.s4 -> s32 @ m8n16
       !eq(gf,"m8n16:x1") : !listsplat(llvm_i32_ty, 1),
       !eq(gf,"m8n16:x2") : !listsplat(llvm_i32_ty, 2),
       !eq(gf,"m8n16:x4") : !listsplat(llvm_i32_ty, 4),
@@ -834,7 +834,7 @@ class NVVM_MMA_OPS {
     ["m16n16"], ["x1", "x2"], ["b8", "b8x16.b6x16_p32", "b8x16.b4x16_p64"]>.ret;
 
   list<WMMA_REGS> ldmatrix_geom_m8n16_ops = LDMATRIX_OPS<
-    ["m8n16"], ["x1", "x2", "x4"], ["b8x16.b6x16_p32", "b8x16.b4x16_p64"]>.ret;
+    ["m8n16"], ["x1", "x2", "x4"], ["b8x16.b6x16_p32", "b8x16.b4x16_p64", "s8.s4"]>.ret;
 
   list<WMMA_REGS> stmatrix_b16_ops = STMATRIX_OPS<
     ["m8n8"], ["x1", "x2", "x4"], ["b16"]>.ret;
@@ -1033,6 +1033,7 @@ class NVVM_LDMATRIX_SUPPORTED<WMMA_REGS frag, bit trans> {
     !and(!eq(g, "m8n16"), !eq(t, "b8"), !eq(trans, 0)): true,
     !and(!eq(g, "m8n16"), !eq(t, "b8x16.b6x16_p32"), !eq(trans, 0)): true,
     !and(!eq(g, "m8n16"), !eq(t, "b8x16.b4x16_p64"), !eq(trans, 0)): true,
+    !and(!eq(g, "m8n16"), !eq(t, "s8.s4"), !eq(trans, 0)): true,
     true: false
   );
 }
@@ -2064,10 +2065,10 @@ let TargetPrefix = "nvvm" in {
   foreach relu = ["", "_relu"] in {
     foreach satfinite = ["", "_satfinite"] in {
       def int_nvvm_ff2f16x2_rs # relu # satfinite : NVVMBuiltin,
-          PureIntrinsic<[llvm_v2f16_ty], [llvm_float_ty, llvm_float_ty, llvm_i32_ty, llvm_i1_ty], [ImmArg<ArgIndex<3>, DefaultValue<0>>]>;
+          PureIntrinsic<[llvm_v2f16_ty], [llvm_float_ty, llvm_float_ty, llvm_i32_ty]>;
 
       def int_nvvm_ff2bf16x2_rs # relu # satfinite : NVVMBuiltin,
-          PureIntrinsic<[llvm_v2bf16_ty], [llvm_float_ty, llvm_float_ty, llvm_i32_ty, llvm_i1_ty], [ImmArg<ArgIndex<3>, DefaultValue<0>>]>;
+          PureIntrinsic<[llvm_v2bf16_ty], [llvm_float_ty, llvm_float_ty, llvm_i32_ty]>;
     }
   }
 
@@ -2098,18 +2099,25 @@ let TargetPrefix = "nvvm" in {
 
   foreach type = ["e4m3x2", "e5m2x2"] in {
     foreach relu = ["", "_relu"] in {
-      def int_nvvm_ff_to_ # type # _rn # relu : NVVMBuiltin,
-          PureIntrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty]>;
+      foreach rnd = ["rn", "rz"] in {
+        def int_nvvm_ff_to_ # type # _ # rnd # relu : NVVMBuiltin,
+            PureIntrinsic<[llvm_i16_ty],
+                          [llvm_float_ty, llvm_float_ty, llvm_i1_ty],
+                          [ImmArg<ArgIndex<2>, DefaultValue<0>>]>;
 
-      def int_nvvm_f16x2_to_ # type # _rn # relu : NVVMBuiltin,
-          PureIntrinsic<[llvm_i16_ty], [llvm_v2f16_ty]>;
+        def int_nvvm_f16x2_to_ # type # _ # rnd # relu : NVVMBuiltin,
+            PureIntrinsic<[llvm_i16_ty], [llvm_v2f16_ty, llvm_i1_ty],
+                          [ImmArg<ArgIndex<1>, DefaultValue<0>>]>;
+
+        def int_nvvm_bf16x2_to_ # type # _ # rnd # relu # _satfinite :
+            NVVMBuiltin,
+            PureIntrinsic<[llvm_i16_ty], [llvm_v2bf16_ty, llvm_i1_ty],
+                          [ImmArg<ArgIndex<1>, DefaultValue<0>>]>;
+      }
 
       def int_nvvm_ # type # _to_f16x2_rn # relu : NVVMBuiltin,
           PureIntrinsic<[llvm_v2f16_ty], [llvm_i16_ty]>;
-          
-      def int_nvvm_bf16x2_to_ # type # _rn # relu # _satfinite
-        : PureIntrinsic<[llvm_i16_ty], [llvm_v2bf16_ty]>;
-      
+
       foreach satfinite = ["", "_satfinite"] in {
         def int_nvvm_ # type # _to_bf16x2_rn # relu # satfinite # _scale_n2_ue8m0
             : PureIntrinsic<[llvm_v2bf16_ty], [llvm_i16_ty, llvm_i16_ty]>;
@@ -2156,18 +2164,27 @@ let TargetPrefix = "nvvm" in {
   // FP6 conversions.
   foreach type = ["e2m3x2", "e3m2x2"] in {
     foreach relu = ["", "_relu"] in {
-      def int_nvvm_ff_to_ # type # _rn # relu # _satfinite : NVVMBuiltin,
-          PureIntrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty]>;
+      foreach rnd = ["rn", "rz"] in {
+        def int_nvvm_ff_to_ # type # _ # rnd # relu # _satfinite :
+            NVVMBuiltin,
+            PureIntrinsic<[llvm_i16_ty],
+                          [llvm_float_ty, llvm_float_ty, llvm_i1_ty],
+                          [ImmArg<ArgIndex<2>, DefaultValue<0>>]>;
+
+        def int_nvvm_f16x2_to_ # type # _ # rnd # relu # _satfinite :
+            NVVMBuiltin,
+            PureIntrinsic<[llvm_i16_ty], [llvm_v2f16_ty, llvm_i1_ty],
+                          [ImmArg<ArgIndex<1>, DefaultValue<0>>]>;
+
+        def int_nvvm_bf16x2_to_ # type # _ # rnd # relu # _satfinite :
+            NVVMBuiltin,
+            PureIntrinsic<[llvm_i16_ty], [llvm_v2bf16_ty, llvm_i1_ty],
+                          [ImmArg<ArgIndex<1>, DefaultValue<0>>]>;
+      }
 
       def int_nvvm_ # type # _to_f16x2_rn # relu : NVVMBuiltin,
           PureIntrinsic<[llvm_v2f16_ty], [llvm_i16_ty]>;
-          
-      def int_nvvm_f16x2_to_ # type # _rn # relu # _satfinite
-        : PureIntrinsic<[llvm_i16_ty], [llvm_v2f16_ty]>;
 
-      def int_nvvm_bf16x2_to_ # type # _rn # relu # _satfinite
-        : PureIntrinsic<[llvm_i16_ty], [llvm_v2bf16_ty]>;
-      
       foreach satfinite = ["", "_satfinite"] in {
         def int_nvvm_ # type # _to_bf16x2_rn # relu # satfinite # _scale_n2_ue8m0
             : PureIntrinsic<[llvm_v2bf16_ty], [llvm_i16_ty, llvm_i16_ty]>;

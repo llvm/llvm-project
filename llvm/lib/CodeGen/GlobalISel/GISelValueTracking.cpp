@@ -1188,6 +1188,22 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     }
     break;
   }
+  case TargetOpcode::G_VECTOR_COMPRESS: {
+    // Each result lane is either a lane of the source vector or the passthru,
+    // so the known bits are those shared by both.
+    Register Vec = MI.getOperand(1).getReg();
+    Register PassThru = MI.getOperand(3).getReg();
+    computeKnownBitsImpl(PassThru, Known, DemandedElts, Depth + 1);
+    // If we don't know any bits, early out.
+    if (Known.isUnknown())
+      break;
+    // Compression can move any source lane to any result position, so all
+    // source lanes are demanded.
+    APInt DemandedSrcElts = APInt::getAllOnes(DemandedElts.getBitWidth());
+    computeKnownBitsImpl(Vec, Known2, DemandedSrcElts, Depth + 1);
+    Known = Known.intersectWith(Known2);
+    break;
+  }
   case TargetOpcode::G_ABS: {
     Register SrcReg = MI.getOperand(1).getReg();
     computeKnownBitsImpl(SrcReg, Known, DemandedElts, Depth + 1);
@@ -2796,6 +2812,22 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
     }
     break;
   }
+  case TargetOpcode::G_VECTOR_COMPRESS: {
+    // Each result lane is either a lane of the source vector or the passthru,
+    // so the number of sign bits is the minimum of the two.
+    Register Vec = MI.getOperand(1).getReg();
+    Register PassThru = MI.getOperand(3).getReg();
+    unsigned Tmp = computeNumSignBits(PassThru, DemandedElts, Depth + 1);
+    // If passthru contributes nothing, fall back to the KnownBits refinement.
+    if (Tmp == 1)
+      break;
+    // Compression can move any source lane to any result position, so all
+    // source lanes are demanded.
+    APInt DemandedSrcElts = APInt::getAllOnes(DemandedElts.getBitWidth());
+    unsigned Tmp2 = computeNumSignBits(Vec, DemandedSrcElts, Depth + 1);
+    FirstAnswer = std::min(Tmp, Tmp2);
+    break;
+  }
   case TargetOpcode::G_EXTRACT_VECTOR_ELT: {
     GExtractVectorElement &Extract = cast<GExtractVectorElement>(MI);
     Register InVec = Extract.getVectorReg();
@@ -2970,9 +3002,10 @@ GISelValueTrackingAnalysis::run(MachineFunction &MF,
   return Result(MF, MaxDepth);
 }
 
-PreservedAnalyses
-GISelValueTrackingPrinterPass::run(MachineFunction &MF,
-                                   MachineFunctionAnalysisManager &MFAM) {
+static PreservedAnalyses
+printGISelValueTracking(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM, raw_ostream &OS,
+                        bool PrintFPClass) {
   auto &VTA = MFAM.getResult<GISelValueTrackingAnalysis>(MF);
   const auto &MRI = MF.getRegInfo();
   OS << "name: ";
@@ -2987,13 +3020,36 @@ GISelValueTrackingPrinterPass::run(MachineFunction &MF,
         Register Reg = MO.getReg();
         if (!MRI.getType(Reg).isValid())
           continue;
-        KnownBits Known = VTA.getKnownBits(Reg);
-        unsigned SignedBits = VTA.computeNumSignBits(Reg);
-        bool IsKnownNeverZero = VTA.isKnownNeverZero(Reg);
-        OS << "  " << MO << " KnownBits:" << Known << " SignBits:" << SignedBits
-           << " IsKnownNeverZero:" << IsKnownNeverZero << '\n';
+        if (PrintFPClass) {
+          KnownFPClass FPKnown = VTA.computeKnownFPClass(Reg);
+          OS << "  " << MO << " FPClasses:" << FPKnown.getKnownFPClasses()
+             << " SignBitKnown:";
+          if (FPKnown.getSignBit())
+            OS << (*FPKnown.getSignBit() ? '1' : '0');
+          else
+            OS << '?';
+          OS << '\n';
+        } else {
+          KnownBits Known = VTA.getKnownBits(Reg);
+          unsigned SignedBits = VTA.computeNumSignBits(Reg);
+          bool IsKnownNeverZero = VTA.isKnownNeverZero(Reg);
+          OS << "  " << MO << " KnownBits:" << Known
+             << " SignBits:" << SignedBits
+             << " IsKnownNeverZero:" << IsKnownNeverZero << '\n';
+        }
       };
     }
   }
   return PreservedAnalyses::all();
+}
+
+PreservedAnalyses
+GISelValueTrackingPrinterPass::run(MachineFunction &MF,
+                                   MachineFunctionAnalysisManager &MFAM) {
+  return printGISelValueTracking(MF, MFAM, OS, false);
+}
+
+PreservedAnalyses GISelValueTrackingFPClassPrinterPass::run(
+    MachineFunction &MF, MachineFunctionAnalysisManager &MFAM) {
+  return printGISelValueTracking(MF, MFAM, OS, true);
 }

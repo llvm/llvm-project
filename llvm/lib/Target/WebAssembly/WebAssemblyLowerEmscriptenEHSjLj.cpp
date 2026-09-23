@@ -361,8 +361,7 @@ public:
   WebAssemblyLowerEmscriptenEHSjLjImpl(
       bool EnableEmEH,
       std::function<DominatorTree &(Function &F)> GetDominatorTree)
-      : EnableEmEH(EnableEmEH || WebAssembly::WasmEnableEmEH),
-        EnableEmSjLj(WebAssembly::WasmEnableEmSjLj),
+      : EnableEmEH(EnableEmEH), EnableEmSjLj(WebAssembly::WasmEnableEmSjLj),
         EnableWasmSjLj(WebAssembly::WasmEnableSjLj),
         GetDominatorTree(GetDominatorTree) {
     assert(!(EnableEmSjLj && EnableWasmSjLj) &&

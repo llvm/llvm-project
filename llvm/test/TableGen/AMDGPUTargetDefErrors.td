@@ -151,7 +151,7 @@ class AMDGPUGPUInfo<list<int> isa = []> {
 
 def FeatureFoo : SubtargetFeature<"foo", "HasFoo", "true", "Foo">;
 
-// The generic check only considers frontend-visible features.
+// Ordinary frontend-visible features require support from every covered GPU.
 def AMDGPUFrontendVisibleFeatures {
   list<SubtargetFeature> Features = [FeatureFoo];
 }

@@ -398,7 +398,7 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
                                         /*is_scalable=*/true);
       break;
     case BuiltinType::SveBFloat16:
-      resultType = cir::VectorType::get(builder.getFp16Ty(), 8,
+      resultType = cir::VectorType::get(builder.getBfloat16Ty(), 8,
                                         /*is_scalable=*/true);
       break;
     case BuiltinType::SveInt32:
@@ -553,8 +553,6 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
   case Type::Pointer: {
     const PointerType *ptrTy = cast<PointerType>(ty);
     QualType elemTy = ptrTy->getPointeeType();
-    assert(!elemTy->isConstantMatrixType() && "not implemented");
-
     mlir::Type pointeeType = convertType(elemTy);
 
     resultType =
@@ -605,6 +603,14 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     const VectorType *vec = cast<VectorType>(ty);
     const mlir::Type elemTy = convertType(vec->getElementType());
     resultType = cir::VectorType::get(elemTy, vec->getNumElements());
+    break;
+  }
+
+  case Type::ConstantMatrix: {
+    const ConstantMatrixType *mt = cast<ConstantMatrixType>(ty);
+    const mlir::Type elemTy = convertType(mt->getElementType());
+    resultType =
+        cir::MatrixType::get(elemTy, mt->getNumRows(), mt->getNumColumns());
     break;
   }
 
@@ -691,9 +697,8 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
 
 mlir::Type CIRGenTypes::convertTypeForMem(clang::QualType qualType,
                                           bool forBitField) {
-  if (qualType->isConstantMatrixType()) {
-    cgm.errorNYI("Matrix type conversion");
-    return cgm.sInt32Ty;
+  if (astContext.getLangOpts().HLSL && qualType->isConstantMatrixType()) {
+    cgm.errorNYI("convertTypeForMem: HLSL & ConstantMatrixType");
   }
 
   mlir::Type convertedType = convertType(qualType);
@@ -775,12 +780,43 @@ CIRGenTypes::clangCallConvToCIRCallConv(clang::CallingConv cc) {
   }
 }
 
+/// Whether a by-value ABI type is `_Atomic` or contains an `_Atomic` member.
+/// Pointers and references are not walked: `_Atomic(T)*` is just a pointer.
+static bool typeContainsAtomicForABI(QualType ty, ASTContext &ctx) {
+  ty = ty.getCanonicalType().getUnqualifiedType();
+  if (ty->isAtomicType())
+    return true;
+
+  if (const ArrayType *arrayTy = ctx.getAsArrayType(ty))
+    return typeContainsAtomicForABI(arrayTy->getElementType(), ctx);
+
+  const RecordDecl *rd = ty->getAsRecordDecl();
+  if (!rd || !rd->getDefinition())
+    return false;
+
+  if (const CXXRecordDecl *cxxRD = dyn_cast<CXXRecordDecl>(rd)) {
+    for (const CXXBaseSpecifier &base : cxxRD->bases())
+      if (typeContainsAtomicForABI(base.getType(), ctx))
+        return true;
+  }
+
+  for (const FieldDecl *field : rd->fields())
+    if (typeContainsAtomicForABI(field->getType(), ctx))
+      return true;
+  return false;
+}
+
 const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
     CanQualType returnType, bool isInstanceMethod,
     llvm::ArrayRef<CanQualType> argTypes, FunctionType::ExtInfo info,
     RequiredArgs required) {
   assert(llvm::all_of(argTypes,
                       [](CanQualType t) { return t.isCanonicalAsParam(); }));
+  auto containsAtomic = [&](CanQualType t) {
+    return typeContainsAtomicForABI(t, astContext);
+  };
+  if (containsAtomic(returnType) || llvm::any_of(argTypes, containsAtomic))
+    cgm.errorNYI("passing or returning atomic types");
   // Lookup or create unique function info.
   llvm::FoldingSetNodeID id;
   CIRGenFunctionInfo::Profile(id, isInstanceMethod, info, required, returnType,

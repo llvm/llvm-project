@@ -118,7 +118,7 @@ protected:
     M = parseAssemblyString(AssemblyF, SMError, Context);
     if (!M)
       report_fatal_error(SMError.getMessage());
-    M->setDataLayout(TM->createDataLayout());
+    M->setDataLayout(TargetTriple.computeDataLayout());
 
     // Get llvm::Function from M
     Foo = M->getFunction("foo");

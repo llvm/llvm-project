@@ -47,6 +47,14 @@ using namespace llvm;
 namespace llvm::AMDGPU {
 #define GET_ImageDimIntrinsicTable_IMPL
 #define GET_RsrcIntrinsics_IMPL
+#define GET_GFX1250BlockingCyclesTable_DECL
+#define GET_GFX1250BlockingCyclesTable_IMPL
+
+struct AMDGPUBlockingCyclesInfo {
+  uint16_t Opcode;
+  uint8_t GFX1250BlockingCycles;
+};
+
 #include "AMDGPUGenSearchableTables.inc"
 } // namespace llvm::AMDGPU
 
@@ -6047,6 +6055,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
 
     if (Opcode != AMDGPU::V_MOV_B64_DPP_PSEUDO &&
         !AMDGPU::isLegalDPALU_DPPControl(ST, DC) &&
+        ST.hasFeature(AMDGPU::FeatureDPALU_DPP) &&
         AMDGPU::isDPALU_DPP(Desc, *this, ST)) {
       ErrInfo = "Invalid dpp_ctrl value: "
                 "DP ALU dpp only support row_newbcast";
@@ -8911,13 +8920,19 @@ void SIInstrInfo::moveToVALUImpl(
   // Remove any references to SCC. Vector instructions can't read from it, and
   // We're just about to add the implicit use / defs of VCC, and we don't want
   // both.
+  bool DeadSCCDef = false;
   for (MachineOperand &Op : Inst.implicit_operands()) {
     if (Op.getReg() == AMDGPU::SCC) {
       // Only propagate through live-def of SCC.
-      if (Op.isDef() && !Op.isDead())
-        addSCCDefUsersToVALUWorklist(Op, Inst, Worklist);
-      if (Op.isUse())
-        addSCCDefsToVALUWorklist(NewInstr, Worklist);
+      if (Op.isDef()) {
+        if (Op.isDead())
+          DeadSCCDef = true;
+        else
+          addSCCDefUsersToVALUWorklist(Op, Inst, Worklist);
+        continue;
+      }
+
+      addSCCDefsToVALUWorklist(NewInstr, Worklist);
     }
   }
   Inst.eraseFromParent();
@@ -8932,6 +8947,14 @@ void SIInstrInfo::moveToVALUImpl(
     MRI.replaceRegWith(DstReg, NewDstReg);
   }
   fixImplicitOperands(*NewInstr);
+
+  if (DeadSCCDef) {
+    // A scalar op with a dead SCC def lowers to a VALU op whose VCC def will
+    // also be dead.
+    if (MachineOperand *VCCDef =
+            NewInstr->findRegisterDefOperand(RI.getVCC(), &RI))
+      VCCDef->setIsDead();
+  }
 
   // Legalize the operands
   legalizeOperands(*NewInstr, MDT);
@@ -11164,6 +11187,17 @@ unsigned SIInstrInfo::getInstrLatency(const InstrItineraryData *ItinData,
   }
 
   return SchedModel.computeInstrLatency(&MI);
+}
+
+unsigned SIInstrInfo::getBlockingCycles(const MachineInstr &MI) const {
+  if (!ST.hasGFX1250VALUBlockingCycles())
+    return 0;
+
+  // Use processor-specific lookup table
+  if (const auto *Entry = AMDGPU::getGFX1250BlockingCyclesInfo(MI.getOpcode()))
+    return Entry->GFX1250BlockingCycles;
+
+  return 0;
 }
 
 const MachineOperand &

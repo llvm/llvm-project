@@ -195,9 +195,13 @@ static void addDeclareAttr(fir::FirOpBuilder &builder, mlir::Operation *op,
                                               builder.getContext(), clause)));
 }
 
+/// The action of the declare directive that a recipe function carries out.
+enum class DeclareActionKind { PostAlloc, PreDealloc, PostDealloc };
+
 static mlir::func::FuncOp createDeclareFunc(
     mlir::OpBuilder &modBuilder, fir::FirOpBuilder &builder, mlir::Location loc,
-    llvm::StringRef funcName, llvm::SmallVector<mlir::Type> argsTy = {},
+    llvm::StringRef funcName, DeclareActionKind kind,
+    llvm::SmallVector<mlir::Type> argsTy = {},
     llvm::SmallVector<mlir::Location> locs = {}, bool linkable = false) {
   auto funcTy = mlir::FunctionType::get(modBuilder.getContext(), argsTy, {});
   auto funcOp = mlir::func::FuncOp::create(modBuilder, loc, funcName, funcTy);
@@ -208,9 +212,28 @@ static mlir::func::FuncOp createDeclareFunc(
   builder.setInsertionPointToEnd(&funcOp.getRegion().back());
   mlir::func::ReturnOp::create(builder, loc);
   builder.setInsertionPointToStart(&funcOp.getRegion().back());
-  if (linkable)
+  if (linkable) {
+    // The recipe names itself in the slot of the action it performs, so that
+    // the action can be told from the attribute rather than from the name.
+    mlir::MLIRContext *ctx = modBuilder.getContext();
+    auto self = mlir::SymbolRefAttr::get(ctx, funcName);
+    mlir::SymbolRefAttr postAlloc, preDealloc, postDealloc;
+    switch (kind) {
+    case DeclareActionKind::PostAlloc:
+      postAlloc = self;
+      break;
+    case DeclareActionKind::PreDealloc:
+      preDealloc = self;
+      break;
+    case DeclareActionKind::PostDealloc:
+      postDealloc = self;
+      break;
+    }
     funcOp->setAttr(mlir::acc::getDeclareActionAttrName(),
-                    mlir::UnitAttr::get(modBuilder.getContext()));
+                    mlir::acc::DeclareActionAttr::get(ctx, /*preAlloc=*/{},
+                                                      postAlloc, preDealloc,
+                                                      postDealloc));
+  }
   return funcOp;
 }
 
@@ -240,8 +263,9 @@ static void createDeclareAllocFuncWithArg(mlir::OpBuilder &modBuilder,
 
   if (!mlir::isa<fir::ReferenceType>(descTy))
     descTy = fir::ReferenceType::get(descTy);
-  auto registerFuncOp = createDeclareFunc(
-      modBuilder, builder, loc, registerFuncName.str(), {descTy}, {loc});
+  auto registerFuncOp =
+      createDeclareFunc(modBuilder, builder, loc, registerFuncName.str(),
+                        DeclareActionKind::PostAlloc, {descTy}, {loc});
 
   llvm::SmallVector<mlir::Value> bounds;
   std::stringstream asFortranDesc;
@@ -274,8 +298,9 @@ static void createDeclareDeallocFuncWithArg(
                      << Fortran::lower::declarePreDeallocSuffix.str();
   if (!mlir::isa<fir::ReferenceType>(descTy))
     descTy = fir::ReferenceType::get(descTy);
-  auto preDeallocOp = createDeclareFunc(
-      modBuilder, builder, loc, preDeallocFuncName.str(), {descTy}, {loc});
+  auto preDeallocOp =
+      createDeclareFunc(modBuilder, builder, loc, preDeallocFuncName.str(),
+                        DeclareActionKind::PreDealloc, {descTy}, {loc});
 
   mlir::Value var = preDeallocOp.getArgument(0);
 
@@ -310,8 +335,9 @@ static void createDeclareDeallocFuncWithArg(
   std::stringstream postDeallocFuncName;
   postDeallocFuncName << funcNamePrefix.str()
                       << Fortran::lower::declarePostDeallocSuffix.str();
-  auto postDeallocOp = createDeclareFunc(
-      modBuilder, builder, loc, postDeallocFuncName.str(), {descTy}, {loc});
+  auto postDeallocOp =
+      createDeclareFunc(modBuilder, builder, loc, postDeallocFuncName.str(),
+                        DeclareActionKind::PostDealloc, {descTy}, {loc});
 
   var = postDeallocOp.getArgument(0);
   // End structured region with declare_exit.
@@ -1768,21 +1794,21 @@ static void visitLoopControl(
       callback(std::get<Fortran::parser::LoopControl::Bounds>(loopControl->u),
                loc);
     } else {
-      // Safely locate the next inner DoConstruct within this eval.
-      const Fortran::parser::DoConstruct *innerDo = nullptr;
-      if (crtEval && crtEval->hasNestedEvaluations()) {
-        for (Fortran::lower::pft::Evaluation &child :
-             crtEval->getNestedEvaluations()) {
-          if (auto *stmt = child.getIf<Fortran::parser::DoConstruct>()) {
-            innerDo = stmt;
-            // Prepare to descend for the next iteration
-            crtEval = &child;
-            break;
-          }
-        }
-      }
+      // Safely locate the next inner DoConstruct within this eval, skipping
+      // over any intervening evaluations (e.g. a CompilerDirective such as
+      // !DIR$ IVDEP) that may sit between loop levels. The separate body
+      // descent in Bridge.cpp performs the same search over this same
+      // construct and is responsible for warning about skipped directives,
+      // so this bounds-only descent does not warn again here.
+      Fortran::lower::pft::Evaluation *nextEval =
+          crtEval ? Fortran::lower::findNestedDoConstructEvaluation(*crtEval)
+                  : nullptr;
+      const Fortran::parser::DoConstruct *innerDo =
+          nextEval ? nextEval->getIf<Fortran::parser::DoConstruct>() : nullptr;
       if (!innerDo)
         break; // No deeper loop; stop collecting collapsed bounds.
+      // Prepare to descend for the next iteration.
+      crtEval = nextEval;
 
       if (markInnerCollapsed)
         Fortran::lower::markDoConstructAsCollapsed(*innerDo);
@@ -2670,7 +2696,7 @@ static mlir::acc::LoopOp createLoopOp(
     if (mlir::LLVM::LoopAnnotationAttr la =
             Fortran::lower::genLoopAnnotationAttr(builder.getContext(),
                                                   doStmtEval->dirs))
-      loopOp->setDiscardableAttr(mlir::LLVM::LoopAnnotationAttr::name, la);
+      loopOp->setDiscardableAttr(mlir::LLVM::getLoopAnnotationAttrName(), la);
   }
 
   return loopOp;
@@ -4094,6 +4120,7 @@ static void createDeclareAllocFunc(mlir::OpBuilder &modBuilder,
                    << Fortran::lower::declarePostAllocSuffix.str();
   auto registerFuncOp =
       createDeclareFunc(modBuilder, builder, loc, registerFuncName.str(),
+                        DeclareActionKind::PostAlloc,
                         /*argsTy=*/{}, /*locs=*/{}, /*linkable=*/true);
 
   fir::AddrOfOp addrOp = fir::AddrOfOp::create(
@@ -4137,6 +4164,7 @@ static void createDeclareDeallocFunc(mlir::OpBuilder &modBuilder,
                      << Fortran::lower::declarePreDeallocSuffix.str();
   auto preDeallocOp =
       createDeclareFunc(modBuilder, builder, loc, preDeallocFuncName.str(),
+                        DeclareActionKind::PreDealloc,
                         /*argsTy=*/{}, /*locs=*/{}, /*linkable=*/true);
   fir::AddrOfOp addrOp = fir::AddrOfOp::create(
       builder, loc, fir::ReferenceType::get(globalOp.getType()),
@@ -5452,6 +5480,21 @@ void Fortran::lower::clearCollapsedDoConstructs() {
   collapsedDoConstructs.clear();
 }
 
+Fortran::lower::pft::Evaluation *
+Fortran::lower::findNestedDoConstructEvaluation(
+    Fortran::lower::pft::Evaluation &eval,
+    llvm::SmallVectorImpl<Fortran::lower::pft::Evaluation *> *skipped) {
+  if (!eval.hasNestedEvaluations())
+    return nullptr;
+  for (Fortran::lower::pft::Evaluation &child : eval.getNestedEvaluations()) {
+    if (child.getIf<Fortran::parser::DoConstruct>())
+      return &child;
+    if (skipped)
+      skipped->push_back(&child);
+  }
+  return nullptr;
+}
+
 bool Fortran::lower::isInsideOpenACCComputeConstruct(
     fir::FirOpBuilder &builder) {
   return mlir::isa_and_nonnull<ACC_COMPUTE_CONSTRUCT_OPS>(
@@ -5670,7 +5713,7 @@ mlir::Operation *Fortran::lower::genOpenACCLoopFromDoConstruct(
     if (mlir::LLVM::LoopAnnotationAttr la =
             Fortran::lower::genLoopAnnotationAttr(builder.getContext(),
                                                   doStmtEval->dirs))
-      loopOp->setDiscardableAttr(mlir::LLVM::LoopAnnotationAttr::name, la);
+      loopOp->setDiscardableAttr(mlir::LLVM::getLoopAnnotationAttrName(), la);
   }
 
   return loopOp;
