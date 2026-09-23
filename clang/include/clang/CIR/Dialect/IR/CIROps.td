@@ -4547,6 +4547,10 @@ def CIR_DeleteArrayOp : CIR_Op<"delete_array"> {
 
     The `dtor_may_throw` unit property, when present, indicates that the
     element destructor may throw exceptions.
+
+    The `element_align` attribute gives the element type's preferred
+    alignment in bytes, which should be the same value the corresponding `new[]`
+    uses to size its array cookie.
   }];
 
   let arguments = (ins
@@ -4554,16 +4558,19 @@ def CIR_DeleteArrayOp : CIR_Op<"delete_array"> {
     FlatSymbolRefAttr:$delete_fn,
     CIR_UsualDeleteParamsAttr:$delete_params,
     OptionalAttr<FlatSymbolRefAttr>:$element_dtor,
-    UnitProp:$dtor_may_throw
+    UnitProp:$dtor_may_throw,
+    I64Attr:$element_align
   );
 
   let builders = [
     OpBuilder<(ins "mlir::Value":$address,
                    "mlir::FlatSymbolRefAttr":$delete_fn,
-                   "cir::UsualDeleteParamsAttr":$delete_params), [{
+                   "cir::UsualDeleteParamsAttr":$delete_params,
+                   "uint64_t":$element_align), [{
       build($_builder, $_state, address, delete_fn, delete_params,
             /*element_dtor=*/mlir::FlatSymbolRefAttr{},
-            /*dtor_may_throw=*/false);
+            /*dtor_may_throw=*/false,
+            $_builder.getI64IntegerAttr(element_align));
     }]>
   ];
 
