@@ -18,7 +18,7 @@
 #include <typeindex>
 #include <vector>
 
-#include "../../../../support/test_macros.h"
+#include "test_macros.h"
 
 // Itanium ABI implementations prefix the RTTI name of a type with internal linkage with a '*',
 // which lets this implementation distinguish between two internally linked types
