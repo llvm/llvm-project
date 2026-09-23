@@ -31,7 +31,7 @@ body:             |
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %arg:_(i32) = COPY $w0
-    ; CHECK-NEXT: DBG_VALUE %trunc:_(i16), $noreg, !9, !DIExpression(), debug-location !DILocation(line: 1, column: 1, scope: !4)
+    ; CHECK-NEXT: DBG_VALUE %arg(i32), $noreg, !9, !DIExpression(DW_OP_LLVM_convert, 32, DW_ATE_unsigned, DW_OP_LLVM_convert, 16, DW_ATE_unsigned, DW_OP_stack_value), debug-location !DILocation(line: 1, column: 1, scope: !4)
     ; CHECK-NEXT: $w0 = COPY %arg(i32)
     %arg:_(i32) = COPY $w0
     %trunc:_(i16) = G_TRUNC %arg:_(i32)
