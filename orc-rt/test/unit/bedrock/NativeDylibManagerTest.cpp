@@ -9,7 +9,7 @@
 // Test NativeDylibManager APIs.
 //
 //===----------------------------------------------------------------------===//
-
+#ifndef _WIN32
 #include "orc-rt/bedrock/NativeDylibManager.h"
 #include "orc-rt/bedrock/Session.h"
 
@@ -197,3 +197,4 @@ TEST(NativeDylibManagerTest, LookupMixedRequiredAndWeak) {
       << "weak-missing symbol should be reported as a present optional";
   EXPECT_EQ(*(*Result)[1], nullptr);
 }
+#endif

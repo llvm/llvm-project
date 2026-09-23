@@ -62,18 +62,6 @@ def SDT_RISCVIntBinOp_VL : SDTypeProfile<1, 5, [SDTCisSameAs<0, 1>,
                                                 SDTCisSameNumEltsAs<0, 4>,
                                                 SDTCisVT<5, XLenVT>]>;
 
-// Input: (vector, vector/scalar, passthru, mask, roundmode, vl)
-def SDT_RISCVVNBinOp_RM_VL : SDTypeProfile<1, 6, [SDTCisVec<0>, SDTCisInt<0>,
-                                                  SDTCisSameAs<0, 3>,
-                                                  SDTCisSameNumEltsAs<0, 1>,
-                                                  SDTCisVec<1>,
-                                                  SDTCisOpSmallerThanOp<2, 1>,
-                                                  SDTCisSameAs<0, 2>,
-                                                  SDTCisSameNumEltsAs<0, 4>,
-                                                  SDTCVecEltisVT<4, i1>,
-                                                  SDTCisVT<5, XLenVT>,
-                                                  SDTCisVT<6, XLenVT>]>;
-
 def SDT_RISCVFPUnOp_VL : SDTypeProfile<1, 3, [SDTCisSameAs<0, 1>,
                                               SDTCisVec<0>, SDTCisFP<0>,
                                               SDTCVecEltisVT<2, i1>,
