@@ -79,10 +79,17 @@ inline std::error_code disableAutoConversion(sys::fs::file_t FD) {
   return std::error_code();
 }
 
+inline std::error_code enableAutoConversion(int FD) {
+#ifdef __MVS__
+  if (::enablezOSAutoConversion(FD) == -1)
+    return errnoAsErrorCode();
+#endif
+  return std::error_code();
+}
+
 inline std::error_code enableAutoConversion(sys::fs::file_t FD) {
 #ifdef __MVS__
-  if (::enablezOSAutoConversion(FD.get()) == -1)
-    return errnoAsErrorCode();
+  return enableAutoConversion(FD.get());
 #endif
   return std::error_code();
 }
@@ -95,10 +102,17 @@ inline std::error_code enableAutoConversion(sys::fs::file_t FD, int ccsid) {
   return std::error_code();
 }
 
+inline std::error_code restoreStdHandleAutoConversion(int FD) {
+#ifdef __MVS__
+  if (::restorezOSStdHandleAutoConversion(FD) == -1)
+    return errnoAsErrorCode();
+#endif
+  return std::error_code();
+}
+
 inline std::error_code restoreStdHandleAutoConversion(sys::fs::file_t FD) {
 #ifdef __MVS__
-  if (::restorezOSStdHandleAutoConversion(FD.get()) == -1)
-    return errnoAsErrorCode();
+  return restoreStdHandleAutoConversion(FD.get());
 #endif
   return std::error_code();
 }
