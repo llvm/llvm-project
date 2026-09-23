@@ -80,6 +80,27 @@ end subroutine
 ! CHECK: cuf.allocate %[[BOX_DECL]]#0 : {{.*}} {data_attr = #cuf.cuda<managed>, pointer}
 
 ! -----------------------------------------------------------------------------
+! Test 5b: Scalar pointers are also implicitly managed (same as arrays)
+! -----------------------------------------------------------------------------
+subroutine test_scalar_pointer_managed()
+  integer, pointer :: p
+  type t
+    integer :: n
+  end type
+  type(t), pointer :: node
+  allocate(p)
+  allocate(node)
+  deallocate(p)
+  deallocate(node)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_scalar_pointer_managed()
+! CHECK: cuf.alloc {{.*}} {bindc_name = "node", data_attr = #cuf.cuda<managed>
+! CHECK: cuf.alloc !fir.box<!fir.ptr<i32>> {bindc_name = "p", data_attr = #cuf.cuda<managed>
+! CHECK: cuf.allocate {{.*}} {data_attr = #cuf.cuda<managed>, pointer}
+! CHECK: cuf.allocate {{.*}} {data_attr = #cuf.cuda<managed>, pointer}
+
+! -----------------------------------------------------------------------------
 ! Test 6: Multiple allocatables - mix of implicit and explicit
 ! -----------------------------------------------------------------------------
 subroutine test_mixed_allocatables()
