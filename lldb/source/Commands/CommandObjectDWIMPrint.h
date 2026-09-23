@@ -44,9 +44,9 @@ public:
 private:
   void DoExecute(llvm::StringRef command, CommandReturnObject &result) override;
 
-  std::string
-  RewritePathForBackingStorage(llvm::StringRef expr, StackFrame &frame,
-                               lldb::DynamicValueType use_dynamic);
+  std::string RewritePathForBackingStorage(llvm::StringRef expr,
+                                           StackFrame &frame,
+                                           lldb::DynamicValueType use_dynamic);
 
   OptionGroupOptions m_option_group;
   OptionGroupFormat m_format_options = lldb::eFormatDefault;

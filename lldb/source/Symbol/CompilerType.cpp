@@ -970,12 +970,12 @@ CompilerType::GetDirectNestedTypeWithName(llvm::StringRef name) const {
   return CompilerType();
 }
 
-llvm::StringRef
-CompilerType::GetPropertyBackingStorageName(llvm::StringRef property_name) const {
+llvm::StringRef CompilerType::GetPropertyBackingStorageName(
+    llvm::StringRef property_name) const {
   if (IsValid() && !property_name.empty()) {
     if (auto type_system_sp = GetTypeSystem())
       return type_system_sp->GetPropertyBackingStorageName(m_type,
-                                                            property_name);
+                                                           property_name);
   }
   return llvm::StringRef();
 }

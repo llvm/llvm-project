@@ -7113,7 +7113,8 @@ llvm::StringRef TypeSystemClang::GetPropertyBackingStorageName(
       getASTContext().Idents.get(property_name);
   clang::ObjCPropertyDecl *property_decl =
       class_interface_decl->FindPropertyDeclaration(
-          &property_ident, clang::ObjCPropertyQueryKind::OBJC_PR_query_instance);
+          &property_ident,
+          clang::ObjCPropertyQueryKind::OBJC_PR_query_instance);
   if (!property_decl)
     return llvm::StringRef();
 
@@ -7964,10 +7965,10 @@ bool TypeSystemClang::AddObjCClassProperty(
 
   CompilerType property_clang_type_to_access;
 
-  if (property_clang_type.IsValid())
-    property_clang_type_to_access = property_clang_type;
-  else if (ivar_decl)
+  if (ivar_decl)
     property_clang_type_to_access = ast->GetType(ivar_decl->getType());
+  else if (property_clang_type.IsValid())
+    property_clang_type_to_access = property_clang_type;
 
   if (!class_interface_decl || !property_clang_type_to_access.IsValid())
     return false;

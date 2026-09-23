@@ -28,11 +28,6 @@ class TestCase(TestBase):
 
     @requireDarwin
     def test_property_backing_storage(self):
-        """A property backed by a differently-named ivar (DW_TAG_property /
-        DW_AT_property_forward) should take the frame-variable fast path,
-        instead of unconditionally falling back to `expression`. Covers the
-        same three synthesis variants as
-        clang/test/DebugInfo/ObjC/property-backing-storage.m."""
         self.build()
         lldbutil.run_to_source_breakpoint(
             self, "break here for backing storage", lldb.SBFileSpec("main.m")

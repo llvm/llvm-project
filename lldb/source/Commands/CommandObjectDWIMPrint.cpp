@@ -73,14 +73,12 @@ std::string CommandObjectDWIMPrint::RewritePathForBackingStorage(
   std::string rewritten_path = components[0].str();
   bool did_rewrite = false;
 
-  for (llvm::StringRef component :
-       llvm::ArrayRef(components).drop_front()) {
+  for (llvm::StringRef component : llvm::ArrayRef(components).drop_front()) {
     ValueObjectSP child_sp = valobj_sp->GetChildMemberWithName(component);
     llvm::StringRef name_used = component;
     if (!child_sp) {
       llvm::StringRef backing_name =
-          valobj_sp->GetCompilerType().GetPropertyBackingStorageName(
-              component);
+          valobj_sp->GetCompilerType().GetPropertyBackingStorageName(component);
       if (backing_name.empty())
         return {};
       child_sp = valobj_sp->GetChildMemberWithName(backing_name);
