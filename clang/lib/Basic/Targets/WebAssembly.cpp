@@ -426,8 +426,6 @@ void WebAssemblyTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
   // because they are unsupported.
   if ((!HasCooperativeThreading && !HasAtomics) || !HasBulkMemory) {
     Opts.POSIXThreads = false;
-    Opts.setThreadModel(LangOptions::ThreadModelKind::Single);
-    Opts.ThreadsafeStatics = false;
   }
 }
 
