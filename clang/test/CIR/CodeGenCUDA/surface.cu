@@ -14,15 +14,19 @@
 // RUN:   -emit-llvm -o - %s | FileCheck --check-prefix=LLVM-HOST %s
 // RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-linux-gnu \
 // RUN:   -target-sdk-version=12.3 -fcuda-include-gpubinary %t \
-// RUN:   -emit-llvm -o - %s | FileCheck --check-prefix=OGCG-HOST %s
+// RUN:   -emit-llvm -o - %s | FileCheck --check-prefix=LLVM-HOST %s
 
 struct surfaceReference {
   int desc;
 };
 
-template <typename T, int dim = 1>
-struct __attribute__((device_builtin_surface_type)) surface
-    : public surfaceReference {};
+template <class T, int dim = 1>
+struct __attribute__((device_builtin_surface_type)) surface;
+
+template <class T, int dim>
+struct __attribute__((device_builtin_surface_type)) surface {
+  typedef surfaceReference type;
+};
 
 template <int dim>
 struct __attribute__((device_builtin_surface_type)) surface<void, dim>
@@ -63,12 +67,7 @@ surface<void, 2> surf;
 // including the surface type extracted from surface<void, 2>.
 // CIR-HOST: cir.global{{.*}} @surf = {{.*}}cu.var_registration = #cir.cu.var_registration<surf, Surface, surface_type = 2>
 
-// Check CIR-lowered LLVM registration.
+// Check both CIR-lowered LLVM and original CodeGen registration.
 // LLVM-HOST-LABEL: define internal void @__cuda_register_globals
 // LLVM-HOST-SAME: (ptr %[[FATBIN:.*]])
 // LLVM-HOST: call void @__cudaRegisterSurface(ptr %[[FATBIN]], ptr @surf, ptr @[[NAME:.*]], ptr @[[NAME]], i32 2, i32 0)
-
-// Check parity with original CodeGen.
-// OGCG-HOST-LABEL: define internal void @__cuda_register_globals
-// OGCG-HOST-SAME: (ptr %[[FATBIN:.*]])
-// OGCG-HOST: call void @__cudaRegisterSurface(ptr %[[FATBIN]], ptr @surf, ptr @[[NAME:.*]], ptr @[[NAME]], i32 2, i32 0)
