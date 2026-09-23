@@ -1399,17 +1399,10 @@ void OpEmitter::genPropertiesSupport() {
 
       setPropMethod << formatv(R"decl(
   {{
-    auto &propStorage = prop.{0};
     {1}
-    if (attr) {{
-      auto convertedAttr = ::llvm::dyn_cast<std::remove_reference_t<decltype(propStorage)>>(attr);
-      if (convertedAttr) {{
-        propStorage = convertedAttr;
-      } else {{
-        emitError() << "Invalid attribute `{0}` in property conversion: " << attr;
-        return ::mlir::failure();
-      }
-    }
+    if (::mlir::failed(::mlir::detail::setAttributeProperty(
+            prop.{0}, attr, "{0}", emitError)))
+      return ::mlir::failure();
   }
 )decl",
                                name, getAttr);
@@ -1446,15 +1439,10 @@ void OpEmitter::genPropertiesSupport() {
     const auto *namedAttr =
         llvm::dyn_cast_if_present<const AttributeMetadata *>(attrOrProp);
     StringRef name = namedAttr->attrName;
-    getPropMethod << formatv(R"decl(
-    {{
-      const auto &propStorage = prop.{0};
-      if (propStorage)
-        attrs.push_back(odsBuilder.getNamedAttr("{0}",
-                                       propStorage));
-    }
-)decl",
-                             name);
+    getPropMethod << formatv(
+        "    ::mlir::detail::appendAttributeProperty(attrs, \"{0}\", "
+        "prop.{0});\n",
+        name);
   }
   getPropMethod << R"decl(
   if (!attrs.empty())

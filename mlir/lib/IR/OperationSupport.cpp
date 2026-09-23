@@ -21,6 +21,13 @@
 
 using namespace mlir;
 
+void mlir::detail::appendAttributeProperty(
+    llvm::SmallVectorImpl<NamedAttribute> &attrs, StringRef name,
+    Attribute attr) {
+  if (attr)
+    attrs.emplace_back(name, attr);
+}
+
 //===----------------------------------------------------------------------===//
 // NamedAttrList
 //===----------------------------------------------------------------------===//
