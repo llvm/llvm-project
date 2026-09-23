@@ -65,14 +65,16 @@ class Compilation {
   /// The original (untranslated) input argument list.
   llvm::opt::InputArgList *Args;
 
-	public:
-	   phases::ID FinalPhase; 
-		llvm::opt:: Arg *FinalPhaseArg;
-         private:
-
   /// The driver translated arguments. Note that toolchains may perform their
   /// own argument translation.
   llvm::opt::DerivedArgList *TranslatedArgs;
+
+  /// Which compilation phase is supposed to be the last job.
+  phases::ID FinalPhase;
+
+  /// Which compiler argument determined what the \p FinalPhase should be (used
+  /// for diagnostics).
+  llvm::opt::Arg *FinalPhaseArg = nullptr;
 
   /// The list of actions we've created via MakeAction.  This is not accessible
   /// to consumers; it's here just to manage ownership.
@@ -206,6 +208,15 @@ public:
   const llvm::opt::DerivedArgList &getArgs() const { return *TranslatedArgs; }
 
   llvm::opt::DerivedArgList &getArgs() { return *TranslatedArgs; }
+
+  void setFinalPhase(phases::ID FinalPhase, llvm::opt::Arg *FinalPhaseArg) {
+    this->FinalPhase = FinalPhase;
+    this->FinalPhaseArg = FinalPhaseArg;
+  }
+
+  phases::ID getFinalPhase() const { return FinalPhase; }
+
+  llvm::opt::Arg *getFinalPhaseArg() const { return FinalPhaseArg; }
 
   ActionList &getActions() { return Actions; }
   const ActionList &getActions() const { return Actions; }

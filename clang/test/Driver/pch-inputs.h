@@ -4,10 +4,10 @@
 // Warn about linker options being ignored when not linking
 // RUN: %clang %s -lfoo -o %t/tmp1.pch -### 2>&1 | FileCheck %s --check-prefix=UNUSED-L,SINGLEHEADER
 // RUN: %clang %s -x c++-header -lfoo -o %t/tmp1.pch -### 2>&1 | FileCheck %s --check-prefix=UNUSED-L,SINGLEHEADER
-// UNUSED-L: clang: warning: -lfoo: 'linker' input unused [-Wunused-command-line-argument]
+// UNUSED-L: clang: warning: -lfoo: 'linker' input unused when '' is present [-Wunused-command-line-argument]
 
 // RUN: %clang %s -Wl,--whole-archive -o %t/tmp1.pch -### 2>&1 | FileCheck %s --check-prefix=UNUSED-WL,SINGLEHEADER
-// UNUSED-WL: clang: warning: -Wl,--whole-archive: 'linker' input unused [-Wunused-command-line-argument]
+// UNUSED-WL: clang: warning: -Wl,--whole-archive: 'linker' input unused when '' is present [-Wunused-command-line-argument]
 
 // RUN: %clang %S/Inputs/header1.h %S/Inputs/header2.h -lfoo -### 2>&1 | FileCheck %s --check-prefix=UNUSED-L,MULTIHEADER
 
@@ -23,7 +23,7 @@
 // RUN: %clang -x cl-header %s -Xlinker -somelinkerflag -### 2>&1 | FileCheck %s --check-prefix=UNUSED-XLINKER
 // RUN: %clang -x objective-c++-header %s -Xlinker -somelinkerflag -### 2>&1 | FileCheck %s --check-prefix=UNUSED-XLINKER
 // RUN: %clang -x hlsl %s -Xlinker -somelinkerflag -### 2>&1 | FileCheck %s --check-prefix=UNUSED-XLINKER
-// UNUSED-XLINKER: clang: warning: -Xlinker -somelinkerflag: 'linker' input unused [-Wunused-command-line-argument]
+// UNUSED-XLINKER: clang: warning: -Xlinker -somelinkerflag: 'linker' input unused when '' is present [-Wunused-command-line-argument]
 
 
 // Normal case: Single header file input compiles to .pch even without --precompile
@@ -44,5 +44,3 @@
 // MULTIHEADER: "-emit-pch"
 // MULTIHEADER: "-o"
 // MULTIHEADER: header2.h.pch"
-
-

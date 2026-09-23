@@ -437,6 +437,13 @@ phases::ID Driver::getFinalPhase(const DerivedArgList &DAL,
   return FinalPhase;
 }
 
+void Driver::updateFinalPhase(Compilation &C,
+                              llvm::ArrayRef<InputTy> Inputs) const {
+  Arg *FinalPhaseArg = nullptr;
+  phases ::ID FinalPhase = getFinalPhase(C.getArgs(), Inputs, &FinalPhaseArg);
+  C.setFinalPhase(FinalPhase, FinalPhaseArg);
+}
+
 llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
 Driver::executeProgram(llvm::ArrayRef<llvm::StringRef> Args) const {
   llvm::SmallString<64> OutputFile;
@@ -1873,15 +1880,17 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   // Construct the list of inputs.
   InputList Inputs;
   BuildInputs(C->getDefaultToolChain(), *TranslatedArgs, Inputs);
-	C->FinalPhase  = getFinalPhase(*TranslatedArgs, Inputs, &C->FinalPhaseArg) ;
-	auto FinalPhase = C->FinalPhase;
-  if (HasConfigFileTail && Inputs.size()) {    
-    if (FinalPhase==
-        phases::Link) {
+  updateFinalPhase(*C, Inputs);
+  phases::ID FinalPhase = C->getFinalPhase();
+
+  if (HasConfigFileTail && Inputs.size()) {
+    if (FinalPhase == phases::Link) {
       DerivedArgList TranslatedLinkerIns(*CfgOptionsTail);
       for (Arg *A : *CfgOptionsTail)
         TranslatedLinkerIns.append(A);
       BuildInputs(C->getDefaultToolChain(), TranslatedLinkerIns, Inputs);
+      updateFinalPhase(*C, Inputs);
+      FinalPhase = C->getFinalPhase();
     }
   }
 
@@ -2149,6 +2158,7 @@ void Driver::generateCompilationDiagnostics(
   // Construct the list of inputs.
   InputList Inputs;
   BuildInputs(C.getDefaultToolChain(), C.getArgs(), Inputs);
+  updateFinalPhase(C, Inputs);
 
   ArgStringList IRInputs;
   for (InputList::iterator it = Inputs.begin(), ie = Inputs.end(); it != ie;) {
@@ -3461,9 +3471,10 @@ void Driver::handleArguments(Compilation &C, DerivedArgList &Args,
     YcArg = nullptr;
   }
 
+  phases::ID FinalPhase = C.getFinalPhase();
+  llvm::opt::Arg *FinalPhaseArg = C.getFinalPhaseArg();
 
-
-  if (C.FinalPhase == phases::Link) {
+  if (FinalPhase == phases::Link) {
     if (Args.hasArgNoClaim(options::OPT_hipstdpar)) {
       Args.AddFlagArg(nullptr, getOpts().getOption(options::OPT_hip_link));
       Args.AddFlagArg(nullptr,
@@ -3498,7 +3509,7 @@ void Driver::handleArguments(Compilation &C, DerivedArgList &Args,
     }
   }
 
-  if (C.FinalPhase == phases::Preprocess || Args.hasArg(options::OPT__SLASH_Y_)) {
+  if (FinalPhase == phases::Preprocess || Args.hasArg(options::OPT__SLASH_Y_)) {
     // If only preprocessing or /Y- is used, all pch handling is disabled.
     // Rather than check for it everywhere, just remove clang-cl pch-related
     // flags here.
@@ -3516,7 +3527,7 @@ void Driver::handleArguments(Compilation &C, DerivedArgList &Args,
     Args.eraseArg(options::OPT_include_pch);
   }
 
-  bool LinkOnly = phases::Link == C.FinalPhase && Inputs.size() > 0;
+  bool LinkOnly = phases::Link == FinalPhase && Inputs.size() > 0;
   for (auto &I : Inputs) {
     types::ID InputType = I.first;
     const Arg *InputArg = I.second;
@@ -3528,7 +3539,7 @@ void Driver::handleArguments(Compilation &C, DerivedArgList &Args,
 
     // If the first step comes after the final phase we are doing as part of
     // this compilation, warn the user about it.
-    if (InitialPhase > C.FinalPhase) {
+    if (InitialPhase > FinalPhase) {
       if (InputArg->isClaimed())
         continue;
 
@@ -3553,19 +3564,19 @@ void Driver::handleArguments(Compilation &C, DerivedArgList &Args,
                 Args.getLastArg(options::OPT_M, options::OPT_MM)) &&
                getPreprocessedType(InputType) == types::TY_INVALID)
         Diag(clang::diag::warn_drv_preprocessed_input_file_unused)
-            << InputArg->getAsString(Args) << !!C.FinalPhaseArg
-            << (C.FinalPhaseArg ? C.FinalPhaseArg->getOption().getName() : "");
+            << InputArg->getAsString(Args) << !!FinalPhaseArg
+            << (FinalPhaseArg ? FinalPhaseArg->getOption().getName() : "");
       else
         Diag(clang::diag::warn_drv_input_file_unused)
             << InputArg->getAsString(Args) << getPhaseName(InitialPhase)
-            << !C.FinalPhaseArg
-            << (C.FinalPhaseArg ? C.FinalPhaseArg->getSpelling() : "");
+            << !!FinalPhaseArg
+            << (FinalPhaseArg ? FinalPhaseArg->getSpelling() : "");
       continue;
     }
 
     if (YcArg) {
       // Add a separate precompile phase for the compile phase.
-      if (C.FinalPhase >= phases::Compile) {
+      if (FinalPhase >= phases::Compile) {
         const types::ID HeaderType = lookupHeaderTypeForSourceType(InputType);
         // Build the pipeline for the pch file.
         Action *ClangClPch = C.MakeAction<InputAction>(*InputArg, HeaderType);
@@ -3636,12 +3647,12 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
   Args.ClaimAllArgs(options::OPT_no_offload_new_driver);
   Args.ClaimAllArgs(options::OPT_offload_new_driver);
 
+  phases::ID FinalPhase = C.getFinalPhase();
   bool HIPRDCDeviceOnlyFatBin =
       C.isOffloadingHostKind(Action::OFK_HIP) && offloadDeviceOnly() &&
       Args.hasArg(options::OPT_hip_link) &&
       Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false) &&
-     C.FinalPhase == phases::Link &&
-      !Args.hasArg(options::OPT_emit_llvm) &&
+      FinalPhase == phases::Link && !Args.hasArg(options::OPT_emit_llvm) &&
       Args.hasFlag(options::OPT_gpu_bundle_output,
                    options::OPT_no_gpu_bundle_output, true);
 
@@ -3654,7 +3665,8 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
     types::ID InputType = I.first;
     const Arg *InputArg = I.second;
 
-    auto PL = types::getCompilationPhases(*this, Args, Inputs, InputType, C.FinalPhase);
+    auto PL =
+        types::getCompilationPhases(*this, Args, Inputs, InputType, FinalPhase);
     if (PL.empty())
       continue;
 
@@ -4152,7 +4164,7 @@ Driver::BuildOffloadingActions(Compilation &C, llvm::opt::DerivedArgList &Args,
   // Don't build offloading actions if we do not have a compile action. If
   // preprocessing only ignore embedding.
   if (!(isa<CompileJobAction>(HostAction) ||
-        C.FinalPhase == phases::Preprocess))
+        C.getFinalPhase() == phases::Preprocess))
     return HostAction;
 
   bool UsesLLVMOffloading = Args.hasArg(
@@ -4205,7 +4217,8 @@ Driver::BuildOffloadingActions(Compilation &C, llvm::opt::DerivedArgList &Args,
             .isOSDarwin())
       HostAction->setCannotBeCollapsedWithNextDependentAction();
 
-    auto PL = types::getCompilationPhases(*this, Args, {Input}, InputType, C.FinalPhase);
+    auto PL = types::getCompilationPhases(*this, Args, {Input}, InputType,
+                                          C.getFinalPhase());
 
     for (phases::ID Phase : PL) {
       if (Phase == phases::Link) {

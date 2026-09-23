@@ -117,7 +117,8 @@ namespace types {
   getCompilationPhases(ID Id, phases::ID LastPhase = phases::IfsMerge);
   llvm::SmallVector<phases::ID, phases::MaxNumberOfPhases> getCompilationPhases(
       const clang::driver::Driver &Driver, llvm::opt::DerivedArgList &DAL,
-      llvm::ArrayRef<std::pair<ID, const llvm::opt::Arg *>> Inputs, ID Id, phases::ID FinalPhase);
+      llvm::ArrayRef<std::pair<ID, const llvm::opt::Arg *>> Inputs, ID Id,
+      phases::ID FinalPhase);
 
   /// lookupCXXTypeForCType - Lookup CXX input type that corresponds to given
   /// C type (used for clang++ emulation of g++ behaviour)

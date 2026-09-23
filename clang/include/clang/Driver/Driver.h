@@ -332,16 +332,20 @@ private:
   LLVM_PREFERRED_TYPE(bool)
   unsigned ProbePrecompiled : 1;
 
-public:
   // getFinalPhase - Determine which compilation mode we are in and record
   // which option we used to determine the final phase.
   // TODO: Much of what getFinalPhase returns are not actually true compiler
   //       modes. Fold this functionality into Types::getCompilationPhases and
   //       handleArguments.
-   phases::ID getFinalPhase(const llvm::opt::DerivedArgList &DAL,
+  phases::ID getFinalPhase(const llvm::opt::DerivedArgList &DAL,
                            llvm::ArrayRef<InputTy>,
-                           llvm::opt::Arg **FinalPhaseArg = nullptr) const  ;
+                           llvm::opt::Arg **FinalPhaseArg = nullptr) const;
 
+  /// Set the final phase in \p C based on compiler arguments, driver state, and
+  /// the \p Inputs to be processed.
+  void updateFinalPhase(Compilation &C, llvm::ArrayRef<InputTy> Inputs) const;
+
+public:
   llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
   executeProgram(llvm::ArrayRef<llvm::StringRef> Args) const;
 
