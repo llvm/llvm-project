@@ -75,3 +75,19 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPtest_data_hpm
 ! CHECK: acc.data
 ! CHECK: fir.call @_QPgemm_hpm
+
+! Mapping a named COMMON does not create a device binding for its members,
+! so the host specific must still be selected.
+subroutine test_common_block
+  use m
+  real(4) :: mapped(2,2,2)
+  common /blk/ mapped
+  !$acc data copyin(/blk/)
+  call doit(mapped)
+  !$acc end data
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_common_block
+! CHECK: acc.data
+! CHECK: fir.call @_QP__host_sub
+! CHECK-NOT: fir.call @_QP__device_sub

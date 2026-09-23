@@ -2029,16 +2029,15 @@ void AccAttributeVisitor::ResolveAccObject(
             if (auto *symbol{ResolveAccCommonBlockName(&name)}) {
               CheckMultipleAppearances(
                   name, *symbol, Symbol::Flag::AccCommonBlock);
+              // Members of a named COMMON listed in a data clause are not
+              // recorded as device-mapped. Lowering does not create an
+              // alternate device binding for them, so CUDA generic resolution
+              // must not select a DEVICE specific. A member listed as a
+              // designator is handled in the branch above.
               for (auto &object : symbol->get<CommonBlockDetails>().objects()) {
                 if (auto *resolvedObject{
                         ResolveAcc(*object, accFlag, currScope())}) {
                   AddToContextObjectWithDSA(*resolvedObject, accFlag);
-                  if (GetContext().directive ==
-                          llvm::acc::Directive::ACCD_data &&
-                      IsOpenACCDeviceMappingFlag(accFlag)) {
-                    currScope().AddOpenACCMappedSymbol(*resolvedObject);
-                    context_.NoteOpenACCDataMapping();
-                  }
                 }
               }
             } else {
