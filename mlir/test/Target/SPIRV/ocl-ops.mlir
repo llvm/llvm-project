@@ -114,4 +114,14 @@ spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses, Vec
     %6 = spirv.CL.u_min %arg2, %arg3 : i32
     spirv.Return
   }
+
+  spirv.func @clamp(%arg0 : f32, %arg1 : i32, %arg2 : i32) "None" {
+    // CHECK: {{%.*}} = spirv.CL.fclamp {{%[^,]*}}, {{%[^,]*}}, {{%[^,]*}} : f32
+    %0 = spirv.CL.fclamp %arg0, %arg0, %arg0 : f32
+    // CHECK: {{%.*}} = spirv.CL.s_clamp {{%[^,]*}}, {{%[^,]*}}, {{%[^,]*}} : i32
+    %1 = spirv.CL.s_clamp %arg1, %arg2, %arg2 : i32
+    // CHECK: {{%.*}} = spirv.CL.u_clamp {{%[^,]*}}, {{%[^,]*}}, {{%[^,]*}} : i32
+    %2 = spirv.CL.u_clamp %arg1, %arg2, %arg2 : i32
+    spirv.Return
+  }
 }
