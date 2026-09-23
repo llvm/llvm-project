@@ -16,7 +16,6 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/UB/IR/UBOps.h"
-#include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
@@ -124,31 +123,19 @@ static LogicalResult transferPreconditions(PatternRewriter &rewriter,
   return success();
 }
 
-// Adjusts the strides of a memref according to a given permutation map for
-// vector operations.
-//
-// This function updates the innermost strides in the `strides` array to
-// reflect the permutation specified by `permMap`. The permutation is computed
-// using the inverse and broadcasting-aware version of the permutation map,
-// and is applied to the relevant strides. This ensures that memory accesses
-// are consistent with the logical permutation of vector elements.
+// Returns the memref strides in vector-dimension order: the stride at vector
+// dimension `v` is the stride of the memref dimension the permutation map has
+// `v` read, so that stepping one element along `v` steps that far in memory.
 //
 // Example:
-//   Suppose we have a memref of rank 4 with strides `[s0, s1, s2, s3]`.
-//   If the permutation map swaps the last two dimensions (e.g., [0, 1] -> [1,
-//   0]), then after calling this function, the last two strides will be
-//   swapped:
-//     Original strides: [s0, s1, s2, s3]
-//     After permutation: [s0, s1, s3, s2]
+//   For a memref of rank 3 with strides `[s0, s1, s2]` read into a rank-2
+//   vector through `(d0, d1, d2) -> (d2, d1)`, the result is `[s2, s1]`.
 //
-static void adjustStridesForPermutation(AffineMap permMap,
-                                        SmallVectorImpl<Value> &strides) {
-
-  AffineMap invMap = inverseAndBroadcastProjectedPermutation(permMap);
-  SmallVector<unsigned> perms;
-  invMap.isPermutationOfMinorIdentityWithBroadcasting(perms);
-  SmallVector<int64_t> perms64(perms.begin(), perms.end());
-  strides = applyPermutation(strides, perms64);
+static SmallVector<Value> getStridesInVectorOrder(AffineMap permMap,
+                                                  ArrayRef<Value> strides) {
+  return llvm::map_to_vector(permMap.getResults(), [&](AffineExpr expr) {
+    return strides[cast<AffineDimExpr>(expr).getPosition()];
+  });
 }
 
 // Computes memory strides and a memref offset for vector transfer operations,
@@ -275,18 +262,14 @@ static Value computeOffsets(VectorTransferOpInterface xferOp,
     return stepOp;
   });
 
-  // Local offsets are indexed in vector order, so permute strides; the base
-  // offset below uses the original memref-order strides.
-  SmallVector<Value> permutedStrides(strides.begin(), strides.end());
-  adjustStridesForPermutation(xferOp.getPermutationMap(), permutedStrides);
+  SmallVector<Value> vectorStrides =
+      getStridesInVectorOrder(xferOp.getPermutationMap(), strides);
 
   // Multiply step vectors by corresponding strides
-  size_t memrefRank = permutedStrides.size();
   size_t vectorRank = vectorShape.size();
   SmallVector<Value> strideMultiplied;
   for (size_t i = 0; i < vectorRank; ++i) {
-    size_t memrefDim = memrefRank - vectorRank + i;
-    Value strideValue = permutedStrides[memrefDim];
+    Value strideValue = vectorStrides[i];
     auto mulType = dyn_cast<VectorType>(stepVectors[i].getType());
     auto bcastOp =
         vector::BroadcastOp::create(rewriter, loc, mulType, strideValue);

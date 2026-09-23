@@ -178,6 +178,32 @@ gpu.func @load_high_dim_transposed(%source: memref<2x2x64x128xf16>,
 }
 
 // -----
+// A permutation the nd block load cannot realize falls back to the scattered
+// load, which walks each vector dimension at the stride of the memref dimension
+// the map has it read: 1 for d2, 8192 for d0 and 128 for d1 here.
+gpu.module @xevm_module {
+gpu.func @load_rotated_dims(%source: memref<32x64x128xf32>,
+    %i: index, %j: index, %k: index) -> vector<2x4x8xf32> {
+  %c0 = arith.constant 0.0 : f32
+  %0 = vector.transfer_read %source[%i, %j, %k], %c0
+    {permutation_map = affine_map<(d0, d1, d2) -> (d2, d0, d1)>,
+    in_bounds = [true, true, true]} : memref<32x64x128xf32>, vector<2x4x8xf32>
+  gpu.return %0 : vector<2x4x8xf32>
+}
+
+// CHECK-LABEL:  @load_rotated_dims(
+// CHECK:        %[[STRIDE_D1:.+]] = arith.constant dense<128> : vector<8xindex>
+// CHECK:        %[[STRIDE_D0:.+]] = arith.constant dense<8192> : vector<4xindex>
+// CHECK:        %[[STEP_D2:.+]] = vector.step : vector<2xindex>
+// CHECK:        %[[STEP_D0:.+]] = vector.step : vector<4xindex>
+// CHECK:        %[[STEP_D1:.+]] = vector.step : vector<8xindex>
+// CHECK:        arith.muli %[[STEP_D0]], %[[STRIDE_D0]] : vector<4xindex>
+// CHECK:        arith.muli %[[STEP_D1]], %[[STRIDE_D1]] : vector<8xindex>
+// CHECK:        %[[VEC:.+]] = xegpu.load {{.*}} -> vector<2x4x8xf32>
+// CHECK:        return %[[VEC]]
+}
+
+// -----
 gpu.module @xevm_module {
 gpu.func @load_dynamic_source(%source: memref<?x?x?xf32>,
     %i: index, %j: index, %k: index) -> vector<8x16xf32> {
