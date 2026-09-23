@@ -909,23 +909,23 @@ public:
       mlir::Value amtValue = builder.getConstFP(loc, fpScalarType, amount);
       amtValue = cir::VecSplatOp::create(builder, loc, vecType, amtValue);
       return builder.createFAdd(loc, input, amtValue);
-    } else {
-      QualType type = e->getSubExpr()->getType();
-      // Another special case: half FP increment should be done via float.
-      if (type->isHalfType() && !cgf.getContext().getLangOpts().NativeHalfType)
-        input = builder.createFloatingCast(input, builder.getSingleTy());
-
-      auto fpInterface = mlir::cast<cir::FPTypeInterface>(input.getType());
-      auto amount = llvm::APFloat::getOne(fpInterface.getFloatSemantics(),
-                                          /*Negative=*/e->isDecrementOp());
-      mlir::Value amtValue = builder.getConstFP(loc, input.getType(), amount);
-      mlir::Value output = builder.createFAdd(loc, input, amtValue);
-
-      if (type->isHalfType() && !cgf.getContext().getLangOpts().NativeHalfType)
-        output = builder.createFloatingCast(output, builder.getFp16Ty());
-
-      return output;
     }
+
+    QualType type = e->getSubExpr()->getType();
+    // Another special case: half FP increment should be done via float.
+    if (type->isHalfType() && !cgf.getContext().getLangOpts().NativeHalfType)
+      input = builder.createFloatingCast(input, builder.getSingleTy());
+
+    auto fpInterface = mlir::cast<cir::FPTypeInterface>(input.getType());
+    auto amount = llvm::APFloat::getOne(fpInterface.getFloatSemantics(),
+                                        /*Negative=*/e->isDecrementOp());
+    mlir::Value amtValue = builder.getConstFP(loc, input.getType(), amount);
+    mlir::Value output = builder.createFAdd(loc, input, amtValue);
+
+    if (type->isHalfType() && !cgf.getContext().getLangOpts().NativeHalfType)
+      output = builder.createFloatingCast(output, builder.getFp16Ty());
+
+    return output;
   }
 
   mlir::Value VisitUnaryNot(const UnaryOperator *e) {
