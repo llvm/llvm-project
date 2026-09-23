@@ -948,3 +948,47 @@ struct GH199417_3 {
     // it would be better to print the original type.
   } a;                                 // c23-note {{field 'a' has type 'int' here}}
 };
+
+// An incomplete enumeration declared in a parameter list is not compatible with
+// a file scope enumeration of the same name; only complete tag types can be.
+void GH173477_1(enum GH173477_E1 e); // both-warning {{ISO C forbids forward references to 'enum' types}} \
+                                        both-warning {{declaration of 'enum GH173477_E1' will not be visible outside of this function}} \
+                                        both-note {{previous declaration is here}}
+enum GH173477_E1 { GH173477_A };
+void GH173477_1(enum GH173477_E1 e) {} // both-error {{conflicting types for 'GH173477_1'}}
+
+void GH173477_2(enum GH173477_E2 *e); // both-warning {{ISO C forbids forward references to 'enum' types}} \
+                                         both-warning {{declaration of 'enum GH173477_E2' will not be visible outside of this function}} \
+                                         both-note {{previous declaration is here}}
+enum GH173477_E2 { GH173477_B };
+void GH173477_2(enum GH173477_E2 *e) {} // both-error {{conflicting types for 'GH173477_2'}}
+
+// A complete one is compatible in C23.
+void GH173477_3(enum GH173477_E3 { GH173477_C } e); // c17-warning {{declaration of 'enum GH173477_E3' will not be visible outside of this function}} \
+                                                       c17-note {{previous declaration is here}}
+enum GH173477_E3 { GH173477_C };
+void GH173477_3(enum GH173477_E3 e) {} // c17-error {{conflicting types for 'GH173477_3'}}
+
+// An enumeration with a fixed underlying type is complete without a definition,
+// so it is compatible with one that is declared the same way, but not with a
+// definition or with a different underlying type.
+enum GH173477_E4 : int;
+void GH173477_4(enum GH173477_E4 e); // c17-note {{previous declaration is here}}
+void GH173477_4_test(void) {
+  enum GH173477_E4 : int;
+  void GH173477_4(enum GH173477_E4 e); // c17-error {{conflicting types for 'GH173477_4'}}
+}
+
+enum GH173477_E5 : int;
+void GH173477_5(enum GH173477_E5 e); // both-note {{previous declaration is here}}
+void GH173477_5_test(void) {
+  enum GH173477_E5 : int { GH173477_D };
+  void GH173477_5(enum GH173477_E5 e); // both-error {{conflicting types for 'GH173477_5'}}
+}
+
+enum GH173477_E6 : int;
+void GH173477_6(enum GH173477_E6 e); // both-note {{previous declaration is here}}
+void GH173477_6_test(void) {
+  enum GH173477_E6 : short;
+  void GH173477_6(enum GH173477_E6 e); // both-error {{conflicting types for 'GH173477_6'}}
+}
