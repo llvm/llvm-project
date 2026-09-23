@@ -19,7 +19,7 @@ typedef float __attribute__((coop_mat(SCOPE, 16, 16, USE_A))) MatX_t; // expecte
 
 #pragma OPENCL EXTENSION cl_khr_cooperative_matrix : enable
 
-typedef float __attribute__((coop_mat(SCOPE, 16, 16, USE_A))) MatA_t;
+typedef float __attribute__((coop_mat(SCOPE, 16, 16, USE_A))) MatA_t; // expected-note {{declared here}}
 typedef float __attribute__((coop_mat(SCOPE, 16, 16, USE_B))) MatB_t;
 typedef int   __attribute__((coop_mat(SCOPE, 16, 16, USE_C))) MatC_int_t;
 
@@ -65,3 +65,8 @@ kernel void test_bad_assignment(__global float *ptr) {
 	bad = coop_mat_load(ptr, ROW_MAJOR, 16); // expected-error {{builtin return value should be assigned to cooperative matrix type variable}}
     (void)bad;
 }
+
+// ---------------------------------------------------------------------------
+// 5. Kernel parameter cannot be of cooperative matrix type.
+// ---------------------------------------------------------------------------
+kernel void test_bad_kernel_param(MatA_t a) {} // expected-error {{cannot be used as the type of a kernel parameter}}
