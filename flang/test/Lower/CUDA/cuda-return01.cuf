@@ -1,4 +1,5 @@
 ! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+! RUN: bbc -emit-hlfir -fcuda %s -o - | fir-opt --cuf-convert-late | FileCheck %s --check-prefix=LATE
 
 ! Check if finalization works with a return statement
 
@@ -16,6 +17,15 @@ end
 ! CHECK: return
 ! CHECK: }
 
+! LATE: func.func @_QPsub1()
+! LATE: %[[DECL:.*]]:2 = hlfir.declare
+! LATE: %[[SUB1_ACTIVE:.*]] = fir.call @_FortranACUFDeviceIsActive() : () -> i1
+! LATE-NEXT: fir.if %[[SUB1_ACTIVE]] {
+! LATE: cuf.free %[[DECL]]#0 : !fir.ref<!fir.array<10xi32>>{{.*}}
+! LATE-NEXT: }
+! LATE: return
+! LATE: }
+
 subroutine sub2
   integer, device, allocatable :: a(:)
   return
@@ -28,6 +38,14 @@ end
 ! CHECK: cuf.deallocate
 ! CHECK: cuf.free{{.*}}
 ! CHECK-NEXT: }
+
+! LATE-LABEL: func.func @_QPsub2()
+! LATE: %[[SUB2_ACTIVE:.*]] = fir.call @_FortranACUFDeviceIsActive() : () -> i1
+! LATE-NEXT: fir.if %[[SUB2_ACTIVE]] {
+! LATE: fir.if
+! LATE: cuf.deallocate
+! LATE: cuf.free{{.*}}
+! LATE-NEXT: }
 
 program main
   integer, allocatable, device :: a(:)
@@ -49,3 +67,14 @@ end
 ! CHECK: cuf.free{{.*}}
 ! CHECK-NEXT: }
 ! CHECK-NEXT: return
+
+! LATE-LABEL: func.func @_QQmain() attributes {fir.bindc_name = "MAIN"}
+! LATE: %[[PTR:.*]]:2 = hlfir.declare %{{.*}} {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFEp"}
+! LATE: %[[ACTIVE:.*]] = fir.call @_FortranACUFDeviceIsActive() : () -> i1
+! LATE-NEXT: fir.if %[[ACTIVE]] {
+! LATE-NEXT: fir.call @_QPcudadevicesynchronize()
+! LATE-NEXT: cuf.free %[[PTR]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>{{.*}}
+! LATE: cuf.deallocate
+! LATE: cuf.free{{.*}}
+! LATE-NEXT: }
+! LATE-NOT: cuf.device_is_active
