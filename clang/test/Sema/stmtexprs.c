@@ -15,4 +15,10 @@ struct S {
 void test_bitfield_promotion(struct S s) {
   _Static_assert(_Generic(+({ s.b; }), int: 1, unsigned: 2) == 1,
                  "bit-field in statement expression should be promoted");
+  _Static_assert(_Generic(+s.b, int: 1, unsigned: 2) == 1,
+                 "ordinary bit-field access should be promoted");
+  _Static_assert(_Generic(({ s.b; }), int: 1, unsigned: 2) == 2,
+                 "bit-field in statement expression without unary + should not be promoted");
+  _Static_assert(_Generic(s.b, int: 1, unsigned: 2) == 2,
+                 "ordinary bit-field access without unary + should not be promoted");
 }
