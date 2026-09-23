@@ -4,13 +4,12 @@
 Used to simulate a PDB whose public symbol records disagree with the
 executable's section table (as can happen with real-world PDBs).
 """
+
 import re
 import sys
 
 if len(sys.argv) != 4:
-    sys.exit(
-        "usage: corrupt-public-offset.py <yaml-file> <symbol-name> <new-offset>"
-    )
+    sys.exit("usage: corrupt-public-offset.py <yaml-file> <symbol-name> <new-offset>")
 
 yaml_path, symbol_name, new_offset = sys.argv[1:4]
 new_offset = int(new_offset, 0)
