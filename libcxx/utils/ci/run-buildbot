@@ -337,6 +337,7 @@ EOF
     "${MONOREPO_ROOT}/libcxx/utils/ci/lnt/run-benchmarks" \
         --dry-run -vv \
         --git-repo "${MONOREPO_ROOT}" \
+        --libcxx-installation "${INSTALL_DIR}" \
         --benchmark-commit HEAD \
         --test-suite-commit HEAD \
         --machine test-tools \
