@@ -364,6 +364,18 @@ static bool isMergePassthruOpcode(unsigned Opc) {
   case AArch64ISD::FSQRT_MERGE_PASSTHRU:
   case AArch64ISD::FRECPX_MERGE_PASSTHRU:
   case AArch64ISD::FABS_MERGE_PASSTHRU:
+  case AArch64ISD::STRICT_FCEIL_MERGE_PASSTHRU:
+  case AArch64ISD::STRICT_FFLOOR_MERGE_PASSTHRU:
+  case AArch64ISD::STRICT_FNEARBYINT_MERGE_PASSTHRU:
+  case AArch64ISD::STRICT_FP_EXTEND_MERGE_PASSTHRU:
+  case AArch64ISD::STRICT_FP_ROUND_MERGE_PASSTHRU:
+  case AArch64ISD::STRICT_FRINT_MERGE_PASSTHRU:
+  case AArch64ISD::STRICT_FROUND_MERGE_PASSTHRU:
+  case AArch64ISD::STRICT_FROUNDEVEN_MERGE_PASSTHRU:
+  case AArch64ISD::STRICT_FSQRT_MERGE_PASSTHRU:
+  case AArch64ISD::STRICT_FTRUNC_MERGE_PASSTHRU:
+  case AArch64ISD::STRICT_SINT_TO_FP_MERGE_PASSTHRU:
+  case AArch64ISD::STRICT_UINT_TO_FP_MERGE_PASSTHRU:
     return true;
   }
 }
@@ -458,7 +470,7 @@ extractPtrauthBlendDiscriminators(SDValue Disc, SelectionDAG *DAG) {
   // If there's no address discriminator, use NoRegister, which we'll later
   // replace with XZR, or directly use a Z variant of the inst. when available.
   if (!AddrDisc)
-    AddrDisc = DAG->getRegister(AArch64::NoRegister, MVT::i64);
+    AddrDisc = DAG->getRegister(Register(), MVT::i64);
 
   return std::make_tuple(
       DAG->getTargetConstant(ConstDiscN->getZExtValue(), DL, MVT::i64),
@@ -1016,6 +1028,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::RESET_FPMODE, MVT::Other, Custom);
 
   setOperationAction(ISD::ATOMIC_CMP_SWAP, MVT::i128, Custom);
+  for (MVT Ty : {MVT::f16, MVT::bf16, MVT::f32, MVT::f64})
+    setOperationAction(ISD::ATOMIC_LOAD_FSUB, Ty, Expand);
   if (!Subtarget->hasLSE() && !Subtarget->outlineAtomics()) {
     setOperationAction(ISD::ATOMIC_LOAD_SUB, MVT::i32, LibCall);
     setOperationAction(ISD::ATOMIC_LOAD_SUB, MVT::i64, LibCall);
@@ -1435,6 +1449,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::VECREDUCE_OR, MVT::v2i64, Custom);
     setOperationAction(ISD::VECREDUCE_XOR, MVT::v2i64, Custom);
 
+    for (MVT VT : {MVT::v4i16, MVT::v8i16, MVT::v2i32, MVT::v4i32})
+      setOperationAction(ISD::SMULFIXSAT, VT, Custom);
+
     setOperationAction(ISD::ANY_EXTEND, MVT::v4i32, Legal);
     setTruncStoreAction(MVT::v2i32, MVT::v2i16, Expand);
     // Likewise, narrowing and extending vector loads/stores aren't handled
@@ -1531,6 +1548,26 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     for (MVT VT : { MVT::v16f16, MVT::v8f32, MVT::v4f64 })
       setOperationAction(ISD::FADD, VT, Custom);
 
+    // Two-way integer ``pure'' add reductions lower to a [SU]ADALP.
+    {
+      static const unsigned MLAOps[] = {ISD::PARTIAL_REDUCE_SMLA,
+                                        ISD::PARTIAL_REDUCE_UMLA};
+      setPartialReduceMLAAction(MLAOps, MVT::v4i16, MVT::v8i8, Custom);
+      setPartialReduceMLAAction(MLAOps, MVT::v2i32, MVT::v4i16, Custom);
+      setPartialReduceMLAAction(MLAOps, MVT::v1i64, MVT::v2i32, Custom);
+      setPartialReduceMLAAction(MLAOps, MVT::v8i16, MVT::v16i8, Custom);
+      setPartialReduceMLAAction(MLAOps, MVT::v4i32, MVT::v8i16, Custom);
+      setPartialReduceMLAAction(MLAOps, MVT::v2i64, MVT::v4i32, Custom);
+
+      // Wider reductions are built from a ladder of the rungs above.
+      setPartialReduceMLAAction(MLAOps, MVT::v2i32, MVT::v8i8, Custom);
+      setPartialReduceMLAAction(MLAOps, MVT::v1i64, MVT::v4i16, Custom);
+      setPartialReduceMLAAction(MLAOps, MVT::v1i64, MVT::v8i8, Custom);
+      setPartialReduceMLAAction(MLAOps, MVT::v4i32, MVT::v16i8, Custom);
+      setPartialReduceMLAAction(MLAOps, MVT::v2i64, MVT::v8i16, Custom);
+      setPartialReduceMLAAction(MLAOps, MVT::v2i64, MVT::v16i8, Custom);
+    }
+
     if (Subtarget->hasDotProd()) {
       static const unsigned MLAOps[] = {ISD::PARTIAL_REDUCE_SMLA,
                                         ISD::PARTIAL_REDUCE_UMLA};
@@ -1609,9 +1646,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::TRUNCATE_USAT_U, VT, Legal);
   }
 
-  if (Subtarget->hasSME()) {
-    setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::Other, Custom);
-  }
+  setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::Other, Custom);
 
   // FIXME: Move lowering for more nodes here if those are common between
   // SVE and SME.
@@ -1620,14 +1655,24 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
          {MVT::nxv16i1, MVT::nxv8i1, MVT::nxv4i1, MVT::nxv2i1, MVT::nxv1i1}) {
       setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
-      setOperationAction(ISD::VECTOR_DEINTERLEAVE, VT, Custom);
-      setOperationAction(ISD::VECTOR_INTERLEAVE, VT, Custom);
+      setVectorInterleaveAction(
+          {ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE}, {2, 3}, VT,
+          Custom);
     }
     for (auto VT : {MVT::nxv16i1, MVT::nxv8i1, MVT::nxv4i1, MVT::nxv2i1}) {
       setOperationAction({ISD::CTTZ_ELTS, ISD::CTTZ_ELTS_ZERO_POISON}, VT,
                          Custom);
       setOperationAction(ISD::VECTOR_FIND_LAST_ACTIVE, VT, Legal);
       setOperationAction(ISD::GET_ACTIVE_LANE_MASK, VT, Legal);
+    }
+
+    if (Subtarget->hasSVE2() && Subtarget->isSVEAvailable()) {
+      for (MVT VT : {MVT::nxv16i1, MVT::nxv8i1})
+        setOperationAction(ISD::VECTOR_MATCH, VT, Custom);
+
+      for (MVT VT :
+           {MVT::v16i1, MVT::v8i1, MVT::v16i8, MVT::v8i8, MVT::v3i8, MVT::v4i8})
+        setOperationAction(ISD::VECTOR_MATCH, VT, Custom);
     }
 
     setOperationAction(ISD::GET_ACTIVE_LANE_MASK, MVT::nxv1i1, Custom);
@@ -1651,10 +1696,10 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::CTPOP, VT, Custom);
       setOperationAction(ISD::CTTZ, VT, Custom);
       setOperationAction(ISD::INSERT_SUBVECTOR, VT, Custom);
-      setOperationAction(ISD::UINT_TO_FP, VT, Custom);
-      setOperationAction(ISD::SINT_TO_FP, VT, Custom);
-      setOperationAction(ISD::FP_TO_UINT, VT, Custom);
-      setOperationAction(ISD::FP_TO_SINT, VT, Custom);
+      setOperationAction({ISD::UINT_TO_FP, ISD::STRICT_UINT_TO_FP}, VT, Custom);
+      setOperationAction({ISD::SINT_TO_FP, ISD::STRICT_SINT_TO_FP}, VT, Custom);
+      setOperationAction({ISD::FP_TO_UINT, ISD::STRICT_FP_TO_UINT}, VT, Custom);
+      setOperationAction({ISD::FP_TO_SINT, ISD::STRICT_FP_TO_SINT}, VT, Custom);
       setOperationAction(ISD::FP_TO_UINT_SAT, VT, Custom);
       setOperationAction(ISD::FP_TO_SINT_SAT, VT, Custom);
       setOperationAction(ISD::MLOAD, VT, Custom);
@@ -1688,8 +1733,13 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VECREDUCE_UMAX, VT, Custom);
       setOperationAction(ISD::VECREDUCE_SMIN, VT, Custom);
       setOperationAction(ISD::VECREDUCE_SMAX, VT, Custom);
-      setOperationAction(ISD::VECTOR_DEINTERLEAVE, VT, Custom);
-      setOperationAction(ISD::VECTOR_INTERLEAVE, VT, Custom);
+      setVectorInterleaveAction(
+          {ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE}, {2, 3}, VT,
+          Custom);
+      if (Subtarget->hasSME2() && Subtarget->isStreaming())
+        setVectorInterleaveAction(
+            {ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE}, {4}, VT,
+            Custom);
 
       setOperationAction(ISD::UMUL_LOHI, VT, Expand);
       setOperationAction(ISD::SMUL_LOHI, VT, Expand);
@@ -1826,33 +1876,33 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::SPLAT_VECTOR, VT, Legal);
       setOperationAction(ISD::SELECT, VT, Custom);
       setOperationAction(ISD::SETCC, VT, Custom);
-      setOperationAction(ISD::FADD, VT, Custom);
+      setOperationAction({ISD::FADD, ISD::STRICT_FADD}, VT, Custom);
       setOperationAction(ISD::FCANONICALIZE, VT, Custom);
       setOperationAction(ISD::FCOPYSIGN, VT, Custom);
-      setOperationAction(ISD::FDIV, VT, Custom);
-      setOperationAction(ISD::FMA, VT, Custom);
-      setOperationAction(ISD::FMAXIMUM, VT, Custom);
-      setOperationAction(ISD::FMAXNUM, VT, Custom);
+      setOperationAction({ISD::FDIV, ISD::STRICT_FDIV}, VT, Custom);
+      setOperationAction({ISD::FMA, ISD::STRICT_FMA}, VT, Custom);
+      setOperationAction({ISD::FMAXIMUM, ISD::STRICT_FMAXIMUM}, VT, Custom);
+      setOperationAction({ISD::FMAXNUM, ISD::STRICT_FMAXNUM}, VT, Custom);
       setOperationAction(ISD::FMAXNUM_IEEE, VT, Custom);
-      setOperationAction(ISD::FMINIMUM, VT, Custom);
-      setOperationAction(ISD::FMINNUM, VT, Custom);
+      setOperationAction({ISD::FMINIMUM, ISD::STRICT_FMINIMUM}, VT, Custom);
+      setOperationAction({ISD::FMINNUM, ISD::STRICT_FMINNUM}, VT, Custom);
       setOperationAction(ISD::FMINNUM_IEEE, VT, Custom);
-      setOperationAction(ISD::FMUL, VT, Custom);
+      setOperationAction({ISD::FMUL, ISD::STRICT_FMUL}, VT, Custom);
       setOperationAction(ISD::FNEG, VT, Custom);
-      setOperationAction(ISD::FSUB, VT, Custom);
-      setOperationAction(ISD::FCEIL, VT, Custom);
-      setOperationAction(ISD::FFLOOR, VT, Custom);
-      setOperationAction(ISD::FNEARBYINT, VT, Custom);
-      setOperationAction(ISD::FRINT, VT, Custom);
+      setOperationAction({ISD::FSUB, ISD::STRICT_FSUB}, VT, Custom);
+      setOperationAction({ISD::FCEIL, ISD::STRICT_FCEIL}, VT, Custom);
+      setOperationAction({ISD::FFLOOR, ISD::STRICT_FFLOOR}, VT, Custom);
+      setOperationAction({ISD::FNEARBYINT, ISD::STRICT_FNEARBYINT}, VT, Custom);
+      setOperationAction({ISD::FRINT, ISD::STRICT_FRINT}, VT, Custom);
       setOperationAction(ISD::LRINT, VT, Custom);
       setOperationAction(ISD::LLRINT, VT, Custom);
-      setOperationAction(ISD::FROUND, VT, Custom);
-      setOperationAction(ISD::FROUNDEVEN, VT, Custom);
-      setOperationAction(ISD::FTRUNC, VT, Custom);
-      setOperationAction(ISD::FSQRT, VT, Custom);
+      setOperationAction({ISD::FROUND, ISD::STRICT_FROUND}, VT, Custom);
+      setOperationAction({ISD::FROUNDEVEN, ISD::STRICT_FROUNDEVEN}, VT, Custom);
+      setOperationAction({ISD::FTRUNC, ISD::STRICT_FTRUNC}, VT, Custom);
+      setOperationAction({ISD::FSQRT, ISD::STRICT_FSQRT}, VT, Custom);
       setOperationAction(ISD::FABS, VT, Custom);
-      setOperationAction(ISD::FP_EXTEND, VT, Custom);
-      setOperationAction(ISD::FP_ROUND, VT, Custom);
+      setOperationAction({ISD::FP_EXTEND, ISD::STRICT_FP_EXTEND}, VT, Custom);
+      setOperationAction({ISD::FP_ROUND, ISD::STRICT_FP_ROUND}, VT, Custom);
       setOperationAction(ISD::VECREDUCE_FADD, VT, Custom);
       setOperationAction(ISD::VECREDUCE_FMAX, VT, Custom);
       setOperationAction(ISD::VECREDUCE_FMIN, VT, Custom);
@@ -1861,31 +1911,47 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VECREDUCE_FMUL, VT, Custom);
       setOperationAction(ISD::VECTOR_SPLICE_LEFT, VT, Custom);
       setOperationAction(ISD::VECTOR_SPLICE_RIGHT, VT, Custom);
-      setOperationAction(ISD::VECTOR_DEINTERLEAVE, VT, Custom);
-      setOperationAction(ISD::VECTOR_INTERLEAVE, VT, Custom);
+      setVectorInterleaveAction(
+          {ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE}, {2, 3}, VT,
+          Custom);
+      if (Subtarget->hasSME2() && Subtarget->isStreaming())
+        setVectorInterleaveAction(
+            {ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE}, {4}, VT,
+            Custom);
 
       setOperationAction(ISD::SELECT_CC, VT, Expand);
-      setOperationAction(ISD::FREM, VT, Expand);
-      setOperationAction(ISD::FPOW, VT, Expand);
-      setOperationAction(ISD::FPOWI, VT, Expand);
+      setOperationAction({ISD::FREM, ISD::STRICT_FREM}, VT, Expand);
+      setOperationAction({ISD::FPOW, ISD::STRICT_FPOW}, VT, Expand);
+      setOperationAction({ISD::FPOWI, ISD::STRICT_FPOWI}, VT, Expand);
       setOperationAction(ISD::FCBRT, VT, Expand);
-      setOperationAction(ISD::FCOS, VT, Expand);
-      setOperationAction(ISD::FSIN, VT, Expand);
+      setOperationAction({ISD::FCOS, ISD::STRICT_FCOS}, VT, Expand);
+      setOperationAction({ISD::FSIN, ISD::STRICT_FSIN}, VT, Expand);
       setOperationAction(ISD::FSINCOS, VT, Expand);
-      setOperationAction(ISD::FTAN, VT, Expand);
-      setOperationAction(ISD::FACOS, VT, Expand);
-      setOperationAction(ISD::FASIN, VT, Expand);
-      setOperationAction(ISD::FATAN, VT, Expand);
-      setOperationAction(ISD::FATAN2, VT, Expand);
-      setOperationAction(ISD::FCOSH, VT, Expand);
-      setOperationAction(ISD::FSINH, VT, Expand);
-      setOperationAction(ISD::FTANH, VT, Expand);
-      setOperationAction(ISD::FEXP, VT, Expand);
-      setOperationAction(ISD::FEXP2, VT, Expand);
+      setOperationAction({ISD::FTAN, ISD::STRICT_FTAN}, VT, Expand);
+      setOperationAction({ISD::FACOS, ISD::STRICT_FACOS}, VT, Expand);
+      setOperationAction({ISD::FASIN, ISD::STRICT_FASIN}, VT, Expand);
+      setOperationAction({ISD::FATAN, ISD::STRICT_FATAN}, VT, Expand);
+      setOperationAction({ISD::FATAN2, ISD::STRICT_FATAN2}, VT, Expand);
+      setOperationAction({ISD::FCOSH, ISD::STRICT_FCOSH}, VT, Expand);
+      setOperationAction({ISD::FSINH, ISD::STRICT_FSINH}, VT, Expand);
+      setOperationAction({ISD::FTANH, ISD::STRICT_FTANH}, VT, Expand);
+      setOperationAction({ISD::FEXP, ISD::STRICT_FEXP}, VT, Expand);
+      setOperationAction({ISD::FEXP2, ISD::STRICT_FEXP2}, VT, Expand);
       setOperationAction(ISD::FEXP10, VT, Expand);
-      setOperationAction(ISD::FLOG, VT, Expand);
-      setOperationAction(ISD::FLOG2, VT, Expand);
-      setOperationAction(ISD::FLOG10, VT, Expand);
+      setOperationAction({ISD::FLOG, ISD::STRICT_FLOG}, VT, Expand);
+      setOperationAction({ISD::FLOG2, ISD::STRICT_FLOG2}, VT, Expand);
+      setOperationAction({ISD::FLOG10, ISD::STRICT_FLOG10}, VT, Expand);
+
+      // TODO: These require custom lowering.
+      setOperationAction(ISD::STRICT_FLDEXP, VT, Expand);
+      setOperationAction(ISD::STRICT_PSEUDO_FMIN, VT, Expand);
+      setOperationAction(ISD::STRICT_PSEUDO_FMAX, VT, Expand);
+      setOperationAction(ISD::STRICT_LROUND, VT, Expand);
+      setOperationAction(ISD::STRICT_LLROUND, VT, Expand);
+      setOperationAction(ISD::STRICT_LRINT, VT, Expand);
+      setOperationAction(ISD::STRICT_LLRINT, VT, Expand);
+      setOperationAction(ISD::STRICT_FSETCC, VT, Expand);
+      setOperationAction(ISD::STRICT_FSETCCS, VT, Expand);
 
       setCondCodeAction(ISD::SETO, VT, Expand);
       setCondCodeAction(ISD::SETOLT, VT, Expand);
@@ -1913,8 +1979,13 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::SELECT, VT, Custom);
       setOperationAction(ISD::SELECT_CC, VT, Expand);
       setOperationAction(ISD::SPLAT_VECTOR, VT, Legal);
-      setOperationAction(ISD::VECTOR_DEINTERLEAVE, VT, Custom);
-      setOperationAction(ISD::VECTOR_INTERLEAVE, VT, Custom);
+      setVectorInterleaveAction(
+          {ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE}, {2, 3}, VT,
+          Custom);
+      if (Subtarget->hasSME2() && Subtarget->isStreaming())
+        setVectorInterleaveAction(
+            {ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE}, {4}, VT,
+            Custom);
       setOperationAction(ISD::VECTOR_SPLICE_LEFT, VT, Custom);
       setOperationAction(ISD::VECTOR_SPLICE_RIGHT, VT, Custom);
     }
@@ -2073,9 +2144,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::VSCALE, MVT::i32, Custom);
 
     for (auto VT : {MVT::v16i1, MVT::v8i1, MVT::v4i1, MVT::v2i1})
-      setOperationAction(
-          {ISD::INTRINSIC_WO_CHAIN, ISD::CTTZ_ELTS, ISD::CTTZ_ELTS_ZERO_POISON},
-          VT, Custom);
+      setOperationAction({ISD::INTRINSIC_WO_CHAIN, ISD::CTTZ_ELTS,
+                          ISD::CTTZ_ELTS_ZERO_POISON, ISD::EXTRACT_SUBVECTOR},
+                         VT, Custom);
 
     // Without SubReg Liveness the multi-vector instructions can introduce
     // unnecessary COPY and/or MOVPFRX instructions.
@@ -2166,6 +2237,67 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::CLMUL, MVT::nxv2i64, Custom);
   }
 
+  if (Subtarget->isSVEAvailable() ||
+      (Subtarget->isSVEorStreamingSVEAvailable() && Subtarget->hasSME2p2())) {
+    // We can lower types that have <vscale x {2|4}> elements to compact.
+    for (auto VT :
+         {MVT::nxv4i32, MVT::nxv2i64, MVT::nxv2f32, MVT::nxv4f32, MVT::nxv2f64})
+      setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
+    for (auto VT : {MVT::nxv2i8, MVT::nxv2i16, MVT::nxv2i32, MVT::nxv2i64,
+                    MVT::nxv2f32, MVT::nxv2f64, MVT::nxv4i8, MVT::nxv4i16,
+                    MVT::nxv4i32, MVT::nxv4f32}) {
+      // Use a custom lowering for masked stores that could be a supported
+      // compressing store. Note: These types still use the normal (Legal)
+      // lowering for non-compressing masked stores.
+      setOperationAction(ISD::MSTORE, VT, Custom);
+    }
+
+    // If we have SVE, we can use SVE logic for legal NEON vectors in the lowest
+    // bits of the SVE register.
+    for (auto VT : {MVT::v2i32, MVT::v4i32, MVT::v2i64, MVT::v2f32, MVT::v4f32,
+                    MVT::v2f64}) {
+      setOperationAction(ISD::MSTORE, VT, Custom);
+      setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
+    }
+
+    // Promote nxv4<f16|bf16> to nxv4i32.
+    setOperationPromotedToType(ISD::VECTOR_COMPRESS, MVT::nxv4bf16,
+                               MVT::nxv4i16);
+    setOperationPromotedToType(ISD::VECTOR_COMPRESS, MVT::nxv4f16,
+                               MVT::nxv4i16);
+    setOperationPromotedToType(ISD::VECTOR_COMPRESS, MVT::nxv4i16,
+                               MVT::nxv4i32);
+
+    // Promote nxv2<f16|bf16> to nxv2i64.
+    setOperationPromotedToType(ISD::VECTOR_COMPRESS, MVT::nxv2bf16,
+                               MVT::nxv2i16);
+    setOperationPromotedToType(ISD::VECTOR_COMPRESS, MVT::nxv2f16,
+                               MVT::nxv2i16);
+    setOperationPromotedToType(ISD::VECTOR_COMPRESS, MVT::nxv2i16,
+                               MVT::nxv2i64);
+
+    if (Subtarget->hasSVE2p2() || Subtarget->hasSME2p2()) {
+      // With +sve2p2/+sme2p2 the full range of vector types are supported.
+      for (auto VT :
+           {MVT::nxv16i8, MVT::nxv8i16, MVT::nxv8f16, MVT::nxv8bf16}) {
+        // Use custom lowering for MSTORE so we can handle compressstore (using
+        // VECTOR_COMPRESS).
+        setOperationAction(ISD::MSTORE, VT, Custom);
+        setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
+      }
+
+      for (auto VT : {MVT::v8i8, MVT::v16i8, MVT::v4i16, MVT::v8i16, MVT::v4f16,
+                      MVT::v8f16, MVT::v4bf16, MVT::v8bf16})
+        setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
+    } else {
+      // Promote v4i16/f16 to v4i32/f32 as the SVE container for v4i16 is nxv8,
+      // which is not supported with for compact (with only +sve).
+      setOperationPromotedToType(ISD::VECTOR_COMPRESS, MVT::v4bf16, MVT::v4i16);
+      setOperationPromotedToType(ISD::VECTOR_COMPRESS, MVT::v4f16, MVT::v4i16);
+      setOperationPromotedToType(ISD::VECTOR_COMPRESS, MVT::v4i16, MVT::v4i32);
+    }
+  }
+
   // Handle non-aliasing elements mask
   if (Subtarget->hasSVE2() ||
       (Subtarget->hasSME() && Subtarget->isStreaming())) {
@@ -2198,32 +2330,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
                     MVT::nxv4f32, MVT::nxv2f64, MVT::v4f16, MVT::v8f16,
                     MVT::v2f32, MVT::v4f32, MVT::v2f64})
       setOperationAction(ISD::VECREDUCE_SEQ_FADD, VT, Custom);
-
-    // We can lower types that have <vscale x {2|4}> elements to compact.
-    for (auto VT :
-         {MVT::nxv4i32, MVT::nxv2i64, MVT::nxv2f32, MVT::nxv4f32, MVT::nxv2f64})
-      setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
-
-    // If we have SVE, we can use SVE logic for legal NEON vectors in the lowest
-    // bits of the SVE register.
-    for (auto VT : {MVT::v2i32, MVT::v4i32, MVT::v2i64, MVT::v2f32, MVT::v4f32,
-                    MVT::v2f64})
-      setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
-
-    // Promote v4i16/f16 to v4i32/f32 as the SVE container for v4i16 is nxv8,
-    // which is not supported with for compact (with only +sve).
-    setOperationPromotedToType(ISD::VECTOR_COMPRESS, MVT::v4bf16, MVT::v4i16);
-    setOperationPromotedToType(ISD::VECTOR_COMPRESS, MVT::v4f16, MVT::v4i16);
-    setOperationPromotedToType(ISD::VECTOR_COMPRESS, MVT::v4i16, MVT::v4i32);
-
-    for (auto VT : {MVT::nxv2i8, MVT::nxv2i16, MVT::nxv2i32, MVT::nxv2i64,
-                    MVT::nxv2f32, MVT::nxv2f64, MVT::nxv4i8, MVT::nxv4i16,
-                    MVT::nxv4i32, MVT::nxv4f32}) {
-      // Use a custom lowering for masked stores that could be a supported
-      // compressing store. Note: These types still use the normal (Legal)
-      // lowering for non-compressing masked stores.
-      setOperationAction(ISD::MSTORE, VT, Custom);
-    }
 
     // Histcnt is SVE2 only
     if (Subtarget->hasSVE2()) {
@@ -2327,8 +2433,8 @@ void AArch64TargetLowering::addTypeForNEON(MVT VT) {
   setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Custom);
   setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
   setOperationAction(ISD::ZERO_EXTEND_VECTOR_INREG, VT, Custom);
-  setOperationAction(ISD::VECTOR_DEINTERLEAVE, VT, Custom);
-  setOperationAction(ISD::VECTOR_INTERLEAVE, VT, Custom);
+  setVectorInterleaveAction({ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE},
+                            {2, 3}, VT, Custom);
   setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
   setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
   setOperationAction(ISD::SRA, VT, Custom);
@@ -2403,6 +2509,10 @@ void AArch64TargetLowering::addTypeForNEON(MVT VT) {
   // When little-endian we can use ordinary d and q register loads/stores for
   // vector types, but when big-endian we need to use structure load/store which
   // only allow post-index addressing.
+  // With +strict-align, we also need to use LD1/ST1 when the alignment is
+  // less than the vector size, but we can still use LDR/STR for more-aligned
+  // accesses, so these are marked as legal here, and the invalid cases are
+  // rejected in getIndexedAddressParts.
   if (Subtarget->isLittleEndian()) {
     for (unsigned im = (unsigned)ISD::PRE_INC;
          im != (unsigned)ISD::LAST_INDEXED_MODE; ++im) {
@@ -2446,30 +2556,6 @@ bool AArch64TargetLowering::shouldExpandGetActiveLaneMask(EVT ResVT,
     return true;
 
   return false;
-}
-
-bool AArch64TargetLowering::shouldExpandCttzElements(EVT VT) const {
-  if (!Subtarget->isSVEorStreamingSVEAvailable())
-    return true;
-
-  // We can only use the BRKB + CNTP sequence with legal predicate types. We can
-  // also support fixed-width predicates.
-  return VT != MVT::nxv16i1 && VT != MVT::nxv8i1 && VT != MVT::nxv4i1 &&
-         VT != MVT::nxv2i1 && VT != MVT::v16i1 && VT != MVT::v8i1 &&
-         VT != MVT::v4i1 && VT != MVT::v2i1;
-}
-
-bool AArch64TargetLowering::shouldExpandVectorMatch(EVT VT,
-                                                    unsigned SearchSize) const {
-  // MATCH is SVE2 and only available in non-streaming mode.
-  if (!Subtarget->hasSVE2() || !Subtarget->isSVEAvailable())
-    return true;
-  // Furthermore, we can only use it for 8-bit or 16-bit elements.
-  if (VT == MVT::nxv8i16 || VT == MVT::v8i16)
-    return SearchSize != 8;
-  if (VT == MVT::nxv16i8 || VT == MVT::v16i8 || VT == MVT::v8i8)
-    return SearchSize != 8 && SearchSize != 16;
-  return true;
 }
 
 void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
@@ -3115,7 +3201,14 @@ bool AArch64TargetLowering::allowsMisalignedMemoryAccesses(
   // unaligned accesses are disabled). Without this, these will be forced to
   // have 16-byte alignment with +strict-align (and fail to lower as we don't
   // yet support TLI.expandUnalignedLoad() and TLI.expandUnalignedStore()).
-  if (VT.isScalableVector()) {
+  //
+  // For NEON in strict-align mode, we need to use LD1/ST1 when the alignment
+  // is less than the size of the vector, but greater than or equal to the size
+  // of the elements.
+  bool UseNEONLd1 = Subtarget->requiresStrictAlign() &&
+                    VT.isFixedLengthVector() &&
+                    (VT.getSizeInBits() == 64 || VT.getSizeInBits() == 128);
+  if (VT.isScalableVector() || UseNEONLd1) {
     unsigned ElementSizeBits = VT.getScalarSizeInBits();
     if (ElementSizeBits % 8 == 0 && Alignment >= Align(ElementSizeBits / 8))
       return true;
@@ -3542,7 +3635,7 @@ void AArch64TargetLowering::fixupPtrauthDiscriminator(
       // Small immediate integer constant passed via VReg.
       if (DiscMI->getOperand(1).isImm() &&
           isUInt<16>(DiscMI->getOperand(1).getImm())) {
-        AddrDisc = AArch64::NoRegister;
+        AddrDisc = Register();
         IntDisc = DiscMI->getOperand(1).getImm();
       }
       break;
@@ -3552,7 +3645,7 @@ void AArch64TargetLowering::fixupPtrauthDiscriminator(
   // For uniformity, always use NoRegister, as XZR is not necessarily contained
   // in the requested register class.
   if (AddrDisc == AArch64::XZR)
-    AddrDisc = AArch64::NoRegister;
+    AddrDisc = Register();
 
   // Make sure AddrDisc operand respects the register class imposed by MI.
   if (AddrDisc && MRI.getRegClass(AddrDisc) != AddrDiscRC) {
@@ -4866,10 +4959,16 @@ static void simplifySetCCIntoEq(ISD::CondCode &CC, SDValue &LHS, SDValue &RHS,
 SDValue AArch64TargetLowering::LowerFP_EXTEND(SDValue Op,
                                               SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
+  bool IsStrict = Op->isStrictFPOpcode();
+
   if (VT.isScalableVector()) {
     SDValue SrcVal = Op.getOperand(0);
 
     if (VT == MVT::nxv2f64 && SrcVal.getValueType() == MVT::nxv2bf16) {
+      // TODO: Missing support for bfloat strict-fp operations.
+      if (IsStrict)
+        return SDValue();
+
       // Break conversion in two with the first part converting to f32 and the
       // second using native f32->VT instructions.
       SDLoc DL(Op);
@@ -4877,13 +4976,15 @@ SDValue AArch64TargetLowering::LowerFP_EXTEND(SDValue Op,
                          DAG.getNode(ISD::FP_EXTEND, DL, MVT::nxv2f32, SrcVal));
     }
 
-    return LowerToPredicatedOp(Op, DAG, AArch64ISD::FP_EXTEND_MERGE_PASSTHRU);
+    return LowerToPredicatedOp(Op, DAG,
+                               IsStrict
+                                   ? AArch64ISD::STRICT_FP_EXTEND_MERGE_PASSTHRU
+                                   : AArch64ISD::FP_EXTEND_MERGE_PASSTHRU);
   }
 
   if (useSVEForFixedLengthVectorVT(VT, !Subtarget->isNeonAvailable()))
     return LowerFixedLengthFPExtendToSVE(Op, DAG);
 
-  bool IsStrict = Op->isStrictFPOpcode();
   SDValue Op0 = Op.getOperand(IsStrict ? 1 : 0);
   EVT Op0VT = Op0.getValueType();
   if (VT == MVT::f64) {
@@ -4894,9 +4995,9 @@ SDValue AArch64TargetLowering::LowerFP_EXTEND(SDValue Op,
     if (Op0VT == MVT::bf16 && IsStrict) {
       SDValue Ext1 =
           DAG.getNode(ISD::STRICT_FP_EXTEND, SDLoc(Op), {MVT::f32, MVT::Other},
-                      {Op0, Op.getOperand(0)});
+                      {Op.getOperand(0), Op0});
       return DAG.getNode(ISD::STRICT_FP_EXTEND, SDLoc(Op), {VT, MVT::Other},
-                         {Ext1, Ext1.getValue(1)});
+                         {Ext1.getValue(1), Ext1});
     }
     if (Op0VT == MVT::bf16)
       return DAG.getNode(ISD::FP_EXTEND, SDLoc(Op), VT,
@@ -4923,7 +5024,14 @@ SDValue AArch64TargetLowering::LowerFP_ROUND(SDValue Op,
       return Op;
 
     if (VT.getScalarType() != MVT::bf16)
-      return LowerToPredicatedOp(Op, DAG, AArch64ISD::FP_ROUND_MERGE_PASSTHRU);
+      return LowerToPredicatedOp(
+          Op, DAG,
+          IsStrict ? AArch64ISD::STRICT_FP_ROUND_MERGE_PASSTHRU
+                   : AArch64ISD::FP_ROUND_MERGE_PASSTHRU);
+
+    // TODO: Missing support for bfloat strict-fp operations.
+    if (IsStrict)
+      return SDValue();
 
     SDLoc DL(Op);
     constexpr EVT I32 = MVT::nxv4i32;
@@ -5060,9 +5168,6 @@ SDValue AArch64TargetLowering::LowerVectorFP_TO_INT(SDValue Op,
   bool IsStrict = Op->isStrictFPOpcode();
   EVT InVT = Op.getOperand(IsStrict ? 1 : 0).getValueType();
   EVT VT = Op.getValueType();
-
-  assert(!(IsStrict && VT.isScalableVector()) &&
-         "Unimplemented SVE support for STRICT_FP_to_INT!");
 
   // f16 conversions are promoted to f32 when full fp16 is not supported.
   if ((InVT.getVectorElementType() == MVT::f16 && !Subtarget->hasFullFP16()) ||
@@ -5380,11 +5485,8 @@ SDValue AArch64TargetLowering::LowerVectorINT_TO_FP(SDValue Op,
   unsigned Opc = Op.getOpcode();
   bool IsSigned = Opc == ISD::SINT_TO_FP || Opc == ISD::STRICT_SINT_TO_FP;
 
-  assert(!(IsStrict && VT.isScalableVector()) &&
-         "Unimplemented SVE support for ISD:::STRICT_INT_TO_FP!");
-
   // NOTE: i1->bf16 does not require promotion to f32.
-  if (VT.isScalableVector() && InVT.getVectorElementType() == MVT::i1) {
+  if (InVT.isScalableVectorOf(MVT::i1) && !IsStrict) {
     SDValue FalseVal = DAG.getConstantFP(0.0, DL, VT);
     SDValue TrueVal = IsSigned ? DAG.getConstantFP(-1.0, DL, VT)
                                : DAG.getConstantFP(1.0, DL, VT);
@@ -5397,8 +5499,7 @@ SDValue AArch64TargetLowering::LowerVectorINT_TO_FP(SDValue Op,
     if (IsStrict) {
       SDValue Val = DAG.getNode(Op.getOpcode(), DL, {F32, MVT::Other},
                                 {Op.getOperand(0), In});
-      return DAG.getNode(ISD::STRICT_FP_ROUND, DL,
-                         {Op.getValueType(), MVT::Other},
+      return DAG.getNode(ISD::STRICT_FP_ROUND, DL, Op->getVTList(),
                          {Val.getValue(1), Val.getValue(0),
                           DAG.getIntPtrConstant(0, DL, /*isTarget=*/true)});
     }
@@ -5412,8 +5513,11 @@ SDValue AArch64TargetLowering::LowerVectorINT_TO_FP(SDValue Op,
     if (VT == MVT::nxv8f32)
       return Op;
 
-    unsigned Opcode = IsSigned ? AArch64ISD::SINT_TO_FP_MERGE_PASSTHRU
-                               : AArch64ISD::UINT_TO_FP_MERGE_PASSTHRU;
+    unsigned Opcode =
+        IsStrict ? (IsSigned ? AArch64ISD::STRICT_SINT_TO_FP_MERGE_PASSTHRU
+                             : AArch64ISD::STRICT_UINT_TO_FP_MERGE_PASSTHRU)
+                 : (IsSigned ? AArch64ISD::SINT_TO_FP_MERGE_PASSTHRU
+                             : AArch64ISD::UINT_TO_FP_MERGE_PASSTHRU);
     return LowerToPredicatedOp(Op, DAG, Opcode);
   }
 
@@ -5473,9 +5577,7 @@ SDValue AArch64TargetLowering::LowerVectorINT_TO_FP(SDValue Op,
   // Use a scalar operation for conversions between single-element vectors of
   // the same size.
   if (VT.getVectorNumElements() == 1) {
-    SDValue Extract =
-        DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, InVT.getScalarType(), In,
-                    DAG.getConstant(0, DL, MVT::i64));
+    SDValue Extract = DAG.getExtractVectorElt(DL, InVT.getScalarType(), In, 0);
     EVT ScalarVT = VT.getScalarType();
     if (IsStrict)
       return DAG.getNode(Op.getOpcode(), DL, {ScalarVT, MVT::Other},
@@ -5753,8 +5855,7 @@ SDValue AArch64TargetLowering::LowerBITCAST(SDValue Op,
   Op = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v8i16, Src);
   Op = DAG.getNode(ISD::BITCAST, DL,
                    EVT::getVectorVT(*DAG.getContext(), OpVT, 8), Op);
-  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, OpVT, Op,
-                     DAG.getConstant(0, DL, MVT::i64));
+  return DAG.getExtractVectorElt(DL, OpVT, Op, 0);
 }
 
 // Returns lane if Op extracts from a two-element vector and lane is constant
@@ -6459,20 +6560,55 @@ static SDValue LowerSMELdrStr(SDValue N, SelectionDAG &DAG, bool IsLoad) {
 
 static SDValue LowerVectorMatch(SDValue Op, SelectionDAG &DAG) {
   SDLoc DL(Op);
-  SDValue ID =
-      DAG.getTargetConstant(Intrinsic::aarch64_sve_match, DL, MVT::i64);
-
-  auto Op1 = Op.getOperand(1);
-  auto Op2 = Op.getOperand(2);
-  auto Mask = Op.getOperand(3);
+  auto Op1 = Op.getOperand(0);
+  auto Op2 = Op.getOperand(1);
+  auto Mask = Op.getOperand(2);
 
   EVT Op1VT = Op1.getValueType();
   EVT Op2VT = Op2.getValueType();
   EVT ResVT = Op.getValueType();
 
-  assert((Op1VT.getVectorElementType() == MVT::i8 ||
-          Op1VT.getVectorElementType() == MVT::i16) &&
-         "Expected 8-bit or 16-bit characters.");
+  if ((Op2VT == MVT::v3i8 || Op2VT == MVT::v4i8)) {
+    SDValue Needle = Op2;
+    EVT NeedleVT = Op2VT;
+
+    if (NeedleVT == MVT::v3i8) {
+      // Pad a v3i8 needle to v4i8.
+      SDValue Pad = DAG.getExtractVectorElt(DL, MVT::i8, Needle, 0);
+      Needle = DAG.getInsertSubvector(DL, DAG.getPOISON(MVT::v4i8), Needle, 0);
+      Needle = DAG.getInsertVectorElt(DL, Needle, Pad, 3);
+    }
+
+    // Extend the v4i8 needle to v16i8.
+    Needle = DAG.getBitcast(MVT::v1i32, Needle);
+    Needle = DAG.getExtractVectorElt(DL, MVT::i32, Needle, 0);
+    Needle = DAG.getSplatVector(MVT::v4i32, DL, Needle);
+    Needle = DAG.getBitcast(MVT::v16i8, Needle);
+
+    return DAG.getNode(ISD::VECTOR_MATCH, DL, Op.getValueType(), Op1, Needle,
+                       Mask);
+  }
+
+  if (!DAG.getTargetLoweringInfo().isTypeLegal(ResVT) ||
+      !DAG.getTargetLoweringInfo().isTypeLegal(Op1VT))
+    return SDValue();
+
+  if (Op1VT.getVectorElementType() != MVT::i8 &&
+      Op1VT.getVectorElementType() != MVT::i16)
+    return SDValue();
+
+  if (Op2VT.getFixedSizeInBits() > 128) {
+    // For VLS SVE fixed-vector types > 128-bit can be legal. These still need
+    // splitting as `match` works per 128-bit segment.
+    auto [NeedleLo, NeedleHi] = DAG.SplitVector(Op2, DL);
+
+    SDValue MatchLo =
+        DAG.getNode(ISD::VECTOR_MATCH, DL, ResVT, Op1, NeedleLo, Mask);
+    SDValue MatchHi =
+        DAG.getNode(ISD::VECTOR_MATCH, DL, ResVT, Op1, NeedleHi, Mask);
+
+    return DAG.getNode(ISD::OR, DL, ResVT, MatchLo, MatchHi);
+  }
 
   // Scalable vector type used to wrap operands.
   // A single container is enough for both operands because ultimately the
@@ -6494,11 +6630,13 @@ static SDValue LowerVectorMatch(SDValue Op, SelectionDAG &DAG) {
     MVT Op2IntVT = MVT::getIntegerVT(Op2BitWidth);
     EVT Op2PromotedVT = getPackedSVEVectorVT(Op2IntVT);
     Op2 = DAG.getBitcast(MVT::getVectorVT(Op2IntVT, 1), Op2);
-    Op2 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, Op2IntVT, Op2,
-                      DAG.getConstant(0, DL, MVT::i64));
+    Op2 = DAG.getExtractVectorElt(DL, Op2IntVT, Op2, 0);
     Op2 = DAG.getSplatVector(Op2PromotedVT, DL, Op2);
     Op2 = DAG.getBitcast(OpContainerVT, Op2);
   }
+
+  SDValue ID =
+      DAG.getTargetConstant(Intrinsic::aarch64_sve_match, DL, MVT::i64);
 
   // If the result is scalable, we just need to carry out the MATCH.
   if (ResVT.isScalableVector())
@@ -6588,6 +6726,47 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   switch (IntNo) {
   default:
     return SDValue(); // Don't custom lower most intrinsics.
+  case Intrinsic::aarch64_svc:
+  case Intrinsic::aarch64_hvc: {
+    // The MSVC __svc/__hvc intrinsic takes the 16-bit instruction immediate as
+    // their first operand and four further operands passed in X0-X3 (an unused
+    // argument is passed as poison) and returns the value left in X0.  Matching
+    // MSVC, the instruction is not treated as clobbering the caller-saved
+    // registers; only X0 (the result) is defined.
+    SDValue Chain = Op.getOperand(0);
+    unsigned Imm = Op.getConstantOperandVal(2);
+
+    static const MCPhysReg ArgGPRs[] = {AArch64::X0, AArch64::X1, AArch64::X2,
+                                        AArch64::X3};
+
+    SDValue Glue;
+    SmallVector<SDValue, 4> RegOps;
+    for (unsigned I = 0; I < std::size(ArgGPRs); ++I) {
+      SDValue Arg = Op.getOperand(3 + I);
+      if (Arg.isUndef())
+        continue;
+      Chain = DAG.getCopyToReg(Chain, DL, ArgGPRs[I], Arg, Glue);
+      Glue = Chain.getValue(1);
+      RegOps.push_back(DAG.getRegister(ArgGPRs[I], MVT::i64));
+    }
+
+    SmallVector<SDValue, 8> Ops;
+    Ops.push_back(Chain);
+    Ops.push_back(DAG.getTargetConstant(Imm, DL, MVT::i32));
+    Ops.append(RegOps.begin(), RegOps.end());
+    if (Glue.getNode())
+      Ops.push_back(Glue);
+
+    unsigned Opc =
+        IntNo == Intrinsic::aarch64_svc ? AArch64ISD::SVC : AArch64ISD::HVC;
+    SDValue Node =
+        DAG.getNode(Opc, DL, DAG.getVTList(MVT::Other, MVT::Glue), Ops);
+    Chain = Node.getValue(0);
+    Glue = Node.getValue(1);
+
+    SDValue Result = DAG.getCopyFromReg(Chain, DL, AArch64::X0, MVT::i64, Glue);
+    return DAG.getMergeValues({Result.getValue(0), Result.getValue(1)}, DL);
+  }
   case Intrinsic::aarch64_mops_memset_tag: {
     auto Node = cast<MemIntrinsicSDNode>(Op.getNode());
     SDValue Chain = Node->getChain();
@@ -6670,8 +6849,7 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       SDValue Result =
           DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v1i64, Op.getOperand(1));
       Result = DAG.getNode(ISD::ABS, DL, MVT::v1i64, Result);
-      return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i64, Result,
-                         DAG.getConstant(0, DL, MVT::i64));
+      return DAG.getExtractVectorElt(DL, MVT::i64, Result, 0);
     } else if (Ty.isVector() && Ty.isInteger() && isTypeLegal(Ty)) {
       return DAG.getNode(ISD::ABS, DL, Ty, Op.getOperand(1));
     } else {
@@ -6947,13 +7125,12 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::aarch64_sve_dupq_lane:
     return LowerDUPQLane(Op, DAG);
   case Intrinsic::aarch64_sve_convert_from_svbool:
-    if (Op.getValueType() == MVT::aarch64svcount)
-      return DAG.getNode(ISD::BITCAST, DL, Op.getValueType(), Op.getOperand(1));
     return getSVEPredicateBitCast(Op.getValueType(), Op.getOperand(1), DAG);
   case Intrinsic::aarch64_sve_convert_to_svbool:
-    if (Op.getOperand(1).getValueType() == MVT::aarch64svcount)
-      return DAG.getNode(ISD::BITCAST, DL, MVT::nxv16i1, Op.getOperand(1));
     return getSVEPredicateBitCast(MVT::nxv16i1, Op.getOperand(1), DAG);
+  case Intrinsic::aarch64_sve_convert_from_svcount:
+  case Intrinsic::aarch64_sve_convert_to_svcount:
+    return DAG.getNode(ISD::BITCAST, DL, Op.getValueType(), Op.getOperand(1));
   case Intrinsic::aarch64_sve_fneg:
     return DAG.getNode(AArch64ISD::FNEG_MERGE_PASSTHRU, DL, Op.getValueType(),
                        Op.getOperand(2), Op.getOperand(3), Op.getOperand(1));
@@ -7200,9 +7377,6 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
         ADDLV, DAG.getConstant(0, DL, MVT::i64));
     return EXTRACT_VEC_ELT;
   }
-  case Intrinsic::experimental_vector_match: {
-    return LowerVectorMatch(Op, DAG);
-  }
   case Intrinsic::aarch64_cls:
   case Intrinsic::aarch64_cls64: {
     SDValue Res = DAG.getNode(ISD::CTLS, DL, Op.getOperand(1).getValueType(),
@@ -7217,6 +7391,15 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::aarch64_neon_pmul:
     return DAG.getNode(ISD::CLMUL, DL, Op.getValueType(), Op.getOperand(1),
                        Op.getOperand(2));
+  case Intrinsic::aarch64_sve_psel: {
+    if (Op.getValueType() != MVT::aarch64svcount)
+      return Op;
+    // Lower predicate-as-counter variants to reuse normal predicate isel.
+    SmallVector<SDValue> Ops(Op->ops());
+    Ops[1] = DAG.getNode(ISD::BITCAST, DL, MVT::nxv16i1, Ops[1]);
+    SDValue PSel = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::nxv16i1, Ops);
+    return DAG.getNode(ISD::BITCAST, DL, MVT::aarch64svcount, PSel);
+  }
   }
 }
 
@@ -7619,8 +7802,7 @@ static SDValue LowerTruncateVectorStore(SDLoc DL, StoreSDNode *ST,
   SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, MVT::v8i8, TruncExt);
 
   Trunc = DAG.getNode(ISD::BITCAST, DL, MVT::v2i32, Trunc);
-  SDValue ExtractTrunc = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32,
-                                     Trunc, DAG.getConstant(0, DL, MVT::i64));
+  SDValue ExtractTrunc = DAG.getExtractVectorElt(DL, MVT::i32, Trunc, 0);
 
   return DAG.getStore(ST->getChain(), DL, ExtractTrunc,
                       ST->getBasePtr(), ST->getMemOperand());
@@ -8021,6 +8203,14 @@ SDValue AArch64TargetLowering::LowerLOAD(SDValue Op,
   LoadSDNode *LoadNode = cast<LoadSDNode>(Op);
   assert(LoadNode && "Expected custom lowering of a load node");
 
+  // Extending loads of v2i8 -> v2i32/v2i64 are better lowered using SVE's
+  // extending load instructions as they otherwise require 2 or 3 instructions
+  // to promote.
+  bool OverrideNeon = !Subtarget->isNeonAvailable() ||
+                      cast<LoadSDNode>(Op)->getMemoryVT() == MVT::v2i8;
+  if (useSVEForFixedLengthVectorVT(Op.getValueType(), OverrideNeon))
+    return LowerFixedLengthVectorLoadToSVE(Op, DAG);
+
   if (SDValue Result = tryLowerSmallVectorExtLoad(LoadNode, DAG))
     return Result;
 
@@ -8064,9 +8254,6 @@ SDValue AArch64TargetLowering::LowerFixedLengthVectorCompressToSVE(
 SDValue AArch64TargetLowering::LowerVECTOR_COMPRESS(SDValue Op,
                                                     SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
-  if (!Subtarget->isSVEAvailable())
-    return SDValue();
-
   if (VT.isFixedLengthVector())
     return LowerFixedLengthVectorCompressToSVE(Op, DAG);
 
@@ -8097,6 +8284,21 @@ SDValue AArch64TargetLowering::LowerVECTOR_COMPRESS(SDValue Op,
 
   return DAG.getNode(ISD::VSELECT, DL, VT, CompressedMask, Compressed,
                      Passthru);
+}
+
+SDValue AArch64TargetLowering::LowerSMULFIXSAT(SDValue Op,
+                                               SelectionDAG &DAG) const {
+  EVT VT = Op.getValueType();
+  assert((VT == MVT::v4i16 || VT == MVT::v8i16 || VT == MVT::v2i32 ||
+          VT == MVT::v4i32) &&
+         "Unexpected type for SMULFIXSAT lowering");
+
+  unsigned Scale = Op.getConstantOperandVal(2);
+  if (Scale != VT.getScalarSizeInBits() - 1)
+    return SDValue();
+
+  return DAG.getNode(AArch64ISD::SQDMULH, SDLoc(Op), VT, Op.getOperand(0),
+                     Op.getOperand(1));
 }
 
 // Generate SUBS and CSEL for integer abs.
@@ -8195,19 +8397,15 @@ static SDValue LowerFLDEXP(SDValue Op, SelectionDAG &DAG) {
     break;
   }
 
-  SDValue Zero = DAG.getConstant(0, DL, MVT::i64);
-  SDValue VX =
-      DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, XVT, DAG.getPOISON(XVT), X, Zero);
-  SDValue VExp = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, ExpVT,
-                             DAG.getPOISON(ExpVT), Exp, Zero);
+  SDValue VX = DAG.getInsertVectorElt(DL, DAG.getPOISON(XVT), X, 0);
+  SDValue VExp = DAG.getInsertVectorElt(DL, DAG.getPOISON(ExpVT), Exp, 0);
   SDValue VPg = DAG.getConstant(
       1, DL, XVT.changeVectorElementType(*DAG.getContext(), MVT::i1));
   SDValue FScale = DAG.getNode(
       ISD::INTRINSIC_WO_CHAIN, DL, XVT,
       DAG.getTargetConstant(Intrinsic::aarch64_sve_fscale, DL, MVT::i64), VPg,
       VX, VExp);
-  SDValue Final =
-      DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, X.getValueType(), FScale, Zero);
+  SDValue Final = DAG.getExtractVectorElt(DL, X.getValueType(), FScale, 0);
   if (X.getValueType() != XScalarTy)
     Final = DAG.getNode(ISD::FP_ROUND, DL, XScalarTy, Final,
                         DAG.getIntPtrConstant(1, SDLoc(Op), /*isTarget=*/true));
@@ -8516,9 +8714,7 @@ SDValue AArch64TargetLowering::LowerCLMUL(SDValue Op, SelectionDAG &DAG) const {
   SDValue CLMUL = DAG.getNode(ISD::CLMUL, DL, CLMULTy, VecOp0, VecOp1);
   if (ExtractTy == MVT::i32)
     CLMUL = DAG.getNode(ISD::BITCAST, DL, MVT::v2i32, CLMUL);
-  SDValue ExtractVecElt =
-      DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ExtractTy, CLMUL,
-                  DAG.getTargetConstant(0, DL, MVT::i64));
+  SDValue ExtractVecElt = DAG.getExtractVectorElt(DL, ExtractTy, CLMUL, 0);
   if (ExtractTy != VT)
     ExtractVecElt = DAG.getNode(ISD::TRUNCATE, DL, VT, ExtractVecElt);
   return ExtractVecElt;
@@ -8595,32 +8791,66 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerXALUO(Op, DAG);
   case ISD::FADD:
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::FADD_PRED);
+  case ISD::STRICT_FADD:
+    return LowerToPredicatedOp(Op, DAG, AArch64ISD::STRICT_FADD_PRED);
   case ISD::FSUB:
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::FSUB_PRED);
+  case ISD::STRICT_FSUB:
+    return LowerToPredicatedOp(Op, DAG, AArch64ISD::STRICT_FSUB_PRED);
   case ISD::FMUL:
     return LowerFMUL(Op, DAG);
+  case ISD::STRICT_FMUL:
+    return LowerToPredicatedOp(Op, DAG, AArch64ISD::STRICT_FMUL_PRED);
   case ISD::FMA:
     return LowerFMA(Op, DAG);
+  case ISD::STRICT_FMA:
+    return LowerToPredicatedOp(Op, DAG, AArch64ISD::STRICT_FMA_PRED);
   case ISD::FDIV:
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::FDIV_PRED);
+  case ISD::STRICT_FDIV:
+    return LowerToPredicatedOp(Op, DAG, AArch64ISD::STRICT_FDIV_PRED);
   case ISD::FNEG:
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::FNEG_MERGE_PASSTHRU);
   case ISD::FCEIL:
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::FCEIL_MERGE_PASSTHRU);
+  case ISD::STRICT_FCEIL:
+    return LowerToPredicatedOp(Op, DAG,
+                               AArch64ISD::STRICT_FCEIL_MERGE_PASSTHRU);
   case ISD::FFLOOR:
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::FFLOOR_MERGE_PASSTHRU);
+  case ISD::STRICT_FFLOOR:
+    return LowerToPredicatedOp(Op, DAG,
+                               AArch64ISD::STRICT_FFLOOR_MERGE_PASSTHRU);
   case ISD::FNEARBYINT:
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::FNEARBYINT_MERGE_PASSTHRU);
+  case ISD::STRICT_FNEARBYINT:
+    return LowerToPredicatedOp(Op, DAG,
+                               AArch64ISD::STRICT_FNEARBYINT_MERGE_PASSTHRU);
   case ISD::FRINT:
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::FRINT_MERGE_PASSTHRU);
+  case ISD::STRICT_FRINT:
+    return LowerToPredicatedOp(Op, DAG,
+                               AArch64ISD::STRICT_FRINT_MERGE_PASSTHRU);
   case ISD::FROUND:
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::FROUND_MERGE_PASSTHRU);
+  case ISD::STRICT_FROUND:
+    return LowerToPredicatedOp(Op, DAG,
+                               AArch64ISD::STRICT_FROUND_MERGE_PASSTHRU);
   case ISD::FROUNDEVEN:
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::FROUNDEVEN_MERGE_PASSTHRU);
+  case ISD::STRICT_FROUNDEVEN:
+    return LowerToPredicatedOp(Op, DAG,
+                               AArch64ISD::STRICT_FROUNDEVEN_MERGE_PASSTHRU);
   case ISD::FTRUNC:
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::FTRUNC_MERGE_PASSTHRU);
+  case ISD::STRICT_FTRUNC:
+    return LowerToPredicatedOp(Op, DAG,
+                               AArch64ISD::STRICT_FTRUNC_MERGE_PASSTHRU);
   case ISD::FSQRT:
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::FSQRT_MERGE_PASSTHRU);
+  case ISD::STRICT_FSQRT:
+    return LowerToPredicatedOp(Op, DAG,
+                               AArch64ISD::STRICT_FSQRT_MERGE_PASSTHRU);
   case ISD::FABS:
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::FABS_MERGE_PASSTHRU);
   case ISD::FP_ROUND:
@@ -8785,9 +9015,6 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::MLOAD:
     return LowerMLOAD(Op, DAG);
   case ISD::LOAD:
-    if (useSVEForFixedLengthVectorVT(Op.getValueType(),
-                                     !Subtarget->isNeonAvailable()))
-      return LowerFixedLengthVectorLoadToSVE(Op, DAG);
     return LowerLOAD(Op, DAG);
   case ISD::ADD:
   case ISD::AND:
@@ -8795,18 +9022,28 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerToScalableOp(Op, DAG);
   case ISD::FMAXIMUM:
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::FMAX_PRED);
+  case ISD::STRICT_FMAXIMUM:
+    return LowerToPredicatedOp(Op, DAG, AArch64ISD::STRICT_FMAX_PRED);
   case ISD::FMAXNUM:
   case ISD::FMAXNUM_IEEE:
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::FMAXNM_PRED);
+  case ISD::STRICT_FMAXNUM:
+    return LowerToPredicatedOp(Op, DAG, AArch64ISD::STRICT_FMAXNM_PRED);
   case ISD::FMINIMUM:
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::FMIN_PRED);
+  case ISD::STRICT_FMINIMUM:
+    return LowerToPredicatedOp(Op, DAG, AArch64ISD::STRICT_FMIN_PRED);
   case ISD::FMINNUM:
   case ISD::FMINNUM_IEEE:
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::FMINNM_PRED);
+  case ISD::STRICT_FMINNUM:
+    return LowerToPredicatedOp(Op, DAG, AArch64ISD::STRICT_FMINNM_PRED);
   case ISD::VSELECT:
     return LowerFixedLengthVectorSelectToSVE(Op, DAG);
   case ISD::ABS:
     return LowerABS(Op, DAG);
+  case ISD::SMULFIXSAT:
+    return LowerSMULFIXSAT(Op, DAG);
   case ISD::ABDS:
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::ABDS_PRED);
   case ISD::ABDU:
@@ -8836,6 +9073,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerVECTOR_INTERLEAVE(Op, DAG);
   case ISD::GET_ACTIVE_LANE_MASK:
     return LowerGET_ACTIVE_LANE_MASK(Op, DAG);
+  case ISD::VECTOR_MATCH:
+    return LowerVectorMatch(Op, DAG);
   case ISD::LRINT:
   case ISD::LLRINT:
     if (Op.getValueType().isVector())
@@ -8937,8 +9176,12 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     }
 
     SDValue Pg = getPredicateForVector(DAG, DL, VT);
-    SDValue NewCttzElts =
-        DAG.getNode(AArch64ISD::CTTZ_ELTS, DL, MVT::i64, Pg, CttzOp);
+    // We preserve the poison semantics here to avoid the poison path from being
+    // affected by the checks emitted for the no-poison case.
+    unsigned Opcode = Op.getOpcode() == ISD::CTTZ_ELTS_ZERO_POISON
+                          ? AArch64ISD::CTTZ_ELTS_ZERO_POISON
+                          : AArch64ISD::CTTZ_ELTS;
+    SDValue NewCttzElts = DAG.getNode(Opcode, DL, MVT::i64, Pg, CttzOp);
     return DAG.getZExtOrTrunc(NewCttzElts, DL, Op.getValueType());
   }
   }
@@ -9911,8 +10154,7 @@ bool AArch64TargetLowering::isEligibleForTailCallOptimization(
   // the streaming mode or ZA/ZT0 to be restored after returning from the call.
   SMECallAttrs CallAttrs =
       getSMECallAttrs(CallerF, getRuntimeLibcallsInfo(), CLI);
-  if (CallAttrs.requiresSMChange() || CallAttrs.requiresLazySave() ||
-      CallAttrs.requiresPreservingAllZAState() ||
+  if (CallAttrs.requiresSMChange() || CallAttrs.requiresZASave() ||
       CallAttrs.requiresPreservingZT0() ||
       CallAttrs.caller().hasStreamingBody() || CallAttrs.caller().isNewZA() ||
       CallAttrs.caller().isNewZT0())
@@ -10124,8 +10366,9 @@ void AArch64TargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
 
     // The SVE vector length can change when entering/leaving streaming mode.
     // FPMR is set to 0 when entering/leaving streaming mode.
-    if (MI.getOperand(0).getImm() == AArch64SVCR::SVCRSM ||
-        MI.getOperand(0).getImm() == AArch64SVCR::SVCRSMZA) {
+    if (MI.getOpcode() == AArch64::MSRpstatesvcrImm1 &&
+        (MI.getOperand(0).getImm() == AArch64SVCR::SVCRSM ||
+         MI.getOperand(0).getImm() == AArch64SVCR::SVCRSMZA)) {
       MI.addOperand(MachineOperand::CreateReg(AArch64::VG, /*IsDef=*/false,
                                               /*IsImplicit=*/true));
       MI.addOperand(MachineOperand::CreateReg(AArch64::VG, /*IsDef=*/true,
@@ -10264,6 +10507,18 @@ static bool shouldLowerTailCallStackArg(const MachineFunction &MF,
   return true;
 }
 
+/// Returns the ZA state save/use marker node necessary for \p CallAttrs.
+static std::optional<unsigned>
+getZAMarkerForCall(const SMECallAttrs &CallAttrs) {
+  if (CallAttrs.requiresZASave())
+    return AArch64ISD::REQUIRES_ZA_SAVE;
+  if (CallAttrs.requiresPreservingZT0())
+    return AArch64ISD::REQUIRES_ZT0_SAVE;
+  if (CallAttrs.caller().hasZAState() || CallAttrs.caller().hasZT0State())
+    return AArch64ISD::INOUT_ZA_USE;
+  return std::nullopt;
+}
+
 /// LowerCall - Lower a call to a callseq_start + CALL + callseq_end chain,
 /// and add input and output parameter nodes.
 SDValue
@@ -10339,13 +10594,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   SMECallAttrs CallAttrs =
       getSMECallAttrs(MF.getFunction(), getRuntimeLibcallsInfo(), CLI);
 
-  std::optional<unsigned> ZAMarkerNode;
-  if (CallAttrs.requiresLazySave() || CallAttrs.requiresPreservingAllZAState())
-    ZAMarkerNode = AArch64ISD::REQUIRES_ZA_SAVE;
-  else if (CallAttrs.requiresPreservingZT0())
-    ZAMarkerNode = AArch64ISD::REQUIRES_ZT0_SAVE;
-  else if (CallAttrs.caller().hasZAState() || CallAttrs.caller().hasZT0State())
-    ZAMarkerNode = AArch64ISD::INOUT_ZA_USE;
+  std::optional<unsigned> ZAMarkerNode = getZAMarkerForCall(CallAttrs);
 
   if (IsTailCall) {
     // Check if it's really possible to do a tail call.
@@ -10380,13 +10629,23 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   // caller will deallocate the entire stack and the callee still expects its
   // arguments to begin at SP+0. Completely unused for non-tail calls.
   int FPDiff = 0;
+  const Align StackAlign = Subtarget->getFrameLowering()->getStackAlign();
 
   if (IsTailCall && !IsSibCall) {
     unsigned NumReusableBytes = FuncInfo->getBytesInStackArgArea();
 
-    // Since callee will pop argument stack as a tail call, we must keep the
-    // popped size 16-byte aligned.
-    NumBytes = alignTo(NumBytes, 16);
+    // In general, neither NumBytes nor NumReusableBytes is guaranteed to be
+    // aligned, so we round NumBytes up to the same residue mod StackAlign as
+    // NumReusableBytes, which keeps their difference (FPDiff) a multiple of
+    // StackAlign, and therefore preserve the required stack alignment going
+    // into the callee.  When the callee's convention can guarantee TCO,
+    // LowerFormalArguments will have force-aligned the stack arg area for us
+    // already, so we can count on our own alignment of NumBytes below to result
+    // in an aligned FPDiff.
+    assert((!DoesCalleeRestoreStack(CallConv, TailCallOpt) ||
+            isAligned(StackAlign, NumReusableBytes)) &&
+           "expected LowerFormalArguments to force-align stack arg area");
+    NumBytes += offsetToAlignment(NumBytes - NumReusableBytes, StackAlign);
 
     // FPDiff will be negative if this tail call requires more space than we
     // would automatically have in our incoming argument space. Positive if we
@@ -10398,12 +10657,12 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     if (FPDiff < 0 && FuncInfo->getTailCallReservedStack() < (unsigned)-FPDiff)
       FuncInfo->setTailCallReservedStack(-FPDiff);
 
-    // The stack pointer must be 16-byte aligned at all times it's used for a
-    // memory operation, which in practice means at *all* times and in
+    // The stack pointer must be at least 16-byte aligned at all times it's used
+    // for a memory operation, which in practice means at *all* times and in
     // particular across call boundaries. Therefore our own arguments started at
-    // a 16-byte aligned SP and the delta applied for the tail call should
-    // satisfy the same constraint.
-    assert(FPDiff % 16 == 0 && "unaligned stack on tail call");
+    // an aligned SP and the delta applied for the tail call should satisfy the
+    // same constraint.
+    assert(isAligned(StackAlign, FPDiff) && "unaligned stack on tail call");
   }
 
   auto DescribeCallsite =
@@ -10950,8 +11209,9 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
       MF.getFunction().getParent()->getModuleFlag("import-call-optimization"))
     DAG.addCalledGlobal(Chain.getNode(), CalledGlobal, OpFlags);
 
-  uint64_t CalleePopBytes =
-      DoesCalleeRestoreStack(CallConv, TailCallOpt) ? alignTo(NumBytes, 16) : 0;
+  uint64_t CalleePopBytes = DoesCalleeRestoreStack(CallConv, TailCallOpt)
+                                ? alignTo(NumBytes, StackAlign)
+                                : 0;
 
   Chain = DAG.getCALLSEQ_END(Chain, NumBytes, CalleePopBytes, InGlue, DL);
   InGlue = Chain.getValue(1);
@@ -11359,6 +11619,17 @@ AArch64TargetLowering::LowerDarwinGlobalTLSAddress(SDValue Op,
   // returns the address of the variable in this thread.
   Chain = DAG.getCopyToReg(Chain, DL, AArch64::X0, DescAddr, SDValue());
 
+  auto &MF = DAG.getMachineFunction();
+  auto *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
+
+  SMECallAttrs TLSCallAttrs(FuncInfo->getSMEFnAttrs(), {}, SMEAttrs::Normal);
+  bool RequiresSMChange = TLSCallAttrs.requiresSMChange();
+
+  if (RequiresSMChange)
+    Chain =
+        changeStreamingMode(DAG, DL, /*Enable=*/false, Chain, Chain.getValue(1),
+                            getSMToggleCondition(TLSCallAttrs));
+
   unsigned Opcode = AArch64ISD::CALL;
   SmallVector<SDValue, 8> Ops;
   Ops.push_back(Chain);
@@ -11369,13 +11640,23 @@ AArch64TargetLowering::LowerDarwinGlobalTLSAddress(SDValue Op,
     Opcode = AArch64ISD::AUTH_CALL;
     Ops.push_back(DAG.getTargetConstant(AArch64PACKey::IA, DL, MVT::i32));
     Ops.push_back(DAG.getTargetConstant(0, DL, MVT::i64)); // Integer Disc.
-    Ops.push_back(DAG.getRegister(AArch64::NoRegister, MVT::i64)); // Addr Disc.
+    Ops.push_back(DAG.getRegister(Register(), MVT::i64));  // Addr Disc.
   }
 
   Ops.push_back(DAG.getRegister(AArch64::X0, MVT::i64));
   Ops.push_back(DAG.getRegisterMask(Mask));
   Ops.push_back(Chain.getValue(1));
   Chain = DAG.getNode(Opcode, DL, DAG.getVTList(MVT::Other, MVT::Glue), Ops);
+
+  if (std::optional<unsigned> ZAMarkerNode = getZAMarkerForCall(TLSCallAttrs))
+    Chain = DAG.getNode(*ZAMarkerNode, DL, DAG.getVTList(MVT::Other, MVT::Glue),
+                        {Chain, Chain.getValue(1)});
+
+  if (RequiresSMChange)
+    Chain =
+        changeStreamingMode(DAG, DL, /*Enable=*/true, Chain, Chain.getValue(1),
+                            getSMToggleCondition(TLSCallAttrs));
+
   return DAG.getCopyFromReg(Chain, DL, AArch64::X0, PtrVT, Chain.getValue(1));
 }
 
@@ -11417,8 +11698,7 @@ SDValue AArch64TargetLowering::LowerELFTLSLocalExec(const GlobalValue *GV,
                                       HiVar,
                                       DAG.getTargetConstant(0, DL, MVT::i32)),
                    0);
-    return SDValue(DAG.getMachineNode(AArch64::ADDXri, DL, PtrVT, Addr,
-                                      LoVar,
+    return SDValue(DAG.getMachineNode(AArch64::ADDXri, DL, PtrVT, Addr, LoVar,
                                       DAG.getTargetConstant(0, DL, MVT::i32)),
                    0);
   }
@@ -11500,6 +11780,7 @@ SDValue AArch64TargetLowering::LowerELFTLSDescCallSeq(SDValue SymAddr,
   SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
 
   SMECallAttrs TLSCallAttrs(FuncInfo->getSMEFnAttrs(), {}, SMEAttrs::Normal);
+  std::optional<unsigned> ZAMarkerNode = getZAMarkerForCall(TLSCallAttrs);
   bool RequiresSMChange = TLSCallAttrs.requiresSMChange();
 
   auto ChainAndGlue = [](SDValue Chain) -> std::pair<SDValue, SDValue> {
@@ -11519,9 +11800,9 @@ SDValue AArch64TargetLowering::LowerELFTLSDescCallSeq(SDValue SymAddr,
   std::tie(Chain, Glue) = ChainAndGlue(DAG.getNode(
       Opcode, DL, NodeTys, Glue ? ArrayRef(Ops) : ArrayRef(Ops).drop_back()));
 
-  if (TLSCallAttrs.requiresLazySave())
-    std::tie(Chain, Glue) = ChainAndGlue(DAG.getNode(
-        AArch64ISD::REQUIRES_ZA_SAVE, DL, NodeTys, {Chain, Chain.getValue(1)}));
+  if (ZAMarkerNode)
+    std::tie(Chain, Glue) = ChainAndGlue(
+        DAG.getNode(*ZAMarkerNode, DL, NodeTys, {Chain, Chain.getValue(1)}));
 
   if (RequiresSMChange)
     std::tie(Chain, Glue) =
@@ -11529,6 +11810,29 @@ SDValue AArch64TargetLowering::LowerELFTLSDescCallSeq(SDValue SymAddr,
                                          getSMToggleCondition(TLSCallAttrs)));
 
   return DAG.getCopyFromReg(Chain, DL, AArch64::X0, PtrVT, Glue);
+}
+
+TLSModel::Model AArch64::getELFTLSModel(const GlobalValue *GV,
+                                        const TargetMachine &TM,
+                                        bool HasELFSignedGOT) {
+  TLSModel::Model Model =
+      HasELFSignedGOT ? TLSModel::GeneralDynamic : TM.getTLSModel(GV);
+
+  if (!EnableAArch64ELFLocalDynamicTLSGeneration &&
+      Model == TLSModel::LocalDynamic)
+    Model = TLSModel::GeneralDynamic;
+
+  if (TM.getCodeModel() == CodeModel::Large && Model != TLSModel::LocalExec)
+    report_fatal_error("ELF TLS only supported in small memory model or "
+                       "in local exec TLS model");
+  // Different choices can be made for the maximum size of the TLS area for a
+  // module. For the small address model, the default TLS size is 16MiB and the
+  // maximum TLS size is 4GiB.
+  // FIXME: add tiny and large code model support for TLS access models other
+  // than local exec. We currently generate the same code as small for tiny,
+  // which may be larger than needed.
+
+  return Model;
 }
 
 SDValue
@@ -11539,26 +11843,8 @@ AArch64TargetLowering::LowerELFGlobalTLSAddress(SDValue Op,
   const GlobalAddressSDNode *GA = cast<GlobalAddressSDNode>(Op);
   AArch64FunctionInfo *MFI =
       DAG.getMachineFunction().getInfo<AArch64FunctionInfo>();
-
-  TLSModel::Model Model = MFI->hasELFSignedGOT()
-                              ? TLSModel::GeneralDynamic
-                              : getTargetMachine().getTLSModel(GA->getGlobal());
-
-  if (!EnableAArch64ELFLocalDynamicTLSGeneration) {
-    if (Model == TLSModel::LocalDynamic)
-      Model = TLSModel::GeneralDynamic;
-  }
-
-  if (getTargetMachine().getCodeModel() == CodeModel::Large &&
-      Model != TLSModel::LocalExec)
-    report_fatal_error("ELF TLS only supported in small memory model or "
-                       "in local exec TLS model");
-  // Different choices can be made for the maximum size of the TLS area for a
-  // module. For the small address model, the default TLS size is 16MiB and the
-  // maximum TLS size is 4GiB.
-  // FIXME: add tiny and large code model support for TLS access models other
-  // than local exec. We currently generate the same code as small for tiny,
-  // which may be larger than needed.
+  TLSModel::Model Model = AArch64::getELFTLSModel(
+      GA->getGlobal(), getTargetMachine(), MFI->hasELFSignedGOT());
 
   SDValue TPOff;
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
@@ -12100,13 +12386,10 @@ SDValue AArch64TargetLowering::LowerFCOPYSIGN(SDValue Op,
     EVT SVT = getPackedSVEVectorVT(VT);
 
     SDValue Poison = DAG.getPOISON(SVT);
-    SDValue Zero = DAG.getConstant(0, DL, MVT::i64);
-    SDValue Ins1 =
-        DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, SVT, Poison, In1, Zero);
-    SDValue Ins2 =
-        DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, SVT, Poison, In2, Zero);
+    SDValue Ins1 = DAG.getInsertVectorElt(DL, Poison, In1, 0);
+    SDValue Ins2 = DAG.getInsertVectorElt(DL, Poison, In2, 0);
     SDValue FCS = DAG.getNode(ISD::FCOPYSIGN, DL, SVT, Ins1, Ins2);
-    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, FCS, Zero);
+    return DAG.getExtractVectorElt(DL, VT, FCS, 0);
   }
 
   auto BitCast = [this](EVT VT, SDValue Op, SelectionDAG &DAG) {
@@ -12191,12 +12474,9 @@ SDValue AArch64TargetLowering::LowerCTPOP_PARITY(SDValue Op,
   if (Subtarget->isSVEorStreamingSVEAvailable()) {
     if (VT == MVT::i32 || VT == MVT::i64) {
       EVT ContainerVT = VT == MVT::i32 ? MVT::nxv4i32 : MVT::nxv2i64;
-      Val = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, ContainerVT,
-                        DAG.getPOISON(ContainerVT), Val,
-                        DAG.getVectorIdxConstant(0, DL));
+      Val = DAG.getInsertVectorElt(DL, DAG.getPOISON(ContainerVT), Val, 0);
       Val = DAG.getNode(ISD::CTPOP, DL, ContainerVT, Val);
-      Val = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, Val,
-                        DAG.getVectorIdxConstant(0, DL));
+      Val = DAG.getExtractVectorElt(DL, VT, Val, 0);
       if (IsParity)
         Val = DAG.getNode(ISD::AND, DL, VT, Val, DAG.getConstant(1, DL, VT));
       return Val;
@@ -12235,8 +12515,7 @@ SDValue AArch64TargetLowering::LowerCTPOP_PARITY(SDValue Op,
     SDValue AddV = DAG.getNode(AArch64ISD::UADDV, DL, MVT::v8i8, CtPop);
     AddV = DAG.getNode(AArch64ISD::NVCAST, DL,
                        VT == MVT::i32 ? MVT::v2i32 : MVT::v1i64, AddV);
-    AddV = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, AddV,
-                       DAG.getConstant(0, DL, MVT::i64));
+    AddV = DAG.getExtractVectorElt(DL, VT, AddV, 0);
     if (IsParity)
       AddV = DAG.getNode(ISD::AND, DL, VT, AddV, DAG.getConstant(1, DL, VT));
     return AddV;
@@ -12245,9 +12524,8 @@ SDValue AArch64TargetLowering::LowerCTPOP_PARITY(SDValue Op,
 
     SDValue CtPop = DAG.getNode(ISD::CTPOP, DL, MVT::v16i8, Val);
     SDValue AddV = DAG.getNode(AArch64ISD::UADDV, DL, MVT::v16i8, CtPop);
-    AddV = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i64,
-                       DAG.getNode(AArch64ISD::NVCAST, DL, MVT::v2i64, AddV),
-                       DAG.getConstant(0, DL, MVT::i64));
+    AddV = DAG.getExtractVectorElt(
+        DL, MVT::i64, DAG.getNode(AArch64ISD::NVCAST, DL, MVT::v2i64, AddV), 0);
     AddV = DAG.getZExtOrTrunc(AddV, DL, VT);
     if (IsParity)
       AddV = DAG.getNode(ISD::AND, DL, VT, AddV, DAG.getConstant(1, DL, VT));
@@ -12502,7 +12780,8 @@ static SDValue performOrXorChainCombine(SDNode *N, SelectionDAG &DAG) {
   SmallVector<std::pair<SDValue, SDValue>, 16> WorkList;
 
   // Only handle integer compares.
-  if (N->getOpcode() != ISD::SETCC)
+  if (N->getOpcode() != ISD::SETCC || LHS.getValueType().isVector() ||
+      LHS.getValueType().getSizeInBits() > 64)
     return SDValue();
 
   ISD::CondCode Cond = cast<CondCodeSDNode>(N->getOperand(2))->get();
@@ -12711,11 +12990,10 @@ static SDValue emitVectorComparison(SDValue LHS, SDValue RHS,
     if (!LHS.getValueType().isVector()) {
       EVT VecVT =
           EVT::getVectorVT(*DAG.getContext(), VT, 128 / VT.getSizeInBits());
-      SDValue Zero = DAG.getConstant(0, DL, MVT::i64);
-      SDValue MaskVec = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, VecVT,
-                                    DAG.getPOISON(VecVT), Fcmeq, Zero);
+      SDValue MaskVec =
+          DAG.getInsertVectorElt(DL, DAG.getPOISON(VecVT), Fcmeq, 0);
       SDValue InvertedMask = DAG.getNOT(DL, MaskVec, VecVT);
-      return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, InvertedMask, Zero);
+      return DAG.getExtractVectorElt(DL, VT, InvertedMask, 0);
     }
     return DAG.getNOT(DL, Fcmeq, VT);
   }
@@ -12795,16 +13073,15 @@ static SDValue emitFloatCompareMask(SDValue LHS, SDValue RHS, SDValue TVal,
     return Cmp;
 
   EVT VecVT = EVT::getVectorVT(*DAG.getContext(), VT, 128 / VT.getSizeInBits());
-  SDValue Zero = DAG.getConstant(0, DL, MVT::i64);
   SDValue Poison = DAG.getPOISON(VecVT);
-  Cmp = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, VecVT, Poison, Cmp, Zero);
+  Cmp = DAG.getInsertVectorElt(DL, Poison, Cmp, 0);
   if (Cmp2) {
-    Cmp2 = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, VecVT, Poison, Cmp2, Zero);
+    Cmp2 = DAG.getInsertVectorElt(DL, Poison, Cmp2, 0);
     Cmp = DAG.getNode(ISD::OR, DL, VecVT, Cmp, Cmp2);
   }
   if (ShouldInvert)
     Cmp = DAG.getNOT(DL, Cmp, VecVT);
-  Cmp = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, Cmp, Zero);
+  Cmp = DAG.getExtractVectorElt(DL, VT, Cmp, 0);
   return Cmp;
 }
 
@@ -13736,7 +14013,6 @@ bool AArch64TargetLowering::isFPImmLegalAsFMov(const APFloat &Imm,
 bool AArch64TargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
                                          bool OptForSize) const {
   bool IsLegal = isFPImmLegalAsFMov(Imm, VT);
-  const APInt ImmInt = Imm.bitcastToAPInt();
 
   // If we can not materialize in immediate field for fmov, check if the
   // value can be encoded as the immediate operand of a logical instruction.
@@ -13751,15 +14027,34 @@ bool AArch64TargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
     // movw+movk is fused). So by default we limit up to 2 instructions
     // or 4 with hasFuseLiterals.
     SmallVector<AArch64_IMM::ImmInsnModel, 4> Insn;
+    const APInt ImmInt = Imm.bitcastToAPInt();
     AArch64_IMM::expandMOVImm(ImmInt.getZExtValue(), VT.getSizeInBits(), Insn);
     assert(Insn.size() <= 4 &&
            "Should be able to build any value with at most 4 moves");
-    unsigned Limit = (OptForSize ? 1 : (Subtarget->hasFuseLiterals() ? 4 : 2));
+
+    unsigned Limit = OptForSize ? 1 : 2;
+
+    if (!OptForSize && Insn.size() > Limit && Subtarget->hasFuseLiterals()) {
+      // Relax the limit based on subtarget fusion capabilites
+      for (unsigned I = 0; I + 1 < Insn.size(); ++I) {
+        const AArch64_IMM::ImmInsnModel &First = Insn[I];
+        const AArch64_IMM::ImmInsnModel &Second = Insn[I + 1];
+        if (Subtarget->fusesMOVImmPair(First.Opcode, First.Op2.value_or(0),
+                                       Second.Opcode, Second.Op2.value_or(0))) {
+          ++Limit;
+          // An instruction can only be fused once, so the 2nd one of the pair
+          // cannot start another pair and is skipped.
+          ++I;
+        }
+      }
+    }
+
     IsLegal = Insn.size() <= Limit;
   }
 
   LLVM_DEBUG(dbgs() << (IsLegal ? "Legal " : "Illegal ") << VT
-                    << " imm value: "; Imm.dump(););
+                    << " imm value: ";
+             Imm.dump(););
   return IsLegal;
 }
 
@@ -14203,14 +14498,39 @@ AArch64TargetLowering::getRegForInlineAsmConstraint(
     }
   } else {
     if (const auto P = parseSVERegAsConstraint(Constraint)) {
-      // SME functions that are not in streaming mode, should
-      // still observe clobbers of Z-registers by clobbering
-      // the lower 128bits of those registers.
-      if (AArch64::ZPRRegClass.hasSubClassEq(P->second) &&
-          !Subtarget->isSVEorStreamingSVEAvailable())
-        return std::make_pair(TRI->getSubReg(P->first, AArch64::zsub),
-                              &AArch64::FPR128RegClass);
-      return *P;
+      if (!AArch64::ZPRRegClass.hasSubClassEq(P->second))
+        return *P;
+
+      // A named Z-register constraint with MVT::Other
+      // represents an untyped clobber.
+      if (VT == MVT::Other) {
+        // SME functions that are not in streaming mode, should
+        // still observe clobbers of Z-registers by clobbering
+        // the lower 128bits of those registers.
+        if (!Subtarget->isSVEorStreamingSVEAvailable())
+          return std::make_pair(TRI->getSubReg(P->first, AArch64::zsub),
+                                &AArch64::FPR128RegClass);
+        return *P;
+      }
+
+      if (Subtarget->isSVEorStreamingSVEAvailable()) {
+        // Accept the full-width SVE vector types representable in C
+        switch (VT.SimpleTy) {
+        case MVT::nxv16i8:
+        case MVT::nxv8i16:
+        case MVT::nxv4i32:
+        case MVT::nxv2i64:
+        case MVT::nxv8f16:
+        case MVT::nxv4f32:
+        case MVT::nxv2f64:
+        case MVT::nxv8bf16:
+          return *P;
+        default:
+          break;
+        }
+      }
+
+      return std::make_pair(0U, nullptr);
     }
     if (const auto PC = parsePredicateConstraint(Constraint))
       if (const auto *RegClass = getPredicateRegisterClass(*PC, VT))
@@ -15246,60 +15566,6 @@ static bool isEXTMaskWithSplat(ArrayRef<int> M, EVT VT, unsigned SplatOperand,
   return false;
 }
 
-/// isZIP_v_undef_Mask - Special case of isZIPMask for canonical form of
-/// "vector_shuffle v, v", i.e., "vector_shuffle v, undef".
-/// Mask is e.g., <0, 0, 1, 1> instead of <0, 4, 1, 5>.
-static bool isZIP_v_undef_Mask(ArrayRef<int> M, EVT VT, unsigned &WhichResult) {
-  unsigned NumElts = VT.getVectorNumElements();
-  if (NumElts % 2 != 0)
-    return false;
-  WhichResult = (M[0] == 0 ? 0 : 1);
-  unsigned Idx = WhichResult * NumElts / 2;
-  for (unsigned i = 0; i != NumElts; i += 2) {
-    if ((M[i] >= 0 && (unsigned)M[i] != Idx) ||
-        (M[i + 1] >= 0 && (unsigned)M[i + 1] != Idx))
-      return false;
-    Idx += 1;
-  }
-
-  return true;
-}
-
-/// isUZP_v_undef_Mask - Special case of isUZPMask for canonical form of
-/// "vector_shuffle v, v", i.e., "vector_shuffle v, undef".
-/// Mask is e.g., <0, 2, 0, 2> instead of <0, 2, 4, 6>,
-static bool isUZP_v_undef_Mask(ArrayRef<int> M, EVT VT, unsigned &WhichResult) {
-  unsigned Half = VT.getVectorNumElements() / 2;
-  WhichResult = (M[0] == 0 ? 0 : 1);
-  for (unsigned j = 0; j != 2; ++j) {
-    unsigned Idx = WhichResult;
-    for (unsigned i = 0; i != Half; ++i) {
-      int MIdx = M[i + j * Half];
-      if (MIdx >= 0 && (unsigned)MIdx != Idx)
-        return false;
-      Idx += 2;
-    }
-  }
-
-  return true;
-}
-
-/// isTRN_v_undef_Mask - Special case of isTRNMask for canonical form of
-/// "vector_shuffle v, v", i.e., "vector_shuffle v, undef".
-/// Mask is e.g., <0, 0, 2, 2> instead of <0, 4, 2, 6>.
-static bool isTRN_v_undef_Mask(ArrayRef<int> M, EVT VT, unsigned &WhichResult) {
-  unsigned NumElts = VT.getVectorNumElements();
-  if (NumElts % 2 != 0)
-    return false;
-  WhichResult = (M[0] == 0 ? 0 : 1);
-  for (unsigned i = 0; i < NumElts; i += 2) {
-    if ((M[i] >= 0 && (unsigned)M[i] != i + WhichResult) ||
-        (M[i + 1] >= 0 && (unsigned)M[i + 1] != i + WhichResult))
-      return false;
-  }
-  return true;
-}
-
 static bool isINSMask(ArrayRef<int> M, int NumInputElements,
                       bool &DstIsLeft, int &Anomaly) {
   if (M.size() != static_cast<size_t>(NumInputElements))
@@ -15475,12 +15741,9 @@ static SDValue GeneratePerfectShuffle(unsigned ID, SDValue V1, SDValue V2,
         OpLHS = DAG.getBitcast(MVT::v4f16, OpLHS);
       }
     }
-    SDValue Ext = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL,
-                              Input.getValueType().getVectorElementType(),
-                              Input, DAG.getVectorIdxConstant(ExtLane, DL));
-    SDValue Ins =
-        DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, Input.getValueType(), OpLHS,
-                    Ext, DAG.getVectorIdxConstant(RHSID & 0x3, DL));
+    SDValue Ext = DAG.getExtractVectorElt(
+        DL, Input.getValueType().getVectorElementType(), Input, ExtLane);
+    SDValue Ins = DAG.getInsertVectorElt(DL, OpLHS, Ext, RHSID & 0x3);
     return DAG.getBitcast(VT, Ins);
   }
 
@@ -16013,15 +16276,15 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
                        OperandOrder == 0 ? V2 : V1);
   }
 
-  if (isZIP_v_undef_Mask(ShuffleMask, VT, WhichResult)) {
+  if (isZIP_v_undef_Mask(ShuffleMask, NumElts, WhichResult)) {
     unsigned Opc = (WhichResult == 0) ? AArch64ISD::ZIP1 : AArch64ISD::ZIP2;
     return DAG.getNode(Opc, DL, V1.getValueType(), V1, V1);
   }
-  if (isUZP_v_undef_Mask(ShuffleMask, VT, WhichResult)) {
+  if (isUZP_v_undef_Mask(ShuffleMask, NumElts, WhichResult)) {
     unsigned Opc = (WhichResult == 0) ? AArch64ISD::UZP1 : AArch64ISD::UZP2;
     return DAG.getNode(Opc, DL, V1.getValueType(), V1, V1);
   }
-  if (isTRN_v_undef_Mask(ShuffleMask, VT, WhichResult)) {
+  if (isTRN_v_undef_Mask(ShuffleMask, NumElts, WhichResult)) {
     unsigned Opc = (WhichResult == 0) ? AArch64ISD::TRN1 : AArch64ISD::TRN2;
     return DAG.getNode(Opc, DL, V1.getValueType(), V1, V1);
   }
@@ -16030,29 +16293,25 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
     return Concat;
 
   bool DstIsLeft;
-  int Anomaly;
+  int DstLane;
   int NumInputElements = V1.getValueType().getVectorNumElements();
-  if (isINSMask(ShuffleMask, NumInputElements, DstIsLeft, Anomaly)) {
+  if (isINSMask(ShuffleMask, NumInputElements, DstIsLeft, DstLane)) {
     SDValue DstVec = DstIsLeft ? V1 : V2;
-    SDValue DstLaneV = DAG.getConstant(Anomaly, DL, MVT::i64);
 
     SDValue SrcVec = V1;
-    int SrcLane = ShuffleMask[Anomaly];
+    int SrcLane = ShuffleMask[DstLane];
     if (SrcLane >= NumInputElements) {
       SrcVec = V2;
       SrcLane -= NumElts;
     }
-    SDValue SrcLaneV = DAG.getConstant(SrcLane, DL, MVT::i64);
 
     EVT ScalarVT = VT.getVectorElementType();
-
     if (ScalarVT.getFixedSizeInBits() < 32 && ScalarVT.isInteger())
       ScalarVT = MVT::i32;
 
-    return DAG.getNode(
-        ISD::INSERT_VECTOR_ELT, DL, VT, DstVec,
-        DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ScalarVT, SrcVec, SrcLaneV),
-        DstLaneV);
+    return DAG.getInsertVectorElt(
+        DL, DstVec, DAG.getExtractVectorElt(DL, ScalarVT, SrcVec, SrcLane),
+        DstLane);
   }
 
   if (SDValue NewSD = tryWidenMaskForShuffle(Op, DAG))
@@ -16855,12 +17114,10 @@ SDValue AArch64TargetLowering::LowerFixedLengthBuildVectorToSVE(
     return SDValue();
 
   // Lower (pow2) BUILD_VECTORS that are <= 128-bit to a sequence of ZIP1s.
-  SDValue ZeroI64 = DAG.getConstant(0, DL, MVT::i64);
   SmallVector<SDValue, 16> Intermediates = map_to_vector<16>(
       Op->op_values(), [&, Poison = DAG.getPOISON(ContainerVT)](SDValue Op) {
         return Op.isUndef() ? Poison
-                            : DAG.getNode(ISD::INSERT_VECTOR_ELT, DL,
-                                          ContainerVT, Poison, Op, ZeroI64);
+                            : DAG.getInsertVectorElt(DL, Poison, Op, 0);
       });
 
   ElementCount ZipEC = ContainerVT.getVectorElementCount();
@@ -16888,8 +17145,16 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
                                                  SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
 
-  bool OverrideNEON = !Subtarget->isNeonAvailable() ||
-                      cast<BuildVectorSDNode>(Op)->isArithmeticSequence();
+  bool OverrideNEON = !Subtarget->isNeonAvailable();
+  if (!OverrideNEON && Subtarget->isSVEorStreamingSVEAvailable()) {
+    if (auto Seq = cast<BuildVectorSDNode>(Op)->isArithmeticSequence()) {
+      // Only attempt to use the SVE index instruction if both operands are
+      // immediate, otherwise it's better to load a literal.
+      if (Seq->first.sge(-16) && Seq->first.slt(16) && Seq->second.sge(-16) &&
+          Seq->second.slt(16))
+        OverrideNEON = true;
+    }
+  }
   if (useSVEForFixedLengthVectorVT(VT, OverrideNEON))
     return LowerFixedLengthBuildVectorToSVE(Op, DAG);
 
@@ -17018,9 +17283,9 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
   }
 
   // Convert BUILD_VECTOR where all elements but the lowest are undef into
-  // SCALAR_TO_VECTOR, except for when we have a single-element constant vector
+  // SCALAR_TO_VECTOR, except for when we have a constant vector
   // as SimplifyDemandedBits will just turn that back into BUILD_VECTOR.
-  if (isOnlyLowElement && !(NumElts == 1 && isIntOrFPConstant(Value))) {
+  if (isOnlyLowElement && !isIntOrFPConstant(Value)) {
     LLVM_DEBUG(dbgs() << "LowerBUILD_VECTOR: only low element used, creating 1 "
                          "SCALAR_TO_VECTOR node\n");
     return DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VT, Value);
@@ -17105,26 +17370,9 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
   // i32 and try again.
   if (usesOnlyOneValue) {
     if (!isConstant) {
-      if (Value.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
-          Value.getValueType() != VT) {
-        LLVM_DEBUG(
-            dbgs() << "LowerBUILD_VECTOR: use DUP for non-constant splats\n");
-        return DAG.getNode(AArch64ISD::DUP, DL, VT, Value);
-      }
-
-      // This is actually a DUPLANExx operation, which keeps everything vectory.
-
-      SDValue Lane = Value.getOperand(1);
-      Value = Value.getOperand(0);
-      if (Value.getValueSizeInBits() == 64) {
-        LLVM_DEBUG(
-            dbgs() << "LowerBUILD_VECTOR: DUPLANE works on 128-bit vectors, "
-                      "widening it\n");
-        Value = WidenVector(Value, DAG);
-      }
-
-      unsigned Opcode = getDUPLANEOp(VT.getVectorElementType());
-      return DAG.getNode(Opcode, DL, VT, Value, Lane);
+      LLVM_DEBUG(
+          dbgs() << "LowerBUILD_VECTOR: use DUP for non-constant splats\n");
+      return DAG.getNode(AArch64ISD::DUP, DL, VT, Value);
     }
 
     if (VT.getVectorElementType().isFloatingPoint()) {
@@ -17179,11 +17427,10 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
     // Now insert the non-constant lanes.
     for (unsigned i = 0; i < NumElts; ++i) {
       SDValue V = Op.getOperand(i);
-      SDValue LaneIdx = DAG.getConstant(i, DL, MVT::i64);
       if (!isIntOrFPConstant(V) && !V.isUndef())
         // Note that type legalization likely mucked about with the VT of the
         // source operand, so we may have to convert it here before inserting.
-        Val = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, VT, Val, V, LaneIdx);
+        Val = DAG.getInsertVectorElt(DL, Val, V, i);
     }
     return Val;
   }
@@ -17257,9 +17504,7 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
     // Next, insert the elements that do not match the common value.
     for (unsigned I = 0; I < NumElts; ++I)
       if (Op.getOperand(I) != Value)
-        NewVector =
-            DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, VT, NewVector,
-                        Op.getOperand(I), DAG.getConstant(I, DL, MVT::i64));
+        NewVector = DAG.getInsertVectorElt(DL, NewVector, Op.getOperand(I), I);
 
     return NewVector;
   }
@@ -17378,8 +17623,7 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
       SDValue V = Op.getOperand(i);
       if (V.isUndef())
         continue;
-      SDValue LaneIdx = DAG.getConstant(i, DL, MVT::i64);
-      Vec = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, VT, Vec, V, LaneIdx);
+      Vec = DAG.getInsertVectorElt(DL, Vec, V, i);
     }
     return Vec;
   }
@@ -17796,9 +18040,9 @@ bool AArch64TargetLowering::isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const {
           isTRNMask(M, NumElts, DummyUnsigned, DummyUnsigned) ||
           isUZPMask(M, NumElts, DummyUnsigned) ||
           isZIPMask(M, NumElts, DummyUnsigned, DummyUnsigned) ||
-          isTRN_v_undef_Mask(M, VT, DummyUnsigned) ||
-          isUZP_v_undef_Mask(M, VT, DummyUnsigned) ||
-          isZIP_v_undef_Mask(M, VT, DummyUnsigned) ||
+          isTRN_v_undef_Mask(M, NumElts, DummyUnsigned) ||
+          isUZP_v_undef_Mask(M, NumElts, DummyUnsigned) ||
+          isZIP_v_undef_Mask(M, NumElts, DummyUnsigned) ||
           isINSMask(M, NumElts, DummyBool, DummyInt) ||
           isConcatMask(M, VT, VT.getSizeInBits() == 128));
 }
@@ -18067,8 +18311,7 @@ static SDValue getReductionSDNode(unsigned Op, SDLoc DL, SDValue ScalarOp,
                                   SelectionDAG &DAG) {
   SDValue VecOp = ScalarOp.getOperand(0);
   auto Rdx = DAG.getNode(Op, DL, VecOp.getSimpleValueType(), VecOp);
-  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ScalarOp.getValueType(), Rdx,
-                     DAG.getConstant(0, DL, MVT::i64));
+  return DAG.getExtractVectorElt(DL, ScalarOp.getValueType(), Rdx, 0);
 }
 
 static SDValue getVectorBitwiseReduce(unsigned Opcode, SDValue Vec, EVT VT,
@@ -18717,15 +18960,13 @@ bool AArch64TargetLowering::isProfitableToHoist(Instruction *I) const {
         User->getOpcode() == Instruction::FAdd))
     return true;
 
-  const TargetOptions &Options = getTargetMachine().Options;
   const Function *F = I->getFunction();
   const DataLayout &DL = F->getDataLayout();
   Type *Ty = User->getOperand(0)->getType();
 
   return !(isFMAFasterThanFMulAndFAdd(*F, Ty) &&
            isOperationLegalOrCustom(ISD::FMA, getValueType(DL, Ty)) &&
-           (Options.AllowFPOpFusion == FPOpFusion::Fast ||
-            I->getFastMathFlags().allowContract()));
+           I->getFastMathFlags().allowContract());
 }
 
 // All 32-bit GPR operations implicitly zero the high-half of the corresponding
@@ -20109,8 +20350,8 @@ bool AArch64TargetLowering::isFMAFasterThanFMulAndFAdd(
   case MVT::f64:
     return Subtarget->hasFPARMv8();
   case MVT::bf16:
-    return VT.isScalableVector() && Subtarget->hasBF16() &&
-           Subtarget->isNonStreamingSVEorSME2Available();
+    return VT.isScalableVector() &&
+           (Subtarget->hasBF16() || Subtarget->hasSVEB16B16());
   default:
     break;
   }
@@ -20149,6 +20390,11 @@ AArch64TargetLowering::getScratchRegisters(CallingConv::ID) const {
 ArrayRef<MCPhysReg> AArch64TargetLowering::getRoundingControlRegisters() const {
   static const MCPhysReg RCRegs[] = {AArch64::FPCR};
   return RCRegs;
+}
+
+bool AArch64TargetLowering::isNarrowingProfitable(SDNode *N, EVT SrcVT,
+                                                  EVT DestVT) const {
+  return isTypeLegal(DestVT) && DestVT.isVector();
 }
 
 bool
@@ -21618,9 +21864,7 @@ tryToReplaceScalarFPConversionWithSVE(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   SDLoc DL(N);
-  SDValue ZeroIdx = DAG.getVectorIdxConstant(0, DL);
-  SDValue Vec = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, SrcVecTy,
-                            DAG.getPOISON(SrcVecTy), SrcVal, ZeroIdx);
+  SDValue Vec = DAG.getInsertVectorElt(DL, DAG.getPOISON(SrcVecTy), SrcVal, 0);
 
   // FP_TO_*_SAT carries the saturating scalar VT as operand 1, so preserve it.
   SmallVector<SDValue, 2> ConvertOps = {Vec};
@@ -21628,7 +21872,7 @@ tryToReplaceScalarFPConversionWithSVE(SDNode *N, SelectionDAG &DAG,
       N->getOpcode() == ISD::FP_TO_UINT_SAT)
     ConvertOps.push_back(DAG.getValueType(DestVecTy.getVectorElementType()));
   SDValue Convert = DAG.getNode(N->getOpcode(), DL, DestVecTy, ConvertOps);
-  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, DestTy, Convert, ZeroIdx);
+  return DAG.getExtractVectorElt(DL, DestTy, Convert, 0);
 }
 
 static SDValue performIntToFpCombine(SDNode *N, SelectionDAG &DAG,
@@ -22425,10 +22669,8 @@ performExtractVectorEltCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
 
     if (Shuffle && Shuffle->getMaskElt(0) == 1 &&
         Other == Shuffle->getOperand(0)) {
-      SDValue Extract1 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, Other,
-                                     DAG.getConstant(0, DL, MVT::i64));
-      SDValue Extract2 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, Other,
-                                     DAG.getConstant(1, DL, MVT::i64));
+      SDValue Extract1 = DAG.getExtractVectorElt(DL, VT, Other, 0);
+      SDValue Extract2 = DAG.getExtractVectorElt(DL, VT, Other, 1);
       if (!IsStrict)
         return DAG.getNode(N0->getOpcode(), DL, VT, Extract1, Extract2);
 
@@ -23146,9 +23388,8 @@ static SDValue performAddUADDVCombine(SDNode *N, SelectionDAG &DAG) {
   EVT ValVT = Val1->getValueType(0);
   SDLoc DL(N);
   SDValue AddVal = DAG.getNode(ISD::ADD, DL, ValVT, Val1, Val2);
-  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT,
-                     DAG.getNode(AArch64ISD::UADDV, DL, ValVT, AddVal),
-                     DAG.getConstant(0, DL, MVT::i64));
+  return DAG.getExtractVectorElt(
+      DL, VT, DAG.getNode(AArch64ISD::UADDV, DL, ValVT, AddVal), 0);
 }
 
 /// Perform the scalar expression combine in the form of:
@@ -23287,6 +23528,55 @@ static SDValue performNegCSelCombine(SDNode *N, SelectionDAG &DAG) {
                      CSel.getOperand(3));
 }
 
+// Reassociate adds/subs of extended values when one of the operations can
+// become an add/sub long, matching [SU](ADD|SUB)L:
+//
+//   (ext(A) - X) + ext(B) -> (ext(A) + ext(B)) - X
+//   (ext(A) - X) - ext(B) -> (ext(A) - ext(B)) - X
+//   ext(B) - (X + ext(A)) -> (ext(B) - ext(A)) - X
+//
+// We don't need to reassociate expressions that can use widening add/sub
+// instead, such as (ext(A) + X) + ext(B) or (X - ext(A)) - ext(B).
+static SDValue reassociateAddSubLong(SDNode *N, SelectionDAG &DAG) {
+  using namespace llvm::SDPatternMatch;
+
+  EVT VT = N->getValueType(0);
+  if (VT != MVT::v8i16 && VT != MVT::v4i32 && VT != MVT::v2i64)
+    return SDValue();
+  EVT HalfEltVT = MVT::getIntegerVT(VT.getScalarSizeInBits() / 2);
+
+  for (unsigned ExtOpc : {ISD::ZERO_EXTEND, ISD::SIGN_EXTEND}) {
+    SDValue A, B, X;
+    auto ExtOp = m_Node(ExtOpc, m_SpecificVectorElementVT(HalfEltVT));
+    auto MatchA = m_Value(A, ExtOp), MatchB = m_Value(B, ExtOp);
+    auto MatchX = m_Value(X, m_Unless(ExtOp));
+
+    auto TryReassociate = [&](unsigned Opc0, SDValue L, SDValue R,
+                              unsigned Opc1, SDValue X) {
+      // Long instructions read operands from lower/upper halves.
+      if (isEssentiallyExtractHighSubvector(L.getOperand(0)) !=
+          isEssentiallyExtractHighSubvector(R.getOperand(0)))
+        return SDValue();
+      SDLoc DL(N);
+      return DAG.getNode(Opc1, DL, VT, DAG.getNode(Opc0, DL, VT, L, R), X);
+    };
+
+    // (ext(A) - X) + ext(B) -> (ext(A) + ext(B)) - X
+    if (sd_match(N, m_Add(m_OneUse(m_Sub(MatchA, MatchX)), MatchB)))
+      return TryReassociate(ISD::ADD, A, B, ISD::SUB, X);
+
+    // (ext(A) - X) - ext(B) -> (ext(A) - ext(B)) - X
+    if (sd_match(N, m_Sub(m_OneUse(m_Sub(MatchA, MatchX)), MatchB)))
+      return TryReassociate(ISD::SUB, A, B, ISD::SUB, X);
+
+    // ext(B) - (X + ext(A)) -> (ext(B) - ext(A)) - X
+    if (sd_match(N, m_Sub(MatchB, m_OneUse(m_Add(MatchX, MatchA)))))
+      return TryReassociate(ISD::SUB, B, A, ISD::SUB, X);
+  }
+
+  return SDValue();
+}
+
 // The basic add/sub long vector instructions have variants with "2" on the end
 // which act on the high-half of their inputs. They are normally matched by
 // patterns like:
@@ -23310,6 +23600,9 @@ static SDValue performAddSubLongCombine(SDNode *N,
       return performSetccAddFolding(N, DAG);
     return SDValue();
   }
+
+  if (SDValue R = reassociateAddSubLong(N, DAG))
+    return R;
 
   // Make sure both branches are extended in the same way.
   SDValue LHS = N->getOperand(0);
@@ -23696,8 +23989,7 @@ static SDValue performTruncateCombine(SDNode *N, SelectionDAG &DAG,
     MVT CastVT = SrcVectorType.isScalableVector() ? MVT::nxv4i32 : MVT::v4i32;
 
     Op = DAG.getNode(AArch64ISD::NVCAST, DL, CastVT, Op);
-    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, Op,
-                       DAG.getVectorIdxConstant(ExtractIndex * 2, DL));
+    return DAG.getExtractVectorElt(DL, VT, Op, ExtractIndex * 2);
   }
 
   return SDValue();
@@ -23947,9 +24239,8 @@ static SDValue performAddSubIntoVectorOp(SDNode *N, SelectionDAG &DAG) {
   } else
     return SDValue();
 
-  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i64,
-                     DAG.getNode(N->getOpcode(), DL, MVT::v1i64, Op0, Op1),
-                     DAG.getConstant(0, DL, MVT::i64));
+  return DAG.getExtractVectorElt(
+      DL, MVT::i64, DAG.getNode(N->getOpcode(), DL, MVT::v1i64, Op0, Op1), 0);
 }
 
 static bool isLoadOrMultipleLoads(SDValue B, SmallVector<LoadSDNode *> &Loads) {
@@ -24318,7 +24609,35 @@ static SDValue performSubNegAndOneCombine(SDNode *N, SelectionDAG &DAG) {
   SDLoc DL(N);
   return DAG.getSetCC(DL, VT, And, DAG.getConstant(0, DL, VT), ISD::SETNE);
 }
+static SDValue performAddAddCombine(SDNode *N, SelectionDAG &DAG) {
+  if (N->getOpcode() != ISD::ADD)
+    return SDValue();
 
+  EVT VT = N->getValueType(0);
+
+  if (!VT.isScalarInteger())
+    return SDValue();
+
+  SDValue Op0 = N->getOperand(0);
+  SDValue Op1 = N->getOperand(1);
+  SDValue A, B;
+
+  if (Op0.getOpcode() == ISD::ADD && Op0.hasOneUse() &&
+      (Op0.getOperand(0) == Op1 || Op0.getOperand(1) == Op1)) {
+    A = (Op0.getOperand(0) == Op1) ? Op0.getOperand(1) : Op0.getOperand(0);
+    B = Op1;
+  } else if (Op1.getOpcode() == ISD::ADD && Op1.hasOneUse() &&
+             (Op1.getOperand(0) == Op0 || Op1.getOperand(1) == Op0)) {
+    A = (Op1.getOperand(0) == Op0) ? Op1.getOperand(1) : Op1.getOperand(0);
+    B = Op0;
+  } else {
+    return SDValue();
+  }
+
+  SDLoc DL(N);
+  SDValue ShiftB = DAG.getNode(ISD::SHL, DL, VT, B, DAG.getConstant(1, DL, VT));
+  return DAG.getNode(ISD::ADD, DL, VT, A, ShiftB);
+}
 // Fold ADD(SBC(Y, 0, W), C) -> SBC(Y, -C, W)
 // SBC(Y, 0, W) = Y - 0 - ~carry = Y + carry - 1
 // Adding C:  Y + carry - 1 + C = Y - (-C) - ~carry = SBC(Y, -C, W)
@@ -24344,9 +24663,46 @@ static SDValue performAddWithSBCCombine(SDNode *N, SelectionDAG &DAG) {
                      DAG.getNegative(C, DL, VT), SBC.getOperand(2));
 }
 
+// Reuse both results of the comparison in a conditional subtraction:
+//   sub x, (csel q, 0, cc, (subs x, q):1)
+//     -> csel (subs x, q):0, x, cc, (subs x, q):1
+// Also handle a zero true operand. Keep the original flags and condition so
+// that other comparison users are unaffected.
+static SDValue performConditionalSubCombine(SDNode *N, SelectionDAG &DAG) {
+  if (N->getOpcode() != ISD::SUB)
+    return SDValue();
+  EVT VT = N->getValueType(0);
+  if (VT != MVT::i32 && VT != MVT::i64)
+    return SDValue();
+
+  SDValue X = N->getOperand(0), Sel = N->getOperand(1);
+  if (Sel.getOpcode() != AArch64ISD::CSEL || !Sel.hasOneUse())
+    return SDValue();
+
+  // Reuse the wrapping difference computed by SUBS. Keeping the original
+  // NZCV flags and condition makes this valid for any condition code.
+  SDValue Flags = Sel.getOperand(3);
+  if (Flags.getOpcode() != AArch64ISD::SUBS || Flags.getOperand(0) != X)
+    return SDValue();
+
+  // Match select(C, 0, Q) or select(C, Q, 0).
+  SDValue Q = Flags.getOperand(1);
+  bool ZeroOnTrue = isNullConstant(Sel.getOperand(0)) && Sel.getOperand(1) == Q;
+  bool ZeroOnFalse =
+      isNullConstant(Sel.getOperand(1)) && Sel.getOperand(0) == Q;
+  if (!ZeroOnTrue && !ZeroOnFalse)
+    return SDValue();
+
+  SDValue Diff = Flags.getValue(0);
+  return DAG.getNode(AArch64ISD::CSEL, SDLoc(N), VT, ZeroOnTrue ? X : Diff,
+                     ZeroOnTrue ? Diff : X, Sel.getOperand(2), Flags);
+}
+
 static SDValue performAddSubCombine(SDNode *N,
                                     TargetLowering::DAGCombinerInfo &DCI) {
   // Try to change sum of two reductions.
+  if (SDValue Val = performAddAddCombine(N, DCI.DAG))
+    return Val;
   if (SDValue Val = performAddUADDVCombine(N, DCI.DAG))
     return Val;
   if (SDValue Val = performAddDotCombine(N, DCI.DAG))
@@ -24368,6 +24724,8 @@ static SDValue performAddSubCombine(SDNode *N,
   if (SDValue Val = performAddSubIntoVectorOp(N, DCI.DAG))
     return Val;
   if (SDValue Val = performSubWithBorrowCombine(N, DCI.DAG))
+    return Val;
+  if (SDValue Val = performConditionalSubCombine(N, DCI.DAG))
     return Val;
   if (SDValue Val = performAddTruncShiftCombine(N, DCI.DAG))
     return Val;
@@ -24499,15 +24857,13 @@ static SDValue tryCombineShiftImm(unsigned IID, SDNode *N, SelectionDAG &DAG) {
     Op = DAG.getNode(Opcode, DL, VT, Op,
                      DAG.getSignedConstant(-ShiftAmount, DL, MVT::i32, true));
     if (N->getValueType(0) == MVT::i64)
-      Op = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i64, Op,
-                       DAG.getConstant(0, DL, MVT::i64));
+      Op = DAG.getExtractVectorElt(DL, MVT::i64, Op, 0);
     return Op;
   } else if (!IsRightShift && ShiftAmount >= 0 && ShiftAmount < ElemBits) {
     Op = DAG.getNode(Opcode, DL, VT, Op,
                      DAG.getTargetConstant(ShiftAmount, DL, MVT::i32));
     if (N->getValueType(0) == MVT::i64)
-      Op = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i64, Op,
-                       DAG.getConstant(0, DL, MVT::i64));
+      Op = DAG.getExtractVectorElt(DL, MVT::i64, Op, 0);
     return Op;
   }
 
@@ -24533,10 +24889,11 @@ static SDValue tryCombineCRC32(unsigned Mask, SDNode *N, SelectionDAG &DAG) {
 static SDValue combineAcrossLanesIntrinsic(unsigned Opc, SDNode *N,
                                            SelectionDAG &DAG) {
   SDLoc DL(N);
-  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, N->getValueType(0),
-                     DAG.getNode(Opc, DL, N->getOperand(1).getSimpleValueType(),
-                                 N->getOperand(1)),
-                     DAG.getConstant(0, DL, MVT::i64));
+  return DAG.getExtractVectorElt(
+      DL, N->getValueType(0),
+      DAG.getNode(Opc, DL, N->getOperand(1).getSimpleValueType(),
+                  N->getOperand(1)),
+      0);
 }
 
 static SDValue LowerSVEIntrinsicIndex(SDNode *N, SelectionDAG &DAG) {
@@ -24715,9 +25072,7 @@ static SDValue combineSVEReductionInt(SDNode *N, unsigned Opc,
 
   // SVE reductions set the whole vector register with the first element
   // containing the reduction result, which we'll now extract.
-  SDValue Zero = DAG.getConstant(0, DL, MVT::i64);
-  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, N->getValueType(0), Reduce,
-                     Zero);
+  return DAG.getExtractVectorElt(DL, N->getValueType(0), Reduce, 0);
 }
 
 static SDValue combineSVEReductionFP(SDNode *N, unsigned Opc,
@@ -24732,9 +25087,7 @@ static SDValue combineSVEReductionFP(SDNode *N, unsigned Opc,
 
   // SVE reductions set the whole vector register with the first element
   // containing the reduction result, which we'll now extract.
-  SDValue Zero = DAG.getConstant(0, DL, MVT::i64);
-  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, N->getValueType(0), Reduce,
-                     Zero);
+  return DAG.getExtractVectorElt(DL, N->getValueType(0), Reduce, 0);
 }
 
 static SDValue combineSVEReductionOrderedFP(SDNode *N, unsigned Opc,
@@ -24748,16 +25101,13 @@ static SDValue combineSVEReductionOrderedFP(SDNode *N, unsigned Opc,
 
   // Ordered reductions use the first lane of the result vector as the
   // reduction's initial value.
-  SDValue Zero = DAG.getConstant(0, DL, MVT::i64);
-  InitVal = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, ReduceVT,
-                        DAG.getPOISON(ReduceVT), InitVal, Zero);
+  InitVal = DAG.getInsertVectorElt(DL, DAG.getPOISON(ReduceVT), InitVal, 0);
 
   SDValue Reduce = DAG.getNode(Opc, DL, ReduceVT, Pred, InitVal, VecToReduce);
 
   // SVE reductions set the whole vector register with the first element
   // containing the reduction result, which we'll now extract.
-  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, N->getValueType(0), Reduce,
-                     Zero);
+  return DAG.getExtractVectorElt(DL, N->getValueType(0), Reduce, 0);
 }
 
 static SDValue tryCombineNeonFcvtFP16ToI16(SDNode *N, unsigned Opcode,
@@ -24900,9 +25250,7 @@ tryCombineFADDReductionWithZero(SDNode *N, SelectionDAG &DAG,
     for (unsigned I = 0; I < NumElts; I++) {
       if (KnownZeroElts[I])
         continue;
-      SDValue Elt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, Vec,
-                                DAG.getConstant(I, DL, MVT::i64));
-
+      SDValue Elt = DAG.getExtractVectorElt(DL, EltVT, Vec, I);
       Acc = DAG.getNode(ISD::FADD, DL, EltVT, Acc, Elt, Flags);
     }
     return Acc;
@@ -24911,8 +25259,7 @@ tryCombineFADDReductionWithZero(SDNode *N, SelectionDAG &DAG,
   // Pairwise reduction- extract all elements, then reduce pairwise.
   SmallVector<SDValue, 4> Elts;
   for (unsigned I = 0; I < NumElts; I++) {
-    Elts.push_back(DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, Vec,
-                               DAG.getConstant(I, DL, MVT::i64)));
+    Elts.push_back(DAG.getExtractVectorElt(DL, EltVT, Vec, I));
   }
   while (Elts.size() > 1) {
     SmallVector<SDValue, 4> NewElts;
@@ -26425,8 +26772,10 @@ static SDValue trySimplifySrlAddToRshrnb(SDValue Srl, SelectionDAG &DAG,
   return DAG.getNode(AArch64ISD::NVCAST, DL, VT, Rshrnb);
 }
 
-static SDValue isNVCastToHalfWidthElements(SDValue V) {
-  if (V.getOpcode() != AArch64ISD::NVCAST)
+static SDValue isNVCastToHalfWidthElements(SDValue V,
+                                           const AArch64Subtarget *Subtarget) {
+  if (V.getOpcode() != AArch64ISD::NVCAST &&
+      (V.getOpcode() != ISD::BITCAST || !Subtarget->isLittleEndian()))
     return SDValue();
 
   SDValue Op = V.getOperand(0);
@@ -26475,14 +26824,14 @@ static SDValue performUzpCombine(SDNode *N, SelectionDAG &DAG,
   if (SDValue Urshr = tryCombineExtendRShTrunc(N, DAG))
     return Urshr;
 
-  if (SDValue PreCast = isNVCastToHalfWidthElements(Op0)) {
+  if (SDValue PreCast = isNVCastToHalfWidthElements(Op0, Subtarget)) {
     if (SDValue Rshrnb = trySimplifySrlAddToRshrnb(PreCast, DAG, Subtarget)) {
       Rshrnb = DAG.getNode(AArch64ISD::NVCAST, DL, ResVT, Rshrnb);
       return DAG.getNode(AArch64ISD::UZP1, DL, ResVT, Rshrnb, Op1);
     }
   }
 
-  if (SDValue PreCast = isNVCastToHalfWidthElements(Op1)) {
+  if (SDValue PreCast = isNVCastToHalfWidthElements(Op1, Subtarget)) {
     if (SDValue Rshrnb = trySimplifySrlAddToRshrnb(PreCast, DAG, Subtarget)) {
       Rshrnb = DAG.getNode(AArch64ISD::NVCAST, DL, ResVT, Rshrnb);
       return DAG.getNode(AArch64ISD::UZP1, DL, ResVT, Op0, Rshrnb);
@@ -26490,7 +26839,7 @@ static SDValue performUzpCombine(SDNode *N, SelectionDAG &DAG,
   }
 
   // uzp1<ty>(nvcast(unpklo(uzp1<ty>(x, y))), z) => uzp1<ty>(x, z)
-  if (SDValue PreCast = isNVCastToHalfWidthElements(Op0)) {
+  if (SDValue PreCast = isNVCastToHalfWidthElements(Op0, Subtarget)) {
     if (PreCast.getOpcode() == AArch64ISD::UUNPKLO) {
       if (PreCast.getOperand(0).getOpcode() == AArch64ISD::UZP1) {
         SDValue X = PreCast.getOperand(0).getOperand(0);
@@ -26500,11 +26849,32 @@ static SDValue performUzpCombine(SDNode *N, SelectionDAG &DAG,
   }
 
   // uzp1<ty>(x, nvcast(unpkhi(uzp1<ty>(y, z)))) => uzp1<ty>(x, z)
-  if (SDValue PreCast = isNVCastToHalfWidthElements(Op1)) {
+  if (SDValue PreCast = isNVCastToHalfWidthElements(Op1, Subtarget)) {
     if (PreCast.getOpcode() == AArch64ISD::UUNPKHI) {
       if (PreCast.getOperand(0).getOpcode() == AArch64ISD::UZP1) {
         SDValue Z = PreCast.getOperand(0).getOperand(1);
         return DAG.getNode(AArch64ISD::UZP1, DL, ResVT, Op0, Z);
+      }
+    }
+  }
+
+  // uzp1(nvcast(x >> k), nvcast(y >> k)) -> uzp2(nvcast(x), nvcast(y))
+  // where 'k' is 'sizeof(eltty(x))/2'.
+  if (SDValue PreCastOp0 = isNVCastToHalfWidthElements(Op0, Subtarget)) {
+    if (SDValue PreCastOp1 = isNVCastToHalfWidthElements(Op1, Subtarget)) {
+      if (PreCastOp0.getOpcode() == ISD::SRL &&
+          PreCastOp1.getOpcode() == ISD::SRL &&
+          PreCastOp0.getOperand(1) == PreCastOp1.getOperand(1)) {
+        ConstantSDNode *ShiftAmount =
+            isConstOrConstSplat(PreCastOp0.getOperand(1), /*AllowUndef=*/false,
+                                /*AllowTruncate=*/true);
+        if (ShiftAmount &&
+            ShiftAmount->getAsZExtVal() == ResVT.getScalarSizeInBits())
+          return DAG.getNode(AArch64ISD::UZP2, DL, ResVT,
+                             DAG.getNode(AArch64ISD::NVCAST, DL, ResVT,
+                                         PreCastOp0.getOperand(0)),
+                             DAG.getNode(AArch64ISD::NVCAST, DL, ResVT,
+                                         PreCastOp1.getOperand(0)));
       }
     }
   }
@@ -27140,9 +27510,9 @@ static bool getBoolVectorBitcastCompare(SDValue Vec, SDValue RHS,
 // iN, we can use a trick that extracts the i^th bit from the i^th element and
 // then performs a vector add to get a scalar bitmask. This requires that each
 // element's bits are either all 1 or all 0.
-static SDValue vectorToScalarBitmask(SDNode *N, SelectionDAG &DAG) {
-  SDLoc DL(N);
-  SDValue ComparisonResult(N, 0);
+static SDValue vectorToScalarBitmask(SDValue ComparisonResult,
+                                     SelectionDAG &DAG) {
+  SDLoc DL(ComparisonResult);
   EVT VecVT = ComparisonResult.getValueType();
   assert(VecVT.isVector() && "Must be a vector type");
 
@@ -27165,11 +27535,16 @@ static SDValue vectorToScalarBitmask(SDNode *N, SelectionDAG &DAG) {
   }
   VecVT = VecVT.changeVectorElementTypeToInteger();
 
-  // Large vectors don't map directly to this conversion, so to avoid too many
-  // edge cases, we don't apply it here. The conversion will likely still be
-  // applied later via multiple smaller vectors, whose results are concatenated.
-  if (VecVT.getSizeInBits() > 128)
-    return SDValue();
+  // The bitmask depends only on the lane count, not the lane width so when
+  // the preferred type exceeds 128 bits narrow the lanes to fill one 128-bit
+  // register instead of spilling through the stack.
+  if (VecVT.getSizeInBits() > 128) {
+    assert(128 % NumElts == 0 && "Expected NumElts to evenly divide 128 bits");
+    unsigned NarrowedEltBits = 128 / NumElts;
+    if (NarrowedEltBits < 8)
+      return SDValue();
+    VecVT = MVT::getVectorVT(MVT::getIntegerVT(NarrowedEltBits), NumElts);
+  }
 
   // Ensure that all elements' bits are either 0s or 1s.
   ComparisonResult = DAG.getSExtOrTrunc(ComparisonResult, DL, VecVT);
@@ -27201,8 +27576,7 @@ static SDValue vectorToScalarBitmask(SDNode *N, SelectionDAG &DAG) {
     V = DAG.getNode(AArch64ISD::ADDP, DL, VecVT, V, V);
     V = DAG.getNode(AArch64ISD::ADDP, DL, VecVT, V, V);
     V = DAG.getNode(ISD::BITCAST, DL, MVT::v8i16, V);
-    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32, V,
-                       DAG.getConstant(0, DL, MVT::i64));
+    return DAG.getExtractVectorElt(DL, MVT::i32, V, 0);
   }
 
   // All other vector sizes.
@@ -27295,8 +27669,7 @@ static SDValue performCTTZCombine(SDNode *N,
   auto CompressedCttz = [&](SDValue V) -> SDValue {
     if (V.getValueType().getSizeInBits() == DRegBits) {
       SDValue Nv = DAG.getNode(AArch64ISD::NVCAST, DL, MVT::v1i64, V);
-      SDValue Scalar = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i64, Nv,
-                                   DAG.getConstant(0, DL, MVT::i64));
+      SDValue Scalar = DAG.getExtractVectorElt(DL, MVT::i64, Nv, 0);
       return DAG.getNode(ISD::CTTZ, DL, MVT::i64, Scalar);
     }
     SDValue Compressed = DAG.getBitcast(MVT::i128, V);
@@ -27367,7 +27740,7 @@ static SDValue combineBoolVectorAndTruncateStore(SelectionDAG &DAG,
     return SDValue();
 
   VecOp = DAG.getNode(ISD::TRUNCATE, DL, MemVT, VecOp);
-  SDValue VectorBits = vectorToScalarBitmask(VecOp.getNode(), DAG);
+  SDValue VectorBits = vectorToScalarBitmask(VecOp, DAG);
   if (!VectorBits)
     return SDValue();
 
@@ -27420,10 +27793,7 @@ static SDValue combineStoreValueFPToInt(StoreSDNode *ST,
   SDLoc DL(ST);
   SDValue VecFP = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VecSrcVT, FPSrc);
   SDValue VecConv = DAG.getNode(Value.getOpcode(), DL, VecDstVT, VecFP);
-
-  SDValue Zero = DAG.getVectorIdxConstant(0, DL);
-  SDValue Extracted =
-      DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, VecConv, Zero);
+  SDValue Extracted = DAG.getExtractVectorElt(DL, VT, VecConv, 0);
 
   DCI.CombineTo(ST->getValue().getNode(), Extracted);
   return SDValue(ST, 0);
@@ -27465,20 +27835,17 @@ static SDValue combineI8TruncStore(StoreSDNode *ST, SelectionDAG &DAG,
   SDValue Chain = ST->getChain();
   MachineMemOperand *MMO = ST->getMemOperand();
   unsigned IdxScale = WideVT.getScalarSizeInBits() / 8;
-  SDValue E2 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i8, Cast,
-                           DAG.getConstant(2 * IdxScale, DL, MVT::i64));
+  SDValue E2 = DAG.getExtractVectorElt(DL, MVT::i8, Cast, IdxScale * 2);
   TypeSize Offset2 = TypeSize::getFixed(2);
   SDValue Ptr2 = DAG.getMemBasePlusOffset(ST->getBasePtr(), Offset2, DL);
   Chain = DAG.getStore(Chain, DL, E2, Ptr2, MF.getMachineMemOperand(MMO, 2, 1));
 
-  SDValue E1 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i8, Cast,
-                           DAG.getConstant(1 * IdxScale, DL, MVT::i64));
+  SDValue E1 = DAG.getExtractVectorElt(DL, MVT::i8, Cast, IdxScale);
   TypeSize Offset1 = TypeSize::getFixed(1);
   SDValue Ptr1 = DAG.getMemBasePlusOffset(ST->getBasePtr(), Offset1, DL);
   Chain = DAG.getStore(Chain, DL, E1, Ptr1, MF.getMachineMemOperand(MMO, 1, 1));
 
-  SDValue E0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i8, Cast,
-                           DAG.getConstant(0, DL, MVT::i64));
+  SDValue E0 = DAG.getExtractVectorElt(DL, MVT::i8, Cast, 0);
   Chain = DAG.getStore(Chain, DL, E0, ST->getBasePtr(),
                        MF.getMachineMemOperand(MMO, 0, 1));
   return Chain;
@@ -27503,6 +27870,9 @@ static unsigned getFPSubregForVT(EVT VT) {
 static SDValue
 performInterleavedStoreCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                                SelectionDAG &DAG);
+
+static SDValue performLegalizedInterleavedStoreCombine(
+    StoreSDNode *ST, TargetLowering::DAGCombinerInfo &DCI, SelectionDAG &DAG);
 
 static SDValue performSTORECombine(SDNode *N,
                                    TargetLowering::DAGCombinerInfo &DCI,
@@ -27536,6 +27906,9 @@ static SDValue performSTORECombine(SDNode *N,
     return Res;
 
   if (SDValue Res = performInterleavedStoreCombine(N, DCI, DAG))
+    return Res;
+
+  if (SDValue Res = performLegalizedInterleavedStoreCombine(ST, DCI, DAG))
     return Res;
 
   // Cast ptr32 and ptr64 pointers to the default address space before a store.
@@ -27653,9 +28026,7 @@ static SDValue performSTORECombine(SDNode *N,
       // Handle extracting from lanes != 0.
       SDValue Ext = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL,
                                 Value.getValueType(), Vector, ExtIdx);
-      SDValue Zero = DAG.getVectorIdxConstant(0, DL);
-      ExtVector = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, VectorVT,
-                              DAG.getPOISON(VectorVT), Ext, Zero);
+      ExtVector = DAG.getInsertVectorElt(DL, DAG.getPOISON(VectorVT), Ext, 0);
     }
 
     EVT FPMemVT = MemVT == MVT::i8
@@ -27816,8 +28187,6 @@ performInterleavedStoreCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
 
   auto *MemN = cast<MemSDNode>(N);
   if (IsScalable) {
-    if (NumParts == 3)
-      return SDValue();
     SDValue Pred;
     if (IsMasked) {
       Pred = getNarrowMaskForInterleavedOps(DAG, DL, Mask, NumParts);
@@ -27828,8 +28197,18 @@ performInterleavedStoreCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
       Pred = DAG.getConstant(1, DL, PredVT);
     }
 
-    const Intrinsic::ID IID =
-        NumParts == 2 ? Intrinsic::aarch64_sve_st2 : Intrinsic::aarch64_sve_st4;
+    Intrinsic::ID IID;
+    switch (NumParts) {
+    case 2:
+      IID = Intrinsic::aarch64_sve_st2;
+      break;
+    case 3:
+      IID = Intrinsic::aarch64_sve_st3;
+      break;
+    case 4:
+      IID = Intrinsic::aarch64_sve_st4;
+      break;
+    }
     SmallVector<SDValue, 8> Ops;
     Ops.append({Chain, DAG.getConstant(IID, DL, MVT::i32)});
     Ops.append(ValueInterleaveOps);
@@ -27889,14 +28268,118 @@ performInterleavedStoreCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                                  MemN->getMemoryVT(), MemN->getMemOperand());
 }
 
+static SDValue performLegalizedInterleavedStoreCombine(
+    StoreSDNode *ST, TargetLowering::DAGCombinerInfo &DCI, SelectionDAG &DAG) {
+  // Type legalization splits a wide interleaved store into consecutive legal
+  // stores. Combine each group that directly stores all results of a legal
+  // VECTOR_INTERLEAVE into a structured store.
+  if (DCI.getDAGCombineLevel() < AfterLegalizeTypes ||
+      !DAG.getSubtarget<AArch64Subtarget>().isNeonAvailable())
+    return SDValue();
+
+  SDValue StoredValue = ST->getValue();
+  SDNode *Interleave = StoredValue.getNode();
+  if (Interleave->getOpcode() != ISD::VECTOR_INTERLEAVE)
+    return SDValue();
+
+  unsigned NumParts = Interleave->getNumOperands();
+  if (NumParts < 2 || NumParts > 4)
+    return SDValue();
+
+  EVT SubVecTy = Interleave->getValueType(0);
+  if (!SubVecTy.is64BitVector() && !SubVecTy.is128BitVector())
+    return SDValue();
+
+  SmallVector<StoreSDNode *, 4> Stores(NumParts, nullptr);
+  for (SDUse &Use : Interleave->uses()) {
+    unsigned ResNo = Use.getResNo();
+    auto *Store = dyn_cast<StoreSDNode>(Use.getUser());
+    if (Stores[ResNo] || !Store)
+      return SDValue();
+    Stores[ResNo] = Store;
+  }
+
+  if (llvm::is_contained(Stores, nullptr))
+    return SDValue();
+
+  StoreSDNode *BaseStore = Stores[0];
+  unsigned Bytes = SubVecTy.getStoreSize().getFixedValue();
+  for (auto [Idx, Store] : enumerate(Stores)) {
+    if (!DAG.areNonVolatileConsecutiveStores(Store, BaseStore, Bytes, Idx))
+      return SDValue();
+  }
+
+  static constexpr Intrinsic::ID NEONStores[] = {Intrinsic::aarch64_neon_st2,
+                                                 Intrinsic::aarch64_neon_st3,
+                                                 Intrinsic::aarch64_neon_st4};
+  SDLoc DL(Interleave);
+  SmallVector<SDValue, 8> Ops = {
+      BaseStore->getChain(),
+      DAG.getTargetConstant(NEONStores[NumParts - 2], DL, MVT::i64)};
+  Ops.append(Interleave->op_begin(), Interleave->op_end());
+  Ops.push_back(BaseStore->getBasePtr());
+
+  EVT MemVT =
+      EVT::getVectorVT(*DAG.getContext(), SubVecTy.getVectorElementType(),
+                       SubVecTy.getVectorElementCount() * NumParts);
+  MachineFunction &MF = DAG.getMachineFunction();
+  MachineMemOperand *MMO =
+      MF.getMachineMemOperand(BaseStore->getMemOperand(), 0, NumParts * Bytes);
+  SDValue NewStore = DAG.getMemIntrinsicNode(
+      ISD::INTRINSIC_VOID, DL, DAG.getVTList(MVT::Other), Ops, MemVT, MMO);
+
+  for (StoreSDNode *Store : Stores)
+    if (Store != ST)
+      DCI.CombineTo(Store, NewStore);
+  return NewStore;
+}
+
+/// Expand a scalable compressing store to a VECTOR_COMPRESS + a masked store.
+static SDValue expandScalableCompressingStore(MaskedStoreSDNode *Store,
+                                              SelectionDAG &DAG) {
+  SDLoc DL(Store);
+  EVT VT = Store->getValue().getValueType();
+  assert(VT.isScalableVector() && Store->isCompressingStore() &&
+         "Expected a scalable compressing store");
+
+  EVT MaskVT = Store->getMask().getValueType();
+  SDValue Zero = DAG.getConstant(0, DL, MVT::i64);
+  SDValue CntActive = DAG.getNode(
+      ISD::INTRINSIC_WO_CHAIN, DL, MVT::i64,
+      DAG.getTargetConstant(Intrinsic::aarch64_sve_cntp, DL, MVT::i64),
+      Store->getMask(), Store->getMask());
+
+  SDValue CompressedValue =
+      DAG.getNode(ISD::VECTOR_COMPRESS, DL, VT, Store->getValue(),
+                  Store->getMask(), DAG.getPOISON(VT));
+  SDValue CompressedMask =
+      DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, DL, MaskVT, Zero, CntActive);
+
+  return DAG.getMaskedStore(Store->getChain(), DL, CompressedValue,
+                            Store->getBasePtr(), Store->getOffset(),
+                            CompressedMask, Store->getMemoryVT(),
+                            Store->getMemOperand(), Store->getAddressingMode(),
+                            Store->isTruncatingStore(),
+                            /*isCompressing=*/false);
+}
+
 static SDValue performMSTORECombine(SDNode *N,
                                     TargetLowering::DAGCombinerInfo &DCI,
                                     SelectionDAG &DAG,
-                                    const AArch64Subtarget *Subtarget) {
+                                    const AArch64Subtarget *Subtarget,
+                                    const AArch64TargetLowering &TLI) {
   MaskedStoreSDNode *MST = cast<MaskedStoreSDNode>(N);
   SDValue Value = MST->getValue();
   SDValue Mask = MST->getMask();
   SDLoc DL(N);
+
+  // If MST is a compressing store and VECTOR_COMPRESS can be lowered for the VT
+  // expand the store early. This allows type promotion to apply to unpacked
+  // SVE float types.
+  EVT VT = MST->getValue().getValueType();
+  if (MST->isCompressingStore() && VT.isScalableVector() &&
+      TLI.isOperationLegalOrCustomOrPromote(ISD::VECTOR_COMPRESS, VT))
+    return expandScalableCompressingStore(MST, DAG);
 
   if (SDValue Res = performInterleavedStoreCombine(N, DCI, DAG))
     return Res;
@@ -28260,6 +28743,9 @@ bool checkValueWidth(SDValue V, unsigned width, ISD::LoadExtType &ExtType) {
     LoadSDNode *LoadNode = cast<LoadSDNode>(V.getNode());
     if ((LoadNode->getMemoryVT() == MVT::i8 && width == 8)
        || (LoadNode->getMemoryVT() == MVT::i16 && width == 16)) {
+      if (LoadNode->getExtensionType() != ISD::SEXTLOAD &&
+          LoadNode->getExtensionType() != ISD::ZEXTLOAD)
+        return false;
       ExtType = LoadNode->getExtensionType();
       return true;
     }
@@ -29134,6 +29620,17 @@ static SDValue performSETCCCombine(SDNode *N,
       SplatLHSVal.isOne())
     return DAG.getSetCC(DL, VT, DAG.getConstant(0, DL, CmpVT), RHS, ISD::SETGE);
 
+  // Fold setcc(and(X, Y), 0, seteq) --> NOT(AArch64ISD::CMTST(X, Y)).
+  // SETNE will have been legalized to SETEQ by this point.
+  // The NOT folds away when the result feeds a BSP.
+  if (DCI.isAfterLegalizeDAG() && CmpVT.isFixedLengthVector() &&
+      Cond == ISD::SETEQ && LHS.getOpcode() == ISD::AND &&
+      isZerosVector(RHS.getNode())) {
+    SDValue CMTSTNode = DAG.getNode(AArch64ISD::CMTST, DL, CmpVT,
+                                    LHS.getOperand(0), LHS.getOperand(1));
+    return DAG.getNOT(DL, CMTSTNode, CmpVT);
+  }
+
   return SDValue();
 }
 
@@ -29797,7 +30294,8 @@ static SDValue performSelectCombine(SDNode *N,
 }
 
 static SDValue performDUPCombine(SDNode *N,
-                                 TargetLowering::DAGCombinerInfo &DCI) {
+                                 TargetLowering::DAGCombinerInfo &DCI,
+                                 const AArch64Subtarget *Subtarget) {
   EVT VT = N->getValueType(0);
   SDLoc DL(N);
   // If "v2i32 DUP(x)" and "v4i32 DUP(x)" both exist, use an extract from the
@@ -29821,6 +30319,15 @@ static SDValue performDUPCombine(SDNode *N,
     //   v4i32 = SCALAR_TO_VECTOR (i32 (zextloadi8 addr)) ; Matches to ldr b0
     //   v4i32 = DUPLANE32 (v4i32), 0
     if (auto *LD = dyn_cast<LoadSDNode>(Op)) {
+      if (!Subtarget->noPredicatedLD1R() &&
+          Subtarget->isSVEorStreamingSVEAvailable() && Op->hasOneUse() &&
+          VT.getScalarType().isInteger() &&
+          VT.getScalarType() != LD->getMemoryVT().getScalarType()) {
+        EVT ScalableVT = getContainerForFixedLengthVector(DCI.DAG, VT);
+        SDValue SplatNode =
+            DCI.DAG.getNode(ISD::SPLAT_VECTOR, DL, ScalableVT, Op);
+        return convertFromScalableVector(DCI.DAG, VT, SplatNode);
+      }
       ISD::LoadExtType ExtType = LD->getExtensionType();
       EVT MemVT = LD->getMemoryVT();
       EVT ElemVT = VT.getVectorElementType();
@@ -29844,7 +30351,9 @@ static SDValue performDUPCombine(SDNode *N,
     // produce a scalar value in FPRs.
     if (Op.getOpcode() == AArch64ISD::FCMEQ ||
         Op.getOpcode() == AArch64ISD::FCMGE ||
-        Op.getOpcode() == AArch64ISD::FCMGT) {
+        Op.getOpcode() == AArch64ISD::FCMGT ||
+        (Op.getOpcode() == ISD::BITCAST &&
+         Op->getOperand(0).getValueType().isFloatingPoint())) {
       EVT ElemVT = VT.getVectorElementType();
       EVT ExpandedVT = VT;
       // Insert into a 128-bit vector to match DUPLANE's pattern.
@@ -29852,8 +30361,8 @@ static SDValue performDUPCombine(SDNode *N,
         ExpandedVT = EVT::getVectorVT(*DCI.DAG.getContext(), ElemVT,
                                       128 / ElemVT.getSizeInBits());
       SDValue Zero = DCI.DAG.getConstant(0, DL, MVT::i64);
-      SDValue Vec = DCI.DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, ExpandedVT,
-                                    DCI.DAG.getPOISON(ExpandedVT), Op, Zero);
+      SDValue Vec =
+          DCI.DAG.getInsertVectorElt(DL, DCI.DAG.getPOISON(ExpandedVT), Op, 0);
       return DCI.DAG.getNode(getDUPLANEOp(ElemVT), DL, VT, Vec, Zero);
     }
 
@@ -29881,8 +30390,10 @@ static SDValue performDUPCombine(SDNode *N,
   return SDValue();
 }
 
-/// Get rid of unnecessary NVCASTs (that don't change the type).
-static SDValue performNVCASTCombine(SDNode *N, SelectionDAG &DAG) {
+/// Get rid of unnecessary NVCASTs (that don't change the type). Under LE a
+/// NVCAST is converted to a bitcast.
+static SDValue performNVCASTCombine(SDNode *N, SelectionDAG &DAG,
+                                    const AArch64Subtarget *Subtarget) {
   EVT VT = N->getValueType(0);
   SDValue Op = N->getOperand(0);
 
@@ -29891,6 +30402,9 @@ static SDValue performNVCASTCombine(SDNode *N, SelectionDAG &DAG) {
 
   if (Op.isUndef())
     return DAG.getUNDEF(VT);
+
+  if (Subtarget->isLittleEndian())
+    return DAG.getBitcast(VT, Op);
 
   if (Op.getOpcode() == AArch64ISD::NVCAST)
     return DAG.getNode(AArch64ISD::NVCAST, SDLoc(N), VT, Op.getOperand(0));
@@ -30580,7 +31094,11 @@ static SDValue performBSPExpandForSVE(SDNode *N, SelectionDAG &DAG,
 static SDValue performDupLane128Combine(SDNode *N, SelectionDAG &DAG) {
   EVT VT = N->getValueType(0);
 
-  SDValue Insert = N->getOperand(0);
+  SDValue Op = N->getOperand(0);
+  if (Op.getOpcode() == ISD::SPLAT_VECTOR && Op.getValueType() == VT)
+    return Op;
+
+  SDValue Insert = Op;
   if (Insert.getOpcode() != ISD::INSERT_SUBVECTOR)
     return SDValue();
 
@@ -30788,12 +31306,22 @@ static SDValue
 performScalarToVectorCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                              SelectionDAG &DAG) {
   SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  SDValue N0 = N->getOperand(0);
 
   // If a DUP(Op0) already exists, reuse it for the scalar_to_vector.
   if (DCI.isAfterLegalizeDAG()) {
     if (SDNode *LN = DCI.DAG.getNodeIfExists(AArch64ISD::DUP, N->getVTList(),
                                              N->getOperand(0)))
       return SDValue(LN, 0);
+  }
+
+  if (VT.isFixedLengthVector() && VT.getVectorNumElements() > 1 &&
+      isIntOrFPConstant(N0)) {
+    SDValue Undef = DAG.getPOISON(N0.getValueType());
+    SmallVector<SDValue> Ops(VT.getVectorNumElements(), Undef);
+    Ops[0] = N0;
+    return DAG.getBuildVector(VT, DL, Ops);
   }
 
   // Let's do below transform.
@@ -30809,15 +31337,13 @@ performScalarToVectorCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
 
-  EVT VT = N->getValueType(0);
   if (VT != MVT::v1i64)
     return SDValue();
 
-  SDValue ZEXT = N->getOperand(0);
-  if (ZEXT.getOpcode() != ISD::ZERO_EXTEND || ZEXT.getValueType() != MVT::i64)
+  if (N0.getOpcode() != ISD::ZERO_EXTEND || N0.getValueType() != MVT::i64)
     return SDValue();
 
-  SDValue EXTRACT_VEC_ELT = ZEXT.getOperand(0);
+  SDValue EXTRACT_VEC_ELT = N0.getOperand(0);
   if (EXTRACT_VEC_ELT.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
       EXTRACT_VEC_ELT.getValueType() != MVT::i32)
     return SDValue();
@@ -30863,8 +31389,78 @@ static bool isDeinterleave4ForWideningUToFP(SDNode *N) {
   return llvm::all_of(Users, [](SDNode *User) { return User != nullptr; });
 }
 
+static SDValue performLegalizedVectorDeinterleaveCombine(
+    SDNode *N, TargetLowering::DAGCombinerInfo &DCI, SelectionDAG &DAG) {
+  // Type legalization splits a wide load into consecutive legal loads. Combine
+  // each group used by a legal VECTOR_DEINTERLEAVE into a structured load.
+  if (DCI.getDAGCombineLevel() < AfterLegalizeTypes ||
+      !DAG.getSubtarget<AArch64Subtarget>().isNeonAvailable())
+    return SDValue();
+
+  if (N->getOpcode() != ISD::VECTOR_DEINTERLEAVE)
+    return SDValue();
+
+  unsigned NumParts = N->getNumOperands();
+  if (NumParts < 2 || NumParts > 4)
+    return SDValue();
+
+  EVT SubVecTy = N->getValueType(0);
+  if (!SubVecTy.is64BitVector() && !SubVecTy.is128BitVector())
+    return SDValue();
+
+  SmallVector<LoadSDNode *, 4> Loads;
+  for (const SDValue &Operand : N->op_values()) {
+    auto *Load = dyn_cast<LoadSDNode>(Operand);
+    if (!Load || !Operand.hasOneUse())
+      return SDValue();
+    Loads.push_back(Load);
+  }
+
+  LoadSDNode *BaseLoad = Loads[0];
+  unsigned Bytes = SubVecTy.getStoreSize().getFixedValue();
+  for (auto [Idx, Load] : enumerate(Loads)) {
+    if (!DAG.areNonVolatileConsecutiveLoads(Load, BaseLoad, Bytes, Idx))
+      return SDValue();
+  }
+
+  static constexpr Intrinsic::ID NEONLoads[] = {Intrinsic::aarch64_neon_ld2,
+                                                Intrinsic::aarch64_neon_ld3,
+                                                Intrinsic::aarch64_neon_ld4};
+  SDLoc DL(N);
+  EVT MemVT =
+      EVT::getVectorVT(*DAG.getContext(), SubVecTy.getVectorElementType(),
+                       SubVecTy.getVectorElementCount() * NumParts);
+  MachineFunction &MF = DAG.getMachineFunction();
+  MachineMemOperand *MMO =
+      MF.getMachineMemOperand(BaseLoad->getMemOperand(), 0, NumParts * Bytes);
+
+  SmallVector<EVT, 5> ResVTs(NumParts, SubVecTy);
+  ResVTs.push_back(MVT::Other);
+
+  // We can now generate a structured load!
+  SDValue NewLoad = DAG.getMemIntrinsicNode(
+      ISD::INTRINSIC_W_CHAIN, DL, DAG.getVTList(ResVTs),
+      {BaseLoad->getChain(),
+       DAG.getTargetConstant(NEONLoads[NumParts - 2], DL, MVT::i64),
+       BaseLoad->getBasePtr()},
+      MemVT, MMO);
+
+  SmallVector<SDValue, 4> ResOps;
+  for (unsigned I = 0; I != NumParts; ++I)
+    ResOps.push_back(NewLoad.getValue(I));
+
+  // Replace uses of the original chain result with the new chain result.
+  for (LoadSDNode *Load : Loads)
+    DAG.ReplaceAllUsesOfValueWith(SDValue(Load, 1), NewLoad.getValue(NumParts));
+
+  return DCI.CombineTo(N, ResOps, false);
+}
+
 static SDValue performVectorDeinterleaveCombine(
     SDNode *N, TargetLowering::DAGCombinerInfo &DCI, SelectionDAG &DAG) {
+  if (SDValue Res = performLegalizedVectorDeinterleaveCombine(N, DCI, DAG))
+    return Res;
+
   if (!DCI.isBeforeLegalize())
     return SDValue();
 
@@ -30915,8 +31511,6 @@ static SDValue performVectorDeinterleaveCombine(
   SDValue Res;
   MemSDNode *MemNode = dyn_cast<MemSDNode>(WideVec);
   if (IsScalable) {
-    if (NumParts == 3)
-      return SDValue();
     SDValue Chain, BasePtr, Pred;
     if (auto *MaskedLoad = dyn_cast<MaskedLoadSDNode>(WideVec)) {
       // Bail out if the masked load has an unexpected number of uses, since we
@@ -30950,8 +31544,18 @@ static SDValue performVectorDeinterleaveCombine(
       BasePtr = Load->getBasePtr();
     }
 
-    const Intrinsic::ID IID = NumParts == 2 ? Intrinsic::aarch64_sve_ld2_sret
-                                            : Intrinsic::aarch64_sve_ld4_sret;
+    Intrinsic::ID IID;
+    switch (NumParts) {
+    case 2:
+      IID = Intrinsic::aarch64_sve_ld2_sret;
+      break;
+    case 3:
+      IID = Intrinsic::aarch64_sve_ld3_sret;
+      break;
+    case 4:
+      IID = Intrinsic::aarch64_sve_ld4_sret;
+      break;
+    }
     SDValue NewLdOps[] = {Chain, DAG.getConstant(IID, DL, MVT::i32), Pred,
                           BasePtr};
     Res = DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, ResVTList,
@@ -31273,7 +31877,7 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::STORE:
     return performSTORECombine(N, DCI, DAG, Subtarget);
   case ISD::MSTORE:
-    return performMSTORECombine(N, DCI, DAG, Subtarget);
+    return performMSTORECombine(N, DCI, DAG, Subtarget, *this);
   case ISD::MGATHER:
   case ISD::MSCATTER:
   case ISD::EXPERIMENTAL_VECTOR_HISTOGRAM:
@@ -31292,11 +31896,11 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   case AArch64ISD::DUPLANE16:
   case AArch64ISD::DUPLANE32:
   case AArch64ISD::DUPLANE64:
-    return performDUPCombine(N, DCI);
+    return performDUPCombine(N, DCI, Subtarget);
   case AArch64ISD::DUPLANE128:
     return performDupLane128Combine(N, DAG);
   case AArch64ISD::NVCAST:
-    return performNVCASTCombine(N, DAG);
+    return performNVCASTCombine(N, DAG, Subtarget);
   case AArch64ISD::SPLICE:
     return performSpliceCombine(N, DAG);
   case AArch64ISD::UUNPKLO:
@@ -31599,10 +32203,9 @@ bool AArch64TargetLowering::isIndexingLegal(MachineInstr &MI, Register Base,
   return isInt<9>(CstOffset->getSExtValue());
 }
 
-bool AArch64TargetLowering::getIndexedAddressParts(SDNode *N, SDNode *Op,
-                                                   SDValue &Base,
-                                                   SDValue &Offset,
-                                                   SelectionDAG &DAG) const {
+bool AArch64TargetLowering::getIndexedAddressParts(
+    SDNode *N, SDNode *Op, SDValue &Base, SDValue &Offset, SelectionDAG &DAG,
+    ISD::MemIndexedMode AM) const {
   if (Op->getOpcode() != ISD::ADD && Op->getOpcode() != ISD::SUB)
     return false;
 
@@ -31646,6 +32249,12 @@ bool AArch64TargetLowering::getIndexedAddressParts(SDNode *N, SDNode *Op,
     if (!Subtarget->isLittleEndian() && MemType.isVector() &&
         (uint64_t)RHSC != MemType.getStoreSize())
       return false;
+    // Likewise, when compiling with +strict-align we use LD1/ST1 when the
+    // alignment is less than the vector size.
+    if (Subtarget->requiresStrictAlign() && MemType.isVector() &&
+        cast<MemSDNode>(N)->getAlign() < MemType.getStoreSize() &&
+        ((uint64_t)RHSC != MemType.getStoreSize() || AM != ISD::POST_INC))
+      return false;
     // Always emit pre-inc/post-inc addressing mode. Use negated constant offset
     // when dealing with subtraction.
     Offset = DAG.getConstant(RHSC, SDLoc(N), RHS->getValueType(0));
@@ -31678,7 +32287,8 @@ bool AArch64TargetLowering::getPreIndexedAddressParts(SDNode *N, SDValue &Base,
   if (IsVolatile)
     return false;
 
-  if (!getIndexedAddressParts(N, Ptr.getNode(), Base, Offset, DAG))
+  if (!getIndexedAddressParts(N, Ptr.getNode(), Base, Offset, DAG,
+                              ISD::PRE_INC))
     return false;
   AM = ISD::PRE_INC;
   return true;
@@ -31707,7 +32317,7 @@ bool AArch64TargetLowering::getPostIndexedAddressParts(
   if (IsVolatile)
     return false;
 
-  if (!getIndexedAddressParts(N, Op, Base, Offset, DAG))
+  if (!getIndexedAddressParts(N, Op, Base, Offset, DAG, ISD::POST_INC))
     return false;
   // Post-indexing updates the base, so it's not a valid transform
   // if that's not the same as the load's pointer.
@@ -31738,7 +32348,7 @@ static void replaceBoolVectorBitcast(SDNode *N,
       Op = Op.getOperand(0);
   }
 
-  SDValue VectorBits = vectorToScalarBitmask(Op.getNode(), DAG);
+  SDValue VectorBits = vectorToScalarBitmask(Op, DAG);
   if (VectorBits)
     Results.push_back(DAG.getZExtOrTrunc(VectorBits, DL, VT));
 }
@@ -31881,6 +32491,29 @@ void AArch64TargetLowering::ReplaceExtractSubVectorResults(
 
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
+
+  if (VT.isFixedLengthVectorOf(MVT::i1)) {
+    EVT NewEltVT;
+    switch (VT.getVectorMinNumElements()) {
+    case 2:
+      NewEltVT = MVT::i32;
+      break;
+    case 4:
+      NewEltVT = MVT::i16;
+      break;
+    default:
+      NewEltVT = MVT::i8;
+      break;
+    }
+
+    EVT NewInVT = InVT.changeVectorElementType(*DAG.getContext(), NewEltVT);
+    EVT NewVT = VT.changeVectorElementType(*DAG.getContext(), NewEltVT);
+    SDValue ExtendedIn = DAG.getNode(ISD::ANY_EXTEND, DL, NewInVT, In);
+    SDValue SubVec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, NewVT, ExtendedIn,
+                                 N->getOperand(1));
+    Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, VT, SubVec));
+    return;
+  }
 
   // The following checks bail if this is not a halving operation.
 
@@ -32334,6 +32967,21 @@ void AArch64TargetLowering::ReplaceNodeResults(
   case ISD::GET_ACTIVE_LANE_MASK:
     ReplaceGetActiveLaneMaskResults(N, Results, DAG);
     return;
+  case ISD::VECTOR_MATCH: {
+    EVT VT = N->getValueType(0);
+    if (!VT.isFixedLengthVectorOf(MVT::i1))
+      return;
+
+    // NOTE: Only trivial type promotion is supported.
+    EVT NewVT = getTypeToTransformTo(*DAG.getContext(), VT);
+    if (NewVT.getVectorNumElements() != VT.getVectorNumElements())
+      return;
+
+    SDLoc DL(N);
+    SDValue V = DAG.getNode(ISD::VECTOR_MATCH, DL, NewVT, N->ops());
+    Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, VT, V));
+    return;
+  }
   case ISD::INTRINSIC_WO_CHAIN: {
     EVT VT = N->getValueType(0);
 
@@ -32390,20 +33038,6 @@ void AArch64TargetLowering::ReplaceNodeResults(
           DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, RuntimePStateSM));
       return;
     }
-    case Intrinsic::experimental_vector_match: {
-      if (!VT.isFixedLengthVectorOf(MVT::i1))
-        return;
-
-      // NOTE: Only trivial type promotion is supported.
-      EVT NewVT = getTypeToTransformTo(*DAG.getContext(), VT);
-      if (NewVT.getVectorNumElements() != VT.getVectorNumElements())
-        return;
-
-      SDLoc DL(N);
-      auto V = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, NewVT, N->ops());
-      Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, VT, V));
-      return;
-    }
     }
   }
   case ISD::READ_REGISTER: {
@@ -32452,8 +33086,9 @@ SDValue AArch64TargetLowering::emitStackGuardMixFP(SelectionDAG &DAG,
 
 unsigned AArch64TargetLowering::combineRepeatedFPDivisors() const {
   // Combine multiple FDIVs with the same divisor into multiple FMULs by the
-  // reciprocal if there are three or more FDIVs.
-  return 3;
+  // reciprocal if there are enough FDIVs. The threshold is determined by the
+  // subtarget feature.
+  return Subtarget->useReciprocalFDivCombineThreshold2() ? 2 : 3;
 }
 
 TargetLoweringBase::LegalizeTypeAction
@@ -32669,9 +33304,10 @@ AArch64TargetLowering::shouldExpandAtomicRMWInIR(
   // If LSFE is available and FP exceptions are not observable, use atomic FP
   // instructions in preference to expansion.
   const Function &F = *AI->getFunction();
-  if (Subtarget->hasLSFE() && !F.isStrictFP() &&
+  if (Subtarget->hasLSFE() && Size < 128 && !F.isStrictFP() &&
       F.getFnAttribute("no-trapping-math").getValueAsBool() &&
       (AI->getOperation() == AtomicRMWInst::FAdd ||
+       AI->getOperation() == AtomicRMWInst::FSub ||
        AI->getOperation() == AtomicRMWInst::FMax ||
        AI->getOperation() == AtomicRMWInst::FMin ||
        AI->getOperation() == AtomicRMWInst::FMaximum ||
@@ -32848,6 +33484,55 @@ Value *AArch64TargetLowering::emitStoreConditional(IRBuilderBase &Builder,
   return CI;
 }
 
+Value *AArch64TargetLowering::emitCanLoadSpeculatively(
+    IRBuilderBase &Builder, Value *Ptr, Value *SizeInBytes) const {
+  // Conservatively only allow speculation for address space 0.
+  if (Ptr->getType()->getPointerAddressSpace() != 0)
+    return nullptr;
+  // For power-of-2 sizes <= 16, emit alignment check: (ptr & (size - 1)) == 0.
+  // If the pointer is aligned to at least 'size' bytes, loading 'size' bytes
+  // cannot cross a page boundary, so it's safe to speculate.
+  // The 16-byte limit ensures correctness with MTE (memory tagging), since
+  // MTE uses 16-byte tag granules.
+  //
+  // The alignment check only works for power-of-2 sizes. For non-power-of-2
+  // sizes, we conservatively return false.
+  constexpr uint64_t MTETagGranuleInBytes = 16;
+
+  if (auto *ConstSize = dyn_cast<ConstantInt>(SizeInBytes)) {
+    uint64_t Size = ConstSize->getZExtValue();
+    // For non-power-of-2 or constant sizes > 16, return nullptr (default
+    // false).
+    if (!isPowerOf2_64(Size) || Size > MTETagGranuleInBytes)
+      return nullptr;
+
+    // Power-of-2 constant size <= 16: use fast alignment check.
+    Value *PtrAddr = Builder.CreatePtrToAddr(Ptr);
+    return Builder.CreateIsNull(Builder.CreateAnd(PtrAddr, Size - 1));
+  }
+
+  // Check size <= 16 and alignment. A runtime power-of-2 test is omitted
+  // because the intrinsic's result is poison for non-power-of-2 sizes.
+  Value *SizeLE16 = Builder.CreateICmpULE(
+      SizeInBytes,
+      ConstantInt::get(SizeInBytes->getType(), MTETagGranuleInBytes));
+
+  // Narrow only after the comparison above, so that a size exceeding the
+  // address width is not truncated into the accepted range.
+  const DataLayout &DL = Builder.GetInsertBlock()->getDataLayout();
+  Type *AddrTy = DL.getAddressType(Ptr->getType());
+  Value *SizeAddr = Builder.CreateZExtOrTrunc(SizeInBytes, AddrTy);
+
+  // alignment check: (ptr & (size - 1)) == 0
+  Value *SizeMinusOne =
+      Builder.CreateSub(SizeAddr, ConstantInt::get(AddrTy, 1));
+  Value *PtrAddr = Builder.CreatePtrToAddr(Ptr);
+  Value *AlignCheck =
+      Builder.CreateIsNull(Builder.CreateAnd(PtrAddr, SizeMinusOne));
+
+  return Builder.CreateAnd(SizeLE16, AlignCheck);
+}
+
 bool AArch64TargetLowering::functionArgumentNeedsConsecutiveRegisters(
     Type *Ty, CallingConv::ID CallConv, bool isVarArg,
     const DataLayout &DL) const {
@@ -32935,7 +33620,7 @@ Value *AArch64TargetLowering::getSafeStackPointerLocation(
 /// If a physical register, this returns the register that receives the
 /// exception address on entry to an EH pad.
 Register AArch64TargetLowering::getExceptionPointerRegister(
-    const Constant *PersonalityFn) const {
+    ExceptionHandling EH, const Constant *PersonalityFn) const {
   // FIXME: This is a guess. Has this been defined yet?
   return AArch64::X0;
 }
@@ -32943,7 +33628,7 @@ Register AArch64TargetLowering::getExceptionPointerRegister(
 /// If a physical register, this returns the register that receives the
 /// exception typeid on entry to a landing pad.
 Register AArch64TargetLowering::getExceptionSelectorRegister(
-    const Constant *PersonalityFn) const {
+    ExceptionHandling EH, const Constant *PersonalityFn) const {
   // FIXME: This is a guess. Has this been defined yet?
   return AArch64::X1;
 }
@@ -33289,11 +33974,11 @@ bool AArch64TargetLowering::shouldLocalize(
   unsigned Opc = MI.getOpcode();
   switch (Opc) {
   case TargetOpcode::G_GLOBAL_VALUE: {
-    // On Darwin, TLS global vars get selected into function calls, which
-    // we don't want localized, as they can get moved into the middle of a
-    // another call sequence.
+    // Don't localize TLS global vars on Mach-O and ELF, as doing so can move
+    // TLS-related instructions into a call sequence.
     const GlobalValue &GV = *MI.getOperand(1).getGlobal();
-    if (GV.isThreadLocal() && Subtarget->isTargetMachO())
+    if (GV.isThreadLocal() &&
+        (Subtarget->isTargetMachO() || Subtarget->isTargetELF()))
       return false;
     return true; // Always localize G_GLOBAL_VALUE to avoid high reg pressure.
   }
@@ -33361,7 +34046,7 @@ bool AArch64TargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
         return true;
 
     if (const AllocaInst *AI = dyn_cast<AllocaInst>(&Inst)) {
-      if (AI->getAllocatedType()->isScalableTy())
+      if (AI->isScalable())
         return true;
     }
   }
@@ -33377,9 +34062,8 @@ bool AArch64TargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
         Caller->hasFnAttribute("aarch64_pstate_sm_compatible") ||
         Caller->hasFnAttribute("aarch64_za_state_agnostic")) {
       auto CallAttrs = SMECallAttrs(*Base, &getRuntimeLibcallsInfo());
-      if (CallAttrs.requiresSMChange() || CallAttrs.requiresLazySave() ||
-          CallAttrs.requiresPreservingZT0() ||
-          CallAttrs.requiresPreservingAllZAState())
+      if (CallAttrs.requiresSMChange() || CallAttrs.requiresPreservingZT0() ||
+          CallAttrs.requiresZASave())
         return true;
     }
   }
@@ -33685,30 +34369,7 @@ SDValue AArch64TargetLowering::LowerMSTORE(SDValue Op,
   if (!Store->isCompressingStore())
     return SDValue();
 
-  EVT MaskVT = Store->getMask().getValueType();
-  EVT MaskExtVT = getPromotedVTForPredicate(MaskVT);
-  EVT MaskReduceVT = MaskExtVT.getScalarType();
-  SDValue Zero = DAG.getConstant(0, DL, MVT::i64);
-
-  SDValue MaskExt =
-      DAG.getNode(ISD::ZERO_EXTEND, DL, MaskExtVT, Store->getMask());
-  SDValue CntActive =
-      DAG.getNode(ISD::VECREDUCE_ADD, DL, MaskReduceVT, MaskExt);
-  if (MaskReduceVT != MVT::i64)
-    CntActive = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, CntActive);
-
-  SDValue CompressedValue =
-      DAG.getNode(ISD::VECTOR_COMPRESS, DL, VT, Store->getValue(),
-                  Store->getMask(), DAG.getPOISON(VT));
-  SDValue CompressedMask =
-      DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, DL, MaskVT, Zero, CntActive);
-
-  return DAG.getMaskedStore(Store->getChain(), DL, CompressedValue,
-                            Store->getBasePtr(), Store->getOffset(),
-                            CompressedMask, Store->getMemoryVT(),
-                            Store->getMemOperand(), Store->getAddressingMode(),
-                            Store->isTruncatingStore(),
-                            /*isCompressing=*/false);
+  return expandScalableCompressingStore(Store, DAG);
 }
 
 SDValue AArch64TargetLowering::LowerFixedLengthVectorMStoreToSVE(
@@ -33923,6 +34584,9 @@ SDValue AArch64TargetLowering::LowerToPredicatedOp(SDValue Op,
   SDLoc DL(Op);
   auto Pg = getPredicateForVector(DAG, DL, VT);
 
+  bool IsStrictFP = Op->isStrictFPOpcode();
+  unsigned OpStartIdx = IsStrictFP ? 1 : 0;
+
   if (VT.isFixedLengthVector()) {
     assert(isTypeLegal(VT) && "Expected only legal fixed-width types");
     EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT);
@@ -33957,8 +34621,18 @@ SDValue AArch64TargetLowering::LowerToPredicatedOp(SDValue Op,
 
   assert(VT.isScalableVector() && "Only expect to lower scalable vector op!");
 
-  SmallVector<SDValue, 4> Operands = {Pg};
-  for (const SDValue &V : Op->op_values()) {
+  SmallVector<SDValue, 4> Operands;
+
+  // Chain
+  if (IsStrictFP)
+    Operands.push_back(Op.getOperand(0));
+
+  // Predicate
+  Operands.push_back(Pg);
+
+  // Regular operands
+  for (unsigned OpIdx = OpStartIdx; OpIdx < Op.getNumOperands(); OpIdx++) {
+    SDValue V = Op.getOperand(OpIdx);
     assert((!V.getValueType().isVector() ||
             V.getValueType().isScalableVector()) &&
            "Only scalable vectors are supported!");
@@ -33968,7 +34642,7 @@ SDValue AArch64TargetLowering::LowerToPredicatedOp(SDValue Op,
   if (isMergePassthruOpcode(NewOp))
     Operands.push_back(DAG.getPOISON(VT));
 
-  return DAG.getNode(NewOp, DL, VT, Operands, Op->getFlags());
+  return DAG.getNode(NewOp, DL, Op->getVTList(), Operands, Op->getFlags());
 }
 
 // If a fixed length vector operation has no side effects when applied to
@@ -34018,18 +34692,15 @@ SDValue AArch64TargetLowering::LowerVECREDUCE_SEQ_FADD(SDValue ScalarOp,
     VecOp = convertToScalableVector(DAG, ContainerVT, VecOp);
   }
 
-  SDValue Pg = getPredicateForVector(DAG, DL, SrcVT);
-  SDValue Zero = DAG.getConstant(0, DL, MVT::i64);
-
   // Convert operands to Scalable.
-  AccOp = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, ContainerVT,
-                      DAG.getPOISON(ContainerVT), AccOp, Zero);
+  AccOp = DAG.getInsertVectorElt(DL, DAG.getPOISON(ContainerVT), AccOp, 0);
 
   // Perform reduction.
+  SDValue Pg = getPredicateForVector(DAG, DL, SrcVT);
   SDValue Rdx = DAG.getNode(AArch64ISD::FADDA_PRED, DL, ContainerVT,
                             Pg, AccOp, VecOp);
 
-  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ResVT, Rdx, Zero);
+  return DAG.getExtractVectorElt(DL, ResVT, Rdx, 0);
 }
 
 SDValue AArch64TargetLowering::LowerPredReductionToSVE(SDValue ReduceOp,
@@ -34204,8 +34875,7 @@ SDValue AArch64TargetLowering::LowerReductionToSVE(SDValue Op,
     Rdx = DAG.getNode(RdxOpcode, DL, RdxVT, Pg, VecOp);
   }
 
-  SDValue Res = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ResVT,
-                            Rdx, DAG.getConstant(0, DL, MVT::i64));
+  SDValue Res = DAG.getExtractVectorElt(DL, ResVT, Rdx, 0);
 
   // The VEC_REDUCE nodes expect an element size result.
   if (ResVT != Op.getValueType())
@@ -34423,6 +35093,30 @@ AArch64TargetLowering::LowerFixedLengthIntToFPToSVE(SDValue Op,
   }
 }
 
+static SDValue lowerPredicateInterleaveWithPackedVectors(SDValue Op,
+                                                         SelectionDAG &DAG) {
+  SDLoc DL(Op);
+  EVT OpVT = Op.getValueType();
+  assert(OpVT.isScalableVector() && OpVT.getVectorElementType() == MVT::i1 &&
+         Op->getNumOperands() == 3 && "Unexpected predicate interleave");
+
+  EVT PackedVT = getPackedSVEVectorVT(OpVT.getVectorElementCount());
+  SmallVector<SDValue, 3> PackedOps;
+  for (SDValue V : Op->ops())
+    PackedOps.push_back(DAG.getNode(ISD::ZERO_EXTEND, DL, PackedVT, V));
+
+  SmallVector<EVT, 3> PackedVTs(3, PackedVT);
+  SDValue PackedOp =
+      DAG.getNode(Op.getOpcode(), DL, DAG.getVTList(PackedVTs), PackedOps);
+
+  SDValue Zero = DAG.getConstant(0, DL, PackedVT);
+  SmallVector<SDValue, 3> Results;
+  for (unsigned I = 0; I != 3; ++I)
+    Results.push_back(
+        DAG.getSetCC(DL, OpVT, PackedOp.getValue(I), Zero, ISD::SETNE));
+  return DAG.getMergeValues(Results, DL);
+}
+
 SDValue
 AArch64TargetLowering::LowerVECTOR_DEINTERLEAVE(SDValue Op,
                                                 SelectionDAG &DAG) const {
@@ -34461,6 +35155,9 @@ AArch64TargetLowering::LowerVECTOR_DEINTERLEAVE(SDValue Op,
   }
 
   if (OpVT.isScalableVector() && Op->getNumOperands() == 3) {
+    if (OpVT.getVectorElementType() == MVT::i1)
+      return lowerPredicateInterleaveWithPackedVectors(Op, DAG);
+
     // aarch64_sve_ld3 only supports packed datatypes.
     EVT PackedVT = getPackedSVEVectorVT(OpVT.getVectorElementCount());
     Align Alignment = DAG.getReducedAlign(PackedVT, /*UseABI=*/false);
@@ -34571,6 +35268,9 @@ SDValue AArch64TargetLowering::LowerVECTOR_INTERLEAVE(SDValue Op,
   }
 
   if (OpVT.isScalableVector() && Op->getNumOperands() == 3) {
+    if (OpVT.getVectorElementType() == MVT::i1)
+      return lowerPredicateInterleaveWithPackedVectors(Op, DAG);
+
     // aarch64_sve_st3 only supports packed datatypes.
     EVT PackedVT = getPackedSVEVectorVT(OpVT.getVectorElementCount());
     SmallVector<SDValue, 3> InVecs;
@@ -34736,6 +35436,29 @@ AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
   EVT OrigResultVT = ResultVT;
   EVT OpVT = LHS.getValueType();
 
+  // Two-way fixed-length integer add reductions.
+  if ((Op.getOpcode() == ISD::PARTIAL_REDUCE_UMLA ||
+       Op.getOpcode() == ISD::PARTIAL_REDUCE_SMLA) &&
+      Subtarget->isNeonAvailable() &&
+      (OpVT.is64BitVector() || OpVT.is128BitVector()) &&
+      ResultVT.getScalarSizeInBits() == OpVT.getScalarSizeInBits() * 2 &&
+      ResultVT.getVectorNumElements() * 2 == OpVT.getVectorNumElements()) {
+    // A pure partial reduction can lower to [SU]ADALP via patterns.
+    if (isOneVector(RHS))
+      return Op;
+    // Otherwise, expand operations without efficient SVE lowering.
+    if (OpVT.getScalarType() == MVT::i8 &&
+        !(Subtarget->isSVEorStreamingSVEAvailable() &&
+          (Subtarget->hasSVE2p3() || Subtarget->hasSME2p3())))
+      return SDValue();
+    if (OpVT.getScalarType() == MVT::i16 &&
+        !(Subtarget->isSVEorStreamingSVEAvailable() &&
+          (Subtarget->hasSVE2p1() || Subtarget->hasSME2())))
+      return SDValue();
+    if (OpVT.getScalarType() == MVT::i32)
+      return SDValue();
+  }
+
   // We can handle this case natively by accumulating into a wider
   // zero-padded vector.
   if (ResultVT == MVT::v2i32 && OpVT == MVT::v16i8) {
@@ -34779,6 +35502,12 @@ AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
                     DAG.getConstant(0, DL, ResultVT), SignFlipMask, RHS);
     return DAG.getNode(ISD::SUB, DL, ResultVT, BiasedDot, BiasCorrection);
   }
+
+  // The wider Neon shapes left here have no single instruction, so leave them
+  // to the generic expansion, which chains the two-way reductions above.
+  if (!Subtarget->isSVEorStreamingSVEAvailable() &&
+      OpVT.getVectorNumElements() > 2 * ResultVT.getVectorNumElements())
+    return SDValue();
 
   bool ConvertToScalable = ResultVT.isFixedLengthVector() &&
                            Subtarget->isSVEorStreamingSVEAvailable();
@@ -34872,6 +35601,10 @@ static unsigned getSVEOpcodeForFPToInt(unsigned Opc) {
   case ISD::FP_TO_SINT_SAT:
   case ISD::FP_TO_SINT:
     return AArch64ISD::FCVTZS_MERGE_PASSTHRU;
+  case ISD::STRICT_FP_TO_SINT:
+    return AArch64ISD::STRICT_FCVTZS_MERGE_PASSTHRU;
+  case ISD::STRICT_FP_TO_UINT:
+    return AArch64ISD::STRICT_FCVTZU_MERGE_PASSTHRU;
   default:
     llvm_unreachable("Unexpected opcode");
   }
@@ -34879,13 +35612,10 @@ static unsigned getSVEOpcodeForFPToInt(unsigned Opc) {
 
 SDValue AArch64TargetLowering::LowerFPToIntToSVE(SDValue Op,
                                                  SelectionDAG &DAG) const {
-  // Strict FP_TO_INT is not yet implemented.
-  if (Op->isStrictFPOpcode())
-    return SDValue();
-
+  bool IsStrict = Op->isStrictFPOpcode();
   unsigned Opc = Op.getOpcode();
-  EVT InVT = Op.getOperand(0).getValueType();
   EVT VT = Op.getValueType();
+  EVT InVT = Op.getOperand(IsStrict ? 1 : 0).getValueType();
 
   // bf16 inputs need promotion before conversion.
   if (InVT.getVectorElementType() == MVT::bf16)
@@ -34911,11 +35641,13 @@ SDValue AArch64TargetLowering::LowerFPToIntToSVE(SDValue Op,
       return Op;
 
     SmallVector<SDValue, 4> Operands;
+    if (IsStrict)
+      Operands.push_back(Op.getOperand(0));
     Operands.push_back(getPredicateForVector(DAG, DL, VT));
-    Operands.push_back(Op.getOperand(0));
+    Operands.push_back(Op.getOperand(IsStrict ? 1 : 0));
     Operands.push_back(DAG.getPOISON(VT));
-    return DAG.getNode(getSVEOpcodeForFPToInt(Opc), DL, VT, Operands,
-                       Op->getFlags());
+    return DAG.getNode(getSVEOpcodeForFPToInt(Opc), DL, Op->getVTList(),
+                       Operands, Op->getFlags());
   }
 
   bool OverrideNEON = !Subtarget->isNeonAvailable();
@@ -34929,10 +35661,13 @@ SDValue AArch64TargetLowering::LowerFPToIntToSVE(SDValue Op,
 SDValue
 AArch64TargetLowering::LowerFixedLengthFPToIntToSVE(SDValue Op,
                                                     SelectionDAG &DAG) const {
+  // Strict FP_TO_INT is not yet implemented.
+  if (Op->isStrictFPOpcode())
+    return SDValue();
+
   EVT VT = Op.getValueType();
   unsigned Opc = Op.getOpcode();
   assert(VT.isFixedLengthVector() && "Expected fixed length vector type!");
-  assert(!Op->isStrictFPOpcode() && "Strict FP_TO_INT not yet supported");
   unsigned Opcode = getSVEOpcodeForFPToInt(Op.getOpcode());
 
   bool IsSaturating = Opc == ISD::FP_TO_UINT_SAT || Opc == ISD::FP_TO_SINT_SAT;
@@ -35114,8 +35849,7 @@ SDValue AArch64TargetLowering::LowerFixedLengthVECTOR_SHUFFLEToSVE(
   if (SVN->isSplat()) {
     unsigned Lane = std::max(0, SVN->getSplatIndex());
     EVT ScalarTy = MinLegalExtractEltScalarTy(VT.getVectorElementType());
-    SDValue SplatEl = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ScalarTy, Op1,
-                                  DAG.getConstant(Lane, DL, MVT::i64));
+    SDValue SplatEl = DAG.getExtractVectorElt(DL, ScalarTy, Op1, Lane);
     Op = DAG.getNode(ISD::SPLAT_VECTOR, DL, ContainerVT, SplatEl);
     return convertFromScalableVector(DAG, VT, Op);
   }
@@ -35166,8 +35900,8 @@ SDValue AArch64TargetLowering::LowerFixedLengthVECTOR_SHUFFLEToSVE(
 
   unsigned WhichResult;
   unsigned OperandOrder;
-  if (isZIPMask(ShuffleMask, VT.getVectorNumElements(), WhichResult,
-                OperandOrder) &&
+  unsigned NumElts = VT.getVectorNumElements();
+  if (isZIPMask(ShuffleMask, NumElts, WhichResult, OperandOrder) &&
       WhichResult == 0) {
     SDValue ZIP = DAG.getNode(AArch64ISD::ZIP1, DL, ContainerVT,
                               OperandOrder == 0 ? Op1 : Op2,
@@ -35184,11 +35918,11 @@ SDValue AArch64TargetLowering::LowerFixedLengthVECTOR_SHUFFLEToSVE(
     return convertFromScalableVector(DAG, VT, TRN);
   }
 
-  if (isZIP_v_undef_Mask(ShuffleMask, VT, WhichResult) && WhichResult == 0)
+  if (isZIP_v_undef_Mask(ShuffleMask, NumElts, WhichResult) && WhichResult == 0)
     return convertFromScalableVector(
         DAG, VT, DAG.getNode(AArch64ISD::ZIP1, DL, ContainerVT, Op1, Op1));
 
-  if (isTRN_v_undef_Mask(ShuffleMask, VT, WhichResult)) {
+  if (isTRN_v_undef_Mask(ShuffleMask, NumElts, WhichResult)) {
     unsigned Opc = (WhichResult == 0) ? AArch64ISD::TRN1 : AArch64ISD::TRN2;
     return convertFromScalableVector(
         DAG, VT, DAG.getNode(Opc, DL, ContainerVT, Op1, Op1));
@@ -35221,8 +35955,8 @@ SDValue AArch64TargetLowering::LowerFixedLengthVECTOR_SHUFFLEToSVE(
       return convertFromScalableVector(DAG, VT, Op);
     }
 
-    if (isZIPMask(ShuffleMask, VT.getVectorNumElements(), WhichResult,
-                  OperandOrder) &&
+    unsigned NumElts = VT.getVectorNumElements();
+    if (isZIPMask(ShuffleMask, NumElts, WhichResult, OperandOrder) &&
         WhichResult != 0) {
       SDValue ZIP = DAG.getNode(AArch64ISD::ZIP2, DL, ContainerVT,
                                 OperandOrder == 0 ? Op1 : Op2,
@@ -35230,17 +35964,18 @@ SDValue AArch64TargetLowering::LowerFixedLengthVECTOR_SHUFFLEToSVE(
       return convertFromScalableVector(DAG, VT, ZIP);
     }
 
-    if (isUZPMask(ShuffleMask, VT.getVectorNumElements(), WhichResult)) {
+    if (isUZPMask(ShuffleMask, NumElts, WhichResult)) {
       unsigned Opc = (WhichResult == 0) ? AArch64ISD::UZP1 : AArch64ISD::UZP2;
       return convertFromScalableVector(
           DAG, VT, DAG.getNode(Opc, DL, ContainerVT, Op1, Op2));
     }
 
-    if (isZIP_v_undef_Mask(ShuffleMask, VT, WhichResult) && WhichResult != 0)
+    if (isZIP_v_undef_Mask(ShuffleMask, NumElts, WhichResult) &&
+        WhichResult != 0)
       return convertFromScalableVector(
           DAG, VT, DAG.getNode(AArch64ISD::ZIP2, DL, ContainerVT, Op1, Op1));
 
-    if (isUZP_v_undef_Mask(ShuffleMask, VT, WhichResult)) {
+    if (isUZP_v_undef_Mask(ShuffleMask, NumElts, WhichResult)) {
       unsigned Opc = (WhichResult == 0) ? AArch64ISD::UZP1 : AArch64ISD::UZP2;
       return convertFromScalableVector(
           DAG, VT, DAG.getNode(Opc, DL, ContainerVT, Op1, Op1));
@@ -35450,6 +36185,14 @@ bool AArch64TargetLowering::canCreateUndefOrPoisonForTargetNode(
 }
 
 bool AArch64TargetLowering::isTargetCanonicalConstantNode(SDValue Op) const {
+  // Peek through bitcasts/extracts/inserts to see if we have a vector
+  // load/broadcast from memory.
+  while (
+      Op.getOpcode() == ISD::BITCAST || Op.getOpcode() == AArch64ISD::NVCAST ||
+      Op.getOpcode() == ISD::EXTRACT_SUBVECTOR ||
+      (Op.getOpcode() == ISD::INSERT_SUBVECTOR && Op.getOperand(0).isUndef()))
+    Op = Op.getOperand(Op.getOpcode() == ISD::INSERT_SUBVECTOR ? 1 : 0);
+
   return Op.getOpcode() == AArch64ISD::DUP ||
          Op.getOpcode() == AArch64ISD::MOVI ||
          Op.getOpcode() == AArch64ISD::MOVIshift ||
@@ -35461,8 +36204,7 @@ bool AArch64TargetLowering::isTargetCanonicalConstantNode(SDValue Op) const {
          // ISel will select fmov(mov i64 0x8000000000000000), resulting in a
          // fmov from fpr to gpr, which is more expensive than fneg(movi(0))
          (Op.getOpcode() == ISD::FNEG &&
-          Op.getOperand(0).getOpcode() == AArch64ISD::MOVIedit &&
-          Op.getOperand(0).getConstantOperandVal(0) == 0) ||
+          isTargetCanonicalConstantNode(Op.getOperand(0))) ||
          (Op.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
           Op.getOperand(0).getOpcode() == AArch64ISD::DUP) ||
          TargetLowering::isTargetCanonicalConstantNode(Op);

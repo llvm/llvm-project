@@ -29,6 +29,7 @@
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
 namespace detail {
+class ContextImpl;
 class PlatformImpl;
 class QueueImpl;
 
@@ -54,13 +55,19 @@ std::vector<std::unique_ptr<PlatformImpl>> &getPlatformCache();
 // the SYCL shared library is first being unloaded.
 void registerStaticVarShutdownHandler();
 
-// TODO: extend with context
-using AsyncExceptionKey = std::weak_ptr<QueueImpl>;
+using AsyncExceptionKey =
+    std::pair<std::weak_ptr<QueueImpl>, std::weak_ptr<ContextImpl>>;
 
 struct AsyncExceptionKeyOwnerLess {
   bool operator()(const AsyncExceptionKey &LHS,
                   const AsyncExceptionKey &RHS) const noexcept {
-    return std::owner_less<std::weak_ptr<QueueImpl>>{}(LHS, RHS);
+    std::owner_less<std::weak_ptr<QueueImpl>> QueueLess;
+    if (QueueLess(LHS.first, RHS.first))
+      return true;
+    if (QueueLess(RHS.first, LHS.first))
+      return false;
+    return std::owner_less<std::weak_ptr<ContextImpl>>{}(LHS.second,
+                                                         RHS.second);
   }
 };
 
@@ -71,12 +78,12 @@ using AsyncExceptionsContainer =
 /// SpinLock.
 InstanceWithLock<AsyncExceptionsContainer> &getAsyncExceptionList();
 
-/// Adds an exception to the list of unreported asynchronous exceptions.
+/// Adds an exception to the list of unreported asynchronous exceptions
+/// associated with the given queue and with the context enclosing it.
 void recordAsyncException(const std::shared_ptr<QueueImpl> &QueuePtr,
                           const std::exception_ptr &ExceptionPtr);
 
-/// Reports all unreported asynchronous exceptions to available async_handler
-/// and clears the list.
+/// Reports all unreported asynchronous exceptions and clears the list.
 void flushAsyncExceptions();
 
 } // namespace detail

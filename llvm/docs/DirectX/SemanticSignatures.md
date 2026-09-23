@@ -125,3 +125,136 @@ The following container fields are derived from the operands above:
 
 A metadata node of one or more semantic indices. Its length must equal the
 `Rows` field of the containing signature element.
+
+## Signature Packing
+
+Before a semantic signature is serialized, each element that participates in
+packing is assigned a location in a fixed register space of 32 rows and 4
+columns. An element occupies a rectangle of `Rows` consecutive registers and
+`Cols` consecutive components. Its allocated location is recorded in
+`StartRow` and `StartCol`.
+
+The packing helper classifies each element from its semantic kind, shader stage,
+and I/O type. Elements with the `NotAllocated` interpretation are accessed by
+other means and retain the unallocated row and column sentinels. The remaining
+interpretations accepted by a packing algorithm are assigned locations
+according to that algorithm's rules. If an eligible element cannot be placed,
+packing returns a `SignaturePackingError` identifying the element that failed.
+
+The packing APIs are declared in [SemanticSignaturePacking.h], and the
+in-memory element representation they operate on is declared in
+[SemanticSignatures.h].
+
+[SemanticSignaturePacking.h]: https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/Frontend/HLSL/SemanticSignaturePacking.h
+
+### Stacked Packing
+
+Stacked packing is used for a vertex shader input signature. Eligible elements
+are visited in declaration order. Each starts at column zero of the first row
+after the preceding element, and a multi-row element occupies consecutive rows.
+Elements are never co-packed into the unused columns of another element, and
+interpolation mode, component type, and semantic interpretation do not otherwise
+affect placement.
+
+For example:
+
+```hlsl
+struct VSIn {
+  float A       : A;
+  float3 B[2]   : B;
+  uint VertexID : SV_VertexID;
+};
+```
+
+The signature is allocated as:
+
+```text
+reg0: A.x        | unused.yzw
+reg1: B[0].xyz   | unused.w
+reg2: B[1].xyz   | unused.w
+reg3: VertexID.x | unused.yzw
+```
+
+### Prefix-Stable Packing
+
+Prefix-stable packing is used for signatures that connect programmable shader
+stages or carry patch constant data. Elements are visited in declaration order
+and placed at the first compatible location in the 32-row by 4-column register
+space. Once an element is placed it is never moved, so appending elements to a
+signature does not change the locations assigned to its existing prefix.
+
+Elements can share unused components in a row when all applicable packing
+constraints are satisfied:
+
+- Every element in a row must have a compatible interpolation mode.
+- When native 16-bit types are enabled, every element in a row must have the
+  same component width. Without native 16-bit types, min-precision values
+  occupy 32-bit components.
+- Within each row, elements are ordered by category: arbitrary values first,
+  followed by system values, and then system-generated values. For example, a
+  system value can never be packed to the left of an arbitrary value.
+  `ClipCull` and `TessFactor` follow these categories in the internal ordering,
+  with the additional placement rules described below.
+- A system value or system generated value cannot be placed in a dynamically
+  indexed row. A dynamically indexed row is a row within the range covered by
+  a multi-row element, where the row is selected using a dynamic index.
+
+Some semantic interpretations require additional handling:
+
+- `SV_ClipDistance` and `SV_CullDistance` are packed only with each other in
+  dedicated rows. Together they may occupy at most eight components across at
+  most two rows. The rows must be adjacent when a clip or cull element spans
+  multiple rows. Otherwise, clip and cull rows do not need to be adjacent.
+- A multi-row tessellation factor is searched for only in the last column.
+  Arbitrary values may fill the columns to its left, even when declared after
+  the factor. A single-row tessellation factor is ordered and packed as a
+  system value instead.
+- Geometry shader output streams are packed independently.
+
+For example:
+
+```hlsl
+struct VSOut {
+  float3 A[3] : A;
+  float1x2 B  : B;
+  float2 C    : C;
+  float D     : D;
+};
+```
+
+Assuming `B` has column-major matrix orientation, the signature is allocated
+as:
+
+```text
+reg0: A[0].xyz | B[0][0].w
+reg1: A[1].xyz | B[0][1].w
+reg2: A[2].xyz | D.w
+reg3: C.xy     | unused.zw
+```
+
+### Indexed Packing
+
+Indexed packing is used for a pixel shader output signature. Each eligible
+`SV_Target` element occupies one row and starts at column zero. Its semantic
+index directly selects that row, so declaration order does not affect placement
+and rows without a corresponding semantic index remain unused. Elements that do
+not contribute to the target register space remain unallocated.
+
+For example:
+
+```hlsl
+struct PSOut {
+  float4 Color3 : SV_Target3;
+  float Color0  : SV_Target0;
+  float2 Color2 : SV_Target2;
+};
+```
+
+The signature is allocated as:
+
+```text
+reg0: Color0.x  | unused.yzw
+reg1: unused.xyzw
+reg2: Color2.xy | unused.zw
+reg3: Color3.xyzw
+```
