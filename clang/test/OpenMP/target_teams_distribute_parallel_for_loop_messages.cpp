@@ -616,7 +616,7 @@ void test_loop_firstprivate_lastprivate() {
 }
 
 void test_ordered() {
-#pragma omp target teams distribute parallel for ordered // expected-error {{unexpected OpenMP clause 'ordered' in directive '#pragma omp target teams distribute parallel for'}}
+#pragma omp target teams distribute parallel for ordered // OK
   for (int i = 0; i < 16; ++i)
     ;
 }

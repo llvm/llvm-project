@@ -198,6 +198,8 @@ void SmallPtrSetImplBase::moveHelper(const void **SmallStorage,
                                      const void **RHSSmallStorage,
                                      SmallPtrSetImplBase &&RHS) {
   assert(&RHS != this && "Self-move should be handled by the caller.");
+  incrementEpoch();
+  RHS.incrementEpoch();
 
   if (RHS.isSmall()) {
     // Copy a small RHS rather than moving.
@@ -223,6 +225,8 @@ void SmallPtrSetImplBase::swap(const void **SmallStorage,
                                const void **RHSSmallStorage,
                                SmallPtrSetImplBase &RHS) {
   if (this == &RHS) return;
+  incrementEpoch();
+  RHS.incrementEpoch();
 
   // We can only avoid copying elements if neither set is small.
   if (!this->isSmall() && !RHS.isSmall()) {

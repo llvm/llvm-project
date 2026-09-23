@@ -10,4 +10,4 @@
 
 #include "src/math/ilogb.h"
 
-LIST_INTLOGB_TESTS(int, double, LIBC_NAMESPACE::ilogb);
+LIST_INTLOGB_TESTS(Ilogb, int, double, LIBC_NAMESPACE::ilogb);
