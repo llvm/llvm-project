@@ -68,6 +68,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -127,6 +128,11 @@ static cl::opt<unsigned> ScanUsersLimit(
 static cl::opt<uint32_t> MaxNumDeps(
     "gvn-max-num-deps", cl::Hidden, cl::init(100),
     cl::desc("Max number of dependences to attempt Load PRE (default = 100)"));
+
+static cl::opt<uint32_t> MaxNumReachingBlocks(
+    "gvn-max-num-reaching-blocks", cl::Hidden, cl::init(200),
+    cl::desc("Max number of blocks scanned per load in the MemorySSA "
+             "reaching-value analysis (default = 200)"));
 
 // This is based on IsValueFullyAvailableInBlockNumSpeculationsMax stat.
 static cl::opt<uint32_t> MaxBBSpeculations(
@@ -351,16 +357,7 @@ GVNPass::Expression GVNPass::ValueTable::createExpr(Instruction *I) {
     E.Commutative = true;
   }
 
-  if (auto *C = dyn_cast<CmpInst>(I)) {
-    // Sort the operand value numbers so x<y and y>x get the same value number.
-    CmpInst::Predicate Predicate = C->getPredicate();
-    if (E.VarArgs[0] > E.VarArgs[1]) {
-      std::swap(E.VarArgs[0], E.VarArgs[1]);
-      Predicate = CmpInst::getSwappedPredicate(Predicate);
-    }
-    E.Opcode = (C->getOpcode() << 8) | Predicate;
-    E.Commutative = true;
-  } else if (auto *IVI = dyn_cast<InsertValueInst>(I)) {
+  if (auto *IVI = dyn_cast<InsertValueInst>(I)) {
     E.VarArgs.append(IVI->idx_begin(), IVI->idx_end());
   } else if (auto *SVI = dyn_cast<ShuffleVectorInst>(I)) {
     ArrayRef<int> ShuffleMask = SVI->getShuffleMask();
@@ -392,7 +389,7 @@ GVNPass::Expression GVNPass::ValueTable::createCmpExpr(
 }
 
 GVNPass::Expression
-GVNPass::ValueTable::createExtractvalueExpr(ExtractValueInst *EI) {
+GVNPass::ValueTable::createExtractValueExpr(ExtractValueInst *EI) {
   assert(EI && "Not an ExtractValueInst?");
   Expression E;
   E.Ty = EI->getType();
@@ -500,6 +497,14 @@ uint32_t GVNPass::ValueTable::lookupOrAddCall(CallInst *C) {
   // threads that is currently executing, and they might be in different basic
   // blocks.
   if (C->isConvergent()) {
+    ValueNumbering[C] = NextValueNumber;
+    return NextValueNumber++;
+  }
+
+  // Conservatively assign unique value numbers to calls with operand bundles.
+  // TODO: Bundle names could be included in the value numbering expression to
+  // allow combining calls with identical bundles.
+  if (C->hasOperandBundles()) {
     ValueNumbering[C] = NextValueNumber;
     return NextValueNumber++;
   }
@@ -683,8 +688,6 @@ uint32_t GVNPass::ValueTable::lookupOrAdd(Value *V) {
     case Instruction::And:
     case Instruction::Or:
     case Instruction::Xor:
-    case Instruction::ICmp:
-    case Instruction::FCmp:
     case Instruction::Trunc:
     case Instruction::ZExt:
     case Instruction::SExt:
@@ -707,11 +710,16 @@ uint32_t GVNPass::ValueTable::lookupOrAdd(Value *V) {
     case Instruction::InsertValue:
       Exp = createExpr(I);
       break;
+    case Instruction::ICmp:
+    case Instruction::FCmp:
+      Exp = createCmpExpr(I->getOpcode(), cast<CmpInst>(I)->getPredicate(),
+                          I->getOperand(0), I->getOperand(1));
+      break;
     case Instruction::GetElementPtr:
       Exp = createGEPExpr(cast<GetElementPtrInst>(I));
       break;
     case Instruction::ExtractValue:
-      Exp = createExtractvalueExpr(cast<ExtractValueInst>(I));
+      Exp = createExtractValueExpr(cast<ExtractValueInst>(I));
       break;
     case Instruction::PHI:
       ValueNumbering[V] = NextValueNumber;
@@ -869,6 +877,11 @@ bool GVNPass::isLoadPRESplitBackedgeEnabled() const {
 }
 
 bool GVNPass::isMemDepEnabled() const {
+  // MemDep and MemorySSA are mutually exclusive. parseGVNOptions() enforces
+  // this for pass parameters, but the -enable-gvn-{memdep,memoryssa} cl::opt
+  // overrides default independently, so honor MemorySSA winning here too.
+  if (isMemorySSAEnabled())
+    return Options.AllowMemDep.value_or(false);
   return Options.AllowMemDep.value_or(GVNEnableMemDep);
 }
 
@@ -2103,7 +2116,10 @@ bool GVNPass::processNonLocalLoad(LoadInst *Load,
     if (GetElementPtrInst *GEP =
             dyn_cast<GetElementPtrInst>(Load->getOperand(0))) {
       for (Use &U : GEP->indices())
-        if (Instruction *I = dyn_cast<Instruction>(U.get()))
+        // Instructions inserted by GVN during this iteration (e.g. coercion
+        // casts from MaterializeAdjustedValue) may not have value numbers yet,
+        // so they are skipped.
+        if (Instruction *I = dyn_cast<Instruction>(U.get()); I && VN.exists(I))
           Changed |= performScalarPRE(I);
     }
   }
@@ -2665,6 +2681,9 @@ bool GVNPass::findReachingValuesForLoad(LoadInst *L,
   // Do a bottom-up DFS.
   auto Worklist = InitialWorklist;
   while (!Worklist.empty()) {
+    // Match MemDep's cutoff for expensive non-local queries.
+    if (Blocks.size() > MaxNumReachingBlocks)
+      return false;
     auto *BB = Worklist.pop_back_val();
     DependencyBlockInfo &Info = Blocks.find(BB)->second;
 
@@ -3456,6 +3475,15 @@ bool GVNPass::runImpl(Function &F, AssumptionCache &RunAC, DominatorTree &RunDT,
                       const TargetLibraryInfo &RunTLI, AAResults &RunAA,
                       MemoryDependenceResults *RunMD, LoopInfo &LI,
                       OptimizationRemarkEmitter *RunORE, MemorySSA *MSSA) {
+  // MemDep and MemorySSA are mutually exclusive. isMemDepEnabled() silently
+  // lets MemorySSA win for the common single-flag case, but an explicit
+  // request for both via -enable-gvn-{memdep,memoryssa} is a contradiction we
+  // reject rather than resolve arbitrarily.
+  if (GVNEnableMemDep.getNumOccurrences() && GVNEnableMemDep &&
+      GVNEnableMemorySSA.getNumOccurrences() && GVNEnableMemorySSA)
+    report_fatal_error("GVN: -enable-gvn-memdep and -enable-gvn-memoryssa are "
+                       "mutually exclusive",
+                       /*gen_crash_diag=*/false);
   AC = &RunAC;
   DT = &RunDT;
   VN.setDomTree(DT);

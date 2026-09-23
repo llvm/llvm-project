@@ -217,6 +217,22 @@ lldb::ProcessLaunchInfoSP ScriptedPythonInterface::ExtractValueFromPythonObject<
 }
 
 template <>
+lldb::ThreadPlanSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::ThreadPlanSP>(
+    python::PythonObject &p, Status &error) {
+  lldb::SBThreadPlan *sb_thread_plan = reinterpret_cast<lldb::SBThreadPlan *>(
+      python::LLDBSWIGPython_CastPyObjectToSBThreadPlan(p.get()));
+
+  if (!sb_thread_plan) {
+    error = Status::FromErrorStringWithFormat(
+        "Couldn't cast lldb::SBThreadPlan to lldb::ThreadPlanSP.");
+    return {};
+  }
+
+  return ScriptInterpreterBridge::GetThreadPlan(*sb_thread_plan);
+}
+
+template <>
 std::optional<MemoryRegionInfo>
 ScriptedPythonInterface::ExtractValueFromPythonObject<
     std::optional<MemoryRegionInfo>>(python::PythonObject &p, Status &error) {
@@ -270,6 +286,25 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::DescriptionLevel>(
     return ret_val;
   }
   return static_cast<lldb::DescriptionLevel>(unsigned_val);
+}
+
+template <>
+lldb::StepType
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::StepType>(
+    python::PythonObject &p, Status &error) {
+  lldb::StepType ret_val = lldb::eStepTypeNone;
+
+  llvm::Expected<unsigned long long> unsigned_or_err = p.AsUnsignedLongLong();
+  if (!unsigned_or_err) {
+    error = (Status::FromError(unsigned_or_err.takeError()));
+    return ret_val;
+  }
+  unsigned long long unsigned_val = *unsigned_or_err;
+  if (unsigned_val >= lldb::eStepTypeScripted) {
+    error = Status("value too large for lldb::StepType.");
+    return ret_val;
+  }
+  return static_cast<lldb::StepType>(unsigned_val);
 }
 
 template <>

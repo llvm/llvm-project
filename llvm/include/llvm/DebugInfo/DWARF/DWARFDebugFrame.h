@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/iterator.h"
+#include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include "llvm/DebugInfo/DWARF/LowLevel/DWARFCFIProgram.h"
 #include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/DebugInfo/DWARF/LowLevel/DWARFUnwindTable.h"
@@ -18,12 +19,12 @@
 #include "llvm/Support/Error.h"
 #include "llvm/TargetParser/Triple.h"
 #include <memory>
+#include <optional>
 #include <vector>
 
 namespace llvm {
 
 class raw_ostream;
-class DWARFDataExtractor;
 class MCRegisterInfo;
 struct DIDumpOptions;
 
@@ -72,6 +73,24 @@ public:
   const CFIProgram &cfis() const { return CFIs; }
   CFIProgram &cfis() { return CFIs; }
 
+  /// If using lazily parsed CFIs, this returns the section offset where the
+  /// unparsed CFIs start so user can parse them on-demand through the
+  /// CFIProgram parsing interface cfis().parse(Data, ..., getEndOffset()).
+  /// This returns std::nullopt if CFIs are already succesfully parsed.
+  std::optional<uint64_t> getUnparsedCFIStartOffset() const {
+    return UnparsedCFIStartOffset;
+  }
+  void markCFIProgramUnparsed(uint64_t StartOffset) {
+    UnparsedCFIStartOffset = StartOffset;
+  }
+  void markCFIProgramParsed() { UnparsedCFIStartOffset = std::nullopt; }
+  uint64_t getEndOffset() const {
+    // End is Offset plus the size of the initial length field plus Length.
+    // The initial length field is 4 bytes in DWARF32 and 12 bytes in DWARF64
+    // (a 0xffffffff escape marker followed by an 8-byte length).
+    return Offset + (IsDWARF64 ? 12 : 4) + Length;
+  }
+
   /// Dump the instructions in this CFI fragment
   virtual void dump(raw_ostream &OS, DIDumpOptions DumpOpts) const = 0;
 
@@ -85,6 +104,9 @@ protected:
 
   /// Entry length as specified in DWARF.
   const uint64_t Length;
+
+  /// Offset for lazy parsing; std::nullopt if CFIs are already parsed.
+  std::optional<uint64_t> UnparsedCFIStartOffset;
 
   CFIProgram CFIs;
 };
@@ -200,8 +222,17 @@ class DWARFDebugFrame {
   std::vector<std::unique_ptr<dwarf::FrameEntry>> Entries;
   using iterator = pointee_iterator<decltype(Entries)::const_iterator>;
 
+  /// Section contents, retained by parse() when it was asked to leave the CFI
+  /// instruction programs undecoded, so that they can be parsed on demand.
+  std::optional<DWARFDataExtractor> Data;
+
   /// Return the entry at the given offset or nullptr.
   dwarf::FrameEntry *getEntryAtOffset(uint64_t Offset) const;
+
+  /// Make sure CFIs of \p Entry are fully parsed, then dump the entry.
+  /// Failure to decode the CFI is reported through \p DumpOpts.
+  void dumpEntry(dwarf::FrameEntry &Entry, raw_ostream &OS,
+                 DIDumpOptions DumpOpts) const;
 
 public:
   // If IsEH is true, assume it is a .eh_frame section. Otherwise,
@@ -218,7 +249,18 @@ public:
 
   /// Parse the section from raw data. \p Data is assumed to contain the whole
   /// frame section contents to be parsed.
-  LLVM_ABI Error parse(DWARFDataExtractor Data);
+  ///
+  /// If \p ParseCFIProgram is false, the CFI instruction program of each entry
+  /// is not decoded; callers can parse individual programs on demand through
+  /// parseCFIProgram(), as long as \p Data stays valid.
+  LLVM_ABI Error parse(DWARFDataExtractor Data, bool ParseCFIProgram = true);
+
+  /// Decode the CFI instruction program of \p Entry if parse() was told to
+  /// skip it.
+  LLVM_ABI Error parseCFIProgram(dwarf::FrameEntry &Entry) const;
+
+  /// Decode all the CFI instruction programs that parse() was told to skip.
+  LLVM_ABI Error parseAllCFIPrograms() const;
 
   /// Return whether the section has any entries.
   bool empty() const { return Entries.empty(); }
