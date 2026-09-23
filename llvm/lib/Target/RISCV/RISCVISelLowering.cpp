@@ -18974,9 +18974,8 @@ static SDValue combinePExtWideningSubAcc(SDNode *N, SelectionDAG &DAG,
   MVT SrcVT = VT == MVT::v4i16 ? MVT::v4i8 : MVT::v2i16;
   auto Extend = [&](SDValue &Ext, SDValue &Src) {
     return m_Value(
-        Ext, m_OneUse(m_AnyOf(
-                 m_Node(ISD::SIGN_EXTEND, m_Value(Src, m_SpecificVT(SrcVT))),
-                 m_Node(ISD::ZERO_EXTEND, m_Value(Src, m_SpecificVT(SrcVT))))));
+        Ext, m_OneUse(m_AnyOf(m_SExt(m_Value(Src, m_SpecificVT(SrcVT))),
+                              m_ZExt(m_Value(Src, m_SpecificVT(SrcVT))))));
   };
 
   SDValue Acc, ExtA, A, ExtB, B;
