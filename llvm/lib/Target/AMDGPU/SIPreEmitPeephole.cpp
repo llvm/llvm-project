@@ -794,15 +794,10 @@ void SIPreEmitPeephole::collectUnpackingCandidates(
 
     if (TotalCyclesBetweenCandidates >= NumMFMACycles - 1)
       return;
-    // Identify register dependencies between those used by the MFMA
-    // instruction and the following packed instructions. Also checks for
-    // transitive dependencies between the MFMA def and candidate instruction
-    // def and uses. Conservatively ensures that we do not incorrectly
-    // read/write registers.
-    if (llvm::any_of(Instr.operands(), [&](const MachineOperand &InstrMO) {
-          return InstrMO.isReg() && InstrMO.getReg().isValid() &&
-                 TRI->regsOverlap(MFMADef, InstrMO.getReg());
-        }))
+    // Stop at RAW or WAW dependencies on the MFMA destination. Such
+    // instructions cannot safely overlap with the MFMA.
+    if (Instr.readsRegister(MFMADef, TRI) ||
+        Instr.modifiesRegister(MFMADef, TRI))
       return;
 
     if (!IsUnpackable)
