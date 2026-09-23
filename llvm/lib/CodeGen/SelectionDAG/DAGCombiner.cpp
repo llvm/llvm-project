@@ -13933,10 +13933,10 @@ SDValue DAGCombiner::visitMSTORE(SDNode *N) {
   // FIXME: Can we do this for indexed, compressing, or truncating stores?
   if (ISD::isConstantSplatVectorAllOnes(Mask.getNode()) && MST->isUnindexed() &&
       !MST->isCompressingStore() && !MST->isTruncatingStore())
-    return DAG.getStore(
-        MST->getChain(), SDLoc(N), MST->getValue(), MST->getBasePtr(),
-        MST->getPointerInfo(), MST->getBaseAlign(),
-        MST->getMemOperand()->getFlags(), MST->getNonRangeMMOMetadata());
+    return DAG.getStore(MST->getChain(), SDLoc(N), MST->getValue(),
+                        MST->getBasePtr(), MST->getPointerInfo(),
+                        MST->getBaseAlign(), MST->getMemOperand()->getFlags(),
+                        MST->getNonRangeMMOMetadata());
 
   // Try transforming N to an indexed store.
   if (CombineToPreIndexedLoadStore(N) || CombineToPostIndexedLoadStore(N))
@@ -17276,10 +17276,10 @@ SDValue DAGCombiner::reduceLoadWidth(SDNode *N) {
         LN0->getMemOperand()->getFlags(),
         MMOMetadata(LN0->getAAInfo(), NewRanges, LN0->getMemCacheHint()));
   } else
-    Load = DAG.getExtLoad(
-        ExtType, DL, VT, LN0->getChain(), NewPtr,
-        LN0->getPointerInfo().getWithOffset(PtrOff), ExtVT, LN0->getBaseAlign(),
-        LN0->getMemOperand()->getFlags(), LN0->getNonRangeMMOMetadata());
+    Load = DAG.getExtLoad(ExtType, DL, VT, LN0->getChain(), NewPtr,
+                          LN0->getPointerInfo().getWithOffset(PtrOff), ExtVT,
+                          LN0->getBaseAlign(), LN0->getMemOperand()->getFlags(),
+                          LN0->getNonRangeMMOMetadata());
 
   // Replace the old load's chain with the new load's chain.
   WorklistRemover DeadNodes(*this);
@@ -23005,16 +23005,16 @@ SDValue DAGCombiner::ReduceLoadOpStoreWidth(SDNode *N) {
     Align NewAlign = commonAlignment(LD->getAlign(), PtrOff);
     SDValue NewPtr =
         DAG.getMemBasePlusOffset(Ptr, TypeSize::getFixed(PtrOff), SDLoc(LD));
-    SDValue NewLD = DAG.getLoad(
-        NewVT, SDLoc(N0), LD->getChain(), NewPtr,
-        LD->getPointerInfo().getWithOffset(PtrOff), NewAlign,
-        LD->getMemOperand()->getFlags(), LD->getNonRangeMMOMetadata());
+    SDValue NewLD = DAG.getLoad(NewVT, SDLoc(N0), LD->getChain(), NewPtr,
+                                LD->getPointerInfo().getWithOffset(PtrOff),
+                                NewAlign, LD->getMemOperand()->getFlags(),
+                                LD->getNonRangeMMOMetadata());
     SDValue NewVal = DAG.getNode(Opc, SDLoc(Value), NewVT, NewLD,
                                  DAG.getConstant(NewImm, SDLoc(Value), NewVT));
-    SDValue NewST = DAG.getStore(
-        Chain, SDLoc(N), NewVal, NewPtr,
-        ST->getPointerInfo().getWithOffset(PtrOff), NewAlign,
-        MachineMemOperand::MONone, ST->getNonRangeMMOMetadata());
+    SDValue NewST =
+        DAG.getStore(Chain, SDLoc(N), NewVal, NewPtr,
+                     ST->getPointerInfo().getWithOffset(PtrOff), NewAlign,
+                     MachineMemOperand::MONone, ST->getNonRangeMMOMetadata());
 
     AddToWorklist(NewPtr.getNode());
     AddToWorklist(NewLD.getNode());
@@ -24494,9 +24494,9 @@ SDValue DAGCombiner::replaceStoreOfInsertLoad(StoreSDNode *ST) {
     NewAlign = commonAlignment(ST->getAlign(), EltVT.getFixedSizeInBits() / 8);
   }
 
-  return DAG.getStore(
-      Chain, DL, Elt, NewPtr, PointerInfo, NewAlign,
-      ST->getMemOperand()->getFlags(), ST->getNonRangeMMOMetadata());
+  return DAG.getStore(Chain, DL, Elt, NewPtr, PointerInfo, NewAlign,
+                      ST->getMemOperand()->getFlags(),
+                      ST->getNonRangeMMOMetadata());
 }
 
 SDValue DAGCombiner::visitATOMIC_STORE(SDNode *N) {
