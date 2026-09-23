@@ -10,6 +10,7 @@
 #include "clang/Basic/ABI.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/DWARF/DWARFAddressRange.h"
@@ -4198,18 +4199,35 @@ CollectCallSiteParameters(ModuleSP module, DWARFDIE call_site_die) {
   return parameters;
 }
 
-static void CollectCallSiteDIEs(DWARFDIE parent,
+static void CollectCallSiteDIEs(DWARFDIE function_die,
                                 std::vector<DWARFDIE> &call_site_dies) {
-  for (DWARFDIE child : parent.children()) {
-    if (child.Tag() == DW_TAG_call_site ||
-        child.Tag() == DW_TAG_GNU_call_site) {
-      call_site_dies.push_back(child);
-      continue;
-    }
+  // Bound traversal depth so malformed or unusually deep DWARF cannot cause
+  // unbounded traversal.
+  constexpr unsigned MaxScopeDepth = 8;
+  struct WorkItem {
+    DWARFDIE die;
+    unsigned depth;
+  };
 
-    // A nested subprogram owns its call sites independently of this function.
-    if (child.Tag() != DW_TAG_subprogram)
-      CollectCallSiteDIEs(child, call_site_dies);
+  llvm::SmallVector<WorkItem, 8> worklist;
+  worklist.push_back({function_die, 0});
+
+  while (!worklist.empty()) {
+    WorkItem item = worklist.pop_back_val();
+    for (DWARFDIE child : item.die.children()) {
+      if (child.Tag() == DW_TAG_call_site ||
+          child.Tag() == DW_TAG_GNU_call_site) {
+        call_site_dies.push_back(child);
+        continue;
+      }
+
+      // A nested subprogram owns its call sites independently of this
+      // function.
+      if (child.Tag() == DW_TAG_subprogram || item.depth >= MaxScopeDepth)
+        continue;
+
+      worklist.push_back({child, item.depth + 1});
+    }
   }
 }
 
