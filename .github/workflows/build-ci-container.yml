@@ -27,8 +27,8 @@ jobs:
     strategy:
       matrix:
         runs-on:
-          - depot-ubuntu-24.04-16
-          - depot-ubuntu-24.04-arm-16
+          - depot-ubuntu-26.04-16
+          - depot-ubuntu-26.04-arm-16
         container-name:
           - ''
           - agent
@@ -69,7 +69,7 @@ jobs:
       - build-ci-container
     permissions:
       packages: write
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:

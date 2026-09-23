@@ -23,7 +23,7 @@ jobs:
     if: >-
       github.event.issue.pull_request &&
       contains(github.event.comment.body, '/libcxx-bot benchmark')
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     environment:
       name: main-branch-only
       deployment: false
@@ -42,7 +42,7 @@ jobs:
           LLVM_TOKEN_GENERATOR_PRIVATE_KEY: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
 
   extract-info:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     needs:
       - permission-check
     permissions:
