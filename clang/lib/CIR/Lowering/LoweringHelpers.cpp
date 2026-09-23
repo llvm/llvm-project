@@ -34,6 +34,13 @@ bool isSplitStorageBitInt(cir::IntType ty, const mlir::DataLayout &dataLayout) {
       llvm::alignTo(storeSize, dataLayout.getTypeABIAlignment(storageTy));
   return allocSize != storeSize;
 }
+
+/// Checks if `dataLayout` describes a big endian layout.
+bool isBigEndian(const mlir::DataLayout &dataLayout) {
+  auto endiannessStr =
+      mlir::dyn_cast_or_null<mlir::StringAttr>(dataLayout.getEndianness());
+  return endiannessStr && endiannessStr == "big";
+}
 } // namespace
 
 mlir::Attribute getBitIntStorageAttr(mlir::ConversionPatternRewriter &rewriter,
@@ -51,10 +58,13 @@ mlir::Attribute getBitIntStorageAttr(mlir::ConversionPatternRewriter &rewriter,
   // If we have to do split storage, we are an array of bytes.  Split this up
   // into the array that matches convertTypeForMemory.
   unsigned numBytes = storageBits / 8;
+  bool bigEndian = isBigEndian(dataLayout);
   llvm::SmallVector<mlir::APInt> bytes;
   bytes.reserve(numBytes);
-  for (unsigned i = 0; i != numBytes; ++i)
-    bytes.emplace_back(8, val.extractBitsAsZExtValue(8, i * 8));
+  for (unsigned i = 0; i != numBytes; ++i) {
+    unsigned byteIndex = bigEndian ? numBytes - 1 - i : i;
+    bytes.emplace_back(8, val.extractBitsAsZExtValue(8, byteIndex * 8));
+  }
 
   auto i8Ty = mlir::IntegerType::get(intTy.getContext(), 8);
   return mlir::DenseElementsAttr::get(
