@@ -470,11 +470,19 @@ StmtResult Sema::ActOnCompoundStmt(SourceLocation L, SourceLocation R,
       DiagnoseEmptyLoopBody(Elts[i], Elts[i + 1]);
   }
 
-  // Find defer statements that immediately precede a break/continue statement.
-  for (unsigned i = 0; i != NumElts - 1; ++i) {
-    if (isa<DeferStmt>(Elts[i]) && isa<BreakStmt, ContinueStmt>(Elts[i+1]))
-      Diag(Elts[i]->getBeginLoc(), diag::warn_redundant_defer)
-          << Elts[i]->getSourceRange();
+  // Find defer statements that immediately precede a `break`/`continue`
+  // or a plain `return` statement.
+  if (NumElts > 1) {
+    for (unsigned i = 0; i != NumElts - 1; ++i) {
+      if (!isa<DeferStmt>(Elts[i]))
+        continue;
+
+      if (isa<BreakStmt, ContinueStmt>(Elts[i + 1]) ||
+          (isa<ReturnStmt>(Elts[i + 1]) &&
+           !cast<ReturnStmt>(Elts[i + 1])->getRetValue()))
+        Diag(Elts[i]->getBeginLoc(), diag::warn_redundant_defer)
+            << Elts[i]->getSourceRange();
+    }
   }
 
   // Check for defer as last statement.
