@@ -5744,6 +5744,24 @@ public:
   /// \returns The expansion if successful, SDValue() otherwise
   SDValue expandROT(SDNode *N, bool AllowVectorOps, SelectionDAG &DAG) const;
 
+  /// Expand get_active_lane_mask into a scalar bitmask sequence.
+  /// \param DAG The SelectionDAG.
+  /// \param VT The target vector boolean type.
+  /// \param Index The loop iteration index.
+  /// \param TripCount The loop trip count.
+  /// \param DL The source location.
+  /// \returns The expanded SDValue, or an empty SDValue if expansion is not
+  /// supported.
+  SDValue expandGetActiveLaneMask(SelectionDAG &DAG, EVT VT, SDValue Index,
+                                  SDValue TripCount, const SDLoc &DL) const;
+
+  /// Return true if the target prefers to expand get_active_lane_mask
+  /// into a scalar bitmask sequence.
+  /// \param VT The vector mask type.
+  virtual bool shouldExpandGetActiveLaneMaskUsingScalar(EVT VT) const {
+    return false;
+  }
+
   /// Expand shift-by-parts.
   /// \param N Node to expand
   /// \param Lo lower-output-part after conversion

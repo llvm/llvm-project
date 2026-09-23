@@ -8470,6 +8470,14 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     SDValue Index = getValue(I.getOperand(0));
     SDValue TripCount = getValue(I.getOperand(1));
     EVT ElementVT = Index.getValueType();
+    // Attempt to expand into a scalar bitmask if preferred by target.
+    if (TLI.shouldExpandGetActiveLaneMaskUsingScalar(CCVT)) {
+      if (SDValue Res =
+              TLI.expandGetActiveLaneMask(DAG, CCVT, Index, TripCount, sdl)) {
+        setValue(&I, Res);
+        return;
+      }
+    }
 
     if (!TLI.shouldExpandGetActiveLaneMask(CCVT, ElementVT)) {
       setValue(&I, DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, sdl, CCVT, Index,

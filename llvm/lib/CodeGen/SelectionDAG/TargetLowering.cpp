@@ -8685,6 +8685,51 @@ static bool isNonZeroModBitWidthOrUndef(SDValue Z, unsigned BW) {
       /*AllowUndefs=*/true, /*AllowTruncation=*/true);
 }
 
+SDValue TargetLowering::expandGetActiveLaneMask(SelectionDAG &DAG, EVT VT,
+                                                SDValue Index,
+                                                SDValue TripCount,
+                                                const SDLoc &DL) const {
+  if (!VT.isFixedLengthVector())
+    return SDValue();
+
+  unsigned NumElts = VT.getVectorNumElements();
+
+  if (NumElts > 64)
+    return SDValue();
+
+  EVT IndexVT = Index.getValueType();
+  // Scalar integer type wide enough to hold all lane bits (at least i8).
+  unsigned MaskBits = llvm::PowerOf2Ceil(std::max(8u, NumElts));
+  EVT MaskVT = EVT::getIntegerVT(*DAG.getContext(), MaskBits);
+
+  // Clamp remaining lanes: Diff = (TripCount <= Index) ? 0 : (TripCount -
+  // Index).
+  SDValue Sub = DAG.getNode(ISD::SUB, DL, IndexVT, TripCount, Index);
+  SDValue IsLe = DAG.getSetCC(
+      DL, getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), IndexVT),
+      TripCount, Index, ISD::SETULE);
+  SDValue Zero = DAG.getConstant(0, DL, IndexVT);
+  SDValue Diff = DAG.getSelect(DL, IndexVT, IsLe, Zero, Sub);
+  // Clamp to vector length: k = umin(Diff, NumElts).
+  SDValue MaxLanes = DAG.getConstant(NumElts, DL, IndexVT);
+  SDValue Clamped = DAG.getNode(ISD::UMIN, DL, IndexVT, Diff, MaxLanes);
+  // Build the scalar bitmask: (1 << k) - 1.
+  SDValue ShiftAmt = DAG.getZExtOrTrunc(Clamped, DL, MaskVT);
+  SDValue One = DAG.getConstant(1, DL, MaskVT);
+  SDValue Shl = DAG.getNode(ISD::SHL, DL, MaskVT, One, ShiftAmt);
+  SDValue ScalarMask = DAG.getNode(ISD::SUB, DL, MaskVT, Shl, One);
+  // Bitcast to a boolean vector matching the integer bit width.
+  EVT BoolVecVT =
+      EVT::getVectorVT(*DAG.getContext(), MVT::i1, MaskVT.getSizeInBits());
+  SDValue Bitcast = DAG.getNode(ISD::BITCAST, DL, BoolVecVT, ScalarMask);
+
+  if (BoolVecVT == VT)
+    return Bitcast;
+  // Extract the original subvector if padded (e.g. v4i1 from i8 -> v8i1).
+  return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Bitcast,
+                     DAG.getVectorIdxConstant(0, DL));
+}
+
 SDValue TargetLowering::expandFunnelShift(SDNode *Node,
                                           SelectionDAG &DAG) const {
   EVT VT = Node->getValueType(0);

@@ -32696,6 +32696,25 @@ X86TargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
                                  : AtomicExpansionKind::None;
 }
 
+bool X86TargetLowering::shouldExpandGetActiveLaneMaskUsingScalar(EVT VT) const {
+  if (!VT.isFixedLengthVector())
+    return false;
+
+  unsigned NumElts = VT.getVectorNumElements();
+
+  // Only consider power-of-2 vector lengths up to 64.
+  if (NumElts > 64 || !isPowerOf2_32(NumElts))
+    return false;
+
+  // AVX-512 natively supports mask registers (kmov/bzhi) for >=16.
+  if (Subtarget.hasAVX512())
+    return NumElts >= 16;
+
+  // Without AVX-512, bitcasting to vXi1 requires costly unpacking (e.g. pinsrb)
+  // on smaller vectors. Only expand v64i1 to avoid its 80+ vector instructions.
+  return NumElts == 64;
+}
+
 enum BitTestKind : unsigned {
   UndefBit,
   ConstantBit,
