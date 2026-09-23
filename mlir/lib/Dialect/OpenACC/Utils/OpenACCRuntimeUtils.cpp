@@ -187,6 +187,19 @@ int64_t ACCRuntimeCallConfig::getAsyncNoValueRuntimeValue() const {
   return asyncNoValueRuntimeValue;
 }
 
+void ACCRuntimeCallConfig::setDeclareBinaryDescriptorFn(
+    DeclareBinaryDescriptorFn fn) {
+  declareBinaryDescriptorFn = std::move(fn);
+}
+
+Value ACCRuntimeCallConfig::createDeclareBinaryDescriptor(
+    Location loc, OpBuilder &builder) const {
+  if (declareBinaryDescriptorFn)
+    return declareBinaryDescriptorFn(loc, builder);
+  return LLVM::ZeroOp::create(builder, loc,
+                              LLVM::LLVMPointerType::get(builder.getContext()));
+}
+
 void acc::populateDialectIdentityDeviceTypeMapping(
     ACCRuntimeCallConfig &config) {
   for (uint32_t value = 0; value <= getMaxEnumValForDeviceType(); ++value)
