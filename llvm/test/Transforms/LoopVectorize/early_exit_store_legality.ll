@@ -886,8 +886,9 @@ exit:
 define i32 @uncountable_exit_with_masked_ldst_separate_condition(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred, ptr align 2 readonly %st.pred) !dbg !66 {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'uncountable_exit_with_masked_ldst_separate_condition'
 ; CHECK-DEBUG:       LV: We can vectorize this loop!
+; CHECK-DEBUG:       LV: Not vectorizing: Early exit loop with side effects contains unsupported conditional memory operations
 ; CHECK-DEBUG:       LV: Vectorization is possible but not beneficial.
-; CHECK-REMARK:      foo.c:290:3: loop not vectorized: Early exit loop with side effects contains unsupported memory operations
+; CHECK-REMARK:      foo.c:290:3: loop not vectorized: Early exit loop with side effects contains unsupported conditional memory operations
 entry:
   br label %for.body, !dbg !67
 
@@ -1076,8 +1077,8 @@ exit:
 
 define i64 @uncountable_exit_with_extra_induction(ptr dereferenceable(80) noalias %array, ptr align 4 dereferenceable(80) readonly %pred) !dbg !78 {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'uncountable_exit_with_extra_induction'
-; CHECK-DEBUG:       LV: Not vectorizing: Early exit loop with side effects contains unsupported reductions or recurrences.
-; CHECK-REMARK:      foo.c:350:3: loop not vectorized: Early exit loop with side effects contains unsupported reductions or recurrences
+; CHECK-DEBUG:       LV: Not vectorizing: Early exit loop with side effects contains unsupported reductions, inductions or recurrences
+; CHECK-REMARK:      foo.c:350:3: loop not vectorized: Early exit loop with side effects contains unsupported reductions, inductions or recurrences
 entry:
   br label %for.body, !dbg !79
 
