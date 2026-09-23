@@ -6,6 +6,10 @@
 # RUN:   --skip-symbolization --format=text --output=%t/profile \
 # RUN:   --show-detailed-warning 2>&1 \
 # RUN:   | FileCheck %s --implicit-check-not="Bogus trace"
+# RUN: llvm-profgen --binary=%t/cs-bogus-trace.exe --perfscript=%t/perfscript-clean \
+# RUN:   --skip-symbolization --format=text --output=%t/profile-clean \
+# RUN:   --show-detailed-warning 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=CLEAN --allow-empty
 
 ## A hybrid sample is kept only if the callchain leaf (sampled pc) and the
 ## newest LBR target lie in the same function, or either is external. The leaf
@@ -17,6 +21,10 @@
 # CHECK: Bogus trace: stack tip = 0x00001008, LBR tip = 0x00001094
 # CHECK: Bogus trace: stack tip = 0x00001088, LBR tip = 0x00001060
 # CHECK: 33.33%(3/9) of hybrid samples had a callchain leaf that disagreed with the newest LBR target (bogus trace).
+# CHECK: Bogus trace rate exceeds 1%: the profile has high sample skid and may not be suitable for optimization.
+
+## No warnings when every sample is kept.
+# CLEAN-NOT: Bogus trace
 
 #--- a.s
 .macro func name
@@ -142,3 +150,11 @@ PERF_RECORD_MMAP2 1/1: [0x0(0x2000) @ 0 00:00 0 0]: r-xp /tmp/cs-bogus-trace.exe
 	            1088
 	            104c
  0x1090/0x7f0000001000/P/-/-/0  0x1048/0x1080/P/-/-/0
+
+#--- perfscript-clean
+PERF_RECORD_MMAP2 1/1: [0x0(0x2000) @ 0 00:00 0 0]: r-xp /tmp/cs-bogus-trace.exe
+
+; Small positive skid within f. Kept.
+	            1088
+	            104c
+ 0x1048/0x1080/P/-/-/0

@@ -721,6 +721,10 @@ void HybridPerfReader::unwindSamples() {
   emitWarningSummary(NumBogusTrace, NumTotalHybridSample,
                      "of hybrid samples had a callchain leaf that disagreed "
                      "with the newest LBR target (bogus trace).");
+  if (NumBogusTrace * 100 > NumTotalHybridSample)
+    WithColor::warning() << "Bogus trace rate exceeds 1%: the profile has high "
+                            "sample skid and may not be suitable for "
+                            "optimization.\n";
 }
 
 /// Parse a hex address from \p Str.
