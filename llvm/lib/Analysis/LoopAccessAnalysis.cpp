@@ -1105,10 +1105,7 @@ isNoWrap(PredicatedScalarEvolution &PSE, const SCEVAddRecExpr *AR, Value *Ptr,
          std::optional<int64_t> Stride = std::nullopt,
          SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr) {
   // FIXME: This should probably only return true for NUW.
-  if (any(AR->getNoWrapFlags(SCEV::NoWrapMask)))
-    return true;
-
-  if (Ptr && PSE.hasNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW))
+  if (any(AR->getNoWrapFlags(SCEV::FlagsMask)))
     return true;
 
   // An nusw getelementptr that is an AddRec cannot wrap. If it would wrap,
@@ -1146,9 +1143,8 @@ isNoWrap(PredicatedScalarEvolution &PSE, const SCEVAddRecExpr *AR, Value *Ptr,
 
   if (Ptr && Predicates) {
     ScalarEvolution &SE = *PSE.getSE();
-    SCEVWrapPredicate::IncrementWrapFlags Flags = SCEVWrapPredicate::clearFlags(
-        SCEVWrapPredicate::IncrementNUSW,
-        SCEVWrapPredicate::getImpliedFlags(AR, SE));
+    SCEVWrapPredicate::IncrementWrapFlags Flags =
+        SCEVWrapPredicate::IncrementNUSW;
     Predicates->push_back(SE.getWrapPredicate(AR, Flags));
     LLVM_DEBUG(dbgs() << "LAA: Pointer may wrap:\n"
                       << "LAA:   Pointer: " << *Ptr << "\n"
@@ -2394,8 +2390,20 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   // Negative distances are not plausible dependencies.
   if (SE.isKnownNonPositive(Dist)) {
     if (SE.isKnownNonNegative(Dist)) {
-      if (HasSameSize) {
-        // Write to the same location with the same size.
+      // Equal-sized accesses to the same location are forward.
+      if (HasSameSize)
+        return Dependence::Forward;
+
+      if (CommonStride) {
+        // For mixed sizes, CommonStride is asserted to cover both accesses when
+        // computed in getDependenceDistanceStrideAndSize, so different
+        // iterations cannot overlap.
+        [[maybe_unused]] uint64_t ASz =
+            DL.getTypeAllocSize(getLoadStoreType(InstMap[AIdx]));
+        [[maybe_unused]] uint64_t BSz =
+            DL.getTypeAllocSize(getLoadStoreType(InstMap[BIdx]));
+        assert(*CommonStride >= std::max(ASz, BSz) &&
+               "Invariant from getDependenceDistanceStrideAndSize broken!");
         return Dependence::Forward;
       }
       LLVM_DEBUG(dbgs() << "LAA: possibly zero dependence difference but "

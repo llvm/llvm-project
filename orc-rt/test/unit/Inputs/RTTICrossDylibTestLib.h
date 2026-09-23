@@ -15,10 +15,15 @@
 #ifndef ORC_RT_TEST_RTTICROSSDYLIBTESTLIB_H
 #define ORC_RT_TEST_RTTICROSSDYLIBTESTLIB_H
 
+#include "TestVisibility.h"
 #include "orc-rt/support/Error.h"
 
-extern "C" orc_rt::ErrorInfoBase *rttiCrossDylibTest_makeError(int Code);
-extern "C" void rttiCrossDylibTest_destroyError(orc_rt::ErrorInfoBase *E);
-extern "C" const void *rttiCrossDylibTest_libraryID();
+extern "C" TEST_EXPORT orc_rt::ErrorInfoBase *
+rttiCrossDylibTest_makeError(int Code);
+
+extern "C" TEST_EXPORT void
+rttiCrossDylibTest_destroyError(orc_rt::ErrorInfoBase *E);
+
+extern "C" TEST_EXPORT const void *rttiCrossDylibTest_libraryID();
 
 #endif // ORC_RT_TEST_RTTICROSSDYLIBTESTLIB_H
