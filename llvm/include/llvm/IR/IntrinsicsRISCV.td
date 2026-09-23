@@ -1992,7 +1992,7 @@ let TargetPrefix = "riscv" in {
       DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                             [LLVMMatchType<0>, llvm_anyvector_ty,
                              LLVMMatchType<1>,
-                             LLVMScalarOrSameVectorWidth<1, llvm_i1_ty>,
+                             LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                              llvm_anyint_ty, LLVMMatchType<2>],
                             [ImmArg<ArgIndex<5>>, IntrNoMem]>, RISCVVIntrinsic {
       let VLOperand = 4;
@@ -2007,16 +2007,6 @@ let TargetPrefix = "riscv" in {
                              llvm_anyint_ty],
                             [IntrNoMem]>, RISCVVIntrinsic {
       let VLOperand = 2;
-    }
-
-    // Input: (maskedoff, vector_in, mask, vl, policy)
-    def "int_riscv_" # NAME # "_mask" :
-      DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                            [LLVMMatchType<0>, llvm_anyvector_ty,
-                             LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                             llvm_anyint_ty, LLVMMatchType<2>],
-                            [ImmArg<ArgIndex<4>>, IntrNoMem]>, RISCVVIntrinsic {
-      let VLOperand = 3;
     }
   }
 
@@ -2135,6 +2125,34 @@ class RVPBinaryIntrinsic
   def int_riscv_pmhraccu  : RVPTernaryIntrinsic;
   def int_riscv_pmhaccsu  : RVPTernaryIntrinsic;
   def int_riscv_pmhraccsu : RVPTernaryIntrinsic;
+
+  // Packed Multiply High Parts. The packed forms multiply the full-width
+  // element of rs1 by one byte (b0/b1) or one halfword (h0/h1) of each
+  // element of rs2, so rs2's elements are half the size of the result's.
+  class RVPMulHighPartsIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                              [LLVMMatchType<0>,
+                               LLVMSubdivide2VectorType<0>],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_pmulh_b0   : RVPMulHighPartsIntrinsic;
+  def int_riscv_pmulh_b1   : RVPMulHighPartsIntrinsic;
+  def int_riscv_pmulhsu_b0 : RVPMulHighPartsIntrinsic;
+  def int_riscv_pmulhsu_b1 : RVPMulHighPartsIntrinsic;
+  def int_riscv_pmulh_h0   : RVPMulHighPartsIntrinsic;
+  def int_riscv_pmulh_h1   : RVPMulHighPartsIntrinsic;
+  def int_riscv_pmulhsu_h0 : RVPMulHighPartsIntrinsic;
+  def int_riscv_pmulhsu_h1 : RVPMulHighPartsIntrinsic;
+
+  // The scalar forms keep a single product of the full-width rs1 and one
+  // halfword of rs2: <2 x i16> pairs with i32.
+  class RVPScalarMulHighPartsIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+                              [LLVMMatchType<0>, llvm_anyvector_ty],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_mulh_h0   : RVPScalarMulHighPartsIntrinsic;
+  def int_riscv_mulh_h1   : RVPScalarMulHighPartsIntrinsic;
+  def int_riscv_mulhsu_h0 : RVPScalarMulHighPartsIntrinsic;
+  def int_riscv_mulhsu_h1 : RVPScalarMulHighPartsIntrinsic;
 
   // Packed Multiplication with Horizontal Addition.
   class RVPHorizontalMulIntrinsic

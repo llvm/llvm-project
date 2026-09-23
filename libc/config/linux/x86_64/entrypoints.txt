@@ -49,10 +49,22 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # fcntl.h entrypoints
     libc.src.fcntl.creat
+    libc.src.fcntl.fallocate
     libc.src.fcntl.fcntl
     libc.src.fcntl.open
     libc.src.fcntl.openat
     libc.src.fcntl.posix_fadvise
+    libc.src.fcntl.posix_fadvise64
+    libc.src.fcntl.posix_fallocate
+
+    # grp.h entrypoints
+    libc.src.grp.endgrent
+    libc.src.grp.getgrent
+    libc.src.grp.getgrgid
+    libc.src.grp.getgrgid_r
+    libc.src.grp.getgrnam
+    libc.src.grp.getgrnam_r
+    libc.src.grp.setgrent
 
     # net/if.h entrypoints
     libc.src.net.if_indextoname
@@ -244,6 +256,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.lldiv
     libc.src.stdlib.memalignment
     libc.src.stdlib.mkdtemp
+    libc.src.stdlib.mkostemp
     libc.src.stdlib.mkstemp
     libc.src.stdlib.qsort
     libc.src.stdlib.qsort_r
@@ -384,10 +397,14 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.stat.fchmod
     libc.src.sys.stat.fchmodat
     libc.src.sys.stat.fstat
+    libc.src.sys.stat.fstatat
     libc.src.sys.stat.futimens
     libc.src.sys.stat.lstat
     libc.src.sys.stat.mkdir
     libc.src.sys.stat.mkdirat
+    libc.src.sys.stat.mkfifo
+    libc.src.sys.stat.mkfifoat
+    libc.src.sys.stat.mknodat
     libc.src.sys.stat.stat
     libc.src.sys.stat.umask
     libc.src.sys.stat.utimensat
@@ -413,6 +430,11 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.wait.wait
     libc.src.sys.wait.wait4
     libc.src.sys.wait.waitpid
+
+    # sys/xattr.h entrypoints
+    libc.src.sys.xattr.flistxattr
+    libc.src.sys.xattr.listxattr
+    libc.src.sys.xattr.llistxattr
 
     # sys/prctl.h entrypoints
     libc.src.sys.prctl.prctl
@@ -447,7 +469,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.chdir
     libc.src.unistd.chown
     libc.src.unistd.chroot
-    libc.src.unistd.confstr
     libc.src.unistd.close
     libc.src.unistd.dup
     libc.src.unistd.dup2
@@ -497,7 +518,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.sleep
     libc.src.unistd.symlink
     libc.src.unistd.symlinkat
-    libc.src.unistd.sysconf
     libc.src.unistd.tcgetpgrp
     libc.src.unistd.tcsetpgrp
     libc.src.unistd.truncate
@@ -1319,10 +1339,13 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.dirent.fdopendir
 
     # pthread.h entrypoints
+    libc.src.pthread.__pthread_cleanup_pop
+    libc.src.pthread.__pthread_cleanup_push
     libc.src.pthread.pthread_atfork
     libc.src.pthread.pthread_attr_destroy
     libc.src.pthread.pthread_attr_getdetachstate
     libc.src.pthread.pthread_attr_getguardsize
+    libc.src.pthread.pthread_attr_getinheritsched
     libc.src.pthread.pthread_attr_getschedparam
     libc.src.pthread.pthread_attr_getschedpolicy
     libc.src.pthread.pthread_attr_getscope
@@ -1331,6 +1354,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_attr_init
     libc.src.pthread.pthread_attr_setdetachstate
     libc.src.pthread.pthread_attr_setguardsize
+    libc.src.pthread.pthread_attr_setinheritsched
     libc.src.pthread.pthread_attr_setschedparam
     libc.src.pthread.pthread_attr_setschedpolicy
     libc.src.pthread.pthread_attr_setscope
@@ -1408,6 +1432,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_setspecific
 
     # sched.h entrypoints
+    libc.src.sched.clone
     libc.src.sched.__sched_andcpuset
     libc.src.sched.__sched_clrcpuset
     libc.src.sched.__sched_cpualloc
@@ -1497,6 +1522,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdlib.exit
     libc.src.stdlib.getenv
     libc.src.stdlib.putenv
+    libc.src.stdlib.secure_getenv
     libc.src.stdlib.setenv
     libc.src.stdlib.unsetenv
     libc.src.stdlib.mbstowcs
@@ -1608,6 +1634,7 @@ if(LLVM_LIBC_FULL_BUILD)
     # unistd.h entrypoints
     libc.src.unistd.__llvm_libc_syscall
     libc.src.unistd._exit
+    libc.src.unistd.confstr
     libc.src.unistd.environ
     libc.src.unistd.execl
     libc.src.unistd.execv
@@ -1618,6 +1645,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.unistd.optind
     libc.src.unistd.optopt
     libc.src.unistd.swab
+    libc.src.unistd.sysconf
 
     # sys/select.h entrypoints
     libc.src.sys.select.select

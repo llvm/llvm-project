@@ -64,6 +64,10 @@ public:
   /// \return the context implementation object this queue is associated with.
   ContextImpl &getContext() { return *MContext; }
 
+  /// \return a weak pointer to the context implementation object this queue is
+  /// associated with.
+  std::weak_ptr<ContextImpl> getContextWeakPtr() const { return MContext; }
+
   /// \return the device implementation object this queue is associated with.
   DeviceImpl &getDevice() { return MDevice; }
 
@@ -114,7 +118,8 @@ public:
   void setKernelLaunchParams(std::vector<EventImplPtr> &&Events,
                              const ol_kernel_launch_size_args_t &Range);
 
-  /// \return the async_handler associated with this queue.
+  /// \return the async_handler associated with this queue, empty if the queue
+  /// was constructed without one and its context has none either.
   const async_handler &getAsyncHandler() const { return MAsyncHandler; }
 
   /// Submits a memory copy operation from one USM or host pointer to another.
@@ -126,6 +131,18 @@ public:
   /// \return an event impl object that represents the status of the operation.
   EventImplPtr memcpy(void *Dest, const void *Src, std::size_t NumBytes,
                       const std::vector<EventImplPtr> &DepEvents);
+
+  /// Submits a fill operation that replicates a pattern into USM.
+  ///
+  /// \param Ptr is the pointer to memory to be filled.
+  /// \param Pattern is the pattern to be replicated.
+  /// \param PatternSize is the size of the pattern in bytes.
+  /// \param Count is the number of times the pattern is filled.
+  /// \param DepEvents is a vector of dependencies for the operation.
+  /// \return an event impl object that represents the status of the operation.
+  EventImplPtr fill(void *Ptr, const void *Pattern, std::size_t PatternSize,
+                    std::size_t Count,
+                    const std::vector<EventImplPtr> &DepEvents);
 
   /// Submits a command group function to this queue.
   ///

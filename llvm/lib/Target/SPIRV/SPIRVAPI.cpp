@@ -103,8 +103,7 @@ SPIRVTranslate(Module *M, std::string &SpirvObj, std::string &ErrMsg,
 
   std::string DLStr = M->getDataLayoutStr();
   Expected<DataLayout> MaybeDL = DataLayout::parse(
-      DLStr.empty() ? Target->createDataLayout().getStringRepresentation()
-                    : DLStr);
+      DLStr.empty() ? TargetTriple.computeDataLayout() : DLStr);
   if (!MaybeDL) {
     ErrMsg = toString(MaybeDL.takeError());
     return false;

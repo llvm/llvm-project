@@ -188,7 +188,7 @@ protected:
   // How many to add to "this" to get the sibling.
   // If it is zero, then the DIE doesn't have children,
   // or the DWARF claimed it had children but the DIE
-  // only contained a single NULL terminating child.
+  // only contained a single null-terminating child.
   uint32_t m_sibling_idx : 31, m_has_children : 1;
   uint16_t m_abbr_idx = 0;
   /// A copy of the DW_TAG value so we don't have to go through the compile

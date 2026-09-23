@@ -69,6 +69,7 @@ add_header_macro(
     .llvm-libc-types.struct_flock64
     .llvm-libc-types.pid_t
     .llvm-libc-types.off_t
+    .llvm-libc-types.off64_t
     .llvm_libc_common_h
 )
 
@@ -583,6 +584,7 @@ add_header_macro(
     .llvm-libc-types.__pthread_once_func_t
     .llvm-libc-types.__pthread_start_t
     .llvm-libc-types.__pthread_tss_dtor_t
+    .llvm-libc-types.struct___pthread_cleanup_frame
     .llvm-libc-types.clockid_t
     .llvm-libc-types.pthread_attr_t
     .llvm-libc-types.pthread_cond_t
@@ -1094,6 +1096,16 @@ add_header_macro(
     .llvm-libc-types.pid_t
     .llvm-libc-types.struct_rusage
     .llvm-libc-types.siginfo_t
+)
+
+add_header_macro(
+  sys_xattr
+  ../libc/include/sys/xattr.yaml
+  sys/xattr.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-types.size_t
+    .llvm-libc-types.ssize_t
 )
 
 file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/net)

@@ -140,7 +140,6 @@ public:
 
   bool run(MachineFunction &MF);
   void fixSCCCopies(MachineFunction &MF);
-  void prepareRegSequenceAndPHIs(MachineFunction &MF);
   unsigned getNextVGPRToSGPRCopyId() { return ++NextVGPRToSGPRCopyID; }
   bool needToBeConvertedToVALU(V2SCopyInfo *I);
   void analyzeVGPRToSGPRCopy(MachineInstr *MI);

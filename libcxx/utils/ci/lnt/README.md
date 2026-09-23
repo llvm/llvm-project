@@ -76,12 +76,13 @@ which can be used to benchmark locally:
 ```
 run-benchmarks --test-suite-commit <SHA1> --machine <MACHINE>    \
                --compiler clang++ --benchmark-commit <SHA2>      \
+               --libcxx-installation <PATH>                      \
                --output result.json
 ```
 
-This will run the benchmarks (using the test suite at the specified `SHA1`) against libc++
-as-of the specified `SHA2`, and produce a LNT-ready JSON report. The results can then be
-submitted to a LNT instance if desired.
+This will run the benchmarks (using the test suite at the specified `SHA1`) against the installation
+of libc++ at `PATH` (which is assumed to be libc++ as-of `SHA2`), and produce a LNT-ready JSON report.
+The results can then be submitted to a LNT instance if desired.
 
 ## Setting up a local LNT instance
 
