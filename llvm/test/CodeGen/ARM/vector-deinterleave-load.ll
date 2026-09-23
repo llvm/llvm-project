@@ -24,29 +24,11 @@ entry:
 define void @arm_vector_deinterleave_idx_ld3(ptr %src) {
 ; CHECK-LABEL: arm_vector_deinterleave_idx_ld3:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r11}
-; CHECK-NEXT:    push {r11}
-; CHECK-NEXT:    .setfp r11, sp
-; CHECK-NEXT:    mov r11, sp
-; CHECK-NEXT:    .pad #60
-; CHECK-NEXT:    sub sp, sp, #60
-; CHECK-NEXT:    bfc sp, #0, #4
-; CHECK-NEXT:    vld1.32 {d16, d17}, [r0:128]!
-; CHECK-NEXT:    mov r1, sp
-; CHECK-NEXT:    vld1.32 {d18, d19}, [r0:128]!
-; CHECK-NEXT:    vld1.64 {d20, d21}, [r0:128]
-; CHECK-NEXT:    add r0, r1, #32
-; CHECK-NEXT:    vst1.64 {d20, d21}, [r0:128]
-; CHECK-NEXT:    mov r0, r1
-; CHECK-NEXT:    vst1.64 {d16, d17}, [r0:128]!
-; CHECK-NEXT:    vst1.64 {d18, d19}, [r0]
-; CHECK-NEXT:    vld3.32 {d16, d18, d20}, [r1:64]!
-; CHECK-NEXT:    vld3.32 {d17, d19, d21}, [r1:64]
+; CHECK-NEXT:    vld3.32 {d16, d18, d20}, [r0:64]!
+; CHECK-NEXT:    vld3.32 {d17, d19, d21}, [r0:64]
 ; CHECK-NEXT:    @ fake_use: $q8
 ; CHECK-NEXT:    @ fake_use: $q9
 ; CHECK-NEXT:    @ fake_use: $q10 $q8_q9_q10_q11
-; CHECK-NEXT:    mov sp, r11
-; CHECK-NEXT:    pop {r11}
 ; CHECK-NEXT:    bx lr
 entry:
   %load = load <12 x float>, ptr %src
@@ -64,18 +46,12 @@ entry:
 define void @arm_vector_deinterleave_idx_ld4(ptr %src) {
 ; CHECK-LABEL: arm_vector_deinterleave_idx_ld4:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vld1.32 {d16, d17}, [r0:128]!
-; CHECK-NEXT:    vld1.32 {d18, d19}, [r0:128]!
-; CHECK-NEXT:    vld1.32 {d20, d21}, [r0:128]!
-; CHECK-NEXT:    vld1.64 {d22, d23}, [r0:128]
-; CHECK-NEXT:    vuzp.32 q8, q9
-; CHECK-NEXT:    vuzp.32 q10, q11
-; CHECK-NEXT:    vuzp.32 q8, q10
+; CHECK-NEXT:    vld4.32 {d16, d18, d20, d22}, [r0:256]!
+; CHECK-NEXT:    vld4.32 {d17, d19, d21, d23}, [r0:256]
 ; CHECK-NEXT:    @ fake_use: $q8
-; CHECK-NEXT:    @ fake_use: $q10
-; CHECK-NEXT:    vuzp.32 q9, q11
 ; CHECK-NEXT:    @ fake_use: $q9
-; CHECK-NEXT:    @ fake_use: $q11
+; CHECK-NEXT:    @ fake_use: $q10
+; CHECK-NEXT:    @ fake_use: $q11 $q8_q9_q10_q11
 ; CHECK-NEXT:    bx lr
 entry:
   %load = load <16 x float>, ptr %src
