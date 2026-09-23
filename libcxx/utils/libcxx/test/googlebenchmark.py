@@ -180,31 +180,54 @@ def prepare(config, litConfig):
     installDir = os.path.join(prefix, "install")
     os.makedirs(root, exist_ok=True)
 
-    cmake = os.environ.get("CMAKE", "cmake")
+    cmake = (
+        litConfig.params.get("cmake")
+        or getattr(config, "cmake", None)
+        or os.environ.get("CMAKE", "cmake")
+    )
+    cmake_generator = (
+        litConfig.params.get("cmake_generator")
+        or getattr(config, "cmake_generator", None)
+        or os.environ.get("CMAKE_GENERATOR")
+    )
+    cmake_make_program = (
+        litConfig.params.get("cmake_make_program")
+        or getattr(config, "cmake_make_program", None)
+        or os.environ.get("CMAKE_MAKE_PROGRAM")
+    )
 
     if not os.path.exists(os.path.join(buildDir, "CMakeCache.txt")):
         litConfig.note("Configuring GoogleBenchmark in {}".format(buildDir))
         compiler = _expand(config, _getSubstitution("%{cxx}", config))
+        configure_cmd = [
+            cmake,
+            "-S",
+            SOURCE_DIR,
+            "-B",
+            buildDir,
+            "-DCMAKE_BUILD_TYPE=Release",
+            "-DCMAKE_CXX_COMPILER={}".format(compiler),
+            "-DCMAKE_CXX_FLAGS={}".format(" ".join(flags)),
+            # Set CMAKE_EXE_LINKER_FLAGS in addition to BENCHMARK_CXX_LIBRARIES since we
+            # need CMake's own probe executables to have the right linker flags.
+            "-DCMAKE_EXE_LINKER_FLAGS={}".format(
+                " ".join("-l{}".format(lib) for lib in libraries)
+            ),
+            "-DCMAKE_INSTALL_PREFIX={}".format(installDir),
+            "-DCMAKE_INSTALL_LIBDIR=lib",
+            "-DBENCHMARK_CXX_LIBRARIES={}".format(";".join(libraries)),
+            "-DBENCHMARK_ENABLE_TESTING=OFF",
+            "-DBENCHMARK_ENABLE_WERROR=OFF",
+            "-DBENCHMARK_INSTALL_DOCS=OFF",
+        ]
+        if cmake_generator:
+            configure_cmd += ["-G", cmake_generator]
+        if cmake_make_program:
+            configure_cmd += ["-DCMAKE_MAKE_PROGRAM={}".format(cmake_make_program)]
         _run(
             litConfig,
             "configure",
-            [
-                cmake,
-                "-S", SOURCE_DIR,
-                "-B", buildDir,
-                "-DCMAKE_BUILD_TYPE=Release",
-                "-DCMAKE_CXX_COMPILER={}".format(compiler),
-                "-DCMAKE_CXX_FLAGS={}".format(" ".join(flags)),
-                # Set CMAKE_EXE_LINKER_FLAGS in addition to BENCHMARK_CXX_LIBRARIES since we
-                # need CMake's own probe executables to have the right linker flags.
-                "-DCMAKE_EXE_LINKER_FLAGS={}".format(" ".join("-l{}".format(lib) for lib in libraries)),
-                "-DCMAKE_INSTALL_PREFIX={}".format(installDir),
-                "-DCMAKE_INSTALL_LIBDIR=lib",
-                "-DBENCHMARK_CXX_LIBRARIES={}".format(";".join(libraries)),
-                "-DBENCHMARK_ENABLE_TESTING=OFF",
-                "-DBENCHMARK_ENABLE_WERROR=OFF",
-                "-DBENCHMARK_INSTALL_DOCS=OFF",
-            ],
+            configure_cmd,
             cwd=root,
         )
 
