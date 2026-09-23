@@ -521,7 +521,7 @@ features cannot lower the translation-unit ABI level;
 - Added `-Wredundant-defer` to diagnose redundant uses of the `_Defer`
   keyword, such as when deferring the last statement of a block; when
   used as the body of a conditional; or when it immediately precedes
-  a `break`/`continue` statement.
+  a `break`/`continue` statement or a `return` with no argument.
 
 ### Improvements to Clang's time-trace
 
