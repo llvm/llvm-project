@@ -281,12 +281,9 @@ class TestXMLRegisterUnion(GDBRemoteTestBase):
         process = self.setup_register_test(
             """\
             <vector id="v4f" type="ieee_single" count="4"/>
-            <vector id="v2d" type="ieee_double" count="2"/>
             <union id="views">
-              <field name="f32" type="ieee_single"/>
-              <field name="f64" type="ieee_double"/>
-              <field name="floats" type="v4f"/>
-              <field name="doubles" type="v2d"/>
+              <field name="scalar" type="ieee_single"/>
+              <field name="lanes" type="v4f"/>
               <field name="raw" type="uint128"/>
             </union>
             <reg name="u0" regnum="0" bitsize="128" type="views"/>
@@ -298,17 +295,20 @@ class TestXMLRegisterUnion(GDBRemoteTestBase):
         union = frame.FindRegister("u0")
         self.assertTrue(union.IsValid())
         self.assertTrue(union.GetType().IsValid())
+        self.assertRegex(
+            union.GetType().GetName(), r"^__lldb_register_union_[0-9]+_16$"
+        )
         self.assertEqual(union.GetByteSize(), 16)
-        self.assertEqual(union.GetNumChildren(), 5)
+        self.assertEqual(union.GetNumChildren(), 3)
         self.assertEqual(
-            [union.GetChildAtIndex(i).GetName() for i in range(5)],
-            ["f32", "f64", "floats", "doubles", "raw"],
+            [union.GetChildAtIndex(i).GetName() for i in range(3)],
+            ["scalar", "lanes", "raw"],
         )
         self.assertAlmostEqual(
-            union.GetChildMemberWithName("f32").GetData().float[0], 1.5
+            union.GetChildMemberWithName("scalar").GetData().float[0], 1.5
         )
         self.assertAlmostEqual(
-            union.GetValueForExpressionPath(".floats[2]").GetData().float[0],
+            union.GetValueForExpressionPath(".lanes[2]").GetData().float[0],
             3.5,
         )
 
@@ -326,6 +326,7 @@ class TestXMLRegisterUnion(GDBRemoteTestBase):
         )
 
         union = process.GetThreadAtIndex(0).GetFrameAtIndex(0).FindRegister("u0")
+        self.assertRegex(union.GetType().GetName(), r"^__lldb_register_union_[0-9]+_4$")
         self.assertEqual(union.GetByteSize(), 16)
         self.assertEqual(union.GetType().GetByteSize(), 4)
         self.assertEqual(union.GetChildMemberWithName("value").GetValueAsUnsigned(), 42)
@@ -562,14 +563,25 @@ class TestXMLRegisterUnion(GDBRemoteTestBase):
             "00" * 32,
         )
 
-        self.expect("register read u0.missing", error=True, substrs=["No field path"])
-        self.expect("register read u0.", error=True, substrs=["No field path"])
-        self.expect("register read u0..f32", error=True, substrs=["No field path"])
-        for path in ["u0[0]", "v0[", "v0[0", "v0[]", "v0[x]", "v0[0]junk"]:
+        invalid_paths = {
+            "u0.missing": "No field path 'missing' in register 'u0'",
+            "u0.": "No field path '' in register 'u0'",
+            "u0..f32": "No field path '.f32' in register 'u0'",
+            "u0[0]": "No field path '[0]' in register 'u0'",
+            "v0[": "No field path '[' in register 'v0'",
+            "v0[0": "No field path '[0' in register 'v0'",
+            "v0[]": "No field path '[]' in register 'v0'",
+            "v0[x]": "No field path '[x]' in register 'v0'",
+            "v0[-1]": "No field path '[-1]' in register 'v0'",
+            "v0[4294967296]": "No field path '[4294967296]' in register 'v0'",
+            "v0[0]junk": "No field path '[0]junk' in register 'v0'",
+            "v0[0].missing": "No field path '[0].missing' in register 'v0'",
+        }
+        for path, diagnostic in invalid_paths.items():
             self.expect(
                 "register read " + path,
                 error=True,
-                substrs=["No field path"],
+                substrs=[diagnostic],
             )
         self.expect(
             "register read v0[9].f32",
@@ -579,7 +591,7 @@ class TestXMLRegisterUnion(GDBRemoteTestBase):
         self.expect(
             "register read pc.field",
             error=True,
-            substrs=["does not have a structured type"],
+            substrs=["Register 'pc' does not have a structured type"],
         )
 
     @skipIfXmlSupportMissing
