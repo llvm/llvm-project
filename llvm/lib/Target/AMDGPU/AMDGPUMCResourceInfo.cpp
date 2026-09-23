@@ -15,6 +15,7 @@
 #include "AMDGPUMCResourceInfo.h"
 #include "SIMachineFunctionInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
@@ -105,84 +106,86 @@ MCSymbol *MCResourceInfo::getMaxNamedBarrierSymbol(MCContext &OutContext) {
   return OutContext.getOrCreateSymbol("amdgpu.max_num_named_barrier");
 }
 
-// Tries to flatten recursive call register resource gathering. Simple cycle
-// avoiding dfs to find the constants in the propagated symbols.
-// Assumes:
-// - RecSym has been confirmed to recurse (this means the callee symbols should
-//   all be populated, started at RecSym).
-// - Shape of the resource symbol's MCExpr (`max` args are order agnostic):
-//   RecSym.MCExpr := max(<constant>+, <callee_symbol>*)
-const MCExpr *MCResourceInfo::flattenedCycleMax(MCSymbol *RecSym,
-                                                ResourceInfoKind RIK,
-                                                MCContext &OutContext) {
+// Max and OR are associative and idempotent. Normalize the whole cyclic
+// assignment, folding its constants and retaining each unresolved outgoing
+// symbol once, using one visited set across all callees.
+const MCExpr *MCResourceInfo::flattenedCycleExpr(
+    MCSymbol *Sym, const MCExpr *Expr, int64_t LocalValue, ResourceInfoKind RIK,
+    AMDGPUMCExpr::VariantKind Kind, MCContext &OutContext) {
+  assert((Kind == AMDGPUMCExpr::AGVK_Max || Kind == AMDGPUMCExpr::AGVK_Or) &&
+         "expected an idempotent resource expression");
   SmallPtrSet<const MCExpr *, 8> Seen;
-  SmallVector<const MCExpr *, 8> WorkList;
-  int64_t Maximum = 0;
-
-  const MCExpr *RecExpr = RecSym->getVariableValue();
-  WorkList.push_back(RecExpr);
+  SmallPtrSet<const MCSymbol *, 8> UnresolvedSymbols;
+  SmallVector<const MCExpr *, 8> WorkList{Expr};
+  SmallVector<const MCExpr *, 8> Args{nullptr};
+  int64_t ConstantValue = 0;
 
   while (!WorkList.empty()) {
     const MCExpr *CurExpr = WorkList.pop_back_val();
-    switch (CurExpr->getKind()) {
-    default: {
-      // Assuming the recursion is of shape `max(<constant>, <callee_symbol>)`
-      // where <callee_symbol> will eventually recurse. If this condition holds,
-      // the recursion occurs within some other (possibly unresolvable) MCExpr,
-      // thus using the worst case value then.
-      if (!AMDGPUMCExpr::isSymbolUsedInExpression(RecSym, CurExpr)) {
-        LLVM_DEBUG(dbgs() << "MCResUse:   " << RecSym->getName()
-                          << ": Recursion in unexpected sub-expression, using "
-                             "module maximum\n");
-        switch (RIK) {
-        default:
-          break;
-        case RIK_NumVGPR:
-          return MCSymbolRefExpr::create(getMaxVGPRSymbol(OutContext),
-                                         OutContext);
-          break;
-        case RIK_NumSGPR:
-          return MCSymbolRefExpr::create(getMaxSGPRSymbol(OutContext),
-                                         OutContext);
-          break;
-        case RIK_NumAGPR:
-          return MCSymbolRefExpr::create(getMaxAGPRSymbol(OutContext),
-                                         OutContext);
-          break;
-        }
+    if (!Seen.insert(CurExpr).second)
+      continue;
+
+    if (const auto *Constant = dyn_cast<MCConstantExpr>(CurExpr)) {
+      ConstantValue = Kind == AMDGPUMCExpr::AGVK_Max
+                          ? std::max(ConstantValue, Constant->getValue())
+                          : ConstantValue | Constant->getValue();
+      continue;
+    }
+
+    if (const auto *SymExpr = dyn_cast<MCSymbolRefExpr>(CurExpr)) {
+      const MCSymbol &Ref = SymExpr->getSymbol();
+      // The current function's local value is already part of the assignment.
+      // A reference to it through a call cycle contributes nothing further.
+      if (&Ref == Sym)
+        continue;
+      if (Ref.isVariable())
+        WorkList.push_back(Ref.getVariableValue());
+      else if (UnresolvedSymbols.insert(&Ref).second)
+        Args.push_back(CurExpr);
+      continue;
+    }
+
+    if (const auto *TargetExpr = dyn_cast<AMDGPUMCExpr>(CurExpr)) {
+      if (TargetExpr->getKind() == Kind) {
+        // Push in reverse order to preserve the original expression order.
+        append_range(WorkList, reverse(TargetExpr->getArgs()));
+        continue;
       }
+    }
+
+    // Resource symbols currently consist only of constants, symbol references,
+    // and max/OR expressions. If that changes, an unfamiliar shape within a
+    // cyclic assignment must still produce a conservative value.
+    LLVM_DEBUG(dbgs() << "MCResUse:   " << Sym->getName()
+                      << ": Unexpected cyclic expression; using fallback\n");
+    MCSymbol *MaxSym;
+    switch (RIK) {
+    case RIK_NumVGPR:
+      MaxSym = getMaxVGPRSymbol(OutContext);
       break;
-    }
-    case MCExpr::ExprKind::Constant: {
-      int64_t Val = cast<MCConstantExpr>(CurExpr)->getValue();
-      Maximum = std::max(Maximum, Val);
+    case RIK_NumAGPR:
+      MaxSym = getMaxAGPRSymbol(OutContext);
       break;
-    }
-    case MCExpr::ExprKind::SymbolRef: {
-      const MCSymbolRefExpr *SymExpr = cast<MCSymbolRefExpr>(CurExpr);
-      const MCSymbol &SymRef = SymExpr->getSymbol();
-      if (SymRef.isVariable()) {
-        const MCExpr *SymVal = SymRef.getVariableValue();
-        if (Seen.insert(SymVal).second)
-          WorkList.push_back(SymVal);
-      }
+    case RIK_NumSGPR:
+      MaxSym = getMaxSGPRSymbol(OutContext);
       break;
-    }
-    case MCExpr::ExprKind::Target: {
-      const AMDGPUMCExpr *TargetExpr = cast<AMDGPUMCExpr>(CurExpr);
-      if (TargetExpr->getKind() == AMDGPUMCExpr::VariantKind::AGVK_Max) {
-        for (auto &Arg : TargetExpr->getArgs())
-          WorkList.push_back(Arg);
-      }
+    case RIK_NumNamedBarrier:
+      MaxSym = getMaxNamedBarrierSymbol(OutContext);
       break;
+    default:
+      return MCConstantExpr::create(1, OutContext);
     }
-    }
+    // Entry functions do not contribute to the module maximum.
+    return AMDGPUMCExpr::createMax(
+        {MCConstantExpr::create(LocalValue, OutContext),
+         MCSymbolRefExpr::create(MaxSym, OutContext)},
+        OutContext);
   }
 
-  LLVM_DEBUG(dbgs() << "MCResUse:   " << RecSym->getName()
-                    << ": Using flattened max: << " << Maximum << '\n');
-
-  return MCConstantExpr::create(Maximum, OutContext);
+  Args.front() = MCConstantExpr::create(ConstantValue, OutContext);
+  if (Args.size() == 1)
+    return Args.front();
+  return AMDGPUMCExpr::create(Kind, Args, OutContext);
 }
 
 void MCResourceInfo::assignResourceInfoExpr(
@@ -209,39 +212,21 @@ void MCResourceInfo::assignResourceInfoExpr(
       MCSymbol *CalleeFnSym = TM.getSymbol(&Callee->getFunction());
       MCSymbol *CalleeValSym =
           getSymbol(CalleeFnSym->getName(), RIK, OutContext);
-
-      // Avoid constructing recursive definitions by detecting whether `Sym` is
-      // found transitively within any of its `CalleeValSym`.
-      if (!CalleeValSym->isVariable() ||
-          !AMDGPUMCExpr::isSymbolUsedInExpression(
-              Sym, CalleeValSym->getVariableValue())) {
-        LLVM_DEBUG(dbgs() << "MCResUse:   " << Sym->getName() << ": Adding "
-                          << CalleeValSym->getName() << " as callee\n");
-        ArgExprs.push_back(MCSymbolRefExpr::create(CalleeValSym, OutContext));
-      } else {
+      LLVM_DEBUG(dbgs() << "MCResUse:   " << Sym->getName() << ": Adding "
+                        << CalleeValSym->getName() << " as callee\n");
+      ArgExprs.push_back(MCSymbolRefExpr::create(CalleeValSym, OutContext));
+    }
+    if (ArgExprs.size() > 1) {
+      SymVal = AMDGPUMCExpr::create(Kind, ArgExprs, OutContext);
+      // Detect the cycle once, then normalize the complete assignment. A
+      // single visited set folds shared subexpressions across every callee.
+      if (AMDGPUMCExpr::isSymbolUsedInExpression(Sym, SymVal)) {
         LLVM_DEBUG(dbgs() << "MCResUse:   " << Sym->getName()
-                          << ": Recursion found, attempt flattening of cycle "
-                             "for resource usage\n");
-        // In case of recursion for vgpr/sgpr/agpr resource usage: try to
-        // flatten and use the max of the call cycle. May still end up emitting
-        // module max if not fully resolvable.
-        switch (RIK) {
-        default:
-          break;
-        case RIK_NumVGPR:
-        case RIK_NumSGPR:
-        case RIK_NumAGPR:
-          ArgExprs.push_back(flattenedCycleMax(CalleeValSym, RIK, OutContext));
-          break;
-        case RIK_NumNamedBarrier:
-          ArgExprs.push_back(MCSymbolRefExpr::create(
-              getMaxNamedBarrierSymbol(OutContext), OutContext));
-          break;
-        }
+                          << ": Normalizing cyclic resource expression\n");
+        SymVal =
+            flattenedCycleExpr(Sym, SymVal, LocalValue, RIK, Kind, OutContext);
       }
     }
-    if (ArgExprs.size() > 1)
-      SymVal = AMDGPUMCExpr::create(Kind, ArgExprs, OutContext);
   }
   Sym->setVariableValue(SymVal);
 }
@@ -353,6 +338,7 @@ void MCResourceInfo::gatherResourceInfo(
   SetMaxReg(MaxSGPRSym, FRI.NumExplicitSGPR, RIK_NumSGPR);
   SetMaxReg(MaxNamedBarrierSym, FRI.NumNamedBarrier, RIK_NumNamedBarrier);
 
+  bool HasPrivateSegmentCycle = false;
   {
     // The expression for private segment size should be: FRI.PrivateSegmentSize
     // + max(FRI.Callees, FRI.CalleeSegmentSize)
@@ -384,6 +370,15 @@ void MCResourceInfo::gatherResourceInfo(
           LLVM_DEBUG(dbgs() << "MCResUse:   " << Sym->getName() << ": Adding "
                             << CalleeValSym->getName() << " as callee\n");
           ArgExprs.push_back(MCSymbolRefExpr::create(CalleeValSym, OutContext));
+        } else {
+          // Dropping this edge avoids a recursive MC expression, but it also
+          // means the finite private-segment expression is no longer a proven
+          // call-graph closure. Request dynamic-stack provisioning on versions
+          // that support it. This does not prove a bound for older versions.
+          HasPrivateSegmentCycle = true;
+          LLVM_DEBUG(dbgs() << "MCResUse:   " << Sym->getName()
+                            << ": Private-segment call cycle found; using "
+                               "dynamic-stack fallback\n");
         }
       }
     }
@@ -410,7 +405,8 @@ void MCResourceInfo::gatherResourceInfo(
     assignResourceInfoExpr(FRI.HasDynamicallySizedStack,
                            ResourceInfoKind::RIK_HasDynSizedStack,
                            AMDGPUMCExpr::AGVK_Or, MF, FRI.Callees, OutContext);
-    assignResourceInfoExpr(FRI.HasRecursion, ResourceInfoKind::RIK_HasRecursion,
+    assignResourceInfoExpr(FRI.HasRecursion || HasPrivateSegmentCycle,
+                           ResourceInfoKind::RIK_HasRecursion,
                            AMDGPUMCExpr::AGVK_Or, MF, FRI.Callees, OutContext);
     assignResourceInfoExpr(FRI.HasIndirectCall,
                            ResourceInfoKind::RIK_HasIndirectCall,
@@ -420,7 +416,8 @@ void MCResourceInfo::gatherResourceInfo(
     SetToLocal(FRI.UsesFlatScratch, ResourceInfoKind::RIK_UsesFlatScratch);
     SetToLocal(FRI.HasDynamicallySizedStack,
                ResourceInfoKind::RIK_HasDynSizedStack);
-    SetToLocal(FRI.HasRecursion, ResourceInfoKind::RIK_HasRecursion);
+    SetToLocal(FRI.HasRecursion || HasPrivateSegmentCycle,
+               ResourceInfoKind::RIK_HasRecursion);
     SetToLocal(FRI.HasIndirectCall, ResourceInfoKind::RIK_HasIndirectCall);
   }
 }
