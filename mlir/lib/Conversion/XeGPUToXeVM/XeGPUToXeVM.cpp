@@ -375,8 +375,8 @@ class CreateNdDescToXeVMPattern
       for (int64_t d = 0; d < rank - 2; ++d) {
         Value planesBelow = rewriter.createOrFold<arith::SubIOp>(
             loc, createOffset(mixedSizes, d), one);
-        Value rows = rewriter.createOrFold<arith::MulIOp>(
-            loc, planesBelow, leadingRowStrides[d]);
+        Value rows = rewriter.createOrFold<arith::MulIOp>(loc, planesBelow,
+                                                          leadingRowStrides[d]);
         baseShapeH =
             rewriter.createOrFold<arith::AddIOp>(loc, baseShapeH, rows);
       }
