@@ -25625,8 +25625,7 @@ void SemaOpenMP::ActOnOpenMPDeclareReductionInitializerEnd(
   if (Initializer && !DRD->getDeclContext()->isDependentContext()) {
     QualType ReductionType = DRD->getType();
     if (CXXRecordDecl *RD = ReductionType->getAsCXXRecordDecl()) {
-      CXXConstructorDecl *DefaultCtor = SemaRef.LookupDefaultConstructor(RD);
-      if (DefaultCtor && !DefaultCtor->isDeleted() && !DefaultCtor->isTrivial())
+      if (!RD->hasTrivialDefaultConstructor())
         SemaRef.ActOnUninitializedDecl(OmpPrivParm);
     }
   }
