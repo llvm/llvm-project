@@ -1641,6 +1641,7 @@ int64_t llvm::getICmpTrueVal(const TargetLowering &TLI, bool IsVector,
 void llvm::saveUsesAndErase(MachineInstr &MI, MachineRegisterInfo &MRI,
                             LostDebugLocObserver *LocObserver,
                             SmallInstListTy &DeadInstChain) {
+  salvageDebugInfo(MRI, MI);
   for (MachineOperand &Op : MI.uses()) {
     if (Op.isReg() && Op.getReg().isVirtual())
       DeadInstChain.insert(MRI.getVRegDef(Op.getReg()));
