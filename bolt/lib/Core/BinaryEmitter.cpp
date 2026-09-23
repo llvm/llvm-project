@@ -88,10 +88,22 @@ size_t padFunction(std::map<std::string, size_t> &FunctionPadding,
   return 0;
 }
 
+size_t breakFunctionSize(const BinaryFunction &Function) {
+  for (const std::string &Name : BreakFunctionNames)
+    if (Function.hasNameRegex(Name))
+      return 2;
+  return 0;
+}
+
+StringRef markFunctionBytes(const BinaryContext &BC) {
+  return MarkFuncs ? BC.MIB->getTrapFillValue() : StringRef();
+}
+
 size_t padFunctionBefore(const BinaryFunction &Function) {
   static std::map<std::string, size_t> CacheFunctionPadding;
   return padFunction(CacheFunctionPadding, FunctionPadBeforeSpec, Function);
 }
+
 size_t padFunctionAfter(const BinaryFunction &Function) {
   static std::map<std::string, size_t> CacheFunctionPadding;
   return padFunction(CacheFunctionPadding, FunctionPadSpec, Function);
@@ -286,15 +298,7 @@ void BinaryEmitter::emitFunctions() {
 
 bool BinaryEmitter::emitFunction(BinaryFunction &Function,
                                  FunctionFragment &FF) {
-  if (Function.size() == 0 && !Function.hasIslandsInfo())
-    return false;
-
-  if (Function.getState() == BinaryFunction::State::Empty)
-    return false;
-
-  // Avoid emitting function without instructions when overwriting the original
-  // function in-place. Otherwise, emit the empty function to define the symbol.
-  if (!BC.HasRelocations && !Function.hasNonPseudoInstructions())
+  if (!shouldEmitFunctionFragment(BC, Function))
     return false;
 
   MCSection *Section =
@@ -387,14 +391,8 @@ bool BinaryEmitter::emitFunction(BinaryFunction &Function,
          "first basic block should never be cold");
 
   // Emit UD2 at the beginning if requested by user.
-  if (!opts::BreakFunctionNames.empty()) {
-    for (std::string &Name : opts::BreakFunctionNames) {
-      if (Function.hasNameRegex(Name)) {
-        Streamer.emitIntValue(0x0B0F, 2); // UD2: 0F 0B
-        break;
-      }
-    }
-  }
+  if (const size_t BreakSize = opts::breakFunctionSize(Function))
+    Streamer.emitIntValue(0x0B0F, BreakSize); // UD2: 0F 0B
 
   // Emit code.
   emitFunctionBody(Function, FF, /*EmitCodeOnly=*/false);
@@ -406,8 +404,8 @@ bool BinaryEmitter::emitFunction(BinaryFunction &Function,
     Streamer.emitFill(Padding, MAI.getTextAlignFillValue());
   }
 
-  if (opts::MarkFuncs)
-    Streamer.emitBytes(BC.MIB->getTrapFillValue());
+  if (StringRef Marker = opts::markFunctionBytes(BC); !Marker.empty())
+    Streamer.emitBytes(Marker);
 
   // Emit CFI end
   if (NeedsFDE)
@@ -1225,6 +1223,22 @@ void BinaryEmitter::emitDataSections(StringRef OrgSecPrefix) {
 
 namespace llvm {
 namespace bolt {
+
+bool shouldEmitFunctionFragment(const BinaryContext &BC,
+                                const BinaryFunction &Function) {
+  if (Function.size() == 0 && !Function.hasIslandsInfo())
+    return false;
+
+  if (Function.getState() == BinaryFunction::State::Empty)
+    return false;
+
+  // Avoid emitting function without instructions when overwriting the original
+  // function in-place. Otherwise, emit the empty function to define the symbol.
+  if (!BC.HasRelocations && !Function.hasNonPseudoInstructions())
+    return false;
+
+  return true;
+}
 
 void emitBinaryContext(MCStreamer &Streamer, BinaryContext &BC,
                        StringRef OrgSecPrefix) {

@@ -2310,7 +2310,9 @@ public:
 
     if (!OnBehalfOf) {
       for (BinaryFunction *ExternalFunc : Islands->Dependency) {
-        Size = alignTo(Size, ExternalFunc->getConstantIslandAlignment());
+        // BinaryEmitter aligns dependency islands using the constant-island
+        // alignment of the host function.
+        Size = alignTo(Size, getConstantIslandAlignment());
         Size += ExternalFunc->estimateConstantIslandSize(this);
       }
     }
