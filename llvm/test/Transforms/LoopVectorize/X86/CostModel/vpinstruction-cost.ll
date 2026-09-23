@@ -357,3 +357,163 @@ loop:
 exit:
   ret void
 }
+
+define void @test_vpinstruction_alloca_cost(ptr noalias %dst) {
+; CHECK-LABEL: 'test_vpinstruction_alloca_cost'
+; CHECK:  Cost of 0 for VF 1: EMIT-SCALAR ir<%iv> = phi [ ir<0>, vector.ph ], [ ir<%iv.next>, loop ]
+; CHECK:  Cost of 1 for VF 1: EMIT ir<%a> = alloca ir<1>
+; CHECK:  Cost of 0 for VF 1: EMIT ir<%g.dst> = getelementptr inbounds ir<%dst>, ir<%iv>
+; CHECK:  Cost of 1 for VF 1: EMIT store ir<%a>, ir<%g.dst>
+; CHECK:  Cost of 1 for VF 1: EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
+; CHECK:  Cost of 1 for VF 1: EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<32>
+; CHECK:  Cost of 0 for VF 1: EMIT branch-on-cond ir<%ec>
+; CHECK:  Cost of 0 for VF 2: vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3:%[0-9]+]]>, ir<1>, vp<[[VP0:%[0-9]+]]>
+; CHECK:  Cost of 1 for VF 2: REPLICATE ir<%a> = alloca ir<1>
+; CHECK:  Cost of 0 for VF 2: CLONE ir<%g.dst> = getelementptr inbounds ir<%dst>, vp<[[VP4]]>
+; CHECK:  Cost of 0 for VF 2: vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds ptr, ir<%g.dst>, ir<1>
+; CHECK:  Cost of 1 for VF 2: WIDEN store vp<[[VP5]]>, ir<%a>
+; CHECK:  Cost of 0 for VF 2: EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1:%[0-9]+]]>
+; CHECK:  Cost of 1 for VF 2: EMIT branch-on-count vp<%index.next>, vp<[[VP2:%[0-9]+]]>
+; CHECK:  Cost of 0 for VF 2: vector loop backedge
+; CHECK:  Cost of 1 for VF 2: canonical IV increment
+; CHECK:  Cost of 0 for VF 2: EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP2]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK:  Cost of 0 for VF 2: IR %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ] (extra operand: vp<%bc.resume.val> from scalar.ph)
+; CHECK:  Cost of 0 for VF 2: IR %a = alloca i8, align 16
+; CHECK:  Cost of 0 for VF 2: IR %g.dst = getelementptr inbounds ptr, ptr %dst, i64 %iv
+; CHECK:  Cost of 0 for VF 2: IR store ptr %a, ptr %g.dst, align 8
+; CHECK:  Cost of 0 for VF 2: IR %iv.next = add nuw nsw i64 %iv, 1
+; CHECK:  Cost of 0 for VF 2: IR %ec = icmp eq i64 %iv.next, 32
+; CHECK:  Cost of 1 for VF 2: EMIT vp<%cmp.n> = icmp eq ir<32>, vp<[[VP2]]>
+; CHECK:  Cost of 0 for VF 2: EMIT branch-on-cond vp<%cmp.n>
+; CHECK:  Cost of 0 for VF 4: vp<[[VP4]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
+; CHECK:  Cost of 1 for VF 4: REPLICATE ir<%a> = alloca ir<1>
+; CHECK:  Cost of 0 for VF 4: CLONE ir<%g.dst> = getelementptr inbounds ir<%dst>, vp<[[VP4]]>
+; CHECK:  Cost of 0 for VF 4: vp<[[VP5]]> = vector-pointer inbounds ptr, ir<%g.dst>, ir<1>
+; CHECK:  Cost of 1 for VF 4: WIDEN store vp<[[VP5]]>, ir<%a>
+; CHECK:  Cost of 0 for VF 4: EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
+; CHECK:  Cost of 1 for VF 4: EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
+; CHECK:  Cost of 0 for VF 4: vector loop backedge
+; CHECK:  Cost of 1 for VF 4: canonical IV increment
+; CHECK:  Cost of 0 for VF 4: EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP2]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK:  Cost of 0 for VF 4: IR %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ] (extra operand: vp<%bc.resume.val> from scalar.ph)
+; CHECK:  Cost of 0 for VF 4: IR %a = alloca i8, align 16
+; CHECK:  Cost of 0 for VF 4: IR %g.dst = getelementptr inbounds ptr, ptr %dst, i64 %iv
+; CHECK:  Cost of 0 for VF 4: IR store ptr %a, ptr %g.dst, align 8
+; CHECK:  Cost of 0 for VF 4: IR %iv.next = add nuw nsw i64 %iv, 1
+; CHECK:  Cost of 0 for VF 4: IR %ec = icmp eq i64 %iv.next, 32
+; CHECK:  Cost of 1 for VF 4: EMIT vp<%cmp.n> = icmp eq ir<32>, vp<[[VP2]]>
+; CHECK:  Cost of 0 for VF 4: EMIT branch-on-cond vp<%cmp.n>
+; CHECK:  Cost of 1 for VF 4: EMIT vp<%cmp.n> = icmp eq ir<32>, vp<[[VP2]]>
+; CHECK:  Cost of 0 for VF 4: EMIT branch-on-cond vp<%cmp.n>
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %a = alloca i8, align 16
+  %g.dst = getelementptr inbounds ptr, ptr %dst, i64 %iv
+  store ptr %a, ptr %g.dst, align 8
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 32
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; Switch is free for TCK_RecipThroughput on X86, use minsize (TCK_CodeSize) to
+; expose its cost.
+define void @test_vpinstruction_switch_cost_minsize(ptr noalias %dst) minsize {
+; CHECK-LABEL: 'test_vpinstruction_switch_cost_minsize'
+; CHECK:  Cost of 0 for VF 1: EMIT-SCALAR ir<%iv> = phi [ ir<0>, vector.ph ], [ ir<%iv.next>, loop.latch ]
+; CHECK:  Cost of 0 for VF 1: EMIT ir<%g.dst> = getelementptr inbounds ir<%dst>, ir<%iv>
+; CHECK:  Cost of 1 for VF 1: EMIT-SCALAR ir<%l> = load ir<%g.dst>
+; CHECK:  Cost of 1 for VF 1: EMIT switch ir<%l>, ir<-12>, ir<13> (!vplan.prof.estimated estimated {715827883, 715827883, 715827883})
+; CHECK:  Cost of 2 for VF 1: EMIT store ir<0>, ir<%g.dst> (!vplan.execution.frequency 3074457347049914368 (33.33%, estimated))
+; CHECK:  Cost of 2 for VF 1: EMIT store ir<42>, ir<%g.dst> (!vplan.execution.frequency 3074457347049914368 (33.33%, estimated))
+; CHECK:  Cost of 2 for VF 1: EMIT store ir<2>, ir<%g.dst> (!vplan.execution.frequency 3074457347049914368 (33.33%, estimated))
+; CHECK:  Cost of 1 for VF 1: EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
+; CHECK:  Cost of 1 for VF 1: EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<32>
+; CHECK:  Cost of 1 for VF 1: EMIT branch-on-cond ir<%ec>
+; CHECK:  Cost of 0 for VF 2: vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3:%[0-9]+]]>, ir<1>, vp<[[VP0:%[0-9]+]]>
+; CHECK:  Cost of 0 for VF 2: CLONE ir<%g.dst> = getelementptr ir<%dst>, vp<[[VP4]]>
+; CHECK:  Cost of 0 for VF 2: vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds i64, ir<%g.dst>, ir<1>
+; CHECK:  Cost of 1 for VF 2: WIDEN ir<%l> = load vp<[[VP5]]>
+; CHECK:  Cost of 1 for VF 2: EMIT vp<[[VP6:%[0-9]+]]> = icmp eq ir<%l>, ir<-12>
+; CHECK:  Cost of 1 for VF 2: EMIT vp<[[VP7:%[0-9]+]]> = icmp eq ir<%l>, ir<13>
+; CHECK:  Cost of 0 for VF 2: EMIT vp<[[VP8:%[0-9]+]]> = or vp<[[VP6]]>, vp<[[VP7]]>
+; CHECK:  Cost of 1 for VF 2: EMIT vp<[[VP9:%[0-9]+]]> = not vp<[[VP8]]>
+; CHECK:  Cost of 0 for VF 2: vp<[[VP10:%[0-9]+]]> = vector-pointer i64, ir<%g.dst>, ir<1>
+; CHECK:  Cost of 1 for VF 2: WIDEN store vp<[[VP10]]>, ir<0>, vp<[[VP7]]> (!vplan.execution.frequency 3074457347049914368 (33.33%, estimated))
+; CHECK:  Cost of 0 for VF 2: vp<[[VP11:%[0-9]+]]> = vector-pointer i64, ir<%g.dst>, ir<1>
+; CHECK:  Cost of 1 for VF 2: WIDEN store vp<[[VP11]]>, ir<42>, vp<[[VP6]]> (!vplan.execution.frequency 3074457347049914368 (33.33%, estimated))
+; CHECK:  Cost of 0 for VF 2: vp<[[VP12:%[0-9]+]]> = vector-pointer i64, ir<%g.dst>, ir<1>
+; CHECK:  Cost of 1 for VF 2: WIDEN store vp<[[VP12]]>, ir<2>, vp<[[VP9]]> (!vplan.execution.frequency 3074457347049914368 (33.33%, estimated))
+; CHECK:  Cost of 0 for VF 2: EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1:%[0-9]+]]>
+; CHECK:  Cost of 1 for VF 2: EMIT branch-on-count vp<%index.next>, vp<[[VP2:%[0-9]+]]>
+; CHECK:  Cost of 1 for VF 2: vector loop backedge
+; CHECK:  Cost of 1 for VF 2: canonical IV increment
+; CHECK:  Cost of 0 for VF 2: EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP2]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK:  Cost of 0 for VF 2: IR %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ] (extra operand: vp<%bc.resume.val> from scalar.ph)
+; CHECK:  Cost of 0 for VF 2: IR %g.dst = getelementptr inbounds i64, ptr %dst, i64 %iv
+; CHECK:  Cost of 0 for VF 2: IR %l = load i64, ptr %g.dst, align 8
+; CHECK:  Cost of 1 for VF 2: EMIT vp<%cmp.n> = icmp eq ir<32>, vp<[[VP2]]>
+; CHECK:  Cost of 0 for VF 2: EMIT branch-on-cond vp<%cmp.n>
+; CHECK:  Cost of 0 for VF 4: vp<[[VP4]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
+; CHECK:  Cost of 0 for VF 4: CLONE ir<%g.dst> = getelementptr ir<%dst>, vp<[[VP4]]>
+; CHECK:  Cost of 0 for VF 4: vp<[[VP5]]> = vector-pointer inbounds i64, ir<%g.dst>, ir<1>
+; CHECK:  Cost of 1 for VF 4: WIDEN ir<%l> = load vp<[[VP5]]>
+; CHECK:  Cost of 1 for VF 4: EMIT vp<[[VP6]]> = icmp eq ir<%l>, ir<-12>
+; CHECK:  Cost of 1 for VF 4: EMIT vp<[[VP7]]> = icmp eq ir<%l>, ir<13>
+; CHECK:  Cost of 0 for VF 4: EMIT vp<[[VP8]]> = or vp<[[VP6]]>, vp<[[VP7]]>
+; CHECK:  Cost of 1 for VF 4: EMIT vp<[[VP9]]> = not vp<[[VP8]]>
+; CHECK:  Cost of 0 for VF 4: vp<[[VP10]]> = vector-pointer i64, ir<%g.dst>, ir<1>
+; CHECK:  Cost of 1 for VF 4: WIDEN store vp<[[VP10]]>, ir<0>, vp<[[VP7]]> (!vplan.execution.frequency 3074457347049914368 (33.33%, estimated))
+; CHECK:  Cost of 0 for VF 4: vp<[[VP11]]> = vector-pointer i64, ir<%g.dst>, ir<1>
+; CHECK:  Cost of 1 for VF 4: WIDEN store vp<[[VP11]]>, ir<42>, vp<[[VP6]]> (!vplan.execution.frequency 3074457347049914368 (33.33%, estimated))
+; CHECK:  Cost of 0 for VF 4: vp<[[VP12]]> = vector-pointer i64, ir<%g.dst>, ir<1>
+; CHECK:  Cost of 1 for VF 4: WIDEN store vp<[[VP12]]>, ir<2>, vp<[[VP9]]> (!vplan.execution.frequency 3074457347049914368 (33.33%, estimated))
+; CHECK:  Cost of 0 for VF 4: EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
+; CHECK:  Cost of 1 for VF 4: EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
+; CHECK:  Cost of 1 for VF 4: vector loop backedge
+; CHECK:  Cost of 1 for VF 4: canonical IV increment
+; CHECK:  Cost of 0 for VF 4: EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP2]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK:  Cost of 0 for VF 4: IR %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ] (extra operand: vp<%bc.resume.val> from scalar.ph)
+; CHECK:  Cost of 0 for VF 4: IR %g.dst = getelementptr inbounds i64, ptr %dst, i64 %iv
+; CHECK:  Cost of 0 for VF 4: IR %l = load i64, ptr %g.dst, align 8
+; CHECK:  Cost of 1 for VF 4: EMIT vp<%cmp.n> = icmp eq ir<32>, vp<[[VP2]]>
+; CHECK:  Cost of 0 for VF 4: EMIT branch-on-cond vp<%cmp.n>
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %g.dst = getelementptr inbounds i64, ptr %dst, i64 %iv
+  %l = load i64, ptr %g.dst, align 8
+  switch i64 %l, label %default [
+    i64 -12, label %case1
+    i64 13, label %case2
+  ]
+
+case1:
+  store i64 42, ptr %g.dst, align 8
+  br label %loop.latch
+
+case2:
+  store i64 0, ptr %g.dst, align 8
+  br label %loop.latch
+
+default:
+  store i64 2, ptr %g.dst, align 8
+  br label %loop.latch
+
+loop.latch:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 32
+  br i1 %ec, label %exit, label %loop.header
+
+exit:
+  ret void
+}

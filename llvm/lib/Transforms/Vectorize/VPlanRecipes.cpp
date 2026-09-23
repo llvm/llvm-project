@@ -1581,9 +1581,13 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
   case Instruction::ExtractValue:
   case Instruction::FNeg:
   case Instruction::Freeze:
-    if (!VF.isScalar() || !getUnderlyingValue())
-      return 0;
-    return getCostForRecipeWithOpcode(getOpcode(), VF, Ctx);
+    if (VF.isScalar())
+      return getCostForRecipeWithOpcode(getOpcode(), VF, Ctx);
+    break;
+  case Instruction::Alloca:
+    assert(VF.isScalar() && "only scalar VF expected");
+    return Ctx.TTI.getArithmeticInstrCost(Instruction::Mul, getScalarType(),
+                                          Ctx.CostKind);
   case Instruction::Load:
   case Instruction::Store:
     assert(VF.isScalar() && "only scalar VF expected");
@@ -1598,23 +1602,25 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
   }
   case VPInstruction::BranchOnCond:
   case Instruction::PHI:
-    if (!getUnderlyingValue())
-      return 0;
-    return Ctx.TTI.getCFInstrCost(getOpcode() == Instruction::PHI
-                                      ? Instruction::PHI
-                                      : Instruction::CondBr,
-                                  Ctx.CostKind);
+  case Instruction::Switch:
+    if (VF.isScalar())
+      return Ctx.TTI.getCFInstrCost(getOpcode() == VPInstruction::BranchOnCond
+                                        ? Instruction::CondBr
+                                        : getOpcode(),
+                                    Ctx.CostKind);
+    break;
   case VPInstruction::ExtractPenultimateElement:
     if (VF == ElementCount::getScalable(1))
       return InstructionCost::getInvalid();
-    [[fallthrough]];
+    break;
   default:
-    // TODO: Compute cost other VPInstructions once the legacy cost model has
-    // been retired.
-    assert((VF.isScalar() || !getUnderlyingValue()) &&
-           "unexpected VPInstruction with underlying value");
-    return 0;
+    break;
   }
+  // TODO: Compute cost other VPInstructions once the legacy cost model has
+  // been retired.
+  assert((VF.isScalar() || !getUnderlyingValue()) &&
+         "unexpected VPInstruction with underlying value");
+  return 0;
 }
 
 bool VPInstruction::isVectorToScalar() const {
