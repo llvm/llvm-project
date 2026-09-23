@@ -261,7 +261,7 @@ bool BreakpointLocation::ConditionSaysStop(ExecutionContext &exe_ctx,
     }
   }
   // If the expression was parsed successfully, it can be evaluated separately
-  // at every breakpoint without having to parse it again.
+  // at every breakpoint location hit without having to parse it again.
   if (m_dil_expr_tree) {
     dil::Interpreter interpreter(exe_ctx.GetTargetSP(), condition.GetText(),
                                  exe_ctx.GetFrameRef(), lldb::eNoDynamicValues,
