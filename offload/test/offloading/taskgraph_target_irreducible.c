@@ -14,6 +14,12 @@
 // kernels honoring those edges (plugin-owned graph) or the software fallback
 // re-issues them in the carve's topological emission order.  Either way the
 // wavefront values (binomial C(i+j, i)) must come out right every iteration.
+//
+// `nowait` is what keeps the wavefront edges the only ones.  A recorded target
+// without it generates an undeferred task, so encounter order is a dependence
+// too, and the extra edges make the graph a total order -- which is trivially
+// series-parallel, so the carve would come out sequential and the irreducible
+// path this test is named for would never run.
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -44,18 +50,18 @@ int main() {
           int left = i * N + (j - 1);
           // clang-format off
           if (i == 0 && j == 0) {
-#pragma omp target map(tofrom : v[0 : N * N]) depend(out : v[me])
+#pragma omp target nowait map(tofrom : v[0 : N * N]) depend(out : v[me])
             { v[me] = 1; }
           } else if (i == 0) {
-#pragma omp target map(tofrom : v[0 : N * N]) \
+#pragma omp target nowait map(tofrom : v[0 : N * N]) \
     depend(in : v[left]) depend(out : v[me])
             { v[me] = v[left]; }
           } else if (j == 0) {
-#pragma omp target map(tofrom : v[0 : N * N]) \
+#pragma omp target nowait map(tofrom : v[0 : N * N]) \
     depend(in : v[up]) depend(out : v[me])
             { v[me] = v[up]; }
           } else {
-#pragma omp target map(tofrom : v[0 : N * N]) \
+#pragma omp target nowait map(tofrom : v[0 : N * N]) \
     depend(in : v[up], v[left]) depend(out : v[me])
             { v[me] = v[up] + v[left]; }
           }

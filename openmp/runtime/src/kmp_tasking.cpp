@@ -5481,6 +5481,7 @@ __kmp_taskgraph_node_alloc(kmp_taskgraph_record_t *rec, kmp_task_t *task,
 
   new_task->task = task;
   new_task->taskloop_task = false;
+  new_task->undeferred = false;
   new_task->relocate = nullptr;
   new_task->reduce_input = nullptr;
   new_task->target = nullptr;
@@ -6752,14 +6753,15 @@ void __kmpc_taskgraph_taskwait(ident_t *loc_ref, kmp_int32 gtid,
       fprintf(stderr, "__kmpc_taskgraph_taskwait: record taskwait here!\n");
       fprintf(stderr, "ndeps: %d\n", (int)ndeps);
 #endif
+      // Without `nowait` this generates an undeferred (included) task, so it
+      // is a barrier for everything recorded after it rather than a pure
+      // dependence point.
+      node->undeferred = !has_no_wait;
       node->u.unresolved.ndeps = ndeps;
       node->u.unresolved.dep_list = (kmp_depend_info_t *)__kmp_thread_malloc(
           thread, ndeps * sizeof(kmp_depend_info_t));
       KMP_MEMCPY(node->u.unresolved.dep_list, dep_list,
                  ndeps * sizeof(kmp_depend_info_t));
-      // TODO: Record has_no_wait somewhere?
-      // if (has_no_wait)
-      //  return;
     } else if (status == KMP_TDG_READY) {
 #ifdef DEBUG_TASKGRAPH
       fprintf(stderr, "non-taskgraph taskwait entry point for taskwait in "
@@ -6779,9 +6781,10 @@ void __kmpc_taskgraph_taskwait(ident_t *loc_ref, kmp_int32 gtid,
 static kmp_taskgraph_target_node_t *__kmp_taskgraph_alloc_target_node(
     kmp_info_t *thread, kmp_taskgraph_record_t *rec,
     enum kmp_taskgraph_region_type kind, kmp_int32 ndeps,
-    kmp_depend_info_t *dep_list, kmp_int64 device_id,
+    kmp_depend_info_t *dep_list, kmp_int32 has_no_wait, kmp_int64 device_id,
     kmp_target_relocate_t relocate) {
   kmp_taskgraph_node_t *node = __kmp_taskgraph_node_alloc(rec, nullptr);
+  node->undeferred = !has_no_wait;
   node->u.unresolved.ndeps = ndeps;
   node->u.unresolved.dep_list = (kmp_depend_info_t *)__kmp_thread_malloc(
       thread, ndeps * sizeof(kmp_depend_info_t));
@@ -6803,12 +6806,12 @@ static kmp_taskgraph_target_node_t *__kmp_taskgraph_alloc_target_node(
 // each array it points to so the capture outlives this recording invocation.
 static void __kmp_taskgraph_record_target_kernel(
     kmp_info_t *thread, kmp_taskgraph_record_t *rec, kmp_int32 ndeps,
-    kmp_depend_info_t *dep_list, kmp_int64 device_id, kmp_int32 num_teams,
-    kmp_int32 thread_limit, void *host_ptr, void *kernel_args,
-    kmp_target_relocate_t relocate) {
-  kmp_taskgraph_target_node_t *target =
-      __kmp_taskgraph_alloc_target_node(thread, rec, TASKGRAPH_REGION_TARGET,
-                                        ndeps, dep_list, device_id, relocate);
+    kmp_depend_info_t *dep_list, kmp_int32 has_no_wait, kmp_int64 device_id,
+    kmp_int32 num_teams, kmp_int32 thread_limit, void *host_ptr,
+    void *kernel_args, kmp_target_relocate_t relocate) {
+  kmp_taskgraph_target_node_t *target = __kmp_taskgraph_alloc_target_node(
+      thread, rec, TASKGRAPH_REGION_TARGET, ndeps, dep_list, has_no_wait,
+      device_id, relocate);
   target->u.kernel.num_teams = num_teams;
   target->u.kernel.thread_limit = thread_limit;
   target->u.kernel.host_ptr = host_ptr;
@@ -6852,11 +6855,12 @@ static void __kmp_taskgraph_record_target_kernel(
 static void __kmp_taskgraph_record_target_data(
     kmp_info_t *thread, kmp_taskgraph_record_t *rec,
     enum kmp_taskgraph_region_type kind, kmp_int32 ndeps,
-    kmp_depend_info_t *dep_list, kmp_int64 device_id, kmp_int32 arg_num,
-    void **args_base, void **args, kmp_int64 *arg_sizes, kmp_int64 *arg_types,
-    void **arg_names, void **arg_mappers, kmp_target_relocate_t relocate) {
+    kmp_depend_info_t *dep_list, kmp_int32 has_no_wait, kmp_int64 device_id,
+    kmp_int32 arg_num, void **args_base, void **args, kmp_int64 *arg_sizes,
+    kmp_int64 *arg_types, void **arg_names, void **arg_mappers,
+    kmp_target_relocate_t relocate) {
   kmp_taskgraph_target_node_t *target = __kmp_taskgraph_alloc_target_node(
-      thread, rec, kind, ndeps, dep_list, device_id, relocate);
+      thread, rec, kind, ndeps, dep_list, has_no_wait, device_id, relocate);
   target->u.data.arg_num = arg_num;
   // Both calls are given the originals; the second repoints these at the copy.
   void **dup_args_base = args_base;
@@ -7179,9 +7183,9 @@ kmp_int32 __kmpc_taskgraph_target(ident_t *loc_ref, kmp_int32 gtid,
   kmp_taskgroup_t *taskgroup = thread->th.th_current_task->td_taskgroup;
   kmp_taskgraph_record_t *rec = __kmp_taskgraph_or_parent_recording(taskgroup);
   if (rec && KMP_ATOMIC_LD_ACQ(&rec->status) == KMP_TDG_RECORDING)
-    __kmp_taskgraph_record_target_kernel(thread, rec, ndeps, dep_list,
-                                         device_id, num_teams, thread_limit,
-                                         host_ptr, kernel_args, reloc);
+    __kmp_taskgraph_record_target_kernel(
+        thread, rec, ndeps, dep_list, has_no_wait, device_id, num_teams,
+        thread_limit, host_ptr, kernel_args, reloc);
   KMP_ASSERT(tgt_target_kernel);
   // Here on the recording path, we invoke this synchronously after satisfying
   // the dependencies above.
@@ -7209,8 +7213,8 @@ void __kmpc_taskgraph_target_enter_data(
   if (recording) {
     __kmp_taskgraph_record_target_data(
         thread, rec, TASKGRAPH_REGION_TARGET_ENTER_DATA, ndeps, dep_list,
-        device_id, arg_num, args_base, args, arg_sizes, arg_types, arg_names,
-        arg_mappers, reloc);
+        has_no_wait, device_id, arg_num, args_base, args, arg_sizes, arg_types,
+        arg_names, arg_mappers, reloc);
   } else if (has_no_wait && tgt_target_data_begin_nowait_mapper) {
     tgt_target_data_begin_nowait_mapper(
         loc_ref, device_id, arg_num, args_base, args, (int64_t *)arg_sizes,
@@ -7241,8 +7245,8 @@ void __kmpc_taskgraph_target_exit_data(
   if (recording) {
     __kmp_taskgraph_record_target_data(
         thread, rec, TASKGRAPH_REGION_TARGET_EXIT_DATA, ndeps, dep_list,
-        device_id, arg_num, args_base, args, arg_sizes, arg_types, arg_names,
-        arg_mappers, reloc);
+        has_no_wait, device_id, arg_num, args_base, args, arg_sizes, arg_types,
+        arg_names, arg_mappers, reloc);
   } else if (has_no_wait && tgt_target_data_end_nowait_mapper) {
     tgt_target_data_end_nowait_mapper(
         loc_ref, device_id, arg_num, args_base, args, (int64_t *)arg_sizes,
@@ -7272,9 +7276,9 @@ void __kmpc_taskgraph_target_update(
   bool recording = rec && KMP_ATOMIC_LD_ACQ(&rec->status) == KMP_TDG_RECORDING;
   if (recording) {
     __kmp_taskgraph_record_target_data(
-        thread, rec, TASKGRAPH_REGION_TARGET_UPDATE, ndeps, dep_list, device_id,
-        arg_num, args_base, args, arg_sizes, arg_types, arg_names, arg_mappers,
-        reloc);
+        thread, rec, TASKGRAPH_REGION_TARGET_UPDATE, ndeps, dep_list,
+        has_no_wait, device_id, arg_num, args_base, args, arg_sizes, arg_types,
+        arg_names, arg_mappers, reloc);
   } else if (has_no_wait && tgt_target_data_update_nowait_mapper) {
     tgt_target_data_update_nowait_mapper(
         loc_ref, device_id, arg_num, args_base, args, (int64_t *)arg_sizes,
