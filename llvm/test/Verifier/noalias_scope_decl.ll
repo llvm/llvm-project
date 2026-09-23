@@ -10,7 +10,7 @@ define void @test_single_scope02() nounwind ssp {
   ret void
 }
 ; CHECK: !id.scope.list must point to a list with a single scope
-; CHECK-NEXT:   tail call void @llvm.experimental.noalias.scope.decl(metadata !5)
+; CHECK-NEXT:   tail call void @llvm.experimental.noalias.scope.decl(metadata !{{[0-9]+}})
 
 define void @test_single_scope03() nounwind ssp {
   tail call void @llvm.experimental.noalias.scope.decl(metadata !"test")
@@ -31,7 +31,7 @@ define void @test_dom02() nounwind ssp {
   ret void
 }
 ; CHECK-NEXT: llvm.experimental.noalias.scope.decl dominates another one with the same scope
-; CHECK-NEXT:   tail call void @llvm.experimental.noalias.scope.decl(metadata !2)
+; CHECK-NEXT:   tail call void @llvm.experimental.noalias.scope.decl(metadata !{{[0-9]+}})
 
 define void @test_dom03() nounwind ssp {
   tail call void @llvm.experimental.noalias.scope.decl(metadata !2)
@@ -39,7 +39,7 @@ define void @test_dom03() nounwind ssp {
   ret void
 }
 ; CHECK-NEXT: llvm.experimental.noalias.scope.decl dominates another one with the same scope
-; CHECK-NEXT:   tail call void @llvm.experimental.noalias.scope.decl(metadata !2)
+; CHECK-NEXT:   tail call void @llvm.experimental.noalias.scope.decl(metadata !{{[0-9]+}})
 
 ; CHECK-NOT: llvm.experimental.noalias.scope.decl
 

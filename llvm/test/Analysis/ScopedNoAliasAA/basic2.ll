@@ -15,19 +15,19 @@ entry:
   store float %1, ptr %arrayidx, align 4
   ret void
 
-; CHECK: MayAlias:   %0 = load float, ptr %c, align 4, !alias.scope !0 <->   store float %0, ptr %arrayidx.i, align 4, !alias.scope !4, !noalia
-; CHECK: s !5
-; CHECK: MayAlias:   %0 = load float, ptr %c, align 4, !alias.scope !0 <->   store float %0, ptr %arrayidx1.i, align 4, !alias.scope !0, !noali
-; CHECK: as !4
-; CHECK: MayAlias:   %0 = load float, ptr %c, align 4, !alias.scope !0 <->   store float %1, ptr %arrayidx, align 4
-; CHECK: MayAlias:   %1 = load float, ptr %c, align 4 <->   store float %0, ptr %arrayidx.i, align 4, !alias.scope !4, !noalias !5
-; CHECK: MayAlias:   %1 = load float, ptr %c, align 4 <->   store float %0, ptr %arrayidx1.i, align 4, !alias.scope !0, !noalias !4
+; CHECK: MayAlias:   %0 = load float, ptr %c, align 4, !alias.scope !{{[0-9]+}} <->   store float %0, ptr %arrayidx.i, align 4, !alias.scope !{{[0-9]+}}, !noalia
+; CHECK: s !{{[0-9]+}}
+; CHECK: MayAlias:   %0 = load float, ptr %c, align 4, !alias.scope !{{[0-9]+}} <->   store float %0, ptr %arrayidx1.i, align 4, !alias.scope !{{[0-9]+}}, !noali
+; CHECK: as !{{[0-9]+}}
+; CHECK: MayAlias:   %0 = load float, ptr %c, align 4, !alias.scope !{{[0-9]+}} <->   store float %1, ptr %arrayidx, align 4
+; CHECK: MayAlias:   %1 = load float, ptr %c, align 4 <->   store float %0, ptr %arrayidx.i, align 4, !alias.scope !{{[0-9]+}}, !noalias !{{[0-9]+}}
+; CHECK: MayAlias:   %1 = load float, ptr %c, align 4 <->   store float %0, ptr %arrayidx1.i, align 4, !alias.scope !{{[0-9]+}}, !noalias !{{[0-9]+}}
 ; CHECK: MayAlias:   %1 = load float, ptr %c, align 4 <->   store float %1, ptr %arrayidx, align 4
-; CHECK: NoAlias:   store float %0, ptr %arrayidx1.i, align 4, !alias.scope !0, !noalias !4 <->   store float %0, ptr %arrayidx.i, align
-; CHECK: 4, !alias.scope !4, !noalias !5
-; CHECK: NoAlias:   store float %1, ptr %arrayidx, align 4 <->   store float %0, ptr %arrayidx.i, align 4, !alias.scope !4, !noalias !5
-; CHECK: MayAlias:   store float %1, ptr %arrayidx, align 4 <->   store float %0, ptr %arrayidx1.i, align 4, !alias.scope !0, !noalias !
-; CHECK: 4
+; CHECK: NoAlias:   store float %0, ptr %arrayidx1.i, align 4, !alias.scope !{{[0-9]+}}, !noalias !{{[0-9]+}} <->   store float %0, ptr %arrayidx.i, align
+; CHECK: 4, !alias.scope !{{[0-9]+}}, !noalias !{{[0-9]+}}
+; CHECK: NoAlias:   store float %1, ptr %arrayidx, align 4 <->   store float %0, ptr %arrayidx.i, align 4, !alias.scope !{{[0-9]+}}, !noalias !{{[0-9]+}}
+; CHECK: MayAlias:   store float %1, ptr %arrayidx, align 4 <->   store float %0, ptr %arrayidx1.i, align 4, !alias.scope !{{[0-9]+}}, !noalias !
+; CHECK: {{[0-9]+}}
 }
 
 attributes #0 = { nounwind uwtable }

@@ -14,7 +14,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/ADCE.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/PostOrderIterator.h"
