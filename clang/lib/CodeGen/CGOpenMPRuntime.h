@@ -123,7 +123,12 @@ struct OMPTaskDataTy final {
   bool IsWorksharingReduction = false;
   bool HasNowaitClause = false;
   bool HasModifier = false;
+  const Expr *ReplayableCond = nullptr;
 };
+
+/// Gather the depend clauses of \p S into \p Data.Dependences, collapsing
+/// 'omp_all_memory' as the runtime expects.
+void buildDependences(const OMPExecutableDirective &S, OMPTaskDataTy &Data);
 
 /// Class intended to support codegen of all kind of the reduction clauses.
 class ReductionCodeGen {
@@ -556,6 +561,10 @@ protected:
     LValue TDBase;
     const RecordDecl *KmpTaskTQTyRD = nullptr;
     llvm::Value *TaskDupFn = nullptr;
+    /// Compiler-emitted helper that re-initializes any non-trivially-copyable
+    /// firstprivate fields after the runtime bitwise-clones a task into a
+    /// taskgraph record. Null when no such helper is required.
+    llvm::Value *TaskCloneFn = nullptr;
   };
   /// Emit task region for the task directive. The task region is emitted in
   /// several steps:
@@ -582,7 +591,9 @@ protected:
   TaskResultTy emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
                             const OMPExecutableDirective &D,
                             llvm::Function *TaskFunction, QualType SharedsTy,
-                            Address Shareds, const OMPTaskDataTy &Data);
+                            Address Shareds, const OMPTaskDataTy &Data,
+                            bool ForTaskgraph,
+                            std::array<llvm::Value *, 3> &TaskAllocArgs);
 
   /// Emit update for lastprivate conditional data.
   void emitLastprivateConditionalUpdate(CodeGenFunction &CGF, LValue IVLVal,
@@ -1175,6 +1186,7 @@ public:
                             const OMPExecutableDirective &D,
                             llvm::Function *TaskFunction, QualType SharedsTy,
                             Address Shareds, const Expr *IfCond,
+                            const Expr *ReplayableCond,
                             const OMPTaskDataTy &Data);
 
   /// Emit task region for the taskloop directive. The taskloop region is
@@ -1210,7 +1222,8 @@ public:
                                 const OMPLoopDirective &D,
                                 llvm::Function *TaskFunction,
                                 QualType SharedsTy, Address Shareds,
-                                const Expr *IfCond, const OMPTaskDataTy &Data);
+                                const Expr *IfCond, const Expr *ReplayableCond,
+                                const OMPTaskDataTy &Data);
 
   /// Emit code for the directive that does not require outlining.
   ///
@@ -1378,7 +1391,13 @@ public:
 
   /// Emit code for 'taskwait' directive.
   virtual void emitTaskwaitCall(CodeGenFunction &CGF, SourceLocation Loc,
+                                const Expr *ReplayableCond,
                                 const OMPTaskDataTy &Data);
+
+  /// Emit code for 'taskgraph' directive.
+  virtual void emitTaskgraphCall(CodeGenFunction &CGF, SourceLocation Loc,
+                                 const OMPExecutableDirective &D,
+                                 const Expr *IfCond);
 
   /// Emit code for 'cancellation point' construct.
   /// \param CancelRegion Region kind for which the cancellation point must be
@@ -1431,13 +1450,44 @@ public:
   /// target directive, or null if no device clause is used and device modifier.
   /// \param SizeEmitter Callback to emit number of iterations for loop-based
   /// directives.
+  /// \param ReplayableCond Condition of the replayable clause associated with
+  /// the target directive (a constant-true literal if the clause has no
+  /// argument), or null if no replayable clause is used.
   virtual void emitTargetCall(
       CodeGenFunction &CGF, const OMPExecutableDirective &D,
       llvm::Function *OutlinedFn, llvm::Value *OutlinedFnID, const Expr *IfCond,
       llvm::PointerIntPair<const Expr *, 2, OpenMPDeviceClauseModifier> Device,
       llvm::function_ref<llvm::Value *(CodeGenFunction &CGF,
                                        const OMPLoopDirective &D)>
-          SizeEmitter);
+          SizeEmitter,
+      const Expr *ReplayableCond = nullptr);
+
+  /// Record a target region nested inside a taskgraph by emitting a
+  /// __kmpc_taskgraph_target call. \p KernelArgsPtr is a pointer to a populated
+  /// __tgt_kernel_arguments struct; \p NumTeams / \p NumThreads / \p DeviceID
+  /// are the launch parameters and \p OutlinedFnID is the host pointer used to
+  /// identify the region. Depend clauses of \p D are forwarded to the entry
+  /// point, which satisfies them synchronously; a replayable target is never
+  /// wrapped in a hidden helper task.
+  void emitTaskgraphTargetCall(CodeGenFunction &CGF,
+                               const OMPExecutableDirective &D,
+                               SourceLocation Loc, llvm::Value *OutlinedFnID,
+                               llvm::Value *DeviceID, llvm::Value *NumTeams,
+                               llvm::Value *NumThreads,
+                               llvm::Value *KernelArgsPtr);
+
+  /// Record a standalone 'target {enter|exit} data' / 'target update' directive
+  /// nested inside a taskgraph by emitting the matching
+  /// __kmpc_taskgraph_target_{enter,exit}_data / _update call. The map-info
+  /// arrays are passed directly, and depend clauses of \p D are forwarded to
+  /// the entry point, which satisfies them synchronously; a replayable
+  /// target-data directive is never wrapped in a hidden helper task.
+  void emitTaskgraphTargetDataCall(
+      CodeGenFunction &CGF, const OMPExecutableDirective &D, SourceLocation Loc,
+      llvm::Value *DeviceID, unsigned NumTargetItems,
+      llvm::Value *BasePointersArray, llvm::Value *PointersArray,
+      llvm::Value *SizesArray, llvm::Value *MapTypesArray,
+      llvm::Value *MapNamesArray, llvm::Value *MappersArray);
 
   /// Emit the target regions enclosed in \a GD function definition or
   /// the function itself in case it is a valid device function. Returns true if
@@ -1528,10 +1578,12 @@ public:
   /// directive, or null if no if clause is used.
   /// \param Device Expression evaluated in device clause associated with the
   /// target directive, or null if no device clause is used.
-  virtual void emitTargetDataStandAloneCall(CodeGenFunction &CGF,
-                                            const OMPExecutableDirective &D,
-                                            const Expr *IfCond,
-                                            const Expr *Device);
+  /// \param ReplayableCond Condition of the replayable clause associated with
+  /// the target directive (a constant-true literal if the clause has no
+  /// argument), or null if no replayable clause is used.
+  virtual void emitTargetDataStandAloneCall(
+      CodeGenFunction &CGF, const OMPExecutableDirective &D, const Expr *IfCond,
+      const Expr *Device, const Expr *ReplayableCond = nullptr);
 
   /// Marks function \a Fn with properly mangled versions of vector functions.
   /// \param FD Function marked as 'declare simd'.
@@ -2059,6 +2111,7 @@ public:
                     const OMPExecutableDirective &D,
                     llvm::Function *TaskFunction, QualType SharedsTy,
                     Address Shareds, const Expr *IfCond,
+                    const Expr *ReplayableCond,
                     const OMPTaskDataTy &Data) override;
 
   /// Emit task region for the taskloop directive. The taskloop region is
@@ -2093,6 +2146,7 @@ public:
   void emitTaskLoopCall(CodeGenFunction &CGF, SourceLocation Loc,
                         const OMPLoopDirective &D, llvm::Function *TaskFunction,
                         QualType SharedsTy, Address Shareds, const Expr *IfCond,
+                        const Expr *ReplayableCond,
                         const OMPTaskDataTy &Data) override;
 
   /// Emit a code for reduction clause. Next code should be emitted for
@@ -2213,7 +2267,16 @@ public:
 
   /// Emit code for 'taskwait' directive.
   void emitTaskwaitCall(CodeGenFunction &CGF, SourceLocation Loc,
+                        const Expr *ReplayableCond,
                         const OMPTaskDataTy &Data) override;
+
+  /// Emit code for 'taskgraph' directive.
+  /// \param IfCond Expression evaluated in if clause associated with the
+  // taskgraph.
+  /// \param D Directive to emit.
+  void emitTaskgraphCall(CodeGenFunction &CGF, SourceLocation Loc,
+                         const OMPExecutableDirective &D,
+                         const Expr *IfCond) override;
 
   /// Emit code for 'cancellation point' construct.
   /// \param CancelRegion Region kind for which the cancellation point must be
@@ -2263,7 +2326,8 @@ public:
       llvm::PointerIntPair<const Expr *, 2, OpenMPDeviceClauseModifier> Device,
       llvm::function_ref<llvm::Value *(CodeGenFunction &CGF,
                                        const OMPLoopDirective &D)>
-          SizeEmitter) override;
+          SizeEmitter,
+      const Expr *ReplayableCond = nullptr) override;
 
   /// Emit the target regions enclosed in \a GD function definition or
   /// the function itself in case it is a valid device function. Returns true if
@@ -2321,10 +2385,9 @@ public:
   /// directive, or null if no if clause is used.
   /// \param Device Expression evaluated in device clause associated with the
   /// target directive, or null if no device clause is used.
-  void emitTargetDataStandAloneCall(CodeGenFunction &CGF,
-                                    const OMPExecutableDirective &D,
-                                    const Expr *IfCond,
-                                    const Expr *Device) override;
+  void emitTargetDataStandAloneCall(
+      CodeGenFunction &CGF, const OMPExecutableDirective &D, const Expr *IfCond,
+      const Expr *Device, const Expr *ReplayableCond = nullptr) override;
 
   /// Emit initialization for doacross loop nesting support.
   /// \param D Loop-based construct used in doacross nesting construct.
