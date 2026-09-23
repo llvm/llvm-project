@@ -1094,6 +1094,34 @@ void DwarfDebug::addGnuPubAttributes(DwarfCompileUnit &U, DIE &D) const {
   U.addFlag(D, dwarf::DW_AT_GNU_pubnames);
 }
 
+static bool isLangCaseSensitive(const DISourceLanguageName &Lang) {
+  if (Lang.hasVersionedName()) {
+    switch (Lang.getName()) {
+    case dwarf::DW_LNAME_Fortran:
+    case dwarf::DW_LNAME_Cobol:
+    case dwarf::DW_LNAME_Pascal:
+      return false;
+    default:
+      return true;
+    }
+  }
+  switch (Lang.getName()) {
+  case dwarf::DW_LANG_Cobol74:
+  case dwarf::DW_LANG_Cobol85:
+  case dwarf::DW_LANG_Fortran77:
+  case dwarf::DW_LANG_Fortran90:
+  case dwarf::DW_LANG_Fortran95:
+  case dwarf::DW_LANG_Fortran03:
+  case dwarf::DW_LANG_Fortran08:
+  case dwarf::DW_LANG_Fortran18:
+  case dwarf::DW_LANG_Fortran23:
+  case dwarf::DW_LANG_Pascal83:
+    return false;
+  default:
+    return true;
+  }
+}
+
 void DwarfDebug::finishUnitAttributes(const DICompileUnit *DIUnit,
                                       DwarfCompileUnit &NewCU) {
   DIE &Die = NewCU.getUnitDie();
@@ -1119,6 +1147,9 @@ void DwarfDebug::finishUnitAttributes(const DICompileUnit *DIUnit,
                   Lang.getName());
   }
 
+  if (!isLangCaseSensitive(DIUnit->getSourceLanguage()))
+    NewCU.addUInt(Die, dwarf::DW_AT_identifier_case, dwarf::DW_FORM_data1,
+                  dwarf::DW_ID_case_insensitive);
   NewCU.addString(Die, dwarf::DW_AT_name, FN);
 
   finishTargetUnitAttributes(*DIUnit, NewCU);
@@ -1144,10 +1175,10 @@ void DwarfDebug::finishUnitAttributes(const DICompileUnit *DIUnit,
     addGnuPubAttributes(NewCU, Die);
   }
 
-  if (useAppleExtensionAttributes()) {
-    if (DIUnit->isOptimized())
-      NewCU.addFlag(Die, dwarf::DW_AT_APPLE_optimized);
+  if (DIUnit->isOptimized())
+    NewCU.addFlag(Die, dwarf::DW_AT_APPLE_optimized);
 
+  if (useAppleExtensionAttributes()) {
     StringRef Flags = DIUnit->getFlags();
     if (!Flags.empty())
       NewCU.addString(Die, dwarf::DW_AT_APPLE_flags, Flags);
@@ -1340,6 +1371,7 @@ void DwarfDebug::finalizeModuleInfo() {
     // Emit DW_AT_containing_type attribute to connect types with their
     // vtable holding type.
     TheCU.constructContainingTypeDIEs();
+    TheCU.constructPropertyForwardDIEs();
 
     // Add CU specific attributes if we need to add any.
     // If we're splitting the dwarf out now that we've got the entire
@@ -2692,10 +2724,9 @@ void DwarfDebug::findForceIsStmtInstrs(const MachineFunction *MF) {
   // We only need to the predecessors of MBBs that could have is_stmt set by
   // this logic.
   SmallDenseSet<MachineBasicBlock *, 4> PredMBBsToExamine;
-  SmallDenseMap<MachineBasicBlock *, MachineInstr *> PotentialIsStmtMBBInstrs;
-  // We use const_cast even though we won't actually modify MF, because some
-  // methods we need take a non-const MBB.
-  for (auto &MBB : *const_cast<MachineFunction *>(MF)) {
+  SmallDenseMap<const MachineBasicBlock *, const MachineInstr *>
+      PotentialIsStmtMBBInstrs;
+  for (const auto &MBB : *MF) {
     if (MBB.empty() || MBB.pred_empty())
       continue;
     for (auto &MI : MBB) {
@@ -2713,11 +2744,12 @@ void DwarfDebug::findForceIsStmtInstrs(const MachineFunction *MF) {
   // multiple branches that each have their own source location); otherwise we
   // just use the last line in the block.
   for (auto *MBB : PredMBBsToExamine) {
-    auto CheckMBBEdge = [&](MachineBasicBlock *Succ, unsigned OutgoingLine) {
+    auto CheckMBBEdge = [&](const MachineBasicBlock *Succ,
+                            unsigned OutgoingLine) {
       auto MBBInstrIt = PotentialIsStmtMBBInstrs.find(Succ);
       if (MBBInstrIt == PotentialIsStmtMBBInstrs.end())
         return;
-      MachineInstr *MI = MBBInstrIt->second;
+      const MachineInstr *MI = MBBInstrIt->second;
       if (MI->getDebugLoc()->getLine() == OutgoingLine)
         return;
       PotentialIsStmtMBBInstrs.erase(MBBInstrIt);
@@ -2739,10 +2771,10 @@ void DwarfDebug::findForceIsStmtInstrs(const MachineFunction *MF) {
       continue;
     // If we can't determine what DLs this branch's successors use, just treat
     // all the successors as coming from the last DebugLoc.
-    SmallVector<MachineBasicBlock *, 2> SuccessorBBs;
+    SmallVector<const MachineBasicBlock *, 2> SuccessorBBs;
     auto MIIt = MBB->rbegin();
     {
-      MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
+      const MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
       SmallVector<MachineOperand, 4> Cond;
       bool AnalyzeFailed = TII->analyzeBranch(*MBB, TBB, FBB, Cond);
       // For a conditional branch followed by unconditional branch where the

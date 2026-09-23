@@ -45,12 +45,6 @@ MipsRegisterInfo::MipsRegisterInfo(const MipsSubtarget &STI)
 
 unsigned MipsRegisterInfo::getPICCallReg() { return Mips::T9; }
 
-const TargetRegisterClass *
-MipsRegisterInfo::getPointerRegClass(unsigned Kind) const {
-  assert(Kind == 0 && "this should only be used for default case");
-  return ArePtrs64bit ? &Mips::GPR64RegClass : &Mips::GPR32RegClass;
-}
-
 unsigned
 MipsRegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
                                       MachineFunction &MF) const {
@@ -185,6 +179,11 @@ getReservedRegs(const MachineFunction &MF) const {
   for (MCPhysReg R : ReservedGPR64)
     Reserved.set(R);
 
+  // Mark user-reserved GPRs and their 64-bit super-registers.
+  for (unsigned I = 1; I < 32; ++I)
+    if (Subtarget.isGPRReservedByUser(I))
+      markSuperRegs(Reserved, Mips::GPR32RegClass.getRegister(I));
+
   // For mno-abicalls, GP is a program invariant!
   bool GPIsGlobal = isGPUsedAsGlobalRegister(MF);
   if (!Subtarget.isABICalls() || GPIsGlobal) {
@@ -311,7 +310,7 @@ bool MipsRegisterInfo::canRealignStack(const MachineFunction &MF) const {
 
   const MipsSubtarget &Subtarget = MF.getSubtarget<MipsSubtarget>();
   unsigned FP = Subtarget.isGP32bit() ? Mips::FP : Mips::FP_64;
-  unsigned BP = Subtarget.isGP32bit() ? Mips::S7 : Mips::S7_64;
+  unsigned BP = Subtarget.getABI().getSavedReg(7, Subtarget.isGP64bit());
 
   // Support dynamic stack realignment for all targets except Mips16.
   if (Subtarget.inMips16Mode())

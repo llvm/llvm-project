@@ -20,9 +20,9 @@ program p
 
 ! CHECK-DAG: acc.global_dtor @{{.*}}_acc_dtor {
 ! CHECK-DAG: %[[ADDR1:.*]] = fir.address_of(@{{.*}}) {acc.declare = #acc.declare<dataClause = acc_copyin>} : !fir.ref<tuple<f32>>
-! CHECK-DAG: %[[GDP:.*]] = acc.getdeviceptr varPtr(%[[ADDR1]] : !fir.ref<tuple<f32>>) -> !fir.ref<tuple<f32>> {dataClause = #acc<data_clause acc_copyin>, {{.*}}}
+! CHECK-DAG: %[[GDP:.*]] = acc.getdeviceptr varPtr(%[[ADDR1]] : !fir.ref<tuple<f32>>) dataClause(acc_copyin) structured(false) name("com") -> !fir.ref<tuple<f32>>
 ! CHECK-DAG: acc.declare_exit dataOperands(%[[GDP]] : !fir.ref<tuple<f32>>)
-! CHECK-DAG: acc.delete accPtr(%[[GDP]] : !fir.ref<tuple<f32>>) {dataClause = #acc<data_clause acc_copyin>{{.*}}}
+! CHECK-DAG: acc.delete accPtr(%[[GDP]] : !fir.ref<tuple<f32>>) dataClause(acc_copyin) structured(false) name("com")
 ! CHECK-DAG: acc.terminator
 ! CHECK-DAG: }
 
@@ -36,5 +36,4 @@ contains
   end subroutine s
 
 end program p
-
 

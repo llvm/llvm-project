@@ -6,40 +6,43 @@ define <32 x i32> @f0(ptr %a0, i32 %a1) #0 {
 ; CHECK-LABEL: f0:
 ; CHECK:       // %bb.0: // %b0
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     [[RADD:[r0-9]+]] = add([[R1:[r0-9]+]],[[R0:[r0-9]+]])
+; CHECK-NEXT:     r0 = add(r1,r0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     [[RLCPI:[r0-9]+]] = ##.LCPI0_0
+; CHECK-NEXT:     allocframe(r29,#128):raw
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     [[RNEG:[r0-9]+]] = #-1
+; CHECK-NEXT:     r2 = add(r0,#136)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     [[RADD136:[r0-9]+]] = add([[RADD]],#136)
+; CHECK-NEXT:     r29 = and(r29,#-128)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     [[V1:[v0-9]+]] = vmem([[RLCPI]]+#0)
+; CHECK-NEXT:     v1 = vmem(r0+#1)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     [[RADD128:[r0-9]+]] = add([[RADD]],#128)
+; CHECK-NEXT:     v0 = vmemu(r2+#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     [[Q0:[q0-9]+]] = vand([[V1]],[[RNEG]])
+; CHECK-NEXT:     r4 = add(r29,#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     [[V2:[v0-9]+]] = vmemu([[RADD136]]+#0)
+; CHECK-NEXT:     v0.w = vadd(v1.w,v0.w)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     [[V3:[v0-9]+]] = vmem([[RADD]]+#1)
+; CHECK-NEXT:     vmem(r4+#0) = v0
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     [[V0:[v0-9]+]].w = vadd([[V3]].w,[[V2]].w)
+; CHECK-NEXT:     r2 = memw(r4+#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     if ([[Q0]]) vmem([[RADD128]]+#0) = [[V0]]
+; CHECK-NEXT:     r3 = memw(r4+#4)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     jumpr r31
+; CHECK-NEXT:     memd(r0+#128) = r3:2
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r31:30 = dealloc_return(r30):raw
 ; CHECK-NEXT:    }
 b0:
   %v0 = add i32 %a1, 128
