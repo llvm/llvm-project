@@ -88,7 +88,7 @@ uint32_t NamedStreamMap::calculateSerializedLength() const {
   return sizeof(uint32_t)                             // String data size
          + NamesBuffer.size()                         // String data
          + OffsetIndexMap.calculateSerializedLength() // Offset Index Map
-         + 4;                                         // NMTNI::niMac.
+         + sizeof(uint32_t);                          // NMTNI::niMac.
 }
 
 uint32_t NamedStreamMap::size() const { return OffsetIndexMap.size(); }
