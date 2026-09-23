@@ -30,6 +30,7 @@ CheckOptions:
   readability-identifier-naming.StaticConstantCase: CamelCase
   readability-identifier-naming.StaticVariableCase: CamelCase
   readability-identifier-naming.VariableCase: CamelCase
+  readability-identifier-naming.DefaultHungarianPrefix: On
   readability-identifier-naming.AbstractClassHungarianPrefix: On
   readability-identifier-naming.ClassHungarianPrefix: On
   readability-identifier-naming.ClassConstantHungarianPrefix: On

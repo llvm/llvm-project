@@ -424,8 +424,10 @@ bool isUnlimitedPolymorphicType(mlir::Type ty) {
 }
 
 bool isRecordWithAllocatableMember(mlir::Type ty) {
+  ty = unwrapSequenceType(ty);
   if (auto recTy = mlir::dyn_cast<fir::RecordType>(ty))
     for (auto [field, memTy] : recTy.getTypeList()) {
+      memTy = unwrapSequenceType(memTy);
       if (fir::isAllocatableType(memTy))
         return true;
       // A record type cannot recursively include itself as a direct member.
@@ -1650,6 +1652,9 @@ fir::getTypeSizeAndAlignment(mlir::Location loc, mlir::Type ty,
     return std::pair{size, alignment};
   }
   if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(ty)) {
+    // Dynamic / unknown shapes have no compile-time byte size.
+    if (seqTy.hasDynamicExtents() || seqTy.hasUnknownShape())
+      return std::nullopt;
     auto result = getTypeSizeAndAlignment(loc, seqTy.getEleTy(), dl, kindMap);
     if (!result)
       return result;
@@ -1661,6 +1666,25 @@ fir::getTypeSizeAndAlignment(mlir::Location loc, mlir::Type ty,
   if (auto recTy = mlir::dyn_cast<fir::RecordType>(ty)) {
     std::uint64_t size = 0;
     unsigned short align = 1;
+    if (recTy.isPacked()) {
+      // LLVM packed structs (<{ ... }>) place fields back-to-back with no
+      // inter-field alignment padding and no tail padding.  Each component
+      // still occupies its allocation size (llvm::alignTo(storeSize, ABI
+      // alignment)), because LLVM's packed StructLayout advances by
+      // getTypeAllocSize, not getTypeStoreSize.  For example, x86 f80 has
+      // store size 10 bytes but ABI alignment 16 bytes, so its allocation
+      // size is 16 bytes; a packed {f80, i8} therefore occupies 17 bytes,
+      // not 11.  The packed struct's own ABI alignment is always 1.
+      for (auto component : recTy.getTypeList()) {
+        auto result =
+            getTypeSizeAndAlignment(loc, component.second, dl, kindMap);
+        if (!result)
+          return result;
+        auto [compSize, compAlign] = *result;
+        size += llvm::alignTo(compSize, compAlign); // alloc size per field
+      }
+      return std::pair{size, static_cast<unsigned short>(1)};
+    }
     for (auto component : recTy.getTypeList()) {
       auto result = getTypeSizeAndAlignment(loc, component.second, dl, kindMap);
       if (!result)
@@ -1670,6 +1694,8 @@ fir::getTypeSizeAndAlignment(mlir::Location loc, mlir::Type ty,
           llvm::alignTo(size, compAlign) + llvm::alignTo(compSize, compAlign);
       align = std::max(align, compAlign);
     }
+    // Round up to the record's alignment to include outermost tail padding.
+    size = llvm::alignTo(size, align);
     return std::pair{size, align};
   }
   if (auto logical = mlir::dyn_cast<fir::LogicalType>(ty)) {

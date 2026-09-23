@@ -3,8 +3,8 @@
 
 !s32i = !cir.int<s, 32>
 !s64i = !cir.int<s, 64>
-!rec_Vec3   = !cir.struct<"Vec3"   {!s32i, !s32i, !s32i}>
-!rec_TwoI64 = !cir.struct<"TwoI64" {!s64i, !s64i}>
+!rec_Vec3   = !cir.struct<"Vec3"   {data !s32i, data !s32i, data !s32i}>
+!rec_TwoI64 = !cir.struct<"TwoI64" {data !s64i, data !s64i}>
 
 #coerce_vec3_return_to_twoi64 = {
   return = { kind = "direct", coerced_type = !rec_TwoI64 },

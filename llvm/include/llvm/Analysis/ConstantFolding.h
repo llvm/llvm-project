@@ -160,7 +160,8 @@ LLVM_ABI Constant *ConstantFoldLoadFromUniformValue(Constant *C, Type *Ty,
 
 /// canConstantFoldCallTo - Return true if its even possible to fold a call to
 /// the specified function.
-LLVM_ABI bool canConstantFoldCallTo(const CallBase *Call, const Function *F);
+LLVM_ABI bool canConstantFoldCallTo(const CallBase *Call, const Function *F,
+                                    const TargetLibraryInfo *TLI = nullptr);
 
 /// ConstantFoldCall - Attempt to constant fold a call to the specified function
 /// with the specified arguments, returning null if unsuccessful.

@@ -5,11 +5,13 @@ import random
 
 import lldb
 from lldbsuite.test.lldbtest import *
+from lldbsuite.test.decorators import requireSocketPermission
 from lldbsuite.test.gdbclientutils import *
 import lldbgdbserverutils
 from lldbsuite.support import seven
 
 
+@requireSocketPermission  # setUp binds a listening socket for the proxy server
 class GDBProxyTestBase(TestBase):
     """
     Base class for gdbserver proxy tests.

@@ -16,8 +16,10 @@ void handle_attach(char *sync_file_path) {
     sync_file.open(sync_file_path);
   }
 
-  while (wait_for_attach)
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  while (wait_for_attach) {
+    const auto sleep_time = std::chrono::milliseconds(10);
+    std::this_thread::sleep_for(sleep_time); // attach breakpoint
+  }
 }
 
 int main(int argc, char **args) {

@@ -201,3 +201,16 @@ pbndkb
 
 // X86: error: register %r16d is only available in 64-bit mode
 movl %eax, %r16d
+
+// X86: error: unexpected register in memory operand
+// X64: error: unexpected register in memory operand
+movl $0, %cs:%ds:(%eax)
+
+// X86: error: unexpected register in memory operand
+// X64: error: unexpected register in memory operand
+movl $0, %cs:%eax
+
+.set reg, %eax
+// X86: error: unexpected register in memory operand
+// X64: error: unexpected register in memory operand
+movl $0, ((reg))

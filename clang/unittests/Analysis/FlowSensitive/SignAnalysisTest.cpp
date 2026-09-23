@@ -444,6 +444,7 @@ void runDataflow(llvm::StringRef Code, Matcher Match,
 
 // FIXME add this to testing support.
 template <typename NodeType, typename MatcherType>
+[[maybe_unused]]
 const NodeType *findFirst(ASTContext &ASTCtx, const MatcherType &M) {
   auto TargetNodes = match(M.bind("v"), ASTCtx);
   assert(TargetNodes.size() == 1 && "Match must be unique");

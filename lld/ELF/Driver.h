@@ -18,7 +18,7 @@ namespace lld::elf {
 struct Ctx;
 
 // Parses command line options.
-class ELFOptTable : public llvm::opt::GenericOptTable {
+class ELFOptTable : public llvm::opt::OptTable {
 public:
   ELFOptTable();
   llvm::opt::InputArgList parse(Ctx &, ArrayRef<const char *> argv);
