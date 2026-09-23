@@ -69,6 +69,7 @@
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -869,7 +870,7 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags,
     // environment to build the file, it would be nice if we could emit a
     // "PreparingBuild" status to inform users, it is non-trivial given the
     // current implementation.
-    auto Cmd = CDB.getCompileCommand(FileName);
+    auto Cmd = CDB.getCompileCommand(Inputs.RealFilePath);
     // If we don't have a reliable command for this file, it may be a header.
     // Try to find a file that includes it, to borrow its command.
     if (!Cmd || !isReliable(*Cmd)) {
@@ -1625,6 +1626,7 @@ struct TUScheduler::FileData {
   /// Latest inputs, passed to TUScheduler::update().
   std::string Contents;
   ASTWorkerHandle Worker;
+  SmallString<128> RealFilePath;
 };
 
 TUScheduler::TUScheduler(const GlobalCompilationDatabase &CDB,
@@ -1680,13 +1682,19 @@ bool TUScheduler::update(PathRef File, ParseInputs Inputs,
     ASTWorkerHandle Worker = ASTWorker::create(
         File, CDB, *IdleASTs, *HeaderIncluders,
         WorkerThreads ? &*WorkerThreads : nullptr, Barrier, Opts, *Callbacks);
+    // Attempt to get and store the "real path".  Don't worry about
+    // errors/tilde expansion, that naturally happens later when
+    // needed.
+    SmallString<128> RealFilePath{File};
+    llvm::sys::fs::real_path(File, RealFilePath);
     FD = std::unique_ptr<FileData>(
-        new FileData{Inputs.Contents, std::move(Worker)});
+        new FileData{Inputs.Contents, std::move(Worker), RealFilePath});
     ContentChanged = true;
   } else if (FD->Contents != Inputs.Contents) {
     ContentChanged = true;
     FD->Contents = Inputs.Contents;
   }
+  Inputs.RealFilePath = FD->RealFilePath;
   FD->Worker->update(std::move(Inputs), WantDiags, ContentChanged);
   // There might be synthetic update requests, don't change the LastActiveFile
   // in such cases.
