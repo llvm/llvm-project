@@ -14,6 +14,7 @@
 
 #include "flang/Optimizer/Analysis/AliasAnalysis.h"
 #include "flang/Optimizer/Dialect/FIROperationMoveOpInterface.h"
+#include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FortranVariableInterface.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
@@ -240,6 +241,24 @@ static bool canHoistLoad(Operation *op, LoopLikeOpInterface loopLike,
   return false;
 }
 
+/// Return true if moving \p op out of \p loopLike would move it before a
+/// fir.assert that precedes it in one of its enclosing blocks. Since
+/// fir.assert may terminate execution, doing so would speculate \p op on the
+/// assertion failure path.
+static bool isAfterAssert(Operation *op, LoopLikeOpInterface loopLike) {
+  Operation *current = op;
+  while (current != loopLike.getOperation()) {
+    for (Operation *previous = current->getPrevNode(); previous;
+         previous = previous->getPrevNode())
+      if (isa<fir::AssertOp>(previous))
+        return true;
+    current = current->getParentOp();
+    if (!current)
+      return false;
+  }
+  return false;
+}
+
 /// Returns true iff hoisting \p op out of a nested region is expected to be
 /// inexpensive. This is a cost heuristic only; the safety of the hoisting is
 /// established separately.
@@ -339,6 +358,16 @@ void LoopInvariantCodeMotion::runOnOperation() {
         if (isPure(op)) {
           LDBG() << "Pure operation: " << *op;
           return true;
+        }
+
+        // fir.assert may terminate execution. Do not move an operation that
+        // cannot be speculated to a point where it executes before an assert
+        // that currently guards it. The assert's non-addressable runtime
+        // effect intentionally does not alias program memory, so alias
+        // analysis alone cannot enforce this ordering.
+        if (!isSpeculatable(op) && isAfterAssert(op, loopLike)) {
+          LDBG() << "Cannot speculate operation before fir.assert: " << *op;
+          return false;
         }
 
         // Handle RecursivelySpeculatable operations that have

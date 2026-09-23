@@ -839,6 +839,43 @@ def fir_UnreachableOp : fir_Op<"unreachable", [Terminator]> {
 
 }
 
+def fir_AssertOp : fir_Op<"assert",
+    [ConditionallySpeculatable,
+     MemoryEffects<[MemWrite<FortranRuntimeResource>]>]> {
+  let summary = "assert a condition at runtime";
+
+  let description = [{
+    Assert that a condition is true at runtime. If the condition is false,
+    program execution is terminated and the diagnostic message may be reported
+    to the user via the Fortran runtime so that formatting and abort behavior
+    stay consistent with other runtime aborts.
+
+    This operation is not speculatable. It writes a non-addressable
+    `FortranRuntimeResource` so that it cannot be CSEd or DCE'd, while still
+    allowing store-to-load forwarding of unrelated program memory across it.
+
+    It is not a terminator. MLIR CFG regions treat every operation in a block
+    as having the same reachability, so this write does not by itself prevent
+    a later non-speculatable op in the same block from being moved before it.
+    Passes should not speculate such ops; they must consult
+    `ConditionallySpeculatable` rather than alias analysis alone.
+
+    ```
+      fir.assert %condition, "expected condition to hold"
+    ```
+  }];
+
+  let arguments = (ins I1:$condition, StrAttr:$message);
+
+  let assemblyFormat = "$condition `,` $message attr-dict";
+
+  let extraClassDeclaration = [{
+    ::mlir::Speculation::Speculatability getSpeculatability() {
+      return ::mlir::Speculation::NotSpeculatable;
+    }
+  }];
+}
+
 def fir_FirEndOp : fir_Op<"end", [Terminator, NoMemoryEffect]> {
   let summary = "the end instruction";
 

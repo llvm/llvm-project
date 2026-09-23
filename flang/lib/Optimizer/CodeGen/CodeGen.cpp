@@ -51,6 +51,7 @@
 #include "mlir/Conversion/UBToLLVM/UBToLLVM.h"
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
@@ -4359,6 +4360,19 @@ struct UnreachableOpConversion
   }
 };
 
+/// `fir.assert` --> `cf.assert`
+struct AssertOpConversion : public fir::FIROpConversion<fir::AssertOp> {
+  using FIROpConversion::FIROpConversion;
+
+  llvm::LogicalResult
+  matchAndRewrite(fir::AssertOp assertOp, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<mlir::cf::AssertOp>(
+        assertOp, adaptor.getCondition(), assertOp.getMessageAttr());
+    return mlir::success();
+  }
+};
+
 /// `fir.is_present` -->
 /// ```
 ///  %0 = llvm.mlir.constant(0 : i64)
@@ -5115,15 +5129,15 @@ void fir::populateFIRToLLVMConversionPatterns(
   patterns.insert<
       AbsentOpConversion, AddcOpConversion, AddrOfOpConversion,
       AllocaOpConversion, AllocMemOpConversion, BitcastOpConversion,
-      BoxAddrOpConversion, BoxCharLenOpConversion, BoxDimsOpConversion,
-      BoxEleSizeOpConversion, BoxIsAllocOpConversion, BoxIsArrayOpConversion,
-      BoxIsPtrOpConversion, AssumedSizeExtentOpConversion,
-      IsAssumedSizeExtentOpConversion, BoxOffsetOpConversion,
-      BoxProcHostOpConversion, BoxRankOpConversion, BoxTypeCodeOpConversion,
-      BoxTypeDescOpConversion, CallOpConversion, CmpcOpConversion,
-      VolatileCastOpConversion, ConvertOpConversion, CoordinateOpConversion,
-      CopyOpConversion, DTEntryOpConversion, DeclareOpConversion,
-      DeclareValueOpConversion,
+      AssertOpConversion, BoxAddrOpConversion, BoxCharLenOpConversion,
+      BoxDimsOpConversion, BoxEleSizeOpConversion, BoxIsAllocOpConversion,
+      BoxIsArrayOpConversion, BoxIsPtrOpConversion,
+      AssumedSizeExtentOpConversion, IsAssumedSizeExtentOpConversion,
+      BoxOffsetOpConversion, BoxProcHostOpConversion, BoxRankOpConversion,
+      BoxTypeCodeOpConversion, BoxTypeDescOpConversion, CallOpConversion,
+      CmpcOpConversion, VolatileCastOpConversion, ConvertOpConversion,
+      CoordinateOpConversion, CopyOpConversion, DTEntryOpConversion,
+      DeclareOpConversion, DeclareValueOpConversion,
       DoConcurrentSpecifierOpConversion<fir::LocalitySpecifierOp>,
       DoConcurrentSpecifierOpConversion<fir::DeclareReductionOp>,
       CreateBoxOpConversion, DivcOpConversion, EmboxOpConversion,

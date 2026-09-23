@@ -23,3 +23,27 @@ func.func @_QPtest(%arg0: !fir.ref<!fir.array<10xf32>> {fir.bindc_name = "x"}, %
   }
   return
 }
+
+// -----
+
+// A fir.assert may terminate execution, so a non-speculatable load after it
+// must not be hoisted onto the assertion failure path. The assert writes a
+// non-addressable resource, therefore this ordering must be enforced
+// independently of alias analysis.
+// CHECK-LABEL:   func.func @assert_guards_load(
+// CHECK:           fir.do_loop {{.*}} {
+// CHECK:             fir.assert %{{.*}}, "valid pointer"
+// CHECK-NEXT:        %[[LOAD:.*]] = fir.load %{{.*}} : !fir.ref<f32>
+// CHECK:             fir.store %[[LOAD]] to %{{.*}} : !fir.ref<f32>
+func.func @assert_guards_load(%arg0: !fir.ref<!fir.array<10xf32>>, %arg1: !fir.ref<f32>, %is_valid: i1) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  %shape = fir.shape %c10 : (index) -> !fir.shape<1>
+  fir.do_loop %i = %c1 to %c10 step %c1 {
+    fir.assert %is_valid, "valid pointer"
+    %value = fir.load %arg1 : !fir.ref<f32>
+    %element = fir.array_coor %arg0(%shape) %i : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
+    fir.store %value to %element : !fir.ref<f32>
+  }
+  return
+}

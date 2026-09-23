@@ -1,6 +1,7 @@
 // Test the FIR operations
 
 // RUN: fir-opt %s | fir-opt | FileCheck %s
+// RUN: fir-opt --canonicalize %s | FileCheck %s --check-prefix=ASSERT
 
 // CHECK-LABEL: func private @it1() -> !fir.int<4>
 // CHECK: func private @box1() -> !fir.boxchar<2>
@@ -10,6 +11,16 @@ func.func private @it1() -> !fir.int<4>
 func.func private @box1() -> !fir.boxchar<2>
 func.func private @box2() -> !fir.boxproc<(i32, i32) -> i64>
 func.func private @box3() -> !fir.box<!fir.type<derived3{f:f32}>>
+
+// CHECK-LABEL: func.func @test_assert(
+// CHECK-SAME: %[[CONDITION:.*]]: i1
+// CHECK: fir.assert %[[CONDITION]], "expected condition to hold"
+// ASSERT-LABEL: func.func @test_assert(
+// ASSERT: fir.assert
+func.func @test_assert(%condition: i1) {
+  fir.assert %condition, "expected condition to hold"
+  return
+}
 
 // Fortran SUBROUTINE and FUNCTION
 // CHECK-LABEL: func private @print_index3(index, index, index)
