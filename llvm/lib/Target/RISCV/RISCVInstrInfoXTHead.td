@@ -64,10 +64,12 @@ def tuimm2 : TImmLeaf<XLenVT, [{return isUInt<2>(Imm);}]>;
 
 def th_memidx_rs1 : RegisterOperand<GPR> {
   let DecoderMethod = "decodeTHMemIdxRs1Operand";
+  let hasCompleteDecoder = false;
 }
 
 def th_mempair_rs1 : RegisterOperand<GPR> {
   let DecoderMethod = "decodeTHMemPairRs1Operand";
+  let hasCompleteDecoder = false;
 }
 
 //===----------------------------------------------------------------------===//
