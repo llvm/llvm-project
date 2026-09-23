@@ -3426,6 +3426,11 @@ let append Predicates = [IsRV64] in {
                                  (XLenVT GPR:$c), (XLenVT GPR:$d))),
             (PACK (PPAIRE_H GPR:$a, GPR:$b), (PPAIRE_H GPR:$c, GPR:$d))>;
 
+  // PPAIREO.W packs the low word of rs1 with the high word of rs2.
+  def : Pat<(v2i32 (build_vector (XLenVT GPR:$a),
+                                 (XLenVT (srl GPR:$x, (XLenVT 32))))),
+            (PPAIREO_W GPR:$a, GPR:$x)>;
+
   def : Pat<(v2i32 (build_vector (XLenVT GPR:$a), (XLenVT GPR:$b))),
             (PACK GPR:$a, GPR:$b)>;
 
