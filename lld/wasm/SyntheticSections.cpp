@@ -618,6 +618,15 @@ void ElemSection::addEntry(FunctionSymbol *sym) {
   // They only exist so that the calls to missing functions can validate.
   if (sym->hasTableIndex() || sym->isStub)
     return;
+
+  // Pad with null function pointers if alignment is requested.
+  if (ctx.arg.functionPointerAlignment > 1) {
+    while ((ctx.arg.tableBase + indirectFunctions.size()) %
+           ctx.arg.functionPointerAlignment) {
+      indirectFunctions.push_back(nullptr);
+    }
+  }
+
   sym->setTableIndex(ctx.arg.tableBase + indirectFunctions.size());
   indirectFunctions.emplace_back(sym);
 }
@@ -656,9 +665,9 @@ void ElemSection::writeBody() {
   writeUleb128(os, indirectFunctions.size(), "elem count");
   uint32_t tableIndex = ctx.arg.tableBase;
   for (const FunctionSymbol *sym : indirectFunctions) {
-    assert(sym->getTableIndex() == tableIndex);
+    assert(!sym || sym->getTableIndex() == tableIndex);
     (void)tableIndex;
-    writeUleb128(os, sym->getFunctionIndex(), "function index");
+    writeUleb128(os, sym ? sym->getFunctionIndex() : 0, "function index");
     ++tableIndex;
   }
 }
