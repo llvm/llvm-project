@@ -17,7 +17,11 @@
 
 #include <sycl/__impl/detail/config.hpp>
 
+#include <detail/suppress_extra_warnings.hpp>
+
+_LIBSYCL_SUPPRESS_EXTRA_WARNINGS_BEGIN
 #include <llvm/Object/OffloadBinary.h>
+_LIBSYCL_SUPPRESS_EXTRA_WARNINGS_END
 
 #include <OffloadAPI.h>
 

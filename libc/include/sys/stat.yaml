@@ -76,6 +76,13 @@ functions:
       - type: int
       - type: const char *
       - type: mode_t
+  - name: mknodat
+    return_type: int
+    arguments:
+      - type: int
+      - type: const char *
+      - type: mode_t
+      - type: dev_t
   - name: stat
     return_type: int
     arguments:

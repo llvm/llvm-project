@@ -48,6 +48,13 @@ let cppNamespace = "::cir" in {
           "operation carries no memory-effects attribute.  Null means the "
           "effects are unknown, not that the callee touches no memory",
           "cir::MemoryEffectsAttr", "getMemoryEffectsAttr", (ins)>,
+      InterfaceMethod<
+          "Set the memory effects of the call operation",
+          "void", "setMemoryEffectsAttr",
+          (ins "cir::MemoryEffectsAttr":$effects), [{}],
+          /*defaultImplementation=*/[{
+            $_op.setMemoryEffectsAttr(effects);
+          }]>,
       InterfaceMethod<[{"Set the inline-kind of a call operation"}],
                       "void", "setInlineKind", 
                       (ins "std::optional<cir::InlineKind>":$kind), [{}], 

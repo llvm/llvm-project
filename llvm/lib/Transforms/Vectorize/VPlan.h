@@ -1101,7 +1101,8 @@ public:
   /// Returns default flags for \p Opcode and scalar \p ResultTy for opcodes
   /// that support it, asserts otherwise. Opcodes not supporting default flags
   /// include compares and ComputeReductionResult.
-  static VPIRFlags getDefaultFlags(unsigned Opcode, Type *ResultTy = nullptr);
+  LLVM_ABI_FOR_TEST static VPIRFlags getDefaultFlags(unsigned Opcode,
+                                                     Type *ResultTy = nullptr);
 
 #if !defined(NDEBUG)
   /// Returns true if the set flags are valid for \p Opcode.
@@ -1885,7 +1886,8 @@ protected:
 /// VPWidenCastRecipe is a recipe to create vector cast instructions.
 /// TODO: Merge with VPWidenRecipe now that type is associated to every
 /// VPRecipeValue.
-class VPWidenCastRecipe : public VPRecipeWithIRFlags, public VPIRMetadata {
+class LLVM_ABI_FOR_TEST VPWidenCastRecipe : public VPRecipeWithIRFlags,
+                                            public VPIRMetadata {
   /// Cast instruction opcode.
   Instruction::CastOps Opcode;
 
@@ -1932,7 +1934,8 @@ protected:
 };
 
 /// A recipe for widening vector intrinsics.
-class VPWidenIntrinsicRecipe : public VPRecipeWithIRFlags, public VPIRMetadata {
+class LLVM_ABI_FOR_TEST VPWidenIntrinsicRecipe : public VPRecipeWithIRFlags,
+                                                 public VPIRMetadata {
   /// ID of the vector intrinsic to widen.
   Intrinsic::ID VectorIntrinsicID;
 
@@ -4195,7 +4198,7 @@ protected:
 /// A recipe for converting \p Current into \p Start + \p Current * \p Step.
 /// FastMathFlags are derived from the \p FPBinOp in the case of FP inductions,
 /// and the passed NoWrap \p Flags apply in the case of Ptr and Int inductions.
-class VPDerivedIVRecipe : public VPRecipeWithIRFlags {
+class LLVM_ABI_FOR_TEST VPDerivedIVRecipe : public VPRecipeWithIRFlags {
   /// Kind of the induction.
   const InductionDescriptor::InductionKind Kind;
   /// If not nullptr, the floating point induction binary operator. Must be set
