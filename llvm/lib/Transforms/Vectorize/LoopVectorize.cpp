@@ -1817,12 +1817,38 @@ public:
   /// Return true if any runtime checks have been added
   bool hasChecks() const { return getSCEVChecks().first || HasMemChecks; }
 
-  /// Drop the pre-built memory check block in favour of VPlan recipes.
-  /// TODO: Remove once the checks can be costed in VPlan, before VF selection.
-  void dropMemRuntimeChecks() {
+  /// Try to generate the memory runtime checks for \p RtPtrChecking as recipes
+  /// in \p Plan, dropping the pre-built block. Returns false if unsupported.
+  /// TODO: Remove the pre-built block once the checks can be costed in VPlan,
+  /// before VF selection.
+  bool
+  tryToAddMemRuntimeChecksToVPlan(VPlan &Plan,
+                                  const RuntimePointerChecking &RtPtrChecking,
+                                  DebugLoc DL, bool AddBranchWeights) {
     assert(MemCheckBlock && pred_empty(MemCheckBlock) &&
            "cannot drop memory checks that are missing or already connected");
+    // Diff checks are not modelled in VPlan yet, and the VPlan expander cannot
+    // hoist bounds out of an enclosing loop.
+    if (RtPtrChecking.getDiffChecks() || OuterLoop)
+      return false;
+
+    // VPSCEVExpander expands AddRecs in the plan's entry, not the check block,
+    // and does not support pointer-typed min/max yet.
+    ScalarEvolution &SE = *PSE.getSE();
+    auto IsPtrMinMax = [](const SCEV *S) {
+      return isa<SCEVMinMaxExpr>(S) && S->getType()->isPointerTy();
+    };
+    for (const RuntimeCheckingPtrGroup &CG : RtPtrChecking.CheckingGroups)
+      if (SE.containsAddRecurrence(CG.Low) ||
+          SE.containsAddRecurrence(CG.High) ||
+          SCEVExprContains(CG.Low, IsPtrMinMax) ||
+          SCEVExprContains(CG.High, IsPtrMinMax))
+        return false;
+
     eraseMemCheckBlock();
+    RUN_VPLAN_PASS(VPlanTransforms::addMemoryRuntimeChecks, Plan,
+                   RtPtrChecking.getChecks(), SE, DL, AddBranchWeights);
+    return true;
   }
 
 private:
@@ -6989,33 +7015,6 @@ void LoopVectorizationPlanner::addReductionResultComputation(
   RUN_VPLAN_PASS(VPlanTransforms::clearReductionWrapFlags, *Plan);
 }
 
-/// Return true if \p RtPtrChecking's memory checks for \p OrigLoop can be
-/// modelled as VPlan recipes.
-static bool
-canModelMemChecksInVPlan(const RuntimePointerChecking &RtPtrChecking,
-                         const Loop &OrigLoop, ScalarEvolution &SE) {
-  // Diff checks are not modelled in VPlan yet.
-  if (RtPtrChecking.getDiffChecks())
-    return false;
-
-  // The VPlan expander cannot hoist bounds out of an enclosing loop.
-  if (OrigLoop.getParentLoop())
-    return false;
-
-  // Return true if \p CG's bounds can be expanded in the check block.
-  // VPSCEVExpander only expands AddRecs of loops enclosing the plan's scope.
-  auto BoundsAreVPlanExpandable = [&SE](const RuntimeCheckingPtrGroup &CG) {
-    return !SE.containsAddRecurrence(CG.Low) &&
-           !SE.containsAddRecurrence(CG.High);
-  };
-
-  ArrayRef<RuntimePointerCheck> Checks = RtPtrChecking.getChecks();
-  return !Checks.empty() && all_of(Checks, [&](const RuntimePointerCheck &C) {
-    return BoundsAreVPlanExpandable(*C.first) &&
-           BoundsAreVPlanExpandable(*C.second);
-  });
-}
-
 void LoopVectorizationPlanner::attachRuntimeChecks(
     VPlan &Plan, GeneratedRTChecks &RTChecks, bool HasBranchWeights,
     bool UseVPlanMemChecks) const {
@@ -7049,17 +7048,10 @@ void LoopVectorizationPlanner::attachRuntimeChecks(
                   "(e.g., adding 'restrict').";
       });
     }
-    const RuntimePointerChecking &RtPtrChecking =
-        *Legal->getLAI()->getRuntimePointerChecking();
-    ScalarEvolution &SE = *PSE.getSE();
-    if (UseVPlanMemChecks &&
-        canModelMemChecksInVPlan(RtPtrChecking, *OrigLoop, SE)) {
-      RTChecks.dropMemRuntimeChecks();
-      RUN_VPLAN_PASS(VPlanTransforms::addMemoryRuntimeChecks, Plan,
-                     RtPtrChecking.getChecks(), SE, OrigLoop->getStartLoc(),
-                     HasBranchWeights);
+    if (UseVPlanMemChecks && RTChecks.tryToAddMemRuntimeChecksToVPlan(
+                                 Plan, *Legal->getRuntimePointerChecking(),
+                                 OrigLoop->getStartLoc(), HasBranchWeights))
       return;
-    }
     RUN_VPLAN_PASS(VPlanTransforms::attachCheckBlock, Plan, MemCheckCond,
                    MemCheckBlock, HasBranchWeights);
   }
@@ -8158,9 +8150,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     // checks for the main plan.
     LVP.addMinimumIterationCheck(BestMainPlan, EPI.EpilogueVF, EPI.EpilogueUF,
                                  ElementCount::getFixed(0));
-    // Epilogue vectorization has not been converted to VPlan memory checks
-    // yet; it shares the checks between the main and epilogue plans via the
-    // pre-built IR block.
+    // Epilogue vectorization shares the pre-built memory checks between the
+    // main and epilogue plans, so it cannot use VPlan memory checks yet.
     LVP.attachRuntimeChecks(BestMainPlan, Checks, HasBranchWeights,
                             /*UseVPlanMemChecks=*/false);
     RUN_VPLAN_PASS(
@@ -8200,8 +8191,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                            BestPlan);
     LVP.addMinimumIterationCheck(BestPlan, VF.Width, IC,
                                  VF.MinProfitableTripCount);
-    LVP.attachRuntimeChecks(BestPlan, Checks, HasBranchWeights,
-                            /*UseVPlanMemChecks=*/true);
+    LVP.attachRuntimeChecks(BestPlan, Checks, HasBranchWeights);
 
     if (!IsInnerLoop)
       LLVM_DEBUG(dbgs() << "Vectorizing outer loop in \"" << F->getName()
