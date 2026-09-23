@@ -894,26 +894,6 @@ public:
     });
   }
 
-  bool isUImm2Lsb0() const { return isUImmShifted<1, 1>(); }
-
-  bool isUImm5Lsb0() const { return isUImmShifted<4, 1>(); }
-
-  bool isUImm6Lsb0() const { return isUImmShifted<5, 1>(); }
-
-  bool isUImm6Lsb000() const { return isUImmShifted<3, 3>(); }
-
-  bool isUImm7Lsb00() const { return isUImmShifted<5, 2>(); }
-
-  bool isUImm7Lsb000() const { return isUImmShifted<4, 3>(); }
-
-  bool isUImm8Lsb00() const { return isUImmShifted<6, 2>(); }
-
-  bool isUImm8Lsb000() const { return isUImmShifted<5, 3>(); }
-
-  bool isUImm9Lsb000() const { return isUImmShifted<6, 3>(); }
-
-  bool isUImm14Lsb00() const { return isUImmShifted<12, 2>(); }
-
   bool isUImm10Lsb00NonZero() const {
     return isUImmPred(
         [](int64_t Imm) { return isShiftedUInt<8, 2>(Imm) && (Imm != 0); });
@@ -4258,16 +4238,45 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
     }
   }
 
-  if (Opcode == RISCV::TH_LDD || Opcode == RISCV::TH_LWUD ||
-      Opcode == RISCV::TH_LWD) {
+  if (Opcode == RISCV::CV_INSERT &&
+      Inst.getOperand(3).getImm() + Inst.getOperand(4).getImm() >= 32)
+    return Error(Operands[3]->getStartLoc(),
+                 "the sum of the immediate operands must be less than 32");
+
+  switch (Opcode) {
+  default:
+    break;
+  case RISCV::TH_LBIA:
+  case RISCV::TH_LBIB:
+  case RISCV::TH_LBUIA:
+  case RISCV::TH_LBUIB:
+  case RISCV::TH_LHIA:
+  case RISCV::TH_LHIB:
+  case RISCV::TH_LHUIA:
+  case RISCV::TH_LHUIB:
+  case RISCV::TH_LWIA:
+  case RISCV::TH_LWIB:
+  case RISCV::TH_LWUIA:
+  case RISCV::TH_LWUIB:
+  case RISCV::TH_LDIA:
+  case RISCV::TH_LDIB:
+    if (Inst.getOperand(0).getReg() == Inst.getOperand(2).getReg())
+      return Error(Operands[1]->getStartLoc(), "rd and rs1 must be different");
+    break;
+  case RISCV::TH_LDD:
+  case RISCV::TH_LWUD:
+  case RISCV::TH_LWD: {
     MCRegister Rd1 = Inst.getOperand(0).getReg();
     MCRegister Rd2 = Inst.getOperand(1).getReg();
     MCRegister Rs1 = Inst.getOperand(2).getReg();
-    // The encoding with rd1 == rd2 == rs1 is reserved for XTHead load pair.
+    // The encoding with overlapping rs1, rd1, and rd2 is reserved for XTHead
+    // load pair.
     if (Rs1 == Rd1 || Rs1 == Rd2 || Rd1 == Rd2) {
       SMLoc Loc = Operands[1]->getStartLoc();
       return Error(Loc, "rs1, rd1, and rd2 cannot overlap");
     }
+    break;
+  }
   }
 
   if (Opcode == RISCV::CM_MVSA01 || Opcode == RISCV::QC_CM_MVSA01) {

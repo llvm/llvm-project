@@ -10,4 +10,4 @@
 
 #include "src/math/f16divf.h"
 
-LIST_DIV_TESTS(float16, float, LIBC_NAMESPACE::f16divf)
+LIST_DIV_TESTS(F16divf, float16, float, LIBC_NAMESPACE::f16divf)
