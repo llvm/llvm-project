@@ -54,6 +54,14 @@ mlir::Type adjustGlobalTypeForInit(mlir::Type llvmType, mlir::Attribute init,
                                    const mlir::TypeConverter &converter,
                                    const mlir::DataLayout &dataLayout);
 
+// A version of adjustGlobalTypeForInit which records where additional padding
+// was added in the middle, so we can properly adjust field indexes.
+mlir::Type
+adjustGlobalTypeForInit(mlir::Type llvmType, mlir::Attribute init,
+                        const mlir::TypeConverter &converter,
+                        const mlir::DataLayout &dataLayout,
+                        llvm::SmallVectorImpl<unsigned> &paddingAddedIndexes);
+
 mlir::Value getConstAPInt(mlir::OpBuilder &bld, mlir::Location loc,
                           mlir::Type typ, const llvm::APInt &val);
 
@@ -68,4 +76,8 @@ mlir::Value createAnd(mlir::OpBuilder &bld, mlir::Value lhs,
                       const llvm::APInt &rhs);
 
 mlir::Value createLShR(mlir::OpBuilder &bld, mlir::Value lhs, unsigned rhs);
+
+mlir::Type convertTypeForMemory(const mlir::TypeConverter &converter,
+                                mlir::DataLayout const &dataLayout,
+                                mlir::Type type);
 #endif

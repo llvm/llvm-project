@@ -98,6 +98,7 @@ else()
     kmp_str.cpp
     kmp_tasking.cpp
     kmp_threadprivate.cpp
+    kmp_traits.cpp
     kmp_utility.cpp
     kmp_barrier.cpp
     kmp_wait_release.cpp
@@ -199,12 +200,10 @@ if(LIBOMP_USE_HWLOC)
   # the options to other libraries that depend on it, e.g. libompd.
   target_include_directories(obj.omp
     PRIVATE
-    "$<BUILD_INTERFACE:${LIBOMP_HWLOC_INCLUDE_DIR}>"
-    "$<INSTALL_INTERFACE:${LIBOMP_HWLOC_INCLUDE_DIR}>")
+    "$<BUILD_INTERFACE:${LIBOMP_HWLOC_INCLUDE_DIR}>")
   target_include_directories(omp
     INTERFACE
-    "$<BUILD_INTERFACE:${LIBOMP_HWLOC_INCLUDE_DIR}>"
-    "$<INSTALL_INTERFACE:${LIBOMP_HWLOC_INCLUDE_DIR}>")
+    "$<BUILD_INTERFACE:${LIBOMP_HWLOC_INCLUDE_DIR}>")
 endif()
 
 if(OPENMP_MSVC_NAME_SCHEME)

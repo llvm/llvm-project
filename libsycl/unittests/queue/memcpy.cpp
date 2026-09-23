@@ -14,8 +14,7 @@ using namespace ::testing;
 
 TEST(Queue, Memcpy) {
   constexpr int NumBytes = 32;
-  constexpr int NMemcpies = 4;
-  constexpr int NMemcpyAttempts = 5;
+  constexpr int NMemcpies = 5;
 
   mock::MockWrapper Mock;
   queue Q;
@@ -29,7 +28,7 @@ TEST(Queue, Memcpy) {
 
   EXPECT_CALL(Mock.get(), olGetMemInfo(_, OL_MEM_INFO_DEVICE,
                                        sizeof(ol_device_handle_t), _))
-      .Times(NMemcpyAttempts * 2)
+      .Times(NMemcpies * 2)
       .WillRepeatedly([&](const void *Ptr, ol_mem_info_t PropName,
                           size_t PropSize, void *PropValue) -> ol_result_t {
         EXPECT_TRUE(Ptr == SrcPtr || Ptr == DstPtr);
@@ -67,11 +66,7 @@ TEST(Queue, Memcpy) {
   Q.memcpy(DstPtr, SrcPtr, NumBytes);
 
   IsSrcHostPtr = true;
-  try {
-    Q.memcpy(DstPtr, SrcPtr, NumBytes);
-  } catch (const exception &e) {
-    EXPECT_EQ(e.code(), make_error_code(errc::feature_not_supported));
-  }
+  Q.memcpy(DstPtr, SrcPtr, NumBytes);
 }
 
 TEST(Queue, MemcpyZeroBytes) {

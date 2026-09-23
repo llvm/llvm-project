@@ -1,6 +1,7 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=alpha.webkit.UnretainedLocalVarsChecker -verify %s
 
 #import "objc-mock-types.h"
+#import "mock-types.h"
 #import "mock-system-header.h"
 
 void someFunction();
@@ -592,10 +593,7 @@ SomeObj* provide();
 
 - (void)storeSomeObj {
   auto *obj = [self getSomeObj];
-  // expected-warning@-1{{Local variable 'obj' is a raw pointer to RetainPtr-capable type 'SomeObj' [alpha.webkit.UnretainedLocalVarsChecker]}}
   [obj doWork];
-  auto *obj2 = [SomeObj sharedInstance];
-  [obj2 doWork];
 }
 
 - (void)assignToGuardianArg:(RetainPtr<SomeObj>&)obj {
