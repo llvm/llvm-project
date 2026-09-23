@@ -3750,8 +3750,8 @@ bool SIInsertWaitcnts::run() {
       // Set REPLAY_MODE (bit 25) in MODE register to enable multi-group XNACK
       // replay. This aligns hardware behavior with the compiler's s_wait_xcnt
       // insertion logic, which assumes multi-group mode by default.
-      unsigned RegEncoding =
-          AMDGPU::Hwreg::HwregEncoding::encode(AMDGPU::Hwreg::ID_MODE, 25, 1);
+      unsigned RegEncoding = static_cast<unsigned>(
+          AMDGPU::Hwreg::HwregEncoding::encode(AMDGPU::Hwreg::ID_MODE, 25, 1));
       BuildMI(EntryBB, InsertPt, DebugLoc(),
               TII.get(AMDGPU::S_SETREG_IMM32_B32))
           .addImm(1)
