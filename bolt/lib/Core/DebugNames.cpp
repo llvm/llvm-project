@@ -329,20 +329,17 @@ std::optional<std::string> DWARF5AcceleratorTable::getName(
   }
   auto &It = Entries[Name];
   if (It.Values.empty()) {
-    if (DWOID && NameToUse.empty()) {
-      // For DWO Unit the offset is in the .debug_str.dwo section.
-      // Need to find offset for the name in the .debug_str section.
+    if (DWOID || !NameToUse.empty()) {
+      // The offset in hand is into .debug_str.dwo, or absent for a synthesized
+      // name. Look for its offset in the main .debug_str.
       llvm::hash_code Hash = llvm::hash_value(llvm::StringRef(Name));
       auto ItCache = StrCacheToOffsetMap.find(Hash);
-      // New string not in the input, we'll assign an offset later.
+      // New string not in the main .debug_str, we'll assign an offset later.
       if (ItCache == StrCacheToOffsetMap.end())
         It.NeedsStrOffset = true;
       else
         NameIndexOffset = ItCache->second;
     }
-    // New string not in the input, we'll assign an offset later.
-    if (!NameToUse.empty())
-      It.NeedsStrOffset = true;
     It.StrOffset = NameIndexOffset;
     // This is the same hash function used in DWARF5AccelTableData.
     It.HashValue = caseFoldingDjbHash(Name);
