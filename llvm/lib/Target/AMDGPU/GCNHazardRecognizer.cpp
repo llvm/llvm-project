@@ -1017,6 +1017,7 @@ static int getMaxWindowDeficit(
 
   // Taken by value: Arrive can grow the bucket this arrival is stored in.
   auto Scan = [&](Arrival A) {
+    // A closer arrival has superseded this one.
     if (Best.lookup(A.MBB) < A.Distance)
       return;
 
@@ -3696,12 +3697,10 @@ int GCNHazardRecognizer::checkMAIVALUHazards(MachineInstr *MI) const {
   bool IsVALU = SIInstrInfo::isVALU(*MI, /*AllowLDSDMA=*/true);
 
   unsigned Reg;
-  const MachineInstr *MFMA = nullptr;
-  auto IsMFMAWriteFn = [&Reg, &MFMA, this](const MachineInstr &MI) {
+  auto IsMFMAWriteFn = [&Reg, this](const MachineInstr &MI) {
     if (!SIInstrInfo::isMFMA(MI) ||
         !TRI.regsOverlap(MI.getOperand(0).getReg(), Reg))
       return false;
-    MFMA = &MI;
     return true;
   };
 
@@ -3887,14 +3886,11 @@ int GCNHazardRecognizer::checkMAIVALUHazards(MachineInstr *MI) const {
       WaitStatesNeeded = std::max(WaitStatesNeeded, DotWriteDifferentVALUWrite -
                                                     WaitStatesSinceDef);
 
-    MFMA = nullptr;
-    WaitStatesSinceDef =
-        getWaitStatesSinceDef(Reg, IsMFMAWriteFn, MaxWaitStates);
-    if (MFMA) {
+    auto MFMAWawWindow = [&](const MachineInstr &Producer) {
       int NeedWaitStates = MaxWaitStates;
-      int NumPasses = TSchedModel.computeInstrLatency(MFMA);
+      int NumPasses = TSchedModel.computeInstrLatency(&Producer);
 
-      if (SIInstrInfo::isDGEMM(MFMA->getOpcode())) {
+      if (SIInstrInfo::isDGEMM(Producer.getOpcode())) {
         switch (NumPasses) {
         case 4:
           NeedWaitStates = DMFMA4x4WriteVgprVALUWriteWaitStates;
@@ -3908,7 +3904,7 @@ int GCNHazardRecognizer::checkMAIVALUHazards(MachineInstr *MI) const {
         }
       } else if (ST.hasGFX940Insts()) {
         NeedWaitStates =
-            TII.isXDL(*MFMA)
+            TII.isXDL(Producer)
                 ? GFX940_XDL_N_PassWriteVgprVALUWawWaitStates(
                       NumPasses, ST.hasGFX950Insts())
                 : GFX940_SMFMA_N_PassWriteVgprVALUWawWaitStates(NumPasses);
@@ -3930,54 +3926,56 @@ int GCNHazardRecognizer::checkMAIVALUHazards(MachineInstr *MI) const {
 
       assert(NeedWaitStates <= MaxWaitStates &&
              "hazard requirement exceeds the scan window");
-      int WaitStatesNeededForUse = NeedWaitStates - WaitStatesSinceDef;
-      WaitStatesNeeded = std::max(WaitStatesNeeded, WaitStatesNeededForUse);
-
-      if (WaitStatesNeeded == MaxWaitStates)
-        break;
-    }
-
-    auto IsSMFMAReadAsCFn = [&Reg, &MFMA, this](const MachineInstr &MI) {
-      if (!SIInstrInfo::isMFMA(MI) || SIInstrInfo::isDGEMM(MI.getOpcode()) ||
-          !MI.readsRegister(Reg, &TRI))
-        return false;
-
-      if (ST.hasGFX940Insts() && !TII.isXDL(MI))
-        return false;
-
-      const MachineOperand *SrcC =
-          TII.getNamedOperand(MI, AMDGPU::OpName::src2);
-      assert(SrcC);
-      if (!SrcC->isReg() || !TRI.regsOverlap(SrcC->getReg(), Reg))
-        return false;
-
-      MFMA = &MI;
-      return true;
+      return NeedWaitStates;
     };
 
-    MFMA = nullptr;
-    int WaitStatesSinceUse = getWaitStatesSince(IsSMFMAReadAsCFn,
-                                                MaxWarWaitStates);
-    if (!MFMA)
-      continue;
+    WaitStatesNeeded = std::max(
+        WaitStatesNeeded,
+        getMaxWindowDeficit(MaxWaitStates,
+                            [&](const MachineInstr &P) -> std::optional<int> {
+                              if (!IsMFMAWriteFn(P))
+                                return std::nullopt;
+                              return MFMAWawWindow(P);
+                            }));
 
-    unsigned HazardDefLatency = TSchedModel.computeInstrLatency(MFMA);
-    int NeedWaitStates = MaxWaitStates;
-    switch (HazardDefLatency) {
-    case 2:  NeedWaitStates = SMFMA4x4ReadVgprVALUWarWaitStates;
-             break;
-    case 4:  assert(ST.hasGFX940Insts());
-             NeedWaitStates = GFX940_XDL4PassReadVgprVALUWarWaitStates;
-             break;
-    case 8:  NeedWaitStates = SMFMA16x16ReadVgprVALUWarWaitStates;
-             break;
-    case 16: [[fallthrough]];
-    default: NeedWaitStates = SMFMA32x32ReadVgprVALUWarWaitStates;
-             break;
-    }
+    if (WaitStatesNeeded >= MaxWaitStates)
+      break;
 
-    int WaitStatesNeededForUse = NeedWaitStates - WaitStatesSinceUse;
-    WaitStatesNeeded = std::max(WaitStatesNeeded, WaitStatesNeededForUse);
+    // Wait states this write needs after an MFMA that read Reg as srcC.
+    auto SMFMAReadAsCWindow =
+        [&](const MachineInstr &Reader) -> std::optional<int> {
+      if (!SIInstrInfo::isMFMA(Reader) ||
+          SIInstrInfo::isDGEMM(Reader.getOpcode()) ||
+          !Reader.readsRegister(Reg, &TRI))
+        return std::nullopt;
+
+      if (ST.hasGFX940Insts() && !TII.isXDL(Reader))
+        return std::nullopt;
+
+      const MachineOperand *SrcC =
+          TII.getNamedOperand(Reader, AMDGPU::OpName::src2);
+      assert(SrcC && "an MFMA must have a src2 operand");
+      if (!SrcC->isReg() || !TRI.regsOverlap(SrcC->getReg(), Reg))
+        return std::nullopt;
+
+      switch (TSchedModel.computeInstrLatency(&Reader)) {
+      case 2:
+        return SMFMA4x4ReadVgprVALUWarWaitStates;
+      case 4:
+        assert(ST.hasGFX940Insts() && "4-pass XDL is gfx940 or later");
+        return GFX940_XDL4PassReadVgprVALUWarWaitStates;
+      case 8:
+        return SMFMA16x16ReadVgprVALUWarWaitStates;
+      case 16:
+        [[fallthrough]];
+      default:
+        return SMFMA32x32ReadVgprVALUWarWaitStates;
+      }
+    };
+
+    WaitStatesNeeded =
+        std::max(WaitStatesNeeded,
+                 getMaxWindowDeficit(MaxWarWaitStates, SMFMAReadAsCWindow));
   }
 
   return WaitStatesNeeded;
