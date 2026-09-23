@@ -124,3 +124,29 @@ loop:
 leave:
   ret void
 }
+
+; %start is in [-1, 127], which bounds the backedge-taken count by 128. That is
+; tighter than the backedge-taken count if the backedge is taken at all (241).
+define void @s_3(i8 %n) {
+; CHECK-LABEL: 's_3'
+; CHECK-NEXT:  Determining loop execution counts for: @s_3
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-127 + (-1 * %n) + ((112 + %n) smax (127 + %n)<nsw>))
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i8 -15, actual taken count either this or zero.
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-127 + (-1 * %n) + ((112 + %n) smax (127 + %n)<nsw>)), actual taken count either this or zero.
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %start = add nsw i8 %n, 127
+  %rhs = add i8 %n, 112
+  %g = icmp sgt i8 %start, %rhs
+  br i1 %g, label %loop, label %leave
+
+loop:
+  %iv = phi i8 [ %start, %entry ], [ %iv.inc, %loop ]
+  %iv.inc = add i8 %iv, 1
+  %iv.cmp = icmp slt i8 %iv, %rhs
+  br i1 %iv.cmp, label %loop, label %leave
+
+leave:
+  ret void
+}
