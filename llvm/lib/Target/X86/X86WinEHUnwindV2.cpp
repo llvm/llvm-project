@@ -425,7 +425,8 @@ bool runX86WinEHUnwindV2(MachineFunction &MF) {
            InstructionCountThreshold) ||
           (UnwindCodeCount >= UnwindCodeThreshold)) {
         BuildMI(MBB, MBB.begin(), DL,
-                TII->get(X86::SEH_SplitChainedAtEndOfBlock));
+                TII->get(X86::SEH_SplitChainedAtEndOfBlock))
+            .setMIFlag(MachineInstr::FrameDestroy);
         LastUnwindInfoEndPosition = Info.ApproximateInstructionPosition;
         // Doesn't reset to 0, as the prolog unwind codes are now in this info.
         UnwindCodeCount = FI.ApproximatePrologCodeCount + 1;

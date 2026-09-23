@@ -71,7 +71,7 @@ body:             |
 # CHECK-LABEL: too_many_instr
 # CHECK-LABEL:   bb.0.entry:
 # bb.1 + bb.2 have enough instructions that bb.0 has its own info.
-# ALLOWLESS:      SEH_SplitChainedAtEndOfBlock
+# ALLOWLESS:      frame-destroy SEH_SplitChainedAtEndOfBlock
 # ALLOWMORE-NOT:  SEH_SplitChainedAtEndOfBlock
 # CHECK:          frame-destroy SEH_BeginEpilogue
 # CHECK-NEXT:     frame-destroy SEH_UnwindV2Start
@@ -88,7 +88,7 @@ body:             |
 
 # CHECK-LABEL:   bb.2
 # bb.3 has enough instructions by itself that bb.2 needs to split.
-# ALLOWLESS-NEXT: SEH_SplitChainedAtEndOfBlock
+# ALLOWLESS-NEXT: frame-destroy SEH_SplitChainedAtEndOfBlock
 # ALLOWMORE-NOT:  SEH_SplitChainedAtEndOfBlock
 # CHECK:          frame-destroy SEH_BeginEpilogue
 # CHECK-NEXT:     frame-destroy SEH_UnwindV2Start

@@ -24,7 +24,7 @@
 
 # If we restricted the number of unwind codes, then we expect to use chained
 # infos.
-# ALLOWLESS:      SEH_SplitChainedAtEndOfBlock
+# ALLOWLESS:      frame-destroy SEH_SplitChainedAtEndOfBlock
 # ALLOWMORE-NOT:  SEH_SplitChainedAtEndOfBlock
 
 --- |
