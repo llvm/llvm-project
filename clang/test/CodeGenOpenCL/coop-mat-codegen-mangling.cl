@@ -126,15 +126,21 @@ kernel void test_load_local(__local float *ptr) {
 //     Same matrix type, __global vs __local -> two distinct symbols.
 // ===========================================================================
 
-kernel void test_store_global(__global float *ptr, MatF_16x16_A a) {
+kernel void test_store_global(__global float *ptr) {
+    MatF_16x16_A a;
+    a = coop_mat_init(0.0f);
     coop_mat_store(ptr, a, ROW_MAJOR, 16);
+    (void)a;
 }
 // CHECK-LABEL: @__clang_ocl_kern_imp_test_store_global
 // CHECK: call {{.*}} @__spirv_CooperativeMatrixStoreKHR_global_f32_sc{{[0-9]+}}_16x16_u{{[0-9]+}}
 // CHECK-SAME: ptr addrspace(1)
 
-kernel void test_store_local(__local float *ptr, MatF_16x16_A a) {
+kernel void test_store_local(__local float *ptr) {
+    MatF_16x16_A a;
+    a = coop_mat_init(0.0f);
     coop_mat_store(ptr, a, ROW_MAJOR, 16);
+    (void)a;
 }
 // CHECK-LABEL: @__clang_ocl_kern_imp_test_store_local
 // CHECK: call {{.*}} @__spirv_CooperativeMatrixStoreKHR_local_f32_sc{{[0-9]+}}_16x16_u{{[0-9]+}}
