@@ -312,6 +312,12 @@ static SPIRVTypeInst deduceResultTypeFromOperands(MachineInstr *I,
   case TargetOpcode::G_ZEXT:
   case TargetOpcode::G_TRUNC:
     return deduceIntTypeFromResult(ResVReg, MIB, GR);
+  case TargetOpcode::G_FCONSTANT:
+    return GR->getOrCreateSPIRVType(I->getOperand(1).getFPImm()->getType(), MIB,
+                                    SPIRV::AccessQualifier::ReadWrite,
+                                    /*EmitIR=*/true);
+  case TargetOpcode::G_SELECT:
+    return deduceTypeFromOperandRange(I, MIB, GR, 2, 4);
   case TargetOpcode::G_BUILD_VECTOR:
     return deduceTypeFromOperandRange(I, MIB, GR, 1, I->getNumOperands());
   case TargetOpcode::G_SHUFFLE_VECTOR:
@@ -424,7 +430,9 @@ static bool requiresSpirvType(MachineInstr &I, SPIRVGlobalRegistry *GR,
     return false;
   }
 
-  if (!I.isPreISelOpcode()) {
+  // Lowerings often copy their result into the original destination register,
+  // which is new and untyped if it was itself created during legalization.
+  if (!I.isPreISelOpcode() && !I.isCopy()) {
     LLVM_DEBUG(dbgs() << "Instruction is not a generic instruction.\n");
     return false;
   }

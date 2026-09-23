@@ -599,8 +599,6 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
                                G_FNEARBYINT,
                                G_INTRINSIC_ROUND,
                                G_INTRINSIC_TRUNC,
-                               G_FMINIMUM,
-                               G_FMAXIMUM,
                                G_INTRINSIC_ROUNDEVEN})
       .legalFor(allFloatScalars)
       .legalFor(allowedFloatVectorTypes)
@@ -609,6 +607,17 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
                    0, ElementCount::getFixed(MaxVectorSize)))
         .moreElementsToNextPow2(0);
   // clang-format on
+
+  // OpenCL.std fmin/fmax and GLSL.std.450 NMin/NMax implement IEEE 754-2008
+  // minNum/maxNum, which do not propagate NaNs and do not order signed zeros.
+  // Expand fminimum/fmaximum in terms of them.
+  getActionDefinitionsBuilder({G_FMINIMUM, G_FMAXIMUM})
+      .lowerFor(allFloatScalars)
+      .lowerFor(allowedFloatVectorTypes)
+      .fewerElementsIf(vectorElementCountIsGreaterThan(0, MaxVectorSize),
+                       LegalizeMutations::changeElementCountTo(
+                           0, ElementCount::getFixed(MaxVectorSize)))
+      .moreElementsToNextPow2(0);
 
   getActionDefinitionsBuilder(G_FCOPYSIGN)
       .legalForCartesianProduct(allFloatScalarsAndVectors,
@@ -1106,6 +1115,18 @@ bool SPIRVLegalizerInfo::legalizeIsFPClass(
 
   unsigned BitSize = SrcTy.getScalarSizeInBits();
   const fltSemantics &Semantics = getFltSemanticForLLT(SrcTy.getScalarType());
+
+  // If this G_IS_FPCLASS was created while lowering another instruction (e.g.
+  // G_FMINIMUM), its source may not have a SPIR-V type yet, but the OpBitcast
+  // below needs one.
+  if (!GR->getSPIRVTypeForVReg(SrcReg)) {
+    Type *LLVMSrcTy =
+        Type::getFloatingPointTy(MIRBuilder.getContext(), Semantics);
+    if (SrcTy.isVector())
+      LLVMSrcTy = VectorType::get(LLVMSrcTy, SrcTy.getElementCount());
+    setRegClassType(SrcReg, LLVMSrcTy, GR, MIRBuilder,
+                    SPIRV::AccessQualifier::ReadWrite, /*EmitIR=*/true);
+  }
 
   LLT IntTy = LLT::scalar(BitSize);
   Type *LLVMIntTy = IntegerType::get(MIRBuilder.getContext(), BitSize);
