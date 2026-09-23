@@ -733,6 +733,54 @@ InstructionCost RISCVTTIImpl::getSlideCost(FixedVectorType *Tp,
   return FirstSlideCost + SecondSlideCost + MaskCost;
 }
 
+/// Return the type used to cost vzip.vv, whose LMUL represents the
+/// interleaved destination EMUL. Return std::nullopt if illegal.
+static std::optional<MVT> getZvzipVZIPCostVT(MVT InterleavedVT,
+                                             const RISCVSubtarget &ST,
+                                             const RISCVTargetLowering &TLI) {
+  if (!InterleavedVT.getVectorElementCount().isKnownEven())
+    return std::nullopt;
+
+  MVT CostVT = InterleavedVT;
+  if (InterleavedVT.isFixedLengthVector()) {
+    MVT SourceVT = InterleavedVT.getHalfNumVectorElementsVT();
+    CostVT = TLI.getContainerForFixedLengthVector(SourceVT)
+                 .getDoubleNumVectorElementsVT();
+  }
+
+  unsigned EltBits = CostVT.getScalarSizeInBits();
+  unsigned MinSize = CostVT.getSizeInBits().getKnownMinValue();
+  unsigned LMULOctuple = MinSize / (RISCV::RVVBitsPerBlock / 8);
+  // Perform the 2 * SEW <= LMUL * min(ELEN, VLEN) check.
+  if (EltBits * 16 > LMULOctuple * std::min(ST.getELen(), ST.getRealMinVLen()))
+    return std::nullopt;
+  return CostVT;
+}
+
+/// Return the type used to cost vunzipe.v/vunzipo.v, whose LMUL represents
+/// the interleaved source EMUL. Return std::nullopt if illegal.
+static std::optional<MVT> getZvzipVUNZIPCostVT(MVT InterleavedVT,
+                                               const RISCVTargetLowering &TLI) {
+  if (!InterleavedVT.getVectorElementCount().isKnownEven())
+    return std::nullopt;
+
+  MVT CostVT = InterleavedVT;
+  // lowerZvzipVUNZIP widens the source container if halving it would produce
+  // an illegal result type. Apply the same rule here so the cost uses the
+  // source LMUL selected by ISel.
+  if (InterleavedVT.isFixedLengthVector()) {
+    CostVT = TLI.getContainerForFixedLengthVector(InterleavedVT);
+    if (CostVT.getVectorMinNumElements() == 1 ||
+        !TLI.isTypeLegal(CostVT.getHalfNumVectorElementsVT()))
+      CostVT = CostVT.getDoubleNumVectorElementsVT();
+  }
+
+  MVT DeinterleavedVT = CostVT.getHalfNumVectorElementsVT();
+  if (RISCVTargetLowering::getLMUL(DeinterleavedVT) == RISCVVType::LMUL_8)
+    return std::nullopt;
+  return CostVT;
+}
+
 InstructionCost RISCVTTIImpl::getShuffleCost(
     TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
     TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
@@ -1897,6 +1945,53 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
             getRISCVInstructionCost({RISCV::VSLIDEDOWN_VI, RISCV::VMV_X_S},
                                     ValLT.second, CostKind);
     return Cost;
+  }
+  case Intrinsic::vector_interleave2:
+  case Intrinsic::vector_deinterleave2: {
+    if (!ST->hasStdExtZvzip())
+      break;
+
+    bool IsInterleave = ICA.getID() == Intrinsic::vector_interleave2;
+    Type *InterleavedTy = IsInterleave ? RetTy : ICA.getArgTypes().front();
+    // ISel does not select vzip.vv if either interleave2 input is undef.
+    if (IsInterleave && !ICA.isTypeBasedOnly() &&
+        any_of(ICA.getArgs(),
+               [](const Value *Arg) { return isa<UndefValue>(Arg); }))
+      break;
+    if (InterleavedTy->getScalarSizeInBits() == 1)
+      break;
+
+    if (auto *FVT = dyn_cast<FixedVectorType>(InterleavedTy)) {
+      if (IsInterleave) {
+        unsigned VF = FVT->getNumElements() / 2;
+        auto *HalfFVT = FixedVectorType::getHalfElementsVectorType(FVT);
+        return getShuffleCost(TTI::SK_PermuteTwoSrc, FVT, HalfFVT, CostKind,
+                              createInterleaveMask(VF, 2), 0, nullptr);
+      }
+
+      auto *HalfFVT = FixedVectorType::getHalfElementsVectorType(FVT);
+      unsigned VF = HalfFVT->getNumElements();
+      InstructionCost Cost = 0;
+      for (unsigned Start = 0; Start != 2; ++Start)
+        Cost += getShuffleCost(TTI::SK_PermuteSingleSrc, HalfFVT, FVT, CostKind,
+                               createStrideMask(Start, 2, VF), 0, nullptr);
+      return Cost;
+    }
+
+    std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(InterleavedTy);
+    if (!LT.second.isScalableVector())
+      break;
+    if (IsInterleave) {
+      if (std::optional<MVT> CostVT = getZvzipVZIPCostVT(LT.second, *ST, *TLI))
+        return LT.first *
+               getRISCVInstructionCost(RISCV::VZIP_VV, *CostVT, CostKind);
+    } else if (std::optional<MVT> CostVT =
+                   getZvzipVUNZIPCostVT(LT.second, *TLI)) {
+      return LT.first *
+             getRISCVInstructionCost({RISCV::VUNZIPE_V, RISCV::VUNZIPO_V},
+                                     *CostVT, CostKind);
+    }
+    break;
   }
   }
 
