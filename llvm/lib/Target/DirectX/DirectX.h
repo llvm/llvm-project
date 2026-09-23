@@ -127,6 +127,9 @@ void initializeShaderFlagsAnalysisWrapperPass(PassRegistry &);
 /// Initializer for dxil::RootSignatureAnalysisWrapper pass.
 void initializeRootSignatureAnalysisWrapperPass(PassRegistry &);
 
+/// Initializer for dxil::SignatureAnalysisWrapper pass.
+void initializeSignatureAnalysisWrapperPass(PassRegistry &);
+
 /// Initializer for DXContainerGlobals pass.
 void initializeDXContainerGlobalsPass(PassRegistry &);
 

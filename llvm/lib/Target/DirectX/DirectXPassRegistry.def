@@ -18,6 +18,7 @@
 #endif
 MODULE_ANALYSIS("dx-shader-flags", dxil::ShaderFlagsAnalysis())
 MODULE_ANALYSIS("dxil-root-signature-analysis", dxil::RootSignatureAnalysis())
+MODULE_ANALYSIS("dxil-signature-analysis", dxil::SignatureAnalysis())
 #undef MODULE_ANALYSIS
 
 #ifndef MODULE_PASS
@@ -38,6 +39,7 @@ MODULE_PASS("dxil-post-optimization-validation", DXILPostOptimizationValidation(
 // TODO: rename to print<foo> after NPM switch
 MODULE_PASS("print-dx-shader-flags", dxil::ShaderFlagsAnalysisPrinter(dbgs()))
 MODULE_PASS("print<dxil-root-signature>", dxil::RootSignatureAnalysisPrinter(dbgs()))
+MODULE_PASS("print<dxil-signature>", dxil::SignatureAnalysisPrinter(dbgs()))
 #undef MODULE_PASS
 
 #ifndef FUNCTION_PASS
