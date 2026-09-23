@@ -22,6 +22,7 @@
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/AbstractCallSite.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
@@ -698,9 +699,9 @@ void GlobalsAAResult::AnalyzeCallGraph(LazyCallGraph &LCG, Module &M) {
         continue;
       }
 
-      // Scan current IR directly for decl/indirect calls and loads/stores.
-      // Decls/indirect have no LCG edges, and caching them on LCG nodes
-      // would go stale across CGSCC updates (e.g. inlining).
+      // Scan current IR directly for decl/indirect calls, callbacks, and
+      // loads/stores. Decls/indirect have no LCG edges, and caching them on
+      // LCG nodes would go stale across CGSCC updates (e.g. inlining).
       SmallPtrSet<const Function *, 4> SeenCallees;
       for (LazyCallGraph::Node &N : C) {
         if (KnowNothing)
@@ -742,10 +743,32 @@ void GlobalsAAResult::AnalyzeCallGraph(LazyCallGraph &LCG, Module &M) {
             KnowNothing = true;
             break;
           }
+
+          // Legacy CallGraph models callback targets as call edges; LCG has
+          // no such edges, so model them here instead.
+          bool CallbackPoison = false;
+          forEachCallbackFunction(*CB, [&](Function *Callback) {
+            if (CallbackPoison || !SeenCallees.insert(Callback).second)
+              return;
+            if (FunctionInfo *CallbackFI = getFunctionInfo(Callback)) {
+              FI.addFunctionInfo(*CallbackFI);
+            } else {
+              // Unknown callback; be conservative unless it is inside our
+              // SCC, whose effects are being computed into this same FI.
+              LazyCallGraph::Node *CallbackN = LCG.lookup(*Callback);
+              if (!CallbackN || LCG.lookupSCC(*CallbackN) != &C)
+                CallbackPoison = true;
+            }
+          });
+          if (CallbackPoison) {
+            KnowNothing = true;
+            break;
+          }
         }
       }
 
-      // The body scan may have found an unknown declaration or indirect call.
+      // The body scan may have found an unknown declaration, indirect call,
+      // or callback.
       if (KnowNothing) {
         for (LazyCallGraph::Node &N : C)
           FunctionInfos.erase(&N.getFunction());
