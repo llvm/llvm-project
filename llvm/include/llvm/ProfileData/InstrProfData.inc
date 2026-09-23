@@ -99,6 +99,9 @@ INSTR_PROF_DATA(const uint16_t, llvm::Type::getInt16Ty(Ctx), \
                                  OffloadDeviceWaveSizeVal))
 INSTR_PROF_DATA(const uint32_t, llvm::Type::getInt32Ty(Ctx), NumBitmapBytes, \
                 ConstantInt::get(llvm::Type::getInt32Ty(Ctx), NumBitmapBytes))
+/* The last NumWaveCounters entries in CounterPtr count GPU wave visits. */
+INSTR_PROF_DATA(const uint32_t, llvm::Type::getInt32Ty(Ctx), NumWaveCounters, \
+                ConstantInt::get(llvm::Type::getInt32Ty(Ctx), NumWaveCounters))
 #undef INSTR_PROF_DATA
 /* INSTR_PROF_DATA end. */
 
@@ -773,9 +776,9 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
         (uint64_t)'f' << 16 | (uint64_t)'R' << 8 | (uint64_t)129
 
 /* Raw profile format version (start from 1). */
-#define INSTR_PROF_RAW_VERSION 11
+#define INSTR_PROF_RAW_VERSION 12
 /* Indexed profile format version (start from 1). */
-#define INSTR_PROF_INDEX_VERSION 14
+#define INSTR_PROF_INDEX_VERSION 15
 /* Coverage mapping format version (start from 0). */
 #define INSTR_PROF_COVMAP_VERSION 6
 

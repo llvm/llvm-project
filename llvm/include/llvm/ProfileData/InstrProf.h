@@ -907,6 +907,8 @@ struct InstrProfValueSiteRecord {
 /// Profiling information for a single function.
 struct InstrProfRecord {
   std::vector<uint64_t> Counts;
+  /// GPU wave visits at each counter index, separate from lane-flow counts.
+  std::vector<uint64_t> WaveCounts;
   std::vector<uint8_t> BitmapBytes;
   /// For AMDGPU offload profiling: raw or merged uniform counters. One uint64_t
   /// per instrumented block, tracking entries where all lanes were active.
@@ -924,8 +926,9 @@ struct InstrProfRecord {
       : Counts(std::move(Counts)), BitmapBytes(std::move(BitmapBytes)) {}
   InstrProfRecord(InstrProfRecord &&) = default;
   InstrProfRecord(const InstrProfRecord &RHS)
-      : Counts(RHS.Counts), BitmapBytes(RHS.BitmapBytes),
-        UniformCounts(RHS.UniformCounts), UniformityBits(RHS.UniformityBits),
+      : Counts(RHS.Counts), WaveCounts(RHS.WaveCounts),
+        BitmapBytes(RHS.BitmapBytes), UniformCounts(RHS.UniformCounts),
+        UniformityBits(RHS.UniformityBits),
         OffloadDeviceWaveSize(RHS.OffloadDeviceWaveSize),
         ValueData(RHS.ValueData
                       ? std::make_unique<ValueProfData>(*RHS.ValueData)
@@ -933,6 +936,7 @@ struct InstrProfRecord {
   InstrProfRecord &operator=(InstrProfRecord &&) = default;
   InstrProfRecord &operator=(const InstrProfRecord &RHS) {
     Counts = RHS.Counts;
+    WaveCounts = RHS.WaveCounts;
     BitmapBytes = RHS.BitmapBytes;
     UniformCounts = RHS.UniformCounts;
     UniformityBits = RHS.UniformityBits;
@@ -1004,6 +1008,7 @@ struct InstrProfRecord {
   /// Clear value data entries, edge counters, and uniformity data.
   void Clear() {
     Counts.clear();
+    WaveCounts.clear();
     UniformCounts.clear();
     UniformityBits.clear();
     OffloadDeviceWaveSize = 0;
@@ -1231,7 +1236,9 @@ enum ProfVersion {
   Version13 = 13,
   // UniformityBits added for AMDGPU offload profiling divergence detection.
   Version14 = 14,
-  // The current version is 14.
+  // GPU wave counts added to record data.
+  Version15 = 15,
+  // The current version is 15.
   CurrentVersion = INSTR_PROF_INDEX_VERSION
 };
 const uint64_t Version = ProfVersion::CurrentVersion;
