@@ -904,8 +904,8 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
       }
     }
     if (EType == EmitterType::CheckCompress) {
-      CodeStream.indent(6) << "if (Size) *Size = " << Dest.TheDef->getValueAsInt("Size")
-                           << ";\n";
+      CodeStream.indent(6) << "if (Size) *Size = "
+                           << Dest.TheDef->getValueAsInt("Size") << ";\n";
     }
     if (CompressOrUncompress)
       CodeStream.indent(6) << "OutInst.setLoc(MI.getLoc());\n";
