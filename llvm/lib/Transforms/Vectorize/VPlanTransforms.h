@@ -171,7 +171,7 @@ struct VPlanTransforms {
   /// recurrences, also creates FirstOrderRecurrenceSplice instructions and
   /// sinks/hoists users as needed. Returns false if any fixed-order
   /// recurrence cannot be handled.
-  static bool createHeaderPhiRecipes(
+  LLVM_ABI_FOR_TEST static bool createHeaderPhiRecipes(
       VPlan &Plan, PredicatedScalarEvolution &PSE, Loop &OrigLoop,
       const VPDominatorTree &VPDT,
       const MapVector<PHINode *, InductionDescriptor> &Inductions,
