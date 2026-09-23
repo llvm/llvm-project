@@ -79,7 +79,7 @@ cc_library(
 # Flag documentation: https://bazel.build/extending/config
 string_flag(
     name = "mpc",
-    build_setting_default = "external",
+    build_setting_default = "disable",
     values = [
         "disable",  # Skip tests that need mpc
         "external",  # Build mpc from source
