@@ -1253,7 +1253,11 @@ Value *LoopIdiomVectorize::expandFindFirstByte(
   if (auto ParentLoop = CurLoop->getParentLoop()) {
     ParentLoop->addBasicBlockToLoop(BB0, *LI);
     ParentLoop->addChildLoop(OuterLoop);
-    ParentLoop->addBasicBlockToLoop(BB4, *LI);
+    // BB4 branches only to ExitSucc, so it belongs to the parent loop only when
+    // that exit is itself inside the parent loop. Otherwise BB4 always leaves,
+    // which would leave a parent block with no in-loop successor.
+    if (ParentLoop->contains(ExitSucc))
+      ParentLoop->addBasicBlockToLoop(BB4, *LI);
   } else {
     LI->addTopLevelLoop(OuterLoop);
   }
