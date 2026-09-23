@@ -5929,7 +5929,7 @@ bool Sema::CheckTemplateArgumentList(
       llvm::SmallVector<UnexpandedParameterPack> Unexpanded;
       collectUnexpandedParameterPacks(TL.getPatternLoc(), Unexpanded);
       for (const auto &UPP : Unexpanded) {
-        auto *TST = UPP.first.dyn_cast<const TemplateSpecializationType *>();
+        auto *TST = dyn_cast<const TemplateSpecializationType *>(UPP.first);
         if (!TST)
           continue;
         assert(isPackProducingBuiltinTemplateName(TST->getTemplateName()));
@@ -10566,10 +10566,12 @@ Sema::ActOnExplicitInstantiation(Scope *S, SourceLocation ExternLoc,
                false, TypeResult(), /*IsTypeSpecifier*/ false,
                /*IsTemplateParamOrArg*/ false, /*OOK=*/OffsetOfKind::Outside)
           .get();
-  assert(!IsDependent && "explicit instantiation of dependent name not yet handled");
 
   if (!TagD)
     return true;
+
+  assert(!IsDependent &&
+         "explicit instantiation of dependent name not yet handled");
 
   TagDecl *Tag = cast<TagDecl>(TagD);
   assert(!Tag->isEnum() && "shouldn't see enumerations here");

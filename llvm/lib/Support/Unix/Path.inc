@@ -83,16 +83,6 @@ extern char **environ;
 #include <sys/mount.h>
 #include <sys/param.h>
 #elif defined(__linux__) || defined(__managarm__)
-#if defined(HAVE_LINUX_MAGIC_H)
-#include <linux/magic.h>
-#else
-#if defined(HAVE_LINUX_NFS_FS_H)
-#include <linux/nfs_fs.h>
-#endif
-#if defined(HAVE_LINUX_SMB_H)
-#include <linux/smb.h>
-#endif
-#endif
 #include <sys/vfs.h>
 #elif defined(_AIX)
 #include <sys/statfs.h>
@@ -123,9 +113,8 @@ namespace llvm {
 namespace sys {
 namespace fs {
 
-const file_t kInvalidFile = -1;
-
-#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) ||     \
+#if defined(__FreeBSD__) || defined(__NetBSD__) ||                             \
+    (defined(__OpenBSD__) && !defined(HAVE_GETEXECPATH)) ||                    \
     defined(__FreeBSD_kernel__) || defined(__linux__) ||                       \
     defined(__CYGWIN__) || defined(__DragonFly__) || defined(_AIX) ||          \
     defined(__GNU__) ||                                                        \
@@ -287,7 +276,16 @@ std::string getMainExecutable(const char *argv0, void *MainAddr) {
   // Fall back to the classical detection.
   if (getprogpath(exe_path, argv0))
     return exe_path;
-#elif defined(__OpenBSD__) || defined(__HAIKU__)
+#elif defined(__OpenBSD__)
+  char exe_path[PATH_MAX];
+#ifdef HAVE_GETEXECPATH
+  if (getexecpath(exe_path, sizeof(exe_path)) == 0)
+    return exe_path;
+#else
+  if (getprogpath(exe_path, argv0) != NULL)
+    return exe_path;
+#endif
+#elif defined(__HAIKU__)
   char exe_path[PATH_MAX];
   // argv[0] only
   if (getprogpath(exe_path, argv0) != NULL)
@@ -794,6 +792,10 @@ std::error_code status(const Twine &Path, file_status &Result, bool Follow) {
   return fillStatus(StatRet, Status, Result);
 }
 
+std::error_code status(file_t F, file_status &Result) {
+  return status(F.get(), Result);
+}
+
 std::error_code status(int FD, file_status &Result) {
   sandbox::violationIfEnabled();
 
@@ -860,8 +862,8 @@ std::error_code setLastAccessAndModificationTime(int FD, TimePoint<> AccessTime,
 #endif
 }
 
-std::error_code mapped_file_region::init(int FD, uint64_t Offset, mapmode Mode,
-                                         const char *Name) {
+std::error_code mapped_file_region::init(file_t FD, uint64_t Offset,
+                                         mapmode Mode, const char *Name) {
   assert(Size != 0);
 
   int flags = (Mode == readwrite) ? MAP_SHARED : MAP_PRIVATE;
@@ -889,13 +891,13 @@ std::error_code mapped_file_region::init(int FD, uint64_t Offset, mapmode Mode,
   }
 #endif // #if defined (__APPLE__)
 
-  Mapping = ::mmap(nullptr, Size, prot, flags, FD, Offset);
+  Mapping = ::mmap(nullptr, Size, prot, flags, FD.get(), Offset);
   if (Mapping == MAP_FAILED)
     return errnoAsErrorCode();
   return std::error_code();
 }
 
-mapped_file_region::mapped_file_region(int fd, mapmode mode, size_t length,
+mapped_file_region::mapped_file_region(file_t fd, mapmode mode, size_t length,
                                        uint64_t offset, std::error_code &ec,
                                        const char *name)
     : Size(length), Mode(mode) {
@@ -1027,11 +1029,9 @@ ErrorOr<basic_file_status> directory_entry::status() const {
   return s;
 }
 
-//
-// FreeBSD optionally provides /proc/self/fd, but it is incompatible with
-// Linux. The thing to use is realpath.
-//
-#if !defined(__FreeBSD__) && !defined(__OpenBSD__)
+// Only enable on OSes that have the /proc filesystem, /proc/self/fd,
+// and semantics compatible with Linux.
+#if defined(__linux__)
 #define TRY_PROC_SELF_FD
 #endif
 
@@ -1200,9 +1200,9 @@ std::error_code openFile(const Twine &Name, int &ResultFD,
   return std::error_code();
 }
 
-Expected<int> openNativeFile(const Twine &Name, CreationDisposition Disp,
-                             FileAccess Access, OpenFlags Flags,
-                             unsigned Mode) {
+Expected<file_t> openNativeFile(const Twine &Name, CreationDisposition Disp,
+                                FileAccess Access, OpenFlags Flags,
+                                unsigned Mode) {
   sandbox::violationIfEnabled();
 
   int FD;
@@ -1260,7 +1260,7 @@ Expected<file_t> openNativeFileForRead(const Twine &Name, OpenFlags Flags,
                                        SmallVectorImpl<char> *RealPath) {
   sandbox::violationIfEnabled();
 
-  file_t ResultFD;
+  int ResultFD;
   std::error_code EC = openFileForRead(Name, ResultFD, Flags, RealPath);
   if (EC)
     return errorCodeToError(EC);
@@ -1288,7 +1288,8 @@ Expected<size_t> readNativeFile(file_t FD, MutableArrayRef<char> Buf) {
 #else
   size_t Size = Buf.size();
 #endif
-  ssize_t NumRead = sys::RetryAfterSignal(-1, ::read, FD, Buf.data(), Size);
+  ssize_t NumRead =
+      sys::RetryAfterSignal(-1, ::read, FD.get(), Buf.data(), Size);
   if (NumRead == -1)
     return errorCodeToError(errnoAsErrorCode());
   return NumRead;
@@ -1305,7 +1306,7 @@ Expected<size_t> readNativeFileSlice(file_t FD, MutableArrayRef<char> Buf,
 #endif
 #ifdef HAVE_PREAD
   ssize_t NumRead =
-      sys::RetryAfterSignal(-1, ::pread, FD, Buf.data(), Size, Offset);
+      sys::RetryAfterSignal(-1, ::pread, FD.get(), Buf.data(), Size, Offset);
 #else
   if (lseek(FD, Offset, SEEK_SET) == -1)
     return errorCodeToError(errnoAsErrorCode());
@@ -1380,8 +1381,8 @@ std::error_code closeFile(file_t &F) {
   sandbox::violationIfEnabled();
 
   file_t TmpF = F;
-  F = kInvalidFile;
-  return Process::SafelyCloseFileDescriptor(TmpF);
+  F = file_t::Invalid;
+  return Process::SafelyCloseFileDescriptor(TmpF.get());
 }
 
 template <typename T>

@@ -542,6 +542,7 @@ def WAVE_BARRIER : SPseudoInstSI<(outs), (ins),
 
 def SCHED_BARRIER : SPseudoInstSI<(outs), (ins i32imm:$mask),
   [(int_amdgcn_sched_barrier (i32 timm:$mask))]> {
+  let usesCustomInserter = 1;
   let SchedRW = [];
   let hasNoSchedulingInfo = 1;
   let hasSideEffects = 1;
@@ -557,6 +558,7 @@ def SCHED_GROUP_BARRIER : SPseudoInstSI<
   (outs),
   (ins i32imm:$mask, i32imm:$size, i32imm:$syncid),
   [(int_amdgcn_sched_group_barrier (i32 timm:$mask), (i32 timm:$size), (i32 timm:$syncid))]> {
+  let usesCustomInserter = 1;
   let SchedRW = [];
   let hasNoSchedulingInfo = 1;
   let hasSideEffects = 1;
@@ -597,7 +599,6 @@ def SI_IF: CFPseudoInstSI <
   [(set i1:$dst, (AMDGPUif i1:$vcc, bb:$target))], 1, 1> {
   let Constraints = "";
   let Size = 12;
-  let hasSideEffects = 1;
   let IsNeverUniform = 1;
 }
 
@@ -605,7 +606,6 @@ def SI_ELSE : CFPseudoInstSI <
   (outs SReg_1:$dst),
   (ins SReg_1:$src, brtarget:$target), [], 1, 1> {
   let Size = 12;
-  let hasSideEffects = 1;
   let IsNeverUniform = 1;
 }
 
@@ -622,11 +622,10 @@ def SI_LOOP : CFPseudoInstSI <
   [(AMDGPUloop i1:$saved, bb:$target)], 1, 1> {
   let Size = 8;
   let isBranch = 1;
-  let hasSideEffects = 1;
   let IsNeverUniform = 1;
 }
 
-} // End isTerminator = 1
+} // End isTerminator = 1, isNotDuplicable = 1
 
 def SI_END_CF : CFPseudoInstSI <
   (outs), (ins SReg_1:$saved), [], 1, 1> {
@@ -4765,6 +4764,7 @@ def G_AMDGPU_BUFFER_LOAD_TFE : BufferLoadGenericInstruction;
 def G_AMDGPU_BUFFER_LOAD_FORMAT : BufferLoadGenericInstruction;
 def G_AMDGPU_BUFFER_LOAD_FORMAT_TFE : BufferLoadGenericInstruction;
 def G_AMDGPU_BUFFER_LOAD_FORMAT_D16 : BufferLoadGenericInstruction;
+def G_AMDGPU_BUFFER_LOAD_FORMAT_D16_TFE : BufferLoadGenericInstruction;
 def G_AMDGPU_TBUFFER_LOAD_FORMAT : TBufferLoadGenericInstruction;
 def G_AMDGPU_TBUFFER_LOAD_FORMAT_D16 : TBufferLoadGenericInstruction;
 
