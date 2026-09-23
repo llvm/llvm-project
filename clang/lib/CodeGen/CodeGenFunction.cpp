@@ -3054,7 +3054,8 @@ void CodeGenFunction::EmitPPCAIXMultiVersionResolver(
       // Map feature names to __builtin_cpu_supports() strings
       BuiltinCpuSupportsArg =
           llvm::StringSwitch<StringRef>(FeatureStr)
-#define PPC_AIX_CLONES_FEATURE(FEATURE_NAME, AIX_BUILTIN_CPU_SUPPORTS_NAME, _) \
+#define PPC_AIX_CLONES_FEATURE(FEATURE_NAME, AIX_BUILTIN_CPU_SUPPORTS_NAME, _, \
+                               __)                                             \
   .Case(FEATURE_NAME, AIX_BUILTIN_CPU_SUPPORTS_NAME)
 #include "llvm/TargetParser/PPCTargetParser.def"
               // Features without runtime checks return empty string

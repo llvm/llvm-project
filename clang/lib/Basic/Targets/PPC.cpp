@@ -769,7 +769,7 @@ llvm::APInt PPCTargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
 
     // Regular feature priority (positive or negative category 2)
     int Priority = llvm::StringSwitch<int>(Feature)
-#define PPC_AIX_CLONES_FEATURE(FEATURE_NAME, _, PRIORITY)                      \
+#define PPC_AIX_CLONES_FEATURE(FEATURE_NAME, _, __, PRIORITY)                  \
   .Case(FEATURE_NAME, PRIORITY)
 #include "llvm/TargetParser/PPCTargetParser.def"
                        .Default(0);
@@ -870,7 +870,8 @@ void PPCTargetInfo::fillValidCPUList(SmallVectorImpl<StringRef> &Values) const {
 bool PPCTargetInfo::isValidClonesFeatureName(StringRef FeatureStr) const {
   // Only features with runtime detection are valid for target_clones
   return llvm::StringSwitch<bool>(FeatureStr)
-#define PPC_AIX_CLONES_FEATURE(FEATURE_NAME, _, __) .Case(FEATURE_NAME, true)
+#define PPC_AIX_CLONES_FEATURE(FEATURE_NAME, _, __, ___)                       \
+  .Case(FEATURE_NAME, true)
 #include "llvm/TargetParser/PPCTargetParser.def"
       .Default(false);
 }

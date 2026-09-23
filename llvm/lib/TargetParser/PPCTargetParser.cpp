@@ -154,7 +154,11 @@ bool isValidFeatureName(StringRef Name) {
 }
 
 bool canDisableFeatureOnAIX(StringRef Name) {
-  return Name == "vsx" || Name == "htm";
+  return llvm::StringSwitch<bool>(Name)
+#define PPC_AIX_CLONES_FEATURE(FEATURE_NAME, _, CAN_DISABLE, ___)              \
+  .Case(FEATURE_NAME, CAN_DISABLE)
+#include "llvm/TargetParser/PPCTargetParser.def"
+      .Default(false);
 }
 
 } // namespace PPC
