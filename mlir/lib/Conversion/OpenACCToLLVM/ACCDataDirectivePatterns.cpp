@@ -21,7 +21,6 @@
 #include "mlir/Conversion/OpenACCToLLVM/ACCToLLVMUtils.h"
 
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtilsCG.h"
@@ -53,26 +52,6 @@ static LogicalResult emitDataRuntimeCall(
   arguments.push_back(asyncQueue);
   return createRuntimeCall(loc, rewriter, globalSymbolRegion, symbolTable, fn,
                            config, arguments);
-}
-
-/// Splices \p region, the body of a structured data construct, into the block
-/// holding \p op, so that the construct itself can be erased. The terminators
-/// of the region branch to the code that follows \p op.
-static void spliceDataRegion(Operation *op, Region &region,
-                             RewriterBase &rewriter) {
-  Block *prev = op->getBlock();
-  Block *succ = rewriter.splitBlock(prev, Block::iterator(op));
-  rewriter.setInsertionPointToEnd(prev);
-  LLVM::BrOp::create(rewriter, op->getLoc(), &region.getBlocks().front());
-  for (Block &block : region.getBlocks()) {
-    Operation *terminator = block.getTerminator();
-    if (isa<acc::TerminatorOp>(terminator)) {
-      rewriter.setInsertionPoint(terminator);
-      LLVM::BrOp::create(rewriter, op->getLoc(), succ);
-      rewriter.eraseOp(terminator);
-    }
-  }
-  rewriter.inlineRegionBefore(region, succ);
 }
 
 namespace {
@@ -158,7 +137,7 @@ struct DataOpLowering : public ACCDataDirectivePattern<DataOp> {
                                         emitEnd)))
       return failure();
 
-    spliceDataRegion(op, op.getRegion(), rewriter);
+    acc::spliceConstructRegion(op, op.getRegion(), rewriter);
     rewriter.eraseOp(op);
     return success();
   }
@@ -217,6 +196,65 @@ struct DataEntryOpLowering : public ConvertOpToLLVMPattern<OpTy> {
   }
 };
 
+/// An `acc.getdeviceptr` clause stands for the device address of an object
+/// whose mapping was established elsewhere. Where it names the object of a
+/// data exit operation, the runtime call of that construct carries the host
+/// address and looks the device one up itself, so the clause is replaced by
+/// the address of the object as any other data entry clause is. Read as a
+/// value, it is the runtime that has to be asked for the address.
+struct GetDevicePtrOpLowering
+    : public ConvertOpToLLVMPattern<acc::GetDevicePtrOp> {
+  GetDevicePtrOpLowering(const LLVMTypeConverter &converter,
+                         OpenACCSupport &accSupport, Region &globalSymbolRegion,
+                         SymbolTable &symbolTable,
+                         const ACCRuntimeCallConfig &config,
+                         PatternBenefit benefit = 1)
+      : ConvertOpToLLVMPattern<acc::GetDevicePtrOp>(converter, benefit),
+        accSupport(accSupport), globalSymbolRegion(globalSymbolRegion),
+        symbolTable(symbolTable), config(config) {}
+
+  /// Returns whether \p user only states the mapping the clause describes,
+  /// which is what a data exit operation and the construct holding the clause
+  /// do.
+  static bool isMappingUse(Operation *user) {
+    return isa<ACC_DATA_EXIT_OPS, ACC_COMPUTE_AND_DATA_CONSTRUCT_OPS,
+               acc::KernelEnvironmentOp>(user);
+  }
+
+  LogicalResult
+  matchAndRewrite(acc::GetDevicePtrOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    bool readAsValue = llvm::any_of(
+        op->getUsers(), [](Operation *user) { return !isMappingUse(user); });
+    if (!readAsValue) {
+      rewriter.replaceOp(op, adaptor.getVar());
+      return success();
+    }
+    // The mapping hands the host address of the object to the runtime call of
+    // the construct, so the clause cannot stand for the device address at the
+    // same time.
+    if (llvm::any_of(op->getUsers(), isMappingUse)) {
+      (void)accSupport.emitNYI(
+          op.getLoc(), "device address read from a clause that also states a "
+                       "mapping of the object");
+      return failure();
+    }
+
+    FailureOr<Value> devicePtr = acc::emitGetDevicePtrCall(
+        op, adaptor.getVar(), /*ifPresent=*/false, rewriter, globalSymbolRegion,
+        symbolTable, config);
+    if (failed(devicePtr))
+      return failure();
+    rewriter.replaceOp(op, *devicePtr);
+    return success();
+  }
+
+  OpenACCSupport &accSupport;
+  Region &globalSymbolRegion;
+  SymbolTable &symbolTable;
+  ACCRuntimeCallConfig config;
+};
+
 /// A data exit operation and the bounds of a mapping have no result to stand
 /// in for, so they are simply removed with the construct that used them.
 template <typename OpTy>
@@ -238,13 +276,17 @@ void mlir::configureACCDataDirectiveConversionLegality(
     ConversionTarget &target) {
   // The map entries themselves stay legal: a construct removes the ones it
   // consumes, and the ones describing a construct that is lowered elsewhere
-  // have to survive this conversion.
+  // have to survive this conversion. An `acc.getdeviceptr` read as a value is
+  // the exception, as the address it stands for is only known to the runtime,
+  // so leaving it behind would state a mapping that nothing carries out.
   target.addIllegalOp<acc::DataOp, acc::EnterDataOp, acc::ExitDataOp,
-                      acc::UpdateOp>();
+                      acc::UpdateOp, acc::GetDevicePtrOp>();
 }
 
-void mlir::populateACCDataClauseOpPatterns(LLVMTypeConverter &converter,
-                                           RewritePatternSet &patterns) {
+void mlir::populateACCDataClauseOpPatterns(
+    LLVMTypeConverter &converter, RewritePatternSet &patterns,
+    acc::OpenACCSupport &accSupport, Region &globalSymbolRegion,
+    SymbolTable &symbolTable, const acc::ACCRuntimeCallConfig &config) {
   // Bounds describe a mapping rather than data, and they are removed together
   // with the clause operations holding them, so their type only has to survive
   // this conversion.
@@ -256,7 +298,6 @@ void mlir::populateACCDataClauseOpPatterns(LLVMTypeConverter &converter,
       DataEntryOpLowering<acc::CreateOp>, DataEntryOpLowering<acc::PresentOp>,
       DataEntryOpLowering<acc::NoCreateOp>, DataEntryOpLowering<acc::AttachOp>,
       DataEntryOpLowering<acc::DevicePtrOp>,
-      DataEntryOpLowering<acc::GetDevicePtrOp>,
       DataEntryOpLowering<acc::UpdateDeviceOp>,
       DataEntryOpLowering<acc::PrivateOp>,
       DataEntryOpLowering<acc::FirstprivateOp>,
@@ -265,6 +306,8 @@ void mlir::populateACCDataClauseOpPatterns(LLVMTypeConverter &converter,
       EraseDataClauseOp<acc::CopyoutOp>, EraseDataClauseOp<acc::DeleteOp>,
       EraseDataClauseOp<acc::DetachOp>, EraseDataClauseOp<acc::UpdateHostOp>,
       EraseDataClauseOp<acc::DataBoundsOp>>(converter);
+  patterns.add<GetDevicePtrOpLowering>(converter, accSupport,
+                                       globalSymbolRegion, symbolTable, config);
 }
 
 void mlir::populateACCDataDirectivePatterns(

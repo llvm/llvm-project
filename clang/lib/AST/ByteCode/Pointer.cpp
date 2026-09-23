@@ -999,6 +999,7 @@ bool Pointer::hasSameBase(const Pointer &A, const Pointer &B) {
                  B.Opaque.Base.asVarDecl()->getMostRecentDecl();
     return false;
   }
+  llvm_unreachable("should have been handled by the fully covered switch");
 }
 
 bool Pointer::pointToSameBlock(const Pointer &A, const Pointer &B) {

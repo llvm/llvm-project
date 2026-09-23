@@ -1704,6 +1704,15 @@ def HasVendorXqccmp
       AssemblerPredicate<(all_of FeatureVendorXqccmp),
                          "'Xqccmp' (Qualcomm 16-bit Push/Pop and Double Moves)">;
 
+def FeatureVendorXqccmi
+    : RISCVExperimentalExtension<0, 2,
+                     "Qualcomm 16-bit Instruction Lookup Table",
+                     [FeatureStdExtZca, FeatureStdExtZicsr]>;
+def HasVendorXqccmi
+    : Predicate<"Subtarget->hasVendorXqccmi()">,
+      AssemblerPredicate<(all_of FeatureVendorXqccmi),
+                         "'Xqccmi' (Qualcomm 16-bit Instruction Lookup Table)">;
+
 def FeatureVendorXqccmt
     : RISCVExperimentalExtension<0, 1, "Qualcomm 16-bit Table Jump",
                      [FeatureStdExtZca, FeatureStdExtZicsr]>;

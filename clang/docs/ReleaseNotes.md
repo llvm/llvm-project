@@ -510,6 +510,14 @@ features cannot lower the translation-unit ABI level;
 
 - Clang now diagnoses matrix logical operations are only supported for HLSL. (GH222381)
 
+- Improve the input size mismatch diagnostic when calling `__builtin_shufflevector` with valid
+  vector element types but different sizes. (GH221791)
+
+- Suggests the correct location for an attribute written before the `using`
+  keyword of an alias-declaration. (#GH155787)
+
+- Improve Clang diagnoses when unary `__imag` operator with non-complex type operand is used as lvalue. (GH222383)
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
@@ -538,6 +546,8 @@ features cannot lower the translation-unit ABI level;
 - Fixed an assertion when `#pragma omp declare simd` or `#pragma omp declare variant` is followed by another OpenMP declarative directive containing a qualified identifier. (#GH217204)
 - Fixed a crash when an `asm` label names the register for a global variable of incomplete type. (#GH219746)
 - Fixed an ICE hat occurred when using `__imag int/float` as lvalue in assignment. (#GH119498)
+- Fixed an assertion failure in `-Wsign-compare` when a negated or complemented vector of unsigned integers was compared against a signed constant. (#GH203575)
+- Fixed an assertion failure when a constant statement expression that declares a variable is used as a bound of an OpenMP loop. A statement expression in a bound of a non-rectangular loop is now diagnosed. (#GH153987)
 
 #### Bug Fixes to Compiler Builtins
 
@@ -570,6 +580,14 @@ features cannot lower the translation-unit ABI level;
   rather than to a declarator chunk. (#GH196982, #GH111463)
 
 #### Bug Fixes to C++ Support
+
+- Fixed lambdas with specifiers or attributes after the capture list being
+  misparsed as function declarations in direct-initialization contexts under
+  `-fms-extensions` or in HLSL mode.
+
+- Fixed the destruction timing of temporaries created by default member
+  initializers during aggregate initialization. Such an initializer is part of
+  the full-expression containing the aggregate initialization. (#GH85601)
 
 - Fixed false-positive module ODR diagnostics when a type is found through a
   using-declaration in one definition and directly in another. ODR hashing also
@@ -628,6 +646,11 @@ features cannot lower the translation-unit ABI level;
   operator required an access check that ran while an enclosing declaration
   was still being parsed. (#GH210692)
 
+- Fixed an assertion when a call to a class object was resolved through a
+  conversion function to a function pointer that was introduced into the class
+  by a using-declaration (e.g. `using Base::operator auto;`). Such a conversion
+  function is now also diagnosed if it is deleted. (#GH189146)
+
 - A workaround that was introduced to fix an issue with the `<format>` header present in some versions of
   libstdc++15 has been extended to support preprocessed input. Previously, splitting the preprocessing and
   compilation step would result in the fix not being applied. (#GH160314)
@@ -656,6 +679,9 @@ features cannot lower the translation-unit ABI level;
   using ``__is_constructible`` on a nested class template inside the definition
   of the containing class. (#GH215166)
 
+- Fixed a crash issue when a value dependent recovery init appeared in constant
+  evaluation context in default constant evaluator.
+
 - Fixed a bug where Clang incorrectly required `promise.return_value()` for a
   dependent `co_return` operand that inits to `void`, instead of using
   `promise.return_void()`. (#GH218368)
@@ -666,6 +692,9 @@ features cannot lower the translation-unit ABI level;
 - Fixed a crash when a non-type template parameter of reference type is bound
   to a subobject and is used in a context that requires an implicit conversion.
   (#GH215900)
+
+- Fixed an assertion when mangling an abbreviated function template whose
+  return type has an ABI tag. (#GH204178)
 
 - Fixed an assertion during template argument deduction where a function parameter pack is referenced by other types in the function type. (#GH28877), (#GH213760)
 
@@ -698,8 +727,19 @@ features cannot lower the translation-unit ABI level;
   class with an invalid non-static data member, such as one qualified with an
   address space. (#GH194605)
 
+- Fixed deduction of the template parameters appearing in the type of a
+  constant template parameter of reference type. (#GH40328)
+
 - Fixed an issue where an explicit specialization of a constexpr variable would
   result in a link error. (#GH219796)
+
+- Fixed ambiguous overload where two non-static member functions with
+  different signatures could be incorrectly considered equivalent. (#GH224499)
+
+- Fixed an assertion failure when explicitly instantiating a nested member with 
+  an ill-formed template argument. Clang now checks for a failed declaration 
+  lookup before asserting that the name is not dependent, avoiding an assertion 
+  after an earlier diagnostic has caused the declaration to be unavailable. (#GH220525)
 
 #### Bug Fixes to AST Handling
 
@@ -737,6 +777,9 @@ features cannot lower the translation-unit ABI level;
 - Fixed an assertion when the `dim` argument to an OpenACC `gang` clause
   evaluated to a value not representable by a signed integer, such as an
   unsigned wrap around. (#GH221418)
+- Fixed an assertion failure when a method or function definition follows an
+  Objective-C `@implementation` that was ended by a nested `@interface`,
+  `@protocol` or `@implementation` before its `@end`. (#GH209503)
 
 ### OpenACC Specific Changes
 
@@ -769,6 +812,8 @@ features cannot lower the translation-unit ABI level;
 
 #### X86 Support
 
+- Support `AVX10_V2_AUX` ISA (`-mavx10v2aux`).
+
 #### Arm and AArch64 Support
 
 - Added support for pointer authentication discrimination of C++ virtual table
@@ -780,6 +825,11 @@ features cannot lower the translation-unit ABI level;
 - Enabled PAC and BTI by default for AArch64 Android targets.
 
 #### Windows Support
+
+- Clang now accepts ``_except`` as an alias for ``__except`` in SEH handler
+  position when ``-fms-compatibility`` is enabled, matching the existing
+  ``_try``, ``_finally``, and ``_leave`` aliases. ``_except`` remains an ordinary
+  identifier outside that context.
 
 - Fixed ``setjmp`` on 32-bit Arm passing the frame pointer, rather than the
   stack pointer as it was on entry to the function, as the frame value the CRT
@@ -793,6 +843,11 @@ features cannot lower the translation-unit ABI level;
   ([#210174](https://github.com/llvm/llvm-project/issues/210174))
 
 #### LoongArch Support
+
+- `loongarch32-*-none-elf` and `loongarch64-*-none-elf` targets now use the
+  bare-metal toolchain, like other bare-metal targets. The linker is run
+  directly instead of through `gcc`, and host include directories are no
+  longer searched.
 
 #### RISC-V Support
 
@@ -867,6 +922,14 @@ features cannot lower the translation-unit ABI level;
 
 ### Code Completion
 
+- Parameters declared with a `decltype` are now presented as the type the
+  `decltype` resolves to, e.g. `set_x(int val)` rather than
+  `set_x(decltype(x) val)`. This affects the completion strings produced by
+  libclang as well as those used by clangd.
+
+- Members inherited from a dependent base class that is named through an alias
+  template are suggested by code completion when relevant.
+
 ### Static Analyzer
 
 #### Crash and bug fixes
@@ -901,6 +964,9 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 
 ### OpenMP Support
 
+- Added the OpenMP 6.1 `#pragma omp flatten` loop transformation and the
+  `depth` clause. Flatten combines perfectly nested canonical loops into one
+  loop. `depth(k)` selects how many outermost loops to combine (default 2).
 - Canonicalize intra-tiles in loop tiling. `#pragma omp tile` still emits a
   min-bounded inner loop, which vectorizes well. When a parent directive such as
   `for collapse(n)` needs a constant per-tile trip count, Clang rereads a
@@ -914,8 +980,6 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   - A loop transformation (`tile`, `unroll`, `interchange`, ...) that consumes
     another tile's intra-tile loop.
 
-- Added parsing and semantic support for `dims` modifier in `num_teams` and
-  `thread_limit` clauses for OpenMP 6.1 or later.
 - Added parsing and semantic support for `dims` modifier in `num_teams`,
   `thread_limit` and `num_threads` clauses for OpenMP 6.1 or later.
 - Map-type-modifying modifiers applied to a list item with a user-defined mapper
@@ -926,6 +990,21 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 - The `holds` clause on the `assume` directive now lowers side-effect-free
   conditions to `llvm.assume`, enabling downstream optimizations. Previously
   the clause was parsed but its condition was discarded without effect.
+
+- Added support for capturing structured bindings in OpenMP regions
+  (a C++20 extension; warned as an extension in C++17). Individual bindings
+  form aggregate decompositions(structs, classes, and arrays) can now be used
+  in data-sharing clauses (``private``, ``firstprivate``, ``lastprivate``,
+  ``shared``, ``linear``) and ``map`` clauses for target directives.
+  Tuple-like bindings (types using the tuple protocol with ``get<N>()``,
+  such as ``std::pair`` or ``std::tuple``) are not yet supported and
+  will produce a compilation error. Reduction clauses with structured bindings
+  are not yet supported.
+  When the original variable is explicitly mapped in a target region
+  but only bindings from it are used (not the original variable itself),
+  modifications to the bindings will not be reflected in the original variable.
+  To ensure correct behavior, either use the original variable directly in the
+  target region or map the bindings explicitly instead.
 
 ### SYCL Support
 

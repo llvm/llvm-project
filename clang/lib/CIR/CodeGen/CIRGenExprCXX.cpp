@@ -1776,8 +1776,9 @@ mlir::Value CIRGenFunction::emitCXXNewExpr(const CXXNewExpr *e) {
     // conditionally (with an active flag) after the branch. The enclosing
     // FullExprCleanupScope detects this via ConditionalEvaluationFinder and
     // provides the cleanup region for the deferred destructors.
-    ConditionalEvaluation eval(*this);
     mlir::Value isNotNull = builder.createPtrIsNotNull(allocation.getPointer());
+
+    ConditionalEvaluation eval(*this);
     nullCheckOp =
         cir::IfOp::create(builder, getLoc(e->getSourceRange()), isNotNull,
                           /*withElseRegion=*/false,

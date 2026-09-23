@@ -180,7 +180,23 @@ def ACCDeclareCtorDtorConversion
     Option<"priority", "priority", "int32_t", /*default=*/"102",
            "Priority for ACC declare global constructors and destructors">,
     Option<"generateDtors", "generate-dtors", "bool", /*default=*/"true",
-           "Generate LLVM destructor functions and register them globally">
+           "Generate LLVM destructor functions and register them globally">,
+    Option<"extraCtorName", "extra-ctor-name", "std::string",
+           /*default=*/"\"acc.extra_ctor\"",
+           "Name of the extra constructor function added to global ctors.">,
+    ListOption<"extraConstructors", "extra-constructors", "std::string",
+               "Extra functions to declare and call from an OpenACC "
+               "constructor.">,
+    ListOption<"entryOnlyConstructors", "entry-only-constructors",
+               "std::string",
+               "Extra functions to declare and call from an OpenACC "
+               "constructor when the entry-point-name is defined and present "
+               "in the module">,
+    Option<"entryPointName", "entry-point-name", "std::string",
+           /*default=*/"",
+           "Symbol name of the entry point. Extra constructors with "
+           "in entryOnlyConstructors are emitted only when this symbol is "
+           "present. Empty means entryOnlyConstructors are never emitted.">
   ];
   let dependentDialects = ["mlir::LLVM::LLVMDialect"];
 }
