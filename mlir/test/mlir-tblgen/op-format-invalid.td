@@ -3,19 +3,101 @@
 // This file contains tests for the specification of the declarative op format.
 
 include "mlir/IR/OpBase.td"
+include "mlir/IR/EnumAttr.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 
 def TestDialect : Dialect {
   let name = "test";
 }
+def TestStrictPropertiesDialect : Dialect {
+  let name = "test_strict_properties";
+  let useStrictPropertiesInAssemblyFormat = 1;
+}
 class TestFormat_Op<string fmt, list<Trait> traits = []>
     : Op<TestDialect, "format_op", traits> {
+  let assemblyFormat = fmt;
+}
+class TestStrictPropertiesFormat_Op<string fmt, list<Trait> traits = []>
+    : Op<TestStrictPropertiesDialect, "format_op", traits> {
   let assemblyFormat = fmt;
 }
 
 //===----------------------------------------------------------------------===//
 // Directives
 //===----------------------------------------------------------------------===//
+
+//===----------------------------------------------------------------------===//
+// enum
+//===----------------------------------------------------------------------===//
+
+def DirectiveEnumCase : I32EnumCase<"Case", 0>;
+def DirectiveEnum : I32Enum<"DirectiveEnum", "test enum",
+                            [DirectiveEnumCase]>;
+def DirectiveEnumAttr : EnumAttr<TestDialect, DirectiveEnum, "enum">;
+
+def DirectiveUnbuildableEnumAttr
+    : EnumAttr<TestDialect, DirectiveEnum, "unbuildable_enum"> {
+  let constBuilderCall = "";
+}
+
+def DirectiveBitEnumNone : I32BitEnumCaseNone<"None", "none">;
+def DirectiveBitEnumCase : I32BitEnumCaseBit<"Case", 0, "case">;
+def DirectiveCommaBitEnum
+    : I32BitEnum<"DirectiveCommaBitEnum", "comma bit enum",
+                 [DirectiveBitEnumNone, DirectiveBitEnumCase]> {
+  let cppNamespace = "::test";
+  let separator = ", ";
+}
+def DirectiveCommaBitEnumAttr
+    : EnumAttr<TestDialect, DirectiveCommaBitEnum, "comma_bit_enum">;
+
+def DirectiveNoZeroBitEnum
+    : I32BitEnum<"DirectiveNoZeroBitEnum", "bit enum without zero",
+                 [DirectiveBitEnumCase]> {
+  let cppNamespace = "::test";
+}
+def DirectiveNoZeroBitEnumAttr
+    : EnumAttr<TestDialect, DirectiveNoZeroBitEnum, "no_zero_bit_enum">;
+
+// CHECK: error: 'enum' directive expects an enum attribute
+def DirectiveAEnumInvalidA : TestFormat_Op<[{
+  enum($attr) attr-dict
+}]>, Arguments<(ins I64Attr:$attr)>;
+
+// CHECK: error: 'enum' directive expects an enum attribute
+def DirectiveAEnumInvalidB : TestFormat_Op<[{
+  enum($operand) attr-dict
+}]>, Arguments<(ins I64:$operand)>;
+
+// CHECK: error: 'enum' and 'qualified' directives cannot be combined
+def DirectiveAEnumInvalidC : TestFormat_Op<[{
+  qualified(enum($attr)) attr-dict
+}]>, Arguments<(ins DirectiveEnumAttr:$attr)>;
+
+// CHECK: error: 'enum' and 'qualified' directives cannot be combined
+def DirectiveAEnumInvalidD : TestFormat_Op<[{
+  enum(qualified($attr)) attr-dict
+}]>, Arguments<(ins DirectiveEnumAttr:$attr)>;
+
+// CHECK: error: 'enum' directive can only be used at the top level
+def DirectiveAEnumInvalidE : TestFormat_Op<[{
+  custom<Foo>(enum($attr)) attr-dict
+}]>, Arguments<(ins DirectiveEnumAttr:$attr)>;
+
+// CHECK: error: 'enum' directive requires an enum attribute with an underlying type and a constant builder
+def DirectiveAEnumInvalidF : TestFormat_Op<[{
+  enum($attr) attr-dict
+}]>, Arguments<(ins DirectiveUnbuildableEnumAttr:$attr)>;
+
+// CHECK: error: 'enum' directive requires a bit enum to define a zero-valued case
+def DirectiveAEnumInvalidG : TestFormat_Op<[{
+  enum($attr) attr-dict
+}]>, Arguments<(ins DirectiveNoZeroBitEnumAttr:$attr)>;
+
+// CHECK: error: unquoted bit enum cannot be followed by its ',' separator literal
+def DirectiveAEnumInvalidH : TestFormat_Op<[{
+  enum($attr) `,` attr-dict
+}]>, Arguments<(ins DirectiveCommaBitEnumAttr:$attr)>;
 
 //===----------------------------------------------------------------------===//
 // attr-dict
@@ -36,6 +118,24 @@ def DirectiveAttrDictInvalidC : TestFormat_Op<[{
 def DirectiveAttrDictInvalidD : TestFormat_Op<[{
   type(attr-dict)
 }]>;
+
+// CHECK: error: strict properties in assembly format requires prop-dict
+// CHECK-SAME: unless all inherent attributes and properties are bound in the
+// CHECK-SAME: custom assembly format; missing attribute 'attr'
+def DirectiveAttrDictInvalidE : TestStrictPropertiesFormat_Op<[{
+  attr-dict
+}]> {
+  let arguments = (ins I64Attr:$attr);
+}
+
+// CHECK: error: strict properties in assembly format requires prop-dict
+// CHECK-SAME: unless all inherent attributes and properties are bound in the
+// CHECK-SAME: custom assembly format; missing property 'prop'
+def DirectiveAttrDictInvalidF : TestStrictPropertiesFormat_Op<[{
+  attr-dict
+}]> {
+  let arguments = (ins IntProp<"int64_t">:$prop);
+}
 
 //===----------------------------------------------------------------------===//
 // custom
@@ -346,9 +446,29 @@ def OIListErrorNoLiteral : TestFormat_Op<[{
 def OIListLiteralAmbiguity : TestFormat_Op<[{
   oilist( `foo` | `bar` ) `foo` attr-dict
 }]>;
+// CHECK: error: format ambiguity because foo is used as both an oilist separator and clause keyword.
+def OIListSeparatorClauseAmbiguity : TestFormat_Op<[{
+  oilist<`foo`>(`foo`) attr-dict
+}]>;
+// CHECK: error: format ambiguity because , is used both in oilist element and the adjacent literal.
+def OIListSeparatorLiteralAmbiguity : TestFormat_Op<[{
+  oilist<`,`>(`foo`) `,` attr-dict
+}]>;
+// CHECK: error: expected literal, but got '>'
+def OIListSeparatorMissing : TestFormat_Op<[{
+  oilist<>(`foo`) attr-dict
+}]>;
 // CHECK: error: expected '(' before oilist argument list
 def OIListStartingToken : TestFormat_Op<[{
   oilist `wrong` attr-dict
+}]>;
+// CHECK: error: expected '>' after oilist separator
+def OIListUnterminatedSeparator : TestFormat_Op<[{
+  oilist<`,` (`foo`) attr-dict
+}]>;
+// CHECK: error: oilist separator must be a non-whitespace literal
+def OIListWhitespaceSeparator : TestFormat_Op<[{
+  oilist<` `>(`foo`) attr-dict
 }]>;
 
 //===----------------------------------------------------------------------===//

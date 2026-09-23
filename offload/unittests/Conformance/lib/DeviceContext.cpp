@@ -175,6 +175,7 @@ DeviceContext::DeviceContext(std::size_t GlobalDeviceId)
                 llvm::Twine(Devices.size()));
 
   DeviceHandle = Devices[GlobalDeviceId].Handle;
+  OL_CHECK(olCreateContext(1, &DeviceHandle, &Context));
 }
 
 DeviceContext::DeviceContext(llvm::StringRef Platform, std::size_t DeviceId)
@@ -210,6 +211,12 @@ DeviceContext::DeviceContext(llvm::StringRef Platform, std::size_t DeviceId)
 
   GlobalDeviceId = *FoundGlobalDeviceId;
   DeviceHandle = Devices[GlobalDeviceId].Handle;
+  OL_CHECK(olCreateContext(1, &DeviceHandle, &Context));
+}
+
+DeviceContext::~DeviceContext() {
+  if (Context)
+    olDestroyContext(Context);
 }
 
 [[nodiscard]] llvm::Expected<std::shared_ptr<DeviceImage>>
@@ -245,7 +252,7 @@ DeviceContext::loadBinary(llvm::StringRef Directory,
 
   ol_program_handle_t ProgramHandle = nullptr;
   const ol_result_t OlResult =
-      olCreateProgram(DeviceHandle, BinaryData->getBufferStart(),
+      olCreateProgram(Context, DeviceHandle, BinaryData->getBufferStart(),
                       BinaryData->getBufferSize(), &ProgramHandle);
 
   if (OlResult != OL_SUCCESS) {

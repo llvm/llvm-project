@@ -117,8 +117,8 @@ bool WebAssemblyRegisterInfo::eliminateFrameIndex(
   unsigned FIRegOperand = FrameRegister;
   if (FrameOffset) {
     // Create i32/64.add SP, offset and make it the operand.
-    const TargetRegisterClass *PtrRC =
-        MRI.getTargetRegisterInfo()->getPointerRegClass();
+    const TargetRegisterClass *PtrRC = TII->getRegClass(
+        TII->get(WebAssemblyFrameLowering::getOpcConst(MF)), 0);
     Register OffsetOp = MRI.createVirtualRegister(PtrRC);
     BuildMI(MBB, *II, II->getDebugLoc(),
             TII->get(WebAssemblyFrameLowering::getOpcConst(MF)),
@@ -149,13 +149,6 @@ WebAssemblyRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   return Regs[TFI->hasFP(MF)][TT.isArch64Bit()];
 }
 
-const TargetRegisterClass *
-WebAssemblyRegisterInfo::getPointerRegClass(unsigned Kind) const {
-  assert(Kind == 0 && "Only one kind of pointer on WebAssembly");
-  return TT.getArch() == Triple::wasm64 ? &WebAssembly::I64RegClass
-                                        : &WebAssembly::I32RegClass;
-}
-
 static const TargetRegisterClass &getRegClassForBank(const RegisterBank &RB) {
   switch (RB.getID()) {
   case WebAssembly::I32RegBankID:
@@ -180,12 +173,8 @@ static const TargetRegisterClass &getRegClassForBank(const RegisterBank &RB) {
 }
 
 const TargetRegisterClass *
-WebAssemblyRegisterInfo::getConstrainedRegClassForOperand(
-    const MachineOperand &MO, const MachineRegisterInfo &MRI) const {
-  assert(MO.isReg());
-
-  Register Reg = MO.getReg();
-
+WebAssemblyRegisterInfo::getConstrainedRegClassForReg(
+    Register Reg, const MachineRegisterInfo &MRI) const {
   if (Reg.isPhysical()) {
     switch (Reg.id()) {
     case WebAssembly::SP32:

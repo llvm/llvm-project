@@ -128,8 +128,8 @@ while.end:
 
 ; CHECK-COST-LABEL: umin
 ; CHECK-COST: Found an estimated cost of 2 for VF 1 For instruction:   %1 = tail call i8 @llvm.umin.i8(i8 %0, i8 %offset)
-; CHECK-COST: Cost of 1 for VF 2: WIDEN-INTRINSIC ir<%1> = call llvm.umin(ir<%0>, ir<%offset>)
-; CHECK-COST: Cost of 1 for VF 4: WIDEN-INTRINSIC ir<%1> = call llvm.umin(ir<%0>, ir<%offset>)
+; CHECK-COST: Cost of 3 for VF 2: WIDEN-INTRINSIC ir<%1> = call llvm.umin(ir<%0>, ir<%offset>)
+; CHECK-COST: Cost of 3 for VF 4: WIDEN-INTRINSIC ir<%1> = call llvm.umin(ir<%0>, ir<%offset>)
 ; CHECK-COST: Cost of 1 for VF 8: WIDEN-INTRINSIC ir<%1> = call llvm.umin(ir<%0>, ir<%offset>)
 ; CHECK-COST: Cost of 1 for VF 16: WIDEN-INTRINSIC ir<%1> = call llvm.umin(ir<%0>, ir<%offset>)
 
