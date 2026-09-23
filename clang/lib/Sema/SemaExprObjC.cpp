@@ -1049,6 +1049,12 @@ CheckObjCDictionaryLiteralUTF8Keys(Sema &S, ObjCDictionaryLiteral *Literal) {
     return;
   if (Literal->isValueDependent() || Literal->isTypeDependent())
     return;
+  // With -fno-constant-cfstrings the keys are emitted as
+  // OBJC_CLASS_$_NSConstantString, which preserves the original bytes (no
+  // truncation) and compares them as-is at lookup time, so an ill-formed key
+  // is still found and there is nothing to warn about.
+  if (S.getLangOpts().NoConstantCFStrings)
+    return;
 
   for (unsigned Idx = 0, End = Literal->getNumElements(); Idx != End; ++Idx) {
     Expr *Key = Literal->getKeyValueElement(Idx).Key->IgnoreParenImpCasts();

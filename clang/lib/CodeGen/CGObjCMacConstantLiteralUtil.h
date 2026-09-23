@@ -99,7 +99,13 @@ public:
   NSDictionaryBuilder(
       const ObjCDictionaryLiteral *E,
       ArrayRef<std::pair<llvm::Constant *, llvm::Constant *>> KeysAndObjects,
-      const Options O = Options::Sorted) {
+      const Options O = Options::Sorted,
+      // When keys are emitted as constant CFStrings (the default), they are
+      // stored and looked up as UTF-16, so sort by UTF-16 code unit. When
+      // -fno-constant-cfstrings is passed, keys are instead emitted as
+      // OBJC_CLASS_$_NSConstantString and compared as raw bytes at lookup
+      // time, so sort by UTF-8 byte order (LKS < RKS) to match.
+      bool SortKeysByUTF16 = true) {
     Opts = static_cast<uint64_t>(O);
     uint64_t const NumElements = KeysAndObjects.size();
 
@@ -110,10 +116,12 @@ public:
     SmallVector<size_t, 16> ElementIndicies(NumElements);
     std::iota(ElementIndicies.begin(), ElementIndicies.end(), 0);
 
-    // Precompute the UTF-16 form of each string key. The runtime stores keys as
-    // UTF-16 and looks them up by UTF-16 code-unit order, so we must sort by the
-    // same order here. Sorting by the raw UTF-8 bytes instead would diverge for
-    // keys mixing characters in U+E000..U+FFFF with astral characters
+    // Precompute the UTF-16 form of each string key (unless the keys are not
+    // emitted as constant CFStrings, in which case UTF-16 comparison does not
+    // apply). The runtime stores constant-CFString keys as UTF-16 and looks
+    // them up by UTF-16 code-unit order, so we must sort by the same order
+    // here. Sorting by the raw UTF-8 bytes instead would diverge for keys
+    // mixing characters in U+E000..U+FFFF with astral characters
     // (U+10000..U+10FFFF), because UTF-16 encodes the latter with lead
     // surrogates (0xD800..0xDBFF) that sort *below* 0xE000 -- causing the
     // runtime's lookup to miss keys that are actually present.
@@ -121,12 +129,16 @@ public:
     // A key need not be well-formed UTF-8: string literals with invalid or
     // partial sequences are legal in the AST (Sema warns about them separately;
     // see warn_objc_dictionary_ill_formed_utf8_key). We deliberately mirror the
-    // constant CFString emitter (CodeGenModule::GetConstantCFStringEntry), which
-    // runs ConvertUTF8toUTF16 with strictConversion and keeps whatever prefix
-    // converts successfully, so we sort by exactly the code units the string is
-    // stored and looked up as. Any trailing bytes that fail to convert are
-    // dropped from the sort key; this cannot crash and yields a valid
-    // strict-weak ordering regardless of well-formedness.
+    // constant CFString emitter (CodeGenModule::GetConstantCFStringEntry),
+    // which runs ConvertUTF8toUTF16 with strictConversion and keeps whatever
+    // prefix converts successfully, so we sort by exactly the code units the
+    // string is stored and looked up as. Any trailing bytes that fail to
+    // convert are dropped from the sort key; this cannot crash and yields a
+    // valid strict-weak ordering regardless of well-formedness. The raw UTF-8
+    // bytes of each key, used for byte-order sorting when the keys are not
+    // emitted as UTF-16 constant CFStrings.
+    SmallVector<StringRef, 16> KeysUTF8;
+    KeysUTF8.reserve(NumElements);
     SmallVector<SmallVector<llvm::UTF16, 16>, 16> KeysUTF16(NumElements);
     for (size_t I = 0; I < NumElements; ++I) {
       Expr *const K = E->getKeyValueElement(I).Key->IgnoreImpCasts();
@@ -136,9 +148,13 @@ public:
       // NOTE: Using the `StringLiteral->getString()` since it checks that
       //       `chars` are 1 byte
       StringRef KS = SL->getString()->getString();
+      KeysUTF8.push_back(KS);
+      if (!SortKeysByUTF16)
+        continue;
       SmallVectorImpl<llvm::UTF16> &Dst = KeysUTF16[I];
       Dst.resize(KS.size()); // UTF-16 needs <= as many code units as UTF-8.
-      const llvm::UTF8 *SrcPtr = reinterpret_cast<const llvm::UTF8 *>(KS.data());
+      const llvm::UTF8 *SrcPtr =
+          reinterpret_cast<const llvm::UTF8 *>(KS.data());
       llvm::UTF16 *DstPtr = Dst.data();
       llvm::ConvertUTF8toUTF16(&SrcPtr, SrcPtr + KS.size(), &DstPtr,
                                DstPtr + Dst.size(), llvm::strictConversion);
@@ -147,17 +163,22 @@ public:
     }
 
     // Now perform the sorts and shift the indicies as needed
-    llvm::stable_sort(
-        ElementIndicies, [O, &KeysUTF16](size_t LI, size_t RI) {
-          // Sort by UTF-16 code unit to match the runtime's lookup order. This
-          // is a deterministic total order, so it still aids link-time de-dupe,
-          // and it supports the runtime's `O(log n)` worst-case lookup.
-          // ArrayRef::operator< is a lexicographic code-unit comparison.
-          if (O == Options::Sorted)
-            return ArrayRef<llvm::UTF16>(KeysUTF16[LI]) <
-                   ArrayRef<llvm::UTF16>(KeysUTF16[RI]);
-          llvm_unreachable("Unexpected `NSDictionaryBuilder::Options given");
-        });
+    llvm::stable_sort(ElementIndicies, [O, SortKeysByUTF16, &KeysUTF8,
+                                        &KeysUTF16](size_t LI, size_t RI) {
+      // This is a deterministic total order, so it still aids link-time
+      // de-dupe, and it supports the runtime's `O(log n)` worst-case
+      // lookup. ArrayRef::operator< is a lexicographic code-unit
+      // comparison.
+      if (O == Options::Sorted) {
+        if (SortKeysByUTF16)
+          return ArrayRef<llvm::UTF16>(KeysUTF16[LI]) <
+                 ArrayRef<llvm::UTF16>(KeysUTF16[RI]);
+        // Sort by raw UTF-8 byte order (LKS < RKS) to match the lookup
+        // order used for OBJC_CLASS_$_NSConstantString keys.
+        return KeysUTF8[LI] < KeysUTF8[RI];
+      }
+      llvm_unreachable("Unexpected `NSDictionaryBuilder::Options given");
+    });
 
     // Finally use the sorted indicies to insert into `Elements`.
     for (auto &Idx : ElementIndicies) {
