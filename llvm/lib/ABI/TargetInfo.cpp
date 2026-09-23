@@ -41,10 +41,6 @@ bool TargetInfo::isPromotableInteger(const IntegerType *IT) const {
   return BitWidth < 32;
 }
 
-unsigned TargetInfo::getBitIntRegThreshold() const {
-  return hasInt128Type() ? 128 : getLongLongWidth();
-}
-
 ArgInfo TargetInfo::getNaturalAlignIndirect(const Type *Ty, unsigned AddrSpace,
                                             bool ByVal) const {
   return ArgInfo::getIndirect(Ty->getAlignment(), ByVal, AddrSpace);

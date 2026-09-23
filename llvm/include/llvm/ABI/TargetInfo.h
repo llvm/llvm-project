@@ -96,7 +96,9 @@ protected:
   LLVM_ABI bool isPromotableInteger(const IntegerType *IT) const;
 
   /// Bit width above which a _BitInt cannot stay in registers.
-  LLVM_ABI unsigned getBitIntRegThreshold() const;
+  unsigned getBitIntRegThreshold() const {
+    return hasInt128Type() ? 128 : getLongLongWidth();
+  }
   LLVM_ABI ArgInfo getNaturalAlignIndirect(const Type *Ty, unsigned AddrSpace,
                                            bool ByVal = true) const;
   LLVM_ABI bool isAggregateTypeForABI(const Type *Ty) const;
