@@ -2238,6 +2238,14 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_file_file_io_result",
+    hdrs = ["src/__support/File/file_io_result.h"],
+    deps = [
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_file_file",
     srcs = [
         "include/llvm-libc-types/off_t.h",
@@ -2252,6 +2260,7 @@ libc_support_library(
         ":__support_cpp_new",
         ":__support_cpp_span",
         ":__support_error_or",
+        ":__support_file_file_io_result",
         ":__support_libc_errno",
         ":__support_macros_attributes",
         ":__support_macros_config",
