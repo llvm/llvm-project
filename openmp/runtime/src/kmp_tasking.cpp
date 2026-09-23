@@ -2910,7 +2910,11 @@ static void __kmp_taskgraph_exec_descr_start(kmp_int32 gtid, kmp_info_t *thread,
   KMP_TASKGRAPH_REGION_TARGET_CASES: {
 #if ENABLE_LIBOMPTARGET
     // Invoke a recorded target construct synchronously.
+    if (descr->region->mutexset)
+      __kmp_taskgraph_acquire_locks(gtid, descr->region->owner, descr->region);
     __kmp_taskgraph_exec_target(thread, descr->region);
+    if (descr->region->mutexset)
+      __kmp_taskgraph_release_locks(gtid, descr->region->owner, descr->region);
     for (kmp_taskgraph_exec_descr_elem_t *s = descr->successors; s; s = s->next)
       __kmp_taskgraph_exec_descr_start(gtid, thread, s->exec_descr, taskgroup);
 #else
