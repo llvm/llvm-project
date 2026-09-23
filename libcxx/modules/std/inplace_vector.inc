@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 export namespace std {
-#if _LIBCPP_STD_VER >= 26
+#if _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_EXPERIMENTAL_INPLACE_VECTOR
   using std::inplace_vector;
 
   using std::erase;

@@ -35,3 +35,7 @@
 #if !_LIBCPP_HAS_EXPERIMENTAL_HARDENING_OBSERVE_SEMANTIC
 #  error "-fexperimental-library should allow using the Hardening observe semantic"
 #endif
+
+#if !_LIBCPP_HAS_EXPERIMENTAL_INPLACE_VECTOR
+#  error "-fexperimental-library should enable the inplace_vector header"
+#endif
