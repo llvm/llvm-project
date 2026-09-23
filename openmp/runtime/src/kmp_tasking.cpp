@@ -5958,6 +5958,10 @@ static void __kmp_taskgraph_reset(kmp_taskgraph_record_t *rec, kmp_int32 gtid,
   rec->graph_id = graph_id;
   rec->record_map = nullptr;
   rec->alloc_root = nullptr;
+  // A reused record was only handed back because it had no users left, and a
+  // fresh one is raw memory, so this is an initialisation either way.
+  KMP_ATOMIC_ST_RLX(&rec->replay_users, 0);
+  rec->expired = false;
   if (!keep_recycled_deps)
     rec->recycled_deps = nullptr;
   rec->num_tasks = 0;
@@ -6124,18 +6128,22 @@ static kmp_task_t *__kmp_taskgraph_clone_task(kmp_info_t *thread,
 // executed.  For now, this just frees everything in the list immediately: when
 // multiple concurrent playbacks are implemented, it should only free records
 // with zero usage counts.
-// When available, a kmp_taskgraph_record_t structure is returned for reuse by
-// a subsequent taskgraph recording.
+//
+// When available (and if WANT_REUSE is true), a kmp_taskgraph_record_t
+// structure is returned for reuse by a subsequent taskgraph recording.
 
-static kmp_taskgraph_record_t *
-__kmp_expire_taskgraph_records(kmp_int32 gtid,
-                               kmp_taskgraph_record_t **expiring_p) {
+static kmp_taskgraph_record_t *__kmp_expire_taskgraph_records(
+    kmp_int32 gtid, kmp_taskgraph_record_t **expiring_p, bool want_reuse) {
   kmp_taskgraph_record_t *record = nullptr;
 
   while (*expiring_p) {
     kmp_taskgraph_record_t *expiring = *expiring_p;
+    if (KMP_ATOMIC_LD_ACQ(&expiring->replay_users) != 0) {
+      expiring_p = &expiring->next;
+      continue;
+    }
     *expiring_p = expiring->next;
-    if (!record) {
+    if (want_reuse && !record) {
       record = expiring;
       __kmp_taskgraph_free(gtid, record, /*keep_rec=*/true);
     } else {
@@ -6208,11 +6216,14 @@ void __kmpc_taskgraph(ident_t *loc_ref, kmp_int32 gtid,
       KMP_FATAL(OmpTaskgraphConcurrentRecord, src_loc, graph_id);
       __kmp_str_free(&src_loc);
     }
-    // Move the existing record to the header's expiring list
+    // Move the existing record to the header's expiring list.  It can't be used
+    // for new replays from here on.
+    record->expired = true;
     *record_p = record->next;
     record->next = header->expiring;
     header->expiring = record;
-    reuse_record = __kmp_expire_taskgraph_records(gtid, &header->expiring);
+    reuse_record = __kmp_expire_taskgraph_records(gtid, &header->expiring,
+                                                  /*want_reuse=*/true);
     record = nullptr;
   }
   if (!record) {
@@ -6232,9 +6243,13 @@ void __kmpc_taskgraph(ident_t *loc_ref, kmp_int32 gtid,
     // taskgroup.
     KMP_ATOMIC_ST_REL(&taskgroup->taskgraph.recording, record);
   }
+  // Decide between recording and replaying while the header lock is still
+  // held, and increment the usage count if we're going to replay.
+  kmp_taskgraph_status_t status = KMP_ATOMIC_LD_ACQ(&record->status);
+  if (status == KMP_TDG_READY)
+    KMP_ATOMIC_INC(&record->replay_users);
   __kmp_release_lock(&header->header_lock, gtid);
 
-  kmp_taskgraph_status_t status = KMP_ATOMIC_LD_ACQ(&record->status);
   if (status == KMP_TDG_RECORDING)
     entry(args);
   else if (status == KMP_TDG_READY) {
@@ -6257,6 +6272,14 @@ void __kmpc_taskgraph(ident_t *loc_ref, kmp_int32 gtid,
     __kmp_replay_taskgraph(gtid, current_taskdata, record, graph_id, taskgroup);
     __kmpc_end_taskgroup(loc_ref, gtid);
     __kmp_release_lock(&record->map_lock, gtid);
+    // Decrement usage count and expire our record if it was 'graph_reset' by
+    // some thread during this replay.
+    if (KMP_ATOMIC_DEC(&record->replay_users) == 1) {
+      __kmp_acquire_lock(&header->header_lock, gtid);
+      __kmp_expire_taskgraph_records(gtid, &header->expiring,
+                                     /*want_reuse=*/false);
+      __kmp_release_lock(&header->header_lock, gtid);
+    }
     return;
   }
 
