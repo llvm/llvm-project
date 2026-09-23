@@ -78,6 +78,14 @@ public:
   bool hasInt128Type() const override { return false; }
 };
 
+// A default-classifying target whose alloca space is non-zero, so indirect
+// classifications must carry that address space.
+class AllocaAS5DefaultTargetInfo : public TestTargetInfo {
+public:
+  using TestTargetInfo::TestTargetInfo;
+  unsigned getAllocaAddrSpace() const override { return 5; }
+};
+
 class TargetInfoTest : public ::testing::Test {
 protected:
   llvm::BumpPtrAllocator Alloc;
@@ -178,6 +186,15 @@ TEST_F(TargetInfoTest, DefaultArgRecordInMemoryIsIndirectNoByVal) {
   ArgInfo Info = classifyArg(recordInMemory());
   ASSERT_TRUE(Info.isIndirect());
   EXPECT_FALSE(Info.getIndirectByVal());
+}
+
+// The default classifier routes indirect args through the target's alloca
+// space.
+TEST_F(TargetInfoTest, DefaultArgIndirectUsesAllocaAddrSpace) {
+  AllocaAS5DefaultTargetInfo TI(TB);
+  ArgInfo Info = TI.classifyArgumentType(recordInMemory());
+  ASSERT_TRUE(Info.isIndirect());
+  EXPECT_EQ(Info.getIndirectAddrSpace(), 5u);
 }
 
 // A _BitInt wider than 128 bits is passed indirectly.
