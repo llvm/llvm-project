@@ -127,8 +127,12 @@ set(RUNTIMES_hexagon-unknown-linux-musl_LLVM_ENABLE_PER_TARGET_RUNTIME_DIR OFF C
 # The Hexagon driver's getCompilerRTPath() returns ${SysRoot}/usr/lib/,
 # so compiler-rt libraries must be installed there with arch-suffix names.
 # Headers stay in the resource dir (COMPILER_RT_INSTALL_INCLUDE_DIR default).
+# NOTE: must be CACHE STRING, not CACHE PATH.  A relative PATH-typed cache
+# entry is resolved against the (runtimes sub-) build directory, which sent the
+# sanitizer libs to obj_llvm/.../runtimes-bins instead of the sysroot.  STRING
+# is joined to CMAKE_INSTALL_PREFIX at install time, matching LIBCXX_* below.
 set(RUNTIMES_hexagon-unknown-linux-musl_COMPILER_RT_INSTALL_LIBRARY_DIR
-    "target/hexagon-unknown-linux-musl/usr/lib" CACHE PATH "")
+    "target/hexagon-unknown-linux-musl/usr/lib" CACHE STRING "")
 
 # libc++/libcxxabi/libunwind headers and libraries -> sysroot.
 # Paths are relative to CMAKE_INSTALL_PREFIX (the host toolchain root).
@@ -170,11 +174,11 @@ set(RUNTIMES_hexagon-unknown-linux-musl_COMPILER_RT_CXX_LIBRARY "libcxx" CACHE S
 set(RUNTIMES_hexagon-unknown-linux-musl_COMPILER_RT_USE_BUILTINS_LIBRARY ON CACHE BOOL "")
 set(RUNTIMES_hexagon-unknown-linux-musl_SANITIZER_CXX_ABI "libc++" CACHE STRING "")
 set(RUNTIMES_hexagon-unknown-linux-musl_SANITIZER_CXX_ABI_INTREE ON CACHE BOOL "")
+# COMPILER_RT_BUILD_{SANITIZERS,XRAY,PROFILE,GWP_ASAN,LIBFUZZER,MEMPROF,
+# CTX_PROFILE} all default ON upstream, so they're left unset here.
+# COMPILER_RT_SANITIZERS_TO_BUILD defaults to "all"; set explicitly for
+# documentation clarity. Sanitizers Hexagon can't support (e.g. tsan) simply
+# aren't built, since Hexagon is absent from their own
+# ALL_<X>_SUPPORTED_ARCH list in cmake/Modules/AllSupportedArchDefs.cmake.
 set(RUNTIMES_hexagon-unknown-linux-musl_COMPILER_RT_BUILD_BUILTINS OFF CACHE BOOL "")
-set(RUNTIMES_hexagon-unknown-linux-musl_COMPILER_RT_BUILD_SANITIZERS ON CACHE BOOL "")
-set(RUNTIMES_hexagon-unknown-linux-musl_COMPILER_RT_BUILD_XRAY ON CACHE BOOL "")
-set(RUNTIMES_hexagon-unknown-linux-musl_COMPILER_RT_BUILD_PROFILE ON CACHE BOOL "")
-set(RUNTIMES_hexagon-unknown-linux-musl_COMPILER_RT_BUILD_GWP_ASAN ON CACHE BOOL "")
-set(RUNTIMES_hexagon-unknown-linux-musl_COMPILER_RT_BUILD_LIBFUZZER ON CACHE BOOL "")
-set(RUNTIMES_hexagon-unknown-linux-musl_COMPILER_RT_BUILD_MEMPROF ON CACHE BOOL "")
-set(RUNTIMES_hexagon-unknown-linux-musl_COMPILER_RT_BUILD_CTX_PROFILE ON CACHE BOOL "")
+set(RUNTIMES_hexagon-unknown-linux-musl_COMPILER_RT_SANITIZERS_TO_BUILD "all" CACHE STRING "")

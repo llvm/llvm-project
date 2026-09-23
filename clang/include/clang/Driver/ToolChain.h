@@ -26,6 +26,7 @@
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/VersionTuple.h"
+#include "llvm/Support/VirtualFileSystemFwd.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cassert>
@@ -43,11 +44,6 @@ class ArgList;
 class DerivedArgList;
 
 } // namespace opt
-namespace vfs {
-
-class FileSystem;
-
-} // namespace vfs
 } // namespace llvm
 
 namespace clang {
@@ -435,6 +431,7 @@ public:
   // Helper methods
 
   std::string GetFilePath(const char *Name) const;
+  std::optional<std::string> GetFilePathIfExists(const char *Name) const;
   std::string GetProgramPath(const char *Name) const;
 
   /// Returns the linker path, respecting the -fuse-ld= argument to determine
@@ -783,6 +780,10 @@ public:
   // given compilation arguments.
   virtual CXXStdlibType GetCXXStdlibType(const llvm::opt::ArgList &Args) const;
 
+  // GetCXXStdlibName - Determine the name of the C++ standard library to use
+  // with the given compilation arguments.
+  virtual StringRef GetCXXStdlibName(const llvm::opt::ArgList &Args) const;
+
   // GetUnwindLibType - Determine the unwind library type to use with the
   // given compilation arguments.
   virtual UnwindLibType GetUnwindLibType(const llvm::opt::ArgList &Args) const;
@@ -911,7 +912,9 @@ public:
       return;
     }
 
-    if (TT.isAMDGPU()) {
+    if (TT.isAMDGCN()) {
+      // Fixup legacy "amdgcn" triples to "amdgpu"
+      TT.setArch(llvm::Triple::amdgpu, TT.getSubArch());
       if (TT.getVendor() == llvm::Triple::UnknownVendor)
         TT.setVendor(llvm::Triple::AMD);
       if (TT.getOS() == llvm::Triple::UnknownOS)

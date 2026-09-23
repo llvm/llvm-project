@@ -17,7 +17,6 @@
 #include <cstddef>
 #include <cstring>
 #include <utility>
-#include <vector>
 
 namespace Fortran::parser {
 
@@ -36,6 +35,7 @@ Prescanner::Prescanner(const Prescanner &that, Preprocessor &prepro,
     bool isNestedInIncludeDirective)
     : messages_{that.messages_}, cooked_{that.cooked_}, preprocessor_{prepro},
       allSources_{that.allSources_}, features_{that.features_},
+      preprocessingEnabled_{that.preprocessingEnabled_},
       preprocessingOnly_{that.preprocessingOnly_},
       expandIncludeLines_{that.expandIncludeLines_},
       isNestedInIncludeDirective_{isNestedInIncludeDirective},
@@ -69,6 +69,17 @@ static inline int IsSpaceOrTab(const char *p) {
 
 static inline constexpr bool IsFixedFormCommentChar(char ch) {
   return ch == '!' || ch == '*' || ch == 'C' || ch == 'c';
+}
+
+static bool HasTabInLabelField(const char *col1, const char *limit) {
+  std::uint64_t len{static_cast<std::uint64_t>(limit - col1)};
+  int n{len < 6 ? static_cast<int>(len) : 6};
+  for (int i{0}; i < n && col1[i] != '\n'; ++i) {
+    if (col1[i] == '\t') {
+      return true;
+    }
+  }
+  return false;
 }
 
 static void NormalizeCompilerDirectiveCommentMarker(TokenSequence &dir) {
@@ -197,19 +208,21 @@ void Prescanner::Statement() {
       }
       tokens.CloseToken();
       SkipSpaces();
-      if (InConditionalLine() && inFixedForm_ && !tabInCurrentLine_ &&
-          column_ == 6 && *at_ != '\n') {
-        // !$   0   - turn '0' into a space
-        // !$   1   - turn '1' into '&'
+      if ((InConditionalLine() || IsOpenMPDirective()) && inFixedForm_ &&
+          !tabInCurrentLine_ && column_ == 6 && *at_ != '\n') {
         if (int n{IsSpace(at_)}; n || *at_ == '0') {
+          // !$   0   - turn '0' into a space
           at_ += n ? n : 1;
-        } else {
+          ++column_;
+          SkipSpaces();
+        } else if (InConditionalLine()) {
+          // !$   1   - turn '1' into '&'
           ++at_;
           EmitChar(tokens, '&');
           tokens.CloseToken();
+          ++column_;
+          SkipSpaces();
         }
-        ++column_;
-        SkipSpaces();
       }
     }
     break;
@@ -345,6 +358,9 @@ void Prescanner::Statement() {
     while (CompilerDirectiveContinuation(tokens, line.sentinel)) {
       newlineProvenance = GetCurrentProvenance();
     }
+    if (inFixedForm_ && !preprocessingOnly_ && tokens.HasBlanks()) {
+      tokens.RemoveBlanks();
+    }
     if (preprocessingOnly_ && inFixedForm_ && InConditionalLine() &&
         nextLine_ < limit_) {
       // In -E mode, when the line after !$ conditional compilation is a
@@ -432,6 +448,25 @@ void Prescanner::LabelField(TokenSequence &token) {
   int colOffset{column_ - 1};
   const char *start{at_};
   std::optional<int> badColumn;
+
+  // Skip C-style comments.
+  if (preprocessingEnabled_) {
+    const char *p{SkipWhiteSpace(start)};
+    std::uint64_t spaces{HasTabInLabelField(start - colOffset, limit_)
+            ? 6
+            : static_cast<std::uint64_t>(p - start)};
+    if (colOffset + spaces < 6 && IsCComment(p)) {
+      at_ += spaces;
+      column_ += spaces;
+      SkipCComments(/*reportUnterminated=*/true);
+      if (at_ > start + spaces) {
+        WarnCComment(p);
+        colOffset = column_ - 1;
+        start = at_;
+      }
+    }
+  }
+
   for (; *at_ != '\n' && column_ <= 6; ++at_) {
     if (*at_ == '\t') {
       ++at_;
@@ -598,7 +633,7 @@ void Prescanner::NextChar() {
 // fixed form, and all forms of line continuation.
 bool Prescanner::SkipToNextSignificantCharacter() {
   if (inPreprocessorDirective_) {
-    SkipCComments();
+    SkipCComments(/*reportUnterminated=*/false);
     return false;
   } else {
     auto anyContinuationLine{false};
@@ -622,19 +657,22 @@ bool Prescanner::SkipToNextSignificantCharacter() {
   }
 }
 
-void Prescanner::SkipCComments() {
+void Prescanner::SkipCComments(bool reportUnterminated) {
   while (true) {
     if (IsCComment(at_)) {
       if (const char *after{SkipCComment(at_)}) {
-        column_ += after - at_;
-        // May have skipped over one or more newlines; relocate the start of
-        // the next line.
-        nextLine_ = at_ = after;
-        NextLine();
+        UpdateSourcePositionAfterSkip(after);
       } else {
-        // Don't emit any messages about unclosed C-style comments, because
-        // the sequence /* can appear legally in a FORMAT statement.  There's
-        // no ambiguity, since the sequence */ cannot appear legally.
+        // Error messages for unterminated C-style comments should be emitted
+        // only when preprocessing is enabled, since the sequence /* can
+        // appear legally in a FORMAT statement.
+        // At the moment, errors are emitted only for some code paths, such as
+        // when processing label fields, while others keep the old behavior of
+        // ignoring unterminated C-style comments.
+        // TODO Always emit an error when preprocessing is enabled.
+        if (preprocessingEnabled_ && reportUnterminated) {
+          Say(GetProvenance(at_), "unterminated C-style comment"_err_en_US);
+        }
         break;
       }
     } else if (inPreprocessorDirective_ && at_[0] == '\\' && at_ + 2 < limit_ &&
@@ -643,6 +681,13 @@ void Prescanner::SkipCComments() {
     } else {
       break;
     }
+  }
+}
+
+void Prescanner::WarnCComment(const char *at) {
+  if (features_.ShouldWarn(LanguageFeature::ClassicCComments)) {
+    Say(LanguageFeature::ClassicCComments, GetProvenance(at),
+        "nonstandard usage: C-style comment"_port_en_US);
   }
 }
 
@@ -660,11 +705,31 @@ const char *Prescanner::SkipWhiteSpace(const char *p) {
   return p;
 }
 
+// If `cComment` is non-null, C-style comments are skipped, and `*cComment`
+// is set to point to the first C-style comment found, or to null if none
+// were found.
+// If `cComment` is null, C-style comments are not skipped.
+//
+// The returned first C-style comment is used to emit a warning if that
+// comment is actually consumed. This is consistent with how C-style
+// comment warnings are emitted elsewhere: only the first one is warned
+// about, then SkipCComments is called, which may skip multiple C-style
+// comments.
 const char *Prescanner::SkipWhiteSpaceIncludingEmptyMacros(
-    const char *p) const {
+    const char *p, const char **cComment) const {
+  const char *firstCComment{nullptr};
   while (true) {
     if (int n{IsSpaceOrTab(p)}) {
       p += n;
+    } else if (cComment && IsCComment(p)) {
+      if (const char *after{SkipCComment(p)}) {
+        if (!firstCComment) {
+          firstCComment = p;
+        }
+        p = after;
+      } else {
+        break;
+      }
     } else if (preprocessor_.AnyDefinitions() && IsLegalIdentifierStart(*p)) {
       // Skip keyword macros with empty definitions
       const char *q{p + 1};
@@ -680,6 +745,9 @@ const char *Prescanner::SkipWhiteSpaceIncludingEmptyMacros(
     } else {
       break;
     }
+  }
+  if (cComment) {
+    *cComment = firstCComment;
   }
   return p;
 }
@@ -714,44 +782,68 @@ const char *Prescanner::SkipCComment(const char *p) const {
   return p;
 }
 
+// When skipping over C-style comments, one or more newlines may be skipped.
+// Adjust current position, column, and next line in source.
+void Prescanner::UpdateSourcePositionAfterSkip(const char *after) {
+  if (at_ >= after) {
+    return;
+  }
+  const char *nl{after - 1};
+  while (nl > at_ && *nl != '\n') {
+    --nl;
+  }
+  if (*nl == '\n' && after >= nextLine_) {
+    column_ = after - nl;
+    nextLine_ = nl + 1;
+    NextLine();
+  } else {
+    column_ += after - at_;
+  }
+  at_ = after;
+}
+
 bool Prescanner::NextToken(TokenSequence &tokens) {
   CHECK(at_ >= start_ && at_ < limit_);
-  if (InFixedFormSource() && !preprocessingOnly_) {
+  bool compilingFixedForm{InFixedFormSource() && !preprocessingOnly_};
+  if (compilingFixedForm) {
     SkipSpaces();
-  } else {
-    if (*at_ == '/' && IsCComment(at_)) {
-      // Recognize and skip over classic C style /*comments*/ when
-      // outside a character literal.
-      if (features_.ShouldWarn(LanguageFeature::ClassicCComments)) {
-        Say(LanguageFeature::ClassicCComments, GetCurrentProvenance(),
-            "nonstandard usage: C-style comment"_port_en_US);
-      }
-      SkipCComments();
+  }
+  if (*at_ == '/' && IsCComment(at_) &&
+      (!compilingFixedForm || preprocessingEnabled_)) {
+    // Recognize and skip over classic C style /*comments*/ when
+    // outside a character literal.
+    const char *before{at_};
+    SkipCComments(/*reportUnterminated=*/false);
+    if (at_ > before) {
+      WarnCComment(before);
     }
-    if (IsSpaceOrTab(at_)) {
-      // Compress free-form white space into a single space character.
-      const auto theSpace{at_};
-      char previous{at_ <= start_ ? ' ' : at_[-1]};
-      NextChar();
+    if (compilingFixedForm) {
       SkipSpaces();
-      if (*at_ == '\n' && !omitNewline_) {
-        // Discard white space at the end of a line.
-      } else if (!inPreprocessorDirective_ &&
-          (previous == '(' || *at_ == '(' || *at_ == ')')) {
-        // Discard white space before/after '(' and before ')', unless in a
-        // preprocessor directive.  This helps yield space-free contiguous
-        // names for generic interfaces like OPERATOR( + ) and
-        // READ ( UNFORMATTED ), without misinterpreting #define f (notAnArg).
-        // This has the effect of silently ignoring the illegal spaces in
-        // the array constructor ( /1,2/ ) but that seems benign; it's
-        // hard to avoid that while still removing spaces from OPERATOR( / )
-        // and OPERATOR( // ).
-      } else {
-        // Preserve the squashed white space as a single space character.
-        tokens.PutNextTokenChar(' ', GetProvenance(theSpace));
-        tokens.CloseToken();
-        return true;
-      }
+    }
+  }
+  if (!compilingFixedForm && IsSpaceOrTab(at_)) {
+    // Compress free-form white space into a single space character.
+    const auto theSpace{at_};
+    char previous{at_ <= start_ ? ' ' : at_[-1]};
+    NextChar();
+    SkipSpaces();
+    if (*at_ == '\n' && !omitNewline_) {
+      // Discard white space at the end of a line.
+    } else if (!inPreprocessorDirective_ &&
+        (previous == '(' || *at_ == '(' || *at_ == ')')) {
+      // Discard white space before/after '(' and before ')', unless in a
+      // preprocessor directive.  This helps yield space-free contiguous
+      // names for generic interfaces like OPERATOR( + ) and
+      // READ ( UNFORMATTED ), without misinterpreting #define f (notAnArg).
+      // This has the effect of silently ignoring the illegal spaces in
+      // the array constructor ( /1,2/ ) but that seems benign; it's
+      // hard to avoid that while still removing spaces from OPERATOR( / )
+      // and OPERATOR( // ).
+    } else {
+      // Preserve the squashed white space as a single space character.
+      tokens.PutNextTokenChar(' ', GetProvenance(theSpace));
+      tokens.CloseToken();
+      return true;
     }
   }
   brokenToken_ = false;
@@ -827,6 +919,22 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
       EmitChar(tokens, *at_);
       ++at_, ++column_;
       hadContinuation = SkipToNextSignificantCharacter();
+      // Fixed-form !$omp: padding / trailing `!` in cols 7-72 before newline
+      // should allow continuation to splice split identifiers.
+      if (!hadContinuation && inFixedForm_ && IsOpenMPDirective() &&
+          !preprocessingOnly_ && IsSpaceOrTab(at_)) {
+        const char *probe{at_};
+        int col{column_};
+        while (col <= fixedFormColumnLimit_ && IsSpaceOrTab(probe)) {
+          probe += IsSpaceOrTab(probe);
+          ++col;
+        }
+        if (col > fixedFormColumnLimit_ || *probe == '\n' || *probe == '\r' ||
+            (*probe == '!' && col <= fixedFormColumnLimit_)) {
+          SkipSpaces();
+          hadContinuation = SkipToNextSignificantCharacter();
+        }
+      }
       if (hadContinuation && IsLegalIdentifierStart(*at_)) {
         if (brokenToken_) {
           break;
@@ -1335,6 +1443,7 @@ bool Prescanner::SkipCommentLine(bool afterAmpersand) {
   } else {
     auto lineClass{ClassifyLine(nextLine_)};
     if (lineClass.kind == LineClassification::Kind::Comment) {
+      nextLine_ += lineClass.payloadOffset; // advance to '!' or newline
       NextLine();
       return true;
     } else if (lineClass.kind ==
@@ -1360,18 +1469,44 @@ bool Prescanner::SkipCommentLine(bool afterAmpersand) {
   return false;
 }
 
-const char *Prescanner::FixedFormContinuationLine(bool atNewline) {
+const char *Prescanner::FixedFormContinuationLine(
+    bool atNewline, const char *&cComment, const char *&unterminatedCComment) {
+  cComment = nullptr;
+  unterminatedCComment = nullptr;
   if (IsAtEnd()) {
     return nullptr;
   }
   tabInCurrentLine_ = false;
   char col1{*nextLine_};
+  const char *afterWhiteSpace{SkipWhiteSpace(nextLine_)};
+  const char *afterCComment{nullptr};
+  if (preprocessingEnabled_ && IsCComment(afterWhiteSpace) &&
+      !HasTabInLabelField(nextLine_, limit_)) {
+    afterCComment = SkipCComment(afterWhiteSpace);
+    if (afterCComment == nullptr) {
+      unterminatedCComment = afterWhiteSpace;
+    } else {
+      cComment = afterWhiteSpace;
+    }
+  }
+  std::uint64_t maxLineLength{static_cast<std::uint64_t>(limit_ - nextLine_)};
+  std::uint64_t n{maxLineLength < 5 ? maxLineLength - 1 : 4};
+  int trailingSpaces{0};
+  for (std::uint64_t i{afterCComment
+               ? static_cast<std::uint64_t>(afterCComment - nextLine_)
+               : 1};
+      i <= n && nextLine_[i] == ' '; ++i) {
+    ++trailingSpaces;
+  }
+  bool cCommentAndSpaces{afterCComment &&
+      afterCComment - nextLine_ + trailingSpaces == 5 &&
+      std::memchr(nextLine_, '\n', n + 1) == nullptr};
   bool canBeNonDirectiveContinuation{
-      (col1 == ' ' ||
-          ((col1 == 'D' || col1 == 'd') &&
-              features_.IsEnabled(LanguageFeature::OldDebugLines))) &&
-      nextLine_[1] == ' ' && nextLine_[2] == ' ' && nextLine_[3] == ' ' &&
-      nextLine_[4] == ' '};
+      ((col1 == ' ' ||
+           ((col1 == 'D' || col1 == 'd') &&
+               features_.IsEnabled(LanguageFeature::OldDebugLines))) &&
+          trailingSpaces == 4) ||
+      cCommentAndSpaces};
   if (InCompilerDirective() && !(InConditionalLine() && !preprocessingOnly_)) {
     // !$ under -E is not continued, but deferred to later compilation
     if (IsFixedFormCommentChar(col1) &&
@@ -1436,10 +1571,22 @@ const char *Prescanner::FixedFormContinuationLine(bool atNewline) {
     if (canBeNonDirectiveContinuation) {
       const char *col6{nextLine_ + 5};
       if (*col6 != '\n' && *col6 != '0' && !IsSpaceOrTab(col6)) {
-        if ((*col6 == 'i' || *col6 == 'I') && IsIncludeLine(nextLine_)) {
-          // It's an INCLUDE line, not a continuation
-        } else {
-          return nextLine_ + 6;
+        const char *afterCol6CComment{nullptr};
+        if (preprocessingEnabled_ && IsCComment(col6) &&
+            !unterminatedCComment) {
+          afterCol6CComment = SkipCComment(col6);
+          if (afterCol6CComment == nullptr) {
+            unterminatedCComment = col6;
+          } else if (!cComment) {
+            cComment = col6;
+          }
+        }
+        if (afterCol6CComment == nullptr) {
+          if ((*col6 == 'i' || *col6 == 'I') && IsIncludeLine(nextLine_)) {
+            // It's an INCLUDE line, not a continuation
+          } else {
+            return nextLine_ + 6;
+          }
         }
       }
     }
@@ -1459,13 +1606,9 @@ constexpr bool IsDirective(const char *match, const char *dir) {
   return true;
 }
 
-const char *Prescanner::FreeFormContinuationLine(bool ampersand) {
+const char *Prescanner::GetFreeFormContinuationLine(
+    bool ampersand, const char *p) {
   const char *lineStart{nextLine_};
-  const char *p{lineStart};
-  if (p >= limit_) {
-    return nullptr;
-  }
-  p = SkipWhiteSpaceIncludingEmptyMacros(p);
   if (InCompilerDirective()) {
     if (InConditionalLine()) {
       if (preprocessingOnly_) {
@@ -1551,6 +1694,21 @@ const char *Prescanner::FreeFormContinuationLine(bool ampersand) {
   }
 }
 
+const char *Prescanner::FreeFormContinuationLine(bool ampersand) {
+  const char *lineStart{nextLine_};
+  const char *p{lineStart};
+  if (p >= limit_) {
+    return nullptr;
+  }
+  const char *cComment;
+  p = SkipWhiteSpaceIncludingEmptyMacros(lineStart, &cComment);
+  p = GetFreeFormContinuationLine(ampersand, p);
+  if (p && cComment) {
+    WarnCComment(cComment);
+  }
+  return p;
+}
+
 bool Prescanner::FixedFormContinuation(bool atNewline) {
   // N.B. We accept '&' as a continuation indicator in fixed form, too,
   // but not in a character literal.
@@ -1558,7 +1716,17 @@ bool Prescanner::FixedFormContinuation(bool atNewline) {
     return false;
   }
   do {
-    if (const char *cont{FixedFormContinuationLine(atNewline)}) {
+    const char *cComment{nullptr};
+    const char *unterminatedCComment{nullptr};
+    if (const char *cont{FixedFormContinuationLine(
+            atNewline, cComment, unterminatedCComment)}) {
+      if (cComment) {
+        WarnCComment(cComment);
+      }
+      if (unterminatedCComment) {
+        Say(GetProvenance(unterminatedCComment),
+            "unterminated C-style comment"_err_en_US);
+      }
       BeginSourceLine(cont);
       column_ = 7;
       NextLine();
@@ -1589,8 +1757,8 @@ bool Prescanner::FreeFormContinuation() {
   }
   do {
     if (const char *cont{FreeFormContinuationLine(ampersand)}) {
-      BeginSourceLine(cont);
-      NextLine();
+      UpdateSourcePositionAfterSkip(cont);
+      tabInCurrentLine_ = false;
       return true;
     }
   } while (SkipCommentLine(ampersand));
@@ -1676,11 +1844,15 @@ Prescanner::IsFixedFormCompilerDirectiveLine(const char *start) const {
     }
     ++column;
   }
-  if (isOpenMPConditional) {
+  const bool isOpenMPSentinelScan{isOpenMPConditional ||
+      (features_.IsEnabled(LanguageFeature::OpenMP) &&
+          std::strcmp(sentinel, "$omp") == 0)};
+  if (isOpenMPSentinelScan) {
     for (; column <= fixedFormColumnLimit_; ++column, ++p) {
       if (IsSpaceOrTab(p)) {
       } else if (*p == '!') {
-        return std::nullopt; // !$    ! is a comment, not a directive
+        return std::nullopt; // sentinel + blanks + ! is a comment, not a
+                             // directive
       } else {
         break;
       }
@@ -1696,7 +1868,8 @@ Prescanner::IsFixedFormCompilerDirectiveLine(const char *start) const {
 
 std::optional<Prescanner::LineClassification>
 Prescanner::IsFreeFormCompilerDirectiveLine(const char *start) const {
-  if (const char *p{SkipWhiteSpaceIncludingEmptyMacros(start)};
+  if (const char *p{
+          SkipWhiteSpaceIncludingEmptyMacros(start, /*cComment=*/nullptr)};
       p && *p == '!') {
     if (auto lnClass{IsCompilerDirectiveSentinelAfterKeywordMacro(p + 1)}) {
       if (lnClass->kind == LineClassification::Kind::CompilerDirective) {
@@ -1771,7 +1944,16 @@ const char *Prescanner::IsCompilerDirectiveSentinel(
     return nullptr;
   }
   const auto iter{compilerDirectiveSentinels_.find(std::string(sentinel, len))};
-  return iter == compilerDirectiveSentinels_.end() ? nullptr : iter->c_str();
+  if (iter == compilerDirectiveSentinels_.end()) {
+    return nullptr;
+  }
+  // OpenMP 5.2, 3.1: "omx" is an extension sentinel for fixed source form only
+  // (the free-form extension sentinel is "ompx"), so a free-form "!$omx" is an
+  // ordinary comment rather than a directive.
+  if (!inFixedForm_ && *iter == "$omx") {
+    return nullptr;
+  }
+  return iter->c_str();
 }
 
 const char *Prescanner::IsCompilerDirectiveSentinel(CharBlock token) const {
@@ -1929,7 +2111,7 @@ bool Prescanner::CompilerDirectiveContinuation(
   if (nextContinuation) {
     // What follows is !DIR$ & xxx; skip over the & so that it
     // doesn't cause a spurious continuation.
-    at_ = nextContinuation;
+    UpdateSourcePositionAfterSkip(nextContinuation);
   } else {
     // What follows looks like a source line before macro expansion,
     // but might become a directive continuation afterwards.
@@ -1985,10 +2167,9 @@ bool Prescanner::SourceLineContinuation(TokenSequence &tokens) {
       NextLine();
       return true;
     } else if (const char *nextContinuation{FreeFormContinuationLine(true)}) {
-      BeginSourceLine(nextLine_);
-      NextLine();
+      UpdateSourcePositionAfterSkip(nextContinuation);
+      tabInCurrentLine_ = false;
       TokenSequence followingTokens;
-      at_ = nextContinuation;
       while (NextToken(followingTokens)) {
       }
       if (auto followingPrepro{

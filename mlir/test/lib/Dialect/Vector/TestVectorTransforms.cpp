@@ -9,13 +9,13 @@
 #include <optional>
 
 #include "mlir/Analysis/SliceAnalysis.h"
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Affine/IR/AffineDialect.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
+#include "mlir/Dialect/NVGPU/IR/NVGPUDialectDecl.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
@@ -210,6 +210,21 @@ struct TestVectorUnrollingPatterns
                   if (resultShape.size() == 2 && resultShape[0] == 2 &&
                       resultShape[1] == 1) {
                     return SmallVector<int64_t>{1, 1};
+                  }
+                  // Multi-group cases: tile contiguous per reassociation group
+                  // but strided in the whole result.
+                  auto sourceShape = shapeCast.getSourceVectorType().getShape();
+                  if (resultShape.size() == 3 && resultShape[0] == 8 &&
+                      resultShape[1] == 1 && resultShape[2] == 32) {
+                    return SmallVector<int64_t>{8, 1, 4};
+                  }
+                  if (sourceShape.size() == 3 && resultShape.size() == 2 &&
+                      resultShape[0] == 4 && resultShape[1] == 4) {
+                    return SmallVector<int64_t>{2, 2};
+                  }
+                  if (resultShape.size() == 3 && resultShape[0] == 2 &&
+                      resultShape[1] == 8 && resultShape[2] == 4) {
+                    return SmallVector<int64_t>{2, 2, 2};
                   }
                   // Default case: [2,4] for all tests.
                   return SmallVector<int64_t>{2, 4};
@@ -777,7 +792,7 @@ struct TestCreateVectorBroadcast
 
   void runOnOperation() override {
     getOperation()->walk([](Operation *op) {
-      if (op->getName().getStringRef() != "test_create_broadcast")
+      if (op->getName().getStringRef() != "test.create_broadcast")
         return;
       auto targetShape =
           cast<VectorType>(op->getResult(0).getType()).getShape();

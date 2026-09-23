@@ -18,7 +18,7 @@
 #include <cstdio>
 #include <string>
 
-#if defined(_LIBCPP_WIN32API)
+#ifdef _WIN32
 #  define PATHSTR(x) (L##x)
 #  define PATH_CSTR_FMT "\"%ls\""
 #else

@@ -6,14 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "flang/Optimizer/CodeGen/TypeConverter.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
-#include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Optimizer/Support/Utils.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/PatternMatch.h"
@@ -22,11 +21,10 @@
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LogicalResult.h"
-#include "mlir/Transforms/DialectConversion.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "flang-cuf-function-rewrite"
@@ -41,16 +39,15 @@ using namespace mlir;
 namespace {
 
 using genFunctionType =
-    std::function<mlir::Value(mlir::PatternRewriter &, fir::CallOp op)>;
+    std::function<mlir::Value(mlir::RewriterBase &, fir::CallOp op)>;
 
-class CallConversion : public OpRewritePattern<fir::CallOp> {
+class CallConversion {
 public:
-  CallConversion(MLIRContext *context)
-      : OpRewritePattern<fir::CallOp>(context) {}
+  explicit CallConversion(bool deferAccRoutines)
+      : deferAccRoutines_(deferAccRoutines) {}
 
-  LogicalResult
-  matchAndRewrite(fir::CallOp op,
-                  mlir::PatternRewriter &rewriter) const override {
+  LogicalResult matchAndRewrite(fir::CallOp op,
+                                mlir::RewriterBase &rewriter) const {
     auto callee = op.getCallee();
     if (!callee)
       return failure();
@@ -74,6 +71,19 @@ public:
     if (!func.isExternal())
       return failure();
 
+    // Defer folding in the host copy of an OpenACC routine. Device
+    // specialization later clones the host body to build the device routine, so
+    // folding it to the host value now would bake that value into the device
+    // clone. A later run (after specialization) folds each copy in its own
+    // host/device context. Calls already inside a gpu.module are device copies
+    // and are always safe to fold.
+    if (deferAccRoutines_ && !op->getParentOfType<gpu::GPUModuleOp>()) {
+      if (auto enclosing = op->getParentOfType<mlir::FunctionOpInterface>())
+        if (mlir::acc::isAccRoutine(enclosing))
+          return failure();
+    }
+
+    rewriter.setInsertionPoint(op);
     mlir::Value result = fct->second(rewriter, op);
     if (!result)
       return failure();
@@ -82,8 +92,7 @@ public:
   }
 
 private:
-  static mlir::Value genOnDevice(mlir::PatternRewriter &rewriter,
-                                 fir::CallOp op) {
+  static mlir::Value genOnDevice(mlir::RewriterBase &rewriter, fir::CallOp op) {
     // Only fold calls that match the intrinsic's shape: no arguments and a
     // single logical result.
     if (!op.getArgs().empty() || op.getNumResults() != 1)
@@ -103,23 +112,21 @@ private:
   // is recovered independently of external name mangling.
   const llvm::StringMap<genFunctionType> genMappings_ = {
       {"on_device", &genOnDevice}};
+
+  bool deferAccRoutines_ = false;
 };
 
 class CUFFunctionRewrite
     : public fir::impl::CUFFunctionRewriteBase<CUFFunctionRewrite> {
 public:
+  using CUFFunctionRewriteBase::CUFFunctionRewriteBase;
+
   void runOnOperation() override {
-    auto *ctx = &getContext();
-    mlir::RewritePatternSet patterns(ctx);
-
-    patterns.insert<CallConversion>(patterns.getContext());
-
-    if (mlir::failed(
-            mlir::applyPatternsGreedily(getOperation(), std::move(patterns)))) {
-      mlir::emitError(mlir::UnknownLoc::get(ctx),
-                      "error in CUFFunctionRewrite op conversion\n");
-      signalPassFailure();
-    }
+    CallConversion conversion(deferAccRoutines);
+    mlir::IRRewriter rewriter(&getContext());
+    getOperation()->walk([&](fir::CallOp op) {
+      (void)conversion.matchAndRewrite(op, rewriter);
+    });
   }
 };
 

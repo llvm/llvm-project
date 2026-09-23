@@ -71,7 +71,7 @@ template <input_range _View, move_constructible _Fn>
 template <input_range _View, copy_constructible _Fn>
 #  endif
   requires __transform_view_constraints<_View, _Fn>
-class _LIBCPP_ABI_LLVM18_NO_UNIQUE_ADDRESS transform_view : public view_interface<transform_view<_View, _Fn>> {
+class _LIBCPP_LLVM18_NO_UNIQUE_ADDRESS_ABI_TAG transform_view : public view_interface<transform_view<_View, _Fn>> {
   template <bool>
   class __iterator;
   template <bool>
@@ -192,6 +192,11 @@ class transform_view<_View, _Fn>::__iterator
 
   _Parent* __parent_ = nullptr;
 
+  _LIBCPP_HIDE_FROM_ABI constexpr __iterator(_Parent& __parent, iterator_t<_Base> __current)
+      : __parent_(std::addressof(__parent)), __current_(std::move(__current)) {}
+
+  friend class transform_view<_View, _Fn>;
+
   template <bool>
   friend class transform_view<_View, _Fn>::__iterator;
 
@@ -208,9 +213,6 @@ public:
   _LIBCPP_HIDE_FROM_ABI __iterator()
     requires default_initializable<iterator_t<_Base>>
   = default;
-
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator(_Parent& __parent, iterator_t<_Base> __current)
-      : __parent_(std::addressof(__parent)), __current_(std::move(__current)) {}
 
   // Note: `__i` should always be `__iterator<false>`, but directly using
   // `__iterator<false>` is ill-formed when `_Const` is false
@@ -354,6 +356,10 @@ class transform_view<_View, _Fn>::__sentinel {
 
   sentinel_t<_Base> __end_ = sentinel_t<_Base>();
 
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit __sentinel(sentinel_t<_Base> __end) : __end_(__end) {}
+
+  friend class transform_view<_View, _Fn>;
+
   template <bool>
   friend class transform_view<_View, _Fn>::__iterator;
 
@@ -362,8 +368,6 @@ class transform_view<_View, _Fn>::__sentinel {
 
 public:
   _LIBCPP_HIDE_FROM_ABI __sentinel() = default;
-
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __sentinel(sentinel_t<_Base> __end) : __end_(__end) {}
 
   // Note: `__i` should always be `__sentinel<false>`, but directly using
   // `__sentinel<false>` is ill-formed when `_Const` is false

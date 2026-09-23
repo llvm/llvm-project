@@ -98,24 +98,12 @@ enum ID {
 #undef OPTION
 };
 
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_CODE
 #include "SYCLLinkOpts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
 
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "SYCLLinkOpts.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-constexpr OptTable::Info InfoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
-#include "SYCLLinkOpts.inc"
-#undef OPTION
-};
-
-class LinkerOptTable : public opt::GenericOptTable {
+class LinkerOptTable : public opt::OptTable {
 public:
-  LinkerOptTable()
-      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {}
+  LinkerOptTable() : opt::OptTable(optionTables()) {}
 };
 } // namespace
 
@@ -652,7 +640,7 @@ static Error runCodeGen(StringRef File, const llvm::Triple &TargetTriple,
 
   // Set data layout if needed.
   if (M->getDataLayout().isDefault())
-    M->setDataLayout(TM->createDataLayout());
+    M->setDataLayout(TargetTriple.computeDataLayout());
 
   // Open output file for writing.
   int FD = -1;
@@ -725,8 +713,11 @@ static Error runAOTCompileIntelGPU(StringRef InputFile, StringRef OutputFile,
   CmdArgs.push_back("-device");
   CmdArgs.push_back(Arch);
 
-  StringRef ExtraArgs = Args.getLastArgValue(OPT_ocloc_options_EQ);
-  ExtraArgs.split(CmdArgs, " ", /*MaxSplit=*/-1, /*KeepEmpty=*/false);
+  // getAllArgValues returns a temporary vector; retain it so the StringRefs
+  // remain valid through the executeCommands call below.
+  std::vector<std::string> ExtraArgsStorage =
+      Args.getAllArgValues(OPT_ocloc_options_EQ);
+  llvm::append_range(CmdArgs, ExtraArgsStorage);
 
   CmdArgs.push_back("-output");
   CmdArgs.push_back(OutputFile);
@@ -747,9 +738,9 @@ static Error runAOTCompile(StringRef InputFile, StringRef OutputFile,
                            const ArgList &Args) {
   StringRef Arch = Args.getLastArgValue(OPT_arch_EQ);
   OffloadArch OA = StringToOffloadArch(Arch);
-  if (IsIntelGPUOffloadArch(OA))
+  if (OA.isIntelGPU())
     return runAOTCompileIntelGPU(InputFile, OutputFile, Args);
-  if (IsIntelCPUOffloadArch(OA))
+  if (OA.isIntelCPU())
     return runAOTCompileIntelCPU(InputFile, OutputFile, Args);
 
   llvm_unreachable("runAOTCompile dispatched on unsupported arch");
@@ -975,15 +966,19 @@ static Error runSYCLLink(ArrayRef<std::unique_ptr<MemoryBuffer>> Inputs,
     SplitModules = std::move(*SplitModulesOrErr);
   }
 
-  bool IsAOTCompileNeeded = IsIntelOffloadArch(
-      StringToOffloadArch(Args.getLastArgValue(OPT_arch_EQ)));
+  bool IsAOTCompileNeeded =
+      StringToOffloadArch(Args.getLastArgValue(OPT_arch_EQ)).isIntel();
 
   StringRef OutputFileNameExt = ".spv";
 
   // Code generation step.
+  StringRef Stem = sys::path::filename(OutputFile).rsplit('.').first;
   for (size_t I = 0, E = SplitModules.size(); I != E; ++I) {
-    StringRef Stem = OutputFile.rsplit('.').first;
-    std::string CodeGenFile = (Stem + "_" + Twine(I) + OutputFileNameExt).str();
+    auto CodeGenFileOrErr =
+        createTempFile(Args, Stem, OutputFileNameExt.drop_front());
+    if (!CodeGenFileOrErr)
+      return CodeGenFileOrErr.takeError();
+    StringRef CodeGenFile = *CodeGenFileOrErr;
 
     if (Error Err = runCodeGen(SplitModules[I].ModuleFilePath,
                                Result.TargetTriple, Args, CodeGenFile, C))
@@ -998,10 +993,15 @@ static Error runSYCLLink(ArrayRef<std::unique_ptr<MemoryBuffer>> Inputs,
 
     SplitModules[I].ModuleFilePath = CodeGenFile;
     if (IsAOTCompileNeeded) {
-      std::string AOTFile = (Stem + "_" + Twine(I) + ".out").str();
-      if (Error Err = runAOTCompile(CodeGenFile, AOTFile, Args))
+      // Reuse CodeGenFile's unique name so the AOT output can be correlated
+      // with the SPIR-V file it was compiled from.
+      SmallString<128> AOTFile(CodeGenFile);
+      sys::path::replace_extension(AOTFile, "out");
+      TempFiles.push_back(AOTFile);
+      StringRef AOTFileRef = TempFiles.back();
+      if (Error Err = runAOTCompile(CodeGenFile, AOTFileRef, Args))
         return Err;
-      SplitModules[I].ModuleFilePath = AOTFile;
+      SplitModules[I].ModuleFilePath = AOTFileRef;
     }
   }
 

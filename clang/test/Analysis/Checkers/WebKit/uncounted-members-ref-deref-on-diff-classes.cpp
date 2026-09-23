@@ -19,5 +19,5 @@ public:
 
 private:
   TreeNode* m_parent;
-// expected-warning@-1{{Member variable 'm_parent' in 'TreeNode' is a raw pointer to ref-countable type 'TreeNode'}}
+// expected-warning@-1{{Member variable 'm_parent' (of 'TreeNode') is a raw pointer to RefPtr-capable type 'TreeNode'}}
 };

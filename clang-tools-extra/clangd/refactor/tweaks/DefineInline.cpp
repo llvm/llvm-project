@@ -364,7 +364,7 @@ addInlineIfInHeader(const FunctionDecl *FD) {
   if (!isHeaderFile(FileName, FD->getASTContext().getLangOpts()))
     return std::nullopt;
 
-  return tooling::Replacement(SM, FD->getFunctionLocStart(), 0, "inline ");
+  return tooling::Replacement(SM, FD->getInnerLocStart(), 0, "inline ");
 }
 
 /// Moves definition of a function/method to its declaration location.

@@ -760,7 +760,7 @@ static bool constantIsDead(const Constant *C, bool RemoveDeadUsers) {
   if (RemoveDeadUsers) {
     // If C is only used by metadata, it should not be preserved but should
     // have its uses replaced.
-    ReplaceableMetadataImpl::SalvageDebugInfo(*C);
+    ReplaceableUses::SalvageDebugInfo(*C);
     const_cast<Constant *>(C)->destroyConstant();
   }
 
@@ -2130,34 +2130,27 @@ Value *DSOLocalEquivalent::handleOperandChangeImpl(Value *From, Value *To) {
   assert(From == getGlobalValue() && "Changing value does not match operand.");
   assert(isa<Constant>(To) && "Can only replace the operands with a constant");
 
-  // The replacement is with another global value.
-  if (const auto *ToObj = dyn_cast<GlobalValue>(To)) {
-    if (DSOLocalEquivalent *NewEquiv =
-            getContext().pImpl->DSOLocalEquivalents.lookup(ToObj))
-      return llvm::ConstantExpr::getBitCast(NewEquiv, getType());
-  }
-
   // If the argument is replaced with a null value, just replace this constant
   // with a null value.
   if (isa<ConstantPointerNull>(To))
     return To;
 
-  // The replacement could be a bitcast or an alias to another function. We can
-  // replace it with a bitcast to the dso_local_equivalent of that function.
-  auto *Func = cast<Function>(To->stripPointerCastsAndAliases());
+  // The replacement could be a bitcast to another GlobalValue. We can
+  // replace it with a bitcast to the dso_local_equivalent of that GV.
+  GlobalValue *GV = cast<GlobalValue>(To->stripPointerCasts());
   if (DSOLocalEquivalent *NewEquiv =
-          getContext().pImpl->DSOLocalEquivalents.lookup(Func))
+          getContext().pImpl->DSOLocalEquivalents.lookup(GV))
     return llvm::ConstantExpr::getBitCast(NewEquiv, getType());
 
-  // erase invalidates iterators/references, hence the duplicate Func lookup.
+  // erase invalidates iterators/references, hence the duplicate GV lookup.
   getContext().pImpl->DSOLocalEquivalents.erase(getGlobalValue());
-  getContext().pImpl->DSOLocalEquivalents[Func] = this;
-  setOperand(0, Func);
+  getContext().pImpl->DSOLocalEquivalents[GV] = this;
+  setOperand(0, GV);
 
-  if (Func->getType() != getType()) {
+  if (GV->getType() != getType()) {
     // It is ok to mutate the type here because this constant should always
     // reflect the type of the function it's holding.
-    mutateType(Func->getType());
+    mutateType(GV->getType());
   }
   return nullptr;
 }
@@ -2717,6 +2710,82 @@ Constant *ConstantExpr::getGetElementPtr(Type *Ty, Constant *C,
   return pImpl->ExprConstants.getOrCreate(ReqTy, Key);
 }
 
+Constant *ConstantExpr::getGetElementPtr(const DataLayout &DL, Type *Ty,
+                                         Constant *C, ArrayRef<Constant *> Idxs,
+                                         GEPNoWrapFlags NW,
+                                         std::optional<ConstantRange> InRange,
+                                         Type *OnlyIfReducedTy) {
+  // Handle already canonical GEP.
+  if (Ty->isIntegerTy(8) && Idxs[0]->getType() == DL.getIndexType(C->getType()))
+    return getPtrAdd(C, Idxs[0], NW, InRange, OnlyIfReducedTy);
+
+  // Some API require an ArrayRef of Value * instead of Constant *.
+  ArrayRef<Value *> ValIdxs =
+      ArrayRef((Value *const *)Idxs.data(), Idxs.size());
+  assert(isSupportedGetElementPtr(Ty) && "Element type is unsupported!");
+  assert(GetElementPtrInst::getIndexedType(Ty, Idxs) && "GEP indices invalid!");
+
+  Type *RetTy = GetElementPtrInst::getGEPReturnType(C, ValIdxs);
+  Type *IdxTy = DL.getIndexType(RetTy);
+
+  Constant *Offset = Constant::getNullValue(IdxTy);
+  auto GTI = gep_type_begin(Ty, ValIdxs), GTE = gep_type_end(Ty, ValIdxs);
+  for (; GTI != GTE; ++GTI) {
+    auto *Idx = cast<Constant>(GTI.getOperand());
+    if (Idx->isNullValue())
+      continue;
+
+    if (StructType *STy = GTI.getStructTypeOrNull()) {
+      uint64_t OpValue = Idx->getUniqueInteger().getZExtValue();
+      uint64_t Size = DL.getStructLayout(STy)->getElementOffset(OpValue);
+      if (!Size)
+        continue;
+
+      Offset = ConstantFoldBinaryInstruction(Instruction::Add, Offset,
+                                             ConstantInt::get(IdxTy, Size));
+      if (!Offset)
+        return nullptr;
+
+      continue;
+    }
+
+    // Splat the index if needed.
+    if (IdxTy->isVectorTy() && !Idx->getType()->isVectorTy())
+      Idx = ConstantVector::getSplat(cast<VectorType>(IdxTy)->getElementCount(),
+                                     Idx);
+
+    // Convert to correct type.
+    if (Idx->getType() != IdxTy) {
+      Idx = ConstantFoldCastInstruction(Idx->getType()->getScalarSizeInBits() <
+                                                IdxTy->getScalarSizeInBits()
+                                            ? Instruction::SExt
+                                            : Instruction::Trunc,
+                                        Idx, IdxTy);
+      if (!Idx)
+        return nullptr;
+    }
+
+    TypeSize TySize = GTI.getSequentialElementStride(DL);
+    if (TySize.isScalable())
+      return nullptr;
+
+    // Multiply by scale.
+    if (TySize != TypeSize::getFixed(1)) {
+      Constant *Scale = ConstantInt::getSigned(IdxTy, TySize.getFixedValue(),
+                                               /*ImplicitTrunc=*/true);
+      Idx = ConstantFoldBinaryInstruction(Instruction::Mul, Idx, Scale);
+      if (!Idx)
+        return nullptr;
+    }
+
+    Offset = ConstantFoldBinaryInstruction(Instruction::Add, Offset, Idx);
+    if (!Offset)
+      return nullptr;
+  }
+
+  return getPtrAdd(C, Offset, NW, InRange, OnlyIfReducedTy);
+}
+
 Constant *ConstantExpr::getExtractElement(Constant *Val, Constant *Idx,
                                           Type *OnlyIfReducedTy) {
   assert(Val->getType()->isVectorTy() &&
@@ -2900,10 +2969,10 @@ Constant *ConstantExpr::getIntrinsicIdentity(Intrinsic::ID ID, Type *Ty) {
     return Constant::getAllOnesValue(Ty);
   case Intrinsic::smax:
     return Constant::getIntegerValue(
-        Ty, APInt::getSignedMinValue(Ty->getIntegerBitWidth()));
+        Ty, APInt::getSignedMinValue(Ty->getScalarSizeInBits()));
   case Intrinsic::smin:
     return Constant::getIntegerValue(
-        Ty, APInt::getSignedMaxValue(Ty->getIntegerBitWidth()));
+        Ty, APInt::getSignedMaxValue(Ty->getScalarSizeInBits()));
   default:
     return nullptr;
   }
@@ -3373,15 +3442,15 @@ uint64_t ConstantDataSequential::getElementAsInteger(uint64_t Elt) const {
 
   // The data is stored in host byte order, make sure to cast back to the right
   // type to load with the right endianness.
-  switch (getElementType()->getScalarSizeInBits()) {
+  switch (getElementByteSize()) {
   default: llvm_unreachable("Invalid bitwidth for CDS");
-  case 8:
+  case 1:
     return *reinterpret_cast<const uint8_t *>(EltPtr);
-  case 16:
+  case 2:
     return *reinterpret_cast<const uint16_t *>(EltPtr);
-  case 32:
+  case 4:
     return *reinterpret_cast<const uint32_t *>(EltPtr);
-  case 64:
+  case 8:
     return *reinterpret_cast<const uint64_t *>(EltPtr);
   }
 }
@@ -3394,21 +3463,21 @@ APInt ConstantDataSequential::getElementAsAPInt(uint64_t Elt) const {
 
   // The data is stored in host byte order, make sure to cast back to the right
   // type to load with the right endianness.
-  switch (getElementType()->getScalarSizeInBits()) {
+  switch (getElementByteSize()) {
   default: llvm_unreachable("Invalid bitwidth for CDS");
-  case 8: {
+  case 1: {
     auto EltVal = *reinterpret_cast<const uint8_t *>(EltPtr);
     return APInt(8, EltVal);
   }
-  case 16: {
+  case 2: {
     auto EltVal = *reinterpret_cast<const uint16_t *>(EltPtr);
     return APInt(16, EltVal);
   }
-  case 32: {
+  case 4: {
     auto EltVal = *reinterpret_cast<const uint32_t *>(EltPtr);
     return APInt(32, EltVal);
   }
-  case 64: {
+  case 8: {
     auto EltVal = *reinterpret_cast<const uint64_t *>(EltPtr);
     return APInt(64, EltVal);
   }

@@ -10,7 +10,7 @@
 
 ; AMDGPU is used because its i32 mul has a cost of 4,
 ; making the over-counting observable against the default budget of 4.
-target triple = "amdgcn-amd-amdhsa"
+target triple = "amdgpu7.00-amd-amdhsa"
 
 ; CHECK-LABEL: @offset_start_loop
 ; The loop should be runtime-unrolled 8x (prologue + main unrolled body).

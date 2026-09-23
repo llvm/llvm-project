@@ -289,6 +289,22 @@ def StdVariantChecker : Checker<"StdVariant">,
   HelpText<"Check for bad type access for std::variant.">,
   Documentation<HasDocumentation>;
 
+def LifetimeModeling : Checker<"LifetimeModeling">,
+  HelpText<"Model lifetime annotations for other checkers">,
+  Documentation<NotDocumented>,
+  Hidden;
+
+def UseAfterLifetimeEnd : Checker<"UseAfterLifetimeEnd">,
+  HelpText<"Check for uses of references or pointers that "
+           "outlive their bound object">,
+  Dependencies<[LifetimeModeling]>,
+  Documentation<HasDocumentation>;
+
+def DanglingPtrDeref : Checker<"DanglingPtrDeref">,
+  HelpText<"Check for dereferences of a dangling pointer">,
+  Dependencies<[LifetimeModeling]>,
+  Documentation<HasDocumentation>;
+
 } // end "alpha.core"
 
 //===----------------------------------------------------------------------===//
@@ -601,6 +617,13 @@ let ParentPackage = UnixAlpha in {
 
 def PthreadLockChecker : Checker<"PthreadLock">,
   HelpText<"Simple lock -> unlock checker">,
+  CheckerOptions<[
+    CmdLineOption<Boolean,
+                  "WarnOnLockOrderReversal",
+                  "Warn when locks are not released in LIFO order.",
+                  "false",
+                  Released>
+  ]>,
   Dependencies<[PthreadLockBase]>,
   Documentation<HasDocumentation>;
 
@@ -794,11 +817,6 @@ def SmartPtrChecker: Checker<"SmartPtr">,
   HelpText<"Find the dereference of null SmrtPtr">,
   Dependencies<[SmartPtrModeling]>,
   Documentation<HasDocumentation>;
-
-def UseAfterLifetimeEnd : Checker<"UseAfterLifetimeEnd">,
-  HelpText<"Check for uses of references or pointers that "
-           "outlive their bound object">,
-  Documentation<NotDocumented>;
 
 } // end: "alpha.cplusplus"
 
@@ -1588,10 +1606,9 @@ def CheckerDocumentationChecker : Checker<"CheckerDocumentation">,
   HelpText<"Defines an empty checker callback for all possible handlers.">,
   Documentation<NotDocumented>;
 
-def DebugUseAfterLifetimeEnd : Checker<"DebugUseAfterLifetimeEnd">,
-  HelpText<"Prints the bindings recorded by the UseAfterLifetimeEnd checker. "
-           "Use with clang_analyzer_dumpLifetimeOriginsOf().">,
-  WeakDependencies<[UseAfterLifetimeEnd]>,
+def DebugLifetimeModeling : Checker<"DebugLifetimeModeling">,
+  HelpText<"Dump the set of regions the bound variable originates from">,
+  Dependencies<[LifetimeModeling]>,
   Documentation<NotDocumented>;
 
 } // end "debug"
@@ -1773,12 +1790,20 @@ def UncountedLocalVarsChecker : Checker<"UncountedLocalVarsChecker">,
   HelpText<"Check uncounted local variables.">,
   Documentation<HasDocumentation>;
 
+def UncheckedLambdaCapturesChecker : Checker<"UncheckedLambdaCapturesChecker">,
+  HelpText<"Check unchecked lambda captures.">,
+  Documentation<HasDocumentation>;
+
 def UncheckedLocalVarsChecker : Checker<"UncheckedLocalVarsChecker">,
   HelpText<"Check unchecked local variables.">,
   Documentation<HasDocumentation>;
 
 def UnretainedLocalVarsChecker : Checker<"UnretainedLocalVarsChecker">,
   HelpText<"Check unretained local variables.">,
+  Documentation<HasDocumentation>;
+
+def UnborrowedLocalVarsChecker : Checker<"UnborrowedLocalVarsChecker">,
+  HelpText<"Check local variables holding a loan on a CanBorrow object that is not guarded by a Borrow.">,
   Documentation<HasDocumentation>;
 
 def RetainPtrCtorAdoptChecker : Checker<"RetainPtrCtorAdoptChecker">,

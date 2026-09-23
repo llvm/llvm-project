@@ -10,6 +10,7 @@
 
 #include "lldb/Breakpoint/Breakpoint.h"
 #include "lldb/Core/DebuggerEvents.h"
+#include "lldb/Core/Diagnostics.h"
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/Core/Mangled.h"
 #include "lldb/Core/ModuleList.h"
@@ -1068,6 +1069,9 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
   m_collection_sp->AppendProperty(
       LanguageProperties::GetSettingName(), "Language settings.", true,
       Language::GetGlobalLanguageProperties().GetValueProperties());
+  m_collection_sp->AppendProperty(
+      "diagnostics", "Diagnostics settings.", true,
+      Diagnostics::GetGlobalProperties().GetValueProperties());
   if (m_command_interpreter_up) {
     m_collection_sp->AppendProperty(
         "interpreter",
@@ -2354,15 +2358,14 @@ bool Debugger::StartEventHandlerThread() {
     // is up and running and listening to events before we return from this
     // function. We do this by listening to events for the
     // eBroadcastBitEventThreadIsListening from the m_sync_broadcaster
-    ConstString full_name("lldb.debugger.event-handler");
-    ListenerSP listener_sp(
-        Listener::MakeListener(full_name.AsCString(nullptr)));
+    llvm::StringRef full_name("lldb.debugger.event-handler");
+    ListenerSP listener_sp(Listener::MakeListener(full_name));
     listener_sp->StartListeningForEvents(&m_sync_broadcaster,
                                          eBroadcastBitEventThreadIsListening);
 
     llvm::StringRef thread_name =
-        full_name.GetLength() < llvm::get_max_thread_name_length()
-            ? full_name.GetStringRef()
+        full_name.size() < llvm::get_max_thread_name_length()
+            ? full_name
             : "dbg.evt-handler";
 
     // Use larger 8MB stack for this thread
@@ -2619,7 +2622,7 @@ StructuredData::DictionarySP Debugger::GetBuildConfiguration() {
       *config_up, "zlib", LLVM_ENABLE_ZLIB,
       "A boolean value that indicates if zlib support is enabled in LLDB");
   AddBoolConfigEntry(
-      *config_up, "lzma", LLDB_ENABLE_LZMA,
+      *config_up, "lzma", LLVM_ENABLE_LZMA,
       "A boolean value that indicates if lzma support is enabled in LLDB");
   AddBoolConfigEntry(
       *config_up, "python", LLDB_ENABLE_PYTHON,

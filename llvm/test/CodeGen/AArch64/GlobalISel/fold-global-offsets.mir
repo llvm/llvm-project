@@ -38,8 +38,8 @@ body:             |
     ; CHECK-NEXT: $x0 = COPY [[GV]](p0)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %global:_(p0) = G_GLOBAL_VALUE @g
-    %offset:_(s64) = G_CONSTANT i64 1
-    %ptr_add:_(p0) = G_PTR_ADD %global, %offset(s64)
+    %offset:_(i64) = G_CONSTANT i64 1
+    %ptr_add:_(p0) = G_PTR_ADD %global, %offset(i64)
     $x0 = COPY %ptr_add
     RET_ReallyLR implicit $x0
 
@@ -62,8 +62,8 @@ body:             |
     ; CHECK-NEXT: $x0 = COPY [[GV]](p0)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %global:_(p0) = G_GLOBAL_VALUE @g + 3
-    %offset:_(s64) = G_CONSTANT i64 1
-    %ptr_add:_(p0) = G_PTR_ADD %global, %offset(s64)
+    %offset:_(i64) = G_CONSTANT i64 1
+    %ptr_add:_(p0) = G_PTR_ADD %global, %offset(i64)
     $x0 = COPY %ptr_add
     RET_ReallyLR implicit $x0
 
@@ -82,20 +82,20 @@ body:             |
     ; CHECK-LABEL: name: two_ptr_adds_same_offset
     ; CHECK: liveins: $x0, $x1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %val1:_(s64) = COPY $x0
-    ; CHECK-NEXT: %val2:_(s64) = COPY $x1
+    ; CHECK-NEXT: %val1:_(i64) = COPY $x0
+    ; CHECK-NEXT: %val2:_(i64) = COPY $x1
     ; CHECK-NEXT: [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @g + 1
-    ; CHECK-NEXT: G_STORE %val1(s64), [[GV]](p0) :: (store (s64))
-    ; CHECK-NEXT: G_STORE %val2(s64), [[GV]](p0) :: (store (s64))
+    ; CHECK-NEXT: G_STORE %val1(i64), [[GV]](p0) :: (store (i64))
+    ; CHECK-NEXT: G_STORE %val2(i64), [[GV]](p0) :: (store (i64))
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %val1:_(s64) = COPY $x0
-    %val2:_(s64) = COPY $x1
+    %val1:_(i64) = COPY $x0
+    %val2:_(i64) = COPY $x1
     %global:_(p0) = G_GLOBAL_VALUE @g
-    %offset:_(s64) = G_CONSTANT i64 1
-    %ptr_add1:_(p0) = G_PTR_ADD %global, %offset(s64)
-    %ptr_add2:_(p0) = G_PTR_ADD %global, %offset(s64)
-    G_STORE %val1:_(s64), %ptr_add1 :: (store (s64))
-    G_STORE %val2:_(s64), %ptr_add2 :: (store (s64))
+    %offset:_(i64) = G_CONSTANT i64 1
+    %ptr_add1:_(p0) = G_PTR_ADD %global, %offset(i64)
+    %ptr_add2:_(p0) = G_PTR_ADD %global, %offset(i64)
+    G_STORE %val1:_(i64), %ptr_add1 :: (store (i64))
+    G_STORE %val2:_(i64), %ptr_add2 :: (store (i64))
     RET_ReallyLR implicit $x0
 
 ...
@@ -114,23 +114,23 @@ body:             |
     ; CHECK-LABEL: name: two_ptr_adds_different_offset
     ; CHECK: liveins: $x0, $x1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %val1:_(s64) = COPY $x0
-    ; CHECK-NEXT: %val2:_(s64) = COPY $x1
+    ; CHECK-NEXT: %val1:_(i64) = COPY $x0
+    ; CHECK-NEXT: %val2:_(i64) = COPY $x1
     ; CHECK-NEXT: [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @g + 2
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-    ; CHECK-NEXT: %ptr_add2:_(p0) = G_PTR_ADD [[GV]], [[C]](s64)
-    ; CHECK-NEXT: G_STORE %val1(s64), [[GV]](p0) :: (store (s64))
-    ; CHECK-NEXT: G_STORE %val2(s64), %ptr_add2(p0) :: (store (s64))
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 8
+    ; CHECK-NEXT: %ptr_add2:_(p0) = G_PTR_ADD [[GV]], [[C]](i64)
+    ; CHECK-NEXT: G_STORE %val1(i64), [[GV]](p0) :: (store (i64))
+    ; CHECK-NEXT: G_STORE %val2(i64), %ptr_add2(p0) :: (store (i64))
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %val1:_(s64) = COPY $x0
-    %val2:_(s64) = COPY $x1
+    %val1:_(i64) = COPY $x0
+    %val2:_(i64) = COPY $x1
     %global:_(p0) = G_GLOBAL_VALUE @g
-    %offset1:_(s64) = G_CONSTANT i64 2
-    %offset2:_(s64) = G_CONSTANT i64 10
-    %ptr_add1:_(p0) = G_PTR_ADD %global, %offset1(s64)
-    %ptr_add2:_(p0) = G_PTR_ADD %global, %offset2(s64)
-    G_STORE %val1:_(s64), %ptr_add1 :: (store (s64))
-    G_STORE %val2:_(s64), %ptr_add2 :: (store (s64))
+    %offset1:_(i64) = G_CONSTANT i64 2
+    %offset2:_(i64) = G_CONSTANT i64 10
+    %ptr_add1:_(p0) = G_PTR_ADD %global, %offset1(i64)
+    %ptr_add2:_(p0) = G_PTR_ADD %global, %offset2(i64)
+    G_STORE %val1:_(i64), %ptr_add1 :: (store (i64))
+    G_STORE %val2:_(i64), %ptr_add2 :: (store (i64))
     RET_ReallyLR implicit $x0
 
 ...
@@ -152,17 +152,17 @@ body:             |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @g + 4
-    ; CHECK-NEXT: %offset:_(s64) = G_CONSTANT i64 1
-    ; CHECK-NEXT: %dont_fold_me:_(p0) = G_PTR_ADD [[GV]], %offset(s64)
+    ; CHECK-NEXT: %offset:_(i64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: %dont_fold_me:_(p0) = G_PTR_ADD [[GV]], %offset(i64)
     ; CHECK-NEXT: $x0 = COPY %dont_fold_me(p0)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %global:_(p0) = G_GLOBAL_VALUE @g
-    %offset:_(s64) = G_CONSTANT i64 1
-    %ptr_add1:_(p0) = G_PTR_ADD %global, %offset(s64)
-    %ptr_add2:_(p0) = G_PTR_ADD %ptr_add1, %offset(s64)
-    %ptr_add3:_(p0) = G_PTR_ADD %ptr_add2, %offset(s64)
-    %ptr_add4:_(p0) = G_PTR_ADD %ptr_add3, %offset(s64)
-    %dont_fold_me:_(p0) = G_PTR_ADD %ptr_add4, %offset(s64)
+    %offset:_(i64) = G_CONSTANT i64 1
+    %ptr_add1:_(p0) = G_PTR_ADD %global, %offset(i64)
+    %ptr_add2:_(p0) = G_PTR_ADD %ptr_add1, %offset(i64)
+    %ptr_add3:_(p0) = G_PTR_ADD %ptr_add2, %offset(i64)
+    %ptr_add4:_(p0) = G_PTR_ADD %ptr_add3, %offset(i64)
+    %dont_fold_me:_(p0) = G_PTR_ADD %ptr_add4, %offset(i64)
     $x0 = COPY %dont_fold_me
     RET_ReallyLR implicit $x0
 
@@ -181,13 +181,13 @@ body:             |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %global:_(p0) = G_GLOBAL_VALUE @g
-    ; CHECK-NEXT: %offset:_(s64) = G_CONSTANT i64 -1
-    ; CHECK-NEXT: %ptr_add:_(p0) = G_PTR_ADD %global, %offset(s64)
+    ; CHECK-NEXT: %offset:_(i64) = G_CONSTANT i64 -1
+    ; CHECK-NEXT: %ptr_add:_(p0) = G_PTR_ADD %global, %offset(i64)
     ; CHECK-NEXT: $x0 = COPY %ptr_add(p0)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %global:_(p0) = G_GLOBAL_VALUE @g
-    %offset:_(s64) = G_CONSTANT i64 -1
-    %ptr_add:_(p0) = G_PTR_ADD %global, %offset(s64)
+    %offset:_(i64) = G_CONSTANT i64 -1
+    %ptr_add:_(p0) = G_PTR_ADD %global, %offset(i64)
     $x0 = COPY %ptr_add
     RET_ReallyLR implicit $x0
 
@@ -206,13 +206,13 @@ body:             |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %global:_(p0) = G_GLOBAL_VALUE @g + 3
-    ; CHECK-NEXT: %offset:_(s64) = G_CONSTANT i64 -1
-    ; CHECK-NEXT: %ptr_add:_(p0) = G_PTR_ADD %global, %offset(s64)
+    ; CHECK-NEXT: %offset:_(i64) = G_CONSTANT i64 -1
+    ; CHECK-NEXT: %ptr_add:_(p0) = G_PTR_ADD %global, %offset(i64)
     ; CHECK-NEXT: $x0 = COPY %ptr_add(p0)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %global:_(p0) = G_GLOBAL_VALUE @g + 3
-    %offset:_(s64) = G_CONSTANT i64 -1
-    %ptr_add:_(p0) = G_PTR_ADD %global, %offset(s64)
+    %offset:_(i64) = G_CONSTANT i64 -1
+    %ptr_add:_(p0) = G_PTR_ADD %global, %offset(i64)
     $x0 = COPY %ptr_add
     RET_ReallyLR implicit $x0
 
@@ -232,13 +232,13 @@ body:             |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %global:_(p0) = G_GLOBAL_VALUE @g
-    ; CHECK-NEXT: %offset:_(s64) = G_CONSTANT i64 4292870144
-    ; CHECK-NEXT: %ptr_add:_(p0) = G_PTR_ADD %global, %offset(s64)
+    ; CHECK-NEXT: %offset:_(i64) = G_CONSTANT i64 4292870144
+    ; CHECK-NEXT: %ptr_add:_(p0) = G_PTR_ADD %global, %offset(i64)
     ; CHECK-NEXT: $x0 = COPY %ptr_add(p0)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %global:_(p0) = G_GLOBAL_VALUE @g
-    %offset:_(s64) = G_CONSTANT i64 4292870144 ; 1 << 21
-    %ptr_add:_(p0) = G_PTR_ADD %global, %offset(s64)
+    %offset:_(i64) = G_CONSTANT i64 4292870144 ; 1 << 21
+    %ptr_add:_(p0) = G_PTR_ADD %global, %offset(i64)
     $x0 = COPY %ptr_add
     RET_ReallyLR implicit $x0
 
@@ -254,13 +254,13 @@ body:             |
 
     ; CHECK-LABEL: name: dont_fold_offset_larger_than_type_alloc
     ; CHECK: %global:_(p0) = G_GLOBAL_VALUE @g
-    ; CHECK-NEXT: %offset:_(s64) = G_CONSTANT i64 16
-    ; CHECK-NEXT: %ptr_add:_(p0) = G_PTR_ADD %global, %offset(s64)
+    ; CHECK-NEXT: %offset:_(i64) = G_CONSTANT i64 16
+    ; CHECK-NEXT: %ptr_add:_(p0) = G_PTR_ADD %global, %offset(i64)
     ; CHECK-NEXT: $x0 = COPY %ptr_add(p0)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %global:_(p0) = G_GLOBAL_VALUE @g
-    %offset:_(s64) = G_CONSTANT i64 16
-    %ptr_add:_(p0) = G_PTR_ADD %global, %offset(s64)
+    %offset:_(i64) = G_CONSTANT i64 16
+    %ptr_add:_(p0) = G_PTR_ADD %global, %offset(i64)
     $x0 = COPY %ptr_add(p0)
     RET_ReallyLR implicit $x0
 
@@ -276,13 +276,13 @@ body:             |
 
     ; CHECK-LABEL: name: dont_fold_unsized_type
     ; CHECK: %global:_(p0) = G_GLOBAL_VALUE @unsized
-    ; CHECK-NEXT: %offset:_(s64) = G_CONSTANT i64 16
-    ; CHECK-NEXT: %ptr_add:_(p0) = G_PTR_ADD %global, %offset(s64)
+    ; CHECK-NEXT: %offset:_(i64) = G_CONSTANT i64 16
+    ; CHECK-NEXT: %ptr_add:_(p0) = G_PTR_ADD %global, %offset(i64)
     ; CHECK-NEXT: $x0 = COPY %ptr_add(p0)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %global:_(p0) = G_GLOBAL_VALUE @unsized
-    %offset:_(s64) = G_CONSTANT i64 16
-    %ptr_add:_(p0) = G_PTR_ADD %global, %offset(s64)
+    %offset:_(i64) = G_CONSTANT i64 16
+    %ptr_add:_(p0) = G_PTR_ADD %global, %offset(i64)
     $x0 = COPY %ptr_add(p0)
     RET_ReallyLR implicit $x0
 
@@ -298,12 +298,12 @@ body:             |
 
     ; CHECK-LABEL: name: dont_fold_thread_local
     ; CHECK: %global:_(p0) = G_GLOBAL_VALUE @thread_local
-    ; CHECK-NEXT: %offset:_(s64) = G_CONSTANT i64 16
-    ; CHECK-NEXT: %ptr_add:_(p0) = G_PTR_ADD %global, %offset(s64)
+    ; CHECK-NEXT: %offset:_(i64) = G_CONSTANT i64 16
+    ; CHECK-NEXT: %ptr_add:_(p0) = G_PTR_ADD %global, %offset(i64)
     ; CHECK-NEXT: $x0 = COPY %ptr_add(p0)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %global:_(p0) = G_GLOBAL_VALUE @thread_local
-    %offset:_(s64) = G_CONSTANT i64 16
-    %ptr_add:_(p0) = G_PTR_ADD %global, %offset(s64)
+    %offset:_(i64) = G_CONSTANT i64 16
+    %ptr_add:_(p0) = G_PTR_ADD %global, %offset(i64)
     $x0 = COPY %ptr_add(p0)
     RET_ReallyLR implicit $x0

@@ -12,7 +12,6 @@
 
 #include "L0Memory.h"
 #include "L0Device.h"
-#include "L0Plugin.h"
 
 namespace llvm::omp::target::plugin {
 
@@ -77,7 +76,7 @@ Error MemAllocatorTy::MemPoolTy::init(int32_t Kind, MemAllocatorTy *AllocatorIn,
   PoolSizeMax = UserPoolSize << 20; // Covert MB to B.
   PoolSize = 0;
 
-  auto Context = Allocator->L0Context->getZeContext();
+  auto Context = Allocator->ZeContext;
   const auto Device = Allocator->Device;
 
   // Check page size used for this allocation kind to decide minimum.
@@ -381,11 +380,13 @@ bool MemAllocatorTy::MemAllocInfoMapTy::remove(void *Ptr,
 }
 
 Error MemAllocatorTy::initDevicePools(L0DeviceTy &L0Device,
-                                      const L0OptionsTy &Options) {
+                                      const L0OptionsTy &Options,
+                                      ze_context_handle_t ZeCtx) {
   SupportsLargeMem = L0Device.supportsLargeMem();
   IsHostMem = false;
   Device = &L0Device;
   L0Context = &L0Device.getL0Context();
+  ZeContext = ZeCtx;
   for (auto Kind : {TARGET_ALLOC_DEVICE, TARGET_ALLOC_SHARED}) {
     if (Options.MemPoolConfig[Kind].Use) {
       std::lock_guard<std::mutex> Lock(Mtx);
@@ -405,10 +406,12 @@ Error MemAllocatorTy::initDevicePools(L0DeviceTy &L0Device,
 }
 
 Error MemAllocatorTy::initHostPool(L0ContextTy &Driver,
-                                   const L0OptionsTy &Option) {
+                                   const L0OptionsTy &Option,
+                                   ze_context_handle_t ZeCtx) {
   SupportsLargeMem = Driver.supportsLargeMem();
   IsHostMem = true;
   L0Context = &Driver;
+  ZeContext = ZeCtx;
   if (Option.MemPoolConfig[TARGET_ALLOC_HOST].Use) {
     std::lock_guard<std::mutex> Lock(Mtx);
     Pools[TARGET_ALLOC_HOST] = std::make_unique<MemPoolTy>();
@@ -654,24 +657,24 @@ Expected<void *> MemAllocatorTy::allocFromL0(size_t Size, size_t Align,
     HostDesc.pNext = &RelaxedDesc;
   }
 
-  auto ZeDevice = Device ? Device->getZeDevice() : nullptr;
-  auto ZeContext = L0Context->getZeContext();
+  auto zeDevice = Device ? Device->getZeDevice() : nullptr;
+  auto zeContext = ZeContext;
   bool MakeResident = false;
   switch (Kind) {
   case TARGET_ALLOC_DEVICE:
     MakeResident = true;
-    CALL_ZE_RET_ERROR(zeMemAllocDevice, ZeContext, &DeviceDesc, Size, Align,
-                      ZeDevice, &Mem);
+    CALL_ZE_RET_ERROR(zeMemAllocDevice, zeContext, &DeviceDesc, Size, Align,
+                      zeDevice, &Mem);
     ODBG(OLDT_Alloc) << "Allocated " << Size << " bytes of device memory "
                      << Mem;
     break;
   case TARGET_ALLOC_HOST:
-    CALL_ZE_RET_ERROR(zeMemAllocHost, ZeContext, &HostDesc, Size, Align, &Mem);
+    CALL_ZE_RET_ERROR(zeMemAllocHost, zeContext, &HostDesc, Size, Align, &Mem);
     ODBG(OLDT_Alloc) << "Allocated " << Size << " bytes of host memory " << Mem;
     break;
   case TARGET_ALLOC_SHARED:
-    CALL_ZE_RET_ERROR(zeMemAllocShared, ZeContext, &DeviceDesc, &HostDesc, Size,
-                      Align, ZeDevice, &Mem);
+    CALL_ZE_RET_ERROR(zeMemAllocShared, zeContext, &DeviceDesc, &HostDesc, Size,
+                      Align, zeDevice, &Mem);
     ODBG(OLDT_Alloc) << "Allocated " << Size << " bytes of shared memory "
                      << Mem;
     break;
@@ -691,7 +694,7 @@ Expected<void *> MemAllocatorTy::allocFromL0(size_t Size, size_t Align,
 }
 
 Error MemAllocatorTy::deallocFromL0(void *Ptr) {
-  CALL_ZE_RET_ERROR(zeMemFree, L0Context->getZeContext(), Ptr);
+  CALL_ZE_RET_ERROR(zeMemFree, ZeContext, Ptr);
   ODBG(OLDT_Alloc) << "Freed device pointer " << Ptr;
   return Plugin::success();
 }

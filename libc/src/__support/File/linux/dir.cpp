@@ -15,6 +15,7 @@
 #include "hdr/fcntl_macros.h"    // For open flags
 #include "hdr/sys_stat_macros.h" // For S_ISDIR
 #include "src/__support/OSUtil/linux/stat/kernel_statx_types.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/close.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/fcntl.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/open.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/statx.h"
@@ -42,9 +43,9 @@ ErrorOr<size_t> platform_fetch_dirents(int fd, cpp::span<uint8_t> buffer) {
 }
 
 int platform_closedir(int fd) {
-  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_close, fd);
-  if (ret < 0)
-    return static_cast<int>(-ret);
+  auto ret = linux_syscalls::close(fd);
+  if (!ret)
+    return ret.error();
   return 0;
 }
 
@@ -70,5 +71,7 @@ int platform_check_dir(int fd) {
 
   return 0;
 }
+
+size_t platform_dir_reclen(struct dirent *d) { return d->d_reclen; }
 
 } // namespace LIBC_NAMESPACE_DECL

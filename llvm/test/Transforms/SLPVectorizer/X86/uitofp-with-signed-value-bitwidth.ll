@@ -5,17 +5,17 @@ define i32 @test(ptr %d, i32 %0) {
 ; CHECK-LABEL: define i32 @test(
 ; CHECK-SAME: ptr [[D:%.*]], i32 [[TMP0:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[TMP0]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = sext <2 x i32> [[TMP2]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP3:%.*]] = uitofp <2 x i64> [[TMP8]] to <2 x double>
 ; CHECK-NEXT:    [[TMP4:%.*]] = fdiv <2 x double> [[TMP3]], zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = fcmp ogt <2 x double> [[TMP4]], zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i1> [[TMP5]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i1> [[TMP5]], i64 1
 ; CHECK-NEXT:    [[G_0_I_I:%.*]] = select i1 [[TMP6]], double 1.000000e+00, double 0.000000e+00
 ; CHECK-NEXT:    [[CONV3_I_I:%.*]] = fptosi double [[G_0_I_I]] to i32
 ; CHECK-NEXT:    store i32 [[CONV3_I_I]], ptr [[D]], align 4
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i1> [[TMP5]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i1> [[TMP5]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[K_EXIT:.*]], label %[[IF_THEN_I:.*]]
 ; CHECK:       [[IF_THEN_I]]:
 ; CHECK-NEXT:    unreachable

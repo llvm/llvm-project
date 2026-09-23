@@ -69,6 +69,18 @@ void call_stpncpy(void) {
   __builtin_stpncpy(s1, s2, 20); // expected-warning {{'stpncpy' size argument is too large; destination buffer has size 10, but size argument is 20}}
 }
 
+void call_strlcat(void) {
+  char s1[10], s2[20];
+  __builtin_strlcat(s2, s1, 20);
+  __builtin_strlcat(s1, s2, 20); // expected-warning {{'strlcat' size argument is too large; destination buffer has size 10, but size argument is 20}}
+}
+
+void call_strlcpy(void) {
+  char s1[10], s2[20];
+  __builtin_strlcpy(s2, s1, 20);
+  __builtin_strlcpy(s1, s2, 20); // expected-warning {{'strlcpy' size argument is too large; destination buffer has size 10, but size argument is 20}}
+}
+
 void call_strcpy(void) {
   const char *const src = "abcd";
   char dst[4];
@@ -100,7 +112,7 @@ void call_stpcpy(void) {
 
 void call_memmove(void) {
   char s1[10], s2[20];
-  __builtin_memmove(s2, s1, 20);
+  __builtin_memmove(s2, s1, 20); // expected-warning {{'memmove' reading 20 bytes from a region of size 10}}
   __builtin_memmove(s1, s2, 20); // expected-warning {{'memmove' will always overflow; destination buffer has size 10, but size argument is 20}}
 }
 
@@ -271,11 +283,13 @@ template <int A, int B>
 void call_memcpy_dep() {
   char bufferA[A];
   char bufferB[B];
-  memcpy(bufferA, bufferB, 10); // expected-warning{{'memcpy' will always overflow; destination buffer has size 9, but size argument is 10}}
+  memcpy(bufferA, bufferB, 10);
 }
 
 void call_call_memcpy() {
-  call_memcpy_dep<10, 9>();
+  call_memcpy_dep<10, 9>(); // expected-note {{in instantiation of function template specialization 'call_memcpy_dep<10, 9>' requested here}}
+                            // expected-warning@-5 {{'memcpy' reading 10 bytes from a region of size 9}}
   call_memcpy_dep<9, 10>(); // expected-note {{in instantiation of function template specialization 'call_memcpy_dep<9, 10>' requested here}}
+                            // expected-warning@-7 {{'memcpy' will always overflow; destination buffer has size 9, but size argument is 10}}
 }
 #endif

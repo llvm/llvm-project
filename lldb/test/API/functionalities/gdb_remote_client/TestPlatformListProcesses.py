@@ -46,9 +46,23 @@ class TestPlatformListProcesses(GDBRemoteTestBase):
         processes.GetProcessInfoAtIndex(0, process_info)
         self.assertEqual(process_info.GetProcessID(), 95117)
         self.assertEqual(process_info.GetName(), "foo")
+        self.assertEqual(processes[0].GetProcessID(), 95117)
 
         processes.GetProcessInfoAtIndex(1, process_info)
         self.assertEqual(process_info.GetProcessID(), 95126)
         self.assertEqual(process_info.GetName(), "foo")
+        self.assertEqual(processes[1].GetProcessID(), 95126)
+
+        any_process = False
+        for i, info in enumerate(processes):
+            any_process = True
+            if i == 0:
+                self.assertEqual(info.GetProcessID(), 95117)
+            elif i == 1:
+                self.assertEqual(info.GetProcessID(), 95126)
+            else:
+                self.fail("More than two processes returned")
+
+        self.assertTrue(any_process)
 
         platform.DisconnectRemote()

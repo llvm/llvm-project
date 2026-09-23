@@ -12,8 +12,8 @@ gpu.func @store_1D_vector(%vec: vector<8xf32>, %source: memref<8x16x32xf32>,
 // CHECK-SAME:   %[[VAL:.+]]: vector<8xf32>, %[[SRC:.+]]: memref<8x16x32xf32>,
 // CHECK-SAME:   %[[OFF1:.+]]: index, %[[OFF2:.+]]: index, %[[OFF3:.+]]: index,
 // CHECK-SAME:   %[[INDICES:.+]]: vector<8xindex>, %[[MASK:.+]]: vector<8xi1>) {
-// CHECK-COUNT2: arith.muli {{.*}} : index
-// CHECK-COUNT2: arith.addi {{.*}} : index
+// CHECK:        arith.muli {{.*}} : index
+// CHECK:        arith.addi {{.*}} : index
 // CHECK:        %[[SPLAT:.+]] = vector.broadcast {{.*}}:  index to vector<8xindex>
 // CHECK:        %[[LIN_IDX:.+]] = arith.addi %[[SPLAT]], %[[INDICES]] : vector<8xindex>
 // CHECK:        %[[BASE:.+]] = memref.extract_aligned_pointer_as_index %[[SRC]] : memref<8x16x32xf32> -> index
@@ -35,8 +35,8 @@ gpu.func @store_2D_memref(%vec: vector<8xf32>, %source: memref<8x32xf32>,
 // CHECK-SAME:   %[[VAL:.+]]: vector<8xf32>, %[[SRC:.+]]: memref<8x32xf32>,
 // CHECK-SAME:   %[[OFF1:.+]]: index, %[[OFF2:.+]]: index
 // CHECK-SAME:   %[[INDICES:.+]]: vector<8xindex>, %[[MASK:.+]]: vector<8xi1>) {
-// CHECK-COUNT1: arith.muli {{.*}} : index
-// CHECK-COUNT1: arith.addi {{.*}} : index
+// CHECK:        arith.muli {{.*}} : index
+// CHECK:        arith.addi {{.*}} : index
 // CHECK:        %[[SPLAT:.+]] = vector.broadcast {{.*}}:  index to vector<8xindex>
 // CHECK:        %[[LIN_IDX:.+]] = arith.addi %[[SPLAT]], %[[INDICES]] : vector<8xindex>
 // CHECK:        %[[BASE:.+]] = memref.extract_aligned_pointer_as_index %[[SRC]] : memref<8x32xf32> -> index
@@ -58,8 +58,8 @@ gpu.func @store_2D_vector(%vec: vector<8x16xf32>, %source: memref<8x16x32xf32>,
 // CHECK-SAME:   %[[VAL:.+]]: vector<8x16xf32>, %[[SRC:.+]]: memref<8x16x32xf32>,
 // CHECK-SAME:   %[[OFF1:.+]]: index, %[[OFF2:.+]]: index, %[[OFF3:.+]]: index,
 // CHECK-SAME:   %[[INDICES:.+]]: vector<8x16xindex>, %[[MASK:.+]]: vector<8x16xi1>) {
-// CHECK-COUNT2: arith.muli {{.*}} : index
-// CHECK-COUNT2: arith.addi {{.*}} : index
+// CHECK:        arith.muli {{.*}} : index
+// CHECK:        arith.addi {{.*}} : index
 // CHECK:        %[[SPLAT:.+]] = vector.broadcast {{.*}}:  index to vector<8x16xindex>
 // CHECK:        %[[LIN_IDX:.+]] = arith.addi %[[SPLAT]], %[[INDICES]] : vector<8x16xindex>
 // CHECK:        %[[BASE:.+]] = memref.extract_aligned_pointer_as_index %[[SRC]] : memref<8x16x32xf32> -> index
@@ -82,8 +82,8 @@ gpu.func @store_dynamic_source(%vec: vector<8x16xf32>, %source: memref<?x?x?xf32
 // CHECK-SAME:   %[[OFF1:.+]]: index, %[[OFF2:.+]]: index, %[[OFF3:.+]]: index,
 // CHECK-SAME:   %[[INDICES:.+]]: vector<8x16xindex>, %[[MASK:.+]]: vector<8x16xi1>) {
 // CHECK:        memref.extract_strided_metadata %[[SRC]]
-// CHECK-COUNT2: arith.muli {{.*}} : index
-// CHECK-COUNT2: arith.addi {{.*}} : index
+// CHECK:        arith.muli {{.*}} : index
+// CHECK:        arith.addi {{.*}} : index
 // CHECK:        %[[SPLAT:.+]] = vector.broadcast {{.*}}:  index to vector<8x16xindex>
 // CHECK:        %[[LIN_IDX:.+]] = arith.addi %[[SPLAT]], %[[INDICES]] : vector<8x16xindex>
 // CHECK:        %[[BASE:.+]] = memref.extract_aligned_pointer_as_index %[[SRC]] : memref<?x?x?xf32> -> index
@@ -106,8 +106,8 @@ gpu.func @store_dynamic_source2(%vec: vector<8x16xf32>, %source: memref<?x8x16xf
 // CHECK-SAME:   %[[OFF1:.+]]: index, %[[OFF2:.+]]: index, %[[OFF3:.+]]: index,
 // CHECK-SAME:   %[[INDICES:.+]]: vector<8x16xindex>, %[[MASK:.+]]: vector<8x16xi1>) {
 // CHECK-NOT:    memref.extract_strided_metadata %[[SRC]]
-// CHECK-COUNT2: arith.muli {{.*}} : index
-// CHECK-COUNT2: arith.addi {{.*}} : index
+// CHECK:        arith.muli {{.*}} : index
+// CHECK:        arith.addi {{.*}} : index
 // CHECK:        %[[SPLAT:.+]] = vector.broadcast {{.*}}:  index to vector<8x16xindex>
 // CHECK:        %[[LIN_IDX:.+]] = arith.addi %[[SPLAT]], %[[INDICES]] : vector<8x16xindex>
 // CHECK:        %[[BASE:.+]] = memref.extract_aligned_pointer_as_index %[[SRC]] : memref<?x8x16xf32> -> index
@@ -161,8 +161,8 @@ gpu.func @non_unit_inner_stride_3D(
 // CHECK:        %[[BB:.+]], %[[M_OFF:.+]], %[[SIZES:.+]]:3, %[[STRIDES:.+]]:3 = memref.extract_strided_metadata %[[SRC]]
 // CHECK:        arith.muli %[[OFF0]], %[[STRIDES]]#0 : index
 // CHECK:        arith.addi {{.*}} : index
-// CHECK-COUNT2: arith.muli {{.*}} : index
-// CHECK-COUNT2: arith.addi {{.*}} : index
+// CHECK:        arith.muli {{.*}} : index
+// CHECK:        arith.addi {{.*}} : index
 // CHECK:        %[[STRD_INDICES:.+]] = arith.muli {{.*}}%[[INDICES]]{{.*}} : vector<8xindex>
 // CHECK:        %[[SPLAT:.+]] = vector.broadcast {{.*}} : index to vector<8xindex>
 // CHECK:        %[[LIN_IDX:.+]] = arith.addi %[[SPLAT]], %[[STRD_INDICES]] : vector<8xindex>

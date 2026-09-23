@@ -123,8 +123,6 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   // Some instructions only support s16 if the subtarget has full 16-bit FP
   // support.
   const bool HasFP16 = ST.hasFullFP16();
-  const LLT &MinFPScalar = HasFP16 ? f16 : f32;
-
   const bool HasCSSC = ST.hasCSSC();
   const bool HasRCPC3 = ST.hasRCPC3();
   const bool HasSVE = ST.hasSVE();
@@ -252,6 +250,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
           {v4i32, v4i32},
           {v2i64, v2i64},
       })
+      .widenScalarToNextPow2(1)
       .widenScalarToNextPow2(0)
       .clampScalar(1, s32, s64)
       .clampScalar(0, s32, s64)
@@ -297,7 +296,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalFor({i64, v16i8, v8i16, v4i32})
       .lower();
 
-  getActionDefinitionsBuilder({G_SMULFIX, G_UMULFIX}).lower();
+  getActionDefinitionsBuilder(
+      {G_SMULFIX, G_UMULFIX, G_SMULFIXSAT, G_UMULFIXSAT})
+      .lower();
 
   getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX})
       .legalFor({v8i8, v16i8, v4i16, v8i16, v2i32, v4i32})
@@ -340,7 +341,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalFor({{i32, i32}, {i64, i32}})
       .clampScalar(0, s32, s64)
       .clampScalar(1, s32, s64)
-      .widenScalarToNextPow2(0);
+      .widenScalarToNextPow2(0)
+      .lower();
 
   getActionDefinitionsBuilder({G_FSHL, G_FSHR})
       .customFor({{i32, i32}, {i32, i64}, {i64, i64}})
@@ -617,7 +619,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .widenScalarIf(
           all(scalarNarrowerThan(0, 32),
               atomicOrderingAtLeastOrStrongerThan(0, AtomicOrdering::Release)),
-          changeTo(0, s32))
+          changeElementSizeTo(0, s32))
       .legalForTypesWithMemDesc(
           {{s8, p0, s8, 8},     {s16, p0, s8, 8},  // truncstorei8 from s16
            {s32, p0, s8, 8},                       // truncstorei8 from s32
@@ -859,7 +861,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder({G_TRUNC_SSAT_S, G_TRUNC_SSAT_U, G_TRUNC_USAT_U})
       .legalFor({{v8i8, v8i16}, {v4i16, v4i32}, {v2i32, v2i64}})
-      .clampNumElements(0, v2s32, v2s32);
+      .clampNumElements(0, v8s8, v8s8)
+      .clampNumElements(0, v4s16, v4s16)
+      .clampNumElements(0, v2s32, v2s32)
+      .lower();
 
   getActionDefinitionsBuilder(G_SEXT_INREG)
       .legalFor({i32, i64, v8i8, v16i8, v4i16, v8i16, v2i32, v4i32, v2i64})
@@ -935,7 +940,12 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .moreElementsToNextPow2(0)
       .widenScalarOrEltToNextPow2OrMinSize(0)
       .minScalar(0, s32)
-      .widenScalarOrEltToNextPow2OrMinSize(1, /*MinSize=*/HasFP16 ? 16 : 32)
+      .widenScalarIf(
+          [HasFP16](const LegalityQuery &Query) {
+            return (!HasFP16 && Query.Types[1].getScalarType().isFloat16()) ||
+                   Query.Types[1].getScalarType().isBFloat16();
+          },
+          changeElementTo(1, f32))
       .widenScalarIf(
           [=](const LegalityQuery &Query) {
             return Query.Types[0].getScalarSizeInBits() <= 64 &&
@@ -981,7 +991,12 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .moreElementsToNextPow2(0)
       .widenScalarToNextPow2(0, /*MinSize=*/32)
       .minScalar(0, s32)
-      .widenScalarOrEltToNextPow2OrMinSize(1, /*MinSize=*/HasFP16 ? 16 : 32)
+      .widenScalarIf(
+          [HasFP16](const LegalityQuery &Query) {
+            return (!HasFP16 && Query.Types[1].getScalarType().isFloat16()) ||
+                   Query.Types[1].getScalarType().isBFloat16();
+          },
+          changeElementTo(1, f32))
       .widenScalarIf(
           [=](const LegalityQuery &Query) {
             unsigned ITySize = Query.Types[0].getScalarSizeInBits();
@@ -1343,6 +1358,13 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder(G_EXTRACT_SUBVECTOR)
       .legalFor({{v8s8, v16s8}, {v4s16, v8s16}, {v2s32, v4s32}})
       .widenScalarOrEltToNextPow2(0)
+      .clampMaxNumElements(0, s8, 16)
+      .clampMaxNumElements(0, s16, 8)
+      .clampMaxNumElements(0, s32, 4)
+      .clampNumElements(1, v8s8, v16s8)
+      .clampNumElements(1, v4s16, v8s16)
+      .clampNumElements(1, v2s32, v4s32)
+      .lower()
       .immIdx(0); // Inform verifier imm idx 0 is handled.
 
   // TODO: {nxv16s8, s8}, {nxv8s16, s16}
@@ -1391,7 +1413,12 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder(G_VECREDUCE_FADD)
       .legalFor({{f32, v2f32}, {f32, v4f32}, {f64, v2f64}})
       .legalFor(HasFP16, {{f16, v4f16}, {f16, v8f16}})
-      .minScalarOrElt(0, MinFPScalar)
+      .widenScalarIf(
+          [HasFP16](const LegalityQuery &Query) {
+            return (!HasFP16 && Query.Types[0].getScalarType().isFloat16()) ||
+                   Query.Types[0].getScalarType().isBFloat16();
+          },
+          changeElementTo(0, f32))
       .clampMaxNumElements(1, s64, 2)
       .clampMaxNumElements(1, s32, 4)
       .clampMaxNumElements(1, s16, 8)
@@ -1403,7 +1430,12 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   // clamp to 128 bit vectors then to 64bit vectors to produce a cascade of
   // smaller types, followed by scalarizing what remains.
   getActionDefinitionsBuilder(G_VECREDUCE_FMUL)
-      .minScalarOrElt(0, MinFPScalar)
+      .widenScalarIf(
+          [HasFP16](const LegalityQuery &Query) {
+            return (!HasFP16 && Query.Types[0].getScalarType().isFloat16()) ||
+                   Query.Types[0].getScalarType().isBFloat16();
+          },
+          changeElementTo(0, f32))
       .clampMaxNumElements(1, s64, 2)
       .clampMaxNumElements(1, s32, 4)
       .clampMaxNumElements(1, s16, 8)
@@ -1436,7 +1468,12 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
                                G_VECREDUCE_FMINIMUM, G_VECREDUCE_FMAXIMUM})
       .legalFor({{f32, v2f32}, {f32, v4f32}, {f64, v2f64}})
       .legalFor(HasFP16, {{f16, v4f16}, {f16, v8f16}})
-      .minScalarOrElt(0, MinFPScalar)
+      .widenScalarIf(
+          [HasFP16](const LegalityQuery &Query) {
+            return (!HasFP16 && Query.Types[0].getScalarType().isFloat16()) ||
+                   Query.Types[0].getScalarType().isBFloat16();
+          },
+          changeElementTo(0, f32))
       .clampMaxNumElements(1, s64, 2)
       .clampMaxNumElements(1, s32, 4)
       .clampMaxNumElements(1, s16, 8)
@@ -1501,6 +1538,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder({G_GET_FPENV, G_SET_FPENV, G_RESET_FPENV,
                                G_GET_FPMODE, G_SET_FPMODE, G_RESET_FPMODE})
       .libcall();
+
+  getActionDefinitionsBuilder({G_GET_ROUNDING, G_SET_ROUNDING})
+      .customFor({s32});
 
   getActionDefinitionsBuilder(G_IS_FPCLASS).lower();
 
@@ -1575,6 +1615,10 @@ bool AArch64LegalizerInfo::legalizeCustom(
     // In order to lower f16 to f64 properly, we need to use f32 as an
     // intermediary
     return legalizeFptrunc(MI, MIRBuilder, MRI);
+  case TargetOpcode::G_GET_ROUNDING:
+    return legalizeGetRounding(MI, MIRBuilder, MRI, Helper);
+  case TargetOpcode::G_SET_ROUNDING:
+    return legalizeSetRounding(MI, MIRBuilder, MRI, Helper);
   }
 
   llvm_unreachable("expected switch to return");
@@ -1788,7 +1832,7 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
 
     MachineFunction &MF = *MI.getMF();
     auto Val = MF.getRegInfo().createGenericVirtualRegister(
-        LLT::scalar(VaListSize * 8));
+        LLT::integer(VaListSize * 8));
     MIB.buildLoad(Val, MI.getOperand(2),
                   *MF.getMachineMemOperand(MachinePointerInfo(),
                                            MachineMemOperand::MOLoad,
@@ -2035,8 +2079,8 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   }
   case Intrinsic::aarch64_neon_sqshlu: {
     // Check if last operand is constant vector dup
-    auto ShiftAmount = isConstantOrConstantSplatVector(
-        *MRI.getVRegDef(MI.getOperand(3).getReg()), MRI);
+    auto ShiftAmount =
+        isConstantOrConstantSplatVector(MI.getOperand(3).getReg(), MRI);
     if (ShiftAmount) {
       // If so, create a new intrinsic with the correct shift amount
       MIB.buildInstr(AArch64::G_SQSHLU_I, {MI.getOperand(0)},
@@ -2067,6 +2111,8 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     MI.eraseFromParent();
     return true;
   }
+  case Intrinsic::aarch64_neon_addhn:
+    return LowerBinOp(AArch64::G_ADDHN);
   case Intrinsic::aarch64_neon_sqadd: {
     if (MRI.getType(MI.getOperand(0).getReg()).isVector())
       return LowerBinOp(TargetOpcode::G_SADDSAT);
@@ -2256,7 +2302,7 @@ bool AArch64LegalizerInfo::legalizeVaArg(MachineInstr &MI,
   Register ListPtr = MI.getOperand(1).getReg();
 
   LLT PtrTy = MRI.getType(ListPtr);
-  LLT IntPtrTy = LLT::scalar(PtrTy.getSizeInBits());
+  LLT IntPtrTy = LLT::integer(PtrTy.getSizeInBits());
 
   const unsigned PtrSize = PtrTy.getSizeInBits() / 8;
   const Align PtrAlign = Align(PtrSize);
@@ -2481,7 +2527,7 @@ bool AArch64LegalizerInfo::legalizeAtomicCmpxchg128(
       break;
     }
 
-    LLT s128 = LLT::scalar(128);
+    LLT s128 = LLT::integer(128);
     auto CASDst = MRI.createGenericVirtualRegister(s128);
     auto CASDesired = MRI.createGenericVirtualRegister(s128);
     auto CASNew = MRI.createGenericVirtualRegister(s128);
@@ -2686,9 +2732,9 @@ bool AArch64LegalizerInfo::legalizeFptrunc(MachineInstr &MI,
   // G_FPTRUNC.
 
   if (DstTy.isBFloat16() && SrcTy.isFloat64()) {
-    auto Mid =
-        MIRBuilder.buildInstr(AArch64::G_FPTRUNC_ODD, {LLT::float32()}, {Src});
-    MIRBuilder.buildInstr(AArch64::G_FPTRUNC, {Dst}, {Mid});
+    auto Mid = MIRBuilder.buildInstr(AArch64::G_FPTRUNC_ODD, {LLT::float32()},
+                                     {Src}, MI.getFlags());
+    MIRBuilder.buildInstr(AArch64::G_FPTRUNC, {Dst}, {Mid}, MI.getFlags());
     MI.eraseFromParent();
     return true;
   }
@@ -2726,9 +2772,10 @@ bool AArch64LegalizerInfo::legalizeFptrunc(MachineInstr &MI,
 
   // Create all of the round-to-odd instructions and store them
   for (auto SrcReg : RegsToUnmergeTo) {
-    Register Mid =
-        MIRBuilder.buildInstr(AArch64::G_FPTRUNC_ODD, {v2s32}, {SrcReg})
-            .getReg(0);
+    Register Mid = MIRBuilder
+                       .buildInstr(AArch64::G_FPTRUNC_ODD, {v2s32}, {SrcReg},
+                                   MI.getFlags())
+                       .getReg(0);
     TruncOddDstRegs.push_back(Mid);
   }
 
@@ -2744,10 +2791,12 @@ bool AArch64LegalizerInfo::legalizeFptrunc(MachineInstr &MI,
               .getReg(0);
 
       RegsToMerge.push_back(
-          MIRBuilder.buildFPTrunc(v4s16, ConcatDst).getReg(0));
+          MIRBuilder.buildFPTrunc(v4s16, ConcatDst, MI.getFlags()).getReg(0));
     } else {
       RegsToMerge.push_back(
-          MIRBuilder.buildFPTrunc(v2s16, TruncOddDstRegs[Index++]).getReg(0));
+          MIRBuilder
+              .buildFPTrunc(v2s16, TruncOddDstRegs[Index++], MI.getFlags())
+              .getReg(0));
     }
   }
 
@@ -2762,5 +2811,71 @@ bool AArch64LegalizerInfo::legalizeFptrunc(MachineInstr &MI,
   Register Fin = MIRBuilder.buildMergeLikeInstr(DstTy, RegsToMerge).getReg(0);
   MRI.replaceRegWith(Dst, Fin);
   MI.eraseFromParent();
+  return true;
+}
+
+bool AArch64LegalizerInfo::legalizeGetRounding(MachineInstr &MI,
+                                               MachineIRBuilder &MIRBuilder,
+                                               MachineRegisterInfo &MRI,
+                                               LegalizerHelper &Helper) const {
+  const LLT I32 = LLT::integer(32);
+  const LLT I64 = LLT::integer(64);
+
+  Register Dst = MI.getOperand(0).getReg();
+  Register FPCR64 = MRI.createGenericVirtualRegister(I64);
+  MachineInstrBuilder GetFPCR =
+      MIRBuilder.buildIntrinsic(Intrinsic::aarch64_get_fpcr, ArrayRef{FPCR64});
+
+  // AArch64 rounding mode value to FLT_ROUNDS mapping is 0->1, 1->2, 2->3,
+  // 3->0, so we add one to the FPCR bits for the rounding mode.
+  // Instead of shifting and then adding as `((FPCR >> 22) + 1) & 0b11` which
+  // generates 3 instructions, we increment the rounding mode with
+  // `(FPCR + (1 << 22))` and extract the bits. The shift and addition is done
+  // in one instruction as `add	.., .., #1024, lsl #12`, so overall we generate
+  // one less instruction.
+  auto FPCR32 = MIRBuilder.buildTrunc(I32, GetFPCR);
+  auto One = MIRBuilder.buildConstant(I32, 1U << 22);
+  auto Added = MIRBuilder.buildAdd(I32, FPCR32, One);
+  auto LSB = MIRBuilder.buildConstant(I32, 22);
+  auto Width = MIRBuilder.buildConstant(I32, 2);
+  MIRBuilder.buildInstr(TargetOpcode::G_UBFX, {Dst}, {Added, LSB, Width});
+
+  MI.eraseFromParent();
+  return true;
+}
+
+bool AArch64LegalizerInfo::legalizeSetRounding(MachineInstr &MI,
+                                               MachineIRBuilder &MIRBuilder,
+                                               MachineRegisterInfo &MRI,
+                                               LegalizerHelper &Helper) const {
+  const LLT I32 = LLT::integer(32);
+  const LLT I64 = LLT::integer(64);
+
+  // AArch64 rounding mode value to FLT_ROUNDS mapping is 0->1, 1->2, 2->3,
+  // 3->0, so calculate the new value of FPCR[23:22] as `((arg - 1) & 3) << 22`.
+  Register RM = MI.getOperand(0).getReg();
+  auto One = MIRBuilder.buildConstant(I32, 1);
+  auto Subtracted = MIRBuilder.buildSub(I32, RM, One);
+  auto Mask = MIRBuilder.buildConstant(I32, 0b11);
+  auto Masked = MIRBuilder.buildAnd(I32, Subtracted, Mask);
+  auto ShiftAmount = MIRBuilder.buildConstant(I32, 22);
+  auto Shifted = MIRBuilder.buildShl(I32, Masked, ShiftAmount);
+
+  // Get current value of FPCR.
+  MachineInstrBuilder GetFPCR =
+      MIRBuilder.buildIntrinsic(Intrinsic::aarch64_get_fpcr, {I64});
+
+  // (FPCR & ~Mask) | Shifted
+  auto FPCRMask = MIRBuilder.buildConstant(I64, ~((int64_t)0b11 << 22));
+  auto FPCRMasked = MIRBuilder.buildAnd(I64, GetFPCR, FPCRMask);
+  auto ShiftedS64 = MIRBuilder.buildZExt(I64, Shifted);
+  auto FPCRUpdated = MIRBuilder.buildOr(I64, FPCRMasked, ShiftedS64);
+
+  // Write new FPCR.
+  MIRBuilder.buildIntrinsic(Intrinsic::aarch64_set_fpcr, ArrayRef<Register>())
+      .addUse(FPCRUpdated.getReg(0));
+
+  MI.eraseFromParent();
+
   return true;
 }

@@ -5,29 +5,29 @@
 
 ; REQUIRES: asserts
 ; RUN: llc -mtriple=hexagon-unknown-elf -mhvx -mcpu=hexagonv79 -mattr=+hvxv79,+hvx-length128b,+hvx-qfloat -enable-xqf-gen=true \
-; RUN: -hexagon-qfloat-mode=ieee -debug-only=handle-qfp -o /dev/null < %s \
+; RUN: -enable-rem-conv=true -hexagon-qfloat-mode=ieee -debug-only=handle-qfp -o /dev/null < %s \
 ; RUN: 2>&1 | FileCheck %s --check-prefix=IEEE
 ; RUN: llc -mtriple=hexagon-unknown-elf -mhvx -mcpu=hexagonv81 -mattr=+hvxv81,+hvx-length128b,+hvx-qfloat -enable-xqf-gen=true \
-; RUN: -hexagon-qfloat-mode=ieee -debug-only=handle-qfp -o /dev/null < %s \
+; RUN: -enable-rem-conv=true -hexagon-qfloat-mode=ieee -debug-only=handle-qfp -o /dev/null < %s \
 ; RUN: 2>&1 | FileCheck %s --check-prefix=IEEE
 ; RUN: llc -mtriple=hexagon-unknown-elf -mhvx -mcpu=hexagonv79 -mattr=+hvxv79,+hvx-length128b,+hvx-qfloat -enable-xqf-gen=true \
-; RUN: -hexagon-qfloat-mode=strict-ieee -debug-only=handle-qfp -o /dev/null < %s \
+; RUN: -enable-rem-conv=true -hexagon-qfloat-mode=strict-ieee -debug-only=handle-qfp -o /dev/null < %s \
 ; RUN: 2>&1 | FileCheck %s --check-prefix=STRICT
 ; RUN: llc -mtriple=hexagon-unknown-elf -mhvx -mcpu=hexagonv81 -mattr=+hvxv81,+hvx-length128b,+hvx-qfloat -enable-xqf-gen=true \
-; RUN: -hexagon-qfloat-mode=strict-ieee -debug-only=handle-qfp -o /dev/null < %s \
+; RUN: -enable-rem-conv=true -hexagon-qfloat-mode=strict-ieee -debug-only=handle-qfp -o /dev/null < %s \
 ; RUN: 2>&1 | FileCheck %s --check-prefix=STRICT
 ; RUN: llc -mtriple=hexagon-unknown-elf -mhvx -mcpu=hexagonv79 -mattr=+hvxv79,+hvx-length128b,+hvx-qfloat -enable-xqf-gen=true \
-; RUN: -hexagon-qfloat-mode=lossy -debug-only=handle-qfp -o /dev/null < %s \
+; RUN: -enable-rem-conv=true -hexagon-qfloat-mode=lossy -debug-only=handle-qfp -o /dev/null < %s \
 ; RUN: 2>&1 | FileCheck %s --check-prefix=LOSSY
 ; RUN: llc -mtriple=hexagon-unknown-elf -mhvx -mcpu=hexagonv81 -mattr=+hvxv81,+hvx-length128b,+hvx-qfloat -enable-xqf-gen=true \
-; RUN: -hexagon-qfloat-mode=lossy -debug-only=handle-qfp -o /dev/null < %s \
+; RUN: -enable-rem-conv=true -hexagon-qfloat-mode=lossy -debug-only=handle-qfp -o /dev/null < %s \
 ; RUN: 2>&1 | FileCheck %s --check-prefix=LOSSY
 
 ; RUN: llc -mtriple=hexagon-unknown-elf -mhvx -mcpu=hexagonv79 -mattr=+hvxv79,+hvx-length128b,+hvx-qfloat -enable-xqf-gen=true \
-; RUN: -debug-only=handle-qfp -o /dev/null < %s \
+; RUN: -enable-rem-conv=true -debug-only=handle-qfp -o /dev/null < %s \
 ; RUN: 2>&1 | FileCheck %s --check-prefix=LEGACY
 ; RUN: llc -mtriple=hexagon-unknown-elf -mhvx -mcpu=hexagonv81 -mattr=+hvxv81,+hvx-length128b,+hvx-qfloat -enable-xqf-gen=true \
-; RUN: -debug-only=handle-qfp -o /dev/null < %s \
+; RUN: -enable-rem-conv=true -debug-only=handle-qfp -o /dev/null < %s \
 ; RUN: 2>&1 | FileCheck %s --check-prefix=LEGACY
 
 define dso_local <32 x i32> @test1(i32 noundef %input1, i32 noundef %input2, i32 noundef %size) local_unnamed_addr #0 {

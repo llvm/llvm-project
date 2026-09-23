@@ -82,7 +82,7 @@ struct MissingFeatures {
   static bool opFuncReadOnly() { return false; }
   static bool opFuncUnwindTablesAttr() { return false; }
   static bool opFuncWillReturn() { return false; }
-  static bool handleCUDALaunchBoundsAttr() { return false; }
+  static bool opFuncPreferredAlignment() { return false; }
   static bool setLLVMFunctionFEnvAttributes() { return false; }
 
   // CallOp handling
@@ -91,9 +91,10 @@ struct MissingFeatures {
   static bool opCallReturn() { return false; }
   static bool opCallArgEvaluationOrder() { return false; }
   static bool opCallCallConv() { return false; }
-  static bool opCallMustTail() { return false; }
+  static bool opCallThunkTailHint() { return false; }
   static bool opCallInAlloca() { return false; }
   static bool opCallAttrs() { return false; }
+  static bool opCallInvokeAttrs() { return false; }
   static bool opCallSurroundingTry() { return false; }
   static bool opCallObjCMethod() { return false; }
   static bool opCallExtParameterInfo() { return false; }
@@ -120,7 +121,7 @@ struct MissingFeatures {
 
   // RecordType
   static bool astRecordDeclAttr() { return false; }
-  static bool zeroSizeRecordMembers() { return false; }
+  static bool noUniqueAddressLayout() { return false; }
 
   // Coroutines
   static bool coroOutsideFrameMD() { return false; }
@@ -194,6 +195,7 @@ struct MissingFeatures {
   static bool assignMemcpyizer() { return false; }
   static bool astVarDeclInterface() { return false; }
   static bool attributeNoBuiltin() { return false; }
+  static bool branchProtection() { return false; }
   static bool builtinCall() { return false; }
   static bool builtinCallF128() { return false; }
   static bool builtinBitCountExpr() { return false; }
@@ -215,9 +217,12 @@ struct MissingFeatures {
   static bool ctorConstLvalueToRvalueConversion() { return false; }
   static bool ctorMemcpyizer() { return false; }
   static bool cudaSupport() { return false; }
+  static bool cudaTextureType() { return false; }
   static bool hipModuleCtor() { return false; }
   static bool dataLayoutTypeAllocSize() { return false; }
   static bool dataLayoutPtrHandlingBasedOnLangAS() { return false; }
+  static bool deadOnReturnAttr() { return false; }
+  static bool noaliasOnByvalAttr() { return false; }
   static bool deferredCXXGlobalInit() { return false; }
   static bool deleteArray() { return false; }
   static bool devirtualizeDestructor() { return false; }
@@ -227,11 +232,13 @@ struct MissingFeatures {
   static bool emitCondLikelihoodViaExpectIntrinsic() { return false; }
   static bool emitConstrainedFPCall() { return false; }
   static bool emitLifetimeMarkers() { return false; }
+  static bool lifetimeMarkersBypass() { return false; }
   static bool emitLValueAlignmentAssumption() { return false; }
   static bool emitNullCheckForDeleteCalls() { return false; }
   static bool emitNullabilityCheck() { return false; }
   static bool emitTypeCheck() { return false; }
   static bool emitTypeMetadataCodeForVCall() { return false; }
+  static bool fakeUseCleanup() { return false; }
   static bool isPPC_FP128Ty() { return false; }
 
   // Fast math.
@@ -246,7 +253,6 @@ struct MissingFeatures {
   static bool generateDebugInfo() { return false; }
   static bool getRuntimeFunctionDecl() { return false; }
   static bool globalViewIntLowering() { return false; }
-  static bool guardAbortOnException() { return false; }
   static bool handleBuiltinICEArguments() { return false; }
   static bool hip() { return false; }
   static bool incrementProfileCounter() { return false; }
@@ -302,7 +308,6 @@ struct MissingFeatures {
   static bool vaArgABILowering() { return false; }
   static bool vectorConstants() { return false; }
   static bool vlas() { return false; }
-  static bool vtableInitialization() { return false; }
   static bool vtableEmitMetadata() { return false; }
   static bool vtableRelativeLayout() { return false; }
   static bool weakRefReference() { return false; }
@@ -318,7 +323,6 @@ struct MissingFeatures {
   static bool scalableVectors() { return false; }
   static bool unsizedTypes() { return false; }
   static bool vectorType() { return false; }
-  static bool fixedPointType() { return false; }
 
   // Future CIR operations
   static bool callOp() { return false; }

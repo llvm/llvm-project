@@ -1,4 +1,4 @@
-# RUN: not llc -mtriple=amdgcn -mcpu=gfx1100 -run-pass=virtregmap \
+# RUN: not llc -mtriple=amdgpu11.00 -run-pass=virtregmap \
 # RUN:     -filetype=null %s 2>&1 | FileCheck %s
 #
 # 'split-from' must reference a different vreg than 'id'.

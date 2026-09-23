@@ -53,8 +53,7 @@ void tools::serenity::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     if (Args.hasArg(options::OPT_rdynamic))
       CmdArgs.push_back("-export-dynamic");
     if (!IsShared) {
-      Arg *A = Args.getLastArg(options::OPT_pie, options::OPT_no_pie,
-                               options::OPT_nopie);
+      Arg *A = Args.getLastArg(options::OPT_pie, options::OPT_no_pie);
       bool IsPIE =
           A ? A->getOption().matches(options::OPT_pie) : TC.isPIEDefault(Args);
       if (IsPIE)

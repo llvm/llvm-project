@@ -414,19 +414,13 @@ def LiftControlFlowToSCFPass : Pass<"lift-cf-to-scf"> {
     Otherwise a single ControlFlow switch branching to one block per return-like
     operation kind remains.
 
-    This pass may need to create unreachable terminators in case of infinite
-    loops, which is only supported for 'func.func' for now. If you potentially
-    have infinite loops inside CFG regions not belonging to 'func.func',
-    consider using `transformCFGToSCF` function directly with corresponding
-    `CFGToSCFInterface::createUnreachableTerminator` implementation.
+    This pass may need to create `ub.unreachable` terminators in case of
+    statically known infinite loops.
   }];
 
   let dependentDialects = ["scf::SCFDialect",
                            "arith::ArithDialect",
-                           "ub::UBDialect",
-                           // TODO: This is only necessary until we have a
-                           //       ub.unreachable op.
-                           "func::FuncDialect"];
+                           "ub::UBDialect"];
 }
 
 //===----------------------------------------------------------------------===//
@@ -901,24 +895,30 @@ def ConvertMathToSPIRVPass : Pass<"convert-math-to-spirv"> {
 
 def ConvertMathToXeVM : Pass<"convert-math-to-xevm"> {
   let summary =
-      "Convert (fast) math operations to native XeVM/SPIRV equivalents";
+      "Convert math operations to their XeVM/SPIRV OpenCL equivalents";
   let description = [{
-    This pass converts supported math ops marked with the `afn` fastmath flag
-    to function calls for OpenCL `native_` math intrinsics: These intrinsics
-    are typically mapped directly to native device instructions, often resulting
-    in better performance. However, the precision/error of these intrinsics
-    are implementation-defined, and thus math ops are only converted when they
-    have the `afn` fastmath flag enabled. However, if the `convertToOCL` flag is
-    set then all supported math ops would be lowered to OpenCL math intrinsics.
+    This pass lowers supported math ops to OpenCL math intrinsic calls. The
+    fastmath flag on each op picks which intrinsic is used:
+
+    *   Ops marked `afn` or `fast` become calls to OpenCL `native_` intrinsics.
+        Both work because `fast` is a group flag that expands to every fastmath
+        bit, `afn` included. These intrinsics are typically mapped directly to
+        native device instructions, often resulting in better performance. Their
+        precision/error is implementation-defined, so `afn` is what opts in.
+        Other flags on their own (`nnan`, `ninf`, ...) do not.
+    *   Every other op becomes a call to the precise OpenCL intrinsic from the
+        `__spirv_ocl_` extended instruction set. Set the `convertToOCL` flag to
+        `false` to leave these ops alone instead.
   }];
   let options = [
     Option<"convertArith", "convert-arith", "bool", /*default=*/"true",
       "Convert supported Arith ops (e.g. arith.divf) as well.">,
-    Option<"convertToOCL", "convert-to-ocl", "bool", /*default=*/"false",
-      "Convert supported Math ops to OCL intrinsics.">
+    Option<"convertToOCL", "convert-to-ocl", "bool", /*default=*/"true",
+      "Convert Math ops without `afn` fastmath to precise OCL intrinsics.">
   ];
   let dependentDialects = [
     "arith::ArithDialect",
+    "vector::VectorDialect",
     "xevm::XeVMDialect",
     "LLVM::LLVMDialect",
   ];
@@ -1106,7 +1106,8 @@ def ConvertNVGPUToNVVMPass : Pass<"convert-nvgpu-to-nvvm"> {
     "arith::ArithDialect",
     "LLVM::LLVMDialect",
     "memref::MemRefDialect",
-    "NVVM::NVVMDialect"
+    "NVVM::NVVMDialect",
+    "vector::VectorDialect"
   ];
 }
 
@@ -1118,6 +1119,15 @@ def ConvertNVGPUToNVVMPass : Pass<"convert-nvgpu-to-nvvm"> {
 def ConvertOpenACCToSCFPass : Pass<"convert-openacc-to-scf", "ModuleOp"> {
   let summary = "Convert the OpenACC ops to OpenACC with SCF dialect";
   let dependentDialects = ["scf::SCFDialect", "acc::OpenACCDialect"];
+}
+
+//===----------------------------------------------------------------------===//
+// OpenACCToLLVM
+//===----------------------------------------------------------------------===//
+
+def ConvertACCToLLVMPass : Pass<"acc-to-llvm", "ModuleOp"> {
+  let summary = "Lower OpenACC operations to LLVM dialect.";
+  let dependentDialects = ["LLVM::LLVMDialect", "acc::OpenACCDialect"];
 }
 
 //===----------------------------------------------------------------------===//
@@ -1161,6 +1171,43 @@ def ReconcileUnrealizedCastsPass : Pass<"reconcile-unrealized-casts"> {
     and the producer operation is converted by another pass, each of which
     produces an unrealized cast. This pass can be used to clean up the IR.
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// SCFToAffine
+//===----------------------------------------------------------------------===//
+
+// TODO: extend to scf.if, scf.parallel, possibly more.
+def RaiseSCFToAffinePass : Pass<"raise-scf-to-affine"> {
+  let summary = "Raise SCF operations to affine operations (best effort)";
+  let description = [{
+    Raising to the affine dialect enables affine analyses and transforms such
+    as loop tiling, unrolling, vectorization, and dependence analysis.
+    Currently only `scf.for` is handled; loops that cannot be raised are left
+    unchanged.
+
+    A `scf.for` is raised when its lower and upper bounds are valid affine
+    dimensions (or an `affine.max` / `affine.min` respectively) and its step
+    is a valid affine symbol. Two cases are handled:
+
+      - Constant step: raised directly, preserving the step and any
+        `affine.min` / `affine.max` bounds as the loop's bounds.
+      - Dynamic (symbolic) step: the loop is normalized to unit step and the
+        original induction variable is reconstructed in the body. An
+        `affine.min` upper bound is supported here; an `affine.max` lower bound
+        is not, as it cannot be raised soundly without a constant step.
+
+    Bounds and step of non-`index` type are cast to `index` first if the source
+    type allows lossless conversion (otherwise we do not touch the loop). In any
+    case we preserve semantics.
+
+    This pass does not modify memory accesses; use `--affine-raise-from-memref`
+    to convert `memref.load` / `memref.store`.
+  }];
+  let dependentDialects = [
+    "affine::AffineDialect",
+    "arith::ArithDialect",
+  ];
 }
 
 //===----------------------------------------------------------------------===//

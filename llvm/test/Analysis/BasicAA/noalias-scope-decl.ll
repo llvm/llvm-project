@@ -14,12 +14,12 @@ define void @test1(ptr %P, ptr %Q) nounwind ssp {
 ; CHECK-LABEL: Function: test1:
 
 ; CHECK: MayAlias:	i8* %P, i8* %Q
-; CHECK: NoModRef:  Ptr: i8* %P	<->  tail call void @llvm.experimental.noalias.scope.decl(metadata !0)
-; CHECK: NoModRef:  Ptr: i8* %Q	<->  tail call void @llvm.experimental.noalias.scope.decl(metadata !0)
+; CHECK: NoModRef:  Ptr: i8* %P	<->  tail call void @llvm.experimental.noalias.scope.decl(metadata ![[SCOPE:[0-9]+]])
+; CHECK: NoModRef:  Ptr: i8* %Q	<->  tail call void @llvm.experimental.noalias.scope.decl(metadata ![[SCOPE]])
 ; CHECK: Both ModRef:  Ptr: i8* %P	<->  tail call void @llvm.memcpy.p0.p0.i64(ptr %P, ptr %Q, i64 12, i1 false)
 ; CHECK: Both ModRef:  Ptr: i8* %Q	<->  tail call void @llvm.memcpy.p0.p0.i64(ptr %P, ptr %Q, i64 12, i1 false)
-; CHECK: NoModRef:   tail call void @llvm.experimental.noalias.scope.decl(metadata !0) <->   tail call void @llvm.memcpy.p0.p0.i64(ptr %P, ptr %Q, i64 12, i1 false)
-; CHECK: NoModRef:   tail call void @llvm.memcpy.p0.p0.i64(ptr %P, ptr %Q, i64 12, i1 false) <->   tail call void @llvm.experimental.noalias.scope.decl(metadata !0)
+; CHECK: NoModRef:   tail call void @llvm.experimental.noalias.scope.decl(metadata ![[SCOPE]]) <->   tail call void @llvm.memcpy.p0.p0.i64(ptr %P, ptr %Q, i64 12, i1 false)
+; CHECK: NoModRef:   tail call void @llvm.memcpy.p0.p0.i64(ptr %P, ptr %Q, i64 12, i1 false) <->   tail call void @llvm.experimental.noalias.scope.decl(metadata ![[SCOPE]])
 }
 
 

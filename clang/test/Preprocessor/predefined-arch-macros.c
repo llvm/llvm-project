@@ -1839,7 +1839,6 @@
 // CHECK_DMR_M32: #define __AMX_FP8__ 1
 // CHECK_GNR_M32: #define __AMX_INT8__ 1
 // CHECK_DMR_M32: #define __AMX_MOVRS__ 1
-// CHECK_DMR_M32: #define __AMX_TF32__ 1
 // CHECK_GNR_M32: #define __AMX_TILE__ 1
 // CHECK_DMR_M32: #define __AVX10_2_512__ 1
 // CHECK_DMR_M32: #define __AVX10_2__ 1
@@ -1945,7 +1944,6 @@
 // CHECK_DMR_M64: #define __AMX_FP8__ 1
 // CHECK_GNR_M64: #define __AMX_INT8__ 1
 // CHECK_DMR_M64: #define __AMX_MOVRS__ 1
-// CHECK_DMR_M64: #define __AMX_TF32__ 1
 // CHECK_GNR_M64: #define __AMX_TILE__ 1
 // CHECK_DMR_M64: #define __AVX10_2_512__ 1
 // CHECK_DMR_M64: #define __AVX10_2__ 1
@@ -4792,7 +4790,19 @@
 // RUN: %clang -E -dM %s -o - 2>&1 \
 // RUN:     -target sparc-unknown-linux \
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SPARC_LDBL
+// RUN: %clang -E -dM %s -o - 2>&1 \
+// RUN:     -target sparc-sun-solaris \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SPARC_LDBL
 // CHECK_SPARC_LDBL: #define __LONG_DOUBLE_128__ 1
+
+// RUN: %clang -E -dM %s -o - 2>&1 \
+// RUN:     -target sparc-unknown-none \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SPARC_LDBL64
+// RUN: %clang -E -dM %s -o - 2>&1 \
+// RUN:     -target sparc-unknown-rtems \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SPARC_LDBL64
+// CHECK_SPARC_LDBL64-NOT: #define __LONG_DOUBLE_128__ 1
+// CHECK_SPARC_LDBL64: #define __SIZEOF_LONG_DOUBLE__ 8
 
 // RUN: %clang -mcpu=v9 -E -dM %s -o - 2>&1 \
 // RUN:     -target sparc-unknown-linux \

@@ -447,6 +447,7 @@ Error MachOLayoutBuilder::layoutTail(uint64_t Offset) {
     case MachO::LC_VERSION_MIN_TVOS:
     case MachO::LC_VERSION_MIN_WATCHOS:
     case MachO::LC_BUILD_VERSION:
+    case MachO::LC_TARGET_TRIPLE:
     case MachO::LC_ID_DYLIB:
     case MachO::LC_LOAD_DYLIB:
     case MachO::LC_LOAD_WEAK_DYLIB:

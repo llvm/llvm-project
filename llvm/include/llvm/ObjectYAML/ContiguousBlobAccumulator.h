@@ -89,7 +89,14 @@ public:
       support::endian::write<T>(OS, Val, E);
   }
 
-  LLVM_ABI void updateDataAt(uint64_t Pos, void *Data, size_t Size);
+  template <typename T>
+  void updateDataAt(uint64_t Pos, T Val, llvm::endianness E) {
+    char Data[sizeof(T)];
+    support::endian::write<T>(Data, Val, E);
+    updateDataAt(Pos, Data, sizeof(Data));
+  }
+
+  LLVM_ABI void updateDataAt(uint64_t Pos, const void *Data, size_t Size);
 };
 
 } // end namespace yaml
