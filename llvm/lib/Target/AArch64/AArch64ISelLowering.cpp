@@ -15186,37 +15186,6 @@ SDValue AArch64TargetLowering::ReconstructShuffle(SDValue Op,
   return V;
 }
 
-// check if an EXT instruction can handle the shuffle mask when the
-// vector sources of the shuffle are the same.
-static bool isSingletonEXTMask(ArrayRef<int> M, EVT VT, unsigned &Imm) {
-  unsigned NumElts = VT.getVectorNumElements();
-
-  // Assume that the first shuffle index is not UNDEF.  Fail if it is.
-  if (M[0] < 0)
-    return false;
-
-  Imm = M[0];
-
-  // If this is a VEXT shuffle, the immediate value is the index of the first
-  // element.  The other shuffle indices must be the successive elements after
-  // the first one.
-  unsigned ExpectedElt = Imm;
-  for (unsigned i = 1; i < NumElts; ++i) {
-    // Increment the expected index.  If it wraps around, just follow it
-    // back to index zero and keep going.
-    ++ExpectedElt;
-    if (ExpectedElt == NumElts)
-      ExpectedElt = 0;
-
-    if (M[i] < 0)
-      continue; // ignore UNDEF indices
-    if (ExpectedElt != static_cast<unsigned>(M[i]))
-      return false;
-  }
-
-  return true;
-}
-
 // Detect patterns of a0,a1,a2,a3,b0,b1,b2,b3,c0,c1,c2,c3,d0,d1,d2,d3 from
 // v4i32s. This is really a truncate, which we can construct out of (legal)
 // concats and truncate nodes.
@@ -15339,48 +15308,6 @@ static bool isWideDUPMask(ArrayRef<int> M, EVT VT, unsigned BlockSize,
       return false;
 
   DupLaneOp = Elt0 / NumEltsPerBlock;
-  return true;
-}
-
-// check if an EXT instruction can handle the shuffle mask when the
-// vector sources of the shuffle are different.
-static bool isEXTMask(ArrayRef<int> M, EVT VT, bool &ReverseEXT,
-                      unsigned &Imm) {
-  // Look for the first non-undef element.
-  const int *FirstRealElt = find_if(M, [](int Elt) { return Elt >= 0; });
-
-  // Benefit from APInt to handle overflow when calculating expected element.
-  unsigned NumElts = VT.getVectorNumElements();
-  unsigned MaskBits = APInt(32, NumElts * 2).logBase2();
-  APInt ExpectedElt = APInt(MaskBits, *FirstRealElt + 1, /*isSigned=*/false,
-                            /*implicitTrunc=*/true);
-  // The following shuffle indices must be the successive elements after the
-  // first real element.
-  bool FoundWrongElt = std::any_of(FirstRealElt + 1, M.end(), [&](int Elt) {
-    return Elt != ExpectedElt++ && Elt >= 0;
-  });
-  if (FoundWrongElt)
-    return false;
-
-  // The index of an EXT is the first element if it is not UNDEF.
-  // Watch out for the beginning UNDEFs. The EXT index should be the expected
-  // value of the first element.  E.g.
-  // <-1, -1, 3, ...> is treated as <1, 2, 3, ...>.
-  // <-1, -1, 0, 1, ...> is treated as <2*NumElts-2, 2*NumElts-1, 0, 1, ...>.
-  // ExpectedElt is the last mask index plus 1.
-  Imm = ExpectedElt.getZExtValue();
-
-  // There are two difference cases requiring to reverse input vectors.
-  // For example, for vector <4 x i32> we have the following cases,
-  // Case 1: shufflevector(<4 x i32>,<4 x i32>,<-1, -1, -1, 0>)
-  // Case 2: shufflevector(<4 x i32>,<4 x i32>,<-1, -1, 7, 0>)
-  // For both cases, we finally use mask <5, 6, 7, 0>, which requires
-  // to reverse two input vectors.
-  if (Imm < NumElts)
-    ReverseEXT = true;
-  else
-    Imm -= NumElts;
-
   return true;
 }
 
@@ -16248,13 +16175,14 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
 
   bool ReverseEXT = false;
   unsigned Imm;
-  if (isEXTMask(ShuffleMask, VT, ReverseEXT, Imm)) {
+  if (isEXTMask(ShuffleMask, NumElts, ReverseEXT, Imm)) {
     if (ReverseEXT)
       std::swap(V1, V2);
     Imm *= getExtFactor(V1);
     return DAG.getNode(AArch64ISD::EXT, DL, V1.getValueType(), V1, V2,
                        DAG.getConstant(Imm, DL, MVT::i32));
-  } else if (V2->isUndef() && isSingletonEXTMask(ShuffleMask, VT, Imm)) {
+  }
+  if (V2->isUndef() && isSingletonEXTMask(ShuffleMask, NumElts, Imm)) {
     Imm *= getExtFactor(V1);
     return DAG.getNode(AArch64ISD::EXT, DL, V1.getValueType(), V1, V1,
                        DAG.getConstant(Imm, DL, MVT::i32));
@@ -18036,8 +17964,8 @@ bool AArch64TargetLowering::isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const {
           isREVMask(M, EltSize, NumElts, 64) ||
           isREVMask(M, EltSize, NumElts, 32) ||
           isREVMask(M, EltSize, NumElts, 16) ||
-          isEXTMask(M, VT, DummyBool, DummyUnsigned) ||
-          isSingletonEXTMask(M, VT, DummyUnsigned) ||
+          isEXTMask(M, NumElts, DummyBool, DummyUnsigned) ||
+          isSingletonEXTMask(M, NumElts, DummyUnsigned) ||
           isTRNMask(M, NumElts, DummyUnsigned, DummyUnsigned) ||
           isUZPMask(M, NumElts, DummyUnsigned) ||
           isZIPMask(M, NumElts, DummyUnsigned, DummyUnsigned) ||
@@ -35857,7 +35785,7 @@ SDValue AArch64TargetLowering::LowerFixedLengthVECTOR_SHUFFLEToSVE(
 
   bool ReverseEXT = false;
   unsigned Imm;
-  if (isEXTMask(ShuffleMask, VT, ReverseEXT, Imm) &&
+  if (isEXTMask(ShuffleMask, VT.getVectorNumElements(), ReverseEXT, Imm) &&
       Imm == VT.getVectorNumElements() - 1) {
     if (ReverseEXT)
       std::swap(Op1, Op2);
