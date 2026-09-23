@@ -3173,6 +3173,8 @@ Sema::SubstParmVarDecl(ParmVarDecl *OldParm,
                        bool ExpectParameterPack, bool EvaluateConstraint) {
   TypeSourceInfo *OldTSI = OldParm->getTypeSourceInfo();
   TypeSourceInfo *NewTSI = nullptr;
+  llvm::SaveAndRestore InParameterType(InFunctionParameterTypeInstantiation,
+                                       true);
 
   TypeLoc OldTL = OldTSI->getTypeLoc();
   if (PackExpansionTypeLoc ExpansionTL = OldTL.getAs<PackExpansionTypeLoc>()) {
