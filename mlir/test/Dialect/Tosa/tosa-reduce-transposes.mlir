@@ -426,9 +426,9 @@ func.func @test_static_unary_path_to_const() -> tensor<1x2x3x4xi32> {
 // -----
 
 // CHECK-LABEL: @test_static_diverges_to_non_splat_const_and_nullifying
-// CHECK: %[[NEW_CONST:.*]] = "tosa.const"()
+// CHECK: %[[NEW_CONST:.*]] = tosa.const values(
 // CHECK-SAME{LITERAL}: dense<[[[[1, 3, 5, 7], [9, 11, 13, 15], [17, 19, 21, 23]], [[2, 4, 6, 8], [10, 12, 14, 16], [18, 20, 22, 24]]]]>
-// CHECK: tensor<1x2x3x4xi32>}> : () -> tensor<1x2x3x4xi32>
+// CHECK-SAME: : tensor<1x2x3x4xi32>) : () -> tensor<1x2x3x4xi32>
 // CHECK: %[[NEW_CLAMP:.*]] = tosa.clamp %arg0 min_val(0 : i32) max_val(2147483647 : i32) : (tensor<1x2x3x4xi32>) -> tensor<1x2x3x4xi32>
 // CHECK: %[[NEW_ABS:.*]] = tosa.abs %[[NEW_CONST]] : (tensor<1x2x3x4xi32>) -> tensor<1x2x3x4xi32>
 // CHECK: %[[NEW_ADD:.*]] = tosa.add %[[NEW_ABS]], %[[NEW_CLAMP]] : (tensor<1x2x3x4xi32>, tensor<1x2x3x4xi32>) -> tensor<1x2x3x4xi32>
@@ -599,7 +599,7 @@ func.func @test_unimplemented_static_diverges_to_one_nullifying_one_non_nullifyi
 }
 
 // CHECK-LABEL: @test_transpose_bool
-// CHECK: %{{.*}} = "tosa.const"()
+// CHECK: %{{.*}} = tosa.const values(
 // CHECK-SAME{LITERAL}: dense<[[true, false], [false, false], [false, true]]>
 func.func @test_transpose_bool() -> tensor<3x2xi1> {
   %0 = "tosa.const"() <{values = dense<[[true, false, false], [false, false, true]]> : tensor<2x3xi1>}> : () -> tensor<2x3xi1>
@@ -608,7 +608,7 @@ func.func @test_transpose_bool() -> tensor<3x2xi1> {
 }
 
 // CHECK-LABEL: @test_transpose_i4
-// CHECK: %{{.*}} = "tosa.const"()
+// CHECK: %{{.*}} = tosa.const values(
 // CHECK-SAME{LITERAL}: dense<[[1, 4], [2, 5], [3, 6]]>
 func.func @test_transpose_i4() -> tensor<3x2xi4> {
   %0 = "tosa.const"() <{values = dense<[[1, 2, 3], [4, 5, 6]]> : tensor<2x3xi4>}> : () -> tensor<2x3xi4>
