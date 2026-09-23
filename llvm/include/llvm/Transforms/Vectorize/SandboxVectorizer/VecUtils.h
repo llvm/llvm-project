@@ -503,6 +503,10 @@ public:
 #endif // NDEBUG
 };
 
+extern template LLVM_TEMPLATE_ABI void
+    VecUtils::DeadInstructionMorgue::collectPotentiallyDeadInstrs<Instruction>(
+          BndlRef<Instruction *>);
+
 } // namespace sandboxir
 
 } // namespace llvm
