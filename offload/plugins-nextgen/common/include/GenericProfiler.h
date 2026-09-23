@@ -33,6 +33,8 @@ struct GenericDeviceTy;
 struct GenericPluginTy;
 class GenericProfilerTy;
 
+/// Helper function to unpack a tuple of arguments and call a function with
+/// them.
 template <typename FunT, typename... ArgsT, size_t... IdxSequence>
 void callViaIndexSeq(FunT F, GenericProfilerTy *P, uint64_t StartNanos,
                      uint64_t EndNanos, std::tuple<ArgsT...> Args,
@@ -40,6 +42,8 @@ void callViaIndexSeq(FunT F, GenericProfilerTy *P, uint64_t StartNanos,
   F(P, StartNanos, EndNanos, std::get<IdxSequence>(Args)...);
 }
 
+/// Helper function to unpack a tuple of arguments and call a function with
+/// them.
 template <typename FunT, typename... ArgsT>
 void callViaUnpack(FunT F, GenericProfilerTy *P, uint64_t StartNanos,
                    uint64_t EndNanos, std::tuple<ArgsT...> Tup) {
@@ -65,6 +69,7 @@ public:
   /// cannot outlive the buffers they point into.
   virtual OmptTracingBufferMgr *getTraceRecordManager() { return nullptr; }
 
+  /// Returns true if profiling is enabled, false otherwise.
   virtual bool isProfilingEnabled() { return false; }
 
   /// Set the factors which are used to interpolate the device clock compared to
@@ -115,42 +120,62 @@ public:
 
   /// RAII style timer that measures the elapsed time between construction and
   /// destruction, then invokes a callback with the profiler, start/end times,
-  /// and any captured arguments.
-  template <typename FnT, typename... ArgsT> class ProfTimerTy {
+  /// and any captured arguments. It wraps an existing GenericProfiler instance
+  /// to delay the call of the ProfilerFunction (F) until this object's dtor is
+  /// called.
+  template <typename ProfilerFuncTy, typename... ProfilerFuncArgsTy>
+  class ProfTimerTy {
   public:
-    ProfTimerTy(FnT &&F, GenericProfilerTy *P, GenericDeviceTy *D, ArgsT... As)
-        : Fun(F), Prof(P), Dev(D), Args(As...) {
-      assert(Prof && "GenericProfilerTy is null");
-      assert(Dev && "GenericDeviceTy is null");
-      if (Prof)
-        StartTime = Prof->getDeviceTimeStamp(Dev);
+    /// On creation, saves the timestamp from the profiler and device, and
+    /// stores the callback function and its arguments.
+    ProfTimerTy(ProfilerFuncTy &&F, GenericProfilerTy *P, GenericDeviceTy *D,
+                ProfilerFuncArgsTy... As)
+        : ProfilerFunction(F), ProfilerInstance(P), Device(D),
+          ProfilerFuncArgs(As...) {
+      assert(ProfilerInstance && "GenericProfilerTy is null");
+      assert(Device && "GenericDeviceTy is null");
+      if (ProfilerInstance)
+        StartTime = ProfilerInstance->getDeviceTimeStamp(Device);
     }
 
+    /// On destruction, saves the end timestamp and invokes the callback
+    /// function with the profiler, start/end times, and captured arguments.
     ~ProfTimerTy() {
-      assert(Prof && "GenericProfilerTy is null");
-      assert(Dev && "GenericDeviceTy is null");
-      if (Prof) {
-        uint64_t EndTime = Prof->getDeviceTimeStamp(Dev);
-        callViaUnpack(Fun, Prof, StartTime, EndTime, Args);
+      assert(ProfilerInstance && "GenericProfilerTy is null");
+      assert(Device && "GenericDeviceTy is null");
+      if (ProfilerInstance) {
+        uint64_t EndTime = ProfilerInstance->getDeviceTimeStamp(Device);
+        callViaUnpack(ProfilerFunction, ProfilerInstance, StartTime, EndTime,
+                      ProfilerFuncArgs);
       }
     }
 
   private:
-    FnT Fun;
-    GenericProfilerTy *Prof;
-    GenericDeviceTy *Dev;
+    /// The callback function to be invoked on destruction, which takes the
+    /// profiler, start/end times, and captured arguments.
+    ProfilerFuncTy ProfilerFunction;
+    /// The profiler instance to be used for timing and invoking the callback
+    /// function.
+    GenericProfilerTy *ProfilerInstance;
+    /// The device instance to be used for timing and invoking the callback
+    /// function.
+    GenericDeviceTy *Device;
+    /// The start time of the timer, captured at construction.
     uint64_t StartTime = 0;
-    std::tuple<ArgsT...> Args;
+    /// The captured arguments to be passed to the callback function on
+    /// destruction.
+    std::tuple<ProfilerFuncArgsTy...> ProfilerFuncArgs;
   };
 
-  template <typename FnT, typename... ArgsT>
+  template <typename ProfilerFuncTy, typename... ProfilerFuncArgsTy>
   [[maybe_unused]]
-  ProfTimerTy(FnT &&, GenericProfilerTy *, ArgsT...)
-      -> ProfTimerTy<FnT, ArgsT...>;
+  ProfTimerTy(ProfilerFuncTy &&, GenericProfilerTy *, ProfilerFuncArgsTy...)
+      -> ProfTimerTy<ProfilerFuncTy, ProfilerFuncArgsTy...>;
 
-  template <typename FnT, typename... ArgsT> friend class ProfTimerTy;
+  template <typename ProfilerFuncTy, typename... ProfilerFuncArgsTy>
+  friend class ProfTimerTy;
 
-  /// Returns an RAII style timer, which will handle data allocation timing.
+  /// Returns an RAII style timer, which handles data allocation timing.
   [[nodiscard]] auto getScopedDataAllocTimer(GenericDeviceTy *Dev,
                                              void *HostPtr, uint64_t Size,
                                              void *ProfData = nullptr) {
@@ -162,7 +187,7 @@ public:
         this, Dev, HostPtr, Size, ProfData);
   }
 
-  /// Returns an RAII style timer, which will handle data deletion timing.
+  /// Returns an RAII style timer, which handles data deletion timing.
   [[nodiscard]] auto getScopedDataDeleteTimer(GenericDeviceTy *Dev,
                                               void *TgtPtr,
                                               void *ProfData = nullptr) {
