@@ -2479,6 +2479,7 @@ module std {
         header "__pstl/cpu_algos/transform_reduce.h"
       }
     }
+    module decoupled_lookback { header "__pstl/decoupled_lookback.h" }
     module dispatch           { header "__pstl/dispatch.h" }
     module handle_exception   { header "__pstl/handle_exception.h" }
   }

@@ -52,6 +52,7 @@
 #include <__pstl/cpu_algos/transform.h>
 #include <__pstl/cpu_algos/transform_inclusive_scan_init.h>
 #include <__pstl/cpu_algos/transform_reduce.h>
+#include <__pstl/decoupled_lookback.h>
 #include <__utility/empty.h>
 #include <__utility/exception_guard.h>
 #include <__utility/move.h>
@@ -271,59 +272,28 @@ struct __cpu_traits<__libdispatch_backend_tag> {
         __combiner);
   }
 
-  template <class _RandomAccessIterator1,
-            class _RandomAccessIterator2,
-            class _Value,
-            class _Reduction,
-            class _Accumulation,
-            class _Scan>
+  template <class _Value, class _RandomAccessIterator1, class _PartitionScan>
   _LIBCPP_HIDE_FROM_ABI static optional<__empty>
-  __scan(_RandomAccessIterator1 __first,
-         _RandomAccessIterator1 __last,
-         _RandomAccessIterator2 __result,
-         _Value __init,
-         _Reduction __reduction,
-         _Accumulation __accumulation,
-         _Scan __scan) {
+  __lookback_scan(_RandomAccessIterator1 __first, _RandomAccessIterator1 __last, _PartitionScan __scan) {
     if (__first == __last)
-      return __empty{};
+      return __empty{}; // nothing to do
 
-    auto __partitions = __libdispatch::__partition_chunks(__last - __first);
+    // Partition the input and allocate the lookback storage
+    __libdispatch::__chunk_partitions __partitions = __libdispatch::__partition_chunks(__last - __first);
+    __decoupled_lookback<_Value> __lookback{static_cast<size_t>(__partitions.__chunk_count_ - 1)};
+    if (__partitions.__chunk_count_ > 1 && __lookback.__size() == 0) {
+      return nullopt; // failed to allocate the lookback storage
+    }
 
-    auto __destroy = [__count = __partitions.__chunk_count_](_Value* __ptr) {
-      std::destroy_n(__ptr, __count);
-      std::allocator<_Value>().deallocate(__ptr, __count);
-    };
-
-    // TODO: use __uninitialized_buffer
-    // TODO: check for malloc failure
-    // TODO: need one less element - the last chunk is not used in fact
-    unique_ptr<_Value[], decltype(__destroy)> __values(
-        std::allocator<_Value>().allocate(__partitions.__chunk_count_), __destroy);
-
-    // First: compute partial reductions for each chunk in parallel
-    __libdispatch::__dispatch_apply(__partitions.__chunk_count_, [&](size_t __chunk) {
+    // Run the single-pass scan with decoupled lookback
+    atomic<size_t> __next_chunk{0};
+    __libdispatch::__dispatch_apply(__partitions.__chunk_count_, [&](size_t /*__apply_chunk_out_of_order*/) {
+      size_t __chunk         = __next_chunk.fetch_add(1, std::memory_order_relaxed);
       auto __this_chunk_size = __chunk == 0 ? __partitions.__first_chunk_size_ : __partitions.__chunk_size_;
       auto __index           = __chunk == 0 ? 0
                                             : (__chunk * __partitions.__chunk_size_) +
                                                   (__partitions.__first_chunk_size_ - __partitions.__chunk_size_);
-      std::__construct_at(
-          __values.get() + __chunk, __reduction(__first + __index, __first + __index + __this_chunk_size));
-    });
-
-    // Second: accumulate the partial reductions serially
-    __accumulation(__values.get(), __values.get() + __partitions.__chunk_count_, __init);
-
-    // Third: distribute the accumulated prefix sum to each chunk in a parallel scan
-    __libdispatch::__dispatch_apply(__partitions.__chunk_count_, [&](size_t __chunk) {
-      auto __this_chunk_size = __chunk == 0 ? __partitions.__first_chunk_size_ : __partitions.__chunk_size_;
-      auto __index           = __chunk == 0 ? 0
-                                            : (__chunk * __partitions.__chunk_size_) +
-                                                  (__partitions.__first_chunk_size_ - __partitions.__chunk_size_);
-      __scan(__first + __index,
-             __first + __index + __this_chunk_size,
-             __result + __index,
-             std::move(__chunk == 0 ? __init : __values.get()[__chunk - 1]));
+      __scan(__first + __index, __first + __index + __this_chunk_size, __chunk, __lookback);
     });
 
     return __empty{};

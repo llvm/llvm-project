@@ -31,6 +31,7 @@
 #include <__pstl/cpu_algos/transform.h>
 #include <__pstl/cpu_algos/transform_inclusive_scan_init.h>
 #include <__pstl/cpu_algos/transform_reduce.h>
+#include <__pstl/decoupled_lookback.h>
 #include <__utility/empty.h>
 #include <__utility/move.h>
 
@@ -68,22 +69,13 @@ struct __cpu_traits<__std_thread_backend_tag> {
     return __reduce(std::move(__first), std::move(__last), std::move(__init));
   }
 
-  template <class _RandomAccessIterator1,
-            class _RandomAccessIterator2,
-            class _Value,
-            class _Reduction,
-            class _Accumulation,
-            class _Scan>
+  template <class _Value, class _RandomAccessIterator, class _PartitionScan>
   _LIBCPP_HIDE_FROM_ABI static optional<__empty>
-  __scan(_RandomAccessIterator1 __first,
-         _RandomAccessIterator1 __last,
-         _RandomAccessIterator2 __result,
-         _Value __init,
-         _Reduction /*__reduction*/,
-         _Accumulation /*__accumulation*/,
-         _Scan __scan) {
-    if (__first != __last)
-      __scan(__first, __last, __result, std::move(__init));
+  __lookback_scan(_RandomAccessIterator __first, _RandomAccessIterator __last, _PartitionScan __scan) {
+    if (__first == __last)
+      return __empty{}; // nothing to do
+    __decoupled_lookback<_Value> __lookback{0};
+    __scan(__first, __last, 0, __lookback);
     return __empty{};
   }
 

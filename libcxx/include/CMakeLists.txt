@@ -712,6 +712,7 @@ set(files
   __pstl/cpu_algos/transform.h
   __pstl/cpu_algos/transform_inclusive_scan_init.h
   __pstl/cpu_algos/transform_reduce.h
+  __pstl/decoupled_lookback.h
   __pstl/dispatch.h
   __pstl/handle_exception.h
   __random/bernoulli_distribution.h
