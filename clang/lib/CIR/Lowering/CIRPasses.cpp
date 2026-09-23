@@ -28,6 +28,16 @@ static CallConvTarget getCallConvTarget(const llvm::Triple &triple) {
   // Windows is not supported.  UEFI shares its convention.
   if (triple.getArch() == llvm::Triple::x86_64 && !triple.isOSWindowsOrUEFI())
     return CallConvTarget::X86_64;
+  if (triple.getArch() == llvm::Triple::x86 && triple.isOSBinFormatELF())
+    return CallConvTarget::X86_32;
+  if (triple.getArch() == llvm::Triple::aarch64 ||
+      triple.getArch() == llvm::Triple::aarch64_32 ||
+      triple.getArch() == llvm::Triple::aarch64_be)
+    return CallConvTarget::AArch64;
+  if ((triple.getArch() == llvm::Triple::ppc64 ||
+       triple.getArch() == llvm::Triple::ppc64le) &&
+      triple.isOSBinFormatELF())
+    return CallConvTarget::PPC64;
   return CallConvTarget::None;
 }
 
@@ -74,6 +84,31 @@ getX86ABICompatInfo(const clang::ASTContext &astContext,
   return abiCompat;
 }
 
+/// Resolve Clang's target and language options into the flags consumed by the
+/// LLVM ABI library's AArch64 classifier.  Keep this in sync with classic
+/// CodeGen's CodeGenModule::getLLVMABITargetInfo.
+static llvm::abi::AArch64ABIOptions
+getAArch64ABIOptions(const clang::ASTContext &astContext,
+                     clang::LangOptions::ClangABI compat) {
+  const clang::TargetInfo &targetInfo = astContext.getTargetInfo();
+  const llvm::Triple &triple = targetInfo.getTriple();
+  llvm::abi::AArch64ABIOptions options;
+  if (targetInfo.getABI() == "darwinpcs")
+    options.Kind = llvm::abi::AArch64ABIKind::DarwinPCS;
+  else if (triple.isOSWindows())
+    options.Kind = llvm::abi::AArch64ABIKind::Win64;
+  else if (targetInfo.getABI() == "aapcs-soft")
+    options.Kind = llvm::abi::AArch64ABIKind::AAPCSSoft;
+  else
+    options.Kind = llvm::abi::AArch64ABIKind::AAPCS;
+
+  options.IsILP32 = triple.getArch() == llvm::Triple::aarch64_32;
+  options.IsCXX = astContext.getLangOpts().CPlusPlus;
+  options.IsMicrosoftCXXABI = targetInfo.getCXXABI().isMicrosoft();
+  options.CompatInfo.IsMatrixHA = compat > clang::LangOptions::ClangABI::Ver23;
+  return options;
+}
+
 mlir::LogicalResult
 runCIRToCIRPasses(mlir::ModuleOp theModule, mlir::MLIRContext &mlirContext,
                   clang::ASTContext &astContext, bool enableVerifier,
@@ -116,8 +151,8 @@ runCIRToCIRPasses(mlir::ModuleOp theModule, mlir::MLIRContext &mlirContext,
   if (enableCallConvLowering) {
     // CallConvLowering rewrites signatures and call sites using the classifier,
     // so it must run after CXXABILowering has lowered C++ ABI types to plain
-    // records the classifier can handle.  Only the x86_64 System V classifier
-    // is implemented; other targets are left unchanged.
+    // records the classifier can handle.  Targets without a full LLVM ABI
+    // library classifier use only the rules implemented by this pass.
     const clang::TargetInfo &targetInfo = astContext.getTargetInfo();
     CallConvTarget target = getCallConvTarget(targetInfo.getTriple());
     if (target != CallConvTarget::None) {
@@ -135,7 +170,8 @@ runCIRToCIRPasses(mlir::ModuleOp theModule, mlir::MLIRContext &mlirContext,
       pm.addPass(mlir::createCallConvLoweringPass(
           target, getX86AVXABILevel(targetInfo.getABI()),
           allowsX86TargetAttrAvx(astContext, compat),
-          getX86ABICompatInfo(astContext, compat)));
+          getX86ABICompatInfo(astContext, compat),
+          getAArch64ABIOptions(astContext, compat)));
     }
   }
 

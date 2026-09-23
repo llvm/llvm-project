@@ -114,7 +114,8 @@ llvm::LogicalResult prepareCIRModuleDataLayout(mlir::ModuleOp mod,
   context->loadDialect<mlir::DLTIDialect, mlir::LLVM::LLVMDialect,
                        mlir::omp::OpenMPDialect>();
 
-  cir::setMLIRDataLayout(mod, llvm::DataLayout(layoutString));
+  cir::setMLIRDataLayout(mod, llvm::DataLayout(layoutString),
+                         targetInfo->getBitIntMaxAlign());
 
   return llvm::success();
 }

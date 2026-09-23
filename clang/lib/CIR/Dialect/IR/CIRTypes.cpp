@@ -729,6 +729,23 @@ constexpr static uint64_t kBitsInByte = 8;
 constexpr static uint64_t kDefaultPointerSizeBits = 64;
 constexpr static uint64_t kDefaultPointerAlignment = 8;
 
+/// Read Clang's target-specific maximum _BitInt alignment, in bits, from the
+/// sentinel CIR integer data-layout entry.  Hand-written CIR without the entry
+/// keeps the historical/default 64-bit cap.
+static uint64_t getBitIntMaxAlign(mlir::DataLayoutEntryListRef params) {
+  for (mlir::DataLayoutEntryInterface entry : params) {
+    if (!entry.isTypeEntry())
+      continue;
+    auto key =
+        mlir::dyn_cast<cir::IntType>(mlir::cast<mlir::Type>(entry.getKey()));
+    if (!key || !key.isBitInt() || key.getWidth() != 1)
+      continue;
+    if (auto value = mlir::dyn_cast<mlir::IntegerAttr>(entry.getValue()))
+      return value.getValue().getZExtValue();
+  }
+  return 64;
+}
+
 /// Returns the default-address-space #cir.ptr_spec entry, or a synthesized
 /// 64-bit default when there is none. Per-AS entries are not modeled yet.
 cir::PtrSpecAttr getPointerSpec(mlir::DataLayoutEntryListRef params,
@@ -1046,7 +1063,7 @@ unsigned
 IntType::getStorageTypeWidth(const mlir::DataLayout &dataLayout) const {
   if (!isBitInt())
     return getWidth();
-  uint64_t alignBits = getABIAlignment(dataLayout, {}) * 8;
+  uint64_t alignBits = dataLayout.getTypeABIAlignment(*this) * 8;
   return static_cast<unsigned>(llvm::alignTo(getWidth(), alignBits));
 }
 
@@ -1063,10 +1080,10 @@ uint64_t IntType::getABIAlignment(const mlir::DataLayout &dataLayout,
                                   mlir::DataLayoutEntryListRef params) const {
   unsigned width = getWidth();
   if (isBitInt()) {
-    // _BitInt alignment: min(PowerOf2Ceil(width), 64 bits) in bytes.
-    // Matches Clang's TargetInfo::getBitIntAlign with default max = 64.
+    // _BitInt alignment: min(PowerOf2Ceil(width), target maximum) in bytes.
+    // Matches Clang's TargetInfo::getBitIntAlign.
     uint64_t alignBits =
-        std::min(llvm::PowerOf2Ceil(width), static_cast<uint64_t>(64));
+        std::min(llvm::PowerOf2Ceil(width), getBitIntMaxAlign(params));
     return std::max(alignBits / 8, static_cast<uint64_t>(1));
   }
   // Round up to a power-of-two byte alignment.  DataLayout consumers such as
