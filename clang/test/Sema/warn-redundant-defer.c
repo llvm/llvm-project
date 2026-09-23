@@ -213,3 +213,19 @@ void f2() {
 
   defer {} // expected-warning {{redundant use of defer}}
 }
+
+int f3() {
+  defer {} // OK
+  return 0;
+}
+
+void f4() {
+  defer {} // OK
+  f1();
+  return;
+}
+
+void f5() {
+  defer {} // expected-warning {{redundant use of defer}}
+  return;
+}
