@@ -1864,8 +1864,7 @@ xegpu::setupPrefetchNdAnchorLayout(xegpu::LayoutKind layoutKind,
 /// consumer layout (from its result's downstream uses) and validates it
 /// against uArch constraints; if valid, the consumer's `inst_data` /
 /// `sg_layout` are honored. Otherwise the helper falls back to defaults
-/// derived from uArch block parameters. `lane_data` never comes from the
-/// consumer; see compute2DBlockIOLaneLayout.
+/// derived from uArch block parameters.
 xegpu::DistributeLayoutAttr
 xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
                                VectorType resVecTy,
@@ -1906,11 +1905,7 @@ xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
   // attr
   bool hasTranspose =
       consumerLaneLayout[rank - 2] > 1 && consumerLaneLayout[rank - 1] == 1;
-  // VNNI exists only below 32 bits, so a wider consumer packing rows into
-  // lane_data is not asking for a transform. Reading it as one sends us looking
-  // for a block variant the hardware does not have, and the whole layout is
-  // then abandoned -- leaving the consumer's lane_data on the load, which is
-  // what pack_register would wrongly be set from.
+  // VNNI exists only below 32 bits.
   bool canTransform =
       elemTy.isIntOrFloat() &&
       elemTy.getIntOrFloatBitWidth() < uArch->getGeneralPackedFormatBitSize();
@@ -2025,34 +2020,15 @@ static xegpu::DistributeLayoutAttr setupGenericLoadAnchorLayout(
   SmallVector<int64_t> consumerLaneData =
       consumerLayout.getEffectiveLaneDataAsInt();
 
-  SmallVector<int64_t> laneLayout;
-  SmallVector<int64_t> laneData;
   assert(!consumerLaneLayout.empty() && !consumerLaneData.empty() &&
          "Expected consumer layout to have lane_layout and lane_data");
-  laneLayout.assign(consumerLaneLayout.begin(), consumerLaneLayout.end());
-  laneData.assign(consumerLaneData.begin(), consumerLaneData.end());
+  SmallVector<int64_t> laneLayout(consumerLaneLayout);
 
-  // A matrix/gather load reads a single contiguous span of memory per lane, so
-  // a lane can only pack (lane_data > 1) elements along the innermost,
-  // contiguous dim. A consumer that requests lane_data > 1 on an outer, strided
-  // dim (e.g. a downstream reduction packing across mem_desc rows) is not
-  // lowerable: the contiguous load would fetch adjacent inner elements instead
-  // of the strided outer ones. Clamp the innermost dim to maxChunkSize and
-  // force outer dims to 1; a downstream convert_layout reconciles the
-  // difference with the consumer.
-  for (size_t i = 0; i + 1 < laneData.size(); ++i)
-    laneData[i] = 1;
-  if (!laneData.empty())
-    laneData.back() =
-        std::min(laneData.back(), static_cast<int64_t>(maxChunkSize));
-
-  // Lanes are bounded by what this load's own tile can supply. A consumer may
-  // distribute a dim more finely than the tile is wide -- a cross-subgroup
-  // reduction reloading a 16x4 slab wants the 16 lanes it uses elsewhere -- and
-  // keeping that would leave the layout unable to distribute the result.
-  for (size_t i = 0; i < laneLayout.size() && i < resShape.size(); ++i)
-    laneLayout[i] = std::min(laneLayout[i],
-                             std::max<int64_t>(1, resShape[i] / laneData[i]));
+  // A matrix/gather load reads one contiguous span per lane, so a lane can pack
+  // only along the innermost dim, and only up to maxChunkSize.
+  SmallVector<int64_t> laneData(consumerLaneData.size(), 1);
+  laneData.back() =
+      std::min(consumerLaneData.back(), static_cast<int64_t>(maxChunkSize));
 
   if (layoutKind == xegpu::LayoutKind::InstData) {
     SmallVector<int64_t> instData;
@@ -2460,16 +2436,13 @@ xegpu::completeDpasMxLaneLayoutFromInstData(
 /// (`ResolveLayoutConflicts`), which inserts a `convert_layout` op - this
 /// function never has to give up.
 ///
-/// For the InstData and Lane layout kinds the lane_layout and lane_data are
-/// computed by `computeReductionLaneLayoutAndData`, which prefers a lane-local
-/// reduction and spends only otherwise-idle lanes on a cross-lane one. The
-/// inst_data is simply the element-wise product lane_layout * lane_data.
+/// InstData kind: `computeReductionLaneLayoutAndData` derives lane_layout and
+/// lane_data, and inst_data is their element-wise product.
 ///
-/// At the Lane kind a consumer sliced over exactly `reductionDims` is reused
-/// verbatim: the InstData run already settled the packing and inserted any
-/// `convert_layout` needed, so this stage adopts that decision rather than
-/// re-deriving one. Re-deriving is reserved for the other consumers, and
-/// assumes all leading (non-innermost-two) dims are unit, as
+/// Lane kind: a consumer sliced over exactly `reductionDims` is reused verbatim
+/// rather than re-derived, so this stage does not re-decide packing an earlier
+/// run already committed to. Any other consumer goes through the same
+/// derivation, which assumes all leading (non-innermost-two) dims are unit, as
 /// `leadingDimsAreUnit` asserts.
 ///
 /// The function returns the *result* layout (the SliceAttr). The *source*
@@ -2522,28 +2495,32 @@ xegpu::completeDpasMxLaneLayoutFromInstData(
 ///   3. Lane layout - Default (lanes on innermost dim):
 ///      srcShape=[32, 64], reductionDims=[0], subgroupSize=16
 ///      * Source Layout (decided by this function):
-///        laneLayout=[1, 16], laneData=[1, 1] (returned sliced over dim 0).
-///      The innermost dim is not reduced, so lanes stay on it.
+///        laneLayout=[1, 16], laneData=[16, 1] (returned sliced over dim 0).
+///      The innermost dim is not reduced, so lanes stay on it. Reduced dim 0 is
+///      then lane-free and takes the per-lane reduce vector:
+///      laneData[0] = min(maxReduceVectorSize, 32) = 16.
 ///
 ///   4. Lane layout - Switch (lanes moved off the reduction dim):
 ///      srcShape=[32, 64], reductionDims=[1], subgroupSize=16
 ///      * Source Layout (decided by this function):
-///        laneLayout=[16, 1], laneData=[1, 1] (returned sliced over dim 1).
+///        laneLayout=[16, 1], laneData=[1, 16] (returned sliced over dim 1).
 ///      The innermost dim is the sole reduction dim, so lanes move to the
-///      non-reduction dim to reduce within a lane. This switch only happens
-///      when the consumer has no reduction dims to broadcast the result back
-///      along (i.e. the consumer layout is not a slice over this reduction);
-///      otherwise the default (example 3) is used.
+///      non-reduction dim to reduce within a lane, and the now lane-free
+///      reduction dim takes the per-lane reduce vector (16 of its 64 elements).
+///      This switch only happens when the consumer has no reduction dims to
+///      broadcast the result back along (i.e. the consumer layout is not a
+///      slice over this reduction); otherwise the default (example 3) is used.
 ///
 ///   5. Lane layout - No switch when both inner dims are reduced (reduction to
 ///   scalar):
 ///      srcShape=[32, 64], reductionDims=[0, 1], subgroupSize=16
 ///      * Source Layout (decided by this function):
-///        laneLayout=[1, 16], laneData=[1, 1] (returned sliced over dims
+///        laneLayout=[1, 16], laneData=[16, 1] (returned sliced over dims
 ///        [0,1]).
 ///      Both dims are reduced, so this is not a *sole* innermost reduction; the
 ///      switch condition (example 4) does not apply and lanes stay on the
-///      innermost dim. The cross-lane reduction here is unavoidable.
+///      innermost dim. Reduced dim 0 is lane-free, so it takes the reduce
+///      vector. The cross-lane reduction over dim 1 here is unavoidable.
 ///
 ///   6. Lane layout - No switch when the consumer slices the reduction dim:
 ///      srcShape=[32, 64], reductionDims=[1], subgroupSize=16
@@ -2569,7 +2546,7 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
   auto context = srcVecTy.getContext();
 
   const int subgroupSize = uArch->getSubgroupSize();
-  int64_t maxReduceVectorSize = 16; // could extend to spirv vector Size
+  int64_t maxReduceVectorSize = 16; // extend to spirv vector Size
   xegpu::DistributeLayoutAttr srcLayout;
   if (layoutKind == xegpu::LayoutKind::Subgroup) {
     xegpu::SliceAttr consumerSliceLayout =
