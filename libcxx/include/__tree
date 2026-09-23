@@ -1074,7 +1074,7 @@ public:
 
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<iterator, bool> __emplace_unique(_Args&&... __args) {
-    return std::__try_key_extraction<key_type>(
+    return std::__try_key_extraction<key_type, value_type>(
         [this](const key_type& __key, _Args&&... __args2) {
           auto [__parent, __child] = __find_equal(__key);
           __node_pointer __r       = std::__static_fancy_pointer_cast<__node_pointer>(__child);
@@ -1105,7 +1105,7 @@ public:
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<iterator, bool>
   __emplace_hint_unique(const_iterator __p, _Args&&... __args) {
-    return std::__try_key_extraction<key_type>(
+    return std::__try_key_extraction<key_type, value_type>(
         [this, __p](const key_type& __key, _Args&&... __args2) {
           __node_base_pointer __dummy;
           auto [__parent, __child] = __find_equal(__p, __dummy, __key);
@@ -1182,7 +1182,7 @@ public:
     using __reference = decltype(*__first);
 
     for (; __first != __last; ++__first) {
-      std::__try_key_extraction<key_type>(
+      std::__try_key_extraction<key_type, value_type>(
           [this, &__max_node](const key_type& __key, __reference&& __val) {
             if (value_comp()(__max_node->__get_value(), __key)) { // __key > __max_node
               __node_holder __nd = __construct_node(std::forward<__reference>(__val));

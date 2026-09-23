@@ -15,6 +15,7 @@ int x = 0;
 int y = 10;
 int z = 20;
 
+// clang-format off
 __attribute__((noinline)) static void workOne() {
 #pragma omp task depend(inout : x)
   {}
@@ -29,6 +30,7 @@ __attribute__((noinline)) static void workThree() {
 #pragma omp task depend(in : y, z) depend(out : x)
   {}
 }
+// clang-format on
 
 int main() {
 #pragma omp parallel

@@ -33,7 +33,7 @@ func.func @not_with_maybe_overflow(%arg0 : i32) -> (i32, i32, i32, i32, i32, i32
 }
 
 // CHECK-LABEL: func @yes_with_no_overflow
-// CHECK: arith.divui
+// CHECK: arith.divui {{.*}} exact {test.marker}
 // CHECK: arith.ceildivui
 // CHECK: arith.divui
 // CHECK: arith.remui
@@ -50,7 +50,7 @@ func.func @yes_with_no_overflow(%arg0 : i32) -> (i32, i32, i32, i32, i32, i32, i
     %c4 = arith.constant 4 : i32
     %0 = arith.minui %arg0, %ci32_almost_smax : i32
     %1 = arith.addi %0, %c1 : i32
-    %2 = arith.divsi %1, %c4 : i32
+    %2 = arith.divsi %1, %c4 exact {test.marker} : i32
     %3 = arith.ceildivsi %1, %c4 : i32
     %4 = arith.floordivsi %1, %c4 : i32
     %5 = arith.remsi %1, %c4 : i32

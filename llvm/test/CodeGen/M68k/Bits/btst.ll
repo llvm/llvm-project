@@ -4,12 +4,12 @@
 define fastcc i16 @switch_to_btst(i16 %a) nounwind {
 ; CHECK-LABEL: switch_to_btst:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    move.l %d0, %d1
-; CHECK-NEXT:    and.l #65535, %d1
-; CHECK-NEXT:    sub.l #11, %d1
+; CHECK-NEXT:    cmpi.w #11, %d0
 ; CHECK-NEXT:    bhi .LBB0_3
 ; CHECK-NEXT:  ; %bb.1: ; %entry
-; CHECK-NEXT:    and.l #65535, %d0
+; CHECK-NEXT:    swap %d0
+; CHECK-NEXT:    clr.w %d0
+; CHECK-NEXT:    swap %d0
 ; CHECK-NEXT:    move.l #3612, %d1
 ; CHECK-NEXT:    btst %d0, %d1
 ; CHECK-NEXT:    beq .LBB0_3
@@ -17,7 +17,7 @@ define fastcc i16 @switch_to_btst(i16 %a) nounwind {
 ; CHECK-NEXT:    moveq #1, %d0
 ; CHECK-NEXT:    rts
 ; CHECK-NEXT:  .LBB0_3: ; %no_match
-; CHECK-NEXT:    moveq #0, %d0
+; CHECK-NEXT:    clr.w %d0
 ; CHECK-NEXT:    rts
   entry:
     switch i16 %a, label %no_match [
@@ -43,7 +43,7 @@ define fastcc i16 @and_mask_to_btst(i8 %a, i8 %b) nounwind {
 ; CHECK-NEXT:    btst %d1, %d0
 ; CHECK-NEXT:    beq .LBB1_1
 ; CHECK-NEXT:  ; %bb.2: ; %cond_false
-; CHECK-NEXT:    moveq #0, %d0
+; CHECK-NEXT:    clr.w %d0
 ; CHECK-NEXT:    rts
 ; CHECK-NEXT:  .LBB1_1: ; %cond_true
 ; CHECK-NEXT:    moveq #1, %d0
