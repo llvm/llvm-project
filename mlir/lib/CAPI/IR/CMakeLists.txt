@@ -2,6 +2,7 @@
 add_mlir_upstream_c_api_library(MLIRCAPIIR
   AffineExpr.cpp
   AffineMap.cpp
+  Analysis.cpp
   BuiltinAttributes.cpp
   BuiltinTypes.cpp
   Diagnostics.cpp
@@ -14,6 +15,7 @@ add_mlir_upstream_c_api_library(MLIRCAPIIR
   Support.cpp
 
   LINK_LIBS PUBLIC
+  MLIRAnalysis
   MLIRBytecodeWriter
   MLIRIR
   MLIRParser
