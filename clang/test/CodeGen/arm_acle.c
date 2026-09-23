@@ -494,41 +494,11 @@ uint32_t test_rev16(uint32_t t) {
 //
 // AArch64-LABEL: @test_rev16l(
 // AArch64-NEXT:  entry:
-// AArch64-NEXT:    [[SHR_I:%.*]] = lshr i64 [[T:%.*]], 32
-// AArch64-NEXT:    [[CONV_I:%.*]] = trunc i64 [[SHR_I]] to i32
-// AArch64-NEXT:    [[TMP0:%.*]] = call i32 @llvm.bswap.i32(i32 [[CONV_I]])
-// AArch64-NEXT:    [[REM_I_I10_I:%.*]] = urem i32 16, 32
-// AArch64-NEXT:    [[CMP_I_I11_I:%.*]] = icmp eq i32 [[REM_I_I10_I]], 0
-// AArch64-NEXT:    br i1 [[CMP_I_I11_I]], label [[IF_THEN_I_I17_I:%.*]], label [[IF_END_I_I12_I:%.*]]
-// AArch64:       if.then.i.i17.i:
-// AArch64-NEXT:    br label [[__REV16_EXIT18_I:%.*]]
-// AArch64:       if.end.i.i12.i:
-// AArch64-NEXT:    [[SHR_I_I13_I:%.*]] = lshr i32 [[TMP0]], [[REM_I_I10_I]]
-// AArch64-NEXT:    [[SUB_I_I14_I:%.*]] = sub i32 32, [[REM_I_I10_I]]
-// AArch64-NEXT:    [[SHL_I_I15_I:%.*]] = shl i32 [[TMP0]], [[SUB_I_I14_I]]
-// AArch64-NEXT:    [[OR_I_I16_I:%.*]] = or i32 [[SHR_I_I13_I]], [[SHL_I_I15_I]]
-// AArch64-NEXT:    br label [[__REV16_EXIT18_I]]
-// AArch64:       __rev16.exit18.i:
-// AArch64-NEXT:    [[RETVAL_I_I6_I_0:%.*]] = phi i32 [ [[TMP0]], [[IF_THEN_I_I17_I]] ], [ [[OR_I_I16_I]], [[IF_END_I_I12_I]] ]
-// AArch64-NEXT:    [[CONV1_I:%.*]] = zext i32 [[RETVAL_I_I6_I_0]] to i64
-// AArch64-NEXT:    [[SHL_I:%.*]] = shl i64 [[CONV1_I]], 32
-// AArch64-NEXT:    [[CONV2_I:%.*]] = trunc i64 [[T]] to i32
-// AArch64-NEXT:    [[TMP1:%.*]] = call i32 @llvm.bswap.i32(i32 [[CONV2_I]])
-// AArch64-NEXT:    [[REM_I_I_I:%.*]] = urem i32 16, 32
-// AArch64-NEXT:    [[CMP_I_I_I:%.*]] = icmp eq i32 [[REM_I_I_I]], 0
-// AArch64-NEXT:    br i1 [[CMP_I_I_I]], label [[IF_THEN_I_I_I:%.*]], label [[IF_END_I_I_I:%.*]]
-// AArch64:       if.then.i.i.i:
-// AArch64-NEXT:    br label [[__REV16LL_EXIT:%.*]]
-// AArch64:       if.end.i.i.i:
-// AArch64-NEXT:    [[SHR_I_I_I:%.*]] = lshr i32 [[TMP1]], [[REM_I_I_I]]
-// AArch64-NEXT:    [[SUB_I_I_I:%.*]] = sub i32 32, [[REM_I_I_I]]
-// AArch64-NEXT:    [[SHL_I_I_I:%.*]] = shl i32 [[TMP1]], [[SUB_I_I_I]]
-// AArch64-NEXT:    [[OR_I_I_I:%.*]] = or i32 [[SHR_I_I_I]], [[SHL_I_I_I]]
-// AArch64-NEXT:    br label [[__REV16LL_EXIT]]
-// AArch64:       __rev16ll.exit:
-// AArch64-NEXT:    [[RETVAL_I_I_I_0:%.*]] = phi i32 [ [[TMP1]], [[IF_THEN_I_I_I]] ], [ [[OR_I_I_I]], [[IF_END_I_I_I]] ]
-// AArch64-NEXT:    [[CONV4_I:%.*]] = zext i32 [[RETVAL_I_I_I_0]] to i64
-// AArch64-NEXT:    [[OR_I:%.*]] = or i64 [[SHL_I]], [[CONV4_I]]
+// AArch64-NEXT:    [[SHR_I:%.*]] = lshr i64 [[T:%.*]], 8
+// AArch64-NEXT:    [[AND_I:%.*]] = and i64 [[SHR_I]], 71777214294589695
+// AArch64-NEXT:    [[SHL_I:%.*]] = shl i64 [[T]], 8
+// AArch64-NEXT:    [[AND1_I:%.*]] = and i64 [[SHL_I]], -71777214294589696
+// AArch64-NEXT:    [[OR_I:%.*]] = or i64 [[AND_I]], [[AND1_I]]
 // AArch64-NEXT:    ret i64 [[OR_I]]
 //
 long test_rev16l(long t) {
@@ -537,41 +507,11 @@ long test_rev16l(long t) {
 
 // ARM-LABEL: @test_rev16ll(
 // ARM-NEXT:  entry:
-// ARM-NEXT:    [[SHR_I:%.*]] = lshr i64 [[T:%.*]], 32
-// ARM-NEXT:    [[CONV_I:%.*]] = trunc i64 [[SHR_I]] to i32
-// ARM-NEXT:    [[TMP0:%.*]] = call i32 @llvm.bswap.i32(i32 [[CONV_I]])
-// ARM-NEXT:    [[REM_I_I10_I:%.*]] = urem i32 16, 32
-// ARM-NEXT:    [[CMP_I_I11_I:%.*]] = icmp eq i32 [[REM_I_I10_I]], 0
-// ARM-NEXT:    br i1 [[CMP_I_I11_I]], label [[IF_THEN_I_I17_I:%.*]], label [[IF_END_I_I12_I:%.*]]
-// ARM:       if.then.i.i17.i:
-// ARM-NEXT:    br label [[__REV16_EXIT18_I:%.*]]
-// ARM:       if.end.i.i12.i:
-// ARM-NEXT:    [[SHR_I_I13_I:%.*]] = lshr i32 [[TMP0]], [[REM_I_I10_I]]
-// ARM-NEXT:    [[SUB_I_I14_I:%.*]] = sub i32 32, [[REM_I_I10_I]]
-// ARM-NEXT:    [[SHL_I_I15_I:%.*]] = shl i32 [[TMP0]], [[SUB_I_I14_I]]
-// ARM-NEXT:    [[OR_I_I16_I:%.*]] = or i32 [[SHR_I_I13_I]], [[SHL_I_I15_I]]
-// ARM-NEXT:    br label [[__REV16_EXIT18_I]]
-// ARM:       __rev16.exit18.i:
-// ARM-NEXT:    [[RETVAL_I_I6_I_0:%.*]] = phi i32 [ [[TMP0]], [[IF_THEN_I_I17_I]] ], [ [[OR_I_I16_I]], [[IF_END_I_I12_I]] ]
-// ARM-NEXT:    [[CONV1_I:%.*]] = zext i32 [[RETVAL_I_I6_I_0]] to i64
-// ARM-NEXT:    [[SHL_I:%.*]] = shl i64 [[CONV1_I]], 32
-// ARM-NEXT:    [[CONV2_I:%.*]] = trunc i64 [[T]] to i32
-// ARM-NEXT:    [[TMP1:%.*]] = call i32 @llvm.bswap.i32(i32 [[CONV2_I]])
-// ARM-NEXT:    [[REM_I_I_I:%.*]] = urem i32 16, 32
-// ARM-NEXT:    [[CMP_I_I_I:%.*]] = icmp eq i32 [[REM_I_I_I]], 0
-// ARM-NEXT:    br i1 [[CMP_I_I_I]], label [[IF_THEN_I_I_I:%.*]], label [[IF_END_I_I_I:%.*]]
-// ARM:       if.then.i.i.i:
-// ARM-NEXT:    br label [[__REV16LL_EXIT:%.*]]
-// ARM:       if.end.i.i.i:
-// ARM-NEXT:    [[SHR_I_I_I:%.*]] = lshr i32 [[TMP1]], [[REM_I_I_I]]
-// ARM-NEXT:    [[SUB_I_I_I:%.*]] = sub i32 32, [[REM_I_I_I]]
-// ARM-NEXT:    [[SHL_I_I_I:%.*]] = shl i32 [[TMP1]], [[SUB_I_I_I]]
-// ARM-NEXT:    [[OR_I_I_I:%.*]] = or i32 [[SHR_I_I_I]], [[SHL_I_I_I]]
-// ARM-NEXT:    br label [[__REV16LL_EXIT]]
-// ARM:       __rev16ll.exit:
-// ARM-NEXT:    [[RETVAL_I_I_I_0:%.*]] = phi i32 [ [[TMP1]], [[IF_THEN_I_I_I]] ], [ [[OR_I_I_I]], [[IF_END_I_I_I]] ]
-// ARM-NEXT:    [[CONV4_I:%.*]] = zext i32 [[RETVAL_I_I_I_0]] to i64
-// ARM-NEXT:    [[OR_I:%.*]] = or i64 [[SHL_I]], [[CONV4_I]]
+// ARM-NEXT:    [[SHR_I:%.*]] = lshr i64 [[T:%.*]], 8
+// ARM-NEXT:    [[AND_I:%.*]] = and i64 [[SHR_I]], 71777214294589695
+// ARM-NEXT:    [[SHL_I:%.*]] = shl i64 [[T]], 8
+// ARM-NEXT:    [[AND1_I:%.*]] = and i64 [[SHL_I]], -71777214294589696
+// ARM-NEXT:    [[OR_I:%.*]] = or i64 [[AND_I]], [[AND1_I]]
 // ARM-NEXT:    ret i64 [[OR_I]]
 //
 uint64_t test_rev16ll(uint64_t t) {
@@ -1819,16 +1759,5 @@ int test_rndr(uint64_t *__addr) {
 //
 int test_rndrrs(uint64_t *__addr) {
   return __rndrrs(__addr);
-}
-#endif
-
-#if defined(__ARM_64BIT_STATE)
-// AArch64-LABEL: @test_stshh_atomic_store(
-// AArch64-NEXT:  entry:
-// AArch64:         call void @llvm.aarch64.stshh.atomic.store.p0(ptr %p, i64 {{.*}}, i32 0, i32 0, i32 32)
-// AArch64-NEXT:    ret void
-//
-void test_stshh_atomic_store(int *p, int v) {
-  __arm_atomic_store_with_stshh(p, v, __ATOMIC_RELAXED, 0);
 }
 #endif

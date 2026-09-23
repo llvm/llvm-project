@@ -68,7 +68,7 @@ private:
   /// The type of the resource referenced.
   TypeID opaqueID;
   /// The dialect owning the given resource.
-  Dialect *dialect;
+  Dialect *dialect = nullptr;
 };
 
 /// This class represents a CRTP base class for dialect resource handles. It
@@ -501,6 +501,11 @@ public:
   /// printed some other way (like as a fixed operand).
   virtual void printOptionalAttrDict(ArrayRef<NamedAttribute> attrs,
                                      ArrayRef<StringRef> elidedAttrs = {}) = 0;
+
+  void printOptionalAttrDict(DictionaryAttr attrs,
+                             ArrayRef<StringRef> elidedAttrs = {}) {
+    printOptionalAttrDict(attrs.getValue(), elidedAttrs);
+  }
 
   /// If the specified operation has attributes, print out an attribute
   /// dictionary prefixed with 'attributes'.
@@ -1165,14 +1170,19 @@ public:
       typename = std::enable_if_t<!llvm::is_one_of<
           AttrType, Attribute, ArrayAttr, StringAttr, SymbolRefAttr>::value>>
   OptionalParseResult parseOptionalAttribute(AttrType &result, Type type = {}) {
+    llvm::SMLoc loc = getCurrentLocation();
     Attribute attr;
     OptionalParseResult parseResult = parseOptionalAttribute(attr, type);
     if (!parseResult.has_value() || failed(*parseResult))
       return parseResult;
     result = dyn_cast<AttrType>(attr);
-    if (!result)
-      return emitError(getCurrentLocation())
-             << "expected attribute of a different type";
+    if (!result) {
+      InFlightDiagnostic diag =
+          emitError(loc, "invalid kind of attribute specified");
+      if constexpr (HasStaticName<AttrType>::value)
+        diag << ": expected " << AttrType::name << ", but found " << attr;
+      return diag;
+    }
     return success();
   }
 
@@ -1843,14 +1853,6 @@ ParseResult parseDimensionList(OpAsmParser &parser,
 namespace llvm {
 template <>
 struct DenseMapInfo<mlir::AsmDialectResourceHandle> {
-  static inline mlir::AsmDialectResourceHandle getEmptyKey() {
-    return {DenseMapInfo<void *>::getEmptyKey(),
-            DenseMapInfo<mlir::TypeID>::getEmptyKey(), nullptr};
-  }
-  static inline mlir::AsmDialectResourceHandle getTombstoneKey() {
-    return {DenseMapInfo<void *>::getTombstoneKey(),
-            DenseMapInfo<mlir::TypeID>::getTombstoneKey(), nullptr};
-  }
   static unsigned getHashValue(const mlir::AsmDialectResourceHandle &handle) {
     return DenseMapInfo<void *>::getHashValue(handle.getResource());
   }

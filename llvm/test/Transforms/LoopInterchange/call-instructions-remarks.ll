@@ -23,10 +23,10 @@ declare void @bar(i64 %a) readnone
 
 ; CHECK: --- !Missed
 ; CHECK-NEXT: Pass:            loop-interchange
-; CHECK-NEXT: Name:            CallInst
+; CHECK-NEXT: Name:            UnsafeInst
 ; CHECK-NEXT: Function:        interchange_01
 ; CHECK-NEXT: Args:
-; CHECK-NEXT: - String:          Cannot interchange loops due to call instruction.
+; CHECK-NEXT: - String:          Cannot interchange loops due to instruction that is potentially unsafe to interchange.
 
 define void @interchange_01(i32 %k) {
 entry:

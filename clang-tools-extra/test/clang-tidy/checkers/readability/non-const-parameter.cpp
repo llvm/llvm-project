@@ -372,3 +372,190 @@ void testGenericLambdaIssue177354() {
     T x(*p);
   };
 }
+
+template <typename Index>
+void dependentArray1(double *ToFill, Index I, double FillValue) {
+  ToFill[I] = FillValue;
+}
+
+template <typename Index>
+void dependentArray2(double *ToFill, Index I, double FillValue) {
+  I[ToFill] = FillValue;
+}
+
+void useDependentArray() {
+  double ToFill[2] = {};
+  dependentArray1(ToFill, 0, 1.0);
+  dependentArray2(ToFill, 0, 1.0);
+}
+
+void testGenericLambdaIssue177354EqualsInit() {
+  // CHECK-MESSAGES-NOT: warning: pointer parameter 'p' can be pointer to const
+  auto genericLambda = []<typename T>(int *p) {
+    T x = *p;
+  };
+}
+
+void testGenericLambdaIssue177354Parens() {
+  // CHECK-MESSAGES-NOT: warning: pointer parameter 'p' can be pointer to const
+  auto genericLambda = []<typename T>(int *p) {
+    T x((*p));
+  };
+}
+
+template <typename T>
+struct DependentCtor {
+  DependentCtor(int *p);
+};
+
+template <typename T>
+struct DependentCtor2 {
+  DependentCtor2(int *p, int *q);
+};
+
+void dependentInitInGenericLambda() {
+  // CHECK-MESSAGES-NOT: warning: pointer parameter 'p' can be pointer to const
+  auto lambda = []<typename T>(int *p) {
+    DependentCtor<T> s(p);
+  };
+}
+
+void dependentInitInGenericLambdaParens() {
+  // CHECK-MESSAGES-NOT: warning: pointer parameter 'p' can be pointer to const
+  auto lambda = []<typename T>(int *p) {
+    DependentCtor<T> s((p));
+  };
+}
+
+void dependentInitInGenericLambdaMultiArg() {
+  // CHECK-MESSAGES-NOT: warning: pointer parameter 'p' can be pointer to const
+  auto lambda = []<typename T>(int *p) {
+    DependentCtor2<T> s(p, p);
+  };
+}
+
+template <class T>
+struct StaticDepInClassInit {
+  static const T X = 0;
+};
+
+template <class T>
+const T StaticDepInClassInit<T>::X;
+
+template <class T>
+struct StaticDepOutOfClassInit {
+  static const T X;
+};
+
+template <class T>
+const T StaticDepOutOfClassInit<T>::X = 0;
+
+double overloadConflict(double *overloadConflictPtr) {
+  return *overloadConflictPtr;
+}
+
+double overloadConflict(const double *overloadConflictPtr) {
+  return *overloadConflictPtr;
+}
+
+double topLevelConstPointerOverload(double *topLevelConstPtr) {
+  return *topLevelConstPtr;
+}
+
+double topLevelConstPointerOverload(const double *const topLevelConstPtr) {
+  return *topLevelConstPtr;
+}
+
+void arrayOverloadConflict(double arrayOut[2],
+                           double arrayConflictParam[2]) {
+  arrayOut[0] = arrayConflictParam[0];
+}
+
+void arrayOverloadConflict(double arrayOut[2],
+                           const double arrayConflictParam[2]) {
+  arrayOut[0] = arrayConflictParam[0];
+}
+
+int returnTypeConflict(int *returnTypePtr) { return *returnTypePtr; }
+
+long returnTypeConflict(const int *returnTypePtr) { return *returnTypePtr; }
+
+namespace UsingOverloadConflict {
+int usingConflict(const int *usingConflictPtr) { return *usingConflictPtr; }
+} // namespace UsingOverloadConflict
+
+using UsingOverloadConflict::usingConflict;
+int usingConflict(int *usingConflictPtr) { return *usingConflictPtr; }
+
+template <int>
+int templateOverloadConflict(int *templateConflictPtr) {
+  return *templateConflictPtr;
+}
+
+template <int>
+int templateOverloadConflict(const int *templateConflictPtr) {
+  return *templateConflictPtr;
+}
+
+struct ConstructorOverloadConflict {
+  ConstructorOverloadConflict(int *ctorConflictPtr) {
+    (void)*ctorConflictPtr;
+  }
+  ConstructorOverloadConflict(const int *ctorConflictPtr) {}
+};
+
+struct MemberOverloadConflict {
+  void withConflictingOverload(int *memberConflictPtr) {
+    (void)*memberConflictPtr;
+  }
+  void withConflictingOverload(const int *memberConflictPtr) {}
+};
+
+struct OperatorCallConflict {
+  int operator()(int *operatorCallPtr) { return *operatorCallPtr; }
+  int operator()(const int *operatorCallPtr) { return *operatorCallPtr; }
+};
+
+struct QualifiedMemberOverload {
+  // CHECK-MESSAGES: :[[@LINE+1]]:32: warning: pointer parameter 'qualifiedMemberPtr' can be pointer to const
+  void withConstQualifier(int *qualifiedMemberPtr) const {
+    // CHECK-FIXES: void withConstQualifier(const int *qualifiedMemberPtr) const {
+    (void)*qualifiedMemberPtr;
+  }
+  void withConstQualifier(const int *qualifiedMemberPtr) {}
+};
+
+bool atomicCompareExchangeN(int *obj, int *expected, int desired) {
+  return __atomic_compare_exchange_n(obj, expected, desired, false,
+                                     __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+}
+
+bool atomicCompareExchange(int *obj, int *expected, int *desired) {
+  return __atomic_compare_exchange(obj, expected, desired, false,
+                                   __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+}
+
+bool atomicCompareExchangeOffset(int *obj, int *expected, int desired) {
+  return __atomic_compare_exchange_n(obj, expected + 1, desired, false,
+                                     __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+}
+
+void atomicLoadOut(int *obj, int *dest) {
+  __atomic_load(obj, dest, __ATOMIC_SEQ_CST);
+}
+
+void atomicExchangeOut(int *obj, int *val, int *old) {
+  __atomic_exchange(obj, val, old, __ATOMIC_SEQ_CST);
+}
+
+// CHECK-MESSAGES: :[[@LINE+1]]:66: warning: pointer parameter 'unrelated' can be pointer to const
+int atomicCompareExchangeUnrelated(int *obj, int *expected, int *unrelated) {
+  // CHECK-FIXES: int atomicCompareExchangeUnrelated(int *obj, int *expected, const int *unrelated) {
+  return __atomic_compare_exchange_n(obj, expected, 0, false,
+                                     __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST) +
+         *unrelated;
+}
+
+int atomicLoad(int *p) {
+  return __atomic_load_n(p, __ATOMIC_SEQ_CST);
+}

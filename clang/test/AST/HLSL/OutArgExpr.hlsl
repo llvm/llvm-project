@@ -32,8 +32,9 @@ void zero(out int Z) { Z = 0; }
 // AST-NEXT: HLSLOutArgExpr {{.*}} 'int' lvalue inout
 // AST-NEXT: OpaqueValueExpr [[LVOpV:0x[0-9a-fA-F]+]] {{.*}} 'hlsl_device float' lvalue
 // AST-NEXT: CXXOperatorCallExpr {{.*}} 'hlsl_device float' lvalue '[]'
-// AST-NEXT: ImplicitCastExpr {{.*}} 'hlsl_device float &(*)(unsigned int)' <FunctionToPointerDecay>
-// AST-NEXT: DeclRefExpr {{.*}} 'hlsl_device float &(unsigned int)' lvalue CXXMethod {{.*}} 'operator[]' 'hlsl_device float &(unsigned int)'
+// AST-NEXT: ImplicitCastExpr {{.*}} 'hlsl_device float &(*)(unsigned int) const' <FunctionToPointerDecay>
+// AST-NEXT: DeclRefExpr {{.*}} 'hlsl_device float &(unsigned int) const' lvalue CXXMethod {{.*}} 'operator[]' 'hlsl_device float &(unsigned int) const'
+// AST-NEXT: ImplicitCastExpr {{.*}} 'const hlsl::RWBuffer<float>' lvalue <NoOp>
 // AST-NEXT: DeclRefExpr {{.*}} 'RWBuffer<float>':'hlsl::RWBuffer<float>' lvalue Var {{.*}} 'Buf' 'RWBuffer<float>':'hlsl::RWBuffer<float>'
 // AST-NEXT: ImplicitCastExpr {{.*}} 'uint':'unsigned int' <LValueToRValue>
 // AST-NEXT: DeclRefExpr {{.*}} 'uint':'unsigned int' lvalue ParmVar {{.*}} 'GI' 'uint':'unsigned int'

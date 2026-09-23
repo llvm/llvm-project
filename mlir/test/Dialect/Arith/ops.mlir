@@ -49,6 +49,30 @@ func.func @test_addui_extended_scalable_vector(%arg0 : vector<[8]xi64>, %arg1 : 
   return %0#0 : vector<[8]xi64>
 }
 
+// CHECK-LABEL: test_subui_extended
+func.func @test_subui_extended(%arg0 : i64, %arg1 : i64) -> i64 {
+  %diff, %borrow = arith.subui_extended %arg0, %arg1 : i64, i1
+  return %diff : i64
+}
+
+// CHECK-LABEL: test_subui_extended_tensor
+func.func @test_subui_extended_tensor(%arg0 : tensor<8x8xi64>, %arg1 : tensor<8x8xi64>) -> tensor<8x8xi64> {
+  %diff, %borrow = arith.subui_extended %arg0, %arg1 : tensor<8x8xi64>, tensor<8x8xi1>
+  return %diff : tensor<8x8xi64>
+}
+
+// CHECK-LABEL: test_subui_extended_vector
+func.func @test_subui_extended_vector(%arg0 : vector<8xi64>, %arg1 : vector<8xi64>) -> vector<8xi64> {
+  %0:2 = arith.subui_extended %arg0, %arg1 : vector<8xi64>, vector<8xi1>
+  return %0#0 : vector<8xi64>
+}
+
+// CHECK-LABEL: test_subui_extended_scalable_vector
+func.func @test_subui_extended_scalable_vector(%arg0 : vector<[8]xi64>, %arg1 : vector<[8]xi64>) -> vector<[8]xi64> {
+  %0:2 = arith.subui_extended %arg0, %arg1 : vector<[8]xi64>, vector<[8]xi1>
+  return %0#0 : vector<[8]xi64>
+}
+
 // CHECK-LABEL: test_subi
 func.func @test_subi(%arg0 : i64, %arg1 : i64) -> i64 {
   %0 = arith.subi %arg0, %arg1 : i64
@@ -481,6 +505,36 @@ func.func @test_negf_scalable_vector(%arg0 : vector<[8]xf64>) -> vector<[8]xf64>
   return %0 : vector<[8]xf64>
 }
 
+// CHECK-LABEL: test_flush_denormals
+func.func @test_flush_denormals(%arg0 : f32) -> f32 {
+  %0 = arith.flush_denormals %arg0 : f32
+  return %0 : f32
+}
+
+// CHECK-LABEL: test_flush_denormals_tensor
+func.func @test_flush_denormals_tensor(%arg0 : tensor<8x8xf32>) -> tensor<8x8xf32> {
+  %0 = arith.flush_denormals %arg0 : tensor<8x8xf32>
+  return %0 : tensor<8x8xf32>
+}
+
+// CHECK-LABEL: test_flush_denormals_vector
+func.func @test_flush_denormals_vector(%arg0 : vector<8xf32>) -> vector<8xf32> {
+  %0 = arith.flush_denormals %arg0 : vector<8xf32>
+  return %0 : vector<8xf32>
+}
+
+// CHECK-LABEL: test_flush_denormals_scalable_vector
+func.func @test_flush_denormals_scalable_vector(%arg0 : vector<[8]xf32>) -> vector<[8]xf32> {
+  %0 = arith.flush_denormals %arg0 : vector<[8]xf32>
+  return %0 : vector<[8]xf32>
+}
+
+// CHECK-LABEL: test_flush_denormals_bf16
+func.func @test_flush_denormals_bf16(%arg0 : bf16) -> bf16 {
+  %0 = arith.flush_denormals %arg0 : bf16
+  return %0 : bf16
+}
+
 // CHECK-LABEL: test_addf
 func.func @test_addf(%arg0 : f64, %arg1 : f64) -> f64 {
   %0 = arith.addf %arg0, %arg1 : f64
@@ -749,6 +803,41 @@ func.func @test_truncf_rounding_mode(%arg0 : f64) -> (f32, f32, f32, f32, f32) {
   %3 = arith.truncf %arg0 toward_zero : f64 to f32
   %4 = arith.truncf %arg0 to_nearest_away : f64 to f32
   return %0, %1, %2, %3, %4 : f32, f32, f32, f32, f32
+}
+
+// CHECK-LABEL: test_convertf
+func.func @test_convertf(%arg0 : f16) -> bf16 {
+  // CHECK: arith.convertf %arg0 : f16 to bf16
+  %0 = arith.convertf %arg0 : f16 to bf16
+  return %0 : bf16
+}
+
+// CHECK-LABEL: test_convertf_vector
+func.func @test_convertf_vector(%arg0 : vector<8xf16>) -> vector<8xbf16> {
+  // CHECK: arith.convertf %arg0 : vector<8xf16> to vector<8xbf16>
+  %0 = arith.convertf %arg0 : vector<8xf16> to vector<8xbf16>
+  return %0 : vector<8xbf16>
+}
+
+// CHECK-LABEL: test_convertf_scalable_vector
+func.func @test_convertf_scalable_vector(%arg0 : vector<[8]xbf16>) -> vector<[8]xf16> {
+  // CHECK: arith.convertf %arg0 : vector<[8]xbf16> to vector<[8]xf16>
+  %0 = arith.convertf %arg0 : vector<[8]xbf16> to vector<[8]xf16>
+  return %0 : vector<[8]xf16>
+}
+
+// CHECK-LABEL: test_convertf_tensor
+func.func @test_convertf_tensor(%arg0 : tensor<8x8xf16>) -> tensor<8x8xbf16> {
+  // CHECK: arith.convertf %arg0 : tensor<8x8xf16> to tensor<8x8xbf16>
+  %0 = arith.convertf %arg0 : tensor<8x8xf16> to tensor<8x8xbf16>
+  return %0 : tensor<8x8xbf16>
+}
+
+// CHECK-LABEL: test_convertf_rounding_mode
+func.func @test_convertf_rounding_mode(%arg0 : bf16) -> f16 {
+  // CHECK: arith.convertf %arg0 to_nearest_even : bf16 to f16
+  %0 = arith.convertf %arg0 to_nearest_even : bf16 to f16
+  return %0 : f16
 }
 
 // CHECK-LABEL: test_uitofp
@@ -1152,6 +1241,9 @@ func.func @maximum(%v1: vector<4xf32>, %v2: vector<4xf32>,
   %maxnum_vector = arith.maxnumf %v1, %v2 : vector<4xf32>
   %maxnum_scalable_vector = arith.maxnumf %sv1, %sv2 : vector<[4]xf32>
   %maxnum_float = arith.maxnumf %f1, %f2 : f32
+  %maximumnum_vector = arith.maximumnumf %v1, %v2 : vector<4xf32>
+  %maximumnum_scalable_vector = arith.maximumnumf %sv1, %sv2 : vector<[4]xf32>
+  %maximumnum_float = arith.maximumnumf %f1, %f2 : f32
   %max_signed = arith.maxsi %i1, %i2 : i32
   %max_unsigned = arith.maxui %i1, %i2 : i32
   return
@@ -1168,6 +1260,9 @@ func.func @minimum(%v1: vector<4xf32>, %v2: vector<4xf32>,
   %minnum_vector = arith.minnumf %v1, %v2 : vector<4xf32>
   %minnum_scalable_vector = arith.minnumf %sv1, %sv2 : vector<[4]xf32>
   %minnum_float = arith.minnumf %f1, %f2 : f32
+  %minimumnum_vector = arith.minimumnumf %v1, %v2 : vector<4xf32>
+  %minimumnum_scalable_vector = arith.minimumnumf %sv1, %sv2 : vector<[4]xf32>
+  %minimumnum_float = arith.minimumnumf %f1, %f2 : f32
   %min_signed = arith.minsi %i1, %i2 : i32
   %min_unsigned = arith.minui %i1, %i2 : i32
   return
@@ -1181,12 +1276,14 @@ func.func @fastmath(%arg0: f32, %arg1: f32, %arg2: i32) {
 // CHECK: {{.*}} = arith.divf %arg0, %arg1 fastmath<fast> : f32
 // CHECK: {{.*}} = arith.remf %arg0, %arg1 fastmath<fast> : f32
 // CHECK: {{.*}} = arith.negf %arg0 fastmath<fast> : f32
+// CHECK: {{.*}} = arith.flush_denormals %arg0 fastmath<fast> : f32
   %0 = arith.addf %arg0, %arg1 fastmath<fast> : f32
   %1 = arith.subf %arg0, %arg1 fastmath<fast> : f32
   %2 = arith.mulf %arg0, %arg1 fastmath<fast> : f32
   %3 = arith.divf %arg0, %arg1 fastmath<fast> : f32
   %4 = arith.remf %arg0, %arg1 fastmath<fast> : f32
   %5 = arith.negf %arg0 fastmath<fast> : f32
+  %flush = arith.flush_denormals %arg0 fastmath<fast> : f32
 // CHECK: {{.*}} = arith.addf %arg0, %arg1 : f32
   %6 = arith.addf %arg0, %arg1 fastmath<none> : f32
 // CHECK: {{.*}} = arith.addf %arg0, %arg1 fastmath<nnan,ninf> : f32
@@ -1196,6 +1293,21 @@ func.func @fastmath(%arg0: f32, %arg1: f32, %arg2: i32) {
 // CHECK: {{.*}} = arith.cmpf oeq, %arg0, %arg1 fastmath<fast> : f32
   %9 = arith.cmpf oeq, %arg0, %arg1 fastmath<fast> : f32
 
+  return
+}
+
+// CHECK-LABEL: @roundingmode
+func.func @roundingmode(%arg0: f32, %arg1: f32) {
+// CHECK: {{.*}} = arith.addf %arg0, %arg1 to_nearest_even : f32
+  %0 = arith.addf %arg0, %arg1 to_nearest_even : f32
+// CHECK: {{.*}} = arith.subf %arg0, %arg1 downward : f32
+  %1 = arith.subf %arg0, %arg1 downward : f32
+// CHECK: {{.*}} = arith.mulf %arg0, %arg1 upward : f32
+  %2 = arith.mulf %arg0, %arg1 upward : f32
+// CHECK: {{.*}} = arith.divf %arg0, %arg1 toward_zero : f32
+  %3 = arith.divf %arg0, %arg1 toward_zero : f32
+// CHECK: {{.*}} = arith.addf %arg0, %arg1 to_nearest_even fastmath<fast> : f32
+  %4 = arith.addf %arg0, %arg1 to_nearest_even fastmath<fast> : f32
   return
 }
 

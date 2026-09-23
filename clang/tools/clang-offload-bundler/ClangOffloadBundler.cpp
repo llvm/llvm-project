@@ -62,8 +62,6 @@ static void PrintVersion(raw_ostream &OS) {
 
 int main(int argc, const char **argv) {
 
-  cl::opt<bool> Help("h", cl::desc("Alias for -help"), cl::Hidden);
-
   // Mark all our options with this category, everything else (except for
   // -version and -help) will be hidden.
   cl::OptionCategory
@@ -161,11 +159,6 @@ int main(int argc, const char **argv) {
       "one. The resulting file can also be unbundled into different files by \n"
       "this tool if -unbundle is provided.\n");
 
-  if (Help) {
-    cl::PrintHelpMessage();
-    return 0;
-  }
-
   /// Class to store bundler options in standard (non-cl::opt) data structures
   // Avoid using cl::opt variables after these assignments when possible
   OffloadBundlerConfig BundlerConfig;
@@ -184,9 +177,11 @@ int main(int argc, const char **argv) {
   if (CompressionLevel.getNumOccurrences() > 0)
     BundlerConfig.CompressionLevel = CompressionLevel;
 
-  BundlerConfig.TargetNames = TargetNames;
-  BundlerConfig.InputFileNames = InputFileNames;
-  BundlerConfig.OutputFileNames = OutputFileNames;
+  BundlerConfig.TargetNames.assign(TargetNames.begin(), TargetNames.end());
+  BundlerConfig.InputFileNames.assign(InputFileNames.begin(),
+                                      InputFileNames.end());
+  BundlerConfig.OutputFileNames.assign(OutputFileNames.begin(),
+                                       OutputFileNames.end());
 
   /// The index of the host input in the list of inputs.
   BundlerConfig.HostInputIndex = ~0u;
@@ -243,7 +238,8 @@ int main(int argc, const char **argv) {
     s.insert(s.end(), InputFileNamesDeprecatedOpt.begin(),
              InputFileNamesDeprecatedOpt.end());
   }
-  BundlerConfig.InputFileNames = InputFileNames;
+  BundlerConfig.InputFileNames.assign(InputFileNames.begin(),
+                                      InputFileNames.end());
 
   if (OutputFileNames.getNumOccurrences() != 0 &&
       OutputFileNamesDeprecatedOpt.getNumOccurrences() != 0) {
@@ -259,7 +255,8 @@ int main(int argc, const char **argv) {
     s.insert(s.end(), OutputFileNamesDeprecatedOpt.begin(),
              OutputFileNamesDeprecatedOpt.end());
   }
-  BundlerConfig.OutputFileNames = OutputFileNames;
+  BundlerConfig.OutputFileNames.assign(OutputFileNames.begin(),
+                                       OutputFileNames.end());
 
   if (ListBundleIDs) {
     if (Unbundle) {
@@ -395,7 +392,8 @@ int main(int argc, const char **argv) {
     ++Index;
   }
 
-  BundlerConfig.TargetNames = StandardizedTargetNames;
+  BundlerConfig.TargetNames.assign(StandardizedTargetNames.begin(),
+                                   StandardizedTargetNames.end());
 
   for (const auto &TargetID : TargetIDs) {
     if (auto ConflictingTID =

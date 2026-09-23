@@ -58,7 +58,4 @@ _start:
 # CHECK-NEXT:       - Index:           2
 # DEMANGLE-NEXT:      Name:            'foo(int)'
 # MANGLE-NEXT:        Name:            _Z3fooi
-# CHECK-NEXT:     GlobalNames:
-# CHECK-NEXT:       - Index:           0
-# CHECK-NEXT:         Name:            __stack_pointer
 # CHECK-NEXT: ...

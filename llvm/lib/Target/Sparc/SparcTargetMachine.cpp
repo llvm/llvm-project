@@ -79,8 +79,7 @@ SparcTargetMachine::SparcTargetMachine(const Target &T, const Triple &TT,
                                        std::optional<CodeModel::Model> CM,
                                        CodeGenOptLevel OL, bool JIT)
     : CodeGenTargetMachineImpl(
-          T, TT.computeDataLayout(), TT, CPU, FS, Options,
-          getEffectiveRelocModel(RM),
+          T, TT, CPU, FS, Options, getEffectiveRelocModel(RM),
           getEffectiveSparcCodeModel(CM, getEffectiveRelocModel(RM),
                                      TT.isSPARC64(), JIT),
           OL),
@@ -112,13 +111,8 @@ SparcTargetMachine::getSubtargetImpl(const Function &F) const {
     FS += FS.empty() ? "+soft-float" : ",+soft-float";
 
   auto &I = SubtargetMap[CPU + FS];
-  if (!I) {
-    // This needs to be done before we create a new subtarget since any
-    // creation will depend on the TM and the code generation flags on the
-    // function that reside in TargetOptions.
-    resetTargetOptions(F);
+  if (!I)
     I = std::make_unique<SparcSubtarget>(CPU, TuneCPU, FS, *this);
-  }
   return I.get();
 }
 

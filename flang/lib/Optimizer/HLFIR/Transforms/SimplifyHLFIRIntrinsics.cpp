@@ -15,8 +15,6 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/IntrinsicCall.h"
-#include "flang/Optimizer/Builder/Todo.h"
-#include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/HLFIR/Passes.h"
@@ -313,7 +311,10 @@ protected:
       auto constDim = fir::getIntIfConstant(getDim());
       if (!constDim)
         return rewriter.notifyMatchFailure(op, "Nonconstant DIM");
-      dimVal = *constDim;
+      std::optional<std::int64_t> constDim64 = constDim->trySExtValue();
+      if (!constDim64)
+        return rewriter.notifyMatchFailure(op, "DIM does not fit in int64_t");
+      dimVal = *constDim64;
 
       if ((dimVal <= 0 || dimVal > getSourceRank()))
         return rewriter.notifyMatchFailure(op,
@@ -1128,12 +1129,13 @@ private:
         hlfir::loadElementAt(loc, builder, array, oneBasedIndices);
     mlir::Value cond =
         builder.createConvert(loc, builder.getI1Type(), elementValue);
+    mlir::Value zero =
+        builder.createIntegerConstant(loc, getResultElementType(), 0);
     mlir::Value one =
         builder.createIntegerConstant(loc, getResultElementType(), 1);
-    mlir::Value add1 =
-        mlir::arith::AddIOp::create(builder, loc, currentValue[0], one);
-    return {mlir::arith::SelectOp::create(builder, loc, cond, add1,
-                                          currentValue[0])};
+    mlir::Value addend =
+        mlir::arith::SelectOp::create(builder, loc, cond, one, zero);
+    return {mlir::arith::AddIOp::create(builder, loc, currentValue[0], addend)};
   }
 };
 
@@ -1436,7 +1438,11 @@ public:
         if (!constDim)
           return rewriter.notifyMatchFailure(
               op, "Nonconstant DIM for CSHIFT/EOSHIFT");
-        dimVal = *constDim;
+        std::optional<std::int64_t> constDim64 = constDim->trySExtValue();
+        if (!constDim64)
+          return rewriter.notifyMatchFailure(
+              op, "DIM does not fit in int64_t for CSHIFT/EOSHIFT");
+        dimVal = *constDim64;
       }
 
     if (dimVal <= 0 || dimVal > arrayRank)
@@ -1455,10 +1461,11 @@ public:
           return rewriter.notifyMatchFailure(
               op, "EOSHIFT with BOUNDARY being CHARACTER expression");
       }
-      // TODO: selecting between ARRAY and BOUNDARY values with derived types
-      // need more work.
-      if (fir::isa_derived(expr.getEleTy()))
-        return rewriter.notifyMatchFailure(op, "EOSHIFT of derived type");
+      // TODO: selecting between ARRAY and BOUNDARY values with derived or
+      // polymorphic types need more work.
+      if (fir::isa_derived(expr.getEleTy()) || expr.isPolymorphic())
+        return rewriter.notifyMatchFailure(
+            op, "EOSHIFT of derived or polymorphic type");
     }
 
     // When DIM==1 and the contiguity of the input array is not statically
@@ -2506,7 +2513,7 @@ public:
     std::optional<bool> isBack;
     if (back) {
       if (auto backCst = fir::getIntIfConstant(back))
-        isBack = *backCst != 0;
+        isBack = !backCst->isZero();
     } else {
       isBack = false;
     }

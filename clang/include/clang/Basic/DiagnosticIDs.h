@@ -36,14 +36,15 @@ enum class Group;
 enum {
   DIAG_SIZE_COMMON = 300,
   DIAG_SIZE_DRIVER = 400,
-  DIAG_SIZE_FRONTEND = 200,
+  DIAG_SIZE_FRONTEND = 300,
+  DIAG_SIZE_CODEGEN = 100,
   DIAG_SIZE_SERIALIZATION = 120,
   DIAG_SIZE_LEX = 500,
   DIAG_SIZE_PARSE = 800,
   DIAG_SIZE_AST = 300,
   DIAG_SIZE_COMMENT = 100,
   DIAG_SIZE_CROSSTU = 100,
-  DIAG_SIZE_SEMA = 5000,
+  DIAG_SIZE_SEMA = 6000,
   DIAG_SIZE_ANALYSIS = 100,
   DIAG_SIZE_REFACTORING = 1000,
   DIAG_SIZE_INSTALLAPI = 100,
@@ -55,7 +56,8 @@ enum {
   DIAG_START_COMMON        =                          0,
   DIAG_START_DRIVER        = DIAG_START_COMMON        + static_cast<int>(DIAG_SIZE_COMMON),
   DIAG_START_FRONTEND      = DIAG_START_DRIVER        + static_cast<int>(DIAG_SIZE_DRIVER),
-  DIAG_START_SERIALIZATION = DIAG_START_FRONTEND      + static_cast<int>(DIAG_SIZE_FRONTEND),
+  DIAG_START_CODEGEN       = DIAG_START_FRONTEND      + static_cast<int>(DIAG_SIZE_FRONTEND),
+  DIAG_START_SERIALIZATION = DIAG_START_CODEGEN       + static_cast<int>(DIAG_SIZE_CODEGEN),
   DIAG_START_LEX           = DIAG_START_SERIALIZATION + static_cast<int>(DIAG_SIZE_SERIALIZATION),
   DIAG_START_PARSE         = DIAG_START_LEX           + static_cast<int>(DIAG_SIZE_LEX),
   DIAG_START_AST           = DIAG_START_PARSE         + static_cast<int>(DIAG_SIZE_PARSE),
@@ -485,8 +487,17 @@ public:
 
   /// Get the appropriate diagnostic Id to use for issuing a compatibility
   /// diagnostic. For use by the various DiagCompat() helpers.
-  static unsigned getCXXCompatDiagId(const LangOptions &LangOpts,
-                                     unsigned CompatDiagId);
+  static unsigned getCompatDiagId(const LangOptions &LangOpts,
+                                  unsigned CompatDiagId);
+
+  /// Return true if either of the following two conditions hold:
+  /// 1. \p Loc is in a system header and the diagnostic kind \p DiagID does
+  ///    not have the property 'ShowInSystemHeader'.
+  /// 2. \p Loc is in the expansion of a macro defined in a system header and
+  ///    the diagnostic kind \p DiagID does not have the property
+  ///    'ShowInSystemMacro'.
+  bool shouldSuppressAsSystemWarning(unsigned DiagID, SourceLocation Loc,
+                                     const DiagnosticsEngine &Diag) const;
 
 private:
   /// Classify the specified diagnostic ID into a Level, consumable by

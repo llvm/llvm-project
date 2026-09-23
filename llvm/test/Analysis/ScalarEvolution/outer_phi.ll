@@ -9,9 +9,9 @@ define i32 @test_01(i32 %a, i32 %b) {
 ; CHECK-NEXT:    %outer.iv = phi i32 [ 0, %entry ], [ %iv.next, %outer.backedge ]
 ; CHECK-NEXT:    --> %outer.iv U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %outer: Variant, %inner: Invariant }
 ; CHECK-NEXT:    %iv = phi i32 [ 0, %outer ], [ %iv.next, %inner.backedge ]
-; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%inner> U: [0,-2147483648) S: [0,-2147483648) Exits: <<Unknown>> LoopDispositions: { %inner: Computable, %outer: Variant }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%inner> U: [0,-2147483648) S: [0,-2147483648) Exits: <<Unknown>> LoopDispositions: { %inner: Computable, %outer: Uniform }
 ; CHECK-NEXT:    %iv.next = add nuw nsw i32 %iv, 1
-; CHECK-NEXT:    --> {1,+,1}<nuw><%inner> U: [1,-2147483647) S: [1,-2147483647) Exits: <<Unknown>> LoopDispositions: { %inner: Computable, %outer: Variant }
+; CHECK-NEXT:    --> {1,+,1}<nuw><%inner> U: [1,-2147483647) S: [1,-2147483647) Exits: <<Unknown>> LoopDispositions: { %inner: Computable, %outer: Uniform }
 ; CHECK-NEXT:    %inner.loop.cond = call i1 @cond()
 ; CHECK-NEXT:    --> %inner.loop.cond U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %inner: Variant, %outer: Variant }
 ; CHECK-NEXT:    %outer.loop.cond = call i1 @cond()

@@ -54,6 +54,15 @@ public:
     return AddressSpace::ADDRESS_SPACE_GENERIC;
   }
 
+  unsigned getAddressSpaceJoin(unsigned AS1, unsigned AS2) const override {
+    if ((AS1 == AddressSpace::ADDRESS_SPACE_SHARED &&
+         AS2 == AddressSpace::ADDRESS_SPACE_SHARED_CLUSTER) ||
+        (AS2 == AddressSpace::ADDRESS_SPACE_SHARED &&
+         AS1 == AddressSpace::ADDRESS_SPACE_SHARED_CLUSTER))
+      return AddressSpace::ADDRESS_SPACE_SHARED_CLUSTER;
+    return AddressSpace::ADDRESS_SPACE_GENERIC;
+  }
+
   bool
   canHaveNonUndefGlobalInitializerInAddressSpace(unsigned AS) const override {
     return AS != AddressSpace::ADDRESS_SPACE_SHARED &&
@@ -222,7 +231,16 @@ public:
     return false;
   }
 
-  InstructionUniformity getInstructionUniformity(const Value *V) const override;
+  InstructionCost getPartialReductionCost(
+      unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
+      ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
+      TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
+      TTI::TargetCostKind CostKind,
+      std::optional<FastMathFlags> FMF) const override {
+    return InstructionCost::getInvalid();
+  }
+
+  ValueUniformity getValueUniformity(const Value *V) const override;
 };
 
 } // end namespace llvm

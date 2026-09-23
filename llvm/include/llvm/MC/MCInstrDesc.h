@@ -74,9 +74,11 @@ enum OperandType {
 
   OPERAND_FIRST_GENERIC_IMM = 12,
   OPERAND_GENERIC_IMM_0 = 12,
-  OPERAND_LAST_GENERIC_IMM = 12,
+  OPERAND_GENERIC_IMM_1 = 13,
+  OPERAND_GENERIC_IMM_2 = 14,
+  OPERAND_LAST_GENERIC_IMM = 14,
 
-  OPERAND_FIRST_TARGET = 13,
+  OPERAND_FIRST_TARGET = 15,
 };
 
 } // namespace MCOI
@@ -617,6 +619,11 @@ public:
     }
     return -1;
   }
+
+  /// Return true if this instruction explicitly defines the specified physical
+  /// register.
+  LLVM_ABI bool hasExplicitDefOfPhysReg(const MCInst &MI, MCRegister Reg,
+                                        const MCRegisterInfo &RI) const;
 
   /// Return true if this instruction defines the specified physical
   /// register, either explicitly or implicitly.

@@ -10,7 +10,7 @@ define i32 @select_const_i32_from_icmp(ptr %v, i64 %n) {
 ; CHECK-VF4IC1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
 ; CHECK-VF4IC1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF4IC1:       [[VECTOR_PH]]:
-; CHECK-VF4IC1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; CHECK-VF4IC1-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 3
 ; CHECK-VF4IC1-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-VF4IC1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-VF4IC1:       [[VECTOR_BODY]]:
@@ -53,7 +53,7 @@ define i32 @select_const_i32_from_icmp(ptr %v, i64 %n) {
 ; CHECK-VF4IC4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 16
 ; CHECK-VF4IC4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF4IC4:       [[VECTOR_PH]]:
-; CHECK-VF4IC4-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 16
+; CHECK-VF4IC4-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 15
 ; CHECK-VF4IC4-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-VF4IC4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-VF4IC4:       [[VECTOR_BODY]]:
@@ -114,7 +114,7 @@ define i32 @select_const_i32_from_icmp(ptr %v, i64 %n) {
 ; CHECK-VF1IC4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
 ; CHECK-VF1IC4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF1IC4:       [[VECTOR_PH]]:
-; CHECK-VF1IC4-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; CHECK-VF1IC4-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 3
 ; CHECK-VF1IC4-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-VF1IC4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-VF1IC4:       [[VECTOR_BODY]]:
@@ -174,7 +174,7 @@ define i32 @select_const_i32_from_icmp(ptr %v, i64 %n) {
 entry:
   br label %loop
 
-loop:                                      ; preds = %entry, %loop
+loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %rdx = phi i32 [ 3, %entry ], [ %sel, %loop ]
   %gep.v.iv = getelementptr inbounds i32, ptr %v, i64 %iv
@@ -185,7 +185,7 @@ loop:                                      ; preds = %entry, %loop
   %exit.cond = icmp eq i64 %iv.next, %n
   br i1 %exit.cond, label %exit, label %loop
 
-exit:                                     ; preds = %loop
+exit:
   ret i32 %sel
 }
 
@@ -196,7 +196,7 @@ define i32 @select_const_i32_from_icmp2(ptr %v, i64 %n) {
 ; CHECK-VF4IC1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
 ; CHECK-VF4IC1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF4IC1:       [[VECTOR_PH]]:
-; CHECK-VF4IC1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; CHECK-VF4IC1-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 3
 ; CHECK-VF4IC1-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-VF4IC1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-VF4IC1:       [[VECTOR_BODY]]:
@@ -239,7 +239,7 @@ define i32 @select_const_i32_from_icmp2(ptr %v, i64 %n) {
 ; CHECK-VF4IC4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 16
 ; CHECK-VF4IC4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF4IC4:       [[VECTOR_PH]]:
-; CHECK-VF4IC4-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 16
+; CHECK-VF4IC4-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 15
 ; CHECK-VF4IC4-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-VF4IC4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-VF4IC4:       [[VECTOR_BODY]]:
@@ -300,7 +300,7 @@ define i32 @select_const_i32_from_icmp2(ptr %v, i64 %n) {
 ; CHECK-VF1IC4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
 ; CHECK-VF1IC4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF1IC4:       [[VECTOR_PH]]:
-; CHECK-VF1IC4-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; CHECK-VF1IC4-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 3
 ; CHECK-VF1IC4-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-VF1IC4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-VF1IC4:       [[VECTOR_BODY]]:
@@ -360,7 +360,7 @@ define i32 @select_const_i32_from_icmp2(ptr %v, i64 %n) {
 entry:
   br label %loop
 
-loop:                                      ; preds = %entry, %loop
+loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %rdx = phi i32 [ 3, %entry ], [ %sel, %loop ]
   %gep.v.iv = getelementptr inbounds i32, ptr %v, i64 %iv
@@ -371,7 +371,7 @@ loop:                                      ; preds = %entry, %loop
   %exit.cond = icmp eq i64 %iv.next, %n
   br i1 %exit.cond, label %exit, label %loop
 
-exit:                                     ; preds = %loop
+exit:
   ret i32 %sel
 }
 
@@ -382,7 +382,7 @@ define i32 @select_i32_from_icmp(ptr %v, i32 %a, i32 %b, i64 %n) {
 ; CHECK-VF4IC1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
 ; CHECK-VF4IC1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF4IC1:       [[VECTOR_PH]]:
-; CHECK-VF4IC1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; CHECK-VF4IC1-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 3
 ; CHECK-VF4IC1-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-VF4IC1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-VF4IC1:       [[VECTOR_BODY]]:
@@ -425,7 +425,7 @@ define i32 @select_i32_from_icmp(ptr %v, i32 %a, i32 %b, i64 %n) {
 ; CHECK-VF4IC4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 16
 ; CHECK-VF4IC4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF4IC4:       [[VECTOR_PH]]:
-; CHECK-VF4IC4-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 16
+; CHECK-VF4IC4-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 15
 ; CHECK-VF4IC4-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-VF4IC4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-VF4IC4:       [[VECTOR_BODY]]:
@@ -486,7 +486,7 @@ define i32 @select_i32_from_icmp(ptr %v, i32 %a, i32 %b, i64 %n) {
 ; CHECK-VF1IC4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
 ; CHECK-VF1IC4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF1IC4:       [[VECTOR_PH]]:
-; CHECK-VF1IC4-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; CHECK-VF1IC4-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 3
 ; CHECK-VF1IC4-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-VF1IC4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-VF1IC4:       [[VECTOR_BODY]]:
@@ -546,7 +546,7 @@ define i32 @select_i32_from_icmp(ptr %v, i32 %a, i32 %b, i64 %n) {
 entry:
   br label %loop
 
-loop:                                      ; preds = %entry, %loop
+loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %rdx = phi i32 [ %a, %entry ], [ %sel, %loop ]
   %gep.v.iv = getelementptr inbounds i32, ptr %v, i64 %iv
@@ -557,7 +557,7 @@ loop:                                      ; preds = %entry, %loop
   %exit.cond = icmp eq i64 %iv.next, %n
   br i1 %exit.cond, label %exit, label %loop
 
-exit:                                     ; preds = %loop
+exit:
   ret i32 %sel
 }
 
@@ -568,7 +568,7 @@ define i32 @select_const_i32_from_fcmp_fast(ptr %v, i64 %n) {
 ; CHECK-VF4IC1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
 ; CHECK-VF4IC1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF4IC1:       [[VECTOR_PH]]:
-; CHECK-VF4IC1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; CHECK-VF4IC1-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 3
 ; CHECK-VF4IC1-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-VF4IC1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-VF4IC1:       [[VECTOR_BODY]]:
@@ -611,7 +611,7 @@ define i32 @select_const_i32_from_fcmp_fast(ptr %v, i64 %n) {
 ; CHECK-VF4IC4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 16
 ; CHECK-VF4IC4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF4IC4:       [[VECTOR_PH]]:
-; CHECK-VF4IC4-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 16
+; CHECK-VF4IC4-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 15
 ; CHECK-VF4IC4-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-VF4IC4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-VF4IC4:       [[VECTOR_BODY]]:
@@ -672,7 +672,7 @@ define i32 @select_const_i32_from_fcmp_fast(ptr %v, i64 %n) {
 ; CHECK-VF1IC4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
 ; CHECK-VF1IC4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF1IC4:       [[VECTOR_PH]]:
-; CHECK-VF1IC4-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; CHECK-VF1IC4-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 3
 ; CHECK-VF1IC4-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-VF1IC4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-VF1IC4:       [[VECTOR_BODY]]:
@@ -732,7 +732,7 @@ define i32 @select_const_i32_from_fcmp_fast(ptr %v, i64 %n) {
 entry:
   br label %loop
 
-loop:                                      ; preds = %entry, %loop
+loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %rdx = phi i32 [ 2, %entry ], [ %sel, %loop ]
   %gep.v.iv = getelementptr inbounds float, ptr %v, i64 %iv
@@ -743,7 +743,7 @@ loop:                                      ; preds = %entry, %loop
   %exit.cond = icmp eq i64 %iv.next, %n
   br i1 %exit.cond, label %exit, label %loop
 
-exit:                                     ; preds = %loop
+exit:
   ret i32 %sel
 }
 
@@ -754,7 +754,7 @@ define i32 @select_const_i32_from_fcmp(ptr %v, i64 %n) {
 ; CHECK-VF4IC1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
 ; CHECK-VF4IC1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF4IC1:       [[VECTOR_PH]]:
-; CHECK-VF4IC1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; CHECK-VF4IC1-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 3
 ; CHECK-VF4IC1-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-VF4IC1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-VF4IC1:       [[VECTOR_BODY]]:
@@ -797,7 +797,7 @@ define i32 @select_const_i32_from_fcmp(ptr %v, i64 %n) {
 ; CHECK-VF4IC4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 16
 ; CHECK-VF4IC4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF4IC4:       [[VECTOR_PH]]:
-; CHECK-VF4IC4-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 16
+; CHECK-VF4IC4-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 15
 ; CHECK-VF4IC4-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-VF4IC4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-VF4IC4:       [[VECTOR_BODY]]:
@@ -858,7 +858,7 @@ define i32 @select_const_i32_from_fcmp(ptr %v, i64 %n) {
 ; CHECK-VF1IC4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
 ; CHECK-VF1IC4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF1IC4:       [[VECTOR_PH]]:
-; CHECK-VF1IC4-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; CHECK-VF1IC4-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 3
 ; CHECK-VF1IC4-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-VF1IC4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-VF1IC4:       [[VECTOR_BODY]]:
@@ -918,7 +918,7 @@ define i32 @select_const_i32_from_fcmp(ptr %v, i64 %n) {
 entry:
   br label %loop
 
-loop:                                      ; preds = %entry, %loop
+loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %rdx = phi i32 [ 2, %entry ], [ %sel, %loop ]
   %gep.v.iv = getelementptr inbounds float, ptr %v, i64 %iv
@@ -929,7 +929,7 @@ loop:                                      ; preds = %entry, %loop
   %exit.cond = icmp eq i64 %iv.next, %n
   br i1 %exit.cond, label %exit, label %loop
 
-exit:                                     ; preds = %loop
+exit:
   ret i32 %sel
 }
 
@@ -940,7 +940,7 @@ define i32 @select_i32_from_icmp_same_inputs(i32 %a, i32 %b, i64 %n) {
 ; CHECK-VF4IC1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
 ; CHECK-VF4IC1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF4IC1:       [[VECTOR_PH]]:
-; CHECK-VF4IC1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; CHECK-VF4IC1-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 3
 ; CHECK-VF4IC1-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-VF4IC1-NEXT:    [[TMP0:%.*]] = icmp ne i32 [[A]], 3
 ; CHECK-VF4IC1-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[TMP0]], i64 0
@@ -981,7 +981,7 @@ define i32 @select_i32_from_icmp_same_inputs(i32 %a, i32 %b, i64 %n) {
 ; CHECK-VF4IC4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 16
 ; CHECK-VF4IC4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF4IC4:       [[VECTOR_PH]]:
-; CHECK-VF4IC4-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 16
+; CHECK-VF4IC4-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 15
 ; CHECK-VF4IC4-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-VF4IC4-NEXT:    [[TMP0:%.*]] = icmp ne i32 [[A]], 3
 ; CHECK-VF4IC4-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[TMP0]], i64 0
@@ -1031,7 +1031,7 @@ define i32 @select_i32_from_icmp_same_inputs(i32 %a, i32 %b, i64 %n) {
 ; CHECK-VF1IC4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
 ; CHECK-VF1IC4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF1IC4:       [[VECTOR_PH]]:
-; CHECK-VF1IC4-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; CHECK-VF1IC4-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 3
 ; CHECK-VF1IC4-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-VF1IC4-NEXT:    [[TMP0:%.*]] = icmp ne i32 [[A]], 3
 ; CHECK-VF1IC4-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -1075,7 +1075,7 @@ define i32 @select_i32_from_icmp_same_inputs(i32 %a, i32 %b, i64 %n) {
 entry:
   br label %loop
 
-loop:                                      ; preds = %entry, %loop
+loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %rdx = phi i32 [ %a, %entry ], [ %sel, %loop ]
   %cmp.rdx.3 = icmp eq i32 %rdx, 3
@@ -1084,7 +1084,7 @@ loop:                                      ; preds = %entry, %loop
   %exit.cond = icmp eq i64 %iv.next, %n
   br i1 %exit.cond, label %exit, label %loop
 
-exit:                                     ; preds = %loop
+exit:
   ret i32 %sel
 }
 
@@ -1095,7 +1095,7 @@ define float @select_const_f32_from_icmp(ptr %v, i64 %n) {
 ; CHECK-VF4IC1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
 ; CHECK-VF4IC1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF4IC1:       [[VECTOR_PH]]:
-; CHECK-VF4IC1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; CHECK-VF4IC1-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 3
 ; CHECK-VF4IC1-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-VF4IC1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-VF4IC1:       [[VECTOR_BODY]]:
@@ -1140,7 +1140,7 @@ define float @select_const_f32_from_icmp(ptr %v, i64 %n) {
 ; CHECK-VF4IC4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 16
 ; CHECK-VF4IC4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF4IC4:       [[VECTOR_PH]]:
-; CHECK-VF4IC4-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 16
+; CHECK-VF4IC4-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 15
 ; CHECK-VF4IC4-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-VF4IC4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-VF4IC4:       [[VECTOR_BODY]]:
@@ -1167,10 +1167,10 @@ define float @select_const_f32_from_icmp(ptr %v, i64 %n) {
 ; CHECK-VF4IC4-NEXT:    [[TMP11:%.*]] = icmp ne <4 x i32> [[WIDE_LOAD6]], splat (i32 3)
 ; CHECK-VF4IC4-NEXT:    [[TMP3:%.*]] = freeze <4 x i1> [[TMP2]]
 ; CHECK-VF4IC4-NEXT:    [[TMP13:%.*]] = freeze <4 x i1> [[TMP9]]
-; CHECK-VF4IC4-NEXT:    [[TMP14:%.*]] = or <4 x i1> [[TMP3]], [[TMP13]]
 ; CHECK-VF4IC4-NEXT:    [[TMP15:%.*]] = freeze <4 x i1> [[TMP10]]
-; CHECK-VF4IC4-NEXT:    [[TMP16:%.*]] = or <4 x i1> [[TMP14]], [[TMP15]]
 ; CHECK-VF4IC4-NEXT:    [[TMP17:%.*]] = freeze <4 x i1> [[TMP11]]
+; CHECK-VF4IC4-NEXT:    [[TMP33:%.*]] = or <4 x i1> [[TMP3]], [[TMP13]]
+; CHECK-VF4IC4-NEXT:    [[TMP16:%.*]] = or <4 x i1> [[TMP33]], [[TMP15]]
 ; CHECK-VF4IC4-NEXT:    [[TMP18:%.*]] = or <4 x i1> [[TMP16]], [[TMP17]]
 ; CHECK-VF4IC4-NEXT:    [[TMP4:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP18]])
 ; CHECK-VF4IC4-NEXT:    [[TMP5]] = select i1 [[TMP4]], <4 x i1> [[TMP2]], <4 x i1> [[TMP0]]
@@ -1215,7 +1215,7 @@ define float @select_const_f32_from_icmp(ptr %v, i64 %n) {
 ; CHECK-VF1IC4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
 ; CHECK-VF1IC4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF1IC4:       [[VECTOR_PH]]:
-; CHECK-VF1IC4-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; CHECK-VF1IC4-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 3
 ; CHECK-VF1IC4-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-VF1IC4-NEXT:    br label %[[LOOP:.*]]
 ; CHECK-VF1IC4:       [[LOOP]]:
@@ -1245,10 +1245,10 @@ define float @select_const_f32_from_icmp(ptr %v, i64 %n) {
 ; CHECK-VF1IC4-NEXT:    [[TMP18:%.*]] = icmp ne i32 [[TMP14]], 3
 ; CHECK-VF1IC4-NEXT:    [[TMP19:%.*]] = freeze i1 [[TMP15]]
 ; CHECK-VF1IC4-NEXT:    [[TMP20:%.*]] = freeze i1 [[TMP16]]
-; CHECK-VF1IC4-NEXT:    [[TMP21:%.*]] = or i1 [[TMP19]], [[TMP20]]
 ; CHECK-VF1IC4-NEXT:    [[TMP22:%.*]] = freeze i1 [[TMP17]]
-; CHECK-VF1IC4-NEXT:    [[TMP23:%.*]] = or i1 [[TMP21]], [[TMP22]]
 ; CHECK-VF1IC4-NEXT:    [[TMP24:%.*]] = freeze i1 [[TMP18]]
+; CHECK-VF1IC4-NEXT:    [[TMP39:%.*]] = or i1 [[TMP19]], [[TMP20]]
+; CHECK-VF1IC4-NEXT:    [[TMP23:%.*]] = or i1 [[TMP39]], [[TMP22]]
 ; CHECK-VF1IC4-NEXT:    [[TMP25:%.*]] = or i1 [[TMP23]], [[TMP24]]
 ; CHECK-VF1IC4-NEXT:    [[TMP26]] = select i1 [[TMP25]], i1 [[TMP15]], i1 [[TMP0]]
 ; CHECK-VF1IC4-NEXT:    [[TMP27]] = select i1 [[TMP25]], i1 [[TMP16]], i1 [[TMP1]]
@@ -1289,7 +1289,7 @@ define float @select_const_f32_from_icmp(ptr %v, i64 %n) {
 entry:
   br label %loop
 
-loop:                                      ; preds = %entry, %loop
+loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %rdx = phi fast float [ 3.0, %entry ], [ %sel, %loop ]
   %gep.v.iv = getelementptr inbounds i32, ptr %v, i64 %iv
@@ -1300,7 +1300,7 @@ loop:                                      ; preds = %entry, %loop
   %exit.cond = icmp eq i64 %iv.next, %n
   br i1 %exit.cond, label %exit, label %loop
 
-exit:                                     ; preds = %loop
+exit:
   ret float %sel
 }
 
@@ -1311,7 +1311,7 @@ define i32 @select_variant_i32_from_icmp(ptr %v1, ptr %v2, i64 %n) {
 ; CHECK-VF4IC1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
 ; CHECK-VF4IC1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF4IC1:       [[VECTOR_PH]]:
-; CHECK-VF4IC1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; CHECK-VF4IC1-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 3
 ; CHECK-VF4IC1-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-VF4IC1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-VF4IC1:       [[VECTOR_BODY]]:
@@ -1360,7 +1360,7 @@ define i32 @select_variant_i32_from_icmp(ptr %v1, ptr %v2, i64 %n) {
 ; CHECK-VF4IC4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 16
 ; CHECK-VF4IC4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF4IC4:       [[VECTOR_PH]]:
-; CHECK-VF4IC4-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 16
+; CHECK-VF4IC4-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 15
 ; CHECK-VF4IC4-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-VF4IC4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-VF4IC4:       [[VECTOR_BODY]]:
@@ -1395,10 +1395,10 @@ define i32 @select_variant_i32_from_icmp(ptr %v1, ptr %v2, i64 %n) {
 ; CHECK-VF4IC4-NEXT:    [[TMP15:%.*]] = icmp ne <4 x i32> [[WIDE_LOAD6]], splat (i32 3)
 ; CHECK-VF4IC4-NEXT:    [[TMP17:%.*]] = freeze <4 x i1> [[TMP11]]
 ; CHECK-VF4IC4-NEXT:    [[TMP24:%.*]] = freeze <4 x i1> [[TMP13]]
-; CHECK-VF4IC4-NEXT:    [[TMP18:%.*]] = or <4 x i1> [[TMP17]], [[TMP24]]
 ; CHECK-VF4IC4-NEXT:    [[TMP33:%.*]] = freeze <4 x i1> [[TMP14]]
-; CHECK-VF4IC4-NEXT:    [[TMP20:%.*]] = or <4 x i1> [[TMP18]], [[TMP33]]
 ; CHECK-VF4IC4-NEXT:    [[TMP21:%.*]] = freeze <4 x i1> [[TMP15]]
+; CHECK-VF4IC4-NEXT:    [[TMP37:%.*]] = or <4 x i1> [[TMP17]], [[TMP24]]
+; CHECK-VF4IC4-NEXT:    [[TMP20:%.*]] = or <4 x i1> [[TMP37]], [[TMP33]]
 ; CHECK-VF4IC4-NEXT:    [[TMP22:%.*]] = or <4 x i1> [[TMP20]], [[TMP21]]
 ; CHECK-VF4IC4-NEXT:    [[TMP19:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP22]])
 ; CHECK-VF4IC4-NEXT:    [[TMP23]] = select i1 [[TMP19]], <4 x i1> [[TMP11]], <4 x i1> [[LAST_ACTIVE_MASK]]
@@ -1445,7 +1445,7 @@ define i32 @select_variant_i32_from_icmp(ptr %v1, ptr %v2, i64 %n) {
 ; CHECK-VF1IC4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
 ; CHECK-VF1IC4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF1IC4:       [[VECTOR_PH]]:
-; CHECK-VF1IC4-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; CHECK-VF1IC4-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 3
 ; CHECK-VF1IC4-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-VF1IC4-NEXT:    br label %[[LOOP:.*]]
 ; CHECK-VF1IC4:       [[LOOP]]:
@@ -1483,10 +1483,10 @@ define i32 @select_variant_i32_from_icmp(ptr %v1, ptr %v2, i64 %n) {
 ; CHECK-VF1IC4-NEXT:    [[TMP26:%.*]] = icmp ne i32 [[TMP14]], 3
 ; CHECK-VF1IC4-NEXT:    [[TMP27:%.*]] = freeze i1 [[TMP23]]
 ; CHECK-VF1IC4-NEXT:    [[TMP28:%.*]] = freeze i1 [[TMP24]]
-; CHECK-VF1IC4-NEXT:    [[TMP29:%.*]] = or i1 [[TMP27]], [[TMP28]]
 ; CHECK-VF1IC4-NEXT:    [[TMP30:%.*]] = freeze i1 [[TMP25]]
-; CHECK-VF1IC4-NEXT:    [[TMP31:%.*]] = or i1 [[TMP29]], [[TMP30]]
 ; CHECK-VF1IC4-NEXT:    [[TMP32:%.*]] = freeze i1 [[TMP26]]
+; CHECK-VF1IC4-NEXT:    [[TMP47:%.*]] = or i1 [[TMP27]], [[TMP28]]
+; CHECK-VF1IC4-NEXT:    [[TMP31:%.*]] = or i1 [[TMP47]], [[TMP30]]
 ; CHECK-VF1IC4-NEXT:    [[TMP33:%.*]] = or i1 [[TMP31]], [[TMP32]]
 ; CHECK-VF1IC4-NEXT:    [[TMP34]] = select i1 [[TMP33]], i1 [[TMP23]], i1 [[TMP0]]
 ; CHECK-VF1IC4-NEXT:    [[TMP35]] = select i1 [[TMP33]], i1 [[TMP24]], i1 [[TMP1]]
@@ -1529,7 +1529,7 @@ define i32 @select_variant_i32_from_icmp(ptr %v1, ptr %v2, i64 %n) {
 entry:
   br label %loop
 
-loop:                                      ; preds = %entry, %loop
+loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %rdx = phi i32 [ 3, %entry ], [ %sel, %loop ]
   %gep.v1.iv = getelementptr inbounds i32, ptr %v1, i64 %iv
@@ -1542,7 +1542,7 @@ loop:                                      ; preds = %entry, %loop
   %exit.cond = icmp eq i64 %iv.next, %n
   br i1 %exit.cond, label %exit, label %loop
 
-exit:                                     ; preds = %loop
+exit:
   ret i32 %sel
 }
 
@@ -1571,7 +1571,7 @@ define i32 @select_i32_from_icmp_non_redux_phi(i32 %a, i32 %b, i32 %n) {
 entry:
   br label %loop
 
-loop:                                      ; preds = %entry, %loop
+loop:
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
   %rdx = phi i32 [ %a, %entry ], [ %sel, %loop ]
   %cmp.rdx.3 = icmp eq i32 %rdx, 3
@@ -1580,7 +1580,7 @@ loop:                                      ; preds = %entry, %loop
   %exit.cond = icmp eq i32 %iv.next, %n
   br i1 %exit.cond, label %exit, label %loop
 
-exit:                                     ; preds = %loop
+exit:
   ret i32 %sel
 }
 ;.

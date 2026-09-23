@@ -142,11 +142,8 @@ end subroutine
 ! CHECK:          %[[VAL_12:.*]] = hlfir.designate %[[VAL_5]]#0 (%[[VAL_10]])  : (!fir.box<!fir.array<?x!fir.logical<4>>>, index) -> !fir.ref<!fir.logical<4>>
 ! CHECK:          %[[VAL_13:.*]] = fir.load %[[VAL_11]] : !fir.ref<!fir.logical<4>>
 ! CHECK:          %[[VAL_14:.*]] = fir.load %[[VAL_12]] : !fir.ref<!fir.logical<4>>
-! CHECK:          %[[VAL_15:.*]] = fir.convert %[[VAL_13]] : (!fir.logical<4>) -> i1
-! CHECK:          %[[VAL_16:.*]] = fir.convert %[[VAL_14]] : (!fir.logical<4>) -> i1
-! CHECK:          %[[VAL_17:.*]] = arith.cmpi ne, %[[VAL_15]], %[[VAL_16]] : i1
-! CHECK:          %[[VAL_18:.*]] = fir.convert %[[VAL_17]] : (i1) -> !fir.logical<4>
-! CHECK:          hlfir.yield_element %[[VAL_18]] : !fir.logical<4>
+! CHECK:          %[[VAL_15:.*]] = fir.neqv %[[VAL_13]], %[[VAL_14]] : !fir.logical<4>
+! CHECK:          hlfir.yield_element %[[VAL_15]] : !fir.logical<4>
 ! CHECK:        }
 ! CHECK:        hlfir.yield %[[VAL_19:.*]] : !hlfir.expr<?x!fir.logical<4>> cleanup {
 ! CHECK:          hlfir.destroy %[[VAL_19]] : !hlfir.expr<?x!fir.logical<4>>

@@ -139,7 +139,7 @@ using ATTR_USE alignas(4) ATTR_USE foobar = int; // expected-error {{'ATTR_NAME'
                                                                   expected-error {{'alignas' attribute only applies to}} \
                                                                   expected-error 2 {{'ATTR_NAME' only applies to function types}}
 
-ATTR_USE using T = int; // expected-error {{'ATTR_NAME' cannot appear here}}
+ATTR_USE using T = int; // expected-error {{misplaced 'ATTR_NAME'; expected 'ATTR_NAME' here}}
 using T ATTR_USE = int; // expected-error {{'ATTR_NAME' only applies to function types}}
 template<typename T> using U ATTR_USE = T; // expected-error {{'ATTR_NAME' only applies to function types}}
 using ns::i ATTR_USE; // expected-warning {{ISO C++}} \
@@ -179,7 +179,7 @@ struct ATTR_USE N::S s; // expected-error {{'ATTR_NAME' cannot appear here}}
 struct ATTR_USE Template<int> t; // expected-error {{'ATTR_NAME' cannot appear here}}
 struct ATTR_USE ::template Template<int> u; // expected-error {{'ATTR_NAME' cannot appear here}}
 template struct ATTR_USE Template<char>; // expected-error {{'ATTR_NAME' cannot appear here}}
-template struct __attribute__((pure)) Template<std::size_t>; // We still allow GNU-style attributes here
+template struct __attribute__((warn_unused)) Template<std::size_t>; // We still allow GNU-style attributes here
 template <> struct ATTR_USE Template<void>; // expected-error {{'ATTR_NAME' only applies to non-K&R-style functions}}
 
 enum ATTR_USE E1 {}; // expected-error {{'ATTR_NAME' only applies to non-K&R-style functions}}

@@ -15,6 +15,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/ExecutionEngine/JITLink/ELF_aarch32.h"
 #include "llvm/ExecutionEngine/JITLink/ELF_aarch64.h"
+#include "llvm/ExecutionEngine/JITLink/ELF_hexagon.h"
 #include "llvm/ExecutionEngine/JITLink/ELF_loongarch.h"
 #include "llvm/ExecutionEngine/JITLink/ELF_ppc64.h"
 #include "llvm/ExecutionEngine/JITLink/ELF_riscv.h"
@@ -85,10 +86,17 @@ createLinkGraphFromELFObject(MemoryBufferRef ObjectBuffer,
     return TargetMachineArch.takeError();
 
   switch (*TargetMachineArch) {
-  case ELF::EM_AARCH64:
-    return createLinkGraphFromELFObject_aarch64(ObjectBuffer, std::move(SSP));
+  case ELF::EM_AARCH64: {
+    if (DataEncoding == ELF::ELFDATA2LSB)
+      return createLinkGraphFromELFObject_aarch64(ObjectBuffer, std::move(SSP));
+    else
+      return createLinkGraphFromELFObject_aarch64_be(ObjectBuffer,
+                                                     std::move(SSP));
+  }
   case ELF::EM_ARM:
     return createLinkGraphFromELFObject_aarch32(ObjectBuffer, std::move(SSP));
+  case ELF::EM_HEXAGON:
+    return createLinkGraphFromELFObject_hexagon(ObjectBuffer, std::move(SSP));
   case ELF::EM_PPC64: {
     if (DataEncoding == ELF::ELFDATA2LSB)
       return createLinkGraphFromELFObject_ppc64le(ObjectBuffer, std::move(SSP));
@@ -118,11 +126,17 @@ void link_ELF(std::unique_ptr<LinkGraph> G,
   case Triple::aarch64:
     link_ELF_aarch64(std::move(G), std::move(Ctx));
     return;
+  case Triple::aarch64_be:
+    link_ELF_aarch64_be(std::move(G), std::move(Ctx));
+    return;
   case Triple::arm:
   case Triple::armeb:
   case Triple::thumb:
   case Triple::thumbeb:
     link_ELF_aarch32(std::move(G), std::move(Ctx));
+    return;
+  case Triple::hexagon:
+    link_ELF_hexagon(std::move(G), std::move(Ctx));
     return;
   case Triple::loongarch32:
   case Triple::loongarch64:

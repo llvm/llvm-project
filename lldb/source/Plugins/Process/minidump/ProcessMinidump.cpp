@@ -77,7 +77,7 @@ void HashElfTextSection(ModuleSP module_sp, std::vector<uint8_t> &breakpad_uuid,
   SectionList *sect_list = module_sp->GetSectionList();
   if (sect_list == nullptr)
     return;
-  SectionSP sect_sp = sect_list->FindSectionByName(ConstString(".text"));
+  SectionSP sect_sp = sect_list->FindSectionByName(".text");
   if (!sect_sp)
     return;
   constexpr size_t kMDGUIDSize = 16;
@@ -208,17 +208,23 @@ Status ProcessMinidump::DoLoadCore() {
 
   m_thread_list = m_minidump_parser->GetThreads();
   auto exception_stream_it = m_minidump_parser->GetExceptionStreams();
-  for (auto exception_stream : exception_stream_it) {
+  for (auto exception_stream_or_err : exception_stream_it) {
     // If we can't read an exception stream skip it
     // We should probably serve a warning
-    if (!exception_stream)
+    if (!exception_stream_or_err) {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Process),
+                     exception_stream_or_err.takeError(),
+                     "failed to read exception stream: {0}");
       continue;
+    }
+    const llvm::minidump::ExceptionStream &exception_stream =
+        *exception_stream_or_err;
 
     if (!m_exceptions_by_tid
-             .try_emplace(exception_stream->ThreadId, exception_stream.get())
+             .try_emplace(exception_stream.ThreadId, exception_stream)
              .second) {
       return Status::FromErrorStringWithFormatv(
-          "Duplicate exception stream for tid {0}", exception_stream->ThreadId);
+          "Duplicate exception stream for tid {0}", exception_stream.ThreadId);
     }
   }
 
@@ -308,15 +314,17 @@ bool ProcessMinidump::IsAlive() { return true; }
 
 bool ProcessMinidump::WarnBeforeDetach() const { return false; }
 
-size_t ProcessMinidump::ReadMemory(lldb::addr_t addr, void *buf, size_t size,
-                                   Status &error) {
+size_t ProcessMinidump::ReadMemory(const ProcessAddress &process_addr,
+                                   void *buf, size_t size, Status &error) {
+  lldb::addr_t addr = process_addr.GetValue();
   // Don't allow the caching that lldb_private::Process::ReadMemory does since
   // we have it all cached in our dump file anyway.
   return DoReadMemory(addr, buf, size, error);
 }
 
-size_t ProcessMinidump::DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
-                                     Status &error) {
+size_t ProcessMinidump::DoReadMemory(const ProcessAddress &process_addr,
+                                     void *buf, size_t size, Status &error) {
+  lldb::addr_t addr = process_addr.GetValue();
 
   llvm::Expected<llvm::ArrayRef<uint8_t>> mem_maybe =
       m_minidump_parser->GetMemory(addr, size);
@@ -394,13 +402,13 @@ void ProcessMinidump::BuildMemoryRegions() {
                                                 section_sp->GetByteSize());
       MemoryRegionInfo region =
           MinidumpParser::GetMemoryRegionInfo(*m_memory_regions, load_addr);
-      if (region.GetMapped() != MemoryRegionInfo::eYes &&
+      if (region.GetMapped() != eLazyBoolYes &&
           region.GetRange().GetRangeBase() <= section_range.GetRangeBase() &&
           section_range.GetRangeEnd() <= region.GetRange().GetRangeEnd()) {
         to_add.emplace_back();
         to_add.back().GetRange() = section_range;
         to_add.back().SetLLDBPermissions(section_sp->GetPermissions());
-        to_add.back().SetMapped(MemoryRegionInfo::eYes);
+        to_add.back().SetMapped(eLazyBoolYes);
         to_add.back().SetName(module_sp->GetFileSpec().GetPath().c_str());
       }
     }

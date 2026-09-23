@@ -18,9 +18,9 @@ define i8 @header_load_live_out_deref(ptr dereferenceable(1024) %A, ptr derefere
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i8>, ptr [[TMP1]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <4 x i8> [[WIDE_LOAD]], [[WIDE_LOAD2]]
-; CHECK-NEXT:    [[INDEX_NEXT3]] = add nuw i64 [[OFFSET_IDX]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = freeze <4 x i1> [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP3]])
+; CHECK-NEXT:    [[INDEX_NEXT3]] = add nuw i64 [[OFFSET_IDX]], 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT3]], 64
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[VECTOR_BODY_INTERIM]]
 ; CHECK:       [[VECTOR_BODY_INTERIM]]:
@@ -86,9 +86,9 @@ define i8 @latch_load_live_out_deref(ptr dereferenceable(1024) %A, ptr dereferen
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i8>, ptr [[TMP1]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <4 x i8> [[WIDE_LOAD]], [[WIDE_LOAD2]]
-; CHECK-NEXT:    [[INDEX_NEXT4]] = add nuw i64 [[OFFSET_IDX]], 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = freeze <4 x i1> [[TMP2]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP5]])
+; CHECK-NEXT:    [[INDEX_NEXT4]] = add nuw i64 [[OFFSET_IDX]], 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT4]], 64
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[VECTOR_BODY_INTERIM]]
 ; CHECK:       [[VECTOR_BODY_INTERIM]]:

@@ -9,8 +9,6 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_NEARBYINTTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_NEARBYINTTEST_H
 
-#undef LIBC_MATH_USE_SYSTEM_FENV
-
 #include "hdr/fenv_macros.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
@@ -18,9 +16,6 @@
 #include "test/UnitTest/Test.h"
 
 using LIBC_NAMESPACE::Sign;
-
-static constexpr int ROUNDING_MODES[4] = {FE_UPWARD, FE_DOWNWARD, FE_TOWARDZERO,
-                                          FE_TONEAREST};
 
 template <typename T>
 class NearbyIntTestTemplate : public LIBC_NAMESPACE::testing::Test {
@@ -82,22 +77,22 @@ public:
   }
 };
 
-#define LIST_NEARBYINT_TESTS(T, func)                                          \
-  using LlvmLibcNearbyIntTest = NearbyIntTestTemplate<T>;                      \
-  TEST_F(LlvmLibcNearbyIntTest, TestNaN) { testNaN(&func); }                   \
-  TEST_F(LlvmLibcNearbyIntTest, TestInfinities) { testInfinities(&func); }     \
-  TEST_F(LlvmLibcNearbyIntTest, TestZeroes) { testZeroes(&func); }             \
-  TEST_F(LlvmLibcNearbyIntTest, TestIntegers) { testIntegers(&func); }         \
-  TEST_F(LlvmLibcNearbyIntTest, TestSubnormalToNearest) {                      \
+#define LIST_NEARBYINT_TESTS(Name, T, func)                                    \
+  using LlvmLibc##Name##Test = NearbyIntTestTemplate<T>;                       \
+  TEST_F(LlvmLibc##Name##Test, TestNaN) { testNaN(&func); }                    \
+  TEST_F(LlvmLibc##Name##Test, TestInfinities) { testInfinities(&func); }      \
+  TEST_F(LlvmLibc##Name##Test, TestZeroes) { testZeroes(&func); }              \
+  TEST_F(LlvmLibc##Name##Test, TestIntegers) { testIntegers(&func); }          \
+  TEST_F(LlvmLibc##Name##Test, TestSubnormalToNearest) {                       \
     testSubnormalToNearest(&func);                                             \
   }                                                                            \
-  TEST_F(LlvmLibcNearbyIntTest, TestSubnormalTowardZero) {                     \
+  TEST_F(LlvmLibc##Name##Test, TestSubnormalTowardZero) {                      \
     testSubnormalTowardZero(&func);                                            \
   }                                                                            \
-  TEST_F(LlvmLibcNearbyIntTest, TestSubnormalToPosInf) {                       \
+  TEST_F(LlvmLibc##Name##Test, TestSubnormalToPosInf) {                        \
     testSubnormalToPosInf(&func);                                              \
   }                                                                            \
-  TEST_F(LlvmLibcNearbyIntTest, TestSubnormalToNegInf) {                       \
+  TEST_F(LlvmLibc##Name##Test, TestSubnormalToNegInf) {                        \
     testSubnormalToNegInf(&func);                                              \
   }
 

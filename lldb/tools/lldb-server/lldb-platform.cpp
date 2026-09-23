@@ -39,10 +39,8 @@
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Host/Socket.h"
+#include "lldb/Host/common/DomainSocket.h"
 #include "lldb/Host/common/TCPSocket.h"
-#if LLDB_ENABLE_POSIX
-#include "lldb/Host/posix/DomainSocket.h"
-#endif
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Status.h"
@@ -70,24 +68,12 @@ enum ID {
 #undef OPTION
 };
 
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_CODE
 #include "PlatformOptions.inc"
-#undef OPTTABLE_STR_TABLE_CODE
 
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "PlatformOptions.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-static constexpr opt::OptTable::Info InfoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
-#include "PlatformOptions.inc"
-#undef OPTION
-};
-
-class PlatformOptTable : public opt::GenericOptTable {
+class PlatformOptTable : public opt::OptTable {
 public:
-  PlatformOptTable()
-      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {}
+  PlatformOptTable() : opt::OptTable(optionTables()) {}
 
   void PrintHelp(llvm::StringRef Name) {
     std::string Usage =
@@ -205,7 +191,7 @@ static Status parse_listen_host_port(Socket::SocketProtocol &protocol,
 
 static Status save_socket_id_to_file(const std::string &socket_id,
                                      const FileSpec &file_spec) {
-  FileSpec temp_file_spec(file_spec.GetDirectory().GetStringRef());
+  FileSpec temp_file_spec(file_spec.GetDirectory());
   Status status(llvm::sys::fs::create_directory(temp_file_spec.GetPath()));
   if (status.Fail())
     return Status::FromErrorStringWithFormat(
@@ -325,8 +311,8 @@ static Status spawn_process(const char *progname, const FileSpec &prog,
   self_args.AppendArgument(llvm::StringRef("platform"));
   self_args.AppendArgument(llvm::StringRef("--child-platform-fd"));
   self_args.AppendArgument(llvm::to_string(shared_socket.GetSendableFD()));
-  launch_info.AppendDuplicateFileAction((int64_t)shared_socket.GetSendableFD(),
-                                        (int64_t)shared_socket.GetSendableFD());
+  launch_info.AppendDuplicateFileAction(shared_socket.GetSendableFD(),
+                                        shared_socket.GetSendableFD());
   if (gdb_port) {
     self_args.AppendArgument(llvm::StringRef("--gdbserver-port"));
     self_args.AppendArgument(llvm::to_string(gdb_port));
@@ -493,7 +479,7 @@ int main_platform(int argc, char *argv[]) {
   }
 
   if (!LLDBServerUtilities::SetupLogging(log_file, log_channels, 0))
-    return -1;
+    return EXIT_FAILURE;
 
   // Print usage and exit if no listening port is specified.
   if (listen_host_port.empty() && fd == SharedSocket::kInvalidFD) {
@@ -539,7 +525,7 @@ int main_platform(int argc, char *argv[]) {
     if (gdbserver_port) {
       socket = std::make_unique<TCPSocket>(sockfd, /*should_close=*/true);
     } else {
-#if LLDB_ENABLE_POSIX
+#if LLDB_ENABLE_POSIX || defined(_WIN32)
       llvm::Expected<std::unique_ptr<DomainSocket>> domain_socket =
           DomainSocket::FromBoundNativeSocket(sockfd, /*should_close=*/true);
       if (!domain_socket) {

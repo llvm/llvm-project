@@ -18,9 +18,10 @@
 // a time on any given thread.
 //
 // Architecture:
-//   - Code region (RX): Contains pre-assembled trampoline stubs that load
-//     callee address and static chain from a paired TDATA entry, then jump
-//     to the callee with the static chain in the appropriate register.
+//   - Code region (RX): Contains trampoline stubs generated during pool
+//     initialization that load the callee address and static chain from a
+//     paired TDATA entry, then jump to the callee with the static chain in the
+//     appropriate register.
 //   - Data region (RW): Contains TrampolineData entries with {callee_address,
 //     static_chain_address} pairs, one per trampoline slot.
 //   - Free list: Tracks available trampoline slots for O(1) alloc/free.
@@ -28,9 +29,6 @@
 // Thread safety: Uses Fortran::runtime::Lock (pthreads on POSIX,
 // CRITICAL_SECTION on Windows) — not std::mutex — to avoid C++ runtime
 // library dependence. A single global lock serializes pool operations.
-// This is a deliberate V1 design choice to keep the initial W^X
-// architectural change minimal. Per-thread lock-free pools are deferred
-// to a future optimization patch.
 //
 // AddressSanitizer note: The trampoline code region is allocated via
 // mmap (not malloc/new), so ASan does not track it. The data region
@@ -58,6 +56,13 @@
 #if defined(_WIN32)
 #include <windows.h>
 #else
+// On macOS/Darwin, the flang-rt CMake configuration sets
+// -D_POSIX_C_SOURCE=200809, which hides BSD/Apple-specific mmap flags
+// (MAP_ANON, MAP_JIT) from <sys/mman.h>. Define _DARWIN_C_SOURCE to
+// re-expose them for MAP_JIT on Apple Silicon and MAP_ANON elsewhere.
+#if defined(__APPLE__) && !defined(_DARWIN_C_SOURCE)
+#define _DARWIN_C_SOURCE
+#endif
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <unistd.h>
@@ -131,10 +136,7 @@ public:
     ensureInitialized();
 
     if (freeHead_ == kInvalidIndex) {
-      // Pool exhausted — fixed size by design for V1.
-      // The pool capacity is controlled by FLANG_TRAMPOLINE_POOL_SIZE
-      // (default 1024). Dynamic slab growth can be added in a follow-up
-      // patch if real workloads demonstrate a need for it.
+      // Pool capacity is fixed after initialization.
       Terminator terminator{__FILE__, __LINE__};
       terminator.Crash("Trampoline pool exhausted (max %zu slots). "
                        "Set FLANG_TRAMPOLINE_POOL_SIZE to increase.",
@@ -192,10 +194,6 @@ private:
     initialized_ = true;
 
     // Check environment variable for pool size override.
-    // Fixed-size pool by design (V1): avoids complexity of dynamic growth
-    // and re-protection of code pages. The default (1024 slots) is
-    // sufficient for typical Fortran programs. Users can override via:
-    //   export FLANG_TRAMPOLINE_POOL_SIZE=4096
     if (const char *envSize = std::getenv("FLANG_TRAMPOLINE_POOL_SIZE")) {
       long val{std::strtol(envSize, nullptr, 10)};
       if (val > 0) {
@@ -224,7 +222,11 @@ private:
     }
     if (codeRegion_) {
       // Enable writing on this thread (MAP_JIT defaults to execute).
-      pthread_jit_write_protect_np(0); // 0 = writable
+      // Guard for deployment targets older than macOS 11.0 (Apple Silicon
+      // always runs >= 11.0, so this is effectively unconditional at runtime).
+      if (__builtin_available(macOS 11.0, *)) {
+        pthread_jit_write_protect_np(0); // 0 = writable
+      }
     }
 #elif defined(MAP_ANONYMOUS)
     // Linux and other POSIX platforms with MAP_ANONYMOUS.
@@ -274,7 +276,9 @@ private:
     VirtualProtect(codeRegion_, codeSize, PAGE_EXECUTE_READ, &oldProtect);
 #elif defined(__APPLE__) && defined(__aarch64__)
     // Switch back to execute-only (MAP_JIT manages per-thread W^X).
-    pthread_jit_write_protect_np(1); // 1 = executable
+    if (__builtin_available(macOS 11.0, *)) {
+      pthread_jit_write_protect_np(1); // 1 = executable
+    }
 #else
     mprotect(codeRegion_, codeSize, PROT_READ | PROT_EXEC);
 #endif

@@ -81,31 +81,19 @@ static cl::opt<bool>
 // output quality. Setting HugeRegion so large that it will never be
 // reached means best-effort, but may be slow.
 
-// When Stores and Loads maps (or NonAliasStores and NonAliasLoads)
-// together hold this many SUs, a reduction of maps will be done.
-static cl::opt<unsigned> HugeRegion("dag-maps-huge-region", cl::Hidden,
-    cl::init(1000), cl::desc("The limit to use while constructing the DAG "
-                             "prior to scheduling, at which point a trade-off "
-                             "is made to avoid excessive compile time."));
-
-static cl::opt<unsigned> ReductionSize(
-    "dag-maps-reduction-size", cl::Hidden,
-    cl::desc("A huge scheduling region will have maps reduced by this many "
-             "nodes at a time. Defaults to HugeRegion / 2."));
+// When Stores and Loads maps together hold this many SUs, a reduction of maps
+// will be done.
+static cl::opt<unsigned>
+    HugeRegion("dag-maps-huge-region", cl::Hidden, cl::init(500),
+               cl::desc("The limit to use while constructing the DAG "
+                        "prior to scheduling, at which point a trade-off "
+                        "is made to avoid excessive compile time."));
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 static cl::opt<bool> SchedPrintCycles(
     "sched-print-cycles", cl::Hidden, cl::init(false),
     cl::desc("Report top/bottom cycles when dumping SUnit instances"));
 #endif
-
-static unsigned getReductionSize() {
-  // Always reduce a huge region with half of the elements, except
-  // when user sets this number explicitly.
-  if (ReductionSize.getNumOccurrences() == 0)
-    return HugeRegion / 2;
-  return ReductionSize;
-}
 
 static void dumpSUList(const ScheduleDAGInstrs::SUList &L) {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -161,8 +149,7 @@ static bool getUnderlyingObjectsForInstr(const MachineInstr *MI,
         if (PSV->isAliased(&MFI))
           return false;
 
-        bool MayAlias = PSV->mayAlias(&MFI);
-        Objects.emplace_back(PSV, MayAlias);
+        Objects.push_back(PSV);
       } else if (const Value *V = MMO->getValue()) {
         SmallVector<Value *, 4> Objs;
         if (!getUnderlyingObjectsForCodeGen(V, Objs))
@@ -170,7 +157,7 @@ static bool getUnderlyingObjectsForInstr(const MachineInstr *MI,
 
         for (Value *V : Objs) {
           assert(isIdentifiedObject(V));
-          Objects.emplace_back(V, true);
+          Objects.push_back(V);
         }
       } else
         return false;
@@ -621,7 +608,7 @@ void ScheduleDAGInstrs::initSUnits() {
       for (const MCWriteProcResEntry &PRE :
            make_range(SchedModel.getWriteProcResBegin(SC),
                       SchedModel.getWriteProcResEnd(SC))) {
-        switch (SchedModel.getProcResource(PRE.ProcResourceIdx)->BufferSize) {
+        switch (SchedModel.getResourceBufferSize(PRE.ProcResourceIdx)) {
         case 0:
           SU->hasReservedResource = true;
           break;
@@ -719,39 +706,6 @@ void ScheduleDAGInstrs::addBarrierChain(Value2SUsMap &map) {
   map.clear();
 }
 
-void ScheduleDAGInstrs::insertBarrierChain(Value2SUsMap &map) {
-  assert(BarrierChain != nullptr);
-
-  // Go through all lists of SUs.
-  for (Value2SUsMap::iterator I = map.begin(), EE = map.end(); I != EE;) {
-    Value2SUsMap::iterator CurrItr = I++;
-    SUList &sus = CurrItr->second;
-    SUList::iterator SUItr = sus.begin(), SUEE = sus.end();
-    for (; SUItr != SUEE; ++SUItr) {
-      // Stop on BarrierChain or any instruction above it.
-      if ((*SUItr)->NodeNum <= BarrierChain->NodeNum)
-        break;
-
-      (*SUItr)->addPredBarrier(BarrierChain);
-    }
-
-    // Remove also the BarrierChain from list if present.
-    if (SUItr != SUEE && *SUItr == BarrierChain)
-      SUItr++;
-
-    // Remove all SUs that are now successors of BarrierChain.
-    if (SUItr != sus.begin())
-      sus.erase(sus.begin(), SUItr);
-  }
-
-  // Remove all entries with empty su lists.
-  map.remove_if([&](std::pair<ValueType, SUList> &mapEntry) {
-      return (mapEntry.second.empty()); });
-
-  // Recompute the size of the map (NumNodes).
-  map.reComputeSize();
-}
-
 void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
                                         RegPressureTracker *RPTracker,
                                         PressureDiffs *PDiffs,
@@ -764,6 +718,7 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
     AAForDep.emplace(*AA);
 
   BarrierChain = nullptr;
+  MemOpsProcessed = 0;
 
   this->TrackLaneMasks = TrackLaneMasks;
   MISUnitMap.clear();
@@ -785,15 +740,6 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
   // non-aliasing if they both depend on only identified Values and do
   // not share any common Value.
   Value2SUsMap Stores, Loads(1 /*TrueMemOrderLatency*/);
-
-  // Certain memory accesses are known to not alias any SU in Stores
-  // or Loads, and have therefore their own 'NonAlias'
-  // domain. E.g. spill / reload instructions never alias LLVM I/R
-  // Values. It would be nice to assume that this type of memory
-  // accesses always have a proper memory operand modelling, and are
-  // therefore never unanalyzable, but this is conservatively not
-  // done.
-  Value2SUsMap NonAliasStores, NonAliasLoads(1 /*TrueMemOrderLatency*/);
 
   // Track all instructions that may raise floating-point exceptions.
   // These do not depend on one other (or normal loads or stores), but
@@ -930,8 +876,6 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
       // Add dependencies against everything below it and clear maps.
       addBarrierChain(Stores);
       addBarrierChain(Loads);
-      addBarrierChain(NonAliasStores);
-      addBarrierChain(NonAliasLoads);
       addBarrierChain(FPExceptions);
 
       continue;
@@ -943,12 +887,14 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
       if (BarrierChain)
         BarrierChain->addPredBarrier(SU);
 
-      FPExceptions.insert(SU, UnknownValue);
-
-      if (FPExceptions.size() >= HugeRegion) {
-        LLVM_DEBUG(dbgs() << "Reducing FPExceptions map.\n");
-        Value2SUsMap empty;
-        reduceHugeMemNodeMaps(FPExceptions, empty, getReductionSize());
+      if (FPExceptions.size() + 1 >= HugeRegion) {
+        LLVM_DEBUG(
+            dbgs()
+            << "Creating barrier chain and clearing FPExceptions map.\n");
+        BarrierChain = SU;
+        addBarrierChain(FPExceptions);
+      } else {
+        FPExceptions.insert(SU, UnknownValue);
       }
     }
 
@@ -957,9 +903,24 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
         !(MI.mayLoad() && !MI.isDereferenceableInvariantLoad()))
       continue;
 
+    MemOpsProcessed++;
+
     // Always add dependecy edge to BarrierChain if present.
-    if (BarrierChain)
+    if (BarrierChain && BarrierChain != SU)
       BarrierChain->addPredBarrier(SU);
+
+    // Reduce maps if they grow huge.
+    if (MemOpsProcessed >= HugeRegion) {
+      LLVM_DEBUG(dbgs() << "Creating barrier chain and clearing maps.\n");
+
+      BarrierChain = SU;
+
+      addBarrierChain(Stores);
+      addBarrierChain(Loads);
+
+      MemOpsProcessed = 0;
+      continue;
+    }
 
     // Find the underlying objects for MI. The Objs vector is either
     // empty, or filled with the Values of memory locations which this
@@ -972,32 +933,23 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
       if (!ObjsFound) {
         // An unknown store depends on all stores and loads.
         addChainDependencies(SU, Stores);
-        addChainDependencies(SU, NonAliasStores);
         addChainDependencies(SU, Loads);
-        addChainDependencies(SU, NonAliasLoads);
 
         // Map this store to 'UnknownValue'.
         Stores.insert(SU, UnknownValue);
       } else {
         // Add precise dependencies against all previously seen memory
         // accesses mapped to the same Value(s).
-        for (const UnderlyingObject &UnderlObj : Objs) {
-          ValueType V = UnderlObj.getValue();
-          bool ThisMayAlias = UnderlObj.mayAlias();
-
+        for (const ValueType V : Objs) {
           // Add dependencies to previous stores and loads mapped to V.
-          addChainDependencies(SU, (ThisMayAlias ? Stores : NonAliasStores), V);
-          addChainDependencies(SU, (ThisMayAlias ? Loads : NonAliasLoads), V);
+          addChainDependencies(SU, Stores, V);
+          addChainDependencies(SU, Loads, V);
         }
         // Update the store map after all chains have been added to avoid adding
         // self-loop edge if multiple underlying objects are present.
-        for (const UnderlyingObject &UnderlObj : Objs) {
-          ValueType V = UnderlObj.getValue();
-          bool ThisMayAlias = UnderlObj.mayAlias();
+        for (const ValueType V : Objs)
+          Stores.insert(SU, V);
 
-          // Map this store to V.
-          (ThisMayAlias ? Stores : NonAliasStores).insert(SU, V);
-        }
         // The store may have dependencies to unanalyzable loads and
         // stores.
         addChainDependencies(SU, Loads, UnknownValue);
@@ -1007,34 +959,21 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
       if (!ObjsFound) {
         // An unknown load depends on all stores.
         addChainDependencies(SU, Stores);
-        addChainDependencies(SU, NonAliasStores);
 
+        // Map this load to 'UnknownValue'.
         Loads.insert(SU, UnknownValue);
       } else {
-        for (const UnderlyingObject &UnderlObj : Objs) {
-          ValueType V = UnderlObj.getValue();
-          bool ThisMayAlias = UnderlObj.mayAlias();
-
+        for (const ValueType V : Objs) {
           // Add precise dependencies against all previously seen stores
           // mapping to the same Value(s).
-          addChainDependencies(SU, (ThisMayAlias ? Stores : NonAliasStores), V);
+          addChainDependencies(SU, Stores, V);
 
           // Map this load to V.
-          (ThisMayAlias ? Loads : NonAliasLoads).insert(SU, V);
+          Loads.insert(SU, V);
         }
         // The load may have dependencies to unanalyzable stores.
         addChainDependencies(SU, Stores, UnknownValue);
       }
-    }
-
-    // Reduce maps if they grow huge.
-    if (Stores.size() + Loads.size() >= HugeRegion) {
-      LLVM_DEBUG(dbgs() << "Reducing Stores and Loads maps.\n");
-      reduceHugeMemNodeMaps(Stores, Loads, getReductionSize());
-    }
-    if (NonAliasStores.size() + NonAliasLoads.size() >= HugeRegion) {
-      LLVM_DEBUG(dbgs() << "Reducing NonAliasStores and NonAliasLoads maps.\n");
-      reduceHugeMemNodeMaps(NonAliasStores, NonAliasLoads, getReductionSize());
     }
   }
 
@@ -1070,56 +1009,6 @@ void ScheduleDAGInstrs::Value2SUsMap::dump() {
     dbgs() << " : ";
     dumpSUList(SUs);
   }
-}
-
-void ScheduleDAGInstrs::reduceHugeMemNodeMaps(Value2SUsMap &stores,
-                                              Value2SUsMap &loads, unsigned N) {
-  LLVM_DEBUG(dbgs() << "Before reduction:\nStoring SUnits:\n"; stores.dump();
-             dbgs() << "Loading SUnits:\n"; loads.dump());
-
-  // Insert all SU's NodeNums into a vector and sort it.
-  std::vector<unsigned> NodeNums;
-  NodeNums.reserve(stores.size() + loads.size());
-  for (const auto &[V, SUs] : stores) {
-    (void)V;
-    for (const auto *SU : SUs)
-      NodeNums.push_back(SU->NodeNum);
-  }
-  for (const auto &[V, SUs] : loads) {
-    (void)V;
-    for (const auto *SU : SUs)
-      NodeNums.push_back(SU->NodeNum);
-  }
-  llvm::sort(NodeNums);
-
-  // The N last elements in NodeNums will be removed, and the SU with
-  // the lowest NodeNum of them will become the new BarrierChain to
-  // let the not yet seen SUs have a dependency to the removed SUs.
-  assert(N <= NodeNums.size());
-  SUnit *newBarrierChain = &SUnits[*(NodeNums.end() - N)];
-  if (BarrierChain) {
-    // The aliasing and non-aliasing maps reduce independently of each
-    // other, but share a common BarrierChain. Check if the
-    // newBarrierChain is above the former one. If it is not, it may
-    // introduce a loop to use newBarrierChain, so keep the old one.
-    if (newBarrierChain->NodeNum < BarrierChain->NodeNum) {
-      BarrierChain->addPredBarrier(newBarrierChain);
-      BarrierChain = newBarrierChain;
-      LLVM_DEBUG(dbgs() << "Inserting new barrier chain: SU("
-                        << BarrierChain->NodeNum << ").\n");
-    }
-    else
-      LLVM_DEBUG(dbgs() << "Keeping old barrier chain: SU("
-                        << BarrierChain->NodeNum << ").\n");
-  }
-  else
-    BarrierChain = newBarrierChain;
-
-  insertBarrierChain(stores);
-  insertBarrierChain(loads);
-
-  LLVM_DEBUG(dbgs() << "After reduction:\nStoring SUnits:\n"; stores.dump();
-             dbgs() << "Loading SUnits:\n"; loads.dump());
 }
 
 static void toggleKills(const MachineRegisterInfo &MRI, LiveRegUnits &LiveRegs,

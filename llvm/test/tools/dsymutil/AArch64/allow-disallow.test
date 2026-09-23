@@ -1,64 +1,108 @@
 # Test --allow to include one object file (1.o).
-RUN: dsymutil --dump-debug-map \
+RUN: dsymutil --linker classic --dump-debug-map \
+RUN:   %p/../Inputs/allow-disallow/a.out.arm64 \
+RUN:   --oso-prepend-path=%p/../Inputs \
+RUN:   --allow=%p/../Inputs/allow-disallow/one.yaml \
+RUN:   | FileCheck %s --check-prefix=ALLOW-ONE
+RUN: dsymutil --linker parallel --dump-debug-map \
 RUN:   %p/../Inputs/allow-disallow/a.out.arm64 \
 RUN:   --oso-prepend-path=%p/../Inputs \
 RUN:   --allow=%p/../Inputs/allow-disallow/one.yaml \
 RUN:   | FileCheck %s --check-prefix=ALLOW-ONE
 
 # Test --allow to include two object files (1.o and 3.o).
-RUN: dsymutil --dump-debug-map \
+RUN: dsymutil --linker classic --dump-debug-map \
+RUN:   %p/../Inputs/allow-disallow/a.out.arm64 \
+RUN:   --oso-prepend-path=%p/../Inputs \
+RUN:   --allow=%p/../Inputs/allow-disallow/two.yaml \
+RUN:   | FileCheck %s --check-prefix=ALLOW-TWO
+RUN: dsymutil --linker parallel --dump-debug-map \
 RUN:   %p/../Inputs/allow-disallow/a.out.arm64 \
 RUN:   --oso-prepend-path=%p/../Inputs \
 RUN:   --allow=%p/../Inputs/allow-disallow/two.yaml \
 RUN:   | FileCheck %s --check-prefix=ALLOW-TWO
 
 # Test --allow to include no object files (empty allow list).
-RUN: dsymutil --dump-debug-map \
+RUN: dsymutil --linker classic --dump-debug-map \
+RUN:   %p/../Inputs/allow-disallow/a.out.arm64 \
+RUN:   --oso-prepend-path=%p/../Inputs \
+RUN:   --allow=%p/../Inputs/allow-disallow/empty.yaml \
+RUN:   | FileCheck %s --check-prefix=ALLOW-NONE
+RUN: dsymutil --linker parallel --dump-debug-map \
 RUN:   %p/../Inputs/allow-disallow/a.out.arm64 \
 RUN:   --oso-prepend-path=%p/../Inputs \
 RUN:   --allow=%p/../Inputs/allow-disallow/empty.yaml \
 RUN:   | FileCheck %s --check-prefix=ALLOW-NONE
 
 # Test --disallow to exclude one object file (1.o).
-RUN: dsymutil --dump-debug-map \
+RUN: dsymutil --linker classic --dump-debug-map \
+RUN:   %p/../Inputs/allow-disallow/a.out.arm64 \
+RUN:   --oso-prepend-path=%p/../Inputs \
+RUN:   --disallow=%p/../Inputs/allow-disallow/one.yaml \
+RUN:   | FileCheck %s --check-prefix=DISALLOW-ONE
+RUN: dsymutil --linker parallel --dump-debug-map \
 RUN:   %p/../Inputs/allow-disallow/a.out.arm64 \
 RUN:   --oso-prepend-path=%p/../Inputs \
 RUN:   --disallow=%p/../Inputs/allow-disallow/one.yaml \
 RUN:   | FileCheck %s --check-prefix=DISALLOW-ONE
 
 # Test --disallow to exclude two object files (1.o and 3.o).
-RUN: dsymutil --dump-debug-map \
+RUN: dsymutil --linker classic --dump-debug-map \
+RUN:   %p/../Inputs/allow-disallow/a.out.arm64 \
+RUN:   --oso-prepend-path=%p/../Inputs \
+RUN:   --disallow=%p/../Inputs/allow-disallow/two.yaml \
+RUN:   | FileCheck %s --check-prefix=DISALLOW-TWO
+RUN: dsymutil --linker parallel --dump-debug-map \
 RUN:   %p/../Inputs/allow-disallow/a.out.arm64 \
 RUN:   --oso-prepend-path=%p/../Inputs \
 RUN:   --disallow=%p/../Inputs/allow-disallow/two.yaml \
 RUN:   | FileCheck %s --check-prefix=DISALLOW-TWO
 
 # Test --disallow to exclude no object files (empty allow list).
-RUN: dsymutil --dump-debug-map \
+RUN: dsymutil --linker classic --dump-debug-map \
+RUN:   %p/../Inputs/allow-disallow/a.out.arm64 \
+RUN:   --oso-prepend-path=%p/../Inputs \
+RUN:   --disallow=%p/../Inputs/allow-disallow/empty.yaml \
+RUN:   | FileCheck %s --check-prefix=DISALLOW-NONE
+RUN: dsymutil --linker parallel --dump-debug-map \
 RUN:   %p/../Inputs/allow-disallow/a.out.arm64 \
 RUN:   --oso-prepend-path=%p/../Inputs \
 RUN:   --disallow=%p/../Inputs/allow-disallow/empty.yaml \
 RUN:   | FileCheck %s --check-prefix=DISALLOW-NONE
 
 # Test error when allow-list file does not exist.
-RUN: not dsymutil --dump-debug-map \
+RUN: not dsymutil --linker classic --dump-debug-map \
+RUN:   %p/../Inputs/allow-disallow/a.out.arm64 \
+RUN:   --allow=/nonexistent/path 2>&1 \
+RUN:   | FileCheck %s --check-prefix=MISSING-FILE
+RUN: not dsymutil --linker parallel --dump-debug-map \
 RUN:   %p/../Inputs/allow-disallow/a.out.arm64 \
 RUN:   --allow=/nonexistent/path 2>&1 \
 RUN:   | FileCheck %s --check-prefix=MISSING-FILE
 
 # Test error when disallow-list file does not exist.
-RUN: not dsymutil --dump-debug-map \
+RUN: not dsymutil --linker classic --dump-debug-map \
+RUN:   %p/../Inputs/allow-disallow/a.out.arm64 \
+RUN:   --disallow=/nonexistent/path 2>&1 \
+RUN:   | FileCheck %s --check-prefix=MISSING-FILE
+RUN: not dsymutil --linker parallel --dump-debug-map \
 RUN:   %p/../Inputs/allow-disallow/a.out.arm64 \
 RUN:   --disallow=/nonexistent/path 2>&1 \
 RUN:   | FileCheck %s --check-prefix=MISSING-FILE
 
 # Test error when combined with -y.
-RUN: not dsymutil --allow=some.file.yaml \
+RUN: not dsymutil --linker classic --allow=some.file.yaml \
+RUN:   -y %p/../Inputs/remarks/basic.macho.remarks.arm64 2>&1 \
+RUN:   | FileCheck %s --check-prefix=YAML-CONFLICT
+RUN: not dsymutil --linker parallel --allow=some.file.yaml \
 RUN:   -y %p/../Inputs/remarks/basic.macho.remarks.arm64 2>&1 \
 RUN:   | FileCheck %s --check-prefix=YAML-CONFLICT
 
 # Test error when --allow and --disallow are both specified.
-RUN: not dsymutil --allow=some.file.yaml --disallow=some.file.yaml \
+RUN: not dsymutil --linker classic --allow=some.file.yaml --disallow=some.file.yaml \
+RUN:   %p/../Inputs/allow-disallow/a.out.arm64 2>&1 \
+RUN:   | FileCheck %s --check-prefix=ALLOW-DISALLOW-CONFLICT
+RUN: not dsymutil --linker parallel --allow=some.file.yaml --disallow=some.file.yaml \
 RUN:   %p/../Inputs/allow-disallow/a.out.arm64 2>&1 \
 RUN:   | FileCheck %s --check-prefix=ALLOW-DISALLOW-CONFLICT
 

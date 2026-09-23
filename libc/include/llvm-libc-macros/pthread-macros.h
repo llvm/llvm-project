@@ -29,39 +29,71 @@
 #define PTHREAD_PROCESS_PRIVATE 0
 #define PTHREAD_PROCESS_SHARED 1
 
+#define PTHREAD_SCOPE_SYSTEM 0
+#define PTHREAD_SCOPE_PROCESS 1
+
+#define PTHREAD_INHERIT_SCHED 0
+#define PTHREAD_EXPLICIT_SCHED 1
+
 #ifdef __linux__
 #define PTHREAD_MUTEX_INITIALIZER                                              \
   {                                                                            \
-      /* .__timed = */ 0,      /* .__recursive = */ 0,                         \
-      /* .__robust = */ 0,     /* .__owner = */ NULL,                          \
-      /* .__lock_count = */ 0, /* .__futex_word = */ {0},                      \
+      /* .__ftxw = */ {0},    /* .__priority_inherit = */ 0,                   \
+      /* .__recursive = */ 0, /* .__robust = */ 0,                             \
+      /* .__pshared = */ 0,   /* .__error_checking = */ 0,                     \
+      /* .__owner = */ 0,     /* .__lock_count = */ 0,                         \
   }
 #else
 #define PTHREAD_MUTEX_INITIALIZER                                              \
   {                                                                            \
-      /* .__timed = */ 0,      /* .__recursive = */ 0,                         \
-      /* .__robust = */ 0,     /* .__owner = */ NULL,                          \
-      /* .__lock_count = */ 0,                                                 \
+      /* .__ftxw = */ {0},    /* .__priority_inherit = */ 0,                   \
+      /* .__recursive = */ 0, /* .__robust = */ 0,                             \
+      /* .__pshared = */ 0,   /* .__error_checking = */ 0,                     \
+      /* .__owner = */ 0,     /* .__lock_count = */ 0,                         \
   }
 #endif
 
+#define PTHREAD_COND_INITIALIZER                                               \
+  {                                                                            \
+      /* .__waiter_queue = */ {{NULL, NULL}},                                  \
+      /* .__futex = */ {0},                                                    \
+      /* .__is_shared = */ 0,                                                  \
+      /* .__is_realtime = */ 1,                                                \
+      /* .__padding = */ {0},                                                  \
+  }
+
 #define PTHREAD_RWLOCK_INITIALIZER                                             \
   {                                                                            \
-      /* .__is_pshared = */ 0,                                                 \
-      /* .__preference = */ 0,                                                 \
-      /* .__state = */ 0,                                                      \
+      /* .__raw = */ {                                                         \
+          /* .__is_pshared = */ 0,                                             \
+          /* .__preference = */ 0,                                             \
+          /* .__state = */ 0,                                                  \
+          /* .__wait_queue_mutex = */ {0},                                     \
+          /* .__pending_readers = */ {0},                                      \
+          /* .__pending_writers = */ {0},                                      \
+          /* .__reader_serialization = */ {0},                                 \
+          /* .__writer_serialization = */ {0},                                 \
+      },                                                                       \
       /* .__write_tid = */ 0,                                                  \
-      /* .__wait_queue_mutex = */ {0},                                         \
-      /* .__pending_readers = */ {0},                                          \
-      /* .__pending_writers = */ {0},                                          \
-      /* .__reader_serialization = */ {0},                                     \
-      /* .__writer_serialization = */ {0},                                     \
   }
+
+#define pthread_cleanup_push(routine, arg)                                     \
+  do {                                                                         \
+    struct __pthread_cleanup_frame __cleanup_frame;                            \
+  __pthread_cleanup_push(&__cleanup_frame, (routine), (arg))
+
+#define pthread_cleanup_pop(execute)                                           \
+  __pthread_cleanup_pop((execute));                                            \
+  }                                                                            \
+  while (0)
 
 // glibc extensions
 #define PTHREAD_STACK_MIN (1 << 14) // 16KB
 #define PTHREAD_RWLOCK_PREFER_READER_NP 0
 #define PTHREAD_RWLOCK_PREFER_WRITER_NP 1
 #define PTHREAD_RWLOCK_PREFER_WRITER_NONRECURSIVE_NP 2
+
+// llvm libc extensions
+#define PTHREAD_STACK_DYNAMIC_NP 0
 
 #endif // LLVM_LIBC_MACROS_PTHREAD_MACRO_H

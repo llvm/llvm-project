@@ -806,7 +806,8 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
               if (EType == EmitterType::CheckCompress)
                 CondStream << " && MI.getOperand(" << OpIdx
                            << ").getReg().isPhysical()";
-              CondStream << CondSep << TargetName << "MCRegisterClasses[";
+              CondStream << CondSep << "get" << TargetName
+                         << "MCRegisterClass(";
               if (ClassRec->isSubClassOf("RegClassByHwMode")) {
                 CondStream << TargetName << "RegClassByHwModeTables[HwModeId]["
                            << TargetName << "::" << ClassRec->getName() << "]";
@@ -814,7 +815,7 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
                 CondStream << TargetName << "::" << ClassRec->getName()
                            << "RegClassID";
               }
-              CondStream << "].contains(MI.getOperand(" << OpIdx
+              CondStream << ").contains(MI.getOperand(" << OpIdx
                          << ").getReg())";
             }
 

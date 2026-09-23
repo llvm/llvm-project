@@ -5,22 +5,6 @@ entry:
       ptr undef,
       !DILocalVariable(scope: !1),
       !DIExpression(),
-      !{})
-; CHECK-LABEL: invalid #dbg record DILocation
-; CHECK-NEXT: #dbg_value({{.*}})
-
-    #dbg_declare(
-      ptr undef,
-      !DILocalVariable(scope: !1),
-      !DIExpression(),
-      !{})
-; CHECK-LABEL: invalid #dbg record DILocation
-; CHECK-NEXT: #dbg_declare({{.*}})
-
-    #dbg_value(
-      ptr undef,
-      !DILocalVariable(scope: !1),
-      !DIExpression(),
       !DILocation(scope: !2))
 ; CHECK-LABEL: mismatched subprogram between #dbg record variable and DILocation
 ; CHECK-NEXT: #dbg_value({{[^,]+}}, ![[VAR:[0-9]+]], {{[^,]+}}, ![[LOC:[0-9]+]]
@@ -51,5 +35,7 @@ entry:
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 2, !"Debug Info Version", i32 3}
-!1 = distinct !DISubprogram(name: "foo")
-!2 = distinct !DISubprogram(name: "bar")
+!1 = distinct !DISubprogram(name: "foo", type: !4)
+!2 = distinct !DISubprogram(name: "bar", type: !4)
+!3 = !{null}
+!4 = !DISubroutineType(types: !3)

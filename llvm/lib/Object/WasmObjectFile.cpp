@@ -600,7 +600,7 @@ Error WasmObjectFile::parseNameSection(ReadContext &Ctx) {
           if (!SeenSegments.insert(Index).second)
             return make_error<GenericBinaryError>(
                 "segment named more than once", object_error::parse_failed);
-          if (Index > DataSegments.size())
+          if (Index >= DataSegments.size())
             return make_error<GenericBinaryError>("invalid data segment name entry",
                                                   object_error::parse_failed);
           nameType = wasm::NameType::DATA_SEGMENT;
@@ -665,6 +665,12 @@ Error WasmObjectFile::parseLinkingSection(ReadContext &Ctx) {
       for (uint32_t I = 0; I < Count; I++) {
         DataSegments[I].Data.Name = readString(Ctx);
         DataSegments[I].Data.Alignment = readVaruint32(Ctx);
+        if (DataSegments[I].Data.Alignment > 32)
+          return make_error<GenericBinaryError>(
+              "invalid data segment alignment: `" + DataSegments[I].Data.Name +
+                  "` (alignment: " + Twine(DataSegments[I].Data.Alignment) +
+                  ")",
+              object_error::parse_failed);
         DataSegments[I].Data.LinkingFlags = readVaruint32(Ctx);
       }
       break;
@@ -829,23 +835,39 @@ Error WasmObjectFile::parseLinkingSectionSymtab(ReadContext &Ctx) {
     case wasm::WASM_SYMBOL_TYPE_DATA:
       Info.Name = readString(Ctx);
       if (IsDefined) {
-        auto Index = readVaruint32(Ctx);
-        auto Offset = readVaruint64(Ctx);
-        auto Size = readVaruint64(Ctx);
-        if (!(Info.Flags & wasm::WASM_SYMBOL_ABSOLUTE)) {
-          if (static_cast<size_t>(Index) >= DataSegments.size())
+        if ((Info.Flags & wasm::WASM_SYMBOL_BINDING_MASK) ==
+            wasm::WASM_SYMBOL_BINDING_COMMON) {
+          if (Info.Flags & wasm::WASM_SYMBOL_ABSOLUTE)
             return make_error<GenericBinaryError>(
-                "invalid data segment index: " + Twine(Index),
+                "common symbols cannot be absolute: " + Info.Name,
                 object_error::parse_failed);
-          size_t SegmentSize = DataSegments[Index].Data.Content.size();
-          if (Offset > SegmentSize)
+          auto Size = readVaruint64(Ctx);
+          auto Alignment = readUint8(Ctx);
+          if (Alignment > 32)
             return make_error<GenericBinaryError>(
-                "invalid data symbol offset: `" + Info.Name +
-                    "` (offset: " + Twine(Offset) +
-                    " segment size: " + Twine(SegmentSize) + ")",
+                "invalid common symbol alignment: `" + Info.Name +
+                    "` (alignment: " + Twine(unsigned(Alignment)) + ")",
                 object_error::parse_failed);
+          Info.CommonRef = wasm::WasmCommonReference{Size, Alignment};
+        } else {
+          auto Index = readVaruint32(Ctx);
+          auto Offset = readVaruint64(Ctx);
+          auto Size = readVaruint64(Ctx);
+          if (!(Info.Flags & wasm::WASM_SYMBOL_ABSOLUTE)) {
+            if (Index >= DataSegments.size())
+              return make_error<GenericBinaryError>(
+                  "invalid data segment index: " + Twine(Index),
+                  object_error::parse_failed);
+            size_t SegmentSize = DataSegments[Index].Data.Content.size();
+            if (Offset > SegmentSize)
+              return make_error<GenericBinaryError>(
+                  "invalid data symbol offset: `" + Info.Name +
+                      "` (offset: " + Twine(Offset) +
+                      " segment size: " + Twine(SegmentSize) + ")",
+                  object_error::parse_failed);
+          }
+          Info.DataRef = wasm::WasmDataReference{Index, Offset, Size};
         }
-        Info.DataRef = wasm::WasmDataReference{Index, Offset, Size};
       }
       break;
 
@@ -1058,6 +1080,10 @@ Error WasmObjectFile::parseRelocSection(StringRef Name, ReadContext &Ctx) {
                                             object_error::parse_failed);
 
     auto badReloc = [&](StringRef msg) {
+      if (Reloc.Index >= Symbols.size())
+        return make_error<GenericBinaryError>(
+            msg + ": index " + Twine(Reloc.Index) + " out of range",
+            object_error::parse_failed);
       return make_error<GenericBinaryError>(
           msg + ": " + Twine(Symbols[Reloc.Index].Info.Name),
           object_error::parse_failed);
@@ -1116,6 +1142,7 @@ Error WasmObjectFile::parseRelocSection(StringRef Name, ReadContext &Ctx) {
     case wasm::R_WASM_MEMORY_ADDR_I64:
     case wasm::R_WASM_MEMORY_ADDR_REL_SLEB64:
     case wasm::R_WASM_MEMORY_ADDR_TLS_SLEB64:
+    case wasm::R_WASM_MEMORY_ADDR_LOCREL_I64:
       if (!isValidDataSymbol(Reloc.Index))
         return badReloc("invalid data relocation");
       Reloc.Addend = readVarint64(Ctx);
@@ -1159,7 +1186,8 @@ Error WasmObjectFile::parseRelocSection(StringRef Name, ReadContext &Ctx) {
       Size = 4;
     if (Reloc.Type == wasm::R_WASM_TABLE_INDEX_I64 ||
         Reloc.Type == wasm::R_WASM_MEMORY_ADDR_I64 ||
-        Reloc.Type == wasm::R_WASM_FUNCTION_OFFSET_I64)
+        Reloc.Type == wasm::R_WASM_FUNCTION_OFFSET_I64 ||
+        Reloc.Type == wasm::R_WASM_MEMORY_ADDR_LOCREL_I64)
       Size = 8;
     if (Reloc.Offset + Size > EndOffset)
       return make_error<GenericBinaryError>("invalid relocation offset",
@@ -1547,6 +1575,10 @@ Error WasmObjectFile::parseExportSection(ReadContext &Ctx) {
                                               object_error::parse_failed);
       Info.Kind = wasm::WASM_SYMBOL_TYPE_TAG;
       Info.ElementIndex = Ex.Index;
+      if (isDefinedTagIndex(Ex.Index)) {
+        unsigned TagIndex = Ex.Index - NumImportedTags;
+        Signature = &Signatures[Tags[TagIndex].SigIndex];
+      }
       break;
     case wasm::WASM_EXTERNAL_MEMORY:
       break;

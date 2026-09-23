@@ -7,12 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/cbrtbf16.h"
-#include "src/__support/FPUtil/bfloat16.h"
-#include "src/__support/macros/config.h"
-#include "src/__support/math/cbrtf.h"
+#include "src/__support/math/cbrtbf16.h"
 
 namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(bfloat16, cbrtbf16, (bfloat16 x)) {
-  return static_cast<bfloat16>(math::cbrtf(static_cast<float>(x)));
+  return math::cbrtbf16(x);
 }
 } // namespace LIBC_NAMESPACE_DECL

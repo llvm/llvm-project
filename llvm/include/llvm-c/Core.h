@@ -2747,8 +2747,12 @@ LLVM_C_ABI LLVMValueRef LLVMConstantPtrAuth(LLVMValueRef Ptr, LLVMValueRef Key,
  * @{
  */
 LLVM_C_ABI LLVMOpcode LLVMGetConstOpcode(LLVMValueRef ConstantVal);
-LLVM_C_ABI LLVMValueRef LLVMAlignOf(LLVMTypeRef Ty);
-LLVM_C_ABI LLVMValueRef LLVMSizeOf(LLVMTypeRef Ty);
+LLVM_C_ABI LLVM_ATTRIBUTE_C_DEPRECATED(
+    LLVMValueRef LLVMAlignOf(LLVMTypeRef Ty),
+    "Create a constant based on LLVMABIAlignmentOfType() instead");
+LLVM_C_ABI LLVM_ATTRIBUTE_C_DEPRECATED(
+    LLVMValueRef LLVMSizeOf(LLVMTypeRef Ty),
+    "Create a constant based on LLVMABISizeOfType() instead");
 LLVM_C_ABI LLVMValueRef LLVMConstNeg(LLVMValueRef ConstantVal);
 LLVM_C_ABI LLVMValueRef LLVMConstNSWNeg(LLVMValueRef ConstantVal);
 LLVM_C_ABI LLVM_ATTRIBUTE_C_DEPRECATED(
@@ -3147,25 +3151,25 @@ LLVM_C_ABI unsigned LLVMLookupIntrinsicID(const char *Name, size_t NameLen);
 LLVM_C_ABI unsigned LLVMGetIntrinsicID(LLVMValueRef Fn);
 
 /**
- * Get or insert the declaration of an intrinsic.  For overloaded intrinsics,
- * parameter types must be provided to uniquely identify an overload.
+ * Get or insert the declaration of an intrinsic. For overloaded intrinsics,
+ * overload types must be provided to uniquely identify an overload.
  *
  * @see llvm::Intrinsic::getOrInsertDeclaration()
  */
 LLVM_C_ABI LLVMValueRef LLVMGetIntrinsicDeclaration(LLVMModuleRef Mod,
                                                     unsigned ID,
-                                                    LLVMTypeRef *ParamTypes,
-                                                    size_t ParamCount);
+                                                    LLVMTypeRef *OverloadTypes,
+                                                    size_t OverloadCount);
 
 /**
- * Retrieves the type of an intrinsic.  For overloaded intrinsics, parameter
+ * Retrieves the type of an intrinsic. For overloaded intrinsics, overload
  * types must be provided to uniquely identify an overload.
  *
  * @see llvm::Intrinsic::getType()
  */
 LLVM_C_ABI LLVMTypeRef LLVMIntrinsicGetType(LLVMContextRef Ctx, unsigned ID,
-                                            LLVMTypeRef *ParamTypes,
-                                            size_t ParamCount);
+                                            LLVMTypeRef *OverloadTypes,
+                                            size_t OverloadCount);
 
 /**
  * Retrieves the name of an intrinsic.
@@ -3176,13 +3180,13 @@ LLVM_C_ABI const char *LLVMIntrinsicGetName(unsigned ID, size_t *NameLength);
 
 /** Deprecated: Use LLVMIntrinsicCopyOverloadedName2 instead. */
 LLVM_C_ABI char *LLVMIntrinsicCopyOverloadedName(unsigned ID,
-                                                 LLVMTypeRef *ParamTypes,
-                                                 size_t ParamCount,
+                                                 LLVMTypeRef *OverloadTypes,
+                                                 size_t OverloadCount,
                                                  size_t *NameLength);
 
 /**
  * Copies the name of an overloaded intrinsic identified by a given list of
- * parameter types.
+ * overload types.
  *
  * Unlike LLVMIntrinsicGetName, the caller is responsible for freeing the
  * returned string.
@@ -3193,8 +3197,8 @@ LLVM_C_ABI char *LLVMIntrinsicCopyOverloadedName(unsigned ID,
  */
 LLVM_C_ABI char *LLVMIntrinsicCopyOverloadedName2(LLVMModuleRef Mod,
                                                   unsigned ID,
-                                                  LLVMTypeRef *ParamTypes,
-                                                  size_t ParamCount,
+                                                  LLVMTypeRef *OverloadTypes,
+                                                  size_t OverloadCount,
                                                   size_t *NameLength);
 
 /**
@@ -4643,18 +4647,17 @@ LLVM_C_ABI void LLVMSetCurrentDebugLocation2(LLVMBuilderRef Builder,
  * current debug location for the given builder.  If the builder has no current
  * debug location, this function is a no-op.
  *
- * @deprecated LLVMSetInstDebugLocation is deprecated in favor of the more general
- *             LLVMAddMetadataToInst.
- *
  * @see llvm::IRBuilder::SetInstDebugLocation()
  */
 LLVM_C_ABI void LLVMSetInstDebugLocation(LLVMBuilderRef Builder,
                                          LLVMValueRef Inst);
 
 /**
- * Adds the metadata registered with the given builder to the given instruction.
+ * Same as LLVMSetInstDebugLocation.
  *
- * @see llvm::IRBuilder::AddMetadataToInst()
+ * @deprecated Use the identical LLVMSetInstDebugLocation.
+ *
+ * @see llvm::IRBuilder::SetInstDebugLocation()
  */
 LLVM_C_ABI void LLVMAddMetadataToInst(LLVMBuilderRef Builder,
                                       LLVMValueRef Inst);

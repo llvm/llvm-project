@@ -47,7 +47,7 @@ struct PassOption final {
   }
 };
 
-class ModuleNoopPass : public PassInfoMixin<ModuleNoopPass> {
+class ModuleNoopPass : public OptionalPassInfoMixin<ModuleNoopPass> {
   uint32_t &ExecutedBitMap;
   uint32_t RunID;
   void *PassID;

@@ -6,6 +6,7 @@ add_flang_library(FIRCodeGen
   LLVMInsertChainFolder.cpp
   LowerRepackArrays.cpp
   PreCGRewrite.cpp
+  RematerializeFIRBoxOps.cpp
   TBAABuilder.cpp
   Target.cpp
   TargetRewrite.cpp
@@ -48,5 +49,7 @@ add_flang_library(FIRCodeGen
   MLIRBuiltinToLLVMIRTranslation
   MLIRLLVMToLLVMIRTranslation
   MLIRTargetLLVMIRExport
+  MLIRUBDialect
+  MLIRUBToLLVM
   MLIRVectorToLLVM
 )

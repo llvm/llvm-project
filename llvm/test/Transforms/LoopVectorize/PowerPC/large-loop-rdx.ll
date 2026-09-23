@@ -19,7 +19,7 @@ define void @QLA_F3_r_veq_norm2_V(ptr noalias %r, ptr noalias %a, i32 %n) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[TMP0]], 16
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 16
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 15
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -243,9 +243,9 @@ define void @QLA_F3_r_veq_norm2_V(ptr noalias %r, ptr noalias %a, i32 %n) {
 ; CHECK:       [[VEC_EPILOG_PH]]:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi double [ [[TMP158]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0.000000e+00, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NEXT:    [[N_MOD_VF69:%.*]] = urem i64 [[TMP0]], 2
+; CHECK-NEXT:    [[N_MOD_VF69:%.*]] = and i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[N_VEC70:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF69]]
-; CHECK-NEXT:    [[TMP138:%.*]] = insertelement <2 x double> zeroinitializer, double [[BC_MERGE_RDX]], i32 0
+; CHECK-NEXT:    [[TMP138:%.*]] = insertelement <2 x double> zeroinitializer, double [[BC_MERGE_RDX]], i64 0
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT80:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
@@ -282,11 +282,11 @@ define void @QLA_F3_r_veq_norm2_V(ptr noalias %r, ptr noalias %a, i32 %n) {
 ; CHECK-NEXT:    br i1 [[CMP_N81]], label %[[FOR_COND_FOR_END13_CRIT_EDGE]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC70]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX82:%.*]] = phi double [ [[TMP186]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP158]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0.000000e+00, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX81:%.*]] = phi double [ [[TMP186]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP158]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0.000000e+00, %[[ITER_CHECK]] ]
 ; CHECK-NEXT:    br label %[[FOR_COND1_PREHEADER:.*]]
 ; CHECK:       [[FOR_COND1_PREHEADER]]:
 ; CHECK-NEXT:    [[INDVARS_IV1:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_COND1_PREHEADER]] ], [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_SCALAR_PH]] ]
-; CHECK-NEXT:    [[SUM_026:%.*]] = phi double [ [[ADD10_2:%.*]], %[[FOR_COND1_PREHEADER]] ], [ [[BC_MERGE_RDX82]], %[[VEC_EPILOG_SCALAR_PH]] ]
+; CHECK-NEXT:    [[SUM_026:%.*]] = phi double [ [[ADD10_2:%.*]], %[[FOR_COND1_PREHEADER]] ], [ [[BC_MERGE_RDX81]], %[[VEC_EPILOG_SCALAR_PH]] ]
 ; CHECK-NEXT:    [[ARRAYIDX5_REALP1:%.*]] = getelementptr inbounds [3 x { float, float }], ptr [[A]], i64 [[INDVARS_IV1]], i64 0, i32 0
 ; CHECK-NEXT:    [[ARRAYIDX5_REAL:%.*]] = load float, ptr [[ARRAYIDX5_REALP1]], align 8
 ; CHECK-NEXT:    [[ARRAYIDX5_IMAGP:%.*]] = getelementptr inbounds [3 x { float, float }], ptr [[A]], i64 [[INDVARS_IV1]], i64 0, i32 1
@@ -331,10 +331,10 @@ entry:
   %cmp24 = icmp sgt i32 %n, 0
   br i1 %cmp24, label %for.cond1.preheader.preheader, label %for.end13
 
-for.cond1.preheader.preheader:                    ; preds = %entry
+for.cond1.preheader.preheader:
   br label %for.cond1.preheader
 
-for.cond1.preheader:                              ; preds = %for.cond1.preheader.preheader, %for.cond1.preheader
+for.cond1.preheader:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.cond1.preheader ], [ 0, %for.cond1.preheader.preheader ]
   %sum.026 = phi double [ %add10.2, %for.cond1.preheader ], [ 0.000000e+00, %for.cond1.preheader.preheader ]
   %arrayidx5.realp = getelementptr inbounds [3 x { float, float }], ptr %a, i64 %indvars.iv, i64 0, i32 0
@@ -369,12 +369,12 @@ for.cond1.preheader:                              ; preds = %for.cond1.preheader
   %exitcond = icmp eq i32 %lftr.wideiv, %n
   br i1 %exitcond, label %for.cond.for.end13_crit_edge, label %for.cond1.preheader
 
-for.cond.for.end13_crit_edge:                     ; preds = %for.cond1.preheader
+for.cond.for.end13_crit_edge:
   %add10.2.lcssa = phi double [ %add10.2, %for.cond1.preheader ]
   %phitmp = fptrunc double %add10.2.lcssa to float
   br label %for.end13
 
-for.end13:                                        ; preds = %for.cond.for.end13_crit_edge, %entry
+for.end13:
   %sum.0.lcssa = phi float [ %phitmp, %for.cond.for.end13_crit_edge ], [ 0.000000e+00, %entry ]
   store float %sum.0.lcssa, ptr %r, align 4
   ret void

@@ -15,6 +15,7 @@
 # PRECHECK: DW_TAG_variable
 # PRECHECK: DW_AT_location [DW_FORM_exprloc]  (DW_OP_addrx 0x1)
 # PRECHECK-EMPTY:
+# PRECHECK: DW_AT_inline [DW_FORM_implicit_const] (DW_INL_inlined)
 
 # POSTCHECK: version = 0x0005
 # POSTCHECK: DW_TAG_variable
@@ -23,6 +24,7 @@
 # POSTCHECK: DW_TAG_variable
 # POSTCHECK: DW_AT_location [DW_FORM_exprloc]  (DW_OP_addrx 0x3)
 # POSTCHECK-EMPTY:
+# POSTCHECK: DW_AT_inline [DW_FORM_implicit_const] (DW_INL_inlined)
 
 # clang++ main.cpp -g -O2
 # void use(int * x, int * y) {

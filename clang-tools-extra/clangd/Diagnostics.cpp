@@ -20,6 +20,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TokenKinds.h"
+#include "clang/Edit/EditedSource.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/Token.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -180,7 +181,6 @@ const char *getMainFileRange(const Diag &D, const SourceManager &SM,
       case diag::note_checking_constraints_for_class_spec_id_here:
       case diag::note_checking_constraints_for_function_here:
       case diag::note_constraint_substitution_here:
-      case diag::note_constraint_normalization_here:
       case diag::note_parameter_mapping_substitution_here:
         R = N.Range;
         return "in template";
@@ -622,6 +622,9 @@ std::vector<Diag> StoreDiags::take(const clang::tidy::ClangTidyContext *Tidy) {
     }
     setTags(Diag);
   }
+  if (Finalizer)
+    for (auto &Diag : Output)
+      Finalizer(Diag);
   // Deduplicate clang-tidy diagnostics -- some clang-tidy checks may emit
   // duplicated messages due to various reasons (e.g. the check doesn't handle
   // template instantiations well; clang-tidy alias checks).
@@ -788,7 +791,6 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
       return false;
     // Copy as we may modify the ranges.
     auto FixIts = Info.getFixItHints().vec();
-    llvm::SmallVector<TextEdit, 1> Edits;
     for (auto &FixIt : FixIts) {
       // Allow fixits within a single macro-arg expansion to be applied.
       // This can be incorrect if the argument is expanded multiple times in
@@ -806,6 +808,14 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
       if (FixIt.RemoveRange.getBegin().isMacroID() ||
           FixIt.RemoveRange.getEnd().isMacroID())
         return false;
+    }
+    llvm::SmallVector<FixItHint> MergedFixIts;
+    clang::edit::mergeFixits(FixIts, SM, *LangOpts, MergedFixIts);
+    if (MergedFixIts.empty())
+      return false;
+    llvm::SmallVector<TextEdit> Edits;
+    Edits.reserve(MergedFixIts.size());
+    for (const auto &FixIt : MergedFixIts) {
       if (!isInsideMainFile(FixIt.RemoveRange.getBegin(), SM))
         return false;
       Edits.push_back(toTextEdit(FixIt, SM, *LangOpts));
@@ -813,8 +823,8 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
 
     llvm::SmallString<64> Message;
     // If requested and possible, create a message like "change 'foo' to 'bar'".
-    if (SyntheticMessage && FixIts.size() == 1) {
-      const auto &FixIt = FixIts.front();
+    if (SyntheticMessage && MergedFixIts.size() == 1) {
+      const auto &FixIt = MergedFixIts.front();
       bool Invalid = false;
       llvm::StringRef Remove =
           Lexer::getSourceText(FixIt.RemoveRange, SM, *LangOpts, &Invalid);

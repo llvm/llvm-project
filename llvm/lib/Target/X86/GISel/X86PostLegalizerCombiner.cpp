@@ -20,25 +20,19 @@
 //===----------------------------------------------------------------------===//
 #include "X86.h"
 #include "X86TargetMachine.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
-#include "llvm/CodeGen/GlobalISel/CSEMIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
 #include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
-#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
-#include "llvm/Support/Debug.h"
 
 #define GET_GICOMBINER_DEPS
 #include "X86GenPostLegalizeGICombiner.inc"
@@ -76,8 +70,8 @@ protected:
 
 public:
   X86PostLegalizerCombinerImpl(
-      MachineFunction &MF, CombinerInfo &CInfo, const TargetPassConfig *TPC,
-      GISelValueTracking &VT, GISelCSEInfo *CSEInfo,
+      MachineFunction &MF, CombinerInfo &CInfo, GISelValueTracking &VT,
+      GISelCSEInfo *CSEInfo,
       const X86PostLegalizerCombinerImplRuleConfig &RuleConfig,
       MachineDominatorTree *MDT);
 
@@ -97,11 +91,11 @@ private:
 #undef GET_GICOMBINER_IMPL
 
 X86PostLegalizerCombinerImpl::X86PostLegalizerCombinerImpl(
-    MachineFunction &MF, CombinerInfo &CInfo, const TargetPassConfig *TPC,
-    GISelValueTracking &VT, GISelCSEInfo *CSEInfo,
+    MachineFunction &MF, CombinerInfo &CInfo, GISelValueTracking &VT,
+    GISelCSEInfo *CSEInfo,
     const X86PostLegalizerCombinerImplRuleConfig &RuleConfig,
     MachineDominatorTree *MDT)
-    : Combiner(MF, CInfo, TPC, &VT, CSEInfo),
+    : Combiner(MF, CInfo, &VT, CSEInfo),
       Helper(Observer, B, /*IsPreLegalize=*/false, &VT, MDT,
              MF.getSubtarget<X86Subtarget>().getLegalizerInfo()),
       RuleConfig(RuleConfig), STI(MF.getSubtarget<X86Subtarget>()),
@@ -141,7 +135,6 @@ void X86PostLegalizerCombinerLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<GISelValueTrackingAnalysisLegacy>();
   // This is only added when processing level is not OptNone.
   AU.addRequired<MachineDominatorTreeWrapperPass>();
-  AU.addPreserved<MachineDominatorTreeWrapperPass>();
   AU.addRequired<GISelCSEAnalysisWrapperPass>();
   AU.addPreserved<GISelCSEAnalysisWrapperPass>();
 
@@ -171,8 +164,7 @@ bool X86PostLegalizerCombinerLegacy::runOnMachineFunction(MachineFunction &MF) {
 
   CombinerInfo CInfo = createCombinerInfo(!skipFunction(F), F);
 
-  X86PostLegalizerCombinerImpl Impl(MF, CInfo, TPC, *VT, CSEInfo, RuleConfig,
-                                    MDT);
+  X86PostLegalizerCombinerImpl Impl(MF, CInfo, *VT, CSEInfo, RuleConfig, MDT);
   return Impl.combineMachineInstrs();
 }
 
@@ -206,8 +198,8 @@ X86PostLegalizerCombinerPass::run(MachineFunction &MF,
   if (!RuleConfig.parseCommandLineOption())
     reportFatalInternalError("Invalid rule identifier");
 
-  X86PostLegalizerCombinerImpl Impl(MF, CInfo, nullptr, VT, CSEInfo.get(),
-                                    RuleConfig, &MDT);
+  X86PostLegalizerCombinerImpl Impl(MF, CInfo, VT, CSEInfo.get(), RuleConfig,
+                                    &MDT);
   if (!Impl.combineMachineInstrs())
     return PreservedAnalyses::all();
 

@@ -39,7 +39,7 @@ define i16 @out16_constmask(i16 %x, i16 %y) {
 ; CHECK-NOBMI-NEXT:    # kill: def $esi killed $esi def $rsi
 ; CHECK-NOBMI-NEXT:    # kill: def $edi killed $edi def $rdi
 ; CHECK-NOBMI-NEXT:    andl $21845, %edi # imm = 0x5555
-; CHECK-NOBMI-NEXT:    andl $-21846, %esi # imm = 0xAAAA
+; CHECK-NOBMI-NEXT:    andl $43690, %esi # imm = 0xAAAA
 ; CHECK-NOBMI-NEXT:    leal (%rsi,%rdi), %eax
 ; CHECK-NOBMI-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NOBMI-NEXT:    retq
@@ -49,7 +49,7 @@ define i16 @out16_constmask(i16 %x, i16 %y) {
 ; CHECK-BMI-NEXT:    # kill: def $esi killed $esi def $rsi
 ; CHECK-BMI-NEXT:    # kill: def $edi killed $edi def $rdi
 ; CHECK-BMI-NEXT:    andl $21845, %edi # imm = 0x5555
-; CHECK-BMI-NEXT:    andl $-21846, %esi # imm = 0xAAAA
+; CHECK-BMI-NEXT:    andl $43690, %esi # imm = 0xAAAA
 ; CHECK-BMI-NEXT:    leal (%rsi,%rdi), %eax
 ; CHECK-BMI-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-BMI-NEXT:    retq

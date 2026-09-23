@@ -200,7 +200,6 @@ private:
 
   void nodeScheduled(SUnit *SU);
   void tryCandidateTopDown(SISchedCandidate &Cand, SISchedCandidate &TryCand);
-  void tryCandidateBottomUp(SISchedCandidate &Cand, SISchedCandidate &TryCand);
   SUnit* pickNode();
   void traceCandidate(const SISchedCandidate &Cand);
   void initRegPressure(MachineBasicBlock::iterator BeginBlock,
@@ -398,8 +397,6 @@ private:
   // by scheduling a block with these LiveIn and LiveOut.
   std::vector<int> checkRegUsageImpact(std::set<Register> &InRegs,
                                        std::set<Register> &OutRegs);
-
-  void schedule();
 };
 
 struct SIScheduleBlockResult {

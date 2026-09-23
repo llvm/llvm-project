@@ -41,7 +41,6 @@ class MachOReader : public Reader {
   void readExportInfo(Object &O) const;
   void readLinkData(Object &O, std::optional<size_t> LCIndex,
                     LinkData &LD) const;
-  void readCodeSignature(Object &O) const;
   void readDataInCodeData(Object &O) const;
   void readLinkerOptimizationHint(Object &O) const;
   void readFunctionStartsData(Object &O) const;

@@ -23,9 +23,9 @@ namespace llvm {
 class Module;
 
 /// Pass to perform split of global variables.
-class GlobalSplitPass : public PassInfoMixin<GlobalSplitPass> {
+class GlobalSplitPass : public OptionalPassInfoMixin<GlobalSplitPass> {
 public:
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 } // end namespace llvm

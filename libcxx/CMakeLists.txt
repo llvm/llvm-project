@@ -2,6 +2,14 @@
 # Setup Project
 #===============================================================================
 cmake_minimum_required(VERSION 3.20.0)
+if("${CMAKE_VERSION}" VERSION_LESS "3.31.0")
+  message(WARNING
+    "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 24, the "
+    "minimum version of CMake required to build LLVM will become 3.31.0, and "
+    "using an older CMake will become an error. Please upgrade your CMake to "
+    "at least 3.31.0 now to avoid issues in the future.")
+endif()
+
 set(LLVM_SUBPROJECT_TITLE "libc++")
 
 # Unset the C++ Standard: other projects sometimes override this global property, which
@@ -310,12 +318,17 @@ option(LIBCXX_HAS_WIN32_THREAD_API "Ignore auto-detection and force use of win32
 option(LIBCXX_HAS_EXTERNAL_THREAD_API
   "Build libc++ with an externalized threading API.
    This option may only be set to ON when LIBCXX_ENABLE_THREADS=ON." OFF)
+option(LIBCXX_HAS_C11_THREAD_API "Ignore auto-detection and force use of C11 thread API" OFF)
 
-if (LIBCXX_ENABLE_THREADS)
-  set(LIBCXX_PSTL_BACKEND "std_thread" CACHE STRING "Which PSTL backend to use")
+if (APPLE)
+  set(LIBCXX_PSTL_BACKEND_DEFAULT_VALUE "libdispatch")
+elseif(LIBCXX_ENABLE_THREADS)
+  set(LIBCXX_PSTL_BACKEND_DEFAULT_VALUE "std_thread")
 else()
-  set(LIBCXX_PSTL_BACKEND "serial" CACHE STRING "Which PSTL backend to use")
+  set(LIBCXX_PSTL_BACKEND_DEFAULT_VALUE "serial")
 endif()
+
+set(LIBCXX_PSTL_BACKEND "${LIBCXX_PSTL_BACKEND_DEFAULT_VALUE}" CACHE STRING "Which PSTL backend to use")
 
 # Misc options ----------------------------------------------------------------
 # FIXME: Turn -pedantic back ON. It is currently off because it warns
@@ -354,6 +367,10 @@ if(NOT LIBCXX_ENABLE_THREADS)
     message(FATAL_ERROR "LIBCXX_HAS_WIN32_THREAD_API can only be set to ON"
                         " when LIBCXX_ENABLE_THREADS is also set to ON.")
   endif()
+  if (LIBCXX_HAS_C11_THREAD_API)
+    message(FATAL_ERROR "LIBCXX_HAS_C11_THREAD_API can only be set to ON"
+                        " when LIBCXX_ENABLE_THREADS is also set to ON.")
+  endif()
 
 endif()
 
@@ -368,12 +385,30 @@ if (LIBCXX_HAS_EXTERNAL_THREAD_API)
                         " and LIBCXX_HAS_WIN32_THREAD_API cannot be both"
                         " set to ON at the same time.")
   endif()
+  if (LIBCXX_HAS_C11_THREAD_API)
+    message(FATAL_ERROR "The options LIBCXX_HAS_EXTERNAL_THREAD_API"
+                        " and LIBCXX_HAS_C11_THREAD_API cannot be both"
+                        " set to ON at the same time.")
+  endif()
 endif()
 
 if (LIBCXX_HAS_PTHREAD_API)
   if (LIBCXX_HAS_WIN32_THREAD_API)
     message(FATAL_ERROR "The options LIBCXX_HAS_PTHREAD_API"
                         " and LIBCXX_HAS_WIN32_THREAD_API cannot be both"
+                        " set to ON at the same time.")
+  endif()
+  if (LIBCXX_HAS_C11_THREAD_API)
+    message(FATAL_ERROR "The options LIBCXX_HAS_PTHREAD_API"
+                        " and LIBCXX_HAS_C11_THREAD_API cannot be both"
+                        " set to ON at the same time.")
+  endif()
+endif()
+
+if (LIBCXX_HAS_WIN32_THREAD_API)
+  if (LIBCXX_HAS_C11_THREAD_API)
+    message(FATAL_ERROR "The options LIBCXX_HAS_WIN32_THREAD_API"
+                        " and LIBCXX_HAS_C11_THREAD_API cannot be both"
                         " set to ON at the same time.")
   endif()
 endif()
@@ -422,10 +457,24 @@ set(LIBCXX_INSTALL_RUNTIME_DIR "${CMAKE_INSTALL_BINDIR}" CACHE STRING
 set(LIBCXX_INSTALL_MODULES_DIR "share/libc++/v1" CACHE STRING
     "Path where target-agnostic libc++ module source files should be installed.")
 
+# On platforms that don't support shared library targets
+# (e.g. CMAKE_SYSTEM_NAME of "Generic", used for GPU and other
+# baremetal targets), the shared library target is not built at
+# all. The global TARGET_SUPPORTS_SHARED_LIBS property is left
+# undefined on platforms that do support shared libraries, and only
+# set to FALSE on those that don't. See
+# https://gitlab.kitware.com/cmake/cmake/-/issues/25759.
+get_property(LIBCXX_TARGET_SUPPORTS_SHARED_LIBS GLOBAL PROPERTY TARGET_SUPPORTS_SHARED_LIBS)
+if(NOT DEFINED LIBCXX_TARGET_SUPPORTS_SHARED_LIBS OR LIBCXX_TARGET_SUPPORTS_SHARED_LIBS)
+  set(LIBCXX_SUPPORTS_SHARED_LIBRARY ON)
+else()
+  set(LIBCXX_SUPPORTS_SHARED_LIBRARY OFF)
+endif()
 set(LIBCXX_SHARED_OUTPUT_NAME "c++" CACHE STRING "Output name for the shared libc++ runtime library.")
 set(LIBCXX_STATIC_OUTPUT_NAME "c++" CACHE STRING "Output name for the static libc++ runtime library.")
 
-if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
+# TODO: Use common runtimes infrastructure for output and install paths
+if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
   set(LIBCXX_TARGET_SUBDIR ${LLVM_DEFAULT_TARGET_TRIPLE})
   if(LIBCXX_LIBDIR_SUBDIR)
     string(APPEND LIBCXX_TARGET_SUBDIR /${LIBCXX_LIBDIR_SUBDIR})
@@ -598,50 +647,7 @@ function(cxx_add_module_flags target)
   endif()
 endfunction()
 
-string(TOUPPER "${CMAKE_BUILD_TYPE}" uppercase_CMAKE_BUILD_TYPE)
-
-# Sanitizer flags =============================================================
-
-function(get_sanitizer_flags OUT_VAR  USE_SANITIZER)
-  set(SANITIZER_FLAGS)
-  set(USE_SANITIZER "${USE_SANITIZER}")
-  # NOTE: LLVM_USE_SANITIZER checks for a UNIX like system instead of MSVC.
-  # But we don't have LLVM_ON_UNIX so checking for MSVC is the best we can do.
-  if (USE_SANITIZER AND NOT MSVC)
-    append_flags_if_supported(SANITIZER_FLAGS "-fno-omit-frame-pointer")
-    append_flags_if_supported(SANITIZER_FLAGS "-gline-tables-only")
-
-    if (NOT uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG" AND
-            NOT uppercase_CMAKE_BUILD_TYPE STREQUAL "RELWITHDEBINFO")
-      append_flags_if_supported(SANITIZER_FLAGS "-gline-tables-only")
-    endif()
-    if (USE_SANITIZER STREQUAL "Address")
-      append_flags(SANITIZER_FLAGS "-fsanitize=address")
-    elseif (USE_SANITIZER STREQUAL "HWAddress")
-      append_flags(SANITIZER_FLAGS "-fsanitize=hwaddress")
-    elseif (USE_SANITIZER MATCHES "Memory(WithOrigins)?")
-      append_flags(SANITIZER_FLAGS -fsanitize=memory)
-      if (USE_SANITIZER STREQUAL "MemoryWithOrigins")
-        append_flags(SANITIZER_FLAGS "-fsanitize-memory-track-origins")
-      endif()
-    elseif (USE_SANITIZER STREQUAL "Undefined")
-      append_flags(SANITIZER_FLAGS "-fsanitize=undefined" "-fno-sanitize=vptr,function" "-fno-sanitize-recover=all")
-    elseif (USE_SANITIZER STREQUAL "Address;Undefined" OR
-            USE_SANITIZER STREQUAL "Undefined;Address")
-      append_flags(SANITIZER_FLAGS "-fsanitize=address,undefined" "-fno-sanitize=vptr,function" "-fno-sanitize-recover=all")
-    elseif (USE_SANITIZER STREQUAL "Thread")
-      append_flags(SANITIZER_FLAGS -fsanitize=thread)
-    elseif (USE_SANITIZER STREQUAL "DataFlow")
-      append_flags(SANITIZER_FLAGS -fsanitize=dataflow)
-    else()
-      message(WARNING "Unsupported value of LLVM_USE_SANITIZER: ${USE_SANITIZER}")
-    endif()
-  elseif(USE_SANITIZER AND MSVC)
-    message(WARNING "LLVM_USE_SANITIZER is not supported on this platform.")
-  endif()
-  set(${OUT_VAR} "${SANITIZER_FLAGS}" PARENT_SCOPE)
-endfunction()
-
+include(GetSanitizerFlags)
 get_sanitizer_flags(SANITIZER_FLAGS "${LLVM_USE_SANITIZER}")
 add_library(cxx-sanitizer-flags INTERFACE)
 target_compile_options(cxx-sanitizer-flags INTERFACE ${SANITIZER_FLAGS})
@@ -696,23 +702,6 @@ function(cxx_link_system_libraries target)
   endif()
 
   if (MSVC)
-    if ((NOT CMAKE_MSVC_RUNTIME_LIBRARY AND uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG")
-        OR (CMAKE_MSVC_RUNTIME_LIBRARY MATCHES "Debug"))
-      set(LIB_SUFFIX "d")
-    else()
-      set(LIB_SUFFIX "")
-    endif()
-
-    if (NOT CMAKE_MSVC_RUNTIME_LIBRARY OR CMAKE_MSVC_RUNTIME_LIBRARY MATCHES "DLL$")
-      set(CRT_LIB "msvcrt")
-      set(CXX_LIB "msvcprt")
-    else()
-      set(CRT_LIB "libcmt")
-      set(CXX_LIB "libcpmt")
-    endif()
-
-    target_link_libraries(${target} PRIVATE ${CRT_LIB}${LIB_SUFFIX}) # C runtime startup files
-    target_link_libraries(${target} PRIVATE ${CXX_LIB}${LIB_SUFFIX}) # C++ standard library. Required for exception_ptr internals.
     # Required for standards-complaint wide character formatting functions
     # (e.g. `printfw`/`scanfw`)
     target_link_libraries(${target} PRIVATE iso_stdio_wide_specifiers)
@@ -762,6 +751,7 @@ endif()
 config_define(${LIBCXX_HAS_PTHREAD_API} _LIBCPP_HAS_THREAD_API_PTHREAD)
 config_define(${LIBCXX_HAS_EXTERNAL_THREAD_API} _LIBCPP_HAS_THREAD_API_EXTERNAL)
 config_define(${LIBCXX_HAS_WIN32_THREAD_API} _LIBCPP_HAS_THREAD_API_WIN32)
+config_define(${LIBCXX_HAS_C11_THREAD_API} _LIBCPP_HAS_THREAD_API_C11)
 config_define(${LIBCXX_HAS_MUSL_LIBC} _LIBCPP_HAS_MUSL_LIBC)
 config_define_if(LIBCXX_NO_VCRUNTIME _LIBCPP_NO_VCRUNTIME)
 config_define(${LIBCXX_ENABLE_FILESYSTEM} _LIBCPP_HAS_FILESYSTEM)

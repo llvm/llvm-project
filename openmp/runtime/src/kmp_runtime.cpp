@@ -13,6 +13,7 @@
 #include "kmp.h"
 #include "kmp_affinity.h"
 #include "kmp_atomic.h"
+#include "kmp_device_env.h"
 #include "kmp_environment.h"
 #include "kmp_error.h"
 #include "kmp_i18n.h"
@@ -459,6 +460,15 @@ void __kmp_warn(char const *format, ...) {
 }
 
 void __kmp_abort_process() {
+  // A failed assertion or fatal error raised from inside the abort path itself
+  // re-enters this function on the same thread. __kmp_exit_lock is not
+  // recursive, so re-acquiring it below would hang the process instead of
+  // terminating it. Terminate directly on re-entry.
+  static KMP_THREAD_LOCAL bool aborting = false;
+  if (aborting)
+    abort();
+  aborting = true;
+
   // Later threads may stall here, but that's ok because abort() will kill them.
   __kmp_acquire_bootstrap_lock(&__kmp_exit_lock);
 
@@ -6918,6 +6928,18 @@ void __kmp_register_library_startup(void) {
 
 void __kmp_unregister_library(void) {
 
+  // Claim the unregistration. Teardown can be entered concurrently from
+  // library shutdown, __kmp_abort_process() and the signal handler, none of
+  // which share a lock, and the library may never have registered itself at
+  // all (e.g. a fatal error raised before registration). Atomically take
+  // ownership of __kmp_registration_str so exactly one caller runs the
+  // teardown below; the others return without touching the freed string.
+  char *reg_str = __kmp_registration_str;
+  if (reg_str == NULL ||
+      !KMP_COMPARE_AND_STORE_PTR(&__kmp_registration_str, reg_str, NULL))
+    return;
+  __kmp_registration_flag = 0;
+
   char *name = __kmp_reg_status_name();
   char *value = NULL;
 
@@ -6952,9 +6974,7 @@ void __kmp_unregister_library(void) {
   value = __kmp_env_get(name);
 #endif
 
-  KMP_DEBUG_ASSERT(__kmp_registration_flag != 0);
-  KMP_DEBUG_ASSERT(__kmp_registration_str != NULL);
-  if (value != NULL && strcmp(value, __kmp_registration_str) == 0) {
+  if (value != NULL && strcmp(value, reg_str) == 0) {
 //  Ok, this is our variable. Delete it.
 #if defined(KMP_USE_SHM)
     if (__kmp_shm_available) {
@@ -6976,12 +6996,9 @@ void __kmp_unregister_library(void) {
     KMP_INTERNAL_FREE(temp_reg_status_file_name);
 #endif
 
-  KMP_INTERNAL_FREE(__kmp_registration_str);
+  KMP_INTERNAL_FREE(reg_str);
   KMP_INTERNAL_FREE(value);
   KMP_INTERNAL_FREE(name);
-
-  __kmp_registration_flag = 0;
-  __kmp_registration_str = NULL;
 
 } // __kmp_unregister_library
 
@@ -8328,6 +8345,8 @@ void __kmp_cleanup(void) {
     __kmp_affinity_format = NULL;
   }
 
+  __kmp_device_env_reset();
+
   __kmp_i18n_catclose();
 
   if (__kmp_nesting_nth_level)
@@ -8924,7 +8943,8 @@ __kmp_determine_reduction_method(
 
 #if KMP_ARCH_X86_64 || KMP_ARCH_PPC64 || KMP_ARCH_AARCH64 ||                   \
     KMP_ARCH_MIPS64 || KMP_ARCH_RISCV64 || KMP_ARCH_LOONGARCH64 ||             \
-    KMP_ARCH_VE || KMP_ARCH_S390X || KMP_ARCH_WASM
+    KMP_ARCH_VE || KMP_ARCH_S390X || KMP_ARCH_WASM32 || KMP_ARCH_WASM64 ||     \
+    KMP_ARCH_ARM64EC
 
 #if KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||     \
     KMP_OS_OPENBSD || KMP_OS_WINDOWS || KMP_OS_DARWIN || KMP_OS_HAIKU ||       \
@@ -8956,7 +8976,7 @@ __kmp_determine_reduction_method(
        // KMP_OS_HURD || KMP_OS_SOLARIS || KMP_OS_WASI || KMP_OS_AIX
 
 #elif KMP_ARCH_X86 || KMP_ARCH_ARM || KMP_ARCH_AARCH || KMP_ARCH_MIPS ||       \
-    KMP_ARCH_WASM || KMP_ARCH_PPC || KMP_ARCH_AARCH64_32 || KMP_ARCH_SPARC
+    KMP_ARCH_PPC || KMP_ARCH_AARCH64_32 || KMP_ARCH_SPARC
 
 #if KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||     \
     KMP_OS_OPENBSD || KMP_OS_WINDOWS || KMP_OS_HAIKU || KMP_OS_HURD ||         \

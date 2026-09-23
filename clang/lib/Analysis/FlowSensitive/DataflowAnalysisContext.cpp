@@ -96,7 +96,8 @@ StorageLocation &DataflowAnalysisContext::createStorageLocation(QualType Type) {
 // Returns the keys for a given `StringMap`.
 // Can't use `StringSet` as the return type as it doesn't support `operator==`.
 template <typename T>
-static llvm::DenseSet<llvm::StringRef> getKeys(const llvm::StringMap<T> &Map) {
+[[maybe_unused]] static llvm::DenseSet<llvm::StringRef>
+getKeys(const llvm::StringMap<T> &Map) {
   return llvm::DenseSet<llvm::StringRef>(llvm::from_range, Map.keys());
 }
 

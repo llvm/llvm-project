@@ -4,8 +4,8 @@
 // The IR is updated regardless of memref.global private constant
 //
 module {
-  // CHECK: memref.global "private" constant @__constant_4xi32 : memref<4xi32> = dense<[1, 2, 3, 4]> {alignment = 16 : i64}
-  memref.global "private" constant @__constant_4xi32 : memref<4xi32> = dense<[1, 2, 3, 4]> {alignment = 16 : i64}
+  // CHECK: memref.global "private" constant @__constant_4xi32 : memref<4xi32> = dense<[1, 2, 3, 4]> alignment = 16
+  memref.global "private" constant @__constant_4xi32 : memref<4xi32> = dense<[1, 2, 3, 4]> alignment = 16
   func.func @main(%arg0: i32) -> i32 {
     %0 = tensor.empty() : tensor<10xbf16>
     // CHECK-NOT: memref.get_global
@@ -24,6 +24,27 @@ module @named_module_acceptable {
     %0 = tensor.empty() : tensor<10xbf16>
     // CHECK-NOT: tensor.empty
     return %arg0 : tensor<10xf32>
+  }
+}
+
+// -----
+
+// Dead function arguments are removed even if the enclosing module defines a
+// symbol (has a sym_name attribute). Fixes #98700.
+//
+// CHECK: func.func private @compute(%arg0: i32) -> i32
+// CHECK-NOT: %dead_arg
+module @named_module_with_dead_args {
+  func.func private @compute(%arg0: i32, %dead_arg: i32) -> i32 {
+    return %arg0 : i32
+  }
+  // CHECK: func.func @main() -> i32
+  func.func @main() -> i32 {
+    %c1 = arith.constant 1 : i32
+    %c2 = arith.constant 2 : i32
+    // CHECK: call @compute(%c1_i32) : (i32) -> i32
+    %result = call @compute(%c1, %c2) : (i32, i32) -> i32
+    return %result : i32
   }
 }
 
@@ -603,6 +624,33 @@ module @return_void_with_unused_argument {
 
 // -----
 
+// CHECK-LABEL: func.func private @keep_region_branch_operands_valid() {
+func.func private @keep_region_branch_operands_valid(%arg0: memref<f64>) {
+  %false = arith.constant false
+  %cst = arith.constant 2.000000e+00 : f64
+  %0 = memref.load %arg0[] {name = "caller"} : memref<f64>
+  memref.store %cst, %arg0[] {name = "callee"} : memref<f64>
+  // CHECK: %[[COND:.*]] = ub.poison : i1
+  // CHECK: scf.if %[[COND]]
+  // CHECK: %[[YIELD0:.*]] = ub.poison : memref<f64>
+  // CHECK: scf.yield %[[YIELD0]] : memref<f64>
+  // CHECK: %[[YIELD1:.*]] = ub.poison : memref<f64>
+  // CHECK: scf.yield %[[YIELD1]] : memref<f64>
+  %1 = scf.if %false -> (memref<f64>) {
+    scf.yield %arg0 : memref<f64>
+  } else {
+    %2 = bufferization.clone %arg0 : memref<f64> to memref<f64>
+    scf.yield %2 : memref<f64>
+  }
+  %true = arith.constant true
+  %base_buffer, %offset = memref.extract_strided_metadata %arg0 : memref<f64> -> memref<f64>, index
+  %base_buffer_0, %offset_1 = memref.extract_strided_metadata %1 : memref<f64> -> memref<f64>, index
+  bufferization.dealloc (%base_buffer, %base_buffer_0 : memref<f64>, memref<f64>) if (%false, %true)
+  return
+}
+
+// -----
+
 // CHECK-LABEL: module @dynamically_unreachable
 module @dynamically_unreachable {
   func.func @dynamically_unreachable() {
@@ -846,4 +894,27 @@ module @func_with_non_call_users {
     func.return
   }
   spirv.EntryPoint "GLCompute" @callee
+}
+
+// -----
+
+// A call op may have results that are produced by the call op itself instead of
+// being forwarded from the callee (`%status` below). Such results are not part
+// of the 1:1 relationship between call results and callee results.
+//
+// CHECK-LABEL: func.func private @callee_with_dead_return() {
+// CHECK-NEXT:    return
+// CHECK-NEXT:  }
+// CHECK:       func.func @main() -> i1 {
+// CHECK-NEXT:    %[[STATUS:.*]] = test.call_and_produce @callee_with_dead_return() : () -> i1
+// CHECK-NEXT:    return %[[STATUS]]
+// CHECK-NEXT:  }
+// CHECK-CANONICALIZE-LABEL: func.func private @callee_with_dead_return() {
+func.func private @callee_with_dead_return() -> i32 {
+  %c0 = arith.constant 0 : i32
+  return %c0 : i32
+}
+func.func @main() -> i1 {
+  %status, %non_live = test.call_and_produce @callee_with_dead_return() : () -> (i1, i32)
+  return %status : i1
 }

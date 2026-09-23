@@ -28,7 +28,7 @@
 //
 // CHECK:           %[[LHS_ROW_1:.*]] = llvm.extractvalue %[[VAL_1]][0] : !llvm.array<2 x vector<4xf32>>
 // CHECK:           %[[TP_1:.*]] = llvm.shufflevector %[[LHS_ROW_1]], %[[LHS_ROW_1]] [0, 1, 2, 3, 0, 0, 0, 0] : vector<4xf32>
-// CHECK:           %[[TP_2:.*]] = llvm.shufflevector %[[TP_1]], %[[POISON_LHS]] [0, 1, 2, 3, 12, 13, 14, 15] : vector<8xf32>
+// CHECK:           %[[TP_2:.*]] = llvm.shufflevector %[[TP_1]], %[[POISON_LHS]] [0, 1, 2, 3, -1, -1, -1, -1] : vector<8xf32>
 // CHECK:           %[[LHS_ROW_2:.*]] = llvm.extractvalue %[[VAL_1]][1] : !llvm.array<2 x vector<4xf32>>
 // CHECK:           %[[TP_3:.*]] = llvm.shufflevector %[[LHS_ROW_2]], %[[LHS_ROW_2]] [0, 1, 2, 3, 0, 0, 0, 0] : vector<4xf32>
 // CHECK:           %[[LHS:.*]] = llvm.shufflevector %[[TP_3]], %[[TP_2]] [8, 9, 10, 11, 0, 1, 2, 3] : vector<8xf32>
@@ -43,7 +43,7 @@
 //       | ROW_4 |
 // CHECK:           %[[RHS_ROW_1:.*]] = llvm.extractvalue %[[VAL_0]][0] : !llvm.array<4 x vector<3xf32>>
 // CHECK:           %[[TP_4:.*]] = llvm.shufflevector %[[RHS_ROW_1]], %[[RHS_ROW_1]] [0, 1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0] : vector<3xf32>
-// CHECK:           %[[TP_5:.*]] = llvm.shufflevector %[[TP_4]], %[[POISON_RHS]] [0, 1, 2, 15, 16, 17, 18, 19, 20, 21, 22, 23] : vector<12xf32>
+// CHECK:           %[[TP_5:.*]] = llvm.shufflevector %[[TP_4]], %[[POISON_RHS]] [0, 1, 2, -1, -1, -1, -1, -1, -1, -1, -1, -1] : vector<12xf32>
 // CHECK:           %[[RHS_ROW_2:.*]] = llvm.extractvalue %[[VAL_0]][1] : !llvm.array<4 x vector<3xf32>>
 // CHECK:           %[[TP_6:.*]] = llvm.shufflevector %[[RHS_ROW_2]], %[[RHS_ROW_2]] [0, 1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0] : vector<3xf32>
 // CHECK:           %[[TP_7:.*]] = llvm.shufflevector %[[TP_6]], %[[TP_5]] [12, 13, 14, 0, 1, 2, 18, 19, 20, 21, 22, 23] : vector<12xf32>
@@ -55,7 +55,7 @@
 // CHECK:           %[[RHS:.*]] = llvm.shufflevector %[[TP_10]], %[[TP_9]] [12, 13, 14, 15, 16, 17, 18, 19, 20, 0, 1, 2] : vector<12xf32>
 
 // ===> Matrix multiply
-// CHECK:           %[[MM:.*]] = llvm.intr.matrix.multiply %[[LHS]], %[[RHS]] {lhs_columns = 4 : i32, lhs_rows = 2 : i32, rhs_columns = 3 : i32} : (vector<8xf32>, vector<12xf32>) -> vector<6xf32>
+// CHECK:           %[[MM:.*]] = llvm.intr.matrix.multiply %[[LHS]], %[[RHS]], lhs_rows = 2, lhs_columns = 4, rhs_columns = 3 : (vector<8xf32>, vector<12xf32>) -> vector<6xf32>
 // CHECK:           %[[RES:.*]] = arith.addf %[[ARG2]], %{{.*}} : vector<2x3xf32>
 // CHECK:           return %[[RES]] : vector<2x3xf32>
 func.func @matmul(%arg0: vector<2x4xf32>,

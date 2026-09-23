@@ -29,6 +29,15 @@ namespace acc {
 /// `ACC_COMPUTE_CONSTRUCT_OPS`.
 mlir::Operation *getEnclosingComputeOp(mlir::Region &region);
 
+/// If `v` is not a block argument of an `acc.compute_region` body, returns
+/// nullptr. Otherwise maps the block argument to its operand and returns it.
+mlir::Value getACCOperandForBlockArg(mlir::Value v);
+
+/// If `v` is not a block argument of an `acc.compute_region` body, returns
+/// nullptr. Otherwise maps the block argument to its operand and returns the
+/// defining operation if it is one of `ACC_DATA_ENTRY_OPS`.
+mlir::Operation *getACCDataClauseOpForBlockArg(mlir::Value v);
+
 /// Returns true if this value is only used by `acc.private` operations in the
 /// `region`.
 bool isOnlyUsedByPrivateClauses(mlir::Value val, mlir::Region &region);
@@ -48,9 +57,20 @@ std::optional<ClauseDefaultValue> getDefaultAttr(mlir::Operation *op);
 mlir::acc::VariableTypeCategory getTypeCategory(mlir::Value var);
 
 /// Attempts to extract the variable name from a value by walking through
-/// view-like operations until an `acc.var_name` attribute is found. Returns
-/// empty string if no name is found.
+/// view-like operations until an `acc.var_name` attribute, the name of a data
+/// clause operation, or the symbol a global is addressed through is found.
+/// Returns empty string if no name is found.
 std::string getVariableName(mlir::Value v);
+
+/// Returns a placeholder string for use as an acc.var_name attribute value when
+/// the actual variable name is not yet known at the point of IR construction.
+/// The placeholder is meant to be replaced with the real name at a later
+/// lowering stage.
+/// For example, recipe init regions may attach this to ops at recipe-generation
+/// time, and ACCRecipeMaterialization will subsequently replace the placeholder
+/// with the actual variable name on all marked ops after inlining the recipe
+/// into the compute construct.
+llvm::StringLiteral getVarNamePlaceholder();
 
 /// Get the recipe name for a given recipe kind and type.
 /// Returns an empty string if not possible to generate a recipe name.
@@ -73,10 +93,26 @@ bool isValidSymbolUse(mlir::Operation *user, mlir::SymbolRefAttr symbol,
 
 /// Check if a value represents device data.
 /// This checks if the value represents device data via the
-/// MappableType, PointerLikeType, and GlobalVariableOpInterface interfaces.
+/// MappableType, PointerLikeType, and GlobalVariableOpInterface interfaces,
+/// and whether the defining operation carries `acc.declare` with the deviceptr
+/// clause.
 /// \param val The value to check
 /// \return true if the value is device data, false otherwise
-bool isDeviceValue(mlir::Value val);
+bool isDeviceAccessibleValue(mlir::Value val);
+
+/// Check if a value is backed by memory that is residing in the current device,
+/// and therefore requires no runtime mapping or attach.
+///
+/// This is stricter than isDeviceAccessibleValue: isDeviceAccessibleValue
+/// answers device accessibility (whether the current device can reach the
+/// storage, regardless of where it physically resides), whereas this answers
+/// device residence (whether the storage physically lives in device memory).
+/// Storage that is accessible but physically shared with the host may migrate
+/// on demand, so it is not in device memory: it must still be mapped so the
+/// runtime can attach rather than be treated as already resident.
+/// \param val The value to check
+/// \return true if the value is in device memory, false otherwise
+bool isInDeviceMemoryValue(mlir::Value val);
 
 /// Check if a value use is valid in an OpenACC region.
 /// This is true if:

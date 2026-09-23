@@ -3,7 +3,7 @@
 //      for loop.
 //
 // RUN: %dexter_regression_test_cxx_build %s -o %t
-// RUN: %dexter_regression_test_run --binary %t -- %s | FileCheck %s
+// RUN: %dexter_regression_test_run --use-heuristic --binary %t -- %s | FileCheck %s
 // CHECK: limit_steps_expect_loop.cpp:
 
 int main(const int argc, const char * argv[]) {

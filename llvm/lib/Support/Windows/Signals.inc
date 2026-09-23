@@ -21,6 +21,7 @@
 #include <stdio.h>
 
 #include "llvm/Support/Format.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/raw_ostream.h"
 
 // The Windows.h header must be after LLVM and standard headers.
@@ -798,6 +799,9 @@ void sys::CleanupOnSignal(uintptr_t Context) {
 }
 
 static LONG WINAPI LLVMUnhandledExceptionFilter(LPEXCEPTION_POINTERS ep) {
+  // Let's not interfere with stack trace symbolication and friends.
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+
   Cleanup(true);
 
   // Write out the exception code.
@@ -833,6 +837,9 @@ static LONG WINAPI LLVMUnhandledExceptionFilter(LPEXCEPTION_POINTERS ep) {
 }
 
 static BOOL WINAPI LLVMConsoleCtrlHandler(DWORD dwCtrlType) {
+  // Let's not interfere with stack trace symbolication and friends.
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+
   // We are running in our very own thread, courtesy of Windows.
   EnterCriticalSection(&CriticalSection);
   // This function is only ever called when a CTRL-C or similar control signal

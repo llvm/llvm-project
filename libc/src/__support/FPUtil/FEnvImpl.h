@@ -19,6 +19,13 @@
 #include "src/__support/macros/optimization.h"
 #include "src/__support/macros/properties/architectures.h"
 #include "src/__support/macros/properties/compiler.h"
+#include "src/__support/macros/properties/cpu_features.h"
+
+#ifdef LIBC_COMPILER_HAS_STDC_FENV_ACCESS
+#define LIBC_FENV_ACCESS_ON _Pragma("STDC FENV_ACCESS ON")
+#else
+#define LIBC_FENV_ACCESS_ON
+#endif
 
 // In full build mode we are the system fenv in libc.
 #if defined(LIBC_FULL_BUILD)
@@ -37,27 +44,56 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
-LIBC_INLINE int clear_except(int excepts) { return feclearexcept(excepts); }
+LIBC_INLINE int clear_except(int excepts) {
+  LIBC_FENV_ACCESS_ON
+  return feclearexcept(excepts);
+}
 
-LIBC_INLINE int test_except(int excepts) { return fetestexcept(excepts); }
+LIBC_INLINE int test_except(int excepts) {
+  LIBC_FENV_ACCESS_ON
+  return fetestexcept(excepts);
+}
 
 LIBC_INLINE int get_except() {
+  LIBC_FENV_ACCESS_ON
   fexcept_t excepts = 0;
   fegetexceptflag(&excepts, FE_ALL_EXCEPT);
   return static_cast<int>(excepts);
 }
 
 LIBC_INLINE int set_except(int excepts) {
+  LIBC_FENV_ACCESS_ON
   fexcept_t exc = static_cast<fexcept_t>(excepts);
   return fesetexceptflag(&exc, FE_ALL_EXCEPT);
 }
 
-LIBC_INLINE int raise_except(int excepts) { return feraiseexcept(excepts); }
+LIBC_INLINE int raise_except(int excepts) {
+  LIBC_FENV_ACCESS_ON
+  return feraiseexcept(excepts);
+}
 
-LIBC_INLINE int get_round() { return fegetround(); }
+LIBC_INLINE int enable_except(int) { return 0; }
+
+LIBC_INLINE int disable_except(int) { return 0; }
+
+LIBC_INLINE int get_round() {
+  LIBC_FENV_ACCESS_ON
+  return fegetround();
+}
 
 LIBC_INLINE int set_round(int rounding_mode) {
+  LIBC_FENV_ACCESS_ON
   return fesetround(rounding_mode);
+}
+
+LIBC_INLINE int get_env(fenv_t *env) {
+  LIBC_FENV_ACCESS_ON
+  return fegetenv(env);
+}
+
+LIBC_INLINE int set_env(const fenv_t *env) {
+  LIBC_FENV_ACCESS_ON
+  return fesetenv(env);
 }
 
 } // namespace fputil
@@ -123,12 +159,13 @@ LIBC_INLINE int set_env(const fenv_t *) { return 0; }
 namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
-LIBC_INLINE static constexpr int
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT int
 clear_except_if_required([[maybe_unused]] int excepts) {
   if (cpp::is_constant_evaluated()) {
     return 0;
   } else {
 #ifndef LIBC_MATH_HAS_NO_EXCEPT
+    LIBC_FENV_ACCESS_ON
     if (math_errhandling & MATH_ERREXCEPT)
       return clear_except(excepts);
 #endif // LIBC_MATH_HAS_NO_EXCEPT
@@ -136,12 +173,13 @@ clear_except_if_required([[maybe_unused]] int excepts) {
   }
 }
 
-LIBC_INLINE static constexpr int
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT int
 set_except_if_required([[maybe_unused]] int excepts) {
   if (cpp::is_constant_evaluated()) {
     return 0;
   } else {
 #ifndef LIBC_MATH_HAS_NO_EXCEPT
+    LIBC_FENV_ACCESS_ON
     if (math_errhandling & MATH_ERREXCEPT)
       return set_except(excepts);
 #endif // LIBC_MATH_HAS_NO_EXCEPT
@@ -149,12 +187,13 @@ set_except_if_required([[maybe_unused]] int excepts) {
   }
 }
 
-LIBC_INLINE static constexpr int
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT int
 raise_except_if_required([[maybe_unused]] int excepts) {
   if (cpp::is_constant_evaluated()) {
     return 0;
   } else {
 #ifndef LIBC_MATH_HAS_NO_EXCEPT
+    LIBC_FENV_ACCESS_ON
     if (math_errhandling & MATH_ERREXCEPT)
       return raise_except(excepts);
 #endif // LIBC_MATH_HAS_NO_EXCEPT
@@ -162,7 +201,7 @@ raise_except_if_required([[maybe_unused]] int excepts) {
   }
 }
 
-LIBC_INLINE static constexpr void
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT void
 set_errno_if_required([[maybe_unused]] int err) {
   if (!cpp::is_constant_evaluated()) {
 #ifndef LIBC_MATH_HAS_NO_ERRNO
@@ -171,6 +210,64 @@ set_errno_if_required([[maybe_unused]] int err) {
 #endif // LIBC_MATH_HAS_NO_ERRNO
   }
 }
+
+template <typename T>
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT void raise_overflow_except_if_required() {
+  raise_except_if_required(FE_OVERFLOW | FE_INEXACT);
+}
+
+template <typename T>
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT void raise_underflow_except_if_required() {
+  raise_except_if_required(FE_UNDERFLOW | FE_INEXACT);
+}
+
+#if defined(LIBC_TARGET_CPU_HAS_FPU_FLOAT)
+template <>
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT void
+raise_overflow_except_if_required<float>() {
+  if (cpp::is_constant_evaluated()) {
+    return;
+  } else {
+    volatile float x = 0x1.0p127f;
+    x = x * 2.0f;
+  }
+}
+
+template <>
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT void
+raise_underflow_except_if_required<float>() {
+  if (cpp::is_constant_evaluated()) {
+    return;
+  } else {
+    volatile float x = 0x1.0p-126f;
+    x = x * 0x1.0p-50f;
+  }
+}
+#endif // LIBC_TARGET_CPU_HAS_FPU_FLOAT
+
+#if defined(LIBC_TARGET_CPU_HAS_FPU_DOUBLE)
+template <>
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT void
+raise_overflow_except_if_required<double>() {
+  if (cpp::is_constant_evaluated()) {
+    return;
+  } else {
+    volatile double x = 0x1.0p1023;
+    x = x * 2.0;
+  }
+}
+
+template <>
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT void
+raise_underflow_except_if_required<double>() {
+  if (cpp::is_constant_evaluated()) {
+    return;
+  } else {
+    volatile double x = 0x1.0p-1022;
+    x = x * 0x1.0p-100;
+  }
+}
+#endif // LIBC_TARGET_CPU_HAS_FPU_DOUBLE
 
 } // namespace fputil
 } // namespace LIBC_NAMESPACE_DECL

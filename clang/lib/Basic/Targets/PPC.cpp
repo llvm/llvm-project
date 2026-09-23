@@ -59,6 +59,8 @@ bool PPCTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasP9Vector = true;
     } else if (Feature == "+power10-vector") {
       HasP10Vector = true;
+    } else if (Feature == "+future-vector") {
+      HasFutureVector = true;
     } else if (Feature == "+pcrelative-memops") {
       HasPCRelativeMemops = true;
     } else if (Feature == "+spe" || Feature == "+efpu2") {
@@ -434,6 +436,8 @@ void PPCTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__POWER10_VECTOR__");
   if (HasPCRelativeMemops)
     Builder.defineMacro("__PCREL__");
+  if (HasFutureVector)
+    Builder.defineMacro("__FUTURE_VECTOR__");
 
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2");
@@ -710,6 +714,14 @@ ParsedTargetAttr PPCTargetInfo::parseTargetAttr(StringRef Features) const {
   return Ret;
 }
 
+bool PPCTargetInfo::isValidFeatureName(StringRef Name) const {
+  // we have some target features that are spelled differently on the command
+  // line versus what's in PPC.td. We need to continue accepting them.
+  if (Name == "pcrel" || Name == "prefixed")
+    return true;
+  return llvm::PPC::isValidFeatureName(Name);
+}
+
 llvm::APInt PPCTargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
   if (Features.empty())
     return llvm::APInt(32, 0);
@@ -831,6 +843,9 @@ void PPCTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
   if (getTriple().isOSAIX() && Opts.EnableAIXQuadwordAtomicsABI &&
       HasQuadwordAtomics)
     MaxAtomicInlineWidth = 128;
+
+  if (getTriple().isOSAIX() && Opts.EnableAIXExtendedAltivecABI)
+    ABI = "vec-extabi";
 }
 
 llvm::SmallVector<Builtin::InfosShard>

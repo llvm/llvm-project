@@ -73,8 +73,7 @@ namespace DestroyArrayElem {
                                // both-note {{in call to}}
 
   constexpr int test2() {
-
-    int a[4] = {};
+    int a[4] = {}; // both-note {{declared here}}
     std::destroy_at(&a[1]);
     int r = a[1]; // both-note {{read of object outside its lifetime}}
     std::construct_at(&a[1]);
@@ -85,6 +84,7 @@ namespace DestroyArrayElem {
 
   constexpr int test3() {
     int a[4]; /// Array with no init map.
+    // both-note@-1 {{declared here}}
     std::construct_at(&a[3]);
     return a[3]; // both-note {{read of uninitialized object}}
   }
@@ -92,7 +92,7 @@ namespace DestroyArrayElem {
                                // both-note {{in call to}}
 
   constexpr int test4(bool b) {
-    int a[4];
+    int a[4]; // both-note {{declared here}}
     a[0] = 12;
     std::construct_at(&a[3]);
     return b ? a[0] : a[3]; // both-note {{read of uninitialized object}}
@@ -103,7 +103,7 @@ namespace DestroyArrayElem {
 
 
   constexpr int test5() {
-    int *a = std::allocator<int>{}.allocate(3);
+    int *a = std::allocator<int>{}.allocate(3); // both-note {{heap allocation performed here}}
     a[0] = 1; // both-note {{assignment to object outside its lifetime}}
     int b = a[1];
     std::allocator<int>{}.deallocate(a);

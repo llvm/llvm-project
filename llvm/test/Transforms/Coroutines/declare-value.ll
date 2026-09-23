@@ -56,17 +56,19 @@ attributes #0 = { presplitcoroutine }
 attributes #1 = { nomerge nounwind }
 attributes #2 = { nounwind }
 
+!12 = !{null}
+!13 = !DISubroutineType(types: !12)
 !llvm.module.flags = !{!0}
 
 !0 = !{i32 2, !"Debug Info Version", i32 3}
-!1 = distinct !DISubprogram(scope: null, spFlags: DISPFlagDefinition, unit: !2, retainedNodes: !4)
+!1 = distinct !DISubprogram(scope: null, spFlags: DISPFlagDefinition, type: !13, unit: !2, retainedNodes: !4)
 !2 = distinct !DICompileUnit(language: DW_LANG_Swift, file: !3, isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug)
 !3 = !DIFile(filename: "blah", directory: "")
 !4 = !{}
 !5 = !DILocalVariable(scope: !1, type: !6)
 !6 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "Klass")
 !7 = !DILocation(line: 0, scope: !1)
-!8 = distinct !DISubprogram(scope: null, spFlags: DISPFlagDefinition, unit: !2)
+!8 = distinct !DISubprogram(scope: null, spFlags: DISPFlagDefinition, type: !13, unit: !2)
 !9 = !DILocation(line: 0, scope: !8)
-!10 = distinct !DISubprogram(scope: null, spFlags: DISPFlagDefinition, unit: !2)
+!10 = distinct !DISubprogram(scope: null, spFlags: DISPFlagDefinition, type: !13, unit: !2)
 !11 = !DILocation(line: 0, scope: !10)

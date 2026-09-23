@@ -1,9 +1,9 @@
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; TODO: This test currently fails with LLVM_ENABLE_EXPENSIVE_CHECKS enabled
-; XFAIL: expensive_checks
-
-; CHECK-SPIRV-DAG: %[[#]] = OpGroupAsyncCopy %[[#]] %[[#Scope:]]
+; CHECK-SPIRV-DAG: %[[#EventTy:]] = OpTypeEvent
+; CHECK-SPIRV-DAG: %[[#NullEvent:]] = OpConstantNull %[[#EventTy]]
+; CHECK-SPIRV-DAG: %[[#]] = OpGroupAsyncCopy %[[#EventTy]] %[[#Scope:]] %[[#]] %[[#]] %[[#]] %[[#]] %[[#NullEvent]]
 ; CHECK-SPIRV-DAG: %[[#Scope]] = OpConstant %[[#]]
 
 %opencl.event_t = type opaque

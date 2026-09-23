@@ -124,8 +124,8 @@ mgpuModuleLoad(void *data, size_t /*gpuBlobSize*/) {
   return module;
 }
 
-extern "C" MLIR_CUDA_WRAPPERS_EXPORT CUmodule mgpuModuleLoadJIT(void *data,
-                                                                int optLevel) {
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT CUmodule
+mgpuModuleLoadJIT(void *data, int optLevel, size_t /*assmeblySize*/) {
   ScopedContext scopedContext;
   CUmodule module = nullptr;
   char jitErrorBuffer[4096] = {0};
@@ -146,7 +146,11 @@ extern "C" MLIR_CUDA_WRAPPERS_EXPORT CUmodule mgpuModuleLoadJIT(void *data,
 }
 
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuModuleUnload(CUmodule module) {
-  CUDA_REPORT_IF_ERROR(cuModuleUnload(module));
+  // Tolerate CUDA_ERROR_DEINITIALIZED: this can run from a global destructor
+  // after the CUDA primary context has already been torn down.
+  CUresult result = cuModuleUnload(module);
+  if (result != CUDA_SUCCESS && result != CUDA_ERROR_DEINITIALIZED)
+    CUDA_REPORT_IF_ERROR(result);
 }
 
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT CUfunction
@@ -337,6 +341,73 @@ extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuSetDefaultDevice(int32_t device) {
 ///
 
 #if (CUDA_VERSION >= 12000)
+
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuLaunchKernelCooperative(
+    CUfunction function, intptr_t gridX, intptr_t gridY, intptr_t gridZ,
+    intptr_t clusterX, intptr_t clusterY, intptr_t clusterZ, intptr_t blockX,
+    intptr_t blockY, intptr_t blockZ, int32_t smem, CUstream stream,
+    void **params, void **extra) {
+  ScopedContext scopedContext;
+  if (smem > 0) {
+    int32_t maxShmem = 0;
+    CUdevice device = getDefaultCuDevice();
+    CUDA_REPORT_IF_ERROR(cuDeviceGet(&device, /*ordinal=*/defaultDevice));
+    CUDA_REPORT_IF_ERROR(cuDeviceGetAttribute(
+        &maxShmem, CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_BLOCK_OPTIN,
+        device));
+    if (maxShmem < smem) {
+      fprintf(stderr,
+              "Requested shared memory (%dkb) is larger than maximum allowed "
+              "shared memory (%dkb) for this device\n",
+              smem, maxShmem);
+    }
+    CUDA_REPORT_IF_ERROR(cuFuncSetAttribute(
+        function, CU_FUNC_ATTRIBUTE_MAX_DYNAMIC_SHARED_SIZE_BYTES, smem));
+  }
+
+  CUlaunchConfig config;
+  config.gridDimX = gridX;
+  config.gridDimY = gridY;
+  config.gridDimZ = gridZ;
+  config.blockDimX = blockX;
+  config.blockDimY = blockY;
+  config.blockDimZ = blockZ;
+  config.sharedMemBytes = smem;
+  config.hStream = stream;
+
+  CUlaunchAttribute launchAttrs[3];
+  int numAttrs = 0;
+
+  bool hasCluster = clusterX > 0 && clusterY > 0 && clusterZ > 0;
+  if (hasCluster) {
+    launchAttrs[numAttrs].id = CU_LAUNCH_ATTRIBUTE_CLUSTER_DIMENSION;
+    launchAttrs[numAttrs].value.clusterDim.x = clusterX;
+    launchAttrs[numAttrs].value.clusterDim.y = clusterY;
+    launchAttrs[numAttrs].value.clusterDim.z = clusterZ;
+    numAttrs++;
+
+    launchAttrs[numAttrs].id =
+        CU_LAUNCH_ATTRIBUTE_CLUSTER_SCHEDULING_POLICY_PREFERENCE;
+    launchAttrs[numAttrs].value.clusterSchedulingPolicyPreference =
+        CU_CLUSTER_SCHEDULING_POLICY_SPREAD;
+    numAttrs++;
+  }
+
+  launchAttrs[numAttrs].id = CU_LAUNCH_ATTRIBUTE_COOPERATIVE;
+  launchAttrs[numAttrs].value.cooperative = 1;
+  numAttrs++;
+
+  config.numAttrs = numAttrs;
+  config.attrs = launchAttrs;
+
+  debug_print("Launching cooperative kernel (cluster=%d), "
+              "grid=%ld,%ld,%ld, "
+              "threads: %ld, %ld, %ld, "
+              "smem: %dkb\n",
+              hasCluster, gridX, gridY, gridZ, blockX, blockY, blockZ, smem);
+
+  CUDA_REPORT_IF_ERROR(cuLaunchKernelEx(&config, function, params, extra));
+}
 
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuLaunchClusterKernel(
     CUfunction function, intptr_t clusterX, intptr_t clusterY,

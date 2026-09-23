@@ -1121,7 +1121,7 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
 
     // We have got the address. Create a memory object out of it
     return_valobj_sp = ValueObjectMemory::Create(
-        &thread, "", Address(mem_address, nullptr), return_compiler_type);
+        &thread, "", Address(mem_address), return_compiler_type);
   }
   return return_valobj_sp;
 }

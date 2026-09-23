@@ -507,8 +507,12 @@ ComplexPairTy ComplexExprEmitter::EmitComplexToComplexCast(ComplexPairTy Val,
                                                            QualType DestType,
                                                            SourceLocation Loc) {
   // Get the src/dest element type.
-  SrcType = SrcType->castAs<ComplexType>()->getElementType();
-  DestType = DestType->castAs<ComplexType>()->getElementType();
+  SrcType = SrcType.getAtomicUnqualifiedType()
+                ->castAs<ComplexType>()
+                ->getElementType();
+  DestType = DestType.getAtomicUnqualifiedType()
+                 ->castAs<ComplexType>()
+                 ->getElementType();
 
   // C99 6.3.1.6: When a value of complex type is converted to another
   // complex type, both the real and imaginary parts follow the conversion
@@ -534,6 +538,7 @@ ComplexPairTy ComplexExprEmitter::EmitScalarToComplexCast(llvm::Value *Val,
 
 ComplexPairTy ComplexExprEmitter::EmitCast(CastKind CK, Expr *Op,
                                            QualType DestTy) {
+  DestTy = DestTy.getAtomicUnqualifiedType();
   switch (CK) {
   case CK_Dependent:
     llvm_unreachable("dependent cast kind in IR gen!");
@@ -777,7 +782,8 @@ ComplexPairTy ComplexExprEmitter::EmitComplexBinOpLibCall(StringRef LibCallName,
       4, Op.Ty->castAs<ComplexType>()->getElementType());
   QualType FQTy = CGF.getContext().getFunctionType(Op.Ty, ArgsQTys, EPI);
   const CGFunctionInfo &FuncInfo = CGF.CGM.getTypes().arrangeFreeFunctionCall(
-      Args, cast<FunctionType>(FQTy.getTypePtr()), false);
+      Args, cast<FunctionType>(FQTy.getTypePtr()), false,
+      CGF.getCurrentFunctionDecl());
 
   llvm::FunctionType *FTy = CGF.CGM.getTypes().GetFunctionType(FuncInfo);
   llvm::FunctionCallee Func = CGF.CGM.CreateRuntimeFunction(
@@ -792,7 +798,8 @@ ComplexPairTy ComplexExprEmitter::EmitComplexBinOpLibCall(StringRef LibCallName,
 
 /// Lookup the libcall name for a given floating point type complex
 /// multiply.
-static StringRef getComplexMultiplyLibCallName(llvm::Type *Ty) {
+static StringRef getComplexMultiplyLibCallName(const llvm::Triple &T,
+                                               llvm::Type *Ty) {
   switch (Ty->getTypeID()) {
   default:
     llvm_unreachable("Unsupported floating point type!");
@@ -807,7 +814,7 @@ static StringRef getComplexMultiplyLibCallName(llvm::Type *Ty) {
   case llvm::Type::X86_FP80TyID:
     return "__mulxc3";
   case llvm::Type::FP128TyID:
-    return "__multc3";
+    return T.isPPC() ? "__mulkc3" : "__multc3";
   }
 }
 
@@ -874,8 +881,9 @@ ComplexPairTy ComplexExprEmitter::EmitBinMul(const BinOpInfo &Op) {
       // Now emit the libcall on this slowest of the slow paths.
       CGF.EmitBlock(LibCallBB);
       Value *LibCallR, *LibCallI;
+      llvm::Triple Triple = CGF.getTarget().getTriple();
       std::tie(LibCallR, LibCallI) = EmitComplexBinOpLibCall(
-          getComplexMultiplyLibCallName(Op.LHS.first->getType()), Op);
+          getComplexMultiplyLibCallName(Triple, Op.LHS.first->getType()), Op);
       Builder.CreateBr(ContBB);
 
       // Finally continue execution by phi-ing together the different
@@ -944,10 +952,7 @@ ComplexPairTy ComplexExprEmitter::EmitAlgebraicDiv(llvm::Value *LHSr,
 
 // EmitFAbs - Emit a call to @llvm.fabs.
 static llvm::Value *EmitllvmFAbs(CodeGenFunction &CGF, llvm::Value *Value) {
-  llvm::Function *Func =
-      CGF.CGM.getIntrinsic(llvm::Intrinsic::fabs, Value->getType());
-  llvm::Value *Call = CGF.Builder.CreateCall(Func, Value);
-  return Call;
+  return CGF.Builder.CreateFAbs(Value);
 }
 
 // EmitRangeReductionDiv - Implements Smith's algorithm for complex division.
@@ -1075,7 +1080,9 @@ ComplexPairTy ComplexExprEmitter::EmitBinDiv(const BinOpInfo &Op) {
       case llvm::Type::X86_FP80TyID:
         return EmitComplexBinOpLibCall("__divxc3", LibCallOp);
       case llvm::Type::FP128TyID:
-        return EmitComplexBinOpLibCall("__divtc3", LibCallOp);
+        return EmitComplexBinOpLibCall(
+            CGF.getTarget().getTriple().isPPC() ? "__divkc3" : "__divtc3",
+            LibCallOp);
       }
     } else {
       return EmitAlgebraicDiv(LHSr, LHSi, RHSr, RHSi);
@@ -1215,9 +1222,7 @@ LValue ComplexExprEmitter::EmitCompoundAssignLValue(
     ComplexPairTy (ComplexExprEmitter::*Func)(const BinOpInfo &), RValue &Val) {
   TestAndClearIgnoreReal();
   TestAndClearIgnoreImag();
-  QualType LHSTy = E->getLHS()->getType();
-  if (const AtomicType *AT = LHSTy->getAs<AtomicType>())
-    LHSTy = AT->getValueType();
+  QualType LHSTy = E->getLHS()->getType().getAtomicUnqualifiedType();
 
   BinOpInfo OpInfo;
   OpInfo.FPFeatures = E->getFPFeaturesInEffect(CGF.getLangOpts());

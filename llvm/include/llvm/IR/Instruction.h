@@ -24,6 +24,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/ModRef.h"
 #include <cstdint>
 #include <utility>
 
@@ -36,7 +37,6 @@ class FastMathFlags;
 class MDNode;
 class Module;
 struct AAMDNodes;
-class DbgMarker;
 class DbgRecord;
 
 template <> struct ilist_alloc_traits<Instruction> {
@@ -53,9 +53,6 @@ class InsertPosition {
 
 public:
   InsertPosition(std::nullptr_t) : InsertAt() {}
-  LLVM_ABI LLVM_DEPRECATED("Use BasicBlock::iterators for insertion instead",
-                           "BasicBlock::iterator")
-      InsertPosition(Instruction *InsertBefore);
   LLVM_ABI InsertPosition(BasicBlock *InsertAtEnd);
   InsertPosition(InstListType::iterator InsertAt) : InsertAt(InsertAt) {}
   operator InstListType::iterator() const { return InsertAt; }
@@ -78,6 +75,7 @@ public:
       : iterator_adaptor_base<succ_iterator, op_iterator,
                               std::random_access_iterator_tag, BasicBlock *,
                               ptrdiff_t, BasicBlock *, BasicBlock *> {
+    succ_iterator() = default;
     explicit succ_iterator(op_iterator I) : iterator_adaptor_base(I) {}
 
     BasicBlock *operator*() const { return cast<BasicBlock>(*I); }
@@ -92,6 +90,7 @@ public:
                               std::random_access_iterator_tag,
                               const BasicBlock *, ptrdiff_t, const BasicBlock *,
                               const BasicBlock *> {
+    const_succ_iterator() = default;
     explicit const_succ_iterator(const_op_iterator I)
         : iterator_adaptor_base(I) {}
 
@@ -104,15 +103,21 @@ public:
 private:
   DebugLoc DbgLoc;                         // 'dbg' Metadata cache.
 
+  friend class Value;
+  /// Index of first metadata attachment in context, or zero.
+  unsigned MetadataIndex = 0;
+
   /// Relative order of this instruction in its parent basic block. Used for
   /// O(1) local dominance checks between instructions.
   mutable unsigned Order = 0;
 
-public:
   /// Optional marker recording the position for debugging information that
   /// takes effect immediately before this instruction. Null unless there is
   /// debugging information present.
   DbgMarker *DebugMarker = nullptr;
+
+public:
+  DbgMarker *getDbgMarker() const { return DebugMarker; }
 
   /// Clone any debug-info attached to \p From onto this instruction. Used to
   /// copy debugging information from one block to another, when copying entire
@@ -162,9 +167,9 @@ public:
   LLVM_ABI void handleMarkerRemoval();
 
 protected:
-  // The 15 first bits of `Value::SubclassData` are available for subclasses of
+  // All 16 bits of `Value::SubclassData` are available for subclasses of
   // `Instruction` to use.
-  using OpaqueField = Bitfield::Element<uint16_t, 0, 15>;
+  using OpaqueField = Bitfield::Element<uint16_t, 0, 16>;
 
   // Template alias so that all Instruction storing alignment use the same
   // definiton.
@@ -184,11 +189,6 @@ protected:
       typename Bitfield::Element<AtomicOrdering, Offset, 3,
                                  AtomicOrdering::LAST>;
 
-private:
-  // The last bit is used to store whether the instruction has metadata attached
-  // or not.
-  using HasMetadataField = Bitfield::Element<bool, 15, 1>;
-
 protected:
   LLVM_ABI ~Instruction(); // Use deleteValue() to delete a generic Instruction.
 
@@ -198,8 +198,43 @@ public:
 
   /// Specialize the methods defined in Value, as we know that an instruction
   /// can only be used by other instructions.
-  Instruction       *user_back()       { return cast<Instruction>(*user_begin());}
-  const Instruction *user_back() const { return cast<Instruction>(*user_begin());}
+  using user_iterator = user_iterator_impl<Instruction>;
+  using const_user_iterator = user_iterator_impl<const Instruction>;
+  user_iterator materialized_user_begin() {
+    assert(hasUseList());
+    return user_iterator(UseList);
+  }
+  const_user_iterator materialized_user_begin() const {
+    assert(hasUseList());
+    return const_user_iterator(UseList);
+  }
+  user_iterator user_begin() {
+    assertModuleIsMaterialized();
+    return materialized_user_begin();
+  }
+  const_user_iterator user_begin() const {
+    assertModuleIsMaterialized();
+    return materialized_user_begin();
+  }
+  user_iterator user_end() { return user_iterator(); }
+  const_user_iterator user_end() const { return const_user_iterator(); }
+
+  iterator_range<user_iterator> materialized_users() {
+    return make_range(materialized_user_begin(), user_end());
+  }
+  iterator_range<const_user_iterator> materialized_users() const {
+    return make_range(materialized_user_begin(), user_end());
+  }
+  iterator_range<user_iterator> users() {
+    assertModuleIsMaterialized();
+    return materialized_users();
+  }
+  iterator_range<const_user_iterator> users() const {
+    assertModuleIsMaterialized();
+    return materialized_users();
+  }
+  Instruction *user_back() { return *user_begin(); }
+  const Instruction *user_back() const { return *user_begin(); }
 
   /// Return the module owning the function this instruction belongs to
   /// or nullptr it the function does not have a module.
@@ -237,16 +272,6 @@ public:
   LLVM_ABI InstListType::iterator eraseFromParent();
 
   /// Insert an unlinked instruction into a basic block immediately before
-  /// the specified instruction.
-  ///
-  /// Deprecated in favour of the iterator-accepting flavour. Iterators at the
-  /// start of a block such as BasicBlock::getFirstNonPHIIt must be passed into
-  /// insertBefore without unwrapping/rewrapping. For all other positions, call
-  /// getIterator to fetch the instruction iterator.
-  LLVM_ABI LLVM_DEPRECATED("Use iterators as instruction positions",
-                           "") void insertBefore(Instruction *InsertPos);
-
-  /// Insert an unlinked instruction into a basic block immediately before
   /// the specified position.
   LLVM_ABI void insertBefore(InstListType::iterator InsertPos);
 
@@ -267,16 +292,6 @@ public:
 
   /// Unlink this instruction from its current basic block and insert it into
   /// the basic block that MovePos lives in, right before MovePos.
-  ///
-  /// Deprecated in favour of the iterator-accepting flavour. Iterators at the
-  /// start of a block such as BasicBlock::getFirstNonPHIIt must be passed into
-  /// moveBefore without unwrapping/rewrapping. For all other positions, call
-  /// getIterator to fetch the instruction iterator.
-  LLVM_ABI LLVM_DEPRECATED("Use iterators as instruction positions",
-                           "") void moveBefore(Instruction *MovePos);
-
-  /// Unlink this instruction from its current basic block and insert it into
-  /// the basic block that MovePos lives in, right before MovePos.
   LLVM_ABI void moveBefore(InstListType::iterator InsertPos);
 
   /// Perform a \ref moveBefore operation, while signalling that the caller
@@ -288,15 +303,6 @@ public:
   /// intends to preserve the original ordering of instructions. This implicitly
   /// means that any adjacent debug-info should move with this instruction.
   LLVM_ABI void moveBeforePreserving(BasicBlock &BB, InstListType::iterator I);
-
-  /// Perform a \ref moveBefore operation, while signalling that the caller
-  /// intends to preserve the original ordering of instructions. This implicitly
-  /// means that any adjacent debug-info should move with this instruction.
-  ///
-  /// Deprecated in favour of the iterator-accepting flavour of
-  /// moveBeforePreserving, as all insertions should be at iterator positions.
-  LLVM_ABI LLVM_DEPRECATED("Use iterators as instruction positions",
-                           "") void moveBeforePreserving(Instruction *MovePos);
 
 private:
   /// RemoveDIs project: all other moves implemented with this method,
@@ -433,7 +439,7 @@ public:
   //===--------------------------------------------------------------------===//
 
   /// Return true if this instruction has any metadata attached to it.
-  bool hasMetadata() const { return DbgLoc || Value::hasMetadata(); }
+  bool hasMetadata() const { return DbgLoc || MetadataIndex != 0; }
 
   // Return true if this instruction contains loop metadata other than
   // a debug location
@@ -441,7 +447,7 @@ public:
 
   /// Return true if this instruction has metadata attached to it other than a
   /// debug location.
-  bool hasMetadataOtherThanDebugLoc() const { return Value::hasMetadata(); }
+  bool hasMetadataOtherThanDebugLoc() const { return MetadataIndex != 0; }
 
   /// Return true if this instruction has the given type of metadata attached.
   bool hasMetadata(unsigned KindID) const {
@@ -459,7 +465,8 @@ public:
     // Handle 'dbg' as a special case since it is not stored in the hash table.
     if (KindID == LLVMContext::MD_dbg)
       return DbgLoc.getAsMDNode();
-    return Value::getMetadata(KindID);
+    return hasMetadataOtherThanDebugLoc() ? Value::getMetadataImpl(KindID)
+                                          : nullptr;
   }
 
   /// Get the metadata of given kind attached to this Instruction.
@@ -495,6 +502,11 @@ public:
   /// empty, all meta data will be copied.
   LLVM_ABI void copyMetadata(const Instruction &SrcInst,
                              ArrayRef<unsigned> WL = ArrayRef<unsigned>());
+
+  /// Copy debug, profile, and memprof metadata from \p SrcInst to this
+  /// instruction without copying alias-analysis or type-dependent metadata.
+  /// TODO: Include additional metadata in the future if appropriate.
+  LLVM_ABI void copyProfileAndDebugMetadata(const Instruction &SrcInst);
 
   /// Erase all metadata that matches the predicate.
   LLVM_ABI void eraseMetadataIf(function_ref<bool(unsigned, MDNode *)> Pred);
@@ -586,23 +598,22 @@ public:
   LLVM_ABI void dropPoisonGeneratingMetadata();
 
   /// Return true if this instruction has poison-generating attribute.
-  LLVM_ABI bool hasPoisonGeneratingReturnAttributes() const LLVM_READONLY;
+  LLVM_ABI bool hasPoisonGeneratingAttributes() const LLVM_READONLY;
 
-  /// Drops return attributes that may generate poison.
-  LLVM_ABI void dropPoisonGeneratingReturnAttributes();
+  /// Drops attributes that may generate poison.
+  LLVM_ABI void dropPoisonGeneratingAttributes();
 
   /// Return true if this instruction has poison-generating flags,
-  /// return attributes or metadata.
+  /// attributes or metadata.
   bool hasPoisonGeneratingAnnotations() const {
-    return hasPoisonGeneratingFlags() ||
-           hasPoisonGeneratingReturnAttributes() ||
+    return hasPoisonGeneratingFlags() || hasPoisonGeneratingAttributes() ||
            hasPoisonGeneratingMetadata();
   }
 
-  /// Drops flags, return attributes and metadata that may generate poison.
+  /// Drops flags, attributes and metadata that may generate poison.
   void dropPoisonGeneratingAnnotations() {
     dropPoisonGeneratingFlags();
-    dropPoisonGeneratingReturnAttributes();
+    dropPoisonGeneratingAttributes();
     dropPoisonGeneratingMetadata();
   }
 
@@ -704,6 +715,10 @@ public:
   /// operator which supports these flags. See LangRef.html for the meaning of
   /// these flags.
   LLVM_ABI FastMathFlags getFastMathFlags() const LLVM_READONLY;
+
+  /// Convenience function for getting fast-math flags, or default-constructed
+  /// FastMathFlags when not a FPMathOperator.
+  LLVM_ABI FastMathFlags getFastMathFlagsOrNone() const LLVM_READONLY;
 
   /// Copy I's fast-math flags
   LLVM_ABI void copyFastMathFlags(const Instruction *I);
@@ -834,6 +849,10 @@ public:
     return Opcode == Xor;
   }
 
+  /// Return memory effects of the instruction. argmem here refers to the
+  /// operands of the instruction.
+  LLVM_ABI MemoryEffects getMemoryEffects() const LLVM_READONLY;
+
   /// Return true if this instruction may modify memory.
   LLVM_ABI bool mayWriteToMemory() const LLVM_READONLY;
 
@@ -857,6 +876,10 @@ public:
 
   /// Return true if this instruction has a volatile memory access.
   LLVM_ABI bool isVolatile() const LLVM_READONLY;
+
+  /// Return true if this instruction may synchronize, in the sense that it
+  /// may introduce a synchronizes-with edge.
+  LLVM_ABI bool maySynchronize() const LLVM_READONLY;
 
   /// Return the type this instruction accesses in memory, if any.
   LLVM_ABI Type *getAccessType() const LLVM_READONLY;
@@ -928,10 +951,6 @@ public:
   /// llvm.lifetime.end marker.
   LLVM_ABI bool isLifetimeStartOrEnd() const LLVM_READONLY;
 
-  /// Return true if the instruction is a llvm.launder.invariant.group or
-  /// llvm.strip.invariant.group.
-  LLVM_ABI bool isLaunderOrStripInvariantGroup() const LLVM_READONLY;
-
   /// Return true if the instruction is a DbgInfoIntrinsic or PseudoProbeInst.
   LLVM_ABI bool isDebugOrPseudoInst() const LLVM_READONLY;
 
@@ -964,6 +983,8 @@ public:
     CompareUsingScalarTypes = 1 << 1,
     /// Check for equivalence with intersected callbase attrs.
     CompareUsingIntersectedAttrs = 1 << 2,
+    /// Check for equivalence by comparing call targets.
+    CompareCallTargets = 1 << 3,
   };
 
   /// This function determines if the specified instruction executes the same
@@ -1006,7 +1027,7 @@ public:
   LLVM_ABI void setSuccessor(unsigned Idx, BasicBlock *BB);
 
   LLVM_ABI iterator_range<const_succ_iterator> successors() const LLVM_READONLY;
-  LLVM_ABI iterator_range<succ_iterator> successors() {
+  iterator_range<succ_iterator> successors() {
     auto Ops = static_cast<const Instruction *>(this)->successors();
     Use *Begin = const_cast<Use *>(Ops.begin().getUse());
     Use *End = const_cast<Use *>(Ops.end().getUse());
@@ -1077,7 +1098,8 @@ public:
 private:
   friend class SymbolTableListTraits<Instruction, ilist_iterator_bits<true>,
                                      ilist_parent<BasicBlock>>;
-  friend class BasicBlock; // For renumbering.
+  friend class BasicBlock; // For renumbering and DebugMarker.
+  friend class DbgMarker;  // For DebugMarker.
 
   // Shadow Value::setValueSubclassData with a private forwarding method so that
   // subclasses cannot accidentally use it.
@@ -1090,24 +1112,16 @@ private:
   }
 
 protected:
-  // Instruction subclasses can stick up to 15 bits of stuff into the
+  // Instruction subclasses can stick up to 16 bits of stuff into the
   // SubclassData field of instruction with these members.
 
   template <typename BitfieldElement>
   typename BitfieldElement::Type getSubclassData() const {
-    static_assert(
-        std::is_same<BitfieldElement, HasMetadataField>::value ||
-            !Bitfield::isOverlapping<BitfieldElement, HasMetadataField>(),
-        "Must not overlap with the metadata bit");
     return Bitfield::get<BitfieldElement>(getSubclassDataFromValue());
   }
 
   template <typename BitfieldElement>
   void setSubclassData(typename BitfieldElement::Type Value) {
-    static_assert(
-        std::is_same<BitfieldElement, HasMetadataField>::value ||
-            !Bitfield::isOverlapping<BitfieldElement, HasMetadataField>(),
-        "Must not overlap with the metadata bit");
     auto Storage = getSubclassDataFromValue();
     Bitfield::set<BitfieldElement>(Storage, Value);
     setValueSubclassData(Storage);

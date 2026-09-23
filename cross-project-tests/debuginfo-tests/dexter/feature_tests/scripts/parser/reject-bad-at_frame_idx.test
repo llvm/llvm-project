@@ -1,0 +1,33 @@
+RUN: not %dexter_regression_test_run --binary %s --skip-run -- %s 2>&1 | FileCheck %s
+
+Tests that we reject invalid at_frame_idx uses.
+
+CHECK: No valid Dexter script found in file
+
+CHECK: Script starting line [[# @LINE + 2]]:
+CHECK: Error with node: Where(function=bar, at_frame_idx=1): at_frame_idx can only be used with !and nodes
+---
+!where {function: foo}:
+    !where {function: bar, at_frame_idx: 1}:
+        !value a: 0
+...
+
+CHECK: Script starting line [[# @LINE + 2]]:
+CHECK: !where node Where(function=baz) cannot be contained by a node with at_frame_idx.
+---
+!where {function: foo}:
+    !where {function: bar}:
+        !and {at_frame_idx: 1}:
+            !where {function: baz}:
+                !value b: 1
+...
+
+CHECK: Script starting line [[# @LINE + 2]]:
+CHECK: !and node And(at_frame_idx=2) with at_frame_idx cannot be contained by another node with at_frame_idx.
+---
+!where {function: foo}:
+    !where {function: bar}:
+        !and {at_frame_idx: 1}:
+            !and {at_frame_idx: 2}:
+                !value c: 2
+...

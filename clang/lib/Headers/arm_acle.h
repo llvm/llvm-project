@@ -222,7 +222,8 @@ __rev16(uint32_t __t) {
 
 static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
 __rev16ll(uint64_t __t) {
-  return (((uint64_t)__rev16(__t >> 32)) << 32) | (uint64_t)__rev16((uint32_t)__t);
+  return (((__t >> 8) & 0x00ff00ff00ff00ff) |
+          ((__t << 8) & 0xff00ff00ff00ff00));
 }
 
 static __inline__ unsigned long __attribute__((__always_inline__, __nodebug__))
@@ -838,14 +839,6 @@ static __inline__ int __attribute__((__always_inline__, __nodebug__, target("ran
 __rndrrs(uint64_t *__p) {
   return __builtin_arm_rndrrs(__p);
 }
-#endif
-
-/* Atomic store with PCDPHINT */
-#if defined(__ARM_64BIT_STATE) && __ARM_64BIT_STATE
-#define __arm_atomic_store_with_stshh(ptr, data, memory_order,                 \
-                                      retention_policy)                        \
-  __builtin_arm_atomic_store_with_stshh(ptr, data, memory_order,               \
-                                        retention_policy)
 #endif
 
 /* 11.2 Guarded Control Stack intrinsics */

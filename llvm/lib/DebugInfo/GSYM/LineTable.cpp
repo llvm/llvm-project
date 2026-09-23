@@ -8,7 +8,7 @@
 
 #include "llvm/DebugInfo/GSYM/LineTable.h"
 #include "llvm/DebugInfo/GSYM/FileWriter.h"
-#include "llvm/Support/DataExtractor.h"
+#include "llvm/DebugInfo/GSYM/GsymDataExtractor.h"
 
 using namespace llvm;
 using namespace gsym;
@@ -51,7 +51,7 @@ static bool encodeSpecial(int64_t MinLineDelta, int64_t MaxLineDelta,
 
 typedef std::function<bool(const LineEntry &Row)> LineEntryCallback;
 
-static llvm::Error parse(DataExtractor &Data, uint64_t BaseAddr,
+static llvm::Error parse(GsymDataExtractor &Data, uint64_t BaseAddr,
                          LineEntryCallback const &Callback) {
   uint64_t Offset = 0;
   if (!Data.isValidOffset(Offset))
@@ -248,7 +248,7 @@ llvm::Error LineTable::encode(FileWriter &Out, uint64_t BaseAddr) const {
 // Parse all line table entries into the "LineTable" vector. We can
 // cache the results of this if needed, or we can call LineTable::lookup()
 // below.
-llvm::Expected<LineTable> LineTable::decode(DataExtractor &Data,
+llvm::Expected<LineTable> LineTable::decode(GsymDataExtractor &Data,
                                             uint64_t BaseAddr) {
   LineTable LT;
   llvm::Error Err = parse(Data, BaseAddr, [&](const LineEntry &Row) -> bool {
@@ -263,7 +263,8 @@ llvm::Expected<LineTable> LineTable::decode(DataExtractor &Data,
 // We will need to determine if we need to cache the line table by calling
 // LineTable::parseAllEntries(...) or just call this function each time.
 // There is a CPU vs memory tradeoff we will need to determined.
-Expected<LineEntry> LineTable::lookup(DataExtractor &Data, uint64_t BaseAddr, uint64_t Addr) {
+Expected<LineEntry> LineTable::lookup(GsymDataExtractor &Data,
+                                      uint64_t BaseAddr, uint64_t Addr) {
   LineEntry Result;
   llvm::Error Err = parse(Data, BaseAddr,
                           [Addr, &Result](const LineEntry &Row) -> bool {

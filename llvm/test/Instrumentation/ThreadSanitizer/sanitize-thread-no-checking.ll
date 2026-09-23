@@ -25,7 +25,7 @@ entry:
 
 ; CHECK: define i32 @"\01-[WithCalls dealloc]"(ptr %a)
 ; CHECK-NEXT: entry:
-; CHECK-NEXT:   %0 = call ptr @llvm.returnaddress(i32 0)
+; CHECK-NEXT:   %0 = call ptr @llvm.returnaddress.p0(i32 0)
 ; CHECK-NEXT:   call void @__tsan_func_entry(ptr %0)
 ; CHECK-NEXT:   call void @__tsan_ignore_thread_begin()
 ; CHECK-NEXT:   %tmp1 = load i32, ptr %a, align 4

@@ -34,25 +34,39 @@ AST_POLYMORPHIC_MATCHER_P(
                              Builder) != Args.end();
 }
 
+AST_MATCHER(Decl, isInStdOrPosixNamespace) {
+  for (const auto *DC = dyn_cast<DeclContext>(&Node); DC;
+       DC = DC->getParent()) {
+    if (DC->isStdNamespace())
+      return true;
+
+    if (const auto *NS = dyn_cast<NamespaceDecl>(DC);
+        NS && NS->getName() == "posix" && NS->getParent()->isTranslationUnit())
+      return true;
+  }
+  return false;
+}
+
 } // namespace
 
 namespace clang::tidy::bugprone {
 
 void StdNamespaceModificationCheck::registerMatchers(MatchFinder *Finder) {
-  auto HasStdParent =
+  const auto HasStdParent =
       hasDeclContext(namespaceDecl(hasAnyName("std", "posix"),
                                    unless(hasParent(namespaceDecl())))
                          .bind("nmspc"));
-  auto UserDefinedDecl =
+  // FIXME: Investigate why lambda closure declarations can be absent from the
+  // AST parent map.
+  const auto UserDefinedDecl =
       namedDecl(anyOf(classTemplateDecl(), tagDecl()),
-                hasAncestor(namespaceDecl(hasAnyName("std", "posix"),
-                                          unless(hasParent(namespaceDecl())))));
-  auto UserDefinedType = qualType(hasUnqualifiedDesugaredType(anyOf(
+                hasDeclContext(isInStdOrPosixNamespace()));
+  const auto UserDefinedType = qualType(hasUnqualifiedDesugaredType(anyOf(
       tagType(unless(hasDeclaration(UserDefinedDecl))),
       templateSpecializationType(unless(hasDeclaration(UserDefinedDecl))))));
-  auto HasNoProgramDefinedTemplateArgument = unless(
+  const auto HasNoProgramDefinedTemplateArgument = unless(
       hasAnyTemplateArgumentIncludingPack(refersToType(UserDefinedType)));
-  auto InsideStdClassOrClassTemplateSpecialization = hasDeclContext(
+  const auto InsideStdClassOrClassTemplateSpecialization = hasDeclContext(
       anyOf(cxxRecordDecl(HasStdParent),
             classTemplateSpecializationDecl(
                 HasStdParent, HasNoProgramDefinedTemplateArgument)));
@@ -115,6 +129,10 @@ void clang::tidy::bugprone::StdNamespaceModificationCheck::check(
   const auto *D = Result.Nodes.getNodeAs<Decl>("decl");
   const auto *NS = Result.Nodes.getNodeAs<NamespaceDecl>("nmspc");
   if (!D || !NS)
+    return;
+
+  // Skip compiler-generated implicit declarations (e.g. std::align_val_t).
+  if (D->isImplicit())
     return;
 
   diag(D->getLocation(),

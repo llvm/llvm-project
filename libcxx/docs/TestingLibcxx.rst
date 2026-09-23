@@ -23,6 +23,13 @@ Please see the `Lit Command Guide`_ for more information about LIT.
 
 .. _LIT Command Guide: https://llvm.org/docs/CommandGuide/lit.html
 
+Dependencies
+------------
+
+The libc++ test suite has a few optional dependencies. These can be installed
+with ``pip install -r libcxx/test/requirements.txt``. Installing these dependencies
+will ensure that the maximum number of tests can be run.
+
 Usage
 -----
 
@@ -549,39 +556,36 @@ Testing hardening assertions
 ============================
 
 Each hardening assertion should be tested using death tests (via the
-``TEST_LIBCPP_ASSERT_FAILURE`` macro). Use the ``libcpp-hardening-mode`` Lit
-feature to make sure the assertion is enabled in (and only in) the intended
-modes. The convention is to use `assert.` in the name of the test file to make
-it easier to identify as a hardening test, e.g. ``assert.my_func.pass.cpp``.
+``TEST_LIBCPP_ASSERT_FAILURE`` macro). The convention is to use ``assert.`` in
+the name of the test file to make it easier to identify as a hardening test, e.g.
+``assert.my_func.pass.cpp``.
+
+These tests only make sense in configurations where the death test machinery in
+``check_assertion.h`` is usable, where a failing assertion is observable, and
+where the assertion being tested is enabled in the first place. Use the various
+``can-test-hardening-assertions-<mode>`` Lit features to guard the tests accordingly.
+The bare ``can-test-hardening-assertions`` Lit feature only encodes whether the death
+test machinery is usable; it is meant for tests that select a hardening mode or an
+assertion semantic themselves (see the tests under ``libcxx/test/libcxx/assertions/``).
+
 A toy example:
 
 .. code-block:: cpp
 
-  // Note: the following three annotations are currently needed to use the
-  // `TEST_LIBCPP_ASSERT_FAILURE`.
-  // REQUIRES: has-unix-headers
-  // UNSUPPORTED: c++03
-  // XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
+  // Example: `std::foo(...)` uses `_LIBCPP_ASSERT_NON_NULL`, which is
+  // enabled in the `extensive` and `debug` modes.
+  // REQUIRES: can-test-hardening-assertions-extensive
 
-  // Example: only run this test in `fast`/`extensive`/`debug` modes.
-  // UNSUPPORTED: libcpp-hardening-mode=none
-  // Example: only run this test in the `debug` mode.
-  // REQUIRES: libcpp-hardening-mode=debug
-  // Example: only run this test in `extensive`/`debug` modes.
-  // REQUIRES: libcpp-hardening-mode={{extensive|debug}}
-
-  #include <header_being_tested>
+  #include <stdfoo>
 
   #include "check_assertion.h" // Contains the `TEST_LIBCPP_ASSERT_FAILURE` macro
 
   int main(int, char**) {
-    std::type_being_tested foo;
     int bad_input = -1;
-    TEST_LIBCPP_ASSERT_FAILURE(foo.some_function_that_asserts(bad_input),
-        "The expected assertion message");
+    TEST_LIBCPP_ASSERT_FAILURE(std::foo(bad_input), "The expected assertion message");
 
     return 0;
   }
 
-Note that error messages are only tested (matched) if the ``debug``
-hardening mode is used.
+Note that error messages are only tested (matched) when the assertion semantic in
+effect logs one, i.e. ``enforce`` or ``observe``.

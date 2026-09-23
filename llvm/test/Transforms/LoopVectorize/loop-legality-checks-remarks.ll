@@ -4,7 +4,7 @@
 ; Make sure LV legal bails out when the loop doesn't have a legal pre-header.
 ; CHECK-LABEL: 'not_exist_preheader'
 ; CHECK: LV: Not vectorizing: Loop doesn't have a legal pre-header.
-define void @not_exist_preheader(ptr %dst, ptr %arg) nounwind uwtable {
+define void @not_exist_preheader(ptr %dst, ptr %arg) {
 entry:
   indirectbr ptr %arg, [label %exit.0, label %loop]
 

@@ -26,4 +26,4 @@ using math::cospif16;
 
 #endif // LIBC_TYPES_HAS_FLOAT16
 
-#endif // LLVM_LIBC_SHARED_MATH_COSPIF_H
+#endif // LLVM_LIBC_SHARED_MATH_COSPIF16_H

@@ -13,10 +13,10 @@
 ; RUN: FileCheck %s --check-prefix=CHECK-BE-P9
 
 ; RUN: llc -verify-machineinstrs -mcpu=pwr8 -ppc-asm-full-reg-names \
-; RUN:   -ppc-vsr-nums-as-vr -mtriple=powerpc64-ibm-aix < %s | \
+; RUN:   -ppc-vsr-nums-as-vr -mtriple=powerpc64-ibm-aix --code-model=small < %s | \
 ; RUN: FileCheck %s --check-prefix=CHECK-AIX-64-P8
 ; RUN: llc -verify-machineinstrs -mcpu=pwr9 -ppc-asm-full-reg-names \
-; RUN:   -ppc-vsr-nums-as-vr -mtriple=powerpc64-ibm-aix < %s | \
+; RUN:   -ppc-vsr-nums-as-vr -mtriple=powerpc64-ibm-aix --code-model=small < %s | \
 ; RUN: FileCheck %s --check-prefix=CHECK-AIX-64-P9
 ; RUN: llc -verify-machineinstrs -mcpu=pwr8 -ppc-asm-full-reg-names \
 ; RUN:   -ppc-vsr-nums-as-vr -mtriple=powerpc-ibm-aix < %s | \

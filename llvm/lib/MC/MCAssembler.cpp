@@ -92,6 +92,7 @@ void MCAssembler::reset() {
   HasLayout = false;
   HasFinalLayout = false;
   RelaxAll = false;
+  BundleAlign.reset();
   Sections.clear();
   Symbols.clear();
   ThumbFuncs.clear();
@@ -231,6 +232,9 @@ uint64_t MCAssembler::computeFragmentSize(const MCFragment &F) const {
     }
     return Size;
   }
+
+  case MCFragment::FT_PrefAlign:
+    return F.getSize();
 
   case MCFragment::FT_Nops:
     return cast<MCNopsFragment>(F).getNumBytes();
@@ -393,6 +397,27 @@ void MCAssembler::addRelocDirective(RelocDirective RD) {
   relocDirectives.push_back(RD);
 }
 
+/// Write \p NumBytes of NOPs at \p Offset in chunks of at most \p MaxNopSize.
+/// When bundling is enabled, no chunk crosses a bundle boundary.
+static void writeControlledNops(raw_ostream &OS, const MCAssembler &Asm,
+                                uint64_t NumBytes, uint64_t Offset,
+                                uint64_t MaxNopSize,
+                                const MCSubtargetInfo *STI) {
+  while (NumBytes) {
+    uint64_t Size = std::min(NumBytes, MaxNopSize);
+    if (Asm.isBundlingEnabled()) {
+      uint64_t BundleSize = Asm.getBundleAlign().value();
+      Size = std::min(Size, BundleSize - (Offset & (BundleSize - 1)));
+    }
+    assert(Size && "try to emit zero-sized NOP");
+    if (!Asm.getBackend().writeNopData(OS, Size, STI))
+      reportFatalInternalError("unable to write nop sequence of " +
+                               Twine(Size) + " bytes");
+    NumBytes -= Size;
+    Offset += Size;
+  }
+}
+
 /// Write the fragment \p F to the output file.
 static void writeFragment(raw_ostream &OS, const MCAssembler &Asm,
                           const MCFragment &F) {
@@ -438,9 +463,9 @@ static void writeFragment(raw_ostream &OS, const MCAssembler &Asm,
 
     // In the nops mode, call the backend hook to write `Count` nops.
     if (F.hasAlignEmitNops()) {
-      if (!Asm.getBackend().writeNopData(OS, Count, F.getSubtargetInfo()))
-        reportFatalInternalError("unable to write nop sequence of " +
-                                 Twine(Count) + " bytes");
+      writeControlledNops(OS, Asm, Count,
+                          Asm.getFragmentOffset(F) + F.getFixedSize(), Count,
+                          F.getSubtargetInfo());
     } else {
       // Otherwise, write out in multiples of the value size.
       for (uint64_t i = 0; i != Count; ++i) {
@@ -463,6 +488,23 @@ static void writeFragment(raw_ostream &OS, const MCAssembler &Asm,
       }
     }
   } break;
+
+  case MCFragment::FT_PrefAlign: {
+    OS << StringRef(F.getContents().data(), F.getContents().size());
+    uint64_t PadSize = FragmentSize - F.getContents().size();
+    if (F.getPrefAlignEmitNops()) {
+      if (!Asm.getBackend().writeNopData(OS, PadSize, F.getSubtargetInfo()))
+        reportFatalInternalError("unable to write nop sequence of " +
+                                 Twine(PadSize) + " bytes");
+    } else if (F.getPrefAlignFill() == 0) {
+      OS.write_zeros(PadSize);
+    } else {
+      char B = char(F.getPrefAlignFill());
+      for (uint64_t I = 0; I < PadSize; ++I)
+        OS << B;
+    }
+    break;
+  }
 
   case MCFragment::FT_Fill: {
     ++stats::EmittedFillFragments;
@@ -524,26 +566,15 @@ static void writeFragment(raw_ostream &OS, const MCAssembler &Asm,
     if (!ControlledNopLength)
       ControlledNopLength = MaximumNopLength;
 
-    while (NumBytes) {
-      uint64_t NumBytesToEmit =
-          (uint64_t)std::min(NumBytes, ControlledNopLength);
-      assert(NumBytesToEmit && "try to emit empty NOP instruction");
-      if (!Asm.getBackend().writeNopData(OS, NumBytesToEmit,
-                                         NF.getSubtargetInfo())) {
-        report_fatal_error("unable to write nop sequence of the remaining " +
-                           Twine(NumBytesToEmit) + " bytes");
-        break;
-      }
-      NumBytes -= NumBytesToEmit;
-    }
+    writeControlledNops(OS, Asm, (uint64_t)NumBytes, Asm.getFragmentOffset(NF),
+                        (uint64_t)ControlledNopLength, NF.getSubtargetInfo());
     break;
   }
 
   case MCFragment::FT_BoundaryAlign: {
     const MCBoundaryAlignFragment &BF = cast<MCBoundaryAlignFragment>(F);
-    if (!Asm.getBackend().writeNopData(OS, FragmentSize, BF.getSubtargetInfo()))
-      report_fatal_error("unable to write nop sequence of " +
-                         Twine(FragmentSize) + " bytes");
+    writeControlledNops(OS, Asm, FragmentSize, Asm.getFragmentOffset(BF),
+                        FragmentSize, BF.getSubtargetInfo());
     break;
   }
 
@@ -596,6 +627,10 @@ void MCAssembler::writeSectionData(raw_ostream &OS,
         // Disallowed for API usage. AsmParser changes non-zero fill values to
         // 0.
         assert(F.getAlignFill() == 0 && "Invalid align in virtual section!");
+        break;
+      case MCFragment::FT_PrefAlign:
+        assert(!F.getPrefAlignEmitNops() && F.getPrefAlignFill() == 0 &&
+               "Invalid align in BSS");
         break;
       case MCFragment::FT_Fill:
         HasNonZero = cast<MCFillFragment>(F).getValue() != 0;
@@ -690,6 +725,19 @@ void MCAssembler::layout() {
   // helps check whether a PC-relative fixup is fully resolved.
   this->HasFinalLayout = true;
 
+  // Stores the current .reloc group for each fragment.
+  //
+  // A .reloc group is a consecutive sequence of .reloc relocations that have
+  // an offset <= the first relocation's offset. A relocation with offset > the
+  // first relocation's offset starts a new group. Relocation groups are
+  // inserted in offset order using the offset of the first relocation, but the
+  // source ordering of relocations within the group is preserved.
+  DenseMap<MCFragment *, std::vector<MCFixup>> RelocGroups;
+  auto DrainRelocGroup = [](MCFragment *F, std::vector<MCFixup> &Group) {
+    F->insertRelocFixups(Group);
+    Group.clear();
+  };
+
   // Resolve .reloc offsets and add fixups.
   for (auto &PF : relocDirectives) {
     MCValue Res;
@@ -708,8 +756,15 @@ void MCAssembler::layout() {
     }
 
     uint64_t Offset = Sym ? Sym->getOffset() + Res.getConstant() : 0;
-    F->addFixup(MCFixup::create(Offset, PF.Expr, PF.Kind));
+    auto Fixup = MCFixup::create(Offset, PF.Expr, PF.Kind);
+    auto &Group = RelocGroups[F];
+    if (!Group.empty() && Group[0].getOffset() < Offset)
+      DrainRelocGroup(F, Group);
+    Group.push_back(Fixup);
   }
+
+  for (auto &[F, Group] : RelocGroups)
+    DrainRelocGroup(F, Group);
 
   // Evaluate and apply the fixups, generating relocation entries as necessary.
   for (MCSection &Sec : *this) {
@@ -772,6 +827,39 @@ void MCAssembler::relaxAlign(MCFragment &F) {
   F.VarContentEnd = F.VarContentStart + Size;
   if (F.VarContentEnd > F.getParent()->ContentStorage.size())
     F.getParent()->ContentStorage.resize(F.VarContentEnd);
+}
+
+// Compute the body size by walking forward from F to the End symbol and
+// summing fragment sizes. This avoids depending on stale layout offsets.
+void MCAssembler::relaxPrefAlign(MCFragment &F) {
+  uint64_t RawStart = F.Offset + F.getFixedSize();
+  const MCSymbol &End = F.getPrefAlignEnd();
+  if (!End.getFragment() || End.getFragment()->getParent() != F.getParent()) {
+    recordError(SMLoc(), ".prefalign end symbol '" + End.getName() +
+                             "' must be in the current section");
+    return;
+  }
+  const MCFragment *EndFrag = End.getFragment();
+  if (EndFrag->getLayoutOrder() <= F.getLayoutOrder())
+    return;
+  uint64_t BodySize = End.getOffset();
+  for (auto *Cur = F.getNext(); Cur != EndFrag; Cur = Cur->getNext())
+    BodySize += computeFragmentSize(*Cur);
+  // Intervening FT_Align's padding depends on where this prefalign lands, so
+  // `BodySize` depends on this prefalign's own padding and may not reach a
+  // fixed point. Break the cycle with a monotone value.
+  Align NewAlign =
+      std::min(Align(llvm::bit_ceil(BodySize)), F.getPrefAlignPreferred());
+  NewAlign = std::max(NewAlign, F.getPrefAlignComputed());
+  F.setPrefAlignComputed(NewAlign);
+  uint64_t NewPadSize = offsetToAlignment(RawStart, NewAlign);
+  F.VarContentStart = F.getFixedSize();
+  F.VarContentEnd = F.VarContentStart + NewPadSize;
+  if (F.VarContentEnd > F.getParent()->ContentStorage.size())
+    F.getParent()->ContentStorage.resize(F.VarContentEnd);
+  // Update the maximum alignment on the current section if necessary, similar
+  // to MCObjectStreamer::emitValueToAlignment.
+  F.getParent()->ensureMinAlignment(NewAlign);
 }
 
 bool MCAssembler::fixupNeedsRelaxation(const MCFragment &F,
@@ -892,24 +980,42 @@ static bool needPadding(uint64_t StartAddr, uint64_t Size,
          isAgainstBoundary(StartAddr, Size, BoundaryAlignment);
 }
 
+/// Compute the padding size to boundary-align the fragments BF is responsible
+/// for.
+static uint64_t computeBoundaryAlignSize(const MCAssembler &Asm,
+                                         const MCBoundaryAlignFragment &BF) {
+  assert(BF.getLastFragment() && "the fragment range to align must be known");
+
+  uint64_t AlignedOffset = Asm.getFragmentOffset(BF);
+  uint64_t AlignedSize = 0;
+  for (const MCFragment *F = BF.getNext();; F = F->getNext()) {
+    AlignedSize += Asm.computeFragmentSize(*F);
+    if (F == BF.getLastFragment())
+      break;
+  }
+
+  Align BoundaryAlignment = BF.getAlignment();
+
+  if (!Asm.isBundlingEnabled())
+    return needPadding(AlignedOffset, AlignedSize, BoundaryAlignment)
+               ? offsetToAlignment(AlignedOffset, BoundaryAlignment)
+               : 0U;
+  if (BF.isAlignToEnd())
+    return offsetToAlignment(AlignedOffset + AlignedSize, BoundaryAlignment);
+
+  // For bundle alignment, we only pad instructions that cross the boundary.
+  return mayCrossBoundary(AlignedOffset, AlignedSize, BoundaryAlignment)
+             ? offsetToAlignment(AlignedOffset, BoundaryAlignment)
+             : 0U;
+}
+
 void MCAssembler::relaxBoundaryAlign(MCBoundaryAlignFragment &BF) {
   // BoundaryAlignFragment that doesn't need to align any fragment should not be
   // relaxed.
   if (!BF.getLastFragment())
     return;
 
-  uint64_t AlignedOffset = getFragmentOffset(BF);
-  uint64_t AlignedSize = 0;
-  for (const MCFragment *F = BF.getNext();; F = F->getNext()) {
-    AlignedSize += computeFragmentSize(*F);
-    if (F == BF.getLastFragment())
-      break;
-  }
-
-  Align BoundaryAlignment = BF.getAlignment();
-  uint64_t NewSize = needPadding(AlignedOffset, AlignedSize, BoundaryAlignment)
-                         ? offsetToAlignment(AlignedOffset, BoundaryAlignment)
-                         : 0U;
+  uint64_t NewSize = computeBoundaryAlignSize(*this, BF);
   if (NewSize == BF.getSize())
     return;
   BF.setSize(NewSize);
@@ -977,7 +1083,10 @@ void MCAssembler::relaxFragment(MCFragment &F) {
     relaxAlign(F);
     break;
   case MCFragment::FT_Relaxable:
-    assert(!getRelaxAll() && "Did not expect a FT_Relaxable in RelaxAll mode");
+    // Bundling emits every instruction as relaxable, so FT_Relaxable is
+    // expected with RelaxAll mode once bundling is enabled.
+    assert((isBundlingEnabled() || !getRelaxAll()) &&
+           "Did not expect a FT_Relaxable in RelaxAll mode");
     relaxInstruction(F);
     break;
   case MCFragment::FT_LEB:
@@ -994,6 +1103,9 @@ void MCAssembler::relaxFragment(MCFragment &F) {
     break;
   case MCFragment::FT_BoundaryAlign:
     relaxBoundaryAlign(static_cast<MCBoundaryAlignFragment &>(F));
+    break;
+  case MCFragment::FT_PrefAlign:
+    relaxPrefAlign(F);
     break;
   case MCFragment::FT_CVInlineLines:
     getContext().getCVContext().encodeInlineLineTable(

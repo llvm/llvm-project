@@ -22,26 +22,33 @@ def RequiresSMInterface: OpInterface<"RequiresSMInterface"> {
   let methods = [
     InterfaceMethod<
       "Get the SM version required by the op from the trait", 
-      "const mlir::NVVM::NVVMCheckSMVersion", "getRequiredMinSMVersion"
+      "mlir::NVVM::NVVMCheckSMVersion", "getRequiredMinSMVersion"
     >
   ];
 }
 
-// OP requires a specified minimum SM value or higher; 
+// Op requires a specified minimum SM value or higher; 
 // it is not architecture-specific.
 class NVVMRequiresSM<int minVersion> :
-  ParamNativeOpTrait<"NVVMRequiresSM", !cast<string>(minVersion)>;
+  ParamNativeOpTrait<"NVVMRequiresSM", !cast<string>(minVersion) # "0">;
 
-class StrJoin<string sep, list<string> str_list> {
-  string ret = !foldl("", str_list, a, b,
-               !if(!eq(a, ""), b, !if(!eq(b, ""), a, !strconcat(a, sep, b))));
-}
-
-// OP requires an exact SM match along with 
-// architecture acceleration.
+// Op requires an exact SM match along with architecture acceleration.
 class NVVMRequiresSMa<list<int> smVersions> :
-  ParamNativeOpTrait<"NVVMRequiresSMa",
-                      StrJoin<",", !foreach(vers, smVersions,
-                                            !cast<string>(vers))>.ret>;
+  ParamNativeOpTrait<"NVVMRequiresSM",
+    !interleave(!foreach(smVersion, smVersions, 
+                  !add(!mul(smVersion, 10), 3)), ",")>;
 
+// Op requires an SM version belonging to the family.
+class NVVMRequiresSMf<list<int> smVersions> :
+  ParamNativeOpTrait<"NVVMRequiresSM", 
+    !interleave(!foreach(smVersion, smVersions, 
+                  !add(!mul(smVersion, 10), 2)), ",")>;
+
+// Op supported on some combination of architecture acceleration and family-specific SM versions.
+class NVVMRequiresSMaOrSMf<list<int> smVersionsA, list<int> smVersionsF> :
+  ParamNativeOpTrait<"NVVMRequiresSM",
+    !interleave(!foreach(smVersion, smVersionsA, 
+                  !add(!mul(smVersion, 10), 3)) #
+                !foreach(smVersion, smVersionsF, 
+                  !add(!mul(smVersion, 10), 2)), ",")>;
 #endif //NVVM_REQUIRES_SM_TRAITS

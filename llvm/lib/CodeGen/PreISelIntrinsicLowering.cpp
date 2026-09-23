@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/ExpandVectorPredication.h"
 #include "llvm/CodeGen/LibcallLoweringInfo.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Function.h"
@@ -59,7 +60,7 @@ namespace {
 
 struct PreISelIntrinsicLowering {
   const TargetMachine *TM;
-  const LibcallLoweringModuleAnalysisResult &ModuleLibcalls;
+  const ModuleLibcallLoweringInfo &ModuleLibcalls;
   const function_ref<TargetTransformInfo &(Function &)> LookupTTI;
   const function_ref<TargetLibraryInfo &(Function &)> LookupTLI;
 
@@ -70,7 +71,7 @@ struct PreISelIntrinsicLowering {
 
   explicit PreISelIntrinsicLowering(
       const TargetMachine *TM_,
-      const LibcallLoweringModuleAnalysisResult &ModuleLibcalls_,
+      const ModuleLibcallLoweringInfo &ModuleLibcalls_,
       function_ref<TargetTransformInfo &(Function &)> LookupTTI_,
       function_ref<TargetLibraryInfo &(Function &)> LookupTLI_,
       bool UseMemIntrinsicLibFunc_ = true)
@@ -134,6 +135,31 @@ static bool lowerLoadRelative(Function &F) {
   }
 
   return Changed;
+}
+
+/// Lower @llvm.can.load.speculatively using target-specific expansion.
+/// Targets may provide their own expansion via
+/// TargetLowering::emitCanLoadSpeculatively; the default expansion
+/// conservatively returns false.
+static bool lowerCanLoadSpeculatively(Function &F, const TargetMachine *TM) {
+  if (!TM)
+    return false;
+
+  return forEachCall(F, [&](CallInst *CI) {
+    const TargetLowering *TLI =
+        TM->getSubtargetImpl(*CI->getFunction())->getTargetLowering();
+
+    IRBuilder<> Builder(CI);
+    // A null result means the target cannot answer; lower to false.
+    Value *Result = TLI->emitCanLoadSpeculatively(Builder, CI->getArgOperand(0),
+                                                  CI->getArgOperand(1));
+    if (!Result)
+      Result = Builder.getFalse();
+
+    CI->replaceAllUsesWith(Result);
+    CI->eraseFromParent();
+    return true;
+  });
 }
 
 // ObjCARC has knowledge about whether an obj-c runtime function needs to be
@@ -241,25 +267,24 @@ bool PreISelIntrinsicLowering::shouldExpandMemIntrinsicWithSize(
   return SizeVal > Threshold || Threshold == 0;
 }
 
-static bool
-canEmitLibcall(const LibcallLoweringModuleAnalysisResult &ModuleLowering,
-               const TargetMachine *TM, Function *F, RTLIB::Libcall LC) {
+static bool canEmitLibcall(const ModuleLibcallLoweringInfo &ModuleLowering,
+                           const TargetMachine *TM, Function *F,
+                           RTLIB::Libcall LC) {
   // TODO: Should this consider the address space of the memcpy?
   if (!TM)
     return true;
   const LibcallLoweringInfo &Lowering =
-      ModuleLowering.getLibcallLowering(*TM->getSubtargetImpl(*F));
+      getLibcallLowering(ModuleLowering, *TM->getSubtargetImpl(*F));
   return Lowering.getLibcallImpl(LC) != RTLIB::Unsupported;
 }
 
-static bool
-canEmitMemcpy(const LibcallLoweringModuleAnalysisResult &ModuleLowering,
-              const TargetMachine *TM, Function *F) {
+static bool canEmitMemcpy(const ModuleLibcallLoweringInfo &ModuleLowering,
+                          const TargetMachine *TM, Function *F) {
   // TODO: Should this consider the address space of the memcpy?
   if (!TM)
     return true;
   const LibcallLoweringInfo &Lowering =
-      ModuleLowering.getLibcallLowering(*TM->getSubtargetImpl(*F));
+      getLibcallLowering(ModuleLowering, *TM->getSubtargetImpl(*F));
   return Lowering.getMemcpyImpl() != RTLIB::Unsupported;
 }
 
@@ -482,6 +507,52 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(
   return Changed;
 }
 
+static GlobalValue *getDeactivationSymbol(CallInst *Call) {
+  if (auto Bundle = Call->getOperandBundle(LLVMContext::OB_deactivation_symbol))
+    return cast<GlobalValue>(Bundle->Inputs[0]);
+  return nullptr;
+}
+
+static bool expandPtrauthForEmuPAC(Function &Intr) {
+  Module &M = *Intr.getParent();
+  if (Triple(M.getTargetTriple()).isArm64e())
+    return false;
+
+  Type *Int64Ty = Type::getInt64Ty(M.getContext());
+
+  assert(Intr.getIntrinsicID() == Intrinsic::ptrauth_sign ||
+         Intr.getIntrinsicID() == Intrinsic::ptrauth_auth);
+  auto *EmuFnTy = FunctionType::get(Int64Ty, {Int64Ty, Int64Ty}, false);
+  FunctionCallee EmuIntr = M.getOrInsertFunction(
+      Intr.getIntrinsicID() == Intrinsic::ptrauth_auth ? "__emupac_autda"
+                                                       : "__emupac_pacda",
+      EmuFnTy);
+
+  for (User *U : llvm::make_early_inc_range(Intr.users())) {
+    auto *Call = cast<CallInst>(U);
+    // We only support the DA key for now.
+    if (auto *Key = dyn_cast<ConstantInt>(Call->getArgOperand(1));
+        !Key || Key->getZExtValue() != /*AArch64PACKey::DA*/ 2)
+      continue;
+
+    Function *F = Call->getParent()->getParent();
+    Attribute FSAttr = F->getFnAttribute("target-features");
+    if (FSAttr.isValid() && FSAttr.getValueAsString().contains("+pauth"))
+      continue;
+
+    std::vector<OperandBundleDef> DSBundle;
+    if (auto *DS = getDeactivationSymbol(Call))
+      DSBundle.push_back(OperandBundleDef("deactivation-symbol", DS));
+
+    IRBuilder<> B(Call);
+    auto *EmuCall = B.CreateCall(
+        EmuIntr, {Call->getArgOperand(0), Call->getArgOperand(2)}, DSBundle);
+    Call->replaceAllUsesWith(EmuCall);
+    Call->eraseFromParent();
+  }
+  return true;
+}
+
 static bool expandProtectedFieldPtr(Function &Intr) {
   Module &M = *Intr.getParent();
 
@@ -491,89 +562,19 @@ static bool expandProtectedFieldPtr(Function &Intr) {
   Type *Int64Ty = Type::getInt64Ty(M.getContext());
   PointerType *PtrTy = PointerType::get(M.getContext(), 0);
 
-  Function *SignIntr =
-      Intrinsic::getOrInsertDeclaration(&M, Intrinsic::ptrauth_sign, {});
-  Function *AuthIntr =
-      Intrinsic::getOrInsertDeclaration(&M, Intrinsic::ptrauth_auth, {});
-
-  auto *EmuFnTy = FunctionType::get(Int64Ty, {Int64Ty, Int64Ty}, false);
-
-  auto CreateSign = [&](IRBuilder<> &B, Value *Val, Value *Disc,
-                        OperandBundleDef DSBundle) {
-    Function *F = B.GetInsertBlock()->getParent();
-    Attribute FSAttr = F->getFnAttribute("target-features");
-    if (FSAttr.isValid() && FSAttr.getValueAsString().contains("+pauth"))
-      return B.CreateCall(
-          SignIntr, {Val, B.getInt32(/*AArch64PACKey::DA*/ 2), Disc}, DSBundle);
-    FunctionCallee EmuSignIntr =
-        M.getOrInsertFunction("__emupac_pacda", EmuFnTy);
-    return B.CreateCall(EmuSignIntr, {Val, Disc}, DSBundle);
-  };
-
-  auto CreateAuth = [&](IRBuilder<> &B, Value *Val, Value *Disc,
-                        OperandBundleDef DSBundle) {
-    Function *F = B.GetInsertBlock()->getParent();
-    Attribute FSAttr = F->getFnAttribute("target-features");
-    if (FSAttr.isValid() && FSAttr.getValueAsString().contains("+pauth"))
-      return B.CreateCall(
-          AuthIntr, {Val, B.getInt32(/*AArch64PACKey::DA*/ 2), Disc}, DSBundle);
-    FunctionCallee EmuAuthIntr =
-        M.getOrInsertFunction("__emupac_autda", EmuFnTy);
-    return B.CreateCall(EmuAuthIntr, {Val, Disc}, DSBundle);
-  };
-
-  auto GetDeactivationSymbol = [&](CallInst *Call) -> GlobalValue * {
-    if (auto Bundle =
-            Call->getOperandBundle(LLVMContext::OB_deactivation_symbol))
-      return cast<GlobalValue>(Bundle->Inputs[0]);
-    return nullptr;
-  };
-
   for (User *U : llvm::make_early_inc_range(Intr.users())) {
     auto *Call = cast<CallInst>(U);
 
     auto *Pointer = Call->getArgOperand(0);
-    auto *Disc = Call->getArgOperand(1);
     bool UseHWEncoding =
         cast<ConstantInt>(Call->getArgOperand(2))->getZExtValue();
     if (!UseHWEncoding)
       reportFatalUsageError("software encoding currently unsupported");
 
-    auto *DS = GetDeactivationSymbol(Call);
+    auto *DS = getDeactivationSymbol(Call);
     OperandBundleDef DSBundle("deactivation-symbol", DS);
 
     for (Use &U : llvm::make_early_inc_range(Call->uses())) {
-      // Insert code to encode each pointer stored to the pointer returned by
-      // the intrinsic.
-      if (auto *SI = dyn_cast<StoreInst>(U.getUser())) {
-        if (U.getOperandNo() == 1 &&
-            isa<PointerType>(SI->getValueOperand()->getType())) {
-          IRBuilder<> B(SI);
-          auto *SIValInt =
-              B.CreatePtrToInt(SI->getValueOperand(), B.getInt64Ty());
-          Value *Sign = CreateSign(B, SIValInt, Disc, DSBundle);
-          SI->setOperand(0, B.CreateIntToPtr(Sign, B.getPtrTy()));
-          SI->setOperand(1, Pointer);
-          continue;
-        }
-      }
-
-      // Insert code to decode each pointer loaded from the pointer returned by
-      // the intrinsic. This is the inverse of the encode operation implemented
-      // above.
-      if (auto *LI = dyn_cast<LoadInst>(U.getUser())) {
-        if (isa<PointerType>(LI->getType())) {
-          IRBuilder<> B(LI);
-          auto *NewLI = cast<LoadInst>(LI->clone());
-          NewLI->setOperand(0, Pointer);
-          B.Insert(NewLI);
-          auto *LIInt = B.CreatePtrToInt(NewLI, B.getInt64Ty());
-          Value *Auth = CreateAuth(B, LIInt, Disc, DSBundle);
-          LI->replaceAllUsesWith(B.CreateIntToPtr(Auth, B.getPtrTy()));
-          LI->eraseFromParent();
-          continue;
-        }
-      }
       // Comparisons against null cannot be used to recover the original
       // pointer so we replace them with comparisons against the original
       // pointer.
@@ -592,8 +593,12 @@ static bool expandProtectedFieldPtr(Function &Intr) {
         }
       }
 
-      // We couldn't rewrite away this use of the intrinsic. Replace it with the
-      // pointer operand, and arrange to define a deactivation symbol.
+      // If we are here, this means that we couldn't rewrite away this use of
+      // the intrinsic. Any load or store uses were removed by InstCombine, and
+      // in general, we can't rewrite away non-load/store uses of
+      // llvm.protected.field.ptr because doing so could expose the encoded
+      // pointer value to the program. Replace it with the pointer operand, and
+      // arrange to define a deactivation symbol.
       U.set(Pointer);
       if (DS)
         DSsToDeactivate.insert(DS);
@@ -693,6 +698,9 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
       break;
     case Intrinsic::load_relative:
       Changed |= lowerLoadRelative(F);
+      break;
+    case Intrinsic::can_load_speculatively:
+      Changed |= lowerCanLoadSpeculatively(F, TM);
       break;
     case Intrinsic::is_constant:
     case Intrinsic::objectsize:
@@ -802,12 +810,24 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
     case Intrinsic::objc_sync_exit:
       Changed |= lowerObjCCall(F, RTLIB::impl_objc_sync_exit);
       break;
+    case Intrinsic::acos:
+    case Intrinsic::asin:
+    case Intrinsic::atan:
+    case Intrinsic::cos:
+    case Intrinsic::cosh:
     case Intrinsic::exp:
     case Intrinsic::exp2:
+    case Intrinsic::exp10:
     case Intrinsic::log:
+    case Intrinsic::log2:
+    case Intrinsic::log10:
+    case Intrinsic::sin:
+    case Intrinsic::sinh:
+    case Intrinsic::tan:
+    case Intrinsic::tanh:
       Changed |= forEachCall(F, [&](CallInst *CI) {
         Type *Ty = CI->getArgOperand(0)->getType();
-        if (!TM || !isa<ScalableVectorType>(Ty))
+        if (!isa<ScalableVectorType>(Ty))
           return false;
         const TargetLowering *TL = TM->getSubtargetImpl(F)->getTargetLowering();
         unsigned Op = TL->IntrinsicIDToISD(F.getIntrinsicID());
@@ -816,6 +836,43 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
           return false;
         return lowerUnaryVectorIntrinsicAsLoop(M, CI);
       });
+      break;
+    case Intrinsic::modf:
+    case Intrinsic::sincos:
+    case Intrinsic::sincospi:
+      Changed |= forEachCall(F, [&](CallInst *CI) {
+        Type *Ty = CI->getArgOperand(0)->getType();
+        if (!isa<ScalableVectorType>(Ty))
+          return false;
+        const TargetLowering *TL = TM->getSubtargetImpl(F)->getTargetLowering();
+        unsigned Op = TL->IntrinsicIDToISD(F.getIntrinsicID());
+        assert(Op != ISD::DELETED_NODE && "unsupported intrinsic");
+        EVT VT = EVT::getEVT(Ty);
+        if (!TL->isOperationExpand(Op, VT))
+          return false;
+        // The vector legalizer can expand these to a vector math library call.
+        RTLIB::Libcall LC;
+        switch (Op) {
+        case ISD::FMODF:
+          LC = RTLIB::getMODF(VT);
+          break;
+        case ISD::FSINCOS:
+          LC = RTLIB::getSINCOS(VT);
+          break;
+        case ISD::FSINCOSPI:
+          LC = RTLIB::getSINCOSPI(VT);
+          break;
+        default:
+          llvm_unreachable("unexpected intrinsic");
+        }
+        if (TL->getLibcallImpl(LC) != RTLIB::Unsupported)
+          return false;
+        return lowerUnaryVectorIntrinsicAsLoop(M, CI);
+      });
+      break;
+    case Intrinsic::ptrauth_sign:
+    case Intrinsic::ptrauth_auth:
+      Changed |= expandPtrauthForEmuPAC(F);
       break;
     case Intrinsic::protected_field_ptr:
       Changed |= expandProtectedFieldPtr(F);
@@ -851,7 +908,7 @@ public:
   }
 
   bool runOnModule(Module &M) override {
-    const LibcallLoweringModuleAnalysisResult &ModuleLibcalls =
+    const ModuleLibcallLoweringInfo &ModuleLibcalls =
         getAnalysis<LibcallLoweringInfoWrapper>().getResult(M);
 
     auto LookupTTI = [this](Function &F) -> TargetTransformInfo & {
@@ -889,7 +946,7 @@ ModulePass *llvm::createPreISelIntrinsicLoweringPass() {
 
 PreservedAnalyses
 PreISelIntrinsicLoweringPass::run(Module &M, ModuleAnalysisManager &MAM) {
-  const LibcallLoweringModuleAnalysisResult &LibcallLowering =
+  const ModuleLibcallLoweringInfo &LibcallLowering =
       MAM.getResult<LibcallLoweringModuleAnalysis>(M);
 
   auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();

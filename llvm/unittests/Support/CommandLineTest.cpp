@@ -18,6 +18,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/StringSaver.h"
+#include "llvm/Support/TypeSize.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
@@ -41,6 +42,10 @@ namespace {
 MATCHER(StringEquality, "Checks if two char* are equal as strings") {
   return std::string(std::get<0>(arg)) == std::string(std::get<1>(arg));
 }
+
+#ifdef _WIN32
+bool preferForwardSlash() { return llvm::sys::path::native("/") == "/"; }
+#endif
 
 class TempEnvVar {
  public:
@@ -222,6 +227,71 @@ TEST(CommandLineTest, TokenizeGNUCommandLine) {
       "foo bar",     "foo bar",   "foo bar",          "foo\\bar",
       "-DFOO=bar()", "foobarbaz", "C:\\src\\foo.cpp", "C:srcfoo.cpp"};
   testCommandLineTokenizer(cl::TokenizeGNUCommandLine, Input, Output);
+}
+
+TEST(CommandLineTest, TokenizeGNUCommandLineEmptyQuotes) {
+  // Explicit '' and "" should be treated as an empty string argument, as shells
+  // and gcc do.
+  const char Input1[] = R"(a b c "" d)";
+  const char *const Output1[] = {"a", "b", "c", "", "d"};
+  testCommandLineTokenizer(cl::TokenizeGNUCommandLine, Input1, Output1);
+
+  const char Input2[] = R"(a b c '' d)";
+  const char *const Output2[] = {"a", "b", "c", "", "d"};
+  testCommandLineTokenizer(cl::TokenizeGNUCommandLine, Input2, Output2);
+
+  // Check that empty arguments are preserved at the beginning/end of the
+  // input.
+  const char Input3[] = R"('' a b c d "")";
+  const char *const Output3[] = {"", "a", "b", "c", "d", ""};
+  testCommandLineTokenizer(cl::TokenizeGNUCommandLine, Input3, Output3);
+
+  // Check that an input containing only empty arguments is handled
+  // correctly.
+  const char Input4[] = R"("" '')";
+  const char *const Output4[] = {"", ""};
+  testCommandLineTokenizer(cl::TokenizeGNUCommandLine, Input4, Output4);
+
+  // Each sequence of juxtaposed empty string segments is still just one
+  // empty string.
+  const char Input5[] = R"('''' """" ''"")";
+  const char *const Output5[] = {"", "", ""};
+  testCommandLineTokenizer(cl::TokenizeGNUCommandLine, Input5, Output5);
+}
+
+TEST(CommandLineTest, TokenizeGNUCommandLineWhitespace) {
+  // Leading/trailing whitespace should be ignored.
+  const char Input1[] = R"(  a b c '' d  )";
+  const char *const Output1[] = {"a", "b", "c", "", "d"};
+  testCommandLineTokenizer(cl::TokenizeGNUCommandLine, Input1, Output1);
+}
+
+TEST(CommandLineTest, TokenizeGNUCommandLineJuxtaposedQuotedSegments) {
+  const char Input1[] = R"(a""a ""b c"" d''d ''e f'')";
+  const char *const Output1[] = {"aa", "b", "c", "dd", "e", "f"};
+  testCommandLineTokenizer(cl::TokenizeGNUCommandLine, Input1, Output1);
+
+  const char Input2[] = R"("'a'"'"b"')";
+  const char *const Output2[] = {R"('a'"b")"};
+  testCommandLineTokenizer(cl::TokenizeGNUCommandLine, Input2, Output2);
+}
+
+TEST(CommandLineTest, TokenizeGNUCommandLineUnterminatedQuotes) {
+  // Unterminated quotes are implicitly terminated at EOF.
+  const char Input1[] = R"(a b ')";
+  const char *const Output1[] = {"a", "b", ""};
+  testCommandLineTokenizer(cl::TokenizeGNUCommandLine, Input1, Output1);
+
+  const char Input2[] = R"(a b 'c d)";
+  const char *const Output2[] = {"a", "b", "c d"};
+  testCommandLineTokenizer(cl::TokenizeGNUCommandLine, Input2, Output2);
+}
+
+TEST(CommandLineTest, TokenizeGNUCommandLineNewlines) {
+  // Newlines are also treated literally inside quotes.
+  const char Input1[] = "a 'b\nc' d";
+  const char *const Output1[] = {"a", "b\nc", "d"};
+  testCommandLineTokenizer(cl::TokenizeGNUCommandLine, Input1, Output1);
 }
 
 TEST(CommandLineTest, TokenizeWindowsCommandLine1) {
@@ -774,68 +844,6 @@ TEST(CommandLineTest, GetRegisteredSubcommands) {
   }
 }
 
-TEST(CommandLineTest, DefaultOptions) {
-  cl::ResetCommandLineParser();
-
-  StackOption<std::string> Bar("bar", cl::sub(cl::SubCommand::getAll()),
-                               cl::DefaultOption);
-  StackOption<std::string, cl::alias> Bar_Alias(
-      "b", cl::desc("Alias for -bar"), cl::aliasopt(Bar), cl::DefaultOption);
-
-  StackOption<bool> Foo("foo", cl::init(false),
-                        cl::sub(cl::SubCommand::getAll()), cl::DefaultOption);
-  StackOption<bool, cl::alias> Foo_Alias("f", cl::desc("Alias for -foo"),
-                                         cl::aliasopt(Foo), cl::DefaultOption);
-
-  StackSubCommand SC1("sc1", "First Subcommand");
-  // Override "-b" and change type in sc1 SubCommand.
-  StackOption<bool> SC1_B("b", cl::sub(SC1), cl::init(false));
-  StackSubCommand SC2("sc2", "Second subcommand");
-  // Override "-foo" and change type in sc2 SubCommand.  Note that this does not
-  // affect "-f" alias, which continues to work correctly.
-  StackOption<std::string> SC2_Foo("foo", cl::sub(SC2));
-
-  const char *args0[] = {"prog", "-b", "args0 bar string", "-f"};
-  EXPECT_TRUE(cl::ParseCommandLineOptions(std::size(args0), args0,
-                                          StringRef(), &llvm::nulls()));
-  EXPECT_EQ(Bar, "args0 bar string");
-  EXPECT_TRUE(Foo);
-  EXPECT_FALSE(SC1_B);
-  EXPECT_TRUE(SC2_Foo.empty());
-
-  cl::ResetAllOptionOccurrences();
-
-  const char *args1[] = {"prog", "sc1", "-b", "-bar", "args1 bar string", "-f"};
-  EXPECT_TRUE(cl::ParseCommandLineOptions(std::size(args1), args1,
-                                          StringRef(), &llvm::nulls()));
-  EXPECT_EQ(Bar, "args1 bar string");
-  EXPECT_TRUE(Foo);
-  EXPECT_TRUE(SC1_B);
-  EXPECT_TRUE(SC2_Foo.empty());
-  for (auto *S : cl::getRegisteredSubcommands()) {
-    if (*S) {
-      EXPECT_EQ("sc1", S->getName());
-    }
-  }
-
-  cl::ResetAllOptionOccurrences();
-
-  const char *args2[] = {"prog", "sc2", "-b", "args2 bar string",
-                         "-f", "-foo", "foo string"};
-  EXPECT_TRUE(cl::ParseCommandLineOptions(std::size(args2), args2,
-                                          StringRef(), &llvm::nulls()));
-  EXPECT_EQ(Bar, "args2 bar string");
-  EXPECT_TRUE(Foo);
-  EXPECT_FALSE(SC1_B);
-  EXPECT_EQ(SC2_Foo, "foo string");
-  for (auto *S : cl::getRegisteredSubcommands()) {
-    if (*S) {
-      EXPECT_EQ("sc2", S->getName());
-    }
-  }
-  cl::ResetCommandLineParser();
-}
-
 TEST(CommandLineTest, ArgumentLimit) {
 #if HAVE_UNISTD_H && defined(_SC_ARG_MAX)
   if (sysconf(_SC_ARG_MAX) != -1) {
@@ -950,7 +958,7 @@ TEST(CommandLineTest, ResponseFiles) {
 TEST(CommandLineTest, RecursiveResponseFiles) {
   vfs::InMemoryFileSystem FS;
 #ifdef _WIN32
-  const char *TestRoot = "C:\\";
+  const char *TestRoot = preferForwardSlash() ? "C:/" : "C:\\";
 #else
   const char *TestRoot = "/";
 #endif
@@ -1020,7 +1028,7 @@ TEST(CommandLineTest, RecursiveResponseFiles) {
 TEST(CommandLineTest, ResponseFilesAtArguments) {
   vfs::InMemoryFileSystem FS;
 #ifdef _WIN32
-  const char *TestRoot = "C:\\";
+  const char *TestRoot = preferForwardSlash() ? "C:/" : "C:\\";
 #else
   const char *TestRoot = "/";
 #endif
@@ -1596,6 +1604,35 @@ TEST_F(GetOptionWidthTest,
             ExpectedStrSize);
 }
 
+TEST(CommandLineTest, BoolValues) {
+  cl::ResetCommandLineParser();
+
+  StackOption<bool> OptF("f", cl::init(true));
+  StackOption<bool> OptFlag("flag");
+
+  const char *args1[] = {"prog", "-flag", "--f=false"};
+  EXPECT_TRUE(
+      cl::ParseCommandLineOptions(3, args1, StringRef(), &llvm::nulls()));
+  EXPECT_TRUE(OptFlag);
+  EXPECT_FALSE(OptF);
+  cl::ResetAllOptionOccurrences();
+
+  // An empty value is not the same as no value.
+  const char *args2[] = {"prog", "-flag="};
+  EXPECT_FALSE(
+      cl::ParseCommandLineOptions(2, args2, StringRef(), &llvm::nulls()));
+  cl::ResetAllOptionOccurrences();
+
+  const char *args3[] = {"prog", "-flag=yes"};
+  EXPECT_FALSE(
+      cl::ParseCommandLineOptions(2, args3, StringRef(), &llvm::nulls()));
+  cl::ResetAllOptionOccurrences();
+
+  const char *args4[] = {"prog", "-flag=True"};
+  EXPECT_FALSE(
+      cl::ParseCommandLineOptions(2, args4, StringRef(), &llvm::nulls()));
+}
+
 TEST(CommandLineTest, PrefixOptions) {
   cl::ResetCommandLineParser();
 
@@ -2133,6 +2170,90 @@ TEST(CommandLineTest, ConsumeOptionalString) {
   EXPECT_TRUE(Errs.empty());
 }
 
+TEST(CommandLineTest, ParseElementCount) {
+  cl::ResetCommandLineParser();
+
+  StackOption<ElementCount> Count("count", cl::init(ElementCount::getFixed(1)));
+
+  std::string Errs;
+  raw_string_ostream OS(Errs);
+
+  const char *FixedArgs[] = {"prog", "--count=4"};
+  ASSERT_TRUE(cl::ParseCommandLineOptions(std::size(FixedArgs), FixedArgs,
+                                          StringRef(), &OS));
+  EXPECT_EQ(Count, ElementCount::getFixed(4));
+  EXPECT_TRUE(Errs.empty());
+
+  Errs.clear();
+  cl::ResetAllOptionOccurrences();
+
+  const char *SpacedScalableArgs[] = {"prog", "--count=vscale x 8"};
+  ASSERT_TRUE(cl::ParseCommandLineOptions(
+      std::size(SpacedScalableArgs), SpacedScalableArgs, StringRef(), &OS));
+  EXPECT_EQ(Count, ElementCount::getScalable(8));
+  EXPECT_TRUE(Errs.empty());
+
+  Errs.clear();
+  cl::ResetAllOptionOccurrences();
+
+  const char *FlexibleWhitespaceArgs[] = {"prog", "--count=\tvscale\t x\t12  "};
+  ASSERT_TRUE(cl::ParseCommandLineOptions(std::size(FlexibleWhitespaceArgs),
+                                          FlexibleWhitespaceArgs, StringRef(),
+                                          &OS));
+  EXPECT_EQ(Count, ElementCount::getScalable(12));
+  EXPECT_TRUE(Errs.empty());
+
+  Errs.clear();
+  cl::ResetAllOptionOccurrences();
+
+  const char *CompactScalableArgs[] = {"prog", "--count=vscalex4"};
+  ASSERT_TRUE(cl::ParseCommandLineOptions(
+      std::size(CompactScalableArgs), CompactScalableArgs, StringRef(), &OS));
+  EXPECT_EQ(Count, ElementCount::getScalable(4));
+  EXPECT_TRUE(Errs.empty());
+}
+
+TEST(CommandLineTest, RejectInvalidElementCount) {
+  cl::ResetCommandLineParser();
+
+  StackOption<ElementCount> Count("count");
+
+  std::string Errs;
+  raw_string_ostream OS(Errs);
+
+  const char *MissingMultiplierArgs[] = {"prog", "--count=vscale"};
+  testing::internal::CaptureStderr();
+  EXPECT_FALSE(cl::ParseCommandLineOptions(std::size(MissingMultiplierArgs),
+                                           MissingMultiplierArgs, StringRef(),
+                                           &OS));
+  std::string ErrorOutput = testing::internal::GetCapturedStderr();
+  EXPECT_NE(
+      ErrorOutput.find("'vscale' value invalid for ElementCount argument!"),
+      std::string::npos);
+
+  Errs.clear();
+  cl::ResetAllOptionOccurrences();
+
+  const char *TrailingJunkArgs[] = {"prog", "--count=vscale x 8x"};
+  testing::internal::CaptureStderr();
+  EXPECT_FALSE(cl::ParseCommandLineOptions(std::size(TrailingJunkArgs),
+                                           TrailingJunkArgs, StringRef(), &OS));
+  ErrorOutput = testing::internal::GetCapturedStderr();
+  EXPECT_NE(ErrorOutput.find(
+                "'vscale x 8x' value invalid for ElementCount argument!"),
+            std::string::npos);
+
+  const char *TrailingJunkFixedArgs[] = {"prog", "--count=4adsf"};
+  testing::internal::CaptureStderr();
+  EXPECT_FALSE(cl::ParseCommandLineOptions(std::size(TrailingJunkFixedArgs),
+                                           TrailingJunkFixedArgs, StringRef(),
+                                           &OS));
+  ErrorOutput = testing::internal::GetCapturedStderr();
+  EXPECT_NE(
+      ErrorOutput.find("'4adsf' value invalid for ElementCount argument!"),
+      std::string::npos);
+}
+
 TEST(CommandLineTest, ResetAllOptionOccurrences) {
   cl::ResetCommandLineParser();
 
@@ -2144,23 +2265,20 @@ TEST(CommandLineTest, ResetAllOptionOccurrences) {
       cl::values(clEnumValN(ValA, "enableA", "Enable A"),
                  clEnumValN(ValB, "enableB", "Enable B"),
                  clEnumValN(ValC, "enableC", "Enable C")));
-  StackOption<std::string, cl::list<std::string>> Sink(cl::Sink);
   StackOption<std::string> Input(cl::Positional);
   StackOption<std::string, cl::list<std::string>> ExtraArgs(cl::ConsumeAfter);
 
-  const char *Args[] = {"prog",     "-option",  "-str=STR", "-enableA",
-                        "-enableC", "-unknown", "input",    "-arg"};
+  const char *Args[] = {"prog",     "-option", "-str=STR", "-enableA",
+                        "-enableC", "input",   "-arg"};
 
   std::string Errs;
   raw_string_ostream OS(Errs);
-  EXPECT_TRUE(cl::ParseCommandLineOptions(8, Args, StringRef(), &OS));
+  EXPECT_TRUE(cl::ParseCommandLineOptions(7, Args, StringRef(), &OS));
   EXPECT_TRUE(OS.str().empty());
 
   EXPECT_TRUE(Option);
   EXPECT_EQ("STR", Str);
   EXPECT_EQ((1u << ValA) | (1u << ValC), Bits.getBits());
-  EXPECT_EQ(1u, Sink.size());
-  EXPECT_EQ("-unknown", Sink[0]);
   EXPECT_EQ("input", Input);
   EXPECT_EQ(1u, ExtraArgs.size());
   EXPECT_EQ("-arg", ExtraArgs[0]);
@@ -2169,7 +2287,6 @@ TEST(CommandLineTest, ResetAllOptionOccurrences) {
   EXPECT_FALSE(Option);
   EXPECT_EQ("", Str);
   EXPECT_EQ(0u, Bits.getBits());
-  EXPECT_EQ(0u, Sink.size());
   EXPECT_EQ(0, Input.getNumOccurrences());
   EXPECT_EQ(0u, ExtraArgs.size());
 }

@@ -474,6 +474,7 @@ LLVMBool LLVMPrintModuleToFile(LLVMModuleRef M, const char *Filename,
     return true;
   }
 
+  unwrap(M)->renumberMetadataForAssembly();
   unwrap(M)->print(dest, nullptr);
 
   dest.close();
@@ -491,6 +492,7 @@ char *LLVMPrintModuleToString(LLVMModuleRef M) {
   std::string buf;
   raw_string_ostream os(buf);
 
+  unwrap(M)->renumberMetadataForAssembly();
   unwrap(M)->print(os, nullptr);
 
   return strdup(buf.c_str());
@@ -510,7 +512,18 @@ void LLVMAppendModuleInlineAsm(LLVMModuleRef M, const char *Asm, size_t Len) {
 }
 
 const char *LLVMGetModuleInlineAsm(LLVMModuleRef M, size_t *Len) {
-  auto &Str = unwrap(M)->getModuleInlineAsm();
+  Module *Mod = unwrap(M);
+  ArrayRef<Module::GlobalAsmFragment> Frags = Mod->getModuleInlineAsm();
+  if (Frags.empty()) {
+    *Len = 0;
+    return nullptr;
+  }
+
+  if (Frags.size() != 1)
+    reportFatalUsageError("LLVMGetModuleInlineAsm is not supported if there is "
+                          "more than one module inline assembly fragment");
+
+  auto &Str = Frags.begin()->Asm;
   *Len = Str.length();
   return Str.c_str();
 }
@@ -1829,11 +1842,15 @@ LLVMOpcode LLVMGetConstOpcode(LLVMValueRef ConstantVal) {
 }
 
 LLVMValueRef LLVMAlignOf(LLVMTypeRef Ty) {
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
   return wrap(ConstantExpr::getAlignOf(unwrap(Ty)));
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 }
 
 LLVMValueRef LLVMSizeOf(LLVMTypeRef Ty) {
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
   return wrap(ConstantExpr::getSizeOf(unwrap(Ty)));
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 }
 
 LLVMValueRef LLVMConstNeg(LLVMValueRef ConstantVal) {
@@ -2552,13 +2569,13 @@ static Intrinsic::ID llvm_map_to_intrinsic_id(unsigned ID) {
   return llvm::Intrinsic::ID(ID);
 }
 
-LLVMValueRef LLVMGetIntrinsicDeclaration(LLVMModuleRef Mod,
-                                         unsigned ID,
-                                         LLVMTypeRef *ParamTypes,
-                                         size_t ParamCount) {
-  ArrayRef<Type*> Tys(unwrap(ParamTypes), ParamCount);
+LLVMValueRef LLVMGetIntrinsicDeclaration(LLVMModuleRef Mod, unsigned ID,
+                                         LLVMTypeRef *OverloadTypes,
+                                         size_t OverloadCount) {
+  ArrayRef<Type *> OverloadTys(unwrap(OverloadTypes), OverloadCount);
   auto IID = llvm_map_to_intrinsic_id(ID);
-  return wrap(llvm::Intrinsic::getOrInsertDeclaration(unwrap(Mod), IID, Tys));
+  return wrap(
+      llvm::Intrinsic::getOrInsertDeclaration(unwrap(Mod), IID, OverloadTys));
 }
 
 const char *LLVMIntrinsicGetName(unsigned ID, size_t *NameLength) {
@@ -2569,27 +2586,30 @@ const char *LLVMIntrinsicGetName(unsigned ID, size_t *NameLength) {
 }
 
 LLVMTypeRef LLVMIntrinsicGetType(LLVMContextRef Ctx, unsigned ID,
-                                 LLVMTypeRef *ParamTypes, size_t ParamCount) {
+                                 LLVMTypeRef *OverloadTypes,
+                                 size_t OverloadCount) {
   auto IID = llvm_map_to_intrinsic_id(ID);
-  ArrayRef<Type*> Tys(unwrap(ParamTypes), ParamCount);
-  return wrap(llvm::Intrinsic::getType(*unwrap(Ctx), IID, Tys));
+  ArrayRef<Type *> OverloadTys(unwrap(OverloadTypes), OverloadCount);
+  return wrap(llvm::Intrinsic::getType(*unwrap(Ctx), IID, OverloadTys));
 }
 
-char *LLVMIntrinsicCopyOverloadedName(unsigned ID, LLVMTypeRef *ParamTypes,
-                                      size_t ParamCount, size_t *NameLength) {
+char *LLVMIntrinsicCopyOverloadedName(unsigned ID, LLVMTypeRef *OverloadTypes,
+                                      size_t OverloadCount,
+                                      size_t *NameLength) {
   auto IID = llvm_map_to_intrinsic_id(ID);
-  ArrayRef<Type*> Tys(unwrap(ParamTypes), ParamCount);
-  auto Str = llvm::Intrinsic::getNameNoUnnamedTypes(IID, Tys);
+  ArrayRef<Type *> OverloadTys(unwrap(OverloadTypes), OverloadCount);
+  auto Str = llvm::Intrinsic::getNameNoUnnamedTypes(IID, OverloadTys);
   *NameLength = Str.length();
   return strdup(Str.c_str());
 }
 
 char *LLVMIntrinsicCopyOverloadedName2(LLVMModuleRef Mod, unsigned ID,
-                                       LLVMTypeRef *ParamTypes,
-                                       size_t ParamCount, size_t *NameLength) {
+                                       LLVMTypeRef *OverloadTypes,
+                                       size_t OverloadCount,
+                                       size_t *NameLength) {
   auto IID = llvm_map_to_intrinsic_id(ID);
-  ArrayRef<Type *> Tys(unwrap(ParamTypes), ParamCount);
-  auto Str = llvm::Intrinsic::getName(IID, Tys, unwrap(Mod));
+  ArrayRef<Type *> OverloadTys(unwrap(OverloadTypes), OverloadCount);
+  auto Str = llvm::Intrinsic::getName(IID, OverloadTys, unwrap(Mod));
   *NameLength = Str.length();
   return strdup(Str.c_str());
 }
@@ -2880,7 +2900,7 @@ LLVMValueRef LLVMGetBasicBlockParent(LLVMBasicBlockRef BB) {
 }
 
 LLVMValueRef LLVMGetBasicBlockTerminator(LLVMBasicBlockRef BB) {
-  return wrap(unwrap(BB)->getTerminator());
+  return wrap(unwrap(BB)->getTerminatorOrNull());
 }
 
 unsigned LLVMCountBasicBlocks(LLVMValueRef FnRef) {
@@ -3074,20 +3094,20 @@ LLVMValueRef LLVMIsATerminatorInst(LLVMValueRef Inst) {
 
 LLVMDbgRecordRef LLVMGetFirstDbgRecord(LLVMValueRef Inst) {
   Instruction *Instr = unwrap<Instruction>(Inst);
-  if (!Instr->DebugMarker)
+  if (!Instr->getDbgMarker())
     return nullptr;
-  auto I = Instr->DebugMarker->StoredDbgRecords.begin();
-  if (I == Instr->DebugMarker->StoredDbgRecords.end())
+  auto I = Instr->getDbgMarker()->StoredDbgRecords.begin();
+  if (I == Instr->getDbgMarker()->StoredDbgRecords.end())
     return nullptr;
   return wrap(&*I);
 }
 
 LLVMDbgRecordRef LLVMGetLastDbgRecord(LLVMValueRef Inst) {
   Instruction *Instr = unwrap<Instruction>(Inst);
-  if (!Instr->DebugMarker)
+  if (!Instr->getDbgMarker())
     return nullptr;
-  auto I = Instr->DebugMarker->StoredDbgRecords.rbegin();
-  if (I == Instr->DebugMarker->StoredDbgRecords.rend())
+  auto I = Instr->getDbgMarker()->StoredDbgRecords.rbegin();
+  if (I == Instr->getDbgMarker()->StoredDbgRecords.rend())
     return nullptr;
   return wrap(&*I);
 }
@@ -3095,7 +3115,7 @@ LLVMDbgRecordRef LLVMGetLastDbgRecord(LLVMValueRef Inst) {
 LLVMDbgRecordRef LLVMGetNextDbgRecord(LLVMDbgRecordRef Rec) {
   DbgRecord *Record = unwrap<DbgRecord>(Rec);
   simple_ilist<DbgRecord>::iterator I(Record);
-  if (++I == Record->getInstruction()->DebugMarker->StoredDbgRecords.end())
+  if (++I == Record->getInstruction()->getDbgMarker()->StoredDbgRecords.end())
     return nullptr;
   return wrap(&*I);
 }
@@ -3103,7 +3123,7 @@ LLVMDbgRecordRef LLVMGetNextDbgRecord(LLVMDbgRecordRef Rec) {
 LLVMDbgRecordRef LLVMGetPreviousDbgRecord(LLVMDbgRecordRef Rec) {
   DbgRecord *Record = unwrap<DbgRecord>(Rec);
   simple_ilist<DbgRecord>::iterator I(Record);
-  if (I == Record->getInstruction()->DebugMarker->StoredDbgRecords.begin())
+  if (I == Record->getInstruction()->getDbgMarker()->StoredDbgRecords.begin())
     return nullptr;
   return wrap(&*--I);
 }
@@ -3483,14 +3503,14 @@ LLVMMetadataRef LLVMGetCurrentDebugLocation2(LLVMBuilderRef Builder) {
 
 void LLVMSetCurrentDebugLocation2(LLVMBuilderRef Builder, LLVMMetadataRef Loc) {
   if (Loc)
-    unwrap(Builder)->SetCurrentDebugLocation(DebugLoc(unwrap<MDNode>(Loc)));
+    unwrap(Builder)->SetCurrentDebugLocation(DebugLoc(unwrap<DILocation>(Loc)));
   else
     unwrap(Builder)->SetCurrentDebugLocation(DebugLoc());
 }
 
 void LLVMSetCurrentDebugLocation(LLVMBuilderRef Builder, LLVMValueRef L) {
-  MDNode *Loc =
-      L ? cast<MDNode>(unwrap<MetadataAsValue>(L)->getMetadata()) : nullptr;
+  DILocation *Loc =
+      L ? cast<DILocation>(unwrap<MetadataAsValue>(L)->getMetadata()) : nullptr;
   unwrap(Builder)->SetCurrentDebugLocation(DebugLoc(Loc));
 }
 
@@ -3505,7 +3525,7 @@ void LLVMSetInstDebugLocation(LLVMBuilderRef Builder, LLVMValueRef Inst) {
 }
 
 void LLVMAddMetadataToInst(LLVMBuilderRef Builder, LLVMValueRef Inst) {
-  unwrap(Builder)->AddMetadataToInst(unwrap<Instruction>(Inst));
+  unwrap(Builder)->SetInstDebugLocation(unwrap<Instruction>(Inst));
 }
 
 void LLVMBuilderSetDefaultFPMathTag(LLVMBuilderRef Builder,
@@ -3990,20 +4010,23 @@ void LLVMSetIsDisjoint(LLVMValueRef Inst, LLVMBool IsDisjoint) {
 
 LLVMValueRef LLVMBuildMalloc(LLVMBuilderRef B, LLVMTypeRef Ty,
                              const char *Name) {
-  Type* ITy = Type::getInt32Ty(unwrap(B)->GetInsertBlock()->getContext());
-  Constant* AllocSize = ConstantExpr::getSizeOf(unwrap(Ty));
-  AllocSize = ConstantExpr::getTruncOrBitCast(AllocSize, ITy);
-  return wrap(unwrap(B)->CreateMalloc(ITy, unwrap(Ty), AllocSize, nullptr,
-                                      nullptr, Name));
+  BasicBlock *BB = unwrap(B)->GetInsertBlock();
+  const DataLayout &DL = BB->getDataLayout();
+  Type *ITy = Type::getInt32Ty(BB->getContext());
+  Value *AllocSize =
+      unwrap(B)->CreateTypeSize(ITy, DL.getTypeAllocSize(unwrap(Ty)));
+  return wrap(unwrap(B)->CreateMalloc(ITy, AllocSize, nullptr, nullptr, Name));
 }
 
 LLVMValueRef LLVMBuildArrayMalloc(LLVMBuilderRef B, LLVMTypeRef Ty,
                                   LLVMValueRef Val, const char *Name) {
-  Type* ITy = Type::getInt32Ty(unwrap(B)->GetInsertBlock()->getContext());
-  Constant* AllocSize = ConstantExpr::getSizeOf(unwrap(Ty));
-  AllocSize = ConstantExpr::getTruncOrBitCast(AllocSize, ITy);
-  return wrap(unwrap(B)->CreateMalloc(ITy, unwrap(Ty), AllocSize, unwrap(Val),
-                                      nullptr, Name));
+  BasicBlock *BB = unwrap(B)->GetInsertBlock();
+  const DataLayout &DL = BB->getDataLayout();
+  Type *ITy = Type::getInt32Ty(BB->getContext());
+  Value *AllocSize =
+      unwrap(B)->CreateTypeSize(ITy, DL.getTypeAllocSize(unwrap(Ty)));
+  return wrap(
+      unwrap(B)->CreateMalloc(ITy, AllocSize, unwrap(Val), nullptr, Name));
 }
 
 LLVMValueRef LLVMBuildMemSet(LLVMBuilderRef B, LLVMValueRef Ptr,

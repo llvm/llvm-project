@@ -1,6 +1,7 @@
 #include <dlfcn.h>
 #include <stdexcept>
 #include <stdio.h>
+#include <stdlib.h>
 
 int twelve(int i) {
   return 12 + i; // break 12

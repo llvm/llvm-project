@@ -14,6 +14,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/DebugInfo/CodeView/StringsAndChecksums.h"
+#include "llvm/ObjectYAML/ContiguousBlobAccumulator.h"
 #include "llvm/ObjectYAML/ObjectYAML.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/BinaryStreamWriter.h"
@@ -25,14 +26,17 @@
 #include <vector>
 
 using namespace llvm;
+using llvm::yaml::ContiguousBlobAccumulator;
 
 namespace {
+
+constexpr auto LittleEndian = llvm::endianness::little;
 
 /// This parses a yaml stream that represents a COFF object file.
 /// See docs/yaml2obj for the yaml scheema.
 struct COFFParser {
   COFFParser(COFFYAML::Object &Obj, yaml::ErrorHandler EH)
-      : Obj(Obj), SectionTableStart(0), SectionTableSize(0), ErrHandler(EH) {
+      : Obj(Obj), ErrHandler(EH) {
     // A COFF string table always starts with a 4 byte size field. Offsets into
     // it include this size, so allocate it now.
     StringTable.append(4, char(0));
@@ -48,10 +52,6 @@ struct COFFParser {
 
   uint32_t getFileAlignment() const {
     return Obj.OptionalHeader->Header.FileAlignment;
-  }
-
-  unsigned getHeaderSize() const {
-    return useBigObj() ? COFF::Header32Size : COFF::Header16Size;
   }
 
   unsigned getSymbolSize() const {
@@ -146,19 +146,6 @@ enum { DOSStubSize = 128 };
 
 } // end anonymous namespace
 
-// Take a CP and assign addresses and sizes to everything. Returns false if the
-// layout is not valid to do.
-static bool layoutOptionalHeader(COFFParser &CP) {
-  if (!CP.isPE())
-    return true;
-  unsigned PEHeaderSize = CP.is64Bit() ? sizeof(object::pe32plus_header)
-                                       : sizeof(object::pe32_header);
-  CP.Obj.Header.SizeOfOptionalHeader =
-      PEHeaderSize + sizeof(object::data_directory) *
-                         CP.Obj.OptionalHeader->Header.NumberOfRvaAndSize;
-  return true;
-}
-
 static yaml::BinaryRef
 toDebugS(ArrayRef<CodeViewYAML::YAMLDebugSubsection> Subsections,
          const codeview::StringsAndChecksums &SC, BumpPtrAllocator &Allocator) {
@@ -185,152 +172,44 @@ toDebugS(ArrayRef<CodeViewYAML::YAMLDebugSubsection> Subsections,
   return {Output};
 }
 
-// Take a CP and assign addresses and sizes to everything. Returns false if the
-// layout is not valid to do.
-static bool layoutCOFF(COFFParser &CP) {
-  // The section table starts immediately after the header, including the
-  // optional header.
-  CP.SectionTableStart =
-      CP.getHeaderSize() + CP.Obj.Header.SizeOfOptionalHeader;
-  if (CP.isPE())
-    CP.SectionTableStart += DOSStubSize + sizeof(COFF::PEMagic);
-  CP.SectionTableSize = COFF::SectionSize * CP.Obj.Sections.size();
-
-  uint32_t CurrentSectionDataOffset =
-      CP.SectionTableStart + CP.SectionTableSize;
-
-  for (COFFYAML::Section &S : CP.Obj.Sections) {
-    // We support specifying exactly one of SectionData or Subsections.  So if
-    // there is already some SectionData, then we don't need to do any of this.
-    if (S.Name == ".debug$S" && S.SectionData.binary_size() == 0) {
-      CodeViewYAML::initializeStringsAndChecksums(S.DebugS,
-                                                  CP.StringsAndChecksums);
-      if (CP.StringsAndChecksums.hasChecksums() &&
-          CP.StringsAndChecksums.hasStrings())
-        break;
-    }
-  }
-
-  // Assign each section data address consecutively.
-  for (COFFYAML::Section &S : CP.Obj.Sections) {
+// Write the content of a section and fill in the header fields locating it.
+// Returns whether the section has any content.
+static bool writeSectionContent(COFFParser &CP, COFFYAML::Section &S,
+                                ContiguousBlobAccumulator &CBA) {
+  if (S.SectionData.binary_size() == 0) {
     if (S.Name == ".debug$S") {
-      if (S.SectionData.binary_size() == 0) {
-        assert(CP.StringsAndChecksums.hasStrings() &&
-               "Object file does not have debug string table!");
-
-        S.SectionData =
-            toDebugS(S.DebugS, CP.StringsAndChecksums, CP.Allocator);
-      }
+      assert(CP.StringsAndChecksums.hasStrings() &&
+             "Object file does not have debug string table!");
+      S.SectionData = toDebugS(S.DebugS, CP.StringsAndChecksums, CP.Allocator);
     } else if (S.Name == ".debug$T") {
-      if (S.SectionData.binary_size() == 0)
-        S.SectionData = CodeViewYAML::toDebugT(S.DebugT, CP.Allocator, S.Name);
+      S.SectionData = CodeViewYAML::toDebugT(S.DebugT, CP.Allocator, S.Name);
     } else if (S.Name == ".debug$P") {
-      if (S.SectionData.binary_size() == 0)
-        S.SectionData = CodeViewYAML::toDebugT(S.DebugP, CP.Allocator, S.Name);
-    } else if (S.Name == ".debug$H") {
-      if (S.DebugH && S.SectionData.binary_size() == 0)
-        S.SectionData = CodeViewYAML::toDebugH(*S.DebugH, CP.Allocator);
-    }
-
-    size_t DataSize = S.SectionData.binary_size();
-    for (auto E : S.StructuredData)
-      DataSize += E.size();
-    if (DataSize > 0) {
-      CurrentSectionDataOffset = alignTo(CurrentSectionDataOffset,
-                                         CP.isPE() ? CP.getFileAlignment() : 4);
-      S.Header.SizeOfRawData = DataSize;
-      if (CP.isPE())
-        S.Header.SizeOfRawData =
-            alignTo(S.Header.SizeOfRawData, CP.getFileAlignment());
-      S.Header.PointerToRawData = CurrentSectionDataOffset;
-      CurrentSectionDataOffset += S.Header.SizeOfRawData;
-      if (!S.Relocations.empty()) {
-        S.Header.PointerToRelocations = CurrentSectionDataOffset;
-        if (S.Header.Characteristics & COFF::IMAGE_SCN_LNK_NRELOC_OVFL) {
-          S.Header.NumberOfRelocations = 0xffff;
-          CurrentSectionDataOffset += COFF::RelocationSize;
-        } else
-          S.Header.NumberOfRelocations = S.Relocations.size();
-        CurrentSectionDataOffset += S.Relocations.size() * COFF::RelocationSize;
-      }
-    } else {
-      // Leave SizeOfRawData unaltered. For .bss sections in object files, it
-      // carries the section size.
-      S.Header.PointerToRawData = 0;
+      S.SectionData = CodeViewYAML::toDebugT(S.DebugP, CP.Allocator, S.Name);
+    } else if (S.Name == ".debug$H" && S.DebugH) {
+      S.SectionData = CodeViewYAML::toDebugH(*S.DebugH, CP.Allocator);
     }
   }
 
-  uint32_t SymbolTableStart = CurrentSectionDataOffset;
+  bool HasContent = S.SectionData.binary_size() != 0;
+  for (const auto &E : S.StructuredData)
+    HasContent |= E.size() != 0;
 
-  // Calculate number of symbols.
-  uint32_t NumberOfSymbols = 0;
-  for (std::vector<COFFYAML::Symbol>::iterator i = CP.Obj.Symbols.begin(),
-                                               e = CP.Obj.Symbols.end();
-       i != e; ++i) {
-    uint32_t NumberOfAuxSymbols = 0;
-    if (i->FunctionDefinition)
-      NumberOfAuxSymbols += 1;
-    if (i->bfAndefSymbol)
-      NumberOfAuxSymbols += 1;
-    if (i->WeakExternal)
-      NumberOfAuxSymbols += 1;
-    if (!i->File.empty())
-      NumberOfAuxSymbols +=
-          (i->File.size() + CP.getSymbolSize() - 1) / CP.getSymbolSize();
-    if (i->SectionDefinition)
-      NumberOfAuxSymbols += 1;
-    if (i->CLRToken)
-      NumberOfAuxSymbols += 1;
-    i->Header.NumberOfAuxSymbols = NumberOfAuxSymbols;
-    NumberOfSymbols += 1 + NumberOfAuxSymbols;
+  if (!HasContent) {
+    // Leave SizeOfRawData unaltered. For .bss sections in object files, it
+    // carries the section size.
+    S.Header.PointerToRawData = 0;
+    return false;
   }
 
-  // Store all the allocated start addresses in the header.
-  CP.Obj.Header.NumberOfSections = CP.Obj.Sections.size();
-  CP.Obj.Header.NumberOfSymbols = NumberOfSymbols;
-  if (NumberOfSymbols > 0 || CP.StringTable.size() > 4)
-    CP.Obj.Header.PointerToSymbolTable = SymbolTableStart;
-  else
-    CP.Obj.Header.PointerToSymbolTable = 0;
-
-  *reinterpret_cast<support::ulittle32_t *>(&CP.StringTable[0]) =
-      CP.StringTable.size();
-
+  CBA.padToAlignment(CP.isPE() ? CP.getFileAlignment() : 4);
+  S.Header.PointerToRawData = CBA.getOffset();
+  for (const auto &E : S.StructuredData)
+    E.writeAsBinary(CBA);
+  CBA.writeAsBinary(S.SectionData);
+  if (CP.isPE())
+    CBA.padToAlignment(CP.getFileAlignment());
+  S.Header.SizeOfRawData = CBA.getOffset() - S.Header.PointerToRawData;
   return true;
-}
-
-template <typename value_type> struct binary_le_impl {
-  value_type Value;
-  binary_le_impl(value_type V) : Value(V) {}
-};
-
-template <typename value_type>
-raw_ostream &operator<<(raw_ostream &OS,
-                        const binary_le_impl<value_type> &BLE) {
-  char Buffer[sizeof(BLE.Value)];
-  support::endian::write<value_type, llvm::endianness::little>(Buffer,
-                                                               BLE.Value);
-  OS.write(Buffer, sizeof(BLE.Value));
-  return OS;
-}
-
-template <typename value_type>
-binary_le_impl<value_type> binary_le(value_type V) {
-  return binary_le_impl<value_type>(V);
-}
-
-template <size_t NumBytes> struct zeros_impl {};
-
-template <size_t NumBytes>
-raw_ostream &operator<<(raw_ostream &OS, const zeros_impl<NumBytes> &) {
-  char Buffer[NumBytes];
-  memset(Buffer, 0, sizeof(Buffer));
-  OS.write(Buffer, sizeof(Buffer));
-  return OS;
-}
-
-template <typename T> zeros_impl<sizeof(T)> zeros(const T &) {
-  return zeros_impl<sizeof(T)>();
 }
 
 template <typename T>
@@ -388,7 +267,40 @@ static uint32_t initializeOptionalHeader(COFFParser &CP, uint16_t Magic,
   return BaseOfData;
 }
 
-static bool writeCOFF(COFFParser &CP, raw_ostream &OS) {
+static bool writeCOFF(COFFParser &CP, ContiguousBlobAccumulator &CBA) {
+  // Calculate number of symbols.
+  CP.Obj.Header.NumberOfSymbols = 0;
+  for (COFFYAML::Symbol &Sym : CP.Obj.Symbols) {
+    uint32_t NumberOfAuxSymbols = 0;
+    if (Sym.FunctionDefinition)
+      NumberOfAuxSymbols += 1;
+    if (Sym.bfAndefSymbol)
+      NumberOfAuxSymbols += 1;
+    if (Sym.WeakExternal)
+      NumberOfAuxSymbols += 1;
+    if (!Sym.File.empty())
+      NumberOfAuxSymbols +=
+          (Sym.File.size() + CP.getSymbolSize() - 1) / CP.getSymbolSize();
+    if (Sym.SectionDefinition)
+      NumberOfAuxSymbols += 1;
+    if (Sym.CLRToken)
+      NumberOfAuxSymbols += 1;
+    Sym.Header.NumberOfAuxSymbols = NumberOfAuxSymbols;
+    CP.Obj.Header.NumberOfSymbols += 1 + NumberOfAuxSymbols;
+  }
+
+  CP.Obj.Header.NumberOfSections = CP.Obj.Sections.size();
+
+  unsigned PEHeaderSize = CP.is64Bit() ? sizeof(object::pe32plus_header)
+                                       : sizeof(object::pe32_header);
+  if (CP.isPE())
+    CP.Obj.Header.SizeOfOptionalHeader =
+        PEHeaderSize + sizeof(object::data_directory) *
+                           CP.Obj.OptionalHeader->Header.NumberOfRvaAndSize;
+
+  // Save field offsets for writing back their final values.
+  uint64_t PointerToSymbolTableOffset;
+
   if (CP.isPE()) {
     // PE files start with a DOS stub.
     object::dos_header DH;
@@ -405,76 +317,66 @@ static bool writeCOFF(COFFParser &CP, raw_ostream &OS) {
     DH.AddressOfNewExeHeader = DOSStubSize;
 
     // Write out our DOS stub.
-    OS.write(reinterpret_cast<char *>(&DH), sizeof(DH));
+    CBA.write(reinterpret_cast<const char *>(&DH), sizeof(DH));
     // Write padding until we reach the position of where our PE signature
     // should live.
-    OS.write_zeros(DOSStubSize - sizeof(DH));
+    CBA.writeZeros(DOSStubSize - sizeof(DH));
     // Write out the PE signature.
-    OS.write(COFF::PEMagic, sizeof(COFF::PEMagic));
+    CBA.write(COFF::PEMagic, sizeof(COFF::PEMagic));
   }
   if (CP.useBigObj()) {
-    OS << binary_le(static_cast<uint16_t>(COFF::IMAGE_FILE_MACHINE_UNKNOWN))
-       << binary_le(static_cast<uint16_t>(0xffff))
-       << binary_le(
-              static_cast<uint16_t>(COFF::BigObjHeader::MinBigObjectVersion))
-       << binary_le(CP.Obj.Header.Machine)
-       << binary_le(CP.Obj.Header.TimeDateStamp);
-    OS.write(COFF::BigObjMagic, sizeof(COFF::BigObjMagic));
-    OS << zeros(uint32_t(0)) << zeros(uint32_t(0)) << zeros(uint32_t(0))
-       << zeros(uint32_t(0)) << binary_le(CP.Obj.Header.NumberOfSections)
-       << binary_le(CP.Obj.Header.PointerToSymbolTable)
-       << binary_le(CP.Obj.Header.NumberOfSymbols);
+    CBA.write(static_cast<uint16_t>(COFF::IMAGE_FILE_MACHINE_UNKNOWN),
+              LittleEndian);
+    CBA.write(static_cast<uint16_t>(0xffff), LittleEndian);
+    CBA.write(static_cast<uint16_t>(COFF::BigObjHeader::MinBigObjectVersion),
+              LittleEndian);
+    CBA.write(CP.Obj.Header.Machine, LittleEndian);
+    CBA.write(CP.Obj.Header.TimeDateStamp, LittleEndian);
+    CBA.write(COFF::BigObjMagic, sizeof(COFF::BigObjMagic));
+    CBA.writeZeros(4 * sizeof(uint32_t));
+    CBA.write(CP.Obj.Header.NumberOfSections, LittleEndian);
+    PointerToSymbolTableOffset = CBA.getOffset();
+    // The final symbol table offset is written after the section data.
+    CBA.writeZeros(sizeof(CP.Obj.Header.PointerToSymbolTable));
+    CBA.write(CP.Obj.Header.NumberOfSymbols, LittleEndian);
   } else {
-    OS << binary_le(CP.Obj.Header.Machine)
-       << binary_le(static_cast<int16_t>(CP.Obj.Header.NumberOfSections))
-       << binary_le(CP.Obj.Header.TimeDateStamp)
-       << binary_le(CP.Obj.Header.PointerToSymbolTable)
-       << binary_le(CP.Obj.Header.NumberOfSymbols)
-       << binary_le(CP.Obj.Header.SizeOfOptionalHeader)
-       << binary_le(CP.Obj.Header.Characteristics);
+    CBA.write(CP.Obj.Header.Machine, LittleEndian);
+    CBA.write(static_cast<int16_t>(CP.Obj.Header.NumberOfSections),
+              LittleEndian);
+    CBA.write(CP.Obj.Header.TimeDateStamp, LittleEndian);
+    PointerToSymbolTableOffset = CBA.getOffset();
+    // The final symbol table offset is written after the section data.
+    CBA.writeZeros(sizeof(CP.Obj.Header.PointerToSymbolTable));
+    CBA.write(CP.Obj.Header.NumberOfSymbols, LittleEndian);
+    CBA.write(CP.Obj.Header.SizeOfOptionalHeader, LittleEndian);
+    CBA.write(CP.Obj.Header.Characteristics, LittleEndian);
   }
+
+  // The optional header, if present, immediately follows the COFF file header.
+  uint64_t OptionalHeaderOffset = CBA.getOffset();
   if (CP.isPE()) {
-    if (CP.is64Bit()) {
-      object::pe32plus_header PEH;
-      initializeOptionalHeader(CP, COFF::PE32Header::PE32_PLUS, &PEH);
-      OS.write(reinterpret_cast<char *>(&PEH), sizeof(PEH));
-    } else {
-      object::pe32_header PEH;
-      uint32_t BaseOfData =
-          initializeOptionalHeader(CP, COFF::PE32Header::PE32, &PEH);
-      PEH.BaseOfData = BaseOfData;
-      OS.write(reinterpret_cast<char *>(&PEH), sizeof(PEH));
-    }
+    // Reserve space for the PE header, whose fields depend on the final section
+    // layout. The data directories that follow it are already final.
+    CBA.writeZeros(PEHeaderSize);
     for (uint32_t I = 0; I < CP.Obj.OptionalHeader->Header.NumberOfRvaAndSize;
          ++I) {
       const std::optional<COFF::DataDirectory> *DataDirectories =
           CP.Obj.OptionalHeader->DataDirectories;
       uint32_t NumDataDir = std::size(CP.Obj.OptionalHeader->DataDirectories);
       if (I >= NumDataDir || !DataDirectories[I]) {
-        OS << zeros(uint32_t(0));
-        OS << zeros(uint32_t(0));
+        CBA.writeZeros(2 * sizeof(uint32_t));
       } else {
-        OS << binary_le(DataDirectories[I]->RelativeVirtualAddress);
-        OS << binary_le(DataDirectories[I]->Size);
+        CBA.write(DataDirectories[I]->RelativeVirtualAddress, LittleEndian);
+        CBA.write(DataDirectories[I]->Size, LittleEndian);
       }
     }
   }
 
-  assert(OS.tell() == CP.SectionTableStart);
-  // Output section table.
-  for (const COFFYAML::Section &S : CP.Obj.Sections) {
-    OS.write(S.Header.Name, COFF::NameSize);
-    OS << binary_le(S.Header.VirtualSize)
-       << binary_le(S.Header.VirtualAddress)
-       << binary_le(S.Header.SizeOfRawData)
-       << binary_le(S.Header.PointerToRawData)
-       << binary_le(S.Header.PointerToRelocations)
-       << binary_le(S.Header.PointerToLineNumbers)
-       << binary_le(S.Header.NumberOfRelocations)
-       << binary_le(S.Header.NumberOfLineNumbers)
-       << binary_le(S.Header.Characteristics);
-  }
-  assert(OS.tell() == CP.SectionTableStart + CP.SectionTableSize);
+  CP.SectionTableStart = CBA.getOffset();
+  CP.SectionTableSize = COFF::SectionSize * CP.Obj.Sections.size();
+  // Reserve space for the section table. Section offsets and sizes are filled
+  // in later.
+  CBA.writeZeros(CP.SectionTableSize);
 
   unsigned CurSymbol = 0;
   StringMap<unsigned> SymbolTableIndexMap;
@@ -483,22 +385,36 @@ static bool writeCOFF(COFFParser &CP, raw_ostream &OS) {
     CurSymbol += 1 + Sym.Header.NumberOfAuxSymbols;
   }
 
+  // Collect the CodeView strings and checksums shared by all .debug$S sections.
+  for (COFFYAML::Section &S : CP.Obj.Sections) {
+    // We support specifying exactly one of SectionData or Subsections. So if
+    // there is already some SectionData, then we don't need to do any of this.
+    if (S.Name == ".debug$S" && S.SectionData.binary_size() == 0) {
+      CodeViewYAML::initializeStringsAndChecksums(S.DebugS,
+                                                  CP.StringsAndChecksums);
+      if (CP.StringsAndChecksums.hasChecksums() &&
+          CP.StringsAndChecksums.hasStrings())
+        break;
+    }
+  }
+
   // Output section data.
-  for (const COFFYAML::Section &S : CP.Obj.Sections) {
-    if (S.Header.SizeOfRawData == 0 || S.Header.PointerToRawData == 0)
+  for (COFFYAML::Section &S : CP.Obj.Sections) {
+    bool HasContent = writeSectionContent(CP, S, CBA);
+    if (!HasContent || S.Relocations.empty())
       continue;
-    assert(S.Header.PointerToRawData >= OS.tell());
-    OS.write_zeros(S.Header.PointerToRawData - OS.tell());
-    for (auto E : S.StructuredData)
-      E.writeAsBinary(OS);
-    S.SectionData.writeAsBinary(OS);
-    assert(S.Header.SizeOfRawData >= S.SectionData.binary_size());
-    OS.write_zeros(S.Header.PointerToRawData + S.Header.SizeOfRawData -
-                   OS.tell());
-    if (S.Header.Characteristics & COFF::IMAGE_SCN_LNK_NRELOC_OVFL)
-      OS << binary_le<uint32_t>(/*VirtualAddress=*/ S.Relocations.size() + 1)
-         << binary_le<uint32_t>(/*SymbolTableIndex=*/ 0)
-         << binary_le<uint16_t>(/*Type=*/ 0);
+
+    S.Header.PointerToRelocations = CBA.getOffset();
+    if (S.Header.Characteristics & COFF::IMAGE_SCN_LNK_NRELOC_OVFL) {
+      S.Header.NumberOfRelocations = 0xffff;
+      CBA.write<uint32_t>(/*VirtualAddress=*/S.Relocations.size() + 1,
+                          LittleEndian);
+      CBA.write<uint32_t>(/*SymbolTableIndex=*/0, LittleEndian);
+      CBA.write<uint16_t>(/*Type=*/0, LittleEndian);
+    } else {
+      S.Header.NumberOfRelocations = S.Relocations.size();
+    }
+
     for (const COFFYAML::Relocation &R : S.Relocations) {
       uint32_t SymbolTableIndex;
       if (R.SymbolTableIndex) {
@@ -509,46 +425,90 @@ static bool writeCOFF(COFFParser &CP, raw_ostream &OS) {
       } else {
         SymbolTableIndex = SymbolTableIndexMap[R.SymbolName];
       }
-      OS << binary_le(R.VirtualAddress) << binary_le(SymbolTableIndex)
-         << binary_le(R.Type);
+      CBA.write(R.VirtualAddress, LittleEndian);
+      CBA.write(SymbolTableIndex, LittleEndian);
+      CBA.write(R.Type, LittleEndian);
     }
   }
 
+  // Fill in the optional header now that the section layout is final.
+  if (CP.isPE()) {
+    if (CP.is64Bit()) {
+      object::pe32plus_header PEH;
+      initializeOptionalHeader(CP, COFF::PE32Header::PE32_PLUS, &PEH);
+      CBA.updateDataAt(OptionalHeaderOffset, &PEH, sizeof(PEH));
+    } else {
+      object::pe32_header PEH;
+      uint32_t BaseOfData =
+          initializeOptionalHeader(CP, COFF::PE32Header::PE32, &PEH);
+      PEH.BaseOfData = BaseOfData;
+      CBA.updateDataAt(OptionalHeaderOffset, &PEH, sizeof(PEH));
+    }
+  }
+
+  // Fill in the section table.
+  static_assert(sizeof(object::coff_section) == COFF::SectionSize,
+                "unexpected COFF section header size");
+  uint64_t SectionHeaderOffset = CP.SectionTableStart;
+  for (const COFFYAML::Section &S : CP.Obj.Sections) {
+    object::coff_section Header{};
+    memcpy(Header.Name, S.Header.Name, COFF::NameSize);
+    Header.VirtualSize = S.Header.VirtualSize;
+    Header.VirtualAddress = S.Header.VirtualAddress;
+    Header.SizeOfRawData = S.Header.SizeOfRawData;
+    Header.PointerToRawData = S.Header.PointerToRawData;
+    Header.PointerToRelocations = S.Header.PointerToRelocations;
+    Header.PointerToLinenumbers = S.Header.PointerToLineNumbers;
+    Header.NumberOfRelocations = S.Header.NumberOfRelocations;
+    Header.NumberOfLinenumbers = S.Header.NumberOfLineNumbers;
+    Header.Characteristics = S.Header.Characteristics;
+    CBA.updateDataAt(SectionHeaderOffset, &Header, sizeof(Header));
+    SectionHeaderOffset += sizeof(Header);
+  }
+
   // Output symbol table.
+  if (CP.Obj.Header.NumberOfSymbols || CP.StringTable.size() > 4)
+    CP.Obj.Header.PointerToSymbolTable = CBA.getOffset();
+  else
+    CP.Obj.Header.PointerToSymbolTable = 0;
+
+  CBA.updateDataAt(PointerToSymbolTableOffset,
+                   CP.Obj.Header.PointerToSymbolTable, LittleEndian);
 
   for (std::vector<COFFYAML::Symbol>::const_iterator i = CP.Obj.Symbols.begin(),
                                                      e = CP.Obj.Symbols.end();
        i != e; ++i) {
-    OS.write(i->Header.Name, COFF::NameSize);
-    OS << binary_le(i->Header.Value);
+    CBA.write(i->Header.Name, COFF::NameSize);
+    CBA.write(i->Header.Value, LittleEndian);
     if (CP.useBigObj())
-      OS << binary_le(i->Header.SectionNumber);
+      CBA.write(i->Header.SectionNumber, LittleEndian);
     else
-      OS << binary_le(static_cast<int16_t>(i->Header.SectionNumber));
-    OS << binary_le(i->Header.Type) << binary_le(i->Header.StorageClass)
-       << binary_le(i->Header.NumberOfAuxSymbols);
+      CBA.write(static_cast<int16_t>(i->Header.SectionNumber), LittleEndian);
+    CBA.write(i->Header.Type, LittleEndian);
+    CBA.write(i->Header.StorageClass, LittleEndian);
+    CBA.write(i->Header.NumberOfAuxSymbols, LittleEndian);
 
     if (i->FunctionDefinition) {
-      OS << binary_le(i->FunctionDefinition->TagIndex)
-         << binary_le(i->FunctionDefinition->TotalSize)
-         << binary_le(i->FunctionDefinition->PointerToLinenumber)
-         << binary_le(i->FunctionDefinition->PointerToNextFunction)
-         << zeros(i->FunctionDefinition->unused);
-      OS.write_zeros(CP.getSymbolSize() - COFF::Symbol16Size);
+      CBA.write(i->FunctionDefinition->TagIndex, LittleEndian);
+      CBA.write(i->FunctionDefinition->TotalSize, LittleEndian);
+      CBA.write(i->FunctionDefinition->PointerToLinenumber, LittleEndian);
+      CBA.write(i->FunctionDefinition->PointerToNextFunction, LittleEndian);
+      CBA.writeZeros(sizeof(i->FunctionDefinition->unused));
+      CBA.writeZeros(CP.getSymbolSize() - COFF::Symbol16Size);
     }
     if (i->bfAndefSymbol) {
-      OS << zeros(i->bfAndefSymbol->unused1)
-         << binary_le(i->bfAndefSymbol->Linenumber)
-         << zeros(i->bfAndefSymbol->unused2)
-         << binary_le(i->bfAndefSymbol->PointerToNextFunction)
-         << zeros(i->bfAndefSymbol->unused3);
-      OS.write_zeros(CP.getSymbolSize() - COFF::Symbol16Size);
+      CBA.writeZeros(sizeof(i->bfAndefSymbol->unused1));
+      CBA.write(i->bfAndefSymbol->Linenumber, LittleEndian);
+      CBA.writeZeros(sizeof(i->bfAndefSymbol->unused2));
+      CBA.write(i->bfAndefSymbol->PointerToNextFunction, LittleEndian);
+      CBA.writeZeros(sizeof(i->bfAndefSymbol->unused3));
+      CBA.writeZeros(CP.getSymbolSize() - COFF::Symbol16Size);
     }
     if (i->WeakExternal) {
-      OS << binary_le(i->WeakExternal->TagIndex)
-         << binary_le(i->WeakExternal->Characteristics)
-         << zeros(i->WeakExternal->unused);
-      OS.write_zeros(CP.getSymbolSize() - COFF::Symbol16Size);
+      CBA.write(i->WeakExternal->TagIndex, LittleEndian);
+      CBA.write(i->WeakExternal->Characteristics, LittleEndian);
+      CBA.writeZeros(sizeof(i->WeakExternal->unused));
+      CBA.writeZeros(CP.getSymbolSize() - COFF::Symbol16Size);
     }
     if (!i->File.empty()) {
       unsigned SymbolSize = CP.getSymbolSize();
@@ -556,31 +516,37 @@ static bool writeCOFF(COFFParser &CP, raw_ostream &OS) {
           (i->File.size() + SymbolSize - 1) / SymbolSize;
       uint32_t NumberOfAuxBytes = NumberOfAuxRecords * SymbolSize;
       uint32_t NumZeros = NumberOfAuxBytes - i->File.size();
-      OS.write(i->File.data(), i->File.size());
-      OS.write_zeros(NumZeros);
+      CBA.write(i->File.data(), i->File.size());
+      CBA.writeZeros(NumZeros);
     }
     if (i->SectionDefinition) {
-      OS << binary_le(i->SectionDefinition->Length)
-         << binary_le(i->SectionDefinition->NumberOfRelocations)
-         << binary_le(i->SectionDefinition->NumberOfLinenumbers)
-         << binary_le(i->SectionDefinition->CheckSum)
-         << binary_le(static_cast<int16_t>(i->SectionDefinition->Number))
-         << binary_le(i->SectionDefinition->Selection)
-         << zeros(i->SectionDefinition->unused)
-         << binary_le(static_cast<int16_t>(i->SectionDefinition->Number >> 16));
-      OS.write_zeros(CP.getSymbolSize() - COFF::Symbol16Size);
+      CBA.write(i->SectionDefinition->Length, LittleEndian);
+      CBA.write(i->SectionDefinition->NumberOfRelocations, LittleEndian);
+      CBA.write(i->SectionDefinition->NumberOfLinenumbers, LittleEndian);
+      CBA.write(i->SectionDefinition->CheckSum, LittleEndian);
+      CBA.write(static_cast<int16_t>(i->SectionDefinition->Number),
+                LittleEndian);
+      CBA.write(i->SectionDefinition->Selection, LittleEndian);
+      CBA.writeZeros(sizeof(i->SectionDefinition->unused));
+      CBA.write(static_cast<int16_t>(i->SectionDefinition->Number >> 16),
+                LittleEndian);
+      CBA.writeZeros(CP.getSymbolSize() - COFF::Symbol16Size);
     }
     if (i->CLRToken) {
-      OS << binary_le(i->CLRToken->AuxType) << zeros(i->CLRToken->unused1)
-         << binary_le(i->CLRToken->SymbolTableIndex)
-         << zeros(i->CLRToken->unused2);
-      OS.write_zeros(CP.getSymbolSize() - COFF::Symbol16Size);
+      CBA.write(i->CLRToken->AuxType, LittleEndian);
+      CBA.writeZeros(sizeof(i->CLRToken->unused1));
+      CBA.write(i->CLRToken->SymbolTableIndex, LittleEndian);
+      CBA.writeZeros(sizeof(i->CLRToken->unused2));
+      CBA.writeZeros(CP.getSymbolSize() - COFF::Symbol16Size);
     }
   }
 
   // Output string table.
-  if (CP.Obj.Header.PointerToSymbolTable)
-    OS.write(&CP.StringTable[0], CP.StringTable.size());
+  if (CP.Obj.Header.PointerToSymbolTable) {
+    *reinterpret_cast<support::ulittle32_t *>(CP.StringTable.data()) =
+        CP.StringTable.size();
+    CBA.write(CP.StringTable.data(), CP.StringTable.size());
+  }
   return true;
 }
 
@@ -595,47 +561,51 @@ size_t COFFYAML::SectionDataEntry::size() const {
   return Size;
 }
 
-template <typename T> static void writeLoadConfig(T &S, raw_ostream &OS) {
-  OS.write(reinterpret_cast<const char *>(&S),
-           std::min(sizeof(S), static_cast<size_t>(S.Size)));
+template <typename T>
+static void writeLoadConfig(T &S, ContiguousBlobAccumulator &CBA) {
+  CBA.write(reinterpret_cast<const char *>(&S),
+            std::min(sizeof(S), static_cast<size_t>(S.Size)));
   if (sizeof(S) < S.Size)
-    OS.write_zeros(S.Size - sizeof(S));
+    CBA.writeZeros(S.Size - sizeof(S));
 }
 
-void COFFYAML::SectionDataEntry::writeAsBinary(raw_ostream &OS) const {
+void COFFYAML::SectionDataEntry::writeAsBinary(
+    ContiguousBlobAccumulator &CBA) const {
   if (UInt32)
-    OS << binary_le(*UInt32);
-  Binary.writeAsBinary(OS);
+    CBA.write(*UInt32, LittleEndian);
+  CBA.writeAsBinary(Binary);
   if (LoadConfig32)
-    writeLoadConfig(*LoadConfig32, OS);
+    writeLoadConfig(*LoadConfig32, CBA);
   if (LoadConfig64)
-    writeLoadConfig(*LoadConfig64, OS);
+    writeLoadConfig(*LoadConfig64, CBA);
 }
 
 namespace llvm {
 namespace yaml {
 
 bool yaml2coff(llvm::COFFYAML::Object &Doc, raw_ostream &Out,
-               ErrorHandler ErrHandler) {
+               ErrorHandler ErrHandler, uint64_t MaxSize) {
   COFFParser CP(Doc, ErrHandler);
   if (!CP.parse()) {
     ErrHandler("failed to parse YAML file");
     return false;
   }
 
-  if (!layoutOptionalHeader(CP)) {
-    ErrHandler("failed to layout optional header for COFF file");
-    return false;
-  }
-
-  if (!layoutCOFF(CP)) {
-    ErrHandler("failed to layout COFF file");
-    return false;
-  }
-  if (!writeCOFF(CP, Out)) {
+  // Limit the output size to guard against a runaway YAML description.
+  ContiguousBlobAccumulator CBA(/*BaseOffset=*/0, MaxSize);
+  if (!writeCOFF(CP, CBA)) {
     ErrHandler("failed to write COFF file");
     return false;
   }
+  if (Error E = CBA.takeLimitError()) {
+    // Match ELF by reporting a custom error message instead below.
+    consumeError(std::move(E));
+    ErrHandler("the desired output size is greater than permitted. Use the "
+               "--max-size option to change the limit");
+    return false;
+  }
+
+  CBA.writeBlobToStream(Out);
   return true;
 }
 

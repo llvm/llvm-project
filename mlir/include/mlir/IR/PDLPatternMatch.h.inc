@@ -14,6 +14,7 @@
 #if MLIR_ENABLE_PDL_IN_PATTERNMATCH
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 namespace mlir {
 //===----------------------------------------------------------------------===//
@@ -519,6 +520,7 @@ template <typename T>
 struct ProcessPDLValue<T, std::enable_if_t<std::is_base_of<OpState, T>::value>>
     : public ProcessDerivedPDLValue<T, Operation *> {
   static T processAsArg(Operation *value) { return cast<T>(value); }
+  using ProcessDerivedPDLValue<T, Operation *>::processAsArg;
 };
 
 //===----------------------------------------------------------------------===//
@@ -640,8 +642,8 @@ void assertArgs(PatternRewriter &rewriter, ArrayRef<PDLValue> values,
 
 /// Store a single result within the result list.
 template <typename T>
-static LogicalResult processResults(PatternRewriter &rewriter,
-                                    PDLResultList &results, T &&value) {
+LogicalResult processResults(PatternRewriter &rewriter, PDLResultList &results,
+                             T &&value) {
   ProcessPDLValue<T>::processAsResult(rewriter, results,
                                       std::forward<T>(value));
   return success();
@@ -649,9 +651,8 @@ static LogicalResult processResults(PatternRewriter &rewriter,
 
 /// Store a std::pair<> as individual results within the result list.
 template <typename T1, typename T2>
-static LogicalResult processResults(PatternRewriter &rewriter,
-                                    PDLResultList &results,
-                                    std::pair<T1, T2> &&pair) {
+LogicalResult processResults(PatternRewriter &rewriter, PDLResultList &results,
+                             std::pair<T1, T2> &&pair) {
   if (failed(processResults(rewriter, results, std::move(pair.first))) ||
       failed(processResults(rewriter, results, std::move(pair.second))))
     return failure();
@@ -660,9 +661,8 @@ static LogicalResult processResults(PatternRewriter &rewriter,
 
 /// Store a std::tuple<> as individual results within the result list.
 template <typename... Ts>
-static LogicalResult processResults(PatternRewriter &rewriter,
-                                    PDLResultList &results,
-                                    std::tuple<Ts...> &&tuple) {
+LogicalResult processResults(PatternRewriter &rewriter, PDLResultList &results,
+                             std::tuple<Ts...> &&tuple) {
   auto applyFn = [&](auto &&...args) {
     return (succeeded(processResults(rewriter, results, std::move(args))) &&
             ...);
@@ -677,9 +677,8 @@ inline LogicalResult processResults(PatternRewriter &rewriter,
   return result;
 }
 template <typename T>
-static LogicalResult processResults(PatternRewriter &rewriter,
-                                    PDLResultList &results,
-                                    FailureOr<T> &&result) {
+LogicalResult processResults(PatternRewriter &rewriter, PDLResultList &results,
+                             FailureOr<T> &&result) {
   if (failed(result))
     return failure();
   return processResults(rewriter, results, std::move(*result));

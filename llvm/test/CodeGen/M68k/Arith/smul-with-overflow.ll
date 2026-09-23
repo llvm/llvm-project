@@ -4,13 +4,13 @@
 define zeroext i8 @smul_i8(i8 signext %a, i8 signext %b) nounwind ssp {
 ; CHECK-LABEL: smul_i8:
 ; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    moveq #0, %d0
 ; CHECK-NEXT:    move.b (11,%sp), %d0
-; CHECK-NEXT:    and.l #255, %d0
+; CHECK-NEXT:    moveq #0, %d1
 ; CHECK-NEXT:    move.b (7,%sp), %d1
-; CHECK-NEXT:    and.l #255, %d1
 ; CHECK-NEXT:    muls %d0, %d1
-; CHECK-NEXT:    move.l %d1, %d0
-; CHECK-NEXT:    and.l #65535, %d0
+; CHECK-NEXT:    moveq #0, %d0
+; CHECK-NEXT:    move.w %d1, %d0
 ; CHECK-NEXT:    and.l #255, %d0
 ; CHECK-NEXT:    rts
 entry:
@@ -42,7 +42,9 @@ define zeroext i16 @smul_i16(i16 signext %a, i16 signext %b) nounwind ssp {
 ; CHECK-NEXT:    move.w (6,%sp), %d0
 ; CHECK-NEXT:    move.w (10,%sp), %d1
 ; CHECK-NEXT:    muls %d1, %d0
-; CHECK-NEXT:    and.l #65535, %d0
+; CHECK-NEXT:    swap %d0
+; CHECK-NEXT:    clr.w %d0
+; CHECK-NEXT:    swap %d0
 ; CHECK-NEXT:    rts
 entry:
   %smul = tail call { i16, i1 } @llvm.smul.with.overflow.i16(i16 %a, i16 %b)
@@ -70,7 +72,7 @@ define fastcc i1 @test1(i32 %v1, i32 %v2) nounwind {
 ; CHECK-NEXT:    lea (no,%pc), %a0
 ; CHECK-NEXT:    move.l %a0, (%sp)
 ; CHECK-NEXT:    jsr printf
-; CHECK-NEXT:    moveq #0, %d0
+; CHECK-NEXT:    clr.b %d0
 ; CHECK-NEXT:    adda.l #12, %sp
 ; CHECK-NEXT:    rts
 ; CHECK-NEXT:  .LBB3_1: ; %normal
@@ -109,7 +111,7 @@ define fastcc i1 @test2(i32 %v1, i32 %v2) nounwind {
 ; CHECK-NEXT:    lea (no,%pc), %a0
 ; CHECK-NEXT:    move.l %a0, (%sp)
 ; CHECK-NEXT:    jsr printf
-; CHECK-NEXT:    moveq #0, %d0
+; CHECK-NEXT:    clr.b %d0
 ; CHECK-NEXT:    adda.l #12, %sp
 ; CHECK-NEXT:    rts
 ; CHECK-NEXT:  .LBB4_2: ; %normal

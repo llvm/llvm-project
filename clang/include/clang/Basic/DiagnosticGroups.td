@@ -176,6 +176,9 @@ def NullConversion : DiagGroup<"null-conversion">;
 def ImplicitConversionFloatingPointToBool :
   DiagGroup<"implicit-conversion-floating-point-to-bool">;
 def ObjCLiteralConversion : DiagGroup<"objc-literal-conversion">;
+def NonportableIncludePathSeparator : DiagGroup<"nonportable-include-path-separator">;
+def NonportableIncludePath : DiagGroup<"nonportable-include-path",
+                                       [NonportableIncludePathSeparator]>;
 def MacroRedefined : DiagGroup<"macro-redefined">;
 def BuiltinMacroRedefined : DiagGroup<"builtin-macro-redefined">;
 def BuiltinRequiresHeader : DiagGroup<"builtin-requires-header">;
@@ -270,6 +273,7 @@ def UnguardedAvailability : DiagGroup<"unguarded-availability",
 def : DiagGroup<"partial-availability", [UnguardedAvailability]>;
 def DeprecatedDynamicExceptionSpec
     : DiagGroup<"deprecated-dynamic-exception-spec">;
+def HipDeprecatedBuiltins : DiagGroup<"hip-deprecated-builtins">;
 def DeprecatedBuiltins : DiagGroup<"deprecated-builtins">;
 def DeprecatedImplementations :DiagGroup<"deprecated-implementations">;
 def DeprecatedIncrementBool : DiagGroup<"deprecated-increment-bool">;
@@ -346,6 +350,7 @@ def ExtraTokens : DiagGroup<"extra-tokens">;
 def CXX98CompatExtraSemi : DiagGroup<"c++98-compat-extra-semi">;
 def CXX11ExtraSemi : DiagGroup<"c++11-extra-semi">;
 def EmptyInitStatement : DiagGroup<"empty-init-stmt">;
+def ExpansionStmtBody : DiagGroup<"expansion-stmt-missing-braces">;
 def ExportUnnamed : DiagGroup<"export-unnamed">;
 def ExtraSemiStmt : DiagGroup<"extra-semi-stmt", [EmptyInitStatement]>;
 def ExtraSemi : DiagGroup<"extra-semi", [CXX98CompatExtraSemi,
@@ -408,6 +413,9 @@ def CXXPre26CompatPedantic :
   DiagGroup<"pre-c++26-compat-pedantic", [CXXPre26Compat]>;
 def : DiagGroup<"pre-c++2c-compat", [CXXPre26Compat]>;
 def : DiagGroup<"pre-c++2c-compat-pedantic", [CXXPre26CompatPedantic]>;
+def CXXPre29Compat : DiagGroup<"pre-c++2d-compat">;
+def CXXPre29CompatPedantic :
+  DiagGroup<"pre-c++2d-compat-pedantic", [CXXPre29Compat]>;
 
 def CXX98CompatBindToTemporaryCopy :
   DiagGroup<"c++98-compat-bind-to-temporary-copy">;
@@ -447,13 +455,13 @@ def CXX11WarnSuggestOverride : DiagGroup<"suggest-override">;
 
 def WarnUnnecessaryVirtualSpecifier : DiagGroup<"unnecessary-virtual-specifier"> {
   code Documentation = [{
-Warns when a ``final`` class contains a virtual method (including virtual
-destructors) that does not override anything. Since ``final`` classes cannot
+Warns when a `final` class contains a virtual method (including virtual
+destructors) that does not override anything. Since `final` classes cannot
 be subclassed, their methods cannot be overridden, so there is no point to
-introducing new ``virtual`` methods.
+introducing new `virtual` methods.
 
 The warning also detects virtual methods in classes whose destructor is
-``final``, for the same reason.
+`final`, for the same reason.
   }];
 }
 
@@ -582,6 +590,12 @@ This may contain false-positives, e.g. when the borrowed storage is potentially 
   }];
 }
 
+def LifetimeSafetyUseAfterFree : DiagGroup<"lifetime-safety-use-after-free"> {
+    code Documentation = [{
+Warning to detect use-after-free, introduced by freeing an object and later using it.
+    }];
+}
+
 // Dangling-Field (aka Escape-To-Field)
 def LifetimeSafetyDanglingField : DiagGroup<"lifetime-safety-dangling-field"> {
   code Documentation = [{
@@ -594,10 +608,22 @@ Warning to detect dangling field references.
 This may contain false-positives, e.g. when the borrowed storage is potentially moved and is not destroyed at function exit.
   }];
 }
+def LifetimeSafetyDanglingFieldLambdaCapture : DiagGroup<"lifetime-safety-dangling-field-lambda-capture"> {
+  code Documentation = [{
+Warning to detect dangling field references.
+This may contain false-positives, e.g. when the field is captured by a lambda that resets the field before function exit.
+  }];
+}
 
 def LifetimeSafetyDanglingGlobal : DiagGroup<"lifetime-safety-dangling-global"> {
   code Documentation = [{
 Warning to detect dangling global references.
+  }];
+}
+
+def LifetimeSafetyDanglingGlobalInMain : DiagGroup<"lifetime-safety-dangling-global-in-main"> {
+  code Documentation = [{
+Warning to detect dangling global references in main function.
   }];
 }
 
@@ -614,17 +640,48 @@ Warning to detect invalidation of references.
   }];
 }
 
+def LifetimeSafetyLifetimeboundViolation : DiagGroup<"lifetime-safety-lifetimebound-violation"> {
+  code Documentation = [{
+Detects parameters marked as [[clang::lifetimebound]] for which the analysis could not verify that the return value can be lifetime bound to the parameter.
+This warning may produce false-positives diagnostics when it cannot fully model the code.
+  }];
+}
+
+def LifetimeSafetyInapplicableLifetimebound
+    : DiagGroup<"lifetime-safety-inapplicable-lifetimebound"> {
+  code Documentation = [{
+Detects uses of [[clang::lifetimebound]] that have no effect because the type of the annotated parameter cannot carry a lifetime.
+  }];
+}
+
+def LifetimeSafetyCrossTUMisplacedLifetimebound
+    : DiagGroup<"lifetime-safety-cross-tu-misplaced-lifetimebound">;
+def LifetimeSafetyIntraTUMisplacedLifetimebound
+    : DiagGroup<"lifetime-safety-intra-tu-misplaced-lifetimebound">;
+def LifetimeSafetyMisplacedLifetimebound
+    : DiagGroup<"lifetime-safety-misplaced-lifetimebound",
+                [LifetimeSafetyCrossTUMisplacedLifetimebound,
+                 LifetimeSafetyIntraTUMisplacedLifetimebound]> {
+    code Documentation = [{
+Detects function definitions whose parameters or implicit this argument are marked as [[clang::lifetimebound]] when the first declaration is not.
+}];
+}
+
 def LifetimeSafetyPermissive : DiagGroup<"lifetime-safety-permissive",
                                          [LifetimeSafetyUseAfterScope,
                                          LifetimeSafetyReturnStackAddr,
                                          LifetimeSafetyDanglingField,
-                                         LifetimeSafetyDanglingGlobal]>;
+                                         LifetimeSafetyDanglingGlobal,
+                                         LifetimeSafetyUseAfterFree]>;
 
 def LifetimeSafetyStrict : DiagGroup<"lifetime-safety-strict",
-                                    [LifetimeSafetyUseAfterScopeMoved,
+                                    [LifetimeSafetyPermissive,
+                                    LifetimeSafetyUseAfterScopeMoved,
                                     LifetimeSafetyReturnStackAddrMoved,
                                     LifetimeSafetyDanglingFieldMoved,
-                                    LifetimeSafetyDanglingGlobal,
+                                    LifetimeSafetyDanglingFieldLambdaCapture,
+                                    LifetimeSafetyDanglingGlobalMoved,
+                                    LifetimeSafetyDanglingGlobalInMain,
                                     LifetimeSafetyInvalidation]>;
 
 def LifetimeSafety : DiagGroup<"lifetime-safety",
@@ -634,10 +691,17 @@ Warnings to detect use-after-free and related temporal safety bugs based on life
   }];
 }
 
+def LifetimeSafetyCrossTUConstructorSuggestions
+    : DiagGroup<"lifetime-safety-cross-tu-constructor-suggestions">;
+def LifetimeSafetyIntraTUConstructorSuggestions
+    : DiagGroup<"lifetime-safety-intra-tu-constructor-suggestions">;
+
 def LifetimeSafetyCrossTUSuggestions
-    : DiagGroup<"lifetime-safety-cross-tu-suggestions">;
+    : DiagGroup<"lifetime-safety-cross-tu-suggestions",
+                [LifetimeSafetyCrossTUConstructorSuggestions]>;
 def LifetimeSafetyIntraTUSuggestions
-    : DiagGroup<"lifetime-safety-intra-tu-suggestions">;
+    : DiagGroup<"lifetime-safety-intra-tu-suggestions",
+                [LifetimeSafetyIntraTUConstructorSuggestions]>;
 def LifetimeSafetySuggestions
     : DiagGroup<"lifetime-safety-suggestions",
                 [LifetimeSafetyCrossTUSuggestions,
@@ -654,11 +718,29 @@ Detects misuse of [[clang::noescape]] annotation where the parameter escapes (fo
   }];
 }
 
-def LifetimeSafetyValidations : DiagGroup<"lifetime-safety-validations",
-                                          [LifetimeSafetyNoescape]> {
+def LifetimeSafetyAnnotationPlacement
+    : DiagGroup<"lifetime-safety-annotation-placement",
+                [LifetimeSafetyInapplicableLifetimebound,
+                 LifetimeSafetyMisplacedLifetimebound]> {
   code Documentation = [{
-Verify function implementations adhere to the annotated lifetime contracts through lifetime safety
-like verifying [[clang::noescape]] and [[clang::lifetimebound]] (upcoming).
+Validates that lifetime annotations are placed on appropriate types and in appropriate locations.
+  }];
+}
+
+def LifetimeSafetyAnnotationVerification
+    : DiagGroup<"lifetime-safety-annotation-verification",
+                [LifetimeSafetyNoescape,
+                 LifetimeSafetyLifetimeboundViolation]> {
+  code Documentation = [{
+Verifies that function implementations adhere to their lifetime annotation contracts through dataflow analysis.
+  }];
+}
+
+def LifetimeSafetyValidations : DiagGroup<"lifetime-safety-validations",
+                                         [LifetimeSafetyAnnotationPlacement,
+                                          LifetimeSafetyAnnotationVerification]> {
+  code Documentation = [{
+Validates correct usage and adherence to lifetime safety annotations like [[clang::noescape]] and [[clang::lifetimebound]].
   }];
 }
 
@@ -850,23 +932,23 @@ def MSBitfieldCompatibility : DiagGroup<"ms-bitfield-padding"> {
 
     This can occur when mixing different types explicitly:
 
-    .. code-block:: c++
-
-      struct S {
-        uint16_t field1 : 1;
-        uint32_t field2 : 1;
-      };
+    ```c++
+    struct S {
+      uint16_t field1 : 1;
+      uint32_t field2 : 1;
+    };
+    ```
 
     or more subtly through enums
 
-    .. code-block:: c++
-
-      enum Enum1 { /* ... */ };
-      enum class Enum2 : unsigned char { /* ... */ };
-      struct S {
-        Enum1 field1 : 1;
-        Enum2 field2 : 1;
-      };
+    ```c++
+    enum Enum1 { /* ... */ };
+    enum class Enum2 : unsigned char { /* ... */ };
+    struct S {
+      Enum1 field1 : 1;
+      Enum2 field2 : 1;
+    };
+    ```
 
     In each of these cases under the Microsoft ABI the second bit-field
     will not be packed with the preceding bit-field, and instead will be aligned
@@ -883,7 +965,7 @@ def MSBitfieldCompatibility : DiagGroup<"ms-bitfield-padding"> {
     to int sized storage for all specifiers or to resort to declaring the
     bit-fields with explicit integer storage types and cast in and out of the field.
     If such a solution is required the
-    :ref:`preferred_type <langext-preferred_type_documentation>` attribute can be
+    {ref}`preferred_type <langext-preferred_type_documentation>` attribute can be
     used to convey the actual field type to debuggers and other tooling.
   }];
 }
@@ -944,12 +1026,14 @@ def MemsetTransposedArgs : DiagGroup<"memset-transposed-args">;
 def DynamicClassMemaccess : DiagGroup<"dynamic-class-memaccess">;
 def NonTrivialMemcall : DiagGroup<"nontrivial-memcall">;
 def NonTrivialMemaccess : DiagGroup<"nontrivial-memaccess", [NonTrivialMemcall]>;
+def NonportableSystemIncludePath : DiagGroup<"nonportable-system-include-path">;
 def SuspiciousBzero : DiagGroup<"suspicious-bzero">;
 def SuspiciousMemaccess : DiagGroup<"suspicious-memaccess",
   [SizeofPointerMemaccess, DynamicClassMemaccess,
    NonTrivialMemaccess, MemsetTransposedArgs, SuspiciousBzero]>;
 def StaticInInline : DiagGroup<"static-in-inline">;
 def StaticLocalInInline : DiagGroup<"static-local-in-inline">;
+def CounterExt : DiagGroup<"counter-extension">;
 def UniqueObjectDuplication : DiagGroup<"unique-object-duplication"> {
   code Documentation = [{
 Warns when objects which are supposed to be globally unique might get duplicated
@@ -965,29 +1049,29 @@ once per copy, etc.
 
 Specifically, this warning fires when it detects an object which:
 
-#. Is defined as ``inline`` in a header file (so it might get compiled into multiple libaries), and
-#. Has external linkage (otherwise it's supposed to be duplicated), and
-#. Has hidden visibility (posix) or lacks a dllimport/dllexport attribute (windows).
+1. Is defined as `inline` in a header file (so it might get compiled into multiple libaries), and
+1. Has external linkage (otherwise it's supposed to be duplicated), and
+1. Has hidden visibility (posix) or lacks a dllimport/dllexport attribute (windows).
 
 As well as one of the following:
 
-#. The object is mutable, or
-#. The object's initializer definitely has side effects.
+1. The object is mutable, or
+1. The object's initializer definitely has side effects.
 
 The warning can be resolved by removing one of the conditions above. In rough
 order of preference, this may be done by:
 
-#. Marking the object ``const`` (if possible)
-#. Moving the object's definition to a source file
-#. Making the object visible using ``__attribute((visibility("default")))``,
-   ``__declspec(dllimport)``, or ``__declspec(dllexport)``.
+1. Marking the object `const` (if possible)
+1. Moving the object's definition to a source file
+1. Making the object visible using `__attribute((visibility("default")))`,
+   `__declspec(dllimport)`, or `__declspec(dllexport)`.
 
-When annotating an object with ``__declspec(dllimport)`` or ``__declspec(dllexport)``,
+When annotating an object with `__declspec(dllimport)` or `__declspec(dllexport)`,
 take care to ensure that the object is only exported from one dll, and is imported
 everywhere else.
 
 Note that for (2), all levels of a pointer variable must be constant;
-``const int*`` will trigger the warning because the pointer itself is mutable.
+`const int*` will trigger the warning because the pointer itself is mutable.
 }];
 }
 
@@ -1130,7 +1214,6 @@ def Attributes : DiagGroup<"attributes", [UnknownAttributes,
 def UnknownSanitizers : DiagGroup<"unknown-sanitizers">;
 def UnnamedTypeTemplateArgs : DiagGroup<"unnamed-type-template-args",
                                         [CXX98CompatUnnamedTypeTemplateArgs]>;
-def UnsupportedFriend : DiagGroup<"unsupported-friend">;
 def UnusedArgument : DiagGroup<"unused-argument">;
 def UnusedCommandLineArgument : DiagGroup<"unused-command-line-argument">;
 def IgnoredOptimizationArgument : DiagGroup<"ignored-optimization-argument">;
@@ -1158,7 +1241,9 @@ def UnusedValue : DiagGroup<"unused-value", [UnusedComparison, UnusedResult,
 def UnusedConstVariable : DiagGroup<"unused-const-variable">;
 def UnusedVariable : DiagGroup<"unused-variable",
                                [UnusedConstVariable]>;
-def UnusedButSetVariable : DiagGroup<"unused-but-set-variable">;
+def UnusedButSetGlobal : DiagGroup<"unused-but-set-global">;
+def UnusedButSetVariable
+    : DiagGroup<"unused-but-set-variable", [UnusedButSetGlobal]>;
 def UnusedLocalTypedef : DiagGroup<"unused-local-typedef">;
 def UnusedPropertyIvar :  DiagGroup<"unused-property-ivar">;
 def UnusedGetterReturnValue : DiagGroup<"unused-getter-return-value">;
@@ -1513,6 +1598,10 @@ def CXX23 : DiagGroup<"c++23-extensions", [CXX23AttrsOnLambda]>;
 // earlier C++ versions.
 def CXX26 : DiagGroup<"c++26-extensions">;
 
+// A warning group for warnings about using C++29 features as extensions in
+// earlier C++ versions.
+def CXX29 : DiagGroup<"c++2d-extensions">;
+
 def : DiagGroup<"c++0x-extensions", [CXX11]>;
 def : DiagGroup<"c++1y-extensions", [CXX14]>;
 def : DiagGroup<"c++1z-extensions", [CXX17]>;
@@ -1535,7 +1624,7 @@ def C23 : DiagGroup<"c23-extensions", [VariadicMacroArgumentsOmitted]>;
 def : DiagGroup<"c2x-extensions", [C23]>;
 
 // A warning group for warnings about using C2y features as extensions.
-def C2y : DiagGroup<"c2y-extensions", [StaticInInline]>;
+def C2y : DiagGroup<"c2y-extensions", [StaticInInline, CounterExt]>;
 
 // Previously supported warning group which is no longer pertinent as binary
 // literals are a C++14 and C23 extension now instead of a GNU extension.
@@ -1606,6 +1695,8 @@ def MicrosoftStringLiteralFromPredefined : DiagGroup<
     "microsoft-string-literal-from-predefined">;
 def MicrosoftInlineOnNonFunction : DiagGroup<
     "microsoft-inline-on-non-function">;
+def MicrosoftRelaxedConstantFold :
+  DiagGroup<"relaxed-constant-fold">;
 
 // Aliases.
 def : DiagGroup<"msvc-include", [MicrosoftInclude]>;
@@ -1692,6 +1783,10 @@ def OpenMP : DiagGroup<"openmp", [
 def SourceUsesOpenACC : DiagGroup<"source-uses-openacc">;
 def OpenACC : DiagGroup<"openacc", [SourceUsesOpenACC]>;
 
+// ClangIR (CIR) warnings emitted by MLIR-side passes routed through clang.
+def ClangIR : DiagGroup<"clangir">;
+def RemarkClangIR : DiagGroup<"remark-clangir">;
+
 // Backend warnings.
 def BackendInlineAsm : DiagGroup<"inline-asm">;
 def BackendSourceMgr : DiagGroup<"source-mgr">;
@@ -1707,13 +1802,13 @@ like YAML by adding the `-foptimization-record-file=<file>` command-line flag.
 Results can be filtered by function name by passing
 `-mllvm -filter-print-funcs=foo`, where `foo` is the target function's name.
 
-   .. code-block:: console
+   ```console
+   clang -c a.cpp -Rpass-analysis=stack-frame-layout -mllvm -filter-print-funcs=foo
+   ```
 
-      clang -c a.cpp -Rpass-analysis=stack-frame-layout -mllvm -filter-print-funcs=foo
-
-   .. code-block:: console
-
-      clang -c a.cpp -Rpass-analysis=stack-frame-layout -foptimization-record-file=<file>
+   ```console
+   clang -c a.cpp -Rpass-analysis=stack-frame-layout -foptimization-record-file=<file>
+   ```
 }];
 }
 // Compatibility flag name from old versions of Clang.
@@ -1798,6 +1893,7 @@ def BoundsSafetyCountedByEltTyUnknownSize :
 
 // A group for cross translation unit static analysis related warnings.
 def CrossTU : DiagGroup<"ctu">;
+def CrossTURemarks : DiagGroup<"ctu-remarks">;
 
 def CTADMaybeUnsupported : DiagGroup<"ctad-maybe-unsupported">;
 
@@ -1811,26 +1907,26 @@ def MaxTokens : DiagGroup<"max-tokens"> {
 The warning is issued if the number of pre-processor tokens exceeds
 the token limit, which can be set in three ways:
 
-1. As a limit at a specific point in a file, using the ``clang max_tokens_here``
+1. As a limit at a specific point in a file, using the `clang max_tokens_here`
    pragma:
 
-   .. code-block:: c++
+   ```c++
+   #pragma clang max_tokens_here 1234
+   ```
 
-      #pragma clang max_tokens_here 1234
-
-2. As a per-translation unit limit, using the ``-fmax-tokens=`` command-line
+2. As a per-translation unit limit, using the `-fmax-tokens=` command-line
    flag:
 
-   .. code-block:: console
+   ```console
+   clang -c a.cpp -fmax-tokens=1234
+   ```
 
-      clang -c a.cpp -fmax-tokens=1234
+3. As a per-translation unit limit using the `clang max_tokens_total` pragma,
+   which works like and overrides the `-fmax-tokens=` flag:
 
-3. As a per-translation unit limit using the ``clang max_tokens_total`` pragma,
-   which works like and overrides the ``-fmax-tokens=`` flag:
-
-   .. code-block:: c++
-
-      #pragma clang max_tokens_total 1234
+   ```c++
+   #pragma clang max_tokens_total 1234
+   ```
 
 These limits can be helpful in limiting code growth through included files.
 
@@ -1875,6 +1971,9 @@ def HLSLExplicitBinding : DiagGroup<"hlsl-explicit-binding">;
 // Warnings for DXIL validation
 def DXILValidation : DiagGroup<"dxil-validation">;
 
+// Warnings for SPIRV validation
+def SPIRVValidation : DiagGroup<"spirv-validation">;
+
 // Warning for HLSL API availability
 def HLSLAvailability : DiagGroup<"hlsl-availability">;
 
@@ -1896,7 +1995,8 @@ def UnsafeBufferUsageInLibcCall : DiagGroup<"unsafe-buffer-usage-in-libc-call">;
 def UnsafeBufferUsageInUniquePtrArrayAccess : DiagGroup<"unsafe-buffer-usage-in-unique-ptr-array-access">;
 def UnsafeBufferUsageInStaticSizedArray : DiagGroup<"unsafe-buffer-usage-in-static-sized-array">;
 def UnsafeBufferUsageInFormatAttrCall : DiagGroup<"unsafe-buffer-usage-in-format-attr-call">;
-def UnsafeBufferUsage : DiagGroup<"unsafe-buffer-usage", [UnsafeBufferUsageInContainer, UnsafeBufferUsageInLibcCall, UnsafeBufferUsageInUniquePtrArrayAccess, UnsafeBufferUsageInStaticSizedArray, UnsafeBufferUsageInFormatAttrCall]>;
+def UnsafeBufferUsageInStringView : DiagGroup<"unsafe-buffer-usage-in-string-view">;
+def UnsafeBufferUsage : DiagGroup<"unsafe-buffer-usage", [UnsafeBufferUsageInContainer, UnsafeBufferUsageInLibcCall, UnsafeBufferUsageInUniquePtrArrayAccess, UnsafeBufferUsageInStaticSizedArray, UnsafeBufferUsageInFormatAttrCall, UnsafeBufferUsageInStringView]>;
 
 // Warnings and notes InstallAPI verification.
 def InstallAPIViolation : DiagGroup<"installapi-violation">;
@@ -1908,7 +2008,7 @@ def BitIntExtension : DiagGroup<"bit-int-extension">;
 def ExtractAPIMisuse : DiagGroup<"extractapi-misuse">;
 
 // Warnings related to the "Scalable Static Analysis Framework" - SSAF.
-def ScalableStaticAnalysisFramework : DiagGroup<"scalable-static-analysis-framework">;
+def ScalableStaticAnalysis : DiagGroup<"scalable-static-analysis-framework">;
 
 // Warnings about using the non-standard extension having an explicit specialization
 // with a storage class specifier.
@@ -1925,3 +2025,10 @@ def TrivialAutoVarInit : DiagGroup<"trivial-auto-var-init">;
 
 // A warning for options that enable a feature that is not yet complete
 def ExperimentalOption : DiagGroup<"experimental-option">;
+
+// Warnings about unguarded usages of AMDGPU target specific constructs
+def UnguardedBuiltinUsageAMDGPU : DiagGroup<"amdgpu-unguarded-builtin-usage">;
+
+def AvailableVisibleAMDGPU : DiagGroup<"amdgpu-av">;
+
+def DynamicDebugging : DiagGroup<"dynamic-debugging">;

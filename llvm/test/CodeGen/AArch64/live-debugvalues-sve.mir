@@ -1,4 +1,4 @@
-# RUN: llc -start-before=prologepilog -stop-after=livedebugvalues -mattr=+sve -o - %s | FileCheck %s
+# RUN: llc -start-before=prolog-epilog -stop-after=livedebugvalues -mattr=+sve -o - %s | FileCheck %s
 #
 # FIXME: re-enable this run line when InstrRef LiveDebugValues is able to
 # rely on the target spill/restore inst recognisers.

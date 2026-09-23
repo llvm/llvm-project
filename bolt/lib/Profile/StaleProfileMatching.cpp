@@ -42,6 +42,20 @@ using namespace llvm;
 #undef DEBUG_TYPE
 #define DEBUG_TYPE "bolt-prof"
 
+// Frozen mixer; the block hashes computed below participate in BOLT's
+// stale profile matching, so this function's exact output is part of
+// the on-disk profile format. Do not change without versioning that
+// format.
+static constexpr uint64_t hash_16_bytes(uint64_t low, uint64_t high) {
+  const uint64_t kMul = 0x9ddfea08eb382d69ULL;
+  uint64_t a = (low ^ high) * kMul;
+  a ^= (a >> 47);
+  uint64_t b = (high ^ a) * kMul;
+  b ^= (b >> 47);
+  b *= kMul;
+  return b;
+}
+
 namespace opts {
 
 extern cl::opt<bool> TimeRewrite;
@@ -414,7 +428,7 @@ void BinaryFunction::computeBlockHashes(HashFunction HashFunction) const {
     uint64_t Hash = 0;
     for (BinaryBasicBlock *SuccBB : BB->successors()) {
       uint64_t SuccHash = OpcodeHashes[SuccBB->getIndex()];
-      Hash = hashing::detail::hash_16_bytes(Hash, SuccHash);
+      Hash = hash_16_bytes(Hash, SuccHash);
     }
     if (HashFunction == HashFunction::StdHash) {
       // Compatibility with old behavior.
@@ -427,7 +441,7 @@ void BinaryFunction::computeBlockHashes(HashFunction HashFunction) const {
     Hash = 0;
     for (BinaryBasicBlock *PredBB : BB->predecessors()) {
       uint64_t PredHash = OpcodeHashes[PredBB->getIndex()];
-      Hash = hashing::detail::hash_16_bytes(Hash, PredHash);
+      Hash = hash_16_bytes(Hash, PredHash);
     }
     if (HashFunction == HashFunction::StdHash) {
       // Compatibility with old behavior.

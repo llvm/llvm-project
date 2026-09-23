@@ -24,15 +24,17 @@
 // ----------------
 // 1. Compute constructs: acc.parallel, acc.serial, and acc.kernels are
 //    replaced by acc.kernel_environment containing a single acc.compute_region.
-//    Launch arguments (num_gangs, num_workers, vector_length) become
-//    acc.par_width ops (each result is `index`) and are passed as
-//    compute_region launch operands (still required to be acc.par_width
-//    results by the compute_region verifier).
+//    For acc.parallel / acc.kernels, launch arguments (num_gangs, num_workers,
+//    vector_length) become acc.par_width ops (each result is `index`) and are
+//    passed as compute_region launch operands. Compute regions with
+//    num_gangs(1), num_workers(1), and vector_length(1) and acc serial use a
+//    single sequential acc.par_width launch operand.
 //
 // 2. acc.loop: Converted according to context and attributes:
 //    - Unstructured: body wrapped in scf.execute_region.
-//    - Sequential (serial region or seq clause): scf.parallel with
-//      par_dims = sequential.
+//    - Sequential (serial region, seq clause, or compute region with
+//    num_gangs(1), num_workers(1), and vector_length(1)):
+//      scf.parallel with par_dims = sequential.
 //    - Auto (in parallel/kernels): scf.for with collapse when
 //    multi-dimensional.
 //    - Orphan (not inside a compute construct): scf.for, no collapse.
@@ -45,6 +47,7 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/OpenACCParMapping.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtils.h"
@@ -56,6 +59,8 @@
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/RegionUtils.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 
 namespace mlir {
 namespace acc {
@@ -75,31 +80,6 @@ namespace {
 // Helper functions
 //===----------------------------------------------------------------------===//
 
-/// Strip index_cast operations from a value before checking for a constant.
-static Value stripIndexCasts(Value val) {
-  while (auto castOp = val.getDefiningOp<arith::IndexCastOp>())
-    val = castOp.getIn();
-  return val;
-}
-
-/// A parallel construct is "effectively serial" when it specifies
-/// num_gangs(1), num_workers(1), and vector_length(1). This matches
-/// the semantics of acc.serial but expressed through acc.parallel.
-static bool isEffectivelySerial(ParallelOp op) {
-  auto numGangs = op.getNumGangsValues();
-  if (numGangs.size() != 1)
-    return false;
-  Value numWorkers = op.getNumWorkersValue();
-  if (!numWorkers)
-    return false;
-  Value vectorLength = op.getVectorLengthValue();
-  if (!vectorLength)
-    return false;
-  return isConstantIntValue(stripIndexCasts(numGangs.front()), 1) &&
-         isConstantIntValue(stripIndexCasts(numWorkers), 1) &&
-         isConstantIntValue(stripIndexCasts(vectorLength), 1);
-}
-
 static bool isOpInComputeRegion(Operation *op) {
   Region *region = op->getBlock()->getParent();
   return getEnclosingComputeOp(*region) != nullptr;
@@ -107,24 +87,22 @@ static bool isOpInComputeRegion(Operation *op) {
 
 static bool isOpInSerialRegion(Operation *op) {
   if (auto parallelOp = op->getParentOfType<ParallelOp>())
-    return isEffectivelySerial(parallelOp);
-  if (auto computeRegion = op->getParentOfType<ComputeRegionOp>())
-    return computeRegion.isEffectivelySerial();
+    return parallelOp.isEffectivelySerial();
+  if (auto kernelsOp = op->getParentOfType<KernelsOp>())
+    return kernelsOp.isEffectivelySerial();
   if (op->getParentOfType<SerialOp>())
     return true;
+  if (auto computeRegion = op->getParentOfType<ComputeRegionOp>())
+    return computeRegion.isEffectivelySerial();
   if (auto funcOp = op->getParentOfType<FunctionOpInterface>()) {
     if (isSpecializedAccRoutine(funcOp)) {
-      auto attr = funcOp->getAttrOfType<SpecializedRoutineAttr>(
+      auto attr = funcOp->getDiscardableAttrOfType<SpecializedRoutineAttr>(
           getSpecializedRoutineAttrName());
       if (attr && attr.getLevel().getValue() == ParLevel::seq)
         return true;
     }
   }
   return false;
-}
-
-static void setParDimsAttr(Operation *op, GPUParallelDimsAttr attr) {
-  op->setAttr(GPUParallelDimsAttr::name, attr);
 }
 
 /// Clone defining ops of constant live-in values into `region`, rewrite uses
@@ -157,30 +135,89 @@ static void materializeConstantLiveInsIntoRegion(Region &region,
   }
 }
 
-/// Insert a parallel dimension into the list, maintaining order by
-/// GPUParallelDimAttr::getOrder (descending).
-static void insertParDim(SmallVectorImpl<GPUParallelDimAttr> &parDims,
-                         GPUParallelDimAttr parDim) {
-  GPUParallelDimAttr *lb = llvm::lower_bound(
-      parDims, parDim,
-      [](const GPUParallelDimAttr &a, const GPUParallelDimAttr &b) {
-        return a.getOrder() > b.getOrder();
-      });
-  if (lb == parDims.end() || *lb != parDim)
-    parDims.insert(lb, parDim);
+/// Return the device type from which gang/worker/vector clauses should be read.
+/// If the requested device type has any such clauses, use that exclusively;
+/// otherwise fall back to the default (DeviceType::None).
+static DeviceType getGangWorkerVectorDeviceType(LoopOp loopOp,
+                                                DeviceType deviceType) {
+  if (deviceType != DeviceType::None &&
+      loopOp.hasAnyGangWorkerVector(deviceType))
+    return deviceType;
+  return DeviceType::None;
+}
+
+template <typename ComputeConstructT>
+static DeviceType getParDimsDeviceType(ComputeConstructT computeOp,
+                                       DeviceType deviceType) {
+  if (deviceType != DeviceType::None &&
+      computeOp.hasAnyGangWorkerVector(deviceType))
+    return deviceType;
+  return DeviceType::None;
+}
+
+/// Constant sized gang/worker/vector clauses collected per compute construct.
+struct SizedLevel {
+  ParLevel level;
+  int64_t size;
+};
+using SizedLevelMap = DenseMap<Operation *, SmallVector<SizedLevel>>;
+
+/// Record a sized clause if `size` is a constant; NYI otherwise.
+static LogicalResult tryAddSizedLevel(SizedLevelMap &sizedLevelMap,
+                                      Operation *computeOp, LoopOp loopOp,
+                                      ParLevel level, Value size,
+                                      OpenACCSupport &accSupport) {
+  if (!size)
+    return success();
+  std::optional<int64_t> constSize = getConstantIntValue(size);
+  if (!constSize) {
+    accSupport.emitNYI(loopOp.getLoc(),
+                       "non-constant sized parallelism clause");
+    return failure();
+  }
+  sizedLevelMap[computeOp].push_back({level, *constSize});
+  return success();
+}
+
+/// Collect constant sized levels from loops in `acc.kernels` regions.
+static LogicalResult fillSizedLevelMap(Operation *op, DeviceType deviceType,
+                                       SizedLevelMap &sizedLevelMap,
+                                       OpenACCSupport &accSupport) {
+  WalkResult result = op->walk([&](LoopOp loopOp) {
+    Operation *computeOp =
+        getEnclosingComputeOp(*loopOp->getBlock()->getParent());
+    if (!computeOp || !isa<KernelsOp>(computeOp))
+      return WalkResult::advance();
+    DeviceType loopDeviceType =
+        getGangWorkerVectorDeviceType(loopOp, deviceType);
+    if (failed(tryAddSizedLevel(
+            sizedLevelMap, computeOp, loopOp, ParLevel::vector,
+            loopOp.getVectorValue(loopDeviceType), accSupport)) ||
+        failed(tryAddSizedLevel(
+            sizedLevelMap, computeOp, loopOp, ParLevel::worker,
+            loopOp.getWorkerValue(loopDeviceType), accSupport)) ||
+        failed(tryAddSizedLevel(
+            sizedLevelMap, computeOp, loopOp, ParLevel::gang_dim1,
+            loopOp.getGangValue(GangArgType::Num, loopDeviceType), accSupport)))
+      return WalkResult::interrupt();
+    return WalkResult::advance();
+  });
+  return failure(result.wasInterrupted());
 }
 
 /// Map loop parallelism clauses (gang/worker/vector) to GPU parallel
-/// dimensions using the given mapping policy.
+/// dimensions using the given mapping policy. Sized clauses (e.g. vector(n))
+/// count as the corresponding level.
 static SmallVector<GPUParallelDimAttr>
 getParallelDimensions(LoopOp loopOp, const ACCToGPUMappingPolicy &policy,
                       DeviceType deviceType) {
+  deviceType = getGangWorkerVectorDeviceType(loopOp, deviceType);
   SmallVector<GPUParallelDimAttr> parDims;
   auto *ctx = loopOp->getContext();
 
-  if (loopOp.hasVector(deviceType))
+  if (loopOp.hasVector(deviceType) || loopOp.getVectorValue(deviceType))
     insertParDim(parDims, policy.vectorDim(ctx));
-  if (loopOp.hasWorker(deviceType))
+  if (loopOp.hasWorker(deviceType) || loopOp.getWorkerValue(deviceType))
     insertParDim(parDims, policy.workerDim(ctx));
   if (auto gangDimValue = loopOp.getGangValue(GangArgType::Dim, deviceType)) {
     if (auto gangDimDefOp =
@@ -188,67 +225,87 @@ getParallelDimensions(LoopOp loopOp, const ACCToGPUMappingPolicy &policy,
       auto gangLevel = getGangParLevel(gangDimDefOp.value());
       insertParDim(parDims, policy.gangDim(ctx, gangLevel));
     }
-  } else if (loopOp.hasGang(deviceType)) {
+  } else if (loopOp.hasGang(deviceType) ||
+             loopOp.getGangValue(GangArgType::Num, deviceType)) {
     insertParDim(parDims, policy.gangDim(ctx, ParLevel::gang_dim1));
   }
   return parDims;
 }
 
-/// Create acc.par_width operations from gang/worker/vector values of a
-/// compute construct. Queries the device-type-specific values first, falling
-/// back to the default (DeviceType::None) values.
+/// Build `acc.compute_region` launch operands: one sequential `acc.par_width`
+/// for `acc.serial`, for `acc.parallel` / `acc.kernels` when every num_gangs
+/// operand and num_workers / vector_length are the constant 1, and otherwise
+/// `acc.par_width` from gang/worker/vector (device-type operands first, then
+/// default DeviceType::None).
 template <typename ComputeConstructT>
-static SmallVector<Value>
-assignKnownLaunchArgs(ComputeConstructT computeOp, DeviceType deviceType,
-                      RewriterBase &rewriter,
-                      const ACCToGPUMappingPolicy &policy) {
-  SmallVector<Value> values;
+static SmallVector<Value> assignKnownLaunchArgs(
+    ComputeConstructT computeOp, DeviceType deviceType, RewriterBase &rewriter,
+    const ACCToGPUMappingPolicy &policy, const SizedLevelMap &sizedLevelMap) {
   auto *ctx = rewriter.getContext();
-  auto indexTy = rewriter.getIndexType();
   auto loc = computeOp->getLoc();
 
-  auto numGangs = computeOp.getNumGangsValues(deviceType);
-  if (numGangs.empty())
-    numGangs = computeOp.getNumGangsValues();
-  for (auto [gangDimIdx, gangSize] : llvm::enumerate(numGangs)) {
-    auto gangLevel = getGangParLevel(gangDimIdx + 1);
-    values.push_back(
-        ParWidthOp::create(rewriter, loc,
-                           getValueOrCreateCastToIndexLike(
-                               rewriter, gangSize.getLoc(), indexTy, gangSize),
-                           policy.gangDim(ctx, gangLevel)));
-  }
+  if constexpr (std::is_same_v<ComputeConstructT, SerialOp>) {
+    return {ParWidthOp::create(rewriter, loc, Value(), policy.seqDim(ctx))};
+  } else if constexpr (llvm::is_one_of<ComputeConstructT, ParallelOp,
+                                       KernelsOp>::value) {
+    if (computeOp.isEffectivelySerial())
+      return {ParWidthOp::create(rewriter, loc, Value(), policy.seqDim(ctx))};
 
-  Value numWorkers = computeOp.getNumWorkersValue(deviceType);
-  if (!numWorkers)
-    numWorkers = computeOp.getNumWorkersValue();
-  if (numWorkers) {
-    values.push_back(ParWidthOp::create(
-        rewriter, loc,
-        getValueOrCreateCastToIndexLike(rewriter, numWorkers.getLoc(), indexTy,
-                                        numWorkers),
-        policy.workerDim(ctx)));
-  }
+    deviceType = getParDimsDeviceType(computeOp, deviceType);
 
-  Value vectorLength = computeOp.getVectorLengthValue(deviceType);
-  if (!vectorLength)
-    vectorLength = computeOp.getVectorLengthValue();
-  if (vectorLength) {
-    values.push_back(ParWidthOp::create(
-        rewriter, loc,
-        getValueOrCreateCastToIndexLike(rewriter, vectorLength.getLoc(),
-                                        indexTy, vectorLength),
-        policy.vectorDim(ctx)));
-  }
-  return values;
-}
+    SmallVector<Value> values;
+    auto indexTy = rewriter.getIndexType();
 
-/// SerialOp has no gang/worker/vector clauses.
-template <>
-SmallVector<Value>
-assignKnownLaunchArgs<SerialOp>(SerialOp, DeviceType, RewriterBase &,
-                                const ACCToGPUMappingPolicy &) {
-  return {};
+    auto numGangs = computeOp.getNumGangsValues(deviceType);
+    for (auto [gangDimIdx, gangSize] : llvm::enumerate(numGangs)) {
+      auto gangLevel = getGangParLevel(gangDimIdx + 1);
+      values.push_back(ParWidthOp::create(
+          rewriter, loc,
+          getValueOrCreateCastToIndexLike(rewriter, gangSize.getLoc(), indexTy,
+                                          gangSize),
+          policy.gangDim(ctx, gangLevel)));
+    }
+
+    Value numWorkers = computeOp.getNumWorkersValue(deviceType);
+    if (numWorkers) {
+      values.push_back(ParWidthOp::create(
+          rewriter, loc,
+          getValueOrCreateCastToIndexLike(rewriter, numWorkers.getLoc(),
+                                          indexTy, numWorkers),
+          policy.workerDim(ctx)));
+    }
+
+    Value vectorLength = computeOp.getVectorLengthValue(deviceType);
+    if (vectorLength) {
+      values.push_back(ParWidthOp::create(
+          rewriter, loc,
+          getValueOrCreateCastToIndexLike(rewriter, vectorLength.getLoc(),
+                                          indexTy, vectorLength),
+          policy.vectorDim(ctx)));
+    }
+
+    // Loop-level sized clauses. Skip a dim already set on the construct.
+    // Rematerialize the constant here so it dominates the compute region.
+    auto sizedLevels = sizedLevelMap.find(computeOp.getOperation());
+    if (sizedLevels != sizedLevelMap.end()) {
+      for (const SizedLevel &sizedLevel : sizedLevels->second) {
+        GPUParallelDimAttr dim = policy.map(ctx, sizedLevel.level);
+        bool exists = llvm::any_of(values, [&](Value v) {
+          auto parWidth = v.getDefiningOp<ParWidthOp>();
+          return parWidth && parWidth.getParDim() == dim;
+        });
+        if (exists)
+          continue;
+        Value sizeVal =
+            arith::ConstantIndexOp::create(rewriter, loc, sizedLevel.size);
+        values.push_back(ParWidthOp::create(rewriter, loc, sizeVal, dim));
+      }
+    }
+    return values;
+  } else {
+    llvm_unreachable("assignKnownLaunchArgs: expected parallel, kernels, or "
+                     "serial");
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -275,15 +332,14 @@ public:
     LoopParMode parMode = loopOp.getDefaultOrDeviceTypeParallelism(deviceType);
 
     if (parMode == LoopParMode::loop_seq || isOpInSerialRegion(loopOp)) {
-      // Although it might seem unintuitive, scf.parallel is used here because
-      // the parallelism of the loop is already predetermined (as sequential).
-      // scf.for will become a candidate for auto-parallelization analysis.
-      auto parallelOp = convertACCLoopToSCFParallel(loopOp, rewriter);
-      if (!parallelOp)
+      // Use scf.for with sequential loops, because the loop's parallelism is
+      // already determined.
+      auto forOp =
+          convertACCLoopToSCFFor(loopOp, rewriter, /*enableCollapse=*/true);
+      if (!forOp)
         return failure();
-      setParDimsAttr(parallelOp,
-                     GPUParallelDimsAttr::seq(loopOp->getContext()));
-      rewriter.replaceOp(loopOp, parallelOp);
+      setParDimsAttr(forOp, GPUParallelDimsAttr::seq(loopOp->getContext()));
+      rewriter.replaceOp(loopOp, forOp);
     } else if (parMode == LoopParMode::loop_auto) {
       // All loops in serial regions should have already been handled.
       assert(!isOpInSerialRegion(loopOp) &&
@@ -293,6 +349,13 @@ public:
           convertACCLoopToSCFFor(loopOp, rewriter, /*enableCollapse=*/true);
       if (!forOp)
         return failure();
+      SmallVector<GPUParallelDimAttr> parDims =
+          getParallelDimensions(loopOp, policy, deviceType);
+      if (!parDims.empty()) {
+        auto parDimsAttr =
+            GPUParallelDimsAttr::get(loopOp->getContext(), parDims);
+        setParDimsAttr(forOp, parDimsAttr);
+      }
       rewriter.replaceOp(loopOp, forOp);
     } else if (!isOpInComputeRegion(loopOp) &&
                !isSpecializedAccRoutine(
@@ -337,17 +400,17 @@ template <typename ComputeConstructT>
 class ComputeOpConversion : public OpRewritePattern<ComputeConstructT> {
 public:
   ComputeOpConversion(MLIRContext *ctx, const ACCToGPUMappingPolicy &policy,
-                      DeviceType deviceType)
+                      DeviceType deviceType, const SizedLevelMap &sizedLevelMap)
       : OpRewritePattern<ComputeConstructT>(ctx), policy(policy),
-        deviceType(deviceType) {}
+        deviceType(deviceType), sizedLevelMap(sizedLevelMap) {}
 
   LogicalResult matchAndRewrite(ComputeConstructT computeOp,
                                 PatternRewriter &rewriter) const override {
     rewriter.setInsertionPoint(computeOp);
     auto kernelEnv =
-        KernelEnvironmentOp::createAndPopulate(computeOp, rewriter);
-    auto launchArgs =
-        assignKnownLaunchArgs(computeOp, deviceType, rewriter, policy);
+        KernelEnvironmentOp::createAndPopulate(computeOp, deviceType, rewriter);
+    auto launchArgs = assignKnownLaunchArgs(computeOp, deviceType, rewriter,
+                                            policy, sizedLevelMap);
     Region &region = computeOp.getRegion();
     SetVector<Value> liveInValues;
     getUsedValuesDefinedAbove(region, region, liveInValues);
@@ -367,6 +430,7 @@ public:
 private:
   const ACCToGPUMappingPolicy &policy;
   DeviceType deviceType;
+  const SizedLevelMap &sizedLevelMap;
 };
 
 //===----------------------------------------------------------------------===//
@@ -383,6 +447,11 @@ public:
     auto *context = op.getContext();
 
     DefaultACCToGPUMappingPolicy policy;
+    // Collect loop sized levels before loops are rewritten away.
+    SizedLevelMap sizedLevelMap;
+    OpenACCSupport &accSupport = getAnalysis<OpenACCSupport>();
+    if (failed(fillSizedLevelMap(op, deviceType, sizedLevelMap, accSupport)))
+      return signalPassFailure();
 
     // Part 1: Convert acc.loop to scf.parallel/scf.for while the parent
     // compute construct is still present (needed to determine conversion
@@ -397,7 +466,8 @@ public:
     RewritePatternSet computePatterns(context);
     computePatterns
         .insert<ComputeOpConversion<ParallelOp>, ComputeOpConversion<KernelsOp>,
-                ComputeOpConversion<SerialOp>>(context, policy, deviceType);
+                ComputeOpConversion<SerialOp>>(context, policy, deviceType,
+                                               sizedLevelMap);
     if (failed(applyPatternsGreedily(op, std::move(computePatterns))))
       return signalPassFailure();
   }

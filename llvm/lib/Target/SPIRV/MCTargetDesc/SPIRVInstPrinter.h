@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_SPIRV_INSTPRINTER_SPIRVINSTPRINTER_H
-#define LLVM_LIB_TARGET_SPIRV_INSTPRINTER_SPIRVINSTPRINTER_H
+#ifndef LLVM_LIB_TARGET_SPIRV_MCTARGETDESC_SPIRVINSTPRINTER_H
+#define LLVM_LIB_TARGET_SPIRV_MCTARGETDESC_SPIRVINSTPRINTER_H
 
 #include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "llvm/ADT/DenseSet.h"
@@ -43,6 +43,7 @@ public:
                                  bool SkipImmediates = false);
   void printOpConstantVarOps(const MCInst *MI, unsigned StartIndex,
                              raw_ostream &O);
+  unsigned printMemoryOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
 
   void printExtension(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   template <SPIRV::OperandCategory::OperandCategory category>
@@ -56,4 +57,4 @@ public:
 };
 } // namespace llvm
 
-#endif // LLVM_LIB_TARGET_SPIRV_INSTPRINTER_SPIRVINSTPRINTER_H
+#endif // LLVM_LIB_TARGET_SPIRV_MCTARGETDESC_SPIRVINSTPRINTER_H

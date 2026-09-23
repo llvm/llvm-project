@@ -16,7 +16,6 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/PassRegistry.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -84,56 +83,93 @@ bool ProcessImplicitDefs::canTurnIntoImplicitDef(MachineInstr *MI) {
 void ProcessImplicitDefs::processImplicitDef(MachineInstr *MI) {
   LLVM_DEBUG(dbgs() << "Processing " << *MI);
   Register Reg = MI->getOperand(0).getReg();
+  // Trim any extra operands.
+  for (unsigned i = MI->getNumOperands() - 1; i; --i)
+    MI->removeOperand(i);
 
   if (Reg.isVirtual()) {
     // For virtual registers, mark all uses as <undef>, and convert users to
     // implicit-def when possible.
+    bool AllUsesUndef = true;
     for (MachineOperand &MO : MRI->use_nodbg_operands(Reg)) {
-      MO.setIsUndef();
       MachineInstr *UserMI = MO.getParent();
+      if (UserMI->hasTiedAndOtherReadOf(Reg, MO.getSubReg())) {
+        AllUsesUndef = false;
+        continue;
+      }
+      MO.setIsUndef();
       if (!canTurnIntoImplicitDef(UserMI))
         continue;
       LLVM_DEBUG(dbgs() << "Converting to IMPLICIT_DEF: " << *UserMI);
       UserMI->setDesc(TII->get(TargetOpcode::IMPLICIT_DEF));
       WorkList.insert(UserMI);
     }
-    MI->eraseFromParent();
+    if (AllUsesUndef) {
+      MI->eraseFromParent();
+      return;
+    }
+    // A kept PHI, now an IMPLICIT_DEF, leaves the PHI block.
+    MachineBasicBlock *MBB = MI->getParent();
+    MachineBasicBlock::iterator Next = std::next(MI->getIterator());
+    if (Next != MBB->end() && Next->isPHI())
+      MBB->splice(MBB->SkipPHIsAndLabels(Next), MBB, MI);
     return;
   }
 
   // This is a physreg implicit-def.
-  // Look for the first instruction to use or define an alias.
-  MachineBasicBlock::instr_iterator UserMI = MI->getIterator();
-  MachineBasicBlock::instr_iterator UserE = MI->getParent()->instr_end();
-  bool Found = false;
-  for (++UserMI; UserMI != UserE; ++UserMI) {
-    for (MachineOperand &MO : UserMI->operands()) {
+  // Try to add undef flag to all uses.  If all uses are updated remove
+  // implicit-def.
+  MachineBasicBlock::instr_iterator SearchMI = MI->getIterator();
+  MachineBasicBlock::instr_iterator SearchE = MI->getParent()->instr_end();
+  bool ImplicitDefIsDead = false;
+  bool SearchedWholeBlock = true;
+  constexpr unsigned SearchLimit = 35;
+  unsigned Count = 0;
+  for (++SearchMI; SearchMI != SearchE; ++SearchMI) {
+    if (SearchMI->isDebugInstr())
+      continue;
+    if (++Count > SearchLimit) {
+      SearchedWholeBlock = false;
+      break;
+    }
+    for (MachineOperand &MO : SearchMI->operands()) {
       if (!MO.isReg())
         continue;
-      Register UserReg = MO.getReg();
-      if (!UserReg.isPhysical() || !TRI->regsOverlap(Reg, UserReg))
+      Register SearchReg = MO.getReg();
+      if (!SearchReg.isPhysical() || !TRI->regsOverlap(Reg, SearchReg))
         continue;
-      // UserMI uses or redefines Reg. Set <undef> flags on all uses.
-      Found = true;
-      if (MO.isUse())
-        MO.setIsUndef();
+      // SearchMI uses or redefines Reg. Set <undef> flags on all uses.
+      if (MO.isUse()) {
+        if (TRI->isSubRegisterEq(Reg, SearchReg)) {
+          MO.setIsUndef();
+        } else {
+          // Use is larger than Reg.  It is not safe to add undef to this use.
+          return;
+        }
+      }
+      if (MO.isDef()) {
+        if (TRI->isSubRegisterEq(SearchReg, Reg)) {
+          ImplicitDefIsDead = true;
+        } else {
+          // Reg is larger than definition.  It is not safe to add undef to any
+          // subsequent uses of Reg.
+          return;
+        }
+      }
     }
-    if (Found)
+    if (ImplicitDefIsDead) {
+      LLVM_DEBUG(dbgs() << "Physreg redefine: " << *SearchMI);
       break;
+    }
   }
 
-  // If we found the using MI, we can erase the IMPLICIT_DEF.
-  if (Found) {
-    LLVM_DEBUG(dbgs() << "Physreg user: " << *UserMI);
+  // If we have added an undef flag to all uses (i.e. we have found a redefining
+  // MI or there are no successors), we can erase the IMPLICIT_DEF.
+  if (ImplicitDefIsDead ||
+      (SearchedWholeBlock && MI->getParent()->succ_empty())) {
     MI->eraseFromParent();
-    return;
+    LLVM_DEBUG(dbgs() << "Deleting implicit-def: " << *MI);
   }
-
-  // Using instr wasn't found, it could be in another block.
-  // Leave the physreg IMPLICIT_DEF, but trim any extra operands.
-  for (unsigned i = MI->getNumOperands() - 1; i; --i)
-    MI->removeOperand(i);
-  LLVM_DEBUG(dbgs() << "Keeping physreg: " << *MI);
 }
 
 bool ProcessImplicitDefsLegacy::runOnMachineFunction(MachineFunction &MF) {

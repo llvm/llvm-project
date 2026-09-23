@@ -23,8 +23,8 @@
 #include "llvm/CodeGen/RegisterBankInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <bitset>
 
 #define GET_SUBTARGETINFO_HEADER
 #include "MipsGenSubtargetInfo.inc"
@@ -112,6 +112,9 @@ class MipsSubtarget : public MipsGenSubtargetInfo {
   // IsGP64bit - General-purpose registers are 64 bits wide
   bool IsGP64bit;
 
+  // MIPS GPRs explicitly reserved through -ffixed-REG.
+  std::bitset<32> UserReservedGPR;
+
   // IsPTR64bit - Pointers are 64 bit wide
   bool IsPTR64bit;
 
@@ -129,9 +132,6 @@ class MipsSubtarget : public MipsGenSubtargetInfo {
 
   // FixR5900 - Enable R5900 short loop erratum fix.
   bool FixR5900;
-
-  // isLinux - Target system is Linux. Is false we consider ELFOS for now.
-  bool IsLinux;
 
   // UseSmallSection - Small section is used.
   bool UseSmallSection;
@@ -227,12 +227,6 @@ class MipsSubtarget : public MipsGenSubtargetInfo {
   /// The overridden stack alignment.
   MaybeAlign StackAlignOverride;
 
-  InstrItineraryData InstrItins;
-
-  // We can override the determination of whether we are in mips16 mode
-  // as from the command line
-  enum {NoOverride, Mips16Override, NoMips16Override} OverrideMode;
-
   const MipsTargetMachine &TM;
 
   Triple TargetTriple;
@@ -254,6 +248,11 @@ public:
   bool isABI_O32() const;
   const MipsABIInfo &getABI() const;
   bool isABI_FPXX() const { return isABI_O32() && IsFPXX; }
+
+  bool isGPRReservedByUser(unsigned GPR) const {
+    assert(GPR < UserReservedGPR.size() && "GPR number out of range");
+    return UserReservedGPR[GPR];
+  }
 
   /// This constructor initializes the data members to match that
   /// of the specified triple.
@@ -407,10 +406,6 @@ public:
     return hasMips32r6() && !StrictAlign;
   }
 
-  // Set helper classes
-  void setHelperClassesMips16();
-  void setHelperClassesMipsSE();
-
   const SelectionDAGTargetInfo *getSelectionDAGInfo() const override;
 
   const MipsInstrInfo *getInstrInfo() const override { return InstrInfo.get(); }
@@ -423,10 +418,6 @@ public:
   const MipsTargetLowering *getTargetLowering() const override {
     return TLInfo.get();
   }
-  const InstrItineraryData *getInstrItineraryData() const override {
-    return &InstrItins;
-  }
-
   void initLibcallLoweringInfo(LibcallLoweringInfo &Info) const override;
 
 protected:

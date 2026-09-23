@@ -12,11 +12,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "InstCombineInternal.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 
@@ -357,9 +357,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
         SimplifyDemandedBits(I, 0, DemandedMask, LHSKnown, Q, Depth + 1))
       return I;
     Value *LHS, *RHS;
-    if (DemandedMask == 1 &&
-        match(I->getOperand(0), m_Intrinsic<Intrinsic::ctpop>(m_Value(LHS))) &&
-        match(I->getOperand(1), m_Intrinsic<Intrinsic::ctpop>(m_Value(RHS)))) {
+    if (DemandedMask == 1 && match(I->getOperand(0), m_Ctpop(m_Value(LHS))) &&
+        match(I->getOperand(1), m_Ctpop(m_Value(RHS)))) {
       // (ctpop(X) ^ ctpop(Y)) & 1 --> ctpop(X^Y) & 1
       IRBuilderBase::InsertPointGuard Guard(Builder);
       Builder.SetInsertPoint(I);
@@ -732,8 +731,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
 
       // Do not simplify if shl is part of funnel-shift pattern
       if (I->hasOneUse()) {
-        auto *Inst = dyn_cast<Instruction>(I->user_back());
-        if (Inst && Inst->getOpcode() == BinaryOperator::Or) {
+        Instruction *Inst = I->user_back();
+        if (Inst->getOpcode() == BinaryOperator::Or) {
           if (auto Opt = convertOrOfShiftsToFunnelShift(*Inst)) {
             auto [IID, FShiftArgs] = *Opt;
             if ((IID == Intrinsic::fshl || IID == Intrinsic::fshr) &&
@@ -814,8 +813,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
 
       // Do not simplify if lshr is part of funnel-shift pattern
       if (I->hasOneUse()) {
-        auto *Inst = dyn_cast<Instruction>(I->user_back());
-        if (Inst && Inst->getOpcode() == BinaryOperator::Or) {
+        Instruction *Inst = I->user_back();
+        if (Inst->getOpcode() == BinaryOperator::Or) {
           if (auto Opt = convertOrOfShiftsToFunnelShift(*Inst)) {
             auto [IID, FShiftArgs] = *Opt;
             if ((IID == Intrinsic::fshl || IID == Intrinsic::fshr) &&
@@ -1135,6 +1134,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
           if (DemandedMaskLHS.isSubsetOf(LHSKnown.Zero | LHSKnown.One) &&
               !match(I->getOperand(0), m_SpecificInt(LHSKnown.One))) {
             replaceOperand(*I, 0, Constant::getIntegerValue(VTy, LHSKnown.One));
+            // Range attribute or metadata may no longer hold.
+            I->dropPoisonGeneratingAnnotations();
             return I;
           }
 
@@ -1142,6 +1143,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
           if (DemandedMaskRHS.isSubsetOf(RHSKnown.Zero | RHSKnown.One) &&
               !match(I->getOperand(1), m_SpecificInt(RHSKnown.One))) {
             replaceOperand(*I, 1, Constant::getIntegerValue(VTy, RHSKnown.One));
+            // Range attribute or metadata may no longer hold.
+            I->dropPoisonGeneratingAnnotations();
             return I;
           }
         }
@@ -1460,6 +1463,58 @@ Value *InstCombinerImpl::simplifyShrShlDemandedBits(
   return nullptr;
 }
 
+/// Return true if the top-level all-lanes demanded-elements query can be
+/// skipped for an intermediate insertelement chain node. This is limited to a
+/// bounded one-use chain with distinct in-range constant indices, where SDVE
+/// cannot remove a dead insert before hitting its depth limit.
+static bool canSkipDemandedEltsInInsertChain(InsertElementInst &IE,
+                                             unsigned VWidth,
+                                             unsigned DepthLimit) {
+  // Only skip chain nodes that feed another insertelement; the final chain root
+  // still runs the full query.
+  if (!IE.hasOneUse())
+    return false;
+  auto *UserIE = dyn_cast<InsertElementInst>(IE.user_back());
+  if (!UserIE || UserIE->getOperand(0) != &IE)
+    return false;
+
+  SmallBitVector SeenIndices(VWidth);
+  auto HasNewIndexInRange = [&](InsertElementInst &Insert) {
+    auto *Idx = dyn_cast<ConstantInt>(Insert.getOperand(2));
+    // Let the normal SDVE path handle variable or out-of-range indices. The
+    // latter may simplify the chain and must not be passed to getZExtValue().
+    if (!Idx || Idx->getValue().uge(VWidth))
+      return false;
+
+    unsigned Index = Idx->getZExtValue();
+    if (SeenIndices.test(Index))
+      return false;
+
+    SeenIndices.set(Index);
+    return true;
+  };
+
+  auto *Cur = &IE;
+  for (unsigned I = 0; I != DepthLimit; ++I) {
+    // This loop scans the same base-chain window that the SDVE query would
+    // inspect before hitting its depth limit. With distinct insert indices in
+    // that window, the all-lanes query cannot remove a dead insert; with
+    // VWidth > DepthLimit, it also cannot narrow demand to a single lane.
+    if (!HasNewIndexInRange(*Cur))
+      return false;
+
+    Value *Base = Cur->getOperand(0);
+    if (match(Base, m_Poison()))
+      return true;
+
+    Cur = dyn_cast<InsertElementInst>(Base);
+    if (!Cur || !Cur->hasOneUse())
+      return false;
+  }
+
+  return true;
+}
+
 /// The specified value produces a vector with any number of elements.
 /// This method analyzes which elements of the operand are poison and
 /// returns that information in PoisonElts.
@@ -1608,6 +1663,13 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
     break;
   }
   case Instruction::InsertElement: {
+    unsigned DepthLimit = SimplifyDemandedVectorEltsDepthLimit;
+    auto *IE = cast<InsertElementInst>(I);
+    // Skip only when SDVE cannot simplify this insert chain before the limit.
+    if (Depth == 0 && DemandedElts.isAllOnes() && VWidth > DepthLimit &&
+        canSkipDemandedEltsInInsertChain(*IE, VWidth, DepthLimit))
+      return nullptr;
+
     // If this is a variable index, we don't know which element it overwrites.
     // demand exactly the same input as we produce.
     ConstantInt *Idx = dyn_cast<ConstantInt>(I->getOperand(2));
@@ -2000,10 +2062,15 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
         return nullptr;
       };
 
-      if (User *ShufBO = findShufBO(/* MatchShufAsOp0 */ true))
+      User *ShufBO = findShufBO(/* MatchShufAsOp0 */ true);
+      if (!ShufBO)
+        ShufBO = findShufBO(/* MatchShufAsOp0 */ false);
+      if (ShufBO) {
+        auto *ShufBOI = cast<Instruction>(ShufBO);
+        ShufBOI->andIRFlags(BO);
+        Worklist.add(ShufBOI);
         return ShufBO;
-      if (User *ShufBO = findShufBO(/* MatchShufAsOp0 */ false))
-        return ShufBO;
+      }
     }
 
     simplifyAndSetOp(I, 0, DemandedElts, PoisonElts);
@@ -2066,7 +2133,7 @@ static Value *simplifyDemandedFPClassFabs(KnownFPClass &Known, Value *Src,
   if ((DemandedMask & fcInf) == fcNone)
     KnownSrc.knownNot(fcInf);
 
-  if (KnownSrc.SignBit == false ||
+  if (KnownSrc.getSignBit() == false ||
       ((DemandedMask & fcNan) == fcNone && KnownSrc.isKnownNever(fcNegative)))
     return Src;
 
@@ -2120,7 +2187,7 @@ static Value *simplifyDemandedFPClassResult(Instruction *FPOp,
                                             FPClassTest DemandedMask,
                                             KnownFPClass &Known,
                                             ArrayRef<KnownFPClass> KnownSrcs) {
-  FPClassTest ValidResults = DemandedMask & Known.KnownFPClasses;
+  FPClassTest ValidResults = DemandedMask & Known.getKnownFPClasses();
   Constant *SingleVal = getFPClassConstant(FPOp->getType(), ValidResults,
                                            /*IsCanonicalizing=*/true);
   if (SingleVal)
@@ -2149,7 +2216,7 @@ static Value *simplifyDemandedFPClassFnegFabs(KnownFPClass &Known, Value *Src,
     KnownSrc.knownNot(fcInf);
 
   // If the source value is known negative, we can directly fold to it.
-  if (KnownSrc.SignBit == true)
+  if (KnownSrc.getSignBit() == true)
     return Src;
 
   // If the only sign bit difference is for 0, ignore it with nsz.
@@ -2178,10 +2245,11 @@ static Value *simplifyDemandedFPClassCopysignMag(Value *MagSrc,
         KnownSrc.isKnownAlways(PosOrZero))
       return MagSrc;
   } else {
-    if ((DemandedMask & ~fcNegative) == fcNone && KnownSrc.SignBit == true)
+    if ((DemandedMask & ~fcNegative) == fcNone && KnownSrc.getSignBit() == true)
       return MagSrc;
 
-    if ((DemandedMask & ~fcPositive) == fcNone && KnownSrc.SignBit == false)
+    if ((DemandedMask & ~fcPositive) == fcNone &&
+        KnownSrc.getSignBit() == false)
       return MagSrc;
   }
 
@@ -2202,13 +2270,15 @@ simplifyDemandedFPClassMinMax(KnownFPClass &Known, Intrinsic::ID IID,
 
     // If one operand is known greater than the other, it must be that
     // operand unless the other is a nan.
-    if (cannotOrderStrictlyLess(KnownLHS.KnownFPClasses,
-                                KnownRHS.KnownFPClasses, OrderedZeroSign) &&
+    if (cannotOrderStrictlyLess(KnownLHS.getKnownFPClasses(),
+                                KnownRHS.getKnownFPClasses(),
+                                OrderedZeroSign) &&
         KnownRHS.isKnownNever(fcNan))
       return CI->getArgOperand(0);
 
-    if (cannotOrderStrictlyGreater(KnownLHS.KnownFPClasses,
-                                   KnownRHS.KnownFPClasses, OrderedZeroSign) &&
+    if (cannotOrderStrictlyGreater(KnownLHS.getKnownFPClasses(),
+                                   KnownRHS.getKnownFPClasses(),
+                                   OrderedZeroSign) &&
         KnownLHS.isKnownNever(fcNan))
       return CI->getArgOperand(1);
 
@@ -2219,13 +2289,15 @@ simplifyDemandedFPClassMinMax(KnownFPClass &Known, Intrinsic::ID IID,
 
     // If one operand is known less than the other, it must be that operand
     // unless the other is a nan.
-    if (cannotOrderStrictlyGreater(KnownLHS.KnownFPClasses,
-                                   KnownRHS.KnownFPClasses, OrderedZeroSign) &&
+    if (cannotOrderStrictlyGreater(KnownLHS.getKnownFPClasses(),
+                                   KnownRHS.getKnownFPClasses(),
+                                   OrderedZeroSign) &&
         KnownRHS.isKnownNever(fcNan))
       return CI->getArgOperand(0);
 
-    if (cannotOrderStrictlyLess(KnownLHS.KnownFPClasses,
-                                KnownRHS.KnownFPClasses, OrderedZeroSign) &&
+    if (cannotOrderStrictlyLess(KnownLHS.getKnownFPClasses(),
+                                KnownRHS.getKnownFPClasses(),
+                                OrderedZeroSign) &&
         KnownLHS.isKnownNever(fcNan))
       return CI->getArgOperand(1);
 
@@ -2236,13 +2308,15 @@ simplifyDemandedFPClassMinMax(KnownFPClass &Known, Intrinsic::ID IID,
     OpKind = IID == Intrinsic::maxnum ? KnownFPClass::MinMaxKind::maxnum
                                       : KnownFPClass::MinMaxKind::maximumnum;
 
-    if (cannotOrderStrictlyLess(KnownLHS.KnownFPClasses,
-                                KnownRHS.KnownFPClasses, OrderedZeroSign) &&
+    if (cannotOrderStrictlyLess(KnownLHS.getKnownFPClasses(),
+                                KnownRHS.getKnownFPClasses(),
+                                OrderedZeroSign) &&
         KnownLHS.isKnownNever(fcNan))
       return CI->getArgOperand(0);
 
-    if (cannotOrderStrictlyGreater(KnownLHS.KnownFPClasses,
-                                   KnownRHS.KnownFPClasses, OrderedZeroSign) &&
+    if (cannotOrderStrictlyGreater(KnownLHS.getKnownFPClasses(),
+                                   KnownRHS.getKnownFPClasses(),
+                                   OrderedZeroSign) &&
         KnownRHS.isKnownNever(fcNan))
       return CI->getArgOperand(1);
 
@@ -2253,13 +2327,15 @@ simplifyDemandedFPClassMinMax(KnownFPClass &Known, Intrinsic::ID IID,
     OpKind = IID == Intrinsic::minnum ? KnownFPClass::MinMaxKind::minnum
                                       : KnownFPClass::MinMaxKind::minimumnum;
 
-    if (cannotOrderStrictlyGreater(KnownLHS.KnownFPClasses,
-                                   KnownRHS.KnownFPClasses, OrderedZeroSign) &&
+    if (cannotOrderStrictlyGreater(KnownLHS.getKnownFPClasses(),
+                                   KnownRHS.getKnownFPClasses(),
+                                   OrderedZeroSign) &&
         KnownLHS.isKnownNever(fcNan))
       return CI->getArgOperand(0);
 
-    if (cannotOrderStrictlyLess(KnownLHS.KnownFPClasses,
-                                KnownRHS.KnownFPClasses, OrderedZeroSign) &&
+    if (cannotOrderStrictlyLess(KnownLHS.getKnownFPClasses(),
+                                KnownRHS.getKnownFPClasses(),
+                                OrderedZeroSign) &&
         KnownRHS.isKnownNever(fcNan))
       return CI->getArgOperand(1);
 
@@ -2274,7 +2350,7 @@ simplifyDemandedFPClassMinMax(KnownFPClass &Known, Intrinsic::ID IID,
   Known = KnownFPClass::minMaxLike(KnownLHS, KnownRHS, OpKind, Mode);
   Known.knownNot(~DemandedMask);
 
-  return getFPClassConstant(CI->getType(), Known.KnownFPClasses,
+  return getFPClassConstant(CI->getType(), Known.getKnownFPClasses(),
                             /*IsCanonicalizing=*/true);
 }
 
@@ -2361,7 +2437,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
         KnownSrc.knownNot(fcInf);
 
       // fneg(fabs(x)) => fneg(x)
-      if (KnownSrc.SignBit == false)
+      if (KnownSrc.getSignBit() == false)
         return replaceOperand(*I, 0, FNegFAbsSrc);
 
       // fneg(fabs(x)) => fneg(x), ignoring -0 if nsz.
@@ -2452,7 +2528,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
 
     Known.knownNot(~DemandedMask);
 
-    if (Constant *SingleVal = getFPClassConstant(VTy, Known.KnownFPClasses,
+    if (Constant *SingleVal = getFPClassConstant(VTy, Known.getKnownFPClasses(),
                                                  /*IsCanonicalizing=*/true))
       return SingleVal;
 
@@ -2471,7 +2547,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       return I->getOperand(0);
 
     FastMathFlags InferredFMF = inferFastMathValueFlags(
-        FMF, Known.KnownFPClasses, {KnownLHS, KnownRHS});
+        FMF, Known.getKnownFPClasses(), {KnownLHS, KnownRHS});
     if (InferredFMF != FMF) {
       I->setFastMathFlags(InferredFMF);
       return I;
@@ -2522,7 +2598,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       Known = KnownFPClass::square(KnownLHS, Mode);
       Known.knownNot(~DemandedMask);
 
-      if (Constant *Folded = getFPClassConstant(VTy, Known.KnownFPClasses,
+      if (Constant *Folded = getFPClassConstant(VTy, Known.getKnownFPClasses(),
                                                 /*IsCanonicalizing=*/true))
         return Folded;
 
@@ -2536,7 +2612,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
         // Note: Dropping canonicalize.
         IRBuilderBase::InsertPointGuard Guard(Builder);
         Builder.SetInsertPoint(I);
-        Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, X, FMF);
+        Value *Fabs = Builder.CreateFAbs(X, FMF);
         Fabs->takeName(I);
         return Fabs;
       }
@@ -2640,12 +2716,12 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     Known = KnownFPClass::fmul(KnownLHS, KnownRHS, Mode);
     Known.knownNot(~DemandedMask);
 
-    if (Constant *SingleVal = getFPClassConstant(VTy, Known.KnownFPClasses,
+    if (Constant *SingleVal = getFPClassConstant(VTy, Known.getKnownFPClasses(),
                                                  /*IsCanonicalizing=*/true))
       return SingleVal;
 
     FastMathFlags InferredFMF = inferFastMathValueFlags(
-        FMF, Known.KnownFPClasses, {KnownLHS, KnownRHS});
+        FMF, Known.getKnownFPClasses(), {KnownLHS, KnownRHS});
     if (InferredFMF != FMF) {
       I->setFastMathFlags(InferredFMF);
       return I;
@@ -2665,8 +2741,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       Value *IsZeroOrNan = Builder.CreateFCmpFMF(
           FCmpInst::FCMP_UEQ, I->getOperand(0), ConstantFP::getZero(VTy), FMF);
 
-      Value *Fabs =
-          Builder.CreateUnaryIntrinsic(Intrinsic::fabs, I->getOperand(0), FMF);
+      Value *Fabs = Builder.CreateFAbs(I->getOperand(0), FMF);
       Value *IsInfOrNan = Builder.CreateFCmpFMF(
           FCmpInst::FCMP_UEQ, Fabs, ConstantFP::getInfinity(VTy), FMF);
 
@@ -2733,12 +2808,22 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
         SimplifyDemandedFPClass(I, 1, RHSDemandedMask, KnownRHS, SQ, Depth + 1))
       return I;
 
+    bool ResultNotNan = (DemandedMask & fcNan) == fcNone;
+    bool ResultNotInf = (DemandedMask & fcInf) == fcNone;
+
+    // Replacing 0/x with a zero is only valid when the divisor can't be
+    // (logical) zero, since 0/0 is NaN -- unless NaN results aren't demanded. A
+    // subnormal divisor can flush to zero under a flushing denormal mode.
+    bool CanIgnoreZeroByZeroNan =
+        ResultNotNan || KnownRHS.isKnownNeverLogicalZero(Mode);
+
     // nsz [+-]0 / x -> 0
     if (FMF.noSignedZeros() && KnownLHS.isKnownAlways(fcZero) &&
-        KnownRHS.isKnownNeverNaN())
+        KnownRHS.isKnownNeverNaN() && CanIgnoreZeroByZeroNan)
       return ConstantFP::getZero(VTy);
 
-    if (KnownLHS.isKnownAlways(fcPosZero) && KnownRHS.isKnownNeverNaN()) {
+    if (KnownLHS.isKnownAlways(fcPosZero) && KnownRHS.isKnownNeverNaN() &&
+        CanIgnoreZeroByZeroNan) {
       IRBuilderBase::InsertPointGuard Guard(Builder);
       Builder.SetInsertPoint(I);
 
@@ -2748,9 +2833,6 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       Copysign->takeName(I);
       return Copysign;
     }
-
-    bool ResultNotNan = (DemandedMask & fcNan) == fcNone;
-    bool ResultNotInf = (DemandedMask & fcInf) == fcNone;
 
     if (!ResultNotInf &&
         ((ResultNotNan || (KnownLHS.isKnownNeverNaN() &&
@@ -2775,12 +2857,12 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     Known = KnownFPClass::fdiv(KnownLHS, KnownRHS, Mode);
     Known.knownNot(~DemandedMask);
 
-    if (Constant *SingleVal = getFPClassConstant(VTy, Known.KnownFPClasses,
+    if (Constant *SingleVal = getFPClassConstant(VTy, Known.getKnownFPClasses(),
                                                  /*IsCanonicalizing=*/true))
       return SingleVal;
 
     FastMathFlags InferredFMF = inferFastMathValueFlags(
-        FMF, Known.KnownFPClasses, {KnownLHS, KnownRHS});
+        FMF, Known.getKnownFPClasses(), {KnownLHS, KnownRHS});
     if (InferredFMF != FMF) {
       I->setFastMathFlags(InferredFMF);
       return I;
@@ -2863,8 +2945,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
 
       KnownFPClass KnownSign =
           computeKnownFPClass(CI->getArgOperand(1), fcAllFlags, SQ, Depth + 1);
-      if (KnownMag.SignBit && KnownSign.SignBit &&
-          *KnownMag.SignBit == *KnownSign.SignBit)
+      if (KnownMag.getSignBit() && KnownSign.getSignBit() &&
+          *KnownMag.getSignBit() == *KnownSign.getSignBit())
         return CI->getOperand(0);
 
       // TODO: Call argument attribute not considered
@@ -2872,13 +2954,13 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       if (FMF.noNaNs())
         KnownSign.knownNot(fcNan);
 
-      if (KnownSign.SignBit == false) {
+      if (KnownSign.getSignBit() == false) {
         CI->dropUBImplyingAttrsAndMetadata();
         CI->setOperand(1, ConstantFP::getZero(VTy));
         return I;
       }
 
-      if (KnownSign.SignBit == true) {
+      if (KnownSign.getSignBit() == true) {
         CI->dropUBImplyingAttrsAndMetadata();
         CI->setOperand(1, ConstantFP::get(VTy, -1.0));
         return I;
@@ -2957,7 +3039,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
 
       auto *FPOp = cast<FPMathOperator>(CI);
 
-      FPClassTest ValidResults = DemandedMask & Known.KnownFPClasses;
+      FPClassTest ValidResults = DemandedMask & Known.getKnownFPClasses();
       FastMathFlags InferredFMF = FMF;
 
       if (!FMF.noSignedZeros()) {
@@ -3168,7 +3250,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       Known = KnownFPClass::sqrt(KnownSrc, Mode);
       Known.knownNot(~DemandedMask);
 
-      if (Known.KnownFPClasses == fcZero) {
+      if (Known.getKnownFPClasses() == fcZero) {
         if (FMF.noSignedZeros())
           return ConstantFP::getZero(VTy);
         IRBuilderBase::InsertPointGuard Guard(Builder);
@@ -3274,8 +3356,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
 
       Known.knownNot(~DemandedMask);
 
-      if (Constant *SingleVal = getFPClassConstant(VTy, Known.KnownFPClasses,
-                                                   /*IsCanonicalizing=*/true))
+      if (Constant *SingleVal =
+              getFPClassConstant(VTy, Known.getKnownFPClasses(),
+                                 /*IsCanonicalizing=*/true))
         return SingleVal;
 
       if ((IID == Intrinsic::trunc || IsRoundNearestOrTrunc) &&
@@ -3290,7 +3373,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       }
 
       FastMathFlags InferredFMF =
-          inferFastMathValueFlags(FMF, Known.KnownFPClasses, KnownSrc);
+          inferFastMathValueFlags(FMF, Known.getKnownFPClasses(), KnownSrc);
       if (InferredFMF != FMF) {
         CI->dropUBImplyingAttrsAndMetadata();
         CI->setFastMathFlags(InferredFMF);
@@ -3346,7 +3429,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
         Known = KnownFPClass::canonicalize(KnownSrc, Mode);
         Known.knownNot(~DemandedMask);
 
-        if (Constant *SingleVal = getFPClassConstant(VTy, Known.KnownFPClasses))
+        if (Constant *SingleVal =
+                getFPClassConstant(VTy, Known.getKnownFPClasses()))
           return SingleVal;
 
         // For IEEE handling, there is only a bit change for nan inputs, so we
@@ -3359,7 +3443,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
           return CI->getArgOperand(0);
 
         FastMathFlags InferredFMF =
-            inferFastMathValueFlags(FMF, Known.KnownFPClasses, KnownSrc);
+            inferFastMathValueFlags(FMF, Known.getKnownFPClasses(), KnownSrc);
         if (InferredFMF != FMF) {
           CI->dropUBImplyingAttrsAndMetadata();
           CI->setFastMathFlags(InferredFMF);
@@ -3466,10 +3550,10 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
           DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
 
           Known = KnownFPClass::frexp_mant(KnownSrc, Mode);
-          Known.KnownFPClasses &= DemandedMask;
+          Known.setKnownFPClasses(Known.getKnownFPClasses() & DemandedMask);
 
           if (Constant *SingleVal =
-                  getFPClassConstant(VTy, Known.KnownFPClasses,
+                  getFPClassConstant(VTy, Known.getKnownFPClasses(),
                                      /*IsCanonicalizing=*/true))
             return SingleVal;
 
@@ -3537,7 +3621,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     break;
   }
 
-  return getFPClassConstant(VTy, Known.KnownFPClasses);
+  return getFPClassConstant(VTy, Known.getKnownFPClasses());
 }
 
 /// Helper routine of SimplifyDemandedUseFPClass. It computes Known
@@ -3637,8 +3721,8 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedFPClass(
       if (FMF.noNaNs())
         KnownSign.knownNot(fcNan);
 
-      if (KnownSign.SignBit && KnownMag.SignBit &&
-          *KnownSign.SignBit == *KnownMag.SignBit)
+      if (KnownSign.getSignBit() && KnownMag.getSignBit() &&
+          *KnownSign.getSignBit() == *KnownMag.getSignBit())
         return Mag;
 
       Known = KnownFPClass::copysign(KnownMag, KnownSign);
@@ -3675,7 +3759,7 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedFPClass(
     break;
   }
 
-  return getFPClassConstant(I->getType(), Known.KnownFPClasses);
+  return getFPClassConstant(I->getType(), Known.getKnownFPClasses());
 }
 
 bool InstCombinerImpl::SimplifyDemandedFPClass(Instruction *I, unsigned OpNo,
@@ -3701,7 +3785,7 @@ bool InstCombinerImpl::SimplifyDemandedFPClass(Instruction *I, unsigned OpNo,
     Known = computeKnownFPClass(V, fcAllFlags, SQ, Depth);
     Known.knownNot(~DemandedMask);
 
-    if (Known.KnownFPClasses == fcNone) {
+    if (Known.getKnownFPClasses() == fcNone) {
       if (isa<PoisonValue>(V))
         return false;
       replaceUse(U, PoisonValue::get(VTy));
@@ -3714,7 +3798,7 @@ bool InstCombinerImpl::SimplifyDemandedFPClass(Instruction *I, unsigned OpNo,
     if (isa<Constant>(V))
       return false;
 
-    Value *FoldedToConst = getFPClassConstant(VTy, Known.KnownFPClasses);
+    Value *FoldedToConst = getFPClassConstant(VTy, Known.getKnownFPClasses());
     if (!FoldedToConst || FoldedToConst == V)
       return false;
 

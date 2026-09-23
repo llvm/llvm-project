@@ -40,7 +40,10 @@ bool collectObjectSectionSizes(object::ObjectFile &Obj, DWARFContext &DICtx,
                                const Twine &Filename, raw_ostream &OS);
 
 bool showVariableCoverage(object::ObjectFile &Obj, DWARFContext &DICtx,
-                          bool CombineInstances, raw_ostream &OS);
+                          object::ObjectFile *BaselineObj,
+                          DWARFContext *BaselineCtx, StringRef BitcodeFile,
+                          bool MaybeUndefined, bool CombineInstances,
+                          raw_ostream &OS);
 } // namespace dwarfdump
 } // namespace llvm
 

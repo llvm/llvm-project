@@ -16,7 +16,7 @@ target triple = "aarch64--"
 ; Make sure we don't mess up metadata arguments.
 declare void @llvm.write_register.i64(metadata, i64)
 
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: G_WRITE_REGISTER !0, %0:_(s64) (in function: test_write_register_intrin)
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: G_WRITE_REGISTER !0, %0:_(i64) (in function: test_write_register_intrin)
 ; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for test_write_register_intrin
 ; FALLBACK-WITH-REPORT-LABEL: test_write_register_intrin:
 define void @test_write_register_intrin() {
@@ -101,7 +101,7 @@ entry:
   ret void
 }
 
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: %4:_(s128), %5:_(s1) = G_UMULO %0:_, %6:_ (in function: umul_s128)
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: %4:_(i128), %5:_(i1) = G_UMULO %0:_, %6:_ (in function: umul_s128)
 ; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for umul_s128
 ; FALLBACK-WITH-REPORT-OUT-LABEL: umul_s128
 declare {i128, i1} @llvm.umul.with.overflow.i128(i128, i128) nounwind readnone
@@ -141,6 +141,14 @@ entry:
   %1 = icmp ult i32 %asmresult1, 2
   tail call void @llvm.assume(i1 %1)
   ret i32 %asmresult1
+}
+
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to translate instruction: call{{.*}} (in function: inline_asm_multi_reg_input)
+; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for inline_asm_multi_reg_input
+; FALLBACK-WITH-REPORT-OUT-LABEL: inline_asm_multi_reg_input
+define i128 @inline_asm_multi_reg_input(i128 %x) {
+  %r = call i128 asm sideeffect "/* $0 $1 */", "=&r,r"(i128 %x)
+  ret i128 %r
 }
 
 attributes #1 = { "target-features"="+sve" }

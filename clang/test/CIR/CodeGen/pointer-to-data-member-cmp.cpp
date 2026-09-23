@@ -6,6 +6,10 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++17 -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll --check-prefix=OGCG %s
 
+// RUN: %clang_cc1 -triple aarch64-unknown-linux-gnu -std=c++17 -fclangir -emit-cir -mmlir -mlir-print-ir-before=cir-cxxabi-lowering %s -o %t-arm.cir 2> %t-arm-before.cir
+// RUN: FileCheck --check-prefix=CIR-BEFORE --input-file=%t-arm-before.cir %s
+// RUN: FileCheck --check-prefix=CIR-AFTER --input-file=%t-arm.cir %s
+
 struct Foo {
   int a;
 };

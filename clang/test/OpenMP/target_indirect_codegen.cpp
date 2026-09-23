@@ -1,14 +1,14 @@
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=51 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm %s -o - | FileCheck %s --check-prefix=HOST
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=51 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm-bc %s -o %t-host.bc
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=51 -x c++ -triple amdgcn-amd-amdhsa -emit-llvm %s -fopenmp-is-target-device -fvisibility=protected -fopenmp-host-ir-file-path %t-host.bc -o - | FileCheck %s --check-prefix=DEVICE
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=51 -x c++ -triple amdgcn-amd-amdhsa %s -fopenmp-is-target-device -fvisibility=protected -fopenmp-host-ir-file-path %t-host.bc -emit-pch -o %t
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=51 -x c++ -triple amdgcn-amd-amdhsa -emit-llvm %s -fopenmp-is-target-device -fvisibility=protected -fopenmp-host-ir-file-path %t-host.bc -include-pch %t -o - | FileCheck %s --check-prefix=DEVICE
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=51 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=amdgpu-amd-amdhsa -emit-llvm %s -o - | FileCheck %s --check-prefix=HOST
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=51 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=amdgpu-amd-amdhsa -emit-llvm-bc %s -o %t-host.bc
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=51 -x c++ -triple amdgpu-amd-amdhsa -emit-llvm %s -fopenmp-is-target-device -fvisibility=protected -fopenmp-host-ir-file-path %t-host.bc -o - | FileCheck %s --check-prefix=DEVICE
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=51 -x c++ -triple amdgpu-amd-amdhsa %s -fopenmp-is-target-device -fvisibility=protected -fopenmp-host-ir-file-path %t-host.bc -emit-pch -o %t
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=51 -x c++ -triple amdgpu-amd-amdhsa -emit-llvm %s -fopenmp-is-target-device -fvisibility=protected -fopenmp-host-ir-file-path %t-host.bc -include-pch %t -o - | FileCheck %s --check-prefix=DEVICE
 
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=51 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=spirv64-intel -emit-llvm %s -o - | FileCheck %s --check-prefix=HOST
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=51 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=spirv64-intel -emit-llvm-bc %s -o %t-spirv-host.bc
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=51 -x c++ -triple spirv64-intel -emit-llvm %s -fopenmp-is-target-device -fvisibility=protected -fopenmp-host-ir-file-path %t-spirv-host.bc -o - | FileCheck %s --check-prefix=DEVICE
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=51 -x c++ -triple spirv64-intel -emit-llvm %s -fopenmp-is-target-device -fvisibility=protected -fopenmp-host-ir-file-path %t-spirv-host.bc -o - | FileCheck %s --check-prefix=DEVICE,SPIRV
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=51 -x c++ -triple spirv64-intel %s -fopenmp-is-target-device -fvisibility=protected -fopenmp-host-ir-file-path %t-spirv-host.bc -emit-pch -o %t
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=51 -x c++ -triple spirv64-intel -emit-llvm %s -fopenmp-is-target-device -fvisibility=protected -fopenmp-host-ir-file-path %t-spirv-host.bc -include-pch %t -o - | FileCheck %s --check-prefix=DEVICE
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=51 -x c++ -triple spirv64-intel -emit-llvm %s -fopenmp-is-target-device -fvisibility=protected -fopenmp-host-ir-file-path %t-spirv-host.bc -include-pch %t -o - | FileCheck %s --check-prefix=DEVICE,SPIRV
 
 // expected-no-diagnostics
 #ifndef HEADER
@@ -86,6 +86,7 @@ int main() {
 #endif
 // DEVICE-LABEL: define {{.*}}void @__omp_offloading_{{.+}}_main_l{{[0-9]+}}(
 // DEVICE: call {{.*}}@__llvm_omp_indirect_call_lookup(
+// SPIRV-SAME:  ptr addrspace(9)
 // DEVICE: call {{.*}}void %{{.+}}()
 // DEVICE: call {{.*}}@__llvm_omp_indirect_call_lookup(
 // DEVICE: call {{.*}}void %{{.+}}()

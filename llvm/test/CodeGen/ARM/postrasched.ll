@@ -3,10 +3,10 @@
 
 ; CHECK-LABEL: test_misched
 ; Pre and post ra machine scheduling
-; CHECK:  ********** MI Scheduling **********
+; CHECK:  Current Schedule Region
 ; CHECK:  t2LDRi12
 ; CHECK:  Latency            : 2
-; CHECK:  ********** MI Scheduling **********
+; CHECK:  Current Schedule Region
 ; CHECK:  t2LDRi12
 ; CHECK:  Latency            : 2
 

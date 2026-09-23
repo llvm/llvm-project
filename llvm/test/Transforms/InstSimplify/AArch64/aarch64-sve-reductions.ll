@@ -146,6 +146,16 @@ define i8 @eorv_i8_all_active_splat(i8 %a) #0 {
   ret i8 %out
 }
 
+define i8 @eorv_i8_all_active_non_splat(<vscale x 16 x i8> %a) #0 {
+; CHECK-LABEL: define i8 @eorv_i8_all_active_non_splat(
+; CHECK-SAME: <vscale x 16 x i8> [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[OUT:%.*]] = call i8 @llvm.aarch64.sve.eorv.nxv16i8(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> [[A]])
+; CHECK-NEXT:    ret i8 [[OUT]]
+;
+  %out = call i8 @llvm.aarch64.sve.eorv.nxv16i8(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> %a)
+  ret i8 %out
+}
+
 define i16 @eorv_i16_splat_neutral_val(<vscale x 8 x i1> %pg) #0 {
 ; CHECK-LABEL: define i16 @eorv_i16_splat_neutral_val(
 ; CHECK-SAME: <vscale x 8 x i1> [[PG:%.*]]) #[[ATTR0]] {

@@ -49,8 +49,8 @@ public:
 
 /// Create an Offload error.
 template <typename... ArgsTy>
-static llvm::Error createOffloadError(error::ErrorCode Code, const char *ErrFmt,
-                                      ArgsTy... Args) {
+[[maybe_unused]] static llvm::Error
+createOffloadError(error::ErrorCode Code, const char *ErrFmt, ArgsTy... Args) {
   std::string Buffer;
   llvm::raw_string_ostream(Buffer) << llvm::format(ErrFmt, Args...);
   return llvm::make_error<error::OffloadError>(Code, Buffer);

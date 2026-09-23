@@ -15,6 +15,8 @@
 #define MLIR_DIALECT_AMDGPU_IR_AMDGPUDIALECT_H_
 
 #include "mlir/Bytecode/BytecodeOpInterface.h"
+#include "mlir/Dialect/AMDGPU/IR/AMDGPUDialectDecl.h"
+#include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
@@ -22,9 +24,7 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
 
-#include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h.inc"
-
-#include "mlir/Dialect/AMDGPU/IR/AMDGPUEnums.h.inc"
+#include "mlir/Dialect/AMDGPU/IR/AMDGPUEnums.h"
 
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUAttrs.h.inc"
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUTypes.h.inc"

@@ -63,13 +63,10 @@ inline ConstantInitFuture::ConstantInitFuture(ConstantInitBuilderBase *builder)
   assert(builder->Buffer[0] != nullptr);
 }
 
-llvm::GlobalVariable *
-ConstantInitBuilderBase::createGlobal(llvm::Constant *initializer,
-                                      const llvm::Twine &name,
-                                      CharUnits alignment,
-                                      bool constant,
-                                      llvm::GlobalValue::LinkageTypes linkage,
-                                      unsigned addressSpace) {
+llvm::GlobalVariable *ConstantInitBuilderBase::createGlobal(
+    llvm::Constant *initializer, const llvm::Twine &name, CharUnits alignment,
+    bool constant, llvm::GlobalValue::LinkageTypes linkage,
+    std::optional<unsigned> addressSpace) {
   auto GV = new llvm::GlobalVariable(CGM.getModule(),
                                      initializer->getType(),
                                      constant,
@@ -94,9 +91,9 @@ void ConstantInitBuilderBase::setGlobalInitializer(llvm::GlobalVariable *GV,
 
 void ConstantInitBuilderBase::resolveSelfReferences(llvm::GlobalVariable *GV) {
   for (auto &entry : SelfReferences) {
-    llvm::Constant *resolvedReference =
-      llvm::ConstantExpr::getInBoundsGetElementPtr(
-        GV->getValueType(), GV, entry.Indices);
+    llvm::Constant *resolvedReference = llvm::ConstantExpr::getGetElementPtr(
+        CGM.getDataLayout(), GV->getValueType(), GV, entry.Indices,
+        llvm::GEPNoWrapFlags::inBounds());
     auto dummy = entry.Dummy;
     dummy->replaceAllUsesWith(resolvedReference);
     dummy->eraseFromParent();

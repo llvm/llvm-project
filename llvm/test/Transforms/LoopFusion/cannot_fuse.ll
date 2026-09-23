@@ -148,7 +148,8 @@ bb25:                                             ; preds = %bb15
 ; CHECK: Attempting fusion on Candidate List:
 ; CHECK-NEXT: [[LOOP1PREHEADER]]
 ; CHECK-NEXT: [[LOOP2PREHEADER]]
-; CHECK: Fusion candidates do not have identical trip counts. Not fusing.
+; CHECK: Fusion candidates do not have identical trip counts
+; CHECK-SAME: and peeling is not supported for this
 ; CHECK: Loop Fusion complete
 define void @different_bounds(ptr noalias %arg) {
 bb:

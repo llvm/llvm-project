@@ -18,10 +18,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Driver/Types.h"
 #include "llvm/Support/Error.h"
-
-namespace llvm::vfs {
-class FileSystem;
-} // namespace llvm::vfs
+#include "llvm/Support/VirtualFileSystemFwd.h"
 
 namespace clang {
 class DiagnosticsEngine;
@@ -31,6 +28,10 @@ class Compilation;
 } // namespace clang
 
 namespace clang::driver::modules {
+
+/// Emits diagnostics for arguments incompatible with -fmodules-driver.
+void diagnoseModulesDriverArgs(llvm::opt::DerivedArgList &DAL,
+                               DiagnosticsEngine &Diags);
 
 /// The parsed Standard library module manifest.
 struct StdModuleManifest {

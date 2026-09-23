@@ -43,12 +43,12 @@ static cl::opt<bool> GenerateMergedBaseProfiles(
 
 namespace llvm {
 namespace sampleprof {
-bool FunctionSamples::ProfileIsProbeBased = false;
-bool FunctionSamples::ProfileIsCS = false;
-bool FunctionSamples::ProfileIsPreInlined = false;
-bool FunctionSamples::UseMD5 = false;
-bool FunctionSamples::HasUniqSuffix = true;
-bool FunctionSamples::ProfileIsFS = false;
+std::atomic<bool> FunctionSamples::ProfileIsProbeBased;
+std::atomic<bool> FunctionSamples::ProfileIsCS;
+std::atomic<bool> FunctionSamples::ProfileIsPreInlined;
+std::atomic<bool> FunctionSamples::UseMD5;
+std::atomic<bool> FunctionSamples::HasUniqSuffix = true;
+std::atomic<bool> FunctionSamples::ProfileIsFS;
 
 std::error_code
 serializeTypeMap(const TypeCountMap &Map,
@@ -143,6 +143,7 @@ sampleprof_error SampleRecord::merge(const SampleRecord &Other,
                                      uint64_t Weight) {
   sampleprof_error Result;
   Result = addSamples(Other.getSamples(), Weight);
+  CallTargets.reserve(CallTargets.size() + Other.getCallTargets().size());
   for (const auto &I : Other.getCallTargets()) {
     mergeSampleProfErrors(Result, addCalledTarget(I.first, I.second, Weight));
   }
@@ -220,11 +221,9 @@ void FunctionSamples::print(raw_ostream &OS, unsigned Indent) const {
   OS.indent(Indent);
   if (!BodySamples.empty()) {
     OS << "Samples collected in the function's body {\n";
-    SampleSorter<LineLocation, SampleRecord> SortedBodySamples(BodySamples);
-    for (const auto &SI : SortedBodySamples.get()) {
+    for (const auto &[Loc, Record] : BodySamples) {
       OS.indent(Indent + 2);
-      const auto &Loc = SI->first;
-      OS << SI->first << ": " << SI->second;
+      OS << Loc << ": " << Record;
       if (const TypeCountMap *TypeCountMap =
               this->findCallsiteTypeSamplesAt(Loc)) {
         OS.indent(Indent + 2);
@@ -240,11 +239,7 @@ void FunctionSamples::print(raw_ostream &OS, unsigned Indent) const {
   OS.indent(Indent);
   if (!CallsiteSamples.empty()) {
     OS << "Samples collected in inlined callsites {\n";
-    SampleSorter<LineLocation, FunctionSamplesMap> SortedCallsiteSamples(
-        CallsiteSamples);
-    for (const auto *Element : SortedCallsiteSamples.get()) {
-      // Element is a pointer to a pair of LineLocation and FunctionSamplesMap.
-      const auto &[Loc, FunctionSampleMap] = *Element;
+    for (const auto &[Loc, FunctionSampleMap] : CallsiteSamples) {
       for (const FunctionSamples &FuncSample :
            llvm::make_second_range(FunctionSampleMap)) {
         OS.indent(Indent + 2);
@@ -286,7 +281,7 @@ void sampleprof::sortFuncProfiles(
 
 unsigned FunctionSamples::getOffset(const DILocation *DIL) {
   return (DIL->getLine() - DIL->getScope()->getSubprogram()->getLine()) &
-      0xffff;
+         0xffff;
 }
 
 LineLocation FunctionSamples::getCallSiteIdentifier(const DILocation *DIL,
@@ -308,8 +303,8 @@ LineLocation FunctionSamples::getCallSiteIdentifier(const DILocation *DIL,
 
 const FunctionSamples *FunctionSamples::findFunctionSamples(
     const DILocation *DIL, SampleProfileReaderItaniumRemapper *Remapper,
-    const HashKeyMap<std::unordered_map, FunctionId, FunctionId>
-        *FuncNameToProfNameMap) const {
+    const HashKeyMap<DenseMap, FunctionId, FunctionId> *FuncNameToProfNameMap)
+    const {
   assert(DIL);
   SmallVector<std::pair<LineLocation, StringRef>, 10> S;
 
@@ -351,8 +346,8 @@ void FunctionSamples::findAllNames(DenseSet<FunctionId> &NameSet) const {
 const FunctionSamples *FunctionSamples::findFunctionSamplesAt(
     const LineLocation &Loc, StringRef CalleeName,
     SampleProfileReaderItaniumRemapper *Remapper,
-    const HashKeyMap<std::unordered_map, FunctionId, FunctionId>
-        *FuncNameToProfNameMap) const {
+    const HashKeyMap<DenseMap, FunctionId, FunctionId> *FuncNameToProfNameMap)
+    const {
   CalleeName = getCanonicalFnName(CalleeName);
 
   auto I = CallsiteSamples.find(mapIRLocToProfileLoc(Loc));
