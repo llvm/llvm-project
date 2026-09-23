@@ -1,9 +1,14 @@
-//===-- Linux implementation of ppoll ------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Linux implementation of ppoll.
+///
 //===----------------------------------------------------------------------===//
 
 #include "src/poll/ppoll.h"
@@ -33,6 +38,8 @@ LLVM_LIBC_FUNCTION(int, ppoll,
   }
 
 #if defined(SYS_ppoll_time64)
+  // The kernel expects the signal mask size in bytes, not the number of
+  // signals. NSIG is the signal count, so NSIG / 8 gives the byte size.
   int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_ppoll_time64, fds, nfds, tsp,
                                               sigmask, NSIG / 8);
 #elif defined(SYS_ppoll)
