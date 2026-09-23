@@ -602,14 +602,13 @@ TEST_F(AArch64TargetInfoTest, ClassifyFixedLengthSVEDataCoerced) {
         {FixedSVFloat64, F64, 2},
     };
 
-    for (const auto &Case : Cases) {
+    for (const auto &[Ty, EltTy, MinElts] : Cases) {
       std::unique_ptr<FunctionInfo> FI =
-          FunctionInfo::create(llvm::CallingConv::C, Case.Ty, {Case.Ty});
+          FunctionInfo::create(llvm::CallingConv::C, Ty, {Ty});
       FI->getReturnInfo() = ArgInfo::getIgnore();
       TI->computeInfo(*FI);
-      expectDirectCoercedSVEData(FI->getReturnInfo(), Case.EltTy, Case.MinElts);
-      expectDirectCoercedSVEData(FI->getArgInfo(0).Info, Case.EltTy,
-                                 Case.MinElts);
+      expectDirectCoercedSVEData(FI->getReturnInfo(), EltTy, MinElts);
+      expectDirectCoercedSVEData(FI->getArgInfo(0).Info, EltTy, MinElts);
     }
   }
 }
@@ -1093,12 +1092,12 @@ TEST_F(AArch64TargetInfoTest, ClassifyReturnCXXCannotPassInRegistersIndirect) {
   } Cases[] = {{NonPassableHFA, llvm::Align(4)},
                {VirtualDerived, llvm::Align(8)}};
 
-  for (const auto &Case : Cases) {
+  for (const auto &[RetTy, ExpectedAlign] : Cases) {
     std::unique_ptr<FunctionInfo> FI =
-        FunctionInfo::create(llvm::CallingConv::C, Case.RetTy, {});
+        FunctionInfo::create(llvm::CallingConv::C, RetTy, {});
     FI->getReturnInfo() = ArgInfo::getIgnore();
     TI->computeInfo(*FI);
-    expectNaturalAlignIndirect(FI->getReturnInfo(), Case.ExpectedAlign,
+    expectNaturalAlignIndirect(FI->getReturnInfo(), ExpectedAlign,
                                /*ByVal=*/false);
   }
 }
