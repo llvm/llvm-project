@@ -2268,7 +2268,7 @@ VarDecl::isThisDeclarationADefinition(ASTContext &C) const {
                     TSK_ExplicitSpecialization) ||
          isa<VarTemplatePartialSpecializationDecl>(this)))
       return Definition;
-    if (!isOutOfLine() && isInline())
+    if (!isOutOfLine() && (isInline() || hasDefiningAttr()))
       return Definition;
     return DeclarationOnly;
   }
