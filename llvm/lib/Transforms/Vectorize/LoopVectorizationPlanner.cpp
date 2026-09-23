@@ -143,17 +143,15 @@ bool VFSelectionContext::isLegalMaskedLoadOrStore(bool IsLoad, Type *ScalarTy,
                                                   Align Alignment,
                                                   unsigned AddressSpace) const {
   return ForceTargetSupportsMaskedMemoryOps ||
-         (IsLoad ? TTI.isLegalMaskedLoad(ScalarTy, Alignment, AddressSpace)
-                 : TTI.isLegalMaskedStore(ScalarTy, Alignment, AddressSpace));
+         llvm::isLegalMaskedLoadOrStore(TTI, IsLoad, ScalarTy, Alignment,
+                                        AddressSpace);
 }
 
 bool VFSelectionContext::isLegalGatherOrScatter(bool IsLoad, Type *ScalarTy,
                                                 Align Alignment,
                                                 ElementCount VF) const {
-  Type *VectorTy = toVectorTy(ScalarTy, VF);
   return ForceTargetSupportsGatherScatterOps ||
-         (IsLoad ? TTI.isLegalMaskedGather(VectorTy, Alignment)
-                 : TTI.isLegalMaskedScatter(VectorTy, Alignment));
+         llvm::isLegalGatherOrScatter(TTI, IsLoad, ScalarTy, Alignment, VF);
 }
 
 bool VFSelectionContext::supportsScalableVectors() const {

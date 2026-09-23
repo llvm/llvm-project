@@ -29,10 +29,15 @@
 #include "llvm/Analysis/GuardUtils.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/Loads.h"
+#include "llvm/Analysis/LoopAccessAnalysis.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
+#include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
@@ -2420,101 +2425,55 @@ static void sinkLastInstruction(ArrayRef<BasicBlock*> Blocks) {
   }
 }
 
-/// Estimate whether commoning \p NumMemOps loads or stores like \p I, which
-/// access distinct addresses, penalizes a later vectorizer. Commoning needs a
-/// pointer PHI, so the result can only be widened as a gather or scatter, while
-/// separate blocks allow one independent masked load or store each.
+/// Return true if \p I is a memory access with a stride of one element per
+/// iteration of the loop it belongs to.
+static bool isUnitStrideMemOp(Instruction *I, const SimplifyCFGOptions &Opts) {
+  if (!Opts.LI || !Opts.SE)
+    return false;
+  Loop *L = Opts.LI->getLoopFor(I->getParent());
+  if (!L)
+    return false;
+  Type *AccessTy = getLoadStoreType(I);
+  const DataLayout &DL = I->getDataLayout();
+  if (DL.getTypeAllocSizeInBits(AccessTy) != DL.getTypeSizeInBits(AccessTy))
+    return false;
+  Value *Ptr = getLoadStorePointerOperand(I);
+  PredicatedScalarEvolution PSE(*Opts.SE, *L);
+  auto *AR = dyn_cast<SCEVAddRecExpr>(PSE.getSCEV(Ptr));
+  if (!AR)
+    return false;
+  std::optional<int64_t> Stride =
+      getStrideFromAddRec(AR, L, AccessTy, Ptr, PSE);
+  return Stride == 1 || Stride == -1;
+}
+
+/// Estimate whether commoning the loads or stores \p Insts, which access
+/// distinct addresses, penalizes a later vectorizer. Commoning needs a pointer
+/// PHI, so consecutive accesses that each could be widened into a masked load
+/// or store are widened as a gather or scatter instead.
 static bool
 sinkingMemOpCouldPenalizeVectorization(const TargetTransformInfo &TTI,
-                                       Instruction *I, unsigned NumMemOps) {
+                                       ArrayRef<Instruction *> Insts,
+                                       const SimplifyCFGOptions &Opts) {
+  Instruction *I = Insts.front();
   bool IsLoad = isa<LoadInst>(I);
   assert((IsLoad || isa<StoreInst>(I)) && "Expected a load or store");
-  Type *ScalarTy = getLoadStoreType(I);
-  Align Alignment = getLoadStoreAlignment(I);
-  unsigned AS = getLoadStoreAddressSpace(I);
-  Intrinsic::ID MaskedID =
-      IsLoad ? Intrinsic::masked_load : Intrinsic::masked_store;
-  Intrinsic::ID GatherScatterID =
-      IsLoad ? Intrinsic::masked_gather : Intrinsic::masked_scatter;
-
-  // There is nothing to preserve unless the operations can be widened in place.
-  if (!VectorType::isValidElementType(ScalarTy) ||
-      !(IsLoad ? TTI.isLegalMaskedLoad(ScalarTy, Alignment, AS)
-               : TTI.isLegalMaskedStore(ScalarTy, Alignment, AS)))
+  if (!all_of(Insts,
+              [&](Instruction *I) { return isUnitStrideMemOp(I, Opts); }))
     return false;
 
-  // Without a gather or scatter the commoned operation cannot be widened.
-  if (!(IsLoad ? TTI.isLegalMaskedGather(ScalarTy, Alignment)
-               : TTI.isLegalMaskedScatter(ScalarTy, Alignment)))
-    return true;
-
-  TypeSize EltWidth = I->getDataLayout().getTypeSizeInBits(ScalarTy);
-  if (EltWidth.isScalable() || EltWidth.isZero())
-    return true;
-
-  auto PenalizesForVF = [&](ElementCount VF) {
-    auto *VecTy = VectorType::get(ScalarTy, VF);
-    Value *Ptr = getLoadStorePointerOperand(I);
-    auto *PtrVecTy = VectorType::get(Ptr->getType(), VF);
-    constexpr TargetTransformInfo::TargetCostKind CostKind =
-        TargetTransformInfo::TCK_RecipThroughput;
-
-    InstructionCost GatherScatterCost =
-        TTI.getAddressComputationCost(PtrVecTy, nullptr, nullptr, CostKind) +
-        TTI.getMemIntrinsicInstrCost(
-            MemIntrinsicCostAttributes(GatherScatterID, VecTy, Ptr,
-                                       /*VariableMask=*/true, Alignment, I),
-            CostKind);
-    InstructionCost MaskedCost =
-        TTI.getMemIntrinsicInstrCost(
-            MemIntrinsicCostAttributes(MaskedID, VecTy, Alignment, AS),
-            CostKind) *
-        NumMemOps;
-
-    LLVM_DEBUG(dbgs() << "SINK: " << (VF.isScalable() ? "scalable" : "fixed")
-                      << " VF " << VF.getKnownMinValue() << ": "
-                      << (IsLoad ? "gather" : "scatter") << " cost "
-                      << GatherScatterCost << " vs " << NumMemOps << " masked "
-                      << (IsLoad ? "loads " : "stores ") << MaskedCost << "\n");
-    return GatherScatterCost >= MaskedCost;
-  };
-
-  // One vector register's worth of elements, at vscale=1 for scalable vectors.
-  auto VFFrom = [&](TargetTransformInfo::RegisterKind RK,
-                    bool Scalable) -> std::optional<ElementCount> {
-    TypeSize RegWidth = TTI.getRegisterBitWidth(RK);
-    if (RegWidth.isScalable() != Scalable || RegWidth.isZero())
-      return std::nullopt;
-    unsigned NumElts = RegWidth.getKnownMinValue() / EltWidth.getFixedValue();
-    if (NumElts < (Scalable ? 1u : 2u))
-      return std::nullopt;
-    return ElementCount::get(NumElts, Scalable);
-  };
-
-  std::optional<ElementCount> FixedVF =
-      VFFrom(TargetTransformInfo::RGK_FixedWidthVector, /*Scalable=*/false);
-  std::optional<ElementCount> ScalableVF =
-      VFFrom(TargetTransformInfo::RGK_ScalableVector, /*Scalable=*/true);
-
-  // Both forms are legal but no vector factor can be formed, so the target
-  // vectorizes in a way this cannot reason about. Keep the operations separate.
-  if (!FixedVF && !ScalableVF)
-    return true;
-
-  // A vectorizer may pick either kind of vector, so keep the operations
-  // separate if commoning them does not pay off for one of them.
-  bool Penalizes = false;
-  if (FixedVF)
-    Penalizes |= PenalizesForVF(*FixedVF);
-  if (ScalableVF)
-    Penalizes |= PenalizesForVF(*ScalableVF);
-  return Penalizes;
+  Type *ScalarTy = getLoadStoreType(I);
+  return VectorType::isValidElementType(ScalarTy) &&
+         isLegalMaskedLoadOrStore(TTI, IsLoad, ScalarTy,
+                                  getLoadStoreAlignment(I),
+                                  getLoadStoreAddressSpace(I));
 }
 
 /// Check whether BB's predecessors end with unconditional branches. If it is
 /// true, sink any common code from the predecessors to BB.
 static bool sinkCommonCodeFromPredecessors(BasicBlock *BB, DomTreeUpdater *DTU,
-                                           const TargetTransformInfo &TTI) {
+                                           const TargetTransformInfo &TTI,
+                                           const SimplifyCFGOptions &Options) {
   // We support two situations:
   //   (1) all incoming arcs are unconditional
   //   (2) there are non-unconditional incoming arcs
@@ -2634,7 +2593,7 @@ static bool sinkCommonCodeFromPredecessors(BasicBlock *BB, DomTreeUpdater *DTU,
     auto ProfitableToSinkInstruction = [&](LockstepReverseIterator<true> &LRI) {
       ArrayRef<Instruction *> Insts = *LRI;
       if (isa<LoadInst, StoreInst>(Insts[0]) && !HaveSameMemAddress(Insts) &&
-          sinkingMemOpCouldPenalizeVectorization(TTI, Insts[0], Insts.size()))
+          sinkingMemOpCouldPenalizeVectorization(TTI, Insts, Options))
         return false;
 
       unsigned NumPHIInsts = 0;
@@ -9429,7 +9388,7 @@ bool SimplifyCFGOpt::simplifyOnce(BasicBlock *BB) {
     return true;
 
   if (SinkCommon && Options.SinkCommonInsts) {
-    if (sinkCommonCodeFromPredecessors(BB, DTU, TTI) ||
+    if (sinkCommonCodeFromPredecessors(BB, DTU, TTI, Options) ||
         mergeCompatibleInvokes(BB, DTU)) {
       // sinkCommonCodeFromPredecessors() does not automatically CSE PHI's,
       // so we may now how duplicate PHI's.
