@@ -42,6 +42,12 @@ target_replay(ident_t *Loc, DeviceTy &Device, void *HostPtr, void *DeviceMemory,
 
 extern void handleTargetOutcome(bool Success, ident_t *Loc);
 
+/// Resolve the device-side kernel entry (a plugin \c GenericKernelTy*) for the
+/// host function pointer \p HostPtr on libomptarget device \p DeviceId, or
+/// return nullptr if no matching entry / target table exists.  Used by the
+/// taskgraph backend to fill a kernel node's device handle at finalize.
+extern void *getDeviceKernelEntry(int32_t DeviceId, void *HostPtr);
+
 ////////////////////////////////////////////////////////////////////////////////
 /// Print out the names and properties of the arguments to each kernel
 static inline void
