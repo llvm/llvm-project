@@ -1175,9 +1175,8 @@ private:
     }
   }
 
-  // An F2023 enumeration type has Derived category but lowers to i32 and is
-  // returned by value like an integer, so it must not use the caller-allocated
-  // fir.save_result ABI reserved for record-shaped results.
+  // An F2023 enumeration type has Derived category but lowers to i32, so a
+  // scalar enumeration result is returned by value like an integer.
   static bool
   isEnumerationDerived(const Fortran::evaluate::DynamicType &dynamicType) {
     // GetDerivedTypeSpec() is null-safe: it yields nullptr for polymorphic and
@@ -1410,10 +1409,8 @@ private:
     addFirResult(mlirType, FirPlaceHolder::resultEntityPosition,
                  Property::Value);
     // Explicit results require the caller to allocate the storage and save the
-    // function result in the storage with a fir.save_result. Enumeration
-    // results lower to i32 and are returned by value, so they are exempt.
-    if (!isEnumerationDerived(typeAndShape->type()))
-      setSaveResult();
+    // function result in the storage with a fir.save_result.
+    setSaveResult();
   }
 
   // Return nullopt for scalars, empty vector for assumed rank, and a vector
