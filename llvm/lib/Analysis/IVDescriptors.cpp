@@ -374,7 +374,6 @@ static RecurrenceDescriptor getMinMaxRecurrence(PHINode *Phi, Loop *TheLoop,
   // Validate chain entries and collect stores from chain entries and
   // intermediate ops.
   SmallVector<StoreInst *> Stores;
-  SmallPtrSet<Value *, 8> SubChains;
   for (Value *V : Chain) {
     for (User *U : V->users()) {
       if (Chain.contains(U))
@@ -392,7 +391,6 @@ static RecurrenceDescriptor getMinMaxRecurrence(PHINode *Phi, Loop *TheLoop,
       Value *A, *B;
       if (GetMinMaxRK(I, A, B) != RK)
         return {};
-
       for (User *IU : I->users()) {
         if (auto *SI = dyn_cast<StoreInst>(IU))
           Stores.push_back(SI);
