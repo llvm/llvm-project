@@ -448,7 +448,7 @@ if dwarf_version_string and gdb_version_string:
                 )
         except ValueError as e:
             lit_config.warning(
-                f"Assuming GDB {gdb_version_string} is incompatible with DWARF version {dwarf_version_string}: {e}"
+                f"Failed to check GDB version: {gdb_version_string}. Assuming GDB is incompatible with DWARF version {dwarf_version_string}: {e}"
             )
             config.available_features.add("gdb-clang-incompatibility")
 
