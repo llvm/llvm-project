@@ -6122,13 +6122,13 @@ __kmp_expire_taskgraph_records(kmp_int32 gtid,
 
   while (*expiring_p) {
     kmp_taskgraph_record_t *expiring = *expiring_p;
+    *expiring_p = expiring->next;
     if (!record) {
       record = expiring;
       __kmp_taskgraph_free(gtid, record, /*keep_rec=*/true);
     } else {
-      __kmp_taskgraph_free(gtid, record, /*keep_rec=*/false);
+      __kmp_taskgraph_free(gtid, expiring, /*keep_rec=*/false);
     }
-    *expiring_p = expiring->next;
   }
 
   return record;
