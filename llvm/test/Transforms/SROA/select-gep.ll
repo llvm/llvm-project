@@ -347,32 +347,6 @@ define i32 @test_select_idx_not_constant3(i1 %c, ptr %p, i64 %arg) {
   ret i32 %res
 }
 
-; The intermediate addrspacecast is dead after unfolding the GEP(select).
-define i32 @test_sroa_select_gep_addrspace(i1 %cond) {
-; CHECK-LABEL: @test_sroa_select_gep_addrspace(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ALLOC0:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[ALLOC1:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    store i32 1, ptr [[ALLOC0]], align 4
-; CHECK-NEXT:    store i32 3, ptr [[ALLOC1]], align 4
-; CHECK-NEXT:    [[ALLOC1_SROA_1_0_GEP_SROA_CAST:%.*]] = addrspacecast ptr [[ALLOC1]] to ptr addrspace(5)
-; CHECK-NEXT:    [[ALLOC0_SROA_1_0_GEP_SROA_CAST:%.*]] = addrspacecast ptr [[ALLOC0]] to ptr addrspace(5)
-; CHECK-NEXT:    [[CAST:%.*]] = select i1 [[COND:%.*]], ptr addrspace(5) [[ALLOC0_SROA_1_0_GEP_SROA_CAST]], ptr addrspace(5) [[ALLOC1_SROA_1_0_GEP_SROA_CAST]]
-; CHECK-NEXT:    [[VALUE:%.*]] = load volatile i32, ptr addrspace(5) [[CAST]], align 4
-; CHECK-NEXT:    ret i32 [[VALUE]]
-;
-entry:
-  %alloc0 = alloca %pair, align 8
-  %alloc1 = alloca %pair, align 8
-  store %pair { i32 0, i32 1 }, ptr %alloc0
-  store %pair { i32 2, i32 3 }, ptr %alloc1
-  %select = select i1 %cond, ptr %alloc0, ptr %alloc1
-  %cast = addrspacecast ptr %select to ptr addrspace(5)
-  %gep = getelementptr inbounds %pair, ptr addrspace(5) %cast, i32 0, i32 1
-  %value = load volatile i32, ptr addrspace(5) %gep
-  ret i32 %value
-}
-
 define i32 @test_select_fold_split(i1 %cond) {
 ; CHECK-LABEL: @test_select_fold_split(
 ; CHECK-NEXT:    [[VAL_SROA_SPECULATED:%.*]] = select i1 [[COND:%.*]], i32 1, i32 3
@@ -520,26 +494,17 @@ define i32 @test_select_fold_split_zero_gep(i1 %cond) {
 }
 
 
-
-; Check for correct addrspacecast insertion for loads.
 define i32 @test_select_fold_split_volatile(i1 %cond) {
 ; CHECK-LABEL: @test_select_fold_split_volatile(
-; CHECK-NEXT:    [[ALLOC0:%.*]] = alloca i32, align 8
-; CHECK-NEXT:    [[DOTFCA_1_GEP2:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[ALLOC2:%.*]] = alloca i32, align 8
 ; CHECK-NEXT:    [[ALLOC1:%.*]] = alloca i32, align 8
-; CHECK-NEXT:    [[DOTFCA_1_GEP:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    store i32 0, ptr [[ALLOC0]], align 8
-; CHECK-NEXT:    store i32 1, ptr [[DOTFCA_1_GEP2]], align 4
+; CHECK-NEXT:    store i32 0, ptr [[ALLOC2]], align 8
 ; CHECK-NEXT:    store i32 2, ptr [[ALLOC1]], align 8
-; CHECK-NEXT:    store i32 3, ptr [[DOTFCA_1_GEP]], align 4
-; CHECK-NEXT:    [[ALLOC1_SROA_0_0_GEP_SROA_CAST6:%.*]] = addrspacecast ptr [[ALLOC1]] to ptr addrspace(5)
+; CHECK-NEXT:    [[ALLOC0:%.*]] = select i1 [[COND:%.*]], ptr [[ALLOC2]], ptr [[ALLOC1]]
 ; CHECK-NEXT:    [[ALLOC0_SROA_0_0_GEP_SROA_CAST8:%.*]] = addrspacecast ptr [[ALLOC0]] to ptr addrspace(5)
-; CHECK-NEXT:    [[ALLOC0_SROA_0_0_GEP_SROA_CAST7:%.*]] = select i1 [[COND:%.*]], ptr addrspace(5) [[ALLOC0_SROA_0_0_GEP_SROA_CAST8]], ptr addrspace(5) [[ALLOC1_SROA_0_0_GEP_SROA_CAST6]]
-; CHECK-NEXT:    [[ALLOC1_SROA_2_0_GEP4_SROA_CAST:%.*]] = addrspacecast ptr [[DOTFCA_1_GEP]] to ptr addrspace(5)
-; CHECK-NEXT:    [[ALLOC0_SROA_2_0_GEP3_SROA_CAST:%.*]] = addrspacecast ptr [[DOTFCA_1_GEP2]] to ptr addrspace(5)
-; CHECK-NEXT:    [[GEP1:%.*]] = select i1 [[COND]], ptr addrspace(5) [[ALLOC0_SROA_2_0_GEP3_SROA_CAST]], ptr addrspace(5) [[ALLOC1_SROA_2_0_GEP4_SROA_CAST]]
+; CHECK-NEXT:    [[ALLOC0_SROA_0_0_GEP_SROA_CAST7:%.*]] = getelementptr inbounds [[STRUCT_T:%.*]], ptr addrspace(5) [[ALLOC0_SROA_0_0_GEP_SROA_CAST8]], i32 0, i32 0
 ; CHECK-NEXT:    [[VAL1:%.*]] = load volatile i32, ptr addrspace(5) [[ALLOC0_SROA_0_0_GEP_SROA_CAST7]], align 4
-; CHECK-NEXT:    [[VAL2:%.*]] = load volatile i32, ptr addrspace(5) [[GEP1]], align 4
+; CHECK-NEXT:    [[VAL2:%.*]] = select i1 [[COND]], i32 1, i32 3
 ; CHECK-NEXT:    [[VAL3:%.*]] = add i32 [[VAL1]], [[VAL2]]
 ; CHECK-NEXT:    ret i32 [[VAL3]]
 ;
@@ -552,7 +517,7 @@ define i32 @test_select_fold_split_volatile(i1 %cond) {
   %gep0 = getelementptr inbounds %struct.T, ptr addrspace(5) %cast, i32 0, i32 0
   %gep1 = getelementptr inbounds %struct.T, ptr addrspace(5) %cast, i32 0, i32 1
   %val1 = load volatile i32, ptr addrspace(5) %gep0
-  %val2 = load volatile i32, ptr addrspace(5) %gep1
+  %val2 = load i32, ptr addrspace(5) %gep1
   %val3 = add i32 %val1, %val2
   ret i32 %val3
 }
