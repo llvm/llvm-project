@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/ConvertCall.h"
+#include "flang/Evaluate/tools.h"
 #include "flang/Lower/Allocatable.h"
 #include "flang/Lower/CUDA.h"
 #include "flang/Lower/ConvertExprToHLFIR.h"
@@ -1723,6 +1724,46 @@ static PreparedDummyArgument prepareProcedurePointerActualArgument(
   return PreparedDummyArgument{tempBoxProc, /*cleanups=*/{}};
 }
 
+static bool isCUDADeviceDummy(
+    const Fortran::evaluate::characteristics::DummyArgument *dummy) {
+  if (!dummy)
+    return false;
+  return Fortran::common::visit(
+      Fortran::common::visitors{
+          [](const Fortran::evaluate::characteristics::DummyDataObject
+                 &object) {
+            return object.cudaDataAttr == Fortran::common::CUDADataAttr::Device;
+          },
+          [](const auto &) { return false; },
+      },
+      dummy->u);
+}
+
+static void useOpenACCDeviceBinding(
+    mlir::Location loc, Fortran::lower::PreparedActualArgument &preparedActual,
+    const Fortran::lower::CallerInterface::PassedEntity &arg,
+    CallContext &callContext) {
+  if (!isCUDADeviceDummy(arg.characteristics))
+    return;
+  const Fortran::lower::SomeExpr *expr{arg.entity->UnwrapExpr()};
+  if (!expr || !Fortran::evaluate::IsVariable(*expr))
+    return;
+
+  Fortran::lower::SymMapScope deviceScope{callContext.symMap};
+  bool foundDeviceBinding{false};
+  for (const Fortran::semantics::Symbol &symbol :
+       Fortran::evaluate::GetSymbolVector(*expr))
+    foundDeviceBinding |=
+        callContext.symMap.copyDeviceBindingToCurrentScope(symbol);
+  if (!foundDeviceBinding)
+    return;
+
+  hlfir::EntityWithAttributes deviceActual = Fortran::lower::convertExprToHLFIR(
+      loc, callContext.converter, *expr, callContext.symMap,
+      callContext.stmtCtx);
+  preparedActual.setActual(deviceActual);
+}
+
 /// Prepare arguments of calls to user procedures with actual arguments that
 /// have been pre-lowered but not yet prepared according to the interface.
 void prepareUserCallArguments(
@@ -1745,6 +1786,7 @@ void prepareUserCallArguments(
       caller.placeInput(arg, builder.genAbsentOp(loc, argTy));
       continue;
     }
+    useOpenACCDeviceBinding(loc, *preparedActual, arg, callContext);
 
     switch (arg.passBy) {
     case PassBy::Value: {

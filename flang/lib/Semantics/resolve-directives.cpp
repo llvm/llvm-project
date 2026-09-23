@@ -1964,6 +1964,21 @@ static bool ContainsStructureComponent(const parser::Designator &designator) {
       designator.u);
 }
 
+static bool IsOpenACCDeviceMappingFlag(Symbol::Flag flag) {
+  switch (flag) {
+  case Symbol::Flag::AccCopy:
+  case Symbol::Flag::AccCopyIn:
+  case Symbol::Flag::AccCopyInReadOnly:
+  case Symbol::Flag::AccCopyOut:
+  case Symbol::Flag::AccCreate:
+  case Symbol::Flag::AccPresent:
+  case Symbol::Flag::AccDevicePtr:
+    return true;
+  default:
+    return false;
+  }
+}
+
 void AccAttributeVisitor::ResolveAccObject(
     const parser::AccObject &accObject, Symbol::Flag accFlag) {
   common::visit(
@@ -1998,6 +2013,11 @@ void AccAttributeVisitor::ResolveAccObject(
             const parser::Name &baseName{parser::GetFirstName(designator)};
             if (auto *symbol{ResolveAcc(baseName, accFlag, currScope())}) {
               AddToContextObjectWithDSA(*symbol, accFlag);
+              if (GetContext().directive == llvm::acc::Directive::ACCD_data &&
+                  IsOpenACCDeviceMappingFlag(accFlag)) {
+                currScope().AddOpenACCMappedSymbol(*symbol);
+                context_.NoteOpenACCDataMapping();
+              }
               if (preciseDesignator &&
                   dataSharingAttributeFlags.test(accFlag)) {
                 CheckMultipleAppearances(
@@ -2013,6 +2033,12 @@ void AccAttributeVisitor::ResolveAccObject(
                 if (auto *resolvedObject{
                         ResolveAcc(*object, accFlag, currScope())}) {
                   AddToContextObjectWithDSA(*resolvedObject, accFlag);
+                  if (GetContext().directive ==
+                          llvm::acc::Directive::ACCD_data &&
+                      IsOpenACCDeviceMappingFlag(accFlag)) {
+                    currScope().AddOpenACCMappedSymbol(*resolvedObject);
+                    context_.NoteOpenACCDataMapping();
+                  }
                 }
               }
             } else {
