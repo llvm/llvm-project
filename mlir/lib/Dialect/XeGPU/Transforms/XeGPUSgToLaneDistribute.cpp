@@ -2055,6 +2055,29 @@ struct SgToLaneConvertLayoutBroadcastExtract
 /// keeps row `l % n` of both columns and the distributed result is
 /// `vector<1x2>`.
 ///
+///   xegpu.convert_layout %src
+///     <{input_layout = #xegpu.slice<#xegpu.layout<lane_layout = [8, 1, 2],
+///                                                 lane_data = [4, 1, 1],
+///                                                 order = [0, 2, 1]>,
+///                                   dims = [0]>,
+///       target_layout = #xegpu.layout<lane_layout = [8, 1],
+///                                     lane_data = [1, 1]>}>
+///     : vector<8x2xf8E8M0FNU>
+///
+/// becomes, with lane `l` holding all 8 rows of column `l / 8`:
+///
+///   %flat   = vector.shape_cast %src : vector<8x1xf8E8M0FNU> to
+///             vector<8xf8E8M0FNU>
+///   %lane   = gpu.lane_id
+///   %row    = arith.remui %lane, %c8 : index
+///   %own    = vector.extract %flat[%row] : f8E8M0FNU from
+///             vector<8xf8E8M0FNU>
+///   %rowI32 = arith.index_cast %row : index to i32
+///   %owner1 = arith.addi %rowI32, %c8_i32 : i32
+///   %col0, %v0 = gpu.shuffle idx %own, %rowI32, %c16_i32 : f8E8M0FNU
+///   %col1, %v1 = gpu.shuffle idx %own, %owner1, %c16_i32 : f8E8M0FNU
+///   %res    = vector.from_elements %col0, %col1 : vector<1x2xf8E8M0FNU>
+///
 /// The source is flattened first because `xegpu-vector-linearize` cannot
 /// linearize a `vector.extract` with a dynamic position out of a rank-2 value.
 ///
