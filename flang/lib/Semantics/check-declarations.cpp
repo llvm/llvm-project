@@ -1735,7 +1735,7 @@ void CheckHelper::CheckSubprogram(
           "An ABSTRACT interface may not have the same name as an intrinsic type"_err_en_US);
     }
     if (IsBindCProcedure(symbol) &&
-        context_.ShouldWarn(common::UsageWarning::Interoperability)) {
+        context_.ShouldWarn(common::UsageWarning::BindCArrayDescriptor)) {
       // A BIND(C) binding name that starts with '_' identifies an
       // implementation-internal interface (e.g. one of the compiler's own
       // runtime library wrappers, which choose such names deliberately)
@@ -1749,7 +1749,7 @@ void CheckHelper::CheckSubprogram(
       if (!isImplementationInternal) {
         for (const Symbol *dummy : details.dummyArgs()) {
           if (dummy && (IsAssumedShape(*dummy) || IsAssumedRank(*dummy))) {
-            Warn(common::UsageWarning::Interoperability, dummy->name(),
+            Warn(common::UsageWarning::BindCArrayDescriptor, dummy->name(),
                 "Dummy argument '%s' of BIND(C) interface '%s' is %s; the C/C++ side must accept a Fortran 2018 CFI descriptor (CFI_cdesc_t), not a bare address, which may not match an external interface written for an older calling convention"_port_en_US,
                 dummy->name(), symbol.name(),
                 IsAssumedRank(*dummy) ? "assumed-rank" : "assumed-shape");
