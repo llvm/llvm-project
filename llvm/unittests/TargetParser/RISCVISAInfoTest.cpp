@@ -404,6 +404,19 @@ TEST(ParseArchString, AcceptsSupportedBaseISAsAndSetsXLenAndFLen) {
   EXPECT_EQ(InfoRV64GCV.getMaxELenFp(), 64U);
 }
 
+TEST(RISCVISAInfoTest, CanonicalExtensionOrderVP) {
+  auto MaybeISAInfo = RISCVISAInfo::parseArchString("rv64i_p0p21_v", true);
+  ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
+
+  RISCVISAInfo &Info = **MaybeISAInfo;
+
+  // The canonical string should place 'v' before 'p'
+  EXPECT_EQ(
+      Info.toString(),
+      "rv64i2p1_f2p2_d2p2_v1p0_p0p21_zicsr2p0_zmmul1p0_zba1p0_zbb1p0_zve32f1p0_"
+      "zve32x1p0_zve64d1p0_zve64f1p0_zve64x1p0_zvl128b1p0_zvl32b1p0_zvl64b1p0");
+}
+
 TEST(ParseArchString, RejectsUnrecognizedExtensionNamesByDefault) {
   EXPECT_EQ(
       toString(
@@ -815,6 +828,11 @@ TEST(ParseArchString, RejectsConflictingExtensions) {
     EXPECT_THAT(Error, ::testing::HasSubstr(ConflictingExt));
   }
 
+  for (StringRef Input : {"rv32idc_xqccmi0p2", "rv32i_zcd_xqccmi0p2"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "'xqccmi' and 'zcd' extensions are incompatible");
+  }
+
   for (StringRef Input : {"rv32i_zcmp_xqccmp0p3", "rv64i_zcmp_xqccmp0p3"}) {
     EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
               "'zcmp' and 'xqccmp' extensions are incompatible");
@@ -925,6 +943,12 @@ TEST(ParseArchString,
 TEST(ParseArchString,
      RejectsExperimentalProfilesIfEnableExperimentalExtensionsNotSet) {
   EXPECT_EQ(
+      toString(RISCVISAInfo::parseArchString("rva23p1s64", false).takeError()),
+      "requires '-menable-experimental-extensions' for profile 'rva23p1s64'");
+  EXPECT_EQ(
+      toString(RISCVISAInfo::parseArchString("rvb23p1s64", false).takeError()),
+      "requires '-menable-experimental-extensions' for profile 'rvb23p1s64'");
+  EXPECT_EQ(
       toString(RISCVISAInfo::parseArchString("rvm23u32", false).takeError()),
       "requires '-menable-experimental-extensions' for profile 'rvm23u32'");
 }
@@ -936,11 +960,10 @@ TEST(ToFeatures, IIsDroppedAndExperimentalExtensionsArePrefixed) {
   EXPECT_THAT((*MaybeISAInfo1)->toFeatures(),
               ElementsAre("+i", "+m", "+zmmul", "+zalasr"));
 
-  auto MaybeISAInfo2 = RISCVISAInfo::parseArchString(
-      "rv32e_zalasr_xventanacondops", true, false);
+  auto MaybeISAInfo2 =
+      RISCVISAInfo::parseArchString("rv32e_zalasr", true, false);
   ASSERT_THAT_EXPECTED(MaybeISAInfo2, Succeeded());
-  EXPECT_THAT((*MaybeISAInfo2)->toFeatures(),
-              ElementsAre("+e", "+zalasr", "+xventanacondops"));
+  EXPECT_THAT((*MaybeISAInfo2)->toFeatures(), ElementsAre("+e", "+zalasr"));
 }
 
 TEST(ToFeatures, UnsupportedExtensionsAreDropped) {
@@ -1243,6 +1266,40 @@ TEST(ParseArchString, RVYFeatureImplicationC) {
   EXPECT_FALSE((*MaybeISAInfo)->hasExtension("zcd"));
 }
 
+static StringRef GetABIFromFeatures(unsigned XLen,
+                                    std::vector<std::string> Features) {
+  auto ISAInfo = RISCVISAInfo::parseFeatures(XLen, Features);
+  EXPECT_THAT_EXPECTED(ISAInfo, Succeeded());
+  return (*ISAInfo)->computeDefaultABI();
+}
+
+TEST(ComputeDefaultABI, SelectsExpectedABI) {
+  EXPECT_EQ(GetABIFromFeatures(32, {}), "ilp32");
+  EXPECT_EQ(GetABIFromFeatures(32, {"+f"}), "ilp32f");
+  EXPECT_EQ(GetABIFromFeatures(32, {"+f", "+d"}), "ilp32d");
+  EXPECT_EQ(GetABIFromFeatures(32, {"+e"}), "ilp32e");
+  EXPECT_EQ(GetABIFromFeatures(64, {}), "lp64");
+  EXPECT_EQ(GetABIFromFeatures(64, {"+f"}), "lp64f");
+  EXPECT_EQ(GetABIFromFeatures(64, {"+f", "+d"}), "lp64d");
+  EXPECT_EQ(GetABIFromFeatures(64, {"+e"}), "lp64e");
+
+  // RVY targets default to the capability ABI.
+  EXPECT_EQ(GetABIFromFeatures(32, {"+experimental-y"}), "il32pc64");
+  EXPECT_EQ(GetABIFromFeatures(32, {"+experimental-y", "+f"}), "il32pc64f");
+  EXPECT_EQ(GetABIFromFeatures(32, {"+experimental-y", "+f", "+d"}),
+            "il32pc64d");
+  EXPECT_EQ(GetABIFromFeatures(32, {"+experimental-y", "+e"}), "il32pc64e");
+  EXPECT_EQ(GetABIFromFeatures(64, {"+experimental-y"}), "l64pc128");
+  EXPECT_EQ(GetABIFromFeatures(64, {"+experimental-y", "+f"}), "l64pc128f");
+  EXPECT_EQ(GetABIFromFeatures(64, {"+experimental-y", "+f", "+d"}),
+            "l64pc128d");
+  // RV64E has no capability ABI (yet).
+  EXPECT_EQ(GetABIFromFeatures(64, {"+experimental-y", "+e"}), "lp64e");
+
+  // CHERIoT always selects the cheriot ABI by default.
+  EXPECT_EQ(GetABIFromFeatures(32, {"+xcheriot"}), "cheriot");
+}
+
 TEST(ParseArchString, ZcaZcbZcmpZcmtImpliesZce) {
   // Test Zca+Zcb+Zcmp+Zcmt implies Zce behavior.
 
@@ -1394,6 +1451,7 @@ R"(All available -march extensions for RISC-V
     ziccif               1.0
     zicclsm              1.0
     ziccrse              1.0
+    zicfiss              1.0
     zicntr               2.0
     zicond               1.0
     zicsr                2.0
@@ -1504,6 +1562,7 @@ R"(All available -march extensions for RISC-V
     smepmp               1.0
     smmpm                1.0
     smnpm                1.0
+    smpmpdeleg           1.0
     smrnmi               1.0
     smstateen            1.0
     ssaia                1.0
@@ -1516,6 +1575,8 @@ R"(All available -march extensions for RISC-V
     ssdbltrp             1.0
     ssnpm                1.0
     sspm                 1.0
+    sspmp                1.0
+    sspmpen              1.0
     ssqosid              1.0
     ssstateen            1.0
     ssstrict             1.0
@@ -1609,7 +1670,6 @@ R"(All available -march extensions for RISC-V
     xtheadmempair        1.0
     xtheadsync           1.0
     xtheadvdot           1.0
-    xventanacondops      1.0
     xwchc                2.2
 
 Experimental extensions
@@ -1617,8 +1677,8 @@ Experimental extensions
     y                    0.98
     zibi                 0.1
     zicfilp              1.0       This is a long dummy description
-    zicfiss              1.0
-    zvabd                0.7
+    zilx                 0.1
+    zvabd                0.9
     zvbc32e              0.7
     zvdot4a8i            0.1
     zvfbdota32f          0.2
@@ -1637,9 +1697,22 @@ Experimental extensions
     zvvmm                0.1
     zvvmtls              0.1
     zvvmttls             0.1
-    zvzip                0.1
+    zvzip                0.3
+    smcsps               0.20
+    smehv                0.20
+    smidctrl             0.20
+    smijt                0.20
+    smip                 0.20
+    smnip                0.20
     smpmpmt              0.6
-    svukte               0.3
+    sscsps               0.20
+    ssehv                0.20
+    ssidctrl             0.20
+    ssijt                0.20
+    ssip                 0.20
+    ssnip                0.20
+    svukte               1.0
+    xqccmi               0.2
     xqccmt               0.1
     xsfmclic             0.1
     xsfsclic             0.1
@@ -1657,6 +1730,8 @@ Supported Profiles
     rvi20u64
 
 Experimental Profiles
+    rva23p1s64
+    rvb23p1s64
     rvm23u32
 
 Use -march to specify the target's extension.

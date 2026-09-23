@@ -108,7 +108,6 @@
 #include <cstdint>
 #include <cstdlib>
 #include <iterator>
-#include <numeric>
 #include <optional>
 #include <tuple>
 #include <type_traits>
@@ -1298,8 +1297,10 @@ bool Vectorizer::isSafeToMove(
     if (!I->mayReadOrWriteMemory())
       continue;
 
-    // Loads can be reordered with other loads.
-    if (IsLoadChain && isa<LoadInst>(I))
+    // Loads can be reordered with other unordered loads.  Ordered atomics
+    // act as reordering barriers, via getModRefInfo below.
+    if (auto *LI = dyn_cast<LoadInst>(I);
+        IsLoadChain && LI && LI->isUnordered())
       continue;
 
     // Stores can be sunk below invariant loads.
@@ -1748,6 +1749,12 @@ Vectorizer::collectEquivalenceClasses(BasicBlock::iterator Begin,
 
     Type *Ty = getLoadStoreType(&I);
     if (!VectorType::isValidElementType(Ty->getScalarType()))
+      continue;
+
+    // Pointer loads and stores with external state must retain their pointer
+    // memory type so the out-of-band state is transferred. Do not vectorize
+    // these pointers.
+    if (DL.hasExternalState(Ty))
       continue;
 
     // Skip weird non-byte sizes. They probably aren't worth the effort of

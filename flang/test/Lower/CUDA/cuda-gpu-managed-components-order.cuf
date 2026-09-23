@@ -1,0 +1,44 @@
+! Two derived types that each combine a MANAGED component with a DEVICE one,
+! differing only in whether the user attributed the MANAGED component and in
+! the order the two components are declared. The same CHECK lines are applied
+! to both, so they pass only if the compiler treats the two identically.
+
+! RUN: rm -rf %t && split-file %s %t
+! RUN: bbc -emit-hlfir -fcuda -gpu=managed %t/implicit_managed_first.cuf -o - \
+! RUN:   | FileCheck %s
+! RUN: bbc -emit-hlfir -fcuda -gpu=managed %t/explicit_managed_last.cuf -o - \
+! RUN:   | FileCheck %s
+
+!--- implicit_managed_first.cuf
+subroutine s()
+  type :: t
+     real, allocatable :: m(:)           ! attributed by the compiler
+     real, allocatable, device :: d(:)
+  end type
+  type(t), managed :: obj
+  allocate(obj%m(100))
+  allocate(obj%d(100))
+end subroutine
+
+!--- explicit_managed_last.cuf
+subroutine s()
+  type :: t
+     real, allocatable, device :: d(:)
+     real, allocatable, managed :: m(:)  ! attributed by the user
+  end type
+  type(t), managed :: obj
+  allocate(obj%m(100))
+  allocate(obj%d(100))
+end subroutine
+
+! A component the user attributed relocates the object, whichever order the
+! components are declared in.
+! CHECK-LABEL: func.func @_QPs()
+! CHECK: cuf.alloc {{.*}} {bindc_name = "obj", data_attr = #cuf.cuda<managed>
+
+! Each component is then allocated in its own memory space: the MANAGED one
+! through the managed allocator, the DEVICE one through the device allocator.
+! CHECK: fir.embox {{.*}} {allocator_idx = 3 : i32}
+! CHECK: cuf.allocate {{.*}} {data_attr = #cuf.cuda<managed>} -> i32
+! CHECK: fir.embox {{.*}} {allocator_idx = 2 : i32}
+! CHECK: cuf.allocate {{.*}} {data_attr = #cuf.cuda<device>} -> i32

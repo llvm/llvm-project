@@ -16,7 +16,7 @@
 using namespace llvm;
 
 TEST_F(AMDGPUTestBase, TestCSEForRegisterClassOrBankAndLLT) {
-  auto TM = createAMDGPUTargetMachine("amdgpu11.00-amd-", "", "");
+  auto TM = createAMDGPUTargetMachine(Triple("amdgpu11.00-amd-"), "", "");
   if (!TM)
     GTEST_SKIP();
 

@@ -19,7 +19,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/Support/Casting.h"
 #include <cassert>
-#include <cstdint>
 
 #define DEBUG_TYPE "scev-division"
 
@@ -140,9 +139,9 @@ void SCEVDivision::visitAddRecExpr(const SCEVAddRecExpr *Numerator) {
     return cannotDivide(Numerator);
 
   Quotient = SE.getAddRecExpr(StartQ, StepQ, Numerator->getLoop(),
-                              SCEV::NoWrapFlags::FlagAnyWrap);
+                              SCEV::NoWrapFlags::FlagNone);
   Remainder = SE.getAddRecExpr(StartR, StepR, Numerator->getLoop(),
-                               SCEV::NoWrapFlags::FlagAnyWrap);
+                               SCEV::NoWrapFlags::FlagNone);
 }
 
 void SCEVDivision::visitAddExpr(const SCEVAddExpr *Numerator) {

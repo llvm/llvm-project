@@ -941,13 +941,18 @@ protected:
     // branch. That said, would a synthesized body ever intend to handle
     // ownership? As of today they don't. And if they did, how would we
     // put notes inside it, given that it doesn't match any source locations?
-    if (!FD || !FD->hasBody())
+    if (!FD)
       return false;
+
+    Stmt *Body = FD->getBody();
+    if (!Body)
+      return false;
+
     using namespace clang::ast_matchers;
 
     auto Matches = match(findAll(stmt(anyOf(cxxDeleteExpr().bind("delete"),
                                             callExpr().bind("call")))),
-                         *FD->getBody(), ACtx);
+                         *Body, ACtx);
     for (BoundNodes Match : Matches) {
       if (Match.getNodeAs<CXXDeleteExpr>("delete"))
         return true;
@@ -1074,8 +1079,8 @@ public:
                                    BugReporterContext &BRC,
                                    PathSensitiveBugReport &BR) override;
 
-  PathDiagnosticPieceRef getEndPath(BugReporterContext &BRC,
-                                    const ExplodedNode *EndPathNode,
+  PathDiagnosticPieceRef getEndPath(const ExplodedNode *EndPathNode,
+                                    BugReporterContext &BRC,
                                     PathSensitiveBugReport &BR) override {
     if (!IsLeak)
       return nullptr;
@@ -3554,7 +3559,6 @@ void MallocChecker::checkEscapeOnReturn(const ReturnStmt *S,
     return;
 
   // Check if we are returning a symbol.
-  ProgramStateRef State = C.getState();
   SVal RetVal = C.getSVal(E);
   SymbolRef Sym = RetVal.getAsSymbol();
   if (!Sym)
@@ -4112,8 +4116,8 @@ PathDiagnosticPieceRef MallocBugVisitor::VisitNode(const ExplodedNode *N,
         ReleaseFunctionSF = CurrentSF;
         // ...but if the stack contains a destructor call, then we say that the
         // outermost destructor stack frame is the _responsible_ one:
-        for (const StackFrame *SF = CurrentSF; SF; SF = SF->getParent()) {
-          if (const auto *DD = dyn_cast<CXXDestructorDecl>(SF->getDecl())) {
+        for (const StackFrame &SF : N->stackframes()) {
+          if (const auto *DD = dyn_cast<CXXDestructorDecl>(SF.getDecl())) {
             if (isReferenceCountingPointerDestructor(DD)) {
               // This immediately looks like a reference-counting destructor.
               // We're bad at guessing the original reference count of the
@@ -4149,7 +4153,7 @@ PathDiagnosticPieceRef MallocBugVisitor::VisitNode(const ExplodedNode *N,
             //   if (refPut(data))
             //     doFree(data);
             // }
-            ReleaseFunctionSF = SF;
+            ReleaseFunctionSF = &SF;
           }
         }
 

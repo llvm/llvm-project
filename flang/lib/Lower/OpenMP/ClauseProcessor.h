@@ -97,7 +97,8 @@ public:
   bool processInitializer(
       lower::SymMap &symMap,
       ReductionProcessor::GenInitValueCBTy &genInitValueCB,
-      const parser::OmpStylizedInstance *parserInitInstance = nullptr) const;
+      const parser::OmpStylizedInstance *parserInitInstance = nullptr,
+      unsigned instanceIdx = 0) const;
   bool processMergeable(mlir::omp::MergeableClauseOps &result) const;
   bool processNogroup(mlir::omp::NogroupClauseOps &result) const;
   bool processNotinbranch(mlir::omp::NotinbranchClauseOps &result) const;
@@ -110,6 +111,7 @@ public:
                          mlir::omp::NumThreadsClauseOps &result) const;
   bool processOrder(mlir::omp::OrderClauseOps &result) const;
   bool processOrdered(mlir::omp::OrderedClauseOps &result) const;
+  bool processFull() const;
   bool processPartial(std::optional<int64_t> &result) const;
   bool processPriority(lower::StatementContext &stmtCtx,
                        mlir::omp::PriorityClauseOps &result) const;
@@ -123,12 +125,14 @@ public:
   bool processSimd(mlir::omp::OrderedRegionOperands &result) const;
   bool processThreadLimit(lower::StatementContext &stmtCtx,
                           mlir::omp::ThreadLimitClauseOps &result) const;
+  bool processThreadset(mlir::omp::ThreadsetClauseOps &result) const;
   bool processUntied(mlir::omp::UntiedClauseOps &result) const;
   bool processDetach(mlir::omp::DetachClauseOps &result) const;
   // 'Repeatable' clauses: They can appear multiple times in the clause list.
   bool processAffinity(mlir::omp::AffinityClauseOps &result) const;
   bool processAligned(mlir::omp::AlignedClauseOps &result) const;
-  bool processAllocate(mlir::omp::AllocateClauseOps &result) const;
+  bool processAllocate(mlir::omp::AllocateClauseOps &result,
+                       bool supportAlignment = false) const;
   bool processCopyin() const;
   bool processCopyprivate(mlir::Location currentLocation,
                           mlir::omp::CopyprivateClauseOps &result) const;
@@ -233,7 +237,7 @@ void ClauseProcessor::processTODO(mlir::Location currentLocation,
   auto checkUnhandledClause = [&](llvm::omp::Clause id, const auto *x) {
     if (!x)
       return;
-    unsigned version = semaCtx.langOptions().OpenMPVersion;
+    llvm::omp::Version version = semaCtx.langOptions().getOpenMPVersion();
     bool isSimdDirective = llvm::omp::getOpenMPDirectiveName(directive, version)
                                .upper()
                                .find("SIMD") != llvm::StringRef::npos;

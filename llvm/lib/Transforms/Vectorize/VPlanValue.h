@@ -246,7 +246,9 @@ public:
   }
 };
 
-/// VPValues defined by a VPRegionBlock, like the canonical IV.
+/// VPValues are defined by a VPRegionBlock, like the canonical IV. They must
+/// be materialized when the containing region is dissolved, before VPlan
+/// execution.
 class VPRegionValue : public VPSymbolicValue {
   VPRegionBlock *DefiningRegion;
   DebugLoc DL;
@@ -473,6 +475,7 @@ public:
   const_operand_range operands() const {
     return const_operand_range(op_begin(), op_end());
   }
+  bool operands_empty() const { return Operands.empty(); } // NOLINT
 
   /// Returns true if the VPUser uses scalars of operand \p Op. Conservatively
   /// returns if only first (scalar) lane is used, as default.

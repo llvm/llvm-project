@@ -29,7 +29,9 @@
 #include "clang/AST/Mangle.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/Type.h"
+#include "clang/Basic/PointerAuthOptions.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
+#include "clang/CodeGenUtils/ItaniumCXXABIUtils.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Instructions.h"
@@ -1553,58 +1555,6 @@ static llvm::FunctionCallee getBadCastFn(CodeGenFunction &CGF) {
   return CGF.CGM.CreateRuntimeFunction(FTy, "__cxa_bad_cast");
 }
 
-/// Compute the src2dst_offset hint as described in the
-/// Itanium C++ ABI [2.9.7]
-static CharUnits computeOffsetHint(ASTContext &Context,
-                                   const CXXRecordDecl *Src,
-                                   const CXXRecordDecl *Dst) {
-  CXXBasePaths Paths(/*FindAmbiguities=*/true, /*RecordPaths=*/true,
-                     /*DetectVirtual=*/false);
-
-  // If Dst is not derived from Src we can skip the whole computation below and
-  // return that Src is not a public base of Dst.  Record all inheritance paths.
-  if (!Dst->isDerivedFrom(Src, Paths))
-    return CharUnits::fromQuantity(-2ULL);
-
-  unsigned NumPublicPaths = 0;
-  CharUnits Offset;
-
-  // Now walk all possible inheritance paths.
-  for (const CXXBasePath &Path : Paths) {
-    if (Path.Access != AS_public)  // Ignore non-public inheritance.
-      continue;
-
-    ++NumPublicPaths;
-
-    for (const CXXBasePathElement &PathElement : Path) {
-      // If the path contains a virtual base class we can't give any hint.
-      // -1: no hint.
-      if (PathElement.Base->isVirtual())
-        return CharUnits::fromQuantity(-1ULL);
-
-      if (NumPublicPaths > 1) // Won't use offsets, skip computation.
-        continue;
-
-      // Accumulate the base class offsets.
-      const ASTRecordLayout &L = Context.getASTRecordLayout(PathElement.Class);
-      Offset += L.getBaseClassOffset(
-          PathElement.Base->getType()->getAsCXXRecordDecl());
-    }
-  }
-
-  // -2: Src is not a public base of Dst.
-  if (NumPublicPaths == 0)
-    return CharUnits::fromQuantity(-2ULL);
-
-  // -3: Src is a multiple public base type but never a virtual base type.
-  if (NumPublicPaths > 1)
-    return CharUnits::fromQuantity(-3ULL);
-
-  // Otherwise, the Src type is a unique public nonvirtual base type of Dst.
-  // Return the offset of Src from the origin of Dst.
-  return Offset;
-}
-
 static llvm::FunctionCallee getBadTypeidFn(CodeGenFunction &CGF) {
   // void __cxa_bad_typeid();
   llvm::FunctionType *FTy = llvm::FunctionType::get(CGF.VoidTy, false);
@@ -1666,7 +1616,8 @@ llvm::Value *ItaniumCXXABI::emitDynamicCastCall(
   const CXXRecordDecl *DestDecl = DestRecordTy->getAsCXXRecordDecl();
   llvm::Value *OffsetHint = llvm::ConstantInt::getSigned(
       PtrDiffLTy,
-      computeOffsetHint(CGF.getContext(), SrcDecl, DestDecl).getQuantity());
+      CodeGenUtils::computeOffsetHint(CGF.getContext(), SrcDecl, DestDecl)
+          .getQuantity());
 
   // Emit the call to __dynamic_cast.
   llvm::Value *Value = ThisAddr.emitRawPointer(CGF);
@@ -1785,12 +1736,12 @@ llvm::Value *ItaniumCXXABI::emitExactDynamicCast(
     PerformPostCastAuthentication = CGF.getLangOpts().PointerAuthCalls;
     CGPointerAuthInfo StrippingAuthInfo(0, PointerAuthenticationMode::Strip,
                                         false, false, nullptr);
-    Address VTablePtrPtr = ThisAddr.withElementType(CGF.VoidPtrPtrTy);
+    Address VTablePtrPtr = ThisAddr.withElementType(CGM.GlobalsInt8PtrTy);
     VTable = CGF.Builder.CreateLoad(VTablePtrPtr, "vtable");
     if (PerformPostCastAuthentication)
       VTable = CGF.EmitPointerAuthAuth(StrippingAuthInfo, VTable);
   } else
-    VTable = CGF.GetVTablePtr(ThisAddr, CGF.DefaultPtrTy, SrcDecl);
+    VTable = CGF.GetVTablePtr(ThisAddr, CGM.GlobalsInt8PtrTy, SrcDecl);
 
   // Compare the vptr against the expected vptr for the destination type at
   // this offset.
@@ -2231,12 +2182,9 @@ llvm::Value *ItaniumCXXABI::getVTableAddressPointInStructorWithVTT(
       CGF.Builder.CreateAlignedLoad(CGF.GlobalsVoidPtrTy, VTT,
                                     CGF.getPointerAlign());
 
-  if (auto &Schema = CGF.CGM.getCodeGenOpts().PointerAuth.CXXVTTVTablePointers) {
-    CGPointerAuthInfo PointerAuth = CGF.EmitPointerAuthInfo(Schema, VTT,
-                                                            GlobalDecl(),
-                                                            QualType());
-    AP = CGF.EmitPointerAuthAuth(PointerAuth, AP);
-  }
+  if (auto PointerAuth = CGM.getVTablePointerAuthInfo(&CGF, VTableClass, VTT,
+                                                      /*IsVTTEntry=*/true))
+    AP = CGF.EmitPointerAuthAuth(*PointerAuth, AP);
 
   return AP;
 }
@@ -3441,7 +3389,8 @@ LValue ItaniumCXXABI::EmitThreadLocalVarDeclLValue(CodeGenFunction &CGF,
   llvm::Value *Val = CGF.CGM.GetAddrOfGlobalVar(VD);
   llvm::Function *Wrapper = getOrCreateThreadLocalWrapper(VD, Val);
 
-  llvm::CallInst *CallVal = CGF.Builder.CreateCall(Wrapper);
+  llvm::CallInst *CallVal =
+      CGF.Builder.CreateCall(Wrapper, {}, CGF.getBundlesForFunclet(Wrapper));
   CallVal->setCallingConv(Wrapper->getCallingConv());
 
   LValue LV;
@@ -3530,7 +3479,7 @@ ItaniumCXXABI::getOrCreateVirtualFunctionPointerThunk(const CXXMethodDecl *MD) {
   const FunctionProtoType *FPT = MD->getType()->getAs<FunctionProtoType>();
   RequiredArgs Required = RequiredArgs::forPrototypePlus(FPT, /*this*/ 1);
   const CGFunctionInfo &CallInfo =
-      CGM.getTypes().arrangeCXXMethodCall(CallArgs, FPT, Required, 0);
+      CGM.getTypes().arrangeCXXMethodCall(CallArgs, FPT, Required, 0, MD);
   CGCallee Callee = CGCallee::forVirtual(nullptr, GlobalDecl(MD),
                                          getThisAddress(CGF), ThunkTy);
   llvm::CallBase *CallOrInvoke;
@@ -3788,6 +3737,8 @@ static bool TypeInfoIsInStandardLibrary(const BuiltinType *Ty) {
 #include "clang/Basic/AMDGPUTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define SPIRV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/SPIRVTypes.def"
     case BuiltinType::ShortAccum:
     case BuiltinType::Accum:
     case BuiltinType::LongAccum:

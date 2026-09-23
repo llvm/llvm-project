@@ -492,17 +492,21 @@ static SmallVector<Value> createTileZeros(OpBuilder &rewriter, Location loc,
   return loopItrArgs;
 }
 
-static Value getIndxToLoadStoreFromPckBuffer(
-    OpBuilder &rewriter, Location loc, Value ivInnerLoop, Value ivOuterLoop,
-    bool isInnerLoopUBHasOddQuot, bool isInnerLoopUBLarger, bool pack,
-    unsigned int blockingFactor) {
+static Value getIndxToLoadStoreFromPckBuffer(OpBuilder &rewriter, Location loc,
+                                             Value ivInnerLoop,
+                                             Value ivOuterLoop,
+                                             bool isInnerLoopUBHasOddQuot,
+                                             bool isInnerLoopUBLarger,
+                                             bool pack, Value blockStride) {
 
   Value c2 = arith::ConstantIndexOp::create(rewriter, loc, 2);
-  Value packOffset =
-      arith::ConstantIndexOp::create(rewriter, loc, (16 * blockingFactor));
 
+  // `blockStride` is the reduction (K) loop step, i.e. the amount by which the
+  // induction variable advances for one K-block. Dividing the induction value
+  // by it yields the K-block index regardless of whether the loop counts
+  // K-elements (step == 16*blockingFactor) or pre-blocked K-tiles (step == 1).
   Value quotientInnerLoop =
-      arith::DivUIOp::create(rewriter, loc, ivInnerLoop, packOffset);
+      arith::DivUIOp::create(rewriter, loc, ivInnerLoop, blockStride);
   Value remInnerLoop = arith::RemUIOp::create(
       rewriter, loc, rewriter.getIndexType(), quotientInnerLoop, c2);
 
@@ -587,8 +591,7 @@ createLoops(OpBuilder &rewriter, Location loc, Value lowerBound,
                                                      nLoadIndx, ivNewInnerLoop);
               indxToStoreInBuffer = getIndxToLoadStoreFromPckBuffer(
                   rewriter, loc, ivNewInnerLoop, ivOuterLoop,
-                  isInnerLoopUBHasOddQuot, isInnerLoopUBLarger, pack,
-                  blockingFactor);
+                  isInnerLoopUBHasOddQuot, isInnerLoopUBLarger, pack, step);
               Value indxToLoadFromMatB =
                   arith::AddIOp::create(rewriter, loc, indxToStoreInBuffer, c1);
               indxToLoadFromBuffer =
@@ -653,14 +656,16 @@ createLoops(OpBuilder &rewriter, Location loc, Value lowerBound,
         if (!isVnni) {
           if (outerLoop) {
             if (!pack) {
-              Value nLoadIndx = arith::ConstantIndexOp::create(
-                  rewriter, locNewInnerLoop, offset);
               matB = Value();
               indxToLoadFromBuffer = c0;
+              // Use the real spill-block induction value (== spillInnerLoop)
+              // together with the loop step so the computed ping-pong slot
+              // matches the prefetch store side for any number of register
+              // blocks, including odd counts (e.g. 96 = 3 blocks). Passing a
+              // constant here mis-parities the slot for odd block counts.
               indxToLoadFromBuffer = getIndxToLoadStoreFromPckBuffer(
-                  rewriter, loc, nLoadIndx, ivOuterLoop,
-                  isInnerLoopUBHasOddQuot, isInnerLoopUBLarger, pack,
-                  blockingFactor);
+                  rewriter, loc, ivNewInnerLoop, ivOuterLoop,
+                  isInnerLoopUBHasOddQuot, isInnerLoopUBLarger, pack, step);
             }
           } else {
             if (!pack) {
@@ -797,14 +802,18 @@ struct VectorContractToAMXDotProduct
     Operation *accReadOp =
         traceToVectorReadLikeParentOperation(contractOp.getAcc());
 
-    Operation *resultWriteOp =
-        traceToVectorWriteLikeUserOperation(contractOp.getResult());
+    // Only the contract result's first consumer is needed, not the final
+    // store. This keeps the lowering independent of the epilogue ops (truncf,
+    // bias add, ReLU, ...) that sit between the contraction and the write.
+    Value resultChainEnd = contractionUsersAfterYield(contractOp.getResult());
 
-    if (!accReadOp || !resultWriteOp)
+    if (!accReadOp || !resultChainEnd)
       return rewriter.notifyMatchFailure(
           contractOp, "The ACC operand of the vector.contract should be a "
-                      "transfer_read or a load. And, the result should be "
-                      "stored using transfer_write or store.");
+                      "transfer_read or a load. And, the result should have a "
+                      "single-use chain to its consumer.");
+
+    Block *resultBlock = resultChainEnd.user_begin()->getBlock();
 
     Type ipType = rewriter.getBF16Type();
     Type opType = rewriter.getF32Type();
@@ -821,12 +830,12 @@ struct VectorContractToAMXDotProduct
       ipType = rewriter.getF8E5M2Type();
 
     if (accReadOp->getBlock() == contractOp->getBlock() &&
-        resultWriteOp->getBlock() != contractOp->getBlock())
+        resultBlock != contractOp->getBlock())
       return rewriter.notifyMatchFailure(
           contractOp, "The accumulator store is in different block.");
 
     if (accReadOp->getBlock() != contractOp->getBlock() &&
-        resultWriteOp->getBlock() == contractOp->getBlock())
+        resultBlock == contractOp->getBlock())
       return rewriter.notifyMatchFailure(
           contractOp, "The accumulator read is in different block.");
 
@@ -842,7 +851,7 @@ struct VectorContractToAMXDotProduct
     // Case 1: For just one VC rewrite. Where all accumulator read/write
     // within the same block.
     if (accReadOp->getBlock() == contractOp->getBlock() &&
-        resultWriteOp->getBlock() == contractOp->getBlock()) {
+        resultBlock == contractOp->getBlock()) {
 
       if (!isReadSrcMemref(contractOp.getAcc()))
         return rewriter.notifyMatchFailure(contractOp,
@@ -1045,10 +1054,18 @@ struct VectorContractToAMXDotProduct
     while (true) {
       Operation *parent = current->getParentOfType<scf::ForOp>();
 
-      if (!parent)
+      if (!parent) {
+        // The accumulator initialization can be hoisted above an enclosing
+        // parallel region (scf.parallel/scf.forall) when the register tile
+        // matches the problem size and the M/N register loops fold away. In
+        // that case the reduction loop(s) collected so far are still valid to
+        // rewrite, so stop climbing instead of bailing out.
+        if (!loopLists.empty())
+          break;
         return rewriter.notifyMatchFailure(
             contractOp,
             "Accumulator read and contract op not within scf.for op");
+      }
 
       loopLists.push_back(dyn_cast<scf::ForOp>(parent));
 

@@ -14,12 +14,12 @@ from lldbsuite.test import lldbutil
 MAX_PATH = 260
 
 
-@skipUnlessWindows
+@requireWindows
 class LongPathTargetTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     def _long_path(self, path):
-        return "\\\\?\\" + os.path.abspath(path)
+        return lldbutil.get_extended_windows_path(path)
 
     def _normalize(self, path):
         if path.startswith("\\\\?\\"):

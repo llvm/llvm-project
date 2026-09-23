@@ -335,8 +335,10 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
       //   In the definition of a constexpr function [...]
       //    -- if the function is a constructor or destructor,
       //       its class shall not have any virtual base classes
-      data().DefaultedDefaultConstructorIsConstexpr = false;
-      data().DefaultedDestructorIsConstexpr = false;
+      if (!C.getLangOpts().CPlusPlus26) {
+        data().DefaultedDefaultConstructorIsConstexpr = false;
+        data().DefaultedDestructorIsConstexpr = false;
+      }
 
       // C++1z [class.copy]p8:
       //   The implicitly-declared copy constructor for a class X will have
@@ -3771,6 +3773,65 @@ void DecompositionDecl::printName(llvm::raw_ostream &OS,
     Comma = true;
   }
   OS << ']';
+}
+
+DecompositionDecl::OriginalVarResult DecompositionDecl::getOriginalVar() const {
+  OriginalVarResult Result;
+  const Expr *Init = getInit();
+  if (!Init)
+    return Result;
+
+  // Helper to determine diagnostic kind from a CallExpr based on value
+  // category.
+  auto GetDiagKindFromCall = [](const CallExpr *Call) {
+    return Call->isXValue() ? OriginalVarResult::MoveExpr
+                            : OriginalVarResult::CallExpr;
+  };
+  const Expr *Stripped = Init->IgnoreParenImpCasts();
+  if (const auto *BTE = dyn_cast<CXXBindTemporaryExpr>(Stripped))
+    Stripped = BTE->getSubExpr()->IgnoreParenImpCasts();
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(Stripped)) {
+    Result.Var = dyn_cast<VarDecl>(DRE->getDecl());
+    return Result;
+  }
+  if (const auto *CE = dyn_cast<CXXConstructExpr>(Stripped)) {
+    if (CE->getNumArgs() == 1) {
+      const Expr *ArgStripped = CE->getArg(0)->IgnoreParenImpCasts();
+      if (const auto *ArgDRE = dyn_cast<DeclRefExpr>(ArgStripped)) {
+        Result.Var = dyn_cast<VarDecl>(ArgDRE->getDecl());
+        return Result;
+      }
+      if (const auto *Call = dyn_cast<CallExpr>(ArgStripped))
+        Result.DiagKind = GetDiagKindFromCall(Call);
+      else
+        Result.DiagKind = OriginalVarResult::Temporary;
+      return Result;
+    }
+  }
+  Result.DiagKind = OriginalVarResult::Temporary;
+  if (const auto *Call = dyn_cast<CallExpr>(Stripped)) {
+    Result.DiagKind = GetDiagKindFromCall(Call);
+  } else if (isa<InitListExpr, CXXStdInitializerListExpr>(Stripped)) {
+    Result.DiagKind = OriginalVarResult::InitListExpr;
+  } else if (const auto *FCE = dyn_cast<CXXFunctionalCastExpr>(Stripped)) {
+    const Expr *SubExpr = FCE->getSubExpr()->IgnoreParenImpCasts();
+    if (isa<InitListExpr>(SubExpr)) {
+      Result.DiagKind = OriginalVarResult::InitListExpr;
+    } else if (const auto *Call = dyn_cast<CallExpr>(SubExpr)) {
+      Result.DiagKind = GetDiagKindFromCall(Call);
+    } else if (const auto *CE = dyn_cast<CXXConstructExpr>(SubExpr)) {
+      if (CE->getNumArgs() == 1) {
+        if (const auto *ArgCall =
+                dyn_cast<CallExpr>(CE->getArg(0)->IgnoreParenImpCasts()))
+          Result.DiagKind = GetDiagKindFromCall(ArgCall);
+      }
+    }
+  } else if (isa<MaterializeTemporaryExpr, CXXBindTemporaryExpr>(Stripped)) {
+    Result.DiagKind = OriginalVarResult::Temporary;
+  } else if (Stripped->isXValue()) {
+    Result.DiagKind = OriginalVarResult::MoveExpr;
+  }
+  return Result;
 }
 
 void MSPropertyDecl::anchor() {}

@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgcn-amd-amdhsa -target-cpu gfx942 \
+// RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgpu9.42-amd-amdhsa \
 // RUN:   %s -emit-llvm -o - | FileCheck %s
 
-// RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgcn-amd-amdhsa -target-cpu gfx942 \
+// RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgpu9.42-amd-amdhsa \
 // RUN:   -S -o - %s | FileCheck -check-prefix=GFX942 %s
 
 // REQUIRES: amdgpu-registered-target
@@ -10,7 +10,7 @@ typedef half  __attribute__((ext_vector_type(2))) half2;
 typedef short __attribute__((ext_vector_type(2))) short2;
 
 // CHECK-LABEL: test_flat_add_f32
-// CHECK: [[RMW:%.+]] = atomicrmw fadd ptr %{{.+}}, float %{{.+}} syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory !{{[0-9]+}}, !amdgpu.ignore.denormal.mode !{{[0-9]+$}}
+// CHECK: [[RMW:%.+]] = atomicrmw fadd ptr %{{.+}}, float %{{.+}} syncscope("agent") monotonic, align 4, !atomic.ignore.denormal.mode !{{[0-9]+}}, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
 
 // GFX942-LABEL:  test_flat_add_f32
 // GFX942: flat_atomic_add_f32
@@ -78,7 +78,7 @@ void test_local_add_2f16_noret(__local half2 *addr, half2 x) {
 }
 
 // CHECK-LABEL: @test_global_add_f32
-// CHECK: = atomicrmw fadd ptr addrspace(1) %{{.+}}, float %{{.+}} syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory !{{[0-9]+}}, !amdgpu.ignore.denormal.mode !{{[0-9]+$}}
+// CHECK: = atomicrmw fadd ptr addrspace(1) %{{.+}}, float %{{.+}} syncscope("agent") monotonic, align 4, !atomic.ignore.denormal.mode !{{[0-9]+}}, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
 void test_global_add_f32(float *rtn, global float *addr, float x) {
   *rtn = __builtin_amdgcn_global_atomic_fadd_f32(addr, x);
 }

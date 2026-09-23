@@ -3,15 +3,18 @@ add_lldb_tool(lldb-mcp
   Multiplexer.cpp
 
   LINK_COMPONENTS
-    Option
     Support
   LINK_LIBS
     liblldb
-    lldbUtility
     lldbHost
     lldbProtocolMCP
+    lldbUtility
   )
 
+# lldb-mcp hosts debug sessions in its own process. It drives the debug engine
+# through the public SB API in liblldb, but also links a few internal libraries
+# (transport, host) directly, so guard against liblldb interposing their
+# symbols, the same as lldb-dap.
 lldb_prevent_liblldb_symbol_interposition(lldb-mcp)
 
 if(APPLE)

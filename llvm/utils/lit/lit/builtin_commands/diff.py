@@ -5,6 +5,7 @@ import locale
 import os
 import re
 import sys
+import platform
 
 # diff.py runs in two modes during the in-process migration:
 #   - In-process: imported as 'lit.builtin_commands.diff', so __package__ is
@@ -63,11 +64,22 @@ def getDirTree(path, basedir=""):
 def compareTwoFiles(flags, filepaths, stdin, stdout):
     filelines = []
     for file in filepaths:
+        is_text = False
         if file == "-":
             filelines.append(stdin.readlines())
         else:
-            with open(file, "rb") as file_bin:
-                filelines.append(file_bin.readlines())
+            if platform.system() == "OS/390":
+                try:
+                    with open(file, "r") as file_text:
+                        filelines.append(
+                            file_text.read().encode().splitlines(keepends=True)
+                        )
+                        is_text = True
+                except:
+                    pass
+            if not is_text:
+                with open(file, "rb") as file_bin:
+                    filelines.append(file_bin.readlines())
 
     try:
         return compareTwoTextFiles(
@@ -92,11 +104,7 @@ def compareTwoBinaryFiles(flags, filepaths, filelines, stdout):
     )
 
     for diff in diffs:
-        stdout.write(
-            diff.decode(errors="backslashreplace").encode(
-                locale.getpreferredencoding(False)
-            )
-        )
+        stdout.write(diff.decode(errors="backslashreplace").encode("utf-8"))
         exitCode = 1
     return exitCode
 
@@ -153,9 +161,7 @@ def printDirVsFile(dir_path, file_path, stdout):
         msg = "File %s is a directory while file %s is a regular file"
     else:
         msg = "File %s is a directory while file %s is a regular empty file"
-    stdout.write(
-        (msg % (dir_path, file_path) + "\n").encode(locale.getpreferredencoding(False))
-    )
+    stdout.write((msg % (dir_path, file_path) + "\n").encode("utf-8"))
 
 
 def printFileVsDir(file_path, dir_path, stdout):
@@ -163,16 +169,12 @@ def printFileVsDir(file_path, dir_path, stdout):
         msg = "File %s is a regular file while file %s is a directory"
     else:
         msg = "File %s is a regular empty file while file %s is a directory"
-    stdout.write(
-        (msg % (file_path, dir_path) + "\n").encode(locale.getpreferredencoding(False))
-    )
+    stdout.write((msg % (file_path, dir_path) + "\n").encode("utf-8"))
 
 
 def printOnlyIn(basedir, path, name, stdout):
     stdout.write(
-        ("Only in %s: %s\n" % (os.path.join(basedir, path), name)).encode(
-            locale.getpreferredencoding(False)
-        )
+        ("Only in %s: %s\n" % (os.path.join(basedir, path), name)).encode("utf-8")
     )
 
 

@@ -171,7 +171,7 @@ private:
   friend class SBBreakpointName;
   friend class SBTarget;
 
-  friend class lldb_private::ScriptInterpreter;
+  friend class lldb_private::ScriptInterpreterBridge;
   friend class lldb_private::python::SWIGBridge;
 
   SBBreakpoint(const lldb::BreakpointSP &bp_sp);

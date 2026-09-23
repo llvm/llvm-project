@@ -228,7 +228,7 @@ public:
   ///     A bit mask that indicates which events to get names for.
   ///
   /// \return
-  ///     The NULL terminated C string name of this Broadcaster.
+  ///     The null-terminated C string name of this Broadcaster.
   bool GetEventNames(Stream &s, const uint32_t event_mask,
                      bool prefix_with_broadcaster_name) const {
     return m_broadcaster_sp->GetEventNames(s, event_mask,

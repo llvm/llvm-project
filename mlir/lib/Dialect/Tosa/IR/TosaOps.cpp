@@ -44,10 +44,8 @@ using namespace mlir::tosa;
 // Tosa dialect interface includes.
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Tosa/IR/TosaAvailability.cpp.inc"
 #include "mlir/Dialect/Tosa/IR/TosaEnums.cpp.inc"
 #include "mlir/Dialect/Tosa/IR/TosaInterfaces.cpp.inc"
-#include "mlir/Dialect/Tosa/IR/TosaOpAvailabilityImpl.inc"
 
 namespace {
 #include "mlir/Dialect/Tosa/IR/TosaDialectBytecode.cpp.inc"
@@ -274,304 +272,6 @@ void mlir::tosa::printVariableOpTypeOrInitialValue(
   }
 }
 
-namespace {
-
-// parse attributes with special handling for tosa enum attributes
-template <typename EnumType>
-ParseResult parseAttrEntryWithEnumHandling(OpAsmParser &parser,
-                                           NamedAttrList &outAttrs) {
-  llvm::StringRef name;
-  if (parser.parseOptionalKeyword(&name) || parser.parseEqual())
-    return failure();
-
-  // special handling: rounding_mode accepts a *bare* RoundingMode enum
-  // keyword.
-  llvm::StringRef kw;
-  if constexpr (std::is_same_v<EnumType, tosa::RoundingMode>) {
-    if (name == "rounding_mode" &&
-        succeeded(parser.parseOptionalKeyword(&kw))) {
-      auto sym = symbolizeRoundingMode(kw);
-      if (!sym)
-        return parser.emitError(parser.getCurrentLocation())
-               << "invalid rounding_mode value: " << kw;
-      auto attr = RoundingModeAttr::get(parser.getContext(), sym.value());
-      outAttrs.push_back(NamedAttribute(name, attr));
-      return success();
-    }
-  }
-  // special handling: mode accepts a *bare* ResizeMode enum keyword.
-  if constexpr (std::is_same_v<EnumType, tosa::ResizeMode>) {
-    if (name == "mode" && succeeded(parser.parseOptionalKeyword(&kw))) {
-      auto sym = symbolizeResizeMode(kw);
-      if (!sym)
-        return parser.emitError(parser.getCurrentLocation())
-               << "invalid resize mode value: " << kw;
-      auto attr = ResizeModeAttr::get(parser.getContext(), sym.value());
-      outAttrs.push_back(NamedAttribute(name, attr));
-      return success();
-    }
-  }
-  // special handling: nan_mode accepts a *bare* NanPropagationMode enum
-  // keyword.
-  if constexpr (std::is_same_v<EnumType, tosa::NanPropagationMode>) {
-    if (name == "nan_mode" && succeeded(parser.parseOptionalKeyword(&kw))) {
-      auto sym = symbolizeNanPropagationMode(kw);
-      if (!sym)
-        return parser.emitError(parser.getCurrentLocation())
-               << "invalid nan_mode value: " << kw;
-      auto attr = NanPropagationModeAttr::get(parser.getContext(), sym.value());
-      outAttrs.push_back(NamedAttribute(name, attr));
-      return success();
-    }
-  }
-
-  // special handling: block_size accepts a *bare* BlockSizeMode enum
-  if constexpr (std::is_same_v<EnumType, tosa::BlockSize>) {
-    if (name == "block_size" && succeeded(parser.parseOptionalKeyword(&kw))) {
-      auto sym = symbolizeBlockSize(kw);
-      if (!sym)
-        return parser.emitError(parser.getCurrentLocation())
-               << "invalid block_size value: " << kw;
-      auto attr = BlockSizeAttr::get(parser.getContext(), sym.value());
-      outAttrs.push_back(NamedAttribute(name, attr));
-      return success();
-    }
-  }
-
-  // Default path: parse any normal attribute literal, including fully qualified
-  // enum keyword
-  Attribute attr;
-  return parser.parseAttribute(attr, name, outAttrs);
-}
-
-template <typename EnumType>
-ParseResult parseWithEnumHandling(OpAsmParser &parser, OperationState &result) {
-  // parse operands
-  SmallVector<OpAsmParser::UnresolvedOperand, 5> operands;
-  if (parser.parseCommaSeparatedList(
-          [&]() { return parser.parseOperand(operands.emplace_back()); }))
-    return failure();
-
-  // Parse { attr-dict } with special handling for enum bare token
-  NamedAttrList attrs;
-  if (succeeded(parser.parseOptionalLBrace()) &&
-      failed(parser.parseOptionalRBrace())) {
-    do {
-      if (parseAttrEntryWithEnumHandling<EnumType>(parser, attrs))
-        return failure();
-    } while (succeeded(parser.parseOptionalComma()));
-    if (parser.parseRBrace())
-      return failure();
-  }
-
-  FunctionType fnTy;
-  if (parser.parseColonType(fnTy))
-    return failure();
-
-  // Resolve operands and types
-  if (failed(parser.resolveOperands(operands, fnTy.getInputs(),
-                                    parser.getCurrentLocation(),
-                                    result.operands)))
-    return failure();
-
-  result.addTypes(fnTy.getResults());
-  result.addAttributes(attrs);
-
-  return success();
-}
-
-void printNamedAttr(OpAsmPrinter &parser, const NamedAttribute namedAttr) {
-  parser << namedAttr.getName().strref() << " = ";
-  auto attr = namedAttr.getValue();
-  if (auto roundingModeAttr = dyn_cast<tosa::RoundingModeAttr>(attr)) {
-    parser << roundingModeAttr.getValue();
-  } else if (auto resizeModeAttr = dyn_cast<tosa::ResizeModeAttr>(attr)) {
-    parser << resizeModeAttr.getValue();
-  } else if (auto nanPropagationModeAttr =
-                 dyn_cast<tosa::NanPropagationModeAttr>(attr)) {
-    parser << nanPropagationModeAttr.getValue();
-  } else if (auto blockSizeAttr = dyn_cast<tosa::BlockSizeAttr>(attr)) {
-    parser << blockSizeAttr.getValue();
-  } else {
-    parser.printAttribute(attr);
-  }
-}
-
-// print with special handling for default valued NanPropagationMode attribute
-void printWithNanPropagationHandling(OpAsmPrinter &parser, Operation *op) {
-  parser << " ";
-  parser.printOperands(op->getOperands());
-
-  NamedAttrList toPrint(op->getAttrs());
-  // remove default NanPropagate attribute
-  const auto kDefaultNanValue = NanPropagationMode::PROPAGATE;
-  for (auto attr : op->getAttrs()) {
-    if (auto nanAttr = dyn_cast<NanPropagationModeAttr>(attr.getValue())) {
-      if (nanAttr.getValue() == kDefaultNanValue) {
-        // elide from toPrint
-        toPrint.erase(attr.getName());
-        break;
-      }
-    }
-  }
-
-  if (!toPrint.empty()) {
-    parser << " {";
-    llvm::interleaveComma(toPrint, parser, [&](const NamedAttribute namedAttr) {
-      printNamedAttr(parser, namedAttr);
-    });
-    parser << "}";
-  }
-
-  parser << " : ";
-  parser.printFunctionalType(op);
-}
-
-// print with special handling for enums: RoundingMode, ResizeMode
-void printWithEnumHandling(OpAsmPrinter &parser, Operation *op) {
-  parser << " ";
-  parser.printOperands(op->getOperands());
-
-  if (!op->getAttrs().empty()) {
-    parser << " {";
-    llvm::interleaveComma(op->getAttrs(), parser,
-                          [&](const NamedAttribute namedAttr) {
-                            printNamedAttr(parser, namedAttr);
-                          });
-    parser << "}";
-  }
-
-  parser << " : ";
-  parser.printFunctionalType(op);
-}
-
-} // namespace
-
-ParseResult RescaleOp::parse(OpAsmParser &parser, OperationState &result) {
-  return parseWithEnumHandling<tosa::RoundingMode>(parser, result);
-}
-
-void RescaleOp::print(OpAsmPrinter &parser) {
-  printWithEnumHandling(parser, *this);
-}
-
-ParseResult ApplyScaleOp::parse(OpAsmParser &parser, OperationState &result) {
-  return parseWithEnumHandling<tosa::RoundingMode>(parser, result);
-}
-
-void ApplyScaleOp::print(OpAsmPrinter &parser) {
-  printWithEnumHandling(parser, *this);
-}
-
-ParseResult ResizeOp::parse(OpAsmParser &parser, OperationState &result) {
-  return parseWithEnumHandling<tosa::ResizeMode>(parser, result);
-}
-
-void ResizeOp::print(OpAsmPrinter &parser) {
-  printWithEnumHandling(parser, *this);
-}
-
-ParseResult ArgMaxOp::parse(OpAsmParser &parser, OperationState &result) {
-  return parseWithEnumHandling<tosa::NanPropagationMode>(parser, result);
-}
-
-void ArgMaxOp::print(OpAsmPrinter &parser) {
-  printWithNanPropagationHandling(parser, *this);
-}
-
-ParseResult MaxPool2dOp::parse(OpAsmParser &parser, OperationState &result) {
-  return parseWithEnumHandling<tosa::NanPropagationMode>(parser, result);
-}
-
-void MaxPool2dOp::print(OpAsmPrinter &parser) {
-  printWithNanPropagationHandling(parser, *this);
-}
-
-ParseResult MaxPool2dAdaptiveOp::parse(OpAsmParser &parser,
-                                       OperationState &result) {
-  return parseWithEnumHandling<tosa::NanPropagationMode>(parser, result);
-}
-
-void MaxPool2dAdaptiveOp::print(OpAsmPrinter &parser) {
-  printWithNanPropagationHandling(parser, *this);
-}
-
-ParseResult ClampOp::parse(OpAsmParser &parser, OperationState &result) {
-  return parseWithEnumHandling<tosa::NanPropagationMode>(parser, result);
-}
-
-void ClampOp::print(OpAsmPrinter &parser) {
-  printWithNanPropagationHandling(parser, *this);
-}
-
-ParseResult MaximumOp::parse(OpAsmParser &parser, OperationState &result) {
-  return parseWithEnumHandling<tosa::NanPropagationMode>(parser, result);
-}
-
-void MaximumOp::print(OpAsmPrinter &parser) {
-  printWithNanPropagationHandling(parser, *this);
-}
-
-ParseResult MinimumOp::parse(OpAsmParser &parser, OperationState &result) {
-  return parseWithEnumHandling<tosa::NanPropagationMode>(parser, result);
-}
-
-void MinimumOp::print(OpAsmPrinter &parser) {
-  printWithNanPropagationHandling(parser, *this);
-}
-
-ParseResult ReduceMaxOp::parse(OpAsmParser &parser, OperationState &result) {
-  return parseWithEnumHandling<tosa::NanPropagationMode>(parser, result);
-}
-
-void ReduceMaxOp::print(OpAsmPrinter &parser) {
-  printWithNanPropagationHandling(parser, *this);
-}
-
-ParseResult ReduceMinOp::parse(OpAsmParser &parser, OperationState &result) {
-  return parseWithEnumHandling<tosa::NanPropagationMode>(parser, result);
-}
-
-void ReduceMinOp::print(OpAsmPrinter &parser) {
-  printWithNanPropagationHandling(parser, *this);
-}
-
-ParseResult MatmulTBlockScaledOp::parse(OpAsmParser &parser,
-                                        OperationState &result) {
-  return parseWithEnumHandling<tosa::BlockSize>(parser, result);
-}
-
-void MatmulTBlockScaledOp::print(OpAsmPrinter &parser) {
-  printWithEnumHandling(parser, *this);
-}
-
-ParseResult CastFromBlockScaledOp::parse(OpAsmParser &parser,
-                                         OperationState &result) {
-  return parseWithEnumHandling<tosa::BlockSize>(parser, result);
-}
-
-void CastFromBlockScaledOp::print(OpAsmPrinter &parser) {
-  printWithEnumHandling(parser, *this);
-}
-
-ParseResult CastToBlockScaledOp::parse(OpAsmParser &parser,
-                                       OperationState &result) {
-  return parseWithEnumHandling<tosa::BlockSize>(parser, result);
-}
-
-void CastToBlockScaledOp::print(OpAsmPrinter &parser) {
-  printWithEnumHandling(parser, *this);
-}
-
-ParseResult Conv2DBlockScaledOp::parse(OpAsmParser &parser,
-                                       OperationState &result) {
-  return parseWithEnumHandling<tosa::BlockSize>(parser, result);
-}
-
-void Conv2DBlockScaledOp::print(OpAsmPrinter &parser) {
-  printWithEnumHandling(parser, *this);
-}
-
 //===----------------------------------------------------------------------===//
 // Tosa utilities.
 //===----------------------------------------------------------------------===//
@@ -741,22 +441,31 @@ LogicalResult mlir::tosa::mxint8Type::convertFromAttribute(
 // TOSA block scaling utilities.
 //===----------------------------------------------------------------------===//
 
-LogicalResult mlir::tosa::verifyBlockScaledTensorType(mlir::Type type,
-                                                      bool allowScaleValues) {
+LogicalResult mlir::tosa::verifyBlockScaledTensorType(
+    mlir::Type type, llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
+    bool allowScaleValues) {
   const auto tensorType = llvm::cast<ShapedType>(type);
   const BlockScaledType elemType =
       llvm::dyn_cast<BlockScaledType>(tensorType.getElementType());
   if (!elemType)
     return success();
 
-  if (!allowScaleValues && elemType.hasScaleValues())
+  if (!allowScaleValues && elemType.hasScaleValues()) {
+    if (emitError)
+      emitError()
+          << "block scaled tensor type with scale values is not allowed";
     return failure();
+  }
 
   if (!tensorType.hasRank())
     return success();
 
-  if (tensorType.getRank() == 0)
+  if (tensorType.getRank() == 0) {
+    if (emitError)
+      emitError() << "block scaled tensor type must have rank greater than "
+                     "zero";
     return failure();
+  }
 
   const ArrayRef<int64_t> tensorShape = tensorType.getShape();
   const uint32_t blockSize =
@@ -765,17 +474,45 @@ LogicalResult mlir::tosa::verifyBlockScaledTensorType(mlir::Type type,
   if (allowScaleValues && elemType.hasScaleValues() &&
       tensorType.hasStaticShape()) {
     const size_t numBlocks = tensorType.getNumElements() / blockSize;
-    if (elemType.getScaleValues().size() != numBlocks)
+    if (elemType.getScaleValues().size() != numBlocks) {
+      if (emitError)
+        emitError() << "block scaled tensor type with scale values must have "
+                       "scale values for each block, expected "
+                    << numBlocks << ", got "
+                    << elemType.getScaleValues().size();
       return failure();
+    }
   }
 
   const int64_t blockedDimension = tensorShape.back();
   if (ShapedType::isDynamic(blockedDimension))
     return success();
-  if (blockedDimension % blockSize != 0)
+
+  if (blockedDimension % blockSize != 0) {
+    if (emitError)
+      emitError() << "last dimension of block scaled tensor type ("
+                  << blockedDimension << ") must be divisible by block size ("
+                  << blockSize << ")";
+
     return failure();
+  }
 
   return success();
+}
+
+std::string mlir::tosa::getTosaTensorTypeErrorMessage(mlir::Type type) {
+  MLIRContext *ctx = type.getContext();
+  std::string message;
+  ScopedDiagnosticHandler handler(
+      ctx, [&](Diagnostic &diag) { message = diag.str(); });
+
+  if (failed(verifyBlockScaledTensorType(
+          type, [ctx] { return emitError(UnknownLoc::get(ctx)); })) &&
+      !message.empty()) {
+    return ": " + message;
+  }
+
+  return "";
 }
 
 static ParseResult parseScaleValues(AsmParser &parser,
@@ -888,21 +625,16 @@ static LogicalResult verifyConvOp(T op) {
     return failure();
   }
 
-  if (isa<Float8E5M2Type>(inputEType) || isa<Float8E4M3FNType>(inputEType) ||
-      isa<Float8E5M2Type>(weightEType) || isa<Float8E4M3FNType>(weightEType)) {
-    if (inputEType != weightEType) {
-      op.emitOpError(
-          "expect both input and weight to have same element type, got ")
-          << inputEType << " and " << weightEType;
-      return failure();
-    }
-  }
+  const bool isInputBlockScaled = llvm::isa<BlockScaledType>(inputEType);
+  const bool isWeightBlockScaled = llvm::isa<BlockScaledType>(weightEType);
+  const bool isInputFloat = llvm::isa<FloatType>(inputEType);
+  const bool isWeightFloat = llvm::isa<FloatType>(weightEType);
 
-  bool inputIsFloat = llvm::isa<FloatType>(inputEType);
-  bool weightIsFloat = llvm::isa<FloatType>(weightEType);
+  const bool isInputBSorFloat = isInputBlockScaled || isInputFloat;
+  const bool isWeightBSorFloat = isWeightBlockScaled || isWeightFloat;
 
   // Either both must be float or both non-float.
-  if (inputIsFloat != weightIsFloat) {
+  if (isInputBSorFloat != isWeightBSorFloat) {
     op.emitOpError(
         "expect both input and weight to be float or not together, got ")
         << inputEType << " and " << weightEType;
@@ -910,16 +642,26 @@ static LogicalResult verifyConvOp(T op) {
   }
 
   auto inputZpEType = getStorageElementTypeOrSelf(op.getInputZp().getType());
-  if (inputEType != inputZpEType) {
+  if (!isInputBlockScaled && inputEType != inputZpEType) {
     return op.emitOpError("expect both input and its zero point are the same "
                           "element type, got ")
            << inputEType << " and " << inputZpEType;
   }
+  if (isInputBlockScaled && !llvm::isa<Float32Type>(inputZpEType)) {
+    return op.emitOpError(
+               "expect block scaled input to have fp32 zero point, got ")
+           << inputEType << " and " << inputZpEType;
+  }
 
   auto weightZpEType = getStorageElementTypeOrSelf(op.getWeightZp().getType());
-  if (weightEType != weightZpEType) {
+  if (!isWeightBlockScaled && weightEType != weightZpEType) {
     return op.emitOpError("expect both weight and its zero point are the same "
                           "element type, got ")
+           << weightEType << " and " << weightZpEType;
+  }
+  if (isWeightBlockScaled && !llvm::isa<Float32Type>(weightZpEType)) {
+    return op.emitOpError(
+               "expect block scaled weight to have fp32 zero point, got ")
            << weightEType << " and " << weightZpEType;
   }
 
@@ -959,9 +701,12 @@ LogicalResult tosa::ConstOp::verify() {
       return op.emitOpError(
           "attribute block scaled type must have scale values");
 
-    if (failed(verifyBlockScaledTensorType(attrType, true)))
-      return op.emitOpError("block scaled attribute type is not valid, got ")
-             << attrType;
+    const auto emitAttributeError = [&op]() {
+      return op.emitOpError("attribute block scaled type is invalid: ");
+    };
+
+    if (failed(verifyBlockScaledTensorType(attrType, emitAttributeError, true)))
+      return failure();
 
     const BlockScaledType resultBlockScaledType =
         llvm::dyn_cast<mlir::tosa::BlockScaledType>(resultElemType);
@@ -997,33 +742,6 @@ static LogicalResult verifyConvOpModes(T op) {
 
   if (auto quantType = llvm::dyn_cast<mlir::quant::QuantizedType>(inputEType))
     inputEType = getStorageElementTypeFromQuantized(quantType);
-
-  auto accType = op.getAccType();
-  if (inputEType.isInteger(8) && !accType.isInteger(32))
-    return op.emitOpError("accumulator type for i8 tensor is not i32, got ")
-           << accType;
-
-  if (inputEType.isInteger(16) && !accType.isInteger(48))
-    return op.emitOpError("accumulator type for i16 tensor is not i48, got ")
-           << accType;
-
-  if (isa<Float8E5M2Type, Float8E4M3Type>(inputEType) &&
-      !(accType.isF16() || accType.isF32()))
-    return op.emitOpError("accumulator type for f8 tensor is not f16/f32, got ")
-           << accType;
-
-  if (inputEType.isF16() && !(accType.isF16() || accType.isF32()))
-    return op.emitOpError(
-               "accumulator type for f16 tensor is not f16/f32, got ")
-           << accType;
-
-  if (inputEType.isBF16() && !accType.isF32())
-    return op.emitOpError("accumulator type for bf16 tensor is not f32, got ")
-           << accType;
-
-  if (inputEType.isF32() && !accType.isF32())
-    return op.emitOpError("accumulator type for f32 tensor is not f32, got ")
-           << accType;
 
   auto resultEType =
       llvm::cast<ShapedType>(op.getResult().getType()).getElementType();
@@ -2238,16 +1956,26 @@ template <typename T>
 static LogicalResult verifyMatMulZeroPointType(T op, Value input, Value zp,
                                                StringRef inputName,
                                                StringRef zpName) {
+  const Type inputElementType = getElementTypeOrSelf(input.getType());
   const Type inputStorageElementType = getStorageElementTypeOrSelf(input);
   const Type zpElementType = getStorageElementTypeOrSelf(zp);
+  Type expectedElementType = inputStorageElementType;
 
-  if (inputStorageElementType != zpElementType)
-    return op.emitOpError("expect input ")
-           << inputName << " and " << zpName
-           << " have the same element type, got " << inputStorageElementType
-           << " and " << zpElementType;
+  if (isa<BlockScaledType>(inputElementType))
+    expectedElementType = Float32Type::get(op.getContext());
 
-  return success();
+  if (expectedElementType == zpElementType)
+    return success();
+
+  InFlightDiagnostic diag = op.emitOpError("expect input ");
+  diag << inputName << " and " << zpName;
+  if (isa<BlockScaledType>(inputElementType))
+    diag << " have compatible element types, got " << inputElementType
+         << " and " << zpElementType;
+  else
+    diag << " have the same element type, got " << inputStorageElementType
+         << " and " << zpElementType;
+  return diag;
 }
 
 LogicalResult MatMulOp::verify() {
@@ -2734,6 +2462,21 @@ LogicalResult tosa::SliceOp::verify() {
              << startValues << "]";
   }
 
+  // ERROR_IF(is_block_scale<in_out_t>() && start[rank(shape1) - 1] %
+  // get_innermost_block_size<in_out_t>() != 0);
+  const auto elemType = getElementTypeOrSelf(input.getType());
+  if (const auto blockScaledType = llvm::dyn_cast<BlockScaledType>(elemType)) {
+    const auto startBlock = startValues.back();
+    const auto scaleBlock =
+        BlockShapeAttr::getBlockShapeValue(blockScaledType.getBlockShape());
+    if (startBlock % scaleBlock != 0) {
+      return emitOpError(
+                 "expected start innermost block size to match data type "
+                 "for block scaled input, got start block=")
+             << startBlock << ", scale block=" << scaleBlock;
+    }
+  }
+
   SmallVector<int64_t> sizeValues;
   if (!tosa::getConstShapeValues(size.getDefiningOp(), sizeValues))
     return success();
@@ -3162,7 +2905,8 @@ LogicalResult tosa::ReshapeBlockScaledOp::inferReturnTypeComponents(
   llvm::SmallVector<int64_t> newScaleShapeValue;
   if (numInputs == 2) {
     newScaleShapeValue.assign(newShapeValue.begin(), newShapeValue.end());
-    if (ShapedType::isStatic(newScaleShapeValue.back()))
+    if (!newScaleShapeValue.empty() &&
+        ShapedType::isStatic(newScaleShapeValue.back()))
       newScaleShapeValue.back() /= blockSize;
   }
 
@@ -3173,7 +2917,7 @@ LogicalResult tosa::ReshapeBlockScaledOp::inferReturnTypeComponents(
     for (size_t idx = 0; idx < newShapeValue.size(); idx++) {
       if (ShapedType::isDynamic(newScaleShapeValue[idx])) {
         newScaleShapeValue[idx] = newShapeValue[idx];
-        if (idx == (newShapeValue.size() - 1))
+        if (idx + 1 == newShapeValue.size())
           newScaleShapeValue[idx] /= blockSize;
       }
     }
@@ -3203,6 +2947,10 @@ llvm::LogicalResult tosa::ReshapeBlockScaledOp::verify() {
           .failed()) {
     return failure();
   }
+
+  if (inputList.size() == 2 &&
+      cast<tosa::shapeType>(getNewValueShape().getType()).getRank() == 0)
+    return emitOpError("requires new shape to have a rank greater than 0");
 
   const auto inputType = llvm::cast<ShapedType>(inputList[0].getType());
   if (!inputType.hasRank())
@@ -3272,7 +3020,7 @@ llvm::LogicalResult tosa::ReshapeBlockScaledOp::verify() {
       return emitOpError("expect block size to be 1, got ") << blockSize;
   }
 
-  // Get the new value shape dimension values
+  // Get the new value shape dimension values.
   SmallVector<int64_t> shapeValues;
   if (!tosa::getConstShapeValues(getNewValueShape().getDefiningOp(),
                                  shapeValues)) {
@@ -3281,9 +3029,6 @@ llvm::LogicalResult tosa::ReshapeBlockScaledOp::verify() {
   }
 
   if (inputList.size() == 2) {
-    if (static_cast<int64_t>(shapeValues.size()) == 0)
-      return emitOpError("requires new shape to have a rank greater than 0");
-
     const int64_t lastShapeDim = shapeValues.back();
     if (ShapedType::isStatic(lastShapeDim) && lastShapeDim % blockSize != 0)
       return emitOpError("expect last dimension of new shape (")
@@ -3556,6 +3301,12 @@ LogicalResult tosa::TransposeOp::verify() {
       !isPermutationVector(llvm::map_to_vector(
           constantPerms, [](int32_t v) -> int64_t { return v; })))
     return emitOpError() << "expected valid permutation indices";
+
+  if (isa<BlockScaledType>(getInput1().getType().getElementType()) &&
+      constantPerms.back() != static_cast<int32_t>(constantPerms.size()) - 1) {
+    return emitOpError() << "expected no-op permutation on innermost dimension "
+                            "for block scaled input";
+  }
 
   // ERROR_IF(tensor_size(shape1) != tensor_size(shape))
   if (inputShape.hasStaticShape() && outputShape.hasStaticShape() &&
@@ -3997,6 +3748,12 @@ LogicalResult tosa::ResizeOp::inferReturnTypeComponents(
 LogicalResult tosa::ResizeOp::verify() {
   const Value input = getInput();
   const Value output = getOutput();
+  const Type inputElementType = getElementTypeOrSelf(input.getType());
+
+  if (isa<BlockScaledType>(inputElementType) &&
+      getMode() != ResizeMode::NEAREST_NEIGHBOR)
+    return emitOpError("requires NEAREST_NEIGHBOR mode for block scaled input");
+
   const RankedTensorType inputType =
       llvm::dyn_cast<RankedTensorType>(input.getType());
   const RankedTensorType outputType =
@@ -5343,6 +5100,16 @@ LogicalResult CastOp::verify() {
   const bool inputIsBlockScaled = llvm::isa<BlockScaledType>(inputElementType);
   const bool outputIsBlockScaled =
       llvm::isa<BlockScaledType>(outputElementType);
+
+  const bool isUnsigned = this->getInputUnsigned();
+  const Type inputDataType = getStorageElementTypeOrSelf(inputType);
+
+  if (isUnsigned)
+    if (!inputDataType.isInteger() || inputDataType.isInteger(1))
+      return emitOpError()
+             << "attribute input_unsigned requires integer type inputs. Got: "
+             << inputDataType;
+
   if (!inputIsBlockScaled && !outputIsBlockScaled)
     return success();
 
@@ -5720,7 +5487,7 @@ void IfOp::print(OpAsmPrinter &p) {
     p.printRegion(elseRegion);
   }
 
-  p.printOptionalAttrDict((*this)->getAttrs());
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue());
 }
 
 LogicalResult IfOp::verify() {
@@ -5929,7 +5696,8 @@ void WhileOp::print(OpAsmPrinter &parser) {
   parser.printRegion(getCondGraph(), /*printEntryBlockArgs=*/false);
   parser << " do ";
   parser.printRegion(getBodyGraph());
-  parser.printOptionalAttrDictWithKeyword((*this)->getAttrs());
+  parser.printOptionalAttrDictWithKeyword(
+      (*this)->getDiscardableAttrDictionary().getValue());
 }
 
 // Create a rank-1 const tensor for zero point of the source tensor.
@@ -6131,6 +5899,43 @@ LogicalResult tosa::SliceShapeOp::verify() {
 //===----------------------------------------------------------------------===//
 // TOSA Operator Definitions.
 //===----------------------------------------------------------------------===//
+
+static ParseResult parseOptionalBoolClause(OpAsmParser &parser,
+                                           StringRef keyword,
+                                           BoolAttr &result) {
+  if (failed(parser.parseOptionalKeyword(keyword)))
+    return success();
+  if (parser.parseLParen() || parser.parseAttribute(result) ||
+      parser.parseRParen())
+    return failure();
+  return success();
+}
+
+static void printOptionalBoolClause(OpAsmPrinter &printer, StringRef keyword,
+                                    BoolAttr attr) {
+  if (!attr)
+    return;
+  printer << keyword << '(';
+  printer.printAttribute(attr);
+  printer << ')';
+}
+
+static ParseResult parseLocalBound(OpAsmParser &parser, BoolAttr &result) {
+  return parseOptionalBoolClause(parser, "local_bound", result);
+}
+
+static void printLocalBound(OpAsmPrinter &printer, Operation *, BoolAttr attr) {
+  printOptionalBoolClause(printer, "local_bound", attr);
+}
+
+static ParseResult parseInputUnsigned(OpAsmParser &parser, BoolAttr &result) {
+  return parseOptionalBoolClause(parser, "input_unsigned", result);
+}
+
+static void printInputUnsigned(OpAsmPrinter &printer, Operation *,
+                               BoolAttr attr) {
+  printOptionalBoolClause(printer, "input_unsigned", attr);
+}
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Tosa/IR/TosaOps.cpp.inc"

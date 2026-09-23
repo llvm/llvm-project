@@ -602,16 +602,20 @@ bool ExtractAPIVisitorBase<Derived>::VisitRecordDecl(const RecordDecl *Decl) {
   DeclarationFragments SubHeading =
       DeclarationFragmentsBuilder::getSubHeading(Decl);
 
+  AvailabilityInfo Availability = AvailabilityInfo::createFromDecl(Decl);
+  if (const auto *TypedefDecl = Decl->getTypedefNameForAnonDecl())
+    Availability.mergeWith(AvailabilityInfo::createFromDecl(TypedefDecl));
+
   if (Decl->isUnion())
     API.createRecord<UnionRecord>(
-        USR, Name, createHierarchyInformationForDecl(*Decl), Loc,
-        AvailabilityInfo::createFromDecl(Decl), Comment, Declaration,
-        SubHeading, isInSystemHeader(Decl), isEmbeddedInVarDeclarator(*Decl));
+        USR, Name, createHierarchyInformationForDecl(*Decl), Loc, Availability,
+        Comment, Declaration, SubHeading, isInSystemHeader(Decl),
+        isEmbeddedInVarDeclarator(*Decl));
   else
     API.createRecord<StructRecord>(
-        USR, Name, createHierarchyInformationForDecl(*Decl), Loc,
-        AvailabilityInfo::createFromDecl(Decl), Comment, Declaration,
-        SubHeading, isInSystemHeader(Decl), isEmbeddedInVarDeclarator(*Decl));
+        USR, Name, createHierarchyInformationForDecl(*Decl), Loc, Availability,
+        Comment, Declaration, SubHeading, isInSystemHeader(Decl),
+        isEmbeddedInVarDeclarator(*Decl));
 
   return true;
 }

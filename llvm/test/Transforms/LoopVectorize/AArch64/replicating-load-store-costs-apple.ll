@@ -289,7 +289,7 @@ define ptr @replicating_store_in_conditional_latch(ptr %p, i32 %n)  {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i64 [[TMP3]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP3]], 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[N_MOD_VF]], 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i64 4, i64 [[N_MOD_VF]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[TMP5]]
@@ -452,22 +452,21 @@ define void @test_prefer_vector_addressing(ptr %start, ptr %ms, ptr noalias %src
 ; CHECK-SAME: ptr [[START:%.*]], ptr [[MS:%.*]], ptr noalias [[SRC:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[GEP_START:%.*]] = getelementptr i8, ptr [[START]], i64 3
-; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[MS]] to i64
-; CHECK-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoaddr ptr [[MS]] to i64
+; CHECK-NEXT:    [[START2:%.*]] = ptrtoaddr ptr [[START]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[START2]], 3
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP10]], i64 [[TMP0]])
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], [[START2]]
-; CHECK-NEXT:    [[TMP23:%.*]] = add i64 [[TMP2]], -3
+; CHECK-NEXT:    [[TMP25:%.*]] = add i64 [[TMP1]], -3
+; CHECK-NEXT:    [[TMP23:%.*]] = sub i64 [[TMP25]], [[START2]]
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP23]], i64 1)
-; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP2]], [[UMIN]]
-; CHECK-NEXT:    [[TMP24:%.*]] = add i64 [[TMP3]], -3
+; CHECK-NEXT:    [[TMP24:%.*]] = sub i64 [[TMP23]], [[UMIN]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = udiv i64 [[TMP24]], 3
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[UMIN]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP5]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP6]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP6]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP6]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP6]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[N_VEC]], 3
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[GEP_START]], i64 [[TMP7]]
@@ -586,8 +585,8 @@ define double @test_scalarization_cost_for_load_of_address(ptr %src.0, ptr %src.
 ; CHECK-NEXT:    [[TMP15:%.*]] = load ptr, ptr [[TMP13]], align 8
 ; CHECK-NEXT:    [[LV:%.*]] = load double, ptr [[L_P_2]], align 8
 ; CHECK-NEXT:    [[TMP17:%.*]] = load double, ptr [[TMP15]], align 8
-; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <2 x double> poison, double [[LV]], i32 0
-; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <2 x double> [[TMP18]], double [[TMP17]], i32 1
+; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <2 x double> poison, double [[LV]], i64 0
+; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <2 x double> [[TMP18]], double [[TMP17]], i64 1
 ; CHECK-NEXT:    [[TMP20:%.*]] = fmul <2 x double> [[TMP9]], [[TMP19]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = call double @llvm.vector.reduce.fadd.v2f64(double 3.000000e+00, <2 x double> [[TMP20]])
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
@@ -729,22 +728,22 @@ define i32 @test_or_reduction_with_stride_2(i32 %scale, ptr %src) {
 ; CHECK-NEXT:    [[TMP70:%.*]] = load i8, ptr [[TMP33]], align 1
 ; CHECK-NEXT:    [[TMP71:%.*]] = load i8, ptr [[TMP34]], align 1
 ; CHECK-NEXT:    [[TMP72:%.*]] = load i8, ptr [[TMP35]], align 1
-; CHECK-NEXT:    [[TMP48:%.*]] = insertelement <16 x i8> poison, i8 [[TMP44]], i32 0
-; CHECK-NEXT:    [[TMP49:%.*]] = insertelement <16 x i8> [[TMP48]], i8 [[TMP45]], i32 1
-; CHECK-NEXT:    [[TMP50:%.*]] = insertelement <16 x i8> [[TMP49]], i8 [[TMP46]], i32 2
-; CHECK-NEXT:    [[TMP51:%.*]] = insertelement <16 x i8> [[TMP50]], i8 [[TMP47]], i32 3
-; CHECK-NEXT:    [[TMP52:%.*]] = insertelement <16 x i8> [[TMP51]], i8 [[TMP36]], i32 4
-; CHECK-NEXT:    [[TMP53:%.*]] = insertelement <16 x i8> [[TMP52]], i8 [[TMP37]], i32 5
-; CHECK-NEXT:    [[TMP54:%.*]] = insertelement <16 x i8> [[TMP53]], i8 [[TMP38]], i32 6
-; CHECK-NEXT:    [[TMP55:%.*]] = insertelement <16 x i8> [[TMP54]], i8 [[TMP39]], i32 7
-; CHECK-NEXT:    [[TMP56:%.*]] = insertelement <16 x i8> [[TMP55]], i8 [[TMP40]], i32 8
-; CHECK-NEXT:    [[TMP57:%.*]] = insertelement <16 x i8> [[TMP56]], i8 [[TMP41]], i32 9
-; CHECK-NEXT:    [[TMP58:%.*]] = insertelement <16 x i8> [[TMP57]], i8 [[TMP42]], i32 10
-; CHECK-NEXT:    [[TMP59:%.*]] = insertelement <16 x i8> [[TMP58]], i8 [[TMP43]], i32 11
-; CHECK-NEXT:    [[TMP60:%.*]] = insertelement <16 x i8> [[TMP59]], i8 [[TMP69]], i32 12
-; CHECK-NEXT:    [[TMP61:%.*]] = insertelement <16 x i8> [[TMP60]], i8 [[TMP70]], i32 13
-; CHECK-NEXT:    [[TMP62:%.*]] = insertelement <16 x i8> [[TMP61]], i8 [[TMP71]], i32 14
-; CHECK-NEXT:    [[TMP63:%.*]] = insertelement <16 x i8> [[TMP62]], i8 [[TMP72]], i32 15
+; CHECK-NEXT:    [[TMP48:%.*]] = insertelement <16 x i8> poison, i8 [[TMP44]], i64 0
+; CHECK-NEXT:    [[TMP49:%.*]] = insertelement <16 x i8> [[TMP48]], i8 [[TMP45]], i64 1
+; CHECK-NEXT:    [[TMP50:%.*]] = insertelement <16 x i8> [[TMP49]], i8 [[TMP46]], i64 2
+; CHECK-NEXT:    [[TMP51:%.*]] = insertelement <16 x i8> [[TMP50]], i8 [[TMP47]], i64 3
+; CHECK-NEXT:    [[TMP52:%.*]] = insertelement <16 x i8> [[TMP51]], i8 [[TMP36]], i64 4
+; CHECK-NEXT:    [[TMP53:%.*]] = insertelement <16 x i8> [[TMP52]], i8 [[TMP37]], i64 5
+; CHECK-NEXT:    [[TMP54:%.*]] = insertelement <16 x i8> [[TMP53]], i8 [[TMP38]], i64 6
+; CHECK-NEXT:    [[TMP55:%.*]] = insertelement <16 x i8> [[TMP54]], i8 [[TMP39]], i64 7
+; CHECK-NEXT:    [[TMP56:%.*]] = insertelement <16 x i8> [[TMP55]], i8 [[TMP40]], i64 8
+; CHECK-NEXT:    [[TMP57:%.*]] = insertelement <16 x i8> [[TMP56]], i8 [[TMP41]], i64 9
+; CHECK-NEXT:    [[TMP58:%.*]] = insertelement <16 x i8> [[TMP57]], i8 [[TMP42]], i64 10
+; CHECK-NEXT:    [[TMP59:%.*]] = insertelement <16 x i8> [[TMP58]], i8 [[TMP43]], i64 11
+; CHECK-NEXT:    [[TMP60:%.*]] = insertelement <16 x i8> [[TMP59]], i8 [[TMP69]], i64 12
+; CHECK-NEXT:    [[TMP61:%.*]] = insertelement <16 x i8> [[TMP60]], i8 [[TMP70]], i64 13
+; CHECK-NEXT:    [[TMP62:%.*]] = insertelement <16 x i8> [[TMP61]], i8 [[TMP71]], i64 14
+; CHECK-NEXT:    [[TMP63:%.*]] = insertelement <16 x i8> [[TMP62]], i8 [[TMP72]], i64 15
 ; CHECK-NEXT:    [[TMP64:%.*]] = sext <16 x i8> [[TMP63]] to <16 x i32>
 ; CHECK-NEXT:    [[TMP65:%.*]] = mul <16 x i32> [[BROADCAST_SPLAT]], [[TMP64]]
 ; CHECK-NEXT:    [[TMP66]] = or <16 x i32> [[TMP65]], [[VEC_PHI]]

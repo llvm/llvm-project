@@ -222,6 +222,28 @@ add_libc_test(
 )
 
 add_libc_test(
+  wcscasecmp_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wcscasecmp_test.cpp
+  DEPENDS
+    libc.src.__support.wctype_utils
+    libc.src.wchar.wcscasecmp
+)
+
+add_libc_test(
+  wcsncasecmp_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wcsncasecmp_test.cpp
+  DEPENDS
+    libc.src.__support.wctype_utils
+    libc.src.wchar.wcsncasecmp
+)
+
+add_libc_test(
   wcscmp_test
   SUITE
     libc_wchar_unittests
@@ -487,8 +509,7 @@ add_libc_test(
   DEPENDS
     libc.src.wchar.wcstof
     libc.test.UnitTest.ErrnoCheckingTest
-  LINK_LIBRARIES
-    LibcFPTestHelpers
+    libc.test.UnitTest.FPTestHelpers
 )
 
 add_libc_test(
@@ -500,8 +521,7 @@ add_libc_test(
   DEPENDS
     libc.src.wchar.wcstod
     libc.test.UnitTest.ErrnoCheckingTest
-  LINK_LIBRARIES
-    LibcFPTestHelpers
+    libc.test.UnitTest.FPTestHelpers
 )
 
 add_libc_test(
@@ -517,7 +537,7 @@ add_libc_test(
     libc.test.UnitTest.ErrnoCheckingTest
 )
 
-add_libc_unittest(
+add_libc_test(
   wcsxfrm_test
   SUITE
     libc_wchar_unittests

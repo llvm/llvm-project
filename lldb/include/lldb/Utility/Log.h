@@ -210,8 +210,8 @@ public:
                              llvm::raw_ostream &output_stream,
                              llvm::raw_ostream &error_stream);
 
-  static bool ListChannelCategories(llvm::StringRef channel,
-                                    llvm::raw_ostream &stream);
+  static llvm::Expected<std::string>
+  ListChannelCategories(llvm::StringRef channel);
 
   /// Returns the list of log channels.
   static std::vector<llvm::StringRef> ListChannels();

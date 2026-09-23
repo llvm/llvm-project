@@ -2293,10 +2293,8 @@ StmtResult Sema::ActOnForStmt(SourceLocation ForLoc, SourceLocation LParenLoc,
         if (VarDecl *VD = dyn_cast<VarDecl>(DI)) {
           VarDeclSeen = true;
           if (VD->isLocalVarDecl() && !VD->hasLocalStorage())
-            Diag(DI->getLocation(),
-                 getLangOpts().C23
-                     ? diag::warn_c17_non_local_variable_decl_in_for
-                     : diag::ext_c23_non_local_variable_decl_in_for);
+            DiagCompat(DI->getLocation(),
+                       diag_compat::non_local_variable_decl_in_for);
         } else if (!NonVarSeen) {
           // Keep track of the first non-variable declaration we saw so that
           // we can diagnose if we don't see any variable declarations. This
@@ -2312,9 +2310,8 @@ StmtResult Sema::ActOnForStmt(SourceLocation ForLoc, SourceLocation LParenLoc,
       // Diagnose if we saw a non-variable declaration but no variable
       // declarations.
       if (NonVarSeen && !VarDeclSeen)
-        Diag(NonVarSeen->getLocation(),
-             getLangOpts().C23 ? diag::warn_c17_non_variable_decl_in_for
-                               : diag::ext_c23_non_variable_decl_in_for);
+        DiagCompat(NonVarSeen->getLocation(),
+                   diag_compat::non_variable_decl_in_for);
     }
   }
 
@@ -2993,9 +2990,7 @@ StmtResult Sema::BuildCXXForRangeStmt(
     SourceLocation RangeLoc = RangeVar->getLocation();
     QualType BeginType = BeginVar->getType(), EndType = EndVar->getType();
     if (!Context.hasSameType(BeginType, EndType)) {
-      Diag(RangeLoc, getLangOpts().CPlusPlus17
-                         ? diag::warn_for_range_begin_end_types_differ
-                         : diag::ext_for_range_begin_end_types_differ)
+      DiagCompat(RangeLoc, diag_compat::for_range_begin_end_types_differ)
           << BeginType << EndType;
       NoteForRangeBeginEndFunction(*this, BeginExpr, BEF_begin);
       NoteForRangeBeginEndFunction(*this, EndExpr, BEF_end);
@@ -4085,7 +4080,8 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
   const AttrVec *Attrs = nullptr;
   bool isObjCMethod = false;
 
-  if (const FunctionDecl *FD = getCurFunctionDecl()) {
+  FunctionDecl *FD = getCurFunctionDecl();
+  if (FD) {
     FnRetType = FD->getReturnType();
     if (FD->hasAttrs())
       Attrs = &FD->getAttrs();
@@ -4143,11 +4139,11 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
   // deduction.
   if (getLangOpts().CPlusPlus14) {
     if (AutoType *AT = FnRetType->getContainedAutoType()) {
-      FunctionDecl *FD = cast<FunctionDecl>(CurContext);
       // If we've already decided this function is invalid, e.g. because
       // we saw a `return` whose expression had an error, don't keep
       // trying to deduce its return type.
       // (Some return values may be needlessly wrapped in RecoveryExpr).
+      assert(FD);
       if (FD->isInvalidDecl() ||
           DeduceFunctionTypeFromReturnExpr(FD, ReturnLoc, RetValExp, AT)) {
         FD->setInvalidDecl();
@@ -4256,8 +4252,6 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
     Result = ReturnStmt::Create(Context, ReturnLoc, RetValExp,
                                 /* NRVOCandidate=*/nullptr);
   } else if (!RetValExp && !HasDependentReturnType) {
-    FunctionDecl *FD = getCurFunctionDecl();
-
     if ((FD && FD->isInvalidDecl()) || FnRetType->containsErrors()) {
       // The intended return type might have been "void", so don't warn.
     } else if (getLangOpts().CPlusPlus11 && FD && FD->isConstexpr()) {
@@ -4714,9 +4708,42 @@ static bool
 buildCapturedStmtCaptureList(Sema &S, CapturedRegionScopeInfo *RSI,
                              SmallVectorImpl<CapturedStmt::Capture> &Captures,
                              SmallVectorImpl<Expr *> &CaptureInits) {
+  bool HasError = false; // Track if any errors occurred.
+  llvm::SmallPtrSet<VarDecl *, 4> CapturedDecomposed;
   for (const sema::Capture &Cap : RSI->Captures) {
     if (Cap.isInvalid())
       continue;
+
+    ValueDecl *CapVar = nullptr;
+    if (Cap.isVariableCapture()) {
+      CapVar = Cap.getVariable();
+      if (auto *BD = dyn_cast<BindingDecl>(CapVar)) {
+        // Detect structured bindings in OpenMP captured regions.
+        // When a BindingDecl (e.g., 'a' from 'auto [a, b] = p')
+        // is referenced inside an OpenMP region.
+        // isVariableCapturable() in SemaExpr.cpp already resets this to the
+        // DecompositionDecl during per-use expression checking. This runs
+        // later, at region-end (ActOnCapturedRegionEnd), over the
+        // already-built capture list, catching captures added without going
+        // through that per-use path (e.g. via explicit map clauses).
+        if (RSI->CapRegionKind == CR_OpenMP && BD->getHoldingVar()) {
+          S.Diag(Cap.getLocation(), diag::err_capture_tuple_binding_openmp)
+              << CapVar;
+          S.Diag(CapVar->getLocation(), diag::note_entity_declared_at)
+              << CapVar;
+          HasError = true; // Mark error but continue.
+          continue;        // Skip this capture, move to next.
+        }
+        CapVar = cast<VarDecl>(BD->getDecomposedDecl());
+      }
+      if (RSI->CapRegionKind == CR_OpenMP) {
+        if (auto *DD = dyn_cast<DecompositionDecl>(CapVar)) {
+          if (!CapturedDecomposed.insert(DD).second) {
+            continue; // Skip duplicate
+          }
+        }
+      }
+    }
 
     // Form the initializer for the capture.
     ExprResult Init = S.BuildCaptureInit(Cap, Cap.getLocation(),
@@ -4725,32 +4752,38 @@ buildCapturedStmtCaptureList(Sema &S, CapturedRegionScopeInfo *RSI,
     // FIXME: Bail out now if the capture is not used and the initializer has
     // no side-effects.
 
-    // Create a field for this capture.
-    FieldDecl *Field = S.BuildCaptureField(RSI->TheRecordDecl, Cap);
+    // Build the capture field. For OpenMP, pass IsOpenMP=true to handle
+    // DecompositionDecl captures correctly.
+    FieldDecl *Field = S.BuildCaptureField(RSI->TheRecordDecl, Cap,
+                                           RSI->CapRegionKind == CR_OpenMP);
 
     // Add the capture to our list of captures.
     if (Cap.isThisCapture()) {
-      Captures.push_back(CapturedStmt::Capture(Cap.getLocation(),
-                                               CapturedStmt::VCK_This));
+      Captures.push_back(
+          CapturedStmt::Capture(Cap.getLocation(), CapturedStmt::VCK_This));
     } else if (Cap.isVLATypeCapture()) {
       Captures.push_back(
           CapturedStmt::Capture(Cap.getLocation(), CapturedStmt::VCK_VLAType));
     } else {
       assert(Cap.isVariableCapture() && "unknown kind of capture");
 
-      if (S.getLangOpts().OpenMP && RSI->CapRegionKind == CR_OpenMP)
-        S.OpenMP().setOpenMPCaptureKind(Field, Cap.getVariable(),
-                                        RSI->OpenMPLevel);
-
-      Captures.push_back(CapturedStmt::Capture(
-          Cap.getLocation(),
-          Cap.isReferenceCapture() ? CapturedStmt::VCK_ByRef
-                                   : CapturedStmt::VCK_ByCopy,
-          cast<VarDecl>(Cap.getVariable())));
+      if (S.getLangOpts().OpenMP && RSI->CapRegionKind == CR_OpenMP) {
+        const ValueDecl *DSAVar = Cap.getVariable();
+        // DSAs are tracked per binding; a captured DecompositionDecl has no
+        // own DSA entry.
+        if (const auto *DD = dyn_cast<DecompositionDecl>(DSAVar))
+          if (!DD->bindings().empty())
+            DSAVar = *DD->bindings().begin();
+        S.OpenMP().setOpenMPCaptureKind(Field, DSAVar, RSI->OpenMPLevel);
+      }
+      Captures.emplace_back(Cap.getLocation(),
+                            Cap.isReferenceCapture() ? CapturedStmt::VCK_ByRef
+                                                     : CapturedStmt::VCK_ByCopy,
+                            cast<VarDecl>(CapVar));
     }
     CaptureInits.push_back(Init.get());
   }
-  return false;
+  return HasError;
 }
 
 static std::optional<int>

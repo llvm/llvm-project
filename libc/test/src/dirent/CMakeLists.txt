@@ -1,7 +1,7 @@
 add_subdirectory(testdata)
 add_custom_target(libc_dirent_unittests)
 
-add_libc_unittest(
+add_libc_test(
   dirent_test
   SUITE
     libc_dirent_unittests
@@ -17,7 +17,7 @@ add_libc_unittest(
     libc.test.UnitTest.ErrnoCheckingTest
 )
 
-add_libc_unittest(
+add_libc_test(
   fdopendir_test
   SUITE
     libc_dirent_unittests
@@ -37,5 +37,3 @@ add_libc_unittest(
     libc.hdr.types.DIR
     libc.hdr.types.struct_dirent
 )
-
-

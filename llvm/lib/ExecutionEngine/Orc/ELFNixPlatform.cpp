@@ -7,15 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/ELFNixPlatform.h"
+#include "llvm/ExecutionEngine/Orc/Mangling.h"
 
 #include "llvm/ExecutionEngine/JITLink/aarch64.h"
 #include "llvm/ExecutionEngine/JITLink/loongarch.h"
 #include "llvm/ExecutionEngine/JITLink/ppc64.h"
 #include "llvm/ExecutionEngine/JITLink/systemz.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
-#include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ObjectFormats.h"
+#include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
 
@@ -218,8 +219,6 @@ ELFNixPlatform::Create(ObjectLinkingLayer &ObjLinkingLayer,
                                        ES.getTargetTriple().str(),
                                    inconvertibleErrorCode());
 
-  auto &EPC = ES.getExecutorProcessControl();
-
   // Create default aliases if the caller didn't supply any.
   if (!RuntimeAliases) {
     auto StandardRuntimeAliases = standardPlatformAliases(ES, PlatformJD);
@@ -232,15 +231,18 @@ ELFNixPlatform::Create(ObjectLinkingLayer &ObjLinkingLayer,
   if (auto Err = PlatformJD.define(symbolAliases(std::move(*RuntimeAliases))))
     return std::move(Err);
 
-  // Add JIT-dispatch function support symbols.
-  if (auto Err = PlatformJD.define(
-          absoluteSymbols({{ES.intern("__orc_rt_jit_dispatch"),
-                            {EPC.getJITDispatchInfo().JITDispatchFunction,
-                             JITSymbolFlags::Exported}},
-                           {ES.intern("__orc_rt_jit_dispatch_ctx"),
-                            {EPC.getJITDispatchInfo().JITDispatchContext,
-                             JITSymbolFlags::Exported}}})))
-    return std::move(Err);
+  {
+    // Add JIT dispatch reexports from bootstrap JITDylib.
+    MangleAndInterner Mangle(ES);
+    auto Exports = buildSimpleReexportsAliasMap(
+        ES.getBootstrapJITDylib(),
+        {{Mangle(rt::DispatchName), Mangle(rt::DispatchCtxName)}});
+    if (!Exports)
+      return Exports.takeError();
+    if (auto Err =
+            PlatformJD.define(reexports(ES.getBootstrapJITDylib(), *Exports)))
+      return Err;
+  }
 
   // Create the instance.
   Error Err = Error::success();

@@ -582,6 +582,18 @@ public:
     return true;
   }
 
+  bool VisitImportDecl(const ImportDecl *D) {
+    H.addToken(D->getLocation(), HighlightingKind::Modifier);
+    for (const auto ModuleLoc : D->getIdentifierLocs()) {
+      H.addToken(ModuleLoc, HighlightingKind::Namespace);
+    }
+    return true;
+  }
+  bool VisitExportDecl(const ExportDecl *D) {
+    H.addToken(D->getLocation(), HighlightingKind::Modifier);
+    return true;
+  }
+
   bool VisitTagDecl(TagDecl *D) {
     for (TemplateParameterList *TPL : D->getTemplateParameterLists())
       H.addAngleBracketTokens(TPL->getLAngleLoc(), TPL->getRAngleLoc());
@@ -1012,6 +1024,7 @@ public:
     case TemplateName::SubstTemplateTemplateParmPack:
     case TemplateName::UsingTemplate:
     case TemplateName::DeducedTemplate:
+    case TemplateName::PackIndexingTemplate:
       // Names that could be resolved to a TemplateDecl are handled elsewhere.
       break;
     }

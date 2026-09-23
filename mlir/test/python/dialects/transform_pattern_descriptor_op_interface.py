@@ -16,7 +16,7 @@ def run(emit_schedule):
     with ir.Context(), ir.Location.unknown():
         payload = emit_payload()
 
-        MyPatternDescriptors.load(reload=True)
+        MyPatternDescriptors.load()
 
         # NB: Pattern descriptor ops have their interfaces attached
         #     in their respective test functions.

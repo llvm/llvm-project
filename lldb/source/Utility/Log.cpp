@@ -282,15 +282,16 @@ bool Log::DumpLogChannel(llvm::StringRef channel,
   return true;
 }
 
-bool Log::ListChannelCategories(llvm::StringRef channel,
-                                llvm::raw_ostream &stream) {
+llvm::Expected<std::string>
+Log::ListChannelCategories(llvm::StringRef channel) {
   auto ch = g_channel_map->find(channel);
-  if (ch == g_channel_map->end()) {
-    stream << llvm::formatv("Invalid log channel '{0}'.\n", channel);
-    return false;
-  }
-  ListCategories(stream, *ch);
-  return true;
+  if (ch == g_channel_map->end())
+    return llvm::createStringErrorV("Invalid log channel '{0}'.\n", channel);
+
+  std::string categories;
+  llvm::raw_string_ostream strm(categories);
+  ListCategories(strm, *ch);
+  return categories;
 }
 
 void Log::DisableAllLogChannels() {
@@ -437,7 +438,11 @@ void Log::EmitJSONMessage(llvm::StringRef file, llvm::StringRef function,
                           llvm::StringRef message) {
   llvm::json::Object obj;
   WriteJSONHeader(obj, file, function);
-  obj["message"] = message;
+  // Log messages can carry arbitrary bytes; JSON strings must be valid UTF-8.
+  if (llvm::json::isUTF8(message))
+    obj["message"] = message;
+  else
+    obj["message"] = llvm::json::fixUTF8(message);
   std::string out;
   llvm::raw_string_ostream os(out);
   os << llvm::json::Value(std::move(obj)) << "\n";

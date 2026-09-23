@@ -7,14 +7,35 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/OptBisect.h"
 #include "llvm/IR/PassManagerImpl.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/ErrorHandling.h"
 #include <optional>
 
 using namespace llvm;
 
 namespace llvm {
+
+bool detail::shouldSkipOptimizationForOptBisect(IRUnitRef IR,
+                                                StringRef PassName) {
+  LLVMContext *Ctx = nullptr;
+  std::string IRName = "";
+  if (const auto *M = dyn_cast<Module>(IR)) {
+    Ctx = &M->getContext();
+    IRName = "[module]";
+  } else if (const auto *F = dyn_cast<Function>(IR)) {
+    Ctx = &F->getContext();
+    IRName = F->getName().str();
+  } else {
+    llvm_unreachable("Tried to check skipping for an invalid IR type");
+  }
+  const OptPassGate &Gate = Ctx->getOptPassGate();
+  return Gate.isEnabled() && !Gate.shouldRunPass(PassName, IRName);
+}
+
 // Explicit template instantiations and specialization defininitions for core
 // template typedefs.
 template class LLVM_EXPORT_TEMPLATE AllAnalysesOn<Module>;

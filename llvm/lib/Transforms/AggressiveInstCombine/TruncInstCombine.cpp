@@ -32,6 +32,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Support/KnownBits.h"
 
 using namespace llvm;
@@ -43,9 +44,8 @@ STATISTIC(NumExprsReduced, "Number of truncations eliminated by reducing bit "
 STATISTIC(NumInstrsReduced,
           "Number of instructions whose bit width was reduced");
 
-/// Given an instruction and a container, it fills all the relevant operands of
-/// that instruction, with respect to the Trunc expression graph optimizaton.
-static void getRelevantOperands(Instruction *I, SmallVectorImpl<Value *> &Ops) {
+/// Return whether operand \p OpNo of \p I is reducible.
+static bool isRelevantOperand(const Instruction *I, unsigned OpNo) {
   unsigned Opc = I->getOpcode();
   switch (Opc) {
   case Instruction::Trunc:
@@ -53,7 +53,7 @@ static void getRelevantOperands(Instruction *I, SmallVectorImpl<Value *> &Ops) {
   case Instruction::SExt:
     // These CastInst are considered leaves of the evaluated expression, thus,
     // their operands are not relevent.
-    break;
+    return false;
   case Instruction::Add:
   case Instruction::Sub:
   case Instruction::Mul:
@@ -65,23 +65,32 @@ static void getRelevantOperands(Instruction *I, SmallVectorImpl<Value *> &Ops) {
   case Instruction::AShr:
   case Instruction::UDiv:
   case Instruction::URem:
+    return true;
   case Instruction::InsertElement:
-    Ops.push_back(I->getOperand(0));
-    Ops.push_back(I->getOperand(1));
-    break;
+    return OpNo < 2;
   case Instruction::ExtractElement:
-    Ops.push_back(I->getOperand(0));
-    break;
+    return OpNo == 0;
   case Instruction::Select:
-    Ops.push_back(I->getOperand(1));
-    Ops.push_back(I->getOperand(2));
-    break;
+    return OpNo != 0;
   case Instruction::PHI:
-    llvm::append_range(Ops, cast<PHINode>(I)->incoming_values());
-    break;
+    return true;
+  case Instruction::ShuffleVector:
+    return true;
+  case Instruction::Call: {
+    Intrinsic::ID IID = cast<CallInst>(I)->getIntrinsicID();
+    return IID == Intrinsic::umin || IID == Intrinsic::umax;
+  }
   default:
     llvm_unreachable("Unreachable!");
   }
+}
+
+/// Given an instruction and a container, it fills all the relevant operands of
+/// that instruction, with respect to the Trunc expression graph optimizaton.
+static void getRelevantOperands(Instruction *I, SmallVectorImpl<Value *> &Ops) {
+  for (Use &Op : I->operands())
+    if (isRelevantOperand(I, Op.getOperandNo()))
+      Ops.push_back(Op.get());
 }
 
 bool TruncInstCombine::buildTruncExpressionGraph() {
@@ -145,7 +154,8 @@ bool TruncInstCombine::buildTruncExpressionGraph() {
     case Instruction::URem:
     case Instruction::InsertElement:
     case Instruction::ExtractElement:
-    case Instruction::Select: {
+    case Instruction::Select:
+    case Instruction::ShuffleVector: {
       SmallVector<Value *, 2> Operands;
       getRelevantOperands(I, Operands);
       append_range(Worklist, Operands);
@@ -160,10 +170,19 @@ bool TruncInstCombine::buildTruncExpressionGraph() {
           Worklist.push_back(Op);
       break;
     }
+    case Instruction::Call: {
+      Intrinsic::ID IID = cast<CallInst>(I)->getIntrinsicID();
+      if (IID == Intrinsic::umin || IID == Intrinsic::umax) {
+        SmallVector<Value *, 2> Operands;
+        getRelevantOperands(I, Operands);
+        append_range(Worklist, Operands);
+        break;
+      }
+      return false;
+    }
     default:
       // TODO: Can handle more cases here:
-      // 1. shufflevector
-      // 2. sdiv, srem
+      // 1. sdiv, srem
       // ...
       return false;
     }
@@ -267,18 +286,20 @@ Type *TruncInstCombine::getBestTruncatedType() {
     return nullptr;
 
   // We don't want to duplicate instructions, which isn't profitable. Thus, we
-  // can't shrink something that has multiple users, unless all users are
-  // post-dominated by the trunc instruction, i.e., were visited during the
-  // expression evaluation.
+  // can't shrink something that has multiple uses, unless all uses can be
+  // reduced and all users are post-dominated by the trunc instruction,
+  // i.e., were visited during the expression evaluation.
   unsigned DesiredBitWidth = 0;
   for (auto Itr : InstInfoMap) {
     Instruction *I = Itr.first;
     if (I->hasOneUse())
       continue;
     bool IsExtInst = (isa<ZExtInst>(I) || isa<SExtInst>(I));
-    for (auto *U : I->users())
-      if (auto *UI = dyn_cast<Instruction>(U))
-        if (UI != CurrentTruncInst && !InstInfoMap.count(UI)) {
+    for (Use &U : I->uses())
+      if (auto *UI = dyn_cast<Instruction>(U.getUser()))
+        if (UI != CurrentTruncInst &&
+            (!InstInfoMap.count(UI) ||
+             !isRelevantOperand(UI, U.getOperandNo()))) {
           if (!IsExtInst)
             return nullptr;
           // If this is an extension from the dest type, we can eliminate it,
@@ -314,8 +335,7 @@ Type *TruncInstCombine::getBestTruncatedType() {
         return nullptr;
       if (I->getOpcode() == Instruction::LShr) {
         KnownBits KnownLHS = computeKnownBits(I->getOperand(0));
-        MinBitWidth =
-            std::max(MinBitWidth, KnownLHS.getMaxValue().getActiveBits());
+        MinBitWidth = std::max(MinBitWidth, KnownLHS.countMaxActiveBits());
       }
       if (I->getOpcode() == Instruction::AShr) {
         unsigned NumSignBits = ComputeNumSignBits(I->getOperand(0));
@@ -324,18 +344,33 @@ Type *TruncInstCombine::getBestTruncatedType() {
       if (MinBitWidth >= OrigBitWidth)
         return nullptr;
       Itr.second.MinBitWidth = MinBitWidth;
-    }
-    if (I->getOpcode() == Instruction::UDiv ||
-        I->getOpcode() == Instruction::URem) {
+    } else if (I->getOpcode() == Instruction::UDiv ||
+               I->getOpcode() == Instruction::URem) {
       unsigned MinBitWidth = 0;
       for (const auto &Op : I->operands()) {
         KnownBits Known = computeKnownBits(Op);
-        MinBitWidth =
-            std::max(Known.getMaxValue().getActiveBits(), MinBitWidth);
+        MinBitWidth = std::max(Known.countMaxActiveBits(), MinBitWidth);
         if (MinBitWidth >= OrigBitWidth)
           return nullptr;
       }
       Itr.second.MinBitWidth = MinBitWidth;
+    } else if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
+      switch (II->getIntrinsicID()) {
+      case Intrinsic::umin:
+      case Intrinsic::umax: {
+        unsigned MinBitWidth = 0;
+        for (const auto &Op : II->args()) {
+          KnownBits Known = computeKnownBits(Op);
+          MinBitWidth = std::max(Known.countMaxActiveBits(), MinBitWidth);
+          if (MinBitWidth >= OrigBitWidth)
+            return nullptr;
+        }
+        Itr.second.MinBitWidth = MinBitWidth;
+        break;
+      }
+      default:
+        llvm_unreachable("Unhandled intrinsic");
+      }
     }
   }
 
@@ -348,7 +383,6 @@ Type *TruncInstCombine::getBestTruncatedType() {
   if (MinBitWidth >= OrigBitWidth ||
       (DesiredBitWidth && DesiredBitWidth != MinBitWidth))
     return nullptr;
-
   return IntegerType::get(CurrentTruncInst->getContext(), MinBitWidth);
 }
 
@@ -462,11 +496,28 @@ void TruncInstCombine::ReduceExpressionGraph(Type *SclTy) {
       Res = Builder.CreateSelect(Op0, LHS, RHS, "", I);
       break;
     }
+    case Instruction::ShuffleVector: {
+      Value *LHS = getReducedOperand(I->getOperand(0), SclTy);
+      Value *RHS = getReducedOperand(I->getOperand(1), SclTy);
+      auto *SI = cast<ShuffleVectorInst>(I);
+      Res = Builder.CreateShuffleVector(LHS, RHS, SI->getShuffleMask());
+      break;
+    }
     case Instruction::PHI: {
       Res = Builder.CreatePHI(getReducedType(I, SclTy), I->getNumOperands());
       OldNewPHINodes.push_back(
           std::make_pair(cast<PHINode>(I), cast<PHINode>(Res)));
       break;
+    }
+    case Instruction::Call: {
+      Intrinsic::ID IID = cast<CallInst>(I)->getIntrinsicID();
+      if (IID == Intrinsic::umin || IID == Intrinsic::umax) {
+        Value *LHS = getReducedOperand(I->getOperand(0), SclTy);
+        Value *RHS = getReducedOperand(I->getOperand(1), SclTy);
+        Res = Builder.CreateBinaryIntrinsic(IID, LHS, RHS);
+        break;
+      }
+      llvm_unreachable("Unhandled call instruction");
     }
     default:
       llvm_unreachable("Unhandled instruction");
@@ -543,7 +594,7 @@ bool TruncInstCombine::run(Function &F) {
     if (Type *NewDstSclTy = getBestTruncatedType()) {
       LLVM_DEBUG(
           dbgs() << "ICE: TruncInstCombine reducing type of expression graph "
-                    "dominated by: "
+                    "post-dominated by: "
                  << CurrentTruncInst << '\n');
       ReduceExpressionGraph(NewDstSclTy);
       ++NumExprsReduced;

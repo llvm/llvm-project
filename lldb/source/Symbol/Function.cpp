@@ -150,12 +150,23 @@ lldb::addr_t CallEdge::GetReturnPCAddress(Function &caller,
   return GetLoadAddress(GetUnresolvedReturnPCAddress(), caller, target);
 }
 
-Function *DirectCallEdge::ResolveCallee(ModuleList &images) {
+SymbolContext CallEdge::ResolveCallee(const Address &addr) {
+  SymbolContext sc;
+  addr.CalculateSymbolContext(&sc, eSymbolContextFunction);
+  if (!sc.function) {
+    LLDB_LOG(GetLog(LLDBLog::Step),
+             "CallEdge: Could not find complete function");
+    return SymbolContext();
+  }
+  return sc;
+}
+
+Address DirectCallEdge::ResolveCalleeAddress(ModuleList &images) const {
   if (!m_symbol_name)
-    return nullptr;
+    return Address();
 
   Log *log = GetLog(LLDBLog::Step);
-  LLDB_LOG(log, "DirectCallEdge: Lazily parsing the call graph for {0}",
+  LLDB_LOG(log, "DirectCallEdge: Parsing the call graph for {0}",
            m_symbol_name);
 
   SymbolContextList sc_list;
@@ -165,22 +176,16 @@ Function *DirectCallEdge::ResolveCallee(ModuleList &images) {
   if (num_matches == 0 || !sc_list[0].symbol) {
     LLDB_LOG(log, "DirectCallEdge: Found no symbols for {0}, cannot resolve it",
              m_symbol_name);
-    return nullptr;
+    return Address();
   }
 
   Address callee_addr = sc_list[0].symbol->GetAddress();
   if (!callee_addr.IsValid()) {
     LLDB_LOG(log, "DirectCallEdge: Invalid symbol address");
-    return nullptr;
+    return Address();
   }
 
-  Function *f = callee_addr.CalculateSymbolContextFunction();
-  if (!f) {
-    LLDB_LOG(log, "DirectCallEdge: Could not find complete function");
-    return nullptr;
-  }
-
-  return f;
+  return callee_addr;
 }
 
 DirectCallEdge::DirectCallEdge(const char *symbol_name,
@@ -191,10 +196,9 @@ DirectCallEdge::DirectCallEdge(const char *symbol_name,
                std::move(parameters)),
       m_symbol_name(symbol_name) {}
 
-Function *DirectCallEdge::GetCallee(ModuleList &images, ExecutionContext &) {
-  std::call_once(m_resolved_flag,
-                 [&] { m_callee_def = ResolveCallee(images); });
-  return m_callee_def;
+SymbolContext DirectCallEdge::GetCallee(ModuleList &images,
+                                        ExecutionContext &) {
+  return ResolveCallee(ResolveCalleeAddress(images));
 }
 
 IndirectCallEdge::IndirectCallEdge(DWARFExpressionList call_target,
@@ -206,8 +210,8 @@ IndirectCallEdge::IndirectCallEdge(DWARFExpressionList call_target,
                std::move(parameters)),
       call_target(std::move(call_target)) {}
 
-Function *IndirectCallEdge::GetCallee(ModuleList &images,
-                                      ExecutionContext &exe_ctx) {
+SymbolContext IndirectCallEdge::GetCallee(ModuleList &images,
+                                          ExecutionContext &exe_ctx) {
   Log *log = GetLog(LLDBLog::Step);
   Status error;
   llvm::Expected<Value> callee_addr_val = call_target.Evaluate(
@@ -217,14 +221,14 @@ Function *IndirectCallEdge::GetCallee(ModuleList &images,
   if (!callee_addr_val) {
     LLDB_LOG_ERROR(log, callee_addr_val.takeError(),
                    "IndirectCallEdge: Could not evaluate expression: {0}");
-    return nullptr;
+    return SymbolContext();
   }
 
   addr_t raw_addr =
       callee_addr_val->GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
   if (raw_addr == LLDB_INVALID_ADDRESS) {
     LLDB_LOG(log, "IndirectCallEdge: Could not extract address from scalar");
-    return nullptr;
+    return SymbolContext();
   }
 
   if (auto *process = exe_ctx.GetProcessPtr()) {
@@ -237,16 +241,10 @@ Function *IndirectCallEdge::GetCallee(ModuleList &images,
   Address callee_addr;
   if (!exe_ctx.GetTargetPtr()->ResolveLoadAddress(raw_addr, callee_addr)) {
     LLDB_LOG(log, "IndirectCallEdge: Could not resolve callee's load address");
-    return nullptr;
+    return SymbolContext();
   }
 
-  Function *f = callee_addr.CalculateSymbolContextFunction();
-  if (!f) {
-    LLDB_LOG(log, "IndirectCallEdge: Could not find complete function");
-    return nullptr;
-  }
-
-  return f;
+  return ResolveCallee(callee_addr);
 }
 
 /// @}
@@ -269,6 +267,34 @@ Function::Function(CompileUnit *comp_unit, lldb::user_id_t func_uid,
 
 Function::~Function() = default;
 
+bool Function::GetStartLineTableEntry(LineEntry &line_entry, uint32_t *index) {
+  LineTable *line_table = m_comp_unit ? m_comp_unit->GetLineTable() : nullptr;
+  if (line_table == nullptr)
+    return false;
+
+  uint32_t line_entry_idx = UINT32_MAX;
+  if (line_table->FindLineEntryByAddress(GetAddress(), line_entry,
+                                         &line_entry_idx)) {
+    if (index)
+      *index = line_entry_idx;
+    return true;
+  }
+
+  // The entry point has no line row (e.g. a WebAssembly function's
+  // locals-declaration header), so take the first row inside the function.
+  AddressRange entry_range;
+  if (!m_block.GetRangeContainingAddress(m_address, entry_range))
+    return false;
+  auto [first, last] = line_table->GetLineEntryIndexRange(entry_range);
+  if (first == last)
+    return false;
+  if (!line_table->GetLineEntryAtIndex(first, line_entry))
+    return false;
+  if (index)
+    *index = first;
+  return true;
+}
+
 void Function::GetStartLineSourceInfo(SupportFileNSP &source_file_sp,
                                       uint32_t &line_no) {
   line_no = 0;
@@ -285,12 +311,8 @@ void Function::GetStartLineSourceInfo(SupportFileNSP &source_file_sp,
         std::make_shared<SupportFile>(m_type->GetDeclaration().GetFile());
     line_no = m_type->GetDeclaration().GetLine();
   } else {
-    LineTable *line_table = m_comp_unit->GetLineTable();
-    if (line_table == nullptr)
-      return;
-
     LineEntry line_entry;
-    if (line_table->FindLineEntryByAddress(GetAddress(), line_entry, nullptr)) {
+    if (GetStartLineTableEntry(line_entry)) {
       line_no = line_entry.line;
       source_file_sp = line_entry.file_sp;
     }
@@ -577,37 +599,8 @@ uint32_t Function::GetPrologueByteSize() {
     if (line_table) {
       LineEntry first_line_entry;
       uint32_t first_line_entry_idx = UINT32_MAX;
-      bool found_first_line_entry = line_table->FindLineEntryByAddress(
-          GetAddress(), first_line_entry, &first_line_entry_idx);
-
-      // When the entry point isn't covered (e.g. WebAssembly), fall back to the
-      // first line entry that begins within the function so the prologue is
-      // still skipped to a real instruction instead of leaving the breakpoint
-      // on the (unexecutable) entry address.
-      if (!found_first_line_entry) {
-        AddressRange entry_range;
-        if (m_block.GetRangeContainingAddress(m_address, entry_range)) {
-          const addr_t func_start_addr = m_address.GetFileAddress();
-          const addr_t func_end_addr =
-              entry_range.GetBaseAddress().GetFileAddress() +
-              entry_range.GetByteSize();
-          const uint32_t line_table_size = line_table->GetSize();
-          for (uint32_t idx = 0; idx < line_table_size; ++idx) {
-            LineEntry line_entry;
-            bool success = line_table->GetLineEntryAtIndex(idx, line_entry);
-            assert(success && "idx is within the line table size");
-            UNUSED_IF_ASSERT_DISABLED(success);
-            const addr_t entry_addr =
-                line_entry.range.GetBaseAddress().GetFileAddress();
-            if (entry_addr >= func_start_addr && entry_addr < func_end_addr) {
-              first_line_entry = line_entry;
-              first_line_entry_idx = idx;
-              found_first_line_entry = true;
-              break;
-            }
-          }
-        }
-      }
+      bool found_first_line_entry =
+          GetStartLineTableEntry(first_line_entry, &first_line_entry_idx);
 
       if (found_first_line_entry) {
         // Make sure the first line entry isn't already the end of the prologue

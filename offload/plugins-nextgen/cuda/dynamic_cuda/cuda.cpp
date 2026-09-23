@@ -50,6 +50,7 @@ DLWRAP(cuMemAllocHost, 2)
 DLWRAP(cuMemAllocManaged, 3)
 DLWRAP(cuMemAllocAsync, 3)
 
+DLWRAP(cuMemcpyAsync, 4)
 DLWRAP(cuMemcpyDtoDAsync, 4)
 DLWRAP(cuMemcpyDtoH, 3)
 DLWRAP(cuMemcpyDtoHAsync, 4)
@@ -69,6 +70,7 @@ DLWRAP(cuMemFreeAsync, 2)
 
 DLWRAP(cuMemPrefetchAsync, 4)
 DLWRAP(cuPointerGetAttribute, 3)
+DLWRAP(cuPointerGetAttributes, 4)
 
 DLWRAP(cuModuleGetFunction, 3)
 DLWRAP(cuModuleGetGlobal, 4)
@@ -137,6 +139,7 @@ static bool checkForCUDA() {
       {"cuMemcpyHtoD", "cuMemcpyHtoD_v2"},
       {"cuStreamDestroy", "cuStreamDestroy_v2"},
       {"cuModuleGetGlobal", "cuModuleGetGlobal_v2"},
+      {"cuMemcpyAsync", "cuMemcpyAsync_v2"},
       {"cuMemcpyDtoHAsync", "cuMemcpyDtoHAsync_v2"},
       {"cuMemcpyDtoDAsync", "cuMemcpyDtoDAsync_v2"},
       {"cuMemcpyHtoDAsync", "cuMemcpyHtoDAsync_v2"},

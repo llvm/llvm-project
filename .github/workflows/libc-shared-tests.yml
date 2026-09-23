@@ -27,7 +27,7 @@ jobs:
 
     steps:
       - name: Checkout LLVM
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
 
@@ -53,7 +53,7 @@ jobs:
     timeout-minutes: 20
     runs-on: ubuntu-24.04
     container:
-      image: 'ghcr.io/llvm/libc-ubuntu-24.04:latest@sha256:c6e2ee2a9bf5cebd51fd27dd8e85381c2f73d90e091c764082f8ad528ee18918'
+      image: 'ghcr.io/llvm/libc-ubuntu-26.04:latest@sha256:fffa8d515b48be0367b0bd09ef8cf64c622367e3b0e3426e4c4f12c8fa667063'
     strategy:
       fail-fast: false # If one arch fails, let the other finish
       matrix:
@@ -74,7 +74,7 @@ jobs:
 
     steps:
       - name: Checkout LLVM
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
 
@@ -83,7 +83,7 @@ jobs:
           mkdir build
           cat << 'EOF' > /__w/llvm-project/llvm-project/build/qemu-wrapper.sh
           #!/bin/bash
-          qemu-${{ matrix.arch }}-static -L /usr/${{ matrix.target_triple }} "$@"
+          qemu-${{ matrix.arch }} -L /usr/${{ matrix.target_triple }} "$@"
           EOF
           chmod +x /__w/llvm-project/llvm-project/build/qemu-wrapper.sh
 
@@ -126,7 +126,7 @@ jobs:
     timeout-minutes: 20
     runs-on: ubuntu-24.04
     container:
-      image: 'ghcr.io/llvm/libc-ubuntu-24.04:latest@sha256:a902fb53bdad5e4a4bb6c11b6584e717a7b3d6e886f1ea58e11f95e46226249c'
+      image: 'ghcr.io/llvm/libc-ubuntu-26.04:latest@sha256:fffa8d515b48be0367b0bd09ef8cf64c622367e3b0e3426e4c4f12c8fa667063'
     strategy:
       fail-fast: false # If one arch fails, let the other finish
       matrix:
@@ -141,15 +141,15 @@ jobs:
             c_compiler: /usr/local/gcc8/bin/gcc
             cxx_compiler: /usr/local/gcc8/bin/g++
           - name: gcc-9
-            c_compiler: gcc-9
-            cxx_compiler: g++-9
+            c_compiler: /usr/local/gcc9/bin/gcc
+            cxx_compiler: /usr/local/gcc9/bin/g++
           - name: gcc-11
             c_compiler: gcc-11
             cxx_compiler: g++-11
 
     steps:
       - name: Checkout LLVM
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
 

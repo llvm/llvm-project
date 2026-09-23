@@ -46,6 +46,18 @@ public:
     FIROptLastEPCallbacks.push_back(C);
   }
 
+  void registerHLFIROptEarlyEPCallbacks(
+      const std::function<void(mlir::PassManager &, llvm::OptimizationLevel)>
+          &C) {
+    HLFIROptEarlyEPCallbacks.push_back(C);
+  }
+
+  void registerHLFIROptLastEPCallbacks(
+      const std::function<void(mlir::PassManager &, llvm::OptimizationLevel)>
+          &C) {
+    HLFIROptLastEPCallbacks.push_back(C);
+  }
+
   void invokeFIROptEarlyEPCallbacks(
       mlir::PassManager &pm, llvm::OptimizationLevel optLevel) {
     for (auto &C : FIROptEarlyEPCallbacks)
@@ -64,6 +76,18 @@ public:
       C(pm, optLevel);
   };
 
+  void invokeHLFIROptEarlyEPCallbacks(
+      mlir::PassManager &pm, llvm::OptimizationLevel optLevel) const {
+    for (auto &C : HLFIROptEarlyEPCallbacks)
+      C(pm, optLevel);
+  };
+
+  void invokeHLFIROptLastEPCallbacks(
+      mlir::PassManager &pm, llvm::OptimizationLevel optLevel) const {
+    for (auto &C : HLFIROptLastEPCallbacks)
+      C(pm, optLevel);
+  };
+
 private:
   llvm::SmallVector<
       std::function<void(mlir::PassManager &, llvm::OptimizationLevel)>, 1>
@@ -76,6 +100,14 @@ private:
   llvm::SmallVector<
       std::function<void(mlir::PassManager &, llvm::OptimizationLevel)>, 1>
       FIROptLastEPCallbacks;
+
+  llvm::SmallVector<
+      std::function<void(mlir::PassManager &, llvm::OptimizationLevel)>, 1>
+      HLFIROptEarlyEPCallbacks;
+
+  llvm::SmallVector<
+      std::function<void(mlir::PassManager &, llvm::OptimizationLevel)>, 1>
+      HLFIROptLastEPCallbacks;
 };
 
 /// Configuriation for the MLIR to LLVM pass pipeline.
@@ -111,6 +143,7 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
       InstrumentFunctionEntry = "__cyg_profile_func_enter";
       InstrumentFunctionExit = "__cyg_profile_func_exit";
     }
+    DisableTailCalls = opts.DisableTailCalls;
     DwarfVersion = opts.DwarfVersion;
     SplitDwarfFile = opts.SplitDwarfFile;
     DwarfDebugFlags = opts.DwarfDebugFlags;
@@ -139,11 +172,14 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
   std::string PreferVectorWidth = ""; ///< Set prefer-vector-width attribute for
                                       ///< functions.
   bool NSWOnLoopVarInc = true; ///< Add nsw flag to loop variable increments.
+  bool EnableOpenACC = false; ///< Enable OpenACC lowering.
+  bool EnableCUDA = false; ///< Enable CUDA Fortran lowering.
   bool EnableOpenMP = false; ///< Enable OpenMP lowering.
   bool EnableOpenMPIsTargetDevice =
       false; ///< Compiling for an OpenMP target device.
   bool UseSampleProfile = false; ///< Enable sample based profiling
   bool DebugInfoForProfiling = false; ///< Enable extra debugging info
+  bool DisableTailCalls = false; ///< Disable tail call optimization
   bool EnableOpenMPSimd = false; ///< Enable OpenMP simd-only mode.
   bool SkipConvertComplexPow = false; ///< Do not run complex pow conversion.
   std::string InstrumentFunctionEntry =

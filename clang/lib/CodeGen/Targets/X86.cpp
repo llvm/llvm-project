@@ -579,6 +579,9 @@ unsigned X86_32ABIInfo::getTypeStackAlignInBytes(QualType Ty,
   if (Align <= MinABIStackAlignInBytes)
     return 0; // Use default alignment.
 
+  if (Ty->isFloat128Type())
+    return 16;
+
   if (IsLinuxABI) {
     // Exclude other System V OS (e.g Darwin, PS4 and FreeBSD) since we don't
     // want to spend any effort dealing with the ramifications of ABI breaks.
@@ -1385,6 +1388,8 @@ public:
   }
 
   void computeInfo(CGFunctionInfo &FI) const override;
+  unsigned getX86ABIAVXLevel(const FunctionDecl *FD,
+                             const FunctionType::ExtInfo &Info) const override;
 
   RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
                    AggValueSlot Slot) const override;
@@ -1404,6 +1409,8 @@ public:
         IsMingw64(getTarget().getTriple().isWindowsGNUEnvironment()) {}
 
   void computeInfo(CGFunctionInfo &FI) const override;
+  unsigned getX86ABIAVXLevel(const FunctionDecl *FD,
+                             const FunctionType::ExtInfo &Info) const override;
 
   RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
                    AggValueSlot Slot) const override;
@@ -1419,14 +1426,18 @@ public:
     return isX86VectorCallAggregateSmallEnough(NumMembers);
   }
 
-  ABIArgInfo classifyArgForArm64ECVarArg(QualType Ty) const override {
+  ABIArgInfo classifyArgForArm64ECVarArg(QualType Ty,
+                                         bool IsNamedArg) const override {
     unsigned FreeSSERegs = 0;
-    return classify(Ty, FreeSSERegs, /*IsReturnType=*/false,
-                    llvm::CallingConv::C);
+    ClassifyKind Kind =
+        IsNamedArg ? ClassifyKind::FixedArgument : ClassifyKind::VarArg;
+    return classify(Ty, FreeSSERegs, Kind, llvm::CallingConv::C);
   }
 
 private:
-  ABIArgInfo classify(QualType Ty, unsigned &FreeSSERegs, bool IsReturnType,
+  enum class ClassifyKind { Return, FixedArgument, VarArg };
+
+  ABIArgInfo classify(QualType Ty, unsigned &FreeSSERegs, ClassifyKind Kind,
                       unsigned CC) const;
   ABIArgInfo reclassifyHvaArgForVectorCall(QualType Ty, unsigned &FreeSSERegs,
                                            const ABIArgInfo &current) const;
@@ -1822,6 +1833,32 @@ void X86_64ABIInfo::postMerge(unsigned AggregateSize, Class &Lo,
     Hi = SSE;
 }
 
+static X86AVXABILevel getEffectiveX86AVXABILevel(CodeGenTypes &CGT,
+                                                 X86AVXABILevel GlobalAVXLevel,
+                                                 const FunctionDecl *FD) {
+  // Always return global AVX level on PlayStation.
+  if (CGT.getTarget().getTriple().isPS() ||
+      CGT.getContext().getLangOpts().getClangABICompat() <=
+          LangOptions::ClangABI::Ver23) {
+    return GlobalAVXLevel;
+  }
+
+  X86AVXABILevel Level = GlobalAVXLevel;
+  // TargetVersionAttr does not apply to x86.
+  // FIXME: Handling TargetClonesAttr and CPUSpecificAttr is intentionally
+  // deferred to a follow-up.
+  if (!FD || !FD->hasAttr<TargetAttr>())
+    return Level;
+
+  llvm::StringMap<bool> FeatureMap;
+  CGT.getCGM().getContext().getFunctionFeatureMap(FeatureMap, FD);
+  if (FeatureMap.lookup("avx512f"))
+    return std::max(Level, X86AVXABILevel::AVX512);
+  if (FeatureMap.lookup("avx"))
+    return std::max(Level, X86AVXABILevel::AVX);
+  return Level;
+}
+
 X86_64ABIInfo::Class X86_64ABIInfo::merge(Class Accum, Class Field) {
   // AMD64-ABI 3.2.3p2: Rule 4. Each field of an object is
   // classified recursively so that always two fields are
@@ -2167,6 +2204,10 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
     bool UseClang11Compat = getContext().getLangOpts().isCompatibleWith(
                                 LangOptions::ClangABI::Ver11) ||
                             getContext().getTargetInfo().getTriple().isPS();
+    bool ClassifyUnnamedBitFields =
+        getContext().getLangOpts().getClangABICompat() >
+            LangOptions::ClangABI::Ver23 &&
+        !getContext().getTargetInfo().getTriple().isPS();
     bool IsUnion = RT->isUnionType() && !UseClang11Compat;
 
     for (RecordDecl::field_iterator i = RD->field_begin(), e = RD->field_end();
@@ -2174,8 +2215,13 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
       uint64_t Offset = OffsetBase + Layout.getFieldOffset(idx);
       bool BitField = i->isBitField();
 
-      // Ignore padding bit-fields.
-      if (BitField && i->isUnnamedBitField())
+      // Ignore padding bit-fields. Normally only zero-length bit-fields are
+      // padding, but under -fclang-abi-compat=23 every unnamed bit-field is,
+      // faithfully reproducing Clang 23 -- including its crash on aggregates
+      // where skipping one leaves part of a wider access unit (e.g. an
+      // __int128 bit-field run) unclassified.
+      if (BitField && (ClassifyUnnamedBitFields ? i->isZeroLengthBitField()
+                                                : i->isUnnamedBitField()))
         continue;
 
       // AMD64-ABI 3.2.3p2: Rule 1. If the size of an object is larger than
@@ -2216,7 +2262,8 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
       // structure to be passed in memory even if unaligned, and
       // therefore they can straddle an eightbyte.
       if (BitField) {
-        assert(!i->isUnnamedBitField());
+        assert(ClassifyUnnamedBitFields ? !i->isZeroLengthBitField()
+                                        : !i->isUnnamedBitField());
         uint64_t Offset = OffsetBase + Layout.getFieldOffset(idx);
         uint64_t Size = i->getBitWidthValue();
 
@@ -3024,8 +3071,13 @@ X86_64ABIInfo::classifyRegCallStructType(QualType Ty, unsigned &NeededInt,
       llvm::StructType::get(getVMContext(), CoerceElts));
 }
 
-void X86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {
+unsigned
+X86_64ABIInfo::getX86ABIAVXLevel(const FunctionDecl *FD,
+                                 const FunctionType::ExtInfo &Info) const {
+  return static_cast<unsigned>(getEffectiveX86AVXABILevel(CGT, AVXLevel, FD));
+}
 
+void X86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {
   const unsigned CallingConv = FI.getCallingConvention();
   // It is possible to force Win64 calling convention on any x86_64 target by
   // using __attribute__((ms_abi)). In such case to correctly emit Win64
@@ -3033,6 +3085,17 @@ void X86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {
   if (CallingConv == llvm::CallingConv::Win64) {
     WinX86_64ABIInfo Win64ABIInfo(CGT, AVXLevel);
     Win64ABIInfo.computeInfo(FI);
+    return;
+  }
+
+  assert(FI.getX86ABIAVXLevel() <=
+             static_cast<unsigned>(X86AVXABILevel::AVX512) &&
+         "Unexpected X86 AVX ABI level");
+  X86AVXABILevel EffectiveAVXLevel =
+      static_cast<X86AVXABILevel>(FI.getX86ABIAVXLevel());
+  if (EffectiveAVXLevel != AVXLevel) {
+    X86_64ABIInfo EffectiveABIInfo(CGT, EffectiveAVXLevel);
+    EffectiveABIInfo.computeInfo(FI);
     return;
   }
 
@@ -3402,15 +3465,26 @@ ABIArgInfo WinX86_64ABIInfo::reclassifyHvaArgForVectorCall(
 }
 
 ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
-                                      bool IsReturnType, unsigned CC) const {
+                                      ClassifyKind Kind, unsigned CC) const {
   bool IsVectorCall = CC == llvm::CallingConv::X86_VectorCall;
   bool IsRegCall = CC == llvm::CallingConv::X86_RegCall;
 
   if (Ty->isVoidType())
     return ABIArgInfo::getIgnore();
 
-  if (const auto *ED = Ty->getAsEnumDecl())
+  bool PromoteScopedEnum = false;
+  if (const auto *ED = Ty->getAsEnumDecl()) {
     Ty = ED->getIntegerType();
+    PromoteScopedEnum = Kind == ClassifyKind::VarArg && ED->isScoped() &&
+                        getContext().isPromotableIntegerType(Ty);
+  }
+
+  // MSVC extends scoped enums with a sub-int underlying type when they are
+  // passed through an ellipsis. Unlike unscoped enums, scoped enums are not
+  // subject to the language's default argument promotions, so handle the
+  // extension as part of the ABI classification.
+  if (PromoteScopedEnum)
+    return ABIArgInfo::getExtend(Ty);
 
   TypeInfo Info = getContext().getTypeInfo(Ty);
   uint64_t Width = Info.Width;
@@ -3418,7 +3492,7 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
 
   const RecordType *RT = Ty->getAsCanonical<RecordType>();
   if (RT) {
-    if (!IsReturnType) {
+    if (Kind != ClassifyKind::Return) {
       if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(RT, getCXXABI()))
         return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
                                        RAA == CGCXXABI::RAA_DirectInMemory);
@@ -3438,7 +3512,8 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
     if (IsRegCall) {
       if (FreeSSERegs >= NumElts) {
         FreeSSERegs -= NumElts;
-        if (IsReturnType || Ty->isBuiltinType() || Ty->isVectorType())
+        if (Kind == ClassifyKind::Return || Ty->isBuiltinType() ||
+            Ty->isVectorType())
           return ABIArgInfo::getDirect();
         return ABIArgInfo::getExpand();
       }
@@ -3447,10 +3522,11 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
           /*ByVal=*/false);
     } else if (IsVectorCall) {
       if (FreeSSERegs >= NumElts &&
-          (IsReturnType || Ty->isBuiltinType() || Ty->isVectorType())) {
+          (Kind == ClassifyKind::Return || Ty->isBuiltinType() ||
+           Ty->isVectorType())) {
         FreeSSERegs -= NumElts;
         return ABIArgInfo::getDirect();
-      } else if (IsReturnType) {
+      } else if (Kind == ClassifyKind::Return) {
         return ABIArgInfo::getExpand();
       } else if (!Ty->isBuiltinType() && !Ty->isVectorType()) {
         // HVAs are delayed and reclassified in the 2nd step.
@@ -3505,7 +3581,7 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
       // If it's a parameter type, the normal ABI rule is that arguments larger
       // than 8 bytes are passed indirectly. GCC follows it. We follow it too,
       // even though it isn't particularly efficient.
-      if (!IsReturnType)
+      if (Kind != ClassifyKind::Return)
         return ABIArgInfo::getIndirect(
             Align, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
             /*ByVal=*/false);
@@ -3558,6 +3634,16 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
   return ABIArgInfo::getDirect();
 }
 
+unsigned
+WinX86_64ABIInfo::getX86ABIAVXLevel(const FunctionDecl *FD,
+                                    const FunctionType::ExtInfo &Info) const {
+  if (Info.getCC() == CC_X86_64SysV) {
+    return static_cast<unsigned>(getEffectiveX86AVXABILevel(CGT, AVXLevel, FD));
+  }
+
+  return static_cast<unsigned>(AVXLevel);
+}
+
 void WinX86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {
   const unsigned CC = FI.getCallingConvention();
   bool IsVectorCall = CC == llvm::CallingConv::X86_VectorCall;
@@ -3581,7 +3667,8 @@ void WinX86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {
   }
 
   if (!getCXXABI().classifyReturnType(FI))
-    FI.getReturnInfo() = classify(FI.getReturnType(), FreeSSERegs, true, CC);
+    FI.getReturnInfo() =
+        classify(FI.getReturnType(), FreeSSERegs, ClassifyKind::Return, CC);
 
   if (IsVectorCall) {
     // We can use up to 6 SSE register parameters with vectorcall.
@@ -3599,7 +3686,10 @@ void WinX86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {
     // registers are left.
     unsigned *MaybeFreeSSERegs =
         (IsVectorCall && ArgNum >= 6) ? &ZeroSSERegs : &FreeSSERegs;
-    I.info = classify(I.type, *MaybeFreeSSERegs, false, CC);
+    ClassifyKind Kind = ArgNum >= FI.getNumRequiredArgs()
+                            ? ClassifyKind::VarArg
+                            : ClassifyKind::FixedArgument;
+    I.info = classify(I.type, *MaybeFreeSSERegs, Kind, CC);
     ++ArgNum;
   }
 

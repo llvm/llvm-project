@@ -40,13 +40,6 @@ namespace lldb_private {
 template <> Log::Channel &LogChannelFor<TestChannel>() { return test_channel; }
 } // namespace lldb_private
 
-// Wrap list function to make it easier to test.
-static bool ListCategories(llvm::StringRef channel, std::string &result) {
-  result.clear();
-  llvm::raw_string_ostream result_stream(result);
-  return Log::ListChannelCategories(channel, result_stream);
-}
-
 namespace {
 // A test fixture which provides tests with a pre-registered channel.
 struct LogChannelTest : public ::testing::Test {
@@ -276,18 +269,18 @@ TEST_F(LogChannelTest, Disable) {
 
 TEST_F(LogChannelTest, List) {
   std::string list;
-  EXPECT_TRUE(ListCategories("chan", list));
-  std::string expected =
-      R"(Logging categories for 'chan':
+  EXPECT_THAT_EXPECTED(Log::ListChannelCategories("chan"),
+                       llvm::HasValue(
+                           R"(Logging categories for 'chan':
   all - all available logging categories
   default - default set of logging categories
   foo - log foo
   bar - log bar
-)";
-  EXPECT_EQ(expected, list);
+)"));
 
-  EXPECT_FALSE(ListCategories("chanchan", list));
-  EXPECT_EQ("Invalid log channel 'chanchan'.\n", list);
+  EXPECT_THAT_EXPECTED(
+      Log::ListChannelCategories("chanchan"),
+      llvm::FailedWithMessage("Invalid log channel 'chanchan'.\n"));
 }
 
 TEST_F(LogChannelEnabledTest, log_options) {
@@ -392,6 +385,35 @@ TEST_F(LogChannelEnabledTest, JSONLOutput) {
   EXPECT_TRUE(Obj->getString("backtrace").has_value());
   EXPECT_EQ(Obj->getString("file").value_or(""), "LogTest.cpp");
   EXPECT_EQ(Obj->getString("function").value_or(""), "logAndTakeOutput");
+}
+
+TEST_F(LogChannelEnabledTest, JSONLOutputInvalidUTF8) {
+  // Arbitrary bytes must not abort the JSON writer.
+  EXPECT_THAT_ERROR(Log::EnableLogChannel(getLogHandler(),
+                                          /*log_options=*/LLDB_LOG_OPTION_JSON,
+                                          "chan", {}),
+                    llvm::Succeeded());
+
+  auto CheckMessage = [](llvm::StringRef Msg) {
+    llvm::Expected<llvm::json::Value> Parsed = llvm::json::parse(Msg);
+    ASSERT_TRUE(static_cast<bool>(Parsed))
+        << llvm::toString(Parsed.takeError());
+    llvm::json::Object *Obj = Parsed->getAsObject();
+    ASSERT_NE(Obj, nullptr);
+    std::optional<llvm::StringRef> Message = Obj->getString("message");
+    ASSERT_TRUE(Message.has_value());
+    EXPECT_TRUE(llvm::json::isUTF8(*Message));
+    EXPECT_TRUE(Message->contains("before"));
+    EXPECT_TRUE(Message->contains("after"));
+  };
+
+  // Check both entry points: Format and PutString.
+  CheckMessage(logAndTakeOutput("before\xff\xfe"
+                                "after"));
+
+  getLog()->PutString("before\xff\xfe"
+                      "after");
+  CheckMessage(takeOutput());
 }
 
 TEST_F(LogChannelEnabledTest, LLDB_LOG_ERROR) {

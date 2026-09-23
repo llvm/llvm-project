@@ -40,7 +40,6 @@ static UniformityInfo computeUniformity(const TargetTransformInfo *TTI,
 TEST_F(AMDGPUTestBase, NewValueIsConservativelyDivergent) {
 
   StringRef ModuleString = R"(
-  target triple = "amdgcn-unknown-amdhsa"
   define amdgpu_kernel void @test(i32 inreg %a, i32 inreg %b) {
     %add = add i32 %a, %b
     ret void
@@ -54,8 +53,8 @@ TEST_F(AMDGPUTestBase, NewValueIsConservativelyDivergent) {
   Function *F = M->getFunction("test");
   ASSERT_TRUE(F);
 
-  auto TM =
-      createAMDGPUTargetMachine("amdgpu10.10-amd-", "", "+wavefrontsize32");
+  auto TM = createAMDGPUTargetMachine(Triple("amdgpu10.10-amd-"), "",
+                                      "+wavefrontsize32");
   ASSERT_TRUE(TM);
   TargetTransformInfo TTI = TM->getTargetTransformInfo(*F);
 

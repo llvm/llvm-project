@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=amdgpu8.02 -mattr=-xnack -run-pass post-RA-sched -verify-machineinstrs -o - %s | FileCheck -check-prefix=GCN %s
-# RUN: llc -mtriple=amdgpu8.02 -mattr=-xnack -passes=post-RA-sched -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgpu8.02 --amdgpu-xnack=false -run-pass post-RA-sched -verify-machineinstrs -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgpu8.02 --amdgpu-xnack=false -passes=post-RA-sched -o - %s | FileCheck -check-prefix=GCN %s
 
 # GCN:      FLAT_LOAD_DWORD
 # GCN-NEXT: FLAT_LOAD_DWORD

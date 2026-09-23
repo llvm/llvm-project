@@ -11,6 +11,7 @@
 // check our code paths (succeeds and errors).
 
 #include "hdr/sys_mman_macros.h"
+#include "hdr/sys_resource_macros.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/libc_errno.h"
 #include "src/sys/mman/madvise.h"
@@ -23,14 +24,14 @@
 #include "src/sys/mman/munlockall.h"
 #include "src/sys/mman/munmap.h"
 #include "src/sys/resource/getrlimit.h"
-#include "src/unistd/sysconf.h"
+#include "src/unistd/getpagesize.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
 #include <sys/syscall.h>
 
-const size_t PAGE_SIZE = LIBC_NAMESPACE::sysconf(_SC_PAGESIZE);
+const size_t PAGE_SIZE = LIBC_NAMESPACE::getpagesize();
 
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
 using LlvmLibcMlockTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;

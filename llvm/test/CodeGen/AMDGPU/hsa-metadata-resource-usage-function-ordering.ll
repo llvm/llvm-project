@@ -2,9 +2,9 @@
 ; test assertions are unlikely to succeed by accident.
 
 ; RUN: llc -amdgpu-assume-external-call-stack-size=5310 -mtriple=amdgpu7.00-amd-amdhsa -enable-misched=0 -filetype=asm -o - < %s | FileCheck --check-prefixes CHECK,GFX7 %s
-; RUN: llc -amdgpu-assume-external-call-stack-size=5310 -mattr=-xnack -mtriple=amdgpu8.03-amd-amdhsa -enable-misched=0 -filetype=asm -o - < %s | FileCheck --check-prefixes CHECK,GFX8 %s
-; RUN: llc -amdgpu-assume-external-call-stack-size=5310 -mattr=-xnack -mtriple=amdgpu9.00-amd-amdhsa -enable-misched=0 -filetype=asm -o - < %s | FileCheck --check-prefixes CHECK,GFX9 %s
-; RUN: llc -amdgpu-assume-external-call-stack-size=5310 -mattr=-xnack -mtriple=amdgpu10.10-amd-amdhsa -enable-misched=0 -filetype=asm -o - < %s | FileCheck --check-prefixes CHECK,GFX10 %s
+; RUN: llc -amdgpu-assume-external-call-stack-size=5310 --amdgpu-xnack=false -mtriple=amdgpu8.03-amd-amdhsa -enable-misched=0 -filetype=asm -o - < %s | FileCheck --check-prefixes CHECK,GFX8 %s
+; RUN: llc -amdgpu-assume-external-call-stack-size=5310 --amdgpu-xnack=false -mtriple=amdgpu9.00-amd-amdhsa -enable-misched=0 -filetype=asm -o - < %s | FileCheck --check-prefixes CHECK,GFX9 %s
+; RUN: llc -amdgpu-assume-external-call-stack-size=5310 --amdgpu-xnack=false -mtriple=amdgpu10.10-amd-amdhsa -enable-misched=0 -filetype=asm -o - < %s | FileCheck --check-prefixes CHECK,GFX10 %s
 
 ; CHECK-LABEL: amdhsa.kernels
 
