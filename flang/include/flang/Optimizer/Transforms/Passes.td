@@ -824,11 +824,6 @@ def LoopInvariantCodeMotion : Pass<"flang-licm", "::mlir::func::FuncOp"> {
     fir.declare) and interfaces such as FortranObjectViewOpInterface.
     The pass only moves existing operations, so there are no dependent
     dialects.
-
-    With only-inside set, a loop must have an ancestor with the given operation
-    name, within the current function (including the function itself). A loop
-    matching the name does not qualify on that basis alone. No matching ancestor
-    means no hoisting. The pass and its analyses remain rooted at the function.
   }];
   let options = [Option<"hoistFromNestedRegions", "hoist-from-nested-regions",
                         "::fir::LICMNestedHoistingMode",
@@ -844,12 +839,7 @@ def LoopInvariantCodeMotion : Pass<"flang-licm", "::mlir::func::FuncOp"> {
                                 "loads"),
             clEnumValN(::fir::LICMNestedHoistingMode::Aggressive,
                        "aggressive", "Hoist all safe invariant ops")
-           )}]>,
-    Option<"onlyInside", "only-inside", "std::string",
-           /*default=*/"std::string{}",
-           "Only hoist from loops nested in an operation with this name "
-           "(empty means all loops)">
-  ];
+           )}]>];
 }
 
 #endif // FLANG_OPTIMIZER_TRANSFORMS_PASSES
