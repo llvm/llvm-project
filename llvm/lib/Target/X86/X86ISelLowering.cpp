@@ -56214,7 +56214,7 @@ static SDValue combineFMulcFCMulc(SDNode *N, SelectionDAG &DAG,
 }
 
 // We try to match the following pattern from FMSUBADD(X, A, M) to lower it
-// into complex conjugate fmadd for fp16 (#216290).
+// into complex conjugate multiply for fp16.
 // for vector of the complex form v <v0r, v0i, v1r, v1i, ...>
 // and 2 complex vectors a, b,
 // X = duplicate real (b) : <b0r, b0r, b1r, b1r, ...>
@@ -56281,17 +56281,8 @@ static SDValue combineFaddCFmul(SDNode *N, SelectionDAG &DAG,
   bool IsConj;
   SDValue FAddOp1, MulOp0, MulOp1;
   MVT CVT = MVT::getVectorVT(MVT::f32, VT.getVectorNumElements() / 2);
-  auto GetCFmulFrom = [&MulOp0, &MulOp1, &IsConj, &DAG,
-                       &IsVectorAllNegativeZero, &CVT](SDValue N) -> bool {
-    if (N.getOpcode() == X86ISD::FMSUBADD && N.hasOneUse()) {
-      SDValue A, B;
-      if (!isCFMulFromFMSUBADD(N, DAG, A, B))
-        return false;
-      IsConj = true;
-      MulOp0 = DAG.getBitcast(CVT, A);
-      MulOp1 = DAG.getBitcast(CVT, B);
-      return true;
-    }
+  auto GetCFmulFrom = [&MulOp0, &MulOp1, &IsConj,
+                       &IsVectorAllNegativeZero](SDValue N) -> bool {
     if (!N.hasOneUse() || N.getOpcode() != ISD::BITCAST)
       return false;
     SDValue Op0 = N.getOperand(0);
@@ -58556,17 +58547,36 @@ static SDValue combineFMA(SDNode *N, SelectionDAG &DAG,
   }
 }
 
+// Combine FMSUBADD(SHUFFLE(B),A,FMUL(SHUFFLE(A),SHUFFLE(B))) -> VFCMULC(A,B)
 // Combine FMADDSUB(A, B, FNEG(C)) -> FMSUBADD(A, B, C)
 // Combine FMSUBADD(A, B, FNEG(C)) -> FMADDSUB(A, B, C)
 static SDValue combineFMADDSUB(SDNode *N, SelectionDAG &DAG,
-                               TargetLowering::DAGCombinerInfo &DCI) {
+                               TargetLowering::DAGCombinerInfo &DCI,
+                               const X86Subtarget &Subtarget) {
   SDLoc dl(N);
   EVT VT = N->getValueType(0);
+  SDValue N2 = N->getOperand(2);
+
+  if (N->getOpcode() == X86ISD::FMSUBADD && Subtarget.hasFP16() &&
+      N->hasOneUse() &&
+      (VT == MVT::v8f16 || VT == MVT::v16f16 || VT == MVT::v32f16)) {
+    SDValue A, B;
+    if (isCFMulFromFMSUBADD(SDValue(N, 0), DAG, A, B)) {
+      MVT CVT = MVT::getVectorVT(MVT::f32, VT.getVectorNumElements() / 2);
+      SDValue MulOp0 = DAG.getBitcast(CVT, A);
+      SDValue MulOp1 = DAG.getBitcast(CVT, B);
+      // FMSUBADD has no flags, so we use the flags from the FMUL (i.e. the
+      // third operand) it was fused from, as it is the only operand which
+      // still has FMF (see isCFMulFromFMSUBADD for the pattern).
+      SDValue Fmulc =
+          DAG.getNode(X86ISD::VFCMULC, dl, CVT, MulOp0, MulOp1, N2->getFlags());
+      return DAG.getBitcast(VT, Fmulc);
+    }
+  }
+
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   bool CodeSize = DAG.getMachineFunction().getFunction().hasOptSize();
   bool LegalOperations = !DCI.isBeforeLegalizeOps();
-
-  SDValue N2 = N->getOperand(2);
 
   SDValue NegN2 =
       TLI.getCheaperNegatedExpression(N2, DAG, LegalOperations, CodeSize);
@@ -64225,7 +64235,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::FMADDSUB_RND:
   case X86ISD::FMSUBADD_RND:
   case X86ISD::FMADDSUB:
-  case X86ISD::FMSUBADD:    return combineFMADDSUB(N, DAG, DCI);
+  case X86ISD::FMSUBADD:    return combineFMADDSUB(N, DAG, DCI, Subtarget);
   case X86ISD::MOVMSK:      return combineMOVMSK(N, DAG, DCI, Subtarget);
   case X86ISD::TESTP:       return combineTESTP(N, DAG, DCI, Subtarget);
   case X86ISD::MGATHER:

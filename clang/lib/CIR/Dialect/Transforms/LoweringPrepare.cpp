@@ -14,9 +14,7 @@
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Value.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/Mangle.h"
 #include "clang/Basic/Cuda.h"
-#include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TargetCXXABI.h"
@@ -1996,20 +1994,14 @@ void LoweringPreparePass::buildCXXGlobalInitFunc() {
   // with priority (TBD).  Module implementation units behave the same
   // way as a non-modular TU with imports.
   // The C++20 named-module init function name is precomputed by CIRGen and
-  // stored as a module-level attribute, so this pass does not need a live
-  // ASTContext in split-compilation flows. Fall back to the AST-based path
-  // only when the attribute is absent (e.g. tests that bypass CIRGen).
+  // stored as a module-level attribute.  Its presence is what marks this
+  // module as a named-module interface unit, so the name and the external
+  // linkage that goes with it both come from the attribute and this pass needs
+  // no live ASTContext.  Modules built directly from textual CIR can opt in to
+  // the module-init form by setting the same attribute.
   if (auto fnNameAttr = mlirModule->getAttrOfType<mlir::StringAttr>(
           cir::CIRDialect::getCXXModuleInitFnNameAttrName())) {
     fnName += fnNameAttr.getValue();
-    linkage = cir::GlobalLinkageKind::ExternalLinkage;
-  } else if (astCtx && astCtx->getCurrentNamedModule() &&
-             !astCtx->getCurrentNamedModule()->isModuleImplementation()) {
-    llvm::raw_svector_ostream out(fnName);
-    std::unique_ptr<clang::MangleContext> mangleCtx(
-        astCtx->createMangleContext());
-    cast<clang::ItaniumMangleContext>(*mangleCtx)
-        .mangleModuleInitializer(astCtx->getCurrentNamedModule(), out);
     linkage = cir::GlobalLinkageKind::ExternalLinkage;
   } else {
     fnName += "_GLOBAL__sub_I_";
@@ -2275,7 +2267,8 @@ cir::GlobalOp LoweringPreparePass::getOrCreateConstAggregateGlobal(
 
   // First, check globals we've already discovered for this base name.
   for (cir::GlobalOp gv : versions) {
-    if (gv.getSymType() == ty && gv.getInitialValue() == constant)
+    if (gv.getSymType() == ty && gv.getInitialValue() == constant &&
+        gv.getAlignment() == alignment)
       return gv;
   }
 
@@ -2298,7 +2291,8 @@ cir::GlobalOp LoweringPreparePass::getOrCreateConstAggregateGlobal(
       break;
     versions.push_back(existingGv);
     if (existingGv.getSymType() == ty &&
-        existingGv.getInitialValue() == constant)
+        existingGv.getInitialValue() == constant &&
+        existingGv.getAlignment() == alignment)
       return existingGv;
     ++version;
   }
@@ -2378,7 +2372,15 @@ void LoweringPreparePass::lowerStoreOfConstAggregate(cir::StoreOp op) {
       cir::GetGlobalOp::create(builder, op.getLoc(), ptrTy, gv.getSymName());
 
   // Replace store with copy.
-  builder.createCopy(op.getAddr(), globalPtr);
+  cir::CopyOp copyOp = builder.createCopy(op.getAddr(), globalPtr);
+
+  cir::CIRDataLayout dataLayout(mlirModule);
+  uint64_t naturalAlign = dataLayout.getABITypeAlign(ty).value();
+  if (alloca.getAlignment() != naturalAlign)
+    copyOp.setDstAlignment(alloca.getAlignment());
+  uint64_t srcAlign = gv.getAlignment().value_or(naturalAlign);
+  if (srcAlign != naturalAlign)
+    copyOp.setSrcAlignment(srcAlign);
 
   // Erase the original store.
   op.erase();
