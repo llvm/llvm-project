@@ -45,6 +45,7 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK-NEXT:   - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            linking
 ; CHECK-NEXT:     Version:         2
+; CHECK-NEXT:     TargetArch:      wasm32
 ; CHECK-NEXT:     SymbolTable:
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Kind:            DATA
@@ -87,4 +88,4 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK-NEXT:         Name:        .data.b
 ; CHECK-NEXT:         Alignment:   3
 ; CHECK-NEXT:         Flags:       [ ]
-; CHECK-NEXT:   ...
+; CHECK-NEXT: ...
