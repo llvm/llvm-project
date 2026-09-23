@@ -10,4 +10,4 @@
 
 #include "src/math/iscanonicall.h"
 
-LIST_ISCANONICAL_TESTS(long double, LIBC_NAMESPACE::iscanonicall)
+LIST_ISCANONICAL_TESTS(Iscanonicall, long double, LIBC_NAMESPACE::iscanonicall)

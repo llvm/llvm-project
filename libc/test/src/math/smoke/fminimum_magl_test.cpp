@@ -10,4 +10,5 @@
 
 #include "src/math/fminimum_magl.h"
 
-LIST_FMINIMUM_MAG_TESTS(long double, LIBC_NAMESPACE::fminimum_magl)
+LIST_FMINIMUM_MAG_TESTS(FminimumMagl, long double,
+                        LIBC_NAMESPACE::fminimum_magl)

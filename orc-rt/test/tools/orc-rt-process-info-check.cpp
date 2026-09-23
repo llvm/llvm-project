@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt-utils/CommandLine.h"
-#include "orc-rt/ExecutorProcessInfo.h"
+#include "orc-rt-internal/tools/OptionParser.h"
+#include "orc-rt/bedrock/ExecutorProcessInfo.h"
 #include <iostream>
 
 int main(int argc, char *argv[]) {
@@ -18,7 +18,7 @@ int main(int argc, char *argv[]) {
   bool PrintHelp = false;
 
   {
-    orc_rt::CommandLineParser P;
+    orc_rt::OptionParser P;
     P.addFlag("print-triple", "Print the detected target triple", false,
               PrintTriple)
         .addFlag("print-page-size", "Print the detected page size", false,
@@ -28,14 +28,14 @@ int main(int argc, char *argv[]) {
                  PrintCPUFeatures)
         .addFlag("help", "Print help", false, PrintHelp);
 
-    if (auto Err = P.parse(argc, argv)) {
+    if (auto Err = P.parseAsMainArgs(argc, argv)) {
       std::cerr << "error: " << orc_rt::toString(std::move(Err)) << "\n";
-      P.printHelp(std::cerr, argv[0]);
+      std::cerr << P.formatHelp(argv[0]);
       return 1;
     }
 
     if (PrintHelp) {
-      P.printHelp(std::cerr, argv[0]);
+      std::cerr << P.formatHelp(argv[0]);
       return 0;
     }
   }
