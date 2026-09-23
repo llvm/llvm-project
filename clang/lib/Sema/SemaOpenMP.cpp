@@ -5030,6 +5030,24 @@ static bool checkCancelRegion(Sema &SemaRef, OpenMPDirectiveKind CurrentRegion,
   return true;
 }
 
+// Return TRUE if KIND is a task-generating construct.  In the case of compound
+// directives, the outermost leaf kind is tested.
+static bool isOpenMPExplicitTaskGeneratingDirective(OpenMPDirectiveKind Kind) {
+  switch (getLeafConstructsOrSelf(Kind).front()) {
+  case OMPD_target:
+  case OMPD_target_data:
+  case OMPD_target_enter_data:
+  case OMPD_target_exit_data:
+  case OMPD_target_update:
+  case OMPD_task:
+  case OMPD_taskloop:
+  case OMPD_taskwait:
+    return true;
+  default:
+    return false;
+  }
+}
+
 static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
                                   OpenMPDirectiveKind CurrentRegion,
                                   const DeclarationNameInfo &CurrentName,
@@ -5093,6 +5111,23 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
     // OpenMP [2.16, Nesting of Regions]
     // OpenMP constructs may not be nested inside an atomic region.
     SemaRef.Diag(StartLoc, diag::err_omp_prohibited_region_atomic);
+    return true;
+  }
+  if (ParentRegion == OMPD_taskgraph &&
+      getDirectiveCategory(CurrentRegion) == Category::Executable &&
+      !isOpenMPExplicitTaskGeneratingDirective(CurrentRegion)) {
+    // OpenMP 6.0 [14.3, taskgraph Construct, Restrictions]
+    // Task-generating constructs are the only constructs that may be
+    // encountered as part of the taskgraph region.  A construct that is not
+    // task-generating generates no node to record, so it would run on the
+    // recording execution and then be absent from every replay.  The parent
+    // directive is the whole test: [2, region] puts neither the body of a
+    // generated task nor a target region in the encountering region, so a
+    // construct below one of those is not in the taskgraph region and is not
+    // restricted.  Only constructs are restricted, hence the category test,
+    // which leaves the informational and utility directives alone.
+    SemaRef.Diag(StartLoc, diag::err_omp_taskgraph_not_task_generating)
+        << getOpenMPDirectiveName(CurrentRegion, OMPVersion);
     return true;
   }
   if (CurrentRegion == OMPD_section) {

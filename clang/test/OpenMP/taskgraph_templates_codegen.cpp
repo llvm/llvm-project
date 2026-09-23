@@ -6,7 +6,7 @@
 
 // Exercises taskgraph codegen with orthogonal language/runtime features:
 //  - C++ templates + non-trivial firstprivate cloning.
-//  - taskgroup task_reduction / task in_reduction inside taskgraph.
+//  - taskloop reduction inside taskgraph (taskgraph reduction-init path).
 //  - taskwait depend(...) inside taskgraph (task-generating path).
 
 template <typename T>
@@ -40,13 +40,12 @@ T templated_task_reduction(T seed) {
   T Acc = seed;
 #pragma omp taskgraph
   {
-#pragma omp taskgroup task_reduction(+: Acc)
-    {
-#pragma omp task in_reduction(+: Acc)
-      {
-        Acc += seed;
-      }
-    }
+    // A taskgroup is not task-generating, so it cannot be written in a
+    // taskgraph region; the reduction clause on taskloop reaches the same
+    // taskgraph reduction init through the taskgroup that codegen emits for it.
+#pragma omp taskloop reduction(+: Acc)
+    for (int i = 0; i < 4; ++i)
+      Acc += seed;
 #pragma omp taskwait depend(in: Acc)
   }
   return Acc;

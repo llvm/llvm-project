@@ -12404,6 +12404,8 @@ def err_omp_nowait_clause_without_depend: Error<
   "directive '#pragma omp taskwait' cannot use 'nowait' clause without 'depend' clause">;
 def err_omp_taskgraph_taskwait_without_depend: Error<
   "directive '#pragma omp taskwait' within '#pragma omp taskgraph' must use 'depend' clause to be task-generating">;
+def err_omp_taskgraph_not_task_generating: Error<
+  "'%0' directive is not task-generating and cannot be used within '#pragma omp taskgraph'">;
 def note_omp_nowait_clause_here : Note<
   "'nowait' clause is here">;
 def err_omp_single_decl_in_declare_simd_variant : Error<
