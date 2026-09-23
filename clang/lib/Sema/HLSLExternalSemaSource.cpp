@@ -898,12 +898,13 @@ static void defineHLSLInterlockedFunc(Sema &S, NamespaceDecl *NS,
   LangAS AddrSpaces[] = {LangAS::hlsl_groupshared, LangAS::hlsl_device};
 
   for (QualType ElemTy : Elems)
-    for (LangAS AS : AddrSpaces)
-      for (bool ThreeArg : {false, true}) {
-        if (RequiresOriginalValue && !ThreeArg)
-          continue;
-        buildAtomicOverload(S, NS, FuncName, BuiltinName, ElemTy, AS, ThreeArg);
-      }
+    for (LangAS AS : AddrSpaces) {
+      if (!RequiresOriginalValue)
+        buildAtomicOverload(S, NS, FuncName, BuiltinName, ElemTy, AS,
+                            /*ThreeArg=*/false);
+      buildAtomicOverload(S, NS, FuncName, BuiltinName, ElemTy, AS,
+                          /*ThreeArg=*/true);
+    }
 }
 
 void HLSLExternalSemaSource::defineHLSLAtomicIntrinsics() {

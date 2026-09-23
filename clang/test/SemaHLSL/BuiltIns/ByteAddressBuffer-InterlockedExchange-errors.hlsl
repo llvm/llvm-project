@@ -2,11 +2,6 @@
 // RUN:   -triple dxil-pc-shadermodel6.6-library %s -fsyntax-only -verify \
 // RUN:   -verify-ignore-unexpected=note,warning
 
-// Unlike the other interlocked methods, InterlockedExchange declares a single
-// overload per element type because the original value is required. There is
-// therefore no overload set to fail against, so Clang reports the argument
-// mismatch directly instead of 'no matching member function'.
-
 RWByteAddressBuffer BAB : register(u0);
 RasterizerOrderedByteAddressBuffer ROVB : register(u1);
 
