@@ -192,10 +192,10 @@ public:
 
   size_t PutStringAsRawHex8(llvm::StringRef s);
 
-  /// Output a NULL terminated C string \a cstr to the stream \a s.
+  /// Output a null-terminated C string \a cstr to the stream \a s.
   ///
   /// \param[in] cstr
-  ///     A NULL terminated C string.
+  ///     A null-terminated C string.
   ///
   /// \return
   ///     A reference to this class so multiple things can be streamed
@@ -373,11 +373,11 @@ public:
 
   /// Output a quoted C string value to the stream.
   ///
-  /// Print a double quoted NULL terminated C string to the stream using the
+  /// Print a double quoted null-terminated C string to the stream using the
   /// printf format in \a format.
   ///
   /// \param[in] cstr
-  ///     A NULL terminated C string value.
+  ///     A null-terminated C string value.
   ///
   /// \param[in] format
   ///     The optional C string format that can be overridden.

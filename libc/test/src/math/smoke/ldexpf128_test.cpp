@@ -10,4 +10,4 @@
 
 #include "src/math/ldexpf128.h"
 
-LIST_LDEXP_TESTS(float128, LIBC_NAMESPACE::ldexpf128);
+LIST_LDEXP_TESTS(Ldexpf128, float128, LIBC_NAMESPACE::ldexpf128);

@@ -1,4 +1,4 @@
-; RUN: opt %s -mtriple amdgcn-- -passes='print<uniformity>' -disable-output 2>&1 | FileCheck %s
+; RUN: opt %s -mtriple amdgpu7.00-- -passes='print<uniformity>' -disable-output 2>&1 | FileCheck %s
 
 define amdgpu_kernel void @divergent_cycle_1(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: UniformityInfo for function 'divergent_cycle_1':

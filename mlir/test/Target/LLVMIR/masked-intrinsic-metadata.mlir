@@ -15,23 +15,21 @@ llvm.func @masked_load_store_metadata(%ptr: !llvm.ptr, %mask: vector<7xi1>) {
   // CHECK-SAME: !alias.scope ![[$SCOPE1:[0-9]+]]
   // CHECK-SAME: !noalias ![[$SCOPE2:[0-9]+]]
   // CHECK-SAME: !llvm.access.group ![[$AG:[0-9]+]]
-  %0 = llvm.intr.masked.load %ptr, %mask {
-      alignment = 4 : i64,
+  %0 = llvm.intr.masked.load(%ptr, %mask), alignment(4) <
       access_groups = [#access_group],
       alias_scopes = [#alias_scope1],
       noalias_scopes = [#alias_scope2],
-      tbaa = [#tbaa_tag]} : (!llvm.ptr, vector<7xi1>) -> vector<7xf32>
+      tbaa = [#tbaa_tag]> : (!llvm.ptr, vector<7xi1>) -> vector<7xf32>
   // CHECK: call void @llvm.masked.store.v7f32.p0
   // CHECK-SAME: !tbaa ![[$TBAA]]
   // CHECK-SAME: !alias.scope ![[$SCOPE1]]
   // CHECK-SAME: !noalias ![[$SCOPE2]]
   // CHECK-SAME: !llvm.access.group ![[$AG]]
-  llvm.intr.masked.store %0, %ptr, %mask {
-      alignment = 4 : i64,
+  llvm.intr.masked.store(%0, %ptr, %mask), alignment(4) <
       access_groups = [#access_group],
       alias_scopes = [#alias_scope1],
       noalias_scopes = [#alias_scope2],
-      tbaa = [#tbaa_tag]} : vector<7xf32>, vector<7xi1> into !llvm.ptr
+      tbaa = [#tbaa_tag]> : vector<7xf32>, vector<7xi1> into !llvm.ptr
   llvm.return
 }
 
@@ -42,23 +40,21 @@ llvm.func @masked_gather_scatter_metadata(%ptrs: vector<7 x !llvm.ptr>, %mask: v
   // CHECK-SAME: !alias.scope ![[$SCOPE1]]
   // CHECK-SAME: !noalias ![[$SCOPE2]]
   // CHECK-SAME: !llvm.access.group ![[$AG]]
-  %0 = llvm.intr.masked.gather %ptrs, %mask {
-      alignment = 4 : i64,
+  %0 = llvm.intr.masked.gather(%ptrs, %mask), alignment(4) <
       access_groups = [#access_group],
       alias_scopes = [#alias_scope1],
       noalias_scopes = [#alias_scope2],
-      tbaa = [#tbaa_tag]} : (vector<7 x !llvm.ptr>, vector<7xi1>) -> vector<7xf32>
+      tbaa = [#tbaa_tag]> : (vector<7 x !llvm.ptr>, vector<7xi1>) -> vector<7xf32>
   // CHECK: call void @llvm.masked.scatter.v7f32.v7p0
   // CHECK-SAME: !tbaa ![[$TBAA]]
   // CHECK-SAME: !alias.scope ![[$SCOPE1]]
   // CHECK-SAME: !noalias ![[$SCOPE2]]
   // CHECK-SAME: !llvm.access.group ![[$AG]]
-  llvm.intr.masked.scatter %0, %ptrs, %mask {
-      alignment = 4 : i64,
+  llvm.intr.masked.scatter(%0, %ptrs, %mask), alignment(4) <
       access_groups = [#access_group],
       alias_scopes = [#alias_scope1],
       noalias_scopes = [#alias_scope2],
-      tbaa = [#tbaa_tag]} : vector<7xf32>, vector<7xi1> into vector<7 x !llvm.ptr>
+      tbaa = [#tbaa_tag]> : vector<7xf32>, vector<7xi1> into vector<7 x !llvm.ptr>
   llvm.return
 }
 

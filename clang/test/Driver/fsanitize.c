@@ -406,10 +406,12 @@
 
 // RUN: %clang --target=x86_64--freebsd -fsanitize=kernel-address %s -### 2>&1 | FileCheck %s -check-prefix=KERNEL-ADDRESS-FREEBSD
 // RUN: %clang --target=aarch64--freebsd -fsanitize=kernel-address %s -### 2>&1 | FileCheck %s -check-prefix=KERNEL-ADDRESS-FREEBSD
+// RUN: %clang --target=riscv64--freebsd -fsanitize=kernel-address %s -### 2>&1 | FileCheck %s -check-prefix=KERNEL-ADDRESS-FREEBSD
 // KERNEL-ADDRESS-FREEBSD: "-fsanitize=kernel-address"
 
 // RUN: %clang --target=x86_64--freebsd -fsanitize=kernel-memory %s -### 2>&1 | FileCheck %s -check-prefix=KERNEL-MEMORY-FREEBSD
 // RUN: %clang --target=aarch64--freebsd -fsanitize=kernel-memory %s -### 2>&1 | FileCheck %s -check-prefix=KERNEL-MEMORY-FREEBSD
+// RUN: %clang --target=riscv64--freebsd -fsanitize=kernel-memory %s -### 2>&1 | FileCheck %s -check-prefix=KERNEL-MEMORY-FREEBSD
 // KERNEL-MEMORY-FREEBSD: "-fsanitize=kernel-memory"
 
 // * NetBSD; please keep ordered as in Sanitizers.def *
