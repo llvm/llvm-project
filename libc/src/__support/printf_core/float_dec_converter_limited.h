@@ -677,27 +677,30 @@ LIBC_INLINE int convert_float_outer(Writer<mode> *writer,
 
 template <typename T, OverflowMode mode,
           cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-LIBC_INLINE int convert_float_decimal_typed(Writer<mode> *writer,
-                                            const FormatSection &to_conv,
-                                            fputil::FPBits<T> float_bits) {
+LIBC_INLINE int
+convert_finite_float_decimal_typed(Writer<mode> *writer,
+                                   const FormatSection &to_conv,
+                                   fputil::FPBits<T> float_bits) {
   return convert_finite_float_typed<T>(writer, to_conv, float_bits,
                                        ConversionType::F);
 }
 
 template <typename T, OverflowMode mode,
           cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-LIBC_INLINE int convert_float_dec_exp_typed(Writer<mode> *writer,
-                                            const FormatSection &to_conv,
-                                            fputil::FPBits<T> float_bits) {
+LIBC_INLINE int
+convert_finite_float_dec_exp_typed(Writer<mode> *writer,
+                                   const FormatSection &to_conv,
+                                   fputil::FPBits<T> float_bits) {
   return convert_finite_float_typed<T>(writer, to_conv, float_bits,
                                        ConversionType::E);
 }
 
 template <typename T, OverflowMode mode,
           cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-LIBC_INLINE int convert_float_dec_auto_typed(Writer<mode> *writer,
-                                             const FormatSection &to_conv,
-                                             fputil::FPBits<T> float_bits) {
+LIBC_INLINE int
+convert_finite_float_dec_auto_typed(Writer<mode> *writer,
+                                    const FormatSection &to_conv,
+                                    fputil::FPBits<T> float_bits) {
   return convert_finite_float_typed<T>(writer, to_conv, float_bits,
                                        ConversionType::G);
 }
