@@ -366,6 +366,35 @@ __OMP_RTL(__kmpc_omp_task, false, Int32, IdentPtr, Int32,
           /* kmp_task_t */ VoidPtr)
 __OMP_RTL(__kmpc_end_taskgroup, false, Void, IdentPtr, Int32)
 __OMP_RTL(__kmpc_taskgroup, false, Void, IdentPtr, Int32)
+__OMP_RTL(__kmpc_taskgraph, false, Void, IdentPtr, Int32, VoidPtrPtr, SizeTy,
+          Int32, Int32, VoidPtr, VoidPtr)
+__OMP_RTL(__kmpc_taskgraph_task, false, Int32, IdentPtr, Int32, VoidPtr, Int32,
+          SizeTy, SizeTy, Int32, VoidPtr, VoidPtr, VoidPtr)
+__OMP_RTL(__kmpc_taskgraph_taskloop, false, Int32, IdentPtr, Int32, VoidPtr,
+          Int32, Int32, Int64Ptr, Int64Ptr, Int64,
+          Int32, Int32, Int64, Int32, VoidPtr, VoidPtr)
+__OMP_RTL(__kmpc_taskgraph_taskwait, false, Void, IdentPtr, Int32, Int32,
+          VoidPtr, Int32)
+__OMP_RTL(__kmpc_taskgraph_taskred_init, false, /* kmp_taskgroup */ VoidPtr,
+          Int32, Int32, VoidPtr)
+__OMP_RTL(__kmpc_taskgraph_target, false, Int32, IdentPtr, Int32, Int32,
+          /* kmp_depend_info_t */ VoidPtr, Int32, Int64, Int32, Int32, VoidPtr,
+          /* __tgt_kernel_arguments */ VoidPtr,
+          /* kmp_target_relocate_t */ VoidPtr)
+__OMP_RTL(__kmpc_taskgraph_target_enter_data, false, Void, IdentPtr, Int32,
+          Int32, /* kmp_depend_info_t */ VoidPtr, Int32, Int64, Int32,
+          VoidPtrPtr, VoidPtrPtr, Int64Ptr, Int64Ptr,
+          /* map_var_info_t */ VoidPtrPtr, VoidPtrPtr,
+          /* kmp_target_relocate_t */ VoidPtr)
+__OMP_RTL(__kmpc_taskgraph_target_exit_data, false, Void, IdentPtr, Int32,
+          Int32, /* kmp_depend_info_t */ VoidPtr, Int32, Int64, Int32,
+          VoidPtrPtr, VoidPtrPtr, Int64Ptr, Int64Ptr,
+          /* map_var_info_t */ VoidPtrPtr, VoidPtrPtr,
+          /* kmp_target_relocate_t */ VoidPtr)
+__OMP_RTL(__kmpc_taskgraph_target_update, false, Void, IdentPtr, Int32, Int32,
+          /* kmp_depend_info_t */ VoidPtr, Int32, Int64, Int32, VoidPtrPtr,
+          VoidPtrPtr, Int64Ptr, Int64Ptr, /* map_var_info_t */ VoidPtrPtr,
+          VoidPtrPtr, /* kmp_target_relocate_t */ VoidPtr)
 __OMP_RTL(__kmpc_omp_task_begin_if0, false, Void, IdentPtr, Int32,
           /* kmp_task_t */ VoidPtr)
 __OMP_RTL(__kmpc_omp_task_complete_if0, false, Void, IdentPtr, Int32,

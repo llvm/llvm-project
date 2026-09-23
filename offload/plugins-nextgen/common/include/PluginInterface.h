@@ -27,6 +27,7 @@
 #include "Shared/Environment.h"
 #include "Shared/EnvironmentVar.h"
 #include "Shared/Requirements.h"
+#include "Shared/TaskGraph.h"
 #include "Shared/Utils.h"
 
 #include "GlobalHandler.h"
@@ -1390,6 +1391,27 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
   RecordReplayTy *getRecordReplay() { return RecordReplay; }
 
+  /// Taskgraph handoff hooks.  \p Graph is the shared processed-taskgraph tree
+  /// (Shared/TaskGraph.h), which the plugin reads but never modifies.
+  ///
+  /// finalizeTaskGraph interprets the tree into whatever executable form suits
+  /// the backend and claims ownership of the graph by succeeding; replay
+  /// dispatches that form and destroy frees it.  The base implementations
+  /// decline, as should any backend that meets something in the tree it cannot
+  /// express.  A declined graph is replayed on the host by libomp.
+  virtual Error finalizeTaskGraph(llvm::omp::target::TaskGraphTy *Graph) {
+    return Plugin::error(error::ErrorCode::UNSUPPORTED,
+                         "taskgraph finalize unsupported by this plugin");
+  }
+  virtual Error replayTaskGraph(llvm::omp::target::TaskGraphTy *Graph,
+                                void *HostCtx) {
+    return Plugin::error(error::ErrorCode::UNSUPPORTED,
+                         "taskgraph replay unsupported by this plugin");
+  }
+  virtual Error destroyTaskGraph(llvm::omp::target::TaskGraphTy *Graph) {
+    return Plugin::success();
+  }
+
   /// Map to record kernel have been launchedl, for error reporting purposes.
   ProtectedObj<KernelTraceInfoRecordTy> KernelLaunchTraces;
 
@@ -1785,6 +1807,13 @@ public:
   int32_t launch_kernel(int32_t DeviceId, void *TgtEntryPtr,
                         KernelLaunchArgsTy &LaunchArgs,
                         __tgt_async_info *AsyncInfoPtr);
+
+  /// Taskgraph support: build an executable form of \p Graph, replay it, or
+  /// destroy it on the given device. Return OFFLOAD_SUCCESS only if the plugin
+  /// handled the request; libomp replays the graph on the host otherwise.
+  int32_t finalize_taskgraph(int32_t DeviceId, void *Graph);
+  int32_t replay_taskgraph(int32_t DeviceId, void *Graph, void *HostCtx);
+  int32_t destroy_taskgraph(int32_t DeviceId, void *Graph);
 
   /// Synchronize an asyncrhonous queue with the plugin runtime.
   int32_t synchronize(int32_t DeviceId, __tgt_async_info *AsyncInfoPtr);

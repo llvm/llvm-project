@@ -90,6 +90,97 @@ enum tgt_map_type : uint64_t {
   OMP_TGT_MAPTYPE_MEMBER_OF = 0xffff000000000000
 };
 
+#ifdef __cplusplus
+/// Map-type accessor helpers.
+///
+/// Plugins need to inspect data mappings in their taskgraph lowering
+/// implementations in order to determine how to abstractly interpret memory
+/// operations and translate them into whichever form is needed for the (graph)
+/// API they are targeting.  Here, we provide a set of light-weight accessors to
+/// hide the details of bit encodings, etc. from the plugins so that we only
+/// have to maintain that information in libomptarget proper.
+namespace omptarget {
+namespace maptype {
+
+/// Copy host->device on region entry (the "to" map modifier).
+inline bool isTo(int64_t MapType) { return MapType & OMP_TGT_MAPTYPE_TO; }
+/// Copy device->host on region exit (the "from" map modifier).
+inline bool isFrom(int64_t MapType) { return MapType & OMP_TGT_MAPTYPE_FROM; }
+/// Transfer regardless of the reference count ("always").
+inline bool isAlways(int64_t MapType) {
+  return MapType & OMP_TGT_MAPTYPE_ALWAYS;
+}
+/// Force unmapping / deletion of the device allocation.
+inline bool isDelete(int64_t MapType) {
+  return MapType & OMP_TGT_MAPTYPE_DELETE;
+}
+/// The argument is passed to the kernel (its device base address is an arg).
+inline bool isTargetParam(int64_t MapType) {
+  return MapType & OMP_TGT_MAPTYPE_TARGET_PARAM;
+}
+/// Pointer-and-pointee map (both the pointer and what it points at are mapped).
+inline bool isPtrAndObj(int64_t MapType) {
+  return MapType & OMP_TGT_MAPTYPE_PTR_AND_OBJ;
+}
+/// Return the device base address of the mapped data to the host.
+inline bool isReturnParam(int64_t MapType) {
+  return MapType & OMP_TGT_MAPTYPE_RETURN_PARAM;
+}
+/// Private (firstprivate aggregate) variable -- not mapped, needs its own
+/// per-launch device storage.
+inline bool isPrivate(int64_t MapType) {
+  return MapType & OMP_TGT_MAPTYPE_PRIVATE;
+}
+/// Pass-by-value literal -- the argument *is* the value (no device pointer).
+inline bool isLiteral(int64_t MapType) {
+  return MapType & OMP_TGT_MAPTYPE_LITERAL;
+}
+/// The mapping was added implicitly by the compiler.
+inline bool isImplicit(int64_t MapType) {
+  return MapType & OMP_TGT_MAPTYPE_IMPLICIT;
+}
+/// Runtime error if the data is not already present on the device.
+inline bool isPresent(int64_t MapType) {
+  return MapType & OMP_TGT_MAPTYPE_PRESENT;
+}
+/// Attach-pointer map (pointer attachment, processed after all other maps).
+inline bool isAttach(int64_t MapType) {
+  return MapType & OMP_TGT_MAPTYPE_ATTACH;
+}
+/// Non-contiguous descriptor (used by non-contiguous target update).
+inline bool isNonContig(int64_t MapType) {
+  return MapType & OMP_TGT_MAPTYPE_NON_CONTIG;
+}
+/// True iff this map is a member of a struct (the struct index is encoded in
+/// the top 16 bits).
+inline bool isMemberOf(int64_t MapType) {
+  return MapType & OMP_TGT_MAPTYPE_MEMBER_OF;
+}
+
+/// Direction of the data movement implied by a map clause, derived once from
+/// the to/from bits, for consumers that want to build transfer nodes.
+enum class TransferDir {
+  None, ///< neither to nor from (alloc-only / pass-by-value / private).
+  H2D,  ///< host -> device (to, but not from).
+  D2H,  ///< device -> host (from, but not to).
+  Both, ///< to and from (copy in before, copy out after).
+};
+
+inline TransferDir transferDir(int64_t MapType) {
+  bool T = isTo(MapType), F = isFrom(MapType);
+  if (T && F)
+    return TransferDir::Both;
+  if (T)
+    return TransferDir::H2D;
+  if (F)
+    return TransferDir::D2H;
+  return TransferDir::None;
+}
+
+} // namespace maptype
+} // namespace omptarget
+#endif // __cplusplus
+
 /// Flags for offload entries.
 enum OpenMPOffloadingDeclareTargetFlags {
   /// Mark the entry global as having a 'link' attribute.
@@ -450,6 +541,135 @@ void *__tgt_get_mapped_ptr(int64_t DeviceId, const void *HostPtr);
 // unsigned callback(rpc::Server::Port *Port, unsigned NumLanes). See the RPC
 // code for details.
 void __tgt_register_rpc_callback(unsigned (*Callback)(void *, unsigned));
+
+//===----------------------------------------------------------------------===//
+// Taskgraph transmission ABI (libomp -> libomptarget)
+//
+// When a taskgraph record contains at least one target region, libomp streams
+// the processed region tree to libomptarget via the preorder traversal
+// callbacks below.  See Shared/TaskGraph.h for the resulting data structures
+// within this library.
+//===----------------------------------------------------------------------===//
+
+/// Relocation callback (libomp-owned).  Rewrites moved host pointers in a
+/// target node's captured arguments before replay.  \p captured is the node's
+/// kernel-arguments blob or map-array bundle; \p taskgraph_args is the current
+/// invocation's outlined-entry argument pack.
+/// FIXME: This might change later in the series; come back to this.
+typedef void (*__tgt_taskgraph_relocate_ty)(void *captured,
+                                            void *taskgraph_args);
+
+/// A pointer to libomp's host-subregion executor.  Runs a maximal host-only
+/// subtree of the taskgraph synchronously on the CPU and blocks until it
+/// completes. \p host_ctx is the opaque context registered at replay time;
+/// \p region is the opaque kmp_taskgraph_region_t* emitted via
+// emit_host_region.
+typedef void (*__tgt_taskgraph_host_exec_ty)(void *host_ctx, void *region);
+
+/// Begin streaming a processed taskgraph.
+///
+/// \p NodeCount is the number of immediate children of the graph's root region
+/// (the same prefix-count every _start_* container carries; see below).
+///
+/// \p ByteSize drives the two-pass, single-block construction.  On the first
+/// (measuring) pass libomp passes 0; libomptarget only accumulates the byte
+/// size the graph will occupy and returns it from __tgt_taskgraph_end.  libomp
+/// then replays the identical stream on a second pass, passing that size back
+/// here so libomptarget can allocate the whole graph in one exactly-sized block
+/// that never moves during construction.
+void *__tgt_taskgraph_start(int64_t DeviceId, uintptr_t GraphId,
+                            __tgt_taskgraph_host_exec_ty HostCb,
+                            int32_t NumMutexes, size_t ByteSize);
+
+/// Preorder region bracketing.  \p NodeCount is the region's immediate-child
+/// count.
+void __tgt_taskgraph_start_parallel(void *Graph, int32_t NodeCount);
+void __tgt_taskgraph_end_parallel(void *Graph);
+void __tgt_taskgraph_start_sequential(void *Graph, int32_t NodeCount);
+void __tgt_taskgraph_end_sequential(void *Graph);
+void __tgt_taskgraph_start_exclusive(void *Graph, int32_t NodeCount);
+void __tgt_taskgraph_end_exclusive(void *Graph);
+
+/// Irreducible region bracketing.  Child nodes are transmitted first, followed
+/// by edges.
+/// \p NodeCount is the immediate-child count (as for the other containers) and
+/// \p EdgeCount is the number of edges.
+void __tgt_taskgraph_start_irreducible(void *Graph, int32_t NodeCount,
+                                       int32_t EdgeCount);
+void __tgt_taskgraph_end_irreducible(void *Graph);
+
+/// A single edge of an irreducible region.  \p SrcChild / \p DstChild are
+/// 0-based child indices within that region.
+void __tgt_taskgraph_emit_edge(void *Graph, int32_t SrcChild, int32_t DstChild);
+
+/// Emit a maximal host-only subtree as a single opaque leaf.  \p Region is the
+/// kmp_taskgraph_region_t* libomp will run when its host executor is invoked.
+/// \p MutexBits / \p MutexNumBits carry the leaf's mutex set.
+void __tgt_taskgraph_emit_host_region(void *Graph, void *Region,
+                                      const uint64_t *MutexBits,
+                                      int32_t MutexNumBits);
+
+/// Emit a target kernel leaf.  \p KernelArgs is libomp's deep copy of the
+/// kernel-arguments blob (opaque KernelArgsTy*); \p Relocate patches it on
+/// replay; \p MutexBits / \p MutexNumBits carry the leaf's mutex set.
+void __tgt_taskgraph_emit_target(void *Graph, int64_t DeviceId,
+                                 int32_t NumTeams, int32_t ThreadLimit,
+                                 void *HostPtr, void *KernelArgs,
+                                 __tgt_taskgraph_relocate_ty Relocate,
+                                 const uint64_t *MutexBits,
+                                 int32_t MutexNumBits);
+
+/// Emit a target enter-data / exit-data / update leaf.  The map arrays are
+/// libomp-owned deep copies; \p Relocate patches them on replay;
+/// \p MutexBits / \p MutexNumBits carry the leaf's mutex set.
+void __tgt_taskgraph_emit_target_enter_data(
+    void *Graph, int64_t DeviceId, int32_t ArgNum, void **ArgsBase, void **Args,
+    int64_t *ArgSizes, int64_t *ArgTypes, void **ArgNames, void **ArgMappers,
+    __tgt_taskgraph_relocate_ty Relocate, const uint64_t *MutexBits,
+    int32_t MutexNumBits);
+void __tgt_taskgraph_emit_target_exit_data(
+    void *Graph, int64_t DeviceId, int32_t ArgNum, void **ArgsBase, void **Args,
+    int64_t *ArgSizes, int64_t *ArgTypes, void **ArgNames, void **ArgMappers,
+    __tgt_taskgraph_relocate_ty Relocate, const uint64_t *MutexBits,
+    int32_t MutexNumBits);
+void __tgt_taskgraph_emit_target_update(
+    void *Graph, int64_t DeviceId, int32_t ArgNum, void **ArgsBase, void **Args,
+    int64_t *ArgSizes, int64_t *ArgTypes, void **ArgNames, void **ArgMappers,
+    __tgt_taskgraph_relocate_ty Relocate, const uint64_t *MutexBits,
+    int32_t MutexNumBits);
+
+/// Finish taskgraph transmission.  Returns the number of bytes the graph
+/// occupies (the single-block size): meaningful on the first (measuring) pass,
+/// where its return value is fed back to __tgt_taskgraph_start as \p ByteSize.
+size_t __tgt_taskgraph_end(void *Graph);
+
+/// Build the executable form (delegates to the active plugin).  Returns
+/// OFFLOAD_SUCCESS iff a plugin claimed the graph and will execute it.  On
+/// OFFLOAD_FAIL, execution will fall back to libomp: target regions will be
+/// run synchronously.
+int __tgt_taskgraph_finalize(int64_t DeviceId, void *Graph);
+
+/// Replay a finalized taskgraph: relocate captures, re-resolve device args,
+/// then dispatch to the plugin.  Returns OFFLOAD_SUCCESS / OFFLOAD_FAIL.
+int __tgt_taskgraph_replay(void *Graph, void *TaskgraphArgs, void *HostCtx);
+
+/// Destroy a finalized taskgraph.  Must be called before libomp frees the
+/// captured node payloads referenced by the graph.
+void __tgt_taskgraph_destroy(void *Graph);
+
+/// Duplicate kernel args at capture time.  Uses a two-pass measure/allocate
+/// strategy.  Used so libomp doesn't have to understand kernel arg layout.
+void __tgt_taskgraph_dup_kernel_args(void *Dst, void *Src, size_t *AllocSize);
+
+/// Duplicate the map arrays of a target data construct at capture time.
+///
+/// This is here mainly for symmetry with __tgt_taskgraph_dup_kernel_args, and
+/// is called in the same two-pass manner.  In this case both sides already know
+/// the data layout though.
+void __tgt_taskgraph_dup_data_args(void *Dst, int32_t ArgNum, void ***ArgsBase,
+                                   void ***Args, int64_t **ArgSizes,
+                                   int64_t **ArgTypes, void ***ArgNames,
+                                   void ***ArgMappers, size_t *AllocSize);
 
 #ifdef __cplusplus
 }
