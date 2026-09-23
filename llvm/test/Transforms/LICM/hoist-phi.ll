@@ -100,20 +100,29 @@ end:
   ret void
 }
 
-; TODO: This is currently too complicated for us to be able to hoist the phi.
+; The branch in %if doesn't dominate %then, but the only other path to %then is
+; the one replicated by hoisting the branch in %loop, so both branches and the
+; three way phi can be hoisted.
 ; CHECK-LABEL: @three_way_phi
 define void @three_way_phi(i32 %x, ptr %p) {
 ; CHECK-LABEL: entry:
 ; CHECK-DAG: %cmp1 = icmp sgt i32 %x, 0
 ; CHECK-DAG: %add = add i32 %x, 1
 ; CHECK-DAG: %cmp2 = icmp sgt i32 %add, 0
-; CHECK-ENABLED: br i1 %cmp1, label %[[IF_LICM:.*]], label %[[ELSE_LICM:.*]]
+; CHECK-DISABLED: %sub = sub i32 %x, 1
+; CHECK-ENABLED: br i1 %cmp1, label %[[IF_LICM:.*]], label %[[THEN_LICM:.*]]
 
 ; CHECK-ENABLED: [[IF_LICM]]:
-; CHECK-ENABLED: br label %[[THEN_LICM:.*]]
+; CHECK-ENABLED: br i1 %cmp2, label %[[IF_IF_LICM:.*]], label %[[THEN_LICM]]
+
+; CHECK-ENABLED: [[IF_IF_LICM]]:
+; CHECK-ENABLED: %sub = sub i32 %x, 1
+; CHECK-ENABLED: br label %[[THEN_LICM]]
 
 ; CHECK-ENABLED: [[THEN_LICM]]:
-; CHECK: %sub = sub i32 %x, 1
+; CHECK-ENABLED: %phi = phi i32 [ 0, %entry ], [ %add, %[[IF_LICM]] ], [ %sub, %[[IF_IF_LICM]] ]
+; CHECK-ENABLED: store i32 %phi, ptr %p
+; CHECK-ENABLED: %cmp3 = icmp ne i32 %phi, 0
 ; CHECK: br label %loop
 
 entry:
@@ -140,6 +149,160 @@ then:
 
 end:
   ret void
+}
+
+; Same as @three_way_phi, but the branch in %loop is not loop invariant, so the
+; path from %loop to %then is not replicated and neither the branch in %if nor
+; the phi can be hoisted.
+; CHECK-LABEL: @three_way_phi_variant_branch
+define void @three_way_phi_variant_branch(i32 %x, ptr %p) {
+; CHECK-LABEL: entry:
+; CHECK-DAG: %add = add i32 %x, 1
+; CHECK-DAG: %cmp2 = icmp sgt i32 %add, 0
+; CHECK-DAG: %sub = sub i32 %x, 1
+; CHECK: br label %loop
+
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %then ]
+  %cmp1 = icmp sgt i32 %iv, 0
+  br i1 %cmp1, label %if, label %then
+
+if:
+  %add = add i32 %x, 1
+  %cmp2 = icmp sgt i32 %add, 0
+  br i1 %cmp2, label %if.if, label %then
+
+if.if:
+  %sub = sub i32 %x, 1
+  br label %then
+
+; CHECK-LABEL: then:
+; CHECK: %phi = phi i32 [ 0, %loop ], [ %add, %if ], [ %sub, %if.if ]
+then:
+  %phi = phi i32 [ 0, %loop ], [ %add, %if ], [ %sub, %if.if ]
+  store i32 %phi, ptr %p
+  %iv.next = add i32 %iv, 1
+  %cmp3 = icmp ne i32 %phi, 0
+  br i1 %cmp3, label %loop, label %end
+
+end:
+  ret void
+}
+
+; Same as @three_way_phi, but the branch in %loop is a diamond rather than a
+; triangle. The branch in %if converges at %then as well and %if is one of the
+; blocks the branch in %loop replicates, so both branches and the three way phi
+; can be hoisted.
+; CHECK-LABEL: @diamond_nested_phi
+define void @diamond_nested_phi(i32 %x, ptr %p) {
+; CHECK-LABEL: entry:
+; CHECK-DAG: %cmp1 = icmp sgt i32 %x, 0
+; CHECK-DAG: %add = add i32 %x, 1
+; CHECK-DAG: %cmp2 = icmp sgt i32 %add, 0
+; CHECK-DISABLED-DAG: %mul = mul i32 %x, 3
+; CHECK-DISABLED-DAG: %sub = sub i32 %x, 1
+; CHECK-ENABLED: br i1 %cmp1, label %[[IF_LICM:.*]], label %[[ELSE_LICM:.*]]
+
+; CHECK-ENABLED: [[IF_LICM]]:
+; CHECK-ENABLED: br i1 %cmp2, label %[[IF_IF_LICM:.*]], label %[[THEN_LICM:.*]]
+
+; CHECK-ENABLED: [[ELSE_LICM]]:
+; CHECK-ENABLED: %mul = mul i32 %x, 3
+; CHECK-ENABLED: br label %[[THEN_LICM]]
+
+; CHECK-ENABLED: [[IF_IF_LICM]]:
+; CHECK-ENABLED: %sub = sub i32 %x, 1
+; CHECK-ENABLED: br label %[[THEN_LICM]]
+
+; CHECK-ENABLED: [[THEN_LICM]]:
+; CHECK-ENABLED: %phi = phi i32 [ %add, %[[IF_LICM]] ], [ %sub, %[[IF_IF_LICM]] ], [ %mul, %[[ELSE_LICM]] ]
+; CHECK-ENABLED: store i32 %phi, ptr %p
+; CHECK: br label %loop
+
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [0, %entry], [%iv.next, %then]
+  %cmp1 = icmp sgt i32 %x, 0
+  br i1 %cmp1, label %if, label %else
+
+if:
+  %add = add i32 %x, 1
+  %cmp2 = icmp sgt i32 %add, 0
+  br i1 %cmp2, label %if.if, label %then
+
+if.if:
+  %sub = sub i32 %x, 1
+  br label %then
+
+else:
+  %mul = mul i32 %x, 3
+  br label %then
+
+; CHECK-DISABLED-LABEL: then:
+; CHECK-DISABLED: %phi = phi i32 [ %add, %if ], [ %sub, %if.if ], [ %mul, %else ]
+then:
+  %phi = phi i32 [ %add, %if ], [ %sub, %if.if ], [ %mul, %else ]
+  store i32 %phi, ptr %p
+  %iv.next = add i32 %iv, 1
+  %cmp3 = icmp slt i32 %iv.next, 200
+  br i1 %cmp3, label %loop, label %end
+
+end:
+  ret void
+}
+
+; The invariant part of %add.2 is reassociated into the preheader, which is the
+; convergence point of the cloned control flow. %xor is hoisted into the nested
+; cloned control flow first, so it has to be rehoisted more than one level up
+; for it to dominate its new use.
+; CHECK-LABEL: @rehoist_through_nested_control_flow
+define i32 @rehoist_through_nested_control_flow(i32 %a, i1 %c.1, i1 %c.2) {
+; CHECK-LABEL: bb:
+; CHECK: %xor = xor i32 %a, 1
+; CHECK-ENABLED: br i1 %c.1, label %[[LATCH_LICM:.*]], label %[[BODY_1_LICM:.*]]
+
+; CHECK-ENABLED: [[BODY_1_LICM]]:
+; CHECK-ENABLED: br i1 %c.2, label %[[LATCH_LICM]], label %[[BODY_2_LICM:.*]]
+
+; CHECK-ENABLED: [[BODY_2_LICM]]:
+; CHECK-ENABLED: br label %[[LATCH_LICM]]
+
+; CHECK-ENABLED: [[LATCH_LICM]]:
+; CHECK: %invariant.op = add i32 20, %xor
+; CHECK: br label %loop.header
+
+bb:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i32 [ 6, %bb ], [ %iv.next, %loop.latch ]
+  %v = phi i32 [ 35902, %bb ], [ %p, %loop.latch ]
+  br i1 %c.1, label %loop.latch, label %body.1
+
+body.1:
+  %v.add = add i32 %v, 10
+  br i1 %c.2, label %loop.latch, label %body.2
+
+body.2:
+  %add.1 = add i32 %v.add, 20
+  %xor = xor i32 %a, 1
+  %add.2 = add i32 %add.1, %xor
+  br label %loop.latch
+
+loop.latch:
+  %p = phi i32 [ %v, %loop.header ], [ %v.add, %body.1 ], [ %add.2, %body.2 ]
+  %iv.next = add nuw nsw i32 %iv, 1
+  %ec = icmp ult i32 %iv, 181
+  br i1 %ec, label %loop.header, label %exit
+
+exit:
+  %e = phi i32 [ %p, %loop.latch ]
+  ret i32 %e
 }
 
 ; TODO: This is currently too complicated for us to be able to hoist the phi.

@@ -677,6 +677,57 @@ public:
                      MemorySSAUpdater &MSSAU)
       : LI(LI), DT(DT), CurLoop(CurLoop), MSSAU(MSSAU) {}
 
+  static void erasePredecessorsReplicatedBy(
+      CondBrInst *BI, BasicBlock *BB,
+      SmallPtrSetImpl<BasicBlock *> &PredecessorBlocks) {
+    if (BI->getSuccessor(0) == BB) {
+      PredecessorBlocks.erase(BI->getParent());
+      PredecessorBlocks.erase(BI->getSuccessor(1));
+    } else if (BI->getSuccessor(1) == BB) {
+      PredecessorBlocks.erase(BI->getParent());
+      PredecessorBlocks.erase(BI->getSuccessor(0));
+    } else {
+      PredecessorBlocks.erase(BI->getSuccessor(0));
+      PredecessorBlocks.erase(BI->getSuccessor(1));
+    }
+  }
+
+  bool hasExactlyReplicatedControlFlow(CondBrInst *BI, BasicBlock *CommonSucc) {
+    // This can only be replicated only if other sucessor has single control
+    // flow. CommonSucc can be hoisted by others.
+    for (BasicBlock *Succ : successors(BI))
+      if (Succ != CommonSucc && !DT->dominates(BI, Succ))
+        return false;
+
+    BasicBlock *BB = BI->getParent();
+    if (BB == CommonSucc)
+      return false;
+    // There has to be a pending branch that BB is a successor of, or
+    // getOrCreateHoistedBlock() falls back to the preheader. The preheader is
+    // also the clone of CommonSucc at that point, so HoistTarget would be
+    // HoistCommonSucc and cloning the branch would erase the only edge into
+    // the loop.
+    auto IsReplicatedBy = [&](std::pair<CondBrInst *, BasicBlock *> Pair) {
+      return Pair.second == CommonSucc && DT->dominates(Pair.first, BB) &&
+             (Pair.first->getSuccessor(0) == BB ||
+              Pair.first->getSuccessor(1) == BB);
+    };
+    if (llvm::none_of(HoistableBranches, IsReplicatedBy))
+      return false;
+
+    SmallPtrSet<BasicBlock *, 8> PredecessorBlocks(llvm::from_range,
+                                                   predecessors(CommonSucc));
+    // We don't give duplicate branch a chance as they are same as direct jump.
+    if (PredecessorBlocks.size() != pred_size(CommonSucc))
+      return false;
+    erasePredecessorsReplicatedBy(BI, CommonSucc, PredecessorBlocks);
+    for (auto &Pair : HoistableBranches)
+      if (Pair.second == CommonSucc)
+        erasePredecessorsReplicatedBy(Pair.first, CommonSucc,
+                                      PredecessorBlocks);
+    return PredecessorBlocks.empty();
+  }
+
   void registerPossiblyHoistableBranch(CondBrInst *BI) {
     // We can only hoist conditional branches with loop invariant operands.
     if (!ControlFlowHoisting || !CurLoop->hasLoopInvariantOperands(BI))
@@ -725,11 +776,11 @@ public:
     // there will be some other path to the successor that will not be
     // controlled by this branch so any phi we hoist would be controlled by the
     // wrong condition. This also takes care of avoiding hoisting of loop back
-    // edges.
-    // TODO: In some cases this could be relaxed if the successor is dominated
-    // by another block that's been hoisted and we can guarantee that the
-    // control flow has been replicated exactly.
-    if (CommonSucc && DT->dominates(BI, CommonSucc))
+    // edges. The requirement is relaxed when those other paths are themselves
+    // replicated by branches we are already going to hoist, see
+    // hasExactlyReplicatedControlFlow().
+    if (CommonSucc && (DT->dominates(BI, CommonSucc) ||
+                       hasExactlyReplicatedControlFlow(BI, CommonSucc)))
       HoistableBranches[BI] = CommonSucc;
   }
 
@@ -749,22 +800,9 @@ public:
     // values.
     if (PredecessorBlocks.size() != pred_size(BB))
       return false;
-    for (auto &Pair : HoistableBranches) {
-      if (Pair.second == BB) {
-        // Which blocks are predecessors via this branch depends on if the
-        // branch is triangle-like or diamond-like.
-        if (Pair.first->getSuccessor(0) == BB) {
-          PredecessorBlocks.erase(Pair.first->getParent());
-          PredecessorBlocks.erase(Pair.first->getSuccessor(1));
-        } else if (Pair.first->getSuccessor(1) == BB) {
-          PredecessorBlocks.erase(Pair.first->getParent());
-          PredecessorBlocks.erase(Pair.first->getSuccessor(0));
-        } else {
-          PredecessorBlocks.erase(Pair.first->getSuccessor(0));
-          PredecessorBlocks.erase(Pair.first->getSuccessor(1));
-        }
-      }
-    }
+    for (auto &Pair : HoistableBranches)
+      if (Pair.second == BB)
+        erasePredecessorsReplicatedBy(Pair.first, BB, PredecessorBlocks);
     // PredecessorBlocks will now be empty if for every predecessor of BB we
     // found a hoistable branch source.
     return PredecessorBlocks.empty();
@@ -1026,29 +1064,38 @@ bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
 
   // If we hoisted instructions to a conditional block they may not dominate
   // their uses that weren't hoisted (such as phis where some operands are not
-  // loop invariant). If so make them unconditional by moving them to their
-  // immediate dominator. We iterate through the instructions in reverse order
-  // which ensures that when we rehoist an instruction we rehoist its operands,
-  // and also keep track of where in the block we are rehoisting to make sure
-  // that we rehoist instructions before the instructions that use them.
+  // loop invariant). If so make them less conditional by moving them to a
+  // block that dominates all of their uses. We iterate through the
+  // instructions in reverse order which ensures that when we rehoist an
+  // instruction we rehoist its operands, and also keep track of where in the
+  // block we are rehoisting to make sure that we rehoist instructions before
+  // the instructions that use them.
   Instruction *HoistPoint = nullptr;
   if (ControlFlowHoisting) {
     for (Instruction *I : reverse(HoistedInstructions)) {
       if (!llvm::all_of(I->uses(),
                         [&](Use &U) { return DT->dominates(I, U); })) {
+        // Cloned control flow can be nested, so the immediate dominator of the
+        // block I was hoisted to is not necessarily enough.
         BasicBlock *Dominator =
             DT->getNode(I->getParent())->getIDom()->getBlock();
-        if (!HoistPoint || !DT->dominates(HoistPoint->getParent(), Dominator)) {
-          if (HoistPoint)
-            assert(DT->dominates(Dominator, HoistPoint->getParent()) &&
-                   "New hoist point expected to dominate old hoist point");
-          HoistPoint = Dominator->getTerminator();
+        for (Use &U : I->uses()) {
+          auto *User = cast<Instruction>(U.getUser());
+          BasicBlock *UserBB = isa<PHINode>(User)
+                                   ? cast<PHINode>(User)->getIncomingBlock(U)
+                                   : User->getParent();
+          Dominator = DT->findNearestCommonDominator(Dominator, UserBB);
         }
+        if (!HoistPoint || !DT->dominates(HoistPoint->getParent(), Dominator))
+          HoistPoint = Dominator->getTerminator();
         LLVM_DEBUG(dbgs() << "LICM rehoisting to "
                           << HoistPoint->getParent()->getNameOrAsOperand()
                           << ": " << *I << "\n");
         moveInstructionBefore(*I, HoistPoint->getIterator(), *SafetyInfo, MSSAU,
                               SE);
+        assert(llvm::all_of(I->uses(),
+                            [&](Use &U) { return DT->dominates(I, U); }) &&
+               "Rehoisting failed to make the instruction dominate its uses");
         HoistPoint = I;
         Changed = true;
       }
