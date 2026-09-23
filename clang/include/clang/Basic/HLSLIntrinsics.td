@@ -326,7 +326,6 @@ def hlsl_abs : HLSLOneArgBuiltin<"abs", "__builtin_elementwise_abs"> {
 }];
   let VaryingTypes = SignedTypes;
   let VaryingLongVector = 1;
-  let VaryingMatDims = [];
 }
 
 // Unsigned abs is a constexpr identity - unsigned values are already non-negative.
@@ -344,7 +343,6 @@ function returns its input unchanged.
   let IsConstexpr = 1;
   let VaryingTypes = UnsignedIntTypes;
   let VaryingLongVector = 1;
-  let VaryingMatDims = [];
 }
 
 // Returns the arccosine of the input value, Val.
