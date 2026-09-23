@@ -467,7 +467,7 @@ public:
     // the cleanup scope of any temporary the condition creates encloses the
     // one the evaluation opens.
     mlir::Value condV = cgf.emitOpOnBoolExpr(loc, e->getCond());
-    CIRGenFunction::ConditionalEvaluation eval(cgf);
+    CIRGenFunction::ConditionalEvaluation eval(cgf, loc);
 
     // Save whether the destination's lifetime is externally managed.
     bool isExternallyDestructed = dest.isExternallyDestructed();

@@ -2527,14 +2527,15 @@ public:
     mlir::Operation *anchorAfter = nullptr;
 
   public:
-    ConditionalEvaluation(CIRGenFunction &cgf) : cgf(cgf) {
+    /// \p loc is the location of the conditional expression. It is used for
+    /// the cleanup scope this may open.
+    ConditionalEvaluation(CIRGenFunction &cgf, mlir::Location loc) : cgf(cgf) {
       // Open the cleanup scope that hosts cleanups deferred from inside this
       // conditional (see deferredConditionalCleanupStack). Only the outermost
       // conditional opens one, and only while a FullExprCleanupScope is
       // active to close it. When nothing is deferred into it the cleanup
       // region stays trivial and canonicalization inlines the scope away.
       if (cgf.currentFullExprCleanupScope && !cgf.isInConditionalBranch()) {
-        mlir::Location loc = cgf.builder.getUnknownLoc();
         cir::CleanupKind cleanupKind = cgf.getLangOpts().Exceptions
                                            ? cir::CleanupKind::All
                                            : cir::CleanupKind::Normal;
