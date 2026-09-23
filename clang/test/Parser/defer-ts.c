@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c11 -fsyntax-only -fdefer-ts -Wno-redundant-defer -verify %s
-// RUN: %clang_cc1 -std=c23 -fsyntax-only -fdefer-ts -Wno-redundant-defer -verify %s
+// RUN: %clang_cc1 -std=c11 -fsyntax-only -fdefer-ts -verify %s
+// RUN: %clang_cc1 -std=c23 -fsyntax-only -fdefer-ts -verify %s
 
 #define defer _Defer
 
