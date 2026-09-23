@@ -759,3 +759,47 @@ loop:
 exit:
   ret void
 }
+
+define void @combined_exit_conditions_one_vector_iteration_plus_one_scalar(ptr align 4 dereferenceable(80) readonly %src, ptr align 4 dereferenceable(80) noalias %dst, ptr align 4 dereferenceable(80) readonly %pred) {
+; CHECK-LABEL: define void @combined_exit_conditions_one_vector_iteration_plus_one_scalar(
+; CHECK-SAME: ptr readonly align 4 dereferenceable(80) [[SRC:%.*]], ptr noalias align 4 dereferenceable(80) [[DST:%.*]], ptr readonly align 4 dereferenceable(80) [[PRED:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
+; CHECK:       [[FOR_BODY]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[SRC_PTR:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[SRC]], i64 [[IV]]
+; CHECK-NEXT:    [[DATA:%.*]] = load i32, ptr [[SRC_PTR]], align 4
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[DATA]], 1
+; CHECK-NEXT:    [[DST_PTR:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[DST]], i64 [[IV]]
+; CHECK-NEXT:    store i32 [[ADD]], ptr [[DST_PTR]], align 4
+; CHECK-NEXT:    [[EE_PTR:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[PRED]], i64 [[IV]]
+; CHECK-NEXT:    [[EE_VAL:%.*]] = load i32, ptr [[EE_PTR]], align 4
+; CHECK-NEXT:    [[EE_CMP:%.*]] = icmp ne i32 [[EE_VAL]], 0
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[COUNTED_CMP:%.*]] = icmp eq i64 [[IV_NEXT]], 5
+; CHECK-NEXT:    [[COMBINED_COND:%.*]] = select i1 [[EE_CMP]], i1 true, i1 [[COUNTED_CMP]]
+; CHECK-NEXT:    br i1 [[COMBINED_COND]], label %[[EXIT:.*]], label %[[FOR_BODY]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %src.ptr = getelementptr inbounds nuw [4 x i8], ptr %src, i64 %iv
+  %data = load i32, ptr %src.ptr, align 4
+  %add = add nsw i32 %data, 1
+  %dst.ptr = getelementptr inbounds nuw [4 x i8], ptr %dst, i64 %iv
+  store i32 %add, ptr %dst.ptr, align 4
+  %ee.ptr = getelementptr inbounds nuw [4 x i8], ptr %pred, i64 %iv
+  %ee.val = load i32, ptr %ee.ptr, align 4
+  %ee.cmp = icmp ne i32 %ee.val, 0
+  %iv.next = add nuw nsw i64 %iv, 1
+  %counted.cmp = icmp eq i64 %iv.next, 5
+  %combined.cond = select i1 %ee.cmp, i1 true, i1 %counted.cmp
+  br i1 %combined.cond, label %exit, label %for.body
+
+exit:
+  ret void
+}

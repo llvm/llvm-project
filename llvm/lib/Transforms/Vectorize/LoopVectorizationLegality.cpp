@@ -1767,7 +1767,7 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
   if (isa<SCEVCouldNotCompute>(PSE.getSE()->getPredicatedExitCount(
           TheLoop, LatchBB, &Predicates, ScalarEvolution::SymbolicMaximum))) {
     reportVectorizationFailure(
-        "Cannot determine exact exit count for latch block",
+        "Cannot determine symbolic max exit count for latch block",
         "Cannot vectorize early exit loop",
         "UnknownLatchExitCountEarlyExitLoop", ORE, TheLoop);
     return false;

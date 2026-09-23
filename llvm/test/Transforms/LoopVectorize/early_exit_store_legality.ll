@@ -798,7 +798,7 @@ exit:
 ; Vectorizeable, requires improvements in dereferenceability checks
 define void @uncountable_exit_with_invariant_but_unknown_stride(ptr dereferenceable(4000) noalias %array, ptr align 2 dereferenceable(4000) readonly %pred, i64 %stride) !dbg !62 {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'uncountable_exit_with_invariant_but_unknown_stride'
-; CHECK-DEBUG:       LV: Not vectorizing: Cannot determine exact exit count for latch block.
+; CHECK-DEBUG:       LV: Not vectorizing: Cannot determine symbolic max exit count for latch block.
 ; CHECK-REMARK:      foo.c:270:3: loop not vectorized: Cannot vectorize early exit loop
 ; CHECK-REMARK-NEXT: foo.c:270:3: loop not vectorized: could not determine number of loop iterations
 entry:
