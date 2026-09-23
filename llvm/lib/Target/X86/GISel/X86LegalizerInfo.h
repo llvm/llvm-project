@@ -61,6 +61,9 @@ private:
   bool legalizeSETROUNDING(MachineInstr &MI, MachineRegisterInfo &MRI,
                            LegalizerHelper &Helper) const;
 
+  bool legalizeShuffleVector(MachineInstr &MI, MachineRegisterInfo &MRI,
+                             LegalizerHelper &Helper) const;
+  
   bool legalizeGLOBAL_VALUE(MachineInstr &MI, MachineRegisterInfo &MRI,
                             LegalizerHelper &Helper) const;
 };
