@@ -6615,15 +6615,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
   // count is >= increment and a multiple of the increment.
   VPRegionBlock *LoopRegion = Plan->getVectorLoopRegion();
   bool HasNUW = !IVUpdateMayOverflow || Style == TailFoldingStyle::None;
-  if (!HasNUW) {
-    auto *IVInc =
-        LoopRegion->getExitingBasicBlock()->getTerminator()->getOperand(0);
-    assert(match(IVInc,
-                 m_VPInstruction<Instruction::Add>(
-                     m_Specific(LoopRegion->getCanonicalIV()), m_VPValue())) &&
-           "Did not find the canonical IV increment");
-    LoopRegion->clearCanonicalIVNUW(cast<VPInstruction>(IVInc));
-  }
+  if (!HasNUW)
+    LoopRegion->clearCanonicalIVNUW(vputils::findCanonicalIVIncrement(*Plan));
 
   // ---------------------------------------------------------------------------
   // Pre-construction: record ingredients whose recipes we'll need to further

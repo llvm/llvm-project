@@ -1353,14 +1353,8 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
   Builder.createNaryOp(VPInstruction::BranchOnCond, HeaderMask);
 
   VPBasicBlock *OrigLatch = LoopRegion->getExitingBasicBlock();
-  VPValue *IVInc;
-  [[maybe_unused]] bool TermBranchOnCount =
-      match(OrigLatch->getTerminator(),
-            m_BranchOnCount(m_VPValue(IVInc),
-                            m_Specific(&Plan.getVectorTripCount())));
-  assert(TermBranchOnCount &&
-         match(IVInc, m_Add(m_Specific(LoopRegion->getCanonicalIV()),
-                            m_Specific(&Plan.getVFxUF()))) &&
+  VPValue *IVInc = vputils::findCanonicalIVIncrement(Plan);
+  assert(IVInc &&
          std::next(IVInc->getDefiningRecipe()->getIterator()) ==
              OrigLatch->getTerminator()->getIterator() &&
          "Unexpected canonical iv increment");
