@@ -2145,7 +2145,12 @@ void CIRGenModule::replaceUsesOfNonProtoTypeWithRealFunction(
   assert(!cir::MissingFeatures::opFuncExceptions());
   assert(!cir::MissingFeatures::opFuncParameterAttributes());
   assert(!cir::MissingFeatures::opFuncOperandBundles());
-  if (oldFn->getAttrs().size() <= 1)
+  unsigned numInherentAttrs = 0;
+  oldFn->getName().walkInherentAttrs(
+      oldFn, [&](llvm::StringRef, mlir::Attribute &attr) {
+        numInherentAttrs += bool(attr);
+      });
+  if (numInherentAttrs <= 1)
     errorNYI(old->getLoc(),
              "replaceUsesOfNonProtoTypeWithRealFunction: Attribute forwarding");
 
@@ -2486,7 +2491,8 @@ bool CIRGenModule::findFieldMemberPath(const CXXRecordDecl *currentClass,
       getTypes().getCIRGenRecordLayout(currentClass);
 
   // The field is declared directly in this class.
-  if (astContext.isSameEntity(field->getParent(), currentClass)) {
+  if (astContext.isSameEntity(field->getParent()->getMostRecentDecl(),
+                              currentClass->getMostRecentDecl())) {
     int32_t fieldIdx;
     if (currentClass->isUnion()) {
       // For unions, getCIRFieldNo always returns 0 for every union member (all
@@ -3660,10 +3666,10 @@ cir::FuncOp CIRGenModule::getOrCreateCIRFunction(
 
   if (d)
     setFunctionAttributes(gd, funcOp, /*isIncompleteFunction=*/false, isThunk);
-  if (!extraAttrs.empty()) {
-    extraAttrs.append(funcOp->getAttrs());
-    funcOp->setAttrs(extraAttrs);
-  }
+  if (!extraAttrs.empty())
+    for (mlir::NamedAttribute attr : extraAttrs)
+      if (!funcOp->hasDiscardableAttr(attr.getName()))
+        funcOp->setDiscardableAttr(attr.getName(), attr.getValue());
 
   // 'dontDefer' actually means don't move this to the deferredDeclsToEmit list.
   if (dontDefer) {

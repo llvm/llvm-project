@@ -9,7 +9,7 @@
 // Tests for SimpleNativeMemoryMap's SPS Controller Interface.
 //
 //===----------------------------------------------------------------------===//
-#ifndef _WIN32
+
 #include "orc-rt/bedrock/sps/SimpleNativeMemoryMapSPSCI.h"
 #include "orc-rt/bedrock/Session.h"
 #include "orc-rt/bedrock/SimpleNativeMemoryMap.h"
@@ -24,6 +24,7 @@
 #include "gtest/gtest.h"
 
 using namespace orc_rt;
+using namespace orc_rt::test;
 
 namespace orc_rt {
 
@@ -321,4 +322,3 @@ TEST_F(SimpleNativeMemoryMapSPSCITest, ReserveInitializeDetachShutdown) {
 
   EXPECT_EQ(SentinelValue, 42);
 }
-#endif

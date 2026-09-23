@@ -25,6 +25,7 @@
 #include "clang/AST/TypeBase.h"
 #include "clang/AST/VTableBuilder.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "clang/CodeGenUtils/ItaniumCXXABIUtils.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace clang;
@@ -2105,58 +2106,6 @@ void CIRGenItaniumCXXABI::emitBadCastCall(CIRGenFunction &cgf,
   emitCallToBadCast(cgf, loc);
 }
 
-// TODO(cir): This could be shared with classic codegen.
-static CharUnits computeOffsetHint(ASTContext &astContext,
-                                   const CXXRecordDecl *src,
-                                   const CXXRecordDecl *dst) {
-  CXXBasePaths paths(/*FindAmbiguities=*/true, /*RecordPaths=*/true,
-                     /*DetectVirtual=*/false);
-
-  // If Dst is not derived from Src we can skip the whole computation below and
-  // return that Src is not a public base of Dst.  Record all inheritance paths.
-  if (!dst->isDerivedFrom(src, paths))
-    return CharUnits::fromQuantity(-2);
-
-  unsigned numPublicPaths = 0;
-  CharUnits offset;
-
-  // Now walk all possible inheritance paths.
-  for (const CXXBasePath &path : paths) {
-    if (path.Access != AS_public) // Ignore non-public inheritance.
-      continue;
-
-    ++numPublicPaths;
-
-    for (const CXXBasePathElement &pathElement : path) {
-      // If the path contains a virtual base class we can't give any hint.
-      // -1: no hint.
-      if (pathElement.Base->isVirtual())
-        return CharUnits::fromQuantity(-1);
-
-      if (numPublicPaths > 1) // Won't use offsets, skip computation.
-        continue;
-
-      // Accumulate the base class offsets.
-      const ASTRecordLayout &L =
-          astContext.getASTRecordLayout(pathElement.Class);
-      offset += L.getBaseClassOffset(
-          pathElement.Base->getType()->getAsCXXRecordDecl());
-    }
-  }
-
-  // -2: Src is not a public base of Dst.
-  if (numPublicPaths == 0)
-    return CharUnits::fromQuantity(-2);
-
-  // -3: Src is a multiple public base type but never a virtual base type.
-  if (numPublicPaths > 1)
-    return CharUnits::fromQuantity(-3);
-
-  // Otherwise, the Src type is a unique public nonvirtual base type of Dst.
-  // Return the offset of Src from the origin of Dst.
-  return offset;
-}
-
 static cir::FuncOp getItaniumDynamicCastFn(CIRGenFunction &cgf) {
   // Prototype:
   // void *__dynamic_cast(const void *sub,
@@ -2337,7 +2286,8 @@ static cir::DynamicCastInfoAttr emitDynamicCastInfo(CIRGenFunction &cgf,
 
   const CXXRecordDecl *srcDecl = srcRecordTy->getAsCXXRecordDecl();
   const CXXRecordDecl *destDecl = destRecordTy->getAsCXXRecordDecl();
-  CharUnits offsetHint = computeOffsetHint(cgf.getContext(), srcDecl, destDecl);
+  CharUnits offsetHint =
+      CodeGenUtils::computeOffsetHint(cgf.getContext(), srcDecl, destDecl);
 
   mlir::Type ptrdiffTy = cgf.convertType(cgf.getContext().getPointerDiffType());
   auto offsetHintAttr = cir::IntAttr::get(ptrdiffTy, offsetHint.getQuantity());

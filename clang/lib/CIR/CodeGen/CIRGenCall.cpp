@@ -21,6 +21,7 @@
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/CIR/ABIArgInfo.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "clang/CodeGenUtils/CallUtils.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/TypeSize.h"
@@ -628,16 +629,6 @@ static bool determineNoUndef(QualType clangTy, CIRGenTypes &types,
   return false;
 }
 
-/// Compute the nofpclass mask for FP types based on language options.
-static unsigned getNoFPClassTestMask(const LangOptions &langOpts) {
-  unsigned mask = 0;
-  if (langOpts.NoHonorInfs)
-    mask |= llvm::fcInf;
-  if (langOpts.NoHonorNaNs)
-    mask |= llvm::fcNan;
-  return mask;
-}
-
 void CIRGenModule::constructFunctionReturnAttributes(
     const CIRGenFunctionInfo &info, const Decl *targetDecl, bool isThunk,
     mlir::NamedAttrList &retAttrs) {
@@ -653,7 +644,8 @@ void CIRGenModule::constructFunctionReturnAttributes(
                  mlir::UnitAttr::get(&getMLIRContext()));
 
   if (retTy->hasFloatingRepresentation())
-    if (unsigned mask = getNoFPClassTestMask(getLangOpts()))
+    if (llvm::FPClassTest mask =
+            CodeGenUtils::getNoFPClassTestMask(getLangOpts()))
       retAttrs.set(mlir::LLVM::LLVMDialect::getNoFPClassAttrName(),
                    builder.getI64IntegerAttr(mask));
 
@@ -778,7 +770,8 @@ void CIRGenModule::constructFunctionArgumentAttributes(
     }
 
     if (argType->hasFloatingRepresentation())
-      if (unsigned mask = getNoFPClassTestMask(getLangOpts()))
+      if (llvm::FPClassTest mask =
+              CodeGenUtils::getNoFPClassTestMask(getLangOpts()))
         argAttrList.set(mlir::LLVM::LLVMDialect::getNoFPClassAttrName(),
                         builder.getI64IntegerAttr(mask));
 
@@ -800,13 +793,6 @@ void CIRGenModule::constructFunctionArgumentAttributes(
                         mlir::UnitAttr::get(&getMLIRContext()));
     }
   }
-}
-
-/// Returns the canonical formal type of the given C++ method.
-static CanQual<FunctionProtoType> getFormalType(const CXXMethodDecl *md) {
-  return md->getType()
-      ->getCanonicalTypeUnqualified()
-      .getAs<FunctionProtoType>();
 }
 
 /// Adds the formal parameters in FPT to the given prefix.  If any parameter in
@@ -853,7 +839,7 @@ CIRGenTypes::arrangeCXXStructorDeclaration(GlobalDecl gd) {
       passParams = inheritingCtorHasParams(inherited, gd.getCtorType());
   }
 
-  CanQual<FunctionProtoType> fpt = getFormalType(md);
+  CanQual<FunctionProtoType> fpt = CodeGenUtils::getFormalType(md);
 
   if (passParams)
     appendParameterTypes(*this, argTypes, fpt);
@@ -1003,7 +989,7 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeCXXConstructorCall(
   // +1 for implicit this, which should always be args[0]
   unsigned totalPrefixArgs = 1 + extraPrefixArgs;
 
-  CanQual<FunctionProtoType> fpt = getFormalType(d);
+  CanQual<FunctionProtoType> fpt = CodeGenUtils::getFormalType(d);
   RequiredArgs required = passProtoArgs
                               ? RequiredArgs::getFromProtoWithExtraSlots(
                                     fpt, totalPrefixArgs + extraSuffixArgs)

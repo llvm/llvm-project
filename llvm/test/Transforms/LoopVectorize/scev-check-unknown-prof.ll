@@ -11,8 +11,8 @@ define void @wrap_check(i32 %n, i32 %step) !prof !0 {
 ; CHECK:  [[LOOP_PREHEADER]]:
 ; CHECK:    br i1 [[MIN_ITERS_CHECK:%.*]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
 ; CHECK:  [[VECTOR_SCEVCHECK]]:
-; CHECK:    [[TMP4:%.*]] = select i1 [[TMP3:%.*]], i8 [[TMP2:%.*]], i8 [[TMP1:%.*]]
-; CHECK:    [[TMP9:%.*]] = select i1 [[TMP3]], i1 [[TMP8:%.*]], i1 [[TMP7:%.*]]
+; CHECK:    [[TMP4:%.*]] = select i1 [[TMP3:%.*]], i8 [[TMP2:%.*]], i8 [[TMP1:%.*]], !prof [[PROF1:![0-9]+]]
+; CHECK:    [[TMP9:%.*]] = select i1 [[TMP3]], i1 [[TMP8:%.*]], i1 [[TMP7:%.*]], !prof [[PROF1]]
 ; CHECK:    br i1 [[TMP16:%.*]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:  [[VECTOR_PH]]:
 ; CHECK:  [[VECTOR_BODY:.*]]:
@@ -57,12 +57,12 @@ define void @runtime_step_memcheck(ptr %in, ptr %out, i64 %n, i64 %step) !prof !
 ; CHECK:  [[LOOP_PREHEADER]]:
 ; CHECK:    br i1 [[MIN_ITERS_CHECK:%.*]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
 ; CHECK:  [[VECTOR_SCEVCHECK]]:
-; CHECK:    [[TMP4:%.*]] = select i1 [[TMP3:%.*]], i32 [[TMP2:%.*]], i32 [[TMP1:%.*]]
-; CHECK:    [[TMP9:%.*]] = select i1 [[TMP3]], i1 [[TMP8:%.*]], i1 [[TMP7:%.*]]
+; CHECK:    [[TMP4:%.*]] = select i1 [[TMP3:%.*]], i32 [[TMP2:%.*]], i32 [[TMP1:%.*]], !prof [[PROF1]]
+; CHECK:    [[TMP9:%.*]] = select i1 [[TMP3]], i1 [[TMP8:%.*]], i1 [[TMP7:%.*]], !prof [[PROF1]]
 ; CHECK:    br i1 [[TMP16:%.*]], label %[[SCALAR_PH]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:  [[VECTOR_MEMCHECK]]:
-; CHECK:    [[UMIN:%.*]] = select i1 [[TMP23:%.*]], ptr [[IN]], ptr [[SCEVGEP1:%.*]]
-; CHECK:    [[UMAX:%.*]] = select i1 [[TMP24:%.*]], ptr [[IN]], ptr [[SCEVGEP1]]
+; CHECK:    [[UMIN:%.*]] = select i1 [[TMP23:%.*]], ptr [[IN]], ptr [[SCEVGEP1:%.*]], !prof [[PROF1]]
+; CHECK:    [[UMAX:%.*]] = select i1 [[TMP24:%.*]], ptr [[IN]], ptr [[SCEVGEP1]], !prof [[PROF1]]
 ; CHECK:    br i1 [[FOUND_CONFLICT:%.*]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:  [[VECTOR_PH]]:
 ; CHECK:  [[VECTOR_BODY:.*]]:
@@ -149,6 +149,7 @@ exit:
 !0 = !{!"function_entry_count", i64 1000}
 ;.
 ; CHECK: [[PROF0]] = !{!"function_entry_count", i64 1000}
+; CHECK: [[PROF1]] = !{!"unknown", !"scev-expander"}
 ; CHECK: [[LOOP1]] = distinct !{[[LOOP1]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; CHECK: [[META2]] = !{!"llvm.loop.isvectorized", i32 1}
 ; CHECK: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}

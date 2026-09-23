@@ -84,7 +84,8 @@ ABIArgInfo SparcV8ABIInfo::classifyReturnType(QualType Ty) const {
   }
 
   if (const auto *BT = Ty->getAs<BuiltinType>();
-      BT && BT->getKind() == BuiltinType::LongDouble)
+      BT && BT->getKind() == BuiltinType::LongDouble &&
+      getContext().getTypeSize(Ty) > 64)
     return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
                                    /*ByVal=*/false);
 
@@ -103,7 +104,8 @@ ABIArgInfo SparcV8ABIInfo::classifyArgumentType(QualType Ty) const {
   }
 
   const auto *BT = Ty->getAs<BuiltinType>();
-  if (BT && BT->getKind() == BuiltinType::LongDouble)
+  if (BT && BT->getKind() == BuiltinType::LongDouble &&
+      getContext().getTypeSize(Ty) > 64)
     return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
 
   return DefaultABIInfo::classifyArgumentType(Ty);
