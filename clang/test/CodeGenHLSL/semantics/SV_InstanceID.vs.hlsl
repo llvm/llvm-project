@@ -7,8 +7,8 @@
 // CHECK: define void @main() {{.*}} {
 uint main(uint id : SV_InstanceID) : A {
   // Vulkan's InstanceIndex builtin is not zero-based when a non-zero
-  // FirstInstance is used, unlike HLSL's SV_InstanceID. Compensate by
-  // subtracting the BaseInstance builtin (matches DXC's SPIR-V backend).
+  // FirstInstance is used, unlike HLSL's SV_InstanceID.
+  // Resolve by subtracting the BaseInstance builtin.
   // CHECK-SPIRV: %[[INDEX:.*]] = load i32, ptr addrspace(7) @SV_InstanceID, align 4
   // CHECK-SPIRV: %[[BASE:.*]] = load i32, ptr addrspace(7) @SV_InstanceID.base, align 4
   // CHECK-SPIRV: %[[INPUT:.*]] = sub i32 %[[INDEX]], %[[BASE]]
