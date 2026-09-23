@@ -155,14 +155,16 @@ static bool getUnderlyingObjectsForInstr(const MachineInstr *MI,
       Objects.push_back(PSV);
     } else if (const Value *V = MMO->getValue()) {
       SmallVector<Value *, 4> Objs;
-      AllObjectsIdentified &= getUnderlyingObjectsForCodeGen(V, Objs);
+      bool ObjectsIdentified = getUnderlyingObjectsForCodeGen(V, Objs);
+      AllObjectsIdentified &= ObjectsIdentified;
 
       for (Value *V : Objs) {
-        assert(!AllObjectsIdentified || isIdentifiedObject(V));
+        assert(!ObjectsIdentified || isIdentifiedObject(V));
         Objects.push_back(V);
       }
-    } else
+    } else {
       AllObjectsIdentified = false;
+    }
   }
 
   return AllObjectsIdentified;
