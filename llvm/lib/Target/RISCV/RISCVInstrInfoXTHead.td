@@ -44,7 +44,7 @@ def ImmThreeAsmOperand : AsmOperandClass {
 def immthree : RISCVOp {
   let ParserMatchClass = ImmThreeAsmOperand;
   let OperandType = "OPERAND_THREE";
-  let DecoderMethod = "decodeImmThreeOperand";
+  let DecoderMethod = "decodeFixedImmOperand<3>";
 }
 
 def ImmFourAsmOperand : AsmOperandClass {
@@ -57,7 +57,7 @@ def ImmFourAsmOperand : AsmOperandClass {
 def immfour : RISCVOp {
   let ParserMatchClass = ImmFourAsmOperand;
   let OperandType = "OPERAND_FOUR";
-  let DecoderMethod = "decodeImmFourOperand";
+  let DecoderMethod = "decodeFixedImmOperand<4>";
 }
 
 def tuimm2 : TImmLeaf<XLenVT, [{return isUInt<2>(Imm);}]>;

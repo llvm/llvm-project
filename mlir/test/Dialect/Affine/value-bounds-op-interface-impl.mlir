@@ -327,3 +327,58 @@ func.func @affine_for_iv_multi_result_bounds(%n: index) {
   }
   return
 }
+
+// -----
+
+// Tiled `scf.for` + `affine.min` remainder. `%tile = minui(1, %n)` so
+// `%tile <= 1`, hence `%bytes = affine.min * 64` is `<= 64`. `{constant}`
+// reifies an exclusive UB, so the bound is 65.
+//
+// `affine.min` inserts `%iv`, `%ub`, and `%tile` as symbols. Processing
+// `%ub = arith.minui` calls `isProvablyNonNegative`, which inserts a new
+// SetDim and shifts every symbol column. The worklist must still visit
+// `%tile`; otherwise the bound is the remainder `16384 * 64` (exclusive
+// 1048577) and `tile <= 1` is never added.
+// CHECK-LABEL: func @affine_min_scf_for_stale_worklist_minui_tile
+//       CHECK:   %[[c65:.*]] = arith.constant 65 : index
+//       CHECK:   scf.yield %[[c65]]
+func.func @affine_min_scf_for_stale_worklist_minui_tile(%n: index) -> index {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c64 = arith.constant 64 : index
+  %c16384 = arith.constant 16384 : index
+  %ub = arith.minui %n, %c16384 : index
+  %tile = arith.minui %c1, %n : index
+  %ret = scf.for %iv = %c0 to %ub step %tile iter_args(%acc = %c0) -> index {
+    %min = affine.min affine_map<(d0)[s0, s1] -> (-d0 + s0, s1)>(%iv)[%ub, %tile]
+    %bytes = arith.muli %min, %c64 : index
+    %bound = "test.reify_bound"(%bytes) {type = "UB", constant} : (index) -> (index)
+    scf.yield %bound : index
+  }
+  return %ret : index
+}
+
+// -----
+
+// Same min, but the remainder is `arith.subi` + `arith.minui`. Tile is
+// processed, so the exclusive UB is 65 even before the worklist identity
+// fix.
+// CHECK-LABEL: func @affine_min_scf_for_minui_remainder
+//       CHECK:   %[[c65:.*]] = arith.constant 65 : index
+//       CHECK:   scf.yield %[[c65]]
+func.func @affine_min_scf_for_minui_remainder(%n: index) -> index {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c64 = arith.constant 64 : index
+  %c16384 = arith.constant 16384 : index
+  %ub = arith.minui %n, %c16384 : index
+  %tile = arith.minui %c1, %n : index
+  %ret = scf.for %iv = %c0 to %ub step %tile iter_args(%acc = %c0) -> index {
+    %rem = arith.subi %ub, %iv : index
+    %min = arith.minui %rem, %tile : index
+    %bytes = arith.muli %min, %c64 : index
+    %bound = "test.reify_bound"(%bytes) {type = "UB", constant} : (index) -> (index)
+    scf.yield %bound : index
+  }
+  return %ret : index
+}

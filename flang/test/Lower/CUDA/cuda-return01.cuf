@@ -43,6 +43,7 @@ end
 ! CHECK: %[[PTR:.*]]:2 = hlfir.declare %{{.*}} {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFEp"}
 ! CHECK: %[[ACTIVE:.*]] = fir.call @_FortranACUFDeviceIsActive() {{.*}} : () -> i1
 ! CHECK-NEXT: fir.if %[[ACTIVE]] {
+! CHECK-NEXT: fir.call @_QPcudadevicesynchronize()
 ! CHECK-NEXT: cuf.free %[[PTR]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>{{.*}}
 ! CHECK: cuf.deallocate
 ! CHECK: cuf.free{{.*}}

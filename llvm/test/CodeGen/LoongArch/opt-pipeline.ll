@@ -152,7 +152,10 @@
 ; LAXX-NEXT:       Machine Optimization Remark Emitter
 ; LAXX-NEXT:       Shrink Wrapping analysis
 ; LAXX-NEXT:       Prologue/Epilogue Insertion & Frame Finalization
+; LAXX-NEXT:       LoongArch Late Branch Optimisation Pass
 ; LAXX-NEXT:       Machine Late Instructions Cleanup Pass
+; LAXX-NEXT:       Machine Cycle Info Analysis
+; LAXX-NEXT:       Machine Block Frequency Analysis
 ; LAXX-NEXT:       Control Flow Optimizer
 ; LAXX-NEXT:       Lazy Machine Block Frequency Analysis
 ; LAXX-NEXT:       Tail Duplication
@@ -160,6 +163,7 @@
 ; LAXX-NEXT:       Post-RA pseudo instruction expansion pass
 ; LAXX-NEXT:       MachineDominator Tree Construction
 ; LAXX-NEXT:       Machine Natural Loop Construction
+; LAXX-NEXT:       Machine Register Class Info Analysis
 ; LAXX-NEXT:       Post RA top-down list latency scheduler
 ; LAXX-NEXT:       Analyze Machine Code For Garbage Collection
 ; LAXX-NEXT:       Machine Cycle Info Analysis
@@ -180,6 +184,9 @@
 ; LAXX-NEXT:       Stack Frame Layout Analysis
 ; LAXX-NEXT:       LoongArch pseudo instruction expansion pass
 ; LAXX-NEXT:       LoongArch atomic pseudo instruction expansion pass
+; LAXX-NEXT:       MachineDominator Tree Construction
+; LAXX-NEXT:       MachinePostDominator Tree Construction
+; LAXX-NEXT:       LoongArch Memory Barrier Optimisation pass
 ; LAXX-NEXT:       Lazy Machine Block Frequency Analysis
 ; LAXX-NEXT:       Machine Optimization Remark Emitter
 ; LAXX-NEXT:       LoongArch Assembly Printer

@@ -59,6 +59,7 @@ licenses(["notice"])
             "CprojTest.h",
             func_name + "_test.cpp",
         ],
+        overlay_build_only = func_name == "cprojf",  # Depends on mpfr
         deps = ["//libc:func_name".replace("func_name", func_name)] + [
             "//libc:hdr_math_macros",
             "//libc/test/UnitTest:fp_test_helpers",
