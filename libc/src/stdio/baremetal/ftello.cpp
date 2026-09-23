@@ -27,12 +27,13 @@ LLVM_LIBC_FUNCTION(off_t, ftello, (::FILE * stream)) {
     libc_errno = EINVAL;
     return static_cast<off_t>(-1);
   }
-  off_t result = __llvm_libc_stdio_seek(stream, 0, SEEK_CUR);
+  off_t offset;
+  int result = __llvm_libc_stdio_seek(stream, &offset, SEEK_CUR);
   if (result < 0) {
     libc_errno = static_cast<int>(-result);
     return static_cast<off_t>(-1);
   }
-  return result;
+  return offset;
 }
 
 } // namespace LIBC_NAMESPACE_DECL
