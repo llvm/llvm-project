@@ -181,12 +181,11 @@ def prepare(config, litConfig):
     os.makedirs(root, exist_ok=True)
 
     cmake = _expand(config, _getSubstitution("%{cmake}", config))
-    cmake_generator = _expand(config, _getSubstitution("%{cmake_generator}", config))
-    cmake_make_program = _expand(config, _getSubstitution("%{cmake_make_program}", config))
-
     if not os.path.exists(os.path.join(buildDir, "CMakeCache.txt")):
         litConfig.note("Configuring GoogleBenchmark in {}".format(buildDir))
         compiler = _expand(config, _getSubstitution("%{cxx}", config))
+        cmake_generator = _expand(config, _getSubstitution("%{cmake_generator}", config))
+        cmake_make_program = _expand(config, _getSubstitution("%{cmake_make_program}", config))
         _run(
             litConfig,
             "configure",
