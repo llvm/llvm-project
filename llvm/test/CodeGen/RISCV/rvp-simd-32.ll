@@ -3827,3 +3827,88 @@ define i32 @test_maccsu_h11_i32(i32 %rd, <2 x i16> %a, <2 x i16> %b) {
   %r = call i32 @llvm.riscv.maccsu.11.i32.v2i16(i32 %rd, <2 x i16> %a, <2 x i16> %b)
   ret i32 %r
 }
+
+; Scalar multiply high
+define i32 @test_mulh_i32(i32 %rs1, i32 %rs2) {
+; RV32-LABEL: test_mulh_i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mulh a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_mulh_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pmulh.w a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call i32 @llvm.riscv.mulh.i32(i32 %rs1, i32 %rs2)
+  ret i32 %res
+}
+
+define i32 @test_mulhr_i32(i32 %rs1, i32 %rs2) {
+; RV32-LABEL: test_mulhr_i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mulhr a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_mulhr_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pmulhr.w a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call i32 @llvm.riscv.mulhr.i32(i32 %rs1, i32 %rs2)
+  ret i32 %res
+}
+
+define i32 @test_mulhu_u32(i32 %rs1, i32 %rs2) {
+; RV32-LABEL: test_mulhu_u32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mulhu a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_mulhu_u32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pmulhu.w a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call i32 @llvm.riscv.mulhu.u32(i32 %rs1, i32 %rs2)
+  ret i32 %res
+}
+
+define i32 @test_mulhru_u32(i32 %rs1, i32 %rs2) {
+; RV32-LABEL: test_mulhru_u32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mulhru a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_mulhru_u32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pmulhru.w a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call i32 @llvm.riscv.mulhru.u32(i32 %rs1, i32 %rs2)
+  ret i32 %res
+}
+
+define i32 @test_mulhsu_i32(i32 %rs1, i32 %rs2) {
+; RV32-LABEL: test_mulhsu_i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mulhsu a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_mulhsu_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pmulhsu.w a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call i32 @llvm.riscv.mulhsu.i32(i32 %rs1, i32 %rs2)
+  ret i32 %res
+}
+
+define i32 @test_mulhrsu_i32(i32 %rs1, i32 %rs2) {
+; RV32-LABEL: test_mulhrsu_i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mulhrsu a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_mulhrsu_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pmulhrsu.w a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call i32 @llvm.riscv.mulhrsu.i32(i32 %rs1, i32 %rs2)
+  ret i32 %res
+}

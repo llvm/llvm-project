@@ -400,6 +400,20 @@ __packed_pabs(abs_u32, int32_t, uint32_t)
 __packed_pabs(abs_u64, int64_t, uint64_t)
 #endif
 
+/* Scalar Multiply High */
+#define __packed_mulh_builtin(name, res_ty, ty1, ty2)                          \
+  static __inline__ res_ty __DEFAULT_FN_ATTRS __riscv_##name(ty1 __rs1,        \
+                                                             ty2 __rs2) {      \
+    return __builtin_riscv_##name(__rs1, __rs2);                               \
+  }
+__packed_mulh_builtin(mulh_i32, int32_t, int32_t, int32_t)
+__packed_mulh_builtin(mulhr_i32, int32_t, int32_t, int32_t)
+__packed_mulh_builtin(mulhu_u32, uint32_t, uint32_t, uint32_t)
+__packed_mulh_builtin(mulhru_u32, uint32_t, uint32_t, uint32_t)
+__packed_mulh_builtin(mulhsu_i32, int32_t, int32_t, uint32_t)
+__packed_mulh_builtin(mulhrsu_i32, int32_t, int32_t, uint32_t)
+#undef __packed_mulh_builtin
+
 /* Packed Splat (32-bit) */
 __packed_splat(pmv_s_u8x4, uint8x4_t, uint8_t, __packed_splat4)
 __packed_splat(pmv_s_i8x4, int8x4_t, int8_t, __packed_splat4)

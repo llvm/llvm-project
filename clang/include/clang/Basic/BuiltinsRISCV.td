@@ -247,6 +247,14 @@ def pmerge_i16x4 : RISCVBuiltin<"_Vector<4, short>(_Vector<4, short>, _Vector<4,
 def pmerge_u32x2 : RISCVBuiltin<"_Vector<2, unsigned int>(_Vector<2, unsigned int>, _Vector<2, unsigned int>, _Vector<2, unsigned int>)">;
 def pmerge_i32x2 : RISCVBuiltin<"_Vector<2, int>(_Vector<2, int>, _Vector<2, int>, _Vector<2, unsigned int>)">;
 
+// Scalar Multiply High
+def mulh_i32 : RISCVBuiltin<"int32_t(int32_t, int32_t)">;
+def mulhr_i32 : RISCVBuiltin<"int32_t(int32_t, int32_t)">;
+def mulhu_u32 : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
+def mulhru_u32 : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
+def mulhsu_i32 : RISCVBuiltin<"int32_t(int32_t, uint32_t)">;
+def mulhrsu_i32 : RISCVBuiltin<"int32_t(int32_t, uint32_t)">;
+
 // Packed Multiply High (32-bit)
 def pmulh_i16x2 : RISCVBuiltin<"_Vector<2, short>(_Vector<2, short>, _Vector<2, short>)">;
 def pmulhr_i16x2 : RISCVBuiltin<"_Vector<2, short>(_Vector<2, short>, _Vector<2, short>)">;
