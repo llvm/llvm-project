@@ -19,6 +19,7 @@
 #include "llvm/IR/IntrinsicsDirectX.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/MC/DXContainerPSVInfo.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
 #include <set>
@@ -390,6 +391,83 @@ MDNode *emitSignature(LLVMContext &Ctx,
   return MDNode::get(Ctx, Nodes);
 }
 
+dxbc::SigComponentType getComponentType(ElementType Type, bool Legacy) {
+  switch (Type) {
+  case ElementType::I1:
+    return Legacy ? dxbc::SigComponentType::Unknown
+                  : dxbc::SigComponentType::UInt32;
+  case ElementType::I16:
+    return dxbc::SigComponentType::SInt16;
+  case ElementType::U16:
+    return dxbc::SigComponentType::UInt16;
+  case ElementType::I32:
+    return dxbc::SigComponentType::SInt32;
+  case ElementType::U32:
+    return dxbc::SigComponentType::UInt32;
+  case ElementType::F16:
+    return dxbc::SigComponentType::Float16;
+  case ElementType::F32:
+    return dxbc::SigComponentType::Float32;
+  default:
+    llvm_unreachable("validated signature component type");
+  }
+}
+
+dxbc::D3DSystemValue getSystemValue(dxbc::PSV::SemanticKind Kind) {
+  using KindTy = dxbc::PSV::SemanticKind;
+  switch (Kind) {
+  case KindTy::Arbitrary:
+    return dxbc::D3DSystemValue::Undefined;
+  case KindTy::VertexID:
+    return dxbc::D3DSystemValue::VertexID;
+  case KindTy::Position:
+    return dxbc::D3DSystemValue::Position;
+  case KindTy::IsFrontFace:
+    return dxbc::D3DSystemValue::IsFrontFace;
+  case KindTy::ClipDistance:
+    return dxbc::D3DSystemValue::ClipDistance;
+  case KindTy::CullDistance:
+    return dxbc::D3DSystemValue::CullDistance;
+  case KindTy::Target:
+    return dxbc::D3DSystemValue::Target;
+  default:
+    llvm_unreachable("validated vertex/pixel signature semantic");
+  }
+}
+
+void buildSignature(mcdxbc::Signature &Sig,
+                    ArrayRef<SemanticSignatureElement> Elements, bool Input,
+                    bool Native16, bool Legacy) {
+  for (const auto &E : Elements) {
+    uint8_t Mask = E.getDeclaredMask();
+    uint8_t ExclusiveMask =
+        Input ? E.getAlwaysReadsMask() : E.getNeverWritesMask();
+    if (Legacy)
+      ExclusiveMask = Input ? 0 : static_cast<uint8_t>(~Mask);
+    for (auto [Row, Index] : enumerate(E.SemanticIndices))
+      Sig.addParam(E.GSStream, E.SemanticName, Index,
+                   getSystemValue(E.SemanticKind),
+                   getComponentType(E.CompType, Legacy), E.StartRow + Row, Mask,
+                   ExclusiveMask, E.getMinPrecision(!Native16));
+  }
+}
+
+void buildPSVElements(SmallVectorImpl<mcdxbc::PSVSignatureElement> &Dest,
+                      ArrayRef<SemanticSignatureElement> Elements,
+                      bool Legacy) {
+  for (const auto &E : Elements) {
+    auto Type = getComponentType(E.CompType, Legacy);
+    // SigComponentType and PSV ComponentType share COMPONENT_TYPE definitions.
+    Dest.push_back({E.SemanticKind == dxbc::PSV::SemanticKind::Arbitrary
+                        ? E.SemanticName
+                        : StringRef(),
+                    E.SemanticIndices, static_cast<uint8_t>(E.StartRow), E.Cols,
+                    E.StartCol, E.isAllocated(), E.SemanticKind,
+                    static_cast<dxbc::PSV::ComponentType>(Type), E.InterpMode,
+                    E.DynIndexMask, static_cast<uint8_t>(E.GSStream)});
+  }
+}
+
 } // namespace
 
 MDTuple *EntrySignature::getAsMetadata(LLVMContext &Ctx,
@@ -399,6 +477,40 @@ MDTuple *EntrySignature::getAsMetadata(LLVMContext &Ctx,
   return MDNode::get(Ctx,
                      {emitSignature(Ctx, Inputs, ValidatorVersion),
                       emitSignature(Ctx, Outputs, ValidatorVersion), nullptr});
+}
+
+void EntrySignature::buildSignatures(mcdxbc::Signature &Input,
+                                     mcdxbc::Signature &Output,
+                                     VersionTuple ValidatorVersion) const {
+  bool Legacy = !ValidatorVersion.empty() &&
+                ValidatorVersion != VersionTuple(0, 0) &&
+                ValidatorVersion < VersionTuple(1, 5);
+  buildSignature(Input, Inputs, true, UseNative16Bit, Legacy);
+  buildSignature(Output, Outputs, false, UseNative16Bit, Legacy);
+}
+
+void EntrySignature::updatePSV(mcdxbc::PSVRuntimeInfo &PSV,
+                               VersionTuple ValidatorVersion) const {
+  bool Legacy = !ValidatorVersion.empty() &&
+                ValidatorVersion != VersionTuple(0, 0) &&
+                ValidatorVersion < VersionTuple(1, 5);
+  buildPSVElements(PSV.InputElements, Inputs, Legacy);
+  buildPSVElements(PSV.OutputElements, Outputs, Legacy);
+  PSV.BaseData.SigInputVectors = InputVectors;
+  PSV.BaseData.SigOutputVectors[0] = OutputVectors;
+  PSV.InputOutputMap[0] = InputOutputMap;
+  if (Stage == Triple::Vertex)
+    PSV.BaseData.StageInfo.VS.OutputPositionPresent =
+        llvm::any_of(Outputs, [](const auto &E) {
+          return E.SemanticKind == dxbc::PSV::SemanticKind::Position;
+        });
+  if (Stage == Triple::Pixel)
+    PSV.BaseData.StageInfo.PS.SampleFrequency =
+        llvm::any_of(Inputs, [](const auto &E) {
+          return E.InterpMode == dxbc::PSV::InterpolationMode::LinearSample ||
+                 E.InterpMode ==
+                     dxbc::PSV::InterpolationMode::LinearNoperspectiveSample;
+        });
 }
 
 SmallVector<uint32_t> EntrySignature::getDependencyState() const {

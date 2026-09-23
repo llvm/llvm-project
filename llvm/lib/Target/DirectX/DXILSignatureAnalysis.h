@@ -18,6 +18,11 @@
 
 namespace llvm {
 class MDTuple;
+namespace mcdxbc {
+class Signature;
+struct PSVRuntimeInfo;
+} // namespace mcdxbc
+
 namespace dxil {
 
 /// Finalized signature information, independent of the source metadata and of
@@ -33,6 +38,10 @@ struct EntrySignature {
   bool UseNative16Bit = false;
 
   MDTuple *getAsMetadata(LLVMContext &Ctx, VersionTuple ValidatorVersion) const;
+  void buildSignatures(mcdxbc::Signature &Input, mcdxbc::Signature &Output,
+                       VersionTuple ValidatorVersion) const;
+  void updatePSV(mcdxbc::PSVRuntimeInfo &PSV,
+                 VersionTuple ValidatorVersion) const;
   SmallVector<uint32_t> getDependencyState() const;
   void print(raw_ostream &OS) const;
 };
