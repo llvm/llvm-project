@@ -6,14 +6,12 @@
 // CHECK: [[A:%.*]] = alloca [2 x [1 x i32]], align 4
 // CHECK-NEXT: [[B:%.*]] = alloca <2 x i32>, align 4
 // CHECK-NEXT: [[Tmp:%.*]] = alloca [2 x [1 x i32]], align 4
-// CHECK-NEXT: [[Tmp2:%.*]] = alloca <2 x i32>, align 4
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[A]], ptr align 4 {{.*}}, i32 8, i1 false)
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[Tmp]], ptr align 4 [[A]], i32 8, i1 false)
 // CHECK-NEXT: [[G1:%.*]] = getelementptr inbounds [2 x [1 x i32]], ptr [[Tmp]], i32 0, i32 0, i32 0
 // CHECK-NEXT: [[G2:%.*]] = getelementptr inbounds [2 x [1 x i32]], ptr [[Tmp]], i32 0, i32 1, i32 0
-// CHECK-NEXT: [[C:%.*]] = load <2 x i32>, ptr [[Tmp2]], align 4
 // CHECK-NEXT: [[L:%.*]] = load i32, ptr [[G1]], align 4
-// CHECK-NEXT: [[D:%.*]] = insertelement <2 x i32> [[C]], i32 [[L]], i64 0
+// CHECK-NEXT: [[D:%.*]] = insertelement <2 x i32> poison, i32 [[L]], i64 0
 // CHECK-NEXT: [[L2:%.*]] = load i32, ptr [[G2]], align 4
 // CHECK-NEXT: [[E:%.*]] = insertelement <2 x i32> [[D]], i32 [[L2]], i64 1
 // CHECK-NEXT: store <2 x i32> [[E]], ptr [[B]], align 4
@@ -32,14 +30,12 @@ struct S {
 // CHECK: [[s:%.*]] = alloca %struct.S, align 1
 // CHECK-NEXT: [[A:%.*]] = alloca <2 x i32>, align 4
 // CHECK-NEXT: [[Tmp:%.*]] = alloca %struct.S, align 1
-// CHECK-NEXT: [[Tmp2:%.*]] = alloca <2 x i32>, align 4
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[s]], ptr align 1 {{.*}}, i32 8, i1 false)
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[Tmp]], ptr align 1 [[s]], i32 8, i1 false)
 // CHECK-NEXT: [[G1:%.*]] = getelementptr inbounds %struct.S, ptr [[Tmp]], i32 0, i32 0
 // CHECK-NEXT: [[G2:%.*]] = getelementptr inbounds %struct.S, ptr [[Tmp]], i32 0, i32 1
-// CHECK-NEXT: [[B:%.*]] = load <2 x i32>, ptr [[Tmp2]], align 4
 // CHECK-NEXT: [[L:%.*]] = load i32, ptr [[G1]], align 4
-// CHECK-NEXT: [[C:%.*]] = insertelement <2 x i32> [[B]], i32 [[L]], i64 0
+// CHECK-NEXT: [[C:%.*]] = insertelement <2 x i32> poison, i32 [[L]], i64 0
 // CHECK-NEXT: [[L2:%.*]] = load float, ptr [[G2]], align 4
 // CHECK-NEXT: [[D:%.*]] = fptosi float [[L2]] to i32
 // CHECK-NEXT: [[E:%.*]] = insertelement <2 x i32> [[C]], i32 [[D]], i64 1
@@ -99,7 +95,6 @@ struct Derived : BFields {
 // CHECK-NEXT: [[D_INDIRECT_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT: [[A:%.*]] = alloca <4 x i32>, align 4
 // CHECK-NEXT: [[Tmp:%.*]] = alloca %struct.Derived, align 1
-// CHECK-NEXT: [[FlatTmp:%.*]] = alloca <4 x i32>, align 4
 // CHECK-NEXT: store ptr %D, ptr [[D_INDIRECT_ADDR]], align 4
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[Tmp]], ptr align 1 %D, i32 19, i1 false)
 // CHECK-NEXT: [[Gep:%.*]] = getelementptr inbounds %struct.Derived, ptr [[Tmp]], i32 0, i32 0
@@ -107,10 +102,9 @@ struct Derived : BFields {
 // CHECK-NEXT: [[Gep1:%.*]] = getelementptr inbounds %struct.Derived, ptr [[Tmp]], i32 0, i32 0, i32 0
 // CHECK-NEXT: [[Gep2:%.*]] = getelementptr inbounds %struct.Derived, ptr [[Tmp]], i32 0, i32 0, i32 2
 // CHECK-NEXT: [[Gep3:%.*]] = getelementptr inbounds %struct.Derived, ptr [[Tmp]], i32 0, i32 1
-// CHECK-NEXT: [[Z:%.*]] = load <4 x i32>, ptr [[FlatTmp]], align 4
 // CHECK-NEXT: [[Y:%.*]] = load double, ptr [[Gep1]], align 8
 // CHECK-NEXT: [[C:%.*]] = fptosi double [[Y]] to i32
-// CHECK-NEXT: [[X:%.*]] = insertelement <4 x i32> [[Z]], i32 [[C]], i64 0
+// CHECK-NEXT: [[X:%.*]] = insertelement <4 x i32> poison, i32 [[C]], i64 0
 // CHECK-NEXT: [[BFL:%.*]] = load i24, ptr [[E]], align 1
 // CHECK-NEXT: [[BFShl:%.*]] = shl i24 [[BFL]], 9
 // CHECK-NEXT: [[BFAshr:%.*]] = ashr i24 [[BFShl]], 9
@@ -132,15 +126,13 @@ export void call6(Derived D) {
 // CHECK:    [[M_ADDR:%.*]] = alloca [2 x <2 x float>], align 4
 // CHECK-NEXT:    [[V:%.*]] = alloca <4 x float>, align 4
 // CHECK-NEXT:    [[HLSL_EWCAST_SRC:%.*]] = alloca [2 x <2 x float>], align 4
-// CHECK-NEXT:    [[FLATCAST_TMP:%.*]] = alloca <4 x float>, align 4
 // CHECK-NEXT:    store <4 x float> %M, ptr [[M_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[M_ADDR]], align 4
 // CHECK-NEXT:    store <4 x float> [[TMP0]], ptr [[HLSL_EWCAST_SRC]], align 4
 // CHECK-NEXT:    [[MATRIX_GEP:%.*]] = getelementptr inbounds <4 x float>, ptr [[HLSL_EWCAST_SRC]], i32 0
-// CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[FLATCAST_TMP]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[MATRIX_GEP]], align 4
 // CHECK-NEXT:    [[MATRIXEXT:%.*]] = extractelement <4 x float> [[TMP2]], i32 0
-// CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> [[TMP1]], float [[MATRIXEXT]], i64 0
+// CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> poison, float [[MATRIXEXT]], i64 0
 // CHECK-NEXT:    [[TMP4:%.*]] = load <4 x float>, ptr [[MATRIX_GEP]], align 4
 // COL-CHECK-NEXT:    [[MATRIXEXT1:%.*]] = extractelement <4 x float> [[TMP4]], i32 2
 // ROW-CHECK-NEXT:    [[MATRIXEXT1:%.*]] = extractelement <4 x float> [[TMP4]], i32 1
@@ -165,15 +157,13 @@ export void call7(float2x2 M) {
 // CHECK-NEXT:    [[V:%.*]] = alloca <3 x i32>, align 4
 // COL-CHECK-NEXT:    [[HLSL_EWCAST_SRC:%.*]] = alloca [1 x <3 x i32>], align 4
 // ROW-CHECK-NEXT:    [[HLSL_EWCAST_SRC:%.*]] = alloca [3 x <1 x i32>], align 4
-// CHECK-NEXT:    [[FLATCAST_TMP:%.*]] = alloca <3 x i32>, align 4
 // CHECK-NEXT:    store <3 x i32> %M, ptr [[M_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <3 x i32>, ptr [[M_ADDR]], align 4
 // CHECK-NEXT:    store <3 x i32> [[TMP0]], ptr [[HLSL_EWCAST_SRC]], align 4
 // CHECK-NEXT:    [[MATRIX_GEP:%.*]] = getelementptr inbounds <3 x i32>, ptr [[HLSL_EWCAST_SRC]], i32 0
-// CHECK-NEXT:    [[TMP1:%.*]] = load <3 x i32>, ptr [[FLATCAST_TMP]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = load <3 x i32>, ptr [[MATRIX_GEP]], align 4
 // CHECK-NEXT:    [[MATRIXEXT:%.*]] = extractelement <3 x i32> [[TMP2]], i32 0
-// CHECK-NEXT:    [[TMP3:%.*]] = insertelement <3 x i32> [[TMP1]], i32 [[MATRIXEXT]], i64 0
+// CHECK-NEXT:    [[TMP3:%.*]] = insertelement <3 x i32> poison, i32 [[MATRIXEXT]], i64 0
 // CHECK-NEXT:    [[TMP4:%.*]] = load <3 x i32>, ptr [[MATRIX_GEP]], align 4
 // CHECK-NEXT:    [[MATRIXEXT1:%.*]] = extractelement <3 x i32> [[TMP4]], i32 1
 // CHECK-NEXT:    [[TMP5:%.*]] = insertelement <3 x i32> [[TMP3]], i32 [[MATRIXEXT1]], i64 1
@@ -193,17 +183,15 @@ export void call8(int3x1 M) {
 // CHECK-NEXT:    [[V:%.*]] = alloca <2 x i32>, align 4
 // COL-CHECK-NEXT:    [[HLSL_EWCAST_SRC:%.*]] = alloca [2 x <1 x i32>], align 4
 // ROW-CHECK-NEXT:    [[HLSL_EWCAST_SRC:%.*]] = alloca [1 x <2 x i32>], align 4
-// CHECK-NEXT:    [[FLATCAST_TMP:%.*]] = alloca <2 x i1>, align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = zext <2 x i1> %M to <2 x i32>
 // CHECK-NEXT:    store <2 x i32> [[TMP0]], ptr [[M_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[M_ADDR]], align 4
 // CHECK-NEXT:    store <2 x i32> [[TMP1]], ptr [[HLSL_EWCAST_SRC]], align 4
 // CHECK-NEXT:    [[MATRIX_GEP:%.*]] = getelementptr inbounds <2 x i32>, ptr [[HLSL_EWCAST_SRC]], i32 0
-// CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i1>, ptr [[FLATCAST_TMP]], align 4
 // CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr [[MATRIX_GEP]], align 4
 // CHECK-NEXT:    [[MATRIXEXT:%.*]] = extractelement <2 x i32> [[TMP3]], i32 0
 // CHECK-NEXT:    [[LOADEDV:%.*]] = icmp ne i32 [[MATRIXEXT]], 0
-// CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i1> [[TMP2]], i1 [[LOADEDV]], i64 0
+// CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i1> poison, i1 [[LOADEDV]], i64 0
 // CHECK-NEXT:    [[TMP5:%.*]] = load <2 x i32>, ptr [[MATRIX_GEP]], align 4
 // CHECK-NEXT:    [[MATRIXEXT1:%.*]] = extractelement <2 x i32> [[TMP5]], i32 1
 // CHECK-NEXT:    [[LOADEDV2:%.*]] = icmp ne i32 [[MATRIXEXT1]], 0
@@ -226,15 +214,13 @@ struct BoolVecStruct {
 // CHECK-NEXT:  [[S_INDIRECT_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[V:%.*]] = alloca <2 x i32>, align 4
 // CHECK-NEXT:    [[AGG_TEMP:%.*]] = alloca %struct.BoolVecStruct, align 1
-// CHECK-NEXT:    [[FLATCAST_TMP:%.*]] = alloca <2 x i1>, align 4
 // CHECK-NEXT:    store ptr %s, ptr [[S_INDIRECT_ADDR]], align 4
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[AGG_TEMP]], ptr align 1 %s, i32 8, i1 false)
 // CHECK-NEXT:    [[VECTOR_GEP:%.*]] = getelementptr inbounds %struct.BoolVecStruct, ptr [[AGG_TEMP]], i32 0, i32 0
-// CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i1>, ptr [[FLATCAST_TMP]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[VECTOR_GEP]], align 4
 // CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
 // CHECK-NEXT:    [[LOADEDV:%.*]] = icmp ne i32 [[VECEXT]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i1> [[TMP0]], i1 [[LOADEDV]], i64 0
+// CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i1> poison, i1 [[LOADEDV]], i64 0
 // CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr [[VECTOR_GEP]], align 4
 // CHECK-NEXT:    [[VECEXT1:%.*]] = extractelement <2 x i32> [[TMP3]], i32 1
 // CHECK-NEXT:    [[LOADEDV2:%.*]] = icmp ne i32 [[VECEXT1]], 0

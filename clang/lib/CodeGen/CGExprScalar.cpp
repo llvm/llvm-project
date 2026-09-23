@@ -2565,8 +2565,7 @@ static Value *EmitHLSLElementwiseCast(CodeGenFunction &CGF, LValue SrcVal,
     assert(LoadList.size() >= VecTy->getNumElements() &&
            "Flattened type on RHS must have the same number or more elements "
            "than vector on LHS.");
-    llvm::Value *V = CGF.Builder.CreateLoad(
-        CGF.CreateIRTempWithoutCast(DestTy, "flatcast.tmp"));
+    llvm::Value *V = llvm::PoisonValue::get(CGF.ConvertType(DestTy));
     // write to V.
     for (unsigned I = 0, E = VecTy->getNumElements(); I < E; I++) {
       RValue RVal = CGF.EmitLoadOfLValue(LoadList[I], Loc);
@@ -2586,8 +2585,7 @@ static Value *EmitHLSLElementwiseCast(CodeGenFunction &CGF, LValue SrcVal,
 
     bool IsRowMajor = isMatrixRowMajor(CGF.getLangOpts(), DestTy);
 
-    llvm::Value *V = CGF.Builder.CreateLoad(
-        CGF.CreateIRTempWithoutCast(DestTy, "flatcast.tmp"));
+    llvm::Value *V = llvm::PoisonValue::get(CGF.ConvertType(DestTy));
     // V is an allocated temporary for constructing the matrix.
     for (unsigned Row = 0, RE = MatTy->getNumRows(); Row < RE; Row++) {
       for (unsigned Col = 0, CE = MatTy->getNumColumns(); Col < CE; Col++) {
