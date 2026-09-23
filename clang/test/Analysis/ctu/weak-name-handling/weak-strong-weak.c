@@ -2,9 +2,9 @@
 // RUN: mkdir -p %t
 // RUN: split-file %s %t
 
-// RUN: %clang_cc1 -x c -emit-pch -o %t/a.c.ast %t/a.c
-// RUN: %clang_cc1 -x c -emit-pch -o %t/b.c.ast %t/b.c
-// RUN: %clang_cc1 -x c -emit-pch -o %t/c.c.ast %t/c.c
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -x c -emit-pch -o %t/a.c.ast %t/a.c
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -x c -emit-pch -o %t/b.c.ast %t/b.c
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -x c -emit-pch -o %t/c.c.ast %t/c.c
 
 // RUN: %clang_extdef_map %t/a.c.ast %t/b.c.ast %t/c.c.ast > %t/externalDefMap.tmp.txt 2> %t/extdef_err.txt
 // RUN: sed -e 's|%t\/||g' %t/externalDefMap.tmp.txt > %t/externalDefMap.txt
