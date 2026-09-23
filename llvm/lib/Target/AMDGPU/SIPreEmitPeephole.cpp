@@ -77,8 +77,7 @@ private:
   // Here, we have overwritten v0 before we use it. This function checks if
   // unpacking can lead to such a situation.
   bool canUnpackingClobberRegister(const MachineInstr &MI);
-  bool canSourceClobberRegister(const MachineInstr &MI,
-                                Register UnpackedDstReg,
+  bool canSourceClobberRegister(const MachineInstr &MI, Register UnpackedDstReg,
                                 AMDGPU::OpName SrcName,
                                 AMDGPU::OpName ModsName) const;
   bool hasUnsupportedVPKMovModifiers(const MachineInstr &MI) const;
