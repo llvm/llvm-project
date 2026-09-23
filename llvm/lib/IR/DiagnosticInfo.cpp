@@ -420,17 +420,20 @@ void DiagnosticInfoUnsupported::print(DiagnosticPrinter &DP) const {
 }
 
 DiagnosticInfoUnsupportedTargetIntrinsic::
-    DiagnosticInfoUnsupportedTargetIntrinsic(
-        const Function &Fn, unsigned IntrinsicID, FunctionType *IntrinsicType,
-        const DiagnosticLocation &Loc,
-        std::optional<StringRef> RequiredFeatures)
+    DiagnosticInfoUnsupportedTargetIntrinsic(const Function &Fn,
+                                             unsigned IntrinsicID,
+                                             FunctionType *IntrinsicType,
+                                             const DiagnosticLocation &Loc)
     : DiagnosticInfoWithLocationBase(DK_UnsupportedTargetIntrinsic, DS_Error,
                                      Fn, Loc),
-      IntrinsicID(IntrinsicID), IntrinsicType(IntrinsicType),
-      RequiredFeatures(RequiredFeatures) {
+      IntrinsicID(IntrinsicID), IntrinsicType(IntrinsicType) {
   assert(IntrinsicType && "intrinsic type should not be null");
-  assert((!RequiredFeatures || !RequiredFeatures->empty()) &&
+  StringRef Features = Intrinsic::getRequiredTargetFeatures(
+      static_cast<Intrinsic::ID>(IntrinsicID));
+  assert(!Features.empty() &&
          "intrinsic without required features should be supported");
+  if (!Features.contains(Intrinsic::CustomTargetFeatures))
+    RequiredFeatures = Features;
 }
 
 std::string DiagnosticInfoUnsupportedTargetIntrinsic::getMessage() const {

@@ -3,7 +3,7 @@
 ; RUN: llc -mtriple=amdgpu11.00 -amdgpu-enable-delay-alu=0 -mattr=+wavefrontsize32 < %s | FileCheck -check-prefixes=CHECK,GFX11 %s
 ; RUN: llvm-extract --func=constant_false -S %s | not llc -mtriple=amdgpu9.00 -filetype=null 2>&1 | FileCheck -check-prefix=ERR %s
 
-; ERR: error: {{.*}}: in function {{@?}}constant_false{{.*}}: llvm.amdgcn.ballot.i32 requires target feature 'wavefrontsize32'
+; ERR: error: {{.*}}: in function {{@?}}constant_false{{.*}}: llvm.amdgcn.ballot.i32 is not supported on this target
 
 declare i32 @llvm.amdgcn.ballot.i32(i1)
 declare i32 @llvm.ctpop.i32(i32)

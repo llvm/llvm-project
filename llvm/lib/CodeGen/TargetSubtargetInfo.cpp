@@ -12,6 +12,7 @@
 
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
 
@@ -27,60 +28,55 @@ TargetSubtargetInfo::TargetSubtargetInfo(
 
 TargetSubtargetInfo::~TargetSubtargetInfo() = default;
 
-bool TargetSubtargetInfo::isIntrinsicSupported(unsigned IntrinsicID) const {
+TargetSubtargetInfo::IntrinsicSupport
+TargetSubtargetInfo::getIntrinsicSupport(unsigned IntrinsicID) const {
   StringRef RequiredFeatures = Intrinsic::getRequiredTargetFeatures(
       static_cast<Intrinsic::ID>(IntrinsicID));
 
   if (RequiredFeatures.empty())
-    return true;
+    return IntrinsicSupport::Supported;
 
   auto [It, Inserted] = IntrinsicSupportCache.try_emplace(IntrinsicID);
-  if (Inserted)
-    It->second = !RequiredFeatures.contains(Intrinsic::CustomTargetFeatures) &&
-                 checkFeatureExpression(RequiredFeatures);
-  return It->second;
-}
+  if (!Inserted)
+    return It->second;
 
-bool TargetSubtargetInfo::isIntrinsicSupported(
-    unsigned IntrinsicID, const CallBase &CB,
-    std::optional<StringRef> &RequiredFeatures) const {
-  RequiredFeatures.reset();
-  if (isIntrinsicSupported(IntrinsicID))
-    return true;
-
-  StringRef FeatureExpression = Intrinsic::getRequiredTargetFeatures(
-      static_cast<Intrinsic::ID>(IntrinsicID));
-  if (!FeatureExpression.contains(Intrinsic::CustomTargetFeatures)) {
-    RequiredFeatures = FeatureExpression;
-    return false;
-  }
-
-  std::optional<StringRef> CustomRequiredFeatures =
-      getCustomRequiredTargetFeaturesForIntrinsic(IntrinsicID, CB);
-  bool CustomSupported =
-      CustomRequiredFeatures && checkFeatureExpression(*CustomRequiredFeatures);
-  auto CheckWithCustom = [&](bool Supported) {
-    return checkFeatureExpression(FeatureExpression,
+  auto CheckWithCustom = [&](bool CustomSupported) {
+    return checkFeatureExpression(RequiredFeatures,
                                   [&](StringRef Term) -> std::optional<bool> {
                                     if (Term == Intrinsic::CustomTargetFeatures)
-                                      return Supported;
+                                      return CustomSupported;
                                     return std::nullopt;
                                   });
   };
-  if (CheckWithCustom(CustomSupported))
-    return true;
 
-  // Only report the custom check's requirement when satisfying that check
-  // would make the complete feature expression true.
-  if (!CustomSupported && CheckWithCustom(true))
-    RequiredFeatures = CustomRequiredFeatures;
-  return false;
+  // Feature expressions only use AND and OR, so the result is monotonic in the
+  // custom term. Only defer to the target when the custom term decides it.
+  if (CheckWithCustom(false))
+    It->second = IntrinsicSupport::Supported;
+  else if (RequiredFeatures.contains(Intrinsic::CustomTargetFeatures) &&
+           CheckWithCustom(true))
+    It->second = IntrinsicSupport::NeedsCustomCheck;
+  else
+    It->second = IntrinsicSupport::Unsupported;
+  return It->second;
 }
 
-std::optional<StringRef>
-TargetSubtargetInfo::getCustomRequiredTargetFeaturesForIntrinsic(
-    unsigned, const CallBase &) const {
-  return std::nullopt;
+bool TargetSubtargetInfo::isIntrinsicSupported(unsigned IntrinsicID,
+                                               const CallBase &CB) const {
+  switch (getIntrinsicSupport(IntrinsicID)) {
+  case IntrinsicSupport::Supported:
+    return true;
+  case IntrinsicSupport::Unsupported:
+    return false;
+  case IntrinsicSupport::NeedsCustomCheck:
+    return isCustomIntrinsicSupported(IntrinsicID, CB);
+  }
+  llvm_unreachable("unknown intrinsic support kind");
+}
+
+bool TargetSubtargetInfo::isCustomIntrinsicSupported(unsigned,
+                                                     const CallBase &) const {
+  return false;
 }
 
 bool TargetSubtargetInfo::enableAtomicExpand() const {

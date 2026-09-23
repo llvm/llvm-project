@@ -1140,7 +1140,7 @@ private:
 public:
   DiagnosticInfoUnsupportedTargetIntrinsic(
       const Function &Fn, unsigned IntrinsicID, FunctionType *IntrinsicType,
-      const DiagnosticLocation &Loc, std::optional<StringRef> RequiredFeatures);
+      const DiagnosticLocation &Loc = DiagnosticLocation());
 
   static bool classof(const DiagnosticInfo *DI) {
     return DI->getKind() == DK_UnsupportedTargetIntrinsic;
@@ -1149,8 +1149,8 @@ public:
   unsigned getIntrinsicID() const { return IntrinsicID; }
   FunctionType *getIntrinsicType() const { return IntrinsicType; }
 
-  /// Returns the required feature expression, or \c std::nullopt if no feature
-  /// expression supports this intrinsic overload.
+  /// Returns the required feature expression, or \c std::nullopt if support
+  /// is decided by a call-dependent target check.
   std::optional<StringRef> getRequiredFeatures() const {
     return RequiredFeatures;
   }

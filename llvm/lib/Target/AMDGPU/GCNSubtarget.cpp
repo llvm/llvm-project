@@ -25,7 +25,6 @@
 #include "llvm/CodeGen/MachinePipeliner.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
-#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
@@ -59,17 +58,15 @@ static cl::opt<unsigned>
 
 GCNSubtarget::~GCNSubtarget() = default;
 
-std::optional<StringRef>
-GCNSubtarget::getCustomRequiredTargetFeaturesForIntrinsic(
-    unsigned IntrinsicID, const CallBase &CB) const {
-  if (IntrinsicID == Intrinsic::amdgcn_ballot) {
-    if (CB.getType()->isIntegerTy(32))
-      return "wavefrontsize32";
-    return StringRef();
+bool GCNSubtarget::isCustomIntrinsicSupported(unsigned IntrinsicID,
+                                              const CallBase &CB) const {
+  switch (IntrinsicID) {
+  case Intrinsic::amdgcn_ballot:
+    // Only reached in wave64, where i32 ballots cannot hold the lane mask.
+    return !CB.getType()->isIntegerTy(32);
+  default:
+    return TargetSubtargetInfo::isCustomIntrinsicSupported(IntrinsicID, CB);
   }
-
-  return TargetSubtargetInfo::getCustomRequiredTargetFeaturesForIntrinsic(
-      IntrinsicID, CB);
 }
 
 static AMDGPUSubtarget::Generation computeDefaultGeneration(const Triple &TT) {

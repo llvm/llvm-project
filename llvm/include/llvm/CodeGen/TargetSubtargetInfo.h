@@ -26,7 +26,6 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
 #include <memory>
-#include <optional>
 #include <vector>
 
 namespace llvm {
@@ -96,15 +95,9 @@ public:
 
   virtual bool isXRaySupported() const { return false; }
 
-  /// \returns true if the target intrinsic \p IntrinsicID is supported by this
-  /// subtarget.
-  bool isIntrinsicSupported(unsigned IntrinsicID) const;
-
-  /// Checks whether the target intrinsic \p IntrinsicID used by \p CB is
-  /// supported. Sets \p RequiredFeatures when the intrinsic is unsupported
-  /// because a feature is missing.
-  bool isIntrinsicSupported(unsigned IntrinsicID, const CallBase &CB,
-                            std::optional<StringRef> &RequiredFeatures) const;
+  /// \returns true if the target intrinsic \p IntrinsicID called by \p CB is
+  /// supported by this subtarget.
+  bool isIntrinsicSupported(unsigned IntrinsicID, const CallBase &CB) const;
 
   // Interfaces to the major aspects of target machine information:
   //
@@ -407,16 +400,23 @@ public:
   virtual const FeatureBitset &getInlineMustMatchFeatures() const = 0;
 
 protected:
-  /// Returns the call-dependent target features required by an intrinsic whose
-  /// target feature expression contains \c $custom. An empty expression means
-  /// no features are required; \c std::nullopt means the call is unsupported.
-  virtual std::optional<StringRef>
-  getCustomRequiredTargetFeaturesForIntrinsic(unsigned IntrinsicID,
-                                              const CallBase &CB) const;
+  /// Evaluates the \c $custom term of the target feature expression of
+  /// \p IntrinsicID for the call \p CB. Only called when the rest of the
+  /// expression does not already decide whether the intrinsic is supported.
+  virtual bool isCustomIntrinsicSupported(unsigned IntrinsicID,
+                                          const CallBase &CB) const;
 
 private:
-  /// Lazy, incrementally-populated cache for isIntrinsicSupported().
-  mutable DenseMap<unsigned, bool> IntrinsicSupportCache;
+  enum class IntrinsicSupport : uint8_t {
+    Supported,
+    Unsupported,
+    NeedsCustomCheck
+  };
+
+  IntrinsicSupport getIntrinsicSupport(unsigned IntrinsicID) const;
+
+  /// Lazy, incrementally-populated cache for getIntrinsicSupport().
+  mutable DenseMap<unsigned, IntrinsicSupport> IntrinsicSupportCache;
 };
 } // end namespace llvm
 
