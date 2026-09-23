@@ -27,9 +27,10 @@ using namespace llvm::omp::target::debug;
 PluginManager *PM = nullptr;
 
 namespace llvm::offload::tmp {
-Error __ol_tgt_minimalOlInit(llvm::SmallVector<GenericPluginTy *> &LoadedPlugins);
+Error __ol_tgt_minimalOlInit(
+    llvm::SmallVector<GenericPluginTy *> &LoadedPlugins);
 } // namespace llvm::offload::tmp
-  
+
 void PluginManager::init() {
   TIMESCOPE();
   if (OffloadPolicy::isOffloadDisabled()) {
@@ -41,7 +42,8 @@ void PluginManager::init() {
 
   llvm::SmallVector<GenericPluginTy *> LoadedPlugins;
   if (auto Err = llvm::offload::tmp::__ol_tgt_minimalOlInit(LoadedPlugins))
-    FATAL_MESSAGE(1, "Failed to initialize minimal offload layer: %s", toString(std::move(Err)).c_str());
+    FATAL_MESSAGE(1, "Failed to initialize minimal offload layer: %s",
+                  toString(std::move(Err)).c_str());
 
   for (auto *Plugin : LoadedPlugins) {
     ODBG(ODT_Init) << "Loaded plugin: " << Plugin->getName()

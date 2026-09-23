@@ -81,7 +81,8 @@ DeviceTy::~DeviceTy() {
 }
 
 namespace llvm::offload::tmp {
-Expected<ol_device_handle_t> __ol_tgt_deviceInit(GenericPluginTy *RTL, int32_t RTLDeviceID);
+Expected<ol_device_handle_t> __ol_tgt_deviceInit(GenericPluginTy *RTL,
+                                                 int32_t RTLDeviceID);
 } // namespace llvm::offload::tmp
 
 llvm::Error DeviceTy::init() {

@@ -1450,7 +1450,8 @@ namespace tmp {
 // Temporary helpers to help transition of libomptarget to liboffload. Not to be
 // used outside of the migration effort.
 // TODO: remove once libomptarget does not depend on these helpers anymore.
-Error __ol_tgt_minimalOlInit(llvm::SmallVector<GenericPluginTy *> &LoadedPlugins) {
+Error __ol_tgt_minimalOlInit(
+    llvm::SmallVector<GenericPluginTy *> &LoadedPlugins) {
   std::lock_guard<std::mutex> Lock(OffloadContextValMutex);
 
   if (isOffloadInitialized()) {
@@ -1466,7 +1467,7 @@ Error __ol_tgt_minimalOlInit(llvm::SmallVector<GenericPluginTy *> &LoadedPlugins
     auto *Plugin = createPlugin_##Name();                                      \
     LoadedPlugins.push_back(Plugin);                                           \
     NewContext->Platforms.emplace_back(std::make_unique<ol_platform_impl_t>(   \
-         std::unique_ptr<GenericPluginTy>(Plugin), Backend));                  \
+        std::unique_ptr<GenericPluginTy>(Plugin), Backend));                   \
   } while (false);
 #include "Shared/Targets.def"
 
@@ -1479,7 +1480,8 @@ Error __ol_tgt_minimalOlInit(llvm::SmallVector<GenericPluginTy *> &LoadedPlugins
   return Error::success();
 }
 
-Expected<ol_device_handle_t> __ol_tgt_deviceInit(GenericPluginTy *Plugin, int32_t RTLDeviceID) {
+Expected<ol_device_handle_t> __ol_tgt_deviceInit(GenericPluginTy *Plugin,
+                                                 int32_t RTLDeviceID) {
   std::lock_guard<std::mutex> Lock(OffloadContextValMutex);
   OffloadContext &Ctx = OffloadContext::get();
 
