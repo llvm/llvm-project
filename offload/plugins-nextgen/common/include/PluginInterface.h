@@ -1483,7 +1483,7 @@ struct GenericPluginTy {
   virtual ~GenericPluginTy() {}
 
   /// Initialize the plugin.
-  Error init();
+  Error init(GenericProfilerTy *ProfilerPtr = nullptr);
 
   /// Initialize the plugin and return the number of available devices.
   virtual Expected<int32_t> initImpl() = 0;
