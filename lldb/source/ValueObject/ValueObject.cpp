@@ -291,6 +291,10 @@ const Status &ValueObject::GetError() {
   return m_error;
 }
 
+const Status &ValueObject::PeekError() {
+  return m_error;
+}
+
 const char *ValueObject::GetLocationAsCStringImpl(const Value &value,
                                                   const DataExtractor &data) {
   if (UpdateValueIfNeeded(false)) {
@@ -3893,12 +3897,13 @@ lldb::ValueObjectSP ValueImpl::GetSP(Process::StopLocker &stop_locker,
   lldb::ValueObjectSP value_sp = m_valobj_sp;
 
   Target *target = value_sp->GetTargetSP().get();
-  // If this ValueObject holds an error, then it is valuable for that.
-  if (value_sp->GetError().Fail())
-    return value_sp;
 
-  if (!target)
+  if (!target) {
+  // If this ValueObject holds an error, then it is valuable for that.
+    if (value_sp->GetError().Fail())
+      return value_sp;
     return ValueObjectSP();
+  }
 
   api_mutex = target->GetAPIMutex();
   lock = std::unique_lock<TargetAPIMutex>(api_mutex);
@@ -3909,8 +3914,20 @@ lldb::ValueObjectSP ValueImpl::GetSP(Process::StopLocker &stop_locker,
     // is running. If you want to look at values, pause the process, then
     // look.
     error = Status::FromErrorString("process must be stopped.");
+    // We still want to return a value object if it was in an error state, but
+    // we can't call GetError here, since that would call UpdateValueIfNeeded
+    // which isn't safe to do without holding the stop locker.
+    if (value_sp->PeekError().Fail())
+      return value_sp;
+
     return ValueObjectSP();
   }
+
+  // Now we can safely get the ValueObject to update itself and if that results
+  // in an error, return this ValueObject since it holds the error:
+  // If this ValueObject holds an error, then it is valuable for that.
+  if (value_sp->GetError().Fail())
+    return value_sp;
 
   if (m_use_dynamic != eNoDynamicValues) {
     ValueObjectSP dynamic_sp = value_sp->GetDynamicValue(m_use_dynamic);
