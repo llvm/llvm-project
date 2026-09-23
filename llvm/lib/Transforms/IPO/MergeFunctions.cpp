@@ -526,8 +526,25 @@ MergeFunctions::runOnFunctions(ArrayRef<Function *> Funcs) {
   return this->DelToNewMap;
 }
 
+// Direct calls to Old are about to call New. The verifier requires a location
+// on a call from a function with debug info to a function with debug info, but
+// a call to Old need not have one if Old has no debug info. Give such calls a
+// line 0 location in the caller.
+static void addMissingCallLocations(Function *Old, Function *New) {
+  if (!New->getSubprogram())
+    return;
+  for (Use &U : Old->uses()) {
+    auto *CB = dyn_cast<CallBase>(U.getUser());
+    if (!CB || !CB->isCallee(&U) || CB->getDebugLoc())
+      continue;
+    if (DISubprogram *SP = CB->getFunction()->getSubprogram())
+      CB->setDebugLoc(DILocation::get(CB->getContext(), 0, 0, SP));
+  }
+}
+
 // Replace direct callers of Old with New.
 void MergeFunctions::replaceDirectCallers(Function *Old, Function *New) {
+  addMissingCallLocations(Old, New);
   for (Use &U : make_early_inc_range(Old->uses())) {
     CallBase *CB = dyn_cast<CallBase>(U.getUser());
     if (CB && CB->isCallee(&U)) {
@@ -1200,6 +1217,7 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
         GlobalNumbers.erase(G);
         // If G's address is not significant, replace it entirely.
         removeUsers(G);
+        addMissingCallLocations(G, F);
         G->replaceAllUsesWith(F);
       } else {
         // Redirect direct callers of G to F. (See note on MergeFunctionsPDI
