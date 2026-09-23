@@ -685,14 +685,14 @@ define void @remove_diff_checks_via_guards(i32 %x, i32 %y, ptr %A) {
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[TMP5]], i64 0)
 ; CHECK-NEXT:    [[TMP6:%.*]] = trunc i64 [[SMAX]] to i32
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp slt i32 [[TMP6]], 0
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp ugt i64 [[SMAX]], 4294967295
-; CHECK-NEXT:    [[TMP9:%.*]] = or i1 [[TMP7]], [[TMP8]]
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp ugt i64 [[SMAX]], 4294967295
+; CHECK-NEXT:    [[TMP15:%.*]] = or i1 [[TMP7]], [[TMP13]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = add i32 [[OFFSET]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp slt i32 [[TMP11]], [[OFFSET]]
-; CHECK-NEXT:    [[TMP13:%.*]] = icmp ugt i64 [[SMAX]], 4294967295
-; CHECK-NEXT:    [[TMP14:%.*]] = or i1 [[TMP12]], [[TMP13]]
-; CHECK-NEXT:    [[TMP15:%.*]] = or i1 [[TMP9]], [[TMP14]]
-; CHECK-NEXT:    br i1 [[TMP15]], [[SCALAR_PH]], [[VECTOR_MEMCHECK:label %.*]]
+; CHECK-NEXT:    [[TMP16:%.*]] = icmp ugt i64 [[SMAX]], 4294967295
+; CHECK-NEXT:    [[TMP14:%.*]] = or i1 [[TMP12]], [[TMP16]]
+; CHECK-NEXT:    [[TMP17:%.*]] = or i1 [[TMP15]], [[TMP14]]
+; CHECK-NEXT:    br i1 [[TMP17]], [[SCALAR_PH]], [[VECTOR_PH:label %.*]]
 ;
 entry:
   %offset = sub i32 %x, %y
