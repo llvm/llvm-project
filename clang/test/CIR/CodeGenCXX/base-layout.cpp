@@ -16,7 +16,7 @@ struct D : V3, B {};
 constinit D d{};
 // CIR: cir.global external @d = #cir.const_record<{#cir.const_record<{#cir.global_view<@_ZTV1D, [0 : i32, 2 : i32]> : !cir.vptr}> : !rec_V3, #cir.const_record<{#cir.const_record<{#cir.global_view<@_ZTV1D, [1 : i32, 2 : i32]> : !cir.vptr}> : !rec_V1, #cir.const_record<{#cir.global_view<@_ZTV1D, [2 : i32, 2 : i32]> : !cir.vptr}> : !rec_V2}> : !rec_B}> : !rec_D
 // LLVM: @d = global %struct.D { %struct.V3 { ptr getelementptr inbounds nuw (i8, ptr @_ZTV1D, i64 16) }, %struct.B { %struct.V1 { ptr getelementptr inbounds nuw (i8, ptr @_ZTV1D, i64 40) }, %struct.V2 { ptr getelementptr inbounds nuw (i8, ptr @_ZTV1D, i64 64) } } }
-// OGCG: @d = global { ptr, ptr, ptr } { ptr getelementptr inbounds inrange(-16, 8) ({ [3 x ptr], [3 x ptr], [3 x ptr] }, ptr @_ZTV1D, i32 0, i32 0, i32 2), ptr getelementptr inbounds inrange(-16, 8) ({ [3 x ptr], [3 x ptr], [3 x ptr] }, ptr @_ZTV1D, i32 0, i32 1, i32 2), ptr getelementptr inbounds inrange(-16, 8) ({ [3 x ptr], [3 x ptr], [3 x ptr] }, ptr @_ZTV1D, i32 0, i32 2, i32 2) }
+// OGCG: @d = global { ptr, ptr, ptr } { ptr getelementptr inbounds inrange(-16, 8) (i8, ptr @_ZTV1D, i64 16), ptr getelementptr inbounds inrange(-16, 8) (i8, ptr @_ZTV1D, i64 40), ptr getelementptr inbounds inrange(-16, 8) (i8, ptr @_ZTV1D, i64 64) }
 
 
 struct Base {

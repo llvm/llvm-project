@@ -26,13 +26,12 @@ void f() noexcept {
 // LLVM-DAG: @_ZTSFvvE = linkonce_odr constant [5 x i8] c"FvvE\00", comdat
 // LLVM-DAG: @_ZTSPDoFvvE = linkonce_odr constant [8 x i8] c"PDoFvvE\00", comdat
 
-// CIR and OGCG represent the reference to the type info vtable differently,
-// as a byte offset from the vtable symbol or as an index into an array of
-// pointers, but both name its address point.
+// CIR and OGCG use byte offsets to name the type info vtable address point.
+// OGCG additionally marks these GEPs inbounds.
 // LLVMCIR-DAG: @_ZTIFvvE = linkonce_odr constant { ptr, ptr } { ptr getelementptr (i8, ptr @_ZTVN10__cxxabiv120__function_type_infoE, i64 16), ptr @_ZTSFvvE }, comdat
 // LLVMCIR-DAG: @_ZTIPDoFvvE = linkonce_odr constant { ptr, ptr, i32, ptr } { ptr getelementptr (i8, ptr @_ZTVN10__cxxabiv119__pointer_type_infoE, i64 16), ptr @_ZTSPDoFvvE, i32 64, ptr @_ZTIFvvE }, comdat
-// OGCG-DAG: @_ZTIFvvE = linkonce_odr constant { ptr, ptr } { ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv120__function_type_infoE, i64 2), ptr @_ZTSFvvE }, comdat
-// OGCG-DAG: @_ZTIPDoFvvE = linkonce_odr constant { ptr, ptr, i32, ptr } { ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv119__pointer_type_infoE, i64 2), ptr @_ZTSPDoFvvE, i32 64, ptr @_ZTIFvvE }, comdat
+// OGCG-DAG: @_ZTIFvvE = linkonce_odr constant { ptr, ptr } { ptr getelementptr inbounds (i8, ptr @_ZTVN10__cxxabiv120__function_type_infoE, i64 16), ptr @_ZTSFvvE }, comdat
+// OGCG-DAG: @_ZTIPDoFvvE = linkonce_odr constant { ptr, ptr, i32, ptr } { ptr getelementptr inbounds (i8, ptr @_ZTVN10__cxxabiv119__pointer_type_infoE, i64 16), ptr @_ZTSPDoFvvE, i32 64, ptr @_ZTIFvvE }, comdat
 
 // The throw unwinds to the terminate scope of the enclosing noexcept function.
 // LLVM-LABEL: define{{.*}} void @_Z1fv()
