@@ -395,9 +395,10 @@ struct VPlanTransforms {
   /// latch exit condition. Multiple exits are handled with a dispatch block
   /// that determines which exit to take based on lane-by-lane semantics.
   LLVM_ABI_FOR_TEST static bool
-  handleUncountableEarlyExits(VPlan &Plan, Loop *TheLoop,
-                              PredicatedScalarEvolution &PSE, DominatorTree &DT,
-                              AssumptionCache *AC, UncountableExitStyle Style);
+  handleUncountableEarlyExits(VPlan &Plan, OptimizationRemarkEmitter *ORE,
+                              Loop *TheLoop, PredicatedScalarEvolution &PSE,
+                              DominatorTree &DT, AssumptionCache *AC,
+                              UncountableExitStyle Style);
 
   /// Disconnect countable early exits from the loop.
   LLVM_ABI_FOR_TEST static void handleCountableEarlyExits(VPlan &Plan);
