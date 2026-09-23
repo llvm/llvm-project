@@ -258,7 +258,8 @@ public:
   void print(raw_ostream &os,
              std::optional<int64_t> messagePartIndex = std::nullopt) const;
 
-  /// Converts the diagnostic to a string, concatenating all the parts if there are multiples.
+  /// Converts the diagnostic to a string, concatenating all the parts if there
+  /// are multiples.
   std::string str() const;
 
   /// Converts each message part to a separate string. Returns a single string
@@ -337,6 +338,12 @@ inline raw_ostream &operator<<(raw_ostream &os, const Diagnostic &diag) {
 //===----------------------------------------------------------------------===//
 // InFlightDiagnostic
 //===----------------------------------------------------------------------===//
+
+namespace diag {
+/// Starts a new message part in an in-flight diagnostic. Leading, trailing, and
+/// consecutive uses of `next` do not create empty message parts.
+inline InFlightDiagnostic &next(InFlightDiagnostic &diag);
+} // namespace diag
 
 /// This class represents a diagnostic that is inflight and set to be reported.
 /// This allows for last minute modifications of the diagnostic before it is
@@ -436,7 +443,7 @@ private:
 
   // Allow access to the constructor.
   friend DiagnosticEngine;
-  friend inline InFlightDiagnostic &next(InFlightDiagnostic &diag);
+  friend inline InFlightDiagnostic &diag::next(InFlightDiagnostic &diag);
 
   /// The engine that this diagnostic is to report to.
   DiagnosticEngine *owner = nullptr;
@@ -445,9 +452,7 @@ private:
   std::optional<Diagnostic> impl;
 };
 
-/// Starts a new message part in an in-flight diagnostic. Leading, trailing, and
-/// consecutive uses of `next` do not create empty message parts.
-inline InFlightDiagnostic &next(InFlightDiagnostic &diag) {
+inline InFlightDiagnostic &diag::next(InFlightDiagnostic &diag) {
   diag.impl->startNewMessagePart();
   return diag;
 }

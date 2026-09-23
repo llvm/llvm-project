@@ -32,8 +32,8 @@ struct TestDiagnosticsNextPass
   void runOnOperation() override {
     getOperation()->walk([](SymbolOpInterface op) {
       StringRef opName = op.getNameAttr();
-      InFlightDiagnostic diag = op->emitRemark(opName) << "1" << next;
-      diag << opName << "2" << next << opName << "3";
+      InFlightDiagnostic diag = op->emitRemark(opName) << "1" << diag::next;
+      diag << opName << "2" << diag::next << opName << "3";
     });
   }
 };
