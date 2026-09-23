@@ -556,8 +556,8 @@ func.func @fold_mul_zero_broadcast(%arg0: tensor<2x3xf32>) -> (tensor<2x3xf32>, 
 
 // CHECK-LABEL: @fold_mul_zero_dynamic_nofold
 // CHECK-SAME:                    %[[ARG0:.*]]: tensor<?x17xf32>) -> tensor<?x17xf32> {
-// CHECK:           %[[ZERO:.*]] = "tosa.const"() <{values = dense<0.000000e+00> : tensor<1x1xf32>}> : () -> tensor<1x1xf32>
-// CHECK:           %[[SHIFT:.*]] = "tosa.const"() <{values = dense<0> : tensor<1xi8>}> : () -> tensor<1xi8>
+// CHECK:           %[[ZERO:.*]] = tosa.const values(dense<0.000000e+00> : tensor<1x1xf32>) : () -> tensor<1x1xf32>
+// CHECK:           %[[SHIFT:.*]] = tosa.const values(dense<0> : tensor<1xi8>) : () -> tensor<1xi8>
 // CHECK:           %[[MUL:.*]] = tosa.mul %[[ARG0]], %[[ZERO]], %[[SHIFT]] : (tensor<?x17xf32>, tensor<1x1xf32>, tensor<1xi8>) -> tensor<?x17xf32>
 // CHECK:           return %[[MUL]]
 func.func @fold_mul_zero_dynamic_nofold(%arg0: tensor<?x17xf32>) -> tensor<?x17xf32> {

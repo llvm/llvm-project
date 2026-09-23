@@ -106,7 +106,7 @@ func.func @depthwise_conv2d_no_const_zero_point(%arg0: tensor<4x10x10x2xi8>, %ar
 // CHECK-SAME:      %[[BIAS:.*]]: tensor<?xf32>) -> tensor<?x10x10x6xf32> {
 // CHECK:           %[[BIAS_EXPANDED_SHAPE:.*]] = tosa.const_shape values(dense<[1, 1, 1, -1]> : tensor<4xindex>) : () -> !tosa.shape<4>
 // CHECK:           %[[RES_EXPANDED_SHAPE:.*]] = tosa.const_shape values(dense<[-1, 10, 10, 6]> : tensor<4xindex>) : () -> !tosa.shape<4>
-// CHECK:           %[[MUL_SHIFT:.*]] = "tosa.const"() <{values = dense<0> : tensor<1xi8>}> : () -> tensor<1xi8>
+// CHECK:           %[[MUL_SHIFT:.*]] = tosa.const values(dense<0> : tensor<1xi8>) : () -> tensor<1xi8>
 // CHECK:           %[[WTS_EXPANDED_SHAPE:.*]] = tosa.const_shape values(dense<[1, 1, 1, 2, 3]> : tensor<5xindex>) : () -> !tosa.shape<5>
 // CHECK:           %[[INP_EXPANDED_SHAPE:.*]] = tosa.const_shape values(dense<[-1, 10, 10, 2, 1]> : tensor<5xindex>) : () -> !tosa.shape<5>
 // CHECK:           %[[INP_RESHAPED:.*]] = tosa.reshape %[[INP]], %[[INP_EXPANDED_SHAPE]] : (tensor<?x10x10x2xf32>, !tosa.shape<5>) -> tensor<?x10x10x2x1xf32>
