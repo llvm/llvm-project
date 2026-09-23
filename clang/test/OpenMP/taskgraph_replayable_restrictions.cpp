@@ -157,6 +157,21 @@ void nested() {
   }
 }
 
+// A target data region's structured block, on the other hand, is executed by
+// the encountering task, so its constructs are in the taskgraph region.
+void within_a_target_data(int n) {
+  omp_event_handle_t ev;
+
+#pragma omp taskgraph
+  {
+#pragma omp target data map(tofrom : n)
+    {
+#pragma omp task detach(ev) // expected-error {{detachable replayable task is not allowed within '#pragma omp taskgraph'}}
+      {}
+    }
+  }
+}
+
 template <int N> void templated() {
   omp_event_handle_t ev;
 

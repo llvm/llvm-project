@@ -87,6 +87,24 @@ subroutine f04
 end
 
 subroutine f05
+  integer :: x
+
+  !$omp taskgraph
+  !$omp target data map(tofrom: x)
+  !A TARGET DATA region's structured block is executed by the encountering
+  !task, so its constructs are encountered in the TASKGRAPH region too.
+  !ERROR: Only task-generating constructs are allowed inside TASKGRAPH region
+  !$omp parallel
+  !$omp end parallel
+  !Ok: task-generating.
+  !No diagnostic expected.
+  !$omp task
+  !$omp end task
+  !$omp end target data
+  !$omp end taskgraph
+end
+
+subroutine f06
   integer :: i
 
   !$omp taskgraph
