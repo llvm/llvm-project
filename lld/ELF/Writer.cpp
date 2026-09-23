@@ -1583,9 +1583,7 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
       changed |= ctx.in.relrDyn->updateAllocSize(ctx);
     if (ctx.in.relrAuthDyn)
       changed |= ctx.in.relrAuthDyn->updateAllocSize(ctx);
-    if ((ctx.in.relrAuthDyn ||
-         (ctx.in.got && ctx.in.got->hasDeferredEntries)) &&
-        ctx.in.dynamic && ctx.in.dynamic->getParent()) {
+    if (ctx.in.dynamic && ctx.in.dynamic->getParent()) {
       size_t oldSize = ctx.in.dynamic->getSize();
       finalizeSynthetic(ctx, ctx.in.dynamic.get());
       changed |= (oldSize != ctx.in.dynamic->getSize());
