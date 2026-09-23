@@ -13,6 +13,7 @@
 #include "clang/Basic/OffloadArch.h"
 #include "clang/Driver/Action.h"
 #include "clang/Driver/Job.h"
+#include "clang/Driver/Phases.h"
 #include "clang/Driver/Util.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -63,6 +64,11 @@ class Compilation {
 
   /// The original (untranslated) input argument list.
   llvm::opt::InputArgList *Args;
+
+	public:
+	   phases::ID FinalPhase; 
+		llvm::opt:: Arg *FinalPhaseArg;
+         private:
 
   /// The driver translated arguments. Note that toolchains may perform their
   /// own argument translation.
