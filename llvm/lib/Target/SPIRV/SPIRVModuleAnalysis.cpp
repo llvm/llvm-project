@@ -36,7 +36,7 @@ using namespace llvm;
 static cl::opt<bool>
     SPVDumpDeps("spv-dump-deps",
                 cl::desc("Dump MIR with SPIR-V dependencies info"),
-                cl::Optional, cl::init(false));
+                cl::init(false));
 
 static cl::list<SPIRV::Capability::Capability>
     AvoidCapabilities("avoid-spirv-capabilities",

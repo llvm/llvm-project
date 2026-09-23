@@ -24,6 +24,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -377,7 +378,7 @@ Value *SCEVExpander::InsertBinop(Instruction::BinaryOps Opcode,
 /// loop-invariant portions of expressions, after considering what
 /// can be folded using target addressing modes.
 ///
-Value *SCEVExpander::expandAddToGEP(const SCEV *Offset, Value *V,
+Value *SCEVExpander::expandAddToGEP(SCEVUse Offset, Value *V,
                                     SCEV::NoWrapFlags Flags) {
   assert(!isa<Instruction>(V) ||
          SE.DT.dominates(cast<Instruction>(V), &*Builder.GetInsertPoint()));
@@ -531,7 +532,7 @@ Value *SCEVExpander::visitAddExpr(SCEVUseT<const SCEVAddExpr *> S) {
   if (match(S, m_scev_URem(m_SCEV(URemLHS), m_SCEV(URemRHS), SE))) {
     Value *LHS = expand(URemLHS);
     Value *RHS = expand(URemRHS);
-    return InsertBinop(Instruction::URem, LHS, RHS, SCEV::FlagAnyWrap,
+    return InsertBinop(Instruction::URem, LHS, RHS, SCEV::FlagNone,
                        /*IsSafeToHoist*/ false);
   }
 
@@ -580,7 +581,7 @@ Value *SCEVExpander::visitAddExpr(SCEVUseT<const SCEVAddExpr *> S) {
       for (; I != E && I->first == CurLoop; ++I) {
         // If the operand is SCEVUnknown and not instructions, peek through
         // it, to enable more of it to be folded into the GEP.
-        const SCEV *X = I->second;
+        SCEVUse X = I->second;
         if (const SCEVUnknown *U = dyn_cast<SCEVUnknown>(X))
           if (!isa<Instruction>(U->getValue()))
             X = SE.getSCEV(U->getValue());
@@ -590,7 +591,7 @@ Value *SCEVExpander::visitAddExpr(SCEVUseT<const SCEVAddExpr *> S) {
     } else if (Op->isNonConstantNegative()) {
       // Instead of doing a negate and add, just do a subtract.
       Value *W = expand(SE.getNegativeSCEV(Op));
-      Sum = InsertBinop(Instruction::Sub, Sum, W, SCEV::FlagAnyWrap,
+      Sum = InsertBinop(Instruction::Sub, Sum, W, SCEV::FlagNone,
                         /*IsSafeToHoist*/ true);
       ++I;
     } else {
@@ -623,7 +624,7 @@ Value *SCEVExpander::visitMulExpr(SCEVUseT<const SCEVMulExpr *> S) {
     unsigned BitWidth = Ty->getScalarSizeInBits();
     APInt Mask(APInt::getBitsSetFrom(BitWidth, ShAmtC));
     Value *Res = InsertBinop(Instruction::And, LHS, ConstantInt::get(Ty, Mask),
-                             SCEV::FlagAnyWrap, /*IsSafeToHoist*/ true);
+                             SCEV::FlagNone, /*IsSafeToHoist*/ true);
     return Res;
   }
 
@@ -667,13 +668,13 @@ Value *SCEVExpander::visitMulExpr(SCEVUseT<const SCEVMulExpr *> S) {
     if (Exponent & 1)
       Result = P;
     for (uint64_t BinExp = 2; BinExp <= Exponent; BinExp <<= 1) {
-      P = InsertBinop(Instruction::Mul, P, P, SCEV::FlagAnyWrap,
+      P = InsertBinop(Instruction::Mul, P, P, SCEV::FlagNone,
                       /*IsSafeToHoist*/ true);
       if (Exponent & BinExp)
-        Result = Result ? InsertBinop(Instruction::Mul, Result, P,
-                                      SCEV::FlagAnyWrap,
-                                      /*IsSafeToHoist*/ true)
-                        : P;
+        Result = Result
+                     ? InsertBinop(Instruction::Mul, Result, P, SCEV::FlagNone,
+                                   /*IsSafeToHoist*/ true)
+                     : P;
     }
 
     I = E;
@@ -688,7 +689,7 @@ Value *SCEVExpander::visitMulExpr(SCEVUseT<const SCEVMulExpr *> S) {
     } else if (I->second->isAllOnesValue()) {
       // Instead of doing a multiply by negative one, just do a negate.
       Prod = InsertBinop(Instruction::Sub, Constant::getNullValue(Ty), Prod,
-                         SCEV::FlagAnyWrap, /*IsSafeToHoist*/ true);
+                         SCEV::FlagNone, /*IsSafeToHoist*/ true);
       ++I;
     } else {
       // A simple mul.
@@ -723,7 +724,7 @@ Value *SCEVExpander::visitUDivExpr(SCEVUseT<const SCEVUDivExpr *> S) {
     if (RHS.isPowerOf2())
       return InsertBinop(Instruction::LShr, LHS,
                          ConstantInt::get(SC->getType(), RHS.logBase2()),
-                         SCEV::FlagAnyWrap, /*IsSafeToHoist*/ true);
+                         SCEV::FlagNone, /*IsSafeToHoist*/ true);
   }
 
   const SCEV *RHSExpr = S->getRHS();
@@ -741,7 +742,7 @@ Value *SCEVExpander::visitUDivExpr(SCEVUseT<const SCEVUDivExpr *> S) {
       RHS = Builder.CreateIntrinsic(RHS->getType(), Intrinsic::umax,
                                     {RHS, ConstantInt::get(RHS->getType(), 1)});
   }
-  return InsertBinop(Instruction::UDiv, LHS, RHS, SCEV::FlagAnyWrap,
+  return InsertBinop(Instruction::UDiv, LHS, RHS, SCEV::FlagNone,
                      /*IsSafeToHoist*/ SE.isKnownNonZero(S->getRHS()));
 }
 
@@ -1580,7 +1581,8 @@ Value *SCEVExpander::expandMinMaxExpr(SCEVUseT<const SCEVNAryExpr *> S,
     else {
       Value *ICmp =
           Builder.CreateICmp(MinMaxIntrinsic::getPredicate(IntrinID), LHS, RHS);
-      Sel = Builder.CreateSelect(ICmp, LHS, RHS, Name);
+      Sel = Builder.CreateSelectWithUnknownProfile(ICmp, LHS, RHS,
+                                                   "scev-expander", Name);
     }
     LHS = Sel;
   }
@@ -2340,7 +2342,8 @@ Value *SCEVExpander::generateOverflowCheck(const SCEVAddRecExpr *AR,
   Builder.SetInsertPoint(Loc);
   // Compute |Step|
   Value *StepCompare = Builder.CreateICmp(ICmpInst::ICMP_SLT, StepValue, Zero);
-  Value *AbsStep = Builder.CreateSelect(StepCompare, NegStepValue, StepValue);
+  Value *AbsStep = Builder.CreateSelectWithUnknownProfile(
+      StepCompare, NegStepValue, StepValue, "scev-expander");
 
   // Compute |Step| * Backedge
   // Compute:
@@ -2399,7 +2402,8 @@ Value *SCEVExpander::generateOverflowCheck(const SCEVAddRecExpr *AR,
           Signed ? ICmpInst::ICMP_SGT : ICmpInst::ICMP_UGT, Sub, StartValue);
     if (NeedPosCheck && NeedNegCheck) {
       // Select the answer based on the sign of Step.
-      EndCheck = Builder.CreateSelect(StepCompare, EndCompareGT, EndCompareLT);
+      EndCheck = Builder.CreateSelectWithUnknownProfile(
+          StepCompare, EndCompareGT, EndCompareLT, "scev-expander");
     }
     return Builder.CreateOr(EndCheck, OfMul);
   };

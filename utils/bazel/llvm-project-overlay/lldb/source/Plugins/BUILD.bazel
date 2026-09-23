@@ -346,7 +346,7 @@ cc_library(
         ":PluginDynamicLoaderDarwinKernelHeaders",
         ":PluginObjectContainerMachOFileset",
         ":PluginPlatformPOSIX",
-        "//clang:driver_options_inc_gen",
+        "//clang:options",
         "//lldb:BreakpointHeaders",
         "//lldb:Core",
         "//lldb:Headers",
