@@ -4165,7 +4165,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
                                                          m_Value(InsertValue),
                                                          m_Value(InsertIdx))) &&
         InsertValue->getType() == ReturnType) {
-      unsigned Index = cast<ConstantInt>(InsertIdx)->getZExtValue();
+      uint64_t Index = cast<ConstantInt>(InsertIdx)->getZExtValue();
       // Case where we get the same index right after setting it.
       // extract.vector(insert.vector(InsertTuple, InsertValue, Idx), Idx) -->
       // InsertValue
