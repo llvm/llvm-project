@@ -5595,7 +5595,6 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
   return Cost;
 }
 
-#ifndef NDEBUG
 /// Returns the frequency with which \p VPBB executes, as recorded on its
 /// recipes. All recipes of a block share the same frequency.
 static std::optional<VPExecutionFrequency>
@@ -5604,7 +5603,6 @@ getRecordedExecutionFrequency(const VPBasicBlock *VPBB) {
     return std::nullopt;
   return cast<VPInstruction>(&VPBB->front())->getExecutionFrequency();
 }
-#endif
 
 InstructionCost LoopVectorizationPlanner::computeScalarCost() const {
   ElementCount ScalarVF = ElementCount::getFixed(1);
