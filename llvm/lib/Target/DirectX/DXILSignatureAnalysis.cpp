@@ -355,7 +355,57 @@ ModuleSignatureInfo collectSignatures(Module &M,
   return std::move(*Result);
 }
 
+MDNode *emitSignature(LLVMContext &Ctx,
+                      ArrayRef<SemanticSignatureElement> Elements,
+                      VersionTuple ValidatorVersion) {
+  if (Elements.empty())
+    return nullptr;
+  auto I32 = [&](uint32_t V) {
+    return ConstantAsMetadata::get(ConstantInt::get(Type::getInt32Ty(Ctx), V));
+  };
+  auto I8 = [&](uint8_t V) {
+    return ConstantAsMetadata::get(ConstantInt::get(Type::getInt8Ty(Ctx), V));
+  };
+  SmallVector<Metadata *> Nodes;
+  for (const auto &E : Elements) {
+    SmallVector<Metadata *> Indices, Props;
+    for (uint32_t Index : E.SemanticIndices)
+      Indices.push_back(I32(Index));
+    if (E.GSStream)
+      Props.append({I32(0), I32(E.GSStream)});
+    if (E.DynIndexMask)
+      Props.append({I32(2), I32(E.DynIndexMask)});
+    if (E.UsageMask &&
+        (ValidatorVersion.empty() || ValidatorVersion == VersionTuple(0, 0) ||
+         ValidatorVersion >= VersionTuple(1, 5)))
+      Props.append({I32(3), I32(E.UsageMask >> E.StartCol)});
+    Nodes.push_back(MDNode::get(
+        Ctx, {I32(E.SigId), MDString::get(Ctx, E.SemanticName),
+              I8(static_cast<uint8_t>(E.CompType)),
+              I8(static_cast<uint8_t>(E.SemanticKind)),
+              MDNode::get(Ctx, Indices), I8(static_cast<uint8_t>(E.InterpMode)),
+              I32(E.Rows), I8(E.Cols), I32(E.StartRow), I8(E.StartCol),
+              Props.empty() ? nullptr : MDNode::get(Ctx, Props)}));
+  }
+  return MDNode::get(Ctx, Nodes);
+}
+
 } // namespace
+
+MDTuple *EntrySignature::getAsMetadata(LLVMContext &Ctx,
+                                       VersionTuple ValidatorVersion) const {
+  if (Inputs.empty() && Outputs.empty())
+    return nullptr;
+  return MDNode::get(Ctx,
+                     {emitSignature(Ctx, Inputs, ValidatorVersion),
+                      emitSignature(Ctx, Outputs, ValidatorVersion), nullptr});
+}
+
+SmallVector<uint32_t> EntrySignature::getDependencyState() const {
+  SmallVector<uint32_t> State = {InputVectors * 4, OutputVectors * 4};
+  llvm::append_range(State, InputOutputMap);
+  return State;
+}
 
 void EntrySignature::print(raw_ostream &OS) const {
   auto Print = [&](StringRef Name, ArrayRef<SemanticSignatureElement> Elements,

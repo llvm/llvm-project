@@ -1,17 +1,17 @@
 ; RUN: split-file %s %t
-; RUN: not opt -disable-output -passes='print<dxil-signature>' %t/triple.ll 2>&1 | FileCheck %s --check-prefix=TRIPLE
-; RUN: not opt -disable-output -passes='print<dxil-signature>' %t/duplicate.ll 2>&1 | FileCheck %s --check-prefix=DUPLICATE
-; RUN: not opt -disable-output -passes='print<dxil-signature>' %t/width.ll 2>&1 | FileCheck %s --check-prefix=WIDTH
-; RUN: not opt -disable-output -passes='print<dxil-signature>' %t/id.ll 2>&1 | FileCheck %s --check-prefix=ID
-; RUN: not opt -disable-output -passes='print<dxil-signature>' %t/rows.ll 2>&1 | FileCheck %s --check-prefix=ROWS
-; RUN: not opt -disable-output -passes='print<dxil-signature>' %t/component.ll 2>&1 | FileCheck %s --check-prefix=COMPONENT
-; RUN: not opt -disable-output -passes='print<dxil-signature>' %t/stage.ll 2>&1 | FileCheck %s --check-prefix=STAGE
-; RUN: not opt -disable-output -passes='print<dxil-signature>' %t/access.ll 2>&1 | FileCheck %s --check-prefix=ACCESS
-; RUN: not opt -disable-output -passes='print<dxil-signature>' %t/missing.ll 2>&1 | FileCheck %s --check-prefix=MISSING
-; RUN: not opt -disable-output -passes='print<dxil-signature>' %t/overflow.ll 2>&1 | FileCheck %s --check-prefix=OVERFLOW
-; RUN: not opt -disable-output -passes='print<dxil-signature>' %t/partial.ll 2>&1 | FileCheck %s --check-prefix=PARTIAL
-; RUN: not opt -disable-output -passes='print<dxil-signature>' %t/name.ll 2>&1 | FileCheck %s --check-prefix=NAME
-; RUN: not opt -disable-output -passes='print<dxil-signature>' %t/function.ll 2>&1 | FileCheck %s --check-prefix=FUNCTION
+; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/triple.ll 2>&1 | FileCheck %s --check-prefix=TRIPLE
+; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/duplicate.ll 2>&1 | FileCheck %s --check-prefix=DUPLICATE
+; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/width.ll 2>&1 | FileCheck %s --check-prefix=WIDTH
+; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/id.ll 2>&1 | FileCheck %s --check-prefix=ID
+; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/rows.ll 2>&1 | FileCheck %s --check-prefix=ROWS
+; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/component.ll 2>&1 | FileCheck %s --check-prefix=COMPONENT
+; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/stage.ll 2>&1 | FileCheck %s --check-prefix=STAGE
+; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/access.ll 2>&1 | FileCheck %s --check-prefix=ACCESS
+; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/missing.ll 2>&1 | FileCheck %s --check-prefix=MISSING
+; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/overflow.ll 2>&1 | FileCheck %s --check-prefix=OVERFLOW
+; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/partial.ll 2>&1 | FileCheck %s --check-prefix=PARTIAL
+; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/name.ll 2>&1 | FileCheck %s --check-prefix=NAME
+; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/function.ll 2>&1 | FileCheck %s --check-prefix=FUNCTION
 
 ; TRIPLE: Invalid semantic signature: expected an entry/input/output signature triple
 ; DUPLICATE: Invalid semantic signature: duplicate signature record for entry 'main'

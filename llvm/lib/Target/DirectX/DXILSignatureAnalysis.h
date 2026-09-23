@@ -14,8 +14,10 @@
 #include "llvm/Frontend/HLSL/SemanticSignatures.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/VersionTuple.h"
 
 namespace llvm {
+class MDTuple;
 namespace dxil {
 
 /// Finalized signature information, independent of the source metadata and of
@@ -30,6 +32,8 @@ struct EntrySignature {
   SmallVector<uint32_t> InputOutputMap;
   bool UseNative16Bit = false;
 
+  MDTuple *getAsMetadata(LLVMContext &Ctx, VersionTuple ValidatorVersion) const;
+  SmallVector<uint32_t> getDependencyState() const;
   void print(raw_ostream &OS) const;
 };
 
