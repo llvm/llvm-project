@@ -318,8 +318,7 @@ public:
   typedef _Tp value_type;
 
   static_assert(is_object<_Tp>::value && __is_unqualified_v<_Tp> && is_default_constructible<_Tp>::value &&
-                    is_copy_constructible<_Tp>::value && is_copy_assignable<_Tp>::value &&
-                    is_destructible<_Tp>::value,
+                    is_copy_constructible<_Tp>::value && is_copy_assignable<_Tp>::value && is_destructible<_Tp>::value,
                 "std::complex<T> requires T to be a cv-unqualified object type that satisfies the "
                 "Cpp17DefaultConstructible, Cpp17CopyConstructible, Cpp17CopyAssignable, and "
                 "Cpp17Destructible requirements");
