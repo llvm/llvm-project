@@ -27,6 +27,7 @@ namespace {
 using namespace llvm;
 
 using ABIType = llvm::abi::Type;
+using llvm::abi::ArgInfo;
 using llvm::abi::FieldInfo;
 using llvm::abi::FunctionInfo;
 using llvm::abi::RecordFlags;
@@ -43,7 +44,24 @@ public:
   const llvm::abi::ABICompatInfo &getABICompatInfo() const override {
     return Compat;
   }
+  using TargetInfo::getNaturalAlignIndirect;
   using TargetInfo::isSingleElementStruct;
+
+private:
+  llvm::abi::ABICompatInfo Compat;
+};
+
+// A target whose stack/alloca lives in a non-zero address space, so indirect
+// arguments must be allocated there rather than in AS 0.
+class AllocaAS5TargetInfo : public TargetInfo {
+public:
+  explicit AllocaAS5TargetInfo(TypeBuilder &Builder) : TargetInfo(Builder) {}
+  void computeInfo(FunctionInfo &) const override {}
+  const llvm::abi::ABICompatInfo &getABICompatInfo() const override {
+    return Compat;
+  }
+  unsigned getAllocaAddrSpace() const override { return 5; }
+  using TargetInfo::getNaturalAlignIndirect;
 
 private:
   llvm::abi::ABICompatInfo Compat;
@@ -142,6 +160,23 @@ TEST_F(TargetInfoTest, SingleElementStructNestedSingleElementReduces) {
 // A non-record type is never a single-element struct.
 TEST_F(TargetInfoTest, SingleElementStructNonRecordReturnsNull) {
   EXPECT_EQ(singleElement(I32), nullptr);
+}
+
+// Indirect args land in the target's alloca space.
+TEST_F(TargetInfoTest, NaturalAlignIndirectUsesAllocaAddrSpace) {
+  AllocaAS5TargetInfo TI(TB);
+  ArgInfo AI = TI.getNaturalAlignIndirect(I32, TI.getAllocaAddrSpace());
+  EXPECT_TRUE(AI.isIndirect());
+  EXPECT_EQ(AI.getIndirectAddrSpace(), 5u);
+  EXPECT_TRUE(AI.getIndirectByVal());
+}
+
+// The default alloca space is 0, matching classic's DefaultABIInfo.
+TEST_F(TargetInfoTest, NaturalAlignIndirectDefaultsToZeroAddrSpace) {
+  TestTargetInfo TI(TB);
+  ArgInfo AI = TI.getNaturalAlignIndirect(I32, TI.getAllocaAddrSpace());
+  EXPECT_TRUE(AI.isIndirect());
+  EXPECT_EQ(AI.getIndirectAddrSpace(), 0u);
 }
 
 } // namespace
