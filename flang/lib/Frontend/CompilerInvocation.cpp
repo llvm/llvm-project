@@ -327,6 +327,9 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
       args.hasFlag(clang::options::OPT_floop_interchange,
                    clang::options::OPT_fno_loop_interchange, true);
 
+  if (args.hasArg(clang::options::OPT_funique_internal_linkage_names))
+    opts.UniqueInternalLinkageNames = 1;
+
   if (args.getLastArg(clang::options::OPT_fexperimental_loop_fusion))
     opts.FuseLoops = 1;
 

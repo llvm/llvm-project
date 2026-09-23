@@ -3236,7 +3236,8 @@ InstructionCost VPScalarIVStepsRecipe::computeCost(ElementCount VF,
   // probability.
   const VPRegionBlock *Region = getRegion();
   if (Region && Region->isReplicator())
-    Cost /= Ctx.getReplicateRegionCostDivisor(Region);
+    Cost /= Ctx.getCostDivisor(
+        Region->getEntryBranchOnMask()->getExecutionFrequency());
   return Cost;
 }
 
@@ -4067,7 +4068,8 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     // Scale the cost by the probability of executing the predicated blocks.
     // This assumes the predicated block for each vector lane is equally
     // likely.
-    ScalarCost /= Ctx.getReplicateRegionCostDivisor(getRegion());
+    ScalarCost /= Ctx.getCostDivisor(
+        getRegion()->getEntryBranchOnMask()->getExecutionFrequency());
     return ScalarCost;
   }
   case Instruction::Load:
@@ -4126,7 +4128,8 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     if (ParentRegion && ParentRegion->isReplicator()) {
       if (!PtrSCEV)
         break;
-      Cost /= Ctx.getReplicateRegionCostDivisor(ParentRegion);
+      Cost /= Ctx.getCostDivisor(
+          ParentRegion->getEntryBranchOnMask()->getExecutionFrequency());
       Cost += Ctx.TTI.getCFInstrCost(Instruction::CondBr, Ctx.CostKind);
 
       auto *VecI1Ty = VectorType::get(

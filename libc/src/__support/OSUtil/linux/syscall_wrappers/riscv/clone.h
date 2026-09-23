@@ -57,7 +57,7 @@ LIBC_INLINE long clone_impl(int flags, void *child_stack, pid_t *parent_tid,
                   "unimp\n\t"
                   "1:\n\t" : "+r"(a0) : "r"(a7),
                   "r"(a1), "r"(a2), "r"(a3), "r"(a4), [sys_exit] "i"(SYS_exit),
-                  [stack_adj] "i"(STACK_ADJUSTMENT) : "memory");
+                  [stack_adj] "i"(CLONE_STACK_ALIGNMENT) : "memory");
   return a0;
 }
 

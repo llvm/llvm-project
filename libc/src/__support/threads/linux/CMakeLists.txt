@@ -40,12 +40,27 @@ add_header_library(
     libc.src.__support.time.abs_timeout
 )
 
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_ARCHITECTURE})
+  add_subdirectory(${LIBC_TARGET_ARCHITECTURE})
+endif()
+
+if(TARGET libc.src.__support.threads.linux.${LIBC_TARGET_ARCHITECTURE}.tls)
+  add_object_library(
+    tls
+    ALIAS
+    DEPENDS
+      .${LIBC_TARGET_ARCHITECTURE}.tls
+  )
+  set(thread_tls_dep .tls)
+endif()
+
 add_object_library(
   thread
   SRCS
     thread.cpp
   DEPENDS
     .futex_utils
+    ${thread_tls_dep}
     libc.config.app_h
     libc.include.sys_syscall
     libc.hdr.fcntl_macros
