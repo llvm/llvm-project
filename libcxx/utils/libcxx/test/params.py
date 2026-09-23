@@ -526,7 +526,7 @@ DEFAULT_PARAMETERS = [
         default="Ninja",
         help="The CMake generator to use when performing CMake builds inside the test suite.",
         actions=lambda generator: [
-            AddSubstitution("%{cmake_generator}", shlex.quote(generator)),
+            AddSubstitution("%{cmake_generator}", generator),
         ],
     ),
 ]
