@@ -762,7 +762,7 @@ llvm::APInt PPCTargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
     if (Feature.starts_with("+") || Feature.starts_with("-"))
       Feature = Feature.drop_front(1);
 
-    // Check if this is a negative category 3 feature (highest priority)
+    // Check if this is a negative disableable feature (highest priority)
     // Sema guarantees there's only one such version on a target_clones.
     if (IsNegated && llvm::PPC::canDisableFeatureOnAIX(Feature))
       return llvm::APInt(32, NEGATIVE_FEATURE_PRIORITY);

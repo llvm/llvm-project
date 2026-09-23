@@ -662,15 +662,15 @@ bool SemaPPC::checkTargetClonesAttr(const SmallVectorImpl<StringRef> &Params,
           if (IsNegated) {
             // Only one negative target-feature that can be disabled.
             if (HasNegativeDisablableFeature) {
-              return Diag(CurLoc, diag::err_ppc_multiple_negative_category2)
+              return Diag(CurLoc, diag::err_ppc_multiple_negative_disableable)
                      << LHS << DisablableFeatureName;
             }
             HasNegativeDisablableFeature = true;
             DisablableFeatureName = LHS;
           }
-          // Positive category 2 features are always allowed
+          // Positive disableable features are always allowed.
         }
-        // Category 1 features (positive or negative) are always allowed
+        // Non-disableable features (positive or negative) are always allowed.
       }
       SmallString<64> CPU;
       if (LHS.starts_with("cpu=")) {
