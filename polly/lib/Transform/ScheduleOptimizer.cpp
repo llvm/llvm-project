@@ -55,6 +55,7 @@
 #include "polly/ScopInfo.h"
 #include "polly/Support/ISLOStream.h"
 #include "polly/Support/ISLTools.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
@@ -159,6 +160,12 @@ static cl::opt<bool> RegisterTiling("polly-register-tiling",
                                     cl::desc("Enable register tiling"),
                                     cl::cat(PollyCategory));
 
+static cl::opt<bool> DistributePointLoops(
+    "polly-distribute-point-loops",
+    cl::desc("Distribute the innermost point loop of a tile over its "
+             "statements if this makes the loop of every statement parallel"),
+    cl::init(true), cl::cat(PollyCategory));
+
 static cl::opt<int> RegisterDefaultTileSize(
     "polly-register-tiling-default-tile-size",
     cl::desc("The default register tile size (if not enough were provided by"
@@ -226,6 +233,8 @@ STATISTIC(FirstLevelTileOpts, "Number of first level tiling applied");
 STATISTIC(SecondLevelTileOpts, "Number of second level tiling applied");
 STATISTIC(RegisterTileOpts, "Number of register tiling applied");
 STATISTIC(PrevectOpts, "Number of strip-mining for prevectorization applied");
+STATISTIC(PointLoopDistributions,
+          "Number of innermost point loops distributed over statements");
 STATISTIC(MatMulOpts,
           "Number of matrix multiplication patterns detected and optimized");
 
@@ -376,6 +385,25 @@ private:
   ///
   /// @param Node The schedule node to (possibly) optimize.
   static isl::schedule_node applyTileBandOpt(isl::schedule_node Node);
+
+  /// Distribute the innermost loop of a band over its statements.
+  ///
+  /// Time tiling of a stencil shifts the statements of a time step against
+  /// each other and fuses them in the innermost point loop. The loop then runs
+  /// each statement under a condition and carries the dependences between
+  /// them, which keeps it from being vectorized. Run the innermost loop once
+  /// for each group of statements instead, where statements that depend on
+  /// each other form a group, if the groups can be ordered and none of them
+  /// carries a dependence in the innermost loop. A loop that is parallel
+  /// already is only distributed over statements that do not exchange any
+  /// data within it.
+  ///
+  /// @param Node The innermost band to distribute, typically the point band of
+  ///             a tiling.
+  /// @param D    The dependences of the SCoP.
+  /// @return The node at the position of @p Node.
+  static isl::schedule_node distributeInnermostLoop(isl::schedule_node Node,
+                                                    const Dependences *D);
 
   /// Apply prevectorization on the bands in the schedule tree.
   ///
@@ -549,6 +577,114 @@ ScheduleTreeOptimizer::applyTileBandOpt(isl::schedule_node Node) {
 }
 
 isl::schedule_node
+ScheduleTreeOptimizer::distributeInnermostLoop(isl::schedule_node Node,
+                                               const Dependences *D) {
+  if (!isSimpleInnermostBand(Node))
+    return Node;
+
+  // Number the statements in the order of their names, so that the result does
+  // not depend on the order in which isl lists them.
+  isl::union_set Domain = Node.get_domain();
+  SmallVector<isl::set, 8> Stmts;
+  for (isl::set Stmt : Domain.get_set_list())
+    Stmts.push_back(Stmt);
+  unsigned NumStmts = Stmts.size();
+  if (NumStmts < 2)
+    return Node;
+  llvm::sort(Stmts, [](const isl::set &A, const isl::set &B) {
+    return A.get_tuple_name() < B.get_tuple_name();
+  });
+  DenseMap<isl_id *, unsigned> StmtIndex;
+  for (auto [Idx, Stmt] : enumerate(Stmts))
+    StmtIndex[Stmt.get_tuple_id().get()] = Idx;
+
+  isl::schedule_node_band Band = Node.as<isl::schedule_node_band>();
+  unsigned NumMembers = unsignedFromIslSize(Band.n_member());
+  isl::schedule_node_band Inner = Band;
+  if (NumMembers > 1)
+    Inner = Band.split(NumMembers - 1).child(0).as<isl::schedule_node_band>();
+
+  // The dependences between the instances that share the iterations of all
+  // loops around the innermost one, split into those that the innermost loop
+  // carries and those within one of its iterations.
+  isl::union_map Deps = D->getDependences(
+      Dependences::TYPE_RAW | Dependences::TYPE_WAR | Dependences::TYPE_WAW);
+  Deps = Deps.intersect_domain(Domain).intersect_range(Domain);
+  Deps = Deps.eq_at(Inner.get_prefix_schedule_multi_union_pw_aff());
+  isl::union_map SameIteration = Deps.eq_at(Inner.get_partial_schedule());
+  isl::union_map Carried = Deps.subtract(SameIteration);
+  if (Carried.is_null())
+    return Node;
+
+  auto getIndex = [&](const isl::map &Dep, isl::dim Dim) {
+    return StmtIndex.lookup(Dep.get_tuple_id(Dim).get());
+  };
+
+  // If the fused loop is parallel already, only separate statements that do
+  // not exchange any data within it, to keep the reuse between the others.
+  if (Carried.is_empty().is_true())
+    for (isl::map Dep : Deps.get_map_list())
+      if (getIndex(Dep, isl::dim::in) != getIndex(Dep, isl::dim::out))
+        return Node;
+
+  // Reaches[I][J] is set if statement J depends on statement I, possibly
+  // through other statements. Statements that depend on each other form a
+  // group.
+  SmallVector<BitVector, 8> Reaches(NumStmts, BitVector(NumStmts));
+  for (isl::map Dep : Deps.get_map_list())
+    Reaches[getIndex(Dep, isl::dim::in)].set(getIndex(Dep, isl::dim::out));
+  for (unsigned K : seq(NumStmts))
+    for (unsigned I : seq(NumStmts))
+      if (Reaches[I][K])
+        Reaches[I] |= Reaches[K];
+
+  // The loop of every group must be parallel.
+  for (isl::map Dep : Carried.get_map_list())
+    if (Reaches[getIndex(Dep, isl::dim::out)][getIndex(Dep, isl::dim::in)])
+      return Node;
+
+  SmallVector<unsigned, 8> GroupOf(NumStmts);
+  unsigned NumGroups = 0;
+  for (unsigned I : seq(NumStmts)) {
+    auto Earlier = find_if(
+        seq(I), [&](unsigned J) { return Reaches[I][J] && Reaches[J][I]; });
+    GroupOf[I] = Earlier != seq(I).end() ? GroupOf[*Earlier] : NumGroups++;
+  }
+  if (NumGroups < 2)
+    return Node;
+
+  // A group depends on more statements than every group it depends on, so
+  // ordering by this number respects the dependences.
+  SmallVector<unsigned, 8> Leader(NumGroups);
+  for (unsigned Stmt : reverse(seq(NumStmts)))
+    Leader[GroupOf[Stmt]] = Stmt;
+  auto NumPredecessors = [&](unsigned Group) {
+    return count_if(seq(NumStmts), [&](unsigned Pred) {
+      return GroupOf[Pred] != Group && Reaches[Pred][Leader[Group]];
+    });
+  };
+  SmallVector<unsigned, 8> Order = to_vector<8>(seq(NumGroups));
+  stable_sort(Order, [&](unsigned A, unsigned B) {
+    return NumPredecessors(A) < NumPredecessors(B);
+  });
+
+  isl::union_set_list Filters(Node.ctx(), NumGroups);
+  for (unsigned Group : Order) {
+    isl::union_set Filter = isl::union_set::empty(Node.ctx());
+    for (unsigned Stmt : seq(NumStmts))
+      if (GroupOf[Stmt] == Group)
+        Filter = Filter.unite(Stmts[Stmt]);
+    Filters = Filters.add(Filter);
+  }
+
+  isl::schedule_node Sequence = Inner.insert_sequence(Filters);
+  if (Sequence.is_null())
+    return Node;
+  PointLoopDistributions++;
+  return NumMembers > 1 ? Sequence.parent() : Sequence;
+}
+
+isl::schedule_node
 ScheduleTreeOptimizer::applyPrevectBandOpt(isl::schedule_node Node) {
   auto Space = isl::manage(isl_schedule_node_band_get_space(Node.get()));
   if (Space.is_null())
@@ -588,6 +724,25 @@ ScheduleTreeOptimizer::optimizeBand(__isl_take isl_schedule_node *NodeArg,
 
   if (OAI->Postopts)
     Node = applyTileBandOpt(Node);
+
+  // Prevectorization strip-mines a parallel point loop and register tiling
+  // unrolls the point loops, leave those to them.
+  if (OAI->Postopts && DistributePointLoops && !OAI->Prevect &&
+      !RegisterTiling) {
+    isl::schedule_node Distributed;
+    {
+      IslQuotaScope MaxScope = OAI->MaxOpGuard.enter();
+      Distributed = distributeInnermostLoop(Node, OAI->D);
+      // Leave the band as it is if the analysis exceeds the quota, rather than
+      // discarding the other optimizations of the SCoP.
+      if (OAI->MaxOpGuard.hasQuotaExceeded()) {
+        Distributed = {};
+        isl_ctx_reset_error(Node.ctx().get());
+      }
+    }
+    if (!Distributed.is_null())
+      Node = Distributed;
+  }
 
   if (OAI->Prevect) {
     IslQuotaScope MaxScope = OAI->MaxOpGuard.enter();
