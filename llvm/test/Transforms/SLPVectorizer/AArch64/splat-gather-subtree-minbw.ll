@@ -29,9 +29,7 @@ define double @test() {
 ; CHECK-NEXT:    [[TMP19:%.*]] = fmul <2 x double> [[TMP13]], [[TMP17]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = bitcast <2 x i64> [[TMP18]] to <2 x double>
 ; CHECK-NEXT:    [[TMP21:%.*]] = fmul <2 x double> [[TMP19]], [[TMP20]]
-; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <2 x double> [[TMP21]], i64 0
-; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <2 x double> [[TMP21]], i64 1
-; CHECK-NEXT:    [[FADD:%.*]] = fadd double [[TMP22]], [[TMP23]]
+; CHECK-NEXT:    [[FADD:%.*]] = call reassoc double @llvm.vector.reduce.fadd.v2f64(double -0.000000e+00, <2 x double> [[TMP21]])
 ; CHECK-NEXT:    ret double [[FADD]]
 ;
 bbl:

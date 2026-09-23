@@ -2771,7 +2771,7 @@ SCEVUse ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
       // re-generate the operands list. Group the operands by constant scale,
       // to avoid multiplying by the same constant scale multiple times.
       std::map<APInt, SmallVector<SCEVUse, 4>, APIntCompare> MulOpLists;
-      for (const SCEV *NewOp : NewOps)
+      for (SCEVUse NewOp : NewOps)
         MulOpLists[M.find(NewOp)->second].push_back(NewOp);
       // Re-generate the operands list.
       Ops.clear();
