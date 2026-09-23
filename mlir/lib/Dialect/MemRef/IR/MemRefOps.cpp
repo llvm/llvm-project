@@ -2637,7 +2637,21 @@ void ExpandShapeOp::build(OpBuilder &builder, OperationState &result,
   build(builder, result, *resultType, src, reassociation, outputShape);
 }
 
+/// Verify that none of the reassociation groups is empty.
+template <typename MemrefReshapeOp>
+static LogicalResult verifyReassociationIndicesNotEmpty(MemrefReshapeOp op) {
+  if (llvm::any_of(
+          op.getReassociationIndices(),
+          [](const ReassociationIndices &group) { return group.empty(); })) {
+    return op.emitOpError("reassociation indices must not be empty");
+  }
+  return success();
+}
+
 LogicalResult ExpandShapeOp::verify() {
+  if (failed(verifyReassociationIndicesNotEmpty(*this)))
+    return failure();
+
   MemRefType srcType = getSrcType();
   MemRefType resultType = getResultType();
 
@@ -2903,6 +2917,9 @@ void CollapseShapeOp::build(OpBuilder &b, OperationState &result, Value src,
 }
 
 LogicalResult CollapseShapeOp::verify() {
+  if (failed(verifyReassociationIndicesNotEmpty(*this)))
+    return failure();
+
   MemRefType srcType = getSrcType();
   MemRefType resultType = getResultType();
 

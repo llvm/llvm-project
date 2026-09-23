@@ -238,7 +238,6 @@ on support follow.
 | `Zvfbfwma` | Supported |
 | `Zvfh` | Supported |
 | `Zvfhmin` | Supported |
-| `Zvfofp8min` | Assembly Support |
 | `Zvkb` | Supported |
 | `Zvkg` | Supported ([See note](#riscv-vector-crypto-note)) |
 | `Zvkn` | Supported ([See note](#riscv-vector-crypto-note)) |
@@ -253,10 +252,6 @@ on support follow.
 | `Zvksg` | Supported ([See note](#riscv-vector-crypto-note)) |
 | `Zvksh` | Supported ([See note](#riscv-vector-crypto-note)) |
 | `Zvkt` | Supported |
-| `Zvvfmm` | Assembly Support |
-| `Zvvmm` | Assembly Support |
-| `Zvvmtls` | Assembly Support |
-| `Zvvmttls` | Assembly Support |
 | `Zvl32b` | ([Partially](#riscv-vlen-32-note)) Supported |
 | `Zvl64b` | Supported |
 | `Zvl128b` | Supported |
@@ -543,6 +538,10 @@ The current vendor extensions supported are:
 `Xwchc`
 
 : LLVM implements `the custom compressed opcodes present in some QingKe cores` by WCH / Nanjing Qinheng Microelectronics. The vendor refers to these opcodes by the name "XW".
+
+`experimental-Xqccmi`
+
+: LLVM implements [version 0.2 of the Qualcomm 16-bit Instruction Lookup Table extension specification](https://github.com/qualcomm/riscv-unified-db/releases#release-Xqccmi-0.2.0) by Qualcomm. All instructions are prefixed with `qc.` as described in the specification.
 
 `Xqccmp`
 

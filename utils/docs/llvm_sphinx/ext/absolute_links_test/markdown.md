@@ -11,6 +11,8 @@ These nonportable internal links should warn:
 - [generated HTML section](target.html#target-section)
 - [reference-style project link][project-target]
 - [reference-style generated HTML link][html-target]
+- [reST source section](project:rest.rst#rest-section)
+- [generated reST HTML section](rest.html#rest-section)
 
 [project-target]: project:target.md#target-document
 [html-target]: target.html#target-document

@@ -45,11 +45,6 @@ extern const LLVM_ABI MachOUnwindInfoRegistrarSymbolNames
     orc_rt_MachOUnwindInfoRegistrarSPSSymbols;
 
 } // end namespace rt
-
-namespace rt_alt {
-LLVM_ABI extern const SymbolNameSpec UnwindInfoManagerRegisterActionName;
-LLVM_ABI extern const SymbolNameSpec UnwindInfoManagerDeregisterActionName;
-} // end namespace rt_alt
 } // end namespace orc
 } // end namespace llvm
 

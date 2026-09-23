@@ -301,10 +301,12 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
     raw_string_ostream MaskOS(Mask);
     ListSeparator Sep(" | ");
     for (const Init *I : *R.getValueAsListInit(Field))
-      MaskOS << Sep << cast<DefInit>(I)->getDef()->getName();
+      MaskOS << Sep << "static_cast<unsigned>("
+             << cast<DefInit>(I)->getDef()->getName() << ")";
     if (const DefInit *DI = dyn_cast<DefInit>(R.getValueInit("Group")))
       for (const Init *I : *DI->getDef()->getValueAsListInit(Field))
-        MaskOS << Sep << cast<DefInit>(I)->getDef()->getName();
+        MaskOS << Sep << "static_cast<unsigned>("
+               << cast<DefInit>(I)->getDef()->getName() << ")";
     return Mask.empty() ? std::string("0") : Mask;
   };
 
@@ -320,19 +322,13 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
     return 0u;
   };
 
-  // Dump string table.
-  OS << "/////////\n";
-  OS << "// String table\n\n";
-  OS << "#if defined(OPTTABLE_STR_TABLE_CODE) || defined(OPTTABLE_CODE)\n";
-  Table.EmitStringTableDef(OS, "OptionStrTable");
-  OS << "#undef OPTTABLE_STR_TABLE_CODE\n";
-  OS << "#endif // OPTTABLE_STR_TABLE_CODE || OPTTABLE_CODE\n\n";
-
   OS << "/////////\n";
   OS << "// Tables\n\n";
   OS << "#ifdef OPTTABLE_CODE\n";
   // A function rather than an object: the object needs dynamic relocations.
   OS << "static llvm::opt::OptTable::Tables optionTables() {\n";
+  Table.EmitStringTableDef(OS, "OptionStrTable");
+  OS << "\n";
 
   // Dump prefixes.
   OS << "  static constexpr llvm::StringTable::Offset OptionPrefixesTable[] = "
@@ -481,7 +477,7 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
   }
   OS << "  };\n\n";
 
-  OS << "  return {OptionStrTableStorage, OptionPrefixesTable,\n";
+  OS << "  return {OptionStrTable, OptionPrefixesTable,\n";
   OS << "          OptionInfoTable, OptionInfoExtrasTable, "
         "OptionHelpTextVariantsTable, "
      << (SubCommands.empty() ? "{}" : "OptionSubCommands")
