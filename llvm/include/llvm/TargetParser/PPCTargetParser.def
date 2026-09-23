@@ -286,7 +286,9 @@ PPC_AIX_FEATURE("vsx","CPU supports the vector-scalar extension",USE_SYS_CONF,AI
 // attribute on AIX.
 // - AIX_BUILTIN_CPU_SUPPORTS_NAME: the corresponding __builtin_cpu_supports
 // testable feature.
-// - CAN_DISABLE: whether this target-feature can be disabled at runtime.
+// - CAN_DISABLE: whether this target-feature can be disabled at runtime. Some
+// CPU features (such as altivec and htm) can be disabled at the OS level via
+// the schedo command (e.g. schedo -ro allow_vmx=0)
 // - PRIORITY: an integer value that determines the order of which features are
 // tested first when selecting between clones in the resolver. Higher priority
 // items will be tested first. The function PPCTargetInfo::getFMVPriority uses
@@ -321,7 +323,7 @@ PPC_AIX_CLONES_FEATURE("htm",                 "htm",       1, 214)
 PPC_AIX_CLONES_FEATURE("vsx",                 "vsx",       1, 111)
 PPC_AIX_CLONES_FEATURE("popcntd",             "arch_2_06", 0, 112)
 //                    Base features: 50-99 (below pwr7=100)
-PPC_AIX_CLONES_FEATURE("altivec",             "altivec",   0, 50)
+PPC_AIX_CLONES_FEATURE("altivec",             "altivec",   1, 50)
 #undef PPC_AIX_CLONES_FEATURE
 
 // Negative form (e.g. no-vsx) for features that can be disabled at runtime have
