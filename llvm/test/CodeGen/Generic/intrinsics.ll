@@ -19,13 +19,6 @@ define ptr @launder(ptr %p) {
         ret ptr %q
 }
 
-declare ptr @llvm.strip.invariant.group(ptr)
-
-define ptr @strip(ptr %p) {
-        %q = call ptr @llvm.strip.invariant.group(ptr %p)
-        ret ptr %q
-}
-
 declare void @llvm.sideeffect()
 
 define void @test_sideeffect() {

@@ -17,6 +17,7 @@
 #include "AllocActionTestUtils.h"
 #include "BedrockTestUtils.h"
 #include "CommonTestUtils.h"
+#include "ErrorMatchers.h"
 #include "gtest/gtest.h"
 
 #include <cstring>
@@ -24,6 +25,7 @@
 #include <vector>
 
 using namespace orc_rt;
+using namespace orc_rt::test;
 
 // Write the given value to the address pointed to by P.
 static orc_rt_WrapperFunctionBuffer
@@ -188,8 +190,7 @@ TEST(SimpleNativeMemoryMapTest, ReleaseMultipleReportsErrors) {
   // Test that releaseMultiple reports errors via Session::reportError
   // when some addresses aren't recognized.
   std::vector<std::string> Errors;
-  Session S(mockExecutorProcessInfo(), noDispatch,
-            [&](Error Err) { Errors.push_back(toString(std::move(Err))); });
+  Session S(mockExecutorProcessInfo(), noDispatch, AccumulateErrors(Errors));
   SimpleSymbolTable ThrowAway;
   auto SNMM = cantFail(SimpleNativeMemoryMap::Create(S, ThrowAway));
 
@@ -210,8 +211,7 @@ TEST(SimpleNativeMemoryMapTest, DeinitializeMultipleReportsErrors) {
   // Test that deinitializeMultiple reports errors via Session::reportError
   // when some addresses aren't recognized.
   std::vector<std::string> Errors;
-  Session S(mockExecutorProcessInfo(), noDispatch,
-            [&](Error Err) { Errors.push_back(toString(std::move(Err))); });
+  Session S(mockExecutorProcessInfo(), noDispatch, AccumulateErrors(Errors));
   SimpleSymbolTable ThrowAway;
   auto SNMM = cantFail(SimpleNativeMemoryMap::Create(S, ThrowAway));
 
@@ -224,9 +224,7 @@ TEST(SimpleNativeMemoryMapTest, DeinitializeMultipleReportsErrors) {
   // This should fail and report the error.
   std::future<Error> DeinitResult;
   SNMM->deinitializeMultiple(waitFor(DeinitResult), {Addr});
-  auto Err = DeinitResult.get();
-  EXPECT_TRUE(!!Err);
-  consumeError(std::move(Err));
+  EXPECT_THAT_ERROR(DeinitResult.get(), Failed());
 
   EXPECT_EQ(Errors.size(), 1U);
 

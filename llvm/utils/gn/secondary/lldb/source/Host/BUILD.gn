@@ -29,7 +29,6 @@ static_library("Host") {
     "common/HostProcess.cpp",
     "common/HostThread.cpp",
     "common/JSONTransport.cpp",
-    "common/LZMA.cpp",
     "common/LockFileBase.cpp",
     "common/MainLoopBase.cpp",
     "common/MemoryMonitor.cpp",
@@ -98,9 +97,12 @@ static_library("Host") {
       "posix/LockFilePosix.cpp",
       "posix/MainLoopPosix.cpp",
       "posix/PipePosix.cpp",
-      "posix/ProcessLauncherPosixFork.cpp",
       "posix/Support.cpp",
     ]
+
+    if (current_os != "emscripten") {
+      sources += [ "posix/ProcessLauncherPosixFork.cpp" ]
+    }
   }
 
   if (current_os == "aix") {
@@ -124,6 +126,13 @@ static_library("Host") {
     deps += [ "macosx/objcxx" ]
 
     # FIXME: Maybe define NO_XPC_SERVICES
+  }
+
+  if (current_os == "emscripten") {
+    sources += [
+      "emscripten/Host.cpp",
+      "emscripten/HostInfoEmscripten.cpp",
+    ]
   }
 
   if (current_os == "linux" || current_os == "android") {
@@ -169,9 +178,6 @@ static_library("Host") {
   # endif()
   # if (LLDB_ENABLE_LIBEDIT)
   #   list(APPEND EXTRA_LIBS LibEdit::LibEdit)
-  # endif()
-  # if (LLDB_ENABLE_LZMA)
-  #   list(APPEND EXTRA_LIBS ${LIBLZMA_LIBRARIES})
   # endif()
   # if (WIN32)
   #   list(APPEND LLDB_SYSTEM_LIBS psapi)

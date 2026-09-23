@@ -283,6 +283,13 @@ public:
   virtual const Fortran::lower::pft::FunctionLikeUnit *
   getCurrentFunctionUnit() const = 0;
 
+  /// Returns true if \p sym is the target of a Cray pointer association that
+  /// is visible in the procedure being lowered. Such symbols are given the
+  /// TARGET attribute in FIR so that the aliasing between the Cray pointee and
+  /// the target is visible to all FIR passes.
+  virtual bool
+  isVisibleCrayPointerTarget(const Fortran::semantics::Symbol &sym) const = 0;
+
   /// Check support of Multi-image features if -fcoarray is provided
   virtual void checkCoarrayEnabled() = 0;
 

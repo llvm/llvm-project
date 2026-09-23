@@ -134,6 +134,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  execl
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.execl
+)
+
+add_entrypoint_object(
   execle
   ALIAS
   DEPENDS
@@ -292,6 +299,13 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.pathconf
+)
+
+add_entrypoint_object(
+  pause
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.pause
 )
 
 add_entrypoint_object(
