@@ -748,8 +748,8 @@ TEST_P(ImportReflection, ImportReflectionAPValueAsType) {
   ASSERT_TRUE(ToVal.isReflection());
   EXPECT_EQ(ReflectionKind::Type, ToVal.getReflectionOperandKind());
 
-  const auto *ToTSI = static_cast<const TypeSourceInfo *>(
-      ToVal.getReflectionOpaqueOperand());
+  const auto *ToTSI =
+      static_cast<const TypeSourceInfo *>(ToVal.getReflectionOpaqueOperand());
   ASSERT_TRUE(ToTSI);
   EXPECT_EQ(ToTA->getASTContext().IntTy.getAsOpaquePtr(),
             ToTSI->getType().getCanonicalType().getAsOpaquePtr());

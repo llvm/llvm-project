@@ -10887,8 +10887,8 @@ ASTNodeImporter::ImportAPValue(const APValue &FromValue) {
       Result = APValue(ReflectionKind::Null, nullptr);
       break;
     case ReflectionKind::Type: {
-      auto *FromTSI = const_cast<TypeSourceInfo *>(
-          static_cast<const TypeSourceInfo *>(
+      auto *FromTSI =
+          const_cast<TypeSourceInfo *>(static_cast<const TypeSourceInfo *>(
               FromValue.getReflectionOpaqueOperand()));
       TypeSourceInfo *ToTSI = importChecked(Err, FromTSI);
       if (Err)
