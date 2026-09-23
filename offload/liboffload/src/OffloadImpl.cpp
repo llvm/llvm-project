@@ -1446,5 +1446,39 @@ Error olQueryQueue_impl(ol_queue_handle_t Queue, bool *IsQueueWorkCompleted) {
   return Error::success();
 }
 
+namespace tmp {
+// Temporary helpers to help transition of libomptarget to liboffload. Not to be
+// used outside of the migration effort.
+// TODO: remove once libomptarget does not depend on these helpers anymore.
+Error __ol_tgt_minimalOlInit(llvm::SmallVector<GenericPluginTy *> &LoadedPlugins) {
+  std::lock_guard<std::mutex> Lock(OffloadContextValMutex);
+
+  if (isOffloadInitialized()) {
+    OffloadContext::get().RefCount++;
+    return Plugin::success();
+  }
+
+  auto *NewContext = new OffloadContext{};
+
+#define PLUGIN_TARGET(Name)                                                    \
+  do {                                                                         \
+    auto Backend = pluginNameToBackend(#Name);                                 \
+    auto *Plugin = createPlugin_##Name();                                      \
+    LoadedPlugins.push_back(Plugin);                                           \
+    NewContext->Platforms.emplace_back(std::make_unique<ol_platform_impl_t>(   \
+         std::unique_ptr<GenericPluginTy>(Plugin), Backend));                  \
+  } while (false);
+#include "Shared/Targets.def"
+
+  NewContext->TracingEnabled = std::getenv("OFFLOAD_TRACE");
+  NewContext->ValidationEnabled = !std::getenv("OFFLOAD_DISABLE_VALIDATION");
+
+  OffloadContextVal.store(NewContext);
+  OffloadContext::get().RefCount++;
+
+  return Error::success();
+}
+} // namespace tmp
+
 } // namespace offload
 } // namespace llvm
