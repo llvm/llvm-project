@@ -5869,6 +5869,35 @@ void CodeGenFunction::processInReduction(const OMPExecutableDirective &S,
   (void)InRedScope.Privatize();
 }
 
+/// Return the condition that decides whether \p S is a replayable construct,
+/// or null if it cannot be one.
+///
+/// OpenMP 6.0 [14.3] makes a task-generating construct that is encountered in
+/// a taskgraph construct a replayable construct of the region "unless
+/// otherwise specified by the replayable clause".  So the enclosing taskgraph
+/// supplies the default and an explicit clause overrides it, rather than the
+/// taskgraph forcing every construct within it to be recorded.  A clause whose
+/// argument is omitted means replayable, as does the taskgraph default; both
+/// are returned as a constant-true condition, which emitIfClause folds away.
+///
+/// [14.6] gives replayable-expression the constant property, so in a
+/// conforming program the result here is always a constant and no branch
+/// survives.  A non-constant argument is accepted as an extension and decided
+/// at run time.
+static const Expr *getOMPReplayableCond(CodeGenFunction &CGF,
+                                        const OMPExecutableDirective &S) {
+  const auto *RC = S.getSingleClause<OMPReplayableClause>();
+  if (!RC && !CGF.getOMPWithinTaskgraph())
+    return nullptr;
+  if (RC)
+    if (const Expr *Cond = RC->getCondition())
+      return Cond;
+  return IntegerLiteral::Create(
+      CGF.getContext(), llvm::APInt(32, 1),
+      CGF.getContext().getIntTypeForBitwidth(32, /*Signed=*/0),
+      SourceLocation());
+}
+
 void CodeGenFunction::EmitOMPTaskDirective(const OMPTaskDirective &S) {
   // Emit outlined function for task construct.
   const CapturedStmt *CS = S.getCapturedStmt(OMPD_task);
@@ -5887,16 +5916,7 @@ void CodeGenFunction::EmitOMPTaskDirective(const OMPTaskDirective &S) {
   OMPTaskDataTy Data;
   // Check if we should emit tied or untied task.
   Data.Tied = !S.getSingleClause<OMPUntiedClause>();
-  const Expr *ReplayableCond = nullptr;
-  if (auto *RC = S.getSingleClause<OMPReplayableClause>()) {
-    ReplayableCond = RC->getCondition();
-    if (!ReplayableCond) {
-      ReplayableCond = IntegerLiteral::Create(
-          getContext(), llvm::APInt(32, 1),
-          getContext().getIntTypeForBitwidth(32, /*Signed=*/0),
-          SourceLocation());
-    }
-  }
+  const Expr *ReplayableCond = getOMPReplayableCond(*this, S);
   // Propagate the replayable signal into Data so that reduction init can
   // route to the taskgraph-aware runtime entry point when the task may
   // participate in taskgraph replay.
@@ -5940,18 +5960,8 @@ void CodeGenFunction::EmitOMPTaskwaitDirective(const OMPTaskwaitDirective &S) {
   // Build list of dependences
   buildDependences(S, Data);
   Data.HasNowaitClause = S.hasClausesOfKind<OMPNowaitClause>();
-  const Expr *ReplayableCond = nullptr;
-  if (auto *RC = S.getSingleClause<OMPReplayableClause>()) {
-    ReplayableCond = RC->getCondition();
-    if (!ReplayableCond) {
-      ReplayableCond = IntegerLiteral::Create(
-          getContext(), llvm::APInt(32, 1),
-          getContext().getIntTypeForBitwidth(32, /*Signed=*/0),
-          SourceLocation());
-    }
-  }
   CGM.getOpenMPRuntime().emitTaskwaitCall(*this, S.getBeginLoc(),
-                                          ReplayableCond, Data);
+                                          getOMPReplayableCond(*this, S), Data);
 }
 
 void CodeGenFunction::EmitOMPTaskgraphDirective(
@@ -8358,16 +8368,7 @@ void CodeGenFunction::EmitOMPTaskLoopBasedDirective(const OMPLoopDirective &S) {
     }
   }
 
-  const Expr *ReplayableCond = nullptr;
-  if (auto *RC = S.getSingleClause<OMPReplayableClause>()) {
-    ReplayableCond = RC->getCondition();
-    if (!ReplayableCond) {
-      ReplayableCond = IntegerLiteral::Create(
-          getContext(), llvm::APInt(32, 1),
-          getContext().getIntTypeForBitwidth(32, /*Signed=*/0),
-          SourceLocation());
-    }
-  }
+  const Expr *ReplayableCond = getOMPReplayableCond(*this, S);
 
   OMPTaskDataTy Data;
   // Check if taskloop must be emitted without taskgroup.

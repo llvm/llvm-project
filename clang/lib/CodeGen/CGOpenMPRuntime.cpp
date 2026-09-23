@@ -5249,21 +5249,14 @@ void CGOpenMPRuntime::emitTaskCall(
     }
   };
 
-  if (CGF.getOMPWithinTaskgraph()) {
-    // Lexically within taskgraph, always replayable.
-    RegionCodeGenTy TaskgraphRCG(TaskgraphTaskCodeGen);
-    TaskgraphRCG(CGF);
+  // ReplayableCond is constant-folded to TRUE when lexically inside a taskgraph
+  // when a replayable clause is not present, else it's the clause's value.
+  if (ReplayableCond) {
+    emitIfClause(CGF, ReplayableCond, TaskgraphTaskCodeGen,
+                 NonTaskgraphTaskCodeGen);
   } else {
-    if (ReplayableCond) {
-      // We have a replayable clause.  Task is replayable if its argument is
-      // omitted or evaluates to TRUE.
-      emitIfClause(CGF, ReplayableCond, TaskgraphTaskCodeGen,
-                   NonTaskgraphTaskCodeGen);
-    } else {
-      // Not taskgraph, not replayable.
-      RegionCodeGenTy NonTaskgraphRCG(NonTaskgraphTaskCodeGen);
-      NonTaskgraphRCG(CGF);
-    }
+    RegionCodeGenTy NonTaskgraphRCG(NonTaskgraphTaskCodeGen);
+    NonTaskgraphRCG(CGF);
   }
 }
 
@@ -5453,21 +5446,14 @@ void CGOpenMPRuntime::emitTaskLoopCall(
                         TaskArgs);
   };
 
-  if (CGF.getOMPWithinTaskgraph()) {
-    // Lexically within taskgraph, always replayable.
-    RegionCodeGenTy TaskgraphRCG(TaskgraphTaskloopCodeGen);
-    TaskgraphRCG(CGF);
+  // ReplayableCond is constant-folded to TRUE when lexically inside a taskgraph
+  // when a replayable clause is not present, else it's the clause's value.
+  if (ReplayableCond) {
+    emitIfClause(CGF, ReplayableCond, TaskgraphTaskloopCodeGen,
+                 NonTaskgraphTaskloopCodeGen);
   } else {
-    if (ReplayableCond) {
-      // We have a replayable clause.  Taskloop is replayable if its argument
-      // is omitted or evaluates to TRUE.
-      emitIfClause(CGF, ReplayableCond, TaskgraphTaskloopCodeGen,
-                   NonTaskgraphTaskloopCodeGen);
-    } else {
-      // Not taskgraph, not replayable.
-      RegionCodeGenTy NonTaskgraphRCG(NonTaskgraphTaskloopCodeGen);
-      NonTaskgraphRCG(CGF);
-    }
+    RegionCodeGenTy NonTaskgraphRCG(NonTaskgraphTaskloopCodeGen);
+    NonTaskgraphRCG(CGF);
   }
 }
 
@@ -6603,15 +6589,20 @@ llvm::Value *CGOpenMPRuntime::emitTaskReductionInit(
       llvm::ConstantInt::get(CGM.IntTy, Size, /*isSigned=*/true),
       CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(TaskRedInput.getPointer(),
                                                       CGM.VoidPtrTy)};
-  // A task/taskloop participates in taskgraph replay either when it is
-  // lexically nested inside a #pragma omp taskgraph region or when it carries
-  // a `replayable` clause (which may also fire dynamically inside a taskgraph
-  // recording).  In both cases route through the taskgraph-aware entry point
-  // so the runtime can stash the reduction input for later replay.  The
-  // taskgraph entry point degrades to the regular init when no taskgraph
-  // recording is active, so this is safe even when `replayable(false)` at
-  // runtime.
-  if (CGF.getOMPWithinTaskgraph() || Data.ReplayableCond)
+  // The __kmpc_taskgraph_taskred_init entry point allocates a copy of the
+  // reduction data, so only call it if there's a possibility that the construct
+  // may have 'replayable' true.  In the case that the construct is false but we
+  // cannot tell until runtime, the allocated copy is freed safely in libomp.
+  bool MayBeReplayable;
+  if (Data.ReplayableCond) {
+    bool KnownValue;
+    MayBeReplayable =
+        !CGF.ConstantFoldsToSimpleInteger(Data.ReplayableCond, KnownValue) ||
+        KnownValue;
+  } else {
+    MayBeReplayable = CGF.getOMPWithinTaskgraph();
+  }
+  if (MayBeReplayable)
     return CGF.EmitRuntimeCall(
         OMPBuilder.getOrCreateRuntimeFunction(
             CGM.getModule(), OMPRTL___kmpc_taskgraph_taskred_init),
@@ -6748,21 +6739,15 @@ void CGOpenMPRuntime::emitTaskwaitCall(CodeGenFunction &CGF, SourceLocation Loc,
           }
         };
 
-    if (CGF.getOMPWithinTaskgraph()) {
-      // Lexically within taskgraph, always replayable.
-      RegionCodeGenTy TaskgraphRCG(TaskgraphTaskwaitCodeGen);
-      TaskgraphRCG(CGF);
+    // ReplayableCond is constant-folded to TRUE when lexically inside a
+    // taskgraph when a replayable clause is not present, else it's the clause's
+    // value.
+    if (ReplayableCond) {
+      emitIfClause(CGF, ReplayableCond, TaskgraphTaskwaitCodeGen,
+                   NonTaskgraphTaskwaitCodeGen);
     } else {
-      if (ReplayableCond) {
-        // We have a replayable clause.  Taskwait is replayable if its argument
-        // is omitted or evaluates to TRUE.
-        emitIfClause(CGF, ReplayableCond, TaskgraphTaskwaitCodeGen,
-                     NonTaskgraphTaskwaitCodeGen);
-      } else {
-        // Not taskgraph, not replayable.
-        RegionCodeGenTy NonTaskgraphRCG(NonTaskgraphTaskwaitCodeGen);
-        NonTaskgraphRCG(CGF);
-      }
+      RegionCodeGenTy NonTaskgraphRCG(NonTaskgraphTaskwaitCodeGen);
+      NonTaskgraphRCG(CGF);
     }
   }
 
