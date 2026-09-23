@@ -410,7 +410,8 @@ define i1 @neg_sdiv_strict_quotient_may_be_zero(i32 noundef %x, i32 noundef %n) 
 ; CHECK-NEXT:    [[GT1:%.*]] = icmp sgt i32 [[N]], 1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[GT1]])
 ; CHECK-NEXT:    [[Q:%.*]] = sdiv i32 [[X]], [[N]]
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i32 [[Q]], 0
+; CHECK-NEXT:    ret i1 [[C]]
 ;
   %pos = icmp sgt i32 %x, 0
   call void @llvm.assume(i1 %pos)

@@ -1613,7 +1613,7 @@ void State::addInfoFor(BasicBlock &BB) {
     //   srem x, n: result >= 0 and result <= x, if x >= 0
     //              result < n,                  if n > 0
     //   sdiv x, n: result >= 0 and result <= x, if x >= 0 and n > 0
-    //              result > 0 and result < x,   if x > 0 and n > 1
+    //              result >= 0 and result < x,  if x > 0 and n > 1
     if (auto *BO = dyn_cast<BinaryOperator>(&I)) {
       if ((BO->getOpcode() == Instruction::URem ||
            BO->getOpcode() == Instruction::UDiv ||
@@ -2617,8 +2617,7 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
           bool IsStrict = Info.isKnownPositive(X) &&
                           Info.doesHold(CmpInst::ICMP_SGT, N,
                                         ConstantInt::get(N->getType(), 1));
-          AddFact(IsStrict ? CmpInst::ICMP_SGT : CmpInst::ICMP_SGE, BO,
-                  Constant::getNullValue(BO->getType()));
+          AddFact(CmpInst::ICMP_SGE, BO, Constant::getNullValue(BO->getType()));
           AddFact(IsStrict ? CmpInst::ICMP_SLT : CmpInst::ICMP_SLE, BO, X);
           continue;
         }
