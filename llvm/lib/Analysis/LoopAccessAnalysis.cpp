@@ -3197,9 +3197,9 @@ static const SCEV *getStrideFromPointer(Value *Ptr, ScalarEvolution *SE, Loop *L
 
   // Look through multiplies that scale a stride by a constant.
   match(V, m_scev_Mul(m_SCEVConstant(), m_SCEV(V)));
-  if (auto *C = dyn_cast<SCEVIntegralCastExpr>(V))
-    if (isa<SCEVUnknown>(C->getOperand()))
-      return V;
+  const SCEVUnknown *U;
+  if (match(V, m_scev_IntegralCast(m_SCEVUnknown(U))))
+    return U;
 
   return nullptr;
 }
@@ -3215,16 +3215,16 @@ void LoopAccessInfo::collectStridedAccess(Value *MemAccess) {
   // computation of an interesting IV - but we chose not to as we
   // don't have a cost model here, and broadening the scope exposes
   // far too many unprofitable cases.
-  const SCEV *StrideExpr = getStrideFromPointer(Ptr, PSE->getSE(), TheLoop);
-  if (!StrideExpr)
+  const SCEV *StrideBase = getStrideFromPointer(Ptr, PSE->getSE(), TheLoop);
+  if (!StrideBase)
     return;
 
-  if (match(StrideExpr, m_scev_UndefOrPoison()))
+  if (match(StrideBase, m_scev_UndefOrPoison()))
     return;
 
   LLVM_DEBUG(dbgs() << "LAA: Found a strided access that is a candidate for "
                        "versioning:");
-  LLVM_DEBUG(dbgs() << "  Ptr: " << *Ptr << " Stride: " << *StrideExpr << "\n");
+  LLVM_DEBUG(dbgs() << "  Ptr: " << *Ptr << " Stride: " << *StrideBase << "\n");
 
   if (!SpeculateUnitStride) {
     LLVM_DEBUG(dbgs() << "  Chose not to due to -laa-speculate-unit-stride\n");
@@ -3248,12 +3248,6 @@ void LoopAccessInfo::collectStridedAccess(Value *MemAccess) {
   if (!LoopGuards)
     LoopGuards.emplace(ScalarEvolution::LoopGuards::collect(TheLoop, *SE));
   MaxBTC = SE->applyLoopGuards(MaxBTC, *LoopGuards);
-
-  // Strip back off the integer cast, and check that our result is a
-  // SCEVUnknown as we expect.
-  const SCEV *StrideBase = StrideExpr;
-  if (const auto *C = dyn_cast<SCEVIntegralCastExpr>(StrideBase))
-    StrideBase = C->getOperand();
 
   // Evaluate the guarded trip count under the unit-stride predicate instead of
   // comparing the stride and trip count, which may use different integer
