@@ -11,7 +11,6 @@
 #include "SIFoldOperands.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
@@ -20,7 +19,6 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
-#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/InitializePasses.h"
 
 #define DEBUG_TYPE "si-fold-operands"
@@ -921,6 +919,20 @@ bool SIFoldOperandsImpl::tryAddToFoldList(
     if (Opc == AMDGPU::S_FMAC_F32 && OpNo == 3) {
       if (tryToFoldAsFMAAKorMK())
         return true;
+    }
+
+    // Inlineable constant might have been folded into Imm operand of fmaak or
+    // fmamk and we are trying to fold a non-inlinable constant.
+    if ((Opc == AMDGPU::S_FMAAK_F32 || Opc == AMDGPU::S_FMAMK_F32) &&
+        OpToFold.isImm()) {
+      std::optional<int64_t> ImmVal = OpToFold.getEffectiveImmVal();
+      if (ImmVal && !TII->isInlineConstant(*MI, OpNo, *ImmVal)) {
+        unsigned ImmIdx = Opc == AMDGPU::S_FMAAK_F32 ? 3 : 2;
+        MachineOperand &OpImm = MI->getOperand(ImmIdx);
+        if (!OpImm.isReg() &&
+            TII->isInlineConstant(*MI, MI->getOperand(OpNo), OpImm))
+          return tryToFoldAsFMAAKorMK();
+      }
     }
 
     // Special case for s_setreg_b32
@@ -2217,7 +2229,9 @@ bool SIFoldOperandsImpl::tryFoldFoldableCopy(
       OpToFold.getSubReg()) {
     if (DstRC == &AMDGPU::SReg_32RegClass &&
         DstRC == MRI->getRegClass(OpToFold.getReg())) {
-      assert(OpToFold.getSubReg() == AMDGPU::lo16);
+      if (!TRI->getMatchingSuperRegClass(DstRC, &AMDGPU::SGPR_LO16RegClass,
+                                         OpToFold.getSubReg()))
+        return false;
       OpToFold.setSubReg(0);
     }
   }
@@ -2312,7 +2326,7 @@ SIFoldOperandsImpl::isClamp(const MachineInstr &MI) const {
         (Op == AMDGPU::V_PK_MAX_F16 || Op == AMDGPU::V_PK_MAX_NUM_BF16)
             ? SISrcMods::OP_SEL_1
             : 0u;
-    if (Src0Mods != UnsetMods && Src1Mods != UnsetMods)
+    if (Src0Mods != UnsetMods || Src1Mods != UnsetMods)
       return nullptr;
     return Src0;
   }
@@ -2459,8 +2473,7 @@ SIFoldOperandsImpl::isOMod(const MachineInstr &MI) const {
     const MachineOperand *Src1 = TII->getNamedOperand(MI, AMDGPU::OpName::src1);
 
     // If there is an immediate operand, it must be Src1
-    std::optional<int64_t> Src1Imm =
-        TII->getImmOrMaterializedImm(*MRI, const_cast<MachineOperand &>(*Src1));
+    std::optional<int64_t> Src1Imm = TII->getImmOrMaterializedImm(*MRI, *Src1);
     if (!Src1Imm)
       return {nullptr, SIOutMods::NONE};
 
@@ -2504,8 +2517,10 @@ SIFoldOperandsImpl::isOMod(const MachineInstr &MI) const {
     return {nullptr, SIOutMods::NONE};
   }
   case AMDGPU::V_PK_MUL_BF16: {
-    // OMOD folding for BF16 packed multiply
-    if (MFI->getMode().FP32Denormals.Output != DenormalMode::PreserveSign ||
+    // OMOD folding for BF16 packed multiply. bf16 has no denormal mode of its
+    // own; it follows the default ("denormal-fp-math") mode, which is the same
+    // field as f64/f16.
+    if (MFI->getMode().FP64FP16Denormals.Output != DenormalMode::PreserveSign ||
         MI.mayRaiseFPException())
       return {nullptr, SIOutMods::NONE};
 
@@ -2513,8 +2528,7 @@ SIFoldOperandsImpl::isOMod(const MachineInstr &MI) const {
     const MachineOperand *Src1 = TII->getNamedOperand(MI, AMDGPU::OpName::src1);
 
     // If there is an immediate operand, it must be Src1
-    std::optional<int64_t> Src1Imm =
-        TII->getImmOrMaterializedImm(*MRI, const_cast<MachineOperand &>(*Src1));
+    std::optional<int64_t> Src1Imm = TII->getImmOrMaterializedImm(*MRI, *Src1);
     if (!Src1Imm)
       return {nullptr, SIOutMods::NONE};
 
@@ -2527,8 +2541,8 @@ SIFoldOperandsImpl::isOMod(const MachineInstr &MI) const {
         TII->getNamedOperand(MI, AMDGPU::OpName::src0_modifiers);
     const MachineOperand *Src1Mods =
         TII->getNamedOperand(MI, AMDGPU::OpName::src1_modifiers);
-    if ((Src0Mods && (Src0Mods->getImm() & ~SISrcMods::OP_SEL_1)) ||
-        (Src1Mods && (Src1Mods->getImm() & ~SISrcMods::OP_SEL_1)) ||
+    if ((Src0Mods->getImm() & ~SISrcMods::OP_SEL_1) ||
+        (Src1Mods->getImm() & ~SISrcMods::OP_SEL_1) ||
         TII->hasModifiersSet(MI, AMDGPU::OpName::omod) ||
         TII->hasModifiersSet(MI, AMDGPU::OpName::clamp))
       return {nullptr, SIOutMods::NONE};
@@ -2536,8 +2550,9 @@ SIFoldOperandsImpl::isOMod(const MachineInstr &MI) const {
     return {Src0, OMod};
   }
   case AMDGPU::V_PK_ADD_BF16: {
-    // OMOD folding for BF16 packed add: x + x -> x * 2
-    if (MFI->getMode().FP32Denormals.Output != DenormalMode::PreserveSign)
+    // OMOD folding for BF16 packed add: x + x -> x * 2. See the bf16 denormal
+    // mode note in the V_PK_MUL_BF16 case above.
+    if (MFI->getMode().FP64FP16Denormals.Output != DenormalMode::PreserveSign)
       return {nullptr, SIOutMods::NONE};
 
     const MachineOperand *Src0 = TII->getNamedOperand(MI, AMDGPU::OpName::src0);
@@ -2552,8 +2567,8 @@ SIFoldOperandsImpl::isOMod(const MachineInstr &MI) const {
         TII->getNamedOperand(MI, AMDGPU::OpName::src0_modifiers);
     const MachineOperand *Src1Mods =
         TII->getNamedOperand(MI, AMDGPU::OpName::src1_modifiers);
-    if ((Src0Mods && (Src0Mods->getImm() & ~SISrcMods::OP_SEL_1)) ||
-        (Src1Mods && (Src1Mods->getImm() & ~SISrcMods::OP_SEL_1)) ||
+    if ((Src0Mods->getImm() & ~SISrcMods::OP_SEL_1) ||
+        (Src1Mods->getImm() & ~SISrcMods::OP_SEL_1) ||
         TII->hasModifiersSet(MI, AMDGPU::OpName::omod) ||
         TII->hasModifiersSet(MI, AMDGPU::OpName::clamp))
       return {nullptr, SIOutMods::NONE};
@@ -2581,9 +2596,7 @@ bool SIFoldOperandsImpl::tryFoldOMod(MachineInstr &MI) {
   // In real-true16 mode, vgpr_16 results are packed into vgpr_32 via
   // REG_SEQUENCE. Look through it to find the actual instruction.
   if (Def->isRegSequence() && Def->getNumOperands() == 5 &&
-      Def->getOperand(1).isReg() && Def->getOperand(2).isImm() &&
-      Def->getOperand(2).getImm() == AMDGPU::lo16 &&
-      Def->getOperand(3).isReg()) {
+      Def->getOperand(2).getImm() == AMDGPU::lo16) {
     // Only look through if the high 16 bits are undefined
     bool CanLookThrough = true;
     MachineInstr *Hi16Def = MRI->getVRegDef(Def->getOperand(3).getReg());

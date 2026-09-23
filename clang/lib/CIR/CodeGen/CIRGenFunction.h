@@ -536,13 +536,14 @@ private:
 public:
   /// Use to track source locations across nested visitor traversals.
   /// Always use a `SourceLocRAIIObject` to change currSrcLoc.
-  std::optional<mlir::Location> currSrcLoc;
+  std::optional<SourceRange> currSrcLoc;
+
   class SourceLocRAIIObject {
     CIRGenFunction &cgf;
-    std::optional<mlir::Location> oldLoc;
+    std::optional<SourceRange> oldLoc;
 
   public:
-    SourceLocRAIIObject(CIRGenFunction &cgf, mlir::Location value) : cgf(cgf) {
+    SourceLocRAIIObject(CIRGenFunction &cgf, SourceRange value) : cgf(cgf) {
       if (cgf.currSrcLoc)
         oldLoc = cgf.currSrcLoc;
       cgf.currSrcLoc = value;
@@ -569,6 +570,22 @@ public:
   mlir::Location getLoc(mlir::Location lhs, mlir::Location rhs);
 
   const clang::LangOptions &getLangOpts() const { return cgm.getLangOpts(); }
+
+  bool checkIfFunctionMustProgress() {
+    if (cgm.getCodeGenOpts().getFiniteLoops() ==
+        clang::CodeGenOptions::FiniteLoopsKind::Never)
+      return false;
+
+    // C++11 and later guarantees that a thread eventually will do one of the
+    // following (C++11 [intro.multithread]p24 and C++17 [intro.progress]p1):
+    // - terminate,
+    //  - make a call to a library I/O function,
+    //  - perform an access through a volatile glvalue, or
+    //  - perform a synchronization operation or an atomic operation.
+    //
+    // Hence each function is 'mustprogress' in C++11 or later.
+    return getLangOpts().CPlusPlus11;
+  }
 
   /// True if an insertion point is defined. If not, this indicates that the
   /// current code being emitted is unreachable.
@@ -1105,6 +1122,15 @@ public:
                      FunctionArgList args, clang::SourceLocation loc,
                      clang::SourceLocation startLoc);
 
+  /// Wrap the function body in a `cir.try` that enforces the exception
+  /// specification of \p d: a filter handler for a dynamic specification
+  /// (`throw(T...)` or pre-C++17 `throw()`), or a terminate handler for a
+  /// specification that permits nothing to escape.
+  void emitStartEHSpec(const clang::Decl *d);
+
+  /// Close the `cir.try` opened by emitStartEHSpec.
+  void emitEndEHSpec(const clang::Decl *d);
+
   /// returns true if aggregate type has a volatile member.
   bool hasVolatileMember(QualType t) {
     if (const auto *rd = t->getAsRecordDecl())
@@ -1118,6 +1144,18 @@ public:
   /// The cleanup depth enclosing all the cleanups associated with the
   /// parameters.
   EHScopeStack::stable_iterator prologueCleanupDepth;
+
+  /// The `cir.try` wrapping a function whose exception specification has to be
+  /// enforced. Null when the current function needs no such wrapper.
+  cir::TryOp ehSpecTryOp;
+
+  /// Whether the wrapper opened by emitStartEHSpec is a terminate scope, whose
+  /// handler calls std::terminate() for any escaping exception, rather than the
+  /// filter of a dynamic exception specification.
+  bool inEHSpecTerminateScope() {
+    return ehSpecTryOp &&
+           mlir::isa<cir::CatchAllAttr>(ehSpecTryOp.getHandlerTypes()[0]);
+  }
 
   bool isCatchOrCleanupRequired();
 
@@ -1618,9 +1656,9 @@ public:
   void finishThunk();
 
   /// Generate code for a thunk function.
-  void generateThunk(cir::FuncOp fn, const CIRGenFunctionInfo &fnInfo,
-                     GlobalDecl gd, const ThunkInfo &thunk,
-                     bool isUnprototyped);
+  void generateThunk(cir::FuncOp fn, SourceRange fnLoc,
+                     const CIRGenFunctionInfo &fnInfo, GlobalDecl gd,
+                     const ThunkInfo &thunk, bool isUnprototyped);
 
   /// ----------------------
   /// CIR emit functions
@@ -1639,6 +1677,7 @@ public:
                                                        const CallExpr *expr);
   std::optional<mlir::Value> emitAArch64SVEBuiltinExpr(unsigned builtinID,
                                                        const CallExpr *expr);
+  cir::VectorType getSVEType(const SVETypeFlags &typeFlags);
 
   mlir::Value emitAlignmentAssumption(mlir::Value ptrValue, QualType ty,
                                       SourceLocation loc,
@@ -1750,6 +1789,14 @@ public:
       mlir::Value *emittedArgValue = nullptr,
       cir::MemOrder ordering = cir::MemOrder::SequentiallyConsistent);
 
+  /// Emit `cir.atomic.cmpxchg`. Returns the old value, or the success flag
+  /// when `returnBool` is true.
+  mlir::Value emitAtomicCmpXchg(
+      const clang::CallExpr *expr, bool returnBool,
+      cir::MemOrder successOrder = cir::MemOrder::SequentiallyConsistent,
+      cir::MemOrder failureOrder = cir::MemOrder::SequentiallyConsistent,
+      cir::SyncScopeKind scope = cir::SyncScopeKind::System);
+
   mlir::LogicalResult emitAttributedStmt(const AttributedStmt &s);
 
   AutoVarEmission emitAutoVarAlloca(const clang::VarDecl &d,
@@ -1843,7 +1890,7 @@ public:
   RValue emitCall(const CIRGenFunctionInfo &funcInfo,
                   const CIRGenCallee &callee, ReturnValueSlot returnValue,
                   const CallArgList &args, cir::CIRCallOpInterface *callOp,
-                  bool isMustTail, mlir::Location loc);
+                  bool isMustTail, SourceRange clangLoc);
   RValue emitCall(const CIRGenFunctionInfo &funcInfo,
                   const CIRGenCallee &callee, ReturnValueSlot returnValue,
                   const CallArgList &args, bool isMustTail,
@@ -1857,8 +1904,8 @@ public:
                   const clang::CallExpr *e, ReturnValueSlot returnValue);
 
   /// Emit the call and return for a thunk function.
-  void emitCallAndReturnForThunk(cir::FuncOp callee, const ThunkInfo *thunk,
-                                 bool isUnprototyped);
+  void emitCallAndReturnForThunk(cir::FuncOp callee, SourceRange fnLoc,
+                                 const ThunkInfo *thunk, bool isUnprototyped);
 
   void emitCallArg(CallArgList &args, const clang::Expr *e,
                    clang::QualType argType);
@@ -1907,6 +1954,10 @@ public:
   cir::CoroIdOp emitCoroIDBuiltinCall(const CallExpr *e);
   cir::CoroAllocOp emitCoroAllocBuiltinCall(const CallExpr *e);
   cir::CoroBeginOp emitCoroBeginBuiltinCall(const CallExpr *e);
+  cir::CoroPromiseOp emitCoroPromiseBuiltinCall(const CallExpr *e);
+  cir::CoroDoneOp emitCoroDoneBuiltinCall(const CallExpr *e);
+  cir::CoroResumeOp emitCoroResumeBuiltinCall(const CallExpr *e);
+  cir::CoroDestroyOp emitCoroDestroyBuiltinCall(const CallExpr *e);
 
   cir::CoroSizeOp emitCoroSizeBuiltinCall(const CallExpr *e);
   cir::CoroFreeOp emitCoroFreeBuiltin(const CallExpr *e);
@@ -2283,8 +2334,8 @@ public:
                                    clang::QualType dstType,
                                    clang::SourceLocation loc);
 
-  void emitScalarInit(const clang::Expr *init, mlir::Location loc,
-                      LValue lvalue, bool capturedByInit = false);
+  void emitScalarInit(const clang::Expr *init, LValue lvalue,
+                      bool capturedByInit = false);
 
   mlir::Value emitScalarOrConstFoldImmArg(unsigned iceArguments, unsigned idx,
                                           const Expr *argExpr);
@@ -2332,6 +2383,13 @@ public:
   std::optional<mlir::Value>
   emitTargetBuiltinExpr(unsigned builtinID, const clang::CallExpr *e,
                         ReturnValueSlot &returnValue);
+
+  /// Emit a diagnostic if the target features required by \p targetDecl are
+  /// not available in the calling function. Mirrors CodeGenFunction behavior.
+  void checkTargetFeatures(const clang::CallExpr *e,
+                           const clang::FunctionDecl *targetDecl);
+  void checkTargetFeatures(clang::SourceLocation loc,
+                           const clang::FunctionDecl *targetDecl);
 
   /// Given a value and its clang type, returns the value casted to its memory
   /// representation.
@@ -2398,13 +2456,23 @@ public:
   /// An object to manage conditionally-evaluated expressions.
   class ConditionalEvaluation {
     CIRGenFunction &cgf;
-    mlir::OpBuilder::InsertPoint insertPt;
+
+    /// The insertion point that precedes the conditional, stored as the
+    /// enclosing block and the operation immediately before that point. Later
+    /// operations (the condition, cleanup scopes) can be appended without
+    /// moving this point. A null \c anchorAfter means the insertion point is
+    /// the start of \c anchorBlock.
+    mlir::Block *anchorBlock;
+    mlir::Operation *anchorAfter = nullptr;
 
   public:
     ConditionalEvaluation(CIRGenFunction &cgf)
-        : cgf(cgf), insertPt(cgf.builder.saveInsertionPoint()) {}
-    ConditionalEvaluation(CIRGenFunction &cgf, mlir::OpBuilder::InsertPoint ip)
-        : cgf(cgf), insertPt(ip) {}
+        : cgf(cgf), anchorBlock(cgf.builder.getInsertionBlock()) {
+      assert(anchorBlock && "conditional evaluation needs an insertion point");
+      mlir::Block::iterator ip = cgf.builder.getInsertionPoint();
+      if (ip != anchorBlock->begin())
+        anchorAfter = &*std::prev(ip);
+    }
 
     void beginEvaluation() {
       assert(cgf.outermostConditional != this);
@@ -2418,10 +2486,20 @@ public:
         cgf.outermostConditional = nullptr;
     }
 
+    /// Records \p op as the last operation emitted at the pre-conditional
+    /// insertion point, so that a later emission lands after it rather than
+    /// ahead of it.
+    void advanceInsertPoint(mlir::Operation *op) { anchorAfter = op; }
+
     /// Returns the insertion point which will be executed prior to each
     /// evaluation of the conditional code. In LLVM OG, this method
     /// is called getStartingBlock.
-    mlir::OpBuilder::InsertPoint getInsertPoint() const { return insertPt; }
+    mlir::OpBuilder::InsertPoint getInsertPoint() const {
+      if (!anchorAfter)
+        return mlir::OpBuilder::InsertPoint(anchorBlock, anchorBlock->begin());
+      return mlir::OpBuilder::InsertPoint(
+          anchorAfter->getBlock(), std::next(anchorAfter->getIterator()));
+    }
   };
 
   struct ConditionalInfo {
@@ -2438,12 +2516,13 @@ public:
     {
       mlir::OpBuilder::InsertionGuard guard(builder);
       builder.restoreInsertionPoint(outermostConditional->getInsertPoint());
-      builder.createStore(
+      cir::StoreOp store = builder.createStore(
           value.getLoc(), value, addr, /*isVolatile=*/false,
           /*isNontemporal=*/false,
           mlir::IntegerAttr::get(
               mlir::IntegerType::get(value.getContext(), 64),
               (uint64_t)addr.getAlignment().getAsAlign().value()));
+      outermostConditional->advanceInsertPoint(store);
     }
   }
 
@@ -2539,7 +2618,7 @@ public:
   Address
   maybeCastStackAddressSpace(Address alloca,
                              mlir::ptr::MemorySpaceAttrInterface destAddrSpace,
-                             mlir::Value arraySize);
+                             mlir::Value arraySize = nullptr);
   Address createDefaultAlignTempAlloca(mlir::Type ty, mlir::Location loc,
                                        const Twine &name);
 
@@ -2686,6 +2765,7 @@ public:
   mlir::LogicalResult emitOMPSplitDirective(const OMPSplitDirective &s);
   mlir::LogicalResult
   emitOMPInterchangeDirective(const OMPInterchangeDirective &s);
+  mlir::LogicalResult emitOMPFlattenDirective(const OMPFlattenDirective &s);
   mlir::LogicalResult emitOMPAssumeDirective(const OMPAssumeDirective &s);
   mlir::LogicalResult emitOMPMaskedDirective(const OMPMaskedDirective &s);
   mlir::LogicalResult emitOMPStripeDirective(const OMPStripeDirective &s);

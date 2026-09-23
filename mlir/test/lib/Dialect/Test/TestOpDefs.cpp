@@ -30,10 +30,6 @@ StringAttr OverriddenSymbolVisibilityOp::getNameAttr() {
   return getSymNameAttr();
 }
 
-void OverriddenSymbolVisibilityOp::setName(StringAttr name) {
-  setSymNameAttr(name);
-}
-
 static StringLiteral getVisibilityString(SymbolTable::Visibility visibility) {
   switch (visibility) {
   case SymbolTable::Visibility::Private:
@@ -1324,6 +1320,85 @@ LogicalResult TestOpWithPropertiesAndInferredType::inferReturnTypes(
   inferredReturnTypes.push_back(IntegerType::get(
       context, adaptor.getLhs() + adaptor.getProperties().rhs));
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// SegmentedRegionBranchOp / SegmentedRegionBranchTerminatorOp
+//===----------------------------------------------------------------------===//
+
+void SegmentedRegionBranchOp::getCanonicalizationPatterns(
+    RewritePatternSet &patterns, MLIRContext *context) {
+  populateRegionBranchOpInterfaceCanonicalizationPatterns(patterns,
+                                                          getOperationName());
+}
+
+void SegmentedRegionBranchOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  regions.emplace_back(&getFirstRegion());
+  regions.emplace_back(&getSecondRegion());
+  if (!point.isParent())
+    regions.emplace_back(getOperation());
+}
+
+ValueRange
+SegmentedRegionBranchOp::getSuccessorInputs(RegionSuccessor successor) {
+  if (successor.isOperation())
+    return {};
+  return successor.getSuccessor()->front().getArguments();
+}
+
+OperandRange
+SegmentedRegionBranchOp::getEntrySuccessorOperands(RegionSuccessor successor) {
+  return successor.getSuccessor() == &getFirstRegion() ? getFirst()
+                                                       : getSecond();
+}
+
+MutableOperandRange
+SegmentedRegionBranchTerminatorOp::getMutableSuccessorOperands(
+    RegionSuccessor successor) {
+  if (successor.isOperation())
+    return MutableOperandRange(getOperation(), getNumOperands(), 0);
+  auto parent = cast<SegmentedRegionBranchOp>((*this)->getParentOp());
+  return successor.getSuccessor() == &parent.getFirstRegion()
+             ? getFirstMutable()
+             : getSecondMutable();
+}
+
+//===----------------------------------------------------------------------===//
+// IsolatedRegionBranchOp
+//===----------------------------------------------------------------------===//
+
+void IsolatedRegionBranchOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  if (!point.isParent()) {
+    regions.emplace_back(getOperation());
+    return;
+  }
+  for (Region &region : getBranches())
+    regions.emplace_back(&region);
+}
+
+ValueRange
+IsolatedRegionBranchOp::getSuccessorInputs(RegionSuccessor successor) {
+  return successor.isOperation()
+             ? ValueRange(getOutputs())
+             : ValueRange(successor.getSuccessor()->getArguments());
+}
+
+OperandRange
+IsolatedRegionBranchOp::getEntrySuccessorOperands(RegionSuccessor successor) {
+  return getInputs();
+}
+
+void IsolatedRegionBranchOp::getCanonicalizationPatterns(
+    RewritePatternSet &patterns, MLIRContext *context) {
+  populateRegionBranchOpInterfaceCanonicalizationPatterns(patterns,
+                                                          getOperationName());
+}
+
+MutableOperandRange
+IsolatedRegionYieldOp::getMutableSuccessorOperands(RegionSuccessor successor) {
+  return getValuesMutable();
 }
 
 //===----------------------------------------------------------------------===//

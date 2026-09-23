@@ -227,7 +227,6 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::dx_nclamp:
   case Intrinsic::dx_isinf:
   case Intrinsic::dx_isnan:
-  case Intrinsic::dx_normalize:
   case Intrinsic::dx_sdot:
   case Intrinsic::dx_udot:
   case Intrinsic::dx_sign:
@@ -658,43 +657,6 @@ static Value *expandLog10Intrinsic(CallInst *Orig) {
   return expandLogIntrinsic(Orig, numbers::ln2f / numbers::ln10f);
 }
 
-// Use dot product of vector operand with itself to calculate the length.
-// Divide the vector by that length to normalize it.
-static Value *expandNormalizeIntrinsic(CallInst *Orig) {
-  Value *X = Orig->getOperand(0);
-  Type *Ty = Orig->getType();
-  Type *EltTy = Ty->getScalarType();
-  IRBuilder<> Builder(Orig);
-
-  auto *XVec = dyn_cast<FixedVectorType>(Ty);
-  if (!XVec) {
-    if (auto *constantFP = dyn_cast<ConstantFP>(X)) {
-      const APFloat &fpVal = constantFP->getValueAPF();
-      if (fpVal.isZero())
-        reportFatalUsageError("Invalid input scalar: length is zero");
-    }
-    return Builder.CreateFDiv(X, X);
-  }
-
-  Value *DotProduct = expandFloatDotChunk(Orig, X, X);
-
-  // verify that the length is non-zero
-  // (if the dot product is non-zero, then the length is non-zero)
-  if (auto *constantFP = dyn_cast<ConstantFP>(DotProduct)) {
-    const APFloat &fpVal = constantFP->getValueAPF();
-    if (fpVal.isZero())
-      reportFatalUsageError("Invalid input vector: length is zero");
-  }
-
-  Value *Multiplicand = Builder.CreateIntrinsic(EltTy, Intrinsic::dx_rsqrt,
-                                                ArrayRef<Value *>{DotProduct},
-                                                nullptr, "dx.rsqrt");
-
-  Value *MultiplicandVec =
-      Builder.CreateVectorSplat(XVec->getNumElements(), Multiplicand);
-  return Builder.CreateFMul(X, MultiplicandVec);
-}
-
 static Value *expandAtan2Intrinsic(CallInst *Orig) {
   Value *Y = Orig->getOperand(0);
   Value *X = Orig->getOperand(1);
@@ -752,8 +714,7 @@ static Value *expandFunnelShiftIntrinsic(CallInst *Orig) {
 
   IRBuilder<> Builder(Orig);
 
-  unsigned BitWidth = Ty->getScalarSizeInBits();
-  assert(llvm::isPowerOf2_32(BitWidth) &&
+  assert(llvm::isPowerOf2_32(Ty->getScalarSizeInBits()) &&
          "Can't use Mask to compute modulo and inverse");
 
   // Note: if (Shift % BitWidth) == 0 then (BitWidth - Shift) == BitWidth,
@@ -852,7 +813,11 @@ static bool expandBufferLoadIntrinsic(CallInst *Orig, bool IsRaw) {
     if (IsRaw) {
       LoadIntrinsic = Intrinsic::dx_resource_load_rawbuffer;
       Value *Tmp = Builder.getInt32(4 * Base * 2);
-      Args.push_back(Builder.CreateAdd(Orig->getOperand(2), Tmp));
+      Value *Offset = Orig->getOperand(2);
+      Args.push_back(Offset);
+      unsigned AddressArg = isa<PoisonValue>(Offset) ? 1 : 2;
+      if (Base != 0)
+        Args[AddressArg] = Builder.CreateAdd(Args[AddressArg], Tmp);
     }
 
     Value *Load = Builder.CreateIntrinsic(LoadType, LoadIntrinsic, Args);
@@ -1008,7 +973,11 @@ static bool expandBufferStoreIntrinsic(CallInst *Orig, bool IsRaw) {
     if (IsRaw) {
       StoreIntrinsic = Intrinsic::dx_resource_store_rawbuffer;
       Value *Tmp = Builder.getInt32(4 * Base);
-      Args.push_back(Builder.CreateAdd(Orig->getOperand(2), Tmp));
+      Value *Offset = Orig->getOperand(2);
+      Args.push_back(Offset);
+      unsigned AddressArg = isa<PoisonValue>(Offset) ? 1 : 2;
+      if (Base != 0)
+        Args[AddressArg] = Builder.CreateAdd(Args[AddressArg], Tmp);
     }
 
     SmallVector<int, 4> Mask;
@@ -1367,9 +1336,6 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
     break;
   case Intrinsic::dx_isnan:
     Result = expand16BitIsNaN(Orig);
-    break;
-  case Intrinsic::dx_normalize:
-    Result = expandNormalizeIntrinsic(Orig);
     break;
   case Intrinsic::dx_fdot:
     Result = expandFloatDotIntrinsic(Orig);

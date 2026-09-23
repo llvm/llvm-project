@@ -28,6 +28,7 @@
 #include <cassert>
 #include <cstring>
 #include <limits>
+#include <list>
 
 namespace llvm::ubi {
 
@@ -1755,10 +1756,12 @@ public:
       if (!isUIntN(RetBW, Vec.size()))
         return AnyValue::poison();
 
-      uint64_t Count = 0;
-      for (const AnyValue &V : Vec) {
+      for (const AnyValue &V : Vec)
         if (V.isPoison())
           return AnyValue::poison();
+
+      uint64_t Count = 0;
+      for (const AnyValue &V : Vec) {
         if (!V.asInteger().isZero())
           break;
         ++Count;
@@ -2473,6 +2476,7 @@ public:
   void visitIntToFPInst(Instruction &I, bool IsSigned) {
     const fltSemantics &DstSem =
         I.getType()->getScalarType()->getFltSemantics();
+    FastMathFlags FMF = cast<FPMathOperator>(I).getFastMathFlags();
 
     visitUnOp(I, [&](const AnyValue &Operand) -> AnyValue {
       if (Operand.isPoison())
@@ -2488,7 +2492,8 @@ public:
       Res.convertFromAPInt(Operand.asInteger(), /*IsSigned=*/IsSigned,
                            Ctx.getCurrentRoundingMode());
 
-      return AnyValue(Res);
+      // We need IsInput=true here because the nsz flag applies to the output.
+      return handleFMFFlags(Res, FMF, /*IsInput=*/true);
     });
   }
 
@@ -2633,7 +2638,7 @@ public:
   }
 
   void visitAllocaInst(AllocaInst &AI) {
-    uint64_t AllocSize = Ctx.getEffectiveTypeAllocSize(AI.getAllocatedType());
+    uint64_t AllocSize = Ctx.getEffectiveTypeSize(AI.getAllocationBaseSize(DL));
     if (AI.isArrayAllocation()) {
       auto &Size = getValue(AI.getArraySize());
       if (Size.isPoison()) {

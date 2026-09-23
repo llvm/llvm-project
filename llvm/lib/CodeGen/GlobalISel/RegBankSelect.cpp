@@ -196,7 +196,7 @@ class RegBankSelectImpl {
   };
 
   /// Insertion point before or after an instruction.
-  class LLVM_ABI InstrInsertPoint : public InsertPoint {
+  class InstrInsertPoint : public InsertPoint {
   private:
     /// Insertion point.
     MachineInstr &Instr;
@@ -232,7 +232,7 @@ class RegBankSelectImpl {
   };
 
   /// Insertion point at the beginning or end of a basic block.
-  class LLVM_ABI MBBInsertPoint : public InsertPoint {
+  class MBBInsertPoint : public InsertPoint {
   private:
     /// Insertion point.
     MachineBasicBlock &MBB;
@@ -270,7 +270,7 @@ class RegBankSelectImpl {
   };
 
   /// Insertion point on an edge.
-  class LLVM_ABI EdgeInsertPoint : public InsertPoint {
+  class EdgeInsertPoint : public InsertPoint {
   private:
     /// Source of the edge.
     MachineBasicBlock &Src;
@@ -360,10 +360,10 @@ class RegBankSelectImpl {
     /// if the machine operand is a physical register. \p P is used to
     /// to update liveness information and such when materializing the
     /// points.
-    LLVM_ABI RepairingPlacement(MachineInstr &MI, unsigned OpIdx,
-                                const TargetRegisterInfo &TRI, Pass *P,
-                                MachineFunctionAnalysisManager *MFAM,
-                                RepairingKind Kind = RepairingKind::Insert);
+    RepairingPlacement(MachineInstr &MI, unsigned OpIdx,
+                       const TargetRegisterInfo &TRI, Pass *P,
+                       MachineFunctionAnalysisManager *MFAM,
+                       RepairingKind Kind = RepairingKind::Insert);
 
     /// \name Getters.
     /// @{
@@ -376,15 +376,14 @@ class RegBankSelectImpl {
     /// \name Overloaded methods to add an insertion point.
     /// @{
     /// Add a MBBInsertionPoint to the list of InsertPoints.
-    LLVM_ABI void addInsertPoint(MachineBasicBlock &MBB, bool Beginning);
+    void addInsertPoint(MachineBasicBlock &MBB, bool Beginning);
     /// Add a InstrInsertionPoint to the list of InsertPoints.
-    LLVM_ABI void addInsertPoint(MachineInstr &MI, bool Before);
+    void addInsertPoint(MachineInstr &MI, bool Before);
     /// Add an EdgeInsertionPoint (\p Src, \p Dst) to the list of InsertPoints.
-    LLVM_ABI void addInsertPoint(MachineBasicBlock &Src,
-                                 MachineBasicBlock &Dst);
+    void addInsertPoint(MachineBasicBlock &Src, MachineBasicBlock &Dst);
     /// Add an InsertPoint to the list of insert points.
     /// This method takes the ownership of &\p Point.
-    LLVM_ABI void addInsertPoint(InsertPoint &Point);
+    void addInsertPoint(InsertPoint &Point);
     /// @}
 
     /// \name Accessors related to the insertion points.
@@ -449,28 +448,28 @@ protected:
   public:
     /// Create a MappingCost assuming that most of the instructions
     /// will occur in a basic block with \p LocalFreq frequency.
-    LLVM_ABI MappingCost(BlockFrequency LocalFreq);
+    MappingCost(BlockFrequency LocalFreq);
 
     /// Add \p Cost to the local cost.
     /// \return true if this cost is saturated, false otherwise.
-    LLVM_ABI bool addLocalCost(uint64_t Cost);
+    bool addLocalCost(uint64_t Cost);
 
     /// Add \p Cost to the non-local cost.
     /// Non-local cost should reflect the frequency of their placement.
     /// \return true if this cost is saturated, false otherwise.
-    LLVM_ABI bool addNonLocalCost(uint64_t Cost);
+    bool addNonLocalCost(uint64_t Cost);
 
     /// Saturate the cost to the maximal representable value.
-    LLVM_ABI void saturate();
+    void saturate();
 
     /// Return an instance of MappingCost that represents an
     /// impossible mapping.
-    LLVM_ABI static MappingCost ImpossibleCost();
+    static MappingCost ImpossibleCost();
 
     /// Check if this is less than \p Cost.
-    LLVM_ABI bool operator<(const MappingCost &Cost) const;
+    bool operator<(const MappingCost &Cost) const;
     /// Check if this is equal to \p Cost.
-    LLVM_ABI bool operator==(const MappingCost &Cost) const;
+    bool operator==(const MappingCost &Cost) const;
     /// Check if this is not equal to \p Cost.
     bool operator!=(const MappingCost &Cost) const { return !(*this == Cost); }
     /// Check if this is greater than \p Cost.
@@ -479,10 +478,10 @@ protected:
     }
 
     /// Print this on dbgs() stream.
-    LLVM_ABI void dump() const;
+    void dump() const;
 
     /// Print this on \p OS;
-    LLVM_ABI void print(raw_ostream &OS) const;
+    void print(raw_ostream &OS) const;
 
     /// Overload the stream operator for easy debug printing.
     [[maybe_unused]] friend raw_ostream &operator<<(raw_ostream &OS,
@@ -615,16 +614,15 @@ protected:
                  function_ref<MachineBranchProbabilityInfo *()> GetCachedMBPI,
                  const MappingCost *BestCost = nullptr);
 
-  /// When \p RepairPt involves splitting to repair \p MO for the
-  /// given \p ValMapping, try to change the way we repair such that
-  /// the splitting is not required anymore.
+  /// When \p RepairPt involves splitting to repair the operand of \p MI it
+  /// refers to for the given \p ValMapping, try to change the way we repair
+  /// such that the splitting is not required anymore.
   ///
   /// \pre \p RepairPt.hasSplit()
-  /// \pre \p MO == MO.getParent()->getOperand(\p RepairPt.getOpIdx())
-  /// \pre \p ValMapping is the mapping of \p MO for MO.getParent()
+  /// \pre \p ValMapping is the mapping of \p MI.getOperand(RepairPt.getOpIdx())
   ///      that implied \p RepairPt.
   void tryAvoidingSplit(RegBankSelectImpl::RepairingPlacement &RepairPt,
-                        const MachineOperand &MO,
+                        const MachineInstr &MI,
                         const RegisterBankInfo::ValueMapping &ValMapping) const;
 
   /// Apply \p Mapping to \p MI. \p RepairPts represents the different
@@ -936,16 +934,13 @@ const RegisterBankInfo::InstructionMapping &RegBankSelectImpl::findBestMapping(
 }
 
 void RegBankSelectImpl::tryAvoidingSplit(
-    RegBankSelectImpl::RepairingPlacement &RepairPt, const MachineOperand &MO,
+    RegBankSelectImpl::RepairingPlacement &RepairPt, const MachineInstr &MI,
     const RegisterBankInfo::ValueMapping &ValMapping) const {
-  const MachineInstr &MI = *MO.getParent();
+  const MachineOperand &MO = MI.getOperand(RepairPt.getOpIdx());
   assert(RepairPt.hasSplit() && "We should not have to adjust for split");
   // Splitting should only occur for PHIs or between terminators,
   // because we only do local repairing.
   assert((MI.isPHI() || MI.isTerminator()) && "Why do we split?");
-
-  assert(&MI.getOperand(RepairPt.getOpIdx()) == &MO &&
-         "Repairing placement does not match operand");
 
   // If we need splitting for phis, that means it is because we
   // could not find an insertion point before the terminators of
@@ -1121,7 +1116,7 @@ RegBankSelectImpl::MappingCost RegBankSelectImpl::computeMapping(
     // we may give a higher cost to this mapping.
     // Nevertheless, we may get away with the split, so try that first.
     if (RepairPt.hasSplit())
-      tryAvoidingSplit(RepairPt, MO, ValMapping);
+      tryAvoidingSplit(RepairPt, MI, ValMapping);
 
     // Check that the materialization of the repairing is possible.
     if (!RepairPt.canMaterialize()) {

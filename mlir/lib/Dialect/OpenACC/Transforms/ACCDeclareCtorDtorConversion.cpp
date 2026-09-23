@@ -117,6 +117,35 @@ static LLVM::LLVMFuncOp createLLVMFunctionFromRegion(StringRef symName,
   return newFunc;
 }
 
+/// Declare extra runtime functions and call them from a defined llvm.func
+/// registered in llvm.mlir.global_ctors. The extra functions themselves stay
+/// declarations: llvm.mlir.global_ctors requires a function with a body.
+static LLVM::LLVMFuncOp
+createExtraConstructorCaller(ModuleOp mod, OpBuilder &builder,
+                             ArrayRef<std::string> extraNames,
+                             StringRef extraCtorName) {
+  auto llvmVoidTy = LLVM::LLVMVoidType::get(mod.getContext());
+  auto funcTy = LLVM::LLVMFunctionType::get(llvmVoidTy, {}, /*isVarArg=*/false);
+
+  builder.setInsertionPointToEnd(mod.getBody());
+  for (const std::string &name : extraNames) {
+    if (mod.lookupSymbol<LLVM::LLVMFuncOp>(name))
+      continue;
+    LLVM::LLVMFuncOp::create(builder, mod.getLoc(), name, funcTy,
+                             LLVM::Linkage::External);
+  }
+
+  auto wrapper = LLVM::LLVMFuncOp::create(builder, mod.getLoc(), extraCtorName,
+                                          funcTy, LLVM::Linkage::Internal);
+  Block *entry = wrapper.addEntryBlock(builder);
+  builder.setInsertionPointToStart(entry);
+  for (const std::string &name : extraNames)
+    LLVM::CallOp::create(builder, mod.getLoc(), funcTy,
+                         FlatSymbolRefAttr::get(mod.getContext(), name));
+  LLVM::ReturnOp::create(builder, mod.getLoc(), ValueRange{});
+  return wrapper;
+}
+
 struct ACCDeclareCtorDtorConversion
     : public acc::impl::ACCDeclareCtorDtorConversionBase<
           ACCDeclareCtorDtorConversion> {
@@ -166,6 +195,24 @@ struct ACCDeclareCtorDtorConversion
       }
       worklist.push_back(op.getOperation());
     });
+
+    bool hasEntryPoint = !entryPointName.empty() &&
+                         static_cast<bool>(mod.lookupSymbol(entryPointName));
+    SmallVector<std::string, 4> extraNames;
+    for (const auto &funcName : extraConstructors)
+      extraNames.push_back(funcName);
+    for (const auto &funcName : entryOnlyConstructors) {
+      if (hasEntryPoint)
+        extraNames.push_back(funcName);
+    }
+    if (!extraNames.empty()) {
+      LLVM::LLVMFuncOp extraCtor =
+          createExtraConstructorCaller(mod, builder, extraNames, extraCtorName);
+      allCtors.push_back(
+          FlatSymbolRefAttr::get(mod.getContext(), extraCtor.getSymName()));
+      ctorPriorities.push_back(priority);
+      ctorData.push_back(LLVM::ZeroAttr::get(builder.getContext()));
+    }
 
     if (allCtors.size() > existingCtorCount)
       replaceGlobalCtors(mod, builder, allCtors, ctorPriorities, ctorData,
