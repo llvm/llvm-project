@@ -569,9 +569,15 @@ TEST_F(LexerTest, GetBeginningOfTokenWithEscapedNewLine) {
   }
 }
 
-TEST_F(LexerTest, AvoidPastEndOfStringDereference) {
+TEST_F(LexerTest, AvoidPastEndOfStringDereference01) {
   EXPECT_TRUE(Lex("  //  \\\n").empty());
+}
+
+TEST_F(LexerTest, AvoidPastEndOfStringDereference02) {
   EXPECT_TRUE(Lex("#include <\\\\").empty());
+}
+
+TEST_F(LexerTest, AvoidPastEndOfStringDereference03) {
   EXPECT_TRUE(Lex("#include <\\\\\n").empty());
 }
 
