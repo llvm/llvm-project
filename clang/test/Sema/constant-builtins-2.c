@@ -251,6 +251,71 @@ __extension__ _Static_assert(
   1, ""
 );
 
+
+__extension__ _Static_assert(
+  // double: ordinary comparisons 
+  __builtin_fmax(1.0, 2.0) == 2.0 && __builtin_fmax(2.0, 1.0) == 2.0 &&
+  __builtin_fmax(-1.0, -2.0) == -1.0 && __builtin_fmax(-1.0, 1.0) == 1.0 &&
+
+  __builtin_fmin(1.0, 2.0) == 1.0 && __builtin_fmin(2.0, 1.0) == 1.0 &&
+  __builtin_fmin(-1.0, -2.0) == -2.0 && __builtin_fmin(-1.0, 1.0) == -1.0 &&
+    
+  // NaN propagation: the non-NaN operand wins; both-NaN stays NaN
+  __builtin_fmax(__builtin_nan(""), 1.0) == 1.0 && __builtin_fmax(1.0, __builtin_nan("")) == 1.0 &&
+  __builtin_isnan(__builtin_fmax(__builtin_nan(""), __builtin_nan(""))) &&
+
+  __builtin_fmin(__builtin_nan(""), 1.0) == 1.0 && __builtin_fmin(1.0, __builtin_nan("")) == 1.0 &&
+  __builtin_isnan(__builtin_fmin(__builtin_nan(""), __builtin_nan(""))) &&
+
+  // mixed-sign zero: magnitude is guaranteed, sign is not (C11 7.12.12.2)
+  __builtin_fmax(0.0, -0.0) == 0.0 && __builtin_fmax(-0.0, 0.0) == 0.0 &&
+  __builtin_fmin(0.0, -0.0) == 0.0 && __builtin_fmin(-0.0, 0.0) == 0.0 &&
+
+  // float 
+  __builtin_fmaxf(1.0f, 2.0f) == 2.0f && __builtin_fmaxf(2.0f, 1.0f) == 2.0f &&
+  __builtin_fmaxf(-1.0f, -2.0f) == -1.0f && __builtin_fmaxf(-1.0f, 1.0f) == 1.0f &&
+
+  __builtin_fminf(1.0f, 2.0f) == 1.0f && __builtin_fminf(2.0f, 1.0f) == 1.0f &&
+  __builtin_fminf(-1.0f, -2.0f) == -2.0f && __builtin_fminf(-1.0f, 1.0f) == -1.0f &&
+
+  __builtin_fmaxf(__builtin_nanf(""), 1.0f) == 1.0f && __builtin_fmaxf(1.0f, __builtin_nanf("")) == 1.0f &&
+  __builtin_isnan(__builtin_fmaxf(__builtin_nanf(""), __builtin_nanf(""))) &&
+
+  __builtin_fminf(__builtin_nanf(""), 1.0f) == 1.0f && __builtin_fminf(1.0f, __builtin_nanf("")) == 1.0f &&
+  __builtin_isnan(__builtin_fminf(__builtin_nanf(""), __builtin_nanf(""))) &&
+
+  __builtin_fmaxf(0.0f, -0.0f) == 0.0f && __builtin_fminf(0.0f, -0.0f) == 0.0f &&
+
+  // long double 
+  __builtin_fmaxl(1.0L, 2.0L) == 2.0L && __builtin_fmaxl(2.0L, 1.0L) == 2.0L &&
+  __builtin_fmaxl(-1.0L, -2.0L) == -1.0L && __builtin_fmaxl(-1.0L, 1.0L) == 1.0L &&
+
+  __builtin_fminl(1.0L, 2.0L) == 1.0L && __builtin_fminl(2.0L, 1.0L) == 1.0L &&
+  __builtin_fminl(-1.0L, -2.0L) == -2.0L && __builtin_fminl(-1.0L, 1.0L) == -1.0L &&
+
+  __builtin_fmaxl(__builtin_nanl(""), 1.0L) == 1.0L && __builtin_fmaxl(1.0L, __builtin_nanl("")) == 1.0L &&
+  __builtin_isnan(__builtin_fmaxl(__builtin_nanl(""), __builtin_nanl(""))) &&
+
+  __builtin_fminl(__builtin_nanl(""), 1.0L) == 1.0L && __builtin_fminl(1.0L, __builtin_nanl("")) == 1.0L &&
+  __builtin_isnan(__builtin_fminl(__builtin_nanl(""), __builtin_nanl(""))) &&
+
+  __builtin_fmaxl(0.0L, -0.0L) == 0.0L && __builtin_fminl(0.0L, -0.0L) == 0.0L &&
+
+#if defined(__FLOAT128__) || defined(__SIZEOF_FLOAT128__)
+  // __float128 
+  __builtin_fmaxf128(1.0q, 2.0q) == 2.0q && __builtin_fmaxf128(2.0q, 1.0q) == 2.0q &&
+  __builtin_fmaxf128(-1.0q, -2.0q) == -1.0q && __builtin_fmaxf128(-1.0q, 1.0q) == 1.0q &&
+  __builtin_fminf128(1.0q, 2.0q) == 1.0q && __builtin_fminf128(2.0q, 1.0q) == 1.0q &&
+  __builtin_fminf128(-1.0q, -2.0q) == -2.0q && __builtin_fminf128(-1.0q, 1.0q) == -1.0q &&
+  __builtin_fmaxf128(__builtin_nanf128(""), 1.0q) == 1.0q && __builtin_fmaxf128(1.0q, __builtin_nanf128("")) == 1.0q &&
+  __builtin_fminf128(__builtin_nanf128(""), 1.0q) == 1.0q && __builtin_fminf128(1.0q, __builtin_nanf128("")) == 1.0q &&
+  __builtin_isnan(__builtin_fmaxf128(__builtin_nanf128(""), __builtin_nanf128(""))) &&
+  __builtin_isnan(__builtin_fminf128(__builtin_nanf128(""), __builtin_nanf128(""))) &&
+  __builtin_fmaxf128(0.0q, -0.0q) == 0.0q && __builtin_fminf128(0.0q, -0.0q) == 0.0q &&
+#endif
+  1, ""
+);
+
 //double       g19 = __builtin_powi(2.0, 4);
 //float        g20 = __builtin_powif(2.0f, 4);
 //long double  g21 = __builtin_powil(2.0L, 4);
