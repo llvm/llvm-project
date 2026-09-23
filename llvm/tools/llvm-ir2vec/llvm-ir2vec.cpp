@@ -131,7 +131,7 @@ static cl::opt<std::string> OutputFilename("o", cl::desc("Output filename"),
 // Embedding-specific options
 static cl::opt<std::string>
     FunctionName("function", cl::desc("Process specific function only"),
-                 cl::value_desc("name"), cl::Optional, cl::init(""),
+                 cl::value_desc("name"), cl::init(""),
                  cl::sub(EmbeddingsSubCmd), cl::cat(CommonCategory));
 
 static cl::opt<EmbeddingLevel>
@@ -214,7 +214,7 @@ static Error setupMIRContext(const std::string &InputFile, MIRContext &Ctx) {
       exit(1); // Match original behavior
     }
     Ctx.TM = std::move(*TMOrErr);
-    return Ctx.TM->createDataLayout().getStringRepresentation();
+    return TheTriple.computeDataLayout();
   };
 
   Ctx.M = MIR->parseIRModule(SetDataLayout);
