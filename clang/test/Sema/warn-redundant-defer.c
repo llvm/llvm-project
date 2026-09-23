@@ -74,12 +74,76 @@ void f2() {
   for (;;) {
     defer {} // OK
     f1();
+    l1: break;
+  }
+
+  for (;;) {
+    defer {} // expected-warning {{redundant use of defer}}
+    l2: break;
+  }
+
+  for (;;) {
+    defer {} // expected-warning {{redundant use of defer}}
+    l3: l4: break;
+  }
+
+  for (;;) {
+    defer {} // OK
+    f1();
+    [[clang::likely]] break;
+  }
+
+  for (;;) {
+    defer {} // expected-warning {{redundant use of defer}}
+    [[clang::likely]] break;
+  }
+
+  for (;;) {
+    defer {} // expected-warning {{redundant use of defer}}
+    [[clang::likely]] [[clang::suppress]] break;
+  }
+
+  for (;;) {
+    defer {} // OK
+    f1();
     continue;
   }
 
   for (;;) {
     defer {} // expected-warning {{redundant use of defer}}
     continue;
+  }
+
+  for (;;) {
+    defer {} // OK
+    f1();
+    l5: continue;
+  }
+
+  for (;;) {
+    defer {} // expected-warning {{redundant use of defer}}
+    l6: continue;
+  }
+
+  for (;;) {
+    defer {} // expected-warning {{redundant use of defer}}
+    l7: l8: continue;
+  }
+
+  for (;;) {
+    defer {} // OK
+    f1();
+    [[clang::likely]] continue;
+  }
+
+  for (;;) {
+    defer {} // expected-warning {{redundant use of defer}}
+    [[clang::likely]] continue;
+  }
+
+  for (;;) {
+    defer {} // expected-warning {{redundant use of defer}}
+    [[clang::likely]] [[clang::suppress]] continue;
   }
 
   while (true) {
