@@ -15576,7 +15576,7 @@ public:
 
   bool CheckFunctionReturnType(QualType T, SourceLocation Loc);
 
-  bool IsCoopMatrixBuiltin(Expr *RHSExpr);
+  bool BuiltinReturnsCoopMatrix(Expr *RHSExpr);
 
   /// Build a function type.
   ///
