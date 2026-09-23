@@ -1216,7 +1216,7 @@ else ()
           get_compiler_rt_install_dir(${arch} BUILTIN_INSTALL_DIR)
           install(FILES "${SPIRV64_BC_OUTPUT}"
                   DESTINATION "${BUILTIN_INSTALL_DIR}"
-                  COMPONENT builtins)
+                  COMPONENT clang_rt.builtins-${arch})
         else()
           message(WARNING
             "llvm-link not found (LLVM_TOOLS_BINARY_DIR='${LLVM_TOOLS_BINARY_DIR}'); "

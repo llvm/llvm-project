@@ -6,7 +6,7 @@
 // in llvm/include/llvm/TargetParser/X86TargetParser.def.
 extern void a(const char *);
 
-// CIR: ![[MODEL_TY:.*]] = !cir.struct<{!u32i, !u32i, !u32i, !cir.array<!u32i x 1>}>
+// CIR: ![[MODEL_TY:.*]] = !cir.struct<{data !u32i, data !u32i, data !u32i, data !cir.array<!u32i x 1>}>
 // CIR: cir.global "private" external dso_local @__cpu_model : ![[MODEL_TY]]
 // LLVM: @__cpu_model = external dso_local global { i32, i32, i32, [1 x i32] }
 

@@ -39,6 +39,9 @@ static constexpr LangASMap NVPTXAddrSpaceMap = {
     {LangAS::sycl_global_device, 1},
     {LangAS::sycl_global_host, 1},
     {LangAS::sycl_local, 3},
+    {LangAS::sycl_private, 0},
+    {LangAS::sycl_generic, 0},
+    {LangAS::sycl_constant, 4},
 };
 
 /// The DWARF address class. Taken from
@@ -82,6 +85,8 @@ public:
   }
 
   bool hasFeature(StringRef Feature) const override;
+
+  bool setABI(const std::string &Name) override;
 
   virtual bool isAddressSpaceSupersetOf(LangAS A, LangAS B) const override {
     // The generic address space AS(0) is a superset of all the other address

@@ -217,6 +217,24 @@ define amdgpu_kernel void @incompatible_attribute_block_count_x(ptr addrspace(1)
   ret void
 }
 
+define amdgpu_kernel void @preload_hidden_arg_dead_gep() {
+; NO-PRELOAD-LABEL: define amdgpu_kernel void @preload_hidden_arg_dead_gep(
+; NO-PRELOAD-SAME: ) #[[ATTR0]] {
+; NO-PRELOAD-NEXT:    [[IMP_ARG_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+; NO-PRELOAD-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr addrspace(4) [[IMP_ARG_PTR]], i64 12
+; NO-PRELOAD-NEXT:    ret void
+;
+; PRELOAD-LABEL: define amdgpu_kernel void @preload_hidden_arg_dead_gep(
+; PRELOAD-SAME: ) #[[ATTR0]] {
+; PRELOAD-NEXT:    [[IMP_ARG_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+; PRELOAD-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr addrspace(4) [[IMP_ARG_PTR]], i64 12
+; PRELOAD-NEXT:    ret void
+;
+  %imp_arg_ptr = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+  %gep = getelementptr i8, ptr addrspace(4) %imp_arg_ptr, i64 12
+  ret void
+}
+
 ;.
 ; NO-PRELOAD: [[META0]] = !{}
 ;.

@@ -3,7 +3,7 @@
 
 // Test inlining of hlfir.copy_in that does not require the array to be copied out
 func.func private @_test_inline_copy_in(%arg0: !fir.box<!fir.array<?x?x?xf64>> {fir.bindc_name = "x"}, %arg1: !fir.ref<i32> {fir.bindc_name = "i"}, %arg2: !fir.ref<i32> {fir.bindc_name = "j"}) {
-  %0 = fir.alloca !fir.box<!fir.heap<!fir.array<?xf64>>>
+  %0 = fir.alloca !fir.box<!fir.array<?xf64>>
   %1 = fir.dummy_scope : !fir.dscope
   %2:2 = hlfir.declare %arg1 dummy_scope %1 {uniq_name = "_QFFsb2Ei"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
   %3:2 = hlfir.declare %arg2 dummy_scope %1 {uniq_name = "_QFFsb2Ej"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
@@ -25,11 +25,11 @@ func.func private @_test_inline_copy_in(%arg0: !fir.box<!fir.array<?x?x?xf64>> {
   %15 = fir.shape %12 : (index) -> !fir.shape<1>
   %16 = hlfir.designate %4#0 (%6, %c1:%7#1:%c1_1, %14)  shape %15 : (!fir.box<!fir.array<?x?x?xf64>>, i64, index, index, index, i64, !fir.shape<1>) -> !fir.box<!fir.array<?xf64>>
   %c100_i32 = arith.constant 100 : i32
-  %17:2 = hlfir.copy_in %16 to %0 : (!fir.box<!fir.array<?xf64>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) -> (!fir.box<!fir.array<?xf64>>, i1)
+  %17:3 = hlfir.copy_in %16 to %0 : (!fir.box<!fir.array<?xf64>>, !fir.ref<!fir.box<!fir.array<?xf64>>>) -> (!fir.box<!fir.array<?xf64>>, i1, i1)
   %18 = fir.box_addr %17#0 : (!fir.box<!fir.array<?xf64>>) -> !fir.ref<!fir.array<?xf64>>
   %19:3 = hlfir.associate %c100_i32 {adapt.valuebyref} : (i32) -> (!fir.ref<i32>, !fir.ref<i32>, i1)
   fir.call @_QFPsb(%18, %19#0) fastmath<contract> : (!fir.ref<!fir.array<?xf64>>, !fir.ref<i32>) -> ()
-  hlfir.copy_out %0, %17#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, i1) -> ()
+  hlfir.copy_out %0, %17#1, %17#2 : (!fir.ref<!fir.box<!fir.array<?xf64>>>, i1, i1) -> ()
   hlfir.end_associate %19#1, %19#2 : !fir.ref<i32>, i1
   return
 }
@@ -72,14 +72,11 @@ func.func private @_test_inline_copy_in(%arg0: !fir.box<!fir.array<?x?x?xf64>> {
 // CHECK:      }
 // CHECK:      fir.result %[[VAL_25:.*]]#0, %[[VAL_3:.*]] : !fir.box<!fir.array<?xf64>>, i1
 // CHECK:    }
-// CHECK:    %[[VAL_ALLOCA:.*]] = fir.alloca !fir.box<!fir.array<?xf64>>
-// CHECK:    fir.store %[[VAL_21:.*]]#0 to %[[VAL_ALLOCA:.*]] : !fir.ref<!fir.box<!fir.array<?xf64>>>
 // CHECK:    %[[VAL_22:.*]] = fir.box_addr %[[VAL_21:.*]]#0 : (!fir.box<!fir.array<?xf64>>) -> !fir.ref<!fir.array<?xf64>>
 // CHECK:    %[[VAL_23:.*]]:3 = hlfir.associate %[[VAL_5:.*]] {adapt.valuebyref} : (i32) -> (!fir.ref<i32>, !fir.ref<i32>, i1)
 // CHECK:    fir.call @_QFPsb(%[[VAL_22:.*]], %[[VAL_23:.*]]#0) fastmath<contract> : (!fir.ref<!fir.array<?xf64>>, !fir.ref<i32>) -> ()
 // CHECK:    fir.if %[[VAL_21:.*]]#1 {
-// CHECK:      %[[VAL_BOX:.*]] = fir.load %[[VAL_ALLOCA:.*]] : !fir.ref<!fir.box<!fir.array<?xf64>>>
-// CHECK:      %[[VAL_ADDR:.*]] = fir.box_addr %[[VAL_BOX:.*]] : (!fir.box<!fir.array<?xf64>>) -> !fir.ref<!fir.array<?xf64>>
+// CHECK:      %[[VAL_ADDR:.*]] = fir.box_addr %[[VAL_21:.*]]#0 : (!fir.box<!fir.array<?xf64>>) -> !fir.ref<!fir.array<?xf64>>
 // CHECK:      %[[VAL_HEAP:.*]] = fir.convert %[[VAL_ADDR:.*]] : (!fir.ref<!fir.array<?xf64>>) -> !fir.heap<!fir.array<?xf64>>
 // CHECK:      fir.freemem %[[VAL_HEAP:.*]] : !fir.heap<!fir.array<?xf64>>
 // CHECK:    }
@@ -89,7 +86,7 @@ func.func private @_test_inline_copy_in(%arg0: !fir.box<!fir.array<?x?x?xf64>> {
 
 // Test not inlining of hlfir.copy_in when copy-back is required (intent(inout))
 func.func private @_test_inline_copy_in_with_copyback(%arg0: !fir.box<!fir.array<?x?x?xf64>> {fir.bindc_name = "x"}, %arg1: !fir.ref<i32> {fir.bindc_name = "i"}, %arg2: !fir.ref<i32> {fir.bindc_name = "j"}) {
-  %0 = fir.alloca !fir.box<!fir.heap<!fir.array<?xf64>>>
+  %0 = fir.alloca !fir.box<!fir.array<?xf64>>
   %1 = fir.dummy_scope : !fir.dscope
   %2:2 = hlfir.declare %arg1 dummy_scope %1 {uniq_name = "_QFFsb2Ei"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
   %3:2 = hlfir.declare %arg2 dummy_scope %1 {uniq_name = "_QFFsb2Ej"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
@@ -111,11 +108,11 @@ func.func private @_test_inline_copy_in_with_copyback(%arg0: !fir.box<!fir.array
   %15 = fir.shape %12 : (index) -> !fir.shape<1>
   %16 = hlfir.designate %4#0 (%6, %c1:%7#1:%c1_1, %14)  shape %15 : (!fir.box<!fir.array<?x?x?xf64>>, i64, index, index, index, i64, !fir.shape<1>) -> !fir.box<!fir.array<?xf64>>
   %c100_i32 = arith.constant 100 : i32
-  %17:2 = hlfir.copy_in %16 to %0 : (!fir.box<!fir.array<?xf64>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) -> (!fir.box<!fir.array<?xf64>>, i1)
+  %17:3 = hlfir.copy_in %16 to %0 : (!fir.box<!fir.array<?xf64>>, !fir.ref<!fir.box<!fir.array<?xf64>>>) -> (!fir.box<!fir.array<?xf64>>, i1, i1)
   %18 = fir.box_addr %17#0 : (!fir.box<!fir.array<?xf64>>) -> !fir.ref<!fir.array<?xf64>>
   %19:3 = hlfir.associate %c100_i32 {adapt.valuebyref} : (i32) -> (!fir.ref<i32>, !fir.ref<i32>, i1)
   fir.call @_QFPsb(%18, %19#1) fastmath<contract> : (!fir.ref<!fir.array<?xf64>>, !fir.ref<i32>) -> ()
-  hlfir.copy_out %0, %17#1 to %16 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, i1, !fir.box<!fir.array<?xf64>>) -> ()
+  hlfir.copy_out %0, %17#1, %17#2 to %16 : (!fir.ref<!fir.box<!fir.array<?xf64>>>, i1, i1, !fir.box<!fir.array<?xf64>>) -> ()
   hlfir.end_associate %19#1, %19#2 : !fir.ref<i32>, i1
   return
 }
@@ -124,71 +121,71 @@ func.func private @_test_inline_copy_in_with_copyback(%arg0: !fir.box<!fir.array
 // CHECK-SAME:      %[[VAL_0:.*]]: !fir.box<!fir.array<?x?x?xf64>> {fir.bindc_name = "x"},
 // CHECK-SAME:      %[[VAL_1:.*]]: !fir.ref<i32> {fir.bindc_name = "i"},
 // CHECK-SAME:      %[[VAL_2:.*]]: !fir.ref<i32> {fir.bindc_name = "j"}) {
-// CHECK:    %[[TMP:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xf64>>>
-// CHECK:    %[[COPYIN:.*]]:2 = hlfir.copy_in %{{.*}} to %[[TMP]] : (!fir.box<!fir.array<?xf64>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) -> (!fir.box<!fir.array<?xf64>>, i1)
+// CHECK:    %[[TEMPBOX:.*]] = fir.alloca !fir.box<!fir.array<?xf64>>
+// CHECK:    %[[COPYIN:.*]]:3 = hlfir.copy_in %{{.*}} to %[[TEMPBOX]] : (!fir.box<!fir.array<?xf64>>, !fir.ref<!fir.box<!fir.array<?xf64>>>) -> (!fir.box<!fir.array<?xf64>>, i1, i1)
 // CHECK:    fir.call @_QFPsb(
-// CHECK:    hlfir.copy_out %[[TMP]], %[[COPYIN]]#1 to %{{.*}} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, i1, !fir.box<!fir.array<?xf64>>) -> ()
+// CHECK:    hlfir.copy_out %[[TEMPBOX]], %[[COPYIN]]#1, %[[COPYIN]]#2 to %{{.*}} : (!fir.ref<!fir.box<!fir.array<?xf64>>>, i1, i1, !fir.box<!fir.array<?xf64>>) -> ()
 // CHECK:    return
 // CHECK:  }
 
 // Test not inlining optional dummy arguments (no direct copy-out)
 func.func @_QPoptional_copy_in_out(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x", fir.optional}) {
   %false = arith.constant false
-  %0 = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>>
+  %0 = fir.alloca !fir.box<!fir.array<?xf32>>
   %1 = fir.dummy_scope : !fir.dscope
   %2:2 = hlfir.declare %arg0 dummy_scope %1 {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFoptional_copy_in_outEx"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
   %3 = fir.is_present %2#0 : (!fir.box<!fir.array<?xf32>>) -> i1
-  %4:2 = fir.if %3 -> (!fir.ref<!fir.array<?xf32>>, i1) {
-    %5:2 = hlfir.copy_in %2#0 to %0 : (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> (!fir.box<!fir.array<?xf32>>, i1)
+  %4:3 = fir.if %3 -> (!fir.ref<!fir.array<?xf32>>, i1, i1) {
+    %5:3 = hlfir.copy_in %2#0 to %0 : (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.box<!fir.array<?xf32>>>) -> (!fir.box<!fir.array<?xf32>>, i1, i1)
     %6 = fir.box_addr %5#0 : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
-    fir.result %6, %5#1 : !fir.ref<!fir.array<?xf32>>, i1
+    fir.result %6, %5#1, %5#2 : !fir.ref<!fir.array<?xf32>>, i1, i1
   } else {
     %5 = fir.absent !fir.ref<!fir.array<?xf32>>
-    fir.result %5, %false : !fir.ref<!fir.array<?xf32>>, i1
+    fir.result %5, %false, %false : !fir.ref<!fir.array<?xf32>>, i1, i1
   }
   fir.call @_QPtakes_optional_explicit(%4#0) fastmath<contract> : (!fir.ref<!fir.array<?xf32>>) -> ()
-  hlfir.copy_out %0, %4#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, i1) -> ()
+  hlfir.copy_out %0, %4#1, %4#2 : (!fir.ref<!fir.box<!fir.array<?xf32>>>, i1, i1) -> ()
   return
 }
 
 // CHECK-LABEL:  func.func @_QPoptional_copy_in_out(
 // CHECK-SAME: %[[ARG_0:.*]]: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x", fir.optional}) {
 // CHECK:    %false = arith.constant false
-// CHECK:    %[[VAL_0:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>>
+// CHECK:    %[[VAL_0:.*]] = fir.alloca !fir.box<!fir.array<?xf32>>
 // CHECK:    %[[VAL_1:.*]] = fir.dummy_scope : !fir.dscope
 // CHECK:    %[[VAL_2:.*]]:2 = hlfir.declare %[[ARG_0:.*]] dummy_scope %[[VAL_1:.*]] {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFoptional_copy_in_outEx"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
 // CHECK:    %[[VAL_3:.*]] = fir.is_present %[[VAL_2:.*]]#0 : (!fir.box<!fir.array<?xf32>>) -> i1
-// CHECK:    %[[VAL_4:.*]]:2 = fir.if %[[VAL_3:.*]] -> (!fir.ref<!fir.array<?xf32>>, i1) {
-// CHECK:      %[[VAL_5:.*]]:2 = hlfir.copy_in %[[VAL_2:.*]]#0 to %[[VAL_0:.*]] : (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> (!fir.box<!fir.array<?xf32>>, i1)
+// CHECK:    %[[VAL_4:.*]]:3 = fir.if %[[VAL_3:.*]] -> (!fir.ref<!fir.array<?xf32>>, i1, i1) {
+// CHECK:      %[[VAL_5:.*]]:3 = hlfir.copy_in %[[VAL_2:.*]]#0 to %[[VAL_0:.*]] : (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.box<!fir.array<?xf32>>>) -> (!fir.box<!fir.array<?xf32>>, i1, i1)
 // CHECK:      %[[VAL_6:.*]] = fir.box_addr %[[VAL_5:.*]]#0 : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
-// CHECK:      fir.result %[[VAL_6:.*]], %[[VAL_5:.*]]#1 : !fir.ref<!fir.array<?xf32>>, i1
+// CHECK:      fir.result %[[VAL_6:.*]], %[[VAL_5:.*]]#1, %[[VAL_5:.*]]#2 : !fir.ref<!fir.array<?xf32>>, i1, i1
 // CHECK:    } else {
 // CHECK:      %[[VAL_5:.*]] = fir.absent !fir.ref<!fir.array<?xf32>>
-// CHECK:      fir.result %[[VAL_5:.*]], %false : !fir.ref<!fir.array<?xf32>>, i1
+// CHECK:      fir.result %[[VAL_5:.*]], %false, %false : !fir.ref<!fir.array<?xf32>>, i1, i1
 // CHECK:    }
 // CHECK:    fir.call @_QPtakes_optional_explicit(%[[VAL_4:.*]]#0) fastmath<contract> : (!fir.ref<!fir.array<?xf32>>) -> ()
-// CHECK:    hlfir.copy_out %[[VAL_0:.*]], %[[VAL_4:.*]]#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, i1) -> ()
+// CHECK:    hlfir.copy_out %[[VAL_0:.*]], %[[VAL_4:.*]]#1, %[[VAL_4:.*]]#2 : (!fir.ref<!fir.box<!fir.array<?xf32>>>, i1, i1) -> ()
 // CHECK:    return
 // CHECK:  }
 
 // Test not inlining of assumed-rank arrays
 func.func @_QPtest_copy_in_out_2(%arg0: !fir.box<!fir.array<*:f32>> {fir.bindc_name = "x"}) {
-  %0 = fir.alloca !fir.box<!fir.heap<!fir.array<*:f32>>>
+  %0 = fir.alloca !fir.box<!fir.array<*:f32>>
   %1 = fir.dummy_scope : !fir.dscope
   %2:2 = hlfir.declare %arg0 dummy_scope %1 {uniq_name = "_QFtest_copy_in_out_2Ex"} : (!fir.box<!fir.array<*:f32>>, !fir.dscope) -> (!fir.box<!fir.array<*:f32>>, !fir.box<!fir.array<*:f32>>)
-  %3:2 = hlfir.copy_in %2#0 to %0 : (!fir.box<!fir.array<*:f32>>, !fir.ref<!fir.box<!fir.heap<!fir.array<*:f32>>>>) -> (!fir.box<!fir.array<*:f32>>, i1)
+  %3:3 = hlfir.copy_in %2#0 to %0 : (!fir.box<!fir.array<*:f32>>, !fir.ref<!fir.box<!fir.array<*:f32>>>) -> (!fir.box<!fir.array<*:f32>>, i1, i1)
   fir.call @_QPtakes_contiguous_intentin(%3#0) fastmath<contract> : (!fir.box<!fir.array<*:f32>>) -> ()
-  hlfir.copy_out %0, %3#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<*:f32>>>>, i1) -> ()
+  hlfir.copy_out %0, %3#1, %3#2 : (!fir.ref<!fir.box<!fir.array<*:f32>>>, i1, i1) -> ()
   return
 }
 
 // CHECK-LABEL: func.func @_QPtest_copy_in_out_2(
 // CHECK-SAME: %[[ARG_0]]: !fir.box<!fir.array<*:f32>> {fir.bindc_name = "x"}) {
-// CHECK:   %[[VAL_0]] = fir.alloca !fir.box<!fir.heap<!fir.array<*:f32>>>
+// CHECK:   %[[VAL_0]] = fir.alloca !fir.box<!fir.array<*:f32>>
 // CHECK:   %[[VAL_1]] = fir.dummy_scope : !fir.dscope
 // CHECK:   %[[VAL_2]]:2 = hlfir.declare %[[ARG_0]] dummy_scope %[[VAL_1]] {uniq_name = "_QFtest_copy_in_out_2Ex"} : (!fir.box<!fir.array<*:f32>>, !fir.dscope) -> (!fir.box<!fir.array<*:f32>>, !fir.box<!fir.array<*:f32>>)
-// CHECK:   %[[VAL_3]]:2 = hlfir.copy_in %[[VAL_2]]#0 to %[[VAL_0]] : (!fir.box<!fir.array<*:f32>>, !fir.ref<!fir.box<!fir.heap<!fir.array<*:f32>>>>) -> (!fir.box<!fir.array<*:f32>>, i1)
+// CHECK:   %[[VAL_3]]:3 = hlfir.copy_in %[[VAL_2]]#0 to %[[VAL_0]] : (!fir.box<!fir.array<*:f32>>, !fir.ref<!fir.box<!fir.array<*:f32>>>) -> (!fir.box<!fir.array<*:f32>>, i1, i1)
 // CHECK:   fir.call @_QPtakes_contiguous_intentin(%[[VAL_3]]#0) fastmath<contract> : (!fir.box<!fir.array<*:f32>>) -> ()
-// CHECK:   hlfir.copy_out %[[VAL_0]], %[[VAL_3]]#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<*:f32>>>>, i1) -> ()
+// CHECK:   hlfir.copy_out %[[VAL_0]], %[[VAL_3]]#1, %[[VAL_3]]#2 : (!fir.ref<!fir.box<!fir.array<*:f32>>>, i1, i1) -> ()
 // CHECK:   return
 // CHECK: }

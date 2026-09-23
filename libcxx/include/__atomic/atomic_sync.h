@@ -34,47 +34,47 @@ _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 #    if !_LIBCPP_AVAILABILITY_HAS_NEW_SYNC
 
 // old dylib interface kept for backwards compatibility
-_LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_one(void const volatile*) _NOEXCEPT;
-_LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_all(void const volatile*) _NOEXCEPT;
-_LIBCPP_EXPORTED_FROM_ABI __cxx_contention_t __libcpp_atomic_monitor(void const volatile*) _NOEXCEPT;
-_LIBCPP_EXPORTED_FROM_ABI void __libcpp_atomic_wait(void const volatile*, __cxx_contention_t) _NOEXCEPT;
+_LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_one(void const volatile*) noexcept;
+_LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_all(void const volatile*) noexcept;
+_LIBCPP_EXPORTED_FROM_ABI __cxx_contention_t __libcpp_atomic_monitor(void const volatile*) noexcept;
+_LIBCPP_EXPORTED_FROM_ABI void __libcpp_atomic_wait(void const volatile*, __cxx_contention_t) noexcept;
 
-_LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_one(__cxx_atomic_contention_t const volatile*) _NOEXCEPT;
-_LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_all(__cxx_atomic_contention_t const volatile*) _NOEXCEPT;
+_LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_one(__cxx_atomic_contention_t const volatile*) noexcept;
+_LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_all(__cxx_atomic_contention_t const volatile*) noexcept;
 _LIBCPP_EXPORTED_FROM_ABI __cxx_contention_t
-__libcpp_atomic_monitor(__cxx_atomic_contention_t const volatile*) _NOEXCEPT;
+__libcpp_atomic_monitor(__cxx_atomic_contention_t const volatile*) noexcept;
 _LIBCPP_EXPORTED_FROM_ABI void
-__libcpp_atomic_wait(__cxx_atomic_contention_t const volatile*, __cxx_contention_t) _NOEXCEPT;
+__libcpp_atomic_wait(__cxx_atomic_contention_t const volatile*, __cxx_contention_t) noexcept;
 #    endif // !_LIBCPP_AVAILABILITY_HAS_NEW_SYNC
 
 // new dylib interface
 
 // return the global contention state's current value for the address
 _LIBCPP_AVAILABILITY_NEW_SYNC _LIBCPP_EXPORTED_FROM_ABI __cxx_contention_t
-__atomic_monitor_global(void const* __address) _NOEXCEPT;
+__atomic_monitor_global(void const* __address) noexcept;
 
 // wait on the global contention state to be changed from the given value for the address
 _LIBCPP_AVAILABILITY_NEW_SYNC _LIBCPP_EXPORTED_FROM_ABI void
-__atomic_wait_global_table(void const* __address, __cxx_contention_t __monitor_value) _NOEXCEPT;
+__atomic_wait_global_table(void const* __address, __cxx_contention_t __monitor_value) noexcept;
 
 // notify one waiter waiting on the global contention state for the address
-_LIBCPP_AVAILABILITY_NEW_SYNC _LIBCPP_EXPORTED_FROM_ABI void __atomic_notify_one_global_table(void const*) _NOEXCEPT;
+_LIBCPP_AVAILABILITY_NEW_SYNC _LIBCPP_EXPORTED_FROM_ABI void __atomic_notify_one_global_table(void const*) noexcept;
 
 // notify all waiters waiting on the global contention state for the address
-_LIBCPP_AVAILABILITY_NEW_SYNC _LIBCPP_EXPORTED_FROM_ABI void __atomic_notify_all_global_table(void const*) _NOEXCEPT;
+_LIBCPP_AVAILABILITY_NEW_SYNC _LIBCPP_EXPORTED_FROM_ABI void __atomic_notify_all_global_table(void const*) noexcept;
 
 // wait on the address directly with the native platform wait
 template <std::size_t _Size>
 _LIBCPP_AVAILABILITY_NEW_SYNC _LIBCPP_EXPORTED_FROM_ABI void
-__atomic_wait_native(void const* __address, void const* __old_value) _NOEXCEPT;
+__atomic_wait_native(void const* __address, void const* __old_value) noexcept;
 
 // notify one waiter waiting on the address directly with the native platform wait
 template <std::size_t _Size>
-_LIBCPP_AVAILABILITY_NEW_SYNC _LIBCPP_EXPORTED_FROM_ABI void __atomic_notify_one_native(const void*) _NOEXCEPT;
+_LIBCPP_AVAILABILITY_NEW_SYNC _LIBCPP_EXPORTED_FROM_ABI void __atomic_notify_one_native(const void*) noexcept;
 
 // notify all waiters waiting on the address directly with the native platform wait
 template <std::size_t _Size>
-_LIBCPP_AVAILABILITY_NEW_SYNC _LIBCPP_EXPORTED_FROM_ABI void __atomic_notify_all_native(const void*) _NOEXCEPT;
+_LIBCPP_AVAILABILITY_NEW_SYNC _LIBCPP_EXPORTED_FROM_ABI void __atomic_notify_all_native(const void*) noexcept;
 
 _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 

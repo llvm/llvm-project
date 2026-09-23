@@ -13,7 +13,7 @@ module {
     %2 = llvm.mlir.constant(3.000000e+00 : f32) : f32
     %3 = llvm.mlir.constant(4.000000e+00 : f32) : f32
     %4 = llvm.mlir.undef : vector<4xf32>
-    %5 = llvm.mlir.constant(0 : index) : i64
+    %5 = llvm.mlir.constant(0 : i64) : i64
     %6 = llvm.insertelement %0, %4[%5 : i64] : vector<4xf32>
     %7 = llvm.shufflevector %6, %4 [0, 0, 0, 0] : vector<4xf32>
     %8 = llvm.mlir.constant(1 : i64) : i64

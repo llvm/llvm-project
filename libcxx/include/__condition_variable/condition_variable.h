@@ -36,6 +36,14 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
+#  if !_LIBCPP_HAS_THREAD_API_PTHREAD
+#    define _LIBCPP_HAS_COND_CLOCKWAIT 0
+#  elif (defined(__ANDROID__) && __ANDROID_API__ >= 30) || _LIBCPP_GLIBC_PREREQ(2, 30)
+#    define _LIBCPP_HAS_COND_CLOCKWAIT 1
+#  else
+#    define _LIBCPP_HAS_COND_CLOCKWAIT 0
+#  endif
+
 // enum class cv_status
 _LIBCPP_DECLARE_STRONG_ENUM(cv_status){no_timeout, timeout};
 _LIBCPP_DECLARE_STRONG_ENUM_EPILOG(cv_status)
@@ -87,7 +95,7 @@ inline _LIBCPP_HIDE_FROM_ABI chrono::nanoseconds __safe_nanosecond_cast(chrono::
   return nanoseconds(__result);
 }
 
-class _LIBCPP_EXPORTED_FROM_ABI condition_variable {
+class _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_WARN_UNUSED condition_variable {
   __libcpp_condvar_t __cv_ = _LIBCPP_CONDVAR_INITIALIZER;
 
 public:
