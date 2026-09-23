@@ -17849,12 +17849,11 @@ SDValue AArch64TargetLowering::LowerVECTOR_REPEAT(SDValue Op,
 
   // Repeat into a packed container before extracting the low lanes, which
   // places the result elements at the spacing required by the unpacked type.
-  EVT PackedVT = getPackedSVEVectorVT(VT.getVectorElementType());
-  EVT PackedSrcVT = SrcVT.getDoubleNumVectorElementsVT(*DAG.getContext());
-  SDValue PackedSrc =
-      DAG.getNode(ISD::CONCAT_VECTORS, DL, PackedSrcVT, Src, Src);
-  SDValue Broadcast = DAG.getNode(ISD::VECTOR_REPEAT, DL, PackedVT, PackedSrc);
-  return DAG.getExtractSubvector(DL, VT, Broadcast, 0);
+  SDValue SrcAsScalar =
+      DAG.getExtractVectorElt(DL, MVT::i64, DAG.getBitcast(MVT::v1i64, Src), 0);
+  SDValue Splat = DAG.getSplat(MVT::nxv2i64, DL, SrcAsScalar);
+  EVT PackedVT = VT.getDoubleNumVectorElementsVT(*DAG.getContext());
+  return DAG.getExtractSubvector(DL, VT, DAG.getBitcast(PackedVT, Splat), 0);
 }
 
 SDValue AArch64TargetLowering::LowerINSERT_SUBVECTOR(SDValue Op,

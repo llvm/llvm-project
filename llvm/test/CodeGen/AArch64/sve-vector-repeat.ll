@@ -230,8 +230,7 @@ define <vscale x 4 x half> @repeat_double_f16_to_double_sve(<4 x half> %a) {
 ; CHECK-LABEL: repeat_double_f16_to_double_sve:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    mov v0.d[1], v0.d[0]
-; CHECK-NEXT:    mov z0.q, q0
+; CHECK-NEXT:    mov z0.d, d0
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-NEXT:    ret
   %out = call <vscale x 4 x half> @llvm.vector.repeat.nxv4f16(<4 x half> %a)
@@ -243,8 +242,7 @@ define <vscale x 2 x half> @repeat_2f16_to_nxv2f16(<4 x half> %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    dup v0.2s, v0.s[0]
-; CHECK-NEXT:    mov v0.d[1], v0.d[0]
-; CHECK-NEXT:    mov z0.q, q0
+; CHECK-NEXT:    mov z0.d, d0
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
 ; CHECK-NEXT:    ret
@@ -301,8 +299,7 @@ define <vscale x 2 x float> @repeat_double_f32_to_nxv2f32(<2 x float> %a) {
 ; CHECK-LABEL: repeat_double_f32_to_nxv2f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    mov v0.d[1], v0.d[0]
-; CHECK-NEXT:    mov z0.q, q0
+; CHECK-NEXT:    mov z0.d, d0
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
 ; CHECK-NEXT:    ret
   %out = call <vscale x 2 x float> @llvm.vector.repeat.nxv2f32.v2f32(<2 x float> %a)
@@ -325,8 +322,7 @@ define <vscale x 4 x bfloat> @repeat_double_bf16_to_nxv4bf16(<4 x bfloat> %a) #0
 ; CHECK-LABEL: repeat_double_bf16_to_nxv4bf16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    mov v0.d[1], v0.d[0]
-; CHECK-NEXT:    mov z0.q, q0
+; CHECK-NEXT:    mov z0.d, d0
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-NEXT:    ret
   %out = call <vscale x 4 x bfloat> @llvm.vector.repeat.nxv4bf16.v4bf16(<4 x bfloat> %a)
