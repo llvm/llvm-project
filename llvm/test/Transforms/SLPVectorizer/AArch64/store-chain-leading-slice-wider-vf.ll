@@ -9,66 +9,61 @@ define void @test(ptr %u, ptr %b, ptr %c, ptr %bu, double %b0, double %b4, doubl
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ptr [[U:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], ptr [[BU:%.*]], double [[B0:%.*]], double [[B4:%.*]], double [[B8:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[X2_P:%.*]] = getelementptr inbounds double, ptr [[B]], i64 1
-; CHECK-NEXT:    [[X1_P:%.*]] = getelementptr inbounds double, ptr [[B]], i64 3
+; CHECK-NEXT:    [[X1_P:%.*]] = getelementptr inbounds double, ptr [[B]], i64 1
 ; CHECK-NEXT:    [[X1:%.*]] = load double, ptr [[X1_P]], align 8
-; CHECK-NEXT:    [[X6_P:%.*]] = getelementptr inbounds double, ptr [[B]], i64 5
-; CHECK-NEXT:    [[X5_P:%.*]] = getelementptr inbounds double, ptr [[B]], i64 7
+; CHECK-NEXT:    [[X2_P:%.*]] = getelementptr inbounds double, ptr [[B]], i64 2
+; CHECK-NEXT:    [[X5_P:%.*]] = getelementptr inbounds double, ptr [[B]], i64 5
 ; CHECK-NEXT:    [[X5:%.*]] = load double, ptr [[X5_P]], align 8
-; CHECK-NEXT:    [[X10_P:%.*]] = getelementptr inbounds double, ptr [[B]], i64 9
-; CHECK-NEXT:    [[X9_P:%.*]] = getelementptr inbounds double, ptr [[B]], i64 11
+; CHECK-NEXT:    [[X6_P:%.*]] = getelementptr inbounds double, ptr [[B]], i64 6
+; CHECK-NEXT:    [[X9_P:%.*]] = getelementptr inbounds double, ptr [[B]], i64 9
 ; CHECK-NEXT:    [[X9:%.*]] = load double, ptr [[X9_P]], align 8
-; CHECK-NEXT:    [[Y2_P:%.*]] = getelementptr inbounds double, ptr [[C]], i64 1
-; CHECK-NEXT:    [[Y1_P:%.*]] = getelementptr inbounds double, ptr [[C]], i64 3
+; CHECK-NEXT:    [[X10_P:%.*]] = getelementptr inbounds double, ptr [[B]], i64 10
+; CHECK-NEXT:    [[Y1_P:%.*]] = getelementptr inbounds double, ptr [[C]], i64 1
 ; CHECK-NEXT:    [[Y1:%.*]] = load double, ptr [[Y1_P]], align 8
-; CHECK-NEXT:    [[Y6_P:%.*]] = getelementptr inbounds double, ptr [[C]], i64 5
-; CHECK-NEXT:    [[Y5_P:%.*]] = getelementptr inbounds double, ptr [[C]], i64 7
+; CHECK-NEXT:    [[Y2_P:%.*]] = getelementptr inbounds double, ptr [[C]], i64 2
+; CHECK-NEXT:    [[Y5_P:%.*]] = getelementptr inbounds double, ptr [[C]], i64 5
 ; CHECK-NEXT:    [[Y5:%.*]] = load double, ptr [[Y5_P]], align 8
-; CHECK-NEXT:    [[Y10_P:%.*]] = getelementptr inbounds double, ptr [[C]], i64 9
+; CHECK-NEXT:    [[Y6_P:%.*]] = getelementptr inbounds double, ptr [[C]], i64 6
+; CHECK-NEXT:    [[Y9_P:%.*]] = getelementptr inbounds double, ptr [[C]], i64 9
+; CHECK-NEXT:    [[Y9:%.*]] = load double, ptr [[Y9_P]], align 8
+; CHECK-NEXT:    [[Y10_P:%.*]] = getelementptr inbounds double, ptr [[C]], i64 10
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[X2_P]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[X6_P]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[X10_P]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr [[Y2_P]], align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x double>, ptr [[Y6_P]], align 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = load <2 x double>, ptr [[Y10_P]], align 8
-; CHECK-NEXT:    [[Y11_P:%.*]] = getelementptr inbounds double, ptr [[C]], i64 11
-; CHECK-NEXT:    [[Y11:%.*]] = load double, ptr [[Y11_P]], align 8
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x double> poison, double [[B8]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x double> poison, double [[B4]], i64 0
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x double> poison, double [[B0]], i64 0
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[P3:%.*]] = phi double [ [[X1]], %[[ENTRY]] ], [ [[Y1]], %[[LOOP]] ]
-; CHECK-NEXT:    [[P7:%.*]] = phi double [ [[X5]], %[[ENTRY]] ], [ [[Y5]], %[[LOOP]] ]
-; CHECK-NEXT:    [[P11:%.*]] = phi double [ [[X9]], %[[ENTRY]] ], [ [[Y11]], %[[LOOP]] ]
-; CHECK-NEXT:    [[TMP6:%.*]] = phi <2 x double> [ [[TMP2]], %[[ENTRY]] ], [ [[TMP5]], %[[LOOP]] ]
-; CHECK-NEXT:    [[TMP7:%.*]] = phi <2 x double> [ [[TMP1]], %[[ENTRY]] ], [ [[TMP4]], %[[LOOP]] ]
-; CHECK-NEXT:    [[TMP8:%.*]] = phi <2 x double> [ [[TMP0]], %[[ENTRY]] ], [ [[TMP3]], %[[LOOP]] ]
+; CHECK-NEXT:    [[P1:%.*]] = phi double [ [[X1]], %[[ENTRY]] ], [ [[Y1]], %[[LOOP]] ]
+; CHECK-NEXT:    [[P5:%.*]] = phi double [ [[X5]], %[[ENTRY]] ], [ [[Y5]], %[[LOOP]] ]
+; CHECK-NEXT:    [[P9:%.*]] = phi double [ [[X9]], %[[ENTRY]] ], [ [[Y9]], %[[LOOP]] ]
+; CHECK-NEXT:    [[TMP9:%.*]] = phi <2 x double> [ [[TMP2]], %[[ENTRY]] ], [ [[TMP5]], %[[LOOP]] ]
+; CHECK-NEXT:    [[TMP10:%.*]] = phi <2 x double> [ [[TMP1]], %[[ENTRY]] ], [ [[TMP4]], %[[LOOP]] ]
+; CHECK-NEXT:    [[TMP11:%.*]] = phi <2 x double> [ [[TMP0]], %[[ENTRY]] ], [ [[TMP3]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[U_ROW:%.*]] = getelementptr inbounds [3 x double], ptr [[U]], i64 [[IV]]
-; CHECK-NEXT:    [[U1_P:%.*]] = getelementptr inbounds i8, ptr [[U_ROW]], i64 8
-; CHECK-NEXT:    [[U2_P:%.*]] = getelementptr inbounds i8, ptr [[U_ROW]], i64 16
 ; CHECK-NEXT:    [[BU_ROW:%.*]] = getelementptr inbounds [4 x double], ptr [[BU]], i64 [[IV]]
-; CHECK-NEXT:    [[BU1:%.*]] = getelementptr inbounds i8, ptr [[BU_ROW]], i64 8
-; CHECK-NEXT:    [[U0:%.*]] = load double, ptr [[U_ROW]], align 8
-; CHECK-NEXT:    [[U1:%.*]] = load double, ptr [[U1_P]], align 8
-; CHECK-NEXT:    [[U2:%.*]] = load double, ptr [[U2_P]], align 8
-; CHECK-NEXT:    [[Q0_0:%.*]] = tail call double @llvm.fmuladd.f64(double [[B0]], double [[U0]], double 0.000000e+00)
-; CHECK-NEXT:    [[Q0_1:%.*]] = tail call double @llvm.fmuladd.f64(double [[B4]], double [[U1]], double [[Q0_0]])
-; CHECK-NEXT:    [[Q0:%.*]] = tail call double @llvm.fmuladd.f64(double [[B8]], double [[U2]], double [[Q0_1]])
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x double> poison, double [[U0]], i64 0
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x double> [[TMP9]], <2 x double> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP11:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP8]], <2 x double> [[TMP10]], <2 x double> zeroinitializer)
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <2 x double> poison, double [[U1]], i64 0
-; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <2 x double> [[TMP12]], <2 x double> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP14:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP7]], <2 x double> [[TMP13]], <2 x double> [[TMP11]])
-; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <2 x double> poison, double [[U2]], i64 0
-; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <2 x double> [[TMP15]], <2 x double> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP17:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP6]], <2 x double> [[TMP16]], <2 x double> [[TMP14]])
-; CHECK-NEXT:    [[Q3_0:%.*]] = tail call double @llvm.fmuladd.f64(double [[P3]], double [[U0]], double 0.000000e+00)
-; CHECK-NEXT:    [[Q3_1:%.*]] = tail call double @llvm.fmuladd.f64(double [[P7]], double [[U1]], double [[Q3_0]])
-; CHECK-NEXT:    [[Q3:%.*]] = tail call double @llvm.fmuladd.f64(double [[P11]], double [[U2]], double [[Q3_1]])
-; CHECK-NEXT:    store double [[Q0]], ptr [[BU_ROW]], align 8
-; CHECK-NEXT:    store <2 x double> [[TMP17]], ptr [[BU1]], align 8
-; CHECK-NEXT:    [[BU3:%.*]] = getelementptr inbounds i8, ptr [[BU_ROW]], i64 24
-; CHECK-NEXT:    store double [[Q3]], ptr [[BU3]], align 8
+; CHECK-NEXT:    [[TMP12:%.*]] = load <3 x double>, ptr [[U_ROW]], align 8
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x double> [[TMP8]], double [[P1]], i64 1
+; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <2 x double> [[TMP11]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <4 x double> [[TMP13]], <4 x double> [[TMP14]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <3 x double> [[TMP12]], <3 x double> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP17:%.*]] = call <4 x double> @llvm.fmuladd.v4f64(<4 x double> [[TMP15]], <4 x double> [[TMP16]], <4 x double> zeroinitializer)
+; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <4 x double> [[TMP7]], double [[P5]], i64 1
+; CHECK-NEXT:    [[TMP19:%.*]] = shufflevector <2 x double> [[TMP10]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP20:%.*]] = shufflevector <4 x double> [[TMP18]], <4 x double> [[TMP19]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP21:%.*]] = shufflevector <3 x double> [[TMP12]], <3 x double> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP22:%.*]] = call <4 x double> @llvm.fmuladd.v4f64(<4 x double> [[TMP20]], <4 x double> [[TMP21]], <4 x double> [[TMP17]])
+; CHECK-NEXT:    [[TMP23:%.*]] = insertelement <4 x double> [[TMP6]], double [[P9]], i64 1
+; CHECK-NEXT:    [[TMP24:%.*]] = shufflevector <2 x double> [[TMP9]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP25:%.*]] = shufflevector <4 x double> [[TMP23]], <4 x double> [[TMP24]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP26:%.*]] = shufflevector <3 x double> [[TMP12]], <3 x double> poison, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
+; CHECK-NEXT:    [[TMP27:%.*]] = call <4 x double> @llvm.fmuladd.v4f64(<4 x double> [[TMP25]], <4 x double> [[TMP26]], <4 x double> [[TMP22]])
+; CHECK-NEXT:    store <4 x double> [[TMP27]], ptr [[BU_ROW]], align 8
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[LOOP]]
