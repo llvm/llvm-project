@@ -1860,7 +1860,7 @@ entry:
   ret void
 }
 
-; Don't the known-incremented retain+release elimination if the pointer is
+; Don't do the known-incremented retain+release elimination if the pointer is
 ; autoreleased and there's an autoreleasePoolPop.
 
 ; CHECK-LABEL: define void @test43(

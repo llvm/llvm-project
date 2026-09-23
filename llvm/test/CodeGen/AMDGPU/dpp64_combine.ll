@@ -119,7 +119,7 @@ bb1:
 ; DPP32: v_min{{(_num)?}}_f64{{(_e32)?}} v[0:1], v[0:1], v[{{[0-9:]+}}]{{$}}
 define nofpclass(nan) double @dpp64_fmin(double nofpclass(nan) %x) {
 entry:
-  %dpp = tail call double @llvm.amdgcn.update.dpp.f64(double 0x7FF0000000000000, double %x, i32 337, i32 15, i32 15, i1 false)
+  %dpp = tail call double @llvm.amdgcn.update.dpp.f64(double +inf, double %x, i32 337, i32 15, i32 15, i1 false)
   %min = tail call nnan double @llvm.minnum.f64(double %x, double %dpp)
   ret double %min
 }
@@ -130,7 +130,7 @@ entry:
 ; DPP32: v_max{{(_num)?}}_f64{{(_e32)?}} v[0:1], v[0:1], v[{{[0-9:]+}}]{{$}}
 define nofpclass(nan) double @dpp64_fmax(double nofpclass(nan) %x) #0 {
 entry:
-  %dpp = tail call double @llvm.amdgcn.update.dpp.f64(double 0xFFF0000000000000, double %x, i32 337, i32 15, i32 15, i1 false)
+  %dpp = tail call double @llvm.amdgcn.update.dpp.f64(double -inf, double %x, i32 337, i32 15, i32 15, i1 false)
   %max = tail call nnan double @llvm.maxnum.f64(double %x, double %dpp)
   ret double %max
 }

@@ -26,11 +26,11 @@ define amdgpu_kernel void @spam(ptr addrspace(1) noalias %arg) {
   %tmp1 = zext i32 %tmp to i64
   %tmp2 = getelementptr inbounds double, ptr addrspace(1) %arg, i64 %tmp1
   %tmp3 = load double, ptr addrspace(1) %tmp2, align 8
-  %tmp4 = fadd double 0x7FF8000000000000, 0.000000e+00
+  %tmp4 = fadd double +qnan, 0.000000e+00
   %tmp5 = insertelement <2 x double> poison, double %tmp4, i64 0
   %tmp6 = insertelement <2 x double> %tmp5, double %tmp3, i64 1
   %tmp7 = insertelement <2 x double> %tmp6, double 0.000000e+00, i64 1
-  %tmp8 = fadd <2 x double> zeroinitializer, splat (double 0x7FF8000000000000)
+  %tmp8 = fadd <2 x double> zeroinitializer, splat (double +qnan)
   %tmp9 = fadd <2 x double> %tmp7, zeroinitializer
   %tmp10 = extractelement <2 x double> %tmp8, i64 0
   %tmp11 = getelementptr inbounds double, ptr addrspace(1) %tmp2, i64 2

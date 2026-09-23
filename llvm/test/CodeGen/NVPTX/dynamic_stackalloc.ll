@@ -4,7 +4,7 @@
 
 ; RUN: llc < %s -mtriple=nvptx -mattr=+ptx73 -mcpu=sm_52 | FileCheck %s --check-prefixes=CHECK-32
 ; RUN: llc < %s -mtriple=nvptx64 -mattr=+ptx73 -mcpu=sm_52 | FileCheck %s --check-prefixes=CHECK-64
-; RUN: llc < %s -mtriple=nvptx64 -mattr=+ptx73 -mcpu=sm_52 --nvptx-short-ptr | FileCheck %s --check-prefixes=CHECK-MIXED
+; RUN: llc < %s -mtriple=nvptx64 -mattr=+ptx73 -mcpu=sm_52 -target-abi=shortptr | FileCheck %s --check-prefixes=CHECK-MIXED
 ; RUN: %if ptxas-isa-7.3 && ptxas-ptr32 %{ llc < %s -mtriple=nvptx -mattr=+ptx73 -mcpu=sm_52 | %ptxas-verify %}
 ; RUN: %if ptxas-isa-7.3 %{ llc < %s -mtriple=nvptx64 -mattr=+ptx73 -mcpu=sm_52 | %ptxas-verify %}
 

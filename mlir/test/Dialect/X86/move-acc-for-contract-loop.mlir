@@ -320,4 +320,3 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
-

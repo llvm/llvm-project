@@ -787,12 +787,14 @@ void privatizeSymbol(
 
     if constexpr (std::is_same_v<OpType, mlir::omp::PrivateClauseOp>) {
       result = OpType::create(
-          firOpBuilder, symLoc, uniquePrivatizerName, allocType,
+          firOpBuilder, symLoc, uniquePrivatizerName,
+          /*sym_visibility=*/nullptr, allocType,
           emitCopyRegion ? mlir::omp::DataSharingClauseType::FirstPrivate
                          : mlir::omp::DataSharingClauseType::Private);
     } else {
       result =
-          OpType::create(firOpBuilder, symLoc, uniquePrivatizerName, allocType,
+          OpType::create(firOpBuilder, symLoc, uniquePrivatizerName,
+                         /*sym_visibility=*/nullptr, allocType,
                          emitCopyRegion ? fir::LocalitySpecifierType::LocalInit
                                         : fir::LocalitySpecifierType::Local);
     }
