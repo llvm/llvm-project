@@ -526,6 +526,9 @@ bool MipsSEInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case Mips::BuildPairF64:
     expandBuildPairF64(MBB, MI, isMicroMips, false);
     break;
+  case Mips::BuildPairF64_FPR:
+    MI.eraseFromParent();
+    return true;
   case Mips::BuildPairF64_64:
     expandBuildPairF64(MBB, MI, isMicroMips, true);
     break;
@@ -853,9 +856,9 @@ void MipsSEInstrInfo::expandExtractElementF64(MachineBasicBlock &MBB,
   unsigned SubIdx = N ? Mips::sub_hi : Mips::sub_lo;
   Register SubReg = getRegisterInfo().getSubReg(SrcReg, SubIdx);
 
-  // FPXX on MIPS-II or MIPS32r1 should have been handled with a spill/reload
+  // FPXX/FP64 without MFHC1 should have been handled with a spill/reload
   // in MipsSEFrameLowering.cpp.
-  assert(!(Subtarget.isABI_FPXX() && !Subtarget.hasMips32r2()));
+  assert(!((Subtarget.isABI_FPXX() || FP64) && !Subtarget.hasMTHC1()));
 
   // FP64A (FP64 with nooddspreg) should have been handled with a spill/reload
   // in MipsSEFrameLowering.cpp.
@@ -896,7 +899,7 @@ void MipsSEInstrInfo::expandBuildPairF64(MachineBasicBlock &MBB,
   //   mtc1 Lo, $fp
   //   mthc1 Hi, $fp
   //
-  // Otherwise, for O32 FPXX ABI:
+  // Otherwise, for FPXX/FP64:
   //   spill + reload via ldc1
   // This case is handled by the frame lowering code.
   //
@@ -904,12 +907,12 @@ void MipsSEInstrInfo::expandBuildPairF64(MachineBasicBlock &MBB,
   //   mtc1 Lo, $fp
   //   mtc1 Hi, $fp + 1
   //
-  // The case where dmtc1 is available doesn't need to be handled here
+  // The case where 64-bit GPRs can be used doesn't need to be handled here
   // because it never creates a BuildPairF64 node.
 
-  // FPXX on MIPS-II or MIPS32r1 should have been handled with a spill/reload
+  // FPXX/FP64 without MTHC1 should have been handled with a spill/reload
   // in MipsSEFrameLowering.cpp.
-  assert(!(Subtarget.isABI_FPXX() && !Subtarget.hasMips32r2()));
+  assert(!((Subtarget.isABI_FPXX() || FP64) && !Subtarget.hasMTHC1()));
 
   // FP64A (FP64 with nooddspreg) should have been handled with a spill/reload
   // in MipsSEFrameLowering.cpp.
@@ -952,7 +955,7 @@ void MipsSEInstrInfo::expandEhReturn(MachineBasicBlock &MBB,
   unsigned ADDU = ABI.GetPtrAdduOp();
   unsigned SP = Subtarget.isGP64bit() ? Mips::SP_64 : Mips::SP;
   unsigned RA = Subtarget.isGP64bit() ? Mips::RA_64 : Mips::RA;
-  unsigned T9 = Subtarget.isGP64bit() ? Mips::T9_64 : Mips::T9;
+  unsigned T9 = ABI.getTempReg(9, Subtarget.isGP64bit());
   unsigned ZERO = Subtarget.isGP64bit() ? Mips::ZERO_64 : Mips::ZERO;
   Register OffsetReg = I->getOperand(0).getReg();
   Register TargetReg = I->getOperand(1).getReg();

@@ -2113,12 +2113,62 @@ kmp_int32 __kmpc_omp_taskyield(ident_t *loc_ref, kmp_int32 gtid, int end_part) {
 
 #if OMP_TASKGRAPH_EXPERIMENTAL
 
-// This is copy/pasted, better make it global.
-static kmp_int32 __kmp_region_deplist_len(kmp_taskgraph_region_dep_t *list) {
-  kmp_int32 len = 0;
-  for (; list; list = list->next)
-    ++len;
-  return len;
+// Return the members of the irreducible REGION in topological order, i.e. with
+// each member preceded by its intra-region predecessors.  The caller frees the
+// returned array.
+static kmp_taskgraph_region_t **
+__kmp_taskgraph_irreducible_order(kmp_info_t *thread,
+                                  kmp_taskgraph_region_t *region) {
+  kmp_int32 num_children = region->inner.num_children;
+  kmp_taskgraph_region_t **order =
+      (kmp_taskgraph_region_t **)__kmp_fast_allocate(
+          thread, num_children * sizeof(kmp_taskgraph_region_t *));
+  kmp_int32 outidx = 0;
+
+  for (kmp_int32 c = 0; c < num_children; c++)
+    region->inner.children[c]->mark = TASKGRAPH_UNMARKED;
+
+  for (kmp_int32 c = 0; c < num_children; c++)
+    if (region->inner.children[c]->mark == TASKGRAPH_UNMARKED)
+      __kmp_taskgraph_topological_order(region->inner.children[c], order,
+                                        &outidx);
+
+  // Members only depend on other members, so the walk cannot leave the region.
+  assert(outidx == num_children);
+  return order;
+}
+
+// The number of exit descrs REGION resolves to, i.e. the length of the pred
+// list __kmp_build_exec_descrs_1 returns for it.  A dependency on REGION has to
+// name every one of them.
+static kmp_int32 __kmp_count_region_exits(kmp_taskgraph_region_t *region) {
+  switch (region->type) {
+  case TASKGRAPH_REGION_NODE:
+  case TASKGRAPH_REGION_WAIT:
+  case TASKGRAPH_REGION_ENTRY:
+  case TASKGRAPH_REGION_EXIT:
+    return 1;
+  case TASKGRAPH_REGION_PARALLEL: {
+    // All children run concurrently, so all of them are exits.
+    kmp_int32 exits = 0;
+    for (kmp_int32 c = 0; c < region->inner.num_children; c++)
+      exits += __kmp_count_region_exits(region->inner.children[c]);
+    return exits;
+  }
+  case TASKGRAPH_REGION_SEQUENTIAL:
+  case TASKGRAPH_REGION_EXCLUSIVE:
+    // The children are chained, so only the last one is an exit.
+    return __kmp_count_region_exits(
+        region->inner.children[region->inner.num_children - 1]);
+  case TASKGRAPH_REGION_IRREDUCIBLE: {
+    // The members with no successors are the exits.
+    kmp_int32 exits = 0;
+    for (kmp_int32 c = 0; c < region->inner.num_children; c++)
+      if (!region->inner.children[c]->successors)
+        exits += __kmp_count_region_exits(region->inner.children[c]);
+    return exits;
+  }
+  }
 }
 
 // Count the number of exec_descr and successor-list structures that we need
@@ -2162,13 +2212,22 @@ kmp_int32 __kmp_count_exec_descrs_1(kmp_taskgraph_region_t *region,
     return npreds;
   }
   case TASKGRAPH_REGION_IRREDUCIBLE: {
+    if (npreds > 0)
+      successors += npreds;
+    descrs++;
+    npreds = 1;
     kmp_int32 out_preds = 0;
     for (kmp_int32 c = 0; c < region->inner.num_children; c++) {
       kmp_taskgraph_region_t *child_region = region->inner.children[c];
       kmp_int32 inner_or_outer_preds = npreds;
-      if (child_region->predecessors)
-        inner_or_outer_preds =
-            __kmp_region_deplist_len(child_region->predecessors);
+      if (child_region->predecessors) {
+        // Mirror the builder: an edge to a member contributes that member's
+        // whole exit set, not a single entry.
+        inner_or_outer_preds = 0;
+        for (kmp_taskgraph_region_dep_t *p = child_region->predecessors; p;
+             p = p->next)
+          inner_or_outer_preds += __kmp_count_region_exits(p->region);
+      }
       kmp_int32 child_preds = __kmp_count_exec_descrs_1(
           child_region, inner_or_outer_preds, successors, descrs);
       if (!child_region->successors)
@@ -2181,7 +2240,7 @@ kmp_int32 __kmp_count_exec_descrs_1(kmp_taskgraph_region_t *region,
 
 void __kmp_count_exec_descrs(kmp_taskgraph_region_t *region,
                              kmp_int32 &successors, kmp_int32 &descrs) {
-  kmp_int32 npreds;
+  [[maybe_unused]] kmp_int32 npreds;
   npreds = __kmp_count_exec_descrs_1(region, 0, successors, descrs);
   // We want to reach the exit...
   assert(npreds > 0);
@@ -2334,9 +2393,8 @@ kmp_taskgraph_exec_descr_list_t *__kmp_build_exec_descrs_1(
     if (region->exec_descr) {
       assert(region->exec_descr->region == region);
       ed = region->exec_descr;
-      if (ed->indegree == -1 && npreds > 0)
-        ed->indegree = npreds;
     } else {
+      assert(npreds >= 0);
       ed = &exec_descr_arr[idx++];
       ed->region = region;
       ed->indegree = npreds;
@@ -2347,11 +2405,9 @@ kmp_taskgraph_exec_descr_list_t *__kmp_build_exec_descrs_1(
   };
   auto fill = [&](kmp_taskgraph_exec_descr_t *exec_descr,
                   kmp_taskgraph_exec_descr_list_t *preds_list) -> void {
-    // kmp_taskgraph_exec_descr_elem_t *successors = *successor_tail;
     if (!preds_list)
       return;
     kmp_taskgraph_exec_descr_elem_t *pred = preds_list->head, *walk;
-    kmp_int32 succ_idx = 0;
     walk = pred;
     do {
       kmp_taskgraph_exec_descr_t *pred_descr = walk->exec_descr;
@@ -2421,19 +2477,41 @@ kmp_taskgraph_exec_descr_list_t *__kmp_build_exec_descrs_1(
     return preds;
   }
   case TASKGRAPH_REGION_IRREDUCIBLE: {
+    kmp_int32 npreds = __kmp_exec_descr_list_len(preds);
+    kmp_taskgraph_exec_descr_t *gather_descr = descr_for_region(region, npreds);
+    fill(gather_descr, preds);
+    __kmp_exec_descr_list_deref(thread, recycled, preds);
+    preds = __kmp_exec_descr_singleton_list(thread, recycled, gather_descr);
+
+    // A member's dependencies name sibling members, and we resolve each one to
+    // the exit descrs recorded on it (see EXEC_DESCRS_OUT below).  Members are
+    // stored in reverse preorder, so walk them in topological order instead:
+    // that way a predecessor has always been built by the time we need it.
+    kmp_int32 num_children = region->inner.num_children;
+    kmp_taskgraph_region_t **order =
+        __kmp_taskgraph_irreducible_order(thread, region);
+
     kmp_taskgraph_exec_descr_list_t *out_preds = nullptr;
-    for (kmp_int32 c = 0; c < region->inner.num_children; c++) {
-      kmp_taskgraph_region_t *child_region = region->inner.children[c];
+    for (kmp_int32 c = 0; c < num_children; c++) {
+      kmp_taskgraph_region_t *child_region = order[c];
       kmp_taskgraph_exec_descr_list_t *inner_or_outer_preds = preds;
       if (child_region->predecessors) {
         inner_or_outer_preds = nullptr;
         for (kmp_taskgraph_region_dep_t *p = child_region->predecessors; p;
              p = p->next) {
           assert(p->region);
-          kmp_taskgraph_exec_descr_t *pred_descr =
-              descr_for_region(p->region, -1);
-          inner_or_outer_preds = __kmp_exec_descr_list_add(
-              thread, recycled, pred_descr, inner_or_outer_preds);
+          // An edge to a compound member means "after everything in it", so
+          // depend on that member's whole exit set rather than on its entry
+          // descr.  For a leaf member the exit set is just its own descr.
+          assert(p->region->exec_descrs_out);
+          kmp_taskgraph_exec_descr_elem_t *head =
+              p->region->exec_descrs_out->head;
+          kmp_taskgraph_exec_descr_elem_t *walk = head;
+          do {
+            inner_or_outer_preds = __kmp_exec_descr_list_add(
+                thread, recycled, walk->exec_descr, inner_or_outer_preds);
+            walk = walk->next;
+          } while (walk != head);
         }
       } else {
         // PREDS may be reused on successive iterations of the loop: make sure
@@ -2446,16 +2524,29 @@ kmp_taskgraph_exec_descr_list_t *__kmp_build_exec_descrs_1(
       kmp_taskgraph_exec_descr_list_t *child_preds = __kmp_build_exec_descrs_1(
           thread, exec_descr_arr, idx, recycled, child_region,
           inner_or_outer_preds, successor_tail);
-      if (!child_region->successors)
+      if (!child_region->successors) {
+        // A region exit.  Having no successors, this child is named by no
+        // sibling, so nothing reads its exit set back and the destructive
+        // splice is safe.
         out_preds =
             __kmp_exec_descr_splice_list(thread, out_preds, child_preds);
-      else
-        // This child's output preds are not a region exit and are not needed
-        // by any successor (successors wire themselves up via their own
-        // 'predecessors' lists), so drop the fresh list here to avoid leaking
-        // its header and elements.
-        __kmp_exec_descr_list_deref(thread, recycled, child_preds);
+      } else {
+        // Later siblings resolve their edges to this child through
+        // EXEC_DESCRS_OUT, so keep a reference for the rest of the loop.
+        child_region->exec_descrs_out = child_preds;
+      }
     }
+    // Release the exit sets: nothing outside this loop reads them, and leaving
+    // the pointers behind would leave dangling values in a structure that
+    // outlives the build.
+    for (kmp_int32 c = 0; c < num_children; c++) {
+      if (order[c]->exec_descrs_out) {
+        __kmp_exec_descr_list_deref(thread, recycled,
+                                    order[c]->exec_descrs_out);
+        order[c]->exec_descrs_out = nullptr;
+      }
+    }
+    __kmp_fast_free(thread, order);
     // We do this unconditionally even though it looks like it could depend on
     // the flow in the loop above, but the (explicit) ref by the _list_ref call
     // and (implicit) deref by __kmp_build_exec_descrs balance out, so it's OK.
@@ -2572,13 +2663,13 @@ static void __kmp_taskgraph_exec_descr_start(kmp_int32 gtid, kmp_info_t *thread,
     }
     KMP_FALLTHROUGH();
   case TASKGRAPH_REGION_WAIT:
+  case TASKGRAPH_REGION_IRREDUCIBLE:
     for (kmp_taskgraph_exec_descr_elem_t *s = descr->successors; s; s = s->next)
       __kmp_taskgraph_exec_descr_start(gtid, thread, s->exec_descr, taskgroup);
     if (descr->region->type == TASKGRAPH_REGION_PARALLEL &&
         descr->region->reduce_input)
       __kmpc_end_taskgroup(/*loc=*/nullptr, gtid);
     break;
-  case TASKGRAPH_REGION_IRREDUCIBLE:
   case TASKGRAPH_REGION_EXCLUSIVE:
   case TASKGRAPH_REGION_SEQUENTIAL:
   case TASKGRAPH_REGION_ENTRY:
@@ -3296,8 +3387,10 @@ static void __kmp_replay_taskgraph(kmp_int32 gtid,
   }
 
   kmp_taskgraph_exec_descr_t *exec_descrs = taskgraph->exec_descrs;
-  for (kmp_size_t i = 0; i < taskgraph->num_exec_descrs; i++)
+  for (kmp_size_t i = 0; i < taskgraph->num_exec_descrs; i++) {
+    assert(exec_descrs[i].indegree >= 0);
     exec_descrs[i].npredecessors = exec_descrs[i].indegree;
+  }
 
   __kmp_taskgraph_exec_descr_start(gtid, thread, taskgraph->exec_descrs,
                                    taskgroup);

@@ -145,8 +145,8 @@ LogicalResult verifyGraphConstantIdAttrs(Operation *op) {
     if (!isa<tosa::ConstOp, tosa::ConstShapeOp>(op))
       return WalkResult::advance();
 
-    auto graphConstantId =
-        op->getAttrOfType<IntegerAttr>(graphARMGraphConstantIdAttrName);
+    auto graphConstantId = op->getDiscardableAttrOfType<IntegerAttr>(
+        graphARMGraphConstantIdAttrName);
     if (!graphConstantId)
       return WalkResult::advance();
 

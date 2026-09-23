@@ -21,8 +21,7 @@ LIBC_INLINE File *openfile(const char *file_name, const char *mode) {
 }
 
 TEST(LlvmLibcPlatformFileTest, CreateWriteCloseAndReadBack) {
-  constexpr char FILENAME[] =
-      APPEND_LIBC_TEST("testdata/create_write_close_and_readback.test");
+  constexpr char FILENAME[] = "testdata/create_write_close_and_readback.test";
   File *file = openfile(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
   ASSERT_EQ(file->write(TEXT, TEXT_SIZE).value, TEXT_SIZE);
@@ -43,8 +42,7 @@ TEST(LlvmLibcPlatformFileTest, CreateWriteCloseAndReadBack) {
 }
 
 TEST(LlvmLibcPlatformFileTest, CreateWriteSeekAndReadBack) {
-  constexpr char FILENAME[] =
-      APPEND_LIBC_TEST("testdata/create_write_seek_and_readback.test");
+  constexpr char FILENAME[] = "testdata/create_write_seek_and_readback.test";
   File *file = openfile(FILENAME, "w+");
   ASSERT_FALSE(file == nullptr);
   ASSERT_EQ(file->write(TEXT, TEXT_SIZE).value, TEXT_SIZE);
@@ -64,8 +62,7 @@ TEST(LlvmLibcPlatformFileTest, CreateWriteSeekAndReadBack) {
 }
 
 TEST(LlvmLibcPlatformFileTest, CreateAppendCloseAndReadBack) {
-  constexpr char FILENAME[] =
-      APPEND_LIBC_TEST("testdata/create_append_close_and_readback.test");
+  constexpr char FILENAME[] = "testdata/create_append_close_and_readback.test";
   File *file = openfile(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
   ASSERT_EQ(file->write(TEXT, TEXT_SIZE).value, TEXT_SIZE);
@@ -94,8 +91,7 @@ TEST(LlvmLibcPlatformFileTest, CreateAppendCloseAndReadBack) {
 }
 
 TEST(LlvmLibcPlatformFileTest, CreateAppendSeekAndReadBack) {
-  constexpr char FILENAME[] =
-      APPEND_LIBC_TEST("testdata/create_append_seek_and_readback.test");
+  constexpr char FILENAME[] = "testdata/create_append_seek_and_readback.test";
   File *file = openfile(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
   ASSERT_EQ(file->write(TEXT, TEXT_SIZE).value, TEXT_SIZE);
@@ -128,7 +124,7 @@ TEST(LlvmLibcPlatformFileTest, LargeFile) {
   for (size_t i = 0; i < DATA_SIZE; ++i)
     write_data[i] = BYTE;
 
-  constexpr char FILENAME[] = APPEND_LIBC_TEST("testdata/large_file.test");
+  constexpr char FILENAME[] = "testdata/large_file.test";
   File *file = openfile(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
 
@@ -155,8 +151,7 @@ TEST(LlvmLibcPlatformFileTest, LargeFile) {
 }
 
 TEST(LlvmLibcPlatformFileTest, ReadSeekCurAndRead) {
-  constexpr char FILENAME[] =
-      APPEND_LIBC_TEST("testdata/read_seek_cur_and_read.test");
+  constexpr char FILENAME[] = "testdata/read_seek_cur_and_read.test";
   File *file = openfile(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
   constexpr char CONTENT[] = "1234567890987654321";
@@ -183,8 +178,7 @@ TEST(LlvmLibcPlatformFileTest, ReadSeekCurAndRead) {
 }
 
 TEST(LlvmLibcPlatformFileTest, IncorrectOperation) {
-  constexpr char FILENAME[] =
-      APPEND_LIBC_TEST("testdata/incorrect_operation.test");
+  constexpr char FILENAME[] = "testdata/incorrect_operation.test";
   char data[1] = {123};
 
   File *file = openfile(FILENAME, "w");
