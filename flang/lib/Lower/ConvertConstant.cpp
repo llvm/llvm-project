@@ -104,7 +104,7 @@ class DenseGlobalBuilder {
 public:
   static fir::GlobalOp
   tryCreating(fir::FirOpBuilder &builder, mlir::Location loc, mlir::Type symTy,
-              llvm::StringRef globalName, mlir::StringAttr linkage,
+              llvm::StringRef globalName, fir::LinkageAttr linkage,
               bool isConst, const Fortran::lower::SomeExpr &initExpr,
               cuf::DataAttributeAttr dataAttr, bool setDefaultAlignment) {
     DenseGlobalBuilder globalBuilder;
@@ -130,7 +130,7 @@ public:
   template <Fortran::common::TypeCategory TC, int KIND>
   static fir::GlobalOp tryCreating(
       fir::FirOpBuilder &builder, mlir::Location loc, mlir::Type symTy,
-      llvm::StringRef globalName, mlir::StringAttr linkage, bool isConst,
+      llvm::StringRef globalName, fir::LinkageAttr linkage, bool isConst,
       const Fortran::evaluate::Constant<Fortran::evaluate::Type<TC, KIND>>
           &constant,
       cuf::DataAttributeAttr dataAttr, bool setDefaultAlignment = true) {
@@ -202,7 +202,7 @@ private:
   fir::GlobalOp tryCreatingGlobal(fir::FirOpBuilder &builder,
                                   mlir::Location loc, mlir::Type symTy,
                                   llvm::StringRef globalName,
-                                  mlir::StringAttr linkage, bool isConst,
+                                  fir::LinkageAttr linkage, bool isConst,
                                   cuf::DataAttributeAttr dataAttr,
                                   bool setDefaultAlignment) const {
     // Not a "trivial" intrinsic constant array, or empty array.
@@ -228,7 +228,7 @@ private:
 
 fir::GlobalOp Fortran::lower::tryCreatingDenseGlobal(
     fir::FirOpBuilder &builder, mlir::Location loc, mlir::Type symTy,
-    llvm::StringRef globalName, mlir::StringAttr linkage, bool isConst,
+    llvm::StringRef globalName, fir::LinkageAttr linkage, bool isConst,
     const Fortran::lower::SomeExpr &initExpr, cuf::DataAttributeAttr dataAttr,
     bool setDefaultAlignment) {
   return DenseGlobalBuilder::tryCreating(builder, loc, symTy, globalName,
@@ -627,16 +627,7 @@ genInlinedArrayLit(Fortran::lower::AbstractConverter &converter,
   mlir::Value array = fir::UndefOp::create(builder, loc, arrayTy);
   if (Fortran::evaluate::GetSize(con.shape()) == 0)
     return array;
-  if constexpr (T::category == Fortran::common::TypeCategory::Character) {
-    do {
-      mlir::Value elementVal =
-          genScalarLit<T::kind>(builder, loc, con.At(subscripts), con.LEN(),
-                                /*outlineInReadOnlyMemory=*/false);
-      array =
-          fir::InsertValueOp::create(builder, loc, arrayTy, array, elementVal,
-                                     builder.getArrayAttr(createIdx()));
-    } while (con.IncrementSubscripts(subscripts));
-  } else if constexpr (T::category == Fortran::common::TypeCategory::Derived) {
+  if constexpr (T::category == Fortran::common::TypeCategory::Derived) {
     do {
       mlir::Type eleTy =
           mlir::cast<fir::SequenceType>(arrayTy).getElementType();
@@ -647,15 +638,31 @@ genInlinedArrayLit(Fortran::lower::AbstractConverter &converter,
           fir::InsertValueOp::create(builder, loc, arrayTy, array, elementVal,
                                      builder.getArrayAttr(createIdx()));
     } while (con.IncrementSubscripts(subscripts));
+  } else if constexpr (T::category ==
+                           Fortran::common::TypeCategory::Character &&
+                       T::kind != 1) {
+    do {
+      mlir::Value elementVal =
+          genScalarLit<T::kind>(builder, loc, con.At(subscripts), con.LEN(),
+                                /*outlineInReadOnlyMemory=*/false);
+      array =
+          fir::InsertValueOp::create(builder, loc, arrayTy, array, elementVal,
+                                     builder.getArrayAttr(createIdx()));
+    } while (con.IncrementSubscripts(subscripts));
   } else {
     llvm::SmallVector<mlir::Attribute> rangeStartIdx;
     uint64_t rangeSize = 0;
     mlir::Type eleTy = mlir::cast<fir::SequenceType>(arrayTy).getElementType();
     do {
       auto getElementVal = [&]() {
-        return builder.createConvert(loc, eleTy,
-                                     genScalarLit<T::category, T::kind>(
-                                         builder, loc, con.At(subscripts)));
+        if constexpr (T::category == Fortran::common::TypeCategory::Character)
+          return genScalarLit<T::kind>(builder, loc, con.At(subscripts),
+                                       con.LEN(),
+                                       /*outlineInReadOnlyMemory=*/false);
+        else
+          return builder.createConvert(loc, eleTy,
+                                       genScalarLit<T::category, T::kind>(
+                                           builder, loc, con.At(subscripts)));
       };
       Fortran::evaluate::ConstantSubscripts nextSubscripts = subscripts;
       bool nextIsSame = con.IncrementSubscripts(nextSubscripts) &&

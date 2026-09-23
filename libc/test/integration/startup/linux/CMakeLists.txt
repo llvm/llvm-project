@@ -76,3 +76,13 @@ add_integration_test(
   SRCS
     irelative_no_ifunc_test.cpp
 )
+
+add_integration_test(
+  startup_r_debug_test
+  SUITE libc-startup-tests
+  SRCS
+    r_debug_test.cpp
+  DEPENDS
+    libc.include.link
+    libc.src.link._r_debug
+)

@@ -402,11 +402,116 @@ private:
 
   fir::FortranVariableOpInterface
   gen(const Fortran::evaluate::CoarrayRef &coarrayRef) {
-    TODO(getLoc(), "coarray: lowering a reference to a coarray object");
+    PartInfo partInfo;
+    mlir::Type resultType = visit(coarrayRef, partInfo);
+    return genDesignate(resultType, partInfo, coarrayRef);
   }
 
-  mlir::Type visit(const Fortran::evaluate::CoarrayRef &, PartInfo &) {
-    TODO(getLoc(), "coarray: lowering a reference to a coarray object");
+  mlir::Type visit(const Fortran::evaluate::CoarrayRef &coarrayRef,
+                   PartInfo &partInfo) {
+    // Coarray is a data entity with corank > 0 that must be scalar
+    // or array.
+    mlir::Type baseType = visit(coarrayRef.base().GetLastSymbol(), partInfo);
+    if (auto seqType = mlir::dyn_cast<fir::SequenceType>(baseType)) {
+      fir::FirOpBuilder &builder = getBuilder();
+      mlir::Location loc = getLoc();
+      mlir::Type idxTy = builder.getIndexType();
+      llvm::SmallVector<std::pair<mlir::Value, mlir::Value>> bounds;
+      auto getBaseBounds = [&](unsigned i) {
+        if (bounds.empty()) {
+          bounds = hlfir::genBounds(loc, builder, partInfo.base.value());
+          assert(!bounds.empty() &&
+                 "failed to compute implicit array section bounds");
+        }
+        return bounds[i];
+      };
+
+      auto frontEndResultShape = Fortran::evaluate::GetShape(
+          converter.getFoldingContext(), coarrayRef);
+      auto tryGettingExtentFromFrontEnd = [&](unsigned dim)
+          -> std::pair<mlir::Value, fir::SequenceType::Extent> {
+        // Use constant extent if possible. The main advantage to do this now
+        // is to get the best FIR array types as possible while lowering.
+        if (frontEndResultShape)
+          if (auto maybeI64 =
+                  Fortran::evaluate::ToInt64(frontEndResultShape->at(dim)))
+            return {builder.createIntegerConstant(loc, idxTy, *maybeI64),
+                    *maybeI64};
+        return {mlir::Value{}, fir::SequenceType::getUnknownExtent()};
+      };
+
+      llvm::SmallVector<mlir::Value> resultExtents;
+      fir::SequenceType::Shape resultTypeShape;
+      bool sawVectorSubscripts = false;
+      if (auto *arrayRef{
+              std::get_if<Fortran::evaluate::ArrayRef>(&coarrayRef.base().u)}) {
+        for (auto subscript : llvm::enumerate(arrayRef->subscript())) {
+          if (const auto *triplet = std::get_if<Fortran::evaluate::Triplet>(
+                  &subscript.value().u)) {
+            mlir::Value lb, ub;
+            if (const auto &lbExpr = triplet->lower())
+              lb = genSubscript(*lbExpr);
+            else
+              lb = getBaseBounds(subscript.index()).first;
+            if (const auto &ubExpr = triplet->upper())
+              ub = genSubscript(*ubExpr);
+            else
+              ub = getBaseBounds(subscript.index()).second;
+            lb = builder.createConvert(loc, idxTy, lb);
+            ub = builder.createConvert(loc, idxTy, ub);
+            mlir::Value stride = genSubscript(triplet->stride());
+            stride = builder.createConvert(loc, idxTy, stride);
+            auto [extentValue, shapeExtent] =
+                tryGettingExtentFromFrontEnd(resultExtents.size());
+            resultTypeShape.push_back(shapeExtent);
+            if (!extentValue)
+              extentValue =
+                  builder.genExtentFromTriplet(loc, lb, ub, stride, idxTy);
+            resultExtents.push_back(extentValue);
+            partInfo.subscripts.emplace_back(
+                hlfir::DesignateOp::Triplet{lb, ub, stride});
+          } else {
+            const auto &expr =
+                std::get<Fortran::evaluate::IndirectSubscriptIntegerExpr>(
+                    subscript.value().u)
+                    .value();
+            hlfir::Entity subscript = genSubscript(expr);
+            partInfo.subscripts.push_back(subscript);
+            if (expr.Rank() > 0) {
+              sawVectorSubscripts = true;
+              auto [extentValue, shapeExtent] =
+                  tryGettingExtentFromFrontEnd(resultExtents.size());
+              resultTypeShape.push_back(shapeExtent);
+              if (!extentValue)
+                extentValue =
+                    hlfir::genExtent(loc, builder, subscript, /*dim=*/0);
+              resultExtents.push_back(extentValue);
+            }
+          }
+        }
+      }
+      assert(resultExtents.size() == resultTypeShape.size() &&
+             "inconsistent hlfir.designate shape");
+
+      // For vector subscripts, create an hlfir.elemental_addr and continue
+      // lowering the designator inside it as if it was addressing an element of
+      // the vector subscripts.
+      if (sawVectorSubscripts)
+        TODO(loc, "coarray: with vector subscripts.");
+
+      mlir::Type resultType = seqType.getEleTy();
+      if (!resultTypeShape.empty()) {
+        // Ranked array section. The result shape comes from the array section
+        // subscripts.
+        resultType = fir::SequenceType::get(resultTypeShape, resultType);
+        assert(!partInfo.resultShape &&
+               "Fortran designator can only have one ranked part");
+        partInfo.resultShape = builder.genShape(loc, resultExtents);
+      }
+      return resultType;
+    } else {
+      return baseType;
+    }
   }
 
   fir::FortranVariableOpInterface
@@ -975,20 +1080,11 @@ private:
   mlir::Location loc;
 };
 
-static mlir::Value
-findOverriddenExprValue(const Fortran::lower::ExprToValueMap &map,
-                        const Fortran::lower::SomeExpr &expr);
-
 hlfir::EntityWithAttributes HlfirDesignatorBuilder::genDesignatorExpr(
     const Fortran::lower::SomeExpr &designatorExpr,
     bool vectorSubscriptDesignatorToValue) {
   // Expr<SomeType> plumbing to unwrap Designator<T> and call
   // gen(Designator<T>.u).
-  if (const Fortran::lower::ExprToValueMap *map =
-          getConverter().getExprOverrides()) {
-    if (mlir::Value value = findOverriddenExprValue(*map, designatorExpr))
-      return hlfir::EntityWithAttributes{value};
-  }
   return Fortran::common::visit(
       [&](const auto &x) -> hlfir::EntityWithAttributes {
         using T = std::decay_t<decltype(x)>;
@@ -1561,30 +1657,6 @@ static bool hasDeferredCharacterLength(const Fortran::semantics::Symbol &sym) {
          type->characterTypeSpec().length().isDeferred();
 }
 
-static mlir::Value
-findOverriddenExprValue(const Fortran::lower::ExprToValueMap &map,
-                        const Fortran::lower::SomeExpr &expr) {
-  if (auto match = map.find(&expr); match != map.end())
-    return match->second;
-
-  // The map uses pointer identity, but the some expressions
-  // (e.g. a(2)) may appear at multiple AST nodes with different addresses.
-  // Fall back to structural comparison via ArrayRef::operator==.
-  for (auto [key, value] : map) {
-    if (Fortran::lower::isEqual(key, &expr))
-      return value;
-    auto keyRef = Fortran::evaluate::ExtractDataRef(*key);
-    auto exprRef = Fortran::evaluate::ExtractDataRef(expr);
-    if (keyRef && exprRef) {
-      auto *keyArray = std::get_if<Fortran::evaluate::ArrayRef>(&keyRef->u);
-      auto *exprArray = std::get_if<Fortran::evaluate::ArrayRef>(&exprRef->u);
-      if (keyArray && exprArray && *keyArray == *exprArray)
-        return value;
-    }
-  }
-  return {};
-}
-
 /// Lower Expr to HLFIR.
 class HlfirBuilder {
 public:
@@ -1598,12 +1670,12 @@ public:
     if (const Fortran::lower::ExprToValueMap *map =
             getConverter().getExprOverrides()) {
       if constexpr (std::is_same_v<T, Fortran::evaluate::SomeType>) {
-        if (mlir::Value value = findOverriddenExprValue(*map, expr))
-          return hlfir::EntityWithAttributes{value};
+        if (auto match = map->find(&expr); match != map->end())
+          return hlfir::EntityWithAttributes{match->second};
       } else {
         Fortran::lower::SomeExpr someExpr = toEvExpr(expr);
-        if (mlir::Value value = findOverriddenExprValue(*map, someExpr))
-          return hlfir::EntityWithAttributes{value};
+        if (auto match = map->find(&someExpr); match != map->end())
+          return hlfir::EntityWithAttributes{match->second};
       }
     }
     return Fortran::common::visit([&](const auto &x) { return gen(x); },
@@ -1645,12 +1717,6 @@ private:
   template <typename T>
   hlfir::EntityWithAttributes
   gen(const Fortran::evaluate::Designator<T> &designator) {
-    if (const Fortran::lower::ExprToValueMap *map =
-            getConverter().getExprOverrides()) {
-      Fortran::lower::SomeExpr someExpr = toEvExpr(designator);
-      if (mlir::Value value = findOverriddenExprValue(*map, someExpr))
-        return hlfir::EntityWithAttributes{value};
-    }
     return HlfirDesignatorBuilder(getLoc(), getConverter(), getSymMap(),
                                   getStmtCtx())
         .gen(designator.u);
