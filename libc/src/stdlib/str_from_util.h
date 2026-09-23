@@ -17,6 +17,7 @@
 #ifndef LLVM_LIBC_SRC_STDLIB_STRFROM_UTIL_H
 #define LLVM_LIBC_SRC_STDLIB_STRFROM_UTIL_H
 
+#include "include/llvm-libc-types/float128.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/printf_core/converter_atlas.h"
@@ -32,21 +33,11 @@ namespace internal {
 template <typename T>
 using storage_type = typename fputil::FPBits<T>::StorageType;
 
-template <typename T>
-printf_core::FormatSection parse_format_string(const char *__restrict format,
-                                               T fp) {
+template <typename T, printf_core::OverflowMode overflow_mode>
+LIBC_INLINE int strfromfloat_convert(printf_core::Writer<overflow_mode> *writer,
+                                     const char *__restrict format, T fp) {
   printf_core::FormatSection section;
   size_t cur_pos = 0;
-
-  // There is no typed conversion function to convert single precision float
-  // to hex exponential format, and the function convert_float_hex_exp()
-  // requires a double or long double value to work correctly.
-  // To work around this, we convert fp to double if it is single precision, and
-  // then use that double precision value in the %{A, a} conversion specifiers.
-  [[maybe_unused]] double new_fp;
-  bool t_is_single_prec_type = cpp::is_same<T, float>::value;
-  if (t_is_single_prec_type)
-    new_fp = (double)fp;
 
   if (format[cur_pos] == '%') {
     section.has_conv = true;
@@ -71,68 +62,67 @@ printf_core::FormatSection parse_format_string(const char *__restrict format,
     switch (format[cur_pos]) {
     case 'a':
     case 'A':
-      if (t_is_single_prec_type)
-        section.conv_val_raw = cpp::bit_cast<storage_type<double>>(new_fp);
-      else
-        section.conv_val_raw = cpp::bit_cast<storage_type<T>>(fp);
-      break;
     case 'e':
     case 'E':
     case 'f':
     case 'F':
     case 'g':
     case 'G':
-      section.conv_val_raw = cpp::bit_cast<storage_type<T>>(fp);
       break;
     default:
       section.has_conv = false;
-      while (format[cur_pos] != '\0')
-        ++cur_pos;
       break;
     }
-
-    if (format[cur_pos] != '\0')
-      ++cur_pos;
   } else {
     section.has_conv = false;
-    // We are looking for exactly one section, so no more '%'
-    while (format[cur_pos] != '\0')
-      ++cur_pos;
   }
 
-  section.raw_string = {format, cur_pos};
-  return section;
-}
-
-template <typename T, printf_core::OverflowMode overflow_mode>
-int strfromfloat_convert(printf_core::Writer<overflow_mode> *writer,
-                         const printf_core::FormatSection &section) {
   if (!section.has_conv)
-    return writer->write(section.raw_string);
+    return writer->write(format);
 
-  auto res = static_cast<storage_type<T>>(section.conv_val_raw);
-
-  fputil::FPBits<T> strfromfloat_bits(res);
+  fputil::FPBits<T> strfromfloat_bits(fp);
   if (strfromfloat_bits.is_inf_or_nan())
-    return convert_inf_nan(writer, section);
+    return convert_inf_nan(
+        writer,
+        printf_core::InfNanFPBitsProperties{
+            .is_negative = strfromfloat_bits.is_neg(),
+            .mantissa_is_zero = strfromfloat_bits.get_mantissa() == 0,
+        },
+        section);
 
   switch (section.conv_name) {
   case 'f':
   case 'F':
-    return convert_float_decimal_typed(writer, section, strfromfloat_bits);
+    return printf_core::convert_finite_float_decimal_typed(writer, section,
+                                                           strfromfloat_bits);
   case 'e':
   case 'E':
-    return convert_float_dec_exp_typed(writer, section, strfromfloat_bits);
+    return printf_core::convert_finite_float_dec_exp_typed(writer, section,
+                                                           strfromfloat_bits);
   case 'a':
   case 'A':
-    return convert_float_hex_exp(writer, section);
+    // There is no typed conversion function to convert single precision float
+    // to hex exponential format, and the convert_finite_float_hex_exp()
+    // requires a double or long double value to work correctly.
+    if constexpr (cpp::is_same_v<T, float>) {
+      return printf_core::convert_finite_float_hex_exp(
+          writer,
+          printf_core::get_float_hex_exp_fp_bits_properties_typed(
+              fputil::FPBits<double>(static_cast<double>(fp))),
+          section);
+    } else {
+      return printf_core::convert_finite_float_hex_exp(
+          writer,
+          printf_core::get_float_hex_exp_fp_bits_properties_typed(
+              strfromfloat_bits),
+          section);
+    }
   case 'g':
   case 'G':
-    return convert_float_dec_auto_typed(writer, section, strfromfloat_bits);
-  default:
-    return writer->write(section.raw_string);
+    return printf_core::convert_finite_float_dec_auto_typed(writer, section,
+                                                            strfromfloat_bits);
   }
-  return -1;
+  __builtin_unreachable();
 }
 
 } // namespace internal

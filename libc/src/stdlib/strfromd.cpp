@@ -20,17 +20,9 @@ LLVM_LIBC_FUNCTION(int, strfromd,
                     double fp)) {
   LIBC_ASSERT(s != nullptr);
 
-  printf_core::FormatSection section =
-      internal::parse_format_string(format, fp);
   printf_core::Writer writer =
       printf_core::make_drop_overflow_writer(s, (n > 0 ? n - 1 : 0));
-
-  int result = 0;
-  if (section.has_conv)
-    result = internal::strfromfloat_convert<double>(&writer, section);
-  else
-    result = writer.write(section.raw_string);
-
+  int result = internal::strfromfloat_convert(&writer, format, fp);
   if (result < 0)
     return result;
 
