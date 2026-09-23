@@ -818,7 +818,7 @@ define i64 @AtomicLoadNand(i64 signext %incr) nounwind {
 ; MIPS4-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS4-NEXT:    lld $2, 0($1)
 ; MIPS4-NEXT:    and $3, $2, $4
-; MIPS4-NEXT:    nor $3, $zero, $3
+; MIPS4-NEXT:    not $3, $3
 ; MIPS4-NEXT:    scd $3, 0($1)
 ; MIPS4-NEXT:    beqz $3, .LBB5_1
 ; MIPS4-NEXT:    nop
@@ -836,7 +836,7 @@ define i64 @AtomicLoadNand(i64 signext %incr) nounwind {
 ; MIPS64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS64-NEXT:    lld $2, 0($1)
 ; MIPS64-NEXT:    and $3, $2, $4
-; MIPS64-NEXT:    nor $3, $zero, $3
+; MIPS64-NEXT:    not $3, $3
 ; MIPS64-NEXT:    scd $3, 0($1)
 ; MIPS64-NEXT:    beqz $3, .LBB5_1
 ; MIPS64-NEXT:    nop
@@ -854,7 +854,7 @@ define i64 @AtomicLoadNand(i64 signext %incr) nounwind {
 ; MIPS64R2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS64R2-NEXT:    lld $2, 0($1)
 ; MIPS64R2-NEXT:    and $3, $2, $4
-; MIPS64R2-NEXT:    nor $3, $zero, $3
+; MIPS64R2-NEXT:    not $3, $3
 ; MIPS64R2-NEXT:    scd $3, 0($1)
 ; MIPS64R2-NEXT:    beqz $3, .LBB5_1
 ; MIPS64R2-NEXT:    nop
@@ -872,7 +872,7 @@ define i64 @AtomicLoadNand(i64 signext %incr) nounwind {
 ; MIPS64R6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS64R6-NEXT:    lld $2, 0($1)
 ; MIPS64R6-NEXT:    and $3, $2, $4
-; MIPS64R6-NEXT:    nor $3, $zero, $3
+; MIPS64R6-NEXT:    not $3, $3
 ; MIPS64R6-NEXT:    scd $3, 0($1)
 ; MIPS64R6-NEXT:    beqzc $3, .LBB5_1
 ; MIPS64R6-NEXT:    nop
@@ -889,7 +889,7 @@ define i64 @AtomicLoadNand(i64 signext %incr) nounwind {
 ; MIPS64R6O0-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS64R6O0-NEXT:    lld $2, 0($3)
 ; MIPS64R6O0-NEXT:    and $1, $2, $4
-; MIPS64R6O0-NEXT:    nor $1, $zero, $1
+; MIPS64R6O0-NEXT:    not $1, $1
 ; MIPS64R6O0-NEXT:    scd $1, 0($3)
 ; MIPS64R6O0-NEXT:    beqzc $1, .LBB5_1
 ; MIPS64R6O0-NEXT:    nop
@@ -906,7 +906,7 @@ define i64 @AtomicLoadNand(i64 signext %incr) nounwind {
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    lld $2, 0($1)
 ; O1-NEXT:    and $3, $2, $4
-; O1-NEXT:    nor $3, $zero, $3
+; O1-NEXT:    not $3, $3
 ; O1-NEXT:    scd $3, 0($1)
 ; O1-NEXT:    beqz $3, .LBB5_1
 ; O1-NEXT:    nop
@@ -924,7 +924,7 @@ define i64 @AtomicLoadNand(i64 signext %incr) nounwind {
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    lld $2, 0($1)
 ; O2-NEXT:    and $3, $2, $4
-; O2-NEXT:    nor $3, $zero, $3
+; O2-NEXT:    not $3, $3
 ; O2-NEXT:    scd $3, 0($1)
 ; O2-NEXT:    beqz $3, .LBB5_1
 ; O2-NEXT:    nop
@@ -942,7 +942,7 @@ define i64 @AtomicLoadNand(i64 signext %incr) nounwind {
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    lld $2, 0($1)
 ; O3-NEXT:    and $3, $2, $4
-; O3-NEXT:    nor $3, $zero, $3
+; O3-NEXT:    not $3, $3
 ; O3-NEXT:    scd $3, 0($1)
 ; O3-NEXT:    beqz $3, .LBB5_1
 ; O3-NEXT:    nop
@@ -960,7 +960,7 @@ define i64 @AtomicLoadNand(i64 signext %incr) nounwind {
 ; MIPS64EB-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS64EB-NEXT:    lld $2, 0($1)
 ; MIPS64EB-NEXT:    and $3, $2, $4
-; MIPS64EB-NEXT:    nor $3, $zero, $3
+; MIPS64EB-NEXT:    not $3, $3
 ; MIPS64EB-NEXT:    scd $3, 0($1)
 ; MIPS64EB-NEXT:    beqz $3, .LBB5_1
 ; MIPS64EB-NEXT:    nop

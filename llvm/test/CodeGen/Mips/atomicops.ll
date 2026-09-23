@@ -1,4 +1,5 @@
-; RUN: llc  -mtriple=mipsel -mattr=mips16 -relocation-model=pic -O3 < %s | FileCheck %s -check-prefix=16
+; RUN: llc -mtriple=mipsel -mattr=mips16 -relocation-model=pic -O3 -verify-machineinstrs < %s | FileCheck %s -check-prefix=16
+; RUN: llc -mtriple=mips -mattr=mips16 -relocation-model=pic -O0 -verify-machineinstrs < %s | FileCheck %s -check-prefix=16
 
 @.str = private unnamed_addr constant [8 x i8] c"%d, %d\0A\00", align 1
 
@@ -46,3 +47,34 @@ entry:
 }
 
 declare i32 @printf(ptr nocapture, ...) nounwind
+
+; MIPS16 uses byte and halfword libcalls.
+define i8 @add_i8(ptr %ptr, i8 %value) {
+; 16-LABEL: add_i8:
+; 16: %call16(__sync_fetch_and_add_1)
+  %old = atomicrmw add ptr %ptr, i8 %value seq_cst
+  ret i8 %old
+}
+
+define i8 @cmpxchg_i8(ptr %ptr, i8 %cmp, i8 %value) {
+; 16-LABEL: cmpxchg_i8:
+; 16: %call16(__sync_val_compare_and_swap_1)
+  %pair = cmpxchg ptr %ptr, i8 %cmp, i8 %value seq_cst acquire
+  %old = extractvalue { i8, i1 } %pair, 0
+  ret i8 %old
+}
+
+define i16 @add_i16(ptr %ptr, i16 %value) {
+; 16-LABEL: add_i16:
+; 16: %call16(__sync_fetch_and_add_2)
+  %old = atomicrmw add ptr %ptr, i16 %value seq_cst
+  ret i16 %old
+}
+
+define i16 @cmpxchg_i16(ptr %ptr, i16 %cmp, i16 %value) {
+; 16-LABEL: cmpxchg_i16:
+; 16: %call16(__sync_val_compare_and_swap_2)
+  %pair = cmpxchg ptr %ptr, i16 %cmp, i16 %value seq_cst acquire
+  %old = extractvalue { i16, i1 } %pair, 0
+  ret i16 %old
+}
