@@ -945,10 +945,9 @@ static kmp_taskgraph_region_t *__kmp_taskgraph_region_alloc(
       kmp_taskgraph_region_t(taskgraph, alloc_chain, type, num_nodes, parent);
 }
 
-static kmp_int32
-__kmp_taskgraph_topological_order(kmp_taskgraph_region_t *region,
-                                  kmp_taskgraph_region_t **order_out,
-                                  kmp_int32 *outidx) {
+kmp_int32 __kmp_taskgraph_topological_order(kmp_taskgraph_region_t *region,
+                                            kmp_taskgraph_region_t **order_out,
+                                            kmp_int32 *outidx) {
   if (region->mark == TASKGRAPH_PERMANENT_MARK)
     return region->level;
 
