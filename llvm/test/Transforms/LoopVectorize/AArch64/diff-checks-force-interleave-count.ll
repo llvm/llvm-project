@@ -17,7 +17,7 @@ define void @diff_check_d(ptr %src, ptr %dst, i64 %n) {
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], [[SCALAR_PH:label %.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP2]], 5
+; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP2]], 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP3]], -1
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[DST1]], [[SRC2]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP5]], 1
