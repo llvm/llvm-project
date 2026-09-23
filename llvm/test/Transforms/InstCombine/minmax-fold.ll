@@ -1651,10 +1651,12 @@ declare void @llvm.assume(i1)
 
 define i32 @test_umin_sub1_assume_nonzero(i32 %x, i32 %w) {
 ; CHECK-LABEL: @test_umin_sub1_assume_nonzero(
-; CHECK:       call void @llvm.assume(i1
-; CHECK:       [[SUB:%.*]] = add i32 [[W:%.*]], -1
-; CHECK-NEXT:  [[R:%.*]] = call i32 @llvm.umin.i32(i32 [[X:%.*]], i32 [[SUB]])
-; CHECK-NEXT:  ret i32 [[R]]
+; CHECK-NEXT:    [[NONZERO:%.*]] = icmp ne i32 [[W:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NONZERO]])
+; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[W]], -1
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.umin.i32(i32 [[X:%.*]], i32 [[SUB]])
+; CHECK-NEXT:    ret i32 [[R]]
+;
   %nonzero = icmp ne i32 %w, 0
   call void @llvm.assume(i1 %nonzero)
   %cmp = icmp ult i32 %x, %w
@@ -1665,10 +1667,16 @@ define i32 @test_umin_sub1_assume_nonzero(i32 %x, i32 %w) {
 
 define i32 @test_umin_sub1_guard_nonzero(i32 %x, i32 %w) {
 ; CHECK-LABEL: @test_umin_sub1_guard_nonzero(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ZERO:%.*]] = icmp eq i32 [[W:%.*]], 0
+; CHECK-NEXT:    br i1 [[ZERO]], label [[ZERO_BB:%.*]], label [[USE:%.*]]
+; CHECK:       zero.bb:
+; CHECK-NEXT:    ret i32 0
 ; CHECK:       use:
-; CHECK:       [[SUB:%.*]] = add i32 [[W:%.*]], -1
-; CHECK-NEXT:  [[R:%.*]] = call i32 @llvm.umin.i32(i32 [[X:%.*]], i32 [[SUB]])
-; CHECK-NEXT:  ret i32 [[R]]
+; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[W]], -1
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.umin.i32(i32 [[X:%.*]], i32 [[SUB]])
+; CHECK-NEXT:    ret i32 [[R]]
+;
 entry:
   %zero = icmp eq i32 %w, 0
   br i1 %zero, label %zero.bb, label %use
@@ -1685,10 +1693,11 @@ use:
 
 define i32 @test_umin_sub1_unknown_nonzero(i32 %x, i32 %w) {
 ; CHECK-LABEL: @test_umin_sub1_unknown_nonzero(
-; CHECK:       [[CMP:%.*]] = icmp ult i32 [[X:%.*]], [[W:%.*]]
-; CHECK-NEXT:  [[SUB:%.*]] = add i32 [[W]], -1
-; CHECK-NEXT:  [[R:%.*]] = select i1 [[CMP]], i32 [[X]], i32 [[SUB]]
-; CHECK-NEXT:  ret i32 [[R]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[X:%.*]], [[W:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[W]], -1
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP]], i32 [[X]], i32 [[SUB]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
   %cmp = icmp ult i32 %x, %w
   %sub = add i32 %w, -1
   %r = select i1 %cmp, i32 %x, i32 %sub
