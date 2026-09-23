@@ -91,6 +91,8 @@ using namespace llvm::PatternMatch;
 
 STATISTIC(NumRemoved, "Number of unreachable basic blocks removed");
 STATISTIC(NumPHICSEs, "Number of PHI's that got CSE'd");
+STATISTIC(NumCastUses, "Number of uses of Cast expressions replaced with uses "
+                       "of sunken Casts");
 
 static cl::opt<bool> PHICSEDebugHash(
     "phicse-debug-hash",
@@ -4049,6 +4051,69 @@ bool llvm::inferAttributesFromOthers(Function &F) {
   // can infer by inspecting arguments of argmemonly-ish functions.
 
   return Changed;
+}
+
+bool llvm::sinkCastToUsers(CastInst *CI) {
+  BasicBlock *DefBB = CI->getParent();
+
+  /// InsertedCasts - Only insert a cast in each block once.
+  DenseMap<BasicBlock *, CastInst *> InsertedCasts;
+
+  bool MadeChange = false;
+  for (Instruction::user_iterator UI = CI->user_begin(), E = CI->user_end();
+       UI != E;) {
+    Use &TheUse = UI.getUse();
+    Instruction *User = cast<Instruction>(*UI);
+
+    // Figure out which BB this cast is used in.  For PHI's this is the
+    // appropriate predecessor block.
+    BasicBlock *UserBB = User->getParent();
+    if (PHINode *PN = dyn_cast<PHINode>(User)) {
+      UserBB = PN->getIncomingBlock(TheUse);
+    }
+
+    // Preincrement use iterator so we don't invalidate it.
+    ++UI;
+
+    // The first insertion point of a block containing an EH pad is after the
+    // pad.  If the pad is the user, we cannot sink the cast past the pad.
+    if (User->isEHPad())
+      continue;
+
+    // If the block selected to receive the cast is an EH pad that does not
+    // allow non-PHI instructions before the terminator, we can't sink the
+    // cast.
+    if (UserBB->getTerminator()->isEHPad())
+      continue;
+
+    // If this user is in the same block as the cast, don't change the cast.
+    if (UserBB == DefBB)
+      continue;
+
+    // If we have already inserted a cast into this block, use it.
+    CastInst *&InsertedCast = InsertedCasts[UserBB];
+
+    if (!InsertedCast) {
+      BasicBlock::iterator InsertPt = UserBB->getFirstInsertionPt();
+      assert(InsertPt != UserBB->end());
+      InsertedCast = cast<CastInst>(CI->clone());
+      InsertedCast->insertBefore(*UserBB, InsertPt);
+    }
+
+    // Replace a use of the cast with a use of the new cast.
+    TheUse = InsertedCast;
+    MadeChange = true;
+    ++NumCastUses;
+  }
+
+  // If we removed all uses, nuke the cast.
+  if (CI->use_empty()) {
+    salvageDebugInfo(*CI);
+    CI->eraseFromParent();
+    MadeChange = true;
+  }
+
+  return MadeChange;
 }
 
 void OverflowTracking::mergeFlags(Instruction &I) {
