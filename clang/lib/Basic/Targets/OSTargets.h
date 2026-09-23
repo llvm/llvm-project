@@ -30,7 +30,14 @@ public:
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override {
     TgtInfo::getTargetDefines(Opts, Builder);
-    getOSDefines(Opts, TgtInfo::getTriple(), Builder);
+
+    const llvm::Triple &Triple = TgtInfo::getTriple();
+    // mlibc is quite portable and can be used with a few different OSes
+    if (Triple.getEnvironmentName() == "mlibc") {
+      Builder.defineMacro("__mlibc__");
+    }
+
+    getOSDefines(Opts, Triple, Builder);
   }
 };
 
