@@ -1604,12 +1604,20 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
       stack[last_idx - 2] = old_top;
     } break;
 
-    case DW_OP_abs:
-      if (!stack.back().GetScalar().AbsoluteValue()) {
+    case DW_OP_abs: {
+      Scalar &operand = stack.back().GetScalar();
+      const bool was_unsigned =
+          operand.GetType() == Scalar::e_int && !operand.IsSigned();
+      // DW_OP_abs interprets the bits as signed without changing the result
+      // type.
+      operand.MakeSigned();
+      if (!operand.AbsoluteValue()) {
         return llvm::createStringError(
             "failed to take the absolute value of the first stack item");
       }
-      break;
+      if (was_unsigned)
+        operand.MakeUnsigned();
+    } break;
 
     case DW_OP_and:
       if (llvm::Error err = CheckScalarOperandsHaveSameType(
