@@ -92,8 +92,7 @@ define i64 @test_or_start_known_ones(i32 %s, ptr %p) {
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[START]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[STEP:%.*]] = load volatile i64, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = or i64 [[IV]], [[STEP]]
-; CHECK-NEXT:    [[IV_NEXT_MASKED:%.*]] = or i64 [[IV_NEXT]], -4294967296
-; CHECK-NEXT:    tail call void @use(i64 [[IV_NEXT_MASKED]])
+; CHECK-NEXT:    tail call void @use(i64 [[IV_NEXT]])
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
 entry:
@@ -114,15 +113,10 @@ loop:
 define i64 @test_or_step_known_zeros(i32 %s, ptr %p) {
 ; CHECK-LABEL: @test_or_step_known_zeros(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[START:%.*]] = zext i32 [[S:%.*]] to i64
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[START]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[STEP_I32:%.*]] = load volatile i32, ptr [[P:%.*]], align 4
-; CHECK-NEXT:    [[STEP:%.*]] = zext i32 [[STEP_I32]] to i64
-; CHECK-NEXT:    [[IV_NEXT]] = or i64 [[IV]], [[STEP]]
-; CHECK-NEXT:    [[IV_NEXT_MASKED:%.*]] = and i64 [[IV]], -4294967296
-; CHECK-NEXT:    tail call void @use(i64 [[IV_NEXT_MASKED]])
+; CHECK-NEXT:    tail call void @use(i64 0)
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
 entry:
@@ -230,8 +224,7 @@ define i64 @test_and_start_known_zeros(i32 %s, ptr %p) {
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[START]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[STEP:%.*]] = load volatile i64, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = and i64 [[IV]], [[STEP]]
-; CHECK-NEXT:    [[IV_NEXT_MASKED:%.*]] = and i64 [[IV_NEXT]], 4294967295
-; CHECK-NEXT:    tail call void @use(i64 [[IV_NEXT_MASKED]])
+; CHECK-NEXT:    tail call void @use(i64 [[IV_NEXT]])
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
 entry:
@@ -260,8 +253,7 @@ define i64 @test_and_step_known_ones(i32 %s, ptr %p) {
 ; CHECK-NEXT:    [[STEP_ZEXT:%.*]] = zext i32 [[STEP_I32]] to i64
 ; CHECK-NEXT:    [[STEP:%.*]] = or disjoint i64 [[STEP_ZEXT]], -4294967296
 ; CHECK-NEXT:    [[IV_NEXT]] = and i64 [[IV]], [[STEP]]
-; CHECK-NEXT:    [[IV_NEXT_MASKED:%.*]] = or i64 [[IV_NEXT]], -4294967296
-; CHECK-NEXT:    tail call void @use(i64 [[IV_NEXT_MASKED]])
+; CHECK-NEXT:    tail call void @use(i64 [[IV_NEXT]])
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
 entry:
