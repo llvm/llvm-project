@@ -370,7 +370,7 @@ static RecurrenceDescriptor getMinMaxRecurrence(PHINode *Phi, Loop *TheLoop,
       return {};
     return RecurrenceDescriptor(
         Phi->getIncomingValueForBlock(TheLoop->getLoopPreheader()),
-        /*Exit=*/nullptr, /*Store=*/nullptr, RK, FMF,
+        /*Exit=*/nullptr, /*Store=*/nullptr, RK, FastMathFlags(),
         /*ExactFP=*/nullptr, Phi->getType(), /*IsMultiUse=*/true);
   }
 
@@ -396,30 +396,10 @@ static RecurrenceDescriptor getMinMaxRecurrence(PHINode *Phi, Loop *TheLoop,
       if (GetMinMaxRK(I, A, B) != RK)
         return {};
 
-      // Results of FCmps should be used by single selects to qualify as valid
-      // intermediate uses of the Phi. These selects must exist as backedge
-      // values to unique def-use chains. These unique chains should be handled
-      // as separate but parralel "sub" min/max recurrences and should not cause
-      // this chain to fail getting the recurrence descriptor.
-      if (auto *FCmpI = dyn_cast<FCmpInst>(I)) {
-        auto *Select = dyn_cast<SelectInst>(FCmpI->getUniqueUndroppableUser());
-        if (!Select || !TheLoop->contains(Select))
-          return {};
-
-        bool SubChainIsValid = any_of(Select->users(), [&](User *US) {
-          auto *SubChain = dyn_cast<PHINode>(US);
-          return SubChain && !Chain.contains(SubChain);
-        });
-
-        if (!SubChainIsValid)
-          return {};
-        SubChains.insert(Select);
-      }
-
       for (User *IU : I->users()) {
         if (auto *SI = dyn_cast<StoreInst>(IU))
           Stores.push_back(SI);
-        else if (!Chain.contains(IU) && !SubChains.contains(IU))
+        else if (!Chain.contains(IU))
           return {};
       }
     }
