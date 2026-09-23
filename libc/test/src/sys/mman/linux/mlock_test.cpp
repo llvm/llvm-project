@@ -24,14 +24,14 @@
 #include "src/sys/mman/munlockall.h"
 #include "src/sys/mman/munmap.h"
 #include "src/sys/resource/getrlimit.h"
-#include "src/unistd/sysconf.h"
+#include "src/unistd/getpagesize.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
 #include <sys/syscall.h>
 
-const size_t PAGE_SIZE = LIBC_NAMESPACE::sysconf(_SC_PAGESIZE);
+const size_t PAGE_SIZE = LIBC_NAMESPACE::getpagesize();
 
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
 using LlvmLibcMlockTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;

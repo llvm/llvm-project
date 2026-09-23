@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Annotations.h"
+#include "Compiler.h"
 #include "Diagnostics.h"
 #include "IncludeCleaner.h"
 #include "ParsedAST.h"
@@ -523,6 +524,43 @@ TEST(IncludeCleaner, MissingIncludesAreUnique) {
   auto &SM = AST.getSourceManager();
   EXPECT_EQ(RefRange.file(), SM.getMainFileID());
   EXPECT_EQ(halfOpenToRange(SM, RefRange.toCharRange(SM)), MainFile.range());
+}
+
+TEST(IncludeCleaner, NoHangOnRefExpandedInsidePreamblePatchInclude) {
+  llvm::StringLiteral Baseline = R"cpp(// comment
+#include "all.h"
+#define RET Foo
+)cpp";
+  Annotations Modified(R"cpp(// comment
+#include "all.h"
+#define RET Foo
+#include [["rettype.inc"]]
+plugin_callback();
+)cpp");
+
+  TestTU TU;
+  TU.AdditionalFiles["foo.h"] = guard("struct Foo {};");
+  TU.AdditionalFiles["all.h"] = guard("#include \"foo.h\"");
+  TU.AdditionalFiles["rettype.inc"] = "RET\n";
+
+  TU.Code = Baseline.str();
+  auto BaselinePreamble = TU.preamble();
+  ASSERT_TRUE(BaselinePreamble);
+
+  IgnoreDiagnostics Diags;
+  MockFS FS;
+  TU.Code = Modified.code().str();
+  auto CI = buildCompilerInvocation(TU.inputs(FS), Diags);
+  ASSERT_TRUE(CI);
+  auto AST = ParsedAST::build(testPath(TU.Filename), TU.inputs(FS),
+                              std::move(CI), {}, std::move(BaselinePreamble));
+  ASSERT_TRUE(AST);
+  auto Findings = computeIncludeCleanerFindings(*AST).MissingIncludes;
+  ASSERT_THAT(Findings, testing::SizeIs(1));
+  auto RefRange = Findings.front().SymRefRange;
+  const auto &SM = AST->getSourceManager();
+  EXPECT_EQ(RefRange.file(), SM.getMainFileID());
+  EXPECT_EQ(halfOpenToRange(SM, RefRange.toCharRange(SM)), Modified.range());
 }
 
 TEST(IncludeCleaner, NoCrash) {
