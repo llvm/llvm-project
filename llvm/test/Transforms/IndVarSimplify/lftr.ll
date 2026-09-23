@@ -34,7 +34,7 @@ loopexit:
   ret i32 %i
 }
 
-; TODO: we should be able to convert the subtract into a post-decrement check
+;; Convert a pre-decrement check on the latch into a post-decrement check
 define i32 @pre_to_post_sub() {
 ; CHECK-LABEL: @pre_to_post_sub(
 ; CHECK-NEXT:  entry:
@@ -43,8 +43,8 @@ define i32 @pre_to_post_sub() {
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 1000, [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[I_NEXT]] = sub nsw i32 [[I]], 1
 ; CHECK-NEXT:    store i32 [[I]], ptr @A, align 4
-; CHECK-NEXT:    [[C:%.*]] = icmp samesign ugt i32 [[I]], 0
-; CHECK-NEXT:    br i1 [[C]], label [[LOOP]], label [[LOOPEXIT:%.*]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[I_NEXT]], -1
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[LOOPEXIT:%.*]]
 ; CHECK:       loopexit:
 ; CHECK-NEXT:    ret i32 0
 ;
@@ -60,6 +60,60 @@ loop:
 
 loopexit:
   ret i32 %i
+}
+
+;; Do not rewrite non-unit stride loops.
+define void @non_unit_stride() {
+; CHECK-LABEL: @non_unit_stride(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 1000, [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[I_NEXT]] = sub nsw i32 [[I]], 2
+; CHECK-NEXT:    store i32 [[I]], ptr @A, align 4
+; CHECK-NEXT:    [[C:%.*]] = icmp samesign ugt i32 [[I]], 1
+; CHECK-NEXT:    br i1 [[C]], label [[LOOP]], label [[LOOPEXIT:%.*]]
+; CHECK:       loopexit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %i = phi i32 [ 1000, %entry ], [ %i.next, %loop ]
+  %i.next = sub i32 %i, 2
+  store i32 %i, ptr @A
+  %c = icmp ugt i32 %i, 1
+  br i1 %c, label %loop, label %loopexit
+
+loopexit:
+  ret void
+}
+
+;; Do not use a decrementing pointer IV as the LFTR loop counter.
+define void @decrementing_pointer(ptr %start) {
+; CHECK-LABEL: @decrementing_pointer(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[P_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[P_NEXT]] = getelementptr i8, ptr [[P]], i64 -1
+; CHECK-NEXT:    [[C:%.*]] = icmp ugt ptr [[P]], null
+; CHECK-NEXT:    br i1 [[C]], label [[LOOP]], label [[LOOPEXIT:%.*]]
+; CHECK:       loopexit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %p = phi ptr [ %start, %entry ], [ %p.next, %loop ]
+  %p.next = getelementptr i8, ptr %p, i64 -1
+  %c = icmp ugt ptr %p, null
+  br i1 %c, label %loop, label %loopexit
+
+loopexit:
+  ret void
 }
 
 
