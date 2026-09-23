@@ -12,7 +12,7 @@ define i32 @test(i32 signext %x, i32 signext %c) {
 ; CHECK-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; CHECK-NEXT:    addiur2 $5, $5, -1
 ; CHECK-NEXT:    sltiu $1, $5, 4
-; CHECK-NEXT:    beqz $1, $BB0_6
+; CHECK-NEXT:    beqz $1, $BB0_5
 ; CHECK-NEXT:    addu $3, $2, $25
 ; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    li16 $2, 0
@@ -27,16 +27,13 @@ define i32 @test(i32 signext %x, i32 signext %c) {
 ; CHECK-NEXT:    addiur2 $2, $4, 1
 ; CHECK-NEXT:    jrc $ra
 ; CHECK-NEXT:  $BB0_3: # %sw.bb3
+; CHECK-NEXT:    b $BB0_5
 ; CHECK-NEXT:    addius5 $4, 2
-; CHECK-NEXT:    move $2, $4
-; CHECK-NEXT:    jrc $ra
 ; CHECK-NEXT:  $BB0_4: # %sw.bb5
 ; CHECK-NEXT:    addius5 $4, 3
+; CHECK-NEXT:  $BB0_5: # %sw.epilog
 ; CHECK-NEXT:    move $2, $4
-; CHECK-NEXT:  $BB0_5: # %for.cond.cleanup
-; CHECK-NEXT:    jrc $ra
-; CHECK-NEXT:  $BB0_6:
-; CHECK-NEXT:    move $2, $4
+; CHECK-NEXT:  $BB0_6: # %for.cond.cleanup
 ; CHECK-NEXT:    jrc $ra
 entry:
   switch i32 %c, label %sw.epilog [

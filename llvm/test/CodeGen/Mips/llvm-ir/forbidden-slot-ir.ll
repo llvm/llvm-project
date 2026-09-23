@@ -1,6 +1,7 @@
+; Keep the branch layout being tested independent of tail merging.
 target triple = "mipsisa32r6el-unknown-linux-gnu"
 
-; RUN: llc -filetype=asm %s -o - | FileCheck %s --check-prefix=MIPSELR6
+; RUN: llc -enable-tail-merge=false -filetype=asm %s -o - | FileCheck %s --check-prefix=MIPSELR6
 ; Function Attrs: noinline nounwind optnone uwtable
 define i1 @foo0() nounwind {
 ; MIPSELR6:      bnezc	$1, $BB0_2
