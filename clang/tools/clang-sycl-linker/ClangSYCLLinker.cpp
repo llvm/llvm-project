@@ -101,24 +101,12 @@ enum ID {
 #undef OPTION
 };
 
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_CODE
 #include "SYCLLinkOpts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
 
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "SYCLLinkOpts.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-constexpr OptTable::Info InfoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
-#include "SYCLLinkOpts.inc"
-#undef OPTION
-};
-
-class LinkerOptTable : public opt::GenericOptTable {
+class LinkerOptTable : public opt::OptTable {
 public:
-  LinkerOptTable()
-      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {}
+  LinkerOptTable() : opt::OptTable(optionTables()) {}
 };
 } // namespace
 
@@ -658,7 +646,7 @@ static Error runCodeGen(StringRef File, const llvm::Triple &TargetTriple,
 
   // Set data layout if needed.
   if (M->getDataLayout().isDefault())
-    M->setDataLayout(TM->createDataLayout());
+    M->setDataLayout(TargetTriple.computeDataLayout());
 
   // Open output file for writing.
   int FD = -1;
@@ -933,17 +921,16 @@ static bool canSkipModuleSplit(IRSplitMode Mode, const Module &M,
 /// AOT-compiles every JIT image in \p SplitModules concurrently and swaps each
 /// module's path to point at the compiled object.
 static Error aotCompileSplitModules(SmallVectorImpl<SplitModule> &SplitModules,
-                                    const ArgList &Args, StringRef OutputFile) {
+                                    const ArgList &Args) {
   // Each worker thread writes only its own index, so this is race-free.
   SmallVector<std::string, 0> AOTFiles(SplitModules.size());
   for (size_t I = 0, E = SplitModules.size(); I != E; ++I) {
-    SmallString<64> Prefix;
-    (sys::path::filename(OutputFile).rsplit('.').first + "_" + Twine(I))
-        .toVector(Prefix);
-    Expected<StringRef> AOTFileOrErr = createTempFile(Args, Prefix, "out");
-    if (!AOTFileOrErr)
-      return AOTFileOrErr.takeError();
-    AOTFiles[I] = std::string(*AOTFileOrErr);
+    // Reuse the codegen file's unique name so the AOT output can be
+    // correlated with the SPIR-V file it was compiled from.
+    SmallString<128> AOTFile(SplitModules[I].ModuleFilePath);
+    sys::path::replace_extension(AOTFile, "out");
+    TempFiles.push_back(AOTFile);
+    AOTFiles[I] = std::string(TempFiles.back());
   }
 
   if (Error Err = parallelForEachError(
@@ -1018,9 +1005,13 @@ static Error runSYCLLink(ArrayRef<std::unique_ptr<MemoryBuffer>> Inputs,
   StringRef OutputFileNameExt = ".spv";
 
   // Code generation step.
+  StringRef Stem = sys::path::filename(OutputFile).rsplit('.').first;
   for (size_t I = 0, E = SplitModules.size(); I != E; ++I) {
-    StringRef Stem = OutputFile.rsplit('.').first;
-    std::string CodeGenFile = (Stem + "_" + Twine(I) + OutputFileNameExt).str();
+    auto CodeGenFileOrErr =
+        createTempFile(Args, Stem, OutputFileNameExt.drop_front());
+    if (!CodeGenFileOrErr)
+      return CodeGenFileOrErr.takeError();
+    StringRef CodeGenFile = *CodeGenFileOrErr;
 
     if (Error Err = runCodeGen(SplitModules[I].ModuleFilePath,
                                Result.TargetTriple, Args, CodeGenFile, C))
@@ -1037,7 +1028,7 @@ static Error runSYCLLink(ArrayRef<std::unique_ptr<MemoryBuffer>> Inputs,
   }
 
   if (IsAOTCompileNeeded)
-    if (Error Err = aotCompileSplitModules(SplitModules, Args, OutputFile))
+    if (Error Err = aotCompileSplitModules(SplitModules, Args))
       return Err;
 
   // Collect all images to be packed into a single OffloadBinary.

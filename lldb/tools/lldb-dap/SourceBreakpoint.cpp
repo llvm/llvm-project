@@ -236,7 +236,7 @@ lldb::SBError SourceBreakpoint::FormatLogText(llvm::StringRef text,
       // hex number in the text
       if (std::isxdigit(text[0])) {
         // Make a string that can hold onto two hex chars plus a
-        // NULL terminator
+        // null terminator
         char hex_str[3] = {0, 0, 0};
         hex_str[0] = text[0];
 

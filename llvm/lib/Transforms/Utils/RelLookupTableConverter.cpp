@@ -61,8 +61,7 @@ static bool shouldConvertToRelLookupTable(LookupTableInfo &Info, Module &M,
     return false;
 
   // Make sure this is a gep of the form GV + scale*var.
-  unsigned IndexWidth =
-      DL.getIndexTypeSizeInBits(Load->getPointerOperand()->getType());
+  unsigned IndexWidth = DL.getIndexTypeSizeInBits(GEP->getType());
   SmallMapVector<Value *, APInt, 4> VarOffsets;
   APInt ConstOffset(IndexWidth, 0);
   if (!GEP->collectOffset(DL, IndexWidth, VarOffsets, ConstOffset) ||
