@@ -1832,17 +1832,10 @@ public:
     if (RtPtrChecking.getDiffChecks() || OuterLoop)
       return false;
 
-    // VPSCEVExpander expands AddRecs in the plan's entry, not the check block,
-    // and does not support pointer-typed min/max yet.
+    // VPSCEVExpander expands AddRecs in the plan's entry, not the check block.
     ScalarEvolution &SE = *PSE.getSE();
-    auto IsPtrMinMax = [](const SCEV *S) {
-      return isa<SCEVMinMaxExpr>(S) && S->getType()->isPointerTy();
-    };
     for (const RuntimeCheckingPtrGroup &CG : RtPtrChecking.CheckingGroups)
-      if (SE.containsAddRecurrence(CG.Low) ||
-          SE.containsAddRecurrence(CG.High) ||
-          SCEVExprContains(CG.Low, IsPtrMinMax) ||
-          SCEVExprContains(CG.High, IsPtrMinMax))
+      if (SE.containsAddRecurrence(CG.Low) || SE.containsAddRecurrence(CG.High))
         return false;
 
     eraseMemCheckBlock();

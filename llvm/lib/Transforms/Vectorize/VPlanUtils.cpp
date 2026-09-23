@@ -1077,9 +1077,24 @@ VPValue *VPSCEVExpander::expand(const SCEV *S) {
       Ops.push_back(OpV);
     }
     VPValue *Result = Ops.front();
-    for (VPValue *Op : drop_begin(Ops))
-      Result = Builder.createScalarIntrinsic(IntrinsicID, {Result, Op},
-                                             ResultTy, DL);
+    for (VPValue *Op : drop_begin(Ops)) {
+      if (!ResultTy->isPointerTy()) {
+        Result = Builder.createScalarIntrinsic(IntrinsicID, {Result, Op},
+                                               ResultTy, DL);
+        continue;
+      }
+      // The min/max intrinsics don't support pointer operands, so expand
+      // pointer-typed min/max as cmp + select, matching SCEVExpander.
+      VPValue *Cmp = Builder.createICmp(
+          MinMaxIntrinsic::getPredicate(IntrinsicID), Result, Op, DL);
+      VPInstruction *Sel = Builder.createSelect(Cmp, Result, Op, DL);
+      Function &F =
+          *Builder.getPlan().getScalarHeader()->getIRBasicBlock()->getParent();
+      if (MDNode *MD =
+              getExplicitlyUnknownBranchWeightsIfProfiled(F, "scev-expander"))
+        Sel->setMetadata(LLVMContext::MD_prof, MD);
+      Result = Sel;
+    }
     return Result;
   }
   case scAddRecExpr: {
