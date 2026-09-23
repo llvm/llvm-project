@@ -543,6 +543,19 @@ static kmp_uint64 __kmp_bitset_signature(const kmp_bitset_t *bitset) {
   return sig;
 }
 
+/// Pick the hash bucket for a region whose predecessor and successor sets fold
+/// to PRED_SIG and SUCC_SIG.  Regions that are twins land in the same bucket
+/// because their signatures agree; unrelated regions may collide, so bucket
+/// members still have to be filtered.
+
+static kmp_uint32 __kmp_taskgraph_twin_bucket(kmp_uint64 pred_sig,
+                                              kmp_uint64 succ_sig,
+                                              kmp_uint32 mask) {
+  kmp_uint64 hash = pred_sig ^ (succ_sig * 0x9e3779b97f4a7c15ull);
+  hash ^= hash >> 32;
+  return (kmp_uint32)hash & mask;
+}
+
 static bool __kmp_bitset_intersect_p(kmp_bitset_t *a, kmp_bitset_t *b) {
   if (!a || !b)
     return false;
@@ -2006,6 +2019,9 @@ static bool __kmp_taskgraph_rewrite_irreducible(
   kmp_bitset_t **succ_bitsets = nullptr;
   kmp_uint64 *pred_sigs = nullptr;
   kmp_uint64 *succ_sigs = nullptr;
+  kmp_int32 *bucket_head = nullptr;
+  kmp_int32 *bucket_next = nullptr;
+  kmp_uint32 bucket_mask = 0;
 
   bool regions_combined_p = false;
 
@@ -2077,16 +2093,40 @@ static bool __kmp_taskgraph_rewrite_irreducible(
             pred_sigs[j] = __kmp_bitset_signature(pred_bitsets[j]);
             succ_sigs[j] = __kmp_bitset_signature(succ_bitsets[j]);
           }
+
+          bucket_mask = 1;
+          while (bucket_mask < (kmp_uint32)worklist_length)
+            bucket_mask <<= 1;
+          bucket_mask -= 1;
+          bucket_head = (kmp_int32 *)__kmp_fast_allocate(
+              thread, sizeof(kmp_int32) * (bucket_mask + 1));
+          bucket_next = (kmp_int32 *)__kmp_fast_allocate(
+              thread, sizeof(kmp_int32) * worklist_length);
+          for (kmp_uint32 b = 0; b <= bucket_mask; b++)
+            bucket_head[b] = -1;
+          // Built back to front, so each chain lists its members in increasing
+          // order.  That is what lets the scan below start at bucket_next[i]
+          // and see exactly the candidates after i, in the order it would have
+          // reached them by walking the whole array.
+          for (kmp_int32 j = worklist_length - 1; j >= 0; j--) {
+            kmp_uint32 b = __kmp_taskgraph_twin_bucket(
+                pred_sigs[j], succ_sigs[j], bucket_mask);
+            bucket_next[j] = bucket_head[b];
+            bucket_head[b] = j;
+          }
         }
 
         kmp_taskgraph_region_dep_t *equal_deps_chain = nullptr;
 
         kmp_int32 same_preds_and_succs = 1;
         bool any_mutex_p = __kmp_taskgraph_region_mutex_p(region);
-        // The signatures (hashes) are used here a cheap pre-filter to avoid
-        // unnecessary __kmp_bitset_equal tests -- which can get expensive
-        // on large graphs.
-        for (kmp_int32 j = i + 1; j < worklist_length; j++) {
+        // Twins share a signature and so share a bucket, and a bucket lists
+        // its members in increasing order, so starting at bucket_next[i]
+        // visits exactly the candidates worth comparing, rather than every
+        // remaining region.  Equal buckets or equal signatures do not imply
+        // equal bitsets, so we still need to do the full __kmp_bitset_equal
+        // comparison when we find a potential match.
+        for (kmp_int32 j = bucket_next[i]; j >= 0; j = bucket_next[j]) {
           if (pred_sigs[j] == pred_sigs[i] && succ_sigs[j] == succ_sigs[i] &&
               order[j]->mark != TASKGRAPH_COMBINED &&
               __kmp_bitset_equal(pred_bitsets[j], pred_bitsets[i]) &&
@@ -2199,6 +2239,8 @@ static bool __kmp_taskgraph_rewrite_irreducible(
     __kmp_fast_free(thread, succ_bitsets);
     __kmp_fast_free(thread, pred_sigs);
     __kmp_fast_free(thread, succ_sigs);
+    __kmp_fast_free(thread, bucket_head);
+    __kmp_fast_free(thread, bucket_next);
   }
 
   // Case 2 made progress: let the build loop re-run the series/parallel
