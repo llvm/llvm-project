@@ -21,7 +21,7 @@ using namespace clang;
 using namespace clang::CIRGen;
 using namespace cir;
 
-/// Map a constant integeral to memory order.
+/// Map a constant integral to memory order.
 static cir::MemOrder decodeAtomicOrder(const Expr *arg, ASTContext &ctx) {
   Expr::EvalResult orderRes;
   if (!arg->EvaluateAsInt(orderRes, ctx))

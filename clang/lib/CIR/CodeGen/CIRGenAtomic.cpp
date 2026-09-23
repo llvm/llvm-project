@@ -671,14 +671,14 @@ static void setAMDGPUAtomicMetadata(CIRGenFunction &cgf, mlir::Operation *op) {
   clang::AtomicOptions atomicOpts = cgf.cgm.getAtomicOpts();
   mlir::UnitAttr unit = cgf.getBuilder().getUnitAttr();
   if (!atomicOpts.getOption(clang::AtomicOptionKind::FineGrainedMemory))
-    op->setAttr("cir.amdgpu_no_fine_grained_memory", unit);
+    op->setAttr(cir::CIRDialect::getAMDGPUNoFineGrainedMemoryAttrName(), unit);
   if (!atomicOpts.getOption(clang::AtomicOptionKind::RemoteMemory))
-    op->setAttr("cir.amdgpu_no_remote_memory", unit);
+    op->setAttr(cir::CIRDialect::getAMDGPUNoRemoteMemoryAttrName(), unit);
   // Denormal flushing only matters for a float add.
   if (atomicOpts.getOption(clang::AtomicOptionKind::IgnoreDenormalMode) &&
       fetchOp.getBinop() == cir::AtomicFetchKind::Add &&
       mlir::isa<cir::SingleType>(fetchOp.getVal().getType()))
-    op->setAttr("cir.amdgpu_ignore_denormal_mode", unit);
+    op->setAttr(cir::CIRDialect::getAMDGPUIgnoreDenormalModeAttrName(), unit);
 }
 
 static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,

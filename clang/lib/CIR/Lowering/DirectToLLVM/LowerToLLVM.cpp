@@ -1503,8 +1503,9 @@ mlir::LogicalResult CIRToLLVMAtomicFetchOpLowering::matchAndRewrite(
   // CIRGen decides the metadata for a C++/HIP atomic from the atomic options
   // in effect, so those markers are simply carried across.
   for (llvm::StringRef marker :
-       {"cir.amdgpu_no_fine_grained_memory", "cir.amdgpu_no_remote_memory",
-        "cir.amdgpu_ignore_denormal_mode"})
+       {cir::CIRDialect::getAMDGPUNoFineGrainedMemoryAttrName(),
+        cir::CIRDialect::getAMDGPUNoRemoteMemoryAttrName(),
+        cir::CIRDialect::getAMDGPUIgnoreDenormalModeAttrName()})
     if (mlir::Attribute a = op->getAttr(marker))
       rmwVal->setAttr(marker, a);
 
@@ -1516,11 +1517,13 @@ mlir::LogicalResult CIRToLLVMAtomicFetchOpLowering::matchAndRewrite(
         mlir::cast<mlir::LLVM::LLVMPointerType>(adaptor.getPtr().getType());
     if (ptrTy.getAddressSpace() != llvm::AMDGPUAS::LOCAL_ADDRESS) {
       mlir::UnitAttr unit = rewriter.getUnitAttr();
-      rmwVal->setAttr("cir.amdgpu_no_fine_grained_memory", unit);
+      rmwVal->setAttr(cir::CIRDialect::getAMDGPUNoFineGrainedMemoryAttrName(),
+                      unit);
       // Denormal flushing only matters for a float add.
       if (llvmBinOp == mlir::LLVM::AtomicBinOp::fadd &&
           mlir::isa<cir::SingleType>(op.getVal().getType()))
-        rmwVal->setAttr("cir.amdgpu_ignore_denormal_mode", unit);
+        rmwVal->setAttr(cir::CIRDialect::getAMDGPUIgnoreDenormalModeAttrName(),
+                        unit);
     }
   }
 
