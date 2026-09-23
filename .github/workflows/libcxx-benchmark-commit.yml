@@ -47,7 +47,7 @@ on:
 jobs:
   # Determine which configuration to run based on the `lnt-machine` input.
   select-machine:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     outputs:
       matrix: ${{ steps.select.outputs.matrix }}
     steps:

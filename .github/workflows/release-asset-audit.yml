@@ -19,7 +19,7 @@ permissions:
 jobs:
   audit:
     name: "Release Asset Audit"
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     if: github.repository == 'llvm/llvm-project'
     steps:
       - name: Checkout LLVM
@@ -49,7 +49,7 @@ jobs:
     environment:
       name: main-branch-only
       deployment: false
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     if: >-
       github.repository == 'llvm/llvm-project' &&
       github.event_name != 'pull_request' &&
