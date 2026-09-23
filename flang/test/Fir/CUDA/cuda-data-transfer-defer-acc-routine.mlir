@@ -23,6 +23,16 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<i64, dense<64> : 
     } <{origin = "acc.routine"}>
     return
   }
+
+  func.func @device_specialized_logical() attributes {acc.specialized_routine = #acc.specialized_routine<@routine, <seq>, "device_specialized_logical">} {
+    acc.compute_region {
+      %dst = fir.alloca !fir.logical<4>
+      %true = arith.constant true
+      cuf.data_transfer %true to %dst {transfer_kind = #cuf.cuda_transfer<host_device>} : i1, !fir.ref<!fir.logical<4>>
+      acc.yield
+    } <{origin = "acc.routine"}>
+    return
+  }
 }
 
 // DEFER-LABEL: func.func @host(
@@ -45,3 +55,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<i64, dense<64> : 
 // CONVERT-NOT: cuf.data_transfer
 // CONVERT-NOT: fir.call @_FortranACUFDataTransferPtrPtr
 // CONVERT: fir.store %{{.*}} to %{{.*}} : !fir.ref<i32>
+
+// CONVERT-LABEL: func.func @device_specialized_logical(
+// CONVERT-NOT: cuf.data_transfer
+// CONVERT: %[[CVT:.*]] = fir.convert %{{.*}} : (i1) -> !fir.logical<4>
+// CONVERT: fir.store %[[CVT]] to %{{.*}} : !fir.ref<!fir.logical<4>>

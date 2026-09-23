@@ -227,6 +227,7 @@ struct CUFDataTransferOpConversion
           fir::isa_trivial(dstTy)) {
         if (fir::isa_ref_type(src.getType()))
           src = fir::LoadOp::create(rewriter, loc, src);
+        src = createConvertOp(rewriter, loc, dstTy, src);
         fir::StoreOp::create(rewriter, loc, src, dst);
       } else {
         hlfir::AssignOp::create(rewriter, loc, src, dst);
