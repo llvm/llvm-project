@@ -48,8 +48,8 @@ void CIRCXXABI::readArrayCookie(mlir::Location loc, mlir::Value elementPtr,
   // cookieSize is always a multiple of the element alignment (both are
   // powers of 2 and cookieSize >= elementAlign), so subtracting it preserves
   // alignment. The cookie alignment therefore equals the element alignment.
-  numElements = readArrayCookieImpl(loc, allocBytePtr, cookieSize,
-                                    elementAlign, dataLayout, builder);
+  numElements = readArrayCookieImpl(loc, allocBytePtr, cookieSize, elementAlign,
+                                    dataLayout, builder);
 }
 
 } // namespace cir
