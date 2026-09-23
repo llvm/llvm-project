@@ -1697,6 +1697,7 @@ void CodeGenFunction::EmitOMPReductionClauseInit(
     case OMPD_error:
     case OMPD_barrier:
     case OMPD_taskwait:
+    case OMPD_taskgraph:
     case OMPD_taskgroup:
     case OMPD_flush:
     case OMPD_depobj:
@@ -5765,8 +5766,19 @@ void CodeGenFunction::EmitOMPTargetTaskBasedDirective(
   IntegerLiteral IfCond(getContext(), TrueOrFalse,
                         getContext().getIntTypeForBitwidth(32, /*Signed=*/0),
                         SourceLocation());
+  const Expr *ReplayableCond = nullptr;
+  if (auto *RC = S.getSingleClause<OMPReplayableClause>()) {
+    ReplayableCond = RC->getCondition();
+    if (!ReplayableCond) {
+      ReplayableCond = IntegerLiteral::Create(
+          getContext(), llvm::APInt(32, 1),
+          getContext().getIntTypeForBitwidth(32, /*Signed=*/0),
+          SourceLocation());
+    }
+  }
   CGM.getOpenMPRuntime().emitTaskCall(*this, S.getBeginLoc(), S, OutlinedFn,
-                                      SharedsTy, CapturedStruct, &IfCond, Data);
+                                      SharedsTy, CapturedStruct, &IfCond,
+                                      ReplayableCond, Data);
 }
 
 void CodeGenFunction::processInReduction(const OMPExecutableDirective &S,
@@ -5857,6 +5869,35 @@ void CodeGenFunction::processInReduction(const OMPExecutableDirective &S,
   (void)InRedScope.Privatize();
 }
 
+/// Return the condition that decides whether \p S is a replayable construct,
+/// or null if it cannot be one.
+///
+/// OpenMP 6.0 [14.3] makes a task-generating construct that is encountered in
+/// a taskgraph construct a replayable construct of the region "unless
+/// otherwise specified by the replayable clause".  So the enclosing taskgraph
+/// supplies the default and an explicit clause overrides it, rather than the
+/// taskgraph forcing every construct within it to be recorded.  A clause whose
+/// argument is omitted means replayable, as does the taskgraph default; both
+/// are returned as a constant-true condition, which emitIfClause folds away.
+///
+/// [14.6] gives replayable-expression the constant property, so in a
+/// conforming program the result here is always a constant and no branch
+/// survives.  A non-constant argument is accepted as an extension and decided
+/// at run time.
+static const Expr *getOMPReplayableCond(CodeGenFunction &CGF,
+                                        const OMPExecutableDirective &S) {
+  const auto *RC = S.getSingleClause<OMPReplayableClause>();
+  if (!RC && !CGF.getOMPWithinTaskgraph())
+    return nullptr;
+  if (RC)
+    if (const Expr *Cond = RC->getCondition())
+      return Cond;
+  return IntegerLiteral::Create(
+      CGF.getContext(), llvm::APInt(32, 1),
+      CGF.getContext().getIntTypeForBitwidth(32, /*Signed=*/0),
+      SourceLocation());
+}
+
 void CodeGenFunction::EmitOMPTaskDirective(const OMPTaskDirective &S) {
   // Emit outlined function for task construct.
   const CapturedStmt *CS = S.getCapturedStmt(OMPD_task);
@@ -5875,15 +5916,20 @@ void CodeGenFunction::EmitOMPTaskDirective(const OMPTaskDirective &S) {
   OMPTaskDataTy Data;
   // Check if we should emit tied or untied task.
   Data.Tied = !S.getSingleClause<OMPUntiedClause>();
+  const Expr *ReplayableCond = getOMPReplayableCond(*this, S);
+  // Propagate the replayable signal into Data so that reduction init can
+  // route to the taskgraph-aware runtime entry point when the task may
+  // participate in taskgraph replay.
+  Data.ReplayableCond = ReplayableCond;
   auto &&BodyGen = [CS](CodeGenFunction &CGF, PrePostActionTy &) {
     CGF.EmitStmt(CS->getCapturedStmt());
   };
-  auto &&TaskGen = [&S, SharedsTy, CapturedStruct,
-                    IfCond](CodeGenFunction &CGF, llvm::Function *OutlinedFn,
-                            const OMPTaskDataTy &Data) {
+  auto &&TaskGen = [&S, SharedsTy, CapturedStruct, IfCond, ReplayableCond](
+                       CodeGenFunction &CGF, llvm::Function *OutlinedFn,
+                       const OMPTaskDataTy &Data) {
     CGF.CGM.getOpenMPRuntime().emitTaskCall(CGF, S.getBeginLoc(), S, OutlinedFn,
                                             SharedsTy, CapturedStruct, IfCond,
-                                            Data);
+                                            ReplayableCond, Data);
   };
   auto LPCRegion =
       CGOpenMPRuntime::LastprivateConditionalRAII::disable(*this, S);
@@ -5914,7 +5960,22 @@ void CodeGenFunction::EmitOMPTaskwaitDirective(const OMPTaskwaitDirective &S) {
   // Build list of dependences
   buildDependences(S, Data);
   Data.HasNowaitClause = S.hasClausesOfKind<OMPNowaitClause>();
-  CGM.getOpenMPRuntime().emitTaskwaitCall(*this, S.getBeginLoc(), Data);
+  CGM.getOpenMPRuntime().emitTaskwaitCall(*this, S.getBeginLoc(),
+                                          getOMPReplayableCond(*this, S), Data);
+}
+
+void CodeGenFunction::EmitOMPTaskgraphDirective(
+    const OMPTaskgraphDirective &S) {
+  const Expr *IfCond = nullptr;
+  for (const auto *C : S.getClausesOfKind<OMPIfClause>()) {
+    if (C->getNameModifier() == OMPD_unknown ||
+        C->getNameModifier() == OMPD_taskgraph) {
+      IfCond = C->getCondition();
+      break;
+    }
+  }
+
+  CGM.getOpenMPRuntime().emitTaskgraphCall(*this, S.getBeginLoc(), S, IfCond);
 }
 
 static bool isSupportedByOpenMPIRBuilder(const OMPTaskgroupDirective &T) {
@@ -8307,11 +8368,17 @@ void CodeGenFunction::EmitOMPTaskLoopBasedDirective(const OMPLoopDirective &S) {
     }
   }
 
+  const Expr *ReplayableCond = getOMPReplayableCond(*this, S);
+
   OMPTaskDataTy Data;
   // Check if taskloop must be emitted without taskgroup.
   Data.Nogroup = S.getSingleClause<OMPNogroupClause>();
   // TODO: Check if we should emit tied or untied task.
   Data.Tied = true;
+  // Propagate the replayable signal into Data so that reduction init can
+  // route to the taskgraph-aware runtime entry point when the taskloop may
+  // participate in taskgraph replay.
+  Data.ReplayableCond = ReplayableCond;
   // Set scheduling for taskloop
   if (const auto *Clause = S.getSingleClause<OMPGrainsizeClause>()) {
     // grainsize clause
@@ -8426,15 +8493,16 @@ void CodeGenFunction::EmitOMPTaskLoopBasedDirective(const OMPLoopDirective &S) {
                                (*LIP)->getType(), S.getBeginLoc()));
     });
   };
-  auto &&TaskGen = [&S, SharedsTy, CapturedStruct,
-                    IfCond](CodeGenFunction &CGF, llvm::Function *OutlinedFn,
-                            const OMPTaskDataTy &Data) {
+  auto &&TaskGen = [&S, SharedsTy, CapturedStruct, IfCond, ReplayableCond](
+                       CodeGenFunction &CGF, llvm::Function *OutlinedFn,
+                       const OMPTaskDataTy &Data) {
     auto &&CodeGen = [&S, OutlinedFn, SharedsTy, CapturedStruct, IfCond,
+                      ReplayableCond,
                       &Data](CodeGenFunction &CGF, PrePostActionTy &) {
       OMPLoopScope PreInitScope(CGF, S);
-      CGF.CGM.getOpenMPRuntime().emitTaskLoopCall(CGF, S.getBeginLoc(), S,
-                                                  OutlinedFn, SharedsTy,
-                                                  CapturedStruct, IfCond, Data);
+      CGF.CGM.getOpenMPRuntime().emitTaskLoopCall(
+          CGF, S.getBeginLoc(), S, OutlinedFn, SharedsTy, CapturedStruct,
+          IfCond, ReplayableCond, Data);
     };
     CGF.CGM.getOpenMPRuntime().emitInlinedDirective(CGF, OMPD_taskloop,
                                                     CodeGen);
