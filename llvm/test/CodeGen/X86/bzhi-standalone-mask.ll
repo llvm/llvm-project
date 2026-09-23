@@ -13,8 +13,7 @@ define i32 @mask32(i32 %n) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl $-1, %ecx
-; X86-NEXT:    shlxl %eax, %ecx, %eax
-; X86-NEXT:    notl %eax
+; X86-NEXT:    bzhil %eax, %ecx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-NOBMI-LABEL: mask32:
@@ -38,8 +37,7 @@ define i32 @mask32(i32 %n) nounwind {
 ; X64-BMI2-LABEL: mask32:
 ; X64-BMI2:       # %bb.0:
 ; X64-BMI2-NEXT:    movl $-1, %eax
-; X64-BMI2-NEXT:    shlxl %edi, %eax, %eax
-; X64-BMI2-NEXT:    notl %eax
+; X64-BMI2-NEXT:    bzhil %edi, %eax, %eax
 ; X64-BMI2-NEXT:    retq
   %shl = shl i32 -1, %n
   %mask = xor i32 %shl, -1
@@ -51,8 +49,7 @@ define i32 @mask32_indexzext(i8 zeroext %n) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl $-1, %ecx
-; X86-NEXT:    shlxl %eax, %ecx, %eax
-; X86-NEXT:    notl %eax
+; X86-NEXT:    bzhil %eax, %ecx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-NOBMI-LABEL: mask32_indexzext:
@@ -76,8 +73,7 @@ define i32 @mask32_indexzext(i8 zeroext %n) nounwind {
 ; X64-BMI2-LABEL: mask32_indexzext:
 ; X64-BMI2:       # %bb.0:
 ; X64-BMI2-NEXT:    movl $-1, %eax
-; X64-BMI2-NEXT:    shlxl %edi, %eax, %eax
-; X64-BMI2-NEXT:    notl %eax
+; X64-BMI2-NEXT:    bzhil %edi, %eax, %eax
 ; X64-BMI2-NEXT:    retq
   %conv = zext i8 %n to i32
   %shl = shl i32 -1, %conv
@@ -122,8 +118,7 @@ define i64 @mask64(i64 %n) nounwind {
 ; X64-BMI2-LABEL: mask64:
 ; X64-BMI2:       # %bb.0:
 ; X64-BMI2-NEXT:    movq $-1, %rax
-; X64-BMI2-NEXT:    shlxq %rdi, %rax, %rax
-; X64-BMI2-NEXT:    notq %rax
+; X64-BMI2-NEXT:    bzhiq %rdi, %rax, %rax
 ; X64-BMI2-NEXT:    retq
   %shl = shl i64 -1, %n
   %mask = xor i64 %shl, -1
@@ -166,10 +161,8 @@ define i32 @mask64_32_trunc(i64 %n) nounwind {
 ;
 ; X64-BMI2-LABEL: mask64_32_trunc:
 ; X64-BMI2:       # %bb.0:
-; X64-BMI2-NEXT:    movq $-1, %rax
-; X64-BMI2-NEXT:    shlxq %rdi, %rax, %rax
-; X64-BMI2-NEXT:    notl %eax
-; X64-BMI2-NEXT:    # kill: def $eax killed $eax killed $rax
+; X64-BMI2-NEXT:    movl $-1, %eax
+; X64-BMI2-NEXT:    bzhil %edi, %eax, %eax
 ; X64-BMI2-NEXT:    retq
   %shl = shl i64 -1, %n
   %trunc = trunc i64 %shl to i32
@@ -184,8 +177,7 @@ define i32 @mask32_and_and_escape(i32 %x, i32 %n, ptr %escape) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl $-1, %edx
-; X86-NEXT:    shlxl %ecx, %edx, %edx
-; X86-NEXT:    notl %edx
+; X86-NEXT:    bzhil %ecx, %edx, %edx
 ; X86-NEXT:    movl %edx, (%eax)
 ; X86-NEXT:    bzhil %ecx, {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    retl
@@ -215,8 +207,7 @@ define i32 @mask32_and_and_escape(i32 %x, i32 %n, ptr %escape) nounwind {
 ; X64-BMI2-LABEL: mask32_and_and_escape:
 ; X64-BMI2:       # %bb.0:
 ; X64-BMI2-NEXT:    movl $-1, %eax
-; X64-BMI2-NEXT:    shlxl %esi, %eax, %eax
-; X64-BMI2-NEXT:    notl %eax
+; X64-BMI2-NEXT:    bzhil %esi, %eax, %eax
 ; X64-BMI2-NEXT:    movl %eax, (%rdx)
 ; X64-BMI2-NEXT:    bzhil %esi, %edi, %eax
 ; X64-BMI2-NEXT:    retq
