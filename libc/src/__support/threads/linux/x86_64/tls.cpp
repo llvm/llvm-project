@@ -12,7 +12,7 @@
 #include "src/__support/OSUtil/linux/syscall_wrappers/mmap.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/munmap.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/threads/tcb.h"
+#include "src/__support/threads/linux/tcb.h"
 #include "src/string/memory_utils/inline_memcpy.h"
 
 #include <asm/prctl.h>
@@ -21,7 +21,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 // TODO: Also generalize this routine and handle dynamic loading properly.
-void init_tls(TLSDescriptor &tls_descriptor) {
+[[gnu::flatten]] void init_tls(TLSDescriptor &tls_descriptor) {
   // We will assume the alignment is always a power of two.
   uintptr_t tls_size = app.tls.size & -app.tls.align;
   if (tls_size != app.tls.size)

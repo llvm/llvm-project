@@ -729,6 +729,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   }
 
   if (Subtarget.hasStdExtZfbfmin()) {
+    setOperationAction({ISD::UNDEF, ISD::POISON}, MVT::bf16, Expand);
     setOperationAction(ISD::BITCAST, MVT::i16, Custom);
     setOperationAction(ISD::ConstantFP, MVT::bf16, Expand);
     setOperationAction(ISD::SELECT_CC, MVT::bf16, Expand);
@@ -744,6 +745,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   }
 
   if (Subtarget.hasStdExtZfhminOrZhinxmin()) {
+    if (Subtarget.hasStdExtZfhmin())
+      setOperationAction({ISD::UNDEF, ISD::POISON}, MVT::f16, Expand);
     if (Subtarget.hasStdExtZfhOrZhinx()) {
       setOperationAction(FPLegalNodeTypes, MVT::f16, Legal);
       setOperationAction(FPRndMode, MVT::f16,
@@ -808,6 +811,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   }
 
   if (Subtarget.hasStdExtFOrZfinx()) {
+    if (Subtarget.hasStdExtF())
+      setOperationAction({ISD::UNDEF, ISD::POISON}, MVT::f32, Expand);
     setOperationAction(FPLegalNodeTypes, MVT::f32, Legal);
     setOperationAction(FPRndMode, MVT::f32,
                        Subtarget.hasStdExtZfa() ? Legal : Custom);
@@ -843,6 +848,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BITCAST, MVT::i32, Custom);
 
   if (Subtarget.hasStdExtDOrZdinx()) {
+    if (Subtarget.hasStdExtD())
+      setOperationAction({ISD::UNDEF, ISD::POISON}, MVT::f64, Expand);
     setOperationAction(FPLegalNodeTypes, MVT::f64, Legal);
 
     if (!Subtarget.is64Bit())

@@ -50,18 +50,24 @@ class Expr;
 /// sub-expression and true.
 ///
 /// Calls \p callback for each origin the traversal reaches, passing the
-/// subexpression, whether the traversal recognized it as a safe origin, and
+/// subexpression, whether the traversal recognized it as a safe origin,
 /// whether the path to it passed through a temporary that dies at the end of
-/// the full-expression; in that case the origin's lifetime guarantee cannot
-/// be assumed to extend past the full-expression. Returns false if any of
-/// calls to callbacks returned false. Otherwise true.
+/// the full-expression (in that case the origin's lifetime guarantee cannot
+/// be assumed to extend past the full-expression), and whether the path to it
+/// followed at least one [[clang::lifetimebound]] edge. Returns false if any
+/// of calls to callbacks returned false. Otherwise true.
+///
+/// If \p FollowLifetimeBound is true, f(x [[clang::lifetimebound]])
+/// traverses into x.
 bool tryToFindPtrOrigin(
     const clang::Expr *E, bool StopAtFirstRefCountedObj,
+    bool FollowLifetimeBound,
     std::function<bool(const clang::CXXRecordDecl *)> isSafePtr,
     std::function<bool(const clang::QualType)> isSafePtrType,
     std::function<bool(const clang::Decl *)> isSafeGlobalDecl,
     std::function<bool(const clang::Expr *, bool /*IsSafe*/,
-                       bool /*OriginDependsOnFullExpressionTemporary*/)>
+                       bool /*OriginDependsOnFullExpressionTemporary*/,
+                       bool /*PtrIsLifetimeBoundToOrigin*/)>
         callback);
 
 /// For \p E referring to a ref-countable/-counted pointer/reference we return

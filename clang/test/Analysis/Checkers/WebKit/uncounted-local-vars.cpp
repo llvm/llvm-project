@@ -794,6 +794,13 @@ namespace binding_raw_ptr {
     a->method();
   }
 
+  void bind_temp_from_guarded(RefPtr<RefCountable> owner) {
+    auto [a, b] = pair<RefCountable*, RefCountable*> { owner.get(), owner.get() };
+    // expected-warning@-1{{Local variable 'a' is a raw reference to RefPtr-capable type 'binding_raw_ptr::pair<RefCountable *, RefCountable *>' [alpha.webkit.UncountedLocalVarsChecker]}}
+    // expected-warning@-2{{Local variable 'b' is a raw reference to RefPtr-capable type 'binding_raw_ptr::pair<RefCountable *, RefCountable *>' [alpha.webkit.UncountedLocalVarsChecker]}}
+    a->method();
+  }
+
   struct ptr_container {
     RefPtr<RefCountable> a;
     RefCountable* b;

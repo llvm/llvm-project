@@ -4243,16 +4243,40 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
     return Error(Operands[3]->getStartLoc(),
                  "the sum of the immediate operands must be less than 32");
 
-  if (Opcode == RISCV::TH_LDD || Opcode == RISCV::TH_LWUD ||
-      Opcode == RISCV::TH_LWD) {
+  switch (Opcode) {
+  default:
+    break;
+  case RISCV::TH_LBIA:
+  case RISCV::TH_LBIB:
+  case RISCV::TH_LBUIA:
+  case RISCV::TH_LBUIB:
+  case RISCV::TH_LHIA:
+  case RISCV::TH_LHIB:
+  case RISCV::TH_LHUIA:
+  case RISCV::TH_LHUIB:
+  case RISCV::TH_LWIA:
+  case RISCV::TH_LWIB:
+  case RISCV::TH_LWUIA:
+  case RISCV::TH_LWUIB:
+  case RISCV::TH_LDIA:
+  case RISCV::TH_LDIB:
+    if (Inst.getOperand(0).getReg() == Inst.getOperand(2).getReg())
+      return Error(Operands[1]->getStartLoc(), "rd and rs1 must be different");
+    break;
+  case RISCV::TH_LDD:
+  case RISCV::TH_LWUD:
+  case RISCV::TH_LWD: {
     MCRegister Rd1 = Inst.getOperand(0).getReg();
     MCRegister Rd2 = Inst.getOperand(1).getReg();
     MCRegister Rs1 = Inst.getOperand(2).getReg();
-    // The encoding with rd1 == rd2 == rs1 is reserved for XTHead load pair.
+    // The encoding with overlapping rs1, rd1, and rd2 is reserved for XTHead
+    // load pair.
     if (Rs1 == Rd1 || Rs1 == Rd2 || Rd1 == Rd2) {
       SMLoc Loc = Operands[1]->getStartLoc();
       return Error(Loc, "rs1, rd1, and rd2 cannot overlap");
     }
+    break;
+  }
   }
 
   if (Opcode == RISCV::CM_MVSA01 || Opcode == RISCV::QC_CM_MVSA01) {
