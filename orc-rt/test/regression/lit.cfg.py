@@ -9,6 +9,7 @@ import lit.util
 from lit.llvm import llvm_config
 from lit.llvm.subst import ToolSubst
 import platform
+import mmap
 
 config.name = "ORC-RT"
 config.test_format = lit.formats.ShTest()
@@ -94,6 +95,10 @@ config.substitutions.append(("%target_triple", config.target_triple))
 # The architecture the runtime was built for, so tests can check the triple it
 # reports against an independent source.
 config.substitutions.append(("%target-arch", config.target_triple.split("-")[0]))
+
+# Add the page size from mmap this allows us to avoid another if statement as
+# it would likely need ctypes for windows as it does not support sysconf
+config.substituions.append(("%host-page-size", mmap.PAGESIZE))
 
 # Add host OS and arch substitutions for host-detection tests.
 config.substitutions.append(("%host-arch", platform.machine()))
