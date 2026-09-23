@@ -20,8 +20,7 @@ struct Trailing {
 };
 
 // A trailing array member is a flexible array member under the default
-// -fstrict-flex-arrays=0, so -fsanitize=array-bounds does not check it, but
-// the opt-out silences it.
+// -fstrict-flex-arrays=0, so -fsanitize=array-bounds does not check it.
 void unsafe_trailing_member(Trailing *t, int idx) {
-  t->buffer[idx] = 0;
+  t->buffer[idx] = 0; // expected-warning {{unsafe buffer access}}
 }

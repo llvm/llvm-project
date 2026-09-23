@@ -18,8 +18,8 @@
 // -Wno-unsafe-buffer-usage-in-static-sized-array exists for code built with
 // -fsanitize=array-bounds, which bounds-checks subscripts on arrays of known
 // size.  The sanitizer does not trust the declared size of a trailing array
-// member that -fstrict-flex-arrays treats as a flexible array member, but the
-// opt-out silences accesses to those too.
+// member that -fstrict-flex-arrays treats as a flexible array member, so the
+// opt-out must not silence accesses to those either.
 
 struct Zero {
   int len;
@@ -52,19 +52,19 @@ union U {
 };
 
 void zero(Zero *z, unsigned idx) {
-  z->buf[idx] = 0;
+  z->buf[idx] = 0; // level012-warning{{unsafe buffer access}}
 }
 
 void one(One *o, unsigned idx) {
-  o->buf[idx] = 0;
+  o->buf[idx] = 0; // level01-warning{{unsafe buffer access}}
   // The struct hack: a constant index past the declared size.
-  o->buf[1] = 0;
+  o->buf[1] = 0; // level01-warning{{unsafe buffer access}}
 }
 
 void many(Many *m, unsigned idx) {
-  m->buf[idx] = 0;
+  m->buf[idx] = 0; // level0-warning{{unsafe buffer access}}
   m->buf[3] = 0;   // a constant index within the declared size is always safe
-  m->buf[20] = 0;
+  m->buf[20] = 0; // level0-warning{{unsafe buffer access}}
 }
 
 void incomplete(Incomplete *i, unsigned idx) {
@@ -76,7 +76,7 @@ void not_trailing(NotTrailing *n, unsigned idx) {
 }
 
 void union_member(U *u, unsigned idx) {
-  u->buf[idx] = 0;
+  u->buf[idx] = 0; // level01-warning{{unsafe buffer access}}
 }
 
 struct Method {
@@ -84,6 +84,6 @@ struct Method {
   int buf[16];
 
   void set(unsigned idx) {
-    buf[idx] = 0;
+    buf[idx] = 0; // level0-warning{{unsafe buffer access}}
   }
 };
