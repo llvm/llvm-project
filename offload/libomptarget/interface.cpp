@@ -1042,6 +1042,16 @@ EXTERN void __tgt_taskgraph_dup_kernel_args(void *Dst, void *Src,
   bool SizeOnly = (Dst == nullptr);
   KernelArgsTy *KernArgs = static_cast<KernelArgsTy *>(Src);
   size_t N = KernArgs->NumArgs;
+  namespace mt = omptarget::maptype;
+  // A firstprivate aggregate whose clause carried the "saved" modifier: its
+  // data has to be duplicated here.  We only need to do this for aggregates,
+  // because scalars or pointers are passed by value.
+  auto FpAggregateP = [&](size_t Idx) {
+    int64_t ArgType = KernArgs->ArgTypes[Idx];
+    return mt::isPrivate(ArgType) && !mt::isLiteral(ArgType) &&
+           mt::isSaved(ArgType) && KernArgs->ArgPtrs[Idx] &&
+           KernArgs->ArgSizes[Idx] > 0;
+  };
   // ArgNames and ArgMappers are optional; a launch with neither debug names nor
   // user-defined mappers leaves them null.  The copy has to preserve that, or
   // every argument would appear to carry a mapper (pointing at uninitialized
@@ -1069,6 +1079,10 @@ EXTERN void __tgt_taskgraph_dup_kernel_args(void *Dst, void *Src,
     // ArgMappers
     if (HasMappers)
       CountAligned(N * sizeof(void *), alignof(void *));
+    // One snapshot per saved firstprivate aggregate.
+    for (size_t I = 0; I < N; I++)
+      if (FpAggregateP(I))
+        CountAligned(KernArgs->ArgSizes[I], alignof(std::max_align_t));
     *AllocSize = Total;
   } else {
     size_t Allocated = 0;
@@ -1100,6 +1114,17 @@ EXTERN void __tgt_taskgraph_dup_kernel_args(void *Dst, void *Src,
             ? static_cast<void **>(BumpAllocDup(
                   N * sizeof(void *), alignof(void *), KernArgs->ArgMappers))
             : nullptr;
+    // Snapshot each saved firstprivate aggregate and redirect the argument at
+    // the copy.
+    for (size_t I = 0; I < N; I++) {
+      if (!FpAggregateP(I))
+        continue;
+      void *Saved =
+          BumpAllocDup(KernArgs->ArgSizes[I], alignof(std::max_align_t),
+                       KernArgs->ArgPtrs[I]);
+      DupArgs->ArgPtrs[I] = Saved;
+      DupArgs->ArgBasePtrs[I] = Saved;
+    }
     assert(Allocated == *AllocSize);
   }
 }

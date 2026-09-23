@@ -84,6 +84,10 @@ enum tgt_map_type : uint64_t {
   // instead of preserving the original pointer's value. Currently only
   // useful in conjunction with RETURN_PARAM.
   OMP_TGT_MAPTYPE_FB_NULLIFY = 0x8000,
+  // For firstprivate values, set if the (aggregate) value has the "saved"
+  // modifier: if so, we will snapshot the pointed-to data when recording
+  // taskgraphs.
+  OMP_TGT_MAPTYPE_SAVED = 0x10000,
   // descriptor for non-contiguous target-update
   OMP_TGT_MAPTYPE_NON_CONTIG = 0x100000000000,
   // member of struct, member given by [16 MSBs] - 1
@@ -151,6 +155,8 @@ inline bool isAttach(int64_t MapType) {
 inline bool isNonContig(int64_t MapType) {
   return MapType & OMP_TGT_MAPTYPE_NON_CONTIG;
 }
+/// Firstprivate aggregate whose clause carried the "saved" modifier.
+inline bool isSaved(int64_t MapType) { return MapType & OMP_TGT_MAPTYPE_SAVED; }
 /// True iff this map is a member of a struct (the struct index is encoded in
 /// the top 16 bits).
 inline bool isMemberOf(int64_t MapType) {
