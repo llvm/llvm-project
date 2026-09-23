@@ -6917,18 +6917,6 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
 
     return DAG.getNode(AArch64ISD::PMULL, DL, Op.getValueType(), LHS, RHS);
   }
-  case Intrinsic::aarch64_neon_smax:
-    return DAG.getNode(ISD::SMAX, DL, Op.getValueType(), Op.getOperand(1),
-                       Op.getOperand(2));
-  case Intrinsic::aarch64_neon_umax:
-    return DAG.getNode(ISD::UMAX, DL, Op.getValueType(), Op.getOperand(1),
-                       Op.getOperand(2));
-  case Intrinsic::aarch64_neon_smin:
-    return DAG.getNode(ISD::SMIN, DL, Op.getValueType(), Op.getOperand(1),
-                       Op.getOperand(2));
-  case Intrinsic::aarch64_neon_umin:
-    return DAG.getNode(ISD::UMIN, DL, Op.getValueType(), Op.getOperand(1),
-                       Op.getOperand(2));
   case Intrinsic::aarch64_neon_scalar_sqxtn:
   case Intrinsic::aarch64_neon_scalar_sqxtun:
   case Intrinsic::aarch64_neon_scalar_uqxtn: {
