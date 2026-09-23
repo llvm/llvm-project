@@ -1,6 +1,6 @@
 ; REQUIRES: x86_64-linux
 ; RUN: rm -rf %t.rundir
-; RUN: rm -rf %t.channel-basename.*
+; RUN: rm -rf %t.channel-basename.* %t.chan.* %t.*.s
 ; RUN: mkdir %t.rundir
 ; RUN: cp %S/../../../lib/Analysis/models/log_reader.py %t.rundir
 ; RUN: cp %S/../../../lib/Analysis/models/interactive_host.py %t.rundir
@@ -21,3 +21,25 @@
 
 ; CHECK:      index_to_evict: 9
 ; CHECK-NEXT: index_to_evict: 10
+
+;; Out-of-range priority advice is saturated, not converted.
+
+; DEFINE: %{prio} = %python %t.rundir/interactive_main.py --priority=
+; DEFINE: %{llc} = llc -mtriple=x86_64-linux-unknown -regalloc=greedy \
+; DEFINE:   -regalloc-enable-priority-advisor=release %S/Inputs/two-large-fcts.ll
+
+; RUN: %{prio}low %t.chan.low %{llc} \
+; RUN:   -regalloc-priority-interactive-channel-base=%t.chan.low -o %t.low.s
+; RUN: %{prio}high %t.chan.high %{llc} \
+; RUN:   -regalloc-priority-interactive-channel-base=%t.chan.high -o %t.high.s
+; RUN: %{prio}negative %t.chan.neg %{llc} \
+; RUN:   -regalloc-priority-interactive-channel-base=%t.chan.neg -o %t.neg.s
+; RUN: %{prio}huge %t.chan.huge %{llc} \
+; RUN:   -regalloc-priority-interactive-channel-base=%t.chan.huge -o %t.huge.s
+
+;; Without saturation, -1.0 wrapped to near UINT_MAX and 1e30 converted to 0.
+; RUN: cmp %t.neg.s %t.low.s
+; RUN: cmp %t.huge.s %t.high.s
+
+;; Guard against the above passing vacuously: the two references must differ.
+; RUN: not cmp -s %t.low.s %t.high.s

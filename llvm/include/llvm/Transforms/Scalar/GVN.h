@@ -192,7 +192,7 @@ public:
     Expression createExpr(Instruction *I);
     Expression createCmpExpr(unsigned Opcode, CmpInst::Predicate Predicate,
                              Value *LHS, Value *RHS);
-    Expression createExtractvalueExpr(ExtractValueInst *EI);
+    Expression createExtractValueExpr(ExtractValueInst *EI);
     Expression createGEPExpr(GetElementPtrInst *GEP);
     uint32_t lookupOrAddCall(CallInst *C);
     uint32_t computeLoadStoreVN(Instruction *I);

@@ -2,8 +2,10 @@
 ; RUN:   -verify-machineinstrs < %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64-unknown-linux-gnu -mattr=+pauth -relocation-model=pic \
 ; RUN:   -filetype=obj < %s | llvm-readelf -r -s - | FileCheck --check-prefix=CHECK-OBJ %s
-; RUN: not llc -mtriple=aarch64-unknown-linux-gnu -mattr=+pauth -relocation-model=pic \
-; RUN:   -global-isel=1 < %s 2>&1 | FileCheck --check-prefix=CHECK-ERR %s
+; RUN: llc -mtriple=aarch64-unknown-linux-gnu -mattr=+pauth -relocation-model=pic \
+; RUN:   -global-isel=1 -verify-machineinstrs < %s 2>&1 | FileCheck %s
+; RUN: llc -mtriple=aarch64-unknown-linux-gnu -mattr=+pauth -relocation-model=pic \
+; RUN:   -global-isel=1 -filetype=obj < %s | llvm-readelf -r -s - | FileCheck --check-prefix=CHECK-OBJ %s
 
 @general_dynamic_var = external thread_local global i32
 
@@ -24,8 +26,6 @@ define i32 @test_generaldynamic() {
 ; CHECK-OBJ: R_AARCH64_AUTH_TLSDESC_LD64_LO12
 ; CHECK-OBJ: R_AARCH64_AUTH_TLSDESC_ADD_LO12
 ; CHECK-OBJ-NOT: R_AARCH64_TLSDESC_CALL
-
-; CHECK-ERR: LLVM ERROR: cannot select: %1:gpr64sp(p0) = G_GLOBAL_VALUE @general_dynamic_var (in function: test_generaldynamic)
 }
 
 define ptr @test_generaldynamic_addr() {

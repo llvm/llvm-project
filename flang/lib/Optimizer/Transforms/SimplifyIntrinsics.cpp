@@ -1058,6 +1058,12 @@ void SimplifyIntrinsicsPass::simplifyIntOrFloatReduction(
   auto argType = getArgElementType(args[0]);
   if (!argType)
     return;
+  // Unsigned reductions (e.g. MaxvalUnsigned/SumUnsigned) lower to runtime
+  // calls whose signless result type intentionally differs from the unsigned
+  // element type, and the inline reduction generated below would use a signed
+  // identity/comparison. Leave the correct runtime call in place.
+  if (argType->isUnsignedInteger())
+    return;
   assert(*argType == resultType &&
          "Argument/result types mismatch in reduction");
 

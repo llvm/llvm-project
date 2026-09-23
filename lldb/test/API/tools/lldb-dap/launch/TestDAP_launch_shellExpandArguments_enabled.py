@@ -4,7 +4,7 @@ Test lldb-dap launch request.
 
 import os
 
-from lldbsuite.test.decorators import expectedFailureAll, skipIfLinux, skipIfWasm
+from lldbsuite.test.decorators import *
 from lldbsuite.test.tools.lldb_dap.types import LaunchArgs
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 

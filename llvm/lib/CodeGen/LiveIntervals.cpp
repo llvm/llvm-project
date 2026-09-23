@@ -294,6 +294,45 @@ void LiveIntervals::computeRegMasks() {
   }
 }
 
+void LiveIntervals::reassignRegMaskSlots(MachineBasicBlock &Orig,
+                                         MachineBasicBlock &SplitBB) {
+  assert(&Orig != &SplitBB && "expected distinct blocks");
+  std::pair<unsigned, unsigned> &OrigRMB = RegMaskBlocks[Orig.getNumber()];
+  std::pair<unsigned, unsigned> &SplitRMB = RegMaskBlocks[SplitBB.getNumber()];
+
+  // RegMaskSlots is sorted, so the slots that moved are those at or after
+  // SplitBB's start index.
+  ArrayRef<SlotIndex> OrigSlots =
+      getRegMaskSlots().slice(OrigRMB.first, OrigRMB.second);
+  unsigned KeptCount = llvm::lower_bound(OrigSlots, getMBBStartIdx(&SplitBB)) -
+                       OrigSlots.begin();
+  if (KeptCount == OrigRMB.second)
+    return; // No regmask slots moved into SplitBB.
+
+  SplitRMB.first = OrigRMB.first + KeptCount;
+  SplitRMB.second = OrigRMB.second - KeptCount;
+  OrigRMB.second = KeptCount;
+}
+
+void LiveIntervals::insertMBBInMapsImpl(
+    MachineBasicBlock *MBB, [[maybe_unused]] bool AssumeRegMaskEmpty) {
+#ifdef EXPENSIVE_CHECKS
+  assert((!AssumeRegMaskEmpty ||
+          none_of(*MBB,
+                  [](const MachineInstr &MI) {
+                    return any_of(MI.operands(), [](const MachineOperand &MO) {
+                      return MO.isRegMask();
+                    });
+                  })) &&
+         "insertMBBInMaps expects a block with no regmask operands; use "
+         "LiveIntervals::splitAt() to split a block containing calls");
+#endif
+  Indexes->insertMBBInMaps(MBB);
+  assert(unsigned(MBB->getNumber()) == RegMaskBlocks.size() &&
+         "Blocks must be added in order.");
+  RegMaskBlocks.push_back(std::make_pair(RegMaskSlots.size(), 0));
+}
+
 //===----------------------------------------------------------------------===//
 //                           Register Unit Liveness
 //===----------------------------------------------------------------------===//
@@ -912,11 +951,25 @@ float LiveIntervals::getSpillWeight(bool isDef, bool isUse,
                                     const MachineBlockFrequencyInfo *MBFI,
                                     const MachineBasicBlock *MBB,
                                     ProfileSummaryInfo *PSI) {
-  float Weight = isDef + isUse;
   const auto *MF = MBB->getParent();
+  return getSpillWeight(isDef, isUse, MBFI, MBB,
+                        PSI && llvm::shouldOptimizeForSize(MF, PSI, MBFI));
+}
+
+float LiveIntervals::getSpillWeight(bool isDef, bool isUse,
+                                    const MachineBlockFrequencyInfo *MBFI,
+                                    const MachineInstr &MI, bool OptForSize) {
+  return getSpillWeight(isDef, isUse, MBFI, MI.getParent(), OptForSize);
+}
+
+float LiveIntervals::getSpillWeight(bool isDef, bool isUse,
+                                    const MachineBlockFrequencyInfo *MBFI,
+                                    const MachineBasicBlock *MBB,
+                                    bool OptForSize) {
+  float Weight = isDef + isUse;
   // When optimizing for size we only consider the codesize impact of spilling
   // the register, not the runtime impact.
-  if (PSI && llvm::shouldOptimizeForSize(MF, PSI, MBFI))
+  if (OptForSize)
     return Weight;
   return Weight * MBFI->getBlockFreqRelativeToEntryBlock(MBB);
 }
