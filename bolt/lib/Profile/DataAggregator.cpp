@@ -386,13 +386,20 @@ void DataAggregator::processFileBuildID(StringRef FileBuildID) {
     return;
   }
 
+  if (opts::IgnoreBuildID) {
+    errs() << "PERF2BOLT-WARNING: failed to match build-id from perf output, "
+              "continuing because -ignore-build-id was requested. The profile "
+              "will be meaningless if the perf data was not recorded for this "
+              "binary.\n";
+    return;
+  }
+
   errs() << "PERF2BOLT-ERROR: failed to match build-id from perf output. "
             "This indicates the input binary supplied for data aggregation "
             "is not the same recorded by perf when collecting profiling "
             "data, or there were no samples recorded for the binary. "
             "Use -ignore-build-id option to override.\n";
-  if (!opts::IgnoreBuildID)
-    abort();
+  abort();
 }
 
 bool DataAggregator::checkPerfDataMagic(StringRef FileName) {

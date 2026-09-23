@@ -987,7 +987,7 @@ SCEVUse SCEVAddRecExpr::evaluateAtIteration(ArrayRef<SCEVUse> Operands,
                                             const SCEV *It, ScalarEvolution &SE,
                                             SCEV::NoWrapFlags UseFlags) {
   assert(Operands.size() > 0);
-  assert((Operands.size() == 2 || UseFlags == SCEV::FlagAnyWrap) &&
+  assert((Operands.size() == 2 || UseFlags == SCEV::FlagNone) &&
          "use-specific flags only supported for affine AddRecs");
   SCEVUse Result = Operands[0].getPointer();
   for (unsigned i = 1, e = Operands.size(); i != e; ++i) {
@@ -999,8 +999,8 @@ SCEVUse SCEVAddRecExpr::evaluateAtIteration(ArrayRef<SCEVUse> Operands,
       return Coeff;
 
     SCEVUse Mul = SE.getMulExpr(Operands[i].getPointer(), Coeff,
-                                {SCEV::FlagAnyWrap, UseFlags});
-    Result = SE.getAddExpr(Result, Mul, {SCEV::FlagAnyWrap, UseFlags});
+                                {SCEV::FlagNone, UseFlags});
+    Result = SE.getAddExpr(Result, Mul, {SCEV::FlagNone, UseFlags});
   }
   return Result;
 }
@@ -1013,7 +1013,7 @@ SCEVUse SCEVAddRecExpr::getExitValue(ScalarEvolution &SE) const {
   // is the value it had, and that did not wrap.
   return evaluateAtIteration(operands(), BTC, SE,
                              isAffine() ? getNoWrapFlags(SCEV::FlagNUW)
-                                        : SCEV::FlagAnyWrap);
+                                        : SCEV::FlagNone);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1189,7 +1189,7 @@ const SCEV *ScalarEvolution::getTruncateExpr(SCEVUse Op, Type *Ty,
     SmallVector<SCEVUse, 4> Operands;
     for (const SCEV *Op : AddRec->operands())
       Operands.push_back(getTruncateExpr(Op, Ty, Depth + 1));
-    return getAddRecExpr(Operands, AddRec->getLoop(), SCEV::FlagAnyWrap);
+    return getAddRecExpr(Operands, AddRec->getLoop(), SCEV::FlagNone);
   }
 
   // Return zero if truncating to known zeros.
@@ -1339,7 +1339,7 @@ static const SCEV *getPreStartForExtend(const SCEVAddRecExpr *AR,
     ScalarEvolution::maskFlags(SA->getNoWrapFlags(), SCEV::FlagNUW);
   const SCEV *PreStart = SE->getAddExpr(DiffOps, PreStartFlags);
   const SCEVAddRecExpr *PreAR = dyn_cast<SCEVAddRecExpr>(
-      SE->getAddRecExpr(PreStart, Step, L, SCEV::FlagAnyWrap));
+      SE->getAddRecExpr(PreStart, Step, L, SCEV::FlagNone));
 
   // "{S,+,X} is <nsw>/<nuw>" and "the backedge is taken at least once" implies
   // "S+X does not sign/unsign-overflow".
@@ -1639,9 +1639,9 @@ const SCEV *ScalarEvolution::getZeroExtendExprImpl(SCEVUse Op, Type *Ty,
         Type *WideTy = IntegerType::get(getContext(), BitWidth * 2);
         // Check whether Start+Step*MaxBECount has no unsigned overflow.
         const SCEV *ZMul =
-            getMulExpr(CastedMaxBECount, Step, SCEV::FlagAnyWrap, Depth + 1);
+            getMulExpr(CastedMaxBECount, Step, SCEV::FlagNone, Depth + 1);
         const SCEV *ZAdd = getZeroExtendExpr(
-            getAddExpr(Start, ZMul, SCEV::FlagAnyWrap, Depth + 1), WideTy,
+            getAddExpr(Start, ZMul, SCEV::FlagNone, Depth + 1), WideTy,
             Depth + 1);
         const SCEV *WideStart = getZeroExtendExpr(Start, WideTy, Depth + 1);
         const SCEV *WideMaxBECount =
@@ -1650,8 +1650,8 @@ const SCEV *ScalarEvolution::getZeroExtendExprImpl(SCEVUse Op, Type *Ty,
             getAddExpr(WideStart,
                        getMulExpr(WideMaxBECount,
                                   getZeroExtendExpr(Step, WideTy, Depth + 1),
-                                  SCEV::FlagAnyWrap, Depth + 1),
-                       SCEV::FlagAnyWrap, Depth + 1);
+                                  SCEV::FlagNone, Depth + 1),
+                       SCEV::FlagNone, Depth + 1);
         if (ZAdd == OperandExtendedAdd) {
           // Cache knowledge of AR NUW, which is propagated to this AddRec.
           setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR), SCEV::FlagNUW);
@@ -1667,8 +1667,8 @@ const SCEV *ScalarEvolution::getZeroExtendExprImpl(SCEVUse Op, Type *Ty,
             getAddExpr(WideStart,
                        getMulExpr(WideMaxBECount,
                                   getSignExtendExpr(Step, WideTy, Depth + 1),
-                                  SCEV::FlagAnyWrap, Depth + 1),
-                       SCEV::FlagAnyWrap, Depth + 1);
+                                  SCEV::FlagNone, Depth + 1),
+                       SCEV::FlagNone, Depth + 1);
         if (ZAdd == OperandExtendedAdd) {
           // Cache knowledge of AR NW, which is propagated to this AddRec.
           // Negative step causes unsigned wrap, but it still can't self-wrap.
@@ -1801,7 +1801,7 @@ const SCEV *ScalarEvolution::getZeroExtendExprImpl(SCEVUse Op, Type *Ty,
       if (D != 0) {
         const SCEV *SZExtD = getZeroExtendExpr(getConstant(D), Ty, Depth);
         const SCEV *SResidual =
-            getAddExpr(getConstant(-D), SA, SCEV::FlagAnyWrap, Depth);
+            getAddExpr(getConstant(-D), SA, SCEV::FlagNone, Depth);
         const SCEV *SZExtR = getZeroExtendExpr(SResidual, Ty, Depth + 1);
         return getAddExpr(SZExtD, SZExtR, (SCEV::FlagNSW | SCEV::FlagNUW),
                           Depth + 1);
@@ -1990,7 +1990,7 @@ const SCEV *ScalarEvolution::getSignExtendExprImpl(SCEVUse Op, Type *Ty,
       if (D != 0) {
         const SCEV *SSExtD = getSignExtendExpr(getConstant(D), Ty, Depth);
         const SCEV *SResidual =
-            getAddExpr(getConstant(-D), SA, SCEV::FlagAnyWrap, Depth);
+            getAddExpr(getConstant(-D), SA, SCEV::FlagNone, Depth);
         const SCEV *SSExtR = getSignExtendExpr(SResidual, Ty, Depth + 1);
         return getAddExpr(SSExtD, SSExtR, (SCEV::FlagNSW | SCEV::FlagNUW),
                           Depth + 1);
@@ -2030,9 +2030,9 @@ const SCEV *ScalarEvolution::getSignExtendExprImpl(SCEVUse Op, Type *Ty,
         Type *WideTy = IntegerType::get(getContext(), BitWidth * 2);
         // Check whether Start+Step*MaxBECount has no signed overflow.
         const SCEV *SMul =
-            getMulExpr(CastedMaxBECount, Step, SCEV::FlagAnyWrap, Depth + 1);
+            getMulExpr(CastedMaxBECount, Step, SCEV::FlagNone, Depth + 1);
         const SCEV *SAdd = getSignExtendExpr(
-            getAddExpr(Start, SMul, SCEV::FlagAnyWrap, Depth + 1), WideTy,
+            getAddExpr(Start, SMul, SCEV::FlagNone, Depth + 1), WideTy,
             Depth + 1);
         const SCEV *WideStart = getSignExtendExpr(Start, WideTy, Depth + 1);
         const SCEV *WideMaxBECount =
@@ -2041,8 +2041,8 @@ const SCEV *ScalarEvolution::getSignExtendExprImpl(SCEVUse Op, Type *Ty,
             getAddExpr(WideStart,
                        getMulExpr(WideMaxBECount,
                                   getSignExtendExpr(Step, WideTy, Depth + 1),
-                                  SCEV::FlagAnyWrap, Depth + 1),
-                       SCEV::FlagAnyWrap, Depth + 1);
+                                  SCEV::FlagNone, Depth + 1),
+                       SCEV::FlagNone, Depth + 1);
         if (SAdd == OperandExtendedAdd) {
           // Cache knowledge of AR NSW, which is propagated to this AddRec.
           setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR), SCEV::FlagNSW);
@@ -2058,8 +2058,8 @@ const SCEV *ScalarEvolution::getSignExtendExprImpl(SCEVUse Op, Type *Ty,
             getAddExpr(WideStart,
                        getMulExpr(WideMaxBECount,
                                   getZeroExtendExpr(Step, WideTy, Depth + 1),
-                                  SCEV::FlagAnyWrap, Depth + 1),
-                       SCEV::FlagAnyWrap, Depth + 1);
+                                  SCEV::FlagNone, Depth + 1),
+                       SCEV::FlagNone, Depth + 1);
         if (SAdd == OperandExtendedAdd) {
           // If AR wraps around then
           //
@@ -2375,7 +2375,7 @@ ScalarEvolution::getStrengthenedNoWrapFlagsFromBinOp(
   if (OBO->hasNoUnsignedWrap() && OBO->hasNoSignedWrap())
     return std::nullopt;
 
-  SCEV::NoWrapFlags Flags = SCEV::NoWrapFlags::FlagAnyWrap;
+  SCEV::NoWrapFlags Flags = SCEV::NoWrapFlags::FlagNone;
 
   if (OBO->hasNoUnsignedWrap())
     Flags = ScalarEvolution::setFlags(Flags, SCEV::FlagNUW);
@@ -2580,7 +2580,7 @@ SCEVUse ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
         ++Count;
       // Merge the values into a multiply.
       SCEVUse Scale = getConstant(Ty, Count);
-      const SCEV *Mul = getMulExpr(Scale, Ops[i], SCEV::FlagAnyWrap, Depth + 1);
+      const SCEV *Mul = getMulExpr(Scale, Ops[i], SCEV::FlagNone, Depth + 1);
       if (Ops.size() == Count)
         return Mul;
       Ops[i] = Mul;
@@ -2641,7 +2641,8 @@ SCEVUse ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
           }
         }
         if (Ok)
-          LargeOps.push_back(getMulExpr(LargeMulOps, SCEV::FlagAnyWrap, Depth + 1));
+          LargeOps.push_back(
+              getMulExpr(LargeMulOps, SCEV::FlagNone, Depth + 1));
       } else {
         Ok = false;
         break;
@@ -2649,7 +2650,7 @@ SCEVUse ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
     }
     if (Ok) {
       // Evaluate the expression in the larger type.
-      const SCEV *Fold = getAddExpr(LargeOps, SCEV::FlagAnyWrap, Depth + 1);
+      const SCEV *Fold = getAddExpr(LargeOps, SCEV::FlagNone, Depth + 1);
       // If it folds to something simple, use it. Otherwise, don't.
       if (isa<SCEVConstant>(Fold) || isa<SCEVUnknown>(Fold))
         return getTruncateExpr(Fold, Ty);
@@ -2667,7 +2668,7 @@ SCEVUse ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
     if (AddExpr && C && isa<SCEVConstant>(AddExpr->getOperand(0))) {
       auto C1 = cast<SCEVConstant>(AddExpr->getOperand(0))->getAPInt();
       auto C2 = C->getAPInt();
-      SCEV::NoWrapFlags PreservedFlags = SCEV::FlagAnyWrap;
+      SCEV::NoWrapFlags PreservedFlags = SCEV::FlagNone;
 
       APInt ConstAdd = C1 + C2;
       auto AddFlags = AddExpr->getNoWrapFlags();
@@ -2687,7 +2688,7 @@ SCEVUse ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
             ScalarEvolution::setFlags(PreservedFlags, SCEV::FlagNSW);
       }
 
-      if (PreservedFlags != SCEV::FlagAnyWrap) {
+      if (PreservedFlags != SCEV::FlagNone) {
         SmallVector<SCEVUse, 4> NewOps(AddExpr->operands());
         NewOps[0] = getConstant(ConstAdd);
         return getAddExpr(NewOps, PreservedFlags);
@@ -2702,7 +2703,7 @@ SCEVUse ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
       if (NarrowA == getNegativeSCEV(InnerAdd->getOperand(0)) &&
           getZeroExtendExpr(NarrowA, B->getType()) == A &&
           hasFlags(StrengthenNoWrapFlags(this, scAddExpr, {NarrowA, InnerAdd},
-                                         SCEV::FlagAnyWrap),
+                                         SCEV::FlagNone),
                    SCEV::FlagNUW)) {
         return getZeroExtendExpr(getAddExpr(NarrowA, InnerAdd), B->getType());
       }
@@ -2770,7 +2771,7 @@ SCEVUse ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
       // re-generate the operands list. Group the operands by constant scale,
       // to avoid multiplying by the same constant scale multiple times.
       std::map<APInt, SmallVector<SCEVUse, 4>, APIntCompare> MulOpLists;
-      for (const SCEV *NewOp : NewOps)
+      for (SCEVUse NewOp : NewOps)
         MulOpLists[M.find(NewOp)->second].push_back(NewOp);
       // Re-generate the operands list.
       Ops.clear();
@@ -2778,19 +2779,19 @@ SCEVUse ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
         Ops.push_back(getConstant(AccumulatedConstant));
       for (auto &MulOp : MulOpLists) {
         if (MulOp.first == 1) {
-          Ops.push_back(getAddExpr(MulOp.second, SCEV::FlagAnyWrap, Depth + 1));
+          Ops.push_back(getAddExpr(MulOp.second, SCEV::FlagNone, Depth + 1));
         } else if (MulOp.first != 0) {
-          Ops.push_back(getMulExpr(
-              getConstant(MulOp.first),
-              getAddExpr(MulOp.second, SCEV::FlagAnyWrap, Depth + 1),
-              SCEV::FlagAnyWrap, Depth + 1));
+          Ops.push_back(
+              getMulExpr(getConstant(MulOp.first),
+                         getAddExpr(MulOp.second, SCEV::FlagNone, Depth + 1),
+                         SCEV::FlagNone, Depth + 1));
         }
       }
       if (Ops.empty())
         return getZero(Ty);
       if (Ops.size() == 1)
         return Ops[0];
-      return getAddExpr(Ops, SCEV::FlagAnyWrap, Depth + 1);
+      return getAddExpr(Ops, SCEV::FlagNone, Depth + 1);
     }
   }
 
@@ -2801,7 +2802,7 @@ SCEVUse ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
       return M->getOperand(OpIdx == 0);
     SmallVector<SCEVUse, 4> Remaining(M->operands().take_front(OpIdx));
     append_range(Remaining, M->operands().drop_front(OpIdx + 1));
-    return getMulExpr(Remaining, SCEV::FlagAnyWrap, Depth + 1);
+    return getMulExpr(Remaining, SCEV::FlagNone, Depth + 1);
   };
 
   // If we are adding something to a multiply expression, make sure the
@@ -2849,9 +2850,9 @@ SCEVUse ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
       if (!Cofactors.empty()) {
         Cofactors.push_back(StripFactor(Mul, MulOp));
 
-        SCEVUse InnerSum = getAddExpr(Cofactors, SCEV::FlagAnyWrap, Depth + 1);
+        SCEVUse InnerSum = getAddExpr(Cofactors, SCEV::FlagNone, Depth + 1);
         SCEVUse OuterMul =
-            getMulExpr(MulOpSCEV, InnerSum, SCEV::FlagAnyWrap, Depth + 1);
+            getMulExpr(MulOpSCEV, InnerSum, SCEV::FlagNone, Depth + 1);
 
         // DeadIndices does not include Idx (the anchor), hence +1.
         if (Ops.size() == DeadIndices.size() + 1)
@@ -2866,7 +2867,7 @@ SCEVUse ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
           Ops.erase(Ops.begin() + (Dead > Idx ? Dead - 1 : Dead));
 
         Ops.push_back(OuterMul);
-        return getAddExpr(Ops, SCEV::FlagAnyWrap, Depth + 1);
+        return getAddExpr(Ops, SCEV::FlagNone, Depth + 1);
       }
     }
   }
@@ -2916,11 +2917,11 @@ SCEVUse ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
       // scope, thus proves the program undefined if the flags would be violated
       // in the outer scope.
       SCEV::NoWrapFlags AddFlags = Flags;
-      if (AddFlags != SCEV::FlagAnyWrap) {
+      if (AddFlags != SCEV::FlagNone) {
         auto *DefI = getDefiningScopeBound(LIOps);
         auto *ReachI = &*AddRecLoop->getHeader()->begin();
         if (!isGuaranteedToTransferExecutionTo(DefI, ReachI))
-          AddFlags = SCEV::FlagAnyWrap;
+          AddFlags = SCEV::FlagNone;
       }
       AddRecOps[0] = getAddExpr(LIOps, AddFlags, Depth + 1);
 
@@ -2939,7 +2940,7 @@ SCEVUse ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
           Ops[i] = NewRec;
           break;
         }
-      return getAddExpr(Ops, SCEV::FlagAnyWrap, Depth + 1);
+      return getAddExpr(Ops, SCEV::FlagNone, Depth + 1);
     }
 
     // Okay, if there weren't any loop invariants to be folded, check to see if
@@ -2969,14 +2970,14 @@ SCEVUse ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
               }
               AddRecOps[i] =
                   getAddExpr(AddRecOps[i], OtherAddRec->getOperand(i),
-                             SCEV::FlagAnyWrap, Depth + 1);
+                             SCEV::FlagNone, Depth + 1);
             }
             Ops.erase(Ops.begin() + OtherIdx); --OtherIdx;
           }
         }
         // Step size has changed, so we cannot guarantee no self-wraparound.
-        Ops[Idx] = getAddRecExpr(AddRecOps, AddRecLoop, SCEV::FlagAnyWrap);
-        return getAddExpr(Ops, SCEV::FlagAnyWrap, Depth + 1);
+        Ops[Idx] = getAddRecExpr(AddRecOps, AddRecLoop, SCEV::FlagNone);
+        return getAddExpr(Ops, SCEV::FlagNone, Depth + 1);
       }
     }
 
@@ -2986,7 +2987,7 @@ SCEVUse ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
 
   // Okay, it looks like we really DO need an add expr.  Check to see if we
   // already have one, otherwise create a new one.
-  assert((UseFlags == SCEV::FlagAnyWrap || equal(OrigOps, Ops)) &&
+  assert((UseFlags == SCEV::FlagNone || equal(OrigOps, Ops)) &&
          "Tried to add SCEVUse flags after operands changed");
   return {getOrCreateAddExpr(Ops, ComputeFlags(Ops)), UseFlags};
 }
@@ -3190,9 +3191,9 @@ SCEVUse ScalarEvolution::getMulExpr(SmallVectorImpl<SCEVUse> &Ops,
       const SCEV *Op0, *Op1;
       if (match(Ops[1], m_scev_Add(m_SCEV(Op0), m_SCEV(Op1))) &&
           containsConstantInAddMulChain(Ops[1])) {
-        const SCEV *LHS = getMulExpr(LHSC, Op0, SCEV::FlagAnyWrap, Depth + 1);
-        const SCEV *RHS = getMulExpr(LHSC, Op1, SCEV::FlagAnyWrap, Depth + 1);
-        return getAddExpr(LHS, RHS, SCEV::FlagAnyWrap, Depth + 1);
+        const SCEV *LHS = getMulExpr(LHSC, Op0, SCEV::FlagNone, Depth + 1);
+        const SCEV *RHS = getMulExpr(LHSC, Op1, SCEV::FlagNone, Depth + 1);
+        return getAddExpr(LHS, RHS, SCEV::FlagNone, Depth + 1);
       }
 
       if (Ops[0]->isAllOnesValue()) {
@@ -3202,19 +3203,19 @@ SCEVUse ScalarEvolution::getMulExpr(SmallVectorImpl<SCEVUse> &Ops,
           SmallVector<SCEVUse, 4> NewOps;
           bool AnyFolded = false;
           for (const SCEV *AddOp : Add->operands()) {
-            const SCEV *Mul = getMulExpr(Ops[0], SCEVUse(AddOp),
-                                         SCEV::FlagAnyWrap, Depth + 1);
+            const SCEV *Mul =
+                getMulExpr(Ops[0], SCEVUse(AddOp), SCEV::FlagNone, Depth + 1);
             if (!isa<SCEVMulExpr>(Mul)) AnyFolded = true;
             NewOps.push_back(Mul);
           }
           if (AnyFolded)
-            return getAddExpr(NewOps, SCEV::FlagAnyWrap, Depth + 1);
+            return getAddExpr(NewOps, SCEV::FlagNone, Depth + 1);
         } else if (const auto *AddRec = dyn_cast<SCEVAddRecExpr>(Ops[1])) {
           // Negation preserves a recurrence's no self-wrap property.
           SmallVector<SCEVUse, 4> Operands;
           for (const SCEV *AddRecOp : AddRec->operands())
             Operands.push_back(getMulExpr(Ops[0], SCEVUse(AddRecOp),
-                                          SCEV::FlagAnyWrap, Depth + 1));
+                                          SCEV::FlagNone, Depth + 1));
           // Let M be the minimum representable signed value. AddRec with nsw
           // multiplied by -1 can have signed overflow if and only if it takes a
           // value of M: M * (-1) would stay M and (M + 1) * (-1) would be the
@@ -3240,7 +3241,7 @@ SCEVUse ScalarEvolution::getMulExpr(SmallVectorImpl<SCEVUse> &Ops,
         if (isa<SCEVConstant>(InnerAdd->getOperand(0)) &&
             getZeroExtendExpr(NarrowC, Ops[1]->getType()) == LHSC &&
             hasFlags(StrengthenNoWrapFlags(this, scMulExpr, {NarrowC, InnerAdd},
-                                           SCEV::FlagAnyWrap),
+                                           SCEV::FlagNone),
                      SCEV::FlagNUW)) {
           const SCEV *Res =
               getMulExpr(NarrowC, InnerAdd, SCEV::FlagNUW, Depth + 1);
@@ -3297,7 +3298,7 @@ SCEVUse ScalarEvolution::getMulExpr(SmallVectorImpl<SCEVUse> &Ops,
     // list, and they are not necessarily sorted.  Recurse to resort and
     // resimplify any operands we just acquired.
     if (DeletedMul)
-      return getMulExpr(Ops, SCEV::FlagAnyWrap, Depth + 1);
+      return getMulExpr(Ops, SCEV::FlagNone, Depth + 1);
   }
 
   // If there are any add recurrences in the operands list, see if any other
@@ -3324,7 +3325,7 @@ SCEVUse ScalarEvolution::getMulExpr(SmallVectorImpl<SCEVUse> &Ops,
       //  NLI * LI * {Start,+,Step}  -->  NLI * {LI*Start,+,LI*Step}
       SmallVector<SCEVUse, 4> NewOps;
       NewOps.reserve(AddRec->getNumOperands());
-      const SCEV *Scale = getMulExpr(LIOps, SCEV::FlagAnyWrap, Depth + 1);
+      const SCEV *Scale = getMulExpr(LIOps, SCEV::FlagNone, Depth + 1);
 
       // If both the mul and addrec are nuw, we can preserve nuw.
       // If both the mul and addrec are nsw, we can only preserve nsw if either
@@ -3335,7 +3336,7 @@ SCEVUse ScalarEvolution::getMulExpr(SmallVectorImpl<SCEVUse> &Ops,
 
       for (unsigned i = 0, e = AddRec->getNumOperands(); i != e; ++i) {
         NewOps.push_back(getMulExpr(Scale, AddRec->getOperand(i),
-                                    SCEV::FlagAnyWrap, Depth + 1));
+                                    SCEV::FlagNone, Depth + 1));
 
         if (hasFlags(Flags, SCEV::FlagNSW) && !hasFlags(Flags, SCEV::FlagNUW)) {
           ConstantRange NSWRegion = ConstantRange::makeGuaranteedNoWrapRegion(
@@ -3357,7 +3358,7 @@ SCEVUse ScalarEvolution::getMulExpr(SmallVectorImpl<SCEVUse> &Ops,
           Ops[i] = NewRec;
           break;
         }
-      return getMulExpr(Ops, SCEV::FlagAnyWrap, Depth + 1);
+      return getMulExpr(Ops, SCEV::FlagNone, Depth + 1);
     }
 
     // Okay, if there weren't any loop invariants to be folded, check to see
@@ -3410,17 +3411,17 @@ SCEVUse ScalarEvolution::getMulExpr(SmallVectorImpl<SCEVUse> &Ops,
             const SCEV *CoeffTerm = getConstant(Ty, Coeff);
             const SCEV *Term1 = AddRec->getOperand(y-z);
             const SCEV *Term2 = OtherAddRec->getOperand(z);
-            SumOps.push_back(getMulExpr(CoeffTerm, Term1, Term2,
-                                        SCEV::FlagAnyWrap, Depth + 1));
+            SumOps.push_back(
+                getMulExpr(CoeffTerm, Term1, Term2, SCEV::FlagNone, Depth + 1));
           }
         }
         if (SumOps.empty())
           SumOps.push_back(getZero(Ty));
-        AddRecOps.push_back(getAddExpr(SumOps, SCEV::FlagAnyWrap, Depth + 1));
+        AddRecOps.push_back(getAddExpr(SumOps, SCEV::FlagNone, Depth + 1));
       }
       if (!Overflow) {
-        const SCEV *NewAddRec = getAddRecExpr(AddRecOps, AddRec->getLoop(),
-                                              SCEV::FlagAnyWrap);
+        const SCEV *NewAddRec =
+            getAddRecExpr(AddRecOps, AddRec->getLoop(), SCEV::FlagNone);
         if (Ops.size() == 2) return NewAddRec;
         Ops[Idx] = NewAddRec;
         Ops.erase(Ops.begin() + OtherIdx); --OtherIdx;
@@ -3431,7 +3432,7 @@ SCEVUse ScalarEvolution::getMulExpr(SmallVectorImpl<SCEVUse> &Ops,
       }
     }
     if (OpsModified)
-      return getMulExpr(Ops, SCEV::FlagAnyWrap, Depth + 1);
+      return getMulExpr(Ops, SCEV::FlagNone, Depth + 1);
 
     // Otherwise couldn't fold anything into this recurrence.  Move onto the
     // next one.
@@ -3439,7 +3440,7 @@ SCEVUse ScalarEvolution::getMulExpr(SmallVectorImpl<SCEVUse> &Ops,
 
   // Okay, it looks like we really DO need an mul expr.  Check to see if we
   // already have one, otherwise create a new one.
-  assert((UseFlags == SCEV::FlagAnyWrap || equal(OrigOps, Ops)) &&
+  assert((UseFlags == SCEV::FlagNone || equal(OrigOps, Ops)) &&
          "Tried to add SCEVUse flags after operands changed");
   return {getOrCreateMulExpr(Ops, ComputeFlags(Ops)), UseFlags};
 }
@@ -3513,9 +3514,9 @@ const SCEV *ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS) {
           const APInt &DivInt = RHSC->getAPInt();
           if (!StepInt.urem(DivInt) &&
               getZeroExtendExpr(AR, ExtTy) ==
-              getAddRecExpr(getZeroExtendExpr(AR->getStart(), ExtTy),
-                            getZeroExtendExpr(Step, ExtTy),
-                            AR->getLoop(), SCEV::FlagAnyWrap)) {
+                  getAddRecExpr(getZeroExtendExpr(AR->getStart(), ExtTy),
+                                getZeroExtendExpr(Step, ExtTy), AR->getLoop(),
+                                SCEV::FlagNone)) {
             SmallVector<SCEVUse, 4> Operands;
             for (const SCEV *Op : AR->operands())
               Operands.push_back(getUDivExpr(Op, RHS));
@@ -3530,7 +3531,7 @@ const SCEV *ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS) {
                 getZeroExtendExpr(AR, ExtTy) ==
                 getAddRecExpr(getZeroExtendExpr(AR->getStart(), ExtTy),
                               getZeroExtendExpr(Step, ExtTy), AR->getLoop(),
-                              SCEV::FlagAnyWrap);
+                              SCEV::FlagNone);
 
             // With N <= C and both N, C as powers-of-2, the transformation
             // {X,+,N}/C => {(X - X%N),+,N}/C preserves division results even
@@ -3546,7 +3547,7 @@ const SCEV *ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS) {
                 !isa<SCEVAddExpr>(NewStart)) {
               const SCEV *NewLHS =
                   getAddRecExpr(NewStart, Step, AR->getLoop(),
-                                NoWrap ? SCEV::FlagNW : SCEV::FlagAnyWrap);
+                                NoWrap ? SCEV::FlagNW : SCEV::FlagNone);
               if (LHS != NewLHS)
                 return getUDivExpr(NewLHS, RHS);
             }
@@ -3725,7 +3726,7 @@ SCEVUse ScalarEvolution::getAddRecExpr(SmallVectorImpl<SCEVUse> &Operands,
 
   if (Operands.back()->isZero()) {
     Operands.pop_back();
-    return getAddRecExpr(Operands, L, SCEV::FlagAnyWrap); // {X,+,0}  -->  X
+    return getAddRecExpr(Operands, L, SCEV::FlagNone); // {X,+,0}  -->  X
   }
 
   // It's tempting to want to call getConstantMaxBackedgeTakenCount count here and
@@ -3781,7 +3782,7 @@ SCEVUse ScalarEvolution::getAddRecExpr(SmallVectorImpl<SCEVUse> &Operands,
 
   // Okay, it looks like we really DO need an addrec expr.  Check to see if we
   // already have one, otherwise create a new one.
-  assert((UseFlags == SCEV::FlagAnyWrap || equal(OrigOperands, Operands)) &&
+  assert((UseFlags == SCEV::FlagNone || equal(OrigOperands, Operands)) &&
          "Tried to add SCEVUse flags after operands changed");
   return {getOrCreateAddRecExpr(Operands, L, Flags), UseFlags};
 }
@@ -3809,7 +3810,7 @@ const SCEV *ScalarEvolution::getGEPExpr(GEPOperator *GEP,
 const SCEV *ScalarEvolution::getGEPExpr(SCEVUse BaseExpr,
                                         ArrayRef<SCEVUse> IndexExprs,
                                         Type *SrcElementTy, GEPNoWrapFlags NW) {
-  SCEV::NoWrapFlags OffsetWrap = SCEV::FlagAnyWrap;
+  SCEV::NoWrapFlags OffsetWrap = SCEV::FlagNone;
   if (NW.hasNoUnsignedSignedWrap())
     OffsetWrap = setFlags(OffsetWrap, SCEV::FlagNSW);
   if (NW.hasNoUnsignedWrap())
@@ -3862,7 +3863,7 @@ const SCEV *ScalarEvolution::getGEPExpr(SCEVUse BaseExpr,
   // non-negative, we can use nuw.
   bool NUW = NW.hasNoUnsignedWrap() ||
              (NW.hasNoUnsignedSignedWrap() && isKnownNonNegative(Offset));
-  SCEV::NoWrapFlags BaseWrap = NUW ? SCEV::FlagNUW : SCEV::FlagAnyWrap;
+  SCEV::NoWrapFlags BaseWrap = NUW ? SCEV::FlagNUW : SCEV::FlagNone;
   const SCEV *GEPExpr = getAddExpr(BaseExpr, Offset, BaseWrap);
   assert(BaseExpr->getType() == GEPExpr->getType() &&
          "GEP should not change type mid-flight.");
@@ -3880,7 +3881,7 @@ SCEV *ScalarEvolution::findExistingSCEVInCache(SCEVTypes SCEVType,
 }
 
 const SCEV *ScalarEvolution::getAbsExpr(const SCEV *Op, bool IsNSW) {
-  SCEV::NoWrapFlags Flags = IsNSW ? SCEV::FlagNSW : SCEV::FlagAnyWrap;
+  SCEV::NoWrapFlags Flags = IsNSW ? SCEV::FlagNSW : SCEV::FlagNone;
   return getSMaxExpr(Op, getNegativeSCEV(Op, Flags));
 }
 
@@ -4637,7 +4638,7 @@ const SCEV *ScalarEvolution::removePointerBase(const SCEV *P) {
     Ops[0] = removePointerBase(Ops[0]);
     // Don't try to transfer nowrap flags for now. We could in some cases
     // (for example, if pointer operand of the AddRec is a SCEVUnknown).
-    return getAddRecExpr(Ops, AddRec->getLoop(), SCEV::FlagAnyWrap);
+    return getAddRecExpr(Ops, AddRec->getLoop(), SCEV::FlagNone);
   }
   if (auto *Add = dyn_cast<SCEVAddExpr>(P)) {
     // The base of an Add is the pointer operand.
@@ -4678,7 +4679,7 @@ const SCEV *ScalarEvolution::getMinusSCEV(SCEVUse LHS, SCEVUse RHS,
 
   // We represent LHS - RHS as LHS + (-1)*RHS. This transformation
   // makes it so that we cannot make much use of NUW.
-  auto AddFlags = SCEV::FlagAnyWrap;
+  auto AddFlags = SCEV::FlagNone;
   const bool RHSIsNotMinSigned =
       !getSignedRangeMin(RHS).isMinSignedValue();
   if (hasFlags(Flags, SCEV::FlagNSW)) {
@@ -4703,7 +4704,7 @@ const SCEV *ScalarEvolution::getMinusSCEV(SCEVUse LHS, SCEVUse RHS,
   // relative to a loop that is to be found in a recurrence in LHS and
   // not in RHS. Applying NSW to (-1)*M may then let the NSW have a
   // larger scope than intended.
-  auto NegFlags = RHSIsNotMinSigned ? SCEV::FlagNSW : SCEV::FlagAnyWrap;
+  auto NegFlags = RHSIsNotMinSigned ? SCEV::FlagNSW : SCEV::FlagNone;
 
   return getAddExpr(LHS, getNegativeSCEV(RHS, NegFlags), AddFlags, Depth);
 }
@@ -5553,7 +5554,7 @@ ScalarEvolution::createAddRecFromPHIWithCastsImpl(const SCEVUnknown *SymbolicPHI
   const SCEV *StartVal = getSCEV(StartValueV);
   const SCEV *PHISCEV =
       getAddRecExpr(getTruncateExpr(StartVal, TruncTy),
-                    getTruncateExpr(Accum, TruncTy), L, SCEV::FlagAnyWrap);
+                    getTruncateExpr(Accum, TruncTy), L, SCEV::FlagNone);
 
   // PHISCEV can be either a SCEVConstant or a SCEVAddRecExpr.
   // ex: If truncated Accum is 0 and StartVal is a constant, then PHISCEV
@@ -5630,7 +5631,7 @@ ScalarEvolution::createAddRecFromPHIWithCastsImpl(const SCEVUnknown *SymbolicPHI
   // which the casts had been folded away. The caller can rewrite SymbolicPHI
   // into NewAR if it will also add the runtime overflow checks specified in
   // Predicates.
-  const SCEV *NewAR = getAddRecExpr(StartVal, Accum, L, SCEV::FlagAnyWrap);
+  const SCEV *NewAR = getAddRecExpr(StartVal, Accum, L, SCEV::FlagNone);
 
   std::pair<const SCEV *, SmallVector<const SCEVPredicate *, 3>> PredRewrite =
       std::make_pair(NewAR, Predicates);
@@ -5704,7 +5705,7 @@ bool PredicatedScalarEvolution::areAddRecsEqualWithPreds(
 
 static SCEV::NoWrapFlags
 getNoWrapFlagsForGEP(GEPOperator *GEP, const SCEV *Accum, ScalarEvolution &SE) {
-  SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap;
+  SCEV::NoWrapFlags Flags = SCEV::FlagNone;
   GEPNoWrapFlags NW = GEP->getNoWrapFlags();
   // If the increment has any nowrap flags, then we know the address
   // space cannot be wrapped around.
@@ -5734,7 +5735,7 @@ const SCEV *ScalarEvolution::createSimpleAffineAddRec(PHINode *PN,
   assert(BEValueV && StartValueV);
 
   const SCEV *Accum = nullptr;
-  SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap;
+  SCEV::NoWrapFlags Flags = SCEV::FlagNone;
   if (auto BO = MatchBinaryOp(BEValueV, getDataLayout(), AC, DT, PN)) {
     if (BO->Opcode != Instruction::Add)
       return nullptr;
@@ -5861,7 +5862,7 @@ const SCEV *ScalarEvolution::createAddRecFromPHI(PHINode *PN) {
       if (isLoopInvariant(Accum, L) ||
           (isa<SCEVAddRecExpr>(Accum) &&
            cast<SCEVAddRecExpr>(Accum)->getLoop() == L)) {
-        SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap;
+        SCEV::NoWrapFlags Flags = SCEV::FlagNone;
 
         if (auto BO = MatchBinaryOp(BEValueV, getDataLayout(), AC, DT, PN)) {
           if (BO->Opcode == Instruction::Add && BO->LHS == PN) {
@@ -7140,7 +7141,7 @@ ScalarEvolution::getRangeForAffineAR(const SCEV *Start, const SCEV *Step,
       getUnsignedRangeMax(Step), getUnsignedRange(Start), MaxBECount,
       /*Signed=*/false);
 
-  SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap;
+  SCEV::NoWrapFlags Flags = SCEV::FlagNone;
   if (NUW)
     Flags = ScalarEvolution::setFlags(Flags, SCEV::FlagNUW);
   if (NSW1 && NSW2)
@@ -7333,11 +7334,12 @@ ConstantRange ScalarEvolution::getRangeViaFactoring(const SCEV *Start,
 }
 
 SCEV::NoWrapFlags ScalarEvolution::getNoWrapFlagsFromUB(const Value *V) {
-  if (isa<ConstantExpr>(V)) return SCEV::FlagAnyWrap;
+  if (isa<ConstantExpr>(V))
+    return SCEV::FlagNone;
   const BinaryOperator *BinOp = cast<BinaryOperator>(V);
 
   // Return early if there are no flags to propagate to the SCEV.
-  SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap;
+  SCEV::NoWrapFlags Flags = SCEV::FlagNone;
   if (auto *PDI = dyn_cast<PossiblyDisjointInst>(BinOp);
       PDI && PDI->isDisjoint()) {
     Flags = ScalarEvolution::setFlags(SCEV::FlagNUW, SCEV::FlagNSW);
@@ -7347,10 +7349,10 @@ SCEV::NoWrapFlags ScalarEvolution::getNoWrapFlagsFromUB(const Value *V) {
     if (BinOp->hasNoSignedWrap())
       Flags = ScalarEvolution::setFlags(Flags, SCEV::FlagNSW);
   }
-  if (Flags == SCEV::FlagAnyWrap)
-    return SCEV::FlagAnyWrap;
+  if (Flags == SCEV::FlagNone)
+    return SCEV::FlagNone;
 
-  return isSCEVExprNeverPoison(BinOp) ? Flags : SCEV::FlagAnyWrap;
+  return isSCEVExprNeverPoison(BinOp) ? Flags : SCEV::FlagNone;
 }
 
 const Instruction *
@@ -7882,7 +7884,7 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
           // formed with operands from AddOps.
           const SCEV *RHS = getSCEV(BO->RHS);
           SCEV::NoWrapFlags Flags = getNoWrapFlagsFromUB(BO->Op);
-          if (Flags != SCEV::FlagAnyWrap) {
+          if (Flags != SCEV::FlagNone) {
             const SCEV *LHS = getSCEV(BO->LHS);
             if (BO->Opcode == Instruction::Sub)
               AddOps.push_back(getMinusSCEV(LHS, RHS, Flags));
@@ -7920,7 +7922,7 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
           }
 
           SCEV::NoWrapFlags Flags = getNoWrapFlagsFromUB(BO->Op);
-          if (Flags != SCEV::FlagAnyWrap) {
+          if (Flags != SCEV::FlagNone) {
             LHS = getSCEV(BO->LHS);
             RHS = getSCEV(BO->RHS);
             MulOps.push_back(getMulExpr(LHS, RHS, Flags));
@@ -7949,7 +7951,7 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
       RHS = getSCEV(BO->RHS);
       return getURemExpr(LHS, RHS);
     case Instruction::Sub: {
-      SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap;
+      SCEV::NoWrapFlags Flags = SCEV::FlagNone;
       if (BO->Op)
         Flags = getNoWrapFlagsFromUB(BO->Op);
 
@@ -8108,7 +8110,7 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
         // turn a nuw nsw shl into a nuw nsw mul. However, nsw in isolation
         // requires special handling. It can be preserved as long as we're not
         // left shifting by bitwidth - 1.
-        auto Flags = SCEV::FlagAnyWrap;
+        auto Flags = SCEV::FlagNone;
         if (BO->Op) {
           auto MulFlags = getNoWrapFlagsFromUB(BO->Op);
           if (any(MulFlags & SCEV::FlagNSW) &&
@@ -14040,8 +14042,7 @@ SCEVAddRecExpr::getPostIncExpr(ScalarEvolution &SE) const {
   const SCEV *Last = getOperand(getNumOperands() - 1);
   assert(!Last->isZero() && "Recurrency with zero step?");
   Ops.push_back(Last);
-  return cast<SCEVAddRecExpr>(SE.getAddRecExpr(Ops, getLoop(),
-                                               SCEV::FlagAnyWrap));
+  return cast<SCEVAddRecExpr>(SE.getAddRecExpr(Ops, getLoop(), SCEV::FlagNone));
 }
 
 // Return true when S contains at least an undef value.
@@ -16302,7 +16303,7 @@ const SCEV *ScalarEvolution::LoopGuards::rewrite(const SCEV *Expr) const {
     const DenseMap<const SCEV *, const SCEV *> &Map;
     const SmallDenseSet<std::pair<const SCEV *, const SCEV *>> &NotEqual;
 
-    SCEV::NoWrapFlags FlagMask = SCEV::FlagAnyWrap;
+    SCEV::NoWrapFlags FlagMask = SCEV::FlagNone;
 
   public:
     SCEVLoopGuardRewriter(ScalarEvolution &SE,

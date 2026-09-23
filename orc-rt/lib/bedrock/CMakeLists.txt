@@ -62,6 +62,7 @@ set(ORC_RT_BEDROCK_WINDOWS_SOURCES
   sys/windows/DynamicLibrary.cpp
   sys/windows/Memory.cpp
   sys/windows/CPUFeatures.cpp
+  sys/windows/PageSize.cpp
   sys/windows/TargetTriple.cpp
 )
 

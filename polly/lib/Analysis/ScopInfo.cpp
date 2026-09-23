@@ -1384,7 +1384,7 @@ public:
     const SCEV *Start = visit(E->getStart());
     const SCEV *AddRec = SE.getAddRecExpr(SE.getConstant(E->getType(), 0),
                                           visit(E->getStepRecurrence(SE)),
-                                          E->getLoop(), SCEV::FlagAnyWrap);
+                                          E->getLoop(), SCEV::FlagNone);
     return SE.getAddExpr(Start, AddRec);
   }
 

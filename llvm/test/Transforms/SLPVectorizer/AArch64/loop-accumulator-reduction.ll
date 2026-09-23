@@ -4,7 +4,8 @@
 @cst = external global [9 x double]
 
 ; Loop-carried fadd reduction: the accumulator must become a vector phi,
-; reduced once after the loop.
+; reduced once after the loop. The row fadds do not contract, the fmadd chains
+; of the scalar rows would be cheaper than the vector rows.
 define double @loop_acc_fadd(ptr %p, i64 %n) {
 ; CHECK-LABEL: define double @loop_acc_fadd(
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) {
@@ -41,14 +42,14 @@ define double @loop_acc_fadd(ptr %p, i64 %n) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x double> [[TMP8]], double [[C4]], i64 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x double> [[TMP9]], double [[C7]], i64 2
 ; CHECK-NEXT:    [[TMP11:%.*]] = fmul fast <4 x double> [[TMP7]], [[TMP10]]
-; CHECK-NEXT:    [[TMP12:%.*]] = fadd fast <4 x double> [[TMP11]], [[TMP5]]
+; CHECK-NEXT:    [[TMP12:%.*]] = fadd reassoc nnan ninf nsz arcp afn <4 x double> [[TMP11]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x double> <double poison, double -0.000000e+00, double poison, double poison>, double [[L2]], i64 0
 ; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <4 x double> [[TMP13]], <4 x double> poison, <4 x i32> <i32 0, i32 0, i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x double> <double poison, double poison, double poison, double 1.000000e+00>, double [[C2]], i64 0
 ; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x double> [[TMP15]], double [[C5]], i64 1
 ; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x double> [[TMP16]], double [[C8]], i64 2
 ; CHECK-NEXT:    [[TMP18:%.*]] = fmul fast <4 x double> [[TMP14]], [[TMP17]]
-; CHECK-NEXT:    [[TMP19:%.*]] = fadd fast <4 x double> [[TMP12]], [[TMP18]]
+; CHECK-NEXT:    [[TMP19:%.*]] = fadd reassoc nnan ninf nsz arcp afn <4 x double> [[TMP12]], [[TMP18]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = shufflevector <4 x double> [[TMP19]], <4 x double> <double poison, double poison, double poison, double 1.000000e+00>, <4 x i32> <i32 0, i32 1, i32 poison, i32 7>
 ; CHECK-NEXT:    [[TMP21:%.*]] = shufflevector <4 x double> [[TMP20]], <4 x double> [[TMP19]], <4 x i32> <i32 0, i32 1, i32 6, i32 3>
 ; CHECK-NEXT:    [[TMP22:%.*]] = fmul <4 x double> [[TMP19]], [[TMP21]]
@@ -85,19 +86,19 @@ loop:
   %c8 = load double, ptr getelementptr (double, ptr @cst, i64 8), align 8
   %a00 = fmul fast double %l0, %c0
   %a01 = fmul fast double %l1, %c1
-  %a02 = fadd fast double %a01, %a00
+  %a02 = fadd reassoc nnan ninf nsz arcp afn double %a01, %a00
   %a03 = fmul fast double %l2, %c2
-  %a = fadd fast double %a02, %a03
+  %a = fadd reassoc nnan ninf nsz arcp afn double %a02, %a03
   %b00 = fmul fast double %l0, %c3
   %b01 = fmul fast double %l1, %c4
-  %b02 = fadd fast double %b01, %b00
+  %b02 = fadd reassoc nnan ninf nsz arcp afn double %b01, %b00
   %b03 = fmul fast double %l2, %c5
-  %b = fadd fast double %b02, %b03
+  %b = fadd reassoc nnan ninf nsz arcp afn double %b02, %b03
   %d00 = fmul fast double %l0, %c6
   %d01 = fmul fast double %l1, %c7
-  %d02 = fadd fast double %d01, %d00
+  %d02 = fadd reassoc nnan ninf nsz arcp afn double %d01, %d00
   %d03 = fmul fast double %l2, %c8
-  %d = fadd fast double %d02, %d03
+  %d = fadd reassoc nnan ninf nsz arcp afn double %d02, %d03
   %sa = fmul double %a, %a
   %t1 = fadd fast double %sa, %acc
   %sb = fmul double %b, %b
@@ -692,7 +693,7 @@ define double @dup_exit_edges_bypass(ptr %p, i64 %n, double %y, i32 %sw) {
 ; CHECK-NEXT:    [[SLPRDX_FROMLOOP:%.*]] = phi i1 [ true, %[[LOOP]] ], [ false, %[[ENTRY]] ], [ false, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[RES:%.*]] = phi double [ poison, %[[LOOP]] ], [ [[Y]], %[[ENTRY]] ], [ [[Y]], %[[ENTRY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = call fast double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[SLPRDX_EXIT]])
-; CHECK-NEXT:    [[TMP1:%.*]] = select fast i1 [[SLPRDX_FROMLOOP]], double [[TMP2]], double [[RES]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[SLPRDX_FROMLOOP]], double [[TMP2]], double [[RES]]
 ; CHECK-NEXT:    ret double [[TMP1]]
 ;
 entry:
@@ -797,7 +798,7 @@ define double @early_exit_in_loop_value(ptr %p, i64 %n) {
 ; CHECK-NEXT:    [[SLPRDX_FROMLOOP:%.*]] = phi i1 [ true, %[[LATCH]] ], [ false, %[[LOOP]] ]
 ; CHECK-NEXT:    [[RES:%.*]] = phi double [ poison, %[[LATCH]] ], [ [[TMP1]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call fast double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[SLPRDX_EXIT]])
-; CHECK-NEXT:    [[TMP2:%.*]] = select fast i1 [[SLPRDX_FROMLOOP]], double [[TMP3]], double [[RES]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[SLPRDX_FROMLOOP]], double [[TMP3]], double [[RES]]
 ; CHECK-NEXT:    ret double [[TMP2]]
 ;
 entry:
@@ -1323,7 +1324,7 @@ define double @bypass_from_sibling_loop(ptr %p, ptr %q, i64 %n, i64 %m, i1 %c) {
 ; CHECK-NEXT:    [[SLPRDX_FROMLOOP:%.*]] = phi i1 [ true, %[[LOOP]] ], [ false, %[[LOOP2]] ]
 ; CHECK-NEXT:    [[RES1:%.*]] = phi double [ poison, %[[LOOP]] ], [ [[SUM2]], %[[LOOP2]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call fast double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[SLPRDX_EXIT]])
-; CHECK-NEXT:    [[RES:%.*]] = select fast i1 [[SLPRDX_FROMLOOP]], double [[TMP1]], double [[RES1]]
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[SLPRDX_FROMLOOP]], double [[TMP1]], double [[RES1]]
 ; CHECK-NEXT:    ret double [[RES]]
 ;
 entry:

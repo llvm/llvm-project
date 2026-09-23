@@ -29,7 +29,9 @@
 
 #include "gtest/gtest.h"
 
-inline void noErrors(orc_rt::Error Err) { orc_rt::cantFail(std::move(Err)); }
+inline void noErrors(orc_rt::Error Err) noexcept {
+  orc_rt::cantFail(std::move(Err));
+}
 
 /// ReportError callback for tests that records the message of every reported
 /// error, in the order reported.
@@ -37,7 +39,7 @@ class AccumulateErrors {
 public:
   AccumulateErrors(std::vector<std::string> &ErrMsgs) : ErrMsgs(ErrMsgs) {}
 
-  void operator()(orc_rt::Error Err) {
+  void operator()(orc_rt::Error Err) noexcept {
     ErrMsgs.push_back(orc_rt::toString(std::move(Err)));
   }
 

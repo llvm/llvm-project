@@ -3287,7 +3287,6 @@ bool IRTranslatorImpl::translateKnownIntrinsic(const CallInst &CI,
   case Intrinsic::annotation:
   case Intrinsic::ptr_annotation:
   case Intrinsic::launder_invariant_group:
-  case Intrinsic::strip_invariant_group:
   case Intrinsic::threadlocal_address: {
     // Drop the intrinsic, but forward the value.
     MIRBuilder.buildCopy(getOrCreateVReg(CI),
@@ -5300,7 +5299,8 @@ PreservedAnalyses IRTranslatorPass::run(MachineFunction &MF,
   const TargetSubtargetInfo &Subtarget = MF.getSubtarget();
   Function &F = MF.getFunction();
 
-  bool ShouldSkipOpts = MF.getFunction().hasOptNone();
+  bool ShouldSkipOpts = MF.getFunction().hasOptNone() ||
+                        shouldSkipOptimizationForOptBisect(MF.getFunction());
   auto &FAM = MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
                   .getManager();
   auto &MAMProxy =
