@@ -5405,7 +5405,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
   if (!MRI.isSSA() && MI.isCopy())
     return verifyCopy(MI, MRI, ErrInfo);
 
-  if (SIInstrInfo::isGenericOpcode(Opcode))
+  if (SIInstrInfo::isGenericOpcode(Opcode) && !MI.isInlineAsm())
     return true;
 
   int Src0Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src0);

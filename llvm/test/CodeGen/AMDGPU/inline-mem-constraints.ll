@@ -2,6 +2,11 @@
 
 ; RUN: llc -mtriple=amdgpu8.02 < %s | FileCheck --check-prefix=VI %s
 
+; NOTE: addrspace(2) (region/GDS), addrspace(3) (local/LDS), and addrspace(5)
+; (private/scratch) use 32-bit pointers in AMDGPU, which are incompatible with
+; flat_load/flat_store (which require a 64-bit address operand). Tests for
+; those address spaces are therefore absent.
+
 define void @flat_load_RF(ptr %in) {
 ; VI-LABEL: flat_load_RF:
 ; VI:       ; %bb.0: ; %entry
@@ -40,38 +45,6 @@ entry:
   ret void
 }
 
-define void @flat_load_RF_as2(ptr %in) {
-; VI-LABEL: flat_load_RF_as2:
-; VI:       ; %bb.0: ; %entry
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    flat_load_dword v0, v[0:1]
-; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; VI-NEXT:    ;;#ASMSTART
-; VI-NEXT:    flat_load_dword v0, v0
-; VI-NEXT:    ;;#ASMEND
-; VI-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  %addr = load ptr addrspace(2), ptr %in
-  %a = tail call i32 asm sideeffect "flat_load_dword $0, $1", "=v,*^RF"(ptr addrspace(2) elementtype(i32) %addr)
-  ret void
-}
-
-define void @flat_load_RF_as3(ptr %in) {
-; VI-LABEL: flat_load_RF_as3:
-; VI:       ; %bb.0: ; %entry
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    flat_load_dword v0, v[0:1]
-; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; VI-NEXT:    ;;#ASMSTART
-; VI-NEXT:    flat_load_dword v0, v0
-; VI-NEXT:    ;;#ASMEND
-; VI-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  %addr = load ptr addrspace(3), ptr %in
-  %a = tail call i32 asm sideeffect "flat_load_dword $0, $1", "=v,*^RF"(ptr addrspace(3) elementtype(i32) %addr)
-  ret void
-}
-
 define void @flat_load_RF_as4(ptr %in) {
 ; VI-LABEL: flat_load_RF_as4:
 ; VI:       ; %bb.0: ; %entry
@@ -88,22 +61,6 @@ define void @flat_load_RF_as4(ptr %in) {
 entry:
   %addr = load ptr addrspace(4), ptr %in
   %a = tail call i32 asm sideeffect "flat_load_dword $0, $1", "=v,*^RF"(ptr addrspace(4) elementtype(i32) %addr)
-  ret void
-}
-
-define void @flat_load_RF_as5(ptr %in) {
-; VI-LABEL: flat_load_RF_as5:
-; VI:       ; %bb.0: ; %entry
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    flat_load_dword v0, v[0:1]
-; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; VI-NEXT:    ;;#ASMSTART
-; VI-NEXT:    flat_load_dword v0, v0
-; VI-NEXT:    ;;#ASMEND
-; VI-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  %addr = load ptr addrspace(5), ptr %in
-  %a = tail call i32 asm sideeffect "flat_load_dword $0, $1", "=v,*^RF"(ptr addrspace(5) elementtype(i32) %addr)
   ret void
 }
 
@@ -146,38 +103,6 @@ entry:
   ret void
 }
 
-define void @flat_load_m_constraint_as2(ptr %in) {
-; VI-LABEL: flat_load_m_constraint_as2:
-; VI:       ; %bb.0: ; %entry
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    flat_load_dword v0, v[0:1]
-; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; VI-NEXT:    ;;#ASMSTART
-; VI-NEXT:    flat_load_dword v0, v0
-; VI-NEXT:    ;;#ASMEND
-; VI-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  %addr = load ptr addrspace(2), ptr %in
-  %a = tail call i32 asm sideeffect "flat_load_dword $0, $1", "=v,*m"(ptr addrspace(2) elementtype(i32) %addr)
-  ret void
-}
-
-define void @flat_load_m_constraint_as3(ptr %in) {
-; VI-LABEL: flat_load_m_constraint_as3:
-; VI:       ; %bb.0: ; %entry
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    flat_load_dword v0, v[0:1]
-; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; VI-NEXT:    ;;#ASMSTART
-; VI-NEXT:    flat_load_dword v0, v0
-; VI-NEXT:    ;;#ASMEND
-; VI-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  %addr = load ptr addrspace(3), ptr %in
-  %a = tail call i32 asm sideeffect "flat_load_dword $0, $1", "=v,*m"(ptr addrspace(3) elementtype(i32) %addr)
-  ret void
-}
-
 define void @flat_load_m_constraint_as4(ptr %in) {
 ; VI-LABEL: flat_load_m_constraint_as4:
 ; VI:       ; %bb.0: ; %entry
@@ -194,22 +119,6 @@ define void @flat_load_m_constraint_as4(ptr %in) {
 entry:
   %addr = load ptr addrspace(4), ptr %in
   %a = tail call i32 asm sideeffect "flat_load_dword $0, $1", "=v,*m"(ptr addrspace(4) elementtype(i32) %addr)
-  ret void
-}
-
-define void @flat_load_m_constraint_as5(ptr %in) {
-; VI-LABEL: flat_load_m_constraint_as5:
-; VI:       ; %bb.0: ; %entry
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    flat_load_dword v0, v[0:1]
-; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; VI-NEXT:    ;;#ASMSTART
-; VI-NEXT:    flat_load_dword v0, v0
-; VI-NEXT:    ;;#ASMEND
-; VI-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  %addr = load ptr addrspace(5), ptr %in
-  %a = tail call i32 asm sideeffect "flat_load_dword $0, $1", "=v,*m"(ptr addrspace(5) elementtype(i32) %addr)
   ret void
 }
 
@@ -294,40 +203,6 @@ define void @flat_store_RF_as1(ptr %in, ptr %in2) {
   ret void
 }
 
-define void @flat_store_RF_as2(ptr %in, ptr %in2) {
-; VI-LABEL: flat_store_RF_as2:
-; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    flat_load_dword v0, v[0:1]
-; VI-NEXT:    flat_load_dword v1, v[2:3]
-; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; VI-NEXT:    ;;#ASMSTART
-; VI-NEXT:    flat_store_dword v0, v1
-; VI-NEXT:    ;;#ASMEND
-; VI-NEXT:    s_setpc_b64 s[30:31]
-  %addr = load ptr addrspace(2), ptr %in
-  %data = load i32, ptr %in2
-  call void asm "flat_store_dword $0, $1", "=*^RF,v"(ptr addrspace(2) elementtype(i32) %addr, i32 %data)
-  ret void
-}
-
-define void @flat_store_RF_as3(ptr %in, ptr %in2) {
-; VI-LABEL: flat_store_RF_as3:
-; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    flat_load_dword v0, v[0:1]
-; VI-NEXT:    flat_load_dword v1, v[2:3]
-; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; VI-NEXT:    ;;#ASMSTART
-; VI-NEXT:    flat_store_dword v0, v1
-; VI-NEXT:    ;;#ASMEND
-; VI-NEXT:    s_setpc_b64 s[30:31]
-  %addr = load ptr addrspace(3), ptr %in
-  %data = load i32, ptr %in2
-  call void asm "flat_store_dword $0, $1", "=*^RF,v"(ptr addrspace(3) elementtype(i32) %addr, i32 %data)
-  ret void
-}
-
 define void @flat_store_RF_as4(ptr %in, ptr %in2) {
 ; VI-LABEL: flat_store_RF_as4:
 ; VI:       ; %bb.0:
@@ -345,23 +220,6 @@ define void @flat_store_RF_as4(ptr %in, ptr %in2) {
   %addr = load ptr addrspace(4), ptr %in
   %data = load i32, ptr %in2
   call void asm "flat_store_dword $0, $1", "=*^RF,v"(ptr addrspace(4) elementtype(i32) %addr, i32 %data)
-  ret void
-}
-
-define void @flat_store_RF_as5(ptr %in, ptr %in2) {
-; VI-LABEL: flat_store_RF_as5:
-; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    flat_load_dword v0, v[0:1]
-; VI-NEXT:    flat_load_dword v1, v[2:3]
-; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; VI-NEXT:    ;;#ASMSTART
-; VI-NEXT:    flat_store_dword v0, v1
-; VI-NEXT:    ;;#ASMEND
-; VI-NEXT:    s_setpc_b64 s[30:31]
-  %addr = load ptr addrspace(5), ptr %in
-  %data = load i32, ptr %in2
-  call void asm "flat_store_dword $0, $1", "=*^RF,v"(ptr addrspace(5) elementtype(i32) %addr, i32 %data)
   ret void
 }
 
@@ -405,40 +263,6 @@ define void @flat_store_m_constraint_as1(ptr %in, ptr %in2) {
   ret void
 }
 
-define void @flat_store_m_constraint_as2(ptr %in, ptr %in2) {
-; VI-LABEL: flat_store_m_constraint_as2:
-; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    flat_load_dword v0, v[0:1]
-; VI-NEXT:    flat_load_dword v1, v[2:3]
-; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; VI-NEXT:    ;;#ASMSTART
-; VI-NEXT:    flat_store_dword v0, v1
-; VI-NEXT:    ;;#ASMEND
-; VI-NEXT:    s_setpc_b64 s[30:31]
-  %addr = load ptr addrspace(2), ptr %in
-  %data = load i32, ptr %in2
-  call void asm "flat_store_dword $0, $1", "=*m,v"(ptr addrspace(2) elementtype(i32) %addr, i32 %data)
-  ret void
-}
-
-define void @flat_store_m_constraint_as3(ptr %in, ptr %in2) {
-; VI-LABEL: flat_store_m_constraint_as3:
-; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    flat_load_dword v0, v[0:1]
-; VI-NEXT:    flat_load_dword v1, v[2:3]
-; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; VI-NEXT:    ;;#ASMSTART
-; VI-NEXT:    flat_store_dword v0, v1
-; VI-NEXT:    ;;#ASMEND
-; VI-NEXT:    s_setpc_b64 s[30:31]
-  %addr = load ptr addrspace(3), ptr %in
-  %data = load i32, ptr %in2
-  call void asm "flat_store_dword $0, $1", "=*m,v"(ptr addrspace(3) elementtype(i32) %addr, i32 %data)
-  ret void
-}
-
 define void @flat_store_m_constraint_as4(ptr %in, ptr %in2) {
 ; VI-LABEL: flat_store_m_constraint_as4:
 ; VI:       ; %bb.0:
@@ -456,23 +280,6 @@ define void @flat_store_m_constraint_as4(ptr %in, ptr %in2) {
   %addr = load ptr addrspace(4), ptr %in
   %data = load i32, ptr %in2
   call void asm "flat_store_dword $0, $1", "=*m,v"(ptr addrspace(4) elementtype(i32) %addr, i32 %data)
-  ret void
-}
-
-define void @flat_store_m_constraint_as5(ptr %in, ptr %in2) {
-; VI-LABEL: flat_store_m_constraint_as5:
-; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    flat_load_dword v0, v[0:1]
-; VI-NEXT:    flat_load_dword v1, v[2:3]
-; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; VI-NEXT:    ;;#ASMSTART
-; VI-NEXT:    flat_store_dword v0, v1
-; VI-NEXT:    ;;#ASMEND
-; VI-NEXT:    s_setpc_b64 s[30:31]
-  %addr = load ptr addrspace(5), ptr %in
-  %data = load i32, ptr %in2
-  call void asm "flat_store_dword $0, $1", "=*m,v"(ptr addrspace(5) elementtype(i32) %addr, i32 %data)
   ret void
 }
 
