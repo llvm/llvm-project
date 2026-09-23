@@ -594,7 +594,9 @@ def CUFOpConversion : Pass<"cuf-convert", "mlir::ModuleOp"> {
 
 def CUFOpConversionLate : Pass<"cuf-convert-late", "mlir::ModuleOp"> {
   let summary = "Convert CUF operations to runtime calls late in the pipeline";
-  let dependentDialects = ["fir::FIROpsDialect"];
+  let dependentDialects = [
+    "fir::FIROpsDialect", "mlir::arith::ArithDialect", "mlir::gpu::GPUDialect"
+  ];
 }
 
 def CUFDeviceGlobal :

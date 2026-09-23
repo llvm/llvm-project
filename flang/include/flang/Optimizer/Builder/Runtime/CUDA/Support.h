@@ -23,10 +23,6 @@ namespace fir::runtime::cuda {
 /// Generate runtime call to synchronize the CUDA device.
 void genCUDADeviceSynchronize(fir::FirOpBuilder &builder, mlir::Location loc);
 
-/// Generate a call returning (as i1) whether the device's primary context is
-/// alive, to guard scope-exit frees against a user cudaDeviceReset().
-mlir::Value genDeviceIsActive(fir::FirOpBuilder &builder, mlir::Location loc);
-
 } // namespace fir::runtime::cuda
 
 #endif // FORTRAN_OPTIMIZER_BUILDER_RUNTIME_CUDA_SUPPORT_H_
