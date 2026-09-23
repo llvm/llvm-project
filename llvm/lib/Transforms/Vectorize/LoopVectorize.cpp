@@ -7032,12 +7032,8 @@ void LoopVectorizationPlanner::attachRuntimeChecks(
                   "(e.g., adding 'restrict').";
       });
     }
-    // VPSCEVExpander expands AddRecs in the plan's entry, not the check block,
-    // and does not support pointer-typed min/max yet.
-    auto IsUnsupported = [](const SCEV *S) {
-      return isa<SCEVAddRecExpr>(S) ||
-             (isa<SCEVMinMaxExpr>(S) && S->getType()->isPointerTy());
-    };
+    // VPSCEVExpander expands AddRecs in the plan's entry, not the check block.
+    auto IsUnsupported = [](const SCEV *S) { return isa<SCEVAddRecExpr>(S); };
     // Diff checks are not modelled in VPlan yet, and the VPlan expander cannot
     // hoist bounds out of an enclosing loop.
     const auto &RtPtrChecking = *Legal->getRuntimePointerChecking();
