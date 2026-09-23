@@ -1,0 +1,102 @@
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=60 -x c++ -std=c++11 -triple x86_64-unknown-unknown -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=60 -x c++ -std=c++11 -triple x86_64-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=60 -x c++ -std=c++11 -triple x86_64-unknown-unknown -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s
+// expected-no-diagnostics
+
+// Codegen for the graph_id, graph_reset and if clauses.  For graph_id and
+// graph_reset the arguments of interest are the 4th (graph_id, i64) and 5th
+// (graph_reset, i32) of __kmpc_taskgraph.
+
+#ifndef HEADER
+#define HEADER
+
+void body();
+
+// CHECK-LABEL: define {{.*}} @_Z10no_clausesv
+void no_clauses() {
+  // CHECK: call void @__kmpc_taskgraph(ptr {{.*}}, i32 %{{.*}}, ptr @.omp.taskgraph.handle{{[^,]*}}, i64 0, i32 0, i32 0,
+#pragma omp taskgraph
+  { body(); }
+}
+
+// An omitted graph_reset argument has the optional property: it means "reset",
+// so it must lower to a constant 1 -- not to 0, and not to a null-pointer
+// dereference in the frontend.
+// CHECK-LABEL: define {{.*}} @_Z17reset_no_argumentv
+void reset_no_argument() {
+  // CHECK: call void @__kmpc_taskgraph(ptr {{.*}}, i32 %{{.*}}, ptr @.omp.taskgraph.handle{{[^,]*}}, i64 0, i32 1, i32 0,
+#pragma omp taskgraph graph_reset
+  { body(); }
+}
+
+// A true condition must agree with the omitted form rather than differing by a
+// sign extension (it used to pass -1).
+// CHECK-LABEL: define {{.*}} @_Z10reset_truev
+void reset_true() {
+  // CHECK: call void @__kmpc_taskgraph(ptr {{.*}}, i32 %{{.*}}, ptr @.omp.taskgraph.handle{{[^,]*}}, i64 0, i32 1, i32 0,
+#pragma omp taskgraph graph_reset(true)
+  { body(); }
+}
+
+// CHECK-LABEL: define {{.*}} @_Z11reset_falsev
+void reset_false() {
+  // CHECK: call void @__kmpc_taskgraph(ptr {{.*}}, i32 %{{.*}}, ptr @.omp.taskgraph.handle{{[^,]*}}, i64 0, i32 0, i32 0,
+#pragma omp taskgraph graph_reset(false)
+  { body(); }
+}
+
+// CHECK-LABEL: define {{.*}} @_Z10reset_exprb
+void reset_expr(bool c) {
+  // CHECK: [[TOBOOL:%.*]] = icmp ne i8 %{{.*}}, 0
+  // CHECK-NEXT: [[RESET:%.*]] = zext i1 [[TOBOOL]] to i32
+  // CHECK-NEXT: call void @__kmpc_taskgraph(ptr {{.*}}, i32 %{{.*}}, ptr @.omp.taskgraph.handle{{[^,]*}}, i64 0, i32 [[RESET]], i32 0,
+#pragma omp taskgraph graph_reset(c)
+  { body(); }
+}
+
+// An omitted argument combines with graph_id as usual.
+// CHECK-LABEL: define {{.*}} @_Z24id_and_reset_no_argumenti
+void id_and_reset_no_argument(int id) {
+  // CHECK: [[GID:%.*]] = zext i32 %{{.*}} to i64
+  // CHECK-NEXT: call void @__kmpc_taskgraph(ptr {{.*}}, i32 %{{.*}}, ptr @.omp.taskgraph.handle{{[^,]*}}, i64 [[GID]], i32 1, i32 0,
+#pragma omp taskgraph graph_id(id) graph_reset
+  { body(); }
+}
+
+// The if clause selects whether the region is recorded, and nothing else.  In
+// particular the region is a taskgroup region either way: __kmpc_taskgraph
+// supplies the implicit taskgroup on the recording path, so the path that
+// bypasses it has to emit one.
+
+// CHECK-LABEL: define {{.*}} @_Z8if_falsev
+void if_false() {
+  // CHECK-NOT: @__kmpc_taskgraph(
+  // CHECK: call void @__kmpc_taskgroup(
+  // CHECK-NEXT: call void @taskgraph.omp_outlined.
+  // CHECK-NEXT: call void @__kmpc_end_taskgroup(
+#pragma omp taskgraph if(false)
+  { body(); }
+}
+
+// CHECK-LABEL: define {{.*}} @_Z7if_truev
+void if_true() {
+  // CHECK-NOT: @__kmpc_taskgroup(
+  // CHECK: call void @__kmpc_taskgraph(
+#pragma omp taskgraph if(true)
+  { body(); }
+}
+
+// CHECK-LABEL: define {{.*}} @_Z6if_dynb
+void if_dyn(bool c) {
+  // CHECK: br i1 %{{.*}}, label %[[THEN:.+]], label %[[ELSE:.+]]
+  // CHECK: [[THEN]]:
+  // CHECK-NEXT: call void @__kmpc_taskgraph(
+  // CHECK: [[ELSE]]:
+  // CHECK-NEXT: call void @__kmpc_taskgroup(
+  // CHECK-NEXT: call void @taskgraph.omp_outlined.
+  // CHECK-NEXT: call void @__kmpc_end_taskgroup(
+#pragma omp taskgraph if(taskgraph: c)
+  { body(); }
+}
+
+#endif
