@@ -403,7 +403,8 @@ Interpreter::Interpreter(std::unique_ptr<CompilerInstance> Instance,
 
 Interpreter::~Interpreter() {
   IncrParser.reset();
-  Act->FinalizeAction();
+  if (SourceFileCreated)
+    Act->FinalizeAction();
   if (DeviceParser)
     DeviceParser.reset();
   if (DeviceAct)
@@ -468,6 +469,8 @@ llvm::Expected<std::unique_ptr<Interpreter>> Interpreter::create(
     return std::move(E);
 
   Interp->markUserCodeStart();
+
+  Interp->SourceFileCreated = true;
 
   return std::move(Interp);
 }

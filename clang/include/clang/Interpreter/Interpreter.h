@@ -127,6 +127,9 @@ class Interpreter {
   /// An optional compiler instance for CUDA offloading
   std::unique_ptr<CompilerInstance> DeviceCI;
 
+  /// This member is set when source file has been successfully created. It
+  /// will be used to gate 'ending' this file when the object is destroyed.
+  bool SourceFileCreated = false;
 protected:
   // Derived classes can use an extended interface of the Interpreter.
   Interpreter(std::unique_ptr<CompilerInstance> Instance, llvm::Error &Err,
