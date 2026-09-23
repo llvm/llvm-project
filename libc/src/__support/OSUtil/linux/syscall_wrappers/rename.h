@@ -24,6 +24,22 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
+LIBC_INLINE ErrorOr<int> renameat(int olddirfd, const char *oldpath,
+                                  int newdirfd, const char *newpath) {
+#ifdef SYS_renameat2
+  int ret =
+      syscall_impl<int>(SYS_renameat2, olddirfd, oldpath, newdirfd, newpath, 0);
+#elif defined(SYS_renameat)
+  int ret =
+      syscall_impl<int>(SYS_renameat, olddirfd, oldpath, newdirfd, newpath);
+#else
+#error "renameat and renameat2 syscalls not available."
+#endif
+  if (ret < 0)
+    return Error(-ret);
+  return ret;
+}
+
 LIBC_INLINE ErrorOr<int> rename(const char *oldpath, const char *newpath) {
 #ifdef SYS_renameat2
   int ret =

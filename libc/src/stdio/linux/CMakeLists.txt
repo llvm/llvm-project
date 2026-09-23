@@ -24,6 +24,17 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  renameat
+  SRCS
+    renameat.cpp
+  HDRS
+    ../renameat.h
+  DEPENDS
+    libc.src.__support.OSUtil.linux.syscall_wrappers.rename
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   fdopen
   SRCS
     fdopen.cpp
