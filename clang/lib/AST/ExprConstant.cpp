@@ -12244,8 +12244,8 @@ bool VectorExprEvaluator::VisitBinaryOperator(const BinaryOperator *E) {
   Expr *LHS = E->getLHS();
   Expr *RHS = E->getRHS();
 
-  QualType LHSType = LHS->getType().getAtomicUnqualifiedType();
-  QualType RHSType = RHS->getType().getAtomicUnqualifiedType();
+  [[maybe_unused]] QualType LHSType = LHS->getType().getAtomicUnqualifiedType();
+  [[maybe_unused]] QualType RHSType = RHS->getType().getAtomicUnqualifiedType();
   assert(LHSType->isVectorType() && RHSType->isVectorType() &&
          "Must both be vector types");
   // Checking JUST the types are the same would be fine, except shifts don't
