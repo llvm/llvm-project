@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fopenacc -triple x86_64-unknown-linux-gnu -fclangir \
-// RUN:     -clangir-enable-call-conv-lowering -emit-cir %s -o - | FileCheck %s
+// RUN:     -fclangir-call-conv-lowering -emit-cir %s -o - | FileCheck %s
 
 struct Pair {
   long a, b;

@@ -71,7 +71,7 @@
 #    error "__cpp_lib_constexpr_bitset should have the value 202207L in c++23"
 #  endif
 
-#elif TEST_STD_VER > 23
+#elif TEST_STD_VER == 26
 
 #  ifndef __cpp_lib_bitset
 #    error "__cpp_lib_bitset should be defined in c++26"
@@ -87,6 +87,22 @@
 #    error "__cpp_lib_constexpr_bitset should have the value 202207L in c++26"
 #  endif
 
-#endif // TEST_STD_VER > 23
+#elif TEST_STD_VER > 26
+
+#  ifndef __cpp_lib_bitset
+#    error "__cpp_lib_bitset should be defined in c++29"
+#  endif
+#  if __cpp_lib_bitset != 202306L
+#    error "__cpp_lib_bitset should have the value 202306L in c++29"
+#  endif
+
+#  ifndef __cpp_lib_constexpr_bitset
+#    error "__cpp_lib_constexpr_bitset should be defined in c++29"
+#  endif
+#  if __cpp_lib_constexpr_bitset != 202207L
+#    error "__cpp_lib_constexpr_bitset should have the value 202207L in c++29"
+#  endif
+
+#endif // TEST_STD_VER > 26
 
 // clang-format on

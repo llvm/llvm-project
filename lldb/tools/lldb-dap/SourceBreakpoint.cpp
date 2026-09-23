@@ -33,8 +33,7 @@ namespace lldb_dap {
 SourceBreakpoint::SourceBreakpoint(DAP &dap,
                                    const protocol::SourceBreakpoint &breakpoint)
     : Breakpoint(dap, breakpoint.condition, breakpoint.hitCondition),
-      m_log_message(breakpoint.logMessage.value_or("")),
-      m_line(breakpoint.line),
+      m_log_message(breakpoint.logMessage), m_line(breakpoint.line),
       m_column(breakpoint.column.value_or(LLDB_INVALID_COLUMN_NUMBER)) {}
 
 llvm::Error SourceBreakpoint::SetBreakpoint(const protocol::Source &source) {
@@ -80,12 +79,13 @@ void SourceBreakpoint::UpdateBreakpoint(const SourceBreakpoint &request_bp) {
 void SourceBreakpoint::CreatePathBreakpoint(const protocol::Source &source) {
   const auto source_path = source.path.value_or("");
   lldb::SBFileSpecList module_list;
-  m_bp = m_dap.target.BreakpointCreateByLocation(source_path.c_str(), m_line,
-                                                 m_column, 0, module_list);
+  m_bp = m_dap.target.BreakpointCreateByLocation(
+      lldb::SBFileSpec(source_path.c_str(), /*resolve=*/true), m_line, m_column,
+      0, module_list);
 }
 
 llvm::Error SourceBreakpoint::CreateAssemblyBreakpointWithSourceReference(
-    int64_t source_reference) {
+    src_ref_t source_reference) {
   std::optional<lldb::addr_t> raw_addr =
       m_dap.GetSourceReferenceAddress(source_reference);
   if (!raw_addr)
@@ -120,7 +120,8 @@ llvm::Error SourceBreakpoint::CreateAssemblyBreakpointWithSourceReference(
 
 llvm::Error SourceBreakpoint::CreateAssemblyBreakpointWithPersistenceData(
     const protocol::PersistenceData &persistence_data) {
-  lldb::SBFileSpec file_spec(persistence_data.module_path.c_str());
+  lldb::SBFileSpec file_spec(persistence_data.module_path.c_str(),
+                             /*resolve=*/true);
   lldb::SBFileSpecList comp_unit_list;
   lldb::SBFileSpecList file_spec_list;
   file_spec_list.Append(file_spec);
@@ -279,6 +280,11 @@ lldb::SBError SourceBreakpoint::FormatLogText(llvm::StringRef text,
 void SourceBreakpoint::SetLogMessage() {
   m_log_message_parts.clear();
 
+  if (m_log_message.empty()) {
+    m_bp.SetCallback(nullptr, nullptr);
+    return;
+  }
+
   // Contains unmatched open curly braces indices.
   std::vector<int> unmatched_curly_braces;
 
@@ -397,8 +403,8 @@ bool SourceBreakpoint::BreakpointHitCallback(
       // evaluation
       const std::string &expr_str = messagePart.text;
       const char *expr = expr_str.c_str();
-      lldb::SBValue value = frame.GetValueForVariablePath(
-          expr, lldb::eDynamicDontRunTarget, lldb::eDILModeLegacy);
+      lldb::SBValue value = frame.GetValueForVariablePathWithMode(
+          expr, lldb::eDILModeLegacy, lldb::eDynamicDontRunTarget);
       if (value.GetError().Fail())
         value = frame.EvaluateExpression(expr);
       output += VariableDescription(
