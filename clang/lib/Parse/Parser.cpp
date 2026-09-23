@@ -662,11 +662,17 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result,
     Module *Mod = reinterpret_cast<Module *>(Tok.getAnnotationValue());
     // FIXME: We need a better way to disambiguate C++ clang modules and
     // standard C++ modules.
-    if (!getLangOpts().CPlusPlusModules || !Mod->isHeaderUnit())
+    if (!getLangOpts().CPlusPlusModules || !Mod->isHeaderUnit()) {
       Actions.ActOnAnnotModuleInclude(Loc, Mod);
-    else {
+    } else {
+      // Preserve transitive #include visibility when building a header unit.
+      // Explicit import declarations keep their own export semantics.
+      SourceLocation ExportLoc =
+          getLangOpts().getCompilingModule() == LangOptions::CMK_HeaderUnit
+              ? Loc
+              : SourceLocation();
       DeclResult Import =
-          Actions.ActOnModuleImport(Loc, SourceLocation(), Loc, Mod);
+          Actions.ActOnModuleImport(Loc, ExportLoc, Loc, Mod);
       Decl *ImportDecl = Import.isInvalid() ? nullptr : Import.get();
       Result = Actions.ConvertDeclToDeclGroup(ImportDecl);
     }

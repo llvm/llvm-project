@@ -14,6 +14,7 @@
 #include "clang/Serialization/ModuleManager.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/IPC2978/IPCManagerCompiler.hpp"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/ModuleMap.h"
 #include "clang/Serialization/GlobalModuleIndex.h"
@@ -55,9 +56,10 @@ ModuleManager::makeKey(const ModuleFileName &Name) const {
             ModCache.getInMemoryModuleCache().lookupPCM(Name, Size, ModTime))
       return ModuleFileKey(Buf);
   } else {
-    if (auto ModuleFile = FileMgr.getOptionalFileRef(Name, /*OpenFile=*/true,
-                                                     /*CacheFailure=*/true,
-                                                     /*IsText=*/false))
+    // IPC has already mapped the BMI; retain its identity without opening it again.
+    if (auto ModuleFile = FileMgr.getOptionalFileRef(
+            Name, /*OpenFile=*/!P2978::managerCompiler, /*CacheFailure=*/true,
+            /*IsText=*/false))
       return ModuleFileKey(*ModuleFile);
   }
 
@@ -205,7 +207,8 @@ AddModuleResult ModuleManager::addModule(
       Expected<FileEntryRef> Entry =
           FileName == StringRef("-")
               ? FileMgr.getSTDIN()
-              : FileMgr.getFileRef(FileName, /*OpenFile=*/true,
+              : FileMgr.getFileRef(FileName,
+                                   /*OpenFile=*/!P2978::managerCompiler,
                                    /*CacheFailure=*/true,
                                    /*IsText=*/false);
       if (!Entry)
@@ -213,6 +216,20 @@ AddModuleResult ModuleManager::addModule(
 
       Size = Entry->getSize();
       ModTime = Entry->getModificationTime();
+
+      if (P2978::managerCompiler) {
+        const StringRef EntryName = Entry->getName();
+        const auto Contents =
+            P2978::managerCompiler->findBMIContents(EntryName);
+        if (!Contents) {
+          return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                         Contents.error());
+        }
+        // IPC BMI views remain valid until process exit and need no trailing
+        // NUL.
+        return llvm::MemoryBuffer::getMemBuffer(
+            *Contents, EntryName, /*RequiresNullTerminator=*/false);
+      }
 
       // RequiresNullTerminator is false because module files don't need it, and
       // this allows the file to still be mmapped.

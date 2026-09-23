@@ -68,6 +68,7 @@
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Basic/Version.h"
+#include "clang/IPC2978/IPCManagerCompiler.hpp"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/MacroInfo.h"
@@ -3530,9 +3531,27 @@ ASTReader::ReadControlBlock(ModuleFile &F,
       // explicit name to file mappings. Also, we will still verify the
       // size/signature making sure it is essentially the same file but
       // perhaps in a different location.
-      if (ImportedKind == MK_PrebuiltModule || ImportedKind == MK_ExplicitModule)
-        ImportedFile = PP.getHeaderSearchInfo().getPrebuiltModuleFileName(
-            ImportedName, /*FileMapOnly*/ !IsImportingStdCXXModule);
+      if (ImportedKind == MK_PrebuiltModule ||
+          ImportedKind == MK_ExplicitModule) {
+        if (P2978::managerCompiler) {
+          if (IsImportingStdCXXModule) {
+            const auto &Result = P2978::managerCompiler->findResponse(
+                ImportedName, P2978::FileType::MODULE);
+            if (!Result) {
+              Diag(CurrentImportLoc,
+                   getDiags().getCustomDiagID(
+                       DiagnosticsEngine::Error,
+                       "could not resolve IPC dependency '%0': %1"))
+                  << ImportedName << Result.error();
+              return Failure;
+            }
+            ImportedFile = ModuleFileName::makeExplicit(Result->filePath);
+          }
+        } else {
+          ImportedFile = PP.getHeaderSearchInfo().getPrebuiltModuleFileName(
+              ImportedName, /*FileMapOnly*/ !IsImportingStdCXXModule);
+        }
+      }
 
       if (IsImportingStdCXXModule && ImportedFile.empty()) {
         Diag(diag::err_failed_to_find_module_file) << ImportedName;

@@ -119,6 +119,12 @@ public:
   /// The directories used to load prebuilt module files.
   std::vector<std::string> PrebuiltModulePaths;
 
+  /// Resolve dependencies through the build-system IPC session.
+  bool UseIPC = false;
+
+  /// Use dependencies from this mock file instead of live IPC when non-empty.
+  std::string IPCMockFile;
+
   /// The module/pch container format.
   std::string ModuleFormat;
 

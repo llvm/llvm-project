@@ -35,4 +35,5 @@ add_clang_library(clangLex
 
   LINK_LIBS
   clangBasic
+  clangIPC2978
   )

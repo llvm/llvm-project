@@ -32,6 +32,7 @@
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Frontend/VerifyDiagnosticConsumer.h"
+#include "clang/IPC2978/IPCManagerCompiler.hpp"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
@@ -58,6 +59,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/SmallVectorMemoryBuffer.h"
 #include "llvm/Support/Threading.h"
@@ -995,6 +997,24 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
 
   llvm::TimeTraceScope TimeScope("ExecuteCompiler");
 
+  // Argument parsing (including round-tripping) must not start an IPC session.
+  // Keep one dependency cache for the entire action, including all its inputs.
+  std::unique_ptr<P2978::IPCManagerCompiler> IPCManager;
+  if (getHeaderSearchOpts().UseIPC) {
+    IPCManager = std::make_unique<P2978::IPCManagerCompiler>();
+    const std::string &MockFile = getHeaderSearchOpts().IPCMockFile;
+    if (!MockFile.empty()) {
+      if (const auto Result = IPCManager->readEntriesFromFile(MockFile);
+          !Result) {
+        getDiagnostics().Report(getDiagnostics().getCustomDiagID(
+            DiagnosticsEngine::Error, "could not load IPC mock file: %0"))
+            << Result.error();
+        return false;
+      }
+    }
+  }
+  llvm::SaveAndRestore IPCSession(P2978::managerCompiler, IPCManager.get());
+
   PrepareForExecution();
 
   // Mark this point as the bottom of the stack if we don't have somewhere
@@ -1929,9 +1949,27 @@ ModuleLoadResult CompilerInstance::findOrCompileModuleAndReadAST(
 
   // Select the source and filename for loading the named module.
   ModuleFileName ModuleFilename;
-  ModuleSource Source =
-      selectModuleSource(M, ModuleName, ModuleFilename, BuiltModules, HS);
   SourceLocation ModuleNameLoc = ModuleNameRange.getBegin();
+  ModuleSource Source;
+
+  if (P2978::managerCompiler) {
+    const auto &Result = P2978::managerCompiler->findResponse(
+        ModuleName, P2978::FileType::MODULE);
+    if (!Result) {
+      getDiagnostics().Report(ModuleNameLoc,
+                              getDiagnostics().getCustomDiagID(
+                                  DiagnosticsEngine::Error,
+                                  "could not resolve IPC dependency '%0': %1"))
+          << ModuleName << Result.error();
+      return ModuleLoadResult();
+    }
+    ModuleFilename = ModuleFileName::makeExplicit(Result->filePath);
+    Source = MS_PrebuiltModulePath;
+  } else {
+    Source =
+        selectModuleSource(M, ModuleName, ModuleFilename, BuiltModules, HS);
+  }
+
   if (Source == MS_ModuleNotFound) {
     // We can't find a module, error out here.
     getDiagnostics().Report(ModuleNameLoc, diag::err_module_not_found)
@@ -2456,6 +2494,49 @@ CompilerInstance::lookupMissingImports(StringRef Name,
 
   return false;
 }
+
+Module *
+CompilerInstance::loadIPCReceivedHeaderUnit(const StringRef FileName,
+                                            const SourceLocation ImportLoc) {
+  if (!getASTReader()) {
+    createASTReader();
+  }
+
+  serialization::ModuleFile *ModuleFile =
+      getASTReader()->getModuleManager().lookupByFileName(
+          ModuleFileName::makeExplicit(FileName));
+  if (!ModuleFile &&
+      !loadModuleFile(ModuleFileName::makeExplicit(FileName), ModuleFile)) {
+    return nullptr;
+  }
+  // A recoverable configuration mismatch can return success without a module.
+  if (!ModuleFile) {
+    getDiagnostics().Report(
+        ImportLoc,
+        getDiagnostics().getCustomDiagID(DiagnosticsEngine::Error,
+                                         "could not load IPC header unit '%0'"))
+        << FileName;
+    return nullptr;
+  }
+
+  Module *Mod = PP->getHeaderSearchInfo().getModuleMap().findModule(
+      ModuleFile->ModuleName);
+  if (!Mod || !Mod->isHeaderUnit()) {
+    getDiagnostics().Report(
+        ImportLoc, getDiagnostics().getCustomDiagID(
+                       DiagnosticsEngine::Error,
+                       "IPC dependency '%0' was not built as a header unit"))
+        << FileName;
+    return nullptr;
+  }
+
+  ModuleFile->Kind = serialization::MK_PrebuiltModule;
+  // Use normal import visibility rather than exposing every BMI dependency.
+  // Preprocessor and Sema handle their visibility at the import token.
+  makeModuleVisible(Mod, Module::AllVisible, ImportLoc);
+  return Mod;
+}
+
 void CompilerInstance::resetAndLeakSema() { llvm::BuryPointer(takeSema()); }
 
 void CompilerInstance::setExternalSemaSource(

@@ -3438,6 +3438,13 @@ static void GenerateHeaderSearchArgs(const HeaderSearchOptions &Opts,
 
   for (const std::string &F : Opts.VFSOverlayFiles)
     GenerateArg(Consumer, OPT_ivfsoverlay, F);
+
+  if (Opts.UseIPC) {
+    if (!Opts.IPCMockFile.empty())
+      GenerateArg(Consumer, OPT_use_ipc_file, Opts.IPCMockFile);
+    else
+      GenerateArg(Consumer, OPT_use_ipc);
+  }
 }
 
 static bool ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
@@ -3560,6 +3567,9 @@ static bool ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
 
   for (const auto *A : Args.filtered(OPT_ivfsoverlay, OPT_vfsoverlay))
     Opts.AddVFSOverlayFile(A->getValue());
+
+  Opts.UseIPC = Args.hasArg(OPT_use_ipc, OPT_use_ipc_file);
+  Opts.IPCMockFile = Args.getLastArgValue(OPT_use_ipc_file).str();
 
   return Diags.getNumErrors() == NumErrorsBefore;
 }

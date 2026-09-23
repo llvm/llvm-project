@@ -161,6 +161,11 @@ public:
                                     SourceLocation TriggerLoc) = 0;
   static std::string getFlatNameFromPath(ModuleIdPath Path);
 
+  /// Load a C++20 header unit received over IPC, reusing an already loaded BMI.
+  /// Returns nullptr if the file cannot be loaded as a header unit.
+  virtual Module *loadIPCReceivedHeaderUnit(StringRef FileName,
+                                            SourceLocation ImportLoc) = 0;
+
   bool HadFatalFailure = false;
 };
 
@@ -186,6 +191,11 @@ public:
   bool lookupMissingImports(StringRef Name,
                             SourceLocation TriggerLoc) override {
     return false;
+  }
+
+  Module *loadIPCReceivedHeaderUnit(StringRef FileName,
+                                    SourceLocation ImportLoc) override {
+    return nullptr;
   }
 };
 

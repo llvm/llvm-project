@@ -453,6 +453,13 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     PATTERN "config.h" EXCLUDE
     )
 
+  install(DIRECTORY include/clang/IPC2978
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/clang"
+    COMPONENT clang-headers
+    FILES_MATCHING
+    PATTERN "*.hpp"
+    )
+
   install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include/clang
     DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
     COMPONENT clang-headers
