@@ -131,13 +131,13 @@ define amdgpu_kernel void @fcmp_f16_lt(
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s12, s2
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s13, s3
-; GFX12-TRUE16-NEXT:    buffer_load_d16_b16 v0, off, s[12:15], null scope:SCOPE_SYS
+; GFX12-TRUE16-NEXT:    buffer_load_u16 v0, off, s[12:15], null scope:SCOPE_SYS
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-TRUE16-NEXT:    buffer_load_d16_hi_b16 v0, off, s[4:7], null scope:SCOPE_SYS
+; GFX12-TRUE16-NEXT:    buffer_load_u16 v1, off, s[4:7], null scope:SCOPE_SYS
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s8, s0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s9, s1
-; GFX12-TRUE16-NEXT:    v_cmp_lt_f16_e32 vcc_lo, v0.l, v0.h
+; GFX12-TRUE16-NEXT:    v_cmp_lt_f16_e32 vcc_lo, v0.l, v1.l
 ; GFX12-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, -1, vcc_lo
 ; GFX12-TRUE16-NEXT:    buffer_store_b32 v0, off, s[8:11], null
 ; GFX12-TRUE16-NEXT:    s_endpgm
@@ -303,9 +303,9 @@ define amdgpu_kernel void @fcmp_f16_lt_abs(
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s12, s2
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s13, s3
-; GFX12-TRUE16-NEXT:    buffer_load_d16_b16 v0, off, s[12:15], null scope:SCOPE_SYS
+; GFX12-TRUE16-NEXT:    buffer_load_u16 v0, off, s[12:15], null scope:SCOPE_SYS
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-TRUE16-NEXT:    buffer_load_d16_b16 v1, off, s[4:7], null scope:SCOPE_SYS
+; GFX12-TRUE16-NEXT:    buffer_load_u16 v1, off, s[4:7], null scope:SCOPE_SYS
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s8, s0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s9, s1
@@ -483,13 +483,13 @@ define amdgpu_kernel void @fcmp_f16_eq(
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s12, s2
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s13, s3
-; GFX12-TRUE16-NEXT:    buffer_load_d16_b16 v0, off, s[12:15], null scope:SCOPE_SYS
+; GFX12-TRUE16-NEXT:    buffer_load_u16 v0, off, s[12:15], null scope:SCOPE_SYS
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-TRUE16-NEXT:    buffer_load_d16_hi_b16 v0, off, s[4:7], null scope:SCOPE_SYS
+; GFX12-TRUE16-NEXT:    buffer_load_u16 v1, off, s[4:7], null scope:SCOPE_SYS
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s8, s0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s9, s1
-; GFX12-TRUE16-NEXT:    v_cmp_eq_f16_e32 vcc_lo, v0.l, v0.h
+; GFX12-TRUE16-NEXT:    v_cmp_eq_f16_e32 vcc_lo, v0.l, v1.l
 ; GFX12-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, -1, vcc_lo
 ; GFX12-TRUE16-NEXT:    buffer_store_b32 v0, off, s[8:11], null
 ; GFX12-TRUE16-NEXT:    s_endpgm
@@ -655,13 +655,13 @@ define amdgpu_kernel void @fcmp_f16_le(
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s12, s2
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s13, s3
-; GFX12-TRUE16-NEXT:    buffer_load_d16_b16 v0, off, s[12:15], null scope:SCOPE_SYS
+; GFX12-TRUE16-NEXT:    buffer_load_u16 v0, off, s[12:15], null scope:SCOPE_SYS
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-TRUE16-NEXT:    buffer_load_d16_hi_b16 v0, off, s[4:7], null scope:SCOPE_SYS
+; GFX12-TRUE16-NEXT:    buffer_load_u16 v1, off, s[4:7], null scope:SCOPE_SYS
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s8, s0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s9, s1
-; GFX12-TRUE16-NEXT:    v_cmp_le_f16_e32 vcc_lo, v0.l, v0.h
+; GFX12-TRUE16-NEXT:    v_cmp_le_f16_e32 vcc_lo, v0.l, v1.l
 ; GFX12-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, -1, vcc_lo
 ; GFX12-TRUE16-NEXT:    buffer_store_b32 v0, off, s[8:11], null
 ; GFX12-TRUE16-NEXT:    s_endpgm
@@ -827,13 +827,13 @@ define amdgpu_kernel void @fcmp_f16_gt(
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s12, s2
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s13, s3
-; GFX12-TRUE16-NEXT:    buffer_load_d16_b16 v0, off, s[12:15], null scope:SCOPE_SYS
+; GFX12-TRUE16-NEXT:    buffer_load_u16 v0, off, s[12:15], null scope:SCOPE_SYS
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-TRUE16-NEXT:    buffer_load_d16_hi_b16 v0, off, s[4:7], null scope:SCOPE_SYS
+; GFX12-TRUE16-NEXT:    buffer_load_u16 v1, off, s[4:7], null scope:SCOPE_SYS
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s8, s0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s9, s1
-; GFX12-TRUE16-NEXT:    v_cmp_gt_f16_e32 vcc_lo, v0.l, v0.h
+; GFX12-TRUE16-NEXT:    v_cmp_gt_f16_e32 vcc_lo, v0.l, v1.l
 ; GFX12-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, -1, vcc_lo
 ; GFX12-TRUE16-NEXT:    buffer_store_b32 v0, off, s[8:11], null
 ; GFX12-TRUE16-NEXT:    s_endpgm
@@ -999,13 +999,13 @@ define amdgpu_kernel void @fcmp_f16_lg(
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s12, s2
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s13, s3
-; GFX12-TRUE16-NEXT:    buffer_load_d16_b16 v0, off, s[12:15], null scope:SCOPE_SYS
+; GFX12-TRUE16-NEXT:    buffer_load_u16 v0, off, s[12:15], null scope:SCOPE_SYS
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-TRUE16-NEXT:    buffer_load_d16_hi_b16 v0, off, s[4:7], null scope:SCOPE_SYS
+; GFX12-TRUE16-NEXT:    buffer_load_u16 v1, off, s[4:7], null scope:SCOPE_SYS
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s8, s0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s9, s1
-; GFX12-TRUE16-NEXT:    v_cmp_lg_f16_e32 vcc_lo, v0.l, v0.h
+; GFX12-TRUE16-NEXT:    v_cmp_lg_f16_e32 vcc_lo, v0.l, v1.l
 ; GFX12-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, -1, vcc_lo
 ; GFX12-TRUE16-NEXT:    buffer_store_b32 v0, off, s[8:11], null
 ; GFX12-TRUE16-NEXT:    s_endpgm
@@ -1171,13 +1171,13 @@ define amdgpu_kernel void @fcmp_f16_ge(
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s12, s2
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s13, s3
-; GFX12-TRUE16-NEXT:    buffer_load_d16_b16 v0, off, s[12:15], null scope:SCOPE_SYS
+; GFX12-TRUE16-NEXT:    buffer_load_u16 v0, off, s[12:15], null scope:SCOPE_SYS
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-TRUE16-NEXT:    buffer_load_d16_hi_b16 v0, off, s[4:7], null scope:SCOPE_SYS
+; GFX12-TRUE16-NEXT:    buffer_load_u16 v1, off, s[4:7], null scope:SCOPE_SYS
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s8, s0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s9, s1
-; GFX12-TRUE16-NEXT:    v_cmp_ge_f16_e32 vcc_lo, v0.l, v0.h
+; GFX12-TRUE16-NEXT:    v_cmp_ge_f16_e32 vcc_lo, v0.l, v1.l
 ; GFX12-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, -1, vcc_lo
 ; GFX12-TRUE16-NEXT:    buffer_store_b32 v0, off, s[8:11], null
 ; GFX12-TRUE16-NEXT:    s_endpgm
@@ -1343,13 +1343,13 @@ define amdgpu_kernel void @fcmp_f16_o(
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s12, s2
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s13, s3
-; GFX12-TRUE16-NEXT:    buffer_load_d16_b16 v0, off, s[12:15], null scope:SCOPE_SYS
+; GFX12-TRUE16-NEXT:    buffer_load_u16 v0, off, s[12:15], null scope:SCOPE_SYS
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-TRUE16-NEXT:    buffer_load_d16_hi_b16 v0, off, s[4:7], null scope:SCOPE_SYS
+; GFX12-TRUE16-NEXT:    buffer_load_u16 v1, off, s[4:7], null scope:SCOPE_SYS
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s8, s0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s9, s1
-; GFX12-TRUE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, v0.l, v0.h
+; GFX12-TRUE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, v0.l, v1.l
 ; GFX12-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, -1, vcc_lo
 ; GFX12-TRUE16-NEXT:    buffer_store_b32 v0, off, s[8:11], null
 ; GFX12-TRUE16-NEXT:    s_endpgm
@@ -1515,13 +1515,13 @@ define amdgpu_kernel void @fcmp_f16_u(
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s12, s2
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s13, s3
-; GFX12-TRUE16-NEXT:    buffer_load_d16_b16 v0, off, s[12:15], null scope:SCOPE_SYS
+; GFX12-TRUE16-NEXT:    buffer_load_u16 v0, off, s[12:15], null scope:SCOPE_SYS
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-TRUE16-NEXT:    buffer_load_d16_hi_b16 v0, off, s[4:7], null scope:SCOPE_SYS
+; GFX12-TRUE16-NEXT:    buffer_load_u16 v1, off, s[4:7], null scope:SCOPE_SYS
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s8, s0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s9, s1
-; GFX12-TRUE16-NEXT:    v_cmp_u_f16_e32 vcc_lo, v0.l, v0.h
+; GFX12-TRUE16-NEXT:    v_cmp_u_f16_e32 vcc_lo, v0.l, v1.l
 ; GFX12-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, -1, vcc_lo
 ; GFX12-TRUE16-NEXT:    buffer_store_b32 v0, off, s[8:11], null
 ; GFX12-TRUE16-NEXT:    s_endpgm
@@ -1687,13 +1687,13 @@ define amdgpu_kernel void @fcmp_f16_nge(
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s12, s2
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s13, s3
-; GFX12-TRUE16-NEXT:    buffer_load_d16_b16 v0, off, s[12:15], null scope:SCOPE_SYS
+; GFX12-TRUE16-NEXT:    buffer_load_u16 v0, off, s[12:15], null scope:SCOPE_SYS
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-TRUE16-NEXT:    buffer_load_d16_hi_b16 v0, off, s[4:7], null scope:SCOPE_SYS
+; GFX12-TRUE16-NEXT:    buffer_load_u16 v1, off, s[4:7], null scope:SCOPE_SYS
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s8, s0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s9, s1
-; GFX12-TRUE16-NEXT:    v_cmp_nge_f16_e32 vcc_lo, v0.l, v0.h
+; GFX12-TRUE16-NEXT:    v_cmp_nge_f16_e32 vcc_lo, v0.l, v1.l
 ; GFX12-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, -1, vcc_lo
 ; GFX12-TRUE16-NEXT:    buffer_store_b32 v0, off, s[8:11], null
 ; GFX12-TRUE16-NEXT:    s_endpgm
@@ -1859,13 +1859,13 @@ define amdgpu_kernel void @fcmp_f16_nlg(
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s12, s2
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s13, s3
-; GFX12-TRUE16-NEXT:    buffer_load_d16_b16 v0, off, s[12:15], null scope:SCOPE_SYS
+; GFX12-TRUE16-NEXT:    buffer_load_u16 v0, off, s[12:15], null scope:SCOPE_SYS
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-TRUE16-NEXT:    buffer_load_d16_hi_b16 v0, off, s[4:7], null scope:SCOPE_SYS
+; GFX12-TRUE16-NEXT:    buffer_load_u16 v1, off, s[4:7], null scope:SCOPE_SYS
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s8, s0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s9, s1
-; GFX12-TRUE16-NEXT:    v_cmp_nlg_f16_e32 vcc_lo, v0.l, v0.h
+; GFX12-TRUE16-NEXT:    v_cmp_nlg_f16_e32 vcc_lo, v0.l, v1.l
 ; GFX12-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, -1, vcc_lo
 ; GFX12-TRUE16-NEXT:    buffer_store_b32 v0, off, s[8:11], null
 ; GFX12-TRUE16-NEXT:    s_endpgm
@@ -2031,13 +2031,13 @@ define amdgpu_kernel void @fcmp_f16_ngt(
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s12, s2
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s13, s3
-; GFX12-TRUE16-NEXT:    buffer_load_d16_b16 v0, off, s[12:15], null scope:SCOPE_SYS
+; GFX12-TRUE16-NEXT:    buffer_load_u16 v0, off, s[12:15], null scope:SCOPE_SYS
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-TRUE16-NEXT:    buffer_load_d16_hi_b16 v0, off, s[4:7], null scope:SCOPE_SYS
+; GFX12-TRUE16-NEXT:    buffer_load_u16 v1, off, s[4:7], null scope:SCOPE_SYS
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s8, s0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s9, s1
-; GFX12-TRUE16-NEXT:    v_cmp_ngt_f16_e32 vcc_lo, v0.l, v0.h
+; GFX12-TRUE16-NEXT:    v_cmp_ngt_f16_e32 vcc_lo, v0.l, v1.l
 ; GFX12-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, -1, vcc_lo
 ; GFX12-TRUE16-NEXT:    buffer_store_b32 v0, off, s[8:11], null
 ; GFX12-TRUE16-NEXT:    s_endpgm
@@ -2203,13 +2203,13 @@ define amdgpu_kernel void @fcmp_f16_nle(
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s12, s2
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s13, s3
-; GFX12-TRUE16-NEXT:    buffer_load_d16_b16 v0, off, s[12:15], null scope:SCOPE_SYS
+; GFX12-TRUE16-NEXT:    buffer_load_u16 v0, off, s[12:15], null scope:SCOPE_SYS
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-TRUE16-NEXT:    buffer_load_d16_hi_b16 v0, off, s[4:7], null scope:SCOPE_SYS
+; GFX12-TRUE16-NEXT:    buffer_load_u16 v1, off, s[4:7], null scope:SCOPE_SYS
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s8, s0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s9, s1
-; GFX12-TRUE16-NEXT:    v_cmp_nle_f16_e32 vcc_lo, v0.l, v0.h
+; GFX12-TRUE16-NEXT:    v_cmp_nle_f16_e32 vcc_lo, v0.l, v1.l
 ; GFX12-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, -1, vcc_lo
 ; GFX12-TRUE16-NEXT:    buffer_store_b32 v0, off, s[8:11], null
 ; GFX12-TRUE16-NEXT:    s_endpgm
@@ -2375,13 +2375,13 @@ define amdgpu_kernel void @fcmp_f16_neq(
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s12, s2
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s13, s3
-; GFX12-TRUE16-NEXT:    buffer_load_d16_b16 v0, off, s[12:15], null scope:SCOPE_SYS
+; GFX12-TRUE16-NEXT:    buffer_load_u16 v0, off, s[12:15], null scope:SCOPE_SYS
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-TRUE16-NEXT:    buffer_load_d16_hi_b16 v0, off, s[4:7], null scope:SCOPE_SYS
+; GFX12-TRUE16-NEXT:    buffer_load_u16 v1, off, s[4:7], null scope:SCOPE_SYS
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s8, s0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s9, s1
-; GFX12-TRUE16-NEXT:    v_cmp_neq_f16_e32 vcc_lo, v0.l, v0.h
+; GFX12-TRUE16-NEXT:    v_cmp_neq_f16_e32 vcc_lo, v0.l, v1.l
 ; GFX12-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, -1, vcc_lo
 ; GFX12-TRUE16-NEXT:    buffer_store_b32 v0, off, s[8:11], null
 ; GFX12-TRUE16-NEXT:    s_endpgm
@@ -2547,13 +2547,13 @@ define amdgpu_kernel void @fcmp_f16_nlt(
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s12, s2
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s13, s3
-; GFX12-TRUE16-NEXT:    buffer_load_d16_b16 v0, off, s[12:15], null scope:SCOPE_SYS
+; GFX12-TRUE16-NEXT:    buffer_load_u16 v0, off, s[12:15], null scope:SCOPE_SYS
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-TRUE16-NEXT:    buffer_load_d16_hi_b16 v0, off, s[4:7], null scope:SCOPE_SYS
+; GFX12-TRUE16-NEXT:    buffer_load_u16 v1, off, s[4:7], null scope:SCOPE_SYS
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s8, s0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s9, s1
-; GFX12-TRUE16-NEXT:    v_cmp_nlt_f16_e32 vcc_lo, v0.l, v0.h
+; GFX12-TRUE16-NEXT:    v_cmp_nlt_f16_e32 vcc_lo, v0.l, v1.l
 ; GFX12-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, -1, vcc_lo
 ; GFX12-TRUE16-NEXT:    buffer_store_b32 v0, off, s[8:11], null
 ; GFX12-TRUE16-NEXT:    s_endpgm

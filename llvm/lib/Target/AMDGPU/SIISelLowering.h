@@ -416,6 +416,7 @@ public:
   bool isExtractVecEltCheap(EVT VT, unsigned Index) const override;
 
   bool isTypeDesirableForOp(unsigned Op, EVT VT) const override;
+  bool isTypeDesirableForOp(unsigned Op, EVT VT, SDNode *N) const override;
 
   bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
 

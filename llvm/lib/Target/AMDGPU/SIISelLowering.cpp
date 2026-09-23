@@ -2505,6 +2505,24 @@ bool SITargetLowering::isTypeDesirableForOp(unsigned Op, EVT VT) const {
   return TargetLowering::isTypeDesirableForOp(Op, VT);
 }
 
+bool SITargetLowering::isTypeDesirableForOp(unsigned Op, EVT VT,
+                                            SDNode *N) const {
+  // Do not convert uniform i32 loads to 16-bit.
+  // Uniform 16-bit loads are legalized to i16 = trunc (zextload i16->i32)
+  // to match subword load patterns.  Allowing conversion back to a 16-bit
+  // load would create an infinite loop.
+  if (Subtarget->hasScalarSubwordLoads() && Op == ISD::LOAD && !VT.isVector() &&
+      VT.getSizeInBits() == 16) {
+    auto *Load = dyn_cast<LoadSDNode>(N);
+    if (Load && Load->getValueType(0) == MVT::i32 && !Load->isDivergent() &&
+        AMDGPU::isUniformMMO(Load->getMemOperand())) {
+      return false;
+    }
+  }
+
+  return isTypeDesirableForOp(Op, VT);
+}
+
 MachinePointerInfo
 SITargetLowering::getKernargSegmentPtrInfo(MachineFunction &MF) const {
   // This isn't really a constant pool but close enough.
@@ -13562,6 +13580,30 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
   MachineMemOperand *MMO = Load->getMemOperand();
 
   if (ExtType == ISD::NON_EXTLOAD && MemVT.getSizeInBits() < 32) {
+    // Legalize uniform 16-bit loads to i16 = trunc (zextload i16->i32)
+    // to match subword load patterns.
+    if (!MemVT.isVector() && MemVT.getSizeInBits() == 16 &&
+        isTypeLegal(MemVT) && Subtarget->hasScalarSubwordLoads() &&
+        !Load->isDivergent() && AMDGPU::isUniformMMO(MMO)) {
+      SDValue Chain = Load->getChain();
+      SDValue BasePtr = Load->getBasePtr();
+
+      // Load as i16 and zero-extend to i32 (matches S_LOAD_U16 behavior)
+      SDValue NewLD = DAG.getExtLoad(ISD::ZEXTLOAD, DL, MVT::i32, Chain,
+                                     BasePtr, MVT::i16, MMO);
+
+      // Truncate back to i16
+      SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, NewLD);
+
+      // For f16/bf16, bitcast from i16 to the original fp type
+      SDValue Result = (MemVT == MVT::i16)
+                           ? Trunc
+                           : DAG.getNode(ISD::BITCAST, DL, MemVT, Trunc);
+
+      SDValue Ops[] = {Result, NewLD.getValue(1)};
+      return DAG.getMergeValues(Ops, DL);
+    }
+
     if (MemVT == MVT::i16 && isTypeLegal(MVT::i16))
       return SDValue();
 
