@@ -11641,6 +11641,105 @@ emitClauseForBareTargetDirective(CodeGenFunction &CGF,
   }
 }
 
+void CGOpenMPRuntime::emitTaskgraphTargetCall(
+    CodeGenFunction &CGF, const OMPExecutableDirective &D, SourceLocation Loc,
+    llvm::Value *OutlinedFnID, llvm::Value *DeviceID, llvm::Value *NumTeams,
+    llvm::Value *NumThreads, llvm::Value *KernelArgsPtr) {
+  llvm::Value *ThreadID = getThreadID(CGF, Loc);
+  llvm::Value *UpLoc = emitUpdateLocation(CGF, Loc);
+
+  OMPTaskDataTy Data;
+  buildDependences(D, Data);
+  Address DependenciesArray = Address::invalid();
+  llvm::Value *NumOfElements;
+  std::tie(NumOfElements, DependenciesArray) =
+      emitDependClause(CGF, Data.Dependences, Loc);
+
+  llvm::Value *NumDeps;
+  llvm::Value *DepList;
+  if (Data.Dependences.empty()) {
+    NumDeps = CGF.Builder.getInt32(0);
+    DepList = llvm::ConstantPointerNull::get(CGF.VoidPtrTy);
+  } else {
+    NumDeps = NumOfElements;
+    DepList = DependenciesArray.emitRawPointer(CGF);
+  }
+
+  llvm::Value *HasNoWait =
+      CGF.Builder.getInt32(D.hasClausesOfKind<OMPNowaitClause>() ? 1 : 0);
+
+  // Relocation callback used at replay to rewrite moved host pointers in the
+  // captured kernel arguments.  Emission of a real relocate function is not yet
+  // implemented (the recorded graph is not replayed through this path yet), so
+  // a null callback is passed; the runtime simply stores it.
+  llvm::Value *Relocate = llvm::ConstantPointerNull::get(CGF.VoidPtrTy);
+
+  llvm::Value *Args[] = {UpLoc,        ThreadID,      NumDeps,  DepList,
+                         HasNoWait,    DeviceID,      NumTeams, NumThreads,
+                         OutlinedFnID, KernelArgsPtr, Relocate};
+  CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
+                          CGM.getModule(), OMPRTL___kmpc_taskgraph_target),
+                      Args);
+}
+
+void CGOpenMPRuntime::emitTaskgraphTargetDataCall(
+    CodeGenFunction &CGF, const OMPExecutableDirective &D, SourceLocation Loc,
+    llvm::Value *DeviceID, unsigned NumTargetItems,
+    llvm::Value *BasePointersArray, llvm::Value *PointersArray,
+    llvm::Value *SizesArray, llvm::Value *MapTypesArray,
+    llvm::Value *MapNamesArray, llvm::Value *MappersArray) {
+  llvm::Value *ThreadID = getThreadID(CGF, Loc);
+  llvm::Value *UpLoc = emitUpdateLocation(CGF, Loc);
+
+  OMPTaskDataTy Data;
+  buildDependences(D, Data);
+  Address DependenciesArray = Address::invalid();
+  llvm::Value *NumOfElements;
+  std::tie(NumOfElements, DependenciesArray) =
+      emitDependClause(CGF, Data.Dependences, Loc);
+
+  llvm::Value *NumDeps;
+  llvm::Value *DepList;
+  if (Data.Dependences.empty()) {
+    NumDeps = CGF.Builder.getInt32(0);
+    DepList = llvm::ConstantPointerNull::get(CGF.VoidPtrTy);
+  } else {
+    NumDeps = NumOfElements;
+    DepList = DependenciesArray.emitRawPointer(CGF);
+  }
+
+  llvm::Value *HasNoWait =
+      CGF.Builder.getInt32(D.hasClausesOfKind<OMPNowaitClause>() ? 1 : 0);
+  llvm::Value *PointerNum = CGF.Builder.getInt32(NumTargetItems);
+
+  RuntimeFunction RTLFn;
+  switch (D.getDirectiveKind()) {
+  case OMPD_target_enter_data:
+    RTLFn = OMPRTL___kmpc_taskgraph_target_enter_data;
+    break;
+  case OMPD_target_exit_data:
+    RTLFn = OMPRTL___kmpc_taskgraph_target_exit_data;
+    break;
+  case OMPD_target_update:
+    RTLFn = OMPRTL___kmpc_taskgraph_target_update;
+    break;
+  default:
+    llvm_unreachable("Unexpected standalone target data directive.");
+  }
+
+  // See emitTaskgraphTargetCall: a real relocate callback is not emitted yet,
+  // so a null pointer is passed and merely stored by the runtime.
+  llvm::Value *Relocate = llvm::ConstantPointerNull::get(CGF.VoidPtrTy);
+
+  llvm::Value *Args[] = {UpLoc,        ThreadID,          NumDeps,
+                         DepList,      HasNoWait,         DeviceID,
+                         PointerNum,   BasePointersArray, PointersArray,
+                         SizesArray,   MapTypesArray,     MapNamesArray,
+                         MappersArray, Relocate};
+  CGF.EmitRuntimeCall(
+      OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(), RTLFn), Args);
+}
+
 static void emitTargetCallKernelLaunch(
     CGOpenMPRuntime *OMPRuntime, llvm::Function *OutlinedFn,
     const OMPExecutableDirective &D,
@@ -11652,7 +11751,7 @@ static void emitTargetCallKernelLaunch(
     llvm::function_ref<llvm::Value *(CodeGenFunction &CGF,
                                      const OMPLoopDirective &D)>
         SizeEmitter,
-    CodeGenFunction &CGF, CodeGenModule &CGM) {
+    CodeGenFunction &CGF, CodeGenModule &CGM, const Expr *ReplayableCond) {
   llvm::OpenMPIRBuilder &OMPBuilder = OMPRuntime->getOMPBuilder();
 
   // Fill up the arrays with all the captured variables.
@@ -11692,10 +11791,10 @@ static void emitTargetCallKernelLaunch(
   MapTypesArray = Info.RTArgs.MapTypesArray;
   MapNamesArray = Info.RTArgs.MapNamesArray;
 
-  auto &&ThenGen = [&OMPRuntime, OutlinedFn, &D, &CapturedVars,
-                    RequiresOuterTask, &CS, OffloadingMandatory, Device,
-                    OutlinedFnID, &InputInfo, &MapTypesArray, &MapNamesArray,
-                    SizeEmitter](CodeGenFunction &CGF, PrePostActionTy &) {
+  auto &&EmitBody = [&OMPRuntime, OutlinedFn, &D, &CapturedVars,
+                     RequiresOuterTask, &CS, OffloadingMandatory, Device,
+                     OutlinedFnID, &InputInfo, &MapTypesArray, &MapNamesArray,
+                     SizeEmitter](CodeGenFunction &CGF, bool Recording) {
     bool IsReverseOffloading = Device.getInt() == OMPC_DEVICE_ancestor;
 
     if (IsReverseOffloading) {
@@ -11757,17 +11856,79 @@ static void emitTargetCallKernelLaunch(
         DynCGroupMem, HasNoWait, /*StrictBlocks=*/IsBare,
         /*StrictThreads=*/IsBare, DynCGroupMemFallback);
 
-    llvm::OpenMPIRBuilder::InsertPointTy AfterIP =
-        cantFail(OMPRuntime->getOMPBuilder().emitKernelLaunch(
-            CGF.Builder, OutlinedFnID, EmitTargetCallFallbackCB, Args, DeviceID,
-            RTLoc, AllocaIP));
-    CGF.Builder.restoreIP(AfterIP);
+    if (Recording) {
+      // Record the target region via __kmpc_taskgraph_target instead of
+      // launching it directly. Build the same __tgt_kernel_arguments struct the
+      // kernel launch would use and hand it, together with the launch
+      // parameters and the depend list, to the taskgraph runtime.
+      //
+      // Clear the NoWait flag in the kernel-args struct and drop the original
+      // nowait intent: a replayable target executes synchronously (it is never
+      // wrapped in a hidden helper task), and the taskgraph stub forwards to
+      // __tgt_target_kernel synchronously.
+      llvm::OpenMPIRBuilder::TargetKernelArgs TaskgraphArgs = Args;
+      TaskgraphArgs.HasNoWait = false;
+      llvm::SmallVector<llvm::Value *> KernelArgsVector;
+      llvm::OpenMPIRBuilder::getKernelArgsVector(TaskgraphArgs, CGF.Builder,
+                                                 KernelArgsVector);
+      llvm::Value *KernelArgsPtr =
+          OMPRuntime->getOMPBuilder().emitKernelArgsStruct(
+              CGF.Builder, AllocaIP, KernelArgsVector);
+      // emitKernelArgsStruct drives the OMPIRBuilder's own IRBuilder; keep
+      // CGF's builder in sync so the runtime call is emitted after the stores.
+      CGF.Builder.restoreIP(OMPRuntime->getOMPBuilder().getInsertionPoint());
+      // The taskgraph entry point satisfies the dependences itself; there is no
+      // enclosing helper task on this path.
+      OMPRuntime->emitTaskgraphTargetCall(
+          CGF, D, D.getBeginLoc(), OutlinedFnID, DeviceID,
+          Args.NumTeams.front(), Args.NumThreads.front(), KernelArgsPtr);
+    } else {
+      llvm::OpenMPIRBuilder::InsertPointTy AfterIP =
+          cantFail(OMPRuntime->getOMPBuilder().emitKernelLaunch(
+              CGF.Builder, OutlinedFnID, EmitTargetCallFallbackCB, Args,
+              DeviceID, RTLoc, AllocaIP));
+      CGF.Builder.restoreIP(AfterIP);
+    }
   };
 
-  if (RequiresOuterTask)
-    CGF.EmitOMPTargetTaskBasedDirective(D, ThenGen, InputInfo);
-  else
-    OMPRuntime->emitInlinedDirective(CGF, D.getDirectiveKind(), ThenGen);
+  // The taskgraph (recording) path is never wrapped in a hidden helper task: a
+  // replayable target executes synchronously and __kmpc_taskgraph_target owns
+  // its own dependences. The ordinary (non-replayable) path keeps the helper
+  // task when depend/nowait require it.
+  //
+  // It still needs the inlined region, though: EmitBody evaluates the launch
+  // bounds (num_teams, thread_limit and, for a combined loop directive, the
+  // trip count), and those expressions can refer to variables captured by the
+  // target region, which only resolve while CapturedStmtInfo is installed.
+  auto &&EmitRecordingBody = [&](CodeGenFunction &CGF, PrePostActionTy &) {
+    EmitBody(CGF, /*Recording=*/true);
+  };
+  auto &&EmitRecording = [&](CodeGenFunction &CGF, PrePostActionTy &) {
+    OMPRuntime->emitInlinedDirective(CGF, D.getDirectiveKind(),
+                                     EmitRecordingBody);
+  };
+  auto &&EmitOrdinaryBody = [&](CodeGenFunction &CGF, PrePostActionTy &) {
+    EmitBody(CGF, /*Recording=*/false);
+  };
+  auto &&EmitOrdinary = [&](CodeGenFunction &CGF, PrePostActionTy &) {
+    if (RequiresOuterTask)
+      CGF.EmitOMPTargetTaskBasedDirective(D, EmitOrdinaryBody, InputInfo);
+    else
+      OMPRuntime->emitInlinedDirective(CGF, D.getDirectiveKind(),
+                                       EmitOrdinaryBody);
+  };
+
+  // Record via the taskgraph entry point when the region is replayable (the
+  // runtime degrades to a synchronous normal launch if nothing is recording),
+  // and otherwise take the ordinary path.  ReplayableCond already carries the
+  // enclosing taskgraph region's default (getOMPReplayableCond), which
+  // emitIfClause folds to just the recording path.
+  if (ReplayableCond) {
+    OMPRuntime->emitIfClause(CGF, ReplayableCond, EmitRecording, EmitOrdinary);
+  } else {
+    RegionCodeGenTy RCG(EmitOrdinary);
+    RCG(CGF);
+  }
 }
 
 static void
@@ -11799,7 +11960,8 @@ void CGOpenMPRuntime::emitTargetCall(
     llvm::PointerIntPair<const Expr *, 2, OpenMPDeviceClauseModifier> Device,
     llvm::function_ref<llvm::Value *(CodeGenFunction &CGF,
                                      const OMPLoopDirective &D)>
-        SizeEmitter) {
+        SizeEmitter,
+    const Expr *ReplayableCond) {
   if (!CGF.HaveInsertPoint())
     return;
 
@@ -11808,6 +11970,10 @@ void CGOpenMPRuntime::emitTargetCall(
 
   assert((OffloadingMandatory || OutlinedFn) && "Invalid outlined function!");
 
+  // This governs the ordinary (non-recording) path only. A recorded target
+  // region is handed to __kmpc_taskgraph_target (in
+  // emitTargetCallKernelLaunch) with its depend/nowait clauses forwarded, so
+  // that path is never wrapped in a hidden helper task and ignores this.
   const bool RequiresOuterTask =
       D.hasClausesOfKind<OMPDependClause>() ||
       D.hasClausesOfKind<OMPNowaitClause>() ||
@@ -11827,16 +11993,16 @@ void CGOpenMPRuntime::emitTargetCall(
   llvm::Value *MapTypesArray = nullptr;
   llvm::Value *MapNamesArray = nullptr;
 
-  auto &&TargetThenGen = [this, OutlinedFn, &D, &CapturedVars,
-                          RequiresOuterTask, &CS, OffloadingMandatory, Device,
-                          OutlinedFnID, &InputInfo, &MapTypesArray,
-                          &MapNamesArray, SizeEmitter](CodeGenFunction &CGF,
-                                                       PrePostActionTy &) {
-    emitTargetCallKernelLaunch(this, OutlinedFn, D, CapturedVars,
-                               RequiresOuterTask, CS, OffloadingMandatory,
-                               Device, OutlinedFnID, InputInfo, MapTypesArray,
-                               MapNamesArray, SizeEmitter, CGF, CGM);
-  };
+  auto &&TargetThenGen =
+      [this, OutlinedFn, &D, &CapturedVars, RequiresOuterTask, &CS,
+       OffloadingMandatory, Device, OutlinedFnID, &InputInfo, &MapTypesArray,
+       &MapNamesArray, SizeEmitter,
+       ReplayableCond](CodeGenFunction &CGF, PrePostActionTy &) {
+        emitTargetCallKernelLaunch(
+            this, OutlinedFn, D, CapturedVars, RequiresOuterTask, CS,
+            OffloadingMandatory, Device, OutlinedFnID, InputInfo, MapTypesArray,
+            MapNamesArray, SizeEmitter, CGF, CGM, ReplayableCond);
+      };
 
   auto &&TargetElseGen =
       [this, OutlinedFn, &D, &CapturedVars, RequiresOuterTask, &CS,
@@ -12469,7 +12635,7 @@ void CGOpenMPRuntime::emitTargetDataCalls(
 
 void CGOpenMPRuntime::emitTargetDataStandAloneCall(
     CodeGenFunction &CGF, const OMPExecutableDirective &D, const Expr *IfCond,
-    const Expr *Device) {
+    const Expr *Device, const Expr *ReplayableCond) {
   if (!CGF.HaveInsertPoint())
     return;
 
@@ -12478,12 +12644,20 @@ void CGOpenMPRuntime::emitTargetDataStandAloneCall(
           isa<OMPTargetUpdateDirective>(D)) &&
          "Expecting either target enter, exit data, or update directives.");
 
+  // A depend/nowait clause normally needs a hidden helper task. The recording
+  // (taskgraph) path is the exception: it forwards the depend/nowait clauses
+  // to the __kmpc_taskgraph_target_*_data entry point, which satisfies them
+  // synchronously, so it is never wrapped in a helper task and ignores this.
+  // RequiresOuterTask therefore only governs the ordinary path below.
+  const bool RequiresOuterTask = D.hasClausesOfKind<OMPDependClause>() ||
+                                 D.hasClausesOfKind<OMPNowaitClause>();
+
   CodeGenFunction::OMPTargetDataInfo InputInfo;
   llvm::Value *MapTypesArray = nullptr;
   llvm::Value *MapNamesArray = nullptr;
   // Generate the code for the opening of the data environment.
-  auto &&ThenGen = [this, &D, Device, &InputInfo, &MapTypesArray,
-                    &MapNamesArray](CodeGenFunction &CGF, PrePostActionTy &) {
+  auto &&EmitDataBody = [this, &D, Device, &InputInfo, &MapTypesArray,
+                         &MapNamesArray](CodeGenFunction &CGF, bool Recording) {
     // Emit device ID if any.
     llvm::Value *DeviceID = nullptr;
     if (Device) {
@@ -12493,123 +12667,142 @@ void CGOpenMPRuntime::emitTargetDataStandAloneCall(
       DeviceID = CGF.Builder.getInt64(OMP_DEVICEID_UNDEF);
     }
 
-    // Emit the number of elements in the offloading arrays.
-    llvm::Constant *PointerNum =
-        CGF.Builder.getInt32(InputInfo.NumberOfTargetItems);
-
-    // Source location for the ident struct
-    llvm::Value *RTLoc = emitUpdateLocation(CGF, D.getBeginLoc());
-
-    SmallVector<llvm::Value *, 13> OffloadingArgs(
-        {RTLoc, DeviceID, PointerNum,
-         InputInfo.BasePointersArray.emitRawPointer(CGF),
-         InputInfo.PointersArray.emitRawPointer(CGF),
-         InputInfo.SizesArray.emitRawPointer(CGF), MapTypesArray, MapNamesArray,
-         InputInfo.MappersArray.emitRawPointer(CGF)});
-
-    // Select the right runtime function call for each standalone
-    // directive.
-    const bool HasNowait = D.hasClausesOfKind<OMPNowaitClause>();
-    RuntimeFunction RTLFn;
-    switch (D.getDirectiveKind()) {
-    case OMPD_target_enter_data:
-      RTLFn = HasNowait ? OMPRTL___tgt_target_data_begin_nowait_mapper
-                        : OMPRTL___tgt_target_data_begin_mapper;
-      break;
-    case OMPD_target_exit_data:
-      RTLFn = HasNowait ? OMPRTL___tgt_target_data_end_nowait_mapper
-                        : OMPRTL___tgt_target_data_end_mapper;
-      break;
-    case OMPD_target_update:
-      RTLFn = HasNowait ? OMPRTL___tgt_target_data_update_nowait_mapper
-                        : OMPRTL___tgt_target_data_update_mapper;
-      break;
-    case OMPD_parallel:
-    case OMPD_for:
-    case OMPD_parallel_for:
-    case OMPD_parallel_master:
-    case OMPD_parallel_sections:
-    case OMPD_for_simd:
-    case OMPD_parallel_for_simd:
-    case OMPD_cancel:
-    case OMPD_cancellation_point:
-    case OMPD_ordered_standalone:
-    case OMPD_ordered_blockassoc:
-    case OMPD_threadprivate:
-    case OMPD_allocate:
-    case OMPD_task:
-    case OMPD_simd:
-    case OMPD_tile:
-    case OMPD_unroll:
-    case OMPD_sections:
-    case OMPD_section:
-    case OMPD_single:
-    case OMPD_master:
-    case OMPD_critical:
-    case OMPD_taskyield:
-    case OMPD_barrier:
-    case OMPD_taskwait:
-    case OMPD_taskgraph:
-    case OMPD_taskgroup:
-    case OMPD_atomic:
-    case OMPD_flush:
-    case OMPD_depobj:
-    case OMPD_scan:
-    case OMPD_teams:
-    case OMPD_target_data:
-    case OMPD_distribute:
-    case OMPD_distribute_simd:
-    case OMPD_distribute_parallel_for:
-    case OMPD_distribute_parallel_for_simd:
-    case OMPD_teams_distribute:
-    case OMPD_teams_distribute_simd:
-    case OMPD_teams_distribute_parallel_for:
-    case OMPD_teams_distribute_parallel_for_simd:
-    case OMPD_declare_simd:
-    case OMPD_declare_variant:
-    case OMPD_begin_declare_variant:
-    case OMPD_end_declare_variant:
-    case OMPD_declare_target:
-    case OMPD_end_declare_target:
-    case OMPD_declare_reduction:
-    case OMPD_declare_mapper:
-    case OMPD_taskloop:
-    case OMPD_taskloop_simd:
-    case OMPD_master_taskloop:
-    case OMPD_master_taskloop_simd:
-    case OMPD_parallel_master_taskloop:
-    case OMPD_parallel_master_taskloop_simd:
-    case OMPD_target:
-    case OMPD_target_simd:
-    case OMPD_target_teams_distribute:
-    case OMPD_target_teams_distribute_simd:
-    case OMPD_target_teams_distribute_parallel_for:
-    case OMPD_target_teams_distribute_parallel_for_simd:
-    case OMPD_target_teams:
-    case OMPD_target_parallel:
-    case OMPD_target_parallel_for:
-    case OMPD_target_parallel_for_simd:
-    case OMPD_requires:
-    case OMPD_metadirective:
-    case OMPD_unknown:
-    default:
-      llvm_unreachable("Unexpected standalone target data directive.");
-      break;
+    if (Recording) {
+      // Record the directive via __kmpc_taskgraph_target_{enter,exit}_data /
+      // _update instead of issuing the data-mapper call directly. The taskgraph
+      // entry point satisfies the dependences itself; there is no enclosing
+      // helper task on this path.
+      emitTaskgraphTargetDataCall(
+          CGF, D, D.getBeginLoc(), DeviceID, InputInfo.NumberOfTargetItems,
+          InputInfo.BasePointersArray.emitRawPointer(CGF),
+          InputInfo.PointersArray.emitRawPointer(CGF),
+          InputInfo.SizesArray.emitRawPointer(CGF), MapTypesArray,
+          MapNamesArray, InputInfo.MappersArray.emitRawPointer(CGF));
+      return;
     }
-    if (HasNowait) {
-      OffloadingArgs.push_back(llvm::Constant::getNullValue(CGF.Int32Ty));
-      OffloadingArgs.push_back(llvm::Constant::getNullValue(CGF.VoidPtrTy));
-      OffloadingArgs.push_back(llvm::Constant::getNullValue(CGF.Int32Ty));
-      OffloadingArgs.push_back(llvm::Constant::getNullValue(CGF.VoidPtrTy));
-    }
-    CGF.EmitRuntimeCall(
-        OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(), RTLFn),
-        OffloadingArgs);
+
+    auto &&EmitNormalDataCall = [&](CodeGenFunction &CGF, PrePostActionTy &) {
+      // Emit the number of elements in the offloading arrays.
+      llvm::Constant *PointerNum =
+          CGF.Builder.getInt32(InputInfo.NumberOfTargetItems);
+
+      // Source location for the ident struct
+      llvm::Value *RTLoc = emitUpdateLocation(CGF, D.getBeginLoc());
+
+      SmallVector<llvm::Value *, 13> OffloadingArgs(
+          {RTLoc, DeviceID, PointerNum,
+           InputInfo.BasePointersArray.emitRawPointer(CGF),
+           InputInfo.PointersArray.emitRawPointer(CGF),
+           InputInfo.SizesArray.emitRawPointer(CGF), MapTypesArray,
+           MapNamesArray, InputInfo.MappersArray.emitRawPointer(CGF)});
+
+      // Select the right runtime function call for each standalone
+      // directive.
+      const bool HasNowait = D.hasClausesOfKind<OMPNowaitClause>();
+      RuntimeFunction RTLFn;
+      switch (D.getDirectiveKind()) {
+      case OMPD_target_enter_data:
+        RTLFn = HasNowait ? OMPRTL___tgt_target_data_begin_nowait_mapper
+                          : OMPRTL___tgt_target_data_begin_mapper;
+        break;
+      case OMPD_target_exit_data:
+        RTLFn = HasNowait ? OMPRTL___tgt_target_data_end_nowait_mapper
+                          : OMPRTL___tgt_target_data_end_mapper;
+        break;
+      case OMPD_target_update:
+        RTLFn = HasNowait ? OMPRTL___tgt_target_data_update_nowait_mapper
+                          : OMPRTL___tgt_target_data_update_mapper;
+        break;
+      case OMPD_parallel:
+      case OMPD_for:
+      case OMPD_parallel_for:
+      case OMPD_parallel_master:
+      case OMPD_parallel_sections:
+      case OMPD_for_simd:
+      case OMPD_parallel_for_simd:
+      case OMPD_cancel:
+      case OMPD_cancellation_point:
+      case OMPD_ordered_standalone:
+      case OMPD_ordered_blockassoc:
+      case OMPD_threadprivate:
+      case OMPD_allocate:
+      case OMPD_task:
+      case OMPD_simd:
+      case OMPD_tile:
+      case OMPD_unroll:
+      case OMPD_sections:
+      case OMPD_section:
+      case OMPD_single:
+      case OMPD_master:
+      case OMPD_critical:
+      case OMPD_taskyield:
+      case OMPD_barrier:
+      case OMPD_taskwait:
+      case OMPD_taskgraph:
+      case OMPD_taskgroup:
+      case OMPD_atomic:
+      case OMPD_flush:
+      case OMPD_depobj:
+      case OMPD_scan:
+      case OMPD_teams:
+      case OMPD_target_data:
+      case OMPD_distribute:
+      case OMPD_distribute_simd:
+      case OMPD_distribute_parallel_for:
+      case OMPD_distribute_parallel_for_simd:
+      case OMPD_teams_distribute:
+      case OMPD_teams_distribute_simd:
+      case OMPD_teams_distribute_parallel_for:
+      case OMPD_teams_distribute_parallel_for_simd:
+      case OMPD_declare_simd:
+      case OMPD_declare_variant:
+      case OMPD_begin_declare_variant:
+      case OMPD_end_declare_variant:
+      case OMPD_declare_target:
+      case OMPD_end_declare_target:
+      case OMPD_declare_reduction:
+      case OMPD_declare_mapper:
+      case OMPD_taskloop:
+      case OMPD_taskloop_simd:
+      case OMPD_master_taskloop:
+      case OMPD_master_taskloop_simd:
+      case OMPD_parallel_master_taskloop:
+      case OMPD_parallel_master_taskloop_simd:
+      case OMPD_target:
+      case OMPD_target_simd:
+      case OMPD_target_teams_distribute:
+      case OMPD_target_teams_distribute_simd:
+      case OMPD_target_teams_distribute_parallel_for:
+      case OMPD_target_teams_distribute_parallel_for_simd:
+      case OMPD_target_teams:
+      case OMPD_target_parallel:
+      case OMPD_target_parallel_for:
+      case OMPD_target_parallel_for_simd:
+      case OMPD_requires:
+      case OMPD_metadirective:
+      case OMPD_unknown:
+      default:
+        llvm_unreachable("Unexpected standalone target data directive.");
+        break;
+      }
+      if (HasNowait) {
+        OffloadingArgs.push_back(llvm::Constant::getNullValue(CGF.Int32Ty));
+        OffloadingArgs.push_back(llvm::Constant::getNullValue(CGF.VoidPtrTy));
+        OffloadingArgs.push_back(llvm::Constant::getNullValue(CGF.Int32Ty));
+        OffloadingArgs.push_back(llvm::Constant::getNullValue(CGF.VoidPtrTy));
+      }
+      CGF.EmitRuntimeCall(
+          OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(), RTLFn),
+          OffloadingArgs);
+    };
+
+    RegionCodeGenTy RCG(EmitNormalDataCall);
+    RCG(CGF);
   };
 
-  auto &&TargetThenGen = [this, &ThenGen, &D, &InputInfo, &MapTypesArray,
-                          &MapNamesArray](CodeGenFunction &CGF,
-                                          PrePostActionTy &) {
+  auto &&TargetThenGen = [this, &EmitDataBody, &D, &InputInfo, &MapTypesArray,
+                          &MapNamesArray, RequiresOuterTask, ReplayableCond](
+                             CodeGenFunction &CGF, PrePostActionTy &) {
     // Fill up the arrays with all the mapped variables.
     MappableExprsHandler::MapCombinedInfoTy CombinedInfo;
     CGOpenMPRuntime::TargetDataInfo Info;
@@ -12617,9 +12810,6 @@ void CGOpenMPRuntime::emitTargetDataStandAloneCall(
     genMapInfo(MEHandler, CGF, CombinedInfo, OMPBuilder);
     emitOffloadingArraysAndArgs(CGF, CombinedInfo, Info, OMPBuilder,
                                 /*IsNonContiguous=*/true, /*ForEndCall=*/false);
-
-    bool RequiresOuterTask = D.hasClausesOfKind<OMPDependClause>() ||
-                             D.hasClausesOfKind<OMPNowaitClause>();
 
     InputInfo.NumberOfTargetItems = Info.NumberOfPtrs;
     InputInfo.BasePointersArray = Address(Info.RTArgs.BasePointersArray,
@@ -12632,10 +12822,37 @@ void CGOpenMPRuntime::emitTargetDataStandAloneCall(
         Address(Info.RTArgs.MappersArray, CGF.VoidPtrTy, CGM.getPointerAlign());
     MapTypesArray = Info.RTArgs.MapTypesArray;
     MapNamesArray = Info.RTArgs.MapNamesArray;
-    if (RequiresOuterTask)
-      CGF.EmitOMPTargetTaskBasedDirective(D, ThenGen, InputInfo);
-    else
-      emitInlinedDirective(CGF, D.getDirectiveKind(), ThenGen);
+
+    // The taskgraph (recording) path is never wrapped in a hidden helper task:
+    // a replayable target-data directive executes synchronously and the
+    // taskgraph entry point owns its own dependences. The ordinary
+    // (non-replayable) path keeps the helper task when depend/nowait require
+    // it.
+    auto &&EmitRecording = [&](CodeGenFunction &CGF, PrePostActionTy &) {
+      EmitDataBody(CGF, /*Recording=*/true);
+    };
+    auto &&EmitOrdinaryBody = [&](CodeGenFunction &CGF, PrePostActionTy &) {
+      EmitDataBody(CGF, /*Recording=*/false);
+    };
+    auto &&EmitOrdinary = [&](CodeGenFunction &CGF, PrePostActionTy &) {
+      if (RequiresOuterTask)
+        CGF.EmitOMPTargetTaskBasedDirective(D, EmitOrdinaryBody, InputInfo);
+      else
+        emitInlinedDirective(CGF, D.getDirectiveKind(), EmitOrdinaryBody);
+    };
+
+    // Record via the taskgraph entry point when the directive is replayable
+    // (the runtime degrades to a synchronous normal mapper call if nothing is
+    // recording), and otherwise issue the ordinary mapper call.
+    // ReplayableCond already carries the enclosing taskgraph region's default
+    // (getOMPReplayableCond), which emitIfClause folds to just the recording
+    // path.
+    if (ReplayableCond) {
+      emitIfClause(CGF, ReplayableCond, EmitRecording, EmitOrdinary);
+    } else {
+      RegionCodeGenTy RCG(EmitOrdinary);
+      RCG(CGF);
+    }
   };
 
   if (IfCond) {
@@ -14105,7 +14322,8 @@ void CGOpenMPSIMDRuntime::emitTargetCall(
     llvm::PointerIntPair<const Expr *, 2, OpenMPDeviceClauseModifier> Device,
     llvm::function_ref<llvm::Value *(CodeGenFunction &CGF,
                                      const OMPLoopDirective &D)>
-        SizeEmitter) {
+        SizeEmitter,
+    const Expr *ReplayableCond) {
   llvm_unreachable("Not supported in SIMD-only mode");
 }
 
@@ -14145,7 +14363,7 @@ void CGOpenMPSIMDRuntime::emitTargetDataCalls(
 
 void CGOpenMPSIMDRuntime::emitTargetDataStandAloneCall(
     CodeGenFunction &CGF, const OMPExecutableDirective &D, const Expr *IfCond,
-    const Expr *Device) {
+    const Expr *Device, const Expr *ReplayableCond) {
   llvm_unreachable("Not supported in SIMD-only mode");
 }
 
