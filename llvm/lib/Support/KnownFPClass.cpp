@@ -385,9 +385,9 @@ KnownBits KnownFPClass::toKnownBits(const fltSemantics &FltSemantics) const {
   return Known;
 }
 
-// Handle known sign bit and nan cases for fadd.
-static KnownFPClass fadd_impl(const KnownFPClass &KnownLHS,
-                              const KnownFPClass &KnownRHS, DenormalMode Mode) {
+// Handle known sign bit and nan cases for fadd, fsub, and fma.
+static KnownFPClass fadd_fsub_fma_common(const KnownFPClass &KnownLHS,
+                                         const KnownFPClass &KnownRHS) {
   KnownFPClass Known;
 
   // Adding positive and negative infinity produces NaN, but only if both
@@ -420,17 +420,13 @@ static KnownFPClass fadd_impl(const KnownFPClass &KnownLHS,
   return Known;
 }
 
-KnownFPClass KnownFPClass::fadd(const KnownFPClass &KnownLHS,
-                                const KnownFPClass &KnownRHS,
-                                DenormalMode Mode) {
-  KnownFPClass Known = fadd_impl(KnownLHS, KnownRHS, Mode);
+static KnownFPClass fadd_fsub_common(const KnownFPClass &KnownLHS,
+                                     const KnownFPClass &KnownRHS) {
+  KnownFPClass Known = fadd_fsub_fma_common(KnownLHS, KnownRHS);
 
-  // (fadd x, 0.0) is guaranteed to return +0.0, not -0.0.
-  if ((KnownLHS.isKnownNeverLogicalNegZero(Mode) ||
-       KnownRHS.isKnownNeverLogicalNegZero(Mode)) &&
-      // Make sure output negative denormal can't flush to -0
-      (Mode.Output == DenormalMode::IEEE ||
-       Mode.Output == DenormalMode::PositiveZero))
+  // fadd(x, +0.0) is guaranteed to return +0.0, not -0.0.
+  // TODO: fadd(+0.0, -0.0) returns -0.0 if rounding towards negative infinity.
+  if (KnownLHS.isKnownNeverNegZero() || KnownRHS.isKnownNeverNegZero())
     Known.knownNot(fcNegZero);
 
   Known.propagateNonSNaN(KnownLHS, KnownRHS);
@@ -438,26 +434,57 @@ KnownFPClass KnownFPClass::fadd(const KnownFPClass &KnownLHS,
   return Known;
 }
 
-KnownFPClass KnownFPClass::fadd_self(const KnownFPClass &KnownSrc,
-                                     DenormalMode Mode) {
-  KnownFPClass Known = fadd(KnownSrc, KnownSrc, Mode);
+KnownFPClass KnownFPClass::fadd(const KnownFPClass &KnownLHS_,
+                                const KnownFPClass &KnownRHS_,
+                                DenormalMode Mode) {
+  KnownFPClass KnownLHS = applyInputDenormalMode(KnownLHS_, Mode);
+  KnownFPClass KnownRHS = applyInputDenormalMode(KnownRHS_, Mode);
 
-  // Doubling 0 will give the same 0.
-  if (KnownSrc.isKnownNeverLogicalPosZero(Mode) &&
-      (Mode.Output == DenormalMode::IEEE ||
-       (Mode.Output == DenormalMode::PreserveSign &&
-        KnownSrc.isKnownNeverPosSubnormal()) ||
-       (Mode.Output == DenormalMode::PositiveZero &&
-        KnownSrc.isKnownNeverSubnormal())))
-    Known.knownNot(fcPosZero);
+  KnownFPClass Known = fadd_fsub_common(KnownLHS, KnownRHS);
 
-  return Known;
+  return applyOutputDenormalMode(Known, Mode);
 }
 
-KnownFPClass KnownFPClass::fsub(const KnownFPClass &KnownLHS,
-                                const KnownFPClass &KnownRHS,
+KnownFPClass KnownFPClass::fadd_self(const KnownFPClass &KnownSrc_,
+                                     DenormalMode Mode) {
+  KnownFPClass KnownSrc = applyInputDenormalMode(KnownSrc_, Mode);
+
+  KnownFPClass Known;
+
+  Known.propagateNonNaN(KnownSrc);
+
+  if (KnownSrc.isKnownNever(fcPosNormal | fcPosInf))
+    Known.knownNot(fcPosInf);
+  if (KnownSrc.isKnownNever(fcNegNormal | fcNegInf))
+    Known.knownNot(fcNegInf);
+
+  if (KnownSrc.isKnownNever(fcPosSubnormal | fcPosNormal))
+    Known.knownNot(fcPosNormal);
+  if (KnownSrc.isKnownNever(fcNegSubnormal | fcNegNormal))
+    Known.knownNot(fcNegNormal);
+
+  if (KnownSrc.isKnownNever(fcPosSubnormal))
+    Known.knownNot(fcPosSubnormal);
+  if (KnownSrc.isKnownNever(fcNegSubnormal))
+    Known.knownNot(fcNegSubnormal);
+
+  if (KnownSrc.isKnownNever(fcPosZero))
+    Known.knownNot(fcPosZero);
+  if (KnownSrc.isKnownNever(fcNegZero))
+    Known.knownNot(fcNegZero);
+
+  return applyOutputDenormalMode(Known, Mode);
+}
+
+KnownFPClass KnownFPClass::fsub(const KnownFPClass &KnownLHS_,
+                                const KnownFPClass &KnownRHS_,
                                 DenormalMode Mode) {
-  return fadd(KnownLHS, fneg(KnownRHS), Mode);
+  KnownFPClass KnownLHS = applyInputDenormalMode(KnownLHS_, Mode);
+  KnownFPClass KnownRHS = applyInputDenormalMode(KnownRHS_, Mode);
+
+  KnownFPClass Known = fadd_fsub_common(KnownLHS, fneg(KnownRHS));
+
+  return applyOutputDenormalMode(Known, Mode);
 }
 
 KnownFPClass KnownFPClass::fmul(const KnownFPClass &KnownLHS,
@@ -632,7 +659,7 @@ KnownFPClass KnownFPClass::fma(const KnownFPClass &KnownLHS,
   //
   // If the multiply is a -0 due to rounding, the final -0 + 0 will be -0,
   // unlike for a separate fadd.
-  KnownFPClass Known = fadd_impl(Mul, KnownAddend, Mode);
+  KnownFPClass Known = fadd_fsub_fma_common(Mul, KnownAddend);
 
   // propagateNonSNaN for 3 arguments.
   if (KnownLHS.isKnownNever(fcSNan) && KnownRHS.isKnownNever(fcSNan) &&
@@ -646,7 +673,7 @@ KnownFPClass KnownFPClass::fma_square(const KnownFPClass &KnownSquared,
                                       const KnownFPClass &KnownAddend,
                                       DenormalMode Mode) {
   KnownFPClass Squared = square(KnownSquared, Mode);
-  KnownFPClass Known = fadd_impl(Squared, KnownAddend, Mode);
+  KnownFPClass Known = fadd_fsub_fma_common(Squared, KnownAddend);
 
   // Since we know the squared input must be positive, the add of opposite sign
   // infinities nan hazard only applies for negative inf.
