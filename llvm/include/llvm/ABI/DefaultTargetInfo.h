@@ -22,14 +22,14 @@ namespace llvm {
 namespace abi {
 
 /// Self-consistent classification that conforms to no particular ABI.
-class DefaultTargetInfo : public TargetInfo {
+class LLVM_ABI DefaultTargetInfo : public TargetInfo {
 public:
   using TargetInfo::TargetInfo;
 
-  LLVM_ABI ArgInfo classifyArgumentType(const Type *Ty) const;
-  LLVM_ABI ArgInfo classifyReturnType(const Type *RetTy) const;
+  ArgInfo classifyArgumentType(const Type *Ty) const;
+  ArgInfo classifyReturnType(const Type *RetTy) const;
 
-  LLVM_ABI void computeInfo(FunctionInfo &FI) const override;
+  void computeInfo(FunctionInfo &FI) const override;
 };
 
 } // namespace abi
