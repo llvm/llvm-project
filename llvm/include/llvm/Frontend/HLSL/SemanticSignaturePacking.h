@@ -111,7 +111,7 @@ packSignatureIndexed(MutableArrayRef<SemanticSignatureElement> Elements,
 ///
 /// See llvm/docs/DirectX/SemanticSignatures.md#optimized-packing for details.
 ///
-/// Returns one past the highest allocated row, or zero if no elements were
+/// Returns the number of allocated rows, or zero if no elements were
 /// allocated. For geometry outputs this is the maximum extent of any stream,
 /// not the sum of their extents.
 ///
