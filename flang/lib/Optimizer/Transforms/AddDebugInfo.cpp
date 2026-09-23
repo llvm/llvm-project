@@ -83,10 +83,16 @@ private:
   /// Names of the modules whose DIModule this compilation unit defines.
   llvm::StringSet<> definedModuleNames;
 
+  mlir::LLVM::DIModuleAttr createModuleAttr(const std::string &name,
+                                            mlir::LLVM::DIFileAttr fileAttr,
+                                            mlir::LLVM::DIScopeAttr scope);
   mlir::LLVM::DIModuleAttr
   getOrCreateModuleAttr(const std::string &name,
                         mlir::LLVM::DIFileAttr fileAttr,
                         mlir::LLVM::DIScopeAttr scope);
+  llvm::SmallVector<mlir::LLVM::DINodeAttr>
+  buildSubmoduleImports(mlir::ModuleOp module, mlir::LLVM::DIFileAttr fileAttr,
+                        mlir::LLVM::DIScopeAttr cuAttr);
   mlir::LLVM::DICommonBlockAttr
   getOrCreateCommonBlockAttr(llvm::StringRef name,
                              mlir::LLVM::DIFileAttr fileAttr,
@@ -526,37 +532,41 @@ mlir::LLVM::DICommonBlockAttr AddDebugInfoPass::getOrCreateCommonBlockAttr(
 // extract information about it from the name of the identifiers and keep a
 // map to avoid duplication.
 mlir::LLVM::DIModuleAttr
+AddDebugInfoPass::createModuleAttr(const std::string &name,
+                                   mlir::LLVM::DIFileAttr fileAttr,
+                                   mlir::LLVM::DIScopeAttr scope) {
+  mlir::MLIRContext *context = &getContext();
+  unsigned line = 0;
+  bool decl = !definedModuleNames.contains(name);
+
+  // The location of the fir.module_debug_imports is that of the MODULE
+  // statement. A module that has none is not defined here, and gets no line.
+  if (auto iter{moduleDebugImportsByName.find(name)};
+      iter != moduleDebugImportsByName.end()) {
+    line = fir::getLineFromLoc(iter->second.getLoc());
+    fileAttr = fir::getFileAttrFromLoc(iter->second.getLoc(), fileAttr);
+  }
+
+  // When decl is true, it means that module is only being used in this
+  // compilation unit and it is defined elsewhere. But if the file/line/scope
+  // fields are valid, the module is not merged with its definition and is
+  // considered different. So we only set those fields when decl is false.
+  return mlir::LLVM::DIModuleAttr::get(
+      context, decl ? nullptr : fileAttr, decl ? nullptr : scope,
+      mlir::StringAttr::get(context, name),
+      /* configMacros */ mlir::StringAttr(),
+      /* includePath */ mlir::StringAttr(),
+      /* apinotes */ mlir::StringAttr(), decl ? 0 : line, decl);
+}
+
+mlir::LLVM::DIModuleAttr
 AddDebugInfoPass::getOrCreateModuleAttr(const std::string &name,
                                         mlir::LLVM::DIFileAttr fileAttr,
                                         mlir::LLVM::DIScopeAttr scope) {
-  mlir::MLIRContext *context = &getContext();
-  mlir::LLVM::DIModuleAttr modAttr;
-  if (auto iter{moduleMap.find(name)}; iter != moduleMap.end()) {
-    modAttr = iter->getValue();
-  } else {
-    unsigned line = 0;
-    bool decl = !definedModuleNames.contains(name);
-
-    // The location of the fir.module_debug_imports is that of the MODULE
-    // statement. A module that has none is not defined here, and gets no line.
-    if (auto iter{moduleDebugImportsByName.find(name)};
-        iter != moduleDebugImportsByName.end()) {
-      line = fir::getLineFromLoc(iter->second.getLoc());
-      fileAttr = fir::getFileAttrFromLoc(iter->second.getLoc(), fileAttr);
-    }
-
-    // When decl is true, it means that module is only being used in this
-    // compilation unit and it is defined elsewhere. But if the file/line/scope
-    // fields are valid, the module is not merged with its definition and is
-    // considered different. So we only set those fields when decl is false.
-    modAttr = mlir::LLVM::DIModuleAttr::get(
-        context, decl ? nullptr : fileAttr, decl ? nullptr : scope,
-        mlir::StringAttr::get(context, name),
-        /* configMacros */ mlir::StringAttr(),
-        /* includePath */ mlir::StringAttr(),
-        /* apinotes */ mlir::StringAttr(), decl ? 0 : line, decl);
-    moduleMap[name] = modAttr;
-  }
+  if (auto iter{moduleMap.find(name)}; iter != moduleMap.end())
+    return iter->getValue();
+  mlir::LLVM::DIModuleAttr modAttr = createModuleAttr(name, fileAttr, scope);
+  moduleMap[name] = modAttr;
   return modAttr;
 }
 
@@ -1085,6 +1095,53 @@ void AddDebugInfoPass::buildDefinedModuleNames(mlir::ModuleOp module) {
     definedModuleNames.insert(entry.getKey());
 }
 
+// A submodule has access to everything in the submodule directly above it, and
+// through that one to the whole of its ancestry, but the name of its
+// DW_TAG_module says nothing about it. Import the parent into each submodule,
+// as gfortran does, so that a debugger stopped in a procedure of a submodule
+// can still find the entities declared above it. The imports of a nested
+// submodule form a chain that it walks up to the module at the root.
+//
+// These belong to the compile unit rather than to any one procedure, so that a
+// submodule needs a single one however many procedures it holds. That makes the
+// compile unit refer to a module that refers back to it, which is what the
+// recursive attribute the caller builds is for.
+//
+// The modules named here are built directly rather than taken from the cache,
+// because they name the placeholder unit while every other use of them names
+// the real one, and only the latter should be handed out. Everything else about
+// them is settled before either is built, so the two describe the same module
+// and become one once the unit they name is resolved.
+llvm::SmallVector<mlir::LLVM::DINodeAttr>
+AddDebugInfoPass::buildSubmoduleImports(mlir::ModuleOp module,
+                                        mlir::LLVM::DIFileAttr fileAttr,
+                                        mlir::LLVM::DIScopeAttr cuAttr) {
+  mlir::MLIRContext *context = &getContext();
+  llvm::SmallVector<mlir::LLVM::DINodeAttr> imports;
+  // Walked rather than taken from the map so that the order is that of the
+  // program and does not depend on how the names happen to hash.
+  module.walk([&](fir::ModuleDebugImportsOp op) {
+    std::optional<llvm::StringRef> ancestor = op.getAncestorModule();
+    std::optional<llvm::StringRef> parent = op.getParentModule();
+    if (!ancestor || !parent)
+      return;
+    // The parent of a first level submodule is the root module, whose name
+    // stands alone. Any other parent is a submodule, and is named like one.
+    std::string parentName = *parent == *ancestor
+                                 ? parent->str()
+                                 : getDebugModuleName(*ancestor, *parent);
+    std::string name = getDebugModuleName(*ancestor, op.getModuleName());
+    imports.push_back(mlir::LLVM::DIImportedEntityAttr::get(
+        context, llvm::dwarf::DW_TAG_imported_module,
+        createModuleAttr(name, fileAttr, cuAttr),
+        createModuleAttr(parentName, fileAttr, cuAttr),
+        fir::getFileAttrFromLoc(op.getLoc(), fileAttr),
+        fir::getLineFromLoc(op.getLoc()), /*name=*/mlir::StringAttr(),
+        /*elements=*/{}));
+  });
+  return imports;
+}
+
 void AddDebugInfoPass::expandUseStmtForDebug(
     fir::UseStmtOp useOp, mlir::LLVM::DISubprogramAttr spAttr,
     mlir::LLVM::DIFileAttr fileAttr, mlir::LLVM::DICompileUnitAttr cuAttr,
@@ -1201,12 +1258,28 @@ void AddDebugInfoPass::runOnOperation() {
       debugLevel == mlir::LLVM::DIEmissionKind::DebugDirectivesOnly
           ? mlir::LLVM::DINameTableKind::None
           : mlir::LLVM::DINameTableKind::Default;
+  // Each submodule compiled here imports the one above it, and those entries
+  // hang off the compile unit. They are scoped at modules that name the unit
+  // they are part of, so build them against a placeholder of it first, and give
+  // the unit the matching recursive id once it holds them.
+  mlir::DistinctAttr cuRecId =
+      mlir::DistinctAttr::create(mlir::UnitAttr::get(context));
+  llvm::SmallVector<mlir::LLVM::DINodeAttr> cuImports = buildSubmoduleImports(
+      module, fileAttr,
+      mlir::cast<mlir::LLVM::DICompileUnitAttr>(
+          mlir::LLVM::DICompileUnitAttr::getRecSelf(cuRecId)));
+
   mlir::LLVM::DICompileUnitAttr cuAttr = mlir::LLVM::DICompileUnitAttr::get(
       mlir::DistinctAttr::create(mlir::UnitAttr::get(context)),
       llvm::dwarf::getLanguage("DW_LANG_Fortran95"), fileAttr, producer,
       isOptimized, debugLevel, debugInfoForProfiling, nameTableKind,
       splitDwarfFile.empty() ? mlir::StringAttr()
-                             : mlir::StringAttr::get(context, splitDwarfFile));
+                             : mlir::StringAttr::get(context, splitDwarfFile),
+      cuImports);
+  // A unit that compiles no submodule holds no import, and stays as it was.
+  if (!cuImports.empty())
+    cuAttr =
+        mlir::cast<mlir::LLVM::DICompileUnitAttr>(cuAttr.withRecId(cuRecId));
 
   // Process module globals early.
   // Walk through all DeclareOps in functions and process globals that are

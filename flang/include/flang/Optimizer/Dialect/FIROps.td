@@ -3093,17 +3093,22 @@ def fir_ModuleDebugImportsOp : fir_Op<"module_debug_imports", [
     operation has no runtime effect. It is emitted only when full debug
     information is requested.
 
-    For a submodule, `ancestor_module` names the module at the root of its
-    ancestry. A submodule is not a first class entity in FIR, and its name is
-    not qualified, so this is what tells the two apart.
+    A submodule is not a first class entity in FIR, and its name is not
+    qualified, so its ancestry is recorded here. `ancestor_module` names the
+    module at the root of it, which is also what tells a submodule and a module
+    apart. `parent_module` names the one directly above, which is that same
+    module for a first level submodule and a submodule of it otherwise.
+    Semantics keeps the two apart in the same way.
   }];
 
   let arguments = (ins StrAttr:$module_name,
-                       OptionalAttr<StrAttr>:$ancestor_module);
+                       OptionalAttr<StrAttr>:$ancestor_module,
+                       OptionalAttr<StrAttr>:$parent_module);
   let regions = (region SizedRegion<1>:$uses);
 
   let assemblyFormat = [{
-    $module_name (`in` $ancestor_module^)? attr-dict-with-keyword $uses
+    $module_name (`in` $ancestor_module^)? (`parent` $parent_module^)?
+    attr-dict-with-keyword $uses
   }];
 }
 

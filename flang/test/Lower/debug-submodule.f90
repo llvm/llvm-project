@@ -2,24 +2,22 @@
 ! RUN: %flang_fc1 -emit-fir %s -o - | FileCheck %s --check-prefix=NO_DEBUG
 ! RUN: %flang_fc1 -emit-fir -debug-info-kind=line-tables-only %s -o - | FileCheck %s --check-prefix=NO_DEBUG
 
-! A submodule is not a first class entity in FIR and its name is not qualified,
-! so lowering records the module at the root of its ancestry. A separate module
-! procedure is mangled with the module that declares its interface, so lowering
-! also records the submodule that defines it.
+! Test that lowering records the ancestry of a submodule, and the submodule
+! that defines a separate module procedure, only when debug info asks for it.
 
 ! NO_DEBUG-NOT: fir.module_debug_imports
 ! NO_DEBUG-NOT: fir.defining_submodule
 
+! Only a separate module procedure needs the attribute. Any other procedure
+! has the submodule in its own name already.
 ! CHECK-DAG: func.func @_QMshapesPsquare({{.*}}attributes {fir.defining_submodule = "impl"}
-! An ordinary module procedure needs no attribute: its own name has the
-! submodule in it already.
 ! CHECK-DAG: func.func @_QMshapesSimplSdeepPdeep_helper() {
 
+! The parent of a first level submodule is the module at the root, and that of
+! a nested one is the submodule containing it.
 ! CHECK-DAG: fir.module_debug_imports "shapes" {
-! CHECK-DAG: fir.module_debug_imports "impl" in "shapes" {
-! The ancestor of a nested submodule is the module at the root, not the
-! submodule that contains it.
-! CHECK-DAG: fir.module_debug_imports "deep" in "shapes" {
+! CHECK-DAG: fir.module_debug_imports "impl" in "shapes" parent "shapes" {
+! CHECK-DAG: fir.module_debug_imports "deep" in "shapes" parent "impl" {
 
 module shapes
   interface

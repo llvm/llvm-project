@@ -3,32 +3,30 @@
 ! RUN: %flang_fc1 -emit-llvm -debug-info-kind=standalone -J%t %s -o - \
 ! RUN:   | FileCheck %s
 
-! Compiling a submodule on its own defines that submodule, not its ancestor.
-! The ancestor is only used here, so it has to stay a declaration: were it given
-! a file, a line and a scope, it would not merge with the definition emitted by
-! the unit that really compiles it.
+! Test that compiling a submodule on its own leaves the ancestor a declaration,
+! so that it still merges with the unit that defines it.
 
 #if STEP == 1
-module shapes
+module anc_shapes
   implicit none
   integer :: mod_var = 1
   interface
     module subroutine hello()
     end subroutine
   end interface
-end module shapes
+end module anc_shapes
 #else
-submodule (shapes) impl
+submodule (anc_shapes) impl
 contains
   module subroutine hello()
   end subroutine hello
 end submodule impl
 
 subroutine standalone()
-  use shapes
+  use anc_shapes
   mod_var = 2
 end subroutine standalone
 #endif
 
-! CHECK-DAG: !DIModule(scope: ![[#]], name: "shapes.impl", file: ![[#]], line: 21)
-! CHECK-DAG: !DIModule(scope: null, name: "shapes", isDecl: true)
+! CHECK-DAG: !DIModule(scope: ![[#]], name: "anc_shapes.impl", file: ![[#]], line: 19)
+! CHECK-DAG: !DIModule(scope: null, name: "anc_shapes", isDecl: true)
