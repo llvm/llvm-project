@@ -369,7 +369,7 @@ ENUM_LANGOPT(ExternDeclNoDLLStorageClassVisibility, VisibilityFromDLLStorageClas
 LANGOPT(SemanticInterposition        , 1, 0, Benign, "semantic interposition")
 LANGOPT(HalfNoSemanticInterposition, 1, 0, Benign,
         "Like -fno-semantic-interposition but don't use local aliases")
-ENUM_LANGOPT(StackProtector, StackProtectorMode, 2, SSPOff, NotCompatible,
+ENUM_LANGOPT(StackProtector, StackProtectorMode, 3, SSPOff, NotCompatible,
              "stack protector mode")
 ENUM_LANGOPT(TrivialAutoVarInit, TrivialAutoVarInitKind, 2, TrivialAutoVarInitKind::Uninitialized, Benign,
              "trivial automatic variable initialization")

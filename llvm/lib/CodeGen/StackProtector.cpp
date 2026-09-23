@@ -63,6 +63,17 @@ static cl::opt<bool> EnableSelectionDAGSP("enable-selectiondag-sp",
 static cl::opt<bool> DisableCheckNoReturn("disable-check-noreturn-call",
                                           cl::init(false), cl::Hidden);
 
+/// Function attribute selecting MSVC's /GS (Buffer Security Check) heuristic.
+/// Emitted by clang-cl.
+static constexpr const char *GSBufferAttr = "stack-protector-gs-buffer";
+
+/// An array is only an MSVC "GS buffer" if it is strictly larger than this.
+static constexpr uint64_t MinGSArraySize = 4;
+
+/// A pointer-free aggregate is only an MSVC "GS buffer" if it is strictly
+/// larger than this.
+static constexpr uint64_t MinGSAggregateSize = 8;
+
 /// InsertStackProtectors - Insert code into the prologue and epilogue of the
 /// function.
 ///
@@ -275,6 +286,75 @@ static bool ContainsProtectableArray(Type *Ty, Module *M, unsigned SSPBufferSize
   return NeedsProtector;
 }
 
+/// Returns true if \p Ty holds a pointer anywhere within it. MSVC's GS-buffer
+/// rules treat a pointer-free aggregate as something that may be used as a
+/// buffer, so the presence of a pointer is what disqualifies it.
+static bool ContainsPointer(Type *Ty) {
+  if (Ty->isPointerTy())
+    return true;
+  if (auto *AT = dyn_cast<ArrayType>(Ty))
+    return ContainsPointer(AT->getElementType());
+  if (auto *ST = dyn_cast<StructType>(Ty))
+    return any_of(ST->elements(), ContainsPointer);
+  return false;
+}
+
+/// Returns true if \p Ty is, or contains, a "GS buffer" as defined by MSVC's
+/// /GS (Buffer Security Check) documentation:
+///
+///   - an array that is larger than 4 bytes, has more than two elements, and
+///     has an element type that is not a pointer type;
+///   - a data structure whose size is more than 8 bytes and that contains no
+///     pointers;
+///   - any class or structure that contains a GS buffer.
+///
+/// \param [out] IsLarge is set to true if the GS buffer that was found is
+/// "large" (>= ssp-buffer-size), so that it is laid out closest to the stack
+/// guard. In an aggregate holding several GS buffers this is set if any of
+/// them is large.
+static bool ContainsGSBuffer(Type *Ty, Module *M, unsigned SSPBufferSize,
+                             bool &IsLarge) {
+  if (!Ty)
+    return false;
+
+  const DataLayout &DL = M->getDataLayout();
+  auto Found = [&](Type *BufferTy) {
+    if (DL.getTypeAllocSize(BufferTy).getKnownMinValue() >= SSPBufferSize)
+      IsLarge = true;
+    return true;
+  };
+
+  if (auto *AT = dyn_cast<ArrayType>(Ty)) {
+    if (!AT->getElementType()->isPointerTy() && AT->getNumElements() > 2 &&
+        DL.getTypeAllocSize(AT).getKnownMinValue() > MinGSArraySize)
+      return Found(AT);
+
+    // The array itself is not a GS buffer, but its elements may still be or
+    // contain one, e.g. an array of two structs that each hold a buffer.
+    return ContainsGSBuffer(AT->getElementType(), M, SSPBufferSize, IsLarge);
+  }
+
+  auto *ST = dyn_cast<StructType>(Ty);
+  if (!ST || ST->isOpaque())
+    return false;
+
+  if (DL.getTypeAllocSize(ST).getKnownMinValue() > MinGSAggregateSize &&
+      !ContainsPointer(ST))
+    return Found(ST);
+
+  bool NeedsProtector = false;
+  for (Type *ET : ST->elements())
+    if (ContainsGSBuffer(ET, M, SSPBufferSize, IsLarge)) {
+      // If a member is a large GS buffer then we are done. Otherwise keep
+      // looking, in case a later member is a large one.
+      if (IsLarge)
+        return true;
+      NeedsProtector = true;
+    }
+
+  return NeedsProtector;
+}
+
 /// Maximum remaining allocation size observed for a phi node, and how often
 /// the allocation size has already been decreased. We only allow a limited
 /// number of decreases.
@@ -404,7 +484,8 @@ static const CallInst *findStackProtectorIntrinsic(Function &F) {
 /// Check whether or not this function needs a stack protector based
 /// upon the stack protector level.
 ///
-/// We use two heuristics: a standard (ssp) and strong (sspstrong).
+/// We use three heuristics: a standard (ssp), a strong (sspstrong) and an
+/// MSVC-compatible one selected by the "stack-protector-gs-buffer" attribute.
 /// The standard heuristic which will add a guard variable to functions that
 /// call alloca with a either a variable size or a size >= SSPBufferSize,
 /// functions with character buffers larger than SSPBufferSize, and functions
@@ -413,12 +494,17 @@ static const CallInst *findStackProtectorIntrinsic(Function &F) {
 /// regardless of size, functions with any buffer regardless of type and size,
 /// functions with aggregates that contain any buffer regardless of type and
 /// size, and functions that contain stack-based variables that have had their
-/// address taken.
+/// address taken. The MSVC heuristic implements /GS (Buffer Security Check):
+/// it adds a guard variable to functions that call alloca regardless of size
+/// and to functions holding a "GS buffer" (see ContainsGSBuffer), but it does
+/// not consider a variable's address being taken, and it never protects a
+/// function that takes a variable argument list.
 bool SSPLayoutAnalysis::requiresStackProtector(Function *F,
                                                SSPLayoutMap *Layout) {
   Module *M = F->getParent();
   bool Strong = false;
   bool NeedsProtector = false;
+  bool GSBuffer = false;
 
   // The set of PHI nodes visited when determining if a variable's reference has
   // been taken.  This set is maintained to ensure we don't visit the same PHI
@@ -447,9 +533,20 @@ bool SSPLayoutAnalysis::requiresStackProtector(Function *F,
     });
     NeedsProtector = true;
     Strong = true; // Use the same heuristic as strong to determine SSPLayout
-  } else if (F->hasFnAttribute(Attribute::StackProtectStrong))
-    Strong = true;
-  else if (!F->hasFnAttribute(Attribute::StackProtect))
+  } else if (F->hasFnAttribute(Attribute::StackProtectStrong)) {
+    // clang-cl's default /GS asks for MSVC's GS-buffer rules rather than the
+    // GCC-compatible strong heuristic. An explicit sspreq (handled above)
+    // still wins over both.
+    GSBuffer = F->getFnAttribute(GSBufferAttr).getValueAsBool();
+    Strong = !GSBuffer;
+  } else if (F->hasFnAttribute(Attribute::StackProtect)) {
+    GSBuffer = F->getFnAttribute(GSBufferAttr).getValueAsBool();
+  } else {
+    return false;
+  }
+
+  // MSVC's /GS does not protect functions that take a variable argument list.
+  if (GSBuffer && F->isVarArg())
     return false;
 
   for (const BasicBlock &BB : *F) {
@@ -479,8 +576,10 @@ bool SSPLayoutAnalysis::requiresStackProtector(Function *F,
                   std::make_pair(AI, MachineFrameInfo::SSPLK_LargeArray));
               ORE.emit(RemarkBuilder);
               NeedsProtector = true;
-            } else if (Strong) {
-              // Require protectors for all alloca calls in strong mode.
+            } else if (Strong || GSBuffer) {
+              // Require protectors for all alloca calls in strong mode. MSVC's
+              // /GS likewise treats every _alloca buffer as a GS buffer, with
+              // no size threshold.
               if (!Layout)
                 return true;
               Layout->insert(
@@ -501,8 +600,13 @@ bool SSPLayoutAnalysis::requiresStackProtector(Function *F,
         }
 
         bool IsLarge = false;
-        if (ContainsProtectableArray(AI->getAllocatedType(), M, SSPBufferSize,
-                                     IsLarge, Strong, false)) {
+        bool Protect =
+            GSBuffer ? ContainsGSBuffer(AI->getAllocatedType(), M,
+                                        SSPBufferSize, IsLarge)
+                     : ContainsProtectableArray(AI->getAllocatedType(), M,
+                                                SSPBufferSize, IsLarge, Strong,
+                                                /*InStruct=*/false);
+        if (Protect) {
           if (!Layout)
             return true;
           Layout->insert(std::make_pair(

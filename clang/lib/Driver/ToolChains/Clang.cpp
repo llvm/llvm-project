@@ -8894,7 +8894,7 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
   if (!isNVPTX && Args.hasFlag(options::OPT__SLASH_GS, options::OPT__SLASH_GS_,
                                /*Default=*/true)) {
     CmdArgs.push_back("-stack-protector");
-    CmdArgs.push_back(Args.MakeArgString(Twine(LangOptions::SSPStrong)));
+    CmdArgs.push_back(Args.MakeArgString(Twine(LangOptions::SSPMSVC)));
   }
 
   const Driver &D = getToolChain().getDriver();

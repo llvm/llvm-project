@@ -122,6 +122,19 @@ features cannot lower the translation-unit ABI level;
   target triples (except 32b arm targets). Can be disabled via
   `-fno-stack-clash-protection`.
 
+- clang-cl's default `/GS` (Buffer Security Check) now uses MSVC's "GS buffer"
+  heuristic instead of the GCC-compatible `-fstack-protector-strong` one. A
+  function is protected if it allocates an array larger than 4 bytes with more
+  than two elements of non-pointer type, a pointer-free aggregate larger than 8
+  bytes, an `_alloca` buffer, or an aggregate containing one of those. Matching
+  MSVC, a local merely having its address taken no longer protects a function,
+  varargs functions are never protected, and no protection is inserted when
+  optimizations are disabled. `/GS-` and `__declspec(safebuffers)` still
+  disable it, and `__declspec(strict_gs_check)` still selects the broader
+  heuristic. Since clang-cl no longer defaults to a GCC-compatible level it no
+  longer predefines `__SSP_STRONG__`; pass `/clang:-fstack-protector-strong`
+  for the previous behavior.
+
 ### Clang Python Bindings Potentially Breaking Changes
 
 - `CompletionChunkKind` instance's `__str__` representation has been adapted to be consistent with other enums in the library.

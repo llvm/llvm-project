@@ -8984,9 +8984,9 @@ def static_define : Flag<["-"], "static-define">,
   MarshallingInfoFlag<LangOpts<"Static">>;
 def stack_protector : Separate<["-"], "stack-protector">,
   HelpText<"Enable stack protectors">,
-  Values<"0,1,2,3">,
+  Values<"0,1,2,3,4">,
   NormalizedValuesScope<"LangOptions">,
-  NormalizedValues<["SSPOff", "SSPOn", "SSPStrong", "SSPReq"]>,
+  NormalizedValues<["SSPOff", "SSPOn", "SSPStrong", "SSPReq", "SSPMSVC"]>,
   MarshallingInfoEnum<LangOpts<"StackProtector">, "SSPOff">;
 def stack_protector_buffer_size : Separate<["-"], "stack-protector-buffer-size">,
   HelpText<"Lower bound for a buffer to be considered for stack protection">,

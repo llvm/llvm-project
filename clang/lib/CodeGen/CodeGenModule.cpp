@@ -1163,12 +1163,24 @@ static bool isStackProtectorOn(const LangOptions &LangOpts,
   return LangOpts.getStackProtector() == Mode;
 }
 
+bool CodeGenModule::useMSVCGSBufferHeuristic(const Decl *D) const {
+  return isStackProtectorOn(LangOpts, getTriple(), LangOptions::SSPMSVC) &&
+         !(D && D->hasAttr<StrictGuardStackCheckAttr>());
+}
+
 std::optional<llvm::Attribute::AttrKind>
 CodeGenModule::StackProtectorAttribute(const Decl *D) const {
+  // MSVC does not insert buffer security checks when optimizations are
+  // disabled. __declspec(strict_gs_check) is an explicit per-function opt-in,
+  // so it still applies at -O0.
+  if (useMSVCGSBufferHeuristic(D) && CodeGenOpts.OptimizationLevel == 0)
+    return std::nullopt;
+
   if (D && D->hasAttr<NoStackProtectorAttr>())
     ; // Do nothing.
   else if (D && D->hasAttr<StrictGuardStackCheckAttr>() &&
-           isStackProtectorOn(LangOpts, getTriple(), LangOptions::SSPOn))
+           (isStackProtectorOn(LangOpts, getTriple(), LangOptions::SSPOn) ||
+            isStackProtectorOn(LangOpts, getTriple(), LangOptions::SSPMSVC)))
     return llvm::Attribute::StackProtectStrong;
   else if (isStackProtectorOn(LangOpts, getTriple(), LangOptions::SSPOn))
     return llvm::Attribute::StackProtect;
@@ -1176,6 +1188,8 @@ CodeGenModule::StackProtectorAttribute(const Decl *D) const {
     return llvm::Attribute::StackProtectStrong;
   else if (isStackProtectorOn(LangOpts, getTriple(), LangOptions::SSPReq))
     return llvm::Attribute::StackProtectReq;
+  else if (isStackProtectorOn(LangOpts, getTriple(), LangOptions::SSPMSVC))
+    return llvm::Attribute::StackProtectStrong;
   return std::nullopt;
 }
 
@@ -3170,6 +3184,8 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
   if (std::optional<llvm::Attribute::AttrKind> Attr =
           StackProtectorAttribute(D)) {
     B.addAttribute(*Attr);
+    if (useMSVCGSBufferHeuristic(D))
+      B.addAttribute("stack-protector-gs-buffer", "true");
   }
 
   if (!D) {

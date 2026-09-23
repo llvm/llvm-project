@@ -2836,6 +2836,30 @@ fn -> other_fn -> other_fn ; fn is norecurse
     function which has an `ssp` or `sspstrong` attribute, the calling
     function's attribute will be upgraded to `sspreq`.
 
+`"stack-protector-gs-buffer"`
+:   This attribute replaces the heuristic used by the `ssp` and `sspstrong`
+    attributes with the one MSVC's `/GS` (Buffer Security Check) option
+    uses. It has no effect on a function that also has `sspreq`. It takes a
+    boolean value, and is emitted by clang-cl.
+
+    Under this heuristic a function is protected if it takes no variable
+    argument list and it allocates a "GS buffer", which is any of:
+
+    - an array that is larger than 4 bytes, has more than two elements, and
+      has an element type that is not a pointer type;
+    - a data structure whose size is more than 8 bytes and that contains no
+      pointers;
+    - a buffer allocated by `alloca()`, regardless of size;
+    - any class or structure that contains a GS buffer.
+
+    Unlike `sspstrong`, a local variable merely having its address taken does
+    not cause a function to be protected. Stack layout rules are unchanged.
+
+    If a function with an `ssp` or `sspstrong` attribute but no
+    `"stack-protector-gs-buffer"` attribute is inlined into a calling function
+    that has one, the attribute is dropped from the caller, so that inlining
+    cannot weaken the callee's protection.
+
 (strictfp)=
 
 `strictfp`

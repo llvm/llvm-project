@@ -2625,6 +2625,15 @@ static void adjustCallerSSPLevel(Function &Caller, const Function &Callee) {
   if (!Caller.hasStackProtectorFnAttr())
     return;
 
+  // The caller may be using MSVC's /GS heuristic, which protects fewer
+  // functions than "strong" does. If the callee asked for the stronger
+  // heuristic, drop the /GS marker so that inlining cannot weaken the
+  // protection the callee was compiled with.
+  if ((Callee.hasFnAttribute(Attribute::StackProtectStrong) ||
+       Callee.hasFnAttribute(Attribute::StackProtectReq)) &&
+      !Callee.hasFnAttribute("stack-protector-gs-buffer"))
+    Caller.removeFnAttr("stack-protector-gs-buffer");
+
   // If upgrading the SSP attribute, clear out the old SSP Attributes first.
   // Having multiple SSP attributes doesn't actually hurt, but it adds useless
   // clutter to the IR.
