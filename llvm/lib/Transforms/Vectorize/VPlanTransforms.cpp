@@ -3093,8 +3093,7 @@ bool VPlanTransforms::splitCombinedExits(VPlan &Plan,
   // Create new terminator for uncountable condition.
   VPBuilder EEBuilder(LatchVPBB);
   if (NeedsFreeze)
-    Uncountable = EEBuilder.createScalarFreeze(
-        Uncountable, Uncountable->getScalarType(), DebugLoc());
+    Uncountable = EEBuilder.createFreeze(Uncountable);
   EEBuilder.createNaryOp(VPInstruction::BranchOnCond, {Uncountable});
 
   // We need to connect the uncountable exit to the sole exit block. The
@@ -3109,8 +3108,7 @@ bool VPlanTransforms::splitCombinedExits(VPlan &Plan,
   // Set condition for latch block to countable condition.
   if (NeedsFreeze) {
     VPBuilder NewLatchBuilder(Term);
-    Countable = NewLatchBuilder.createScalarFreeze(
-        Countable, Countable->getScalarType(), DebugLoc());
+    Countable = NewLatchBuilder.createFreeze(Countable);
   }
   Term->setOperand(0, Countable);
 
@@ -3217,9 +3215,10 @@ getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
         return nullptr;
       Recipes.push_back(cast<VPInstruction>(V->getDefiningRecipe()));
       Recipes.push_back(cast<VPInstruction>(GepR));
-    } else if (match(V, m_Freeze(m_CombineOr(m_VPInstruction<VPInstruction::MaskedCond>(
-                                              m_VPValue(Op1)),
-                                             m_VPValue(Op1))))) {
+    } else if (match(V, m_Freeze(m_CombineOr(
+                            m_VPInstruction<VPInstruction::MaskedCond>(
+                                m_VPValue(Op1)),
+                            m_VPValue(Op1))))) {
       Worklist.push_back(Op1);
       Recipes.push_back(cast<VPInstruction>(V->getDefiningRecipe()));
       Recipes.push_back(cast<VPInstruction>(Op1->getDefiningRecipe()));

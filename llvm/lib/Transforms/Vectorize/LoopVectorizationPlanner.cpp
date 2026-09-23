@@ -914,7 +914,8 @@ bool LoopVectorizationPlanner::isCandidateForEpilogueVectorization(
   // non-latch exits properly.  It may be fine, but it needs auditted and
   // tested.
   // TODO: Add support for loops with an early exit.
-  if (OrigLoop->getExitingBlock() != OrigLoop->getLoopLatch())
+  if (OrigLoop->getExitingBlock() != OrigLoop->getLoopLatch() ||
+      Legal->hasUncountableEarlyExit())
     return false;
 
   return true;

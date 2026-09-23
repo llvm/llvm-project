@@ -196,7 +196,7 @@ exit:
 ; the check line should be changed to: Epilogue tail-folding is not supported yet for early-exit loops, same as the case above.
 define void @combined_exit_conditions(ptr align 4 dereferenceable(80) readonly %src, ptr align 4 dereferenceable(80) noalias %dst, ptr align 4 dereferenceable(80) readonly %pred) {
 ; CHECK-DISABLED-EARLY-EXIT-LABEL: LV: Checking a loop in 'combined_exit_conditions'
-; CHECK-DISABLED-EARLY-EXIT: remark: <unknown>:0:0: loop not vectorized: Cannot vectorize uncountable loop
+; CHECK-DISABLED-EARLY-EXIT: remark: <unknown>:0:0: Epilogue tail-folding is not supported yet for early-exit loops
 ;
 entry:
   br label %for.body
