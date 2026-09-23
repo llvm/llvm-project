@@ -2460,7 +2460,8 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
           remainingSgCount /= sgLayout[i];
         }
       }
-
+      // The reduction dims are assumed to be row-major contiguous with the
+      // left-hand neighbor.
       DenseI32ArrayAttr resOrderAttr = nullptr;
       int numRetainedDims = srcRank - static_cast<int>(reductionDims.size());
       if (orderAttr && !orderAttr.empty() &&
