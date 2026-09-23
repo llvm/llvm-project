@@ -24,6 +24,7 @@
 #include "flang/Support/Fortran.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/OwningOpRef.h"
+#include "llvm/ProfileData/SampleProf.h"
 #include <set>
 
 namespace llvm {
@@ -118,6 +119,8 @@ public:
     return languageFeatures;
   }
 
+  const std::string &getModuleNameHash() const { return moduleNameHash; }
+
   /// Create a folding context. Careful: this is very expensive.
   Fortran::evaluate::FoldingContext createFoldingContext();
 
@@ -180,6 +183,7 @@ private:
   const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults;
   const Fortran::common::LanguageFeatureControl &languageFeatures;
   std::set<std::string> tempNames;
+  std::string moduleNameHash;
   std::optional<mlir::DiagnosticEngine::HandlerID> diagHandlerID;
 };
 
