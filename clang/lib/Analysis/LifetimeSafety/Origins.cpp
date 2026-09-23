@@ -57,13 +57,16 @@ public:
   bool VisitCallExpr(const CallExpr *CE) {
     // Indirect calls (e.g., function pointers) are skipped because lifetime
     // annotations currently apply to declarations, not types.
-    if (const auto *FD = CE->getDirectCallee())
+    if (const auto *FD = CE->getDirectCallee()) {
       collect(FD, FD->getReturnType());
+      collectCaptureBy(FD);
+    }
     return true;
   }
 
   bool VisitCXXConstructExpr(const CXXConstructExpr *CCE) {
     collect(CCE->getConstructor(), CCE->getType());
+    collectCaptureBy(CCE->getConstructor());
     return true;
   }
 
@@ -93,6 +96,34 @@ private:
       if (Param->hasAttr<LifetimeBoundAttr>()) {
         CollectedTypes.push_back(RetType);
         return;
+      }
+    }
+  }
+
+  void collectCaptureBy(const FunctionDecl *FD) {
+    if (!FD)
+      return;
+    FD = getDeclWithMergedLifetimeBoundAttrs(FD);
+    const auto *MD = dyn_cast<CXXMethodDecl>(FD);
+    bool IsInstance = MD && MD->isInstance();
+    int Offset = (MD && MD->isImplicitObjectMemberFunction()) ? 1 : 0;
+    for (const auto *Param : FD->parameters()) {
+      if (auto *Attr = Param->getAttr<LifetimeCaptureByAttr>()) {
+        for (int Idx : Attr->params()) {
+          if (Idx == LifetimeCaptureByAttr::Global ||
+              Idx == LifetimeCaptureByAttr::Unknown ||
+              Idx == LifetimeCaptureByAttr::Invalid)
+            continue;
+          if (Idx == LifetimeCaptureByAttr::This) {
+            if (IsInstance)
+              CollectedTypes.push_back(MD->getFunctionObjectParameterType());
+          } else if (int LogicalIdx = Idx - Offset;
+                     LogicalIdx >= 0 &&
+                     (unsigned)LogicalIdx < FD->getNumParams()) {
+            CollectedTypes.push_back(
+                FD->getParamDecl(LogicalIdx)->getType().getNonReferenceType());
+          }
+        }
       }
     }
   }

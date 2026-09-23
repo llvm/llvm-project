@@ -6,11 +6,11 @@ define <4 x i32> @quux(ptr addrspace(3) %arg) {
 ; CHECK-SAME: ptr addrspace(3) [[ARG:%.*]]) {
 ; CHECK-NEXT:  [[BB:.*:]]
 ; CHECK-NEXT:    [[EXTRACTELEMENT:%.*]] = load i8, ptr addrspace(3) [[ARG]], align 4, !tbaa [[TBAA0:![0-9]+]], !alias.scope [[META0:![0-9]+]], !noalias [[META0]]
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <4 x i8>, ptr addrspace(3) [[ARG]], i32 0, i64 1
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <4 x i8>, ptr addrspace(3) [[ARG]], i64 0, i64 1
 ; CHECK-NEXT:    [[EXTRACTELEMENT1:%.*]] = load i8, ptr addrspace(3) [[TMP0]], align 1, !tbaa [[TBAA0]], !alias.scope [[META0]], !noalias [[META0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i8>, ptr addrspace(3) [[ARG]], i32 0, i64 2
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i8>, ptr addrspace(3) [[ARG]], i64 0, i64 2
 ; CHECK-NEXT:    [[EXTRACTELEMENT2:%.*]] = load i8, ptr addrspace(3) [[TMP1]], align 2, !tbaa [[TBAA0]], !alias.scope [[META0]], !noalias [[META0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <4 x i8>, ptr addrspace(3) [[ARG]], i32 0, i64 3
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <4 x i8>, ptr addrspace(3) [[ARG]], i64 0, i64 3
 ; CHECK-NEXT:    [[EXTRACTELEMENT3:%.*]] = load i8, ptr addrspace(3) [[TMP2]], align 1, !tbaa [[TBAA0]], !alias.scope [[META0]], !noalias [[META0]]
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[EXTRACTELEMENT]] to i32
 ; CHECK-NEXT:    [[ZEXT4:%.*]] = zext i8 [[EXTRACTELEMENT1]] to i32

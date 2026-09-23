@@ -834,15 +834,14 @@ LogicalResult BlockMergeCluster::addToCluster(BlockEquivalenceData &blockData) {
 /// Returns true if the predecessor terminators of the given block can have
 /// their operands updated by appending values of the given types: each must
 /// implement BranchOpInterface and be willing to forward every one of the
-/// types to the block.
+/// types to the block (`areTypesCompatible(T, T)`).
 static bool ableToUpdatePredOperands(Block *block, ArrayRef<Type> types) {
   for (auto it = block->pred_begin(), e = block->pred_end(); it != e; ++it) {
     auto branch = dyn_cast<BranchOpInterface>((*it)->getTerminator());
     if (!branch)
       return false;
-    unsigned succIndex = it.getSuccessorIndex();
     for (Type type : types)
-      if (!branch.mayForwardTypeToSuccessor(succIndex, type))
+      if (!branch.areTypesCompatible(type, type))
         return false;
   }
   return true;
@@ -1281,10 +1280,7 @@ static bool blockArgsDominateInsertionPoint(
 
   for (Operation *op : slice) {
     // Check direct operands.
-    for (Value operand : op->getOperands()) {
-      auto arg = dyn_cast<BlockArgument>(operand);
-      if (!arg)
-        continue;
+    for (auto arg : llvm::make_isa_range<BlockArgument>(op->getOperands())) {
       if (!argDominates(arg, op))
         return false;
     }
@@ -1294,10 +1290,7 @@ static bool blockArgsDominateInsertionPoint(
     for (Region &region : op->getRegions()) {
       SetVector<Value> capturedValues;
       getUsedValuesDefinedAbove(region, region, capturedValues);
-      for (Value val : capturedValues) {
-        auto arg = dyn_cast<BlockArgument>(val);
-        if (!arg)
-          continue;
+      for (auto arg : llvm::make_isa_range<BlockArgument>(capturedValues)) {
         if (!argDominates(arg, op))
           return false;
       }

@@ -341,9 +341,6 @@ protected:
   /// Resets tracker at the specified slot index \p SI.
   void reset(const MachineRegisterInfo &MRI, SlotIndex SI);
 
-  /// Mostly copy/paste from CodeGen/RegisterPressure.cpp
-  void bumpDeadDefs(ArrayRef<VRegMaskOrUnit> DeadDefs);
-
   LaneBitmask getLastUsedLanes(Register Reg, SlotIndex Pos) const;
 
 public:

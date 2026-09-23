@@ -483,10 +483,13 @@ Error COFFPlatformRuntimeState::dlcloseDeinitialize(JITDylibState &JDS) {
              JDS.Name.c_str());
   });
 
-  // Run atexits
-  for (auto AtExit : JDS.AtExits)
+  // Run atexits in reverse registration order.
+  auto AtExits = std::move(JDS.AtExits);
+  while (!AtExits.empty()) {
+    auto AtExit = AtExits.back();
+    AtExits.pop_back();
     AtExit();
-  JDS.AtExits.clear();
+  }
 
   // Run static terminators.
   JDS.CPreTermSection.RunAllNewAndFlush();
