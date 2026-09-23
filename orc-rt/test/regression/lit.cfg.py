@@ -98,7 +98,7 @@ config.substitutions.append(("%target-arch", config.target_triple.split("-")[0])
 
 # Add the page size from mmap this allows us to avoid another if statement as
 # it would likely need ctypes for windows as it does not support sysconf
-config.substituions.append(("%host-page-size", mmap.PAGESIZE))
+config.substitutions.append(("%host-page-size", str(mmap.PAGESIZE)))
 
 # Add host OS and arch substitutions for host-detection tests.
 config.substitutions.append(("%host-arch", platform.machine()))

@@ -141,6 +141,7 @@ add_library(NativeDylibManagerTestLib SHARED
   Inputs/NativeDylibManagerTestLib.cpp)
 set_target_properties(NativeDylibManagerTestLib PROPERTIES
   PREFIX ""
+  DEFINE_SYMBOL ORC_RT_TEST_DLL_EXPORTS
   FOLDER "orc-rt/Tests")
 target_compile_options(NativeDylibManagerTestLib PRIVATE
   ${ORC_RT_COMPILE_FLAGS})
@@ -160,10 +161,8 @@ set_target_properties(RTTICrossDylibTestLib PROPERTIES
   PREFIX ""
   CXX_VISIBILITY_PRESET hidden
   VISIBILITY_INLINES_HIDDEN ON
+  DEFINE_SYMBOL ORC_RT_TEST_DLL_EXPORTS
   FOLDER "orc-rt/Tests")
-
-target_compile_definitions(RTTICrossDylibTestLib PRIVATE
-  RTTI_CROSS_DYLIB_TEST_LIB_EXPORTS)
 
 target_compile_options(RTTICrossDylibTestLib PRIVATE ${ORC_RT_COMPILE_FLAGS})
 

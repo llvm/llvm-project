@@ -2330,6 +2330,15 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       NewFn = nullptr;
       return true;
     }
+    if (Name.starts_with("strip.invariant.group")) {
+      // For clang's usage it would be safe to just drop the
+      // strip.invariant.group, but to be conservative replace with the
+      // stronger launder.invariant.group instead.
+      NewFn = Intrinsic::getOrInsertDeclaration(
+          F->getParent(), Intrinsic::launder_invariant_group,
+          F->getReturnType());
+      return true;
+    }
     break;
 
   case 't':

@@ -12244,13 +12244,15 @@ bool VectorExprEvaluator::VisitBinaryOperator(const BinaryOperator *E) {
   Expr *LHS = E->getLHS();
   Expr *RHS = E->getRHS();
 
-  assert(LHS->getType()->isVectorType() && RHS->getType()->isVectorType() &&
+  [[maybe_unused]] QualType LHSType = LHS->getType().getAtomicUnqualifiedType();
+  [[maybe_unused]] QualType RHSType = RHS->getType().getAtomicUnqualifiedType();
+  assert(LHSType->isVectorType() && RHSType->isVectorType() &&
          "Must both be vector types");
   // Checking JUST the types are the same would be fine, except shifts don't
   // need to have their types be the same (since you always shift by an int).
-  assert(LHS->getType()->castAs<VectorType>()->getNumElements() ==
+  assert(LHSType->castAs<VectorType>()->getNumElements() ==
              E->getType()->castAs<VectorType>()->getNumElements() &&
-         RHS->getType()->castAs<VectorType>()->getNumElements() ==
+         RHSType->castAs<VectorType>()->getNumElements() ==
              E->getType()->castAs<VectorType>()->getNumElements() &&
          "All operands must be the same size.");
 
