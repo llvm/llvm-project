@@ -77,6 +77,10 @@ private:
   // Here, we have overwritten v0 before we use it. This function checks if
   // unpacking can lead to such a situation.
   bool canUnpackingClobberRegister(const MachineInstr &MI);
+  bool canSourceClobberRegister(const MachineInstr &MI,
+                                Register UnpackedDstReg,
+                                AMDGPU::OpName SrcName,
+                                AMDGPU::OpName ModsName) const;
   // Unpack and insert F32 packed instructions, such as V_PK_MUL, V_PK_ADD, and
   // V_PK_FMA. Currently, only V_PK_MUL, V_PK_ADD, V_PK_FMA are supported for
   // this transformation.
@@ -599,6 +603,21 @@ bool SIPreEmitPeephole::removeRedundantModeWrites(
 // If support is extended to new operations, add tests in
 // llvm/test/CodeGen/AMDGPU/unpack-non-coissue-insts-post-ra-scheduler.mir.
 
+bool SIPreEmitPeephole::canSourceClobberRegister(
+    const MachineInstr &MI, Register UnpackedDstReg, AMDGPU::OpName SrcName,
+    AMDGPU::OpName ModsName) const {
+  const MachineOperand *SrcMO = TII->getNamedOperand(MI, SrcName);
+  if (!SrcMO || !SrcMO->isReg())
+    return false;
+
+  Register SrcReg = SrcMO->getReg();
+  unsigned SrcMods = TII->getNamedOperand(MI, ModsName)->getImm();
+  Register HiSrcReg = (SrcMods & SISrcMods::OP_SEL_1)
+                          ? TRI->getSubReg(SrcReg, AMDGPU::sub1)
+                          : TRI->getSubReg(SrcReg, AMDGPU::sub0);
+  return TRI->regsOverlap(UnpackedDstReg, HiSrcReg);
+}
+
 bool SIPreEmitPeephole::canUnpackingClobberRegister(const MachineInstr &MI) {
   unsigned OpCode = MI.getOpcode();
   Register DstReg = MI.getOperand(0).getReg();
@@ -610,20 +629,6 @@ bool SIPreEmitPeephole::canUnpackingClobberRegister(const MachineInstr &MI) {
   // Such scenarios can arise due to specific combinations of op_sel and
   // op_sel_hi modifiers.
   Register UnpackedDstReg = TRI->getSubReg(DstReg, AMDGPU::sub0);
-
-  // Lambda to check if a source operand causes clobbering
-  auto checkSrcClobber = [&](AMDGPU::OpName SrcName,
-                             AMDGPU::OpName ModsName) -> bool {
-    const MachineOperand *SrcMO = TII->getNamedOperand(MI, SrcName);
-    if (SrcMO && SrcMO->isReg()) {
-      Register SrcReg = SrcMO->getReg();
-      unsigned SrcMods = TII->getNamedOperand(MI, ModsName)->getImm();
-      Register HiSrcReg = (SrcMods & SISrcMods::OP_SEL_1)
-                              ? TRI->getSubReg(SrcReg, AMDGPU::sub1)
-                              : TRI->getSubReg(SrcReg, AMDGPU::sub0);
-      return TRI->regsOverlap(UnpackedDstReg, HiSrcReg);
-    }
-  };
 
   // Src1 should be checked before src0 to avoid false positives.
   // For example, the following unpacked sequence is legal:
@@ -643,16 +648,19 @@ bool SIPreEmitPeephole::canUnpackingClobberRegister(const MachineInstr &MI) {
   // In the unpacked version, $vgpr1 uses $vgpr0 as a source, but $vgpr0 was
   // updated in the previous instruction. This behavior does not occur with the
   // packed instruction. As a result, it is unsafe to unpack this sequence.
-  if (checkSrcClobber(AMDGPU::OpName::src1, AMDGPU::OpName::src1_modifiers))
+  if (canSourceClobberRegister(MI, UnpackedDstReg, AMDGPU::OpName::src1,
+                               AMDGPU::OpName::src1_modifiers))
     return true;
 
-  if (checkSrcClobber(AMDGPU::OpName::src0, AMDGPU::OpName::src0_modifiers))
+  if (canSourceClobberRegister(MI, UnpackedDstReg, AMDGPU::OpName::src0,
+                               AMDGPU::OpName::src0_modifiers))
     return true;
 
   // Applicable for packed instructions with 3 source operands, such as
   // V_PK_FMA.
   if (AMDGPU::hasNamedOperand(OpCode, AMDGPU::OpName::src2)) {
-    if (checkSrcClobber(AMDGPU::OpName::src2, AMDGPU::OpName::src2_modifiers))
+    if (canSourceClobberRegister(MI, UnpackedDstReg, AMDGPU::OpName::src2,
+                                 AMDGPU::OpName::src2_modifiers))
       return true;
   }
   return false;
