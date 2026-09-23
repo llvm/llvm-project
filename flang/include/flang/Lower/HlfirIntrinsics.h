@@ -57,10 +57,6 @@ struct PreparedActualArgument {
   /// Get the prepared actual. If this is an array argument in an elemental
   /// call, the current element value will be returned.
   hlfir::Entity getActual(mlir::Location loc, fir::FirOpBuilder &builder) const;
-  void setActual(hlfir::Entity newActual) {
-    actual = newActual;
-    oneBasedElementalIndices = nullptr;
-  }
 
   mlir::Type getFortranElementType() {
     if (auto *actualEntity = std::get_if<hlfir::Entity>(&actual))

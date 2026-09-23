@@ -1724,46 +1724,6 @@ static PreparedDummyArgument prepareProcedurePointerActualArgument(
   return PreparedDummyArgument{tempBoxProc, /*cleanups=*/{}};
 }
 
-static bool isCUDADeviceDummy(
-    const Fortran::evaluate::characteristics::DummyArgument *dummy) {
-  if (!dummy)
-    return false;
-  return Fortran::common::visit(
-      Fortran::common::visitors{
-          [](const Fortran::evaluate::characteristics::DummyDataObject
-                 &object) {
-            return object.cudaDataAttr == Fortran::common::CUDADataAttr::Device;
-          },
-          [](const auto &) { return false; },
-      },
-      dummy->u);
-}
-
-static void useOpenACCDeviceBinding(
-    mlir::Location loc, Fortran::lower::PreparedActualArgument &preparedActual,
-    const Fortran::lower::CallerInterface::PassedEntity &arg,
-    CallContext &callContext) {
-  if (!isCUDADeviceDummy(arg.characteristics))
-    return;
-  const Fortran::lower::SomeExpr *expr{arg.entity->UnwrapExpr()};
-  if (!expr || !Fortran::evaluate::IsVariable(*expr))
-    return;
-
-  Fortran::lower::SymMapScope deviceScope{callContext.symMap};
-  bool foundDeviceBinding{false};
-  for (const Fortran::semantics::Symbol &symbol :
-       Fortran::evaluate::GetSymbolVector(*expr))
-    foundDeviceBinding |=
-        callContext.symMap.copyDeviceBindingToCurrentScope(symbol);
-  if (!foundDeviceBinding)
-    return;
-
-  hlfir::EntityWithAttributes deviceActual = Fortran::lower::convertExprToHLFIR(
-      loc, callContext.converter, *expr, callContext.symMap,
-      callContext.stmtCtx);
-  preparedActual.setActual(deviceActual);
-}
-
 /// Prepare arguments of calls to user procedures with actual arguments that
 /// have been pre-lowered but not yet prepared according to the interface.
 void prepareUserCallArguments(
@@ -1786,8 +1746,6 @@ void prepareUserCallArguments(
       caller.placeInput(arg, builder.genAbsentOp(loc, argTy));
       continue;
     }
-    useOpenACCDeviceBinding(loc, *preparedActual, arg, callContext);
-
     switch (arg.passBy) {
     case PassBy::Value: {
       // True pass-by-value semantics.
@@ -3194,6 +3152,34 @@ genIntrinsicRef(const Fortran::evaluate::SpecificIntrinsic *intrinsic,
   return genIntrinsicRef(intrinsic, *intrinsicEntry, callContext);
 }
 
+static bool isCUDADeviceDummy(
+    const Fortran::evaluate::characteristics::DummyArgument *dummy) {
+  if (!dummy)
+    return false;
+  return Fortran::common::visit(
+      Fortran::common::visitors{
+          [](const Fortran::evaluate::characteristics::DummyDataObject
+                 &object) {
+            return object.cudaDataAttr == Fortran::common::CUDADataAttr::Device;
+          },
+          [](const auto &) { return false; },
+      },
+      dummy->u);
+}
+
+/// Make the objects of \p expr that are mapped by an enclosing structured
+/// OpenACC data construct denote their device copy in the current symbol map
+/// scope. Returns true if any such binding was found, in which case \p expr
+/// must be lowered while that scope is alive.
+static bool mapOpenACCDeviceBindings(const Fortran::lower::SomeExpr &expr,
+                                     Fortran::lower::SymMap &symMap) {
+  bool found = false;
+  for (const Fortran::semantics::Symbol &symbol :
+       Fortran::evaluate::GetSymbolVector(expr))
+    found |= symMap.copyDeviceBindingToCurrentScope(symbol);
+  return found;
+}
+
 /// Main entry point to lower procedure references, regardless of what they are.
 static std::optional<hlfir::EntityWithAttributes>
 genProcedureRef(CallContext &callContext) {
@@ -3289,9 +3275,24 @@ genProcedureRef(CallContext &callContext) {
         continue;
       }
 
+      // An object mapped by an enclosing structured OpenACC data construct is
+      // associated with a CUDA DEVICE dummy through its device copy. The
+      // binding must be in place for this lowering, which is the only one of
+      // the actual argument: lowering it again would duplicate any side
+      // effect of its subscripts.
+      std::optional<Fortran::lower::SymMapScope> deviceScope;
+      if (isCUDADeviceDummy(arg.characteristics) &&
+          Fortran::evaluate::IsVariable(*expr)) {
+        deviceScope.emplace(callContext.symMap);
+        if (!mapOpenACCDeviceBindings(*expr, callContext.symMap))
+          deviceScope.reset();
+      }
+
       auto loweredActual = Fortran::lower::convertExprToHLFIR(
           loc, callContext.converter, *expr, callContext.symMap,
           callContext.stmtCtx);
+      deviceScope.reset();
+
       std::optional<mlir::Value> isPresent;
       if (arg.isOptional())
         isPresent = genIsPresentIfArgMaybeAbsent(
