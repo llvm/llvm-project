@@ -1,13 +1,14 @@
-;; RUN: llc -o - %s | FileCheck %s
+;; RUN: opt -S -passes=dxil-debug-info %s -o - | FileCheck %s
+;; RUN: llc -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-COMMENT
 
 target triple = "dxil-pc-shadermodel6.3-library"
 
 ;; CHECK: define i32 @dbgassign(i32 %a, i32 %b) !dbg [[SP:![0-9]+]] {
 ;; CHECK-NEXT: entry:
-;; CHECK-NEXT:   ; DXIL: to be replaced with: tail call addrspace(0) void @llvm.dbg.value(metadata i32 %a, i64 0, metadata [[LV:![0-9]+]], metadata !DIExpression())
+;; CHECK-COMMENT-NEXT:   ; DXIL: to be replaced with: tail call addrspace(0) void @llvm.dbg.value(metadata i32 %a, i64 0, metadata [[LV:![0-9]+]], metadata !DIExpression())
 ;; CHECK-NEXT:   tail call void @llvm.dbg.value(metadata i32 %a, metadata [[LV:![0-9]+]], metadata !DIExpression())
 ;; CHECK-NEXT:   %add = add nsw i32 %a, %b
-;; CHECK-NEXT:   ; DXIL: to be replaced with: tail call addrspace(0) void @llvm.dbg.value(metadata i32 %add, i64 0, metadata [[LV]], metadata !DIExpression())
+;; CHECK-COMMENT-NEXT:   ; DXIL: to be replaced with: tail call addrspace(0) void @llvm.dbg.value(metadata i32 %add, i64 0, metadata [[LV]], metadata !DIExpression())
 ;; CHECK-NEXT:   tail call void @llvm.dbg.value(metadata i32 %add, metadata [[LV]], metadata !DIExpression()
 ;; CHECK-NEXT:   ret i32 %add
 ;; CHECK-NEXT: }

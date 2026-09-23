@@ -25,6 +25,11 @@ function(lldb_tablegen)
     list(APPEND LTG_UNPARSED_ARGUMENTS -DLLDB_SANITIZED)
   endif()
 
+  string(TOUPPER "${CMAKE_BUILD_TYPE}" LTG_BUILD_TYPE)
+  if (NOT LLVM_ENABLE_ASSERTIONS AND NOT LTG_BUILD_TYPE STREQUAL "DEBUG")
+    list(APPEND LTG_UNPARSED_ARGUMENTS -DNDEBUG)
+  endif()
+
   tablegen(LLDB ${LTG_UNPARSED_ARGUMENTS})
 
   if(LTG_TARGET)
@@ -328,7 +333,8 @@ function(add_lldb_library name)
     set_target_properties(${name} PROPERTIES FRAMEWORK ON)
   endif()
 
-  if(PARAM_SHARED)
+  if(PARAM_SHARED OR
+     (LLDB_BUILD_STATIC_LIBLLDB AND libkind STREQUAL "STATIC"))
     set(install_dest lib${LLVM_LIBDIR_SUFFIX})
     if(PARAM_INSTALL_PREFIX)
       set(install_dest ${PARAM_INSTALL_PREFIX})

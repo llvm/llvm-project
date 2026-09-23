@@ -1910,9 +1910,9 @@ enum CXCursorKind {
    */
   CXCursor_SEHLeaveStmt = 247,
 
-  /** OpenMP ordered directive.
+  /** OpenMP ordered-standalone directive.
    */
-  CXCursor_OMPOrderedDirective = 248,
+  CXCursor_OMPOrderedStandaloneDirective = 248,
 
   /** OpenMP atomic directive.
    */
@@ -2170,9 +2170,13 @@ enum CXCursorKind {
    */
   CXCursor_OMPSplitDirective = 312,
 
+  /** OpenMP ordered-blockassoc directive.
+   */
+  CXCursor_OMPOrderedBlockAssocDirective = 313,
+
   /** OpenMP taskgraph directive.
    */
-  CXCursor_OMPTaskgraphDirective = 313,
+  CXCursor_OMPTaskgraphDirective = 314,
 
   /** OpenACC Compute Construct.
    */

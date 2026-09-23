@@ -217,6 +217,7 @@ class RISCVAsmParser : public MCTargetAsmParser {
   ParseStatus parseOperandWithSpecifier(OperandVector &Operands);
   ParseStatus parseBareSymbol(OperandVector &Operands);
   ParseStatus parseCallSymbol(OperandVector &Operands);
+  ParseStatus parseTailCallSymbol(OperandVector &Operands);
   ParseStatus parsePseudoJumpSymbol(OperandVector &Operands);
   ParseStatus parseJALOffset(OperandVector &Operands);
   ParseStatus parseVTypeI(OperandVector &Operands);
@@ -331,27 +332,32 @@ public:
     Parser.addAliasForDirective(".dword", ".8byte");
     setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
 
-    auto ABIName = StringRef(getTargetOptions().ABIName);
-    if (ABIName.ends_with("f") && !getSTI().hasFeature(RISCV::FeatureStdExtF)) {
-      errs() << "Hard-float 'f' ABI can't be used for a target that "
-                "doesn't support the F instruction set extension (ignoring "
-                "target-abi)\n";
-    } else if (ABIName.ends_with("d") &&
-               !getSTI().hasFeature(RISCV::FeatureStdExtD)) {
-      errs() << "Hard-float 'd' ABI can't be used for a target that "
-                "doesn't support the D instruction set extension (ignoring "
-                "target-abi)\n";
-    }
-
-    // Use computeTargetABI to check if ABIName is valid. If invalid, output
-    // error message.
-    RISCVABI::computeTargetABI(STI, ABIName);
-
     const MCObjectFileInfo *MOFI = Parser.getContext().getObjectFileInfo();
     ParserOptions.IsPicEnabled = MOFI->isPositionIndependent();
 
     if (AddBuildAttributes)
       getTargetStreamer().emitTargetAttributes(STI, /*EmitStackAlign*/ false);
+  }
+
+  // Validate the requested -target-abi now that the lexer has been primed
+  // with the first token, so diagnostics can be reported with a real source
+  // location instead of being printed with no location information.
+  void onBeginOfFile() override {
+    // If the target streamer already has a resolved ABI (e.g. set by
+    // RISCVTargetELFStreamer for a valid -target-abi, or set by
+    // RISCVAsmPrinter during codegen), skip ABI validation.
+    if (getTargetStreamer().hasTargetABI())
+      return;
+
+    Expected<RISCVABI::ABI> ABIOrErr =
+        RISCVABI::computeTargetABI(getSTI(), getTargetOptions().ABIName);
+    if (!ABIOrErr) {
+      getParser().printError(getLoc(), toString(ABIOrErr.takeError()));
+      getTargetStreamer().setTargetABI(
+          cantFail(RISCVABI::computeTargetABI(getSTI(), "")));
+      return;
+    }
+    getTargetStreamer().setTargetABI(*ABIOrErr);
   }
 };
 
@@ -619,6 +625,8 @@ public:
            VK == RISCV::S_CALL_PLT;
   }
 
+  bool isTailCallSymbol() const { return isCallSymbol(); }
+
   bool isPseudoJumpSymbol() const {
     int64_t Imm;
     // Must be of 'immediate' type but not a constant.
@@ -709,7 +717,7 @@ public:
   /// Return true if the operand is a valid fli.s floating-point immediate.
   bool isLoadFPImm() const {
     if (isExpr())
-      return isUImm5();
+      return isUImm<5>();
     if (Kind != KindTy::FPImmediate)
       return false;
     int Idx = RISCVLoadFPImm::getLoadFPImm(
@@ -782,23 +790,6 @@ public:
       return isUImm<5>();
     return isUImm<4>();
   }
-
-  bool isUImm1() const { return isUImm<1>(); }
-  bool isUImm2() const { return isUImm<2>(); }
-  bool isUImm3() const { return isUImm<3>(); }
-  bool isUImm4() const { return isUImm<4>(); }
-  bool isUImm5() const { return isUImm<5>(); }
-  bool isUImm6() const { return isUImm<6>(); }
-  bool isUImm7() const { return isUImm<7>(); }
-  bool isUImm8() const { return isUImm<8>(); }
-  bool isUImm9() const { return isUImm<9>(); }
-  bool isUImm10() const { return isUImm<10>(); }
-  bool isUImm11() const { return isUImm<11>(); }
-  bool isUImm16() const { return isUImm<16>(); }
-  bool isUImm20() const { return isUImm<20>(); }
-  bool isUImm32() const { return isUImm<32>(); }
-  bool isUImm48() const { return isUImm<48>(); }
-  bool isUImm64() const { return isUImm<64>(); }
 
   bool isUImm5NonZero() const {
     return isUImmPred([](int64_t Imm) { return Imm != 0 && isUInt<5>(Imm); });
@@ -889,14 +880,6 @@ public:
     return IsConstantImm && p(fixImmediateForRV32(Imm, isRV64Expr()));
   }
 
-  bool isSImm5() const { return isSImm<5>(); }
-  bool isSImm6() const { return isSImm<6>(); }
-  bool isSImm10() const { return isSImm<10>(); }
-  bool isSImm11() const { return isSImm<11>(); }
-  bool isSImm12() const { return isSImm<12>(); }
-  bool isSImm16() const { return isSImm<16>(); }
-  bool isSImm26() const { return isSImm<26>(); }
-
   bool isSImm5NonZero() const {
     return isSImmPred([](int64_t Imm) { return Imm != 0 && isInt<5>(Imm); });
   }
@@ -910,26 +893,6 @@ public:
       return (isUInt<5>(Imm) && Imm != 0) || (Imm >= 0xfffe0 && Imm <= 0xfffff);
     });
   }
-
-  bool isUImm2Lsb0() const { return isUImmShifted<1, 1>(); }
-
-  bool isUImm5Lsb0() const { return isUImmShifted<4, 1>(); }
-
-  bool isUImm6Lsb0() const { return isUImmShifted<5, 1>(); }
-
-  bool isUImm6Lsb000() const { return isUImmShifted<3, 3>(); }
-
-  bool isUImm7Lsb00() const { return isUImmShifted<5, 2>(); }
-
-  bool isUImm7Lsb000() const { return isUImmShifted<4, 3>(); }
-
-  bool isUImm8Lsb00() const { return isUImmShifted<6, 2>(); }
-
-  bool isUImm8Lsb000() const { return isUImmShifted<5, 3>(); }
-
-  bool isUImm9Lsb000() const { return isUImmShifted<6, 3>(); }
-
-  bool isUImm14Lsb00() const { return isUImmShifted<12, 2>(); }
 
   bool isUImm10Lsb00NonZero() const {
     return isUImmPred(
@@ -1064,10 +1027,6 @@ public:
   bool isSImm5Plus1() const {
     return isSImmPred(
         [](int64_t Imm) { return Imm != INT64_MIN && isInt<5>(Imm - 1); });
-  }
-
-  bool isSImm18() const {
-    return isSImmPred([](int64_t Imm) { return isInt<18>(Imm); });
   }
 
   bool isSImm18Lsb0() const {
@@ -2403,6 +2362,40 @@ ParseStatus RISCVAsmParser::parseCallSymbol(OperandVector &Operands) {
       return Error(Loc, "@ (except the deprecated/ignored @plt) is disallowed");
   } else if (!getLexer().peekTok().is(AsmToken::EndOfStatement)) {
     // Avoid parsing the register in `call rd, foo` as a call symbol.
+    return ParseStatus::NoMatch;
+  } else {
+    Lex();
+  }
+
+  SMLoc E = SMLoc::getFromPointer(S.getPointer() + Identifier.size());
+  RISCV::Specifier Kind = RISCV::S_CALL_PLT;
+
+  MCSymbol *Sym = getContext().getOrCreateSymbol(Identifier);
+  Res = MCSymbolRefExpr::create(Sym, getContext());
+  Res = MCSpecifierExpr::create(Res, Kind, getContext());
+  Operands.push_back(RISCVOperand::createExpr(Res, S, E, isRV64()));
+  return ParseStatus::Success;
+}
+
+// Like parseCallSymbol but allows the symbol to be followed by a comma
+// (for "tail address, register" form where the symbol is not the last operand).
+ParseStatus RISCVAsmParser::parseTailCallSymbol(OperandVector &Operands) {
+  SMLoc S = getLoc();
+  const MCExpr *Res;
+
+  if (getLexer().getKind() != AsmToken::Identifier)
+    return ParseStatus::NoMatch;
+  std::string Identifier(getTok().getIdentifier());
+
+  if (getLexer().peekTok().is(AsmToken::At)) {
+    Lex();
+    Lex();
+    StringRef PLT;
+    SMLoc Loc = getLoc();
+    if (getParser().parseIdentifier(PLT) || PLT != "plt")
+      return Error(Loc, "@ (except the deprecated/ignored @plt) is disallowed");
+  } else if (!getLexer().peekTok().is(AsmToken::EndOfStatement) &&
+             !getLexer().peekTok().is(AsmToken::Comma)) {
     return ParseStatus::NoMatch;
   } else {
     Lex();
@@ -4245,6 +4238,11 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
     }
   }
 
+  if (Opcode == RISCV::CV_INSERT &&
+      Inst.getOperand(3).getImm() + Inst.getOperand(4).getImm() >= 32)
+    return Error(Operands[3]->getStartLoc(),
+                 "the sum of the immediate operands must be less than 32");
+
   if (Opcode == RISCV::TH_LDD || Opcode == RISCV::TH_LWUD ||
       Opcode == RISCV::TH_LWD) {
     MCRegister Rd1 = Inst.getOperand(0).getReg();
@@ -4403,6 +4401,36 @@ bool RISCVAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
   switch (Inst.getOpcode()) {
   default:
     break;
+  case RISCV::MOP_RR_7: {
+    // Remap mop.rr.7 x0, x0, x1/x5 to sspush x1/x5.
+    if (Inst.getOperand(0).getReg() == RISCV::X0 &&
+        Inst.getOperand(1).getReg() == RISCV::X0 &&
+        (Inst.getOperand(2).getReg() == RISCV::X1 ||
+         Inst.getOperand(2).getReg() == RISCV::X5)) {
+      emitToStreamer(
+          Out, MCInstBuilder(RISCV::SSPUSH).addOperand(Inst.getOperand(2)));
+      return false;
+    }
+    break;
+  }
+  case RISCV::MOP_R_28: {
+    // Remap mop.r.28 x0, x1/x5 to sspopchk x1/x5.
+    if (Inst.getOperand(0).getReg() == RISCV::X0 &&
+        (Inst.getOperand(1).getReg() == RISCV::X1 ||
+         Inst.getOperand(1).getReg() == RISCV::X5)) {
+      emitToStreamer(
+          Out, MCInstBuilder(RISCV::SSPOPCHK).addOperand(Inst.getOperand(1)));
+      return false;
+    }
+    // Remap mop.r.28 rN, x0 to ssrdp rN.
+    if (Inst.getOperand(0).getReg() != RISCV::X0 &&
+        Inst.getOperand(1).getReg() == RISCV::X0) {
+      emitToStreamer(
+          Out, MCInstBuilder(RISCV::SSRDP).addOperand(Inst.getOperand(0)));
+      return false;
+    }
+    break;
+  }
   case RISCV::PseudoC_ADDI_NOP: {
     if (Inst.getOperand(2).getImm() == 0)
       emitToStreamer(Out, MCInstBuilder(RISCV::C_NOP));

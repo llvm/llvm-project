@@ -7,7 +7,7 @@
 ! clause, which decomposition only accepts from OpenMP 5.2, while the construct
 ! itself is valid (using this spelling) since OpenMP 4.5.
 
-!CHECK: not yet implemented: OMPD_ordered
+!CHECK: not yet implemented: OMPD_ordered_standalone
 subroutine f00
   integer :: i
   !$omp do ordered(1)

@@ -1,0 +1,16 @@
+---
+MainSourceFile:  '@FOO@'
+Replacements:
+  - FilePath:        '@FOO@'
+    Offset:          10
+    Length:          5
+    ReplacementText: 'X'
+  - FilePath:        '@FOO@'
+    Offset:          12
+    Length:          8
+    ReplacementText: 'Y'
+  - FilePath:        '@FOO@'
+    Offset:          18
+    Length:          3
+    ReplacementText: 'Z'
+...
