@@ -340,3 +340,79 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
     spirv.Return
   }
 }
+
+// -----
+
+// Two sibling loops nested in a loop, each with its own loop control
+
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
+// CHECK-LABEL: @sibling_loops
+  spirv.func @sibling_loops(%count : i32) -> () "None" {
+    %zero = spirv.Constant 0: i32
+    %one = spirv.Constant 1: i32
+    %ivar = spirv.Variable init(%zero) : !spirv.ptr<i32, Function>
+    %jvar = spirv.Variable init(%zero) : !spirv.ptr<i32, Function>
+    %kvar = spirv.Variable init(%zero) : !spirv.ptr<i32, Function>
+
+// CHECK:        spirv.mlir.loop {
+    spirv.mlir.loop {
+      spirv.Branch ^header
+    ^header:
+      %ival0 = spirv.Load "Function" %ivar : i32
+      %icmp = spirv.SLessThan %ival0, %count : i32
+      spirv.BranchConditional %icmp, ^body, ^merge
+    ^body:
+      spirv.Store "Function" %jvar, %zero : i32
+// CHECK:          spirv.mlir.loop control(DontUnroll)
+      spirv.mlir.loop control(DontUnroll) {
+        spirv.Branch ^header
+      ^header:
+        %jval0 = spirv.Load "Function" %jvar : i32
+        %jcmp = spirv.SLessThan %jval0, %count : i32
+        spirv.BranchConditional %jcmp, ^body, ^merge
+      ^body:
+        spirv.Branch ^continue
+      ^continue:
+        %jval1 = spirv.Load "Function" %jvar : i32
+        %jadd = spirv.IAdd %jval1, %one : i32
+        spirv.Store "Function" %jvar, %jadd : i32
+        spirv.Branch ^header
+      ^merge:
+        spirv.mlir.merge
+      }
+      spirv.Store "Function" %kvar, %zero : i32
+// CHECK:          spirv.mlir.loop control(Unroll)
+      spirv.mlir.loop control(Unroll) {
+        spirv.Branch ^header
+      ^header:
+        %kval0 = spirv.Load "Function" %kvar : i32
+        %kcmp = spirv.SLessThan %kval0, %count : i32
+        spirv.BranchConditional %kcmp, ^body, ^merge
+      ^body:
+        spirv.Branch ^continue
+      ^continue:
+        %kval1 = spirv.Load "Function" %kvar : i32
+        %kadd = spirv.IAdd %kval1, %one : i32
+        spirv.Store "Function" %kvar, %kadd : i32
+        spirv.Branch ^header
+      ^merge:
+        spirv.mlir.merge
+      }
+      spirv.Branch ^continue
+    ^continue:
+      %ival1 = spirv.Load "Function" %ivar : i32
+      %iadd = spirv.IAdd %ival1, %one : i32
+      spirv.Store "Function" %ivar, %iadd : i32
+      spirv.Branch ^header
+    ^merge:
+      spirv.mlir.merge
+    }
+    spirv.Return
+  }
+
+  spirv.func @main() -> () "None" {
+    spirv.Return
+  }
+  spirv.EntryPoint "GLCompute" @main
+  spirv.ExecutionMode @main "LocalSize", 1, 1, 1
+}
