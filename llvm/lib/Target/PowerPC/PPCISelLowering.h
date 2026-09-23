@@ -338,11 +338,7 @@ namespace llvm {
       return true;
     }
 
-    /// The Power ISA lets an implementation clear a reservation for reasons of
-    /// its own, and e500v2 loses it when a fence sits between the lwarx and
-    /// the stwcx., which leaves a weak cmpxchg unable to ever succeed. Answer
-    /// true unless the subtarget has FeatureFenceKeepsReservation, so CPUs
-    /// without it, including ppc and ppc64, get the conservative placement.
+    /// True unless the subtarget has FeatureFenceKeepsReservation.
     bool fenceClearsLoadLinkedReservation() const override;
 
     Value *emitLoadLinked(IRBuilderBase &Builder, Type *ValueTy, Value *Addr,

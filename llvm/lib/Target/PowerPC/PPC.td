@@ -177,16 +177,11 @@ def FeaturePartwordAtomic : SubtargetFeature<"partword-atomics",
 def FeatureQuadwordAtomic : SubtargetFeature<"quadword-atomics",
                                              "HasQuadwordAtomics", "true",
                                              "Enable lqarx and stqcx.">;
-// The Power ISA lets an implementation clear a reservation for reasons of its
-// own, and some clear it when a sync or lwsync is executed between the larx
-// and the stcx. That leaves a weak cmpxchg whose release fence is placed there
-// unable to succeed, so AtomicExpand only places it there on processors with
-// this feature. All others, including ppc, ppc32 and ppc64, get the fence
-// ahead of the larx.
+// Some PowerPC implementations clear the LL/SC reservation on a fence.
 def FeatureFenceKeepsReservation :
   SubtargetFeature<"fence-keeps-reservation", "FenceKeepsReservation", "true",
-                   "A sync or lwsync between larx and stcx. does not clear "
-                   "the reservation", [], InlineIgnore>;
+                   "A fence between larx and stcx. keeps the reservation", [],
+                   InlineIgnore>;
 def FeatureInvariantFunctionDescriptors :
   SubtargetFeature<"invariant-function-descriptors",
                    "HasInvariantFunctionDescriptors", "true",

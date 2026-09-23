@@ -1498,14 +1498,8 @@ bool AtomicExpandImpl::expandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
 
   // There's no overhead for sinking the release barrier in a weak cmpxchg, so
   // do it even on minsize.
-  //
-  // Except where a fence can clear the reservation. Sinking puts the fence
-  // between the load-linked and the store-conditional, and there the
-  // store-conditional fails; the strong form recovers because its retry
-  // re-reserves afterwards, but a weak cmpxchg has no retry and so could never
-  // succeed. Hoisting is valid because the fence is only needed to provide the
-  // release ordering of a successful store, and executing it on an attempt
-  // that fails before the store has no additional ordering effect.
+  // A fence between the LL and SC may clear the reservation on some targets.
+  // Strong cmpxchg retries, but weak cmpxchg cannot recover.
   bool UseUnconditionalReleaseBarrier =
       (F->hasMinSize() && !CI->isWeak()) ||
       (CI->isWeak() && TLI->fenceClearsLoadLinkedReservation());
