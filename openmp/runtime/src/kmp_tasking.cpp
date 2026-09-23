@@ -6009,7 +6009,8 @@ static void __kmp_taskgraph_free(kmp_int32 gtid, kmp_taskgraph_record_t *rec,
                                  bool keep_rec = false) {
   kmp_info_t *thread = __kmp_threads[gtid];
 
-  __kmp_taskgraph_free_region_metadata(thread, rec->root);
+  if (rec->root)
+    __kmp_taskgraph_free_region_metadata(thread, rec->root);
 
   for (size_t task = 0; task < rec->num_tasks; task++) {
     // Skip entries that don't have an associated task (e.g. taskwait nodes
@@ -6037,7 +6038,8 @@ static void __kmp_taskgraph_free(kmp_int32 gtid, kmp_taskgraph_record_t *rec,
     KMP_ATOMIC_ST_RLX(&taskdata->td_allocated_child_tasks, 0);
     __kmp_free_task(gtid, taskdata, thread);
   }
-  __kmp_thread_free(thread, rec->record_map);
+  if (rec->record_map)
+    __kmp_thread_free(thread, rec->record_map);
 
   kmp_taskgraph_region_t *region = rec->alloc_root;
   while (region) {
