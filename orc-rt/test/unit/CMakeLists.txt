@@ -164,9 +164,6 @@ set_target_properties(RTTICrossDylibTestLib PROPERTIES
   DEFINE_SYMBOL ORC_RT_TEST_DLL_EXPORTS
   FOLDER "orc-rt/Tests")
 
-set_target_properties(RTTICrossDylibTestLib PROPERTIES
-  DEFINE_SYMBOL ORC_RT_TEST_DLL_EXPORTS)
-
 target_compile_options(RTTICrossDylibTestLib PRIVATE ${ORC_RT_COMPILE_FLAGS})
 
 target_link_libraries(RTTICrossDylibTestLib

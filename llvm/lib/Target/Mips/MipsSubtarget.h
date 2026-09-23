@@ -133,9 +133,6 @@ class MipsSubtarget : public MipsGenSubtargetInfo {
   // FixR5900 - Enable R5900 short loop erratum fix.
   bool FixR5900;
 
-  // isLinux - Target system is Linux. Is false we consider ELFOS for now.
-  bool IsLinux;
-
   // UseSmallSection - Small section is used.
   bool UseSmallSection;
 
@@ -229,10 +226,6 @@ class MipsSubtarget : public MipsGenSubtargetInfo {
 
   /// The overridden stack alignment.
   MaybeAlign StackAlignOverride;
-
-  // We can override the determination of whether we are in mips16 mode
-  // as from the command line
-  enum {NoOverride, Mips16Override, NoMips16Override} OverrideMode;
 
   const MipsTargetMachine &TM;
 
@@ -412,10 +405,6 @@ public:
   bool systemSupportsUnalignedAccess() const {
     return hasMips32r6() && !StrictAlign;
   }
-
-  // Set helper classes
-  void setHelperClassesMips16();
-  void setHelperClassesMipsSE();
 
   const SelectionDAGTargetInfo *getSelectionDAGInfo() const override;
 
