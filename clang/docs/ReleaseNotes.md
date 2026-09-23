@@ -679,6 +679,9 @@ features cannot lower the translation-unit ABI level;
   using ``__is_constructible`` on a nested class template inside the definition
   of the containing class. (#GH215166)
 
+- Fixed a crash issue when a value dependent recovery init appeared in constant
+  evaluation context in default constant evaluator.
+
 - Fixed a bug where Clang incorrectly required `promise.return_value()` for a
   dependent `co_return` operand that inits to `void`, instead of using
   `promise.return_void()`. (#GH218368)

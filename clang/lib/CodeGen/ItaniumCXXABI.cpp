@@ -2141,10 +2141,10 @@ ItaniumCXXABI::getVTableAddressPoint(BaseSubobject Base,
       CGM.getItaniumVTableContext().getVTableLayout(VTableClass);
   VTableLayout::AddressPointLocation AddressPoint =
       Layout.getAddressPoint(Base);
-  llvm::Value *Indices[] = {
-    llvm::ConstantInt::get(CGM.Int32Ty, 0),
-    llvm::ConstantInt::get(CGM.Int32Ty, AddressPoint.VTableIndex),
-    llvm::ConstantInt::get(CGM.Int32Ty, AddressPoint.AddressPointIndex),
+  llvm::Constant *Indices[] = {
+      llvm::ConstantInt::get(CGM.Int32Ty, 0),
+      llvm::ConstantInt::get(CGM.Int32Ty, AddressPoint.VTableIndex),
+      llvm::ConstantInt::get(CGM.Int32Ty, AddressPoint.AddressPointIndex),
   };
 
   // Add inrange attribute to indicate that only the VTableIndex can be
@@ -2158,7 +2158,8 @@ ItaniumCXXABI::getVTableAddressPoint(BaseSubobject Base,
       llvm::APInt(32, (int)-Offset, true),
       llvm::APInt(32, (int)(VTableSize - Offset), true));
   return llvm::ConstantExpr::getGetElementPtr(
-      VTable->getValueType(), VTable, Indices, /*InBounds=*/true, InRange);
+      CGM.getDataLayout(), VTable->getValueType(), VTable, Indices,
+      llvm::GEPNoWrapFlags::inBounds(), InRange);
 }
 
 llvm::Value *ItaniumCXXABI::getVTableAddressPointInStructorWithVTT(
@@ -4069,8 +4070,9 @@ void ItaniumRTTIBuilder::BuildVTablePointer(const Type *Ty,
     VTable = llvm::ConstantExpr::getInBoundsPtrAdd(VTable, Eight);
   } else {
     llvm::Constant *Two = llvm::ConstantInt::get(PtrDiffTy, 2);
-    VTable = llvm::ConstantExpr::getInBoundsGetElementPtr(CGM.GlobalsInt8PtrTy,
-                                                          VTable, Two);
+    VTable = llvm::ConstantExpr::getGetElementPtr(
+        CGM.getDataLayout(), CGM.GlobalsInt8PtrTy, VTable, Two,
+        llvm::GEPNoWrapFlags::inBounds());
   }
 
   if (const auto &Schema =
