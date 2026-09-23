@@ -796,11 +796,11 @@ public:
 
   /// Returns true if frame pointer elimination should be disabled for this
   /// function.
-  LLVM_ABI bool disableFramePointerElim() const;
+  bool disableFramePointerElim() const;
 
   /// Returns true if the frame pointer must always either point to a new frame
   /// record or be un-modified in this function.
-  LLVM_ABI bool framePointerIsReserved() const;
+  bool framePointerIsReserved() const;
 
   /// getJumpTableInfo - Return the jump table info object for the current
   /// function.  This object contains information about jump tables in the

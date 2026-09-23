@@ -37,10 +37,18 @@ enum RecordArgABI {
   RAA_Indirect
 };
 
-/// Flags controlling target-specific ABI compatibility behaviour.
-/// Construct with the default constructor for the current ABI, or use
-/// fromVersion() to get the flags that match a specific Clang version.
+/// Flags controlling ABI compatibility behaviour that applies to every target.
+/// Targets with compatibility flags of their own extend this with a derived
+/// structure.
 struct ABICompatInfo {
+  /// Whether a matrix type may be the base type of a homogeneous aggregate.
+  bool IsMatrixHA : 1;
+
+  ABICompatInfo() : IsMatrixHA(true) {}
+};
+
+/// Flags controlling X86-specific ABI compatibility behaviour.
+struct X86ABICompatInfo : ABICompatInfo {
   bool PassInt128VectorsInMem : 1;
   bool ReturnCXXRecordGreaterThan128InMem : 1;
   bool ClassifyIntegerMMXAsSSE : 1;
@@ -48,29 +56,18 @@ struct ABICompatInfo {
   bool Clang11Compat : 1;
   bool ClassifyUnnamedBitFields : 1;
 
-  ABICompatInfo()
+  X86ABICompatInfo()
       : PassInt128VectorsInMem(true), ReturnCXXRecordGreaterThan128InMem(true),
         ClassifyIntegerMMXAsSSE(true), HonorsRevision98(true),
         Clang11Compat(true), ClassifyUnnamedBitFields(true) {}
-
-  /// Return flags matching the ABI emitted by the given Clang major version.
-  // TODO: fill in per-version flag overrides.
-  static ABICompatInfo fromVersion(unsigned /*ClangMajor*/) {
-    return ABICompatInfo();
-  }
 };
 
 class TargetInfo {
-private:
-  ABICompatInfo CompatInfo;
-
 protected:
   TypeBuilder &TB;
 
 public:
-  explicit TargetInfo(TypeBuilder &Builder) : CompatInfo(), TB(Builder) {}
-  TargetInfo(TypeBuilder &Builder, const ABICompatInfo &Info)
-      : CompatInfo(Info), TB(Builder) {}
+  explicit TargetInfo(TypeBuilder &Builder) : TB(Builder) {}
 
   virtual ~TargetInfo() = default;
 
@@ -78,19 +75,29 @@ public:
   /// and return value.
   virtual void computeInfo(FunctionInfo &FI) const = 0;
   virtual bool isPassByRef(const Type *Ty) const { return false; }
-  const ABICompatInfo &getABICompatInfo() const { return CompatInfo; }
+
+  /// Return this target's ABI compatibility flags. Targets with extra flags
+  /// store a derived object and return that as an ABICompatInfo reference.
+  virtual const ABICompatInfo &getABICompatInfo() const = 0;
+
+  /// Address space in which indirect arguments are allocated (the target's
+  /// alloca/stack space).
+  virtual unsigned getAllocaAddrSpace() const { return 0; }
 
 protected:
   LLVM_ABI RecordArgABI getRecordArgABI(const RecordType *RT) const;
   LLVM_ABI RecordArgABI getRecordArgABI(const Type *Ty) const;
   LLVM_ABI bool isPromotableInteger(const IntegerType *IT) const;
-  LLVM_ABI ArgInfo getNaturalAlignIndirect(const Type *Ty,
+  LLVM_ABI ArgInfo getNaturalAlignIndirect(const Type *Ty, unsigned AddrSpace,
                                            bool ByVal = true) const;
   LLVM_ABI bool isAggregateTypeForABI(const Type *Ty) const;
 
   /// If Ty is a transparent union, return its first field type; otherwise
   /// return Ty unchanged.
   LLVM_ABI const Type *useFirstFieldIfTransparentUnion(const Type *Ty) const;
+
+  /// Returns the scalar a single-element struct reduces to, else null.
+  LLVM_ABI const Type *isSingleElementStruct(const Type *Ty) const;
 
   /// Apply rules for classifying return types that are common to all targets.
   LLVM_ABI bool maybeCommonClassifyReturnType(FunctionInfo &FI) const;
@@ -137,7 +144,7 @@ enum class X86AVXABILevel {
 
 LLVM_ABI std::unique_ptr<TargetInfo>
 createX86_64TargetInfo(TypeBuilder &TB, X86AVXABILevel AVXLevel,
-                       bool Has64BitPointers, const ABICompatInfo &Compat);
+                       bool Has64BitPointers, const X86ABICompatInfo &Compat);
 
 enum class AArch64ABIKind {
   AAPCS = 0,
@@ -152,7 +159,9 @@ enum class AArch64ABIKind {
 struct AArch64ABIOptions {
   AArch64ABIKind Kind = AArch64ABIKind::AAPCS;
   bool IsILP32 = false;
+  bool IsCXX = false;
   bool IsMicrosoftCXXABI = false;
+  ABICompatInfo CompatInfo;
 
   AArch64ABIOptions() = default;
   explicit AArch64ABIOptions(AArch64ABIKind Kind) : Kind(Kind) {}

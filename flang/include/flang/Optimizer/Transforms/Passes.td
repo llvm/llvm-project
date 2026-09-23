@@ -527,6 +527,10 @@ def FunctionAttr : Pass<"function-attr", "mlir::func::FuncOp"> {
               /*default=*/"false",
               "Set the disable-tail-calls attribute on functions to prevent "
               "tail call optimization.">,
+       Option<"UniqueInternalLinkageNames", "unique-internal-linkage-names",
+              "bool", /*default=*/"false",
+              "Set the sample-profile-suffix-elision-policy attribute on "
+              "internal linkage functions in the module.">,
        Option<"tuneCPU", "tune-cpu", "std::string", /*default=*/"",
               "Set the tune-cpu attribute on functions in the module.">,
        Option<"setNoCapture", "set-nocapture", "bool", /*default=*/"false",
@@ -634,7 +638,16 @@ def CUFAddConstructor : Pass<"cuf-add-constructor", "mlir::ModuleOp"> {
     Option<"emitCudaCompiled", "emit-cuda-compiled", "bool",
            /*default=*/"false",
            "Declare an undefined cuda_compiled symbol so linking without the "
-           "CUDA Fortran runtime fails with a clear diagnostic.">
+           "CUDA Fortran runtime fails with a clear diagnostic.">,
+    ListOption<"extraConstructors", "extra-constructors",
+               "std::string",
+               "Extra functions to declare and call from the CUDA Fortran "
+               "constructor.">,
+   ListOption<"entryOnlyConstructors", "entry-only-constructors",
+               "std::string",
+               "Extra functions to declare and call from the CUDA Fortran "
+               "constructor only if the entry function is present.">
+
   ];
 }
 
@@ -659,6 +672,22 @@ def CUFComputeSharedMemoryOffsetsAndSize
     "cuf::CUFDialect", "fir::FIROpsDialect", "mlir::gpu::GPUDialect",
     "mlir::DLTIDialect"
   ];
+}
+
+def CUFDuplicateDeviceFunc
+    : Pass<"cuf-duplicate-device-func", "::mlir::ModuleOp"> {
+  let summary = "Give host_device procedures a device copy before optimization";
+  let description = [{
+    Creates the device copy of every attributes(host,device) procedure, and of
+    every procedure without a device attribute that device code calls, as a
+    func.func in the host module. The copy carries the device proc attribute,
+    the device allocation policy and a cuf.device_copy_of marker naming the
+    original, and device code is redirected to it while host code keeps the
+    original. Running before the FIR optimizer lets each copy be optimized for
+    its own target; cuf-transform-device-func later moves the copies into the
+    GPU module under their original name.
+  }];
+  let dependentDialects = ["cuf::CUFDialect", "fir::FIROpsDialect"];
 }
 
 def CUFDeviceFuncTransform

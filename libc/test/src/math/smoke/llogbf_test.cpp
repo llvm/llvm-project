@@ -10,4 +10,4 @@
 
 #include "src/math/llogbf.h"
 
-LIST_INTLOGB_TESTS(long, float, LIBC_NAMESPACE::llogbf);
+LIST_INTLOGB_TESTS(Llogbf, long, float, LIBC_NAMESPACE::llogbf);

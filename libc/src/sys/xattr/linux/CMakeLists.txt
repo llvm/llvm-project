@@ -1,0 +1,43 @@
+add_entrypoint_object(
+  flistxattr
+  SRCS
+    flistxattr.cpp
+  HDRS
+    ../flistxattr.h
+  DEPENDS
+    libc.src.__support.OSUtil.linux.syscall_wrappers.flistxattr
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  listxattr
+  SRCS
+    listxattr.cpp
+  HDRS
+    ../listxattr.h
+  DEPENDS
+    libc.src.__support.OSUtil.linux.syscall_wrappers.listxattr
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  llistxattr
+  SRCS
+    llistxattr.cpp
+  HDRS
+    ../llistxattr.h
+  DEPENDS
+    libc.src.__support.OSUtil.linux.syscall_wrappers.llistxattr
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.src.errno.errno
+)

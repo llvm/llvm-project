@@ -235,7 +235,8 @@ bool CodeGenAction::beginSourceFileAction() {
     }
 
     mlirModule = std::move(module);
-    const llvm::DataLayout &dl = targetMachine.createDataLayout();
+    const llvm::DataLayout dl(targetMachine.getTargetTriple().computeDataLayout(
+        ci.getInvocation().getTargetOpts().abi));
     fir::support::setMLIRDataLayout(*mlirModule, dl);
     return true;
   }
@@ -1435,7 +1436,7 @@ void CodeGenAction::executeAction() {
   // Note that this overwrites any datalayout stored in the LLVM-IR. This avoids
   // an assert for incompatible data layout when the code-generation happens.
   llvmModule->setTargetTriple(theTriple);
-  llvmModule->setDataLayout(targetMachine.createDataLayout());
+  llvmModule->setDataLayout(theTriple.computeDataLayout(targetOpts.abi));
 
   // Link in builtin bitcode libraries
   if (!codeGenOpts.BuiltinBCLibs.empty())
