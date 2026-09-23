@@ -51,13 +51,13 @@ std::error_code setzOSFileTag(sys::fs::file_t FD, int CCSID, bool IsText);
 
 /** \brief Get the the tag ccsid for a file name or a file descriptor. */
 ErrorOr<__ccsid_t> getzOSFileTag(const Twine &FileName,
-                                 const sys::fs::file_t FD = -1);
+                                 const sys::fs::file_t FD = {});
 
 /** \brief Query the file tag to determine if it needs conversion to UTF-8
  *  codepage.
  */
 ErrorOr<bool> needzOSConversion(const Twine &FileName,
-                                const sys::fs::file_t FD = -1);
+                                const sys::fs::file_t FD = {});
 
 /** Copy the tag attributes from \a source to \a destination.
  *
@@ -125,7 +125,7 @@ inline std::error_code setFileTag(sys::fs::file_t FD, int CCSID, bool IsText) {
 }
 
 inline ErrorOr<bool> needConversion(const Twine &FileName,
-                                    const sys::fs::file_t FD = -1) {
+                                    const sys::fs::file_t FD = {}) {
 #ifdef __MVS__
   return needzOSConversion(FileName, FD.get());
 #endif
