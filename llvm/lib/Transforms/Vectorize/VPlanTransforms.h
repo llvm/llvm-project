@@ -1,4 +1,4 @@
-/=- VPlanTransforms.h - Utility VPlan to VPlan transforms --------------===//
+//===- VPlanTransforms.h - Utility VPlan to VPlan transforms --------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
