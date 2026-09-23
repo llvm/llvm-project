@@ -542,8 +542,8 @@ static void computeKnownBitsAddSub(bool Add, const Value *Op0, const Value *Op1,
 
   // Handle "add nsw X, -1" which is semantically "X - 1".
   // X + (-1) is nonnegative if X is known positive.
-  if (Add && NSW && !KnownOut.isNonNegative() &&
-      match(Op1, m_AllOnes()) && Known2.isNonNegative() && Known2.isNonZero()) {
+  if (Add && NSW && !KnownOut.isNonNegative() && match(Op1, m_AllOnes()) &&
+      Known2.isNonNegative() && Known2.isNonZero()) {
     KnownOut.makeNonNegative();
   }
 
