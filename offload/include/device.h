@@ -174,16 +174,11 @@ struct DeviceTy {
 
   /// Get information from the device.
   template <typename T> T getInfo(DeviceInfo Info) const {
-    InfoTreeNode DevInfo = RTL->obtain_device_info(RTLDeviceID);
-
-    auto EntryOpt = DevInfo.get(Info);
-    if (!EntryOpt)
-      return 0;
-
-    auto Entry = *EntryOpt;
-    if (!std::holds_alternative<T>(Entry->Value))
+    T Value{};
+    if (olGetDeviceInfo(DeviceHandle, static_cast<ol_device_info_t>(Info),
+                        sizeof(Value), &Value))
       return T{};
-    return std::get<T>(Entry->Value);
+    return Value;
   }
 
 private:
