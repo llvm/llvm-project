@@ -14,14 +14,14 @@ define void @combined_exit_conditions(ptr align 4 dereferenceable(80) readonly %
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <4 x i32> [[WIDE_LOAD]], zeroinitializer
 ; CHECK-NEXT:    [[TMP12:%.*]] = freeze <4 x i1> [[TMP2]]
-; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP12]], i1 false)
+; CHECK-NEXT:    [[TMP6:%.*]] = freeze <4 x i1> [[TMP12]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP6]], i1 false)
 ; CHECK-NEXT:    [[UNCOUNTABLE_EXIT_MASK:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 0, i64 [[TMP3]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr [4 x i8], ptr [[SRC]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[TMP0]], <4 x i1> [[UNCOUNTABLE_EXIT_MASK]], <4 x i32> poison)
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <4 x i32> [[WIDE_MASKED_LOAD]], splat (i32 1)
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr [4 x i8], ptr [[DST]], i64 [[INDEX]]
 ; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[TMP4]], ptr align 4 [[TMP5]], <4 x i1> [[UNCOUNTABLE_EXIT_MASK]])
-; CHECK-NEXT:    [[TMP6:%.*]] = freeze <4 x i1> [[TMP12]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP6]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 20
@@ -85,14 +85,14 @@ define void @combined_exit_conditions_swap_comparison_order(ptr align 4 derefere
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <4 x i32> [[WIDE_LOAD]], zeroinitializer
 ; CHECK-NEXT:    [[TMP12:%.*]] = freeze <4 x i1> [[TMP1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP12]], i1 false)
+; CHECK-NEXT:    [[TMP6:%.*]] = freeze <4 x i1> [[TMP12]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP6]], i1 false)
 ; CHECK-NEXT:    [[UNCOUNTABLE_EXIT_MASK:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 0, i64 [[TMP2]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr [4 x i8], ptr [[SRC]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[TMP3]], <4 x i1> [[UNCOUNTABLE_EXIT_MASK]], <4 x i32> poison)
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <4 x i32> [[WIDE_MASKED_LOAD]], splat (i32 1)
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr [4 x i8], ptr [[DST]], i64 [[INDEX]]
 ; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[TMP4]], ptr align 4 [[TMP5]], <4 x i1> [[UNCOUNTABLE_EXIT_MASK]])
-; CHECK-NEXT:    [[TMP6:%.*]] = freeze <4 x i1> [[TMP12]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP6]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 20
@@ -385,14 +385,14 @@ define void @combined_exit_conditions_binary_or(ptr align 4 dereferenceable(80) 
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[PRED]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <4 x i32> [[WIDE_LOAD]], zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP1]], i1 false)
+; CHECK-NEXT:    [[TMP6:%.*]] = freeze <4 x i1> [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP6]], i1 false)
 ; CHECK-NEXT:    [[UNCOUNTABLE_EXIT_MASK:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 0, i64 [[TMP2]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr [4 x i8], ptr [[SRC]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[TMP3]], <4 x i1> [[UNCOUNTABLE_EXIT_MASK]], <4 x i32> poison)
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <4 x i32> [[WIDE_MASKED_LOAD]], splat (i32 1)
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr [4 x i8], ptr [[DST]], i64 [[INDEX]]
 ; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[TMP4]], ptr align 4 [[TMP5]], <4 x i1> [[UNCOUNTABLE_EXIT_MASK]])
-; CHECK-NEXT:    [[TMP6:%.*]] = freeze <4 x i1> [[TMP1]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP6]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 20
