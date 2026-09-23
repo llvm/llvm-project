@@ -51,6 +51,7 @@
 #include "ValueProfileCollector.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -1268,6 +1269,8 @@ private:
   // Find the Instrumented BB and set the value. Return false on error.
   bool setInstrumentedCounts(const std::vector<uint64_t> &CountFromProfile);
 
+  void setWaveCounts(ArrayRef<BasicBlock *> InstrumentBBs);
+
   // Set the edge counter value for the unknown edge -- there should be only
   // one unknown edge.
   void setEdgeCount(DirectEdges &Edges, uint64_t Value);
@@ -1303,6 +1306,43 @@ static void setupBBInfoEdges(
   }
 }
 
+// Wave slots use the same indices as lane counters, including the trailing
+// select counters. Only block-counter slots describe block-entry events.
+void PGOUseFunc::setWaveCounts(ArrayRef<BasicBlock *> InstrumentBBs) {
+  if (ProfileRecord.WaveCounts.empty() || !isGPUProfTarget(*M) || IsCS)
+    return;
+  if (ProfileRecord.WaveCounts.size() != ProfileRecord.Counts.size()) {
+    F.getContext().diagnose(DiagnosticInfoPGOProfile(
+        M->getName().data(),
+        Twine("Inconsistent number of wave counts in ") + F.getName() +
+            "; ignoring wave profile",
+        DS_Warning));
+    return;
+  }
+
+  // Earlier profile annotations can change the instrumentation MST without
+  // changing the CFG hash. Do not reuse its counter indices for wave counts.
+  if (F.getMetadata(LLVMContext::MD_prof))
+    return;
+
+  DenseMap<const BasicBlock *, uint64_t> MeasuredCounts;
+  for (auto [Index, BB] : enumerate(InstrumentBBs))
+    MeasuredCounts.try_emplace(BB, ProfileRecord.WaveCounts[Index]);
+  // Lane-flow reconstruction cannot provide a missing wave normalization count.
+  if (!MeasuredCounts.contains(&F.getEntryBlock()))
+    return;
+
+  SmallVector<uint64_t> Counts;
+  BitVector HasCounts;
+  for (const BasicBlock &BB : F) {
+    auto It = MeasuredCounts.find(&BB);
+    bool HasCount = It != MeasuredCounts.end();
+    Counts.push_back(HasCount ? It->second : 0);
+    HasCounts.push_back(HasCount);
+  }
+  setBlockWaveCounts(F, Counts, HasCounts);
+}
+
 // Visit all the edges and assign the count value for the instrumented
 // edges and the BB. Return false on error.
 bool PGOUseFunc::setInstrumentedCounts(
@@ -1334,6 +1374,7 @@ bool PGOUseFunc::setInstrumentedCounts(
     });
     return false;
   }
+  setWaveCounts(InstrumentBBs);
   auto *FuncEntry = &*F.begin();
 
   // Set the profile count to the Instrumented BBs.
@@ -2293,6 +2334,9 @@ static bool annotateAllFunctions(
 
   bool HasSingleByteCoverage = PGOReader->hasSingleByteCoverage();
   for (auto &F : M) {
+    // A replacement profile must not leave an earlier wave mapping live when
+    // its record is absent, mismatched, or contains only lane counts.
+    clearBlockWaveCounts(F);
     if (skipPGOUse(F))
       continue;
     TargetLibraryInfo &TLI = LookupTLI(F);
