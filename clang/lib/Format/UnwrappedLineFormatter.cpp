@@ -10,6 +10,7 @@
 #include "FormatToken.h"
 #include "WhitespaceManager.h"
 #include "llvm/Support/Debug.h"
+#include <limits>
 #include <queue>
 
 #define DEBUG_TYPE "format-formatter"
@@ -1425,7 +1426,7 @@ private:
   /// In case of equal penalties, we want to prefer states that were inserted
   /// first. During state generation we make sure that we insert states first
   /// that break the line as late as possible.
-  typedef std::pair<unsigned, unsigned> OrderedPenalty;
+  typedef std::pair<uint64_t, unsigned> OrderedPenalty;
 
   /// An edge in the solution space from \c Previous->State to \c State,
   /// inserting a newline dependent on the \c NewLine.
@@ -1468,7 +1469,7 @@ private:
     Queue.push(QueueItem(OrderedPenalty(0, Count), RootNode));
     ++Count;
 
-    unsigned Penalty = 0;
+    uint64_t Penalty = 0;
 
     // While not empty, take first element and follow edges.
     while (!Queue.empty()) {
@@ -1517,6 +1518,8 @@ private:
                << "Total number of analyzed states: " << Count << "\n");
     LLVM_DEBUG(llvm::dbgs() << "---\n");
 
+    if (Penalty > std::numeric_limits<unsigned>::max())
+      return std::numeric_limits<unsigned>::max();
     return Penalty;
   }
 
@@ -1524,7 +1527,7 @@ private:
   ///
   /// Assume the current state is \p PreviousNode and has been reached with a
   /// penalty of \p Penalty. Insert a line break if \p NewLine is \c true.
-  void addNextStateToQueue(unsigned Penalty, StateNode *PreviousNode,
+  void addNextStateToQueue(uint64_t Penalty, StateNode *PreviousNode,
                            bool NewLine, unsigned *Count, QueueType *Queue) {
     if (NewLine && !Indenter->canBreak(PreviousNode->State))
       return;
@@ -1533,9 +1536,11 @@ private:
 
     StateNode *Node = new (Allocator.Allocate())
         StateNode(PreviousNode->State, NewLine, PreviousNode);
-    if (!formatChildren(Node->State, NewLine, /*DryRun=*/true, Penalty))
+    unsigned ChildPenalty = 0;
+    if (!formatChildren(Node->State, NewLine, /*DryRun=*/true, ChildPenalty))
       return;
 
+    Penalty += ChildPenalty;
     Penalty += Indenter->addTokenToState(Node->State, NewLine, true);
 
     Queue->push(QueueItem(OrderedPenalty(Penalty, *Count), Node));

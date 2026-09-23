@@ -25486,6 +25486,22 @@ TEST_F(FormatTest, ShortTemplatedArgumentLists) {
   verifyFormat("template <int N> struct Foo<char[N]> {};", Style);
 }
 
+// Regression test for integer overflow in cost function.
+// Before the fix, the formatter emitted 11 of these 139-character-long template
+// args onto a single 1572-character-long line due to u32 overflow in the cost.
+TEST_F(FormatTest, AccumulatesLargePenaltiesWithoutOverflow) {
+  const std::string Arg =
+      "bazProducerFactoryForDistributedTelemetrySynchronizationAnd"
+      "PersistentCacheCoordinationWithAsynchronousFallbackAnd"
+      "VersionedSchemaNegotiation";
+  std::string Code = "bool foo(int value) {\n"
+                     "  return value == fooRegistry<\n";
+  for (unsigned i = 0; i < 25; ++i)
+    Code += "             " + Arg + ",\n";
+  Code += "             " + Arg + ">();\n}";
+  verifyFormat(Code);
+}
+
 TEST_F(FormatTest, MultilineLambdaInConditional) {
   auto Style = getLLVMStyleWithColumns(70);
   verifyFormat("auto aLengthyIdentifier = oneExpressionSoThatWeBreak ? []() {\n"
