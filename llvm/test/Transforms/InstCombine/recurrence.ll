@@ -81,6 +81,64 @@ loop:                                             ; preds = %loop, %entry
   br label %loop
 }
 
+; The mask should be removed based on Start's ones.
+define i64 @test_or_start_known_ones(i32 %s, ptr %p) {
+; CHECK-LABEL: @test_or_start_known_ones(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[S_EXT:%.*]] = zext i32 [[S:%.*]] to i64
+; CHECK-NEXT:    [[START:%.*]] = or disjoint i64 [[S_EXT]], -4294967296
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[START]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[STEP:%.*]] = load volatile i64, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = or i64 [[IV]], [[STEP]]
+; CHECK-NEXT:    [[IV_NEXT_MASKED:%.*]] = or i64 [[IV_NEXT]], -4294967296
+; CHECK-NEXT:    tail call void @use(i64 [[IV_NEXT_MASKED]])
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  %s.ext = zext i32 %s to i64
+  %start = or i64 %s.ext, u0xFFFFFFFF00000000
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %start, %entry ], [ %iv.next, %loop ]
+  %step = load volatile i64, ptr %p
+  %iv.next = or i64 %iv, %step
+  %iv.next.masked = or i64 %iv.next, u0xFFFFFFFF00000000
+  tail call void @use(i64 %iv.next.masked)
+  br label %loop
+}
+
+; The mask should be removed based on the known zeros of Start and Step.
+define i64 @test_or_step_known_zeros(i32 %s, ptr %p) {
+; CHECK-LABEL: @test_or_step_known_zeros(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[START:%.*]] = zext i32 [[S:%.*]] to i64
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[START]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[STEP_I32:%.*]] = load volatile i32, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[STEP:%.*]] = zext i32 [[STEP_I32]] to i64
+; CHECK-NEXT:    [[IV_NEXT]] = or i64 [[IV]], [[STEP]]
+; CHECK-NEXT:    [[IV_NEXT_MASKED:%.*]] = and i64 [[IV]], -4294967296
+; CHECK-NEXT:    tail call void @use(i64 [[IV_NEXT_MASKED]])
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  %start = zext i32 %s to i64
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %start, %entry ], [ %iv.next, %loop ]
+  %step.i32 = load volatile i32, ptr %p
+  %step = zext i32 %step.i32 to i64
+  %iv.next = or i64 %iv, %step
+  %iv.next.masked = and i64 %iv.next, u0xFFFFFFFF00000000
+  tail call void @use(i64 %iv.next.masked)
+  br label %loop
+}
+
 define i64 @test_and(i64 %a) {
 ; CHECK-LABEL: @test_and(
 ; CHECK-NEXT:  entry:
@@ -159,6 +217,66 @@ loop:                                             ; preds = %loop, %entry
   %step = load volatile i64, ptr %p
   %iv.next = and i64 %iv, %step
   tail call void @use(i64 %iv.next)
+  br label %loop
+}
+
+; The mask should be removed based on Start's zeros.
+define i64 @test_and_start_known_zeros(i32 %s, ptr %p) {
+; CHECK-LABEL: @test_and_start_known_zeros(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[START:%.*]] = zext i32 [[S:%.*]] to i64
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[START]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[STEP:%.*]] = load volatile i64, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = and i64 [[IV]], [[STEP]]
+; CHECK-NEXT:    [[IV_NEXT_MASKED:%.*]] = and i64 [[IV_NEXT]], 4294967295
+; CHECK-NEXT:    tail call void @use(i64 [[IV_NEXT_MASKED]])
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  %start = zext i32 %s to i64
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %start, %entry ], [ %iv.next, %loop ]
+  %step = load volatile i64, ptr %p
+  %iv.next = and i64 %iv, %step
+  %iv.next.masked = and i64 %iv.next, u0x00000000FFFFFFFF
+  tail call void @use(i64 %iv.next.masked)
+  br label %loop
+}
+
+; The mask should be removed based on the known ones of Start and Step.
+define i64 @test_and_step_known_ones(i32 %s, ptr %p) {
+; CHECK-LABEL: @test_and_step_known_ones(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[START_ZEXT:%.*]] = zext i32 [[S:%.*]] to i64
+; CHECK-NEXT:    [[START:%.*]] = or disjoint i64 [[START_ZEXT]], -4294967296
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[START]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[STEP_I32:%.*]] = load volatile i32, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[STEP_ZEXT:%.*]] = zext i32 [[STEP_I32]] to i64
+; CHECK-NEXT:    [[STEP:%.*]] = or disjoint i64 [[STEP_ZEXT]], -4294967296
+; CHECK-NEXT:    [[IV_NEXT]] = and i64 [[IV]], [[STEP]]
+; CHECK-NEXT:    [[IV_NEXT_MASKED:%.*]] = or i64 [[IV_NEXT]], -4294967296
+; CHECK-NEXT:    tail call void @use(i64 [[IV_NEXT_MASKED]])
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  %start.zext = zext i32 %s to i64
+  %start = or i64 %start.zext, u0xFFFFFFFF00000000
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %start, %entry ], [ %iv.next, %loop ]
+  %step.i32 = load volatile i32, ptr %p
+  %step.zext = zext i32 %step.i32 to i64
+  %step = or i64 %step.zext, u0xFFFFFFFF00000000
+  %iv.next = and i64 %iv, %step
+  %iv.next.masked = or i64 %iv.next, u0xFFFFFFFF00000000
+  tail call void @use(i64 %iv.next.masked)
   br label %loop
 }
 
