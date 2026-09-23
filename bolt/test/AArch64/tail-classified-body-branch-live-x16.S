@@ -16,7 +16,7 @@
 # RUN:   --skip-funcs='^bar$' \
 # RUN:   | FileCheck %s --check-prefix=TAILCALL-BOLT
 # RUN: llvm-objdump -d \
-# RUN:   --disassemble-symbols=foo,bar,bar_body,padding,__AArch64_forward_ADRPThunk_bar_0 \
+# RUN:   --disassemble-symbols=foo,bar,bar_body,padding,__AArch64_backward_ADRPThunk_bar_0 \
 # RUN:   %t.tailcall.bolt | FileCheck %s --check-prefix=TAILCALL
 
 # RUN: %clang %cflags -DBRANCH -Wl,-q -Wl,-e,foo %s -o %t.branch \
@@ -92,14 +92,14 @@ padding:
 #
 # TAILCALL: Disassembly of section .text:
 #
-# TAILCALL:      <foo>:
-# TAILCALL-NEXT:   {{.*}} mov x16, #0x2a
-# TAILCALL-NEXT:   {{.*}} b   {{.*}} <__AArch64_forward_ADRPThunk_bar_0>
-#
-# TAILCALL:      <__AArch64_forward_ADRPThunk_bar_0>:
+# TAILCALL:      <__AArch64_backward_ADRPThunk_bar_0>:
 # TAILCALL-NEXT:   {{.*}} adrp x16,
 # TAILCALL-NEXT:   {{.*}} add x16, x16,
 # TAILCALL-NEXT:   {{.*}} br x16
+#
+# TAILCALL:      <foo>:
+# TAILCALL-NEXT:   {{.*}} mov x16, #0x2a
+# TAILCALL-NEXT:   {{.*}} b   {{.*}} <__AArch64_backward_ADRPThunk_bar_0>
 #
 # TAILCALL:      <padding>:
 # TAILCALL-NEXT:   {{.*}} ret

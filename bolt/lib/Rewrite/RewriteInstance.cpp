@@ -4691,21 +4691,36 @@ void RewriteInstance::mapCodeSectionsInPlace(
   // Processing in non-relocation mode.
   uint64_t NewTextSectionStartAddress = NextAvailableAddress;
 
+  auto MapMainFragment = [&](BinaryFunction &Func, uint64_t OutputAddress) {
+    ErrorOr<BinarySection &> FuncSection = Func.getCodeSection();
+    assert(FuncSection && "cannot find section for function");
+    FuncSection->setOutputAddress(OutputAddress);
+    LLVM_DEBUG(dbgs() << "BOLT: mapping 0x"
+                      << Twine::utohexstr(FuncSection->getAllocAddress())
+                      << " to 0x" << Twine::utohexstr(OutputAddress) << '\n');
+    MapSection(*FuncSection, OutputAddress);
+    Func.setImageAddress(FuncSection->getAllocAddress());
+    Func.setImageSize(FuncSection->getOutputSize());
+  };
+
+  // Map injected patches at their pre-assigned addresses. Injected functions
+  // returned by BC->getInjectedBinaryFunctions() are not contained in
+  // BC->getBinaryFunctions(). Their sections are unique and are removed after
+  // their contents have been copied in place.
+  for (BinaryFunction *Func : BC->getInjectedBinaryFunctions()) {
+    const uint64_t OutputAddress = Func->getOutputAddress();
+    if (!Func->isEmitted() || !OutputAddress)
+      continue;
+
+    MapMainFragment(*Func, OutputAddress);
+  }
+
   for (auto &BFI : BC->getBinaryFunctions()) {
     BinaryFunction &Function = BFI.second;
     if (!Function.isEmitted())
       continue;
 
-    ErrorOr<BinarySection &> FuncSection = Function.getCodeSection();
-    assert(FuncSection && "cannot find section for function");
-    FuncSection->setOutputAddress(Function.getAddress());
-    LLVM_DEBUG(dbgs() << "BOLT: mapping 0x"
-                      << Twine::utohexstr(FuncSection->getAllocAddress())
-                      << " to 0x" << Twine::utohexstr(Function.getAddress())
-                      << '\n');
-    MapSection(*FuncSection, Function.getAddress());
-    Function.setImageAddress(FuncSection->getAllocAddress());
-    Function.setImageSize(FuncSection->getOutputSize());
+    MapMainFragment(Function, Function.getAddress());
     assert(Function.getImageSize() <= Function.getMaxSize() &&
            "Unexpected large function");
 
@@ -4757,6 +4772,37 @@ void RewriteInstance::mapCodeSectionsInPlace(
     Section.setOutputAddress(NewTextSectionStartAddress);
     Section.setOutputFileOffset(
         getFileOffsetForAddress(NewTextSectionStartAddress));
+  }
+
+  // Unlike cold fragments, non-fixed injected functions remain in their
+  // emitted code sections. Allocate those sections immediately after the
+  // moved cold fragments so their placement depends only on code layout. The
+  // functions themselves receive their final output addresses later from
+  // linker-resolved symbols in BinaryFunction::updateOutputValues().
+  SmallVector<BinarySection *, 4> InjectedSections;
+  for (const BinaryFunction *Func : BC->getOutputBinaryFunctions()) {
+    if (!(Func->isInjected() && Func->isEmitted() && !Func->getOutputAddress()))
+      continue;
+
+    assert(!Func->isSplit() && "injected functions cannot be split");
+    ErrorOr<BinarySection &> Section = Func->getCodeSection();
+    if (Section && !llvm::is_contained(InjectedSections, &*Section))
+      InjectedSections.push_back(&*Section);
+  }
+
+  for (BinarySection *Section : InjectedSections) {
+    assert(!Section->getOutputAddress() &&
+           "non-fixed injected section already mapped");
+    NextAvailableAddress =
+        alignTo(NextAvailableAddress, Section->getAlignment());
+    LLVM_DEBUG(
+        dbgs() << "BOLT: mapping injected section " << Section->getName()
+               << " at 0x" << Twine::utohexstr(Section->getAllocAddress())
+               << " to 0x" << Twine::utohexstr(NextAvailableAddress) << "\n");
+    MapSection(*Section, NextAvailableAddress);
+    Section->setOutputAddress(NextAvailableAddress);
+    Section->setOutputFileOffset(getFileOffsetForAddress(NextAvailableAddress));
+    NextAvailableAddress += Section->getOutputSize();
   }
 }
 

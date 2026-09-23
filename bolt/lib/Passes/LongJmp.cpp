@@ -11,16 +11,21 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Passes/LongJmp.h"
+#include "bolt/Core/BinaryEmitter.h"
+#include "bolt/Core/FunctionLayout.h"
 #include "bolt/Core/ParallelUtilities.h"
 #include "bolt/Passes/BranchLivenessUtils.h"
 #include "bolt/Passes/RegAnalysis.h"
 #include "bolt/Utils/CommandLineOpts.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/MathExtras.h"
 #include <algorithm>
+#include <cstdint>
+#include <optional>
 
 #define DEBUG_TYPE "longjmp"
 
@@ -30,7 +35,6 @@ namespace opts {
 extern cl::OptionCategory BoltCategory;
 extern cl::OptionCategory BoltOptCategory;
 extern cl::opt<bool> UseOldText;
-extern cl::opt<bool> HotFunctionsAtEnd;
 
 static cl::opt<bool> GroupStubs("group-stubs",
                                 cl::desc("share stubs across functions"),
@@ -50,12 +54,18 @@ static cl::opt<unsigned> MaxThunkChainLength(
     "max-thunk-chain-length",
     cl::desc("maximum number of B-only thunks to use for call relaxation"),
     cl::init(1), cl::Hidden, cl::cat(BoltOptCategory));
-}
+
+static cl::opt<unsigned> MaxThunkRemeasure(
+    "max-thunk-remeasure",
+    cl::desc("maximum number of thunk-island remeasurement iterations (0 "
+             "keeps maximum island reservations)"),
+    cl::init(1), cl::cat(BoltOptCategory));
+} // namespace opts
 
 namespace llvm {
 namespace bolt {
 
-constexpr unsigned ColdFragAlign = 16;
+static const Align ColdFragmentAlignment(16);
 
 static void relaxStubToShortJmp(BinaryBasicBlock &StubBB, const MCSymbol *Tgt) {
   const BinaryContext &BC = StubBB.getFunction()->getBinaryContext();
@@ -134,6 +144,12 @@ LongJmpPass::createNewStub(BinaryBasicBlock &SourceBB, const MCSymbol *TgtSym,
 
   Stubs[&Func].insert(StubBB.get());
   StubBits[StubBB.get()] = BC.MIB->getUncondBranchEncodingSize();
+  LLVM_DEBUG(
+      dbgs() << "BOLT-DEBUG: LongJmp: creating " << (IsCold ? "cold" : "main")
+             << " stub " << StubSym->getName() << " in " << Func.getPrintName()
+             << " at current layout address 0x" << Twine::utohexstr(AtAddress)
+             << " for " << TgtSym->getName() << '\n');
+
   if (IsCold) {
     registerInMap(ColdLocalStubs[&Func]);
     if (opts::GroupStubs && TgtIsFunc)
@@ -182,10 +198,10 @@ BinaryBasicBlock *LongJmpPass::lookupStubFromGroup(
 
   LLVM_DEBUG({
     if (Candidates.size() > 1)
-      dbgs() << "Considering stub group with " << Candidates.size()
-             << " candidates. DotAddress is " << Twine::utohexstr(DotAddress)
-             << ", chosen candidate address is "
-             << Twine::utohexstr(Cand->first) << "\n";
+      dbgs() << "BOLT-DEBUG: LongJmp: considering stub group with "
+             << Candidates.size() << " candidates at 0x"
+             << Twine::utohexstr(DotAddress) << "; selected candidate at 0x"
+             << Twine::utohexstr(Cand->first) << '\n';
   });
   return (PCOffset < MinVal || PCOffset > MaxVal) ? nullptr : Cand->second;
 }
@@ -304,7 +320,7 @@ void LongJmpPass::updateStubGroups() {
   auto update = [&](StubGroupsTy &StubGroups) {
     for (auto &KeyVal : StubGroups) {
       for (StubTy &Elem : KeyVal.second)
-        Elem.first = BBAddresses[Elem.second];
+        Elem.first = BBAddresses.at(Elem.second);
       llvm::sort(KeyVal.second, llvm::less_first());
     }
   };
@@ -317,169 +333,484 @@ void LongJmpPass::updateStubGroups() {
   update(ColdStubGroups);
 }
 
-void LongJmpPass::tentativeBBLayout(const BinaryFunction &Func) {
-  const BinaryContext &BC = Func.getBinaryContext();
-  uint64_t HotDot = HotAddresses[&Func];
-  uint64_t ColdDot = ColdAddresses[&Func];
-  bool Cold = false;
-  for (const BinaryBasicBlock *BB : Func.getLayout().blocks()) {
-    if (Cold || BB->isCold()) {
-      Cold = true;
-      BBAddresses[BB] = ColdDot;
-      ColdDot += BC.computeCodeSize(BB->begin(), BB->end());
-    } else {
-      BBAddresses[BB] = HotDot;
-      HotDot += BC.computeCodeSize(BB->begin(), BB->end());
-    }
-  }
-}
+uint64_t LongJmpPass::updateSectionAlignment(const BinaryContext &BC,
+                                             const BinaryFunction &Func,
+                                             const FunctionFragment &FF,
+                                             uint64_t Alignment) const {
+  if (BC.HasRelocations) {
+    // BinaryEmitter::emitFunction() raises every emitted code section to at
+    // least BC.AlignFunctions in relocation mode.
+    Alignment = std::max<uint64_t>(Alignment, BC.AlignFunctions);
 
-uint64_t LongJmpPass::tentativeLayoutRelocColdPart(
-    const BinaryContext &BC, BinaryFunctionListType &SortedFunctions,
-    uint64_t DotAddress) {
-  DotAddress =
-      alignTo(DotAddress, std::max<uint64_t>(BC.AlignFunctions,
-                                             BC.MaxColdCodeAlignment.load()));
-  for (BinaryFunction *Func : SortedFunctions) {
-    if (!Func->isSplit())
-      continue;
-    DotAddress = alignTo(DotAddress, Func->getMinAlignment());
-    uint64_t Pad =
-        offsetToAlignment(DotAddress, llvm::Align(Func->getAlignment()));
-    if (Pad <= Func->getMaxColdAlignmentBytes())
-      DotAddress += Pad;
-    ColdAddresses[Func] = DotAddress;
-    LLVM_DEBUG(dbgs() << Func->getPrintName() << " cold tentative: "
-                      << Twine::utohexstr(DotAddress) << "\n");
-    DotAddress += Func->estimateColdSize();
-    if (uint64_t IslandSize = Func->estimateConstantIslandSize()) {
-      DotAddress = alignTo(DotAddress, Func->getConstantIslandAlignment());
-      DotAddress += IslandSize;
-    }
-  }
-  return DotAddress;
-}
+    // BinaryEmitter::emitAll() sets the main text section to BC.AlignText.
+    if (Func.getCodeSectionName(FF.getFragmentNum()) ==
+        BC.getMainCodeSectionName())
+      Alignment = std::max<uint64_t>(Alignment, BC.AlignText);
 
-uint64_t
-LongJmpPass::tentativeLayoutRelocMode(const BinaryContext &BC,
-                                      BinaryFunctionListType &SortedFunctions,
-                                      uint64_t DotAddress) {
-  // Compute hot cold frontier
-  int64_t LastHotIndex = -1u;
-  uint32_t CurrentIndex = 0;
-  if (opts::HotFunctionsAtEnd) {
-    for (BinaryFunction *BF : SortedFunctions) {
-      if (BF->hasValidIndex()) {
-        LastHotIndex = CurrentIndex;
-        break;
-      }
+    // BinaryEmitter::emitFunction() emits the mandatory minimum function
+    // alignment first.
+    Alignment = std::max<uint64_t>(Alignment, Func.getMinAlignment());
 
-      ++CurrentIndex;
-    }
+    // BinaryEmitter::emitFunction() emits the preferred function alignment
+    // only when the corresponding maximum padding is nonzero.
+    const uint16_t MaxAlignBytes = FF.isSplitFragment()
+                                       ? Func.getMaxColdAlignmentBytes()
+                                       : Func.getMaxAlignmentBytes();
+    if (MaxAlignBytes > 0)
+      Alignment = std::max<uint64_t>(Alignment, Func.getAlignment());
   } else {
-    for (BinaryFunction *BF : SortedFunctions) {
-      if (!BF->hasValidIndex()) {
-        LastHotIndex = CurrentIndex;
-        break;
-      }
-
-      ++CurrentIndex;
-    }
+    // In non-relocation mode BinaryEmitter emits only the preferred function
+    // alignment. This path is used for newly allocated injected sections.
+    Alignment = std::max<uint64_t>(Alignment, Func.getAlignment());
   }
 
-  // Hot
-  CurrentIndex = 0;
-  bool ColdLayoutDone = false;
-  auto runColdLayout = [&]() {
-    // Mirror the extra hugify alignment inserted by final section allocation
-    // after the last non-cold section. Account for it before assigning cold
-    // fragment addresses so range checks see the hot-to-cold gap.
-    if (opts::Hugify && !BC.HasFixedLoadAddress && !opts::HotFunctionsAtEnd)
-      DotAddress = alignTo(DotAddress, BC.AlignText);
-    DotAddress = tentativeLayoutRelocColdPart(BC, SortedFunctions, DotAddress);
-    ColdLayoutDone = true;
-    if (opts::HotFunctionsAtEnd)
-      DotAddress = alignTo(DotAddress, BC.AlignText);
-  };
-  for (BinaryFunction *Func : SortedFunctions) {
-    if (!BC.shouldEmit(*Func)) {
-      HotAddresses[Func] = Func->getAddress();
+  // BinaryEmitter::emitFunctionBody() emits enabled basic-block alignment
+  // directives.
+  if (BC.AlignBlocks || BC.PreserveBlocksAlignment)
+    for (const BinaryBasicBlock *BB : FF)
+      if (BB->getAlignment() > 1)
+        Alignment = std::max<uint64_t>(Alignment, BB->getAlignment());
+
+  // BinaryEmitter::emitConstantIslands() aligns owned and cloned islands
+  // using the host function's constant-island alignment.
+  if (Func.hasIslandsInfo())
+    Alignment =
+        std::max<uint64_t>(Alignment, Func.getConstantIslandAlignment());
+
+  return Alignment;
+}
+
+void LongJmpPass::assignFunctionFragmentToSection(const BinaryContext &BC,
+                                                  const BinaryFunction &Func,
+                                                  const FunctionFragment &FF) {
+  const StringRef SectionName = Func.getCodeSectionName(FF.getFragmentNum());
+  auto It = llvm::find_if(Sections, [&](const SectionPlacement &Section) {
+    return StringRef(Section.Name) == SectionName;
+  });
+  if (It == Sections.end()) {
+    // AArch64ELFStreamer::changeSection() gives every text section a
+    // four-byte minimum alignment before BinaryEmitter raises it further.
+    Sections.push_back({SmallString<32>(SectionName),
+                        {},
+                        updateSectionAlignment(BC, Func, FF, 4)});
+    It = std::prev(Sections.end());
+  } else {
+    It->Alignment = updateSectionAlignment(BC, Func, FF, It->Alignment);
+  }
+
+  It->Fragments.push_back({&Func, FF.getFragmentNum()});
+}
+
+void LongJmpPass::assignFunctionsToSections(
+    const BinaryContext &BC, const BinaryFunctionListType &SortedFunctions) {
+  // Mirror BinaryEmitter::emitFunctions(): emit each main fragment followed
+  // immediately by its split fragments, preserving that order per section.
+  for (const BinaryFunction *Func : SortedFunctions) {
+    // Do not assign functions for which BinaryEmitter::emitFunction()
+    // returns before selecting a section.
+    if (!shouldEmitFunctionFragment(BC, *Func))
       continue;
+
+    assert((BC.HasRelocations || Func->getLayout().isHotColdSplit()) &&
+           "non-relocation mode supports only hot/cold splitting");
+
+    // RewriteInstance ultimately excludes every code section with a
+    // pre-assigned output address. At this point, those are the sections of
+    // fixed-address injected functions.
+    if (Func->isInjected() && Func->getOutputAddress())
+      continue;
+
+    // In relocation mode, process all remaining functions. In non-relocation
+    // mode, process only non-fixed injected functions. Their sections are
+    // allocated after the moved cold fragments and require the same alignment
+    // calculation as relocation-mode sections.
+    if (!BC.HasRelocations && !Func->isInjected())
+      continue;
+
+    LLVM_DEBUG(dbgs() << "BOLT-DEBUG: LongJmp: collecting fragments for "
+                      << Func->getPrintName() << " (#"
+                      << Func->getFunctionNumber() << ")\n");
+
+    const FunctionLayout &Layout = Func->getLayout();
+    assignFunctionFragmentToSection(BC, *Func, Layout.getMainFragment());
+
+    if (Func->isSplit()) {
+      assert(!Func->isInjected() && "injected functions cannot be split");
+      assert((Layout.fragment_size() == 1 || Func->isSimple()) &&
+             "only simple functions can have multiple fragments");
+      for (const FunctionFragment &FF : Layout.getSplitFragments()) {
+        // BinaryEmitter::emitFunctions() skips an empty split fragment unless
+        // the function carries a constant island.
+        if (FF.empty() && !Func->hasConstantIsland())
+          continue;
+        assignFunctionFragmentToSection(BC, *Func, FF);
+      }
+    }
+  }
+}
+
+/// Advance \p Offset using the rule from
+/// MCObjectStreamer::emitCodeAlignment(). A zero maximum makes the alignment
+/// mandatory; otherwise omit padding larger than \p MaxBytesToEmit.
+static uint64_t applyCodeAlignment(uint64_t Offset, Align Alignment,
+                                   uint64_t MaxBytesToEmit = 0) {
+  const uint64_t Pad = offsetToAlignment(Offset, Alignment);
+  return !MaxBytesToEmit || Pad <= MaxBytesToEmit ? Offset + Pad : Offset;
+}
+
+uint64_t LongJmpPass::layoutFunctionBody(const BinaryContext &BC,
+                                         const BinaryFunction &Func,
+                                         const FunctionFragment &FF,
+                                         uint64_t DotAddress,
+                                         bool RecordAddresses) {
+  for (const BinaryBasicBlock *BB : FF) {
+    // Mirror per-basic-block alignment in BinaryEmitter::emitFunctionBody().
+    if ((BC.AlignBlocks || BC.PreserveBlocksAlignment) &&
+        BB->getAlignment() > 1)
+      DotAddress = applyCodeAlignment(DotAddress, BB->getAlign(),
+                                      BB->getAlignmentMaxBytes());
+
+    if (RecordAddresses) {
+      LLVM_DEBUG(dbgs() << "BOLT-DEBUG: LongJmp layout: basic block "
+                        << BB->getName() << " in " << Func.getPrintName()
+                        << " starts at 0x" << Twine::utohexstr(DotAddress)
+                        << '\n');
+      BBAddresses[BB] = DotAddress;
     }
 
-    if (!ColdLayoutDone && CurrentIndex >= LastHotIndex)
-      runColdLayout();
-
-    DotAddress = alignTo(DotAddress, Func->getMinAlignment());
-    uint64_t Pad =
-        offsetToAlignment(DotAddress, llvm::Align(Func->getAlignment()));
-    if (Pad <= Func->getMaxAlignmentBytes())
-      DotAddress += Pad;
-    HotAddresses[Func] = DotAddress;
-    LLVM_DEBUG(dbgs() << Func->getPrintName() << " tentative: "
-                      << Twine::utohexstr(DotAddress) << "\n");
-    if (!Func->isSplit())
-      DotAddress += Func->estimateSize();
-    else
-      DotAddress += Func->estimateHotSize();
-
-    if (uint64_t IslandSize = Func->estimateConstantIslandSize()) {
-      DotAddress = alignTo(DotAddress, Func->getConstantIslandAlignment());
-      DotAddress += IslandSize;
-    }
-    ++CurrentIndex;
+#ifdef EXPENSIVE_CHECKS
+    // computeCodeSize() skips all pseudo-instructions. Calling
+    // computeInstructionSize() directly would not generally help: unless a
+    // pseudo has an explicit size annotation, it also returns zero.
+    // BinaryEmitter handles CFI pseudos separately by emitting unwind
+    // directives that do not advance the code-section address, but passes
+    // every other pseudo to emitInstruction(). No BOLT path is known to place
+    // another pseudo in an emitted basic block; verify that assumption here.
+    for (const MCInst &Instr : *BB)
+      assert((!BC.MIB->isPseudo(Instr) || BC.MIB->isCFI(Instr)) &&
+             "unexpected non-CFI pseudo in emitted function");
+#endif
+    DotAddress += BC.computeCodeSize(BB->begin(), BB->end());
   }
 
-  // Ensure that tentative code layout always runs for cold blocks.
-  if (!ColdLayoutDone)
-    runColdLayout();
-
-  // BBs
-  for (BinaryFunction *Func : SortedFunctions)
-    tentativeBBLayout(*Func);
+  // BinaryEmitter::emitFunctionBody() emits constant islands after the
+  // fragment instructions.
+  if (Func.hasIslandsInfo()) {
+    DotAddress = alignTo(DotAddress, Func.getConstantIslandAlignment());
+    DotAddress += Func.estimateConstantIslandSize();
+  }
 
   return DotAddress;
 }
 
-void LongJmpPass::tentativeLayout(const BinaryContext &BC,
-                                  BinaryFunctionListType &SortedFunctions) {
-  uint64_t DotAddress = BC.LayoutStartAddress;
+uint64_t LongJmpPass::layoutFunctionFragment(const BinaryContext &BC,
+                                             const BinaryFunction &Func,
+                                             const FunctionFragment &FF,
+                                             uint64_t DotAddress,
+                                             bool RecordAddresses) {
+  assert(shouldEmitFunctionFragment(BC, Func) &&
+         "attempting to lay out a function BinaryEmitter will not emit");
+  const FragmentNum Fragment = FF.getFragmentNum();
+  const bool IsMain = FF.isMainFragment();
+  const bool IsSplit = FF.isSplitFragment();
 
-  if (!BC.HasRelocations) {
-    for (BinaryFunction *Func : SortedFunctions) {
-      HotAddresses[Func] = Func->getAddress();
-      DotAddress = alignTo(DotAddress, ColdFragAlign);
-      ColdAddresses[Func] = DotAddress;
-      if (Func->isSplit())
-        DotAddress += Func->estimateColdSize();
-      tentativeBBLayout(*Func);
-    }
+  const bool HasFixedOutputAddress =
+      Func.isInjected() && Func.getOutputAddress();
+  const bool NeedsRelocationAlignment =
+      BC.HasRelocations && !HasFixedOutputAddress;
+  const bool NeedsNonRelocInjectedAlignment =
+      !BC.HasRelocations && Func.isInjected() && !HasFixedOutputAddress;
+  const bool NeedsNonRelocColdAlignment =
+      !BC.HasRelocations && !Func.isInjected() && IsSplit;
 
-    return;
+  // Apply the alignment that affects the fragment's mapped address.
+  // Section-relative fragments mirror BinaryEmitter::emitFunction(); moved
+  // cold fragments mirror mapCodeSectionsInPlace(). Ordinary non-relocation
+  // main fragments and fixed-address injected functions already have exact
+  // addresses.
+  if (NeedsRelocationAlignment) {
+    DotAddress = alignTo(DotAddress, Func.getMinAlignment());
+    const uint16_t MaxAlignmentBytes =
+        IsSplit ? Func.getMaxColdAlignmentBytes() : Func.getMaxAlignmentBytes();
+    if (MaxAlignmentBytes > 0)
+      DotAddress =
+          applyCodeAlignment(DotAddress, Func.getAlign(), MaxAlignmentBytes);
+  } else if (NeedsNonRelocInjectedAlignment) {
+    // Newly allocated injected sections retain BinaryEmitter's regular
+    // non-relocation function alignment.
+    DotAddress = alignTo(DotAddress, Func.getAlign());
+  } else if (NeedsNonRelocColdAlignment) {
+    // mapCodeSectionsInPlace() aligns each moved cold fragment to a hard-coded
+    // 16-byte boundary.
+    DotAddress = alignTo(DotAddress, ColdFragmentAlignment);
   }
 
-  // Relocation mode
-  uint64_t EstimatedTextSize = 0;
-  if (opts::UseOldText) {
-    EstimatedTextSize = tentativeLayoutRelocMode(BC, SortedFunctions, 0);
+  // BinaryEmitter::emitFunction() places --pad-funcs-before after function
+  // alignment and rejects nonzero padding in non-relocation mode.
+  if (BC.HasRelocations)
+    DotAddress += opts::padFunctionBefore(Func);
 
-    // Initial padding
-    if (EstimatedTextSize <= BC.OldTextSectionSize) {
-      DotAddress = BC.OldTextSectionAddress;
-      uint64_t Pad = offsetToAlignment(DotAddress, llvm::Align(BC.AlignText));
-      if (Pad + EstimatedTextSize <= BC.OldTextSectionSize) {
-        DotAddress += Pad;
+  const uint64_t FragmentAddress = DotAddress;
+
+  // BinaryEmitter::emitFunction() emits the fragment entry symbols here.
+  if (RecordAddresses && IsMain)
+    HotAddresses[&Func] = DotAddress;
+
+  // --break-funcs emits UD2 before the function body.
+  DotAddress += opts::breakFunctionSize(Func);
+
+  DotAddress = layoutFunctionBody(BC, Func, FF, DotAddress, RecordAddresses);
+
+  // BinaryEmitter::emitFunction() emits --pad-funcs after the body in both
+  // relocation and non-relocation modes.
+  DotAddress += opts::padFunctionAfter(Func);
+
+  // --mark-funcs emits the target-specific trap marker after the fragment.
+  DotAddress += opts::markFunctionBytes(BC).size();
+
+  if (RecordAddresses)
+    FragmentAddresses[&FF] = {FragmentAddress, DotAddress};
+
+  LLVM_DEBUG({
+    if (RecordAddresses) {
+      const StringRef FragmentName =
+          IsMain                                                 ? "main"
+          : BC.HasWarmSection && Fragment == FragmentNum::warm() ? "warm"
+          : Fragment == FragmentNum::cold()                      ? "cold"
+                                                                 : "split";
+      dbgs() << "BOLT-DEBUG: LongJmp layout: " << FragmentName << " fragment "
+             << Func.getPrintName();
+      if (IsMain)
+        dbgs() << " starts at 0x" << Twine::utohexstr(HotAddresses.at(&Func))
+               << " and";
+      dbgs() << " ends at 0x" << Twine::utohexstr(DotAddress) << '\n';
+    }
+  });
+
+  return DotAddress;
+}
+
+uint64_t LongJmpPass::layoutSection(const BinaryContext &BC,
+                                    const SectionPlacement &Section,
+                                    uint64_t DotAddress, bool RecordAddresses) {
+  LLVM_DEBUG({
+    if (RecordAddresses)
+      dbgs() << "BOLT-DEBUG: LongJmp layout: section " << Section.Name
+             << " starts at 0x" << Twine::utohexstr(DotAddress)
+             << ", alignment 0x" << Twine::utohexstr(Section.Alignment) << ", "
+             << Section.Fragments.size() << " fragments\n";
+  });
+
+  for (const FunctionFragmentPlacement &Placement : Section.Fragments) {
+    const BinaryFunction &Func = *Placement.Func;
+
+    const FunctionFragment &FF =
+        Func.getLayout().getFragment(Placement.Fragment);
+    DotAddress =
+        layoutFunctionFragment(BC, Func, FF, DotAddress, RecordAddresses);
+  }
+
+  LLVM_DEBUG({
+    if (RecordAddresses)
+      dbgs() << "BOLT-DEBUG: LongJmp layout: section " << Section.Name
+             << " ends at 0x" << Twine::utohexstr(DotAddress) << '\n';
+  });
+
+  return DotAddress;
+}
+
+uint64_t LongJmpPass::layoutSectionsForward(const BinaryContext &BC,
+                                            uint64_t DotAddress) {
+  const StringRef LastNonColdSectionName = BC.HasWarmSection
+                                               ? BC.getWarmCodeSectionName()
+                                               : BC.getMainCodeSectionName();
+  const bool AdjustLastNonColdSection =
+      BC.HasRelocations &&
+      (opts::HotText || (opts::Hugify && !BC.HasFixedLoadAddress));
+  std::optional<uint64_t> LastNonColdSectionEnd = std::nullopt;
+
+  // Mirror allocateAt() in RewriteInstance::mapCodeSections().
+  for (const SectionPlacement &Section : Sections) {
+    DotAddress = alignTo(DotAddress, Section.Alignment);
+    DotAddress = layoutSection(BC, Section, DotAddress);
+
+    if (AdjustLastNonColdSection &&
+        StringRef(Section.Name) == LastNonColdSectionName) {
+      if (opts::HotText)
+        LastNonColdSectionEnd = DotAddress;
+      // Mirror the extra post-hot-text alignment in allocateAt() for
+      // --hugify. With CDSplit, warm code is part of hot text.
+      if (opts::Hugify && !BC.HasFixedLoadAddress)
+        DotAddress = alignTo(DotAddress, Section.Alignment);
+    }
+  }
+
+  // Mirror RewriteInstance::mapCodeSections() padding used to accommodate
+  // hot-text huge-page mapping. The hot-text end is the end of the warm
+  // section when one exists, and the end of the main section otherwise.
+  // RewriteInstance applies this adjustment only in allocateAt() to advance
+  // the next free address; allocateBefore() starts from a fixed upper boundary
+  // and has no corresponding adjustment.
+  if (LastNonColdSectionEnd)
+    DotAddress =
+        std::max(DotAddress, alignTo(*LastNonColdSectionEnd, BC.PageAlign));
+
+  return DotAddress;
+}
+
+bool LongJmpPass::layoutSectionsBackward(const BinaryContext &BC,
+                                         uint64_t DotAddress) {
+  SmallVector<uint64_t, 4> SectionAddresses(Sections.size());
+  // Mirror allocateBefore() in RewriteInstance::mapCodeSections(): assign
+  // section bases in reverse while preserving their sorted output order.
+  for (size_t I = Sections.size(); I > 0; --I) {
+    const SectionPlacement &Section = Sections[I - 1];
+    uint64_t &SectionAddress = SectionAddresses[I - 1];
+    // Match the BinarySection::getOutputSize() consumed by allocateBefore().
+    const uint64_t SectionSize =
+        layoutSection(BC, Section, 0, /*RecordAddresses=*/false);
+    if (SectionSize > DotAddress)
+      return false;
+    DotAddress -= SectionSize;
+    DotAddress = alignDown(DotAddress, Section.Alignment);
+    if (DotAddress < BC.OldTextSectionAddress)
+      return false;
+    SectionAddress = DotAddress;
+  }
+
+  // Contents within every section are still laid out toward higher addresses.
+  for (size_t I = 0; I < Sections.size(); ++I)
+    layoutSection(BC, Sections[I], SectionAddresses[I]);
+
+  return true;
+}
+
+void LongJmpPass::layoutFunctions(
+    const BinaryContext &BC, const BinaryFunctionListType &SortedFunctions) {
+  if (BC.HasRelocations) {
+    // Mirror the old-text allocation choice in
+    // RewriteInstance::mapCodeSections().
+    bool AllocatedAtOldText = false;
+    if (opts::UseOldText) {
+      if (opts::HotFunctionsAtEnd) {
+        AllocatedAtOldText = layoutSectionsBackward(
+            BC, BC.OldTextSectionAddress + BC.OldTextSectionSize);
+      } else {
+        const uint64_t EndAddress =
+            layoutSectionsForward(BC, BC.OldTextSectionAddress);
+        AllocatedAtOldText =
+            EndAddress <= BC.OldTextSectionAddress + BC.OldTextSectionSize;
+      }
+
+      if (!AllocatedAtOldText) {
+        BC.errs() << "BOLT-WARNING: --use-old-text failed during LongJmp "
+                     "layout. The original .text is too small to fit the new "
+                     "code.\n";
+        // Do not clear opts::UseOldText here. RewriteInstance also uses it
+        // during emission to decide how to handle non-code sections such as
+        // .eh_frame, and performs the authoritative fallback later.
+      } else {
+        LLVM_DEBUG(dbgs() << "BOLT-DEBUG: LongJmp: The layout fits into the "
+                             "original .text section\n");
       }
     }
+
+    // mapCodeSections() falls back to allocateAt() when old text is unused
+    // or too small.
+    if (!AllocatedAtOldText)
+      layoutSectionsForward(BC, BC.LayoutStartAddress);
+  } else {
+    // Mirror RewriteInstance::mapCodeSectionsInPlace(). Main fragments retain
+    // their input addresses, while split cold fragments are appended in
+    // original-function order starting at the first free output address.
+    uint64_t ColdAddress = BC.LayoutStartAddress;
+    for (const auto &BFI : BC.getBinaryFunctions()) {
+      const BinaryFunction &Func = BFI.second;
+
+      // PopulateOutputFunctions excludes functions for which shouldEmit()
+      // returns false. LongJmp never relaxes them, so they need no entries in
+      // the function or basic-block address maps. Unlike the other layout
+      // loops, this one visits getBinaryFunctions() to mirror
+      // mapCodeSectionsInPlace(), and therefore needs an explicit check.
+      if (!BC.shouldEmit(Func))
+        continue;
+
+      if (!shouldEmitFunctionFragment(BC, Func))
+        continue;
+
+      layoutFunctionFragment(BC, Func, Func.getLayout().getMainFragment(),
+                             Func.getAddress());
+
+      if (Func.isSplit()) {
+        ColdAddress = layoutFunctionFragment(
+            BC, Func, Func.getLayout().getFragment(FragmentNum::cold()),
+            ColdAddress);
+      }
+    }
+
+    // mapCodeSectionsInPlace() allocates non-fixed injected sections, normally
+    // .text.injected, immediately after the moved cold fragments. These are
+    // the only entries in Sections in non-relocation mode.
+    layoutSectionsForward(BC, ColdAddress);
   }
 
-  if (!EstimatedTextSize || EstimatedTextSize > BC.OldTextSectionSize) {
-    uint64_t TextAlign =
-        std::max<uint64_t>(BC.AlignText, BC.MaxMainCodeAlignment.load());
-    DotAddress = alignTo(BC.LayoutStartAddress, TextAlign);
+  // Fixed-address injected functions are outside Sections and use their
+  // pre-assigned output addresses.
+  for (const BinaryFunction *Func : SortedFunctions) {
+    if (!shouldEmitFunctionFragment(BC, *Func))
+      continue;
+
+    if (Func->isInjected() && Func->getOutputAddress()) {
+      assert(!Func->isSplit() && "injected functions cannot be split");
+      layoutFunctionFragment(BC, *Func, Func->getLayout().getMainFragment(),
+                             Func->getOutputAddress());
+    }
+  }
+}
+
+void LongJmpPass::layout(const BinaryContext &BC,
+                         const BinaryFunctionListType &SortedFunctions) {
+  HotAddresses.clear();
+  BBAddresses.clear();
+  FragmentAddresses.clear();
+  Sections.clear();
+
+  LLVM_DEBUG(
+      dbgs() << "BOLT-DEBUG: LongJmp layout starts at 0x"
+             << Twine::utohexstr(BC.LayoutStartAddress) << ", text alignment 0x"
+             << Twine::utohexstr(BC.AlignText) << ", function alignment 0x"
+             << Twine::utohexstr(BC.AlignFunctions)
+             << ", maximum main alignment 0x"
+             << Twine::utohexstr(BC.MaxMainCodeAlignment.load())
+             << ", maximum cold alignment 0x"
+             << Twine::utohexstr(BC.MaxColdCodeAlignment.load()) << '\n');
+
+  // Reproduce the code placement performed later by BinaryEmitter and
+  // RewriteInstance. First catalogue fragments whose addresses are determined
+  // by output-section placement. In relocation mode this includes all emitted
+  // fragments except fixed-address injected patches. In non-relocation mode it
+  // includes only non-fixed injected functions; ordinary main fragments remain
+  // at their input addresses, while mapCodeSectionsInPlace() allocates moved
+  // cold fragments directly.
+  //
+  // Section alignment depends on every fragment assigned to the section, so
+  // the complete catalogue must be built before calculating any section base.
+  // The layout phase then mirrors either mapCodeSections() or
+  // mapCodeSectionsInPlace(), and finally records fixed injected patches whose
+  // addresses do not come from the section catalogue.
+
+  assignFunctionsToSections(BC, SortedFunctions);
+
+  if (BC.HasRelocations) {
+    // Mirror RewriteInstance::getCodeSections(). Sections not named explicitly
+    // retain their first-emission order.
+    llvm::stable_sort(
+        Sections, [&](const SectionPlacement &A, const SectionPlacement &B) {
+          return BC.compareSectionNames(A.Name, B.Name);
+        });
   }
 
-  tentativeLayoutRelocMode(BC, SortedFunctions, DotAddress);
+  layoutFunctions(BC, SortedFunctions);
 }
 
 bool LongJmpPass::usesStub(const BinaryFunction &Func,
@@ -530,7 +861,7 @@ Error LongJmpPass::relaxStub(BinaryBasicBlock &StubBB, bool &Modified) {
   const MCSymbol *RealTargetSym = BC.MIB->getTargetSymbol(*StubBB.begin());
   const BinaryBasicBlock *TgtBB = Func.getBasicBlockForLabel(RealTargetSym);
   uint64_t TgtAddress = getSymbolAddress(BC, RealTargetSym, TgtBB);
-  uint64_t DotAddress = BBAddresses[&StubBB];
+  uint64_t DotAddress = BBAddresses.at(&StubBB);
   uint64_t PCRelTgtAddress = DotAddress > TgtAddress ? DotAddress - TgtAddress
                                                      : TgtAddress - DotAddress;
 
@@ -543,10 +874,9 @@ Error LongJmpPass::relaxStub(BinaryBasicBlock &StubBB, bool &Modified) {
     if (Bits >= RangeShortJmp)
       return Error::success();
 
-    LLVM_DEBUG(dbgs() << "Relaxing stub to short jump. PCRelTgtAddress = "
-                      << Twine::utohexstr(PCRelTgtAddress)
-                      << " RealTargetSym = " << RealTargetSym->getName()
-                      << "\n");
+    LLVM_DEBUG(dbgs() << "BOLT-DEBUG: LongJmp: relaxing stub to short jump; "
+                      << "distance 0x" << Twine::utohexstr(PCRelTgtAddress)
+                      << ", target " << RealTargetSym->getName() << '\n');
     relaxStubToShortJmp(StubBB, RealTargetSym);
     StubBits[&StubBB] = RangeShortJmp;
     Modified = true;
@@ -559,9 +889,9 @@ Error LongJmpPass::relaxStub(BinaryBasicBlock &StubBB, bool &Modified) {
     return createFatalBOLTError(
         "BOLT-ERROR: Unable to relax stub for PIC binary\n");
 
-  LLVM_DEBUG(dbgs() << "Relaxing stub to long jump. PCRelTgtAddress = "
-                    << Twine::utohexstr(PCRelTgtAddress)
-                    << " RealTargetSym = " << RealTargetSym->getName() << "\n");
+  LLVM_DEBUG(dbgs() << "BOLT-DEBUG: LongJmp: relaxing stub to long jump; "
+                    << "distance 0x" << Twine::utohexstr(PCRelTgtAddress)
+                    << ", target " << RealTargetSym->getName() << '\n');
   relaxStubToLongJmp(StubBB, RealTargetSym);
   StubBits[&StubBB] = static_cast<int>(BC.AsmInfo->getCodePointerSize() * 8);
   Modified = true;
@@ -592,26 +922,41 @@ bool LongJmpPass::needsStub(const BinaryBasicBlock &BB, const MCInst &Inst,
   uint64_t PCRelTgtAddress = getSymbolAddress(BC, TgtSym, TgtBB);
   int64_t PCOffset = (int64_t)(PCRelTgtAddress - DotAddress);
 
-  return PCOffset < MinVal || PCOffset > MaxVal;
+  const bool Result = PCOffset < MinVal || PCOffset > MaxVal;
+  LLVM_DEBUG({
+    if (Result)
+      dbgs() << "BOLT-DEBUG: LongJmp: out-of-range branch in "
+             << Func.getPrintName() << ", basic block " << BB.getName()
+             << ", source 0x" << Twine::utohexstr(DotAddress) << ", target "
+             << TgtSym->getName() << " at 0x"
+             << Twine::utohexstr(PCRelTgtAddress) << ", displacement "
+             << PCOffset << ", range [" << MinVal << ", " << MaxVal << "]\n";
+  });
+  return Result;
 }
 
 Error LongJmpPass::relax(BinaryFunction &Func, bool &Modified) {
   const BinaryContext &BC = Func.getBinaryContext();
 
   assert(BC.isAArch64() && "Unsupported arch");
+  // Keep the relaxation traversal consistent with layout(): functions that
+  // BinaryEmitter will not emit have no entries in BBAddresses.
+  if (!shouldEmitFunctionFragment(BC, Func))
+    return Error::success();
+
   constexpr int InsnSize = 4; // AArch64
   std::vector<std::pair<BinaryBasicBlock *, std::unique_ptr<BinaryBasicBlock>>>
       Insertions;
 
   BinaryBasicBlock *Frontier = getBBAtHotColdSplitPoint(Func);
-  uint64_t FrontierAddress = Frontier ? BBAddresses[Frontier] : 0;
+  uint64_t FrontierAddress = Frontier ? BBAddresses.at(Frontier) : 0;
   if (FrontierAddress)
     FrontierAddress += Frontier->getNumNonPseudos() * InsnSize;
 
   // Add necessary stubs for branch targets we know we can't fit in the
   // instruction
   for (BinaryBasicBlock &BB : Func) {
-    uint64_t DotAddress = BBAddresses[&BB];
+    uint64_t DotAddress = BBAddresses.at(&BB);
     // Stubs themselves are relaxed on the next loop
     if (Stubs[&Func].count(&BB))
       continue;
@@ -684,361 +1029,377 @@ Error LongJmpPass::relax(BinaryFunction &Func, bool &Modified) {
   return Error::success();
 }
 
+bool LongJmpPass::isBranchOffsetInRange(const BinaryFunction &Func,
+                                        const MCInst &Inst,
+                                        int64_t Offset) const {
+  const unsigned Bits = Func.getBinaryContext().MIB->getPCRelEncodingSize(Inst);
+  return isIntN(Bits, Offset);
+}
+
+bool LongJmpPass::isBlockInRange(const BinaryFunction &Func, const MCInst &Inst,
+                                 uint64_t InstAddress,
+                                 const BinaryBasicBlock &BB) const {
+  const int64_t Offset = BB.getOutputStartAddress() - InstAddress;
+  return isBranchOffsetInRange(Func, Inst, Offset);
+}
+
+void LongJmpPass::adjustBasicBlockAddress(BinaryBasicBlock &BB,
+                                          uint64_t Address,
+                                          uint64_t Offset) const {
+  if (BB.getOutputStartAddress() < Address)
+    return;
+  BB.setOutputStartAddress(BB.getOutputStartAddress() + Offset);
+  BB.setOutputEndAddress(BB.getOutputEndAddress() + Offset);
+}
+
+BinaryBasicBlock *LongJmpPass::addLocalTrampoline(
+    LocalBranchState &State, BinaryBasicBlock *BB, const MCSymbol *TargetSymbol,
+    BinaryBasicBlock *TargetBB, uint64_t Count, uint64_t Offset) const {
+  constexpr uint64_t TrampolineSize = 4;
+
+  BinaryFunction &Func = State.Func;
+  BinaryContext &BC = Func.getBinaryContext();
+
+  State.FunctionTrampolines.emplace_back(BB ? BB : State.FF.back(),
+                                         Func.createBasicBlock());
+  BinaryBasicBlock *TrampolineBB =
+      State.FunctionTrampolines.back().second.get();
+
+  const uint64_t OldBBEnd = BB ? BB->getOutputEndAddress() : 0;
+  if (BB && Offset)
+    BB->setOutputEndAddress(OldBBEnd + Offset);
+  Offset += TrampolineSize;
+
+  MCInst Inst;
+  {
+    auto L = BC.scopeLock();
+    BC.MIB->createUncondBranch(Inst, TargetSymbol, BC.Ctx.get());
+  }
+  TrampolineBB->addInstruction(Inst);
+  if (TargetBB)
+    TrampolineBB->addSuccessor(TargetBB, Count);
+  TrampolineBB->setExecutionCount(Count);
+
+  const uint64_t TrampolineAddress =
+      BB ? BB->getOutputEndAddress() : State.FragmentSize;
+  TrampolineBB->setOutputStartAddress(TrampolineAddress);
+  TrampolineBB->setOutputEndAddress(TrampolineAddress + TrampolineSize);
+  TrampolineBB->setFragmentNum(State.FF.getFragmentNum());
+
+  if (TargetBB && !State.Trampolines.lookup(TargetBB))
+    State.Trampolines[TargetBB] = TrampolineBB;
+
+  // A split unconditional branch removes four bytes from its original block
+  // and adds the same four bytes in the trampoline.
+  if (!Offset)
+    return TrampolineBB;
+
+  State.FragmentSize += Offset;
+
+  // A fragment-end trampoline cannot move blocks in another fragment.
+  if (!BB)
+    return TrampolineBB;
+
+  for (BinaryBasicBlock *IBB : State.FF)
+    adjustBasicBlockAddress(*IBB, OldBBEnd, Offset);
+
+  // Pending trampolines are not in the function layout yet, so update their
+  // recorded fragment-local addresses explicitly.
+  for (LocalTrampolineTy &Insertion : State.FunctionTrampolines) {
+    BinaryBasicBlock &IBB = *Insertion.second;
+    if (IBB.getFragmentNum() != TrampolineBB->getFragmentNum() ||
+        &IBB == TrampolineBB)
+      continue;
+    adjustBasicBlockAddress(IBB, OldBBEnd, Offset);
+  }
+
+  return TrampolineBB;
+}
+
+void LongJmpPass::splitUnconditionalBranches(LocalBranchState &State) const {
+  BinaryFunction &Func = State.Func;
+  const MCPlusBuilder &MIB = *Func.getBinaryContext().MIB;
+
+  for (BinaryBasicBlock *BB : State.FF) {
+    MCInst *Inst = BB->getLastNonPseudoInstr();
+    if (!Inst || !MIB.isUnconditionalBranch(*Inst))
+      continue;
+
+    const MCSymbol *TargetSymbol = MIB.getTargetSymbol(*Inst);
+    BB->eraseInstruction(BB->findInstruction(Inst));
+
+    BinaryBasicBlock::BinaryBranchInfo BI;
+    BinaryBasicBlock *TargetBB = BB->getSuccessor(TargetSymbol, BI);
+
+    // Erasing the unconditional branch shrinks BB by one instruction. The new
+    // trampoline restores those four bytes at the same layout position.
+    BinaryBasicBlock *TrampolineBB = addLocalTrampoline(
+        State, BB, TargetBB->getLabel(), TargetBB, BI.Count, /*Offset=*/-4);
+    BB->replaceSuccessor(TargetBB, TrampolineBB, BI.Count);
+  }
+}
+
+bool LongJmpPass::relaxLocalBranch(LocalBranchState &State,
+                                   BinaryBasicBlock &BB, MCInst &Inst,
+                                   uint64_t InstAddress,
+                                   BinaryBasicBlock &TargetBB) const {
+  BinaryFunction &Func = State.Func;
+  BinaryContext &BC = Func.getBinaryContext();
+  const MCPlusBuilder &MIB = *BC.MIB;
+
+  // Use branch taken count for optimal relaxation.
+  const uint64_t Count = BB.getBranchInfo(TargetBB).Count;
+  assert(Count != BinaryBasicBlock::COUNT_NO_PROFILE &&
+         "Expected valid branch execution count");
+
+  // Try to reuse an existing trampoline without introducing any new code.
+  BinaryBasicBlock *TrampolineBB = State.Trampolines.lookup(&TargetBB);
+  if (TrampolineBB && isBlockInRange(Func, Inst, InstAddress, *TrampolineBB)) {
+    BB.replaceSuccessor(&TargetBB, TrampolineBB, Count);
+    TrampolineBB->setExecutionCount(TrampolineBB->getExecutionCount() + Count);
+    auto L = BC.scopeLock();
+    BC.MIB->replaceBranchTarget(Inst, TrampolineBB->getLabel(), BC.Ctx.get());
+    return false;
+  }
+
+  // Keep a branch that was never taken out of the surrounding code when the
+  // fragment-end trampoline is reachable.
+  const int64_t OffsetToEnd = State.FragmentSize - InstAddress;
+  if (Count == 0 && isBranchOffsetInRange(Func, Inst, OffsetToEnd)) {
+    TrampolineBB = addLocalTrampoline(State, nullptr, TargetBB.getLabel(),
+                                      &TargetBB, Count);
+    BB.replaceSuccessor(&TargetBB, TrampolineBB, Count);
+    auto L = BC.scopeLock();
+    BC.MIB->replaceBranchTarget(Inst, TrampolineBB->getLabel(), BC.Ctx.get());
+    return true;
+  }
+
+  // If the other successor is a fall-through, invert the condition code.
+  BinaryBasicBlock *NextBB =
+      Func.getLayout().getBasicBlockAfter(&BB, /*IgnoreSplits=*/false);
+  const bool PreserveFlags =
+      State.BLI ? State.BLI->mustPreserveFlags(Inst) : true;
+  const bool IsReversibleBranch = MIB.isReversibleBranch(Inst, PreserveFlags);
+  const bool ShouldReverseBranch = BB.getConditionalSuccessor(false) == NextBB;
+
+  // If the condition cannot be inverted, preserve the fall-through with a
+  // separate trampoline before inserting the taken-edge trampoline.
+  if (ShouldReverseBranch && !IsReversibleBranch) {
+    const uint64_t NextCount = BB.getBranchInfo(*NextBB).Count;
+    BinaryBasicBlock *FallThrough =
+        addLocalTrampoline(State, &BB, NextBB->getLabel(), NextBB, NextCount);
+    BB.replaceSuccessor(NextBB, FallThrough, NextCount);
+  }
+
+  if (ShouldReverseBranch && IsReversibleBranch) {
+    const uint64_t OldBBSize = BB.estimateSize();
+    BB.swapConditionalSuccessors();
+    {
+      auto L = BC.scopeLock();
+      if (State.BLI)
+        State.BLI->removeAnnotation(Inst);
+      InstructionListType Code = MIB.reverseBranchCondition(
+          Inst, NextBB->getLabel(), BC.Ctx.get(), PreserveFlags);
+      BB.replaceInstruction(BB.findInstruction(&Inst), Code);
+    }
+    const uint64_t NewBBSize = BB.estimateSize();
+
+    TrampolineBB = addLocalTrampoline(State, &BB, TargetBB.getLabel(),
+                                      &TargetBB, Count, NewBBSize - OldBBSize);
+  } else {
+    TrampolineBB =
+        addLocalTrampoline(State, &BB, TargetBB.getLabel(), &TargetBB, Count);
+    auto L = BC.scopeLock();
+    BC.MIB->replaceBranchTarget(Inst, TrampolineBB->getLabel(), BC.Ctx.get());
+  }
+  BB.replaceSuccessor(&TargetBB, TrampolineBB, Count);
+  return true;
+}
+
+bool LongJmpPass::relaxExternalBranch(
+    LocalBranchState &State, BinaryBasicBlock &BB, MCInst &Inst,
+    uint64_t InstAddress,
+    DenseMap<const MCSymbol *, BinaryBasicBlock *> &SymbolTrampolines) const {
+  BinaryFunction &Func = State.Func;
+  BinaryContext &BC = Func.getBinaryContext();
+  const MCPlusBuilder &MIB = *BC.MIB;
+  assert(BC.HasRelocations &&
+         "external branch relaxation requires relocation mode");
+  const MCSymbol *TargetSymbol = MIB.getTargetSymbol(Inst);
+
+  // Internal branches in non-simple functions retain their original layout.
+  if (Func.getBasicBlockForLabel(TargetSymbol))
+    return true;
+
+  BinaryBasicBlock *TrampolineBB = SymbolTrampolines.lookup(TargetSymbol);
+  if (TrampolineBB && isBlockInRange(Func, Inst, InstAddress, *TrampolineBB)) {
+    auto L = BC.scopeLock();
+    BC.MIB->replaceBranchTarget(Inst, TrampolineBB->getLabel(), BC.Ctx.get());
+    return true;
+  }
+
+  // The layout of a non-simple function has to be preserved, so the fragment
+  // end is the only available insertion point.
+  const int64_t OffsetToEnd = State.FragmentSize - InstAddress;
+  const unsigned BitsAvailable = MIB.getPCRelEncodingSize(Inst);
+  if (!isBranchOffsetInRange(Func, Inst, OffsetToEnd)) {
+    auto L = BC.scopeLock();
+    BC.errs() << "BOLT-ERROR: cannot relax branch in non-simple function "
+              << Func << ": a trampoline at the end of the function is "
+              << OffsetToEnd << " bytes away, out of reach for a "
+              << BitsAvailable << "-bit branch\n";
+    BC.printInstruction(BC.errs(), Inst);
+    return false;
+  }
+
+  TrampolineBB = addLocalTrampoline(State, /*BB=*/nullptr, TargetSymbol,
+                                    /*TargetBB=*/nullptr, /*Count=*/0);
+  SymbolTrampolines[TargetSymbol] = TrampolineBB;
+  auto L = BC.scopeLock();
+  BC.MIB->replaceBranchTarget(Inst, TrampolineBB->getLabel(), BC.Ctx.get());
+  return true;
+}
+
+bool LongJmpPass::relaxLocalFragment(
+    BinaryFunction &Func, FunctionFragment &FF, const BranchLivenessInfo *BLI,
+    LocalTrampolineListTy &FunctionTrampolines) const {
+  BinaryContext &BC = Func.getBinaryContext();
+  const MCPlusBuilder &MIB = *BC.MIB;
+
+  // Use output BB address ranges to store fragment-relative offsets.
+  uint64_t FragmentSize = 0;
+  for (BinaryBasicBlock *BB : FF) {
+    BB->setOutputStartAddress(FragmentSize);
+    FragmentSize += BB->estimateSize();
+    BB->setOutputEndAddress(FragmentSize);
+  }
+
+  LocalBranchState State{
+      Func,         FF,
+      BLI,          FunctionTrampolines,
+      FragmentSize, DenseMap<const BinaryBasicBlock *, BinaryBasicBlock *>()};
+
+  // In simple functions, make terminating unconditional branches available
+  // for reuse as local trampolines.
+  if (Func.isSimple())
+    splitUnconditionalBranches(State);
+
+  // Non-simple functions can branch to external symbols, which are tracked by
+  // symbol rather than by destination basic block.
+  DenseMap<const MCSymbol *, BinaryBasicBlock *> SymbolTrampolines;
+
+  bool MayNeedRelaxation;
+  uint64_t NumIterations = 0;
+  do {
+    MayNeedRelaxation = false;
+    ++NumIterations;
+    for (BinaryBasicBlock *BB : FF) {
+      uint64_t NextInstOffset = BB->getOutputStartAddress();
+      // Branch reversal may replace the current instruction with a sequence.
+      // Use an index so the next instruction is reloaded after the mutation.
+      for (size_t I = 0; I < BB->size(); ++I) {
+        MCInst &Inst = *(BB->begin() + I);
+        const uint64_t InstAddress = NextInstOffset;
+        assert((!MIB.isPseudo(Inst) || MIB.isCFI(Inst)) &&
+               "unexpected non-CFI pseudo in function fragment");
+        if (!MIB.isPseudo(Inst))
+          NextInstOffset += 4;
+
+        if (!mayNeedStub(BC, Inst))
+          continue;
+
+        const unsigned BitsAvailable = MIB.getPCRelEncodingSize(Inst);
+
+        // The compact model assumes every +/-128MB branch is in range.
+        if (BitsAvailable == LongestJumpBits)
+          continue;
+
+        const MCSymbol *TargetSymbol = MIB.getTargetSymbol(Inst);
+        if (Func.isSimple()) {
+          BinaryBasicBlock *TargetBB = BB->getSuccessor(TargetSymbol);
+          assert(TargetBB &&
+                 "Basic block target expected for conditional branch.");
+
+          if (TargetBB->getFragmentNum() != FF.getFragmentNum() ||
+              !isBlockInRange(Func, Inst, InstAddress, *TargetBB))
+            MayNeedRelaxation |=
+                relaxLocalBranch(State, *BB, Inst, InstAddress, *TargetBB);
+        } else if (!relaxExternalBranch(State, *BB, Inst, InstAddress,
+                                        SymbolTrampolines))
+          return false;
+      }
+    }
+
+    // We may have added instructions, but every branch fits if the complete
+    // fragment remains smaller than the shortest branch span.
+    if (State.FragmentSize < ShortestJumpSpan)
+      MayNeedRelaxation = false;
+  } while (MayNeedRelaxation);
+
+  LLVM_DEBUG({
+    if (NumIterations > 2)
+      dbgs() << "BOLT-DEBUG: relaxed fragment " << FF.getFragmentNum().get()
+             << " of " << Func << " in " << NumIterations << " iterations\n";
+  });
+  (void)NumIterations;
+  return true;
+}
+
+void LongJmpPass::commitLocalTrampolines(
+    BinaryFunction &Func, LocalTrampolineListTy &FunctionTrampolines) const {
+  DenseMap<BinaryBasicBlock *, std::vector<std::unique_ptr<BinaryBasicBlock>>>
+      Insertions;
+  for (LocalTrampolineTy &Insertion : FunctionTrampolines) {
+    if (Insertion.second)
+      Insertions[Insertion.first].emplace_back(std::move(Insertion.second));
+  }
+
+  for (auto &Insertion : Insertions)
+    Func.insertBasicBlocks(Insertion.first, std::move(Insertion.second),
+                           /*UpdateLayout=*/true, /*UpdateCFI=*/true,
+                           /*RecomputeLPs=*/false);
+}
+
 bool LongJmpPass::relaxLocalBranches(BinaryFunction &BF,
                                      const BranchLivenessInfo *BLI) {
-  BinaryContext &BC = BF.getBinaryContext();
-  auto &MIB = BC.MIB;
-
   // Quick path. Only valid for simple functions, where all branch targets are
   // basic blocks of the function itself. A non-simple function may branch to a
   // symbol outside of it that ends up out of range.
   if (BF.isSimple() && !BF.isSplit() && BF.estimateSize() < ShortestJumpSpan)
     return true;
 
-  auto isBranchOffsetInRange = [&](const MCInst &Inst, int64_t Offset) {
-    const unsigned Bits = MIB->getPCRelEncodingSize(Inst);
-    return isIntN(Bits, Offset);
-  };
+  LocalTrampolineListTy FunctionTrampolines;
+  for (FunctionFragment &FF : BF.getLayout().fragments())
+    if (!relaxLocalFragment(BF, FF, BLI, FunctionTrampolines))
+      return false;
 
-  auto isBlockInRange = [&](const MCInst &Inst, uint64_t InstAddress,
-                            const BinaryBasicBlock &BB) {
-    const int64_t Offset = BB.getOutputStartAddress() - InstAddress;
-    return isBranchOffsetInRange(Inst, Offset);
-  };
-
-  // Keep track of *all* function trampolines that are going to be added to the
-  // function layout at the end of relaxation.
-  std::vector<std::pair<BinaryBasicBlock *, std::unique_ptr<BinaryBasicBlock>>>
-      FunctionTrampolines;
-
-  // Function fragments are relaxed independently.
-  for (FunctionFragment &FF : BF.getLayout().fragments()) {
-    // Fill out code size estimation for the fragment. Use output BB address
-    // ranges to store offsets from the start of the function fragment.
-    uint64_t CodeSize = 0;
-    for (BinaryBasicBlock *BB : FF) {
-      BB->setOutputStartAddress(CodeSize);
-      CodeSize += BB->estimateSize();
-      BB->setOutputEndAddress(CodeSize);
-    }
-
-    // Dynamically-updated size of the fragment.
-    uint64_t FragmentSize = CodeSize;
-
-    // Size of the trampoline in bytes.
-    constexpr uint64_t TrampolineSize = 4;
-
-    // Trampolines created for the fragment. DestinationBB -> TrampolineBB.
-    // NB: here we store only the first trampoline created for DestinationBB.
-    DenseMap<const BinaryBasicBlock *, BinaryBasicBlock *> FragmentTrampolines;
-
-    // Create a trampoline code after \p BB or at the end of the fragment if BB
-    // is nullptr. The trampoline branches to \p TargetSym. If \p TargetBB is
-    // set, it is added as a successor and registered in FragmentTrampolines.
-    // \p Offset reflects the size delta of BB caused by splitting unconditional
-    // branches, or replacing a branch with a longer instruction sequence. It is
-    // used to update the output addresses of basic blocks following the
-    // trampoline.
-    auto addTrampolineAfter = [&](BinaryBasicBlock *BB,
-                                  const MCSymbol *TargetSym,
-                                  BinaryBasicBlock *TargetBB, uint64_t Count,
-                                  uint64_t Offset = 0) {
-      FunctionTrampolines.emplace_back(BB ? BB : FF.back(),
-                                       BF.createBasicBlock());
-      BinaryBasicBlock *TrampolineBB = FunctionTrampolines.back().second.get();
-      const uint64_t OldBBEnd = BB ? BB->getOutputEndAddress() : 0;
-      if (BB && Offset)
-        BB->setOutputEndAddress(OldBBEnd + Offset);
-      Offset += TrampolineSize;
-
-      MCInst Inst;
-      {
-        auto L = BC.scopeLock();
-        MIB->createUncondBranch(Inst, TargetSym, BC.Ctx.get());
-      }
-      TrampolineBB->addInstruction(Inst);
-      if (TargetBB)
-        TrampolineBB->addSuccessor(TargetBB, Count);
-      TrampolineBB->setExecutionCount(Count);
-      const uint64_t TrampolineAddress =
-          BB ? BB->getOutputEndAddress() : FragmentSize;
-      TrampolineBB->setOutputStartAddress(TrampolineAddress);
-      TrampolineBB->setOutputEndAddress(TrampolineAddress + TrampolineSize);
-      TrampolineBB->setFragmentNum(FF.getFragmentNum());
-
-      // Shift the fragment-local output address range for blocks at or after
-      // the old end address.
-      auto adjustBasicBlockAddress = [](BinaryBasicBlock *BB, uint64_t Address,
-                                        uint64_t Offset) {
-        if (BB->getOutputStartAddress() < Address)
-          return;
-        BB->setOutputStartAddress(BB->getOutputStartAddress() + Offset);
-        BB->setOutputEndAddress(BB->getOutputEndAddress() + Offset);
-      };
-
-      if (TargetBB && !FragmentTrampolines.lookup(TargetBB))
-        FragmentTrampolines[TargetBB] = TrampolineBB;
-
-      if (!Offset)
-        return TrampolineBB;
-
-      FragmentSize += Offset;
-
-      // If the trampoline was added at the end of the fragment, offsets of
-      // other fragments should stay intact.
-      if (!BB)
-        return TrampolineBB;
-
-      // Update offsets for blocks after BB.
-      for (BinaryBasicBlock *IBB : FF)
-        adjustBasicBlockAddress(IBB, OldBBEnd, Offset);
-
-      // Update offsets for trampolines in this fragment that are placed after
-      // the new trampoline. Note that trampoline blocks are not part of the
-      // function/fragment layout until we add them right before the return
-      // from relaxLocalBranches().
-      for (auto &Pair : FunctionTrampolines) {
-        BinaryBasicBlock *IBB = Pair.second.get();
-        if (IBB->getFragmentNum() != TrampolineBB->getFragmentNum())
-          continue;
-        if (IBB == TrampolineBB)
-          continue;
-        adjustBasicBlockAddress(IBB, OldBBEnd, Offset);
-      }
-
-      return TrampolineBB;
-    };
-
-    // Pre-populate trampolines by splitting unconditional branches from the
-    // containing basic block. Skip for non-simple functions: this creates
-    // trampolines for targets inside the function, while in a non-simple
-    // function we only relax branches to targets outside of it.
-    if (BF.isSimple()) {
-      for (BinaryBasicBlock *BB : FF) {
-        MCInst *Inst = BB->getLastNonPseudoInstr();
-        if (!Inst || !MIB->isUnconditionalBranch(*Inst))
-          continue;
-
-        const MCSymbol *TargetSymbol = MIB->getTargetSymbol(*Inst);
-        BB->eraseInstruction(BB->findInstruction(Inst));
-
-        BinaryBasicBlock::BinaryBranchInfo BI;
-        BinaryBasicBlock *TargetBB = BB->getSuccessor(TargetSymbol, BI);
-
-        // Erasing the unconditional branch shrinks BB by one instruction.
-        BinaryBasicBlock *TrampolineBB =
-            addTrampolineAfter(BB, TargetBB->getLabel(), TargetBB, BI.Count,
-                               /*Offset=*/-4);
-        BB->replaceSuccessor(TargetBB, TrampolineBB, BI.Count);
-      }
-    }
-
-    /// Relax the branch \p Inst in basic block \p BB that targets \p TargetBB.
-    /// \p InstAddress contains offset of the branch from the start of the
-    /// containing function fragment.
-    auto relaxBranch = [&](BinaryBasicBlock *BB, MCInst &Inst,
-                           uint64_t InstAddress, BinaryBasicBlock *TargetBB) {
-      BinaryFunction *BF = BB->getParent();
-
-      // Use branch taken count for optimal relaxation.
-      const uint64_t Count = BB->getBranchInfo(*TargetBB).Count;
-      assert(Count != BinaryBasicBlock::COUNT_NO_PROFILE &&
-             "Expected valid branch execution count");
-
-      // Try to reuse an existing trampoline without introducing any new code.
-      BinaryBasicBlock *TrampolineBB = FragmentTrampolines.lookup(TargetBB);
-      if (TrampolineBB && isBlockInRange(Inst, InstAddress, *TrampolineBB)) {
-        BB->replaceSuccessor(TargetBB, TrampolineBB, Count);
-        TrampolineBB->setExecutionCount(TrampolineBB->getExecutionCount() +
-                                        Count);
-        auto L = BC.scopeLock();
-        MIB->replaceBranchTarget(Inst, TrampolineBB->getLabel(), BC.Ctx.get());
-        return;
-      }
-
-      // For cold branches, check if we can introduce a trampoline at the end
-      // of the fragment that is within the branch reach. Note that such
-      // trampoline may change address later and become unreachable in which
-      // case we will need further relaxation.
-      const int64_t OffsetToEnd = FragmentSize - InstAddress;
-      if (Count == 0 && isBranchOffsetInRange(Inst, OffsetToEnd)) {
-        TrampolineBB =
-            addTrampolineAfter(nullptr, TargetBB->getLabel(), TargetBB, Count);
-        BB->replaceSuccessor(TargetBB, TrampolineBB, Count);
-        auto L = BC.scopeLock();
-        MIB->replaceBranchTarget(Inst, TrampolineBB->getLabel(), BC.Ctx.get());
-
-        return;
-      }
-
-      // If the other successor is a fall-through, invert the condition code.
-      BinaryBasicBlock *NextBB =
-          BF->getLayout().getBasicBlockAfter(BB, /*IgnoreSplits*/ false);
-      bool PreserveFlags = BLI ? BLI->mustPreserveFlags(Inst) : true;
-      bool IsReversibleBranch = MIB->isReversibleBranch(Inst, PreserveFlags);
-      bool ShouldReverseBranch = BB->getConditionalSuccessor(false) == NextBB;
-
-      // Create a trampoline basic block for the fall-through target of the
-      // branch if its condition cannot be inverted.
-      if (ShouldReverseBranch && !IsReversibleBranch) {
-        const uint64_t NextCount = BB->getBranchInfo(*NextBB).Count;
-        BinaryBasicBlock *FallThrough =
-            addTrampolineAfter(BB, NextBB->getLabel(), NextBB, NextCount);
-        BB->replaceSuccessor(NextBB, FallThrough, NextCount);
-      }
-
-      if (ShouldReverseBranch && IsReversibleBranch) {
-        const uint64_t OldBBSize = BB->estimateSize();
-        BB->swapConditionalSuccessors();
-        {
-          auto L = BC.scopeLock();
-          if (BLI)
-            BLI->removeAnnotation(Inst);
-          InstructionListType Code = MIB->reverseBranchCondition(
-              Inst, NextBB->getLabel(), BC.Ctx.get(), PreserveFlags);
-          BB->replaceInstruction(BB->findInstruction(&Inst), Code);
-        }
-        const uint64_t NewBBSize = BB->estimateSize();
-
-        // Create a trampoline basic block for the original taken target.
-        TrampolineBB = addTrampolineAfter(BB, TargetBB->getLabel(), TargetBB,
-                                          Count, NewBBSize - OldBBSize);
-      } else {
-        // Create a trampoline basic block for the taken target of the branch.
-        TrampolineBB =
-            addTrampolineAfter(BB, TargetBB->getLabel(), TargetBB, Count);
-        auto L = BC.scopeLock();
-        MIB->replaceBranchTarget(Inst, TrampolineBB->getLabel(), BC.Ctx.get());
-      }
-      BB->replaceSuccessor(TargetBB, TrampolineBB, Count);
-    };
-
-    // For non-simple functions, branch targets may be different functions,
-    // so we track trampolines by symbol rather than by basic block.
-    DenseMap<const MCSymbol *, BinaryBasicBlock *> SymbolTrampolines;
-
-    bool MayNeedRelaxation;
-    uint64_t NumIterations = 0;
-    do {
-      MayNeedRelaxation = false;
-      ++NumIterations;
-      for (auto BBI = FF.begin(); BBI != FF.end(); ++BBI) {
-        BinaryBasicBlock *BB = *BBI;
-        uint64_t NextInstOffset = BB->getOutputStartAddress();
-        // Branch reversal may replace the current instruction with a sequence.
-        // Use an index so the next instruction is reloaded after the mutation.
-        for (size_t I = 0; I < BB->size(); ++I) {
-          MCInst &Inst = *(BB->begin() + I);
-          const size_t InstAddress = NextInstOffset;
-          if (!MIB->isPseudo(Inst))
-            NextInstOffset += 4;
-
-          if (!mayNeedStub(BF.getBinaryContext(), Inst))
-            continue;
-
-          const size_t BitsAvailable = MIB->getPCRelEncodingSize(Inst);
-
-          // Span of +/-128MB.
-          if (BitsAvailable == LongestJumpBits)
-            continue;
-
-          const MCSymbol *TargetSymbol = MIB->getTargetSymbol(Inst);
-
-          if (BF.isSimple()) {
-            BinaryBasicBlock *TargetBB = BB->getSuccessor(TargetSymbol);
-            assert(TargetBB &&
-                   "Basic block target expected for conditional branch.");
-
-            // Check if the relaxation is needed.
-            if (TargetBB->getFragmentNum() == FF.getFragmentNum() &&
-                isBlockInRange(Inst, InstAddress, *TargetBB))
-              continue;
-
-            relaxBranch(BB, Inst, InstAddress, TargetBB);
-            MayNeedRelaxation = true;
-          } else {
-            // Skip if the target is within this function.
-            if (BF.getBasicBlockForLabel(TargetSymbol))
-              continue;
-
-            // Try to reuse an existing trampoline for this symbol.
-            BinaryBasicBlock *TrampolineBB =
-                SymbolTrampolines.lookup(TargetSymbol);
-            if (TrampolineBB &&
-                isBlockInRange(Inst, InstAddress, *TrampolineBB)) {
-              auto L = BC.scopeLock();
-              MIB->replaceBranchTarget(Inst, TrampolineBB->getLabel(),
-                                       BC.Ctx.get());
-              continue;
-            }
-
-            // Create a trampoline at the end of the function. Since the layout
-            // of a non-simple function has to be preserved, the end of the
-            // function is the only place where we can put it.
-            const int64_t OffsetToEnd = FragmentSize - InstAddress;
-            if (!isBranchOffsetInRange(Inst, OffsetToEnd)) {
-              auto L = BC.scopeLock();
-              BC.errs() << "BOLT-ERROR: cannot relax branch in non-simple "
-                           "function "
-                        << BF << ": a trampoline at the end of the function is "
-                        << OffsetToEnd << " bytes away, out of reach for a "
-                        << BitsAvailable << "-bit branch\n";
-              BC.printInstruction(BC.errs(), Inst);
-              return false;
-            }
-
-            TrampolineBB = addTrampolineAfter(/*BB=*/nullptr, TargetSymbol,
-                                              /*TargetBB=*/nullptr,
-                                              /*Count=*/0);
-            SymbolTrampolines[TargetSymbol] = TrampolineBB;
-            auto L = BC.scopeLock();
-            MIB->replaceBranchTarget(Inst, TrampolineBB->getLabel(),
-                                     BC.Ctx.get());
-          }
-        }
-      }
-
-      // We may have added new instructions, but the whole fragment is less than
-      // the minimum branch span.
-      if (FragmentSize < ShortestJumpSpan)
-        MayNeedRelaxation = false;
-
-    } while (MayNeedRelaxation);
-
-    LLVM_DEBUG({
-      if (NumIterations > 2) {
-        dbgs() << "BOLT-DEBUG: relaxed fragment " << FF.getFragmentNum().get()
-               << " of " << BF << " in " << NumIterations << " iterations\n";
-      }
-    });
-    (void)NumIterations;
-  }
-
-  // Add trampoline blocks from all fragments to the layout.
-  DenseMap<BinaryBasicBlock *, std::vector<std::unique_ptr<BinaryBasicBlock>>>
-      Insertions;
-  for (std::pair<BinaryBasicBlock *, std::unique_ptr<BinaryBasicBlock>> &Pair :
-       FunctionTrampolines) {
-    if (!Pair.second)
-      continue;
-    Insertions[Pair.first].emplace_back(std::move(Pair.second));
-  }
-
-  for (auto &Pair : Insertions) {
-    BF.insertBasicBlocks(Pair.first, std::move(Pair.second),
-                         /*UpdateLayout*/ true, /*UpdateCFI*/ true,
-                         /*RecomputeLPs*/ false);
-  }
-
+  commitLocalTrampolines(BF, FunctionTrampolines);
   return true;
 }
 
 namespace {
 class ClusteredRelaxation {
 public:
-  ClusteredRelaxation(BinaryContext &BC,
-                      BinaryFunctionListType &OutputFunctions)
-      : BC(BC), OutputFunctions(OutputFunctions) {}
+  ClusteredRelaxation(
+      BinaryContext &BC, BinaryFunctionListType &OutputFunctions,
+      const DenseMap<const FunctionFragment *, std::pair<uint64_t, uint64_t>>
+          &FragmentAddresses,
+      const DenseMap<const BinaryBasicBlock *, uint64_t> &ExactBBAddresses,
+      Align MaxLayoutAlignment)
+      : BC(BC), OutputFunctions(OutputFunctions),
+        FragmentAddresses(FragmentAddresses),
+        ExactBBAddresses(ExactBBAddresses),
+        MaxLayoutAlignment(MaxLayoutAlignment) {
+    MCInst BranchInst;
+    BC.MIB->createUncondBranch(BranchInst, BC.Ctx->createTempSymbol(),
+                               BC.Ctx.get());
+    BranchThunkSize = BC.computeInstructionSize(BranchInst);
+
+    InstructionListType LongThunk;
+    BC.MIB->createLongTailCall(LongThunk, BC.Ctx->createTempSymbol(),
+                               BC.Ctx.get());
+    LongThunkSize = BC.computeCodeSize(LongThunk.begin(), LongThunk.end());
+  }
 
   bool run();
 
@@ -1108,19 +1469,41 @@ private:
 
   static bool isWithinClusterRange(uint64_t SourceOffset,
                                    uint64_t TargetOffset);
+  bool initializeThunkIslandSize();
   static unsigned getClusterDistance(unsigned A, unsigned B);
-  static uint64_t estimateFragmentSize(const BinaryFunction &BF,
-                                       const FunctionFragment &FF);
-  void buildLayout();
-  void collectOutOfRangeReferences();
+  bool buildLayout();
+  bool measureThunkIslands();
+  void applyThunkIslandSizes();
+  void clearReferences();
+  bool collectOutOfRangeReferences(bool ConservativeCandidates);
   const MCSymbol *getOrCreateBranchThunkChain(const OutOfRangeRef &Ref,
                                               unsigned MaxThunks);
   void relaxCalls();
-  void relaxUnconditionalBranches();
+  bool relaxUnconditionalBranches();
   void insertThunks();
 
   BinaryContext &BC;
   BinaryFunctionListType &OutputFunctions;
+  const DenseMap<const FunctionFragment *, std::pair<uint64_t, uint64_t>>
+      &FragmentAddresses;
+  const DenseMap<const BinaryBasicBlock *, uint64_t> &ExactBBAddresses;
+
+  /// Maximum alignment affecting the full code layout. Virtual thunk islands
+  /// must preserve it when shifting all subsequent addresses.
+  const Align MaxLayoutAlignment;
+
+  /// Fixed per-island reservation used by the initial conservative layout.
+  uint64_t MaxThunkIslandSize{0};
+
+  /// Emitted sizes of the two thunk forms, calculated once per relaxation.
+  uint64_t BranchThunkSize{0};
+  uint64_t LongThunkSize{0};
+
+  /// Measured aligned thunk-island sizes at every cluster boundary.
+  SmallVector<uint64_t, 4> ThunkIslandSizes;
+
+  /// Island sizes currently reflected in the estimated cluster layout.
+  SmallVector<uint64_t, 4> AppliedThunkIslandSizes;
 
   /// Estimated cluster layout and source/target position maps.
   SmallVector<FragmentCluster, 4> Clusters;
@@ -1144,47 +1527,58 @@ private:
 };
 } // namespace
 
+static constexpr uint64_t Branch26Span = 1ULL << 27;
+
 bool ClusteredRelaxation::isWithinClusterRange(uint64_t SourceOffset,
                                                uint64_t TargetOffset) {
   const uint64_t Distance = SourceOffset <= TargetOffset
                                 ? TargetOffset - SourceOffset
                                 : SourceOffset - TargetOffset;
-  return Distance < opts::MaxClusterSize;
+  return Distance < Branch26Span;
+}
+
+bool ClusteredRelaxation::initializeThunkIslandSize() {
+  if (opts::MaxClusterSize >= Branch26Span) {
+    BC.errs() << "BOLT-ERROR: --max-cluster-size must be smaller than "
+              << Branch26Span << " bytes\n";
+    return false;
+  }
+
+  // Split the remaining Branch26 range equally between the thunk islands on
+  // either side of a cluster. Round down so the reservation remains inside
+  // that range while shifting subsequent sections and fragments by a multiple
+  // of every alignment represented by the full layout.
+  const uint64_t MaxIslandSize = (Branch26Span - opts::MaxClusterSize) / 2;
+  MaxThunkIslandSize = alignDown(MaxIslandSize, MaxLayoutAlignment.value());
+  if (MaxThunkIslandSize == 0) {
+    BC.errs() << "BOLT-ERROR: --max-cluster-size leaves only " << MaxIslandSize
+              << " bytes per thunk island, less than the required layout "
+                 "alignment of "
+              << MaxLayoutAlignment.value() << " bytes\n";
+    return false;
+  }
+  return true;
 }
 
 unsigned ClusteredRelaxation::getClusterDistance(unsigned A, unsigned B) {
   return A > B ? A - B : B - A;
 }
 
-uint64_t ClusteredRelaxation::estimateFragmentSize(const BinaryFunction &BF,
-                                                   const FunctionFragment &FF) {
-  uint64_t Size = 0;
-  for (const BinaryBasicBlock *BB : FF)
-    Size += BB->estimateSize();
-
-  if (BF.hasIslandsInfo()) {
-    Size += BF.estimateConstantIslandSize();
-    if (BF.getConstantIslandAlignment() > BF.getMinAlignment())
-      Size += BF.getConstantIslandAlignment() - BF.getMinAlignment();
-  }
-
-  Size += FF.isSplitFragment() ? BF.getMaxColdAlignmentBytes()
-                               : BF.getMaxAlignmentBytes();
-  return Size;
-}
-
-void ClusteredRelaxation::buildLayout() {
+bool ClusteredRelaxation::buildLayout() {
   struct OutputFragment {
     const FunctionFragment *FF;
     size_t FunctionIndex;
     SmallString<32> SectionName;
-    uint64_t Size;
+    std::pair<uint64_t, uint64_t> Addresses;
   };
 
   struct FragmentRange {
     size_t Begin;
     size_t End;
   };
+
+  if (!initializeThunkIslandSize())
+    return false;
 
   SmallVector<SmallVector<OutputFragment>, 4> FragmentsBySection;
   StringMap<size_t> SectionToBucket;
@@ -1198,27 +1592,43 @@ void ClusteredRelaxation::buildLayout() {
 
   for (size_t I = 0; I < OutputFunctions.size(); ++I) {
     BinaryFunction *BF = OutputFunctions[I];
-    if (!BC.shouldEmit(*BF) || BF->isPatch())
+    if (!shouldEmitFunctionFragment(BC, *BF) || BF->isPatch())
       continue;
 
     for (const FunctionFragment &FF : BF->getLayout().fragments()) {
       if (FF.empty() && !BF->hasConstantIsland())
         continue;
 
-      addOrderedFragment({&FF, I, BF->getCodeSectionName(FF.getFragmentNum()),
-                          estimateFragmentSize(*BF, FF)});
+      const auto It = FragmentAddresses.find(&FF);
+      assert(It != FragmentAddresses.end() &&
+             "missing function fragment from full layout");
+      const std::pair<uint64_t, uint64_t> Addresses = It->second;
+      assert(Addresses.first <= Addresses.second && "invalid fragment range");
+      if (Addresses.second - Addresses.first > opts::MaxClusterSize) {
+        BC.errs() << "BOLT-ERROR: function fragment " << BF->getPrintName()
+                  << " has size " << Addresses.second - Addresses.first
+                  << " bytes, exceeding --max-cluster-size="
+                  << opts::MaxClusterSize << '\n';
+        return false;
+      }
+      addOrderedFragment(
+          {&FF, I, BF->getCodeSectionName(FF.getFragmentNum()), Addresses});
     }
   }
 
-  // Model final output layout by grouping function fragments in output section
-  // order. Within each section, fragments remain in OutputFunctions order.
+  // The full layout supplies the section order through the address of each
+  // section's first fragment. Sort only sections, retaining emission order for
+  // the potentially thousands of fragments within each section.
   SmallVector<size_t, 4> SectionOrder;
   for (size_t I = 0; I < FragmentsBySection.size(); ++I)
     SectionOrder.push_back(I);
 
   llvm::sort(SectionOrder, [&](size_t A, size_t B) {
-    return BC.compareSectionNames(FragmentsBySection[A].front().SectionName,
-                                  FragmentsBySection[B].front().SectionName);
+    const OutputFragment &FirstA = FragmentsBySection[A].front();
+    const OutputFragment &FirstB = FragmentsBySection[B].front();
+    if (FirstA.Addresses.first != FirstB.Addresses.first)
+      return FirstA.Addresses.first < FirstB.Addresses.first;
+    return BC.compareSectionNames(FirstA.SectionName, FirstB.SectionName);
   });
 
   SmallVector<const OutputFragment *> OrderedFragments;
@@ -1235,14 +1645,19 @@ void ClusteredRelaxation::buildLayout() {
     // Hot fragments appear first, so perform forward walk.
     if (!opts::HotFunctionsAtEnd) {
       size_t Begin = 0;
-      uint64_t Size = OrderedFragments[0]->Size;
+      uint64_t ClusterStart = OrderedFragments.front()->Addresses.first;
+      uint64_t ClusterEnd = OrderedFragments.front()->Addresses.second;
       for (size_t I = 1; I < OrderedFragments.size(); ++I) {
-        if (Size + OrderedFragments[I]->Size > opts::MaxClusterSize) {
+        const OutputFragment &Fragment = *OrderedFragments[I];
+        const uint64_t NewEnd = std::max(ClusterEnd, Fragment.Addresses.second);
+        if (NewEnd - ClusterStart > opts::MaxClusterSize) {
           ClusterRanges.push_back({Begin, I});
           Begin = I;
-          Size = 0;
+          ClusterStart = Fragment.Addresses.first;
+          ClusterEnd = Fragment.Addresses.second;
+          continue;
         }
-        Size += OrderedFragments[I]->Size;
+        ClusterEnd = NewEnd;
       }
       ClusterRanges.push_back({Begin, OrderedFragments.size()});
       return ClusterRanges;
@@ -1250,32 +1665,36 @@ void ClusteredRelaxation::buildLayout() {
 
     // Hot fragments appear last, so perform reverse walk.
     size_t End = OrderedFragments.size();
-    uint64_t Size = OrderedFragments.back()->Size;
+    uint64_t ClusterEnd = OrderedFragments.back()->Addresses.second;
     for (size_t I = End - 1; I > 0;) {
       --I;
-      if (Size + OrderedFragments[I]->Size > opts::MaxClusterSize) {
+      const OutputFragment &Fragment = *OrderedFragments[I];
+      const uint64_t NewStart = Fragment.Addresses.first;
+      const uint64_t NewEnd = std::max(ClusterEnd, Fragment.Addresses.second);
+      if (NewEnd - NewStart > opts::MaxClusterSize) {
         ClusterRanges.push_back({I + 1, End});
         End = I + 1;
-        Size = 0;
+        ClusterEnd = Fragment.Addresses.second;
+        continue;
       }
-      Size += OrderedFragments[I]->Size;
+      ClusterEnd = NewEnd;
     }
     ClusterRanges.push_back({0, End});
     std::reverse(ClusterRanges.begin(), ClusterRanges.end());
     return ClusterRanges;
   };
 
-  uint64_t LayoutOffset = 0;
-  auto addFragmentToCluster = [&](const OutputFragment &Fragment) {
+  auto addFragmentToCluster = [&](const OutputFragment &Fragment,
+                                  uint64_t IslandOffset) {
     FragmentCluster &FC = Clusters.back();
     const unsigned ClusterNum = Clusters.size() - 1;
     BinaryFunction &BF = *OutputFunctions[Fragment.FunctionIndex];
     const FunctionFragment &FF = *Fragment.FF;
-    const uint64_t FragmentOffset = LayoutOffset;
+    const uint64_t FragmentAddress = Fragment.Addresses.first + IslandOffset;
 
     if (FC.NumFragments == 0) {
       FC.StartSectionName = Fragment.SectionName;
-      FC.StartOffset = FragmentOffset;
+      FC.StartOffset = FragmentAddress;
       FC.FirstFunctionIndex = Fragment.FunctionIndex;
     }
 
@@ -1286,37 +1705,46 @@ void ClusteredRelaxation::buildLayout() {
     // Map primary entry points.
     if (FF.isMainFragment())
       for (const MCSymbol *Symbol : BF.getSymbols())
-        SymLayout[Symbol] = {ClusterNum, FragmentOffset};
+        SymLayout[Symbol] = {ClusterNum, FragmentAddress};
 
-    uint64_t BBOffset = FragmentOffset;
     for (const BinaryBasicBlock *BB : FF) {
-      BBLayout[BB] = {ClusterNum, BBOffset};
+      const uint64_t BBAddress = ExactBBAddresses.at(BB) + IslandOffset;
+      BBLayout[BB] = {ClusterNum, BBAddress};
       // Map the local BB label.
       if (const MCSymbol *Label = BB->getLabel())
-        SymLayout[Label] = {ClusterNum, BBOffset};
+        SymLayout[Label] = {ClusterNum, BBAddress};
       // Map the secondary entry point, which can differ from the BB label.
       if (MCSymbol *Label = BF.getLabelAtOffset(BB->getOffset()))
         if (MCSymbol *EntrySymbol = BF.getSecondaryEntryPointSymbol(Label))
-          SymLayout[EntrySymbol] = {ClusterNum, BBOffset};
-
-      BBOffset += BB->estimateSize();
+          SymLayout[EntrySymbol] = {ClusterNum, BBAddress};
     }
-
-    FC.Size += Fragment.Size;
-    LayoutOffset += Fragment.Size;
   };
 
+  uint64_t IslandOffset = 0;
   for (const FragmentRange &Range : buildClusterRanges()) {
     Clusters.emplace_back();
-    for (size_t I = Range.Begin; I < Range.End; ++I)
-      addFragmentToCluster(*OrderedFragments[I]);
+    uint64_t ClusterEnd =
+        OrderedFragments[Range.Begin]->Addresses.second + IslandOffset;
+    for (size_t I = Range.Begin; I < Range.End; ++I) {
+      ClusterEnd = std::max(ClusterEnd, OrderedFragments[I]->Addresses.second +
+                                            IslandOffset);
+      addFragmentToCluster(*OrderedFragments[I], IslandOffset);
+    }
+    FragmentCluster &FC = Clusters.back();
+    FC.Size = ClusterEnd - FC.StartOffset;
+
+    // Reserve a virtual thunk island between consecutive clusters. Forward
+    // thunks from this cluster and backward thunks from the next cluster share
+    // this space. The reservation is not emitted as padding: actual thunks
+    // replace part of it, so the virtual layout conservatively bounds their
+    // effect on all following addresses. Its size is a multiple of the
+    // maximum alignment affecting the code layout, preserving every alignment
+    // decision already made by the full layout.
+    IslandOffset += MaxThunkIslandSize;
   }
 
   if (Clusters.empty())
-    return;
-
-  LLVM_DEBUG(dbgs() << "LongJmp: estimated code size : " << LayoutOffset
-                    << '\n');
+    return true;
 
   // Print cluster stats.
   BC.outs() << "BOLT-INFO: built " << Clusters.size()
@@ -1327,9 +1755,152 @@ void ClusteredRelaxation::buildLayout() {
               << "BOLT-INFO:   " << FC.NumFragments << " fragment(s)\n"
               << "BOLT-INFO:   " << FC.Size << " estimated bytes\n";
   }
+  return true;
 }
 
-void ClusteredRelaxation::collectOutOfRangeReferences() {
+bool ClusteredRelaxation::measureThunkIslands() {
+  // Boundary 0 precedes the first cluster, boundary N follows the last, and
+  // boundary I is shared by forward thunks from cluster I - 1 and backward
+  // thunks from cluster I.
+  const size_t NumBoundaries = Clusters.size() + 1;
+  SmallVector<DenseSet<const MCSymbol *>, 4> BranchThunkTargets(NumBoundaries);
+  SmallVector<DenseSet<const MCSymbol *>, 4> LongThunkTargets(NumBoundaries);
+
+  if (BranchThunkSize == 0 || LongThunkSize == 0) {
+    BC.errs() << "BOLT-ERROR: unable to calculate emitted thunk sizes\n";
+    return false;
+  }
+
+  auto reserveBranchChain = [&](const OutOfRangeRef &Ref) {
+    if (Ref.TargetCluster == -1u) {
+      if (Ref.TargetOffset < Ref.SourceOffset) {
+        for (unsigned Boundary = 0; Boundary <= Ref.SourceCluster; ++Boundary)
+          BranchThunkTargets[Boundary].insert(Ref.TargetSymbol);
+      } else {
+        for (unsigned Boundary = Ref.SourceCluster + 1;
+             Boundary < NumBoundaries; ++Boundary)
+          BranchThunkTargets[Boundary].insert(Ref.TargetSymbol);
+      }
+      return;
+    }
+
+    const unsigned First = std::min(Ref.SourceCluster, Ref.TargetCluster) + 1;
+    const unsigned Last = std::max(Ref.SourceCluster, Ref.TargetCluster);
+    for (unsigned Boundary = First; Boundary <= Last; ++Boundary)
+      BranchThunkTargets[Boundary].insert(Ref.TargetSymbol);
+  };
+
+  auto reserveLongThunk = [&](const OutOfRangeRef &Ref) {
+    const bool IsForward = Ref.TargetCluster == -1u
+                               ? Ref.SourceOffset < Ref.TargetOffset
+                               : Ref.SourceCluster < Ref.TargetCluster;
+    const unsigned Boundary =
+        IsForward ? Ref.SourceCluster + 1 : Ref.SourceCluster;
+    LongThunkTargets[Boundary].insert(Ref.TargetSymbol);
+  };
+
+  // Reserve both possible call implementations. The final, smaller layout may
+  // select different ladder rungs, but it cannot use more than one B thunk per
+  // crossed boundary or more than one long thunk at the source boundary.
+  for (const SmallVector<OutOfRangeRef> &Calls : CallsByDistance)
+    for (const OutOfRangeRef &Call : Calls) {
+      reserveBranchChain(Call);
+      reserveLongThunk(Call);
+    }
+
+  for (const OutOfRangeRef &Call : OutOfLayoutCalls)
+    reserveLongThunk(Call);
+
+  for (const OutOfRangeRef &Branch : Branches)
+    reserveBranchChain(Branch);
+
+  ThunkIslandSizes.clear();
+  ThunkIslandSizes.reserve(NumBoundaries);
+  for (size_t I = 0; I < NumBoundaries; ++I) {
+    const uint64_t NumBranchThunks = BranchThunkTargets[I].size();
+    const uint64_t NumLongThunks = LongThunkTargets[I].size();
+    if (NumBranchThunks > MaxThunkIslandSize / BranchThunkSize ||
+        NumLongThunks > MaxThunkIslandSize / LongThunkSize) {
+      BC.errs() << "BOLT-ERROR: too many candidate thunks for boundary " << I
+                << '\n';
+      return false;
+    }
+    const uint64_t BranchBytes = NumBranchThunks * BranchThunkSize;
+    const uint64_t LongBytes = NumLongThunks * LongThunkSize;
+    if (LongBytes > MaxThunkIslandSize - BranchBytes) {
+      BC.errs() << "BOLT-ERROR: thunk island at boundary " << I
+                << " requires more than its " << MaxThunkIslandSize
+                << "-byte Branch26 reservation\n";
+      return false;
+    }
+    const uint64_t Bytes = BranchBytes + LongBytes;
+    const uint64_t Size = Bytes ? alignTo(Bytes, MaxLayoutAlignment) : 0;
+    if (Size > MaxThunkIslandSize) {
+      BC.errs() << "BOLT-ERROR: thunk island at boundary " << I << " requires "
+                << Size << " aligned bytes, exceeding its "
+                << MaxThunkIslandSize << "-byte Branch26 reservation\n";
+      return false;
+    }
+    LLVM_DEBUG(dbgs() << "BOLT-DEBUG: thunk island at boundary " << I
+                      << " reserves " << Size << " aligned bytes for "
+                      << NumBranchThunks << " branch thunks and "
+                      << NumLongThunks << " long thunks\n");
+    ThunkIslandSizes.push_back(Size);
+  }
+
+  return true;
+}
+
+void ClusteredRelaxation::applyThunkIslandSizes() {
+  assert(ThunkIslandSizes.size() == Clusters.size() + 1 &&
+         "one thunk island expected at every cluster boundary");
+  assert(AppliedThunkIslandSizes.size() == Clusters.size() + 1 &&
+         "current thunk island size expected at every cluster boundary");
+
+  SmallVector<uint64_t, 4> OldOffsets;
+  SmallVector<uint64_t, 4> NewOffsets;
+  OldOffsets.reserve(Clusters.size());
+  NewOffsets.reserve(Clusters.size());
+
+  uint64_t OldOffset = AppliedThunkIslandSizes.front();
+  uint64_t NewOffset = ThunkIslandSizes.front();
+  for (size_t I = 0; I < Clusters.size(); ++I) {
+    OldOffsets.push_back(OldOffset);
+    NewOffsets.push_back(NewOffset);
+    OldOffset += AppliedThunkIslandSizes[I + 1];
+    NewOffset += ThunkIslandSizes[I + 1];
+  }
+
+  auto adjustPosition = [&](Position &Pos) {
+    assert(Pos.Cluster < Clusters.size() && "invalid position cluster");
+    assert(Pos.Offset >= OldOffsets[Pos.Cluster] &&
+           "fixed island offset exceeds position");
+    Pos.Offset = Pos.Offset - OldOffsets[Pos.Cluster] + NewOffsets[Pos.Cluster];
+  };
+
+  for (auto &Entry : BBLayout)
+    adjustPosition(Entry.second);
+  for (auto &Entry : SymLayout)
+    adjustPosition(Entry.second);
+
+  for (size_t I = 0; I < Clusters.size(); ++I) {
+    FragmentCluster &Cluster = Clusters[I];
+    assert(Cluster.StartOffset >= OldOffsets[I] &&
+           "fixed island offset exceeds cluster address");
+    Cluster.StartOffset = Cluster.StartOffset - OldOffsets[I] + NewOffsets[I];
+  }
+
+  AppliedThunkIslandSizes = ThunkIslandSizes;
+}
+
+void ClusteredRelaxation::clearReferences() {
+  OutOfLayoutCalls.clear();
+  CallsByDistance.clear();
+  Branches.clear();
+}
+
+bool ClusteredRelaxation::collectOutOfRangeReferences(
+    bool ConservativeCandidates) {
   CallsByDistance.resize(Clusters.size());
   auto isPrimaryEntryTarget = [&](const MCSymbol *TargetSymbol) {
     uint64_t EntryID = 0;
@@ -1366,27 +1937,42 @@ void ClusteredRelaxation::collectOutOfRangeReferences() {
 
         auto TargetIt = SymLayout.find(TargetSymbol);
         const bool Found = TargetIt != SymLayout.end();
-        // Unmapped targets use maximum offset and are treated as out of range.
-        const Position Target = Found ? TargetIt->second : Position{-1u, -1ULL};
+        uint64_t TargetOffset = -1ULL;
+        if (Found) {
+          TargetOffset = TargetIt->second.Offset;
+        } else if (ErrorOr<uint64_t> Value = BC.getSymbolValue(*TargetSymbol)) {
+          TargetOffset = *Value;
+        }
+        const Position Target =
+            Found ? TargetIt->second : Position{-1u, TargetOffset};
 
-        // Skip already in-range references that do not need relaxation.
-        if (Source.Cluster == Target.Cluster ||
-            isWithinClusterRange(SourceOffset, Target.Offset))
+        // The fixed reservations conservatively bound distances within the
+        // clustered output. Always retain references to targets outside that
+        // layout during the sizing pass: replacing the reservations can shift
+        // all output code relative to such a fixed target in either direction.
+        const bool IsInRange =
+            TargetOffset != -1ULL &&
+            ((Found && Source.Cluster == Target.Cluster) ||
+             isWithinClusterRange(SourceOffset, TargetOffset));
+        if (IsInRange && (Found || !ConservativeCandidates))
           continue;
 
         const OutOfRangeRef Reference{&Inst,          TargetSymbol,
                                       SourceOffset,   Target.Offset,
                                       Source.Cluster, Target.Cluster};
         const bool UseBranchChain =
-            Found && (IsUncondBranch ||
-                      (IsTailCall && !isPrimaryEntryTarget(TargetSymbol)));
+            IsUncondBranch ||
+            (IsTailCall && !isPrimaryEntryTarget(TargetSymbol));
         if (UseBranchChain) {
-          // A direct B to a body entry may be annotated as a tail call. It is
-          // not an ABI call boundary, so use branch chains instead of call
-          // thunks that may clobber x16/x17.
-          if (IsTailCall)
-            BC.MIB->convertTailCallToJmp(Inst);
-
+          if (!Found && TargetOffset == -1ULL) {
+            BC.errs() << "BOLT-ERROR: cannot build a branch thunk chain to "
+                      << TargetSymbol->getName()
+                      << " without a known target address\n";
+            return false;
+          }
+          // A direct B may be annotated as a tail call, but it is not
+          // necessarily an ABI call boundary. Use branch chains rather than
+          // long call thunks that may clobber x16/x17.
           Branches.push_back(Reference);
           continue;
         }
@@ -1403,6 +1989,7 @@ void ClusteredRelaxation::collectOutOfRangeReferences() {
       }
     }
   }
+  return true;
 }
 
 const MCSymbol *
@@ -1410,9 +1997,14 @@ ClusteredRelaxation::getOrCreateBranchThunkChain(const OutOfRangeRef &Ref,
                                                  unsigned MaxThunks) {
   const unsigned SourceCluster = Ref.SourceCluster;
   const unsigned TargetCluster = Ref.TargetCluster;
-  const bool IsForward = SourceCluster < TargetCluster;
+  const bool IsOutsideLayout = TargetCluster == -1u;
+  const bool IsForward = IsOutsideLayout ? Ref.SourceOffset < Ref.TargetOffset
+                                         : SourceCluster < TargetCluster;
   const bool IsCall = BC.MIB->isCall(*Ref.Inst);
-  const unsigned NumHops = getClusterDistance(SourceCluster, TargetCluster);
+  const unsigned NumHops =
+      IsOutsideLayout
+          ? (IsForward ? Clusters.size() - SourceCluster : SourceCluster + 1)
+          : getClusterDistance(SourceCluster, TargetCluster);
 
   auto createBranchThunk = [&](const MCSymbol *TargetSymbol) {
     const size_t ThunkNumber = IsCall ? NumShortThunks++ : NumBranchThunks++;
@@ -1469,7 +2061,12 @@ ClusteredRelaxation::getOrCreateBranchThunkChain(const OutOfRangeRef &Ref,
 
   auto getThunkOffset = [&](const unsigned Cluster) {
     const FragmentCluster &FC = Clusters[Cluster];
-    return IsForward ? FC.getEndOffset() : FC.StartOffset;
+    // BinaryEmitter aligns every injected thunk as a function. A backward
+    // thunk is modeled at an already aligned fragment start; a forward thunk
+    // following arbitrary fragment contents may require explicit padding.
+    return IsForward ? alignTo(FC.getEndOffset(),
+                               Align(BC.MIB->getMinFunctionAlignment()))
+                     : FC.StartOffset;
   };
 
   SmallVector<unsigned> ThunkClusters;
@@ -1539,7 +2136,9 @@ void ClusteredRelaxation::relaxCalls() {
   auto getOrCreateLongThunk = [&](const OutOfRangeRef &Call) {
     const MCSymbol *TargetSymbol = Call.TargetSymbol;
     const unsigned SourceCluster = Call.SourceCluster;
-    const bool IsForward = SourceCluster < Call.TargetCluster;
+    const bool IsForward = Call.TargetCluster == -1u
+                               ? Call.SourceOffset < Call.TargetOffset
+                               : SourceCluster < Call.TargetCluster;
     FragmentCluster &FC = Clusters[SourceCluster];
     if (auto It = FC.LongThunks.find(TargetSymbol); It != FC.LongThunks.end()) {
       ++NumLongThunksReused;
@@ -1621,11 +2220,24 @@ void ClusteredRelaxation::relaxCalls() {
               << " long thunks reused\n";
 }
 
-void ClusteredRelaxation::relaxUnconditionalBranches() {
+bool ClusteredRelaxation::relaxUnconditionalBranches() {
   for (const OutOfRangeRef &Branch : Branches) {
+    if (BC.MIB->isTailCall(*Branch.Inst))
+      BC.MIB->convertTailCallToJmp(*Branch.Inst);
     const MCSymbol *Target =
         getOrCreateBranchThunkChain(Branch, /*MaxThunks=*/-1u);
-    assert(Target && "expected branch thunk chain");
+    if (!Target) {
+      BC.errs() << "BOLT-ERROR: unable to build branch thunk chain from 0x"
+                << Twine::utohexstr(Branch.SourceOffset) << " in cluster "
+                << Branch.SourceCluster << " to "
+                << Branch.TargetSymbol->getName() << " at 0x"
+                << Twine::utohexstr(Branch.TargetOffset) << " in cluster ";
+      if (Branch.TargetCluster == -1u)
+        BC.errs() << "outside the clustered layout\n";
+      else
+        BC.errs() << Branch.TargetCluster << '\n';
+      return false;
+    }
     BC.MIB->replaceBranchTarget(*Branch.Inst, Target, BC.Ctx.get());
   }
 
@@ -1639,6 +2251,7 @@ void ClusteredRelaxation::relaxUnconditionalBranches() {
   if (NumBranchThunksReused)
     BC.outs() << "BOLT-INFO: " << NumBranchThunksReused
               << " branch thunks reused\n";
+  return true;
 }
 
 void ClusteredRelaxation::insertThunks() {
@@ -1676,13 +2289,58 @@ void ClusteredRelaxation::insertThunks() {
 }
 
 bool ClusteredRelaxation::run() {
-  buildLayout();
+  if (!buildLayout())
+    return false;
   if (Clusters.empty())
+    return true;
+
+  // buildLayout() reserves no island before the first cluster and a maximum
+  // sized island at every following boundary. The trailing size does not move
+  // code, but keeping it here makes the boundary vectors uniform. With no
+  // remeasurement requested, the final range checks use these reservations.
+  AppliedThunkIslandSizes.assign(Clusters.size() + 1, MaxThunkIslandSize);
+  AppliedThunkIslandSizes.front() = 0;
+
+  // Use the fixed maximum reservations to find a conservative candidate set.
+  // Repeatedly measure an upper bound for the required thunks and replace the
+  // current reservations with the aligned measured islands. Every measured
+  // internal island is no larger than the reservation it replaces, so no new
+  // cross-cluster candidate can appear. References to fixed targets outside
+  // the clustered output are retained unconditionally during every sizing
+  // pass because moving the output can change their range in either direction.
+  unsigned NumRemeasurements = 0;
+  bool Stabilized = false;
+  for (unsigned I = 0; I < opts::MaxThunkRemeasure; ++I) {
+    if (!collectOutOfRangeReferences(/*ConservativeCandidates=*/true) ||
+        !measureThunkIslands())
+      return false;
+
+    ++NumRemeasurements;
+    const bool AtFixedPoint = ThunkIslandSizes == AppliedThunkIslandSizes;
+    applyThunkIslandSizes();
+    clearReferences();
+    if (AtFixedPoint) {
+      Stabilized = true;
+      break;
+    }
+  }
+
+  if (opts::MaxThunkRemeasure == 0) {
+    BC.outs() << "BOLT-INFO: thunk island layout remeasurement disabled\n";
+  } else {
+    BC.outs() << "BOLT-INFO: thunk island layout "
+              << (Stabilized ? "stabilized" : "did not stabilize") << " after "
+              << NumRemeasurements << " remeasurement iteration"
+              << (NumRemeasurements == 1 ? "" : "s") << '\n';
+  }
+
+  // Perform the final exact range checks against the last measured layout.
+  if (!collectOutOfRangeReferences(/*ConservativeCandidates=*/false))
     return false;
 
-  collectOutOfRangeReferences();
   relaxCalls();
-  relaxUnconditionalBranches();
+  if (!relaxUnconditionalBranches())
+    return false;
   insertThunks();
 
   LLVM_DEBUG(dbgs() << "\nFunction layout with thunks:\n";
@@ -1691,21 +2349,41 @@ bool ClusteredRelaxation::run() {
   return true;
 }
 
-void LongJmpPass::relaxWithClusters(BinaryContext &BC) {
+bool LongJmpPass::relaxWithClusters(BinaryContext &BC) {
   BinaryFunctionListType OutputFunctions = BC.getOutputBinaryFunctions();
-  ClusteredRelaxation Relaxation(BC, OutputFunctions);
+  layout(BC, OutputFunctions);
+
+  // Inserting a virtual thunk island shifts all following addresses. Use the
+  // maximum alignment affecting the full layout so that one aligned
+  // reservation preserves its section, function, basic-block, and
+  // constant-island alignment decisions.
+  uint64_t MaxLayoutAlignment = BC.MIB->getMinFunctionAlignment();
+  for (const BinaryFunction *Func : OutputFunctions) {
+    if (!shouldEmitFunctionFragment(BC, *Func) || Func->isPatch())
+      continue;
+
+    for (const FunctionFragment &FF : Func->getLayout().fragments()) {
+      if (FF.empty() && !Func->hasConstantIsland())
+        continue;
+      MaxLayoutAlignment =
+          updateSectionAlignment(BC, *Func, FF, MaxLayoutAlignment);
+      // RewriteInstance::mapCodeSectionsInPlace() uses this alignment for
+      // moved cold fragments independently of BinaryEmitter's requirements.
+      if (!BC.HasRelocations && FF.isSplitFragment())
+        MaxLayoutAlignment =
+            std::max(MaxLayoutAlignment, ColdFragmentAlignment.value());
+    }
+  }
+  ClusteredRelaxation Relaxation(BC, OutputFunctions, FragmentAddresses,
+                                 BBAddresses, Align(MaxLayoutAlignment));
   if (!Relaxation.run())
-    return;
+    return false;
 
   BC.updateOutputBinaryFunctions(std::move(OutputFunctions));
+  return true;
 }
 
 Error LongJmpPass::runOnFunctions(BinaryContext &BC) {
-
-  assert((opts::CompactCodeModel || opts::ExperimentalRelaxation ||
-          opts::SplitStrategy != opts::SplitFunctionsStrategy::CDSplit) &&
-         "LongJmp cannot work with functions split in more than two fragments");
-
   DenseMap<BinaryFunction *, BranchLivenessInfo> BranchLiveness;
 
   if (opts::FixBranchesWithLiveness) {
@@ -1754,7 +2432,8 @@ Error LongJmpPass::runOnFunctions(BinaryContext &BC) {
       return Error::success();
 
     BC.outs() << "BOLT-INFO: starting experimental relaxation pass\n";
-    relaxWithClusters(BC);
+    if (!relaxWithClusters(BC))
+      return createFatalBOLTError("clustered branch relaxation failure");
     return Error::success();
   }
 
@@ -1765,7 +2444,9 @@ Error LongJmpPass::runOnFunctions(BinaryContext &BC) {
   do {
     ++Iterations;
     Modified = false;
-    tentativeLayout(BC, Sorted);
+    LLVM_DEBUG(dbgs() << "BOLT-DEBUG: LongJmp: layout iteration " << Iterations
+                      << '\n');
+    layout(BC, Sorted);
     updateStubGroups();
     for (BinaryFunction *Func : Sorted) {
       if (auto E = relax(*Func, Modified))

@@ -39,13 +39,13 @@
 # CHECK-BOLT: BOLT-INFO: built 3 function fragment cluster(s)
 # CHECK-BOLT-NEXT: BOLT-INFO: cluster: 0
 # CHECK-BOLT-NEXT: BOLT-INFO:   4 fragment(s)
-# CHECK-BOLT-NEXT: BOLT-INFO:   117440604 estimated bytes
+# CHECK-BOLT-NEXT: BOLT-INFO:   117440568 estimated bytes
 # CHECK-BOLT-NEXT: BOLT-INFO: cluster: 1
 # CHECK-BOLT-NEXT: BOLT-INFO:   4 fragment(s)
-# CHECK-BOLT-NEXT: BOLT-INFO:   117440584 estimated bytes
+# CHECK-BOLT-NEXT: BOLT-INFO:   117440560 estimated bytes
 # CHECK-BOLT-NEXT: BOLT-INFO: cluster: 2
 # CHECK-BOLT-NEXT: BOLT-INFO:   4 fragment(s)
-# CHECK-BOLT-NEXT: BOLT-INFO:   67108944 estimated bytes
+# CHECK-BOLT-NEXT: BOLT-INFO:   67108896 estimated bytes
 # CHECK-BOLT: BOLT-INFO: relaxed 7 unconditional branches
 # CHECK-BOLT: BOLT-INFO: 8 branch thunks created
 # CHECK-BOLT: BOLT-INFO: 2 branch thunks reused
@@ -53,13 +53,13 @@
 # CHECK-BOLT-HFE: BOLT-INFO: built 3 function fragment cluster(s)
 # CHECK-BOLT-HFE-NEXT: BOLT-INFO: cluster: 0
 # CHECK-BOLT-HFE-NEXT: BOLT-INFO:   4 fragment(s)
-# CHECK-BOLT-HFE-NEXT: BOLT-INFO:   67108944 estimated bytes
+# CHECK-BOLT-HFE-NEXT: BOLT-INFO:   67108896 estimated bytes
 # CHECK-BOLT-HFE-NEXT: BOLT-INFO: cluster: 1
 # CHECK-BOLT-HFE-NEXT: BOLT-INFO:   4 fragment(s)
-# CHECK-BOLT-HFE-NEXT: BOLT-INFO:   117440604 estimated bytes
+# CHECK-BOLT-HFE-NEXT: BOLT-INFO:   117440568 estimated bytes
 # CHECK-BOLT-HFE-NEXT: BOLT-INFO: cluster: 2
 # CHECK-BOLT-HFE-NEXT: BOLT-INFO:   4 fragment(s)
-# CHECK-BOLT-HFE-NEXT: BOLT-INFO:   117440584 estimated bytes
+# CHECK-BOLT-HFE-NEXT: BOLT-INFO:   117440560 estimated bytes
 # CHECK-BOLT-HFE: BOLT-INFO: relaxed 4 unconditional branches
 # CHECK-BOLT-HFE: BOLT-INFO: 6 branch thunks created
 

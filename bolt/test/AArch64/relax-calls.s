@@ -55,7 +55,7 @@ hot:
 # CHECK-BOLT-LITE-SAME: {{[[:space:]]foo[[:space:]]}}
 
 # CHECK-BOLT-LITE-NOT: BOLT-INFO: {{.*}} short thunks created
-# CHECK-BOLT-LITE:     BOLT-INFO: 3 long thunks created
+# CHECK-BOLT-LITE:     BOLT-INFO: 2 long thunks created
 
 ## Check the number of thunks created in other modes.
 # CHECK-BOLT: BOLT-INFO: relaxed 4 calls with short thunks

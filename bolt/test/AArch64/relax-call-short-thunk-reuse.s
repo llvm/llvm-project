@@ -1,7 +1,9 @@
 ## Check that short call thunks are reused. With --max-cluster-size=160,
 ## A/B form the source cluster, C/D/E separate the target cluster, and F is the
-## call target. A builds a three-hop thunk chain. B reuses the whole chain,
-## while C and D reuse the rungs already placed after their clusters.
+## call target. Without large alignment, measured thunk islands collapse the
+## conservative reservations and all calls remain direct. With 32MiB text
+## alignment, A and B share one thunk while C and D remain in direct Branch26
+## range of F.
 ##
 ##   cluster 0: A -> F, B -> F
 ##   cluster 1: C -> F
@@ -14,28 +16,51 @@
 # RUN: %clang %cflags -Wl,-q -Wl,-e,A %s -o %t -nostdlib
 # RUN: link_fdata --no-lbr %s %t %t.fdata
 # RUN: llvm-strip --strip-unneeded %t
-# RUN: llvm-bolt %t -o %t.bolt --data %t.fdata \
+# RUN: llvm-bolt %t -o %t.conservative --data %t.fdata \
+# RUN:   --compact-code-model --relax-exp --max-cluster-size=160 \
+# RUN:   --max-thunk-chain-length=3 --max-thunk-remeasure=0 \
+# RUN:   | FileCheck %s --check-prefix=CHECK-CONSERVATIVE
+# RUN: llvm-bolt %t -o %t.measured --data %t.fdata \
 # RUN:   --compact-code-model --relax-exp --max-cluster-size=160 \
 # RUN:   --max-thunk-chain-length=3 \
+# RUN:   | FileCheck %s --check-prefix=CHECK-MEASURED \
+# RUN:   --implicit-check-not='BOLT-INFO: relaxed'
+# RUN: llvm-bolt %t -o %t.fixed-point --data %t.fdata \
+# RUN:   --compact-code-model --relax-exp --max-cluster-size=160 \
+# RUN:   --max-thunk-chain-length=3 --max-thunk-remeasure=3 \
+# RUN:   | FileCheck %s --check-prefix=CHECK-FIXED-POINT \
+# RUN:   --implicit-check-not='BOLT-INFO: relaxed'
+# RUN: llvm-bolt %t -o %t.bolt --data %t.fdata \
+# RUN:   --compact-code-model --relax-exp --max-cluster-size=160 \
+# RUN:   --max-thunk-chain-length=3 --align-text=33554432 \
 # RUN:   | FileCheck %s --check-prefix=CHECK-BOLT
+# RUN: not llvm-bolt %t -o %t.invalid --data %t.fdata \
+# RUN:   --compact-code-model --relax-exp --max-cluster-size=134217727 \
+# RUN:   2>&1 | FileCheck %s --check-prefix=CHECK-INVALID
 # RUN: llvm-objdump -d \
-# RUN:   --disassemble-symbols=A,B,C,D,E,F,__AArch64_forward_Thunk_F_0,__AArch64_forward_Thunk_F_1,__AArch64_forward_Thunk_F_2 \
+# RUN:   --disassemble-symbols=A,B,C,D,E,F,__AArch64_forward_Thunk_F_0 \
 # RUN:   %t.bolt | FileCheck %s --check-prefix=CHECK-OUTPUT
 
-# CHECK-BOLT: BOLT-INFO: built 5 function fragment cluster(s)
-# CHECK-BOLT: BOLT-INFO: relaxed 4 calls with short thunks
-# CHECK-BOLT: BOLT-INFO: 3 short thunks created
-# CHECK-BOLT: BOLT-INFO: 6 short thunks reused
+# CHECK-CONSERVATIVE: BOLT-INFO: built 5 function fragment cluster(s)
+# CHECK-CONSERVATIVE: BOLT-INFO: thunk island layout remeasurement disabled
+# CHECK-CONSERVATIVE: BOLT-INFO: relaxed 3 calls with short thunks
+# CHECK-CONSERVATIVE: BOLT-INFO: 2 short thunks created
+# CHECK-CONSERVATIVE: BOLT-INFO: 1 short thunks reused
 
-## The reuse counter is per reused chain rung:
-##
-##   B -> F  reuses cluster 0, cluster 1, cluster 2 thunks  = 3
-##   C -> F  reuses cluster 1, cluster 2 thunks             = 2
-##   D -> F  reuses cluster 2 thunk                         = 1
-##
-##   Total reused thunk lookups:
-##
-##   3 + 2 + 1 = 6
+# CHECK-MEASURED: BOLT-INFO: built 5 function fragment cluster(s)
+# CHECK-MEASURED: BOLT-INFO: thunk island layout did not stabilize after 1 remeasurement iteration
+
+# CHECK-FIXED-POINT: BOLT-INFO: built 5 function fragment cluster(s)
+# CHECK-FIXED-POINT: BOLT-INFO: thunk island layout stabilized after 3 remeasurement iterations
+
+# CHECK-BOLT: BOLT-INFO: built 5 function fragment cluster(s)
+# CHECK-BOLT: BOLT-INFO: relaxed 2 calls with short thunks
+# CHECK-BOLT: BOLT-INFO: 1 short thunks created
+# CHECK-BOLT: BOLT-INFO: 1 short thunks reused
+
+# CHECK-INVALID: BOLT-ERROR: --max-cluster-size leaves only 0 bytes per thunk island, less than the required layout alignment of 2097152 bytes
+
+## B reuses the thunk created for A, accounting for the single reuse.
 
   .text
   .globl A
@@ -100,32 +125,26 @@ F:
   .reloc 0, R_AARCH64_NONE
 
 # CHECK-OUTPUT:      <A>:
-# CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_forward_Thunk_F_2>
+# CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_forward_Thunk_F_0>
 # CHECK-OUTPUT-NEXT: {{.*}} ret
 
 # CHECK-OUTPUT:      <B>:
-# CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_forward_Thunk_F_2>
+# CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_forward_Thunk_F_0>
 # CHECK-OUTPUT-NEXT: {{.*}} ret
-
-# CHECK-OUTPUT:      <__AArch64_forward_Thunk_F_2>:
-# CHECK-OUTPUT-NEXT: {{.*}} b {{.*}} <__AArch64_forward_Thunk_F_1>
 
 # CHECK-OUTPUT:      <C>:
-# CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_forward_Thunk_F_1>
+# CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <F>
 # CHECK-OUTPUT-NEXT: {{.*}} ret
 
-# CHECK-OUTPUT:      <__AArch64_forward_Thunk_F_1>:
-# CHECK-OUTPUT-NEXT: {{.*}} b {{.*}} <__AArch64_forward_Thunk_F_0>
-
 # CHECK-OUTPUT:      <D>:
-# CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_forward_Thunk_F_0>
+# CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <F>
+# CHECK-OUTPUT-NEXT: {{.*}} ret
+
+# CHECK-OUTPUT:      <E>:
 # CHECK-OUTPUT-NEXT: {{.*}} ret
 
 # CHECK-OUTPUT:      <__AArch64_forward_Thunk_F_0>:
 # CHECK-OUTPUT-NEXT: {{.*}} b {{.*}} <F>
-
-# CHECK-OUTPUT:      <E>:
-# CHECK-OUTPUT-NEXT: {{.*}} ret
 
 # CHECK-OUTPUT:      <F>:
 # CHECK-OUTPUT-NEXT: {{.*}} ret

@@ -10,9 +10,10 @@
 ##   cluster 2: C -> A
 ##   cluster 3: D -> A
 ##   cluster 4: E -> A
+##   cluster 5: F -> A
 ##
-## E creates a backward long thunk to A in cluster 4. D can reuse it from the
-## adjacent cluster boundary, but C needs a separate thunk in cluster 2.
+## F creates a backward long thunk to A. E can reuse it from the adjacent
+## cluster boundary, while C and D remain in direct Branch26 range of A.
 
 # REQUIRES: system-linux
 
@@ -21,15 +22,15 @@
 # RUN: llvm-strip --strip-unneeded %t
 # RUN: llvm-bolt %t -o %t.bolt --data %t.fdata \
 # RUN:   --compact-code-model --relax-exp --max-cluster-size=64 \
-# RUN:   --max-thunk-chain-length=0 \
+# RUN:   --max-thunk-chain-length=0 --align-text=33554432 \
 # RUN:   | FileCheck %s --check-prefix=CHECK-BOLT
 # RUN: llvm-objdump -d \
-# RUN:   --disassemble-symbols=A,B,C,D,E,__AArch64_backward_ADRPThunk_A_0,__AArch64_backward_ADRPThunk_A_1 \
+# RUN:   --disassemble-symbols=A,B,C,D,E,F,__AArch64_backward_ADRPThunk_A_0 \
 # RUN:   %t.bolt | FileCheck %s --check-prefix=CHECK-OUTPUT
 
-# CHECK-BOLT: BOLT-INFO: built 5 function fragment cluster(s)
-# CHECK-BOLT: BOLT-INFO: relaxed 3 calls with long thunks
-# CHECK-BOLT: BOLT-INFO: 2 long thunks created
+# CHECK-BOLT: BOLT-INFO: built 6 function fragment cluster(s)
+# CHECK-BOLT: BOLT-INFO: relaxed 2 calls with long thunks
+# CHECK-BOLT: BOLT-INFO: 1 long thunks created
 # CHECK-BOLT: BOLT-INFO: 1 long thunks reused
 
   .text
@@ -81,6 +82,16 @@ E:
   .space 0x30
   .size E, .-E
 
+  .globl F
+  .type F, %function
+F:
+.F_entry:
+# FDATA: 1 F #.F_entry# 100
+  bl A
+  ret
+  .space 0x30
+  .size F, .-F
+
 ## Force relocation mode.
   .reloc 0, R_AARCH64_NONE
 
@@ -90,15 +101,13 @@ E:
 # CHECK-OUTPUT:      <B>:
 # CHECK-OUTPUT-NEXT: {{.*}} ret
 
-# CHECK-OUTPUT:      <__AArch64_backward_ADRPThunk_A_1>:
-# CHECK-OUTPUT-NEXT: {{.*}} adrp x16, {{.*}}
-# CHECK-OUTPUT-NEXT: {{.*}} add x16, x16, {{.*}}
-# CHECK-OUTPUT-NEXT: {{.*}} br x16
-
 # CHECK-OUTPUT:      <C>:
-# CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_backward_ADRPThunk_A_1>
+# CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <A>
 
 # CHECK-OUTPUT:      <D>:
+# CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <A>
+
+# CHECK-OUTPUT:      <E>:
 # CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_backward_ADRPThunk_A_0>
 
 # CHECK-OUTPUT:      <__AArch64_backward_ADRPThunk_A_0>:
@@ -106,5 +115,5 @@ E:
 # CHECK-OUTPUT-NEXT: {{.*}} add x16, x16, {{.*}}
 # CHECK-OUTPUT-NEXT: {{.*}} br x16
 
-# CHECK-OUTPUT:      <E>:
+# CHECK-OUTPUT:      <F>:
 # CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_backward_ADRPThunk_A_0>
