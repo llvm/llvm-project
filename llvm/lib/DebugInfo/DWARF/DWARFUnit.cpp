@@ -813,7 +813,7 @@ void DWARFUnit::updateVariableDieMap(DWARFDie Die) {
     DataExtractor Data(Location.Expr, isLittleEndian());
     DWARFExpression Expr(Data, AddressSize);
     auto It = Expr.begin();
-    if (It == Expr.end())
+    if (It == Expr.end() || It->isError())
       continue;
 
     // Match exactly the main sequence used to describe global variables:
@@ -836,7 +836,7 @@ void DWARFUnit::updateVariableDieMap(DWARFDie Die) {
 
     // Read the optional 2nd operand, a DW_OP_plus_uconst.
     if (++It != Expr.end()) {
-      if (It->getCode() != dwarf::DW_OP_plus_uconst)
+      if (It->isError() || It->getCode() != dwarf::DW_OP_plus_uconst)
         continue;
 
       LocationAddr += It->getRawOperand(0);
