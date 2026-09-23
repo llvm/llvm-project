@@ -524,6 +524,25 @@ static bool __kmp_bitset_equal(kmp_bitset_t *a, kmp_bitset_t *b) {
   return true;
 }
 
+/// Compute a 64-bit hash value for a bitset that is equal whenever
+/// __kmp_bitset_equal is true.
+
+static kmp_uint64 __kmp_bitset_signature(const kmp_bitset_t *bitset) {
+  kmp_uint64 sig = 0;
+  for (kmp_size_t chunk = 0; chunk < bitset->num_chunks; chunk++) {
+    kmp_uint64 bits = bitset->bits[chunk];
+    if (!bits)
+      continue;
+    // Mix the word together with its position, or a set moved wholesale from
+    // one chunk to another would fold to the same signature.
+    kmp_uint64 mixed = (bits ^ chunk) * 0x9e3779b97f4a7c15ull;
+    mixed ^= mixed >> 29;
+    mixed *= 0xbf58476d1ce4e5b9ull;
+    sig ^= mixed ^ (mixed >> 32);
+  }
+  return sig;
+}
+
 static bool __kmp_bitset_intersect_p(kmp_bitset_t *a, kmp_bitset_t *b) {
   if (!a || !b)
     return false;
@@ -1985,6 +2004,8 @@ static bool __kmp_taskgraph_rewrite_irreducible(
 
   kmp_bitset_t **pred_bitsets = nullptr;
   kmp_bitset_t **succ_bitsets = nullptr;
+  kmp_uint64 *pred_sigs = nullptr;
+  kmp_uint64 *succ_sigs = nullptr;
 
   bool regions_combined_p = false;
 
@@ -2027,6 +2048,10 @@ static bool __kmp_taskgraph_rewrite_irreducible(
               thread, sizeof(kmp_bitset_t *) * worklist_length);
           succ_bitsets = (kmp_bitset_t **)__kmp_fast_allocate(
               thread, sizeof(kmp_bitset_t *) * worklist_length);
+          pred_sigs = (kmp_uint64 *)__kmp_fast_allocate(
+              thread, sizeof(kmp_uint64) * worklist_length);
+          succ_sigs = (kmp_uint64 *)__kmp_fast_allocate(
+              thread, sizeof(kmp_uint64) * worklist_length);
 
           for (kmp_int32 i = 0; i < worklist_length; i++) {
             pred_bitsets[i] = __kmp_bitset_alloc(thread, worklist_length);
@@ -2047,15 +2072,23 @@ static bool __kmp_taskgraph_rewrite_irreducible(
                                succ->region->timestamp);
             }
           }
+
+          for (kmp_int32 j = 0; j < worklist_length; j++) {
+            pred_sigs[j] = __kmp_bitset_signature(pred_bitsets[j]);
+            succ_sigs[j] = __kmp_bitset_signature(succ_bitsets[j]);
+          }
         }
 
         kmp_taskgraph_region_dep_t *equal_deps_chain = nullptr;
 
         kmp_int32 same_preds_and_succs = 1;
         bool any_mutex_p = __kmp_taskgraph_region_mutex_p(region);
-        // FIXME: We might be able to do a bit better than this by hashing.
+        // The signatures (hashes) are used here a cheap pre-filter to avoid
+        // unnecessary __kmp_bitset_equal tests -- which can get expensive
+        // on large graphs.
         for (kmp_int32 j = i + 1; j < worklist_length; j++) {
-          if (order[j]->mark != TASKGRAPH_COMBINED &&
+          if (pred_sigs[j] == pred_sigs[i] && succ_sigs[j] == succ_sigs[i] &&
+              order[j]->mark != TASKGRAPH_COMBINED &&
               __kmp_bitset_equal(pred_bitsets[j], pred_bitsets[i]) &&
               __kmp_bitset_equal(succ_bitsets[j], succ_bitsets[i])) {
             TGDBG("regions %p and %p share all predecessors/successors\n",
@@ -2164,6 +2197,8 @@ static bool __kmp_taskgraph_rewrite_irreducible(
     }
     __kmp_fast_free(thread, pred_bitsets);
     __kmp_fast_free(thread, succ_bitsets);
+    __kmp_fast_free(thread, pred_sigs);
+    __kmp_fast_free(thread, succ_sigs);
   }
 
   // Case 2 made progress: let the build loop re-run the series/parallel
