@@ -13,6 +13,7 @@
 #include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include <memory>
+#include <optional>
 #include <string>
 
 namespace mlir {
@@ -54,6 +55,10 @@ struct OneShotBufferizationOptions : public BufferizationOptions {
   /// `AnalysisHeuristic::Fuzzer`. The fuzzer should be used only with
   /// `testAnalysisOnly = true`.
   unsigned analysisFuzzerSeed = 0;
+
+  /// Whether the IR contains a region with more than one block. When unset,
+  /// the analysis walks the IR to compute it.
+  std::optional<bool> hasUnstructuredControlFlow = std::nullopt;
 };
 
 /// State for analysis-enabled bufferization. This class keeps track of alias
@@ -79,6 +84,10 @@ public:
     return static_cast<const OneShotBufferizationOptions &>(
         AnalysisState::getOptions());
   }
+
+  /// True if any region in the analyzed IR has more than one block. Taken from
+  /// the options when set; otherwise computed by walking the IR.
+  bool hasUnstructuredControlFlow() const { return unstructuredControlFlow; }
 
   /// Analyze the given op and its nested ops.
   LogicalResult analyzeOp(Operation *op, const DominanceInfo &domInfo);
@@ -252,6 +261,9 @@ private:
 
   /// Cache definitions of tensor values.
   DenseMap<Value, SetVector<Value>> cachedDefinitions;
+
+  /// True if any region has more than one block.
+  bool unstructuredControlFlow = false;
 
   /// Cached CFG reachability. Defined out-of-line to keep BitVector out of
   /// this header.

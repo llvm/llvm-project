@@ -117,9 +117,31 @@ static void setInPlaceOpOperand(OpOperand &opOperand, bool inPlace) {
 // OneShotAnalysisState
 //===----------------------------------------------------------------------===//
 
+/// A region with more than one block is unstructured control flow. Single-block
+/// regions, including structured loops, are not.
+static bool detectUnstructuredControlFlow(Operation *op) {
+  bool found = false;
+  op->walk([&](Operation *nested) {
+    for (Region &region : nested->getRegions()) {
+      if (region.getBlocks().size() > 1) {
+        found = true;
+        return WalkResult::interrupt();
+      }
+    }
+    return WalkResult::advance();
+  });
+  return found;
+}
+
 OneShotAnalysisState::OneShotAnalysisState(
     Operation *op, const OneShotBufferizationOptions &options)
     : AnalysisState(options, TypeID::get<OneShotAnalysisState>()) {
+  if (options.hasUnstructuredControlFlow) {
+    unstructuredControlFlow = *options.hasUnstructuredControlFlow;
+  } else {
+    unstructuredControlFlow = detectUnstructuredControlFlow(op);
+  }
+
   // Set up alias sets.
   op->walk([&](Operation *op) {
     for (Value v : op->getResults())
@@ -397,11 +419,15 @@ static bool cannotHappenAfter(Operation *a, Operation *b,
     // since it is cached and works within a single block.
     if (domInfo.properlyDominates(a, b))
       return true;
-    Block *aBlock = a->getBlock();
-    Block *bBlock = b->getBlock();
-    if (aBlock != bBlock && aBlock->getParent() == bBlock->getParent() &&
-        !state.isReachableCached(bBlock, aBlock, &extraBarriers))
-      return true;
+    // Distinct blocks in the same region only exist with unstructured control
+    // flow. Dominance is a complete ordering otherwise.
+    if (state.hasUnstructuredControlFlow()) {
+      Block *aBlock = a->getBlock();
+      Block *bBlock = b->getBlock();
+      if (aBlock != bBlock && aBlock->getParent() == bBlock->getParent() &&
+          !state.isReachableCached(bBlock, aBlock, &extraBarriers))
+        return true;
+    }
   } while ((a = a->getParentOp()));
   return false;
 }
@@ -572,6 +598,10 @@ computeCanUseOpDominanceDueToBlocks(OpOperand *uRead, OpOperand *uWrite,
 static bool canUseOpDominanceDueToBlocks(OpOperand *uRead, OpOperand *uWrite,
                                          const SetVector<Value> &definitions,
                                          OneShotAnalysisState &state) {
+  // No multi-block region means no block-based cycle for dominance to miss.
+  if (!state.hasUnstructuredControlFlow())
+    return true;
+
   assert(!definitions.empty() && "expected at least one definition");
   Block *readBlock = uRead->getOwner()->getBlock();
   Block *writeBlock = uWrite->getOwner()->getBlock();
