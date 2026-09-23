@@ -153,6 +153,8 @@ subroutine test_next(c)
   ! CHECK: %[[RES:.*]] = arith.select %[[CMP]], %[[INC]], %[[MAX]] : i32
   ! Boundary check: ordinal == 3
   ! CHECK: %[[BOUND:.*]] = arith.cmpi eq, %[[ORD]], %[[MAX]] : i32
+  ! A non-optional local STAT needs no runtime presence check.
+  ! CHECK-NOT: fir.is_present
   ! STAT handling: select 112 or 0
   ! CHECK: arith.constant 112
   ! CHECK: arith.constant 0
@@ -207,6 +209,49 @@ subroutine test_next_no_stat(c)
   ! CHECK:   fir.call @{{.*}}ReportFatalUserError
   ! CHECK: }
   result = next(c)
+end subroutine
+
+! -----------------------------------------------------------------------------
+!            Test NEXT() with a STAT that may be absent at runtime
+! -----------------------------------------------------------------------------
+
+! An absent optional dummy (or unallocated allocatable) forwarded as STAT= is
+! not present: STAT must not be written and the boundary is a fatal error.
+
+! CHECK-LABEL: func.func @_QPtest_next_optional_stat(
+subroutine test_next_optional_stat(c, stat)
+  use enum_mod
+  type(color), intent(in) :: c
+  integer, optional, intent(out) :: stat
+  type(color) :: result
+  ! CHECK: %[[STAT:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name = "_QFtest_next_optional_statEstat"}
+  ! CHECK: %[[BOUND:.*]] = arith.cmpi eq
+  ! CHECK: %[[PRES:.*]] = fir.is_present %[[STAT]]#0 : (!fir.ref<i32>) -> i1
+  ! CHECK: fir.if %[[PRES]] {
+  ! CHECK:   arith.select %[[BOUND]]
+  ! CHECK:   hlfir.assign %{{.*}} to %[[STAT]]#0
+  ! CHECK: } else {
+  ! CHECK:   fir.if %[[BOUND]] {
+  ! CHECK:     fir.call @{{.*}}ReportFatalUserError
+  result = next(c, stat=stat)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_next_allocatable_stat(
+subroutine test_next_allocatable_stat(c, stat)
+  use enum_mod
+  type(color), intent(in) :: c
+  integer, allocatable, intent(inout) :: stat
+  type(color) :: result
+  ! CHECK: %[[BOUND:.*]] = arith.cmpi eq
+  ! CHECK: fir.box_addr
+  ! CHECK: %[[PRES:.*]] = arith.cmpi ne
+  ! CHECK: fir.if %[[PRES]] {
+  ! CHECK:   arith.select %[[BOUND]]
+  ! CHECK:   hlfir.assign
+  ! CHECK: } else {
+  ! CHECK:   fir.if %[[BOUND]] {
+  ! CHECK:     fir.call @{{.*}}ReportFatalUserError
+  result = next(c, stat=stat)
 end subroutine
 
 ! -----------------------------------------------------------------------------
@@ -283,6 +328,16 @@ contains
     type(color2) :: c
     c = c2blue
   end function
+  ! CHECK-LABEL: func.func @_QMenum_func_modPpick_array() -> !fir.array<3xi32>
+  function pick_array() result(c)
+    type(color2) :: c(3)
+    c = [c2red, c2green, c2blue]
+  end function
+  ! CHECK-LABEL: func.func @_QMenum_func_modPpick_alloc() -> !fir.box<!fir.heap<!fir.array<?xi32>>>
+  function pick_alloc() result(c)
+    type(color2), allocatable :: c(:)
+    c = [c2red, c2green, c2blue]
+  end function
 end module
 
 ! CHECK-LABEL: func.func @_QPtest_func_result()
@@ -298,6 +353,30 @@ subroutine test_func_result()
   ! The result is a genuine enumeration value: comparison lowers to i32 cmpi.
   ! CHECK: arith.cmpi eq, %{{.*}}, %{{.*}} : i32
   l = (c == c2blue)
+end subroutine
+
+! Non-scalar enumeration results (array, allocatable) use the normal
+! caller-allocated fir.save_result ABI, like integer arrays.
+
+! CHECK-LABEL: func.func @_QPtest_func_result_array()
+subroutine test_func_result_array()
+  use enum_func_mod
+  type(color2) :: c(3)
+  ! CHECK: hlfir.eval_in_mem {{.*}} -> !hlfir.expr<3xi32> {
+  ! CHECK: ^bb0(%[[TMP:.*]]: !fir.ref<!fir.array<3xi32>>):
+  ! CHECK: %[[RES:.*]] = fir.call @_QMenum_func_modPpick_array() {{.*}}: () -> !fir.array<3xi32>
+  ! CHECK: fir.save_result %[[RES]] to %[[TMP]]
+  c = pick_array()
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_func_result_alloc()
+subroutine test_func_result_alloc()
+  use enum_func_mod
+  type(color2), allocatable :: c(:)
+  ! CHECK: %[[TMP:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> {bindc_name = ".result"}
+  ! CHECK: %[[RES:.*]] = fir.call @_QMenum_func_modPpick_alloc() {{.*}}: () -> !fir.box<!fir.heap<!fir.array<?xi32>>>
+  ! CHECK: fir.save_result %[[RES]] to %{{.*}} : !fir.box<!fir.heap<!fir.array<?xi32>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+  c = pick_alloc()
 end subroutine
 
 ! -----------------------------------------------------------------------------
@@ -423,6 +502,31 @@ subroutine test_previous_array(arr)
   ! CHECK: %[[SEL:.*]] = arith.select %[[CMP]], %[[DEC]], %[[ONE]] : i32
   ! CHECK: hlfir.yield_element %[[SEL]] : i32
   parr = previous(arr, stat=stat)
+end subroutine
+
+! -----------------------------------------------------------------------------
+!            Test NEXT() over an array with a STAT that may be absent
+! -----------------------------------------------------------------------------
+
+! CHECK-LABEL: func.func @_QPtest_next_array_optional_stat(
+subroutine test_next_array_optional_stat(arr, stat)
+  use enum_mod
+  type(color), intent(in) :: arr(3)
+  integer, optional, intent(out) :: stat(3)
+  type(color) :: narr(3)
+  ! CHECK: %[[STAT:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name = "_QFtest_next_array_optional_statEstat"}
+  ! CHECK: hlfir.elemental
+  ! CHECK: %[[PRES:.*]] = fir.is_present %[[STAT]]#0 : (!fir.ref<!fir.array<3xi32>>) -> i1
+  ! CHECK: fir.if %[[PRES]] {
+  ! CHECK:   %[[SE:.*]] = hlfir.elemental
+  ! CHECK:   hlfir.assign %[[SE]] to %[[STAT]]#0
+  ! CHECK:   hlfir.destroy %[[SE]]
+  ! CHECK: } else {
+  ! CHECK:   %[[MASK:.*]] = hlfir.elemental
+  ! CHECK:   hlfir.any %[[MASK]]
+  ! CHECK:   fir.call @{{.*}}ReportFatalUserError
+  ! CHECK:   hlfir.destroy %[[MASK]]
+  narr = next(arr, stat=stat)
 end subroutine
 
 ! -----------------------------------------------------------------------------

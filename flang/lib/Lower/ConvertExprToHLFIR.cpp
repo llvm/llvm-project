@@ -1775,6 +1775,67 @@ private:
     return {derived, count};
   }
 
+  // Return the syntactically supplied STAT expression of NEXT/PREVIOUS, or
+  // nullptr if none was written.
+  const Fortran::lower::SomeExpr *getEnumerationStatExpr(
+      const Fortran::evaluate::FunctionRef<Fortran::evaluate::SomeDerived>
+          &expr) {
+    if (expr.arguments().size() < 2 || !expr.arguments()[1])
+      return nullptr;
+    const auto *statExpr = expr.arguments()[1]->UnwrapExpr();
+    assert(statExpr && "STAT argument must be an expression");
+    return statExpr;
+  }
+
+  // Return an i1 telling whether STAT is present at runtime, or a null value
+  // if it is always present. An absent optional dummy or an unallocated or
+  // disassociated allocatable/pointer actual makes STAT not present.
+  mlir::Value
+  genEnumerationStatIsPresent(const Fortran::lower::SomeExpr &statExpr,
+                              hlfir::Entity stat) {
+    if (!Fortran::evaluate::MayBePassedAsAbsentOptional(statExpr))
+      return {};
+    mlir::Location loc = getLoc();
+    fir::FirOpBuilder &builder = getBuilder();
+    if (Fortran::evaluate::IsAllocatableOrPointerObject(statExpr))
+      return builder.genIsNotNullAddr(
+          loc, hlfir::genVariableRawAddress(loc, builder, stat));
+    return fir::IsPresentOp::create(builder, loc, builder.getI1Type(), stat)
+        .getResult();
+  }
+
+  // Emit genPresent() when STAT is present at runtime and genAbsent()
+  // otherwise. A null isPresent means STAT is always present.
+  template <typename PresentFn, typename AbsentFn>
+  void genIfEnumerationStatPresent(mlir::Value isPresent, PresentFn genPresent,
+                                   AbsentFn genAbsent) {
+    if (!isPresent) {
+      genPresent();
+      return;
+    }
+    fir::FirOpBuilder &builder = getBuilder();
+    auto ifOp = fir::IfOp::create(builder, getLoc(), {}, isPresent,
+                                  /*withElseRegion=*/true);
+    builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+    genPresent();
+    builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
+    genAbsent();
+    builder.setInsertionPointAfter(ifOp);
+  }
+
+  // Error termination if cond (i1) is true; used when STAT is not present.
+  void genEnumerationBoundaryFatal(mlir::Value cond) {
+    mlir::Location loc = getLoc();
+    fir::FirOpBuilder &builder = getBuilder();
+    auto ifOp = fir::IfOp::create(builder, loc, {}, cond,
+                                  /*withElseRegion=*/false);
+    builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+    fir::runtime::genReportFatalUserError(
+        builder, loc,
+        "NEXT or PREVIOUS of enumeration type at boundary without STAT=");
+    builder.setInsertionPointAfter(ifOp);
+  }
+
   // Helper to lower STAT argument handling for NEXT/PREVIOUS.
   // atBoundary is a boolean indicating whether the boundary condition was hit.
   void genEnumerationStatHandling(
@@ -1783,12 +1844,15 @@ private:
       mlir::Value atBoundary, mlir::Type resType) {
     mlir::Location loc = getLoc();
     fir::FirOpBuilder &builder = getBuilder();
-    if (expr.arguments().size() >= 2 && expr.arguments()[1]) {
-      // STAT is present — assign 0 or FORTRAN_RUNTIME_STAT_ENUM_BOUNDARY (112)
-      const auto *statExpr = expr.arguments()[1]->UnwrapExpr();
-      assert(statExpr && "STAT argument must be an expression");
-      hlfir::Entity statAddr = Fortran::lower::convertExprToHLFIR(
-          loc, converter, *statExpr, getSymMap(), getStmtCtx());
+    const Fortran::lower::SomeExpr *statExpr = getEnumerationStatExpr(expr);
+    if (!statExpr) {
+      genEnumerationBoundaryFatal(atBoundary);
+      return;
+    }
+    hlfir::Entity statAddr = Fortran::lower::convertExprToHLFIR(
+        loc, converter, *statExpr, getSymMap(), getStmtCtx());
+    auto genStatAssign = [&]() {
+      // Assign 0 or FORTRAN_RUNTIME_STAT_ENUM_BOUNDARY (112).
       mlir::Type statType = statAddr.getFortranElementType();
       mlir::Value boundaryConst = builder.createIntegerConstant(
           loc, statType, 112 /* FORTRAN_RUNTIME_STAT_ENUM_BOUNDARY */);
@@ -1796,16 +1860,10 @@ private:
       mlir::Value statVal = mlir::arith::SelectOp::create(
           builder, loc, atBoundary, boundaryConst, zeroConst);
       hlfir::AssignOp::create(builder, loc, statVal, statAddr);
-    } else {
-      // STAT absent — error termination if at boundary
-      auto ifOp = fir::IfOp::create(builder, loc, {}, atBoundary,
-                                    /*withElseRegion=*/false);
-      builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
-      fir::runtime::genReportFatalUserError(
-          builder, loc,
-          "NEXT or PREVIOUS of enumeration type at boundary without STAT=");
-      builder.setInsertionPointAfter(ifOp);
-    }
+    };
+    genIfEnumerationStatPresent(
+        genEnumerationStatIsPresent(*statExpr, statAddr), genStatAssign,
+        [&]() { genEnumerationBoundaryFatal(atBoundary); });
   }
 
   // Compute the per-element NEXT/PREVIOUS result and boundary flag from a
@@ -1869,12 +1927,39 @@ private:
     getStmtCtx().attachCleanup(
         [=]() { hlfir::DestroyOp::create(*bldr, loc, resultElem); });
 
-    if (expr.arguments().size() >= 2 && expr.arguments()[1]) {
-      // STAT present: elementwise 0/112 into the conformable STAT array.
-      const auto *statExpr = expr.arguments()[1]->UnwrapExpr();
-      assert(statExpr && "STAT argument must be an expression");
-      hlfir::Entity statEntity = Fortran::lower::convertExprToHLFIR(
-          loc, converter, *statExpr, getSymMap(), getStmtCtx());
+    // STAT not present: error termination if any element is at a boundary.
+    auto genBoundaryFatal = [&]() {
+      mlir::Type logType = fir::LogicalType::get(builder.getContext(), 4);
+      auto maskKernel = [&](mlir::Location l, fir::FirOpBuilder &b,
+                            mlir::ValueRange idx) -> hlfir::Entity {
+        mlir::Value ordinal =
+            hlfir::loadTrivialScalar(l, b, hlfir::getElementAt(l, b, arg, idx));
+        auto [result, atBoundary] =
+            genEnumOrdinalStep(b, l, ordinal, eleTy, count, isNext);
+        (void)result;
+        return hlfir::Entity{b.createConvert(l, logType, atBoundary)};
+      };
+      mlir::Value mask =
+          hlfir::genElementalOp(loc, builder, logType, shape, /*typeParams=*/{},
+                                maskKernel, /*isUnordered=*/true);
+      mlir::Value anyBoundary =
+          hlfir::AnyOp::create(builder, loc, logType, mask,
+                               /*dim=*/mlir::Value{});
+      genEnumerationBoundaryFatal(
+          builder.createConvert(loc, builder.getI1Type(), anyBoundary));
+      hlfir::DestroyOp::create(builder, loc, mask);
+    };
+
+    const Fortran::lower::SomeExpr *statExpr = getEnumerationStatExpr(expr);
+    if (!statExpr) {
+      genBoundaryFatal();
+      return hlfir::EntityWithAttributes{resultElem};
+    }
+    hlfir::Entity statEntity = Fortran::lower::convertExprToHLFIR(
+        loc, converter, *statExpr, getSymMap(), getStmtCtx());
+    // STAT present: elementwise 0/112 into the conformable STAT array. The
+    // temporary is destroyed inline since it may live inside a fir.if region.
+    auto genStatAssign = [&]() {
       mlir::Type statType = statEntity.getFortranElementType();
       auto statKernel = [&](mlir::Location l, fir::FirOpBuilder &b,
                             mlir::ValueRange idx) -> hlfir::Entity {
@@ -1892,37 +1977,11 @@ private:
           loc, builder, statType, shape, /*typeParams=*/{}, statKernel,
           /*isUnordered=*/true);
       hlfir::AssignOp::create(builder, loc, statElem, statEntity);
-      getStmtCtx().attachCleanup(
-          [=]() { hlfir::DestroyOp::create(*bldr, loc, statElem); });
-    } else {
-      // STAT absent: error termination if any element is at a boundary.
-      mlir::Type logType = fir::LogicalType::get(builder.getContext(), 4);
-      auto maskKernel = [&](mlir::Location l, fir::FirOpBuilder &b,
-                            mlir::ValueRange idx) -> hlfir::Entity {
-        mlir::Value ordinal =
-            hlfir::loadTrivialScalar(l, b, hlfir::getElementAt(l, b, arg, idx));
-        auto [result, atBoundary] =
-            genEnumOrdinalStep(b, l, ordinal, eleTy, count, isNext);
-        (void)result;
-        return hlfir::Entity{b.createConvert(l, logType, atBoundary)};
-      };
-      mlir::Value mask =
-          hlfir::genElementalOp(loc, builder, logType, shape, /*typeParams=*/{},
-                                maskKernel, /*isUnordered=*/true);
-      mlir::Value anyBoundary =
-          hlfir::AnyOp::create(builder, loc, logType, mask,
-                               /*dim=*/mlir::Value{});
-      mlir::Value cond =
-          builder.createConvert(loc, builder.getI1Type(), anyBoundary);
-      auto ifOp = fir::IfOp::create(builder, loc, {}, cond,
-                                    /*withElseRegion=*/false);
-      builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
-      fir::runtime::genReportFatalUserError(
-          builder, loc,
-          "NEXT or PREVIOUS of enumeration type at boundary without STAT=");
-      builder.setInsertionPointAfter(ifOp);
-      hlfir::DestroyOp::create(builder, loc, mask);
-    }
+      hlfir::DestroyOp::create(builder, loc, statElem);
+    };
+    genIfEnumerationStatPresent(
+        genEnumerationStatIsPresent(*statExpr, statEntity), genStatAssign,
+        genBoundaryFatal);
     return hlfir::EntityWithAttributes{resultElem};
   }
 
