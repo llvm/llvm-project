@@ -567,23 +567,26 @@ RT_API_ATTRS bool RealOutputEditing<KIND>::EditFOutput(const DataEdit &edit) {
       zeroesBeforePoint = 1;
       ++totalLength;
     }
-    int leadingSpaces{width > totalLength ? width - totalLength : 0};
+#if !defined(RT_DEVICE_COMPILATION)
     // Fast path: assemble the whole field (padding, sign, digits, point,
     // fractional zeroes, trailing blanks) into one buffer and emit it with a
     // single Emit() call.
+    int leadingSpaces{width > totalLength ? width - totalLength : 0};
     constexpr int maxAssembledField{512};
     if (!edit.IsListDirected() &&
         leadingSpaces + totalLength <= maxAssembledField) {
       char field[maxAssembledField];
       char *p{field};
       auto copyFrom{[&](const char *from, int n) {
-        while (n-- > 0) {
-          *p++ = *from++;
+        if (n > 0) {
+          std::memcpy(p, from, n);
+          p += n;
         }
       }};
       auto fillWith{[&](char c, int n) {
-        while (n-- > 0) {
-          *p++ = c;
+        if (n > 0) {
+          std::memset(p, c, n);
+          p += n;
         }
       }};
       fillWith(' ', leadingSpaces);
@@ -594,14 +597,15 @@ RT_API_ATTRS bool RealOutputEditing<KIND>::EditFOutput(const DataEdit &edit) {
       copyFrom(convertedStr + signLength + digitsBeforePoint, digitsAfterPoint);
       fillWith('0', trailingZeroes);
       fillWith(' ', trailingBlanks_);
-      // Safety check: the number of characters wrote (p - field)
-      // must equal the field width  computed (leadingSpaces + totalLength).
-      // If they differ, the buffer was mis-filled, so stop instead of
-      // emitting a wrong-length field.
+      // Safety check: the number of characters written (p - field) must equal
+      // the field width computed (leadingSpaces + totalLength). If they
+      // differ, the buffer was mis-filled, so stop instead of emitting a
+      // wrong-length field.
       RUNTIME_CHECK(
           io_.GetIoErrorHandler(), p - field == leadingSpaces + totalLength);
       return EmitAscii(io_, field, static_cast<std::size_t>(p - field));
     }
+#endif // !defined(RT_DEVICE_COMPILATION)
     return EmitPrefix(edit, totalLength, width) &&
         EmitAscii(io_, convertedStr, signLength + digitsBeforePoint) &&
         EmitRepeated(io_, '0', zeroesBeforePoint) &&

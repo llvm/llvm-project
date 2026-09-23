@@ -100,9 +100,7 @@ RT_API_ATTRS bool EmitRepeated(CONTEXT &to, char ch, std::size_t n) {
     // Faster path, no encoding needed: emit the run in bulk
     char buffer[64];
     std::size_t chunk{n < sizeof buffer ? n : sizeof buffer};
-    for (std::size_t j{0}; j < chunk; ++j) {
-      buffer[j] = ch;
-    }
+    std::memset(buffer, ch, chunk);
     while (n > 0) {
       std::size_t bytes{n < chunk ? n : chunk};
       if (!to.Emit(buffer, bytes)) {
