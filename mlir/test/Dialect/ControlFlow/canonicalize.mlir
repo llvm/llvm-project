@@ -687,6 +687,33 @@ func.func @no_merge_self_arg_loop(%step: i1) -> i1 {
   return %result : i1
 }
 
+// -----
+
+// Related to the case above: after folding the constant guard, ^body is the
+// unique predecessor of ^header. The backedge operand is `addi %iter, 1`,
+// which is derived from the destination block argument. Merging would rewrite
+// that add to `addi %next, 1` (a cyclic def) and arith canonicalization would
+// then keep doubling the step.
+
+// CHECK-LABEL: @no_merge_derived_from_dest_arg
+//  CHECK-NEXT:   %[[C0:.*]] = arith.constant 0 : i32
+//  CHECK-NEXT:   return %[[C0]]
+func.func @no_merge_derived_from_dest_arg(%loop: i1, %initial: i32) -> i32 {
+  %true = arith.constant true
+  %c1 = arith.constant 1 : i32
+  %c0 = arith.constant 0 : i32
+  cf.br ^guard(%true : i1)
+^guard(%enter: i1):
+  cf.cond_br %enter, ^exit(%c0 : i32), ^header(%initial : i32)
+^header(%iter: i32):
+  cf.cond_br %loop, ^body, ^exit(%iter : i32)
+^body:
+  %next = arith.addi %iter, %c1 : i32
+  cf.br ^header(%next : i32)
+^exit(%result: i32):
+  return %result : i32
+}
+
 // Verify that block arguments are replaced with a uniform incoming value
 // when all predecessors pass the same SSA value
 

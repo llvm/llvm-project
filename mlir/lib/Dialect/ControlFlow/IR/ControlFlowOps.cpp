@@ -25,6 +25,7 @@
 #include "mlir/IR/Value.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include <numeric>
 
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOpsDialect.cpp.inc"
@@ -156,6 +157,28 @@ static LogicalResult collapseBranch(Block *&successor,
   return success();
 }
 
+/// Return true if `value` is a block argument of `block`, or is defined by an
+/// operation that transitively uses such an argument.
+static bool isTransitivelyDefinedFrom(Value value, Block *block) {
+  SmallVector<Value, 8> worklist{value};
+  SmallPtrSet<Value, 16> visited;
+  while (!worklist.empty()) {
+    Value current = worklist.pop_back_val();
+    if (!visited.insert(current).second)
+      continue;
+    if (auto arg = dyn_cast<BlockArgument>(current)) {
+      if (arg.getOwner() == block)
+        return true;
+      continue;
+    }
+    Operation *def = current.getDefiningOp();
+    if (!def)
+      continue;
+    llvm::append_range(worklist, def->getOperands());
+  }
+  return false;
+}
+
 /// Simplify a branch to a block that has a single predecessor. This effectively
 /// merges the two blocks.
 static LogicalResult
@@ -166,13 +189,15 @@ simplifyBrToBlockWithSinglePred(BranchOp op, PatternRewriter &rewriter) {
   if (succ == opParent || !llvm::hasSingleElement(succ->getPredecessors()))
     return failure();
 
-  // If any branch operand is itself a block argument of the successor, merging
-  // would call replaceAllUsesWith(arg, arg) — a no-op — leaving dangling uses
-  // of that argument after the successor block is erased.
+  // If any branch operand is defined from a block argument of the successor,
+  // merging replaces that argument with the operand. A direct self-argument
+  // makes replaceAllUsesWith a no-op and leaves dangling uses after the
+  // successor is erased. A value derived from the argument (for example
+  // `addi %arg, 1` on a backedge) becomes a cyclic def after the replacement,
+  // and later arith folds do not terminate.
   for (Value operand : op.getOperands())
-    if (auto ba = dyn_cast<BlockArgument>(operand))
-      if (ba.getOwner() == succ)
-        return failure();
+    if (isTransitivelyDefinedFrom(operand, succ))
+      return failure();
 
   // Merge the successor into the current block and erase the branch.
   SmallVector<Value> brOperands(op.getOperands());
