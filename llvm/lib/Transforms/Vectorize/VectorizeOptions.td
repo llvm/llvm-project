@@ -41,6 +41,8 @@ defm : EnumField<"scalable-vectorization", "LoopVectorizeHints::ScalableForceKin
   "Control whether the compiler can use scalable vectors to vectorize a loop">;
 defm : BoolField<"vectorize-vector-loops", "false",
   "Allow vectorization of loops with vector instructions.">;
+defm : BoolField<"interleave-revec-loops", "false",
+  "Allow IC>1 for re-vectorised loops.">;
 
 // LoopVectorizationPlanner.cpp
 defm : BoolField<"force-target-supports-gather-scatter-ops", "false",
