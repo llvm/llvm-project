@@ -487,6 +487,8 @@ RValue PPC32_SVR4_ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAList,
   bool isI64 = Ty->isIntegerType() && getContext().getTypeSize(Ty) == 64;
   bool isInt = !Ty->isFloatingType();
   bool isF64 = Ty->isFloatingType() && getContext().getTypeSize(Ty) == 64;
+  bool isPPC_FP128InFPRs =
+      !IsSoftFloatABI && CGF.ConvertType(Ty)->isPPC_FP128Ty();
 
   // All aggregates are passed indirectly?  That doesn't seem consistent
   // with the argument-lowering code.
@@ -510,8 +512,11 @@ RValue PPC32_SVR4_ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAList,
     NumRegs = Builder.CreateAnd(NumRegs, Builder.getInt8((uint8_t) ~1U));
   }
 
-  llvm::Value *CC =
-      Builder.CreateICmpULT(NumRegs, Builder.getInt8(OverflowLimit), "cond");
+  // A ppc_fp128 uses two registers, and won't be split between registers and
+  // the stack.
+  llvm::Value *CC = Builder.CreateICmpULT(
+      NumRegs, Builder.getInt8(OverflowLimit - (isPPC_FP128InFPRs ? 1 : 0)),
+      "cond");
 
   llvm::BasicBlock *UsingRegs = CGF.createBasicBlock("using_regs");
   llvm::BasicBlock *UsingOverflow = CGF.createBasicBlock("using_overflow");
@@ -550,9 +555,11 @@ RValue PPC32_SVR4_ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAList,
                       RegAddr.getAlignment().alignmentOfArrayElement(RegSize));
 
     // Increase the used-register count.
-    NumRegs =
-      Builder.CreateAdd(NumRegs,
-                        Builder.getInt8((isI64 || (isF64 && IsSoftFloatABI)) ? 2 : 1));
+    CharUnits ArgSize =
+        isIndirect ? CGF.getPointerSize() : getContext().getTypeSizeInChars(Ty);
+    NumRegs = Builder.CreateAdd(
+        NumRegs, Builder.getInt8(llvm::divideCeil(ArgSize.getQuantity(),
+                                                  RegSize.getQuantity())));
     Builder.CreateStore(NumRegs, NumRegsAddr);
 
     CGF.EmitBranch(Cont);
@@ -582,6 +589,11 @@ RValue PPC32_SVR4_ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAList,
                 OverflowAreaAlign);
     // Round up address of argument to alignment
     CharUnits Align = CGF.getContext().getTypeAlignInChars(Ty);
+
+    // Because ppc_fp128 is passed as 2 f64 values, the alignment is only 8.
+    if (isPPC_FP128InFPRs)
+      Align = CharUnits::fromQuantity(8);
+
     if (Align > OverflowAreaAlign) {
       llvm::Value *Ptr = OverflowArea.emitRawPointer(CGF);
       OverflowArea = Address(emitRoundPointerUpToAlignment(CGF, Ptr, Align),
