@@ -125,14 +125,15 @@ leave:
   ret void
 }
 
-; %start is in [-1, 127], which bounds the backedge-taken count by 128. That is
-; tighter than the backedge-taken count if the backedge is taken at all (241).
+; %start is in [-1, 127], which bounds the backedge-taken count by 128. The
+; backedge-taken count if the backedge is taken at all is 241, so the backedge
+; is never taken.
 define void @s_3(i8 %n) {
 ; CHECK-LABEL: 's_3'
 ; CHECK-NEXT:  Determining loop execution counts for: @s_3
-; CHECK-NEXT:  Loop %loop: backedge-taken count is (-127 + (-1 * %n) + ((112 + %n) smax (127 + %n)<nsw>))
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i8 -15, actual taken count either this or zero.
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-127 + (-1 * %n) + ((112 + %n) smax (127 + %n)<nsw>)), actual taken count either this or zero.
+; CHECK-NEXT:  Loop %loop: backedge-taken count is i8 0
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i8 0
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i8 0
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
