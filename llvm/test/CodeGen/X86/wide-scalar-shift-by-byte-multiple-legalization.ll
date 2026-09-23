@@ -19940,7 +19940,7 @@ define void @ashr_64bytes_qwordOff(ptr %src.ptr, ptr %qwordOff.ptr, ptr %dst) no
 ; X86-SSE42-NEXT:    pushl %ebx
 ; X86-SSE42-NEXT:    pushl %edi
 ; X86-SSE42-NEXT:    pushl %esi
-; X86-SSE42-NEXT:    subl $128, %esp
+; X86-SSE42-NEXT:    addl $-128, %esp
 ; X86-SSE42-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE42-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE42-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -19985,7 +19985,7 @@ define void @ashr_64bytes_qwordOff(ptr %src.ptr, ptr %qwordOff.ptr, ptr %dst) no
 ; X86-SSE42-NEXT:    movups %xmm2, 32(%eax)
 ; X86-SSE42-NEXT:    movups %xmm1, 16(%eax)
 ; X86-SSE42-NEXT:    movups %xmm0, (%eax)
-; X86-SSE42-NEXT:    addl $128, %esp
+; X86-SSE42-NEXT:    subl $-128, %esp
 ; X86-SSE42-NEXT:    popl %esi
 ; X86-SSE42-NEXT:    popl %edi
 ; X86-SSE42-NEXT:    popl %ebx
@@ -19996,7 +19996,7 @@ define void @ashr_64bytes_qwordOff(ptr %src.ptr, ptr %qwordOff.ptr, ptr %dst) no
 ; X86-AVX1-NEXT:    pushl %ebx
 ; X86-AVX1-NEXT:    pushl %edi
 ; X86-AVX1-NEXT:    pushl %esi
-; X86-AVX1-NEXT:    subl $128, %esp
+; X86-AVX1-NEXT:    addl $-128, %esp
 ; X86-AVX1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-AVX1-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -20039,7 +20039,7 @@ define void @ashr_64bytes_qwordOff(ptr %src.ptr, ptr %qwordOff.ptr, ptr %dst) no
 ; X86-AVX1-NEXT:    vmovups %xmm2, 32(%eax)
 ; X86-AVX1-NEXT:    vmovups %xmm1, 16(%eax)
 ; X86-AVX1-NEXT:    vmovups %xmm0, (%eax)
-; X86-AVX1-NEXT:    addl $128, %esp
+; X86-AVX1-NEXT:    subl $-128, %esp
 ; X86-AVX1-NEXT:    popl %esi
 ; X86-AVX1-NEXT:    popl %edi
 ; X86-AVX1-NEXT:    popl %ebx

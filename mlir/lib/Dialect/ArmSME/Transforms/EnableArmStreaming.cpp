@@ -122,7 +122,7 @@ struct EnableArmStreamingPass
         return;
     }
 
-    if (function->getAttr(kEnableArmStreamingIgnoreAttr) ||
+    if (function->getDiscardableAttr(kEnableArmStreamingIgnoreAttr) ||
         streamingMode == ArmStreamingMode::Disabled)
       return;
 
@@ -137,8 +137,8 @@ struct EnableArmStreamingPass
     // streaming-mode (see section B1.1.1, IDGNQM of spec [1]). It may be worth
     // supporting this later.
     if (zaMode != ArmZaMode::Disabled)
-      function->setAttr((Twine("llvm.") + stringifyArmZaMode(zaMode)).str(),
-                        unitAttr);
+      function->setDiscardableAttr(
+          (Twine("llvm.") + stringifyArmZaMode(zaMode)).str(), unitAttr);
   }
 };
 } // namespace

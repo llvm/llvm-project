@@ -2,7 +2,7 @@
 
 #map = affine_map<(d0, d1) -> (d0, d1)>
 module attributes {dlti.map = #dlti.map<"MPI:Implementation" = "mpich", "MPI:comm_world_rank" = 0 : i32>} {
-  shard.grid @grid(shape = 1) {sym_visibility = "private"}
+  shard.grid "private" @grid(shape = 1)
   func.func @test_forward() -> (tensor<6x6xi32>, tensor<6x6xi32>, tensor<i32>) attributes {llvm.emit_c_interface} {
     %c1_i32 = arith.constant 1 : i32
     // CHECK: [[v3:%.*]] = tensor.empty() : tensor<6x6xi32>
