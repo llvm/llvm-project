@@ -618,9 +618,6 @@ add_entrypoint_object(
     libc.src.__support.common
     libc.src.__support.macros.config
     libc.src.__support.threads.thread
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
-    -fno-omit-frame-pointer
 )
 
 add_entrypoint_object(
@@ -653,6 +650,34 @@ add_entrypoint_object(
     pthread_equal.h
   DEPENDS
     libc.include.pthread
+    libc.src.__support.threads.thread
+)
+
+add_entrypoint_object(
+  __pthread_cleanup_pop
+  SRCS
+    __pthread_cleanup_pop.cpp
+  HDRS
+    __pthread_cleanup_pop.h
+  DEPENDS
+    libc.hdr.types.struct___pthread_cleanup_frame
+    libc.src.__support.common
+    libc.src.__support.libc_assert
+    libc.src.__support.macros.config
+    libc.src.__support.threads.thread
+)
+
+add_entrypoint_object(
+  __pthread_cleanup_push
+  SRCS
+    __pthread_cleanup_push.cpp
+  HDRS
+    __pthread_cleanup_push.h
+  DEPENDS
+    libc.hdr.types.struct___pthread_cleanup_frame
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
     libc.src.__support.threads.thread
 )
 

@@ -1003,10 +1003,10 @@ mlir::Value ComplexExprEmitter::VisitAbstractConditionalOperator(
   // Bind the common expression if necessary.
   CIRGenFunction::OpaqueValueMapping binding(cgf, e);
 
-  CIRGenFunction::ConditionalEvaluation eval(cgf);
-
   Expr *cond = e->getCond()->IgnoreParens();
   mlir::Value condValue = cgf.evaluateExprAsBool(cond);
+
+  CIRGenFunction::ConditionalEvaluation eval(cgf);
 
   return cir::TernaryOp::create(
              builder, loc, condValue,

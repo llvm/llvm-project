@@ -55,11 +55,14 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.fcntl.openat
     libc.src.fcntl.posix_fadvise
     libc.src.fcntl.posix_fadvise64
+    libc.src.fcntl.posix_fallocate
 
     # grp.h entrypoints
     libc.src.grp.endgrent
     libc.src.grp.getgrent
+    libc.src.grp.getgrgid
     libc.src.grp.getgrgid_r
+    libc.src.grp.getgrnam
     libc.src.grp.getgrnam_r
     libc.src.grp.setgrent
 
@@ -1335,6 +1338,8 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.dirent.fdopendir
 
     # pthread.h entrypoints
+    libc.src.pthread.__pthread_cleanup_pop
+    libc.src.pthread.__pthread_cleanup_push
     libc.src.pthread.pthread_atfork
     libc.src.pthread.pthread_attr_destroy
     libc.src.pthread.pthread_attr_getdetachstate
@@ -1426,6 +1431,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_setspecific
 
     # sched.h entrypoints
+    libc.src.sched.clone
     libc.src.sched.__sched_andcpuset
     libc.src.sched.__sched_clrcpuset
     libc.src.sched.__sched_cpualloc
@@ -1515,6 +1521,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdlib.exit
     libc.src.stdlib.getenv
     libc.src.stdlib.putenv
+    libc.src.stdlib.secure_getenv
     libc.src.stdlib.setenv
     libc.src.stdlib.unsetenv
     libc.src.stdlib.mbstowcs
