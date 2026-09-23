@@ -40,36 +40,30 @@ class LLVM_ABI BundleVec final : public RegionPass {
 private:
   /// Set to true whenever the pass modifies the IR.
   bool Change = false;
-  static constexpr StringRef TopDownArgStr = "top-down";
-  static constexpr StringRef BottomUpArgStr = "bottom-up";
+  AuxPassArgsRegistry ArgsRegistry;
+  AuxPassArg TopDownArg = ArgsRegistry.createArg("top-down");
+  AuxPassArg BottomUpArg = ArgsRegistry.createArg("bottom-up");
   /// Direction for vectorization, set from the mandatory aux argument.
   SchedDirection Dir;
-  /// The original instructions that are potentially dead after vectorization.
-  DenseSet<Instruction *> DeadInstrCandidates;
   /// Maps scalars to vectors.
   std::unique_ptr<InstrMaps> IMaps;
   /// Counter used for force-stopping the vectorizer after this many
   /// invocations. Used for debugging miscompiles.
   unsigned long InvocationCnt = 0;
 
+  VecUtils::DeadInstructionMorgue DeadInstrMorgue;
+
   /// Creates and returns a vector instruction that replaces the instructions in
   /// \p Bndl. \p Operands are the already vectorized operands.
-  Value *createVectorInstr(ArrayRef<Value *> Bndl, ArrayRef<Value *> Operands);
-  /// Erases all dead instructions from the dead instruction candidates
-  /// collected during vectorization.
-  void tryEraseDeadInstrs();
+  Value *createVectorInstr(BndlRef<Value *> Bndl, BndlRef<Value *> Operands);
+
   /// Creates a shuffle instruction that shuffles \p VecOp according to \p Mask.
   /// \p UserBB is the block of the user bundle.
   Value *createShuffle(Value *VecOp, const ShuffleMask &Mask,
                        BasicBlock *UserBB);
   /// Packs all elements of \p ToPack into a vector and returns that vector. \p
   /// UserBB is the block of the user bundle.
-  Value *createPack(ArrayRef<Value *> ToPack, BasicBlock *UserBB);
-  /// After we create vectors for groups of instructions, the original
-  /// instructions are potentially dead and may need to be removed. This
-  /// function helps collect these instructions (along with the pointer operands
-  /// for loads/stores) so that they can be cleaned up later.
-  void collectPotentiallyDeadInstrs(ArrayRef<Value *> Bndl);
+  Value *createPack(BndlRef<Value *> ToPack, BasicBlock *UserBB);
 
   /// Helper class describing how(if) to vectorize the code.
   class ActionsVector {
@@ -96,28 +90,30 @@ private:
 
   /// Recursively try to vectorize \p Bndl. \p UserBndl identifies the
   /// users that this recursive call originates from.
-  Action *vectorizeRec(ArrayRef<Value *> Bndl, ArrayRef<Value *> UserBndl,
+  Action *vectorizeRec(BndlRef<Value *> Bndl, BndlRef<Value *> UserBndl,
                        unsigned Depth, LegalityAnalysis &Legality);
   /// If the values in \p Bndl have external users, then emit unpacks and
   /// connect them to the users. \p Vec is the vectorized form of \p Bndl.
-  void emitUnpacksForExternalUses(const ArrayRef<Value *> Bndl, Value *Vec);
+  void emitUnpacksForExternalUses(BndlRef<Value *> Bndl, Value *Vec);
   /// Generate vector instructions based on `Actions` and return the last vector
   /// created.
   Value *emitVectors();
   /// Entry point for vectorization starting from \p Seeds.
-  bool tryVectorize(ArrayRef<Value *> Seeds, LegalityAnalysis &Legality);
+  bool tryVectorize(BndlRef<Value *> Seeds, LegalityAnalysis &Legality);
 
 public:
   BundleVec(StringRef AuxArg) : RegionPass("bundle-vec") {
-    if (AuxArg == BottomUpArgStr) {
+    ArgsRegistry.parse(AuxArg);
+    if (BottomUpArg) {
       Dir = SchedDirection::BottomUp;
-    } else if (AuxArg == TopDownArgStr) {
+    } else if (TopDownArg) {
       Dir = SchedDirection::TopDown;
     } else {
       std::string ErrStr;
       raw_string_ostream ErrSS(ErrStr);
-      ErrSS << "bundle-vec requires either '" << BottomUpArgStr << "' or '"
-            << TopDownArgStr << "' as its aux argument!\n";
+      ErrSS << "bundle-vec requires either '" << BottomUpArg.getFlagStr()
+            << "' or '" << TopDownArg.getFlagStr()
+            << "' as its aux argument!\n";
       reportFatalUsageError(ErrStr.c_str());
     }
   }

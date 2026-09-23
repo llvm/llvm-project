@@ -60,6 +60,7 @@ AMDGPUDisassembler::AMDGPUDisassembler(const MCSubtargetInfo &STI,
       MAI(Ctx.getAsmInfo()),
       HwModeRegClass(STI.getHwMode(MCSubtargetInfo::HwMode_RegInfo)),
       TargetMaxInstBytes(MAI.getMaxInstLength(&STI)),
+      TargetID(AMDGPU::createAMDGPUTargetID(STI, "")),
       CodeObjectVersion(AMDGPU::getDefaultAMDHSACodeObjectVersion()) {
   // ToDo: AMDGPUDisassembler supports only VI ISA.
   if (!STI.hasFeature(AMDGPU::FeatureGCN3Encoding) && !isGFX10Plus())
@@ -103,26 +104,40 @@ void AMDGPUDisassembler::emitTargetIDIfSupported(raw_ostream &OS,
     unsigned SrameccSetting = EFlags & ELF::EF_AMDGPU_FEATURE_SRAMECC_V4;
     switch (SrameccSetting) {
     case ELF::EF_AMDGPU_FEATURE_SRAMECC_UNSUPPORTED_V4:
+      break;
     case ELF::EF_AMDGPU_FEATURE_SRAMECC_ANY_V4:
+      TargetID.setSramEccSetting(AMDGPU::TargetIDSetting::Any);
       break;
     case ELF::EF_AMDGPU_FEATURE_SRAMECC_OFF_V4:
+      TargetID.setSramEccSetting(AMDGPU::TargetIDSetting::Off);
       OS << ":sramecc-";
       break;
     case ELF::EF_AMDGPU_FEATURE_SRAMECC_ON_V4:
+      TargetID.setSramEccSetting(AMDGPU::TargetIDSetting::On);
       OS << ":sramecc+";
       break;
     }
 
+    // Targets that hardwire xnack on (e.g. gfx1250) don't expose it as a
+    // selectable modifier, so don't print it.
+    bool XnackHardwiredOn = TargetID.isXnackSupported() &&
+                            !STI.hasFeature(AMDGPU::FeatureXNACKOnOffModes);
     unsigned XnackSetting = EFlags & ELF::EF_AMDGPU_FEATURE_XNACK_V4;
     switch (XnackSetting) {
     case ELF::EF_AMDGPU_FEATURE_XNACK_UNSUPPORTED_V4:
+      break;
     case ELF::EF_AMDGPU_FEATURE_XNACK_ANY_V4:
+      TargetID.setXnackSetting(AMDGPU::TargetIDSetting::Any);
       break;
     case ELF::EF_AMDGPU_FEATURE_XNACK_OFF_V4:
-      OS << ":xnack-";
+      TargetID.setXnackSetting(AMDGPU::TargetIDSetting::Off);
+      if (!XnackHardwiredOn)
+        OS << ":xnack-";
       break;
     case ELF::EF_AMDGPU_FEATURE_XNACK_ON_V4:
-      OS << ":xnack+";
+      TargetID.setXnackSetting(AMDGPU::TargetIDSetting::On);
+      if (!XnackHardwiredOn)
+        OS << ":xnack+";
       break;
     }
   }
@@ -232,6 +247,38 @@ static DecodeStatus decodeSrcOp(MCInst &Inst, unsigned EncSize,
   return addOperand(Inst, DAsm->decodeSrcOp(Inst, OpWidth, EncImm));
 }
 
+// Decode an indexed-resource (rsrcidx) 9-bit srsrc field into a 32-bit index
+// register. SGPRs are encoded as 128-251, VGPRs have bit 8 set.
+static DecodeStatus decodeRsrcRegOp(MCInst &Inst, unsigned Imm,
+                                    uint64_t /* Addr */,
+                                    const MCDisassembler *Decoder,
+                                    unsigned OpWidth) {
+  // Uniform-indexed resource. SGPR[0..123] encoded as 128-251.
+  if (Imm >= 128 && Imm < 256)
+    Imm -= 128;
+  return decodeSrcOp(Inst, 9, OpWidth, Imm, Imm, Decoder);
+}
+
+static DecodeStatus decodeRsrcReg128(MCInst &Inst, unsigned Imm,
+                                     uint64_t /* Addr */,
+                                     const MCDisassembler *Decoder) {
+  unsigned OpWidth = 32;
+  // 0-127: Uniform-direct resource in SGPRs (SReg_128).
+  if (Imm < 128)
+    OpWidth = 128;
+  return decodeRsrcRegOp(Inst, Imm, 0, Decoder, OpWidth);
+}
+
+static DecodeStatus decodeRsrcReg256(MCInst &Inst, unsigned Imm,
+                                     uint64_t /* Addr */,
+                                     const MCDisassembler *Decoder) {
+  unsigned OpWidth = 32;
+  // 0-127: Uniform-direct resource in SGPRs (SReg_256).
+  if (Imm < 128)
+    OpWidth = 256;
+  return decodeRsrcRegOp(Inst, Imm, 0, Decoder, OpWidth);
+}
+
 // Decoder for registers. Imm(7-bit) is number of register, uses decodeSrcOp to
 // get register class. Used by SGPR only operands.
 #define DECODE_OPERAND_SREG_7(RegClass, OpWidth)                               \
@@ -239,6 +286,9 @@ static DecodeStatus decodeSrcOp(MCInst &Inst, unsigned EncSize,
 
 #define DECODE_OPERAND_SREG_8(RegClass, OpWidth)                               \
   DECODE_SrcOp(Decode##RegClass##RegisterClass, 8, OpWidth, Imm)
+
+#define DECODE_OPERAND_SREG_9(RegClass, OpWidth)                               \
+  DECODE_SrcOp(Decode##RegClass##RegisterClass, 9, OpWidth, Imm)
 
 // Decoder for registers. Imm(10-bit): Imm{7-0} is number of register,
 // Imm{9} is acc(agpr or vgpr) Imm{8} should be 0 (see VOP3Pe_SMFMAC).
@@ -265,6 +315,10 @@ static DecodeStatus decodeSrcReg9(MCInst &Inst, unsigned Imm,
 template <unsigned OpWidth>
 static DecodeStatus decodeSrcA9(MCInst &Inst, unsigned Imm, uint64_t /* Addr */,
                                 const MCDisassembler *Decoder) {
+  // A clear Imm{8} names an SGPR or an inline constant, which this
+  // register-only operand cannot hold.
+  if (!(Imm & AMDGPU::EncValues::IS_VGPR))
+    return MCDisassembler::Fail;
   return decodeSrcOp(Inst, 9, OpWidth, Imm, Imm | 512, Decoder);
 }
 
@@ -274,6 +328,10 @@ template <unsigned OpWidth>
 static DecodeStatus decodeSrcAV10(MCInst &Inst, unsigned Imm,
                                   uint64_t /* Addr */,
                                   const MCDisassembler *Decoder) {
+  // A clear Imm{8} names an SGPR or an inline constant, which this
+  // register-only operand cannot hold.
+  if (!(Imm & AMDGPU::EncValues::IS_VGPR))
+    return MCDisassembler::Fail;
   return decodeSrcOp(Inst, 10, OpWidth, Imm, Imm, Decoder);
 }
 
@@ -325,12 +383,15 @@ DECODE_OPERAND_SREG_7(SReg_64_XEXEC, 64)
 DECODE_OPERAND_SREG_7(SReg_64_XEXEC_XNULL, 64)
 DECODE_OPERAND_SREG_7(SReg_96, 96)
 DECODE_OPERAND_SREG_7(SReg_128, 128)
-DECODE_OPERAND_SREG_7(SReg_128_XNULL, 128)
 DECODE_OPERAND_SREG_7(SReg_256, 256)
 DECODE_OPERAND_SREG_7(SReg_256_XNULL, 256)
 DECODE_OPERAND_SREG_7(SReg_512, 512)
 
 DECODE_OPERAND_SREG_8(SReg_64, 64)
+
+// GFX13 VBUFFER instructions use a 9-bit srsrc field. For the non-indexed form
+// the two extra MSBs are always 0, so the value still decodes to an SReg_128.
+DECODE_OPERAND_SREG_9(SReg_128_XNULL, 128)
 
 DECODE_OPERAND_REG_8(AGPR_32)
 DECODE_OPERAND_REG_8(AReg_64)
@@ -396,7 +457,8 @@ static DecodeStatus decodeOperand_VGPR_16(MCInst &Inst, unsigned Imm,
                                           uint64_t /*Addr*/,
                                           const MCDisassembler *Decoder) {
   assert(isUInt<10>(Imm) && "10-bit encoding expected");
-  assert(Imm & AMDGPU::EncValues::IS_VGPR && "VGPR expected");
+  if (!(Imm & AMDGPU::EncValues::IS_VGPR))
+    return MCDisassembler::Fail;
 
   const auto *DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
 
@@ -452,6 +514,22 @@ DECODE_OPERAND(decodeSDWA##DecName, decodeSDWA##DecName)
 DECODE_SDWA(Src32)
 DECODE_SDWA(Src16)
 DECODE_SDWA(VopcDst)
+
+#define DECODE_SDWA_IMM_FIELD(Name, MaxImm)                                    \
+  static DecodeStatus Name(MCInst &Inst, unsigned Imm, uint64_t /* Addr */,    \
+                           const MCDisassembler * /* Decoder */) {             \
+    if (Imm > (MaxImm))                                                        \
+      return MCDisassembler::Fail;                                             \
+    return addOperand(Inst, MCOperand::createImm(Imm));                        \
+  }
+
+// The 3-bit SDWA sel fields only define values up to DWORD; 7 is reserved.
+DECODE_SDWA_IMM_FIELD(decodeSDWASel, AMDGPU::SDWA::SdwaSel::DWORD)
+// The 2-bit SDWA dst_unused field only defines values up to UNUSED_PRESERVE;
+// 3 is reserved.
+DECODE_SDWA_IMM_FIELD(decodeSDWADstUnused,
+                      AMDGPU::SDWA::DstUnused::UNUSED_PRESERVE)
+#undef DECODE_SDWA_IMM_FIELD
 
 static DecodeStatus decodeVersionImm(MCInst &Inst, unsigned Imm,
                                      uint64_t /* Addr */,
@@ -578,6 +656,11 @@ bool AMDGPUDisassembler::decodeImmOperands(MCInst &MI,
     if (AMDGPU::EncValues::INLINE_FLOATING_C_MIN <= Imm &&
         Imm <= AMDGPU::EncValues::INLINE_FLOATING_C_MAX) {
       switch (OpDesc.OperandType) {
+      case AMDGPU::OPERAND_REG_IMM_NOINLINE_FP16:
+      case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
+        // Inline constant encodings are not allowed for NOINLINE operand types.
+        // Keep the raw encoding value.
+        continue;
       case AMDGPU::OPERAND_REG_IMM_BF16:
       case AMDGPU::OPERAND_REG_IMM_V2BF16:
       case AMDGPU::OPERAND_REG_INLINE_C_BF16:
@@ -1431,7 +1514,8 @@ void AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
     return;
 
   int NewOpcode =
-      AMDGPU::getMIMGOpcode(Info->BaseOpcode, Info->MIMGEncoding, DstSize, AddrSize);
+      AMDGPU::getMIMGOpcode(Info->BaseOpcode, Info->MIMGEncoding, DstSize,
+                            AddrSize, Info->IndexedRsrc, Info->IndexedSamp);
   if (NewOpcode == -1)
     return;
 
@@ -1724,6 +1808,7 @@ AMDGPUDisassembler::decodeLiteralConstant(const MCInstrDesc &Desc,
   case AMDGPU::OPERAND_REG_IMM_V2FP16_SPLAT:
     UseLit = AMDGPU::isPKFMACF16InlineConstant(Val, isGFX11Plus());
     break;
+  case AMDGPU::OPERAND_REG_IMM_NOINLINE_FP16:
   case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
     break;
   case AMDGPU::OPERAND_REG_IMM_INT16:
@@ -1971,7 +2056,8 @@ unsigned AMDGPUDisassembler::getAgprClassId(unsigned Width) const {
   llvm_unreachable("Invalid register width!");
 }
 
-unsigned AMDGPUDisassembler::getSgprClassId(unsigned Width) const {
+std::optional<unsigned>
+AMDGPUDisassembler::getSgprClassId(unsigned Width) const {
   using namespace AMDGPU;
 
   switch (Width) {
@@ -1999,10 +2085,11 @@ unsigned AMDGPUDisassembler::getSgprClassId(unsigned Width) const {
   case 512:
     return SGPR_512RegClassID;
   }
-  llvm_unreachable("Invalid register width!");
+  return std::nullopt;
 }
 
-unsigned AMDGPUDisassembler::getTtmpClassId(unsigned Width) const {
+std::optional<unsigned>
+AMDGPUDisassembler::getTtmpClassId(unsigned Width) const {
   using namespace AMDGPU;
 
   switch (Width) {
@@ -2026,7 +2113,7 @@ unsigned AMDGPUDisassembler::getTtmpClassId(unsigned Width) const {
   case 512:
     return TTMP_512RegClassID;
   }
-  llvm_unreachable("Invalid register width!");
+  return std::nullopt;
 }
 
 int AMDGPUDisassembler::getTTmpIdx(unsigned Val) const {
@@ -2062,15 +2149,28 @@ MCOperand AMDGPUDisassembler::decodeNonVGPRSrcOp(const MCInst &Inst,
   assert(Val < (1 << 8) && "9-bit Src encoding when Val{8} is 0");
   using namespace AMDGPU::EncValues;
 
+  // Not every operand width has a supported non-VGPR source encoding.
+  // Selecting an unsupported SGPR, ttmp, or special register is malformed.
+  auto UnsupportedWidth = [&]() {
+    return errOperand(Val, "unsupported " + Twine(Width) +
+                               "-bit non-VGPR operand encoding " + Twine(Val));
+  };
+
   if (Val <= SGPR_MAX) {
     // "SGPR_MIN <= Val" is always true and causes compilation warning.
     static_assert(SGPR_MIN == 0);
-    return createSRegOperand(getSgprClassId(Width), Val - SGPR_MIN);
+    std::optional<unsigned> ClassId = getSgprClassId(Width);
+    if (!ClassId)
+      return UnsupportedWidth();
+    return createSRegOperand(*ClassId, Val - SGPR_MIN);
   }
 
   int TTmpIdx = getTTmpIdx(Val);
   if (TTmpIdx >= 0) {
-    return createSRegOperand(getTtmpClassId(Width), TTmpIdx);
+    std::optional<unsigned> ClassId = getTtmpClassId(Width);
+    if (!ClassId)
+      return UnsupportedWidth();
+    return createSRegOperand(*ClassId, TTmpIdx);
   }
 
   if ((INLINE_INTEGER_C_MIN <= Val && Val <= INLINE_INTEGER_C_MAX) ||
@@ -2079,6 +2179,13 @@ MCOperand AMDGPUDisassembler::decodeNonVGPRSrcOp(const MCInst &Inst,
     return MCOperand::createImm(Val);
 
   if (Val == LITERAL64_CONST && STI.hasFeature(AMDGPU::Feature64BitLiterals)) {
+    // Only VOP1, VOP2, VOPC, SOP1, SOP2 and SOPC may encode a 64-bit literal.
+    // VOP3, VOP3P and VOPD have to use a 32-bit one.
+    if (SIInstrFlags::isVOP3Like(*MCII, Inst) ||
+        AMDGPU::isVOPD(Inst.getOpcode())) {
+      return errOperand(Val,
+                        "64-bit literal is not supported by this instruction");
+    }
     return decodeLiteral64Constant();
   }
 
@@ -2094,7 +2201,7 @@ MCOperand AMDGPUDisassembler::decodeNonVGPRSrcOp(const MCInst &Inst,
   case 512:
     return decodeSpecialReg96Plus(Val);
   default:
-    llvm_unreachable("unexpected immediate type");
+    return UnsupportedWidth();
   }
 }
 
@@ -2246,12 +2353,12 @@ MCOperand AMDGPUDisassembler::decodeSDWASrc(unsigned Width,
     if (SDWA9EncValues::SRC_SGPR_MIN <= Val &&
         Val <= (isGFX10Plus() ? SDWA9EncValues::SRC_SGPR_MAX_GFX10
                               : SDWA9EncValues::SRC_SGPR_MAX_SI)) {
-      return createSRegOperand(getSgprClassId(Width),
+      return createSRegOperand(*getSgprClassId(Width),
                                Val - SDWA9EncValues::SRC_SGPR_MIN);
     }
     if (SDWA9EncValues::SRC_TTMP_MIN <= Val &&
         Val <= SDWA9EncValues::SRC_TTMP_MAX) {
-      return createSRegOperand(getTtmpClassId(Width),
+      return createSRegOperand(*getTtmpClassId(Width),
                                Val - SDWA9EncValues::SRC_TTMP_MIN);
     }
 
@@ -2289,14 +2396,12 @@ MCOperand AMDGPUDisassembler::decodeSDWAVopcDst(unsigned Val) const {
     Val &= SDWA9EncValues::VOPC_DST_SGPR_MASK;
 
     int TTmpIdx = getTTmpIdx(Val);
-    if (TTmpIdx >= 0) {
-      auto TTmpClsId = getTtmpClassId(IsWave32 ? 32 : 64);
-      return createSRegOperand(TTmpClsId, TTmpIdx);
-    }
+    if (TTmpIdx >= 0)
+      return createSRegOperand(*getTtmpClassId(IsWave32 ? 32 : 64), TTmpIdx);
     if (Val > SGPR_MAX) {
       return IsWave32 ? decodeSpecialReg32(Val) : decodeSpecialReg64(Val);
     }
-    return createSRegOperand(getSgprClassId(IsWave32 ? 32 : 64), Val);
+    return createSRegOperand(*getSgprClassId(IsWave32 ? 32 : 64), Val);
   }
   return createRegOperand(IsWave32 ? AMDGPU::VCC_LO : AMDGPU::VCC);
 }
@@ -2527,10 +2632,14 @@ Expected<bool> AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC1(
   KdStream << Indent << ".amdhsa_reserve_vcc " << 0 << '\n';
   if (!hasArchitectedFlatScratch())
     KdStream << Indent << ".amdhsa_reserve_flat_scratch " << 0 << '\n';
-  bool ReservedXnackMask = STI.hasFeature(AMDGPU::FeatureXNACK);
-  assert(!ReservedXnackMask || STI.hasFeature(AMDGPU::FeatureSupportsXNACK));
-  KdStream << Indent << ".amdhsa_reserve_xnack_mask " << ReservedXnackMask
-           << '\n';
+  // Only print the directive on xnack-supporting targets (matching the
+  // asmprinter), unless the binary erronously set xnack on an unsupported
+  // target
+  bool ReservedXnackMask = TargetID.isXnackOnOrAny();
+  if (STI.hasFeature(AMDGPU::FeatureSupportsXNACK) || ReservedXnackMask) {
+    KdStream << Indent << ".amdhsa_reserve_xnack_mask " << ReservedXnackMask
+             << '\n';
+  }
   KdStream << Indent << ".amdhsa_next_free_sgpr " << NextFreeSGPR << "\n";
 
   CHECK_RESERVED_BITS(COMPUTE_PGM_RSRC1_PRIORITY);

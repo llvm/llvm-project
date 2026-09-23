@@ -23,7 +23,7 @@ static const std::array<unsigned, 1000> input = [] {
   return result;
 }();
 
-static void BM_to_chars_good(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void BM_to_chars_good(benchmark::State& state) {
   char buffer[128];
   int base = state.range(0);
   while (state.KeepRunningBatch(input.size()))
@@ -32,7 +32,7 @@ static void BM_to_chars_good(benchmark::State& state) {
 }
 BENCHMARK(BM_to_chars_good)->Arg(2)->Arg(8)->Arg(10)->Arg(16)->Arg(23);
 
-static void BM_to_chars_bad(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void BM_to_chars_bad(benchmark::State& state) {
   char buffer[128];
   int base = state.range(0);
   struct sample {
