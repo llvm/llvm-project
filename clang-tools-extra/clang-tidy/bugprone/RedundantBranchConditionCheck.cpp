@@ -10,6 +10,8 @@
 #include "../utils/Aliasing.h"
 #include "../utils/LexerUtils.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ParentMapContext.h"
+#include "clang/AST/StmtCXX.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Analysis/Analyses/ExprMutationAnalyzer.h"
 #include "clang/Lex/Lexer.h"
@@ -38,6 +40,29 @@ static bool isChangedBefore(const Stmt *S, const Stmt *NextS, const Stmt *PrevS,
          SM.isBeforeInTranslationUnit(PrevS->getEndLoc(),
                                       MutS->getBeginLoc()) &&
          SM.isBeforeInTranslationUnit(MutS->getEndLoc(), NextS->getBeginLoc());
+}
+
+/// Returns the outermost loop that encloses `S` and is itself enclosed by
+/// `Outer`, or null if there is no such loop. The walk passes through
+/// declarations, such as a variable initialized by a lambda, but stops at the
+/// enclosing function.
+static const Stmt *getOutermostLoopBetween(const Stmt *S, const Stmt *Outer,
+                                           ASTContext *Context) {
+  const Stmt *Loop = nullptr;
+  DynTypedNodeList Parents = Context->getParents(*S);
+  while (!Parents.empty()) {
+    const DynTypedNode Parent = Parents[0];
+    if (Parent.get<FunctionDecl>())
+      break;
+    if (const auto *ParentStmt = Parent.get<Stmt>()) {
+      if (ParentStmt == Outer)
+        break;
+      if (isa<ForStmt, WhileStmt, DoStmt, CXXForRangeStmt>(ParentStmt))
+        Loop = ParentStmt;
+    }
+    Parents = Context->getParents(Parent);
+  }
+  return Loop;
 }
 
 void RedundantBranchConditionCheck::registerMatchers(MatchFinder *Finder) {
@@ -97,6 +122,13 @@ void RedundantBranchConditionCheck::check(
                         Result.Context))
       return;
   }
+
+  // Inside a loop, a mutation anywhere in the loop runs before the inner
+  // condition is evaluated again, even if it comes later in the source.
+  const Stmt *Loop = getOutermostLoopBetween(InnerIf, OuterIf, Result.Context);
+  if (Loop &&
+      ExprMutationAnalyzer(*Loop, *Result.Context).findMutation(CondVar))
+    return;
 
   // If the variable has an alias then it can be changed by that alias as well.
   // FIXME: could potentially support tracking pointers and references in the
