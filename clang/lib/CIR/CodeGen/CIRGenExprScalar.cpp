@@ -325,6 +325,12 @@ public:
     return {};
   }
 
+  mlir::Value VisitMatrixSingleSubscriptExpr(MatrixSingleSubscriptExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "ScalarExprEmitter: matrix singel subscript");
+    return {};
+  }
+
   mlir::Value VisitCastExpr(CastExpr *e);
   mlir::Value VisitCallExpr(const CallExpr *e);
 
@@ -2225,8 +2231,8 @@ mlir::Value ScalarExprEmitter::emitMul(const BinOpInfo &ops) {
   }
   if (ops.fullType->isConstantMatrixType()) {
     assert(!cir::MissingFeatures::matrixType());
-    cgf.cgm.errorNYI("matrix types");
-    return nullptr;
+    cgf.cgm.errorNYI("ScalarExprEmitter::emitMul: matrix types");
+    return {};
   }
   if (ops.compType->isUnsignedIntegerType() &&
       cgf.sanOpts.has(SanitizerKind::UnsignedIntegerOverflow) &&
@@ -2249,6 +2255,12 @@ mlir::Value ScalarExprEmitter::emitDiv(const BinOpInfo &ops) {
   if (cir::isFPOrVectorOfFPType(ops.lhs.getType())) {
     CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, ops.fpFeatures);
     return builder.createFDiv(loc, ops.lhs, ops.rhs);
+  }
+
+  if (ops.fullType->isConstantMatrixType()) {
+    assert(!cir::MissingFeatures::matrixType());
+    cgf.cgm.errorNYI("ScalarExprEmitter::emitDiv: matrix types");
+    return {};
   }
 
   if (ops.isFixedPointOp())
@@ -2388,8 +2400,8 @@ mlir::Value ScalarExprEmitter::emitAdd(const BinOpInfo &ops) {
   }
   if (ops.fullType->isConstantMatrixType()) {
     assert(!cir::MissingFeatures::matrixType());
-    cgf.cgm.errorNYI("matrix types");
-    return nullptr;
+    cgf.cgm.errorNYI("ScalarExprEmitter::emitAdd: matrix types");
+    return {};
   }
 
   if (ops.compType->isUnsignedIntegerType() &&
@@ -2436,8 +2448,8 @@ mlir::Value ScalarExprEmitter::emitSub(const BinOpInfo &ops) {
 
     if (ops.fullType->isConstantMatrixType()) {
       assert(!cir::MissingFeatures::matrixType());
-      cgf.cgm.errorNYI("matrix types");
-      return nullptr;
+      cgf.cgm.errorNYI("ScalarExprEmitter::emitSub: matrix types");
+      return {};
     }
 
     if (ops.compType->isUnsignedIntegerType() &&
