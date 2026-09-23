@@ -725,13 +725,15 @@ int** test_ternary_double_ptr(bool cond) {
 // These are cases where the diagnostic kind is determined by location
 //===----------------------------------------------------------------------===//
 
+// Returning the dangling pointer is not a use of it, so this is reported as a
+// return of stack memory rather than a use-after-scope.
 MyObj* uaf_before_uar() {
   MyObj* p;
   {
     MyObj local_obj; 
-    p = &local_obj;  // expected-warning {{local variable 'local_obj' does not live long enough}}
-  }                  // expected-note {{local variable 'local_obj' is destroyed here}}
-  return p;          // expected-note {{later used here}}
+    p = &local_obj;  // expected-warning {{stack memory associated with local variable 'local_obj' is returned}}
+  }
+  return p;          // expected-note {{returned here}}
 }
 
 View uar_before_uaf(const MyObj& safe, bool c) {
@@ -2064,9 +2066,8 @@ void test_lifetime_extension_ok() {
 }
 
 const std::string& test_return() {
-  const std::string& x = S().x(); // expected-warning {{temporary object does not live long enough}} expected-note {{temporary object is destroyed here}} \
-                                  // expected-note {{result of call to 'x' aliases the storage of temporary object because the implicit object parameter is marked as lifetimebound}}
-  return x; // expected-note {{later used here}}
+  const std::string& x = S().x(); // expected-warning {{stack memory associated with temporary object is returned}}
+  return x; // expected-note {{returned here}}
 }
 } // namespace reference_type_decl_ref_expr
 
@@ -2833,11 +2834,8 @@ S getS2(const std::string &a [[clang::lifetimebound]], const std::string &b [[cl
 S multiple_lifetimebound_params() {
   std::string str{"abc"};
   S s = getS2(str, std::string("temp")); // expected-warning {{stack memory associated with local variable 'str' is returned}} \
-                                         // expected-warning {{temporary object does not live long enough}} \
-                                         // expected-note {{result of call to 'getS2' aliases the storage of temporary object because parameter 'b' is marked as lifetimebound}} \
-                                         // expected-note {{temporary object is destroyed here}}
-  return s;                              // expected-note {{returned here}} \
-                                         // expected-note {{later used here}}
+                                         // expected-warning {{stack memory associated with temporary object is returned}}
+  return s;                              // expected-note 2 {{returned here}}
 }
 
 // TODO: Diagnose [[clang::lifetimebound]] on functions whose return value
@@ -3714,6 +3712,14 @@ struct Y : X {
     }
     (void)x;
   }
+  void baz() {
+    {
+      int a;
+      x = &a; // expected-warning {{local variable 'a' does not live long enough}}
+    }         // expected-note {{local variable 'a' is destroyed here}}
+    use(x);   // expected-note {{later used here}}
+    x = nullptr;
+  }
 };
 } // namespace base_class_fields
 
@@ -3997,7 +4003,7 @@ void member_capture() {
     MyObj local;
     c.set(local);   // expected-warning {{local variable 'local' does not live long enough}}
   }                 // expected-note {{local variable 'local' is destroyed here}}
-  use(c.stored);    // expected-note {{later used here}}
+  use(c);           // expected-note {{later used here}}
 }
 
 struct SimpleContainer {
@@ -4010,8 +4016,8 @@ void member_capture_simple_container() {
   {
     MyObj local;
     c.set(local);   // expected-warning {{local variable 'local' does not live long enough}}
-  }                 // expected-note {{destroyed here}}   
-  use(c.stored);    // expected-note {{later used here}}
+  }                 // expected-note {{destroyed here}}
+  use(c);           // expected-note {{later used here}}
 }
 
 void captureTwo(View& into, 
@@ -4318,10 +4324,12 @@ void foo() {
 } // namespace TakeOwnershipTests
 
 //===----------------------------------------------------------------------===//
-// Uses by code the analysis cannot see into
+// What counts as a use
 //
-// Opaque code may dereference whatever it is handed. These are uses in their
-// own right, not only because every DeclRefExpr is currently one.
+// A use is an access through an lvalue: reading it (an lvalue-to-rvalue
+// conversion) or writing through it. The loans of the accessed lvalue say which
+// objects it may name, so a dereference needs no special handling. Taking an
+// address, naming a variable, or copying a pointer out of one is not an access.
 //===----------------------------------------------------------------------===//
 
 namespace std { class type_info; }
@@ -4331,6 +4339,155 @@ struct Node {
   int id;
   Node *next;
 };
+
+void copying_a_pointer_is_not_a_use() {
+  Node *p;
+  {
+    Node local;
+    p = &local;  // expected-warning {{local variable 'local' does not live long enough}}
+  }              // expected-note {{local variable 'local' is destroyed here}}
+  Node *q = p;   // Reads p, not *p.
+                 // expected-note@-1 {{local variable 'p' aliases the storage of local variable 'local'}}
+  use(q);        // expected-note {{later used here}}
+}
+
+void taking_an_address_is_not_a_use() {
+  Node *p;
+  {
+    Node local;
+    p = &local;
+  }
+  Node **pp = &p;          // no-warning: borrows p's storage, never reads it.
+  Node *reborrow = &*p;    // no-warning: reborrows, no access.
+  Node **pnext = &p->next; // no-warning: address of a field.
+  (void)pp; (void)reborrow; (void)pnext;
+}
+
+void reading_through_a_pointer_is_a_use() {
+  Node *p;
+  int sink;
+  {
+    Node local;
+    p = &local;   // expected-warning {{local variable 'local' does not live long enough}}
+  }               // expected-note {{local variable 'local' is destroyed here}}
+  sink = p->id;   // expected-note {{later used here}}
+  (void)sink;
+}
+
+// Loading a scalar is not a use of the scalar; it is a use of the pointer that
+// was dereferenced to reach it.
+void reading_a_pointer_field_is_a_use() {
+  Node *p;
+  Node *sink;
+  {
+    Node local;
+    p = &local;   // expected-warning {{local variable 'local' does not live long enough}}
+  }               // expected-note {{local variable 'local' is destroyed here}}
+  sink = p->next; // expected-note {{later used here}}
+  (void)sink;
+}
+
+void writing_through_a_pointer_is_a_use() {
+  Node *p;
+  {
+    Node local;
+    p = &local;      // expected-warning {{local variable 'local' does not live long enough}}
+  }                  // expected-note {{local variable 'local' is destroyed here}}
+  p->id = 1;         // expected-note {{later used here}}
+  p->next = nullptr;
+}
+
+void incrementing_through_a_pointer_is_a_use() {
+  Node *p;
+  {
+    Node local;
+    p = &local;   // expected-warning {{local variable 'local' does not live long enough}}
+  }               // expected-note {{local variable 'local' is destroyed here}}
+  p->id++;        // expected-note {{later used here}}
+}
+
+// Incrementing the pointer itself only touches p's own storage.
+void incrementing_the_pointer_is_not_a_use() {
+  Node *p;
+  {
+    Node local;
+    p = &local;
+  }
+  p++;             // no-warning
+  p += 1;          // no-warning
+}
+
+void discarding_the_value_is_not_a_use() {
+  Node *p;
+  {
+    Node local;
+    p = &local;
+  }
+  (void)p;         // no-warning
+}
+
+void element_access(int i) {
+  Node *arr[4];
+  Node *p, *sink;
+  {
+    Node local;
+    p = &local;
+  }
+  Node **elem = &arr[i];  // no-warning: address of an element.
+  arr[i] = p;             // Reads p, writes the element; neither reads *p.
+  sink = arr[i];          // Reads the element, which names part of arr.
+  (void)elem; (void)sink;
+}
+
+// A dereference only accesses the level actually loaded.
+void one_level_per_load() {
+  Node **pp;
+  {
+    Node *inner;
+    Node outer;
+    inner = &outer;
+    pp = &inner;    // expected-warning {{local variable 'inner' does not live long enough}}
+  }                 // expected-note {{local variable 'inner' is destroyed here}}
+  Node *q = *pp;    // expected-note {{later used here}}
+  (void)q;          // Reads pp, so it names 'inner'; 'outer' is never read.
+}
+
+void reading_through_a_reference_is_a_use() {
+  Node *p;
+  int sink;
+  {
+    Node local;
+    p = &local;   // expected-warning {{local variable 'local' does not live long enough}}
+  }               // expected-note {{local variable 'local' is destroyed here}}
+  Node &r = *p;   // Binding a reference is a reborrow, not an access.
+                  // expected-note@-1 {{local variable 'p' aliases the storage of local variable 'local'}}
+  sink = r.id;    // expected-note {{later used here}}
+  (void)sink;
+}
+
+void writing_through_a_reference_is_a_use() {
+  Node *p;
+  {
+    Node local;
+    p = &local;   // expected-warning {{local variable 'local' does not live long enough}}
+  }               // expected-note {{local variable 'local' is destroyed here}}
+  Node &r = *p;   // expected-note {{local variable 'p' aliases the storage of local variable 'local'}}
+  r.id = 1;       // expected-note {{later used here}}
+}
+
+void through_a_conditional(bool cond) {
+  Node *p1, *p2, *reborrow;
+  int sink;
+  {
+    Node a, b;
+    p1 = &a;        // expected-warning {{local variable 'a' does not live long enough}}
+    p2 = &b;        // expected-warning {{local variable 'b' does not live long enough}}
+  }                 // expected-note 2 {{destroyed here}}
+  reborrow = &*(cond ? p1 : p2);   // no-warning: reborrow only.
+  sink = (cond ? p1 : p2)->id;     // expected-note 2 {{later used here}}
+  (cond ? p1 : p2)->id = 1;
+  (void)reborrow; (void)sink;
+}
 
 // Opaque code may dereference what it is handed, so every argument is a use --
 // including when there is no FunctionDecl to inspect.
@@ -4405,12 +4562,44 @@ void through_placement_new() {
   new (p) Node;          // expected-note {{later used here}}
 }
 
+// Reading the dangling value and then overwriting it is still a use; the read
+// happens first.
+Node *ident(Node *);
+void read_then_overwrite() {
+  Node *p;
+  {
+    Node local;
+    p = &local;   // expected-warning {{local variable 'local' does not live long enough}}
+  }               // expected-note {{local variable 'local' is destroyed here}}
+  p = ident(p);   // expected-note {{later used here}}
+}
 } // namespace opaque_callees
 
 // Reads with no lvalue-to-rvalue conversion in the AST.
 namespace class_reads {
+struct Holder { View v; };
 struct Base { virtual ~Base(); };
 struct Derived : Base {};
+
+void copy_view_from_field() {
+  Holder *h;
+  {
+    Holder local;
+    h = &local;   // expected-warning {{local variable 'local' does not live long enough}}
+  }               // expected-note {{local variable 'local' is destroyed here}}
+  View v = h->v;  // expected-note {{later used here}}
+  (void)v;
+}
+
+void assign_view_from_deref() {
+  View *pv;
+  View v;
+  {
+    View local;
+    pv = &local;  // expected-warning {{local variable 'local' does not live long enough}}
+  }               // expected-note {{local variable 'local' is destroyed here}}
+  v = *pv;        // expected-note {{later used here}}
+}
 
 void dynamic_cast_reads_the_object() {
   Base *b;
@@ -4429,6 +4618,16 @@ void typeid_reads_the_object() {
     b = &local;   // expected-warning {{local variable 'local' does not live long enough}}
   }               // expected-note {{local variable 'local' is destroyed here}}
   (void)typeid(*b); // expected-note {{later used here}}
+}
+
+void bit_cast_reads_its_operand() {
+  long *p;
+  {
+    long local = 0;
+    p = &local;   // expected-warning {{local variable 'local' does not live long enough}}
+  }               // expected-note {{local variable 'local' is destroyed here}}
+  int *q = __builtin_bit_cast(int *, *p); // expected-note {{later used here}}
+  (void)q;
 }
 
 void asm_inout_operand_is_read() {

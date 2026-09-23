@@ -24,6 +24,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TimeProfiler.h"
 
@@ -557,14 +558,22 @@ public:
   /// Given a chain of origins that shows how a loan propagates, this function
   /// extracts the corresponding expressions for each origin. Origins that refer
   /// to declarations (rather than expressions) are skipped.
+  ///
+  /// Until the chain reaches a declaration it is inside the use expression,
+  /// where casts just load the used variable.
   llvm::SmallVector<const Expr *>
   getExprChain(llvm::ArrayRef<OriginID> OriginFlowChain) {
-    llvm::SmallVector<const Expr *> rs;
-    for (const OriginID CurrOID : OriginFlowChain)
-      if (const Expr *CurrExpr =
-              FactMgr.getOriginMgr().getOrigin(CurrOID).getExpr())
-        rs.push_back(CurrExpr);
-    return rs;
+    llvm::SmallVector<const Expr *> Chain;
+    bool InUse = true;
+    for (const OriginID CurrOID : OriginFlowChain) {
+      const Expr *CurrExpr =
+          FactMgr.getOriginMgr().getOrigin(CurrOID).getExpr();
+      if (!CurrExpr)
+        InUse = false;
+      else if (!InUse || !isa<ImplicitCastExpr>(CurrExpr))
+        Chain.push_back(CurrExpr);
+    }
+    return Chain;
   }
 };
 } // namespace

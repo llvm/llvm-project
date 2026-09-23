@@ -1311,8 +1311,11 @@ TEST_F(LifetimeAnalysisTest, LivenessInLoop) {
 
   EXPECT_THAT(Origins({"p", "q"}), MaybeLiveAt("p3"));
 
-  EXPECT_THAT(Origins({"q"}), MustBeLiveAt("p2"));
-  EXPECT_THAT(NoOrigins(), MaybeLiveAt("p2"));
+  // `p = q` is a copy, not a use of `q`, so `q` is live at "p2" only because
+  // its loans flow into `p`. It inherits `p`'s confidence, and `p` is merely
+  // maybe-live at "p3": the backedge overwrites it before reading it.
+  EXPECT_THAT(Origins({"q"}), MaybeLiveAt("p2"));
+  EXPECT_THAT(NoOrigins(), MustBeLiveAt("p2"));
 
   EXPECT_THAT(Origins({"p", "q"}), MaybeLiveAt("p1"));
 }
@@ -1405,6 +1408,92 @@ TEST_F(LifetimeAnalysisTest, LivenessOutsideLoop) {
   )");
   EXPECT_THAT(Origins({"p"}), MustBeLiveAt("p2"));
   EXPECT_THAT(Origins({"p"}), MaybeLiveAt("p1"));
+}
+
+// A use is an access through an lvalue: an lvalue-to-rvalue conversion or a
+// write through it. Taking an address or copying a pointer out of a variable
+// is neither.
+TEST_F(LifetimeAnalysisTest, AddressOfIsNotAUse) {
+  SetupTest(R"(
+    void target() {
+      MyObj s;
+      MyObj* p = &s;
+      POINT(p1);
+      MyObj** pp = &p;
+      (void)pp;
+    }
+  )");
+  EXPECT_THAT(NoOrigins(), AreLiveAt("p1"));
+}
+
+TEST_F(LifetimeAnalysisTest, LoadIsAUse) {
+  SetupTest(R"(
+    void target() {
+      MyObj s;
+      MyObj* p = &s;
+      POINT(p1);
+      MyObj* q = p;
+      use(q);
+    }
+  )");
+  EXPECT_THAT(Origins({"p"}), MustBeLiveAt("p1"));
+}
+
+// Reading `pp` and then `*pp` accesses exactly those two levels. Nothing reads
+// `q`, so no deeper level stays live.
+TEST_F(LifetimeAnalysisTest, DereferenceAccessesOneLevel) {
+  SetupTest(R"(
+    void target(MyObj** pp) {
+      POINT(p1);
+      MyObj* q = *pp;
+      POINT(p2);
+    }
+  )");
+  EXPECT_THAT(Origins({"pp"}), MustBeLiveAt("p1"));
+  EXPECT_THAT(NoOrigins(), AreLiveAt("p2"));
+}
+
+TEST_F(LifetimeAnalysisTest, WriteThroughDereferenceIsAUse) {
+  SetupTest(R"(
+    void target(MyObj** pp) {
+      POINT(p1);
+      *pp = nullptr;
+      POINT(p2);
+    }
+  )");
+  EXPECT_THAT(Origins({"pp"}), MustBeLiveAt("p1"));
+  EXPECT_THAT(NoOrigins(), AreLiveAt("p2"));
+}
+
+// Assigning to a variable is an access to that variable's own storage, which is
+// never a loan that can expire, so it leaves nothing live.
+TEST_F(LifetimeAnalysisTest, WriteToVariableIsNotAUseOfItsValue) {
+  SetupTest(R"(
+    void target(MyObj* q) {
+      MyObj* p;
+      POINT(p1);
+      p = q;
+      POINT(p2);
+      use(*p);
+    }
+  )");
+  EXPECT_THAT(Origins({"q"}), MustBeLiveAt("p1"));
+  EXPECT_THAT(Origins({"p"}), MustBeLiveAt("p2"));
+}
+
+// A reference decl has no storage of its own, so its outer origin is the
+// binding; reading or writing through it accesses whatever it was bound to.
+TEST_F(LifetimeAnalysisTest, AccessThroughReference) {
+  SetupTest(R"(
+    void target(MyObj* p) {
+      MyObj& r = *p;
+      POINT(p1);
+      r.i = 1;
+      POINT(p2);
+    }
+  )");
+  EXPECT_THAT(Origins({"r"}), MustBeLiveAt("p1"));
+  EXPECT_THAT(NoOrigins(), AreLiveAt("p2"));
 }
 
 TEST_F(LifetimeAnalysisTest, TrivialDestructorsUAF) {

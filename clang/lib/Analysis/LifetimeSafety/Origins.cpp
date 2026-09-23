@@ -298,6 +298,8 @@ OriginList *OriginManager::getOrCreateList(const Expr *E) {
     // `p` points to.
     if (doesDeclHaveStorage(ReferencedDecl)) {
       Head = createNode(E, QualType{});
+      // `this->f` reaches its field through `this` instead of naming it.
+      AllOrigins.back().NamesDeclStorage = isa<DeclRefExpr>(E);
       // This ensures origin sharing: multiple expressions to the same
       // declaration share the same underlying origins.
       Head->setInnerOriginList(getOrCreateList(ReferencedDecl));
@@ -316,7 +318,15 @@ OriginList *OriginManager::getOrCreateList(const Expr *E) {
   // addressable.
   if (E->isGLValue() && !Type->isReferenceType())
     Type = AST.getLValueReferenceType(Type);
-  return ExprToList[E] = buildListForType(Type, E);
+  OriginList *List = buildListForType(Type, E);
+  // A qualification conversion of a glvalue names what its operand names. It is
+  // not transparent: for class types it is the node alias notes report.
+  if (const auto *CE = dyn_cast<CastExpr>(E);
+      CE && CE->getCastKind() == CK_NoOp && E->isGLValue())
+    if (const OriginList *Sub = getOrCreateList(CE->getSubExpr()))
+      AllOrigins[List->getOuterOriginID().Value].NamesDeclStorage =
+          getOrigin(Sub->getOuterOriginID()).NamesDeclStorage;
+  return ExprToList[E] = List;
 }
 
 void OriginManager::dump(OriginID OID, llvm::raw_ostream &OS) const {

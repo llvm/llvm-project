@@ -447,9 +447,9 @@ void SelfInvalidatingMap() {
   mp[2] = mp[1]; // expected-warning {{local variable 'mp' is later invalidated}} \
                  // expected-warning {{local variable 'mp' is later invalidated}} \
                  // expected-note {{local variable 'mp' is invalidated here}} \
+                 // expected-note {{result of call to 'operator[]' aliases the storage of local variable 'mp' because the implicit object parameter is inferred as lifetimebound}} \
                  // expected-note {{later used here}} \
                  // expected-note {{local variable 'mp' is invalidated here}} \
-                 // expected-note {{result of call to 'operator[]' aliases the storage of local variable 'mp'}} \
                  // expected-note {{later used here}}
 }
 
@@ -798,9 +798,9 @@ void FlatMapSubscriptMultipleCallsInvalidate(std::flat_map<int, int> mp, int a, 
     PrintMax(mp[a], mp[b]); // expected-warning {{parameter 'mp' is later invalidated}} \
                             // expected-warning {{parameter 'mp' is later invalidated}} \
                             // expected-note {{parameter 'mp' is invalidated here}} \
+                            // expected-note 2 {{result of call to 'operator[]' aliases the storage of parameter 'mp' because the implicit object parameter is inferred as lifetimebound}} \
                             // expected-note {{later used here}} \
                             // expected-note {{parameter 'mp' is invalidated here}} \
-                            // expected-note 2 {{result of call to 'operator[]' aliases the storage of parameter 'mp'}} \
                             // expected-note {{later used here}}
 }
 

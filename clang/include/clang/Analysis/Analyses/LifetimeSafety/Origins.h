@@ -53,6 +53,10 @@ struct Origin {
   /// Null for synthetic lvalue origins (e.g., outer origin of DeclRefExpr).
   const Type *Ty;
 
+  /// True if this origin only holds a loan to a declaration named in scope, so
+  /// it can never hold an expired loan.
+  bool NamesDeclStorage = false;
+
   Origin(OriginID ID, const clang::ValueDecl *D, const Type *QT)
       : ID(ID), Ptr(D), Ty(QT) {}
   Origin(OriginID ID, const clang::Expr *E, const Type *QT)

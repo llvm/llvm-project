@@ -153,17 +153,17 @@ void FactsGenerator::run() {
   FactMgr.computePersistentOrigins(Cfg);
 }
 
-/// Simulates LValueToRValue conversion by peeling the outer lvalue origin
-/// if the expression is a GLValue. For pointer/view GLValues, this strips
-/// the origin representing the storage location to get the origins of the
-/// pointed-to value.
+/// Returns the origins of the value \p E evaluates to, recording the read of a
+/// glvalue. Writes peel the outer origin directly instead.
 ///
 /// Example: For `View& v`, returns the origin of what v points to, not v's
 /// storage.
-static OriginList *getRValueOrigins(const Expr *E, OriginList *List) {
-  if (!List)
-    return nullptr;
-  return E->isGLValue() ? List->peelOuterOrigin() : List;
+OriginList *FactsGenerator::readValue(const Expr *E) {
+  OriginList *List = getOriginsList(*E);
+  if (!E->isGLValue())
+    return List;
+  handleAccess(E);
+  return List ? List->peelOuterOrigin() : nullptr;
 }
 
 void FactsGenerator::VisitDeclStmt(const DeclStmt *DS) {
@@ -184,7 +184,6 @@ void FactsGenerator::VisitDeclRefExpr(const DeclRefExpr *DRE) {
   // GLValues (like EnumConstants).
   if (DRE->getFoundDecl()->isFunctionOrFunctionTemplate() || !DRE->isGLValue())
     return;
-  handleUse(DRE);
   // For all declarations with storage (non-references), we issue a loan
   // representing the borrow of the variable's storage itself.
   //
@@ -218,7 +217,7 @@ void FactsGenerator::VisitCXXConstructExpr(const CXXConstructExpr *CCE) {
       CCE->getConstructor()->isDefaulted() && CCE->getNumArgs() == 1 &&
       hasOrigins(CCE->getType())) {
     const Expr *Arg = CCE->getArg(0);
-    if (OriginList *ArgList = getRValueOrigins(Arg, getOriginsList(*Arg))) {
+    if (OriginList *ArgList = readValue(Arg)) {
       flow(getOriginsList(*CCE), ArgList, /*Kill=*/true);
       return;
     }
@@ -228,7 +227,7 @@ void FactsGenerator::VisitCXXConstructExpr(const CXXConstructExpr *CCE) {
   if (const auto *RD = CCE->getType()->getAsCXXRecordDecl();
       RD && isStdCallableWrapperType(RD) && CCE->getNumArgs() == 1) {
     const Expr *Arg = CCE->getArg(0);
-    if (OriginList *ArgList = getRValueOrigins(Arg, getOriginsList(*Arg))) {
+    if (OriginList *ArgList = readValue(Arg)) {
       flow(getOriginsList(*CCE), ArgList, /*Kill=*/true);
       return;
     }
@@ -289,8 +288,13 @@ void FactsGenerator::VisitCXXNullPtrLiteralExpr(
 
 void FactsGenerator::VisitCastExpr(const CastExpr *CE) {
   const Expr *SubExpr = CE->getSubExpr();
-  if (CE->getCastKind() == CK_Dynamic)
-    handleUse(SubExpr);
+  const CastKind Kind = CE->getCastKind();
+  const bool Loads =
+      Kind == CK_LValueToRValue || Kind == CK_LValueToRValueBitCast;
+  OriginList *Loaded = Loads ? readValue(SubExpr) : nullptr;
+  if (Kind == CK_Dynamic)
+    handleAccess(SubExpr);
+
   OriginList *Dest = getOriginsList(*CE);
   if (!Dest)
     return;
@@ -304,10 +308,8 @@ void FactsGenerator::VisitCastExpr(const CastExpr *CE) {
     assert(Src && "LValue being cast to RValue has no origin list");
     // The result of an LValue-to-RValue cast on a pointer lvalue (like `q` in
     // `int *p, *q; p = q;`) should propagate the inner origin (what the pointer
-    // points to), not the outer origin (the pointer's storage location). Strip
-    // the outer lvalue origin.
-    flow(getOriginsList(*CE), getRValueOrigins(SubExpr, Src),
-         /*Kill=*/true);
+    // points to), not the outer origin (the pointer's storage location).
+    flow(Dest, Loaded, /*Kill=*/true);
     return;
   case CK_NullToPointer:
     getOriginsList(*CE);
@@ -353,7 +355,7 @@ void FactsGenerator::VisitCastExpr(const CastExpr *CE) {
     // lvalue level first. A bit-cast that materializes a pointer from a
     // non-pointer representation has no matching source origin and is
     // untracked.
-    OriginList *RVSrc = getRValueOrigins(SubExpr, Src);
+    OriginList *RVSrc = Loads ? Loaded : Src;
     if (RVSrc && Dest->getLength() == RVSrc->getLength())
       flow(Dest, RVSrc, /*Kill=*/true);
     return;
@@ -395,18 +397,17 @@ void FactsGenerator::VisitUnaryOperator(const UnaryOperator *UO) {
     if (!UO->getType()->isPointerType())
       return;
     const Expr *SubExpr = UO->getSubExpr();
-    flow(getOriginsList(*UO),
-         getRValueOrigins(SubExpr, getOriginsList(*SubExpr)), /*Kill=*/true);
+    flow(getOriginsList(*UO), readValue(SubExpr), /*Kill=*/true);
     return;
   }
   case UO_PreInc:
   case UO_PostInc:
   case UO_PreDec:
   case UO_PostDec: {
+    handleAccess(UO->getSubExpr());
     // Inc/dec keeps a pointer in the same allocation, so the result carries the
     // operand's loans. Peel the operand's storage origin when the *result* is a
-    // prvalue (post-inc/dec, or any form in C) -- the inverse of
-    // getRValueOrigins, which peels when its own argument is a glvalue.
+    // prvalue (post-inc/dec, or any form in C).
     if (!UO->getType()->isPointerType())
       return;
     OriginList *SubList = getOriginsList(*UO->getSubExpr());
@@ -432,6 +433,8 @@ void FactsGenerator::handleAssignment(const Expr *TargetExpr,
                                       const Expr *LHSExpr,
                                       const Expr *RHSExpr) {
   LHSExpr = LHSExpr->IgnoreParenImpCasts();
+  handleAccess(LHSExpr);
+  OriginList *RHSList = readValue(RHSExpr);
   OriginList *LHSList = nullptr;
 
   if (const auto *DRE_LHS = dyn_cast<DeclRefExpr>(LHSExpr)) {
@@ -447,37 +450,7 @@ void FactsGenerator::handleAssignment(const Expr *TargetExpr,
   }
   if (!LHSList)
     return;
-  OriginList *RHSList = getOriginsList(*RHSExpr);
-  // For operator= with reference parameters (e.g.,
-  // `View& operator=(const View&)`), the RHS argument stays an lvalue,
-  // unlike built-in assignment where LValueToRValue cast strips the outer
-  // lvalue origin. Strip it manually to get the actual value origins being
-  // assigned.
-  RHSList = getRValueOrigins(RHSExpr, RHSList);
 
-  if (const auto *DRE_LHS = dyn_cast<DeclRefExpr>(LHSExpr)) {
-    QualType QT = DRE_LHS->getDecl()->getType();
-    if (QT->isReferenceType()) {
-      if (hasOrigins(QT->getPointeeType())) {
-        // Writing through a reference uses the binding but overwrites the
-        // pointee. Model this as a Read of the outer origin (keeping the
-        // binding live) and a Write of the inner origins (killing the pointee's
-        // liveness).
-        if (UseFact *UF = UseFacts.lookup(DRE_LHS)) {
-          const OriginList *FullList = UF->getUsedOrigins();
-          assert(FullList);
-          UF->setUsedOrigins(FactMgr.getOriginMgr().createSingleOriginList(
-              FullList->getOuterOriginID()));
-          if (const OriginList *InnerList = FullList->peelOuterOrigin()) {
-            UseFact *WriteUF = FactMgr.createFact<UseFact>(DRE_LHS, InnerList);
-            WriteUF->markAsWritten();
-            CurrentBlockFacts.push_back(WriteUF);
-          }
-        }
-      }
-    } else
-      markUseAsWrite(DRE_LHS);
-  }
   if (!RHSList) {
     // RHS has no tracked origins (e.g., assigning a callable without origins
     // to std::function). Clear loans of the destination.
@@ -494,7 +467,7 @@ void FactsGenerator::handleAssignment(const Expr *TargetExpr,
   // In C, assignment expressions are not GLValues, so the assignment result has
   // the assigned value origins, not the LHS storage origin.
   if (IsCMode)
-    LHSList = getRValueOrigins(LHSExpr, LHSList);
+    LHSList = LHSList->peelOuterOrigin();
   flow(getOriginsList(*TargetExpr), LHSList, /*Kill=*/true);
 }
 
@@ -521,14 +494,12 @@ void FactsGenerator::VisitBinaryOperator(const BinaryOperator *BO) {
     // counterpart in the object's origin -- so the lists may differ in length
     // and we flow just the top level, leaving the member's value untouched.
     OriginList *Dst = getOriginsList(*BO);
-    OriginList *ObjSrc =
-        BO->getOpcode() == BO_PtrMemD
-            ? getOriginsList(*BO->getLHS())
-            : getRValueOrigins(BO->getLHS(), getOriginsList(*BO->getLHS()));
+    OriginList *ObjSrc = BO->getOpcode() == BO_PtrMemD
+                             ? getOriginsList(*BO->getLHS())
+                             : readValue(BO->getLHS());
     if (Dst && ObjSrc)
       CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
           Dst->getOuterOriginID(), ObjSrc->getOuterOriginID(), /*Kill=*/true));
-    handleUse(BO->getLHS());
     return;
   }
   if (BO->getOpcode() == BO_Comma) {
@@ -536,6 +507,7 @@ void FactsGenerator::VisitBinaryOperator(const BinaryOperator *BO) {
     return;
   }
   if (BO->isCompoundAssignmentOp()) {
+    handleAccess(BO->getLHS());
     // A pointer compound additive assignment (`p += n`) carries the LHS's loans
     // like inc/dec above; in C the result is a prvalue, so peel its outer
     // (storage) origin.
@@ -548,10 +520,9 @@ void FactsGenerator::VisitBinaryOperator(const BinaryOperator *BO) {
   }
   if (BO->getType()->isPointerType() && BO->isAdditiveOp())
     handlePointerArithmetic(BO);
-  handleUse(BO->getRHS());
   if (BO->isAssignmentOp())
     handleAssignment(BO, BO->getLHS(), BO->getRHS());
-  // TODO: Handle assignments involving dereference like `*p = q`.
+  // TODO: Propagate origins for assignments through a dereference (`*p = q`).
 }
 
 static const CFGBlock *findPredBlockForExpr(const CFGBlock *MergeBlock,
@@ -668,7 +639,7 @@ void FactsGenerator::VisitMaterializeTemporaryExpr(
           MTEList->getLength() == (SubExprList->getLength() + 1)) &&
          "MTE top level origin should contain a loan to the MTE itself");
 
-  OriginList *RValMTEList = getRValueOrigins(MTE, MTEList);
+  OriginList *RValMTEList = MTEList->peelOuterOrigin();
   flow(RValMTEList, SubExprList, /*Kill=*/true);
   OriginID OuterMTEID = MTEList->getOuterOriginID();
   if (MTE->getStorageDuration() == SD_FullExpression) {
@@ -762,7 +733,7 @@ bool FactsGenerator::handlePlacementNew(const CXXNewExpr *NE,
   // FIXME: General placement arguments need separate handling to overwrite
   // the right origins.
 
-  handleUse(PlacementArg);
+  handleAccess(PlacementArg);
 
   // The pointer returned by placement new comes from the placement
   // argument.
@@ -814,11 +785,13 @@ void FactsGenerator::VisitGCCAsmStmt(const GCCAsmStmt *AS) {
   for (unsigned I = 0, N = AS->getNumOutputs(); I != N; ++I)
     if (AS->isOutputPlusConstraint(I)) // Also read.
       handleUse(AS->getOutputExpr(I));
+    else
+      handleAccess(AS->getOutputExpr(I));
 }
 
 void FactsGenerator::VisitCXXTypeidExpr(const CXXTypeidExpr *TE) {
   if (TE->isPotentiallyEvaluated())
-    handleUse(TE->getExprOperand());
+    handleAccess(TE->getExprOperand());
 }
 
 void FactsGenerator::VisitCXXDeleteExpr(const CXXDeleteExpr *DE) {
@@ -840,7 +813,7 @@ void FactsGenerator::VisitStmtExpr(const StmtExpr *SE) {
   if (!Last)
     return;
   if (OriginList *Dst = getOriginsList(*SE))
-    if (OriginList *Src = getRValueOrigins(Last, getOriginsList(*Last)))
+    if (OriginList *Src = readValue(Last))
       flow(Dst, Src, /*Kill=*/true);
 }
 
@@ -904,13 +877,12 @@ void FactsGenerator::handleGSLPointerConstruction(const CXXConstructExpr *CCE) {
 
   const Expr *Arg = CCE->getArg(0);
   if (isGslPointerType(Arg->getType())) {
-    OriginList *ArgList = getOriginsList(*Arg);
-    assert(ArgList && "GSL pointer argument should have an origin list");
     // GSL pointer is constructed from another gsl pointer.
     // Example:
     //  View(View v);
     //  View(const View &v);
-    ArgList = getRValueOrigins(Arg, ArgList);
+    OriginList *ArgList = readValue(Arg);
+    assert(ArgList && "GSL pointer argument should have an origin list");
     flow(getOriginsList(*CCE), ArgList, /*Kill=*/true);
   } else if (Arg->getType()->isPointerType()) {
     // GSL pointer is constructed from a raw pointer. Flow only the outermost
@@ -1092,8 +1064,7 @@ void FactsGenerator::handleLifetimeCaptureBy(const FunctionDecl *FD,
               : CallArgs[CapturingArgIdx];
       assert(CapturedByArg && "Capturer expression must be valid");
 
-      OriginList *CapturingOriginList = getOriginsList(*CapturedByArg);
-      OriginList *Dest = getRValueOrigins(CapturedByArg, CapturingOriginList);
+      OriginList *Dest = readValue(CapturedByArg);
       if (!Dest)
         continue;
       // KillDest=false because we cannot know if previous captures are being
@@ -1158,7 +1129,7 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
       // std::string_view(const std::string_view& from)
       if (isGslPointerType(Args[I]->getType())) {
         assert(!Args[I]->isGLValue() || ArgList->getLength() >= 2);
-        ArgList = getRValueOrigins(Args[I], ArgList);
+        ArgList = readValue(Args[I]);
       }
       if (isGslOwnerType(Args[I]->getType())) {
         // The constructed gsl::Pointer borrows from the Owner's storage, not
@@ -1220,29 +1191,27 @@ bool FactsGenerator::handleTestPoint(const CXXFunctionalCastExpr *FCE) {
   return false;
 }
 
-void FactsGenerator::handleUse(const Expr *E) {
-  OriginList *List = getOriginsList(*E);
-  if (!List)
-    return;
-  // For DeclRefExpr: Remove the outer layer of origin which borrows from the
-  // decl directly (e.g., when this is not a reference). This is a use of the
-  // underlying decl.
-  if (auto *DRE = dyn_cast<DeclRefExpr>(E);
-      DRE && !DRE->getDecl()->getType()->isReferenceType())
-    List = getRValueOrigins(DRE, List);
-  // Skip if there is no inner origin (e.g., when it is not a pointer type).
-  if (!List)
-    return;
-  if (!UseFacts.contains(E)) {
-    UseFact *UF = FactMgr.createFact<UseFact>(E, List);
-    CurrentBlockFacts.push_back(UF);
-    UseFacts[E] = UF;
-  }
+bool FactsGenerator::namesDeclStorage(const OriginList *List) const {
+  return FactMgr.getOriginMgr()
+      .getOrigin(List->getOuterOriginID())
+      .NamesDeclStorage;
 }
 
-void FactsGenerator::markUseAsWrite(const DeclRefExpr *DRE) {
-  if (UseFacts.contains(DRE))
-    UseFacts[DRE]->markAsWritten();
+void FactsGenerator::handleAccess(const Expr *E) {
+  OriginList *List = getOriginsList(*E);
+  if (!List || namesDeclStorage(List))
+    return;
+  CurrentBlockFacts.push_back(FactMgr.createFact<UseFact>(
+      E,
+      FactMgr.getOriginMgr().createSingleOriginList(List->getOuterOriginID())));
+}
+
+void FactsGenerator::handleUse(const Expr *E) {
+  OriginList *List = getOriginsList(*E);
+  if (List && namesDeclStorage(List))
+    List = List->peelOuterOrigin();
+  if (List)
+    CurrentBlockFacts.push_back(FactMgr.createFact<UseFact>(E, List));
 }
 
 // Creates an IssueFact for a new placeholder loan for each pointer or reference
