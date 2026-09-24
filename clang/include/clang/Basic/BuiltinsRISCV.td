@@ -203,7 +203,7 @@ def paas_x_i32x2 : RISCVBuiltin<"_Vector<2, int>(_Vector<2, int>, _Vector<2, int
 def pasa_x_i16x4 : RISCVBuiltin<"_Vector<4, short>(_Vector<4, short>, _Vector<4, short>)">;
 def pasa_x_i32x2 : RISCVBuiltin<"_Vector<2, int>(_Vector<2, int>, _Vector<2, int>)">;
 
-// Packed Shifts (32-bit)
+// Packed Shift (32-bit)
 def psll_s_u8x4 : RISCVBuiltin<"_Vector<4, unsigned char>(_Vector<4, unsigned char>, unsigned int)">;
 def psll_s_u16x2 : RISCVBuiltin<"_Vector<2, unsigned short>(_Vector<2, unsigned short>, unsigned int)">;
 def psrl_s_u8x4 : RISCVBuiltin<"_Vector<4, unsigned char>(_Vector<4, unsigned char>, unsigned int)">;
@@ -211,7 +211,7 @@ def psrl_s_u16x2 : RISCVBuiltin<"_Vector<2, unsigned short>(_Vector<2, unsigned 
 def psra_s_i8x4 : RISCVBuiltin<"_Vector<4, signed char>(_Vector<4, signed char>, unsigned int)">;
 def psra_s_i16x2 : RISCVBuiltin<"_Vector<2, short>(_Vector<2, short>, unsigned int)">;
 
-// Packed Shifts (64-bit)
+// Packed Shift (64-bit)
 def psll_s_u8x8 : RISCVBuiltin<"_Vector<8, unsigned char>(_Vector<8, unsigned char>, unsigned int)">;
 def psll_s_u16x4 : RISCVBuiltin<"_Vector<4, unsigned short>(_Vector<4, unsigned short>, unsigned int)">;
 def psll_s_u32x2 : RISCVBuiltin<"_Vector<2, unsigned int>(_Vector<2, unsigned int>, unsigned int)">;
