@@ -121,7 +121,7 @@ bb0:
   %tmp1 = icmp eq i8 %tmp, 0
   br i1 %tmp1, label %bb2, label %bb1
 bb1:
-  %tmp3 = load i8, ptr %r, align 1, !range !2, !tbaa !10, !dbg !5
+  %tmp3 = load i8, ptr %r, align 1, !range !2, !tbaa !11, !dbg !5
   %tmp4 = icmp eq i8 %tmp3, 1
   br i1 %tmp4, label %bb2, label %bb3
 bb2:
@@ -146,3 +146,4 @@ declare i8 @test6g(ptr)
 !8 = !{i32 2, !"Dwarf Version", i32 2}
 !9 = !{i32 2, !"Debug Info Version", i32 3}
 !10 = !{!"scalar type", !1}
+!11 = !{!10, !10, i64 0}
