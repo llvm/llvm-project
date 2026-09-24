@@ -98,7 +98,8 @@ getElementwiseKind(Operation *op, Type elementTy) {
             elementTy &&
         cast<ShapedType>(mulOp.getInput2().getType()).getElementType() ==
             elementTy;
-    if ((isFloat || (isSignlessInt && !isBoolean)) && zeroShift && matchingTypes)
+    if ((isFloat || (isSignlessInt && !isBoolean)) && zeroShift &&
+        matchingTypes)
       return ElementwiseKind::mul;
   }
 
