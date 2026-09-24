@@ -163,11 +163,11 @@ DWARF:
   };
 
   const std::vector<ExpectedTypeInfo> expected_types = {
-      {"INTEGER", 4, lldb::eBasicTypeInt},
+      {"INTEGER(KIND=4)", 4, lldb::eBasicTypeInt},
       {"INTEGER(KIND=8)", 8, lldb::eBasicTypeLongLong},
-      {"REAL", 4, lldb::eBasicTypeFloat},
-      {"COMPLEX", 8, lldb::eBasicTypeFloatComplex},
-      {"LOGICAL", 4, lldb::eBasicTypeBool},
+      {"REAL(KIND=4)", 4, lldb::eBasicTypeFloat},
+      {"COMPLEX(KIND=4)", 8, lldb::eBasicTypeFloatComplex},
+      {"LOGICAL(KIND=4)", 4, lldb::eBasicTypeBool},
   };
 
   size_t type_idx = 0;
