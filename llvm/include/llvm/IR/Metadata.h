@@ -1477,6 +1477,7 @@ public:
   LLVM_ABI static MDNode *getMergedCallsiteMetadata(MDNode *A, MDNode *B);
   LLVM_ABI static MDNode *getMergedCalleeTypeMetadata(const MDNode *A,
                                                       const MDNode *B);
+  LLVM_ABI static MDNode *getMergedCalleesMetadata(MDNode *A, MDNode *B);
   LLVM_ABI static MDNode *getMergedAllocTokenMetadata(const MDNode *A,
                                                       const MDNode *B);
 

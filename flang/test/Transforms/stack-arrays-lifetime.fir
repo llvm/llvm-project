@@ -36,8 +36,8 @@ func.func @_QPcst_alloca(%arg0: !fir.ref<!fir.array<100000xf32>> {fir.bindc_name
   return
 }
 // CHECK-LABEL:   func.func @_QPcst_alloca(
-// CHECK-DAG:           %[[VAL_0:.*]] = fir.alloca !fir.array<100000xf32> {bindc_name = ".tmp.array", fir.has_lifetime}
-// CHECK-DAG:           %[[VAL_2:.*]] = fir.alloca !fir.array<100000xi32> {bindc_name = ".tmp.array", fir.has_lifetime}
+// CHECK-DAG:           %[[VAL_0:.*]] = fir.alloca !fir.array<100000xf32> <{bindc_name = ".tmp.array"}> {fir.has_lifetime}
+// CHECK-DAG:           %[[VAL_2:.*]] = fir.alloca !fir.array<100000xi32> <{bindc_name = ".tmp.array"}> {fir.has_lifetime}
 // CHECK:           %[[VAL_9:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.array<100000xf32>>) -> !llvm.ptr
 // CHECK:           llvm.intr.lifetime.start %[[VAL_9]] : !llvm.ptr
 // CHECK:           fir.do_loop
