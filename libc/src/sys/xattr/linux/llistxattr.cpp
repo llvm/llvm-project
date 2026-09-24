@@ -23,6 +23,8 @@ namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(ssize_t, llistxattr,
                    (const char *path, char *list, size_t size)) {
   LIBC_CRASH_ON_NULLPTR(path);
+  if (size != 0)
+    LIBC_CRASH_ON_NULLPTR(list);
 
   ErrorOr<ssize_t> ret = linux_syscalls::llistxattr(path, list, size);
   if (!ret) {

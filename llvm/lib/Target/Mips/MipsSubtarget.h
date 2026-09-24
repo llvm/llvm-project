@@ -168,14 +168,6 @@ class MipsSubtarget : public MipsGenSubtargetInfo {
   // Has3D -- Supports Mips3D ASE.
   bool Has3D;
 
-  // Allow mixed Mips16 and Mips32 in one source file
-  bool AllowMixed16_32;
-
-  // Optimize for space by compiling all functions as Mips 16 unless
-  // it needs floating point. Functions needing floating point are
-  // compiled as Mips32
-  bool Os16;
-
   // HasMSA -- supports MSA ASE.
   bool HasMSA;
 
@@ -326,9 +318,6 @@ public:
   bool isTargetELF() const { return TargetTriple.isOSBinFormatELF(); }
   bool hasVFPU() const { return HasVFPU; }
   bool inMips16Mode() const { return InMips16Mode; }
-  bool inMips16ModeDefault() const {
-    return InMips16Mode;
-  }
   // Hard float for mips16 means essentially to compile as soft float
   // but to use a runtime library for soft float that is written with
   // native mips32 floating point instructions (those runtime routines
@@ -368,18 +357,9 @@ public:
 
   bool useXGOT() const { return UseXGOT; }
 
-  bool enableLongBranchPass() const {
-    return hasStandardEncoding() || inMicroMipsMode() || allowMixed16_32();
-  }
-
   /// Features related to the presence of specific instructions.
   bool hasExtractInsert() const { return !inMips16Mode() && hasMips32r2(); }
   bool hasMTHC1() const { return hasMips32r2(); }
-
-  bool allowMixed16_32() const { return inMips16ModeDefault() |
-                                        AllowMixed16_32; }
-
-  bool os16() const { return Os16; }
 
   bool isTargetWindows() const { return TargetTriple.isOSWindows(); }
 

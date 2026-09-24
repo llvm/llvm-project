@@ -7,7 +7,10 @@
 # Use sparingly for things common to all compilers and platforms.
 ###############################################################################
 
-common --enable_bzlmod --noenable_workspace
+# Bazel pulls in higher versions than we pin in the MODULE.bazel, but they
+# might be lower versions for people using older bazel versions, so we don't
+# want to be encouraged to bump them.
+common --check_direct_dependencies=off
 
 # Force the runfiles layout without the legacy `external/<repo>/...` mirror,
 # to match the Bazel 9+ default once --legacy_external_runfiles is removed.

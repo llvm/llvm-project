@@ -1114,12 +1114,6 @@ public:
     return EpilogueLoweringStatus == CM_EpilogueAllowed;
   }
 
-  /// Returns true if tail-folding is preferred over an epilogue.
-  bool preferTailFoldedLoop() const {
-    return EpilogueLoweringStatus == CM_EpilogueNotNeededFoldTail ||
-           EpilogueLoweringStatus == CM_EpilogueNotAllowedFoldTail;
-  }
-
   /// Returns the TailFoldingStyle that is best for the current loop.
   TailFoldingStyle getTailFoldingStyle() const {
     return ChosenTailFoldingStyle;

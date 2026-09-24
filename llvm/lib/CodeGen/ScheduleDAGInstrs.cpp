@@ -120,57 +120,54 @@ ScheduleDAGInstrs::ScheduleDAGInstrs(MachineFunction &mf,
   SchedModel.init(&ST, EnableSchedModel, EnableSchedItins);
 }
 
-/// If this machine instr has memory reference information and it can be
-/// tracked to a normal reference to a known object, return the Value
-/// for that object. This function returns false the memory location is
-/// unknown or may alias anything.
+/// If this machine instruction has memory reference information, collect the
+/// list of underlying objects in \p Objects. If any of these objects are
+/// unknown or may alias anything, return false. Atomic and volatile memory
+/// operands are skipped.
 static bool getUnderlyingObjectsForInstr(const MachineInstr *MI,
                                          const MachineFrameInfo &MFI,
                                          UnderlyingObjectsVector &Objects,
                                          const DataLayout &DL) {
-  auto AllMMOsOkay = [&]() {
-    for (const MachineMemOperand *MMO : MI->memoperands()) {
-      // TODO: Figure out whether isAtomic is really necessary (see D57601).
-      if (MMO->isVolatile() || MMO->isAtomic())
-        return false;
+  bool AllObjectsIdentified = true;
 
-      if (const PseudoSourceValue *PSV = MMO->getPseudoValue()) {
+  for (const MachineMemOperand *MMO : MI->memoperands()) {
+    // TODO: Figure out whether isAtomic is really necessary (see D57601).
+    if (MMO->isVolatile() || MMO->isAtomic()) {
+      AllObjectsIdentified = false;
+      continue;
+    }
+
+    if (const PseudoSourceValue *PSV = MMO->getPseudoValue()) {
+      if (MFI.hasTailCall()) {
         // Function that contain tail calls don't have unique PseudoSourceValue
         // objects. Two PseudoSourceValues might refer to the same or
         // overlapping locations. The client code calling this function assumes
         // this is not the case. So return a conservative answer of no known
         // object.
-        if (MFI.hasTailCall())
-          return false;
-
+        AllObjectsIdentified = false;
+      } else if (PSV->isAliased(&MFI)) {
         // For now, ignore PseudoSourceValues which may alias LLVM IR values
-        // because the code that uses this function has no way to cope with
-        // such aliases.
-        if (PSV->isAliased(&MFI))
-          return false;
+        // because the code that uses this function has no way to cope with such
+        // aliases.
+        AllObjectsIdentified = false;
+      }
 
-        Objects.push_back(PSV);
-      } else if (const Value *V = MMO->getValue()) {
-        SmallVector<Value *, 4> Objs;
-        if (!getUnderlyingObjectsForCodeGen(V, Objs))
-          return false;
+      Objects.push_back(PSV);
+    } else if (const Value *V = MMO->getValue()) {
+      SmallVector<Value *, 4> Objs;
+      bool ObjectsIdentified = getUnderlyingObjectsForCodeGen(V, Objs);
+      AllObjectsIdentified &= ObjectsIdentified;
 
-        for (Value *V : Objs) {
-          assert(isIdentifiedObject(V));
-          Objects.push_back(V);
-        }
-      } else
-        return false;
+      for (Value *V : Objs) {
+        assert(!ObjectsIdentified || isIdentifiedObject(V));
+        Objects.push_back(V);
+      }
+    } else {
+      AllObjectsIdentified = false;
     }
-    return true;
-  };
-
-  if (!AllMMOsOkay()) {
-    Objects.clear();
-    return false;
   }
 
-  return true;
+  return AllObjectsIdentified;
 }
 
 void ScheduleDAGInstrs::startBlock(MachineBasicBlock *bb) {
@@ -926,11 +923,11 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
     // empty, or filled with the Values of memory locations which this
     // SU depends on.
     UnderlyingObjectsVector Objs;
-    bool ObjsFound = getUnderlyingObjectsForInstr(&MI, MFI, Objs,
-                                                  MF.getDataLayout());
+    bool ObjsIdentified =
+        getUnderlyingObjectsForInstr(&MI, MFI, Objs, MF.getDataLayout());
 
     if (MI.mayStore()) {
-      if (!ObjsFound) {
+      if (!ObjsIdentified) {
         // An unknown store depends on all stores and loads.
         addChainDependencies(SU, Stores);
         addChainDependencies(SU, Loads);
@@ -956,7 +953,7 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
         addChainDependencies(SU, Stores, UnknownValue);
       }
     } else { // SU is a load.
-      if (!ObjsFound) {
+      if (!ObjsIdentified) {
         // An unknown load depends on all stores.
         addChainDependencies(SU, Stores);
 
