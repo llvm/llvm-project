@@ -153,17 +153,14 @@ void FactsGenerator::run() {
   FactMgr.computePersistentOrigins(Cfg);
 }
 
-/// Returns the origins of the value \p E evaluates to, recording the read of a
-/// glvalue. Writes peel the outer origin directly instead.
-///
-/// Example: For `View& v`, returns the origin of what v points to, not v's
-/// storage.
 OriginList *FactsGenerator::readValue(const Expr *E) {
   OriginList *List = getOriginsList(*E);
+  if (!List)
+    return nullptr;
   if (!E->isGLValue())
     return List;
   handleAccess(E);
-  return List ? List->peelOuterOrigin() : nullptr;
+  return List->peelOuterOrigin();
 }
 
 void FactsGenerator::VisitDeclStmt(const DeclStmt *DS) {
@@ -288,31 +285,21 @@ void FactsGenerator::VisitCXXNullPtrLiteralExpr(
 
 void FactsGenerator::VisitCastExpr(const CastExpr *CE) {
   const Expr *SubExpr = CE->getSubExpr();
-  const CastKind Kind = CE->getCastKind();
-  const bool Loads =
-      Kind == CK_LValueToRValue || Kind == CK_LValueToRValueBitCast;
-  OriginList *Loaded = Loads ? readValue(SubExpr) : nullptr;
-  if (Kind == CK_Dynamic)
-    handleAccess(SubExpr);
-
+  // May be null: loading an `int` has no origins but still reads the operand.
   OriginList *Dest = getOriginsList(*CE);
-  if (!Dest)
-    return;
-  OriginList *Src = getOriginsList(*SubExpr);
+  OriginList *Src = Dest ? getOriginsList(*SubExpr) : nullptr;
 
   switch (CE->getCastKind()) {
   case CK_LValueToRValue:
-    if (!SubExpr->isGLValue())
-      return;
-
-    assert(Src && "LValue being cast to RValue has no origin list");
     // The result of an LValue-to-RValue cast on a pointer lvalue (like `q` in
     // `int *p, *q; p = q;`) should propagate the inner origin (what the pointer
     // points to), not the outer origin (the pointer's storage location).
-    flow(Dest, Loaded, /*Kill=*/true);
+    flow(Dest, readValue(SubExpr), /*Kill=*/true);
+    return;
+  case CK_Dynamic:
+    handleAccess(SubExpr);
     return;
   case CK_NullToPointer:
-    getOriginsList(*CE);
     // TODO: Flow into them a null origin.
     return;
   case CK_NoOp:
@@ -330,7 +317,7 @@ void FactsGenerator::VisitCastExpr(const CastExpr *CE) {
   case CK_ArrayToPointerDecay:
     // va_arg(ap, array_type) is UB and does not provide addressable array
     // storage to model.
-    if (isa<VAArgExpr>(SubExpr->IgnoreParens()))
+    if (!Dest || isa<VAArgExpr>(SubExpr->IgnoreParens()))
       return;
     assert(Src && "Array expression should have origins as it is GL value");
     CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
@@ -351,12 +338,12 @@ void FactsGenerator::VisitCastExpr(const CastExpr *CE) {
   case CK_AtomicToNonAtomic: {
     // `__builtin_bit_cast`/`std::bit_cast` of a pointer, and
     // wrapping/unwrapping `_Atomic(T*)`, preserve the pointer value, so
-    // propagate the borrow. The operand may be a glvalue, so strip its outer
-    // lvalue level first. A bit-cast that materializes a pointer from a
+    // propagate the borrow. readValue peels a glvalue operand's storage level
+    // and records the read. A bit-cast that materializes a pointer from a
     // non-pointer representation has no matching source origin and is
     // untracked.
-    OriginList *RVSrc = Loads ? Loaded : Src;
-    if (RVSrc && Dest->getLength() == RVSrc->getLength())
+    OriginList *RVSrc = readValue(SubExpr);
+    if (Dest && RVSrc && Dest->getLength() == RVSrc->getLength())
       flow(Dest, RVSrc, /*Kill=*/true);
     return;
   }

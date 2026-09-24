@@ -141,8 +141,15 @@ private:
   /// If so, creates a `TestPointFact` and returns true.
   bool handleTestPoint(const CXXFunctionalCastExpr *FCE);
 
+  /// Whether \p List's outer origin names a declaration's storage outright, so
+  /// it can never hold an expired loan (see Origin::NamesDeclStorage).
   bool namesDeclStorage(const OriginList *List) const;
 
+  /// Returns the origins of the value \p E evaluates to, recording the read of
+  /// a glvalue. Callers that write to \p E peel the outer origin themselves.
+  ///
+  /// Example: For `View& v`, returns the origin of what v points to, not v's
+  /// storage.
   OriginList *readValue(const Expr *E);
 
   /// Records an access (read or write) of the storage \p E designates, or that
