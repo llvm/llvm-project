@@ -15,6 +15,8 @@
 #ifdef _WIN32
 #include <malloc.h>
 #else
+#include <stddef.h>
+
 #ifndef __cplusplus
 extern int posix_memalign(void **__memptr, size_t __alignment, size_t __size);
 #else
