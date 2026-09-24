@@ -12434,11 +12434,11 @@ public:
   /// C++, if this occurs in a function prototype, if \p Keyword is not \c enum,
   /// if \p Found does not name an enum typedef, or if the typedef and its
   /// underlying tag share a name in the same redeclaration context.
-  QualType BuildMSVCEnumTypedefType(NamedDecl *Found,
-                                    ElaboratedTypeKeyword Keyword,
-                                    NestedNameSpecifier Qualifier,
-                                    SourceLocation NameLoc,
-                                    bool InFunctionPrototype = false);
+  QualType TryBuildMSVCEnumTypedefType(NamedDecl *Found,
+                                       ElaboratedTypeKeyword Keyword,
+                                       NestedNameSpecifier Qualifier,
+                                       SourceLocation NameLoc,
+                                       bool InFunctionPrototype = false);
 
   /// Rebuilds a type within the context of the current instantiation.
   ///

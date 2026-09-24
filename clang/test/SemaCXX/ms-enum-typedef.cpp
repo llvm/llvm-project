@@ -18,7 +18,7 @@ struct StandardUsingCase {
   enum SameName *member;
 };
 
-typedef enum FriendNamed { FriendValue } FriendAlias; // expected-note {{declared here}}
+typedef enum FriendNamed { FriendValue } FriendAlias; // #FriendAliasDecl
 typedef enum AfterFriendNamed { AfterFriendValue } AfterFriendAlias; // nomsvc-note {{declared here}}
 typedef enum TemplateFriendNamed { TemplateFriendValue } TemplateFriendAlias; // expected-note {{declared here}}
 typedef enum AfterTemplateFriendNamed { AfterTemplateFriendValue } AfterTemplateFriendAlias; // nomsvc-note {{declared here}}
@@ -30,7 +30,9 @@ typedef enum NestedInnerNamed { NestedInnerValue } NestedInnerAlias; // nomsvc-n
 typedef enum NestedOuterNamed { NestedOuterValue } NestedOuterAlias; // nomsvc-note {{declared here}}
 
 struct FriendUse {
-  friend void friend_alias(enum FriendAlias *); // expected-error {{typedef 'FriendAlias' cannot be referenced with the 'enum' specifier}}
+  friend void friend_alias(enum FriendAlias *);
+  // expected-error@-1 {{typedef 'FriendAlias' cannot be referenced with the 'enum' specifier}}
+  // expected-note@#FriendAliasDecl {{declared here}}
   enum AfterFriendAlias *member; // nomsvc-error {{typedef 'AfterFriendAlias' cannot be referenced with the 'enum' specifier}}
                                  // msvc-warning@-1 {{using an 'enum' specifier with a typedef name is a Microsoft extension}}
 };

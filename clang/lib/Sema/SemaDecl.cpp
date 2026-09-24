@@ -18170,11 +18170,11 @@ static bool isAcceptableTagRedeclContext(Sema &S, DeclContext *OldDC,
   return false;
 }
 
-QualType Sema::BuildMSVCEnumTypedefType(NamedDecl *Found,
-                                        ElaboratedTypeKeyword Keyword,
-                                        NestedNameSpecifier Qualifier,
-                                        SourceLocation NameLoc,
-                                        bool InFunctionPrototype) {
+QualType Sema::TryBuildMSVCEnumTypedefType(NamedDecl *Found,
+                                           ElaboratedTypeKeyword Keyword,
+                                           NestedNameSpecifier Qualifier,
+                                           SourceLocation NameLoc,
+                                           bool InFunctionPrototype) {
   if (Qualifier)
     Found = Found->getUnderlyingDecl();
   auto *TD = dyn_cast<TypedefNameDecl>(Found);
@@ -18182,11 +18182,12 @@ QualType Sema::BuildMSVCEnumTypedefType(NamedDecl *Found,
       InFunctionPrototype || !TD || Keyword != ElaboratedTypeKeyword::Enum ||
       !TD->getUnderlyingType()->isEnumeralType())
     return QualType();
-  if (TagDecl *Tag = TD->getUnderlyingType()->getAsTagDecl())
+  if (TagDecl *Tag = TD->getUnderlyingType()->getAsTagDecl()) {
     if (Tag->getDeclName() == TD->getDeclName() &&
         Tag->getDeclContext()->getRedeclContext()->Equals(
             TD->getDeclContext()->getRedeclContext()))
       return QualType();
+  }
 
   checkTypeDeclType(nullptr, DiagCtorKind::None, TD, NameLoc);
   Diag(NameLoc, diag::ext_ms_enum_typedef) << isa<TypeAliasDecl>(TD);
@@ -18240,8 +18241,8 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
 
     NestedNameSpecifier Qualifier = SS.getScopeRep();
     NestedNameSpecifierLoc QualifierLoc = SS.getWithLocInContext(Context);
-    QualType T = BuildMSVCEnumTypedefType(TypeDecl, ElaboratedTypeKeyword::Enum,
-                                          Qualifier, NameLoc);
+    QualType T = TryBuildMSVCEnumTypedefType(
+        TypeDecl, ElaboratedTypeKeyword::Enum, Qualifier, NameLoc);
     if (T.isNull())
       return false;
     TypeLocBuilder TLB;
