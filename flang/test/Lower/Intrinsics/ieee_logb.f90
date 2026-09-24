@@ -19,11 +19,7 @@ subroutine out(x)
   ! CHECK:     %[[V_69:[0-9]+]] = fir.load %[[V_68]] : !fir.ref<i8>
   ! CHECK:     %[[V_70:[0-9]+]] = fir.convert %[[V_69]] : (i8) -> i32
   ! CHECK:     %[[V_71:[0-9]+]] = fir.call @_FortranAMapException(%[[V_70]]) fastmath<contract> : (i32) -> i32
-  ! CHECK:     fir.if %false{{[_0-9]*}} {
-  ! CHECK:       fir.call {{.*}}feraiseexcept(%[[V_71]]) fastmath<contract> : (i32)
-  ! CHECK:     } else {
-  ! CHECK:       fir.call {{.*}}feclearexcept(%[[V_71]]) fastmath<contract> : (i32)
-  ! CHECK:     }
+  ! CHECK:     fir.call {{.*}}feclearexcept(%[[V_71]]) fastmath<contract> : (i32)
   call ieee_set_flag(ieee_divide_by_zero, .false.)
 
   ! CHECK:     %[[V_72:[0-9]+]] = fir.load %[[V_64]] : !fir.ref<f64>
