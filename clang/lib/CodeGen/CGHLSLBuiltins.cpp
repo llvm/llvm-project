@@ -320,12 +320,39 @@ static llvm::SyncScope::ID getHLSLAtomicScope(CodeGenFunction &CGF,
   return CGF.getLLVMContext().getOrInsertSyncScopeID(ScopeName);
 }
 
+// The destination can name one element of a vector, as in `buf[0].z` or
+// `gs[i]`. `LValue::getAddress` gives the address of the whole vector for such
+// an lvalue, so index into the vector to get the address of the element. Sema
+// rejects a multi-element swizzle, so the access is always a single element.
+static Address getHLSLAtomicDestAddr(CodeGenFunction &CGF,
+                                     const LValue &DestLV) {
+  if (!DestLV.isVectorElt() && !DestLV.isExtVectorElt())
+    return DestLV.getAddress();
+
+  Address VecAddr = DestLV.isVectorElt() ? DestLV.getVectorAddress()
+                                         : DestLV.getExtVectorAddress();
+  Value *Idx = DestLV.isVectorElt()
+                   ? DestLV.getVectorIdx()
+                   : llvm::ConstantInt::get(CGF.SizeTy,
+                                            CodeGenFunction::getAccessedFieldNo(
+                                                0, DestLV.getExtVectorElts()));
+
+  // A vector-element lvalue reports the type of the whole vector, so take the
+  // element type from the address. HLSL also treats a scalar as a one-element
+  // vector, in which case the address already has the element type.
+  llvm::Type *VecTy = VecAddr.getElementType();
+  llvm::Type *ElemTy = VecTy->isVectorTy()
+                           ? cast<llvm::VectorType>(VecTy)->getElementType()
+                           : VecTy;
+  return CGF.Builder.CreateGEP(CGF, VecAddr.withElementType(ElemTy), Idx);
+}
+
 static Value *handleInterlockedOp(CodeGenFunction &CGF, const CallExpr *E,
                                   llvm::AtomicRMWInst::BinOp Op) {
   // Emit `atomicrmw <op>` directly — no intermediate intrinsic needed on
   // either DXIL or SPIR-V.
   LValue DestLV = CGF.EmitLValue(E->getArg(0));
-  Address DestAddr = DestLV.getAddress();
+  Address DestAddr = getHLSLAtomicDestAddr(CGF, DestLV);
   Value *Val = CGF.EmitScalarExpr(E->getArg(1));
   [[maybe_unused]] QualType ValTy = E->getArg(1)->getType();
   if (Op == llvm::AtomicRMWInst::Xchg)
@@ -355,7 +382,7 @@ static Value *handleInterlockedOp(CodeGenFunction &CGF, const CallExpr *E,
 static Value *handleInterlockedCompareStore(CodeGenFunction &CGF,
                                             const CallExpr *E) {
   LValue DestLV = CGF.EmitLValue(E->getArg(0));
-  Address DestAddr = DestLV.getAddress();
+  Address DestAddr = getHLSLAtomicDestAddr(CGF, DestLV);
   Value *Compare = CGF.EmitScalarExpr(E->getArg(1));
   Value *Val = CGF.EmitScalarExpr(E->getArg(2));
 
