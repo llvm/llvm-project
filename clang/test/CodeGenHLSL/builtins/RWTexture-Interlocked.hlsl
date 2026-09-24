@@ -35,6 +35,8 @@ RWTexture2DArray<uint> UOut : register(u1);
 // DXCHECK:  atomicrmw max ptr %[[PTR6]], i32 1 syncscope("device") monotonic
 // DXCHECK:  %[[PTR7:.*]] = call {{.*}} @llvm.dx.resource.getpointer.{{.*}}(target("dx.Texture", i32, 1, 0, 0, 7) %{{.*}}, <3 x i32> %{{.*}})
 // DXCHECK:  atomicrmw umax ptr %[[PTR7]], i32 1 syncscope("device") monotonic
+// DXCHECK:  %[[PTR8:.*]] = call {{.*}} @llvm.dx.resource.getpointer.{{.*}}(target("dx.Texture", i32, 1, 0, 1, 2) %{{.*}}, <2 x i32> %{{.*}})
+// DXCHECK:  atomicrmw xchg ptr %[[PTR8]], i32 1 syncscope("device") monotonic
 // SPVCHECK: %[[PTR1:.*]] = call {{.*}} @llvm.spv.resource.getpointer.{{.*}}(target("spirv.SignedImage", i32, {{.*}}) %{{.*}}, <2 x i32> %{{.*}})
 // SPVCHECK: atomicrmw add ptr addrspace(11) %[[PTR1]], i32 1 syncscope("device") monotonic
 // SPVCHECK: %[[PTR2:.*]] = call {{.*}} @llvm.spv.resource.getpointer.{{.*}}(target("spirv.SignedImage", i32, {{.*}}) %{{.*}}, <2 x i32> %{{.*}})
@@ -49,6 +51,8 @@ RWTexture2DArray<uint> UOut : register(u1);
 // SPVCHECK: atomicrmw max ptr addrspace(11) %[[PTR6]], i32 1 syncscope("device") monotonic
 // SPVCHECK: %[[PTR7:.*]] = call {{.*}} @llvm.spv.resource.getpointer.{{.*}}(target("spirv.Image", i32, {{.*}}) %{{.*}}, <3 x i32> %{{.*}})
 // SPVCHECK: atomicrmw umax ptr addrspace(11) %[[PTR7]], i32 1 syncscope("device") monotonic
+// SPVCHECK: %[[PTR8:.*]] = call {{.*}} @llvm.spv.resource.getpointer.{{.*}}(target("spirv.SignedImage", i32, {{.*}}) %{{.*}}, <2 x i32> %{{.*}})
+// SPVCHECK: atomicrmw xchg ptr addrspace(11) %[[PTR8]], i32 1 syncscope("device") monotonic
 [shader("compute")]
 [numthreads(1,1,1)]
 void main(uint3 id : SV_DispatchThreadID) {
@@ -59,4 +63,7 @@ void main(uint3 id : SV_DispatchThreadID) {
   InterlockedMin(UOut[id], 1u);
   InterlockedMax(Out[id.xy], 1);
   InterlockedMax(UOut[id], 1u);
+  // DXIL has no float texture atomic, so only the integer form is covered.
+  int Orig;
+  InterlockedExchange(Out[id.xy], 1, Orig);
 }
