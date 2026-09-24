@@ -774,24 +774,24 @@ LogicalResult mlir::MlirOptMain(llvm::raw_ostream &outputStream,
       llvm::MemoryBuffer::getMemBuffer(buffer->getMemBufferRef(),
                                        /*RequiresNullTerminator=*/false),
       SMLoc());
-  // Note: this creates a verifier handler independent of the the flag set, as
-  // internally if the flag is not set, a new scoped diagnostic handler is
-  // created which would intercept the diagnostics and verify them.
-  SourceMgrDiagnosticVerifierHandler sourceMgrHandler(
-      sourceMgr, &threadPoolCtx, config.verifyDiagnosticsLevel());
+
+  std::optional<SourceMgrDiagnosticVerifierHandler> sourceMgrHandler;
+  if (config.shouldVerifyDiagnostics())
+    sourceMgrHandler.emplace(sourceMgr, &threadPoolCtx,
+                             config.verifyDiagnosticsLevel());
+
   auto chunkFn = [&](std::unique_ptr<MemoryBuffer> chunkBuffer,
                      llvm::MemoryBufferRef sourceBuffer, raw_ostream &os) {
     return processBuffer(
         os, std::move(chunkBuffer), sourceBuffer, config, registry,
-        config.shouldVerifyDiagnostics() ? &sourceMgrHandler : nullptr,
-        threadPool);
+        sourceMgrHandler ? &*sourceMgrHandler : nullptr, threadPool);
   };
   LogicalResult status = splitAndProcessBuffer(
       llvm::MemoryBuffer::getMemBuffer(buffer->getMemBufferRef(),
                                        /*RequiresNullTerminator=*/false),
       chunkFn, outputStream, config.inputSplitMarker(),
       config.outputSplitMarker());
-  if (config.shouldVerifyDiagnostics() && failed(sourceMgrHandler.verify()))
+  if (sourceMgrHandler && failed(sourceMgrHandler->verify()))
     status = failure();
   return status;
 }
