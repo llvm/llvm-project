@@ -27,10 +27,23 @@ using namespace llvm::AMDGPU;
 
 namespace HC = llvm::AMDGPU::HazardClass;
 
-static cl::opt<std::string> AntiHintRuleSelection(
-    "amdgpu-anti-hints-rules", cl::Hidden,
-    cl::desc("Comma-separated anti-hints rules (waw, war), or all or none."),
-    cl::init("all"));
+enum class AntiHintRule {
+  None,
+  MFMAWAW,
+  MFMAWAR,
+  All,
+};
+
+static cl::bits<AntiHintRule> AntiHintRuleSelection(
+    "amdgpu-anti-hints-rules", cl::Hidden, cl::CommaSeparated,
+    cl::desc("Anti-hints rules to select."),
+    cl::values(clEnumValN(AntiHintRule::None, "none", "Select no rules"),
+               clEnumValN(AntiHintRule::MFMAWAW, "mfma-waw",
+                          "MFMA destination write-after-write"),
+               clEnumValN(AntiHintRule::MFMAWAR, "mfma-war",
+                          "XDL MFMA src2 write-after-read"),
+               clEnumValN(AntiHintRule::All, "all",
+                          "Select all rules (default)")));
 
 namespace {
 
@@ -203,25 +216,19 @@ bool hasMFMAHazard(const HazardContext &Ctx) {
   return Ctx.ST->hasGFX90AInsts();
 }
 
-bool ruleSelected(StringRef Name) {
-  StringRef Selection(AntiHintRuleSelection);
-  if (Selection.equals_insensitive("all"))
+bool ruleSelected(AntiHintRule Rule) {
+  if (!AntiHintRuleSelection.getNumOccurrences() ||
+      AntiHintRuleSelection.isSet(AntiHintRule::All))
     return true;
-  if (Selection.equals_insensitive("none"))
-    return false;
-  SmallVector<StringRef, 3> Selected;
-  Selection.split(Selected, ',', /*MaxSplit=*/-1, /*KeepEmpty=*/false);
-  return llvm::any_of(Selected, [Name](StringRef S) {
-    return S.trim().equals_insensitive(Name);
-  });
+  return AntiHintRuleSelection.isSet(Rule);
 }
 
 bool isMFMAWAWRuleEnabled(const HazardContext &Ctx) {
-  return hasMFMAHazard(Ctx) && ruleSelected("waw");
+  return hasMFMAHazard(Ctx) && ruleSelected(AntiHintRule::MFMAWAW);
 }
 
 bool isMFMAWARRuleEnabled(const HazardContext &Ctx) {
-  return hasMFMAHazard(Ctx) && ruleSelected("war");
+  return hasMFMAHazard(Ctx) && ruleSelected(AntiHintRule::MFMAWAR);
 }
 
 bool isXDLMFMA(const MachineInstr &MI, const HazardContext &Ctx) {
@@ -477,16 +484,13 @@ private:
       if (!Ctx.LIS->hasInterval(ProducerReg))
         return;
       const LiveInterval &ProducerLI = Ctx.LIS->getInterval(ProducerReg);
+      // Skip a live producer reg.
       if (ProducerLI.liveAt(Slot))
         return;
       for (Register ConsumerReg : ConsumerRegs) {
         if (ConsumerReg == ProducerReg || isCopyOf(ConsumerReg, ProducerReg))
           continue;
-        // Only allow anti-hints when producer and consumer reg live ranges do
-        // not overlap
-        if (Ctx.LIS->hasInterval(ConsumerReg) &&
-            ProducerLI.overlaps(Ctx.LIS->getInterval(ConsumerReg)))
-          continue;
+
         Ctx.MRI->addRegAllocationAntiHints(ConsumerReg, ProducerReg);
         if (CT.Hint == ConsumerHint::Symmetric)
           Ctx.MRI->addRegAllocationAntiHints(ProducerReg, ConsumerReg);

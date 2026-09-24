@@ -48,10 +48,10 @@ using namespace llvm;
 
 #define DEBUG_TYPE "amdgpu-pre-ra-optimizations"
 
-static cl::opt<bool> EnableAntiHintsForMFMARegs(
-    "amdgpu-anti-hints-for-mfma", cl::Hidden,
-    cl::desc("Add register allocation anti-hints for MFMA hazards."),
-    cl::init(true));
+static cl::opt<bool>
+    EnableAntiHints("amdgpu-anti-hints", cl::Hidden,
+                    cl::desc("Enable register allocation anti-hints."),
+                    cl::init(true));
 
 namespace {
 
@@ -318,7 +318,7 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
 
   // Anti-hints only steer register allocation, so they do not count as a
   // modification of the function.
-  if (EnableAntiHintsForMFMARegs) {
+  if (EnableAntiHints) {
     SchedModel.init(&ST);
     AMDGPU::HazardContext HCtx{TII, TRI, MRI, LIS, &ST, &SchedModel};
     AMDGPU::applyAntiHintRules(MF, HCtx);
