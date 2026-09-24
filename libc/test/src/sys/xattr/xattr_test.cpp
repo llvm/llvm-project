@@ -253,7 +253,7 @@ TEST_F(LlvmLibcXattrTest, SetAttributeWithNonzeroFlags) {
               Fails(EEXIST));
 }
 
-#if 1 // defined(LIBC_ADD_NULL_CHECKS)
+#if defined(LIBC_ADD_NULL_CHECKS)
 
 TEST_F(LlvmLibcXattrTest, SetCrashesOnNullPath) {
   EXPECT_DEATH(

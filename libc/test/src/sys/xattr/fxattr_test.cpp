@@ -180,7 +180,7 @@ TEST_F(LlvmLibcFxattrTest, SetAttributeWithNonzeroFlags) {
               Fails(EEXIST));
 }
 
-#if 1 // defined(LIBC_ADD_NULL_CHECKS)
+#if defined(LIBC_ADD_NULL_CHECKS)
 
 TEST_F(LlvmLibcFxattrTest, SetCrashesOnNullAttributeName) {
   const LIBC_NAMESPACE::CString TEST_FILE_NAME =
