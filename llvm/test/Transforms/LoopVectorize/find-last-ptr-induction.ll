@@ -110,14 +110,13 @@ define ptr @find_last_ptr_induction_separate_array(ptr %a, ptr %b, ptr %init, i6
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x ptr> [[BROADCAST_SPLAT]], i64 0
-; CHECK-NEXT:    [[TMP12:%.*]] = call ptr @llvm.experimental.vector.extract.last.active.v4p0(<4 x ptr> [[TMP9]], <4 x i1> [[TMP8]], ptr [[TMP11]])
+; CHECK-NEXT:    [[TMP11:%.*]] = call ptr @llvm.experimental.vector.extract.last.active.v4p0(<4 x ptr> [[TMP9]], <4 x i1> [[TMP8]], ptr [[INIT]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi ptr [ [[TMP2]], %[[MIDDLE_BLOCK]] ], [ [[B]], %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi ptr [ [[TMP12]], %[[MIDDLE_BLOCK]] ], [ [[INIT]], %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi ptr [ [[TMP11]], %[[MIDDLE_BLOCK]] ], [ [[INIT]], %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -132,7 +131,7 @@ define ptr @find_last_ptr_induction_separate_array(ptr %a, ptr %b, ptr %init, i6
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[R:%.*]] = phi ptr [ [[LAST_NEXT]], %[[LOOP]] ], [ [[TMP12]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[R:%.*]] = phi ptr [ [[LAST_NEXT]], %[[LOOP]] ], [ [[TMP11]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret ptr [[R]]
 ;
 entry:

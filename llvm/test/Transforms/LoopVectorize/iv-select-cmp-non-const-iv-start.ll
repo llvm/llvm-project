@@ -297,13 +297,12 @@ define i32 @select_trunc_non_const_iv_start_signed_guard(ptr %a, i32 %rdx_start,
 ; CHECK-VF4IC1-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-VF4IC1-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK-VF4IC1:       [[MIDDLE_BLOCK]]:
-; CHECK-VF4IC1-NEXT:    [[TMP10:%.*]] = extractelement <4 x i32> [[BROADCAST_SPLAT]], i64 0
-; CHECK-VF4IC1-NEXT:    [[TMP11:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> [[TMP8]], <4 x i1> [[TMP7]], i32 [[TMP10]])
+; CHECK-VF4IC1-NEXT:    [[TMP14:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> [[TMP8]], <4 x i1> [[TMP7]], i32 [[RDX_START]])
 ; CHECK-VF4IC1-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP1]], [[N_VEC]]
 ; CHECK-VF4IC1-NEXT:    br i1 [[CMP_N]], label %[[EXIT_LOOPEXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK-VF4IC1:       [[SCALAR_PH]]:
 ; CHECK-VF4IC1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP2]], %[[MIDDLE_BLOCK]] ], [ [[TMP0]], %[[FOR_BODY_PREHEADER]] ]
-; CHECK-VF4IC1-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP11]], %[[MIDDLE_BLOCK]] ], [ [[RDX_START]], %[[FOR_BODY_PREHEADER]] ]
+; CHECK-VF4IC1-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP14]], %[[MIDDLE_BLOCK]] ], [ [[RDX_START]], %[[FOR_BODY_PREHEADER]] ]
 ; CHECK-VF4IC1-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK-VF4IC1:       [[FOR_BODY]]:
 ; CHECK-VF4IC1-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
@@ -317,7 +316,7 @@ define i32 @select_trunc_non_const_iv_start_signed_guard(ptr %a, i32 %rdx_start,
 ; CHECK-VF4IC1-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[WIDE_TRIP_COUNT]]
 ; CHECK-VF4IC1-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT_LOOPEXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK-VF4IC1:       [[EXIT_LOOPEXIT]]:
-; CHECK-VF4IC1-NEXT:    [[COND_LCSSA:%.*]] = phi i32 [ [[COND]], %[[FOR_BODY]] ], [ [[TMP11]], %[[MIDDLE_BLOCK]] ]
+; CHECK-VF4IC1-NEXT:    [[COND_LCSSA:%.*]] = phi i32 [ [[COND]], %[[FOR_BODY]] ], [ [[TMP14]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-VF4IC1-NEXT:    br label %[[EXIT]]
 ; CHECK-VF4IC1:       [[EXIT]]:
 ; CHECK-VF4IC1-NEXT:    [[IDX_0_LCSSA:%.*]] = phi i32 [ [[RDX_START]], %[[ENTRY]] ], [ [[COND_LCSSA]], %[[EXIT_LOOPEXIT]] ]
@@ -392,8 +391,7 @@ define i32 @select_trunc_non_const_iv_start_signed_guard(ptr %a, i32 %rdx_start,
 ; CHECK-VF4IC4-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-VF4IC4-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK-VF4IC4:       [[MIDDLE_BLOCK]]:
-; CHECK-VF4IC4-NEXT:    [[TMP10:%.*]] = extractelement <4 x i32> [[BROADCAST_SPLAT]], i64 0
-; CHECK-VF4IC4-NEXT:    [[TMP11:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> [[TMP8]], <4 x i1> [[TMP7]], i32 [[TMP10]])
+; CHECK-VF4IC4-NEXT:    [[TMP11:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> [[TMP8]], <4 x i1> [[TMP7]], i32 [[RDX_START]])
 ; CHECK-VF4IC4-NEXT:    [[TMP34:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> [[TMP28]], <4 x i1> [[TMP24]], i32 [[TMP11]])
 ; CHECK-VF4IC4-NEXT:    [[TMP35:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> [[TMP29]], <4 x i1> [[TMP25]], i32 [[TMP34]])
 ; CHECK-VF4IC4-NEXT:    [[TMP36:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> [[TMP30]], <4 x i1> [[TMP26]], i32 [[TMP35]])
