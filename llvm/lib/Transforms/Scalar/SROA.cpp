@@ -4988,10 +4988,12 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
         uint64_t SliceSize = S.endOffset() - S.beginOffset();
         uint64_t NonOverlapSize = SliceSize - OverlapSize;
         if (OverlapSize < NonOverlapSize) {
-          // When the overlap area is smaller the middle part is initially
-          // and remains outside the overlap, so splitting once is enough.
+          // When the overlap area is smaller the middle part is initially and
+          // remains outside the overlap, so splitting once is enough. The size
+          // of the first and last part both equal the overlap size, so the
+          // split points are that amount from the start and end of the slice.
           Offsets.Splits.push_back(OverlapSize);
-          Offsets.Splits.push_back(NonOverlapSize);
+          Offsets.Splits.push_back(SliceSize - OverlapSize);
         } else if (OverlapSize > NonOverlapSize) {
           // When the overlap area is larger the middle part is initially and
           // remains inside the overlap, so we repeatedly split it.
