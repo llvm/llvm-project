@@ -3066,13 +3066,13 @@ namespace conditional_operator_control_flow {
 #ifdef __cpp_exceptions
 
 void throw_branches(bool cond, int *value) {
-  use((cond ? throw 1 : value));
-  (void)(cond ? throw 1 : throw 2);
+  use(cond ? throw 1 : value);
+  cond ? throw 1 : throw 2;
 }
 
 void nested_throw_branches(bool cond, bool cond2, int *value) {
-  use((cond ? (cond2 ? throw 1 : value) : throw 2));
-  use((cond ? throw 1 : (cond2 ? value : throw 2)));
+  use(cond ? (cond2 ? throw 1 : value) : throw 2);
+  use(cond ? throw 1 : (cond2 ? value : throw 2));
 }
 
 // A `throw` arm of a binary conditional `a ?: b` carries no origins; flowing it
@@ -4363,6 +4363,37 @@ void taking_an_address_is_not_a_use() {
   (void)pp; (void)reborrow; (void)pnext;
 }
 
+// The results still point into the dead object, so using them warns.
+void using_an_address_of_the_pointer_is_a_use() {
+  Node *p;
+  {
+    Node local;
+    p = &local;   // expected-warning {{local variable 'local' does not live long enough}}
+  }               // expected-note {{local variable 'local' is destroyed here}}
+  Node **pp = &p;
+  use(pp);        // expected-note {{later used here}}
+}
+
+void using_a_reborrow_is_a_use() {
+  Node *p;
+  {
+    Node local;
+    p = &local;   // expected-warning {{local variable 'local' does not live long enough}}
+  }               // expected-note {{local variable 'local' is destroyed here}}
+  Node *reborrow = &*p; // expected-note {{local variable 'p' aliases the storage of local variable 'local'}}
+  use(reborrow);  // expected-note {{later used here}}
+}
+
+void using_an_address_of_a_field_is_a_use() {
+  Node *p;
+  {
+    Node local;
+    p = &local;   // expected-warning {{local variable 'local' does not live long enough}}
+  }               // expected-note {{local variable 'local' is destroyed here}}
+  Node **pnext = &p->next; // expected-note {{local variable 'p' aliases the storage of local variable 'local'}}
+  use(pnext);     // expected-note {{later used here}}
+}
+
 void reading_through_a_pointer_is_a_use() {
   Node *p;
   int sink;
@@ -4449,7 +4480,45 @@ void one_level_per_load() {
     pp = &inner;    // expected-warning {{local variable 'inner' does not live long enough}}
   }                 // expected-note {{local variable 'inner' is destroyed here}}
   Node *q = *pp;    // expected-note {{later used here}}
-  (void)q;          // Reads pp, so it names 'inner'; 'outer' is never read.
+  (void)*q;         // Discarded, so 'outer' is never read.
+}
+
+// Each of these reads 'outer' as well.
+void reading_the_second_level_is_a_use() {
+  Node **pp;
+  {
+    Node *inner;
+    Node outer;
+    inner = &outer; // expected-warning {{local variable 'outer' does not live long enough}}
+    pp = &inner;    // expected-warning {{local variable 'inner' does not live long enough}}
+  }                 // expected-note 2 {{destroyed here}}
+  Node *q = *pp;    // expected-note {{later used here}} \
+                    // expected-note {{local variable 'pp' aliases the storage of local variable 'outer'}}
+  use(*q);          // expected-note {{later used here}}
+}
+
+void using_the_loaded_pointer_is_a_use() {
+  Node **pp;
+  {
+    Node *inner;
+    Node outer;
+    inner = &outer; // expected-warning {{local variable 'outer' does not live long enough}}
+    pp = &inner;    // expected-warning {{local variable 'inner' does not live long enough}}
+  }                 // expected-note 2 {{destroyed here}}
+  Node *q = *pp;    // expected-note {{later used here}} \
+                    // expected-note {{local variable 'pp' aliases the storage of local variable 'outer'}}
+  use(q);           // expected-note {{later used here}}
+}
+
+void using_the_double_pointer_is_a_use() {
+  Node **pp;
+  {
+    Node *inner;
+    Node outer;
+    inner = &outer; // expected-warning {{local variable 'outer' does not live long enough}}
+    pp = &inner;    // expected-warning {{local variable 'inner' does not live long enough}}
+  }                 // expected-note 2 {{destroyed here}}
+  use(pp);          // expected-note 2 {{later used here}}
 }
 
 void reading_through_a_reference_is_a_use() {
@@ -4562,6 +4631,18 @@ void through_placement_new() {
   new (p) Node;          // expected-note {{later used here}}
 }
 
+// Unlike `p++` on a raw pointer, a class iterator's operator++ is a call.
+void class_iterator_increment_is_a_use() {
+  std::vector<int> v;
+  auto it = v.begin();
+  {
+    std::vector<int> local;
+    it = local.begin(); // expected-warning {{local variable 'local' does not live long enough}} \
+                        // expected-note {{result of call to 'begin' aliases the storage of local variable 'local' because the implicit object parameter is inferred as lifetimebound}}
+  }                     // expected-note {{local variable 'local' is destroyed here}}
+  it++;                 // expected-note {{later used here}}
+}
+
 // Reading the dangling value and then overwriting it is still a use; the read
 // happens first.
 Node *ident(Node *);
@@ -4621,9 +4702,9 @@ void typeid_reads_the_object() {
 }
 
 void bit_cast_reads_its_operand() {
-  long *p;
+  __INTPTR_TYPE__ *p;
   {
-    long local = 0;
+    __INTPTR_TYPE__ local = 0;
     p = &local;   // expected-warning {{local variable 'local' does not live long enough}}
   }               // expected-note {{local variable 'local' is destroyed here}}
   int *q = __builtin_bit_cast(int *, *p); // expected-note {{later used here}}
