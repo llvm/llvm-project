@@ -121,10 +121,12 @@ public:
     requires convertible_to<_Type, _Iter>
   _LIBCPP_HIDE_FROM_ABI constexpr basic_const_iterator(_Type&& __cur) : __current_(std::forward<_Type>(__cur)) {}
 
-  _LIBCPP_HIDE_FROM_ABI constexpr const _Iter& base() const& noexcept { return __current_; }
-  _LIBCPP_HIDE_FROM_ABI constexpr _Iter base() && { return std::move(__current_); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const _Iter& base() const& noexcept { return __current_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Iter base() && { return std::move(__current_); }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __reference operator*() const { return static_cast<__reference>(*__current_); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __reference operator*() const {
+    return static_cast<__reference>(*__current_);
+  }
   _LIBCPP_HIDE_FROM_ABI constexpr const auto* operator->() const
     requires is_lvalue_reference_v<iter_reference_t<_Iter>> &&
              same_as<remove_cvref_t<iter_reference_t<_Iter>>, value_type>
@@ -176,7 +178,7 @@ public:
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __reference operator[](difference_type __n) const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __reference operator[](difference_type __n) const
     requires random_access_iterator<_Iter>
   {
     return static_cast<__reference>(__current_[__n]);
@@ -281,37 +283,38 @@ public:
     return __lhs >= __rhs.__current_;
   }
 
-  friend _LIBCPP_HIDE_FROM_ABI constexpr basic_const_iterator
+  [[nodiscard]] friend _LIBCPP_HIDE_FROM_ABI constexpr basic_const_iterator
   operator+(const basic_const_iterator& __it, difference_type __n)
     requires random_access_iterator<_Iter>
   {
     return basic_const_iterator(__it.__current_ + __n);
   }
-  friend _LIBCPP_HIDE_FROM_ABI constexpr basic_const_iterator
+  [[nodiscard]] friend _LIBCPP_HIDE_FROM_ABI constexpr basic_const_iterator
   operator+(difference_type __n, const basic_const_iterator& __it)
     requires random_access_iterator<_Iter>
   {
     return basic_const_iterator(__it.__current_ + __n);
   }
 
-  friend _LIBCPP_HIDE_FROM_ABI constexpr basic_const_iterator
+  [[nodiscard]] friend _LIBCPP_HIDE_FROM_ABI constexpr basic_const_iterator
   operator-(const basic_const_iterator& __it, difference_type __n)
     requires random_access_iterator<_Iter>
   {
     return basic_const_iterator(__it.__current_ - __n);
   }
   template <sized_sentinel_for<_Iter> _Sent>
-  _LIBCPP_HIDE_FROM_ABI constexpr difference_type operator-(const _Sent& __rhs) const {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr difference_type operator-(const _Sent& __rhs) const {
     return __current_ - __rhs;
   }
   template <__not_a_const_iterator _Sent>
     requires sized_sentinel_for<_Sent, _Iter>
-  friend _LIBCPP_HIDE_FROM_ABI constexpr difference_type
+  [[nodiscard]] friend _LIBCPP_HIDE_FROM_ABI constexpr difference_type
   operator-(const _Sent& __lhs, const basic_const_iterator& __rhs) {
     return __lhs - __rhs;
   }
 
-  friend _LIBCPP_HIDE_FROM_ABI constexpr __rvalue_reference iter_move(const basic_const_iterator& __it) noexcept(
+  [[nodiscard]] friend _LIBCPP_HIDE_FROM_ABI constexpr __rvalue_reference
+  iter_move(const basic_const_iterator& __it) noexcept(
       noexcept(static_cast<__rvalue_reference>(ranges::iter_move(__it.__current_)))) {
     return static_cast<__rvalue_reference>(ranges::iter_move(__it.__current_));
   }
@@ -334,11 +337,11 @@ struct common_type<basic_const_iterator<_Type1>, basic_const_iterator<_Type2>> {
 };
 
 template <input_iterator _Iter>
-_LIBCPP_HIDE_FROM_ABI constexpr const_iterator<_Iter> make_const_iterator(_Iter __it) {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const_iterator<_Iter> make_const_iterator(_Iter __it) {
   return __it;
 }
 template <semiregular _Sent>
-_LIBCPP_HIDE_FROM_ABI constexpr const_sentinel<_Sent> make_const_sentinel(_Sent __sent) {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const_sentinel<_Sent> make_const_sentinel(_Sent __sent) {
   return __sent;
 }
 
