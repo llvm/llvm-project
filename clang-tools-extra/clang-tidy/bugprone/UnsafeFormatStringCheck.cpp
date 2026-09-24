@@ -48,7 +48,7 @@ parseCheckedFunctions(StringRef Option, ClangTidyContext *Context) {
     }
     Result.push_back(
         {Name.trim().str(),
-         matchers::MatchesAnyListedNameMatcher::NameMatcher(Name.trim()),
+         matchers::MatchesAnyListedRegexNameMatcher::NameMatcher(Name.trim()),
          Count});
   }
 
@@ -87,7 +87,7 @@ void UnsafeFormatStringCheck::registerMatchers(MatchFinder *Finder) {
     for (const auto &Entry : CustomPrintfFunctions)
       FunctionNames.emplace_back(Entry.Name);
 
-    auto CustomFunctionsMatcher = matchers::matchesAnyListedName(FunctionNames);
+    auto CustomFunctionsMatcher = matchers::matchesAnyListedRegexName(FunctionNames);
 
     Finder->addMatcher(callExpr(callee((functionDecl(CustomFunctionsMatcher))))
                            .bind(PrintfCallBind),
@@ -101,7 +101,7 @@ void UnsafeFormatStringCheck::registerMatchers(MatchFinder *Finder) {
     for (const auto &Entry : CustomScanfFunctions)
       FunctionNames.emplace_back(Entry.Name);
 
-    auto CustomFunctionsMatcher = matchers::matchesAnyListedName(FunctionNames);
+    auto CustomFunctionsMatcher = matchers::matchesAnyListedRegexName(FunctionNames);
 
     Finder->addMatcher(callExpr(callee((functionDecl(CustomFunctionsMatcher))))
                            .bind(ScanfCallBind),

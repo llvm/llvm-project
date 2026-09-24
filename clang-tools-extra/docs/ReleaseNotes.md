@@ -129,6 +129,12 @@ infrastructure are described first, followed by tool-specific sections.
 
 #### New checks
 
+- New {doc}`bugprone-unsafe-format-string
+  <clang-tidy/checks/bugprone/unsafe-format-string>` check.
+
+  Detects usage of vulnerable `printf` and `scanf`-like format string
+  functions with unbounded `%s` specifiers that can cause buffer overflows.
+
 - New {doc}`llvm-invalid-regex-pattern
   <clang-tidy/checks/llvm/invalid-regex-pattern>` check.
 
@@ -158,11 +164,6 @@ infrastructure are described first, followed by tool-specific sections.
   Finds explicit zero initializers of arrays that can be replaced with empty
   braces.
 
-- New {doc}`bugprone-unsafe-format-string
-  <clang-tidy/checks/bugprone/unsafe-format-string>` check.
-
-  Detects usage of vulnerable `printf` and `scanf`-like format string
-  functions with unbounded `%s` specifiers that can cause buffer overflows.
 
 #### New check aliases
 

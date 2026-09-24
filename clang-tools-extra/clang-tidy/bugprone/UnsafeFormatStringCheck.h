@@ -28,7 +28,7 @@ public:
 
   struct CheckedFunction {
     std::string Name;
-    matchers::MatchesAnyListedNameMatcher::NameMatcher Pattern;
+    matchers::MatchesAnyListedRegexNameMatcher::NameMatcher Pattern;
     unsigned long FormatStringLocation;
   };
 
