@@ -437,3 +437,52 @@ module attributes {transform.with_named_sequence} {
 // CHECK:     %[[OUT:.*]] = tensor.extract_slice %[[ARG5]][0, %{{.*}}, %{{.*}}, 0] [1, %[[SIZE_H]], %{{.*}}, 2] [1, 1, 1, 1] : tensor<1x3x8x2xf32> to tensor<1x?x?x2xf32>
 // CHECK:     %[[RES:.*]] = linalg.winograd_output_transform fmr(F_4_3) ins(%[[IN]] : tensor<1x6x?x1x1x2xf32>) outs(%[[OUT]] : tensor<1x?x?x2xf32>)
 // CHECK:     tensor.insert_slice %[[RES]] into %[[ARG5]][0, %{{.*}}, %{{.*}}, 0] [1, %[[SIZE_H]], %{{.*}}, 2] [1, 1, 1, 1]
+
+// -----
+
+func.func @tile_winograd_input_alpha_w_one(%arg0: tensor<1x10x3x2xf32>, %arg1: tensor<6x1x2x3x1x2xf32>) -> tensor<6x1x2x3x1x2xf32> {
+  %0 = linalg.winograd_input_transform fmr(F_4_3) ins(%arg0 : tensor<1x10x3x2xf32>) outs(%arg1 : tensor<6x1x2x3x1x2xf32>) -> tensor<6x1x2x3x1x2xf32>
+  return %0 : tensor<6x1x2x3x1x2xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.winograd_input_transform"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1, %loop:2 = transform.structured.tile_using_for %0 tile_sizes [0, 0, 1, 2, 0, 0] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// CHECK-LABEL: func.func @tile_winograd_input_alpha_w_one(
+// CHECK-SAME:  %[[ARG0:.*]]: tensor<1x10x3x2xf32>, %[[ARG1:.*]]: tensor<6x1x2x3x1x2xf32>)
+// CHECK: scf.for %[[ARG2:.*]] = {{.*}} iter_args(%[[ARG3:.*]] = %[[ARG1]])
+// CHECK:   scf.for %[[ARG4:.*]] = {{.*}} iter_args(%[[ARG5:.*]] = %[[ARG3]])
+// CHECK:     %[[SIZE_W:.*]] = affine.min
+// CHECK:     %[[IN:.*]] = tensor.extract_slice %[[ARG0]][0, %{{.*}}, %{{.*}}, 0] [1, %{{.*}}, %[[SIZE_W]], 2] [1, 1, 1, 1] : tensor<1x10x3x2xf32> to tensor<1x?x?x2xf32>
+// CHECK:     %[[OUT:.*]] = tensor.extract_slice %[[ARG5]][0, 0, %[[ARG2]], %[[ARG4]], 0, 0] [6, 1, 1, %[[SIZE_W]], 1, 2] [1, 1, 1, 1, 1, 1] : tensor<6x1x2x3x1x2xf32> to tensor<6x1x1x?x1x2xf32>
+// CHECK:     linalg.winograd_input_transform fmr(F_4_3) ins(%[[IN]] : tensor<1x?x?x2xf32>) outs(%[[OUT]] : tensor<6x1x1x?x1x2xf32>)
+
+// -----
+
+func.func @tile_winograd_output_alpha_w_one(%arg0: tensor<6x1x2x3x1x2xf32>, %arg1: tensor<1x8x3x2xf32>) -> tensor<1x8x3x2xf32> {
+  %0 = linalg.winograd_output_transform fmr(F_4_3) ins(%arg0 : tensor<6x1x2x3x1x2xf32>) outs(%arg1 : tensor<1x8x3x2xf32>) -> tensor<1x8x3x2xf32>
+  return %0 : tensor<1x8x3x2xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.winograd_output_transform"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1, %loop:2 = transform.structured.tile_using_for %0 tile_sizes [0, 0, 1, 2, 0, 0] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// CHECK-LABEL: func.func @tile_winograd_output_alpha_w_one(
+// CHECK-SAME:  %[[ARG0:.*]]: tensor<6x1x2x3x1x2xf32>, %[[ARG1:.*]]: tensor<1x8x3x2xf32>)
+// CHECK: scf.for %[[ARG2:.*]] = {{.*}} iter_args(%[[ARG3:.*]] = %[[ARG1]])
+// CHECK:   scf.for %[[ARG4:.*]] = {{.*}} iter_args(%[[ARG5:.*]] = %[[ARG3]])
+// CHECK:     %[[SIZE_W:.*]] = affine.min
+// CHECK:     %[[IN:.*]] = tensor.extract_slice %[[ARG0]][0, 0, %[[ARG2]], %[[ARG4]], 0, 0] [6, 1, 1, %[[SIZE_W]], 1, 2] [1, 1, 1, 1, 1, 1] : tensor<6x1x2x3x1x2xf32> to tensor<6x1x1x?x1x2xf32>
+// CHECK:     %[[OUT:.*]] = tensor.extract_slice %[[ARG5]][0, %{{.*}}, %{{.*}}, 0] [1, %{{.*}}, %[[SIZE_W]], 2] [1, 1, 1, 1] : tensor<1x8x3x2xf32> to tensor<1x?x?x2xf32>
+// CHECK:     %[[RES:.*]] = linalg.winograd_output_transform fmr(F_4_3) ins(%[[IN]] : tensor<6x1x1x?x1x2xf32>) outs(%[[OUT]] : tensor<1x?x?x2xf32>)
+// CHECK:     tensor.insert_slice %[[RES]] into %[[ARG5]][0, %{{.*}}, %{{.*}}, 0] [1, %{{.*}}, %[[SIZE_W]], 2] [1, 1, 1, 1]
