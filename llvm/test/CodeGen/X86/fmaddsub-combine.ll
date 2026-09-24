@@ -630,34 +630,21 @@ define <2 x double> @mul_addsub_chain_pd128(<2 x double> %A, <2 x double> %B, <2
 ; NOFMA-LABEL: mul_addsub_chain_pd128:
 ; NOFMA:       # %bb.0:
 ; NOFMA-NEXT:    vmulpd %xmm1, %xmm0, %xmm0
-; NOFMA-NEXT:    vsubpd %xmm4, %xmm0, %xmm1
-; NOFMA-NEXT:    vaddpd %xmm4, %xmm0, %xmm0
-; NOFMA-NEXT:    vmulpd %xmm3, %xmm2, %xmm2
-; NOFMA-NEXT:    vsubpd %xmm1, %xmm2, %xmm1
-; NOFMA-NEXT:    vaddpd %xmm0, %xmm2, %xmm0
-; NOFMA-NEXT:    vmovsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; NOFMA-NEXT:    vmulpd %xmm3, %xmm2, %xmm1
+; NOFMA-NEXT:    vaddsubpd %xmm4, %xmm0, %xmm0
+; NOFMA-NEXT:    vaddsubpd %xmm0, %xmm1, %xmm0
 ; NOFMA-NEXT:    retq
 ;
 ; FMA3-LABEL: mul_addsub_chain_pd128:
 ; FMA3:       # %bb.0:
-; FMA3-NEXT:    vmulpd %xmm1, %xmm0, %xmm0
-; FMA3-NEXT:    vsubpd %xmm4, %xmm0, %xmm1
-; FMA3-NEXT:    vaddpd %xmm4, %xmm0, %xmm0
-; FMA3-NEXT:    vmulpd %xmm3, %xmm2, %xmm2
-; FMA3-NEXT:    vsubpd %xmm1, %xmm2, %xmm1
-; FMA3-NEXT:    vaddpd %xmm0, %xmm2, %xmm0
-; FMA3-NEXT:    vmovsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; FMA3-NEXT:    vfmaddsub213pd {{.*#+}} xmm0 = (xmm1 * xmm0) +/- xmm4
+; FMA3-NEXT:    vfmaddsub231pd {{.*#+}} xmm0 = (xmm3 * xmm2) +/- xmm0
 ; FMA3-NEXT:    retq
 ;
 ; FMA4-LABEL: mul_addsub_chain_pd128:
 ; FMA4:       # %bb.0:
-; FMA4-NEXT:    vmulpd %xmm1, %xmm0, %xmm0
-; FMA4-NEXT:    vsubpd %xmm4, %xmm0, %xmm1
-; FMA4-NEXT:    vaddpd %xmm4, %xmm0, %xmm0
-; FMA4-NEXT:    vmulpd %xmm3, %xmm2, %xmm2
-; FMA4-NEXT:    vsubpd %xmm1, %xmm2, %xmm1
-; FMA4-NEXT:    vaddpd %xmm0, %xmm2, %xmm0
-; FMA4-NEXT:    vmovsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; FMA4-NEXT:    vfmaddsubpd {{.*#+}} xmm0 = (xmm0 * xmm1) +/- xmm4
+; FMA4-NEXT:    vfmaddsubpd {{.*#+}} xmm0 = (xmm2 * xmm3) +/- xmm0
 ; FMA4-NEXT:    retq
   %AB = fmul contract <2 x double> %A, %B
   %Sub0 = fsub contract <2 x double> %AB, %E
@@ -675,34 +662,21 @@ define <8 x float> @mul_addsub_chain_ps256(<8 x float> %A, <8 x float> %B, <8 x 
 ; NOFMA-LABEL: mul_addsub_chain_ps256:
 ; NOFMA:       # %bb.0:
 ; NOFMA-NEXT:    vmulps %ymm1, %ymm0, %ymm0
-; NOFMA-NEXT:    vsubps %ymm4, %ymm0, %ymm1
-; NOFMA-NEXT:    vaddps %ymm0, %ymm4, %ymm0
-; NOFMA-NEXT:    vmulps %ymm3, %ymm2, %ymm2
-; NOFMA-NEXT:    vsubps %ymm1, %ymm2, %ymm1
-; NOFMA-NEXT:    vaddps %ymm2, %ymm0, %ymm0
-; NOFMA-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0],ymm0[1],ymm1[2],ymm0[3],ymm1[4],ymm0[5],ymm1[6],ymm0[7]
+; NOFMA-NEXT:    vmulps %ymm3, %ymm2, %ymm1
+; NOFMA-NEXT:    vaddsubps %ymm4, %ymm0, %ymm0
+; NOFMA-NEXT:    vaddsubps %ymm0, %ymm1, %ymm0
 ; NOFMA-NEXT:    retq
 ;
 ; FMA3-LABEL: mul_addsub_chain_ps256:
 ; FMA3:       # %bb.0:
-; FMA3-NEXT:    vmulps %ymm1, %ymm0, %ymm0
-; FMA3-NEXT:    vsubps %ymm4, %ymm0, %ymm1
-; FMA3-NEXT:    vaddps %ymm0, %ymm4, %ymm0
-; FMA3-NEXT:    vmulps %ymm3, %ymm2, %ymm2
-; FMA3-NEXT:    vsubps %ymm1, %ymm2, %ymm1
-; FMA3-NEXT:    vaddps %ymm2, %ymm0, %ymm0
-; FMA3-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0],ymm0[1],ymm1[2],ymm0[3],ymm1[4],ymm0[5],ymm1[6],ymm0[7]
+; FMA3-NEXT:    vfmaddsub213ps {{.*#+}} ymm0 = (ymm1 * ymm0) +/- ymm4
+; FMA3-NEXT:    vfmaddsub231ps {{.*#+}} ymm0 = (ymm3 * ymm2) +/- ymm0
 ; FMA3-NEXT:    retq
 ;
 ; FMA4-LABEL: mul_addsub_chain_ps256:
 ; FMA4:       # %bb.0:
-; FMA4-NEXT:    vmulps %ymm1, %ymm0, %ymm0
-; FMA4-NEXT:    vsubps %ymm4, %ymm0, %ymm1
-; FMA4-NEXT:    vaddps %ymm0, %ymm4, %ymm0
-; FMA4-NEXT:    vmulps %ymm3, %ymm2, %ymm2
-; FMA4-NEXT:    vsubps %ymm1, %ymm2, %ymm1
-; FMA4-NEXT:    vaddps %ymm2, %ymm0, %ymm0
-; FMA4-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0],ymm0[1],ymm1[2],ymm0[3],ymm1[4],ymm0[5],ymm1[6],ymm0[7]
+; FMA4-NEXT:    vfmaddsubps {{.*#+}} ymm0 = (ymm0 * ymm1) +/- ymm4
+; FMA4-NEXT:    vfmaddsubps {{.*#+}} ymm0 = (ymm2 * ymm3) +/- ymm0
 ; FMA4-NEXT:    retq
   %AB = fmul contract <8 x float> %A, %B
   %Sub0 = fsub contract <8 x float> %AB, %E
@@ -725,22 +699,14 @@ define <8 x double> @mul_addsub_chain_pd512(<8 x double> %A, <8 x double> %B, <8
 ; NOFMA-NEXT:    .cfi_def_cfa_register %rbp
 ; NOFMA-NEXT:    andq $-32, %rsp
 ; NOFMA-NEXT:    subq $32, %rsp
-; NOFMA-NEXT:    vmovapd 48(%rbp), %ymm8
-; NOFMA-NEXT:    vmovapd 16(%rbp), %ymm9
 ; NOFMA-NEXT:    vmulpd %ymm3, %ymm1, %ymm1
 ; NOFMA-NEXT:    vmulpd %ymm2, %ymm0, %ymm0
-; NOFMA-NEXT:    vsubpd %ymm9, %ymm0, %ymm2
-; NOFMA-NEXT:    vsubpd %ymm8, %ymm1, %ymm3
-; NOFMA-NEXT:    vaddpd %ymm0, %ymm9, %ymm0
-; NOFMA-NEXT:    vaddpd %ymm1, %ymm8, %ymm1
-; NOFMA-NEXT:    vmulpd %ymm6, %ymm4, %ymm4
-; NOFMA-NEXT:    vmulpd %ymm7, %ymm5, %ymm5
-; NOFMA-NEXT:    vsubpd %ymm3, %ymm5, %ymm3
-; NOFMA-NEXT:    vsubpd %ymm2, %ymm4, %ymm2
-; NOFMA-NEXT:    vaddpd %ymm1, %ymm5, %ymm1
-; NOFMA-NEXT:    vblendpd {{.*#+}} ymm1 = ymm3[0],ymm1[1],ymm3[2],ymm1[3]
-; NOFMA-NEXT:    vaddpd %ymm0, %ymm4, %ymm0
-; NOFMA-NEXT:    vblendpd {{.*#+}} ymm0 = ymm2[0],ymm0[1],ymm2[2],ymm0[3]
+; NOFMA-NEXT:    vmulpd %ymm7, %ymm5, %ymm2
+; NOFMA-NEXT:    vmulpd %ymm6, %ymm4, %ymm3
+; NOFMA-NEXT:    vaddsubpd 16(%rbp), %ymm0, %ymm0
+; NOFMA-NEXT:    vaddsubpd %ymm0, %ymm3, %ymm0
+; NOFMA-NEXT:    vaddsubpd 48(%rbp), %ymm1, %ymm1
+; NOFMA-NEXT:    vaddsubpd %ymm1, %ymm2, %ymm1
 ; NOFMA-NEXT:    movq %rbp, %rsp
 ; NOFMA-NEXT:    popq %rbp
 ; NOFMA-NEXT:    .cfi_def_cfa %rsp, 8
@@ -755,22 +721,10 @@ define <8 x double> @mul_addsub_chain_pd512(<8 x double> %A, <8 x double> %B, <8
 ; FMA3_256-NEXT:    .cfi_def_cfa_register %rbp
 ; FMA3_256-NEXT:    andq $-32, %rsp
 ; FMA3_256-NEXT:    subq $32, %rsp
-; FMA3_256-NEXT:    vmovapd 48(%rbp), %ymm8
-; FMA3_256-NEXT:    vmovapd 16(%rbp), %ymm9
-; FMA3_256-NEXT:    vmulpd %ymm3, %ymm1, %ymm1
-; FMA3_256-NEXT:    vmulpd %ymm2, %ymm0, %ymm0
-; FMA3_256-NEXT:    vsubpd %ymm9, %ymm0, %ymm2
-; FMA3_256-NEXT:    vsubpd %ymm8, %ymm1, %ymm3
-; FMA3_256-NEXT:    vaddpd %ymm0, %ymm9, %ymm0
-; FMA3_256-NEXT:    vaddpd %ymm1, %ymm8, %ymm1
-; FMA3_256-NEXT:    vmulpd %ymm6, %ymm4, %ymm4
-; FMA3_256-NEXT:    vmulpd %ymm7, %ymm5, %ymm5
-; FMA3_256-NEXT:    vsubpd %ymm3, %ymm5, %ymm3
-; FMA3_256-NEXT:    vsubpd %ymm2, %ymm4, %ymm2
-; FMA3_256-NEXT:    vaddpd %ymm1, %ymm5, %ymm1
-; FMA3_256-NEXT:    vblendpd {{.*#+}} ymm1 = ymm3[0],ymm1[1],ymm3[2],ymm1[3]
-; FMA3_256-NEXT:    vaddpd %ymm0, %ymm4, %ymm0
-; FMA3_256-NEXT:    vblendpd {{.*#+}} ymm0 = ymm2[0],ymm0[1],ymm2[2],ymm0[3]
+; FMA3_256-NEXT:    vfmaddsub213pd {{.*#+}} ymm0 = (ymm2 * ymm0) +/- mem
+; FMA3_256-NEXT:    vfmaddsub231pd {{.*#+}} ymm0 = (ymm6 * ymm4) +/- ymm0
+; FMA3_256-NEXT:    vfmaddsub213pd {{.*#+}} ymm1 = (ymm3 * ymm1) +/- mem
+; FMA3_256-NEXT:    vfmaddsub231pd {{.*#+}} ymm1 = (ymm7 * ymm5) +/- ymm1
 ; FMA3_256-NEXT:    movq %rbp, %rsp
 ; FMA3_256-NEXT:    popq %rbp
 ; FMA3_256-NEXT:    .cfi_def_cfa %rsp, 8
@@ -778,13 +732,8 @@ define <8 x double> @mul_addsub_chain_pd512(<8 x double> %A, <8 x double> %B, <8
 ;
 ; FMA3_512-LABEL: mul_addsub_chain_pd512:
 ; FMA3_512:       # %bb.0:
-; FMA3_512-NEXT:    vmulpd %zmm1, %zmm0, %zmm0
-; FMA3_512-NEXT:    vsubpd %zmm4, %zmm0, %zmm1
-; FMA3_512-NEXT:    vaddpd %zmm4, %zmm0, %zmm0
-; FMA3_512-NEXT:    vmulpd %zmm3, %zmm2, %zmm2
-; FMA3_512-NEXT:    vsubpd %zmm1, %zmm2, %zmm1
-; FMA3_512-NEXT:    vaddpd %zmm0, %zmm2, %zmm0
-; FMA3_512-NEXT:    vshufpd {{.*#+}} zmm0 = zmm1[0],zmm0[1],zmm1[2],zmm0[3],zmm1[4],zmm0[5],zmm1[6],zmm0[7]
+; FMA3_512-NEXT:    vfmaddsub213pd {{.*#+}} zmm0 = (zmm1 * zmm0) +/- zmm4
+; FMA3_512-NEXT:    vfmaddsub231pd {{.*#+}} zmm0 = (zmm3 * zmm2) +/- zmm0
 ; FMA3_512-NEXT:    retq
 ;
 ; FMA4-LABEL: mul_addsub_chain_pd512:
@@ -796,22 +745,10 @@ define <8 x double> @mul_addsub_chain_pd512(<8 x double> %A, <8 x double> %B, <8
 ; FMA4-NEXT:    .cfi_def_cfa_register %rbp
 ; FMA4-NEXT:    andq $-32, %rsp
 ; FMA4-NEXT:    subq $32, %rsp
-; FMA4-NEXT:    vmovapd 48(%rbp), %ymm8
-; FMA4-NEXT:    vmovapd 16(%rbp), %ymm9
-; FMA4-NEXT:    vmulpd %ymm3, %ymm1, %ymm1
-; FMA4-NEXT:    vmulpd %ymm2, %ymm0, %ymm0
-; FMA4-NEXT:    vsubpd %ymm9, %ymm0, %ymm2
-; FMA4-NEXT:    vsubpd %ymm8, %ymm1, %ymm3
-; FMA4-NEXT:    vaddpd %ymm0, %ymm9, %ymm0
-; FMA4-NEXT:    vaddpd %ymm1, %ymm8, %ymm1
-; FMA4-NEXT:    vmulpd %ymm6, %ymm4, %ymm4
-; FMA4-NEXT:    vmulpd %ymm7, %ymm5, %ymm5
-; FMA4-NEXT:    vsubpd %ymm3, %ymm5, %ymm3
-; FMA4-NEXT:    vsubpd %ymm2, %ymm4, %ymm2
-; FMA4-NEXT:    vaddpd %ymm1, %ymm5, %ymm1
-; FMA4-NEXT:    vblendpd {{.*#+}} ymm1 = ymm3[0],ymm1[1],ymm3[2],ymm1[3]
-; FMA4-NEXT:    vaddpd %ymm0, %ymm4, %ymm0
-; FMA4-NEXT:    vblendpd {{.*#+}} ymm0 = ymm2[0],ymm0[1],ymm2[2],ymm0[3]
+; FMA4-NEXT:    vfmaddsubpd {{.*#+}} ymm0 = (ymm0 * ymm2) +/- mem
+; FMA4-NEXT:    vfmaddsubpd {{.*#+}} ymm0 = (ymm4 * ymm6) +/- ymm0
+; FMA4-NEXT:    vfmaddsubpd {{.*#+}} ymm1 = (ymm1 * ymm3) +/- mem
+; FMA4-NEXT:    vfmaddsubpd {{.*#+}} ymm1 = (ymm5 * ymm7) +/- ymm1
 ; FMA4-NEXT:    movq %rbp, %rsp
 ; FMA4-NEXT:    popq %rbp
 ; FMA4-NEXT:    .cfi_def_cfa %rsp, 8
@@ -832,34 +769,25 @@ define <2 x double> @mul_addsub_chain_nocontract_pd128(<2 x double> %A, <2 x dou
 ; NOFMA-LABEL: mul_addsub_chain_nocontract_pd128:
 ; NOFMA:       # %bb.0:
 ; NOFMA-NEXT:    vmulpd %xmm1, %xmm0, %xmm0
-; NOFMA-NEXT:    vsubpd %xmm4, %xmm0, %xmm1
-; NOFMA-NEXT:    vaddpd %xmm4, %xmm0, %xmm0
-; NOFMA-NEXT:    vmulpd %xmm3, %xmm2, %xmm2
-; NOFMA-NEXT:    vsubpd %xmm1, %xmm2, %xmm1
-; NOFMA-NEXT:    vaddpd %xmm0, %xmm2, %xmm0
-; NOFMA-NEXT:    vmovsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; NOFMA-NEXT:    vmulpd %xmm3, %xmm2, %xmm1
+; NOFMA-NEXT:    vaddsubpd %xmm4, %xmm0, %xmm0
+; NOFMA-NEXT:    vaddsubpd %xmm0, %xmm1, %xmm0
 ; NOFMA-NEXT:    retq
 ;
 ; FMA3-LABEL: mul_addsub_chain_nocontract_pd128:
 ; FMA3:       # %bb.0:
 ; FMA3-NEXT:    vmulpd %xmm1, %xmm0, %xmm0
-; FMA3-NEXT:    vsubpd %xmm4, %xmm0, %xmm1
-; FMA3-NEXT:    vaddpd %xmm4, %xmm0, %xmm0
-; FMA3-NEXT:    vmulpd %xmm3, %xmm2, %xmm2
-; FMA3-NEXT:    vsubpd %xmm1, %xmm2, %xmm1
-; FMA3-NEXT:    vaddpd %xmm0, %xmm2, %xmm0
-; FMA3-NEXT:    vmovsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; FMA3-NEXT:    vmulpd %xmm3, %xmm2, %xmm1
+; FMA3-NEXT:    vaddsubpd %xmm4, %xmm0, %xmm0
+; FMA3-NEXT:    vaddsubpd %xmm0, %xmm1, %xmm0
 ; FMA3-NEXT:    retq
 ;
 ; FMA4-LABEL: mul_addsub_chain_nocontract_pd128:
 ; FMA4:       # %bb.0:
 ; FMA4-NEXT:    vmulpd %xmm1, %xmm0, %xmm0
-; FMA4-NEXT:    vsubpd %xmm4, %xmm0, %xmm1
-; FMA4-NEXT:    vaddpd %xmm4, %xmm0, %xmm0
-; FMA4-NEXT:    vmulpd %xmm3, %xmm2, %xmm2
-; FMA4-NEXT:    vsubpd %xmm1, %xmm2, %xmm1
-; FMA4-NEXT:    vaddpd %xmm0, %xmm2, %xmm0
-; FMA4-NEXT:    vmovsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; FMA4-NEXT:    vmulpd %xmm3, %xmm2, %xmm1
+; FMA4-NEXT:    vaddsubpd %xmm4, %xmm0, %xmm0
+; FMA4-NEXT:    vaddsubpd %xmm0, %xmm1, %xmm0
 ; FMA4-NEXT:    retq
   %AB = fmul <2 x double> %A, %B
   %Sub0 = fsub <2 x double> %AB, %E
@@ -877,43 +805,25 @@ define <2 x double> @mul_addsub_chain3_pd128(<2 x double> %A, <2 x double> %B, <
 ; NOFMA-LABEL: mul_addsub_chain3_pd128:
 ; NOFMA:       # %bb.0:
 ; NOFMA-NEXT:    vmulpd %xmm1, %xmm0, %xmm0
-; NOFMA-NEXT:    vsubpd %xmm6, %xmm0, %xmm1
-; NOFMA-NEXT:    vaddpd %xmm6, %xmm0, %xmm0
-; NOFMA-NEXT:    vmulpd %xmm3, %xmm2, %xmm2
-; NOFMA-NEXT:    vsubpd %xmm1, %xmm2, %xmm1
-; NOFMA-NEXT:    vaddpd %xmm0, %xmm2, %xmm0
+; NOFMA-NEXT:    vmulpd %xmm3, %xmm2, %xmm1
 ; NOFMA-NEXT:    vmulpd %xmm5, %xmm4, %xmm2
-; NOFMA-NEXT:    vsubpd %xmm1, %xmm2, %xmm1
-; NOFMA-NEXT:    vaddpd %xmm0, %xmm2, %xmm0
-; NOFMA-NEXT:    vmovsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; NOFMA-NEXT:    vaddsubpd %xmm6, %xmm0, %xmm0
+; NOFMA-NEXT:    vaddsubpd %xmm0, %xmm1, %xmm0
+; NOFMA-NEXT:    vaddsubpd %xmm0, %xmm2, %xmm0
 ; NOFMA-NEXT:    retq
 ;
 ; FMA3-LABEL: mul_addsub_chain3_pd128:
 ; FMA3:       # %bb.0:
-; FMA3-NEXT:    vmulpd %xmm1, %xmm0, %xmm0
-; FMA3-NEXT:    vsubpd %xmm6, %xmm0, %xmm1
-; FMA3-NEXT:    vaddpd %xmm6, %xmm0, %xmm0
-; FMA3-NEXT:    vmulpd %xmm3, %xmm2, %xmm2
-; FMA3-NEXT:    vsubpd %xmm1, %xmm2, %xmm1
-; FMA3-NEXT:    vaddpd %xmm0, %xmm2, %xmm0
-; FMA3-NEXT:    vmulpd %xmm5, %xmm4, %xmm2
-; FMA3-NEXT:    vsubpd %xmm1, %xmm2, %xmm1
-; FMA3-NEXT:    vaddpd %xmm0, %xmm2, %xmm0
-; FMA3-NEXT:    vmovsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; FMA3-NEXT:    vfmaddsub213pd {{.*#+}} xmm0 = (xmm1 * xmm0) +/- xmm6
+; FMA3-NEXT:    vfmaddsub231pd {{.*#+}} xmm0 = (xmm3 * xmm2) +/- xmm0
+; FMA3-NEXT:    vfmaddsub231pd {{.*#+}} xmm0 = (xmm5 * xmm4) +/- xmm0
 ; FMA3-NEXT:    retq
 ;
 ; FMA4-LABEL: mul_addsub_chain3_pd128:
 ; FMA4:       # %bb.0:
-; FMA4-NEXT:    vmulpd %xmm1, %xmm0, %xmm0
-; FMA4-NEXT:    vsubpd %xmm6, %xmm0, %xmm1
-; FMA4-NEXT:    vaddpd %xmm6, %xmm0, %xmm0
-; FMA4-NEXT:    vmulpd %xmm3, %xmm2, %xmm2
-; FMA4-NEXT:    vsubpd %xmm1, %xmm2, %xmm1
-; FMA4-NEXT:    vaddpd %xmm0, %xmm2, %xmm0
-; FMA4-NEXT:    vmulpd %xmm5, %xmm4, %xmm2
-; FMA4-NEXT:    vsubpd %xmm1, %xmm2, %xmm1
-; FMA4-NEXT:    vaddpd %xmm0, %xmm2, %xmm0
-; FMA4-NEXT:    vmovsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; FMA4-NEXT:    vfmaddsubpd {{.*#+}} xmm0 = (xmm0 * xmm1) +/- xmm6
+; FMA4-NEXT:    vfmaddsubpd {{.*#+}} xmm0 = (xmm2 * xmm3) +/- xmm0
+; FMA4-NEXT:    vfmaddsubpd {{.*#+}} xmm0 = (xmm4 * xmm5) +/- xmm0
 ; FMA4-NEXT:    retq
   %AB = fmul contract <2 x double> %A, %B
   %Sub0 = fsub contract <2 x double> %AB, %G
@@ -937,32 +847,21 @@ define <4 x float> @mul_addsub_chain_subadd_ps128(<4 x float> %A, <4 x float> %B
 ; NOFMA-NEXT:    vmulps %xmm1, %xmm0, %xmm0
 ; NOFMA-NEXT:    vsubps %xmm4, %xmm0, %xmm1
 ; NOFMA-NEXT:    vaddps %xmm4, %xmm0, %xmm0
-; NOFMA-NEXT:    vmulps %xmm3, %xmm2, %xmm2
-; NOFMA-NEXT:    vsubps %xmm0, %xmm2, %xmm0
-; NOFMA-NEXT:    vaddps %xmm1, %xmm2, %xmm1
 ; NOFMA-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
+; NOFMA-NEXT:    vmulps %xmm3, %xmm2, %xmm1
+; NOFMA-NEXT:    vaddsubps %xmm0, %xmm1, %xmm0
 ; NOFMA-NEXT:    retq
 ;
 ; FMA3-LABEL: mul_addsub_chain_subadd_ps128:
 ; FMA3:       # %bb.0:
-; FMA3-NEXT:    vmulps %xmm1, %xmm0, %xmm0
-; FMA3-NEXT:    vsubps %xmm4, %xmm0, %xmm1
-; FMA3-NEXT:    vaddps %xmm4, %xmm0, %xmm0
-; FMA3-NEXT:    vmulps %xmm3, %xmm2, %xmm2
-; FMA3-NEXT:    vsubps %xmm0, %xmm2, %xmm0
-; FMA3-NEXT:    vaddps %xmm1, %xmm2, %xmm1
-; FMA3-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
+; FMA3-NEXT:    vfmsubadd213ps {{.*#+}} xmm0 = (xmm1 * xmm0) -/+ xmm4
+; FMA3-NEXT:    vfmaddsub231ps {{.*#+}} xmm0 = (xmm3 * xmm2) +/- xmm0
 ; FMA3-NEXT:    retq
 ;
 ; FMA4-LABEL: mul_addsub_chain_subadd_ps128:
 ; FMA4:       # %bb.0:
-; FMA4-NEXT:    vmulps %xmm1, %xmm0, %xmm0
-; FMA4-NEXT:    vsubps %xmm4, %xmm0, %xmm1
-; FMA4-NEXT:    vaddps %xmm4, %xmm0, %xmm0
-; FMA4-NEXT:    vmulps %xmm3, %xmm2, %xmm2
-; FMA4-NEXT:    vsubps %xmm0, %xmm2, %xmm0
-; FMA4-NEXT:    vaddps %xmm1, %xmm2, %xmm1
-; FMA4-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
+; FMA4-NEXT:    vfmsubaddps {{.*#+}} xmm0 = (xmm0 * xmm1) -/+ xmm4
+; FMA4-NEXT:    vfmaddsubps {{.*#+}} xmm0 = (xmm2 * xmm3) +/- xmm0
 ; FMA4-NEXT:    retq
   %AB = fmul contract <4 x float> %A, %B
   %Sub0 = fsub contract <4 x float> %AB, %E
@@ -980,34 +879,23 @@ define <2 x double> @mul_addsub_chain_inner_nocontract_pd128(<2 x double> %A, <2
 ; NOFMA-LABEL: mul_addsub_chain_inner_nocontract_pd128:
 ; NOFMA:       # %bb.0:
 ; NOFMA-NEXT:    vmulpd %xmm1, %xmm0, %xmm0
-; NOFMA-NEXT:    vsubpd %xmm4, %xmm0, %xmm1
-; NOFMA-NEXT:    vaddpd %xmm4, %xmm0, %xmm0
-; NOFMA-NEXT:    vmulpd %xmm3, %xmm2, %xmm2
-; NOFMA-NEXT:    vsubpd %xmm1, %xmm2, %xmm1
-; NOFMA-NEXT:    vaddpd %xmm0, %xmm2, %xmm0
-; NOFMA-NEXT:    vmovsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; NOFMA-NEXT:    vmulpd %xmm3, %xmm2, %xmm1
+; NOFMA-NEXT:    vaddsubpd %xmm4, %xmm0, %xmm0
+; NOFMA-NEXT:    vaddsubpd %xmm0, %xmm1, %xmm0
 ; NOFMA-NEXT:    retq
 ;
 ; FMA3-LABEL: mul_addsub_chain_inner_nocontract_pd128:
 ; FMA3:       # %bb.0:
 ; FMA3-NEXT:    vmulpd %xmm1, %xmm0, %xmm0
-; FMA3-NEXT:    vsubpd %xmm4, %xmm0, %xmm1
-; FMA3-NEXT:    vaddpd %xmm4, %xmm0, %xmm0
-; FMA3-NEXT:    vmulpd %xmm3, %xmm2, %xmm2
-; FMA3-NEXT:    vsubpd %xmm1, %xmm2, %xmm1
-; FMA3-NEXT:    vaddpd %xmm0, %xmm2, %xmm0
-; FMA3-NEXT:    vmovsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; FMA3-NEXT:    vaddsubpd %xmm4, %xmm0, %xmm0
+; FMA3-NEXT:    vfmaddsub231pd {{.*#+}} xmm0 = (xmm3 * xmm2) +/- xmm0
 ; FMA3-NEXT:    retq
 ;
 ; FMA4-LABEL: mul_addsub_chain_inner_nocontract_pd128:
 ; FMA4:       # %bb.0:
 ; FMA4-NEXT:    vmulpd %xmm1, %xmm0, %xmm0
-; FMA4-NEXT:    vsubpd %xmm4, %xmm0, %xmm1
-; FMA4-NEXT:    vaddpd %xmm4, %xmm0, %xmm0
-; FMA4-NEXT:    vmulpd %xmm3, %xmm2, %xmm2
-; FMA4-NEXT:    vsubpd %xmm1, %xmm2, %xmm1
-; FMA4-NEXT:    vaddpd %xmm0, %xmm2, %xmm0
-; FMA4-NEXT:    vmovsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; FMA4-NEXT:    vaddsubpd %xmm4, %xmm0, %xmm0
+; FMA4-NEXT:    vfmaddsubpd {{.*#+}} xmm0 = (xmm2 * xmm3) +/- xmm0
 ; FMA4-NEXT:    retq
   %AB = fmul <2 x double> %A, %B
   %Sub0 = fsub <2 x double> %AB, %E

@@ -44362,18 +44362,42 @@ static bool isAddSubOrSubAddMask(ArrayRef<int> Mask, bool &Op0Even) {
   return true;
 }
 
+/// Returns true if \p Sub and \p Add are an FSUB and an FADD with the same
+/// first operand, only used by the caller, whose second operands are the same
+/// or, recursively, such an FSUB and FADD themselves. This is what
+/// SimplifyDemandedVectorElts leaves of a chain of add/sub shuffles: each
+/// FSUB/FADD only demands its own lanes of the inner shuffle, so it is
+/// replaced by the inner FSUB or FADD respectively.
+static bool isSplitAddSubChain(SDValue Sub, SDValue Add, unsigned Depth = 0) {
+  using namespace SDPatternMatch;
+  SDValue X, Y, Z;
+  if (!sd_match(Sub, m_OneUse(m_FSub(m_Value(X), m_Value(Y)))) ||
+      !sd_match(Add, m_OneUse(m_FAdd(m_Specific(X), m_Value(Z)))))
+    return false;
+  if (Y == Z)
+    return true;
+  if (++Depth >= SelectionDAG::MaxRecursionDepth)
+    return false;
+  return isSplitAddSubChain(Y, Z, Depth) || isSplitAddSubChain(Z, Y, Depth);
+}
+
 /// Returns true iff the shuffle node \p N can be replaced with ADDSUB(SUBADD)
 /// operation. If true is returned then the operands of ADDSUB(SUBADD) operation
-/// are written to the parameters \p Opnd0 and \p Opnd1.
+/// are written to the parameters \p Opnd0 and \p Opnd1. \p Opnd1 and
+/// \p Opnd1Alt are the second operands of the first and the second shuffle
+/// input; if they differ, they have to be blended with the shuffle mask
+/// \p Mask to form the second operand.
 ///
-/// We combine shuffle to ADDSUB(SUBADD) directly on the abstract vector shuffle nodes
-/// so it is easier to generically match. We also insert dummy vector shuffle
-/// nodes for the operands which explicitly discard the lanes which are unused
-/// by this operation to try to flow through the rest of the combiner
-/// the fact that they're unused.
+/// We combine shuffle to ADDSUB(SUBADD) directly on the abstract vector shuffle
+/// nodes so it is easier to generically match. We also insert dummy vector
+/// shuffle nodes for the operands which explicitly discard the lanes which are
+/// unused by this operation to try to flow through the rest of the combiner the
+/// fact that they're unused.
 static bool isAddSubOrSubAdd(SDNode *N, const X86Subtarget &Subtarget,
                              SelectionDAG &DAG, SDValue &Opnd0, SDValue &Opnd1,
+                             SDValue &Opnd1Alt, SmallVectorImpl<int> &Mask,
                              bool &IsSubAdd, bool &HasAllowContract) {
+  using namespace SDPatternMatch;
 
   EVT VT = N->getValueType(0);
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
@@ -44381,7 +44405,6 @@ static bool isAddSubOrSubAdd(SDNode *N, const X86Subtarget &Subtarget,
       !VT.getSimpleVT().isFloatingPoint())
     return false;
 
-  SmallVector<int, 16> Mask;
   SmallVector<SDValue, 2> OpInputs;
   if (!getTargetShuffleInputs(SDValue(N, 0), OpInputs, Mask, DAG) ||
       OpInputs.size() != 2 || isAnyZero(Mask) ||
@@ -44401,25 +44424,29 @@ static bool isAddSubOrSubAdd(SDNode *N, const X86Subtarget &Subtarget,
   if (!V1->hasOneUse() || !V2->hasOneUse())
     return false;
 
-  // Ensure that both operations have the same operands. Note that we can
+  // Ensure that both operations have the same first operand. Note that we can
   // commute the FADD operands.
-  SDValue LHS, RHS;
-  if (V1.getOpcode() == ISD::FSUB) {
-    LHS = V1->getOperand(0); RHS = V1->getOperand(1);
-    if ((V2->getOperand(0) != LHS || V2->getOperand(1) != RHS) &&
-        (V2->getOperand(0) != RHS || V2->getOperand(1) != LHS))
-      return false;
-  } else {
-    assert(V2.getOpcode() == ISD::FSUB && "Unexpected opcode");
-    LHS = V2->getOperand(0); RHS = V2->getOperand(1);
-    if ((V1->getOperand(0) != LHS || V1->getOperand(1) != RHS) &&
-        (V1->getOperand(0) != RHS || V1->getOperand(1) != LHS))
-      return false;
-  }
+  SDValue Sub = V1.getOpcode() == ISD::FSUB ? V1 : V2;
+  SDValue Add = V1.getOpcode() == ISD::FSUB ? V2 : V1;
+  SDValue LHS = Sub.getOperand(0), RHS = Sub.getOperand(1), AddRHS;
+  if (!sd_match(Add, m_FAdd(m_Specific(LHS), m_Value(AddRHS))))
+    return false;
 
   bool Op0Even;
   if (!isAddSubOrSubAddMask(Mask, Op0Even))
     return false;
+
+  // The second operands must be the same too, unless they are what is left of
+  // an inner add/sub (or sub/add) shuffle, as in a chain of complex
+  // multiply-adds. Blending them again recreates the inner shuffle.
+  // TODO: This is limited to f32/f64 as the (FM)ADDSUB availability for other
+  // types isn't checked for.
+  if (AddRHS != RHS) {
+    MVT SVT = VT.getSimpleVT().getScalarType();
+    if ((SVT != MVT::f32 && SVT != MVT::f64) ||
+        !(isSplitAddSubChain(RHS, AddRHS) || isSplitAddSubChain(AddRHS, RHS)))
+      return false;
+  }
 
   // It's a subadd if the vector in the even parity is an FADD.
   IsSubAdd = Op0Even ? V1->getOpcode() == ISD::FADD
@@ -44428,7 +44455,8 @@ static bool isAddSubOrSubAdd(SDNode *N, const X86Subtarget &Subtarget,
       V1->getFlags().hasAllowContract() && V2->getFlags().hasAllowContract();
 
   Opnd0 = LHS;
-  Opnd1 = RHS;
+  Opnd1 = V1 == Sub ? RHS : AddRHS;
+  Opnd1Alt = V1 == Sub ? AddRHS : RHS;
   return true;
 }
 
@@ -44481,21 +44509,30 @@ static SDValue combineShuffleToAddSubOrFMAddSub(SDNode *N, const SDLoc &DL,
   if (SDValue V = combineShuffleToFMAddSub(N, DL, Subtarget, DAG))
     return V;
 
-  SDValue Opnd0, Opnd1;
+  SDValue Opnd0, Opnd1, Opnd1Alt;
+  SmallVector<int, 16> Mask;
   bool IsSubAdd;
   bool HasAllowContract;
-  if (!isAddSubOrSubAdd(N, Subtarget, DAG, Opnd0, Opnd1, IsSubAdd,
-                        HasAllowContract))
+  if (!isAddSubOrSubAdd(N, Subtarget, DAG, Opnd0, Opnd1, Opnd1Alt, Mask,
+                        IsSubAdd, HasAllowContract))
     return SDValue();
 
   MVT VT = N->getSimpleValueType(0);
+
+  // Blend the second operands if the FSUB and FADD have different ones. Only
+  // do so once we know that the match is used.
+  auto BlendOpnd1 = [&](SDValue Opnd) {
+    if (Opnd == Opnd1Alt)
+      return Opnd;
+    return DAG.getVectorShuffle(VT, DL, Opnd, Opnd1Alt, Mask);
+  };
 
   // Try to generate X86ISD::FMADDSUB node here.
   SDValue Opnd2;
   if (isFMAddSubOrFMSubAdd(Subtarget, Opnd0, Opnd1, Opnd2, 2,
                            HasAllowContract)) {
     unsigned Opc = IsSubAdd ? X86ISD::FMSUBADD : X86ISD::FMADDSUB;
-    return DAG.getNode(Opc, DL, VT, Opnd0, Opnd1, Opnd2);
+    return DAG.getNode(Opc, DL, VT, Opnd0, Opnd1, BlendOpnd1(Opnd2));
   }
 
   if (IsSubAdd)
@@ -44513,7 +44550,7 @@ static SDValue combineShuffleToAddSubOrFMAddSub(SDNode *N, const SDLoc &DL,
   if (VT.getVectorElementType() == MVT::f16)
     return SDValue();
 
-  return DAG.getNode(X86ISD::ADDSUB, DL, VT, Opnd0, Opnd1);
+  return DAG.getNode(X86ISD::ADDSUB, DL, VT, Opnd0, BlendOpnd1(Opnd1));
 }
 
 /// If we have a shuffle of AVX/AVX512 (256/512 bit) vectors that only uses the
