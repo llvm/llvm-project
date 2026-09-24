@@ -332,8 +332,7 @@ define void @za_zt0_private_za_to_shared_za(ptr %callee) "aarch64_inout_za" "aar
 define void @no_need_to_save_zt0(ptr %callee) "aarch64_new_za" "aarch64_new_zt0" nounwind {
 ; CHECK-LABEL: no_need_to_save_zt0:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #80
-; CHECK-NEXT:    str x30, [sp, #64] // 8-byte Spill
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    mrs x8, TPIDR2_EL0
 ; CHECK-NEXT:    cbz x8, .LBB15_2
 ; CHECK-NEXT:  // %bb.1:
@@ -343,12 +342,9 @@ define void @no_need_to_save_zt0(ptr %callee) "aarch64_new_za" "aarch64_new_zt0"
 ; CHECK-NEXT:    zero { zt0 }
 ; CHECK-NEXT:  .LBB15_2:
 ; CHECK-NEXT:    smstart za
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    str zt0, [x8]
 ; CHECK-NEXT:    blr x0
 ; CHECK-NEXT:    smstop za
-; CHECK-NEXT:    ldr x30, [sp, #64] // 8-byte Reload
-; CHECK-NEXT:    add sp, sp, #80
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   call void %callee() "aarch64_inout_za"
   ret void;
@@ -357,8 +353,7 @@ define void @no_need_to_save_zt0(ptr %callee) "aarch64_new_za" "aarch64_new_zt0"
 define void @no_need_to_save_zt0_after_call(ptr %callee) "aarch64_new_za" "aarch64_new_zt0" nounwind {
 ; CHECK-LABEL: no_need_to_save_zt0_after_call:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #80
-; CHECK-NEXT:    stp x30, x19, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #-16]! // 16-byte Folded Spill
 ; CHECK-NEXT:    mrs x8, TPIDR2_EL0
 ; CHECK-NEXT:    cbz x8, .LBB16_2
 ; CHECK-NEXT:  // %bb.1:
@@ -370,12 +365,9 @@ define void @no_need_to_save_zt0_after_call(ptr %callee) "aarch64_new_za" "aarch
 ; CHECK-NEXT:    smstart za
 ; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    blr x0
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    str zt0, [x8]
 ; CHECK-NEXT:    blr x19
 ; CHECK-NEXT:    smstop za
-; CHECK-NEXT:    ldp x30, x19, [sp, #64] // 16-byte Folded Reload
-; CHECK-NEXT:    add sp, sp, #80
+; CHECK-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
   call void %callee() "aarch64_inout_za" "aarch64_inout_zt0"
   call void %callee() "aarch64_inout_za"
