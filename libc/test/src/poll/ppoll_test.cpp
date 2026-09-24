@@ -58,20 +58,20 @@ TEST_F(LlvmLibcPPollTest, SmokeFailureTest) {
 
 TEST_F(LlvmLibcPPollTest, TimeoutNotMutated) {
   sigalrm_handler_called = false;
-  struct sigaction sa {};
+  struct sigaction sa{};
   sa.sa_handler = handle_sigalrm;
   LIBC_NAMESPACE::sigemptyset(&sa.sa_mask);
   sa.sa_flags = 0;
-  struct sigaction old_sa {};
+  struct sigaction old_sa{};
   ASSERT_EQ(LIBC_NAMESPACE::sigaction(SIGALRM, &sa, &old_sa), 0);
 
   LIBC_NAMESPACE::cpp::scope_exit restore_sa([&] {
     LIBC_NAMESPACE::sigaction(SIGALRM, &old_sa, nullptr);
-    struct itimerval disable_timer {};
+    struct itimerval disable_timer{};
     LIBC_NAMESPACE::setitimer(ITIMER_REAL, &disable_timer, nullptr);
   });
 
-  struct itimerval timer {};
+  struct itimerval timer{};
   timer.it_value.tv_sec = 0;
   timer.it_value.tv_usec = 100000; // 100ms
   ASSERT_EQ(LIBC_NAMESPACE::setitimer(ITIMER_REAL, &timer, nullptr), 0);
@@ -92,11 +92,11 @@ TEST_F(LlvmLibcPPollTest, TimeoutNotMutated) {
 
 TEST_F(LlvmLibcPPollTest, WithSigmask) {
   sigusr1_handler_called = false;
-  struct sigaction sa {};
+  struct sigaction sa{};
   sa.sa_handler = handle_sigusr1;
   LIBC_NAMESPACE::sigemptyset(&sa.sa_mask);
   sa.sa_flags = 0;
-  struct sigaction old_sa {};
+  struct sigaction old_sa{};
   ASSERT_EQ(LIBC_NAMESPACE::sigaction(SIGUSR1, &sa, &old_sa), 0);
 
   sigset_t block_mask{};
