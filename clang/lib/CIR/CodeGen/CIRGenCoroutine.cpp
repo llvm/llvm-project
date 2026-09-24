@@ -590,7 +590,8 @@ CIRGenFunction::emitCoroutineBody(const CoroutineBodyStmt &s) {
             res = exitBuilder();
         });
 
-    if (coro && !coro.getBody().empty() && !coro.getBody().back().mightHaveTerminator()) {
+    if (coro && !coro.getBody().empty() &&
+        !coro.getBody().back().mightHaveTerminator()) {
       mlir::OpBuilder::InsertionGuard guard(builder);
       builder.setInsertionPointAfter(&coro.getBody().back().back());
       cir::YieldOp::create(builder, openCurlyLoc);
