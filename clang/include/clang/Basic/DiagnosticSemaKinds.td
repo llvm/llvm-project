@@ -11534,6 +11534,9 @@ def err_ppc_invalid_arg_type : Error<
   "argument %0 must be of type %1">;
 def err_x86_builtin_invalid_rounding : Error<
   "invalid rounding argument">;
+def err_x86_builtin_reserved_vunpackb_imm : Error<
+  "argument value %0 is a reserved VUNPACKB encoding of size (bits [4:2]) and "
+  "start (bits [1:0])">;
 def err_x86_builtin_invalid_scale : Error<
   "scale argument must be 1, 2, 4, or 8">;
 def err_x86_builtin_tile_arg_duplicate : Error<
@@ -13764,6 +13767,8 @@ def err_hlsl_param_qualifier_mismatch :
 def err_hlsl_vector_compound_assignment_truncation : Error<
   "left hand operand of type %0 to compound assignment cannot be truncated "
   "when used with right hand operand of type %1">;
+def err_hlsl_long_vector_swizzle : Error<
+  "invalid swizzle %0 on vector of over 4 elements">;
 def err_hlsl_builtin_scalar_vector_mismatch
     : Error<
           "%select{all|second and third}0 arguments to %1 must be of scalar or "

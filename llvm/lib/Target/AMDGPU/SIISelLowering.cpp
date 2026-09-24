@@ -7324,29 +7324,9 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   }
   case AMDGPU::V_ADD_CO_U32_e32:
   case AMDGPU::V_SUB_CO_U32_e32:
-  case AMDGPU::V_SUBREV_CO_U32_e32: {
-    // TODO: Define distinct V_*_I32_Pseudo instructions instead.
-    unsigned Opc = MI.getOpcode();
-
-    bool NeedClampOperand = false;
-    if (TII->pseudoToMCOpcode(Opc) == -1) {
-      Opc = AMDGPU::getVOPe64(Opc);
-      NeedClampOperand = true;
-    }
-
-    auto I = BuildMI(*BB, MI, DL, TII->get(Opc), MI.getOperand(0).getReg());
-    if (TII->isVOP3(*I)) {
-      I.addReg(TRI->getVCC(), RegState::Define);
-    }
-    I.add(MI.getOperand(1)).add(MI.getOperand(2));
-    if (NeedClampOperand)
-      I.addImm(0); // clamp bit for e64 encoding
-
-    TII->legalizeOperands(*I);
-
-    MI.eraseFromParent();
+  case AMDGPU::V_SUBREV_CO_U32_e32:
+    // TODO: Remove usesCustomInserter from these instructions.
     return BB;
-  }
   case AMDGPU::V_ADDC_U32_e32:
   case AMDGPU::V_SUBB_U32_e32:
   case AMDGPU::V_SUBBREV_U32_e32:
@@ -11144,6 +11124,12 @@ SITargetLowering::LowerCONVERT_FROM_ARBITRARY_FP(SDValue Op,
     return SDValue();
 
   EVT DstVT = Op.getValueType();
+  // The custom action for a v2i8 source also reaches half conversions on
+  // targets which only have FP8-to-f32 instructions.
+  if (DstVT.getScalarType() == MVT::f16 &&
+      !Subtarget->hasFP8F16ConversionInsts())
+    return SDValue();
+
   if (IsE5M3) {
     if (DstVT.getScalarType() != MVT::f32)
       return SDValue();
