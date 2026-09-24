@@ -20,6 +20,7 @@
 
 namespace clang {
 class ASTContext;
+class Sema;
 
 /// Index of a per PTU State.
 using PTUID = unsigned;
@@ -35,102 +36,19 @@ using PTUID = unsigned;
 // This footprint exists purely to undo the effects of implicit special
 // member generation.
 struct DefinitionDataFootprint {
-  unsigned Aggregate : 1;
-  unsigned PlainOldData : 1;
-  unsigned Empty : 1;
-  unsigned Polymorphic : 1;
-  unsigned IsStandardLayout : 1;
-  unsigned IsCXX11StandardLayout : 1;
-  unsigned HasTrivialSpecialMembers : 6;
-  unsigned HasTrivialSpecialMembersForCall : 6;
-  unsigned DeclaredNonTrivialSpecialMembers : 6;
-  unsigned DeclaredNonTrivialSpecialMembersForCall : 6;
-  unsigned HasIrrelevantDestructor : 1;
-  unsigned HasConstexprNonCopyMoveConstructor : 1;
-  unsigned HasDefaultedDefaultConstructor : 1;
-  unsigned HasConstexprDefaultConstructor : 1;
-  unsigned HasDeclaredCopyConstructorWithConstParam : 1;
-  unsigned HasDeclaredCopyAssignmentWithConstParam : 1;
-  unsigned IsAnyDestructorNoReturn : 1;
-  unsigned DeclaredSpecialMembers : 6;
+#define FIELD(Name, Width, Merge) unsigned Name : Width;
+#include "clang/AST/CXXRecordDeclDefinitionBits.def"
 
   bool operator==(const DefinitionDataFootprint &O) const {
-    return Aggregate == O.Aggregate && PlainOldData == O.PlainOldData &&
-           Empty == O.Empty && Polymorphic == O.Polymorphic &&
-           IsStandardLayout == O.IsStandardLayout &&
-           IsCXX11StandardLayout == O.IsCXX11StandardLayout &&
-           HasTrivialSpecialMembers == O.HasTrivialSpecialMembers &&
-           HasTrivialSpecialMembersForCall ==
-               O.HasTrivialSpecialMembersForCall &&
-           DeclaredNonTrivialSpecialMembers ==
-               O.DeclaredNonTrivialSpecialMembers &&
-           DeclaredNonTrivialSpecialMembersForCall ==
-               O.DeclaredNonTrivialSpecialMembersForCall &&
-           HasIrrelevantDestructor == O.HasIrrelevantDestructor &&
-           HasConstexprNonCopyMoveConstructor ==
-               O.HasConstexprNonCopyMoveConstructor &&
-           HasDefaultedDefaultConstructor == O.HasDefaultedDefaultConstructor &&
-           HasConstexprDefaultConstructor == O.HasConstexprDefaultConstructor &&
-           HasDeclaredCopyConstructorWithConstParam ==
-               O.HasDeclaredCopyConstructorWithConstParam &&
-           HasDeclaredCopyAssignmentWithConstParam ==
-               O.HasDeclaredCopyAssignmentWithConstParam &&
-           IsAnyDestructorNoReturn == O.IsAnyDestructorNoReturn &&
-           DeclaredSpecialMembers == O.DeclaredSpecialMembers;
+#define FIELD(Name, Width, Merge)                                              \
+  if (Name != O.Name)                                                          \
+    return false;
+#include "clang/AST/CXXRecordDeclDefinitionBits.def"
+    return true;
   }
   bool operator!=(const DefinitionDataFootprint &O) const {
     return !(*this == O);
   }
-
-  // void update(const CXXRecordDecl::DefinitionData &Live) {
-  //   Aggregate = Live.Aggregate;
-  //   PlainOldData = Live.PlainOldData;
-  //   Empty = Live.Empty;
-  //   Polymorphic = Live.Polymorphic;
-  //   IsStandardLayout = Live.IsStandardLayout;
-  //   IsCXX11StandardLayout = Live.IsCXX11StandardLayout;
-  //   HasTrivialSpecialMembers = Live.HasTrivialSpecialMembers;
-  //   HasTrivialSpecialMembersForCall = Live.HasTrivialSpecialMembersForCall;
-  //   DeclaredNonTrivialSpecialMembers = Live.DeclaredNonTrivialSpecialMembers;
-  //   DeclaredNonTrivialSpecialMembersForCall =
-  //       Live.DeclaredNonTrivialSpecialMembersForCall;
-  //   HasIrrelevantDestructor = Live.HasIrrelevantDestructor;
-  //   HasConstexprNonCopyMoveConstructor =
-  //       Live.HasConstexprNonCopyMoveConstructor;
-  //   HasDefaultedDefaultConstructor = Live.HasDefaultedDefaultConstructor;
-  //   HasConstexprDefaultConstructor = Live.HasConstexprDefaultConstructor;
-  //   HasDeclaredCopyConstructorWithConstParam =
-  //       Live.HasDeclaredCopyConstructorWithConstParam;
-  //   HasDeclaredCopyAssignmentWithConstParam =
-  //       Live.HasDeclaredCopyAssignmentWithConstParam;
-  //   IsAnyDestructorNoReturn = Live.IsAnyDestructorNoReturn;
-  //   DeclaredSpecialMembers = Live.DeclaredSpecialMembers;
-  // }
-
-  // void restore(CXXRecordDecl::DefinitionData &Live) const {
-  //   Live.Aggregate = Aggregate;
-  //   Live.PlainOldData = PlainOldData;
-  //   Live.Empty = Empty;
-  //   Live.Polymorphic = Polymorphic;
-  //   Live.IsStandardLayout = IsStandardLayout;
-  //   Live.IsCXX11StandardLayout = IsCXX11StandardLayout;
-  //   Live.HasTrivialSpecialMembers = HasTrivialSpecialMembers;
-  //   Live.HasTrivialSpecialMembersForCall = HasTrivialSpecialMembersForCall;
-  //   Live.DeclaredNonTrivialSpecialMembers = DeclaredNonTrivialSpecialMembers;
-  //   Live.DeclaredNonTrivialSpecialMembersForCall =
-  //       DeclaredNonTrivialSpecialMembersForCall;
-  //   Live.HasIrrelevantDestructor = HasIrrelevantDestructor;
-  //   Live.HasConstexprNonCopyMoveConstructor =
-  //       HasConstexprNonCopyMoveConstructor;
-  //   Live.HasDefaultedDefaultConstructor = HasDefaultedDefaultConstructor;
-  //   Live.HasConstexprDefaultConstructor = HasConstexprDefaultConstructor;
-  //   Live.HasDeclaredCopyConstructorWithConstParam =
-  //       HasDeclaredCopyConstructorWithConstParam;
-  //   Live.HasDeclaredCopyAssignmentWithConstParam =
-  //       HasDeclaredCopyAssignmentWithConstParam;
-  //   Live.IsAnyDestructorNoReturn = IsAnyDestructorNoReturn;
-  //   Live.DeclaredSpecialMembers = DeclaredSpecialMembers;
-  // }
 };
 
 // Stores the state of a class template specialization. Tracks its
@@ -234,17 +152,15 @@ struct FunctionSpecializationFootprint {
 };
 
 // Stores the state of an ordinary class member created from a class template
-// instantiation. Tracks its specialization kind, point of instantiation, and
-// source location so the state can be compared and restored.
+// instantiation. Tracks its specialization kind and point of instantiation
+// so the state can be compared and restored.
 struct MemberSpecializationFootprint {
   unsigned SpecializationKind : 3;
   SourceLocation PointOfInstantiation;
-  SourceLocation Location;
 
   bool operator==(const MemberSpecializationFootprint &O) const {
     return SpecializationKind == O.SpecializationKind &&
-           PointOfInstantiation == O.PointOfInstantiation &&
-           Location == O.Location;
+           PointOfInstantiation == O.PointOfInstantiation;
   }
   bool operator!=(const MemberSpecializationFootprint &O) const {
     return !(*this == O);
@@ -254,7 +170,6 @@ struct MemberSpecializationFootprint {
     const MemberSpecializationInfo *MSI = Live.getMemberSpecializationInfo();
     SpecializationKind = MSI->getTemplateSpecializationKind();
     PointOfInstantiation = MSI->getPointOfInstantiation();
-    Location = Live.getLocation();
   }
 
   template <typename OwnerT> void restore(OwnerT &Live) const {
@@ -262,9 +177,11 @@ struct MemberSpecializationFootprint {
     MSI->setTemplateSpecializationKind(
         static_cast<TemplateSpecializationKind>(SpecializationKind));
     MSI->setPointOfInstantiation(PointOfInstantiation);
-    Live.setLocation(Location);
   }
 };
+
+class PTUMutationActions;
+class PTUCheckpointLedger;
 
 class DeclStateReverter {
 private:
@@ -284,6 +201,16 @@ private:
 
   struct ClassTemplateCommonAccess : ClassTemplateDecl {
     using ClassTemplateDecl::getCommonPtr;
+  };
+
+  struct ClassTemplateSpecAccess : ClassTemplateDecl {
+    using ClassTemplateDecl::getSpecializations;
+  };
+  struct FunctionTemplateSpecAccess : FunctionTemplateDecl {
+    using FunctionTemplateDecl::getSpecializations;
+  };
+  struct VarTemplateSpecAccess : VarTemplateDecl {
+    using VarTemplateDecl::getSpecializations;
   };
 
   static bool canonInjectedTSTValid(const ClassTemplateDecl &CTD) {
@@ -436,14 +363,13 @@ protected:
 
   // True if Common could still be created later -- i.e. nobody has called
   // getCommonPtr() anywhere in this template's redecl chain yet.
-  static bool needToTrackCommonPtr(const RedeclarableTemplateDecl &RT) {
+  static bool isCommonPtrValid(const RedeclarableTemplateDecl &RT) {
     return !rawCommonPtr(RT);
   }
 
   // True if CanonInjectedTST could still be cached later. Only valid to
   // call once Common itself is confirmed to exist (see needToTrackCommonPtr).
-  static bool
-  needToTrackTemplateCanonInjectedTST(const ClassTemplateDecl *CTD) {
+  static bool isTemplateCanonInjectedTSTValid(const ClassTemplateDecl *CTD) {
     return !canonInjectedTSTValid(*CTD);
   }
 
@@ -458,6 +384,19 @@ protected:
     clearCanonInjectedTST(CTD);
   }
 
+  // Specializations are appended in commit order, and rollback is strictly
+  // LIFO (only the most recently committed PTU is ever rolled back). So all
+  // specializations added by a given PTU form a trailing run at the back of
+  // the FoldingSetVector. Popping entries while the back entry belongs to
+  // this PTU is therefore sufficient.
+  //
+  // FoldingSetVector also has no arbitrary-position erase – only
+  // pop_back()/clear() – which is another reason to walk from the back
+  // rather than filter the entries in place.
+  static void removeSpecializations(PTUCheckpointLedger &Ledger,
+                                    const RedeclarableTemplateDecl *TD,
+                                    PTUID ID);
+
   // static const Type *getRawTypeForDecl(const TypeDecl *TD) {
   //   return TD->TypeForDecl;
   // }
@@ -470,40 +409,36 @@ protected:
   // static void resetTypeForDecl(TypeDecl *TD) { TD->TypeForDecl = nullptr; }
 
 private:
-  ASTContext &Ctx;
-  llvm::SlabCheckPoint SlabCP;
-  llvm::SmallPtrSet<const DeclContext *, 8> RepairedLexicalContexts;
-
-  bool isAfterCP(const void *P) const {
-    return Ctx.getAllocator().isAfterCheckpoint(P, SlabCP);
-  }
+  PTUCheckpointLedger &PTUSlabCheckpoints;
 
 public:
-  DeclStateReverter(ASTContext &Ctx, llvm::SlabCheckPoint CP)
-      : Ctx(Ctx), SlabCP(CP) {}
+  friend PTUMutationActions;
+
+  explicit DeclStateReverter(PTUCheckpointLedger &Ledger)
+      : PTUSlabCheckpoints(Ledger) {}
 
   static bool isExtensibleContainer(const Decl *D) {
     return isa<NamespaceDecl>(D) || isa<CXXRecordDecl>(D);
   }
 
-  static bool isRedeclarableOrOnlyDecl(Decl *D) {
-    return D->getPreviousDecl() != nullptr;
+  static bool hasNoPreviousDecl(Decl *D) {
+    return D->getPreviousDecl() == nullptr;
   }
 
   void detachDefData(const Decl *D);
 
-  void detachCommonBase(const Decl *D);
+  static void detachCommonBase(const RedeclarableTemplateDecl *RT);
 
   /// Remove D from its semantic context's lookup map, reinstating the
   /// previous declaration if D had replaced one in-place (which is what
   /// StoredDeclsList::HandleRedeclaration does on a redeclaration --
   /// erasing the slot outright would lose the older decl entirely; that
   /// is the ReopenNs failure).
-  void detachFromDCLookup(const Decl *D);
+  void detachFromDCLookup(Decl *D, PTUID ID);
 
   // Walk D's redecl chain looking for the newest decl that predates this
   // PTU. Returns nullptr if the entire chain was created this PTU.
-  template <typename DeclT> DeclT *findSurvivor(DeclT *D) const;
+  template <typename DeclT> DeclT *findSurvivor(DeclT *D, PTUID ID) const;
 
   template <typename decl_type>
   void patchRedeclLink(Redeclarable<decl_type> *D, decl_type *Survivor) {
@@ -512,12 +447,12 @@ public:
 
   /// Point the canonical decl's "most recent" link back at the newest
   /// redeclaration that predates this PTU.
-  void detachFromRedeclChain(const Decl *D);
+  void detachFromRedeclChain(const Decl *D, PTUID ID);
 
-  void repairLexicalChain(DeclContext &DC);
+  void repairLexicalChain(DeclContext &DC, PTUID ID);
 
 private:
-  NamedDecl *tryDetachRedeclChain(Decl *D);
+  NamedDecl *tryDetachRedeclChain(Decl *D, PTUID ID);
 };
 
 template <typename DataT> struct Snapshot {
@@ -552,12 +487,12 @@ public:
     History.push_back(Snapshot<DataT>{ID, Fresh});
   }
 
-  const DataT *getPrevious(PTUID ID) const {
-    for (auto It = History.rbegin(); It != History.rend(); ++It)
-      if (It->ID < ID)
-        return It->Data;
-    return nullptr;
-  }
+  // const DataT *getPrevious(PTUID ID) const {
+  //   for (auto It = History.rbegin(); It != History.rend(); ++It)
+  //     if (It->ID < ID)
+  //       return It->Data;
+  //   return nullptr;
+  // }
 
   /// removal: drop every entry with ID >= \p ID.
   void removeFrom(PTUID ID) {
@@ -574,10 +509,24 @@ using FunctionSpecializationChain =
 using MemberSpecializationChain =
     StateAwareChain<MemberSpecializationFootprint>;
 
+/// Maps addresses to the PTU that allocated them, by keeping the slab
+/// checkpoint taken before each PTU began.
+///
+/// PTU IDs are the vector index, which is what makes the lookup a binary
+/// search: checkpoints are monotonically increasing, so "is this address
+/// after checkpoint N" is true for all N up to the allocating PTU and
+/// false after.
 class PTUCheckpointLedger {
+  const ASTContext &Ctx;
   llvm::SmallVector<llvm::SlabCheckPoint, 16> CheckpointBeforePTU;
 
+  bool isAfter(const void *Ptr, PTUID ID) const {
+    return Ctx.getAllocator().isAfterCheckpoint(Ptr, CheckpointBeforePTU[ID]);
+  }
+
 public:
+  explicit PTUCheckpointLedger(const ASTContext &Ctx) : Ctx(Ctx) {}
+
   /// Called once, right before parsing PTU \p ID begins.
   void recordCheckpoint(PTUID ID, llvm::SlabCheckPoint CP) {
     assert(ID == CheckpointBeforePTU.size() &&
@@ -585,49 +534,30 @@ public:
     CheckpointBeforePTU.push_back(CP);
   }
 
-  /// \return the PTU that allocated \p Ptr, or std::nullopt if \p Ptr
-  /// predates the oldest recorded checkpoint.
-  ///
-  /// Walks newest-to-oldest: checkpoints only ever move forward for state
-  /// that has survived (committed PTUs are never rewound), so the first
-  /// checkpoint for which \p Ptr is "after" is the PTU that produced it.
-  std::optional<PTUID> attribute(const ASTContext &Ctx, const void *Ptr) const {
-    for (PTUID ID = CheckpointBeforePTU.size(); ID-- > 0;) {
-      if (Ctx.getAllocator().isAfterCheckpoint(Ptr, CheckpointBeforePTU[ID]))
-        return ID;
-    }
-    return std::nullopt;
+  /// Was \p Ptr allocated during PTU \p ID or later?
+  bool isFromThisPTU(const void *Ptr, PTUID ID) const {
+    assert(ID < CheckpointBeforePTU.size());
+    return isAfter(Ptr, ID);
   }
 
-  inline std::optional<PTUID> attributeByAddress(const ASTContext &Ctx,
-                                                 const void *Ptr) {
-    // Binary search for the largest ID whose checkpoint Ptr is after -- i.e.
-    // the newest PTU boundary this address was allocated on or past.
+  /// The PTU that allocated \p Ptr, or nullopt if it predates the oldest
+  /// recorded checkpoint. The newest ID whose checkpoint \p Ptr is after.
+  std::optional<PTUID> attribute(const void *Ptr) const {
     size_t Lo = 0, Hi = CheckpointBeforePTU.size();
     std::optional<PTUID> Result;
     while (Lo < Hi) {
       size_t Mid = Lo + (Hi - Lo) / 2;
-      if (Ctx.getAllocator().isAfterCheckpoint(Ptr, CheckpointBeforePTU[Mid])) {
+      if (isAfter(Ptr, Mid)) {
         Result = static_cast<PTUID>(Mid);
-        Lo = Mid + 1; // still after Mid's checkpoint -- look for a later one
+        Lo = Mid + 1;
       } else {
-        Hi = Mid; // not even after Mid -- must be before it
+        Hi = Mid;
       }
     }
     return Result;
   }
 
-  bool predatesPTU(const ASTContext &Ctx, const void *Ptr, PTUID ID) const {
-    assert(ID < CheckpointBeforePTU.size());
-    return !Ctx.getAllocator().isAfterCheckpoint(Ptr, CheckpointBeforePTU[ID]);
-  }
-
-  bool isFromThisPTU(const ASTContext &Ctx, const void *Ptr, PTUID ID) const {
-    assert(ID < CheckpointBeforePTU.size());
-    return Ctx.getAllocator().isAfterCheckpoint(Ptr, CheckpointBeforePTU[ID]);
-  }
-
-  /// Drop checkpoints from \p ID onward.
+  /// Drop checkpoints from \p ID onward, after rolling those PTUs back.
   void undoFrom(PTUID ID) {
     if (ID < CheckpointBeforePTU.size())
       CheckpointBeforePTU.resize(ID);
@@ -651,11 +581,11 @@ public:
     Entries.push_back(FieldMutation<ValueT>{ID, OldValue});
   }
 
-  const ValueT *mostRecent(const OwnerT *Owner) const {
+  std::optional<ValueT> mostRecent(const OwnerT *Owner) const {
     auto It = Log.find(Owner);
-    return (It == Log.end() || It->second.empty())
-               ? nullptr
-               : &It->second.back().OldValue;
+    if (It == Log.end() || It->second.empty())
+      return std::nullopt;
+    return It->second.back().OldValue;
   }
 
   std::optional<PTUID> mostRecentID(const OwnerT *Owner) const {
@@ -676,24 +606,24 @@ public:
                            : std::optional<PTUID>(History.front().ID);
   }
 
-  template <typename FnT> void forEachOwnerSince(PTUID ID, FnT &&Fn) const {
-    for (auto &Entry : Log)
-      if (!Entry.second.empty() && Entry.second.back().ID >= ID)
-        Fn(Entry.first);
-  }
+  // template <typename FnT> void forEachOwnerSince(PTUID ID, FnT &&Fn) const {
+  //   for (auto &Entry : Log)
+  //     if (!Entry.second.empty() && Entry.second.back().ID >= ID)
+  //       Fn(Entry.first);
+  // }
 
-  void removeFrom(PTUID ID) {
-    llvm::SmallVector<OwnerT *> ToErase;
-    for (auto &Entry : Log) {
-      auto &Entries = Entry.second;
-      while (!Entries.empty() && Entries.back().ID >= ID)
-        Entries.pop_back();
-      if (Entries.empty())
-        ToErase.push_back(Entry.first);
-    }
-    for (const OwnerT *O : ToErase)
-      Log.erase(O);
-  }
+  // void removeFrom(PTUID ID) {
+  //   llvm::SmallVector<OwnerT *> ToErase;
+  //   for (auto &Entry : Log) {
+  //     auto &Entries = Entry.second;
+  //     while (!Entries.empty() && Entries.back().ID >= ID)
+  //       Entries.pop_back();
+  //     if (Entries.empty())
+  //       ToErase.push_back(Entry.first);
+  //   }
+  //   for (const OwnerT *O : ToErase)
+  //     Log.erase(O);
+  // }
 
   /// Same trim-then-erase-if-empty as removeFrom(ID), scoped to one owner
   /// instead of sweeping the whole Log -- for callers that already know
@@ -760,11 +690,9 @@ struct MutationRecord {
 using DeclShape = MutationRecord::DeclShape;
 using MutationType = MutationRecord::MutationKind;
 
-class PTUMutationActions;
-
 struct PTUStateInfo {
   PTUID ID;
-  const TranslationUnitDecl *ThisTU; // current info
+  const TranslationUnitDecl *ThisPTU; // current info
 
   llvm::MapVector<const Decl *, MutationRecord> Mutations;
 
@@ -775,17 +703,9 @@ struct PTUStateInfo {
 
   /// Exactly the decls this PTU's own commit() pushed a footprint-chain
   /// entry for (DefinitionData/Specialization/MemberSpecialization, via
-  /// chainFor()/memberSpecChainFor()), keyed on the canonical decl the
-  /// same way those accessors are. Lets undo walk only what this PTU
-  /// actually touched instead of sweeping every decl ever tracked across
-  /// every PTU -- the exact opposite of commit(), scoped the same way
-  /// commit() itself is scoped.
+  /// chainFor()/memberSpecChainFor()).
   llvm::SmallPtrSet<const Decl *, 8> TouchedFootprintDecls;
 
-  /// Same idea for the two FieldMutationChain logs (FunctionTypeMutations,
-  /// TagdeclInfos), which are keyed by owner rather than living in
-  /// LinkedDecls -- kept as two separate sets since the owner types
-  /// (FunctionDecl vs TagDecl) differ.
   llvm::SmallPtrSet<const FunctionDecl *, 4> TouchedFunctionTypeOwners;
   llvm::SmallPtrSet<const TagDecl *, 4> TouchedTagdeclOwners;
 
@@ -852,10 +772,11 @@ public:
       Active.erase(It);
   }
 
-  // Call at commit(ID) time. PTUMutationActions is invoked as
+  // Call at commit/restore time. OnConfirmed is invoked as
   // (const Decl *D, DeclShape S, uint32_t ConfirmedKinds) for every decl
   // that had something newly confirmed this sweep.
-  void sweep(PTUMutationActions &Act);
+  template <typename OnConfirmedFn>
+  void sweep(PTUMutationActions &Act, OnConfirmedFn OnConfirmed);
 };
 
 //===----------------------------------------------------------------------===//
@@ -878,105 +799,58 @@ struct CXXClassDeclNode {
   PTUID OriginID;
   RecordDeclDefinitionDataChain *DefData = nullptr;
   llvm::PointerUnion<SpecializationChain *, MemberSpecializationChain *> Spec;
-  CXXClassDeclNode *Next = nullptr; // free-list link, meaningless off the list
 };
 
 struct VarDeclNode {
   PTUID OriginID;
   llvm::PointerUnion<VarSpecializationChain *, MemberSpecializationChain *>
       Spec;
-  VarDeclNode *Next = nullptr;
 };
 
 struct FunctionDeclNode {
   PTUID OriginID;
   llvm::PointerUnion<FunctionSpecializationChain *, MemberSpecializationChain *>
       Spec;
-  FunctionDeclNode *Next = nullptr;
 };
 
 struct EnumDeclNode {
   PTUID OriginID;
   MemberSpecializationChain *MemberSpec =
       nullptr; // the only thing an enum can ever have
-  EnumDeclNode *Next = nullptr;
 };
 
 using DeclLinkedState = llvm::PointerUnion<CXXClassDeclNode *, VarDeclNode *,
                                            FunctionDeclNode *, EnumDeclNode *>;
 
-/// Intrusive free-list pool for the four node types above. Released nodes
-/// are kept for reuse instead of being immediately deleted. The pool is
-/// bounded by Capacity; once it is full, additional released nodes are
-/// deleted instead of being kept. This keeps memory usage bounded while
-/// still allowing freed nodes to be reused.
-
-template <typename T> class NodePool {
-  T *FreeList = nullptr;
-  unsigned FreeCount = 0;
+/// Pool for reusing node/chain objects without requiring any intrusive
+/// free-list field on T itself -- freed pointers are tracked in a side
+/// vector instead, so this works for the four node types above and the
+/// five StateAwareChain-based chain types alike. Released objects are kept
+/// for reuse, and the pool is bounded by Capacity so unused objects do not
+/// cause unbounded memory growth.
+template <typename T> class ObjectPool {
+  llvm::SmallVector<T *, 8> Free;
   unsigned Capacity;
 
 public:
-  explicit NodePool(unsigned Capacity = 64) : Capacity(Capacity) {}
+  explicit ObjectPool(unsigned Capacity = 64) : Capacity(Capacity) {}
 
-  ~NodePool() {
-    while (FreeList) {
-      T *Dead = FreeList;
-      FreeList = FreeList->Next;
-      delete Dead;
-    }
-  }
-  /// Hands back a reset (all-default) node -- recycled if one is free,
-  /// freshly allocated otherwise.
-  T *acquire() {
-    if (T *N = FreeList) {
-      FreeList = N->Next;
-      --FreeCount;
-      *N = T();
-      return N;
-    }
-    return new T();
-  }
-  /// Takes ownership back. Kept for a future acquire() to hand out again
-  /// if the free list is under capacity; reclaimed for real (delete)
-  /// otherwise, so this pool never holds more than Capacity dead nodes.
-  void release(T *N) {
-    if (FreeCount >= Capacity) {
-      delete N;
-      return;
-    }
-    N->Next = FreeList;
-    FreeList = N;
-    ++FreeCount;
-  }
-};
-
-/// Pool for reusing chain objects without modifying StateAwareChain.
-/// Released chains are kept for reuse, and the pool is bounded by Capacity
-/// so unused chains do not cause unbounded memory growth.
-template <typename ChainT> class ChainPool {
-  llvm::SmallVector<ChainT *, 8> Free;
-  unsigned Capacity;
-
-public:
-  explicit ChainPool(unsigned Capacity = 64) : Capacity(Capacity) {}
-
-  ~ChainPool() {
-    for (ChainT *C : Free)
+  ~ObjectPool() {
+    for (T *C : Free)
       delete C;
   }
 
-  ChainT *acquire() {
+  T *acquire() {
     if (!Free.empty()) {
-      ChainT *C = Free.pop_back_val();
-      *C = ChainT();
+      T *C = Free.pop_back_val();
+      *C = T();
       return C;
     }
-    return new ChainT();
+    return new T();
   }
-  /// Same capacity rule as NodePool::release() -- reclaimed for real once
-  /// Free is at capacity, rather than growing without bound.
-  void release(ChainT *C) {
+  /// Reclaimed for real once Free is at capacity, rather than growing
+  /// without bound.
+  void release(T *C) {
     if (Free.size() >= Capacity) {
       delete C;
       return;
@@ -986,16 +860,16 @@ public:
 };
 
 class LinkedDeclNodeGenerator {
-  NodePool<CXXClassDeclNode> RecordNodes;
-  NodePool<VarDeclNode> VarNodes;
-  NodePool<FunctionDeclNode> FunctionNodes;
-  NodePool<EnumDeclNode> EnumNodes;
+  ObjectPool<CXXClassDeclNode> RecordNodes;
+  ObjectPool<VarDeclNode> VarNodes;
+  ObjectPool<FunctionDeclNode> FunctionNodes;
+  ObjectPool<EnumDeclNode> EnumNodes;
 
-  ChainPool<RecordDeclDefinitionDataChain> DefDataChains;
-  ChainPool<SpecializationChain> ClassSpecChains;
-  ChainPool<VarSpecializationChain> VarSpecChains;
-  ChainPool<FunctionSpecializationChain> FunctionSpecChains;
-  ChainPool<MemberSpecializationChain> MemberSpecChains;
+  ObjectPool<RecordDeclDefinitionDataChain> DefDataChains;
+  ObjectPool<SpecializationChain> ClassSpecChains;
+  ObjectPool<VarSpecializationChain> VarSpecChains;
+  ObjectPool<FunctionSpecializationChain> FunctionSpecChains;
+  ObjectPool<MemberSpecializationChain> MemberSpecChains;
 
 public:
   CXXClassDeclNode *acquireRecordNode() { return RecordNodes.acquire(); }
@@ -1055,9 +929,12 @@ enum class LangMode : uint8_t {
 class IncrementalStateTracker {
 private:
   ASTContext &Ctx;
+  // Only needed so remove stale
+  // Sema::SpecialMemberCache entries for decls this PTU created.
+  Sema &SemaRef;
+  PTUCheckpointLedger PTUSlabCheckpoints;
   LangMode Mode;
   PTUID NextID = 0;
-  PTUCheckpointLedger PTUSlabCheckpoints;
 
   mutable std::vector<PTUStateInfo> PTUStack;
 
@@ -1072,7 +949,7 @@ private:
   SweepTracker HiddenMutationTracker;
 
   FunctionExceptionSpecChain FunctionTypeMutations;
-  TypeForDeclChain TagdeclInfos;
+  TypeForDeclChain TagDeclTypes;
 
   friend class PTUMutationActions;
 
@@ -1083,8 +960,13 @@ private:
   }
   void noteTagDeclTypeMutation(PTUID ID, const TagDecl *Owner,
                                const Type *OldValue) {
-    TagdeclInfos.noteMutation(ID, Owner, OldValue);
+    TagDeclTypes.noteMutation(ID, Owner, OldValue);
     current().TouchedTagdeclOwners.insert(Owner);
+  }
+
+  TypeForDeclChain &getTagDeclTypeInfo() { return TagDeclTypes; }
+  FunctionExceptionSpecChain &getFunctionTypeMutations() {
+    return FunctionTypeMutations;
   }
 
   /// Get-or-create the CXXClassDeclNode backing Canon, acquiring one from
@@ -1238,7 +1120,8 @@ private:
   }
 
 public:
-  IncrementalStateTracker(ASTContext &Ctx, LangMode M) : Ctx(Ctx), Mode(M) {}
+  IncrementalStateTracker(ASTContext &Ctx, Sema &S, LangMode M)
+      : Ctx(Ctx), SemaRef(S), PTUSlabCheckpoints(Ctx), Mode(M) {}
 
   LangMode getMode() const { return Mode; }
 
@@ -1257,7 +1140,7 @@ public:
   }
 
   bool isFromThisPTU(const void *Ptr, PTUID ID) const {
-    return PTUSlabCheckpoints.isFromThisPTU(Ctx, Ptr, ID);
+    return PTUSlabCheckpoints.isFromThisPTU(Ptr, ID);
   }
   bool isFromCurrentPTU(const void *Ptr) const {
     return isFromThisPTU(Ptr, currentID());
@@ -1265,6 +1148,7 @@ public:
 
   SweepTracker &getHiddenMutationTracker() { return HiddenMutationTracker; }
   PTUCheckpointLedger &getPTUSlabCheckpoints() { return PTUSlabCheckpoints; }
+  Sema &getSema() const { return SemaRef; }
 
   void undoLastEntries();
 
@@ -1284,6 +1168,14 @@ private:
       llvm::PointerUnion<SpecializationChain *, MemberSpecializationChain *>
           &Spec,
       PTUID ID, LinkedDeclNodeGenerator &Gen);
+  static bool removeVarSpec(
+      llvm::PointerUnion<VarSpecializationChain *, MemberSpecializationChain *>
+          &Spec,
+      PTUID ID, LinkedDeclNodeGenerator &Gen);
+  static bool
+  removeFunctionSpec(llvm::PointerUnion<FunctionSpecializationChain *,
+                                        MemberSpecializationChain *> &Spec,
+                     PTUID ID, LinkedDeclNodeGenerator &Gen);
   void removeLinkedDecl(const Decl *D, PTUID ID);
   // just only remove entries from current();
 };
@@ -1291,11 +1183,23 @@ private:
 class PTUMutationActions {
 private:
   IncrementalStateTracker &Tracker;
+  SweepTracker &HiddenMutationTracker;
+  DeclStateReverter Reverter;
 
 public:
   explicit PTUMutationActions(IncrementalStateTracker &Tracker)
-      : Tracker(Tracker) {}
+      : Tracker(Tracker),
+        HiddenMutationTracker(Tracker.getHiddenMutationTracker()),
+        Reverter(Tracker.getPTUSlabCheckpoints()) {}
 
+  template <typename DeclStateProxyT>
+  void walkDecls(const DeclContext *DC, DeclStateProxyT &Proxy);
+
+  uint32_t kindsNeedingTracking(DeclShape S, const Decl *D);
+
+  uint32_t verifyMutationFor(const Decl *D, DeclShape S, uint32_t FlaggedKinds);
+
+private:
   /// Every mutation this PTU recorded for a class-shaped decl, applied in
   /// dependency order: definition data first (later steps read the completed
   /// definition), then the type cache, then specialization footprints, then
@@ -1341,45 +1245,29 @@ public:
   void commitEnumFamily(PTUID ID, const EnumDecl *ED, MutationRecord &Rec,
                         bool IsNew);
 
-  template <typename DeclStateProxyT>
-  void walkDecls(const DeclContext *DC, DeclStateProxyT &Proxy);
+  void restoreClass(PTUID ID, const CXXRecordDecl *RD, MutationRecord &Rec);
 
-  // static uint32_t classifyPossibleKinds(DeclShape S, const Decl *D);
+  void restoreFunction(PTUID ID, const FunctionDecl *FD, MutationRecord &Rec);
 
-  uint32_t verifyMutationFor(const Decl *D, DeclShape S, uint32_t FlaggedKinds);
+  void restoreTemplate(PTUID ID, const RedeclarableTemplateDecl *TD,
+                       MutationRecord &Rec);
 
-  void commitLevel1(PTUID ID, const Decl *D, MutationRecord &Rec,
-                    bool IsNew = false);
+  void restoreVar(PTUID ID, const VarDecl *VD, MutationRecord &Rec);
 
+  void restoreEnum(PTUID ID, const EnumDecl *ED, MutationRecord &Rec);
+
+  void restoreTypedef(PTUID ID, const TypedefNameDecl *TD, MutationRecord &Rec);
+
+public:
+  void restoreDecl(PTUID ID, const Decl *D, MutationRecord &Rec);
+  void commitDecl(PTUID ID, const Decl *D, MutationRecord &Rec,
+                  bool IsNew = false);
   // respect the LIFO so only current inside map not commited can be commited
   // not randon PTUID
   // global map info shouldn't be commited before only added here. not note*
   // time.
   void commit(TranslationUnitDecl *MostRecentTU);
-
-  void restoreClassFamily(PTUID ID, const CXXRecordDecl *RD,
-                          MutationRecord &Rec);
-
-  void restoreFunctionFamily(PTUID ID, const FunctionDecl *FD,
-                             MutationRecord &Rec);
-
-  void restoreTemplateFamily(PTUID ID, const RedeclarableTemplateDecl *TD,
-                             MutationRecord &Rec);
-
-  void restoreVarFamily(PTUID ID, const VarDecl *VD, MutationRecord &Rec);
-
-  /// Every mutation this PTU recorded for an enum-shaped decl, or -- when CR
-  /// is non-null -- the baseline seed for one this PTU created.
-  ///
-  /// The smallest family: enums have no specialization category (there is no
-  /// such thing as an enum template), no deferred bodies, and no members with
-  /// independent mutable state -- EnumConstantDecls live and die with the
-  /// EnumDecl, so they are not separately tracked.
-  void restoreEnumFamily(PTUID ID, const EnumDecl *ED, MutationRecord &Rec);
-
-  void restoreLevel1(PTUID ID, const Decl *D, MutationRecord &Rec);
-
-  void rollback(TranslationUnitDecl *MostRecentTU);
+  void restore(TranslationUnitDecl *MostRecentTU);
 };
 
 class PTUMutationRecorder : public ASTMutationListener {
@@ -1388,51 +1276,48 @@ private:
 
   template <typename TemplateT, typename SpecT>
   void noteTemplateDeclMutation(const TemplateT *TD, const SpecT *Spec,
-                                DeclShape S) {}
+                                DeclShape S);
 
   void noteExceptionSpecMutation(const FunctionDecl *FD,
-                                 MutationType K = MutationType::ExceptionSpec) {
-  }
+                                 MutationType K = MutationType::ExceptionSpec);
 
-  void noteDefinitionInstantiated(const Decl *D) {}
+  void noteDefinitionInstantiated(const Decl *D);
 
 public:
   PTUMutationRecorder(IncrementalStateTracker &Tracker) : Tracker(Tracker) {}
 
   /// A new TagDecl definition was completed.
-  void CompletedTagDefinition(const TagDecl *D) override {}
+  void CompletedTagDefinition(const TagDecl *D) override;
 
   /// A new declaration with name has been added to a DeclContext.
-  void AddedVisibleDecl(const DeclContext *DC, const Decl *D) override {}
+  void AddedVisibleDecl(const DeclContext *DC, const Decl *D) override;
 
   /// An implicit member was added after the definition was completed.
-  void AddedCXXImplicitMember(const CXXRecordDecl *RD, const Decl *D) override {
-  }
+  void AddedCXXImplicitMember(const CXXRecordDecl *RD, const Decl *D) override;
 
   /// A template specialization (or partial one) was added to the
   /// template declaration.
   void AddedCXXTemplateSpecialization(
       const ClassTemplateDecl *TD,
-      const ClassTemplateSpecializationDecl *D) override {}
+      const ClassTemplateSpecializationDecl *D) override;
 
   /// A template specialization (or partial one) was added to the
   /// template declaration.
   void AddedCXXTemplateSpecialization(
       const VarTemplateDecl *TD,
-      const VarTemplateSpecializationDecl *D) override {}
+      const VarTemplateSpecializationDecl *D) override;
 
   /// A template specialization (or partial one) was added to the
   /// template declaration.
   void AddedCXXTemplateSpecialization(const FunctionTemplateDecl *TD,
-                                      const FunctionDecl *D) override {}
+                                      const FunctionDecl *D) override;
 
   /// A function's exception specification has been evaluated or
   /// instantiated.
-  void ResolvedExceptionSpec(const FunctionDecl *FD) override {}
+  void ResolvedExceptionSpec(const FunctionDecl *FD) override;
 
   /// A function's return type has been deduced.
-  void DeducedReturnType(const FunctionDecl *FD, QualType ReturnType) override {
-  }
+  void DeducedReturnType(const FunctionDecl *FD, QualType ReturnType) override;
 
   /// A virtual destructor's operator delete has been resolved.
   void ResolvedOperatorDelete(const CXXDestructorDecl *DD,
@@ -1460,7 +1345,7 @@ public:
   /// The instantiation of a templated function or variable was
   /// requested. In particular, the point of instantiation and template
   /// specialization kind of \p D may have changed.
-  void InstantiationRequested(const ValueDecl *D) override {}
+  void InstantiationRequested(const ValueDecl *D) override;
 
   /// A templated variable's definition was implicitly instantiated.
   void VariableDefinitionInstantiated(const VarDecl *D) override {
