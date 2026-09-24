@@ -27,6 +27,24 @@ using namespace llvm;
 
 #define DEBUG_TYPE "regalloc"
 
+static void getBitVecRegAntiHints(Register VReg, BitVector &AntiHintedRegUnits,
+                                  const VirtRegMap &VRM,
+                                  const MachineRegisterInfo &MRI,
+                                  const TargetRegisterInfo &TRI) {
+  assert(VReg.isVirtual() && "Anti-hints are only for virtual registers");
+  for (Register AntiHintVReg : MRI.getRegAllocationAntiHints(VReg)) {
+    // Check if the anti-hinted register has been allocated.
+    if (!VRM.hasPhys(AntiHintVReg))
+      continue;
+    // Delay until first allocated anti-hinted register so unused cases keep
+    // default empty BitVector.
+    if (AntiHintedRegUnits.empty())
+      AntiHintedRegUnits.resize(TRI.getNumRegUnits());
+    for (MCRegUnit Unit : TRI.regunits(VRM.getPhys(AntiHintVReg)))
+      AntiHintedRegUnits.set(static_cast<unsigned>(Unit));
+  }
+}
+
 // Compare VirtRegMap::getRegAllocPref().
 AllocationOrder AllocationOrder::create(Register VirtReg, const VirtRegMap &VRM,
                                         const RegisterClassInfo &RegClassInfo,
@@ -57,7 +75,7 @@ AllocationOrder AllocationOrder::create(Register VirtReg, const VirtRegMap &VRM,
 
   // Get anti-hints.
   BitVector AntiHintedRegUnits;
-  MRI.getBitVecRegAntiHints(VirtReg, AntiHintedRegUnits, VRM);
+  getBitVecRegAntiHints(VirtReg, AntiHintedRegUnits, VRM, MRI, *TRI);
 
   LLVM_DEBUG({
     if (AntiHintedRegUnits.any()) {

@@ -965,11 +965,6 @@ public:
     return is_contained(AntiHints, AntiHintVReg);
   }
 
-  /// Get the BitVector of register units to avoid in anti-hints.
-  /// VRM is the current virtual register map showing allocations made so far.
-  void getBitVecRegAntiHints(Register VReg, BitVector &AntiHintedRegUnits,
-                             const VirtRegMap &VRM) const;
-
   /// markUsesInDebugValueAsUndef - Mark every DBG_VALUE referencing the
   /// specified register as undefined which causes the DBG_VALUE to be
   /// deleted during LiveDebugVariables analysis.
