@@ -482,6 +482,10 @@ const StopCondition &Breakpoint::GetCondition() const {
   return m_options.GetCondition();
 }
 
+StopCondition &Breakpoint::GetCondition() {
+  return m_options.GetCondition();
+}
+
 // This function is used when "baton" doesn't need to be freed
 void Breakpoint::SetCallback(BreakpointHitCallback callback, void *baton,
                              bool is_synchronous) {
