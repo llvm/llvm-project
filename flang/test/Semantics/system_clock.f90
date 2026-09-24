@@ -18,7 +18,13 @@
 ! RUN: %flang_fc1 -fsyntax-only -std=f2023 -Wno-system-clock-strict %s 2>&1 | FileCheck --allow-empty --check-prefix=CLEAN %s
 ! RUN: %flang_fc1 -fsyntax-only -Wno-system-clock-strict -std=f2023 %s 2>&1 | FileCheck --allow-empty --check-prefix=CLEAN %s
 ! RUN: %flang_fc1 -fsyntax-only -std=f2018 -Wsystem-clock-strict %s 2>&1 | FileCheck --check-prefix=STRICT %s
+
 ! RUN: %flang_fc1 -fsyntax-only -Wsystem-clock-strict -std=f2018 %s 2>&1 | FileCheck --check-prefix=STRICT %s
+
+! RUN: %flang_fc1 -fsyntax-only -pedantic %s 2>&1 | FileCheck --check-prefix=STRICT %s
+! RUN: %flang_fc1 -fsyntax-only -pedantic -Wno-system-clock-strict %s 2>&1 | FileCheck --allow-empty --check-prefix=CLEAN %s
+! RUN: %flang_fc1 -fsyntax-only -Wno-system-clock-strict -pedantic %s 2>&1 | FileCheck --allow-empty --check-prefix=CLEAN %s
+! RUN: %flang_fc1 -fsyntax-only -pedantic -std=f2018 %s 2>&1 | FileCheck --allow-empty --check-prefix=CLEAN %s
 
 ! Tests for SYSTEM_CLOCK argument warnings
 

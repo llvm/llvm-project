@@ -1119,6 +1119,41 @@ static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     features.WarnOnAllUsage();
   }
 
+  // SystemClockStrict warning check
+  // Fortran 2023 introduced restrictions to the arguements of SYSTEM_CLOCK.
+  // Since violations of these restrictions can cause unexpected or incorrect
+  // runtime results, violations should be reported to users at compile time
+  // by default. However, since these restrictions are not in Fortran 2018,
+  // these reports should be warnings and not errors. There are two ways to
+  // enable/disable these warnings:
+  //  -W{no-}system-clock-strict
+  //  -std=f20{18,23,28}
+  // Scheme for setting the SystemClockStrict warning:
+  //  - If Fortran 2018 has been set as the Fortran standard to follow, that
+  //    is `-std=f2018` is the last `std` flag, then this warning is
+  //    disabled. Otherwise, the warning is enabled.
+  //  - Later, when the warning flags are parsed, if one or more of
+  //    `-W{no-}system-clock-strict` appear, then the last dictates whether
+  //    or not the warnings are enabled. In this case, whatever is set below
+  //    is overwritten by the last of those flags.
+  // Note: `-pedantic` does not enable this warning, if it is otherwise
+  // disabled.
+  const bool enableWarning = res.getLangOpts().getFortranStandard() !=
+                             Fortran::common::LangOptions::Fortran2018;
+  res.getFrontendOpts().features.EnableWarning(
+      Fortran::common::UsageWarning::SystemClockStrict, enableWarning);
+
+  // -fcoarray
+  if (args.hasArg(clang::options::OPT_fcoarray)) {
+    res.getFrontendOpts().features.Enable(
+        Fortran::common::LanguageFeature::Coarray);
+    const unsigned diagID =
+        diags.getCustomDiagID(clang::DiagnosticsEngine::Warning,
+                              "Support for multi image Fortran features is "
+                              "still experimental and in development.");
+    diags.Report(diagID);
+  }
+
   // -Werror option
   // TODO: Currently throws a Diagnostic for anything other than -W<error>,
   // this has to change when other -W<opt>'s are supported.
@@ -1278,39 +1313,6 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
                                 "accepted to -std= currently.");
       diags.Report(diagID);
     }
-  }
-
-  // SystemClockStrict warning check
-  // Fortran 2023 introduced restrictions to the arguements of SYSTEM_CLOCK.
-  // Since violations of these restrictions can cause unexpected or incorrect
-  // runtime results, violations should be reported to users at compile time
-  // by default. However, since these restrictions are not in Fortran 2018,
-  // these reports should be warnings and not errors. There are two ways to
-  // enable/disable these warnings:
-  //  -W{no-}system-clock-strict
-  //  -std=f20{18,23,28}
-  // Scheme for setting the SystemClockStrict warning:
-  //  - If Fortran 2018 has been set as the Fortran standard to follow, that
-  //    is `-std=f2018` is the last `std` flag, then this warning is
-  //    disabled. Otherwise, the warning is enabled.
-  //  - Later, when the warning flags are parsed, if one or more of
-  //    `-W{no-}system-clock-strict` appear, then the last dictates whether
-  //    or not the warnings are enabled. In this case, whatever is set below
-  //    is overwritten by the last of those flags.
-  const bool enableWarning = res.getLangOpts().getFortranStandard() !=
-                             Fortran::common::LangOptions::Fortran2018;
-  res.getFrontendOpts().features.EnableWarning(
-      Fortran::common::UsageWarning::SystemClockStrict, enableWarning);
-
-  // -fcoarray
-  if (args.hasArg(clang::options::OPT_fcoarray)) {
-    res.getFrontendOpts().features.Enable(
-        Fortran::common::LanguageFeature::Coarray);
-    const unsigned diagID =
-        diags.getCustomDiagID(clang::DiagnosticsEngine::Warning,
-                              "Support for multi image Fortran features is "
-                              "still experimental and in development.");
-    diags.Report(diagID);
   }
 
   return !diags.hasUncompilableErrorOccurred();
