@@ -589,8 +589,7 @@ define i32 @test_or_known_zero_high_bits(ptr %p, i64 %n) {
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[ACC_NEXT]], 255
-; CHECK-NEXT:    ret i32 [[MASKED]]
+; CHECK-NEXT:    ret i32 [[ACC_NEXT]]
 ;
 entry:
   br label %loop
@@ -689,8 +688,7 @@ define i32 @test_and_known_zero_start(ptr %p, i64 %n) {
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[ACC_NEXT]], 255
-; CHECK-NEXT:    ret i32 [[MASKED]]
+; CHECK-NEXT:    ret i32 [[ACC_NEXT]]
 ;
 entry:
   br label %loop
