@@ -18218,11 +18218,11 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
   TagTypeKind Kind = TypeWithKeyword::getTagTypeKindForTypeSpec(TagSpec);
   bool ScopedEnum = ScopedEnumKWLoc.isValid();
 
-  auto SetMSVCEnumType = [&](NamedDecl *Found) {
+  auto TryBuildMSVCEnumType = [&](NamedDecl *Found) -> ParsedType {
     if (!getLangOpts().CPlusPlus || !getLangOpts().MSVCCompat ||
         !MSVCEnumType || Kind != TagTypeKind::Enum ||
         TUK != TagUseKind::Reference || (S && S->containedInPrototypeScope()))
-      return false;
+      return {};
 
     NamedDecl *TypeDecl = Found;
     if (!SS.isEmpty() ||
@@ -18230,20 +18230,20 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
       TypeDecl = Found->getUnderlyingDecl();
     auto *TD = dyn_cast<TypedefNameDecl>(TypeDecl);
     if (!TD)
-      return false;
+      return {};
     // MSVC accepts an unqualified typedef only in class scope and not after a
     // friend specifier.
     if (SS.isEmpty()) {
       if (IsFriend)
-        return false;
+        return {};
       auto *CurRecord = dyn_cast<CXXRecordDecl>(CurContext);
       if (!CurRecord)
-        return false;
+        return {};
       DeclContext *TDContext = TD->getDeclContext();
       auto *TDRecord = dyn_cast<CXXRecordDecl>(TDContext);
       if (!TDContext->Encloses(CurContext) &&
           !(TDRecord && CurRecord->isDerivedFrom(TDRecord)))
-        return false;
+        return {};
     }
 
     NestedNameSpecifier Qualifier = SS.getScopeRep();
@@ -18251,11 +18251,10 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
     QualType T = TryBuildMSVCEnumTypedefType(
         TypeDecl, ElaboratedTypeKeyword::Enum, Qualifier, NameLoc);
     if (T.isNull())
-      return false;
+      return {};
     TypeLocBuilder TLB;
     TLB.push<TypedefTypeLoc>(T).set(KWLoc, QualifierLoc, NameLoc);
-    *MSVCEnumType = CreateParsedType(T, TLB.getTypeSourceInfo(Context, T));
-    return true;
+    return CreateParsedType(T, TLB.getTypeSourceInfo(Context, T));
   };
 
   // FIXME: Check member specializations more carefully.
@@ -18726,8 +18725,10 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
     // okay according to the likely resolution of an open issue;
     // see http://www.open-std.org/jtc1/sc22/wg21/docs/cwg_active.html#407
     if (getLangOpts().CPlusPlus) {
-      if (SetMSVCEnumType(DirectPrevDecl))
+      if (ParsedType BuiltType = TryBuildMSVCEnumType(DirectPrevDecl)) {
+        *MSVCEnumType = BuiltType;
         return (Decl *)nullptr;
+      }
       if (TypedefNameDecl *TD = dyn_cast<TypedefNameDecl>(PrevDecl)) {
         if (TagDecl *Tag = TD->getUnderlyingType()->getAsTagDecl()) {
           if (Tag->getDeclName() == Name &&
