@@ -26,7 +26,7 @@ end subroutine
 ! CHECK:           fir.do_loop {{.*}} {
 ! Verify that `j` is allocated whithin the same scope of its block (i.e. inside
 ! the `parallel` loop).
-! CHECK:             fir.alloca i32 {bindc_name = "j", {{.*}}}
+! CHECK:             fir.alloca i32 <{bindc_name = "j", {{.*}}}>
 ! CHECK:           }
 ! CHECK:         }
 ! CHECK:       }

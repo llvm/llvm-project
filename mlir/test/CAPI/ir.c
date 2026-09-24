@@ -2051,6 +2051,20 @@ int testClone(void) {
 MlirLogicalResult errorHandler(MlirDiagnostic diagnostic, void *userData) {
   fprintf(stderr, "processing diagnostic (userData: %" PRIdPTR ") <<\n",
           (intptr_t)userData);
+  switch (mlirDiagnosticGetSeverity(diagnostic)) {
+  case MlirDiagnosticError:
+    fprintf(stderr, "severity: Error\n");
+    break;
+  case MlirDiagnosticWarning:
+    fprintf(stderr, "severity: Warning\n");
+    break;
+  case MlirDiagnosticNote:
+    fprintf(stderr, "severity: Note\n");
+    break;
+  case MlirDiagnosticRemark:
+    fprintf(stderr, "severity: Remark\n");
+    break;
+  }
   mlirDiagnosticPrint(diagnostic, printToStderr, NULL);
   fprintf(stderr, "\n");
   MlirLocation loc = mlirDiagnosticGetLocation(diagnostic);
@@ -2474,35 +2488,55 @@ void testDiagnostics(void) {
   MlirAttribute nullAttr = {0};
   MlirLocation fusedLoc = mlirLocationFusedGet(ctx, 2, locs, nullAttr);
   mlirEmitError(fusedLoc, "test diagnostics");
+  mlirEmitWarning(unknownLoc, "test warning");
+  mlirEmitRemark(unknownLoc, "test remark");
   mlirContextDetachDiagnosticHandler(ctx, id);
   mlirEmitError(unknownLoc, "more test diagnostics");
   // CHECK-LABEL: @test_diagnostics
   // CHECK: processing diagnostic (userData: 42) <<
+  // CHECK:   severity: Error
   // CHECK:   test diagnostics
   // CHECK:   loc(unknown)
   // CHECK: processing diagnostic (userData: 42) <<
+  // CHECK:   severity: Error
   // CHECK:   test clone
   // CHECK:   loc(unknown)
   // CHECK: >> end of diagnostic (userData: 42)
   // CHECK: processing diagnostic (userData: 42) <<
+  // CHECK:   severity: Error
   // CHECK:   test diagnostics
   // CHECK:   loc("file.c":1:2)
   // CHECK: >> end of diagnostic (userData: 42)
   // CHECK: processing diagnostic (userData: 42) <<
+  // CHECK:   severity: Error
   // CHECK:   test diagnostics
   // CHECK:   loc("other-file.c":1:2 to 3:4)
   // CHECK: >> end of diagnostic (userData: 42)
   // CHECK: processing diagnostic (userData: 42) <<
+  // CHECK:   severity: Error
   // CHECK:   test diagnostics
   // CHECK:   loc(callsite("other-file.c":2:3 at "file.c":1:2))
   // CHECK: >> end of diagnostic (userData: 42)
   // CHECK: processing diagnostic (userData: 42) <<
+  // CHECK:   severity: Error
   // CHECK:   test diagnostics
   // CHECK:   loc("named")
   // CHECK: >> end of diagnostic (userData: 42)
   // CHECK: processing diagnostic (userData: 42) <<
+  // CHECK:   severity: Error
   // CHECK:   test diagnostics
   // CHECK:   loc(fused["named", callsite("other-file.c":2:3 at "file.c":1:2)])
+  // CHECK: >> end of diagnostic (userData: 42)
+  // CHECK: processing diagnostic (userData: 42) <<
+  // CHECK:   severity: Warning
+  // CHECK:   test warning
+  // CHECK:   loc(unknown)
+  // CHECK: >> end of diagnostic (userData: 42)
+  // CHECK: processing diagnostic (userData: 42) <<
+  // CHECK:   severity: Remark
+  // CHECK:   test remark
+  // CHECK:   loc(unknown)
+  // CHECK: >> end of diagnostic (userData: 42)
   // CHECK: deleting user data (userData: 42)
   // CHECK-NOT: processing diagnostic
   // CHECK:     more test diagnostics

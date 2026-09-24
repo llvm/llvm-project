@@ -52,7 +52,7 @@
 !CHECK:  }
 
 !CHECK:  func.func @_QPtest_allocatable_string(%{{.*}}: !fir.ref<i32> {fir.bindc_name = "n"}) {
-!CHECK:    %[[C_BOX_REF:.*]] = fir.alloca !fir.box<!fir.heap<!fir.char<1,?>>> {bindc_name = "c", uniq_name = "_QFtest_allocatable_stringEc"}
+!CHECK:    %[[C_BOX_REF:.*]] = fir.alloca !fir.box<!fir.heap<!fir.char<1,?>>> <{bindc_name = "c", uniq_name = "_QFtest_allocatable_stringEc"}>
 !CHECK:    %[[C_DECL:.*]]:2 = hlfir.declare %[[C_BOX_REF]] typeparams %{{.*}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest_allocatable_stringEc"} : (!fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>, i32) -> (!fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>, !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>)
 !CHECK:    omp.parallel private(@[[STR_PRIVATIZER]] %[[C_DECL]]#0 -> %[[PRIV_ARG:.*]] : {{.*}}) {
 !CHECK:      hlfir.declare %[[PRIV_ARG]]
@@ -66,7 +66,7 @@ end subroutine
 
 !CHECK:  func.func @_QPtest_allocatable_string_array(%[[ARG0:.*]]: !fir.ref<i32> {fir.bindc_name = "n"}) {
 !CHECK:    %{{.*}} = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFtest_allocatable_string_arrayEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK:    %[[C_BOX_REF:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>> {bindc_name = "c", uniq_name = "_QFtest_allocatable_string_arrayEc"}
+!CHECK:    %[[C_BOX_REF:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>> <{bindc_name = "c", uniq_name = "_QFtest_allocatable_string_arrayEc"}>
 !CHECK:    %[[C_BOX:.*]] = fir.embox %{{.*}}(%{{.*}}) typeparams %{{.*}} : (!fir.heap<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, i32) -> !fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>
 !CHECK:    fir.store %[[C_BOX]] to %[[C_BOX_REF]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>
 !CHECK:    %[[C_DECL:.*]]:2 = hlfir.declare %[[C_BOX_REF]] typeparams %{{.*}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest_allocatable_string_arrayEc"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>, i32) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>)

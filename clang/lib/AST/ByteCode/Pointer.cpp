@@ -251,17 +251,16 @@ bool Pointer::operator==(const Pointer &P) const {
 }
 
 APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
-  llvm::SmallVector<APValue::LValuePathEntry, 5> Path;
 
   if (isZero())
-    return APValue(APValue::LValueBase(), CharUnits::Zero(), Path,
+    return APValue(APValue::LValueBase(), CharUnits::Zero(), {},
                    /*IsOnePastEnd=*/false, /*IsNullPtr=*/true);
 
   switch (StorageKind) {
   case Storage::Int:
     return APValue(static_cast<const Expr *>(nullptr),
                    CharUnits::fromQuantity(asIntPointer().Value + this->Offset),
-                   Path,
+                   {},
                    /*IsOnePastEnd=*/false, /*IsNullPtr=*/false);
   case Storage::Block:
     // See below.
@@ -281,15 +280,35 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
                    CharUnits::Zero(), {},
                    /*OnePastTheEnd=*/false, /*IsNull=*/false);
   } break;
-  case Storage::String:
+  case Storage::String: {
+    llvm::SmallVector<APValue::LValuePathEntry, 1> Path;
     if (Offset != 0 || Str.Decayed)
       Path.push_back(APValue::LValuePathEntry::ArrayIndex(Offset));
 
     return APValue(APValue::LValueBase(Str.Base),
                    CharUnits::fromQuantity(Offset * elemSize()), Path,
                    /*OnePastTheEnd=*/false, /*IsNull=*/false);
+  }
   case Storage::Opaque: {
-    if (!Opaque.Base.getType()->isPointerType()) {
+    bool ValidBase = Opaque.hasValidBase() || this->Offset <= 1;
+
+    size_t LayoutOffset = Opaque.computeLayoutOffset(ASTCtx).value_or(0);
+    size_t ElemSize = 0;
+    if (validType(Opaque.getFieldType()))
+      ElemSize = ASTCtx.getTypeSizeInChars(Opaque.getFieldType()).getQuantity();
+
+    auto LValueOffset =
+        CharUnits::fromQuantity(LayoutOffset + (this->Offset * ElemSize));
+    APValue::LValueBase Base;
+    if (const Expr *E = Opaque.Base.asExpr())
+      Base = E;
+    else
+      Base = Opaque.Base.asValueDecl();
+
+    // For valid bases, assemble the LValuePath.
+    APValue Result;
+    if (ValidBase) {
+      llvm::SmallVector<APValue::LValuePathEntry, 5> Path;
       for (const PointerPathEntry &Entry : Opaque.path()) {
         switch (Entry.Kind) {
         case PointerPathEntry::Field:
@@ -307,21 +326,13 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
           break;
         }
       }
-    }
-    size_t LayoutOffset = Opaque.computeLayoutOffset(ASTCtx).value_or(0);
-    size_t ElemSize = 0;
-    if (validType(Opaque.getFieldType()))
-      ElemSize = ASTCtx.getTypeSizeInChars(Opaque.getFieldType()).getQuantity();
-    auto Offset =
-        CharUnits::fromQuantity(LayoutOffset + (this->Offset * ElemSize));
 
-    APValue::LValueBase Base;
-    if (const Expr *E = Opaque.Base.asExpr())
-      Base = E;
-    else
-      Base = Opaque.Base.asValueDecl();
-    APValue Result =
-        APValue(Base, Offset, Path, Opaque.isOnePastEnd(), /*IsNullPtr=*/false);
+      Result = APValue(Base, LValueOffset, Path, Opaque.isOnePastEnd(),
+                       /*IsNullPtr=*/false);
+
+    } else {
+      Result = APValue(Base, LValueOffset, APValue::NoLValuePath{});
+    }
     Result.setConstexprUnknown(Opaque.isConstexprUnknown());
     return Result;
   }
@@ -359,6 +370,7 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
   // Build the path into the object.
   bool OnePastEnd = isOnePastEnd() && !isZeroSizeArray();
 
+  llvm::SmallVector<APValue::LValuePathEntry, 5> Path;
   PtrView Ptr = view();
   while (Ptr.isField() || Ptr.isArrayElement()) {
 
@@ -1574,4 +1586,11 @@ bool OpaquePointer::isOnePastEndOrElementPastEnd() const {
   }
 
   return false;
+}
+
+bool OpaquePointer::hasValidBase() const {
+  if (const VarDecl *VD = Base.asVarDecl())
+    return !VD->hasExternalStorage();
+
+  return !Base.getType()->isPointerType();
 }
