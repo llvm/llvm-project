@@ -16,6 +16,7 @@
 #include "SIInstrInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/IR/Instructions.h"
 
 namespace llvm {
 namespace AMDGPUMI {
@@ -71,6 +72,24 @@ public:
     const AMDGPU::VLdStIdxOpcodeInfo *Info =
         AMDGPU::getVLdStIdxOpcodeInfoByOpcode(Opc);
     return Info && Info->IsStore;
+  }
+};
+
+// Wrapper for the VGPR "as memory" lifetime markers. The object is named by
+// the memory operand, the only thing these carry until
+// AMDGPUPrivateObjectVGPRs gives them its registers.
+class VGPRLifetimeInst : public MachineInstr {
+public:
+  bool isStart() const { return getOpcode() == AMDGPU::VGPR_LIFETIME_START; }
+
+  const AllocaInst &getObject() const {
+    return *cast<AllocaInst>((*memoperands_begin())->getValue());
+  }
+
+  static bool classof(const MachineInstr *MI) {
+    unsigned Opc = MI->getOpcode();
+    return Opc == AMDGPU::VGPR_LIFETIME_START ||
+           Opc == AMDGPU::VGPR_LIFETIME_END;
   }
 };
 

@@ -703,6 +703,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSILowerWWMCopiesLegacyPass(*PR);
   initializeAMDGPUMarkLastScratchLoadLegacyPass(*PR);
   initializeAMDGPULowerIdxOpsLegacyPass(*PR);
+  initializeAMDGPUPrivateObjectVGPRsLegacyPass(*PR);
   initializeSILowerSGPRSpillsLegacyPass(*PR);
   initializeSIFixSGPRCopiesLegacyPass(*PR);
   initializeSIFixVGPRCopiesLegacyPass(*PR);
@@ -1622,9 +1623,12 @@ void AMDGPUPassConfig::addIRPasses() {
 
   addPass(createAtomicExpandLegacyPass());
 
-  if (TM.getOptLevel() > CodeGenOptLevel::None) {
-    addPass(createAMDGPUPromoteAlloca());
+  // With optimizations enabled, do the full promotion of allocas. Without
+  // optimizations, only allocate existing addrspace(13) allocas, which is
+  // needed for functionality rather than for performance.
+  addPass(createAMDGPUPromoteAlloca(TM.getOptLevel()));
 
+  if (TM.getOptLevel() > CodeGenOptLevel::None) {
     if (isPassEnabled(EnableScalarIRPasses))
       addStraightLineScalarOptimizationPasses();
 
@@ -1839,6 +1843,8 @@ void GCNPassConfig::addFastRegAlloc() {
   // SI_ELSE will introduce a copy of the tied operand source after the else.
   insertPass(&PHIEliminationID, &SILowerControlFlowLegacyID);
 
+  insertPass(&PHIEliminationID, &AMDGPUPrivateObjectVGPRsID);
+
   insertPass(&TwoAddressInstructionPassID, &SIWholeQuadModeID);
 
   TargetPassConfig::addFastRegAlloc();
@@ -1871,6 +1877,8 @@ void GCNPassConfig::addOptimizedRegAlloc() {
   // TwoAddressInstructions, otherwise the processing of the tied operand of
   // SI_ELSE will introduce a copy of the tied operand source after the else.
   insertPass(&PHIEliminationID, &SILowerControlFlowLegacyID);
+
+  insertPass(&PHIEliminationID, &AMDGPUPrivateObjectVGPRsID);
 
   if (EnableRewritePartialRegUses)
     insertPass(&RenameIndependentSubregsID, &GCNRewritePartialRegUsesID);
@@ -2412,8 +2420,13 @@ void AMDGPUCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
 
   addFunctionPass(AtomicExpandPass(TM), PMW);
 
-  if (TM.getOptLevel() > CodeGenOptLevel::None) {
+  // See the comment on the legacy pipeline above.
+  if (TM.getOptLevel() > CodeGenOptLevel::None)
     addFunctionPass(AMDGPUPromoteAllocaPass(TM), PMW);
+  else
+    addFunctionPass(AMDGPUVGPRAllocatePass(TM), PMW);
+
+  if (TM.getOptLevel() > CodeGenOptLevel::None) {
     if (isPassEnabled(EnableScalarIRPasses))
       addStraightLineScalarOptimizationPasses(PMW);
 
@@ -2616,6 +2629,8 @@ void AMDGPUCodeGenPassBuilder::addMachineSSAOptimization(
 Error AMDGPUCodeGenPassBuilder::addFastRegAlloc(PassManagerWrapper &PMW) {
   insertPass<PHIEliminationPass>(SILowerControlFlowPass());
 
+  insertPass<PHIEliminationPass>(AMDGPUPrivateObjectVGPRsPass());
+
   insertPass<TwoAddressInstructionPass>(SIWholeQuadModePass());
 
   return Base::addFastRegAlloc(PMW);
@@ -2676,6 +2691,8 @@ Error AMDGPUCodeGenPassBuilder::addOptimizedRegAlloc(PassManagerWrapper &PMW) {
   // TwoAddressInstructions, otherwise the processing of the tied operand of
   // SI_ELSE will introduce a copy of the tied operand source after the else.
   insertPass<PHIEliminationPass>(SILowerControlFlowPass());
+
+  insertPass<PHIEliminationPass>(AMDGPUPrivateObjectVGPRsPass());
 
   if (EnableRewritePartialRegUses)
     insertPass<RenameIndependentSubregsPass>(GCNRewritePartialRegUsesPass());
