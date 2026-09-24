@@ -175,7 +175,7 @@ class TypePromotionImpl {
   bool isSupportedValue(Value *V);
   // Is V an instruction thats result can trivially promoted, or has safe
   // wrapping.
-  bool isLegalToPromote(Value *V);
+  bool isLegalToPromote(Value *V, bool UseSExt = false);
   bool TryToPromote(Value *V, unsigned PromotedWidth, const LoopInfo &LI,
                     bool UseSExt = false);
 
@@ -415,8 +415,11 @@ bool TypePromotionImpl::shouldPromote(Value *V) {
 
 /// Return whether we can safely mutate V's type to ExtTy without having to be
 /// concerned with zero extending or truncation.
-static bool isPromotedResultSafe(Instruction *I) {
+static bool isPromotedResultSafe(Instruction *I, bool UseSExt) {
   if (GenerateSignBits(I))
+    return false;
+
+  if (UseSExt && I->getOpcode() == Instruction::LShr)
     return false;
 
   if (!isa<OverflowingBinaryOperator>(I))
@@ -526,7 +529,8 @@ void IRPromoter::PromoteTree() {
           else
             NewConst = Const->getValue().zext(PromotedWidth);
         } else
-          NewConst = Const->getValue().zext(PromotedWidth);
+          NewConst = UseSExt ? Const->getValue().sext(PromotedWidth) :
+                               Const->getValue().zext(PromotedWidth);
 
         I->setOperand(i, ConstantInt::get(Const->getContext(), NewConst));
       } else if (isa<UndefValue>(Op))
@@ -536,7 +540,8 @@ void IRPromoter::PromoteTree() {
     // For switch, also mutate case values, which are not operands.
     if (auto *SI = dyn_cast<SwitchInst>(I)) {
       for (auto Case : SI->cases()) {
-        APInt NewConst = Case.getCaseValue()->getValue().zext(PromotedWidth);
+        APInt NewConst = UseSExt ? Case.getCaseValue()->getValue().sext(PromotedWidth) :
+                                   Case.getCaseValue()->getValue().zext(PromotedWidth);
         Case.setValue(ConstantInt::get(SI->getContext(), NewConst));
       }
     }
@@ -818,7 +823,7 @@ bool TypePromotionImpl::isSupportedValue(Value *V) {
 /// Check that the type of V would be promoted and that the original type is
 /// smaller than the targeted promoted type. Check that we're not trying to
 /// promote something larger than our base 'TypeSize' type.
-bool TypePromotionImpl::isLegalToPromote(Value *V) {
+bool TypePromotionImpl::isLegalToPromote(Value *V, bool UseSExt) {
   auto *I = dyn_cast<Instruction>(V);
   if (!I)
     return true;
@@ -826,7 +831,7 @@ bool TypePromotionImpl::isLegalToPromote(Value *V) {
   if (SafeToPromote.count(I))
     return true;
 
-  if (isPromotedResultSafe(I) || isSafeWrap(I)) {
+  if (isPromotedResultSafe(I, UseSExt) || (!UseSExt && isSafeWrap(I))) {
     SafeToPromote.insert(I);
     return true;
   }
@@ -840,7 +845,7 @@ bool TypePromotionImpl::TryToPromote(Value *V, unsigned PromotedWidth,
   SafeToPromote.clear();
   SafeWrap.clear();
 
-  if (!isSupportedValue(V) || !shouldPromote(V) || !isLegalToPromote(V))
+  if (!isSupportedValue(V) || !shouldPromote(V) || !isLegalToPromote(V, UseSExt))
     return false;
 
   LLVM_DEBUG(dbgs() << "IR Promotion: TryToPromote: " << *V << ", from "
@@ -864,7 +869,7 @@ bool TypePromotionImpl::TryToPromote(Value *V, unsigned PromotedWidth,
     if (isa<GetElementPtrInst>(V))
       return false;
 
-    if (!isSupportedValue(V) || (shouldPromote(V) && !isLegalToPromote(V))) {
+    if (!isSupportedValue(V) || (shouldPromote(V) && !isLegalToPromote(V, UseSExt))) {
       LLVM_DEBUG(dbgs() << "IR Promotion: Can't handle: " << *V << "\n");
       return false;
     }
