@@ -18892,6 +18892,46 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
         return FMA.getOpcode() == ISD::DELETED_NODE ? SDValue(N, 0) : FMA;
       }
 
+      // The existing walk can independently reassociate FADD chains sharing
+      // an FMUL:
+      //
+      //   M  = FMUL C, D
+      //   F1 = FMA A1, B1, M       P1 = FADD F1, E1
+      //   F2 = FMA A2, B2, M       P2 = FADD F2, E2
+      //   F3 = FMA A3, B3, M       P3 = FADD F3, E3
+      //
+      // into:
+      //
+      //   P1 = FMA A1, B1, (FMA C, D, E1)
+      //   P2 = FMA A2, B2, (FMA C, D, E2)
+      //   P3 = FMA A3, B3, (FMA C, D, E3)
+      if (FMul.getOpcode() == ISD::FMUL &&
+          all_of(FMul->uses(), [&](SDUse &Use) {
+            SDNode *F = Use.getUser();
+            if (Use.getOperandNo() != 2 ||
+                (F->getOpcode() != ISD::FMA && F->getOpcode() != ISD::FMAD) ||
+                !F->hasOneUse())
+              return false;
+
+            SDNode *FAdd = *F->user_begin();
+            if (FAdd->getOpcode() != ISD::FADD ||
+                !FAdd->getFlags().hasAllowReassociation() ||
+                (!AllowFusionGlobally && !FAdd->getFlags().hasAllowContract()))
+              return false;
+
+            SDNode *E = FAdd->getOperand(0).getNode() == F
+                            ? FAdd->getOperand(1).getNode()
+                            : FAdd->getOperand(0).getNode();
+            return !FMul->isPredecessorOf(E);
+          })) {
+        SDValue C = FMul.getOperand(0);
+        SDValue D = FMul.getOperand(1);
+        SDValue CDE = DAG.getNode(PreferredFusedOpcode, SL, VT, C, D, E);
+        DAG.UpdateNodeOperands(TmpFMA.getNode(), TmpFMA->getOperand(0),
+                               TmpFMA->getOperand(1), CDE);
+        return FMA.getOpcode() == ISD::DELETED_NODE ? SDValue(N, 0) : FMA;
+      }
+
       TmpFMA = TmpFMA->getOperand(2);
     }
   }
