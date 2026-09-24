@@ -99,6 +99,11 @@ static bool shouldReport(Operation *op, acc::OpenACCSupport &accSupport,
                          std::string &varName) {
   if (!isa_and_nonnull<ACC_DATA_CLAUSE_OPS>(op))
     return false;
+  // A synthetic operation exists only for the implementation's own
+  // bookkeeping, so it has nothing to tell the user about their code. It can
+  // even duplicate the report of the clause it was created to support.
+  if (acc::getSyntheticFlag(op))
+    return false;
   if (getDataClauseRemarkPrefix(op).empty())
     return false;
   if (op->getNumResults() == 0)

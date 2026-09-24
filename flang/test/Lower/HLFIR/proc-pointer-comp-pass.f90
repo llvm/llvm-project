@@ -96,7 +96,7 @@ subroutine test5(x)
   call takes_char(x%p())
 end subroutine
 ! CHECK-LABEL:   func.func @_QPtest5(
-! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.char<1,4> {bindc_name = ".result"}
+! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.char<1,4> <{bindc_name = ".result"}>
 ! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]]  {{.*}}Ex
 ! CHECK:           %[[VAL_3:.*]] = hlfir.designate %[[VAL_2]]#0{"p"}   {fortran_attrs = #fir.var_attrs<pointer>} : (!fir.ref<!fir.type<_QMmTt3{{(,sequence)?}}{c:!fir.char<1,4>,p:!fir.boxproc<(!fir.ref<!fir.char<1,4>>, index, !fir.ref<!fir.type<_QMmTt3{{(,sequence)?}}>>) -> !fir.boxchar<1>>}>>) -> !fir.ref<!fir.boxproc<(!fir.ref<!fir.char<1,4>>, index, !fir.ref<!fir.type<_QMmTt3{{(,sequence)?}}{c:!fir.char<1,4>,p:!fir.boxproc<(!fir.ref<!fir.char<1,4>>, index, !fir.ref<!fir.type<_QMmTt3{{(,sequence)?}}>>) -> !fir.boxchar<1>>}>>) -> !fir.boxchar<1>>>
 ! CHECK:           %[[VAL_4:.*]] = fir.load %[[VAL_3]] : !fir.ref<!fir.boxproc<(!fir.ref<!fir.char<1,4>>, index, !fir.ref<!fir.type<_QMmTt3{{(,sequence)?}}{c:!fir.char<1,4>,p:!fir.boxproc<(!fir.ref<!fir.char<1,4>>, index, !fir.ref<!fir.type<_QMmTt3{{(,sequence)?}}>>) -> !fir.boxchar<1>>}>>) -> !fir.boxchar<1>>>

@@ -1964,6 +1964,21 @@ static bool ContainsStructureComponent(const parser::Designator &designator) {
       designator.u);
 }
 
+static bool IsOpenACCDeviceMappingFlag(Symbol::Flag flag) {
+  switch (flag) {
+  case Symbol::Flag::AccCopy:
+  case Symbol::Flag::AccCopyIn:
+  case Symbol::Flag::AccCopyInReadOnly:
+  case Symbol::Flag::AccCopyOut:
+  case Symbol::Flag::AccCreate:
+  case Symbol::Flag::AccPresent:
+  case Symbol::Flag::AccDevicePtr:
+    return true;
+  default:
+    return false;
+  }
+}
+
 void AccAttributeVisitor::ResolveAccObject(
     const parser::AccObject &accObject, Symbol::Flag accFlag) {
   common::visit(
@@ -1998,6 +2013,11 @@ void AccAttributeVisitor::ResolveAccObject(
             const parser::Name &baseName{parser::GetFirstName(designator)};
             if (auto *symbol{ResolveAcc(baseName, accFlag, currScope())}) {
               AddToContextObjectWithDSA(*symbol, accFlag);
+              if (GetContext().directive == llvm::acc::Directive::ACCD_data &&
+                  IsOpenACCDeviceMappingFlag(accFlag)) {
+                currScope().AddOpenACCMappedSymbol(*symbol);
+                context_.NoteOpenACCDataMapping();
+              }
               if (preciseDesignator &&
                   dataSharingAttributeFlags.test(accFlag)) {
                 CheckMultipleAppearances(
@@ -2009,6 +2029,11 @@ void AccAttributeVisitor::ResolveAccObject(
             if (auto *symbol{ResolveAccCommonBlockName(&name)}) {
               CheckMultipleAppearances(
                   name, *symbol, Symbol::Flag::AccCommonBlock);
+              // Members of a named COMMON listed in a data clause are not
+              // recorded as device-mapped. Lowering does not create an
+              // alternate device binding for them, so CUDA generic resolution
+              // must not select a DEVICE specific. A member listed as a
+              // designator is handled in the branch above.
               for (auto &object : symbol->get<CommonBlockDetails>().objects()) {
                 if (auto *resolvedObject{
                         ResolveAcc(*object, accFlag, currScope())}) {
@@ -2907,6 +2932,10 @@ static bool IsOpenMPAggregate(const Symbol &symbol) {
     return false;
 
   const auto *type{symbol.GetType()};
+  // Symbols without a declared type (e.g. a derived-type name) are not
+  // variables and belong to no defaultmap category.
+  if (!type)
+    return false;
   // OpenMP categorizes Fortran characters as aggregates.
   if (type->category() == Fortran::semantics::DeclTypeSpec::Category::Character)
     return true;
@@ -2930,6 +2959,8 @@ static bool IsOpenMPScalar(const Symbol &symbol) {
       IsAllocatable(symbol))
     return false;
   const auto *type{symbol.GetType()};
+  if (!type)
+    return false;
   if ((!symbol.GetShape() || symbol.GetShape()->empty()) &&
       (type->category() ==
               Fortran::semantics::DeclTypeSpec::Category::Numeric ||

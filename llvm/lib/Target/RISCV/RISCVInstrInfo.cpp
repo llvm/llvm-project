@@ -1817,6 +1817,81 @@ bool RISCVInstrInfo::isBranchOffsetInRange(unsigned BranchOp,
   }
 }
 
+static bool isJumpTableLoad(const MachineInstr &MI) {
+  return any_of(MI.memoperands(), [](const MachineMemOperand *MMO) {
+    const PseudoSourceValue *PSV = MMO->getPseudoValue();
+    return PSV && PSV->isJumpTable();
+  });
+}
+
+/// Walk back from \p Reg through a jump-table address computation and return
+/// the index of the table it reads, or -1 if \p Reg is not part of one.
+static int getJumpTableIndexFromReg(const MachineRegisterInfo &MRI,
+                                    Register Reg, unsigned Depth) {
+  // Set the limit for the recursive search depth.
+  constexpr unsigned MaxDepth = 6;
+  if (Depth > MaxDepth)
+    return -1;
+
+  if (!Reg.isVirtual())
+    return -1;
+
+  const MachineInstr *MI = MRI.getUniqueVRegDef(Reg);
+  if (!MI)
+    return -1;
+
+  // MI has jump table operand, return it.
+  for (const MachineOperand &MO : MI->operands())
+    if (MO.isJTI())
+      return MO.getIndex();
+
+  // Handle intermediate instructions when resolving to the JumpTableIndex.
+  switch (MI->getOpcode()) {
+  case RISCV::ADD:
+  case RISCV::ADDI:
+  case RISCV::SH1ADD:
+  case RISCV::SH2ADD:
+  case RISCV::SH3ADD:
+    break;
+  case RISCV::LW:
+  case RISCV::LWU:
+  case RISCV::LD:
+    // Only consider ::(load from jump-table) kind of load.
+    if (!isJumpTableLoad(*MI))
+      return -1;
+    break;
+  default:
+    return -1;
+  }
+
+  for (const MachineOperand &MO : MI->all_uses())
+    if (int JTI = getJumpTableIndexFromReg(MRI, MO.getReg(), Depth + 1);
+        JTI >= 0)
+      return JTI;
+
+  return -1;
+}
+
+// Recursively search for %jump-table.N starting from PseudoBRIND,
+// and return the index of %jump-table.N.
+//
+// One common jump table:
+//
+//   %base   = PseudoMovAddr/PseudoLLA/LUI(+ADDI)/QC_E_LI %jump-table.N
+//   %addr   = SH2ADD %index, %base
+//   %entry  = LW %addr, 0 :: (load from jump-table)
+//   %target = ADD %entry, %base
+//   PseudoBRIND %target, 0
+//
+int RISCVInstrInfo::getJumpTableIndex(const MachineInstr &MI) const {
+  if (MI.getOpcode() != RISCV::PseudoBRIND &&
+      MI.getOpcode() != RISCV::PseudoBRINDX7)
+    return -1;
+
+  const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+  return getJumpTableIndexFromReg(MRI, MI.getOperand(0).getReg(), 0);
+}
+
 // If the operation has a predicated pseudo instruction, return the pseudo
 // instruction opcode. Otherwise, return RISCV::INSTRUCTION_LIST_END.
 // TODO: Support more operations.
@@ -2003,8 +2078,8 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
 
   if (requiresNTLHint(MI)) {
     if (STI.hasStdExtZca()) {
-      if (isCompressibleInst(MI, STI))
-        return 4; // c.ntl.all + c.load/c.store
+      if (unsigned Size = getCompressedSize(MI, STI))
+        return 2 + Size; // c.ntl.all + c.load/c.store
       return 6;   // c.ntl.all + load/store
     }
     return 8; // ntl.all + load/store
@@ -2014,8 +2089,8 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     return getInstBundleSize(MI);
 
   if (MI.getParent() && MI.getParent()->getParent()) {
-    if (isCompressibleInst(MI, STI))
-      return 2;
+    if (unsigned Size = getCompressedSize(MI, STI))
+      return Size;
   }
 
   switch (Opcode) {

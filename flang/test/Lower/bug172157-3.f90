@@ -26,17 +26,17 @@ end
 ! CHECK-LABEL: func @_QPtest(
 ! CHECK:  %[[C2_I32:.*]] = arith.constant 2 : i32
 ! CHECK:  %[[C1_I32:.*]] = arith.constant 1 : i32
-! CHECK:  %[[VAL_0:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> {bindc_name = ".result"}
+! CHECK:  %[[VAL_0:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> <{bindc_name = ".result"}>
 ! CHECK:  %[[VAL_1:.*]] = fir.alloca !fir.class<!fir.ptr<!fir.type<_QMmTt{n:i32}>>>
-! CHECK:  %[[VAL_2:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> {bindc_name = ".result"}
+! CHECK:  %[[VAL_2:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> <{bindc_name = ".result"}>
 ! CHECK:  %[[VAL_3:.*]] = fir.alloca !fir.class<!fir.ptr<!fir.type<_QMmTt{n:i32}>>>
 ! CHECK:  %{{.*}} = fir.dummy_scope : !fir.dscope
-! CHECK:  %[[VAL_5:.*]] = fir.alloca !fir.class<!fir.ptr<!fir.type<_QMmTt{n:i32}>>> {bindc_name = "xp", uniq_name = "_QFtestExp"}
+! CHECK:  %[[VAL_5:.*]] = fir.alloca !fir.class<!fir.ptr<!fir.type<_QMmTt{n:i32}>>> <{bindc_name = "xp", uniq_name = "_QFtestExp"}>
 ! CHECK:  %[[VAL_6:.*]] = fir.zero_bits !fir.ptr<!fir.type<_QMmTt{n:i32}>>
 ! CHECK:  %[[VAL_7:.*]] = fir.embox %[[VAL_6]] : (!fir.ptr<!fir.type<_QMmTt{n:i32}>>) -> !fir.class<!fir.ptr<!fir.type<_QMmTt{n:i32}>>>
 ! CHECK:  fir.store %[[VAL_7]] to %[[VAL_5]] : !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMmTt{n:i32}>>>>
 ! CHECK:  %[[VAL_8:.*]] = fir.declare %[[VAL_5]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtestExp"} : (!fir.ref<!fir.class<!fir.ptr<!fir.type<_QMmTt{n:i32}>>>>) -> !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMmTt{n:i32}>>>>
-! CHECK:  %[[VAL_9:.*]] = fir.alloca !fir.type<_QMmTt{n:i32}> {bindc_name = "xt", fir.target, uniq_name = "_QFtestExt"}
+! CHECK:  %[[VAL_9:.*]] = fir.alloca !fir.type<_QMmTt{n:i32}> <{bindc_name = "xt", uniq_name = "_QFtestExt"}> {fir.target}
 ! CHECK:  %[[VAL_10:.*]] = fir.declare %[[VAL_9]] {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFtestExt"} : (!fir.ref<!fir.type<_QMmTt{n:i32}>>) -> !fir.ref<!fir.type<_QMmTt{n:i32}>>
 ! CHECK:  %[[VAL_11:.*]] = fir.address_of(@_QQ_QMmTt.DerivedInit) : !fir.ref<!fir.type<_QMmTt{n:i32}>>
 ! CHECK:  fir.copy %[[VAL_11]] to %[[VAL_10]] no_overlap : !fir.ref<!fir.type<_QMmTt{n:i32}>>, !fir.ref<!fir.type<_QMmTt{n:i32}>>

@@ -54,11 +54,14 @@ public:
               StackFrame &stack_frame, lldb::DynamicValueType use_dynamic,
               uint32_t options);
 
+  /// Evaluate an ASTNode tree.
+  /// \returns A non-null lldb::ValueObjectSP or an Error.
+  llvm::Expected<lldb::ValueObjectSP> EvaluateTree(const ASTNodeUP &tree);
+
+private:
   /// Evaluate an ASTNode.
   /// \returns A non-null lldb::ValueObjectSP or an Error.
   llvm::Expected<lldb::ValueObjectSP> Evaluate(const ASTNode &node);
-
-private:
   /// Evaluate an ASTNode. If the result is a reference, it is also
   /// dereferenced using ValueObject::Dereference.
   /// \returns A non-null lldb::ValueObjectSP or an Error.

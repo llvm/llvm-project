@@ -135,7 +135,7 @@ int gcovMain(int argc, const char *argv[]) {
       Args.hasArg(OPT_preserve_paths), Args.hasArg(OPT_unconditional_branches),
       Args.hasArg(OPT_intermediate_format), Args.hasArg(OPT_long_file_names),
       Args.hasArg(OPT_demangled_names), Args.hasArg(OPT_no_output),
-      Args.hasArg(OPT_relative_only), Args.hasArg(OPT_stdout),
+      Args.hasArg(OPT_relative_only), Args.hasArg(OPT_print_stdout),
       Args.hasArg(OPT_hash_filenames),
       Args.getLastArgValue(OPT_source_prefix_EQ).str());
 

@@ -139,7 +139,7 @@ subroutine copyin_derived_type()
 end
 
 ! CHECK-LABEL:   func.func @_QPcombined_parallel_worksharing_loop() {
-! CHECK:           %[[VAL_0:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFcombined_parallel_worksharing_loopEi"}
+! CHECK:           %[[VAL_0:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFcombined_parallel_worksharing_loopEi"}>
 ! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFcombined_parallel_worksharing_loopEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_2:.*]] = fir.address_of(@_QFcombined_parallel_worksharing_loopEx6) : !fir.ref<i32>
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFcombined_parallel_worksharing_loopEx6"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
@@ -233,7 +233,7 @@ end
 ! CHECK:           %[[VAL_9:.*]] = fir.coordinate_of %[[VAL_6]], %[[VAL_8]] : (!fir.ref<!fir.array<4xi8>>, index) -> !fir.ref<i8>
 ! CHECK:           %[[VAL_10:.*]] = fir.convert %[[VAL_9]] : (!fir.ref<i8>) -> !fir.ref<i32>
 ! CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_10]] storage(%[[VAL_6]][0]) {uniq_name = "_QFcommon_1Ex"} : (!fir.ref<i32>, !fir.ref<!fir.array<4xi8>>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:           %[[VAL_12:.*]] = fir.alloca i32 {bindc_name = "y", uniq_name = "_QFcommon_1Ey"}
+! CHECK:           %[[VAL_12:.*]] = fir.alloca i32 <{bindc_name = "y", uniq_name = "_QFcommon_1Ey"}>
 ! CHECK:           %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_12]] {uniq_name = "_QFcommon_1Ey"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           omp.parallel {
 ! CHECK:             %[[VAL_14:.*]] = omp.threadprivate %[[VAL_0]] : !fir.ref<!fir.array<4xi8>> -> !fir.ref<!fir.array<4xi8>>
@@ -280,7 +280,7 @@ subroutine common_1()
 end subroutine
 
 ! CHECK-LABEL:   func.func @_QPcommon_2() {
-! CHECK:           %[[VAL_0:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFcommon_2Ei"}
+! CHECK:           %[[VAL_0:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFcommon_2Ei"}>
 ! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFcommon_2Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_2:.*]] = fir.address_of(@d_) : !fir.ref<!fir.array<8xi8>>
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 0 : index
@@ -349,7 +349,7 @@ end subroutine
 ! CHECK:           %[[VAL_2:.*]] = omp.threadprivate %[[VAL_1]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>> -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFpointerEp"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
 ! CHECK:           omp.parallel {
-! CHECK:             %[[VAL_4:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?xi32>>> {pinned}
+! CHECK:             %[[VAL_4:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?xi32>>> <{pinned}>
 ! CHECK:             %[[VAL_5:.*]] = omp.threadprivate %[[VAL_1]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>> -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 ! CHECK:             %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFpointerEp"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
 ! CHECK:             %[[VAL_7:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
@@ -516,7 +516,7 @@ end subroutine
 ! CHECK:      %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFallocatable3Ea"} : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
 ! CHECK:      %[[VAL_2:.*]] = omp.threadprivate %[[VAL_1]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>> -> !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK:       %[[VAL_3:.*]]:2  = hlfir.declare %[[VAL_2]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFallocatable3Ea"} : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
-! CHECK:      %[[VAL_4:.*]] = fir.allocmem i32 {fir.must_be_heap = true, uniq_name = "_QFallocatable3Ea.alloc"}
+! CHECK:      %[[VAL_4:.*]] = fir.allocmem i32 <{uniq_name = "_QFallocatable3Ea.alloc"}> {fir.must_be_heap = true}
 ! CHECK:      %[[VAL_5:.*]] = fir.embox %[[VAL_4]] : (!fir.heap<i32>) -> !fir.box<!fir.heap<i32>>
 ! CHECK:      fir.store %[[VAL_5]] to %[[VAL_3]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK:      %[[C10_I32:.*]] = arith.constant 10 : i32

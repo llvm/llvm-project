@@ -30,7 +30,7 @@ def : Separate<["--"], "object-file">, Alias<object_directory_EQ>;
 def preserve_paths : FF<"preserve-paths", "Preserve path components">;
 def relative_only : FF<"relative-only", "Only dump files with relative paths or absolute paths with the prefix specified by -s">;
 defm source_prefix : Eq<"source-prefix", "Source prefix to elide">, MetaVarName<"<prefix>">;
-def stdout : FF<"stdout", "Print to stdout">;
+def print_stdout : FF<"stdout", "Print to stdout">;
 def unconditional_branches : FF<"unconditional-branches", "Display unconditional branch info (requires -b)">;
 def version : FF<"version", "Display the version">;
 
@@ -46,6 +46,6 @@ def : JoinedOrSeparate<["-"], "o">, Alias<object_directory_EQ>, HelpText<"Alias 
 def : F<"p", "Alias for --preserve-paths">, Alias<preserve_paths>;
 def : F<"r", "Alias for --relative-only">, Alias<relative_only>;
 def : JoinedOrSeparate<["-"], "s">, Alias<source_prefix_EQ>, HelpText<"Alias for --source-prefix">, MetaVarName<"<prefix>">;
-def : F<"t", "Alias for --stdout">, Alias<stdout>;
+def : F<"t", "Alias for --stdout">, Alias<print_stdout>;
 def : F<"u", "Alias for --unconditional-branches">, Alias<unconditional_branches>;
 def : F<"x", "Alias for --hash-filenames">, Alias<hash_filenames>;

@@ -11,7 +11,7 @@ block data
   real, save, target :: b
   common /a/ p
   data p /b/
-! CHECK-LABEL: fir.global @a_ {alignment = 8 : i64} : tuple<!fir.box<!fir.ptr<f32>>>
+! CHECK-LABEL: fir.global @a_ <{alignment = 8 : i64}> : tuple<!fir.box<!fir.ptr<f32>>>
   ! CHECK: %[[undef:.*]] = fir.zero_bits tuple<!fir.box<!fir.ptr<f32>>>
   ! CHECK: %[[bAddr:.*]] = fir.address_of(@_QEb) : !fir.ref<f32>
   ! CHECK: %[[b:.*]]:2 = hlfir.declare %[[bAddr]] {{.*}} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
@@ -30,9 +30,9 @@ block data tied
   real, pointer :: p2 => x1
   common /c1/ x1, p1
   common /c2/ x2, p2
-! CHECK-LABEL: fir.global @c1_ {alignment = 8 : i64} : tuple<f32, !fir.array<4xi8>, !fir.box<!fir.ptr<f32>>>
+! CHECK-LABEL: fir.global @c1_ <{alignment = 8 : i64}> : tuple<f32, !fir.array<4xi8>, !fir.box<!fir.ptr<f32>>>
   ! CHECK: fir.address_of(@c2_) : !fir.ref<tuple<f32, !fir.array<4xi8>, !fir.box<!fir.ptr<f32>>>>
-! CHECK-LABEL: fir.global @c2_ {alignment = 8 : i64} : tuple<f32, !fir.array<4xi8>, !fir.box<!fir.ptr<f32>>>
+! CHECK-LABEL: fir.global @c2_ <{alignment = 8 : i64}> : tuple<f32, !fir.array<4xi8>, !fir.box<!fir.ptr<f32>>>
   ! CHECK: fir.address_of(@c1_) : !fir.ref<tuple<f32, !fir.array<4xi8>, !fir.box<!fir.ptr<f32>>>>
 end block data
 
@@ -41,7 +41,7 @@ block data bdsnake
   integer, target :: b = 42
   integer, pointer :: p => b
   common /snake/ p, b
-! CHECK-LABEL: fir.global @snake_ {alignment = 8 : i64} : tuple<!fir.box<!fir.ptr<i32>>, i32>
+! CHECK-LABEL: fir.global @snake_ <{alignment = 8 : i64}> : tuple<!fir.box<!fir.ptr<i32>>, i32>
   ! CHECK: %[[tuple0:.*]] = fir.zero_bits tuple<!fir.box<!fir.ptr<i32>>, i32>
   ! CHECK: %[[snakeAddr:.*]] = fir.address_of(@snake_) : !fir.ref<tuple<!fir.box<!fir.ptr<i32>>, i32>>
   ! CHECK: %[[byteView:.*]] = fir.convert %[[snakeAddr:.*]] : (!fir.ref<tuple<!fir.box<!fir.ptr<i32>>, i32>>) -> !fir.ref<!fir.array<28xi8>>

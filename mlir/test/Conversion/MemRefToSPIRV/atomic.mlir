@@ -72,6 +72,16 @@ func.func @atomic_andi_storage_buffer(%value: i32, %memref: memref<2x3x4xi32, #s
   return %0: i32
 }
 
+//      CHECK: func.func @atomic_xori_workgroup
+// CHECK-SAME: (%[[VAL:.+]]: i32,
+func.func @atomic_xori_workgroup(%value: i32, %memref: memref<2x3x4xi32, #spirv.storage_class<Workgroup>>, %i0: index, %i1: index, %i2: index) -> i32 {
+  // CHECK: %[[AC:.+]] = spirv.AccessChain
+  // CHECK: %[[ATOMIC:.+]] = spirv.AtomicXor <Workgroup> <AcquireRelease|WorkgroupMemory> %[[AC]], %[[VAL]] : !spirv.ptr<i32, Workgroup>
+  // CHECK: return %[[ATOMIC]]
+  %0 = memref.atomic_rmw "xori" %value, %memref[%i0, %i1, %i2] : (i32, memref<2x3x4xi32, #spirv.storage_class<Workgroup>>) -> i32
+  return %0: i32
+}
+
 }
 
 // -----
