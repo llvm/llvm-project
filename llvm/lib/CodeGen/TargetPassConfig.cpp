@@ -294,13 +294,13 @@ static cl::opt<bool> BasicBlockSectionMatchInfer(
     "basic-block-section-match-infer",
     cl::desc(
         "Enable matching and inference when generating basic block sections"),
-    cl::init(false), cl::Optional);
+    cl::init(false));
 
 cl::opt<bool> EmitBBHash(
     "emit-bb-hash",
     cl::desc(
         "Emit the hash of basic block in the SHT_LLVM_BB_ADDR_MAP section."),
-    cl::init(false), cl::Optional);
+    cl::init(false));
 
 /// Allow standard passes to be disabled by command line options. This supports
 /// simple binary flags that either suppress the pass or do nothing.
@@ -958,7 +958,6 @@ void TargetPassConfig::addPassesToHandleExceptions() {
     // funclets. Catchswitch blocks are not lowered in SelectionDAG, so we
     // should remove PHIs there.
     addPass(createWinEHPass(/*DemoteCatchSwitchPHIOnly=*/true));
-    addPass(createWasmEHPass());
     break;
   case ExceptionHandling::Default:
   case ExceptionHandling::None:
@@ -1075,7 +1074,7 @@ bool TargetPassConfig::addCoreISelPasses() {
   // Pass to reset the MachineFunction if the ISel failed. Outside of the above
   // if so that the verifier is not added to it.
   if (Selector == SelectorType::GlobalISel)
-    addPass(createResetMachineFunctionPass(
+    addPass(createResetMachineFunctionLegacyPass(
         reportDiagnosticWhenGlobalISelFallback(), isGlobalISelAbortEnabled()));
 
   // Run the SDAG InstSelector, providing a fallback path when we do not want to
