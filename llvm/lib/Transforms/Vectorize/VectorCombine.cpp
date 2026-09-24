@@ -125,6 +125,7 @@ private:
   bool foldInsExtFNeg(Instruction &I);
   bool foldInsExtBinop(Instruction &I);
   bool foldInsExtVectorToShuffle(Instruction &I);
+  bool foldInsertScalarPartsToShuffle(Instruction &I);
   bool foldBitOpOfCastops(Instruction &I);
   bool foldBitOpOfCastConstant(Instruction &I);
   bool foldBitcastShuffle(Instruction &I);
@@ -6036,6 +6037,113 @@ bool VectorCombine::foldInsExtVectorToShuffle(Instruction &I) {
   return true;
 }
 
+/// Try to replace a chain of insertelements of parts of the same scalar with a
+/// bitcast and a shuffle (little endian):
+///   insert (insert poison, (trunc (lshr X, 32)), 0), (trunc X), 1 -->
+///   shuffle (bitcast X to <2 x i32>), poison, <1, 0>
+bool VectorCombine::foldInsertScalarPartsToShuffle(Instruction &I) {
+  auto *VecTy = dyn_cast<FixedVectorType>(I.getType());
+  if (!VecTy)
+    return false;
+
+  // Start from the last insertelement of the chain.
+  if (I.hasOneUse() && isa<InsertElementInst>(I.user_back()))
+    return false;
+
+  Type *EltTy = VecTy->getElementType();
+  if ((!EltTy->isIntegerTy() && !EltTy->isIEEELikeFPTy()) ||
+      !DL->typeSizeEqualsStoreSize(EltTy))
+    return false;
+  unsigned EltBits = EltTy->getPrimitiveSizeInBits();
+  unsigned NumElts = VecTy->getNumElements();
+
+  Value *Src = nullptr;
+  unsigned NumSrcElts = 0;
+  SmallVector<int> Mask(NumElts, PoisonMaskElem);
+  APInt DemandedElts = APInt::getZero(NumElts);
+  InstructionCost OldCost = 0;
+  Value *Vec = &I;
+  while (auto *Ins = dyn_cast<InsertElementInst>(Vec)) {
+    if (Ins != &I && !Ins->hasOneUse())
+      return false;
+    uint64_t Idx;
+    if (!match(Ins->getOperand(2), m_ConstantInt(Idx)) || Idx >= NumElts)
+      return false;
+    Vec = Ins->getOperand(0);
+    // A later insert to the same element overrides this one.
+    if (DemandedElts[Idx])
+      continue;
+    DemandedElts.setBit(Idx);
+
+    // Match (bitcast (trunc (lshr X, ShAmt))), the bitcast and shift being
+    // optional.
+    Value *Elt = Ins->getOperand(1);
+    Value *Trunc = Elt;
+    match(Trunc, m_BitCast(m_Value(Trunc)));
+    Value *X;
+    if (!match(Trunc, m_Trunc(m_Value(X))) || !X->getType()->isIntegerTy() ||
+        Trunc->getType()->getPrimitiveSizeInBits() != EltBits)
+      return false;
+    Value *Shift = nullptr;
+    uint64_t ShAmt = 0;
+    if (match(X, m_LShr(m_Value(), m_ConstantInt(ShAmt)))) {
+      Shift = X;
+      X = cast<Instruction>(Shift)->getOperand(0);
+    }
+
+    if (!Src) {
+      unsigned SrcBits = X->getType()->getIntegerBitWidth();
+      if (SrcBits % EltBits)
+        return false;
+      Src = X;
+      NumSrcElts = SrcBits / EltBits;
+    } else if (X != Src) {
+      return false;
+    }
+    if (ShAmt % EltBits || ShAmt / EltBits >= NumSrcElts)
+      return false;
+    unsigned Part = ShAmt / EltBits;
+    Mask[Idx] = DL->isBigEndian() ? NumSrcElts - 1 - Part : Part;
+
+    // The scalar ops die with the chain if it is their only user.
+    for (Value *V : {Elt == Trunc ? nullptr : Elt, Trunc, Shift}) {
+      if (!V)
+        continue;
+      if (!V->hasOneUse())
+        break;
+      OldCost += TTI.getInstructionCost(cast<Instruction>(V), CostKind);
+    }
+  }
+  // Elements that are not inserted become poison, so the base must be poison
+  // unless every element is inserted.
+  if (!Src || (!isa<PoisonValue>(Vec) && !DemandedElts.isAllOnes()))
+    return false;
+
+  OldCost += TTI.getScalarizationOverhead(VecTy, DemandedElts, /*Insert=*/true,
+                                          /*Extract=*/false, CostKind);
+
+  auto *SrcVecTy = FixedVectorType::get(EltTy, NumSrcElts);
+  InstructionCost NewCost =
+      TTI.getCastInstrCost(Instruction::BitCast, SrcVecTy, Src->getType(),
+                           TTI::CastContextHint::None, CostKind);
+  bool IsIdentity = NumSrcElts == NumElts &&
+                    ShuffleVectorInst::isIdentityMask(Mask, NumSrcElts);
+  if (!IsIdentity)
+    NewCost += TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, VecTy, SrcVecTy,
+                                  CostKind, Mask);
+
+  LLVM_DEBUG(dbgs() << "Found an insertelement chain of scalar parts: " << I
+                    << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
+                    << "\n");
+  if (!OldCost.isValid() || !NewCost.isValid() || NewCost >= OldCost)
+    return false;
+
+  Value *Cast = Builder.CreateBitCast(Src, SrcVecTy);
+  Value *Shuf = IsIdentity ? Cast : Builder.CreateShuffleVector(Cast, Mask);
+  replaceValue(I, *Shuf);
+  return true;
+}
+
 /// Fold away a matched pair of vector.deinterleave/interleave intrinsics
 /// with a chain of elementwise operations on each between the
 /// deinterleave and interleave.
@@ -6952,6 +7060,8 @@ bool VectorCombine::run() {
         if (foldInsExtBinop(I))
           return true;
         if (foldInsExtVectorToShuffle(I))
+          return true;
+        if (foldInsertScalarPartsToShuffle(I))
           return true;
         break;
       case Instruction::ShuffleVector:

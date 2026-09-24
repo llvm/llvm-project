@@ -8,11 +8,8 @@
 define <2 x i32> @swapped_halves(i64 %x) {
 ; CHECK-LABEL: define <2 x i32> @swapped_halves(
 ; CHECK-SAME: i64 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[HI:%.*]] = lshr i64 [[X]], 32
-; CHECK-NEXT:    [[T1:%.*]] = trunc i64 [[HI]] to i32
-; CHECK-NEXT:    [[T0:%.*]] = trunc i64 [[X]] to i32
-; CHECK-NEXT:    [[V0:%.*]] = insertelement <2 x i32> poison, i32 [[T1]], i64 0
-; CHECK-NEXT:    [[V1:%.*]] = insertelement <2 x i32> [[V0]], i32 [[T0]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64 [[X]] to <2 x i32>
+; CHECK-NEXT:    [[V1:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    ret <2 x i32> [[V1]]
 ;
   %hi = lshr i64 %x, 32
@@ -26,13 +23,8 @@ define <2 x i32> @swapped_halves(i64 %x) {
 define <2 x float> @swapped_halves_float(i64 %x) {
 ; CHECK-LABEL: define <2 x float> @swapped_halves_float(
 ; CHECK-SAME: i64 [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[HI:%.*]] = lshr i64 [[X]], 32
-; CHECK-NEXT:    [[T1:%.*]] = trunc i64 [[HI]] to i32
-; CHECK-NEXT:    [[T0:%.*]] = trunc i64 [[X]] to i32
-; CHECK-NEXT:    [[F1:%.*]] = bitcast i32 [[T1]] to float
-; CHECK-NEXT:    [[F0:%.*]] = bitcast i32 [[T0]] to float
-; CHECK-NEXT:    [[V0:%.*]] = insertelement <2 x float> poison, float [[F1]], i64 0
-; CHECK-NEXT:    [[V1:%.*]] = insertelement <2 x float> [[V0]], float [[F0]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64 [[X]] to <2 x float>
+; CHECK-NEXT:    [[V1:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    ret <2 x float> [[V1]]
 ;
   %hi = lshr i64 %x, 32
@@ -48,17 +40,8 @@ define <2 x float> @swapped_halves_float(i64 %x) {
 define <4 x i16> @reversed_quarters(i64 %x) {
 ; CHECK-LABEL: define <4 x i16> @reversed_quarters(
 ; CHECK-SAME: i64 [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[S1:%.*]] = lshr i64 [[X]], 16
-; CHECK-NEXT:    [[S2:%.*]] = lshr i64 [[X]], 32
-; CHECK-NEXT:    [[S3:%.*]] = lshr i64 [[X]], 48
-; CHECK-NEXT:    [[T0:%.*]] = trunc i64 [[X]] to i16
-; CHECK-NEXT:    [[T1:%.*]] = trunc i64 [[S1]] to i16
-; CHECK-NEXT:    [[T2:%.*]] = trunc i64 [[S2]] to i16
-; CHECK-NEXT:    [[T3:%.*]] = trunc i64 [[S3]] to i16
-; CHECK-NEXT:    [[V0:%.*]] = insertelement <4 x i16> poison, i16 [[T3]], i64 0
-; CHECK-NEXT:    [[V1:%.*]] = insertelement <4 x i16> [[V0]], i16 [[T2]], i64 1
-; CHECK-NEXT:    [[V2:%.*]] = insertelement <4 x i16> [[V1]], i16 [[T1]], i64 2
-; CHECK-NEXT:    [[V3:%.*]] = insertelement <4 x i16> [[V2]], i16 [[T0]], i64 3
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64 [[X]] to <4 x i16>
+; CHECK-NEXT:    [[V3:%.*]] = shufflevector <4 x i16> [[TMP1]], <4 x i16> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    ret <4 x i16> [[V3]]
 ;
   %s1 = lshr i64 %x, 16
@@ -78,17 +61,8 @@ define <4 x i16> @reversed_quarters(i64 %x) {
 define <4 x i32> @reversed_i128(i128 %x) {
 ; CHECK-LABEL: define <4 x i32> @reversed_i128(
 ; CHECK-SAME: i128 [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[S1:%.*]] = lshr i128 [[X]], 32
-; CHECK-NEXT:    [[S2:%.*]] = lshr i128 [[X]], 64
-; CHECK-NEXT:    [[S3:%.*]] = lshr i128 [[X]], 96
-; CHECK-NEXT:    [[T0:%.*]] = trunc i128 [[X]] to i32
-; CHECK-NEXT:    [[T1:%.*]] = trunc i128 [[S1]] to i32
-; CHECK-NEXT:    [[T2:%.*]] = trunc i128 [[S2]] to i32
-; CHECK-NEXT:    [[T3:%.*]] = trunc i128 [[S3]] to i32
-; CHECK-NEXT:    [[V0:%.*]] = insertelement <4 x i32> poison, i32 [[T3]], i64 0
-; CHECK-NEXT:    [[V1:%.*]] = insertelement <4 x i32> [[V0]], i32 [[T2]], i64 1
-; CHECK-NEXT:    [[V2:%.*]] = insertelement <4 x i32> [[V1]], i32 [[T1]], i64 2
-; CHECK-NEXT:    [[V3:%.*]] = insertelement <4 x i32> [[V2]], i32 [[T0]], i64 3
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i128 [[X]] to <4 x i32>
+; CHECK-NEXT:    [[V3:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    ret <4 x i32> [[V3]]
 ;
   %s1 = lshr i128 %x, 32
@@ -109,13 +83,8 @@ define <4 x i32> @reversed_i128(i128 %x) {
 define <4 x i32> @repeated_halves(i64 %x) {
 ; CHECK-LABEL: define <4 x i32> @repeated_halves(
 ; CHECK-SAME: i64 [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[HI:%.*]] = lshr i64 [[X]], 32
-; CHECK-NEXT:    [[T1:%.*]] = trunc i64 [[HI]] to i32
-; CHECK-NEXT:    [[T0:%.*]] = trunc i64 [[X]] to i32
-; CHECK-NEXT:    [[V0:%.*]] = insertelement <4 x i32> poison, i32 [[T1]], i64 0
-; CHECK-NEXT:    [[V1:%.*]] = insertelement <4 x i32> [[V0]], i32 [[T0]], i64 1
-; CHECK-NEXT:    [[V2:%.*]] = insertelement <4 x i32> [[V1]], i32 [[T1]], i64 2
-; CHECK-NEXT:    [[V3:%.*]] = insertelement <4 x i32> [[V2]], i32 [[T0]], i64 3
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64 [[X]] to <2 x i32>
+; CHECK-NEXT:    [[V3:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <4 x i32> <i32 1, i32 0, i32 1, i32 0>
 ; CHECK-NEXT:    ret <4 x i32> [[V3]]
 ;
   %hi = lshr i64 %x, 32
@@ -132,12 +101,8 @@ define <4 x i32> @repeated_halves(i64 %x) {
 define <2 x i16> @odd_quarters(i64 %x) {
 ; CHECK-LABEL: define <2 x i16> @odd_quarters(
 ; CHECK-SAME: i64 [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[S1:%.*]] = lshr i64 [[X]], 16
-; CHECK-NEXT:    [[S3:%.*]] = lshr i64 [[X]], 48
-; CHECK-NEXT:    [[T1:%.*]] = trunc i64 [[S1]] to i16
-; CHECK-NEXT:    [[T3:%.*]] = trunc i64 [[S3]] to i16
-; CHECK-NEXT:    [[V0:%.*]] = insertelement <2 x i16> poison, i16 [[T3]], i64 0
-; CHECK-NEXT:    [[V1:%.*]] = insertelement <2 x i16> [[V0]], i16 [[T1]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64 [[X]] to <4 x i16>
+; CHECK-NEXT:    [[V1:%.*]] = shufflevector <4 x i16> [[TMP1]], <4 x i16> poison, <2 x i32> <i32 3, i32 1>
 ; CHECK-NEXT:    ret <2 x i16> [[V1]]
 ;
   %s1 = lshr i64 %x, 16
@@ -152,17 +117,7 @@ define <2 x i16> @odd_quarters(i64 %x) {
 define <4 x i16> @in_order_quarters(i64 %x) {
 ; CHECK-LABEL: define <4 x i16> @in_order_quarters(
 ; CHECK-SAME: i64 [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[S1:%.*]] = lshr i64 [[X]], 16
-; CHECK-NEXT:    [[S2:%.*]] = lshr i64 [[X]], 32
-; CHECK-NEXT:    [[S3:%.*]] = lshr i64 [[X]], 48
-; CHECK-NEXT:    [[T0:%.*]] = trunc i64 [[X]] to i16
-; CHECK-NEXT:    [[T1:%.*]] = trunc i64 [[S1]] to i16
-; CHECK-NEXT:    [[T2:%.*]] = trunc i64 [[S2]] to i16
-; CHECK-NEXT:    [[T3:%.*]] = trunc i64 [[S3]] to i16
-; CHECK-NEXT:    [[V0:%.*]] = insertelement <4 x i16> poison, i16 [[T0]], i64 0
-; CHECK-NEXT:    [[V1:%.*]] = insertelement <4 x i16> [[V0]], i16 [[T1]], i64 1
-; CHECK-NEXT:    [[V2:%.*]] = insertelement <4 x i16> [[V1]], i16 [[T2]], i64 2
-; CHECK-NEXT:    [[V3:%.*]] = insertelement <4 x i16> [[V2]], i16 [[T3]], i64 3
+; CHECK-NEXT:    [[V3:%.*]] = bitcast i64 [[X]] to <4 x i16>
 ; CHECK-NEXT:    ret <4 x i16> [[V3]]
 ;
   %s1 = lshr i64 %x, 16
@@ -183,12 +138,8 @@ define <4 x i16> @in_order_quarters(i64 %x) {
 define <4 x i16> @missing_elts(i64 %x) {
 ; CHECK-LABEL: define <4 x i16> @missing_elts(
 ; CHECK-SAME: i64 [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[S2:%.*]] = lshr i64 [[X]], 32
-; CHECK-NEXT:    [[S3:%.*]] = lshr i64 [[X]], 48
-; CHECK-NEXT:    [[T2:%.*]] = trunc i64 [[S2]] to i16
-; CHECK-NEXT:    [[T3:%.*]] = trunc i64 [[S3]] to i16
-; CHECK-NEXT:    [[V0:%.*]] = insertelement <4 x i16> poison, i16 [[T3]], i64 0
-; CHECK-NEXT:    [[V1:%.*]] = insertelement <4 x i16> [[V0]], i16 [[T2]], i64 2
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64 [[X]] to <4 x i16>
+; CHECK-NEXT:    [[V1:%.*]] = shufflevector <4 x i16> [[TMP1]], <4 x i16> poison, <4 x i32> <i32 3, i32 poison, i32 2, i32 poison>
 ; CHECK-NEXT:    ret <4 x i16> [[V1]]
 ;
   %s2 = lshr i64 %x, 32
@@ -203,11 +154,8 @@ define <4 x i16> @missing_elts(i64 %x) {
 define <2 x i32> @undef_base(i64 %x) {
 ; CHECK-LABEL: define <2 x i32> @undef_base(
 ; CHECK-SAME: i64 [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[HI:%.*]] = lshr i64 [[X]], 32
-; CHECK-NEXT:    [[T1:%.*]] = trunc i64 [[HI]] to i32
-; CHECK-NEXT:    [[T0:%.*]] = trunc i64 [[X]] to i32
-; CHECK-NEXT:    [[V0:%.*]] = insertelement <2 x i32> undef, i32 [[T1]], i64 0
-; CHECK-NEXT:    [[V1:%.*]] = insertelement <2 x i32> [[V0]], i32 [[T0]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64 [[X]] to <2 x i32>
+; CHECK-NEXT:    [[V1:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    ret <2 x i32> [[V1]]
 ;
   %hi = lshr i64 %x, 32
@@ -219,13 +167,19 @@ define <2 x i32> @undef_base(i64 %x) {
 }
 
 define <2 x i32> @splat_high_half(i64 %x) {
-; CHECK-LABEL: define <2 x i32> @splat_high_half(
-; CHECK-SAME: i64 [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[HI:%.*]] = lshr i64 [[X]], 32
-; CHECK-NEXT:    [[T1:%.*]] = trunc i64 [[HI]] to i32
-; CHECK-NEXT:    [[V0:%.*]] = insertelement <2 x i32> poison, i32 [[T1]], i64 0
-; CHECK-NEXT:    [[V1:%.*]] = insertelement <2 x i32> [[V0]], i32 [[T1]], i64 1
-; CHECK-NEXT:    ret <2 x i32> [[V1]]
+; SSE-LABEL: define <2 x i32> @splat_high_half(
+; SSE-SAME: i64 [[X:%.*]]) #[[ATTR0]] {
+; SSE-NEXT:    [[TMP1:%.*]] = bitcast i64 [[X]] to <2 x i32>
+; SSE-NEXT:    [[V1:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <2 x i32> <i32 1, i32 1>
+; SSE-NEXT:    ret <2 x i32> [[V1]]
+;
+; AVX-LABEL: define <2 x i32> @splat_high_half(
+; AVX-SAME: i64 [[X:%.*]]) #[[ATTR0]] {
+; AVX-NEXT:    [[HI:%.*]] = lshr i64 [[X]], 32
+; AVX-NEXT:    [[T1:%.*]] = trunc i64 [[HI]] to i32
+; AVX-NEXT:    [[V0:%.*]] = insertelement <2 x i32> poison, i32 [[T1]], i64 0
+; AVX-NEXT:    [[V1:%.*]] = insertelement <2 x i32> [[V0]], i32 [[T1]], i64 1
+; AVX-NEXT:    ret <2 x i32> [[V1]]
 ;
   %hi = lshr i64 %x, 32
   %t1 = trunc i64 %hi to i32
@@ -238,12 +192,8 @@ define <2 x i32> @splat_high_half(i64 %x) {
 define <2 x i32> @overwritten_elt(i64 %x, i32 %y) {
 ; CHECK-LABEL: define <2 x i32> @overwritten_elt(
 ; CHECK-SAME: i64 [[X:%.*]], i32 [[Y:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[HI:%.*]] = lshr i64 [[X]], 32
-; CHECK-NEXT:    [[T1:%.*]] = trunc i64 [[HI]] to i32
-; CHECK-NEXT:    [[T0:%.*]] = trunc i64 [[X]] to i32
-; CHECK-NEXT:    [[V0:%.*]] = insertelement <2 x i32> poison, i32 [[Y]], i64 0
-; CHECK-NEXT:    [[V1:%.*]] = insertelement <2 x i32> [[V0]], i32 [[T0]], i64 1
-; CHECK-NEXT:    [[V2:%.*]] = insertelement <2 x i32> [[V1]], i32 [[T1]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64 [[X]] to <2 x i32>
+; CHECK-NEXT:    [[V2:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    ret <2 x i32> [[V2]]
 ;
   %hi = lshr i64 %x, 32
@@ -259,11 +209,8 @@ define <2 x i32> @double_source(double %d) {
 ; CHECK-LABEL: define <2 x i32> @double_source(
 ; CHECK-SAME: double [[D:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[X:%.*]] = bitcast double [[D]] to i64
-; CHECK-NEXT:    [[HI:%.*]] = lshr i64 [[X]], 32
-; CHECK-NEXT:    [[T1:%.*]] = trunc i64 [[HI]] to i32
-; CHECK-NEXT:    [[T0:%.*]] = trunc i64 [[X]] to i32
-; CHECK-NEXT:    [[V0:%.*]] = insertelement <2 x i32> poison, i32 [[T1]], i64 0
-; CHECK-NEXT:    [[V1:%.*]] = insertelement <2 x i32> [[V0]], i32 [[T0]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64 [[X]] to <2 x i32>
+; CHECK-NEXT:    [[V1:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    ret <2 x i32> [[V1]]
 ;
   %x = bitcast double %d to i64
@@ -279,11 +226,8 @@ define <2 x i32> @double_source(double %d) {
 define <2 x i32> @overwritten_base(i64 %x, <2 x i32> %base) {
 ; CHECK-LABEL: define <2 x i32> @overwritten_base(
 ; CHECK-SAME: i64 [[X:%.*]], <2 x i32> [[BASE:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[HI:%.*]] = lshr i64 [[X]], 32
-; CHECK-NEXT:    [[T1:%.*]] = trunc i64 [[HI]] to i32
-; CHECK-NEXT:    [[T0:%.*]] = trunc i64 [[X]] to i32
-; CHECK-NEXT:    [[V0:%.*]] = insertelement <2 x i32> [[BASE]], i32 [[T1]], i64 0
-; CHECK-NEXT:    [[V1:%.*]] = insertelement <2 x i32> [[V0]], i32 [[T0]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64 [[X]] to <2 x i32>
+; CHECK-NEXT:    [[V1:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    ret <2 x i32> [[V1]]
 ;
   %hi = lshr i64 %x, 32
@@ -295,15 +239,24 @@ define <2 x i32> @overwritten_base(i64 %x, <2 x i32> %base) {
 }
 
 define <2 x i32> @swapped_halves_extra_use(i64 %x, ptr %p) {
-; CHECK-LABEL: define <2 x i32> @swapped_halves_extra_use(
-; CHECK-SAME: i64 [[X:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[HI:%.*]] = lshr i64 [[X]], 32
-; CHECK-NEXT:    [[T1:%.*]] = trunc i64 [[HI]] to i32
-; CHECK-NEXT:    [[T0:%.*]] = trunc i64 [[X]] to i32
-; CHECK-NEXT:    store i32 [[T1]], ptr [[P]], align 4
-; CHECK-NEXT:    [[V0:%.*]] = insertelement <2 x i32> poison, i32 [[T1]], i64 0
-; CHECK-NEXT:    [[V1:%.*]] = insertelement <2 x i32> [[V0]], i32 [[T0]], i64 1
-; CHECK-NEXT:    ret <2 x i32> [[V1]]
+; SSE-LABEL: define <2 x i32> @swapped_halves_extra_use(
+; SSE-SAME: i64 [[X:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
+; SSE-NEXT:    [[HI:%.*]] = lshr i64 [[X]], 32
+; SSE-NEXT:    [[T1:%.*]] = trunc i64 [[HI]] to i32
+; SSE-NEXT:    store i32 [[T1]], ptr [[P]], align 4
+; SSE-NEXT:    [[TMP1:%.*]] = bitcast i64 [[X]] to <2 x i32>
+; SSE-NEXT:    [[V1:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <2 x i32> <i32 1, i32 0>
+; SSE-NEXT:    ret <2 x i32> [[V1]]
+;
+; AVX-LABEL: define <2 x i32> @swapped_halves_extra_use(
+; AVX-SAME: i64 [[X:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
+; AVX-NEXT:    [[HI:%.*]] = lshr i64 [[X]], 32
+; AVX-NEXT:    [[T1:%.*]] = trunc i64 [[HI]] to i32
+; AVX-NEXT:    [[T0:%.*]] = trunc i64 [[X]] to i32
+; AVX-NEXT:    store i32 [[T1]], ptr [[P]], align 4
+; AVX-NEXT:    [[V0:%.*]] = insertelement <2 x i32> poison, i32 [[T1]], i64 0
+; AVX-NEXT:    [[V1:%.*]] = insertelement <2 x i32> [[V0]], i32 [[T0]], i64 1
+; AVX-NEXT:    ret <2 x i32> [[V1]]
 ;
   %hi = lshr i64 %x, 32
   %t1 = trunc i64 %hi to i32
@@ -479,15 +432,24 @@ define <2 x i32> @out_of_range_shift(i64 %x) {
 
 ; The intermediate vector is used elsewhere, so the chain ends there.
 define <2 x i32> @extra_use_of_insert(i64 %x, ptr %p) {
-; CHECK-LABEL: define <2 x i32> @extra_use_of_insert(
-; CHECK-SAME: i64 [[X:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[HI:%.*]] = lshr i64 [[X]], 32
-; CHECK-NEXT:    [[T1:%.*]] = trunc i64 [[HI]] to i32
-; CHECK-NEXT:    [[T0:%.*]] = trunc i64 [[X]] to i32
-; CHECK-NEXT:    [[V0:%.*]] = insertelement <2 x i32> poison, i32 [[T1]], i64 0
-; CHECK-NEXT:    store <2 x i32> [[V0]], ptr [[P]], align 8
-; CHECK-NEXT:    [[V1:%.*]] = insertelement <2 x i32> [[V0]], i32 [[T0]], i64 1
-; CHECK-NEXT:    ret <2 x i32> [[V1]]
+; SSE-LABEL: define <2 x i32> @extra_use_of_insert(
+; SSE-SAME: i64 [[X:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
+; SSE-NEXT:    [[T0:%.*]] = trunc i64 [[X]] to i32
+; SSE-NEXT:    [[TMP1:%.*]] = bitcast i64 [[X]] to <2 x i32>
+; SSE-NEXT:    [[V0:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <2 x i32> <i32 1, i32 poison>
+; SSE-NEXT:    store <2 x i32> [[V0]], ptr [[P]], align 8
+; SSE-NEXT:    [[V1:%.*]] = insertelement <2 x i32> [[V0]], i32 [[T0]], i64 1
+; SSE-NEXT:    ret <2 x i32> [[V1]]
+;
+; AVX-LABEL: define <2 x i32> @extra_use_of_insert(
+; AVX-SAME: i64 [[X:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
+; AVX-NEXT:    [[HI:%.*]] = lshr i64 [[X]], 32
+; AVX-NEXT:    [[T1:%.*]] = trunc i64 [[HI]] to i32
+; AVX-NEXT:    [[T0:%.*]] = trunc i64 [[X]] to i32
+; AVX-NEXT:    [[V0:%.*]] = insertelement <2 x i32> poison, i32 [[T1]], i64 0
+; AVX-NEXT:    store <2 x i32> [[V0]], ptr [[P]], align 8
+; AVX-NEXT:    [[V1:%.*]] = insertelement <2 x i32> [[V0]], i32 [[T0]], i64 1
+; AVX-NEXT:    ret <2 x i32> [[V1]]
 ;
   %hi = lshr i64 %x, 32
   %t1 = trunc i64 %hi to i32
@@ -549,6 +511,3 @@ define <8 x i1> @bool_elts(i8 %x) {
   %v1 = insertelement <8 x i1> %v0, i1 %t0, i64 1
   ret <8 x i1> %v1
 }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; AVX: {{.*}}
-; SSE: {{.*}}

@@ -413,17 +413,16 @@ define internal noundef <8 x i16> @_ZL24cmplx_mul_combined_re_im11__Int16x8_t20c
 ; CHECK-LABEL: define internal fastcc noundef <8 x i16> @_ZL24cmplx_mul_combined_re_im11__Int16x8_t20cmplx_int16_t(
 ; CHECK-SAME: <8 x i16> noundef [[A:%.*]], i64 [[SCALE_COERCE:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[SCALE_SROA_0_0_EXTRACT_TRUNC:%.*]] = trunc i64 [[SCALE_COERCE]] to i16
 ; CHECK-NEXT:    [[SCALE_SROA_2_0_EXTRACT_SHIFT36:%.*]] = lshr i64 [[SCALE_COERCE]], 16
 ; CHECK-NEXT:    [[SCALE_SROA_2_0_EXTRACT_TRUNC:%.*]] = trunc i64 [[SCALE_SROA_2_0_EXTRACT_SHIFT36]] to i16
 ; CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <8 x i16> [[A]], <8 x i16> poison, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
-; CHECK-NEXT:    [[VECINIT_I19:%.*]] = insertelement <8 x i16> poison, i16 [[SCALE_SROA_0_0_EXTRACT_TRUNC]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i64 [[SCALE_COERCE]] to <4 x i16>
 ; CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <8 x i16> poison, i16 [[SCALE_SROA_2_0_EXTRACT_TRUNC]], i64 0
 ; CHECK-NEXT:    [[VECINIT7_I:%.*]] = shufflevector <8 x i16> [[VECINIT_I]], <8 x i16> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[VQNEGQ_V1_I:%.*]] = tail call <8 x i16> @llvm.aarch64.neon.sqneg.v8i16(<8 x i16> [[VECINIT7_I]])
 ; CHECK-NEXT:    [[VBSL5_I:%.*]] = shufflevector <8 x i16> [[VQNEGQ_V1_I]], <8 x i16> [[VECINIT_I]], <8 x i32> <i32 0, i32 8, i32 2, i32 8, i32 4, i32 8, i32 6, i32 8>
 ; CHECK-NEXT:    [[SHUFFLE_I85:%.*]] = shufflevector <8 x i16> [[A]], <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[SHUFFLE_I82:%.*]] = shufflevector <8 x i16> [[VECINIT_I19]], <8 x i16> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[SHUFFLE_I82:%.*]] = shufflevector <4 x i16> [[TMP2]], <4 x i16> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[VQDMULL_V2_I72:%.*]] = tail call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> [[SHUFFLE_I85]], <4 x i16> [[SHUFFLE_I82]])
 ; CHECK-NEXT:    [[SHUFFLE_I97:%.*]] = shufflevector <8 x i16> [[A]], <8 x i16> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[VQDMULL_V2_I:%.*]] = tail call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> [[SHUFFLE_I97]], <4 x i16> [[SHUFFLE_I82]])
