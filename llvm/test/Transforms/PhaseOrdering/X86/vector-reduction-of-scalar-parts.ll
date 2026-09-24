@@ -7,58 +7,29 @@
 ; gather should become a shuffle of the loaded vector.
 
 define [2 x float] @sum_pairs(ptr %p, i64 %n) {
-; SSE2-LABEL: define [2 x float] @sum_pairs(
-; SSE2-SAME: ptr nofree readonly captures(none) [[P:%.*]], i64 [[N:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
-; SSE2-NEXT:  [[ENTRY:.*]]:
-; SSE2-NEXT:    [[SKIP:%.*]] = icmp slt i64 [[N]], 1
-; SSE2-NEXT:    br i1 [[SKIP]], label %[[EXIT:.*]], label %[[LOOP:.*]]
-; SSE2:       [[LOOP]]:
-; SSE2-NEXT:    [[PTR:%.*]] = phi ptr [ [[PTR_NEXT:%.*]], %[[LOOP]] ], [ [[P]], %[[ENTRY]] ]
-; SSE2-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[ENTRY]] ]
-; SSE2-NEXT:    [[TMP0:%.*]] = phi <2 x float> [ [[TMP2:%.*]], %[[LOOP]] ], [ zeroinitializer, %[[ENTRY]] ]
-; SSE2-NEXT:    [[X1:%.*]] = load <2 x float>, ptr [[PTR]], align 1
-; SSE2-NEXT:    [[TMP1:%.*]] = shufflevector <2 x float> [[X1]], <2 x float> poison, <2 x i32> <i32 1, i32 0>
-; SSE2-NEXT:    [[TMP2]] = fadd <2 x float> [[TMP0]], [[TMP1]]
-; SSE2-NEXT:    [[PTR_NEXT]] = getelementptr i8, ptr [[PTR]], i64 8
-; SSE2-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
-; SSE2-NEXT:    [[DONE:%.*]] = icmp eq i64 [[I_NEXT]], [[N]]
-; SSE2-NEXT:    br i1 [[DONE]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP0:![0-9]+]]
-; SSE2:       [[EXIT]]:
-; SSE2-NEXT:    [[TMP3:%.*]] = phi <2 x float> [ zeroinitializer, %[[ENTRY]] ], [ [[TMP2]], %[[LOOP]] ]
-; SSE2-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP3]], i64 1
-; SSE2-NEXT:    [[R0:%.*]] = insertvalue [2 x float] poison, float [[TMP4]], 0
-; SSE2-NEXT:    [[TMP5:%.*]] = extractelement <2 x float> [[TMP3]], i64 0
-; SSE2-NEXT:    [[R1:%.*]] = insertvalue [2 x float] [[R0]], float [[TMP5]], 1
-; SSE2-NEXT:    ret [2 x float] [[R1]]
-;
-; AVX2-LABEL: define [2 x float] @sum_pairs(
-; AVX2-SAME: ptr nofree readonly captures(none) [[P:%.*]], i64 [[N:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
-; AVX2-NEXT:  [[ENTRY:.*]]:
-; AVX2-NEXT:    [[SKIP:%.*]] = icmp slt i64 [[N]], 1
-; AVX2-NEXT:    br i1 [[SKIP]], label %[[EXIT:.*]], label %[[LOOP:.*]]
-; AVX2:       [[LOOP]]:
-; AVX2-NEXT:    [[PTR:%.*]] = phi ptr [ [[PTR_NEXT:%.*]], %[[LOOP]] ], [ [[P]], %[[ENTRY]] ]
-; AVX2-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[ENTRY]] ]
-; AVX2-NEXT:    [[TMP0:%.*]] = phi <2 x float> [ [[TMP6:%.*]], %[[LOOP]] ], [ zeroinitializer, %[[ENTRY]] ]
-; AVX2-NEXT:    [[X:%.*]] = load i64, ptr [[PTR]], align 1
-; AVX2-NEXT:    [[HI:%.*]] = lshr i64 [[X]], 32
-; AVX2-NEXT:    [[TMP1:%.*]] = trunc nuw i64 [[HI]] to i32
-; AVX2-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> poison, i32 [[TMP1]], i64 0
-; AVX2-NEXT:    [[TMP3:%.*]] = trunc i64 [[X]] to i32
-; AVX2-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> [[TMP2]], i32 [[TMP3]], i64 1
-; AVX2-NEXT:    [[TMP5:%.*]] = bitcast <2 x i32> [[TMP4]] to <2 x float>
-; AVX2-NEXT:    [[TMP6]] = fadd <2 x float> [[TMP0]], [[TMP5]]
-; AVX2-NEXT:    [[PTR_NEXT]] = getelementptr i8, ptr [[PTR]], i64 8
-; AVX2-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
-; AVX2-NEXT:    [[DONE:%.*]] = icmp eq i64 [[I_NEXT]], [[N]]
-; AVX2-NEXT:    br i1 [[DONE]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP0:![0-9]+]]
-; AVX2:       [[EXIT]]:
-; AVX2-NEXT:    [[TMP7:%.*]] = phi <2 x float> [ zeroinitializer, %[[ENTRY]] ], [ [[TMP6]], %[[LOOP]] ]
-; AVX2-NEXT:    [[TMP8:%.*]] = extractelement <2 x float> [[TMP7]], i64 1
-; AVX2-NEXT:    [[R0:%.*]] = insertvalue [2 x float] poison, float [[TMP8]], 0
-; AVX2-NEXT:    [[TMP9:%.*]] = extractelement <2 x float> [[TMP7]], i64 0
-; AVX2-NEXT:    [[R1:%.*]] = insertvalue [2 x float] [[R0]], float [[TMP9]], 1
-; AVX2-NEXT:    ret [2 x float] [[R1]]
+; CHECK-LABEL: define [2 x float] @sum_pairs(
+; CHECK-SAME: ptr nofree readonly captures(none) [[P:%.*]], i64 [[N:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[SKIP:%.*]] = icmp slt i64 [[N]], 1
+; CHECK-NEXT:    br i1 [[SKIP]], label %[[EXIT:.*]], label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[PTR:%.*]] = phi ptr [ [[PTR_NEXT:%.*]], %[[LOOP]] ], [ [[P]], %[[ENTRY]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x float> [ [[TMP2:%.*]], %[[LOOP]] ], [ zeroinitializer, %[[ENTRY]] ]
+; CHECK-NEXT:    [[X1:%.*]] = load <2 x float>, ptr [[PTR]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x float> [[X1]], <2 x float> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[TMP2]] = fadd <2 x float> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[PTR_NEXT]] = getelementptr i8, ptr [[PTR]], i64 8
+; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
+; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[I_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[TMP3:%.*]] = phi <2 x float> [ zeroinitializer, %[[ENTRY]] ], [ [[TMP2]], %[[LOOP]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP3]], i64 1
+; CHECK-NEXT:    [[R0:%.*]] = insertvalue [2 x float] poison, float [[TMP4]], 0
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x float> [[TMP3]], i64 0
+; CHECK-NEXT:    [[R1:%.*]] = insertvalue [2 x float] [[R0]], float [[TMP5]], 1
+; CHECK-NEXT:    ret [2 x float] [[R1]]
 ;
 entry:
   %skip = icmp slt i64 %n, 1
@@ -100,4 +71,5 @@ exit:
 ; AVX2: [[META1]] = !{!"llvm.loop.unroll.disable"}
 ;.
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; CHECK: {{.*}}
+; AVX2: {{.*}}
+; SSE2: {{.*}}
