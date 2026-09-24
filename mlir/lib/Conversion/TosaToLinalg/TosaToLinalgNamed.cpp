@@ -141,6 +141,9 @@ bool mlir::tosa::isConvertibleToLinalgElementwise(Operation *op) {
   if (op->getNumResults() != 1)
     return false;
 
+  // TOSA has more strict requirements on operand shapes and broadcasting
+  // compared to generic linalg.elementwise operations. All shapes must
+  // have the same rank, so we don't need to check the operands types.
   auto resultTy = dyn_cast<ShapedType>(op->getResult(0).getType());
   if (!resultTy || !resultTy.hasRank())
     return false;
@@ -150,17 +153,6 @@ bool mlir::tosa::isConvertibleToLinalgElementwise(Operation *op) {
   if (!kind)
     return false;
 
-  // linalg.elementwise broadcasts operands through their indexing maps, so
-  // operands only need to be ranked shaped types (tensors or memrefs, possibly
-  // dynamic); their rank need not match the result's. The arity group enum
-  // (Unary=1, Binary=2, Ternary=3) gives the number of forwarded operands.
-  const unsigned arity =
-      llvm::to_underlying(linalg::getArityGroupAndKind(*kind).arityGroup);
-  for (unsigned i = 0; i < arity; ++i) {
-    auto operandTy = dyn_cast<ShapedType>(op->getOperand(i).getType());
-    if (!operandTy || !operandTy.hasRank())
-      return false;
-  }
   return true;
 }
 
