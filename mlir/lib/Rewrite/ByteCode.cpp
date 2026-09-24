@@ -15,6 +15,7 @@
 #include "mlir/Dialect/PDL/IR/PDLTypes.h"
 #include "mlir/Dialect/PDLInterp/IR/PDLInterp.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/Transforms/DialectConversion.h"
 #include "mlir/IR/RegionGraphTraits.h"
 #include "llvm/ADT/IntervalMap.h"
 #include "llvm/ADT/PostOrderIterator.h"
@@ -404,7 +405,7 @@ struct ByteCodeWriter {
                 [](Type) { return PDLValue::Kind::Attribute; })
             .Case<pdl::OperationType>(
                 [](Type) { return PDLValue::Kind::Operation; })
-            .Case([](pdl::RangeType rangeTy) {
+            .Case<pdl::RangeType>([](pdl::RangeType rangeTy) {
               if (isa<pdl::TypeType>(rangeTy.getElementType()))
                 return PDLValue::Kind::TypeRange;
               return PDLValue::Kind::ValueRange;
@@ -1056,6 +1057,11 @@ PDLByteCode::PDLByteCode(
     llvm::StringMap<PDLConstraintFunction> constraintFns,
     llvm::StringMap<PDLRewriteFunction> rewriteFns)
     : configs(std::move(configs)) {
+  
+  // Register PDLL builtin functions before generating bytecode
+  rewriteFns[__pdll_convert_type__] = createConvertTypeBuiltin(this);
+  rewriteFns[__pdll_converted_operand__] = createConvertedOperandBuiltin();
+  
   Generator generator(module.getContext(), uniquedData, matcherByteCode,
                       rewriterByteCode, patterns, maxValueMemoryIndex,
                       maxOpRangeCount, maxTypeRangeCount, maxValueRangeCount,
@@ -1741,36 +1747,6 @@ void ByteCodeExecutor::executeForEach() {
     selectJump(size_t(0));
     return;
   }
-  case PDLValue::Kind::Value: {
-    unsigned &index = loopIndex[read()];
-    ValueRange range = valueRangeMemory[rangeIndex];
-    assert(index <= range.size() && "iterated past the end");
-    if (index < range.size()) {
-      LLVM_DEBUG(llvm::dbgs() << "  * Result: " << range[index] << "\n");
-      value = range[index].getAsOpaquePointer();
-      break;
-    }
-
-    LLVM_DEBUG(llvm::dbgs() << "  * Done\n");
-    index = 0;
-    selectJump(size_t(0));
-    return;
-  }
-  case PDLValue::Kind::Type: {
-    unsigned &index = loopIndex[read()];
-    TypeRange range = typeRangeMemory[rangeIndex];
-    assert(index <= range.size() && "iterated past the end");
-    if (index < range.size()) {
-      LLVM_DEBUG(llvm::dbgs() << "  * Result: " << range[index] << "\n");
-      value = range[index].getAsOpaquePointer();
-      break;
-    }
-
-    LLVM_DEBUG(llvm::dbgs() << "  * Done\n");
-    index = 0;
-    selectJump(size_t(0));
-    return;
-  }
   default:
     llvm_unreachable("unexpected `ForEach` value kind");
   }
@@ -1788,9 +1764,7 @@ void ByteCodeExecutor::executeGetAttribute() {
   unsigned memIndex = read();
   Operation *op = read<Operation *>();
   StringAttr attrName = read<StringAttr>();
-  Attribute attr = op->getDiscardableAttr(attrName);
-  if (op->getPropertiesStorageSize())
-    attr = op->getInherentAttr(attrName).value_or(attr);
+  Attribute attr = op->getAttr(attrName);
 
   LDBG() << "  * Operation: " << *op << "\n  * Attribute: " << attrName
          << "\n  * Result: " << attr;
@@ -1859,8 +1833,7 @@ executeGetOperandsResults(RangeT values, Operation *op, unsigned index,
   } else if (op->hasTrait<AttrSizedSegmentsT>()) {
     LDBG() << "  * Extracting values from `" << attrSizedSegments << "`";
 
-    auto segmentAttr = dyn_cast_or_null<DenseI32ArrayAttr>(
-        op->getInherentAttr(attrSizedSegments).value_or(Attribute{}));
+    auto segmentAttr = op->getAttrOfType<DenseI32ArrayAttr>(attrSizedSegments);
     if (!segmentAttr || segmentAttr.asArrayRef().size() <= index)
       return nullptr;
 
@@ -2078,7 +2051,7 @@ void ByteCodeExecutor::executeSwitchAttribute() {
 void ByteCodeExecutor::executeSwitchOperandCount() {
   LDBG() << "Executing SwitchOperandCount:";
   Operation *op = read<Operation *>();
-  auto cases = read<DenseTypedElementsAttr>().getValues<uint32_t>();
+  auto cases = read<DenseIntOrFPElementsAttr>().getValues<uint32_t>();
 
   LDBG() << "  * Operation: " << *op;
   handleSwitch(op->getNumOperands(), cases);
@@ -2115,7 +2088,7 @@ void ByteCodeExecutor::executeSwitchOperationName() {
 void ByteCodeExecutor::executeSwitchResultCount() {
   LDBG() << "Executing SwitchResultCount:";
   Operation *op = read<Operation *>();
-  auto cases = read<DenseTypedElementsAttr>().getValues<uint32_t>();
+  auto cases = read<DenseIntOrFPElementsAttr>().getValues<uint32_t>();
 
   LDBG() << "  * Operation: " << *op;
   handleSwitch(op->getNumResults(), cases);
@@ -2361,3 +2334,80 @@ LogicalResult PDLByteCode::rewrite(PatternRewriter &rewriter,
   }
   return result;
 }
+
+//===----------------------------------------------------------------------===//
+// PDLL Type Conversion Support
+//===----------------------------------------------------------------------===//
+
+namespace {
+/// Create builtin function for __pdll_convert_type__
+/// Converts a type using a registered TypeConverter
+PDLRewriteFunction createConvertTypeBuiltin(const PDLByteCode *bytecode) {
+  return [bytecode](PatternRewriter &rewriter, PDLResultList &results,
+                    ArrayRef<PDLValue> args) -> LogicalResult {
+    if (args.size() != 2) {
+      return rewriter.notifyMatchFailure(
+          rewriter.getInsertionBlock()->getParentOp(),
+          "convert_type expects 2 arguments");
+    }
+
+    // Extract arguments
+    Type sourceType = args[0].cast<Type>();
+    Attribute converterAttr = args[1].cast<Attribute>();
+    StringAttr converterNameAttr = dyn_cast<StringAttr>(converterAttr);
+
+    if (!converterNameAttr) {
+      return rewriter.notifyMatchFailure(
+          rewriter.getInsertionBlock()->getParentOp(),
+          "Converter name must be a StringAttr");
+    }
+
+    StringRef converterName = converterNameAttr.getValue();
+
+    // Look up type converter
+    const void *converterPtr = bytecode->getTypeConverter(converterName);
+    if (!converterPtr) {
+      return rewriter.notifyMatchFailure(
+          rewriter.getInsertionBlock()->getParentOp(),
+          "Type converter not registered: " + converterName);
+    }
+
+    // Cast and use the type converter
+    const auto *converter = static_cast<const TypeConverter *>(converterPtr);
+    Type convertedType = converter->convertType(sourceType);
+
+    if (!convertedType) {
+      return rewriter.notifyMatchFailure(
+          rewriter.getInsertionBlock()->getParentOp(),
+          "Type conversion failed");
+    }
+
+    results.push_back(convertedType);
+    return success();
+  };
+}
+
+/// Create builtin function for __pdll_converted_operand__
+PDLRewriteFunction createConvertedOperandBuiltin() {
+  return [](PatternRewriter &rewriter, PDLResultList &results,
+            ArrayRef<PDLValue> args) -> LogicalResult {
+    if (args.size() != 2) {
+      return rewriter.notifyMatchFailure(
+          rewriter.getInsertionBlock()->getParentOp(),
+          "converted_operand expects 2 arguments");
+    }
+
+    Value operand = args[0].cast<Value>();
+
+    // Try to get remapped value if in conversion context
+    if (auto *convRewriter = dyn_cast<ConversionPatternRewriter>(&rewriter)) {
+      Value remapped = convRewriter->getRemappedValue(operand);
+      results.push_back(remapped ? remapped : operand);
+    } else {
+      results.push_back(operand);
+    }
+
+    return success();
+  };
+}
+} // namespace

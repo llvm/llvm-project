@@ -68,6 +68,9 @@ public:
     kw_Value,
     kw_ValueRange,
     kw_with,
+    kw_TypeConverter,
+    kw_convert_type,
+    kw_converted_operand,
     KW_END,
 
     /// Punctuation.
