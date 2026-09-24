@@ -17,12 +17,6 @@
 using namespace clang;
 using namespace clang::interp;
 
-EvalEmitter::EvalEmitter(Context &Ctx, Program &P, State &Parent,
-                         InterpStack &Stk, FrameAllocator &FA,
-                         ConstantExprKind ConstexprKind)
-    : Ctx(Ctx), P(P), S(Parent, P, Stk, FA, Ctx, this), EvalResult(Ctx),
-      ConstexprKind(ConstexprKind) {}
-
 EvalEmitter::EvalEmitter(Context &Ctx, Program &P, const EvalSettings &Settings,
                          InterpStack &Stk, FrameAllocator &FA,
                          ConstantExprKind ConstexprKind)

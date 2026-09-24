@@ -62,8 +62,6 @@ public:
                                           const FunctionDecl *FD);
 
   /// Evaluates a toplevel expression as an rvalue.
-  // FIXME: Get rid of the version using a parent State.
-  bool evaluateAsRValue(State &Parent, const Expr *E, APValue &Result);
   bool evaluateAsRValue(const EvalSettings &Settings, const Expr *E,
                         APValue &Result);
 
