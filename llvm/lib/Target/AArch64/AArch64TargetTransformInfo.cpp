@@ -958,6 +958,10 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
         {Intrinsic::umul_with_overflow, MVT::i64, 3}, // eg mul;umulh;cmp asr
     };
     EVT MTy = TLI->getValueType(DL, RetTy->getContainedType(0), true);
+    // Codegen does not handle nxv1 types for overflow ops.
+    if (MTy.isVector() &&
+        MTy.getVectorElementCount() == ElementCount::getScalable(1))
+      return InstructionCost::getInvalid();
     if (MTy.isSimple())
       if (const auto *Entry = CostTableLookup(WithOverflowCostTbl, ICA.getID(),
                                               MTy.getSimpleVT()))
@@ -4932,12 +4936,13 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
     ArrayRef<const Value *> Args, const Instruction *CtxI) const {
 
   // The code-generator is currently not able to handle scalable vectors
-  // of <vscale x 1 x eltty> yet, so return an invalid cost to avoid selecting
-  // it until all instructions are vetted.
+  // of <vscale x 1 x eltty> for all operations. Return an invalid cost for
+  // those that aren't supported.
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   if (auto *VTy = dyn_cast<ScalableVectorType>(Ty))
     if (VTy->getElementCount() == ElementCount::getScalable(1))
-      if (!is_contained({ISD::ADD, ISD::SUB, ISD::MUL}, ISD))
+      if (VTy->getElementType()->isFloatingPointTy() ||
+          is_contained({ISD::SDIV, ISD::SREM, ISD::UDIV, ISD::UREM}, ISD))
         return InstructionCost::getInvalid();
 
   // Legalize the type.
