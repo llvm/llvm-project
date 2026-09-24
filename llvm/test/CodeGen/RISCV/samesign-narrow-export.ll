@@ -18,9 +18,8 @@ define ptr @signed_and_samesign_i8(ptr %p) {
 ; CHECK-NEXT:    addi a0, a0, 1
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB0_2: # %check
-; CHECK-NEXT:    zext.b a2, a1
-; CHECK-NEXT:    li a3, 96
-; CHECK-NEXT:    bltu a2, a3, .LBB0_4
+; CHECK-NEXT:    li a2, 96
+; CHECK-NEXT:    bltu a1, a2, .LBB0_4
 ; CHECK-NEXT:  # %bb.3: # %large
 ; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    addi a0, a0, -94
@@ -49,87 +48,24 @@ middle:
 }
 
 define ptr @signed_and_samesign_i16(ptr %p) {
-; RV32I-LABEL: signed_and_samesign_i16:
-; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    lh a1, 0(a0)
-; RV32I-NEXT:    li a2, 90
-; RV32I-NEXT:    blt a2, a1, .LBB1_2
-; RV32I-NEXT:  # %bb.1: # %small
-; RV32I-NEXT:    addi a0, a0, 1
-; RV32I-NEXT:    ret
-; RV32I-NEXT:  .LBB1_2: # %check
-; RV32I-NEXT:    slli a2, a1, 16
-; RV32I-NEXT:    srli a2, a2, 16
-; RV32I-NEXT:    li a3, 96
-; RV32I-NEXT:    bltu a2, a3, .LBB1_4
-; RV32I-NEXT:  # %bb.3: # %large
-; RV32I-NEXT:    add a0, a0, a1
-; RV32I-NEXT:    addi a0, a0, -94
-; RV32I-NEXT:    ret
-; RV32I-NEXT:  .LBB1_4: # %middle
-; RV32I-NEXT:    addi a0, a0, 2
-; RV32I-NEXT:    ret
-;
-; RV64I-LABEL: signed_and_samesign_i16:
-; RV64I:       # %bb.0: # %entry
-; RV64I-NEXT:    lh a1, 0(a0)
-; RV64I-NEXT:    li a2, 90
-; RV64I-NEXT:    blt a2, a1, .LBB1_2
-; RV64I-NEXT:  # %bb.1: # %small
-; RV64I-NEXT:    addi a0, a0, 1
-; RV64I-NEXT:    ret
-; RV64I-NEXT:  .LBB1_2: # %check
-; RV64I-NEXT:    slli a2, a1, 48
-; RV64I-NEXT:    srli a2, a2, 48
-; RV64I-NEXT:    li a3, 96
-; RV64I-NEXT:    bltu a2, a3, .LBB1_4
-; RV64I-NEXT:  # %bb.3: # %large
-; RV64I-NEXT:    add a0, a0, a1
-; RV64I-NEXT:    addi a0, a0, -94
-; RV64I-NEXT:    ret
-; RV64I-NEXT:  .LBB1_4: # %middle
-; RV64I-NEXT:    addi a0, a0, 2
-; RV64I-NEXT:    ret
-;
-; RV32ZBB-LABEL: signed_and_samesign_i16:
-; RV32ZBB:       # %bb.0: # %entry
-; RV32ZBB-NEXT:    lh a1, 0(a0)
-; RV32ZBB-NEXT:    li a2, 90
-; RV32ZBB-NEXT:    blt a2, a1, .LBB1_2
-; RV32ZBB-NEXT:  # %bb.1: # %small
-; RV32ZBB-NEXT:    addi a0, a0, 1
-; RV32ZBB-NEXT:    ret
-; RV32ZBB-NEXT:  .LBB1_2: # %check
-; RV32ZBB-NEXT:    zext.h a2, a1
-; RV32ZBB-NEXT:    li a3, 96
-; RV32ZBB-NEXT:    bltu a2, a3, .LBB1_4
-; RV32ZBB-NEXT:  # %bb.3: # %large
-; RV32ZBB-NEXT:    add a0, a0, a1
-; RV32ZBB-NEXT:    addi a0, a0, -94
-; RV32ZBB-NEXT:    ret
-; RV32ZBB-NEXT:  .LBB1_4: # %middle
-; RV32ZBB-NEXT:    addi a0, a0, 2
-; RV32ZBB-NEXT:    ret
-;
-; RV64ZBB-LABEL: signed_and_samesign_i16:
-; RV64ZBB:       # %bb.0: # %entry
-; RV64ZBB-NEXT:    lh a1, 0(a0)
-; RV64ZBB-NEXT:    li a2, 90
-; RV64ZBB-NEXT:    blt a2, a1, .LBB1_2
-; RV64ZBB-NEXT:  # %bb.1: # %small
-; RV64ZBB-NEXT:    addi a0, a0, 1
-; RV64ZBB-NEXT:    ret
-; RV64ZBB-NEXT:  .LBB1_2: # %check
-; RV64ZBB-NEXT:    zext.h a2, a1
-; RV64ZBB-NEXT:    li a3, 96
-; RV64ZBB-NEXT:    bltu a2, a3, .LBB1_4
-; RV64ZBB-NEXT:  # %bb.3: # %large
-; RV64ZBB-NEXT:    add a0, a0, a1
-; RV64ZBB-NEXT:    addi a0, a0, -94
-; RV64ZBB-NEXT:    ret
-; RV64ZBB-NEXT:  .LBB1_4: # %middle
-; RV64ZBB-NEXT:    addi a0, a0, 2
-; RV64ZBB-NEXT:    ret
+; CHECK-LABEL: signed_and_samesign_i16:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    lh a1, 0(a0)
+; CHECK-NEXT:    li a2, 90
+; CHECK-NEXT:    blt a2, a1, .LBB1_2
+; CHECK-NEXT:  # %bb.1: # %small
+; CHECK-NEXT:    addi a0, a0, 1
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB1_2: # %check
+; CHECK-NEXT:    li a2, 96
+; CHECK-NEXT:    bltu a1, a2, .LBB1_4
+; CHECK-NEXT:  # %bb.3: # %large
+; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    addi a0, a0, -94
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB1_4: # %middle
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    ret
 entry:
   %x = load i16, ptr %p, align 2
   %wide = sext i16 %x to iXLen
@@ -160,9 +96,8 @@ define ptr @negative_i8(ptr %p) {
 ; CHECK-NEXT:    addi a0, a0, 1
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB2_2: # %check
-; CHECK-NEXT:    zext.b a2, a1
-; CHECK-NEXT:    li a3, 160
-; CHECK-NEXT:    bltu a3, a2, .LBB2_4
+; CHECK-NEXT:    li a2, -96
+; CHECK-NEXT:    bltu a2, a1, .LBB2_4
 ; CHECK-NEXT:  # %bb.3: # %large
 ; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    addi a0, a0, -94
@@ -191,91 +126,24 @@ middle:
 }
 
 define ptr @negative_i16(ptr %p) {
-; RV32I-LABEL: negative_i16:
-; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    lh a1, 0(a0)
-; RV32I-NEXT:    li a2, -90
-; RV32I-NEXT:    blt a1, a2, .LBB3_2
-; RV32I-NEXT:  # %bb.1: # %small
-; RV32I-NEXT:    addi a0, a0, 1
-; RV32I-NEXT:    ret
-; RV32I-NEXT:  .LBB3_2: # %check
-; RV32I-NEXT:    slli a2, a1, 16
-; RV32I-NEXT:    lui a3, 16
-; RV32I-NEXT:    srli a2, a2, 16
-; RV32I-NEXT:    addi a3, a3, -96
-; RV32I-NEXT:    bltu a3, a2, .LBB3_4
-; RV32I-NEXT:  # %bb.3: # %large
-; RV32I-NEXT:    add a0, a0, a1
-; RV32I-NEXT:    addi a0, a0, -94
-; RV32I-NEXT:    ret
-; RV32I-NEXT:  .LBB3_4: # %middle
-; RV32I-NEXT:    addi a0, a0, 2
-; RV32I-NEXT:    ret
-;
-; RV64I-LABEL: negative_i16:
-; RV64I:       # %bb.0: # %entry
-; RV64I-NEXT:    lh a1, 0(a0)
-; RV64I-NEXT:    li a2, -90
-; RV64I-NEXT:    blt a1, a2, .LBB3_2
-; RV64I-NEXT:  # %bb.1: # %small
-; RV64I-NEXT:    addi a0, a0, 1
-; RV64I-NEXT:    ret
-; RV64I-NEXT:  .LBB3_2: # %check
-; RV64I-NEXT:    slli a2, a1, 48
-; RV64I-NEXT:    lui a3, 16
-; RV64I-NEXT:    srli a2, a2, 48
-; RV64I-NEXT:    addi a3, a3, -96
-; RV64I-NEXT:    bltu a3, a2, .LBB3_4
-; RV64I-NEXT:  # %bb.3: # %large
-; RV64I-NEXT:    add a0, a0, a1
-; RV64I-NEXT:    addi a0, a0, -94
-; RV64I-NEXT:    ret
-; RV64I-NEXT:  .LBB3_4: # %middle
-; RV64I-NEXT:    addi a0, a0, 2
-; RV64I-NEXT:    ret
-;
-; RV32ZBB-LABEL: negative_i16:
-; RV32ZBB:       # %bb.0: # %entry
-; RV32ZBB-NEXT:    lh a1, 0(a0)
-; RV32ZBB-NEXT:    li a2, -90
-; RV32ZBB-NEXT:    blt a1, a2, .LBB3_2
-; RV32ZBB-NEXT:  # %bb.1: # %small
-; RV32ZBB-NEXT:    addi a0, a0, 1
-; RV32ZBB-NEXT:    ret
-; RV32ZBB-NEXT:  .LBB3_2: # %check
-; RV32ZBB-NEXT:    lui a2, 16
-; RV32ZBB-NEXT:    zext.h a3, a1
-; RV32ZBB-NEXT:    addi a2, a2, -96
-; RV32ZBB-NEXT:    bltu a2, a3, .LBB3_4
-; RV32ZBB-NEXT:  # %bb.3: # %large
-; RV32ZBB-NEXT:    add a0, a0, a1
-; RV32ZBB-NEXT:    addi a0, a0, -94
-; RV32ZBB-NEXT:    ret
-; RV32ZBB-NEXT:  .LBB3_4: # %middle
-; RV32ZBB-NEXT:    addi a0, a0, 2
-; RV32ZBB-NEXT:    ret
-;
-; RV64ZBB-LABEL: negative_i16:
-; RV64ZBB:       # %bb.0: # %entry
-; RV64ZBB-NEXT:    lh a1, 0(a0)
-; RV64ZBB-NEXT:    li a2, -90
-; RV64ZBB-NEXT:    blt a1, a2, .LBB3_2
-; RV64ZBB-NEXT:  # %bb.1: # %small
-; RV64ZBB-NEXT:    addi a0, a0, 1
-; RV64ZBB-NEXT:    ret
-; RV64ZBB-NEXT:  .LBB3_2: # %check
-; RV64ZBB-NEXT:    lui a2, 16
-; RV64ZBB-NEXT:    zext.h a3, a1
-; RV64ZBB-NEXT:    addi a2, a2, -96
-; RV64ZBB-NEXT:    bltu a2, a3, .LBB3_4
-; RV64ZBB-NEXT:  # %bb.3: # %large
-; RV64ZBB-NEXT:    add a0, a0, a1
-; RV64ZBB-NEXT:    addi a0, a0, -94
-; RV64ZBB-NEXT:    ret
-; RV64ZBB-NEXT:  .LBB3_4: # %middle
-; RV64ZBB-NEXT:    addi a0, a0, 2
-; RV64ZBB-NEXT:    ret
+; CHECK-LABEL: negative_i16:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    lh a1, 0(a0)
+; CHECK-NEXT:    li a2, -90
+; CHECK-NEXT:    blt a1, a2, .LBB3_2
+; CHECK-NEXT:  # %bb.1: # %small
+; CHECK-NEXT:    addi a0, a0, 1
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB3_2: # %check
+; CHECK-NEXT:    li a2, -96
+; CHECK-NEXT:    bltu a2, a1, .LBB3_4
+; CHECK-NEXT:  # %bb.3: # %large
+; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    addi a0, a0, -94
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB3_4: # %middle
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    ret
 entry:
   %x = load i16, ptr %p, align 2
   %wide = sext i16 %x to iXLen
@@ -306,9 +174,8 @@ define ptr @swapped_i8(ptr %p) {
 ; CHECK-NEXT:    addi a0, a0, 1
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB4_2: # %check
-; CHECK-NEXT:    zext.b a2, a1
-; CHECK-NEXT:    li a3, 96
-; CHECK-NEXT:    bltu a2, a3, .LBB4_4
+; CHECK-NEXT:    li a2, 96
+; CHECK-NEXT:    bltu a1, a2, .LBB4_4
 ; CHECK-NEXT:  # %bb.3: # %large
 ; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    addi a0, a0, -94
@@ -447,89 +314,44 @@ declare i32 @consume_zero_i8(i8 zeroext)
 declare i32 @consume_both_i8(i8 signext, i8 zeroext)
 
 define i32 @abi_sign_i8(ptr %p, i32 %gate) {
-; RV32I-LABEL: abi_sign_i8:
-; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    lbu a0, 0(a0)
-; RV32I-NEXT:    beqz a1, .LBB8_2
-; RV32I-NEXT:  # %bb.1: # %check
-; RV32I-NEXT:    sltiu a0, a0, 161
-; RV32I-NEXT:    ret
-; RV32I-NEXT:  .LBB8_2: # %call
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    .cfi_def_cfa_offset 16
-; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    .cfi_offset ra, -4
-; RV32I-NEXT:    slli a0, a0, 24
-; RV32I-NEXT:    srai a0, a0, 24
-; RV32I-NEXT:    call consume_sign_i8
-; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    .cfi_restore ra
-; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    .cfi_def_cfa_offset 0
-; RV32I-NEXT:    ret
+; RV32-LABEL: abi_sign_i8:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    lb a0, 0(a0)
+; RV32-NEXT:    beqz a1, .LBB8_2
+; RV32-NEXT:  # %bb.1: # %check
+; RV32-NEXT:    sltiu a0, a0, -95
+; RV32-NEXT:    ret
+; RV32-NEXT:  .LBB8_2: # %call
+; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    .cfi_def_cfa_offset 16
+; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    .cfi_offset ra, -4
+; RV32-NEXT:    call consume_sign_i8
+; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    .cfi_restore ra
+; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
+; RV32-NEXT:    ret
 ;
-; RV64I-LABEL: abi_sign_i8:
-; RV64I:       # %bb.0: # %entry
-; RV64I-NEXT:    lbu a0, 0(a0)
-; RV64I-NEXT:    sext.w a1, a1
-; RV64I-NEXT:    beqz a1, .LBB8_2
-; RV64I-NEXT:  # %bb.1: # %check
-; RV64I-NEXT:    sltiu a0, a0, 161
-; RV64I-NEXT:    ret
-; RV64I-NEXT:  .LBB8_2: # %call
-; RV64I-NEXT:    addi sp, sp, -16
-; RV64I-NEXT:    .cfi_def_cfa_offset 16
-; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    .cfi_offset ra, -8
-; RV64I-NEXT:    slli a0, a0, 56
-; RV64I-NEXT:    srai a0, a0, 56
-; RV64I-NEXT:    call consume_sign_i8
-; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    .cfi_restore ra
-; RV64I-NEXT:    addi sp, sp, 16
-; RV64I-NEXT:    .cfi_def_cfa_offset 0
-; RV64I-NEXT:    ret
-;
-; RV32ZBB-LABEL: abi_sign_i8:
-; RV32ZBB:       # %bb.0: # %entry
-; RV32ZBB-NEXT:    lbu a0, 0(a0)
-; RV32ZBB-NEXT:    beqz a1, .LBB8_2
-; RV32ZBB-NEXT:  # %bb.1: # %check
-; RV32ZBB-NEXT:    sltiu a0, a0, 161
-; RV32ZBB-NEXT:    ret
-; RV32ZBB-NEXT:  .LBB8_2: # %call
-; RV32ZBB-NEXT:    addi sp, sp, -16
-; RV32ZBB-NEXT:    .cfi_def_cfa_offset 16
-; RV32ZBB-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32ZBB-NEXT:    .cfi_offset ra, -4
-; RV32ZBB-NEXT:    sext.b a0, a0
-; RV32ZBB-NEXT:    call consume_sign_i8
-; RV32ZBB-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32ZBB-NEXT:    .cfi_restore ra
-; RV32ZBB-NEXT:    addi sp, sp, 16
-; RV32ZBB-NEXT:    .cfi_def_cfa_offset 0
-; RV32ZBB-NEXT:    ret
-;
-; RV64ZBB-LABEL: abi_sign_i8:
-; RV64ZBB:       # %bb.0: # %entry
-; RV64ZBB-NEXT:    lbu a0, 0(a0)
-; RV64ZBB-NEXT:    sext.w a1, a1
-; RV64ZBB-NEXT:    beqz a1, .LBB8_2
-; RV64ZBB-NEXT:  # %bb.1: # %check
-; RV64ZBB-NEXT:    sltiu a0, a0, 161
-; RV64ZBB-NEXT:    ret
-; RV64ZBB-NEXT:  .LBB8_2: # %call
-; RV64ZBB-NEXT:    addi sp, sp, -16
-; RV64ZBB-NEXT:    .cfi_def_cfa_offset 16
-; RV64ZBB-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64ZBB-NEXT:    .cfi_offset ra, -8
-; RV64ZBB-NEXT:    sext.b a0, a0
-; RV64ZBB-NEXT:    call consume_sign_i8
-; RV64ZBB-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64ZBB-NEXT:    .cfi_restore ra
-; RV64ZBB-NEXT:    addi sp, sp, 16
-; RV64ZBB-NEXT:    .cfi_def_cfa_offset 0
-; RV64ZBB-NEXT:    ret
+; RV64-LABEL: abi_sign_i8:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    lb a0, 0(a0)
+; RV64-NEXT:    sext.w a1, a1
+; RV64-NEXT:    beqz a1, .LBB8_2
+; RV64-NEXT:  # %bb.1: # %check
+; RV64-NEXT:    sltiu a0, a0, -95
+; RV64-NEXT:    ret
+; RV64-NEXT:  .LBB8_2: # %call
+; RV64-NEXT:    addi sp, sp, -16
+; RV64-NEXT:    .cfi_def_cfa_offset 16
+; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    .cfi_offset ra, -8
+; RV64-NEXT:    call consume_sign_i8
+; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    .cfi_restore ra
+; RV64-NEXT:    addi sp, sp, 16
+; RV64-NEXT:    .cfi_def_cfa_offset 0
+; RV64-NEXT:    ret
 entry:
   %x = load i8, ptr %p
   %choose = icmp eq i32 %gate, 0
@@ -766,7 +588,6 @@ define ptr @signed_and_samesign_zext_nneg_i8(ptr %p) {
 ; CHECK-NEXT:    addi a0, a0, 1
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB13_2: # %check
-; CHECK-NEXT:    zext.b a1, a1
 ; CHECK-NEXT:    li a2, 96
 ; CHECK-NEXT:    bltu a1, a2, .LBB13_4
 ; CHECK-NEXT:  # %bb.3: # %large
@@ -898,74 +719,77 @@ compare:
   ret i32 %r
 }
 
-; A variable RHS exercises extension choices on both the signed and unsigned
-; paths.
+; With a variable RHS, a signed export saves work on the signed path but
+; introduces masking on the unsigned path. Without Zbb, this currently costs
+; one more static instruction than a zero-extended export.
 define i32 @zcount_16_0_same(ptr %p, i16 %rhs, i1 %gate) {
 ; RV32I-LABEL: zcount_16_0_same:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    lhu a0, 0(a0)
-; RV32I-NEXT:    slli a1, a1, 16
+; RV32I-NEXT:    lh a0, 0(a0)
 ; RV32I-NEXT:    andi a2, a2, 1
 ; RV32I-NEXT:    beqz a2, .LBB16_2
 ; RV32I-NEXT:  # %bb.1: # %extended
-; RV32I-NEXT:    slli a0, a0, 16
+; RV32I-NEXT:    slli a1, a1, 16
 ; RV32I-NEXT:    srai a1, a1, 16
-; RV32I-NEXT:    srai a0, a0, 16
 ; RV32I-NEXT:    slt a0, a0, a1
 ; RV32I-NEXT:    neg a0, a0
 ; RV32I-NEXT:    ret
 ; RV32I-NEXT:  .LBB16_2: # %compare
-; RV32I-NEXT:    srli a1, a1, 16
+; RV32I-NEXT:    lui a2, 16
+; RV32I-NEXT:    addi a2, a2, -1
+; RV32I-NEXT:    and a1, a1, a2
+; RV32I-NEXT:    and a0, a0, a2
 ; RV32I-NEXT:    sltu a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: zcount_16_0_same:
 ; RV64I:       # %bb.0: # %entry
-; RV64I-NEXT:    lhu a0, 0(a0)
-; RV64I-NEXT:    slli a1, a1, 48
+; RV64I-NEXT:    lh a0, 0(a0)
 ; RV64I-NEXT:    andi a2, a2, 1
 ; RV64I-NEXT:    beqz a2, .LBB16_2
 ; RV64I-NEXT:  # %bb.1: # %extended
-; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    slli a1, a1, 48
 ; RV64I-NEXT:    srai a1, a1, 48
-; RV64I-NEXT:    srai a0, a0, 48
 ; RV64I-NEXT:    slt a0, a0, a1
 ; RV64I-NEXT:    neg a0, a0
 ; RV64I-NEXT:    ret
 ; RV64I-NEXT:  .LBB16_2: # %compare
-; RV64I-NEXT:    srli a1, a1, 48
+; RV64I-NEXT:    lui a2, 16
+; RV64I-NEXT:    addi a2, a2, -1
+; RV64I-NEXT:    and a1, a1, a2
+; RV64I-NEXT:    and a0, a0, a2
 ; RV64I-NEXT:    sltu a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV32ZBB-LABEL: zcount_16_0_same:
 ; RV32ZBB:       # %bb.0: # %entry
-; RV32ZBB-NEXT:    lhu a0, 0(a0)
+; RV32ZBB-NEXT:    lh a0, 0(a0)
 ; RV32ZBB-NEXT:    andi a2, a2, 1
 ; RV32ZBB-NEXT:    beqz a2, .LBB16_2
 ; RV32ZBB-NEXT:  # %bb.1: # %extended
 ; RV32ZBB-NEXT:    sext.h a1, a1
-; RV32ZBB-NEXT:    sext.h a0, a0
 ; RV32ZBB-NEXT:    slt a0, a0, a1
 ; RV32ZBB-NEXT:    neg a0, a0
 ; RV32ZBB-NEXT:    ret
 ; RV32ZBB-NEXT:  .LBB16_2: # %compare
 ; RV32ZBB-NEXT:    zext.h a1, a1
+; RV32ZBB-NEXT:    zext.h a0, a0
 ; RV32ZBB-NEXT:    sltu a0, a0, a1
 ; RV32ZBB-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: zcount_16_0_same:
 ; RV64ZBB:       # %bb.0: # %entry
-; RV64ZBB-NEXT:    lhu a0, 0(a0)
+; RV64ZBB-NEXT:    lh a0, 0(a0)
 ; RV64ZBB-NEXT:    andi a2, a2, 1
 ; RV64ZBB-NEXT:    beqz a2, .LBB16_2
 ; RV64ZBB-NEXT:  # %bb.1: # %extended
 ; RV64ZBB-NEXT:    sext.h a1, a1
-; RV64ZBB-NEXT:    sext.h a0, a0
 ; RV64ZBB-NEXT:    slt a0, a0, a1
 ; RV64ZBB-NEXT:    neg a0, a0
 ; RV64ZBB-NEXT:    ret
 ; RV64ZBB-NEXT:  .LBB16_2: # %compare
 ; RV64ZBB-NEXT:    zext.h a1, a1
+; RV64ZBB-NEXT:    zext.h a0, a0
 ; RV64ZBB-NEXT:    sltu a0, a0, a1
 ; RV64ZBB-NEXT:    ret
 entry:
