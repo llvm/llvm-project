@@ -61,3 +61,47 @@ func.func @vector_multi_reduction_masked(%arg0: vector<2x4xf32>, %acc: vector<2x
 //  INNER-PARALLEL: %[[INNERMASK:.+]] = vector.extract %[[TPMASK]][0] : vector<2xi1> from vector<4x2xi1>
 //  INNER-PARALLEL: %[[REDUCED:.+]] = arith.mulf %[[INNERVEC]], %[[ACC]] : vector<2xf32>
 //  INNER-PARALLEL: arith.select %[[INNERMASK]], %[[REDUCED]], %[[ACC]] : vector<2xi1>, vector<2xf32>
+
+// -----
+
+//       ALL-LABEL: @negative_multi_reduction_scalable_outer
+//        ALL-SAME: %[[INPUT:.+]]: vector<[2]x4xf32>, %[[ACC:.+]]: vector<[2]xf32>
+// INNER-REDUCTION: vector.multi_reduction <mul>, %[[INPUT]], %[[ACC]] [1] : vector<[2]x4xf32> to vector<[2]xf32>
+//  INNER-PARALLEL: vector.transpose %[[INPUT]], [1, 0] : vector<[2]x4xf32> to vector<4x[2]xf32>
+func.func @negative_multi_reduction_scalable_outer(%arg0: vector<[2]x4xf32>, %acc: vector<[2]xf32>) -> vector<[2]xf32> {
+    %0 = vector.multi_reduction <mul>, %arg0, %acc [1] : vector<[2]x4xf32> to vector<[2]xf32>
+    return %0 : vector<[2]xf32>
+}
+
+// -----
+
+//       ALL-LABEL: @negative_multi_reduction_scalable_outer_reduce
+//        ALL-SAME: %[[INPUT:.+]]: vector<[2]x4xf32>, %[[ACC:.+]]: vector<4xf32>
+// INNER-REDUCTION: vector.transpose %[[INPUT]], [1, 0] : vector<[2]x4xf32> to vector<4x[2]xf32>
+//  INNER-PARALLEL: vector.multi_reduction <mul>, %[[INPUT]], %[[ACC]] [0] : vector<[2]x4xf32> to vector<4xf32>
+func.func @negative_multi_reduction_scalable_outer_reduce(%arg0: vector<[2]x4xf32>, %acc: vector<4xf32>) -> vector<4xf32> {
+    %0 = vector.multi_reduction <mul>, %arg0, %acc [0] : vector<[2]x4xf32> to vector<4xf32>
+    return %0 : vector<4xf32>
+}
+
+// -----
+
+//       ALL-LABEL: @negative_multi_reduction_scalable_outer_masked
+//        ALL-SAME: %[[INPUT:.+]]: vector<[2]x4xf32>, %[[ACC:.+]]: vector<[2]xf32>, %[[MASK:.+]]: vector<[2]x4xi1>
+// INNER-REDUCTION: vector.mask %[[MASK]] { vector.multi_reduction <mul>, %[[INPUT]], %[[ACC]] [1] : vector<[2]x4xf32> to vector<[2]xf32> } : vector<[2]x4xi1> -> vector<[2]xf32>
+//  INNER-PARALLEL: vector.transpose %[[MASK]], [1, 0] : vector<[2]x4xi1> to vector<4x[2]xi1>
+func.func @negative_multi_reduction_scalable_outer_masked(%arg0: vector<[2]x4xf32>, %acc: vector<[2]xf32>, %mask: vector<[2]x4xi1>) -> vector<[2]xf32> {
+    %0 = vector.mask %mask { vector.multi_reduction <mul>, %arg0, %acc [1] : vector<[2]x4xf32> to vector<[2]xf32> } : vector<[2]x4xi1> -> vector<[2]xf32>
+    return %0 : vector<[2]xf32>
+}
+
+// -----
+
+//       ALL-LABEL: @negative_multi_reduction_scalable_outer_reduce_masked
+//        ALL-SAME: %[[INPUT:.+]]: vector<[2]x4xf32>, %[[ACC:.+]]: vector<4xf32>, %[[MASK:.+]]: vector<[2]x4xi1>
+// INNER-REDUCTION: vector.transpose %[[MASK]], [1, 0] : vector<[2]x4xi1> to vector<4x[2]xi1>
+//  INNER-PARALLEL: vector.mask %[[MASK]] { vector.multi_reduction <mul>, %[[INPUT]], %[[ACC]] [0] : vector<[2]x4xf32> to vector<4xf32> } : vector<[2]x4xi1> -> vector<4xf32>
+func.func @negative_multi_reduction_scalable_outer_reduce_masked(%arg0: vector<[2]x4xf32>, %acc: vector<4xf32>, %mask: vector<[2]x4xi1>) -> vector<4xf32> {
+    %0 = vector.mask %mask { vector.multi_reduction <mul>, %arg0, %acc [0] : vector<[2]x4xf32> to vector<4xf32> } : vector<[2]x4xi1> -> vector<4xf32>
+    return %0 : vector<4xf32>
+}
