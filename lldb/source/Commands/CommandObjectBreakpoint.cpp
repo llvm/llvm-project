@@ -205,7 +205,7 @@ public:
       auto condition_mode =
           static_cast<BreakpointConditionMode>(OptionArgParser::ToOptionEnum(
               option_arg, GetDefinitions()[option_idx].enum_values,
-              lldb::eBreakpointConditionModeDWIM, error));
+              lldb::eBreakpointConditionModeDefault, error));
       m_bp_opts.GetCondition().SetMode(condition_mode);
     } break;
     default:

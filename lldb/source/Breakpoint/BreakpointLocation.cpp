@@ -234,9 +234,16 @@ bool BreakpointLocation::ConditionSaysStop(ExecutionContext &exe_ctx,
     return false;
   }
 
+  // If the condition evaluation mode for this breakpoint is not specified,
+  // use the value from the target setting.
+  lldb::BreakpointConditionMode condition_mode =
+      condition.GetMode() != lldb::eBreakpointConditionModeDefault
+          ? condition.GetMode()
+          : GetTarget().GetBreakpointsConditionMode();
+
   // Attempt to parse the condition using Data Inspection Language (DIL).
   if (condition.GetHash() != m_condition_hash && exe_ctx.HasFrameScope() &&
-      condition.GetMode() != lldb::eBreakpointConditionModeExpr) {
+      condition_mode != lldb::eBreakpointConditionModeExpr) {
     // Lex the expression.
     auto lex_or_err = dil::DILLexer::Create(condition.GetText(), eDILModeFull);
     if (lex_or_err) {
@@ -289,7 +296,7 @@ bool BreakpointLocation::ConditionSaysStop(ExecutionContext &exe_ctx,
     m_condition_hash = 0;
   }
   // DIL evaluation failed, trigger the breakpoint and return the error.
-  if (condition.GetMode() == lldb::eBreakpointConditionModeDIL)
+  if (condition_mode == lldb::eBreakpointConditionModeDIL)
     return true;
 
   // The condition evaluation proceeds to UserExpression here.

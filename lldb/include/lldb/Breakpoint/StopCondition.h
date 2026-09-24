@@ -55,7 +55,7 @@ private:
 
   /// The evaluation mode for this condition.
   lldb::BreakpointConditionMode m_condition_mode =
-      lldb::eBreakpointConditionModeDWIM;
+      lldb::eBreakpointConditionModeDefault;
 };
 
 } // namespace lldb_private

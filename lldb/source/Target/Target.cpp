@@ -37,6 +37,7 @@
 #include "lldb/Host/PosixApi.h"
 #include "lldb/Host/StreamFile.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/Interfaces/ScriptedBreakpointInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedHookInterface.h"
@@ -5777,6 +5778,13 @@ bool TargetProperties::GetBreakpointsConsultPlatformAvoidList() {
   const uint32_t idx = ePropertyBreakpointUseAvoidList;
   return GetPropertyAtIndexAs<bool>(
       idx, g_target_properties[idx].default_uint_value != 0);
+}
+
+BreakpointConditionMode TargetProperties::GetBreakpointsConditionMode() const {
+  const uint32_t idx = ePropertyBreakpointsConditionMode;
+  return GetPropertyAtIndexAs<BreakpointConditionMode>(
+      idx, static_cast<BreakpointConditionMode>(
+               g_target_properties[idx].default_uint_value));
 }
 
 bool TargetProperties::GetUseHexImmediates() const {

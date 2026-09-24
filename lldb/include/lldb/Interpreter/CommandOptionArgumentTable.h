@@ -245,7 +245,7 @@ static constexpr OptionEnumValueElement g_completion_type[] = {
 
 static constexpr OptionEnumValueElement g_breakpoint_condition_mode[] = {
     {lldb::eBreakpointConditionModeDIL, "dil",
-     "Use Data Inspection Language to evaluate the condition."},
+     "Use Data Inspection Language (DIL) to evaluate the condition."},
     {lldb::eBreakpointConditionModeExpr, "expr",
      "Use UserExpression to evaluate the condition."},
     {lldb::eBreakpointConditionModeDWIM, "dwim",
@@ -271,7 +271,7 @@ static constexpr CommandObject::ArgumentTableEntry g_argument_table[] = {
     { lldb::eArgTypeAliasOptions, "options-for-aliased-command", lldb::CompletionType::eNoCompletion, {}, { nullptr, false }, "Command options to be used as part of an alias (abbreviation) definition.  (See 'help commands alias' for more information.)" },
     { lldb::eArgTypeArchitecture, "arch", lldb::eArchitectureCompletion, {}, { arch_helper, true }, "The architecture name, e.g. i386 or x86_64." },
     { lldb::eArgTypeBoolean, "boolean", lldb::CompletionType::eNoCompletion, {}, { nullptr, false }, "A Boolean value: 'true' or 'false'" },
-    { lldb::eArgTypeBreakpointConditionMode, "condition-mode", lldb::CompletionType::eNoCompletion, g_breakpoint_condition_mode, { nullptr, false }, "Specifies the mode to use when evaluating a breakpoint's condition expression." },
+    { lldb::eArgTypeBreakpointConditionMode, "condition-mode", lldb::CompletionType::eNoCompletion, g_breakpoint_condition_mode, { nullptr, false }, "Specifies the mode to use when evaluating the condition expression of breakpoints." },
     { lldb::eArgTypeBreakpointID, "breakpt-id", lldb::CompletionType::eNoCompletion, {}, { BreakpointIDHelpTextCallback, false }, nullptr },
     { lldb::eArgTypeBreakpointIDRange, "breakpt-id-list", lldb::CompletionType::eNoCompletion, {}, { BreakpointIDRangeHelpTextCallback, false }, nullptr },
     { lldb::eArgTypeBreakpointName, "breakpoint-name", lldb::eBreakpointNameCompletion, {}, { BreakpointNameHelpTextCallback, false }, nullptr },

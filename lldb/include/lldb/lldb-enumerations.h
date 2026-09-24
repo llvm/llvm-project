@@ -1636,7 +1636,8 @@ constexpr unsigned BreakpointResolverAllResolversMask =
 enum BreakpointConditionMode {
   eBreakpointConditionModeDIL,
   eBreakpointConditionModeExpr,
-  eBreakpointConditionModeDWIM
+  eBreakpointConditionModeDWIM,
+  eBreakpointConditionModeDefault
 };
 
 } // namespace lldb
