@@ -50,8 +50,7 @@ define void @abs2(i8 %x) {
 define void @abs2_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @abs2_vec(
 ; CHECK-NEXT:    [[ABS:%.*]] = call <2 x i8> @llvm.abs.v2i8(<2 x i8> [[X:%.*]], i1 true)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sge <2 x i8> [[ABS]], zeroinitializer
-; CHECK-NEXT:    call void @use_vec(<2 x i1> [[CMP]])
+; CHECK-NEXT:    call void @use_vec(<2 x i1> splat (i1 true))
 ; CHECK-NEXT:    ret void
 ;
   %abs = call <2 x i8> @llvm.abs.v2i8(<2 x i8> %x, i1 true)

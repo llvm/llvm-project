@@ -66,8 +66,7 @@ define i1 @test_alloca_null_pointer_valid() null_pointer_is_valid {
 ; CHECK-LABEL: define i1 @test_alloca_null_pointer_valid(
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr [[A]], null
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %a = alloca i32
   %cmp = icmp ne ptr %a, null

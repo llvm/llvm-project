@@ -1842,6 +1842,32 @@ void SCCPInstVisitor::visitCmpInst(CmpInst &I) {
       !SCCPSolver::isConstant(ValueState[&I]))
     return;
 
+  if ((V1State.isConstant() || V2State.isConstant())) {
+    auto *FCmp = dyn_cast<FCmpInst>(&I);
+    Value *V1 = SCCPSolver::isConstant(V1State)
+                    ? getConstant(V1State, Op1->getType())
+                    : Op1;
+    Value *V2 = SCCPSolver::isConstant(V2State)
+                    ? getConstant(V2State, Op2->getType())
+                    : Op2;
+    Value *R =
+        FCmp
+            ? simplifyFCmpInst(I.getPredicate(), V1, V2,
+                               FCmp->getFastMathFlags(), SimplifyQuery(DL, &I))
+            : simplifyICmpInst(I.getPredicate(), V1, V2, SimplifyQuery(DL, &I));
+    auto *C = dyn_cast_or_null<Constant>(R);
+    if (C) {
+      // Conservatively assume that the result may be based on operands that may
+      // be undef. Note that we use mergeInValue to combine the constant with
+      // the existing lattice value for I, as different constants might be found
+      // after one of the operands go to overdefined, e.g. due to one operand
+      // being a special floating value.
+      ValueLatticeElement NewV;
+      NewV.markConstant(C, /*MayIncludeUndef=*/true);
+      return (void)mergeInValue(ValueState[&I], &I, NewV);
+    }
+  }
+
   markOverdefined(&I);
 }
 
