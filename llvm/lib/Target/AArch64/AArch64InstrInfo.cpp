@@ -126,18 +126,19 @@ static std::optional<unsigned> getLFIInstSizeInBytes(const MachineInstr &MI) {
     return 16;
   case AArch64::BR:
   case AArch64::BLR:
-    // Indirect branches/calls expand to 2 instructions (guard + br/blr),
-    // plus up to 1 instruction for a flushed deferred LR guard.
-    return 12;
+    // Indirect branches/calls expand to 2 instructions (guard + br/blr).
+    return 8;
   case AArch64::RET:
+    // RET through LR is not rewritten.
+    if (MI.getOperand(0).getReg() == AArch64::LR)
+      return std::nullopt;
     // RET through another register expands to 2 instructions (guard + ret).
-    // RET through LR may also expand to 2 instructions if a deferred LR guard
-    // is flushed before the return.
     return 8;
   case AArch64::RETAA:
   case AArch64::RETAB:
     // Authenticated returns expand to 3 instructions (authenticate + guard +
-    // ret). Any deferred LR guard is discarded.
+    // ret). Any deferred LR guard is discarded, so the flush allowance added
+    // by getInstSizeInBytes is an overestimate here.
     return 12;
   case AArch64::BRAA:
   case AArch64::BRAAZ:
@@ -148,9 +149,15 @@ static std::optional<unsigned> getLFIInstSizeInBytes(const MachineInstr &MI) {
   case AArch64::BLRAB:
   case AArch64::BLRABZ:
     // Authenticated branches/calls expand to 3 instructions (authenticate +
-    // guard + branch), plus up to 1 instruction for a flushed deferred LR
-    // guard.
-    return 16;
+    // guard + branch).
+    return 12;
+  case AArch64::TLSDESC_CALLSEQ:
+    // adrp + ldr + add + blr, where the ldr and blr each gain a guard.
+    return 24;
+  case AArch64::TLSDESC_AUTH_CALLSEQ:
+    // adrp + ldr + add + blraa, where the ldr gains a guard and the blraa
+    // expands to 3 instructions (authenticate + guard + blr).
+    return 28;
   case AArch64::AUTIASP:
   case AArch64::AUTIBSP:
   case AArch64::AUTIAZ:
@@ -196,11 +203,6 @@ static std::optional<unsigned> getLFIInstSizeInBytes(const MachineInstr &MI) {
   if (ModifiesSP || ModifiesLR)
     return 8;
 
-  // Any branch or call instruction may have a deferred LR guard flushed
-  // before it (+4 bytes).
-  if (MI.isBranch() || MI.isCall())
-    return 8;
-
   // Default case: instructions that don't cause expansion.
   // - TP accesses in LFI are a single load/store, so no expansion.
   // - All remaining instructions are not rewritten.
@@ -210,6 +212,20 @@ static std::optional<unsigned> getLFIInstSizeInBytes(const MachineInstr &MI) {
 /// GetInstSize - Return the number of bytes of code the specified
 /// instruction may be.  This returns the maximum number of bytes.
 unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
+  unsigned NumBytes = getInstSizeInBytesImpl(MI);
+
+  // The LFI rewriter may flush a deferred LR guard (1 instruction) before any
+  // control-flow instruction. Bundles are skipped because their size is the
+  // sum of the bundled instructions, which already include this.
+  if (Subtarget.isLFI() && !MI.isBundle() &&
+      (MI.isCall() || MI.isBranch() || MI.isReturn()))
+    NumBytes += 4;
+
+  return NumBytes;
+}
+
+unsigned
+AArch64InstrInfo::getInstSizeInBytesImpl(const MachineInstr &MI) const {
   const MCInstrDesc &Desc = MI.getDesc();
   if (!Desc.isPseudo() && !Subtarget.isLFI()) {
     assert(Desc.getSize() == 4 && "Unexpected instruction size");
@@ -243,6 +259,16 @@ unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
 
   if (!MI.isBundle() && isTailCallReturnInst(MI)) {
     NumBytes = Desc.getSize() ? Desc.getSize() : 4;
+
+    if (STI.isLFI()) {
+      unsigned Opc = MI.getOpcode();
+      if (Opc == AArch64::AUTH_TCRETURN || Opc == AArch64::AUTH_TCRETURN_BTI)
+        // The braa/brab expands to 3 instructions (authenticate + guard + br).
+        NumBytes += 8;
+      else if (MI.getOperand(0).isReg())
+        // Indirect tail calls expand to 2 instructions (guard + br).
+        NumBytes += 4;
+    }
 
     const auto *MFI = MF->getInfo<AArch64FunctionInfo>();
     if (!MFI->shouldSignReturnAddress(*MF))

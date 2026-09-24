@@ -425,7 +425,7 @@ TEST(InstSizes, LFIControlFlow) {
   runChecks(TM.get(), II.get(), "", "  RETAA implicit $lr, implicit $sp\n",
             [](AArch64InstrInfo &II, MachineFunction &MF) {
               auto I = MF.begin()->begin();
-              EXPECT_EQ(12u, II.getInstSizeInBytes(*I)); // RETAA (12)
+              EXPECT_EQ(16u, II.getInstSizeInBytes(*I)); // RETAA (12 + 4)
             });
 
   runChecks(TM.get(), II.get(), "", "  B %bb.0\n",
@@ -448,5 +448,28 @@ TEST(InstSizes, LFIControlFlow) {
             [](AArch64InstrInfo &II, MachineFunction &MF) {
               auto I = MF.begin()->begin();
               EXPECT_EQ(8u, II.getInstSizeInBytes(*I)); // BL (4 + 4)
+            });
+
+  runChecks(TM.get(), II.get(), "",
+            "  TCRETURNdi @sizes, 0, csr_aarch64_aapcs, implicit $sp\n",
+            [](AArch64InstrInfo &II, MachineFunction &MF) {
+              auto I = MF.begin()->begin();
+              EXPECT_EQ(8u, II.getInstSizeInBytes(*I)); // TCRETURNdi (4 + 4)
+            });
+
+  runChecks(TM.get(), II.get(), "",
+            "  TCRETURNri $x0, 0, csr_aarch64_aapcs, implicit $sp\n",
+            [](AArch64InstrInfo &II, MachineFunction &MF) {
+              auto I = MF.begin()->begin();
+              // TCRETURNri (8 + 4)
+              EXPECT_EQ(12u, II.getInstSizeInBytes(*I));
+            });
+
+  runChecks(TM.get(), II.get(), "  @var = thread_local global i32 0\n",
+            "  TLSDESC_CALLSEQ target-flags(aarch64-tls) @var\n",
+            [](AArch64InstrInfo &II, MachineFunction &MF) {
+              auto I = MF.begin()->begin();
+              // TLSDESC_CALLSEQ (24 + 4)
+              EXPECT_EQ(28u, II.getInstSizeInBytes(*I));
             });
 }
