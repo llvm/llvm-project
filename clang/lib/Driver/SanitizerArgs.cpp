@@ -396,6 +396,10 @@ bool SanitizerArgs::needsUbsanRt() const {
       needsCfiCrossDsoDiagRt() || (needsScudoRt() && !requiresMinimalRuntime()))
     return false;
 
+  // CSan provides coverage and is incompatible with UBSan.
+  if (needsCsanRt())
+    return false;
+
   return (Sanitizers.Mask & NeedsUbsanRt & ~TrapSanitizers.Mask) ||
          CoverageFeatures;
 }
@@ -741,10 +745,13 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
                          SanitizerKind::Thread),
       std::make_pair(SanitizerKind::Thread,
                      SanitizerKind::Memory | SanitizerKind::Concurrency),
-      std::make_pair(SanitizerKind::Concurrency,
-                     SanitizerKind::Thread | SanitizerKind::Address |
-                         SanitizerKind::Memory | SanitizerKind::Leak |
-                         SanitizerKind::Undefined),
+      std::make_pair(
+          SanitizerKind::Concurrency,
+          SanitizerKind::Thread | SanitizerKind::Address |
+              SanitizerKind::Memory | SanitizerKind::Leak |
+              SanitizerKind::Undefined | SanitizerKind::Integer |
+              SanitizerKind::ImplicitConversion | SanitizerKind::Nullability |
+              SanitizerKind::LocalBounds | SanitizerKind::FloatDivideByZero),
       std::make_pair(SanitizerKind::Leak,
                      SanitizerKind::Thread | SanitizerKind::Memory),
       std::make_pair(SanitizerKind::KernelAddress,
