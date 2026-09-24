@@ -4606,7 +4606,7 @@ public:
 
   /// Returns true if \p Scope is a valid cooperative matrix scope.
   static constexpr bool isScopeValid(size_t Scope) {
-    return Scope == 3; // CLK_COOPERATIVE_MATRIX_SCOPE_SUBGROUP
+    return Scope == 4; // memory_scope_sub_group
   }
 
   /// Returns true if \p Use is a valid cooperative matrix use.
