@@ -708,9 +708,7 @@ template <class X, class Y>
   return UniquePtrCast<X, Y>::doCast(std::move(Val));
 }
 
-// Provide a forwarding from cast_or_null to cast_if_present for current
-// users. This is deprecated and will be removed in a future patch, use
-// cast_if_present instead.
+// Alias of `cast_if_present`.
 template <class X, class Y> auto cast_or_null(const Y &Val) {
   return cast_if_present<X>(Val);
 }
@@ -747,9 +745,7 @@ template <class X, class Y> auto dyn_cast_if_present(Y *Val) {
   return CastInfo<X, Y *>::doCastIfPossible(detail::unwrapValue(Val));
 }
 
-// Forwards to dyn_cast_if_present to avoid breaking current users. This is
-// deprecated and will be removed in a future patch, use
-// dyn_cast_if_present instead.
+// Alias of `dyn_cast_if_present`.
 template <class X, class Y> auto dyn_cast_or_null(const Y &Val) {
   return dyn_cast_if_present<X>(Val);
 }
