@@ -94,7 +94,9 @@ lldb::TypeSP DWARFASTParserFortran::ParseTypeFromDWARF(
       DWARFAttributes attributes;
       DWARFFormValue form_value;
       Declaration decl;
-      uint32_t encoding = 0;
+      // Unsigned is not a type in Fortran, so it serves as a safe default for
+      // malformed DIEs missing DW_AT_encoding.
+      llvm::dwarf::TypeKind encoding = llvm::dwarf::DW_ATE_unsigned;
       switch (tag) {
       case DW_TAG_base_type: {
         dwarf->GetDIEToType()[die.GetDIE()] = DIE_IS_BEING_PARSED;
@@ -113,7 +115,8 @@ lldb::TypeSP DWARFASTParserFortran::ParseTypeFromDWARF(
               }
               break;
             case DW_AT_encoding:
-              encoding = form_value.Unsigned();
+              encoding =
+                  static_cast<llvm::dwarf::TypeKind>(form_value.Unsigned());
               break;
             case DW_AT_byte_size:
               bit_size = form_value.Unsigned() * 8;
@@ -131,7 +134,8 @@ lldb::TypeSP DWARFASTParserFortran::ParseTypeFromDWARF(
             dwarf->MakeType(die.GetID(), type_name, (bit_size + 7) / 8, nullptr,
                             LLDB_INVALID_UID, Type::eEncodingIsUID, decl,
                             compiler_type, Type::ResolveState::Full);
-      } break;
+        break;
+      }
       default:
         if (log) {
           dwarf->GetObjectFile()->GetModule()->LogMessage(
