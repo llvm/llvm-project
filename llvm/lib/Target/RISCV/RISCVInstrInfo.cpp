@@ -2003,8 +2003,9 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
 
   if (requiresNTLHint(MI)) {
     if (STI.hasStdExtZca()) {
-      if (isCompressibleInst(MI, STI))
-        return 4; // c.ntl.all + c.load/c.store
+      unsigned Size = 0;
+      if (isCompressibleInst(MI, STI, Size))
+        return 2 + Size; // c.ntl.all + c.load/c.store
       return 6;   // c.ntl.all + load/store
     }
     return 8; // ntl.all + load/store
@@ -2015,9 +2016,8 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
 
   if (MI.getParent() && MI.getParent()->getParent()) {
     unsigned Size = 0;
-    if (isCompressibleInst(MI, STI, &Size)) {
+    if (isCompressibleInst(MI, STI, Size))
       return Size;
-    }
   }
 
   switch (Opcode) {

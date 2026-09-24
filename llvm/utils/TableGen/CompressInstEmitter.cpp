@@ -634,8 +634,8 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
   } else if (EType == EmitterType::CheckCompress) {
     FuncH << "static bool isCompressibleInst(const MachineInstr &MI,\n";
     FuncH.indent(31) << "const " << TargetName << "Subtarget &STI,\n";
-    FuncH.indent(31) << "unsigned *Size = nullptr) {\n";
-    FuncH.indent(2) << "if (Size) *Size = 0;\n";
+    FuncH.indent(31) << "unsigned &Size) {\n";
+    FuncH.indent(2) << "Size = 0;\n";
   }
   // HwModeId is used if we have any RegClassByHwMode patterns
   if (!Target.getAllRegClassByHwMode().empty())
@@ -904,8 +904,8 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
       }
     }
     if (EType == EmitterType::CheckCompress) {
-      CodeStream.indent(6) << "if (Size) *Size = "
-                           << Dest.TheDef->getValueAsInt("Size") << ";\n";
+      CodeStream.indent(6) << "Size = " << Dest.TheDef->getValueAsInt("Size")
+                           << ";\n";
     }
     if (CompressOrUncompress)
       CodeStream.indent(6) << "OutInst.setLoc(MI.getLoc());\n";
