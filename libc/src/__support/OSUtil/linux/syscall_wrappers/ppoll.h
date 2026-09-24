@@ -9,11 +9,6 @@
 /// \file
 /// Syscall wrapper for ppoll.
 ///
-/// Note: On Linux, the raw ppoll syscall modifies its timeout argument to
-/// return the remaining time if interrupted. Therefore, this wrapper accepts
-/// a mutable timespec pointer. The POSIX ppoll entrypoint is responsible for
-/// making a copy to prevent mutating the user's const timeout argument.
-///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SRC___SUPPORT_OSUTIL_SYSCALL_WRAPPERS_PPOLL_H
@@ -33,26 +28,30 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
+// Note: On Linux, the raw ppoll syscall modifies its timeout argument to
+// return the remaining time if interrupted. Therefore, this wrapper accepts
+// a mutable timespec pointer. The POSIX ppoll entrypoint is responsible for
+// making a copy to prevent mutating the user's const timeout argument.
 LIBC_INLINE ErrorOr<int> ppoll(struct pollfd *fds, nfds_t nfds,
                                struct timespec *__restrict tmo_p,
                                const sigset_t *__restrict sigmask) {
   // The kernel expects the signal mask size in bytes, not the number of
   // signals. NSIG is the signal count, so NSIG / 8 gives the byte size.
-  const size_t sigsetsize = NSIG / 8;
+  const size_t SIGSETSIZE = NSIG / 8;
 
 #if defined(SYS_ppoll_time64)
   static_assert(
       sizeof(time_t) == sizeof(int64_t),
       "SYS_ppoll_time64 requires struct timespec with 64-bit members.");
   return syscall_checked<int>(SYS_ppoll_time64, fds, nfds, tmo_p, sigmask,
-                              sigsetsize);
+                              SIGSETSIZE);
 #elif defined(SYS_ppoll)
   static_assert(
       sizeof(timespec::tv_nsec) == sizeof(long),
       "This legacy syscall fallback is only safe on platforms where tv_nsec "
       "matches the register size (long). It is unsafe on 32-bit platforms "
       "with 64-bit tv_nsec.");
-  return syscall_checked<int>(SYS_ppoll, fds, nfds, tmo_p, sigmask, sigsetsize);
+  return syscall_checked<int>(SYS_ppoll, fds, nfds, tmo_p, sigmask, SIGSETSIZE);
 #else
 #error "ppoll and ppoll_time64 syscalls not available."
 #endif

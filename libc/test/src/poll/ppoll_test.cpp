@@ -76,8 +76,8 @@ TEST_F(LlvmLibcPPollTest, TimeoutNotMutated) {
   timer.it_value.tv_usec = 100000; // 100ms
   ASSERT_EQ(LIBC_NAMESPACE::setitimer(ITIMER_REAL, &timer, nullptr), 0);
 
-  const timespec orig_ts{1, 0}; // 1 second
-  timespec ts = orig_ts;
+  const timespec ORIG_TS{1, 0}; // 1 second
+  timespec ts = ORIG_TS;
   int ret = LIBC_NAMESPACE::ppoll(nullptr, 0, &ts, nullptr);
   ASSERT_EQ(-1, ret);
   ASSERT_ERRNO_EQ(EINTR);
@@ -86,8 +86,8 @@ TEST_F(LlvmLibcPPollTest, TimeoutNotMutated) {
   // The Linux raw syscall modifies its timeout argument when interrupted by a
   // signal, but POSIX requires that ppoll does not modify it. Verify that the
   // timeout argument was not modified.
-  ASSERT_EQ(ts.tv_sec, orig_ts.tv_sec);
-  ASSERT_EQ(ts.tv_nsec, orig_ts.tv_nsec);
+  ASSERT_EQ(ts.tv_sec, ORIG_TS.tv_sec);
+  ASSERT_EQ(ts.tv_nsec, ORIG_TS.tv_nsec);
 }
 
 TEST_F(LlvmLibcPPollTest, WithSigmask) {
