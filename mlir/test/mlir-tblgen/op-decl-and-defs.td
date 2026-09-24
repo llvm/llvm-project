@@ -169,10 +169,10 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
 // DEFS-LABEL: void AOp::buildPropertiesAndDiscardableAttributes
 // DEFS:   Properties &properties = odsState.getOrAddProperties<Properties>();
 // DEFS-NEXT:   populateDefaultProperties(odsState.name, properties);
-// DEFS:     if (name == "attr1" || name == "some_attr2")
-// DEFS:       inherentAttributes.push_back(attr);
-// DEFS:       odsState.addAttribute(attr.getName(), attr.getValue());
-// DEFS:   if (::mlir::failed(setPropertiesFromAttr(
+// DEFS:   const ::llvm::StringRef inherentNames[] = {"attr1", "some_attr2"};
+// DEFS:   ::mlir::detail::splitPropertiesAndDiscardableAttributes(
+// DEFS:   return setPropertiesFromAttr(properties, inherentAttrs,
+
 
 // Check that `getAttrDictionary()` is used when not using properties.
 
