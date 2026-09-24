@@ -1804,14 +1804,14 @@ define <8 x float> @test_mm256_set_ps(float %a0, float %a1, float %a2, float %a3
 ; X86:       # %bb.0:
 ; X86-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X86-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
+; X86-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],zero,zero
 ; X86-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0],xmm0[3]
 ; X86-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[0]
 ; X86-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; X86-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[2,3]
+; X86-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],xmm2[0],zero,zero
 ; X86-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
 ; X86-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm2[0],xmm1[3]
 ; X86-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
@@ -1821,10 +1821,10 @@ define <8 x float> @test_mm256_set_ps(float %a0, float %a1, float %a2, float %a3
 ;
 ; X64-LABEL: test_mm256_set_ps:
 ; X64:       # %bb.0:
-; X64-NEXT:    vinsertps {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[2,3]
+; X64-NEXT:    vinsertps {{.*#+}} xmm2 = xmm3[0],xmm2[0],zero,zero
 ; X64-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0,1],xmm1[0],xmm2[3]
 ; X64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
-; X64-NEXT:    vinsertps {{.*#+}} xmm1 = xmm7[0],xmm6[0],xmm7[2,3]
+; X64-NEXT:    vinsertps {{.*#+}} xmm1 = xmm7[0],xmm6[0],zero,zero
 ; X64-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm5[0],xmm1[3]
 ; X64-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],xmm4[0]
 ; X64-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
@@ -2415,14 +2415,14 @@ define <8 x float> @test_mm256_setr_ps(float %a0, float %a1, float %a2, float %a
 ; X86-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
 ; X86-NEXT:    vmovss {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; X86-NEXT:    vinsertps {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[2,3]
+; X86-NEXT:    vinsertps {{.*#+}} xmm2 = xmm3[0],xmm2[0],zero,zero
 ; X86-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0,1],xmm1[0],xmm2[3]
 ; X86-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
 ; X86-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
 ; X86-NEXT:    vmovss {{.*#+}} xmm3 = mem[0],zero,zero,zero
 ; X86-NEXT:    vmovss {{.*#+}} xmm4 = mem[0],zero,zero,zero
-; X86-NEXT:    vinsertps {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[2,3]
+; X86-NEXT:    vinsertps {{.*#+}} xmm3 = xmm4[0],xmm3[0],zero,zero
 ; X86-NEXT:    vinsertps {{.*#+}} xmm2 = xmm3[0,1],xmm2[0],xmm3[3]
 ; X86-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0,1,2],xmm1[0]
 ; X86-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
@@ -2430,10 +2430,10 @@ define <8 x float> @test_mm256_setr_ps(float %a0, float %a1, float %a2, float %a
 ;
 ; X64-LABEL: test_mm256_setr_ps:
 ; X64:       # %bb.0:
-; X64-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0],xmm5[0],xmm4[2,3]
+; X64-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0],xmm5[0],zero,zero
 ; X64-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0,1],xmm6[0],xmm4[3]
 ; X64-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0,1,2],xmm7[0]
-; X64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
+; X64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],zero,zero
 ; X64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],xmm2[0],xmm0[3]
 ; X64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm3[0]
 ; X64-NEXT:    vinsertf128 $1, %xmm4, %ymm0, %ymm0
