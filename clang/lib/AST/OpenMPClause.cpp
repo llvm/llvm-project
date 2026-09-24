@@ -20,6 +20,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/TargetInfo.h"
+#include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -3126,14 +3127,28 @@ void OMPTraitInfo::getAsVariantMatchInfo(ASTContext &ASTCtx,
                    TraitProperty::user_condition_unknown &&
                "Ill-formed user condition, expected unknown trait property!");
 
+        // Profile the original expression so equally valued template arguments
+        // do not erase distinctions between different parameters. Canonical
+        // profiles also distinguish declarations with the same printed name.
+        // Compute this after loading the AST: profiles contain local pointers
+        // and cannot be compared with profiles serialized by another process.
+        assert(Selector.OriginalCondition && "missing original condition");
+        llvm::FoldingSetNodeID ID;
+        Selector.OriginalCondition->IgnoreParenImpCasts()->Profile(
+            ID, ASTCtx, /*Canonical=*/true);
+        llvm::FoldingSetNodeIDRef Profile = ID.Intern(ASTCtx.getAllocator());
+        // Keep the full profile to avoid hash collisions in subset checks.
+        StringRef ConditionIdentity(
+            reinterpret_cast<const char *>(Profile.data()),
+            Profile.size() * sizeof(unsigned));
+
         if (std::optional<APSInt> CondVal =
                 Selector.ScoreOrCondition->getIntegerConstantExpr(ASTCtx))
           VMI.addTrait(CondVal->isZero() ? TraitProperty::user_condition_false
                                          : TraitProperty::user_condition_true,
-                       Selector.Properties.front().RawString);
+                       ConditionIdentity);
         else
-          VMI.addTrait(TraitProperty::user_condition_false,
-                       Selector.Properties.front().RawString);
+          VMI.addTrait(TraitProperty::user_condition_false, ConditionIdentity);
         continue;
       }
 
