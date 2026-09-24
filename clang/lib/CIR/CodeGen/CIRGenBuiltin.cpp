@@ -2388,8 +2388,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     if (builtinID == Builtin::BImempcpy ||
         builtinID == Builtin::BI__builtin_mempcpy) {
       mlir::Value destPtr = destCast.getPointer();
-      mlir::Value end =
-          builder.createPtrStride(loc, destPtr, sizeVal);
+      mlir::Value end = builder.createPtrStride(loc, destPtr, sizeVal);
       return RValue::get(end);
     }
     return RValue::get(dest.getPointer());
