@@ -182,16 +182,14 @@ public:
   /// If a physical register, this returns the register that receives the
   /// exception address on entry to an EH pad.
   Register
-  getExceptionPointerRegister(ExceptionHandling EH,
-                              const Constant *PersonalityFn) const override {
+  getExceptionPointerRegister(const Constant *PersonalityFn) const override {
     return Hexagon::R0;
   }
 
   /// If a physical register, this returns the register that receives the
   /// exception typeid on entry to a landing pad.
   Register
-  getExceptionSelectorRegister(ExceptionHandling EH,
-                               const Constant *PersonalityFn) const override {
+  getExceptionSelectorRegister(const Constant *PersonalityFn) const override {
     return Hexagon::R1;
   }
 

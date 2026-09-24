@@ -85,6 +85,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/MC/MCSchedule.h"
@@ -22294,17 +22295,21 @@ bool ARMTargetLowering::functionArgumentNeedsConsecutiveRegisters(
 }
 
 Register ARMTargetLowering::getExceptionPointerRegister(
-    ExceptionHandling EH, const Constant *PersonalityFn) const {
+    const Constant *PersonalityFn) const {
   // Platforms which do not use SjLj EH may return values in these registers
   // via the personality function.
-  return EH == ExceptionHandling::SjLj ? Register() : ARM::R0;
+  bool IsSjLj = getTargetMachine().getMCAsmInfo().getExceptionHandlingType() ==
+                ExceptionHandling::SjLj;
+  return IsSjLj ? Register() : ARM::R0;
 }
 
 Register ARMTargetLowering::getExceptionSelectorRegister(
-    ExceptionHandling EH, const Constant *PersonalityFn) const {
+    const Constant *PersonalityFn) const {
   // Platforms which do not use SjLj EH may return values in these registers
   // via the personality function.
-  return EH == ExceptionHandling::SjLj ? Register() : ARM::R1;
+  bool IsSjLj = getTargetMachine().getMCAsmInfo().getExceptionHandlingType() ==
+                ExceptionHandling::SjLj;
+  return IsSjLj ? Register() : ARM::R1;
 }
 
 void ARMTargetLowering::initializeSplitCSR(MachineBasicBlock *Entry) const {

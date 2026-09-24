@@ -2146,16 +2146,14 @@ public:
   /// If a physical register, this returns the register that receives the
   /// exception address on entry to an EH pad.
   virtual Register
-  getExceptionPointerRegister(ExceptionHandling EH,
-                              const Constant *PersonalityFn) const {
+  getExceptionPointerRegister(const Constant *PersonalityFn) const {
     return Register();
   }
 
   /// If a physical register, this returns the register that receives the
   /// exception typeid on entry to a landing pad.
   virtual Register
-  getExceptionSelectorRegister(ExceptionHandling EH,
-                               const Constant *PersonalityFn) const {
+  getExceptionSelectorRegister(const Constant *PersonalityFn) const {
     return Register();
   }
 

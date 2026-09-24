@@ -55,12 +55,10 @@ public:
                          EVT VT) const override;
 
   // Exception handling support.
-  Register getExceptionPointerRegister(ExceptionHandling EH,
-                                       const Constant *) const override {
+  Register getExceptionPointerRegister(const Constant *) const override {
     return BPF::R0;
   }
-  Register getExceptionSelectorRegister(ExceptionHandling EH,
-                                        const Constant *) const override {
+  Register getExceptionSelectorRegister(const Constant *) const override {
     return BPF::R0;
   }
 

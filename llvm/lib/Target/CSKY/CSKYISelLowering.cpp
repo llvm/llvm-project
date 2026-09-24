@@ -1225,12 +1225,12 @@ SDValue CSKYTargetLowering::LowerRETURNADDR(SDValue Op,
 }
 
 Register CSKYTargetLowering::getExceptionPointerRegister(
-    ExceptionHandling EH, const Constant *PersonalityFn) const {
+    const Constant *PersonalityFn) const {
   return CSKY::R0;
 }
 
 Register CSKYTargetLowering::getExceptionSelectorRegister(
-    ExceptionHandling EH, const Constant *PersonalityFn) const {
+    const Constant *PersonalityFn) const {
   return CSKY::R1;
 }
 

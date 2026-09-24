@@ -33621,7 +33621,7 @@ Value *AArch64TargetLowering::getSafeStackPointerLocation(
 /// If a physical register, this returns the register that receives the
 /// exception address on entry to an EH pad.
 Register AArch64TargetLowering::getExceptionPointerRegister(
-    ExceptionHandling EH, const Constant *PersonalityFn) const {
+    const Constant *PersonalityFn) const {
   // FIXME: This is a guess. Has this been defined yet?
   return AArch64::X0;
 }
@@ -33629,7 +33629,7 @@ Register AArch64TargetLowering::getExceptionPointerRegister(
 /// If a physical register, this returns the register that receives the
 /// exception typeid on entry to a landing pad.
 Register AArch64TargetLowering::getExceptionSelectorRegister(
-    ExceptionHandling EH, const Constant *PersonalityFn) const {
+    const Constant *PersonalityFn) const {
   // FIXME: This is a guess. Has this been defined yet?
   return AArch64::X1;
 }
