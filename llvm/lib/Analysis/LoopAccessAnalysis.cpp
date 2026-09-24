@@ -1806,7 +1806,8 @@ std::optional<int64_t> llvm::getPointersDiff(Type *ElemTyA, Value *PtrA,
                                              Type *ElemTyB, Value *PtrB,
                                              const DataLayout &DL,
                                              ScalarEvolution &SE,
-                                             bool StrictCheck, bool CheckType) {
+                                             bool StrictCheck, bool CheckType,
+                                             bool ExpensivePtrCheck) {
   assert(PtrA && PtrB && "Expected non-nullptr pointers.");
 
   // Make sure that A and B are different pointers.
@@ -1851,8 +1852,19 @@ std::optional<int64_t> llvm::getPointersDiff(Type *ElemTyA, Value *PtrA,
     // Otherwise compute the distance with SCEV between the base pointers.
     const SCEV *PtrSCEVA = SE.getSCEV(PtrA);
     const SCEV *PtrSCEVB = SE.getSCEV(PtrB);
-    std::optional<APInt> Diff =
-        SE.computeConstantDifference(PtrSCEVB, PtrSCEVA);
+    std::optional<APInt> Diff;
+    if (ExpensivePtrCheck) {
+      const SCEV *MinusSCEV = SE.getMinusSCEV(PtrSCEVB, PtrSCEVA);
+      if (MinusSCEV == SE.getCouldNotCompute())
+        return std::nullopt;
+      ConstantRange DistRange = SE.getSignedRange(MinusSCEV);
+      if (!DistRange.isSingleElement())
+        return std::nullopt;
+      APInt Dist = DistRange.getSingleElement()->sextOrTrunc(IdxWidth);
+      Diff = (OffsetB - OffsetA + Dist).sextOrTrunc(IdxWidth);
+    } else {
+      Diff = SE.computeConstantDifference(PtrSCEVB, PtrSCEVA);
+    }
     if (!Diff)
       return std::nullopt;
     Val = Diff->trySExtValue();
