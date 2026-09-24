@@ -92,22 +92,22 @@ public:
   bool CanUseUndef = true;
   bool AllowEphemerals = false;
 
-  SimplifyQuery(const DataLayout &DL, const Instruction *CXTI = nullptr)
-      : DL(DL), CtxI(CXTI) {}
+  SimplifyQuery(const DataLayout &DL, const Instruction *CtxI = nullptr)
+      : DL(DL), CtxI(CtxI) {}
 
   SimplifyQuery(const DataLayout &DL, const TargetLibraryInfo *TLI,
                 const DominatorTree *DT = nullptr,
                 AssumptionCache *AC = nullptr,
-                const Instruction *CXTI = nullptr, bool UseInstrInfo = true,
+                const Instruction *CtxI = nullptr, bool UseInstrInfo = true,
                 bool CanUseUndef = true, const DomConditionCache *DC = nullptr)
-      : DL(DL), TLI(TLI), DT(DT), AC(AC), CtxI(CXTI), DC(DC), IIQ(UseInstrInfo),
+      : DL(DL), TLI(TLI), DT(DT), AC(AC), CtxI(CtxI), DC(DC), IIQ(UseInstrInfo),
         CanUseUndef(CanUseUndef) {}
 
   SimplifyQuery(const DataLayout &DL, const DominatorTree *DT,
                 AssumptionCache *AC = nullptr,
-                const Instruction *CXTI = nullptr, bool UseInstrInfo = true,
+                const Instruction *CtxI = nullptr, bool UseInstrInfo = true,
                 bool CanUseUndef = true)
-      : DL(DL), DT(DT), AC(AC), CtxI(CXTI), IIQ(UseInstrInfo),
+      : DL(DL), DT(DT), AC(AC), CtxI(CtxI), IIQ(UseInstrInfo),
         CanUseUndef(CanUseUndef) {}
 
   SimplifyQuery getWithInstruction(const Instruction *I) const {
