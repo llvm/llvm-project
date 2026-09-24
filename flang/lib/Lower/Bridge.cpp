@@ -1277,8 +1277,8 @@ public:
     return bridge.getSemanticsContext().FindScope(currentPosition);
   }
 
-  Fortran::lower::pft::Evaluation &getCurrentEvaluation() override final {
-    return getEval();
+  Fortran::lower::pft::Evaluation *getCurrentEvaluation() override final {
+    return evalPtr;
   }
 
   fir::FirOpBuilder &getFirOpBuilder() override final {
@@ -6487,6 +6487,8 @@ private:
   /// Start translation of a function.
   void startNewFunction(Fortran::lower::pft::FunctionLikeUnit &funit) {
     assert(!builder && "expected nullptr");
+    // Specification expressions have no current executable evaluation.
+    evalPtr = nullptr;
     bridge.fctCtx().pushScope();
     bridge.cudaCleanupCtx().pushScope();
     bridge.openAccCtx().pushScope();

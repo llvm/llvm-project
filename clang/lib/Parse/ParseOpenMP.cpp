@@ -28,6 +28,7 @@
 #include "llvm/Frontend/OpenMP/DirectiveNameParser.h"
 #include "llvm/Frontend/OpenMP/OMPAssume.h"
 #include "llvm/Frontend/OpenMP/OMPContext.h"
+#include "llvm/Support/raw_ostream.h"
 #include <climits>
 #include <optional>
 
@@ -1150,12 +1151,16 @@ void Parser::parseOMPContextSelector(
     if (!Condition.isUsable())
       return FinishSelector();
     TISelector.ScoreOrCondition = Condition.get();
-    StringRef ConditionText = Lexer::getSourceText(
-        CharSourceRange::getTokenRange(Condition.get()->getSourceRange()),
-        PP.getSourceManager(), PP.getLangOpts());
+    // Compare expanded expressions, since a macro can be redefined between
+    // selectors. Ignore outer parentheses when recording condition identity.
+    ASTContext &Context = Actions.getASTContext();
+    std::string ConditionText;
+    llvm::raw_string_ostream OS(ConditionText);
+    Condition.get()->IgnoreParenImpCasts()->printPretty(
+        OS, nullptr, Context.getPrintingPolicy());
     TISelector.Properties.push_back(
         {TraitProperty::user_condition_unknown,
-         ConditionText.empty() ? "<condition>" : ConditionText});
+         StringRef(ConditionText).copy(Context.getAllocator())});
     return;
   }
 

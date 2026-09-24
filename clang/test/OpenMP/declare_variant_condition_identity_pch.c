@@ -12,7 +12,7 @@
 // RUN:   -triple x86_64-unknown-linux -x c++ %t/use.c \
 // RUN:   -include-pch %t/conditions-cxx.pch -emit-llvm -o - | FileCheck %s
 
-// Verify that serialization preserves the source identity of folded user
+// Verify that serialization preserves the expanded identity of folded user
 // conditions. Distinct conditions do not form a subset relationship, while
 // identical conditions do.
 
@@ -29,19 +29,29 @@ extern "C" {
 void condition_high_variant(void);
 void condition_low_variant(void);
 
+#define COND 1
 #pragma omp declare variant(condition_high_variant)                       \
-    match(implementation = {vendor(score(100) : llvm)}, user = {condition(1)})
+    match(implementation = {vendor(score(100) : llvm)},                    \
+          user = {condition(COND)})
+#undef COND
+#define COND 2
 #pragma omp declare variant(condition_low_variant)                         \
     match(implementation = {vendor(score(1) : llvm)}, device = {kind(cpu)}, \
-          user = {condition(2)})
+          user = {condition(COND)})
 void distinct_condition_base(void);
+#undef COND
 
+#define FIRST_COND 1
+#define SECOND_COND (1)
 #pragma omp declare variant(condition_high_variant)                       \
-    match(implementation = {vendor(score(100) : llvm)}, user = {condition(1)})
+    match(implementation = {vendor(score(100) : llvm)},                    \
+          user = {condition(FIRST_COND)})
 #pragma omp declare variant(condition_low_variant)                         \
     match(implementation = {vendor(score(1) : llvm)}, device = {kind(cpu)}, \
-          user = {condition(1)})
+          user = {condition(SECOND_COND)})
 void identical_condition_base(void);
+#undef FIRST_COND
+#undef SECOND_COND
 
 #ifdef __cplusplus
 }

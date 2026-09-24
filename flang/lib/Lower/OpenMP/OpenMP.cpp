@@ -1896,6 +1896,9 @@ static void createBodyOfOp(mlir::Operation &op, const OpWithBodyGenInfo &info,
     return {};
   }();
 
+  mlir::SaveStateStack<OpenMPContextFrame> context{
+      info.converter.getStateStack(), info.eval, info.dir, /*isPartial=*/true};
+
   // Mark the earliest insertion point.
   mlir::Operation *marker = insertMarker(firOpBuilder);
 
@@ -2046,6 +2049,9 @@ static void genBodyOfTargetDataOp(
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
   genEntryBlock(firOpBuilder, args.asEntryBlockArgs(), dataOp.getRegion());
+  mlir::SaveStateStack<OpenMPContextFrame> context{
+      converter.getStateStack(), eval, llvm::omp::Directive::OMPD_target_data,
+      /*isPartial=*/true};
   bindEntryBlockArgs(converter, dataOp, args);
   auto argIface = llvm::cast<mlir::omp::BlockArgOpenMPOpInterface>(*dataOp);
   llvm::SmallVector<const semantics::Symbol *> sourceUseDeviceAddrSyms{
@@ -2132,6 +2138,9 @@ static void genBodyOfTargetOp(
 
   mlir::Region &region = targetOp.getRegion();
   genEntryBlock(firOpBuilder, args.asEntryBlockArgs(), region);
+  mlir::SaveStateStack<OpenMPContextFrame> context{
+      converter.getStateStack(), eval, llvm::omp::Directive::OMPD_target,
+      /*isPartial=*/true};
   bindEntryBlockArgs(converter, targetOp, args);
   if (HostEvalInfo *hostEvalInfo = getHostEvalInfoStackTop(converter))
     hostEvalInfo->bindOperands(argIface.getHostEvalBlockArgs());
@@ -5261,6 +5270,9 @@ static mlir::omp::DistributeOp genCompositeDistributeParallelDo(
   parallelArgs.reduction.vars = parallelClauseOps.reductionVars;
   genParallelOp(converter, symTable, semaCtx, eval, loc, queue, parallelItem,
                 parallelClauseOps, parallelArgs, &dsp, /*isComposite=*/true);
+  mlir::SaveStateStack<OpenMPContextFrame> context{
+      converter.getStateStack(), eval, llvm::omp::Directive::OMPD_parallel,
+      /*isPartial=*/true};
 
   // Clause processing.
   mlir::omp::DistributeOperands distributeClauseOps;
@@ -5331,6 +5343,9 @@ static mlir::omp::DistributeOp genCompositeDistributeParallelDoSimd(
   genParallelOp(converter, symTable, semaCtx, eval, loc, queue, parallelItem,
                 parallelClauseOps, parallelArgs, &parallelItemDSP,
                 /*isComposite=*/true);
+  mlir::SaveStateStack<OpenMPContextFrame> context{
+      converter.getStateStack(), eval, llvm::omp::Directive::OMPD_parallel,
+      /*isPartial=*/true};
 
   // Clause processing.
   // Use a shared cache so that both wsloop and simd produce the same SSA
@@ -7427,7 +7442,7 @@ static void genMetadirective(lower::AbstractConverter &converter,
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
   llvm::SmallVector<llvm::omp::TraitProperty, 8> constructTraits;
-  collectEnclosingConstructTraits(converter, eval, constructTraits);
+  collectEnclosingConstructTraits(converter, &eval, constructTraits);
   semantics::omp::OmpVariantMatchContext ompCtx =
       makeVariantMatchContext(builder.getModule(), constructTraits);
 
