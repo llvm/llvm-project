@@ -415,6 +415,10 @@ public:
   /// signed system implies it or because ValueTracking can prove it.
   bool isKnownNonNegative(Value *V);
 
+  /// Returns true if \p V is known to be positive, either because the signed
+  /// system implies it or because ValueTracking can prove it.
+  bool isKnownPositive(Value *V);
+
   void addFact(CmpInst::Predicate Pred, Value *A, Value *B, unsigned NumIn,
                unsigned NumOut, SmallVectorImpl<StackEntry> &DFSInStack);
 
@@ -1024,6 +1028,13 @@ bool ConstraintInfo::isKnownNonNegative(Value *V) {
          doesHold(CmpInst::ICMP_SGE, V, ConstantInt::get(V->getType(), 0));
 }
 
+bool ConstraintInfo::isKnownPositive(Value *V) {
+  if (auto *CI = dyn_cast<ConstantInt>(V))
+    return CI->getValue().isStrictlyPositive();
+  return ::isKnownPositive(V, DL) ||
+         doesHold(CmpInst::ICMP_SGT, V, ConstantInt::get(V->getType(), 0));
+}
+
 void ConstraintInfo::transferToOtherSystem(
     CmpInst::Predicate Pred, Value *A, Value *B, unsigned NumIn,
     unsigned NumOut, SmallVectorImpl<StackEntry> &DFSInStack) {
@@ -1595,17 +1606,20 @@ void State::addInfoFor(BasicBlock &BB) {
     }
 
     // Add facts from unsigned division, remainder and logical shift right, and
-    // from signed remainder.
+    // from signed division and remainder.
     //   urem x, n: result < n  and  result <= x
     //   udiv x, n: result <= x
     //   lshr x, n: result <= x
     //   srem x, n: result >= 0 and result <= x, if x >= 0
     //              result < n,                  if n > 0
+    //   sdiv x, n: result >= 0 and result <= x, if x >= 0 and n > 0
+    //              result >= 0 and result < x,  if x > 0 and n > 1
     if (auto *BO = dyn_cast<BinaryOperator>(&I)) {
       if ((BO->getOpcode() == Instruction::URem ||
            BO->getOpcode() == Instruction::UDiv ||
            BO->getOpcode() == Instruction::LShr ||
-           BO->getOpcode() == Instruction::SRem) &&
+           BO->getOpcode() == Instruction::SRem ||
+           BO->getOpcode() == Instruction::SDiv) &&
           isGuaranteedNotToBePoison(BO))
         WorkList.push_back(FactOrCheck::getInstFact(DT.getNode(&BB), BO));
     }
@@ -2592,6 +2606,19 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
             // 1
             AddFact(CmpInst::ICMP_SLT, BO, N);
           }
+          continue;
+        }
+        if (BO->getOpcode() == Instruction::SDiv) {
+          Value *X = BO->getOperand(0);
+          Value *N = BO->getOperand(1);
+          if (!Info.isKnownNonNegative(X) || !Info.isKnownPositive(N))
+            continue;
+
+          bool IsStrict = Info.isKnownPositive(X) &&
+                          Info.doesHold(CmpInst::ICMP_SGT, N,
+                                        ConstantInt::get(N->getType(), 1));
+          AddFact(CmpInst::ICMP_SGE, BO, Constant::getNullValue(BO->getType()));
+          AddFact(IsStrict ? CmpInst::ICMP_SLT : CmpInst::ICMP_SLE, BO, X);
           continue;
         }
       }

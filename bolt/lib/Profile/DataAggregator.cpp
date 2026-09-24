@@ -93,7 +93,7 @@ static cl::list<unsigned long long>
 static cl::opt<bool> ImputeTraceFallthrough(
     "impute-trace-fall-through",
     cl::desc("impute missing fall-throughs for branch-only traces"),
-    cl::Optional, cl::cat(AggregatorCategory));
+    cl::cat(AggregatorCategory));
 
 static cl::opt<bool>
 IgnoreBuildID("ignore-build-id",
@@ -110,7 +110,6 @@ static cl::opt<unsigned long long>
 MaxSamples("max-samples",
   cl::init(-1ULL),
   cl::desc("maximum number of samples to read from LBR profile"),
-  cl::Optional,
   cl::Hidden,
   cl::cat(AggregatorCategory));
 
