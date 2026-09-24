@@ -61,15 +61,15 @@ TEST(HLSLInterpolationTest, SamplingLocations) {
   };
   // Non-location keywords must not imply an explicit center modifier or change
   // sampling-location precedence, even in invalid interpolation combinations.
-  for (const auto &Case : Cases)
+  for (const auto &[CaseModifiers, Expected] : Cases)
     for (Mod Other :
          {Mod::None, Mod::NoInterpolation, Mod::Linear, Mod::NoPerspective,
           Mod::Linear | Mod::NoPerspective, Mod::NoInterpolation | Mod::Linear,
           Mod::NoInterpolation | Mod::NoPerspective,
           Mod::NoInterpolation | Mod::Linear | Mod::NoPerspective}) {
-      Mod Modifiers = Case.Modifiers | Other;
+      Mod Modifiers = CaseModifiers | Other;
       SCOPED_TRACE(static_cast<unsigned>(Modifiers));
-      EXPECT_EQ(getInterpolationSamplingLocation(Modifiers), Case.Expected);
+      EXPECT_EQ(getInterpolationSamplingLocation(Modifiers), Expected);
     }
 }
 
