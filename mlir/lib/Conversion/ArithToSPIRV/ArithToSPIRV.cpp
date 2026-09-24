@@ -1502,6 +1502,7 @@ void mlir::arith::populateArithToSPIRVPatterns(
     TypeCastingOpPattern<arith::ExtFOp, spirv::FConvertOp>,
     TruncIPattern, TruncII1Pattern,
     TypeCastingOpPattern<arith::TruncFOp, spirv::FConvertOp>,
+    TypeCastingOpPattern<arith::ConvertFOp, spirv::FConvertOp>,
     IntToFPPattern<arith::UIToFPOp, spirv::ConvertUToFOp, false>,
     BoolToValuePattern<arith::UIToFPOp>,
     IntToFPPattern<arith::SIToFPOp, spirv::ConvertSToFOp, true>,

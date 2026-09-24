@@ -167,9 +167,6 @@ enum MiscFlags {             // Miscellaneous flags to adjust argument
   // with only a single hyphen for the whole group.  This allows emulation
   // of the behavior that ls uses for example: ls -la === ls -l -a
   Grouping = 0x08,
-
-  // Default option
-  DefaultOption = 0x10
 };
 
 //===----------------------------------------------------------------------===//
@@ -304,7 +301,6 @@ public:
   // Return true if the argstr != ""
   bool hasArgStr() const { return !ArgStr.empty(); }
   bool isPositional() const { return getFormattingFlag() == cl::Positional; }
-  bool isDefaultOption() const { return getMiscFlags() & cl::DefaultOption; }
 
   bool isConsumeAfter() const {
     return getNumOccurrencesFlag() == cl::ConsumeAfter;
@@ -2270,14 +2266,6 @@ public:
   /// Expands constructs "@file" in the provided array of arguments recursively.
   LLVM_ABI Error expandResponseFiles(SmallVectorImpl<const char *> &Argv);
 };
-
-/// A convenience helper which concatenates the options specified by the
-/// environment variable EnvVar and command line options, then expands
-/// response files recursively.
-/// \return true if all @files were expanded successfully or there were none.
-LLVM_ABI bool expandResponseFiles(int Argc, const char *const *Argv,
-                                  const char *EnvVar,
-                                  SmallVectorImpl<const char *> &NewArgv);
 
 /// A convenience helper which supports the typical use case of expansion
 /// function call.

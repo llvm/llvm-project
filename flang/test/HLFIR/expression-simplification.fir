@@ -31,7 +31,7 @@ func.func @_QPtest_char_cmp(%arg0: !fir.boxchar<1> {fir.bindc_name = "x"},
 // CHECK-SAME:        %[[ARG_0:.*]]: !fir.boxchar<1> {fir.bindc_name = "x"},
 // CHECK-SAME:        %[[ARG_1:.*]]: !fir.boxchar<1> {fir.bindc_name = "y"}) -> !fir.logical<4> {
 // CHECK:         %[[VAL_0:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:         %[[VAL_1:.*]] = fir.alloca !fir.logical<4> {bindc_name = "cmp", uniq_name = "_QFtest_char_cmpEcmp"}
+// CHECK:         %[[VAL_1:.*]] = fir.alloca !fir.logical<4> <{bindc_name = "cmp", uniq_name = "_QFtest_char_cmpEcmp"}>
 // CHECK:         %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "_QFtest_char_cmpEcmp"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 // CHECK:         %[[VAL_3:.*]]:2 = fir.unboxchar %[[ARG_0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 // CHECK:         %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_3]]#0 typeparams %[[VAL_3]]#1 dummy_scope %[[VAL_0]] {uniq_name = "_QFtest_char_cmpEx"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
