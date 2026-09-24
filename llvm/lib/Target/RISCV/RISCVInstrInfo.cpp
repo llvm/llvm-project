@@ -1830,7 +1830,7 @@ static int getJumpTableIndexFromBase(const MachineRegisterInfo &MRI,
                                      Register Reg) {
   if (!Reg.isVirtual())
     return -1;
-  MachineInstr *MI = MRI.getUniqueVRegDef(Reg);
+  const MachineInstr *MI = MRI.getUniqueVRegDef(Reg);
   if (!MI)
     return -1;
 
@@ -1847,7 +1847,7 @@ static int getJumpTableIndexFromLoadAddr(const MachineRegisterInfo &MRI,
                                          Register Reg) {
   if (!Reg.isVirtual())
     return -1;
-  MachineInstr *MI = MRI.getUniqueVRegDef(Reg);
+  const MachineInstr *MI = MRI.getUniqueVRegDef(Reg);
   if (!MI)
     return -1;
 
