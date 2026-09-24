@@ -1298,6 +1298,15 @@ void RuntimePointerChecking::mergeStencilGroups(PredicatedScalarEvolution &PSE,
     return;
   }
 
+  // visitPointers expands non-header pointer PHIs before runtime checks are
+  // created, so their alternatives are not marked IsForked. An unused
+  // alternative may wrap and make the merged bounds miss a real overlap.
+  for (BasicBlock *BB : L.blocks())
+    if (BB != L.getHeader())
+      for (PHINode &PN : BB->phis())
+        if (PN.getType()->isPointerTy())
+          return;
+
   // For each checking group this pass decomposes each member's offset into
   // stencil form, keeps the candidate members (the ones that can hold the
   // lowest or highest address at runtime), and builds the merged bounds from
