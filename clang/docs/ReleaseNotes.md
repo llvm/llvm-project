@@ -249,6 +249,11 @@ features cannot lower the translation-unit ABI level;
 
 ### New Compiler Flags
 
+- New option `-fmodules-validate-directory-dependencies` makes an implicitly
+  built module out of date when a header is added to a directory it enumerated,
+  such as an umbrella directory or the directory of an umbrella header, after it
+  was built. Off by default.
+
 - New option `-fdefined-pointer-subtraction` added to preserve stable semantics
   when subtracting pointers to unrelated objects.
 

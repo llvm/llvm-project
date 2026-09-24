@@ -24,6 +24,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <functional>
@@ -267,6 +268,27 @@ OptionalDirectoryEntryRef Module::getEffectiveUmbrellaDir() const {
   if (const auto *Dir = std::get_if<DirectoryEntryRef>(&Umbrella))
     return *Dir;
   return std::nullopt;
+}
+
+/// Whether watching \p Ancestor recursively also covers \p Path.
+static bool coversPath(StringRef Ancestor, StringRef Path) {
+  return Path.starts_with(Ancestor) &&
+         (Path.size() == Ancestor.size() ||
+          llvm::sys::path::is_separator(Path[Ancestor.size()]));
+}
+
+void Module::addDirectoryDependency(StringRef Path) {
+  Module *TopLevel = getTopLevelModule();
+  std::vector<std::string> &Deps = TopLevel->DirectoryDependencies;
+  // These are recursive dependencies, so an entry under one already recorded
+  // adds nothing. Submodules contribute to the same list, and their umbrellas
+  // often nest.
+  for (const std::string &Dep : Deps)
+    if (coversPath(Dep, Path))
+      return;
+  llvm::erase_if(Deps,
+                 [&](const std::string &Dep) { return coversPath(Path, Dep); });
+  Deps.emplace_back(Path);
 }
 
 void Module::addTopHeader(FileEntryRef File) {

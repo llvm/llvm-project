@@ -3797,6 +3797,16 @@ defm modules_validate_system_headers : BoolOption<"f", "modules-validate-system-
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
           "Validate the system headers that a module depends on when loading the module">,
   NegFlag<SetFalse, [], []>>, Group<i_Group>;
+defm modules_validate_directory_dependencies
+    : BoolOption<"f", "modules-validate-directory-dependencies",
+                 HeaderSearchOpts<"ModulesValidateDirectoryDependencies">,
+                 DefaultFalse,
+                 PosFlag<SetTrue, [], [ClangOption, CC1Option],
+                         "Treat an implicitly built module as out of date if "
+                         "a directory it depends on the listing of, such as "
+                         "an umbrella directory, changed after it was built">,
+                 NegFlag<SetFalse, [], []>>,
+      Group<i_Group>;
 def fno_modules_validate_textual_header_includes :
   Flag<["-"], "fno-modules-validate-textual-header-includes">,
   Group<f_Group>, Flags<[]>, Visibility<[ClangOption, CC1Option]>,
