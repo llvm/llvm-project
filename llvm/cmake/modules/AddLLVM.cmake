@@ -1068,6 +1068,11 @@ macro(add_llvm_library name)
               LIBRARY DESTINATION lib${LLVM_LIBDIR_SUFFIX} COMPONENT ${name}
               ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX} COMPONENT ${name}
               RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT ${name})
+      if (MSVC)
+        install(FILES $<TARGET_FILE_DIR:${name}>/$<TARGET_FILE_BASE_NAME:${name}>.pdb
+                DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT ${name}
+                OPTIONAL)
+      endif()
 
       if (NOT LLVM_ENABLE_IDE)
         add_llvm_install_targets(install-${name}
@@ -1628,8 +1633,8 @@ macro(llvm_add_tool project name)
                 ${export_to_llvmexports}
                 RUNTIME DESTINATION ${${project}_TOOLS_INSTALL_DIR}
                 COMPONENT ${name})
-        if (LLVM_ENABLE_PDB)
-          install(FILES $<TARGET_PDB_FILE:${name}>
+        if (MSVC)
+          install(FILES $<TARGET_FILE_DIR:${name}>/$<TARGET_FILE_BASE_NAME:${name}>.pdb
                 DESTINATION "${${project}_TOOLS_INSTALL_DIR}" COMPONENT ${name}
                 OPTIONAL)
         endif()
@@ -1663,8 +1668,8 @@ macro(add_llvm_example name)
   add_llvm_executable(${name} EXPORT_SYMBOLS ${ARGN})
   if( LLVM_BUILD_EXAMPLES )
     install(TARGETS ${name} RUNTIME DESTINATION "${LLVM_EXAMPLES_INSTALL_DIR}")
-    if (LLVM_ENABLE_PDB)
-      install(FILES $<TARGET_PDB_FILE:${name}>
+    if (MSVC)
+      install(FILES $<TARGET_FILE_DIR:${name}>/$<TARGET_FILE_BASE_NAME:${name}>.pdb
               DESTINATION "${LLVM_EXAMPLES_INSTALL_DIR}" COMPONENT ${name}
               OPTIONAL)
     endif()
@@ -1702,8 +1707,8 @@ macro(add_llvm_utility name)
               ${export_to_llvmexports}
               RUNTIME DESTINATION ${LLVM_UTILS_INSTALL_DIR}
               COMPONENT ${name})
-      if (LLVM_ENABLE_PDB)
-        install(FILES $<TARGET_PDB_FILE:${name}>
+      if (MSVC)
+        install(FILES $<TARGET_FILE_DIR:${name}>/$<TARGET_FILE_BASE_NAME:${name}>.pdb
                 DESTINATION "${LLVM_UTILS_INSTALL_DIR}" COMPONENT ${name}
                 OPTIONAL)
       endif()
