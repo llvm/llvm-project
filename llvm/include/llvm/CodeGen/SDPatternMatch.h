@@ -1265,31 +1265,6 @@ struct AnyZeroFP_match {
 /// Match a floating-point +0.0 or -0.0 constant or splat.
 inline AnyZeroFP_match m_AnyZeroFP() { return AnyZeroFP_match(); }
 
-struct Negative_match {
-  const SelectionDAG &DAG;
-  bool match(SDValue N) { return DAG.computeKnownBits(N).isNegative(); }
-};
-
-struct NonNegative_match {
-  const SelectionDAG &DAG;
-  bool match(SDValue N) { return DAG.computeKnownBits(N).isNonNegative(); }
-};
-
-struct StrictlyPositive_match {
-  const SelectionDAG &DAG;
-  bool match(SDValue N) { return DAG.computeKnownBits(N).isStrictlyPositive(); }
-};
-
-struct NonPositive_match {
-  const SelectionDAG &DAG;
-  bool match(SDValue N) { return DAG.computeKnownBits(N).isNonPositive(); }
-};
-
-struct NonZero_match {
-  const SelectionDAG &DAG;
-  bool match(SDValue N) { return DAG.computeKnownBits(N).isNonZero(); }
-};
-
 struct Zero_match {
   bool AllowUndefs;
 
@@ -1314,37 +1289,6 @@ struct AllOnes_match {
   bool match(SDValue N) { return isAllOnesOrAllOnesSplat(N, AllowUndefs); }
 };
 
-inline Negative_match m_Negative(const SelectionDAG &DAG) { return {DAG}; }
-template <typename Pattern>
-inline auto m_Negative(const SelectionDAG &DAG, const Pattern &P) {
-  return m_AllOf(m_Negative(DAG), P);
-}
-inline NonNegative_match m_NonNegative(const SelectionDAG &DAG) {
-  return {DAG};
-}
-template <typename Pattern>
-inline auto m_NonNegative(const SelectionDAG &DAG, const Pattern &P) {
-  return m_AllOf(m_NonNegative(DAG), P);
-}
-inline StrictlyPositive_match m_StrictlyPositive(const SelectionDAG &DAG) {
-  return {DAG};
-}
-template <typename Pattern>
-inline auto m_StrictlyPositive(const SelectionDAG &DAG, const Pattern &P) {
-  return m_AllOf(m_StrictlyPositive(DAG), P);
-}
-inline NonPositive_match m_NonPositive(const SelectionDAG &DAG) {
-  return {DAG};
-}
-template <typename Pattern>
-inline auto m_NonPositive(const SelectionDAG &DAG, const Pattern &P) {
-  return m_AllOf(m_NonPositive(DAG), P);
-}
-inline NonZero_match m_NonZero(const SelectionDAG &DAG) { return {DAG}; }
-template <typename Pattern>
-inline auto m_NonZero(const SelectionDAG &DAG, const Pattern &P) {
-  return m_AllOf(m_NonZero(DAG), P);
-}
 inline Ones_match m_One(bool AllowUndefs = false) {
   return Ones_match(AllowUndefs);
 }
