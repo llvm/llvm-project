@@ -45,7 +45,7 @@ static cl::opt<bool> NoLSEAtomics(
     "no-lse-atomics",
     cl::desc("generate instrumentation code sequence without using LSE atomic "
              "instruction"),
-    cl::init(false), cl::Optional, cl::cat(BoltInstrCategory));
+    cl::init(false), cl::cat(BoltInstrCategory));
 } // namespace opts
 
 namespace {

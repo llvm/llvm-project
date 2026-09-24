@@ -18,7 +18,9 @@
 #include "mlir/IR/OpAsmSupport.h"
 #include "mlir/IR/OpDefinition.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/SMLoc.h"
+#include <cstddef>
 #include <optional>
 
 namespace {
@@ -1823,6 +1825,33 @@ public:
   parseOptionalAssignmentList(SmallVectorImpl<Argument> &lhs,
                               SmallVectorImpl<UnresolvedOperand> &rhs) = 0;
 };
+
+namespace detail {
+/// Parse an optional operand or type into a generated parser's storage.
+ParseResult parseOptionalOperandInto(
+    OpAsmParser &parser,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &operands);
+ParseResult parseOptionalTypeInto(AsmParser &parser,
+                                  SmallVectorImpl<Type> &types);
+
+/// Keep the cleanup of multiple generated parser operand groups out of each
+/// parser's early-return paths. The storage is shared across operations with
+/// the same number of groups.
+template <size_t N>
+class OperandParserStorage {
+public:
+  using Group = llvm::SmallVector<OpAsmParser::UnresolvedOperand, 4>;
+
+  LLVM_ATTRIBUTE_NOINLINE OperandParserStorage() {}
+  LLVM_ATTRIBUTE_NOINLINE ~OperandParserStorage() {}
+
+  Group &operator[](size_t index) { return groups[index]; }
+
+private:
+  Group groups[N];
+};
+
+} // namespace detail
 
 //===--------------------------------------------------------------------===//
 // Custom printers and parsers.
