@@ -2349,6 +2349,43 @@ bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
     const DataLayout &DL = TheLoop->getHeader()->getDataLayout();
     auto StoreSize = [&DL](Type *Ty) { return DL.getTypeStoreSize(Ty); };
 
+    // Removing dependence classes above also separates different pointers to
+    // the same address in each iteration, like stores to A[i] in both branches
+    // of an if, and a runtime check between them would always fail. Put them
+    // back into a common class if all loads and stores through them have the
+    // same type and the stride is one element: each iteration then accesses
+    // the same bytes through all of them, and no other iteration accesses
+    // these bytes, so they only depend on each other within an iteration.
+    // Being consecutive, they cannot be part of an interleave group, which
+    // could reorder them as the retry drops the recorded dependences. Before
+    // the retry, all accesses are in a class and this does nothing.
+    SmallDenseMap<std::pair<const SCEV *, Type *>, MemAccessInfo, 4>
+        SameAddressAccesses;
+    for (MemAccessInfo Access : AccessInfos) {
+      if (DepCands.contains(Access))
+        continue;
+      Value *Ptr = Access.getPointer();
+      SmallSetVector<Type *, 1> AccessTys;
+      for (bool IsWrite : {false, true})
+        if (auto It = Accesses.find(MemAccessInfo(Ptr, IsWrite));
+            It != Accesses.end())
+          AccessTys.insert_range(It->second);
+      if (AccessTys.size() != 1)
+        continue;
+      Type *AccessTy = AccessTys.front();
+      const auto *AR = dyn_cast<SCEVAddRecExpr>(PSE.getSCEV(Ptr));
+      if (!AR)
+        continue;
+      std::optional<int64_t> Stride =
+          getStrideFromAddRec(AR, TheLoop, AccessTy, Ptr, PSE);
+      if (Stride != 1 && Stride != -1)
+        continue;
+      auto [It, Inserted] =
+          SameAddressAccesses.try_emplace({AR, AccessTy}, Access);
+      if (!Inserted)
+        DepCands.unionSets(It->second, Access);
+    }
+
     for (auto &Access : AccessInfos) {
       // A written pointer is only checked via its write access, so its bounds
       // must also cover the types it is loaded with.

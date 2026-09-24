@@ -27,22 +27,16 @@ define void @union_array_copy(ptr %src, i64 %src.len, ptr %dst, i64 %dst.len, i6
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw nsw i64 [[SRC_LEN]], 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[N]], [[TMP3]]
 ; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP4]]
-; CHECK-NEXT:    [[BOUND3:%.*]] = icmp ult ptr [[DST_TAGS]], [[SCEVGEP]]
-; CHECK-NEXT:    [[BOUND2:%.*]] = and i1 [[BOUND3]], [[BOUND3]]
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[DST_TAGS]], [[SCEVGEP1]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[DST]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-NEXT:    [[CONFLICT_RDX1:%.*]] = or i1 [[BOUND2]], [[FOUND_CONFLICT]]
 ; CHECK-NEXT:    [[BOUND04:%.*]] = icmp ult ptr [[DST_TAGS]], [[SCEVGEP2]]
 ; CHECK-NEXT:    [[BOUND15:%.*]] = icmp ult ptr [[SRC]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT6:%.*]] = and i1 [[BOUND04]], [[BOUND15]]
-; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[CONFLICT_RDX1]], [[FOUND_CONFLICT6]]
+; CHECK-NEXT:    [[CONFLICT_RDX45:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT6]]
 ; CHECK-NEXT:    [[BOUND07:%.*]] = icmp ult ptr [[DST_TAGS]], [[SCEVGEP3]]
 ; CHECK-NEXT:    [[BOUND18:%.*]] = icmp ult ptr [[SRC_TAGS]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT9:%.*]] = and i1 [[BOUND07]], [[BOUND18]]
-; CHECK-NEXT:    [[CONFLICT_RDX10:%.*]] = or i1 [[CONFLICT_RDX]], [[FOUND_CONFLICT9]]
-; CHECK-NEXT:    [[CONFLICT_RDX44:%.*]] = or i1 [[CONFLICT_RDX10]], [[FOUND_CONFLICT]]
-; CHECK-NEXT:    [[CONFLICT_RDX45:%.*]] = or i1 [[CONFLICT_RDX44]], [[FOUND_CONFLICT6]]
 ; CHECK-NEXT:    [[CONFLICT_RDX22:%.*]] = or i1 [[CONFLICT_RDX45]], [[FOUND_CONFLICT9]]
 ; CHECK-NEXT:    [[BOUND023:%.*]] = icmp ult ptr [[DST]], [[SCEVGEP2]]
 ; CHECK-NEXT:    [[BOUND124:%.*]] = icmp ult ptr [[SRC]], [[SCEVGEP1]]
@@ -74,17 +68,17 @@ define void @union_array_copy(ptr %src, i64 %src.len, ptr %dst, i64 %dst.len, i6
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, ptr [[DST_TAGS]], i64 [[TMP22]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = select <4 x i1> [[TMP7]], <4 x i8> splat (i8 1), <4 x i8> zeroinitializer
 ; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <4 x i8> [[TMP11]], i64 0
-; CHECK-NEXT:    store i8 [[TMP18]], ptr [[TMP10]], align 1
+; CHECK-NEXT:    store i8 [[TMP18]], ptr [[TMP10]], align 1, !alias.scope [[META5:![0-9]+]], !noalias [[META7:![0-9]+]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <4 x i8> [[TMP11]], i64 1
-; CHECK-NEXT:    store i8 [[TMP19]], ptr [[TMP14]], align 1
+; CHECK-NEXT:    store i8 [[TMP19]], ptr [[TMP14]], align 1, !alias.scope [[META5]], !noalias [[META7]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <4 x i8> [[TMP11]], i64 2
-; CHECK-NEXT:    store i8 [[TMP20]], ptr [[TMP15]], align 1
+; CHECK-NEXT:    store i8 [[TMP20]], ptr [[TMP15]], align 1, !alias.scope [[META5]], !noalias [[META7]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <4 x i8> [[TMP11]], i64 3
-; CHECK-NEXT:    store i8 [[TMP21]], ptr [[TMP16]], align 1
-; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[WIDE_MASKED_LOAD]], ptr align 4 [[TMP9]], <4 x i1> [[TMP7]]), !alias.scope [[META5:![0-9]+]], !noalias [[META7:![0-9]+]]
+; CHECK-NEXT:    store i8 [[TMP21]], ptr [[TMP16]], align 1, !alias.scope [[META5]], !noalias [[META7]]
+; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[WIDE_MASKED_LOAD]], ptr align 4 [[TMP9]], <4 x i1> [[TMP7]]), !alias.scope [[META9:![0-9]+]], !noalias [[META10:![0-9]+]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], [[EXIT:label %.*]], label %[[SCALAR_PH]]

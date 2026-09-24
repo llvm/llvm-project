@@ -12,32 +12,25 @@ define void @same_address_complementary_stores(ptr %A, i64 %off, ptr noalias %c,
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        Forward:
+; CHECK-NEXT:            store i8 0, ptr %gep.sel.0, align 1 ->
+; CHECK-NEXT:            store i8 1, ptr %gep.sel.1, align 1
+; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.sel.0 = getelementptr inbounds i8, ptr %A.sel, i64 %iv
+; CHECK-NEXT:          %gep.sel.1 = getelementptr inbounds i8, ptr %A.sel, i64 %iv
 ; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %gep.A = getelementptr inbounds i32, ptr %A, i64 %iv
-; CHECK-NEXT:      Check 1:
-; CHECK-NEXT:        Comparing group GRP0:
-; CHECK-NEXT:          %gep.sel.0 = getelementptr inbounds i8, ptr %A.sel, i64 %iv
-; CHECK-NEXT:        Against group GRP2:
-; CHECK-NEXT:          %gep.sel.1 = getelementptr inbounds i8, ptr %A.sel, i64 %iv
-; CHECK-NEXT:      Check 2:
-; CHECK-NEXT:        Comparing group GRP1:
-; CHECK-NEXT:          %gep.A = getelementptr inbounds i32, ptr %A, i64 %iv
-; CHECK-NEXT:        Against group GRP2:
-; CHECK-NEXT:          %gep.sel.1 = getelementptr inbounds i8, ptr %A.sel, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: (%off + %A) High: (%off + %n + %A))
 ; CHECK-NEXT:            Member: {(%off + %A),+,1}<nw><%loop>
+; CHECK-NEXT:            Member: {(%off + %A),+,1}<nw><%loop>
 ; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %A High: ((4 * %n) + %A))
 ; CHECK-NEXT:            Member: {%A,+,4}<%loop>
-; CHECK-NEXT:        Group GRP2:
-; CHECK-NEXT:          (Low: (%off + %A) High: (%off + %n + %A))
-; CHECK-NEXT:            Member: {(%off + %A),+,1}<nw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -81,21 +74,16 @@ define void @same_address_load_store(ptr %A, i64 %off, i64 %n) {
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        Forward:
+; CHECK-NEXT:            %l = load i8, ptr %gep.sel.0, align 1 ->
+; CHECK-NEXT:            store i8 %add, ptr %gep.sel.1, align 1
+; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.A = getelementptr inbounds i32, ptr %A, i64 %iv
 ; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %gep.sel.1 = getelementptr inbounds i8, ptr %A.sel, i64 %iv
-; CHECK-NEXT:      Check 1:
-; CHECK-NEXT:        Comparing group GRP0:
-; CHECK-NEXT:          %gep.A = getelementptr inbounds i32, ptr %A, i64 %iv
-; CHECK-NEXT:        Against group GRP2:
-; CHECK-NEXT:          %gep.sel.0 = getelementptr inbounds i8, ptr %A.sel, i64 %iv
-; CHECK-NEXT:      Check 2:
-; CHECK-NEXT:        Comparing group GRP1:
-; CHECK-NEXT:          %gep.sel.1 = getelementptr inbounds i8, ptr %A.sel, i64 %iv
-; CHECK-NEXT:        Against group GRP2:
 ; CHECK-NEXT:          %gep.sel.0 = getelementptr inbounds i8, ptr %A.sel, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
@@ -104,8 +92,6 @@ define void @same_address_load_store(ptr %A, i64 %off, i64 %n) {
 ; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: (%off + %A) High: (%off + %n + %A))
 ; CHECK-NEXT:            Member: {(%off + %A),+,1}<nw><%loop>
-; CHECK-NEXT:        Group GRP2:
-; CHECK-NEXT:          (Low: (%off + %A) High: (%off + %n + %A))
 ; CHECK-NEXT:            Member: {(%off + %A),+,1}<nw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
@@ -139,21 +125,16 @@ define void @same_address_negative_stride(ptr %A, i64 %off, i64 %n) {
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        Forward:
+; CHECK-NEXT:            store i8 0, ptr %gep.sel.0, align 1 ->
+; CHECK-NEXT:            store i8 1, ptr %gep.sel.1, align 1
+; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.A = getelementptr inbounds i32, ptr %A, i64 %iv.next
 ; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %gep.sel.0 = getelementptr inbounds i8, ptr %A.sel, i64 %iv.next
-; CHECK-NEXT:      Check 1:
-; CHECK-NEXT:        Comparing group GRP0:
-; CHECK-NEXT:          %gep.A = getelementptr inbounds i32, ptr %A, i64 %iv.next
-; CHECK-NEXT:        Against group GRP2:
-; CHECK-NEXT:          %gep.sel.1 = getelementptr inbounds i8, ptr %A.sel, i64 %iv.next
-; CHECK-NEXT:      Check 2:
-; CHECK-NEXT:        Comparing group GRP1:
-; CHECK-NEXT:          %gep.sel.0 = getelementptr inbounds i8, ptr %A.sel, i64 %iv.next
-; CHECK-NEXT:        Against group GRP2:
 ; CHECK-NEXT:          %gep.sel.1 = getelementptr inbounds i8, ptr %A.sel, i64 %iv.next
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
@@ -162,8 +143,6 @@ define void @same_address_negative_stride(ptr %A, i64 %off, i64 %n) {
 ; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: (-1 + (1 smin %n) + %off + %A) High: (%off + %n + %A))
 ; CHECK-NEXT:            Member: {(-1 + %off + %n + %A),+,-1}<nw><%loop>
-; CHECK-NEXT:        Group GRP2:
-; CHECK-NEXT:          (Low: (-1 + (1 smin %n) + %off + %A) High: (%off + %n + %A))
 ; CHECK-NEXT:            Member: {(-1 + %off + %n + %A),+,-1}<nw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
@@ -198,21 +177,16 @@ define void @same_address_symbolic_stride(ptr %A, i64 %off, i64 %stride, i64 %n)
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        Forward:
+; CHECK-NEXT:            store i8 0, ptr %gep.sel.0, align 1 ->
+; CHECK-NEXT:            store i8 1, ptr %gep.sel.1, align 1
+; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.A = getelementptr inbounds i32, ptr %A, i64 %iv
 ; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %gep.sel.0 = getelementptr inbounds i8, ptr %A.sel, i64 %iv.s
-; CHECK-NEXT:      Check 1:
-; CHECK-NEXT:        Comparing group GRP0:
-; CHECK-NEXT:          %gep.A = getelementptr inbounds i32, ptr %A, i64 %iv
-; CHECK-NEXT:        Against group GRP2:
-; CHECK-NEXT:          %gep.sel.1 = getelementptr inbounds i8, ptr %A.sel, i64 %iv.s
-; CHECK-NEXT:      Check 2:
-; CHECK-NEXT:        Comparing group GRP1:
-; CHECK-NEXT:          %gep.sel.0 = getelementptr inbounds i8, ptr %A.sel, i64 %iv.s
-; CHECK-NEXT:        Against group GRP2:
 ; CHECK-NEXT:          %gep.sel.1 = getelementptr inbounds i8, ptr %A.sel, i64 %iv.s
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
@@ -221,8 +195,6 @@ define void @same_address_symbolic_stride(ptr %A, i64 %off, i64 %stride, i64 %n)
 ; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: (%off + %A) High: (%off + %n + %A))
 ; CHECK-NEXT:            Member: {(%off + %A),+,1}<nw><%loop>
-; CHECK-NEXT:        Group GRP2:
-; CHECK-NEXT:          (Low: (%off + %A) High: (%off + %n + %A))
 ; CHECK-NEXT:            Member: {(%off + %A),+,1}<nw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
