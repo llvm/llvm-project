@@ -94,6 +94,8 @@ done:                                             ; preds = %while.cond, %while.
   ret ptr %dest
 }
 
-!0 = !{!"omnipotent char", !1}
+!0 = !{!3, !3, i64 0}
 !1 = !{!"Simple C/C++ TBAA"}
-!2 = !{!"long long", !0}
+!2 = !{!4, !4, i64 0}
+!3 = !{!"omnipotent char", !1}
+!4 = !{!"long long", !3}
