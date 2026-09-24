@@ -3313,12 +3313,6 @@ TEST_F(AArch64GISelMITest, NarrowScalarInsert) {
   DummyGISelObserver Observer;
   LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
 
-#ifndef NDEBUG
-  EXPECT_DEATH(Helper.narrowScalar(*Inside, 0, S32),
-               "extracting off end of register");
-  return;
-#endif
-
   for (auto Insert : {Inside, Boundary, Straddling}) {
     B.setInstrAndDebugLoc(*Insert);
     EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
@@ -3330,8 +3324,7 @@ TEST_F(AArch64GISelMITest, NarrowScalarInsert) {
   CHECK: [[VAL8:%[0-9]+]]:_(i8) = G_TRUNC
   CHECK: [[VAL16:%[0-9]+]]:_(i16) = G_TRUNC
   CHECK: [[A0:%[0-9]+]]:_(i32), [[A1:%[0-9]+]]:_(i32), [[A2:%[0-9]+]]:_(i32), [[A3:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[SRC]]
-  CHECK-NEXT: [[EXTRACT:%[0-9]+]]:_(s16) = G_EXTRACT [[VAL8]]:_(i8), 0
-  CHECK-NEXT: [[A:%[0-9]+]]:_(i32) = G_INSERT [[A1]]:_, [[EXTRACT]]:_(s16), 8
+  CHECK-NEXT: [[A:%[0-9]+]]:_(i32) = G_INSERT [[A1]]:_, [[VAL8]]:_(i8), 8
   CHECK-NEXT: {{%[0-9]+}}:_(i128) = G_MERGE_VALUES [[A0]]:_(i32), [[A]]:_(i32), [[A2]]:_(i32), [[A3]]:_(i32)
   CHECK: [[B0:%[0-9]+]]:_(i32), [[B1:%[0-9]+]]:_(i32), [[B2:%[0-9]+]]:_(i32), [[B3:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[SRC]]
   CHECK-NEXT: [[B:%[0-9]+]]:_(i32) = G_INSERT [[B1]]:_, [[VAL8]]:_(i8), 24
