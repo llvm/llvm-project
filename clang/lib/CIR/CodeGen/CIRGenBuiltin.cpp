@@ -2385,6 +2385,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     Address srcCast = src.withElementType(builder, cgm.voidTy);
     assert(!cir::MissingFeatures::sanitizers());
     builder.createMemCpy(loc, destCast, srcCast, sizeVal);
+    assert(!cir::MissingFeatures::generateDebugInfo());
     if (builtinID == Builtin::BImempcpy ||
         builtinID == Builtin::BI__builtin_mempcpy) {
       mlir::Value destPtr = destCast.getPointer();
