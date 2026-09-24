@@ -113,6 +113,7 @@ class IRPromoter {
   SmallPtrSet<Value *, 8> NewInsts;
   DenseMap<Value *, SmallVector<Type *, 4>> TruncTysMap;
   SmallPtrSet<Value *, 8> Promoted;
+  bool UseSExt;
 
   void ReplaceAllUsersOfWith(Value *From, Value *To);
   void ExtendSources();
@@ -125,9 +126,10 @@ public:
   IRPromoter(LLVMContext &C, unsigned Width, SetVector<Value *> &visited,
              SetVector<Value *> &sources, SetVector<Instruction *> &sinks,
              SmallPtrSetImpl<Instruction *> &wrap,
-             SmallPtrSetImpl<Instruction *> &instsToRemove)
+             SmallPtrSetImpl<Instruction *> &instsToRemove,
+             bool useSExt = false)
       : Ctx(C), PromotedWidth(Width), Visited(visited), Sources(sources),
-        Sinks(sinks), SafeWrap(wrap), InstsToRemove(instsToRemove) {
+        Sinks(sinks), SafeWrap(wrap), InstsToRemove(instsToRemove), UseSExt(useSExt) {
     ExtTy = IntegerType::get(Ctx, PromotedWidth);
   }
 
@@ -172,7 +174,8 @@ class TypePromotionImpl {
   // Is V an instruction thats result can trivially promoted, or has safe
   // wrapping.
   bool isLegalToPromote(Value *V);
-  bool TryToPromote(Value *V, unsigned PromotedWidth, const LoopInfo &LI);
+  bool TryToPromote(Value *V, unsigned PromotedWidth, const LoopInfo &LI,
+                    bool UseSExt = false);
 
 public:
   bool run(Function &F, const TargetMachine *TM,
@@ -453,8 +456,8 @@ void IRPromoter::ExtendSources() {
     if (auto *I = dyn_cast<Instruction>(V))
       Builder.SetCurrentDebugLocation(I->getDebugLoc());
 
-    Value *ZExt = Builder.CreateZExt(V, ExtTy);
-    if (auto *I = dyn_cast<Instruction>(ZExt)) {
+    Value *Ext = UseSExt ? Builder.CreateSExt(V, ExtTy) : Builder.CreateZExt(V, ExtTy);
+    if (auto *I = dyn_cast<Instruction>(Ext)) {
       if (isa<Argument>(V))
         I->moveBefore(InsertPt);
       else
@@ -462,7 +465,7 @@ void IRPromoter::ExtendSources() {
       NewInsts.insert(I);
     }
 
-    ReplaceAllUsersOfWith(V, ZExt);
+    ReplaceAllUsersOfWith(V, Ext);
   };
 
   // Now, insert extending instructions between the sources and their users.
@@ -814,7 +817,7 @@ bool TypePromotionImpl::isLegalToPromote(Value *V) {
 }
 
 bool TypePromotionImpl::TryToPromote(Value *V, unsigned PromotedWidth,
-                                 const LoopInfo &LI) {
+                                 const LoopInfo &LI, bool UseSExt) {
   Type *OrigTy = V->getType();
   TypeSize = OrigTy->getPrimitiveSizeInBits().getFixedValue();
   SafeToPromote.clear();
@@ -942,7 +945,7 @@ bool TypePromotionImpl::TryToPromote(Value *V, unsigned PromotedWidth,
     return false;
 
   IRPromoter Promoter(*Ctx, PromotedWidth, CurrentVisited, Sources, Sinks,
-                      SafeWrap, InstsToRemove);
+                      SafeWrap, InstsToRemove, UseSExt);
   Promoter.Mutate();
   return true;
 }
@@ -1008,6 +1011,8 @@ bool TypePromotionImpl::run(Function &F, const TargetMachine *TM,
           isa<IntegerType>(I.getType()) && BBIsInLoop(&BB)) {
         LLVM_DEBUG(dbgs() << "IR Promotion: Searching from: "
                           << *I.getOperand(0) << "\n");
+        auto *ZExt = cast<ZExtInst>(&I);
+        bool UseSExt = ZExt->hasNonNeg();
         EVT ZExtVT = TLI->getValueType(DL, I.getType());
         Instruction *Phi = static_cast<Instruction *>(I.getOperand(0));
         auto PromoteWidth = ZExtVT.getFixedSizeInBits();
@@ -1016,7 +1021,7 @@ bool TypePromotionImpl::run(Function &F, const TargetMachine *TM,
                             << "register for ZExt type\n");
           continue;
         }
-        MadeChange |= TryToPromote(Phi, PromoteWidth, LI);
+        MadeChange |= TryToPromote(Phi, PromoteWidth, LI, UseSExt);
       } else if (auto *ICmp = dyn_cast<ICmpInst>(&I)) {
         // Search up from icmps to try to promote their operands.
         // Skip signed or pointer compares
