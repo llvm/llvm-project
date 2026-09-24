@@ -46,7 +46,7 @@
 # CHECK-DAG:   __DATA        __data          0x[[#%x,WEAK_DY:]]      pointer 0 libfoo    _weak_dysym
 # CHECK-DAG:   __DATA        __thread_vars   0x{{[0-9a-f]*}}         pointer 0 libSystem __tlv_bootstrap
 # CHECK-DAG:   __DATA        __thread_vars   0x{{[0-9a-f]*}}         pointer 0 libSystem __tlv_bootstrap
-# CHECK-DAG:   __DATA        __thread_ptrs   0x[[#WEAK_DY_TLV_ADDR]] pointer 0 libfoo    _weak_dysym_tlv
+# CHECK-DAG:   __DATA_CONST  __got           0x[[#WEAK_DY_TLV_ADDR]] pointer 0 libfoo    _weak_dysym_tlv
 ## Check that we don't have any other bindings
 # CHECK-EMPTY:
 
@@ -59,8 +59,8 @@
 # CHECK-DAG:   __DATA_CONST __got           0x[[#WEAK_DY_GOT_ADDR]]   pointer 0 _weak_dysym_for_gotpcrel
 # CHECK-DAG:   __DATA_CONST __got           0x[[#WEAK_EXT_GOT_ADDR]]  pointer 0 _weak_external_for_gotpcrel
 # CHECK-DAG:   __DATA       __data          0x[[#WEAK_DY]]            pointer 0 _weak_dysym
-# CHECK-DAG:   __DATA       __thread_ptrs   0x[[#WEAK_TLV_ADDR]]      pointer 0 _weak_tlv
-# CHECK-DAG:   __DATA       __thread_ptrs   0x[[#WEAK_DY_TLV_ADDR]]   pointer 0 _weak_dysym_tlv
+# CHECK-DAG:   __DATA_CONST __got           0x[[#WEAK_TLV_ADDR]]      pointer 0 _weak_tlv
+# CHECK-DAG:   __DATA_CONST __got           0x[[#WEAK_DY_TLV_ADDR]]   pointer 0 _weak_dysym_tlv
 # CHECK-DAG:   __DATA       __data          0x{{[0-9a-f]*}}           pointer 2 _weak_external
 # CHECK-DAG:   __DATA       __la_symbol_ptr 0x[[#WEAK_DY_FN]]         pointer 0 _weak_dysym_fn
 # CHECK-DAG:   __DATA       __la_symbol_ptr 0x[[#WEAK_EXT_FN]]        pointer 0 _weak_external_fn
@@ -84,8 +84,8 @@
 # CHAINED-DAG:   __DATA       __data        0x{{[0-9a-f]*}}          {{.*}}  rebase                  0x[[#%X,WEAK_INT]]
 # CHAINED-DAG:   __DATA       __thread_vars 0x{{[0-9a-f]*}}          {{.*}}  bind  0x0    libSystem  __tlv_bootstrap
 # CHAINED-DAG:   __DATA       __thread_vars 0x{{[0-9a-f]*}}          {{.*}}  bind  0x0    libSystem  __tlv_bootstrap
-# CHAINED-DAG:   __DATA       __thread_ptrs 0x[[#WEAK_DY_TLV_ADDR]]  {{.*}}  bind  0x0    weak       _weak_dysym_tlv
-# CHAINED-DAG:   __DATA       __thread_ptrs 0x[[#WEAK_TLV_ADDR]]     {{.*}}  bind  0x0    weak       _weak_tlv
+# CHAINED-DAG:   __DATA_CONST __got         0x[[#WEAK_DY_TLV_ADDR]]  {{.*}}  bind  0x0    weak       _weak_dysym_tlv
+# CHAINED-DAG:   __DATA_CONST __got         0x[[#WEAK_TLV_ADDR]]     {{.*}}  bind  0x0    weak       _weak_tlv
 # CHAINED-EMPTY:
 
 #--- libfoo.s
