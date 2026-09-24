@@ -12,8 +12,9 @@
 #include "mlir-c/Rewrite.h"
 #include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/BuiltinTypes.h"
+#include "mlir-c/Dialect/Arith.h"
+#include "mlir-c/Dialect/Func.h"
 #include "mlir-c/IR.h"
-#include "mlir-c/RegisterEverything.h"
 
 #include <assert.h>
 #include <inttypes.h>
@@ -1966,14 +1967,10 @@ void testDialectMaterializeConstant(MlirContext ctx) {
   // CHECK-LABEL: @testDialectMaterializeConstant
   fprintf(stderr, "@testDialectMaterializeConstant\n");
 
-  MlirDialectRegistry registry = mlirDialectRegistryCreate();
-  mlirRegisterAllDialects(registry);
-  mlirContextAppendDialectRegistry(ctx, registry);
-  mlirDialectRegistryDestroy(registry);
-
   MlirDialect arith =
-      mlirContextGetOrLoadDialect(ctx, mlirStringRefCreateFromCString("arith"));
-  mlirContextGetOrLoadDialect(ctx, mlirStringRefCreateFromCString("func"));
+      mlirDialectHandleLoadDialect(mlirGetDialectHandle__arith__(), ctx);
+  MlirDialect func =
+      mlirDialectHandleLoadDialect(mlirGetDialectHandle__func__(), ctx);
 
   const char *moduleString = "func.func @f() {\n"
                              "  return\n"
@@ -1995,13 +1992,16 @@ void testDialectMaterializeConstant(MlirContext ctx) {
   MlirOperation constOp =
       mlirDialectMaterializeConstant(arith, rewriter, value, i32, loc);
   assert(!mlirOperationIsNull(constOp));
+  // The op is created at the current insertion point without changing it: it
+  // lands in funcBody, and the rewriter still points there afterwards.
+  assert(mlirBlockEqual(mlirOperationGetBlock(constOp), funcBody));
+  assert(mlirBlockEqual(mlirRewriterBaseGetInsertionBlock(rewriter), funcBody));
   mlirOperationDump(constOp);
   // CHECK: arith.constant 42 : i32
 
-  // A dialect that does not materialize the given constant returns null. The
-  // func dialect has no constant materializer, so it returns a null operation.
-  MlirDialect func =
-      mlirContextGetOrLoadDialect(ctx, mlirStringRefCreateFromCString("func"));
+  // A dialect whose materializer declines the given attribute/type returns
+  // null. The func dialect has a constant materializer, but it only builds
+  // func.constant from a symbol ref, so an i32 IntegerAttr yields null.
   MlirOperation none =
       mlirDialectMaterializeConstant(func, rewriter, value, i32, loc);
   assert(mlirOperationIsNull(none));
