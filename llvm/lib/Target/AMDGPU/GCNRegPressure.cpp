@@ -1026,8 +1026,9 @@ bool GCNRegPressurePrinter::runOnMachineFunction(MachineFunction &MF) {
 
         while (!RPT.advanceBeforeNext()) {
           GCNRegPressure RPBeforeMI = RPT.getPressure();
+          RPT.resetMaxPressure();
           RPT.advanceToNext();
-          RP.emplace_back(RPBeforeMI, RPT.getPressure());
+          RP.emplace_back(RPBeforeMI, RPT.getMaxPressure());
         }
 
         LiveOut = RPT.getLiveRegs();
