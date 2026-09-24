@@ -8,6 +8,7 @@ add_lldb_unittest(ProtocolTests
   ProtocolMCPServerTest.cpp
 
   LINK_COMPONENTS
+    Option
     Support
   LINK_LIBS
     lldbCore

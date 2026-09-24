@@ -101,7 +101,7 @@ endif()
 
 if (APPLE)
   set(ORC_RT_BEDROCK_TEST_APPLE_SOURCES
-    bedrock/StandaloneMachOUnwindInfoRegistrarTest.cpp
+    bedrock/sys/darwin/StandaloneMachOUnwindInfoRegistrarTest.cpp
     )
 else()
   set(ORC_RT_BEDROCK_TEST_APPLE_SOURCES)

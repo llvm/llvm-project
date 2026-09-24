@@ -84,10 +84,21 @@ public:
   /// alloca/stack space).
   virtual unsigned getAllocaAddrSpace() const { return 0; }
 
+  /// Whether the target has a 128-bit integer type. Default true.
+  virtual bool hasInt128Type() const { return true; }
+
+  /// Width of `long long` in bits. Default 64.
+  virtual unsigned getLongLongWidth() const { return 64; }
+
 protected:
   LLVM_ABI RecordArgABI getRecordArgABI(const RecordType *RT) const;
   LLVM_ABI RecordArgABI getRecordArgABI(const Type *Ty) const;
   LLVM_ABI bool isPromotableInteger(const IntegerType *IT) const;
+
+  /// Bit width above which a _BitInt cannot stay in registers.
+  unsigned getBitIntRegThreshold() const {
+    return hasInt128Type() ? 128 : getLongLongWidth();
+  }
   LLVM_ABI ArgInfo getNaturalAlignIndirect(const Type *Ty, unsigned AddrSpace,
                                            bool ByVal = true) const;
   LLVM_ABI bool isAggregateTypeForABI(const Type *Ty) const;
