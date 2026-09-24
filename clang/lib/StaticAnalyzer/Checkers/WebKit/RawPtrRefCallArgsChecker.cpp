@@ -70,10 +70,38 @@ public:
       }
 
       bool TraverseDecl(Decl *D) override {
+        // A template pattern is checked through its instantiations, which are
+        // traversed from the TemplateDecl itself. In the pattern the callee of
+        // a call may still be an unresolved overload set and the type of an
+        // expression may still be dependent, neither of which can be reasoned
+        // about, so don't enter it at all.
+        if (D && !isa<TemplateDecl>(D) && D->isTemplated())
+          return true;
         llvm::SaveAndRestore SavedDecl(DeclWithIssue);
         if (D && (isa<FunctionDecl>(D) || isa<ObjCMethodDecl>(D)))
           DeclWithIssue = D;
         return DynamicRecursiveASTVisitor::TraverseDecl(D);
+      }
+
+      bool TraverseLambdaExpr(LambdaExpr *L) override {
+        auto *FTD = L->getLambdaClass()->getDependentLambdaCallOperator();
+        if (!FTD)
+          return DynamicRecursiveASTVisitor::TraverseLambdaExpr(L);
+        // The body of a generic lambda is the pattern of its call operator,
+        // but it is reached from the LambdaExpr as a statement, so TraverseDecl
+        // never gets to skip it. Traverse the capture initializers, which are
+        // evaluated in the enclosing scope, and then the call operator itself,
+        // of which the pattern is skipped like any other and the instantiations
+        // are traversed. The initializers are traversed as expressions because
+        // the variable of an init capture is declared in the pattern.
+        for (unsigned I = 0, N = L->capture_size(); I != N; ++I) {
+          if (!(L->capture_begin() + I)->isExplicit())
+            continue;
+          if (auto *Init = L->capture_init_begin()[I];
+              Init && !TraverseStmt(Init))
+            return false;
+        }
+        return TraverseDecl(FTD);
       }
 
       bool VisitCallExpr(CallExpr *CE) override {
@@ -245,6 +273,7 @@ public:
   bool isPtrOriginSafe(const Expr *Arg) const {
     return tryToFindPtrOrigin(
         Arg, /*StopAtFirstRefCountedObj=*/true,
+        Model->checksForInteriorDestruction(),
         [&](const clang::CXXRecordDecl *Record) {
           return Model->isSafePtr(Record);
         },
@@ -255,7 +284,8 @@ public:
         // A temporary on the path to an argument's origin is safe: the full
         // expression does not end until the call returns.
         [&](const clang::Expr *ArgOrigin, bool IsSafe,
-            bool /*OriginDependsOnFullExpressionTemporary*/) {
+            bool /*OriginDependsOnFullExpressionTemporary*/,
+            bool PtrIsLifetimeBoundToOrigin) {
           if (IsSafe)
             return true;
           if (isNullPtr(ArgOrigin))
@@ -277,7 +307,7 @@ public:
             if (isPtrOriginSafe(MCE->getImplicitObjectArgument()))
               return true;
           }
-          if (Model->isSafeExpr(ArgOrigin))
+          if (Model->isSafeExpr(ArgOrigin, PtrIsLifetimeBoundToOrigin))
             return true;
           return false;
         });

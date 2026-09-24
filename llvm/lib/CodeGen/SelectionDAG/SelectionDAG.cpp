@@ -4317,6 +4317,14 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
       Known = Known.anyext(BitWidth);
     break;
   }
+  case ISD::BUILD_PAIR: {
+    // Operand 0 is the low half and operand 1 the high half,
+    // KnownBits::concat places its argument in the low bits.
+    Known = computeKnownBits(Op.getOperand(0), Depth + 1);
+    Known2 = computeKnownBits(Op.getOperand(1), Depth + 1);
+    Known = Known2.concat(Known);
+    break;
+  }
   case ISD::INSERT_VECTOR_ELT: {
     if (Op.getValueType().isScalableVector())
       break;

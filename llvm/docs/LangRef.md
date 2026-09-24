@@ -2741,7 +2741,7 @@ fn -> other_fn -> other_fn ; fn is norecurse
 
 `speculative_load_hardening`
 :   This attribute indicates that
-    [Speculative Load Hardening](https://llvm.org/docs/SpeculativeLoadHardening.html)
+    [Speculative Load Hardening](SpeculativeLoadHardening.md)
     should be enabled for the function body.
 
     Speculative Load Hardening is a best-effort mitigation against
@@ -9265,6 +9265,8 @@ Example:
 This defines a global with type `SHT_LLVM_CFI_JUMP_TABLE` and entry
 size 8.
 
+
+(module-flags-metadata)=
 
 ## Module Flags Metadata
 
@@ -24339,36 +24341,6 @@ to the memory.
 Returns another pointer that aliases its argument but which is considered different
 for the purposes of `load`/`store` `invariant.group` metadata.
 It does not read any accessible memory and the execution can be speculated.
-
-#### '`llvm.strip.invariant.group`' Intrinsic
-
-##### Syntax:
-This is an overloaded intrinsic. The {ref}`allocated object<allocatedobjects>`
-can belong to any address space. The returned pointer must belong to the same
-address space as the argument.
-
-```
-declare ptr @llvm.strip.invariant.group.p0(ptr <ptr>)
-```
-
-##### Overview:
-
-The '`llvm.strip.invariant.group`' intrinsic can be used when an invariant
-established by `invariant.group` metadata no longer holds, to obtain a new pointer
-value that does not carry the invariant information. It is an experimental
-intrinsic, which means that its semantics might change in the future.
-
-
-##### Arguments:
-
-The `llvm.strip.invariant.group` takes only one argument, which is a pointer
-to the memory.
-
-##### Semantics:
-
-Returns another pointer that aliases its argument but which has no associated
-`invariant.group` metadata.
-It does not read any memory and can be speculated.
 
 
 

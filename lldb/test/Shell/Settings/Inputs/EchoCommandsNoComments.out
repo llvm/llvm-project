@@ -1,5 +1,5 @@
-# CHECK: (lldb) command source -s {{.*\n}}
-# CHECK: (lldb) command source -s {{.*\n}}
-# CHECK-NEXT: Executing commands in {{.*\n}}
+# CHECK: (lldb) command source -s {{.*}}
+# CHECK: (lldb) command source -s {{.*}}
+# CHECK-NEXT: Executing commands in {{.*}}
 # CHECK-NEXT: expr 1+2
 # CHECK-NEXT: (int) $0 = 3

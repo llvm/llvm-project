@@ -38,13 +38,13 @@ define void @test() {
 ;
 ; AVX512DQ-LABEL: 'test'
 ; AVX512DQ:  LV: Found an estimated cost of 1 for VF 1 For instruction: %v0 = load i8, ptr %in0, align 1
-; AVX512DQ:  Cost of 24 for VF 2: INTERLEAVE-GROUP with factor 5, ir<%in0>
+; AVX512DQ:  Cost of 22 for VF 2: INTERLEAVE-GROUP with factor 5, ir<%in0>
 ; AVX512DQ:    ir<%v0> = load from index 0
 ; AVX512DQ:    ir<%v1> = load from index 1
 ; AVX512DQ:    ir<%v2> = load from index 2
 ; AVX512DQ:    ir<%v3> = load from index 3
 ; AVX512DQ:    ir<%v4> = load from index 4
-; AVX512DQ:  Cost of 45 for VF 4: INTERLEAVE-GROUP with factor 5, ir<%in0>
+; AVX512DQ:  Cost of 44 for VF 4: INTERLEAVE-GROUP with factor 5, ir<%in0>
 ; AVX512DQ:    ir<%v0> = load from index 0
 ; AVX512DQ:    ir<%v1> = load from index 1
 ; AVX512DQ:    ir<%v2> = load from index 2
