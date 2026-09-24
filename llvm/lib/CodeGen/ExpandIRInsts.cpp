@@ -1487,7 +1487,7 @@ PreservedAnalyses ExpandIRInstsPass::run(Function &F,
   }
 
   const LibcallLoweringInfo &Libcalls =
-      LibcallLowering->getLibcallLowering(*STI);
+      getLibcallLowering(*LibcallLowering, *STI);
 
   return runImpl(F, TLI, Libcalls, AC) ? PreservedAnalyses::none()
                                        : PreservedAnalyses::all();

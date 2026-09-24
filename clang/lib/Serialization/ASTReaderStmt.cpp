@@ -939,7 +939,7 @@ void ASTStmtReader::VisitRequiresExpr(RequiresExpr *E) {
               break;
           }
         }
-        if (Expr *Ex = E.dyn_cast<Expr *>())
+        if (Expr *Ex = dyn_cast<Expr *>(E))
           R = new (Record.getContext()) concepts::ExprRequirement(
                   Ex, RK == concepts::Requirement::RK_Simple, NoexceptLoc,
                   std::move(*Req), Status, SubstitutedConstraintExpr);
@@ -2239,6 +2239,7 @@ void ASTStmtReader::VisitUnresolvedLookupExpr(UnresolvedLookupExpr *E) {
 void ASTStmtReader::VisitTypeTraitExpr(TypeTraitExpr *E) {
   VisitExpr(E);
   E->TypeTraitExprBits.IsBooleanTypeTrait = Record.readInt();
+  E->TypeTraitExprBits.IsComparisonResult = Record.readInt();
   E->TypeTraitExprBits.NumArgs = Record.readInt();
   E->TypeTraitExprBits.Kind = Record.readInt();
 
@@ -2572,6 +2573,10 @@ void ASTStmtReader::VisitOMPCanonicalLoopSequenceTransformationDirective(
 }
 
 void ASTStmtReader::VisitOMPInterchangeDirective(OMPInterchangeDirective *D) {
+  VisitOMPCanonicalLoopNestTransformationDirective(D);
+}
+
+void ASTStmtReader::VisitOMPFlattenDirective(OMPFlattenDirective *D) {
   VisitOMPCanonicalLoopNestTransformationDirective(D);
 }
 
@@ -3777,6 +3782,13 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       break;
     }
 
+    case STMT_OMP_FLATTEN_DIRECTIVE: {
+      unsigned NumLoops = Record[ASTStmtReader::NumStmtFields];
+      unsigned NumClauses = Record[ASTStmtReader::NumStmtFields + 1];
+      S = OMPFlattenDirective::CreateEmpty(Context, NumClauses, NumLoops);
+      break;
+    }
+
     case STMT_OMP_FOR_DIRECTIVE: {
       unsigned CollapsedNum = Record[ASTStmtReader::NumStmtFields];
       unsigned NumClauses = Record[ASTStmtReader::NumStmtFields + 1];
@@ -4471,7 +4483,7 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
     case EXPR_TYPE_TRAIT:
       S = TypeTraitExpr::CreateDeserialized(
           Context, Record[ASTStmtReader::NumExprFields],
-          Record[ASTStmtReader::NumExprFields + 1]);
+          Record[ASTStmtReader::NumExprFields + 2]);
       break;
 
     case EXPR_ARRAY_TYPE_TRAIT:

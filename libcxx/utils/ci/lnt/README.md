@@ -37,7 +37,7 @@ select-anchor-commits --since 2023-01-02 --every week > anchor-commits.txt
 
 # What is missing from LNT (we want at least 3 samples for each commit).
 plan-benchmarks --commit-list anchor-commits.txt                                \
-                --lnt-url http://lnt.llvm.org --test-suite libcxx               \
+                --lnt-url https://lnt.llvm.org --test-suite libcxx              \
                 --machine <machine> --samples 3 > plan.jsonl
 
 # Request the corresponding workflow runs, at most 4 at a time to be a good citizen.
@@ -62,10 +62,10 @@ it for each machine defined in `machines.json` on a schedule.
 
 ## Configuring the benchmark machines
 
-`machines.json` describes the machines we benchmark on. It is the single source of truth
-for both the workflow that runs the benchmarks (`libcxx-benchmark-commit.yml`) and the cron
-that requests those runs (`libcxx-benchmark-cron.yml`). Each entry contains variables used
-by the various workflows and the LNT machine name that the results will be reported under.
+`machines.json` describes the machines we benchmark on and their configuration. It is the
+single source of truth for all workflows that run benchmarks (PR benchmarking, running
+historical benchmarks, etc). Each entry contains variables used by the various workflows
+and the LNT machine name that the results will be reported under.
 
 ## Running benchmarks locally
 
@@ -76,12 +76,14 @@ which can be used to benchmark locally:
 ```
 run-benchmarks --test-suite-commit <SHA1> --machine <MACHINE>    \
                --compiler clang++ --benchmark-commit <SHA2>      \
-               --output result.json
+               --libcxx-installation <PATH>                      \
+               --output result.json                              \
+               -- --param std=c++26 --param optimization=speed
 ```
 
-This will run the benchmarks (using the test suite at the specified `SHA1`) against libc++
-as-of the specified `SHA2`, and produce a LNT-ready JSON report. The results can then be
-submitted to a LNT instance if desired.
+This will run the benchmarks (using the test suite at the specified `SHA1`) against the installation
+of libc++ at `PATH` (which is assumed to be libc++ as-of `SHA2`), and produce a LNT-ready JSON report.
+The results can then be submitted to a LNT instance if desired.
 
 ## Setting up a local LNT instance
 

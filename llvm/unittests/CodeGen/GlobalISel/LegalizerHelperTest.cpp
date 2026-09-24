@@ -1898,6 +1898,57 @@ TEST_F(AArch64GISelMITest, WidenScalarMergeValuesPointer) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
+TEST_F(AArch64GISelMITest, WidenScalarFlags) {
+  setUp();
+  if (!TM)
+    GTEST_SKIP();
+
+  DefineLegalizerInfo(A, {});
+
+  const LLT S8 = LLT::scalar(8);
+  const LLT S16 = LLT::scalar(16);
+  const unsigned NoWrapFlags = MachineInstr::NoUWrap | MachineInstr::NoSWrap;
+
+  auto One8 = B.buildConstant(S8, 1);
+  auto Two8 = B.buildConstant(S8, 2);
+  auto One16 = B.buildConstant(S16, 1);
+
+  MachineInstr *NoWrapOps[] = {
+      B.buildAdd(S8, One8, Two8, NoWrapFlags).getInstr(),
+      B.buildSub(S8, Two8, One8, NoWrapFlags).getInstr(),
+      B.buildMul(S8, One8, Two8, NoWrapFlags).getInstr(),
+  };
+  auto Or = B.buildOr(S8, One8, Two8, MachineInstr::Disjoint);
+  auto ShlValue = B.buildShl(S8, One8, One8, NoWrapFlags);
+  auto ShlAmount = B.buildShl(S16, One16, One8, NoWrapFlags);
+
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B);
+
+  for (MachineInstr *MI : NoWrapOps) {
+    B.setInstr(*MI);
+    EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+              Helper.widenScalar(*MI, 0, S16));
+    EXPECT_EQ(0u, MI->getFlags() & NoWrapFlags);
+  }
+
+  B.setInstr(*Or);
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.widenScalar(*Or, 0, S16));
+  EXPECT_FALSE(Or->getFlag(MachineInstr::Disjoint));
+
+  B.setInstr(*ShlValue);
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.widenScalar(*ShlValue, 0, S16));
+  EXPECT_EQ(0u, ShlValue->getFlags() & NoWrapFlags);
+
+  B.setInstr(*ShlAmount);
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.widenScalar(*ShlAmount, 1, S16));
+  EXPECT_EQ(NoWrapFlags, ShlAmount->getFlags() & NoWrapFlags);
+}
+
 TEST_F(AArch64GISelMITest, WidenSEXTINREG) {
   setUp();
   if (!TM)
@@ -3228,7 +3279,7 @@ TEST_F(AArch64GISelMITest, NarrowScalarExtract) {
   CHECK: [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES
   CHECK: [[COPY:%[0-9]+]]:_(i32) = COPY [[UV1]]
   CHECK: [[UV3:%[0-9]+]]:_(i32), [[UV4:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES
-  CHECK: [[EXTR:%[0-9]+]]:_(s16) = G_EXTRACT [[UV3]]:_(i32), 0
+  CHECK: [[EXTR:%[0-9]+]]:_(i16) = G_EXTRACT [[UV3]]:_(i32), 0
   CHECK: [[COPY:%[0-9]+]]:_(i16) = COPY [[EXTR]]
   )";
 
@@ -4437,6 +4488,55 @@ TEST_F(AArch64GISelMITest, LowerFMinimumExtLLT) {
             Helper.lower(*FMin, 0, LLT()));
 
   LLT::setUseExtended(false);
+}
+
+// Check that narrowScalarFPTOI only narrows conversions from IEEE half:
+// bfloat is also 16 bits wide but has float's exponent range, so swapping in
+// a narrower result could produce poison. Untyped 16-bit sources still match
+// LLT::float16() through the ANY_SCALAR wildcard.
+TEST_F(AArch64GISelMITest, NarrowFPTOIExtLLT) {
+  setUp();
+  if (!TM)
+    GTEST_SKIP();
+
+  const bool SavedUseExtended = LLT::getUseExtended();
+  LLT::setUseExtended(true);
+
+  DefineLegalizerInfo(A, {});
+  LLT S64 = LLT::integer(64);
+  LLT S32 = LLT::integer(32);
+
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B);
+
+  // Bfloat sources must be rejected.
+  Register BFloat16 = MRI->createGenericVirtualRegister(LLT::bfloat16());
+  auto FPTOSIBF16 = B.buildInstr(TargetOpcode::G_FPTOSI, {S64}, {BFloat16});
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::UnableToLegalize,
+            Helper.narrowScalar(*FPTOSIBF16, 0, S32));
+
+  // Every finite half fits in an i32, so the conversion can be narrowed.
+  Register Half = MRI->createGenericVirtualRegister(LLT::float16());
+  auto FPTOSIF16 = B.buildInstr(TargetOpcode::G_FPTOSI, {S64}, {Half});
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.narrowScalar(*FPTOSIF16, 0, S32));
+
+  // Untyped 16-bit sources (e.g. parsed from MIR) still match.
+  Register Untyped16 = MRI->createGenericVirtualRegister(LLT::scalar(16));
+  auto FPTOSIS16 = B.buildInstr(TargetOpcode::G_FPTOSI, {S64}, {Untyped16});
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.narrowScalar(*FPTOSIS16, 0, S32));
+
+  const char *CheckStr = R"(
+  CHECK-DAG: %[[CONV:.*]]:_(i32) = G_FPTOSI %[[SRC:.*]]:_(f16)
+  CHECK-DAG: %[[DST:.*]]:_(i64) = G_SEXT %[[CONV]]
+  CHECK-DAG: %{{[0-9]+}}:_(i64) = G_FPTOSI %{{[0-9]+}}:_(bf16)
+  )";
+
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+
+  LLT::setUseExtended(SavedUseExtended);
 }
 
 } // namespace

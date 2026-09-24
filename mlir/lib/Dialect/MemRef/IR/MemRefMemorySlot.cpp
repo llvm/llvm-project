@@ -96,8 +96,15 @@ SmallVector<MemorySlot> memref::AllocaOp::getPromotableSlots() {
   MemRefType type = getType();
 
   // A single-element memref is promoted to a scalar SSA value.
-  if (type.hasStaticShape() && type.getNumElements() == 1)
-    return {MemorySlot{getResult(), type.getElementType()}};
+  if (type.hasStaticShape()) {
+    std::optional<int64_t> numElements =
+        ShapedType::tryGetNumElements(type.getShape());
+    // Element count overflow: not promotable.
+    if (!numElements)
+      return {};
+    if (*numElements == 1)
+      return {MemorySlot{getResult(), type.getElementType()}};
+  }
 
   // A multi-element memref can be promoted to a single vector SSA value when it
   // is only ever accessed as a whole buffer (e.g. through whole-buffer
@@ -345,9 +352,12 @@ struct MemRefDestructurableTypeExternalModel
   getSubelementIndexMap(Type type) const {
     auto memrefType = llvm::cast<MemRefType>(type);
     constexpr int64_t maxMemrefSizeForDestructuring = 16;
-    if (!memrefType.hasStaticShape() ||
-        memrefType.getNumElements() > maxMemrefSizeForDestructuring ||
-        memrefType.getNumElements() == 1)
+    if (!memrefType.hasStaticShape())
+      return {};
+    std::optional<int64_t> numElements =
+        ShapedType::tryGetNumElements(memrefType.getShape());
+    if (!numElements || *numElements > maxMemrefSizeForDestructuring ||
+        *numElements == 1)
       return {};
 
     DenseMap<Attribute, Type> destructured;

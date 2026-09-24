@@ -31,6 +31,7 @@
 #include "clang/Driver/Tool.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendAction.h"
+#include "clang/Frontend/FrontendOptions.h"
 #include "clang/Frontend/MultiplexConsumer.h"
 #include "clang/Frontend/TextDiagnosticBuffer.h"
 #include "clang/FrontendTool/Utils.h"
@@ -206,6 +207,15 @@ CreateCI(const llvm::opt::ArgStringList &Argv) {
   return std::move(Clang);
 }
 
+static llvm::Error ExecuteIncrementalAction(CompilerInstance &CI,
+                                            IncrementalAction &Act) {
+  if (!CI.ExecuteAction(Act) || CI.getDiagnostics().hasErrorOccurred()) {
+    return llvm::createStringError(llvm::errc::not_supported,
+                                   "Failed to execute incremental action");
+  }
+  return llvm::Error::success();
+}
+
 } // anonymous namespace
 
 namespace clang {
@@ -278,17 +288,18 @@ IncrementalCompilerBuilder::create(std::string TT,
 
 llvm::Expected<std::unique_ptr<CompilerInstance>>
 IncrementalCompilerBuilder::CreateCpp() {
+  std::string TT = TargetTriple ? *TargetTriple : llvm::sys::getProcessTriple();
+
   std::vector<const char *> Argv;
   Argv.reserve(5 + 1 + UserArgs.size());
   Argv.push_back("-xc++");
 #ifdef __EMSCRIPTEN__
   Argv.push_back("-target");
-  Argv.push_back("wasm32-unknown-emscripten");
+  Argv.push_back(TT.c_str());
   Argv.push_back("-fvisibility=default");
 #endif
   llvm::append_range(Argv, UserArgs);
 
-  std::string TT = TargetTriple ? *TargetTriple : llvm::sys::getProcessTriple();
   return IncrementalCompilerBuilder::create(TT, Argv);
 }
 
@@ -349,7 +360,10 @@ Interpreter::Interpreter(std::unique_ptr<CompilerInstance> Instance,
   if (ErrOut)
     return;
 
-  CI->ExecuteAction(*Act);
+  if (llvm::Error E = ExecuteIncrementalAction(*CI, *Act)) {
+    ErrOut = joinErrors(std::move(ErrOut), std::move(E));
+    return;
+  }
 
   IncrParser =
       std::make_unique<IncrementalParser>(*CI, Act.get(), ErrOut, PTUs);
@@ -490,7 +504,8 @@ Interpreter::createWithCUDA(std::unique_ptr<CompilerInstance> CI,
 
   Interp->DeviceAct = std::move(DeviceAct);
 
-  DCI->ExecuteAction(*Interp->DeviceAct);
+  if (llvm::Error E = ExecuteIncrementalAction(*DCI, *Interp->DeviceAct))
+    return std::move(E);
 
   Interp->DeviceCI = std::move(DCI);
 
@@ -567,6 +582,12 @@ Interpreter::Parse(llvm::StringRef Code) {
     return TuOrErr.takeError();
 
   PartialTranslationUnit &LastPTU = IncrParser->RegisterPTU(*TuOrErr);
+
+  // Under -emit-llvm, print the module IR.
+  if (InitPTUSize && LastPTU.TheModule &&
+      getCompilerInstance()->getFrontendOpts().ProgramAction ==
+          frontend::EmitLLVM)
+    LastPTU.TheModule->print(llvm::outs(), /*AAW=*/nullptr);
 
   return LastPTU;
 }

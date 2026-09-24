@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "InstCombineInternal.h"
-#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -27,10 +26,6 @@ using namespace llvm;
 using namespace PatternMatch;
 
 #define DEBUG_TYPE "instcombine"
-
-namespace llvm {
-extern cl::opt<bool> ProfcheckDisableMetadataFixes;
-}
 
 STATISTIC(NumDeadStore, "Number of dead stores eliminated");
 STATISTIC(NumGlobalCopies, "Number of allocas copied from constant global");
@@ -1161,9 +1156,9 @@ Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {
       //  select(Cond, load (addrspacecast(&V1)), load (addrspacecast(&V2))).
       Align Alignment = LI.getAlign();
       if (isSafeToLoadUnconditionally(SI->getOperand(1), LI.getType(),
-                                      Alignment, DL, SI) &&
+                                      Alignment, SQ.getWithInstruction(SI)) &&
           isSafeToLoadUnconditionally(SI->getOperand(2), LI.getType(),
-                                      Alignment, DL, SI)) {
+                                      Alignment, SQ.getWithInstruction(SI))) {
 
         auto MaybeCastedLoadOperand = [&](Value *Op) {
           if (ASC)
@@ -1185,8 +1180,7 @@ Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {
         // poison-generating metadata.
         V1->copyMetadata(LI, Metadata::PoisonGeneratingIDs);
         V2->copyMetadata(LI, Metadata::PoisonGeneratingIDs);
-        return SelectInst::Create(SI->getCondition(), V1, V2, "", nullptr,
-                                  ProfcheckDisableMetadataFixes ? nullptr : SI);
+        return SelectInst::Create(SI->getCondition(), V1, V2, "", nullptr, SI);
       }
     }
   }
@@ -1675,8 +1669,16 @@ bool InstCombinerImpl::mergeStoreIntoSuccessor(StoreInst &SI) {
 
     auto *SIVTy = SI.getValueOperand()->getType();
     auto *OSVTy = OtherStore->getValueOperand()->getType();
-    return CastInst::isBitOrNoopPointerCastable(OSVTy, SIVTy, DL) &&
-           SI.hasSameSpecialState(OtherStore);
+    if (!CastInst::isBitOrNoopPointerCastable(OSVTy, SIVTy, DL) ||
+        !SI.hasSameSpecialState(OtherStore))
+      return false;
+
+    // Elementwise atomic stores behave as one atomic store per vector
+    // element. Do not split or merge those atomic accesses by changing the
+    // element size.
+    return !SI.isElementwise() ||
+           DL.getTypeStoreSize(SIVTy->getScalarType()) ==
+               DL.getTypeStoreSize(OSVTy->getScalarType());
   };
 
   // If the other block ends in an unconditional branch, check for the 'if then

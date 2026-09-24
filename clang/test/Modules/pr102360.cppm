@@ -10,6 +10,14 @@
 // RUN: %clang_cc1 -std=c++20 %t/d.cpp -fsyntax-only -verify \
 // RUN:   -fprebuilt-module-path=%t
 
+// RUN: %clang_cc1 -std=c++20 %t/a.cppm -emit-module-interface -o %t/a.pcm -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++20 %t/b.cppm -emit-module-interface -o %t/b.pcm \
+// RUN:   -fprebuilt-module-path=%t -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++20 %t/c.cppm -emit-module-interface -o %t/c.pcm \
+// RUN:   -fprebuilt-module-path=%t -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++20 %t/d.cpp -fsyntax-only -verify \
+// RUN:   -fprebuilt-module-path=%t -fexperimental-new-constant-interpreter
+
 //--- a.cppm
 export module a;
 

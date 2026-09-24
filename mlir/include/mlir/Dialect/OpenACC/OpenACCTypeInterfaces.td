@@ -265,11 +265,29 @@ def OpenACC_PointerLikeTypeInterface : TypeInterface<"PointerLikeType"> {
         Returns true if the pointer points to device data.
       }],
       /*retTy=*/"bool",
-      /*methodName=*/"isDeviceData",
+      /*methodName=*/"isDeviceAccessible",
       /*args=*/(ins "::mlir::Value":$var),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         return false;
+      }]
+    >,
+    InterfaceMethod<
+      /*description=*/[{
+        Returns true if the pointer points to memory that is residing in the
+        current device. This is a subset of `isDeviceAccessible`: memory that
+        is accessible from the device but is physically shared with the host
+        (and so may migrate on demand) is accessible but not in guaranteed to
+        be in device memory, and therefore must still be mapped or attached
+        rather than treated as already resident.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"isInDeviceMemory",
+      /*args=*/(ins "::mlir::Value":$var),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::cast<::mlir::acc::PointerLikeType>($_type)
+            .isDeviceAccessible(var);
       }]
     >,
   ];
@@ -436,9 +454,10 @@ def OpenACC_MappableTypeInterface : TypeInterface<"MappableType"> {
         that destruction code must be generated after the returned private
         variable usages, typically in the destroy region of recipe operations
         (for example, when heap allocations or temporaries requiring cleanup
-        are created during initialization). When `needsDestroy` is set, callers
-        should invoke `generatePrivateDestroy` in the recipe's destroy region
-        with the privatized value returned by this method.
+        are created during initialization). `destroyValues` may be populated
+        with additional values that must be preserved from initialization and
+        passed to `generatePrivateDestroy`. This is useful when cleanup cannot
+        be derived from the potentially mutable privatized value.
 
         Implementations that want certain ops to carry the correct variable name
         post materialization should attach `getVarNamePlaceholder()` as the
@@ -458,7 +477,8 @@ def OpenACC_MappableTypeInterface : TypeInterface<"MappableType"> {
                     "::mlir::ValueRange":$extents,
                     "::mlir::Value":$initVal,
                     "::mlir::acc::VariableInfoAttr":$varInfo,
-                    "bool &":$needsDestroy),
+                    "bool &":$needsDestroy,
+                    "::llvm::SmallVectorImpl<::mlir::Value> &":$destroyValues),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         return {};
@@ -509,8 +529,10 @@ def OpenACC_MappableTypeInterface : TypeInterface<"MappableType"> {
         produced by `generatePrivateInit`. This is typically inserted in a
         recipe's destroy region, after all uses of the privatized value.
 
-        The `privatized` value is the SSA value yielded by the init region
-        (and passed as the privatized argument to the destroy region).
+        The `privatized` value is the primary SSA value yielded by the init
+        region (and passed as the privatized argument to the destroy region).
+        `destroyValues` contains any additional values yielded by init
+        specifically for destruction.
         Implementations should free heap-allocated storage or perform any
         cleanup required for the given type. If no destruction is required,
         this function should be a no-op and return `true`.
@@ -530,6 +552,7 @@ def OpenACC_MappableTypeInterface : TypeInterface<"MappableType"> {
       /*args=*/(ins "::mlir::OpBuilder &":$builder,
                     "::mlir::Location":$loc,
                     "::mlir::Value":$privatized,
+                    "::mlir::ValueRange":$destroyValues,
                     "::mlir::ValueRange":$extents,
                     "::mlir::acc::VariableInfoAttr":$varInfo),
       /*methodBody=*/"",
@@ -542,11 +565,29 @@ def OpenACC_MappableTypeInterface : TypeInterface<"MappableType"> {
         Returns true if the variable represents device data.
       }],
       /*retTy=*/"bool",
-      /*methodName=*/"isDeviceData",
+      /*methodName=*/"isDeviceAccessible",
       /*args=*/(ins "::mlir::Value":$var),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         return false;
+      }]
+    >,
+    InterfaceMethod<
+      /*description=*/[{
+        Returns true if the pointer points to memory that is residing in the
+        current device. This is a subset of `isDeviceAccessible`: memory that
+        is accessible from the device but is physically shared with the host
+        (and so may migrate on demand) is accessible but not in guaranteed to
+        be in device memory, and therefore must still be mapped or attached
+        rather than treated as already resident.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"isInDeviceMemory",
+      /*args=*/(ins "::mlir::Value":$var),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::cast<::mlir::acc::MappableType>($_type)
+            .isDeviceAccessible(var);
       }]
     >,
   ];

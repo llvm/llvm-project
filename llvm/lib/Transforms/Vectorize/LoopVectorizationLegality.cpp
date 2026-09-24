@@ -462,7 +462,7 @@ int LoopVectorizationLegality::isConsecutivePtr(Type *AccessTy,
   // the symbolic strides when runtime SCEV checks are permitted.
   const auto &Strides = LAI && AllowRuntimeSCEVChecks
                             ? LAI->getSymbolicStrides()
-                            : DenseMap<Value *, const SCEV *>();
+                            : SymbolicStrideMap();
   SmallVector<const SCEVPredicate *> Predicates;
   int Stride = getPtrStride(PSE, AccessTy, Ptr, TheLoop, *DT, Strides, false,
                             AllowRuntimeSCEVChecks ? &Predicates : nullptr)
@@ -523,7 +523,7 @@ public:
     const SCEV *ScaledOffset = SE.getMulExpr(Step, SE.getConstant(Ty, Offset));
     const SCEV *NewStart =
         SE.getAddExpr(Expr->getStart(), SCEVUse(ScaledOffset));
-    return SE.getAddRecExpr(NewStart, NewStep, TheLoop, SCEV::FlagAnyWrap);
+    return SE.getAddRecExpr(NewStart, NewStep, TheLoop, SCEV::FlagNone);
   }
 
   const SCEV *visit(const SCEV *S) {
@@ -706,14 +706,6 @@ bool LoopVectorizationLegality::canVectorizeOuterLoop() {
 void LoopVectorizationLegality::addInductionPhi(PHINode *Phi,
                                                 const InductionDescriptor &ID) {
   Inductions[Phi] = ID;
-
-  // In case this induction also comes with casts that we know we can ignore
-  // in the vectorized loop body, record them here. All casts could be recorded
-  // here for ignoring, but suffices to record only the first (as it is the
-  // only one that may bw used outside the cast sequence).
-  ArrayRef<Instruction *> Casts = ID.getCastInsts();
-  if (!Casts.empty())
-    InductionCastsToIgnore.insert(*Casts.begin());
 
   Type *PhiTy = Phi->getType();
   const DataLayout &DL = Phi->getDataLayout();
@@ -936,11 +928,10 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
         (!VFDatabase::getMappings(*CI).empty() || isTLIScalarize(*TLI, *CI)))) {
     // If the call is a recognized math libary call, it is likely that
     // we can vectorize it given loosened floating-point constraints.
-    LibFunc Func;
     bool IsMathLibCall =
         TLI && CI->getCalledFunction() && CI->getType()->isFloatingPointTy() &&
-        TLI->getLibFunc(CI->getCalledFunction()->getName(), Func) &&
-        TLI->hasOptimizedCodeGen(Func);
+        TLI->hasOptimizedCodeGen(
+            TLI->getLibFunc(CI->getCalledFunction()->getName()));
 
     if (IsMathLibCall) {
       // TODO: Ideally, we should not use clang-specific language here,
@@ -1357,16 +1348,6 @@ bool LoopVectorizationLegality::isInductionPhi(const Value *V) const {
     return false;
 
   return Inductions.count(PN);
-}
-
-bool LoopVectorizationLegality::isCastedInductionVariable(
-    const Value *V) const {
-  auto *Inst = dyn_cast<Instruction>(V);
-  return (Inst && InductionCastsToIgnore.count(Inst));
-}
-
-bool LoopVectorizationLegality::isInductionVariable(const Value *V) const {
-  return isInductionPhi(V) || isCastedInductionVariable(V);
 }
 
 bool LoopVectorizationLegality::isFixedOrderRecurrence(
@@ -1845,12 +1826,11 @@ bool LoopVectorizationLegality::canUncountableExitConditionLoadBeMoved(
     return false;
   }
 
-  ICFLoopSafetyInfo SafetyInfo;
-  SafetyInfo.computeLoopSafetyInfo(TheLoop);
+  ICFLoopSafetyInfo SafetyInfo(TheLoop);
   LoadInst *Load = cast<LoadInst>(L);
   // We need to know that load will be executed before we can hoist a
   // copy out to run just before the first iteration.
-  if (!SafetyInfo.isGuaranteedToExecute(*Load, DT, TheLoop)) {
+  if (!SafetyInfo.isGuaranteedToExecute(*Load, DT)) {
     reportVectorizationFailure(
         "Load for uncountable exit not guaranteed to execute",
         "ConditionalUncountableExitLoad", ORE, TheLoop);

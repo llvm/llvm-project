@@ -86,7 +86,9 @@
 
             ; CHECK:        %[[#bb113]] = OpLabel
             ; CHECK:                      OpSelectionMerge %[[#bb116:]] None
-            ; CHECK:                      OpBranchConditional %[[#]] %[[#bb117:]] %[[#bb116]]
+            ; CHECK:                      OpBranchConditional %[[#]] %[[#bb117:]] %[[#unreachable:]]
+              ; CHECK:   %[[#unreachable]] = OpLabel
+              ; CHECK-NEXT:                OpUnreachable
               ; CHECK:        %[[#bb117]] = OpLabel
               ; CHECK:                      OpSelectionMerge %[[#bb118:]] None
               ; CHECK:                      OpBranchConditional %[[#]] %[[#bb119:]] %[[#bb120:]]
@@ -107,16 +109,8 @@
                   ; CHECK:        %[[#bb129]] = OpLabel
                   ; CHECK:                      OpBranch %[[#bb116]]
                   ; CHECK:        %[[#bb116]] = OpLabel
-                  ; CHECK:                      OpBranchConditional %[[#]] %[[#bb112]] %[[#bb133:]]
-                    ; CHECK:        %[[#bb133]] = OpLabel
-                    ; CHECK:                      OpBranch %[[#bb112]]
+                  ; CHECK:                      OpBranch %[[#bb112]]
                     ; CHECK:        %[[#bb112]] = OpLabel
-                    ; CHECK:                      OpSelectionMerge %[[#bb136:]] None
-                    ; CHECK:                      OpBranchConditional %[[#]] %[[#bb136]] %[[#bb137:]]
-                    ; CHECK:        %[[#bb137]] = OpLabel
-                    ; CHECK-NEXT:                 OpUnreachable
-
-                    ; CHECK:        %[[#bb136]] = OpLabel
                     ; CHECK:                      OpBranchConditional %[[#]] %[[#bb138:]] %[[#bb109]]
                       ; CHECK:        %[[#bb109]] = OpLabel
                       ; CHECK:                      OpBranch %[[#bb139:]]
@@ -423,5 +417,3 @@ attributes #3 = { convergent }
 !0 = !{i32 1, !"wchar_size", i32 4}
 !1 = !{i32 4, !"dx.disable_optimizations", i32 1}
 !2 = !{i32 7, !"frame-pointer", i32 2}
-
-

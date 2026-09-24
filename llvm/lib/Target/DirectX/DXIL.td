@@ -1074,6 +1074,17 @@ def AtomicBinOp : DXILOp<78, atomicBinOp> {
   let stages = [Stages<DXIL1_0, [all_stages]>];
 }
 
+def AtomicCompareExchange : DXILOp<79, atomicCompareExchange> {
+  let Doc = "performs an atomic compare-exchange on a UAV resource element, "
+            "returning the original value";
+  // Handle, Coord0, Coord1, Coord2, CompareValue, NewValue
+  let arguments = [HandleTy, Int32Ty, Int32Ty, Int32Ty, OverloadTy, OverloadTy];
+  let result = OverloadTy;
+  let overloads = [Overloads<DXIL1_0, [Int32Ty]>,
+                   Overloads<DXIL1_6, [Int32Ty, Int64Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+}
+
 def Barrier : DXILOp<80, barrier> {
   let Doc = "inserts a memory barrier in the shader";
   let intrinsics = [
@@ -1527,6 +1538,14 @@ def AnnotateHandle : DXILOp<216, annotateHandle> {
 def CreateHandleFromBinding : DXILOp<217, createHandleFromBinding> {
   let Doc = "create resource handle from binding";
   let arguments = [ResBindTy, Int32Ty, Int1Ty];
+  let result = HandleTy;
+  let stages = [Stages<DXIL1_6, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def CreateHandleFromHeap : DXILOp<218, createHandleFromHeap> {
+  let Doc = "create resource handle from heap";
+  let arguments = [Int32Ty, Int1Ty, Int1Ty];
   let result = HandleTy;
   let stages = [Stages<DXIL1_6, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];

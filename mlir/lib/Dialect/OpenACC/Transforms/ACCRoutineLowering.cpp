@@ -108,12 +108,13 @@ static func::FuncOp createFunctionForDeviceStaging(func::FuncOp hostFunc,
   func::FuncOp deviceFunc =
       func::FuncOp::create(rewriter, loc, hostFunc.getName(), funcType);
   deviceFunc->setAttrs(hostFunc->getAttrs());
-  deviceFunc->removeAttr(getRoutineInfoAttrName());
-  deviceFunc->setAttr(getSpecializedRoutineAttrName(),
-                      SpecializedRoutineAttr::get(
-                          ctx, SymbolRefAttr::get(ctx, routineOp.getSymName()),
-                          ParLevelAttr::get(ctx, parLevel),
-                          StringAttr::get(ctx, hostFunc.getName())));
+  deviceFunc->removeDiscardableAttr(getRoutineInfoAttrName());
+  deviceFunc->setDiscardableAttr(
+      getSpecializedRoutineAttrName(),
+      SpecializedRoutineAttr::get(
+          ctx, SymbolRefAttr::get(ctx, routineOp.getSymName()),
+          ParLevelAttr::get(ctx, parLevel),
+          StringAttr::get(ctx, hostFunc.getName())));
 
   Block *sourceBlock = &hostFunc.getBody().front();
   Block *newBlock = rewriter.createBlock(&deviceFunc.getRegion());

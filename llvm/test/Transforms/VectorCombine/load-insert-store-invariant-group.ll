@@ -34,7 +34,7 @@ define i16 @insert_store_invariant_group_argument(ptr %p) {
 ; VC-LABEL: define i16 @insert_store_invariant_group_argument(
 ; VC-SAME: ptr [[P:%.*]]) {
 ; VC-NEXT:    [[ELT:%.*]] = getelementptr inbounds <8 x i16>, ptr [[P]], i32 0, i32 1
-; VC-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <8 x i16>, ptr [[P]], i32 0, i32 1
+; VC-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <8 x i16>, ptr [[P]], i64 0, i64 1
 ; VC-NEXT:    store i16 1, ptr [[TMP0]], align 2
 ; VC-NEXT:    store i16 2, ptr [[ELT]], align 2
 ; VC-NEXT:    [[R:%.*]] = load i16, ptr [[ELT]], align 2, !invariant.group [[META0]]

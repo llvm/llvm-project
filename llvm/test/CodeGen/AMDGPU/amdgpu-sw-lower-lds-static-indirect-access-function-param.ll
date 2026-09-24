@@ -35,7 +35,7 @@ define void @my_function(ptr addrspace(3) %lds_arg) sanitize_address {
 
 define amdgpu_kernel void @my_kernel() sanitize_address {
 ; CHECK-LABEL: define amdgpu_kernel void @my_kernel(
-; CHECK-SAME: ) #[[ATTR1:[0-9]+]] !llvm.amdgcn.lds.kernel.id [[META1:![0-9]+]] {
+; CHECK-SAME: ) #[[ATTR1:[0-9]+]] !llvm.amdgcn.lds.kernel.id [[META2:![0-9]+]] {
 ; CHECK-NEXT:  WId:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.workitem.id.y()
@@ -65,7 +65,7 @@ define amdgpu_kernel void @my_kernel() sanitize_address {
 ; CHECK-NEXT:    [[XYZCOND:%.*]] = phi i1 [ false, [[WID:%.*]] ], [ true, [[MALLOC]] ]
 ; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier()
 ; CHECK-NEXT:    [[TMP17:%.*]] = load ptr addrspace(1), ptr addrspace(3) @llvm.amdgcn.sw.lds.my_kernel, align 8
-; CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds ([[LLVM_AMDGCN_SW_LDS_MY_KERNEL_MD_TYPE]], ptr addrspace(1) @llvm.amdgcn.sw.lds.my_kernel.md, i32 0, i32 1, i32 0), align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @llvm.amdgcn.sw.lds.my_kernel.md, i64 12), align 4
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr addrspace(3) @llvm.amdgcn.sw.lds.my_kernel, i32 [[TMP8]]
 ; CHECK-NEXT:    [[LDS_PTR:%.*]] = getelementptr [1024 x i32], ptr addrspace(3) [[TMP9]], i32 0, i32 0
 ; CHECK-NEXT:    call void @my_function(ptr addrspace(3) [[LDS_PTR]])
@@ -98,5 +98,6 @@ define amdgpu_kernel void @my_kernel() sanitize_address {
 ; CHECK: attributes #[[ATTR4:[0-9]+]] = { convergent nocallback nofree nounwind willreturn }
 ;.
 ; CHECK: [[META0]] = !{i32 0, i32 1}
-; CHECK: [[META1]] = !{i32 0}
+; CHECK: [[META1:![0-9]+]] = !{i32 4, !"nosanitize_address", i32 1}
+; CHECK: [[META2]] = !{i32 0}
 ;.

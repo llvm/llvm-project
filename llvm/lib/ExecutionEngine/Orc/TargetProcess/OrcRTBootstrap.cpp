@@ -6,12 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "OrcRTBootstrap.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcess/OrcRTBootstrap.h"
+
+#include "llvm/ExecutionEngine/Orc/Shared/Mangler.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 
 #include "llvm/ExecutionEngine/Orc/Shared/SPSCI/CallSPSCI.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SPSCI/MemoryAccessSPSCI.h"
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
-#include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/TargetExecutionUtils.h"
 
 #define DEBUG_TYPE "orc"
@@ -156,42 +159,53 @@ runAsInt32Int32FunctionWrapper(const char *ArgData, size_t ArgSize) {
       .release();
 }
 
-void addTo(StringMap<ExecutorAddr> &M) {
-  M[rt::sps_ci::MemWriteUInt8s::Name] = ExecutorAddr::fromPtr(
-      &writeUIntsWrapper<tpctypes::UInt8Write,
-                         shared::SPSMemoryAccessUInt8Write>);
-  M[rt::sps_ci::MemWriteUInt16s::Name] = ExecutorAddr::fromPtr(
-      &writeUIntsWrapper<tpctypes::UInt16Write,
-                         shared::SPSMemoryAccessUInt16Write>);
-  M[rt::sps_ci::MemWriteUInt32s::Name] = ExecutorAddr::fromPtr(
-      &writeUIntsWrapper<tpctypes::UInt32Write,
-                         shared::SPSMemoryAccessUInt32Write>);
-  M[rt::sps_ci::MemWriteUInt64s::Name] = ExecutorAddr::fromPtr(
-      &writeUIntsWrapper<tpctypes::UInt64Write,
-                         shared::SPSMemoryAccessUInt64Write>);
-  M[rt::sps_ci::MemWritePointers::Name] =
-      ExecutorAddr::fromPtr(&writePointersWrapper);
-  M[rt::sps_ci::MemWriteBuffers::Name] =
-      ExecutorAddr::fromPtr(&writeBuffersWrapper);
-  M[rt::sps_ci::MemReadUInt8s::Name] =
-      ExecutorAddr::fromPtr(&readUIntsWrapper<uint8_t>);
-  M[rt::sps_ci::MemReadUInt16s::Name] =
-      ExecutorAddr::fromPtr(&readUIntsWrapper<uint16_t>);
-  M[rt::sps_ci::MemReadUInt32s::Name] =
-      ExecutorAddr::fromPtr(&readUIntsWrapper<uint32_t>);
-  M[rt::sps_ci::MemReadUInt64s::Name] =
-      ExecutorAddr::fromPtr(&readUIntsWrapper<uint64_t>);
-  M[rt::sps_ci::MemReadPointers::Name] =
-      ExecutorAddr::fromPtr(&readPointersWrapper);
-  M[rt::sps_ci::MemReadBuffers::Name] =
-      ExecutorAddr::fromPtr(&readBuffersWrapper);
-  M[rt::sps_ci::MemReadStrings::Name] =
-      ExecutorAddr::fromPtr(&readStringsWrapper);
-  M[rt::sps_ci::CallMain::Name] = ExecutorAddr::fromPtr(&runAsMainWrapper);
-  M[rt::sps_ci::CallInt32Void::Name] =
+void addRunAsFunctionWrappersTo(StringMap<ExecutorAddr> &M) {
+  Mangler Mangle{Triple(sys::getProcessTriple())};
+  M[Mangle.mangledCopy(rt::sps_ci::CallInt32Void::Name)] =
       ExecutorAddr::fromPtr(&runAsInt32VoidFunctionWrapper);
-  M[rt::sps_ci::CallInt32Int32::Name] =
+  M[Mangle.mangledCopy(rt::sps_ci::CallInt32Int32::Name)] =
       ExecutorAddr::fromPtr(&runAsInt32Int32FunctionWrapper);
+}
+
+void addTo(StringMap<ExecutorAddr> &M) {
+  Mangler Mangle{Triple(sys::getProcessTriple())};
+  M[Mangle.mangledCopy(rt::sps_ci::MemWriteUInt8s::Name)] =
+      ExecutorAddr::fromPtr(
+          &writeUIntsWrapper<tpctypes::UInt8Write,
+                             shared::SPSMemoryAccessUInt8Write>);
+  M[Mangle.mangledCopy(rt::sps_ci::MemWriteUInt16s::Name)] =
+      ExecutorAddr::fromPtr(
+          &writeUIntsWrapper<tpctypes::UInt16Write,
+                             shared::SPSMemoryAccessUInt16Write>);
+  M[Mangle.mangledCopy(rt::sps_ci::MemWriteUInt32s::Name)] =
+      ExecutorAddr::fromPtr(
+          &writeUIntsWrapper<tpctypes::UInt32Write,
+                             shared::SPSMemoryAccessUInt32Write>);
+  M[Mangle.mangledCopy(rt::sps_ci::MemWriteUInt64s::Name)] =
+      ExecutorAddr::fromPtr(
+          &writeUIntsWrapper<tpctypes::UInt64Write,
+                             shared::SPSMemoryAccessUInt64Write>);
+  M[Mangle.mangledCopy(rt::sps_ci::MemWritePointers::Name)] =
+      ExecutorAddr::fromPtr(&writePointersWrapper);
+  M[Mangle.mangledCopy(rt::sps_ci::MemWriteBuffers::Name)] =
+      ExecutorAddr::fromPtr(&writeBuffersWrapper);
+  M[Mangle.mangledCopy(rt::sps_ci::MemReadUInt8s::Name)] =
+      ExecutorAddr::fromPtr(&readUIntsWrapper<uint8_t>);
+  M[Mangle.mangledCopy(rt::sps_ci::MemReadUInt16s::Name)] =
+      ExecutorAddr::fromPtr(&readUIntsWrapper<uint16_t>);
+  M[Mangle.mangledCopy(rt::sps_ci::MemReadUInt32s::Name)] =
+      ExecutorAddr::fromPtr(&readUIntsWrapper<uint32_t>);
+  M[Mangle.mangledCopy(rt::sps_ci::MemReadUInt64s::Name)] =
+      ExecutorAddr::fromPtr(&readUIntsWrapper<uint64_t>);
+  M[Mangle.mangledCopy(rt::sps_ci::MemReadPointers::Name)] =
+      ExecutorAddr::fromPtr(&readPointersWrapper);
+  M[Mangle.mangledCopy(rt::sps_ci::MemReadBuffers::Name)] =
+      ExecutorAddr::fromPtr(&readBuffersWrapper);
+  M[Mangle.mangledCopy(rt::sps_ci::MemReadStrings::Name)] =
+      ExecutorAddr::fromPtr(&readStringsWrapper);
+  M[Mangle.mangledCopy(rt::sps_ci::CallMain::Name)] =
+      ExecutorAddr::fromPtr(&runAsMainWrapper);
+  addRunAsFunctionWrappersTo(M);
 }
 
 } // end namespace rt_bootstrap

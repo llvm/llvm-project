@@ -16,11 +16,11 @@ end subroutine target_simple
 ! CHECK-SAME:              @[[VAR_PRIVATIZER_SYM:.*]] : i32
 
 ! CHECK-LABEL: func.func @_QPtarget_simple() {
-! CHECK:  %[[VAR_ALLOC:.*]] = fir.alloca i32 {bindc_name = "simple_var", {{.*}}}
+! CHECK:  %[[VAR_ALLOC:.*]] = fir.alloca i32 <{bindc_name = "simple_var", {{.*}}}>
 ! CHECK:  %[[VAR_DECL:.*]]:2 = hlfir.declare %[[VAR_ALLOC]]
 
 ! CHECK:  omp.target kernel_type(generic) private(
-! CHECK-SAME: @[[VAR_PRIVATIZER_SYM]] %[[VAR_DECL]]#0 -> %[[REG_ARG:.*]] : !fir.ref<i32>) {
+! CHECK-SAME: @[[VAR_PRIVATIZER_SYM]] %[[VAR_DECL]]#0 -> %[[REG_ARG:[^ ]+]] : !fir.ref<i32>) {
 ! CHECK:      %[[REG_DECL:.*]]:2 = hlfir.declare %[[REG_ARG]]
 ! CHECK:      %[[C10:.*]] = arith.constant 10
 ! CHECK:      hlfir.assign %[[C10]] to %[[REG_DECL]]#0
