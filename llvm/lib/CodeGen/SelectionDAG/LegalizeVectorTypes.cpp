@@ -5239,8 +5239,9 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
     EVT VT0 = N->getValueType(0);
     if (!TLI.isOperationLegalOrCustomOrPromote(N->getOpcode(), WideVecVT) &&
         TLI.isOperationExpandOrLibCall(N->getOpcode(), VT0.getScalarType())) {
-      SDValue Unrolled = DAG.UnrollVectorOp(N, WideVecVT.getVectorNumElements());
-      Res = SDValue(Unrolled.getNode(), ResNo);
+      SDValue Unrolled =
+          DAG.UnrollVectorOp(N, WideVecVT.getVectorNumElements());
+      Res = Unrolled.getValue(ResNo);
       if (N->getNumValues() > 1)
         ReplaceOtherWidenResults(N, Unrolled.getNode(), ResNo);
       return true;
