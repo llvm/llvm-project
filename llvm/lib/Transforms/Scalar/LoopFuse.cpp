@@ -50,6 +50,7 @@
 #include "llvm/Analysis/DependenceAnalysis.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/LoopNestAnalysis.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/ScalarEvolution.h"
@@ -63,6 +64,7 @@
 #include "llvm/Transforms/Utils/CodeMoverUtils.h"
 #include "llvm/Transforms/Utils/LoopPeel.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
+#include "llvm/Transforms/Utils/LoopUtils.h"
 #include <list>
 
 using namespace llvm;
@@ -403,6 +405,87 @@ printFusionCandidates(const FusionCandidateCollection &FusionCandidates) {
 }
 #endif // NDEBUG
 
+/// Fold away an empty block on the "skip" edge of \p L's loop guard, if any.
+///
+/// Loop::getLoopGuardBranch() recognizes a guard only when the non-loop
+/// successor of the guard branch is the block that the loop exit flows into
+/// (looking through empty blocks on the exit side only). Passes such as
+/// JumpThreading can leave an empty forwarding block on the guard side
+/// instead:
+///
+///   Guard:    br %c, %Preheader, %Skip
+///   Skip:     br %Merge             ; empty, only reachable from Guard
+///   ...
+///   Exit:     br %Merge
+///   Merge:    ...
+///
+/// which makes getLoopGuardBranch() treat \p L as unguarded even though
+/// SimplifyCFG would fold %Skip away. This function performs that same
+/// fold: it redirects the guard branch to %Merge and deletes the empty
+/// %Skip block. Loop fusion calls this on every loop before collecting
+/// fusion candidates, so that a guarded loop left in this shape by an
+/// earlier pass is still recognized as guarded and as adjacent to its
+/// neighbor. Returns true if the CFG was changed.
+static bool simplifyLoopGuard(Loop *L, DomTreeUpdater &DTU, LoopInfo &LI,
+                              ScalarEvolution &SE) {
+  if (!L->isLoopSimplifyForm() || !L->isRotatedForm())
+    return false;
+
+  BasicBlock *Preheader = L->getLoopPreheader();
+  BasicBlock *ExitBlock = L->getUniqueExitBlock();
+  if (!ExitBlock)
+    return false;
+
+  BasicBlock *GuardBB = Preheader->getUniquePredecessor();
+  if (!GuardBB)
+    return false;
+
+  auto *GuardBI = dyn_cast<CondBrInst>(GuardBB->getTerminator());
+  if (!GuardBI)
+    return false;
+
+  BasicBlock *SkipBB = GuardBI->getSuccessor(0) == Preheader
+                           ? GuardBI->getSuccessor(1)
+                           : GuardBI->getSuccessor(0);
+  if (SkipBB == Preheader)
+    return false;
+
+  // The skip block must contain nothing but an unconditional branch and must
+  // be reachable only from the guard, so that removing it cannot change any
+  // other path.
+  if (SkipBB->size() != 1 || !isa<UncondBrInst>(SkipBB->getTerminator()) ||
+      SkipBB->hasAddressTaken() || SkipBB->getUniquePredecessor() != GuardBB)
+    return false;
+
+  BasicBlock *MergeBB = SkipBB->getUniqueSuccessor();
+  if (!MergeBB || MergeBB == SkipBB || MergeBB == GuardBB ||
+      LI.isLoopHeader(MergeBB))
+    return false;
+
+  // The loop exit must flow into the same block; otherwise the branch is
+  // not a loop guard.
+  if (&LoopNest::skipEmptyBlockUntil(ExitBlock, MergeBB,
+                                     /*CheckUniquePred=*/true) != MergeBB)
+    return false;
+
+  LLVM_DEBUG(dbgs() << "Removing empty guard skip block " << SkipBB->getName()
+                    << " of loop " << L->getHeader()->getName() << "\n");
+
+  MergeBB->replacePhiUsesWith(SkipBB, GuardBB);
+  GuardBI->replaceSuccessorWith(SkipBB, MergeBB);
+  SkipBB->getTerminator()->eraseFromParent();
+  new UnreachableInst(SkipBB->getContext(), SkipBB);
+
+  DTU.applyUpdates({{DominatorTree::Delete, GuardBB, SkipBB},
+                    {DominatorTree::Delete, SkipBB, MergeBB},
+                    {DominatorTree::Insert, GuardBB, MergeBB}});
+  LI.removeBlock(SkipBB);
+  DTU.deleteBB(SkipBB);
+  DTU.flush();
+
+  return true;
+}
+
 namespace {
 
 /// Collect all loops in function at the same nest level, starting at the
@@ -502,6 +585,11 @@ public:
     LLVM_DEBUG(dbgs() << "Performing Loop Fusion on function " << F.getName()
                       << "\n");
     bool Changed = false;
+
+    // Canonicalize the CFG around loop guards before looking for candidates,
+    // so that guarded loops are recognized as such and as adjacent.
+    for (Loop *L : LI.getLoopsInPreorder())
+      Changed |= simplifyLoopGuard(L, DTU, LI, SE);
 
     while (!LDT.empty()) {
       LLVM_DEBUG(dbgs() << "Got " << LDT.size() << " loop sets for depth "
