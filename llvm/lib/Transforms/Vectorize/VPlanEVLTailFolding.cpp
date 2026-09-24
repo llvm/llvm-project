@@ -384,6 +384,24 @@ static void fixupVFUsersForEVL(VPlan &Plan, VPValue &EVL) {
     return isa<VPWidenPointerInductionRecipe>(U);
   });
 
+  // Also replace VF with EVL for truncated widen induction.
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_deep(Plan.getVectorLoopRegion()->getEntry()))) {
+    for (VPRecipeBase &R : VPBB->phis()) {
+      auto *WidenIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R);
+      if (!WidenIV)
+        continue;
+      if (!match(WidenIV->getOperand(2), m_Trunc(m_Specific(&Plan.getVF()))))
+        continue;
+      VPValue *TruncEVL =
+          VPBuilder::getToInsertAfter(EVL.getDefiningRecipe())
+              .createScalarZExtOrTrunc(
+                  &EVL, cast<VPSingleDefRecipe>(R).getScalarType(),
+                  DebugLoc::getUnknown());
+      R.setOperand(2, TruncEVL);
+    }
+  }
+
   // Create a scalar phi to track the previous EVL if fixed-order recurrence is
   // contained.
   bool ContainsFORs =
