@@ -49,6 +49,8 @@ static bool isChangedBefore(const Stmt *S, const Stmt *NextS, const Stmt *PrevS,
 static const Stmt *getOutermostLoopBetween(const Stmt *S, const Stmt *Outer,
                                            ASTContext *Context) {
   const Stmt *Loop = nullptr;
+  // getParents() returns only the direct parents of a node, usually exactly
+  // one, so the walk calls it once per level.
   DynTypedNodeList Parents = Context->getParents(*S);
   while (!Parents.empty()) {
     const DynTypedNode Parent = Parents[0];
