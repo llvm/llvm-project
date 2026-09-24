@@ -41,7 +41,7 @@ A::A() {}
 // OGCG:   %[[THIS_ADDR:.*]] = alloca ptr
 // OGCG:   store ptr %[[ARG0]], ptr %[[THIS_ADDR]]
 // OGCG:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]]
-// OGCG:   store ptr getelementptr inbounds inrange(-16, 8) ({ [3 x ptr] }, ptr @_ZTV1A, i32 0, i32 0, i32 2), ptr %[[THIS]]
+// OGCG:   store ptr getelementptr inbounds inrange(-16, 8) (i8, ptr @_ZTV1A, i64 16), ptr %[[THIS]]
 
 // NOTE: The GEP in OGCG looks very different from the one generated with CIR,
 //       but it is equivalent. The OGCG GEP indexes by base pointer, then

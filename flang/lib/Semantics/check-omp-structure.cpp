@@ -568,16 +568,9 @@ bool OmpStructureChecker::CheckAllowedClause(llvm::omp::Clause clauseId,
           GetUpperName(clauseId, version), GetUpperName(dirId, version),
           ThisVersion(version), TryVersion(allowedInVersion));
     } else {
-      llvm::StringRef annot{
-          dirId == llvm::omp::Directive::OMPD_ordered_standalone
-              ? " (standalone)"
-              : dirId == llvm::omp::Directive::OMPD_ordered_blockassoc
-              ? " (block-associated)"
-              : ""};
       context_.Say(clauseSource,
-          "%s clause is not allowed on %s%s directive"_err_en_US,
-          GetUpperName(clauseId, version), GetUpperName(dirId, version),
-          annot.str());
+          "%s clause is not allowed on %s directive"_err_en_US,
+          GetUpperName(clauseId, version), GetUpperName(dirId, version));
     }
     return false;
   }
@@ -1655,7 +1648,7 @@ void OmpStructureChecker::Enter(const parser::OmpBlockConstruct &x) {
     llvm::omp::Directive dirId{beginSpec.DirId()};
     auto &msg{context_.Say(beginSpec.source,
         "Expected OpenMP END %s directive"_err_en_US,
-        parser::omp::GetUpperName(dirId, version))};
+        parser::omp::GetUpperName(dirId, version, /*annotate=*/false))};
     // ORDERED has two variants, so be explicit about which variant we think
     // this is.
     if (dirId == llvm::omp::Directive::OMPD_ordered_blockassoc) {
@@ -6130,7 +6123,9 @@ void OmpStructureChecker::CheckArraySection(
     for (const auto &subscript : arrayElement.Subscripts()) {
       if (const auto *triplet{
               std::get_if<parser::SubscriptTriplet>(&subscript.u)}) {
-        if (std::get<0>(triplet->t) && std::get<1>(triplet->t)) {
+        const auto &lower{std::get<0>(triplet->t)};
+        const auto &upper{std::get<1>(triplet->t)};
+        if (lower && upper) {
           std::optional<int64_t> strideVal{std::nullopt};
           if (const auto &strideExpr = std::get<2>(triplet->t)) {
             // OpenMP 6.0 Section 5.2.5: Array Sections
@@ -6147,28 +6142,36 @@ void OmpStructureChecker::CheckArraySection(
                   "Cannot specify a step for a substring"_err_en_US);
             }
           }
-          const auto &lower{std::get<0>(triplet->t)};
-          const auto &upper{std::get<1>(triplet->t)};
-          if (lower && upper) {
-            const auto lval{GetIntValue(lower)};
-            const auto uval{GetIntValue(upper)};
-            if (lval && uval) {
-              int64_t sectionLen = *uval - *lval;
-              if (strideVal) {
-                if (*strideVal == 0) {
-                  continue;
-                }
-                sectionLen = sectionLen / *strideVal;
+          const auto lval{GetIntValue(lower)};
+          const auto uval{GetIntValue(upper)};
+          if (lval && uval) {
+            int64_t sectionLen = *uval - *lval;
+            if (strideVal) {
+              if (*strideVal == 0) {
+                continue;
               }
+              sectionLen = sectionLen / *strideVal;
+            }
 
-              if (sectionLen < 1) {
-                context_.Say(GetContext().clauseSource,
-                    "'%s' in %s clause"
-                    " is a zero size array section"_err_en_US,
-                    name.ToString(),
-                    parser::omp::GetUpperName(clause, version));
-                break;
-              }
+            if (sectionLen < 1) {
+              context_.Say(GetContext().clauseSource,
+                  "'%s' in %s clause"
+                  " is a zero size array section"_err_en_US,
+                  name.ToString(), parser::omp::GetUpperName(clause, version));
+              break;
+            }
+          }
+        } else if (clause == llvm::omp::Clause::OMPC_depend) {
+          if (auto extents{
+                  evaluate::AsConstantExtents(context_.foldingContext(),
+                      evaluate::GetShape(
+                          context_.foldingContext(), *name.symbol))}) {
+            if (llvm::is_contained(*extents, 0)) {
+              context_.Say(GetContext().clauseSource,
+                  "'%s' in %s clause"
+                  " is a zero size array section"_err_en_US,
+                  name.ToString(), parser::omp::GetUpperName(clause, version));
+              break;
             }
           }
         }

@@ -1,4 +1,4 @@
-; RUN: opt -mtriple amdgcn-unknown-amdhsa -passes='print<uniformity>' -disable-output %s 2>&1 | FileCheck %s
+; RUN: opt -mtriple amdgpu7.00-unknown-amdhsa -passes='print<uniformity>' -disable-output %s 2>&1 | FileCheck %s
 
 ; divergent loop (H<header><exiting to X>, B<exiting to Y>)
 ; the divergent join point in %exit is obscured by uniform control joining in %X

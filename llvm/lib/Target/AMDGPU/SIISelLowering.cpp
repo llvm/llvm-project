@@ -6129,11 +6129,27 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
         // parity the result will be the same as the input value.
         Register ParityRegister =
             MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
-
         BuildMI(BB, MI, DL, TII->get(AMDGPU::S_AND_B32), ParityRegister)
             .addReg(NewAccumulator->getOperand(0).getReg())
             .addImm(1)
             .setOperandDead(3); // Dead scc
+        // Check if Src is a known identity constant.
+        MachineInstr *SrcDef = MRI.getVRegDef(SrcReg);
+        if (SrcDef && SrcDef->isMoveImmediate()) {
+          int64_t Imm = SrcDef->getOperand(1).getImm();
+          if (Imm == 1) { // 1 * parity(exec) = parity(exec)
+            if (Opc == AMDGPU::S_XOR_B32) {
+              BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MOV_B32), DstReg)
+                  .addReg(ParityRegister);
+            } else {
+              Register DstHi =
+                  MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+              BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MOV_B32), DstHi).addImm(0);
+              BuildRegSequence(BB, MI, DstReg, ParityRegister, DstHi);
+            }
+            break;
+          }
+        }
         if (Opc == AMDGPU::S_XOR_B32) {
           BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_I32), DstReg)
               .addReg(SrcReg)
@@ -6157,7 +6173,6 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
       }
       case AMDGPU::S_SUB_I32: {
         Register NegatedVal = MRI.createVirtualRegister(DstRegClass);
-
         // Take the negation of the source operand.
         BuildMI(BB, MI, DL, TII->get(AMDGPU::S_SUB_I32), NegatedVal)
             .addImm(0)
@@ -6168,6 +6183,16 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
         break;
       }
       case AMDGPU::S_ADD_I32: {
+        // Check if Src is a known identity constant.
+        MachineInstr *SrcDef = MRI.getVRegDef(SrcReg);
+        if (SrcDef && SrcDef->isMoveImmediate()) {
+          int64_t Imm = SrcDef->getOperand(1).getImm();
+          if (Imm == 1) { // 1 * bitcount(exec) = bitcount(exec)
+            BuildMI(BB, MI, DL, TII->get(AMDGPU::COPY), DstReg)
+                .addReg(NewAccumulator->getOperand(0).getReg());
+            break;
+          }
+        }
         BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_I32), DstReg)
             .addReg(SrcReg)
             .addReg(NewAccumulator->getOperand(0).getReg());
@@ -6190,6 +6215,20 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
             MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
         auto [Op1L, Op1H] = ExtractSubRegs(MI, MI.getOperand(1),
                                            MRI.getRegClass(SrcReg), ST, MRI);
+        // Check if Src is a known identity constant.
+        MachineInstr *SrcDef = MRI.getVRegDef(SrcReg);
+        if (SrcDef && SrcDef->isMoveImmediate()) {
+          int64_t Imm = SrcDef->getOperand(1).getImm();
+          if (Imm == 1 && Opc == AMDGPU::S_ADD_U64_PSEUDO) {
+            // 1 * bitcount(exec) = bitcount(exec)
+            Register DstHi =
+                MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+            BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MOV_B32), DstHi).addImm(0);
+            BuildRegSequence(BB, MI, DstReg,
+                             NewAccumulator->getOperand(0).getReg(), DstHi);
+            break;
+          }
+        }
         if (Opc == AMDGPU::S_SUB_U64_PSEUDO) {
           BuildMI(BB, MI, DL, TII->get(AMDGPU::S_SUB_I32), NegatedValLo)
               .addImm(0)
@@ -7358,13 +7397,19 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
       NeedClampOperand = true;
     }
 
+    bool VCCDead = MI.getOperand(3).isDead();
+
     auto I = BuildMI(*BB, MI, DL, TII->get(Opc), MI.getOperand(0).getReg());
-    if (TII->isVOP3(*I)) {
-      I.addReg(TRI->getVCC(), RegState::Define);
-    }
+    bool IsVOP3 = TII->isVOP3(*I);
+    if (IsVOP3)
+      I.addReg(TRI->getVCC(), RegState::Define | getDeadRegState(VCCDead));
+
     I.add(MI.getOperand(1)).add(MI.getOperand(2));
     if (NeedClampOperand)
       I.addImm(0); // clamp bit for e64 encoding
+
+    if (!IsVOP3 && VCCDead)
+      I.setOperandDead(3);
 
     TII->legalizeOperands(*I);
 
@@ -11168,6 +11213,12 @@ SITargetLowering::LowerCONVERT_FROM_ARBITRARY_FP(SDValue Op,
     return SDValue();
 
   EVT DstVT = Op.getValueType();
+  // The custom action for a v2i8 source also reaches half conversions on
+  // targets which only have FP8-to-f32 instructions.
+  if (DstVT.getScalarType() == MVT::f16 &&
+      !Subtarget->hasFP8F16ConversionInsts())
+    return SDValue();
+
   if (IsE5M3) {
     if (DstVT.getScalarType() != MVT::f32)
       return SDValue();
