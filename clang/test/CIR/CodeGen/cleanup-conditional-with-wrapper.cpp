@@ -42,8 +42,8 @@ Wrapper makeWrapper() {
 // CIR: cir.func {{.*}} @_Z11makeWrapperv(%[[RETVAL:.*]]: !cir.ptr<!rec_Wrapper> {llvm.align = 1 : i64, llvm.dead_on_unwind, llvm.noalias, llvm.sret = !rec_Wrapper, llvm.writable}{{.*}})
 // CIR:   %[[CLEANUP_COND:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
 // CIR:   %[[AGG_TMP0:.*]] = cir.alloca "agg.tmp0" {{.*}} : !cir.ptr<!rec_std3A3Aunique_ptr3CBase3E>
+// CIR:   %[[FLAG:.*]] = cir.load{{.*}} %{{.*}}
 // CIR:   cir.cleanup.scope {
-// CIR:     %[[FLAG:.*]] = cir.load{{.*}} %{{.*}}
 // CIR:     %[[FALSE:.*]] = cir.const #false
 // CIR:     cir.store %[[FALSE]], %[[CLEANUP_COND]]
 // CIR:     cir.if %[[FLAG]] {
@@ -146,9 +146,9 @@ void APFixedPoint::add(int x) const {
 // CIR:       %[[X_BOOL:.*]] = cir.cast int_to_bool %[[X]]
 // CIR:       cir.if %[[X_BOOL]] {
 // CIR:         %[[AGG_TMP:.*]] = cir.alloca "agg.tmp.ensured" {{.*}} : !cir.ptr<!rec_APInt>
+// CIR:         %[[X2:.*]] = cir.load{{.*}} %[[X_ADDR]]
+// CIR:         %[[X2_BOOL:.*]] = cir.cast int_to_bool %[[X2]]
 // CIR:         cir.cleanup.scope {
-// CIR:           %[[X2:.*]] = cir.load{{.*}} %[[X_ADDR]]
-// CIR:           %[[X2_BOOL:.*]] = cir.cast int_to_bool %[[X2]]
 // CIR:           %[[FALSE:.*]] = cir.const #false
 // CIR:           cir.store{{.*}} %[[FALSE]], %[[CLEANUP_COND_TRUE]]
 // CIR:           %[[FALSE:.*]] = cir.const #false
@@ -256,13 +256,9 @@ struct Entry {
 };
 
 // A conditional expression whose condition itself produces a temporary that
-// needs cleanup (here, the Iter() temporary destroyed by ~Iter) nests the
-// deferred-conditional cleanup of a temporary in one of the conditional's
-// arms inside that condition's cleanup scope. The alloca for the
-// conditionally-destroyed Path temporary must be hoisted out of the outer
-// (full-expr) cleanup scope, even though in the freshly emitted IR its
-// direct parent cleanup scope is the inner one created for the Iter
-// temporary.
+// needs cleanup, here the Iter() temporary destroyed by ~Iter. Iter() is
+// constructed before the conditional, so its cleanup scope is the outer one
+// and the conditionally-destroyed Path temporary is destroyed first.
 void makeEntry() {
   Iter() ? Entry() : g_path;
 }
@@ -270,10 +266,12 @@ void makeEntry() {
 // CIR: cir.func {{.*}} @_Z9makeEntryv()
 // CIR:   %[[REF_TMP:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_Iter>
 // CIR:   %[[CLEANUP_COND:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
-// CIR:   %[[AGG_TMP0:.*]] = cir.alloca "agg.tmp0" {{.*}} : !cir.ptr<!rec_Path>
 // CIR:   cir.cleanup.scope {
+// CIR:     %[[AGG_TMP0:.*]] = cir.alloca "agg.tmp0" {{.*}} : !cir.ptr<!rec_Path>
+// CIR:     %[[CALL:.*]] = cir.call @_ZN4ItercvbEv(%[[REF_TMP]])
 // CIR:     cir.cleanup.scope {
-// CIR:       %[[CALL:.*]] = cir.call @_ZN4ItercvbEv(%[[REF_TMP]])
+// CIR:       %[[FALSE:.*]] = cir.const #false
+// CIR:       cir.store %[[FALSE]], %[[CLEANUP_COND]]
 // CIR:       cir.if %[[CALL]] {
 // CIR:         %[[ENSURED_T:.*]] = cir.alloca "agg.tmp.ensured" {{.*}} : !cir.ptr<!rec_Entry>
 // CIR:         cir.call @_ZN5EntryC1Ev(%[[ENSURED_T]])
@@ -286,28 +284,27 @@ void makeEntry() {
 // CIR:       }
 // CIR:       cir.yield
 // CIR:     } cleanup normal {
-// CIR:       cir.call @_ZN4IterD1Ev(%[[REF_TMP]])
+// CIR:       %[[FLAG:.*]] = cir.load{{.*}} %[[CLEANUP_COND]]
+// CIR:       cir.if %[[FLAG]] {
+// CIR:         cir.call @_ZN4PathD1Ev(%[[AGG_TMP0]])
+// CIR:       }
 // CIR:       cir.yield
 // CIR:     }
 // CIR:     cir.yield
 // CIR:   } cleanup normal {
-// CIR:     %[[FLAG:.*]] = cir.load{{.*}} %[[CLEANUP_COND]]
-// CIR:     cir.if %[[FLAG]] {
-// CIR:       cir.call @_ZN4PathD1Ev(%[[AGG_TMP0]])
-// CIR:     }
+// CIR:     cir.call @_ZN4IterD1Ev(%[[REF_TMP]])
 // CIR:     cir.yield
 // CIR:   }
 // CIR:   cir.return
 
 // LLVM: define {{.*}} void @_Z9makeEntryv()
+// LLVM:   %[[AGG_TMP0:.*]] = alloca %struct.Path
 // LLVM:   %[[ENSURED_T:.*]] = alloca %struct.Entry
 // LLVM:   %[[ENSURED_F:.*]] = alloca %struct.Entry
 // LLVM:   %[[REF_TMP:.*]] = alloca %struct.Iter
 // LLVM:   %[[CLEANUP_COND:.*]] = alloca i8
-// LLVM:   %[[AGG_TMP0:.*]] = alloca %struct.Path
-// LLVM:   br label %[[INIT:.*]]
-// LLVM: [[INIT]]:
 // LLVM:   %[[CALL:.*]] = call {{.*}} i1 @_ZN4ItercvbEv(ptr {{.*}} %[[REF_TMP]])
+// LLVM:   store i8 0, ptr %[[CLEANUP_COND]]
 // LLVM:   br i1 %[[CALL]], label %[[TRUE_BB:.*]], label %[[FALSE_BB:.*]]
 // LLVM: [[TRUE_BB]]:
 // LLVM:   call void @_ZN5EntryC1Ev(ptr {{.*}} %[[ENSURED_T]])
@@ -317,11 +314,6 @@ void makeEntry() {
 // LLVM:   call void @_ZN5EntryC1E4Path(ptr {{.*}} %[[ENSURED_F]], ptr nofreeobj noundef align 1 dereferenceable(1) %[[AGG_TMP0]])
 // LLVM:   br label %[[COND_END]]
 // LLVM: [[COND_END]]:
-// LLVM:   br label %[[AFTER_INNER:.*]]
-// LLVM: [[AFTER_INNER]]:
-// LLVM:   call void @_ZN4IterD1Ev(ptr {{.*}} %[[REF_TMP]])
-// LLVM:   br label %[[CHECK_FLAG:.*]]
-// LLVM: [[CHECK_FLAG]]:
 // LLVM:   %[[FLAG_BYTE:.*]] = load i8, ptr %[[CLEANUP_COND]]
 // LLVM:   %[[FLAG:.*]] = trunc i8 %[[FLAG_BYTE]] to i1
 // LLVM:   br i1 %[[FLAG]], label %[[DO_PATH_DTOR:.*]], label %[[DONE:.*]]
@@ -329,6 +321,7 @@ void makeEntry() {
 // LLVM:   call void @_ZN4PathD1Ev(ptr {{.*}} %[[AGG_TMP0]])
 // LLVM:   br label %[[DONE]]
 // LLVM: [[DONE]]:
+// LLVM:   call void @_ZN4IterD1Ev(ptr {{.*}} %[[REF_TMP]])
 // LLVM:   ret void
 
 // OGCG: define {{.*}} void @_Z9makeEntryv()

@@ -102,5 +102,30 @@ __ACC_RTL(tgt_acc_data_update, false, Void, Ptr, Int64, Int64, Int32, Ptr, Ptr,
 //                               void *host_ptr);
 __ACC_RTL(tgt_acc_get_deviceptr, false, Ptr, Ptr, Ptr, Int64, Ptr)
 
+// void __tgt_acc_declare(ident_t *, int64_t flags, int64_t device_type,
+//                        uint32_t arg_num, void **arg_base_ptrs,
+//                        void **arg_ptrs, int64_t *arg_sizes,
+//                        int64_t *arg_types, char **arg_names,
+//                        void **arg_mappers, AccDataDesc **arg_descs,
+//                        int64_t async, void *bin_desc);
+__ACC_RTL(tgt_acc_declare, false, Void, Ptr, Int64, Int64, Int32, Ptr, Ptr, Ptr,
+          Ptr, Ptr, Ptr, Ptr, Int64, Ptr)
+
+// void __tgt_acc_mirror_alloc(ident_t *, int64_t flags, int64_t device_type,
+//                             uint32_t arg_num, void **arg_base_ptrs,
+//                             void **arg_ptrs, int64_t *arg_sizes,
+//                             int64_t *arg_types, char **arg_names,
+//                             void **arg_mappers, AccDataDesc **arg_descs);
+__ACC_RTL(tgt_acc_mirror_alloc, false, Void, Ptr, Int64, Int64, Int32, Ptr, Ptr,
+          Ptr, Ptr, Ptr, Ptr, Ptr)
+
+// void __tgt_acc_mirror_dealloc(ident_t *, int64_t flags, int64_t device_type,
+//                               uint32_t arg_num, void **arg_base_ptrs,
+//                               void **arg_ptrs, int64_t *arg_sizes,
+//                               int64_t *arg_types, char **arg_names,
+//                               void **arg_mappers, AccDataDesc **arg_descs);
+__ACC_RTL(tgt_acc_mirror_dealloc, false, Void, Ptr, Int64, Int64, Int32, Ptr,
+          Ptr, Ptr, Ptr, Ptr, Ptr, Ptr)
+
 #undef __ACC_RTL
 #undef ACC_RTL

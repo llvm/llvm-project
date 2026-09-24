@@ -336,3 +336,55 @@ start:
   %a7 = add nuw nsw i16 %a6, %b4
   ret i16 %a7
 }
+
+; A gathered field with an external use stays as a scalar; the lane order of
+; the reduction root gather is still unobservable, so the permutation is
+; elided.
+
+define i16 @sum8_i64_ext_use(ptr %p, ptr %out) {
+; CHECK-LABEL: define i16 @sum8_i64_ext_use(
+; CHECK-SAME: ptr [[P:%.*]], ptr [[OUT:%.*]]) {
+; CHECK-NEXT:  [[START:.*:]]
+; CHECK-NEXT:    [[L:%.*]] = load i64, ptr [[P]], align 8
+; CHECK-NEXT:    [[S3:%.*]] = lshr i64 [[L]], 24
+; CHECK-NEXT:    [[T6:%.*]] = trunc i64 [[S3]] to i16
+; CHECK-NEXT:    [[B6:%.*]] = and i16 [[T6]], 255
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[L]] to <8 x i8>
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <8 x i8> [[TMP0]] to <8 x i16>
+; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> [[TMP1]])
+; CHECK-NEXT:    store i16 [[B6]], ptr [[OUT]], align 2
+; CHECK-NEXT:    ret i16 [[TMP2]]
+;
+start:
+  %l = load i64, ptr %p, align 8
+  %t0 = trunc i64 %l to i16
+  %b0 = and i16 %t0, 255
+  %t1 = trunc i64 %l to i16
+  %b1 = lshr i16 %t1, 8
+  %s2 = lshr i64 %l, 16
+  %t2 = trunc i64 %s2 to i16
+  %b2 = and i16 %t2, 255
+  %s3 = lshr i64 %l, 24
+  %t3 = trunc i64 %s3 to i16
+  %b3 = and i16 %t3, 255
+  %s4 = lshr i64 %l, 32
+  %t4 = trunc i64 %s4 to i16
+  %b4 = and i16 %t4, 255
+  %s5 = lshr i64 %l, 40
+  %t5 = trunc i64 %s5 to i16
+  %b5 = and i16 %t5, 255
+  %s6 = lshr i64 %l, 48
+  %t6 = trunc i64 %s6 to i16
+  %b6 = and i16 %t6, 255
+  %s7 = lshr i64 %l, 56
+  %b7 = trunc i64 %s7 to i16
+  %a1 = add nuw nsw i16 %b0, %b1
+  %a2 = add nuw nsw i16 %a1, %b2
+  %a3 = add nuw nsw i16 %a2, %b3
+  %a4 = add nuw nsw i16 %a3, %b4
+  %a5 = add nuw nsw i16 %a4, %b5
+  %a6 = add nuw nsw i16 %a5, %b6
+  %a7 = add nuw nsw i16 %a6, %b7
+  store i16 %b3, ptr %out, align 2
+  ret i16 %a7
+}

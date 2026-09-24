@@ -29,7 +29,7 @@ spirv.module Logical Vulkan requires #spirv.vce<v1.6, [Shader, Linkage, Cooperat
 
 // -----
 
-spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage, BFloat16TypeKHR, Float64, Int64], [SPV_KHR_bfloat16]> {
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage, BFloat16TypeKHR, Float16, Float64, Int64], [SPV_KHR_bfloat16]> {
   spirv.func @convert_f_to_s(%arg0 : f32) -> i32 "None" {
     // CHECK: {{%.*}} = spirv.ConvertFToS {{%.*}} : f32 to i32
     %0 = spirv.ConvertFToS %arg0 : f32 to i32
@@ -104,6 +104,11 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage, BFloat1
     // CHECK: {{%.*}} = spirv.FConvert {{%.*}} : bf16 to f32
     %0 = spirv.FConvert %arg0 : bf16 to f32
     spirv.ReturnValue %0 : f32
+  }
+  spirv.func @convert_f16_to_bf16(%arg0 : f16) -> bf16 "None" {
+    // CHECK: {{%.*}} = spirv.FConvert {{%.*}} : f16 to bf16
+    %0 = spirv.FConvert %arg0 : f16 to bf16
+    spirv.ReturnValue %0 : bf16
   }
   spirv.func @s_convert(%arg0 : i32) -> i64 "None" {
     // CHECK: {{%.*}} = spirv.SConvert {{%.*}} : i32 to i64

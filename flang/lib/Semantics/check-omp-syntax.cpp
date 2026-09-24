@@ -314,13 +314,13 @@ bool OmpStructureChecker::VerifyModifierVersion(
           clauseName);
     } else if (since != ~0u && version < since) {
       context_.Say(svr.first,
-          "'%s' modifier is not supported in %s on %s clause, %s"_warn_en_US,
-          modName, omp::ThisVersion(version), clauseName,
+          "'%s' modifier is not supported on %s clause in %s, %s"_warn_en_US,
+          modName, clauseName, omp::ThisVersion(version),
           omp::TryVersion(since));
     } else if (until != 0u && version > until) {
       context_.Say(svr.first,
-          "'%s' modifier is no longer supported in %s on %s clause"_warn_en_US,
-          modName, omp::ThisVersion(version), clauseName);
+          "'%s' modifier is no longer supported on %s clause in %s"_warn_en_US,
+          modName, clauseName, omp::ThisVersion(version));
     }
   }
 

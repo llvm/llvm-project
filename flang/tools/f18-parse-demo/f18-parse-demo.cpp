@@ -297,6 +297,8 @@ int main(int argc, char *const argv[]) {
   driver.prefix = prefix.data();
 
   Fortran::parser::Options options;
+  // f18-parse-demo always preprocesses the input.
+  options.preprocessingEnabled = true;
   options.predefinitions.emplace_back("__F18", "1");
   options.predefinitions.emplace_back("__F18_MAJOR__", "1");
   options.predefinitions.emplace_back("__F18_MINOR__", "1");

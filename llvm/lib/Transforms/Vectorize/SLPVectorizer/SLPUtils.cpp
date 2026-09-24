@@ -1170,12 +1170,6 @@ matchExtractedField(Value *V) {
         return std::make_pair(Src, *Offset);
       return std::nullopt;
     }
-    if (match(Val, m_Shr(m_Trunc(m_Value(Src)), m_APInt(Amt)))) {
-      if (std::optional<unsigned> Offset = GetFieldOffset(
-              Amt, Val->getType()->getIntegerBitWidth(), FieldWidth))
-        return std::make_pair(Src, *Offset);
-      return std::nullopt;
-    }
     if (match(Val, m_Trunc(m_Value(Src))) &&
         Src->getType()->getIntegerBitWidth() >= FieldWidth)
       return std::make_pair(Src, 0u);
