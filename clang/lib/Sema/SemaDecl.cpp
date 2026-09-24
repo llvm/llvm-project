@@ -18179,8 +18179,7 @@ QualType Sema::BuildMSVCEnumTypedefType(NamedDecl *Found,
     Found = Found->getUnderlyingDecl();
   auto *TD = dyn_cast<TypedefNameDecl>(Found);
   if (!getLangOpts().CPlusPlus || !getLangOpts().MSVCCompat ||
-      InFunctionPrototype || InFunctionParameterTypeInstantiation || !TD ||
-      Keyword != ElaboratedTypeKeyword::Enum ||
+      InFunctionPrototype || !TD || Keyword != ElaboratedTypeKeyword::Enum ||
       !TD->getUnderlyingType()->isEnumeralType())
     return QualType();
   if (TagDecl *Tag = TD->getUnderlyingType()->getAsTagDecl())
