@@ -34,6 +34,8 @@ macros:
     macro_header: unistd-macros.h
   - macro_name: _SC_GETPW_R_SIZE_MAX
     macro_header: unistd-macros.h
+  - macro_name: _SC_THREAD_DESTRUCTOR_ITERATIONS
+    macro_header: unistd-macros.h
   - macro_name: _SC_THREAD_ATTR_STACKADDR
     macro_header: unistd-macros.h
   - macro_name: _SC_THREAD_ATTR_STACKSIZE

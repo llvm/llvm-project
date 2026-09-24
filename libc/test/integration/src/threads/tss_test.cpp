@@ -41,6 +41,7 @@ int func(void *obj) {
 }
 
 TEST_MAIN() {
+  ASSERT_EQ(TSS_DTOR_ITERATIONS, 4);
   ASSERT_EQ(LIBC_NAMESPACE::tss_create(&key, &dtor), thrd_success);
   ASSERT_EQ(LIBC_NAMESPACE::tss_set(key, &main_thread_data), thrd_success);
   int *d = reinterpret_cast<int *>(LIBC_NAMESPACE::tss_get(key));

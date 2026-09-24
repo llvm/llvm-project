@@ -852,6 +852,7 @@ add_libc_test(
     sysconf_test.cpp
   DEPENDS
     libc.hdr.errno_macros
+    libc.hdr.limits_macros
     libc.hdr.unistd_macros
     libc.src.unistd.sysconf
     libc.test.UnitTest.ErrnoCheckingTest
