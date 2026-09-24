@@ -126,17 +126,13 @@ module @gemm attributes {gpu.container_module} {
     %c128 = arith.constant 128 : index
     %c256 = arith.constant 256 : index
     %c4K = arith.constant 4096 : index
-    %c1bf16 = arith.constant 1.0 : bf16
-    %c1f8E5M2 = arith.constant 1.0 : f8E5M2
     %c0f32 = arith.constant 0.0 : f32
-    %c1f8E8M0FNU = arith.constant 1.0 : f8E8M0FNU
 
     // The 8 magnitudes e2m1 can represent, which are exact in f8E5M2, bf16 and
     // f32 too. Codes 0..7 of e2m1 encode exactly these, so the fp4 and fp8
     // variants can share one input set.
     %lut = memref.alloc() : memref<8xf32>
     %lut8 = memref.alloc() : memref<8xf8E5M2>
-    %lutb = memref.alloc() : memref<8xbf16>
     %i1 = arith.constant 1 : index
     %i2 = arith.constant 2 : index
     %i3 = arith.constant 3 : index
@@ -176,22 +172,6 @@ module @gemm attributes {gpu.container_module} {
     memref.store %e5, %lut8[%i5] : memref<8xf8E5M2>
     memref.store %e6, %lut8[%i6] : memref<8xf8E5M2>
     memref.store %e7, %lut8[%i7] : memref<8xf8E5M2>
-    %bb0 = arith.constant 0.0 : bf16
-    %bb1 = arith.constant 0.5 : bf16
-    %bb2 = arith.constant 1.0 : bf16
-    %bb3 = arith.constant 1.5 : bf16
-    %bb4 = arith.constant 2.0 : bf16
-    %bb5 = arith.constant 3.0 : bf16
-    %bb6 = arith.constant 4.0 : bf16
-    %bb7 = arith.constant 6.0 : bf16
-    memref.store %bb0, %lutb[%c0] : memref<8xbf16>
-    memref.store %bb1, %lutb[%i1] : memref<8xbf16>
-    memref.store %bb2, %lutb[%i2] : memref<8xbf16>
-    memref.store %bb3, %lutb[%i3] : memref<8xbf16>
-    memref.store %bb4, %lutb[%i4] : memref<8xbf16>
-    memref.store %bb5, %lutb[%i5] : memref<8xbf16>
-    memref.store %bb6, %lutb[%i6] : memref<8xbf16>
-    memref.store %bb7, %lutb[%i7] : memref<8xbf16>
 
     // Three block scales, one per K block of 32, spanning two exponents each
     // side of unity. Per the MX spec a scale is a power of two, so folding it
@@ -307,7 +287,6 @@ module @gemm attributes {gpu.container_module} {
     memref.dealloc %lut : memref<8xf32>
     memref.dealloc %adiv : memref<3xf32>
     memref.dealloc %lut8 : memref<8xf8E5M2>
-    memref.dealloc %lutb : memref<8xbf16>
     memref.dealloc %sc : memref<3xf8E8M0FNU>
     memref.dealloc %scf32 : memref<3xf32>
     memref.dealloc %A : memref<256x4096xbf16>

@@ -29,8 +29,6 @@ module @gemm attributes {gpu.container_module} {
       %mstep = arith.constant 32 : index
       %nstep = arith.constant 32 : index
       %kstep = arith.constant 1024 : index
-      %mbound = arith.constant 256 : index
-      %nbound = arith.constant 256 : index
       %kbound = arith.constant 4096 : index
       %kbstep = arith.constant 512 : index
       %kscalestep = arith.constant 32 : index
@@ -138,17 +136,12 @@ module @gemm attributes {gpu.container_module} {
     %c256 = arith.constant 256 : index
     %c2K = arith.constant 2048 : index
     %c4K = arith.constant 4096 : index
-    %c512K = arith.constant 524288 : index
-    %c1bf16 = arith.constant 1.0 : bf16
-    %c1packed_e2m1 = arith.constant 0x22 : i8
     %c0f32 = arith.constant 0.0 : f32
-    %c1f8E8M0FNU = arith.constant 1.0 : f8E8M0FNU
 
     // The 8 magnitudes e2m1 can represent, indexed by their e2m1 bit pattern, so
     // a nibble holding code c encodes lut[c]. They are exact in bf16 and f32
     // too, so this shares its input set with the fp8 variant.
     %lut = memref.alloc() : memref<8xf32>
-    %lutb = memref.alloc() : memref<8xbf16>
     %i1 = arith.constant 1 : index
     %i2 = arith.constant 2 : index
     %i3 = arith.constant 3 : index
@@ -172,22 +165,6 @@ module @gemm attributes {gpu.container_module} {
     memref.store %f5, %lut[%i5] : memref<8xf32>
     memref.store %f6, %lut[%i6] : memref<8xf32>
     memref.store %f7, %lut[%i7] : memref<8xf32>
-    %bb0 = arith.constant 0.0 : bf16
-    %bb1 = arith.constant 0.5 : bf16
-    %bb2 = arith.constant 1.0 : bf16
-    %bb3 = arith.constant 1.5 : bf16
-    %bb4 = arith.constant 2.0 : bf16
-    %bb5 = arith.constant 3.0 : bf16
-    %bb6 = arith.constant 4.0 : bf16
-    %bb7 = arith.constant 6.0 : bf16
-    memref.store %bb0, %lutb[%c0] : memref<8xbf16>
-    memref.store %bb1, %lutb[%i1] : memref<8xbf16>
-    memref.store %bb2, %lutb[%i2] : memref<8xbf16>
-    memref.store %bb3, %lutb[%i3] : memref<8xbf16>
-    memref.store %bb4, %lutb[%i4] : memref<8xbf16>
-    memref.store %bb5, %lutb[%i5] : memref<8xbf16>
-    memref.store %bb6, %lutb[%i6] : memref<8xbf16>
-    memref.store %bb7, %lutb[%i7] : memref<8xbf16>
 
     // Three block scales, one per K block of 32. Per the MX spec a scale is a
     // power of two, so folding it into the reference cannot round.
@@ -314,7 +291,6 @@ module @gemm attributes {gpu.container_module} {
     memref.dealloc %B_f32 : memref<4096x256xf32>
     memref.dealloc %lut : memref<8xf32>
     memref.dealloc %adiv : memref<3xf32>
-    memref.dealloc %lutb : memref<8xbf16>
     memref.dealloc %sc : memref<3xf8E8M0FNU>
     memref.dealloc %scf32 : memref<3xf32>
     memref.dealloc %A : memref<256x4096xbf16>

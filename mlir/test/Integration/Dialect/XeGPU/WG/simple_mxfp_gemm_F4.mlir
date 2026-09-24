@@ -27,8 +27,6 @@ module @gemm attributes {gpu.container_module} {
       %mstep = arith.constant 32 : index
       %nstep = arith.constant 32 : index
       %kstep = arith.constant 1024 : index
-      %mbound = arith.constant 256 : index
-      %nbound = arith.constant 256 : index
       %kbound = arith.constant 4096 : index
       %kbstep = arith.constant 512 : index
       %kscalestep = arith.constant 32 : index
@@ -145,11 +143,7 @@ module @gemm attributes {gpu.container_module} {
     %c128 = arith.constant 128 : index
     %c256 = arith.constant 256 : index
     %c2K = arith.constant 2048 : index
-    %c4K = arith.constant 4096 : index
-    %c512K = arith.constant 524288 : index
-    %c1packed_e2m1 = arith.constant 0x22 : i8
     %c0f32 = arith.constant 0.0 : f32
-    %c1f8E8M0FNU = arith.constant 1.0 : f8E8M0FNU
 
     // The 8 magnitudes e2m1 can represent, indexed by their e2m1 bit pattern:
     // code c encodes lut[c], so a packed byte holding two copies of code c is

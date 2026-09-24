@@ -132,8 +132,6 @@ module @gemm attributes {gpu.container_module} {
     %c256 = arith.constant 256 : index
     %c4K = arith.constant 4096 : index
     %c0f32 = arith.constant 0.0 : f32
-    %c1f8E5M2 = arith.constant 1.0 : f8E5M2
-    %c1f8E8M0FNU = arith.constant 1.0 : f8E8M0FNU
 
     // The 8 magnitudes e2m1 can represent. They are exact in f8E5M2, bf16 and
     // f32 as well, so the fp4, fp8 and bf16 tests share one input set and one
@@ -181,8 +179,6 @@ module @gemm attributes {gpu.container_module} {
     memref.store %e7, %lut8[%i7] : memref<8xf8E5M2>
 
     %c8 = arith.constant 8 : index
-    %c2 = arith.constant 2 : index
-    %c2048 = arith.constant 2048 : index
 
     // f32 shadows of A and B, filled from the same loop that writes the device
     // operands, so the reference cannot drift from what the kernel is given.

@@ -95,7 +95,6 @@ module @gemm attributes {gpu.container_module} {
     %c256 = arith.constant 256 : index
     %c4K = arith.constant 4096 : index
     %c0f32 = arith.constant 0.0 : f32
-    %c1bf16 = arith.constant 1.0 : bf16
 
     // Input set shared by all seven workgroup tests. A carries a per-K-block
     // divisor and B a per-K-block scale, both powers of two, so the formats that

@@ -31,8 +31,6 @@ module @gemm attributes {gpu.container_module} {
       %mstep = arith.constant 32 : index
       %nstep = arith.constant 32 : index
       %kstep = arith.constant 1024 : index
-      %mbound = arith.constant 256 : index
-      %nbound = arith.constant 256 : index
       %kbound = arith.constant 4096 : index
       %kbstep = arith.constant 512 : index
       %kscalestep = arith.constant 32 : index
@@ -170,11 +168,7 @@ module @gemm attributes {gpu.container_module} {
     %c256 = arith.constant 256 : index
     %c2K = arith.constant 2048 : index
     %c4K = arith.constant 4096 : index
-    %c512K = arith.constant 524288 : index
-    %c1bf16 = arith.constant 1.0 : bf16
-    %c1packed_e2m1 = arith.constant 0x22 : i8
     %c0f32 = arith.constant 0.0 : f32
-    %c1f8E8M0FNU = arith.constant 1.0 : f8E8M0FNU
 
     // Three block scales for B, one per K block of 32. Per the MX spec a scale
     // is a power of two, so folding it into the reference cannot round.
@@ -197,7 +191,6 @@ module @gemm attributes {gpu.container_module} {
 
     %c8 = arith.constant 8 : index
     %c3 = arith.constant 3 : index
-    %c4i = arith.constant 4 : index
     %c32 = arith.constant 32 : index
     %c2 = arith.constant 2 : index
 
