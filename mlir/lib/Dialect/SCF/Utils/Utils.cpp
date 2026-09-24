@@ -989,19 +989,17 @@ delinearizeInductionVariable(RewriterBase &rewriter, Location loc,
   return {delinearizedIvs, preservedUsers};
 }
 
-/// Clamp a normalized loop size at zero. `emitNormalizedLoopBounds` returns
-/// `ceilDiv(ub - lb, step)`, which is negative for an empty loop: combining two
-/// such sizes cancels the signs into a positive extent, and a negative value is
-/// not a legal `affine.delinearize_index` basis.
-static Value clampSizeToNonNegative(RewriterBase &rewriter, Location loc,
-                                    Value size) {
+/// Clamp a normalized loop size, `ceilDiv(ub - lb, step)`, which is negative
+/// for an empty loop. Sizes multiplied into an upper bound are clamped at zero;
+/// sizes used as a delinearization basis or divisor at one.
+static Value clampSize(RewriterBase &rewriter, Location loc, Value size,
+                       int64_t minValue) {
+  TypedAttr minAttr = rewriter.getIntegerAttr(size.getType(), minValue);
   if (auto cst = getConstantIntValue(size))
-    return *cst >= 0 ? size
-                     : getValueOrCreateConstantIntOp(rewriter, loc,
-                                                     rewriter.getIndexAttr(0));
-  Value zero = arith::ConstantOp::create(rewriter, loc,
-                                         rewriter.getZeroAttr(size.getType()));
-  return arith::MaxSIOp::create(rewriter, loc, size, zero);
+    return *cst >= minValue ? size
+                            : arith::ConstantOp::create(rewriter, loc, minAttr);
+  Value min = arith::ConstantOp::create(rewriter, loc, minAttr);
+  return arith::MaxSIOp::create(rewriter, loc, size, min);
 }
 
 LogicalResult mlir::coalesceLoops(RewriterBase &rewriter,
@@ -1051,7 +1049,10 @@ LogicalResult mlir::coalesceLoops(RewriterBase &rewriter,
   rewriter.setInsertionPoint(outermost);
   Location loc = outermost.getLoc();
   SmallVector<Value> upperBounds = llvm::map_to_vector(loops, [&](auto loop) {
-    return clampSizeToNonNegative(rewriter, loc, loop.getUpperBound());
+    return clampSize(rewriter, loc, loop.getUpperBound(), /*minValue=*/0);
+  });
+  SmallVector<Value> basis = llvm::map_to_vector(loops, [&](auto loop) {
+    return clampSize(rewriter, loc, loop.getUpperBound(), /*minValue=*/1);
   });
   Value upperBound = getProductOfIntsOrIndexes(rewriter, loc, upperBounds);
   outermost.setUpperBound(upperBound);
@@ -1059,7 +1060,7 @@ LogicalResult mlir::coalesceLoops(RewriterBase &rewriter,
   // Insert delinearization at the start of the outermost loop body.
   rewriter.setInsertionPointToStart(outermost.getBody());
   auto [delinearizeIvs, preservedUsers] = delinearizeInductionVariable(
-      rewriter, loc, outermost.getInductionVar(), upperBounds);
+      rewriter, loc, outermost.getInductionVar(), basis);
   rewriter.replaceAllUsesExcept(outermost.getInductionVar(), delinearizeIvs[0],
                                 preservedUsers);
 
@@ -1197,6 +1198,7 @@ void mlir::collapseParallelLoops(
 
   // Normalize ParallelOp's iteration pattern.
   SmallVector<Value, 3> normalizedUpperBounds;
+  SmallVector<Value, 3> normalizedDivisors;
   for (unsigned i = 0, e = loops.getNumLoops(); i < e; ++i) {
     OpBuilder::InsertionGuard g2(rewriter);
     rewriter.setInsertionPoint(loops);
@@ -1204,10 +1206,12 @@ void mlir::collapseParallelLoops(
     Value ub = loops.getUpperBound()[i];
     Value step = loops.getStep()[i];
     auto newLoopRange = emitNormalizedLoopBounds(rewriter, loc, lb, ub, step);
-    normalizedUpperBounds.push_back(clampSizeToNonNegative(
-        rewriter, loops.getLoc(),
-        getValueOrCreateConstantIntOp(rewriter, loops.getLoc(),
-                                      newLoopRange.size)));
+    Value size = getValueOrCreateConstantIntOp(rewriter, loops.getLoc(),
+                                               newLoopRange.size);
+    normalizedUpperBounds.push_back(
+        clampSize(rewriter, loops.getLoc(), size, /*minValue=*/0));
+    normalizedDivisors.push_back(
+        clampSize(rewriter, loops.getLoc(), size, /*minValue=*/1));
 
     rewriter.setInsertionPointToStart(loops.getBody());
     denormalizeInductionVariable(rewriter, loc, loops.getInductionVars()[i], lb,
@@ -1247,14 +1251,14 @@ void mlir::collapseParallelLoops(
 
             // Determine the current induction value's current loop iteration
             Value iv = arith::RemSIOp::create(insideBuilder, loc, previous,
-                                              normalizedUpperBounds[idx]);
+                                              normalizedDivisors[idx]);
             replaceAllUsesInRegionWith(loops.getBody()->getArgument(idx), iv,
                                        loops.getRegion());
 
             // Remove the effect of the current induction value to prepare for
             // the next value.
             previous = arith::DivSIOp::create(insideBuilder, loc, previous,
-                                              normalizedUpperBounds[idx]);
+                                              normalizedDivisors[idx]);
           }
 
           // The final induction value is just the remaining value.

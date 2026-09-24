@@ -227,9 +227,12 @@ func.func @parametric(%lb1 : index, %ub1 : index, %step1 : index,
   // CHECK: %[[normalized_j:.*]] = affine.apply
   // CHECK-SAME: affine_map<()[s0, s1, s2] -> ((-s0 + s1) ceildiv s2)>()[%[[orig_lb2]], %[[orig_ub2]], %[[orig_step2]]]
   // Each normalized size is clamped at zero before the sizes are combined, so
-  // two empty dimensions cannot cancel into a positive flattened extent.
-  // CHECK: %[[clamped_i:.+]] = arith.maxsi %[[normalized_i]]
-  // CHECK: %[[clamped_j:.+]] = arith.maxsi %[[normalized_j]]
+  // two empty dimensions cannot cancel into a positive flattened extent, and at
+  // one where it is used as the delinearization basis.
+  // CHECK: %[[clamped_i:.+]] = arith.maxsi %[[normalized_i]], %[[c0]]
+  // CHECK: %[[clamped_j:.+]] = arith.maxsi %[[normalized_j]], %[[c0]]
+  // CHECK: %[[basis_i:.+]] = arith.maxsi %[[normalized_i]], %[[c1]]
+  // CHECK: %[[basis_j:.+]] = arith.maxsi %[[normalized_j]], %[[c1]]
   // CHECK: %[[range:.+]] = affine.apply
   // CHECK-SAME: affine_map<()[s0, s1] -> (s0 * s1)>()[%[[clamped_i]], %[[clamped_j]]]
 
@@ -240,7 +243,7 @@ func.func @parametric(%lb1 : index, %ub1 : index, %step1 : index,
     // CHECK-NOT: scf.for
     scf.for %j = %lb2 to %ub2 step %step2 {
       // Remapping of the induction variables.
-      // CHECK: %[[delinearize:.+]]:2 = affine.delinearize_index %[[i]] into (%[[clamped_i]], %[[clamped_j]])
+      // CHECK: %[[delinearize:.+]]:2 = affine.delinearize_index %[[i]] into (%[[basis_i]], %[[basis_j]])
       // CHECK: %[[orig_j:.*]] = affine.apply affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
       // CHECK-SAME: (%[[delinearize]]#1)[%[[orig_lb2]], %[[orig_step2]]]
       // CHECK: %[[orig_i:.*]] = affine.apply affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>

@@ -142,13 +142,17 @@ module attributes {transform.with_named_sequence} {
 //      CHECK:   %[[NITERS2:.+]] = affine.apply
 // CHECK-SAME:        affine_map<()[s0, s1, s2] -> ((-s0 + s1) ceildiv s2)>()[%[[LB2]], %[[UB2]], %[[STEP2]]]
 //  Each size is clamped at zero before the sizes are combined, so empty
-//  dimensions cannot cancel into a positive flattened extent.
-//      CHECK:   %[[CL0:.+]] = arith.maxsi %[[NITERS0]]
-//      CHECK:   %[[CL1:.+]] = arith.maxsi %[[NITERS1]]
-//      CHECK:   %[[CL2:.+]] = arith.maxsi %[[NITERS2]]
+//  dimensions cannot cancel into a positive flattened extent, and at one where
+//  it is used as the delinearization basis.
+//      CHECK:   %[[CL0:.+]] = arith.maxsi %[[NITERS0]], %[[C0]]
+//      CHECK:   %[[CL1:.+]] = arith.maxsi %[[NITERS1]], %[[C0]]
+//      CHECK:   %[[CL2:.+]] = arith.maxsi %[[NITERS2]], %[[C0]]
+//      CHECK:   %[[B0:.+]] = arith.maxsi %[[NITERS0]], %[[C1]]
+//      CHECK:   %[[B1:.+]] = arith.maxsi %[[NITERS1]], %[[C1]]
+//      CHECK:   %[[B2:.+]] = arith.maxsi %[[NITERS2]], %[[C1]]
 //      CHECK:   %[[NEWUB:.+]] = affine.apply
 //      CHECK:   %[[RESULT:.+]] = scf.for %[[IV:[a-zA-Z0-9]+]] = %[[C0]] to %[[NEWUB]] step %[[C1]] iter_args(%[[ITER_ARG:.+]] = %[[ARG0]])
-//      CHECK:     %[[DELINEARIZE:.+]]:3 = affine.delinearize_index %[[IV]] into (%[[CL0]], %[[CL1]], %[[CL2]])
+//      CHECK:     %[[DELINEARIZE:.+]]:3 = affine.delinearize_index %[[IV]] into (%[[B0]], %[[B1]], %[[B2]])
 //  CHECK-DAG:     %[[K:.+]] = affine.apply affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>(%[[DELINEARIZE]]#2)[%[[LB2]], %[[STEP2]]]
 //  CHECK-DAG:     %[[J:.+]] = affine.apply affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>(%[[DELINEARIZE]]#1)[%[[LB1]], %[[STEP1]]]
 //  CHECK-DAG:     %[[I:.+]] = affine.apply affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>(%[[DELINEARIZE]]#0)[%[[LB0]], %[[STEP0]]]
@@ -327,11 +331,13 @@ module attributes {transform.with_named_sequence} {
 //  CHECK-SAME:     %[[ARG2:.+]]: index)
 //   CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
 //   CHECK-DAG:   %[[C1:.+]] = arith.constant 1 : index
-//       CHECK:   %[[CL1:.+]] = arith.maxsi %[[ARG1]]
-//       CHECK:   %[[CL2:.+]] = arith.maxsi %[[ARG2]]
+//       CHECK:   %[[CL1:.+]] = arith.maxsi %[[ARG1]], %[[C0]]
+//       CHECK:   %[[CL2:.+]] = arith.maxsi %[[ARG2]], %[[C0]]
+//       CHECK:   %[[B1:.+]] = arith.maxsi %[[ARG1]], %[[C1]]
+//       CHECK:   %[[B2:.+]] = arith.maxsi %[[ARG2]], %[[C1]]
 //       CHECK:   %[[UB:.+]] = affine.apply affine_map<()[s0, s1] -> (s0 * s1)>()[%[[CL1]], %[[CL2]]]
 //       CHECK:   scf.for %[[IV:.+]] = %[[C0]] to %[[UB]] step %[[C1]]
-//       CHECK:     %[[DELINEARIZE:.+]]:2 = affine.delinearize_index %[[IV]] into (%[[CL1]], %[[CL2]])
+//       CHECK:     %[[DELINEARIZE:.+]]:2 = affine.delinearize_index %[[IV]] into (%[[B1]], %[[B2]])
 //       CHECK:     "some_use"(%{{[a-zA-Z0-9]+}}, %[[C0]], %[[C0]], %[[DELINEARIZE]]#0, %[[C0]], %[[DELINEARIZE]]#1)
 
 // -----
@@ -368,7 +374,7 @@ module attributes {transform.with_named_sequence} {
 //  CHECK-SAME:     , %[[ARG1:.+]]: index)
 //   CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
 //   CHECK-DAG:   %[[C1:.+]] = arith.constant 1 : index
-//       CHECK:   %[[CL:.+]] = arith.maxsi %[[ARG1]]
+//       CHECK:   %[[CL:.+]] = arith.maxsi %[[ARG1]], %[[C0]]
 //       CHECK:   scf.for %[[IV:.+]] = %[[C0]] to %[[CL]] step %[[C1]]
 //       CHECK:     "some_use"(%{{[a-zA-Z0-9]+}}, %[[C0]], %[[C0]], %[[IV]])
 
@@ -420,3 +426,33 @@ module attributes {transform.with_named_sequence} {
 //       CHECK:     scf.yield %[[UPDATED]]
 //       CHECK:   }
 //       CHECK:   return %[[RESULT]]
+
+// -----
+
+// Statically empty loops: the sizes are negative constants. The flattened
+// bound must fold to zero and the delinearization basis must stay legal.
+func.func @coalesce_empty_static_loops() {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  scf.for %i = %c2 to %c0 step %c1 {
+    scf.for %j = %c2 to %c0 step %c1 {
+      "some_use"(%i, %j) : (index, index) -> ()
+    }
+  } {coalesce}
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["scf.for"]} attributes {coalesce} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.cast %0 : !transform.any_op to !transform.op<"scf.for">
+    %2 = transform.loop.coalesce %1 : (!transform.op<"scf.for">) -> (!transform.op<"scf.for">)
+    transform.yield
+  }
+}
+// CHECK-LABEL: func @coalesce_empty_static_loops
+//   CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
+//   CHECK-DAG:   %[[C1:.+]] = arith.constant 1 : index
+//       CHECK:   scf.for %[[IV:.+]] = %[[C0]] to %[[C0]] step %[[C1]]
+//       CHECK:     affine.delinearize_index %[[IV]] into (1, 1)
