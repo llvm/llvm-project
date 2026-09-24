@@ -36,7 +36,7 @@
 // * Background: Direct personality function call
 // In WebAssembly EH, the VM is responsible for unwinding the stack once an
 // exception is thrown. After the stack is unwound, the control flow is
-// transfered to WebAssembly 'catch' instruction.
+// transferred to WebAssembly 'catch' instruction.
 //
 // Unwinding the stack is not done by libunwind but the VM, so the personality
 // function (e.g. in libcxxabi) cannot be called from libunwind during the
@@ -46,7 +46,7 @@
 // In Itanium EH, if the personality function decides there is no matching catch
 // clause in a call frame and no cleanup action to perform, the unwinder doesn't
 // stop there and continues unwinding. But in Wasm EH, the unwinder stops at
-// every call frame with a catch intruction, after which the personality
+// every call frame with a catch instruction, after which the personality
 // function is called from the compiler-generated user code here.
 //
 // In libunwind, we have this struct that serves as a communication channel
@@ -347,7 +347,6 @@ void WasmEHPrepareImpl::prepareEHPad(BasicBlock *BB, bool NeedPersonality,
   // Pseudocode: __wasm_lpad_context.lpad_index = index;
   IRB.CreateStore(IRB.getInt32(Index), LPadIndexField);
 
-  auto *CPI = cast<CatchPadInst>(FPI);
   // TODO Sometimes storing the LSDA address every time is not necessary, in
   // case it is already set in a dominating EH pad and there is no function call
   // between from that EH pad to here. Consider optimizing those cases.
@@ -356,7 +355,7 @@ void WasmEHPrepareImpl::prepareEHPad(BasicBlock *BB, bool NeedPersonality,
 
   // Pseudocode: personality_fn(exn);
   CallInst *PersCI =
-      IRB.CreateCall(PersonalityF, CatchCI, OperandBundleDef("funclet", CPI));
+      IRB.CreateCall(PersonalityF, CatchCI, OperandBundleDef("funclet", FPI));
   PersCI->setDoesNotThrow();
 
   // Pseudocode: int selector = __wasm_lpad_context.selector;

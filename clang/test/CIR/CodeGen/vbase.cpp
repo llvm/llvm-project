@@ -136,5 +136,5 @@ void ppp() { B b; }
 // OGCG:   store ptr %[[THIS_ARG]], ptr %[[THIS_ADDR]]
 // OGCG:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]]
 // OGCG:   %[[BASE_A_ADDR:.*]] = getelementptr inbounds i8, ptr %[[THIS]], i64 12
-// OGCG:   store ptr getelementptr inbounds inrange(-24, 0) ({ [3 x ptr] }, ptr @_ZTV1B, i32 0, i32 0, i32 3), ptr %[[THIS]]
+// OGCG:   store ptr getelementptr inbounds inrange(-24, 0) (i8, ptr @_ZTV1B, i64 24), ptr %[[THIS]]
 // OGCG:   ret void

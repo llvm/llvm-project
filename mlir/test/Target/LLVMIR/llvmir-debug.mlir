@@ -872,8 +872,8 @@ llvm.func @fn_cu_import_cycle() {
 
 #file = #llvm.di_file<"dialect.mlir" in "/test/">
 #cu = #llvm.di_compile_unit<
-  id = distinct[0]<>, sourceLanguage = DW_LANG_C,
-  sourceLanguageDialect = DW_LLVM_LANG_DIALECT_simt, file = #file,
+  id = distinct[0]<>, sourceLanguage = #llvm.di_source_language_name<
+    language = DW_LANG_C, dialect = DW_LLVM_LANG_DIALECT_simt>, file = #file,
   isOptimized = false, emissionKind = Full
 >
 #sp_ty = #llvm.di_subroutine_type<callingConvention = DW_CC_normal>
@@ -889,6 +889,28 @@ llvm.func @fn_cu_dialect() {
 } loc(fused<#sp>["dialect.mlir":1:1])
 
 // CHECK-DAG: !DICompileUnit({{.*}}dialect: DW_LLVM_LANG_DIALECT_simt)
+
+// -----
+
+#file = #llvm.di_file<"language-name.cpp" in "/test/">
+#cu = #llvm.di_compile_unit<
+  id = distinct[0]<>, sourceLanguage = #llvm.di_source_language_name<
+    name = DW_LNAME_C_plus_plus, version = 202002,
+    dialect = DW_LLVM_LANG_DIALECT_simt>, file = #file,
+  isOptimized = false, emissionKind = Full
+>
+#sp_ty = #llvm.di_subroutine_type<callingConvention = DW_CC_normal>
+#sp = #llvm.di_subprogram<
+  compileUnit = #cu, scope = #file, name = "fn_cu_source_language_name",
+  file = #file, line = 1, scopeLine = 1, subprogramFlags = Definition,
+  type = #sp_ty
+>
+
+// CHECK-LABEL: define void @fn_cu_source_language_name()
+// CHECK-DAG: ![[LNAME_CU:[0-9]+]] = distinct !DICompileUnit(sourceLanguageName: DW_LNAME_C_plus_plus, sourceLanguageVersion: 202002, file: !{{[0-9]+}}, isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, dialect: DW_LLVM_LANG_DIALECT_simt)
+llvm.func @fn_cu_source_language_name() {
+  llvm.return
+} loc(fused<#sp>["language-name.cpp":1:1])
 
 // -----
 
@@ -920,3 +942,25 @@ llvm.func @variant_part_emission(%arg0: i32) {
   llvm.intr.dbg.value #di_local = %arg0 : i32 loc(#loc)
   llvm.return loc(#loc)
 } loc(#loc)
+
+// -----
+
+// CHECK-LABEL: define void @recursive_variant_part
+// CHECK: ![[VARIANT:[0-9]+]] = distinct !DICompositeType(tag: DW_TAG_variant_part, elements: ![[ELEMENTS:[0-9]+]])
+// CHECK: ![[ELEMENTS]] = !{![[MEMBER:[0-9]+]]}
+// CHECK: ![[MEMBER]] = !DIDerivedType(tag: DW_TAG_member, scope: ![[VARIANT]], baseType: null)
+
+#recursive_variant_file = #llvm.di_file<"a.rs" in "">
+#recursive_variant_self = #llvm.di_composite_type<recId = distinct[106]<>, isRecSelf = true>
+#recursive_variant_member = #llvm.di_derived_type<tag = DW_TAG_member, scope = #recursive_variant_self>
+#recursive_variant_type = #llvm.di_composite_type<recId = distinct[106]<>, tag = DW_TAG_variant_part, elements = #recursive_variant_member>
+#recursive_variant_subroutine = #llvm.di_subroutine_type<types = #recursive_variant_type>
+#recursive_variant_cu = #llvm.di_compile_unit<id = distinct[107]<>, sourceLanguage = DW_LANG_C, file = #recursive_variant_file, emissionKind = Full>
+#recursive_variant_sp = #llvm.di_subprogram<id = distinct[108]<>, compileUnit = #recursive_variant_cu, file = #recursive_variant_file, subprogramFlags = "Definition", type = #recursive_variant_subroutine>
+#recursive_variant_loc = loc(fused<#recursive_variant_sp>[unknown])
+
+module {
+  llvm.func @recursive_variant_part() {
+    llvm.return
+  } loc(#recursive_variant_loc)
+}

@@ -37,6 +37,12 @@ public:
     return m_scripted_metadata;
   }
 
+  /// Whether the user can invoke this extension directly, the way a scripted
+  /// command can. Those never introduce the target's API mutex bypass, so at
+  /// top level they serialize like any other command; nested inside an
+  /// already-bypassed callback every extension inherits the ambient policy.
+  virtual bool UserCanRunDirectly() const { return false; }
+
   struct AbstractMethodRequirement {
     llvm::StringLiteral name;
     size_t min_arg_count = 0;
@@ -44,6 +50,17 @@ public:
 
   virtual llvm::SmallVector<AbstractMethodRequirement>
   GetAbstractMethodRequirements() const = 0;
+
+  /// Methods a script may legitimately leave out, for which LLDB has a
+  /// documented answer.
+  ///
+  /// This is the counterpart of GetAbstractMethodRequirements(): a method is
+  /// either required, and its absence rejects the class outright, or listed
+  /// here, and its absence is an expected answer. Only methods named here may
+  /// be dispatched with ScriptedPythonInterface::DispatchToOptional().
+  virtual llvm::SmallVector<llvm::StringLiteral> GetOptionalMethods() const {
+    return {};
+  }
 
   virtual llvm::Expected<FileSpec> GetScriptedModulePath() {
     return llvm::make_error<UnimplementedError>();
@@ -76,24 +93,6 @@ public:
                                                  existing_error);
 
     return {};
-  }
-
-  template <typename T = StructuredData::ObjectSP>
-  static bool CheckStructuredDataObject(llvm::StringRef caller, T obj,
-                                        Status &error) {
-    if (!obj)
-      return ErrorWithMessage<bool>(caller, "Null Structured Data object",
-                                    error);
-
-    if (!obj->IsValid()) {
-      return ErrorWithMessage<bool>(caller, "Invalid StructuredData object",
-                                    error);
-    }
-
-    if (error.Fail())
-      return ErrorWithMessage<bool>(caller, error.AsCString(), error);
-
-    return true;
   }
 
   static bool CreateInstance(lldb::ScriptLanguage language,

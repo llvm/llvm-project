@@ -78,13 +78,12 @@ define void @test2(ptr %a, ptr %b) {
 
 define void @test3(ptr %a, ptr %b) {
 ; CHECK-LABEL: @test3(
-; CHECK-NEXT:    [[A1:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 1
-; CHECK-NEXT:    [[I1:%.*]] = ptrtoaddr ptr [[A1]] to i64
-; CHECK-NEXT:    [[B3:%.*]] = getelementptr inbounds i64, ptr [[B:%.*]], i64 3
-; CHECK-NEXT:    [[I2:%.*]] = ptrtoaddr ptr [[B3]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x ptr> poison, ptr [[A:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x ptr> [[TMP1]], ptr [[B:%.*]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, <2 x ptr> [[TMP2]], <2 x i64> <i64 1, i64 3>
+; CHECK-NEXT:    [[A1:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoaddr <2 x ptr> [[TMP3]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = load <2 x i64>, ptr [[A1]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i64> poison, i64 [[I1]], i64 0
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i64> [[TMP2]], i64 [[I2]], i64 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = add <2 x i64> [[TMP4]], [[TMP5]]
 ; CHECK-NEXT:    store <2 x i64> [[TMP6]], ptr [[A1]], align 8
 ; CHECK-NEXT:    ret void

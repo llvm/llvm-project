@@ -2051,6 +2051,20 @@ int testClone(void) {
 MlirLogicalResult errorHandler(MlirDiagnostic diagnostic, void *userData) {
   fprintf(stderr, "processing diagnostic (userData: %" PRIdPTR ") <<\n",
           (intptr_t)userData);
+  switch (mlirDiagnosticGetSeverity(diagnostic)) {
+  case MlirDiagnosticError:
+    fprintf(stderr, "severity: Error\n");
+    break;
+  case MlirDiagnosticWarning:
+    fprintf(stderr, "severity: Warning\n");
+    break;
+  case MlirDiagnosticNote:
+    fprintf(stderr, "severity: Note\n");
+    break;
+  case MlirDiagnosticRemark:
+    fprintf(stderr, "severity: Remark\n");
+    break;
+  }
   mlirDiagnosticPrint(diagnostic, printToStderr, NULL);
   fprintf(stderr, "\n");
   MlirLocation loc = mlirDiagnosticGetLocation(diagnostic);
@@ -2378,6 +2392,55 @@ void testExplicitThreadPools(void) {
   mlirLlvmThreadPoolDestroy(threadPool);
 }
 
+void testContextTransientScope(void) {
+  MlirContext ctx = mlirContextCreate();
+  fprintf(stderr, "@test_context_transient_scope\n");
+
+  // CHECK-LABEL: @test_context_transient_scope
+  // CHECK: is_in_transient_scope before: 0
+  fprintf(stderr, "is_in_transient_scope before: %d\n",
+          mlirContextIsInTransientScope(ctx));
+
+  MlirType i32Type =
+      mlirTypeParseGet(ctx, mlirStringRefCreateFromCString("i32"));
+
+  mlirContextBeginTransientScope(ctx);
+
+  // CHECK: is_in_transient_scope during: 1
+  fprintf(stderr, "is_in_transient_scope during: %d\n",
+          mlirContextIsInTransientScope(ctx));
+
+  MlirType transientVectorType =
+      mlirTypeParseGet(ctx, mlirStringRefCreateFromCString("vector<4xi32>"));
+  MlirAttribute transientStrAttr =
+      mlirStringAttrGet(ctx, mlirStringRefCreateFromCString("transient_str"));
+
+  // CHECK: transient vector valid: 1
+  fprintf(stderr, "transient vector valid: %d\n",
+          !mlirTypeIsNull(transientVectorType));
+  // CHECK: transient str attr valid: 1
+  fprintf(stderr, "transient str attr valid: %d\n",
+          !mlirAttributeIsNull(transientStrAttr));
+
+  mlirContextEndTransientScope(ctx);
+
+  // CHECK: is_in_transient_scope after: 0
+  fprintf(stderr, "is_in_transient_scope after: %d\n",
+          mlirContextIsInTransientScope(ctx));
+
+  MlirType postResetI32 =
+      mlirTypeParseGet(ctx, mlirStringRefCreateFromCString("i32"));
+  // CHECK: base i32 equal: 1
+  fprintf(stderr, "base i32 equal: %d\n", mlirTypeEqual(i32Type, postResetI32));
+
+  MlirType newVectorType =
+      mlirTypeParseGet(ctx, mlirStringRefCreateFromCString("vector<4xi32>"));
+  // CHECK: new vector valid: 1
+  fprintf(stderr, "new vector valid: %d\n", !mlirTypeIsNull(newVectorType));
+
+  mlirContextDestroy(ctx);
+}
+
 void testLocation(void) {
   MlirContext ctx = mlirContextCreate();
   fprintf(stderr, "@test_location\n");
@@ -2425,35 +2488,55 @@ void testDiagnostics(void) {
   MlirAttribute nullAttr = {0};
   MlirLocation fusedLoc = mlirLocationFusedGet(ctx, 2, locs, nullAttr);
   mlirEmitError(fusedLoc, "test diagnostics");
+  mlirEmitWarning(unknownLoc, "test warning");
+  mlirEmitRemark(unknownLoc, "test remark");
   mlirContextDetachDiagnosticHandler(ctx, id);
   mlirEmitError(unknownLoc, "more test diagnostics");
   // CHECK-LABEL: @test_diagnostics
   // CHECK: processing diagnostic (userData: 42) <<
+  // CHECK:   severity: Error
   // CHECK:   test diagnostics
   // CHECK:   loc(unknown)
   // CHECK: processing diagnostic (userData: 42) <<
+  // CHECK:   severity: Error
   // CHECK:   test clone
   // CHECK:   loc(unknown)
   // CHECK: >> end of diagnostic (userData: 42)
   // CHECK: processing diagnostic (userData: 42) <<
+  // CHECK:   severity: Error
   // CHECK:   test diagnostics
   // CHECK:   loc("file.c":1:2)
   // CHECK: >> end of diagnostic (userData: 42)
   // CHECK: processing diagnostic (userData: 42) <<
+  // CHECK:   severity: Error
   // CHECK:   test diagnostics
   // CHECK:   loc("other-file.c":1:2 to 3:4)
   // CHECK: >> end of diagnostic (userData: 42)
   // CHECK: processing diagnostic (userData: 42) <<
+  // CHECK:   severity: Error
   // CHECK:   test diagnostics
   // CHECK:   loc(callsite("other-file.c":2:3 at "file.c":1:2))
   // CHECK: >> end of diagnostic (userData: 42)
   // CHECK: processing diagnostic (userData: 42) <<
+  // CHECK:   severity: Error
   // CHECK:   test diagnostics
   // CHECK:   loc("named")
   // CHECK: >> end of diagnostic (userData: 42)
   // CHECK: processing diagnostic (userData: 42) <<
+  // CHECK:   severity: Error
   // CHECK:   test diagnostics
   // CHECK:   loc(fused["named", callsite("other-file.c":2:3 at "file.c":1:2)])
+  // CHECK: >> end of diagnostic (userData: 42)
+  // CHECK: processing diagnostic (userData: 42) <<
+  // CHECK:   severity: Warning
+  // CHECK:   test warning
+  // CHECK:   loc(unknown)
+  // CHECK: >> end of diagnostic (userData: 42)
+  // CHECK: processing diagnostic (userData: 42) <<
+  // CHECK:   severity: Remark
+  // CHECK:   test remark
+  // CHECK:   loc(unknown)
+  // CHECK: >> end of diagnostic (userData: 42)
   // CHECK: deleting user data (userData: 42)
   // CHECK-NOT: processing diagnostic
   // CHECK:     more test diagnostics
@@ -3342,6 +3425,7 @@ int main(void) {
     return 16;
 
   testExplicitThreadPools();
+  testContextTransientScope();
   testLocation();
   testDiagnostics();
 

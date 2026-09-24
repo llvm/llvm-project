@@ -701,7 +701,6 @@ private:
     if (F.Column != 0)
       OS.PadToColumn(F.Column);
     OS << F.Str;
-    OS.flush();
     return OS;
   }
   void printHashedSymbol(const Elf_Sym *Sym, unsigned SymIndex,

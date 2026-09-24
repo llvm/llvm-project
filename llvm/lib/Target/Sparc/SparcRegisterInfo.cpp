@@ -112,12 +112,6 @@ bool SparcRegisterInfo::isReservedReg(const MachineFunction &MF,
   return getReservedRegs(MF)[Reg];
 }
 
-const TargetRegisterClass *
-SparcRegisterInfo::getPointerRegClass(unsigned Kind) const {
-  assert(Kind == 0 && "this should only be used for default cases");
-  return Is64Bit ? &SP::I64RegsRegClass : &SP::IntRegsRegClass;
-}
-
 static void replaceFI(MachineFunction &MF, MachineBasicBlock::iterator II,
                       MachineInstr &MI, const DebugLoc &dl,
                       unsigned FIOperandNum, int Offset, unsigned FramePtr) {

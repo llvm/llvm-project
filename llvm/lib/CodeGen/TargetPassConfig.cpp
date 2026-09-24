@@ -50,7 +50,6 @@
 #include "llvm/Transforms/ObjCARC.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils.h"
-#include "llvm/Transforms/Utils/TriggerCrashPass.h"
 #include <cassert>
 #include <optional>
 #include <string>
@@ -101,6 +100,21 @@ static cl::opt<bool> DisableCGP("disable-cgp", cl::Hidden,
 static cl::opt<bool>
     TriggerCrash("codegen-pipeline-trigger-crash", cl::init(false), cl::Hidden,
                  cl::desc("Trigger crash in codegen pipeline"));
+
+namespace {
+class TriggerCrashFunctionLegacyPass : public FunctionPass {
+public:
+  static char ID;
+  TriggerCrashFunctionLegacyPass() : FunctionPass(ID) {}
+  bool runOnFunction(Function &F) override {
+    abort();
+    return false;
+  }
+  StringRef getPassName() const override { return "TriggerCrashFunctionPass"; }
+};
+} // namespace
+
+char TriggerCrashFunctionLegacyPass::ID = 0;
 
 static cl::opt<bool> DisableCopyProp("disable-copyprop", cl::Hidden,
     cl::desc("Disable Copy Propagation pass"));
@@ -280,13 +294,13 @@ static cl::opt<bool> BasicBlockSectionMatchInfer(
     "basic-block-section-match-infer",
     cl::desc(
         "Enable matching and inference when generating basic block sections"),
-    cl::init(false), cl::Optional);
+    cl::init(false));
 
 cl::opt<bool> EmitBBHash(
     "emit-bb-hash",
     cl::desc(
         "Emit the hash of basic block in the SHT_LLVM_BB_ADDR_MAP section."),
-    cl::init(false), cl::Optional);
+    cl::init(false));
 
 /// Allow standard passes to be disabled by command line options. This supports
 /// simple binary flags that either suppress the pass or do nothing.
@@ -944,9 +958,12 @@ void TargetPassConfig::addPassesToHandleExceptions() {
     // funclets. Catchswitch blocks are not lowered in SelectionDAG, so we
     // should remove PHIs there.
     addPass(createWinEHPass(/*DemoteCatchSwitchPHIOnly=*/true));
-    addPass(createWasmEHPass());
     break;
+  case ExceptionHandling::Default:
   case ExceptionHandling::None:
+  case ExceptionHandling::Emscripten:
+    // Emscripten EH is lowered earlier by WebAssemblyLowerEmscriptenEHSjLj, so
+    // by this point it needs no generic EH preparation, like the None case.
     addPass(createLowerInvokePass());
 
     // The lower invoke pass may create unreachable code. Remove it.
@@ -1057,7 +1074,7 @@ bool TargetPassConfig::addCoreISelPasses() {
   // Pass to reset the MachineFunction if the ISel failed. Outside of the above
   // if so that the verifier is not added to it.
   if (Selector == SelectorType::GlobalISel)
-    addPass(createResetMachineFunctionPass(
+    addPass(createResetMachineFunctionLegacyPass(
         reportDiagnosticWhenGlobalISelFallback(), isGlobalISelAbortEnabled()));
 
   // Run the SDAG InstSelector, providing a fallback path when we do not want to
@@ -1090,7 +1107,7 @@ bool TargetPassConfig::addISelPasses() {
   addIRPasses();
 
   if (TriggerCrash)
-    addPass(createTriggerCrashFunctionPass());
+    addPass(new TriggerCrashFunctionLegacyPass());
 
   addCodeGenPrepare();
   addPassesToHandleExceptions();

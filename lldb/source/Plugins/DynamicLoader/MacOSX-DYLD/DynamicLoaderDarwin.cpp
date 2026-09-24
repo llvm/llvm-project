@@ -26,6 +26,7 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlanCallFunction.h"
 #include "lldb/Target/ThreadPlanRunToAddress.h"
+#include "lldb/Target/ThreadPlanRunToBreakpoint.h"
 #include "lldb/Target/ThreadPlanStepInstruction.h"
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -152,13 +153,15 @@ ModuleSP DynamicLoaderDarwin::FindTargetModuleForImageInfo(
         image_info = HostInfo::GetSharedCacheImageInfo(module_spec.GetUUID(),
                                                        sc_uuid, sc_mode);
 
-      else
-        image_info = HostInfo::GetSharedCacheImageInfo(
-            ConstString(module_spec.GetFileSpec().GetPath()), sc_uuid, sc_mode);
+      else {
+        std::string filepath = module_spec.GetFileSpec().GetPath();
+        image_info =
+            HostInfo::GetSharedCacheImageInfo(filepath, sc_uuid, sc_mode);
+      }
     } else {
       // Fall back to looking lldb's own shared cache by filename
-      image_info = HostInfo::GetSharedCacheImageInfo(
-          ConstString(module_spec.GetFileSpec().GetPath()), sc_mode);
+      std::string filepath = module_spec.GetFileSpec().GetPath();
+      image_info = HostInfo::GetSharedCacheImageInfo(filepath, sc_mode);
     }
 
     // If we found it and it has the correct UUID, let's proceed with
@@ -978,8 +981,23 @@ DynamicLoaderDarwin::GetStepThroughTrampolinePlan(Thread &thread,
 
     ConstString current_name =
         current_symbol->GetMangled().GetName(Mangled::ePreferMangled);
-    if (current_symbol->IsTrampoline()) {
+    llvm::StringRef target_symbol_name = current_name;
+    static const llvm::StringRef g_lazy_stub_name = "$lazyLoadStub";
+    // If this is a "lazy library" stub, we don't have a guarantee that the
+    // target library is loaded at the point where we hit the stub.  So we
+    // have to use a symbol name breakpoint rather than an address one.
+    if (current_name && target_symbol_name.consume_back(g_lazy_stub_name)) {
+      auto bkpt_sp = target_sp->CreateBreakpoint(
+          nullptr, nullptr, target_symbol_name.str().c_str(),
+          eFunctionNameTypeFull, eLanguageTypeUnknown, /*offset=*/0,
+          /*is_insn_count=*/false,
+          /*skip_prologue=*/eLazyBoolNo, /*internal=*/true,
+          /* hardware=*/false);
+      return std::make_shared<ThreadPlanRunToBreakpoint>(thread, bkpt_sp,
+                                                         stop_others);
+    }
 
+    if (current_symbol->IsTrampoline()) {
       if (current_name) {
         const ModuleList &images = target_sp->GetImages();
 
@@ -996,7 +1014,6 @@ DynamicLoaderDarwin::GetStepThroughTrampolinePlan(Thread &thread,
                       load_addr);
           }
         }
-
         SymbolContextList reexported_symbols;
         images.FindSymbolsWithNameAndType(current_name, eSymbolTypeReExported,
                                           reexported_symbols);

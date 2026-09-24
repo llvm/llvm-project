@@ -109,12 +109,11 @@ add_llvm_target(X86CodeGen ${sources}
   CodeGenTypes
   Core
   GlobalISel
-  IRPrinter
   Instrumentation
   MC
   ObjCARC
+  Passes
   ProfileData
-  Scalar
   SelectionDAG
   Support
   Target

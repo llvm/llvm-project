@@ -8,7 +8,7 @@ struct S0 {
 
 // CHECK-SPIRV-DAG:    @A0 = external hidden thread_local addrspace(7) externally_initialized constant <4 x float>, !spirv.Decorations ![[#METADATA_0:]]
 
-[shader("pixel")]
+[shader("vertex")]
 S0 main1(float4 input : A) : B {
 // CHECK:         %[[ARG:.*]] = alloca %struct.S0
 // CHECK-SPIRV: %[[INPUT:.*]] = load <4 x float>, ptr addrspace(7) @A0, align 4
@@ -33,6 +33,11 @@ S0 main1(float4 input : A) : B {
   output.color = input;
   return output;
 }
+
+// CHECK-DXIL: !dx.semantic.signatures = !{![[#ENTRY_SIG:]]}
+// CHECK-DXIL: ![[#ENTRY_SIG]] = !{ptr @main1, ![[#INPUT_SIG:]], ![[#OUTPUT_SIG:]]}
+// CHECK-DXIL: ![[#INPUT_SIG]] = !{![[#INPUT_ELEMENT:]]}
+// CHECK-DXIL: ![[#OUTPUT_SIG]] = !{![[#OUTPUT_ELEMENT_0:]], ![[#OUTPUT_ELEMENT_1:]]}
 
 // CHECK-SPIRV-DAG: ![[#METADATA_0]] = !{![[#METADATA_1:]]}
 // CHECK-SPIRV-DAG: ![[#METADATA_1]] = !{i32 30, i32 0}

@@ -49,9 +49,9 @@ subroutine acc_parallel_loop
 ! CHECK:      acc.parallel {
 ! CHECK:        acc.loop private{{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   } attributes {{{.*}}independent = [#acc.device_type<none>]}
+! CHECK-NEXT:   } {{.*}}independent
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
   !$acc parallel loop
   DO i = 1, n
@@ -61,9 +61,9 @@ subroutine acc_parallel_loop
 ! CHECK:      acc.parallel combined(loop) {
 ! CHECK:        acc.loop combined(parallel) private{{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   } attributes {{{.*}}independent = [#acc.device_type<none>]}
+! CHECK-NEXT:   } {{.*}}independent{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
   !$acc parallel loop async
   DO i = 1, n
@@ -74,7 +74,7 @@ subroutine acc_parallel_loop
 ! CHECK:      acc.parallel {{.*}} async {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   } inclusiveUpperbound(array<i1: true>) independent
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }
 
@@ -87,9 +87,9 @@ subroutine acc_parallel_loop
 ! CHECK:      acc.parallel {{.*}} async([[ASYNC1]] : i32) {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
   !$acc parallel loop async(async)
   DO i = 1, n
@@ -100,9 +100,9 @@ subroutine acc_parallel_loop
 ! CHECK:      acc.parallel {{.*}} async([[ASYNC2]] : i32) {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
   !$acc parallel loop async(async) device_type(nvidia) async(1)
   DO i = 1, n
@@ -118,7 +118,7 @@ subroutine acc_parallel_loop
 ! CHECK:      acc.parallel {{.*}} wait {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }
 
@@ -131,9 +131,9 @@ subroutine acc_parallel_loop
 ! CHECK:      acc.parallel {{.*}} wait({[[WAIT1]] : i32}) {
 ! CHECK:        acc.loop
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
   !$acc parallel loop wait(1, 2)
   DO i = 1, n
@@ -145,9 +145,9 @@ subroutine acc_parallel_loop
 ! CHECK:      acc.parallel {{.*}} wait({[[WAIT2]] : i32, [[WAIT3]] : i32}) {
 ! CHECK:        acc.loop
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
   !$acc parallel loop wait(wait1, wait2)
   DO i = 1, n
@@ -159,9 +159,9 @@ subroutine acc_parallel_loop
 ! CHECK:      acc.parallel {{.*}} wait({[[WAIT4]] : i32, [[WAIT5]] : i32}) {
 ! CHECK:        acc.loop
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
   !$acc parallel loop num_gangs(1)
   DO i = 1, n
@@ -172,9 +172,9 @@ subroutine acc_parallel_loop
 ! CHECK:      acc.parallel {{.*}} num_gangs({[[NUMGANGS1]] : i32}) {
 ! CHECK:        acc.loop
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
   !$acc parallel loop num_gangs(numGangs)
   DO i = 1, n
@@ -185,9 +185,9 @@ subroutine acc_parallel_loop
 ! CHECK:      acc.parallel {{.*}} num_gangs({[[NUMGANGS2]] : i32}) {
 ! CHECK:        acc.loop
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
   !$acc parallel loop num_workers(10)
   DO i = 1, n
@@ -198,9 +198,9 @@ subroutine acc_parallel_loop
 ! CHECK:      acc.parallel {{.*}} num_workers([[NUMWORKERS1]] : i32) {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
   !$acc parallel loop num_workers(numWorkers)
   DO i = 1, n
@@ -211,9 +211,9 @@ subroutine acc_parallel_loop
 ! CHECK:      acc.parallel {{.*}} num_workers([[NUMWORKERS2]] : i32) {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
   !$acc parallel loop vector_length(128)
   DO i = 1, n
@@ -224,9 +224,9 @@ subroutine acc_parallel_loop
 ! CHECK:      acc.parallel {{.*}} vector_length([[VECTORLENGTH1]] : i32) {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
   !$acc parallel loop vector_length(vectorLength)
   DO i = 1, n
@@ -237,9 +237,9 @@ subroutine acc_parallel_loop
 ! CHECK:      acc.parallel {{.*}} vector_length([[VECTORLENGTH2]] : i32) {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
   !$acc parallel loop if(.TRUE.)
   DO i = 1, n
@@ -250,9 +250,9 @@ subroutine acc_parallel_loop
 ! CHECK:      acc.parallel {{.*}} if([[IF1]]) {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
   !$acc parallel loop if(ifCondition)
   DO i = 1, n
@@ -264,9 +264,9 @@ subroutine acc_parallel_loop
 ! CHECK:      acc.parallel {{.*}} if([[IF2]]) {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
   !$acc parallel loop self(.TRUE.)
   DO i = 1, n
@@ -277,9 +277,9 @@ subroutine acc_parallel_loop
 ! CHECK:      acc.parallel {{.*}} self([[SELF1]]) {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
   !$acc parallel loop self
   DO i = 1, n
@@ -289,9 +289,9 @@ subroutine acc_parallel_loop
 ! CHECK:      acc.parallel {{.*}} {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {selfAttr}
+! CHECK-NEXT: } selfAttr
 
   !$acc parallel loop self(ifCondition)
   DO i = 1, n
@@ -302,164 +302,164 @@ subroutine acc_parallel_loop
 ! CHECK:      acc.parallel {{.*}} self(%[[SELF2]]) {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
   !$acc parallel loop copy(a, b)
   DO i = 1, n
     a(i) = b(i)
   END DO
 
-! CHECK:      %[[COPYIN_A:.*]] = acc.copyin varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {dataClause = #acc<data_clause acc_copy>, name = "a"}
-! CHECK:      %[[COPYIN_B:.*]] = acc.copyin varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {dataClause = #acc<data_clause acc_copy>, name = "b"}
+! CHECK:      %[[COPYIN_A:.*]] = acc.copyin varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) dataClause(acc_copy) name("a") -> !fir.ref<!fir.array<10xf32>>
+! CHECK:      %[[COPYIN_B:.*]] = acc.copyin varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10xf32>>) dataClause(acc_copy) name("b") -> !fir.ref<!fir.array<10xf32>>
 ! CHECK:      acc.parallel {{.*}} dataOperands(%[[COPYIN_A]], %[[COPYIN_B]] : !fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>) {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
-! CHECK:      acc.copyout accPtr(%[[COPYIN_A]] : !fir.ref<!fir.array<10xf32>>) to varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) {dataClause = #acc<data_clause acc_copy>, name = "a"}
-! CHECK:      acc.copyout accPtr(%[[COPYIN_B]] : !fir.ref<!fir.array<10xf32>>) to varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10xf32>>) {dataClause = #acc<data_clause acc_copy>, name = "b"}
+! CHECK-NEXT: }{{.*}}
+! CHECK:      acc.copyout accPtr(%[[COPYIN_A]] : !fir.ref<!fir.array<10xf32>>) to varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) dataClause(acc_copy) name("a")
+! CHECK:      acc.copyout accPtr(%[[COPYIN_B]] : !fir.ref<!fir.array<10xf32>>) to varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10xf32>>) dataClause(acc_copy) name("b")
 
   !$acc parallel loop copy(a) copy(b)
   DO i = 1, n
     a(i) = b(i)
   END DO
 
-! CHECK:      %[[COPYIN_A:.*]] = acc.copyin varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {dataClause = #acc<data_clause acc_copy>, name = "a"}
-! CHECK:      %[[COPYIN_B:.*]] = acc.copyin varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {dataClause = #acc<data_clause acc_copy>, name = "b"}
+! CHECK:      %[[COPYIN_A:.*]] = acc.copyin varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) dataClause(acc_copy) name("a") -> !fir.ref<!fir.array<10xf32>>
+! CHECK:      %[[COPYIN_B:.*]] = acc.copyin varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10xf32>>) dataClause(acc_copy) name("b") -> !fir.ref<!fir.array<10xf32>>
 ! CHECK:      acc.parallel {{.*}} dataOperands(%[[COPYIN_A]], %[[COPYIN_B]] : !fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>) {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
-! CHECK:      acc.copyout accPtr(%[[COPYIN_A]] : !fir.ref<!fir.array<10xf32>>) to varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) {dataClause = #acc<data_clause acc_copy>, name = "a"}
-! CHECK:      acc.copyout accPtr(%[[COPYIN_B]] : !fir.ref<!fir.array<10xf32>>) to varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10xf32>>) {dataClause = #acc<data_clause acc_copy>, name = "b"}
+! CHECK-NEXT: }{{.*}}
+! CHECK:      acc.copyout accPtr(%[[COPYIN_A]] : !fir.ref<!fir.array<10xf32>>) to varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) dataClause(acc_copy) name("a")
+! CHECK:      acc.copyout accPtr(%[[COPYIN_B]] : !fir.ref<!fir.array<10xf32>>) to varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10xf32>>) dataClause(acc_copy) name("b")
 
   !$acc parallel loop copyin(a) copyin(readonly: b)
   DO i = 1, n
     a(i) = b(i)
   END DO
 
-! CHECK:      %[[COPYIN_A:.*]] = acc.copyin varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {name = "a"}
-! CHECK:      %[[COPYIN_B:.*]] = acc.copyin varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {dataClause = #acc<data_clause acc_copyin_readonly>, name = "b"}
+! CHECK:      %[[COPYIN_A:.*]] = acc.copyin varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) name("a") -> !fir.ref<!fir.array<10xf32>>
+! CHECK:      %[[COPYIN_B:.*]] = acc.copyin varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10xf32>>) dataClause(acc_copyin_readonly) name("b") -> !fir.ref<!fir.array<10xf32>>
 ! CHECK:      acc.parallel {{.*}} dataOperands(%[[COPYIN_A]], %[[COPYIN_B]] : !fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>) {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
-! CHECK:      acc.delete accPtr(%[[COPYIN_A]] : !fir.ref<!fir.array<10xf32>>) {dataClause = #acc<data_clause acc_copyin>, name = "a"}
-! CHECK:      acc.delete accPtr(%[[COPYIN_B]] : !fir.ref<!fir.array<10xf32>>) {dataClause = #acc<data_clause acc_copyin_readonly>, name = "b"}
+! CHECK-NEXT: }{{.*}}
+! CHECK:      acc.delete accPtr(%[[COPYIN_A]] : !fir.ref<!fir.array<10xf32>>) dataClause(acc_copyin) name("a")
+! CHECK:      acc.delete accPtr(%[[COPYIN_B]] : !fir.ref<!fir.array<10xf32>>) dataClause(acc_copyin_readonly) name("b")
 
   !$acc parallel loop copyout(a) copyout(zero: b)
   DO i = 1, n
     a(i) = b(i)
   END DO
 
-! CHECK:      %[[CREATE_A:.*]] = acc.create varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {dataClause = #acc<data_clause acc_copyout>, name = "a"}
-! CHECK:      %[[CREATE_B:.*]] = acc.create varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {dataClause = #acc<data_clause acc_copyout_zero>, name = "b"}
+! CHECK:      %[[CREATE_A:.*]] = acc.create varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) dataClause(acc_copyout) name("a") -> !fir.ref<!fir.array<10xf32>>
+! CHECK:      %[[CREATE_B:.*]] = acc.create varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10xf32>>) dataClause(acc_copyout_zero) name("b") -> !fir.ref<!fir.array<10xf32>>
 ! CHECK:      acc.parallel {{.*}} dataOperands(%[[CREATE_A]], %[[CREATE_B]] : !fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>) {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
-! CHECK:      acc.copyout accPtr(%[[CREATE_A]] : !fir.ref<!fir.array<10xf32>>) to varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) {name = "a"}
-! CHECK:      acc.copyout accPtr(%[[CREATE_B]] : !fir.ref<!fir.array<10xf32>>) to varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10xf32>>) {dataClause = #acc<data_clause acc_copyout_zero>, name = "b"}
+! CHECK-NEXT: }{{.*}}
+! CHECK:      acc.copyout accPtr(%[[CREATE_A]] : !fir.ref<!fir.array<10xf32>>) to varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) name("a")
+! CHECK:      acc.copyout accPtr(%[[CREATE_B]] : !fir.ref<!fir.array<10xf32>>) to varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10xf32>>) dataClause(acc_copyout_zero) name("b")
 
   !$acc parallel loop create(b) create(zero: a)
   DO i = 1, n
     a(i) = b(i)
   END DO
 
-! CHECK:      %[[CREATE_B:.*]] = acc.create varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {name = "b"}
-! CHECK:      %[[CREATE_A:.*]] = acc.create varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {dataClause = #acc<data_clause acc_create_zero>, name = "a"}
+! CHECK:      %[[CREATE_B:.*]] = acc.create varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10xf32>>) name("b") -> !fir.ref<!fir.array<10xf32>>
+! CHECK:      %[[CREATE_A:.*]] = acc.create varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) dataClause(acc_create_zero) name("a") -> !fir.ref<!fir.array<10xf32>>
 ! CHECK:      acc.parallel {{.*}} dataOperands(%[[CREATE_B]], %[[CREATE_A]] : !fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>) {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
-! CHECK:      acc.delete accPtr(%[[CREATE_B]] : !fir.ref<!fir.array<10xf32>>) {dataClause = #acc<data_clause acc_create>, name = "b"}
-! CHECK:      acc.delete accPtr(%[[CREATE_A]] : !fir.ref<!fir.array<10xf32>>) {dataClause = #acc<data_clause acc_create_zero>, name = "a"}
+! CHECK-NEXT: }{{.*}}
+! CHECK:      acc.delete accPtr(%[[CREATE_B]] : !fir.ref<!fir.array<10xf32>>) dataClause(acc_create) name("b")
+! CHECK:      acc.delete accPtr(%[[CREATE_A]] : !fir.ref<!fir.array<10xf32>>) dataClause(acc_create_zero) name("a")
 
   !$acc parallel loop no_create(a, b)
   DO i = 1, n
     a(i) = b(i)
   END DO
 
-! CHECK:      %[[NOCREATE_A:.*]] = acc.nocreate varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {name = "a"}
-! CHECK:      %[[NOCREATE_B:.*]] = acc.nocreate varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {name = "b"}
+! CHECK:      %[[NOCREATE_A:.*]] = acc.nocreate varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) name("a") -> !fir.ref<!fir.array<10xf32>>
+! CHECK:      %[[NOCREATE_B:.*]] = acc.nocreate varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10xf32>>) name("b") -> !fir.ref<!fir.array<10xf32>>
 ! CHECK:      acc.parallel {{.*}} dataOperands(%[[NOCREATE_A]], %[[NOCREATE_B]] : !fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>) {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
-! CHECK:      acc.delete accPtr(%[[NOCREATE_A]] : !fir.ref<!fir.array<10xf32>>) {dataClause = #acc<data_clause acc_no_create>, name = "a"}
-! CHECK:      acc.delete accPtr(%[[NOCREATE_B]] : !fir.ref<!fir.array<10xf32>>) {dataClause = #acc<data_clause acc_no_create>, name = "b"}
+! CHECK-NEXT: }{{.*}}
+! CHECK:      acc.delete accPtr(%[[NOCREATE_A]] : !fir.ref<!fir.array<10xf32>>) dataClause(acc_no_create) name("a")
+! CHECK:      acc.delete accPtr(%[[NOCREATE_B]] : !fir.ref<!fir.array<10xf32>>) dataClause(acc_no_create) name("b")
 
   !$acc parallel loop present(a, b)
   DO i = 1, n
     a(i) = b(i)
   END DO
 
-! CHECK:      %[[PRESENT_A:.*]] = acc.present varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {name = "a"}
-! CHECK:      %[[PRESENT_B:.*]] = acc.present varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {name = "b"}
+! CHECK:      %[[PRESENT_A:.*]] = acc.present varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) name("a") -> !fir.ref<!fir.array<10xf32>>
+! CHECK:      %[[PRESENT_B:.*]] = acc.present varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10xf32>>) name("b") -> !fir.ref<!fir.array<10xf32>>
 ! CHECK:      acc.parallel {{.*}} dataOperands(%[[PRESENT_A]], %[[PRESENT_B]] : !fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>) {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
-! CHECK:      acc.delete accPtr(%[[PRESENT_A]] : !fir.ref<!fir.array<10xf32>>) {dataClause = #acc<data_clause acc_present>, name = "a"}
-! CHECK:      acc.delete accPtr(%[[PRESENT_B]] : !fir.ref<!fir.array<10xf32>>) {dataClause = #acc<data_clause acc_present>, name = "b"}
+! CHECK-NEXT: }{{.*}}
+! CHECK:      acc.delete accPtr(%[[PRESENT_A]] : !fir.ref<!fir.array<10xf32>>) dataClause(acc_present) name("a")
+! CHECK:      acc.delete accPtr(%[[PRESENT_B]] : !fir.ref<!fir.array<10xf32>>) dataClause(acc_present) name("b")
 
   !$acc parallel loop deviceptr(a) deviceptr(b)
   DO i = 1, n
     a(i) = b(i)
   END DO
 
-! CHECK:      %[[DEVICEPTR_A:.*]] = acc.deviceptr varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {name = "a"}
-! CHECK:      %[[DEVICEPTR_B:.*]] = acc.deviceptr varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {name = "b"}
+! CHECK:      %[[DEVICEPTR_A:.*]] = acc.deviceptr varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) name("a") -> !fir.ref<!fir.array<10xf32>>
+! CHECK:      %[[DEVICEPTR_B:.*]] = acc.deviceptr varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10xf32>>) name("b") -> !fir.ref<!fir.array<10xf32>>
 ! CHECK:      acc.parallel {{.*}} dataOperands(%[[DEVICEPTR_A]], %[[DEVICEPTR_B]] : !fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>) {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
   !$acc parallel loop attach(f, g)
   DO i = 1, n
     a(i) = b(i)
   END DO
 
-! CHECK:      %[[ATTACH_F:.*]] = acc.attach varPtr(%[[DECLF]]#0 : !fir.ref<!fir.box<!fir.ptr<f32>>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>> {name = "f"}
-! CHECK:      %[[ATTACH_G:.*]] = acc.attach varPtr(%[[DECLG]]#0 : !fir.ref<!fir.box<!fir.ptr<f32>>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>> {name = "g"}
+! CHECK:      %[[ATTACH_F:.*]] = acc.attach varPtr(%[[DECLF]]#0 : !fir.ref<!fir.box<!fir.ptr<f32>>>) name("f") -> !fir.ref<!fir.box<!fir.ptr<f32>>>
+! CHECK:      %[[ATTACH_G:.*]] = acc.attach varPtr(%[[DECLG]]#0 : !fir.ref<!fir.box<!fir.ptr<f32>>>) name("g") -> !fir.ref<!fir.box<!fir.ptr<f32>>>
 ! CHECK:      acc.parallel {{.*}} dataOperands(%[[ATTACH_F]], %[[ATTACH_G]] : !fir.ref<!fir.box<!fir.ptr<f32>>>, !fir.ref<!fir.box<!fir.ptr<f32>>>) {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
   !$acc parallel loop private(a) firstprivate(b)
   DO i = 1, n
     a(i) = b(i)
   END DO
 
-! CHECK:      %[[ACC_PRIVATE_B:.*]] = acc.firstprivate varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10xf32>>) recipe(@firstprivatization_ref_10xf32) -> !fir.ref<!fir.array<10xf32>> {name = "b"}
+! CHECK:      %[[ACC_PRIVATE_B:.*]] = acc.firstprivate varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10xf32>>) recipe(@firstprivatization_ref_10xf32) name("b") -> !fir.ref<!fir.array<10xf32>>
 ! CHECK:      acc.parallel {{.*}} firstprivate(%[[ACC_PRIVATE_B]] : !fir.ref<!fir.array<10xf32>>) {
-! CHECK:        %[[ACC_PRIVATE_A:.*]] = acc.private varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) recipe(@privatization_ref_10xf32) -> !fir.ref<!fir.array<10xf32>> {name = "a"}
+! CHECK:        %[[ACC_PRIVATE_A:.*]] = acc.private varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) recipe(@privatization_ref_10xf32) name("a") -> !fir.ref<!fir.array<10xf32>>
 ! CHECK:        acc.loop {{.*}} private(%[[ACC_PRIVATE_A]]{{.*}} : !fir.ref<!fir.array<10xf32>>{{.*}})
 ! CHECK-NOT:      fir.do_loop
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
   !$acc parallel loop seq
   DO i = 1, n
@@ -469,9 +469,9 @@ subroutine acc_parallel_loop
 ! CHECK:      acc.parallel {{.*}} {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   } attributes {inclusiveUpperbound = array<i1: true>, seq = [#acc.device_type<none>]}
+! CHECK-NEXT:   } inclusiveUpperbound(array<i1: true>) seq
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
   !$acc parallel loop auto
   DO i = 1, n
@@ -481,9 +481,9 @@ subroutine acc_parallel_loop
 ! CHECK:      acc.parallel {{.*}} {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   } attributes {auto_ = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true>}
+! CHECK-NEXT:   } inclusiveUpperbound(array<i1: true>) auto_
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
   !$acc parallel loop independent
   DO i = 1, n
@@ -493,9 +493,9 @@ subroutine acc_parallel_loop
 ! CHECK:      acc.parallel {{.*}} {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+! CHECK-NEXT:   } inclusiveUpperbound(array<i1: true>) independent
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
   !$acc parallel loop gang
   DO i = 1, n
@@ -505,47 +505,12 @@ subroutine acc_parallel_loop
 ! CHECK:      acc.parallel {{.*}} {
 ! CHECK:        acc.loop {{.*}} gang
 ! CHECK:          acc.yield
-! CHECK-NEXT:   } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+! CHECK-NEXT:   } inclusiveUpperbound(array<i1: true>) independent
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
-  !$acc parallel loop gang(num: 8)
-  DO i = 1, n
-    a(i) = b(i)
-  END DO
-
-! CHECK:      acc.parallel {{.*}} {
-! CHECK:        [[GANGNUM1:%.*]] = arith.constant 8 : i32
-! CHECK:        acc.loop {{.*}} gang({num=[[GANGNUM1]] : i32})
-! CHECK:          acc.yield
-! CHECK-NEXT:   } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
-! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
-
-  !$acc parallel loop gang(num: gangNum)
-  DO i = 1, n
-    a(i) = b(i)
-  END DO
-
-! CHECK:      acc.parallel {{.*}} {
-! CHECK:        [[GANGNUM2:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
-! CHECK:        acc.loop {{.*}} gang({num=[[GANGNUM2]] : i32})
-! CHECK:          acc.yield
-! CHECK-NEXT:   } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
-! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
-
- !$acc parallel loop gang(num: gangNum, static: gangStatic)
-  DO i = 1, n
-    a(i) = b(i)
-  END DO
-
-! CHECK:      acc.parallel {{.*}} {
-! CHECK:        acc.loop {{.*}} gang({num=%{{.*}} : i32, static=%{{.*}} : i32})
-! CHECK:          acc.yield
-! CHECK-NEXT:   } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
-! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! A GANG clause with a num argument is only allowed on a loop associated with
+! a kernels construct, so it is covered by acc-kernels-loop.f90 instead.
 
   !$acc parallel loop vector
   DO i = 1, n
@@ -555,36 +520,12 @@ subroutine acc_parallel_loop
 ! CHECK:      acc.parallel {{.*}} {
 ! CHECK:        acc.loop {{.*}} vector
 ! CHECK:          acc.yield
-! CHECK-NEXT:   } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+! CHECK-NEXT:   } inclusiveUpperbound(array<i1: true>) independent
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
-  !$acc parallel loop vector(128)
-  DO i = 1, n
-    a(i) = b(i)
-  END DO
-
-! CHECK:      acc.parallel {{.*}} {
-! CHECK:        [[CONSTANT128:%.*]] = arith.constant 128 : i32
-! CHECK:        acc.loop {{.*}} vector([[CONSTANT128]] : i32) {{.*}} {
-! CHECK:          acc.yield
-! CHECK-NEXT:   } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
-! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
-
-  !$acc parallel loop vector(vectorLength)
-  DO i = 1, n
-    a(i) = b(i)
-  END DO
-
-! CHECK:      acc.parallel {{.*}} {
-! CHECK:        [[VECTORLENGTH:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
-! CHECK:        acc.loop {{.*}} vector([[VECTORLENGTH]] : i32) {{.*}} {
-! CHECK-NOT:      fir.do_loop
-! CHECK:          acc.yield
-! CHECK-NEXT:   } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
-! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! A VECTOR clause with a value is only allowed on a loop associated with a
+! kernels construct, so it is covered by acc-kernels-loop.f90 instead.
 
   !$acc parallel loop worker
   DO i = 1, n
@@ -595,23 +536,12 @@ subroutine acc_parallel_loop
 ! CHECK:        acc.loop {{.*}} worker {{.*}} {
 ! CHECK-NOT:      fir.do_loop
 ! CHECK:          acc.yield
-! CHECK-NEXT:   } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+! CHECK-NEXT:   } inclusiveUpperbound(array<i1: true>) independent
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
-  !$acc parallel loop worker(128)
-  DO i = 1, n
-    a(i) = b(i)
-  END DO
-
-! CHECK:      acc.parallel {{.*}}{
-! CHECK:        [[WORKER128:%.*]] = arith.constant 128 : i32
-! CHECK:        acc.loop {{.*}} worker([[WORKER128]] : i32) {{.*}} {
-! CHECK-NOT:      fir.do_loop
-! CHECK:          acc.yield
-! CHECK-NEXT:   } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
-! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! A WORKER clause with a value is only allowed on a loop associated with a
+! kernels construct, so it is covered by acc-kernels-loop.f90 instead.
 
   !$acc parallel loop collapse(2)
   DO i = 1, n
@@ -623,9 +553,9 @@ subroutine acc_parallel_loop
 ! CHECK:      acc.parallel {{.*}} {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   } attributes {{{.*}}collapse = [2], collapseDeviceType = [#acc.device_type<none>]{{.*}}}
+! CHECK-NEXT:   } {{.*}}collapse([2]){{.*}}collapseDeviceType([#acc.device_type<none>]){{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
   !$acc parallel loop
   DO i = 1, n
@@ -639,11 +569,11 @@ subroutine acc_parallel_loop
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:            acc.loop {{.*}} {
 ! CHECK:              acc.yield
-! CHECK-NEXT:     } attributes {{{.*}}independent = [#acc.device_type<none>]}
+! CHECK-NEXT:     } {{.*}}independent{{.*}}
 ! CHECK:          acc.yield
-! CHECK-NEXT:   } attributes {{{.*}}independent = [#acc.device_type<none>]}
+! CHECK-NEXT:   } {{.*}}independent{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
  !$acc parallel loop tile(2)
   DO i = 1, n
@@ -654,9 +584,9 @@ subroutine acc_parallel_loop
 ! CHECK:        [[TILESIZE:%.*]] = arith.constant 2 : i32
 ! CHECK:        acc.loop {{.*}} tile({[[TILESIZE]] : i32}) {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
  !$acc parallel loop tile(*)
   DO i = 1, n
@@ -667,9 +597,9 @@ subroutine acc_parallel_loop
 ! CHECK:        [[TILESIZEM1:%.*]] = arith.constant -1 : i32
 ! CHECK:        acc.loop {{.*}} tile({[[TILESIZEM1]] : i32}) {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
   !$acc parallel loop tile(2, 2)
   DO i = 1, n
@@ -683,9 +613,9 @@ subroutine acc_parallel_loop
 ! CHECK:        [[TILESIZE2:%.*]] = arith.constant 2 : i32
 ! CHECK:        acc.loop {{.*}} tile({[[TILESIZE1]] : i32, [[TILESIZE2]] : i32}) control(%arg0 : i32, %arg1 : i32) {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
   !$acc parallel loop tile(tileSize)
   DO i = 1, n
@@ -695,9 +625,9 @@ subroutine acc_parallel_loop
 ! CHECK:      acc.parallel {{.*}} {
 ! CHECK:        acc.loop {{.*}} tile({%{{.*}} : i32}) {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
   !$acc parallel loop tile(tileSize, tileSize)
   DO i = 1, n
@@ -709,9 +639,9 @@ subroutine acc_parallel_loop
 ! CHECK:      acc.parallel {{.*}} {
 ! CHECK:        acc.loop {{.*}} tile({%{{.*}} : i32, %{{.*}} : i32}) control(%arg0 : i32, %arg1 : i32) {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
   !$acc parallel loop reduction(+:reduction_r) reduction(*:reduction_i)
   do i = 1, n
@@ -719,18 +649,18 @@ subroutine acc_parallel_loop
     reduction_i = 1
   end do
 
-! CHECK:      %[[COPYINREDR:.*]] = acc.copyin varPtr(%{{.*}} : !fir.ref<f32>) -> !fir.ref<f32> {dataClause = #acc<data_clause acc_reduction>, implicit = true, name = "reduction_r"}
-! CHECK:      %[[COPYINREDI:.*]] = acc.copyin varPtr(%{{.*}} : !fir.ref<i32>) -> !fir.ref<i32> {dataClause = #acc<data_clause acc_reduction>, implicit = true, name = "reduction_i"}
+! CHECK:      %[[COPYINREDR:.*]] = acc.copyin varPtr(%{{.*}} : !fir.ref<f32>) dataClause(acc_reduction) implicit(true) name("reduction_r") -> !fir.ref<f32>
+! CHECK:      %[[COPYINREDI:.*]] = acc.copyin varPtr(%{{.*}} : !fir.ref<i32>) dataClause(acc_reduction) implicit(true) name("reduction_i") -> !fir.ref<i32>
 ! CHECK:      acc.parallel {{.*}} dataOperands(%[[COPYINREDR]], %[[COPYINREDI]] : !fir.ref<f32>, !fir.ref<i32>) {
-! CHECK:        %[[REDUCTION_R:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<f32>) recipe(@reduction_add_ref_f32) -> !fir.ref<f32> {name = "reduction_r"}
-! CHECK:        %[[REDUCTION_I:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<i32>) recipe(@reduction_mul_ref_i32) -> !fir.ref<i32> {name = "reduction_i"}
+! CHECK:        %[[REDUCTION_R:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<f32>) recipe(@reduction_add_ref_f32) name("reduction_r") -> !fir.ref<f32>
+! CHECK:        %[[REDUCTION_I:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<i32>) recipe(@reduction_mul_ref_i32) name("reduction_i") -> !fir.ref<i32>
 ! CHECK:        acc.loop {{.*}} reduction(%[[REDUCTION_R]], %[[REDUCTION_I]] : !fir.ref<f32>, !fir.ref<i32>) {{.*}}
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
-! CHECK:      acc.copyout accPtr(%[[COPYINREDR]] : !fir.ref<f32>) to varPtr(%{{.*}} : !fir.ref<f32>) {dataClause = #acc<data_clause acc_reduction>, implicit = true, name = "reduction_r"}
-! CHECK:      acc.copyout accPtr(%[[COPYINREDI]] : !fir.ref<i32>) to varPtr(%{{.*}} : !fir.ref<i32>) {dataClause = #acc<data_clause acc_reduction>, implicit = true, name = "reduction_i"}
+! CHECK-NEXT: }{{.*}}
+! CHECK:      acc.copyout accPtr(%[[COPYINREDR]] : !fir.ref<f32>) to varPtr(%{{.*}} : !fir.ref<f32>) dataClause(acc_reduction) implicit(true) name("reduction_r")
+! CHECK:      acc.copyout accPtr(%[[COPYINREDI]] : !fir.ref<i32>) to varPtr(%{{.*}} : !fir.ref<i32>) dataClause(acc_reduction) implicit(true) name("reduction_i")
 
 
   !$acc parallel loop
@@ -741,3 +671,451 @@ subroutine acc_parallel_loop
 ! CHECK-NOT: fir.do_loop
 
 end subroutine acc_parallel_loop
+
+! Combined parallel loop firstprivate: copies are also attached on the
+! acc.loop, consistent with private and reduction on combined constructs.
+subroutine acc_parallel_loop_firstprivate_scalar
+  integer :: i, n, v
+  real :: a(10)
+  n = 10
+  v = 7
+  !$acc parallel loop firstprivate(v)
+  do i = 1, n
+    a(i) = v
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPacc_parallel_loop_firstprivate_scalar
+! CHECK: %[[FP_V:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<i32>) recipe(@firstprivatization_ref_i32) name("v") -> !fir.ref<i32>
+! CHECK: acc.parallel combined(loop) {{.*}}firstprivate(%[[FP_V]] : !fir.ref<i32>)
+! CHECK: %[[DECL_V:.*]]:2 = hlfir.declare %[[FP_V]] {uniq_name = {{.*}}} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK: %[[FP_V_LOOP:.*]] = acc.firstprivate varPtr(%[[DECL_V]]#0 : !fir.ref<i32>) recipe(@firstprivatization_ref_i32) implicit(true) name("v") -> !fir.ref<i32>
+! CHECK: acc.loop combined(parallel) {{.*}}firstprivate(%[[FP_V_LOOP]] : !fir.ref<i32>)
+! CHECK: } inclusiveUpperbound(array<i1: true>) independent
+
+subroutine acc_parallel_loop_firstprivate_seq
+  integer :: i, n, v
+  real :: a(10)
+  n = 10
+  v = 7
+  !$acc parallel loop seq firstprivate(v)
+  do i = 1, n
+    a(i) = v
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPacc_parallel_loop_firstprivate_seq
+! CHECK: %[[FP_V:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<i32>) recipe({{.*}}) name("v") -> !fir.ref<i32>
+! CHECK: acc.parallel combined(loop) {{.*}}firstprivate(%[[FP_V]] : !fir.ref<i32>)
+! CHECK: %[[FP_V_LOOP:.*]] = acc.firstprivate varPtr({{.*}} : !fir.ref<i32>) recipe({{.*}}) implicit(true) name("v") -> !fir.ref<i32>
+! CHECK: acc.loop combined(parallel) {{.*}}firstprivate(%[[FP_V_LOOP]] : !fir.ref<i32>)
+! CHECK: } inclusiveUpperbound(array<i1: true>) seq
+
+subroutine acc_parallel_loop_firstprivate_auto
+  integer :: i, n, v
+  real :: a(10)
+  n = 10
+  v = 7
+  !$acc parallel loop auto firstprivate(v)
+  do i = 1, n
+    a(i) = v
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPacc_parallel_loop_firstprivate_auto
+! CHECK: %[[FP_V:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<i32>) recipe({{.*}}) name("v") -> !fir.ref<i32>
+! CHECK: acc.parallel combined(loop) {{.*}}firstprivate(%[[FP_V]] : !fir.ref<i32>)
+! CHECK: %[[FP_V_LOOP:.*]] = acc.firstprivate varPtr({{.*}} : !fir.ref<i32>) recipe({{.*}}) implicit(true) name("v") -> !fir.ref<i32>
+! CHECK: acc.loop combined(parallel) {{.*}}firstprivate(%[[FP_V_LOOP]] : !fir.ref<i32>)
+! CHECK: } inclusiveUpperbound(array<i1: true>) auto_
+
+! Not only scalars: array gets loop firstprivate too.
+subroutine acc_parallel_loop_firstprivate_array
+  integer :: i, n
+  real :: b(10)
+  n = 10
+  !$acc parallel loop firstprivate(b)
+  do i = 1, n
+    b(i) = 1.0
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPacc_parallel_loop_firstprivate_array
+! CHECK: %[[FP_B:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) recipe({{.*}}) name("b") -> !fir.ref<!fir.array<10xf32>>
+! CHECK: acc.parallel combined(loop) {{.*}}firstprivate(%[[FP_B]] : !fir.ref<!fir.array<10xf32>>)
+! CHECK: %[[FP_B_LOOP:.*]] = acc.firstprivate varPtr({{.*}} : !fir.ref<!fir.array<10xf32>>) recipe({{.*}}) implicit(true) name("b") -> !fir.ref<!fir.array<10xf32>>
+! CHECK: acc.loop combined(parallel) {{.*}}firstprivate(%[[FP_B_LOOP]] : !fir.ref<!fir.array<10xf32>>)
+
+subroutine acc_parallel_loop_firstprivate_mixed
+  integer :: i, n, v
+  real :: b(10)
+  n = 10
+  v = 7
+  !$acc parallel loop firstprivate(v, b)
+  do i = 1, n
+    b(i) = v
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPacc_parallel_loop_firstprivate_mixed
+! CHECK: %[[FP_V:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<i32>) recipe({{.*}}) name("v") -> !fir.ref<i32>
+! CHECK: %[[FP_B:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) recipe({{.*}}) name("b") -> !fir.ref<!fir.array<10xf32>>
+! CHECK: acc.parallel combined(loop) {{.*}}firstprivate(%[[FP_V]], %[[FP_B]] : !fir.ref<i32>, !fir.ref<!fir.array<10xf32>>)
+! CHECK: %[[FP_V_LOOP:.*]] = acc.firstprivate varPtr({{.*}} : !fir.ref<i32>) recipe({{.*}}) implicit(true) name("v") -> !fir.ref<i32>
+! CHECK: %[[FP_B_LOOP:.*]] = acc.firstprivate varPtr({{.*}} : !fir.ref<!fir.array<10xf32>>) recipe({{.*}}) implicit(true) name("b") -> !fir.ref<!fir.array<10xf32>>
+! CHECK: acc.loop combined(parallel) {{.*}}firstprivate(%[[FP_V_LOOP]], %[[FP_B_LOOP]] : !fir.ref<i32>, !fir.ref<!fir.array<10xf32>>)
+
+subroutine acc_parallel_firstprivate_sibling_loops
+  integer :: i, j, n, v
+  real :: a(10)
+  n = 10
+  v = 7
+  !$acc parallel firstprivate(v)
+  !$acc loop
+  do i = 1, n
+    a(i) = v
+  end do
+  !$acc loop
+  do j = 1, n
+    a(j) = v
+  end do
+  !$acc end parallel
+end subroutine
+
+! CHECK-LABEL: func.func @_QPacc_parallel_firstprivate_sibling_loops
+! CHECK: %[[FP_V:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<i32>) recipe({{.*}}) name("v") -> !fir.ref<i32>
+! CHECK: acc.parallel {{.*}}firstprivate(%[[FP_V]] : !fir.ref<i32>)
+! CHECK-NOT: acc.firstprivate {{.*}} implicit(true)
+! CHECK: acc.loop
+
+! Scalars used without an explicit firstprivate are implicitly firstprivate
+! on the compute construct later. Do not emit a loop firstprivate here.
+subroutine acc_parallel_loop_no_explicit_firstprivate
+  integer :: i, n, v
+  real :: a(10)
+  n = 10
+  v = 7
+  !$acc parallel loop
+  do i = 1, n
+    a(i) = v
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPacc_parallel_loop_no_explicit_firstprivate
+! CHECK: acc.parallel combined(loop) {
+! CHECK-NOT: acc.firstprivate
+! CHECK: acc.loop combined(parallel)
+
+! copyin is explicit but not firstprivate, so the loop still gets no copy.
+subroutine acc_parallel_loop_copyin_scalar
+  integer :: i, n, v
+  real :: a(10)
+  n = 10
+  v = 7
+  !$acc parallel loop copyin(v)
+  do i = 1, n
+    a(i) = v
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPacc_parallel_loop_copyin_scalar
+! CHECK: acc.copyin {{.*}} name("v")
+! CHECK: acc.parallel combined(loop) {{.*}}dataOperands
+! CHECK-NOT: acc.firstprivate
+! CHECK: acc.loop combined(parallel)
+
+! Explicit independent is the same as the parallel loop default.
+subroutine acc_parallel_loop_firstprivate_independent
+  integer :: i, n, v
+  real :: a(10)
+  n = 10
+  v = 7
+  !$acc parallel loop independent firstprivate(v)
+  do i = 1, n
+    a(i) = v
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPacc_parallel_loop_firstprivate_independent
+! CHECK: %[[FP_V:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<i32>) recipe({{.*}}) name("v") -> !fir.ref<i32>
+! CHECK: acc.parallel combined(loop) {{.*}}firstprivate(%[[FP_V]] : !fir.ref<i32>)
+! CHECK: %[[FP_V_LOOP:.*]] = acc.firstprivate varPtr({{.*}} : !fir.ref<i32>) recipe({{.*}}) implicit(true) name("v") -> !fir.ref<i32>
+! CHECK: acc.loop combined(parallel) {{.*}}firstprivate(%[[FP_V_LOOP]] : !fir.ref<i32>)
+! CHECK: } inclusiveUpperbound(array<i1: true>) independent
+
+! gang does not change independent, so the scalar still copies onto the loop.
+subroutine acc_parallel_loop_firstprivate_gang
+  integer :: i, n, v
+  real :: a(10)
+  n = 10
+  v = 7
+  !$acc parallel loop gang firstprivate(v)
+  do i = 1, n
+    a(i) = v
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPacc_parallel_loop_firstprivate_gang
+! CHECK: %[[FP_V:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<i32>) recipe({{.*}}) name("v") -> !fir.ref<i32>
+! CHECK: acc.parallel combined(loop) {{.*}}firstprivate(%[[FP_V]] : !fir.ref<i32>)
+! CHECK: %[[FP_V_LOOP:.*]] = acc.firstprivate varPtr({{.*}} : !fir.ref<i32>) recipe({{.*}}) implicit(true) name("v") -> !fir.ref<i32>
+! CHECK: acc.loop combined(parallel) {{.*}}firstprivate(%[[FP_V_LOOP]] : !fir.ref<i32>)
+
+! collapse is still one acc.loop; attach the scalar once.
+subroutine acc_parallel_loop_firstprivate_collapse
+  integer :: i, j, n, v
+  real :: a(10, 10)
+  n = 10
+  v = 7
+  !$acc parallel loop collapse(2) firstprivate(v)
+  do i = 1, n
+    do j = 1, n
+      a(i, j) = v
+    end do
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPacc_parallel_loop_firstprivate_collapse
+! CHECK: %[[FP_V:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<i32>) recipe({{.*}}) name("v") -> !fir.ref<i32>
+! CHECK: acc.parallel combined(loop) {{.*}}firstprivate(%[[FP_V]] : !fir.ref<i32>)
+! CHECK: %[[FP_V_LOOP:.*]] = acc.firstprivate varPtr({{.*}} : !fir.ref<i32>) recipe({{.*}}) implicit(true) name("v") -> !fir.ref<i32>
+! CHECK-NOT: acc.firstprivate {{.*}} implicit(true)
+! CHECK: acc.loop combined(parallel) {{.*}}firstprivate(%[[FP_V_LOOP]] : !fir.ref<i32>)
+! CHECK: collapse([2])
+
+! Inner standalone loop reuses the outer copy; no extra firstprivate.
+subroutine acc_parallel_loop_firstprivate_nested
+  integer :: i, j, n, v
+  real :: a(10, 10)
+  n = 10
+  v = 7
+  !$acc parallel loop firstprivate(v)
+  do i = 1, n
+    !$acc loop
+    do j = 1, n
+      a(i, j) = v
+    end do
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPacc_parallel_loop_firstprivate_nested
+! CHECK: %[[FP_V:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<i32>) recipe({{.*}}) name("v") -> !fir.ref<i32>
+! CHECK: acc.parallel combined(loop) {{.*}}firstprivate(%[[FP_V]] : !fir.ref<i32>)
+! CHECK: %[[FP_V_LOOP:.*]] = acc.firstprivate varPtr({{.*}} : !fir.ref<i32>) recipe({{.*}}) implicit(true) name("v") -> !fir.ref<i32>
+! CHECK: acc.loop combined(parallel) {{.*}}firstprivate(%[[FP_V_LOOP]] : !fir.ref<i32>)
+! CHECK-NOT: acc.firstprivate {{.*}} implicit(true)
+! CHECK: acc.loop
+
+subroutine acc_parallel_loop_firstprivate_two_scalars
+  integer :: i, n, v, w
+  real :: a(10)
+  n = 10
+  v = 7
+  w = 3
+  !$acc parallel loop firstprivate(v, w)
+  do i = 1, n
+    a(i) = v + w
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPacc_parallel_loop_firstprivate_two_scalars
+! CHECK: %[[FP_V:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<i32>) recipe({{.*}}) name("v") -> !fir.ref<i32>
+! CHECK: %[[FP_W:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<i32>) recipe({{.*}}) name("w") -> !fir.ref<i32>
+! CHECK: acc.parallel combined(loop) {{.*}}firstprivate(%[[FP_V]], %[[FP_W]] : !fir.ref<i32>, !fir.ref<i32>)
+! CHECK: %[[FP_V_LOOP:.*]] = acc.firstprivate varPtr({{.*}} : !fir.ref<i32>) recipe({{.*}}) implicit(true) name("v") -> !fir.ref<i32>
+! CHECK: %[[FP_W_LOOP:.*]] = acc.firstprivate varPtr({{.*}} : !fir.ref<i32>) recipe({{.*}}) implicit(true) name("w") -> !fir.ref<i32>
+! CHECK: acc.loop combined(parallel) {{.*}}firstprivate(%[[FP_V_LOOP]], %[[FP_W_LOOP]] : !fir.ref<i32>, !fir.ref<i32>)
+
+subroutine acc_parallel_loop_firstprivate_scalar_kinds
+  integer :: i, n
+  real :: x
+  logical :: l
+  complex :: z
+  real :: a(10)
+  n = 10
+  x = 1.0
+  l = .true.
+  z = (1.0, 0.0)
+  !$acc parallel loop firstprivate(x, l, z)
+  do i = 1, n
+    a(i) = x
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPacc_parallel_loop_firstprivate_scalar_kinds
+! CHECK: %[[FP_X:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<f32>) recipe({{.*}}) name("x") -> !fir.ref<f32>
+! CHECK: %[[FP_L:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<!fir.logical<4>>) recipe({{.*}}) name("l") -> !fir.ref<!fir.logical<4>>
+! CHECK: %[[FP_Z:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<complex<f32>>) recipe({{.*}}) name("z") -> !fir.ref<complex<f32>>
+! CHECK: acc.parallel combined(loop) {{.*}}firstprivate(%[[FP_X]], %[[FP_L]], %[[FP_Z]] : !fir.ref<f32>, !fir.ref<!fir.logical<4>>, !fir.ref<complex<f32>>)
+! CHECK: %[[FP_X_LOOP:.*]] = acc.firstprivate varPtr({{.*}} : !fir.ref<f32>) recipe({{.*}}) implicit(true) name("x") -> !fir.ref<f32>
+! CHECK: %[[FP_L_LOOP:.*]] = acc.firstprivate varPtr({{.*}} : !fir.ref<!fir.logical<4>>) recipe({{.*}}) implicit(true) name("l") -> !fir.ref<!fir.logical<4>>
+! CHECK: %[[FP_Z_LOOP:.*]] = acc.firstprivate varPtr({{.*}} : !fir.ref<complex<f32>>) recipe({{.*}}) implicit(true) name("z") -> !fir.ref<complex<f32>>
+! CHECK: acc.loop combined(parallel) {{.*}}firstprivate(%[[FP_X_LOOP]], %[[FP_L_LOOP]], %[[FP_Z_LOOP]] : !fir.ref<f32>, !fir.ref<!fir.logical<4>>, !fir.ref<complex<f32>>)
+
+subroutine acc_parallel_loop_firstprivate_dummy(v)
+  integer :: v
+  integer :: i, n
+  real :: a(10)
+  n = 10
+  !$acc parallel loop firstprivate(v)
+  do i = 1, n
+    a(i) = v
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPacc_parallel_loop_firstprivate_dummy
+! CHECK: %[[FP_V:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<i32>) recipe({{.*}}) name("v") -> !fir.ref<i32>
+! CHECK: acc.parallel combined(loop) {{.*}}firstprivate(%[[FP_V]] : !fir.ref<i32>)
+! CHECK: %[[FP_V_LOOP:.*]] = acc.firstprivate varPtr({{.*}} : !fir.ref<i32>) recipe({{.*}}) implicit(true) name("v") -> !fir.ref<i32>
+! CHECK: acc.loop combined(parallel) {{.*}}firstprivate(%[[FP_V_LOOP]] : !fir.ref<i32>)
+
+! Not only scalars: assumed-shape array dummy (boxed array).
+subroutine acc_parallel_loop_firstprivate_assumed_shape(b)
+  real :: b(:)
+  integer :: i
+  !$acc parallel loop firstprivate(b)
+  do i = 1, size(b)
+    b(i) = 1.0
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPacc_parallel_loop_firstprivate_assumed_shape
+! CHECK: acc.firstprivate var({{.*}}) recipe({{.*}}) name("b")
+! CHECK: acc.parallel combined(loop) {{.*}}firstprivate
+! CHECK: acc.firstprivate var({{.*}}) recipe({{.*}}) implicit(true) name("b")
+! CHECK: acc.loop combined(parallel) {{.*}}firstprivate
+
+subroutine acc_parallel_loop_firstprivate_with_reduction
+  integer :: i, n, v, r
+  n = 10
+  v = 7
+  r = 0
+  !$acc parallel loop firstprivate(v) reduction(+:r)
+  do i = 1, n
+    r = r + v
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPacc_parallel_loop_firstprivate_with_reduction
+! CHECK: %[[FP_V:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<i32>) recipe({{.*}}) name("v") -> !fir.ref<i32>
+! CHECK: acc.parallel combined(loop) {{.*}}firstprivate(%[[FP_V]] : !fir.ref<i32>)
+! CHECK: %[[FP_V_LOOP:.*]] = acc.firstprivate varPtr({{.*}} : !fir.ref<i32>) recipe({{.*}}) implicit(true) name("v") -> !fir.ref<i32>
+! CHECK: %[[RED_R:.*]] = acc.reduction varPtr({{.*}} : !fir.ref<i32>) recipe({{.*}}) name("r") -> !fir.ref<i32>
+! CHECK: acc.loop combined(parallel) {{.*}}firstprivate(%[[FP_V_LOOP]] : !fir.ref<i32>) reduction(%[[RED_R]] : !fir.ref<i32>)
+
+! Character gets loop firstprivate too.
+subroutine acc_parallel_loop_firstprivate_character
+  integer :: i, n
+  character(len=8) :: s
+  real :: a(10)
+  n = 10
+  s = 'xxxxxxxx'
+  !$acc parallel loop firstprivate(s)
+  do i = 1, n
+    a(i) = 1.0
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPacc_parallel_loop_firstprivate_character
+! CHECK: %[[FP_S:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<!fir.char<1,8>>) recipe({{.*}}) name("s") -> !fir.ref<!fir.char<1,8>>
+! CHECK: acc.parallel combined(loop) {{.*}}firstprivate(%[[FP_S]] : !fir.ref<!fir.char<1,8>>)
+! CHECK: %[[FP_S_LOOP:.*]] = acc.firstprivate varPtr({{.*}} : !fir.ref<!fir.char<1,8>>) recipe({{.*}}) implicit(true) name("s") -> !fir.ref<!fir.char<1,8>>
+! CHECK: acc.loop combined(parallel) {{.*}}firstprivate(%[[FP_S_LOOP]] : !fir.ref<!fir.char<1,8>>)
+
+! Derived type gets loop firstprivate too.
+subroutine acc_parallel_loop_firstprivate_derived
+  type t
+    integer :: x
+  end type
+  type(t) :: p
+  integer :: i, n
+  real :: a(10)
+  n = 10
+  p%x = 1
+  !$acc parallel loop firstprivate(p)
+  do i = 1, n
+    a(i) = p%x
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPacc_parallel_loop_firstprivate_derived
+! CHECK: acc.firstprivate varPtr({{.*}}) recipe({{.*}}) name("p")
+! CHECK: acc.parallel combined(loop) {{.*}}firstprivate
+! CHECK: acc.firstprivate varPtr({{.*}}) recipe({{.*}}) implicit(true) name("p")
+! CHECK: acc.loop combined(parallel) {{.*}}firstprivate
+
+! Pointer and allocatable get loop firstprivate too.
+subroutine acc_parallel_loop_firstprivate_pointer
+  integer, pointer :: p
+  integer, target :: t
+  integer :: i, n
+  real :: a(10)
+  n = 10
+  t = 7
+  p => t
+  !$acc parallel loop firstprivate(p)
+  do i = 1, n
+    a(i) = p
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPacc_parallel_loop_firstprivate_pointer
+! CHECK: %[[FP_P:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<!fir.box<!fir.ptr<i32>>>) recipe({{.*}}) name("p") -> !fir.ref<!fir.box<!fir.ptr<i32>>>
+! CHECK: acc.parallel combined(loop) {{.*}}firstprivate(%[[FP_P]] : !fir.ref<!fir.box<!fir.ptr<i32>>>)
+! CHECK: %[[FP_P_LOOP:.*]] = acc.firstprivate varPtr({{.*}} : !fir.ref<!fir.box<!fir.ptr<i32>>>) recipe({{.*}}) implicit(true) name("p") -> !fir.ref<!fir.box<!fir.ptr<i32>>>
+! CHECK: acc.loop combined(parallel) {{.*}}firstprivate(%[[FP_P_LOOP]] : !fir.ref<!fir.box<!fir.ptr<i32>>>)
+
+subroutine acc_parallel_loop_firstprivate_allocatable
+  integer, allocatable :: v
+  integer :: i, n
+  real :: a(10)
+  n = 10
+  allocate(v)
+  v = 7
+  !$acc parallel loop firstprivate(v)
+  do i = 1, n
+    a(i) = v
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPacc_parallel_loop_firstprivate_allocatable
+! CHECK: %[[FP_V:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<!fir.box<!fir.heap<i32>>>) recipe({{.*}}) name("v") -> !fir.ref<!fir.box<!fir.heap<i32>>>
+! CHECK: acc.parallel combined(loop) {{.*}}firstprivate(%[[FP_V]] : !fir.ref<!fir.box<!fir.heap<i32>>>)
+! CHECK: %[[FP_V_LOOP:.*]] = acc.firstprivate varPtr({{.*}} : !fir.ref<!fir.box<!fir.heap<i32>>>) recipe({{.*}}) implicit(true) name("v") -> !fir.ref<!fir.box<!fir.heap<i32>>>
+! CHECK: acc.loop combined(parallel) {{.*}}firstprivate(%[[FP_V_LOOP]] : !fir.ref<!fir.box<!fir.heap<i32>>>)
+
+subroutine acc_parallel_loop_firstprivate_section
+  integer :: i, n
+  real :: b(10)
+  n = 10
+  !$acc parallel loop firstprivate(b(1:5))
+  do i = 1, n
+    b(1) = i
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPacc_parallel_loop_firstprivate_section
+! CHECK: %[[FP_B:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) bounds({{.*}}) recipe({{.*}}) name("b(1:5)") -> !fir.ref<!fir.array<10xf32>>
+! CHECK: acc.parallel combined(loop) {{.*}}firstprivate(%[[FP_B]] : !fir.ref<!fir.array<10xf32>>)
+! CHECK: %[[FP_B_LOOP:.*]] = acc.firstprivate varPtr({{.*}} : !fir.ref<!fir.array<10xf32>>) bounds({{.*}}) recipe({{.*}}) implicit(true) name("b(1:5)") -> !fir.ref<!fir.array<10xf32>>
+! CHECK: acc.loop combined(parallel) {{.*}}firstprivate(%[[FP_B_LOOP]] : !fir.ref<!fir.array<10xf32>>)
+
+! Non-combined parallel with a single loop is left to a later pass.
+subroutine acc_parallel_firstprivate_one_loop
+  integer :: i, n, v
+  real :: a(10)
+  n = 10
+  v = 7
+  !$acc parallel firstprivate(v)
+  !$acc loop
+  do i = 1, n
+    a(i) = v
+  end do
+  !$acc end parallel
+end subroutine
+
+! CHECK-LABEL: func.func @_QPacc_parallel_firstprivate_one_loop
+! CHECK: %[[FP_V:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<i32>) recipe({{.*}}) name("v") -> !fir.ref<i32>
+! CHECK: acc.parallel {{.*}}firstprivate(%[[FP_V]] : !fir.ref<i32>)
+! CHECK-NOT: acc.firstprivate {{.*}} implicit(true)
+! CHECK: acc.loop

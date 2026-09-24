@@ -80,7 +80,7 @@ protected:
     Segment() : name() {}
 
     // Segment name is 16 characters long. An extra byte is added to guarantee
-    // nul termination in case all 16 bytes are used.
+    // null termination in case all 16 bytes are used.
     char name[17];
     lldb::addr_t vmaddr = LLDB_INVALID_ADDRESS;
     lldb::addr_t vmsize = 0;
