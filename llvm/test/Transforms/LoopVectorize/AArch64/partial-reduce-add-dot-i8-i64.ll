@@ -14,7 +14,13 @@ target triple = "aarch64"
 
 define i64 @zext_reduction_i8_to_i64(ptr %arr, i32 %n) {
 ; VF16-LABEL: 'zext_reduction_i8_to_i64'
+; VF16:  Cost of 2 for VF 16: EXPRESSION vp<[[VP8:%[0-9]+]]> = ir<%acc> + partial.reduce.add (ir<%load> zext to i64)
+; VF16:  Cost of 2 for VF 16: EXPRESSION vp<[[VP8]]> = ir<%acc> + partial.reduce.add (ir<%load> zext to i64)
+;
 ; VF32-LABEL: 'zext_reduction_i8_to_i64'
+; VF32:  Cost of 4 for VF 32: EXPRESSION vp<[[VP8:%[0-9]+]]> = ir<%acc> + partial.reduce.add (ir<%load> zext to i64)
+; VF32:  Cost of 4 for VF 32: EXPRESSION vp<[[VP8]]> = ir<%acc> + partial.reduce.add (ir<%load> zext to i64)
+;
 entry:
   br label %loop
 
@@ -35,7 +41,13 @@ exit:
 
 define i64 @sext_reduction_i8_to_i64(ptr %arr, i32 %n) {
 ; VF16-LABEL: 'sext_reduction_i8_to_i64'
+; VF16:  Cost of 2 for VF 16: EXPRESSION vp<[[VP8:%[0-9]+]]> = ir<%acc> + partial.reduce.add (ir<%load> sext to i64)
+; VF16:  Cost of 2 for VF 16: EXPRESSION vp<[[VP8]]> = ir<%acc> + partial.reduce.add (ir<%load> sext to i64)
+;
 ; VF32-LABEL: 'sext_reduction_i8_to_i64'
+; VF32:  Cost of 4 for VF 32: EXPRESSION vp<[[VP8:%[0-9]+]]> = ir<%acc> + partial.reduce.add (ir<%load> sext to i64)
+; VF32:  Cost of 4 for VF 32: EXPRESSION vp<[[VP8]]> = ir<%acc> + partial.reduce.add (ir<%load> sext to i64)
+;
 entry:
   br label %loop
 
@@ -59,7 +71,17 @@ exit:
 ; turned into TBLs before instruction selection and does not become a udot.
 define i64 @sub_add_chain_i8_to_i64(ptr %a, ptr noalias %b, i32 %n) {
 ; VF16-LABEL: 'sub_add_chain_i8_to_i64'
+; VF16:  Cost of 23 for VF 16: EXPRESSION vp<[[VP9:%[0-9]+]]> = ir<%acc> + partial.reduce.add (sub (0, ir<%load.a>) zext to i64)
+; VF16:  Cost of 2 for VF 16: EXPRESSION vp<[[VP10:%[0-9]+]]> = vp<[[VP9]]> + partial.reduce.add (ir<%load.b> zext to i64)
+; VF16:  Cost of 23 for VF 16: EXPRESSION vp<[[VP9]]> = ir<%acc> + partial.reduce.add (sub (0, ir<%load.a>) zext to i64)
+; VF16:  Cost of 2 for VF 16: EXPRESSION vp<[[VP10]]> = vp<[[VP9]]> + partial.reduce.add (ir<%load.b> zext to i64)
+;
 ; VF32-LABEL: 'sub_add_chain_i8_to_i64'
+; VF32:  Cost of 46 for VF 32: EXPRESSION vp<[[VP9:%[0-9]+]]> = ir<%acc> + partial.reduce.add (sub (0, ir<%load.a>) zext to i64)
+; VF32:  Cost of 4 for VF 32: EXPRESSION vp<[[VP10:%[0-9]+]]> = vp<[[VP9]]> + partial.reduce.add (ir<%load.b> zext to i64)
+; VF32:  Cost of 46 for VF 32: EXPRESSION vp<[[VP9]]> = ir<%acc> + partial.reduce.add (sub (0, ir<%load.a>) zext to i64)
+; VF32:  Cost of 4 for VF 32: EXPRESSION vp<[[VP10]]> = vp<[[VP9]]> + partial.reduce.add (ir<%load.b> zext to i64)
+;
 entry:
   br label %loop
 
