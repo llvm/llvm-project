@@ -9,7 +9,7 @@
 #include "clc/internal/clc.h"
 #include "clc/relational/relational.h"
 
-_CLC_DEFINE_ISFPCLASS(int, int, __clc_isnan, fcNan, float)
+_CLC_DEFINE_RELATIONAL_UNARY(int, int, __clc_isnan, (x != x), float)
 
 #ifdef cl_khr_fp64
 
@@ -17,7 +17,7 @@ _CLC_DEFINE_ISFPCLASS(int, int, __clc_isnan, fcNan, float)
 
 // The scalar version of __clc_isnan(double) returns an int, but the vector
 // versions return a long.
-_CLC_DEFINE_ISFPCLASS(int, long, __clc_isnan, fcNan, double)
+_CLC_DEFINE_RELATIONAL_UNARY(int, long, __clc_isnan, (x != x), double)
 
 #endif
 
@@ -27,6 +27,7 @@ _CLC_DEFINE_ISFPCLASS(int, long, __clc_isnan, fcNan, double)
 
 // The scalar version of __clc_isnan(half) returns an int, but the vector
 // versions return a short.
-_CLC_DEFINE_ISFPCLASS(int, short, __clc_isnan, fcNan, half)
+_CLC_DEFINE_RELATIONAL_UNARY(int, short, __clc_isnan, (x != x), half)
 
 #endif
+
