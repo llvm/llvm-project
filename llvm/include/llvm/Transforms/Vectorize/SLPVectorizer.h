@@ -176,8 +176,10 @@ private:
                         SmallSetVector<Instruction *, 8> &FMACandidates);
 
   /// Scan the basic block and look for patterns that are likely to start
-  /// a vectorization chain.
-  bool vectorizeChainsInBlock(BasicBlock *BB, slpvectorizer::BoUpSLP &R);
+  /// a vectorization chain. The FMA candidates are collected in
+  /// \p FMACandidates for the retry after all the blocks of the function.
+  bool vectorizeChainsInBlock(BasicBlock *BB, slpvectorizer::BoUpSLP &R,
+                              SmallSetVector<Instruction *, 8> &FMACandidates);
 
   std::optional<bool> vectorizeStoreChain(ArrayRef<Value *> Chain,
                                           slpvectorizer::BoUpSLP &R,
