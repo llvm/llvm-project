@@ -1004,45 +1004,23 @@ exit:
 }
 
 define void @redundant_branch_and_tail_folding(ptr %dst, i1 %c) {
-; DEFAULT-LABEL: define void @redundant_branch_and_tail_folding(
-; DEFAULT-SAME: ptr [[DST:%.*]], i1 [[C:%.*]]) {
-; DEFAULT-NEXT:  [[ENTRY:.*:]]
-; DEFAULT-NEXT:    br label %[[VECTOR_PH:.*]]
-; DEFAULT:       [[VECTOR_PH]]:
-; DEFAULT-NEXT:    br label %[[VECTOR_BODY:.*]]
-; DEFAULT:       [[VECTOR_BODY]]:
-; DEFAULT-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; DEFAULT-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; DEFAULT-NEXT:    [[STEP_ADD:%.*]] = add nuw <4 x i64> [[VEC_IND]], splat (i64 4)
-; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; DEFAULT-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[STEP_ADD]], splat (i64 4)
-; DEFAULT-NEXT:    [[TMP0:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
-; DEFAULT-NEXT:    br i1 [[TMP0]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP27:![0-9]+]]
-; DEFAULT:       [[MIDDLE_BLOCK]]:
-; DEFAULT-NEXT:    [[TMP1:%.*]] = add nuw nsw <4 x i64> [[STEP_ADD]], splat (i64 1)
-; DEFAULT-NEXT:    [[TMP2:%.*]] = trunc nuw nsw <4 x i64> [[TMP1]] to <4 x i32>
-; DEFAULT-NEXT:    [[TMP3:%.*]] = extractelement <4 x i32> [[TMP2]], i64 3
-; DEFAULT-NEXT:    store i32 [[TMP3]], ptr [[DST]], align 4
-; DEFAULT-NEXT:    br label %[[SCALAR_PH:.*]]
-; DEFAULT:       [[SCALAR_PH]]:
-;
-; PRED-LABEL: define void @redundant_branch_and_tail_folding(
-; PRED-SAME: ptr [[DST:%.*]], i1 [[C:%.*]]) {
-; PRED-NEXT:  [[ENTRY:.*]]:
-; PRED-NEXT:    br label %[[LOOP_HEADER:.*]]
-; PRED:       [[LOOP_HEADER]]:
-; PRED-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; PRED-NEXT:    br i1 [[C]], label %[[LOOP_LATCH]], label %[[THEN:.*]]
-; PRED:       [[THEN]]:
-; PRED-NEXT:    br label %[[LOOP_LATCH]]
-; PRED:       [[LOOP_LATCH]]:
-; PRED-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; PRED-NEXT:    [[T:%.*]] = trunc nuw nsw i64 [[IV_NEXT]] to i32
-; PRED-NEXT:    store i32 [[T]], ptr [[DST]], align 4
-; PRED-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 21
-; PRED-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP_HEADER]]
-; PRED:       [[EXIT]]:
-; PRED-NEXT:    ret void
+; COMMON-LABEL: define void @redundant_branch_and_tail_folding(
+; COMMON-SAME: ptr [[DST:%.*]], i1 [[C:%.*]]) {
+; COMMON-NEXT:  [[ENTRY:.*]]:
+; COMMON-NEXT:    br label %[[LOOP_HEADER:.*]]
+; COMMON:       [[LOOP_HEADER]]:
+; COMMON-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; COMMON-NEXT:    br i1 [[C]], label %[[LOOP_LATCH]], label %[[THEN:.*]]
+; COMMON:       [[THEN]]:
+; COMMON-NEXT:    br label %[[LOOP_LATCH]]
+; COMMON:       [[LOOP_LATCH]]:
+; COMMON-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; COMMON-NEXT:    [[T:%.*]] = trunc nuw nsw i64 [[IV_NEXT]] to i32
+; COMMON-NEXT:    store i32 [[T]], ptr [[DST]], align 4
+; COMMON-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 21
+; COMMON-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP_HEADER]]
+; COMMON:       [[EXIT]]:
+; COMMON-NEXT:    ret void
 ;
 entry:
   br label %loop.header
@@ -1166,13 +1144,13 @@ define void @pred_udiv_select_cost(ptr %A, ptr %B, ptr %C, i64 %n, i8 %y) #1 {
 ; DEFAULT-NEXT:    store <vscale x 16 x i8> [[TMP21]], ptr [[TMP22]], align 1
 ; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; DEFAULT-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; DEFAULT-NEXT:    br i1 [[TMP23]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP29:![0-9]+]]
+; DEFAULT-NEXT:    br i1 [[TMP23]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP27:![0-9]+]]
 ; DEFAULT:       [[MIDDLE_BLOCK]]:
 ; DEFAULT-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; DEFAULT-NEXT:    br i1 [[CMP_N]], [[EXIT:label %.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; DEFAULT:       [[VEC_EPILOG_ITER_CHECK]]:
 ; DEFAULT-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], [[TMP2]]
-; DEFAULT-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF30:![0-9]+]]
+; DEFAULT-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF28:![0-9]+]]
 ; DEFAULT:       [[VEC_EPILOG_PH]]:
 ; DEFAULT-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; DEFAULT-NEXT:    [[TMP24:%.*]] = call i64 @llvm.vscale.i64()
@@ -1204,7 +1182,7 @@ define void @pred_udiv_select_cost(ptr %A, ptr %B, ptr %C, i64 %n, i8 %y) #1 {
 ; DEFAULT-NEXT:    store <vscale x 8 x i8> [[TMP38]], ptr [[TMP39]], align 1
 ; DEFAULT-NEXT:    [[INDEX_NEXT19]] = add nuw i64 [[INDEX15]], [[TMP25]]
 ; DEFAULT-NEXT:    [[TMP40:%.*]] = icmp eq i64 [[INDEX_NEXT19]], [[N_VEC12]]
-; DEFAULT-NEXT:    br i1 [[TMP40]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP31:![0-9]+]]
+; DEFAULT-NEXT:    br i1 [[TMP40]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP29:![0-9]+]]
 ; DEFAULT:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; DEFAULT-NEXT:    [[CMP_N20:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC12]]
 ; DEFAULT-NEXT:    br i1 [[CMP_N20]], [[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
