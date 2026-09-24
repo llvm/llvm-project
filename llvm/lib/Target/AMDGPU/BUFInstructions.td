@@ -3660,11 +3660,7 @@ let AsmString = BUFFER_WBL2.Mnemonic, // drop flags
 defm BUFFER_WBL2  : MUBUF_Real_gfx90a<0x28>;
 defm BUFFER_INVL2 : MUBUF_Real_gfx90a<0x29>;
 
-let SubtargetPredicate = isGFX940Plus in
 def BUFFER_WBL2_gfx940  : MUBUF_Real_gfx940<0x28, BUFFER_WBL2>;
-
-let SubtargetPredicate = HasBufferInvInst,
-    AssemblerPredicate = HasBufferInvInst in
 def BUFFER_INV_gfx940   : MUBUF_Real_gfx940<0x29, BUFFER_INV>;
 
 class MTBUF_Real_Base_vi <bits<4> op, MTBUF_Pseudo ps, int Enc> :
