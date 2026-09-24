@@ -320,9 +320,6 @@ public:
 
   llvm::Type *ConvertType(QualType T) { return CGF.ConvertType(T); }
   LValue EmitLValue(const Expr *E) { return CGF.EmitLValue(E); }
-  LValue EmitCheckedLValue(const Expr *E, CodeGenFunction::TypeCheckKind TCK) {
-    return CGF.EmitCheckedLValue(E, TCK);
-  }
 
   void EmitBinOpCheck(
       ArrayRef<std::pair<Value *, SanitizerKind::SanitizerOrdinal>> Checks,
@@ -370,8 +367,10 @@ public:
   /// value l-value, this method emits the address of the l-value, then loads
   /// and returns the result.
   Value *EmitLoadOfLValue(const Expr *E) {
-    Value *V = EmitLoadOfLValue(EmitCheckedLValue(E, CodeGenFunction::TCK_Load),
-                                E->getExprLoc());
+    LValue LV =
+        CGF.EmitLValue(E, NotKnownNonNull, CodeGenFunction::ObjectRequired);
+    CGF.EmitTypeCheck(CodeGenFunction::TCK_Load, E, LV);
+    Value *V = EmitLoadOfLValue(LV, E->getExprLoc());
 
     EmitLValueAlignmentAssumption(E, V);
     return V;
@@ -693,21 +692,32 @@ public:
 
   Value *VisitStmtExpr(const StmtExpr *E);
 
+  LValue EmitAssignmentDest(const BinaryOperator *E) {
+    LValue LV = CGF.EmitLValue(E->getLHS(), NotKnownNonNull,
+                               CodeGenFunction::ObjectRequired);
+    CGF.EmitTypeCheck(CodeGenFunction::TCK_Store, E->getLHS(), LV);
+    return LV;
+  }
+
   // Unary Operators.
+  LValue EmitIncDecOperand(const UnaryOperator *E) {
+    return CGF.EmitLValue(E->getSubExpr(), NotKnownNonNull,
+                          CodeGenFunction::ObjectRequired);
+  }
   Value *VisitUnaryPostDec(const UnaryOperator *E) {
-    LValue LV = EmitLValue(E->getSubExpr());
+    LValue LV = EmitIncDecOperand(E);
     return EmitScalarPrePostIncDec(E, LV, false, false);
   }
   Value *VisitUnaryPostInc(const UnaryOperator *E) {
-    LValue LV = EmitLValue(E->getSubExpr());
+    LValue LV = EmitIncDecOperand(E);
     return EmitScalarPrePostIncDec(E, LV, true, false);
   }
   Value *VisitUnaryPreDec(const UnaryOperator *E) {
-    LValue LV = EmitLValue(E->getSubExpr());
+    LValue LV = EmitIncDecOperand(E);
     return EmitScalarPrePostIncDec(E, LV, false, true);
   }
   Value *VisitUnaryPreInc(const UnaryOperator *E) {
-    LValue LV = EmitLValue(E->getSubExpr());
+    LValue LV = EmitIncDecOperand(E);
     return EmitScalarPrePostIncDec(E, LV, true, true);
   }
 
@@ -2195,7 +2205,8 @@ Value *ScalarExprEmitter::VisitArraySubscriptExpr(ArraySubscriptExpr *E) {
   QualType IdxTy = E->getIdx()->getType();
 
   if (CGF.SanOpts.has(SanitizerKind::ArrayBounds))
-    CGF.EmitBoundsCheck(E, E->getBase(), Idx, IdxTy, /*Accessed*/true);
+    CGF.EmitBoundsCheck(E, E->getBase(), Idx, IdxTy,
+                        CodeGenFunction::ObjectRequired);
 
   Value *Ret = Builder.CreateExtractElement(Base, Idx, "vecext");
 
@@ -4075,7 +4086,9 @@ LValue ScalarExprEmitter::EmitCompoundAssignLValue(
   OpInfo.FPFeatures = E->getFPFeaturesInEffect(CGF.getLangOpts());
   OpInfo.E = E;
   // Load/convert the LHS.
-  LValue LHSLV = EmitCheckedLValue(E->getLHS(), CodeGenFunction::TCK_Store);
+  LValue LHSLV = CGF.EmitLValue(E->getLHS(), NotKnownNonNull,
+                                CodeGenFunction::ObjectRequired);
+  CGF.EmitTypeCheck(CodeGenFunction::TCK_Store, E->getLHS(), LHSLV);
 
   llvm::PHINode *atomicPHI = nullptr;
   if (const AtomicType *atomicTy = LHSTy->getAs<AtomicType>()) {
@@ -4530,7 +4543,8 @@ static Value *emitPointerArithmetic(CodeGenFunction &CGF, const BinOpInfo &op,
 /// Emit pointer + index arithmetic.
 llvm::Value *CodeGenFunction::EmitPointerArithmetic(
     const BinaryOperator *BO, Expr *pointerOperand, llvm::Value *pointer,
-    Expr *indexOperand, llvm::Value *index, bool isSubtraction) {
+    Expr *indexOperand, llvm::Value *index, bool isSubtraction,
+    ObjectRequirement_t Req) {
   bool isSigned = indexOperand->getType()->isSignedIntegerOrEnumerationType();
 
   unsigned width = cast<llvm::IntegerType>(index->getType())->getBitWidth();
@@ -4590,8 +4604,7 @@ llvm::Value *CodeGenFunction::EmitPointerArithmetic(
     index = Builder.CreateNeg(index, "idx.neg");
 
   if (SanOpts.has(SanitizerKind::ArrayBounds))
-    EmitBoundsCheck(BO, pointerOperand, index, indexOperand->getType(),
-                    /*Accessed*/ false);
+    EmitBoundsCheck(BO, pointerOperand, index, indexOperand->getType(), Req);
 
   const PointerType *pointerType =
       pointerOperand->getType()->getAs<PointerType>();
@@ -5451,7 +5464,7 @@ Value *ScalarExprEmitter::VisitBinAssign(const BinaryOperator *E) {
   LValue LHS;
 
   if (PointerAuthQualifier PtrAuth = E->getLHS()->getType().getPointerAuth()) {
-    LValue LV = CGF.EmitCheckedLValue(E->getLHS(), CodeGenFunction::TCK_Store);
+    LValue LV = EmitAssignmentDest(E);
     LV.getQuals().removePointerAuth();
     llvm::Value *RV =
         CGF.EmitPointerAuthQualify(PtrAuth, E->getRHS(), LV.getAddress());
@@ -5480,7 +5493,7 @@ Value *ScalarExprEmitter::VisitBinAssign(const BinaryOperator *E) {
 
   case Qualifiers::OCL_Weak:
     RHS = Visit(E->getRHS());
-    LHS = EmitCheckedLValue(E->getLHS(), CodeGenFunction::TCK_Store);
+    LHS = EmitAssignmentDest(E);
     RHS = CGF.EmitARCStoreWeak(LHS.getAddress(), RHS, Ignore);
     break;
 
@@ -5497,7 +5510,7 @@ Value *ScalarExprEmitter::VisitBinAssign(const BinaryOperator *E) {
     else
       RHS = Visit(E->getRHS());
 
-    LHS = EmitCheckedLValue(E->getLHS(), CodeGenFunction::TCK_Store);
+    LHS = EmitAssignmentDest(E);
 
     // Store the value into the LHS.  Bit-fields are handled specially
     // because the result is altered by the store, i.e., [C99 6.5.16p1]

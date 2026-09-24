@@ -2980,7 +2980,8 @@ static TryEmitResult tryEmitARCRetainLoadOfScalar(CodeGenFunction &CGF,
       !type.isConstQualified() &&
       type.getObjCLifetime() == Qualifiers::OCL_Strong) {
     // Emit the lvalue.
-    LValue lv = CGF.EmitLValue(e);
+    LValue lv = CGF.EmitLValue(e, NotKnownNonNull,
+                               CodeGenFunction::ObjectRequired);
 
     // Load the object pointer.
     llvm::Value *result = CGF.EmitLoadOfLValue(lv,
@@ -3012,7 +3013,9 @@ static TryEmitResult tryEmitARCRetainLoadOfScalar(CodeGenFunction &CGF,
                            !shouldRetainObjCLifetime(type.getObjCLifetime()));
   }
 
-  return tryEmitARCRetainLoadOfScalar(CGF, CGF.EmitLValue(e), type);
+  return tryEmitARCRetainLoadOfScalar(
+      CGF, CGF.EmitLValue(e, NotKnownNonNull, CodeGenFunction::ObjectRequired),
+      type);
 }
 
 typedef llvm::function_ref<llvm::Value *(CodeGenFunction &CGF,
@@ -3331,8 +3334,9 @@ Result ARCExprEmitter<Impl,Result>::
   Result result = asImpl().visit(e->getRHS());
 
   // Perform the store.
-  LValue lvalue =
-    CGF.EmitCheckedLValue(e->getLHS(), CodeGenFunction::TCK_Store);
+  LValue lvalue = CGF.EmitLValue(e->getLHS(), NotKnownNonNull,
+                                 CodeGenFunction::ObjectRequired);
+  CGF.EmitTypeCheck(CodeGenFunction::TCK_Store, e->getLHS(), lvalue);
   CGF.EmitStoreThroughLValue(RValue::get(asImpl().getValueOfResult(result)),
                              lvalue);
 
@@ -3657,7 +3661,7 @@ CodeGenFunction::EmitARCStoreUnsafeUnretained(const BinaryOperator *e,
   }
 
   // Emit the LHS and perform the store.
-  LValue lvalue = EmitLValue(e->getLHS());
+  LValue lvalue = EmitLValue(e->getLHS(), NotKnownNonNull, ObjectRequired);
   EmitStoreOfScalar(value, lvalue);
 
   return std::pair<LValue,llvm::Value*>(std::move(lvalue), value);
@@ -3680,7 +3684,7 @@ CodeGenFunction::EmitARCStoreStrong(const BinaryOperator *e,
     hasImmediateRetain = true;
   }
 
-  LValue lvalue = EmitLValue(e->getLHS());
+  LValue lvalue = EmitLValue(e->getLHS(), NotKnownNonNull, ObjectRequired);
 
   // If the RHS was emitted retained, expand this.
   if (hasImmediateRetain) {
@@ -3697,7 +3701,7 @@ CodeGenFunction::EmitARCStoreStrong(const BinaryOperator *e,
 std::pair<LValue,llvm::Value*>
 CodeGenFunction::EmitARCStoreAutoreleasing(const BinaryOperator *e) {
   llvm::Value *value = EmitARCRetainAutoreleaseScalarExpr(e->getRHS());
-  LValue lvalue = EmitLValue(e->getLHS());
+  LValue lvalue = EmitLValue(e->getLHS(), NotKnownNonNull, ObjectRequired);
 
   EmitStoreOfScalar(value, lvalue);
 
