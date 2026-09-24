@@ -173,8 +173,16 @@ lldb::StateType ScriptedThreadPlan::GetPlanRunState() {
   Log *log = GetLog(LLDBLog::Thread);
   LLDB_LOG(log, "called on Scripted Thread Plan: {0}", GetScriptClassName());
   lldb::StateType run_state = eStateRunning;
-  if (m_implementation_sp)
-    run_state = m_interface->GetRunState();
+  if (m_implementation_sp) {
+    llvm::Expected<lldb::StateType> run_state_or_err =
+        m_interface->GetRunState();
+    if (!run_state_or_err) {
+      LLDB_LOG_ERROR(log, run_state_or_err.takeError(),
+                     "Can't call ScriptedThreadPlan::GetRunState: {0}");
+      return run_state;
+    }
+    run_state = *run_state_or_err;
+  }
   return run_state;
 }
 
@@ -186,16 +194,22 @@ void ScriptedThreadPlan::GetDescription(Stream *s,
     ScriptInterpreter *script_interp = GetScriptInterpreter();
     if (script_interp) {
       lldb::StreamSP stream = std::make_shared<lldb_private::StreamString>();
-      llvm::Error err = m_interface->GetStopDescription(stream);
-      if (err) {
+      if (llvm::Error err = m_interface->GetStopDescription(stream))
         LLDB_LOG_ERROR(
             GetLog(LLDBLog::Thread), std::move(err),
             "Can't call ScriptedThreadPlan::GetStopDescription: {0}");
+
+      // Fall back on the class name whenever the plan didn't describe itself,
+      // whether that's because `stop_description` failed or because the plan
+      // doesn't implement it at all. A plan with no description at all is
+      // never the right answer.
+      StreamString *description =
+          reinterpret_cast<StreamString *>(stream.get());
+      if (description->GetString().empty())
         s->Format("Scripted thread plan implemented by class {0}.",
                   GetScriptClassName());
-      } else
-        s->PutCString(
-            reinterpret_cast<StreamString *>(stream.get())->GetData());
+      else
+        s->PutCString(description->GetData());
     }
     return;
   }

@@ -334,21 +334,20 @@ public:
   }
 
   bool isElementTypeLegalForCompressStore(Type *Ty) const {
-    return Ty->isFloatTy() || Ty->isDoubleTy() || Ty->isIntegerTy(32) ||
-           Ty->isIntegerTy(64);
+    assert(Ty->isIntegerTy() || Ty->isFloatingPointTy());
+    // 32-bit and 64-bit element types are legal if we have SVE.
+    if (is_contained({32u, 64u}, Ty->getScalarSizeInBits()))
+      return true;
+
+    // 8-bit and 16-bit types require +sve2p2 or +sme2p2.
+    if (is_contained({8u, 16u}, Ty->getScalarSizeInBits()))
+      return ST->hasSVE2p2() || ST->hasSME2p2();
+
+    return false;
   }
 
   bool isLegalMaskedCompressStore(Type *DataType,
-                                  Align Alignment) const override {
-    if (!ST->isSVEAvailable())
-      return false;
-
-    if (isa<FixedVectorType>(DataType) &&
-        DataType->getPrimitiveSizeInBits() < 128)
-      return false;
-
-    return isElementTypeLegalForCompressStore(DataType->getScalarType());
-  }
+                                  Align Alignment) const override;
 
   bool isLegalMaskedGatherScatter(Type *DataType) const {
     if (!ST->isSVEAvailable())
@@ -507,7 +506,9 @@ public:
   getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
                  TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
                  VectorType *SubTp, ArrayRef<const Value *> Args = {},
-                 const Instruction *CxtI = nullptr) const override;
+                 const Instruction *CxtI = nullptr,
+                 TTI::VectorInstrContext VIC =
+                     TTI::VectorInstrContext::None) const override;
 
   InstructionCost
   getScalarizationOverhead(VectorType *Ty, const APInt &DemandedElts,

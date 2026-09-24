@@ -18,12 +18,15 @@
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/null_check.h"
 
 #include <stdarg.h>
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, execle, (const char *path, const char *arg0, ...)) {
+  LIBC_CRASH_ON_NULLPTR(arg0);
+
   va_list varargs, varargs_copy;
   va_start(varargs, arg0);
   va_copy(varargs_copy, varargs);
@@ -33,7 +36,13 @@ LLVM_LIBC_FUNCTION(int, execle, (const char *path, const char *arg0, ...)) {
     ++argc;
   va_end(varargs);
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wvla"
+#if __has_warning("-Wvla-cxx-extension")
+#pragma GCC diagnostic ignored "-Wvla-cxx-extension"
+#endif
   char *argv[argc + 1];
+#pragma GCC diagnostic pop
   argv[0] = const_cast<char *>(arg0);
 
   for (size_t i = 1; i <= argc; ++i)

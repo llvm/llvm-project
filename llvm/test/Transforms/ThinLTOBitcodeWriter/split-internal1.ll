@@ -14,7 +14,7 @@
 
 ; M0: @g.581d7631532fa146ba4061179da39272 = external hidden global i8
 ; M1: @g = internal global i8 42, !type !0
-; M1: @g.581d7631532fa146ba4061179da39272 = hidden alias ptr, ptr @g
+; M1: @g.581d7631532fa146ba4061179da39272 = hidden alias i8, ptr @g
 @g = internal global i8 42, !type !0
 
 ; M0: define ptr @f()

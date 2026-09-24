@@ -44,23 +44,12 @@
 
 /* BACKTRACE_HEADER defined in Bazel */
 
-/* Define to 1 if you have the <CrashReporterClient.h> header file. */
-/* HAVE_CRASHREPORTERCLIENT_H defined in Bazel */
-
 /* can use __crashreporter_info__ */
 /* HAVE_CRASHREPORTER_INFO  defined in Bazel */
 
 /* Define to 1 if you have the declaration of `arc4random', and to 0 if you
    don't. */
-#define HAVE_DECL_ARC4RANDOM 0
-
-/* Define to 1 if you have the declaration of `FE_ALL_EXCEPT', and to 0 if you
-   don't. */
-/* HAVE_DECL_FE_ALL_EXCEPT defined in Bazel */
-
-/* Define to 1 if you have the declaration of `FE_INEXACT', and to 0 if you
-   don't. */
-/* HAVE_DECL_FE_INEXACT defined in Bazel */
+/* HAVE_DECL_ARC4RANDOM defined in Bazel */
 
 /* Define to 1 if you have the declaration of `strerror_s', and to 0 if you
    don't. */
@@ -147,9 +136,6 @@
 /* Define to 1 if you have the <pthread.h> header file. */
 /* HAVE_PTHREAD_H defined in Bazel */
 
-/* Have pthread_mutex_lock */
-#define HAVE_PTHREAD_MUTEX_LOCK 1
-
 /* Have pthread_rwlock_init */
 #define HAVE_PTHREAD_RWLOCK_INIT 1
 
@@ -175,16 +161,13 @@
 /* HAVE_SYS_IOCTL_H defined in Bazel */
 
 /* Define to 1 if stat struct has st_mtimespec member .*/
-/* #undef HAVE_STRUCT_STAT_ST_MTIMESPEC_TV_NSEC */
+/* HAVE_STRUCT_STAT_ST_MTIMESPEC_TV_NSEC defined in Bazel */
 
 /* Define to 1 if stat struct has st_mtim member. */
 /* HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC defined in Bazel */
 
 /* Define to 1 if you have the <unistd.h> header file. */
 /* HAVE_UNISTD_H defined in Bazel */
-
-/* Define to 1 if you have the <valgrind/valgrind.h> header file. */
-/* #undef HAVE_VALGRIND_VALGRIND_H */
 
 /* Have host's _alloca */
 /* #undef HAVE__ALLOCA */

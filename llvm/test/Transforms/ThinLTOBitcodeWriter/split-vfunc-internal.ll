@@ -11,12 +11,12 @@ define ptr @source() {
 
 ; M0: @g.84f59439b469192440047efc8de357fb = external hidden constant [1 x ptr]
 ; M1: @g = internal constant [1 x ptr] [ptr @ok.84f59439b469192440047efc8de357fb]
-; M1: @g.84f59439b469192440047efc8de357fb = hidden alias ptr, ptr @g
+; M1: @g.84f59439b469192440047efc8de357fb = hidden alias [1 x ptr], ptr @g
 @g = internal constant [1 x ptr] [
   ptr @ok
 ], !type !0
 
-; M0: @ok.84f59439b469192440047efc8de357fb = hidden alias ptr, ptr @ok
+; M0: @ok.84f59439b469192440047efc8de357fb = hidden alias i64 (ptr), ptr @ok
 ; M0: define internal i64 @ok(ptr %this)
 ; M1: define available_externally hidden i64 @ok.84f59439b469192440047efc8de357fb
 define internal i64 @ok(ptr %this) {
