@@ -25,14 +25,15 @@ attributes #0 = { "hlsl.shader"="pixel" }
 !3 = !{i32 0, !"B", i32 1, i32 0, !8, i32 0, i32 1, i8 1, i32 -1, i8 -1, i8 0, i8 0, i32 0}
 !4 = !{i32 1, !"I", i32 4, i32 0, !8, i32 0, i32 1, i8 1, i32 -1, i8 -1, i8 0, i8 0, i32 0}
 !5 = !{i32 2, !"U", i32 5, i32 0, !8, i32 0, i32 1, i8 1, i32 -1, i8 -1, i8 0, i8 0, i32 0}
-!6 = !{i32 3, !"SV_Position", i32 9, i32 3, !8, i32 0, i32 1, i8 4, i32 -1, i8 -1, i8 0, i8 0, i32 0}
+; Pixel input metadata may use the HLSL spelling; ISG1 is canonicalized.
+!6 = !{i32 3, !"SV_POSITION", i32 9, i32 3, !8, i32 0, i32 1, i8 4, i32 -1, i8 -1, i8 0, i8 0, i32 0}
 !7 = !{i32 0, !"SV_Target", i32 9, i32 16, !8, i32 0, i32 1, i8 2, i32 -1, i8 -1, i8 0, i8 0, i32 0}
 !8 = !{i32 0}
 
 ; MD: !{i32 0, !"B", i8 1, i8 0, !{{[0-9]+}}, i8 1, i32 1, i8 1, i32 0, i8 0,
 ; MD: !{i32 1, !"I", i8 4, i8 0, !{{[0-9]+}}, i8 1, i32 1, i8 1, i32 0, i8 1,
 ; MD: !{i32 2, !"U", i8 5, i8 0, !{{[0-9]+}}, i8 1, i32 1, i8 1, i32 0, i8 2,
-; MD: !{i32 3, !"SV_Position", i8 9, i8 3, !{{[0-9]+}}, i8 4, i32 1, i8 4, i32 1, i8 0,
+; MD: !{i32 3, !"SV_POSITION", i8 9, i8 3, !{{[0-9]+}}, i8 4, i32 1, i8 4, i32 1, i8 0,
 
 ; PARTS: Name: B
 ; PARTS: CompType: UInt32

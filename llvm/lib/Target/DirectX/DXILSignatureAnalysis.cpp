@@ -435,6 +435,32 @@ dxbc::D3DSystemValue getSystemValue(dxbc::PSV::SemanticKind Kind) {
   }
 }
 
+// The DXIL reader normalizes system-value semantic names when loading module
+// metadata. The validator then recreates ISG1/OSG1 from those normalized names
+// and compares the parts byte-for-byte, so the container must use the same
+// spelling even if HLSL (or the source metadata) used a different casing.
+StringRef getContainerSemanticName(const SemanticSignatureElement &E) {
+  using Kind = dxbc::PSV::SemanticKind;
+  switch (E.SemanticKind) {
+  case Kind::Arbitrary:
+    return E.SemanticName;
+  case Kind::VertexID:
+    return "SV_VertexID";
+  case Kind::Position:
+    return "SV_Position";
+  case Kind::IsFrontFace:
+    return "SV_IsFrontFace";
+  case Kind::ClipDistance:
+    return "SV_ClipDistance";
+  case Kind::CullDistance:
+    return "SV_CullDistance";
+  case Kind::Target:
+    return "SV_Target";
+  default:
+    llvm_unreachable("validated vertex/pixel signature semantic");
+  }
+}
+
 void buildSignature(mcdxbc::Signature &Sig,
                     ArrayRef<SemanticSignatureElement> Elements, bool Input,
                     bool Native16, bool Legacy) {
@@ -445,7 +471,7 @@ void buildSignature(mcdxbc::Signature &Sig,
     if (Legacy)
       ExclusiveMask = Input ? 0 : static_cast<uint8_t>(~Mask);
     for (auto [Row, Index] : enumerate(E.SemanticIndices))
-      Sig.addParam(E.GSStream, E.SemanticName, Index,
+      Sig.addParam(E.GSStream, getContainerSemanticName(E), Index,
                    getSystemValue(E.SemanticKind),
                    getComponentType(E.CompType, Legacy), E.StartRow + Row, Mask,
                    ExclusiveMask, E.getMinPrecision(!Native16));

@@ -32,7 +32,8 @@ attributes #0 = { "hlsl.shader"="pixel" }
 !2 = !{!5}
 !3 = !{i32 0, !"A", i32 9, i32 0, !10, i32 0, i32 1, i8 2, i32 -1, i8 -1, i8 0, i8 0, i32 0}
 !4 = !{i32 1, !"B", i32 9, i32 0, !11, i32 0, i32 2, i8 2, i32 -1, i8 -1, i8 0, i8 0, i32 0}
-!5 = !{i32 0, !"SV_Target", i32 9, i32 16, !12, i32 0, i32 1, i8 4, i32 -1, i8 -1, i8 0, i8 0, i32 0}
+; The metadata keeps the source spelling, but OSG1 must use SV_Target.
+!5 = !{i32 0, !"SV_TARGET", i32 9, i32 16, !12, i32 0, i32 1, i8 4, i32 -1, i8 -1, i8 0, i8 0, i32 0}
 !10 = !{i32 0}
 !11 = !{i32 0, i32 1}
 !12 = !{i32 3}
@@ -41,7 +42,7 @@ attributes #0 = { "hlsl.shader"="pixel" }
 ; ANALYSIS-NEXT: 0: A rows=1 cols=2 at 0:0 usage=1 dynamic=0
 ; ANALYSIS-NEXT: 1: B rows=2 cols=2 at 0:2 usage=8 dynamic=2
 ; ANALYSIS-NEXT: Outputs: 1 elements, 4 vectors
-; ANALYSIS-NEXT: 0: SV_Target rows=1 cols=4 at 3:0 usage=5 dynamic=0
+; ANALYSIS-NEXT: 0: SV_TARGET rows=1 cols=4 at 3:0 usage=5 dynamic=0
 
 ; MD-NOT: !dx.semantic.signatures
 ; MD: !dx.viewIdState = !{![[STATE:[0-9]+]]}
@@ -49,7 +50,7 @@ attributes #0 = { "hlsl.shader"="pixel" }
 ; MD-DAG: ![[STATE]] = !{[10 x i32] [i32 8, i32 16, i32 20480, i32 0, i32 0, i32 20480, i32 0, i32 0, i32 0, i32 20480]}
 ; MD-DAG: !{i32 1, !"B", i8 9, i8 0, !{{[0-9]+}}, i8 2, i32 2, i8 2, i32 0, i8 2, ![[PROPS:[0-9]+]]}
 ; MD-DAG: ![[PROPS]] = !{i32 2, i32 2, i32 3, i32 2}
-; MD-DAG: !{i32 0, !"SV_Target", i8 9, i8 16, !{{[0-9]+}}, i8 0, i32 1, i8 4, i32 3, i8 0, ![[WRITE:[0-9]+]]}
+; MD-DAG: !{i32 0, !"SV_TARGET", i8 9, i8 16, !{{[0-9]+}}, i8 0, i32 1, i8 4, i32 3, i8 0, ![[WRITE:[0-9]+]]}
 ; MD-DAG: ![[WRITE]] = !{i32 3, i32 5}
 ; MD-NOT: !dx.semantic.signatures
 

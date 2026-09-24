@@ -29,7 +29,8 @@ attributes #0 = { "hlsl.shader"="vertex" }
 !2 = !{!5, !6, !7}
 !3 = !{i32 0, !"POSITION", i32 9, i32 0, !10, i32 0, i32 1, i8 4, i32 -1, i8 -1, i8 0, i8 0, i32 0}
 !4 = !{i32 1, !"TEXCOORD", i32 9, i32 0, !10, i32 0, i32 1, i8 2, i32 -1, i8 -1, i8 0, i8 0, i32 0}
-!5 = !{i32 0, !"SV_Position", i32 9, i32 3, !10, i32 0, i32 1, i8 4, i32 -1, i8 -1, i8 0, i8 0, i32 0}
+; The metadata keeps the source spelling, but OSG1 must use SV_Position.
+!5 = !{i32 0, !"SV_POSITION", i32 9, i32 3, !10, i32 0, i32 1, i8 4, i32 -1, i8 -1, i8 0, i8 0, i32 0}
 !6 = !{i32 1, !"A", i32 9, i32 0, !10, i32 0, i32 1, i8 1, i32 -1, i8 -1, i8 0, i8 0, i32 0}
 !7 = !{i32 2, !"B", i32 9, i32 0, !10, i32 0, i32 1, i8 2, i32 -1, i8 -1, i8 0, i8 0, i32 0}
 !10 = !{i32 0}
@@ -39,7 +40,7 @@ attributes #0 = { "hlsl.shader"="vertex" }
 ; ANALYSIS-NEXT: 0: POSITION rows=1 cols=4 at 0:0 usage=15 dynamic=0
 ; ANALYSIS-NEXT: 1: TEXCOORD rows=1 cols=2 at 1:0 usage=3 dynamic=0
 ; ANALYSIS-NEXT: Outputs: 3 elements, 2 vectors
-; ANALYSIS-NEXT: 0: SV_Position rows=1 cols=4 at 0:0 usage=15 dynamic=0
+; ANALYSIS-NEXT: 0: SV_POSITION rows=1 cols=4 at 0:0 usage=15 dynamic=0
 ; ANALYSIS-NEXT: 1: A rows=1 cols=1 at 1:0 usage=1 dynamic=0
 ; ANALYSIS-NEXT: 2: B rows=1 cols=2 at 1:1 usage=6 dynamic=0
 
@@ -56,7 +57,7 @@ attributes #0 = { "hlsl.shader"="vertex" }
 ; MD-DAG: ![[OUT]] = !{![[SVPOS:[0-9]+]], ![[A:[0-9]+]], ![[B:[0-9]+]]}
 ; MD-DAG: ![[POS]] = !{i32 0, !"POSITION", i8 9, i8 0, ![[INDEX:[0-9]+]], i8 0, i32 1, i8 4, i32 0, i8 0, ![[USE4:[0-9]+]]}
 ; MD-DAG: ![[UV]] = !{i32 1, !"TEXCOORD", i8 9, i8 0, ![[INDEX]], i8 0, i32 1, i8 2, i32 1, i8 0, ![[USE2:[0-9]+]]}
-; MD-DAG: ![[SVPOS]] = !{i32 0, !"SV_Position", i8 9, i8 3, ![[INDEX]], i8 0, i32 1, i8 4, i32 0, i8 0, ![[USE4]]}
+; MD-DAG: ![[SVPOS]] = !{i32 0, !"SV_POSITION", i8 9, i8 3, ![[INDEX]], i8 0, i32 1, i8 4, i32 0, i8 0, ![[USE4]]}
 ; MD-DAG: ![[A]] = !{i32 1, !"A", i8 9, i8 0, ![[INDEX]], i8 0, i32 1, i8 1, i32 1, i8 0, ![[USE1:[0-9]+]]}
 ; MD-DAG: ![[B]] = !{i32 2, !"B", i8 9, i8 0, ![[INDEX]], i8 0, i32 1, i8 2, i32 1, i8 1, ![[USE2]]}
 ; MD-DAG: ![[USE4]] = !{i32 3, i32 15}
