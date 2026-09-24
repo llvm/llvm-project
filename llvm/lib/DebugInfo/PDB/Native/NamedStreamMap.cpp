@@ -59,8 +59,8 @@ Error NamedStreamMap::load(BinaryStreamReader &Stream) {
   if (auto EC = OffsetIndexMap.load(Stream))
     return EC;
 
-  uint32_t niMac;
-  return Stream.readInteger(niMac);
+  uint32_t NiMac;
+  return Stream.readInteger(NiMac);
 }
 
 Error NamedStreamMap::commit(BinaryStreamWriter &Writer) const {
@@ -78,7 +78,7 @@ Error NamedStreamMap::commit(BinaryStreamWriter &Writer) const {
     return EC;
 
   // And finally the NMTNI::niMac value.
-  if (auto EC = Writer.writeInteger(0))
+  if (auto EC = Writer.writeInteger<uint32_t>(0))
     return EC;
 
   return Error::success();
