@@ -12,9 +12,9 @@
 // CHECK:           %[[DUMMY_SCOPE_0:.*]] = fir.dummy_scope : !fir.dscope
 // CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[CONSTANT_2]] : (index) -> !fir.shape<1>
 // CHECK:           %[[DECLARE_0:.*]] = fir.declare %[[ARG0]](%[[SHAPE_0]]) dummy_scope %[[DUMMY_SCOPE_0]] arg 1 {data_attr = #cuf.cuda<device>, uniq_name = "_QFtestEa"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<10xf32>>
-// CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtestEi"}
+// CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFtestEi"}>
 // CHECK:           %[[DECLARE_1:.*]] = fir.declare %[[ALLOCA_0]] {uniq_name = "_QFtestEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
-// CHECK:           %[[ALLOCA_1:.*]] = fir.alloca i64 {bindc_name = "pa", uniq_name = "_QFtestEpa"}
+// CHECK:           %[[ALLOCA_1:.*]] = fir.alloca i64 <{bindc_name = "pa", uniq_name = "_QFtestEpa"}>
 // CHECK:           %[[DECLARE_2:.*]] = fir.declare %[[ALLOCA_1]] {fortran_attrs = #fir.var_attrs<cray_pointer>, uniq_name = "_QFtestEpa"} : (!fir.ref<i64>) -> !fir.ref<i64>
 // CHECK:           %[[DECLARE_3:.*]] = fir.declare %[[ALLOC_0]] {fortran_attrs = #fir.var_attrs<pointer, cray_pointee>, uniq_name = "_QFtestEra"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
 // CHECK:           %[[ZERO_BITS_0:.*]] = fir.zero_bits !fir.ptr<!fir.array<?xf32>>

@@ -929,6 +929,18 @@ add_header_library(
 )
 
 add_header_library(
+  fdatasync
+  HDRS
+    fdatasync.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
   fsync
   HDRS
     fsync.h
@@ -1057,6 +1069,18 @@ add_header_library(
 )
 
 add_header_library(
+  renameat
+  HDRS
+    renameat.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
   lseek
   HDRS
     lseek.h
@@ -1148,6 +1172,28 @@ add_header_library(
     libc.src.__support.error_or
     libc.src.__support.macros.config
     libc.include.sys_syscall
+)
+
+set(clone_arch_header "")
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_ARCHITECTURE}/clone.h)
+  set(clone_arch_header ${LIBC_TARGET_ARCHITECTURE}/clone.h)
+endif()
+
+add_header_library(
+  clone
+  HDRS
+    clone.h
+    ${clone_arch_header}
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.hdr.types.pid_t
+    libc.include.sys_syscall
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.libc_assert
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.architectures
 )
 
 add_header_library(
@@ -1356,3 +1402,16 @@ add_header_library(
     libc.src.__support.CPP.bit
     libc.src.__support.error_or
 )
+
+add_header_library(
+  pause
+  HDRS
+    pause.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.osutil
+)
+
