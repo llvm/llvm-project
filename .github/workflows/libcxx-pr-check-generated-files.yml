@@ -20,7 +20,7 @@ jobs:
       - name: Install dependencies
         uses: aminya/setup-cpp@8170d66c458f4a045220b7b0966c10940bb2a15d # v1.8.1
         with:
-          clangformat: 23.0.1
+          clangformat: 23.1.0
           ninja: true
 
       - name: Check generated files
