@@ -119,32 +119,36 @@ bool SuperHDAGToDAGISel::SelectAddr(SDNode *Op, SDValue N, SDValue &Base,
     return true;
   }
 
-  if (const ConstantSDNode *RHS = dyn_cast<ConstantSDNode>(N.getOperand(1))) {
-
-    // Handle frame index + offset
-    if (N.getOperand(0).getOpcode() == ISD::FrameIndex) {
-      int RHSC = (int)RHS->getZExtValue();
-      int FI = cast<FrameIndexSDNode>(N.getOperand(0))->getIndex();
-
-      Base = CurDAG->getTargetFrameIndex(FI, PtrVT);
-      Disp = CurDAG->getTargetConstant(RHSC, SDLoc(Op), MVT::i32);
-      return true;
-    }
-
-    // Handle reg + offset
-    if (N.getOpcode() == ISD::ADD) {
-      Base = N.getOperand(0);
-      Disp =
-          CurDAG->getTargetConstant(RHS->getZExtValue(), SDLoc(Op), MVT::i32);
-      return true;
-    }
-  }
-
   // if the address is a wrapper, get the underlying data.
   if (N.getOpcode() == SHISD::WRAPPER) {
     Base = N.getOperand(0);
     Disp = N;
     return true;
+  }
+
+  // Constant displacements has more operands, if there's 2 or more, assume
+  // the address may be a form of displacement.
+  if (N.getNumOperands() >= 2) { 
+    if (const ConstantSDNode *RHS = dyn_cast<ConstantSDNode>(N.getOperand(1))) {
+
+      // Handle frame index + offset
+      if (N.getOperand(0).getOpcode() == ISD::FrameIndex) {
+        int RHSC = (int)RHS->getZExtValue();
+        int FI = cast<FrameIndexSDNode>(N.getOperand(0))->getIndex();
+
+        Base = CurDAG->getTargetFrameIndex(FI, PtrVT);
+        Disp = CurDAG->getTargetConstant(RHSC, SDLoc(Op), MVT::i32);
+        return true;
+      }
+
+      // Handle reg + offset
+      if (N.getOpcode() == ISD::ADD) {
+        Base = N.getOperand(0);
+        Disp =
+            CurDAG->getTargetConstant(RHS->getZExtValue(), SDLoc(Op), MVT::i32);
+        return true;
+      }
+    }
   }
   return false;
 }
