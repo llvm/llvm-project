@@ -25,19 +25,19 @@
 
 define spir_kernel void @foo(ptr addrspace(1) noalias %in, ptr addrspace(1) noalias %out) {
 entry:
-  %0 = addrspacecast ptr addrspace(1) %in to ptr addrspace(4)
-  %1 = addrspacecast ptr addrspace(1) %out to ptr addrspace(4)
-  %v = load i32, ptr addrspace(4) %0, align 4, !alias.scope !1
-  store i32 %v, ptr addrspace(4) %1, align 4
+  %src = addrspacecast ptr addrspace(1) %in to ptr addrspace(4)
+  %dst = addrspacecast ptr addrspace(1) %out to ptr addrspace(4)
+  %val = load i32, ptr addrspace(4) %src, align 4, !alias.scope !1
+  store i32 %val, ptr addrspace(4) %dst, align 4
   ret void
 }
 
 define spir_kernel void @bar(ptr addrspace(1) noalias %in, ptr addrspace(1) noalias %out) {
 entry:
-  %0 = addrspacecast ptr addrspace(1) %in to ptr addrspace(4)
-  %1 = addrspacecast ptr addrspace(1) %out to ptr addrspace(4)
-  %v = load i32, ptr addrspace(4) %0, align 4, !alias.scope !1
-  store i32 %v, ptr addrspace(4) %1, align 4
+  %src = addrspacecast ptr addrspace(1) %in to ptr addrspace(4)
+  %dst = addrspacecast ptr addrspace(1) %out to ptr addrspace(4)
+  %val = load i32, ptr addrspace(4) %src, align 4, !alias.scope !1
+  store i32 %val, ptr addrspace(4) %dst, align 4
   ret void
 }
 
