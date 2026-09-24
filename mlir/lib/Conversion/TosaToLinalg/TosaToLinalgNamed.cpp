@@ -30,20 +30,6 @@
 using namespace mlir;
 using namespace mlir::tosa;
 
-// Number of leading data operands the op forwards to linalg.elementwise,
-// matching its unary/binary/ternary arity group. Trailing metadata operands
-// (e.g. MulOp's shift, NegateOp's zero points) are excluded.
-static unsigned getArity(Operation *op) {
-  return llvm::TypeSwitch<Operation *, unsigned>(op)
-      .Case<tosa::AbsOp, tosa::CeilOp, tosa::FloorOp, tosa::ExpOp, tosa::LogOp,
-            tosa::RsqrtOp, tosa::SinOp, tosa::CosOp, tosa::TanhOp, tosa::ErfOp,
-            tosa::ReciprocalOp, tosa::NegateOp>([](Operation *) { return 1u; })
-      .Case<tosa::AddOp, tosa::SubOp, tosa::IntDivOp, tosa::MulOp, tosa::PowOp,
-            tosa::MaximumOp, tosa::MinimumOp>([](Operation *) { return 2u; })
-      .Case<tosa::SelectOp>([](Operation *) { return 3u; })
-      .DefaultUnreachable("Invalid elementwise operation");
-}
-
 // Return the linalg.elementwise kind that is semantically equivalent to the
 // given TOSA elementwise op for the provided element type, or std::nullopt if
 // the op has no direct linalg.elementwise counterpart. Only ops whose TOSA
@@ -158,14 +144,18 @@ bool mlir::tosa::isConvertibleToLinalgElementwise(Operation *op) {
   if (!resultTy || !resultTy.hasRank())
     return false;
 
-  if (!getElementwiseKind(op, resultTy.getElementType()))
+  std::optional<linalg::ElementwiseKind> kind =
+      getElementwiseKind(op, resultTy.getElementType());
+  if (!kind)
     return false;
 
   // linalg.elementwise broadcasts operands through their indexing maps, so
   // operands only need to be ranked shaped types (tensors or memrefs, possibly
-  // dynamic); their rank need not match the result's.
-  const unsigned numInputs = getArity(op);
-  for (unsigned i = 0; i < numInputs; ++i) {
+  // dynamic); their rank need not match the result's. The arity group enum
+  // (Unary=1, Binary=2, Ternary=3) gives the number of forwarded operands.
+  const unsigned arity =
+      llvm::to_underlying(linalg::getArityGroupAndKind(*kind).arityGroup);
+  for (unsigned i = 0; i < arity; ++i) {
     auto operandTy = dyn_cast<ShapedType>(op->getOperand(i).getType());
     if (!operandTy || !operandTy.hasRank())
       return false;
@@ -774,10 +764,12 @@ public:
 
     std::optional<linalg::ElementwiseKind> kind =
         getElementwiseKind(operation, resultTy.getElementType());
+    const unsigned arity =
+        llvm::to_underlying(linalg::getArityGroupAndKind(*kind).arityGroup);
 
     // Trailing metadata operands (e.g. MulOp's shift, NegateOp's zero points)
     // are not forwarded to linalg.elementwise.
-    ValueRange inputs = adaptor.getOperands().take_front(getArity(operation));
+    ValueRange inputs = adaptor.getOperands().take_front(arity);
 
     // Build one indexing map per input, broadcasting static size-1 dimensions,
     // followed by the identity map for the output.
