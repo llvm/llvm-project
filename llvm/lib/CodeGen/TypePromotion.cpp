@@ -122,6 +122,8 @@ class IRPromoter {
   void TruncateSinks();
   void Cleanup();
 
+  bool CheckSignedMatch(const Value *V) const;
+
 public:
   IRPromoter(LLVMContext &C, unsigned Width, SetVector<Value *> &visited,
              SetVector<Value *> &sources, SetVector<Instruction *> &sinks,
@@ -272,6 +274,8 @@ bool TypePromotionImpl::isSink(Value *V) {
     return LessOrEqualTypeSize(Return->getReturnValue());
   if (auto *ZExt = dyn_cast<ZExtInst>(V))
     return GreaterThanTypeSize(ZExt);
+  if (auto *SExt = dyn_cast<SExtInst>(V))
+    return GreaterThanTypeSize(SExt);
   if (auto *Switch = dyn_cast<SwitchInst>(V))
     return LessThanTypeSize(Switch->getCondition());
   if (auto *ICmp = dyn_cast<ICmpInst>(V))
@@ -604,15 +608,14 @@ void IRPromoter::TruncateSinks() {
       continue;
     }
 
-    // Don't insert a trunc for a zext which can still legally promote.
+    // Don't insert a trunc for a (z/s)ext which can still legally promote.
     // Nor insert a trunc when the input value to that trunc has the same width
     // as the zext we are inserting it for.  When this happens the input operand
-    // for the zext will be promoted to the same width as the zext's return type
-    // rendering that zext unnecessary.  This zext gets removed before the end
+    // for the zext will be promoted to the same width as the ext's return type
+    // rendering that ext unnecessary.  This zext gets removed before the end
     // of the pass.
-    if (auto ZExt = dyn_cast<ZExtInst>(I))
-      if (ZExt->getType()->getScalarSizeInBits() >= PromotedWidth)
-        continue;
+    if (CheckSignedMatch(I) && (I->getType()->getScalarSizeInBits() >= PromotedWidth))
+      continue;
 
     // Now handle the others.
     for (unsigned i = 0; i < I->getNumOperands(); ++i) {
@@ -627,31 +630,34 @@ void IRPromoter::TruncateSinks() {
 
 void IRPromoter::Cleanup() {
   LLVM_DEBUG(dbgs() << "IR Promotion: Cleanup..\n");
-  // Some zexts will now have become redundant, along with their trunc
+  // Some (z/s)exts will now have become redundant, along with their trunc
   // operands, so remove them.
   for (auto *V : Visited) {
-    if (!isa<ZExtInst>(V))
+    if (!isa<ZExtInst>(V) && !isa<SExtInst>(V))
       continue;
 
-    auto ZExt = cast<ZExtInst>(V);
-    if (ZExt->getDestTy() != ExtTy)
+    if (!CheckSignedMatch(V))
       continue;
 
-    Value *Src = ZExt->getOperand(0);
-    if (ZExt->getSrcTy() == ZExt->getDestTy()) {
-      LLVM_DEBUG(dbgs() << "IR Promotion: Removing unnecessary cast: " << *ZExt
+    auto XExt = cast<CastInst>(V);
+    if (XExt->getDestTy() != ExtTy)
+      continue;
+
+    Value *Src = XExt->getOperand(0);
+    if (XExt->getSrcTy() == XExt->getDestTy()) {
+      LLVM_DEBUG(dbgs() << "IR Promotion: Removing unnecessary cast: " << *XExt
                         << "\n");
-      ReplaceAllUsersOfWith(ZExt, Src);
+      ReplaceAllUsersOfWith(XExt, Src);
       continue;
     }
 
-    // We've inserted a trunc for a zext sink, but we already know that the
+    // We've inserted a trunc for a (z/s)ext sink, but we already know that the
     // input is in range, negating the need for the trunc.
     if (NewInsts.count(Src) && isa<TruncInst>(Src)) {
       auto *Trunc = cast<TruncInst>(Src);
       assert(Trunc->getOperand(0)->getType() == ExtTy &&
              "expected inserted trunc to be operating on i32");
-      ReplaceAllUsersOfWith(ZExt, Trunc->getOperand(0));
+      ReplaceAllUsersOfWith(XExt, Trunc->getOperand(0));
     }
   }
 
@@ -728,6 +734,17 @@ void IRPromoter::Mutate() {
   Cleanup();
 
   LLVM_DEBUG(dbgs() << "IR Promotion: Mutation complete\n");
+}
+
+bool IRPromoter::CheckSignedMatch(const Value *V) const {
+  bool SignedMatch = false;
+
+  if (isa<SExtInst>(V))
+    SignedMatch = UseSExt;
+  if (auto *ZExt = dyn_cast<ZExtInst>(V))
+    SignedMatch = !UseSExt || ZExt->hasNonNeg();
+
+  return SignedMatch;
 }
 
 /// We disallow booleans to make life easier when dealing with icmps but allow
