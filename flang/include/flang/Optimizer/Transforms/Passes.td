@@ -451,7 +451,8 @@ def LoopVersioning : Pass<"loop-versioning", "mlir::func::FuncOp"> {
   let options = [
     Option<"enableSlices", "enable-slices", "bool",
            /*default=*/"true",
-           "Enable versioning for supported static-unit array slices">
+           "Enable versioning for supported static-unit array slices; disabling "
+           "this option leaves other loop versioning active">
   ];
 }
 

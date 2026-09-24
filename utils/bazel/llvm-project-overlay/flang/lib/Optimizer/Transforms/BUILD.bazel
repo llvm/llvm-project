@@ -56,7 +56,6 @@ cc_library(
         "//flang/lib/Optimizer/Support:FIRSupport",
         "//flang/lib/Support:FortranSupport",
         "//llvm:BinaryFormat",
-        "//llvm:Core",
         "//llvm:Support",
         "//mlir:AffineDialect",
         "//mlir:AffineUtils",

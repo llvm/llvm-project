@@ -1,8 +1,5 @@
 // RUN: fir-opt --loop-versioning %s | FileCheck %s
-// Repeat the existing checks with slice support disabled to ensure the option
-// preserves established slice-free transformation behavior.
-// RUN: fir-opt '--loop-versioning=enable-slices=false' %s | \
-// RUN:   FileCheck %s
+
 
 //  subroutine sum1d(a, n)
 //    real*8 :: a(:)
@@ -155,18 +152,27 @@ func.func @sum1dfixed(%arg0: !fir.ref<!fir.array<?xf64>> {fir.bindc_name = "a"},
 // CHECK-SAME:                    %[[Y:.*]]: !fir.box<!fir.array<?xi32>> {{.*}}) {
 // Look for arith.subi to locate the correct part of code.
 // CHECK:    {{.*}} arith.subi {{.*}}
-// CHECK:    %[[ZERO:.*]] = arith.constant 0 : index
-// CHECK:     %[[DIMS:.*]]:3 = fir.box_dims %[[Y]], %[[ZERO]]
-// CHECK:    %[[FOUR:.*]] = arith.constant 4 : index
-// CHECK:    %[[COMP:.*]] = arith.cmpi eq, %[[DIMS]]#2, %[[FOUR]] : index
-// CHECK:    fir.if %[[COMP]] {
-// CHECK:    %[[CONV:.*]]  = fir.convert %[[Y]] : {{.*}}
-// CHECK:    %[[BOX_ADDR:.*]] = fir.box_addr %[[CONV]] : {{.*}}
+// CHECK-DAG: %[[Y_DIMS:.*]]:3 = fir.box_dims %[[Y]], %[[ZERO_Y:[^ ]+]]
+// CHECK-DAG: %[[ZERO_Y]] = arith.constant 0 : index
+// CHECK-DAG: %[[Y_COMP:.*]] = arith.cmpi eq, %[[Y_DIMS]]#2, %[[FOUR:[^ ]+]] : index
+// CHECK-DAG: %[[FOUR]] = arith.constant 4 : index
+// CHECK-DAG: %[[X_DIMS:.*]]:3 = fir.box_dims %[[X]], %[[ZERO_X:[^ ]+]]
+// CHECK-DAG: %[[ZERO_X]] = arith.constant 0 : index
+// CHECK-DAG: %[[X_COMP:.*]] = arith.cmpi eq, %[[X_DIMS]]#2, %[[X_FOUR:[^ ]+]] : index
+// CHECK-DAG: %[[X_FOUR]] = arith.constant 4 : index
+// CHECK-NOT: arith.andi %[[X_COMP]], %[[X_COMP]]
+// CHECK-NOT: arith.andi %[[Y_COMP]], %[[Y_COMP]]
+// CHECK:    %[[BOTH:.*]] = arith.andi %{{.*}}, %{{.*}} : i1
+// CHECK:    fir.if %[[BOTH]] {
+// CHECK-DAG: %[[Y_CONV:.*]] = fir.convert %[[Y]] : {{.*}}
+// CHECK-DAG: %[[Y_BASE:.*]] = fir.box_addr %[[Y_CONV]] : {{.*}}
+// CHECK-DAG: %[[X_CONV:.*]] = fir.convert %[[X]] : {{.*}}
+// CHECK-DAG: %[[X_BASE:.*]] = fir.box_addr %[[X_CONV]] : {{.*}}
 // CHECK:    fir.do_loop %[[INDEX:.*]] = {{.*}}
-// CHECK:    %[[YADDR:.*]] = fir.coordinate_of %[[BOX_ADDR]], %[[INDEX]]
+// CHECK:    %[[YADDR:.*]] = fir.coordinate_of %[[Y_BASE]], %[[INDEX]]
 // CHECK:    %[[YINT:.*]] = fir.load %[[YADDR]] : {{.*}}
 // CHECK:    %[[YINDEX:.*]] = fir.convert %[[YINT]]
-// CHECK:    %[[XADDR:.*]] = fir.array_coor %[[X]] [%{{.*}}] %[[YINDEX]]
+// CHECK:    %[[XADDR:.*]] = fir.coordinate_of %[[X_BASE]], %{{.*}}
 // CHECK:    fir.call @Func(%[[XADDR]])
 // CHECK-NEXT: }
 // CHECK-NEXT: } else {
@@ -1255,8 +1261,8 @@ func.func @test_optional_arg(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name 
 // CHECK:           return
 // CHECK:         }
 
-// ! Verify that neither of the loops is versioned
-// ! due to the array section in the inner loop:
+// ! Verify that a unit-step section is flattened in the versioned loop while
+// ! the fallback retains the original sliced access:
 // subroutine test_slice(x)
 //   real :: x(:,:)
 //   do i=10,100
@@ -1307,9 +1313,15 @@ func.func @_QPtest_slice(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = 
   return
 }
 // CHECK-LABEL:   func.func @_QPtest_slice(
-// CHECK-NOT: fir.if
+// CHECK-SAME: %[[SLICE_ARG:[^:]+]]: !fir.box<!fir.array<?x?xf32>>
+// CHECK: fir.box_dims %[[SLICE_ARG]],
+// CHECK: fir.if
+// CHECK-COUNT-2: fir.coordinate_of
+// CHECK: } else {
+// CHECK: fir.array_coor %[[SLICE_ARG]]
 
-// ! Verify versioning for argument 'x' but not for 'y':
+// ! Verify independent versioning for the flat access through 'x' and the
+// ! unit-step sliced access through 'y':
 // subroutine test_independent_args(x, y)
 //   real :: x(:,:), y(:,:)
 //   do i=10,100
@@ -1366,7 +1378,12 @@ func.func @_QPtest_independent_args(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bi
 // CHECK:           %[[VAL_19:.*]] = arith.constant 4 : index
 // CHECK:           %[[VAL_20:.*]] = arith.cmpi eq, %[[VAL_16]]#2, %[[VAL_19]] : index
 // CHECK:           %[[VAL_21:.*]]:2 = fir.if %[[VAL_20]] -> (index, i32) {
-// CHECK-NOT: fir.if
+// CHECK:           %[[Y_DIMS:.*]]:3 = fir.box_dims %[[VAL_1]],
+// CHECK:           %[[Y_COMP:.*]] = arith.cmpi eq, %[[Y_DIMS]]#2,
+// CHECK:           fir.if %[[Y_COMP]]
+// CHECK:           fir.coordinate_of
+// CHECK:           } else {
+// CHECK:           fir.array_coor %[[VAL_1]]
 
 
 // ! Verify that the whole loop nest is versioned

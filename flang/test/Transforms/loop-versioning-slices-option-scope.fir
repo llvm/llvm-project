@@ -5,10 +5,8 @@
 // RUN: FileCheck %s --check-prefix=RESULT --input-file=%t.enabled \
 // RUN:   --enable-var-scope
 
-// Compare emitted FIR byte-for-byte to prove that enabling slice support does
-// not change slice-free or rejected-descriptor transformation results.
-// Keep every function single-descriptor so the comparison does not depend on
-// pointer-keyed DenseMap iteration order between fir-opt processes.
+// Compare emitted FIR byte-for-byte to verify that the enable-slices option
+// does not affect slice-free or rejected-descriptor transformations.
 module attributes {
   dlti.dl_spec = #dlti.dl_spec<>,
   llvm.data_layout = "e-p:64:64:64:64"
@@ -39,6 +37,52 @@ module attributes {
   // RESULT: } else {
   // RESULT: fir.array_coor
   // RESULT: return %[[IF]] : i32
+
+  // The slice switch does not undo support for a pointer dummy passed by box
+  // address. Its loaded descriptor is versioned in both configurations.
+  func.func @slice_free_pointer_dummy(
+      %slot: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) {
+    %box = fir.load %slot
+      : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
+    %c1 = arith.constant 1 : index
+    %c8 = arith.constant 8 : index
+    fir.do_loop %i = %c1 to %c8 step %c1 {
+      %address = fir.array_coor %box %i
+        : (!fir.box<!fir.ptr<!fir.array<?xi32>>>, index) -> !fir.ref<i32>
+      fir.call @use_i32(%address) : (!fir.ref<i32>) -> ()
+    }
+    return
+  }
+
+  // RESULT-LABEL: func.func @slice_free_pointer_dummy(
+  // RESULT: fir.if
+  // RESULT: fir.coordinate_of
+  // RESULT: } else {
+  // RESULT: fir.array_coor
+
+  // Interleaved declare/rebox wrappers are normalized for flat accesses too;
+  // disabling sliced accesses must not restore the older matcher order.
+  func.func @slice_free_interleaved_wrappers(
+      %a: !fir.box<!fir.array<?xi32>>) {
+    %reboxed = fir.rebox %a
+      : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
+    %declared = fir.declare %reboxed {uniq_name = "interleaved"}
+      : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
+    %c1 = arith.constant 1 : index
+    %c8 = arith.constant 8 : index
+    fir.do_loop %i = %c1 to %c8 step %c1 {
+      %address = fir.array_coor %declared %i
+        : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
+      fir.call @use_i32(%address) : (!fir.ref<i32>) -> ()
+    }
+    return
+  }
+
+  // RESULT-LABEL: func.func @slice_free_interleaved_wrappers(
+  // RESULT: fir.if
+  // RESULT: fir.coordinate_of
+  // RESULT: } else {
+  // RESULT: fir.array_coor
 
   // A rejected inner slice must prevent rewriting the flat access to the same
   // descriptor both with slice support enabled and explicitly disabled.

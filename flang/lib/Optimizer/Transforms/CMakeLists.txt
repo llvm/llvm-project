@@ -82,9 +82,6 @@ add_flang_library(FIRTransforms
   HLFIRDialect
   MIFDialect
 
-  LINK_COMPONENTS
-  Core
-
   MLIR_LIBS
   MLIRAffineUtils
   MLIRAnalysis
