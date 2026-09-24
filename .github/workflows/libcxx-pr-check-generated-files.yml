@@ -17,11 +17,6 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Install dependencies
-        uses: aminya/setup-cpp@8170d66c458f4a045220b7b0966c10940bb2a15d # v1.8.1
-        with:
-          ninja: true
-
       - name: Check generated files
         run: libcxx/utils/ci/run-buildbot check-generated-output
         env:
