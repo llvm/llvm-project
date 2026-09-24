@@ -4148,11 +4148,11 @@ OpFoldResult LLVM::ShlOp::fold(FoldAdaptor adaptor) {
 
 OpFoldResult LLVM::OrOp::fold(FoldAdaptor adaptor) {
   auto lhs = dyn_cast_or_null<IntegerAttr>(adaptor.getLhs());
-  if (!lhs)
+  if (!lhs || lhs.getType() != getType())
     return {};
 
   auto rhs = dyn_cast_or_null<IntegerAttr>(adaptor.getRhs());
-  if (!rhs)
+  if (!rhs || rhs.getType() != getType())
     return {};
 
   return IntegerAttr::get(getType(), lhs.getValue() | rhs.getValue());

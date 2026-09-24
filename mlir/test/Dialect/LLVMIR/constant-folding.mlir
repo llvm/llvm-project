@@ -88,6 +88,36 @@ llvm.func @or_basic() -> i32 {
 
 // -----
 
+// A constant-like op can fold to an attribute whose type differs from its
+// result type. Do not fold llvm.or using such an attribute.
+// CHECK-LABEL: llvm.func @or_mismatched_lhs
+llvm.func @or_mismatched_lhs() -> i32 {
+  // CHECK: %[[LHS:.*]] = "test.constant"() <{value = 1 : i64}> : () -> i32
+  %lhs = "test.constant"() {value = 1 : i64} : () -> i32
+  // CHECK: %[[RHS:.*]] = "test.constant"() <{value = 2 : i32}> : () -> i32
+  %rhs = "test.constant"() {value = 2 : i32} : () -> i32
+  // CHECK: %[[RESULT:.*]] = llvm.or %[[LHS]], %[[RHS]] : i32
+  %result = llvm.or %lhs, %rhs : i32
+  // CHECK: llvm.return %[[RESULT]] : i32
+  llvm.return %result : i32
+}
+
+// -----
+
+// CHECK-LABEL: llvm.func @or_mismatched_rhs
+llvm.func @or_mismatched_rhs() -> i32 {
+  // CHECK: %[[LHS:.*]] = "test.constant"() <{value = 1 : i32}> : () -> i32
+  %lhs = "test.constant"() {value = 1 : i32} : () -> i32
+  // CHECK: %[[RHS:.*]] = "test.constant"() <{value = 2 : i64}> : () -> i32
+  %rhs = "test.constant"() {value = 2 : i64} : () -> i32
+  // CHECK: %[[RESULT:.*]] = llvm.or %[[LHS]], %[[RHS]] : i32
+  %result = llvm.or %lhs, %rhs : i32
+  // CHECK: llvm.return %[[RESULT]] : i32
+  llvm.return %result : i32
+}
+
+// -----
+
 // CHECK-LABEL: llvm.func @addressof
 llvm.func @addressof() {
   // CHECK-NEXT: %[[ADDRESSOF:.+]] = llvm.mlir.addressof @foo
