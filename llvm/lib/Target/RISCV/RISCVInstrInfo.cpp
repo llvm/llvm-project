@@ -19,6 +19,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/LiveIntervals.h"
@@ -3635,6 +3636,7 @@ RISCVInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
   };
   return ArrayRef(TargetFlags);
 }
+
 bool RISCVInstrInfo::isFunctionSafeToOutlineFrom(
     MachineFunction &MF, bool OutlineFromLinkOnceODRs) const {
   const Function &F = MF.getFunction();
@@ -3643,10 +3645,12 @@ bool RISCVInstrInfo::isFunctionSafeToOutlineFrom(
   if (!OutlineFromLinkOnceODRs && F.hasLinkOnceODRLinkage())
     return false;
 
-  // Don't outline from functions with section markings; the program could
-  // expect that all the code is in the named section.
+  // Allow outlining from functions with section markings if the target can
+  // place the outlined function in the same section. Otherwise, the outlined
+  // function may be placed in a different section, which can break assumptions
+  // about the section layout.
   if (F.hasSection())
-    return false;
+    return supportsSectionAwareOutlining();
 
   // It's safe to outline from MF.
   return true;
