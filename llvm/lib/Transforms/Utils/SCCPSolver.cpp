@@ -26,6 +26,7 @@
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/NoFolder.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
@@ -1781,7 +1782,12 @@ void SCCPInstVisitor::visitBinaryOperator(Instruction &I) {
     Value *V2 = SCCPSolver::isConstant(V2State)
                     ? getConstant(V2State, I.getOperand(1)->getType())
                     : I.getOperand(1);
-    Value *R = simplifyBinOp(I.getOpcode(), V1, V2, SimplifyQuery(DL, &I));
+    Value *R;
+    if (auto *FPOp = dyn_cast<FPMathOperator>(&I))
+      R = simplifyBinOp(I.getOpcode(), V1, V2, FPOp->getFastMathFlags(),
+                        SimplifyQuery(DL, &I));
+    else
+      R = simplifyBinOp(I.getOpcode(), V1, V2, SimplifyQuery(DL, &I));
     auto *C = dyn_cast_or_null<Constant>(R);
     if (C) {
       // Conservatively assume that the result may be based on operands that may
@@ -1809,9 +1815,9 @@ void SCCPInstVisitor::visitBinaryOperator(Instruction &I) {
   ConstantRange R = A.binaryOp(*BO, B);
   mergeInValue(ValueState[&I], &I, ValueLatticeElement::getRange(R));
 
-  // TODO: Currently we do not exploit special values that produce something
-  // better than overdefined with an overdefined operand for vector or floating
-  // point types, like and <4 x i32> overdefined, zeroinitializer.
+  // TODO: The lattice has no per-element information for vectors, so special
+  // values that only apply to some of the elements cannot be exploited, e.g.
+  // and <4 x i32> overdefined, <i32 0, i32 -1, i32 0, i32 -1>.
 }
 
 // Handle ICmpInst instruction.
