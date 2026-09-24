@@ -1049,14 +1049,13 @@ LockedSymbolTableCollection::getSymbolTable(Operation *symbolTableOp) {
 
 SymbolUserMap::SymbolUserMap(SymbolTableCollection &symbolTable,
                              Operation *symbolTableOp)
-    : symbolTable(symbolTable) {
+    : symbolTable(symbolTable), root(symbolTableOp) {
   // Collect symbol users and visibility within each symbol table.
   SmallVector<Operation *> symbols;
   auto walkFn = [&](Operation *symbolTableOp, bool allUsesVisible) {
     for (Operation &nestedOp : symbolTableOp->getRegion(0).getOps()) {
       if (auto symbol = dyn_cast<SymbolOpInterface>(nestedOp)) {
-        // Private symbols can only have users within this table.
-        if (symbol.isPrivate() || allUsesVisible)
+        if (allUsesVisible && !symbol.isPrivate())
           symbolsWithAllUsesVisible.insert(&nestedOp);
       }
       auto symbolUses = SymbolTable::getSymbolUses(&nestedOp);
@@ -1074,6 +1073,13 @@ SymbolUserMap::SymbolUserMap(SymbolTableCollection &symbolTable,
   // A root with no containing block has no symbol users in enclosing IR.
   SymbolTable::walkSymbolTables(
       symbolTableOp, /*allSymUsesVisible=*/!symbolTableOp->getBlock(), walkFn);
+}
+
+bool SymbolUserMap::areAllUsesVisible(Operation *symbol) const {
+  // Private symbols can only have users within their table.
+  if (cast<SymbolOpInterface>(symbol).isPrivate())
+    return root->isProperAncestor(symbol);
+  return symbolsWithAllUsesVisible.contains(symbol);
 }
 
 void SymbolUserMap::replaceAllUsesWith(Operation *symbol,

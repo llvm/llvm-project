@@ -271,6 +271,7 @@ TEST(SymbolUserMap, AllUsesVisible) {
 
   // A private table hides its nested symbols even when it is the map root.
   SymbolUserMap hiddenMap(tables, hidden);
+  EXPECT_FALSE(hiddenMap.areAllUsesVisible(hidden));
   EXPECT_TRUE(hiddenMap.areAllUsesVisible(hiddenLeaf));
   EXPECT_TRUE(hiddenMap.areAllUsesVisible(hiddenPublic));
 }
