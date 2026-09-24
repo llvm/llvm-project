@@ -110,9 +110,42 @@ float test_reduce_min_float(v4sf x) {
   return __builtin_reduce_min(x);
 }
 
+float test_reduce_assoc_fadd(v4sf x, float start) {
+  // CIR-LABEL: @test_reduce_assoc_fadd
+  // CIR: cir.call_llvm_intrinsic "vector.reduce.fadd" {{.*}} : (!cir.float, !cir.vector<4 x !cir.float>) -> !cir.float {fastmath_flags = #cir.fastmath<reassoc>}
+  // CIR: cir.return
+  // LLVM-LABEL: @test_reduce_assoc_fadd
+  // LLVM: call reassoc float @llvm.vector.reduce.fadd.v4f32(float %{{.*}}, <4 x float>
+  // LLVM: ret float
+  return __builtin_reduce_assoc_fadd(x, start);
+}
+
+float test_reduce_assoc_fadd_default_start(v4sf x) {
+  // CIR-LABEL: @test_reduce_assoc_fadd_default_start
+  // CIR: %[[START:.*]] = cir.const #cir.fp<-0.000000e+00> : !cir.float
+  // CIR: cir.call_llvm_intrinsic "vector.reduce.fadd" %[[START]], {{.*}} : (!cir.float, !cir.vector<4 x !cir.float>) -> !cir.float {fastmath_flags = #cir.fastmath<reassoc>}
+  // CIR: cir.return
+  // LLVM-LABEL: @test_reduce_assoc_fadd_default_start
+  // LLVM: call reassoc float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float>
+  // LLVM: ret float
+  return __builtin_reduce_assoc_fadd(x);
+}
+
+float test_reduce_assoc_fadd_cast_start(v4sf x, double start) {
+  // CIR-LABEL: @test_reduce_assoc_fadd_cast_start
+  // CIR: %[[START:.*]] = cir.cast floating {{.*}} : !cir.double -> !cir.float
+  // CIR: cir.call_llvm_intrinsic "vector.reduce.fadd" %[[START]], {{.*}} : (!cir.float, !cir.vector<4 x !cir.float>) -> !cir.float {fastmath_flags = #cir.fastmath<reassoc>}
+  // CIR: cir.return
+  // LLVM-LABEL: @test_reduce_assoc_fadd_cast_start
+  // LLVM: %[[START:.*]] = fptrunc double %{{.*}} to float
+  // LLVM: call reassoc float @llvm.vector.reduce.fadd.v4f32(float %[[START]], <4 x float>
+  // LLVM: ret float
+  return __builtin_reduce_assoc_fadd(x, start);
+}
+
 float test_reduce_in_order_fadd(v4sf x, float start) {
   // CIR-LABEL: @test_reduce_in_order_fadd
-  // CIR: cir.call_llvm_intrinsic "vector.reduce.fadd" {{.*}} : (!cir.float, !cir.vector<4 x !cir.float>) -> !cir.float
+  // CIR: cir.call_llvm_intrinsic "vector.reduce.fadd" {{.*}} : (!cir.float, !cir.vector<4 x !cir.float>) -> !cir.float{{( loc.*)?$}}
   // CIR: cir.return
   // LLVM-LABEL: @test_reduce_in_order_fadd
   // LLVM: call float @llvm.vector.reduce.fadd.v4f32(float %{{.*}}, <4 x float>
