@@ -18219,13 +18219,17 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
   bool ScopedEnum = ScopedEnumKWLoc.isValid();
 
   auto SetMSVCEnumType = [&](NamedDecl *Found) {
+    if (!getLangOpts().CPlusPlus || !getLangOpts().MSVCCompat ||
+        !MSVCEnumType || Kind != TagTypeKind::Enum ||
+        TUK != TagUseKind::Reference || (S && S->containedInPrototypeScope()))
+      return false;
+
     NamedDecl *TypeDecl = Found;
     if (!SS.isEmpty() ||
         (isa<UsingShadowDecl>(Found) && Found->getDeclContext()->isRecord()))
       TypeDecl = Found->getUnderlyingDecl();
     auto *TD = dyn_cast<TypedefNameDecl>(TypeDecl);
-    if (!MSVCEnumType || !TD || Kind != TagTypeKind::Enum ||
-        TUK != TagUseKind::Reference || (S && S->containedInPrototypeScope()))
+    if (!TD)
       return false;
     // MSVC accepts an unqualified typedef only in class scope and not after a
     // friend specifier.
