@@ -36,7 +36,6 @@ static_assert((CSAN_WATCHPOINT_TABLE_ENTRIES &
 static_assert(WP_CHANCE >= 2 && (WP_CHANCE & (WP_CHANCE - 1)) == 0,
               "WP_CHANCE must be a power of two");
 
-// The GPU case does
 static constexpr u32 GPU_MAX_ACCESS_SIZE = 16;
 static constexpr u32 GPU_WATCHPOINT_ENTRIES = CSAN_WATCHPOINT_TABLE_ENTRIES;
 static constexpr u32 GPU_CHECK_ADJACENT_SLOTS = 0;
@@ -70,11 +69,11 @@ INTERFACE u64 __csan_get_num_data_races() {
   return __atomic_load_n(&__csan_num_data_races, __ATOMIC_RELAXED);
 }
 
-// Shallow deduplication check to save the host thread work. Keyed on both the
-// PC and the race kind so each distinct kind of race at a PC is reported once.
-static bool should_report(void *pc, unsigned kind) {
+// Shallow deduplication check to save the host thread work. Keyed on the PC
+// pair and the race kind so each distinct race is reported once.
+static bool should_report(uptr pc, uptr peer_pc, unsigned kind) {
   static u64 seen[64] = {};
-  const u64 token = (reinterpret_cast<uptr>(pc) >> 4) ^
+  const u64 token = (pc >> 4) ^ ((peer_pc >> 4) * 0xD1B54A32D192ED03ull) ^
                     (static_cast<u64>(kind) * 0x9E3779B97F4A7C15ull);
   u64 idx = (token * 0x9E3779B97F4A7C15ull) >> 58;
   u64 last = __scoped_atomic_exchange_n(&seen[idx], token, __ATOMIC_RELAXED,
@@ -87,7 +86,7 @@ report(unsigned kind, uptr addr, u32 size, int access_type, uptr pc,
        void *peer = nullptr, int peer_access = 0, u32 peer_size = 0,
        u8 peer_lane = 0) {
   pc = pc ? pc : GET_CALLER_PC();
-  if (!should_report(reinterpret_cast<void *>(pc), kind))
+  if (!should_report(pc, reinterpret_cast<uptr>(peer), kind))
     return;
 
   __csan_gpu_race rep = {};
@@ -132,7 +131,12 @@ static constexpr u64 TICKS_PER_SEC = 1000000000UL;
 // FIXME: Avoids emitting an unresolved reference to the OCLC ABI version.
 static u32 num_blocks(int dim) {
 #ifdef __AMDGPU__
-  return ((const u32 __gpu_constant *)__builtin_amdgcn_implicitarg_ptr())[dim];
+  // The block count excludes a trailing partial work-group.
+  const u8 __gpu_constant *args =
+      (const u8 __gpu_constant *)__builtin_amdgcn_implicitarg_ptr();
+  const u32 count = ((const u32 __gpu_constant *)args)[dim];
+  const u16 remainder = ((const u16 __gpu_constant *)(args + 18))[dim];
+  return count + (remainder > 0);
 #else
   return __gpu_num_blocks(dim);
 #endif
@@ -224,7 +228,7 @@ static u64 read_range(BytePtr bytes, WordPtr, u32 size) {
 
   for (; i < size && ((reinterpret_cast<uptr>(bytes) + i) & 7u); ++i)
     sum = (sum ^ bytes[i]) * 0x100000001b3ull;
-  for (; i + 8 <= size; i += 8)
+  for (; size - i >= 8; i += 8)
     sum = (sum ^ *reinterpret_cast<WordPtr>(bytes + i)) * 0x100000001b3ull;
   for (; i < size; ++i)
     sum = (sum ^ bytes[i]) * 0x100000001b3ull;
@@ -410,7 +414,7 @@ static void check_access(const volatile void *addr, uptr size, int access_type,
 // Public ABI (emitted by the ConcurrencySanitizer pass)
 //===----------------------------------------------------------------------===//
 
-// Using `sanitize_concurrency_no_checking_at_run_time` ignored on the device,
+// The device does not support `sanitize_concurrency_no_checking_at_run_time`.
 INTERFACE void __csan_init() {}
 INTERFACE void __csan_func_entry(void *) {}
 INTERFACE void __csan_func_exit() {}
