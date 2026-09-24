@@ -624,10 +624,6 @@ public:
     return getGeneration() == GFX11;
   }
 
-  /// GFX11 VOPD dest-buffer forwarding can drop the interlock when SRC0 or
-  /// SRC1 X/Y are distinct VGPRs with the same parity.
-  bool hasGFX11VOPDInterlockHazard() const { return getGeneration() == GFX11; }
-
   bool hasCvtScaleForwardingHazard() const { return HasGFX950Insts; }
 
   // All GFX9 targets experience a fetch delay when an instruction at the start

@@ -61,12 +61,13 @@ bb:
   ret void
 }
 
-  !0 = !{!"omnipotent char", !1, i64 0}
+  !0 = !{!6, !6, i64 0, i64 0}
   !1 = !{!1}
   !2 = !{!3}
   !3 = distinct !{!3, !4}
   !4 = distinct !{!4}
   !5 = !{!3}
+  !6 = !{!"omnipotent char", !1}
 ;.
 ; CHECK: [[TBAA1]] = !{[[META2:![0-9]+]], [[META2]], i64 0, i64 0}
 ; CHECK: [[META2]] = !{!"omnipotent char", [[META3:![0-9]+]]}

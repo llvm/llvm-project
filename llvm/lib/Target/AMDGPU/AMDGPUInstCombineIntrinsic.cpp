@@ -1974,6 +1974,16 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   case Intrinsic::amdgcn_udot4:
   case Intrinsic::amdgcn_sdot8:
   case Intrinsic::amdgcn_udot8: {
+    Value *Src0 = II.getArgOperand(0);
+    Value *Src1 = II.getArgOperand(1);
+
+    // Canonicalize the constant multiplicand to Src1.
+    if (isa<Constant>(Src0) && !isa<Constant>(Src1)) {
+      II.setArgOperand(0, Src1);
+      II.setArgOperand(1, Src0);
+      return &II;
+    }
+
     if (!match(II.getArgOperand(3), m_Zero()) || !II.hasOneUse())
       break;
 

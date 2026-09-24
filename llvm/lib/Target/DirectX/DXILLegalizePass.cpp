@@ -17,6 +17,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <functional>
@@ -356,6 +357,41 @@ static bool updateFnegToFsub(Instruction &I,
   return true;
 }
 
+// DXIL has no floating-point atomic operation. A float exchange only moves the
+// bit pattern, so exchange an integer of the same width instead. Opaque
+// pointers keep the pointer operand type-agnostic, so only the value and the
+// result need a cast. This matches what DXC emits for groupshared memory.
+static bool
+legalizeFloatAtomicExchange(Instruction &I,
+                            SmallVectorImpl<Instruction *> &ToRemove,
+                            DenseMap<Value *, Value *> &) {
+  auto *AI = dyn_cast<AtomicRMWInst>(&I);
+  if (!AI || AI->getOperation() != AtomicRMWInst::Xchg)
+    return false;
+
+  Type *ValTy = AI->getValOperand()->getType();
+  if (!ValTy->isFloatingPointTy())
+    return false;
+
+  // DXIL has 32-bit and 64-bit atomics only. A float of any other width has no
+  // integer exchange to lower to.
+  unsigned Width = ValTy->getPrimitiveSizeInBits();
+  if (Width != 32 && Width != 64)
+    reportFatalUsageError("DXIL atomic exchange requires a 32-bit or 64-bit "
+                          "floating-point value");
+
+  IRBuilder<> Builder(AI);
+  Type *IntTy = Builder.getIntNTy(Width);
+  Value *Val = Builder.CreateBitCast(AI->getValOperand(), IntTy);
+  AtomicRMWInst *NewAI = Builder.CreateAtomicRMW(
+      AtomicRMWInst::Xchg, AI->getPointerOperand(), Val, AI->getAlign(),
+      AI->getOrdering(), AI->getSyncScopeID());
+  NewAI->copyMetadata(*AI);
+  AI->replaceAllUsesWith(Builder.CreateBitCast(NewAI, ValTy));
+  ToRemove.push_back(AI);
+  return true;
+}
+
 static bool
 resolveUnreachableSwitchDefault(Instruction &I,
                                 SmallVectorImpl<Instruction *> &ToRemove,
@@ -496,6 +532,7 @@ private:
     LegalizationPipeline[Stage1].push_back(fixI8UseChain);
     LegalizationPipeline[Stage1].push_back(legalizeFreeze);
     LegalizationPipeline[Stage1].push_back(updateFnegToFsub);
+    LegalizationPipeline[Stage1].push_back(legalizeFloatAtomicExchange);
     LegalizationPipeline[Stage1].push_back(
         downcastI64toI32InsertExtractElements);
     LegalizationPipeline[Stage2].push_back(legalizeScalarLoadStoreOnArrays);
