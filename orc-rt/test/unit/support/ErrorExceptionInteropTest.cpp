@@ -31,7 +31,7 @@ public:
 
 } // namespace
 
-#define EXCEPTION_TEST(X)                                               \
+#define EXCEPTION_TEST(X)                                                      \
   do {                                                                         \
     X;                                                                         \
   } while (false)
