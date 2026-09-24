@@ -617,6 +617,7 @@ public:
                            mlir::gpu::GPUDialect>();
     target.addLegalOp<cuf::StreamCastOp>();
     target.addLegalOp<cuf::DeviceAddressOp>();
+    target.addLegalOp<cuf::DeviceIsActiveOp>();
     cuf::populateCUFToFIRConversionPatterns(typeConverter, *dl, symtab,
                                             patterns);
     if (mlir::failed(mlir::applyPartialConversion(getOperation(), target,

@@ -62,8 +62,6 @@ static void PrintVersion(raw_ostream &OS) {
 
 int main(int argc, const char **argv) {
 
-  cl::opt<bool> Help("h", cl::desc("Alias for -help"), cl::Hidden);
-
   // Mark all our options with this category, everything else (except for
   // -version and -help) will be hidden.
   cl::OptionCategory
@@ -160,11 +158,6 @@ int main(int argc, const char **argv) {
       "referring to the same source file but different targets into a single \n"
       "one. The resulting file can also be unbundled into different files by \n"
       "this tool if -unbundle is provided.\n");
-
-  if (Help) {
-    cl::PrintHelpMessage();
-    return 0;
-  }
 
   /// Class to store bundler options in standard (non-cl::opt) data structures
   // Avoid using cl::opt variables after these assignments when possible

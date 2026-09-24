@@ -7,6 +7,13 @@
 // RUN:   -target-sdk-version=12.3 -fcuda-include-gpubinary %t -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s --check-prefix=CIR
 
+// __cudaRegisterFatBinaryEnd only exists from CUDA 10.1 onwards. LoweringPrepare
+// reads the version from the module's cir.sdk_version attribute, so an older SDK
+// must still suppress both the call and its declaration.
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-cir %s -x cuda \
+// RUN:   -target-sdk-version=10.0 -fcuda-include-gpubinary %t -o %t.oldsdk.cir
+// RUN: FileCheck --input-file=%t.oldsdk.cir %s --check-prefix=OLDSDK
+
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fclangir -emit-llvm %s -x cuda \
 // RUN:   -target-sdk-version=12.3 -fcuda-include-gpubinary %t -o %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll %s --check-prefix=LLVM
@@ -150,6 +157,16 @@ __device__ _BitInt(36) c;
 // CIR-NEXT: %[[DTOR_PTR:.*]] = cir.get_global @__cuda_module_dtor
 // CIR-NEXT: {{.*}} = cir.call @atexit(%[[DTOR_PTR]])
 // CIR-NEXT: cir.return
+
+// With an SDK older than 10.1 the ctor is still built, but registration ends at
+// __cuda_register_globals: atexit follows it directly and the End declaration is
+// nowhere in the module.
+// OLDSDK-NOT: __cudaRegisterFatBinaryEnd
+// OLDSDK: cir.func internal private @__cuda_module_ctor()
+// OLDSDK: cir.call @__cuda_register_globals(
+// OLDSDK-NEXT: %[[OLD_DTOR_PTR:.*]] = cir.get_global @__cuda_module_dtor
+// OLDSDK-NEXT: {{.*}} = cir.call @atexit(%[[OLD_DTOR_PTR]])
+// OLDSDK-NOT: __cudaRegisterFatBinaryEnd
 
 // OGCG: constant [25 x i8] c"GPU binary would be here.", section ".nv_fatbin", align 8
 // OGCG: @__cuda_fatbin_wrapper = internal constant { i32, i32, ptr, ptr } { i32 1180844977, i32 1, ptr @{{.*}}, ptr null }, section ".nvFatBinSegment"

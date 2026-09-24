@@ -1252,8 +1252,6 @@ llvm.func @invariant(%p: !llvm.ptr) {
 llvm.func @invariant_group(%p: !llvm.ptr) {
   // CHECK: call ptr @llvm.launder.invariant.group
   %1 = llvm.intr.launder.invariant.group %p : !llvm.ptr
-  // CHECK: call ptr @llvm.strip.invariant.group
-  %2 = llvm.intr.strip.invariant.group %p : !llvm.ptr
   llvm.return
 }
 
