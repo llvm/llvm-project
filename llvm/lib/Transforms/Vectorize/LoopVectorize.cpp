@@ -5758,12 +5758,10 @@ LoopVectorizationPlanner::LoopVectorizationPlanner(
     Loop *L, LoopInfo *LI, DominatorTree *DT, const TargetLibraryInfo *TLI,
     const TargetTransformInfo &TTI, LoopVectorizationLegality *Legal,
     std::unique_ptr<LoopVectorizationCostModel> CM, VFSelectionContext &Config,
-    InterleavedAccessInfo &IAI, PredicatedScalarEvolution &PSE,
-    OptimizationRemarkEmitter *ORE,
+    PredicatedScalarEvolution &PSE, OptimizationRemarkEmitter *ORE,
     std::function<const BranchProbabilityInfo &()> GetBPI)
     : OrigLoop(L), LI(LI), DT(DT), TLI(TLI), TTI(TTI), Legal(Legal),
-      CM(std::move(CM)), Config(Config), IAI(IAI), PSE(PSE), ORE(ORE),
-      GetBPI(GetBPI) {}
+      CM(std::move(CM)), Config(Config), PSE(PSE), ORE(ORE), GetBPI(GetBPI) {}
 
 LoopVectorizationPlanner::~LoopVectorizationPlanner() = default;
 
@@ -6630,7 +6628,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
   // Range, add it to the set of groups to be later applied to the VPlan and add
   // placeholders for its members' Recipes which we'll be replacing with a
   // single VPInterleaveRecipe.
-  for (InterleaveGroup<Instruction> *IG : IAI.getInterleaveGroups()) {
+  for (InterleaveGroup<Instruction> *IG :
+       CM->InterleaveInfo.getInterleaveGroups()) {
     auto ApplyIG = [IG, this](ElementCount VF) -> bool {
       bool Result = (VF.isVector() && // Query is illegal for VF == 1
                      CM->getWideningDecision(IG->getInsertPos(), VF) ==
@@ -7874,7 +7873,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
       L, LI, DT, TLI, *TTI, &LVL,
       std::make_unique<LoopVectorizationCostModel>(
           SEL, L, PSE, LI, &LVL, *TTI, TLI, AC, ORE, GetBFI, F, IAI, Config),
-      Config, IAI, PSE, ORE, GetBPI);
+      Config, PSE, ORE, GetBPI);
 
   EpilogueLowering EpilogueTailLoweringStatus =
       getEpilogueTailLowering(LVP.getCostModel(), L, ORE, LVL, Hints, TTI);

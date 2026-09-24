@@ -860,9 +860,6 @@ class LoopVectorizationPlanner {
   /// VF selection state independent of cost-modeling decisions.
   VFSelectionContext &Config;
 
-  /// The interleaved access analysis.
-  InterleavedAccessInfo &IAI;
-
   PredicatedScalarEvolution &PSE;
 
   OptimizationRemarkEmitter *ORE;
@@ -899,8 +896,8 @@ public:
       Loop *L, LoopInfo *LI, DominatorTree *DT, const TargetLibraryInfo *TLI,
       const TargetTransformInfo &TTI, LoopVectorizationLegality *Legal,
       std::unique_ptr<LoopVectorizationCostModel> CM,
-      VFSelectionContext &Config, InterleavedAccessInfo &IAI,
-      PredicatedScalarEvolution &PSE, OptimizationRemarkEmitter *ORE,
+      VFSelectionContext &Config, PredicatedScalarEvolution &PSE,
+      OptimizationRemarkEmitter *ORE,
       std::function<const BranchProbabilityInfo &()> GetBPI);
 
   ~LoopVectorizationPlanner();
