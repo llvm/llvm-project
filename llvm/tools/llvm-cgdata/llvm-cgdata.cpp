@@ -67,6 +67,7 @@ static std::string OutputFilename = "-";
 static std::string Filename;
 static bool ShowCGDataVersion;
 static bool SkipTrim;
+static bool LazyLoading;
 static CGDataAction Action;
 static std::optional<CGDataFormat> OutputFormat;
 static std::vector<std::string> InputFilenames;
@@ -107,7 +108,7 @@ static int convert_main(int argc, const char *argv[]) {
     exitWithErrorCode(EC, OutputFilename);
 
   auto FS = vfs::getRealFileSystem();
-  auto ReaderOrErr = CodeGenDataReader::create(Filename, *FS);
+  auto ReaderOrErr = CodeGenDataReader::create(Filename, *FS, LazyLoading);
   if (Error E = ReaderOrErr.takeError())
     exitWithError(std::move(E), Filename);
 
@@ -239,7 +240,7 @@ static int show_main(int argc, const char *argv[]) {
     exitWithErrorCode(EC, OutputFilename);
 
   auto FS = vfs::getRealFileSystem();
-  auto ReaderOrErr = CodeGenDataReader::create(Filename, *FS);
+  auto ReaderOrErr = CodeGenDataReader::create(Filename, *FS, LazyLoading);
   if (Error E = ReaderOrErr.takeError())
     exitWithError(std::move(E), Filename);
 
@@ -350,8 +351,7 @@ static void parseArgs(int argc, char **argv) {
     llvm_unreachable("unrecognized action");
   }
 
-  IndexedCodeGenDataLazyLoading =
-      Args.hasArg(OPT_indexed_codegen_data_lazy_loading);
+  LazyLoading = Args.hasArg(OPT_indexed_codegen_data_lazy_loading);
 }
 
 int llvm_cgdata_main(int argc, char **argvNonConst, const llvm::ToolContext &) {

@@ -182,6 +182,12 @@ public:
   // This collects the different subcommands that have been registered.
   SmallPtrSet<SubCommand *, 4> RegisteredSubCommands;
 
+  // Libraries whose options are declared in TableGen, and an index from their
+  // option names. Libraries[NumIndexedLibraries:] are not indexed yet.
+  SmallVector<LibraryOptions *, 0> Libraries;
+  DenseMap<StringRef, LibraryOptions *> LibraryIndex;
+  size_t NumIndexedLibraries = 0;
+
   CommandLineParser() { registerSubCommand(&SubCommand::getTopLevel()); }
 
   void ResetAllOptionOccurrences();
@@ -228,7 +234,8 @@ public:
     bool HadErrors = false;
     if (O->hasArgStr()) {
       // Add argument to the argument map!
-      if (!SC->OptionsMap.insert(std::make_pair(O->ArgStr, O)).second) {
+      if (!SC->OptionsMap.insert(std::make_pair(O->ArgStr, O)).second ||
+          LibraryIndex.contains(O->ArgStr)) {
         errs() << ProgramName << ": CommandLine Error: Option '" << O->ArgStr
                << "' registered more than once!\n";
         HadErrors = true;
@@ -299,7 +306,7 @@ public:
       if (hasOptions(*S))
         return true;
     }
-    return false;
+    return !Libraries.empty();
   }
 
   bool hasNamedSubCommands() const {
@@ -327,6 +334,34 @@ public:
   }
 
   void printOptionValues();
+
+  void indexLibraryOptions() {
+    bool HadErrors = false;
+    for (; NumIndexedLibraries != Libraries.size(); ++NumIndexedLibraries) {
+      LibraryOptions *L = Libraries[NumIndexedLibraries];
+      L->forEachOption([&](StringRef Spelling, StringRef, StringRef) {
+        StringRef Name = Spelling.rtrim('=');
+        auto [It, Inserted] = LibraryIndex.try_emplace(Name, L);
+        if (Inserted ? none_of(RegisteredSubCommands,
+                               [&](SubCommand *SC) {
+                                 return SC->OptionsMap.contains(Name);
+                               })
+                     : It->second == L)
+          return;
+        errs() << ProgramName << ": CommandLine Error: Option '" << Name
+               << "' registered more than once!\n";
+        HadErrors = true;
+      });
+    }
+    if (HadErrors)
+      report_fatal_error("inconsistency in registered CommandLine options");
+  }
+
+  // A library loaded while parsing (e.g. a pass plugin) may define the name.
+  LibraryOptions *lookupLibraryOption(StringRef Name) {
+    indexLibraryOptions();
+    return LibraryIndex.lookup(Name);
+  }
 
   void registerCategory(OptionCategory *cat) {
     assert(count_if(RegisteredOptionCategories,
@@ -380,6 +415,9 @@ public:
 
     ResetAllOptionOccurrences();
     RegisteredSubCommands.clear();
+    Libraries.clear();
+    LibraryIndex.clear();
+    NumIndexedLibraries = 0;
 
     SubCommand::getTopLevel().reset();
     SubCommand::getAll().reset();
@@ -1468,6 +1506,8 @@ void CommandLineParser::ResetAllOptionOccurrences() {
     if (SC->ConsumeAfterOpt)
       SC->ConsumeAfterOpt->reset();
   }
+  for (LibraryOptions *L : Libraries)
+    L->reset();
 }
 
 bool CommandLineParser::ParseCommandLineOptions(
@@ -1501,6 +1541,7 @@ bool CommandLineParser::ParseCommandLineOptions(
 
   // Copy the program name into ProgName, making sure not to overflow it.
   ProgramName = std::string(sys::path::filename(StringRef(argv[0])));
+  indexLibraryOptions();
 
   // Check out the positional arguments to collect information about them.
   unsigned NumPositionalRequired = 0;
@@ -1650,6 +1691,18 @@ bool CommandLineParser::ParseCommandLineOptions(
       if (!Handler && ChosenSubCommand != &SubCommand::getTopLevel())
         Handler = LookupLongOption(SubCommand::getTopLevel(), ArgName, Value,
                                    LongOptionsUseDoubleDash, HaveDoubleDash);
+
+      if (!Handler && (!LongOptionsUseDoubleDash || HaveDoubleDash)) {
+        if (LibraryOptions *L = lookupLibraryOption(ArgName.split('=').first)) {
+          unsigned N = 1;
+          if (Error E = L->parse(ArrayRef(argv + i, argv + argc), N)) {
+            *Errs << ProgramName << ": " << toString(std::move(E)) << '\n';
+            ErrorParsing = true;
+          }
+          i += N - 1;
+          continue;
+        }
+      }
 
       // Check to see if this "option" is really a prefixed or grouped argument.
       if (!Handler && !(LongOptionsUseDoubleDash && HaveDoubleDash))
@@ -2440,8 +2493,28 @@ public:
     for (const auto &Opt : Opts)
       MaxArgLen = std::max(MaxArgLen, Opt.second->getOptionWidth());
 
+    // Library options are all hidden.
+    SmallVector<std::pair<std::string, StringRef>, 0> LibraryOpts;
+    if (ShowHidden)
+      for (LibraryOptions *L : globalParser().Libraries)
+        L->forEachOption(
+            [&](StringRef Spelling, StringRef MetaVar, StringRef Help) {
+              if (!Help.empty())
+                LibraryOpts.emplace_back((Spelling + MetaVar).str(), Help);
+            });
+    llvm::sort(LibraryOpts);
+    for (const auto &[Name, Help] : LibraryOpts)
+      MaxArgLen = std::max(MaxArgLen, argPlusPrefixesSize(Name));
+
     outs() << "OPTIONS:\n";
     printOptions(Opts, MaxArgLen);
+
+    if (!LibraryOpts.empty())
+      outs() << "\nLibrary options:\n\n";
+    for (const auto &[Name, Help] : LibraryOpts) {
+      outs() << PrintArg(Name);
+      Option::printHelpStr(Help, MaxArgLen, argPlusPrefixesSize(Name));
+    }
 
     // Print any extra help the user has declared.
     for (const auto &I : globalParser().MoreHelp)
@@ -2867,6 +2940,11 @@ void cl::HideUnrelatedOptions(ArrayRef<const cl::OptionCategory *> Categories,
 }
 
 void cl::ResetCommandLineParser() { globalParser().reset(); }
+
+void cl::addLibraryOptions(LibraryOptions &L) {
+  globalParser().Libraries.push_back(&L);
+}
+
 void cl::ResetAllOptionOccurrences() {
   globalParser().ResetAllOptionOccurrences();
 }

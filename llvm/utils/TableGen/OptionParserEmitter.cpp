@@ -11,6 +11,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Support/raw_ostream.h"
@@ -228,6 +229,108 @@ static MarshallingInfo createMarshallingInfo(const Record &R) {
   return Ret;
 }
 
+// Emits the struct an OptionsStruct def declares: its declaration under
+// OPTIONS_STRUCT_DECL, and under OPTIONS_STRUCT_DEFS the global instance, the
+// option table, and apply(), which sets the member an argument names.
+static void emitOptionsStruct(const Record &Struct,
+                              ArrayRef<const Record *> Groups,
+                              ArrayRef<const Record *> Opts, raw_ostream &OS) {
+  struct Member {
+    StringRef Name, Type, Default, HelpText;
+  };
+  std::vector<const Record *> Fields;
+  for (const Record *R : Opts) {
+    StringRef Kind = R->getValueAsDef("Kind")->getValueAsString("Name");
+    if (isa<UnsetInit>(R->getValueInit("FieldName"))) {
+      if (Kind != "Input" && Kind != "Unknown" &&
+          isa<UnsetInit>(R->getValueInit("Alias")))
+        PrintFatalError(R->getLoc(), "an option of an OptionsStruct must be "
+                                     "declared with BoolField or ValueField");
+      continue;
+    }
+    bool HasValue = !isa<UnsetInit>(R->getValueInit("FieldValue"));
+    if ((Kind == "Flag") != HasValue ||
+        (Kind != "Flag" && Kind != "Joined" && Kind != "Separate"))
+      PrintFatalError(R->getLoc(), "a member is set by a Flag with a "
+                                   "FieldValue, or by a Joined or Separate");
+    Fields.push_back(R);
+  }
+  // Members in declaration order.
+  std::vector<const Record *> ByID = Fields;
+  llvm::sort(ByID, [](const Record *A, const Record *B) {
+    return A->getID() < B->getID();
+  });
+  std::vector<Member> Members;
+  StringMap<unsigned> MemberIndex;
+  for (const Record *R : ByID) {
+    Member M{R->getValueAsString("FieldName"), R->getValueAsString("FieldType"),
+             R->getValueAsString("FieldDefault"),
+             getOptionalString(*R, "HelpText")};
+    auto [It, Inserted] = MemberIndex.try_emplace(M.Name, Members.size());
+    if (Inserted) {
+      Members.push_back(M);
+      continue;
+    }
+    Member &Prev = Members[It->second];
+    if (Prev.Type != M.Type || Prev.Default != M.Default)
+      PrintFatalError(R->getLoc(), "member '" + M.Name +
+                                       "' is declared with a different type "
+                                       "or default");
+    if (Prev.HelpText.empty())
+      Prev.HelpText = M.HelpText;
+  }
+
+  StringRef Name = Struct.getName();
+  OS << "\n#ifdef OPTIONS_STRUCT_DECL\n#undef OPTIONS_STRUCT_DECL\n";
+  OS << "#include <string>\n\n";
+  OS << "namespace llvm {\nnamespace opt {\nclass Arg;\n"
+        "class OptTable;\n} // namespace opt\n\n";
+  OS << "struct " << Name << " {\n";
+  for (const Member &M : Members) {
+    if (!M.HelpText.empty()) {
+      std::string Help = M.HelpText.str();
+      llvm::replace(Help, '\n', ' ');
+      OS << "  /// " << Help << "\n";
+    }
+    OS << "  " << M.Type << " " << M.Name << "{" << M.Default << "};\n";
+  }
+  OS << "\n  /// The instance cl::ParseCommandLineOptions sets.\n";
+  OS << "  static " << Name << " Global;\n\n";
+  OS << "  static const opt::OptTable &optTable();\n";
+  OS << "  /// Sets the member that \\p A names. Returns false if the value is "
+        "invalid.\n";
+  OS << "  bool apply(const opt::Arg &A);\n";
+  OS << "};\n} // namespace llvm\n";
+  OS << "#endif // OPTIONS_STRUCT_DECL\n";
+
+  std::string Qualified = ("llvm::" + Name).str();
+  OS << "\n#ifdef OPTIONS_STRUCT_DEFS\n#undef OPTIONS_STRUCT_DEFS\n";
+  OS << Qualified << " " << Qualified << "::Global;\n\n";
+  OS << "namespace {\nenum ID : unsigned {\n  OPT_INVALID = 0,\n";
+  for (const Record *R : Groups)
+    OS << "  OPT_" << getOptionName(*R) << ",\n";
+  for (const Record *R : Opts)
+    OS << "  OPT_" << getOptionName(*R) << ",\n";
+  OS << "};\n} // namespace\n\n";
+  OS << "const llvm::opt::OptTable &" << Qualified << "::optTable() {\n";
+  OS << "  static const llvm::opt::LibraryOptTable T(optionTables());\n";
+  OS << "  return T;\n}\n\n";
+  OS << "bool " << Qualified << "::apply(const llvm::opt::Arg &A) {\n";
+  OS << "  switch (A.getOption().getID()) {\n";
+  for (const Record *R : Fields) {
+    OS << "  case OPT_" << getOptionName(*R) << ":\n";
+    StringRef Member = R->getValueAsString("FieldName");
+    if (isa<UnsetInit>(R->getValueInit("FieldValue")))
+      OS << "    return llvm::opt::parseArgValue(A.getValue(), " << Member
+         << ");\n";
+    else
+      OS << "    " << Member << " = " << R->getValueAsString("FieldValue")
+         << ";\n    return true;\n";
+  }
+  OS << "  }\n  llvm_unreachable(\"option without a member\");\n}\n";
+  OS << "#endif // OPTIONS_STRUCT_DEFS\n";
+}
+
 /// OptionParserEmitter - This tablegen backend takes an input .td file
 /// describing a list of options and emits a data structure for parsing and
 /// working with those options when given an input command line.
@@ -240,6 +343,11 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
 
   std::vector<const Record *> SubCommands =
       Records.getAllDerivedDefinitions("SubCommand");
+
+  ArrayRef<const Record *> Structs =
+      Records.getAllDerivedDefinitions("OptionsStruct");
+  if (Structs.size() > 1)
+    PrintFatalError(Structs[1]->getLoc(), "only one OptionsStruct is allowed");
 
   emitSourceFileHeader("Option Parsing Definitions", OS);
 
@@ -324,9 +432,17 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
 
   OS << "/////////\n";
   OS << "// Tables\n\n";
-  OS << "#ifdef OPTTABLE_CODE\n";
+  // An OptionsStruct's definitions use the tables.
+  OS << (Structs.empty()
+             ? "#ifdef OPTTABLE_CODE\n"
+             : "#if defined(OPTTABLE_CODE) || defined(OPTIONS_STRUCT_DEFS)\n");
   // A function rather than an object: the object needs dynamic relocations.
   OS << "static llvm::opt::OptTable::Tables optionTables() {\n";
+  // An OptionsStruct's .cpp has no using-directive for llvm::opt.
+  if (!Structs.empty())
+    OS << "  using llvm::opt::DefaultVis, llvm::opt::HelpHidden,\n"
+          "      llvm::opt::RenderAsInput, llvm::opt::RenderJoined,\n"
+          "      llvm::opt::RenderSeparate;\n";
   Table.EmitStringTableDef(OS, "OptionStrTable");
   OS << "\n";
 
@@ -484,7 +600,12 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
      << ", OptionSubCommandIDsTable};\n";
   OS << "}\n";
   OS << "#undef OPTTABLE_CODE\n";
-  OS << "#endif // OPTTABLE_CODE\n\n";
+  OS << (Structs.empty()
+             ? "#endif // OPTTABLE_CODE\n\n"
+             : "#endif // OPTTABLE_CODE || OPTIONS_STRUCT_DEFS\n\n");
+
+  if (!Structs.empty())
+    emitOptionsStruct(*Structs[0], Groups, Opts, OS);
 
   // Dump ValuesCode.
   OS << "/////////\n";

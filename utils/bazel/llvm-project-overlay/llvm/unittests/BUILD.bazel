@@ -645,6 +645,15 @@ cc_test(
 )
 
 gentbl_cc_library(
+    name = "library_opts_tests_gen",
+    strip_include_prefix = "Option",
+    tbl_outs = {"Option/LibraryOpts.inc": ["-gen-opt-parser-defs"]},
+    tblgen = "//llvm:llvm-tblgen",
+    td_file = "Option/LibraryOpts.td",
+    deps = ["//llvm:OptParserTdFiles"],
+)
+
+gentbl_cc_library(
     name = "option_tests_gen",
     strip_include_prefix = "Option",
     tbl_outs = {"Option/Opts.inc": ["-gen-opt-parser-defs"]},
@@ -682,10 +691,12 @@ cc_test(
         allow_empty = False,
     ),
     deps = [
+        ":library_opts_tests_gen",
         ":option_tests_gen",
         ":sub_command_opts_tests_gen",
         "//llvm:Option",
         "//llvm:Support",
+        "//third-party/unittest:gmock",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
     ],

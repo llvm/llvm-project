@@ -1,0 +1,111 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#define OPTIONS_STRUCT_DECL
+#include "LibraryOpts.inc"
+
+#include "llvm/Option/ArgList.h"
+#include "llvm/Option/LibraryOptions.h"
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
+
+#define OPTIONS_STRUCT_DEFS
+#include "LibraryOpts.inc"
+
+using namespace llvm;
+
+namespace {
+
+// The struct -gen-opt-parser-defs generates: every spelling sets its member.
+TEST(LibraryOptionsTest, Apply) {
+  TestLibraryOptions O;
+  EXPECT_FALSE(O.Enable);
+  EXPECT_EQ(O.Count, 3u);
+  EXPECT_EQ(O.Ratio, 0.5);
+  EXPECT_EQ(O.Path, "p");
+
+  auto Apply = [&](std::initializer_list<const char *> Argv) {
+    unsigned MissingIndex, MissingCount;
+    opt::InputArgList Args = TestLibraryOptions::optTable().ParseArgs(
+        Argv, MissingIndex, MissingCount);
+    std::vector<bool> Applied;
+    for (const opt::Arg *A : Args)
+      Applied.push_back(O.apply(*A));
+    return Applied;
+  };
+  EXPECT_THAT(Apply({"-lib-enable", "--lib-count=7", "-lib-ratio", "0.25",
+                     "-lib-path=a=b"}),
+              testing::Each(true));
+  EXPECT_TRUE(O.Enable);
+  EXPECT_EQ(O.Count, 7u);
+  EXPECT_EQ(O.Ratio, 0.25);
+  EXPECT_EQ(O.Path, "a=b");
+  EXPECT_THAT(Apply({"-no-lib-enable"}), testing::Each(true));
+  EXPECT_FALSE(O.Enable);
+  EXPECT_THAT(Apply({"-lib-enable=1"}), testing::Each(true));
+  EXPECT_TRUE(O.Enable);
+
+  // A rejected value leaves the member unchanged.
+  EXPECT_THAT(Apply({"-lib-enable=2", "-lib-count=x", "-lib-ratio=y"}),
+              testing::Each(false));
+  EXPECT_TRUE(O.Enable);
+  EXPECT_EQ(O.Count, 7u);
+  EXPECT_EQ(O.Ratio, 0.25);
+}
+
+// What cl:: sees of the struct, without cl::.
+TEST(LibraryOptionsTest, Parser) {
+  opt::LibraryOptionsParser P(
+      TestLibraryOptions::optTable,
+      [](const opt::Arg &A) { return TestLibraryOptions::Global.apply(A); },
+      [] { TestLibraryOptions::Global = TestLibraryOptions(); });
+
+  std::vector<std::string> Rows;
+  P.forEachOption([&](StringRef Spelling, StringRef MetaVar, StringRef Help) {
+    Rows.push_back((Spelling + "|" + MetaVar + "|" + Help).str());
+  });
+  EXPECT_THAT(Rows, testing::ElementsAre(
+                        "lib-count=|<value>|An unsigned", "lib-count||",
+                        "lib-enable=|<value>|", "lib-enable||A bool",
+                        "lib-path=|<value>|A string", "lib-path||",
+                        "lib-ratio=|<value>|A double", "lib-ratio||",
+                        "no-lib-enable||"));
+
+  auto Parse = [&](std::initializer_list<const char *> Argv) {
+    unsigned Consumed = 0;
+    std::string Err = toString(P.parse(Argv, Consumed));
+    return std::to_string(Consumed) + " " + Err;
+  };
+  EXPECT_EQ(Parse({"-lib-count", "5", "-lib-enable"}), "2 ");
+  EXPECT_EQ(TestLibraryOptions::Global.Count, 5u);
+  EXPECT_EQ(Parse({"-lib-count=x", "-lib-enable"}),
+            "1 invalid value 'x' in '-lib-count=x'");
+  EXPECT_EQ(Parse({"-lib-count"}),
+            "1 option '-lib-count' requires an argument");
+  EXPECT_EQ(Parse({"-no-lib-enable=1"}),
+            "1 unknown argument '-no-lib-enable=1'");
+  P.reset();
+  EXPECT_EQ(TestLibraryOptions::Global.Count, 3u);
+}
+
+// A static RegisterLibraryOptions connects the struct's Global to cl::.
+TEST(LibraryOptionsTest, Register) {
+  cl::ResetCommandLineParser();
+  opt::RegisterLibraryOptions<TestLibraryOptions> Registration;
+  const TestLibraryOptions &G = TestLibraryOptions::Global;
+  const char *Args[] = {"prog", "-lib-count", "5", "-lib-enable"};
+  EXPECT_TRUE(cl::ParseCommandLineOptions(std::size(Args), Args, "", &nulls()));
+  EXPECT_EQ(G.Count, 5u);
+  EXPECT_TRUE(G.Enable);
+  cl::ResetAllOptionOccurrences();
+  EXPECT_EQ(G.Count, 3u);
+  EXPECT_FALSE(G.Enable);
+  cl::ResetCommandLineParser();
+}
+
+} // namespace

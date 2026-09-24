@@ -1680,3 +1680,36 @@ TODO: complete this section
 :::{todo}
 TODO: fill in this section
 :::
+
+## Declaring a Library's Options in TableGen
+
+A library can declare its options in a `.td` file instead of as `cl::opt`
+globals. `llvm-tblgen -gen-opt-parser-defs` generates a struct with a member
+per option, the table that parses them, and the hooks through which
+`cl::ParseCommandLineOptions` parses them and `-help-hidden` lists them.
+
+```text
+include "llvm/Option/OptParser.td"
+
+def FooOptions : OptionsStruct;
+// The spellings of FooMode, a C++ enumeration declared elsewhere.
+def FooMode : OptionEnum<"FooMode", [EnumMember<"Fast", "fast">,
+                                     EnumMember<"Small", "small">]>;
+
+defm Enable : BoolField<"foo-enable", "1", "Enable foo">;
+defm Threshold : ValueField<"foo-threshold", "unsigned", "8", "The threshold">;
+defm Mode : EnumField<"foo-mode", FooMode, "FooMode::Fast", "Foo's mode">;
+```
+
+The `defm` name is the member name. A `BoolField` is set by `-x`, `-no-x`, or
+`-x=true|false|1|0`; a `ValueField` of an integer type, `double`,
+or `std::string` by `-x=value` or `-x value`. Both accept `--` for `-`.
+
+The header declares the struct after including what the member defaults need,
+and one source file defines it and registers it with `cl::`.
+
+The library then lists `XXOptionsTableGen` under `DEPENDS` and `Option`
+under `LINK_COMPONENTS`. Code reads `XXOptions::Global.CodeGenDataGenerate`,
+the instance the command line sets. Keep the header in `lib/`, as private as the
+`static cl::opt` it replaces; another library that needs a value calls a
+function or takes a parameter.

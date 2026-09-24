@@ -242,6 +242,10 @@ struct StreamCacheData {
   }
 };
 
+/// Returns whether ThinLTO runs two rounds of code generation
+/// (-codegen-data-thinlto-two-rounds).
+LLVM_ABI bool thinLTOTwoRounds();
+
 /// Save \p TheModule before the first codegen round.
 /// \p Task represents the partition number in the parallel code generation
 /// process. \p AddStream is the callback used to add the serialized module to
