@@ -4,6 +4,10 @@
 // RUN: %clang_cc1 -x c++ -verify -fopenmp -fopenmp-version=52 \
 // RUN:   -triple x86_64-unknown-linux -target-feature +avx \
 // RUN:   -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -E -fopenmp -fopenmp-version=52 %s -o %t.i
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=52 \
+// RUN:   -triple x86_64-unknown-linux -target-feature +avx \
+// RUN:   -emit-llvm %t.i -o - | FileCheck %s
 // expected-no-diagnostics
 
 #ifdef __cplusplus
@@ -60,6 +64,32 @@ void distinct_condition_base(void);
     match(implementation = {vendor(score(1) : llvm)}, device = {kind(cpu)}, \
           user = {condition(1)})
 void identical_condition_base(void);
+
+// Macro spelling must not hide different expanded conditions.
+#define COND 1
+#pragma omp declare variant(condition_high_variant)                       \
+    match(implementation = {vendor(score(100) : llvm)},                    \
+          user = {condition(COND)})
+#undef COND
+#define COND 2
+#pragma omp declare variant(condition_low_variant)                        \
+    match(implementation = {vendor(score(1) : llvm)}, device = {kind(cpu)}, \
+          user = {condition(COND)})
+void redefined_condition_base(void);
+#undef COND
+
+// Different macro names and outer parentheses preserve condition identity.
+#define FIRST_COND 1
+#define SECOND_COND (1)
+#pragma omp declare variant(condition_high_variant)                       \
+    match(implementation = {vendor(score(100) : llvm)},                    \
+          user = {condition(FIRST_COND)})
+#pragma omp declare variant(condition_low_variant)                        \
+    match(implementation = {vendor(score(1) : llvm)}, device = {kind(cpu)}, \
+          user = {condition(SECOND_COND)})
+void equivalent_condition_base(void);
+#undef FIRST_COND
+#undef SECOND_COND
 
 void subset_variant(void);
 void superset_variant(void);
@@ -228,6 +258,20 @@ void distinct_conditions(void) { distinct_condition_base(); }
 void identical_conditions(void) { identical_condition_base(); }
 // CHECK-LABEL: define{{.*}} void @identical_conditions
 // CHECK: call void @condition_low_variant()
+// CHECK: ret void
+
+void redefined_conditions(void) { redefined_condition_base(); }
+// CHECK-LABEL: define{{.*}} void @redefined_conditions
+// CHECK-NOT: call void @condition_low_variant()
+// CHECK: call void @condition_high_variant()
+// CHECK-NOT: call void @condition_low_variant()
+// CHECK: ret void
+
+void equivalent_conditions(void) { equivalent_condition_base(); }
+// CHECK-LABEL: define{{.*}} void @equivalent_conditions
+// CHECK-NOT: call void @condition_high_variant()
+// CHECK: call void @condition_low_variant()
+// CHECK-NOT: call void @condition_high_variant()
 // CHECK: ret void
 
 // A strict subset has score zero before candidates are ranked, even when its

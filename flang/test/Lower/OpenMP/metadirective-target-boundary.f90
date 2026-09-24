@@ -21,22 +21,36 @@ subroutine actual_target(n, a)
   !$omp end parallel
 end subroutine
 
-! A TARGET selected by a metadirective creates the same context boundary.
-! CHECK-LABEL: func.func @_QPselected_target(
+! A selected TARGET contributes its own construct trait.
+! CHECK-LABEL: func.func @_QPselected_target_present()
 ! CHECK: omp.parallel
 ! CHECK: omp.target
-! CHECK-NOT: omp.simd
+! CHECK-NOT: omp.taskyield
+! CHECK: omp.barrier
+! CHECK-NOT: omp.taskyield
 ! CHECK: return
-subroutine selected_target(n, a)
-  integer :: n, i, a(n)
+subroutine selected_target_present()
   !$omp parallel
     !$omp begin metadirective default(target)
       !$omp metadirective &
-      !$omp& when(construct={parallel, target}: simd) &
-      !$omp& default(nothing)
-      do i = 1, n
-        a(i) = i
-      end do
+      !$omp& when(construct={target}: barrier) default(taskyield)
+    !$omp end metadirective
+  !$omp end parallel
+end subroutine
+
+! The same selected TARGET hides the enclosing PARALLEL trait.
+! CHECK-LABEL: func.func @_QPselected_target_hides_parallel()
+! CHECK: omp.parallel
+! CHECK: omp.target
+! CHECK-NOT: omp.barrier
+! CHECK: omp.taskyield
+! CHECK-NOT: omp.barrier
+! CHECK: return
+subroutine selected_target_hides_parallel()
+  !$omp parallel
+    !$omp begin metadirective default(target)
+      !$omp metadirective &
+      !$omp& when(construct={parallel}: barrier) default(taskyield)
     !$omp end metadirective
   !$omp end parallel
 end subroutine

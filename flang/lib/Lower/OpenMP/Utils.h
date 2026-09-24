@@ -58,11 +58,14 @@ public:
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(OpenMPContextFrame)
 
   OpenMPContextFrame(const pft::Evaluation &evaluation,
-                     llvm::omp::Directive directive)
-      : evaluation{evaluation}, directive{directive} {}
+                     llvm::omp::Directive directive, bool isPartial = false)
+      : evaluation{evaluation}, directive{directive}, isPartial{isPartial} {}
 
   const pft::Evaluation &evaluation;
   llvm::omp::Directive directive;
+  // A partial frame records an entered constituent of a combined directive.
+  // A complete frame supplies the source context when it is absent from PFT.
+  bool isPartial;
 };
 
 struct DeclareTargetCaptureInfo {
@@ -278,9 +281,10 @@ std::optional<llvm::SmallVector<mlir::Value>> getIteratorElementIndices(
 
 /// Collect the source OpenMP constructs enclosing \p evaluation in
 /// outermost-to-innermost order. Active metadirective replacements substitute
-/// for their METADIRECTIVE source constructs.
+/// for their METADIRECTIVE source constructs. A null evaluation uses only
+/// active context frames.
 void collectEnclosingConstructTraits(
-    AbstractConverter &converter, const pft::Evaluation &evaluation,
+    AbstractConverter &converter, const pft::Evaluation *evaluation,
     llvm::SmallVectorImpl<llvm::omp::TraitProperty> &constructTraits);
 
 /// Return true when \p module is being compiled for an AMDGPU device or all of

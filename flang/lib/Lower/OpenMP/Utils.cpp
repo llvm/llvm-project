@@ -1473,7 +1473,7 @@ semantics::omp::OmpVariantMatchContext makeVariantMatchContext(
 }
 
 void collectEnclosingConstructTraits(
-    AbstractConverter &converter, const pft::Evaluation &evaluation,
+    AbstractConverter &converter, const pft::Evaluation *evaluation,
     llvm::SmallVectorImpl<llvm::omp::TraitProperty> &constructTraits) {
   llvm::SmallVector<const OpenMPContextFrame *, 4> frames;
   converter.getStateStack().stackWalk<OpenMPContextFrame>(
@@ -1485,8 +1485,9 @@ void collectEnclosingConstructTraits(
   llvm::SmallVector<bool, 4> usedFrames(frames.size(), false);
 
   llvm::SmallVector<const pft::Evaluation *, 8> ancestors;
-  for (const pft::Evaluation *parent = evaluation.parentConstruct; parent;
-       parent = parent->parentConstruct) {
+  for (const pft::Evaluation *parent = evaluation ? evaluation->parentConstruct
+                                                  : nullptr;
+       parent; parent = parent->parentConstruct) {
     ancestors.push_back(parent);
   }
   std::reverse(ancestors.begin(), ancestors.end());
@@ -1499,25 +1500,37 @@ void collectEnclosingConstructTraits(
     if (!omp)
       continue;
     llvm::omp::Directive directive{parser::omp::GetOmpDirectiveName(*omp).v};
+    // An ancestor supplies the full source context, including constituents
+    // whose bodies also have active frames. Count each construct only once.
+    for (auto [index, frame] : llvm::enumerate(frames))
+      if (&frame->evaluation == ancestor)
+        usedFrames[index] = true;
     if (directive != llvm::omp::Directive::OMPD_metadirective) {
       append(directive);
       continue;
     }
-    for (auto [index, frame] : llvm::enumerate(frames)) {
-      if (&frame->evaluation == ancestor) {
+    for (const OpenMPContextFrame *frame : frames) {
+      if (&frame->evaluation == ancestor && !frame->isPartial) {
         append(frame->directive);
-        usedFrames[index] = true;
         break;
       }
     }
   }
 
-  // Active source contexts may not appear in the ancestor chain. This occurs
-  // for a loop-associated metadirective that owns a following sibling and for
-  // an atomic expression lowered from the atomic evaluation itself.
-  for (auto [index, frame] : llvm::enumerate(frames))
-    if (!usedFrames[index])
-      append(frame->directive);
+  // Include entered constituents while their own evaluation is current, e.g.
+  // PARALLEL when lowering the bounds of PARALLEL DO. Complete replacement
+  // frames already describe all constituents of a selected metadirective.
+  for (auto [index, frame] : llvm::enumerate(frames)) {
+    if (usedFrames[index])
+      continue;
+    if (frame->isPartial &&
+        llvm::any_of(
+            frames, [frameEval = &frame->evaluation](const auto *other) {
+              return !other->isPartial && &other->evaluation == frameEval;
+            }))
+      continue;
+    append(frame->directive);
+  }
 }
 
 const semantics::Symbol *
