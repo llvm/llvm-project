@@ -12,9 +12,9 @@
 // RUN:   -triple x86_64-unknown-linux -x c++ %t/use.c \
 // RUN:   -include-pch %t/conditions-cxx.pch -emit-llvm -o - | FileCheck %s
 
-// Verify that serialization preserves the expanded identity of folded user
-// conditions. Distinct conditions do not form a subset relationship, while
-// identical conditions do.
+// Verify that serialization preserves the expressions of folded user
+// conditions. Expanded expressions identify distinct conditions, while
+// ignoring outer parentheses preserves identical conditions.
 
 // CHECK-LABEL: define{{.*}} void @test_conditions()
 // CHECK: call void @condition_high_variant()
