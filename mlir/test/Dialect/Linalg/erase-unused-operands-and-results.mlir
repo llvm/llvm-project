@@ -1,4 +1,7 @@
 // RUN: mlir-opt %s -split-input-file -test-linalg-transform-patterns=test-erase-unused-operands-and-results | FileCheck %s
+// RUN: mlir-opt %s -split-input-file \
+// RUN: -transform-preload-library='transform-library-paths=%p/td/erase-unused-operands-and-results.mlir' \
+// RUN: -transform-interpreter=entry-point=erase_unused_operands_and_results | FileCheck %s
 // RUN: mlir-opt %s -split-input-file -test-linalg-transform-patterns=test-erase-unnecessary-inputs | FileCheck %s --check-prefix=CHECK-INPUT
 
 // CHECK-LABEL: func @remove_deadargs_generic_basic
