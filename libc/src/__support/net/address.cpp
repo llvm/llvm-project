@@ -30,7 +30,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace net {
 
-[[nodiscard]] int str_to_ipv4(cpp::string_view src, void *dst) {
+[[nodiscard]] bool str_to_ipv4(cpp::string_view src, struct in_addr &dst) {
   uint8_t bytes[4];
   size_t idx = 0;
   uint32_t current_val = 0;
@@ -40,22 +40,22 @@ namespace net {
     if (internal::isdigit(c)) {
       // Reject octals and leading zeros
       if (digits_in_octet > 0 && current_val == 0)
-        return 0;
+        return false;
 
       current_val = current_val * 10 + internal::b36_char_to_int(c);
       if (current_val > 255)
-        return 0;
+        return false;
 
       ++digits_in_octet;
     } else if (c == '.') {
       if (digits_in_octet == 0 || idx == 3)
-        return 0; // Empty part or too many dots
+        return false; // Empty part or too many dots
 
       bytes[idx++] = static_cast<uint8_t>(current_val);
       current_val = 0;
       digits_in_octet = 0;
     } else {
-      return 0; // Not ASCII
+      return false;
     }
   }
 
@@ -63,9 +63,8 @@ namespace net {
     return 0;
 
   bytes[3] = static_cast<uint8_t>(current_val);
-  auto *addr = reinterpret_cast<struct in_addr *>(dst);
-  inline_memcpy(&addr->s_addr, bytes, 4);
-  return 1;
+  inline_memcpy(&dst.s_addr, bytes, 4);
+  return true;
 }
 
 cpp::optional<in_addr_t> inet_addr(cpp::string_view src) {

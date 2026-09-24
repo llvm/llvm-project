@@ -16,6 +16,7 @@
 #include "hdr/errno_macros.h"
 #include "hdr/stdint_proxy.h"
 #include "hdr/sys_socket_macros.h"
+#include "hdr/types/struct_in6_addr.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
@@ -32,7 +33,7 @@ LLVM_LIBC_FUNCTION(int, inet_pton,
     libc_errno = EAFNOSUPPORT;
     return -1;
   }
-  return net::str_to_ipv4(src, dst);
+  return net::str_to_ipv4(src, *reinterpret_cast<struct in_addr *>(dst));
 }
 
 } // namespace LIBC_NAMESPACE_DECL
