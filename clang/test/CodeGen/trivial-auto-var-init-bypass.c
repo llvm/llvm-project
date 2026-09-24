@@ -576,12 +576,71 @@ void equivalence_goto_form(int c) {
     use(&x);
   }
 }
+
+// A goto inside a statement expression in a loop condition. The goto's block is
+// recorded in BypassingForwardJumps as an AssertingVH and patched later, so this
+// exercises that the recorded block outlives the unreachable code the goto
+// leaves behind. Expect the init in while.cond, ahead of the branch to L.
+// ZERO-LABEL: define dso_local void @stmt_expr_goto(
+// ZERO-SAME: ) #[[ATTR0]] {
+// ZERO-NEXT:  [[ENTRY:.*:]]
+// ZERO-NEXT:    [[TMP:%.*]] = alloca i32, align 4
+// ZERO-NEXT:    [[X:%.*]] = alloca i32, align 4
+// ZERO-NEXT:    br label %[[WHILE_COND:.*]]
+// ZERO:       [[WHILE_COND]]:
+// ZERO-NEXT:    store i32 0, ptr [[X]], align 4, !annotation [[META1]]
+// ZERO-NEXT:    br label %[[L:.*]]
+// ZERO:       [[BB0:.*:]]
+// ZERO-NEXT:    store i32 1, ptr [[TMP]], align 4
+// ZERO-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP]], align 4
+// ZERO-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP1]], 0
+// ZERO-NEXT:    br i1 [[TOBOOL]], label %[[WHILE_BODY:.*]], label %[[WHILE_END:.*]]
+// ZERO:       [[WHILE_BODY]]:
+// ZERO-NEXT:    br label %[[WHILE_COND]], !llvm.loop [[LOOP4:![0-9]+]]
+// ZERO:       [[WHILE_END]]:
+// ZERO-NEXT:    store i32 0, ptr [[X]], align 4, !annotation [[META1]]
+// ZERO-NEXT:    br label %[[L]]
+// ZERO:       [[L]]:
+// ZERO-NEXT:    call void @use(ptr noundef [[X]])
+// ZERO-NEXT:    ret void
+//
+// PATTERN-LABEL: define dso_local void @stmt_expr_goto(
+// PATTERN-SAME: ) #[[ATTR0]] {
+// PATTERN-NEXT:  [[ENTRY:.*:]]
+// PATTERN-NEXT:    [[TMP:%.*]] = alloca i32, align 4
+// PATTERN-NEXT:    [[X:%.*]] = alloca i32, align 4
+// PATTERN-NEXT:    br label %[[WHILE_COND:.*]]
+// PATTERN:       [[WHILE_COND]]:
+// PATTERN-NEXT:    store i32 -1431655766, ptr [[X]], align 4, !annotation [[META1]]
+// PATTERN-NEXT:    br label %[[L:.*]]
+// PATTERN:       [[BB0:.*:]]
+// PATTERN-NEXT:    store i32 1, ptr [[TMP]], align 4
+// PATTERN-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP]], align 4
+// PATTERN-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP1]], 0
+// PATTERN-NEXT:    br i1 [[TOBOOL]], label %[[WHILE_BODY:.*]], label %[[WHILE_END:.*]]
+// PATTERN:       [[WHILE_BODY]]:
+// PATTERN-NEXT:    br label %[[WHILE_COND]], !llvm.loop [[LOOP4:![0-9]+]]
+// PATTERN:       [[WHILE_END]]:
+// PATTERN-NEXT:    store i32 -1431655766, ptr [[X]], align 4, !annotation [[META1]]
+// PATTERN-NEXT:    br label %[[L]]
+// PATTERN:       [[L]]:
+// PATTERN-NEXT:    call void @use(ptr noundef [[X]])
+// PATTERN-NEXT:    ret void
+//
+void stmt_expr_goto(void) {
+  while (({ goto L; 1; })) {}
+  int x;
+L:
+  use(&x);
+}
 //.
 // ZERO: [[META1]] = !{!"auto-init"}
 // ZERO: [[LOOP2]] = distinct !{[[LOOP2]], [[META3:![0-9]+]]}
 // ZERO: [[META3]] = !{!"llvm.loop.mustprogress"}
+// ZERO: [[LOOP4]] = distinct !{[[LOOP4]], [[META3]]}
 //.
 // PATTERN: [[META1]] = !{!"auto-init"}
 // PATTERN: [[LOOP2]] = distinct !{[[LOOP2]], [[META3:![0-9]+]]}
 // PATTERN: [[META3]] = !{!"llvm.loop.mustprogress"}
+// PATTERN: [[LOOP4]] = distinct !{[[LOOP4]], [[META3]]}
 //.
