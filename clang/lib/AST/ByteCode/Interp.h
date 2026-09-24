@@ -3633,10 +3633,19 @@ inline bool ArrayDecay(InterpState &S, CodePtr OpPC) {
       return true;
     }
 
-    if (!Ptr.getType()->isArrayType()) {
+    const OpaquePointer &OP = Ptr.asOpaquePointer();
+    if (!OP.getFieldType()->isArrayType()) {
       S.Stk.push<Pointer>(Ptr);
       return true;
     }
+
+    if (OP.isUnknownSizeArray() && OP.PathLength != 0) {
+      S.FFDiag(S.Current->getSource(OpPC),
+               diag::note_constexpr_unsupported_unsized_array);
+      S.Stk.push<Pointer>(Ptr);
+      return true;
+    }
+
     return arrayElemPtrOpaque(S, OpPC, Ptr,
                               APSInt(APInt::getZero(1), /*IsUnsigned=*/true),
                               /*AllowReplace=*/false);
