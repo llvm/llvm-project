@@ -172,7 +172,7 @@ define i32 @multiExitIncomplete(ptr %base) nounwind {
 ; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[BASE:%.*]], align 4
 ; CHECK-NEXT:    br label [[L2:%.*]]
 ; CHECK:       l2:
-; CHECK-NEXT:    br label [[L3:%.*]]
+; CHECK-NEXT:    br i1 true, label [[L3:%.*]], label [[EXIT2:%.*]]
 ; CHECK:       l3:
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp ne i32 [[VAL]], 0
 ; CHECK-NEXT:    br i1 [[CMP3]], label [[L1_1:%.*]], label [[EXIT3:%.*]]
@@ -181,7 +181,7 @@ define i32 @multiExitIncomplete(ptr %base) nounwind {
 ; CHECK-NEXT:    [[VAL_1:%.*]] = load i32, ptr [[ADR_1]], align 4
 ; CHECK-NEXT:    br label [[L2_1:%.*]]
 ; CHECK:       l2.1:
-; CHECK-NEXT:    br label [[L3_1:%.*]]
+; CHECK-NEXT:    br i1 true, label [[L3_1:%.*]], label [[EXIT2]]
 ; CHECK:       l3.1:
 ; CHECK-NEXT:    [[CMP3_1:%.*]] = icmp ne i32 [[VAL_1]], 0
 ; CHECK-NEXT:    br i1 [[CMP3_1]], label [[L1_2:%.*]], label [[EXIT3]]
@@ -190,7 +190,7 @@ define i32 @multiExitIncomplete(ptr %base) nounwind {
 ; CHECK-NEXT:    [[VAL_2:%.*]] = load i32, ptr [[ADR_2]], align 4
 ; CHECK-NEXT:    br label [[L2_2:%.*]]
 ; CHECK:       l2.2:
-; CHECK-NEXT:    br label [[L3_2:%.*]]
+; CHECK-NEXT:    br i1 true, label [[L3_2:%.*]], label [[EXIT2]]
 ; CHECK:       l3.2:
 ; CHECK-NEXT:    [[CMP3_2:%.*]] = icmp ne i32 [[VAL_2]], 0
 ; CHECK-NEXT:    br i1 [[CMP3_2]], label [[L1_3:%.*]], label [[EXIT3]]
@@ -199,7 +199,7 @@ define i32 @multiExitIncomplete(ptr %base) nounwind {
 ; CHECK-NEXT:    [[VAL_3:%.*]] = load i32, ptr [[ADR_3]], align 4
 ; CHECK-NEXT:    br label [[L2_3:%.*]]
 ; CHECK:       l2.3:
-; CHECK-NEXT:    br label [[L3_3:%.*]]
+; CHECK-NEXT:    br i1 true, label [[L3_3:%.*]], label [[EXIT2]]
 ; CHECK:       l3.3:
 ; CHECK-NEXT:    [[CMP3_3:%.*]] = icmp ne i32 [[VAL_3]], 0
 ; CHECK-NEXT:    br i1 [[CMP3_3]], label [[L1_4:%.*]], label [[EXIT3]]
@@ -208,14 +208,14 @@ define i32 @multiExitIncomplete(ptr %base) nounwind {
 ; CHECK-NEXT:    [[VAL_4:%.*]] = load i32, ptr [[ADR_4]], align 4
 ; CHECK-NEXT:    br label [[L2_4:%.*]]
 ; CHECK:       l2.4:
-; CHECK-NEXT:    br label [[L3_4:%.*]]
+; CHECK-NEXT:    br i1 true, label [[L3_4:%.*]], label [[EXIT2]]
 ; CHECK:       l3.4:
 ; CHECK-NEXT:    [[CMP3_4:%.*]] = icmp ne i32 [[VAL_4]], 0
 ; CHECK-NEXT:    br i1 [[CMP3_4]], label [[L1_5:%.*]], label [[EXIT3]]
 ; CHECK:       l1.5:
 ; CHECK-NEXT:    br i1 false, label [[L2_5:%.*]], label [[EXIT1:%.*]]
 ; CHECK:       l2.5:
-; CHECK-NEXT:    br i1 true, label [[L3_5:%.*]], label [[EXIT2:%.*]]
+; CHECK-NEXT:    br i1 true, label [[L3_5:%.*]], label [[EXIT2]]
 ; CHECK:       l3.5:
 ; CHECK-NEXT:    br label [[EXIT3]]
 ; CHECK:       exit1:
@@ -320,7 +320,7 @@ define void @nsw_latch(ptr %a) nounwind {
 ; CHECK:       for.cond.1:
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
-; CHECK-NEXT:    [[B_03_LCSSA:%.*]] = phi i32 [ 0, [[FOR_COND_1]] ], [ 0, [[FOR_COND]] ], [ 8, [[FOR_BODY_1]] ]
+; CHECK-NEXT:    [[B_03_LCSSA:%.*]] = phi i32 [ 8, [[FOR_COND_1]] ], [ 8, [[FOR_COND]] ], [ 8, [[FOR_BODY_1]] ]
 ; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ 0, [[FOR_COND_1]] ], [ 0, [[FOR_COND]] ], [ 1, [[FOR_BODY_1]] ]
 ; CHECK-NEXT:    store i32 [[B_03_LCSSA]], ptr [[A:%.*]], align 4
 ; CHECK-NEXT:    ret void
