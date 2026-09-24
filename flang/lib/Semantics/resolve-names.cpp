@@ -6571,7 +6571,7 @@ void DeclarationVisitor::Post(const parser::EnumerationTypeStmt &x) {
 // each enumerator name in the enclosing scope with 1-based ordinal init.
 bool DeclarationVisitor::Pre(const parser::EnumerationEnumeratorStmt &x) {
   Scope &enclosingScope{NonDerivedTypeScope()};
-  // The current DerivedType scope's symbol is the enumeration type.y
+  // The current DerivedType scope's symbol is the enumeration type.
   Symbol *typeSymbol{currScope().symbol()};
   CHECK(typeSymbol);
   auto &typeDetails{typeSymbol->get<DerivedTypeDetails>()};

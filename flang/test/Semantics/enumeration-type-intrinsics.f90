@@ -1,9 +1,5 @@
 ! RUN: not %flang_fc1 -fsyntax-only -fenumeration-type -pedantic %s 2>&1 | FileCheck %s
 ! Test intrinsics HUGE, NEXT, PREVIOUS, INT for enumeration types (F2023 7.6.2).
-! With lowering/runtime support in place, the previously-gated cases (non-
-! constant argument, STAT=, runtime boundary) now compile cleanly; the only
-! remaining compile-time errors are an unsupported INT kind and NEXT/PREVIOUS
-! boundary hits in a required-constant context.
 
 module enum_intrinsics_mod
   enumeration type :: color

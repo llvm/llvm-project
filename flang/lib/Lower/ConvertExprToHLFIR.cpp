@@ -2406,13 +2406,11 @@ private:
               if (ordinal.getType() != ty)
                 ordinal = builder.createConvert(loc, ty, ordinal);
               // F2023 7.6.2 para 5 requires the constructor value to be
-              // positive and <= the number of enumerators. This is a plain
-              // "shall" (not a numbered constraint), so the processor is not
-              // required to detect a violation; the standard leaves the
-              // behavior to the processor. We choose to always emit a runtime
-              // range check with error termination. This block could be placed
-              // behind an -fcheck=enum style flag if the community prefers an
-              // opt-in implementation.
+              // positive and <= the number of enumerators.  We choose to always
+              // emit a runtime range check with error termination. This block
+              // could be placed behind an -fcheck=enum style flag if the
+              // community prefers an opt-in implementation like gfortran's
+              // -fcheck=bounds.
               int count = ctor.derivedTypeSpec()
                               .typeSymbol()
                               .GetUltimate()

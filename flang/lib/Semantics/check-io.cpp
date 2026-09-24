@@ -1186,16 +1186,10 @@ using VisitedSymbolSet = std::unordered_set<const Symbol *>;
 // nested in a nonallocatable/nonpointer component with a specific defined I/O
 // procedure.
 //
-// The walk is memoized on the *instantiated scope* (derived.scope()), the key
-// that distinguishes two parameterized-derived-type instantiations sharing one
-// type symbol -- their defined-I/O shielding (HasDefinedIo) is decided per
-// instantiation.  Keying on the type symbol instead, with a set that is never
-// erased on unwind, made the result order-dependent: once the shared type
-// symbol was marked visited while walking a shielded instantiation, an
-// unshielded sibling instantiation was pruned and its unsafe component missed.
-// This is a two-color DFS: 'onPath' holds the scopes on the recursion stack
+// This is a two-color DFS to prevent missing unsafe components following a
+// shielded instantiation: 'onPath' holds the scopes on the recursion stack
 // (a repeat entry is a back edge from a recursive type and is pruned without
-// caching), and 'cache' memoizes each fully-walked subtree.
+// caching), and 'cache' memorizes each fully-walked subtree.
 using UnsafeComponentPathSet = std::unordered_set<const Scope *>;
 using UnsafeComponentCache = std::unordered_map<const Scope *, const Symbol *>;
 
