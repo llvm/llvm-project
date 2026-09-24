@@ -736,7 +736,7 @@ InstructionCost RISCVTTIImpl::getSlideCost(FixedVectorType *Tp,
 InstructionCost RISCVTTIImpl::getShuffleCost(
     TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
     TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
-    VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CxtI,
+    VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CtxI,
     TTI::VectorInstrContext VIC) const {
   assert((Mask.empty() || DstTy->isScalableTy() ||
           Mask.size() == DstTy->getElementCount().getKnownMinValue()) &&
@@ -2837,7 +2837,7 @@ std::optional<InstructionCost>
 RISCVTTIImpl::getCombinedArithmeticInstructionCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Opd1Info, TTI::OperandValueInfo Opd2Info,
-    ArrayRef<const Value *> Args, const Instruction *CxtI) const {
+    ArrayRef<const Value *> Args, const Instruction *CtxI) const {
   // Vector unsigned division/remainder will be simplified to shifts/masks.
   if ((Opcode == Instruction::UDiv || Opcode == Instruction::URem) &&
       Opd2Info.isConstant() && Opd2Info.isPowerOf2()) {
@@ -2854,25 +2854,25 @@ RISCVTTIImpl::getCombinedArithmeticInstructionCost(
 InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
-    ArrayRef<const Value *> Args, const Instruction *CxtI) const {
+    ArrayRef<const Value *> Args, const Instruction *CtxI) const {
 
   // TODO: Handle more cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput)
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
-                                         Args, CxtI);
+                                         Args, CtxI);
 
   if (isa<FixedVectorType>(Ty) && !ST->useRVVForFixedLengthVectors())
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
-                                         Args, CxtI);
+                                         Args, CtxI);
 
   // Skip if scalar size of Ty is bigger than ELEN.
   if (isa<VectorType>(Ty) && Ty->getScalarSizeInBits() > ST->getELen())
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
-                                         Args, CxtI);
+                                         Args, CtxI);
 
   if (std::optional<InstructionCost> CombinedCost =
           getCombinedArithmeticInstructionCost(Opcode, Ty, CostKind, Op1Info,
-                                               Op2Info, Args, CxtI))
+                                               Op2Info, Args, CtxI))
     return *CombinedCost;
 
   // Legalize the type.
@@ -2895,7 +2895,7 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
         return Entry->Cost * LT.first;
 
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
-                                         Args, CxtI);
+                                         Args, CtxI);
   }
 
   // f16 with zvfhmin and bf16 will be promoted to f32.
@@ -2987,7 +2987,7 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
     // differentiate them.
     return CastCost + ConstantMatCost +
            BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
-                                         Args, CxtI);
+                                         Args, CtxI);
   }
 
   InstructionCost InstrCost = getRISCVInstructionCost(Op, LT.second, CostKind);
