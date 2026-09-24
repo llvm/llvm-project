@@ -1,5 +1,11 @@
 ; RUN: opt -passes=memcpyopt -S %s | FileCheck %s
 
+; Verify that after call-slot forwarding collapses the %a -> %b -> %c
+; memcpy chain, the surviving memcpy's !DIAssignID links to %c's assignment
+; (the actual destination), not %a's. Before the fix, it incorrectly kept
+; the !DIAssignID from the first hop, so %c's dbg_assign pointed at %a.
+; Fix #213642
+
 @constant = private constant [4 x i8] c"abc\00"
 
 define i8 @memcpy_chain() !dbg !5 {
