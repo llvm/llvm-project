@@ -14,13 +14,15 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FILE_SCAN_IMPL_H
 #define LLVM_LIBC_SRC___SUPPORT_FILE_SCAN_IMPL_H
 
+#include "hdr/errno_macros.h"
 #include "hdr/func/free.h"
 #include "hdr/func/malloc.h"
+#include "hdr/func/realloc.h"
 #include "hdr/types/struct_dirent.h"
 #include "include/llvm-libc-types/__scandir_compare_t.h"
 #include "include/llvm-libc-types/__scandir_filter_t.h"
-#include "src/__support/CPP/vector.h"
-#include "src/__support/File/dir.h"
+#include "src/__support/CPP/limits.h"
+#include "src/__support/error_or.h"
 #include "src/stdlib/qsort_util.h"
 #include "src/string/memory_utils/inline_memcpy.h"
 
@@ -36,15 +38,21 @@ ErrorOr<int> scan_impl(const char *name, struct dirent ***namelist,
   }
   DirType *dir = res_open.value();
 
-  cpp::vector<struct dirent *> entries;
-
-  auto free_entries = [&entries]() {
-    for (struct dirent *entry : entries) {
-      ::free(entry);
-    }
-  };
-
   int saved_errno = 0;
+  struct dirent **entries = nullptr;
+  size_t count = 0;
+  size_t buffer_capacity = 0;
+
+  auto free_entries = [&entries, &count]() {
+    if (entries == nullptr) {
+      return;
+    }
+    for (size_t i = 0; i < count; ++i) {
+      ::free(entries[i]);
+    }
+
+    ::free(entries);
+  };
 
   while (true) {
     auto res_read = dir->read();
@@ -58,14 +66,35 @@ ErrorOr<int> scan_impl(const char *name, struct dirent ***namelist,
       break;
     }
 
-    // Note, filter may modify errno
     if (filter != nullptr && !filter(entry)) {
       continue;
     }
 
-    // struct dirent contains an equivalent of a flexible array memeber, so
-    // we can't use sizeof and d_reclen member is only available on Linux.
-    size_t reclen = platform_dir_reclen(entry);
+    if (count >= buffer_capacity) {
+      size_t new_capacity = (buffer_capacity == 0) ? 8 : buffer_capacity * 2;
+      // Cap to MAX_INT since we must return the number of entreis as int
+      // anyway.
+      if (new_capacity > cpp::numeric_limits<int>::max()) {
+        new_capacity = cpp::numeric_limits<int>::max();
+      }
+      // Overflow check
+      if (new_capacity >
+          cpp::numeric_limits<size_t>::max() / sizeof(struct dirent *)) {
+        saved_errno = EOVERFLOW;
+        break;
+      }
+
+      struct dirent **bigger_buffer = static_cast<struct dirent **>(
+          ::realloc(entries, new_capacity * sizeof(struct dirent *)));
+      if (bigger_buffer == nullptr) {
+        saved_errno = ENOMEM;
+        break;
+      }
+      buffer_capacity = new_capacity;
+      entries = bigger_buffer;
+    }
+
+    size_t reclen = DirType::reclen(entry);
 
     struct dirent *new_entry = static_cast<struct dirent *>(::malloc(reclen));
     if (new_entry == nullptr) {
@@ -74,15 +103,10 @@ ErrorOr<int> scan_impl(const char *name, struct dirent ***namelist,
     }
     inline_memcpy(new_entry, entry, reclen);
 
-    if (!entries.push_back(new_entry)) {
-      ::free(new_entry);
-      saved_errno = ENOMEM;
-      break;
-    }
+    entries[count] = new_entry;
+    count++;
   }
 
-  // Closedir may modify errno and set it to, e.g. EBADF, which is not amongst
-  // POSIX-defined error codes for scandir.
   dir->close();
 
   if (saved_errno != 0) {
@@ -90,37 +114,17 @@ ErrorOr<int> scan_impl(const char *name, struct dirent ***namelist,
     return LIBC_NAMESPACE::Error(saved_errno);
   }
 
-  size_t alloc_size = entries.size() * sizeof(struct dirent *);
-  // The filter may have filtered out all entries. We'd like to avoid
-  // malloc(0) in this instance as its exact semantics might be
-  // implementation-dependent.
-  if (alloc_size == 0) {
-    alloc_size = sizeof(struct dirent *);
-  }
-
-  struct dirent **result = static_cast<struct dirent **>(::malloc(alloc_size));
-
-  if (result == nullptr) {
-    free_entries();
-    return LIBC_NAMESPACE::Error(ENOMEM);
-  }
-
-  if (compare != nullptr && !entries.empty()) {
+  if (compare != nullptr && count > 1) {
     auto cmp_fn = [compare](const void *a, const void *b) {
       auto left = static_cast<const struct dirent **>(const_cast<void *>(a));
       auto right = static_cast<const struct dirent **>(const_cast<void *>(b));
       return compare(left, right);
     };
-    internal::unstable_sort(entries.data(), entries.size(),
-                            sizeof(struct dirent *), cmp_fn);
+    internal::unstable_sort(entries, count, sizeof(struct dirent *), cmp_fn);
   }
 
-  for (size_t i = 0; i < entries.size(); ++i) {
-    result[i] = entries[i];
-  }
-
-  *namelist = result;
-  return static_cast<int>(entries.size());
+  *namelist = entries;
+  return static_cast<int>(count);
 }
 
 } // namespace internal

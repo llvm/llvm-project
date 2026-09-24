@@ -54,8 +54,7 @@ add_libc_test(
   DEPENDS
     libc.hdr.types.struct_dirent
     libc.src.__support.File.scan_impl
-    libc.src.__support.File.dir
-    libc.src.__support.File.platform_dir
+    libc.src.__support.error_or
 )
 
 set(platform_stream_targets "platform_stdout;platform_stdin;platform_stderr")
