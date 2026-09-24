@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ABI/DefaultTargetInfo.h"
 #include "llvm/ABI/FunctionInfo.h"
 #include "llvm/ABI/TargetInfo.h"
 #include "llvm/ABI/Types.h"
@@ -20,7 +21,7 @@
 namespace llvm {
 namespace abi {
 
-class AMDGPUTargetInfo final : public TargetInfo {
+class AMDGPUTargetInfo final : public DefaultTargetInfo {
 private:
   static const unsigned MaxNumRegsForArgsRet = 16;
 
@@ -35,20 +36,21 @@ private:
   ArgInfo classifyArgumentType(const Type *Ty, bool Variadic,
                                unsigned &NumRegsLeft) const;
 
-  /// Target-independent fallback classification for arguments and returns.
-  ArgInfo classifyDefaultArgumentType(const Type *Ty) const;
-  ArgInfo classifyDefaultReturnType(const Type *Ty) const;
-
   /// Estimate number of registers the type will use when passed in registers.
   uint64_t getNumRegsForType(const Type *Ty) const;
 
 public:
   AMDGPUTargetInfo(TypeBuilder &TypeBuilder, const ABICompatInfo &Compat,
                    bool CoerceGenericPtrArgToGlobal)
-      : TargetInfo(TypeBuilder), CompatInfo(Compat),
+      : DefaultTargetInfo(TypeBuilder), CompatInfo(Compat),
         CoerceGenericPtrArgToGlobal(CoerceGenericPtrArgToGlobal) {}
 
   const ABICompatInfo &getABICompatInfo() const override { return CompatInfo; }
+
+  /// Indirect arguments live in the private (alloca) address space on AMDGPU.
+  unsigned getAllocaAddrSpace() const override {
+    return AMDGPUAS::PRIVATE_ADDRESS;
+  }
 
   void computeInfo(FunctionInfo &FI) const override;
 };
@@ -80,57 +82,6 @@ uint64_t AMDGPUTargetInfo::getNumRegsForType(const Type *Ty) const {
   return (Ty->getSizeInBits().getFixedValue() + 31) / 32;
 }
 
-// Natural-alignment indirect in the alloca address space (PRIVATE on AMDGPU),
-// ByVal by default.
-static ArgInfo getNaturalAlignIndirectPrivate(const Type *Ty,
-                                              bool ByVal = true) {
-  return ArgInfo::getIndirect(Ty->getAlignment(), ByVal,
-                              /*AddrSpace=*/AMDGPUAS::PRIVATE_ADDRESS);
-}
-
-// A _BitInt wider than int128 is passed indirectly. AMDGPU has int128, so the
-// threshold is 128 bits.
-static bool isOversizedBitInt(const Type *Ty) {
-  const auto *IT = dyn_cast<IntegerType>(Ty);
-  return IT && IT->isBitInt() && IT->getSizeInBits().getFixedValue() > 128;
-}
-
-// Default argument classification for types not handled by the AMDGPU rules.
-ArgInfo AMDGPUTargetInfo::classifyDefaultArgumentType(const Type *Ty) const {
-  Ty = useFirstFieldIfTransparentUnion(Ty);
-
-  if (isAggregateTypeForABI(Ty)) {
-    if (RecordArgABI RAA = getRecordArgABI(Ty); RAA != RAA_Default)
-      return getNaturalAlignIndirectPrivate(Ty,
-                                            /*ByVal=*/RAA ==
-                                                RAA_DirectInMemory);
-    return getNaturalAlignIndirectPrivate(Ty);
-  }
-
-  if (isOversizedBitInt(Ty))
-    return getNaturalAlignIndirectPrivate(Ty);
-
-  const auto *IT = dyn_cast<IntegerType>(Ty);
-  return (IT && isPromotableInteger(IT)) ? ArgInfo::getExtend(Ty)
-                                         : ArgInfo::getDirect();
-}
-
-// Default return classification for types not handled by the AMDGPU rules.
-ArgInfo AMDGPUTargetInfo::classifyDefaultReturnType(const Type *Ty) const {
-  if (Ty->isVoid())
-    return ArgInfo::getIgnore();
-
-  if (isAggregateTypeForABI(Ty))
-    return getNaturalAlignIndirectPrivate(Ty);
-
-  if (isOversizedBitInt(Ty))
-    return getNaturalAlignIndirectPrivate(Ty);
-
-  const auto *IT = dyn_cast<IntegerType>(Ty);
-  return (IT && isPromotableInteger(IT)) ? ArgInfo::getExtend(Ty)
-                                         : ArgInfo::getDirect();
-}
-
 ArgInfo AMDGPUTargetInfo::classifyReturnType(const Type *RetTy) const {
   if (RetTy->isVoid())
     return ArgInfo::getIgnore();
@@ -150,7 +101,7 @@ ArgInfo AMDGPUTargetInfo::classifyReturnType(const Type *RetTy) const {
         return ArgInfo::getDirect(SeltTy);
 
       if (RT && RT->hasFlexibleArrayMember())
-        return classifyDefaultReturnType(RetTy);
+        return DefaultTargetInfo::classifyReturnType(RetTy);
 
       // Pack aggregates <= 4 bytes into single VGPR or pair.
       uint64_t Size = RetTy->getSizeInBits().getFixedValue();
@@ -171,7 +122,7 @@ ArgInfo AMDGPUTargetInfo::classifyReturnType(const Type *RetTy) const {
   }
 
   // Otherwise just do the default thing.
-  return classifyDefaultReturnType(RetTy);
+  return DefaultTargetInfo::classifyReturnType(RetTy);
 }
 
 /// For kernels all parameters are really passed in a special buffer. It doesn't
@@ -195,9 +146,13 @@ ArgInfo AMDGPUTargetInfo::classifyKernelArgumentType(const Type *Ty) const {
     }
   }
 
+  // FIXME: This doesn't apply the optimization of coercing pointers in structs
+  // to global address space when using byref. This would require implementing a
+  // new kind of coercion of the in-memory type when for indirect arguments.
   if (isAggregateTypeForABI(Ty))
-    return ArgInfo::getIndirect(Ty->getAlignment(), /*ByVal=*/false,
-                                /*AddrSpace=*/AMDGPUAS::CONSTANT_ADDRESS);
+    return ArgInfo::getIndirectAliased(
+        Ty->getAlignment(),
+        /*AddrSpace=*/AMDGPUAS::CONSTANT_ADDRESS);
 
   // CanBeFlattened=false keeps the struct intact.
   return ArgInfo::getDirect(Ty, /*Offset=*/0, /*Align=*/std::nullopt,
@@ -224,7 +179,7 @@ ArgInfo AMDGPUTargetInfo::classifyArgumentType(const Type *Ty, bool Variadic,
                                   /*AddrSpace=*/AMDGPUAS::PRIVATE_ADDRESS);
 
     // Ignore empty structs/unions.
-    if (const auto *RT = dyn_cast<RecordType>(Ty); RT && RT->isEmpty())
+    if (Ty->isEmptyRecord())
       return ArgInfo::getIgnore();
 
     // Lower single-element structs to just pass a regular value.
@@ -233,7 +188,7 @@ ArgInfo AMDGPUTargetInfo::classifyArgumentType(const Type *Ty, bool Variadic,
 
     if (const auto *RT = dyn_cast<RecordType>(Ty);
         RT && RT->hasFlexibleArrayMember())
-      return classifyDefaultArgumentType(Ty);
+      return DefaultTargetInfo::classifyArgumentType(Ty);
 
     // Pack aggregates <= 8 bytes into single VGPR or pair.
     uint64_t Size = Ty->getSizeInBits().getFixedValue();
@@ -260,12 +215,12 @@ ArgInfo AMDGPUTargetInfo::classifyArgumentType(const Type *Ty, bool Variadic,
     }
 
     // Pass a struct argument by reference rather than by value.
-    return ArgInfo::getIndirect(Ty->getAlignment(), /*ByVal=*/false,
-                                /*AddrSpace=*/AMDGPUAS::PRIVATE_ADDRESS);
+    return ArgInfo::getIndirectAliased(Ty->getAlignment(),
+                                       /*AddrSpace=*/AMDGPUAS::PRIVATE_ADDRESS);
   }
 
   // Otherwise just do the default thing.
-  ArgInfo AI = classifyDefaultArgumentType(Ty);
+  ArgInfo AI = DefaultTargetInfo::classifyArgumentType(Ty);
   if (!AI.isIndirect()) {
     uint64_t NumRegs = getNumRegsForType(Ty);
     NumRegsLeft -= std::min(NumRegs, uint64_t{NumRegsLeft});

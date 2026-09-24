@@ -160,6 +160,20 @@ static void expectIndirect(const ArgInfo &Info, llvm::Align ExpectedAlign,
   EXPECT_EQ(Info.getIndirectAddrSpace(), AddrSpace);
 }
 
+// Aliased indirect carries an address space but no byval, since the pointer
+// refers to an object the caller owns.
+static void expectIndirectAliased(const ArgInfo &Info,
+                                  llvm::Align ExpectedAlign,
+                                  unsigned AddrSpace) {
+  ASSERT_TRUE(Info.isIndirectAliased());
+  EXPECT_EQ(Info.getIndirectAlign(), ExpectedAlign);
+  EXPECT_EQ(Info.getIndirectAddrSpace(), AddrSpace);
+}
+
+//===----------------------------------------------------------------------===//
+// Argument classification
+//===----------------------------------------------------------------------===//
+
 // A 32-bit integer and a pointer-sized scalar pass directly in their own type.
 TEST_F(AMDGPUTargetInfoTest, ScalarPassesDirect) {
   std::unique_ptr<FunctionInfo> FI;
@@ -180,8 +194,8 @@ TEST_F(AMDGPUTargetInfoTest, PromotableIntegerExtends) {
   EXPECT_TRUE(Info.isSignExt());
 }
 
-// An oversized _BitInt (> 128 bits) is passed indirectly, byval, like classic
-// DefaultABIInfo. The 128-bit boundary width stays direct.
+// An oversized _BitInt (> 128 bits) is passed indirectly, byval.
+// The 128-bit boundary width stays direct.
 TEST_F(AMDGPUTargetInfoTest, OversizedBitIntArgumentIsIndirect) {
   std::unique_ptr<FunctionInfo> FI;
   std::unique_ptr<TargetInfo> TI;
@@ -195,18 +209,6 @@ TEST_F(AMDGPUTargetInfoTest, OversizedBitIntArgumentIsIndirect) {
                                                /*Signed=*/true,
                                                /*IsBitInt=*/true);
   EXPECT_TRUE(classifyArg(BitInt128, FI, TI).isDirect());
-}
-
-// An oversized _BitInt return is indirect too. Classic DefaultABIInfo's
-// getNaturalAlignIndirect defaults ByVal to true, so returns carry it too.
-TEST_F(AMDGPUTargetInfoTest, OversizedBitIntReturnIsIndirect) {
-  std::unique_ptr<FunctionInfo> FI;
-  std::unique_ptr<TargetInfo> TI;
-  const ABIType *BitInt256 = TB.getIntegerType(256, llvm::Align(16),
-                                               /*Signed=*/true,
-                                               /*IsBitInt=*/true);
-  expectIndirect(classifyRet(BitInt256, FI, TI), llvm::Align(16),
-                 /*ByVal=*/true, llvm::AMDGPUAS::PRIVATE_ADDRESS);
 }
 
 // Aggregates <= 16/32/64 bits pack into i16 / i32 / [2 x i32].
@@ -227,6 +229,20 @@ TEST_F(AMDGPUTargetInfoTest, SmallAggregatesPackIntoRegisters) {
   expectDirectI32Pair(classifyArg(S64, FI, TI));
 }
 
+// A mid-sized aggregate (> 8 bytes) that still fits the 16-register budget is
+// passed and returned directly, uncoerced.
+TEST_F(AMDGPUTargetInfoTest, MidSizeAggregateFitsInRegistersIsDirect) {
+  std::unique_ptr<FunctionInfo> FI;
+  std::unique_ptr<TargetInfo> TI;
+  // Two i32[4] fields => 8 registers, within MaxNumRegsForArgsRet (16).
+  const ABIType *Arr =
+      TB.getArrayType(I32, /*NumElements=*/4, /*SizeInBits=*/128);
+  const ABIType *Mid =
+      recordOf({FieldInfo(Arr, 0), FieldInfo(Arr, 128)}, 256, llvm::Align(4));
+  expectUncoercedDirect(classifyArg(Mid, FI, TI));
+  expectUncoercedDirect(classifyRet(Mid, FI, TI));
+}
+
 // An empty struct is dropped from the argument list.
 TEST_F(AMDGPUTargetInfoTest, EmptyAggregateIsIgnored) {
   std::unique_ptr<FunctionInfo> FI;
@@ -243,7 +259,7 @@ TEST_F(AMDGPUTargetInfoTest, SingleElementStructUnwraps) {
 }
 
 // A large aggregate that does not fit the 16-register budget is passed by
-// reference in the private address space.
+// reference (aliased) in the private address space.
 TEST_F(AMDGPUTargetInfoTest, OversizedAggregateIsIndirectPrivate) {
   std::unique_ptr<FunctionInfo> FI;
   std::unique_ptr<TargetInfo> TI;
@@ -252,8 +268,28 @@ TEST_F(AMDGPUTargetInfoTest, OversizedAggregateIsIndirectPrivate) {
                                          /*SizeInBits=*/320);
   const ABIType *Big = recordOf({FieldInfo(ArrTy, 0), FieldInfo(ArrTy, 320)},
                                 640, llvm::Align(4));
-  expectIndirect(classifyArg(Big, FI, TI), llvm::Align(4), /*ByVal=*/false,
-                 llvm::AMDGPUAS::PRIVATE_ADDRESS);
+  expectIndirectAliased(classifyArg(Big, FI, TI), llvm::Align(4),
+                        llvm::AMDGPUAS::PRIVATE_ADDRESS);
+}
+
+// Once the 16-register budget is spent by earlier arguments, a later aggregate
+// that would otherwise fit is passed by reference (aliased) in private memory.
+TEST_F(AMDGPUTargetInfoTest, ArgumentRegisterBudgetExhaustionForcesIndirect) {
+  std::unique_ptr<TargetInfo> TI = target();
+  // Each argument uses 8 of the 16 available registers.
+  const ABIType *Arr =
+      TB.getArrayType(I32, /*NumElements=*/4, /*SizeInBits=*/128);
+  const ABIType *Mid =
+      recordOf({FieldInfo(Arr, 0), FieldInfo(Arr, 128)}, 256, llvm::Align(4));
+  std::unique_ptr<FunctionInfo> FI =
+      FunctionInfo::create(CallingConv::C, Void, {Mid, Mid, Mid});
+  TI->computeInfo(*FI);
+  // The first two fit and pass directly.
+  expectUncoercedDirect(FI->getArgInfo(0).Info);
+  expectUncoercedDirect(FI->getArgInfo(1).Info);
+  // The third exhausts the budget and is passed by reference.
+  expectIndirectAliased(FI->getArgInfo(2).Info, llvm::Align(4),
+                        llvm::AMDGPUAS::PRIVATE_ADDRESS);
 }
 
 // A record that cannot pass in registers (non-trivial C++ type) is passed
@@ -268,16 +304,17 @@ TEST_F(AMDGPUTargetInfoTest, NonTrivialRecordIsIndirectPrivate) {
                  /*ByVal=*/false, llvm::AMDGPUAS::PRIVATE_ADDRESS);
 }
 
-// A non-trivial C++ record return is indirect in the generic (flat) address
-// space with ByVal=false, matching classic's getSRetAddrSpace(LangAS::Default).
-TEST_F(AMDGPUTargetInfoTest, NonTrivialRecordReturnIsIndirectFlat) {
+// A record with a flexible array member falls back to the default classifier,
+// so it is passed indirectly (byval) in private memory.
+TEST_F(AMDGPUTargetInfoTest, FlexibleArrayMemberFallsBackToDefault) {
   std::unique_ptr<FunctionInfo> FI;
   std::unique_ptr<TargetInfo> TI;
-  const ABIType *CannotPass = TB.getRecordType(
-      {FieldInfo(I32, 0)}, llvm::TypeSize::getFixed(32), llvm::Align(4),
-      llvm::Align(4), StructPacking::Default, {}, {}, RecordFlags::IsCXXRecord);
-  expectIndirect(classifyRet(CannotPass, FI, TI), llvm::Align(4),
-                 /*ByVal=*/false, llvm::AMDGPUAS::FLAT_ADDRESS);
+  const ABIType *Flex = TB.getRecordType(
+      {FieldInfo(I32, 0), FieldInfo(I32, 32)}, llvm::TypeSize::getFixed(64),
+      llvm::Align(4), llvm::Align(4), StructPacking::Default, {}, {},
+      RecordFlags::CanPassInRegisters | RecordFlags::HasFlexibleArrayMember);
+  expectIndirect(classifyArg(Flex, FI, TI), llvm::Align(4), /*ByVal=*/true,
+                 llvm::AMDGPUAS::PRIVATE_ADDRESS);
 }
 
 // A variadic argument bypasses register packing and passes through unchanged,
@@ -294,17 +331,105 @@ TEST_F(AMDGPUTargetInfoTest, VariadicArgumentPassesDirect) {
   EXPECT_FALSE(FI->getArgInfo(0).Info.getCanBeFlattened());
 }
 
-// Kernel aggregate arguments are passed by reference in the constant address
-// space (the kernarg segment), never byval.
-TEST_F(AMDGPUTargetInfoTest, KernelAggregateIsIndirectConstant) {
+//===----------------------------------------------------------------------===//
+// Return classification
+//===----------------------------------------------------------------------===//
+
+// A void return is ignored.
+TEST_F(AMDGPUTargetInfoTest, VoidReturnIsIgnored) {
   std::unique_ptr<FunctionInfo> FI;
   std::unique_ptr<TargetInfo> TI;
-  const ABIType *S =
-      recordOf({FieldInfo(I32, 0), FieldInfo(I32, 32)}, 64, llvm::Align(4));
-  expectIndirect(classifyArg(S, FI, TI, CallingConv::AMDGPU_KERNEL),
-                 llvm::Align(4), /*ByVal=*/false,
-                 llvm::AMDGPUAS::CONSTANT_ADDRESS);
+  EXPECT_TRUE(classifyRet(Void, FI, TI).isIgnore());
 }
+
+// An empty struct return is ignored, like an empty argument.
+TEST_F(AMDGPUTargetInfoTest, EmptyAggregateReturnIsIgnored) {
+  std::unique_ptr<FunctionInfo> FI;
+  std::unique_ptr<TargetInfo> TI;
+  EXPECT_TRUE(classifyRet(Empty, FI, TI).isIgnore());
+}
+
+// A single-element struct return is unwrapped to its inner scalar.
+TEST_F(AMDGPUTargetInfoTest, SingleElementStructReturnUnwraps) {
+  std::unique_ptr<FunctionInfo> FI;
+  std::unique_ptr<TargetInfo> TI;
+  const ABIType *Wrapper = recordOf({FieldInfo(F32, 0)}, 32, llvm::Align(4));
+  expectDirectFloat(classifyRet(Wrapper, FI, TI), llvm::APFloat::IEEEsingle());
+}
+
+// Aggregate returns <= 16/32/64 bits pack into i16 / i32 / [2 x i32].
+TEST_F(AMDGPUTargetInfoTest, SmallAggregateReturnPacks) {
+  std::unique_ptr<FunctionInfo> FI;
+  std::unique_ptr<TargetInfo> TI;
+
+  const ABIType *S16 =
+      recordOf({FieldInfo(I8, 0), FieldInfo(I8, 8)}, 16, llvm::Align(1));
+  expectDirectInteger(classifyRet(S16, FI, TI), 16);
+
+  const ABIType *S32 =
+      recordOf({FieldInfo(I16, 0), FieldInfo(I16, 16)}, 32, llvm::Align(2));
+  expectDirectInteger(classifyRet(S32, FI, TI), 32);
+
+  const ABIType *S64 =
+      recordOf({FieldInfo(I32, 0), FieldInfo(I32, 32)}, 64, llvm::Align(4));
+  expectDirectI32Pair(classifyRet(S64, FI, TI));
+}
+
+// An oversized _BitInt return is indirect too. Classic DefaultABIInfo's
+// getNaturalAlignIndirect defaults ByVal to true, so returns carry it too.
+TEST_F(AMDGPUTargetInfoTest, OversizedBitIntReturnIsIndirect) {
+  std::unique_ptr<FunctionInfo> FI;
+  std::unique_ptr<TargetInfo> TI;
+  const ABIType *BitInt256 = TB.getIntegerType(256, llvm::Align(16),
+                                               /*Signed=*/true,
+                                               /*IsBitInt=*/true);
+  expectIndirect(classifyRet(BitInt256, FI, TI), llvm::Align(16),
+                 /*ByVal=*/true, llvm::AMDGPUAS::PRIVATE_ADDRESS);
+}
+
+// A large trivial aggregate return that overflows the register budget is
+// returned indirectly (byval) in the private address space. This is distinct
+// from a non-trivial return, which lands in the flat address space.
+TEST_F(AMDGPUTargetInfoTest, OversizedAggregateReturnIsIndirectPrivate) {
+  std::unique_ptr<FunctionInfo> FI;
+  std::unique_ptr<TargetInfo> TI;
+  // Two i32[10] fields => 20 registers, above MaxNumRegsForArgsRet (16).
+  const ABIType *ArrTy =
+      TB.getArrayType(I32, /*NumElements=*/10, /*SizeInBits=*/320);
+  const ABIType *Big = recordOf({FieldInfo(ArrTy, 0), FieldInfo(ArrTy, 320)},
+                                640, llvm::Align(4));
+  expectIndirect(classifyRet(Big, FI, TI), llvm::Align(4), /*ByVal=*/true,
+                 llvm::AMDGPUAS::PRIVATE_ADDRESS);
+}
+
+// A non-trivial C++ record return is indirect in the generic (flat) address
+// space with ByVal=false, matching classic's getSRetAddrSpace(LangAS::Default).
+TEST_F(AMDGPUTargetInfoTest, NonTrivialRecordReturnIsIndirectFlat) {
+  std::unique_ptr<FunctionInfo> FI;
+  std::unique_ptr<TargetInfo> TI;
+  const ABIType *CannotPass = TB.getRecordType(
+      {FieldInfo(I32, 0)}, llvm::TypeSize::getFixed(32), llvm::Align(4),
+      llvm::Align(4), StructPacking::Default, {}, {}, RecordFlags::IsCXXRecord);
+  expectIndirect(classifyRet(CannotPass, FI, TI), llvm::Align(4),
+                 /*ByVal=*/false, llvm::AMDGPUAS::FLAT_ADDRESS);
+}
+
+// A record that cannot pass in registers is returned indirectly (sret-style,
+// ByVal=false) via the target-independent return rule.
+TEST_F(AMDGPUTargetInfoTest, NonTrivialRecordReturnIsIndirect) {
+  std::unique_ptr<FunctionInfo> FI;
+  std::unique_ptr<TargetInfo> TI;
+  const ABIType *CannotPass = TB.getRecordType(
+      {FieldInfo(I32, 0)}, llvm::TypeSize::getFixed(32), llvm::Align(4),
+      llvm::Align(4), StructPacking::Default, {}, {}, RecordFlags::IsCXXRecord);
+  const ArgInfo &Info = classifyRet(CannotPass, FI, TI);
+  ASSERT_TRUE(Info.isIndirect());
+  EXPECT_FALSE(Info.getIndirectByVal());
+}
+
+//===----------------------------------------------------------------------===//
+// Kernel argument classification
+//===----------------------------------------------------------------------===//
 
 // Kernel direct arguments are passed directly and kept intact.
 TEST_F(AMDGPUTargetInfoTest, KernelScalarIsDirect) {
@@ -313,6 +438,29 @@ TEST_F(AMDGPUTargetInfoTest, KernelScalarIsDirect) {
   const ArgInfo &Info = classifyArg(I32, FI, TI, CallingConv::AMDGPU_KERNEL);
   expectDirectInteger(Info, 32);
   EXPECT_FALSE(Info.getCanBeFlattened());
+}
+
+// A single-element struct kernel argument is unwrapped and passed directly,
+// kept intact.
+TEST_F(AMDGPUTargetInfoTest, KernelSingleElementStructUnwraps) {
+  std::unique_ptr<FunctionInfo> FI;
+  std::unique_ptr<TargetInfo> TI;
+  const ABIType *Wrapper = recordOf({FieldInfo(F32, 0)}, 32, llvm::Align(4));
+  const ArgInfo &Info =
+      classifyArg(Wrapper, FI, TI, CallingConv::AMDGPU_KERNEL);
+  expectDirectFloat(Info, llvm::APFloat::IEEEsingle());
+  EXPECT_FALSE(Info.getCanBeFlattened());
+}
+
+// Kernel aggregate arguments are passed by reference (aliased) in the constant
+// address space, never byval.
+TEST_F(AMDGPUTargetInfoTest, KernelAggregateIsIndirectConstant) {
+  std::unique_ptr<FunctionInfo> FI;
+  std::unique_ptr<TargetInfo> TI;
+  const ABIType *S =
+      recordOf({FieldInfo(I32, 0), FieldInfo(I32, 32)}, 64, llvm::Align(4));
+  expectIndirectAliased(classifyArg(S, FI, TI, CallingConv::AMDGPU_KERNEL),
+                        llvm::Align(4), llvm::AMDGPUAS::CONSTANT_ADDRESS);
 }
 
 // Under HIP a generic scalar-pointer kernel argument is coerced to a global
@@ -346,35 +494,6 @@ TEST_F(AMDGPUTargetInfoTest, KernelGenericPointerUnchangedByDefault) {
   expectDirectPointerAS(
       classifyArg(GenericPtr, FI, TI, CallingConv::AMDGPU_KERNEL),
       llvm::AMDGPUAS::FLAT_ADDRESS);
-}
-
-// A void return is ignored.
-TEST_F(AMDGPUTargetInfoTest, VoidReturnIsIgnored) {
-  std::unique_ptr<FunctionInfo> FI;
-  std::unique_ptr<TargetInfo> TI;
-  EXPECT_TRUE(classifyRet(Void, FI, TI).isIgnore());
-}
-
-// A <= 8-byte aggregate return packs into [2 x i32].
-TEST_F(AMDGPUTargetInfoTest, SmallAggregateReturnPacks) {
-  std::unique_ptr<FunctionInfo> FI;
-  std::unique_ptr<TargetInfo> TI;
-  const ABIType *S64 =
-      recordOf({FieldInfo(I32, 0), FieldInfo(I32, 32)}, 64, llvm::Align(4));
-  expectDirectI32Pair(classifyRet(S64, FI, TI));
-}
-
-// A record that cannot pass in registers is returned indirectly (sret-style,
-// ByVal=false) via the target-independent return rule.
-TEST_F(AMDGPUTargetInfoTest, NonTrivialRecordReturnIsIndirect) {
-  std::unique_ptr<FunctionInfo> FI;
-  std::unique_ptr<TargetInfo> TI;
-  const ABIType *CannotPass = TB.getRecordType(
-      {FieldInfo(I32, 0)}, llvm::TypeSize::getFixed(32), llvm::Align(4),
-      llvm::Align(4), StructPacking::Default, {}, {}, RecordFlags::IsCXXRecord);
-  const ArgInfo &Info = classifyRet(CannotPass, FI, TI);
-  ASSERT_TRUE(Info.isIndirect());
-  EXPECT_FALSE(Info.getIndirectByVal());
 }
 
 } // namespace
