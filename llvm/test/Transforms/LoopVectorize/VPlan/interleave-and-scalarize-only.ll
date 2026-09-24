@@ -90,7 +90,7 @@ define void @test_scalarize_with_branch_cond(ptr %src, ptr %dst) {
 ; CHECK-NEXT:  vp<[[VP4:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = DERIVED-IV ir<false> + vp<[[VP4]]> * ir<true>
+; CHECK-NEXT:      EMIT-SCALAR vp<[[VP5:%[0-9]+]]> = trunc vp<[[VP4]]> to i1
 ; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = SCALAR-STEPS vp<[[VP5]]>, ir<true>, vp<[[VP0]]>
 ; CHECK-NEXT:    Successor(s): pred.store
 ; CHECK-EMPTY:
@@ -251,15 +251,15 @@ define i16 @reduction_with_casts() {
 ; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
-; CHECK-NEXT:    vp<[[VP2:%[0-9]+]]> = DERIVED-IV ir<1> + vp<[[VP1]]> * ir<1>
-; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = reduction-start-vector ir<0>, ir<0>, ir<1>
+; CHECK-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = reduction-start-vector ir<0>, ir<0>, ir<1>
+; CHECK-NEXT:    vp<[[VP3:%[0-9]+]]> = DERIVED-IV ir<1> + vp<[[VP1]]> * ir<1>
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
 ; CHECK-NEXT:  vp<[[VP4:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%count.0.in1> = phi (add) vp<[[VP3]]>, ir<%add>
+; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%count.0.in1> = phi (add) vp<[[VP2]]>, ir<%add>
 ; CHECK-NEXT:      CLONE ir<%conv1> = and ir<%count.0.in1>, ir<65535>
 ; CHECK-NEXT:      CLONE ir<%add> = add ir<%conv1>, ir<1>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP4]]>, vp<[[VP0]]>
@@ -281,7 +281,7 @@ define i16 @reduction_with_casts() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
 ; CHECK-NEXT:    EMIT-SCALAR vp<%bc.merge.rdx> = phi [ vp<[[VP6]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP2]]>, middle.block ], [ ir<1>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP3]]>, middle.block ], [ ir<1>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop>:
@@ -489,15 +489,16 @@ define void @pr179671(ptr align 8 dereferenceable(120) %p, ptr %a, i32 %b) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      FIRST-ORDER-RECURRENCE-PHI ir<%load12> = phi ir<%a>, vp<%next.gep>
-; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = DERIVED-IV ir<%b> + vp<[[VP6]]> * ir<3>
-; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = SCALAR-STEPS vp<[[VP7]]>, ir<3>, vp<[[VP0]]>
-; CHECK-NEXT:      vp<[[VP9:%[0-9]+]]> = DERIVED-IV ir<0> + vp<[[VP6]]> * ir<128>
-; CHECK-NEXT:      vp<[[VP10:%[0-9]+]]> = SCALAR-STEPS vp<[[VP9]]>, ir<128>, vp<[[VP0]]>
-; CHECK-NEXT:      EMIT vp<%next.gep> = ptradd ir<null>, vp<[[VP10]]>
-; CHECK-NEXT:      EMIT vp<[[VP11:%[0-9]+]]> = first-order splice ir<%load12>, vp<%next.gep>
-; CHECK-NEXT:      CLONE store vp<[[VP11]]>, vp<%next.gep>
+; CHECK-NEXT:      EMIT-SCALAR vp<[[VP7:%[0-9]+]]> = trunc vp<[[VP6]]> to i32
+; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = DERIVED-IV ir<%b> + vp<[[VP7]]> * ir<3>
+; CHECK-NEXT:      vp<[[VP9:%[0-9]+]]> = SCALAR-STEPS vp<[[VP8]]>, ir<3>, vp<[[VP0]]>
+; CHECK-NEXT:      vp<[[VP10:%[0-9]+]]> = DERIVED-IV ir<0> + vp<[[VP6]]> * ir<128>
+; CHECK-NEXT:      vp<[[VP11:%[0-9]+]]> = SCALAR-STEPS vp<[[VP10]]>, ir<128>, vp<[[VP0]]>
+; CHECK-NEXT:      EMIT vp<%next.gep> = ptradd ir<null>, vp<[[VP11]]>
+; CHECK-NEXT:      EMIT vp<[[VP12:%[0-9]+]]> = first-order splice ir<%load12>, vp<%next.gep>
+; CHECK-NEXT:      CLONE store vp<[[VP12]]>, vp<%next.gep>
 ; CHECK-NEXT:      CLONE store vp<%next.gep>, ir<%inv_ptr>
-; CHECK-NEXT:      CLONE ir<%sadd_val> = add vp<[[VP8]]>, ir<3>
+; CHECK-NEXT:      CLONE ir<%sadd_val> = add vp<[[VP9]]>, ir<3>
 ; CHECK-NEXT:      CLONE store ir<%sadd_val>, ir<%inv_ptr2>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP6]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -506,12 +507,12 @@ define void @pr179671(ptr align 8 dereferenceable(120) %p, ptr %a, i32 %b) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = extract-last-part vp<%next.gep>
+; CHECK-NEXT:    EMIT vp<[[VP14:%[0-9]+]]> = extract-last-part vp<%next.gep>
 ; CHECK-NEXT:  Successor(s): scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
 ; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP4]]>, middle.block ], [ ir<%b>, ir-bb<entry> ]
-; CHECK-NEXT:    EMIT-SCALAR vp<%scalar.recur.init> = phi [ vp<[[VP13]]>, middle.block ], [ ir<%a>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%scalar.recur.init> = phi [ vp<[[VP14]]>, middle.block ], [ ir<%a>, ir-bb<entry> ]
 ; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val>.1 = phi [ vp<[[VP5]]>, middle.block ], [ ir<null>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<loop.header>
 ; CHECK-EMPTY:

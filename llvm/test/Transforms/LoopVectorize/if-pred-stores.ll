@@ -317,8 +317,8 @@ define void @bug18724(i1 %cond, ptr %ptr, i1 %cond.2, i64 %v.1, i32 %v.2) {
 ; VEC:       [[VECTOR_PH]]:
 ; VEC-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP4]], 1
 ; VEC-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP4]], [[N_MOD_VF]]
-; VEC-NEXT:    [[TMP5:%.*]] = add i64 [[V_1]], [[N_VEC]]
 ; VEC-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> zeroinitializer, i32 [[V_2]], i64 0
+; VEC-NEXT:    [[TMP16:%.*]] = add i64 [[V_1]], [[N_VEC]]
 ; VEC-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VEC:       [[VECTOR_BODY]]:
 ; VEC-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE2:.*]] ]
@@ -350,7 +350,7 @@ define void @bug18724(i1 %cond, ptr %ptr, i1 %cond.2, i64 %v.1, i32 %v.2) {
 ; VEC-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP4]], [[N_VEC]]
 ; VEC-NEXT:    br i1 [[CMP_N]], label %[[FOR_INC26_LOOPEXIT:.*]], label %[[SCALAR_PH]]
 ; VEC:       [[SCALAR_PH]]:
-; VEC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP5]], %[[MIDDLE_BLOCK]] ], [ [[V_1]], %[[FOR_BODY14_PREHEADER]] ]
+; VEC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP16]], %[[MIDDLE_BLOCK]] ], [ [[V_1]], %[[FOR_BODY14_PREHEADER]] ]
 ; VEC-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP15]], %[[MIDDLE_BLOCK]] ], [ [[V_2]], %[[FOR_BODY14_PREHEADER]] ]
 ; VEC-NEXT:    br label %[[FOR_BODY14:.*]]
 ; VEC:       [[FOR_BODY14]]:

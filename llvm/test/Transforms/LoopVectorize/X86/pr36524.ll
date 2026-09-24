@@ -26,8 +26,8 @@ define void @foo(ptr %ptr, ptr %ptr.2) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 80
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 2, [[INDEX]]
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[INDEX]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = add i32 2, [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[TMP3]], 3
 ; CHECK-NEXT:    store i32 [[TMP4]], ptr [[PTR_2]], align 4, !alias.scope [[META6:![0-9]+]], !noalias [[META0]]
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
