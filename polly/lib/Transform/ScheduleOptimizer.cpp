@@ -579,30 +579,50 @@ ScheduleTreeOptimizer::applyTileBandOpt(isl::schedule_node Node) {
 isl::schedule_node
 ScheduleTreeOptimizer::distributeInnermostLoop(isl::schedule_node Node,
                                                const Dependences *D) {
-  if (!isSimpleInnermostBand(Node))
+  // This runs within a quota of isl operations. Every isl result that is used
+  // in a condition, iterated over or dereferenced is checked for an error
+  // first; in that case the band is left as it is.
+  if (Node.is_null() || !isSimpleInnermostBand(Node))
     return Node;
 
-  // Number the statements in the order of their names, so that the result does
-  // not depend on the order in which isl lists them.
   isl::union_set Domain = Node.get_domain();
-  SmallVector<isl::set, 8> Stmts;
-  for (isl::set Stmt : Domain.get_set_list())
-    Stmts.push_back(Stmt);
+  if (Domain.is_null())
+    return Node;
+  isl::set_list DomainList = Domain.get_set_list();
+  if (DomainList.is_null())
+    return Node;
+  SmallVector<std::pair<ScopStmt *, isl::set>, 8> Stmts;
+  for (isl::set Set : DomainList) {
+    isl::id Id = Set.get_tuple_id();
+    if (Id.is_null())
+      return Node;
+    Stmts.push_back({static_cast<ScopStmt *>(Id.get_user()), Set});
+  }
   unsigned NumStmts = Stmts.size();
   if (NumStmts < 2)
     return Node;
-  llvm::sort(Stmts, [](const isl::set &A, const isl::set &B) {
-    return A.get_tuple_name() < B.get_tuple_name();
+
+  // Number the statements in the order of Scop::Stmts, so that the result does
+  // not depend on the order in which isl lists them.
+  DenseMap<const ScopStmt *, unsigned> ScopOrder;
+  for (const ScopStmt &Stmt : *Stmts.front().first->getParent())
+    ScopOrder.insert({&Stmt, ScopOrder.size()});
+  llvm::sort(Stmts, [&](const auto &A, const auto &B) {
+    return ScopOrder.lookup(A.first) < ScopOrder.lookup(B.first);
   });
-  DenseMap<isl_id *, unsigned> StmtIndex;
+  DenseMap<const ScopStmt *, unsigned> StmtIndex;
   for (auto [Idx, Stmt] : enumerate(Stmts))
-    StmtIndex[Stmt.get_tuple_id().get()] = Idx;
+    StmtIndex[Stmt.first] = Idx;
 
   isl::schedule_node_band Band = Node.as<isl::schedule_node_band>();
-  unsigned NumMembers = unsignedFromIslSize(Band.n_member());
+  isl::size NumMembers = Band.n_member();
+  if (NumMembers.is_error())
+    return Node;
   isl::schedule_node_band Inner = Band;
-  if (NumMembers > 1)
-    Inner = Band.split(NumMembers - 1).child(0).as<isl::schedule_node_band>();
+  if (unsigned(NumMembers) > 1)
+    Inner = Band.split(unsigned(NumMembers) - 1)
+                .child(0)
+                .as<isl::schedule_node_band>();
 
   // The dependences between the instances that share the iterations of all
   // loops around the innermost one, split into those that the innermost loop
@@ -613,34 +633,58 @@ ScheduleTreeOptimizer::distributeInnermostLoop(isl::schedule_node Node,
   Deps = Deps.eq_at(Inner.get_prefix_schedule_multi_union_pw_aff());
   isl::union_map SameIteration = Deps.eq_at(Inner.get_partial_schedule());
   isl::union_map Carried = Deps.subtract(SameIteration);
-  if (Carried.is_null())
-    return Node;
 
-  auto getIndex = [&](const isl::map &Dep, isl::dim Dim) {
-    return StmtIndex.lookup(Dep.get_tuple_id(Dim).get());
+  // The pairs of the indices of the source and target statements of the
+  // dependences in UMap; false if an isl operation failed.
+  using EdgeList = SmallVector<std::pair<unsigned, unsigned>, 16>;
+  auto collectEdges = [&](const isl::union_map &UMap, EdgeList &Edges) {
+    if (UMap.is_null())
+      return false;
+    isl::map_list List = UMap.get_map_list();
+    if (List.is_null())
+      return false;
+    for (isl::map Dep : List) {
+      isl::boolean IsEmpty = Dep.is_empty();
+      if (IsEmpty.is_error())
+        return false;
+      if (IsEmpty.is_true())
+        continue;
+      isl::id Src = Dep.get_tuple_id(isl::dim::in);
+      isl::id Dst = Dep.get_tuple_id(isl::dim::out);
+      if (Src.is_null() || Dst.is_null())
+        return false;
+      auto SrcIt = StmtIndex.find(static_cast<ScopStmt *>(Src.get_user()));
+      auto DstIt = StmtIndex.find(static_cast<ScopStmt *>(Dst.get_user()));
+      if (SrcIt == StmtIndex.end() || DstIt == StmtIndex.end())
+        return false;
+      Edges.push_back({SrcIt->second, DstIt->second});
+    }
+    return true;
   };
+  EdgeList DepEdges, CarriedEdges;
+  if (!collectEdges(Deps, DepEdges) || !collectEdges(Carried, CarriedEdges))
+    return Node;
 
   // If the fused loop is parallel already, only separate statements that do
   // not exchange any data within it, to keep the reuse between the others.
-  if (Carried.is_empty().is_true())
-    for (isl::map Dep : Deps.get_map_list())
-      if (getIndex(Dep, isl::dim::in) != getIndex(Dep, isl::dim::out))
-        return Node;
+  if (CarriedEdges.empty() &&
+      any_of(DepEdges, [](auto Edge) { return Edge.first != Edge.second; }))
+    return Node;
 
   // Reaches[I][J] is set if statement J depends on statement I, possibly
   // through other statements. Statements that depend on each other form a
   // group.
   SmallVector<BitVector, 8> Reaches(NumStmts, BitVector(NumStmts));
-  for (isl::map Dep : Deps.get_map_list())
-    Reaches[getIndex(Dep, isl::dim::in)].set(getIndex(Dep, isl::dim::out));
+  for (auto [Src, Dst] : DepEdges)
+    Reaches[Src].set(Dst);
   for (unsigned K : seq(NumStmts))
     for (unsigned I : seq(NumStmts))
       if (Reaches[I][K])
         Reaches[I] |= Reaches[K];
 
   // The loop of every group must be parallel.
-  for (isl::map Dep : Carried.get_map_list())
-    if (Reaches[getIndex(Dep, isl::dim::out)][getIndex(Dep, isl::dim::in)])
+  for (auto [Src, Dst] : CarriedEdges)
+    if (Reaches[Dst][Src])
       return Node;
 
   SmallVector<unsigned, 8> GroupOf(NumStmts);
@@ -673,7 +717,7 @@ ScheduleTreeOptimizer::distributeInnermostLoop(isl::schedule_node Node,
     isl::union_set Filter = isl::union_set::empty(Node.ctx());
     for (unsigned Stmt : seq(NumStmts))
       if (GroupOf[Stmt] == Group)
-        Filter = Filter.unite(Stmts[Stmt]);
+        Filter = Filter.unite(Stmts[Stmt].second);
     Filters = Filters.add(Filter);
   }
 
@@ -681,7 +725,7 @@ ScheduleTreeOptimizer::distributeInnermostLoop(isl::schedule_node Node,
   if (Sequence.is_null())
     return Node;
   PointLoopDistributions++;
-  return NumMembers > 1 ? Sequence.parent() : Sequence;
+  return unsigned(NumMembers) > 1 ? Sequence.parent() : Sequence;
 }
 
 isl::schedule_node
@@ -733,8 +777,9 @@ ScheduleTreeOptimizer::optimizeBand(__isl_take isl_schedule_node *NodeArg,
     {
       IslQuotaScope MaxScope = OAI->MaxOpGuard.enter();
       Distributed = distributeInnermostLoop(Node, OAI->D);
-      // Leave the band as it is if the analysis exceeds the quota, rather than
-      // discarding the other optimizations of the SCoP.
+      // Leave the band as it is if the analysis exceeds the quota. Also reset
+      // the error: if no other quota scope follows, runIslScheduleOptimizer
+      // would otherwise see it and discard all optimizations of the SCoP.
       if (OAI->MaxOpGuard.hasQuotaExceeded()) {
         Distributed = {};
         isl_ctx_reset_error(Node.ctx().get());
