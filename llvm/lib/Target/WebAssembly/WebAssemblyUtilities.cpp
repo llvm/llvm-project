@@ -13,7 +13,7 @@
 
 #include "WebAssemblyUtilities.h"
 #include "WebAssemblyMachineFunctionInfo.h"
-#include "WebAssemblyTargetMachine.h"
+#include "WebAssemblySubtarget.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/IR/Function.h"
 #include "llvm/MC/MCContext.h"
@@ -185,9 +185,7 @@ unsigned WebAssembly::getCopyOpcodeForRegClass(const TargetRegisterClass *RC) {
 
 bool WebAssembly::canLowerMultivalueReturn(
     const WebAssemblySubtarget *Subtarget) {
-  const auto &TM = static_cast<const WebAssemblyTargetMachine &>(
-      Subtarget->getTargetLowering()->getTargetMachine());
-  return Subtarget->hasMultivalue() && TM.usesMultivalueABI();
+  return Subtarget->hasMultivalue() && Subtarget->usesMultivalueABI();
 }
 
 bool WebAssembly::canLowerReturn(size_t ResultSize,
