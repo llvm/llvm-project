@@ -471,15 +471,6 @@ static bool matchAccessTags(const MDNode *A, const MDNode *B,
 MDNode *MDNode::getMostGenericTBAA(MDNode *A, MDNode *B) {
   const MDNode *GenericTag;
   matchAccessTags(A, B, &GenericTag);
-  // The generic tag can be one of the given tags. It must hold for both
-  // accesses, so keep its immutable flag only if both tags have it.
-  if (GenericTag && TBAAStructTagNode(GenericTag).isTypeImmutable() &&
-      !(TBAAStructTagNode(A).isTypeImmutable() &&
-        TBAAStructTagNode(B).isTypeImmutable())) {
-    unsigned FlagOpNo = TBAAStructTagNode(GenericTag).isNewFormat() ? 4 : 3;
-    SmallVector<Metadata *, 4> Ops(GenericTag->operands().take_front(FlagOpNo));
-    GenericTag = MDNode::get(GenericTag->getContext(), Ops);
-  }
   return const_cast<MDNode*>(GenericTag);
 }
 
@@ -624,8 +615,19 @@ static bool mayBeAccessToSubobjectOf(TBAAStructTagNode BaseTag,
                  BaseType.getNode() == BaseTag.getAccessType() ||
                  SubobjectTag.getBaseType() == SubobjectTag.getAccessType();
       if (GenericTag) {
-        *GenericTag =
-            MayAlias ? SubobjectTag.getNode() : createAccessTag(CommonType);
+        if (!MayAlias) {
+          *GenericTag = createAccessTag(CommonType);
+        } else if (SubobjectTag.isTypeImmutable() &&
+                   !BaseTag.isTypeImmutable()) {
+          // The generic tag can only be immutable if both accesses are, so
+          // drop the flag and keep the rest of the tag.
+          const MDNode *Tag = SubobjectTag.getNode();
+          unsigned FlagOpNo = SubobjectTag.isNewFormat() ? 4 : 3;
+          SmallVector<Metadata *, 4> Ops(Tag->operands().take_front(FlagOpNo));
+          *GenericTag = MDNode::get(Tag->getContext(), Ops);
+        } else {
+          *GenericTag = SubobjectTag.getNode();
+        }
       }
       return true;
     }
