@@ -424,6 +424,11 @@ static bool isPromotedResultSafe(Instruction *I, bool UseSExt) {
                   I->getOpcode() == Instruction::URem))
     return false;
 
+  if (UseSExt)
+    if (auto *ZExt = dyn_cast<ZExtInst>(I))
+      if (!ZExt->hasNonNeg())
+        return false;
+
   if (!isa<OverflowingBinaryOperator>(I))
     return true;
 
