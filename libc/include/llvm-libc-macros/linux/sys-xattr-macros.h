@@ -7,21 +7,14 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Function declaration of listxattr.
+/// Linux specific declarations of macros from sys/xattr.h.
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SYS_XATTR_LISTXATTR_H
-#define LLVM_LIBC_SRC_SYS_XATTR_LISTXATTR_H
+#ifndef LLVM_LIBC_MACROS_LINUX_SYS_XATTR_MACROS_H
+#define LLVM_LIBC_MACROS_LINUX_SYS_XATTR_MACROS_H
 
-#include "hdr/types/size_t.h"
-#include "hdr/types/ssize_t.h"
-#include "src/__support/macros/config.h"
+#define XATTR_CREATE 1
+#define XATTR_REPLACE 2
 
-namespace LIBC_NAMESPACE_DECL {
-
-ssize_t listxattr(const char *path, char *list, size_t size);
-
-} // namespace LIBC_NAMESPACE_DECL
-
-#endif // LLVM_LIBC_SRC_SYS_XATTR_LISTXATTR_H
+#endif // LLVM_LIBC_MACROS_LINUX_SYS_XATTR_MACROS_H

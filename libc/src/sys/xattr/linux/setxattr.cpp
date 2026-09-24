@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Implementation of listxattr.
+/// Implementation of setxattr.
 ///
 //===----------------------------------------------------------------------===//
 
-#include "src/sys/xattr/listxattr.h"
-#include "src/__support/OSUtil/linux/syscall_wrappers/listxattr.h"
+#include "src/sys/xattr/setxattr.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/setxattr.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
@@ -20,13 +20,15 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(ssize_t, listxattr,
-                   (const char *path, char *list, size_t size)) {
+LLVM_LIBC_FUNCTION(int, setxattr,
+                   (const char *path, const char *name, const void *value,
+                    size_t size, int flags)) {
   LIBC_CRASH_ON_NULLPTR(path);
+  LIBC_CRASH_ON_NULLPTR(name);
   if (size != 0)
-    LIBC_CRASH_ON_NULLPTR(list);
+    LIBC_CRASH_ON_NULLPTR(value);
 
-  ErrorOr<ssize_t> ret = linux_syscalls::listxattr(path, list, size);
+  ErrorOr<int> ret = linux_syscalls::setxattr(path, name, value, size, flags);
   if (!ret) {
     libc_errno = ret.error();
     return -1;

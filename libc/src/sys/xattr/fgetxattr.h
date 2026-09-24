@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Function declaration of listxattr.
+/// Function declaration of fgetxattr.
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SYS_XATTR_LISTXATTR_H
-#define LLVM_LIBC_SRC_SYS_XATTR_LISTXATTR_H
+#ifndef LLVM_LIBC_SRC_SYS_XATTR_FGETXATTR_H
+#define LLVM_LIBC_SRC_SYS_XATTR_FGETXATTR_H
 
 #include "hdr/types/size_t.h"
 #include "hdr/types/ssize_t.h"
@@ -20,8 +20,8 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-ssize_t listxattr(const char *path, char *list, size_t size);
+ssize_t fgetxattr(int fd, const char *name, void *value, size_t size);
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_SYS_XATTR_LISTXATTR_H
+#endif // LLVM_LIBC_SRC_SYS_XATTR_FGETXATTR_H

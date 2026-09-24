@@ -7,21 +7,21 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Function declaration of listxattr.
+/// Proxy header for macro values defined in sys/xattr.h.
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SYS_XATTR_LISTXATTR_H
-#define LLVM_LIBC_SRC_SYS_XATTR_LISTXATTR_H
+#ifndef LLVM_LIBC_HDR_SYS_XATTR_MACROS_H
+#define LLVM_LIBC_HDR_SYS_XATTR_MACROS_H
 
-#include "hdr/types/size_t.h"
-#include "hdr/types/ssize_t.h"
-#include "src/__support/macros/config.h"
+#ifdef LIBC_FULL_BUILD
 
-namespace LIBC_NAMESPACE_DECL {
+#include "include/llvm-libc-macros/sys-xattr-macros.h"
 
-ssize_t listxattr(const char *path, char *list, size_t size);
+#else // Overlay mode
 
-} // namespace LIBC_NAMESPACE_DECL
+#include <sys/xattr.h>
 
-#endif // LLVM_LIBC_SRC_SYS_XATTR_LISTXATTR_H
+#endif // LIBC_FULL_BUILD
+
+#endif // LLVM_LIBC_HDR_SYS_XATTR_MACROS_H
