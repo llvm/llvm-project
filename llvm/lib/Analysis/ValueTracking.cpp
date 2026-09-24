@@ -171,16 +171,6 @@ KnownBits llvm::computeKnownBits(const Value *V, const DataLayout &DL,
       V, SimplifyQuery(DL, DT, AC, safeCxtI(V, CxtI), UseInstrInfo), Depth);
 }
 
-KnownBits llvm::computeKnownBits(const Value *V, const APInt &DemandedElts,
-                                 const DataLayout &DL, AssumptionCache *AC,
-                                 const Instruction *CxtI,
-                                 const DominatorTree *DT, bool UseInstrInfo,
-                                 unsigned Depth) {
-  return computeKnownBits(
-      V, DemandedElts,
-      SimplifyQuery(DL, DT, AC, safeCxtI(V, CxtI), UseInstrInfo), Depth);
-}
-
 static NoCommonBitsSetResult
 haveNoCommonBitsSetSpecialCases(const Value *LHS, const Value *RHS,
                                 const SimplifyQuery &SQ) {
@@ -3192,6 +3182,8 @@ static bool isNonZeroRecurrence(const PHINode *PN) {
   case Instruction::AShr:
   case Instruction::LShr:
     return BO->isExact();
+  case Instruction::Or:
+    return true;
   default:
     return false;
   }
@@ -7243,7 +7235,6 @@ bool llvm::isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
     bool MustPreserveProvenance) {
   switch (Call->getIntrinsicID()) {
   case Intrinsic::launder_invariant_group:
-  case Intrinsic::strip_invariant_group:
   case Intrinsic::aarch64_irg:
   case Intrinsic::aarch64_tagp:
   // The amdgcn_make_buffer_rsrc function does not alter the address of the
@@ -7467,6 +7458,7 @@ bool llvm::getUnderlyingObjectsForCodeGen(const Value *V,
                                           SmallVectorImpl<Value *> &Objects) {
   SmallPtrSet<const Value *, 16> Visited;
   SmallVector<const Value *, 4> Working(1, V);
+  bool AllObjectsIdentified = true;
   do {
     V = Working.pop_back_val();
 
@@ -7484,16 +7476,11 @@ bool llvm::getUnderlyingObjectsForCodeGen(const Value *V,
           continue;
         }
       }
-      // If getUnderlyingObjects fails to find an identifiable object,
-      // getUnderlyingObjectsForCodeGen also fails for safety.
-      if (!isIdentifiedObject(V)) {
-        Objects.clear();
-        return false;
-      }
+      AllObjectsIdentified &= isIdentifiedObject(V);
       Objects.push_back(const_cast<Value *>(V));
     }
   } while (!Working.empty());
-  return true;
+  return AllObjectsIdentified;
 }
 
 AllocaInst *llvm::findAllocaForValue(Value *V, bool OffsetZero) {

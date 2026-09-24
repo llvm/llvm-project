@@ -388,7 +388,7 @@ func.func @forall_pattern_in_workshare(%shared: !fir.ref<i32>) {
 // thread-local store is also cloned inside the single, but a parallel copy
 // is placed after it so all threads update their own alloca.
 // CHECK:       omp.parallel {
-// CHECK:         %[[IDX:.*]] = fir.alloca i32 {bindc_name = "i", pinned}
+// CHECK:         %[[IDX:.*]] = fir.alloca i32 <{bindc_name = "i", pinned}>
 // CHECK:         fir.do_loop
 // The single contains the shared load, thread-local load, and side effect.
 // The thread-local store is also cloned inside (harmless, one thread runs it).
@@ -453,7 +453,7 @@ func.func @forall_fetch_counter_in_workshare(%stack: !fir.ref<i32>) {
 }
 
 // CHECK:       omp.parallel {
-// CHECK:         %[[COUNTER:.*]] = fir.alloca i64 {pinned}
+// CHECK:         %[[COUNTER:.*]] = fir.alloca i64 <{pinned}>
 // The reset of the counter is a write to thread-local memory whose operands
 // are all available, so it is parallelized and all threads run it.
 // CHECK:         fir.store %{{.*}} to %[[COUNTER]] : !fir.ref<i64>

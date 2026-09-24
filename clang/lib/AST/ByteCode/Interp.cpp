@@ -129,9 +129,8 @@ static void diagnoseNonConstVariable(InterpState &S, CodePtr OpPC,
 static bool diagnoseUnknownDecl(InterpState &S, CodePtr OpPC,
                                 const ValueDecl *D, AccessKinds AK = AK_Read) {
   // This function tries pretty hard to produce a good diagnostic. Just skip
-  // that if nobody will see it anyway.
-  if (!S.diagnosing())
-    return false;
+  // that if nobody will see it anyway. This should be handled in the caller.
+  assert(S.diagnosing());
 
   if (isa<ParmVarDecl>(D)) {
     if (D->getType()->isReferenceType()) {
@@ -371,16 +370,16 @@ bool CheckBCPResult(InterpState &S, const Pointer &Ptr) {
   return false;
 }
 
-bool CheckActive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
-                 AccessKinds AK, bool WillActivate) {
+static bool CheckActive(InterpState &S, CodePtr OpPC, PtrView Ptr,
+                        AccessKinds AK, bool WillActivate = false) {
   if (Ptr.isActive())
     return true;
 
   assert(Ptr.inUnion());
 
   // Find the outermost union.
-  PtrView U = Ptr.view().getBase();
-  PtrView C = Ptr.view();
+  PtrView U = Ptr.getBase();
+  PtrView C = Ptr;
   while (!U.isRoot() && !U.isActive()) {
     // A little arbitrary, but this is what the current interpreter does.
     // See the AnonymousUnion test in test/AST/ByteCode/unions.cpp.
@@ -414,7 +413,7 @@ bool CheckActive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   // non-trivial default constructor.
   if (WillActivate) {
     bool Fails = false;
-    PtrView It = Ptr.view();
+    PtrView It = Ptr;
     while (!It.isRoot() && !It.isActive()) {
       if (const Record *R = It.getRecord(); R && R->isUnion()) {
         if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(R->getDecl());
@@ -451,6 +450,13 @@ bool CheckActive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
            diag::note_constexpr_access_inactive_union_member)
       << AK << InactiveField << !ActiveField << ActiveField;
   return false;
+}
+
+static bool CheckActive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                        AccessKinds AK, bool WillActivate = false) {
+  if (!Ptr.isBlockPointer())
+    return true;
+  return CheckActive(S, OpPC, Ptr.view(), AK, WillActivate);
 }
 
 static bool CheckExtern(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
@@ -582,6 +588,18 @@ static bool CheckConstant(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   if (!Ptr.isStatic() || !Ptr.isBlockPointer())
     return true;
   if (!Ptr.getDeclID())
+    return true;
+  return CheckConstant(S, OpPC, Ptr.getDeclDesc(), AK);
+}
+
+static bool CheckConstant(InterpState &S, CodePtr OpPC, PtrView Ptr,
+                          AccessKinds AK = AK_Read) {
+  if (S.checkingConstantDestruction(Ptr.getDeclDesc()->asVarDecl()))
+    return CheckConstant(S, OpPC, Ptr.getDeclDesc(), AK);
+
+  if (!Ptr.block()->isStatic())
+    return true;
+  if (!Ptr.block()->getDeclID())
     return true;
   return CheckConstant(S, OpPC, Ptr.getDeclDesc(), AK);
 }
@@ -835,6 +853,14 @@ bool diagnoseUninitialized(InterpState &S, CodePtr OpPC, bool Extern,
   return false;
 }
 
+static bool diagnoseUninitialized(InterpState &S, CodePtr OpPC, PtrView Ptr,
+                                  AccessKinds AK) {
+  assert(Ptr.isLive());
+  assert(!Ptr.isInitialized());
+  return diagnoseUninitialized(S, OpPC, Ptr.isExtern(), Ptr.block(),
+                               Ptr.getLifetime(), AK);
+}
+
 static bool CheckLifetime(InterpState &S, CodePtr OpPC, Lifetime LT,
                           const Block *B, AccessKinds AK) {
   if (LT == Lifetime::Started)
@@ -929,25 +955,32 @@ bool CheckLocalLoad(InterpState &S, CodePtr OpPC, const Block *B) {
   return true;
 }
 
-bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
-               AccessKinds AK) {
+bool CheckLoad(InterpState &S, CodePtr OpPC, PtrView Ptr, AccessKinds AK) {
   if (Ptr.isZero()) {
-    const auto &Src = S.Current->getSource(OpPC);
+    SourceInfo Loc = S.Current->getSource(OpPC);
 
     if (Ptr.isField())
-      S.FFDiag(Src, diag::note_constexpr_null_subobject) << CSK_Field;
+      S.FFDiag(Loc, diag::note_constexpr_null_subobject) << CSK_Field;
     else
-      S.FFDiag(Src, diag::note_constexpr_access_null) << AK;
+      S.FFDiag(Loc, diag::note_constexpr_access_null) << AK;
     return false;
   }
-  // Block and string pointers are the only ones we can actually read from.
-  if (!Ptr.isReadablePointerType())
-    return CheckDummy(S, OpPC, Ptr, AK);
 
-  if (Ptr.isBlockPointer() && !Ptr.block()->isAccessible()) {
-    if (!CheckLive(S, OpPC, Ptr, AK))
+  if (!Ptr.block()->isAccessible()) {
+    if (!Ptr.isLive()) {
+      if (Ptr.block()->isDynamic()) {
+        S.FFDiag(S.Current->getSource(OpPC),
+                 diag::note_constexpr_access_deleted_object)
+            << AK;
+      } else if (!S.checkingPotentialConstantExpression()) {
+        S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_access_uninit)
+            << AK << /*uninitialized=*/false << S.Current->getRange(OpPC);
+        noteValueLocation(S, Ptr.block());
+      }
+
       return false;
-    if (!CheckExtern(S, OpPC, Ptr))
+    }
+    if (!CheckExtern(S, OpPC, Ptr.block()))
       return false;
     return CheckWeak(S, OpPC, Ptr.block());
   }
@@ -961,21 +994,19 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   if (!Ptr.isInitialized())
     return diagnoseUninitialized(S, OpPC, Ptr, AK);
 
-  if (Ptr.isBlockPointer()) {
-    if (!CheckLifetime(S, OpPC, Ptr.getLifetime(), Ptr.block(), AK))
-      return false;
-    if (!CheckTemporary(S, OpPC, Ptr.block(), AK))
-      return false;
-
-    if (!CheckMutable(S, OpPC, Ptr.view(), AK))
-      return false;
-    if (!CheckVolatile(S, OpPC, Ptr.view(), AK))
-      return false;
-  }
-  if (isConstexprUnknown(Ptr))
+  if (!CheckLifetime(S, OpPC, Ptr.getLifetime(), Ptr.block(), AK))
+    return false;
+  if (!CheckTemporary(S, OpPC, Ptr.block(), AK))
     return false;
 
-  if (Ptr.isBlockPointer() && !Ptr.isArrayRoot()) {
+  if (!CheckMutable(S, OpPC, Ptr, AK))
+    return false;
+  if (!CheckVolatile(S, OpPC, Ptr, AK))
+    return false;
+  if (isConstexprUnknown(Ptr.block()))
+    return false;
+
+  if (!Ptr.isArrayRoot()) {
     // According to GCC info page:
     //
     // 6.28 Compound Literals
@@ -1005,12 +1036,41 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   return true;
 }
 
+bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+               AccessKinds AK) {
+  if (Ptr.isBlockPointer())
+    return CheckLoad(S, OpPC, Ptr.view(), AK);
+
+  if (Ptr.isZero()) {
+    SourceInfo Loc = S.Current->getSource(OpPC);
+    if (Ptr.isField())
+      S.FFDiag(Loc, diag::note_constexpr_null_subobject) << CSK_Field;
+    else
+      S.FFDiag(Loc, diag::note_constexpr_access_null) << AK;
+    return false;
+  }
+
+  // Block and string pointers are the only ones we can actually read from.
+  if (!Ptr.isReadablePointerType())
+    return diagnoseDummy(S, OpPC, Ptr, AK);
+
+  assert(Ptr.isStringPointer());
+
+  if (!CheckConstant(S, OpPC, Ptr, AK))
+    return false;
+  if (!CheckRange(S, OpPC, Ptr, AK))
+    return false;
+  if (!Ptr.isInitialized())
+    return diagnoseUninitialized(S, OpPC, Ptr, AK);
+  return true;
+}
+
 /// This is not used by any of the opcodes directly. It's used by
 /// EvalEmitter to do the final lvalue-to-rvalue conversion.
 bool CheckFinalLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   assert(!Ptr.isZero());
   if (!Ptr.isReadablePointerType())
-    return CheckDummy(S, OpPC, Ptr, AK_Read);
+    return diagnoseDummy(S, OpPC, Ptr, AK_Read);
 
   if (Ptr.isBlockPointer() && !Ptr.block()->isAccessible()) {
     if (!CheckLive(S, OpPC, Ptr, AK_Read))
@@ -1047,7 +1107,7 @@ bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     return false;
 
   if (Ptr.isOpaquePointer())
-    return CheckDummy(S, OpPC, Ptr, AK);
+    return diagnoseDummy(S, OpPC, Ptr, AK);
 
   if (!Ptr.isBlockPointer())
     return false;
@@ -1346,6 +1406,9 @@ bool CheckDeleteSource(InterpState &S, CodePtr OpPC, const Expr *Source,
 /// We aleady know the given DeclRefExpr is invalid for some reason,
 /// now figure out why and print appropriate diagnostics.
 bool CheckDeclRef(InterpState &S, CodePtr OpPC, const DeclRefExpr *DR) {
+  if (!S.diagnosing())
+    return false;
+
   const ValueDecl *D = DR->getDecl();
   return diagnoseUnknownDecl(S, OpPC, D);
 }
@@ -1365,21 +1428,28 @@ bool InvalidDeclRef(InterpState &S, CodePtr OpPC, const DeclRefExpr *DR,
   return CheckDeclRef(S, OpPC, DR);
 }
 
-bool CheckDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
-                AccessKinds AK) {
-  if (!Ptr.isDummy())
-    return true;
-
-  const VarDecl *D = Ptr.getRootVarDecl();
-  if (!D)
+bool diagnoseDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                   AccessKinds AK) {
+  if (!S.diagnosing())
     return false;
 
-  if (AK == AK_Read || AK == AK_Increment || AK == AK_Decrement)
+  if (AK == AK_Read || AK == AK_Increment || AK == AK_Decrement) {
+    const VarDecl *D = Ptr.getRootVarDecl();
+    if (!D)
+      return false;
     return diagnoseUnknownDecl(S, OpPC, D, AK);
+  }
 
   if (AK == AK_Destroy || S.getLangOpts().CPlusPlus14)
     S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_modify_global);
   return false;
+}
+
+bool CheckDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                AccessKinds AK) {
+  if (!Ptr.isDummy())
+    return true;
+  return diagnoseDummy(S, OpPC, Ptr, AK);
 }
 
 static bool CheckNonNullArgs(InterpState &S, CodePtr OpPC, const Function *F,
@@ -2773,8 +2843,10 @@ bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
     return false;
   }
 
+  if (Ptr.isDummy())
+    return diagnoseDummy(S, OpPC, Ptr, AK_Construct);
   if (!Ptr.isBlockPointer())
-    return CheckDummy(S, OpPC, Ptr, AK_Construct);
+    return false;
 
   if (!CheckRange(S, OpPC, Ptr, AK_Construct))
     return false;
@@ -2788,7 +2860,7 @@ bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
       return false;
     if (!CheckLive(S, OpPC, Ptr, AK_Construct))
       return false;
-    return CheckDummy(S, OpPC, Ptr, AK_Construct);
+    return diagnoseDummy(S, OpPC, Ptr, AK_Construct);
   }
   if (!CheckTemporary(S, OpPC, Ptr, AK_Construct))
     return false;
