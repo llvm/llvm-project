@@ -85,7 +85,6 @@ WORKDIR /home/gha
 
 FROM ci-container-build-tools AS ci-container-code-lint
 ARG LLVM_VERSION
-ARG LLVM_VERSION_MAJOR
 
 COPY --from=llvm-downloader /llvm-extract/LLVM-${LLVM_VERSION}-Linux-X64/bin/clang-tidy \
                             ${LLVM_SYSROOT}/bin/
@@ -126,6 +125,7 @@ USER gha
 ADD github-automation.py /usr/local/bin/
 
 FROM docker.io/library/ubuntu:26.04@sha256:61ebaa5cc23ca45450db85eac015435199ec569e28ec222ea13f2aed2110b8a6 AS ids-builder
+ARG LLVM_VERSION
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y wget gpg python3 python3-pip git cmake
 
@@ -156,6 +156,7 @@ RUN cd ids && \
     ninja -C ./build
 
 FROM ci-container-build-tools AS ci-container-ids-checks
+ARG LLVM_VERSION
 
 COPY llvm/utils/git/requirements.txt requirements.txt
 RUN pip install --require-hashes -r requirements.txt --break-system-packages && \
