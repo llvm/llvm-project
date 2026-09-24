@@ -289,7 +289,24 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
                    CharUnits::fromQuantity(Offset * elemSize()), Path,
                    /*OnePastTheEnd=*/false, /*IsNull=*/false);
   case Storage::Opaque: {
-    if (!Opaque.Base.getType()->isPointerType()) {
+    bool ValidBase = Opaque.hasValidBase() || this->Offset <= 1;
+
+    size_t LayoutOffset = Opaque.computeLayoutOffset(ASTCtx).value_or(0);
+    size_t ElemSize = 0;
+    if (validType(Opaque.getFieldType()))
+      ElemSize = ASTCtx.getTypeSizeInChars(Opaque.getFieldType()).getQuantity();
+
+    auto LValueOffset =
+        CharUnits::fromQuantity(LayoutOffset + (this->Offset * ElemSize));
+    APValue::LValueBase Base;
+    if (const Expr *E = Opaque.Base.asExpr())
+      Base = E;
+    else
+      Base = Opaque.Base.asValueDecl();
+
+    // For valid bases, assemble the LValuePath.
+    APValue Result;
+    if (ValidBase) {
       for (const PointerPathEntry &Entry : Opaque.path()) {
         switch (Entry.Kind) {
         case PointerPathEntry::Field:
@@ -307,21 +324,13 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
           break;
         }
       }
-    }
-    size_t LayoutOffset = Opaque.computeLayoutOffset(ASTCtx).value_or(0);
-    size_t ElemSize = 0;
-    if (validType(Opaque.getFieldType()))
-      ElemSize = ASTCtx.getTypeSizeInChars(Opaque.getFieldType()).getQuantity();
-    auto Offset =
-        CharUnits::fromQuantity(LayoutOffset + (this->Offset * ElemSize));
 
-    APValue::LValueBase Base;
-    if (const Expr *E = Opaque.Base.asExpr())
-      Base = E;
-    else
-      Base = Opaque.Base.asValueDecl();
-    APValue Result =
-        APValue(Base, Offset, Path, Opaque.isOnePastEnd(), /*IsNullPtr=*/false);
+      Result = APValue(Base, LValueOffset, Path, Opaque.isOnePastEnd(),
+                       /*IsNullPtr=*/false);
+
+    } else {
+      Result = APValue(Base, LValueOffset, APValue::NoLValuePath{});
+    }
     Result.setConstexprUnknown(Opaque.isConstexprUnknown());
     return Result;
   }
@@ -1574,4 +1583,11 @@ bool OpaquePointer::isOnePastEndOrElementPastEnd() const {
   }
 
   return false;
+}
+
+bool OpaquePointer::hasValidBase() const {
+  if (const VarDecl *VD = Base.asVarDecl())
+    return !VD->hasExternalStorage();
+
+  return !Base.getType()->isPointerType();
 }

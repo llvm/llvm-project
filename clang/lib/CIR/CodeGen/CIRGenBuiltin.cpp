@@ -595,6 +595,20 @@ static RValue emitBinaryFPBuiltin(CIRGenFunction &cgf, const CallExpr &e) {
 }
 
 template <typename Op>
+static RValue emitTernarySameTypeBuiltin(CIRGenFunction &cgf,
+                                         const CallExpr &e) {
+  mlir::Value arg0 = cgf.emitScalarExpr(e.getArg(0));
+  mlir::Value arg1 = cgf.emitScalarExpr(e.getArg(1));
+  mlir::Value arg2 = cgf.emitScalarExpr(e.getArg(2));
+
+  mlir::Location loc = cgf.getLoc(e.getExprLoc());
+  mlir::Type ty = cgf.convertType(e.getType());
+  auto call = Op::create(cgf.getBuilder(), loc, ty, arg0, arg1, arg2);
+
+  return RValue::get(call->getResult(0));
+}
+
+template <typename Op>
 static RValue emitTernaryMaybeConstrainedFPBuiltin(CIRGenFunction &cgf,
                                                    const CallExpr &e) {
   CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, &e);
@@ -2102,22 +2116,10 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_elementwise_canonicalize:
   case Builtin::BI__builtin_elementwise_copysign:
     return errorBuiltinNYI(*this, e, builtinID);
-  case Builtin::BI__builtin_elementwise_fshl: {
-    mlir::Location loc = getLoc(e->getExprLoc());
-    mlir::Value a = emitScalarExpr(e->getArg(0));
-    mlir::Value b = emitScalarExpr(e->getArg(1));
-    mlir::Value c = emitScalarExpr(e->getArg(2));
-    return RValue::get(builder.emitIntrinsicCallOp(loc, "fshl", a.getType(),
-                                                   mlir::ValueRange{a, b, c}));
-  }
-  case Builtin::BI__builtin_elementwise_fshr: {
-    mlir::Location loc = getLoc(e->getExprLoc());
-    mlir::Value a = emitScalarExpr(e->getArg(0));
-    mlir::Value b = emitScalarExpr(e->getArg(1));
-    mlir::Value c = emitScalarExpr(e->getArg(2));
-    return RValue::get(builder.emitIntrinsicCallOp(loc, "fshr", a.getType(),
-                                                   mlir::ValueRange{a, b, c}));
-  }
+  case Builtin::BI__builtin_elementwise_fshl:
+    return emitTernarySameTypeBuiltin<cir::FshlOp>(*this, *e);
+  case Builtin::BI__builtin_elementwise_fshr:
+    return emitTernarySameTypeBuiltin<cir::FshrOp>(*this, *e);
   case Builtin::BI__builtin_elementwise_clmul:
   case Builtin::BI__builtin_elementwise_pext:
   case Builtin::BI__builtin_elementwise_pdep:
@@ -2182,11 +2184,46 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
 
   case Builtin::BI__builtin_elementwise_maximumnum:
   case Builtin::BI__builtin_elementwise_minimumnum:
-  case Builtin::BI__builtin_reduce_max:
-  case Builtin::BI__builtin_reduce_min:
-  case Builtin::BI__builtin_reduce_add:
-  case Builtin::BI__builtin_reduce_mul:
     return errorBuiltinNYI(*this, e, builtinID);
+  case Builtin::BI__builtin_reduce_max:
+  case Builtin::BI__builtin_reduce_min: {
+    auto getIntrinsicName = [this, builtinIDIfNoAsmLabel](QualType type) {
+      if (const auto *vecTy = type->getAs<VectorType>())
+        type = vecTy->getElementType();
+      else if (type->isSizelessVectorType())
+        type = type->getSizelessVectorEltType(getContext());
+
+      if (builtinIDIfNoAsmLabel == Builtin::BI__builtin_reduce_max) {
+        if (type->isSignedIntegerType())
+          return "vector.reduce.smax";
+        if (type->isUnsignedIntegerType())
+          return "vector.reduce.umax";
+        assert(type->isFloatingType() && "must have a float here");
+        return "vector.reduce.fmax";
+      }
+
+      if (type->isSignedIntegerType())
+        return "vector.reduce.smin";
+      if (type->isUnsignedIntegerType())
+        return "vector.reduce.umin";
+      assert(type->isFloatingType() && "must have a float here");
+      return "vector.reduce.fmin";
+    };
+    return emitBuiltinWithOneOverloadedType<1>(
+        e, getIntrinsicName(e->getArg(0)->getType()),
+        cast<cir::VectorType>(convertType(e->getArg(0)->getType()))
+            .getElementType());
+  }
+  case Builtin::BI__builtin_reduce_add:
+    return emitBuiltinWithOneOverloadedType<1>(
+        e, "vector.reduce.add",
+        cast<cir::VectorType>(convertType(e->getArg(0)->getType()))
+            .getElementType());
+  case Builtin::BI__builtin_reduce_mul:
+    return emitBuiltinWithOneOverloadedType<1>(
+        e, "vector.reduce.mul",
+        cast<cir::VectorType>(convertType(e->getArg(0)->getType()))
+            .getElementType());
   case Builtin::BI__builtin_reduce_xor:
     return emitBuiltinWithOneOverloadedType<1>(
         e, "vector.reduce.xor",
@@ -2203,7 +2240,24 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
         cast<cir::VectorType>(convertType(e->getArg(0)->getType()))
             .getElementType());
   case Builtin::BI__builtin_reduce_assoc_fadd:
-  case Builtin::BI__builtin_reduce_in_order_fadd:
+    return errorBuiltinNYI(*this, e, builtinID);
+  case Builtin::BI__builtin_reduce_in_order_fadd: {
+    assert(e->getNumArgs() == 2 &&
+           "__builtin_reduce_in_order_fadd requires a start value");
+    mlir::Value vector = emitScalarExpr(e->getArg(0));
+    auto vectorTy = cast<cir::VectorType>(vector.getType());
+    mlir::Type scalarTy = vectorTy.getElementType();
+    mlir::Location loc = getLoc(e->getExprLoc());
+    mlir::Value startValue = emitScalarExpr(e->getArg(1));
+    if (startValue.getType() != scalarTy)
+      startValue =
+          builder.createCast(getLoc(e->getArg(1)->getExprLoc()),
+                             cir::CastKind::floating, startValue, scalarTy);
+    SmallVector<mlir::Value, 2> args = {startValue, vector};
+    mlir::Value result =
+        builder.emitIntrinsicCallOp(loc, "vector.reduce.fadd", scalarTy, args);
+    return RValue::get(result);
+  }
   case Builtin::BI__builtin_reduce_maximum:
   case Builtin::BI__builtin_reduce_minimum:
   case Builtin::BI__builtin_matrix_transpose:

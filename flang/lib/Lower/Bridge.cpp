@@ -2020,8 +2020,7 @@ private:
       bridge.openAccCtx().finalizeAndKeep();
       if (bridge.cudaCleanupCtx().hasCode()) {
         mlir::Location loc = toLocation();
-        mlir::Value active =
-            fir::runtime::cuda::genDeviceIsActive(*builder, loc);
+        mlir::Value active = cuf::DeviceIsActiveOp::create(*builder, loc);
         builder->genIfThen(loc, active)
             .genThen([&]() {
               fir::runtime::cuda::genCUDADeviceSynchronize(*builder, loc);
