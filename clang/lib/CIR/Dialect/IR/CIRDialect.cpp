@@ -3760,7 +3760,6 @@ LogicalResult cir::CoroutineOp::verify() {
   if (!isa<YieldOp>(destroy.back().back()))
     return emitOpError("'destroy' must end with cir.yield");
 
-
   if (exit.empty() || exit.back().empty())
     return emitOpError("'exit' region must not be empty");
   if (!isa<ReturnOp>(exit.back().back()))
