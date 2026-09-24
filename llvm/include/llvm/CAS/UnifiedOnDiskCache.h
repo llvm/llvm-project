@@ -70,34 +70,47 @@ public:
        OnDiskGraphDB::FaultInPolicy FaultInPolicy =
            OnDiskGraphDB::FaultInPolicy::FullTree);
 
-  /// Validate the data in \p Path, if needed to ensure correctness.
+  /// Validate the data in \p Path in-process, if it has not been validated
+  /// since the last system boot. A successful validation is recorded so that
+  /// subsequent calls can skip it; a failed or crashed one is recorded as
+  /// pending for \c recover, and is not skipped by subsequent calls.
   ///
-  /// Note: if invalid data is detected and \p AllowRecovery is true, then
-  /// recovery requires exclusive access to the CAS and it is an error to
-  /// attempt recovery if there is concurrent use of the CAS.
+  /// Validation can crash on invalid data. Clients that want to be resilient
+  /// to that should call this from a separate process (e.g. via
+  /// \c llvm-cas -validate-if-needed) and call \c recover if it fails.
   ///
   /// \param Path directory for the on-disk database.
   /// \param HashName Identifier name for the hashing algorithm that is going to
   /// be used.
   /// \param HashByteSize Size for the object digest hash bytes.
   /// \param CheckHash Whether to validate hashes match the data.
-  /// \param AllowRecovery Whether to automatically recover from invalid data by
-  /// marking the files for garbage collection.
   /// \param ForceValidation Whether to force validation to occur even if it
   /// should not be necessary.
-  /// \param LLVMCasBinary If provided, validation is performed out-of-process
-  /// using the given \c llvm-cas executable which protects against crashes
-  /// during validation. Otherwise validation is performed in-process.
   ///
-  /// \returns \c Valid if the data is already valid, \c Recovered if data
-  /// was invalid but has been cleared, \c Skipped if validation is not needed,
-  /// or an \c Error if validation cannot be performed or if the data is left
-  /// in an invalid state because \p AllowRecovery is false.
+  /// \returns \c Valid if the data is valid, \c Skipped if validation is not
+  /// needed, or an \c Error if validation cannot be performed or the data is
+  /// invalid.
   LLVM_ABI static Expected<ValidationResult>
   validateIfNeeded(StringRef Path, StringRef HashName, unsigned HashByteSize,
                    bool CheckHash, OnDiskGraphDB::HashingFuncT HashFn,
-                   bool AllowRecovery, bool ForceValidation,
-                   std::optional<StringRef> LLVMCasBinary);
+                   bool ForceValidation);
+
+  /// Recover from invalid data in \p Path after a failed \c validateIfNeeded,
+  /// by marking all the data for garbage collection.
+  ///
+  /// Recovery requires exclusive access to the CAS and it is an error to
+  /// attempt recovery if there is concurrent use of the CAS.
+  ///
+  /// Recovery is serialized with \c validateIfNeeded, and only happens if the
+  /// last validation failed or crashed. If the data has been recovered or
+  /// validated successfully since, e.g. by a concurrent process, recovery is
+  /// skipped.
+  ///
+  /// \param Path directory for the on-disk database.
+  ///
+  /// \returns \c Recovered if the data has been cleared, \c Skipped if
+  /// recovery is not needed, or an \c Error if recovery cannot be performed.
+  LLVM_ABI static Expected<ValidationResult> recover(StringRef Path);
 
   /// Validate the action cache only.
   LLVM_ABI Error validateActionCache() const;

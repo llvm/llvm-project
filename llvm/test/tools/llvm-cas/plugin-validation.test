@@ -1,0 +1,73 @@
+REQUIRES: cas-plugin
+# HWASan does not tag the globals of a dlopen'ed library with glibc, see
+# https://github.com/llvm/llvm-project/issues/57206.
+UNSUPPORTED: hwasan
+
+RUN: rm -rf %t
+RUN: mkdir %t
+
+RUN: echo "abc" | llvm-cas --cas %t/cas --fcas-plugin-path %cas_plugin \
+RUN:   --make-blob --data - > %t/abc.casid
+RUN: llvm-cas --cas %t/cas --fcas-plugin-path %cas_plugin \
+RUN:   --make-node --data /dev/null @%t/abc.casid > %t/node.casid
+RUN: llvm-cas --cas %t/cas --fcas-plugin-path %cas_plugin \
+RUN:   --put-cache-key @%t/abc.casid @%t/node.casid
+
+RUN: llvm-cas --cas %t/cas --fcas-plugin-path %cas_plugin --validate \
+RUN:   | FileCheck %s --check-prefix=VALID
+RUN: llvm-cas --cas %t/cas --fcas-plugin-path %cas_plugin --validate \
+RUN:   --check-hash | FileCheck %s --check-prefix=VALID
+
+# Validate once per boot unless forced. The output of the validation process
+# is forwarded.
+RUN: llvm-cas --cas %t/cas --fcas-plugin-path %cas_plugin \
+RUN:   --validate-if-needed --check-hash | FileCheck %s --check-prefix=VALID
+RUN: llvm-cas --cas %t/cas --fcas-plugin-path %cas_plugin \
+RUN:   --validate-if-needed --check-hash | FileCheck %s --check-prefix=SKIPPED
+RUN: llvm-cas --cas %t/cas --fcas-plugin-path %cas_plugin \
+RUN:   --validate-if-needed --force | FileCheck %s --check-prefix=VALID
+RUN: llvm-cas --cas %t/cas --fcas-plugin-path %cas_plugin \
+RUN:   --validate-if-needed --in-process | FileCheck %s --check-prefix=SKIPPED
+RUN: llvm-cas --cas %t/cas --fcas-plugin-path %cas_plugin \
+RUN:   --validate-if-needed --in-process --force \
+RUN:   | FileCheck %s --check-prefix=VALID
+
+# Nothing to recover from.
+RUN: llvm-cas --cas %t/cas --fcas-plugin-path %cas_plugin \
+RUN:   --validate-if-needed --force --allow-recovery \
+RUN:   | FileCheck %s --check-prefix=VALID
+
+# Plugin options are passed through.
+RUN: not llvm-cas --cas %t/cas --fcas-plugin-path %cas_plugin \
+RUN:   --fcas-plugin-option bogus=1 --validate-if-needed 2>&1 \
+RUN:   | FileCheck %s --check-prefix=BAD-OPTION
+
+RUN: rm %t/cas/v1.1/data.v1
+RUN: not llvm-cas --cas %t/cas --fcas-plugin-path %cas_plugin --validate
+RUN: not llvm-cas --cas %t/cas --fcas-plugin-path %cas_plugin \
+RUN:   --validate-if-needed --force 2>&1 | FileCheck %s --check-prefix=INVALID
+RUN: not llvm-cas --cas %t/cas --fcas-plugin-path %cas_plugin \
+RUN:   --validate-if-needed --in-process --force 2>&1 \
+RUN:   | FileCheck %s --check-prefix=INVALID
+RUN: llvm-cas --cas %t/cas --fcas-plugin-path %cas_plugin \
+RUN:   --validate-if-needed --force --allow-recovery \
+RUN:   | FileCheck %s --check-prefix=RECOVERED
+RUN: ls %t/cas | FileCheck %s --check-prefix=CORRUPT-DIR
+
+# Recovery also counts as validation for this boot.
+RUN: llvm-cas --cas %t/cas --fcas-plugin-path %cas_plugin \
+RUN:   --validate-if-needed | FileCheck %s --check-prefix=SKIPPED
+
+# The invalid data was discarded.
+RUN: llvm-cas --cas %t/cas --fcas-plugin-path %cas_plugin --validate \
+RUN:   | FileCheck %s --check-prefix=VALID
+RUN: not llvm-cas --cas %t/cas --fcas-plugin-path %cas_plugin \
+RUN:   --get-cache-result @%t/abc.casid | FileCheck %s --check-prefix=NOT-FOUND
+
+VALID: validated successfully
+SKIPPED: validation skipped
+BAD-OPTION: llvm-cas: validate-if-needed: unknown option: bogus
+INVALID: llvm-cas: validate-if-needed:
+RECOVERED: recovered from invalid data
+CORRUPT-DIR: corrupt.0.v1.1
+NOT-FOUND: result not found

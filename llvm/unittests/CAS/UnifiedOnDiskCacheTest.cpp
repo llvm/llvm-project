@@ -9,6 +9,7 @@
 #include "llvm/CAS/UnifiedOnDiskCache.h"
 #include "CASTestConfig.h"
 #include "OnDiskCommonUtils.h"
+#include "llvm/Support/ThreadPool.h"
 #include "llvm/Testing/Support/Error.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gtest/gtest.h"
@@ -134,9 +135,7 @@ TEST_P(CustomHasherOnDiskCASTest, UnifiedOnDiskCacheTest) {
   std::optional<ValidationResult> ValidationRes;
   ASSERT_THAT_ERROR(UnifiedOnDiskCache::validateIfNeeded(
                         Temp.path(), HashName, HashSize, /*CheckHash=*/true,
-                        HashFn, /*AllowRecovery=*/false,
-                        /*ForceValidation=*/true,
-                        /*LLVMCasBinary=*/std::nullopt)
+                        HashFn, /*ForceValidation=*/true)
                         .moveInto(ValidationRes),
                     Succeeded());
   ASSERT_EQ(ValidationRes, ValidationResult::Valid);
@@ -209,5 +208,104 @@ TEST_P(CustomHasherOnDiskCASTest, UnifiedOnDiskCacheTest) {
     ASSERT_THAT_ERROR(cacheGet(UniDB->getKeyValueDB(), Key2Hash).moveInto(Val),
                       Succeeded());
     EXPECT_FALSE(Val.has_value());
+  }
+}
+
+TEST_P(CustomHasherOnDiskCASTest, UnifiedOnDiskCacheConcurrentValidation) {
+  auto HashFn = GetParam().HashFn;
+  StringRef HashName = GetParam().HashName;
+  size_t HashSize = GetParam().HashSize;
+
+  auto createCAS = [&](StringRef Path) {
+    std::unique_ptr<UnifiedOnDiskCache> UniDB;
+    ASSERT_THAT_ERROR(UnifiedOnDiskCache::open(Path, /*SizeLimit=*/std::nullopt,
+                                               HashName, HashSize)
+                          .moveInto(UniDB),
+                      Succeeded());
+    std::optional<ObjectID> ID;
+    ASSERT_THAT_ERROR(store(UniDB->getGraphDB(), "1", {}).moveInto(ID),
+                      Succeeded());
+  };
+  auto validate = [&](StringRef Path, bool Force) {
+    return UnifiedOnDiskCache::validateIfNeeded(
+        Path, HashName, HashSize, /*CheckHash=*/true, HashFn, Force);
+  };
+  auto countCorruptDirs = [](StringRef Path) {
+    unsigned Count = 0;
+    std::error_code EC;
+    for (sys::fs::directory_iterator DirI(Path, EC), DirE; !EC && DirI != DirE;
+         DirI.increment(EC))
+      if (sys::path::filename(DirI->path()).starts_with("corrupt."))
+        ++Count;
+    EXPECT_FALSE(EC);
+    return Count;
+  };
+
+  // Runs \p Fn from multiple threads concurrently, and returns the number of
+  // times each result occurred. Errors are reported as test failures.
+  constexpr unsigned NumTasks = 16;
+  auto runConcurrently = [&](function_ref<Expected<ValidationResult>()> Fn) {
+    std::optional<ValidationResult> Results[NumTasks];
+    std::string Errors[NumTasks];
+    DefaultThreadPool Pool;
+    for (unsigned I = 0; I != NumTasks; ++I)
+      Pool.async([&, I] {
+        if (Error E = Fn().moveInto(Results[I]))
+          Errors[I] = toString(std::move(E));
+      });
+    Pool.wait();
+
+    std::map<ValidationResult, unsigned> Counts;
+    for (unsigned I = 0; I != NumTasks; ++I) {
+      EXPECT_EQ(Errors[I], "");
+      if (Results[I])
+        ++Counts[*Results[I]];
+    }
+    return Counts;
+  };
+
+  // Only one of the concurrent validations of valid data is performed, the
+  // rest see that it has been validated during this boot.
+  {
+    unittest::TempDir Temp("ondisk-unified", /*Unique=*/true);
+    createCAS(Temp.path());
+    auto Counts =
+        runConcurrently([&] { return validate(Temp.path(), /*Force=*/false); });
+    EXPECT_EQ(Counts[ValidationResult::Valid], 1u);
+    EXPECT_EQ(Counts[ValidationResult::Skipped], NumTasks - 1);
+
+    Counts =
+        runConcurrently([&] { return validate(Temp.path(), /*Force=*/true); });
+    EXPECT_EQ(Counts[ValidationResult::Valid], NumTasks);
+  }
+
+  // Concurrently validate invalid data and recover if validation fails, as
+  // done by `llvm-cas -validate-if-needed -allow-recovery`. Exactly one of the
+  // recoveries is performed and none of them fail, regardless of how the
+  // validations and recoveries interleave.
+  for (bool Force : {false, true}) {
+    SCOPED_TRACE(Force ? "Force" : "NoForce");
+    unittest::TempDir Temp("ondisk-unified", /*Unique=*/true);
+    createCAS(Temp.path());
+    ASSERT_FALSE(sys::fs::remove(Temp.path("v1.1/data.v1")));
+
+    auto Counts = runConcurrently([&]() -> Expected<ValidationResult> {
+      Expected<ValidationResult> Result = validate(Temp.path(), Force);
+      if (Result)
+        return Result;
+      consumeError(Result.takeError());
+      return UnifiedOnDiskCache::recover(Temp.path());
+    });
+    EXPECT_EQ(Counts[ValidationResult::Recovered], 1u);
+    EXPECT_EQ(countCorruptDirs(Temp.path()), 1u);
+
+    // Recovery counts as validation for this boot.
+    std::optional<ValidationResult> Result;
+    ASSERT_THAT_ERROR(validate(Temp.path(), /*Force=*/false).moveInto(Result),
+                      Succeeded());
+    EXPECT_EQ(Result, ValidationResult::Skipped);
+    ASSERT_THAT_ERROR(UnifiedOnDiskCache::recover(Temp.path()).moveInto(Result),
+                      Succeeded());
+    EXPECT_EQ(Result, ValidationResult::Skipped);
   }
 }

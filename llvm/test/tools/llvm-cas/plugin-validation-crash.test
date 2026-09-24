@@ -1,0 +1,59 @@
+REQUIRES: cas-plugin
+# HWASan does not tag the globals of a dlopen'ed library with glibc, see
+# https://github.com/llvm/llvm-project/issues/57206.
+UNSUPPORTED: hwasan
+
+# Tests recovery from a validation that crashes, using the test plugin's
+# crash-on-validate option which crashes while checking hashes.
+
+RUN: rm -rf %t
+RUN: mkdir %t
+
+RUN: echo "abc" | llvm-cas --cas %t/cas --fcas-plugin-path %cas_plugin \
+RUN:   --make-blob --data - > %t/abc.casid
+RUN: llvm-cas --cas %t/cas --fcas-plugin-path %cas_plugin \
+RUN:   --put-cache-key @%t/abc.casid @%t/abc.casid
+RUN: llvm-cas --cas %t/cas --fcas-plugin-path %cas_plugin \
+RUN:   --validate-if-needed | FileCheck %s --check-prefix=VALID
+
+# Without --allow-recovery a crash in the validation process is an error.
+RUN: not llvm-cas --cas %t/cas --fcas-plugin-path %cas_plugin \
+RUN:   --fcas-plugin-option crash-on-validate \
+RUN:   --validate-if-needed --force --check-hash 2>&1 \
+RUN:   | FileCheck %s --check-prefix=INVALID
+RUN: FileCheck %s --check-prefix=PENDING --input-file %t/cas/v1.validation
+
+# The crashed validation is not skipped even though the data was validated
+# earlier during this boot.
+RUN: llvm-cas --cas %t/cas --fcas-plugin-path %cas_plugin \
+RUN:   --validate-if-needed | FileCheck %s --check-prefix=VALID
+RUN: FileCheck %s --check-prefix=VALIDATED --input-file %t/cas/v1.validation
+RUN: llvm-cas --cas %t/cas --fcas-plugin-path %cas_plugin \
+RUN:   --validate-if-needed | FileCheck %s --check-prefix=SKIPPED
+
+# An in-process validation that crashes also leaves validation pending.
+RUN: not --crash llvm-cas --cas %t/cas --fcas-plugin-path %cas_plugin \
+RUN:   --fcas-plugin-option crash-on-validate \
+RUN:   --validate-if-needed --in-process --force --check-hash
+RUN: FileCheck %s --check-prefix=PENDING --input-file %t/cas/v1.validation
+
+# With --allow-recovery, llvm-cas recovers after the validation process crashes.
+RUN: llvm-cas --cas %t/cas --fcas-plugin-path %cas_plugin \
+RUN:   --fcas-plugin-option crash-on-validate \
+RUN:   --validate-if-needed --force --check-hash --allow-recovery \
+RUN:   | FileCheck %s --check-prefix=RECOVERED
+RUN: ls %t/cas | FileCheck %s --check-prefix=RECOVERED-DIRS
+RUN: FileCheck %s --check-prefix=VALIDATED --input-file %t/cas/v1.validation
+RUN: llvm-cas --cas %t/cas --fcas-plugin-path %cas_plugin \
+RUN:   --validate-if-needed | FileCheck %s --check-prefix=SKIPPED
+RUN: not llvm-cas --cas %t/cas --fcas-plugin-path %cas_plugin \
+RUN:   --get-cache-result @%t/abc.casid | FileCheck %s --check-prefix=NOT-FOUND
+
+VALID: validated successfully
+SKIPPED: validation skipped
+INVALID: llvm-cas: validate-if-needed: cas contents invalid
+PENDING: {{^0$}}
+VALIDATED: {{^[1-9][0-9]*$}}
+RECOVERED: recovered from invalid data
+RECOVERED-DIRS: corrupt.0.v1.1
+NOT-FOUND: result not found
