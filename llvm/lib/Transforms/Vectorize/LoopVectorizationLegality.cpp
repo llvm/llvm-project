@@ -1654,7 +1654,7 @@ bool LoopVectorizationLegality::canVectorizeLoopNestCFG(
 /// with another term. Binds the pointer, load, and the other comparison term.
 static bool matchUncountableExitCondition(Value *Cond, Value *&Ptr,
                                           Instruction *&Load, Value *&Other) {
-  return match(Cond, m_OneUse(m_c_ICmp(
+  return match(Cond, m_OneUse(m_c_Cmp(
                          m_OneUse(m_Instruction(Load, m_Load(m_Value(Ptr)))),
                          m_Value(Other))));
 }

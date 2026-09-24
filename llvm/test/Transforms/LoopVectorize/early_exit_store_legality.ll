@@ -141,8 +141,8 @@ exit:
 ;; Vectorizeable, needs work on exit condition recipe collection.
 define void @loop_contains_store_fcmp_condition(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) !dbg !18 {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'loop_contains_store_fcmp_condition'
-; CHECK-DEBUG:       LV: Not vectorizing: Early exit loop with store but no supported condition load.
-; CHECK-REMARK:      foo.c:50:3: loop not vectorized: Early exit loop with store but no supported condition load
+; CHECK-DEBUG:       LV: Not vectorizing: Unable to determine early exit condition for loop with side effects
+; CHECK-REMARK:      foo.c:50:3: loop not vectorized: Unable to determine early exit condition for loop with side effects
 entry:
   br label %for.body, !dbg !19
 

@@ -3013,6 +3013,7 @@ static auto m_Uncountable(VPValue *&Cond) {
       m_c_Cmp(m_VPInstruction<Instruction::Load>(m_VPValue()), m_LiveIn()));
 }
 
+namespace {
 struct CountableConditionMatch {
   VPValue *&Cmp;
   PredicatedScalarEvolution &PSE;
@@ -3035,6 +3036,7 @@ struct CountableConditionMatch {
         S, m_scev_AffineAddRec(m_SCEV(), m_scev_One(), m_SpecificLoop(L)));
   }
 };
+} // end anonymous namespace
 
 /// Matches an exit condition formed by comparing the current value of a
 /// affine add recurrence in the given loop with a stride of 1 against a
@@ -3215,13 +3217,13 @@ getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
         return nullptr;
       Recipes.push_back(cast<VPInstruction>(V->getDefiningRecipe()));
       Recipes.push_back(cast<VPInstruction>(GepR));
-    } else if (match(V, m_Freeze(m_CombineOr(
-                            m_VPInstruction<VPInstruction::MaskedCond>(
-                                m_VPValue(Op1)),
-                            m_VPValue(Op1))))) {
+    } else if (match(V, m_Freeze(m_VPValue(Op1)))) {
       Worklist.push_back(Op1);
       Recipes.push_back(cast<VPInstruction>(V->getDefiningRecipe()));
-      Recipes.push_back(cast<VPInstruction>(Op1->getDefiningRecipe()));
+    } else if (match(V, m_VPInstruction<VPInstruction::MaskedCond>(
+                            m_VPValue(Op1)))) {
+      Worklist.push_back(Op1);
+      Recipes.push_back(cast<VPInstruction>(V->getDefiningRecipe()));
     } else
       return nullptr;
   }
