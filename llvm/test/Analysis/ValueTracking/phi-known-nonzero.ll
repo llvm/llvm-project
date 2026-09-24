@@ -262,3 +262,74 @@ T:
 F:
   br label %T
 }
+
+; An or recurrence with a non-zero start value is never zero.
+define i1 @or_recurrence_nonzero_start(ptr %p, i64 %n) {
+; CHECK-LABEL: @or_recurrence_nonzero_start(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[ACC:%.*]] = phi i32 [ 32768, [[ENTRY]] ], [ [[ACC_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[IV]]
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[GEP]], align 4
+; CHECK-NEXT:    [[ACC_NEXT]] = or i32 [[X]], [[ACC]]
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %acc = phi i32 [ 32768, %entry ], [ %acc.next, %loop ]
+  %gep = getelementptr i32, ptr %p, i64 %iv
+  %x = load i32, ptr %gep
+  %acc.next = or i32 %x, %acc
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  %cmp = icmp eq i32 %acc.next, 0
+  ret i1 %cmp
+}
+
+; Negative test: the start value is zero.
+define i1 @or_recurrence_zero_start(ptr %p, i64 %n) {
+; CHECK-LABEL: @or_recurrence_zero_start(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[ACC:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[ACC_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[IV]]
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[GEP]], align 4
+; CHECK-NEXT:    [[ACC_NEXT]] = or i32 [[X]], [[ACC]]
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[ACC_NEXT]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %acc = phi i32 [ 0, %entry ], [ %acc.next, %loop ]
+  %gep = getelementptr i32, ptr %p, i64 %iv
+  %x = load i32, ptr %gep
+  %acc.next = or i32 %x, %acc
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  %cmp = icmp eq i32 %acc.next, 0
+  ret i1 %cmp
+}
