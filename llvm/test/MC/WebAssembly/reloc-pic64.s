@@ -98,12 +98,12 @@ hidden_func:
 # CHECK-NEXT:       - Module:          GOT.mem
 # CHECK-NEXT:         Field:           default_data
 # CHECK-NEXT:         Kind:            GLOBAL
-# CHECK-NEXT:         GlobalType:      I32
+# CHECK-NEXT:         GlobalType:      I64
 # CHECK-NEXT:         GlobalMutable:   true
 # CHECK-NEXT:       - Module:          GOT.func
 # CHECK-NEXT:         Field:           default_func
 # CHECK-NEXT:         Kind:            GLOBAL
-# CHECK-NEXT:         GlobalType:      I32
+# CHECK-NEXT:         GlobalType:      I64
 # CHECK-NEXT:         GlobalMutable:   true
 # CHECK-NEXT:   - Type:            FUNCTION
 # CHECK-NEXT:     FunctionTypes:   [ 0, 0, 1, 1, 0 ]
