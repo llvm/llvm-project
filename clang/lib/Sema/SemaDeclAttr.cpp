@@ -2904,7 +2904,7 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
       NewII = &S.Context.Idents.get("watchos_app_extension");
 
     if (NewII) {
-      const auto *SDKInfo = S.getDarwinSDKInfoForAvailabilityChecking();
+      const auto *SDKInfo = S.getDarwinSDKInfo();
       const auto *IOSToWatchOSMapping =
           SDKInfo ? SDKInfo->getVersionMapping(
                         DarwinSDKInfo::OSEnvPair::iOStoWatchOSPair())
@@ -2965,7 +2965,7 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
       NewII = &S.Context.Idents.get("tvos_app_extension");
 
     if (NewII) {
-      const auto *SDKInfo = S.getDarwinSDKInfoForAvailabilityChecking();
+      const auto *SDKInfo = S.getDarwinSDKInfo();
       const auto *IOSToTvOSMapping =
           SDKInfo ? SDKInfo->getVersionMapping(
                         DarwinSDKInfo::OSEnvPair::iOStoTvOSPair())

@@ -71,6 +71,33 @@ entries:
 
     Name: MyFramework
 
+:ValidSDKs:
+
+  An exhaustive list of the SDKs this file is still valid on, each with the SDK
+  version at which it stops being valid. A file that declares 'ValidSDKs' is
+  used only when the SDK being compiled against is listed *and* older than that
+  entry's 'ValidUntil'; otherwise the whole file is ignored. This lets an API
+  notes file outside of the SDK be phased out for new SDKs while still
+  supporting old SDKs. The SDK list is exhaustive so that new SDKs don't need to
+  be added to an API notes file that is being phased out already.
+
+  ::
+
+    ValidSDKs:
+    - Name: macosx
+      ValidUntil: 14.0
+    - Name: iphoneos
+      ValidUntil: 17.0
+
+  'Name' is an Xcode SDK name as might be passed to `xcrun --sdk`, e.g. macosx,
+  iphoneos, iphonesimulator, et al.
+
+  'ValidUntil' is exclusive, and is compared against the SDK's version, *not*
+  against the deployment target.
+
+  If Clang cannot identify an SDK at all -- no '-isysroot', missing
+  'SDKSettings.json', etc. -- the file applies.
+
 :Classes, Protocols, Tags, Typedefs, Globals, Enumerators, Functions, Namespaces:
 
   Arrays of top-level declarations. Each entry in the array must have a

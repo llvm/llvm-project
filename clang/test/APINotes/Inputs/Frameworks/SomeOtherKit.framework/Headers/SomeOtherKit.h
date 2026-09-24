@@ -4,6 +4,7 @@ __attribute__((objc_root_class))
 @interface A
 -(void)methodA;
 -(void)methodB;
+-(void)methodC;
 @end
 
 #endif

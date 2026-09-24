@@ -1,4 +1,9 @@
 Name: SomeOtherKit
+# Ages out on the macOS 15.0 SDK. Tests that pass no -isysroot see no SDK, so
+# this still applies for them.
+ValidSDKs:
+  - Name: macosx
+    ValidUntil: 15.0
 Classes:
   - Name: A
     Methods:

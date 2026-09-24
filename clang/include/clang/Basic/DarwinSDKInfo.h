@@ -203,6 +203,8 @@ public:
 
   llvm::Triple::EnvironmentType getEnvironment() const { return Environment; }
 
+  bool matchesSDKName(StringRef Name) const;
+
   const llvm::VersionTuple &getVersion() const { return Version; }
 
   const llvm::VersionTuple &getDefaultDeploymentTarget() const {

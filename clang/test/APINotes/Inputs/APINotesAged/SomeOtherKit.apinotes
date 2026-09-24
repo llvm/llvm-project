@@ -1,0 +1,14 @@
+Name: SomeOtherKit
+# Stands in for a search path whose notes are no longer valid: ages out on the
+# macOS 15.0 SDK. Annotates methodC rather than methodB so that it is observable
+# which of several search paths was used.
+ValidSDKs:
+  - Name: macosx
+    ValidUntil: 15.0
+Classes:
+  - Name: A
+    Methods:
+      - Selector:        "methodC"
+        MethodKind:      Instance
+        Availability:    none
+        AvailabilityMsg: "anything but this"

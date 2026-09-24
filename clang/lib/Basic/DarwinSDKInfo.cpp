@@ -397,6 +397,13 @@ findPlatformInfo(const DarwinSDKInfo::PlatformInfoStorageType &PlatformInfos,
   return PlatformInfoIt;
 }
 
+bool DarwinSDKInfo::matchesSDKName(StringRef Name) const {
+  std::pair<llvm::Triple::OSType, llvm::Triple::EnvironmentType>
+      OSAndEnvironment = parseOSAndEnvironment(Name);
+  return (OSAndEnvironment.first == OS) &&
+         (OSAndEnvironment.second == Environment);
+}
+
 bool DarwinSDKInfo::supportsTriple(const llvm::Triple &Triple) const {
   return findPlatformInfo(PlatformInfos, Triple) != PlatformInfos.end();
 }

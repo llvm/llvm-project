@@ -112,7 +112,7 @@ ModuleLoader &Sema::getModuleLoader() const { return PP.getModuleLoader(); }
 DarwinSDKInfo *
 Sema::getDarwinSDKInfoForAvailabilityChecking(SourceLocation Loc,
                                               StringRef Platform) {
-  auto *SDKInfo = getDarwinSDKInfoForAvailabilityChecking();
+  auto *SDKInfo = getDarwinSDKInfo();
   if (!SDKInfo && !WarnedDarwinSDKInfoMissing) {
     Diag(Loc, diag::warn_missing_sdksettings_for_availability_checking)
         << Platform;
@@ -121,7 +121,7 @@ Sema::getDarwinSDKInfoForAvailabilityChecking(SourceLocation Loc,
   return SDKInfo;
 }
 
-DarwinSDKInfo *Sema::getDarwinSDKInfoForAvailabilityChecking() {
+DarwinSDKInfo *Sema::getDarwinSDKInfo() {
   if (CachedDarwinSDKInfo)
     return CachedDarwinSDKInfo->get();
   auto SDKInfo = parseDarwinSDKInfo(

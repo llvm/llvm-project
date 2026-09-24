@@ -1,0 +1,17 @@
+Checks that 'ValidSDKs' survives a YAML -> YAML round trip, i.e. that
+parseAndDumpAPINotes does not silently drop the key or any of its entries.
+
+RUN: apinotes-test %S/Inputs/ValidSDKs/multiple-sdks/AgingLib.apinotes | FileCheck %s
+
+CHECK:      Name:{{ +}}AgingLib
+CHECK:      ValidSDKs:
+CHECK-NEXT: {{ +}}- Name:{{ +}}iphoneos
+CHECK-NEXT: {{ +}}ValidUntil:{{ +}}12.0
+CHECK-NEXT: {{ +}}- Name:{{ +}}macosx
+CHECK-NEXT: {{ +}}ValidUntil:{{ +}}15.0
+
+The rest of the file must still round trip -- a malformed ValidSDKs mapping
+would otherwise swallow the following keys.
+
+CHECK:      Functions:
+CHECK-NEXT: {{ +}}- Name:{{ +}}aged_out_function

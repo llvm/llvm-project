@@ -1,0 +1,13 @@
+---
+Name: PublicPrivateLib
+# Deliberately the mirror of the public file: valid much further into the macOS
+# SDKs, but already expired for any iOS SDK.
+ValidSDKs:
+  - Name: macosx
+    ValidUntil: 15.0
+  - Name: iphoneos
+    ValidUntil: 1.0
+Functions:
+  - Name: private_note_fn
+    Availability: none
+    AvailabilityMsg: "from the private API notes"

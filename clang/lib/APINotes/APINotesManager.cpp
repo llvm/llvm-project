@@ -48,6 +48,15 @@ public:
 };
 } // namespace
 
+/// Adapts an SDK info provider for passing down to the API notes YAML
+/// compiler, or an empty reference if no provider has been set.
+static DarwinSDKInfoProviderRef
+asProviderRef(llvm::unique_function<const DarwinSDKInfo *()> &Provider) {
+  if (!Provider)
+    return {};
+  return Provider;
+}
+
 APINotesManager::APINotesManager(SourceManager &SM, const LangOptions &LangOpts)
     : SM(SM), ImplicitAPINotes(LangOpts.APINotes),
       HasAPINotes(LangOpts.APINotes),
@@ -89,7 +98,8 @@ APINotesManager::loadAPINotes(FileEntryRef APINotesFile) {
     llvm::raw_svector_ostream OS(APINotesBuffer);
     if (api_notes::compileAPINotes(
             SourceBuffer->getBuffer(), SM.getFileEntryForID(SourceFileID), OS,
-            SMAdapter.getDiagHandler(), SMAdapter.getDiagContext()))
+            SMAdapter.getDiagHandler(), SMAdapter.getDiagContext(),
+            asProviderRef(SDKInfoProvider)) != CompileResult::Success)
       return nullptr;
 
     // Make a copy of the compiled form into the buffer.
@@ -115,9 +125,10 @@ APINotesManager::loadAPINotes(StringRef Buffer) {
       diag::warn_apinotes_message, diag::note_apinotes_message, std::nullopt);
   llvm::raw_svector_ostream OS(APINotesBuffer);
 
-  if (api_notes::compileAPINotes(Buffer, nullptr, OS,
-                                 SMAdapter.getDiagHandler(),
-                                 SMAdapter.getDiagContext()))
+  if (api_notes::compileAPINotes(
+          Buffer, nullptr, OS, SMAdapter.getDiagHandler(),
+          SMAdapter.getDiagContext(),
+          asProviderRef(SDKInfoProvider)) != CompileResult::Success)
     return nullptr;
 
   CompiledBuffer = llvm::MemoryBuffer::getMemBufferCopy(
@@ -225,15 +236,13 @@ static bool hasPrivateSubmodules(const Module *M) {
 }
 
 llvm::SmallVector<FileEntryRef, 2>
-APINotesManager::getCurrentModuleAPINotes(Module *M, bool LookInModule,
-                                          ArrayRef<std::string> SearchPaths) {
+APINotesManager::getCurrentModuleAPINotes(Module *M) {
   FileManager &FM = SM.getFileManager();
   auto ModuleName = M->getTopLevelModuleName();
   auto ExportedModuleName = M->getTopLevelModule()->ExportAsModule;
   llvm::SmallVector<FileEntryRef, 2> APINotes;
 
-  // First, look relative to the module itself.
-  if (LookInModule && M->Directory) {
+  if (M->Directory) {
     // Local function to try loading an API notes file in the given directory.
     auto tryAPINotes = [&](DirectoryEntryRef Dir, bool WantPublic) {
       if (auto File = findAPINotesFile(Dir, ModuleName, WantPublic)) {
@@ -287,23 +296,8 @@ APINotesManager::getCurrentModuleAPINotes(Module *M, bool LookInModule,
       if (!M->ModuleMapIsPrivate && hasPrivateSubmodules(M))
         tryAPINotes(*M->Directory, /*wantPublic=*/false);
     }
-
-    if (!APINotes.empty())
-      return APINotes;
   }
 
-  // Second, look for API notes for this module in the module API
-  // notes search paths.
-  for (const auto &SearchPath : SearchPaths) {
-    if (auto SearchDir = FM.getOptionalDirectoryRef(SearchPath)) {
-      if (auto File = findAPINotesFile(*SearchDir, ModuleName)) {
-        APINotes.push_back(*File);
-        return APINotes;
-      }
-    }
-  }
-
-  // Didn't find any API notes.
   return APINotes;
 }
 
@@ -312,12 +306,29 @@ bool APINotesManager::loadCurrentModuleAPINotes(
   assert(!CurrentModuleReaders[ReaderKind::Public] &&
          "Already loaded API notes for the current module?");
 
-  auto APINotes = getCurrentModuleAPINotes(M, LookInModule, SearchPaths);
   unsigned NumReaders = 0;
-  for (auto File : APINotes) {
-    CurrentModuleReaders[NumReaders++] = loadAPINotes(File).release();
-    if (!getCurrentModuleReaders().empty())
+  auto tryLoad = [&](FileEntryRef File) {
+    if (auto Reader = loadAPINotes(File)) {
+      CurrentModuleReaders[NumReaders++] = Reader.release();
       M->APINotesFile = File.getName().str();
+    }
+  };
+
+  // First, look relative to the module itself.
+  if (LookInModule)
+    for (FileEntryRef File : getCurrentModuleAPINotes(M))
+      tryLoad(File);
+
+  // Second, look for API notes for this module in the module API
+  // notes search paths.
+  FileManager &FM = SM.getFileManager();
+  for (const auto &SearchPath : SearchPaths) {
+    if (NumReaders > 0)
+      break;
+
+    if (auto SearchDir = FM.getOptionalDirectoryRef(SearchPath))
+      if (auto File = findAPINotesFile(*SearchDir, M->getTopLevelModuleName()))
+        tryLoad(*File);
   }
 
   if (NumReaders > 0)
@@ -329,10 +340,8 @@ bool APINotesManager::loadCurrentModuleAPINotesFromBuffer(
     ArrayRef<StringRef> Buffers) {
   unsigned NumReader = 0;
   for (auto Buf : Buffers) {
-    auto Reader = loadAPINotes(Buf);
-    assert(Reader && "Could not load the API notes we just generated?");
-
-    CurrentModuleReaders[NumReader++] = Reader.release();
+    if (auto Reader = loadAPINotes(Buf))
+      CurrentModuleReaders[NumReader++] = Reader.release();
   }
   if (NumReader > 0)
     HasAPINotes = true;

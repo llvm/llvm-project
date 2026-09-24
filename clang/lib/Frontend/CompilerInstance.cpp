@@ -775,6 +775,10 @@ void CompilerInstance::createSema(TranslationUnitKind TUKind,
 
   // Set up API notes.
   TheSema->APINotes.setSwiftVersion(getAPINotesOpts().SwiftVersion);
+  // Resolve the SDK lazily, since only an API notes file that declares
+  // 'ValidSDKs' needs it.
+  TheSema->APINotes.setSDKInfoProvider(
+      [&S = *TheSema]() { return S.getDarwinSDKInfo(); });
 
   // Attach the external sema source if there is any.
   if (ExternalSemaSrc) {

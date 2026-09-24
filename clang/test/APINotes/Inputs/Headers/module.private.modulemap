@@ -3,3 +3,7 @@ module PrivateLib {
 }
 
 module ModuleWithWrongCasePrivate.Inner {}
+
+// Gives PublicPrivateLib a private submodule, which is what makes its
+// _private.apinotes file be looked for at all.
+module PublicPrivateLib.Inner {}

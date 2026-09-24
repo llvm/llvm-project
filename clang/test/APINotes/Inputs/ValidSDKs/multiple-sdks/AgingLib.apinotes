@@ -1,0 +1,11 @@
+---
+Name: AgingLib
+ValidSDKs:
+  - Name: iphoneos
+    ValidUntil: 12.0
+  - Name: macosx
+    ValidUntil: 15.0
+Functions:
+  - Name: aged_out_function
+    Availability: none
+    AvailabilityMsg: "the SDK now declares this itself"

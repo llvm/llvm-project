@@ -9,11 +9,13 @@
 #ifndef LLVM_CLANG_APINOTES_APINOTESYAMLCOMPILER_H
 #define LLVM_CLANG_APINOTES_APINOTESYAMLCOMPILER_H
 
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace clang {
+class DarwinSDKInfo;
 class FileEntry;
 } // namespace clang
 
@@ -24,11 +26,24 @@ namespace api_notes {
 /// the APINotes format.
 bool parseAndDumpAPINotes(llvm::StringRef YI, llvm::raw_ostream &OS);
 
+/// Resolves the SDK being compiled against, on demand. Returns null when the
+/// SDK cannot be identified (no sysroot, no SDKSettings.json, ...), which means
+/// "apply the API notes" rather than "skip them".
+using DarwinSDKInfoProviderRef = llvm::function_ref<const DarwinSDKInfo *()>;
+
+enum class CompileResult {
+  Success,
+  Error,
+  /// The file declares 'ValidSDKs' and the SDK being compiled against isn't one
+  /// of them, so nothing was written.
+  Skipped,
+};
+
 /// Converts API notes from YAML format to binary format.
-bool compileAPINotes(llvm::StringRef YAMLInput, const FileEntry *SourceFile,
-                     llvm::raw_ostream &OS,
-                     llvm::SourceMgr::DiagHandlerTy DiagHandler = nullptr,
-                     void *DiagHandlerCtxt = nullptr);
+CompileResult compileAPINotes(
+    llvm::StringRef YAMLInput, const FileEntry *SourceFile,
+    llvm::raw_ostream &OS, llvm::SourceMgr::DiagHandlerTy DiagHandler = nullptr,
+    void *DiagHandlerCtxt = nullptr, DarwinSDKInfoProviderRef GetSDKInfo = {});
 } // namespace api_notes
 } // namespace clang
 

@@ -84,3 +84,11 @@ module RedeclAnnotation {
   header "RedeclAnnotation.h"
   export *
 }
+
+module AgingLib {
+  header "AgingLib.h"
+}
+
+module PublicPrivateLib {
+  header "PublicPrivateLib.h"
+}

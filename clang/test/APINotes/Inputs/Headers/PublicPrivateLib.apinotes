@@ -1,0 +1,14 @@
+---
+Name: PublicPrivateLib
+# Valid below macOS 11.0 but well into the iOS SDKs, which is the opposite of the
+# private file below. That lets one module cover every combination of the two
+# in-module readers surviving or ageing out, just by picking the SDK.
+ValidSDKs:
+  - Name: macosx
+    ValidUntil: 11.0
+  - Name: iphoneos
+    ValidUntil: 99.0
+Functions:
+  - Name: public_note_fn
+    Availability: none
+    AvailabilityMsg: "from the public API notes"

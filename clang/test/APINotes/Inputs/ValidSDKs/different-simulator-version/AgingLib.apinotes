@@ -1,0 +1,11 @@
+---
+Name: AgingLib
+ValidSDKs:
+  - Name: xros
+    ValidUntil: 1.0
+  - Name: xrsimulator
+    ValidUntil: 2.0
+Functions:
+  - Name: aged_out_function
+    Availability: none
+    AvailabilityMsg: "the SDK now declares this itself"

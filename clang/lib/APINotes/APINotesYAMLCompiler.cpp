@@ -16,6 +16,7 @@
 #include "clang/APINotes/APINotesYAMLCompiler.h"
 #include "clang/APINotes/APINotesWriter.h"
 #include "clang/APINotes/Types.h"
+#include "clang/Basic/DarwinSDKInfo.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/Specifiers.h"
 #include "llvm/ADT/STLExtras.h"
@@ -732,9 +733,34 @@ template <> struct MappingTraits<Versioned> {
 } // namespace llvm
 
 namespace {
+struct ValidSDK {
+  StringRef Name;
+  VersionTuple ValidUntil;
+};
+
+typedef std::vector<ValidSDK> ValidSDKsSeq;
+} // namespace
+
+LLVM_YAML_IS_SEQUENCE_VECTOR(ValidSDK)
+
+namespace llvm {
+namespace yaml {
+template <> struct MappingTraits<ValidSDK> {
+  static void mapping(IO &IO, ValidSDK &S) {
+    // Name is a plain string rather than an enumeration. Unrecognized SDK names
+    // are handled by clients.
+    IO.mapRequired("Name", S.Name);
+    IO.mapRequired("ValidUntil", S.ValidUntil);
+  }
+};
+} // namespace yaml
+} // namespace llvm
+
+namespace {
 struct Module {
   StringRef Name;
   AvailabilityItem Availability;
+  ValidSDKsSeq ValidSDKs;
   TopLevelItems TopLevel;
   VersionedSeq SwiftVersions;
 
@@ -755,6 +781,7 @@ template <> struct MappingTraits<Module> {
                    APIAvailability::Available);
     IO.mapOptional("AvailabilityMsg", M.Availability.Msg, StringRef(""));
     IO.mapOptional("SwiftInferImportAsMember", M.SwiftInferImportAsMember);
+    IO.mapOptional("ValidSDKs", M.ValidSDKs);
     mapTopLevelItems(IO, M.TopLevel);
     IO.mapOptional("SwiftVersions", M.SwiftVersions);
   }
@@ -1392,18 +1419,45 @@ static void printDiagnostic(const llvm::SMDiagnostic &Diag, void *Context) {
   Diag.print(nullptr, llvm::errs());
 }
 
-bool api_notes::compileAPINotes(StringRef YAMLInput,
-                                const FileEntry *SourceFile,
-                                llvm::raw_ostream &OS,
-                                llvm::SourceMgr::DiagHandlerTy DiagHandler,
-                                void *DiagHandlerCtxt) {
+static bool isValidForSDK(const ValidSDKsSeq &ValidSDKs,
+                          DarwinSDKInfoProviderRef GetSDKInfo) {
+  if (ValidSDKs.empty() || !GetSDKInfo)
+    return true;
+
+  // If there's no SDK info, assume an old SDK and apply the API notes.
+  const DarwinSDKInfo *SDK = GetSDKInfo();
+  if (!SDK)
+    return true;
+
+  const auto Entry = llvm::find_if(ValidSDKs, [SDK](const ValidSDK &S) {
+    return SDK->matchesSDKName(S.Name);
+  });
+
+  // If the SDK doesn't match any of the valid SDKs, assume a new SDK that
+  // should skip the obsolete API notes.
+  if (Entry == ValidSDKs.end())
+    return false;
+
+  return SDK->getVersion() < Entry->ValidUntil;
+}
+
+CompileResult api_notes::compileAPINotes(
+    StringRef YAMLInput, const FileEntry *SourceFile, llvm::raw_ostream &OS,
+    llvm::SourceMgr::DiagHandlerTy DiagHandler, void *DiagHandlerCtxt,
+    DarwinSDKInfoProviderRef GetSDKInfo) {
   Module TheModule;
 
   if (!DiagHandler)
     DiagHandler = &printDiagnostic;
 
   if (parseAPINotes(YAMLInput, TheModule, DiagHandler, DiagHandlerCtxt))
-    return true;
+    return CompileResult::Error;
 
-  return compile(TheModule, SourceFile, OS, DiagHandler, DiagHandlerCtxt);
+  if (!isValidForSDK(TheModule.ValidSDKs, GetSDKInfo))
+    return CompileResult::Skipped;
+
+  if (compile(TheModule, SourceFile, OS, DiagHandler, DiagHandlerCtxt))
+    return CompileResult::Error;
+
+  return CompileResult::Success;
 }
