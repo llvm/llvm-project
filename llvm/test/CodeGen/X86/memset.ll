@@ -41,9 +41,9 @@ define void @t() nounwind  {
 ; AVX1-NEXT:    subl $60, %esp
 ; AVX1-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; AVX1-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vmovups %ymm0, {{[0-9]+}}(%esp)
+; AVX1-NEXT:    vmovaps %xmm0, {{[0-9]+}}(%esp)
+; AVX1-NEXT:    vmovaps %xmm0, {{[0-9]+}}(%esp)
 ; AVX1-NEXT:    movl %eax, (%esp)
-; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    calll _foo
 ; AVX1-NEXT:    addl $60, %esp
 ; AVX1-NEXT:    retl
@@ -140,12 +140,13 @@ define void @PR83077(ptr %a) {
 ; AVX1-LABEL: PR83077:
 ; AVX1:       ## %bb.0:
 ; AVX1-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; AVX1-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vcmptrueps %ymm0, %ymm0, %ymm0
-; AVX1-NEXT:    vmovups %ymm0, 58(%eax)
-; AVX1-NEXT:    vmovups %ymm0, 32(%eax)
-; AVX1-NEXT:    vmovups %ymm0, (%eax)
-; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    vmovdqu %xmm0, 74(%eax)
+; AVX1-NEXT:    vmovdqu %xmm0, 64(%eax)
+; AVX1-NEXT:    vmovdqu %xmm0, 48(%eax)
+; AVX1-NEXT:    vmovdqu %xmm0, 32(%eax)
+; AVX1-NEXT:    vmovdqu %xmm0, 16(%eax)
+; AVX1-NEXT:    vmovdqu %xmm0, (%eax)
 ; AVX1-NEXT:    retl
 ;
 ; AVX2-LABEL: PR83077:
