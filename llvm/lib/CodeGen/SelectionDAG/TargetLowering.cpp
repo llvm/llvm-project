@@ -3285,7 +3285,9 @@ bool TargetLowering::SimplifyDemandedVectorElts(
 
   // Undef operand.
   if (Op.isUndef()) {
-    KnownUndef.setAllBits();
+    // Don't set KnownUndef for POISON as it might allow it to propagate.
+    if (Op.getOpcode() == ISD::UNDEF)
+      KnownUndef.setAllBits();
     return false;
   }
 
