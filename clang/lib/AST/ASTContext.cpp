@@ -2554,15 +2554,9 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     const ASTRecordLayout &Layout = getASTRecordLayout(RD);
     Width = toBits(Layout.getSize());
     Align = toBits(Layout.getAlignment());
-    if (RD->hasAttr<AlignedAttr>())
-      AlignRequirement = AlignRequirementKind::RequiredByRecord;
-    else if (!Layout.getPragmaPackResistantAlignment().isZero())
-      // Propagate ResistPragmaPack so pragma pack applied to enclosing
-      // records won't reduce alignment for records containing vector or
-      // x87 fp80 types.
-      AlignRequirement = AlignRequirementKind::ResistPragmaPack;
-    else
-      AlignRequirement = AlignRequirementKind::None;
+    AlignRequirement = RD->hasAttr<AlignedAttr>()
+                           ? AlignRequirementKind::RequiredByRecord
+                           : AlignRequirementKind::None;
     break;
   }
 
