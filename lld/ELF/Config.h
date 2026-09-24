@@ -29,6 +29,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/GlobPattern.h"
 #include "llvm/Support/TarWriter.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include <atomic>
 #include <memory>
 #include <mutex>
@@ -652,6 +653,7 @@ struct InStruct {
 };
 
 struct Ctx : CommonLinkerContext {
+  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> fs;
   Config arg;
   LinkerDriver driver;
   LinkerScript *script;
@@ -782,7 +784,7 @@ struct Ctx : CommonLinkerContext {
   // STT_SECTION symbol associated to the .toc input section.
   llvm::DenseSet<std::pair<const Symbol *, uint64_t>> ppc64noTocRelax;
 
-  Ctx();
+  explicit Ctx(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> fs = nullptr);
 
   llvm::raw_fd_ostream openAuxiliaryFile(llvm::StringRef, std::error_code &);
 

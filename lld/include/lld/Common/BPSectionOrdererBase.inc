@@ -68,7 +68,8 @@ template <class D> struct BPOrderer {
                     bool compressionSortStartupFunctions, bool verbose,
                     llvm::ArrayRef<Section *> sections,
                     const DenseMap<CachedHashStringRef, std::set<unsigned>>
-                        &rootSymbolToSectionIdxs)
+                        &rootSymbolToSectionIdxs,
+                    llvm::vfs::FileSystem &fs = *llvm::vfs::getRealFileSystem())
       -> llvm::DenseMap<const Section *, int>;
 
   std::optional<StringRef> static getResolvedLinkageName(StringRef name) {
@@ -164,7 +165,8 @@ auto BPOrderer<D>::computeOrder(
     bool compressionSortStartupFunctions, bool verbose,
     ArrayRef<Section *> sections,
     const DenseMap<CachedHashStringRef, std::set<unsigned>>
-        &rootSymbolToSectionIdxs) -> DenseMap<const Section *, int> {
+        &rootSymbolToSectionIdxs,
+    vfs::FileSystem &fs) -> DenseMap<const Section *, int> {
   TimeTraceScope timeScope("Setup Balanced Partitioning");
   DenseMap<const void *, uint64_t> sectionToIdx;
   for (auto [i, isec] : llvm::enumerate(sections))
@@ -179,8 +181,7 @@ auto BPOrderer<D>::computeOrder(
   DenseSet<CachedHashStringRef> uniqueResolvedProfiledFunctions;
   std::unique_ptr<InstrProfReader> reader;
   if (!profilePath.empty()) {
-    auto fs = vfs::getRealFileSystem();
-    auto readerOrErr = InstrProfReader::create(profilePath, *fs);
+    auto readerOrErr = InstrProfReader::create(profilePath, fs);
     if (!readerOrErr) {
       lld::error(toString(readerOrErr.takeError()));
       return DenseMap<const Section *, int>{};

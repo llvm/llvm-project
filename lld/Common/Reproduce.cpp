@@ -11,6 +11,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/VirtualFileSystem.h"
 
 using namespace lld;
 using namespace llvm;
@@ -22,8 +23,12 @@ using namespace llvm::sys;
 // Returned string is a forward slash separated path even on Windows to avoid
 // a mess with backslash-as-escape and backslash-as-path-separator.
 std::string lld::relativeToRoot(StringRef path) {
+  return relativeToRoot(path, *vfs::getRealFileSystem());
+}
+
+std::string lld::relativeToRoot(StringRef path, vfs::FileSystem &fs) {
   SmallString<128> abs = path;
-  if (fs::make_absolute(abs))
+  if (fs.makeAbsolute(abs))
     return std::string(path);
   path::remove_dots(abs, /*remove_dot_dot=*/true);
 

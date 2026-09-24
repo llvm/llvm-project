@@ -19,6 +19,7 @@
 #include "Writer.h"
 #include "lld/Common/Args.h"
 #include "lld/Common/CommonLinkerContext.h"
+#include "lld/Common/Driver.h"
 #include "lld/Common/Filesystem.h"
 #include "lld/Common/Timer.h"
 #include "lld/Common/Version.h"
@@ -83,9 +84,14 @@ COFFSyncStream coff::Fatal(COFFLinkerContext &ctx) {
 uint64_t coff::errCount(COFFLinkerContext &ctx) { return ctx.e.errorCount; }
 
 namespace lld::coff {
-
 bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
-          llvm::raw_ostream &stderrOS, bool exitEarly, bool disableOutput) {
+          llvm::raw_ostream &stderrOS, bool exitEarly, bool disableOutput,
+          llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> fs) {
+  if (fs) {
+    stderrOS << "lld: error: a virtual filesystem is only supported by the ELF "
+                "driver\n";
+    return false;
+  }
   // This driver-specific context will be freed later by unsafeLldMain().
   auto *ctx = new COFFLinkerContext;
 

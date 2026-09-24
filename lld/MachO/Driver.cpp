@@ -26,6 +26,7 @@
 
 #include "lld/Common/Args.h"
 #include "lld/Common/CommonLinkerContext.h"
+#include "lld/Common/Driver.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/LLVM.h"
 #include "lld/Common/Memory.h"
@@ -1762,7 +1763,13 @@ static void computeColdness() {
 namespace lld {
 namespace macho {
 bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
-          llvm::raw_ostream &stderrOS, bool exitEarly, bool disableOutput) {
+          llvm::raw_ostream &stderrOS, bool exitEarly, bool disableOutput,
+          llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> fs) {
+  if (fs) {
+    stderrOS << "lld: error: a virtual filesystem is only supported by the ELF "
+                "driver\n";
+    return false;
+  }
   // This driver-specific context will be freed later by lldMain().
   auto *ctx = new CommonLinkerContext;
 

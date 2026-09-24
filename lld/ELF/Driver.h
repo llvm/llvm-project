@@ -33,7 +33,7 @@ enum {
 };
 
 void printHelp(Ctx &ctx);
-std::string createResponseFile(const llvm::opt::InputArgList &args);
+std::string createResponseFile(Ctx &ctx, const llvm::opt::InputArgList &args);
 
 std::optional<std::string> findFromSearchPaths(Ctx &, StringRef path);
 std::optional<std::string> searchScript(Ctx &, StringRef path);

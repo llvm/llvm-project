@@ -48,7 +48,9 @@ static bool isPETargetName(StringRef s) {
          s == "arm64ecpe" || s == "arm64xpe" || s == "mipspe";
 }
 
-static std::optional<bool> isPETarget(llvm::ArrayRef<const char *> args) {
+static std::optional<bool> isPETarget(llvm::ArrayRef<const char *> args,
+                                      vfs::FileSystem *fs,
+                                      raw_ostream &stderrOS) {
   for (auto it = args.begin(); it + 1 != args.end(); ++it) {
     if (StringRef(*it) != "-m")
       continue;
@@ -61,9 +63,9 @@ static std::optional<bool> isPETarget(llvm::ArrayRef<const char *> args) {
                                               args.data() + args.size());
   BumpPtrAllocator a;
   StringSaver saver(a);
-  cl::ExpansionContext ectx(saver.getAllocator(), getDefaultQuotingStyle());
+  cl::ExpansionContext ectx(saver.getAllocator(), getDefaultQuotingStyle(), fs);
   if (Error e = ectx.expandResponseFiles(expandedArgs)) {
-    err(toString(std::move(e)));
+    stderrOS << toString(std::move(e)) << '\n';
     return std::nullopt;
   }
 
@@ -124,10 +126,11 @@ parseFlavorWithoutMinGW(llvm::SmallVectorImpl<const char *> &argsV) {
   return f;
 }
 
-static Flavor parseFlavor(llvm::SmallVectorImpl<const char *> &argsV) {
+static Flavor parseFlavor(llvm::SmallVectorImpl<const char *> &argsV,
+                          vfs::FileSystem *fs, raw_ostream &stderrOS) {
   Flavor f = parseFlavorWithoutMinGW(argsV);
   if (f == Gnu) {
-    auto isPE = isPETarget(argsV);
+    auto isPE = isPETarget(argsV, fs, stderrOS);
     if (!isPE)
       return Invalid;
     if (*isPE)
@@ -137,14 +140,16 @@ static Flavor parseFlavor(llvm::SmallVectorImpl<const char *> &argsV) {
 }
 
 static Driver whichDriver(llvm::SmallVectorImpl<const char *> &argsV,
-                          llvm::ArrayRef<DriverDef> drivers) {
-  Flavor f = parseFlavor(argsV);
+                          llvm::ArrayRef<DriverDef> drivers,
+                          vfs::FileSystem *fs, raw_ostream &stderrOS) {
+  Flavor f = parseFlavor(argsV, fs, stderrOS);
   auto it =
       llvm::find_if(drivers, [=](auto &driverdef) { return driverdef.f == f; });
   if (it == drivers.end()) {
     // Driver is invalid or not available in this build.
     return [](llvm::ArrayRef<const char *>, llvm::raw_ostream &,
-              llvm::raw_ostream &, bool, bool) { return false; };
+              llvm::raw_ostream &, bool, bool,
+              IntrusiveRefCntPtr<vfs::FileSystem>) { return false; };
   }
   return it->d;
 }
@@ -156,11 +161,12 @@ bool inTestOutputDisabled = false;
 /// windows linker based on the argv[0] or -flavor option.
 int unsafeLldMain(llvm::ArrayRef<const char *> args,
                   llvm::raw_ostream &stdoutOS, llvm::raw_ostream &stderrOS,
-                  llvm::ArrayRef<DriverDef> drivers, bool exitEarly) {
+                  llvm::ArrayRef<DriverDef> drivers, bool exitEarly,
+                  IntrusiveRefCntPtr<vfs::FileSystem> fs) {
   SmallVector<const char *, 256> argsV(args);
-  Driver d = whichDriver(argsV, drivers);
+  Driver d = whichDriver(argsV, drivers, fs.get(), stderrOS);
   // Run the driver. If an error occurs, false will be returned.
-  int r = !d(argsV, stdoutOS, stderrOS, exitEarly, inTestOutputDisabled);
+  int r = !d(argsV, stdoutOS, stderrOS, exitEarly, inTestOutputDisabled, fs);
   // At this point 'r' is either 1 for error, and 0 for no error.
 
   // Call exit() if we can to avoid calling destructors.
@@ -177,7 +183,8 @@ int unsafeLldMain(llvm::ArrayRef<const char *> args,
 
 Result lld::lldMain(llvm::ArrayRef<const char *> args,
                     llvm::raw_ostream &stdoutOS, llvm::raw_ostream &stderrOS,
-                    llvm::ArrayRef<DriverDef> drivers) {
+                    llvm::ArrayRef<DriverDef> drivers,
+                    IntrusiveRefCntPtr<vfs::FileSystem> fs) {
   int r = 0;
   {
     // The crash recovery is here only to be able to recover from arbitrary
@@ -186,7 +193,7 @@ Result lld::lldMain(llvm::ArrayRef<const char *> args,
     llvm::CrashRecoveryContext crc;
     if (!crc.RunSafely([&]() {
           r = unsafeLldMain(args, stdoutOS, stderrOS, drivers,
-                            /*exitEarly=*/false);
+                            /*exitEarly=*/false, fs);
         }))
       return {crc.RetCode, /*canRunAgain=*/false};
   }
