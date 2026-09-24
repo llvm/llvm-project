@@ -111,6 +111,11 @@ RangeSelector elseBranch(std::string ID);
 /// source), if `S` is an expansion, and `S` itself, otherwise.  Corresponds to
 /// `SourceManager::getExpansionRange`.
 RangeSelector expansion(RangeSelector S);
+
+/// Selects the spelling range of `S` if it is spelled inside a macro
+/// definition, and `S` itself, otherwise. Corresponds to calling
+/// `SourceManager::getSpellingLoc` on both endpoints.
+RangeSelector spelled(RangeSelector S);
 } // namespace transformer
 } // namespace clang
 
