@@ -46,11 +46,17 @@ define i64 @test3(i64 %x, i64 %y) {
 }
 
 define i64 @test4(i64 %y, i32 %s) {
-; CHECK-LABEL: test4:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
-; CHECK-NEXT:    asr x0, x0, x1
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: test4:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-SD-NEXT:    asr x0, x0, x1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test4:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov w8, w1
+; CHECK-GI-NEXT:    asr x0, x0, x8
+; CHECK-GI-NEXT:    ret
 entry:
   %sh_prom = zext i32 %s to i64
   %shr = ashr i64 %y, %sh_prom
@@ -58,11 +64,18 @@ entry:
 }
 
 define i64 @test5(i64 %y, i32 %s) {
-; CHECK-LABEL: test5:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
-; CHECK-NEXT:    asr x0, x0, x1
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: test5:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-SD-NEXT:    asr x0, x0, x1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test5:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-GI-NEXT:    sxtw x8, w1
+; CHECK-GI-NEXT:    asr x0, x0, x8
+; CHECK-GI-NEXT:    ret
 entry:
   %sh_prom = sext i32 %s to i64
   %shr = ashr i64 %y, %sh_prom
@@ -70,11 +83,18 @@ entry:
 }
 
 define i64 @test6(i64 %y, i32 %s) {
-; CHECK-LABEL: test6:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
-; CHECK-NEXT:    lsl x0, x0, x1
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: test6:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-SD-NEXT:    lsl x0, x0, x1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test6:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-GI-NEXT:    sxtw x8, w1
+; CHECK-GI-NEXT:    lsl x0, x0, x8
+; CHECK-GI-NEXT:    ret
 entry:
   %sh_prom = sext i32 %s to i64
   %shr = shl i64 %y, %sh_prom
@@ -288,5 +308,28 @@ define i64 @shl_i64_add64(i64 %x, i64 %amt) {
 ; CHECK-NEXT:    ret
   %add = add i64 %amt, 64
   %r = shl i64 %x, %add
+  ret i64 %r
+}
+
+; Test SUB N-X where N == 0 mod size generates NEG.
+define i32 @shl_i32_sub64(i32 %x, i32 %amt) {
+; CHECK-LABEL: shl_i32_sub64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    neg w8, w1
+; CHECK-NEXT:    lsl w0, w0, w8
+; CHECK-NEXT:    ret
+  %sub = sub i32 64, %amt
+  %r = shl i32 %x, %sub
+  ret i32 %r
+}
+
+define i64 @lshr_i64_sub64(i64 %x, i64 %amt) {
+; CHECK-LABEL: lshr_i64_sub64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    neg x8, x1
+; CHECK-NEXT:    lsr x0, x0, x8
+; CHECK-NEXT:    ret
+  %sub = sub i64 64, %amt
+  %r = lshr i64 %x, %sub
   ret i64 %r
 }
