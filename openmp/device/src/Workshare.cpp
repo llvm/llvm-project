@@ -732,7 +732,7 @@ template <typename Ty> class StaticLoopChunker {
     Ty KernelIteration = NumBlocks * BlockChunk;
 
     // Start index in the chunked space.
-    Ty IV = BId * BlockChunk + TId;
+    Ty IV = BId * BlockChunk + TId * ThreadChunk;
     ASSERT(IV >= 0, "Bad index");
 
     // Cover the entire iteration space, assumptions in the caller might allow
@@ -900,13 +900,15 @@ public:
     if (OneIterationPerThread)
       NumThreads = static_cast<Ty>(mapping::getMaxTeamThreads());
 
-    // If the block chunk is not specified we pick a default now.
-    if (BlockChunk == 0)
-      BlockChunk = NumThreads;
-
     // If the thread chunk is not specified we pick a default now.
     if (ThreadChunk == 0)
       ThreadChunk = 1;
+
+    // If the block chunk is not specified we pick a default now. It has to
+    // cover one chunk for every thread, otherwise the threads past the block
+    // chunk get no iterations at all.
+    if (BlockChunk == 0)
+      BlockChunk = NumThreads * ThreadChunk;
 
     // If we know we have more threads (across all blocks) than iterations we
     // can indicate that to avoid an outer loop.
