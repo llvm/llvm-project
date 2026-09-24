@@ -192,7 +192,7 @@ void SuperHInstrInfo::storeRegToStackSlot(
     MachineInstr::MIFlag Flags) const {
   const MachineFunction &MF = *MBB.getParent();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  uint ObjectSize = MFI.getObjectSize(FrameIndex);
+  uint64_t ObjectSize = MFI.getObjectSize(FrameIndex);
 
   LLVM_DEBUG(dbgs() << "Store "
                     << (SrcReg > RI.getNumRegs() ? "VREG" : RI.getName(SrcReg))
@@ -237,7 +237,7 @@ void SuperHInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                            MachineInstr::MIFlag Flags) const {
   const MachineFunction &MF = *MBB.getParent();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  uint ObjectSize = MFI.getObjectSize(FrameIndex);
+  uint64_t ObjectSize = MFI.getObjectSize(FrameIndex);
 
   LLVM_DEBUG(
       dbgs() << "Load "

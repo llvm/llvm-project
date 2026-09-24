@@ -41,9 +41,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "sh-lower"
 
-#define DEBUG_FN_PRINT()                                                       \
-  LLVM_DEBUG(dbgs() << " - " << __PRETTY_FUNCTION__ << "\n");
-
 SuperHTargetLowering::SuperHTargetLowering(const TargetMachine &TM,
                                            const SuperHSubtarget &STI)
     : TargetLowering(TM, STI), Subtarget(&STI) {
@@ -273,7 +270,6 @@ SDValue SuperHTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
 }
 
 SDValue SuperHTargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
-  DEBUG_FN_PRINT()
 
   SDValue Chain = Op.getOperand(0);
   ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(1))->get();
@@ -299,7 +295,6 @@ SDValue SuperHTargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
 void SuperHTargetLowering::ReplaceNodeResults(SDNode *N,
                                               SmallVectorImpl<SDValue> &Results,
                                               SelectionDAG &DAG) const {
-  DEBUG_FN_PRINT()
 
   SDLoc DL(N);
 
@@ -330,7 +325,6 @@ void SuperHTargetLowering::ReplaceNodeResults(SDNode *N,
 
 SDValue SuperHTargetLowering::LowerConstant(SDValue Op,
                                             SelectionDAG &DAG) const {
-  DEBUG_FN_PRINT()
 
   // Get the address of the target into a register
   if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op)) {
@@ -358,7 +352,6 @@ SDValue SuperHTargetLowering::LowerConstant(SDValue Op,
 
 SDValue SuperHTargetLowering::LowerGlobalAddress(SDValue Op,
                                                  SelectionDAG &DAG) const {
-  DEBUG_FN_PRINT()
 
   // Get the address of the target into a register
   if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Op)) {
@@ -375,7 +368,6 @@ SDValue SuperHTargetLowering::LowerGlobalAddress(SDValue Op,
 
 SDValue SuperHTargetLowering::LowerExternalSymbol(SDValue Op,
                                                   SelectionDAG &DAG) const {
-  DEBUG_FN_PRINT()
 
   // Get the address of the target into a register
   if (ExternalSymbolSDNode *S = dyn_cast<ExternalSymbolSDNode>(Op)) {
@@ -394,7 +386,6 @@ SDValue SuperHTargetLowering::LowerExternalSymbol(SDValue Op,
 
 SDValue SuperHTargetLowering::LowerBlockAddress(SDValue Op,
                                                 SelectionDAG &DAG) const {
-  DEBUG_FN_PRINT()
 
   // Get the address of the target into a register
   if (BlockAddressSDNode *BA = dyn_cast<BlockAddressSDNode>(Op)) {
@@ -975,7 +966,6 @@ SDValue SuperHTargetLowering::LowerOperation(SDValue Op,
 MachineBasicBlock *
 SuperHTargetLowering::insertSELECTCC(MachineInstr &MI,
                                      MachineBasicBlock *MBB) const {
-  DEBUG_FN_PRINT()
 
   MachineRegisterInfo &MRI = MBB->getParent()->getRegInfo();
   const SuperHInstrInfo &TII = *Subtarget->getInstrInfo();
