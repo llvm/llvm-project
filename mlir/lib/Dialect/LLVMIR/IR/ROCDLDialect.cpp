@@ -103,6 +103,18 @@ LogicalResult ROCDLDialect::verifyOperationAttribute(Operation *op,
                              << "' attribute attached to unexpected op";
     }
   }
+  if (reqdWorkGroupSizeAttrName.getName() == attr.getName()) {
+    if (!isa<LLVM::LLVMFuncOp>(op))
+      return op->emitOpError(Twine(attr.getName()) +
+                             " is only supported on `llvm.func` operations");
+    auto value = dyn_cast<DenseI32ArrayAttr>(attr.getValue());
+    if (!value)
+      return op->emitOpError(Twine(attr.getName()) +
+                             " must be a dense i32 array attribute");
+    if (value.asArrayRef().size() != 3)
+      return op->emitOpError(Twine(attr.getName()) +
+                             " must contain exactly three values");
+  }
   // xnack/sramecc describe the whole code object.
   if (attr.getName() == xnackAttrName.getName() ||
       attr.getName() == srameccAttrName.getName()) {

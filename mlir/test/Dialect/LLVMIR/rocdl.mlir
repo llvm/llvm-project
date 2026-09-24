@@ -1872,6 +1872,44 @@ gpu.module @gpu_module_target_id_settings attributes {
 
 // -----
 
+// CHECK-LABEL: llvm.func @reqd_work_group_size_valid
+llvm.func @reqd_work_group_size_valid()
+    attributes {rocdl.reqd_work_group_size = array<i32: 16, 4, 1>} {
+  llvm.return
+}
+
+// -----
+
+// expected-error@below {{rocdl.reqd_work_group_size must contain exactly three values}}
+llvm.func @reqd_work_group_size_too_short()
+    attributes {rocdl.reqd_work_group_size = array<i32: 16, 4>} {
+  llvm.return
+}
+
+// -----
+
+// expected-error@below {{rocdl.reqd_work_group_size must contain exactly three values}}
+llvm.func @reqd_work_group_size_too_long()
+    attributes {rocdl.reqd_work_group_size = array<i32: 16, 4, 1, 1>} {
+  llvm.return
+}
+
+// -----
+
+// expected-error@below {{rocdl.reqd_work_group_size must be a dense i32 array attribute}}
+llvm.func @reqd_work_group_size_wrong_type()
+    attributes {rocdl.reqd_work_group_size = array<i64: 16, 4, 1>} {
+  llvm.return
+}
+
+// -----
+
+// expected-error@below {{rocdl.reqd_work_group_size is only supported on `llvm.func` operations}}
+module attributes {rocdl.reqd_work_group_size = array<i32: 16, 4, 1>} {
+}
+
+// -----
+
 // expected-error@below {{"rocdl.xnack" is only supported on modules}}
 llvm.func private @xnack_on_func() attributes {rocdl.xnack = true}
 
