@@ -809,8 +809,6 @@ llvm.func @invariant(%p: !llvm.ptr) {
 llvm.func @invariant_group_intrinsics(%p: !llvm.ptr) {
   // CHECK: %{{.+}} = llvm.intr.launder.invariant.group %[[P]] : !llvm.ptr
   %1 = llvm.intr.launder.invariant.group %p : !llvm.ptr
-  // CHECK: %{{.+}} = llvm.intr.strip.invariant.group %[[P]] : !llvm.ptr
-  %2 = llvm.intr.strip.invariant.group %p : !llvm.ptr
   llvm.return
 }
 

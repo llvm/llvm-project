@@ -13,6 +13,7 @@
 #include "flang/Optimizer/CodeGen/CodeGen.h"
 
 #include "flang/Optimizer/Builder/CUFCommon.h"
+#include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/CodeGen/CodeGenOpenMP.h"
 #include "flang/Optimizer/CodeGen/FIROpPatterns.h"
 #include "flang/Optimizer/CodeGen/LLVMInsertChainFolder.h"

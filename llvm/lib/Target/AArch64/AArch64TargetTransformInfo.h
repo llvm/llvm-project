@@ -347,17 +347,7 @@ public:
   }
 
   bool isLegalMaskedCompressStore(Type *DataType,
-                                  Align Alignment) const override {
-    if (!(ST->isSVEAvailable() ||
-          (ST->isSVEorStreamingSVEAvailable() && ST->hasSME2p2())))
-      return false;
-
-    if (isa<FixedVectorType>(DataType) &&
-        DataType->getPrimitiveSizeInBits() < 128)
-      return false;
-
-    return isElementTypeLegalForCompressStore(DataType->getScalarType());
-  }
+                                  Align Alignment) const override;
 
   bool isLegalMaskedGatherScatter(Type *DataType) const {
     if (!ST->isSVEAvailable())
