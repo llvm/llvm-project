@@ -306,6 +306,14 @@ int main(int, char**) {
         assert_non_throwing([=, &policy] {
           (void)std::min_element(policy, std::move(first1), std::move(last1), compare);
         });
+
+        // minmax_element(first, last)
+        assert_non_throwing([=, &policy] { (void)std::minmax_element(policy, std::move(first1), std::move(last1)); });
+
+        // minmax_element(first, last, comp)
+        assert_non_throwing([=, &policy] {
+          (void)std::minmax_element(policy, std::move(first1), std::move(last1), compare);
+        });
       }
 
       {
@@ -557,6 +565,28 @@ int main(int, char**) {
 
         // uninitialized_fill_n(first, n, val)
         assert_non_throwing([=, &policy] { std::uninitialized_fill_n(policy, std::move(first1), n, val); });
+      }
+
+      {
+        // uninitialized_copy(first, last, dest)
+        assert_non_throwing([=, &policy] {
+          (void)std::uninitialized_copy(policy, std::move(first1), std::move(last1), std::move(dest));
+        });
+
+        // uninitialized_copy_n(first, n, dest)
+        assert_non_throwing([=, &policy] {
+          (void)std::uninitialized_copy_n(policy, std::move(first1), n, std::move(dest));
+        });
+
+        // uninitialized_move(first, last, dest)
+        assert_non_throwing([=, &policy] {
+          (void)std::uninitialized_move(policy, std::move(first1), std::move(last1), std::move(dest));
+        });
+
+        // uninitialized_move_n(first, n, dest)
+        assert_non_throwing([=, &policy] {
+          (void)std::uninitialized_move_n(policy, std::move(first1), n, std::move(dest));
+        });
       }
     }
   });

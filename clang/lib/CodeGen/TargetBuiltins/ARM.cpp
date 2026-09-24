@@ -2170,15 +2170,10 @@ Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
   }
 
   if (BuiltinID == clang::ARM::BI__clear_cache) {
-    assert(E->getNumArgs() == 2 && "__clear_cache takes 2 arguments");
-    const FunctionDecl *FD = E->getDirectCallee();
-    Value *Ops[2];
-    for (unsigned i = 0; i < 2; i++)
-      Ops[i] = EmitScalarExpr(E->getArg(i));
-    llvm::Type *Ty = CGM.getTypes().ConvertType(FD->getType());
-    llvm::FunctionType *FTy = cast<llvm::FunctionType>(Ty);
-    StringRef Name = FD->getName();
-    return EmitNounwindRuntimeCall(CGM.CreateRuntimeFunction(FTy, Name), Ops);
+    Value *Begin = EmitScalarExpr(E->getArg(0));
+    Value *End = EmitScalarExpr(E->getArg(1));
+    Function *F = CGM.getIntrinsic(Intrinsic::clear_cache, {CGM.DefaultPtrTy});
+    return Builder.CreateCall(F, {Begin, End});
   }
 
   if (BuiltinID == clang::ARM::BI__builtin_arm_mcrr ||
@@ -4140,10 +4135,8 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
   case SVE::BI__builtin_sve_svdup_n_b16:
   case SVE::BI__builtin_sve_svdup_n_b32:
   case SVE::BI__builtin_sve_svdup_n_b64: {
-    Value *CmpNE =
-        Builder.CreateICmpNE(Ops[0], Constant::getNullValue(Ops[0]->getType()));
     llvm::ScalableVectorType *OverloadedTy = getSVEType(TypeFlags);
-    Value *Dup = EmitSVEDupX(CmpNE, OverloadedTy);
+    Value *Dup = EmitSVEDupX(Ops[0], OverloadedTy);
     return EmitSVEPredicateCast(Dup, cast<llvm::ScalableVectorType>(Ty));
   }
 
@@ -4620,15 +4613,10 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   }
 
   if (BuiltinID == clang::AArch64::BI__clear_cache) {
-    assert(E->getNumArgs() == 2 && "__clear_cache takes 2 arguments");
-    const FunctionDecl *FD = E->getDirectCallee();
-    Value *Ops[2];
-    for (unsigned i = 0; i < 2; i++)
-      Ops[i] = EmitScalarExpr(E->getArg(i));
-    llvm::Type *Ty = CGM.getTypes().ConvertType(FD->getType());
-    llvm::FunctionType *FTy = cast<llvm::FunctionType>(Ty);
-    StringRef Name = FD->getName();
-    return EmitNounwindRuntimeCall(CGM.CreateRuntimeFunction(FTy, Name), Ops);
+    Value *Begin = EmitScalarExpr(E->getArg(0));
+    Value *End = EmitScalarExpr(E->getArg(1));
+    Function *F = CGM.getIntrinsic(Intrinsic::clear_cache, {CGM.DefaultPtrTy});
+    return Builder.CreateCall(F, {Begin, End});
   }
 
   if ((BuiltinID == clang::AArch64::BI__builtin_arm_ldrex ||
@@ -6166,7 +6154,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   case NEON::BI__builtin_neon_vmax_v:
   case NEON::BI__builtin_neon_vmaxq_v:
     // FIXME: improve sharing scheme to cope with 3 alternative LLVM intrinsics.
-    Int = usgn ? Intrinsic::aarch64_neon_umax : Intrinsic::aarch64_neon_smax;
+    Int = usgn ? Intrinsic::umax : Intrinsic::smax;
     if (Ty->isFPOrFPVectorTy()) Int = Intrinsic::aarch64_neon_fmax;
     return EmitNeonCall(CGM.getIntrinsic(Int, Ty), Ops, "vmax");
   case NEON::BI__builtin_neon_vmaxh_f16: {
@@ -6176,7 +6164,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   case NEON::BI__builtin_neon_vmin_v:
   case NEON::BI__builtin_neon_vminq_v:
     // FIXME: improve sharing scheme to cope with 3 alternative LLVM intrinsics.
-    Int = usgn ? Intrinsic::aarch64_neon_umin : Intrinsic::aarch64_neon_smin;
+    Int = usgn ? Intrinsic::umin : Intrinsic::smin;
     if (Ty->isFPOrFPVectorTy()) Int = Intrinsic::aarch64_neon_fmin;
     return EmitNeonCall(CGM.getIntrinsic(Int, Ty), Ops, "vmin");
   case NEON::BI__builtin_neon_vminh_f16: {

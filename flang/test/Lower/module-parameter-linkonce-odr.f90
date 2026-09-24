@@ -48,9 +48,12 @@ subroutine use_decl()
 end subroutine
 
 ! Defining TU has an initialized definition; using TU is a declaration.
+! No host ctor/dtor: a PARAMETER is a device constant, not a registered mapping.
 ! DECL-DEF: fir.global @_QMmod_declECp {acc.declare = #acc.declare<dataClause = acc_create>} constant : f32 {
 ! DECL-DEF: fir.has_value
 ! DECL-DEF-NOT: fir.global linkonce_odr @_QMmod_declECp
+! DECL-DEF-NOT: acc.global_ctor @_QMmod_declECp_acc_ctor
+! DECL-DEF-NOT: acc.global_dtor @_QMmod_declECp_acc_dtor
 
 ! DECL-USE: fir.global @_QMmod_declECp {acc.declare = #acc.declare<dataClause = acc_create>
 ! DECL-USE-NOT: fir.global @_QMmod_declECp(
@@ -78,13 +81,13 @@ end subroutine
 ! Plain PARAMETER still gets linkonce_odr; CUDA constant PARAMETER stays strong
 ! with an initializer in the defining TU and a declaration in the consumer.
 ! CUDA-CONST-DAG: fir.global linkonce_odr @_QMmod_cudaEChost_vals
-! CUDA-CONST-DAG: fir.global @_QMmod_cudaECconst_vals({{.*}}) {{.*}}data_attr = #cuf.cuda<constant>
+! CUDA-CONST-DAG: fir.global @_QMmod_cudaECconst_vals({{.*}}) <{{.*}}data_attr = #cuf.cuda<constant>
 
 ! CUDA data attributes are stored in the .mod, so the consumer keeps external
 ! linkage for const_vals with or without -fcuda.  '{' after the name is a
 ! declaration (no dense initializer); DAG because emission order is not a contract.
 ! CUDA-USE-DAG: fir.global linkonce_odr @_QMmod_cudaEChost_vals({{.*}})
-! CUDA-USE-DAG: fir.global @_QMmod_cudaECconst_vals {{{.*}}data_attr = #cuf.cuda<constant>
+! CUDA-USE-DAG: fir.global @_QMmod_cudaECconst_vals <{{{.*}}data_attr = #cuf.cuda<constant>
 ! CUDA-USE-NOFCUDA-DAG: fir.global linkonce_odr @_QMmod_cudaEChost_vals({{.*}})
-! CUDA-USE-NOFCUDA-DAG: fir.global @_QMmod_cudaECconst_vals {{{.*}}data_attr = #cuf.cuda<constant>
+! CUDA-USE-NOFCUDA-DAG: fir.global @_QMmod_cudaECconst_vals <{{{.*}}data_attr = #cuf.cuda<constant>
 ! CUDA-USE-NOFCUDA-NOT: fir.global linkonce_odr @_QMmod_cudaECconst_vals

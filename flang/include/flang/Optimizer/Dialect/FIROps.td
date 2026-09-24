@@ -2754,6 +2754,10 @@ def fir_VolatileCastOp
 def fir_ConvertOp
     : fir_SimpleOneResultOp<"convert", [NoMemoryEffect, ViewLikeOpInterface,
                                         ConditionallySpeculatable,
+                                        DeclareOpInterfaceMethods<
+                                            PromotableOpInterface>,
+                                        DeclareOpInterfaceMethods<
+                                            PromotableAliaserInterface>,
                                         fir_FortranObjectViewOpInterface]> {
   let summary = "encapsulates all Fortran entity type conversions";
 
@@ -2927,6 +2931,7 @@ def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, SymbolName,
     OptionalAttr<fir_Linkage>:$linkage,
     OptionalAttr<cuf_DataAttributeAttr>:$data_attr,
     OptionalAttr<I64Attr>:$alignment,
+    OptionalAttr<StrAttr>:$section,
     OptionalAttr<StrAttr>:$sym_visibility
   );
 
@@ -3287,6 +3292,8 @@ def fir_DeclareOp
                          DeclareOpInterfaceMethods<PromotableOpInterface,
                                                    ["requiresReplacedValues",
                                                     "visitReplacedValues"]>,
+                         DeclareOpInterfaceMethods<
+                             PromotableAliaserInterface>,
                          fir_FortranObjectViewOpInterface]> {
   let summary = "declare a variable";
 

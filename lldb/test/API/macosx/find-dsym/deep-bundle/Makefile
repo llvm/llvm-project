@@ -1,10 +1,14 @@
+C_SOURCES := main.c
 EXE := deep-bundle
-all: clean $(EXE)
+CFLAGS_EXTRAS := -F.
+LD_EXTRAS := -framework MyFramework
 
 include Makefile.rules
 
-$(EXE):
-	$(CC) $(ASAN_LDFLAGS) $(CFLAGS) -install_name $(shell pwd)/MyFramework.framework/Versions/A/MyFramework -dynamiclib -o MyFramework $(SRCDIR)/myframework.c
+main.o: hide.app
+
+hide.app: myframework.c MyFramework.h Info.plist
+	$(CC) $(ASAN_LDFLAGS) $(CFLAGS) -install_name $(shell pwd)/MyFramework.framework/Versions/A/MyFramework -dynamiclib -o MyFramework $<
 	mkdir -p MyFramework.framework/Versions/A/Headers
 	mkdir -p MyFramework.framework/Versions/A/Resources
 	cp MyFramework MyFramework.framework/Versions/A
@@ -18,7 +22,3 @@ $(EXE):
 	mkdir hide.app
 	rm -f MyFramework
 	tar cf - MyFramework.framework MyFramework.framework.dSYM | ( cd hide.app;tar xBpf -)
-	$(CC) $(ASAN_LDFLAGS) $(CFLAGS) -o deep-bundle $(SRCDIR)/main.c -F. -framework MyFramework
-
-clean::
-	rm -rf a.out a.out.dSYM deep-bundle deep-bundle.dSYM MyFramework.framework MyFramework.framework.dSYM MyFramework MyFramework.dSYM hide.app

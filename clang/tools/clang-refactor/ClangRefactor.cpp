@@ -240,9 +240,9 @@ private:
                                "specified for one refactoring action");
     // FIXME: cl::Required can be specified when this option is present
     // in all rules in an action.
-    return std::make_unique<cl::opt<T>>(
-        Opt.getName(), cl::desc(Opt.getDescription()), cl::Optional,
-        cl::cat(Category), cl::sub(Subcommand));
+    return std::make_unique<cl::opt<T>>(Opt.getName(),
+                                        cl::desc(Opt.getDescription()),
+                                        cl::cat(Category), cl::sub(Subcommand));
   }
 
   llvm::SmallPtrSet<const RefactoringOption *, 8> Visited;

@@ -1176,9 +1176,13 @@ public:
     if (!parseResult.has_value() || failed(*parseResult))
       return parseResult;
     result = dyn_cast<AttrType>(attr);
-    if (!result)
-      return emitError(loc) << "expected attribute of type '" << AttrType::name
-                            << "', but found attribute '" << attr << "'";
+    if (!result) {
+      InFlightDiagnostic diag =
+          emitError(loc, "invalid kind of attribute specified");
+      if constexpr (HasStaticName<AttrType>::value)
+        diag << ": expected " << AttrType::name << ", but found " << attr;
+      return diag;
+    }
     return success();
   }
 
@@ -1819,6 +1823,15 @@ public:
   parseOptionalAssignmentList(SmallVectorImpl<Argument> &lhs,
                               SmallVectorImpl<UnresolvedOperand> &rhs) = 0;
 };
+
+namespace detail {
+/// Parse an optional operand or type into a generated parser's storage.
+ParseResult parseOptionalOperandInto(
+    OpAsmParser &parser,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &operands);
+ParseResult parseOptionalTypeInto(AsmParser &parser,
+                                  SmallVectorImpl<Type> &types);
+} // namespace detail
 
 //===--------------------------------------------------------------------===//
 // Custom printers and parsers.
