@@ -111,7 +111,7 @@ using namespace llvm;
 namespace llvm {
 // Experiment to move sanitizers earlier.
 static cl::opt<bool> ClSanitizeOnOptimizerEarlyEP(
-    "sanitizer-early-opt-ep", cl::Optional,
+    "sanitizer-early-opt-ep",
     cl::desc("Insert sanitizers on OptimizerEarlyEP."));
 
 // Experiment to mark cold functions as optsize/minsize/optnone.

@@ -187,6 +187,12 @@ typedef uint32_t uint32x2_t __attribute__((__vector_size__(8)));
     return __rd op __builtin_convertvector(__rs1, rty)                         \
         op __builtin_convertvector(__rs2, rty);                                \
   }
+#define __packed_widen_sub_acc_op(name, rty, ty)                               \
+  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(rty __rd, ty __rs1,  \
+                                                          ty __rs2) {          \
+    return __rd + __builtin_convertvector(__rs1, rty) -                        \
+           __builtin_convertvector(__rs2, rty);                                \
+  }
 #define __packed_widen_mul(name, rty, ty)                                      \
   static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1,            \
                                                           ty __rs2) {          \
@@ -759,6 +765,12 @@ __packed_widen_binary_acc_op(pwadda_i32x2, int32x2_t, int16x2_t, +)
 __packed_widen_binary_acc_op(pwaddau_u16x4, uint16x4_t, uint8x4_t, +)
 __packed_widen_binary_acc_op(pwaddau_u32x2, uint32x2_t, uint16x2_t, +)
 
+/* Packed Widening Subtraction Accumulate */
+__packed_widen_sub_acc_op(pwsuba_i16x4, int16x4_t, int8x4_t)
+__packed_widen_sub_acc_op(pwsuba_i32x2, int32x2_t, int16x2_t)
+__packed_widen_sub_acc_op(pwsubau_u16x4, uint16x4_t, uint8x4_t)
+__packed_widen_sub_acc_op(pwsubau_u32x2, uint32x2_t, uint16x2_t)
+
 /* Packed Widening Multiply (32-bit) */
 __packed_widen_mul(pwmul_i16x4, int16x4_t, int8x4_t)
 __packed_widen_mul(pwmul_i32x2, int32x2_t, int16x2_t)
@@ -1188,6 +1200,44 @@ __packed_subvector_extract8(pget_u8x8_u8x4, uint8x4_t, uint8x8_t)
 __packed_subvector_extract4(pget_i16x4_i16x2, int16x2_t, int16x4_t)
 __packed_subvector_extract4(pget_u16x4_u16x2, uint16x2_t, uint16x4_t)
 
+/* Packed Subvector Insert */
+static __inline__ int8x8_t __DEFAULT_FN_ATTRS
+__riscv_pset_i8x4_i8x8(int8x8_t __v, int8x4_t __s, unsigned __idx)
+    __attribute__((__enable_if__(__idx <= 1, "index must be a constant integer "
+                                            "from 0 to 1"))) {
+  return __idx ? __riscv_pjoin2_i8x8(
+                     __builtin_shufflevector(__v, __v, 0, 1, 2, 3), __s)
+               : __riscv_pjoin2_i8x8(
+                     __s, __builtin_shufflevector(__v, __v, 4, 5, 6, 7));
+}
+static __inline__ uint8x8_t __DEFAULT_FN_ATTRS
+__riscv_pset_u8x4_u8x8(uint8x8_t __v, uint8x4_t __s, unsigned __idx)
+    __attribute__((__enable_if__(__idx <= 1, "index must be a constant integer "
+                                            "from 0 to 1"))) {
+  return __idx ? __riscv_pjoin2_u8x8(
+                     __builtin_shufflevector(__v, __v, 0, 1, 2, 3), __s)
+               : __riscv_pjoin2_u8x8(
+                     __s, __builtin_shufflevector(__v, __v, 4, 5, 6, 7));
+}
+static __inline__ int16x4_t __DEFAULT_FN_ATTRS
+__riscv_pset_i16x2_i16x4(int16x4_t __v, int16x2_t __s, unsigned __idx)
+    __attribute__((__enable_if__(__idx <= 1, "index must be a constant integer "
+                                            "from 0 to 1"))) {
+  return __idx ? __riscv_pjoin2_i16x4(
+                     __builtin_shufflevector(__v, __v, 0, 1), __s)
+               : __riscv_pjoin2_i16x4(
+                     __s, __builtin_shufflevector(__v, __v, 2, 3));
+}
+static __inline__ uint16x4_t __DEFAULT_FN_ATTRS
+__riscv_pset_u16x2_u16x4(uint16x4_t __v, uint16x2_t __s, unsigned __idx)
+    __attribute__((__enable_if__(__idx <= 1, "index must be a constant integer "
+                                            "from 0 to 1"))) {
+  return __idx ? __riscv_pjoin2_u16x4(
+                     __builtin_shufflevector(__v, __v, 0, 1), __s)
+               : __riscv_pjoin2_u16x4(
+                     __s, __builtin_shufflevector(__v, __v, 2, 3));
+}
+
 /* Packed Store (32-bit) */
 __packed_store(pst_i8x4, int8x4_t, int8_t)
 __packed_store(pst_u8x4, uint8x4_t, uint8_t)
@@ -1349,6 +1399,7 @@ __packed_reinterpret(u32x2_i32x2, int32x2_t, uint32x2_t)
 #undef __packed_widen_convert
 #undef __packed_widen_binary_op
 #undef __packed_widen_binary_acc_op
+#undef __packed_widen_sub_acc_op
 #undef __packed_widen_mul
 #undef __packed_widen_mulsu
 #undef __packed_widen_high2
