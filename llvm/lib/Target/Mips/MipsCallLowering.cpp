@@ -224,6 +224,9 @@ MipsOutgoingValueHandler::assignCustomValue(CallLowering::ArgInfo &Arg,
   if (!STI.isLittle())
     std::swap(Lo, Hi);
 
+  MIB.addUse(VALo.getLocReg(), RegState::Implicit);
+  MIB.addUse(VAHi.getLocReg(), RegState::Implicit);
+
   // If we can return a thunk, just include the register copies. The unmerge can
   // be emitted earlier.
   if (Thunk) {

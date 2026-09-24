@@ -88,7 +88,7 @@ static cl::list<unsigned long long>
     FilterPID("pid",
               cl::desc("only use samples from process with specified PID(s) "
                        "(comma-separated)"),
-              cl::CommaSeparated, cl::ZeroOrMore, cl::cat(AggregatorCategory));
+              cl::CommaSeparated, cl::cat(AggregatorCategory));
 
 static cl::opt<bool> ImputeTraceFallthrough(
     "impute-trace-fall-through",
@@ -138,7 +138,6 @@ static cl::opt<bool>
 TimeAggregator("time-aggr",
   cl::desc("time BOLT aggregator"),
   cl::init(false),
-  cl::ZeroOrMore,
   cl::cat(AggregatorCategory));
 
 } // namespace opts

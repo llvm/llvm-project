@@ -51,15 +51,15 @@ fir.declare_reduction @add_reduction_i32 : i32 init {
 // CHECK:         omp.private {type = private} @_QFdo_concurrent_reduceEl_private_i32.omp : i32
 
 // CHECK-LABEL:   func.func @_QPdo_concurrent_reduce() {
-// CHECK:           %[[VAL_0:.*]] = fir.alloca i32 {bindc_name = "i"}
+// CHECK:           %[[VAL_0:.*]] = fir.alloca i32 <{bindc_name = "i"}>
 // CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFdo_concurrent_reduceEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-// CHECK:           %[[VAL_2:.*]] = fir.alloca i32 {bindc_name = "l", uniq_name = "_QFdo_concurrent_reduceEl"}
+// CHECK:           %[[VAL_2:.*]] = fir.alloca i32 <{bindc_name = "l", uniq_name = "_QFdo_concurrent_reduceEl"}>
 // CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFdo_concurrent_reduceEl"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-// CHECK:           %[[VAL_4:.*]] = fir.alloca i32 {bindc_name = "s", uniq_name = "_QFdo_concurrent_reduceEs"}
+// CHECK:           %[[VAL_4:.*]] = fir.alloca i32 <{bindc_name = "s", uniq_name = "_QFdo_concurrent_reduceEs"}>
 // CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] {uniq_name = "_QFdo_concurrent_reduceEs"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 // CHECK:           %[[VAL_6:.*]] = arith.constant 1 : index
 // CHECK:           omp.parallel {
-// CHECK:             %[[VAL_7:.*]] = fir.alloca i32 {bindc_name = "i"}
+// CHECK:             %[[VAL_7:.*]] = fir.alloca i32 <{bindc_name = "i"}>
 // CHECK:             %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_7]] {uniq_name = "_QFdo_concurrent_reduceEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 // CHECK:             omp.wsloop private(@_QFdo_concurrent_reduceEl_private_i32.omp %[[VAL_3]]#0 -> %[[VAL_9:.*]] : !fir.ref<i32>) reduction(@add_reduction_i32.omp %[[VAL_5]]#0 -> %[[VAL_10:.*]] : !fir.ref<i32>) {
 // CHECK:               omp.loop_nest (%[[VAL_11:.*]]) : index = (%[[VAL_6]]) to (%[[VAL_6]]) inclusive step (%[[VAL_6]]) {

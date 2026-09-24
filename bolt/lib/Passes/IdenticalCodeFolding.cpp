@@ -43,7 +43,6 @@ static cl::opt<bool>
 TimeICF("time-icf",
   cl::desc("time icf steps"),
   cl::ReallyHidden,
-  cl::ZeroOrMore,
   cl::cat(BoltOptCategory));
 
 cl::opt<bolt::IdenticalCodeFolding::ICFLevel, false,
@@ -63,7 +62,7 @@ cl::opt<bolt::IdenticalCodeFolding::ICFLevel, false,
                               "Disable identical code folding (default)"),
                    clEnumValN(bolt::IdenticalCodeFolding::ICFLevel::Safe,
                               "safe", "Enable safe identical code folding")),
-        cl::ZeroOrMore, cl::ValueOptional, cl::cat(BoltOptCategory));
+        cl::ValueOptional, cl::cat(BoltOptCategory));
 } // namespace opts
 
 bool IdenticalCodeFolding::shouldOptimize(const BinaryFunction &BF) const {

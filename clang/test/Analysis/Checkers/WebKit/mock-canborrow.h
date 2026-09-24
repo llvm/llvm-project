@@ -217,4 +217,10 @@ private:
   unsigned m_size { 0 };
 };
 
+class Element {
+public:
+  void mutate();
+  void inspect() const;
+};
+
 #endif

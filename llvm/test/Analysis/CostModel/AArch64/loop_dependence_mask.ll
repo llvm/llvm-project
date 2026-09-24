@@ -106,11 +106,11 @@ define void @loop_dependence_war_mask_invalid.i64(i64 %a, i64 %b) {
 ; CHECK-SVE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-SME-LABEL: 'loop_dependence_war_mask_invalid.i64'
-; CHECK-SME-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %res1 = call <16 x i1> @llvm.loop.dependence.war.mask.v16i1.i64(i64 %a, i64 %b, i64 8)
-; CHECK-SME-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %res2 = call <8 x i1> @llvm.loop.dependence.war.mask.v8i1.i64(i64 %a, i64 %b, i64 4)
-; CHECK-SME-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %res3 = call <4 x i1> @llvm.loop.dependence.war.mask.v4i1.i64(i64 %a, i64 %b, i64 2)
-; CHECK-SME-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %res4 = call <2 x i1> @llvm.loop.dependence.war.mask.v2i1.i64(i64 %a, i64 %b, i64 1)
-; CHECK-SME-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %res5 = call <2 x i1> @llvm.loop.dependence.war.mask.v2i1.i64(i64 %a, i64 %b, i64 10)
+; CHECK-SME-NEXT:  Cost Model: Found an estimated cost of 39 for instruction: %res1 = call <16 x i1> @llvm.loop.dependence.war.mask.v16i1.i64(i64 %a, i64 %b, i64 8)
+; CHECK-SME-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %res2 = call <8 x i1> @llvm.loop.dependence.war.mask.v8i1.i64(i64 %a, i64 %b, i64 4)
+; CHECK-SME-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %res3 = call <4 x i1> @llvm.loop.dependence.war.mask.v4i1.i64(i64 %a, i64 %b, i64 2)
+; CHECK-SME-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %res4 = call <2 x i1> @llvm.loop.dependence.war.mask.v2i1.i64(i64 %a, i64 %b, i64 1)
+; CHECK-SME-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %res5 = call <2 x i1> @llvm.loop.dependence.war.mask.v2i1.i64(i64 %a, i64 %b, i64 10)
 ; CHECK-SME-NEXT:  Cost Model: Invalid cost for instruction: %res6 = call <vscale x 16 x i1> @llvm.loop.dependence.war.mask.nxv16i1.i64(i64 %a, i64 %b, i64 8)
 ; CHECK-SME-NEXT:  Cost Model: Invalid cost for instruction: %res7 = call <vscale x 8 x i1> @llvm.loop.dependence.war.mask.nxv8i1.i64(i64 %a, i64 %b, i64 4)
 ; CHECK-SME-NEXT:  Cost Model: Invalid cost for instruction: %res8 = call <vscale x 4 x i1> @llvm.loop.dependence.war.mask.nxv4i1.i64(i64 %a, i64 %b, i64 2)
@@ -161,11 +161,11 @@ define void @loop_dependence_raw_mask_invalid.i64(i64 %a, i64 %b) {
 ; CHECK-SVE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-SME-LABEL: 'loop_dependence_raw_mask_invalid.i64'
-; CHECK-SME-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %res1 = call <16 x i1> @llvm.loop.dependence.raw.mask.v16i1.i64(i64 %a, i64 %b, i64 8)
-; CHECK-SME-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %res2 = call <8 x i1> @llvm.loop.dependence.raw.mask.v8i1.i64(i64 %a, i64 %b, i64 4)
-; CHECK-SME-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %res3 = call <4 x i1> @llvm.loop.dependence.raw.mask.v4i1.i64(i64 %a, i64 %b, i64 2)
-; CHECK-SME-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %res4 = call <2 x i1> @llvm.loop.dependence.raw.mask.v2i1.i64(i64 %a, i64 %b, i64 1)
-; CHECK-SME-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %res5 = call <2 x i1> @llvm.loop.dependence.raw.mask.v2i1.i64(i64 %a, i64 %b, i64 10)
+; CHECK-SME-NEXT:  Cost Model: Found an estimated cost of 41 for instruction: %res1 = call <16 x i1> @llvm.loop.dependence.raw.mask.v16i1.i64(i64 %a, i64 %b, i64 8)
+; CHECK-SME-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %res2 = call <8 x i1> @llvm.loop.dependence.raw.mask.v8i1.i64(i64 %a, i64 %b, i64 4)
+; CHECK-SME-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %res3 = call <4 x i1> @llvm.loop.dependence.raw.mask.v4i1.i64(i64 %a, i64 %b, i64 2)
+; CHECK-SME-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %res4 = call <2 x i1> @llvm.loop.dependence.raw.mask.v2i1.i64(i64 %a, i64 %b, i64 1)
+; CHECK-SME-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %res5 = call <2 x i1> @llvm.loop.dependence.raw.mask.v2i1.i64(i64 %a, i64 %b, i64 10)
 ; CHECK-SME-NEXT:  Cost Model: Invalid cost for instruction: %res6 = call <vscale x 16 x i1> @llvm.loop.dependence.raw.mask.nxv16i1.i64(i64 %a, i64 %b, i64 8)
 ; CHECK-SME-NEXT:  Cost Model: Invalid cost for instruction: %res7 = call <vscale x 8 x i1> @llvm.loop.dependence.raw.mask.nxv8i1.i64(i64 %a, i64 %b, i64 4)
 ; CHECK-SME-NEXT:  Cost Model: Invalid cost for instruction: %res8 = call <vscale x 4 x i1> @llvm.loop.dependence.raw.mask.nxv4i1.i64(i64 %a, i64 %b, i64 2)
