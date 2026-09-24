@@ -2049,12 +2049,12 @@ define void @guard_on_ptrtoaddr(ptr %p) {
 ; CHECK-NEXT:    %n = ptrtoaddr ptr %p to i64
 ; CHECK-NEXT:    --> (ptrtoaddr ptr %p to i64) U: full-set S: full-set
 ; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: [0,-1) S: [0,-1) Exits: (ptrtoaddr ptr %p to i64) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,1001) S: [0,1001) Exits: (ptrtoaddr ptr %p to i64) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add i64 %iv, 1
-; CHECK-NEXT:    --> {1,+,1}<nuw><%loop> U: [1,0) S: [1,0) Exits: (1 + (ptrtoaddr ptr %p to i64))<u nuw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,1002) S: [1,1002) Exits: (1 + (ptrtoaddr ptr %p to i64))<u nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @guard_on_ptrtoaddr
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (ptrtoaddr ptr %p to i64)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 -2
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 1000
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (ptrtoaddr ptr %p to i64)
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
