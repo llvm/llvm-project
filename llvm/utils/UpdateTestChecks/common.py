@@ -1921,10 +1921,17 @@ def generalize_check_lines(
     else:
         regexp = ginfo.get_regexp()
 
-    multiple_braces_re = re.compile(r"({{+)|(}}+)")
+    multiple_braces_re = re.compile(r"{{+|\[\[+")
 
     def escape_braces(match_obj):
         return "{{" + re.escape(match_obj.group(0)) + "}}"
+
+    if not ginfo.is_asm():
+        for i, _ in enumerate(lines):
+            # Escape multiple {{ or [[ as {{}} and [[]] have special meaning in
+            # FileCheck.
+            scrubbed_line = multiple_braces_re.sub(escape_braces, lines[i])
+            lines[i] = scrubbed_line
 
     if ginfo.is_ir():
         for i, line in enumerate(lines):
@@ -2101,12 +2108,6 @@ def generalize_check_lines(
             line += line_template
 
             lines[i] = line
-
-    if ginfo.is_analyze():
-        for i, _ in enumerate(lines):
-            # Escape multiple {{ or }} as {{}} denotes a FileCheck regex.
-            scrubbed_line = multiple_braces_re.sub(escape_braces, lines[i])
-            lines[i] = scrubbed_line
 
     return lines
 
