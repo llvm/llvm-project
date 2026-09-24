@@ -1,12 +1,9 @@
-// RUN: %clang_cc1 -triple aarch64_be-linux-gnu -std=c++17 -emit-llvm -O0 \
-// RUN:   -fdump-record-layouts-simple -o %t.be.ll %s | FileCheck %s --check-prefix=LAYOUT-BE
-// RUN: FileCheck %s --check-prefix=BE <%t.be.ll
-// RUN: %clang_cc1 -triple s390x-linux-gnu -std=c++17 -emit-llvm -O0 \
-// RUN:   -fdump-record-layouts-simple -o %t.s390x.ll %s | FileCheck %s --check-prefix=LAYOUT-BE
-// RUN: FileCheck %s --check-prefix=BE <%t.s390x.ll
-// RUN: %clang_cc1 -triple powerpc64-linux-gnu -std=c++17 -emit-llvm -O0 \
-// RUN:   -fdump-record-layouts-simple -o %t.ppc64.ll %s | FileCheck %s --check-prefix=LAYOUT-BE
-// RUN: FileCheck %s --check-prefix=BE <%t.ppc64.ll
+// RUN: %clang_cc1 -triple aarch64_be-linux-gnu -emit-llvm -fdump-record-layouts-simple -o %t.be.ll %s | FileCheck %s --check-prefix=LAYOUT
+// RUN: FileCheck %s --check-prefix=IR <%t.be.ll
+// RUN: %clang_cc1 -triple s390x-linux-gnu -emit-llvm -fdump-record-layouts-simple -o %t.s390x.ll %s | FileCheck %s --check-prefix=LAYOUT
+// RUN: FileCheck %s --check-prefix=IR <%t.s390x.ll
+// RUN: %clang_cc1 -triple powerpc64-linux-gnu -emit-llvm -fdump-record-layouts-simple -o %t.ppc64.ll %s | FileCheck %s --check-prefix=LAYOUT
+// RUN: FileCheck %s --check-prefix=IR <%t.ppc64.ll
 
 // An oversized bit-field has a declared width larger than its type. Only the
 // type width is a value; the rest is padding, and the value bits come first.
@@ -20,34 +17,34 @@ struct S {
   unsigned char value : 16;
 };
 
-// LAYOUT-BE: BitFields:[
-// LAYOUT-BE-NEXT: <CGBitFieldInfo Offset:8 Size:8 IsSigned:0 StorageSize:16 StorageOffset:0
-// LAYOUT-BE-NEXT: ]>
+// LAYOUT: BitFields:[
+// LAYOUT-NEXT: <CGBitFieldInfo Offset:8 Size:8 IsSigned:0 StorageSize:16 StorageOffset:0
+// LAYOUT-NEXT: ]>
 
 // First byte is 0xAB. The padding byte is not the value.
-// BE: @global = global { i8, i8 } { i8 -85, i8 undef }, align 2
+// IR: @global = global { i8, i8 } { i8 -85, i8 undef }, align 2
 S global = {0xAB};
 
-// BE-LABEL: define {{.*}} @_Z3getPK1S(
-// BE: [[P:%.*]] = load ptr, ptr %p.addr
-// BE: [[LOAD:%.*]] = load i16, ptr [[P]]
-// BE-NEXT: [[SHL:%.*]] = lshr i16 [[LOAD]], 8
-// BE-NEXT: trunc i16 [[SHL]] to i8
+// IR-LABEL: define {{.*}} @_Z3getPK1S(
+// IR: [[P:%.*]] = load ptr, ptr %p.addr
+// IR: [[LOAD:%.*]] = load i16, ptr [[P]]
+// IR-NEXT: [[SHL:%.*]] = lshr i16 [[LOAD]], 8
+// IR-NEXT: trunc i16 [[SHL]] to i8
 unsigned char get(const S *p) {
   return p->value;
 }
 
 // The value goes in the high byte. The low byte is padding and is preserved.
-// BE-LABEL: define {{.*}} @_Z3setP1Sh(
-// BE: [[V:%.*]] = load i8, ptr %v.addr
-// BE: [[PTR:%.*]] = load ptr, ptr %p.addr
-// BE: [[EXT:%.*]] = zext i8 [[V]] to i16
-// BE: [[OLD:%.*]] = load i16, ptr [[PTR]]
-// BE-NEXT: [[MASKED:%.*]] = and i16 [[EXT]], 255
-// BE-NEXT: [[SHIFTED:%.*]] = shl i16 [[MASKED]], 8
-// BE-NEXT: [[KEPT:%.*]] = and i16 [[OLD]], 255
-// BE-NEXT: [[MERGED:%.*]] = or i16 [[KEPT]], [[SHIFTED]]
-// BE-NEXT: store i16 [[MERGED]], ptr [[PTR]]
+// IR-LABEL: define {{.*}} @_Z3setP1Sh(
+// IR: [[V:%.*]] = load i8, ptr %v.addr
+// IR: [[PTR:%.*]] = load ptr, ptr %p.addr
+// IR: [[EXT:%.*]] = zext i8 [[V]] to i16
+// IR: [[OLD:%.*]] = load i16, ptr [[PTR]]
+// IR-NEXT: [[MASKED:%.*]] = and i16 [[EXT]], 255
+// IR-NEXT: [[SHIFTED:%.*]] = shl i16 [[MASKED]], 8
+// IR-NEXT: [[KEPT:%.*]] = and i16 [[OLD]], 255
+// IR-NEXT: [[MERGED:%.*]] = or i16 [[KEPT]], [[SHIFTED]]
+// IR-NEXT: store i16 [[MERGED]], ptr [[PTR]]
 void set(S *p, unsigned char v) {
   p->value = v;
 }
