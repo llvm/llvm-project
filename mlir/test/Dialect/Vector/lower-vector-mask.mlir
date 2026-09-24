@@ -88,3 +88,45 @@ func.func @empty_vector_mask_with_return(%a : vector<8xf32>, %mask : vector<8xi1
   return %0 : vector<8xf32>
 }
 
+
+// -----
+
+// The mask of the masked operation is combined with the `vector.mask` mask.
+
+func.func @vector_transfer_read_with_op_mask(%t0: memref<?xf32>, %idx: index, %m0: vector<16xi1>, %m1: vector<16xi1>) -> vector<16xf32> {
+  %ft0 = arith.constant 0.0 : f32
+  %0 = vector.mask %m0 { vector.transfer_read %t0[%idx], %ft0, %m1 : memref<?xf32>, vector<16xf32> } : vector<16xi1> -> vector<16xf32>
+  return %0 : vector<16xf32>
+}
+
+// CHECK-LABEL:   func.func @vector_transfer_read_with_op_mask(
+// CHECK-SAME:      %[[MEM:.*]]: memref<?xf32>, %[[IDX:.*]]: index, %[[M0:.*]]: vector<16xi1>, %[[M1:.*]]: vector<16xi1>)
+// CHECK-NOT:       vector.mask
+// CHECK:           %[[MASK:.*]] = arith.andi %[[M0]], %[[M1]] : vector<16xi1>
+// CHECK:           vector.transfer_read %[[MEM]][%[[IDX]]], %{{.*}}, %[[MASK]] : memref<?xf32>, vector<16xf32>
+
+// -----
+
+func.func @vector_transfer_write_with_op_mask(%val: vector<16xf32>, %t0: memref<?xf32>, %idx: index, %m0: vector<16xi1>, %m1: vector<16xi1>) {
+  vector.mask %m0 { vector.transfer_write %val, %t0[%idx], %m1 : vector<16xf32>, memref<?xf32> } : vector<16xi1>
+  return
+}
+
+// CHECK-LABEL:   func.func @vector_transfer_write_with_op_mask(
+// CHECK-SAME:      %[[VAL:.*]]: vector<16xf32>, %[[MEM:.*]]: memref<?xf32>, %[[IDX:.*]]: index, %[[M0:.*]]: vector<16xi1>, %[[M1:.*]]: vector<16xi1>)
+// CHECK-NOT:       vector.mask
+// CHECK:           %[[MASK:.*]] = arith.andi %[[M0]], %[[M1]] : vector<16xi1>
+// CHECK:           vector.transfer_write %[[VAL]], %[[MEM]][%[[IDX]]], %[[MASK]] : vector<16xf32>, memref<?xf32>
+
+// -----
+
+func.func @vector_gather_with_op_mask(%base: memref<?xf32>, %idx: index, %indices: vector<16xindex>, %m0: vector<16xi1>, %m1: vector<16xi1>, %pt: vector<16xf32>) -> vector<16xf32> {
+  %0 = vector.mask %m0 { vector.gather %base[%idx] [%indices], %m1, %pt : memref<?xf32>, vector<16xindex>, vector<16xi1>, vector<16xf32> into vector<16xf32> } : vector<16xi1> -> vector<16xf32>
+  return %0 : vector<16xf32>
+}
+
+// CHECK-LABEL:   func.func @vector_gather_with_op_mask(
+// CHECK-SAME:      %[[MEM:.*]]: memref<?xf32>, %[[IDX:.*]]: index, %[[IDXS:.*]]: vector<16xindex>, %[[M0:.*]]: vector<16xi1>, %[[M1:.*]]: vector<16xi1>, %[[PT:.*]]: vector<16xf32>)
+// CHECK-NOT:       vector.mask
+// CHECK:           %[[MASK:.*]] = arith.andi %[[M0]], %[[M1]] : vector<16xi1>
+// CHECK:           vector.gather %[[MEM]][%[[IDX]]] [%[[IDXS]]], %[[MASK]], %[[PT]] : memref<?xf32>, vector<16xindex>, vector<16xi1>, vector<16xf32> into vector<16xf32>

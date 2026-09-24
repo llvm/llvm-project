@@ -205,6 +205,16 @@ protected:
                             PatternRewriter &rewriter) const = 0;
 };
 
+/// Returns the mask of `maskingOp` intersected with `opMask`, the mask the
+/// masked operation already carries, if any.
+static Value combineMasks(PatternRewriter &rewriter, Location loc,
+                          MaskingOpInterface maskingOp, Value opMask) {
+  Value mask = maskingOp.getMask();
+  if (!opMask)
+    return mask;
+  return arith::AndIOp::create(rewriter, loc, mask, opMask);
+}
+
 /// Lowers a masked `vector.transfer_read` operation.
 struct MaskedTransferReadOpPattern
     : public MaskOpRewritePattern<TransferReadOp> {
@@ -225,7 +235,8 @@ public:
     rewriter.replaceOpWithNewOp<TransferReadOp>(
         maskingOp.getOperation(), readOp.getVectorType(), readOp.getBase(),
         readOp.getIndices(), readOp.getPermutationMap(), readOp.getPadding(),
-        maskingOp.getMask(), readOp.getInBounds());
+        combineMasks(rewriter, readOp.getLoc(), maskingOp, readOp.getMask()),
+        readOp.getInBounds());
     return success();
   }
 };
@@ -247,7 +258,8 @@ public:
     rewriter.replaceOpWithNewOp<TransferWriteOp>(
         maskingOp.getOperation(), resultType, writeOp.getVector(),
         writeOp.getBase(), writeOp.getIndices(), writeOp.getPermutationMap(),
-        maskingOp.getMask(), writeOp.getInBounds());
+        combineMasks(rewriter, writeOp.getLoc(), maskingOp, writeOp.getMask()),
+        writeOp.getInBounds());
     return success();
   }
 };
@@ -260,17 +272,14 @@ public:
   LogicalResult
   matchAndRewriteMaskableOp(GatherOp gatherOp, MaskingOpInterface maskingOp,
                             PatternRewriter &rewriter) const override {
-    Value passthru = maskingOp.hasPassthru()
-                         ? maskingOp.getPassthru()
-                         : arith::ConstantOp::create(
-                               rewriter, gatherOp.getLoc(),
-                               rewriter.getZeroAttr(gatherOp.getVectorType()));
-
-    // Replace the `vector.mask` operation.
+    // `vector.mask` takes no passthru for `vector.gather`, so lanes disabled
+    // by either mask take the gather's own passthru.
     rewriter.replaceOpWithNewOp<GatherOp>(
         maskingOp.getOperation(), gatherOp.getVectorType(), gatherOp.getBase(),
-        gatherOp.getOffsets(), gatherOp.getIndices(), maskingOp.getMask(),
-        passthru);
+        gatherOp.getOffsets(), gatherOp.getIndices(),
+        combineMasks(rewriter, gatherOp.getLoc(), maskingOp,
+                     gatherOp.getMask()),
+        gatherOp.getPassThru());
     return success();
   }
 };
