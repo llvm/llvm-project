@@ -1410,7 +1410,7 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
   /// Environment flag that forces every device operation to be synchronized,
   /// draining the queue after each operation. Debugging escape hatch.
-  BoolEnvar OF_ForceSyncOps = BoolEnvar("OFFLOAD_FORCE_SYNC_OPS", false);
+  BoolEnvar OF_ForceSyncOps = BoolEnvar("OFFLOAD_FORCE_BLOCKING", false);
 
   /// Return whether all device operations should be forced synchronous.
   bool forceSyncOps() const { return OF_ForceSyncOps; }
