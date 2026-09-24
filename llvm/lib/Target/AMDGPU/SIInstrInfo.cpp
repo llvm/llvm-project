@@ -11208,11 +11208,13 @@ unsigned SIInstrInfo::getInstrLatency(const InstrItineraryData *ItinData,
 unsigned SIInstrInfo::getBlockingCycles(const MachineInstr &MI) const {
   if (!ST.hasGFX1250VALUBlockingCycles())
     return 0;
+  return getGFX1250BlockingCyclesTable(MI);
+}
 
-  // Use processor-specific lookup table
+unsigned
+SIInstrInfo::getGFX1250BlockingCyclesTable(const MachineInstr &MI) const {
   if (const auto *Entry = AMDGPU::getGFX1250BlockingCyclesInfo(MI.getOpcode()))
     return Entry->GFX1250BlockingCycles;
-
   return 0;
 }
 

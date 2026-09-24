@@ -1216,12 +1216,6 @@ public:
            Opcode == AMDGPU::V_S_SQRT_F32_e64;
   }
 
-  static bool isF64Trans(unsigned Opcode) {
-    return Opcode == AMDGPU::V_RCP_F64_e32 || Opcode == AMDGPU::V_RCP_F64_e64 ||
-           Opcode == AMDGPU::V_RSQ_F64_e32 || Opcode == AMDGPU::V_RSQ_F64_e64 ||
-           Opcode == AMDGPU::V_SQRT_F64_e32 || Opcode == AMDGPU::V_SQRT_F64_e64;
-  }
-
   static bool isVPermPk16(unsigned Opcode) {
     return Opcode == AMDGPU::V_PERM_PK16_B4_U4_e64 ||
            Opcode == AMDGPU::V_PERM_PK16_B6_U4_e64 ||
@@ -1242,15 +1236,14 @@ public:
     // Pseudo-scalar transcendentals (OP32_SCL_T) do NOT clear the hazard.
     if (isPseudoScalarTrans(Opc))
       return false;
-    // OP_32_T: genuine transcendentals clear the hazard, except the F64
-    // transcendentals (which belong to the multi-pass FP64 class).
-    if (isTRANS(MI))
-      return !isF64Trans(Opc);
 
-    // Everything else that is a single-pass VALU op (OP16_1, OP32_1, OP_CMACC,
-    // OP_DUAL_1) is safe. Multi-pass ops block the VALU pipe for more than one
-    // cycle (getBlockingCycles > 1) and do not clear the hazard.
-    return getBlockingCycles(MI) < 2;
+    // Use the table lookup, not getBlockingCycles(): occupancy is gated off on
+    // gfx1251 but the hazard applies to both gfx1250 and gfx1251. Gfx1250 table
+    // is valid enough for gfx1251 w.r.t. v_perm_pk16 safety check here.
+    // OP_32_T is in the table at 2 and is safe; other table entries (>= 2) are
+    // not.
+    unsigned Cycles = getGFX1250BlockingCyclesTable(MI);
+    return Cycles < 2 || (Cycles == 2 && isTRANS(MI));
   }
 
   static bool doesNotReadTiedSource(const MachineInstr &MI) {
@@ -1822,6 +1815,11 @@ public:
                            unsigned *PredCost = nullptr) const override;
 
   unsigned getBlockingCycles(const MachineInstr &MI) const;
+
+  /// GFX1250 blocking-cycles table lookup with no occupancy subtarget gate.
+  /// Returns 0 if \p MI is not in the table. Used as a multi-pass VALU denylist
+  /// (e.g. V_PERM_PK16 hazard) on both gfx1250 and gfx1251.
+  unsigned getGFX1250BlockingCyclesTable(const MachineInstr &MI) const;
 
   const MachineOperand &getCalleeOperand(const MachineInstr &MI) const override;
 
