@@ -529,6 +529,7 @@ features cannot lower the translation-unit ABI level;
 - Fixed a constraint comparison bug in partial ordering. (#GH182671)
 - Fixed a rejected-valid case that used an explicit object parameter in an out-of-line definition of a nested class member. (#GH136472)
 - Fixed an assertion on omp taskloop transparent (#GH197162)
+- Fixed an assertion failure and a garbled diagnostic when the `message` clause of `#pragma omp error` was given a wide or UTF-16/32 string literal. Such literals are now diagnosed and ignored, as they already were in C. (#GH140338)
 - Fixed a bug where `__func__`, `__PRETTY_FUNCTION__` and `__FUNCTION__` were not resolving to the proper function when inside a lambda return type (#GH211811)
 - Fixed USR generation for declarations whose signature mentions a class-type
   non-type template parameter. (#GH212351)
@@ -547,7 +548,6 @@ features cannot lower the translation-unit ABI level;
 - Fixed a crash when an `asm` label names the register for a global variable of incomplete type. (#GH219746)
 - Fixed an ICE hat occurred when using `__imag int/float` as lvalue in assignment. (#GH119498)
 - Fixed an assertion failure in `-Wsign-compare` when a negated or complemented vector of unsigned integers was compared against a signed constant. (#GH203575)
-- Fixed an assertion failure and a garbled diagnostic when the `message` clause of `#pragma omp error` was given a wide or UTF-16/32 string literal. Such literals are now diagnosed and ignored, as they already were in C. (#GH140338)
 
 #### Bug Fixes to Compiler Builtins
 
