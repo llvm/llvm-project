@@ -1995,10 +1995,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
                     MVT::nxv8f16, MVT::nxv4f32, MVT::nxv2f64, MVT::nxv8bf16})
       setOperationAction(ISD::VECTOR_REPEAT, VT, Legal);
 
-    // VECTOR_REPEAT to unpacked SVE types require explicit unpacking to add
-    // spacing between elements.
-    for (auto VT : {MVT::nxv2f16, MVT::nxv4f16, MVT::nxv2f32, MVT::nxv2bf16,
-                    MVT::nxv4bf16})
+    // VECTOR_REPEAT to legal unpacked SVE types require explicit unpacking to
+    // add spacing between elements.
+    for (auto VT : {MVT::nxv4f16, MVT::nxv2f32, MVT::nxv4bf16})
       setOperationAction(ISD::VECTOR_REPEAT, VT, Custom);
 
     if (Subtarget->hasSVEB16B16() &&

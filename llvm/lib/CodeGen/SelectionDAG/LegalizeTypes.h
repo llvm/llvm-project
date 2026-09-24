@@ -318,7 +318,6 @@ private:
   SDValue PromoteIntRes_MLOAD(MaskedLoadSDNode *N);
   SDValue PromoteIntRes_MGATHER(MaskedGatherSDNode *N);
   SDValue PromoteIntRes_VECTOR_COMPRESS(SDNode *N);
-
   SDValue PromoteIntRes_Overflow(SDNode *N);
   SDValue PromoteIntRes_FFREXP(SDNode *N);
   SDValue PromoteIntRes_SADDSUBO(SDNode *N, unsigned ResNo);
@@ -980,6 +979,7 @@ private:
   SDValue SplitVecOp_UnaryOp(SDNode *N);
   SDValue SplitVecOp_TruncateHelper(SDNode *N);
   SDValue SplitVecOp_VECTOR_COMPRESS(SDNode *N, unsigned OpNo);
+
   SDValue SplitVecOp_BITCAST(SDNode *N);
   SDValue SplitVecOp_INSERT_SUBVECTOR(SDNode *N, unsigned OpNo);
   SDValue SplitVecOp_EXTRACT_SUBVECTOR(SDNode *N);

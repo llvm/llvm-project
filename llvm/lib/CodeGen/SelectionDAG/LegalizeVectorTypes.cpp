@@ -8303,18 +8303,17 @@ SDValue DAGTypeLegalizer::WidenVecOp_VECTOR_REPEAT(SDNode *N) {
           SrcVT.getVectorElementCount()))
     report_fatal_error(
         "Cannot widen VECTOR_REPEAT operand to an ElementCount that's not "
-        "a multiple of the input ElementCount.");
+        "a known scalar multiple of the input ElementCount.");
 
   // Repeat the original source because the extra lanes of its widened value
   // are unspecified.
   unsigned NumConcat =
-      WidenedSrcVT.getVectorElementCount().getKnownScalarFactor(
-          SrcVT.getVectorElementCount());
+      WidenedSrcVT.getVectorNumElements() / SrcVT.getVectorNumElements();
   SmallVector<SDValue, 8> Ops(NumConcat, Src);
   SDValue WidenedSrc = DAG.getNode(ISD::CONCAT_VECTORS, DL, WidenedSrcVT, Ops);
   EVT WidenedVT = VT.changeVectorElementCount(
       *DAG.getContext(),
-      ElementCount::getScalable(WidenedSrcVT.getVectorMinNumElements()));
+      ElementCount::getScalable(WidenedSrcVT.getVectorNumElements()));
   SDValue Widened = DAG.getNode(ISD::VECTOR_REPEAT, DL, WidenedVT, WidenedSrc);
   return DAG.getExtractSubvector(DL, VT, Widened, 0);
 }

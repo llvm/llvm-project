@@ -3029,8 +3029,8 @@ SDValue DAGTypeLegalizer::PromoteIntOp_VECTOR_REPEAT(SDNode *N) {
   SDValue Src = GetPromotedInteger(N->getOperand(0));
   EVT SrcVT = Src.getValueType();
   EVT OrigVT = N->getValueType(0);
-  EVT NewVT = EVT::getVectorVT(*DAG.getContext(), SrcVT.getVectorElementType(),
-                               OrigVT.getVectorElementCount());
+  EVT NewVT = OrigVT.changeVectorElementType(*DAG.getContext(),
+                                             SrcVT.getVectorElementType());
   SDValue Res = DAG.getNode(ISD::VECTOR_REPEAT, DL, NewVT, Src);
   return DAG.getNode(ISD::TRUNCATE, DL, OrigVT, Res);
 }
