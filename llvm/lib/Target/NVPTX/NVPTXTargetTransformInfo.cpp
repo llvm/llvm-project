@@ -18,6 +18,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -407,11 +408,14 @@ handleSpaceCheckIntrinsics(InstCombiner &IC, IntrinsicInst &II) {
   case Intrinsic::nvvm_isspacep_const: {
     Value *Op0 = II.getArgOperand(0);
     unsigned AS = Op0->getType()->getPointerAddressSpace();
-    // Peek through ASC to generic AS.
-    // TODO: we could dig deeper through both ASCs and GEPs.
-    if (AS == NVPTXAS::ADDRESS_SPACE_GENERIC)
+    // Look through GEPs to find the addrspacecast that produced the generic
+    // pointer.
+    if (AS == NVPTXAS::ADDRESS_SPACE_GENERIC) {
+      while (auto *GEP = dyn_cast<GEPOperator>(Op0))
+        Op0 = GEP->getPointerOperand();
       if (auto *ASCO = dyn_cast<AddrSpaceCastOperator>(Op0))
         AS = ASCO->getOperand(0)->getType()->getPointerAddressSpace();
+    }
 
     if (std::optional<bool> Answer = evaluateIsSpace(IID, AS))
       return IC.replaceInstUsesWith(II,

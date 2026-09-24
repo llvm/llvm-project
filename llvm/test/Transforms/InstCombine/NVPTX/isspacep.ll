@@ -275,3 +275,55 @@ entry:
   ret void
 }
 
+define i1 @check_gep_after_asc_shared(ptr addrspace(3) %p, i64 %idx) {
+; CHECK-LABEL: define i1 @check_gep_after_asc_shared(
+; CHECK-NEXT:    ret i1 true
+;
+  %generic = addrspacecast ptr addrspace(3) %p to ptr
+  %gep0 = getelementptr i8, ptr %generic, i64 %idx
+  %gep1 = getelementptr i8, ptr %gep0, i64 4
+  %result = call i1 @llvm.nvvm.isspacep.shared(ptr %gep1)
+  ret i1 %result
+}
+
+define i1 @check_gep_after_asc_not_global(ptr addrspace(3) %p, i64 %idx) {
+; CHECK-LABEL: define i1 @check_gep_after_asc_not_global(
+; CHECK-NEXT:    ret i1 false
+;
+  %generic = addrspacecast ptr addrspace(3) %p to ptr
+  %gep = getelementptr i8, ptr %generic, i64 %idx
+  %result = call i1 @llvm.nvvm.isspacep.global(ptr %gep)
+  ret i1 %result
+}
+
+define i1 @check_gep_unknown(ptr %p, i64 %idx) {
+; CHECK-LABEL: define i1 @check_gep_unknown(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[IDX:%.*]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call i1 @llvm.nvvm.isspacep.shared(ptr [[GEP]])
+; CHECK-NEXT:    ret i1 [[RESULT]]
+;
+  %gep = getelementptr i8, ptr %p, i64 %idx
+  %result = call i1 @llvm.nvvm.isspacep.shared(ptr %gep)
+  ret i1 %result
+}
+
+define i1 @check_gep_shared_cluster(ptr addrspace(7) %p, i64 %idx) {
+; CHECK-LABEL: define i1 @check_gep_shared_cluster(
+; CHECK-NEXT:    [[GENERIC:%.*]] = addrspacecast ptr addrspace(7) [[P:%.*]] to ptr
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[GENERIC]], i64 [[IDX:%.*]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call i1 @llvm.nvvm.isspacep.shared(ptr [[GEP]])
+; CHECK-NEXT:    ret i1 [[RESULT]]
+;
+  %generic = addrspacecast ptr addrspace(7) %p to ptr
+  %gep = getelementptr i8, ptr %generic, i64 %idx
+  %result = call i1 @llvm.nvvm.isspacep.shared(ptr %gep)
+  ret i1 %result
+}
+
+define i1 @check_constexpr_gep_after_asc() {
+; CHECK-LABEL: define i1 @check_constexpr_gep_after_asc(
+; CHECK-NEXT:    ret i1 true
+;
+  %result = call i1 @llvm.nvvm.isspacep.shared(ptr getelementptr (i8, ptr addrspacecast (ptr addrspace(3) @shared_data to ptr), i64 4))
+  ret i1 %result
+}
