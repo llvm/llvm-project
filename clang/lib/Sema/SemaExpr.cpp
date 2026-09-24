@@ -19329,10 +19329,11 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
         bool FirstInstantiation = PointOfInstantiation.isInvalid();
         if (FirstInstantiation) {
           PointOfInstantiation = Loc;
-          if (auto *MSI = Func->getMemberSpecializationInfo())
+          if (auto *MSI = Func->getMemberSpecializationInfo()) {
             MSI->setPointOfInstantiation(Loc);
-            // FIXME: Notify listener.
-          else
+            if (ASTMutationListener *L = getASTMutationListener())
+              L->InstantiationRequested(Func);
+          } else
             Func->setTemplateSpecializationKind(TSK, PointOfInstantiation);
         } else if (TSK != TSK_ImplicitInstantiation) {
           // Use the point of use as the point of instantiation, instead of the
@@ -20959,10 +20960,11 @@ static void DoMarkVarDeclReferenced(
       bool FirstInstantiation = PointOfInstantiation.isInvalid();
       if (FirstInstantiation) {
         PointOfInstantiation = Loc;
-        if (MSI)
+        if (MSI) {
           MSI->setPointOfInstantiation(PointOfInstantiation);
-          // FIXME: Notify listener.
-        else
+          if (ASTMutationListener *L = SemaRef.getASTMutationListener())
+            L->InstantiationRequested(Var);
+        } else
           Var->setTemplateSpecializationKind(TSK, PointOfInstantiation);
       }
 

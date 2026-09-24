@@ -59,17 +59,20 @@ IncrementalAction::IncrementalAction(CompilerInstance &Instance,
 std::unique_ptr<ASTConsumer>
 IncrementalAction::CreateASTConsumer(CompilerInstance & /*CI*/,
                                      StringRef InFile) {
-  std::unique_ptr<ASTConsumer> C =
-      WrapperFrontendAction::CreateASTConsumer(this->CI, InFile);
-
-  if (Consumer) {
-    std::vector<std::unique_ptr<ASTConsumer>> Cs;
+  std::vector<std::unique_ptr<ASTConsumer>> Cs;
+  bool HasCustomConsumer = Consumer != nullptr;
+  if (HasCustomConsumer)
     Cs.push_back(std::move(Consumer));
-    Cs.push_back(std::move(C));
-    return std::make_unique<MultiplexConsumer>(std::move(Cs));
-  }
+  Cs.push_back(WrapperFrontendAction::CreateASTConsumer(this->CI, InFile));
 
-  return std::make_unique<InProcessPrintingASTConsumer>(std::move(C), Interp);
+  auto Recorder = std::make_unique<ImplicitInstantiationRecorder>();
+  Instantiations = Recorder.get();
+  Cs.push_back(std::move(Recorder));
+
+  if (HasCustomConsumer)
+    return std::make_unique<MultiplexConsumer>(std::move(Cs));
+
+  return std::make_unique<InProcessPrintingASTConsumer>(std::move(Cs), Interp);
 }
 
 void IncrementalAction::ExecuteAction() {
@@ -129,8 +132,8 @@ CodeGenerator *IncrementalAction::getCodeGen() const {
 }
 
 InProcessPrintingASTConsumer::InProcessPrintingASTConsumer(
-    std::unique_ptr<ASTConsumer> C, Interpreter &I)
-    : MultiplexConsumer(std::move(C)), Interp(I) {}
+    std::vector<std::unique_ptr<ASTConsumer>> Cs, Interpreter &I)
+    : MultiplexConsumer(std::move(Cs)), Interp(I) {}
 
 bool InProcessPrintingASTConsumer::HandleTopLevelDecl(DeclGroupRef DGR) {
   if (DGR.isNull())
