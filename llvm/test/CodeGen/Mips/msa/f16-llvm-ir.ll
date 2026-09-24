@@ -324,8 +324,8 @@ define void @uitofp(i32 %a) {
 ; MIPS32-NEXT:    lui $2, 17200
 ; MIPS32-NEXT:    sw $2, 4($sp)
 ; MIPS32-NEXT:    sw $4, 0($sp)
-; MIPS32-NEXT:    lw $2, %got($CPI5_0)($1)
-; MIPS32-NEXT:    ldc1 $f0, %lo($CPI5_0)($2)
+; MIPS32-NEXT:    mtc1 $zero, $f0
+; MIPS32-NEXT:    mthc1 $2, $f0
 ; MIPS32-NEXT:    ldc1 $f1, 0($sp)
 ; MIPS32-NEXT:    sub.d $f0, $f1, $f0
 ; MIPS32-NEXT:    cvt.s.d $f0, $f0
@@ -346,10 +346,10 @@ define void @uitofp(i32 %a) {
 ; MIPS64R5-N32-NEXT:    addiu $1, $1, %lo(%neg(%gp_rel(uitofp)))
 ; MIPS64R5-N32-NEXT:    lui $2, 17200
 ; MIPS64R5-N32-NEXT:    sw $2, 12($sp)
-; MIPS64R5-N32-NEXT:    sll $2, $4, 0
-; MIPS64R5-N32-NEXT:    sw $2, 8($sp)
-; MIPS64R5-N32-NEXT:    lw $2, %got_page(.LCPI5_0)($1)
-; MIPS64R5-N32-NEXT:    ldc1 $f0, %got_ofst(.LCPI5_0)($2)
+; MIPS64R5-N32-NEXT:    sll $3, $4, 0
+; MIPS64R5-N32-NEXT:    sw $3, 8($sp)
+; MIPS64R5-N32-NEXT:    mtc1 $zero, $f0
+; MIPS64R5-N32-NEXT:    mthc1 $2, $f0
 ; MIPS64R5-N32-NEXT:    ldc1 $f1, 8($sp)
 ; MIPS64R5-N32-NEXT:    sub.d $f0, $f1, $f0
 ; MIPS64R5-N32-NEXT:    cvt.s.d $f0, $f0
@@ -370,10 +370,10 @@ define void @uitofp(i32 %a) {
 ; MIPS64R5-N64-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(uitofp)))
 ; MIPS64R5-N64-NEXT:    lui $2, 17200
 ; MIPS64R5-N64-NEXT:    sw $2, 12($sp)
-; MIPS64R5-N64-NEXT:    sll $2, $4, 0
-; MIPS64R5-N64-NEXT:    sw $2, 8($sp)
-; MIPS64R5-N64-NEXT:    ld $2, %got_page(.LCPI5_0)($1)
-; MIPS64R5-N64-NEXT:    ldc1 $f0, %got_ofst(.LCPI5_0)($2)
+; MIPS64R5-N64-NEXT:    sll $3, $4, 0
+; MIPS64R5-N64-NEXT:    sw $3, 8($sp)
+; MIPS64R5-N64-NEXT:    mtc1 $zero, $f0
+; MIPS64R5-N64-NEXT:    mthc1 $2, $f0
 ; MIPS64R5-N64-NEXT:    ldc1 $f1, 8($sp)
 ; MIPS64R5-N64-NEXT:    sub.d $f0, $f1, $f0
 ; MIPS64R5-N64-NEXT:    cvt.s.d $f0, $f0
@@ -395,8 +395,8 @@ define void @uitofp(i32 %a) {
 ; MIPSR6-N32-NEXT:    lui $2, 17200
 ; MIPSR6-N32-NEXT:    sw $2, 12($sp)
 ; MIPSR6-N32-NEXT:    sw $4, 8($sp)
-; MIPSR6-N32-NEXT:    lw $2, %got_page(.LCPI5_0)($1)
-; MIPSR6-N32-NEXT:    ldc1 $f0, %got_ofst(.LCPI5_0)($2)
+; MIPSR6-N32-NEXT:    mtc1 $zero, $f0
+; MIPSR6-N32-NEXT:    mthc1 $2, $f0
 ; MIPSR6-N32-NEXT:    ldc1 $f1, 8($sp)
 ; MIPSR6-N32-NEXT:    sub.d $f0, $f1, $f0
 ; MIPSR6-N32-NEXT:    cvt.s.d $f0, $f0
@@ -418,8 +418,8 @@ define void @uitofp(i32 %a) {
 ; MIPSR6-N64-NEXT:    lui $2, 17200
 ; MIPSR6-N64-NEXT:    sw $2, 12($sp)
 ; MIPSR6-N64-NEXT:    sw $4, 8($sp)
-; MIPSR6-N64-NEXT:    ld $2, %got_page(.LCPI5_0)($1)
-; MIPSR6-N64-NEXT:    ldc1 $f0, %got_ofst(.LCPI5_0)($2)
+; MIPSR6-N64-NEXT:    mtc1 $zero, $f0
+; MIPSR6-N64-NEXT:    mthc1 $2, $f0
 ; MIPSR6-N64-NEXT:    ldc1 $f1, 8($sp)
 ; MIPSR6-N64-NEXT:    sub.d $f0, $f1, $f0
 ; MIPSR6-N64-NEXT:    cvt.s.d $f0, $f0

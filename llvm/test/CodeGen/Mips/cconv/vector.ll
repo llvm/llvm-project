@@ -5652,15 +5652,12 @@ define <4 x float> @mixed_32(<4 x float> %a, i32 %b) {
 ; MIPS64R5EB:       # %bb.0: # %entry
 ; MIPS64R5EB-NEXT:    daddiu $sp, $sp, -16
 ; MIPS64R5EB-NEXT:    .cfi_def_cfa_offset 16
-; MIPS64R5EB-NEXT:    lui $1, %hi(%neg(%gp_rel(mixed_32)))
-; MIPS64R5EB-NEXT:    daddu $1, $1, $25
-; MIPS64R5EB-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(mixed_32)))
-; MIPS64R5EB-NEXT:    lui $2, 17200
-; MIPS64R5EB-NEXT:    sw $2, 8($sp)
+; MIPS64R5EB-NEXT:    lui $1, 17200
+; MIPS64R5EB-NEXT:    sw $1, 8($sp)
 ; MIPS64R5EB-NEXT:    sll $2, $6, 0
 ; MIPS64R5EB-NEXT:    sw $2, 12($sp)
-; MIPS64R5EB-NEXT:    ld $1, %got_page(.LCPI41_0)($1)
-; MIPS64R5EB-NEXT:    ldc1 $f0, %got_ofst(.LCPI41_0)($1)
+; MIPS64R5EB-NEXT:    mtc1 $zero, $f0
+; MIPS64R5EB-NEXT:    mthc1 $1, $f0
 ; MIPS64R5EB-NEXT:    ldc1 $f1, 8($sp)
 ; MIPS64R5EB-NEXT:    sub.d $f0, $f1, $f0
 ; MIPS64R5EB-NEXT:    insert.d $w1[0], $4
@@ -5781,15 +5778,12 @@ define <4 x float> @mixed_32(<4 x float> %a, i32 %b) {
 ; MIPS64R5EL:       # %bb.0: # %entry
 ; MIPS64R5EL-NEXT:    daddiu $sp, $sp, -16
 ; MIPS64R5EL-NEXT:    .cfi_def_cfa_offset 16
-; MIPS64R5EL-NEXT:    lui $1, %hi(%neg(%gp_rel(mixed_32)))
-; MIPS64R5EL-NEXT:    daddu $1, $1, $25
-; MIPS64R5EL-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(mixed_32)))
-; MIPS64R5EL-NEXT:    lui $2, 17200
-; MIPS64R5EL-NEXT:    sw $2, 12($sp)
+; MIPS64R5EL-NEXT:    lui $1, 17200
+; MIPS64R5EL-NEXT:    sw $1, 12($sp)
 ; MIPS64R5EL-NEXT:    sll $2, $6, 0
 ; MIPS64R5EL-NEXT:    sw $2, 8($sp)
-; MIPS64R5EL-NEXT:    ld $1, %got_page(.LCPI41_0)($1)
-; MIPS64R5EL-NEXT:    ldc1 $f0, %got_ofst(.LCPI41_0)($1)
+; MIPS64R5EL-NEXT:    mtc1 $zero, $f0
+; MIPS64R5EL-NEXT:    mthc1 $1, $f0
 ; MIPS64R5EL-NEXT:    ldc1 $f1, 8($sp)
 ; MIPS64R5EL-NEXT:    sub.d $f0, $f1, $f0
 ; MIPS64R5EL-NEXT:    insert.d $w1[0], $4
