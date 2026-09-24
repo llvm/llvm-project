@@ -57,6 +57,9 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
     report_fatal_error("Do not know how to scalarize the result of this "
                        "operator!\n");
 
+  case ISD::SPLAT_VECTOR:
+    R = N->getOperand(0);
+    break;
   case ISD::LOOP_DEPENDENCE_WAR_MASK:
   case ISD::LOOP_DEPENDENCE_RAW_MASK:
     R = ScalarizeVecRes_LOOP_DEPENDENCE_MASK(N);
