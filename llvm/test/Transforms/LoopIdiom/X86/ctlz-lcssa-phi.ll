@@ -24,16 +24,21 @@ define i32 @ctlz_lcssa_or_recurrence(ptr %p, i32 %n) {
 ; CHECK-NEXT:    br i1 [[EC]], label %[[RED_LOOP]], label %[[CLZ_PH:.*]]
 ; CHECK:       [[CLZ_PH]]:
 ; CHECK-NEXT:    [[X_LCSSA:%.*]] = phi i32 [ [[X_NEXT]], %[[RED_LOOP]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.ctlz.i32(i32 [[X_LCSSA]], i1 true)
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 32, [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 32, [[TMP1]]
 ; CHECK-NEXT:    br label %[[CLZ_LOOP:.*]]
 ; CHECK:       [[CLZ_LOOP]]:
+; CHECK-NEXT:    [[TCPHI:%.*]] = phi i32 [ [[TMP1]], %[[CLZ_PH]] ], [ [[TCDEC:%.*]], %[[CLZ_LOOP]] ]
 ; CHECK-NEXT:    [[CNT:%.*]] = phi i32 [ 32, %[[CLZ_PH]] ], [ [[CNT_NEXT:%.*]], %[[CLZ_LOOP]] ]
 ; CHECK-NEXT:    [[Y:%.*]] = phi i32 [ [[X_LCSSA]], %[[CLZ_PH]] ], [ [[Y_NEXT:%.*]], %[[CLZ_LOOP]] ]
 ; CHECK-NEXT:    [[Y_NEXT]] = lshr i32 [[Y]], 1
 ; CHECK-NEXT:    [[CNT_NEXT]] = add nsw i32 [[CNT]], -1
-; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i32 [[Y_NEXT]], 0
+; CHECK-NEXT:    [[TCDEC]] = sub nsw i32 [[TCPHI]], 1
+; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i32 [[TCDEC]], 0
 ; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[CLZ_LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[CNT_LCSSA:%.*]] = phi i32 [ [[CNT_NEXT]], %[[CLZ_LOOP]] ]
+; CHECK-NEXT:    [[CNT_LCSSA:%.*]] = phi i32 [ [[TMP2]], %[[CLZ_LOOP]] ]
 ; CHECK-NEXT:    ret i32 [[CNT_LCSSA]]
 ;
 entry:
