@@ -58,12 +58,11 @@ define i32 @sum_of_abs_stride_3(ptr noalias %a, ptr noalias %b) {
 ; CHECK-LABEL: define i32 @sum_of_abs_stride_3
 ; CHECK-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call <22 x i8> @llvm.masked.load.v22i8.p0(ptr align 1 [[A]], <22 x i1> <i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true>, <22 x i8> poison)
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <22 x i8> [[TMP0]], <22 x i8> poison, <8 x i32> <i32 0, i32 3, i32 6, i32 9, i32 12, i32 15, i32 18, i32 21>
-; CHECK-NEXT:    [[TMP2:%.*]] = call <8 x i8> @llvm.abs.v8i8(<8 x i8> [[TMP1]], i1 false)
-; CHECK-NEXT:    [[TMP3:%.*]] = sext <8 x i8> [[TMP2]] to <8 x i32>
-; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP3]])
-; CHECK-NEXT:    ret i32 [[TMP4]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call <8 x i8> @llvm.experimental.vp.strided.load.v8i8.p0.i64(ptr align 1 [[A]], i64 3, <8 x i1> splat (i1 true), i32 8)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i8> @llvm.abs.v8i8(<8 x i8> [[TMP0]], i1 false)
+; CHECK-NEXT:    [[TMP2:%.*]] = sext <8 x i8> [[TMP1]] to <8 x i32>
+; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP2]])
+; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
 entry:
   %0 = load i8, ptr %a, align 1
