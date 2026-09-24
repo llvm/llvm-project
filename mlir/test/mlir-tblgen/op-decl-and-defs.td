@@ -195,6 +195,9 @@ def NS_AttrSizedOperandOp : NS_Op<"attr_sized_operands",
 // CHECK:  RangeT getB() {
 // CHECK:  ValueT getC() {
 // CHECK:  RangeT getD() {
+// DEFS-LABEL: void AttrSizedOperandOp::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::TypeRange resultTypes,
+// DEFS-NEXT:   auto &odsProperties = odsState.getOrAddProperties<Properties>();
+// DEFS:   ::llvm::copy({{.*}}, odsProperties.operandSegmentSizes.begin());
 
 // Check op trait for different number of operands
 // ---

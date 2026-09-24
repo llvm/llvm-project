@@ -3265,6 +3265,17 @@ void OpEmitter::buildParamList(SmallVectorImpl<MethodParameter> &paramList,
 void OpEmitter::genCodeForAddingArgAndRegionForBuilder(
     MethodBody &body, llvm::StringSet<> &inferredAttributes,
     bool isRawValueAttr) {
+  bool needsProperties =
+      !op.getProperties().empty() ||
+      op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments");
+  for (const NamedTypeConstraint &operand : op.getOperands())
+    needsProperties |= operand.isVariadicOfVariadic();
+  for (const NamedAttribute &attr : op.getAttributes())
+    needsProperties |=
+        !attr.attr.isDerivedAttr() && !inferredAttributes.contains(attr.name);
+  if (needsProperties)
+    body << "  auto &odsProperties = " << builderOpStateProperties << ";\n";
+
   // Push all operands to the result.
   for (int i = 0, e = op.getNumOperands(); i < e; ++i) {
     std::string argName = getArgumentName(op, i);
@@ -3280,7 +3291,7 @@ void OpEmitter::genCodeForAddingArgAndRegionForBuilder(
            << "      rangeSegments.push_back(range.size());\n"
            << "    auto rangeAttr = " << odsBuilder
            << ".getDenseI32ArrayAttr(rangeSegments);\n";
-      body << "    " << builderOpStateProperties << "."
+      body << "    odsProperties."
            << operand.constraint.getVariadicOfVariadicSegmentSizeAttr()
            << " = rangeAttr;";
       body << "  }\n";
@@ -3318,7 +3329,7 @@ void OpEmitter::genCodeForAddingArgAndRegionForBuilder(
   if (op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments")) {
     body << "  ::llvm::copy(::llvm::ArrayRef<int32_t>({";
     emitSegment();
-    body << "}), " << builderOpStateProperties
+    body << "}), odsProperties"
          << ".operandSegmentSizes.begin());\n";
   }
 
@@ -3328,8 +3339,7 @@ void OpEmitter::genCodeForAddingArgAndRegionForBuilder(
     // interface type (used in the builder argument) to the storage type (used
     // in the state) is not necessarily trivial.
     std::string setterName = op.getSetterName(namedProp.name);
-    body << formatv("  {0}.{1}({2});\n", builderOpStateProperties, setterName,
-                    namedProp.name);
+    body << formatv("  odsProperties.{0}({1});\n", setterName, namedProp.name);
   }
   // Push all attributes to the result.
   for (const auto &namedAttr : op.getAttributes()) {
@@ -3353,12 +3363,10 @@ void OpEmitter::genCodeForAddingArgAndRegionForBuilder(
       // instance.
       FmtContext fctx;
       fctx.withBuilder("odsBuilder");
-      body << formatv("  {0}.{1} = {2};\n", builderOpStateProperties,
-                      namedAttr.name,
+      body << formatv("  odsProperties.{0} = {1};\n", namedAttr.name,
                       constBuildAttrFromParam(attr, fctx, namedAttr.name));
     } else {
-      body << formatv("  {0}.{1} = {1};\n", builderOpStateProperties,
-                      namedAttr.name);
+      body << formatv("  odsProperties.{0} = {0};\n", namedAttr.name);
     }
     if (emitNotNullCheck)
       body.unindent() << "  }\n";
