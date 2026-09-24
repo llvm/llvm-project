@@ -715,6 +715,27 @@ void test_computed_goto_multi_scope(int n, int c) {
   }
 }
 
+// UNINIT-LABEL:  test_nrvo_bypass(
+// UNINIT-NOT:    !annotation
+// ZERO-LABEL:    test_nrvo_bypass(
+// ZERO:      if.then:
+// ZERO-NEXT: call void @llvm.memset{{.*}}(ptr align 4 %agg.result, i8 0, i64 32, i1 false), !annotation [[AUTO_INIT:!.+]]
+// ZERO:      if.end:
+// ZERO-NEXT: call void @llvm.memset{{.*}}(ptr align 4 %agg.result, i8 0, i64 32, i1 false), !annotation [[AUTO_INIT]]
+// PATTERN-LABEL: test_nrvo_bypass(
+// PATTERN:      if.then:
+// PATTERN-NEXT: call void @llvm.memcpy{{.*}}(ptr align 4 %agg.result, ptr align 4 @__const.test_nrvo_bypass.s, i64 32, i1 false), !annotation [[AUTO_INIT:!.+]]
+// PATTERN:      if.end:
+// PATTERN-NEXT: call void @llvm.memcpy{{.*}}(ptr align 4 %agg.result, ptr align 4 @__const.test_nrvo_bypass.s, i64 32, i1 false), !annotation [[AUTO_INIT]]
+struct Big { int a[8]; };
+Big test_nrvo_bypass(int cond) {
+  if (cond)
+    goto skip;
+  Big s;
+skip:
+  return s;
+}
+
 } // extern "C"
 
 // CHECK: [[AUTO_INIT]] = !{ !"auto-init" }
