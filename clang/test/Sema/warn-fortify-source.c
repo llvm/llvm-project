@@ -36,7 +36,6 @@ size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream);
 size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream);
 char *fgets(char *s, int size, FILE *stream);
 
-
 #ifdef __cplusplus
 }
 #endif
