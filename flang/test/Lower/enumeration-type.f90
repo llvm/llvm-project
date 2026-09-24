@@ -373,7 +373,7 @@ end subroutine
 subroutine test_func_result_alloc()
   use enum_func_mod
   type(color2), allocatable :: c(:)
-  ! CHECK: %[[TMP:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> {bindc_name = ".result"}
+  ! CHECK: %[[TMP:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> <{bindc_name = ".result"}>
   ! CHECK: %[[RES:.*]] = fir.call @_QMenum_func_modPpick_alloc() {{.*}}: () -> !fir.box<!fir.heap<!fir.array<?xi32>>>
   ! CHECK: fir.save_result %[[RES]] to %{{.*}} : !fir.box<!fir.heap<!fir.array<?xi32>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
   c = pick_alloc()
