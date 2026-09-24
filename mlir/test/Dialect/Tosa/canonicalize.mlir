@@ -2332,7 +2332,7 @@ func.func @reverse_block_scaled_splat() -> tensor<64x!tosa.block_scaled<BLOCK_SH
   %0 = "tosa.const"() <{values = dense<tensor<64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN, {1.0, 2.0}>> : 1.0 : f8E4M3FN>}> : () -> tensor<64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>
   // CHECK: %[[REV:.*]] = tosa.reverse %[[CST]]
   // CHECK: return %[[REV]]
-  %1 = tosa.reverse %0 {axis = 0 : i32} : (tensor<64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>) -> tensor<64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>
+  %1 = tosa.reverse %0 axis(0) : (tensor<64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>) -> tensor<64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>
   return %1 : tensor<64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>
 }
 
@@ -2342,6 +2342,6 @@ func.func @reverse_block_scaled_splat() -> tensor<64x!tosa.block_scaled<BLOCK_SH
 func.func @reverse_block_scaled_unit_dim(%arg0: tensor<1x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>) -> tensor<1x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>> {
   // CHECK-NOT: tosa.reverse
   // CHECK: return %arg0
-  %0 = tosa.reverse %arg0 {axis = 0 : i32} : (tensor<1x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>) -> tensor<1x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>
+  %0 = tosa.reverse %arg0 axis(0) : (tensor<1x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>) -> tensor<1x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>
   return %0 : tensor<1x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>
 }

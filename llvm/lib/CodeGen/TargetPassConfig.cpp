@@ -294,13 +294,13 @@ static cl::opt<bool> BasicBlockSectionMatchInfer(
     "basic-block-section-match-infer",
     cl::desc(
         "Enable matching and inference when generating basic block sections"),
-    cl::init(false), cl::Optional);
+    cl::init(false));
 
 cl::opt<bool> EmitBBHash(
     "emit-bb-hash",
     cl::desc(
         "Emit the hash of basic block in the SHT_LLVM_BB_ADDR_MAP section."),
-    cl::init(false), cl::Optional);
+    cl::init(false));
 
 /// Allow standard passes to be disabled by command line options. This supports
 /// simple binary flags that either suppress the pass or do nothing.

@@ -800,6 +800,29 @@ static std::optional<FunctionClassification> classifyX86_64VariadicCall(
       modOp, [&]() { return op->emitOpError(); });
 }
 
+/// Whether \p fc gives the callee access to memory through a pointer the ABI
+/// introduced: an sret slot for an indirect return, or an indirect argument.
+static bool hasIndirectSlot(const FunctionClassification &fc) {
+  if (fc.returnInfo.kind == ArgKind::Indirect)
+    return true;
+  return llvm::any_of(fc.argInfos, [](const ArgClassification &ac) {
+    return ac.kind == ArgKind::Indirect;
+  });
+}
+
+/// Record on \p op that the memory its pointer arguments address may be read
+/// and written.  Absent effects already allow that, since an absent attribute
+/// means the effects are unknown, so they are left absent.
+template <typename OpTy> static void widenForArgMemory(OpTy op) {
+  cir::MemoryEffectsAttr effects = op.getMemoryEffectsAttr();
+  if (!effects)
+    return;
+  op.setMemoryEffectsAttr(cir::MemoryEffectsAttr::get(
+      effects.getContext(), effects.getOther(), cir::ModRefInfo::ModRef,
+      effects.getInaccessibleMem(), effects.getErrnoMem(),
+      effects.getTargetMem0(), effects.getTargetMem1()));
+}
+
 #ifndef NDEBUG
 /// Whether \p callFc classifies a call's leading arguments and its return
 /// exactly as \p calleeFc classifies the callee's declared parameters and
@@ -933,7 +956,7 @@ void CallConvLoweringPass::runOnOperation() {
   DataLayout dl(moduleOp);
   CIRABIRewriteContext rewriteCtx(moduleOp, dl);
   // A non-byval indirect parameter's slot outlives the rewrite that retypes
-  // the parameter, so that a call forwarding the parameter can still recognise
+  // the parameter, so that a call forwarding the parameter can still recognize
   // it.  Draining on scope exit collapses those slots whichever way this
   // function returns.
   llvm::scope_exit drainParamSlots(
@@ -1076,14 +1099,27 @@ void CallConvLoweringPass::runOnOperation() {
     addressTakers[callee].push_back(getGlobal);
   });
 
-  // Restate every non-byval indirect parameter's slot alignment as the one the
-  // ABI promises for that parameter, before anything reads a slot.  A call is
-  // rewritten together with its callee rather than with the function
-  // containing it, so a call forwarding such a parameter can be reached before
-  // the parameter's own function is rewritten.  Doing this up front makes the
-  // forwarding decision independent of the order the two were declared in.
-  for (auto &kv : classifications)
-    rewriteCtx.normalizeParameterSlotAlignments(kv.first, kv.second);
+  // Restate every non-byval indirect parameter's slot alignment and route any
+  // use of such a parameter as a call argument through a load of that slot,
+  // before any definition or call site is rewritten.  Doing this up front
+  // makes the forwarding decision independent of the order the callee and its
+  // caller were declared in.
+  for (auto &kv : classifications) {
+    if (failed(rewriteCtx.prepareNonByvalParameters(kv.first, kv.second))) {
+      signalPassFailure();
+      return;
+    }
+  }
+
+  // An sret slot or an indirect argument is a pointer the source never
+  // wrote, and an ellipsis can carry one the declared parameters do not
+  // describe.  The callee reads and writes that memory whatever const or
+  // pure recorded about it, so the recorded effects have to widen.
+  for (auto &kv : classifications) {
+    cir::FuncOp func = kv.first;
+    if (hasIndirectSlot(kv.second) || func.getFunctionType().isVarArg())
+      widenForArgMemory(func);
+  }
 
   // Rewrite each function together with every direct call to it and every op
   // holding its address.  By the time we move on to function F+1, F's
@@ -1113,6 +1149,8 @@ void CallConvLoweringPass::runOnOperation() {
                "a call site's declared parameters must be classified the same "
                "way as the callee's");
       }
+      if (hasIndirectSlot(*callFc))
+        widenForArgMemory(cast<cir::CIRCallOpInterface>(callOp));
       if (failed(rewriteCtx.rewriteCallSite(callOp, *callFc, builder))) {
         signalPassFailure();
         return;
@@ -1187,6 +1225,8 @@ void CallConvLoweringPass::runOnOperation() {
       signalPassFailure();
       return;
     }
+    if (hasIndirectSlot(*fc))
+      widenForArgMemory(c);
     if (failed(rewriteCtx.rewriteCallSite(c.getOperation(), *fc, builder))) {
       signalPassFailure();
       return;

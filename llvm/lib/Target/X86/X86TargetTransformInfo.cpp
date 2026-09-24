@@ -6001,6 +6001,48 @@ X86TTIImpl::getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
   case Intrinsic::masked_store:
     return getMaskedMemoryOpCost(MICA, CostKind);
   }
+
+  static const CostKindTblEntry AVX512VBMI2CostTable[] = {
+    { Intrinsic::masked_expandload,  MVT::v16i8,  { 2, 7, 1, 3 } },
+    { Intrinsic::masked_expandload,  MVT::v32i8,  { 2, 8, 1, 3 } },
+    { Intrinsic::masked_expandload,  MVT::v64i8,  { 2, 9, 1, 3 } },
+
+    { Intrinsic::masked_expandload,  MVT::v8i16,  { 2, 7, 1, 3 } },
+    { Intrinsic::masked_expandload,  MVT::v16i16, { 2, 8, 1, 3 } },
+    { Intrinsic::masked_expandload,  MVT::v32i16, { 2, 9, 1, 3 } },
+  };
+
+  static const CostKindTblEntry AVX512CostTable[] = {
+    { Intrinsic::masked_expandload,  MVT::v4i32,  { 2, 7, 1, 3 } },
+    { Intrinsic::masked_expandload,  MVT::v4f32,  { 2, 7, 1, 3 } },
+    { Intrinsic::masked_expandload,  MVT::v8i32,  { 2, 8, 1, 3 } },
+    { Intrinsic::masked_expandload,  MVT::v8f32,  { 2, 8, 1, 3 } },
+    { Intrinsic::masked_expandload,  MVT::v16i32, { 2, 9, 1, 3 } },
+    { Intrinsic::masked_expandload,  MVT::v16f32, { 2, 9, 1, 3 } },
+
+    { Intrinsic::masked_expandload,  MVT::v2i64,  { 2, 7, 1, 3 } },
+    { Intrinsic::masked_expandload,  MVT::v2f64,  { 2, 7, 1, 3 } },
+    { Intrinsic::masked_expandload,  MVT::v4i64,  { 2, 8, 1, 3 } },
+    { Intrinsic::masked_expandload,  MVT::v4f64,  { 2, 8, 1, 3 } },
+    { Intrinsic::masked_expandload,  MVT::v8i64,  { 2, 9, 1, 3 } },
+    { Intrinsic::masked_expandload,  MVT::v8f64,  { 2, 9, 1, 3 } },
+  };
+
+  std::pair<InstructionCost, MVT> LT =
+      getTypeLegalizationCost(MICA.getDataType());
+
+  if (ST->hasVBMI2())
+    if (const auto *Entry =
+            CostTableLookup(AVX512VBMI2CostTable, MICA.getID(), LT.second))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
+
+  if (ST->hasAVX512())
+    if (const auto *Entry =
+            CostTableLookup(AVX512CostTable, MICA.getID(), LT.second))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
+
   return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
 }
 
