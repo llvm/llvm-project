@@ -1,23 +1,45 @@
-; RUN: llvm-as < %s | llvm-dis | FileCheck %s
-; RUN: verify-uselistorder < %s
+; Test that old-style scalar tags used as !tbaa.struct field tags in older
+; bitcode are auto-upgraded to the struct-path aware format on load, whatever
+; instruction carries the !tbaa.struct. Null and already struct-path field
+; tags are left unchanged; an immutability flag is kept.
+;
+; RUN: llvm-dis < %s.bc | FileCheck %s
+; RUN: verify-uselistorder < %s.bc
 
-; Old-style scalar tags used as !tbaa.struct field tags are auto-upgraded to
-; the struct-path aware format, like top-level !tbaa. Null and already
-; struct-path field tags are left unchanged; an immutability flag is kept.
-
-define void @copy(ptr %a, ptr %b) {
+define void @copy_memcpy(ptr %a, ptr %b) {
+; CHECK: call void @llvm.memcpy.p0.p0.i64(ptr %a, ptr %b, i64 12, i1 false), !tbaa.struct [[TS:![0-9]+]]
   call void @llvm.memcpy.p0.p0.i64(ptr %a, ptr %b, i64 12, i1 false), !tbaa.struct !0
-; CHECK: !tbaa.struct [[TS:![0-9]+]]
   ret void
 }
 
+define void @copy_memmove(ptr %a, ptr %b) {
+; CHECK: call void @llvm.memmove.p0.p0.i64(ptr %a, ptr %b, i64 12, i1 false), !tbaa.struct [[TS]]
+  call void @llvm.memmove.p0.p0.i64(ptr %a, ptr %b, i64 12, i1 false), !tbaa.struct !0
+  ret void
+}
+
+define i32 @access_load_store(ptr %p) {
+; CHECK: %v = load i32, ptr %p, align 4, !tbaa.struct [[TS]]
+; CHECK: store i32 %v, ptr %p, align 4, !tbaa.struct [[TS]]
+  %v = load i32, ptr %p, align 4, !tbaa.struct !0
+  store i32 %v, ptr %p, align 4, !tbaa.struct !0
+  ret i32 %v
+}
+
+define i32 @access_atomicrmw(ptr %p, i32 %v) {
+; CHECK: %r = atomicrmw add ptr %p, i32 %v seq_cst, align 4, !tbaa.struct [[TS]]
+  %r = atomicrmw add ptr %p, i32 %v seq_cst, align 4, !tbaa.struct !0
+  ret i32 %r
+}
+
 define void @copy_flag_and_structpath(ptr %a, ptr %b) {
-  call void @llvm.memcpy.p0.p0.i64(ptr %a, ptr %b, i64 8, i1 false), !tbaa.struct !5
-; CHECK: !tbaa.struct [[TS2:![0-9]+]]
+; CHECK: call void @llvm.memmove.p0.p0.i64(ptr %a, ptr %b, i64 8, i1 false), !tbaa.struct [[TS2:![0-9]+]]
+  call void @llvm.memmove.p0.p0.i64(ptr %a, ptr %b, i64 8, i1 false), !tbaa.struct !5
   ret void
 }
 
 declare void @llvm.memcpy.p0.p0.i64(ptr, ptr, i64, i1)
+declare void @llvm.memmove.p0.p0.i64(ptr, ptr, i64, i1)
 
 ; Old-style 2-operand scalar field tags and a null field tag.
 !0 = !{i64 0, i64 4, !1, i64 4, i64 4, !3, i64 8, i64 4, null}

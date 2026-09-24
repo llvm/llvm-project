@@ -550,14 +550,6 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
     }
   }
 
-  for (auto *Inst : InstsWithTBAAStructTag) {
-    MDNode *MD = Inst->getMetadata(LLVMContext::MD_tbaa_struct);
-    if (!MD)
-      continue;
-    if (MDNode *Upgraded = UpgradeTBAAStructNode(*MD); Upgraded != MD)
-      Inst->setMetadata(LLVMContext::MD_tbaa_struct, Upgraded);
-  }
-
   // Look for intrinsic functions and CallInst that need to be upgraded.  We use
   // make_early_inc_range here because we may remove some functions.
   for (Function &F : llvm::make_early_inc_range(*M))
@@ -2562,8 +2554,6 @@ bool LLParser::parseInstructionMetadata(Instruction &Inst) {
 
     if (MDK == LLVMContext::MD_tbaa)
       InstsWithTBAATag.push_back(&Inst);
-    else if (MDK == LLVMContext::MD_tbaa_struct)
-      InstsWithTBAAStructTag.push_back(&Inst);
 
     // If this is the end of the list, we're done.
   } while (EatIfPresent(lltok::comma));
