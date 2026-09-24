@@ -2,6 +2,7 @@
 ; RUN: opt -mtriple=aarch64 -passes=typepromotion,verify -S < %s | FileCheck %s
 
 declare zeroext i16 @read_index()
+declare signext i16 @read_signed_index()
 
 ; Promote an i8 PHI to a width smaller than the scalar register width.
 define i32 @phi_i8_to_i32(i8 %head) {
@@ -434,24 +435,25 @@ exit:
   ret i16 %head
 }
 
-; An existing sext user currently prevents promotion. Its signed result
-; must remain intact, particularly when the input is negative.
+; An existing sext user of a source no longer blocks signed promotion. Its
+; signed result must remain intact, including when the input is negative.
 define i64 @existing_sext_sink(i16 %head) {
 ; CHECK-LABEL: define i64 @existing_sext_sink(
 ; CHECK-SAME: i16 [[HEAD:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[SIGNED:%.*]] = sext i16 [[HEAD]] to i64
+; CHECK-NEXT:    [[SIGNED1:%.*]] = sext i16 [[HEAD]] to i64
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IDX:%.*]] = phi i16 [ [[HEAD]], %[[ENTRY]] ], [ 0, %[[BODY:.*]] ]
+; CHECK-NEXT:    [[WIDE:%.*]] = phi i64 [ [[SIGNED]], %[[ENTRY]] ], [ 0, %[[BODY:.*]] ]
+; CHECK-NEXT:    [[IDX:%.*]] = trunc i64 [[WIDE]] to i16
 ; CHECK-NEXT:    [[NEGATIVE:%.*]] = icmp slt i16 [[IDX]], 0
 ; CHECK-NEXT:    br i1 [[NEGATIVE]], label %[[EXIT:.*]], label %[[BODY]]
 ; CHECK:       [[BODY]]:
-; CHECK-NEXT:    [[WIDE:%.*]] = zext nneg i16 [[IDX]] to i64
 ; CHECK-NEXT:    [[AGAIN:%.*]] = icmp ne i64 [[WIDE]], 0
 ; CHECK-NEXT:    br i1 [[AGAIN]], label %[[LOOP]], label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    ret i64 [[SIGNED]]
+; CHECK-NEXT:    ret i64 [[SIGNED1]]
 ;
 entry:
   %signed = sext i16 %head to i64
@@ -533,4 +535,215 @@ loop:
   br i1 %again, label %loop, label %exit
 exit:
   ret i64 %sum.next
+}
+
+; Unsigned promotion must truncate the promoted source before applying an
+; existing sext, preserving negative results.
+define i64 @existing_sext_sink_unsigned(i16 %head) {
+; CHECK-LABEL: define i64 @existing_sext_sink_unsigned(
+; CHECK-SAME: i16 [[HEAD:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[HEAD]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i16
+; CHECK-NEXT:    [[SIGNED:%.*]] = sext i16 [[TMP1]] to i64
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ [[TMP0]], %[[ENTRY]] ], [ 0, %[[BODY:.*]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[IDX]] to i16
+; CHECK-NEXT:    [[NEGATIVE:%.*]] = icmp slt i16 [[TMP2]], 0
+; CHECK-NEXT:    br i1 [[NEGATIVE]], label %[[EXIT:.*]], label %[[BODY]]
+; CHECK:       [[BODY]]:
+; CHECK-NEXT:    [[AGAIN:%.*]] = icmp ne i64 [[IDX]], 0
+; CHECK-NEXT:    br i1 [[AGAIN]], label %[[LOOP]], label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i64 [[SIGNED]]
+;
+entry:
+  %signed = sext i16 %head to i64
+  br label %loop
+
+loop:
+  %idx = phi i16 [ %head, %entry ], [ 0, %body ]
+  %negative = icmp slt i16 %idx, 0
+  br i1 %negative, label %exit, label %body
+
+body:
+  %wide = zext i16 %idx to i64
+  %again = icmp ne i64 %wide, 0
+  br i1 %again, label %loop, label %exit
+
+exit:
+  ret i64 %signed
+}
+
+; A signext call return can be a source for signed promotion.
+define i64 @phi_call_source_signext() {
+; CHECK-LABEL: define i64 @phi_call_source_signext() {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[HEAD:%.*]] = call signext i16 @read_signed_index()
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i16 [[HEAD]] to i64
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ [[TMP0]], %[[ENTRY]] ], [ 0, %[[BODY:.*]] ]
+; CHECK-NEXT:    [[SUM:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[SUM_NEXT:%.*]], %[[BODY]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[IDX]] to i16
+; CHECK-NEXT:    [[NEGATIVE:%.*]] = icmp slt i16 [[TMP1]], 0
+; CHECK-NEXT:    br i1 [[NEGATIVE]], label %[[EXIT:.*]], label %[[BODY]]
+; CHECK:       [[BODY]]:
+; CHECK-NEXT:    [[SUM_NEXT]] = add i64 [[SUM]], [[IDX]]
+; CHECK-NEXT:    [[AGAIN:%.*]] = icmp ne i64 [[IDX]], 0
+; CHECK-NEXT:    br i1 [[AGAIN]], label %[[LOOP]], label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[RESULT:%.*]] = phi i64 [ [[SUM]], %[[LOOP]] ], [ [[SUM_NEXT]], %[[BODY]] ]
+; CHECK-NEXT:    ret i64 [[RESULT]]
+;
+entry:
+  %head = call signext i16 @read_signed_index()
+  br label %loop
+
+loop:
+  %idx = phi i16 [ %head, %entry ], [ 0, %body ]
+  %sum = phi i64 [ 0, %entry ], [ %sum.next, %body ]
+  %negative = icmp slt i16 %idx, 0
+  br i1 %negative, label %exit, label %body
+
+body:
+  %wide = zext nneg i16 %idx to i64
+  %sum.next = add i64 %sum, %wide
+  %again = icmp ne i64 %wide, 0
+  br i1 %again, label %loop, label %exit
+
+exit:
+  %result = phi i64 [ %sum, %loop ], [ %sum.next, %body ]
+  ret i64 %result
+}
+
+; The same signext call can feed unsigned promotion. The call attribute
+; does not replace the explicit zero extension of its narrow result.
+define i64 @phi_call_source_signext_unsigned() {
+; CHECK-LABEL: define i64 @phi_call_source_signext_unsigned() {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[HEAD:%.*]] = call signext i16 @read_signed_index()
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[HEAD]] to i64
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ [[TMP0]], %[[ENTRY]] ], [ 0, %[[BODY:.*]] ]
+; CHECK-NEXT:    [[SUM:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[SUM_NEXT:%.*]], %[[BODY]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[IDX]] to i16
+; CHECK-NEXT:    [[NEGATIVE:%.*]] = icmp slt i16 [[TMP1]], 0
+; CHECK-NEXT:    br i1 [[NEGATIVE]], label %[[EXIT:.*]], label %[[BODY]]
+; CHECK:       [[BODY]]:
+; CHECK-NEXT:    [[SUM_NEXT]] = add i64 [[SUM]], [[IDX]]
+; CHECK-NEXT:    [[AGAIN:%.*]] = icmp ne i64 [[IDX]], 0
+; CHECK-NEXT:    br i1 [[AGAIN]], label %[[LOOP]], label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[RESULT:%.*]] = phi i64 [ [[SUM]], %[[LOOP]] ], [ [[SUM_NEXT]], %[[BODY]] ]
+; CHECK-NEXT:    ret i64 [[RESULT]]
+;
+entry:
+  %head = call signext i16 @read_signed_index()
+  br label %loop
+
+loop:
+  %idx = phi i16 [ %head, %entry ], [ 0, %body ]
+  %sum = phi i64 [ 0, %entry ], [ %sum.next, %body ]
+  %negative = icmp slt i16 %idx, 0
+  br i1 %negative, label %exit, label %body
+
+body:
+  %wide = zext i16 %idx to i64
+  %sum.next = add i64 %sum, %wide
+  %again = icmp ne i64 %wide, 0
+  br i1 %again, label %loop, label %exit
+
+exit:
+  %result = phi i64 [ %sum, %loop ], [ %sum.next, %body ]
+  ret i64 %result
+}
+
+; A sext user of the promoted PHI is redundant in signed mode.
+define i64 @phi_sext_sink(i16 %head) {
+; CHECK-LABEL: define i64 @phi_sext_sink(
+; CHECK-SAME: i16 [[HEAD:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i16 [[HEAD]] to i64
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ [[TMP0]], %[[ENTRY]] ], [ 0, %[[BODY:.*]] ]
+; CHECK-NEXT:    [[SUM:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[SUM_NEXT:%.*]], %[[BODY]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[IDX]] to i16
+; CHECK-NEXT:    [[NEGATIVE:%.*]] = icmp slt i16 [[TMP1]], 0
+; CHECK-NEXT:    br i1 [[NEGATIVE]], label %[[EXIT:.*]], label %[[BODY]]
+; CHECK:       [[BODY]]:
+; CHECK-NEXT:    [[SUM_NEXT]] = add i64 [[SUM]], [[IDX]]
+; CHECK-NEXT:    [[AGAIN:%.*]] = icmp ne i64 [[IDX]], 0
+; CHECK-NEXT:    br i1 [[AGAIN]], label %[[LOOP]], label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[RESULT:%.*]] = phi i64 [ [[IDX]], %[[LOOP]] ], [ [[SUM_NEXT]], %[[BODY]] ]
+; CHECK-NEXT:    ret i64 [[RESULT]]
+;
+entry:
+  br label %loop
+
+loop:
+  %idx = phi i16 [ %head, %entry ], [ 0, %body ]
+  %sum = phi i64 [ 0, %entry ], [ %sum.next, %body ]
+  %signed = sext i16 %idx to i64
+  %negative = icmp slt i16 %idx, 0
+  br i1 %negative, label %exit, label %body
+
+body:
+  %wide = zext nneg i16 %idx to i64
+  %sum.next = add i64 %sum, %signed
+  %again = icmp ne i64 %wide, 0
+  br i1 %again, label %loop, label %exit
+
+exit:
+  %result = phi i64 [ %signed, %loop ], [ %sum.next, %body ]
+  ret i64 %result
+}
+
+; In unsigned mode, a sext user of the PHI needs truncation back to i16
+; before sign extension, even if another use zero extends the same PHI.
+define i64 @phi_sext_sink_unsigned(i16 %head) {
+; CHECK-LABEL: define i64 @phi_sext_sink_unsigned(
+; CHECK-SAME: i16 [[HEAD:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[HEAD]] to i64
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ [[TMP0]], %[[ENTRY]] ], [ 0, %[[BODY:.*]] ]
+; CHECK-NEXT:    [[SUM:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[SUM_NEXT:%.*]], %[[BODY]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[IDX]] to i16
+; CHECK-NEXT:    [[SIGNED:%.*]] = sext i16 [[TMP1]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[IDX]] to i16
+; CHECK-NEXT:    [[NEGATIVE:%.*]] = icmp slt i16 [[TMP2]], 0
+; CHECK-NEXT:    br i1 [[NEGATIVE]], label %[[EXIT:.*]], label %[[BODY]]
+; CHECK:       [[BODY]]:
+; CHECK-NEXT:    [[SUM_NEXT]] = add i64 [[SUM]], [[SIGNED]]
+; CHECK-NEXT:    [[AGAIN:%.*]] = icmp ne i64 [[IDX]], 0
+; CHECK-NEXT:    br i1 [[AGAIN]], label %[[LOOP]], label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[RESULT:%.*]] = phi i64 [ [[SIGNED]], %[[LOOP]] ], [ [[SUM_NEXT]], %[[BODY]] ]
+; CHECK-NEXT:    ret i64 [[RESULT]]
+;
+entry:
+  br label %loop
+
+loop:
+  %idx = phi i16 [ %head, %entry ], [ 0, %body ]
+  %sum = phi i64 [ 0, %entry ], [ %sum.next, %body ]
+  %signed = sext i16 %idx to i64
+  %negative = icmp slt i16 %idx, 0
+  br i1 %negative, label %exit, label %body
+
+body:
+  %wide = zext i16 %idx to i64
+  %sum.next = add i64 %sum, %signed
+  %again = icmp ne i64 %wide, 0
+  br i1 %again, label %loop, label %exit
+
+exit:
+  %result = phi i64 [ %signed, %loop ], [ %sum.next, %body ]
+  ret i64 %result
 }

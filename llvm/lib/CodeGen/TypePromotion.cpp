@@ -249,7 +249,8 @@ bool TypePromotionImpl::isSource(Value *V) {
   else if (isa<LoadInst>(V))
     return true;
   else if (auto *Call = dyn_cast<CallInst>(V))
-    return Call->hasRetAttr(Attribute::AttrKind::ZExt);
+    return (Call->hasRetAttr(Attribute::AttrKind::ZExt) ||
+            Call->hasRetAttr(Attribute::AttrKind::SExt));
   else if (auto *Trunc = dyn_cast<TruncInst>(V))
     return EqualTypeSize(Trunc);
   return false;
@@ -787,9 +788,8 @@ bool TypePromotionImpl::isSupportedType(Value *V) {
 }
 
 /// We accept most instructions, as well as Arguments and ConstantInsts. We
-/// Disallow casts other than zext and truncs and only allow calls if their
-/// return value is zeroext. We don't allow opcodes that can introduce sign
-/// bits.
+/// Disallow casts other than zext/sext and truncs and only allow calls if their
+/// return value is zext/sext.
 bool TypePromotionImpl::isSupportedValue(Value *V) {
   if (auto *I = dyn_cast<Instruction>(V)) {
     switch (I->getOpcode()) {
@@ -811,6 +811,7 @@ bool TypePromotionImpl::isSupportedValue(Value *V) {
     case Instruction::BitCast:
       return I->getOperand(0)->getType() == I->getType();
     case Instruction::ZExt:
+    case Instruction::SExt:
       return isSupportedType(I->getOperand(0));
     case Instruction::ICmp:
       // Now that we allow small types than TypeSize, only allow icmp of
@@ -826,7 +827,8 @@ bool TypePromotionImpl::isSupportedValue(Value *V) {
       // can still be sinks.
       auto *Call = cast<CallInst>(I);
       return isSupportedType(Call) &&
-             Call->hasRetAttr(Attribute::AttrKind::ZExt);
+             (Call->hasRetAttr(Attribute::AttrKind::ZExt) ||
+              Call->hasRetAttr(Attribute::AttrKind::SExt));
     }
     }
   } else if (isa<Constant>(V) && !isa<ConstantExpr>(V)) {
