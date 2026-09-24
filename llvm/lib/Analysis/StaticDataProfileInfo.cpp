@@ -12,6 +12,10 @@
 
 using namespace llvm;
 
+cl::opt<bool> PreserveHotDataSectionPrefix(
+    "preserve-hot-data-section-prefix", cl::Hidden, cl::init(true),
+    cl::desc("If true, hot data section prefixes are preserved"));
+
 namespace llvm {
 // FIXME: This option is added for incremental rollout purposes.
 // After the option, string literal partitioning should be implied by
@@ -108,7 +112,7 @@ StringRef StaticDataProfileInfo::hotnessToStr(StaticDataHotness Hotness) const {
   case StaticDataHotness::Cold:
     return "unlikely";
   case StaticDataHotness::Hot:
-    return "hot";
+    return PreserveHotDataSectionPrefix ? "hot" : "";
   default:
     return "";
   }
