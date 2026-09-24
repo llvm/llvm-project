@@ -8,7 +8,6 @@
 
 #include "mlir/Analysis/DataFlow/ConstantPropagationAnalysis.h"
 #include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
-#include "mlir/IR/Matchers.h"
 #include "mlir/Pass/Pass.h"
 
 using namespace mlir;
@@ -64,49 +63,7 @@ static void printAnalysisResults(DataFlowSolver &solver, Operation *op,
 }
 
 namespace {
-/// This is a simple analysis that implements a transfer function for constant
-/// operations.
-struct ConstantAnalysis : public DataFlowAnalysis {
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(ConstantAnalysis)
-
-  using DataFlowAnalysis::DataFlowAnalysis;
-
-  LogicalResult initialize(Operation *top) override {
-    WalkResult result = top->walk([&](Operation *op) {
-      if (failed(visit(getProgramPointAfter(op))))
-        return WalkResult::interrupt();
-      return WalkResult::advance();
-    });
-    return success(!result.wasInterrupted());
-  }
-
-  LogicalResult visit(ProgramPoint *point) override {
-    Operation *op = point->getPrevOp();
-    Attribute value;
-    if (matchPattern(op, m_Constant(&value))) {
-      auto *constant = getOrCreate<Lattice<ConstantValue>>(op->getResult(0));
-      propagateIfChanged(
-          constant, constant->join(ConstantValue(value, op->getDialect())));
-      return success();
-    }
-    setAllToUnknownConstants(op->getResults());
-    for (Region &region : op->getRegions())
-      setAllToUnknownConstants(region.getArguments());
-    return success();
-  }
-
-  /// Set all given values as not constants.
-  void setAllToUnknownConstants(ValueRange values) {
-    for (Value value : values) {
-      auto *constant = getOrCreate<Lattice<ConstantValue>>(value);
-      propagateIfChanged(constant,
-                         constant->join(ConstantValue::getUnknownConstant()));
-    }
-  }
-};
-
-/// This is a simple pass that runs dead code analysis with a constant value
-/// provider that only understands constant operations.
+/// This is a simple pass that runs dead code analysis.
 struct TestDeadCodeAnalysisPass
     : public PassWrapper<TestDeadCodeAnalysisPass, OperationPass<>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestDeadCodeAnalysisPass)
@@ -118,7 +75,7 @@ struct TestDeadCodeAnalysisPass
 
     DataFlowSolver solver;
     solver.load<DeadCodeAnalysis>();
-    solver.load<ConstantAnalysis>();
+    solver.load<SparseConstantPropagation>();
     if (failed(solver.initializeAndRun(op)))
       return signalPassFailure();
     printAnalysisResults(solver, op, llvm::errs());
