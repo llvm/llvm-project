@@ -121,6 +121,9 @@ infrastructure are described first, followed by tool-specific sections.
   user config) by default. Pass `--enable-config=false` to restore the previous
   behavior.
 
+- Added support for loading dynamic plugins via the `-load` command-line
+  option.
+
 ### Improvements to clang-doc
 
 ### Improvements to clang-query
