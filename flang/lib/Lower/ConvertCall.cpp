@@ -3207,6 +3207,10 @@ genProcedureRef(CallContext &callContext) {
                                          callContext.converter);
   mlir::FunctionType callSiteType = caller.genFunctionType();
   const bool isElemental = callContext.isElementalProcWithArrayArgs();
+  // A kernel launch already maps its arguments onto the device through the
+  // CUDA Fortran launch lowering. Substituting an OpenACC device binding here
+  // would pass an address the launch does not expect.
+  const bool isKernelLaunch = !callContext.procRef.chevrons().empty();
   Fortran::lower::PreparedActualArguments loweredActuals;
   // Lower the actual arguments
   for (const Fortran::lower::CallInterface<
@@ -3281,7 +3285,7 @@ genProcedureRef(CallContext &callContext) {
       // the actual argument: lowering it again would duplicate any side
       // effect of its subscripts.
       std::optional<Fortran::lower::SymMapScope> deviceScope;
-      if (isCUDADeviceDummy(arg.characteristics) &&
+      if (!isKernelLaunch && isCUDADeviceDummy(arg.characteristics) &&
           Fortran::evaluate::IsVariable(*expr)) {
         deviceScope.emplace(callContext.symMap);
         if (!mapOpenACCDeviceBindings(*expr, callContext.symMap))

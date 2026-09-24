@@ -16,6 +16,13 @@ module m
     end
   end interface
 
+  interface
+    attributes(global) subroutine kernel(a, n)
+      real(4), device :: a(*)
+      integer, value :: n
+    end
+  end interface
+
   interface gemm
     subroutine gemm_dpm(alpha, a, b, beta, c)
       complex(8), device :: alpha, a(*), b(*), beta, c(*)
@@ -124,3 +131,19 @@ end subroutine
 ! CHECK: acc.data
 ! CHECK: fir.call @_QP__host_sub
 ! CHECK-NOT: fir.call @_QP__device_sub
+
+! A kernel launch maps its own arguments, so it must keep the host address
+! even though the DEVICE dummy would otherwise take the device binding.
+subroutine test_kernel_launch
+  use m
+  real(4) :: mapped(100)
+  !$acc data copyin(mapped)
+  call kernel<<<1,1>>>(mapped, 100)
+  !$acc end data
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_kernel_launch
+! CHECK: %[[HOST:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_kernel_launchEmapped"}
+! CHECK: acc.data
+! CHECK: %[[LAUNCH_ARG:.*]] = fir.convert %[[HOST]]#0
+! CHECK: cuf.kernel_launch @_QPkernel{{.*}}(%[[LAUNCH_ARG]]
