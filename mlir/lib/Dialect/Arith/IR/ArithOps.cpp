@@ -1603,11 +1603,17 @@ OpFoldResult arith::MulFOp::fold(FoldAdaptor adaptor) {
   if (matchPattern(adaptor.getRhs(), m_OneFloat()))
     return getLhs();
 
+  // Match LLVM InstSimplify: with nnan+nsz, X * 0 -> 0 for a non-constant X.
+  // When both operands are constants, fall through to APFloat so IEEE signed
+  // zeros are preserved (e.g. (-c) * +0.0 == -0.0).
   if (arith::bitEnumContainsAll(getFastmath(), arith::FastMathFlags::nnan |
-                                                   arith::FastMathFlags::nsz)) {
+                                                   arith::FastMathFlags::nsz) &&
+      !(adaptor.getLhs() && adaptor.getRhs())) {
     // mulf(x, 0) -> 0
     if (matchPattern(adaptor.getRhs(), m_AnyZeroFloat()))
       return getRhs();
+    if (matchPattern(adaptor.getLhs(), m_AnyZeroFloat()))
+      return getLhs();
   }
 
   auto rm = getRoundingmode();
