@@ -1899,25 +1899,25 @@ static void computeKnownBitsFromOperator(const Operator *I,
         break;
       }
 
-      // For a bitwise recurrence {Start,op,Step}, the step only applies from
-      // the second iteration on, so every fact must also hold for the start
-      // value alone.
-      case Instruction::And:
-      case Instruction::Or: {
+      case Instruction::And: {
+        // Bits that are zero in the start value stay zero, and bits that are
+        // one in both the start value and the step stay one.
         KnownBits KnownStep(BitWidth);
         computeKnownBitsForRecurrenceOperands(P, Start, Step, DemandedElts,
                                               KnownStart, KnownStep, Q, Depth);
-        if (Opcode == Instruction::And) {
-          // Bits that are zero in the start value stay zero, and bits that are
-          // one in both the start value and the step stay one.
-          Known.Zero |= KnownStart.Zero;
-          Known.One |= KnownStart.One & KnownStep.One;
-        } else {
-          // Bits that are zero in both the start value and the step stay zero,
-          // and bits that are one in the start value stay one.
-          Known.Zero |= KnownStart.Zero & KnownStep.Zero;
-          Known.One |= KnownStart.One;
-        }
+        Known.Zero |= KnownStart.Zero;
+        Known.One |= KnownStart.One & KnownStep.One;
+        break;
+      }
+
+      case Instruction::Or: {
+        // Bits that are zero in both the start value and the step stay zero,
+        // and bits that are one in the start value stay one.
+        KnownBits KnownStep(BitWidth);
+        computeKnownBitsForRecurrenceOperands(P, Start, Step, DemandedElts,
+                                              KnownStart, KnownStep, Q, Depth);
+        Known.Zero |= KnownStart.Zero & KnownStep.Zero;
+        Known.One |= KnownStart.One;
         break;
       }
 
