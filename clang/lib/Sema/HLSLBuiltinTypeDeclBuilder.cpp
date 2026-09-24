@@ -1756,11 +1756,19 @@ BuiltinTypeDeclBuilder::addByteAddressBufferInterlockedMethods() {
   ASTContext &AST = SemaRef.getASTContext();
 
   // This is a helper that declares two overloads with and without an out
-  // original-value parameter for each entry.
+  // original-value parameter for each entry, except where the original value
+  // is required.
   addByteAddressBufferInterlockedMethod("InterlockedAdd", AST.UnsignedIntTy,
                                         "__builtin_hlsl_interlocked_add");
   addByteAddressBufferInterlockedMethod("InterlockedAnd", AST.UnsignedIntTy,
                                         "__builtin_hlsl_interlocked_and");
+  addByteAddressBufferInterlockedMethod(
+      "InterlockedExchange", AST.UnsignedIntTy,
+      "__builtin_hlsl_interlocked_exchange", /*RequiresOriginalValue=*/true);
+  addByteAddressBufferInterlockedMethod("InterlockedMax", AST.IntTy,
+                                        "__builtin_hlsl_interlocked_max");
+  addByteAddressBufferInterlockedMethod("InterlockedMax", AST.UnsignedIntTy,
+                                        "__builtin_hlsl_interlocked_max");
   addByteAddressBufferInterlockedMethod("InterlockedMin", AST.IntTy,
                                         "__builtin_hlsl_interlocked_min");
   addByteAddressBufferInterlockedMethod("InterlockedMin", AST.UnsignedIntTy,
@@ -1783,6 +1791,14 @@ BuiltinTypeDeclBuilder::addByteAddressBufferInterlockedMethods() {
     addByteAddressBufferInterlockedMethod("InterlockedAnd64",
                                           AST.UnsignedLongTy,
                                           "__builtin_hlsl_interlocked_and");
+    addByteAddressBufferInterlockedMethod(
+        "InterlockedExchange64", AST.UnsignedLongTy,
+        "__builtin_hlsl_interlocked_exchange", /*RequiresOriginalValue=*/true);
+    addByteAddressBufferInterlockedMethod("InterlockedMax64", AST.LongTy,
+                                          "__builtin_hlsl_interlocked_max");
+    addByteAddressBufferInterlockedMethod("InterlockedMax64",
+                                          AST.UnsignedLongTy,
+                                          "__builtin_hlsl_interlocked_max");
     addByteAddressBufferInterlockedMethod("InterlockedMin64", AST.LongTy,
                                           "__builtin_hlsl_interlocked_min");
     addByteAddressBufferInterlockedMethod("InterlockedMin64",
@@ -2666,7 +2682,8 @@ BuiltinTypeDeclBuilder::addStoreFunction(DeclarationName &Name, bool IsConst,
 
 BuiltinTypeDeclBuilder &
 BuiltinTypeDeclBuilder::addByteAddressBufferInterlockedMethod(
-    StringRef MethodName, QualType ValueTy, StringRef BuiltinName) {
+    StringRef MethodName, QualType ValueTy, StringRef BuiltinName,
+    bool RequiresOriginalValue) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
   ASTContext &AST = SemaRef.getASTContext();
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
@@ -2695,7 +2712,8 @@ BuiltinTypeDeclBuilder::addByteAddressBufferInterlockedMethod(
     MMB.finalize();
   };
 
-  BuildOverload(/*WithOriginalValue=*/false);
+  if (!RequiresOriginalValue)
+    BuildOverload(/*WithOriginalValue=*/false);
   BuildOverload(/*WithOriginalValue=*/true);
   return *this;
 }

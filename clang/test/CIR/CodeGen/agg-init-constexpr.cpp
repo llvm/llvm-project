@@ -23,13 +23,13 @@ extern "C" void construct() {
 // CIR-LABEL: construct()
 // CIR-NEXT: %[[WC_ALLOCA:.*]] = cir.alloca "c" {{.*}} : !cir.ptr<!rec_WithCtor>
 // CIR-NEXT: %[[GET_GLOBAL:.*]] = cir.get_global @__const.construct.c : !cir.ptr<!rec_WithCtor>
-// CIR-NEXT: cir.copy %[[GET_GLOBAL]] to %[[WC_ALLOCA]] : !cir.ptr<!rec_WithCtor>
+// CIR-NEXT: cir.copy %[[GET_GLOBAL]] align(8) to %[[WC_ALLOCA]] align(8) : !cir.ptr<!rec_WithCtor>
 // CIR-NEXT: cir.return
 
 // LLVM: @__const.construct.c = private constant %struct.WithCtor <{ i32 4, [4 x i8] zeroinitializer, i64 10, %struct.HasVal { i32 5 }, [4 x i8] zeroinitializer }>
 // LLVM-LABEL: construct()
 // LLVM-NEXT: %[[WC_ALLOCA:.*]] = alloca %struct.WithCtor
-// LLVM-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 1 %1, ptr align 1 @__const.construct.c, i64 24, i1 false)
+// LLVM-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %1, ptr align 8 @__const.construct.c, i64 24, i1 false)
 // LLVM-NEXT: ret void
 
 // OGCG-LABEL: construct()

@@ -8,3 +8,10 @@ add_entrypoint_object(
   DEPENDS
     .${LIBC_TARGET_OS}.poll
 )
+
+add_entrypoint_object(
+  ppoll
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.ppoll
+)

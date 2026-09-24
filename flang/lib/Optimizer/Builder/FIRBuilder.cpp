@@ -290,6 +290,12 @@ mlir::Block *fir::getAllocaBlock(mlir::Region &region) {
             mlir::dyn_cast<mlir::acc::ComputeRegionOpInterface>(parent))
       return accComputeRegionIface.getAllocaBlock();
 
+    // Offload regions are isolated from above, so allocas cannot be hoisted
+    // past them.
+    if (auto accOffloadRegionIface =
+            mlir::dyn_cast<mlir::acc::OffloadRegionOpInterface>(parent))
+      return &accOffloadRegionIface.getOffloadRegion().front();
+
     if (auto ompOutlineableIface =
             mlir::dyn_cast<mlir::omp::OutlineableOpenMPOpInterface>(parent))
       return ompOutlineableIface.getAllocaBlock();
@@ -1396,86 +1402,6 @@ void fir::factory::genScalarAssignment(
   }
 }
 
-static void genComponentByComponentAssignment(fir::FirOpBuilder &builder,
-                                              mlir::Location loc,
-                                              const fir::ExtendedValue &lhs,
-                                              const fir::ExtendedValue &rhs,
-                                              bool isTemporaryLHS) {
-  auto lbaseType = fir::unwrapPassByRefType(fir::getBase(lhs).getType());
-  auto lhsType = mlir::dyn_cast<fir::RecordType>(lbaseType);
-  assert(lhsType && "lhs must be a scalar record type");
-  auto rbaseType = fir::unwrapPassByRefType(fir::getBase(rhs).getType());
-  auto rhsType = mlir::dyn_cast<fir::RecordType>(rbaseType);
-  assert(rhsType && "rhs must be a scalar record type");
-  auto fieldIndexType = fir::FieldType::get(lhsType.getContext());
-  for (auto [lhsPair, rhsPair] :
-       llvm::zip(lhsType.getTypeList(), rhsType.getTypeList())) {
-    auto &[lFieldName, lFieldTy] = lhsPair;
-    auto &[rFieldName, rFieldTy] = rhsPair;
-    assert(!fir::hasDynamicSize(lFieldTy) && !fir::hasDynamicSize(rFieldTy));
-    mlir::Value rField =
-        fir::FieldIndexOp::create(builder, loc, fieldIndexType, rFieldName,
-                                  rhsType, fir::getTypeParams(rhs));
-    auto rFieldRefType = builder.getRefType(rFieldTy);
-    mlir::Value fromCoor = fir::CoordinateOp::create(
-        builder, loc, rFieldRefType, fir::getBase(rhs), rField);
-    mlir::Value field =
-        fir::FieldIndexOp::create(builder, loc, fieldIndexType, lFieldName,
-                                  lhsType, fir::getTypeParams(lhs));
-    auto fieldRefType = builder.getRefType(lFieldTy);
-    mlir::Value toCoor = fir::CoordinateOp::create(builder, loc, fieldRefType,
-                                                   fir::getBase(lhs), field);
-    std::optional<fir::DoLoopOp> outerLoop;
-    if (auto sequenceType = mlir::dyn_cast<fir::SequenceType>(lFieldTy)) {
-      // Create loops to assign array components elements by elements.
-      // Note that, since these are components, they either do not overlap,
-      // or are the same and exactly overlap. They also have compile time
-      // constant shapes.
-      mlir::Type idxTy = builder.getIndexType();
-      llvm::SmallVector<mlir::Value> indices;
-      mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
-      mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
-      for (auto extent : llvm::reverse(sequenceType.getShape())) {
-        // TODO: add zero size test !
-        mlir::Value ub = builder.createIntegerConstant(loc, idxTy, extent - 1);
-        auto loop = fir::DoLoopOp::create(builder, loc, zero, ub, one);
-        if (!outerLoop)
-          outerLoop = loop;
-        indices.push_back(loop.getInductionVar());
-        builder.setInsertionPointToStart(loop.getBody());
-      }
-      // Set indices in column-major order.
-      std::reverse(indices.begin(), indices.end());
-      auto elementRefType = builder.getRefType(sequenceType.getEleTy());
-      toCoor = fir::CoordinateOp::create(builder, loc, elementRefType, toCoor,
-                                         indices);
-      fromCoor = fir::CoordinateOp::create(builder, loc, elementRefType,
-                                           fromCoor, indices);
-    }
-    if (auto fieldEleTy = fir::unwrapSequenceType(lFieldTy);
-        mlir::isa<fir::BaseBoxType>(fieldEleTy)) {
-      assert(mlir::isa<fir::PointerType>(
-                 mlir::cast<fir::BaseBoxType>(fieldEleTy).getEleTy()) &&
-             "allocatable members require deep copy");
-      auto fromPointerValue = fir::LoadOp::create(builder, loc, fromCoor);
-      auto castTo = builder.createConvert(loc, fieldEleTy, fromPointerValue);
-      fir::StoreOp::create(builder, loc, castTo, toCoor);
-    } else {
-      auto from =
-          fir::factory::componentToExtendedValue(builder, loc, fromCoor);
-      auto to = fir::factory::componentToExtendedValue(builder, loc, toCoor);
-      // If LHS finalization is needed it is expected to be done
-      // for the parent record, so that component-by-component
-      // assignments may avoid finalization calls.
-      fir::factory::genScalarAssignment(builder, loc, to, from,
-                                        /*needFinalization=*/false,
-                                        isTemporaryLHS);
-    }
-    if (outerLoop)
-      builder.setInsertionPointAfter(*outerLoop);
-  }
-}
-
 /// Can the assignment of this record type be implement with a simple memory
 /// copy (it requires no deep copy or user defined assignment of components )?
 static bool recordTypeCanBeMemCopied(fir::RecordType recordType) {
@@ -1534,6 +1460,18 @@ void fir::factory::genRecordAssignment(fir::FirOpBuilder &builder,
   bool disjoint = isTemporaryLHS || !recTy.isSequence() ||
                   (aa.alias(fir::getBase(lhs), fir::getBase(rhs)) ==
                    mlir::AliasResult::NoAlias);
+  // noOverlap is only safe when the operands are *known* to be
+  // non-overlapping: either the LHS is a compiler temporary (can't alias
+  // anything the user wrote), or alias analysis explicitly confirmed
+  // NoAlias.  The !recTy.isSequence() branch of disjoint is an assumption
+  // -- non-SEQUENCE types are expected to be disjoint, but a Cray pointee
+  // aliasing a TARGET variable is a documented counter-example (see
+  // flang/docs/Aliasing.md).  Using no_overlap on an assumed-disjoint pair
+  // emits memcpy, which has undefined behaviour for overlapping operands.
+  // Without no_overlap, fir.copy lowers to memmove, which is always safe.
+  bool noOverlap =
+      isTemporaryLHS || (aa.alias(fir::getBase(lhs), fir::getBase(rhs)) ==
+                         mlir::AliasResult::NoAlias);
   if ((needFinalization && mayHaveFinalizer(recTy, builder)) ||
       hasBoxOperands || !recordTypeCanBeMemCopied(recTy) || !disjoint) {
     auto to = fir::getBase(builder.createBox(loc, lhs));
@@ -1552,15 +1490,34 @@ void fir::factory::genRecordAssignment(fir::FirOpBuilder &builder,
     return;
   }
 
-  // Otherwise, the derived type has compile time constant size and for which
-  // the component by component assignment can be replaced by a memory copy.
-  // Since we do not know the size of the derived type in lowering, do a
-  // component by component assignment. Note that a single fir.load/fir.store
-  // could be used on "small" record types, but as the type size grows, this
-  // leads to issues in LLVM (long compile times, long IR files, and even
-  // asserts at some point). Since there is no good size boundary, just always
-  // use component by component assignment here.
-  genComponentByComponentAssignment(builder, loc, lhs, rhs, isTemporaryLHS);
+  // Otherwise, the derived type has compile time constant size, no
+  // allocatable components, and no user-defined assignment. The size of the
+  // type is not known at this point in lowering, but fir.copy defers the size
+  // computation to codegen where the LLVM data layout is available. That allows
+  // it to copy the full allocated storage including any ABI tail-padding bytes,
+  // which a field-by-field copy would silently skip. Preserving those bytes
+  // matters for SEQUENCE types whose storage is reinterpreted via EQUIVALENCE
+  // or TRANSFER.
+  mlir::Value fromAddr = fir::getBase(rhs);
+  mlir::Value toAddr = fir::getBase(lhs);
+  // Ensure we have raw ref<RecordType> pointers for fir.copy.
+  // Use a per-operand target type that preserves the operand's volatility.
+  // If either operand is !fir.ref<T, volatile>, the target type is also
+  // !fir.ref<T, volatile>, so any emitted fir.convert does not strip the
+  // volatile qualifier and passes ConvertOp::verify under
+  // --strict-fir-volatile-verifier.  A convert is only emitted when the
+  // element type differs (e.g. a module record type assigned to a
+  // structurally identical local SEQUENCE type); when the types already
+  // match no convert is emitted at all.
+  auto fromRefTy =
+      builder.getRefType(recTy, fir::isa_volatile_type(fromAddr.getType()));
+  if (fromAddr.getType() != fromRefTy)
+    fromAddr = builder.createConvert(loc, fromRefTy, fromAddr);
+  auto toRefTy =
+      builder.getRefType(recTy, fir::isa_volatile_type(toAddr.getType()));
+  if (toAddr.getType() != toRefTy)
+    toAddr = builder.createConvert(loc, toRefTy, toAddr);
+  fir::CopyOp::create(builder, loc, fromAddr, toAddr, noOverlap);
 }
 
 mlir::Value fir::factory::createZeroValue(fir::FirOpBuilder &builder,

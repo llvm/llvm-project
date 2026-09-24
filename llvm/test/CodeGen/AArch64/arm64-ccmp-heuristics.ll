@@ -184,7 +184,10 @@ declare hidden fastcc i32 @Maze1Mech(i64, i64, i64, i64, i64, i32, i32) nounwind
 ; Materializable
 declare hidden fastcc void @CleanNet(i64) nounwind ssp
 
-!0 = !{!"long", !1}
-!1 = !{!"omnipotent char", !2}
+!0 = !{!4, !4, i64 0}
+!1 = !{!5, !5, i64 0}
 !2 = !{!"Simple C/C++ TBAA"}
-!3 = !{!"any pointer", !1}
+!3 = !{!6, !6, i64 0}
+!4 = !{!"long", !5}
+!5 = !{!"omnipotent char", !2}
+!6 = !{!"any pointer", !5}

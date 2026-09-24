@@ -11,7 +11,7 @@
 
 // <type_traits>
 
-// template <class T>
+// template <class U = void, class T>
 //   consteval bool is_within_lifetime(const T*) noexcept; // C++26
 
 #include <cassert>
@@ -34,6 +34,9 @@ template <class T>
 concept is_within_lifetime_exists = requires(T t) { std::is_within_lifetime(t); };
 
 struct S {};
+struct D1 : S {};
+struct D2 : D1 {};
+struct D3 : S {};
 
 static_assert(is_within_lifetime_exists<int*>);
 static_assert(is_within_lifetime_exists<const int*>);
@@ -56,10 +59,55 @@ consteval bool f() {
     static_assert(std::is_within_lifetime(const_cast<int*>(&i)));
     static_assert(std::is_within_lifetime(static_cast<const void*>(&i)));
     static_assert(std::is_within_lifetime(static_cast<void*>(const_cast<int*>(&i))));
-    static_assert(std::is_within_lifetime<const int>(&i));
-    static_assert(std::is_within_lifetime<int>(const_cast<int*>(&i)));
-    static_assert(std::is_within_lifetime<const void>(static_cast<const void*>(&i)));
-    static_assert(std::is_within_lifetime<void>(static_cast<void*>(const_cast<int*>(&i))));
+    static_assert(std::is_within_lifetime<void, const int>(&i));
+    static_assert(std::is_within_lifetime<void, int>(const_cast<int*>(&i)));
+    static_assert(std::is_within_lifetime<void, const void>(static_cast<const void*>(&i)));
+    static_assert(std::is_within_lifetime<void, void>(static_cast<void*>(const_cast<int*>(&i))));
+  }
+  // Test well-definedness for casting to derived classes with constexpr variables whose lifetime is in a different
+  // constant expression
+  {
+    static constexpr S s;
+    static constexpr D1 d1;
+    static constexpr D2 d2;
+    static constexpr D3 d3;
+
+    static constexpr const S* pbase0 = &s;
+    static constexpr const S* pbase1 = &d1;
+    static constexpr const S* pbase2 = &d2;
+    static constexpr const S* pbase3 = &d3;
+
+    static_assert(std::is_within_lifetime<S>(pbase0));
+    static_assert(std::is_within_lifetime<S>(pbase1));
+    static_assert(std::is_within_lifetime<S>(pbase2));
+    static_assert(std::is_within_lifetime<S>(pbase3));
+
+    static_assert(!std::is_within_lifetime<D1>(pbase0));
+    static_assert(std::is_within_lifetime<D1>(pbase1));
+    static_assert(std::is_within_lifetime<D1>(pbase2));
+    static_assert(!std::is_within_lifetime<D1>(pbase3));
+
+    static_assert(!std::is_within_lifetime<D2>(pbase0));
+    static_assert(!std::is_within_lifetime<D2>(pbase1));
+    static_assert(std::is_within_lifetime<D2>(pbase2));
+    static_assert(!std::is_within_lifetime<D2>(pbase3));
+
+    static_assert(!std::is_within_lifetime<D3>(pbase0));
+    static_assert(!std::is_within_lifetime<D3>(pbase1));
+    static_assert(!std::is_within_lifetime<D3>(pbase2));
+    static_assert(std::is_within_lifetime<D3>(pbase3));
+
+    static constexpr const D1* pmid0 = &d1;
+    static constexpr const D1* pmid1 = &d2;
+
+    static_assert(std::is_within_lifetime<S>(pmid0));
+    static_assert(std::is_within_lifetime<S>(pmid1));
+
+    static_assert(std::is_within_lifetime<D1>(pmid0));
+    static_assert(std::is_within_lifetime<D1>(pmid1));
+
+    static_assert(!std::is_within_lifetime<D2>(pmid0));
+    static_assert(std::is_within_lifetime<D2>(pmid1));
   }
 
   {
@@ -78,10 +126,54 @@ consteval bool f() {
     assert(std::is_within_lifetime(const_cast<int*>(&i)));
     assert(std::is_within_lifetime(static_cast<const void*>(&i)));
     assert(std::is_within_lifetime(static_cast<void*>(const_cast<int*>(&i))));
-    assert(std::is_within_lifetime<const int>(&i));
-    assert(std::is_within_lifetime<int>(const_cast<int*>(&i)));
-    assert(std::is_within_lifetime<const void>(static_cast<const void*>(&i)));
-    assert(std::is_within_lifetime<void>(static_cast<void*>(const_cast<int*>(&i))));
+    assert((std::is_within_lifetime<void, const int>(&i)));
+    assert((std::is_within_lifetime<void, int>(const_cast<int*>(&i))));
+    assert((std::is_within_lifetime<void, const void>(static_cast<const void*>(&i))));
+    assert((std::is_within_lifetime<void, void>(static_cast<void*>(const_cast<int*>(&i)))));
+  }
+  // Test well-definedness for casting to derived classes with varibles inside the same constant expression
+  {
+    S s;
+    D1 d1;
+    D2 d2;
+    D3 d3;
+
+    S* pbase0 = &s;
+    S* pbase1 = &d1;
+    S* pbase2 = &d2;
+    S* pbase3 = &d3;
+
+    assert(std::is_within_lifetime<S>(pbase0));
+    assert(std::is_within_lifetime<S>(pbase1));
+    assert(std::is_within_lifetime<S>(pbase2));
+    assert(std::is_within_lifetime<S>(pbase3));
+
+    assert(!std::is_within_lifetime<D1>(pbase0));
+    assert(std::is_within_lifetime<D1>(pbase1));
+    assert(std::is_within_lifetime<D1>(pbase2));
+    assert(!std::is_within_lifetime<D1>(pbase3));
+
+    assert(!std::is_within_lifetime<D2>(pbase0));
+    assert(!std::is_within_lifetime<D2>(pbase1));
+    assert(std::is_within_lifetime<D2>(pbase2));
+    assert(!std::is_within_lifetime<D2>(pbase3));
+
+    assert(!std::is_within_lifetime<D3>(pbase0));
+    assert(!std::is_within_lifetime<D3>(pbase1));
+    assert(!std::is_within_lifetime<D3>(pbase2));
+    assert(std::is_within_lifetime<D3>(pbase3));
+
+    D1* pmid0 = &d1;
+    D1* pmid1 = &d2;
+
+    assert(std::is_within_lifetime<S>(pmid0));
+    assert(std::is_within_lifetime<S>(pmid1));
+
+    assert(std::is_within_lifetime<D1>(pmid0));
+    assert(std::is_within_lifetime<D1>(pmid1));
+
+    assert(!std::is_within_lifetime<D2>(pmid0));
+    assert(std::is_within_lifetime<D2>(pmid1));
   }
   // Anonymous union
   {
