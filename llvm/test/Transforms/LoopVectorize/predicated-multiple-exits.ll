@@ -806,7 +806,8 @@ define i32 @diamond_exit_poison_cond_second() {
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i1> zeroinitializer, i64 [[FIRST_ACTIVE_LANE]]
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[VECTOR_EARLY_EXIT_0:.*]], label %[[VECTOR_EARLY_EXIT_1:.*]]
 ; CHECK:       [[VECTOR_EARLY_EXIT_1]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i32> <i32 10, i32 11, i32 12, i32 13>, i64 [[FIRST_ACTIVE_LANE]]
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[FIRST_ACTIVE_LANE]] to i32
+; CHECK-NEXT:    [[TMP4:%.*]] = add i32 10, [[TMP3]]
 ; CHECK-NEXT:    br label %[[LOOP_END1]]
 ; CHECK:       [[VECTOR_EARLY_EXIT_0]]:
 ; CHECK-NEXT:    br label %[[UNREACHABLE_EXIT:.*]]
@@ -814,7 +815,7 @@ define i32 @diamond_exit_poison_cond_second() {
 ; CHECK-NEXT:    call void @llvm.trap()
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[LOOP_END1]]:
-; CHECK-NEXT:    [[RETVAL:%.*]] = phi i32 [ [[TMP3]], %[[VECTOR_EARLY_EXIT_1]] ], [ -1, %[[LOOP_END]] ]
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i32 [ [[TMP4]], %[[VECTOR_EARLY_EXIT_1]] ], [ -1, %[[LOOP_END]] ]
 ; CHECK-NEXT:    ret i32 [[RETVAL]]
 ;
 entry:
