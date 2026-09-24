@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/LoopRotationUtils.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CodeMetrics.h"
@@ -456,6 +457,12 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
   assert(L->contains(NewHeader) && !L->contains(Exit) &&
          "Unable to determine loop header and exit blocks");
 
+  Function &F = *OrigHeader->getParent();
+  BlockWaveCountPreserver WaveProfile(F);
+  bool HasWaveProfile = WaveProfile.hasProfile();
+  if (HasWaveProfile)
+    WaveProfile.invalidate(*OrigHeader);
+
   // This code assumes that the new header has exactly one predecessor.
   // Remove any single-entry PHI nodes in it.
   assert(NewHeader->getSinglePredecessor() &&
@@ -822,6 +829,16 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
   bool DidMerge = MergeBlockIntoPredecessor(OrigHeader, &DTU, LI, MSSAU);
   if (DidMerge)
     RemoveRedundantDbgInstrs(PredBB);
+
+  if (HasWaveProfile) {
+    // The preheader clone and merged body inherit the old header's metadata.
+    OrigPreheader->getTerminator()->setMetadata(
+        LLVMContext::MD_wave_profile_block, nullptr);
+    if (DidMerge)
+      PredBB->getTerminator()->setMetadata(LLVMContext::MD_wave_profile_block,
+                                           nullptr);
+    WaveProfile.restore();
+  }
 
   if (MSSAU && VerifyMemorySSA)
     MSSAU->getMemorySSA()->verifyMemorySSA();
