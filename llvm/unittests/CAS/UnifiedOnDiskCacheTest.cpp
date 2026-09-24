@@ -265,14 +265,17 @@ TEST_P(CustomHasherOnDiskCASTest, UnifiedOnDiskCacheConcurrentValidation) {
   };
 
   // Only one of the concurrent validations of valid data is performed, the
-  // rest see that it has been validated during this boot.
+  // rest see that it has been validated during this boot. Where the boot time
+  // is not known they are all performed.
+  const bool BootTimeKnown = isBootTimeKnown();
   {
     unittest::TempDir Temp("ondisk-unified", /*Unique=*/true);
     createCAS(Temp.path());
     auto Counts =
         runConcurrently([&] { return validate(Temp.path(), /*Force=*/false); });
-    EXPECT_EQ(Counts[ValidationResult::Valid], 1u);
-    EXPECT_EQ(Counts[ValidationResult::Skipped], NumTasks - 1);
+    EXPECT_EQ(Counts[ValidationResult::Valid], BootTimeKnown ? 1u : NumTasks);
+    EXPECT_EQ(Counts[ValidationResult::Skipped],
+              BootTimeKnown ? NumTasks - 1 : 0u);
 
     Counts =
         runConcurrently([&] { return validate(Temp.path(), /*Force=*/true); });
@@ -303,9 +306,49 @@ TEST_P(CustomHasherOnDiskCASTest, UnifiedOnDiskCacheConcurrentValidation) {
     std::optional<ValidationResult> Result;
     ASSERT_THAT_ERROR(validate(Temp.path(), /*Force=*/false).moveInto(Result),
                       Succeeded());
-    EXPECT_EQ(Result, ValidationResult::Skipped);
+    EXPECT_EQ(Result, BootTimeKnown ? ValidationResult::Skipped
+                                    : ValidationResult::Valid);
     ASSERT_THAT_ERROR(UnifiedOnDiskCache::recover(Temp.path()).moveInto(Result),
                       Succeeded());
     EXPECT_EQ(Result, ValidationResult::Skipped);
+  }
+}
+
+TEST_P(CustomHasherOnDiskCASTest, UnifiedOnDiskCacheRepeatedRecovery) {
+  auto HashFn = GetParam().HashFn;
+  StringRef HashName = GetParam().HashName;
+  size_t HashSize = GetParam().HashSize;
+
+  unittest::TempDir Temp("ondisk-unified", /*Unique=*/true);
+
+  // Each recovery moves the data aside under a new name, even though the
+  // directory names of earlier recoveries are still taken.
+  for (unsigned I = 0; I != 3; ++I) {
+    SCOPED_TRACE(I);
+    {
+      std::unique_ptr<UnifiedOnDiskCache> UniDB;
+      ASSERT_THAT_ERROR(UnifiedOnDiskCache::open(Temp.path(),
+                                                 /*SizeLimit=*/std::nullopt,
+                                                 HashName, HashSize)
+                            .moveInto(UniDB),
+                        Succeeded());
+      std::optional<ObjectID> ID;
+      ASSERT_THAT_ERROR(store(UniDB->getGraphDB(), "1", {}).moveInto(ID),
+                        Succeeded());
+    }
+    ASSERT_FALSE(sys::fs::remove(Temp.path("v1.1/data.v1")));
+    EXPECT_THAT_EXPECTED(
+        UnifiedOnDiskCache::validateIfNeeded(Temp.path(), HashName, HashSize,
+                                             /*CheckHash=*/true, HashFn,
+                                             /*ForceValidation=*/true),
+        Failed());
+
+    std::optional<ValidationResult> Result;
+    ASSERT_THAT_ERROR(UnifiedOnDiskCache::recover(Temp.path()).moveInto(Result),
+                      Succeeded());
+    EXPECT_EQ(Result, ValidationResult::Recovered);
+    EXPECT_TRUE(
+        sys::fs::exists(Temp.path("corrupt." + std::to_string(I) + ".v1.1")));
+    EXPECT_FALSE(sys::fs::exists(Temp.path("v1.1")));
   }
 }

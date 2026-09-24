@@ -53,7 +53,8 @@
 /// the underlying on-disk storage. The low-level storage is designed to remain
 /// coherent across regular process crashes, but may be invalid after power loss
 /// or similar system failures. \c UnifiedOnDiskCache::validateIfNeeded allows
-/// validating the contents once per boot, and if validation fails (or crashes,
+/// validating the contents once per boot (or every time, where the boot time is
+/// not known), and if validation fails (or crashes,
 /// when performed in a separate process) \c UnifiedOnDiskCache::recover can
 /// recover by marking invalid data for garbage collection.
 ///
@@ -93,6 +94,7 @@
 #include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
+#include <limits>
 #include <optional>
 
 using namespace llvm;
@@ -233,11 +235,11 @@ static Error validateInProcess(StringRef RootPath, StringRef HashName,
   return Error::success();
 }
 
-static Expected<uint64_t> getCachedBootTime() {
-  static uint64_t BootTime = 0;
-  if (BootTime == 0)
-    if (Error E = getBootTime().moveInto(BootTime))
-      return std::move(E);
+/// \returns the boot time, or 0 if it is not known, including if getting it
+/// failed. Validation is never skipped where the boot time is not known.
+static uint64_t getCachedBootTime() {
+  static const uint64_t BootTime =
+      expectedToOptional(getBootTime()).value_or(0);
   return BootTime;
 }
 
@@ -259,7 +261,8 @@ public:
   /// Written before validating. It is an integer so that older versions, which
   /// only know about boot times, still parse the file and treat it as not
   /// validated. It never matches a boot time.
-  static constexpr uint64_t ValidationPending = 0;
+  static constexpr uint64_t ValidationPending =
+      std::numeric_limits<uint64_t>::max();
 
   static Expected<std::unique_ptr<LockedValidationFile>>
   open(StringRef RootPath) {
@@ -302,7 +305,16 @@ public:
 
   /// \returns the boot time of the last successful validation or recovery, or
   /// 0 if there is none.
-  uint64_t getLastValidBootTime() const { return State.value_or(0); }
+  uint64_t getLastValidBootTime() const {
+    return isValidationPending() ? 0 : State.value_or(0);
+  }
+
+  /// Whether the data was validated or recovered during the boot with
+  /// \p BootTime. Always false where the boot time is not known, i.e. 0,
+  /// since it cannot be told whether that was during the current boot.
+  bool isValidAtBoot(uint64_t BootTime) const {
+    return BootTime != 0 && State == BootTime;
+  }
 
   bool isValidationPending() const { return State == ValidationPending; }
 
@@ -371,6 +383,14 @@ static Error markAllDBDirsCorrupt(StringRef RootPath) {
       GCPath.assign(RootPath);
       sys::path::append(GCPath,
                         CorruptPrefix + std::to_string(Attempt) + "." + DBDir);
+      // Skip names that are taken by earlier recoveries. Checking the error of
+      // the rename is not enough since Windows reports permission denied when
+      // the destination directory exists. Only garbage collection removes
+      // these directories concurrently, and it never creates them.
+      if (sys::fs::exists(GCPath)) {
+        EC = errc::file_exists;
+        continue;
+      }
       EC = sys::fs::rename(PathBuf, GCPath);
       // Darwin uses ENOTEMPTY. Linux may return either ENOTEMPTY or EEXIST.
       if (EC != errc::directory_not_empty && EC != errc::file_exists)
@@ -401,9 +421,7 @@ Expected<ValidationResult> UnifiedOnDiskCache::validateIfNeeded(
     return std::move(E);
 #endif
 
-  uint64_t BootTime = 0;
-  if (Error E = getCachedBootTime().moveInto(BootTime))
-    return std::move(E);
+  uint64_t BootTime = getCachedBootTime();
   uint64_t ValidationBootTime = VF->getLastValidBootTime();
 
   bool Skipped = false;
@@ -417,7 +435,7 @@ Expected<ValidationResult> UnifiedOnDiskCache::validateIfNeeded(
         LogValidationError, Skipped);
   });
 
-  if (ValidationBootTime == BootTime && !ForceValidation) {
+  if (VF->isValidAtBoot(BootTime) && !ForceValidation) {
     Skipped = true;
     return ValidationResult::Skipped;
   }
@@ -451,9 +469,7 @@ Expected<ValidationResult> UnifiedOnDiskCache::recover(StringRef RootPath) {
     return std::move(E);
 #endif
 
-  uint64_t BootTime = 0;
-  if (Error E = getCachedBootTime().moveInto(BootTime))
-    return std::move(E);
+  uint64_t BootTime = getCachedBootTime();
 
   bool Skipped = false;
   std::string LogRecoveryError;

@@ -68,7 +68,7 @@ Expected<size_t> preallocateFileTail(int FD, size_t CurrentSize,
 ///
 /// \returns the boot time in seconds (0 if operation not supported), or an \c
 /// Error.
-Expected<uint64_t> getBootTime();
+LLVM_ABI_FOR_TEST Expected<uint64_t> getBootTime();
 
 /// Helper RAII class for copying a file to a unique file path. At destruction
 /// time it will delete any new temporary files created.

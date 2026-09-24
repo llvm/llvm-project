@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CASTestConfig.h"
+#include "OnDiskCommonUtils.h"
 #include "llvm/CAS/ActionCache.h"
 #include "llvm/CAS/ObjectStore.h"
 #include "llvm/Config/config.h"
@@ -174,9 +175,11 @@ TEST(PluginCASTest, validate) {
   }
 
   // Already validated since boot.
+  const ValidationResult ValidatedSinceBoot =
+      isBootTimeKnown() ? ValidationResult::Skipped : ValidationResult::Valid;
   ASSERT_THAT_ERROR(validateIfNeeded(/*Force=*/false).moveInto(Result),
                     Succeeded());
-  EXPECT_EQ(Result, ValidationResult::Skipped);
+  EXPECT_EQ(Result, ValidatedSinceBoot);
 
   ASSERT_THAT_ERROR(validateIfNeeded(/*Force=*/true).moveInto(Result),
                     Succeeded());
@@ -209,7 +212,7 @@ TEST(PluginCASTest, validate) {
   // Recovery counts as validation for this boot.
   ASSERT_THAT_ERROR(validateIfNeeded(/*Force=*/false).moveInto(Result),
                     Succeeded());
-  EXPECT_EQ(Result, ValidationResult::Skipped);
+  EXPECT_EQ(Result, ValidatedSinceBoot);
 
   std::pair<std::string, std::string> BadOpts[] = {{"bogus", ""}};
   EXPECT_THAT_EXPECTED(

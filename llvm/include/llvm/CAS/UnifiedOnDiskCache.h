@@ -73,7 +73,8 @@ public:
   /// Validate the data in \p Path in-process, if it has not been validated
   /// since the last system boot. A successful validation is recorded so that
   /// subsequent calls can skip it; a failed or crashed one is recorded as
-  /// pending for \c recover, and is not skipped by subsequent calls.
+  /// pending for \c recover, and is not skipped by subsequent calls. Where the
+  /// boot time is not known validation is never skipped.
   ///
   /// Validation can crash on invalid data. Clients that want to be resilient
   /// to that should call this from a separate process (e.g. via

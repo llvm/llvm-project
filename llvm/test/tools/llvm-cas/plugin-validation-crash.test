@@ -1,4 +1,7 @@
 REQUIRES: cas-plugin
+# Checks that validation is skipped once the data has been validated since boot,
+# which requires the boot time to be known.
+REQUIRES: cas-boot-time
 # HWASan does not tag the globals of a dlopen'ed library with glibc, see
 # https://github.com/llvm/llvm-project/issues/57206.
 UNSUPPORTED: hwasan
@@ -52,8 +55,10 @@ RUN:   --get-cache-result @%t/abc.casid | FileCheck %s --check-prefix=NOT-FOUND
 VALID: validated successfully
 SKIPPED: validation skipped
 INVALID: llvm-cas: validate-if-needed: cas contents invalid
-PENDING: {{^0$}}
-VALIDATED: {{^[1-9][0-9]*$}}
+# Validation pending is recorded as UINT64_MAX, a boot time is shorter. The boot
+# time is 0 on platforms where it is not known.
+PENDING: {{^18446744073709551615$}}
+VALIDATED: {{^[0-9]{1,19}$}}
 RECOVERED: recovered from invalid data
 RECOVERED-DIRS: corrupt.0.v1.1
 NOT-FOUND: result not found

@@ -1,4 +1,7 @@
 REQUIRES: cas-plugin
+# Checks that validation is skipped once the data has been validated since boot,
+# which requires the boot time to be known.
+REQUIRES: cas-boot-time
 # HWASan does not tag the globals of a dlopen'ed library with glibc, see
 # https://github.com/llvm/llvm-project/issues/57206.
 UNSUPPORTED: hwasan
