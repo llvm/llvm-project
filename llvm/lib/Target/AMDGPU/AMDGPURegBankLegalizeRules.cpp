@@ -2484,6 +2484,10 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
 
   addRulesForIOpcs({amdgcn_init_whole_wave}).Any({{DivS1}, {{Vcc}, {IntrId}}});
 
+  addRulesForIOpcs({amdgcn_wqm_vote})
+      .Any({{DivS1}, {{Vcc}, {IntrId, Vcc}}})
+      .Any({{UniS1}, {{UniInVcc}, {IntrId, Vcc}}});
+
   addRulesForIOpcs({amdgcn_kill, amdgcn_wqm_demote})
       .Any({{}, {{}, {IntrId, Vcc}}});
 
