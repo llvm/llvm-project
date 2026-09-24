@@ -905,12 +905,14 @@ define <2 x i8> @test_copy_trunc_flags(<2 x i32> %src) {
 }
 
 !0 = !{ !"root" }
-!1 = !{ !"set1", !0 }
-!2 = !{ !"set2", !0 }
+!1 = !{!14, !14, i64 0}
+!2 = !{!15, !15, i64 0}
 !3 = !{ !3, !{!"llvm.loop.parallel_accesses", !13} }
 !4 = !{ float 4.0 }
 !5 = !{ i64 0, i64 8, null }
 !13 = distinct !{}
+!14 = !{!"set1", !0}
+!15 = !{!"set2", !0}
 ;.
 ; CHECK: [[SET1_TBAA0]] = !{[[META1:![0-9]+]], [[META1]], i64 0}
 ; CHECK: [[META1]] = !{!"set1", [[META2:![0-9]+]]}

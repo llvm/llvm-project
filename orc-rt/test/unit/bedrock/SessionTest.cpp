@@ -21,6 +21,7 @@
 
 #include "BedrockTestUtils.h"
 #include "CommonTestUtils.h"
+#include "ErrorMatchers.h"
 
 #include <chrono>
 #include <deque>
@@ -28,6 +29,7 @@
 #include <optional>
 
 using namespace orc_rt;
+using namespace orc_rt::test;
 using ::testing::Eq;
 using ::testing::Optional;
 
@@ -338,13 +340,10 @@ TEST(SessionTest, ReportError) {
   cantFail(std::move(E)); // Force error into checked state.
 
   Session S(mockExecutorProcessInfo(), noDispatch,
-            [&](Error Err) { E = std::move(Err); });
+            [&](Error Err) noexcept { E = std::move(Err); });
   S.reportError(make_error<StringError>("foo"));
 
-  if (E)
-    EXPECT_EQ(toString(std::move(E)), "foo");
-  else
-    ADD_FAILURE() << "Missing error value";
+  EXPECT_THAT_ERROR(std::move(E), FailedWithMessage("foo"));
 }
 
 TEST(SessionTest, ReportErrorsViaSession) {
@@ -353,13 +352,10 @@ TEST(SessionTest, ReportErrorsViaSession) {
 
   // Check that the ReportErrorsViaSession utility works as advertised.
   Session S(mockExecutorProcessInfo(), noDispatch,
-            [&](Error Err) { E = std::move(Err); });
+            [&](Error Err) noexcept { E = std::move(Err); });
   (ReportErrorsViaSession(S))(make_error<StringError>("foo"));
 
-  if (E)
-    EXPECT_EQ(toString(std::move(E)), "foo");
-  else
-    ADD_FAILURE() << "Missing error value";
+  EXPECT_THAT_ERROR(std::move(E), FailedWithMessage("foo"));
 }
 
 TEST(SessionTest, SingleService) {
@@ -858,9 +854,9 @@ TEST(ControllerAccessTest, FailConnect) {
   // Simulate failure to connect.
   bool GotError = false;
   std::string ErrMsg = "failed to connect";
-  Session S(mockExecutorProcessInfo(), noDispatch, [&](Error Err) {
+  Session S(mockExecutorProcessInfo(), noDispatch, [&](Error Err) noexcept {
     GotError = true;
-    EXPECT_EQ(toString(std::move(Err)), ErrMsg);
+    EXPECT_THAT_ERROR(std::move(Err), FailedWithMessage(ErrMsg));
   });
   BootstrapInfo BI(S);
   S.attach<MockControllerAccess>(

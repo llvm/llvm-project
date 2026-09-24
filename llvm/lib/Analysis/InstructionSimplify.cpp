@@ -5421,13 +5421,15 @@ static Value *simplifyGEPInst(Type *SrcTy, Value *Ptr,
   if (!isa<Constant>(Ptr) || !all_of(Indices, IsaPred<Constant>))
     return nullptr;
 
-  if (!ConstantExpr::isSupportedGetElementPtr(SrcTy))
+  ArrayRef<Constant *> ConstIdxs =
+      ArrayRef((Constant *const *)Indices.data(), Indices.size());
+  auto *ConstGEP = ConstantExpr::getGetElementPtr(
+      Q.DL, SrcTy, cast<Constant>(Ptr), ConstIdxs, NW);
+  if (!ConstGEP)
     return ConstantFoldGetElementPtr(SrcTy, cast<Constant>(Ptr), std::nullopt,
                                      Indices);
 
-  auto *CE =
-      ConstantExpr::getGetElementPtr(SrcTy, cast<Constant>(Ptr), Indices, NW);
-  return ConstantFoldConstant(CE, Q.DL);
+  return ConstantFoldConstant(ConstGEP, Q.DL);
 }
 
 Value *llvm::simplifyGEPInst(Type *SrcTy, Value *Ptr, ArrayRef<Value *> Indices,

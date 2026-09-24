@@ -65,7 +65,6 @@ static cl::opt<bool>
 PrintDebugInfo("print-debug-info",
   cl::desc("print debug info when printing functions"),
   cl::Hidden,
-  cl::ZeroOrMore,
   cl::cat(BoltCategory));
 
 cl::opt<bool> PrintRelocations(
@@ -77,7 +76,6 @@ static cl::opt<bool>
 PrintMemData("print-mem-data",
   cl::desc("print memory data annotations when printing functions"),
   cl::Hidden,
-  cl::ZeroOrMore,
   cl::cat(BoltCategory));
 
 cl::opt<std::string> CompDirOverride(
@@ -90,12 +88,12 @@ cl::opt<std::string> CompDirOverride(
 static cl::opt<bool> CloneConstantIsland("clone-constant-island",
                                          cl::desc("clone constant islands"),
                                          cl::Hidden, cl::init(true),
-                                         cl::ZeroOrMore, cl::cat(BoltCategory));
+                                         cl::cat(BoltCategory));
 
 static cl::opt<bool>
     FailOnInvalidPadding("fail-on-invalid-padding", cl::Hidden, cl::init(false),
                          cl::desc("treat invalid code padding as error"),
-                         cl::ZeroOrMore, cl::cat(BoltCategory));
+                         cl::cat(BoltCategory));
 
 static cl::opt<bool> DropDWOPageCache(
     "drop-dwo-page-cache",

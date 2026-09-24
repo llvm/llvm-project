@@ -21,7 +21,7 @@ subroutine char0_common
   call use(ii1, zc0, ll1)
 end subroutine
 
-! CHECK: fir.global common @blk_(dense<0> : vector<16xi8>) {alignment = 8 : i64} : !fir.array<16xi8>
+! CHECK: fir.global common @blk_(dense<0> : vector<16xi8>) <{alignment = 8 : i64}> : !fir.array<16xi8>
 
 ! CHECK-LABEL: func.func @_QPchar0_common
 

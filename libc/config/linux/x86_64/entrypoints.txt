@@ -404,6 +404,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.stat.mkdirat
     libc.src.sys.stat.mkfifo
     libc.src.sys.stat.mkfifoat
+    libc.src.sys.stat.mknod
+    libc.src.sys.stat.mknodat
     libc.src.sys.stat.stat
     libc.src.sys.stat.umask
     libc.src.sys.stat.utimensat
@@ -477,6 +479,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.faccessat
     libc.src.unistd.fchdir
     libc.src.unistd.fchown
+    libc.src.unistd.fdatasync
     libc.src.unistd.fpathconf
     libc.src.unistd.fsync
     libc.src.unistd.ftruncate
@@ -500,6 +503,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.lseek
     libc.src.unistd.nice
     libc.src.unistd.pathconf
+    libc.src.unistd.pause
     libc.src.unistd.pipe
     libc.src.unistd.pipe2
     libc.src.unistd.pread
