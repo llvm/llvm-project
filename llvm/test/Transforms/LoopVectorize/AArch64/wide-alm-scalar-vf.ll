@@ -18,6 +18,9 @@ define void @wide_active_lane_mask_i32_tc(ptr %src, ptr %dst, i32 %n) #0 {
 ; CHECK-UF4:       vector.ph:
 ; CHECK-UF4-NEXT:    [[TMP2:%.*]] = icmp ult i32 0, [[N]]
 ; CHECK-UF4-NEXT:    [[TMP3:%.*]] = icmp ult i32 1, [[N]]
+; CHECK-UF4-NEXT:    [[TMP14:%.*]] = sub i32 [[N]], 2
+; CHECK-UF4-NEXT:    [[TMP18:%.*]] = icmp ugt i32 [[N]], 2
+; CHECK-UF4-NEXT:    [[TMP19:%.*]] = select i1 [[TMP18]], i32 [[TMP14]], i32 0
 ; CHECK-UF4-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-UF4:       vector.body:
 ; CHECK-UF4-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE5:%.*]] ]
@@ -43,9 +46,9 @@ define void @wide_active_lane_mask_i32_tc(ptr %src, ptr %dst, i32 %n) #0 {
 ; CHECK-UF4-NEXT:    br label [[PRED_STORE_CONTINUE5]]
 ; CHECK-UF4:       pred.store.continue5:
 ; CHECK-UF4-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 2
-; CHECK-UF4-NEXT:    [[TMP13]] = icmp ult i32 [[INDEX_NEXT]], [[N]]
-; CHECK-UF4-NEXT:    [[TMP14:%.*]] = add i32 [[INDEX_NEXT]], 1
-; CHECK-UF4-NEXT:    [[TMP15]] = icmp ult i32 [[TMP14]], [[N]]
+; CHECK-UF4-NEXT:    [[TMP13]] = icmp ult i32 [[INDEX]], [[TMP19]]
+; CHECK-UF4-NEXT:    [[TMP17:%.*]] = add i32 [[INDEX]], 1
+; CHECK-UF4-NEXT:    [[TMP15]] = icmp ult i32 [[TMP17]], [[TMP19]]
 ; CHECK-UF4-NEXT:    [[TMP16:%.*]] = xor i1 [[TMP13]], true
 ; CHECK-UF4-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK-UF4:       middle.block:

@@ -731,7 +731,9 @@ vputils::getMemoryLocation(const VPRecipeBase &R) {
   return Loc;
 }
 
-VPInstruction *vputils::findCanonicalIVIncrement(VPlan &Plan) {
+VPInstruction *
+vputils::findCanonicalIVIncrement(VPlan &Plan,
+                                  bool RequireAfterMaterialization) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   VPRegionValue *CanIV = LoopRegion->getCanonicalIV();
   assert(CanIV && "Expected loop region to have a canonical IV");
@@ -781,8 +783,9 @@ VPInstruction *vputils::findCanonicalIVIncrement(VPlan &Plan) {
     }
   }
 
-  assert((!VFxUF.isMaterialized() || Increment) &&
-         "After materializing VFxUF, an increment must exist");
+  assert(
+      (!RequireAfterMaterialization || !VFxUF.isMaterialized() || Increment) &&
+      "After materializing VFxUF, an increment must exist");
   assert((!Increment ||
           LoopRegion->hasCanonicalIVNUW() == Increment->hasNoUnsignedWrap()) &&
          "NUW flag in region and increment must match");
@@ -1140,6 +1143,21 @@ bool vputils::isDeadRecipe(VPRecipeBase &R) {
   if (isa<VPExpandSCEVRecipe>(R) &&
       R.getVPSingleValue() == R.getParent()->getPlan()->getTripCount())
     return false;
+
+  // Do not remove the canonical IV increment if the canonical IV has any
+  // other users in the plan. The increment may be required as the backedge
+  // value of the canonical IV after materialisation.
+  if (auto *VPI = dyn_cast<VPInstruction>(&R)) {
+    VPlan *Plan = R.getParent()->getPlan();
+    VPRegionBlock *LoopRegion = Plan->getVectorLoopRegion();
+    if (LoopRegion &&
+        VPI == findCanonicalIVIncrement(
+                   *Plan, /*RequireAfterMaterialization=*/false)) {
+      VPRegionValue *CanIV = LoopRegion->getCanonicalIV();
+      if (any_of(CanIV->users(), [VPI](const VPUser *U) { return U != VPI; }))
+        return false;
+    }
+  }
 
   // Recipe is dead if no user keeps the recipe alive.
   return all_of(R.definedValues(), [](VPValue *V) { return V->user_empty(); });
