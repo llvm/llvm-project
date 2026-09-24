@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "orc-rt/bedrock/sps/StandaloneMachOUnwindInfoRegistrarSPSCI.h"
-#include "orc-rt/bedrock/StandaloneMachOUnwindInfoRegistrar.h"
+#include "orc-rt-internal/bedrock/sys/darwin/StandaloneMachOUnwindInfoRegistrar.h"
 
 namespace orc_rt::sps_ci {
 
