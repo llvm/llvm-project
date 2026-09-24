@@ -733,18 +733,14 @@ InstructionCost RISCVTTIImpl::getSlideCost(FixedVectorType *Tp,
   return FirstSlideCost + SecondSlideCost + MaskCost;
 }
 
-/// Return the type used to cost vzip.vv, whose LMUL represents the
-/// interleaved destination EMUL. Return std::nullopt if illegal.
-static std::optional<MVT> getZvzipVZIPCostVT(MVT InterleavedVT,
-                                             const RISCVSubtarget &ST,
-                                             const RISCVTargetLowering &TLI) {
+std::optional<MVT> RISCVTTIImpl::getZvzipVZIPCostVT(MVT InterleavedVT) const {
   if (!InterleavedVT.getVectorElementCount().isKnownEven())
     return std::nullopt;
 
   MVT CostVT = InterleavedVT;
   if (InterleavedVT.isFixedLengthVector()) {
     MVT SourceVT = InterleavedVT.getHalfNumVectorElementsVT();
-    CostVT = TLI.getContainerForFixedLengthVector(SourceVT)
+    CostVT = TLI->getContainerForFixedLengthVector(SourceVT)
                  .getDoubleNumVectorElementsVT();
   }
 
@@ -752,15 +748,13 @@ static std::optional<MVT> getZvzipVZIPCostVT(MVT InterleavedVT,
   unsigned MinSize = CostVT.getSizeInBits().getKnownMinValue();
   unsigned LMULOctuple = MinSize / (RISCV::RVVBitsPerBlock / 8);
   // Perform the 2 * SEW <= LMUL * min(ELEN, VLEN) check.
-  if (EltBits * 16 > LMULOctuple * std::min(ST.getELen(), ST.getRealMinVLen()))
+  if (EltBits * 16 >
+      LMULOctuple * std::min(ST->getELen(), ST->getRealMinVLen()))
     return std::nullopt;
   return CostVT;
 }
 
-/// Return the type used to cost vunzipe.v/vunzipo.v, whose LMUL represents
-/// the interleaved source EMUL. Return std::nullopt if illegal.
-static std::optional<MVT> getZvzipVUNZIPCostVT(MVT InterleavedVT,
-                                               const RISCVTargetLowering &TLI) {
+std::optional<MVT> RISCVTTIImpl::getZvzipVUNZIPCostVT(MVT InterleavedVT) const {
   if (!InterleavedVT.getVectorElementCount().isKnownEven())
     return std::nullopt;
 
@@ -769,9 +763,9 @@ static std::optional<MVT> getZvzipVUNZIPCostVT(MVT InterleavedVT,
   // an illegal result type. Apply the same rule here so the cost uses the
   // source LMUL selected by ISel.
   if (InterleavedVT.isFixedLengthVector()) {
-    CostVT = TLI.getContainerForFixedLengthVector(InterleavedVT);
+    CostVT = TLI->getContainerForFixedLengthVector(InterleavedVT);
     if (CostVT.getVectorMinNumElements() == 1 ||
-        !TLI.isTypeLegal(CostVT.getHalfNumVectorElementsVT()))
+        !TLI->isTypeLegal(CostVT.getHalfNumVectorElementsVT()))
       CostVT = CostVT.getDoubleNumVectorElementsVT();
   }
 
@@ -1982,11 +1976,10 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     if (!LT.second.isScalableVector())
       break;
     if (IsInterleave) {
-      if (std::optional<MVT> CostVT = getZvzipVZIPCostVT(LT.second, *ST, *TLI))
+      if (std::optional<MVT> CostVT = getZvzipVZIPCostVT(LT.second))
         return LT.first *
                getRISCVInstructionCost(RISCV::VZIP_VV, *CostVT, CostKind);
-    } else if (std::optional<MVT> CostVT =
-                   getZvzipVUNZIPCostVT(LT.second, *TLI)) {
+    } else if (std::optional<MVT> CostVT = getZvzipVUNZIPCostVT(LT.second)) {
       return LT.first *
              getRISCVInstructionCost({RISCV::VUNZIPE_V, RISCV::VUNZIPO_V},
                                      *CostVT, CostKind);
