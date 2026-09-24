@@ -662,6 +662,7 @@ public:
           auto funcOp = op->getParentOfType<mlir::func::FuncOp>();
           return funcOp && mlir::acc::isAccRoutine(funcOp);
         });
+    target.addLegalOp<cuf::DeviceIsActiveOp>();
     cuf::populateCUFToFIRConversionPatterns(typeConverter, *dl, symtab,
                                             patterns);
     if (mlir::failed(mlir::applyPartialConversion(getOperation(), target,

@@ -48,9 +48,9 @@ set(ORC_RT_BEDROCK_POSIX_SOURCES
 
 set(ORC_RT_BEDROCK_DARWIN_SOURCES
   sys/darwin/CPUFeatures.cpp
+  sys/darwin/StandaloneMachOUnwindInfoRegistrar.cpp
   sys/darwin/TargetTriple.cpp
-  StandaloneMachOUnwindInfoRegistrar.cpp
-  sps/StandaloneMachOUnwindInfoRegistrarSPSCI.cpp
+  sys/darwin/sps/StandaloneMachOUnwindInfoRegistrarSPSCI.cpp
 )
 
 set(ORC_RT_BEDROCK_LINUX_SOURCES
