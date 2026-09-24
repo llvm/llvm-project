@@ -1031,12 +1031,10 @@ struct OperationState {
 
 private:
   /// The deleter and setter are non-null whenever `properties` is, and are
-  /// only called after checking it. Coverity misses this invariant and flags
-  /// the empty `function_ref`s as uninitialized.
-  // coverity[uninit_member]
+  /// only called after checking it.
   PropertyRef properties;
-  llvm::function_ref<void(PropertyRef)> propertiesDeleter;
-  llvm::function_ref<void(PropertyRef, const PropertyRef)> propertiesSetter;
+  void (*propertiesDeleter)(PropertyRef) = nullptr;
+  void (*propertiesSetter)(PropertyRef, const PropertyRef) = nullptr;
   friend class Operation;
 
 public:
