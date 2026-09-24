@@ -27,11 +27,11 @@ func.func @parallel_loop(%arg0 : index, %arg1 : index, %arg2 : index,
 // CHECK:               %true = arith.constant true
 // CHECK:               [[V11:%.*]] = arith.muli [[V7]], [[ARG5]] : index
 // CHECK:               [[V12:%.*]] = arith.addi [[V11]], [[V3]] : index
-// CHECK:               [[V13:%.*]] = arith.cmpi ult, [[V12]], [[ARG3]] : index
+// CHECK:               [[V13:%.*]] = arith.cmpi slt, [[V12]], [[ARG3]] : index
 // CHECK:               [[V14:%.*]] = arith.andi %true, [[V13]] : i1
 // CHECK:               [[V15:%.*]] = arith.muli [[V8]], [[ARG6]] : index
 // CHECK:               [[V16:%.*]] = arith.addi [[V15]], [[V4]] : index
-// CHECK:               [[V17:%.*]] = arith.cmpi ult, [[V16]], [[ARG4]] : index
+// CHECK:               [[V17:%.*]] = arith.cmpi slt, [[V16]], [[ARG4]] : index
 // CHECK:               [[V18:%.*]] = arith.andi [[V14]], [[V17]] : i1
 // CHECK:               scf.if [[V18]] {
 // CHECK:                 [[V19:%.*]] = memref.load [[ARG8]]{{\[}}[[V9]], [[V10]]] : memref<?x?xf32>
@@ -147,3 +147,23 @@ func.func @tile_nested_in_non_ploop() {
 // CHECK:           }
 // CHECK:         }
 // CHECK:       }
+
+// -----
+
+func.func @parallel_loop_negative_lower_bound(%arg0 : index, %arg1 : index,
+                                              %result: memref<?x?xf32>) {
+  %c1 = arith.constant 1 : index
+  %cm3 = arith.constant -3 : index
+  %cst = arith.constant 0.0 : f32
+  scf.parallel (%i0, %i1) = (%cm3, %cm3) to (%arg0, %arg1) step (%c1, %c1) {
+    memref.store %cst, %result[%i0, %i1] : memref<?x?xf32>
+  }
+  return
+}
+
+// The bounds are signed, so a negative index must not be treated as out of
+// bounds by an unsigned compare.
+// CHECK-LABEL:   func @parallel_loop_negative_lower_bound(
+// CHECK-NOT:       arith.cmpi ult
+// CHECK:           arith.cmpi slt
+// CHECK-NOT:       arith.cmpi ult

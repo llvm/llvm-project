@@ -150,7 +150,7 @@ mlir::scf::tileParallelLoop(ParallelOp op, ArrayRef<int64_t> tileSizes,
           b, op.getLoc(),
           arith::MulIOp::create(b, op.getLoc(), innerIV, innerStep), outerIV);
       Value dimInbound = arith::CmpIOp::create(
-          b, op.getLoc(), arith::CmpIPredicate::ult, index, outerUpperBound);
+          b, op.getLoc(), arith::CmpIPredicate::slt, index, outerUpperBound);
       inbound = arith::AndIOp::create(b, op.getLoc(), inbound, dimInbound);
     }
     auto ifInbound = IfOp::create(b, op.getLoc(),
