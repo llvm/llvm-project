@@ -417,6 +417,12 @@ functions:
     arguments:
       - type: const char *
       - type: int
+  - name: pause
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: void
   - name: pipe
     standards:
       - posix

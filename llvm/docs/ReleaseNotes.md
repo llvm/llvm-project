@@ -161,6 +161,10 @@ Makes programs 10x faster by doing Special New Thing.
   The `llvm.vp.merge` will be folded away but the `%evl` will be propagated to
   the add instruction.
 
+* The `llvm.strip.invariant.group` intrinsic has been removed. It existed to
+  work around a bug relating to replacement of pointers with different
+  provenance based on dominating equality conditions, and is no longer needed.
+
 * Introduced the generic `!atomic.ignore.denormal.mode` metadata for
   floating-point `atomicrmw` instructions, generalizing the previously
   AMDGPU-specific `!amdgpu.ignore.denormal.mode`.
@@ -269,6 +273,7 @@ Makes programs 10x faster by doing Special New Thing.
 * Added the experimental `RVA23P1S64` and `RVB23P1S64` profiles.
 * Updated the canonical order of one-letter RISC-V extensions to match the
   latest specification, placing ``p`` after ``v`` and removing unused ``n``.
+* Adds experimental assembler support for the `Xqccmi` (Qualcomm 16-bit Instruction Lookup Table) vendor extension.
 
 ### Changes to the WebAssembly Backend
 
@@ -280,6 +285,9 @@ Makes programs 10x faster by doing Special New Thing.
 ### Changes to the Windows Target
 
 ### Changes to the X86 Backend
+
+* Added assembler and code generation support for the `AVX10_V2_AUX`
+  instruction set.
 
 ### Changes to the OCaml bindings
 
@@ -358,7 +366,7 @@ Makes programs 10x faster by doing Special New Thing.
 
 A wide variety of additional information is available on the
 [LLVM web page](https://llvm.org/), in particular in the
-[documentation](https://llvm.org/docs/) section.  The web page also contains
+[documentation](index.md) section.  The web page also contains
 versions of the API documentation which is up-to-date with the Git version of
 the source code.  You can access versions of these documents specific to this
 release by going into the `llvm/docs/` directory in the LLVM tree.

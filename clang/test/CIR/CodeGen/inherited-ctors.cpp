@@ -162,7 +162,7 @@ void fallsthrough() {
 // Note: see the note above for the CIR/LLVM-IR difference here.
 // OGCG: %[[X_LOAD:.*]] = load i32, ptr %[[X_ALLOCA]]
 // OGCG: call void @_ZN11VirtDerivedCI24BaseEi(ptr {{.*}}%[[THIS_LOAD]], ptr {{.*}}(i8, ptr @_ZTT21VirtualDelegatingCtor, i64 8), i32{{.*}}%[[X_LOAD]])
-// OGCG: store ptr getelementptr inbounds inrange(-24, 0) ({ [3 x ptr] }, ptr @_ZTV21VirtualDelegatingCtor, i32 0, i32 0, i32 3), ptr %[[THIS_LOAD]]
+// OGCG: store ptr getelementptr inbounds inrange(-24, 0) (i8, ptr @_ZTV21VirtualDelegatingCtor, i64 24), ptr %[[THIS_LOAD]]
 //
 // OGCG-LABEL: define linkonce_odr void @_ZN7DerivedCI24BaseEi(ptr {{.*}}, i32 {{.*}})
 // OGCG: %[[THIS_ALLOCA:.*]] = alloca ptr

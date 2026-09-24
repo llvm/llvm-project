@@ -99,11 +99,18 @@ template <typename... TargetOps> class StdRecognizer {
     constexpr unsigned numArgs = TargetOp::getNumArgs();
     TargetOp op =
         buildCall<TargetOp>(builder, call, std::make_index_sequence<numArgs>());
-    // The raised operation keeps every call attribute except the callee,
-    // which it carries as original_fn, so lowering back loses nothing.
-    for (mlir::NamedAttribute attr : call->getAttrs())
-      if (attr.getName() != call.getCalleeAttrName())
-        op->setAttr(attr.getName(), attr.getValue());
+    // Preserve the call properties as auxiliary metadata so LoweringPrepare
+    // can reconstruct the original call. The raised operation does not need
+    // to declare the same set of inherent attributes.
+    // TODO: Model the call properties needed by raised operations as inherent
+    // attributes on CIR_StdOp instead of carrying them as discardable here.
+    call->getName().walkInherentAttrs(
+        call, [&](llvm::StringRef name, mlir::Attribute &attr) {
+          if (name != call.getCalleeAttrName().getValue())
+            op->setDiscardableAttr(name, attr);
+        });
+    for (mlir::NamedAttribute attr : call->getDiscardableAttrs())
+      op->setDiscardableAttr(attr.getName(), attr.getValue());
     call.replaceAllUsesWith(op);
     call.erase();
     return true;

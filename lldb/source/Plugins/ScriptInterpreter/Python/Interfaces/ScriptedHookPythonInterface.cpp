@@ -60,18 +60,14 @@ ScriptedHookPythonInterface::CreatePluginObject(
                                                      target_sp, args_sp);
 }
 
-void ScriptedHookPythonInterface::HandleModuleLoaded(
-    lldb::StreamSP &output_sp) {
-  // This entry point has no error channel, so a failure can only be logged.
-  LogAndDefault(Dispatch("handle_module_loaded", output_sp),
-                LLVM_PRETTY_FUNCTION);
+llvm::Error
+ScriptedHookPythonInterface::HandleModuleLoaded(lldb::StreamSP &output_sp) {
+  return DispatchToOptional("handle_module_loaded", output_sp).takeError();
 }
 
-void ScriptedHookPythonInterface::HandleModuleUnloaded(
-    lldb::StreamSP &output_sp) {
-  // This entry point has no error channel, so a failure can only be logged.
-  LogAndDefault(Dispatch("handle_module_unloaded", output_sp),
-                LLVM_PRETTY_FUNCTION);
+llvm::Error
+ScriptedHookPythonInterface::HandleModuleUnloaded(lldb::StreamSP &output_sp) {
+  return DispatchToOptional("handle_module_unloaded", output_sp).takeError();
 }
 
 llvm::Expected<bool>
