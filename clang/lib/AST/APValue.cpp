@@ -13,7 +13,6 @@
 #include "clang/AST/APValue.h"
 #include "Linkage.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/CharUnits.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
@@ -1056,7 +1055,7 @@ bool APValue::isNullPointer() const {
   return ((const LV *)(const char *)&Data)->IsNullPtr;
 }
 
-void APValue::setLValue(LValueBase B, const CharUnits &O, NoLValuePath,
+void APValue::setLValue(LValueBase B, CharUnits O, NoLValuePath,
                         bool IsNullPtr) {
   assert(isLValue() && "Invalid accessor");
   LV &LVal = *((LV *)(char *)&Data);
@@ -1068,7 +1067,7 @@ void APValue::setLValue(LValueBase B, const CharUnits &O, NoLValuePath,
 }
 
 MutableArrayRef<APValue::LValuePathEntry>
-APValue::setLValueUninit(LValueBase B, const CharUnits &O, unsigned Size,
+APValue::setLValueUninit(LValueBase B, CharUnits O, unsigned Size,
                          bool IsOnePastTheEnd, bool IsNullPtr) {
   assert(isLValue() && "Invalid accessor");
   LV &LVal = *((LV *)(char *)&Data);
@@ -1080,7 +1079,7 @@ APValue::setLValueUninit(LValueBase B, const CharUnits &O, unsigned Size,
   return {LVal.getPath(), Size};
 }
 
-void APValue::setLValue(LValueBase B, const CharUnits &O,
+void APValue::setLValue(LValueBase B, CharUnits O,
                         ArrayRef<LValuePathEntry> Path, bool IsOnePastTheEnd,
                         bool IsNullPtr) {
   MutableArrayRef<APValue::LValuePathEntry> InternalPath =
