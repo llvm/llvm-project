@@ -635,7 +635,7 @@ body:             |
   ; CHECK-NEXT:   V_CMP_NGT_F32_e32 0, [[COPY1]], implicit-def $vcc, implicit $mode, implicit $exec
   ; CHECK-NEXT:   dead [[COPY:%[0-9]+]]:sreg_64 = S_ANDN2_B64 [[COPY]], $vcc, implicit-def $scc
   ; CHECK-NEXT:   SI_EARLY_TERMINATE_SCC0 implicit $exec, implicit $scc
-  ; CHECK-NEXT:   $exec = S_ANDN2_B64_term $exec, $vcc, implicit-def $scc
+  ; CHECK-NEXT:   $exec = S_ANDN2_B64_term $exec, $vcc, implicit-def dead $scc
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   $exec = S_AND_B64 $exec, [[COPY2]], implicit-def $scc
