@@ -10,8 +10,7 @@ define void @header_tested_ult(i8 %n) {
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i8 [[IV]], [[N]]
-; CHECK-NEXT:    call void @use(i1 [[T_1]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i8 [[IV]], [[N]]
 ; CHECK-NEXT:    call void @use(i1 [[C_1]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[IV]], [[N]]
@@ -20,8 +19,7 @@ define void @header_tested_ult(i8 %n) {
 ; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], 1
 ; CHECK-NEXT:    br label %[[LOOP_HEADER]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ule i8 [[IV]], [[N]]
-; CHECK-NEXT:    call void @use(i1 [[T_2]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -53,8 +51,7 @@ define void @header_tested_ugt_commuted(i8 %n) {
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i8 [[IV]], [[N]]
-; CHECK-NEXT:    call void @use(i1 [[T_1]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[N]], [[IV]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP_LATCH]], label %[[EXIT:.*]]
 ; CHECK:       [[LOOP_LATCH]]:
@@ -92,10 +89,8 @@ define void @latch_tested_ne_symbolic_start(i8 %start, i8 %n) {
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[START]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i8 [[IV]], [[N]]
-; CHECK-NEXT:    call void @use(i1 [[T_1]])
-; CHECK-NEXT:    [[T_2:%.*]] = icmp sle i8 [[IV]], [[N]]
-; CHECK-NEXT:    call void @use(i1 [[T_2]])
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i8 [[IV]], [[N]]
 ; CHECK-NEXT:    call void @use(i1 [[C_1]])
 ; CHECK-NEXT:    br label %[[LOOP_LATCH]]
@@ -141,10 +136,8 @@ define void @header_latch_tested_slt(i8 %n) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[T_1:%.*]] = icmp sle i8 [[IV]], [[N]]
-; CHECK-NEXT:    call void @use(i1 [[T_1]])
-; CHECK-NEXT:    [[C_1:%.*]] = icmp ule i8 [[IV]], [[N]]
-; CHECK-NEXT:    call void @use(i1 [[C_1]])
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[IV]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT:.*]]
@@ -177,8 +170,7 @@ define void @header_tested_ne_and(i8 %n, i1 %c) {
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i8 [[IV]], [[N]]
-; CHECK-NEXT:    call void @use(i1 [[T_1]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[IV]], [[N]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP]], [[C]]
 ; CHECK-NEXT:    br i1 [[AND]], label %[[LOOP_LATCH]], label %[[EXIT:.*]]
@@ -214,8 +206,7 @@ define void @header_tested_uge_or(i8 %n, i1 %c) {
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i8 [[IV]], [[N]]
-; CHECK-NEXT:    call void @use(i1 [[T_1]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i8 [[IV]], [[N]]
 ; CHECK-NEXT:    [[OR:%.*]] = or i1 [[CMP]], [[C]]
 ; CHECK-NEXT:    br i1 [[OR]], label %[[EXIT:.*]], label %[[LOOP_LATCH]]
@@ -251,8 +242,7 @@ define void @header_tested_ne_exit_use(i8 %n) {
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i8 [[IV]], [[N]]
-; CHECK-NEXT:    call void @use(i1 [[T_1]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[IV]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP_LATCH]], label %[[EXIT:.*]]
 ; CHECK:       [[LOOP_LATCH]]:
@@ -289,8 +279,7 @@ define void @latch_tested_ult(i8 %n) {
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i8 [[IV]], [[N]]
-; CHECK-NEXT:    call void @use(i1 [[T_1]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    br label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], 1
@@ -324,8 +313,7 @@ define void @header_tested_ult_uadd_with_overflow(i8 %n) {
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i8 [[IV]], [[N]]
-; CHECK-NEXT:    call void @use(i1 [[T_1]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[IV]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP_LATCH]], label %[[EXIT:.*]]
 ; CHECK:       [[LOOP_LATCH]]:
@@ -365,10 +353,8 @@ define void @header_tested_ult_symbolic_start(i8 %start, i8 %n) {
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[START]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i8 [[IV]], [[N]]
-; CHECK-NEXT:    call void @use(i1 [[T_1]])
-; CHECK-NEXT:    [[T_2:%.*]] = icmp sle i8 [[IV]], [[N]]
-; CHECK-NEXT:    call void @use(i1 [[T_2]])
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[IV]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP_LATCH]], label %[[EXIT:.*]]
 ; CHECK:       [[LOOP_LATCH]]:
@@ -410,8 +396,7 @@ define void @latch_tested_slt_unsigned_bound(i8 %start, i8 %n) {
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[START]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i8 [[IV]], [[N]]
-; CHECK-NEXT:    call void @use(i1 [[T_1]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    br label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], 1
@@ -449,16 +434,14 @@ define void @header_tested_postinc_ult(i8 %start, i8 %n) {
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[START]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ult i8 [[IV]], [[N]]
-; CHECK-NEXT:    call void @use(i1 [[T_1]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP_LATCH]], label %[[EXIT:.*]]
 ; CHECK:       [[LOOP_LATCH]]:
 ; CHECK-NEXT:    br label %[[LOOP_HEADER]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ult i8 [[IV]], [[N]]
-; CHECK-NEXT:    call void @use(i1 [[T_2]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -494,18 +477,15 @@ define void @header_tested_postinc_slt(i8 %start, i8 %n) {
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[START]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[T_1:%.*]] = icmp slt i8 [[IV]], [[N]]
-; CHECK-NEXT:    call void @use(i1 [[T_1]])
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ult i8 [[IV]], [[N]]
-; CHECK-NEXT:    call void @use(i1 [[T_2]])
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP_LATCH]], label %[[EXIT:.*]]
 ; CHECK:       [[LOOP_LATCH]]:
 ; CHECK-NEXT:    br label %[[LOOP_HEADER]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[T_3:%.*]] = icmp slt i8 [[IV]], [[N]]
-; CHECK-NEXT:    call void @use(i1 [[T_3]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -543,8 +523,7 @@ define void @neg_header_tested_ult_start_only_unsigned_below(i8 %start, i8 %n) {
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[START]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i8 [[IV]], [[N]]
-; CHECK-NEXT:    call void @use(i1 [[T_1]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp sle i8 [[IV]], [[N]]
 ; CHECK-NEXT:    call void @use(i1 [[C_1]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[IV]], [[N]]
@@ -803,8 +782,7 @@ define void @neg_header_tested_ne_start_only_signed_below(i8 %start, i8 %n) {
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[START]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[T_1:%.*]] = icmp sle i8 [[IV]], [[N]]
-; CHECK-NEXT:    call void @use(i1 [[T_1]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ule i8 [[IV]], [[N]]
 ; CHECK-NEXT:    call void @use(i1 [[C_1]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[IV]], [[N]]
