@@ -39,6 +39,9 @@ public:
     /// Pass the argument indirectly via a hidden pointer with the specified
     /// alignment and address space.
     Indirect,
+    /// Like Indirect, but the pointer may alias an object referenced
+    /// elsewhere. The callee must not modify it and never treats it as byval.
+    IndirectAliased,
     /// Ignore the argument (treat as void). Useful for void and empty structs.
     Ignore,
   };
@@ -132,6 +135,17 @@ public:
     return AI;
   }
 
+  /// An aliased indirect argument. It carries an address space but no byval,
+  /// since the pointer refers to an object the caller owns.
+  static ArgInfo getIndirectAliased(Align Align, unsigned AddrSpace,
+                                    bool Realign = false) {
+    ArgInfo AI(IndirectAliased);
+    AI.Alignment = Align;
+    AI.IndirectAttr.AddrSpace = AddrSpace;
+    AI.IndirectRealign = Realign;
+    return AI;
+  }
+
   static ArgInfo getIgnore() { return ArgInfo(Ignore); }
 
   ArgInfo &setSignExt(bool SignExtend = true) {
@@ -158,6 +172,7 @@ public:
   Kind getKind() const { return TheKind; }
   bool isDirect() const { return TheKind == Direct; }
   bool isIndirect() const { return TheKind == Indirect; }
+  bool isIndirectAliased() const { return TheKind == IndirectAliased; }
   bool isIgnore() const { return TheKind == Ignore; }
   bool isExtend() const { return TheKind == Extend; }
 
@@ -184,24 +199,25 @@ public:
   }
 
   Align getIndirectAlign() const {
-    assert(isIndirect() && "Invalid Kind!");
+    assert((isIndirect() || isIndirectAliased()) && "Invalid Kind!");
     assert(Alignment.has_value() &&
            "Indirect arguments must have an alignment");
     return *Alignment;
   }
 
   unsigned getIndirectAddrSpace() const {
-    assert(isIndirect() && "Invalid Kind!");
+    assert((isIndirect() || isIndirectAliased()) && "Invalid Kind!");
     return IndirectAttr.AddrSpace;
   }
 
   bool getIndirectByVal() const {
+    // Aliased pointers are never byval.
     assert(isIndirect() && "Invalid Kind!");
     return IndirectByVal;
   }
 
   bool getIndirectRealign() const {
-    assert(isIndirect() && "Invalid Kind!");
+    assert((isIndirect() || isIndirectAliased()) && "Invalid Kind!");
     return IndirectRealign;
   }
 

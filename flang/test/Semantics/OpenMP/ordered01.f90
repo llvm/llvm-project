@@ -10,7 +10,7 @@ program main
 
   !$omp do ordered
   do i = 1, N
-    !ERROR: At most one THREADS clause can appear on ORDERED directive
+    !ERROR: At most one THREADS clause can appear on ORDERED (block-associated) directive
     !$omp ordered threads threads
     arrayA(i) = i
     !$omp end ordered
@@ -19,7 +19,7 @@ program main
 
   !$omp simd
   do i = 1, N
-    !ERROR: At most one SIMD clause can appear on ORDERED directive
+    !ERROR: At most one SIMD clause can appear on ORDERED (block-associated) directive
     !$omp ordered simd simd
     arrayA(i) = i
     !$omp end ordered
@@ -28,7 +28,7 @@ program main
 
   !$omp do simd ordered
   do i = 1, N
-    !ERROR: At most one SIMD clause can appear on ORDERED directive
+    !ERROR: At most one SIMD clause can appear on ORDERED (block-associated) directive
     !$omp ordered simd simd
     arrayA(i) = i
     !$omp end ordered
