@@ -4,6 +4,7 @@
 declare void @private_za_callee()
 declare void @shared_za_callee() "aarch64_inout_za"
 declare void @preserves_za_callee() "aarch64_preserves_za"
+declare void @other_private_za_callee(i64)
 
 declare float @llvm.cos.f32(float)
 
@@ -394,4 +395,55 @@ define i64  @test_many_callee_arguments(
   %ret = call i64 @many_args_private_za_callee(
     i64 %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5, i64 %6, i64 %7, i64 %8, i64 %9)
   ret i64 %ret
+}
+
+define void @no_lazy_save_for_private_return_arms(i1 %cond) "aarch64_new_za" nounwind {
+; CHECK-LABEL: no_lazy_save_for_private_return_arms:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
+; CHECK-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    mov x29, sp
+; CHECK-NEXT:    sub sp, sp, #16
+; CHECK-NEXT:    rdsvl x8, #1
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    msub x9, x8, x8, x9
+; CHECK-NEXT:    mov sp, x9
+; CHECK-NEXT:    stp x9, x8, [x29, #-16]
+; CHECK-NEXT:    mrs x8, TPIDR2_EL0
+; CHECK-NEXT:    cbz x8, .LBB10_2
+; CHECK-NEXT:  // %bb.1: // %entry
+; CHECK-NEXT:    bl __arm_tpidr2_save
+; CHECK-NEXT:    msr TPIDR2_EL0, xzr
+; CHECK-NEXT:    zero {za}
+; CHECK-NEXT:  .LBB10_2: // %entry
+; CHECK-NEXT:    smstart za
+; CHECK-NEXT:    mov w20, w0
+; CHECK-NEXT:    bl shared_za_callee
+; CHECK-NEXT:    sub x8, x29, #16
+; CHECK-NEXT:    msr TPIDR2_EL0, x8
+; CHECK-NEXT:    tbz w20, #0, .LBB10_4
+; CHECK-NEXT:  // %bb.3: // %left
+; CHECK-NEXT:    bl private_za_callee
+; CHECK-NEXT:    b .LBB10_5
+; CHECK-NEXT:  .LBB10_4: // %right
+; CHECK-NEXT:    mov w0, #42 // =0x2a
+; CHECK-NEXT:    bl other_private_za_callee
+; CHECK-NEXT:  .LBB10_5: // %common.ret
+; CHECK-NEXT:    msr TPIDR2_EL0, xzr
+; CHECK-NEXT:    smstop za
+; CHECK-NEXT:    mov sp, x29
+; CHECK-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+entry:
+  call void @shared_za_callee()
+  br i1 %cond, label %left, label %right
+
+left:
+  call void @private_za_callee()
+  ret void
+
+right:
+  call void @other_private_za_callee(i64 42)
+  ret void
 }

@@ -328,3 +328,102 @@ define void @za_zt0_private_za_to_shared_za(ptr %callee) "aarch64_inout_za" "aar
   call void %callee() "aarch64_inout_za";
   ret void;
 }
+
+define void @no_need_to_save_zt0(ptr %callee) "aarch64_new_za" "aarch64_new_zt0" nounwind {
+; CHECK-LABEL: no_need_to_save_zt0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub sp, sp, #80
+; CHECK-NEXT:    str x30, [sp, #64] // 8-byte Spill
+; CHECK-NEXT:    mrs x8, TPIDR2_EL0
+; CHECK-NEXT:    cbz x8, .LBB15_2
+; CHECK-NEXT:  // %bb.1:
+; CHECK-NEXT:    bl __arm_tpidr2_save
+; CHECK-NEXT:    msr TPIDR2_EL0, xzr
+; CHECK-NEXT:    zero {za}
+; CHECK-NEXT:    zero { zt0 }
+; CHECK-NEXT:  .LBB15_2:
+; CHECK-NEXT:    smstart za
+; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    str zt0, [x8]
+; CHECK-NEXT:    blr x0
+; CHECK-NEXT:    smstop za
+; CHECK-NEXT:    ldr x30, [sp, #64] // 8-byte Reload
+; CHECK-NEXT:    add sp, sp, #80
+; CHECK-NEXT:    ret
+  call void %callee() "aarch64_inout_za"
+  ret void;
+}
+
+define void @no_need_to_save_zt0_after_call(ptr %callee) "aarch64_new_za" "aarch64_new_zt0" nounwind {
+; CHECK-LABEL: no_need_to_save_zt0_after_call:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub sp, sp, #80
+; CHECK-NEXT:    stp x30, x19, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    mrs x8, TPIDR2_EL0
+; CHECK-NEXT:    cbz x8, .LBB16_2
+; CHECK-NEXT:  // %bb.1:
+; CHECK-NEXT:    bl __arm_tpidr2_save
+; CHECK-NEXT:    msr TPIDR2_EL0, xzr
+; CHECK-NEXT:    zero {za}
+; CHECK-NEXT:    zero { zt0 }
+; CHECK-NEXT:  .LBB16_2:
+; CHECK-NEXT:    smstart za
+; CHECK-NEXT:    mov x19, x0
+; CHECK-NEXT:    blr x0
+; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    str zt0, [x8]
+; CHECK-NEXT:    blr x19
+; CHECK-NEXT:    smstop za
+; CHECK-NEXT:    ldp x30, x19, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    add sp, sp, #80
+; CHECK-NEXT:    ret
+  call void %callee() "aarch64_inout_za" "aarch64_inout_zt0"
+  call void %callee() "aarch64_inout_za"
+  ret void;
+}
+
+define void @no_restore_of_dead_zt0(ptr %private, ptr %shared_za) "aarch64_new_za" "aarch64_new_zt0" nounwind {
+; CHECK-LABEL: no_restore_of_dead_zt0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
+; CHECK-NEXT:    str x19, [sp, #16] // 8-byte Spill
+; CHECK-NEXT:    mov x29, sp
+; CHECK-NEXT:    sub sp, sp, #80
+; CHECK-NEXT:    rdsvl x8, #1
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    msub x9, x8, x8, x9
+; CHECK-NEXT:    mov sp, x9
+; CHECK-NEXT:    stp x9, x8, [x29, #-80]
+; CHECK-NEXT:    mrs x8, TPIDR2_EL0
+; CHECK-NEXT:    cbz x8, .LBB17_2
+; CHECK-NEXT:  // %bb.1:
+; CHECK-NEXT:    bl __arm_tpidr2_save
+; CHECK-NEXT:    msr TPIDR2_EL0, xzr
+; CHECK-NEXT:    zero {za}
+; CHECK-NEXT:    zero { zt0 }
+; CHECK-NEXT:  .LBB17_2:
+; CHECK-NEXT:    smstart za
+; CHECK-NEXT:    sub x8, x29, #64
+; CHECK-NEXT:    sub x9, x29, #80
+; CHECK-NEXT:    mov x19, x1
+; CHECK-NEXT:    str zt0, [x8]
+; CHECK-NEXT:    msr TPIDR2_EL0, x9
+; CHECK-NEXT:    blr x0
+; CHECK-NEXT:    smstart za
+; CHECK-NEXT:    mrs x8, TPIDR2_EL0
+; CHECK-NEXT:    sub x0, x29, #80
+; CHECK-NEXT:    cbnz x8, .LBB17_4
+; CHECK-NEXT:  // %bb.3:
+; CHECK-NEXT:    bl __arm_tpidr2_restore
+; CHECK-NEXT:  .LBB17_4:
+; CHECK-NEXT:    msr TPIDR2_EL0, xzr
+; CHECK-NEXT:    blr x19
+; CHECK-NEXT:    smstop za
+; CHECK-NEXT:    mov sp, x29
+; CHECK-NEXT:    ldr x19, [sp, #16] // 8-byte Reload
+; CHECK-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+  call void %private()
+  call void %shared_za() "aarch64_inout_za"
+  ret void
+}
