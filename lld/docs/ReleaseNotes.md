@@ -33,6 +33,12 @@ from the [LLVM releases web site](https://llvm.org/releases/).
 
 ### COFF Improvements
 
+* Non-standard section names prefixed with `.llvm.` or `llvm_` are no longer
+  truncated to the 8-character COFF limit. Because these sections represent 
+  LLVM-specific metadata and are not consumed by standard Windows and Microsoft
+  tooling, preserving their full names in the string table allows LLVM 
+  functionality to access them more easily.
+
 ### MinGW Improvements
 
 ### MachO Improvements
