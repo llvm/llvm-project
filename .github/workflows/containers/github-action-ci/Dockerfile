@@ -69,20 +69,10 @@ RUN apt-get update && \
     python3-pip \
     file \
     tzdata \
-    python-is-python3 && \
+    python-is-python3 \
+    sccache && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
-
-# We need sccache for caching. We cannot use the apt repository version because
-# it is too old and has bugs related to features we require (particularly GCS
-# caching), so we manually install it here.
-# TODO(boomanaiden154): We should return to installing this from the apt
-# repository once a version containing the necessary bug fixes is available.
-RUN curl -L "https://github.com/mozilla/sccache/releases/download/v0.10.0/sccache-v0.10.0-$(arch)-unknown-linux-musl.tar.gz" > /tmp/sccache.tar.gz && \
-    echo $( [ $(arch) = 'x86_64' ] && echo "1fbb35e135660d04a2d5e42b59c7874d39b3deb17de56330b25b713ec59f849b" || echo "d6a1ce4acd02b937cd61bc675a8be029a60f7bc167594c33d75732bbc0a07400")  /tmp/sccache.tar.gz | sha256sum -c && \
-    tar xzf /tmp/sccache.tar.gz -O --wildcards '*/sccache' > '/usr/local/bin/sccache' && \
-    rm /tmp/sccache.tar.gz && \
-    chmod +x /usr/local/bin/sccache
 
 ENV LLVM_SYSROOT=$LLVM_SYSROOT
 ENV PATH=${LLVM_SYSROOT}/bin:${PATH}
