@@ -506,29 +506,19 @@ template <bool ExcludeChain> struct EffectiveOperands {
   unsigned FirstIndex = 0;
 
   template <typename MatchContext>
-  explicit EffectiveOperands(SDValue N, const MatchContext &Ctx) {
-    const unsigned TotalNumOps = Ctx.getNumOperands(N);
-    FirstIndex = TotalNumOps;
-    for (unsigned I = 0; I < TotalNumOps; ++I) {
-      // Count the number of non-chain and non-glue nodes (we ignore chain
-      // and glue by default) and retreive the operand index offset.
-      EVT VT = N->getOperand(I).getValueType();
-      if (VT != MVT::Glue && VT != MVT::Other) {
-        ++Size;
-        if (FirstIndex == TotalNumOps)
-          FirstIndex = I;
+  explicit EffectiveOperands(SDValue N, const MatchContext &Ctx)
+      : Size(Ctx.getNumOperands(N)) {
+    if (ExcludeChain) {
+      // Glue if present, is the last operand.
+      if (Size != 0 && N->getOperand(Size - 1).getValueType() == MVT::Glue)
+        --Size;
+      // Chain if present, is the first operand.
+      if (Size != 0 && N->getOperand(0).getValueType() == MVT::Other) {
+        ++FirstIndex;
+        --Size;
       }
     }
   }
-};
-
-template <> struct EffectiveOperands<false> {
-  unsigned Size = 0;
-  unsigned FirstIndex = 0;
-
-  template <typename MatchContext>
-  explicit EffectiveOperands(SDValue N, const MatchContext &Ctx)
-      : Size(Ctx.getNumOperands(N)) {}
 };
 
 // === Ternary operations ===
