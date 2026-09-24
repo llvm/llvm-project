@@ -52716,21 +52716,17 @@ static SDValue convertIntLogicToFPLogic(unsigned Opc, const SDLoc &DL, EVT VT,
   // SETCC operands, so this is limited to one level:
   // logic (logic (setcc X), Y), (setcc Z) -->
   // logic (logic (setcc X), (setcc Z)), Y
-  if (VT == MVT::i1) {
-    if (N1.getOpcode() == Opc)
-      std::swap(N0, N1);
-    if (N0.getOpcode() == Opc && N0.hasOneUse() &&
-        N1.getOpcode() == ISD::SETCC) {
-      for (unsigned I = 0; I != 2; ++I) {
-        SDValue Cmp = N0.getOperand(I);
-        if (Cmp.getOpcode() != ISD::SETCC)
-          continue;
-        if (SDValue FPLogic = convertIntLogicToFPLogic(Opc, DL, VT, Cmp, N1,
-                                                       DAG, DCI, Subtarget))
-          return DAG.getNode(Opc, DL, VT, FPLogic, N0.getOperand(1 - I));
-      }
-    }
-  }
+  using namespace SDPatternMatch;
+  auto FPSetCC = [](SDValue &Cmp) {
+    return m_Value(Cmp, m_SetCC(m_FloatingPointVT(), m_Value()));
+  };
+  SDValue X, Y, Z;
+  auto Inner = m_OneUse(m_c_BinOp(Opc, FPSetCC(X), m_Value(Y)));
+  if (VT == MVT::i1 && ((sd_match(N0, Inner) && sd_match(N1, FPSetCC(Z))) ||
+                        (sd_match(N1, Inner) && sd_match(N0, FPSetCC(Z)))))
+    if (SDValue FPLogic =
+            convertIntLogicToFPLogic(Opc, DL, VT, X, Z, DAG, DCI, Subtarget))
+      return DAG.getNode(Opc, DL, VT, FPLogic, Y);
 
   if (!((N0.getOpcode() == ISD::BITCAST && N1.getOpcode() == ISD::BITCAST) ||
         (N0.getOpcode() == ISD::SETCC && N1.getOpcode() == ISD::SETCC)))
