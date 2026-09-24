@@ -33,7 +33,7 @@ void foo5(id (^x)(int)) {
 @end
 
 namespace N {
-  class X { };      
+  class X { };
   void foo(X);
 }
 
@@ -45,7 +45,7 @@ namespace N {
 @end
 
 typedef signed char BOOL;
-void foo6(void *block) {  
+void foo6(void *block) {
 	void (^vb)(id obj, int idx, BOOL *stop) = (void (^)(id, int, BOOL *))block;
     BOOL (^bb)(id obj, int idx, BOOL *stop) = (BOOL (^)(id, int, BOOL *))block;
 }
