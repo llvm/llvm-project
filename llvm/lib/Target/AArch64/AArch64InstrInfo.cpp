@@ -129,11 +129,10 @@ static std::optional<unsigned> getLFIInstSizeInBytes(const MachineInstr &MI) {
     // Indirect branches/calls expand to 2 instructions (guard + br/blr).
     return 8;
   case AArch64::RET:
-    // RET through LR is not rewritten.
-    if (MI.getOperand(0).getReg() == AArch64::LR)
-      return std::nullopt;
     // RET through another register expands to 2 instructions (guard + ret).
-    return 8;
+    if (MI.getOperand(0).getReg() != AArch64::LR)
+      return 8;
+    return std::nullopt;
   case AArch64::RETAA:
   case AArch64::RETAB:
     // Authenticated returns expand to 3 instructions (authenticate + guard +
@@ -232,6 +231,7 @@ unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
 
 unsigned
 AArch64InstrInfo::getInstSizeInBytesImpl(const MachineInstr &MI) const {
+  const MCInstrDesc &Desc = MI.getDesc();
   const MachineBasicBlock &MBB = *MI.getParent();
   const MachineFunction *MF = MBB.getParent();
   const Function &F = MF->getFunction();
