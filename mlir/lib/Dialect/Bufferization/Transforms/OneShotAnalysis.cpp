@@ -120,27 +120,22 @@ static void setInPlaceOpOperand(OpOperand &opOperand, bool inPlace) {
 /// A region with more than one block is unstructured control flow. Single-block
 /// regions, including structured loops, are not.
 static bool detectUnstructuredControlFlow(Operation *op) {
-  bool found = false;
-  op->walk([&](Operation *nested) {
+  WalkResult walkRes = op->walk([&](Operation *nested) {
     for (Region &region : nested->getRegions()) {
       if (region.getBlocks().size() > 1) {
-        found = true;
         return WalkResult::interrupt();
       }
     }
     return WalkResult::advance();
   });
-  return found;
+  return walkRes.wasInterrupted();
 }
 
 OneShotAnalysisState::OneShotAnalysisState(
     Operation *op, const OneShotBufferizationOptions &options)
     : AnalysisState(options, TypeID::get<OneShotAnalysisState>()) {
-  if (options.hasUnstructuredControlFlow) {
-    unstructuredControlFlow = *options.hasUnstructuredControlFlow;
-  } else {
-    unstructuredControlFlow = detectUnstructuredControlFlow(op);
-  }
+  mayHaveUnstructuredCF = options.mayHaveUnstructuredControlFlow.value_or(
+      detectUnstructuredControlFlow(op));
 
   // Set up alias sets.
   op->walk([&](Operation *op) {
@@ -421,7 +416,7 @@ static bool cannotHappenAfter(Operation *a, Operation *b,
       return true;
     // Distinct blocks in the same region only exist with unstructured control
     // flow. Dominance is a complete ordering otherwise.
-    if (state.hasUnstructuredControlFlow()) {
+    if (state.mayHaveUnstructuredControlFlow()) {
       Block *aBlock = a->getBlock();
       Block *bBlock = b->getBlock();
       if (aBlock != bBlock && aBlock->getParent() == bBlock->getParent() &&
@@ -599,7 +594,7 @@ static bool canUseOpDominanceDueToBlocks(OpOperand *uRead, OpOperand *uWrite,
                                          const SetVector<Value> &definitions,
                                          OneShotAnalysisState &state) {
   // No multi-block region means no block-based cycle for dominance to miss.
-  if (!state.hasUnstructuredControlFlow())
+  if (!state.mayHaveUnstructuredControlFlow())
     return true;
 
   assert(!definitions.empty() && "expected at least one definition");

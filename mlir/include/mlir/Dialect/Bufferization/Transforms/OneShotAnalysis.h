@@ -58,7 +58,9 @@ struct OneShotBufferizationOptions : public BufferizationOptions {
 
   /// Whether the IR contains a region with more than one block. When unset,
   /// the analysis walks the IR to compute it.
-  std::optional<bool> hasUnstructuredControlFlow = std::nullopt;
+  /// Note: If the IR contains unstructured control flow, but this flag is set
+  /// to "false", the bufferization may produce incorrect IR.
+  std::optional<bool> mayHaveUnstructuredControlFlow = std::nullopt;
 };
 
 /// State for analysis-enabled bufferization. This class keeps track of alias
@@ -87,7 +89,7 @@ public:
 
   /// True if any region in the analyzed IR has more than one block. Taken from
   /// the options when set; otherwise computed by walking the IR.
-  bool hasUnstructuredControlFlow() const { return unstructuredControlFlow; }
+  bool mayHaveUnstructuredControlFlow() const { return mayHaveUnstructuredCF; }
 
   /// Analyze the given op and its nested ops.
   LogicalResult analyzeOp(Operation *op, const DominanceInfo &domInfo);
@@ -263,7 +265,7 @@ private:
   DenseMap<Value, SetVector<Value>> cachedDefinitions;
 
   /// True if any region has more than one block.
-  bool unstructuredControlFlow = false;
+  bool mayHaveUnstructuredCF = false;
 
   /// Cached CFG reachability. Defined out-of-line to keep BitVector out of
   /// this header.
