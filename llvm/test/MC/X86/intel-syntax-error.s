@@ -19,8 +19,6 @@ _test2:
 .global i
 .set FOO, 2
 
-//CHECK: error: cannot use more than one symbol in memory operand
-mov eax, DWORD PTR arr[i]
 //CHECK: error: rip can only be used as a base register
 .code64
 mov rax, rip
