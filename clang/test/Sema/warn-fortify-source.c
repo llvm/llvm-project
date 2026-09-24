@@ -152,6 +152,11 @@ void call_fread_fwrite_fgets(FILE *fp) {
   fgets(src, 5, fp); // expected-warning {{'fgets' size argument is too large; destination buffer has size 4, but size argument is 5}}
   fgets(src, -1, fp); // expected-warning {{'fgets' size argument is negative}}
 
+  fread(src, 2, 2, fp);
+  fread(src, 0, 10, fp);
+  fwrite(src, 2, 2, fp);
+  fgets(src, 4, fp);
+  fgets(src, 0, fp);
 }
 
 void call_snprintf(double d, int n) {
