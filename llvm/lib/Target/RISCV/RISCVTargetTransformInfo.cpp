@@ -1419,7 +1419,8 @@ RISCVTTIImpl::getStridedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
           dyn_cast_or_null<ConstantInt>(MICA.getStrideVal())) {
     int64_t Stride = StrideCI->getSExtValue();
     // Bail early to avoid UB with std:abs() call
-    if (Stride != std::numeric_limits<int64_t>::min()) {
+    if (Stride != std::numeric_limits<int64_t>::min() &&
+        Stride != 0) {
       uint64_t AbsStride = (uint64_t)std::abs(Stride);
       if (AbsStride < CacheLineBytes) {
         uint64_t MaxCombines = ST->getMaxVectorCoalesceElts();
