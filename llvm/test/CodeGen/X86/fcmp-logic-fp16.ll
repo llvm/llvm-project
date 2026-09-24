@@ -5,15 +5,11 @@
 define i1 @olt_ole_and_f16(half %w, half %x, half %y, half %z) {
 ; NOVL-LABEL: olt_ole_and_f16:
 ; NOVL:       # %bb.0:
+; NOVL-NEXT:    vucomish %xmm0, %xmm1
+; NOVL-NEXT:    seta %cl
 ; NOVL-NEXT:    vucomish %xmm2, %xmm3
 ; NOVL-NEXT:    setae %al
-; NOVL-NEXT:    kmovd %eax, %k0
-; NOVL-NEXT:    vucomish %xmm0, %xmm1
-; NOVL-NEXT:    seta %al
-; NOVL-NEXT:    kmovd %eax, %k1
-; NOVL-NEXT:    kandw %k0, %k1, %k0
-; NOVL-NEXT:    kmovd %k0, %eax
-; NOVL-NEXT:    # kill: def $al killed $al killed $eax
+; NOVL-NEXT:    andb %cl, %al
 ; NOVL-NEXT:    retq
 ;
 ; VL-LABEL: olt_ole_and_f16:
@@ -33,49 +29,38 @@ define i1 @olt_ole_and_f16(half %w, half %x, half %y, half %z) {
 define i1 @mixed_and5_f16(half %a, half %b, half %c, half %d, half %e, half %f) {
 ; NOVL-LABEL: mixed_and5_f16:
 ; NOVL:       # %bb.0:
-; NOVL-NEXT:    vucomish %xmm0, %xmm2
-; NOVL-NEXT:    seta %al
-; NOVL-NEXT:    xorl %ecx, %ecx
-; NOVL-NEXT:    vucomish %xmm3, %xmm0
-; NOVL-NEXT:    movl $255, %edx
-; NOVL-NEXT:    movl $255, %esi
-; NOVL-NEXT:    cmovnel %ecx, %esi
-; NOVL-NEXT:    cmovpl %ecx, %esi
-; NOVL-NEXT:    kmovd %esi, %k0
 ; NOVL-NEXT:    vucomish %xmm1, %xmm0
 ; NOVL-NEXT:    seta %cl
-; NOVL-NEXT:    kmovd %ecx, %k1
-; NOVL-NEXT:    kandw %k0, %k1, %k0
-; NOVL-NEXT:    kmovd %k0, %ecx
-; NOVL-NEXT:    andb %al, %cl
-; NOVL-NEXT:    xorl %eax, %eax
+; NOVL-NEXT:    vucomish %xmm0, %xmm2
+; NOVL-NEXT:    seta %dl
+; NOVL-NEXT:    vucomish %xmm3, %xmm0
+; NOVL-NEXT:    setnp %al
+; NOVL-NEXT:    sete %sil
+; NOVL-NEXT:    andb %al, %sil
 ; NOVL-NEXT:    vucomish %xmm4, %xmm0
-; NOVL-NEXT:    setne %al
-; NOVL-NEXT:    cmovpl %edx, %eax
-; NOVL-NEXT:    kmovd %eax, %k0
+; NOVL-NEXT:    setp %al
+; NOVL-NEXT:    setne %dil
+; NOVL-NEXT:    orb %al, %dil
 ; NOVL-NEXT:    vucomish %xmm5, %xmm0
 ; NOVL-NEXT:    setae %al
-; NOVL-NEXT:    kmovd %eax, %k1
-; NOVL-NEXT:    kandw %k1, %k0, %k0
-; NOVL-NEXT:    kmovd %k0, %eax
-; NOVL-NEXT:    andb %cl, %al
-; NOVL-NEXT:    # kill: def $al killed $al killed $eax
+; NOVL-NEXT:    andb %cl, %dl
+; NOVL-NEXT:    andb %sil, %dl
+; NOVL-NEXT:    andb %dil, %al
+; NOVL-NEXT:    andb %dl, %al
 ; NOVL-NEXT:    retq
 ;
 ; VL-LABEL: mixed_and5_f16:
 ; VL:       # %bb.0:
-; VL-NEXT:    vucomish %xmm0, %xmm2
-; VL-NEXT:    seta %al
-; VL-NEXT:    vcmpeqsh %xmm3, %xmm0, %k0
-; VL-NEXT:    vcmpltsh %xmm0, %xmm1, %k1
-; VL-NEXT:    kandw %k0, %k1, %k0
-; VL-NEXT:    kmovd %k0, %ecx
-; VL-NEXT:    andb %al, %cl
 ; VL-NEXT:    vcmplesh %xmm0, %xmm5, %k0
 ; VL-NEXT:    vcmpneqsh %xmm4, %xmm0, %k1
 ; VL-NEXT:    kandw %k0, %k1, %k0
+; VL-NEXT:    vcmpeqsh %xmm3, %xmm0, %k1
+; VL-NEXT:    kandw %k1, %k0, %k0
+; VL-NEXT:    vcmpltsh %xmm0, %xmm1, %k1
+; VL-NEXT:    kandw %k1, %k0, %k0
+; VL-NEXT:    vcmpltsh %xmm2, %xmm0, %k1
+; VL-NEXT:    kandw %k1, %k0, %k0
 ; VL-NEXT:    kmovd %k0, %eax
-; VL-NEXT:    andb %cl, %al
 ; VL-NEXT:    # kill: def $al killed $al killed $eax
 ; VL-NEXT:    retq
   %c1 = fcmp ogt half %a, %b
