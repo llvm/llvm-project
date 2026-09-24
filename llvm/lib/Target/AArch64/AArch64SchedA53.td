@@ -44,8 +44,12 @@ def A53UnitMAC    : ProcResource<1> { let BufferSize = 0; } // Int MAC
 def A53UnitDiv    : ProcResource<1> { let BufferSize = 0; } // Int Division
 def A53UnitLdSt   : ProcResource<1> { let BufferSize = 0; } // Load/Store
 def A53UnitB      : ProcResource<1> { let BufferSize = 0; } // Branch
-def A53UnitFPALU  : ProcResource<1> { let BufferSize = 0; } // FP ALU
-def A53UnitFPMDS  : ProcResource<1> { let BufferSize = 0; } // FP Mult/Div/Sqrt
+// The FP/ASIMD datapath moves 128 bits per cycle, which it can spend either on
+// one 128-bit (Q-form) operation or on two 64-bit ones. Model each FP/ASIMD
+// pipe as two lanes: 64-bit and scalar operations take a single lane, Q-form
+// operations take both.
+def A53UnitFPALU  : ProcResource<2> { let BufferSize = 0; } // FP ALU
+def A53UnitFPMDS  : ProcResource<2> { let BufferSize = 0; } // FP Mult/Div/Sqrt
 
 
 //===----------------------------------------------------------------------===//
@@ -122,28 +126,110 @@ def : WriteRes<WriteSys, [A53UnitB]>;
 def : WriteRes<WriteBarrier, [A53UnitB]>;
 def : WriteRes<WriteHint, [A53UnitB]>;
 
-// FP ALU
-def : WriteRes<WriteF, [A53UnitFPALU]> { let Latency = 6; }
-def : WriteRes<WriteFCmp, [A53UnitFPALU]> { let Latency = 6; }
-def : WriteRes<WriteFCvt, [A53UnitFPALU]> { let Latency = 6; }
-def : WriteRes<WriteFCopy, [A53UnitFPALU]> { let Latency = 6; }
+// FP ALU. Scalar floating-point arithmetic and conversion have a 4-cycle
+// latency on Cortex-A53.
+def : WriteRes<WriteF, [A53UnitFPALU]> { let Latency = 4; }
+// The compares write NZCV, and only one instruction per cycle can do that, so
+// they do not dual-issue: they take both lanes even though they are scalar.
+// A dependent NZCV consumer only pays a single cycle in practice, but the
+// forwarding path that makes that possible cannot be expressed here, so this
+// keeps the 3-cycle result latency the rest of the family uses.
+def : WriteRes<WriteFCmp, [A53UnitFPALU, A53UnitFPALU]> { let Latency = 3; }
+def : WriteRes<WriteFCvt, [A53UnitFPALU]> { let Latency = 4; }
+// Float-to-int register copy (FMOV between a GPR and an FP register) takes a
+// single cycle in each direction.
+def : WriteRes<WriteFCopy, [A53UnitFPALU]> { let Latency = 1; }
 def : WriteRes<WriteFImm, [A53UnitFPALU]> { let Latency = 6; }
 def : WriteRes<WriteVd, [A53UnitFPALU]> { let Latency = 6; }
-def : WriteRes<WriteVq, [A53UnitFPALU]> { let Latency = 6; }
+// A 128-bit (Q-form) operation fills the whole 128-bit datapath, so it takes
+// both lanes.
+def : WriteRes<WriteVq, [A53UnitFPALU, A53UnitFPALU]> { let Latency = 6; }
 
-// FP Mul, Div, Sqrt
-def : WriteRes<WriteFMul, [A53UnitFPMDS]> { let Latency = 6; }
-def : WriteRes<WriteFDiv, [A53UnitFPMDS]> { let Latency = 33;
-                                            let ReleaseAtCycles = [29]; }
-def A53WriteFMAC : SchedWriteRes<[A53UnitFPMDS]> { let Latency = 10; }
-def A53WriteFDivSP : SchedWriteRes<[A53UnitFPMDS]> { let Latency = 18;
-                                                     let ReleaseAtCycles = [14]; }
-def A53WriteFDivDP : SchedWriteRes<[A53UnitFPMDS]> { let Latency = 33;
-                                                     let ReleaseAtCycles = [29]; }
-def A53WriteFSqrtSP : SchedWriteRes<[A53UnitFPMDS]> { let Latency = 17;
-                                                      let ReleaseAtCycles = [13]; }
-def A53WriteFSqrtDP : SchedWriteRes<[A53UnitFPMDS]> { let Latency = 32;
-                                                      let ReleaseAtCycles = [28]; }
+// FP Mul, Div, Sqrt. Divide and square root are not pipelined and block the
+// whole unit, so they hold both lanes for their full occupancy.
+def : WriteRes<WriteFMul, [A53UnitFPMDS]> { let Latency = 4; }
+def : WriteRes<WriteFDiv, [A53UnitFPMDS, A53UnitFPMDS]> {
+  let Latency = 33;
+  let ReleaseAtCycles = [29, 29];
+}
+// FP multiply-accumulate has an 8-cycle result latency, but the MAC pipe reads
+// the addend late and has a dedicated forwarding path that feeds one MAC's
+// result into the next MAC's addend, so a dependent MAC chain recurs every 4
+// cycles. Only the addend forwards; the multiplicands do not.
+def A53WriteFMAC : SchedWriteRes<[A53UnitFPMDS]> { let Latency = 8; }
+// Q-form multiply-accumulate fills the datapath and takes both lanes.
+def A53WriteFMACQ : SchedWriteRes<[A53UnitFPMDS, A53UnitFPMDS]> {
+  let Latency = 8;
+}
+def A53ReadFPM   : SchedReadAdvance<0>;
+def A53ReadFPMA4 : SchedReadAdvance<4, [A53WriteFMAC, A53WriteFMACQ]>;
+def A53WriteFDivSP : SchedWriteRes<[A53UnitFPMDS, A53UnitFPMDS]> {
+  let Latency = 18;
+  let ReleaseAtCycles = [14, 14];
+}
+def A53WriteFDivDP : SchedWriteRes<[A53UnitFPMDS, A53UnitFPMDS]> {
+  let Latency = 33;
+  let ReleaseAtCycles = [29, 29];
+}
+def A53WriteFSqrtSP : SchedWriteRes<[A53UnitFPMDS, A53UnitFPMDS]> {
+  let Latency = 17;
+  let ReleaseAtCycles = [13, 13];
+}
+def A53WriteFSqrtDP : SchedWriteRes<[A53UnitFPMDS, A53UnitFPMDS]> {
+  let Latency = 32;
+  let ReleaseAtCycles = [28, 28];
+}
+// Reciprocal / reciprocal-square-root Newton-Raphson step (FRECPS/FRSQRTS) and
+// estimate (FRECPE/FRSQRTE). Measured on Cortex-A53: the step is 8 cycles and
+// the estimate 4, not the flat 6 of WriteVd. These run on the FP/ASIMD ALU pipe,
+// so the Q-form variants take both lanes.
+def A53WriteFRecpStep  : SchedWriteRes<[A53UnitFPALU]> { let Latency = 8; }
+def A53WriteFRecpStepQ : SchedWriteRes<[A53UnitFPALU, A53UnitFPALU]> {
+  let Latency = 8;
+}
+def A53WriteFRecpEst   : SchedWriteRes<[A53UnitFPALU]> { let Latency = 4; }
+def A53WriteFRecpEstQ  : SchedWriteRes<[A53UnitFPALU, A53UnitFPALU]> {
+  let Latency = 4;
+}
+// Integer Advanced SIMD multiply-accumulate. The result latency is 4, but the
+// MAC unit forwards one accumulate result straight into the next MAC's
+// accumulator with no interlock, so a dependent accumulator chain recurs every
+// cycle. Only the accumulator forwards; the multiplicands do not. The
+// saturating doubling forms (SQDML[AS]L) do not use this path.
+def A53WriteIMACD : SchedWriteRes<[A53UnitFPALU]> { let Latency = 4; }
+def A53WriteIMACQ : SchedWriteRes<[A53UnitFPALU, A53UnitFPALU]> {
+  let Latency = 4;
+}
+def A53ReadIMACM  : SchedReadAdvance<0>;
+def A53ReadIMACA3 : SchedReadAdvance<3, [A53WriteIMACD, A53WriteIMACQ]>;
+
+// Bitwise Advanced SIMD logic forwards in a single cycle.
+def A53WriteLogicD : SchedWriteRes<[A53UnitFPALU]> { let Latency = 1; }
+def A53WriteLogicQ : SchedWriteRes<[A53UnitFPALU, A53UnitFPALU]> {
+  let Latency = 1;
+}
+// Scalar floating-point select, and the float-to-float register move.
+def A53WriteFSel : SchedWriteRes<[A53UnitFPALU]> { let Latency = 2; }
+def A53WriteFMov : SchedWriteRes<[A53UnitFPALU]> { let Latency = 1; }
+// Advanced SIMD arithmetic that runs at the same 4-cycle latency as its scalar
+// counterpart: floating-point arithmetic and conversion, and the integer vector
+// multiply. Q-form takes both datapath lanes.
+def A53WriteVecD_4 : SchedWriteRes<[A53UnitFPALU]> { let Latency = 4; }
+def A53WriteVecQ_4 : SchedWriteRes<[A53UnitFPALU, A53UnitFPALU]> {
+  let Latency = 4;
+}
+// Integer Advanced SIMD ALU. Measured on Cortex-A53, and matching the sibling
+// Cortex-A55 model: simple arithmetic (ADD/SUB/NEG, halving add/sub) is 2
+// cycles and the wider ALU ops (ABS, pairwise, reduce, saturating, abs-diff)
+// 3, not the flat 6 of WriteVd. Q-form takes both datapath lanes.
+def A53WriteIVecD_2 : SchedWriteRes<[A53UnitFPALU]> { let Latency = 2; }
+def A53WriteIVecQ_2 : SchedWriteRes<[A53UnitFPALU, A53UnitFPALU]> {
+  let Latency = 2;
+}
+def A53WriteIVecD_3 : SchedWriteRes<[A53UnitFPALU]> { let Latency = 3; }
+def A53WriteIVecQ_3 : SchedWriteRes<[A53UnitFPALU, A53UnitFPALU]> {
+  let Latency = 3;
+}
 
 //===----------------------------------------------------------------------===//
 // Subtarget-specific SchedRead types.
@@ -287,13 +373,220 @@ def : InstRW<[WriteAdr, A53WriteVST2], (instregex "ST4Fourv(2d)_POST$")>;
 //---
 // Floating Point MAC, DIV, SQRT
 //---
-def : InstRW<[A53WriteFMAC], (instregex "^FN?M(ADD|SUB).*")>;
-def : InstRW<[A53WriteFMAC], (instregex "^FML(A|S).*")>;
+// Q-form crypto (AES/SHA/PMULL) needs no special case: taking both datapath
+// lanes for one cycle is exactly the throughput of the 128-bit-wide crypto
+// unit, and it leaves fused AES pairs (FeatureFuseAES) free to issue
+// back-to-back.
+
+// The scalar forms take the addend as their third source operand, so only the
+// third read forwards; the ASIMD forms accumulate into the tied destination,
+// which is their first source operand.
+def : InstRW<[A53WriteFMAC, A53ReadFPM, A53ReadFPM, A53ReadFPMA4],
+      (instregex "^FN?M(ADD|SUB).*")>;
+def : InstRW<[A53WriteFMAC, A53ReadFPMA4], (instregex "^FML(A|S)L.*")>;
+def : InstRW<[A53WriteFMAC, A53ReadFPMA4],
+      (instregex "^FML(A|S)(v2f32|v4f16)$",
+                 "^FML(A|S)v1i(16|32|64)_indexed$",
+                 "^FML(A|S)(v2i32|v4i16)_indexed$")>;
+def : InstRW<[A53WriteFMACQ, A53ReadFPMA4],
+      (instregex "^FML(A|S)(v4f32|v2f64|v8f16)$",
+                 "^FML(A|S)(v4i32|v2i64|v8i16)_indexed$")>;
 def : InstRW<[A53WriteFDivSP], (instrs FDIVSrr)>;
 def : InstRW<[A53WriteFDivDP], (instrs FDIVDrr)>;
 def : InstRW<[A53WriteFDivSP], (instregex "^FDIVv.*32$")>;
 def : InstRW<[A53WriteFDivDP], (instregex "^FDIVv.*64$")>;
-def : InstRW<[A53WriteFSqrtSP], (instregex "^.*SQRT.*32$")>;
-def : InstRW<[A53WriteFSqrtDP], (instregex "^.*SQRT.*64$")>;
+// Match only the genuine square root (FSQRT*), not the reciprocal-square-root
+// step/estimate (FRSQRTS/FRSQRTE), which are handled below. Previously the
+// ".*SQRT.*" globs charged those the full square-root latency.
+def : InstRW<[A53WriteFSqrtSP], (instregex "^FSQRT.*32$")>;
+def : InstRW<[A53WriteFSqrtDP], (instregex "^FSQRT.*64$")>;
+
+// Reciprocal / rsqrt step and estimate (see the write classes above).
+def : InstRW<[A53WriteFRecpStep],
+      (instregex "^FR(ECP|SQRT)S(32|64|v2f32)$")>;
+def : InstRW<[A53WriteFRecpStepQ],
+      (instregex "^FR(ECP|SQRT)S(v2f64|v4f32)$")>;
+def : InstRW<[A53WriteFRecpEst],
+      (instregex "^FR(ECP|SQRT)E(v1i32|v1i64|v2f32)$")>;
+def : InstRW<[A53WriteFRecpEstQ],
+      (instregex "^FR(ECP|SQRT)E(v2f64|v4f32)$")>;
+// The reciprocal-exponent and the integer reciprocal estimates share the
+// 4-cycle estimate latency.
+def : InstRW<[A53WriteFRecpEst],
+      (instregex "^FRECPXv1i(32|64)$", "^UR(ECP|SQRT)Ev2i32$")>;
+def : InstRW<[A53WriteFRecpEstQ], (instregex "^UR(ECP|SQRT)Ev4i32$")>;
+
+// Floating-point ASIMD arithmetic, and the integer vector multiply, run at the
+// same 4-cycle latency as the scalar forms (see the write classes above).
+def : InstRW<[A53WriteVecD_4],
+      (instregex "^F(ADD|SUB|ABD|MUL|MULX|MAX|MIN|MAXNM|MINNM)P?(v2f32|v4f16)$",
+                 "^F(ABS|NEG)(v2f32|v4f16)$",
+                 "^FRINT[AIMNPXZ](v2f32|v4f16)$",
+                 "^FMULX?(v2i32|v4i16)_indexed$",
+                 "^F(MAX|MIN|MAXNM|MINNM)Vv4i16v$",
+                 "^([SU]CVTF|FCVT[AMNPZ][SU])(v1i16|v1i32|v1i64)$",
+                 "^([SU]CVTF|FCVT[AMNPZ][SU])(v2f32|v4f16)$",
+                 "^([SU]CVTF|FCVT[AMNPZ][SU])(v2i32|v4i16)_shift$",
+                 "^FCVTXNv1i64$",
+                 "^MULv(2i32|4i16|8i8)$", "^MULv(2i32|4i16)_indexed$")>;
+def : InstRW<[A53WriteVecQ_4],
+      (instregex "^F(ADD|SUB|ABD|MUL|MULX|MAX|MIN|MAXNM|MINNM)P?(v4f32|v2f64|v8f16)$",
+                 "^F(ABS|NEG)(v4f32|v2f64|v8f16)$",
+                 "^FRINT[AIMNPXZ](v4f32|v2f64|v8f16)$",
+                 "^FMULX?(v4i32|v2i64|v8i16)_indexed$",
+                 "^F(MAX|MIN|MAXNM|MINNM)Vv4i32v$",
+                 "^([SU]CVTF|FCVT[AMNPZ][SU])(v2f64|v4f32|v8f16)$",
+                 "^([SU]CVTF|FCVT[AMNPZ][SU])(v2i64|v4i32|v8i16)_shift$",
+                 "^FCVT(L|N)2?v(2i32|4i16|4i32|8i16)$",
+                 "^FCVTXN2?v(2f32|4f32)$",
+                 "^MULv(4i32|8i16|16i8)$", "^MULv(4i32|8i16)_indexed$")>;
+
+// Bitwise ASIMD logic: one cycle.
+def : InstRW<[A53WriteLogicD],
+      (instregex "^(AND|BIC|EOR|ORN|ORR|NOT)v8i8$", "^(ORR|BIC)v(2i32|4i16)$")>;
+def : InstRW<[A53WriteLogicQ],
+      (instregex "^(AND|BIC|EOR|ORN|ORR|NOT)v16i8$", "^(ORR|BIC)v(4i32|8i16)$")>;
+
+// ASIMD compare, permute and insert/select: two cycles. The integer and
+// floating-point compares, EXT/REV/DUP/INS/TBL and the bit-select family all
+// measure 2 on the source-to-result path.
+def : InstRW<[A53WriteIVecD_2],
+      (instregex "^CM(EQ|GE|GT|HI|HS|LE|LT)v(1i64|2i32|4i16|8i8)(rz)?$",
+                 "^(FCM(EQ|GE|GT)|FACG[ET])(v2f32|v4f16|v1i32|v1i64)(rz)?$",
+                 "^(EXT|BIF|BIT|BSL)v8i8$",
+                 "^REV(16|32|64)v(2i32|4i16|8i8)$",
+                 "^(DUP|INS)v.*(8|16|32|64)(gpr|lane)$",
+                 "^TB[LX]v8i8.*$",
+                 "^(ZIP|TRN|UZP)[12]v(2i32|4i16|8i8)$")>;
+def : InstRW<[A53WriteIVecQ_2],
+      (instregex "^CM(EQ|GE|GT|HI|HS|LE|LT)v(2i64|4i32|8i16|16i8)(rz)?$",
+                 "^(FCM(EQ|GE|GT)|FACG[ET])(v4f32|v2f64|v8f16)(rz)?$",
+                 "^(EXT|BIF|BIT|BSL)v16i8$",
+                 "^REV(16|32|64)v(4i32|8i16|16i8)$",
+                 "^TB[LX]v16i8.*$",
+                 "^(ZIP|TRN|UZP)[12]v(2i64|4i32|8i16|16i8)$")>;
+// Absolute-difference accumulate, pairwise accumulate and the rounding
+// add/subtract-narrow take four cycles from their source operands. (A chain
+// through the tied accumulator alone recurs faster, but that is a forwarding
+// path, not the latency, and is not modelled here.)
+def : InstRW<[A53WriteVecD_4],
+      (instregex "^[SU]ABAv(2i32|4i16|8i8)$",
+                 "^[SU]ADALPv(2i32_v1i64|4i16_v2i32|8i8_v4i16)$")>;
+def : InstRW<[A53WriteVecQ_4],
+      (instregex "^[SU]ABAv(16i8|4i32|8i16)$", "^[SU]ABALv",
+                 "^[SU]ADALPv(16i8_v8i16|4i32_v2i64|8i16_v4i32)$",
+                 "^R(ADD|SUB)HNv")>;
+def : InstRW<[A53WriteFSel], (instregex "^FCSEL[HSD]rrr$")>;
+def : InstRW<[A53WriteFMov], (instregex "^FMOV[HSD]r$")>;
+
+// CMTST and CLS take a cycle more than the plain compares.
+def : InstRW<[A53WriteIVecD_3],
+      (instregex "^CMTSTv(1i64|2i32|4i16|8i8)$", "^CLSv(2i32|4i16|8i8)$")>;
+def : InstRW<[A53WriteIVecQ_3],
+      (instregex "^CMTSTv(2i64|4i32|8i16|16i8)$", "^CLSv(4i32|8i16|16i8)$")>;
+
+// ASIMD widening multiply and narrowing convert. The widening multiplies and
+// multiply-accumulates, and the saturating narrows, are four cycles; the plain
+// extract-narrow is two and the add/subtract-high-narrow three. All of these
+// read or write 128 bits and so take the Q-form occupancy.
+def : InstRW<[A53WriteVecQ_4],
+      (instregex "^([SU]MULL|SQDMULL)v.*$",
+                 "^SQDML[AS]Lv.*$",
+                 "^([SU]QXTN|SQXTUN)v.*$")>;
+def : InstRW<[A53WriteIVecQ_2], (instregex "^XTNv.*$")>;
+// Integer multiply-accumulate: the accumulator is the tied destination, so it
+// is the first read and the only one that forwards.
+def : InstRW<[A53WriteIMACD, A53ReadIMACA3],
+      (instregex "^ML[AS]v(2i32|4i16|8i8)$", "^ML[AS]v(2i32|4i16)_indexed$")>;
+def : InstRW<[A53WriteIMACQ, A53ReadIMACA3],
+      (instregex "^ML[AS]v(4i32|8i16|16i8)$", "^ML[AS]v(4i32|8i16)_indexed$",
+                 "^[SU]ML[AS]Lv.*$")>;
+def : InstRW<[A53WriteIVecQ_3], (instregex "^(ADD|SUB)HNv.*$")>;
+
+// ASIMD shifts. Plain shifts -- by immediate or by register, including the
+// insert (SLI/SRI), narrowing (SHRN) and widening (SSHLL/USHLL) forms -- are
+// two cycles. The rounding variants and the shift-accumulates are three, and
+// the saturating shifts, the saturating narrows and the rounding
+// shift-accumulates are four. Narrowing and widening forms read or write 128
+// bits and so use the Q-form occupancy.
+def : InstRW<[A53WriteIVecD_2],
+      (instregex "^(SHL|SLI|SRI)(d|v8i8_shift|v4i16_shift|v2i32_shift)$",
+                 "^[SU]SHR(d|v8i8_shift|v4i16_shift|v2i32_shift)$",
+                 "^[SU]SHLv(1i64|8i8|4i16|2i32)$")>;
+def : InstRW<[A53WriteIVecQ_2],
+      (instregex "^(SHL|SLI|SRI)v(16i8|8i16|4i32|2i64)_shift$",
+                 "^[SU]SHRv(16i8|8i16|4i32|2i64)_shift$",
+                 "^[SU]SHLv(16i8|8i16|4i32|2i64)$",
+                 "^SHRNv.*_shift$", "^[SU]SHLLv.*_shift$")>;
+def : InstRW<[A53WriteIVecD_3],
+      (instregex "^[SU]RSHR(d|v8i8_shift|v4i16_shift|v2i32_shift)$",
+                 "^[SU]RSHLv(1i64|8i8|4i16|2i32)$",
+                 "^[SU]SRA(d|v8i8_shift|v4i16_shift|v2i32_shift)$")>;
+def : InstRW<[A53WriteIVecQ_3],
+      (instregex "^[SU]RSHRv(16i8|8i16|4i32|2i64)_shift$",
+                 "^[SU]RSHLv(16i8|8i16|4i32|2i64)$",
+                 "^[SU]SRAv(16i8|8i16|4i32|2i64)_shift$",
+                 "^RSHRNv.*_shift$")>;
+def : InstRW<[A53WriteVecD_4],
+      (instregex "^[SU]QSHLU?(b|h|s|d)$", "^SQSHLU(b|h|s|d)$",
+                 "^[SU]QR?SHL(b|h|s|d|v1i8|v1i16|v1i32|v1i64)$",
+                 "^[SU]QSHLU?(v8i8|v4i16|v2i32)_shift$",
+                 "^[SU]QR?SHLv(8i8|4i16|2i32)$",
+                 "^[SU]RSRA(d|v8i8_shift|v4i16_shift|v2i32_shift)$")>;
+def : InstRW<[A53WriteVecQ_4],
+      (instregex "^[SU]QSHLU?v(16i8|8i16|4i32|2i64)_shift$",
+                 "^[SU]QR?SHLv(16i8|8i16|4i32|2i64)$",
+                 "^[SU]RSRAv(16i8|8i16|4i32|2i64)_shift$",
+                 "^([SU]QR?SHRN|SQR?SHRUN)[bhsd]?v?.*_shift$")>;
+
+// Integer ASIMD arithmetic (see the write classes above). Accumulate, widening
+// and reduction-narrowing ops are intentionally left on the default here: their
+// A53 measurements were less clear-cut than the sibling A55 model, so they are
+// deferred rather than guessed.
+def : InstRW<[A53WriteIVecD_2],
+      (instregex "^(ADD|SUB|NEG)v(1i64|2i32|4i16|8i8)$",
+                 "^[SU]R?HADDv(2i32|4i16|8i8)$", "^[SU]HSUBv(2i32|4i16|8i8)$")>;
+def : InstRW<[A53WriteIVecQ_2],
+      (instregex "^(ADD|SUB|NEG)v(2i64|4i32|8i16|16i8)$",
+                 "^[SU]R?HADDv(8i16|4i32|16i8)$", "^[SU]HSUBv(8i16|4i32|16i8)$")>;
+def : InstRW<[A53WriteIVecD_3],
+      (instregex "^ABSv(1i64|2i32|4i16|8i8)$",
+                 "^ADDPv(2i32|4i16|8i8)$",
+                 "^[SU]ABDv(2i32|4i16|8i8)$",
+                 "^[SU]ADDLPv(2i32_v1i64|4i16_v2i32|8i8_v4i16)$",
+                 "^([SU]QADD|[SU]QSUB|SQNEG|SUQADD|USQADD)v(1i8|1i16|1i32|1i64|2i32|4i16|8i8)$",
+                 "^(ADDV|SADDLV|UADDLV)v")>;
+def : InstRW<[A53WriteIVecQ_3],
+      (instregex "^ABSv(2i64|4i32|8i16|16i8)$",
+                 "^ADDPv(16i8|2i64|4i32|8i16)$",
+                 "^[SU]ABDv(16i8|4i32|8i16)$",
+                 "^[SU]ADDLPv(16i8_v8i16|4i32_v2i64|8i16_v4i32)$",
+                 "^([SU]QADD|[SU]QSUB|SQNEG|SUQADD|USQADD)v(16i8|2i64|4i32|8i16)$")>;
+
+// The operations that were still inheriting the flat 6-cycle WriteVd/WriteVq.
+// Bit counting and reversal, the widening shift and the vector-to-GPR moves are
+// two cycles; the polynomial multiply is three; the saturating multiply-high,
+// the saturating absolute, the integer min/max reductions and the scalar
+// floating-point pairwise reductions are four.
+def : InstRW<[A53WriteIVecD_2],
+      (instregex "^(CNT|RBIT)v8i8$", "^CLZv(2i32|4i16|8i8)$",
+                 "^[SU]MOVvi.*$")>;
+def : InstRW<[A53WriteIVecQ_2],
+      (instregex "^(CNT|RBIT)v16i8$", "^CLZv(4i32|8i16|16i8)$",
+                 "^SHLLv.*$")>;
+def : InstRW<[A53WriteIVecD_3], (instrs PMULv8i8)>;
+def : InstRW<[A53WriteIVecQ_3], (instrs PMULv16i8)>;
+def : InstRW<[A53WriteVecD_4],
+      (instregex "^SQR?DMULH(v1i16|v1i32)$",
+                 "^SQR?DMULHv(2i32|4i16)(_indexed)?$",
+                 "^SQR?DMULH(v1i16|v1i32)_indexed$",
+                 "^SQABSv(1i8|1i16|1i32|1i64|2i32|4i16|8i8)$",
+                 "^[SU](MAX|MIN)Vv(4i16v|8i8v)$",
+                 "^F(ADD|MAX|MIN|MAXNM|MINNM)Pv2i32p$")>;
+def : InstRW<[A53WriteVecQ_4],
+      (instregex "^SQR?DMULHv(4i32|8i16)(_indexed)?$",
+                 "^SQABSv(16i8|2i64|4i32|8i16)$",
+                 "^[SU](MAX|MIN)Vv(16i8v|4i32v|8i16v)$",
+                 "^F(ADD|MAX|MIN|MAXNM|MINNM)Pv2i64p$")>;
 
 }
