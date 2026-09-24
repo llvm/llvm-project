@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Frontend/HLSL/SemanticSignatures.h"
 #include "gtest/gtest.h"
 
@@ -105,12 +106,12 @@ TEST(HLSLInterpolationTest, PositionAndExplicitModes) {
   for (auto Stage : {Triple::Pixel, Triple::Vertex}) {
     SCOPED_TRACE(Triple::getEnvironmentTypeName(Stage).str());
     IOType IO = Stage == Triple::Pixel ? IOType::In : IOType::Out;
-    for (unsigned I = 0; I != 9; ++I) {
+    for (auto [I, Expected] : llvm::enumerate(PositionModes)) {
       SCOPED_TRACE(I);
       auto Mode = static_cast<InterpMode>(I);
       EXPECT_EQ(normalizeInterpolationMode(Mode, CompType::F32,
                                            SemanticKind::Position, Stage, IO),
-                PositionModes[I]);
+                Expected);
       if (Mode != InterpMode::Undefined)
         EXPECT_EQ(normalizeInterpolationMode(
                       Mode, CompType::F32, SemanticKind::Arbitrary, Stage, IO),
