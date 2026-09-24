@@ -16,6 +16,7 @@
 
 #include "../../llvm-libc-macros/net-if-macros.h"
 #include "../struct_sockaddr.h"
+#include "struct_ifmap.h"
 
 // Prevent the linux headers from defining this type.
 #define __UAPI_DEF_IF_IFREQ 0
@@ -34,6 +35,7 @@ struct ifreq {
     short int ifru_flags;
     int ifru_ivalue;
     int ifru_mtu;
+    struct ifmap ifru_map;
     char ifru_slave[IF_NAMESIZE];
     char ifru_newname[IF_NAMESIZE];
     char *ifru_data;
@@ -49,6 +51,7 @@ struct ifreq {
 #define ifr_flags ifr_ifru.ifru_flags
 #define ifr_metric ifr_ifru.ifru_ivalue
 #define ifr_mtu ifr_ifru.ifru_mtu
+#define ifr_map ifr_ifru.ifru_map
 #define ifr_slave ifr_ifru.ifru_slave
 #define ifr_data ifr_ifru.ifru_data
 #define ifr_ifindex ifr_ifru.ifru_ivalue
