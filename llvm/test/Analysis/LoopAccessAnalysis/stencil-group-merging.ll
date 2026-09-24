@@ -3825,3 +3825,75 @@ loop:
 exit:
   ret void
 }
+
+;; Test 29: Reject pointer PHI alternatives from stencil merging.
+;; Non-header pointer PHIs are expanded before runtime checks are created.
+;; An unused alternative may wrap and hide an overlap in the merged range.
+define void @phi_runtime_stride(ptr %a, ptr %out, i64 %s, i1 %choose_bad) {
+; CHECK-LABEL: 'phi_runtime_stride'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %dst = getelementptr i8, ptr %out, i64 %iv
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %p2 = getelementptr i8, ptr %p0, i64 %neg2
+; CHECK-NEXT:      Check 1:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %dst = getelementptr i8, ptr %out, i64 %iv
+; CHECK-NEXT:        Against group GRP2:
+; CHECK-NEXT:          %p1 = getelementptr i8, ptr %p0, i64 %neg
+; CHECK-NEXT:      Check 2:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %dst = getelementptr i8, ptr %out, i64 %iv
+; CHECK-NEXT:        Against group GRP3:
+; CHECK-NEXT:          %p0 = getelementptr i8, ptr %a, i64 %iv
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: %out High: (64 + %out))
+; CHECK-NEXT:            Member: {%out,+,1}<nw><%loop>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: ((-2 * %s) + %a) High: (64 + (-2 * %s) + %a))
+; CHECK-NEXT:            Member: {((-2 * %s) + %a),+,1}<nw><%loop>
+; CHECK-NEXT:        Group GRP2:
+; CHECK-NEXT:          (Low: ((-1 * %s) + %a) High: (64 + (-1 * %s) + %a))
+; CHECK-NEXT:            Member: {((-1 * %s) + %a),+,1}<nw><%loop>
+; CHECK-NEXT:        Group GRP3:
+; CHECK-NEXT:          (Low: %a High: (64 + %a))
+; CHECK-NEXT:            Member: {%a,+,1}<nw><%loop>
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  %neg = sub i64 0, %s
+  %neg2 = mul i64 %s, -2
+  br label %loop
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %next, %join ]
+  %p0 = getelementptr i8, ptr %a, i64 %iv
+  %p1 = getelementptr i8, ptr %p0, i64 %neg
+  %p2 = getelementptr i8, ptr %p0, i64 %neg2
+  br i1 %choose_bad, label %bad, label %good
+bad:
+  br label %join
+good:
+  br label %join
+join:
+  %pick1 = phi ptr [ %p1, %bad ], [ %p0, %good ]
+  %pick2 = phi ptr [ %p2, %bad ], [ %p0, %good ]
+  %v1 = load i8, ptr %pick1, align 1
+  %v2 = load i8, ptr %pick2, align 1
+  %sum = add i8 %v1, %v2
+  %dst = getelementptr i8, ptr %out, i64 %iv
+  store i8 %sum, ptr %dst, align 1
+  %next = add nuw nsw i64 %iv, 1
+  %more = icmp ult i64 %next, 64
+  br i1 %more, label %loop, label %exit
+exit:
+  ret void
+}
