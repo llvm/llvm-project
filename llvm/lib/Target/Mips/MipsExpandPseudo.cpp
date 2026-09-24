@@ -63,32 +63,30 @@ char MipsExpandPseudo::ID = 0;
 
 MipsExpandPseudo::AtomicOpcodes
 MipsExpandPseudo::getAtomicOpcodes(unsigned Width) const {
-  if (Width == 64)
-    return {STI->hasMips64r6() ? Mips::LLD_R6 : Mips::LLD,
-            STI->hasMips64r6() ? Mips::SCD_R6 : Mips::SCD,
-            Mips::BEQ64,
-            Mips::BNE64,
-            Mips::OR64,
-            Mips::ZERO_64};
+  if (Width == 64) {
+    unsigned LL = STI->hasMips64r6() ? Mips::LLD_R6 : Mips::LLD;
+    unsigned SC = STI->hasMips64r6() ? Mips::SCD_R6 : Mips::SCD;
+    return {LL, SC, Mips::BEQ64, Mips::BNE64, Mips::OR64, Mips::ZERO_64};
+  }
 
   assert(Width == 32 && "Unexpected atomic width");
-  if (STI->inMicroMipsMode())
-    return {STI->hasMips32r6() ? Mips::LL_MMR6 : Mips::LL_MM,
-            STI->hasMips32r6() ? Mips::SC_MMR6 : Mips::SC_MM,
-            STI->hasMips32r6() ? Mips::BEQC_MMR6 : Mips::BEQ_MM,
-            STI->hasMips32r6() ? Mips::BNEC_MMR6 : Mips::BNE_MM,
-            STI->hasMips32r6() ? Mips::OR_MMR6 : Mips::OR_MM,
-            Mips::ZERO};
+  if (STI->inMicroMipsMode()) {
+    unsigned LL = STI->hasMips32r6() ? Mips::LL_MMR6 : Mips::LL_MM;
+    unsigned SC = STI->hasMips32r6() ? Mips::SC_MMR6 : Mips::SC_MM;
+    unsigned BEQ = STI->hasMips32r6() ? Mips::BEQC_MMR6 : Mips::BEQ_MM;
+    unsigned BNE = STI->hasMips32r6() ? Mips::BNEC_MMR6 : Mips::BNE_MM;
+    unsigned OR = STI->hasMips32r6() ? Mips::OR_MMR6 : Mips::OR_MM;
+    return {LL, SC, BEQ, BNE, OR, Mips::ZERO};
+  }
 
   bool ArePtrs64bit = STI->getABI().ArePtrs64bit();
-  return {STI->hasMips32r6() ? (ArePtrs64bit ? Mips::LL64_R6 : Mips::LL_R6)
-                             : (ArePtrs64bit ? Mips::LL64 : Mips::LL),
-          STI->hasMips32r6() ? (ArePtrs64bit ? Mips::SC64_R6 : Mips::SC_R6)
-                             : (ArePtrs64bit ? Mips::SC64 : Mips::SC),
-          Mips::BEQ,
-          Mips::BNE,
-          Mips::OR,
-          Mips::ZERO};
+  unsigned LL = STI->hasMips32r6()
+                    ? (ArePtrs64bit ? Mips::LL64_R6 : Mips::LL_R6)
+                    : (ArePtrs64bit ? Mips::LL64 : Mips::LL);
+  unsigned SC = STI->hasMips32r6()
+                    ? (ArePtrs64bit ? Mips::SC64_R6 : Mips::SC_R6)
+                    : (ArePtrs64bit ? Mips::SC64 : Mips::SC);
+  return {LL, SC, Mips::BEQ, Mips::BNE, Mips::OR, Mips::ZERO};
 }
 
 // Merge selected bits as old ^ ((old ^ new) & mask).
