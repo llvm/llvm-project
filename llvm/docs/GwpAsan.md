@@ -107,7 +107,7 @@ slots are randomly reused to guard future allocations.
 ## Usage
 
 GWP-ASan already ships by default in the
-{doc}`Scudo Hardened Allocator <ScudoHardenedAllocator>`,
+[Scudo Hardened Allocator](ScudoHardenedAllocator.md),
 so building with `-fsanitize=scudo` is the quickest and easiest way to try out
 GWP-ASan.
 
