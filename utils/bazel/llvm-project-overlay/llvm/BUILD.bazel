@@ -4760,6 +4760,7 @@ cc_library(
     deps = [
         ":Support",
         ":config",
+        "//third-party:libxml2",
     ],
 )
 
