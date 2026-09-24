@@ -61,6 +61,18 @@ define <vscale x 2 x double> @fadd_nxv2f64(<vscale x 2 x double> %a, <vscale x 2
   ret <vscale x 2 x double> %res
 }
 
+define <vscale x 2 x double> @fadd_nxv1f64(<vscale x 2 x double> %a, <vscale x 2 x double> %b) {
+; CHECK-LABEL: fadd_nxv1f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fadd z0.d, z0.d, z1.d
+; CHECK-NEXT:    ret
+  %a.nxv1 = call <vscale x 1 x double> @llvm.vector.extract.nxv1f64.nxv2f64(<vscale x 2 x double> %a, i64 0)
+  %b.nxv1 = call <vscale x 1 x double> @llvm.vector.extract.nxv1f64.nxv2f64(<vscale x 2 x double> %b, i64 0)
+  %res.nxv1 = fadd <vscale x 1 x double> %a.nxv1, %b.nxv1
+  %res = call <vscale x 2 x double> @llvm.vector.insert.nxv2f64.nxv1f64(<vscale x 2 x double> poison, <vscale x 1 x double> %res.nxv1, i64 0)
+  ret <vscale x 2 x double> %res
+}
+
 define <vscale x 8 x half> @fdiv_nxv8f16(<vscale x 8 x half> %a, <vscale x 8 x half> %b) {
 ; CHECK-LABEL: fdiv_nxv8f16:
 ; CHECK:       // %bb.0:
@@ -121,6 +133,21 @@ define <vscale x 2 x double> @fdiv_nxv2f64(<vscale x 2 x double> %a, <vscale x 2
   ret <vscale x 2 x double> %res
 }
 
+define <vscale x 2 x double> @fdiv_nxv1f64(<vscale x 2 x double> %a, <vscale x 2 x double> %b) {
+; CHECK-LABEL: fdiv_nxv1f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fdiv z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    ret
+  %a.nxv1 = call <vscale x 1 x double> @llvm.vector.extract.nxv1f64.nxv2f64(<vscale x 2 x double> %a, i64 0)
+  %b.nxv1 = call <vscale x 1 x double> @llvm.vector.extract.nxv1f64.nxv2f64(<vscale x 2 x double> %b, i64 0)
+  %res.nxv1 = fdiv <vscale x 1 x double> %a.nxv1, %b.nxv1
+  %res = call <vscale x 2 x double> @llvm.vector.insert.nxv2f64.nxv1f64(<vscale x 2 x double> poison, <vscale x 1 x double> %res.nxv1, i64 0)
+  ret <vscale x 2 x double> %res
+}
+
+; FIXME: nxv1 frem fails during type legalization
+
 define <vscale x 8 x half> @fsub_nxv8f16(<vscale x 8 x half> %a, <vscale x 8 x half> %b) {
 ; CHECK-LABEL: fsub_nxv8f16:
 ; CHECK:       // %bb.0:
@@ -178,6 +205,18 @@ define <vscale x 2 x double> @fsub_nxv2f64(<vscale x 2 x double> %a, <vscale x 2
   ret <vscale x 2 x double> %res
 }
 
+define <vscale x 2 x double> @fsub_nxv1f64(<vscale x 2 x double> %a, <vscale x 2 x double> %b) {
+; CHECK-LABEL: fsub_nxv1f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fsub z0.d, z0.d, z1.d
+; CHECK-NEXT:    ret
+  %a.nxv1 = call <vscale x 1 x double> @llvm.vector.extract.nxv1f64.nxv2f64(<vscale x 2 x double> %a, i64 0)
+  %b.nxv1 = call <vscale x 1 x double> @llvm.vector.extract.nxv1f64.nxv2f64(<vscale x 2 x double> %b, i64 0)
+  %res.nxv1 = fsub <vscale x 1 x double> %a.nxv1, %b.nxv1
+  %res = call <vscale x 2 x double> @llvm.vector.insert.nxv2f64.nxv1f64(<vscale x 2 x double> poison, <vscale x 1 x double> %res.nxv1, i64 0)
+  ret <vscale x 2 x double> %res
+}
+
 define <vscale x 8 x half> @fmul_nxv8f16(<vscale x 8 x half> %a, <vscale x 8 x half> %b) {
 ; CHECK-LABEL: fmul_nxv8f16:
 ; CHECK:       // %bb.0:
@@ -232,6 +271,18 @@ define <vscale x 2 x double> @fmul_nxv2f64(<vscale x 2 x double> %a, <vscale x 2
 ; CHECK-NEXT:    fmul z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %res = fmul <vscale x 2 x double> %a, %b
+  ret <vscale x 2 x double> %res
+}
+
+define <vscale x 2 x double> @fmul_nxv1f64(<vscale x 2 x double> %a, <vscale x 2 x double> %b) {
+; CHECK-LABEL: fmul_nxv1f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmul z0.d, z0.d, z1.d
+; CHECK-NEXT:    ret
+  %a.nxv1 = call <vscale x 1 x double> @llvm.vector.extract.nxv1f64.nxv2f64(<vscale x 2 x double> %a, i64 0)
+  %b.nxv1 = call <vscale x 1 x double> @llvm.vector.extract.nxv1f64.nxv2f64(<vscale x 2 x double> %b, i64 0)
+  %res.nxv1 = fmul <vscale x 1 x double> %a.nxv1, %b.nxv1
+  %res = call <vscale x 2 x double> @llvm.vector.insert.nxv2f64.nxv1f64(<vscale x 2 x double> poison, <vscale x 1 x double> %res.nxv1, i64 0)
   ret <vscale x 2 x double> %res
 }
 
@@ -438,6 +489,18 @@ define <vscale x 2 x double> @fneg_nxv2f64(<vscale x 2 x double> %a) {
 ; CHECK-NEXT:    fneg z0.d, p0/m, z0.d
 ; CHECK-NEXT:    ret
   %res = fneg <vscale x 2 x double> %a
+  ret <vscale x 2 x double> %res
+}
+
+define <vscale x 2 x double> @fneg_nxv1f64(<vscale x 2 x double> %a) {
+; CHECK-LABEL: fneg_nxv1f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fneg z0.d, p0/m, z0.d
+; CHECK-NEXT:    ret
+  %a.nxv1 = call <vscale x 1 x double> @llvm.vector.extract.nxv1f64.nxv2f64(<vscale x 2 x double> %a, i64 0)
+  %res.nxv1 = fneg <vscale x 1 x double> %a.nxv1
+  %res = call <vscale x 2 x double> @llvm.vector.insert.nxv2f64.nxv1f64(<vscale x 2 x double> poison, <vscale x 1 x double> %res.nxv1, i64 0)
   ret <vscale x 2 x double> %res
 }
 
