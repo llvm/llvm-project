@@ -2935,11 +2935,9 @@ MCSection *TargetLoweringObjectFileGOFF::SelectSectionForGlobal(
         GOFF::PRAttr{false, GOFF::ESD_EXE_DATA, GOFF::ESD_LT_XPLink,
                      PRBindingScope, 0},
         ED);
-    // The binder rejects zero-length PR sections. If the global has zero size
-    // mark the PR so the writer inflates it to a valid length.
-    if (const auto *V = dyn_cast<GlobalVariable>(GO))
-      if (GO->getParent()->getDataLayout().getTypeAllocSize(V->getValueType()) == 0)
-        PR->setRequiresNonZeroLength();
+    // The binder rejects zero-length PR sections. Mark the PR so the writer
+    // inflates it to a valid length if needed.
+    PR->setRequiresNonZeroLength();
     return PR;
   }
   return TextSection;
