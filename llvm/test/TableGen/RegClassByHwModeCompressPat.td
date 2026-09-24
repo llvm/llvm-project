@@ -273,14 +273,12 @@ def : CompressPat<(PTR_MOV PtrRC:$dst, PtrRC:$src),
 // CHECK-NEXT:   return false;
 // CHECK-NEXT: }
 
-// CHECK:      static bool isCompressibleInst(const MachineInstr &MI,
-// CHECK-NEXT:                                const MyTargetSubtarget &STI,
-// CHECK-NEXT:                                unsigned &Size) {
-// CHECK-NEXT:   // Size is non-zero only when a compression pattern matches.
-// CHECK-NEXT:   Size = 0;
+// CHECK:      static unsigned getCompressedSize(const MachineInstr &MI,
+// CHECK-NEXT:                                   const MyTargetSubtarget &STI)
+// CHECK-NEXT:   // Returns the compressed size, or zero if not compressible.
 // CHECK-NEXT:   {{\[\[}}maybe_unused]] unsigned HwModeId = STI.getHwMode(MCSubtargetInfo::HwMode_RegInfo);
 // CHECK-NEXT:   switch (MI.getOpcode()) {
-// CHECK-NEXT:   default: return false;
+// CHECK-NEXT:   default: return 0;
 // CHECK-NEXT:   case MyTarget::PTR_MOV: {
 // CHECK-NEXT:     if (MI.getOperand(0).isReg() && MI.getOperand(0).getReg().isPhysical() &&
 // CHECK-NEXT:         getMyTargetMCRegisterClass(MyTargetRegClassByHwModeTables[HwModeId][MyTarget::PtrRC]).contains(MI.getOperand(0).getReg()) &&
@@ -289,8 +287,8 @@ def : CompressPat<(PTR_MOV PtrRC:$dst, PtrRC:$src),
 // CHECK-NEXT:       // ptr_mov.small $dst, $src
 // CHECK-NEXT:       // Operand: dst
 // CHECK-NEXT:       // Operand: src
-// CHECK-NEXT:       Size = 1;
-// CHECK-NEXT:       return true;
+
+// CHECK-NEXT:       return 1;
 // CHECK-NEXT:     } // if
 // CHECK-NEXT:     if (MI.getOperand(1).isReg() && MI.getOperand(0).isReg() &&
 // CHECK-NEXT:         (MI.getOperand(1).getReg() == MI.getOperand(0).getReg()) &&
@@ -299,8 +297,8 @@ def : CompressPat<(PTR_MOV PtrRC:$dst, PtrRC:$src),
 // CHECK-NEXT:       // ptr_mov.tied $dst, $src
 // CHECK-NEXT:       // Operand: dst
 // CHECK-NEXT:       // Operand: src
-// CHECK-NEXT:       Size = 1;
-// CHECK-NEXT:       return true;
+
+// CHECK-NEXT:       return 1;
 // CHECK-NEXT:     } // if
 // CHECK-NEXT:     if (MI.getOperand(1).isReg() &&
 // CHECK-NEXT:         (MI.getOperand(1).getReg() == MyTarget::RegisterByHwMode::getNullReg(HwModeId)) &&
@@ -308,8 +306,8 @@ def : CompressPat<(PTR_MOV PtrRC:$dst, PtrRC:$src),
 // CHECK-NEXT:         getMyTargetMCRegisterClass(MyTargetRegClassByHwModeTables[HwModeId][MyTarget::PtrRC]).contains(MI.getOperand(0).getReg())) {
 // CHECK-NEXT:       // ptr_mov.zero $dst
 // CHECK-NEXT:       // Operand: dst
-// CHECK-NEXT:       Size = 1;
-// CHECK-NEXT:       return true;
+
+// CHECK-NEXT:       return 1;
 // CHECK-NEXT:     } // if
 // CHECK-NEXT:     break;
 // CHECK-NEXT:   } // case PTR_MOV
@@ -321,8 +319,8 @@ def : CompressPat<(PTR_MOV PtrRC:$dst, PtrRC:$src),
 // CHECK-NEXT:       // x_mov.small $dst, $src
 // CHECK-NEXT:       // Operand: dst
 // CHECK-NEXT:       // Operand: src
-// CHECK-NEXT:       Size = 1;
-// CHECK-NEXT:       return true;
+
+// CHECK-NEXT:       return 1;
 // CHECK-NEXT:     } // if
 // CHECK-NEXT:     if (MI.getOperand(1).isReg() && MI.getOperand(0).isReg() &&
 // CHECK-NEXT:         (MI.getOperand(1).getReg() == MI.getOperand(0).getReg()) &&
@@ -331,8 +329,8 @@ def : CompressPat<(PTR_MOV PtrRC:$dst, PtrRC:$src),
 // CHECK-NEXT:       // x_mov.tied $dst, $src
 // CHECK-NEXT:       // Operand: dst
 // CHECK-NEXT:       // Operand: src
-// CHECK-NEXT:       Size = 1;
-// CHECK-NEXT:       return true;
+
+// CHECK-NEXT:       return 1;
 // CHECK-NEXT:     } // if
 // CHECK-NEXT:     if (MI.getOperand(1).isReg() &&
 // CHECK-NEXT:         (MI.getOperand(1).getReg() == MyTarget::X0) &&
@@ -340,13 +338,13 @@ def : CompressPat<(PTR_MOV PtrRC:$dst, PtrRC:$src),
 // CHECK-NEXT:         getMyTargetMCRegisterClass(MyTarget::XRegsRegClassID).contains(MI.getOperand(0).getReg())) {
 // CHECK-NEXT:       // x_mov.zero $dst
 // CHECK-NEXT:       // Operand: dst
-// CHECK-NEXT:       Size = 1;
-// CHECK-NEXT:       return true;
+
+// CHECK-NEXT:       return 1;
 // CHECK-NEXT:     } // if
 // CHECK-NEXT:     break;
 // CHECK-NEXT:   } // case X_MOV
 // CHECK-NEXT:   } // switch
-// CHECK-NEXT:   return false;
+// CHECK-NEXT:   return 0;
 // CHECK-NEXT: }
 
 def MyTargetISA : InstrInfo;
