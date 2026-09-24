@@ -19,14 +19,19 @@ using namespace llvm;
 using namespace AMDGPUMI;
 
 unsigned VLoadStoreIdxInst::getBitWidth() const {
+  unsigned Opc = getOpcode();
+  if (Opc == AMDGPU::V_LOAD_IDX_BITS || Opc == AMDGPU::V_STORE_IDX_BITS)
+    llvm_unreachable("V_LOAD/STORE_IDX_BITS has no well defined bit width");
   const AMDGPU::VLdStIdxOpcodeInfo *Info =
-      AMDGPU::getVLdStIdxOpcodeInfoByOpcode(getOpcode());
+      AMDGPU::getVLdStIdxOpcodeInfoByOpcode(Opc);
   if (!Info)
     llvm_unreachable("unsupported V_LOAD/STORE_IDX opcode");
   return Info->BitWidth;
 }
 
 int VLoadIdxInst::tryGetOpcodeForBitWidth(unsigned Bits) {
+  if (Bits == 8 || Bits == 16)
+    llvm_unreachable("V_LOAD_IDX_BITS has no well defined bit width");
   const AMDGPU::VLdStIdxOpcodeInfo *Info =
       AMDGPU::getVLdStIdxOpcodeInfoByKey(Bits, /*IsStore=*/false);
   if (!Info)
@@ -41,6 +46,8 @@ unsigned VLoadIdxInst::getOpcodeForBitWidth(unsigned Bits) {
 }
 
 int VStoreIdxInst::tryGetOpcodeForBitWidth(unsigned Bits) {
+  if (Bits == 8 || Bits == 16)
+    llvm_unreachable("V_STORE_IDX_BITS has no well defined bit width");
   const AMDGPU::VLdStIdxOpcodeInfo *Info =
       AMDGPU::getVLdStIdxOpcodeInfoByKey(Bits, /*IsStore=*/true);
   if (!Info)

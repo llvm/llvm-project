@@ -702,6 +702,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPURegBankLegalizeLegacyPass(*PR);
   initializeSILowerWWMCopiesLegacyPass(*PR);
   initializeAMDGPUMarkLastScratchLoadLegacyPass(*PR);
+  initializeAMDGPULowerIdxOpsLegacyPass(*PR);
   initializeSILowerSGPRSpillsLegacyPass(*PR);
   initializeSIFixSGPRCopiesLegacyPass(*PR);
   initializeSIFixVGPRCopiesLegacyPass(*PR);
@@ -1844,6 +1845,11 @@ void GCNPassConfig::addFastRegAlloc() {
 }
 
 void GCNPassConfig::addPreRegAlloc() {
+  // Expand the sub-dword VGPR "as memory" pseudos into a whole-dword access
+  // plus a bit-field extract/insert. Must follow the custom inserter, which
+  // puts the index in M0 for the access created here to inherit.
+  addPass(&AMDGPULowerIdxOpsID);
+
   if (getOptLevel() != CodeGenOptLevel::None)
     addPass(&AMDGPUPrepareAGPRAllocLegacyID);
   if (getOptLevel() >= CodeGenOptLevel::Default && EnableMachinePipeliner)
@@ -2693,6 +2699,9 @@ Error AMDGPUCodeGenPassBuilder::addOptimizedRegAlloc(PassManagerWrapper &PMW) {
 }
 
 void AMDGPUCodeGenPassBuilder::addPreRegAlloc(PassManagerWrapper &PMW) {
+  // See GCNPassConfig::addPreRegAlloc for why this is unconditional.
+  addMachineFunctionPass(AMDGPULowerIdxOpsPass(), PMW);
+
   if (getOptLevel() != CodeGenOptLevel::None)
     addMachineFunctionPass(AMDGPUPrepareAGPRAllocPass(), PMW);
   if (getOptLevel() >= CodeGenOptLevel::Default && EnableMachinePipeliner)
