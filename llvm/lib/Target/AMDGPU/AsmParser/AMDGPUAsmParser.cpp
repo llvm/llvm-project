@@ -1585,9 +1585,9 @@ public:
     return getFeatureBits()[AMDGPU::FeatureArchitectedFlatScratch];
   }
 
-  bool hasSGPR102_SGPR103() const { return !isVI() && !isGFX9(); }
+  bool hasSGPR102_103() const { return !isVI() && !isGFX9(); }
 
-  bool hasSGPR104_SGPR105() const { return isGFX10Plus(); }
+  bool hasSGPR104_105() const { return isGFX10Plus(); }
 
   bool hasIntClamp() const { return getFeatureBits()[AMDGPU::FeatureIntClamp]; }
 
@@ -7239,8 +7239,8 @@ bool AMDGPUAsmParser::subtargetHasRegister(const MCRegisterInfo &MRI,
     return isGFX9Plus();
 
   // GFX10+ has 2 more SGPRs 104 and 105.
-  if (MRI.regsOverlap(SGPR104_SGPR105, Reg))
-    return hasSGPR104_SGPR105();
+  if (MRI.regsOverlap(SGPR104_105, Reg))
+    return hasSGPR104_105();
 
   switch (Reg.id()) {
   case SRC_SHARED_BASE_LO:
@@ -7298,8 +7298,8 @@ bool AMDGPUAsmParser::subtargetHasRegister(const MCRegisterInfo &MRI,
 
   // VI only has 102 SGPRs, so make sure we aren't trying to use the 2 more that
   // SI/CI have.
-  if (MRI.regsOverlap(SGPR102_SGPR103, Reg))
-    return hasSGPR102_SGPR103();
+  if (MRI.regsOverlap(SGPR102_103, Reg))
+    return hasSGPR102_103();
 
   return true;
 }

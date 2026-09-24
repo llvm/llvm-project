@@ -5739,7 +5739,7 @@ define amdgpu_kernel void @idot4_acc32_v16i8(ptr addrspace(1) %src1,
 ; GFX9-NODL-NEXT:    v_lshlrev_b32_e32 v5, 3, v0
 ; GFX9-NODL-NEXT:    ; kill: killed $vgpr4
 ; GFX9-NODL-NEXT:    ; kill: killed $vgpr5
-; GFX9-NODL-NEXT:    ; kill: killed $sgpr0_sgpr1_sgpr2 killed $sgpr3
+; GFX9-NODL-NEXT:    ; kill: killed $sgpr0_2 killed $sgpr3
 ; GFX9-NODL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NODL-NEXT:    global_load_dwordx4 v[0:3], v4, s[0:1]
 ; GFX9-NODL-NEXT:    global_load_dword v0, v5, s[2:3]
@@ -5763,7 +5763,7 @@ define amdgpu_kernel void @idot4_acc32_v16i8(ptr addrspace(1) %src1,
 ; GFX9-DL-NEXT:    v_lshlrev_b32_e32 v5, 3, v0
 ; GFX9-DL-NEXT:    ; kill: killed $vgpr4
 ; GFX9-DL-NEXT:    ; kill: killed $vgpr5
-; GFX9-DL-NEXT:    ; kill: killed $sgpr0_sgpr1_sgpr2 killed $sgpr3
+; GFX9-DL-NEXT:    ; kill: killed $sgpr0_2 killed $sgpr3
 ; GFX9-DL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-DL-NEXT:    global_load_dwordx4 v[0:3], v4, s[0:1]
 ; GFX9-DL-NEXT:    global_load_dword v0, v5, s[2:3]
@@ -5786,7 +5786,7 @@ define amdgpu_kernel void @idot4_acc32_v16i8(ptr addrspace(1) %src1,
 ; GFX10-DL-NEXT:    v_lshlrev_b32_e32 v4, 4, v0
 ; GFX10-DL-NEXT:    v_lshlrev_b32_e32 v5, 3, v0
 ; GFX10-DL-NEXT:    ; kill: killed $vgpr4
-; GFX10-DL-NEXT:    ; kill: killed $sgpr0_sgpr1_sgpr2 killed $sgpr3
+; GFX10-DL-NEXT:    ; kill: killed $sgpr0_2 killed $sgpr3
 ; GFX10-DL-NEXT:    ; kill: killed $vgpr5
 ; GFX10-DL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-DL-NEXT:    global_load_dwordx4 v[0:3], v4, s[0:1]

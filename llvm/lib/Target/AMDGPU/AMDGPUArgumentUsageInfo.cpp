@@ -114,14 +114,14 @@ AMDGPUFunctionArgInfo::getPreloadedValue(
 AMDGPUFunctionArgInfo AMDGPUFunctionArgInfo::fixedABILayout() {
   AMDGPUFunctionArgInfo AI;
   AI.PrivateSegmentBuffer
-    = ArgDescriptor::createRegister(AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3);
-  AI.DispatchPtr = ArgDescriptor::createRegister(AMDGPU::SGPR4_SGPR5);
-  AI.QueuePtr = ArgDescriptor::createRegister(AMDGPU::SGPR6_SGPR7);
+    = ArgDescriptor::createRegister(AMDGPU::SGPR0_3);
+  AI.DispatchPtr = ArgDescriptor::createRegister(AMDGPU::SGPR4_5);
+  AI.QueuePtr = ArgDescriptor::createRegister(AMDGPU::SGPR6_7);
 
   // Do not pass kernarg segment pointer, only pass increment version in its
   // place.
-  AI.ImplicitArgPtr = ArgDescriptor::createRegister(AMDGPU::SGPR8_SGPR9);
-  AI.DispatchID = ArgDescriptor::createRegister(AMDGPU::SGPR10_SGPR11);
+  AI.ImplicitArgPtr = ArgDescriptor::createRegister(AMDGPU::SGPR8_9);
+  AI.DispatchID = ArgDescriptor::createRegister(AMDGPU::SGPR10_11);
 
   // Skip FlatScratchInit/PrivateSegmentSize
   AI.WorkGroupIDX = ArgDescriptor::createRegister(AMDGPU::SGPR12);

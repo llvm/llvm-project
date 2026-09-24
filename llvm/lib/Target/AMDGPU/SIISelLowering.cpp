@@ -4502,8 +4502,8 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
       SDValue ScratchRSrcReg =
           DAG.getCopyFromReg(Chain, DL, Info->getScratchRSrcReg(), MVT::v4i32);
       RegsToPass.emplace_back(IsChainCallConv
-                                  ? AMDGPU::SGPR48_SGPR49_SGPR50_SGPR51
-                                  : AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3,
+                                  ? AMDGPU::SGPR48_51
+                                  : AMDGPU::SGPR0_3,
                               ScratchRSrcReg);
       CopyFromChains.push_back(ScratchRSrcReg.getValue(1));
       Chain = DAG.getTokenFactor(DL, CopyFromChains);
@@ -9303,7 +9303,7 @@ SDValue SITargetLowering::lowerTrapHsaQueuePtr(SDValue Op,
     }
   }
 
-  SDValue SGPR01 = DAG.getRegister(AMDGPU::SGPR0_SGPR1, MVT::i64);
+  SDValue SGPR01 = DAG.getRegister(AMDGPU::SGPR0_1, MVT::i64);
   SDValue ToReg = DAG.getCopyToReg(Chain, SL, SGPR01, QueuePtr, SDValue());
 
   uint64_t TrapID = static_cast<uint64_t>(GCNSubtarget::TrapID::LLVMAMDHSATrap);
