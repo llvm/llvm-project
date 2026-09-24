@@ -9,7 +9,7 @@ compiler-rt.
 Unlike ThreadSanitizer, CSan does not maintain a happens-before model or shadow
 state for every memory location. Memory accesses are sampled at random and
 stalled to detect unordered accesses. Importantly, this method has **no false
-positives** and **fixed memory overhead.** However, the probabalistic nature
+positives** and **fixed memory overhead.** However, the probabilistic nature
 means that many runs are required to state confidently that the application is
 not racy.
 
