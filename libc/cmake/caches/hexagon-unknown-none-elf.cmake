@@ -20,7 +20,7 @@ set(LIBC_TEST_COMPILE_OPTIONS_DEFAULT "-O0" CACHE STRING "")
 # The bare-metal linker script requires explicit memory-region definitions for
 # the test image.
 set(LIBC_TEST_LINK_OPTIONS_DEFAULT
-    "-mv68;-G0;-fuse-ld=lld;-T;${CMAKE_CURRENT_LIST_DIR}/../../test/UnitTest/llvm-libc-baremetal.ld;-Wl,--defsym=__boot_flash=0x00100000;-Wl,--defsym=__boot_flash_size=0x00001000;-Wl,--defsym=__flash=0x00101000;-Wl,--defsym=__flash_size=0x003ff000;-Wl,--defsym=__ram=0x00500000;-Wl,--defsym=__ram_size=0x00800000;-Wl,--defsym=__stack_size=0x00040000"
+    "-mv68;-G0;-T;${CMAKE_CURRENT_LIST_DIR}/../../test/UnitTest/llvm-libc-baremetal.ld;-Wl,--defsym=__boot_flash=0x00100000;-Wl,--defsym=__boot_flash_size=0x00001000;-Wl,--defsym=__flash=0x00101000;-Wl,--defsym=__flash_size=0x003ff000;-Wl,--defsym=__ram=0x00500000;-Wl,--defsym=__ram_size=0x00800000;-Wl,--defsym=__stack_size=0x00040000"
     CACHE STRING "")
 set(LIBC_TEST_CMD
     "qemu-system-hexagon -M sim -cpu v68 -kernel @BINARY@"

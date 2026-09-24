@@ -19,6 +19,7 @@ add_libc_test(
     libc.src.__support.CPP.new
     libc.src.__support.File.file
     libc.src.__support.error_or
+    libc.hdr.errno_macros
     libc.test.UnitTest.MemoryMatcher
 )
 
