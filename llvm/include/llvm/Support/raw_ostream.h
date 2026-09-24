@@ -619,6 +619,19 @@ LLVM_ABI raw_fd_ostream &outs();
 /// expected place.
 LLVM_ABI raw_fd_ostream &errs();
 
+/// This returns the stream used for informational output. By default it is
+/// wired to errs(), preserving the traditional command-line behavior. Hosts
+/// embedding LLVM may redirect it with setInfoOutputStream().
+LLVM_ABI raw_ostream &infos();
+
+/// Redirect informational output process-wide to \p OS. Configure this before
+/// concurrent use. The caller retains ownership and must ensure that \p OS
+/// outlives its use as the informational stream.
+LLVM_ABI void setInfoOutputStream(raw_ostream &OS);
+
+/// Restore the informational output stream to errs().
+LLVM_ABI void resetInfoOutputStream();
+
 /// This returns a reference to a raw_ostream which simply discards output.
 LLVM_ABI raw_ostream &nulls();
 

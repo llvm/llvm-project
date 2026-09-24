@@ -168,7 +168,7 @@ int Compilation::ExecuteCommand(const Command &C,
                                 bool LogOnly) const {
   if ((getDriver().CCPrintOptions ||
        getArgs().hasArg(options::OPT_v)) && !getDriver().CCGenDiagnostics) {
-    raw_ostream *OS = &llvm::errs();
+    raw_ostream *OS = &llvm::infos();
     std::unique_ptr<llvm::raw_fd_ostream> OwnedStream;
 
     // Follow gcc implementation of CC_PRINT_OPTIONS; we could also cache the

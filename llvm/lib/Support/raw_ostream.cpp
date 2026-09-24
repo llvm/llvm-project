@@ -898,6 +898,16 @@ raw_fd_ostream &llvm::errs() {
   return S;
 }
 
+static raw_ostream *InfoOutputStream;
+
+raw_ostream &llvm::infos() {
+  return InfoOutputStream ? *InfoOutputStream : errs();
+}
+
+void llvm::setInfoOutputStream(raw_ostream &OS) { InfoOutputStream = &OS; }
+
+void llvm::resetInfoOutputStream() { InfoOutputStream = nullptr; }
+
 /// nulls() - This returns a reference to a raw_ostream which discards output.
 raw_ostream &llvm::nulls() {
   static raw_null_ostream S;

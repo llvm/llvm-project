@@ -277,7 +277,7 @@ IncrementalCompilerBuilder::create(std::string TT,
       return std::move(Err);
 
   if (Compilation->getArgs().hasArg(options::OPT_v))
-    Compilation->getJobs().Print(llvm::errs(), "\n", /*Quote=*/false);
+    Compilation->getJobs().Print(llvm::infos(), "\n", /*Quote=*/false);
 
   auto ErrOrCC1Args = GetCC1Arguments(&Diags, Compilation.get());
   if (auto Err = ErrOrCC1Args.takeError())

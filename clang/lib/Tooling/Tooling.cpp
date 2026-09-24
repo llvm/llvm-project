@@ -431,9 +431,9 @@ bool ToolInvocation::runInvocation(
     std::shared_ptr<PCHContainerOperations> PCHContainerOps) {
   // Show the invocation, with -v.
   if (Invocation->getHeaderSearchOpts().Verbose) {
-    llvm::errs() << "clang Invocation:\n";
-    Compilation->getJobs().Print(llvm::errs(), "\n", true);
-    llvm::errs() << "\n";
+    llvm::infos() << "clang Invocation:\n";
+    Compilation->getJobs().Print(llvm::infos(), "\n", true);
+    llvm::infos() << "\n";
   }
 
   return Action->runInvocation(std::move(Invocation), Files,

@@ -187,7 +187,7 @@ class CompilerInstance : public ModuleLoader {
   std::unique_ptr<raw_ostream> OwnedVerboseOutputStream;
 
   /// The stream for verbose output.
-  raw_ostream *VerboseOutputStream = &llvm::errs();
+  raw_ostream *VerboseOutputStream = &llvm::infos();
 
   /// The list of active output files.
   std::list<llvm::vfs::OutputFile> OutputFiles;

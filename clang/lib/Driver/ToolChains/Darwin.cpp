@@ -3078,8 +3078,8 @@ void AppleMachO::AddClangCXXStdlibIncludeArgs(
       addSystemInclude(DriverArgs, CC1Args, InstallBin);
       return;
     } else if (DriverArgs.hasArg(options::OPT_v)) {
-      llvm::errs() << "ignoring nonexistent directory \"" << InstallBin
-                   << "\"\n";
+      llvm::infos() << "ignoring nonexistent directory \"" << InstallBin
+                    << "\"\n";
     }
 
     // Otherwise, check for (2)
@@ -3089,8 +3089,8 @@ void AppleMachO::AddClangCXXStdlibIncludeArgs(
       addSystemInclude(DriverArgs, CC1Args, SysrootUsr);
       return;
     } else if (DriverArgs.hasArg(options::OPT_v)) {
-      llvm::errs() << "ignoring nonexistent directory \"" << SysrootUsr
-                   << "\"\n";
+      llvm::infos() << "ignoring nonexistent directory \"" << SysrootUsr
+                    << "\"\n";
     }
 
     // Otherwise, don't add any path.

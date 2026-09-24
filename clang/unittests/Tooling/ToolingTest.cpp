@@ -22,10 +22,12 @@
 #include "clang/Tooling/CompilationDatabase.h"
 #include "clang/Tooling/JSONCompilationDatabase.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
 #include "gtest/gtest.h"
 #include <algorithm>
@@ -224,6 +226,37 @@ TEST(ToolInvocation, TestMapVirtualFile) {
   InMemoryFileSystem->addFile("def/abc", 0,
                               llvm::MemoryBuffer::getMemBuffer("\n"));
   EXPECT_TRUE(Invocation.run());
+}
+
+TEST(ToolInvocation, RoutesVerboseOutputToInfos) {
+  auto OverlayFileSystem =
+      llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(
+          llvm::vfs::getRealFileSystem());
+  auto InMemoryFileSystem =
+      llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  OverlayFileSystem->pushOverlay(InMemoryFileSystem);
+  auto Files = llvm::makeIntrusiveRefCnt<FileManager>(FileSystemOptions(),
+                                                      OverlayFileSystem);
+  InMemoryFileSystem->addFile("test.cpp", 0,
+                              llvm::MemoryBuffer::getMemBuffer("int value;\n"));
+
+  std::string Output;
+  llvm::raw_string_ostream OS(Output);
+  llvm::setInfoOutputStream(OS);
+  llvm::scope_exit ResetInfoOutput([] { llvm::resetInfoOutputStream(); });
+
+  std::vector<std::string> Args = {"tool-executable", "-v", "-fsyntax-only",
+                                   "test.cpp"};
+  ToolInvocation Invocation(Args, std::make_unique<SyntaxOnlyAction>(),
+                            Files.get());
+
+  EXPECT_TRUE(Invocation.run());
+  OS.flush();
+  EXPECT_NE(Output.find("clang version"), std::string::npos);
+  EXPECT_NE(Output.find("clang Invocation:"), std::string::npos);
+  EXPECT_NE(Output.find("-cc1"), std::string::npos);
+  EXPECT_NE(Output.find("clang -cc1 version"), std::string::npos);
+  EXPECT_NE(Output.find("End of search list."), std::string::npos);
 }
 
 TEST(ToolInvocation, TestVirtualModulesCompilation) {

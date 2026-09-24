@@ -504,7 +504,8 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
     HeaderSearchTriple = &PP->getAuxTargetInfo()->getTriple();
 
   ApplyHeaderSearchOptions(PP->getHeaderSearchInfo(), getHeaderSearchOpts(),
-                           PP->getLangOpts(), *HeaderSearchTriple);
+                           PP->getLangOpts(), *HeaderSearchTriple,
+                           &getVerboseOutputStream());
 
   PP->setPreprocessedOutput(getPreprocessorOutputOpts().ShowCPP);
 

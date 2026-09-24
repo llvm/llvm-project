@@ -129,6 +129,20 @@ TEST(raw_ostreamTest, Types_Unbuffered) {
   EXPECT_EQ("X", printToString(X{}));
 }
 
+TEST(raw_ostreamTest, InfoOutputStream) {
+  EXPECT_EQ(&errs(), &infos());
+
+  std::string Str;
+  raw_string_ostream OS(Str);
+  setInfoOutputStream(OS);
+  infos() << "information";
+  OS.flush();
+  EXPECT_EQ("information", Str);
+
+  resetInfoOutputStream();
+  EXPECT_EQ(&errs(), &infos());
+}
+
 TEST(raw_ostreamTest, BufferEdge) {  
   EXPECT_EQ("1.20", printToString(format("%.2f", 1.2), 1));
   EXPECT_EQ("1.20", printToString(format("%.2f", 1.2), 2));
