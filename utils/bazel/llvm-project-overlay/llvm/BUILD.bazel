@@ -6686,6 +6686,15 @@ cc_binary(
     ],
 )
 
+gentbl_cc_library(
+    name = "SplitFileOptsTableGen",
+    strip_include_prefix = "utils/split-file",
+    tbl_outs = {"utils/split-file/Opts.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "utils/split-file/Opts.td",
+    deps = [":OptParserTdFiles"],
+)
+
 cc_binary(
     name = "split-file",
     srcs = glob([
@@ -6694,6 +6703,8 @@ cc_binary(
     copts = llvm_copts,
     stamp = 0,
     deps = [
+        ":Option",
+        ":SplitFileOptsTableGen",
         ":Support",
     ],
 )
