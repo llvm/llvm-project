@@ -1419,11 +1419,11 @@ void ClusteredRelaxation::collectOutOfRangeReferences() {
                                       Source.Cluster, Target.Cluster};
         if (IsUncondBranch) {
           if (!Found) {
-            BC.errs() << "BOLT-ERROR: cannot relax unconditional branch from "
+            BC.errs() << "BOLT-WARNING: cannot relax unconditional branch from "
                       << BF->getPrintName() << " to out-of-layout target "
                       << TargetSymbol->getName() << '\n';
             BC.printInstruction(BC.errs(), Inst);
-            exit(1);
+            continue;
           }
 
           Branches.push_back(Reference);
