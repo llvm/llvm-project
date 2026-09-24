@@ -82,3 +82,90 @@ entry:
   store double %v6_3, ptr %op3, align 8
   ret void
 }
+
+; The operand gather [%c, %z1] of the splat gather subtree for %s7 and %s2
+; matches the first two lanes of the main tree gather [%z1, %c, %d, %a] in the
+; swapped order. The subtree gathers are not used as shuffle sources, so they
+; must not define the order of the main tree: the reorder shuffle made the
+; whole tree unprofitable.
+
+define void @subtree_gathers_do_not_define_order(ptr %out, ptr %in, double %a, double %b, double %c, double %d) {
+; CHECK-LABEL: define void @subtree_gathers_do_not_define_order(
+; CHECK-SAME: ptr [[OUT:%.*]], ptr [[IN:%.*]], double [[A:%.*]], double [[B:%.*]], double [[C:%.*]], double [[D:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[Z1:%.*]] = load double, ptr [[IN]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x double> poison, double [[A]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> [[TMP0]], double [[B]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[TMP1]], <4 x double> poison, <4 x i32> <i32 0, i32 0, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd <4 x double> [[TMP2]], <double 1.000000e+00, double 1.000000e+00, double -0.000000e+00, double -0.000000e+00>
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> poison, double [[D]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> [[TMP4]], double [[A]], i64 1
+; CHECK-NEXT:    [[TMP6:%.*]] = fadd <2 x double> [[TMP5]], splat (double 1.250000e+00)
+; CHECK-NEXT:    [[V0_1:%.*]] = fadd double [[C]], [[Z1]]
+; CHECK-NEXT:    [[S2:%.*]] = fadd double [[Z1]], [[A]]
+; CHECK-NEXT:    [[S7:%.*]] = fmul double [[C]], [[A]]
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x double> [[TMP5]], <2 x double> <double -1.000000e+00, double poison>, <2 x i32> <i32 2, i32 1>
+; CHECK-NEXT:    [[TMP8:%.*]] = fsub <2 x double> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[V1_1:%.*]] = fadd double [[V0_1]], [[A]]
+; CHECK-NEXT:    [[V2_0:%.*]] = fadd double [[Z1]], 1.000000e+00
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x double> poison, double [[V2_0]], i64 0
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x double> [[TMP9]], double [[V1_1]], i64 1
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <2 x double> [[TMP8]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <4 x double> [[TMP10]], <4 x double> [[TMP11]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x double> poison, double [[S7]], i64 0
+; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <4 x double> [[TMP13]], <4 x double> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP15:%.*]] = fsub <4 x double> [[TMP12]], [[TMP14]]
+; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <4 x double> [[TMP1]], <4 x double> <double poison, double 1.000000e+00, double 1.000000e+00, double poison>, <4 x i32> <i32 poison, i32 5, i32 6, i32 0>
+; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x double> poison, double [[C]], i64 0
+; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <4 x double> [[TMP16]], <4 x double> [[TMP17]], <4 x i32> <i32 4, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP19:%.*]] = fadd <4 x double> [[TMP15]], [[TMP18]]
+; CHECK-NEXT:    [[TMP20:%.*]] = shufflevector <4 x double> [[TMP18]], <4 x double> poison, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
+; CHECK-NEXT:    [[TMP21:%.*]] = fmul <4 x double> [[TMP19]], [[TMP20]]
+; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <4 x double> poison, double [[S2]], i64 0
+; CHECK-NEXT:    [[TMP23:%.*]] = shufflevector <4 x double> [[TMP22]], <4 x double> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP24:%.*]] = fmul <4 x double> [[TMP21]], [[TMP23]]
+; CHECK-NEXT:    [[TMP25:%.*]] = fsub <4 x double> [[TMP24]], [[TMP3]]
+; CHECK-NEXT:    store <4 x double> [[TMP25]], ptr [[OUT]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  %z1 = load double, ptr %in, align 8
+  %s2 = fadd double %z1, %a
+  %s5 = fadd double %a, 1.000000e+00
+  %v0_1 = fadd double %c, %z1
+  %v1_2 = fadd double %d, 1.250000e+00
+  %v2_2 = fadd double %v1_2, 1.000000e+00
+  %v0_3 = fadd double %a, 1.250000e+00
+  %v2_3 = fsub double %v0_3, %a
+  %v2_0 = fadd double %z1, 1.000000e+00
+  %s7 = fmul double %c, %a
+  %v3_0 = fsub double %v2_0, %s7
+  %v1_1 = fadd double %v0_1, %a
+  %v3_1 = fsub double %v1_1, %s7
+  %v4_1 = fadd double %v3_1, 1.000000e+00
+  %v3_2 = fsub double %v2_2, %s7
+  %v4_2 = fadd double %v3_2, 1.000000e+00
+  %v3_3 = fsub double %v2_3, %s7
+  %v4_3 = fadd double %v3_3, %a
+  %v4_0 = fadd double %v3_0, %c
+  %v5_0 = fmul double %v4_0, %a
+  %v6_0 = fmul double %v5_0, %s2
+  %v7_0 = fsub double %v6_0, %s5
+  store double %v7_0, ptr %out, align 8
+  %v5_1 = fmul double %v4_1, %a
+  %v6_1 = fmul double %v5_1, %s2
+  %v7_1 = fsub double %v6_1, %s5
+  %op1 = getelementptr i8, ptr %out, i64 8
+  store double %v7_1, ptr %op1, align 8
+  %v5_2 = fmul double %v4_2, %a
+  %v6_2 = fmul double %v5_2, %s2
+  %v7_2 = fsub double %v6_2, %a
+  %op2 = getelementptr i8, ptr %out, i64 16
+  store double %v7_2, ptr %op2, align 8
+  %v5_3 = fmul double %v4_3, %a
+  %v6_3 = fmul double %v5_3, %s2
+  %v7_3 = fsub double %v6_3, %b
+  %op3 = getelementptr i8, ptr %out, i64 24
+  store double %v7_3, ptr %op3, align 8
+  ret void
+}

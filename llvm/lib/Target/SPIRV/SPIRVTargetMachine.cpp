@@ -266,7 +266,7 @@ static cl::opt<bool> SPVEnableNonSemanticDI(
     "spv-emit-nonsemantic-debug-info",
     cl::desc("Deprecated. Use -g to emit SPIR-V NonSemantic.Shader.DebugInfo "
              "instructions"),
-    cl::Optional, cl::init(false));
+    cl::init(false));
 
 // Add the custom SPIRVInstructionSelect from above.
 bool SPIRVPassConfig::addGlobalInstructionSelect() {

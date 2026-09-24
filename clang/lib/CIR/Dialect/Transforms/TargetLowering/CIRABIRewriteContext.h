@@ -72,22 +72,35 @@ public:
   void rewriteFunctionAddress(cir::GetGlobalOp addrOp, cir::FuncOp funcOp,
                               mlir::OpBuilder &builder);
 
-  /// Restate each non-byval indirect parameter's CIRGen slot alignment as the
-  /// alignment the ABI promises for that parameter.  CIRGen picked the slot's
-  /// alignment for a local copy of the record, but the slot is about to stand
-  /// in for the parameter, and a call forwarding it may only promise what the
-  /// incoming pointer does.  Call for every function before any call site is
-  /// rewritten, since a call is rewritten with its callee rather than with its
-  /// enclosing function and so may be reached first.  Not an override, since
-  /// this has no counterpart in the generic contract.
-  void
-  normalizeParameterSlotAlignments(cir::FuncOp funcOp,
-                                   const mlir::abi::FunctionClassification &fc);
+  /// Bring each non-byval indirect parameter of \p funcOp into the shape the
+  /// rest of the rewrite assumes: the parameter's only use, if it has one, is
+  /// a single store into an alloca of the matching pointer type that no other
+  /// non-byval indirect parameter spills to, and that alloca states the
+  /// alignment the ABI promises rather than the one CIRGen picked for a local
+  /// copy.  A use of the parameter as a call argument is routed through a load
+  /// of that slot, so that it names the storage an argument has to name.
+  ///
+  /// Call for every function before any definition or call site is rewritten.
+  /// findParamSpill asserts this shape while the enclosing definition is
+  /// rewritten, and a call is rewritten with its callee rather than with its
+  /// enclosing function and so may be reached first.
+  ///
+  /// A parameter read with no spill to name is given one, since it becomes
+  /// the incoming pointer directly.  A parameter spilled twice, spilled to a
+  /// slot another such parameter also spills to, consumed other than as a
+  /// call argument, spilled where the incoming pointer cannot replace the
+  /// storage, or read where the spill does not dominate it gets a diagnostic
+  /// on the operation at fault and failure.
+  ///
+  /// Not an override, since this has no counterpart in the generic contract.
+  mlir::LogicalResult
+  prepareNonByvalParameters(cir::FuncOp funcOp,
+                            const mlir::abi::FunctionClassification &fc);
 
-  /// Replace each non-byval indirect parameter's CIRGen slot with the
+  /// Replace each non-byval indirect parameter's spill slot with the
   /// incoming pointer, so the body operates on the caller's storage in place.
   /// Call once, after every function and call site has been rewritten: a call
-  /// forwarding such a parameter reads the slot to recognise it.  Not an
+  /// forwarding such a parameter reads the slot to recognize it.  Not an
   /// override, since deferring this has no counterpart in the generic
   /// contract.
   void finalizeParameterSlots();
@@ -98,10 +111,10 @@ private:
   mlir::ModuleOp module;
   const mlir::DataLayout &dl;
 
-  /// CIRGen param-slot allocas that non-byval indirect parameters will
+  /// Param-slot allocas that non-byval indirect parameters will
   /// replace, paired with the incoming pointer that replaces them.  The
   /// rewrite retypes the block argument but leaves the slot standing, because
-  /// a call site recognises a forwardable parameter by the slot its operand
+  /// a call site recognizes a forwardable parameter by the slot its operand
   /// was loaded from.  finalizeParameterSlots does the replacement once every
   /// call site has been rewritten.
   llvm::SmallVector<std::pair<cir::AllocaOp, mlir::BlockArgument>>
