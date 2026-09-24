@@ -53,7 +53,6 @@ include "RISCVMacroFusion.td"
 //===----------------------------------------------------------------------===//
 include "RISCVSchedAndes45.td"
 include "RISCVSchedGenericOOO.td"
-include "RISCVSchedGR765.td"
 include "RISCVSchedMIPSP8700.td"
 include "RISCVSchedRocket.td"
 include "RISCVSchedSiFive7.td"

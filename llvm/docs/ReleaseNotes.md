@@ -256,7 +256,6 @@ Makes programs 10x faster by doing Special New Thing.
 * Added experimental MC support for the ACLIC v0.20 extensions: `Smidctrl`,
   `Ssidctrl`, `Smnip`, `Ssnip`, `Smijt`, `Ssijt`, `Smehv`, `Ssehv`, `Smcsps`,
   `Sscsps`, `Smip`, and `Ssip`.
-* Added `-mcpu=gr765` for the 64-bit GR765 processor.
 * Adds experimental assembler/CodeGen support for the `Zilx` (Indexed Integer
   Load) extension.
 * Bump Svukte extension to 1.0.
@@ -271,6 +270,7 @@ Makes programs 10x faster by doing Special New Thing.
 * Updated the canonical order of one-letter RISC-V extensions to match the
   latest specification, placing ``p`` after ``v`` and removing unused ``n``.
 * Adds experimental assembler support for the `Xqccmi` (Qualcomm 16-bit Instruction Lookup Table) vendor extension.
+* Added `-mcpu=gaisler-gr765` for the 64-bit GR765 processor.
 
 ### Changes to the WebAssembly Backend
 
