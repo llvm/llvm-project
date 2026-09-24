@@ -2055,9 +2055,9 @@ void SIRegisterInfo::buildSpillLoadStore(
     // $vgpr0 = COPY $vgpr1 // outgoing value moved to v0
     // ...
     // WWM spill restore to preserve the inactive lanes of v0.
-    // $sgpr4_sgpr5 = S_XOR_SAVEEXEC_B64 -1
-    // $vgpr0 = BUFFER_LOAD $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0
-    // $exec = S_MOV_B64 killed $sgpr4_sgpr5
+    // $sgpr4_5 = S_XOR_SAVEEXEC_B64 -1
+    // $vgpr0 = BUFFER_LOAD $sgpr0_3, $sgpr32, 0, 0, 0
+    // $exec = S_MOV_B64 killed $sgpr4_5
     // ...
     // SI_RETURN implicit $vgpr0
     // ...
@@ -4300,7 +4300,7 @@ bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
 
 MCRegister SIRegisterInfo::getReturnAddressReg(const MachineFunction &MF) const {
   // Not a callee saved register.
-  return AMDGPU::SGPR30_SGPR31;
+  return AMDGPU::SGPR30_31;
 }
 
 const TargetRegisterClass *

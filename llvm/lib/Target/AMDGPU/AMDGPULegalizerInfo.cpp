@@ -7948,7 +7948,7 @@ bool AMDGPULegalizerInfo::legalizeTrapHsaQueuePtr(
   MachineFunction &MF = B.getMF();
   const LLT I64 = LLT::integer(64);
 
-  Register SGPR01(AMDGPU::SGPR0_SGPR1);
+  Register SGPR01(AMDGPU::SGPR0_1);
   // For code object version 5, queue_ptr is passed through implicit kernarg.
   if (AMDGPU::getAMDHSACodeObjectVersion(*MF.getFunction().getParent()) >=
       AMDGPU::AMDHSA_COV5) {

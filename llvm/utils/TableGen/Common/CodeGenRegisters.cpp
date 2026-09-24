@@ -616,8 +616,70 @@ struct TupleExpander : SetTheory::Expander {
   // Track all synthesized tuple names in order to detect duplicate definitions.
   llvm::StringSet<> TupleNames;
 
-  TupleExpander(std::vector<std::unique_ptr<Record>> &SynthDefs)
-      : SynthDefs(SynthDefs) {}
+  // Maps each register to the one that follows it. Registers that end a
+  // sequence, or that belong to none, are absent.
+  DenseMap<const Record *, const Record *> NextRegister;
+
+  TupleExpander(const RecordKeeper &Records,
+                std::vector<std::unique_ptr<Record>> &SynthDefs)
+      : SynthDefs(SynthDefs) {
+    for (const Record *Seq :
+         Records.getAllDerivedDefinitionsIfDefined("RegisterSequence")) {
+      std::vector<const Record *> Members =
+          Seq->getValueAsListOfDefs("MemberList");
+      for (const auto &[Reg, Next] : zip_equal(
+               ArrayRef(Members).drop_back(), ArrayRef(Members).drop_front())) {
+        const Record *&NextReg = NextRegister[Reg];
+        if (NextReg) {
+          PrintFatalError(Seq->getLoc(), "Register '" + Reg->getName() +
+                                             "' is already followed by '" +
+                                             NextReg->getName() + "'.");
+        }
+        NextReg = Next;
+      }
+    }
+  }
+
+  // Returns whether each of the given registers is followed by the next one,
+  // so that stating the first and the last of them describes them all. A lone
+  // register follows nothing, so it is not a sequence.
+  bool isSequence(ArrayRef<const Record *> Regs) const {
+    if (Regs.size() < 2)
+      return false;
+
+    for (const auto &[Reg, Next] :
+         zip_equal(Regs.drop_back(), Regs.drop_front())) {
+      if (NextRegister.lookup(Reg) != Next)
+        return false;
+    }
+
+    return true;
+  }
+
+  // Names a tuple of registers that follow one another after the first and the
+  // last of them, so that SGPR0, SGPR1, SGPR2 and SGPR3 give SGPR0_3. Returns
+  // nothing if the registers are not named in a way that admits such a name,
+  // in which case the tuple keeps being named after every register it holds.
+  static std::optional<std::string> getSequenceName(const Record *First,
+                                                    const Record *Last) {
+    StringRef FirstName = First->getName();
+    StringRef LastName = Last->getName();
+
+    // The registers have to be named after a common stem and their numbers,
+    // as the name states the stem just once.
+    StringRef Digits = "0123456789";
+    StringRef LastStem = LastName.rtrim(Digits);
+    StringRef LastNumber = LastName.drop_front(LastStem.size());
+    if (LastNumber.empty() || FirstName.rtrim(Digits) != LastStem)
+      return std::nullopt;
+
+    // The first register needs a number of its own, which is what tells the
+    // name of the tuple from the name of that register.
+    if (FirstName.size() == LastStem.size())
+      return std::nullopt;
+
+    return (FirstName + "_" + LastNumber).str();
+  }
 
   void expand(SetTheory &ST, const Record *Def,
               SetTheory::RecSet &Elts) override {
@@ -646,15 +708,31 @@ struct TupleExpander : SetTheory::Expander {
     // Zip them up.
     RecordKeeper &RK = Def->getRecords();
     for (unsigned n = 0; n != Length; ++n) {
-      std::string Name;
       const Record *Proto = Lists[0][n];
       std::vector<Init *> Tuple;
+      SmallVector<const Record *, 8> Regs;
       for (unsigned i = 0; i != Dim; ++i) {
         const Record *Reg = Lists[i][n];
-        if (i)
-          Name += '_';
-        Name += Reg->getName();
+        Regs.push_back(Reg);
         Tuple.push_back(Reg->getDefInit());
+      }
+
+      // Name the tuple after the registers it holds. Registers that follow one
+      // another are described by the first and the last of them, so name the
+      // tuple after those rather than after every register in turn.
+      std::optional<std::string> SequenceName;
+      if (isSequence(Regs))
+        SequenceName = getSequenceName(Regs.front(), Regs.back());
+
+      std::string Name;
+      if (SequenceName) {
+        Name = std::move(*SequenceName);
+      } else {
+        for (const auto &[i, Reg] : enumerate(Regs)) {
+          if (i)
+            Name += '_';
+          Name += Reg->getName();
+        }
       }
 
       // Take the cost list of the first register in the tuple.
@@ -1228,7 +1306,7 @@ CodeGenRegBank::CodeGenRegBank(const RecordKeeper &Records,
   Sets.addFieldExpander("RegisterClass", "MemberList");
   Sets.addFieldExpander("CalleeSavedRegs", "SaveList");
   Sets.addExpander("RegisterTuples",
-                   std::make_unique<TupleExpander>(SynthDefs));
+                   std::make_unique<TupleExpander>(Records, SynthDefs));
 
   // Read in the user-defined (named) sub-register indices.
   // More indices will be synthesized later.
