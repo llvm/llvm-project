@@ -7322,37 +7322,6 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MI.eraseFromParent();
     return BB;
   }
-  case AMDGPU::V_ADD_CO_U32_e32:
-  case AMDGPU::V_SUB_CO_U32_e32:
-  case AMDGPU::V_SUBREV_CO_U32_e32: {
-    // TODO: Define distinct V_*_I32_Pseudo instructions instead.
-    unsigned Opc = MI.getOpcode();
-
-    bool NeedClampOperand = false;
-    if (TII->pseudoToMCOpcode(Opc) == -1) {
-      Opc = AMDGPU::getVOPe64(Opc);
-      NeedClampOperand = true;
-    }
-
-    bool VCCDead = MI.getOperand(3).isDead();
-
-    auto I = BuildMI(*BB, MI, DL, TII->get(Opc), MI.getOperand(0).getReg());
-    bool IsVOP3 = TII->isVOP3(*I);
-    if (IsVOP3)
-      I.addReg(TRI->getVCC(), RegState::Define | getDeadRegState(VCCDead));
-
-    I.add(MI.getOperand(1)).add(MI.getOperand(2));
-    if (NeedClampOperand)
-      I.addImm(0); // clamp bit for e64 encoding
-
-    if (!IsVOP3 && VCCDead)
-      I.setOperandDead(3);
-
-    TII->legalizeOperands(*I);
-
-    MI.eraseFromParent();
-    return BB;
-  }
   case AMDGPU::V_ADDC_U32_e32:
   case AMDGPU::V_SUBB_U32_e32:
   case AMDGPU::V_SUBBREV_U32_e32:
@@ -20511,6 +20480,13 @@ void SITargetLowering::computeKnownBitsForTargetInstr(
       // at any given point.
       Known.Zero.setHighBits(
           llvm::countl_zero(getSubtarget()->getAddressableLocalMemorySize()));
+      break;
+    }
+    case Intrinsic::amdgcn_readfirstlane:
+    case Intrinsic::amdgcn_readlane: {
+      // Result is the data operand's value from some lane.
+      VT.computeKnownBitsImpl(MI->getOperand(2).getReg(), Known, DemandedElts,
+                              Depth + 1);
       break;
     }
     }

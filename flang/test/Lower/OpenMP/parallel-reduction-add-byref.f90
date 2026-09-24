@@ -40,7 +40,7 @@
 !CHECK: }
 
 !CHECK-LABEL: func.func @_QPsimple_int_add
-!CHECK:  %[[IREF:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFsimple_int_addEi"}
+!CHECK:  %[[IREF:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFsimple_int_addEi"}>
 !CHECK:  %[[I_DECL:.*]]:2 = hlfir.declare %[[IREF]] {uniq_name = "_QFsimple_int_addEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:  %[[I_START:.*]] = arith.constant 0 : i32
 !CHECK:  hlfir.assign %[[I_START]] to %[[I_DECL]]#0 : i32, !fir.ref<i32>
@@ -65,7 +65,7 @@ subroutine simple_int_add
 end subroutine
 
 !CHECK-LABEL: func.func @_QPsimple_real_add
-!CHECK:  %[[RREF:.*]] = fir.alloca f32 {bindc_name = "r", uniq_name = "_QFsimple_real_addEr"}
+!CHECK:  %[[RREF:.*]] = fir.alloca f32 <{bindc_name = "r", uniq_name = "_QFsimple_real_addEr"}>
 !CHECK:  %[[R_DECL:.*]]:2 = hlfir.declare %[[RREF]] {uniq_name = "_QFsimple_real_addEr"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 !CHECK:  %[[R_START:.*]] = arith.constant 0.000000e+00 : f32
 !CHECK:  hlfir.assign %[[R_START]] to %[[R_DECL]]#0 : f32, !fir.ref<f32>
@@ -90,9 +90,9 @@ subroutine simple_real_add
 end subroutine
 
 !CHECK-LABEL: func.func @_QPint_real_add
-!CHECK:  %[[IREF:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFint_real_addEi"}
+!CHECK:  %[[IREF:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFint_real_addEi"}>
 !CHECK:  %[[I_DECL:.*]]:2 = hlfir.declare %[[IREF]] {uniq_name = "_QFint_real_addEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK:  %[[RREF:.*]] = fir.alloca f32 {bindc_name = "r", uniq_name = "_QFint_real_addEr"}
+!CHECK:  %[[RREF:.*]] = fir.alloca f32 <{bindc_name = "r", uniq_name = "_QFint_real_addEr"}>
 !CHECK:  %[[R_DECL:.*]]:2 = hlfir.declare %[[RREF]] {uniq_name = "_QFint_real_addEr"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 !CHECK:  %[[R_START:.*]] = arith.constant 0.000000e+00 : f32
 !CHECK:  hlfir.assign %[[R_START]] to %[[R_DECL]]#0 : f32, !fir.ref<f32>

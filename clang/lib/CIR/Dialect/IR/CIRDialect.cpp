@@ -2708,8 +2708,17 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   if (parser.parseOptionalKeyword(noProtoNameAttr).succeeded())
     state.addAttribute(noProtoNameAttr, parser.getBuilder().getUnitAttr());
 
-  if (parser.parseOptionalKeyword(comdatNameAttr).succeeded())
-    state.addAttribute(comdatNameAttr, parser.getBuilder().getUnitAttr());
+  if (parser.parseOptionalKeyword(comdatNameAttr).succeeded()) {
+    std::string comdatKey;
+    if (mlir::succeeded(parser.parseOptionalLParen())) {
+      if (parser.parseString(&comdatKey).failed())
+        return failure();
+      if (parser.parseRParen().failed())
+        return failure();
+    }
+    state.addAttribute(comdatNameAttr,
+                       parser.getBuilder().getStringAttr(comdatKey));
+  }
 
   auto parseAlignmentBody = [&](int64_t &value) {
     if (parser.parseLParen().failed() || parser.parseInteger(value).failed() ||
@@ -3043,8 +3052,11 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
   if (getNoProto())
     p << " no_proto";
 
-  if (getComdat())
+  if (std::optional<StringRef> comdatKey = getComdat()) {
     p << " comdat";
+    if (!comdatKey->empty())
+      p << "(\"" << *comdatKey << "\")";
+  }
 
   if (getAlignment())
     p << " alignment(" << *getAlignment() << ')';
