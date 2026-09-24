@@ -4,8 +4,8 @@ declare void @llvm.fake.use(...)
 
 ; %a is built solely from %x but is defined *outside* the region dominated by
 ; the true edge of %c, so propagateEquality's direct-use replacement cannot
-; reach it. propagateConstExpressions should clone %a into if.true with %x
-; replaced by the known constant 5, and constant-fold the clone.
+; reach it. propagateConstExpressions should fold %a with %x substituted by
+; the known constant 5, and rewrite the use in if.true.
 define i32 @add_outside_dominated_region(i32 %x) {
 ; CHECK-LABEL: @add_outside_dominated_region(
 ; CHECK: if.true:
@@ -33,7 +33,7 @@ if.false:
   ret i32 0
 }
 
-; Cast expressions should also be cloned and folded.
+; Cast expressions should also be folded.
 define i64 @zext_outside_dominated_region(i32 %x) {
 ; CHECK-LABEL: @zext_outside_dominated_region(
 ; CHECK: if.true:
@@ -47,7 +47,7 @@ if.false:
   ret i64 0
 }
 
-; Chains of expressions built solely from %x should be cloned recursively.
+; Chains of expressions built solely from %x should be folded bottom-up.
 define i32 @chained_expr_outside_dominated_region(i32 %x) {
 ; CHECK-LABEL: @chained_expr_outside_dominated_region(
 ; CHECK: if.true:
@@ -194,5 +194,86 @@ if.false:
   %cmp = icmp slt i32 %i.next, %n
   br i1 %cmp, label %loop, label %exit
 exit:
+  ret i32 0
+}
+
+; %m is not built only from %x: the known-constant operand %y is an absorbing
+; element, so the expression still folds even though %x stays unknown.
+define i32 @mul_absorber_other_operand(i32 %x, i32 %y) {
+; CHECK-LABEL: @mul_absorber_other_operand(
+; CHECK: if.true:
+; CHECK-NEXT: ret i32 0
+  %m = mul i32 %x, %y
+  %c = icmp eq i32 %y, 0
+  br i1 %c, label %if.true, label %if.false
+if.true:
+  ret i32 %m
+if.false:
+  ret i32 1
+}
+
+; A shared sub-expression is only walked once; both operands of %s see the
+; same folded value.
+define i32 @shared_subexpression(i32 %x) {
+; CHECK-LABEL: @shared_subexpression(
+; CHECK: if.true:
+; CHECK-NEXT: ret i32 12
+  %a = add i32 %x, 1
+  %s = add i32 %a, %a
+  %c = icmp eq i32 %x, 5
+  br i1 %c, label %if.true, label %if.false
+if.true:
+  ret i32 %s
+if.false:
+  ret i32 0
+}
+
+; Chains deeper than InstSimplify's own recursion limit still fold, because
+; the walk is driven here and each node is simplified with folded operands.
+define i32 @deep_chain(i32 %x) {
+; CHECK-LABEL: @deep_chain(
+; CHECK: if.true:
+; CHECK-NEXT: ret i32 10
+  %a1 = add i32 %x, 1
+  %a2 = add i32 %a1, 1
+  %a3 = add i32 %a2, 1
+  %a4 = add i32 %a3, 1
+  %a5 = add i32 %a4, 1
+  %c = icmp eq i32 %x, 5
+  br i1 %c, label %if.true, label %if.false
+if.true:
+  ret i32 %a5
+if.false:
+  ret i32 0
+}
+
+; Nothing folds when the expression stays non-constant: %y is unknown and add
+; has no absorbing element.
+define i32 @unknown_other_operand_not_folded(i32 %x, i32 %y) {
+; CHECK-LABEL: @unknown_other_operand_not_folded(
+; CHECK: if.true:
+; CHECK-NEXT: ret i32 %a
+  %a = add i32 %x, %y
+  %c = icmp eq i32 %x, 5
+  br i1 %c, label %if.true, label %if.false
+if.true:
+  ret i32 %a
+if.false:
+  ret i32 0
+}
+
+; Loads are not part of the walked opcode set, so an expression whose operand
+; cone contains one is left alone.
+define i32 @load_in_cone_not_folded(ptr %p, i32 %x) {
+; CHECK-LABEL: @load_in_cone_not_folded(
+; CHECK: if.true:
+; CHECK-NEXT: ret i32 %a
+  %l = load i32, ptr %p
+  %a = add i32 %l, %x
+  %c = icmp eq i32 %x, 5
+  br i1 %c, label %if.true, label %if.false
+if.true:
+  ret i32 %a
+if.false:
   ret i32 0
 }
