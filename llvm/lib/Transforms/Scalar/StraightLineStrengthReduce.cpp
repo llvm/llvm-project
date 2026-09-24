@@ -136,6 +136,7 @@ STATISTIC(NumSCEVCandidateBasisDifferences,
           "Number of candidate-basis SCEV differences computed by SLSR");
 STATISTIC(NumFilteredCandidates,
           "Number of SLSR candidates not rewritten due to register pressure");
+STATISTIC(NumRewrittenCandidates, "Number of SLSR candidates rewritten");
 
 namespace {
 
@@ -1426,7 +1427,7 @@ bool StraightLineStrengthReduceLegacyPass::runOnFunction(Function &F) {
 namespace {
 
 class RewriteFilter {
-  // Recondiser rewriting a basic block holding many distinct SLSR bases.
+  // Reconsider rewriting a basic block holding many distinct SLSR bases.
 
   // Each basis contributes one extended live range no matter how many
   // candidates are rewritten against it in a basic block.
@@ -1465,7 +1466,6 @@ public:
     DEBUG_SLSR_REWRITE_FILTER(dbgs() << "-- Max liveness of BBs -- \n");
     SmallPtrSet<const BasicBlock *, 8> BBsToSkip;
     for (auto &BB : *F) {
-
       auto It = BBToNumCandsAndBasises.find(&BB);
       if (It == BBToNumCandsAndBasises.end() ||
           It->second.second <= MinDistinctBasisesToFilter)
@@ -1518,9 +1518,6 @@ private:
   // instruction, so memoize on the type, which is all the weight depends on.
   mutable DenseMap<Type *, unsigned> WeightCache;
 
-  // Liveness is only computed for functions that pass the candidate-count
-  // gate. Blocks of the remaining functions read as having nothing live across
-  // their boundaries, which is why no rewrite is suppressed in that case.
   const BlockLiveness &getLiveness(const BasicBlock *BB) const {
     static const BlockLiveness Empty;
     auto It = BBToLiveness.find(BB);
@@ -1541,8 +1538,8 @@ private:
                                   unsigned Budget) const {
     // Leave the allocator some slack: it also has to satisfy register class
     // and ABI constraints that this estimate knows nothing about.
-    constexpr double SafeRatio = 0.9;
-    unsigned SafeBudget = static_cast<unsigned>(Budget * SafeRatio);
+    constexpr unsigned SafeMargin = 8;
+    unsigned SafeBudget = Budget >= SafeMargin ? Budget - SafeMargin : Budget;
 
     // There is headroom, so however much the rewrite adds is irrelevant.
     if (After <= SafeBudget)
@@ -1832,8 +1829,10 @@ bool StraightLineStrengthReduce::runOnFunction(Function &F) {
   for (Instruction *I : reverse(SortedCandidateInsts)) {
     auto It = PickedCandidateMap.find(I);
     if (It != PickedCandidateMap.end())
-      if (!ToSkipRewrite.contains(It->first))
+      if (!ToSkipRewrite.contains(It->first)) {
         rewriteCandidate(*It->second);
+        NumRewrittenCandidates++;
+      }
   }
 
   for (auto *DeadIns : DeadInstructions)

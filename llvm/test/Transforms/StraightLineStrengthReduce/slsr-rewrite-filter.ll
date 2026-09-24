@@ -4,10 +4,10 @@
 
 ; CHECK-NOT: Number of SLSR candidates not rewritten due to register pressure
 
-; The SLSR rewirte filter needs a register budget to compare against, and
+; The SLSR rewrite filter needs a register budget to compare against, and
 ; the generic TargetTransformInfo has none: getRegisterBudget() returns
 ; std::nullopt unless a target implements it. There is no target triple here, so
-; RPFilter::run() returns early, before it even computes liveness or pressure,
+; RewriteFilter::run() returns early, before it even computes liveness or pressure,
 ; and every rewrite stands.
 ;
 ; @many_basises_overlapping is the same body used by
