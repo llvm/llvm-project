@@ -480,7 +480,7 @@ public:
   virtual bool GetDeclaration(Declaration &decl);
 
   // The functions below should NOT be modified by subclasses
-  /// Updates the ValueObject's value if needed, and then return the
+  /// Updates the ValueObject's value if needed, and then returns the
   /// current error state.  This should only be called if the stop locker is
   /// held so the process can't resume while this is in flight.
   const Status &GetError();

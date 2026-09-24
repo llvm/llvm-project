@@ -291,9 +291,7 @@ const Status &ValueObject::GetError() {
   return m_error;
 }
 
-const Status &ValueObject::PeekError() {
-  return m_error;
-}
+const Status &ValueObject::PeekError() { return m_error; }
 
 const char *ValueObject::GetLocationAsCStringImpl(const Value &value,
                                                   const DataExtractor &data) {
@@ -3899,7 +3897,7 @@ lldb::ValueObjectSP ValueImpl::GetSP(Process::StopLocker &stop_locker,
   Target *target = value_sp->GetTargetSP().get();
 
   if (!target) {
-  // If this ValueObject holds an error, then it is valuable for that.
+    // If this ValueObject holds an error, then it is valuable for that.
     if (value_sp->GetError().Fail())
       return value_sp;
     return ValueObjectSP();
@@ -3925,7 +3923,6 @@ lldb::ValueObjectSP ValueImpl::GetSP(Process::StopLocker &stop_locker,
 
   // Now we can safely get the ValueObject to update itself and if that results
   // in an error, return this ValueObject since it holds the error:
-  // If this ValueObject holds an error, then it is valuable for that.
   if (value_sp->GetError().Fail())
     return value_sp;
 
