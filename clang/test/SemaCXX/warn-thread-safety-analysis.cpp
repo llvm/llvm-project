@@ -8307,6 +8307,18 @@ void test_attr_refers_to_param(Mutex *m) {
   m->Unlock();
 }
 
+struct Owner {
+  Mutex gmu;
+};
+
+// An attribute on a redeclaration names that redeclaration's parameters.
+extern void (*redecl_cb)(int, Owner *g);
+void (*redecl_cb)(int, Owner *g) EXCLUSIVE_LOCKS_REQUIRED(g->gmu) = nullptr;
+
+void callRedecl(int n, Owner *arg) {
+  redecl_cb(n, arg); // expected-warning {{calling function 'redecl_cb' requires holding mutex 'arg->gmu' exclusively}}
+}
+
 // Function references name a function to call just like function pointers do.
 void lock_impl(void) EXCLUSIVE_LOCK_FUNCTION(mu);
 void unlock_impl(void) UNLOCK_FUNCTION(mu);
