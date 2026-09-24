@@ -37,7 +37,7 @@ static cl::opt<unsigned> ColdThreshold(
              "threshold when evaluating whether a basic block is cold "
              "(0 means it is only considered cold if the block has zero "
              "samples). Default: 0 "),
-    cl::init(0), cl::ZeroOrMore, cl::Hidden, cl::cat(BoltOptCategory));
+    cl::init(0), cl::Hidden, cl::cat(BoltOptCategory));
 
 static cl::opt<bool> PrintClusters("print-clusters", cl::desc("print clusters"),
                                    cl::Hidden, cl::cat(BoltOptCategory));
