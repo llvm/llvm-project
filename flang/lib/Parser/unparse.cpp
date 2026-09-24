@@ -2910,6 +2910,12 @@ public:
   WALK_NESTED_ENUM(AccDataModifier, Modifier)
   WALK_NESTED_ENUM(AccessSpec, Kind) // R807
   WALK_NESTED_ENUM(common, TypeParamAttr) // R734
+  void Unparse(const CUDADataAttrSpec &x) { // CUDA
+    Walk(std::get<common::CUDADataAttr>(x.t));
+    if (std::get<std::optional<CUDADataAttrSpec::Implicit>>(x.t)) {
+      Word("(IMPLICIT)");
+    }
+  }
   WALK_NESTED_ENUM(common, CUDADataAttr) // CUDA
   WALK_NESTED_ENUM(common, CUDASubprogramAttrs) // CUDA
   WALK_NESTED_ENUM(common, OmpDependenceKind)

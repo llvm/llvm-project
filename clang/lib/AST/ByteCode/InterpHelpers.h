@@ -42,6 +42,8 @@ bool CheckLive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 /// Checks if a pointer is a dummy pointer.
 bool CheckDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                 AccessKinds AK);
+bool diagnoseDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                   AccessKinds AK);
 
 bool arrayElemPtrOpaque(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                         APSInt &&Index, bool AllowReplace = true);
@@ -76,6 +78,8 @@ inline bool CheckMutable(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 /// Checks if a value can be loaded from a block.
 bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                AccessKinds AK = AK_Read);
+bool CheckLoad(InterpState &S, CodePtr OpPC, PtrView Ptr,
+               AccessKinds AK = AK_Read);
 
 /// Diagnose mismatched new[]/delete or new/delete[] pairs.
 bool CheckNewDeleteForms(InterpState &S, CodePtr OpPC,
@@ -84,11 +88,16 @@ bool CheckNewDeleteForms(InterpState &S, CodePtr OpPC,
                          const Expr *NewExpr);
 
 /// Copy the contents of Src into Dest.
-bool DoMemcpy(InterpState &S, CodePtr OpPC, const Pointer &Src, Pointer &Dest);
+bool DoMemcpy(InterpState &S, CodePtr OpPC, const Pointer &Src, Pointer &Dest,
+              bool Activate = true, bool Diagnose = false);
 
 UnsignedOrNone evaluateBuiltinObjectSize(const ASTContext &ASTCtx,
                                          unsigned Kind, Pointer &Ptr,
                                          const Expr *E, bool IsDynamic = false);
+
+bool diagnoseUninitialized(InterpState &S, CodePtr OpPC, bool Extern,
+                           const Block *B, Lifetime LT = Lifetime::Started,
+                           AccessKinds AK = AK_Read);
 
 template <typename T>
 bool handleOverflow(InterpState &S, CodePtr OpPC, const T &SrcValue) {

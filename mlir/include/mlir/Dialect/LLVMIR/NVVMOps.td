@@ -2143,7 +2143,8 @@ def NVVM_ConvertF32x2ToF6x2Op : NVVM_Op<"convert.f32x2.to.f6x2"> {
 
   string llvmBuilder = [{
     auto intId = NVVM::ConvertF32x2ToF6x2Op::getIntrinsicID($dstTy, $relu);
-    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, {$a, $b});
+    llvm::Value *packedI16 =
+        createIntrinsicCall(builder, intId, {$a, $b, builder.getInt1(false)});
     if(op.getDst().getType().isInteger(16))
       $dst = packedI16;
     else
@@ -2185,7 +2186,8 @@ class NVVM_ConvertFPx2ToF6x2Op<string srcType>
 
   string llvmBuilder = [{
     auto intId = NVVM::Convert}]#srcType#[{x2ToF6x2Op::getIntrinsicID($dstTy, $relu);
-    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, {$src});
+    llvm::Value *packedI16 =
+        createIntrinsicCall(builder, intId, {$src, builder.getInt1(false)});
     if(op.getDst().getType().isInteger(16))
       $dst = packedI16;
     else
@@ -2239,7 +2241,10 @@ def NVVM_ConvertF32x2ToF8x2Op : NVVM_Op<"convert.f32x2.to.f8x2"> {
   
   string llvmBuilder = [{
     auto intId = NVVM::ConvertF32x2ToF8x2Op::getIntrinsicID($dstTy, $rnd, $sat, $relu);
-    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, {$a, $b});
+    llvm::SmallVector<llvm::Value *> args = {$a, $b};
+    if (!mlir::isa<mlir::Float8E8M0FNUType>($dstTy))
+      args.push_back(builder.getInt1(false));
+    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, args);
     if(op.getDst().getType().isInteger(16))
       $dst = packedI16;
     else
@@ -2285,7 +2290,8 @@ def NVVM_ConvertF16x2ToF8x2Op : NVVM_Op<"convert.f16x2.to.f8x2"> {
 
   string llvmBuilder = [{
     auto intId = NVVM::ConvertF16x2ToF8x2Op::getIntrinsicID($dstTy, $relu);
-    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, {$a});
+    llvm::Value *packedI16 =
+        createIntrinsicCall(builder, intId, {$a, builder.getInt1(false)});
     if(op.getDst().getType().isInteger(16))
       $dst = packedI16;
     else
@@ -2335,7 +2341,10 @@ def NVVM_ConvertBF16x2ToF8x2Op : NVVM_Op<"convert.bf16x2.to.f8x2"> {
 
   string llvmBuilder = [{
     auto intId = NVVM::ConvertBF16x2ToF8x2Op::getIntrinsicID($dstTy, $rnd, $sat, $relu);
-    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, {$src});
+    llvm::SmallVector<llvm::Value *> args = {$src};
+    if (!mlir::isa<mlir::Float8E8M0FNUType>($dstTy))
+      args.push_back(builder.getInt1(false));
+    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, args);
     if(op.getDst().getType().isInteger(16))
       $dst = packedI16;
     else
@@ -5040,7 +5049,7 @@ def NVVM_CpAsyncBulkGlobalToSharedClusterOp :
   string llvmBuilder = [{
     auto [id, args] = NVVM::CpAsyncBulkGlobalToSharedClusterOp::getIntrinsicIDAndArgs(
                       *op, moduleTranslation, builder);
-    createIntrinsicCall(builder, id, args);
+    createIntrinsicCall(builder, id, builder.getVoidTy(), args);
   }];
 }
 
@@ -5437,7 +5446,7 @@ def NVVM_MatchSyncOp : NVVM_Op<"match.sync", [InferTypeOpAdaptor]>,
 //===----------------------------------------------------------------------===//
 
 def NVVM_BulkStoreOp: NVVM_Op<"st.bulk"> {
-  let arguments = (ins AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$addr, I64:$size, DefaultValuedAttr<I64Attr, "0">:$initVal);
+  let arguments = (ins AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$addr, AnyTypeOf<[I32, I64]>:$size, DefaultValuedAttr<I64Attr, "0">:$initVal);
 
   let summary = "Bulk Store Op";
   let description = [{
@@ -5451,13 +5460,12 @@ def NVVM_BulkStoreOp: NVVM_Op<"st.bulk"> {
   }];
 
   string llvmBuilder = [{
-    auto intId = getStBulkIntrinsicId(
-          llvm::cast<LLVM::LLVMPointerType>(op.getAddr().getType()));
-    createIntrinsicCall(builder, intId,
-                      {$addr, $size, builder.getInt64($initVal)});
+    createIntrinsicCall(builder, llvm::Intrinsic::nvvm_st_bulk,
+                        builder.getVoidTy(),
+                        {$addr, $size, builder.getInt64($initVal)});
   }];
   
-  let assemblyFormat = "$addr `,` `size` `=` $size (`,` `init` `=` $initVal^)? attr-dict `:` type($addr)";
+  let assemblyFormat = "$addr `,` `size` `=` $size (`,` `init` `=` $initVal^)? attr-dict `:` type($addr) `,` type($size)";
   
   let hasVerifier = 1;
 }

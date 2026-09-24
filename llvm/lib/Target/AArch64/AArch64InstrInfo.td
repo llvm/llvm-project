@@ -3773,6 +3773,14 @@ def TLSDESCCALL : Pseudo<(outs), (ins i64imm:$sym), []>, Sched<[]> {
   let AsmString = ".tlsdesccall $sym";
 }
 
+// This is a directive-like pseudo-instruction. The purpose is to insert an
+// R_AARCH64_AUTH_TLSDESC_CALL relocation at the offset of the following instruction
+// (which in the usual case is a BLRAA).
+let hasSideEffects = 1 in
+def TLSAUTHDESCCALL : Pseudo<(outs), (ins i64imm:$sym), []>, Sched<[]> {
+  let AsmString = ".tlsauthdesccall $sym";
+}
+
 // Pseudo instruction to tell the streamer to emit a 'B' character into the
 // augmentation string.
 def EMITBKEY : Pseudo<(outs), (ins), []>, Sched<[]> {}
@@ -7172,6 +7180,13 @@ def fixedpoint_xform : SDNodeXForm<timm, [{
 }]>;
 def gi_fixedpoint_xform : GICustomOperandRenderer<"renderFixedPointXForm">,
                               GISDNodeXFormEquiv<fixedpoint_xform>;
+def fixedpoint_recip_xform : SDNodeXForm<timm, [{
+  (void)N;
+  return V;
+}]>;
+def gi_fixedpoint_recip_xform
+    : GICustomOperandRenderer<"renderFixedPointRecipXForm">,
+      GISDNodeXFormEquiv<fixedpoint_recip_xform>;
 
 def gi_fixedpoint_f16_i32 : GIComplexOperandMatcher<s32, "selectCVTFixedPoint<32>">,
                             GIComplexPatternEquiv<fixedpoint_f16_i32>;
@@ -7185,6 +7200,13 @@ def gi_fixedpoint_f64_i32 : GIComplexOperandMatcher<s64, "selectCVTFixedPoint<32
                             GIComplexPatternEquiv<fixedpoint_f64_i32>;
 def gi_fixedpoint_f64_i64 : GIComplexOperandMatcher<s64, "selectCVTFixedPoint<64>">,
                             GIComplexPatternEquiv<fixedpoint_f64_i64>;
+
+def gi_fixedpoint_recip_f32_i32
+    : GIComplexOperandMatcher<s32, "selectCVTFixedPosRecipOperand<32>">,
+      GIComplexPatternEquiv<fixedpoint_recip_f32_i32>;
+def gi_fixedpoint_recip_f64_i64
+    : GIComplexOperandMatcher<s64, "selectCVTFixedPosRecipOperand<64>">,
+      GIComplexPatternEquiv<fixedpoint_recip_f64_i64>;
 
 multiclass FPToIntegerFmulPats<SDPatternOperator round, string INST> { 
   let Predicates = [HasFullFP16] in {
@@ -9137,13 +9159,14 @@ def : Pat<(v2i64 (AArch64uaddlv (v2i32 V64:$Rn))),
           (v2i64 (INSERT_SUBREG (v2i64 (IMPLICIT_DEF)), (UADDLPv2i32_v1i64 V64:$Rn), dsub))>;
 
 // uaddlp from shuffle + zext
-def : Pat<(add (AArch64bici (v8i16 (bitconvert v16i8:$src)), (i32 255), (i32 8)),
-               (AArch64vlshr (v8i16 (AArch64NvCast v16i8:$src)), (i32 8))),
+def : Pat<(add (AArch64bici (v8i16 V128:$src), (i32 255), (i32 8)),
+               (AArch64vlshr (v8i16 V128:$src), (i32 8))),
           (UADDLPv16i8_v8i16 V128:$src)>;
 
-def : Pat<(add (and (v4i32 (bitconvert v8i16:$src)),
-                    (v4i32 (AArch64NvCast (v2i64 (AArch64movi_edit (i32 51)))))),
-               (AArch64vlshr (v4i32 (AArch64NvCast v8i16:$src)), (i32 16))),
+let Predicates = [IsLE] in
+def : Pat<(add (and (v4i32 V128:$src),
+                    (v4i32 (bitconvert (v2i64 (AArch64movi_edit (i32 51)))))),
+               (AArch64vlshr (v4i32 V128:$src), (i32 16))),
           (UADDLPv8i16_v4i32 V128:$src)>;
 
 def : Pat<(add (v2i64 (zext (v2i32 (AArch64zip1 (v2i32 (extract_subvector v4i32:$src, (i64 0))),
@@ -9717,12 +9740,10 @@ multiclass IntegerToFPScalarPats<SDPatternOperator OpNode, string INST> {
   // Expect the integer operand to be in FPR register. The AdvSIMD scalar
   // shifted conversion forms are same-width, so only i32->f32 and i64->f64
   // can use them for generic integer-to-fp fixed-point conversions.
-  let GISelShouldIgnore = 1 in {
   def : Pat<(f32 (fmul (f32 (OpNode (i32 (bitconvert (f32 FPR32:$Rn))))), fixedpoint_recip_f32_i32:$scale)),
-            (!cast<Instruction>(INST # "s") FPR32:$Rn, (fixedpoint_xform fixedpoint_recip_f32_i32:$scale))>;
+            (!cast<Instruction>(INST # "s") FPR32:$Rn, (fixedpoint_recip_xform fixedpoint_recip_f32_i32:$scale))>;
   def : Pat<(f64 (fmul (f64 (OpNode (i64 (bitconvert (f64 FPR64:$Rn))))), fixedpoint_recip_f64_i64:$scale)),
-            (!cast<Instruction>(INST # "d") FPR64:$Rn, (fixedpoint_xform fixedpoint_recip_f64_i64:$scale))>;
-  }
+            (!cast<Instruction>(INST # "d") FPR64:$Rn, (fixedpoint_recip_xform fixedpoint_recip_f64_i64:$scale))>;
 
   def : Pat<(f32 (fdiv (f32 (OpNode (i32 (bitconvert (f32 FPR32:$Rn))))), fixedpoint_f32_i32:$scale)),
             (!cast<Instruction>(INST # "s") FPR32:$Rn, (fixedpoint_xform fixedpoint_f32_i32:$scale))>;
@@ -9799,6 +9820,39 @@ def : Pat<(f64 (int_aarch64_neon_vcvtfxs2fp GPR64:$Rn, vecshiftR64:$imm)),
           (SCVTFSXDri GPR64:$Rn, (fixedpoint_scalar_xform vecshiftR64:$imm))>;
 def : Pat<(f64 (int_aarch64_neon_vcvtfxu2fp GPR64:$Rn, vecshiftR64:$imm)),
           (UCVTFSXDri GPR64:$Rn, (fixedpoint_scalar_xform vecshiftR64:$imm))>;
+
+def : Pat<(int_aarch64_neon_vcvtfxu2fp FPR32:$Rn, vecshiftR32:$imm),
+          (UCVTFs FPR32:$Rn, vecshiftR32:$imm)>;
+def : Pat<(f64 (int_aarch64_neon_vcvtfxu2fp (i64 FPR64:$Rn),
+                                                vecshiftR64:$imm)),
+          (UCVTFd FPR64:$Rn, vecshiftR64:$imm)>;
+def : Pat<(f64 (int_aarch64_neon_vcvtfxs2fp (i64 FPR64:$Rn),
+                                                vecshiftR64:$imm)),
+          (SCVTFd FPR64:$Rn, vecshiftR64:$imm)>;
+def : Pat<(int_aarch64_neon_vcvtfxs2fp FPR32:$Rn, vecshiftR32:$imm),
+          (SCVTFs FPR32:$Rn, vecshiftR32:$imm)>;
+
+multiclass GIIntegerToFPScalarPats<SDPatternOperator OpNode, string INST> {
+  def : Pat<(f32 (fmul (f32 (OpNode (i32 FPR32:$Rn))),
+                         fixedpoint_recip_f32_i32:$scale)),
+            (!cast<Instruction>(INST # "s") FPR32:$Rn,
+              (fixedpoint_recip_xform fixedpoint_recip_f32_i32:$scale))>;
+  def : Pat<(f64 (fmul (f64 (OpNode (i64 FPR64:$Rn))),
+                         fixedpoint_recip_f64_i64:$scale)),
+            (!cast<Instruction>(INST # "d") FPR64:$Rn,
+              (fixedpoint_recip_xform fixedpoint_recip_f64_i64:$scale))>;
+  def : Pat<(f32 (fdiv (f32 (OpNode (i32 FPR32:$Rn))),
+                         fixedpoint_f32_i32:$scale)),
+            (!cast<Instruction>(INST # "s") FPR32:$Rn,
+              (fixedpoint_xform fixedpoint_f32_i32:$scale))>;
+  def : Pat<(f64 (fdiv (f64 (OpNode (i64 FPR64:$Rn))),
+                         fixedpoint_f64_i64:$scale)),
+            (!cast<Instruction>(INST # "d") FPR64:$Rn,
+              (fixedpoint_xform fixedpoint_f64_i64:$scale))>;
+}
+
+defm : GIIntegerToFPScalarPats<any_sint_to_fp, "SCVTF">;
+defm : GIIntegerToFPScalarPats<any_uint_to_fp, "UCVTF">;
 
 // Patterns for FP16 Intrinsics - requires reg copy to/from as i16s not supported.
 
@@ -10061,7 +10115,7 @@ defm : CVTFRecipPat<v8f16, v8i16, V128, fixedpoint_recip_v8f16>;
 
 def VImm0080:         PatLeaf<(AArch64movi_shift (i32 128), (i32 0))>;
 def VImm00008000:     PatLeaf<(AArch64movi_shift (i32 128), (i32 8))>;
-def VImm0000000080000000: PatLeaf<(AArch64NvCast (v2f64 (fneg (AArch64NvCast (v4i32 (AArch64movi_shift (i32 128), (i32 24)))))))>;
+def VImm0000000080000000: PatLeaf<(bitconvert (v2f64 (fneg (bitconvert (v4i32 (AArch64movi_shift (i32 128), (i32 24)))))))>;
 
 // RADDHN patterns for when RSHRN shifts by half the size of the vector element
 def : Pat<(v8i8 (trunc (AArch64vlshr (add (v8i16 V128:$Vn), VImm0080), (i32 8)))),
@@ -10069,6 +10123,7 @@ def : Pat<(v8i8 (trunc (AArch64vlshr (add (v8i16 V128:$Vn), VImm0080), (i32 8)))
 def : Pat<(v4i16 (trunc (AArch64vlshr (add (v4i32 V128:$Vn), VImm00008000), (i32 16)))),
           (RADDHNv4i32_v4i16 V128:$Vn, (v4i32 (MOVIv2d_ns (i32 0))))>;
 let AddedComplexity = 5 in
+let Predicates = [IsLE] in
 def : Pat<(v2i32 (trunc (AArch64vlshr (add (v2i64 V128:$Vn), VImm0000000080000000), (i32 32)))),
           (RADDHNv2i64_v2i32 V128:$Vn, (v2i64 (MOVIv2d_ns (i32 0))))>;
 def : Pat<(v8i8 (int_aarch64_neon_rshrn (v8i16 V128:$Vn), (i32 8))),
@@ -10092,6 +10147,7 @@ def : Pat<(v8i16 (concat_vectors
                  (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn,
                  (v4i32 (MOVIv2d_ns (i32 0))))>;
 let AddedComplexity = 5 in
+let Predicates = [IsLE] in
 def : Pat<(v4i32 (concat_vectors
                  (v2i32 V64:$Vd),
                  (v2i32 (trunc (AArch64vlshr (add (v2i64 V128:$Vn), VImm0000000080000000), (i32 32)))))),

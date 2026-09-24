@@ -2741,7 +2741,7 @@ fn -> other_fn -> other_fn ; fn is norecurse
 
 `speculative_load_hardening`
 :   This attribute indicates that
-    [Speculative Load Hardening](https://llvm.org/docs/SpeculativeLoadHardening.html)
+    [Speculative Load Hardening](SpeculativeLoadHardening.md)
     should be enabled for the function body.
 
     Speculative Load Hardening is a best-effort mitigation against
@@ -8757,6 +8757,33 @@ to the SSA value of the pointer operand.
 Note that this is an experimental feature, which means that its semantics might
 change in the future.
 
+(md_atomic.ignore.denormal.mode)=
+
+#### '`atomic.ignore.denormal.mode`' Metadata
+
+The `atomic.ignore.denormal.mode` metadata may be attached to floating-point
+{ref}`atomicrmw <i_atomicrmw>` instructions. It indicates that the handling of
+denormal inputs and results is insignificant, and may be inconsistent with the
+denormal mode the function otherwise operates in, as described by
+{ref}`denormal_fpenv <denormal_fpenv>`.
+
+This is necessary to emit a native atomic instruction on targets and address
+spaces where the atomic unit has a fixed denormal behavior which need not match
+the denormal mode of the containing function. For example, AMDGPU global memory
+atomics unconditionally flush float denormals, as does the NVPTX `atom.add`
+instruction.
+
+The metadata must reference a single metadata node with no entries; the contents
+of the node are ignored.
+
+```llvm
+%res = atomicrmw fadd ptr %ptr, float %value seq_cst, align 4, !atomic.ignore.denormal.mode !0
+
+!0 = !{}
+```
+
+This metadata was previously spelled `amdgpu.ignore.denormal.mode`.
+
 #### '`type`' Metadata
 
 See {doc}`TypeMetadata`.
@@ -9239,6 +9266,8 @@ This defines a global with type `SHT_LLVM_CFI_JUMP_TABLE` and entry
 size 8.
 
 
+(module-flags-metadata)=
+
 ## Module Flags Metadata
 
 Information about the module as a whole is difficult to convey to LLVM's
@@ -9528,7 +9557,8 @@ lowered. The value is a string and must be one of:
 
 When the flag is absent, the target's default thread model is used. The flag
 must use the `error` merge behavior. For example:
-```
+
+```llvm
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"thread-model", !"single"}
 ```
@@ -9541,15 +9571,18 @@ interpretation target-specific.
 
 For example, RISC-V uses names such as `"ilp32"`, `"ilp32d"`, `"lp64"`, and
 `"lp64d"`:
-```
+
+```llvm
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"target-abi", !"lp64d"}
 ```
 while ARM uses names such as `"aapcs"` and `"apcs-gnu"`:
-```
+
+```llvm
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"target-abi", !"aapcs"}
 ...
+```
 
 ### Exception Model Module Flags Metadata
 
@@ -21248,6 +21281,7 @@ The '`llvm.experimental.cttz.elts`' intrinsic counts the trailing (least
 significant) zero elements in a vector. If `src == 0` the result is the
 number of elements in the input vector.
 
+If any element in the input vector is poison, the result is poison.
 
 #### '`llvm.experimental.get.vector.length`' Intrinsic
 
@@ -24020,6 +24054,138 @@ The first two arguments and the result have the same vector of integer type. The
 
 Follows the same semantics as {ref}`srem <i_srem>` with the exception that disabled lanes cannot produce undefined behaviour and always result in poison.
 
+### Speculative Load Intrinsics
+
+LLVM provides intrinsics for speculatively loading memory that may be
+out-of-bounds. These intrinsics enable optimizations like early-exit loop
+vectorization where the vectorized loop may read beyond the end of an array,
+provided the access is guaranteed to be valid by target-specific checks.
+
+(int_speculative_load)=
+
+#### '`llvm.speculative.load`' Intrinsic
+
+##### Syntax:
+This is an overloaded intrinsic.
+
+```
+declare b128               @llvm.speculative.load.b128.p0(ptr <ptr>, i1 <from_end>, ...)
+declare <4 x i32>          @llvm.speculative.load.v4i32.p0(ptr <ptr>, i1 <from_end>, ...)
+declare <vscale x 4 x i32> @llvm.speculative.load.nxv4i32.p0(ptr <ptr>, i1 <from_end>, ...)
+```
+
+The trailing arguments are variadic and select between two forms.
+
+```llvm
+; Direct form: the number of accessible bytes is given as an i64.
+%a = call <4 x i32> (ptr, i1, ...)
+       @llvm.speculative.load.v4i32.p0(ptr %ptr, i1 false, i64 16)
+
+; Oracle form: the number of accessible bytes is the value returned by
+; @oracle(%n).
+%b = call <4 x i32> (ptr, i1, ...)
+       @llvm.speculative.load.v4i32.p0(ptr %ptr, i1 false, ptr @oracle, i64 %n)
+```
+
+##### Overview:
+
+The '`llvm.speculative.load`' intrinsic loads a value from memory. Unlike a
+regular load, the memory access may extend beyond the bounds of the allocated
+object, provided the memory can be safely accessed on the underlying hardware.
+{ref}`llvm.can.load.speculatively <int_can_load_speculatively>` can be used to
+check if the access is safe.
+
+##### Arguments:
+
+The first argument is a pointer to the memory location to load from. The return
+type must be a byte type or a vector type, and its size in bytes must be a
+positive power of 2. The second argument is an `i1` constant flag `from_end`
+selecting whether the `N` accessible bytes are counted from the start or end
+of the loaded value (see Semantics). The remaining arguments determine the
+*number of accessible bytes*, denoted `N` below.
+
+In the **direct form**, the third argument is an `i64` specifying `N`
+directly. In the **oracle form**, the third argument must be a direct
+reference to a non-variadic function returning `i64` that is `nounwind`,
+`nosync` and `willreturn` and may only read memory through its arguments;
+the remaining arguments are forwarded to it, and its return value is `N`.
+
+##### Semantics:
+
+Let `S` denote the size of the return type in bytes.
+
+When `from_end` is `false`, the first `N` bytes (offsets `[0, N)`)
+are the stored values read from memory. Bytes at offsets `[N, S)` are
+`poison`.
+
+When `from_end` is `true`, the last `N` bytes (offsets `[S - N, S)`)
+are the stored values read from memory. Bytes at offsets `[0, S - N)` are
+`poison`.
+
+In both cases, the `N` accessible bytes must lie within the bounds of an
+allocated object that `ptr` is {ref}`based <pointeraliasing>` on, and
+poison bytes are not considered accessed for the purposes of data races or
+`noalias` constraints. The behavior is undefined if `N` exceeds `S`.
+
+The behavior is undefined if any byte the underlying load actually reads is
+not safe to speculatively access.
+{ref}`llvm.can.load.speculatively <int_can_load_speculatively>` can be used
+to check safety.
+
+(int_can_load_speculatively)=
+
+#### '`llvm.can.load.speculatively`' Intrinsic
+
+##### Syntax:
+This is an overloaded intrinsic.
+
+```
+declare i1 @llvm.can.load.speculatively.p0(ptr <ptr>, i64 <num_bytes>)
+declare i1 @llvm.can.load.speculatively.p1(ptr addrspace(1) <ptr>, i64 <num_bytes>)
+```
+
+##### Overview:
+
+The '`llvm.can.load.speculatively`' intrinsic returns true if it is safe
+to speculatively load `num_bytes` bytes starting from `ptr`,
+even if the memory may be beyond the bounds of an allocated object.
+
+##### Arguments:
+
+The first argument is a pointer to the memory location.
+
+The second argument is an i64 specifying the number of accessed bytes,
+and must be a positive power of 2. If the size is not a power-of-2, the
+result is `poison`.
+
+##### Semantics:
+
+This intrinsic has **target-dependent** semantics. It may return `true` only if
+`num_bytes` bytes starting at `ptr + I * num_bytes` can be loaded
+speculatively, for all non-negative integers `I` where the computed address
+does not wrap around the address space and its first or last byte is part of
+the same underlying object as `ptr`.
+
+The specific conditions under which this intrinsic returns `true` are
+determined by the target. For example, a target may check whether the pointer
+alignment guarantees all such loads cannot cross a page boundary.
+
+```llvm
+; Check if we can safely load 16 bytes from %ptr
+%can_load = call i1 @llvm.can.load.speculatively.p0(ptr %ptr, i64 16)
+br i1 %can_load, label %speculative_path, label %safe_path
+
+speculative_path:
+  ; Safe to speculatively load from %ptr
+  %vec = call <4 x i32> (ptr, i1, ...)
+           @llvm.speculative.load.v4i32.p0(ptr %ptr, i1 false, i64 16)
+  ...
+
+safe_path:
+  ; Fall back to masked load or scalar operations
+  ...
+```
+
 ### Memory Use Markers
 
 This class of intrinsics provides information about the
@@ -24179,36 +24345,6 @@ to the memory.
 Returns another pointer that aliases its argument but which is considered different
 for the purposes of `load`/`store` `invariant.group` metadata.
 It does not read any accessible memory and the execution can be speculated.
-
-#### '`llvm.strip.invariant.group`' Intrinsic
-
-##### Syntax:
-This is an overloaded intrinsic. The {ref}`allocated object<allocatedobjects>`
-can belong to any address space. The returned pointer must belong to the same
-address space as the argument.
-
-```
-declare ptr @llvm.strip.invariant.group.p0(ptr <ptr>)
-```
-
-##### Overview:
-
-The '`llvm.strip.invariant.group`' intrinsic can be used when an invariant
-established by `invariant.group` metadata no longer holds, to obtain a new pointer
-value that does not carry the invariant information. It is an experimental
-intrinsic, which means that its semantics might change in the future.
-
-
-##### Arguments:
-
-The `llvm.strip.invariant.group` takes only one argument, which is a pointer
-to the memory.
-
-##### Semantics:
-
-Returns another pointer that aliases its argument but which has no associated
-`invariant.group` metadata.
-It does not read any memory and can be speculated.
 
 
 

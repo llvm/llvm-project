@@ -34,9 +34,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
 // CHECK: fir.store %{{.*}} to %{{.*}} : !fir.ref<!fir.box<!fir.ptr<f32>>
     %9 = fir.convert %5 : (!fir.ref<f32>) -> i64
     fir.store %9 to %3 : !fir.ref<i64>
-// CHECK: fir.store {{.*}} to {{.*}} {tbaa = [#[[ANY_DATA_TAG]]]} : !fir.ref<i64>
+// CHECK: fir.store {{.*}} to {{.*}} <{tbaa = [#[[ANY_DATA_TAG]]]}> : !fir.ref<i64>
     fir.store %cst to %5 : !fir.ref<f32>
-// CHECK: fir.store {{.*}} to {{.*}} {tbaa = [#[[B_TAG]]]} : !fir.ref<f32>
+// CHECK: fir.store {{.*}} to {{.*}} <{tbaa = [#[[B_TAG]]]}> : !fir.ref<f32>
     return
   }
 }

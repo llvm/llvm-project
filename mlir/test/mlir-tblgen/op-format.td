@@ -326,7 +326,7 @@ def LegacyUnquotedBitEnumOp : TestFormat_Op<"$attr attr-dict">,
 // CHECK-LABEL: OptionalGroupA::parse
 // CHECK: if (::mlir::succeeded(parser.parseOptionalQuestion())
 // CHECK-NEXT: else
-// CHECK: parser.parseOptionalOperand
+// CHECK: ::mlir::detail::parseOptionalOperandInto(parser, aOperands)
 // CHECK-LABEL: OptionalGroupA::print
 // CHECK: if (!getA())
 // CHECK-NEXT: odsPrinter << ' ' << "?";
@@ -401,6 +401,10 @@ def OptionalGroupD : TestFormat_Op<[{
 // segment sizes can be inferred from what was actually parsed, so the
 // `operandSegmentSizes` key is left completely untouched: it isn't read,
 // validated, or marked as a used key at all.
+// CHECK-LABEL: PropDictSegmentSizesInferred::parse
+// CHECK: ::mlir::detail::OperandParserStorage<2> odsOperandVectors;
+// CHECK: auto &a1Operands = odsOperandVectors[0];
+// CHECK: auto &a2Operands = odsOperandVectors[1];
 // CHECK-LABEL: PropDictSegmentSizesInferred::setPropertiesFromParsedAttr
 // CHECK-NOT: operandSegmentSizes
 // CHECK: for (::mlir::NamedAttribute attr : dict) {
