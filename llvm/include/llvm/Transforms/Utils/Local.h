@@ -84,14 +84,6 @@ LLVM_ABI bool
 wouldInstructionBeTriviallyDead(const Instruction *I,
                                 const TargetLibraryInfo *TLI = nullptr);
 
-/// Return true if the result produced by the instruction has no side effects on
-/// any paths other than where it is used. This is less conservative than
-/// wouldInstructionBeTriviallyDead which is based on the assumption
-/// that the use count will be 0. An example usage of this API is for
-/// identifying instructions that can be sunk down to use(s).
-LLVM_ABI bool wouldInstructionBeTriviallyDeadOnUnusedPaths(
-    Instruction *I, const TargetLibraryInfo *TLI = nullptr);
-
 /// If the specified value is a trivially dead instruction, delete it.
 /// If that makes any of its operands trivially dead, delete them too,
 /// recursively. Return true if any instructions were deleted.
@@ -143,12 +135,6 @@ LLVM_ABI bool RecursivelyDeleteDeadPHINode(
 LLVM_ABI bool
 SimplifyInstructionsInBlock(BasicBlock *BB,
                             const TargetLibraryInfo *TLI = nullptr);
-
-/// Replace all the uses of an SSA value in @llvm.dbg intrinsics with
-/// undef. This is useful for signaling that a variable, e.g. has been
-/// found dead and hence it's unavailable at a given program point.
-/// Returns true if the dbg values have been changed.
-LLVM_ABI bool replaceDbgUsesWithUndef(Instruction *I);
 
 //===----------------------------------------------------------------------===//
 //  Control Flow Graph Restructuring.

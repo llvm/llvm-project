@@ -643,6 +643,15 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
       continue;
     }
 
+    if (sec.sh_type == SHT_LLVM_DYNDBG_ELF) {
+      if (check(obj.getSectionName(sec, shstrtab)) == dynDbgSecName) {
+        sections[i] = &InputSection::discarded;
+        dynDbgSec = std::make_unique<InputSection>(*this, sec, dynDbgSecName);
+        ctx.hasDynDbg = true;
+      }
+      continue;
+    }
+
     switch (ctx.arg.emachine) {
     case EM_ARM:
       if (sec.sh_type == SHT_ARM_ATTRIBUTES) {
@@ -1249,6 +1258,71 @@ void ObjFile<ELFT>::initializeSymbols(const object::ELFFile<ELFT> &obj) {
     sym->isUsedInRegularObj = true;
     sym->referenced = true;
   }
+
+  if (dynDbgSec)
+    initDynDbgSymbols();
+}
+
+// Add the undefined symbols of the embedded unoptimized dynamic debugging
+// object so that the outer link resolves the inner link's dependencies. Tag
+// those reached by an inner relocation against a SHF_ALLOC section with
+// `isDynDbgRef`; the rest are only needed by debug sections.
+template <class ELFT> void ObjFile<ELFT>::initDynDbgSymbols() {
+  MemoryBufferRef dbgMb(toStringRef(dynDbgSec->contentMaybeDecompress()),
+                        mb.getBufferIdentifier());
+  std::unique_ptr<ELFFileBase> efb = createObjFile(ctx, dbgMb);
+  // Compare ekind (note ObjFile<ELFT>::classof only tests InputFile::kind()).
+  if (efb->ekind != ekind) {
+    Err(ctx) << this << ": " << dynDbgSecName
+             << " contains an incompatible ELF type";
+    return;
+  }
+  auto &dbgObj = cast<ObjFile<ELFT>>(*efb);
+  const object::ELFFile<ELFT> obj = dbgObj.getObj();
+
+  ArrayRef<Elf_Sym> dbgSyms = dbgObj.template getGlobalELFSyms<ELFT>();
+  SmallVector<bool, 0> globalUsed(dbgSyms.size());
+  auto setSymUsed = [&, firstGlobal = dbgObj.firstGlobal](uint32_t symIdx) {
+    if (symIdx >= firstGlobal)
+      globalUsed[symIdx - firstGlobal] = true;
+  };
+
+  for (const Elf_Shdr &sh : dbgObj.template getELFShdrs<ELFT>()) {
+    if (!isStaticRelSecType(sh.sh_type))
+      continue;
+    const Elf_Shdr &target = *CHECK2(obj.getSection(sh.sh_info), &dbgObj);
+    if (!(target.sh_flags & SHF_ALLOC))
+      continue;
+    if (sh.sh_type == SHT_CREL) {
+      auto [rels, relas] = CHECK2(obj.crels(sh), &dbgObj);
+      for (const Elf_Rel &r : rels)
+        setSymUsed(r.getSymbol(false));
+      for (const Elf_Rela &r : relas)
+        setSymUsed(r.getSymbol(false));
+    } else if (sh.sh_type == SHT_RELA) {
+      for (const Elf_Rela &r : CHECK2(obj.relas(sh), &dbgObj))
+        setSymUsed(r.getSymbol(ctx.arg.isMips64EL));
+    } else {
+      for (const Elf_Rel &r : CHECK2(obj.rels(sh), &dbgObj))
+        setSymUsed(r.getSymbol(ctx.arg.isMips64EL));
+    }
+  }
+
+  for (size_t i = 0, end = dbgSyms.size(); i != end; ++i) {
+    const Elf_Sym &s = dbgSyms[i];
+    if (s.st_shndx != SHN_UNDEF)
+      continue;
+    StringRef name = CHECK2(s.getName(dbgObj.stringTable), this);
+    Symbol *sym = ctx.symtab->addSymbol(
+        Undefined{this, name, s.getBinding(), s.st_other, s.getType()});
+    sym->isUsedInRegularObj = true;
+    sym->referenced = true;
+    if (globalUsed[i]) {
+      sym->isDynDbgRef = true;
+      if (sym->traced)
+        Msg(ctx) << this << ": dynamic debugging reference to " << name;
+    }
+  }
 }
 
 template <class ELFT>
@@ -1362,73 +1436,6 @@ template <class ELFT> void ObjFile<ELFT>::postParse() {
       continue;
     std::lock_guard<std::mutex> lock(mu);
     ctx.duplicates.push_back({&sym, this, sec, eSym.st_value});
-  }
-}
-
-// The handling of tentative definitions (COMMON symbols) in archives is murky.
-// A tentative definition will be promoted to a global definition if there are
-// no non-tentative definitions to dominate it. When we hold a tentative
-// definition to a symbol and are inspecting archive members for inclusion
-// there are 2 ways we can proceed:
-//
-// 1) Consider the tentative definition a 'real' definition (ie promotion from
-//    tentative to real definition has already happened) and not inspect
-//    archive members for Global/Weak definitions to replace the tentative
-//    definition. An archive member would only be included if it satisfies some
-//    other undefined symbol. This is the behavior Gold uses.
-//
-// 2) Consider the tentative definition as still undefined (ie the promotion to
-//    a real definition happens only after all symbol resolution is done).
-//    The linker searches archive members for STB_GLOBAL definitions to
-//    replace the tentative definition with. This is the behavior used by
-//    GNU ld.
-//
-//  The second behavior is inherited from SysVR4, which based it on the FORTRAN
-//  COMMON BLOCK model. This behavior is needed for proper initialization in old
-//  (pre F90) FORTRAN code that is packaged into an archive.
-//
-//  The following functions search archive members for definitions to replace
-//  tentative definitions (implementing behavior 2).
-static bool isBitcodeNonCommonDef(MemoryBufferRef mb, StringRef symName,
-                                  StringRef archiveName) {
-  IRSymtabFile symtabFile = check(readIRSymtab(mb));
-  for (const irsymtab::Reader::SymbolRef &sym :
-       symtabFile.TheReader.symbols()) {
-    if (sym.isGlobal() && sym.getName() == symName)
-      return !sym.isUndefined() && !sym.isWeak() && !sym.isCommon();
-  }
-  return false;
-}
-
-template <class ELFT>
-static bool isNonCommonDef(Ctx &ctx, ELFKind ekind, MemoryBufferRef mb,
-                           StringRef symName, StringRef archiveName) {
-  ObjFile<ELFT> *obj = make<ObjFile<ELFT>>(ctx, ekind, mb, archiveName);
-  obj->init();
-  StringRef stringtable = obj->getStringTable();
-
-  for (auto sym : obj->template getGlobalELFSyms<ELFT>()) {
-    Expected<StringRef> name = sym.getName(stringtable);
-    if (name && name.get() == symName)
-      return sym.isDefined() && sym.getBinding() == STB_GLOBAL &&
-             !sym.isCommon();
-  }
-  return false;
-}
-
-static bool isNonCommonDef(Ctx &ctx, MemoryBufferRef mb, StringRef symName,
-                           StringRef archiveName) {
-  switch (getELFKind(ctx, mb, archiveName)) {
-  case ELF32LEKind:
-    return isNonCommonDef<ELF32LE>(ctx, ELF32LEKind, mb, symName, archiveName);
-  case ELF32BEKind:
-    return isNonCommonDef<ELF32BE>(ctx, ELF32BEKind, mb, symName, archiveName);
-  case ELF64LEKind:
-    return isNonCommonDef<ELF64LE>(ctx, ELF64LEKind, mb, symName, archiveName);
-  case ELF64BEKind:
-    return isNonCommonDef<ELF64BE>(ctx, ELF64BEKind, mb, symName, archiveName);
-  default:
-    llvm_unreachable("getELFKind");
   }
 }
 
@@ -2029,13 +2036,6 @@ template <class ELFT> void ObjFile<ELFT>::parseLazy() {
     if (!lazy)
       break;
   }
-}
-
-bool InputFile::shouldExtractForCommon(StringRef name) const {
-  if (isa<BitcodeFile>(this))
-    return isBitcodeNonCommonDef(mb, name, archiveName);
-
-  return isNonCommonDef(ctx, mb, name, archiveName);
 }
 
 std::string elf::replaceThinLTOSuffix(Ctx &ctx, StringRef path) {

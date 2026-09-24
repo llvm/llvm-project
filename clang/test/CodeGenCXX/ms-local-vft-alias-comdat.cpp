@@ -26,5 +26,5 @@ struct ah {
 } a([]{});
 
 //CHECK: @0 = private constant { [2 x ptr] } { [2 x ptr] [ptr @"??_R4?$T@V<lambda_0>@@@@6B@", ptr @"?c@?$T@V<lambda_0>@@@@UEAAXXZ"] }
-//CHECK: @"??_7?$T@V<lambda_0>@@@@6B@" = internal alias ptr, getelementptr inbounds ({ [2 x ptr] }, ptr @0, i32 0, i32 0, i32 1)
+//CHECK: @"??_7?$T@V<lambda_0>@@@@6B@" = internal alias ptr, getelementptr inbounds (i8, ptr @0, i64 8)
 //CHECK-NOT : "??_7?$e@V<lambda_0>@@@@6B@" = comdat any

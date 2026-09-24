@@ -523,11 +523,17 @@ void MappingTraits<WasmYAML::SymbolInfo>::mapping(IO &IO,
     IO.mapRequired("Tag", Info.ElementIndex);
   } else if (Info.Kind == wasm::WASM_SYMBOL_TYPE_DATA) {
     if ((Info.Flags & wasm::WASM_SYMBOL_UNDEFINED) == 0) {
-      if ((Info.Flags & wasm::WASM_SYMBOL_ABSOLUTE) == 0) {
-        IO.mapRequired("Segment", Info.DataRef.Segment);
+      if ((Info.Flags & wasm::WASM_SYMBOL_BINDING_MASK) ==
+          wasm::WASM_SYMBOL_BINDING_COMMON) {
+        IO.mapRequired("Size", Info.CommonRef.Size);
+        IO.mapRequired("Align", Info.CommonRef.Alignment);
+      } else {
+        if ((Info.Flags & wasm::WASM_SYMBOL_ABSOLUTE) == 0) {
+          IO.mapRequired("Segment", Info.DataRef.Segment);
+        }
+        IO.mapOptional("Offset", Info.DataRef.Offset, 0u);
+        IO.mapRequired("Size", Info.DataRef.Size);
       }
-      IO.mapOptional("Offset", Info.DataRef.Offset, 0u);
-      IO.mapRequired("Size", Info.DataRef.Size);
     }
   } else if (Info.Kind == wasm::WASM_SYMBOL_TYPE_SECTION) {
     IO.mapRequired("Section", Info.ElementIndex);
@@ -575,6 +581,7 @@ void ScalarBitSetTraits<WasmYAML::SymbolFlags>::bitset(
   // BCaseMask(BINDING_MASK, BINDING_GLOBAL);
   BCaseMask(BINDING_MASK, BINDING_WEAK);
   BCaseMask(BINDING_MASK, BINDING_LOCAL);
+  BCaseMask(BINDING_MASK, BINDING_COMMON);
   // BCaseMask(VISIBILITY_MASK, VISIBILITY_DEFAULT);
   BCaseMask(VISIBILITY_MASK, VISIBILITY_HIDDEN);
   BCaseMask(UNDEFINED, UNDEFINED);
