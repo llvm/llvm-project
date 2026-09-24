@@ -328,7 +328,7 @@ bool AMDGPUPromoteAllocaImpl::collectAllocaUses(AllocaAnalysis &AA) const {
           break;
         default:
           if (!allOpsAreDerivedFromSameAlloca(AA.Alloca, Cur, Phi))
-            return RejectUser(Inst, "phi with too many operands");
+            return RejectUser(Inst, "phi from mixed objects");
         }
 
         WorkList.push_back(Inst);
@@ -522,7 +522,7 @@ static Value *calculateVectorIndex(Value *Ptr, AllocaAnalysis &AA) {
     AA.Vector.PtrVectorIdx.find(Ptr)->second.Full = Result;
     return Result;
   }
-
+  // If it was not a phi or select, it must be a GEP.
   auto *GEP = cast<GetElementPtrInst>(Ptr);
 
   // Resolve the base index first, as this may create instructions and
@@ -530,6 +530,7 @@ static Value *calculateVectorIndex(Value *Ptr, AllocaAnalysis &AA) {
   Value *BaseIdx =
       I->second.Base ? calculateVectorIndex(I->second.Base, AA) : nullptr;
 
+  // Re-find by Ptr to get the most up to date entry.
   PtrToVectorIndex &Entry = AA.Vector.PtrVectorIdx.find(Ptr)->second;
   Value *Result = nullptr;
   B.SetInsertPoint(GEP);
@@ -1116,12 +1117,17 @@ void AMDGPUPromoteAllocaImpl::analyzePromoteToVector(AllocaAnalysis &AA) const {
     // operand is derived from this alloca, but that also admits null, for which
     // there is no index.
     if (isa<PHINode, SelectInst>(Inst)) {
-      for (Value *Op : Inst->operands()) {
-        if (!Op->getType()->isPointerTy())
-          continue;
+      // Check the merged pointers only. A phi's operands are all incoming
+      // values, but a select's first operand is its condition.
+      auto PtrOps = isa<PHINode>(Inst)
+                        ? cast<PHINode>(Inst)->incoming_values()
+                        : make_range(Inst->op_begin() + 1, Inst->op_end());
+      for (Value *Op : PtrOps) {
+        // collectAllocaUses has already checked that these derive from this
+        // alloca, but it also admits null, which has no vector index.
         Value *Ptr = Op->stripPointerCasts();
         if (Ptr != AA.Alloca && !AA.Pointers.contains(Ptr))
-          return RejectUser(Inst, "operand is not derived from this alloca");
+          return RejectUser(Inst, "operand has no vector index");
       }
 
       // The index itself is built during promotion; this only reserves the
