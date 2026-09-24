@@ -1314,16 +1314,16 @@ define void @predicated_store_zero_taken_weight(ptr %a, i32 %n) {
 ; VF4IC1:    br i1 [[MIN_ITERS_CHECK:%.*]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]], !prof [[PROF0]]
 ; VF4IC1:  [[VECTOR_PH]]:
 ; VF4IC1:  [[VECTOR_BODY:.*]]:
-; VF4IC1:    br i1 [[TMP3:%.*]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
+; VF4IC1:    br i1 [[TMP3:%.*]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]], !prof [[PROF26]]
 ; VF4IC1:  [[PRED_STORE_IF]]:
 ; VF4IC1:  [[PRED_STORE_CONTINUE]]:
-; VF4IC1:    br i1 [[TMP4:%.*]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2:.*]]
+; VF4IC1:    br i1 [[TMP4:%.*]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2:.*]], !prof [[PROF26]]
 ; VF4IC1:  [[PRED_STORE_IF1]]:
 ; VF4IC1:  [[PRED_STORE_CONTINUE2]]:
-; VF4IC1:    br i1 [[TMP7:%.*]], label %[[PRED_STORE_IF3:.*]], label %[[PRED_STORE_CONTINUE4:.*]]
+; VF4IC1:    br i1 [[TMP7:%.*]], label %[[PRED_STORE_IF3:.*]], label %[[PRED_STORE_CONTINUE4:.*]], !prof [[PROF26]]
 ; VF4IC1:  [[PRED_STORE_IF3]]:
 ; VF4IC1:  [[PRED_STORE_CONTINUE4]]:
-; VF4IC1:    br i1 [[TMP10:%.*]], label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6:.*]]
+; VF4IC1:    br i1 [[TMP10:%.*]], label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6:.*]], !prof [[PROF26]]
 ; VF4IC1:  [[PRED_STORE_IF5]]:
 ; VF4IC1:  [[PRED_STORE_CONTINUE6]]:
 ; VF4IC1:    br i1 [[TMP13:%.*]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !prof [[PROF2]], !llvm.loop [[LOOP50:![0-9]+]]
@@ -1343,16 +1343,16 @@ define void @predicated_store_zero_taken_weight(ptr %a, i32 %n) {
 ; VF2IC2:    br i1 [[MIN_ITERS_CHECK:%.*]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]], !prof [[PROF0]]
 ; VF2IC2:  [[VECTOR_PH]]:
 ; VF2IC2:  [[VECTOR_BODY:.*]]:
-; VF2IC2:    br i1 [[TMP5:%.*]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
+; VF2IC2:    br i1 [[TMP5:%.*]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]], !prof [[PROF26]]
 ; VF2IC2:  [[PRED_STORE_IF]]:
 ; VF2IC2:  [[PRED_STORE_CONTINUE]]:
-; VF2IC2:    br i1 [[TMP6:%.*]], label %[[PRED_STORE_IF2:.*]], label %[[PRED_STORE_CONTINUE3:.*]]
+; VF2IC2:    br i1 [[TMP6:%.*]], label %[[PRED_STORE_IF2:.*]], label %[[PRED_STORE_CONTINUE3:.*]], !prof [[PROF26]]
 ; VF2IC2:  [[PRED_STORE_IF2]]:
 ; VF2IC2:  [[PRED_STORE_CONTINUE3]]:
-; VF2IC2:    br i1 [[TMP9:%.*]], label %[[PRED_STORE_IF4:.*]], label %[[PRED_STORE_CONTINUE5:.*]]
+; VF2IC2:    br i1 [[TMP9:%.*]], label %[[PRED_STORE_IF4:.*]], label %[[PRED_STORE_CONTINUE5:.*]], !prof [[PROF26]]
 ; VF2IC2:  [[PRED_STORE_IF4]]:
 ; VF2IC2:  [[PRED_STORE_CONTINUE5]]:
-; VF2IC2:    br i1 [[TMP12:%.*]], label %[[PRED_STORE_IF6:.*]], label %[[PRED_STORE_CONTINUE7:.*]]
+; VF2IC2:    br i1 [[TMP12:%.*]], label %[[PRED_STORE_IF6:.*]], label %[[PRED_STORE_CONTINUE7:.*]], !prof [[PROF26]]
 ; VF2IC2:  [[PRED_STORE_IF6]]:
 ; VF2IC2:  [[PRED_STORE_CONTINUE7]]:
 ; VF2IC2:    br i1 [[TMP15:%.*]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !prof [[PROF2]], !llvm.loop [[LOOP50:![0-9]+]]

@@ -76,8 +76,6 @@ define void @single_pred_zero_weight(ptr noalias %a, ptr noalias %b, ptr noalias
 ;   %if.then 2^-31 ~ 4.66e-10
 ;   %latch      1 =        1
 ;
-; TODO: VPlan currently records a frequency of 0 for %if.then.
-;
 ; BFI-LABEL: block-frequency-info: single_pred_zero_weight
 ; BFI-NEXT:   - entry: float = 1.0,
 ; BFI-NEXT:   - loop: float = 1000.0,
@@ -97,7 +95,7 @@ define void @single_pred_zero_weight(ptr noalias %a, ptr noalias %b, ptr noalias
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:    if.then:
 ; VPLAN-NEXT:      EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv>
-; VPLAN-NEXT:      EMIT store ir<%i>, ir<%gep.a>, ir<%c.0>{{$}}
+; VPLAN-NEXT:      EMIT store ir<%i>, ir<%gep.a>, ir<%c.0> (!vplan.execution.frequency 4294967296 (4.657e-08%))
 ; VPLAN-NEXT:    Successor(s): latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:    latch:
