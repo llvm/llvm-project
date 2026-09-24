@@ -814,7 +814,7 @@ struct AMDGPUQueueTy {
   }
 
   /// Returns the number of streams, this queue is currently assigned to.
-  bool getUserCount() const { return NumUsers; }
+  uint32_t getUserCount() const { return NumUsers; }
 
   /// Returns if the underlying HSA queue is initialized.
   bool isInitialized() { return Queue != nullptr; }
