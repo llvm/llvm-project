@@ -313,13 +313,13 @@ void test_huge_larger_init() {
 // ZERO-LABEL:    test_goto_multiple_bypassed(
 // ZERO: %a = alloca i32, align 4
 // ZERO: %b = alloca i32, align 4
-// ZERO-DAG: store i32 0, ptr %a, align 4, !annotation [[AUTO_INIT:!.+]]
-// ZERO-DAG: store i32 0, ptr %b, align 4, !annotation [[AUTO_INIT:!.+]]
+// ZERO: store i32 0, ptr %a, align 4, !annotation [[AUTO_INIT:!.+]]
+// ZERO-NEXT: store i32 0, ptr %b, align 4, !annotation [[AUTO_INIT]]
 // PATTERN-LABEL: test_goto_multiple_bypassed(
 // PATTERN: %a = alloca i32, align 4
 // PATTERN: %b = alloca i32, align 4
-// PATTERN-DAG: store i32 -1431655766, ptr %a, align 4, !annotation [[AUTO_INIT:!.+]]
-// PATTERN-DAG: store i32 -1431655766, ptr %b, align 4, !annotation [[AUTO_INIT:!.+]]
+// PATTERN: store i32 -1431655766, ptr %a, align 4, !annotation [[AUTO_INIT:!.+]]
+// PATTERN-NEXT: store i32 -1431655766, ptr %b, align 4, !annotation [[AUTO_INIT]]
 void test_goto_multiple_bypassed() {
   goto jump;
   int a;
@@ -579,15 +579,15 @@ void test_goto_multiple_vars() {
 // ZERO:      jump:
 // ZERO:      call void @{{.*}}used
 // ZERO:      call void @{{.*}}used
-// ZERO-DAG:  store i32 0, ptr %b, align 4
-// ZERO-DAG:  store i32 0, ptr %a, align 4
+// ZERO:      store i32 0, ptr %b, align 4
+// ZERO-NEXT: store i32 0, ptr %a, align 4
 // ZERO:      br label %jump
 // PATTERN-LABEL: test_backward_goto_bypass(
 // PATTERN:      jump:
 // PATTERN:      call void @{{.*}}used
 // PATTERN:      call void @{{.*}}used
-// PATTERN-DAG:  store i32 -1431655766, ptr %b
-// PATTERN-DAG:  store i32 -1431655766, ptr %a
+// PATTERN:      store i32 -1431655766, ptr %b
+// PATTERN-NEXT: store i32 -1431655766, ptr %a
 // PATTERN:      br label %jump
 void test_backward_goto_bypass() {
   {

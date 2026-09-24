@@ -18,6 +18,7 @@
 #include "clang/AST/Decl.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 
 namespace clang {
@@ -47,9 +48,9 @@ class VarBypassDetector {
   llvm::DenseMap<const Stmt *, unsigned> ToScopes;
   // Set of variables which were bypassed by some jump.
   llvm::DenseSet<const VarDecl *> Bypasses;
-  // Map from a bypassing jump (goto/switch case) to the variable declarations
-  // it bypasses. Used to reinitialize those variables at the jump.
-  llvm::DenseMap<const Stmt *, llvm::DenseSet<const VarDecl *>>
+  // Map from a bypassing jump (goto/switch) to the variable declarations it
+  // bypasses. Used to reinitialize those variables at the jump.
+  llvm::DenseMap<const Stmt *, llvm::SmallSetVector<const VarDecl *, 4>>
       BypassedVarsAtSource;
   // If true assume that all variables are being bypassed.
   bool AlwaysBypassed = false;
@@ -69,7 +70,7 @@ public:
 
   /// Returns the variables bypassed by jumps from the given source statement,
   /// or nullptr if it bypasses none.
-  const llvm::DenseSet<const VarDecl *> *
+  const llvm::SmallSetVector<const VarDecl *, 4> *
   getBypassedVarsForSource(const Stmt *Source) const {
     auto It = BypassedVarsAtSource.find(Source);
     if (It == BypassedVarsAtSource.end())
