@@ -200,6 +200,33 @@ public:
         : name(name), typeID(typeID), dialect(dialect),
           interfaceMap(std::move(interfaceMap)) {}
 
+    /// Callbacks common to all registered operation models. Store one table
+    /// per operation type so the virtual forwarding methods can be shared.
+    struct HookFns {
+      LogicalResult (*fold)(Operation *, ArrayRef<Attribute>,
+                            SmallVectorImpl<OpFoldResult> &);
+      void (*canonicalize)(RewritePatternSet &, MLIRContext *);
+      bool (*hasTrait)(TypeID);
+      ParseResult (*parse)(OpAsmParser &, OperationState &);
+      void (*populateDefaultAttrs)(const OperationName &, NamedAttrList &);
+      void (*print)(Operation *, OpAsmPrinter &, StringRef);
+      LogicalResult (*verify)(Operation *);
+      LogicalResult (*verifyRegions)(Operation *);
+    };
+
+    LogicalResult foldHook(Operation *op, ArrayRef<Attribute> attrs,
+                           SmallVectorImpl<OpFoldResult> &results) override;
+    void getCanonicalizationPatterns(RewritePatternSet &set,
+                                     MLIRContext *context) override;
+    bool hasTrait(TypeID id) override;
+    OperationName::ParseAssemblyFn getParseAssemblyFn() override;
+    void populateDefaultAttrs(const OperationName &name,
+                              NamedAttrList &attrs) override;
+    void printAssembly(Operation *op, OpAsmPrinter &printer,
+                       StringRef name) override;
+    LogicalResult verifyInvariants(Operation *op) override;
+    LogicalResult verifyRegionInvariants(Operation *op) override;
+
     /// Returns true if this is a registered operation.
     bool isRegistered() const { return typeID != TypeID::get<void>(); }
     detail::InterfaceMap &getInterfaceMap() { return interfaceMap; }
@@ -236,6 +263,11 @@ public:
     /// The TypeID of the Properties struct for this operation.
     TypeID propertiesTypeID;
 
+    /// The forwarding callbacks for a registered operation. Unregistered
+    /// operations override these hooks and leave this pointer null.
+    const HookFns *hookFns = nullptr;
+
+    friend class OperationName;
     friend class RegisteredOperationName;
   };
 
@@ -314,14 +346,20 @@ public:
   /// generalized constant folding.
   LogicalResult foldHook(Operation *op, ArrayRef<Attribute> operands,
                          SmallVectorImpl<OpFoldResult> &results) const {
-    return getImpl()->foldHook(op, operands, results);
+    Impl *impl = getImpl();
+    if (const Impl::HookFns *hooks = impl->hookFns)
+      return hooks->fold(op, operands, results);
+    return impl->foldHook(op, operands, results);
   }
 
   /// This hook returns any canonicalization pattern rewrites that the
   /// operation supports, for use by the canonicalization pass.
   void getCanonicalizationPatterns(RewritePatternSet &results,
                                    MLIRContext *context) const {
-    return getImpl()->getCanonicalizationPatterns(results, context);
+    Impl *impl = getImpl();
+    if (const Impl::HookFns *hooks = impl->hookFns)
+      return hooks->canonicalize(results, context);
+    return impl->getCanonicalizationPatterns(results, context);
   }
 
   /// Returns true if the operation was registered with a particular trait, e.g.
@@ -331,7 +369,12 @@ public:
   bool hasTrait() const {
     return hasTrait(TypeID::get<Trait>());
   }
-  bool hasTrait(TypeID traitID) const { return getImpl()->hasTrait(traitID); }
+  bool hasTrait(TypeID traitID) const {
+    Impl *impl = getImpl();
+    if (const Impl::HookFns *hooks = impl->hookFns)
+      return hooks->hasTrait(traitID);
+    return impl->hasTrait(traitID);
+  }
 
   /// Returns true if the operation *might* have the provided trait. This
   /// means that either the operation is unregistered, or it was registered with
@@ -341,34 +384,49 @@ public:
     return mightHaveTrait(TypeID::get<Trait>());
   }
   bool mightHaveTrait(TypeID traitID) const {
-    return !isRegistered() || getImpl()->hasTrait(traitID);
+    return !isRegistered() || hasTrait(traitID);
   }
 
   /// Return the static hook for parsing this operation assembly.
   ParseAssemblyFn getParseAssemblyFn() const {
-    return getImpl()->getParseAssemblyFn();
+    Impl *impl = getImpl();
+    if (const Impl::HookFns *hooks = impl->hookFns)
+      return hooks->parse;
+    return impl->getParseAssemblyFn();
   }
 
   /// This hook implements the method to populate defaults attributes that are
   /// unset.
   void populateDefaultAttrs(NamedAttrList &attrs) const {
-    getImpl()->populateDefaultAttrs(*this, attrs);
+    Impl *impl = getImpl();
+    if (const Impl::HookFns *hooks = impl->hookFns)
+      return hooks->populateDefaultAttrs(*this, attrs);
+    return impl->populateDefaultAttrs(*this, attrs);
   }
 
   /// This hook implements the AsmPrinter for this operation.
   void printAssembly(Operation *op, OpAsmPrinter &p,
                      StringRef defaultDialect) const {
-    return getImpl()->printAssembly(op, p, defaultDialect);
+    Impl *impl = getImpl();
+    if (const Impl::HookFns *hooks = impl->hookFns)
+      return hooks->print(op, p, defaultDialect);
+    return impl->printAssembly(op, p, defaultDialect);
   }
 
   /// These hooks implement the verifiers for this operation.  It should emits
   /// an error message and returns failure if a problem is detected, or
   /// returns success if everything is ok.
   LogicalResult verifyInvariants(Operation *op) const {
-    return getImpl()->verifyInvariants(op);
+    Impl *impl = getImpl();
+    if (const Impl::HookFns *hooks = impl->hookFns)
+      return hooks->verify(op);
+    return impl->verifyInvariants(op);
   }
   LogicalResult verifyRegionInvariants(Operation *op) const {
-    return getImpl()->verifyRegionInvariants(op);
+    Impl *impl = getImpl();
+    if (const Impl::HookFns *hooks = impl->hookFns)
+      return hooks->verifyRegions(op);
+    return impl->verifyRegionInvariants(op);
   }
 
   /// Return the list of cached attribute names registered to this operation.
@@ -599,32 +657,18 @@ public:
         : Impl(ConcreteOp::getOperationName(), dialect,
                TypeID::get<ConcreteOp>(), ConcreteOp::getInterfaceMap()) {
       propertiesTypeID = TypeID::get<Properties>();
+      hookFns = &getHookFns();
     }
-    LogicalResult foldHook(Operation *op, ArrayRef<Attribute> attrs,
-                           SmallVectorImpl<OpFoldResult> &results) final {
-      return ConcreteOp::getFoldHookFn()(op, attrs, results);
-    }
-    void getCanonicalizationPatterns(RewritePatternSet &set,
-                                     MLIRContext *context) final {
-      ConcreteOp::getCanonicalizationPatterns(set, context);
-    }
-    bool hasTrait(TypeID id) final { return ConcreteOp::getHasTraitFn()(id); }
-    OperationName::ParseAssemblyFn getParseAssemblyFn() final {
-      return ConcreteOp::parse;
-    }
-    void populateDefaultAttrs(const OperationName &name,
-                              NamedAttrList &attrs) final {
-      ConcreteOp::populateDefaultAttrs(name, attrs);
-    }
-    void printAssembly(Operation *op, OpAsmPrinter &printer,
-                       StringRef name) final {
-      ConcreteOp::getPrintAssemblyFn()(op, printer, name);
-    }
-    LogicalResult verifyInvariants(Operation *op) final {
-      return ConcreteOp::getVerifyInvariantsFn()(op);
-    }
-    LogicalResult verifyRegionInvariants(Operation *op) final {
-      return ConcreteOp::getVerifyRegionInvariantsFn()(op);
+    static const HookFns &getHookFns() {
+      static const HookFns hooks = {ConcreteOp::getFoldHookFn(),
+                                    &ConcreteOp::getCanonicalizationPatterns,
+                                    ConcreteOp::getHasTraitFn(),
+                                    &ConcreteOp::parse,
+                                    &ConcreteOp::populateDefaultAttrs,
+                                    ConcreteOp::getPrintAssemblyFn(),
+                                    ConcreteOp::getVerifyInvariantsFn(),
+                                    ConcreteOp::getVerifyRegionInvariantsFn()};
+      return hooks;
     }
 
     /// Implementation for "Properties"

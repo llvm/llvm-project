@@ -30,6 +30,41 @@ void mlir::detail::appendAttributeProperty(
     attrs.emplace_back(name, attr);
 }
 
+LogicalResult
+OperationName::Impl::foldHook(Operation *op, ArrayRef<Attribute> attrs,
+                              SmallVectorImpl<OpFoldResult> &results) {
+  return hookFns->fold(op, attrs, results);
+}
+
+void OperationName::Impl::getCanonicalizationPatterns(RewritePatternSet &set,
+                                                      MLIRContext *context) {
+  hookFns->canonicalize(set, context);
+}
+
+bool OperationName::Impl::hasTrait(TypeID id) { return hookFns->hasTrait(id); }
+
+OperationName::ParseAssemblyFn OperationName::Impl::getParseAssemblyFn() {
+  return hookFns->parse;
+}
+
+void OperationName::Impl::populateDefaultAttrs(const OperationName &name,
+                                               NamedAttrList &attrs) {
+  hookFns->populateDefaultAttrs(name, attrs);
+}
+
+void OperationName::Impl::printAssembly(Operation *op, OpAsmPrinter &printer,
+                                        StringRef name) {
+  hookFns->print(op, printer, name);
+}
+
+LogicalResult OperationName::Impl::verifyInvariants(Operation *op) {
+  return hookFns->verify(op);
+}
+
+LogicalResult OperationName::Impl::verifyRegionInvariants(Operation *op) {
+  return hookFns->verifyRegions(op);
+}
+
 ParseResult mlir::detail::parseOptionalOperandInto(
     OpAsmParser &parser,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &operands) {
