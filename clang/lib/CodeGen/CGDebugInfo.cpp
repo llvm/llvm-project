@@ -3357,6 +3357,46 @@ llvm::DIType *CGDebugInfo::GetPreferredNameType(const CXXRecordDecl *RD,
   return getOrCreateType(PNA->getTypedefType(), Unit);
 }
 
+static void completeStandardLayoutUnionType(CGDebugInfo &DebugInfo,
+                                            QualType QT);
+
+static void completeStandardLayoutUnionMembers(CGDebugInfo &DebugInfo,
+                                               const CXXRecordDecl *RD) {
+  for (const CXXBaseSpecifier &BS : RD->bases())
+    completeStandardLayoutUnionType(DebugInfo, BS.getType());
+
+  for (const FieldDecl *FD : RD->fields()) {
+    // Invalid declarations are skipped when determining the field layout of
+    // unions. This will of course cause a compiler error, but skip these
+    // fields anyway to avoid triggering the `isStandardLayout()` assertion in
+    // `completeStandardLayoutUnionType`.
+    if (FD->isInvalidDecl())
+      continue;
+    completeStandardLayoutUnionType(DebugInfo,
+                                    FD->getType()
+                                        ->getBaseElementTypeUnsafe()
+                                        ->getCanonicalTypeUnqualified());
+  }
+}
+
+static void completeStandardLayoutUnionType(CGDebugInfo &DebugInfo,
+                                            QualType QT) {
+  const auto *RT = QT->getAs<RecordType>();
+  if (!RT)
+    return;
+
+  auto *CRD = dyn_cast<CXXRecordDecl>(RT->getDecl()->getDefinitionOrSelf());
+  if (!CRD || !CRD->hasDefinition())
+    return;
+
+  // We checked at the root that this is a standard-layout type, which
+  // requires all its members / base types to be standard-layout.
+  assert(CRD->isStandardLayout());
+
+  DebugInfo.completeClassData(CRD);
+  completeStandardLayoutUnionMembers(DebugInfo, CRD);
+}
+
 std::pair<llvm::DIType *, llvm::DIType *>
 CGDebugInfo::CreateTypeDefinition(const RecordType *Ty) {
   RecordDecl *RD = Ty->getDecl()->getDefinitionOrSelf();
@@ -3413,6 +3453,21 @@ CGDebugInfo::CreateTypeDefinition(const RecordType *Ty) {
         llvm::MDNode::replaceWithPermanent(llvm::TempDICompositeType(FwdDecl));
 
   RegionMap[RD].reset(FwdDecl);
+
+  if (DebugKind == llvm::codegenoptions::DebugInfoConstructor) {
+    // For standard-layout unions, recursively emit full debug info for all
+    // user-defined types (and their bases/fields) in the union. Per the C++
+    // spec, "it is permitted to inspect the common initial part of any of" the
+    // "common initial sequence" of distinct types in a standard-layout union.
+    // This exception to strict aliasing enables producing a reference to a
+    // type without ever having constructed that type, breaking the assumption
+    // made by constructor homing that all interesting types we'd want debug
+    // info for must have been constructed.
+    //
+    // See: https://wg21.link/class.mem#general-30
+    if (CXXDecl && CXXDecl->isUnion() && CXXDecl->isStandardLayout())
+      completeStandardLayoutUnionMembers(*this, CXXDecl);
+  }
 
   if (CGM.getCodeGenOpts().getDebuggerTuning() == llvm::DebuggerKind::LLDB)
     if (auto *PrefDI = GetPreferredNameType(CXXDecl, DefUnit))

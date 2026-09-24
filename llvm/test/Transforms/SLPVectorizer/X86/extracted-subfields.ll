@@ -143,8 +143,8 @@ start:
   ret i16 %a7
 }
 
-; 16-bit sub-fields: matched, but the 4-lane vector reduction is not
-; profitable on the baseline target.
+; 16-bit sub-fields: matched and reduced as the field vector with the
+; extension to the i32 lanes.
 
 define i32 @sum4_halves_i64(ptr %p) {
 ; CHECK-LABEL: define i32 @sum4_halves_i64(
@@ -184,8 +184,8 @@ start:
   ret i32 %a3
 }
 
-; Only 4 bytes of an i32: the vector reduction is not profitable on the
-; baseline target.
+; Only 4 bytes of an i32: reduced as the field vector with the extension to
+; the i16 lanes.
 
 define i16 @sum4_i32(ptr %p) {
 ; CHECK-LABEL: define i16 @sum4_i32(
@@ -381,4 +381,74 @@ start:
   %w1 = trunc i64 %s1 to i16
   %a = add i16 %w0, %w1
   ret i16 %a
+}
+
+; Same fields as in sum8_i64, but reduced in a scrambled order: the lane
+; order of the reduction root is unobservable, the fields are emitted in the
+; natural order and no permutation is needed.
+
+define i16 @sum8_i64_scrambled(ptr %x) {
+; CHECK-LABEL: define i16 @sum8_i64_scrambled(
+; CHECK-SAME: ptr [[X:%.*]]) {
+; CHECK-NEXT:  [[START:.*:]]
+; CHECK-NEXT:    [[L:%.*]] = load i64, ptr [[X]], align 8
+; CHECK-NEXT:    [[S7:%.*]] = lshr i64 [[L]], 56
+; CHECK-NEXT:    [[S4:%.*]] = lshr i64 [[L]], 32
+; CHECK-NEXT:    [[S6:%.*]] = lshr i64 [[L]], 48
+; CHECK-NEXT:    [[S2:%.*]] = lshr i64 [[L]], 16
+; CHECK-NEXT:    [[S1:%.*]] = lshr i64 [[L]], 8
+; CHECK-NEXT:    [[S5:%.*]] = lshr i64 [[L]], 40
+; CHECK-NEXT:    [[S3:%.*]] = lshr i64 [[L]], 24
+; CHECK-NEXT:    [[B7:%.*]] = trunc i64 [[S7]] to i16
+; CHECK-NEXT:    [[T4:%.*]] = trunc i64 [[S4]] to i16
+; CHECK-NEXT:    [[T6:%.*]] = trunc i64 [[S6]] to i16
+; CHECK-NEXT:    [[T2:%.*]] = trunc i64 [[S2]] to i16
+; CHECK-NEXT:    [[T1:%.*]] = trunc i64 [[S1]] to i16
+; CHECK-NEXT:    [[T5:%.*]] = trunc i64 [[S5]] to i16
+; CHECK-NEXT:    [[T0:%.*]] = trunc i64 [[L]] to i16
+; CHECK-NEXT:    [[T3:%.*]] = trunc i64 [[S3]] to i16
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x i16> poison, i16 [[T3]], i64 0
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <8 x i16> [[TMP0]], i16 [[T0]], i64 1
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <8 x i16> [[TMP8]], i16 [[T5]], i64 2
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i16> [[TMP9]], i16 [[T1]], i64 3
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i16> [[TMP3]], i16 [[T2]], i64 4
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i16> [[TMP4]], i16 [[T6]], i64 5
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x i16> [[TMP5]], i16 [[T4]], i64 6
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x i16> [[TMP6]], i16 [[B7]], i64 7
+; CHECK-NEXT:    [[TMP1:%.*]] = and <8 x i16> [[TMP7]], <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 -1>
+; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> [[TMP1]])
+; CHECK-NEXT:    ret i16 [[TMP2]]
+;
+start:
+  %l = load i64, ptr %x, align 8
+  %t0 = trunc i64 %l to i16
+  %b0 = and i16 %t0, 255
+  %s1 = lshr i64 %l, 8
+  %t1 = trunc i64 %s1 to i16
+  %b1 = and i16 %t1, 255
+  %s2 = lshr i64 %l, 16
+  %t2 = trunc i64 %s2 to i16
+  %b2 = and i16 %t2, 255
+  %s3 = lshr i64 %l, 24
+  %t3 = trunc i64 %s3 to i16
+  %b3 = and i16 %t3, 255
+  %s4 = lshr i64 %l, 32
+  %t4 = trunc i64 %s4 to i16
+  %b4 = and i16 %t4, 255
+  %s5 = lshr i64 %l, 40
+  %t5 = trunc i64 %s5 to i16
+  %b5 = and i16 %t5, 255
+  %s6 = lshr i64 %l, 48
+  %t6 = trunc i64 %s6 to i16
+  %b6 = and i16 %t6, 255
+  %s7 = lshr i64 %l, 56
+  %b7 = trunc i64 %s7 to i16
+  %a1 = add nuw nsw i16 %b3, %b0
+  %a2 = add nuw nsw i16 %a1, %b5
+  %a3 = add nuw nsw i16 %a2, %b1
+  %a4 = add nuw nsw i16 %a3, %b7
+  %a5 = add nuw nsw i16 %a4, %b2
+  %a6 = add nuw nsw i16 %a5, %b6
+  %a7 = add nuw nsw i16 %a6, %b4
+  ret i16 %a7
 }

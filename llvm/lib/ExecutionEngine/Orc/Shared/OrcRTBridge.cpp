@@ -13,14 +13,14 @@ namespace orc {
 namespace rt {
 
 const SymbolNameSpec RegisterEHFrameSectionAllocActionName =
-    SymbolNameSpec::verbatim("llvm_orc_registerEHFrameAllocAction");
+    SymbolNameSpec::c("orc_rt_ci_aa_sps_DWARFEHFrameRegistrar_registerFrame");
 const SymbolNameSpec DeregisterEHFrameSectionAllocActionName =
-    SymbolNameSpec::verbatim("llvm_orc_deregisterEHFrameAllocAction");
+    SymbolNameSpec::c("orc_rt_ci_aa_sps_DWARFEHFrameRegistrar_deregisterFrame");
 
 const SymbolNameSpec RegisterJITLoaderGDBAllocActionName =
-    SymbolNameSpec::verbatim("orc_rt_ci_aa_sps_GDBJITRegistrar_register");
+    SymbolNameSpec::c("orc_rt_ci_aa_sps_GDBJITRegistrar_register");
 const SymbolNameSpec DeregisterJITLoaderGDBAllocActionName =
-    SymbolNameSpec::verbatim("orc_rt_ci_aa_sps_GDBJITRegistrar_deregister");
+    SymbolNameSpec::c("orc_rt_ci_aa_sps_GDBJITRegistrar_deregister");
 
 const SymbolNameSpec DispatchName =
     SymbolNameSpec::verbatim("__orc_rt_jit_dispatch");
@@ -29,18 +29,11 @@ const SymbolNameSpec DispatchCtxName =
 
 const MachOUnwindInfoRegistrarSymbolNames
     orc_rt_MachOUnwindInfoRegistrarSPSSymbols = {
-        SymbolNameSpec::verbatim(
+        SymbolNameSpec::c(
             "orc_rt_ci_aa_sps_MachOUnwindInfoRegistrar_registerSections"),
-        SymbolNameSpec::verbatim(
+        SymbolNameSpec::c(
             "orc_rt_ci_aa_sps_MachOUnwindInfoRegistrar_deregisterSections")};
 
 } // end namespace rt
-namespace rt_alt {
-const SymbolNameSpec UnwindInfoManagerRegisterActionName =
-    SymbolNameSpec::verbatim("orc_rt_alt_UnwindInfoManager_register");
-const SymbolNameSpec UnwindInfoManagerDeregisterActionName =
-    SymbolNameSpec::verbatim("orc_rt_alt_UnwindInfoManager_deregister");
-
-} // end namespace rt_alt
 } // end namespace orc
 } // end namespace llvm

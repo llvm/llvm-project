@@ -968,6 +968,17 @@ bool SemaRISCV::CheckBuiltinFunctionCall(const TargetInfo &TI,
   case RISCV::BI__builtin_riscv_sm4ks:
   case RISCV::BI__builtin_riscv_sm4ed:
     return SemaRef.BuiltinConstantArgRange(TheCall, 2, 0, 3);
+  // Check the psati/pusati saturation width.
+  case RISCV::BI__builtin_riscv_psati_i16x2:
+  case RISCV::BI__builtin_riscv_psati_i16x4:
+    return SemaRef.BuiltinConstantArgRange(TheCall, 1, 1, 16);
+  case RISCV::BI__builtin_riscv_psati_i32x2:
+    return SemaRef.BuiltinConstantArgRange(TheCall, 1, 1, 32);
+  case RISCV::BI__builtin_riscv_pusati_u16x2:
+  case RISCV::BI__builtin_riscv_pusati_u16x4:
+    return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 15);
+  case RISCV::BI__builtin_riscv_pusati_u32x2:
+    return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 31);
   // Check if rnum is in [0, 10]
   case RISCV::BI__builtin_riscv_aes64ks1i:
     return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 10);

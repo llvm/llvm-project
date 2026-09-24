@@ -303,11 +303,6 @@ public:
     return getGeneration() <= SEA_ISLANDS ? 1 : 2;
   }
 
-  /// Return the amount of LDS that can be used that will not restrict the
-  /// occupancy lower than WaveCount.
-  unsigned getMaxLocalMemSizeWithWaveCount(unsigned WaveCount,
-                                           const Function &) const;
-
   bool supportsMinMaxDenormModes() const {
     return getGeneration() >= AMDGPUSubtarget::GFX9;
   }
@@ -628,10 +623,6 @@ public:
   bool hasVALUPartialForwardingHazard() const {
     return getGeneration() == GFX11;
   }
-
-  /// GFX11 VOPD dest-buffer forwarding can drop the interlock when SRC0 or
-  /// SRC1 X/Y are distinct VGPRs with the same parity.
-  bool hasGFX11VOPDInterlockHazard() const { return getGeneration() == GFX11; }
 
   bool hasCvtScaleForwardingHazard() const { return HasGFX950Insts; }
 
