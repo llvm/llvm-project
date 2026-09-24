@@ -411,11 +411,9 @@ define amdgpu_cs void @loop_with_div_break_with_body(ptr addrspace(1) %x, ptr ad
 ; GFX10-NEXT:    s_cmpk_lt_u32 s1, 0x64
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
 ; GFX10-NEXT:    s_cselect_b32 s6, exec_lo, 0
-; GFX10-NEXT:    s_andn2_b32 s4, s4, exec_lo
-; GFX10-NEXT:    s_and_b32 s7, exec_lo, 0
 ; GFX10-NEXT:    s_andn2_b32 s3, s3, exec_lo
 ; GFX10-NEXT:    s_and_b32 s6, exec_lo, s6
-; GFX10-NEXT:    s_or_b32 s4, s4, s7
+; GFX10-NEXT:    s_andn2_b32 s4, s4, exec_lo
 ; GFX10-NEXT:    s_or_b32 s3, s3, s6
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_add_nc_u32_e32 v6, 1, v6
@@ -543,9 +541,7 @@ define amdgpu_ps i32 @irreducible_cfg(i32 %x, i32 %y, i32 %a0, i32 %a1, i32 %a2,
 ; GFX10-NEXT:  ; %bb.7: ; %Flow
 ; GFX10-NEXT:    ; in Loop: Header=BB6_2 Depth=1
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s4
-; GFX10-NEXT:    s_andn2_b32 s0, s5, exec_lo
-; GFX10-NEXT:    s_and_b32 s4, exec_lo, 0
-; GFX10-NEXT:    s_or_b32 s5, s0, s4
+; GFX10-NEXT:    s_andn2_b32 s5, s5, exec_lo
 ; GFX10-NEXT:    s_branch .LBB6_1
 ; GFX10-NEXT:  .LBB6_8: ; %.exit
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s1
