@@ -326,7 +326,7 @@ PPC_AIX_CLONES_FEATURE("popcntd",             "arch_2_06", 0, 112)
 PPC_AIX_CLONES_FEATURE("altivec",             "altivec",   1, 50)
 #undef PPC_AIX_CLONES_FEATURE
 
-// Negative form (e.g. no-vsx) for features that can be disabled at runtime have
+// Negative form (e.g. no-htm) for features that can be disabled at runtime have
 // the highest priority among all features and cpus.
 // See llvm::PPC::canDisableFeatureOnAIX() query for the list of such features.
 #define NEGATIVE_FEATURE_PRIORITY 1000
