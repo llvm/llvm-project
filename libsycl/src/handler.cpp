@@ -16,10 +16,10 @@ _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
 static void checkCommandGroupFunction(
     const std::function<std::shared_ptr<detail::EventImpl>()> &CGF,
-    detail::ContextImpl &QueueContext) {
+    detail::ContextImpl &Context) {
   if (CGF) {
     throw sycl::exception(
-        detail::createSyclObjFromImpl<context>(QueueContext),
+        detail::createSyclObjFromImpl<context>(Context),
         sycl::make_error_code(sycl::errc::invalid),
         "Attempt to set multiple actions for the command group");
   }

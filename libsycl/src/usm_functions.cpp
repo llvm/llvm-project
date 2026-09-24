@@ -198,9 +198,8 @@ void *malloc(std::size_t numBytes, const queue &syclQueue, usm::alloc kind,
 // SYCL 2020 4.8.3.6. Memory deallocation functions.
 
 void free(void *ptr, const context &ctxt) {
-  detail::ContextImpl &ContextImplRef = *detail::getSyclObjImpl(ctxt);
-  detail::callAndThrow(ContextImplRef, olMemFree,
-                       ContextImplRef.getOLHandleRef(), ptr);
+  detail::ContextImpl &Context = *detail::getSyclObjImpl(ctxt);
+  detail::callAndThrow(Context, olMemFree, Context.getOLHandleRef(), ptr);
 }
 
 void free(void *ptr, const queue &q) { return free(ptr, q.get_context()); }

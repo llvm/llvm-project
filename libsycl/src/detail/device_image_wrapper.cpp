@@ -15,12 +15,13 @@ _LIBSYCL_BEGIN_NAMESPACE_SYCL
 namespace detail {
 
 ProgramWrapper::ProgramWrapper(ContextImpl &Context, ol_device_handle_t Device,
-                               const DeviceImageManager &DevImage) {
-  assert(Context.getOLHandleRef());
-  assert(Device);
+                               const DeviceImageManager &DevImage)
+    : MContext(Context) {
+  assert(MContext.getOLHandleRef() && "Context handle can't be nullptr");
+  assert(Device && "Device handle can't be nullptr");
 
   llvm::StringRef Image = DevImage.getOffloadBinary().getImage();
-  callAndThrow(Context, olCreateProgram, Context.getOLHandleRef(), Device,
+  callAndThrow(MContext, olCreateProgram, MContext.getOLHandleRef(), Device,
                Image.data(), Image.size(), &MProgram);
 }
 
@@ -31,14 +32,13 @@ ProgramWrapper::~ProgramWrapper() {
 }
 
 ol_symbol_handle_t
-ProgramWrapper::getOrCreateKernel(std::string_view KernelName,
-                                  ContextImpl &Context) {
+ProgramWrapper::getOrCreateKernel(std::string_view KernelName) {
   auto It = MKernels.find(KernelName);
   if (It != MKernels.end())
     return It->second;
 
   ol_symbol_handle_t Kernel{};
-  callAndThrow(Context, olGetSymbol, MProgram, KernelName.data(),
+  callAndThrow(MContext, olGetSymbol, MProgram, KernelName.data(),
                OL_SYMBOL_KIND_KERNEL, &Kernel);
   MKernels.emplace(KernelName, Kernel);
   return Kernel;

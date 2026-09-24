@@ -18,8 +18,6 @@
 #include <detail/platform_impl.hpp>
 #include <mock/helpers.hpp>
 
-#include <utility>
-
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 namespace unittests {
 

@@ -66,14 +66,14 @@ public:
   /// for a program it does not belong to.
   ///
   /// \param KernelName the name of the kernel to look up.
-  /// \param Context is the context this program belongs to.
   /// \throw sycl::exception with sycl::errc::runtime when the symbol lookup
   /// fails.
   /// \return the liboffload symbol handle of the kernel.
-  ol_symbol_handle_t getOrCreateKernel(std::string_view KernelName,
-                                       ContextImpl &Context);
+  ol_symbol_handle_t getOrCreateKernel(std::string_view KernelName);
 
 private:
+  // Programs are owned by their context, so the context outlives them.
+  ContextImpl &MContext;
   ol_program_handle_t MProgram{};
 
   // Kernel names are backed by the "symbols" string of the device image this

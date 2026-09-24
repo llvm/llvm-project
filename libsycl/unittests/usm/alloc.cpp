@@ -17,10 +17,12 @@
 #include <detail/device_impl.hpp>
 #include <detail/queue_impl.hpp>
 
-#include <array>
-#include <cstddef>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+
+#include <array>
+#include <cstddef>
+#include <vector>
 
 using namespace sycl;
 using namespace ::testing;
