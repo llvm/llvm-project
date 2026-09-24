@@ -74,6 +74,9 @@ protected:
   EvalEmitter(Context &Ctx, Program &P, State &Parent, InterpStack &Stk,
               FrameAllocator &FrameAlloc,
               ConstantExprKind ConstexprKind = ConstantExprKind::Normal);
+  EvalEmitter(Context &Ctx, Program &P, const EvalSettings &Settings,
+              InterpStack &Stk, FrameAllocator &FrameAlloc,
+              ConstantExprKind ConstexprKind = ConstantExprKind::Normal);
 
   EvalEmitter(Context &Ctx, Program &P, Expr::EvalStatus &Status,
               InterpStack &Stk, FrameAllocator &FrameAlloc);

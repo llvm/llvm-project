@@ -12,6 +12,7 @@
 #include "Char.h"
 #include "Compiler.h"
 #include "EvalEmitter.h"
+#include "EvalSettings.h"
 #include "Integral.h"
 #include "InterpFrame.h"
 #include "InterpHelpers.h"
@@ -37,7 +38,8 @@ Context::Context(ASTContext &Ctx) : Ctx(Ctx), P(new Program(*this)) {
 
 Context::~Context() = default;
 
-bool Context::isPotentialConstantExpr(State &Parent, const FunctionDecl *FD) {
+bool Context::isPotentialConstantExpr(const EvalSettings &Settings,
+                                      const FunctionDecl *FD) {
   assert(Stk.empty());
 
   // Get a function handle.
@@ -54,15 +56,16 @@ bool Context::isPotentialConstantExpr(State &Parent, const FunctionDecl *FD) {
 
   ++EvalID;
   // And run it.
-  return Run(Parent, Func);
+  return Run(Settings, Func);
 }
 
-void Context::isPotentialConstantExprUnevaluated(State &Parent, const Expr *E,
+void Context::isPotentialConstantExprUnevaluated(const EvalSettings &Settings,
+                                                 const Expr *E,
                                                  const FunctionDecl *FD) {
   assert(Stk.empty());
   ++EvalID;
   size_t StackSizeBefore = Stk.size();
-  Compiler<EvalEmitter> C(*this, *P, Parent, Stk, FrameAlloc);
+  Compiler<EvalEmitter> C(*this, *P, Settings, Stk, FrameAlloc);
 
   if (!C.interpretCall(FD, E)) {
     C.cleanup();
@@ -99,12 +102,42 @@ bool Context::evaluateAsRValue(State &Parent, const Expr *E, APValue &Result) {
   return true;
 }
 
-bool Context::evaluate(State &Parent, const Expr *E, APValue &Result,
-                       ConstantExprKind Kind) {
+bool Context::evaluateAsRValue(const EvalSettings &Settings, const Expr *E,
+                               APValue &Result) {
   ++EvalID;
   bool Recursing = !Stk.empty();
   size_t StackSizeBefore = Stk.size();
-  Compiler<EvalEmitter> C(*this, *P, Parent, Stk, FrameAlloc, Kind);
+  Compiler<EvalEmitter> C(*this, *P, Settings, Stk, FrameAlloc);
+
+  auto Res = C.interpretExpr(E);
+
+  if (Res.isInvalid()) {
+    C.cleanup();
+    Stk.clearTo(StackSizeBefore);
+    return false;
+  }
+
+  if (!Recursing) {
+    // We *can* actually get here with a non-empty stack, since
+    // things like InterpState::noteSideEffect() exist.
+    C.cleanup();
+#ifndef NDEBUG
+    // Make sure we don't rely on some value being still alive in
+    // InterpStack memory.
+    Stk.clearTo(StackSizeBefore);
+#endif
+  }
+
+  Result = Res.stealAPValue();
+  return true;
+}
+
+bool Context::evaluate(const EvalSettings &Settings, const Expr *E,
+                       APValue &Result, ConstantExprKind Kind) {
+  ++EvalID;
+  bool Recursing = !Stk.empty();
+  size_t StackSizeBefore = Stk.size();
+  Compiler<EvalEmitter> C(*this, *P, Settings, Stk, FrameAlloc, Kind);
 
   auto Res = C.interpretExpr(E, /*ConvertResultToRValue=*/false,
                              /*DestroyToplevelScope=*/true);
@@ -128,12 +161,13 @@ bool Context::evaluate(State &Parent, const Expr *E, APValue &Result,
   return true;
 }
 
-bool Context::evaluateAsInitializer(State &Parent, const VarDecl *VD,
-                                    const Expr *Init, APValue &Result) {
+bool Context::evaluateAsInitializer(const EvalSettings &Settings,
+                                    const VarDecl *VD, const Expr *Init,
+                                    APValue &Result) {
   ++EvalID;
   bool Recursing = !Stk.empty();
   size_t StackSizeBefore = Stk.size();
-  Compiler<EvalEmitter> C(*this, *P, Parent, Stk, FrameAlloc);
+  Compiler<EvalEmitter> C(*this, *P, Settings, Stk, FrameAlloc);
 
   bool CheckGlobalInitialized =
       (VD->getType()->isRecordType() || VD->getType()->isArrayType());
@@ -160,10 +194,10 @@ bool Context::evaluateAsInitializer(State &Parent, const VarDecl *VD,
   return true;
 }
 
-bool Context::evaluateDestruction(State &Parent, const VarDecl *VD,
-                                  APValue Value) {
+bool Context::evaluateDestruction(const EvalSettings &Settings,
+                                  const VarDecl *VD, APValue Value) {
   assert(Stk.empty());
-  Compiler<EvalEmitter> C(*this, *P, Parent, Stk, FrameAlloc);
+  Compiler<EvalEmitter> C(*this, *P, Settings, Stk, FrameAlloc);
 
   auto Res = C.interpretDestructor(VD, Value);
 
@@ -186,14 +220,15 @@ void Context::registerRedecl(const VarDecl *VD, const APValue &V) {
 }
 
 template <typename ResultT>
-bool Context::evaluateStringRepr(State &Parent, const Expr *SizeExpr,
-                                 const Expr *PtrExpr, ResultT &Result) {
+bool Context::evaluateStringRepr(const EvalSettings &Settings,
+                                 const Expr *SizeExpr, const Expr *PtrExpr,
+                                 ResultT &Result) {
   assert(Stk.empty());
-  Compiler<EvalEmitter> C(*this, *P, Parent, Stk, FrameAlloc);
+  Compiler<EvalEmitter> C(*this, *P, Settings, Stk, FrameAlloc);
 
   // Evaluate size value.
   APValue SizeValue;
-  if (!evaluateAsRValue(Parent, SizeExpr, SizeValue))
+  if (!evaluateAsRValue(Settings, SizeExpr, SizeValue))
     return false;
 
   if (!SizeValue.isInt())
@@ -269,26 +304,28 @@ bool Context::evaluateStringRepr(State &Parent, const Expr *SizeExpr,
   return true;
 }
 
-bool Context::evaluateCharRange(State &Parent, const Expr *SizeExpr,
-                                const Expr *PtrExpr, APValue &Result) {
+bool Context::evaluateCharRange(const EvalSettings &Settings,
+                                const Expr *SizeExpr, const Expr *PtrExpr,
+                                APValue &Result) {
   assert(SizeExpr);
   assert(PtrExpr);
 
-  return evaluateStringRepr(Parent, SizeExpr, PtrExpr, Result);
+  return evaluateStringRepr(Settings, SizeExpr, PtrExpr, Result);
 }
 
-bool Context::evaluateCharRange(State &Parent, const Expr *SizeExpr,
-                                const Expr *PtrExpr, std::string &Result) {
+bool Context::evaluateCharRange(const EvalSettings &Settings,
+                                const Expr *SizeExpr, const Expr *PtrExpr,
+                                std::string &Result) {
   assert(SizeExpr);
   assert(PtrExpr);
 
-  return evaluateStringRepr(Parent, SizeExpr, PtrExpr, Result);
+  return evaluateStringRepr(Settings, SizeExpr, PtrExpr, Result);
 }
 
-bool Context::evaluateString(State &Parent, const Expr *E,
+bool Context::evaluateString(const EvalSettings &Settings, const Expr *E,
                              std::string &Result) {
   assert(Stk.empty());
-  Compiler<EvalEmitter> C(*this, *P, Parent, Stk, FrameAlloc);
+  Compiler<EvalEmitter> C(*this, *P, Settings, Stk, FrameAlloc);
 
   auto PtrRes = C.interpretAsPointer(E, [&](InterpState &S, CodePtr OpPC,
                                             const Pointer &Ptr) {
@@ -350,9 +387,10 @@ bool Context::evaluateString(State &Parent, const Expr *E,
   return true;
 }
 
-std::optional<uint64_t> Context::evaluateStrlen(State &Parent, const Expr *E) {
+std::optional<uint64_t> Context::evaluateStrlen(const EvalSettings &Settings,
+                                                const Expr *E) {
   assert(Stk.empty());
-  Compiler<EvalEmitter> C(*this, *P, Parent, Stk, FrameAlloc);
+  Compiler<EvalEmitter> C(*this, *P, Settings, Stk, FrameAlloc);
 
   std::optional<uint64_t> Result;
   auto PtrRes = C.interpretAsPointer(E, [&](InterpState &S, CodePtr OpPC,
@@ -416,12 +454,11 @@ std::optional<uint64_t> Context::evaluateStrlen(State &Parent, const Expr *E) {
   return Result;
 }
 
-std::optional<uint64_t> Context::tryEvaluateObjectSize(State &Parent,
-                                                       const Expr *E,
-                                                       unsigned Kind,
-                                                       bool IsDynamic) {
+std::optional<uint64_t>
+Context::tryEvaluateObjectSize(const EvalSettings &Settings, const Expr *E,
+                               unsigned Kind, bool IsDynamic) {
   assert(Stk.empty());
-  Compiler<EvalEmitter> C(*this, *P, Parent, Stk, FrameAlloc);
+  Compiler<EvalEmitter> C(*this, *P, Settings, Stk, FrameAlloc);
 
   std::optional<uint64_t> Result;
   auto PtrRes = C.interpretAsLValuePointer(E, [&](InterpState &S, CodePtr OpPC,
@@ -448,17 +485,16 @@ std::optional<uint64_t> Context::tryEvaluateObjectSize(State &Parent,
   return Result;
 }
 
-std::optional<bool>
-Context::evaluateWithSubstitution(State &Parent, const FunctionDecl *Callee,
-                                  ArrayRef<const Expr *> Args, const Expr *This,
-                                  const Expr *Condition) {
+std::optional<bool> Context::evaluateWithSubstitution(
+    const EvalSettings &Settings, const FunctionDecl *Callee,
+    ArrayRef<const Expr *> Args, const Expr *This, const Expr *Condition) {
   if (OptPrimType ConditionT = classify(Condition);
       !ConditionT || ConditionT != PT_Bool) {
     return std::nullopt;
   }
 
   assert(Stk.empty());
-  Compiler<EvalEmitter> C(*this, *P, Parent, Stk, FrameAlloc);
+  Compiler<EvalEmitter> C(*this, *P, Settings, Stk, FrameAlloc);
   std::optional<bool> Result =
       C.interpretWithSubstitutions(Callee, Args, This, Condition);
 
@@ -599,9 +635,9 @@ const llvm::fltSemantics &Context::getFloatSemantics(QualType T) const {
   return Ctx.getFloatTypeSemantics(T);
 }
 
-bool Context::Run(State &Parent, const Function *Func) {
+bool Context::Run(const EvalSettings &Settings, const Function *Func) {
   auto Memory = std::make_unique<char[]>(InterpFrame::allocSize(Func));
-  InterpState State(Parent, *P, Stk, FrameAlloc, *this, Func);
+  InterpState State(Settings, *P, Stk, FrameAlloc, *this, Func);
   InterpFrame *Frame = new (Memory.get()) InterpFrame(
       State, Func, /*Caller=*/nullptr, CodePtr(), Func->getArgSize());
   State.Current = Frame;
