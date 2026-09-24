@@ -49,5 +49,10 @@ void entry() {
 
   // CHECK: DeclStmt
   // CHECK-NEXT: VarDecl {{.*}} ImpVec4 'vector<>':'vector<float, 4>' cinit
+
+  vector ImpVec4b = {1.0, 2.0, 3.0, 4.0};
+
+  // CHECK: DeclStmt
+  // CHECK-NEXT: VarDecl {{.*}} ImpVec4b 'hlsl::vector<float, 4>':'vector<float, 4>' cinit
   return;
 }
