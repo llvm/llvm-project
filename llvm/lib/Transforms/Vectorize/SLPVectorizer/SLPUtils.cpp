@@ -7,11 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "SLPUtils.h"
+#include "SLPTypeUtils.h"
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Constants.h"
@@ -1001,6 +1005,88 @@ bool isOnceUsedSeed(const Instruction *I) {
            (!isa<CastInst>(U) || U->hasOneUse());
   return isa<BinaryOperator, UnaryOperator, SelectInst, FreezeInst, CallInst>(
       I);
+}
+
+/// Returns true if \p Ptr is only used by scalar loads and stores, directly or
+/// through getelementptrs with constant offsets.
+static bool onlyFeedsScalarAccesses(Value *Ptr, bool ReVec,
+                                    unsigned Depth = 0) {
+  constexpr unsigned MaxDepth = 2;
+  if (Ptr->use_empty() || Ptr->hasNUsesOrMore(UsesLimit))
+    return false;
+  return all_of(Ptr->users(), [&](User *U) {
+    if (isa<LoadInst>(U))
+      return !getValueType(U, ReVec)->isVectorTy();
+    if (auto *Store = dyn_cast<StoreInst>(U))
+      return Store->getPointerOperand() == Ptr &&
+             !getValueType(Store, ReVec)->isVectorTy();
+    if (auto *GEP = dyn_cast<GetElementPtrInst>(U))
+      return Depth < MaxDepth && GEP->getPointerOperand() == Ptr &&
+             GEP->hasAllConstantIndices() &&
+             onlyFeedsScalarAccesses(GEP, ReVec, Depth + 1);
+    return false;
+  });
+}
+
+static bool collectScalarAccessGEPs(ArrayRef<Value *> VL, LoopInfo &LI,
+                                    bool ReVec,
+                                    SmallVectorImpl<GetElementPtrInst *> &GEPs,
+                                    const Loop *&L) {
+  constexpr unsigned MaxIndexChainLength = 3;
+  for (Value *V : VL) {
+    Value *Cur = V;
+    GetElementPtrInst *GEP = nullptr;
+    for ([[maybe_unused]] unsigned _ : seq<unsigned>(MaxIndexChainLength)) {
+      if (!isa<BinaryOperator, CastInst>(Cur) || !Cur->hasOneUse())
+        return false;
+      User *U = Cur->user_back();
+      if ((GEP = dyn_cast<GetElementPtrInst>(U)))
+        break;
+      Cur = U;
+    }
+    if (!GEP || GEP->getPointerOperand() == Cur ||
+        !onlyFeedsScalarAccesses(GEP, ReVec))
+      return false;
+    // LSR only removes the arithmetic computed in the loop itself.
+    const Loop *GEPLoop = LI.getLoopFor(GEP->getParent());
+    if (!GEPLoop || (L && L != GEPLoop) ||
+        LI.getLoopFor(cast<Instruction>(V)->getParent()) != GEPLoop)
+      return false;
+    L = GEPLoop;
+    GEPs.push_back(GEP);
+  }
+  return true;
+}
+
+bool isStrengthReducibleIndexBundle(ArrayRef<Value *> VL, ScalarEvolution &SE,
+                                    LoopInfo &LI, bool ReVec) {
+  const Loop *L = nullptr;
+  SmallVector<GetElementPtrInst *> GEPs;
+  if (!collectScalarAccessGEPs(VL, LI, ReVec, GEPs, L))
+    return false;
+  const SCEV *FirstAddr = nullptr;
+  for (GetElementPtrInst *GEP : GEPs) {
+    const auto *Addr = dyn_cast<SCEVAddRecExpr>(SE.getSCEV(GEP));
+    if (!Addr || Addr->getLoop() != L || !Addr->isAffine())
+      return false;
+    if (!FirstAddr) {
+      FirstAddr = Addr;
+      continue;
+    }
+    const SCEV *Diff = SE.getMinusSCEV(Addr, FirstAddr);
+    if (isa<SCEVCouldNotCompute>(Diff) || !SE.isLoopInvariant(Diff, L))
+      return false;
+  }
+  return true;
+}
+
+bool isGEPCandidateIndexBundle(
+    ArrayRef<Value *> VL, LoopInfo &LI, bool ReVec,
+    function_ref<bool(GetElementPtrInst *)> IsCandidate) {
+  const Loop *L = nullptr;
+  SmallVector<GetElementPtrInst *> GEPs;
+  return collectScalarAccessGEPs(VL, LI, ReVec, GEPs, L) &&
+         all_of(GEPs, IsCandidate);
 }
 
 Instruction *lookThroughCastRoundTrip(Value *V, bool MustBeElidable) {
