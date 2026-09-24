@@ -1263,6 +1263,15 @@ public:
     // value representing memory location
     PointerUnion<const Value *, const PseudoSourceValue *> ptrVal;
 
+    // Index of the call argument represented by ptrVal. This allows
+    // per-argument metadata to be associated with this memory access.
+    std::optional<unsigned> ptrArgIndex;
+
+    void setPointerOperand(const CallBase &I, unsigned ArgNo) {
+      ptrVal = I.getArgOperand(ArgNo);
+      ptrArgIndex = ArgNo;
+    }
+
     // Fallback address space for use if ptrVal is nullptr. std::nullopt means
     // unknown address space.
     std::optional<unsigned> fallbackAddressSpace;
