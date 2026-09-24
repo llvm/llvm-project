@@ -1498,7 +1498,7 @@ arguments:
 __attribute__((coop_mat(scope, rows, columns, use)))
 ```
 - scope specifies the memory scope of the cooperative matrix.
-  It must be one of the supported OpenCL memory scopes, such as CLK_COOPERATIVE_MATRIX_SCOPE_SUBGROUP.
+  Only one of the OpenCL memory scopes (memory_scope_sub_group) is supported for cooperative matrix.
 - rows specifies the number of rows in the matrix. It must be a constant expression.
 - columns specifies the number of columns in the matrix. It must be a constant expression.
 - use specifies the operand role of the matrix in coop_mat_muladd. It must be one of:
@@ -1510,13 +1510,13 @@ The coop_mat attribute can be used to declare local variables, function paramete
 
 ```c
 float vmat1 __attribute__((coop_mat(
-    CLK_COOPERATIVE_MATRIX_SCOPE_SUBGROUP,
+    memory_scope_sub_group,
     8,
     8,
     CLK_COOPERATIVE_MATRIX_A)));
 
 typedef half chmat44 __attribute__((coop_mat(
-    CLK_COOPERATIVE_MATRIX_SCOPE_SUBGROUP,
+    memory_scope_sub_group,
     4,
     4,
     CLK_COOPERATIVE_MATRIX_B)));

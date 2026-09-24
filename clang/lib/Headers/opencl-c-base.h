@@ -632,10 +632,6 @@ CLINKAGE int printf(__constant const char *st, ...)
 #undef CLINKAGE
 #endif
 
-typedef enum coop_matrix_scope_t {
-  CLK_COOPERATIVE_MATRIX_SCOPE_SUBGROUP = 3
-} coop_matrix_scope_t;
-
 typedef enum coop_matrix_operands_t {
   CLK_COOPERATIVE_MATRIX_OPERAND_NONE = 0,
   CLK_COOPERATIVE_MATRIX_OPERAND_MATRIX_A_SIGNED = 0x10,
