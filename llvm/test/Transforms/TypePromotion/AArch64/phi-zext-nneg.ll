@@ -6,7 +6,7 @@ define i32 @edge_sum(ptr %edges, i16 signext %head) {
 ; CHECK-LABEL: define i32 @edge_sum(
 ; CHECK-SAME: ptr [[EDGES:%.*]], i16 signext [[HEAD:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[HEAD]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i16 [[HEAD]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i16
 ; CHECK-NEXT:    [[OK:%.*]] = icmp sge i16 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[OK]], label %[[BODY:.*]], label %[[EXIT:.*]]
@@ -20,7 +20,7 @@ define i32 @edge_sum(ptr %edges, i16 signext %head) {
 ; CHECK-NEXT:    [[VALUE_WIDE:%.*]] = sext i16 [[VALUE]] to i32
 ; CHECK-NEXT:    [[SUM_NEXT]] = add i32 [[SUM]], [[VALUE_WIDE]]
 ; CHECK-NEXT:    [[NEXT:%.*]] = load i16, ptr [[NEXT_PTR]], align 2
-; CHECK-NEXT:    [[TMP2]] = zext i16 [[NEXT]] to i64
+; CHECK-NEXT:    [[TMP2]] = sext i16 [[NEXT]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i16
 ; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp sge i16 [[TMP3]], 0
 ; CHECK-NEXT:    br i1 [[CONTINUE]], label %[[BODY]], label %[[EXIT]]
@@ -107,10 +107,11 @@ define i64 @mixed_extensions(i16 %head) {
 ; CHECK-LABEL: define i64 @mixed_extensions(
 ; CHECK-SAME: i16 [[HEAD:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[HEAD]] to i64
-; CHECK-NEXT:    [[UNSIGNED:%.*]] = zext i16 [[HEAD]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i16 [[HEAD]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i16
-; CHECK-NEXT:    [[OK:%.*]] = icmp sge i16 [[TMP1]], 0
+; CHECK-NEXT:    [[UNSIGNED:%.*]] = zext i16 [[TMP1]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP0]] to i16
+; CHECK-NEXT:    [[OK:%.*]] = icmp sge i16 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[OK]], label %[[LOOP:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ [[TMP0]], %[[ENTRY]] ], [ 0, %[[LOOP]] ]
@@ -140,7 +141,7 @@ define i1 @negative_constant(i16 %head) {
 ; CHECK-LABEL: define i1 @negative_constant(
 ; CHECK-SAME: i16 [[HEAD:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[HEAD]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i16 [[HEAD]] to i64
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ [[TMP0]], %[[ENTRY]] ], [ 0, %[[BODY:.*]] ]
@@ -151,7 +152,7 @@ define i1 @negative_constant(i16 %head) {
 ; CHECK-NEXT:    [[AGAIN:%.*]] = icmp ne i64 [[IDX]], 0
 ; CHECK-NEXT:    br i1 [[AGAIN]], label %[[LOOP]], label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[MATCH:%.*]] = icmp eq i64 [[TMP0]], 65535
+; CHECK-NEXT:    [[MATCH:%.*]] = icmp eq i64 [[TMP0]], -1
 ; CHECK-NEXT:    ret i1 [[MATCH]]
 ;
 entry:
@@ -177,10 +178,10 @@ define i64 @negative_phi_constant(i16 %head) {
 ; CHECK-LABEL: define i64 @negative_phi_constant(
 ; CHECK-SAME: i16 [[HEAD:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[HEAD]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i16 [[HEAD]] to i64
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ [[TMP0]], %[[ENTRY]] ], [ 65535, %[[BODY:.*]] ]
+; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ [[TMP0]], %[[ENTRY]] ], [ -1, %[[BODY:.*]] ]
 ; CHECK-NEXT:    [[SUM:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IDX]], %[[BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[IDX]] to i16
 ; CHECK-NEXT:    [[NEGATIVE:%.*]] = icmp slt i16 [[TMP1]], 0
@@ -212,7 +213,7 @@ define i32 @negative_switch_case(i16 %head) {
 ; CHECK-LABEL: define i32 @negative_switch_case(
 ; CHECK-SAME: i16 [[HEAD:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[HEAD]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i16 [[HEAD]] to i64
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ [[TMP0]], %[[ENTRY]] ], [ 0, %[[BODY:.*]] ]
@@ -224,7 +225,7 @@ define i32 @negative_switch_case(i16 %head) {
 ; CHECK-NEXT:    br i1 [[AGAIN]], label %[[LOOP]], label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    switch i64 [[TMP0]], label %[[OTHER:.*]] [
-; CHECK-NEXT:      i64 65535, label %[[MINUS_ONE:.*]]
+; CHECK-NEXT:      i64 -1, label %[[MINUS_ONE:.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       [[MINUS_ONE]]:
 ; CHECK-NEXT:    ret i32 1
@@ -259,16 +260,15 @@ define i64 @phi_lshr(i16 %head) {
 ; CHECK-LABEL: define i64 @phi_lshr(
 ; CHECK-SAME: i16 [[HEAD:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[HEAD]] to i64
-; CHECK-NEXT:    [[INITIAL:%.*]] = lshr i64 [[TMP0]], 1
+; CHECK-NEXT:    [[INITIAL:%.*]] = lshr i16 [[HEAD]], 1
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ [[INITIAL]], %[[ENTRY]] ], [ 0, %[[BODY:.*]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi i16 [ [[INITIAL]], %[[ENTRY]] ], [ 0, %[[BODY:.*]] ]
 ; CHECK-NEXT:    [[SUM:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[SUM_NEXT:%.*]], %[[BODY]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[IDX]] to i16
 ; CHECK-NEXT:    [[NEGATIVE:%.*]] = icmp slt i16 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[NEGATIVE]], label %[[EXIT:.*]], label %[[BODY]]
 ; CHECK:       [[BODY]]:
+; CHECK-NEXT:    [[IDX:%.*]] = zext nneg i16 [[TMP1]] to i64
 ; CHECK-NEXT:    [[SUM_NEXT]] = add i64 [[SUM]], [[IDX]]
 ; CHECK-NEXT:    [[AGAIN:%.*]] = icmp ne i64 [[IDX]], 0
 ; CHECK-NEXT:    br i1 [[AGAIN]], label %[[LOOP]], label %[[EXIT]]
@@ -302,16 +302,15 @@ define i64 @phi_udiv(i16 %head) {
 ; CHECK-LABEL: define i64 @phi_udiv(
 ; CHECK-SAME: i16 [[HEAD:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[HEAD]] to i64
-; CHECK-NEXT:    [[INITIAL:%.*]] = udiv i64 [[TMP0]], 3
+; CHECK-NEXT:    [[INITIAL:%.*]] = udiv i16 [[HEAD]], 3
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ [[INITIAL]], %[[ENTRY]] ], [ 0, %[[BODY:.*]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi i16 [ [[INITIAL]], %[[ENTRY]] ], [ 0, %[[BODY:.*]] ]
 ; CHECK-NEXT:    [[SUM:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[SUM_NEXT:%.*]], %[[BODY]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[IDX]] to i16
 ; CHECK-NEXT:    [[NEGATIVE:%.*]] = icmp slt i16 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[NEGATIVE]], label %[[EXIT:.*]], label %[[BODY]]
 ; CHECK:       [[BODY]]:
+; CHECK-NEXT:    [[IDX:%.*]] = zext nneg i16 [[TMP1]] to i64
 ; CHECK-NEXT:    [[SUM_NEXT]] = add i64 [[SUM]], [[IDX]]
 ; CHECK-NEXT:    [[AGAIN:%.*]] = icmp ne i64 [[IDX]], 0
 ; CHECK-NEXT:    br i1 [[AGAIN]], label %[[LOOP]], label %[[EXIT]]
@@ -345,16 +344,15 @@ define i64 @phi_urem(i16 %head) {
 ; CHECK-LABEL: define i64 @phi_urem(
 ; CHECK-SAME: i16 [[HEAD:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[HEAD]] to i64
-; CHECK-NEXT:    [[INITIAL:%.*]] = urem i64 [[TMP0]], 7
+; CHECK-NEXT:    [[INITIAL:%.*]] = urem i16 [[HEAD]], 7
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ [[INITIAL]], %[[ENTRY]] ], [ 0, %[[BODY:.*]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi i16 [ [[INITIAL]], %[[ENTRY]] ], [ 0, %[[BODY:.*]] ]
 ; CHECK-NEXT:    [[SUM:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[SUM_NEXT:%.*]], %[[BODY]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[IDX]] to i16
 ; CHECK-NEXT:    [[NEGATIVE:%.*]] = icmp slt i16 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[NEGATIVE]], label %[[EXIT:.*]], label %[[BODY]]
 ; CHECK:       [[BODY]]:
+; CHECK-NEXT:    [[IDX:%.*]] = zext nneg i16 [[TMP1]] to i64
 ; CHECK-NEXT:    [[SUM_NEXT]] = add i64 [[SUM]], [[IDX]]
 ; CHECK-NEXT:    [[AGAIN:%.*]] = icmp ne i64 [[IDX]], 0
 ; CHECK-NEXT:    br i1 [[AGAIN]], label %[[LOOP]], label %[[EXIT]]
@@ -388,15 +386,16 @@ define i64 @phi_add_nsw(i16 %head) {
 ; CHECK-LABEL: define i64 @phi_add_nsw(
 ; CHECK-SAME: i16 [[HEAD:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[INITIAL:%.*]] = add nsw i16 [[HEAD]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i16 [[HEAD]] to i64
+; CHECK-NEXT:    [[INITIAL:%.*]] = add nsw i64 [[TMP0]], 1
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IDX:%.*]] = phi i16 [ [[INITIAL]], %[[ENTRY]] ], [ 0, %[[BODY:.*]] ]
+; CHECK-NEXT:    [[WIDE:%.*]] = phi i64 [ [[INITIAL]], %[[ENTRY]] ], [ 0, %[[BODY:.*]] ]
 ; CHECK-NEXT:    [[SUM:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[SUM_NEXT:%.*]], %[[BODY]] ]
+; CHECK-NEXT:    [[IDX:%.*]] = trunc i64 [[WIDE]] to i16
 ; CHECK-NEXT:    [[NEGATIVE:%.*]] = icmp slt i16 [[IDX]], 0
 ; CHECK-NEXT:    br i1 [[NEGATIVE]], label %[[EXIT:.*]], label %[[BODY]]
 ; CHECK:       [[BODY]]:
-; CHECK-NEXT:    [[WIDE:%.*]] = zext nneg i16 [[IDX]] to i64
 ; CHECK-NEXT:    [[SUM_NEXT]] = add i64 [[SUM]], [[WIDE]]
 ; CHECK-NEXT:    [[AGAIN:%.*]] = icmp ne i64 [[WIDE]], 0
 ; CHECK-NEXT:    br i1 [[AGAIN]], label %[[LOOP]], label %[[EXIT]]
@@ -430,16 +429,15 @@ define i64 @phi_add_nuw(i16 %head) {
 ; CHECK-LABEL: define i64 @phi_add_nuw(
 ; CHECK-SAME: i16 [[HEAD:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[HEAD]] to i64
-; CHECK-NEXT:    [[INITIAL:%.*]] = add nuw i64 [[TMP0]], 1
+; CHECK-NEXT:    [[INITIAL:%.*]] = add nuw i16 [[HEAD]], 1
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ [[INITIAL]], %[[ENTRY]] ], [ 0, %[[BODY:.*]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi i16 [ [[INITIAL]], %[[ENTRY]] ], [ 0, %[[BODY:.*]] ]
 ; CHECK-NEXT:    [[SUM:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[SUM_NEXT:%.*]], %[[BODY]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[IDX]] to i16
 ; CHECK-NEXT:    [[NEGATIVE:%.*]] = icmp slt i16 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[NEGATIVE]], label %[[EXIT:.*]], label %[[BODY]]
 ; CHECK:       [[BODY]]:
+; CHECK-NEXT:    [[IDX:%.*]] = zext nneg i16 [[TMP1]] to i64
 ; CHECK-NEXT:    [[SUM_NEXT]] = add i64 [[SUM]], [[IDX]]
 ; CHECK-NEXT:    [[AGAIN:%.*]] = icmp ne i64 [[IDX]], 0
 ; CHECK-NEXT:    br i1 [[AGAIN]], label %[[LOOP]], label %[[EXIT]]
@@ -473,15 +471,16 @@ define i64 @phi_sub_nsw(i16 %head) {
 ; CHECK-LABEL: define i64 @phi_sub_nsw(
 ; CHECK-SAME: i16 [[HEAD:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[INITIAL:%.*]] = sub nsw i16 [[HEAD]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i16 [[HEAD]] to i64
+; CHECK-NEXT:    [[INITIAL:%.*]] = sub nsw i64 [[TMP0]], 1
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IDX:%.*]] = phi i16 [ [[INITIAL]], %[[ENTRY]] ], [ 0, %[[BODY:.*]] ]
+; CHECK-NEXT:    [[WIDE:%.*]] = phi i64 [ [[INITIAL]], %[[ENTRY]] ], [ 0, %[[BODY:.*]] ]
 ; CHECK-NEXT:    [[SUM:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[SUM_NEXT:%.*]], %[[BODY]] ]
+; CHECK-NEXT:    [[IDX:%.*]] = trunc i64 [[WIDE]] to i16
 ; CHECK-NEXT:    [[NEGATIVE:%.*]] = icmp slt i16 [[IDX]], 0
 ; CHECK-NEXT:    br i1 [[NEGATIVE]], label %[[EXIT:.*]], label %[[BODY]]
 ; CHECK:       [[BODY]]:
-; CHECK-NEXT:    [[WIDE:%.*]] = zext nneg i16 [[IDX]] to i64
 ; CHECK-NEXT:    [[SUM_NEXT]] = add i64 [[SUM]], [[WIDE]]
 ; CHECK-NEXT:    [[AGAIN:%.*]] = icmp ne i64 [[WIDE]], 0
 ; CHECK-NEXT:    br i1 [[AGAIN]], label %[[LOOP]], label %[[EXIT]]
@@ -515,16 +514,15 @@ define i64 @phi_sub_nuw(i16 %head) {
 ; CHECK-LABEL: define i64 @phi_sub_nuw(
 ; CHECK-SAME: i16 [[HEAD:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[HEAD]] to i64
-; CHECK-NEXT:    [[INITIAL:%.*]] = sub nuw i64 [[TMP0]], 1
+; CHECK-NEXT:    [[INITIAL:%.*]] = sub nuw i16 [[HEAD]], 1
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ [[INITIAL]], %[[ENTRY]] ], [ 0, %[[BODY:.*]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi i16 [ [[INITIAL]], %[[ENTRY]] ], [ 0, %[[BODY:.*]] ]
 ; CHECK-NEXT:    [[SUM:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[SUM_NEXT:%.*]], %[[BODY]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[IDX]] to i16
 ; CHECK-NEXT:    [[NEGATIVE:%.*]] = icmp slt i16 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[NEGATIVE]], label %[[EXIT:.*]], label %[[BODY]]
 ; CHECK:       [[BODY]]:
+; CHECK-NEXT:    [[IDX:%.*]] = zext nneg i16 [[TMP1]] to i64
 ; CHECK-NEXT:    [[SUM_NEXT]] = add i64 [[SUM]], [[IDX]]
 ; CHECK-NEXT:    [[AGAIN:%.*]] = icmp ne i64 [[IDX]], 0
 ; CHECK-NEXT:    br i1 [[AGAIN]], label %[[LOOP]], label %[[EXIT]]
@@ -558,15 +556,16 @@ define i64 @phi_mul_nsw(i16 %head) {
 ; CHECK-LABEL: define i64 @phi_mul_nsw(
 ; CHECK-SAME: i16 [[HEAD:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[INITIAL:%.*]] = mul nsw i16 [[HEAD]], 2
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i16 [[HEAD]] to i64
+; CHECK-NEXT:    [[INITIAL:%.*]] = mul nsw i64 [[TMP0]], 2
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IDX:%.*]] = phi i16 [ [[INITIAL]], %[[ENTRY]] ], [ 0, %[[BODY:.*]] ]
+; CHECK-NEXT:    [[WIDE:%.*]] = phi i64 [ [[INITIAL]], %[[ENTRY]] ], [ 0, %[[BODY:.*]] ]
 ; CHECK-NEXT:    [[SUM:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[SUM_NEXT:%.*]], %[[BODY]] ]
+; CHECK-NEXT:    [[IDX:%.*]] = trunc i64 [[WIDE]] to i16
 ; CHECK-NEXT:    [[NEGATIVE:%.*]] = icmp slt i16 [[IDX]], 0
 ; CHECK-NEXT:    br i1 [[NEGATIVE]], label %[[EXIT:.*]], label %[[BODY]]
 ; CHECK:       [[BODY]]:
-; CHECK-NEXT:    [[WIDE:%.*]] = zext nneg i16 [[IDX]] to i64
 ; CHECK-NEXT:    [[SUM_NEXT]] = add i64 [[SUM]], [[WIDE]]
 ; CHECK-NEXT:    [[AGAIN:%.*]] = icmp ne i64 [[WIDE]], 0
 ; CHECK-NEXT:    br i1 [[AGAIN]], label %[[LOOP]], label %[[EXIT]]
@@ -600,16 +599,15 @@ define i64 @phi_mul_nuw(i16 %head) {
 ; CHECK-LABEL: define i64 @phi_mul_nuw(
 ; CHECK-SAME: i16 [[HEAD:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[HEAD]] to i64
-; CHECK-NEXT:    [[INITIAL:%.*]] = mul nuw i64 [[TMP0]], 2
+; CHECK-NEXT:    [[INITIAL:%.*]] = mul nuw i16 [[HEAD]], 2
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ [[INITIAL]], %[[ENTRY]] ], [ 0, %[[BODY:.*]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi i16 [ [[INITIAL]], %[[ENTRY]] ], [ 0, %[[BODY:.*]] ]
 ; CHECK-NEXT:    [[SUM:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[SUM_NEXT:%.*]], %[[BODY]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[IDX]] to i16
 ; CHECK-NEXT:    [[NEGATIVE:%.*]] = icmp slt i16 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[NEGATIVE]], label %[[EXIT:.*]], label %[[BODY]]
 ; CHECK:       [[BODY]]:
+; CHECK-NEXT:    [[IDX:%.*]] = zext nneg i16 [[TMP1]] to i64
 ; CHECK-NEXT:    [[SUM_NEXT]] = add i64 [[SUM]], [[IDX]]
 ; CHECK-NEXT:    [[AGAIN:%.*]] = icmp ne i64 [[IDX]], 0
 ; CHECK-NEXT:    br i1 [[AGAIN]], label %[[LOOP]], label %[[EXIT]]
@@ -643,15 +641,16 @@ define i64 @phi_shl_nsw(i16 %head) {
 ; CHECK-LABEL: define i64 @phi_shl_nsw(
 ; CHECK-SAME: i16 [[HEAD:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[INITIAL:%.*]] = shl nsw i16 [[HEAD]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i16 [[HEAD]] to i64
+; CHECK-NEXT:    [[INITIAL:%.*]] = shl nsw i64 [[TMP0]], 1
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IDX:%.*]] = phi i16 [ [[INITIAL]], %[[ENTRY]] ], [ 0, %[[BODY:.*]] ]
+; CHECK-NEXT:    [[WIDE:%.*]] = phi i64 [ [[INITIAL]], %[[ENTRY]] ], [ 0, %[[BODY:.*]] ]
 ; CHECK-NEXT:    [[SUM:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[SUM_NEXT:%.*]], %[[BODY]] ]
+; CHECK-NEXT:    [[IDX:%.*]] = trunc i64 [[WIDE]] to i16
 ; CHECK-NEXT:    [[NEGATIVE:%.*]] = icmp slt i16 [[IDX]], 0
 ; CHECK-NEXT:    br i1 [[NEGATIVE]], label %[[EXIT:.*]], label %[[BODY]]
 ; CHECK:       [[BODY]]:
-; CHECK-NEXT:    [[WIDE:%.*]] = zext nneg i16 [[IDX]] to i64
 ; CHECK-NEXT:    [[SUM_NEXT]] = add i64 [[SUM]], [[WIDE]]
 ; CHECK-NEXT:    [[AGAIN:%.*]] = icmp ne i64 [[WIDE]], 0
 ; CHECK-NEXT:    br i1 [[AGAIN]], label %[[LOOP]], label %[[EXIT]]
@@ -685,16 +684,15 @@ define i64 @phi_shl_nuw(i16 %head) {
 ; CHECK-LABEL: define i64 @phi_shl_nuw(
 ; CHECK-SAME: i16 [[HEAD:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[HEAD]] to i64
-; CHECK-NEXT:    [[INITIAL:%.*]] = shl nuw i64 [[TMP0]], 1
+; CHECK-NEXT:    [[INITIAL:%.*]] = shl nuw i16 [[HEAD]], 1
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ [[INITIAL]], %[[ENTRY]] ], [ 0, %[[BODY:.*]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi i16 [ [[INITIAL]], %[[ENTRY]] ], [ 0, %[[BODY:.*]] ]
 ; CHECK-NEXT:    [[SUM:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[SUM_NEXT:%.*]], %[[BODY]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[IDX]] to i16
 ; CHECK-NEXT:    [[NEGATIVE:%.*]] = icmp slt i16 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[NEGATIVE]], label %[[EXIT:.*]], label %[[BODY]]
 ; CHECK:       [[BODY]]:
+; CHECK-NEXT:    [[IDX:%.*]] = zext nneg i16 [[TMP1]] to i64
 ; CHECK-NEXT:    [[SUM_NEXT]] = add i64 [[SUM]], [[IDX]]
 ; CHECK-NEXT:    [[AGAIN:%.*]] = icmp ne i64 [[IDX]], 0
 ; CHECK-NEXT:    br i1 [[AGAIN]], label %[[LOOP]], label %[[EXIT]]
@@ -729,19 +727,18 @@ define i1 @unsigned_wrap(i16 %head) {
 ; CHECK-LABEL: define i1 @unsigned_wrap(
 ; CHECK-SAME: i16 [[HEAD:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[HEAD]] to i64
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ [[TMP0]], %[[ENTRY]] ], [ 0, %[[BODY:.*]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[IDX]] to i16
+; CHECK-NEXT:    [[TMP1:%.*]] = phi i16 [ [[HEAD]], %[[ENTRY]] ], [ 0, %[[BODY:.*]] ]
 ; CHECK-NEXT:    [[NEGATIVE:%.*]] = icmp slt i16 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[NEGATIVE]], label %[[EXIT:.*]], label %[[BODY]]
 ; CHECK:       [[BODY]]:
+; CHECK-NEXT:    [[IDX:%.*]] = zext nneg i16 [[TMP1]] to i64
 ; CHECK-NEXT:    [[AGAIN:%.*]] = icmp ne i64 [[IDX]], 0
 ; CHECK-NEXT:    br i1 [[AGAIN]], label %[[LOOP]], label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[OFFSET:%.*]] = add i64 [[TMP0]], -2
-; CHECK-NEXT:    [[IN_RANGE:%.*]] = icmp ule i64 [[OFFSET]], 65533
+; CHECK-NEXT:    [[OFFSET:%.*]] = add i16 [[HEAD]], -2
+; CHECK-NEXT:    [[IN_RANGE:%.*]] = icmp ule i16 [[OFFSET]], -3
 ; CHECK-NEXT:    ret i1 [[IN_RANGE]]
 ;
 entry:

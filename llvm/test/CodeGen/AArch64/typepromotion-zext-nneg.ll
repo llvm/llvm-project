@@ -3,7 +3,6 @@
 
 ; A signed halfword edge index uses negative values as an end sentinel.
 ; Both the entry and backedge checks guard the nonnegative index use.
-; FIXME: Promote the index PHI with sign extension to avoid redundant masks.
 
 define i32 @edge_sum(ptr %edges, i16 signext %head) {
 ; CHECK-LABEL: edge_sum:
@@ -11,18 +10,17 @@ define i32 @edge_sum(ptr %edges, i16 signext %head) {
 ; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    tbnz w1, #31, .LBB0_4
 ; CHECK-NEXT:  // %bb.1: // %body.preheader
-; CHECK-NEXT:    mov x8, x0
-; CHECK-NEXT:    mov w0, wzr
-; CHECK-NEXT:    and x9, x1, #0xffff
+; CHECK-NEXT:    sxtw x9, w1
+; CHECK-NEXT:    mov w8, wzr
 ; CHECK-NEXT:  .LBB0_2: // %body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    add x9, x8, x9, lsl #3
+; CHECK-NEXT:    add x9, x0, x9, lsl #3
 ; CHECK-NEXT:    ldrsh w10, [x9, #4]
-; CHECK-NEXT:    ldrsh w11, [x9, #2]
-; CHECK-NEXT:    add w0, w0, w10
-; CHECK-NEXT:    and x9, x11, #0xffff
-; CHECK-NEXT:    tbz w11, #31, .LBB0_2
+; CHECK-NEXT:    ldrsh x9, [x9, #2]
+; CHECK-NEXT:    add w8, w8, w10
+; CHECK-NEXT:    tbz x9, #63, .LBB0_2
 ; CHECK-NEXT:  // %bb.3: // %exit
+; CHECK-NEXT:    mov w0, w8
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB0_4:
 ; CHECK-NEXT:    mov w0, wzr

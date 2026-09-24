@@ -3,28 +3,21 @@
 
 ; A signed halfword edge index uses negative values as an end sentinel.
 ; Both the entry and backedge checks guard the nonnegative index use.
-; FIXME: Promote the index PHI with sign extension to avoid redundant masks.
 
 define i32 @edge_sum(ptr %edges, i16 signext %head) {
 ; CHECK-LABEL: edge_sum:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    bltz a1, .LBB0_4
-; CHECK-NEXT:  # %bb.1: # %body.preheader
-; CHECK-NEXT:    mv a2, a0
-; CHECK-NEXT:    li a0, 0
-; CHECK-NEXT:    zext.h a1, a1
-; CHECK-NEXT:  .LBB0_2: # %body
+; CHECK-NEXT:    li a2, 0
+; CHECK-NEXT:    bltz a1, .LBB0_2
+; CHECK-NEXT:  .LBB0_1: # %body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    sh3add a1, a1, a2
-; CHECK-NEXT:    lh a3, 2(a1)
-; CHECK-NEXT:    lh a1, 4(a1)
-; CHECK-NEXT:    addw a0, a0, a1
-; CHECK-NEXT:    zext.h a1, a3
-; CHECK-NEXT:    bgez a3, .LBB0_2
-; CHECK-NEXT:  # %bb.3: # %exit
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB0_4:
-; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    sh3add a3, a1, a0
+; CHECK-NEXT:    lh a1, 2(a3)
+; CHECK-NEXT:    lh a3, 4(a3)
+; CHECK-NEXT:    addw a2, a2, a3
+; CHECK-NEXT:    bgez a1, .LBB0_1
+; CHECK-NEXT:  .LBB0_2: # %exit
+; CHECK-NEXT:    mv a0, a2
 ; CHECK-NEXT:    ret
 entry:
   %ok = icmp sge i16 %head, 0
