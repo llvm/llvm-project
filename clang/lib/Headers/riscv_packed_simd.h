@@ -656,6 +656,19 @@ __packed_binary_builtin_mixed(psshl_s_u32x2, uint32x2_t, uint32x2_t, int, __buil
 __packed_binary_builtin_mixed(psshlr_s_u16x4, uint16x4_t, uint16x4_t, int, __builtin_riscv_psshlr_s_u16x4)
 __packed_binary_builtin_mixed(psshlr_s_u32x2, uint32x2_t, uint32x2_t, int, __builtin_riscv_psshlr_s_u32x2)
 
+/* Packed Saturation (32-bit) */
+#define __riscv_pusati_u16x2(rs1, width)                                       \
+  __builtin_riscv_pusati_u16x2(rs1, width)
+#define __riscv_psati_i16x2(rs1, width) __builtin_riscv_psati_i16x2(rs1, width)
+
+/* Packed Saturation (64-bit) */
+#define __riscv_pusati_u16x4(rs1, width)                                       \
+  __builtin_riscv_pusati_u16x4(rs1, width)
+#define __riscv_pusati_u32x2(rs1, width)                                       \
+  __builtin_riscv_pusati_u32x2(rs1, width)
+#define __riscv_psati_i16x4(rs1, width) __builtin_riscv_psati_i16x4(rs1, width)
+#define __riscv_psati_i32x2(rs1, width) __builtin_riscv_psati_i32x2(rs1, width)
+
 /* Packed Element Insert (32-bit) */
 __packed_insert(pset_i8_i8x4, int8x4_t, int8_t, 3)
 __packed_insert(pset_u8_u8x4, uint8x4_t, uint8_t, 3)
