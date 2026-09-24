@@ -2,7 +2,7 @@
 
 ! CHECK-LABEL: func @_QQmain
 program bb ! block stack management and exits
-    ! CHECK:   %[[V_1:[0-9]+]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFEi"}
+    ! CHECK:   %[[V_1:[0-9]+]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFEi"}>
     ! CHECK:   %[[V_I:[0-9]+]]:2 = hlfir.declare %[[V_1]] {uniq_name = "_QFEi"}
     integer :: i, j
     ! CHECK:   hlfir.assign %c0{{.*}} to %[[V_I]]#0
