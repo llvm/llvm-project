@@ -20,7 +20,6 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <deque>
@@ -39,12 +38,6 @@ using namespace llvm;
 // If a non-mappable instruction is seen, this entire def-use graph is marked
 // as non-transformable. If we see an instruction that converts from the
 // integer domain to FP domain (uitofp,sitofp), we terminate our walk.
-
-/// The largest integer type worth dealing with.
-static cl::opt<unsigned>
-MaxIntegerBW("float2int-max-integer-bw", cl::init(64), cl::Hidden,
-             cl::desc("Max integer bitwidth to consider in float2int"
-                      "(default=64)"));
 
 // Given a FCmp predicate, return a matching ICmp predicate if one
 // exists, otherwise return BAD_ICMP_PREDICATE.
@@ -512,4 +505,13 @@ PreservedAnalyses Float2IntPass::run(Function &F, FunctionAnalysisManager &AM) {
   PreservedAnalyses PA;
   PA.preserveSet<CFGAnalyses>();
   return PA;
+}
+
+void Float2IntPass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  static_cast<PassInfoMixin<Float2IntPass> *>(this)->printPipeline(
+      OS, MapClassName2PassName);
+  OS << '<';
+  OS << "max-integer-bw=" << MaxIntegerBW;
+  OS << '>';
 }
