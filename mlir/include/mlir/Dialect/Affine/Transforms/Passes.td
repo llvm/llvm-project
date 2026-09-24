@@ -220,11 +220,29 @@ def AffineLoopUnroll : InterfacePass<"affine-loop-unroll", "FunctionOpInterface"
 
 def AffineLoopUnrollAndJam : InterfacePass<"affine-loop-unroll-jam", "FunctionOpInterface"> {
   let summary = "Unroll and jam affine loops";
+  let description = [{
+    By default, unroll and jam the first operation in the function entry block
+    if it is an affine loop.
+
+    With `select-shared-input-reductions`, instead select perfect constant-bound
+    nests containing independent floating-point multiply-add reductions with
+    one shared input. Alias analysis must prove that the accumulator does not
+    alias either input; it need not be a local allocation. Without such proof,
+    function arguments are not assumed to be independent. An entire accumulator
+    coordinate must be the output-loop induction variable. The output loop must
+    start at zero, have unit step, and have a trip count equal to
+    `unroll-jam-factor`. Unsupported nests are left unchanged. This is a
+    structural selection policy, not a target profitability model; it does not
+    itself eliminate redundant loads.
+  }];
   let constructor = "mlir::affine::createLoopUnrollAndJamPass()";
   let options = [
     Option<"unrollJamFactor", "unroll-jam-factor", "unsigned",
            /*default=*/"4",
            "Use this unroll jam factor for all loops (default 4)">,
+    Option<"selectSharedInputReductions", "select-shared-input-reductions",
+           "bool", /*default=*/"false",
+           "Select only independent reductions sharing an input">,
   ];
 }
 
