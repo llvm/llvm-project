@@ -37,12 +37,12 @@ namespace net {
   size_t digits_in_octet = 0;
 
   for (char c : src) {
-    if (c >= '0' && c <= '9') {
+    if (internal::isdigit(c)) {
       // Reject octals and leading zeros
       if (digits_in_octet > 0 && current_val == 0)
         return 0;
 
-      current_val = current_val * 10 + static_cast<uint32_t>(c - '0');
+      current_val = current_val * 10 + internal::b36_char_to_int(c);
       if (current_val > 255)
         return 0;
 
