@@ -70,8 +70,8 @@ private:
   /// tryCriticalResourceDependency and tryCriticalResource: we schedule the
   /// dependencies for a SU on critical resource, then schedule that same SU on
   /// the critical resource. This agreement results in shorter live ranges and
-  /// more regular HardwareUnit access patterns. SUs are prioritized based on
-  /// depth for top-down scheduling.
+  /// more regular HardwareUnit access patterns. SUs are prioritized by how
+  /// many registers scheduling them frees; see countRegFrees().
   SmallSetVector<SUnit *, 16> PrioritySUs;
   /// All the SUs in the region that consume this resource.
   SmallSetVector<SUnit *, 16> AllSUs;
@@ -107,21 +107,19 @@ private:
   /// behavior which is not modelled in the compiler.
   unsigned BufferCycles = 0;
 
-  /// Compares two SUnits by depth (lower depth = higher priority for top-down).
-  /// \returns -1 if Candidate is worse, 0 if equal, 1 if Candidate is better.
-  int compareDepth(SUnit *Candidate, SUnit *Existing) const;
-
-  /// Compares two SUnits by proximity to freeing a register.
-  /// \returns -1 if Candidate is worse, 0 if equal, 1 if Candidate is better.
-  int compareRegFreeProximity(SUnit *Candidate, SUnit *Existing) const;
+  /// Cached countRegFrees() of the head of PrioritySUs, valid only while
+  /// PriorityHeadFreesFor is still the head.
+  const SUnit *PriorityHeadFreesFor = nullptr;
+  unsigned PriorityHeadFrees = 0;
 
   /// Try to update PrioritySUs with a new \p SU.
-  void updatePrioritySUsWith(SUnit *SU, bool IsCloseToRegPressureLimit = false);
+  void updatePrioritySUsWith(SUnit *SU);
 
 public:
-  /// Rebuild PrioritySUs from AllSUs using the given pressure flag.
-  void rebuildPrioritySUs(bool IsCloseToRegPressureLimit);
   HardwareUnitInfo() {}
+
+  /// Rebuild PrioritySUs from AllSUs.
+  void rebuildPrioritySUs();
 
   unsigned size() { return AllSUs.size(); }
 
@@ -185,6 +183,7 @@ public:
   void reset() {
     AllSUs.clear();
     PrioritySUs.clear();
+    PriorityHeadFreesFor = nullptr;
     ScheduledSUs.clear();
     TotalCycles = 0;
     Type = AMDGPU::InstructionFlavor::Other;
@@ -205,13 +204,11 @@ public:
   SUnit *getNextTargetSU(bool LookDeep = false) const;
   /// Insert the \p SU into AllSUs and account its \p BlockingCycles into
   /// the TotalCycles. This maintains the list of PrioritySUs.
-  void insert(SUnit *SU, unsigned BlockingCycles,
-              bool IsCloseToRegPressureLimit);
+  void insert(SUnit *SU, unsigned BlockingCycles);
   /// Update the state for \p SU being scheduled by removing it from the AllSUs
   /// and reducing its \p BlockingCycles from the TotalCycles. This maintains
   /// the list of PrioritySUs.
-  void markScheduled(SUnit *SU, unsigned BlockingCycles,
-                     bool IsCloseToRegPressureLimit);
+  void markScheduled(SUnit *SU, unsigned BlockingCycles);
   /// After we've collected all the region pressure for this HWUI, correct for
   /// any specifics of the behavior of this resource. For example, if the
   /// HardwareUnit can hold N instructions simultaneously, then there is no
@@ -270,10 +267,6 @@ protected:
 
   StallCosts getStallCosts(SUnit *SU, SchedBoundary &Zone);
 
-  /// Controls whether or not the KillProximity heuristic is used when
-  /// selecting the next candidate SU for scheduling.
-  bool IsCloseToRegPressureLimit = false;
-
 public:
   CandidateHeuristics() = default;
 
@@ -330,13 +323,9 @@ public:
 
   void dumpRegionSummary();
 
-  void setIsCloseToRegPressureLimit(bool Value) {
-    IsCloseToRegPressureLimit = Value;
-  }
-
   void rebuildAllPrioritySUs() {
     for (auto &HWUI : HWUInfo)
-      HWUI.rebuildPrioritySUs(IsCloseToRegPressureLimit);
+      HWUI.rebuildPrioritySUs();
   }
 };
 
