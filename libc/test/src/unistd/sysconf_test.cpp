@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/errno_macros.h"
+#include "hdr/limits_macros.h"
 #include "hdr/unistd_macros.h"
 #include "src/unistd/sysconf.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
@@ -52,6 +53,8 @@ TEST_F(LlvmLibcSysconfTest, PosixThreadsConstantsTest) {
   EXPECT_EQ(LIBC_NAMESPACE::sysconf(_SC_THREAD_ROBUST_PRIO_PROTECT), -1L);
   EXPECT_EQ(LIBC_NAMESPACE::sysconf(_SC_THREAD_SAFE_FUNCTIONS), 202405L);
   EXPECT_EQ(LIBC_NAMESPACE::sysconf(_SC_THREAD_SPORADIC_SERVER), -1L);
+  EXPECT_EQ(LIBC_NAMESPACE::sysconf(_SC_THREAD_DESTRUCTOR_ITERATIONS),
+            static_cast<long>(PTHREAD_DESTRUCTOR_ITERATIONS));
 }
 
 TEST_F(LlvmLibcSysconfTest, ArgMaxTest) {

@@ -78,8 +78,57 @@ static void null_value_test() {
   ASSERT_EQ(LIBC_NAMESPACE::pthread_key_delete(key), 0);
 }
 
+static void *dtor_getspecific_val;
+static void dtor_verify_getspecific_nullptr(void *) {
+  dtor_getspecific_val = LIBC_NAMESPACE::pthread_getspecific(key);
+}
+
+static void *func_getspecific_nullptr(void *) {
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_setspecific(key, &child_thread_data), 0);
+  return nullptr;
+}
+
+static void getspecific_nullptr_in_dtor_test() {
+  pthread_t th;
+  dtor_getspecific_val = &dtor_getspecific_val;
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_key_create(
+                &key, &dtor_verify_getspecific_nullptr),
+            0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_create(&th, nullptr,
+                                           &func_getspecific_nullptr, nullptr),
+            0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_join(th, nullptr), 0);
+  ASSERT_EQ(dtor_getspecific_val, nullptr);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_key_delete(key), 0);
+}
+
+static int dtor_call_count = 0;
+static void dtor_multiple(void *data) {
+  ++dtor_call_count;
+  if (dtor_call_count < 2)
+    ASSERT_EQ(LIBC_NAMESPACE::pthread_setspecific(key, data), 0);
+}
+
+static void *func_multiple(void *) {
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_setspecific(key, &child_thread_data), 0);
+  return nullptr;
+}
+
+static void multiple_dtor_test() {
+  pthread_t th;
+  dtor_call_count = 0;
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_key_create(&key, &dtor_multiple), 0);
+  ASSERT_EQ(
+      LIBC_NAMESPACE::pthread_create(&th, nullptr, &func_multiple, nullptr), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_join(th, nullptr), 0);
+  ASSERT_EQ(dtor_call_count, 2);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_key_delete(key), 0);
+}
+
 TEST_MAIN() {
   standard_usage_test();
   null_value_test();
+  getspecific_nullptr_in_dtor_test();
+  multiple_dtor_test();
   return 0;
 }
