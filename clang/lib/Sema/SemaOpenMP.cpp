@@ -18369,13 +18369,10 @@ OMPClause *SemaOpenMP::ActOnOpenMPMessageClause(Expr *ME,
                                                 SourceLocation EndLoc) {
   assert(ME && "NULL expr in Message clause");
   QualType Type = ME->getType();
-  // The message is consumed as a narrow string by Sema and the runtime.
-  bool IsNarrowString = false;
-  if (Type->isPointerType() || Type->isArrayType()) {
-    const auto *ElemTy = Type->getPointeeOrArrayElementType();
-    IsNarrowString = ElemTy->isCharType() || ElemTy->isChar8Type();
-  }
-  if (!IsNarrowString) {
+  // OpenMP 5.1 [2.5.4, error Directive]
+  // msg-string is a string of const char * type.
+  if ((!Type->isPointerType() && !Type->isArrayType()) ||
+      !Type->getPointeeOrArrayElementType()->isCharType()) {
     Diag(ME->getBeginLoc(), diag::warn_clause_expected_string)
         << getOpenMPClauseNameForDiag(OMPC_message) << 0;
     return nullptr;

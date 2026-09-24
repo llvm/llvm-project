@@ -4,6 +4,8 @@
 // RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=51 -ferror-limit 100 %s -Wuninitialized
 // RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=60 -ferror-limit 100 %s -Wuninitialized
 
+// RUN: %clang_cc1 -verify -std=c++20 -fopenmp -fopenmp-version=60 -ferror-limit 100 %s -Wuninitialized
+
 // Test outside of an executable context.
 #pragma omp error severity(warning) message("msg") at(compilation) // expected-warning {{msg}}
 
@@ -23,7 +25,13 @@
 // expected-warning@+2 {{expected string in 'clause message' - ignoring}}
 // expected-warning@+1 {{WARNING}}
 #pragma omp error severity(warning) message(L"msg")
-#pragma omp error message(u8"msg") // expected-error {{msg}}
+#ifdef __cpp_char8_t
+// expected-warning@+5 {{expected string in 'clause message' - ignoring}}
+// expected-error@+4 {{ERROR}}
+#else
+// expected-error@+2 {{msg}}
+#endif
+#pragma omp error message(u8"msg")
 
 template <class T>
 T tmain(T argc) {
