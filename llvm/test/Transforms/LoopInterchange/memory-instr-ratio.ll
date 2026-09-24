@@ -4,6 +4,14 @@
 ; RUN: opt < %s -passes=loop-interchange -S -loop-interchange-profitabilities=ignore \
 ; RUN:          -loop-interchange-max-mem-instr-ratio=100 | FileCheck %s --check-prefixes=CHECK,CHECK-RATIO-100
 
+; The loop nest has 20 instructions and 10 stores. With 32-bit arithmetic,
+; 2147483648 * 20 wraps to zero, so the ratio guard rejects this otherwise
+; eligible nest. The guard bounds analysis cost, not legality. If the body
+; changes, keep the instruction count even, or choose a ratio whose 32-bit
+; product with the instruction count wraps below the squared load/store count.
+; RUN: opt < %s -passes=loop-interchange -S -loop-interchange-profitabilities=ignore \
+; RUN:          -loop-interchange-max-mem-instr-ratio=2147483648 | FileCheck %s --check-prefixes=CHECK,CHECK-RATIO-2147483648
+
 define void @f(ptr noalias %A) {
 ; CHECK-RATIO-1-LABEL: define void @f(
 ; CHECK-RATIO-1-SAME: ptr noalias [[A:%.*]]) {
@@ -74,6 +82,46 @@ define void @f(ptr noalias %A) {
 ; CHECK-RATIO-100-NEXT:    br i1 [[EC_I]], label %[[LOOP_J_SPLIT]], label %[[LOOP_I_HEADER]]
 ; CHECK-RATIO-100:       [[EXIT]]:
 ; CHECK-RATIO-100-NEXT:    ret void
+;
+; CHECK-RATIO-2147483648-LABEL: define void @f(
+; CHECK-RATIO-2147483648-SAME: ptr noalias [[A:%.*]]) {
+; CHECK-RATIO-2147483648-NEXT:  [[ENTRY:.*:]]
+; CHECK-RATIO-2147483648-NEXT:    br label %[[LOOP_J_PREHEADER:.*]]
+; CHECK-RATIO-2147483648:       [[LOOP_I_HEADER_PREHEADER:.*]]:
+; CHECK-RATIO-2147483648-NEXT:    br label %[[LOOP_I_HEADER:.*]]
+; CHECK-RATIO-2147483648:       [[LOOP_I_HEADER]]:
+; CHECK-RATIO-2147483648-NEXT:    [[I:%.*]] = phi i64 [ [[I_INC:%.*]], %[[LOOP_I_LATCH:.*]] ], [ 0, %[[LOOP_I_HEADER_PREHEADER]] ]
+; CHECK-RATIO-2147483648-NEXT:    br label %[[LOOP_J_SPLIT1:.*]]
+; CHECK-RATIO-2147483648:       [[LOOP_J_PREHEADER]]:
+; CHECK-RATIO-2147483648-NEXT:    br label %[[LOOP_J:.*]]
+; CHECK-RATIO-2147483648:       [[LOOP_J]]:
+; CHECK-RATIO-2147483648-NEXT:    [[J:%.*]] = phi i64 [ [[TMP0:%.*]], %[[LOOP_J_SPLIT:.*]] ], [ 0, %[[LOOP_J_PREHEADER]] ]
+; CHECK-RATIO-2147483648-NEXT:    br label %[[LOOP_I_HEADER_PREHEADER]]
+; CHECK-RATIO-2147483648:       [[LOOP_J_SPLIT1]]:
+; CHECK-RATIO-2147483648-NEXT:    [[GEP:%.*]] = getelementptr [10 x i8], ptr [[A]], i64 [[J]], i64 [[I]]
+; CHECK-RATIO-2147483648-NEXT:    store i8 0, ptr [[GEP]], align 1
+; CHECK-RATIO-2147483648-NEXT:    store i8 0, ptr [[GEP]], align 1
+; CHECK-RATIO-2147483648-NEXT:    store i8 0, ptr [[GEP]], align 1
+; CHECK-RATIO-2147483648-NEXT:    store i8 0, ptr [[GEP]], align 1
+; CHECK-RATIO-2147483648-NEXT:    store i8 0, ptr [[GEP]], align 1
+; CHECK-RATIO-2147483648-NEXT:    store i8 0, ptr [[GEP]], align 1
+; CHECK-RATIO-2147483648-NEXT:    store i8 0, ptr [[GEP]], align 1
+; CHECK-RATIO-2147483648-NEXT:    store i8 0, ptr [[GEP]], align 1
+; CHECK-RATIO-2147483648-NEXT:    store i8 0, ptr [[GEP]], align 1
+; CHECK-RATIO-2147483648-NEXT:    store i8 0, ptr [[GEP]], align 1
+; CHECK-RATIO-2147483648-NEXT:    [[J_INC:%.*]] = add i64 [[J]], 1
+; CHECK-RATIO-2147483648-NEXT:    [[EC_J:%.*]] = icmp eq i64 [[J_INC]], 10
+; CHECK-RATIO-2147483648-NEXT:    br label %[[LOOP_I_LATCH]]
+; CHECK-RATIO-2147483648:       [[LOOP_J_SPLIT]]:
+; CHECK-RATIO-2147483648-NEXT:    [[TMP0]] = add i64 [[J]], 1
+; CHECK-RATIO-2147483648-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[TMP0]], 10
+; CHECK-RATIO-2147483648-NEXT:    br i1 [[TMP1]], label %[[EXIT:.*]], label %[[LOOP_J]]
+; CHECK-RATIO-2147483648:       [[LOOP_I_LATCH]]:
+; CHECK-RATIO-2147483648-NEXT:    [[I_INC]] = add i64 [[I]], 1
+; CHECK-RATIO-2147483648-NEXT:    [[EC_I:%.*]] = icmp eq i64 [[I_INC]], 10
+; CHECK-RATIO-2147483648-NEXT:    br i1 [[EC_I]], label %[[LOOP_J_SPLIT]], label %[[LOOP_I_HEADER]]
+; CHECK-RATIO-2147483648:       [[EXIT]]:
+; CHECK-RATIO-2147483648-NEXT:    ret void
 ;
 entry:
   br label %loop.i.header

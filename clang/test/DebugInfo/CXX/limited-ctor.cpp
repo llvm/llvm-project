@@ -53,7 +53,7 @@ struct DeclaredConstexpr {
 template <class A, class B> struct Aliased {
   A first;
   B second;
-  constexpr Aliased(const A &a, const B &b) : first(a), second(b) {}
+  Aliased(const A &a, const B &b) : first(a), second(b) {}
 };
 union AliasedSlot {
   Aliased<const int, int> value;
@@ -64,6 +64,24 @@ union AliasedSlot {
 int ReadAliasedSlot() {
   TestAliasedSlot.mutable_value = Aliased<int, int>(1, 2);
   return TestAliasedSlot.value.first;
+}
+
+// CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "ConstexprAliased<int, int>"{{.*}}DIFlagTypePassByValue
+// CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "ConstexprAliased<const int, int>"{{.*}}DIFlagTypePassByValue
+template <class A, class B> struct ConstexprAliased {
+  A first;
+  B second;
+  constexpr ConstexprAliased(const A &a, const B &b) : first(a), second(b) {}
+};
+union ConstexprAliasedSlot {
+  ConstexprAliased<const int, int> value;
+  ConstexprAliased<int, int> mutable_value;
+  ConstexprAliasedSlot() {}
+  ~ConstexprAliasedSlot() {}
+} TestConstexprAliasedSlot;
+int ReadConstexprAliasedSlot() {
+  TestConstexprAliasedSlot.mutable_value = ConstexprAliased<int, int>(1, 2);
+  return TestConstexprAliasedSlot.value.first;
 }
 
 // Defined out-of-line constexpr constructor should emit full debug info.
@@ -166,6 +184,242 @@ struct DelegatingConstexprOutOfLine {
 constexpr DelegatingConstexprOutOfLine::DelegatingConstexprOutOfLine()
     : DelegatingConstexprOutOfLine(42) {}
 constexpr DelegatingConstexprOutOfLine::DelegatingConstexprOutOfLine(int) {}
+
+// Test that a standard layout type in a union emits full debug info.
+// CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "SLInUnion"{{.*}}DIFlagTypePassByValue
+struct SLInUnion {
+  int x;
+  SLInUnion(int);
+};
+
+union SLUnion {
+  SLInUnion u;
+};
+void TestSLUnion(SLUnion) {}
+
+// Test that all types and their bases/fields in a standard-layout union are
+// emitted with full debug info.
+// CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "ParentSLBase"{{.*}}DIFlagTypePassByValue
+// CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "ChildSL"{{.*}}DIFlagTypePassByValue
+// CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "ParentSL"{{.*}}DIFlagTypePassByValue
+struct ParentSLBase{
+  ParentSLBase();
+};
+struct ChildSL {
+  int b;
+  ChildSL();
+};
+struct ParentSL : ParentSLBase {
+  ChildSL f;
+  ParentSL();
+};
+union FollowMembers {
+  ParentSL a;
+  int b;
+};
+void TestFollowMembers(FollowMembers) {}
+
+// Test that a template has its debug info emitted when in a standard-layout
+// union.
+// CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "TemplatedSL<int>"{{.*}}DIFlagTypePassByValue
+// CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "TemplatedSL<float>"{{.*}}DIFlagTypePassByValue
+template <typename T>
+struct TemplatedSL {
+  T x;
+  TemplatedSL(T);
+};
+
+union TemplatedUnion {
+  TemplatedSL<int> a;
+  TemplatedSL<float> b;
+};
+void TestTemplatedUnion(TemplatedUnion) {}
+
+// Test that a standard layout type in a non-standard-layout union does not
+// emit full debug info.
+// CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "SLInNonSLUnion"{{.*}}flags: DIFlagFwdDecl
+struct NonSLBase {
+  int x;
+};
+struct NonSL : NonSLBase {
+  int x;
+  NonSL(int);
+};
+
+struct SLInNonSLUnion {
+  int x;
+  SLInNonSLUnion(int);
+};
+
+union NonSLUnion {
+  SLInNonSLUnion s;
+  NonSL n;
+};
+void TestNonSLUnion(NonSLUnion) {}
+
+// Test that a type nested in a standard-layout union follows the same rules
+// and emits full debug info.
+// CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "NestedSL"{{.*}}DIFlagTypePassByValue
+union NestedUnion {
+  struct NestedSL {
+    int a;
+    NestedSL(int);
+  } n;
+};
+void TestNestedUnion(NestedUnion) {}
+
+// Test that recursive type completion happens through arrays.
+// CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "SLInArray"{{.*}}DIFlagTypePassByValue
+// CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "SLInMultiArray"{{.*}}DIFlagTypePassByValue
+struct SLInArray {
+  int x;
+  SLInArray(int);
+};
+struct SLInMultiArray {
+  int y;
+  SLInMultiArray(int);
+};
+union ArrayUnion {
+  SLInArray arr[3];
+  SLInMultiArray multi_arr[2][4];
+  int raw;
+};
+void TestArrayUnion(ArrayUnion) {}
+
+// Test that recursive type completion ignores cv-qualifiers.
+// CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "SLConst"{{.*}}DIFlagTypePassByValue
+// CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "SLVolatile"{{.*}}DIFlagTypePassByValue
+struct SLConst {
+  int x;
+  SLConst(int);
+};
+struct SLVolatile {
+  int y;
+  SLVolatile(int);
+};
+union CVUnion {
+  const SLConst c;
+  volatile SLVolatile v;
+  int raw;
+};
+void TestCVUnion(CVUnion) {}
+
+// Test that recursive type completion happens through templated fields.
+// CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "SLInGenericUnion"{{.*}}DIFlagTypePassByValue
+template <typename T>
+union GenericUnion {
+  T val;
+  int raw;
+};
+struct SLInGenericUnion {
+  int x;
+  SLInGenericUnion(int);
+};
+void TestGenericUnion(GenericUnion<SLInGenericUnion>) {}
+
+// Test that recursive type completion happens for anonymous standard-layout
+// unions.
+// CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "SLInAnonUnion"{{.*}}DIFlagTypePassByValue
+struct SLInAnonUnion {
+  int x;
+  SLInAnonUnion(int);
+};
+struct EnclosingStruct {
+  union {
+    SLInAnonUnion a;
+    int b;
+  } u;
+};
+void TestEnclosingStruct(EnclosingStruct) {}
+
+// Test that recursive type completion follows inheritence of typedefs.
+// CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "SLDerived"{{.*}}DIFlagTypePassByValue
+// CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "EmptyBase"{{.*}}DIFlagTypePassByValue
+typedef struct EmptyBase {
+  EmptyBase(int);
+} EmptyBaseAlias;
+struct SLDerived : EmptyBaseAlias {
+  int y;
+  SLDerived(int);
+};
+union TypedefDerivedUnion {
+  SLDerived d;
+  int raw;
+};
+void TestTypedefDerivedUnion(TypedefDerivedUnion) {}
+
+// Test that recursive type completion follows multiple inheritence.
+// CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "SLMultipleDerived"{{.*}}DIFlagTypePassByValue
+// CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "EmptyBase1"{{.*}}DIFlagTypePassByValue
+// CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "EmptyBase2"{{.*}}DIFlagTypePassByValue
+struct EmptyBase1 {
+  EmptyBase1(int);
+};
+struct EmptyBase2 {
+  EmptyBase2(int);
+};
+struct SLMultipleDerived : EmptyBase1, EmptyBase2 {
+  int x;
+  SLMultipleDerived(int);
+};
+union MultipleDerivedUnion {
+  SLMultipleDerived d;
+  int raw;
+};
+void TestMultipleDerivedUnion(MultipleDerivedUnion) {}
+
+// Test that recursive type completion follows inheritence of non-empty bases.
+// CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "EmptyDerived"{{.*}}DIFlagTypePassByValue
+// CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "SLBase"{{.*}}DIFlagTypePassByValue
+struct SLBase {
+  int y;
+  SLBase(int);
+};
+struct EmptyDerived : SLBase {
+  EmptyDerived(int);
+};
+union EmptyDerivedUnion {
+  EmptyDerived d;
+  int raw;
+};
+void TestEmptyDerivedUnion(EmptyDerivedUnion) {}
+
+// Test that recursive type completion does not follow types through pointers.
+// CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "SLPointerInUnion"{{.*}}flags: DIFlagFwdDecl
+struct SLPointerInUnion {
+  int x;
+  SLPointerInUnion(int);
+};
+
+union SLUnionPointer {
+  SLPointerInUnion *u;
+};
+void TestSLUnionPointer(SLUnionPointer) {}
+
+// Test that recursive type completion does not follow through pointer or
+// reference members.
+// CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "SLPointerAndReferenceMembers"{{.*}}DIFlagTypePassByValue
+// CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "SLPointerMember"{{.*}}flags: DIFlagFwdDecl
+// CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "SLReferenceMember"{{.*}}flags: DIFlagFwdDecl
+struct SLPointerMember {
+  int x;
+  SLPointerMember(int);
+};
+
+struct SLReferenceMember {
+  int x;
+  SLReferenceMember(int);
+};
+
+struct SLPointerAndReferenceMembers {
+  SLPointerMember *a;
+  SLReferenceMember &b;
+};
+
+union SLPointerAndReferenceMembersUnion {
+  SLPointerAndReferenceMembers a;
+};
+void TestSLPointerAndReferenceMembers(SLPointerAndReferenceMembersUnion) {}
 
 // Test for trivial constructor.
 // CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "F"{{.*}}DIFlagTypePassByValue

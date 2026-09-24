@@ -15,4 +15,5 @@
 using float128 = LIBC_NAMESPACE::fputil::Float128;
 #endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
 
-LIST_ISCANONICAL_TESTS(float128, LIBC_NAMESPACE::iscanonicalf128)
+LIST_ISCANONICAL_TESTS(Iscanonicalf128, float128,
+                       LIBC_NAMESPACE::iscanonicalf128)

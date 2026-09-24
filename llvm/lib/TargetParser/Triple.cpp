@@ -2543,6 +2543,12 @@ FloatABI::ABIType Triple::getDefaultFloatABI() const {
   return FloatABI::Hard;
 }
 
+ThreadModel Triple::getDefaultThreadModel() const {
+  if (isWasm())
+    return ThreadModel::Single;
+  return ThreadModel::POSIX;
+}
+
 LongDoubleFormat Triple::getDefaultLongDoubleFormat() const {
   switch (getArch()) {
   case loongarch64:
@@ -2550,13 +2556,17 @@ LongDoubleFormat Triple::getDefaultLongDoubleFormat() const {
   case riscv64:
   case riscv32be:
   case riscv64be:
-  case sparc:
-  case sparcel:
   case sparcv9:
   case systemz:
   case ve:
   case wasm32:
   case wasm64:
+    return LongDoubleFormat::IEEEquad;
+  case sparc:
+  case sparcel:
+    // GCC uses IEEE double for bare-metal and RTEMS SPARC V8 targets.
+    if (getOS() == UnknownOS || getOS() == RTEMS)
+      return LongDoubleFormat::IEEEdouble;
     return LongDoubleFormat::IEEEquad;
   case ppc:
   case ppcle:

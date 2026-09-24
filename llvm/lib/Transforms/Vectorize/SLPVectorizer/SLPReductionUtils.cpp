@@ -8,9 +8,19 @@
 
 #include "SLPReductionUtils.h"
 
+#include "SLPCostAnalysis.h"
+#include "SLPUtils.h"
+
+#include "llvm/ADT/SmallBitVector.h"
+#include "llvm/Analysis/IVDescriptors.h"
+#include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DataLayout.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/Type.h"
 
 using namespace llvm;
 using namespace llvm::PatternMatch;
@@ -52,6 +62,83 @@ bool isReductionCandidate(Instruction *I) {
   Value *B0 = nullptr, *B1 = nullptr;
   bool IsBinop = matchRdxBop(I, B0, B1);
   return IsBinop || IsSelect;
+}
+
+Type *getBoolReduxWideTy(RecurKind RdxKind, Type *RootTy, Type *LeafTy) {
+  if ((RdxKind == RecurKind::And || RdxKind == RecurKind::Or) &&
+      RootTy->isIntegerTy(1) && LeafTy->isIntegerTy() &&
+      !LeafTy->isIntegerTy(1))
+    return LeafTy;
+  return nullptr;
+}
+
+BoolBitmask isBoolBitmaskRdx(
+    RecurKind RdxKind,
+    const SmallDenseMap<Value *, NarrowedLeafInfo> &NarrowedLeafShifts,
+    const DataLayout &DL) {
+  if (RdxKind != RecurKind::Or || DL.isBigEndian() ||
+      NarrowedLeafShifts.empty())
+    return BoolBitmask::None;
+  unsigned NumLeaves = NarrowedLeafShifts.size();
+  SmallBitVector Seen(NumLeaves);
+  bool NeedMask = false;
+  for (const auto &[V, L] : NarrowedLeafShifts) {
+    if (L.Shift >= NumLeaves || Seen.test(L.Shift))
+      return BoolBitmask::None;
+    Seen.set(L.Shift);
+    KnownBits Known = computeKnownBits(V, DL);
+    // The masked leaf must be known to be 0 or 1.
+    if ((L.Mask & ~Known.Zero).ugt(1))
+      return BoolBitmask::None;
+    // The mask is redundant if it keeps all not-known-zero bits.
+    NeedMask |= !(Known.Zero | L.Mask).isAllOnes();
+  }
+  return NeedMask ? BoolBitmask::NeedMask : BoolBitmask::NoMask;
+}
+
+Value *tryEmitBoolReduxBitcastCmp(IRBuilderBase &Builder,
+                                  const TargetTransformInfo &TTI,
+                                  RecurKind RdxKind, Value *Vec,
+                                  const Value *Root, FastMathFlags FMF,
+                                  const TTI::TargetCostKind CostKind) {
+  auto *VecTy = cast<FixedVectorType>(Vec->getType());
+  unsigned VF = VecTy->getNumElements();
+  auto *I1VecTy = FixedVectorType::get(Builder.getInt1Ty(), VF);
+  DebugLoc DL = Builder.getCurrentDebugLocation();
+  Builder.SetCurrentDebugLocation(cast<Instruction>(Root)->getDebugLoc());
+  Value *T = Builder.CreateTrunc(Vec, I1VecTy);
+  Value *BC = Builder.CreateBitCast(T, Builder.getIntNTy(VF));
+  CmpInst::Predicate Pred =
+      RdxKind == RecurKind::And ? CmpInst::ICMP_EQ : CmpInst::ICMP_NE;
+  Constant *RHS = RdxKind == RecurKind::And
+                      ? Constant::getAllOnesValue(BC->getType())
+                      : Constant::getNullValue(BC->getType());
+  Value *Res = Builder.CreateICmp(Pred, BC, RHS);
+  // The costs are evaluated from the emitted instructions; they are dropped
+  // if the wide reduction form is cheaper.
+  auto CastCost = [&](Value *V, unsigned Opcode, Type *SrcTy) {
+    auto *I = dyn_cast<Instruction>(V);
+    if (!I)
+      return InstructionCost(0);
+    return TTI.getCastInstrCost(Opcode, I->getType(), SrcTy,
+                                TTI.getCastContextHint(I), CostKind, I);
+  };
+  InstructionCost BitcastCmpCost = CastCost(T, Instruction::Trunc, VecTy) +
+                                   CastCost(BC, Instruction::BitCast, I1VecTy);
+  if (auto *Cmp = dyn_cast<Instruction>(Res))
+    BitcastCmpCost += TTI.getCmpSelInstrCost(
+        Instruction::ICmp, BC->getType(), /*CondTy=*/nullptr, Pred, CostKind,
+        TTI.getOperandInfo(BC), TTI.getOperandInfo(RHS), Cmp);
+  if (BitcastCmpCost >=
+      getBoolReduxWideRdxCost(TTI, RdxKind, VecTy, Root, FMF, CostKind)) {
+    for (Value *V : {Res, BC, T})
+      if (auto *I = dyn_cast<Instruction>(V))
+        I->eraseFromParent();
+    Builder.SetCurrentDebugLocation(DL);
+    return nullptr;
+  }
+  Builder.SetCurrentDebugLocation(DL);
+  return Res;
 }
 
 } // namespace llvm::slpvectorizer

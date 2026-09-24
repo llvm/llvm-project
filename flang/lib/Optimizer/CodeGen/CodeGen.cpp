@@ -13,6 +13,7 @@
 #include "flang/Optimizer/CodeGen/CodeGen.h"
 
 #include "flang/Optimizer/Builder/CUFCommon.h"
+#include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/CodeGen/CodeGenOpenMP.h"
 #include "flang/Optimizer/CodeGen/FIROpPatterns.h"
 #include "flang/Optimizer/CodeGen/LLVMInsertChainFolder.h"
@@ -1181,19 +1182,31 @@ struct ConvertOpConversion : public fir::FIROpConversion<fir::ConvertOp> {
         return mlir::success();
       }
       if (mlir::isa<mlir::IntegerType>(toTy)) {
-        // NOTE: We are checking the fir type here because toTy is an LLVM type
-        // which is signless, and we need to use the intrinsic that matches the
-        // sign of the output in fir.
-        if (toFirTy.isUnsignedInteger()) {
-          auto intrinsicName =
-              mlir::StringAttr::get(convert.getContext(), "llvm.fptoui.sat");
-          rewriter.replaceOpWithNewOp<mlir::LLVM::CallIntrinsicOp>(
-              convert, toTy, intrinsicName, op0);
+        if (options.unsafeFPConversion) {
+          // Under unsafe FP math (e.g. -ffast-math), use plain fptosi/fptoui
+          // instead of saturating intrinsics. This avoids expensive
+          // overflow/NAN checking in the generated code.
+          mlir::Value res;
+          if (toFirTy.isUnsignedInteger())
+            res = mlir::LLVM::FPToUIOp::create(rewriter, loc, toTy, op0);
+          else
+            res = mlir::LLVM::FPToSIOp::create(rewriter, loc, toTy, op0);
+          rewriter.replaceOp(convert, res);
         } else {
-          auto intrinsicName =
-              mlir::StringAttr::get(convert.getContext(), "llvm.fptosi.sat");
-          rewriter.replaceOpWithNewOp<mlir::LLVM::CallIntrinsicOp>(
-              convert, toTy, intrinsicName, op0);
+          // NOTE: We are checking the fir type here because toTy is an LLVM
+          // type which is signless, and we need to use the intrinsic that
+          // matches the sign of the output in fir.
+          if (toFirTy.isUnsignedInteger()) {
+            auto intrinsicName =
+                mlir::StringAttr::get(convert.getContext(), "llvm.fptoui.sat");
+            rewriter.replaceOpWithNewOp<mlir::LLVM::CallIntrinsicOp>(
+                convert, toTy, intrinsicName, op0);
+          } else {
+            auto intrinsicName =
+                mlir::StringAttr::get(convert.getContext(), "llvm.fptosi.sat");
+            rewriter.replaceOpWithNewOp<mlir::LLVM::CallIntrinsicOp>(
+                convert, toTy, intrinsicName, op0);
+          }
         }
         return mlir::success();
       }
@@ -3817,6 +3830,8 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
 
     if (global.getAlignment() && *global.getAlignment() > 0)
       g.setAlignment(*global.getAlignment());
+    if (auto section = global.getSection())
+      g.setSection(*section);
 
     auto module = global->getParentOfType<mlir::ModuleOp>();
 
@@ -4906,6 +4921,9 @@ public:
       options.unifiedHeapAllocSuffix = unifiedHeapAllocSuffix;
     if (!managedHeapAllocSuffix.empty())
       options.managedHeapAllocSuffix = managedHeapAllocSuffix;
+
+    if (unsafeFPConversion)
+      options.unsafeFPConversion = unsafeFPConversion;
 
     // Run dynamic pass pipeline for converting Math dialect
     // operations into other dialects (llvm, func, etc.).

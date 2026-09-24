@@ -213,8 +213,10 @@ add_entrypoint_object(
   HDRS
     ../execv.h
   DEPENDS
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.linux.syscall_wrappers.execve
     libc.src.errno.errno
     libc.src.unistd.environ
 )
@@ -226,8 +228,10 @@ add_entrypoint_object(
   HDRS
     ../execve.h
   DEPENDS
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.linux.syscall_wrappers.execve
     libc.src.errno.errno
 )
 
@@ -504,6 +508,19 @@ add_object_library(
     libc.hdr.unistd_macros
     libc.src.errno.errno
     libc.hdr.types.struct_statfs
+)
+
+add_entrypoint_object(
+  pause
+  SRCS
+    pause.cpp
+  HDRS
+    ../pause.h
+  DEPENDS
+    libc.src.__support.OSUtil.linux.syscall_wrappers.pause
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.errno.errno
 )
 
 add_entrypoint_object(

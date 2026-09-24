@@ -16,7 +16,7 @@
 
 ! CHECK-NOT: llvm.func @_QQmain{{.*}}device_type = any
 ! CHECK-NOT: llvm.func @_QQmain{{.*}}device_type = nohost
-! CHECK: llvm.func @_QPsub_a{{.*}}device_type = any, {{.*}}sym_visibility = "private"
+! CHECK: llvm.func @_QPsub_a{{.*}}#omp.declaretarget<device_type = any, capture_clause = to>, {{.*}}sym_visibility = "private"
 
 program named_main
   interface
