@@ -1588,3 +1588,12 @@ def : Pat<(i32 (load        addr:$src)),               (MOVLLPtr addr:$src)>;
 def : Pat<(i32 (zextloadi1  addr:$src)),        (EXTUB (MOVBLPtr addr:$src))>;
 def : Pat<(i32 (zextloadi8  addr:$src)),        (EXTUB (MOVBLPtr addr:$src))>;
 def : Pat<(i32 (zextloadi16 addr:$src)),        (EXTUW (MOVWLPtr addr:$src))>;
+def : Pat<(i32 (load         i32:$src)),               (MOVLL i32:$src)>;
+def : Pat<(i32 (zextloadi1   i32:$src)),        (EXTUB (MOVBL i32:$src))>;
+def : Pat<(i32 (zextloadi8   i32:$src)),        (EXTUB (MOVBL i32:$src))>;
+def : Pat<(i32 (zextloadi16  i32:$src)),        (EXTUW (MOVWL i32:$src))>;
+
+//===--------------------------------------------------------------------------===//
+// Stores
+//===--------------------------------------------------------------------------===//
+def : Pat<(store    i32:$src, i32:$dst),        (MOVLS i32:$src, i32:$dst)>;
