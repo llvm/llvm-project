@@ -6,7 +6,7 @@
 // RUN:   -cl-std=CL2.0 -cl-ext=+cl_khr_cooperative_matrix \
 // RUN:   -finclude-default-header -fsyntax-only -verify %s
 
-#define SCOPE     CLK_COOPERATIVE_MATRIX_SCOPE_SUBGROUP
+#define SCOPE     memory_scope_sub_group
 #define USE_A     CLK_COOPERATIVE_MATRIX_A
 #define USE_B     CLK_COOPERATIVE_MATRIX_B
 #define USE_C     CLK_COOPERATIVE_MATRIX_ACCUMULATOR
@@ -24,7 +24,7 @@ typedef float __attribute__((coop_mat(SCOPE, 16, 16, USE_B))) MatB_t;
 typedef int   __attribute__((coop_mat(SCOPE, 16, 16, USE_C))) MatC_int_t;
 
 // ---------------------------------------------------------------------------
-// 1. Invalid scope value (0 is not CLK_COOPERATIVE_MATRIX_SCOPE_SUBGROUP)
+// 1. Invalid scope value (0 is not memory_scope_sub_group)
 // ---------------------------------------------------------------------------
 typedef float __attribute__((coop_mat(0, 16, 16, USE_A))) MatBadScope; // expected-error {{invalid argument of cooperative matrix attribute}}
 
