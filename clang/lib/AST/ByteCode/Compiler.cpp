@@ -5922,7 +5922,6 @@ bool Compiler<Emitter>::visitAPValue(const APValue &Val, PrimType ValType,
       return this->emitNull(ValType, 0, nullptr, Info);
 
     APValue::LValueBase Base = Val.getLValueBase();
-    ArrayRef<APValue::LValuePathEntry> Path = Val.getLValuePath();
 
     if (const Expr *BaseExpr = Base.dyn_cast<const Expr *>())
       return this->visit(BaseExpr);
@@ -5931,40 +5930,43 @@ bool Compiler<Emitter>::visitAPValue(const APValue &Val, PrimType ValType,
         return false;
 
       QualType EntryType = VD->getType();
-      for (auto &Entry : Path) {
-        if (EntryType->isArrayType()) {
-          uint64_t Index = Entry.getAsArrayIndex();
-          QualType ElemType =
-              EntryType->getAsArrayTypeUnsafe()->getElementType();
-          if (!this->emitConst(Index, PT_Uint64, Info))
-            return false;
-          if (!this->emitArrayElemPtrPop(PT_Uint64, Info))
-            return false;
-          EntryType = ElemType;
-        } else {
-          assert(EntryType->isRecordType());
-          const Record *EntryRecord = getRecord(EntryType);
-          if (!EntryRecord)
-            return false;
-
-          const Decl *BaseOrMember = Entry.getAsBaseOrMember().getPointer();
-          if (const auto *FD = dyn_cast<FieldDecl>(BaseOrMember)) {
-            unsigned EntryOffset = EntryRecord->getField(FD)->Offset;
-            if (!this->emitGetPtrFieldPop(EntryOffset, Info))
+      if (Val.hasLValuePath()) {
+        ArrayRef<APValue::LValuePathEntry> Path = Val.getLValuePath();
+        for (auto &Entry : Path) {
+          if (EntryType->isArrayType()) {
+            uint64_t Index = Entry.getAsArrayIndex();
+            QualType ElemType =
+                EntryType->getAsArrayTypeUnsafe()->getElementType();
+            if (!this->emitConst(Index, PT_Uint64, Info))
               return false;
-            EntryType = FD->getType();
+            if (!this->emitArrayElemPtrPop(PT_Uint64, Info))
+              return false;
+            EntryType = ElemType;
           } else {
-            const auto *Base = cast<CXXRecordDecl>(BaseOrMember);
-            if (const Record::Base *B = EntryRecord->getBaseOrNull(Base)) {
-              if (!this->emitGetPtrBasePop(B->Offset, /*NullOK=*/false, Info))
+            assert(EntryType->isRecordType());
+            const Record *EntryRecord = getRecord(EntryType);
+            if (!EntryRecord)
+              return false;
+
+            const Decl *BaseOrMember = Entry.getAsBaseOrMember().getPointer();
+            if (const auto *FD = dyn_cast<FieldDecl>(BaseOrMember)) {
+              unsigned EntryOffset = EntryRecord->getField(FD)->Offset;
+              if (!this->emitGetPtrFieldPop(EntryOffset, Info))
                 return false;
+              EntryType = FD->getType();
             } else {
-              // Must be a virtual base.
-              assert(EntryRecord->findVirtualBase(Base));
-              if (!this->emitGetPtrVirtBasePop(Base, Info))
-                return false;
+              const auto *Base = cast<CXXRecordDecl>(BaseOrMember);
+              if (const Record::Base *B = EntryRecord->getBaseOrNull(Base)) {
+                if (!this->emitGetPtrBasePop(B->Offset, /*NullOK=*/false, Info))
+                  return false;
+              } else {
+                // Must be a virtual base.
+                assert(EntryRecord->findVirtualBase(Base));
+                if (!this->emitGetPtrVirtBasePop(Base, Info))
+                  return false;
+              }
+              EntryType = Ctx.getASTContext().getCanonicalTagType(Base);
             }
-            EntryType = Ctx.getASTContext().getCanonicalTagType(Base);
           }
         }
       }

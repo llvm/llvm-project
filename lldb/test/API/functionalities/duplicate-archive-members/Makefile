@@ -5,7 +5,7 @@ C_SOURCES := main.c
 # can be controlled without confusing Make.
 libfoo.a: a.c sub1/a.c
 	$(CC) $(CFLAGS) -c $(<D)/a.c -o a.o
-	mkdir -p sub1
+	$(call MKDIR_P,sub1)
 	$(CC) $(CFLAGS) -c $(<D)/sub1/a.c -o sub1/a.o
 	touch -t '198001010000.00' a.o
 	touch -t '198001010000.01' sub1/a.o

@@ -51,6 +51,8 @@ public:
                                                    const LoanID TargetLoan,
                                                    const CFG *Cfg) const;
 
+  /// Like the above, starting from the used origin holding \p TargetLoan. The
+  /// casts that load the used variable itself are left out.
   llvm::SmallVector<OriginID> buildOriginFlowChain(const UseFact *UF,
                                                    const LoanID TargetLoan,
                                                    const CFG *Cfg) const;

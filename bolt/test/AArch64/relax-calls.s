@@ -55,16 +55,19 @@ hot:
 # CHECK-BOLT-LITE:     BOLT-INFO: 3 long thunks created
 
 ## Check the number of thunks created in other modes.
-# CHECK-BOLT: BOLT-INFO: 4 short thunks created
-# CHECK-BOLT: BOLT-INFO: 3 long thunks created
+# CHECK-BOLT: BOLT-INFO: relaxed 4 calls with short thunks
+# CHECK-BOLT: BOLT-INFO: 3 short thunks created
+# CHECK-BOLT: BOLT-INFO: 1 short thunks reused
 
-# CHECK-BOLT-HOT-END: BOLT-INFO: 4 short thunks created
-# CHECK-BOLT-HOT-END: BOLT-INFO: 2 long thunks created
+# CHECK-BOLT-HOT-END: BOLT-INFO: relaxed 3 calls with short thunks
+# CHECK-BOLT-HOT-END: BOLT-INFO: relaxed 1 calls with long thunks
+# CHECK-BOLT-HOT-END: BOLT-INFO: 3 short thunks created
+# CHECK-BOLT-HOT-END: BOLT-INFO: 1 long thunks created
 
 ## Check that correct veneers are used depending on the target proximity.
 # CHECK-OUTPUT-LABEL: <hot>:
-# CHECK-OUTPUT-NEXT: bl {{.*}} <__AArch64ADRPThunk_foo>
-# CHECK-OUTPUT-NEXT: bl {{.*}} <__AArch64Thunk_bar>
+# CHECK-OUTPUT-NEXT: bl {{.*}} <__AArch64_backward_ADRPThunk_foo_{{[0-9]+}}>
+# CHECK-OUTPUT-NEXT: bl {{.*}} <__AArch64_backward_Thunk_bar_{{[0-9]+}}>
 # CHECK-OUTPUT-NEXT: bl {{.*}} <_start>
 
   .global _start
