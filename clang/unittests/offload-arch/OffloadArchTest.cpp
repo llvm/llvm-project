@@ -16,6 +16,7 @@
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gtest/gtest.h"
 #include <algorithm>
+#include <cassert>
 #include <cstdlib>
 #include <optional>
 #include <string>
@@ -28,6 +29,9 @@ llvm::SmallVector<std::string, 8> getCandidateBinPaths(llvm::StringRef ExeDir);
 
 // Defined in AMDGPUArchByKFD.cpp (non-static, compiled into this test).
 int printGPUsByKFD(llvm::StringRef NodePath);
+
+// Defined in LevelZeroArch.cpp.
+std::string getIntelGPUArchName(uint32_t IPVersion);
 
 using namespace llvm;
 
@@ -302,4 +306,53 @@ TEST(KFDTopology, GFX1250NonA0IsPrintedPlain) {
   std::string Output;
   EXPECT_EQ(printGPUsByKFDCapturingStdout(Dir.path(), Output), 0);
   EXPECT_EQ(Output, "gfx1250\n");
+}
+
+// --- getIntelGPUArchName ---
+
+namespace {
+// Build a GPU IP version the way the Level Zero driver reports it. A component
+// too wide for its field would corrupt the fields above it and quietly test
+// something other than what it spells out.
+constexpr uint32_t gpuIPVersion(uint32_t Major, uint32_t Minor,
+                                uint32_t Revision) {
+  assert((Major & ~0x3ffu) == 0 && "major version too wide");
+  assert((Minor & ~0xffu) == 0 && "minor version too wide");
+  assert((Revision & ~0x3fu) == 0 && "revision too wide");
+  return (Major << 22) | (Minor << 14) | Revision;
+}
+} // namespace
+
+TEST(IntelGPUArchName, KnownArchitecturesGetAFriendlyName) {
+  EXPECT_EQ(getIntelGPUArchName(gpuIPVersion(12, 60, 7)), "xe-pvc");
+  EXPECT_EQ(getIntelGPUArchName(gpuIPVersion(20, 1, 4)), "xe-bmg-g21");
+  EXPECT_EQ(getIntelGPUArchName(gpuIPVersion(35, 10, 0)), "xe-nvl-p");
+  EXPECT_EQ(getIntelGPUArchName(gpuIPVersion(12, 0, 0)), "xe-tgllp");
+}
+
+// When several devices share a major and a minor version, the first one listed
+// in IntelGPUTargetParser.def names the whole group.
+TEST(IntelGPUArchName, FirstNameOfAGroupWins) {
+  EXPECT_EQ(getIntelGPUArchName(gpuIPVersion(30, 5, 0)), "xe-nvl-u");
+  EXPECT_EQ(getIntelGPUArchName(gpuIPVersion(12, 55, 0)), "xe-acm-g10");
+}
+
+// Devices with the same major and minor versions but different revisions are
+// the same device.
+TEST(IntelGPUArchName, RevisionDoesNotAffectTheName) {
+  EXPECT_EQ(getIntelGPUArchName(gpuIPVersion(12, 60, 0)), "xe-pvc");
+  EXPECT_EQ(getIntelGPUArchName(gpuIPVersion(12, 60, 63)), "xe-pvc");
+}
+
+// An architecture that is not in the table still has to be named, so that a
+// newer device is usable with a compiler that predates it.
+TEST(IntelGPUArchName, UnknownArchitecturesGetANumericName) {
+  EXPECT_EQ(getIntelGPUArchName(gpuIPVersion(40, 11, 0)), "xe_40.11.0");
+  EXPECT_EQ(getIntelGPUArchName(gpuIPVersion(12, 99, 3)), "xe_12.99.3");
+}
+
+// Pre-Xe devices report a GPU IP version too, but they have no human-friendly
+// identifier.
+TEST(IntelGPUArchName, LegacyArchitecture) {
+  EXPECT_EQ(getIntelGPUArchName(gpuIPVersion(9, 0, 9)), "xe_9.0.9");
 }
