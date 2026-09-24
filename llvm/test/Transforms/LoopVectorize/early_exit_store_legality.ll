@@ -34,7 +34,8 @@ loop.end:
 
 define void @loop_contains_store_condition_load_has_single_user(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'loop_contains_store_condition_load_has_single_user'
-; CHECK-DEBUG:       LV: We can vectorize this loop!
+; CHECK-DEBUG:       LV: We may be able to vectorize this loop!
+; CHECK-DEBUG:       LV: VPlan created successfully. Loop can be vectorized.
 entry:
   br label %for.body
 
@@ -88,7 +89,8 @@ exit:
 ;; Exit-condition load on the RHS of the icmp must still be accepted.
 define void @swapped_cmp_operands(ptr noalias %array, ptr %pred) {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'swapped_cmp_operands'
-; CHECK-DEBUG:       LV: We can vectorize this loop!
+; CHECK-DEBUG:       LV: We may be able to vectorize this loop!
+; CHECK-DEBUG:       LV: Not vectorizing: Early exit loop with side effects contains load used by the exit condition that may fault.
 entry:
   br label %loop
 
@@ -236,7 +238,8 @@ exit:
 ;; Alternatively, we could use masked.load.ff or vp.load.ff
 define void @loop_contains_store_assumed_bounds(ptr noalias %array, ptr readonly %pred, i64 %n) {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'loop_contains_store_assumed_bounds'
-; CHECK-DEBUG:       LV: We can vectorize this loop!
+; CHECK-DEBUG:       LV: We may be able to vectorize this loop!
+; CHECK-DEBUG:       LV: Not vectorizing: Early exit loop with side effects contains load used by the exit condition that may fault.
 entry:
   %n_bytes = mul nuw nsw i64 %n, 2
   call void @llvm.assume(i1 true) [ "align"(ptr %pred, i64 2), "dereferenceable"(ptr %pred, i64 %n_bytes) ]
@@ -264,7 +267,8 @@ exit:
 
 define void @loop_contains_store_to_pointer_with_no_deref_info(ptr align 2 dereferenceable(40) readonly %load.array, ptr align 2 noalias %array, ptr align 2 dereferenceable(40) readonly %pred) {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'loop_contains_store_to_pointer_with_no_deref_info'
-; CHECK-DEBUG:       LV: We can vectorize this loop!
+; CHECK-DEBUG:       LV: We may be able to vectorize this loop!
+; CHECK-DEBUG:       LV: VPlan created successfully. Loop can be vectorized.
 entry:
   br label %for.body
 
@@ -292,7 +296,8 @@ exit:
 ;; Vectorizeable, requires runtime checks and/or ff loads.
 define void @loop_contains_store_unknown_bounds(ptr align 2 dereferenceable(100) noalias %array, ptr align 2 dereferenceable(100) readonly %pred, i64 %n) {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'loop_contains_store_unknown_bounds'
-; CHECK-DEBUG:       LV: We can vectorize this loop!
+; CHECK-DEBUG:       LV: We may be able to vectorize this loop!
+; CHECK-DEBUG:       LV: Not vectorizing: Early exit loop with side effects contains load used by the exit condition that may fault.
 entry:
   br label %for.body
 
@@ -376,7 +381,8 @@ exit:
 
 define void @loop_contains_store_in_latch_block(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'loop_contains_store_in_latch_block'
-; CHECK-DEBUG:       LV: We can vectorize this loop!
+; CHECK-DEBUG:       LV: We may be able to vectorize this loop!
+; CHECK-DEBUG:       LV: VPlan created successfully. Loop can be vectorized.
 entry:
   br label %for.body
 
@@ -742,7 +748,8 @@ exit:
 
 define i16 @uncountable_exit_with_live_out(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'uncountable_exit_with_live_out'
-; CHECK-DEBUG:       LV: We can vectorize this loop!
+; CHECK-DEBUG:       LV: We may be able to vectorize this loop!
+; CHECK-DEBUG:       LV: VPlan created successfully. Loop can be vectorized.
 entry:
   br label %for.body
 
@@ -769,7 +776,7 @@ exit:
 ; Vectorizeable, requires improvements in dereferenceability checks
 define void @uncountable_exit_with_constant_nonunit_stride(ptr dereferenceable(4000) noalias %array, ptr align 2 dereferenceable(4000) readonly %pred) !dbg !60 {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'uncountable_exit_with_constant_nonunit_stride'
-; CHECK-DEBUG:       LV: We can vectorize this loop!
+; CHECK-DEBUG:       LV: We may be able to vectorize this loop!
 ; CHECK-DEBUG:       LV: Not vectorizing: unable to calculate the loop count due to complex control flow.
 ; CHECK-REMARK:      foo.c:260:3: loop not vectorized: unable to calculate the loop count due to complex control flow
 entry:
@@ -826,7 +833,8 @@ exit:
 
 define i32 @uncountable_exit_with_separate_exit_block(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'uncountable_exit_with_separate_exit_block'
-; CHECK-DEBUG:       LV: We can vectorize this loop!
+; CHECK-DEBUG:       LV: We may be able to vectorize this loop!
+; CHECK-DEBUG:       LV: VPlan created successfully. Loop can be vectorized.
 entry:
   br label %for.body
 
@@ -885,7 +893,7 @@ exit:
 
 define i32 @uncountable_exit_with_masked_ldst_separate_condition(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred, ptr align 2 readonly %st.pred) !dbg !66 {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'uncountable_exit_with_masked_ldst_separate_condition'
-; CHECK-DEBUG:       LV: We can vectorize this loop!
+; CHECK-DEBUG:       LV: We may be able to vectorize this loop!
 ; CHECK-DEBUG:       LV: Not vectorizing: Early exit loop with side effects contains unsupported conditional memory operations
 ; CHECK-DEBUG:       LV: Vectorization is possible but not beneficial.
 ; CHECK-REMARK:      foo.c:290:3: loop not vectorized: Early exit loop with side effects contains unsupported conditional memory operations

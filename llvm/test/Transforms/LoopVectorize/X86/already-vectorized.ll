@@ -19,7 +19,7 @@ entry:
 for.body:
 ; We need to make sure we did vectorize the loop
 ; CHECK: LV: Found a loop: for.body
-; CHECK: LV: We can vectorize this loop!
+; CHECK: LV: We may be able to vectorize this loop!
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %red.05 = phi i32 [ 0, %entry ], [ %add, %for.body ]
   %arrayidx = getelementptr inbounds [255 x i32], ptr @a, i64 0, i64 %indvars.iv
