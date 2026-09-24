@@ -24,7 +24,7 @@ namespace clang::clangd {
 namespace {
 
 llvm::SmallString<128> normalizePath(PathRef Path) {
-  llvm::SmallString<128> Result(Path);
+  llvm::SmallString<128> Result(Path.raw());
   llvm::sys::path::remove_dots(Result, /*remove_dot_dot=*/true);
   llvm::sys::path::native(Result, llvm::sys::path::Style::posix);
   return Result;
@@ -35,11 +35,11 @@ std::string normalizePath(PathRef Path, PathRef WorkingDir) {
     return {};
 
   llvm::SmallString<128> Result;
-  if (llvm::sys::path::is_absolute(Path) || WorkingDir.empty())
-    Result = Path;
+  if (Path.isAbsolute() || WorkingDir.empty())
+    Result = Path.raw();
   else {
-    Result = WorkingDir;
-    llvm::sys::path::append(Result, Path);
+    Result = WorkingDir.raw();
+    llvm::sys::path::append(Result, Path.raw());
   }
 
   return normalizePath(Result).str().str();
@@ -115,7 +115,7 @@ std::optional<tooling::CompileCommand>
 getCompileCommandForFile(const clang::tooling::CompilationDatabase &CDB,
                          PathRef FilePath,
                          const ProjectModules::CommandMangler &Mangler) {
-  auto Candidates = CDB.getCompileCommands(FilePath);
+  auto Candidates = CDB.getCompileCommands(FilePath.raw());
   if (Candidates.empty())
     return std::nullopt;
 
@@ -246,10 +246,10 @@ ModuleDependencyScanner::scan(PathRef FilePath,
     Result.ModuleName = ScanningResult->Provides->ModuleName;
 
     auto [Iter, Inserted] = ModuleNameToSource.try_emplace(
-        ScanningResult->Provides->ModuleName, FilePath);
+        ScanningResult->Provides->ModuleName, FilePath.raw());
 
-    if (!Inserted &&
-        !pathEqual(normalizePath(Iter->second), normalizePath(FilePath))) {
+    if (!Inserted && PathRef(normalizePath(Iter->second)) !=
+                         PathRef(normalizePath(FilePath))) {
       elog("Detected multiple source files ({0}, {1}) declaring the same "
            "module: '{2}'. "
            "Now clangd may find the wrong source in such case.",
@@ -396,7 +396,7 @@ public:
   std::string getModuleNameForSource(PathRef File) override {
     indexProducerCommands();
     auto It = SourceToModuleName.find(
-        maybeCaseFoldPath(normalizePath(File, /*WorkingDir=*/{})));
+        PathRef(normalizePath(File, /*WorkingDir=*/{})).caseFolded().raw());
     if (It == SourceToModuleName.end() || It->second.Ambiguous)
       return {};
     return It->second.Name;
@@ -422,7 +422,7 @@ public:
       return {};
 
     indexProducerCommands();
-    auto SourceIt = PCMToSource.find(maybeCaseFoldPath(It->second));
+    auto SourceIt = PCMToSource.find(PathRef(It->second).caseFolded().raw());
     if (SourceIt == PCMToSource.end())
       return {};
 
@@ -467,7 +467,7 @@ private:
         continue;
 
       if (Parsed->OutputModuleFile)
-        PCMToSource[maybeCaseFoldPath(*Parsed->OutputModuleFile)] =
+        PCMToSource[PathRef(*Parsed->OutputModuleFile).caseFolded().raw()] =
             Parsed->SourceFile;
 
       ParsedCommands.push_back(std::move(*Parsed));
@@ -476,14 +476,14 @@ private:
     for (const auto &Parsed : ParsedCommands) {
       for (const auto &Required : Parsed.RequiredModuleFiles) {
         auto SourceIt =
-            PCMToSource.find(maybeCaseFoldPath(Required.getValue()));
+            PCMToSource.find(PathRef(Required.getValue()).caseFolded().raw());
         if (SourceIt == PCMToSource.end())
           continue;
         ModuleNameToDistinctSources[Required.getKey()].insert(
-            maybeCaseFoldPath(SourceIt->second));
+            PathRef(SourceIt->second).caseFolded().raw());
 
         auto &Recovered =
-            SourceToModuleName[maybeCaseFoldPath(SourceIt->second)];
+            SourceToModuleName[PathRef(SourceIt->second).caseFolded().raw()];
         if (Recovered.Name.empty())
           Recovered.Name = Required.getKey().str();
         else if (Recovered.Name != Required.getKey()) {
