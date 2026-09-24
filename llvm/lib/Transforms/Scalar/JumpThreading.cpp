@@ -766,6 +766,17 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
           LHS = CmpLHS->DoPHITranslation(BB, PredBB);
           RHS = PN->getIncomingValue(i);
         }
+        // The value substituted for the PHI is the one it holds at the end of
+        // PredBB.  If that value is an instruction defined in BB itself, PredBB
+        // is a back edge and the value is the one computed by the *previous*
+        // iteration, whereas an occurrence of it in the other operand refers to
+        // the one computed by the current iteration.  Folding would conflate
+        // the two, so skip this incoming edge.
+        Value *Incoming = (PN == CmpLHS) ? LHS : RHS;
+        auto *IncomingI = dyn_cast<Instruction>(Incoming);
+        if (IncomingI && !isa<PHINode>(IncomingI) &&
+            IncomingI->getParent() == BB)
+          continue;
         Value *Res = simplifyCmpInst(Pred, LHS, RHS, {DL});
         if (!Res) {
           if (!isa<Constant>(RHS))
