@@ -462,7 +462,12 @@ StmtResult Sema::ActOnCompoundStmt(SourceLocation L, SourceLocation R,
   }
 
   // Check for suspicious empty body (null statement) in `for' and `while'
-  // statements.  Don't do anything for template instantiations, this just adds
+  // statements, for example:
+  //
+  //   for (;;); <- warning: for loop has empty body
+  //     foo();
+  //
+  // Don't do anything for template instantiations, this just adds
   // noise.
   if (NumElts != 0 && !CurrentInstantiationScope &&
       getCurCompoundScope().HasEmptyLoopBodies) {
@@ -1814,17 +1819,35 @@ Sema::DiagnoseAssignmentEnum(QualType DstType, QualType SrcType,
       << DstType.getUnqualifiedType();
 }
 
+// Checks for issues that are common to `for`/`while` statements.
+static void CheckConditionalLoop(Sema &S, Expr *CondExpr, Stmt *Body) {
+  // Check for comma operator misuse.
+  if (CondExpr &&
+      !S.Diags.isIgnored(diag::warn_comma_operator, CondExpr->getExprLoc()))
+    CommaVisitor(S).Visit(CondExpr);
+
+  if (isa<NullStmt>(Body)) {
+    // Tell Sema::ActOnCompoundStmt to perform a check on
+    // this suspicious empty `for`/`while` loop when
+    // processing the compound statement that contains this loop.
+    //
+    // The actual check cannot be done here directly as it may
+    // depend on other statements following the `for`/`while`
+    // loop, in the outer enclosing CompoundStmt; see the
+    // comment in Sema::ActOnCompoundStmt for an example
+    // of when this happens.
+    //
+    // This does not apply for `if` statements and range-`for`
+    // loops which call DiagnoseEmptyStmtBody() directly.
+    S.getCurCompoundScope().setHasEmptyLoopBodies();
+  }
+}
+
 StmtResult Sema::ActOnWhileStmt(SourceLocation WhileLoc,
                                 SourceLocation LParenLoc, ConditionResult Cond,
                                 SourceLocation RParenLoc, Stmt *Body) {
   if (Cond.isInvalid())
     return StmtError();
-
-  auto CondVal = Cond.get();
-
-  if (CondVal.second &&
-      !Diags.isIgnored(diag::warn_comma_operator, CondVal.second->getExprLoc()))
-    CommaVisitor(*this).Visit(CondVal.second);
 
   // OpenACC3.3 2.14.4:
   // The update directive is executable.  It must not appear in place of the
@@ -1835,8 +1858,9 @@ StmtResult Sema::ActOnWhileStmt(SourceLocation WhileLoc,
     Body = new (Context) NullStmt(Body->getBeginLoc());
   }
 
-  if (isa<NullStmt>(Body))
-    getCurCompoundScope().setHasEmptyLoopBodies();
+  auto CondVal = Cond.get();
+
+  CheckConditionalLoop(*this, CondVal.second, Body);
 
   return WhileStmt::Create(Context, CondVal.first, CondVal.second, Body,
                            WhileLoc, LParenLoc, RParenLoc);
@@ -2320,14 +2344,9 @@ StmtResult Sema::ActOnForStmt(SourceLocation ForLoc, SourceLocation LParenLoc,
                                      Body);
   CheckForRedundantIteration(*this, third.get(), Body);
 
-  if (Second.get().second &&
-      !Diags.isIgnored(diag::warn_comma_operator,
-                       Second.get().second->getExprLoc()))
-    CommaVisitor(*this).Visit(Second.get().second);
+  CheckConditionalLoop(*this, Second.get().second, Body);
 
-  Expr *Third  = third.release().getAs<Expr>();
-  if (isa<NullStmt>(Body))
-    getCurCompoundScope().setHasEmptyLoopBodies();
+  Expr *Third = third.release().getAs<Expr>();
 
   return new (Context)
       ForStmt(Context, First, Second.get().second, Second.get().first, Third,
