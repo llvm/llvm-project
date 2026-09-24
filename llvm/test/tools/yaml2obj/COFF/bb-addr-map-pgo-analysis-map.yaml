@@ -13,7 +13,7 @@
 # CHECK-NEXT:     0020: 880100
 # CHECK-NEXT:   )
 
-## Case 2: Not including a field which is enabled in feature doesn't emit value.
+## Case 2: No value is emitted for an enabled feature whose field is omitted.
 # CHECK:        Number: 2
 # CHECK-NEXT:   Name: .llvm_bb_addr_map
 # CHECK:        RawDataSize: 0xF

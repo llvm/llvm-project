@@ -6,88 +6,107 @@
 # WARN: warning: feature value(0) does not support multiple BB ranges.
 
 ## Case 1: Specify SectionData.
-# CHECK:        Number: 1
+# CHECK:        Number: 1{{$}}
 # CHECK-NEXT:   Name: .llvm_bb_addr_map
-# CHECK:        RawDataSize: 0xD
+# CHECK-NOT:    Section {
+# CHECK:        RawDataSize: 0xD{{$}}
+# CHECK-NOT:    Section {
 # CHECK:        SectionData (
 # CHECK-NEXT:     0000: 00000000 00000000 01010203 04
 # CHECK-NEXT:   )
 
 ## Case 2: Empty.
-# CHECK:        Number: 2
+# CHECK:        Number: 2{{$}}
 # CHECK-NEXT:   Name: .llvm_bb_addr_map
-# CHECK:        RawDataSize: 0x0
-# CHECK-NEXT:   PointerToRawData: 0x0
+# CHECK-NOT:    Section {
+# CHECK:        RawDataSize: 0x0{{$}}
+# CHECK-NEXT:   PointerToRawData: 0x0{{$}}
 
 ## Case 3: Specify SizeOfRawData only.
-# CHECK:        Number: 3
+# CHECK:        Number: 3{{$}}
 # CHECK-NEXT:   Name: .llvm_bb_addr_map
-# CHECK:        RawDataSize: 0x8
-# CHECK-NEXT:   PointerToRawData: 0x0
+# CHECK-NOT:    Section {
+# CHECK:        RawDataSize: 0x8{{$}}
+# CHECK-NEXT:   PointerToRawData: 0x0{{$}}
 
 ## Case 4: Specify Entries.
-# CHECK:        Number: 4
+# CHECK:        Number: 4{{$}}
 # CHECK-NEXT:   Name: .llvm_bb_addr_map
-# CHECK:        RawDataSize: 0x12
+# CHECK-NOT:    Section {
+# CHECK:        RawDataSize: 0x12{{$}}
+# CHECK-NOT:    Section {
 # CHECK:        SectionData (
 # CHECK-NEXT:     0000: 03002000 00000000 0000010B 01020102
 # CHECK-NEXT:     0010: 0203
 # CHECK-NEXT:   )
 
 ## Case 5: Omitting BaseAddress zeroes bytes 2-9 of SectionData below.
-# CHECK:        Number: 5
+# CHECK:        Number: 5{{$}}
 # CHECK-NEXT:   Name: .llvm_bb_addr_map
-# CHECK:        RawDataSize: 0xF
+# CHECK-NOT:    Section {
+# CHECK:        RawDataSize: 0xF{{$}}
+# CHECK-NOT:    Section {
 # CHECK:        SectionData (
 # CHECK-NEXT:     0000: 03000000 00000000 0000010C 010203
 # CHECK-NEXT:   )
 
 ## Case 6: Override the NumBlocks field.
-# CHECK:        Number: 6
+# CHECK:        Number: 6{{$}}
 # CHECK-NEXT:   Name: .llvm_bb_addr_map
-# CHECK:        RawDataSize: 0xF
+# CHECK-NOT:    Section {
+# CHECK:        RawDataSize: 0xF{{$}}
+# CHECK-NOT:    Section {
 # CHECK:        SectionData (
 # CHECK-NEXT:     0000: 03002000 00000000 0000020D 010203
 # CHECK-NEXT:   )
 
 ## Case 7: Specify empty BBRanges.
-# CHECK:        Number: 7
+# CHECK:        Number: 7{{$}}
 # CHECK-NEXT:   Name: .llvm_bb_addr_map
-# CHECK:        RawDataSize: 0x3
+# CHECK-NOT:    Section {
+# CHECK:        RawDataSize: 0x3{{$}}
+# CHECK-NOT:    Section {
 # CHECK:        SectionData (
 # CHECK-NEXT:     0000: 030000
 # CHECK-NEXT:   )
 
 ## Case 8: Specify empty BBRanges with multi-bb-range.
-# CHECK:        Number: 8
+# CHECK:        Number: 8{{$}}
 # CHECK-NEXT:   Name: .llvm_bb_addr_map
-# CHECK:        RawDataSize: 0x3
+# CHECK-NOT:    Section {
+# CHECK:        RawDataSize: 0x3{{$}}
+# CHECK-NOT:    Section {
 # CHECK:        SectionData (
 # CHECK-NEXT:     0000: 030800
 # CHECK-NEXT:   )
 
 ## Case 9: Specify empty CallsiteEndOffsets.
-# CHECK:        Number: 9
+# CHECK:        Number: 9{{$}}
 # CHECK-NEXT:   Name: .llvm_bb_addr_map
-# CHECK:        RawDataSize: 0x10
+# CHECK-NOT:    Section {
+# CHECK:        RawDataSize: 0x10{{$}}
+# CHECK-NOT:    Section {
 # CHECK:        SectionData (
 # CHECK-NEXT:     0000: 03202000 00000000 0000010E 01000203
 # CHECK-NEXT:   )
 
 ## Case 10: Specify basic block hash.
-# CHECK:        Number: 10
+# CHECK:        Number: 10{{$}}
 # CHECK-NEXT:   Name: .llvm_bb_addr_map
-# CHECK:        RawDataSize: 0x18
+# CHECK-NOT:    Section {
+# CHECK:        RawDataSize: 0x18{{$}}
+# CHECK-NOT:    Section {
 # CHECK:        SectionData (
 # CHECK-NEXT:     0000: 04602000 00000000 0000010E 01000203
 # CHECK-NEXT:     0010: 23010000 00000000
 # CHECK-NEXT:   )
 
 ## Case 11: Specify empty Entries. The section stays empty, like Case 2.
-# CHECK:        Number: 11
+# CHECK:        Number: 11{{$}}
 # CHECK-NEXT:   Name: .llvm_bb_addr_map
-# CHECK:        RawDataSize: 0x0
-# CHECK-NEXT:   PointerToRawData: 0x0
+# CHECK-NOT:    Section {
+# CHECK:        RawDataSize: 0x0{{$}}
+# CHECK-NEXT:   PointerToRawData: 0x0{{$}}
 
 --- !COFF
 header:
@@ -216,7 +235,9 @@ symbols: []
 # RUN: llvm-readobj --sections --section-data %t2 | FileCheck %s --check-prefix=I386
 
 # I386:        Name: .llvm_bb_addr_map
-# I386:        RawDataSize: 0xB
+# I386-NOT:    Section {
+# I386:        RawDataSize: 0xB{{$}}
+# I386-NOT:    Section {
 # I386:        SectionData (
 # I386-NEXT:     0000: 03002000 0000010B 010203
 # I386-NEXT:   )
@@ -281,24 +302,8 @@ sections:
 symbols: []
 ...
 
-## Check that "Entries" is only recognized on a .llvm_bb_addr_map section.
-# RUN: not yaml2obj --docnum=6 %s -o %t 2>&1 | FileCheck %s --check-prefix=UNKNOWN-KEY
-
-# UNKNOWN-KEY: error: unknown key 'Entries'
-
---- !COFF
-header:
-  Machine: IMAGE_FILE_MACHINE_AMD64
-sections:
-  - Name: .text
-    Characteristics: [ IMAGE_SCN_CNT_CODE ]
-    Entries:
-      - Version: 3
-symbols: []
-...
-
 ## Check that an unsupported version warns and is encoded anyway.
-# RUN: yaml2obj --docnum=7 %s -o %t7 2>&1 | FileCheck %s --check-prefix=INVALID-VERSION
+# RUN: yaml2obj --docnum=6 %s -o %t6 2>&1 | FileCheck %s --check-prefix=INVALID-VERSION
 
 # INVALID-VERSION: warning: unsupported BB address map version: 6; encoding using the most recent version
 

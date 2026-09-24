@@ -692,9 +692,8 @@ void MappingTraits<COFFYAML::Section>::mapping(IO &IO, COFFYAML::Section &Sec) {
   IO.mapOptional("VirtualSize", Sec.Header.VirtualSize, 0U);
   IO.mapOptional("Alignment", Sec.Alignment, 0U);
 
-  // If this is a .debug$S .debug$T .debug$P, .debug$H, or .llvm_bb_addr_map
-  // section parse the semantic representation of its contents.  If it is any
-  // other kind of section, just deal in raw bytes.
+  // If the section has a semantic representation, parse it. Otherwise, deal in
+  // raw bytes.
   IO.mapOptional("SectionData", Sec.SectionData);
   if (Sec.Name == ".debug$S") {
     IO.mapOptional("Subsections", Sec.DebugS);
