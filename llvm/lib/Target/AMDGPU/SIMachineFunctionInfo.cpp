@@ -97,9 +97,8 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
     if (!ST.hasFlatScratchEnabled()) {
       // Non-entry functions have no special inputs for now, other registers
       // required for scratch access.
-      ScratchRSrcReg = AMDGPU::isChainCC(CC)
-                           ? AMDGPU::SGPR48_51
-                           : AMDGPU::SGPR0_3;
+      ScratchRSrcReg =
+          AMDGPU::isChainCC(CC) ? AMDGPU::SGPR48_51 : AMDGPU::SGPR0_3;
 
       ArgInfo.PrivateSegmentBuffer =
           ArgDescriptor::createRegister(ScratchRSrcReg);

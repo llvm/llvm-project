@@ -1263,9 +1263,8 @@ void AMDGPUCallLowering::handleImplicitCallArguments(
     auto ScratchRSrcReg = MIRBuilder.buildCopy(LLT::fixed_vector(4, 32),
                                                FuncInfo.getScratchRSrcReg());
 
-    auto CalleeRSrcReg = AMDGPU::isChainCC(CalleeCC)
-                             ? AMDGPU::SGPR48_51
-                             : AMDGPU::SGPR0_3;
+    auto CalleeRSrcReg =
+        AMDGPU::isChainCC(CalleeCC) ? AMDGPU::SGPR48_51 : AMDGPU::SGPR0_3;
 
     MIRBuilder.buildCopy(CalleeRSrcReg, ScratchRSrcReg);
     CallInst.addReg(CalleeRSrcReg, RegState::Implicit);

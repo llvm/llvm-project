@@ -4501,9 +4501,8 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
       // In the HSA case, this should be an identity copy.
       SDValue ScratchRSrcReg =
           DAG.getCopyFromReg(Chain, DL, Info->getScratchRSrcReg(), MVT::v4i32);
-      RegsToPass.emplace_back(IsChainCallConv
-                                  ? AMDGPU::SGPR48_51
-                                  : AMDGPU::SGPR0_3,
+      RegsToPass.emplace_back(IsChainCallConv ? AMDGPU::SGPR48_51
+                                              : AMDGPU::SGPR0_3,
                               ScratchRSrcReg);
       CopyFromChains.push_back(ScratchRSrcReg.getValue(1));
       Chain = DAG.getTokenFactor(DL, CopyFromChains);

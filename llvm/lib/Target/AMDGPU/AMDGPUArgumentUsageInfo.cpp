@@ -113,8 +113,7 @@ AMDGPUFunctionArgInfo::getPreloadedValue(
 
 AMDGPUFunctionArgInfo AMDGPUFunctionArgInfo::fixedABILayout() {
   AMDGPUFunctionArgInfo AI;
-  AI.PrivateSegmentBuffer
-    = ArgDescriptor::createRegister(AMDGPU::SGPR0_3);
+  AI.PrivateSegmentBuffer = ArgDescriptor::createRegister(AMDGPU::SGPR0_3);
   AI.DispatchPtr = ArgDescriptor::createRegister(AMDGPU::SGPR4_5);
   AI.QueuePtr = ArgDescriptor::createRegister(AMDGPU::SGPR6_7);
 
