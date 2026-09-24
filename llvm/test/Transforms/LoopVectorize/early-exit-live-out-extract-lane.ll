@@ -37,18 +37,7 @@ define i64 @early_exit_with_live_in_condition(i1 %cond) {
 ; VF1IC2:       [[MIDDLE_BLOCK]]:
 ; VF1IC2-NEXT:    br label %[[LOOP_END:.*]]
 ; VF1IC2:       [[VECTOR_EARLY_EXIT_CHECK]]:
-; VF1IC2-NEXT:    [[TMP13:%.*]] = icmp eq i1 [[TMP8]], false
-; VF1IC2-NEXT:    [[TMP14:%.*]] = zext i1 [[TMP13]] to i64
-; VF1IC2-NEXT:    [[TMP15:%.*]] = add i64 1, [[TMP14]]
-; VF1IC2-NEXT:    [[TMP16:%.*]] = icmp eq i1 [[TMP7]], false
-; VF1IC2-NEXT:    [[TMP17:%.*]] = zext i1 [[TMP16]] to i64
-; VF1IC2-NEXT:    [[TMP18:%.*]] = add i64 0, [[TMP17]]
-; VF1IC2-NEXT:    [[TMP19:%.*]] = icmp ne i64 [[TMP17]], 1
-; VF1IC2-NEXT:    [[TMP20:%.*]] = select i1 [[TMP19]], i64 [[TMP18]], i64 [[TMP15]]
-; VF1IC2-NEXT:    [[TMP21:%.*]] = sub i64 [[TMP20]], 1
-; VF1IC2-NEXT:    [[TMP22:%.*]] = icmp uge i64 [[TMP20]], 1
-; VF1IC2-NEXT:    [[TMP23:%.*]] = select i1 [[TMP22]], i1 [[COND]], i1 [[COND]]
-; VF1IC2-NEXT:    br i1 [[TMP23]], label %[[VECTOR_EARLY_EXIT_0:.*]], label %[[VECTOR_EARLY_EXIT_1:.*]]
+; VF1IC2-NEXT:    br i1 [[COND]], label %[[VECTOR_EARLY_EXIT_0:.*]], label %[[VECTOR_EARLY_EXIT_1:.*]]
 ; VF1IC2:       [[VECTOR_EARLY_EXIT_1]]:
 ; VF1IC2-NEXT:    br label %[[LOOP_END]]
 ; VF1IC2:       [[VECTOR_EARLY_EXIT_0]]:
@@ -89,18 +78,7 @@ define i64 @early_exit_with_live_in_condition(i1 %cond) {
 ; VF4IC2:       [[MIDDLE_BLOCK]]:
 ; VF4IC2-NEXT:    br label %[[LOOP_END:.*]]
 ; VF4IC2:       [[VECTOR_EARLY_EXIT_CHECK]]:
-; VF4IC2-NEXT:    [[FIRST_ACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP5]], i1 false)
-; VF4IC2-NEXT:    [[TMP11:%.*]] = add i64 4, [[FIRST_ACTIVE_LANE]]
-; VF4IC2-NEXT:    [[FIRST_ACTIVE_LANE2:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP4]], i1 false)
-; VF4IC2-NEXT:    [[TMP12:%.*]] = add i64 0, [[FIRST_ACTIVE_LANE2]]
-; VF4IC2-NEXT:    [[TMP13:%.*]] = icmp ne i64 [[FIRST_ACTIVE_LANE2]], 4
-; VF4IC2-NEXT:    [[TMP14:%.*]] = select i1 [[TMP13]], i64 [[TMP12]], i64 [[TMP11]]
-; VF4IC2-NEXT:    [[TMP15:%.*]] = extractelement <4 x i1> [[BROADCAST_SPLAT]], i64 [[TMP14]]
-; VF4IC2-NEXT:    [[TMP16:%.*]] = sub i64 [[TMP14]], 4
-; VF4IC2-NEXT:    [[TMP17:%.*]] = extractelement <4 x i1> [[BROADCAST_SPLAT]], i64 [[TMP16]]
-; VF4IC2-NEXT:    [[TMP18:%.*]] = icmp uge i64 [[TMP14]], 4
-; VF4IC2-NEXT:    [[TMP19:%.*]] = select i1 [[TMP18]], i1 [[TMP17]], i1 [[TMP15]]
-; VF4IC2-NEXT:    br i1 [[TMP19]], label %[[VECTOR_EARLY_EXIT_0:.*]], label %[[VECTOR_EARLY_EXIT_1:.*]]
+; VF4IC2-NEXT:    br i1 [[COND]], label %[[VECTOR_EARLY_EXIT_0:.*]], label %[[VECTOR_EARLY_EXIT_1:.*]]
 ; VF4IC2:       [[VECTOR_EARLY_EXIT_1]]:
 ; VF4IC2-NEXT:    br label %[[LOOP_END]]
 ; VF4IC2:       [[VECTOR_EARLY_EXIT_0]]:
