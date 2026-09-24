@@ -1143,17 +1143,6 @@ static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   res.getFrontendOpts().features.EnableWarning(
       Fortran::common::UsageWarning::SystemClockStrict, enableWarning);
 
-  // -fcoarray
-  if (args.hasArg(clang::options::OPT_fcoarray)) {
-    res.getFrontendOpts().features.Enable(
-        Fortran::common::LanguageFeature::Coarray);
-    const unsigned diagID =
-        diags.getCustomDiagID(clang::DiagnosticsEngine::Warning,
-                              "Support for multi image Fortran features is "
-                              "still experimental and in development.");
-    diags.Report(diagID);
-  }
-
   // -Werror option
   // TODO: Currently throws a Diagnostic for anything other than -W<error>,
   // this has to change when other -W<opt>'s are supported.
@@ -1313,6 +1302,17 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
                                 "accepted to -std= currently.");
       diags.Report(diagID);
     }
+  }
+
+  // -fcoarray
+  if (args.hasArg(clang::options::OPT_fcoarray)) {
+    res.getFrontendOpts().features.Enable(
+        Fortran::common::LanguageFeature::Coarray);
+    const unsigned diagID =
+        diags.getCustomDiagID(clang::DiagnosticsEngine::Warning,
+                              "Support for multi image Fortran features is "
+                              "still experimental and in development.");
+    diags.Report(diagID);
   }
 
   return !diags.hasUncompilableErrorOccurred();
