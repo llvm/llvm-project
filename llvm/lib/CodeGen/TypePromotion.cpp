@@ -131,7 +131,8 @@ public:
              SmallPtrSetImpl<Instruction *> &instsToRemove,
              bool useSExt = false)
       : Ctx(C), PromotedWidth(Width), Visited(visited), Sources(sources),
-        Sinks(sinks), SafeWrap(wrap), InstsToRemove(instsToRemove), UseSExt(useSExt) {
+        Sinks(sinks), SafeWrap(wrap), InstsToRemove(instsToRemove),
+        UseSExt(useSExt) {
     ExtTy = IntegerType::get(Ctx, PromotedWidth);
   }
 
@@ -470,7 +471,8 @@ void IRPromoter::ExtendSources() {
     if (auto *I = dyn_cast<Instruction>(V))
       Builder.SetCurrentDebugLocation(I->getDebugLoc());
 
-    Value *Ext = UseSExt ? Builder.CreateSExt(V, ExtTy) : Builder.CreateZExt(V, ExtTy);
+    Value *Ext =
+        UseSExt ? Builder.CreateSExt(V, ExtTy) : Builder.CreateZExt(V, ExtTy);
     if (auto *I = dyn_cast<Instruction>(Ext)) {
       if (isa<Argument>(V))
         I->moveBefore(InsertPt);
@@ -536,8 +538,8 @@ void IRPromoter::PromoteTree() {
           else
             NewConst = Const->getValue().zext(PromotedWidth);
         } else
-          NewConst = UseSExt ? Const->getValue().sext(PromotedWidth) :
-                               Const->getValue().zext(PromotedWidth);
+          NewConst = UseSExt ? Const->getValue().sext(PromotedWidth)
+                             : Const->getValue().zext(PromotedWidth);
 
         I->setOperand(i, ConstantInt::get(Const->getContext(), NewConst));
       } else if (isa<UndefValue>(Op))
@@ -547,8 +549,9 @@ void IRPromoter::PromoteTree() {
     // For switch, also mutate case values, which are not operands.
     if (auto *SI = dyn_cast<SwitchInst>(I)) {
       for (auto Case : SI->cases()) {
-        APInt NewConst = UseSExt ? Case.getCaseValue()->getValue().sext(PromotedWidth) :
-                                   Case.getCaseValue()->getValue().zext(PromotedWidth);
+        APInt NewConst =
+            UseSExt ? Case.getCaseValue()->getValue().sext(PromotedWidth)
+                    : Case.getCaseValue()->getValue().zext(PromotedWidth);
         Case.setValue(ConstantInt::get(SI->getContext(), NewConst));
       }
     }
@@ -626,7 +629,8 @@ void IRPromoter::TruncateSinks() {
     // for the zext will be promoted to the same width as the ext's return type
     // rendering that ext unnecessary.  This zext gets removed before the end
     // of the pass.
-    if (CheckSignedMatch(I) && (I->getType()->getScalarSizeInBits() >= PromotedWidth))
+    if (CheckSignedMatch(I) &&
+        (I->getType()->getScalarSizeInBits() >= PromotedWidth))
       continue;
 
     // Now handle the others.
@@ -852,13 +856,14 @@ bool TypePromotionImpl::isLegalToPromote(Value *V, bool UseSExt) {
 }
 
 bool TypePromotionImpl::TryToPromote(Value *V, unsigned PromotedWidth,
-                                 const LoopInfo &LI, bool UseSExt) {
+                                     const LoopInfo &LI, bool UseSExt) {
   Type *OrigTy = V->getType();
   TypeSize = OrigTy->getPrimitiveSizeInBits().getFixedValue();
   SafeToPromote.clear();
   SafeWrap.clear();
 
-  if (!isSupportedValue(V) || !shouldPromote(V) || !isLegalToPromote(V, UseSExt))
+  if (!isSupportedValue(V) || !shouldPromote(V) ||
+      !isLegalToPromote(V, UseSExt))
     return false;
 
   LLVM_DEBUG(dbgs() << "IR Promotion: TryToPromote: " << *V << ", from "
@@ -882,7 +887,8 @@ bool TypePromotionImpl::TryToPromote(Value *V, unsigned PromotedWidth,
     if (isa<GetElementPtrInst>(V))
       return false;
 
-    if (!isSupportedValue(V) || (shouldPromote(V) && !isLegalToPromote(V, UseSExt))) {
+    if (!isSupportedValue(V) ||
+        (shouldPromote(V) && !isLegalToPromote(V, UseSExt))) {
       LLVM_DEBUG(dbgs() << "IR Promotion: Can't handle: " << *V << "\n");
       return false;
     }
