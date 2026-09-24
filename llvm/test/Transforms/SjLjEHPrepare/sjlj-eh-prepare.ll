@@ -42,3 +42,6 @@ try.cont:
 
 declare void @may_throw()
 declare i32 @__gxx_personality_sj0(...)
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"exception-model", !"sjlj"}

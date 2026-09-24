@@ -89,6 +89,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
@@ -9134,6 +9135,13 @@ SDValue SelectionDAGBuilder::lowerStartEH(SDValue Chain,
                                           MCSymbol *&BeginLabel) {
   MachineFunction &MF = DAG.getMachineFunction();
 
+  // Skip emitting EH_LABEL on targets whose exception tables don't reference
+  // them (32-bit x86 SEH, Wasm).
+  if (!MF.getContext().getAsmInfo().usesPerInvokeEHLabels()) {
+    BeginLabel = nullptr;
+    return Chain;
+  }
+
   // Insert a label before the invoke call to mark the try range.  This can be
   // used to detect deletion of the invoke via the MachineModuleInfo.
   BeginLabel = MF.getContext().createTempSymbol();
@@ -9155,7 +9163,9 @@ SDValue SelectionDAGBuilder::lowerStartEH(SDValue Chain,
 SDValue SelectionDAGBuilder::lowerEndEH(SDValue Chain, const InvokeInst *II,
                                         const BasicBlock *EHPadBB,
                                         MCSymbol *BeginLabel) {
-  assert(BeginLabel && "BeginLabel should've been set");
+  // No labels were emitted.
+  if (!BeginLabel)
+    return Chain;
 
   MachineFunction &MF = DAG.getMachineFunction();
 

@@ -105,7 +105,9 @@ entry:
 
 declare void @llvm.prefetch(ptr nocapture, i32, i32, i32) nounwind
 
-!0 = !{!"int", !1}
+!0 = !{!4, !4, i64 0}
 !1 = !{!"omnipotent char", !2}
 !2 = !{!"Simple C/C++ TBAA"}
-!3 = !{!"any pointer", !1}
+!3 = !{!5, !5, i64 0}
+!4 = !{!"int", !1}
+!5 = !{!"any pointer", !1}

@@ -6,10 +6,10 @@ program p
   ! CHECK:     %[[V_2:[0-9]+]] = fir.alloca !fir.box<!fir.ptr<i32>>
   ! CHECK:     %[[V_3:[0-9]+]] = fir.alloca !fir.box<!fir.ptr<!fir.array<4x!fir.char<1,3>>>>
   ! CHECK:     %[[V_4:[0-9]+]] = fir.alloca !fir.box<!fir.ptr<i32>>
-  ! CHECK:     %[[V_5:[0-9]+]] = fir.alloca !fir.array<4x!fir.char<1,3>> {bindc_name = "ccc", uniq_name = "_QFEccc"}
+  ! CHECK:     %[[V_5:[0-9]+]] = fir.alloca !fir.array<4x!fir.char<1,3>> <{bindc_name = "ccc", uniq_name = "_QFEccc"}>
   ! CHECK:     %[[V_6:[0-9]+]] = fir.shape %c4{{.*}} : (index) -> !fir.shape<1>
   ! CHECK:     %[[V_7:[0-9]+]] = fir.declare %[[V_5]](%[[V_6]]) typeparams %c3{{.*}} {uniq_name = "_QFEccc"} : (!fir.ref<!fir.array<4x!fir.char<1,3>>>, !fir.shape<1>, index) -> !fir.ref<!fir.array<4x!fir.char<1,3>>>
-  ! CHECK:     %[[V_8:[0-9]+]] = fir.alloca i32 {bindc_name = "jjj", uniq_name = "_QFEjjj"}
+  ! CHECK:     %[[V_8:[0-9]+]] = fir.alloca i32 <{bindc_name = "jjj", uniq_name = "_QFEjjj"}>
   ! CHECK:     %[[V_9:[0-9]+]] = fir.declare %[[V_8]] {uniq_name = "_QFEjjj"} : (!fir.ref<i32>) -> !fir.ref<i32>
   ! CHECK:     fir.store %c17{{.*}} to %[[V_9]] : !fir.ref<i32>
   character*3 ccc(4)
@@ -77,7 +77,7 @@ end
 ! CHECK-LABEL: c.func @_QPsss
 subroutine sss
   ! CHECK:     %[[V_0:[0-9]+]] = fir.alloca !fir.box<!fir.ptr<!fir.array<3xi32>>>
-  ! CHECK:     %[[V_1:[0-9]+]] = fir.alloca !fir.array<3xi32> {bindc_name = "xxx", uniq_name = "_QFsssExxx"}
+  ! CHECK:     %[[V_1:[0-9]+]] = fir.alloca !fir.array<3xi32> <{bindc_name = "xxx", uniq_name = "_QFsssExxx"}>
   ! CHECK:     %[[V_2:[0-9]+]] = fir.shape_shift %c11{{.*}}, %c3{{.*}} : (index, index) -> !fir.shapeshift<1>
   ! CHECK:     %[[V_3:[0-9]+]] = fir.declare %[[V_1]](%[[V_2]]) {uniq_name = "_QFsssExxx"} : (!fir.ref<!fir.array<3xi32>>, !fir.shapeshift<1>) -> !fir.ref<!fir.array<3xi32>>
   integer xxx(11:13)
@@ -145,7 +145,7 @@ subroutine local_poly_namelist
   use m
   class(base), allocatable :: b1
 ! CHECK:  %[[V_0:[0-9]+]]  = fir.alloca !fir.class<!fir.ptr<!fir.type<_QMmTbase{r1:f32}>>>
-! CHECK:  %[[V_2:[0-9]+]]  = fir.alloca !fir.class<!fir.heap<!fir.type<_QMmTbase{r1:f32}>>> {bindc_name = "b1", uniq_name = "_QFlocal_poly_namelistEb1"}
+! CHECK:  %[[V_2:[0-9]+]]  = fir.alloca !fir.class<!fir.heap<!fir.type<_QMmTbase{r1:f32}>>> <{bindc_name = "b1", uniq_name = "_QFlocal_poly_namelistEb1"}>
 ! CHECK:  %[[V_5:[0-9]+]]  = fir.declare %[[V_2]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFlocal_poly_namelistEb1"} : (!fir.ref<!fir.class<!fir.heap<!fir.type<_QMmTbase{r1:f32}>>>>) -> !fir.ref<!fir.class<!fir.heap<!fir.type<_QMmTbase{r1:f32}>>>>
 ! CHECK:  %[[V_9:[0-9]+]]  = fir.alloca !fir.array<1xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>
 ! CHECK:  %[[V_10:[0-9]+]] = fir.undefined !fir.array<1xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>

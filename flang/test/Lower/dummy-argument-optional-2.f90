@@ -197,7 +197,7 @@ end subroutine
 ! CHECK-LABEL: func @_QMoptional_testsPforward_pointer_array() {
 subroutine forward_pointer_array()
   ! CHECK: %[[ALLOCA:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?xf32>>>
-  ! CHECK: %[[RES:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?xf32>>> {bindc_name = ".result"}
+  ! CHECK: %[[RES:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?xf32>>> <{bindc_name = ".result"}>
   call takes_opt_explicit_shape(returns_pointer())
   ! CHECK: %[[RET:.*]] = fir.call @_QPreturns_pointer() {{.*}} : () -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
   ! CHECK: fir.save_result %[[RET]] to %[[RES]] : !fir.box<!fir.ptr<!fir.array<?xf32>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
