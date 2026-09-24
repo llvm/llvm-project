@@ -719,6 +719,32 @@ public:
 
   unsigned getTreeSize() const { return VectorizableTree.size(); }
 
+  /// Returns the size of the current tree, stopping at gathers
+  /// For instance, even though we continue adding tree entries after
+  /// a split node, this function stops counting at the split node
+  /// since it is a gather. This matches the behavior of MinBWs
+  /// computation.
+  unsigned getTreeSizeExcludingGathers() const {
+    unsigned Cnt = 0;
+    SmallBitVector GatherTreeNodes(VectorizableTree.size(), false);
+    for (unsigned NodeIdx : seq<unsigned>(VectorizableTree.size())) {
+      auto &TE = VectorizableTree[NodeIdx];
+      if (DeletedNodes.contains(TE.get()))
+        continue;
+      auto IsGather = [&](TreeEntry *TE) {
+        return TE->isGather() || TransformedToGatherNodes.contains(TE) ||
+               GatherTreeNodes.test(TE->Idx);
+      };
+      if (IsGather(TE.get()) || (!TE->UserTreeIndex.UserTE && NodeIdx != 0) ||
+          (TE->UserTreeIndex.UserTE && (IsGather(TE->UserTreeIndex.UserTE)))) {
+        GatherTreeNodes.set(NodeIdx);
+        continue;
+      }
+      ++Cnt;
+    }
+    return Cnt;
+  }
+
   /// Returns the base graph size, before any transformations.
   unsigned getCanonicalGraphSize() const { return BaseGraphSize; }
 
@@ -3555,6 +3581,23 @@ private:
   /// before the root node.
   SmallVector<TreeEntry *> SplatGatheredScalarsRoots;
 
+  /// Checks if any of \p Entries is an internal gather of a splat gather
+  /// subtree.
+  bool hasSplatSubtreeGather(
+      ArrayRef<SmallVector<const TreeEntry *>> Entries) const {
+    if (SplatGatheredScalarsRoots.empty())
+      return false;
+    return any_of(Entries, [&](ArrayRef<const TreeEntry *> TEs) {
+      return any_of(TEs, [&](const TreeEntry *TE) {
+        if (!TE->isGather())
+          return false;
+        while (TE->UserTreeIndex)
+          TE = TE->UserTreeIndex.UserTE;
+        return is_contained(SplatGatheredScalarsRoots, TE);
+      });
+    });
+  }
+
   /// Number of tree entries added while building the splat gather subtrees.
   /// The subtrees are auxiliary and must not inflate the tree size recorded
   /// for failed store chain attempts.
@@ -3735,9 +3778,9 @@ private:
   mutable SmallDenseMap<std::tuple<Type *, Type *, unsigned>, unsigned>
       NumberOfPartsCache;
 
-  /// Values, already been analyzed for mininmal bitwidth and found to be
-  /// non-profitable.
-  DenseSet<Value *> AnalyzedMinBWVals;
+  /// Values already analyzed for minimal bitwidth and found to be
+  /// non-profitable, mapped to the size of the tree used for the analysis.
+  SmallDenseMap<Value *, unsigned> AnalyzedMinBWVals;
 
   /// A list of values that need to extracted out of the tree.
   /// This list holds pairs of (Internal Scalar : External User). External User
@@ -5592,6 +5635,12 @@ BoUpSLP::findReusedOrderedScalars(const BoUpSLP::TreeEntry &TE,
   SmallVector<std::optional<TargetTransformInfo::ShuffleKind>> GatherShuffles =
       isGatherShuffledEntry(&TE, GatheredScalars, Mask, Entries, NumParts,
                             /*ForOrder=*/true);
+  // The internal gathers of the splat gather subtrees are not used as shuffle
+  // sources, do not reorder the tree to match them.
+  if (hasSplatSubtreeGather(Entries)) {
+    GatherShuffles.clear();
+    Entries.clear();
+  }
   // No shuffled operands - ignore.
   if (GatherShuffles.empty() && ExtractShuffles.empty())
     return std::nullopt;
@@ -22720,23 +22769,10 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
     // The splat gather subtrees are speculative: the keep/drop check may
     // delete them and does not track reuse of their internal gathers by other
     // gathers.
-    if (!GatherShuffles.empty() && !SplatGatheredScalarsRoots.empty()) {
-      auto IsSplatSubtreeGather = [&](const TreeEntry *MTE) {
-        if (!MTE->isGather())
-          return false;
-        for (const TreeEntry *U = MTE; U && U->UserTreeIndex;
-             U = U->UserTreeIndex.UserTE)
-          if (is_contained(SplatGatheredScalarsRoots, U->UserTreeIndex.UserTE))
-            return true;
-        return false;
-      };
-      if (any_of(Entries, [&](ArrayRef<const TreeEntry *> TEs) {
-            return any_of(TEs, IsSplatSubtreeGather);
-          })) {
-        GatherShuffles.clear();
-        Entries.clear();
-        std::fill(Mask.begin(), Mask.end(), PoisonMaskElem);
-      }
+    if (hasSplatSubtreeGather(Entries)) {
+      GatherShuffles.clear();
+      Entries.clear();
+      std::fill(Mask.begin(), Mask.end(), PoisonMaskElem);
     }
     if (!GatherShuffles.empty()) {
       if (std::optional<ResTy> Delayed =
@@ -28431,8 +28467,14 @@ void BoUpSLP::computeMinimumValueSizes() {
     ++NodeIdx;
   }
 
+  auto IsAnalyzedMinBWVal = [&](Value *V, unsigned SizeExGathers) {
+    auto It = AnalyzedMinBWVals.find(V);
+    return It != AnalyzedMinBWVals.end() && It->second >= SizeExGathers;
+  };
+
   // Analyzed the reduction already and not profitable - exit.
-  if (AnalyzedMinBWVals.contains(VectorizableTree[NodeIdx]->Scalars.front()))
+  if (IsAnalyzedMinBWVal(VectorizableTree[NodeIdx]->Scalars.front(),
+                         getTreeSizeExcludingGathers()))
     return;
 
   SmallVector<unsigned> ToDemote;
@@ -28494,8 +28536,9 @@ void BoUpSLP::computeMinimumValueSizes() {
     if (!TreeRootIT)
       return 0u;
 
+    unsigned SizeExGathers = getTreeSizeExcludingGathers();
     if (any_of(E.Scalars,
-               [&](Value *V) { return AnalyzedMinBWVals.contains(V); }))
+               [&](Value *V) { return IsAnalyzedMinBWVal(V, SizeExGathers); }))
       return 0u;
 
     unsigned NumParts =
@@ -28736,8 +28779,11 @@ void BoUpSLP::computeMinimumValueSizes() {
         MaxBitWidth >=
             cast<IntegerType>(TreeRoot.front()->getType()->getScalarType())
                 ->getBitWidth()) {
-      if (UserIgnoreList)
-        AnalyzedMinBWVals.insert_range(TreeRoot);
+      if (UserIgnoreList) {
+        unsigned Sz = getTreeSizeExcludingGathers();
+        for (Value *V : TreeRoot)
+          AnalyzedMinBWVals.insert_or_assign(V, Sz);
+      }
       NodesToKeepBWs.insert_range(ToDemote);
       continue;
     }
@@ -29488,6 +29534,7 @@ bool StoreChainContext::vectorizeOneVF(
                                            unsigned, unsigned &)>
         VectorizeStoreChain) {
   bool AnyProfitableGraph = false;
+  bool PreferWideSlices = false;
   unsigned FirstUnvecStore = getFirstUnvecStore();
 
   // Form slices of size VF starting from FirstUnvecStore and try to
@@ -29520,6 +29567,43 @@ bool StoreChainContext::vectorizeOneVF(
           continue;
         }
       }
+      auto MarkVectorized = [&](unsigned Len) {
+        // Mark the vectorized stores so that we don't vectorize them
+        // again.
+        VectorizedStores.insert_range(
+            ArrayRef(Operands).slice(SliceStartIdx, Len));
+        AnyProfitableGraph = RepeatChanged = Changed = true;
+        // If we vectorized initial block, no need to try to vectorize
+        // it again.
+        markRangeVectorized(SliceStartIdx, Len, FirstUnvecStore, MaxSliceEnd);
+        SliceStartIdx += Len;
+        ++NumStoreChains;
+        if (Stride > 1)
+          ++NumStridedStoreChains;
+        NumVectorizedStores += Len;
+      };
+      // With the register VF 2 the instruction count check may reject the
+      // leading slice, shifting it strands its stores and the wider VFs are
+      // tried only if nothing is vectorized: try the wider slice at the same
+      // position. Once the chain took the wider slices, try them first.
+      auto TryWideSlice = [&]() {
+        if (MaxRegVF != 2 || VF != MaxRegVF ||
+            SliceStartIdx != FirstUnvecStore ||
+            SliceStartIdx + 2 * VF > MaxSliceEnd)
+          return false;
+        unsigned WideTreeSize;
+        if (!VectorizeStoreChain(
+                 ArrayRef(Operands).slice(SliceStartIdx, 2 * VF), SliceStartIdx,
+                 MinVF, WideTreeSize)
+                 .value_or(false))
+          return false;
+        MarkVectorized(2 * VF);
+        return true;
+      };
+      const bool WideFirst = PreferWideSlices;
+      if (WideFirst && TryWideSlice())
+        continue;
+      PreferWideSlices = false;
       unsigned TreeSize;
       std::optional<bool> Res =
           VectorizeStoreChain(Slice, SliceStartIdx, MinVF, TreeSize);
@@ -29530,18 +29614,11 @@ bool StoreChainContext::vectorizeOneVF(
             .first->getSecond()
             .second = VF;
       } else if (*Res) {
-        // Mark the vectorized stores so that we don't vectorize them
-        // again.
-        VectorizedStores.insert_range(Slice);
-        AnyProfitableGraph = RepeatChanged = Changed = true;
-        // If we vectorized initial block, no need to try to vectorize
-        // it again.
-        markRangeVectorized(SliceStartIdx, VF, FirstUnvecStore, MaxSliceEnd);
-        SliceStartIdx += VF;
-        ++NumStoreChains;
-        if (Stride > 1)
-          ++NumStridedStoreChains;
-        NumVectorizedStores += VF;
+        MarkVectorized(VF);
+        continue;
+      }
+      if (Res && !WideFirst && TryWideSlice()) {
+        PreferWideSlices = true;
         continue;
       }
       if (VF > 2 && Res && !allOfRangeProfitable(SliceStartIdx, VF, TreeSize)) {
@@ -32061,6 +32138,15 @@ public:
           return Vals.size() >= ReductionLimit ||
                  (Vals.size() == 2 && Vals.front() != Vals.back());
         });
+    // Small sign-aware groups pay off only when paired via the vector fsub:
+    // each sign must have a group of at least 2 values.
+    auto HasGroupOfSign = [&](bool Negated) {
+      return any_of(ReducedVals, [&](ArrayRef<Value *> Vals) {
+        return Vals.size() >= 2 && IsNegated(Vals.front()) == Negated;
+      });
+    };
+    const bool CanPairSigns =
+        HasGroupOfSign(/*Negated=*/false) && HasGroupOfSign(/*Negated=*/true);
     // Same-size groups of the seed-level reduction get the profitability
     // ordering (cheap groups go last) when the minimum vector factor covers
     // the whole reduction.
@@ -32194,8 +32280,8 @@ public:
       const bool MinVFAllowed = IsSeedRoot && NoScalarLeftovers &&
                                 all_of(Candidates, UsedByReductionOnly);
       if (NumReducedVals < ReductionLimit &&
-          (NumReducedVals < 2 || (!isSplat(Candidates) &&
-                                  NegatedReducedVals.empty() && !MinVFAllowed)))
+          (NumReducedVals < 2 ||
+           (!isSplat(Candidates) && !CanPairSigns && !MinVFAllowed)))
         continue;
 
       // Check if we support repeated scalar values processing (optimization of
@@ -32338,7 +32424,7 @@ public:
       // Same small-group allowance for the vector width, if it covers the
       // whole group.
       const unsigned MinReduxWidth =
-          !NegatedReducedVals.empty() || (MinVFAllowed && NumReducedVals == 2)
+          CanPairSigns || (MinVFAllowed && NumReducedVals == 2)
               ? 2
               : ReductionLimit;
       while (Pos < NumReducedVals - ReduxWidth + 1 &&

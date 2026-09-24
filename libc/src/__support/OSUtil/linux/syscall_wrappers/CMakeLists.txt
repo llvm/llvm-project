@@ -929,6 +929,18 @@ add_header_library(
 )
 
 add_header_library(
+  fdatasync
+  HDRS
+    fdatasync.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
   fsync
   HDRS
     fsync.h
@@ -1053,6 +1065,18 @@ add_header_library(
     libc.src.__support.error_or
     libc.src.__support.macros.config
     libc.hdr.fcntl_macros
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  renameat
+  HDRS
+    renameat.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
     libc.include.sys_syscall
 )
 
@@ -1395,3 +1419,16 @@ add_header_library(
     libc.src.__support.CPP.bit
     libc.src.__support.error_or
 )
+
+add_header_library(
+  pause
+  HDRS
+    pause.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.osutil
+)
+

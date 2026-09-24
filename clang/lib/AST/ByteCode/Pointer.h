@@ -49,6 +49,7 @@ struct PtrView {
   bool isMutable() const {
     return !isRoot() && getInlineDesc()->IsFieldMutable;
   }
+  bool isExtern() const { return Pointee && Pointee->isExtern(); }
   bool isVolatile() const {
     return isRoot() ? getDeclDesc()->IsVolatile : getInlineDesc()->IsVolatile;
   }
@@ -446,6 +447,7 @@ struct OpaquePointer {
   bool hasDeclBase() const { return Base.isDecl(); }
   const VarDecl *getBaseDecl() const { return Base.asVarDecl(); }
   const Expr *getBaseExpr() const { return Base.asExpr(); }
+  bool hasValidBase() const;
 
   OpaquePointer
   withFieldType(const Type *FieldTy,
@@ -874,7 +876,7 @@ public:
   /// Checks if the storage is extern.
   bool isExtern() const {
     if (isBlockPointer())
-      return BS.Pointee && BS.Pointee->isExtern();
+      return view().isExtern();
     return false;
   }
   /// Checks if the storage is static.

@@ -1220,14 +1220,6 @@ specify boolean properties that modify the option.
   option is allowed to accept one or more values (i.e. it is a {ref}`cl::list <cl::list>`
   option).
 
-(cl::DefaultOption)=
-
-* The **cl::DefaultOption** modifier is used to specify that the option is a
-  default that can be overridden by application-specific parsers. For example,
-  the `-help` alias, `-h`, is registered this way, so it can be overridden
-  by applications that need to use the `-h` option for another purpose,
-  either as a regular option or an alias for another option.
-
 (cl::PositionalEatsArgs)=
 
 * The **cl::PositionalEatsArgs** modifier (which only applies to positional

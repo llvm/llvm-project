@@ -1572,7 +1572,7 @@ public:
   std::optional<uint64_t> tryZExtValue() const {
     return (getActiveBits() <= 64) ? std::optional<uint64_t>(getZExtValue())
                                    : std::nullopt;
-  };
+  }
 
   /// Get sign extended value
   ///
@@ -1594,7 +1594,7 @@ public:
   std::optional<int64_t> trySExtValue() const {
     return (getSignificantBits() <= 64) ? std::optional<int64_t>(getSExtValue())
                                         : std::nullopt;
-  };
+  }
 
   /// Get bits required for string value.
   ///
