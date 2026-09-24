@@ -9,7 +9,7 @@
 // CHECK:           %[[VAL_5:.*]] = fir.dummy_scope : !fir.dscope
 // CHECK:           %[[VAL_6:.*]]:2 = fir.unboxchar %[[ARG0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 // CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]]#0 typeparams %[[VAL_6]]#1 dummy_scope %[[VAL_5]] {uniq_name = "_QFtrim_testEc"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
-// CHECK:           %[[VAL_8:.*]] = fir.alloca !fir.char<1,8> {bindc_name = "tc", uniq_name = "_QFtrim_testEtc"}
+// CHECK:           %[[VAL_8:.*]] = fir.alloca !fir.char<1,8> <{bindc_name = "tc", uniq_name = "_QFtrim_testEtc"}>
 // CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_8]] typeparams %[[VAL_3]] {uniq_name = "_QFtrim_testEtc"} : (!fir.ref<!fir.char<1,8>>, index) -> (!fir.ref<!fir.char<1,8>>, !fir.ref<!fir.char<1,8>>)
 // CHECK:           %[[VAL_10:.*]] = fir.embox %[[VAL_7]]#1 typeparams %[[VAL_6]]#1 : (!fir.ref<!fir.char<1,?>>, index) -> !fir.box<!fir.char<1,?>>
 // CHECK:           %[[VAL_11:.*]] = fir.zero_bits !fir.heap<!fir.char<1,?>>

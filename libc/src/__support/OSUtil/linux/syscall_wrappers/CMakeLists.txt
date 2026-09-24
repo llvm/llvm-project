@@ -929,6 +929,18 @@ add_header_library(
 )
 
 add_header_library(
+  fdatasync
+  HDRS
+    fdatasync.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
   fsync
   HDRS
     fsync.h
@@ -1057,6 +1069,18 @@ add_header_library(
 )
 
 add_header_library(
+  renameat
+  HDRS
+    renameat.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
   lseek
   HDRS
     lseek.h
@@ -1130,6 +1154,23 @@ add_header_library(
   DEPENDS
     libc.hdr.types.struct_timespec
     libc.hdr.time_macros
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  ppoll
+  HDRS
+    ppoll.h
+  DEPENDS
+    libc.hdr.signal_macros
+    libc.hdr.types.nfds_t
+    libc.hdr.types.sigset_t
+    libc.hdr.types.struct_pollfd
+    libc.hdr.types.struct_timespec
     libc.src.__support.OSUtil.osutil
     libc.src.__support.common
     libc.src.__support.error_or

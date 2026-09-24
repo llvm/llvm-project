@@ -1352,7 +1352,7 @@ void fir::runtime::genMaxloc(fir::FirOpBuilder &builder, mlir::Location loc,
   if (charHelper.isCharacterScalar(eleTy))
     func = fir::runtime::getRuntimeFunc<mkRTKey(MaxlocCharacter)>(loc, builder);
   if (!func)
-    fir::intrinsicTypeTODO(builder, eleTy, loc, "MAXLOC");
+    fir::intrinsicTypeTODO(eleTy, loc, "MAXLOC");
   genReduction4Args(func, builder, loc, resultBox, arrayBox, maskBox, kindVal,
                     back);
 }
@@ -1383,7 +1383,7 @@ mlir::Value fir::runtime::genMaxval(fir::FirOpBuilder &builder,
   INTEGER_INTRINSIC_INSTANCES(Maxval, )
   UNSIGNED_INTRINSIC_INSTANCES(Maxval, )
   if (!func)
-    fir::intrinsicTypeTODO(builder, eleTy, loc, "MAXVAL");
+    fir::intrinsicTypeTODO(eleTy, loc, "MAXVAL");
 
   auto fTy = func.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
@@ -1438,7 +1438,7 @@ void fir::runtime::genMinloc(fir::FirOpBuilder &builder, mlir::Location loc,
   if (charHelper.isCharacterScalar(eleTy))
     func = fir::runtime::getRuntimeFunc<mkRTKey(MinlocCharacter)>(loc, builder);
   if (!func)
-    fir::intrinsicTypeTODO(builder, eleTy, loc, "MINLOC");
+    fir::intrinsicTypeTODO(eleTy, loc, "MINLOC");
   genReduction4Args(func, builder, loc, resultBox, arrayBox, maskBox, kindVal,
                     back);
 }
@@ -1495,7 +1495,7 @@ mlir::Value fir::runtime::genMinval(fir::FirOpBuilder &builder,
   INTEGER_INTRINSIC_INSTANCES(Minval, )
   UNSIGNED_INTRINSIC_INSTANCES(Minval, )
   if (!func)
-    fir::intrinsicTypeTODO(builder, eleTy, loc, "MINVAL");
+    fir::intrinsicTypeTODO(eleTy, loc, "MINVAL");
 
   auto fTy = func.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
@@ -1549,7 +1549,7 @@ mlir::Value fir::runtime::genNorm2(fir::FirOpBuilder &builder,
   else if (eleTy.isF128())
     func = fir::runtime::getRuntimeFunc<ForcedNorm2Real16>(loc, builder);
   else
-    fir::intrinsicTypeTODO(builder, eleTy, loc, "NORM2");
+    fir::intrinsicTypeTODO(eleTy, loc, "NORM2");
 
   auto fTy = func.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
@@ -1594,7 +1594,7 @@ mlir::Value fir::runtime::genProduct(fir::FirOpBuilder &builder,
   mlir::func::FuncOp func;
   NUMERICAL_INTRINSIC_INSTANCES(Product)
   if (!func)
-    fir::intrinsicTypeTODO(builder, eleTy, loc, "PRODUCT");
+    fir::intrinsicTypeTODO(eleTy, loc, "PRODUCT");
 
   auto fTy = func.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
@@ -1634,7 +1634,7 @@ mlir::Value fir::runtime::genDotProduct(fir::FirOpBuilder &builder,
     func =
         fir::runtime::getRuntimeFunc<mkRTKey(DotProductLogical)>(loc, builder);
   if (!func)
-    fir::intrinsicTypeTODO(builder, eleTy, loc, "DOTPRODUCT");
+    fir::intrinsicTypeTODO(eleTy, loc, "DOTPRODUCT");
 
   auto fTy = func.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
@@ -1678,7 +1678,7 @@ mlir::Value fir::runtime::genSum(fir::FirOpBuilder &builder, mlir::Location loc,
   mlir::func::FuncOp func;
   NUMERICAL_INTRINSIC_INSTANCES(Sum)
   if (!func)
-    fir::intrinsicTypeTODO(builder, eleTy, loc, "SUM");
+    fir::intrinsicTypeTODO(eleTy, loc, "SUM");
 
   auto fTy = func.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
@@ -1813,7 +1813,7 @@ void fir::runtime::genReduce(fir::FirOpBuilder &builder, mlir::Location loc,
     func =
         fir::runtime::getRuntimeFunc<mkRTKey(ReduceDerivedType)>(loc, builder);
   if (!func)
-    fir::intrinsicTypeTODO(builder, eleTy, loc, "REDUCE");
+    fir::intrinsicTypeTODO(eleTy, loc, "REDUCE");
 
   auto fTy = func.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
@@ -1859,7 +1859,7 @@ mlir::Value fir::runtime::genReduce(fir::FirOpBuilder &builder,
     LOGICAL_INTRINSIC_INSTANCES(Reduce, Value)
   }
   if (!func)
-    fir::intrinsicTypeTODO(builder, eleTy, loc, "REDUCE");
+    fir::intrinsicTypeTODO(eleTy, loc, "REDUCE");
 
   auto fTy = func.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
@@ -1907,7 +1907,7 @@ void fir::runtime::genReduceDim(fir::FirOpBuilder &builder, mlir::Location loc,
     func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceDerivedTypeDim)>(loc,
                                                                        builder);
   if (!func)
-    fir::intrinsicTypeTODO(builder, eleTy, loc, "REDUCE");
+    fir::intrinsicTypeTODO(eleTy, loc, "REDUCE");
 
   auto fTy = func.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);

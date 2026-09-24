@@ -294,6 +294,9 @@ features cannot lower the translation-unit ABI level;
 - `-Wfortify-source` now diagnoses when `strlcat`, `__builtin_strlcat`, `strlcpy`, or
   `__builtin_strlcpy` is called with a size argument larger than the destination buffer.
 
+- `-Wfortify-source` now diagnoses when `recv` or `recvfrom` is called with a
+  size argument larger than the destination buffer.
+
 - The `cannot overload a member function` diagnostic now describes the previous
   declaration first, matching the order in which the declarations appear in the
   source. (#GH219803)
@@ -532,10 +535,12 @@ features cannot lower the translation-unit ABI level;
 ### Bug Fixes in This Version
 
 - Fixed incorrect handling of C++ import preprocessing token when a digraph character after import. (#GH190693)
+- Fixed a crash when emitting RTTI for a `dllexport` class, or the fundamental type descriptors for `__cxxabiv1::__fundamental_type_info`, under `-fvisibility=hidden`. (#GH207963)
 - Fixed an assertion failure when passing a wide string literal to `__builtin_nan`. (#GH212108)
 - Fixed a constraint comparison bug in partial ordering. (#GH182671)
 - Fixed a rejected-valid case that used an explicit object parameter in an out-of-line definition of a nested class member. (#GH136472)
 - Fixed an assertion on omp taskloop transparent (#GH197162)
+- Fixed an assertion failure and a garbled diagnostic when the `message` clause of `#pragma omp error` was given a string literal that is not of `char` type, such as a wide string literal. Such literals are now diagnosed and ignored. (#GH140338)
 - Fixed a bug where `__func__`, `__PRETTY_FUNCTION__` and `__FUNCTION__` were not resolving to the proper function when inside a lambda return type (#GH211811)
 - Fixed USR generation for declarations whose signature mentions a class-type
   non-type template parameter. (#GH212351)
@@ -549,13 +554,18 @@ features cannot lower the translation-unit ABI level;
 - Fixed a bug where a stray closing curley brace in an OpenMP/OpenACC pragma could cause pragma parsing issues when inside of a member function. (#GH214195)
 - Fixed a bug where preprocessor directives following comments were not correctly recognized when using -C. (#GH48361)
 - Fixed a crash when declaring a member template within a local class inside an OpenMP region. (#GH216052)
+- Fixed an assertion failure when a variable implicitly mapped by an OpenMP `target` directive has a class type
+  (such as `std::map`) whose mapper lookup instantiates a class template specialization. (#GH154704)
 - Fixed a bug where repeated #imports of modular headers in non-modular compilation were translated to #pragma clang module import. (#GH216924)
 - Fixed an assertion when `#pragma omp declare simd` or `#pragma omp declare variant` is followed by another OpenMP declarative directive containing a qualified identifier. (#GH217204)
 - Fixed a crash when an `asm` label names the register for a global variable of incomplete type. (#GH219746)
 - Fixed an ICE hat occurred when using `__imag int/float` as lvalue in assignment. (#GH119498)
 - Fixed an assertion failure in `-Wsign-compare` when a negated or complemented vector of unsigned integers was compared against a signed constant. (#GH203575)
 - Fixed an assertion failure when a constant statement expression that declares a variable is used as a bound of an OpenMP loop. A statement expression in a bound of a non-rectangular loop is now diagnosed. (#GH153987)
-
+- Fixed a bug where a bit-field accessed as the result of a statement expression
+  (e.g. `({ s.b; })`) was not subject to integer promotion, unlike an ordinary
+  bit-field access. (#GH221542)
+  
 #### Bug Fixes to Compiler Builtins
 
 - Fixed a crash when classifying a call to a builtin with dependent arguments,
@@ -564,8 +574,9 @@ features cannot lower the translation-unit ABI level;
   inside a member function call synthesized by ``__builtin_invoke``. (#GH185241)
 - Fixed a crash in ``__builtin_dump_struct`` when ``-Werror`` promotes
   format warnings to errors. (#GH211943)
-- Fixed a wrong code generation in `__builtin_clear_padding` wherein the
-  wrong bits of the `_BitInt` type were cleared in big-endian mode.
+- Fixed wrong code generation in `__builtin_clear_padding` wherein the wrong
+  bits of the following types were cleared: `_BitInt`, struct bitfields, and
+  packed boolean vectors. (#GH215809), (#GH216063), (#GH224033)
 - Fixed an assertion failure when `__builtin_vectorelements` is applied to a
   reference to a vector type; `vec_step` (in C++ for OpenCL) and
   `__builtin_ptrauth_type_discriminator` similarly no longer accept reference
@@ -968,6 +979,12 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 ### Sanitizers
 
 ### Python Binding Changes
+
+- Fixed a crash (`SIGFPE`) when traversing an AST via the visitor callbacks
+  (e.g. `Cursor.get_children`) on s390x. The callbacks now return a full
+  register word so the return value is correctly extended, working around a
+  `ctypes` bug (https://github.com/python/cpython/issues/156933) that left the
+  high bytes of the return register uninitialized.
 
 ### OpenMP Support
 

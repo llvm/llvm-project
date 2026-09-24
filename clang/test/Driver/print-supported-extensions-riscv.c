@@ -257,7 +257,7 @@
 // CHECK-NEXT:     zvdot4a8i            0.1       'Zvdot4a8i' (Vector 4-element Dot Product of packed 8-bit Integers)
 // CHECK-NEXT:     zvfbdota32f          0.2       'Zvfbdota32f' (FP32 batched dot-product extension)
 // CHECK-NEXT:     zvfbfa               0.1       'Zvfbfa' (Additional BF16 vector compute support)
-// CHECK-NEXT:     zvfofp8min           0.2       'Zvfofp8min' (Vector OFP8 Converts)
+// CHECK-NEXT:     zvfofp8min           0.9       'Zvfofp8min' (Vector OFP8 Converts)
 // CHECK-NEXT:     zvfqwbdota8f         0.2       'Zvfqwbdota8f' (OCP FP8 batched dot-product extension)
 // CHECK-NEXT:     zvfqwdota8f          0.2       'Zvfqwdota8f' (OCP FP8 Dot-Product)
 // CHECK-NEXT:     zvfwbdota16bf        0.2       'Zvfwbdota16bf' (BF16 batched dot-product extension)

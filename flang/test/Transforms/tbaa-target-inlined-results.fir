@@ -34,4 +34,4 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
 // CHECK: #[[TBAA_TAG:.*]] = #llvm.tbaa_tag<base_type = #[[TBAA_TYPE_DESC5]], access_type = #[[TBAA_TYPE_DESC5]], offset = 0>
 
 // CHECK-LABEL: func.func @_QMmPfoo
-// CHECK: fir.store %{{.*}} to %{{.*}} {tbaa = [#[[TBAA_TAG]]]} : !fir.ref<!fir.char<1>>
+// CHECK: fir.store %{{.*}} to %{{.*}} <{tbaa = [#[[TBAA_TAG]]]}> : !fir.ref<!fir.char<1>>
