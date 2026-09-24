@@ -660,7 +660,7 @@ static void printSchedule(llvm::raw_ostream &OS, const isl::schedule &Schedule,
 /// of the same statement, are bounded.
 static bool hasBoundedDistances(const isl::map &Map) {
   isl::set Deltas = Map.deltas();
-  return !Deltas.is_null() && isl_set_is_bounded(Deltas.get()) == isl_bool_true;
+  return !Deltas.is_null() && Deltas.is_bounded().is_true();
 }
 
 /// Undo the simplification of the proximity dependences of a statement on
@@ -676,14 +676,21 @@ static bool hasBoundedDistances(const isl::map &Map) {
 ///
 /// @param Simplified The simplified proximity dependences.
 /// @param Exact      The proximity dependences before simplification.
-static isl::union_map keepBoundedDistances(isl::union_map Simplified,
+static isl::union_map keepBoundedDistances(const isl::union_map &Simplified,
                                            const isl::union_map &Exact) {
   isl::union_map Result = isl::union_map::empty(Simplified.ctx());
   for (isl::map Map : Simplified.get_map_list()) {
     isl::space Space = Map.get_space();
     if (Space.domain().is_equal(Space.range()) && !hasBoundedDistances(Map)) {
+      // Only add the constraints that bound the distances before the
+      // simplification, i.e. the hull of the exact distances, rather than
+      // restoring all constraints of the exact dependence.
       isl::map ExactMap = Exact.extract_map(Space);
-      if (hasBoundedDistances(ExactMap))
+      isl::map Bounded =
+          Map.intersect(ExactMap.deltas().simple_hull().translation());
+      if (hasBoundedDistances(Bounded))
+        Map = Bounded;
+      else if (hasBoundedDistances(ExactMap))
         Map = ExactMap;
     }
     Result = Result.unite(isl::union_map(Map));
