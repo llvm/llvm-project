@@ -70,6 +70,18 @@ void test() {
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::as_const(v)[Diff{0}];
 
+#if TEST_STD_VER >= 23
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  v.cbegin();
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::as_const(v).cbegin();
+
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  v.cend();
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::as_const(v).cend();
+#endif
+
 #if TEST_STD_VER >= 29
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   v.at(Diff{0});

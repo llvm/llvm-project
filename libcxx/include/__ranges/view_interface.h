@@ -75,22 +75,22 @@ public:
     }
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto cbegin()
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto cbegin()
     requires input_range<_Derived>
   {
     return ranges::cbegin(__derived());
   }
-  _LIBCPP_HIDE_FROM_ABI constexpr auto cbegin() const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto cbegin() const
     requires input_range<const _Derived>
   {
     return ranges::cbegin(__derived());
   }
-  _LIBCPP_HIDE_FROM_ABI constexpr auto cend()
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto cend()
     requires input_range<_Derived>
   {
     return ranges::cend(__derived());
   }
-  _LIBCPP_HIDE_FROM_ABI constexpr auto cend() const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto cend() const
     requires input_range<const _Derived>
   {
     return ranges::cend(__derived());
