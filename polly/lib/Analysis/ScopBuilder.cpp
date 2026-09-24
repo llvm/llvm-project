@@ -1453,7 +1453,7 @@ void ScopBuilder::addUserAssumptions(
     // not overflowing). Checking for newly recorded assumptions is not
     // sufficient: SCEVAffinator caches translated expressions, so a
     // precondition shared with an earlier assumption is only recorded once.
-    isl::set &BBInvalidDomain = InvalidDomainMap[BB];
+    isl::set BBInvalidDomain = InvalidDomainMap[BB];
     assert(!BBInvalidDomain.is_null() && "Cannot propagate a nullptr.");
     DenseMap<BasicBlock *, isl::set> AssumptionInvalidDomainMap;
     AssumptionInvalidDomainMap[BB] =
@@ -1464,7 +1464,7 @@ void ScopBuilder::addUserAssumptions(
 
     isl::set AssumptionInvalidDomain = AssumptionInvalidDomainMap[BB];
     bool HasPreconditions = !AssumptionInvalidDomain.is_empty();
-    BBInvalidDomain = BBInvalidDomain.unite(AssumptionInvalidDomain);
+    InvalidDomainMap[BB] = BBInvalidDomain.unite(AssumptionInvalidDomain);
 
     if (!Valid)
       continue;
