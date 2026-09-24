@@ -850,7 +850,7 @@ public:
         NumberOfPartsCache.try_emplace(std::make_tuple(VecTy, ScalarTy, Limit));
     if (Inserted)
       It->second = slpvectorizer::getNumberOfPartsOrRegs(
-          /*QueryNumParts*/ true, *TTI, VecTy, ScalarTy, SLPReVec, Limit);
+          /*QueryNumParts=*/true, *TTI, VecTy, ScalarTy, SLPReVec, Limit);
     return It->second;
   }
 
@@ -864,7 +864,7 @@ public:
         NumberOfRegsCache.try_emplace(std::make_tuple(VecTy, ScalarTy, Limit));
     if (Inserted)
       It->second = slpvectorizer::getNumberOfPartsOrRegs(
-          /*QueryNumParts*/ false, *TTI, VecTy, ScalarTy, SLPReVec, Limit);
+          /*QueryNumParts=*/false, *TTI, VecTy, ScalarTy, SLPReVec, Limit);
     return It->second;
   }
 
