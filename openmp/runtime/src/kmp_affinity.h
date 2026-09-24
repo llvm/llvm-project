@@ -350,7 +350,10 @@ class KMPNativeAffinity : public KMPAffinity {
 
   public:
     mask_t *mask;
-    Mask() { mask = (mask_t *)__kmp_allocate(__kmp_affin_mask_size); }
+    Mask()
+        : mask(__kmp_affin_mask_size == 0
+                   ? nullptr
+                   : (mask_t *)__kmp_allocate(__kmp_affin_mask_size)) {}
     ~Mask() {
       if (mask)
         __kmp_free(mask);
