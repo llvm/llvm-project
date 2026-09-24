@@ -568,10 +568,17 @@ void CIRGenNVCUDARuntime::recordDeviceBinary() {
     return;
   }
 
-  cgm.getModule()->setAttr(
-      cir::CIRDialect::getCUDADeviceBinaryAttrName(),
-      mlir::StringAttr::get(&cgm.getMLIRContext(),
-                            binaryOrErr.get()->getBuffer()));
+  // Typed as the fatbin global's array type so LoweringPrepare can use this
+  // attribute as the initializer as-is: attributes are uniqued on {value, type}
+  // and never freed, so building a second, typed copy there would keep the fat
+  // binary in memory twice.
+  StringRef bytes = binaryOrErr.get()->getBuffer();
+  mlir::MLIRContext &ctx = cgm.getMLIRContext();
+  auto charTy = cir::IntType::get(&ctx, cgm.getTarget().getCharWidth(),
+                                  /*isSigned=*/false);
+  auto fatbinTy = cir::ArrayType::get(charTy, bytes.size());
+  cgm.getModule()->setAttr(cir::CIRDialect::getCUDADeviceBinaryAttrName(),
+                           mlir::StringAttr::get(bytes, fatbinTy));
 }
 
 void CIRGenNVCUDARuntime::finalizeModule() {

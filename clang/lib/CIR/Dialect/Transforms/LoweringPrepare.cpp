@@ -2544,8 +2544,6 @@ void LoweringPreparePass::buildCUDAModuleCtor() {
     return;
   }
 
-  llvm::StringRef deviceBinary = deviceBinaryAttr.getValue();
-
   // Set up common types and builder.
   llvm::StringRef cudaPrefix = getCUDAPrefix(getLangOpts());
   mlir::Location loc = mlirModule->getLoc();
@@ -2556,9 +2554,6 @@ void LoweringPreparePass::buildCUDAModuleCtor() {
   PointerType voidPtrTy = builder.getVoidPtrTy();
   PointerType voidPtrPtrTy = builder.getPointerTo(voidPtrTy);
   IntType intTy = builder.getSIntNTy(32);
-  IntType charTy =
-      cir::IntType::get(&getContext(), getTargetInfo().getCharWidth(),
-                        /*isSigned=*/false);
 
   // --- Create fatbin globals ---
 
@@ -2570,7 +2565,8 @@ void LoweringPreparePass::buildCUDAModuleCtor() {
       getLangOpts().HIP ? ".hipFatBinSegment" : ".nvFatBinSegment";
 
   // Create the fatbin string constant with GPU binary contents.
-  auto fatbinType = ArrayType::get(&getContext(), charTy, deviceBinary.size());
+  // The dialect verifier guarantees the attribute is typed as the array.
+  auto fatbinType = mlir::cast<ArrayType>(deviceBinaryAttr.getType());
   std::string fatbinStrName = addUnderscoredPrefix(cudaPrefix, "_fatbin_str");
   GlobalOp fatbinStr = GlobalOp::create(builder, loc, fatbinStrName, fatbinType,
                                         /*isConstant=*/true, {},
@@ -2582,8 +2578,8 @@ void LoweringPreparePass::buildCUDAModuleCtor() {
     fatbinStr.setAlignment(8);
   }
 
-  fatbinStr.setInitialValueAttr(cir::ConstArrayAttr::get(
-      fatbinType, StringAttr::get(deviceBinary, fatbinType)));
+  fatbinStr.setInitialValueAttr(
+      cir::ConstArrayAttr::get(fatbinType, deviceBinaryAttr));
   fatbinStr.setSection(fatbinConstName);
   fatbinStr.setPrivate();
 
@@ -3102,10 +3098,10 @@ void LoweringPreparePass::runOnOperation() {
   buildCXXGlobalTlsFunc();
   if (getLangOpts().CUDA && !getLangOpts().CUDAIsDevice) {
     buildCUDAModuleCtor();
-    // The bytes are in the fatbin global now; drop the attribute so a large fat
-    // binary isn't stored twice in an emitted .cir. This has to happen out here
-    // because the ctor and both dtor builders test the attribute to decide
-    // whether a device-side binary exists at all.
+    // The fatbin global now references the same attribute; drop the module's
+    // reference so an emitted .cir doesn't print the bytes twice. This has to
+    // happen out here because the ctor and both dtor builders test the
+    // attribute to decide whether a device-side binary exists at all.
     mlirModule->removeAttr(CIRDialect::getCUDADeviceBinaryAttrName());
   }
 
