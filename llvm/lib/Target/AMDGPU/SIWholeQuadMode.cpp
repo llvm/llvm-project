@@ -1221,13 +1221,15 @@ void SIWholeQuadMode::toExact(MachineBasicBlock &MBB,
   if (SaveWQM) {
     unsigned Opcode =
         IsTerminator ? LMC.AndSaveExecTermOpc : LMC.AndSaveExecOpc;
-    MI =
-        BuildMI(MBB, Before, DL, TII->get(Opcode), SaveWQM).addReg(LiveMaskReg);
+    MI = BuildMI(MBB, Before, DL, TII->get(Opcode), SaveWQM)
+             .addReg(LiveMaskReg)
+             .setOperandDead(3);
   } else {
     unsigned Opcode = IsTerminator ? LMC.AndTermOpc : LMC.AndOpc;
     MI = BuildMI(MBB, Before, DL, TII->get(Opcode), LMC.ExecReg)
              .addReg(LMC.ExecReg)
-             .addReg(LiveMaskReg);
+             .addReg(LiveMaskReg)
+             .setOperandDead(3);
   }
 
   LIS->InsertMachineInstrInMaps(*MI);
@@ -1246,7 +1248,8 @@ void SIWholeQuadMode::toWQM(MachineBasicBlock &MBB,
              .addReg(SavedWQM);
   } else {
     MI = BuildMI(MBB, Before, DL, TII->get(LMC.WQMOpc), LMC.ExecReg)
-             .addReg(LMC.ExecReg);
+             .addReg(LMC.ExecReg)
+             .setOperandDead(2);
   }
 
   LIS->InsertMachineInstrInMaps(*MI);
@@ -1265,10 +1268,12 @@ void SIWholeQuadMode::toStrictMode(MachineBasicBlock &MBB,
 
   if (StrictStateNeeded == StateStrictWWM) {
     MI = BuildMI(MBB, Before, DL, TII->get(AMDGPU::ENTER_STRICT_WWM), SaveOrig)
-             .addImm(-1);
+             .addImm(-1)
+             .setOperandDead(3);
   } else {
     MI = BuildMI(MBB, Before, DL, TII->get(AMDGPU::ENTER_STRICT_WQM), SaveOrig)
-             .addImm(-1);
+             .addImm(-1)
+             .setOperandDead(3);
   }
   LIS->InsertMachineInstrInMaps(*MI);
   StateTransition[MI] = StrictStateNeeded;
@@ -1794,7 +1799,8 @@ bool SIWholeQuadMode::run(MachineFunction &MF) {
     // Shader only needs WQM
     auto MI =
         BuildMI(Entry, EntryMI, DebugLoc(), TII->get(LMC.WQMOpc), LMC.ExecReg)
-            .addReg(LMC.ExecReg);
+            .addReg(LMC.ExecReg)
+            .setOperandDead(2);
     LIS->InsertMachineInstrInMaps(*MI);
     lowerKillInstrs(true);
     Changed = true;
