@@ -78,7 +78,7 @@ class PSForm_DCBZL<bits<10> xo, dag OOL, dag IOL, string asmstr,
 let DecoderNamespace = "PairedSingles", Predicates = [HasPairedSingles] in {
 
 let mayLoad = 1, mayStore = 0, hasSideEffects = 0 in {
-// Load a PS from a specific memory location
+// Load a PS from a specific memory location.
 def PSQ_L   : PSForm_QD<56, (outs f8rc:$FRT),
                         (ins (psqdisp $D, $RA):$addr, u1imm:$W, u3imm:$QI),
                         "psq_l $FRT, $addr, $W, $QI", IIC_LdStLFD, []>;
@@ -96,7 +96,7 @@ def PSQ_LUX : PSForm_QX<38, (outs f8rc:$FRT, ptr_rc_nor0:$ea_result),
 }
 
 let mayLoad = 0, mayStore = 1, hasSideEffects = 0 in {
-// Store a PS at a specific memory location
+// Store a PS at a specific memory location.
 def PSQ_ST  : PSForm_QD<60, (outs),
                         (ins f8rc:$FRT, (psqdisp $D, $RA):$dst, u1imm:$W,
                              u3imm:$QI),
@@ -125,12 +125,12 @@ defm PS_ADD    : AForm_2r<4, 21, (outs f8rc:$FRT),
 defm PS_MUL    : AForm_3r<4, 25, (outs f8rc:$FRT),
                           (ins f8rc:$FRA, f8rc:$FRC),
                           "ps_mul", "$FRT, $FRA, $FRC", IIC_FPGeneral, []>;
-// Multiply Add
+// Multiply Add.
 defm PS_MADD   : AForm_1r<4, 29, (outs f8rc:$FRT),
                           (ins f8rc:$FRA, f8rc:$FRC, f8rc:$FRB),
                           "ps_madd", "$FRT, $FRA, $FRC, $FRB", IIC_FPFused,
                           []>;
-// Negative Multiply Add
+// Negative Multiply Add.
 defm PS_NMADD  : AForm_1r<4, 31, (outs f8rc:$FRT),
                           (ins f8rc:$FRA, f8rc:$FRC, f8rc:$FRB),
                           "ps_nmadd", "$FRT, $FRA, $FRC, $FRB", IIC_FPFused,
@@ -142,27 +142,27 @@ defm PS_SUB    : AForm_2r<4, 20, (outs f8rc:$FRT),
 defm PS_DIV    : AForm_2r<4, 18, (outs f8rc:$FRT),
                           (ins f8rc:$FRA, f8rc:$FRB),
                           "ps_div", "$FRT, $FRA, $FRB", IIC_FPDivS, []>;
-// Multiply Subtract
+// Multiply Subtract.
 defm PS_MSUB   : AForm_1r<4, 28, (outs f8rc:$FRT),
                           (ins f8rc:$FRA, f8rc:$FRC, f8rc:$FRB),
                           "ps_msub", "$FRT, $FRA, $FRC, $FRB", IIC_FPFused,
                           []>;
-// Negative Multiply Subtract
+// Negative Multiply Subtract.
 defm PS_NMSUB  : AForm_1r<4, 30, (outs f8rc:$FRT),
                           (ins f8rc:$FRA, f8rc:$FRC, f8rc:$FRB),
                           "ps_nmsub", "$FRT, $FRA, $FRC, $FRB", IIC_FPFused,
                           []>;
-// Reciprocal Estimate
+// Reciprocal Estimate.
 defm PS_RES    : XForm_26r<4, 24, (outs f8rc:$RST), (ins f8rc:$RB),
                            "ps_res", "$RST, $RB", IIC_FPGeneral, []>;
-// Reciprocal Square Root Estimate
+// Reciprocal Square Root Estimate.
 defm PS_RSQRTE : XForm_26r<4, 26, (outs f8rc:$RST), (ins f8rc:$RB),
                            "ps_rsqrte", "$RST, $RB", IIC_FPGeneral, []>;
-// Multply A with the 1st element of B
+// Multply A with the 1st element of B.
 defm PS_MULS0  : AForm_3r<4, 12, (outs f8rc:$FRT),
                           (ins f8rc:$FRA, f8rc:$FRC),
                           "ps_muls0", "$FRT, $FRA, $FRC", IIC_FPGeneral, []>;
-// Multply A with the 2nd element of B
+// Multply A with the 2nd element of B.
 defm PS_MULS1  : AForm_3r<4, 13, (outs f8rc:$FRT),
                           (ins f8rc:$FRA, f8rc:$FRC),
                           "ps_muls1", "$FRT, $FRA, $FRC", IIC_FPGeneral, []>;
@@ -226,16 +226,16 @@ defm PS_MERGE11 : XForm_28r<4, 624, (outs f8rc:$RST),
 }
 
 let mayRaiseFPException = 1, hasSideEffects = 0 in {
-// Unordered Comparison
+// Unordered Comparison.
 def PS_CMPU0 : XForm_17<4, 0, (outs crrc:$BF), (ins f8rc:$RA, f8rc:$RB),
                         "ps_cmpu0 $BF, $RA, $RB", IIC_FPCompare>;
-// Ordered Comparison
+// Ordered Comparison.
 def PS_CMPO0 : XForm_17<4, 32, (outs crrc:$BF), (ins f8rc:$RA, f8rc:$RB),
                         "ps_cmpo0 $BF, $RA, $RB", IIC_FPCompare>;
-// Unordered Comparison
+// Unordered Comparison.
 def PS_CMPU1 : XForm_17<4, 64, (outs crrc:$BF), (ins f8rc:$RA, f8rc:$RB),
                         "ps_cmpu1 $BF, $RA, $RB", IIC_FPCompare>;
-// Ordered Comparison
+// Ordered Comparison.
 def PS_CMPO1 : XForm_17<4, 96, (outs crrc:$BF), (ins f8rc:$RA, f8rc:$RB),
                         "ps_cmpo1 $BF, $RA, $RB", IIC_FPCompare>;
 }
