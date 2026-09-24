@@ -416,9 +416,7 @@ public:
   }
 
   /// Return true if all uses of the symbol within the IR are within this scope.
-  bool areAllUsesVisible(Operation *symbol) const {
-    return symbolsWithAllUsesVisible.contains(symbol);
-  }
+  bool areAllUsesVisible(Operation *symbol) const;
 
   /// Return true if the given symbol has no uses within this map's scope.
   bool useEmpty(Operation *symbol) const {
@@ -433,10 +431,13 @@ private:
   /// A reference to the symbol table used to construct this map.
   SymbolTableCollection &symbolTable;
 
+  /// The root of this map's scope.
+  Operation *root;
+
   /// A map of symbol operations to symbol users.
   DenseMap<Operation *, SetVector<Operation *>> symbolToUsers;
 
-  /// Symbols whose uses are all visible within this map's scope.
+  /// Non-private symbols whose uses are all visible within this map's scope.
   DenseSet<Operation *> symbolsWithAllUsesVisible;
 };
 
