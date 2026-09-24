@@ -3503,15 +3503,11 @@ bool RISCVTTIImpl::isLegalMaskedExpandLoad(Type *DataTy,
     uint64_t MaxEltCount = VTy->getElementCount().getKnownMinValue();
     if (VTy->isScalableTy())
       MaxEltCount *= ST->getRealMaxVLen() / RISCV::RVVBitsPerBlock;
-    if (MaxEltCount > 256) {
-      uint64_t LMUL;
-      if (VTy->isScalableTy())
-        LMUL = VTy->getPrimitiveSizeInBits().getKnownMinValue() /
-               RISCV::RVVBitsPerBlock;
-      else
-        LMUL = VTy->getPrimitiveSizeInBits() / ST->getRealMinVLen();
-      return LMUL < ST->getMaxLMULForFixedLengthVectors();
-    }
+    // We can't yet split any widened indices type.
+    if (MaxEltCount > 256)
+      return getTypeLegalizationCost(
+                 VTy->getWithNewType(Type::getInt16Ty(VTy->getContext())))
+                 .first == 1;
   }
   return true;
 }
