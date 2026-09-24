@@ -25,12 +25,10 @@ func.func @parallel_loop(%arg0 : index, %arg1 : index, %arg2 : index,
 // CHECK:               [[V9:%.*]] = arith.addi [[V7]], [[V3]] : index
 // CHECK:               [[V10:%.*]] = arith.addi [[V8]], [[V4]] : index
 // CHECK:               %true = arith.constant true
-// CHECK:               [[V11:%.*]] = arith.muli [[V7]], [[ARG5]] : index
-// CHECK:               [[V12:%.*]] = arith.addi [[V11]], [[V3]] : index
+// CHECK:               [[V12:%.*]] = arith.addi [[V7]], [[V3]] : index
 // CHECK:               [[V13:%.*]] = arith.cmpi ult, [[V12]], [[ARG3]] : index
 // CHECK:               [[V14:%.*]] = arith.andi %true, [[V13]] : i1
-// CHECK:               [[V15:%.*]] = arith.muli [[V8]], [[ARG6]] : index
-// CHECK:               [[V16:%.*]] = arith.addi [[V15]], [[V4]] : index
+// CHECK:               [[V16:%.*]] = arith.addi [[V8]], [[V4]] : index
 // CHECK:               [[V17:%.*]] = arith.cmpi ult, [[V16]], [[ARG4]] : index
 // CHECK:               [[V18:%.*]] = arith.andi [[V14]], [[V17]] : i1
 // CHECK:               scf.if [[V18]] {
@@ -147,3 +145,50 @@ func.func @tile_nested_in_non_ploop() {
 // CHECK:           }
 // CHECK:         }
 // CHECK:       }
+
+// -----
+
+func.func @parallel_loop_step_gt_one(%arg0 : index, %arg1 : index, %arg2 : index,
+                           %arg3 : index, %arg4 : index, %arg5 : index,
+                           %A: memref<?x?xf32>, %B: memref<?x?xf32>,
+                           %C: memref<?x?xf32>, %result: memref<?x?xf32>) {
+  %c2 = arith.constant 2 : index
+  %c3 = arith.constant 3 : index
+  scf.parallel (%i0, %i1) = (%arg0, %arg1) to (%arg2, %arg3) step (%c2, %c3) {
+    %B_elem = memref.load %B[%i0, %i1] : memref<?x?xf32>
+    %C_elem = memref.load %C[%i0, %i1] : memref<?x?xf32>
+    %sum_elem = arith.addf %B_elem, %C_elem : f32
+    memref.store %sum_elem, %result[%i0, %i1] : memref<?x?xf32>
+  }
+  return
+}
+
+// CHECK-LABEL:   func @parallel_loop_step_gt_one(
+// CHECK-SAME:                                    [[ARG0:%.*]]: index, [[ARG1:%.*]]: index, [[ARG2:%.*]]: index, [[ARG3:%.*]]: index, [[ARG4:%.*]]: index, [[ARG5:%.*]]: index, [[ARG6:%.*]]: memref<?x?xf32>, [[ARG7:%.*]]: memref<?x?xf32>, [[ARG8:%.*]]: memref<?x?xf32>, [[ARG9:%.*]]: memref<?x?xf32>) {
+// CHECK-DAG:       [[C0:%.*]] = arith.constant 0 : index
+// CHECK-DAG:       [[C2:%.*]] = arith.constant 2 : index
+// CHECK-DAG:       [[C3:%.*]] = arith.constant 3 : index
+// CHECK-DAG:       [[C1:%.*]] = arith.constant 1 : index
+// CHECK-DAG:       [[C4:%.*]] = arith.constant 4 : index
+// CHECK:           [[V1:%.*]] = arith.muli [[C2]], [[C1]] : index
+// CHECK:           [[V2:%.*]] = arith.muli [[C3]], [[C4]] : index
+// CHECK:           scf.parallel ([[V3:%.*]], [[V4:%.*]]) = ([[ARG0]], [[ARG1]]) to ([[ARG2]], [[ARG3]]) step ([[V1]], [[V2]]) {
+// CHECK:             scf.parallel ([[V7:%.*]], [[V8:%.*]]) = ([[C0]], [[C0]]) to ([[V1]], [[V2]]) step ([[C2]], [[C3]]) {
+// CHECK:               [[V9:%.*]] = arith.addi [[V7]], [[V3]] : index
+// CHECK:               [[V10:%.*]] = arith.addi [[V8]], [[V4]] : index
+// CHECK:               %true = arith.constant true
+// CHECK:               [[V12:%.*]] = arith.addi [[V7]], [[V3]] : index
+// CHECK:               [[V13:%.*]] = arith.cmpi ult, [[V12]], [[ARG2]] : index
+// CHECK:               [[V14:%.*]] = arith.andi %true, [[V13]] : i1
+// CHECK:               [[V16:%.*]] = arith.addi [[V8]], [[V4]] : index
+// CHECK:               [[V17:%.*]] = arith.cmpi ult, [[V16]], [[ARG3]] : index
+// CHECK:               [[V18:%.*]] = arith.andi [[V14]], [[V17]] : i1
+// CHECK:               scf.if [[V18]] {
+// CHECK:                 [[V19:%.*]] = memref.load [[ARG7]]{{\[}}[[V9]], [[V10]]] : memref<?x?xf32>
+// CHECK:                 [[V20:%.*]] = memref.load [[ARG8]]{{\[}}[[V9]], [[V10]]] : memref<?x?xf32>
+// CHECK:                 [[V21:%.*]] = arith.addf [[V19]], [[V20]] : f32
+// CHECK:                 memref.store [[V21]], [[ARG9]]{{\[}}[[V9]], [[V10]]] : memref<?x?xf32>
+// CHECK:               }
+// CHECK:             }
+// CHECK:           }
+// CHECK:           return
