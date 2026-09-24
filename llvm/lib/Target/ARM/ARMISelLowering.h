@@ -504,7 +504,13 @@ class VectorType;
         Value *Accumulator = nullptr) const override;
 
     bool useFPRegsForHalfType() const override { return true; }
-    bool useFPRegsForBFloat16Type() const override { return true; }
+
+    MVT getRegisterTypeForCallingConv(LLVMContext &Context, CallingConv::ID CC,
+                                      EVT VT) const override;
+
+    unsigned getNumRegistersForCallingConv(LLVMContext &Context,
+                                           CallingConv::ID CC,
+                                           EVT VT) const override;
 
   protected:
     std::pair<const TargetRegisterClass *, uint8_t>

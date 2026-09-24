@@ -1536,16 +1536,8 @@ void TargetLoweringBase::computeRegisterProperties(
   // promote it to f32, because there are no bf16 library calls (except for
   // converting from f32 to bf16).
   if (!isTypeLegal(MVT::bf16)) {
-    // Allow targets to control how we legalize bfloat.
-    bool UseFPRegsForBFloat16Type = useFPRegsForBFloat16Type();
-
-    if (!UseFPRegsForBFloat16Type) {
-      NumRegistersForVT[MVT::bf16] = NumRegistersForVT[MVT::i16];
-      RegisterTypeForVT[MVT::bf16] = RegisterTypeForVT[MVT::i16];
-    } else {
-      NumRegistersForVT[MVT::bf16] = NumRegistersForVT[MVT::f32];
-      RegisterTypeForVT[MVT::bf16] = RegisterTypeForVT[MVT::f32];
-    }
+    NumRegistersForVT[MVT::bf16] = NumRegistersForVT[MVT::i16];
+    RegisterTypeForVT[MVT::bf16] = RegisterTypeForVT[MVT::i16];
     TransformToType[MVT::bf16] = MVT::f32;
     ValueTypeActions.setTypeAction(MVT::bf16, TypeSoftPromoteHalf);
   }

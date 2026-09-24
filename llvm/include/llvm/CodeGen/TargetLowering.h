@@ -571,12 +571,6 @@ public:
   // values are always passed and returned as f32.
   virtual bool useFPRegsForHalfType() const { return false; }
 
-  // Return true if, for soft-promoted bfloat, the bfloat type should be
-  // passed to and returned from functions as f32. The default behavior is to
-  // pass as i16. If soft-promoted bfloat is not used, this function is
-  // ignored and values are always passed and returned as f32.
-  virtual bool useFPRegsForBFloat16Type() const { return false; }
-
   // There are two general methods for expanding a BUILD_VECTOR node:
   //  1. Use SCALAR_TO_VECTOR on the defined scalar values and then shuffle
   //     them together.

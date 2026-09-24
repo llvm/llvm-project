@@ -260,28 +260,46 @@ define bfloat @test_tailcall_flipped(bfloat %a, bfloat %b) #0 {
 ;}
 
 define bfloat @test_phi(ptr %p1) #0 {
-; CHECK-LABEL: test_phi:
-; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r4, lr}
-; CHECK-NEXT:    push {r4, lr}
-; CHECK-NEXT:    .vsave {d8, d9}
-; CHECK-NEXT:    vpush {d8, d9}
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    ldrh r0, [r0]
-; CHECK-NEXT:    vmov s18, r0
-; CHECK-NEXT:  .LBB5_1: @ %loop
-; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldrh r0, [r4]
-; CHECK-NEXT:    vmov.f32 s16, s18
-; CHECK-NEXT:    vmov s18, r0
-; CHECK-NEXT:    mov r0, r4
-; CHECK-NEXT:    bl test_dummy
-; CHECK-NEXT:    tst r0, #1
-; CHECK-NEXT:    bne .LBB5_1
-; CHECK-NEXT:  @ %bb.2: @ %return
-; CHECK-NEXT:    vmov.f32 s0, s16
-; CHECK-NEXT:    vpop {d8, d9}
-; CHECK-NEXT:    pop {r4, pc}
+; CHECK-CVT-LABEL: test_phi:
+; CHECK-CVT:       @ %bb.0: @ %entry
+; CHECK-CVT-NEXT:    .save {r4, r5, r6, lr}
+; CHECK-CVT-NEXT:    push {r4, r5, r6, lr}
+; CHECK-CVT-NEXT:    ldrh r5, [r0]
+; CHECK-CVT-NEXT:    mov r4, r0
+; CHECK-CVT-NEXT:  .LBB5_1: @ %loop
+; CHECK-CVT-NEXT:    @ =>This Inner Loop Header: Depth=1
+; CHECK-CVT-NEXT:    mov r0, r4
+; CHECK-CVT-NEXT:    mov r6, r5
+; CHECK-CVT-NEXT:    ldrh r5, [r4]
+; CHECK-CVT-NEXT:    bl test_dummy
+; CHECK-CVT-NEXT:    tst r0, #1
+; CHECK-CVT-NEXT:    bne .LBB5_1
+; CHECK-CVT-NEXT:  @ %bb.2: @ %return
+; CHECK-CVT-NEXT:    vmov s0, r6
+; CHECK-CVT-NEXT:    pop {r4, r5, r6, pc}
+;
+; CHECK-BF16-LABEL: test_phi:
+; CHECK-BF16:       @ %bb.0: @ %entry
+; CHECK-BF16-NEXT:    .save {r4, lr}
+; CHECK-BF16-NEXT:    push {r4, lr}
+; CHECK-BF16-NEXT:    .vsave {d8, d9}
+; CHECK-BF16-NEXT:    vpush {d8, d9}
+; CHECK-BF16-NEXT:    mov r4, r0
+; CHECK-BF16-NEXT:    ldrh r0, [r0]
+; CHECK-BF16-NEXT:    vmov s18, r0
+; CHECK-BF16-NEXT:  .LBB5_1: @ %loop
+; CHECK-BF16-NEXT:    @ =>This Inner Loop Header: Depth=1
+; CHECK-BF16-NEXT:    ldrh r0, [r4]
+; CHECK-BF16-NEXT:    vmov.f32 s16, s18
+; CHECK-BF16-NEXT:    vmov s18, r0
+; CHECK-BF16-NEXT:    mov r0, r4
+; CHECK-BF16-NEXT:    bl test_dummy
+; CHECK-BF16-NEXT:    tst r0, #1
+; CHECK-BF16-NEXT:    bne .LBB5_1
+; CHECK-BF16-NEXT:  @ %bb.2: @ %return
+; CHECK-BF16-NEXT:    vmov.f32 s0, s16
+; CHECK-BF16-NEXT:    vpop {d8, d9}
+; CHECK-BF16-NEXT:    pop {r4, pc}
 entry:
   %a = load bfloat, ptr %p1
   br label %loop

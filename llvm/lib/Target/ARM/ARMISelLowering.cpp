@@ -22260,6 +22260,26 @@ static bool isHomogeneousAggregate(Type *Ty, HABaseType &Base,
   return (Members > 0 && Members <= 4);
 }
 
+MVT ARMTargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
+                                                     CallingConv::ID CC,
+                                                     EVT VT) const {
+  // Pass soft-promoted bf16 like f32.
+  if (VT == MVT::bf16 && !isTypeLegal(MVT::bf16))
+    return TargetLowering::getRegisterTypeForCallingConv(Context, CC, MVT::f32);
+
+  return TargetLowering::getRegisterTypeForCallingConv(Context, CC, VT);
+}
+
+unsigned ARMTargetLowering::getNumRegistersForCallingConv(LLVMContext &Context,
+                                                          CallingConv::ID CC,
+                                                          EVT VT) const {
+  // Pass soft-promoted bf16 like f32.
+  if (VT == MVT::bf16 && !isTypeLegal(MVT::bf16))
+    return TargetLowering::getNumRegistersForCallingConv(Context, CC, MVT::f32);
+
+  return TargetLowering::getNumRegistersForCallingConv(Context, CC, VT);
+}
+
 /// Return the correct alignment for the current calling convention.
 Align ARMTargetLowering::getABIAlignmentForCallingConv(
     Type *ArgTy, const DataLayout &DL) const {

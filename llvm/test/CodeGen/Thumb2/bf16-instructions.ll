@@ -1045,26 +1045,21 @@ define bfloat @test_phi(ptr %p1) {
 ;
 ; CHECK-FP-LABEL: test_phi:
 ; CHECK-FP:       @ %bb.0: @ %entry
-; CHECK-FP-NEXT:    .save {r4, lr}
-; CHECK-FP-NEXT:    push {r4, lr}
-; CHECK-FP-NEXT:    .vsave {d8, d9}
-; CHECK-FP-NEXT:    vpush {d8, d9}
+; CHECK-FP-NEXT:    .save {r4, r5, r6, lr}
+; CHECK-FP-NEXT:    push {r4, r5, r6, lr}
+; CHECK-FP-NEXT:    ldrh r5, [r0]
 ; CHECK-FP-NEXT:    mov r4, r0
-; CHECK-FP-NEXT:    ldrh r0, [r0]
-; CHECK-FP-NEXT:    vmov s18, r0
 ; CHECK-FP-NEXT:  .LBB36_1: @ %loop
 ; CHECK-FP-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-FP-NEXT:    ldrh r0, [r4]
-; CHECK-FP-NEXT:    vmov.f32 s16, s18
-; CHECK-FP-NEXT:    vmov s18, r0
 ; CHECK-FP-NEXT:    mov r0, r4
+; CHECK-FP-NEXT:    mov r6, r5
+; CHECK-FP-NEXT:    ldrh r5, [r4]
 ; CHECK-FP-NEXT:    bl test_dummy
 ; CHECK-FP-NEXT:    lsls r0, r0, #31
 ; CHECK-FP-NEXT:    bne .LBB36_1
 ; CHECK-FP-NEXT:  @ %bb.2: @ %return
-; CHECK-FP-NEXT:    vmov.f32 s0, s16
-; CHECK-FP-NEXT:    vpop {d8, d9}
-; CHECK-FP-NEXT:    pop {r4, pc}
+; CHECK-FP-NEXT:    vmov s0, r6
+; CHECK-FP-NEXT:    pop {r4, r5, r6, pc}
 entry:
   %a = load bfloat, ptr %p1
   br label %loop
