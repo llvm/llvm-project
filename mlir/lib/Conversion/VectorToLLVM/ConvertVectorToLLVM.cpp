@@ -2094,10 +2094,12 @@ FailureOr<Value> ContractionOpToMatmulOpLowering::matchAndRewriteMaskableOp(
 
   Type opResType = op.getType();
   VectorType vecType = dyn_cast<VectorType>(opResType);
-  if (vecType && vecType.isScalable()) {
-    // Note - this is sufficient to reject all cases with scalable vectors.
+  if (vecType && vecType.isScalable())
     return failure();
-  }
+  // The result type only reflects the M and N dims, so a scalable K
+  // (reduction) dim would slip through the check above.
+  if (op.getLhsType().isScalable() || op.getRhsType().isScalable())
+    return failure();
 
   Type elementType = op.getLhsType().getElementType();
   if (!elementType.isIntOrFloat())
