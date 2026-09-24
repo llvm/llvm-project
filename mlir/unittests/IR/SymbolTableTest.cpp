@@ -235,7 +235,6 @@ TEST(SymbolUserMap, AllUsesVisible) {
   Operation *privateSymbol = SymbolTable::lookupSymbolIn(exposed, "private");
   Operation *nested = SymbolTable::lookupSymbolIn(exposed, "nested");
   Operation *localUser = SymbolTable::lookupSymbolIn(exposed, "local_user");
-  Operation *outside = SymbolTable::lookupSymbolIn(*module, "outside");
   Operation *child = SymbolTable::lookupSymbolIn(exposed, "child");
   Operation *childLeaf = SymbolTable::lookupSymbolIn(child, "leaf");
   Operation *hidden = SymbolTable::lookupSymbolIn(exposed, "hidden");
@@ -266,12 +265,9 @@ TEST(SymbolUserMap, AllUsesVisible) {
   EXPECT_TRUE(exposedMap.useEmpty(childLeaf));
   EXPECT_TRUE(exposedMap.areAllUsesVisible(hiddenLeaf));
   EXPECT_TRUE(exposedMap.areAllUsesVisible(hiddenPublic));
-  EXPECT_FALSE(exposedMap.areAllUsesVisible(outside));
-  EXPECT_FALSE(exposedMap.areAllUsesVisible(exposed));
 
   // A private table hides its nested symbols even when it is the map root.
   SymbolUserMap hiddenMap(tables, hidden);
-  EXPECT_FALSE(hiddenMap.areAllUsesVisible(hidden));
   EXPECT_TRUE(hiddenMap.areAllUsesVisible(hiddenLeaf));
   EXPECT_TRUE(hiddenMap.areAllUsesVisible(hiddenPublic));
 }

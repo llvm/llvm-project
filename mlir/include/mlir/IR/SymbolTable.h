@@ -416,6 +416,7 @@ public:
   }
 
   /// Return true if all uses of the symbol within the IR are within this scope.
+  /// The symbol must belong to this map's scope.
   bool areAllUsesVisible(Operation *symbol) const;
 
   /// Return true if the given symbol has no uses within this map's scope.
@@ -430,9 +431,6 @@ public:
 private:
   /// A reference to the symbol table used to construct this map.
   SymbolTableCollection &symbolTable;
-
-  /// The root of this map's scope.
-  Operation *root;
 
   /// A map of symbol operations to symbol users.
   DenseMap<Operation *, SetVector<Operation *>> symbolToUsers;

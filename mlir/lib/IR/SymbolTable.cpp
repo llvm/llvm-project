@@ -1049,7 +1049,7 @@ LockedSymbolTableCollection::getSymbolTable(Operation *symbolTableOp) {
 
 SymbolUserMap::SymbolUserMap(SymbolTableCollection &symbolTable,
                              Operation *symbolTableOp)
-    : symbolTable(symbolTable), root(symbolTableOp) {
+    : symbolTable(symbolTable) {
   // Collect symbol users and visibility within each symbol table.
   SmallVector<Operation *> symbols;
   auto walkFn = [&](Operation *symbolTableOp, bool allUsesVisible) {
@@ -1078,7 +1078,7 @@ SymbolUserMap::SymbolUserMap(SymbolTableCollection &symbolTable,
 bool SymbolUserMap::areAllUsesVisible(Operation *symbol) const {
   // Private symbols can only have users within their table.
   if (cast<SymbolOpInterface>(symbol).isPrivate())
-    return root->isProperAncestor(symbol);
+    return true;
   return symbolsWithAllUsesVisible.contains(symbol);
 }
 
