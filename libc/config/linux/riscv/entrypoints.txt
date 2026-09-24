@@ -399,6 +399,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.stat.mkdirat
     libc.src.sys.stat.mkfifo
     libc.src.sys.stat.mkfifoat
+    libc.src.sys.stat.mknod
     libc.src.sys.stat.mknodat
     libc.src.sys.stat.stat
     libc.src.sys.stat.umask
@@ -464,6 +465,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.faccessat
     libc.src.unistd.fchdir
     libc.src.unistd.fchown
+    libc.src.unistd.fdatasync
     libc.src.unistd.fpathconf
     libc.src.unistd.fsync
     libc.src.unistd.ftruncate

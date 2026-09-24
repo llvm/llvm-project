@@ -147,7 +147,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
 }
 
 // Pointer global should be created with section attribute.
-// CHECK: fir.global internal @_QMtestEmanx.managed.ptr {section = "__nv_managed_data__"} : !fir.llvm_ptr<i8>
+// CHECK: fir.global internal @_QMtestEmanx.managed.ptr <{section = "__nv_managed_data__"}> : !fir.llvm_ptr<i8>
 // CHECK:   fir.zero_bits !fir.llvm_ptr<i8>
 
 // Constructor should register with CUFRegisterManagedVariable then init module.
