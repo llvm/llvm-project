@@ -87,22 +87,14 @@ SuperHTargetLowering::SuperHTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::ExternalSymbol, MVT::i32, Custom);
   setOperationAction(ISD::BlockAddress, MVT::i32, Custom);
 
-  for (MVT VT : MVT::integer_valuetypes()) {
-    setOperationAction(ISD::Constant, VT, Custom);
-  }
-
   setOperationAction(ISD::BR_CC, MVT::i8, Custom);
   setOperationAction(ISD::BR_CC, MVT::i16, Custom);
   setOperationAction(ISD::BR_CC, MVT::i32, Custom);
   setOperationAction(ISD::BR_CC, MVT::i64, Custom);
   setOperationAction(ISD::BRCOND, MVT::Other, Expand);
 
-  setOperationAction(ISD::SELECT_CC, MVT::i8, Custom);
-  setOperationAction(ISD::SELECT_CC, MVT::i16, Custom);
   setOperationAction(ISD::SELECT_CC, MVT::i32, Custom);
   setOperationAction(ISD::SELECT_CC, MVT::i64, Expand);
-  setOperationAction(ISD::SETCC, MVT::i8, Custom);
-  setOperationAction(ISD::SETCC, MVT::i16, Custom);
   setOperationAction(ISD::SETCC, MVT::i32, Custom);
   setOperationAction(ISD::SETCC, MVT::i64, Custom);
 
@@ -301,12 +293,6 @@ void SuperHTargetLowering::ReplaceNodeResults(SDNode *N,
   SDLoc DL(N);
 
   switch (N->getOpcode()) {
-  case ISD::Constant: {
-    if (const ConstantSDNode *C = dyn_cast<ConstantSDNode>(N)) {
-      Results.push_back(DAG.getConstant(C->getSExtValue(), DL, MVT::i32));
-    }
-    break;
-  }
   default: {
     SDValue Res = LowerOperation(SDValue(N, 0), DAG);
 
