@@ -1510,7 +1510,7 @@ void collectEnclosingConstructTraits(
       continue;
     }
     for (const OpenMPContextFrame *frame : frames) {
-      if (&frame->evaluation == ancestor && !frame->isPartial) {
+      if (&frame->evaluation == ancestor && frame->isReplacement) {
         append(frame->directive);
         break;
       }
@@ -1518,16 +1518,11 @@ void collectEnclosingConstructTraits(
   }
 
   // Include entered constituents while their own evaluation is current, e.g.
-  // PARALLEL when lowering the bounds of PARALLEL DO. Complete replacement
-  // frames already describe all constituents of a selected metadirective.
+  // PARALLEL when lowering the bounds of PARALLEL DO. A selected directive
+  // contributes here only through its entered constituents, so its own clause
+  // expressions have the same context as a directly written directive's.
   for (auto [index, frame] : llvm::enumerate(frames)) {
-    if (usedFrames[index])
-      continue;
-    if (frame->isPartial &&
-        llvm::any_of(
-            frames, [frameEval = &frame->evaluation](const auto *other) {
-              return !other->isPartial && &other->evaluation == frameEval;
-            }))
+    if (usedFrames[index] || frame->isReplacement)
       continue;
     append(frame->directive);
   }
