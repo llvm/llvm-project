@@ -266,11 +266,21 @@ LogicalResult AbstractSparseForwardDataFlowAnalysis::visitCallOperation(
   ArrayRef<AbstractSparseLattice *> forwardedResultLattices =
       resultLattices.slice(firstForwarded, forwardedResults.size());
 
-  for (Operation *predecessor : predecessors->getKnownPredecessors())
+  for (Operation *predecessor : predecessors->getKnownPredecessors()) {
+    // If the predecessor (return-like op) has a different number of operands
+    // than the forwarded results, we can't directly relate them. This can
+    // happen when the callable implicitly produces some results (e.g.,
+    // async.func implicitly produces an async.token). Conservatively set
+    // all forwarded result lattices to entry states.
+    if (predecessor->getNumOperands() != forwardedResultLattices.size()) {
+      setAllToEntryStates(forwardedResultLattices);
+      continue;
+    }
     for (auto &&[operand, resLattice] :
          llvm::zip_equal(predecessor->getOperands(), forwardedResultLattices))
       join(resLattice,
            *getLatticeElementFor(getProgramPointAfter(call), operand));
+  }
   return success();
 }
 
@@ -288,10 +298,16 @@ void AbstractSparseForwardDataFlowAnalysis::visitCallableOperation(
   }
   for (Operation *callsite : callsites->getKnownPredecessors()) {
     auto call = cast<CallOpInterface>(callsite);
-    for (auto it : llvm::zip(call.getArgOperands(), argLattices))
-      join(std::get<1>(it),
-           *getLatticeElementFor(getProgramPointBefore(entryBlock),
-                                 std::get<0>(it)));
+    OperandRange argOperands = call.getArgOperands();
+    // If the number of forwarded call arguments doesn't match the callee's
+    // block arguments, we can't directly relate them. Conservatively set all
+    // argument lattices to entry states.
+    if (argOperands.size() != argLattices.size()) {
+      return setAllToEntryStates(argLattices);
+    }
+    for (auto [operand, argLattice] : llvm::zip_equal(argOperands, argLattices))
+      join(argLattice,
+           *getLatticeElementFor(getProgramPointBefore(entryBlock), operand));
   }
 }
 
@@ -542,11 +558,16 @@ AbstractSparseBackwardDataFlowAnalysis::visitOperation(Operation *op) {
       // Otherwise, propagate information from the entry point of the function
       // back to operands whenever possible.
       Block &block = region->front();
-      for (auto [blockArg, argOpOperand] :
-           llvm::zip(block.getArguments(), argOpOperands)) {
-        meet(getLatticeElement(argOpOperand.get()),
-             *getLatticeElementFor(getProgramPointAfter(op), blockArg));
-        unaccounted.reset(argOpOperand.getOperandNumber());
+      // If the number of forwarded operands doesn't match the callee's block
+      // arguments, we can't directly relate them. Fall through to treat all
+      // operands via visitCallOperand.
+      if (block.getNumArguments() == argOpOperands.size()) {
+        for (auto [blockArg, argOpOperand] :
+             llvm::zip_equal(block.getArguments(), argOpOperands)) {
+          meet(getLatticeElement(argOpOperand.get()),
+               *getLatticeElementFor(getProgramPointAfter(op), blockArg));
+          unaccounted.reset(argOpOperand.getOperandNumber());
+        }
       }
 
       // Handle the operands of the call op that aren't forwarded to any
@@ -605,7 +626,14 @@ LogicalResult AbstractSparseBackwardDataFlowAnalysis::visitCallableOperation(
           cast<CallOpInterface>(call).getForwardedResults();
       SmallVector<const AbstractSparseLattice *> callResultLattices =
           getLatticeElementsFor(getProgramPointAfter(op), forwardedResults);
-      for (auto [op, result] : llvm::zip(operandLattices, callResultLattices))
+      // If the number of return operands doesn't match the forwarded results,
+      // we can't directly relate them. Conservatively set all to exit states.
+      if (operandLattices.size() != callResultLattices.size()) {
+        setAllToExitStates(operandLattices);
+        continue;
+      }
+      for (auto [op, result] :
+           llvm::zip_equal(operandLattices, callResultLattices))
         meet(op, *result);
     }
   } else {
