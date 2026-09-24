@@ -939,14 +939,14 @@ MachineInstr *SIWholeQuadMode::lowerKillF32(MachineInstr &MI) {
   assert(MBB.succ_size() == 1);
 
   // Update live intervals
+  LIS->removeAllRegUnitsForPhysReg(LMC.VccReg);
+
   LIS->ReplaceMachineInstrInMaps(MI, *VcmpMI);
   MBB.remove(&MI);
 
   LIS->InsertMachineInstrInMaps(*MaskUpdateMI);
   LIS->InsertMachineInstrInMaps(*EarlyTermMI);
   LIS->InsertMachineInstrInMaps(*ExecMaskMI);
-
-  LIS->removeAllRegUnitsForPhysReg(AMDGPU::VCC);
 
   return ExecMaskMI;
 }
