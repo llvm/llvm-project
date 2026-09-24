@@ -2121,9 +2121,12 @@ def riscv_pmqracc_h11 : RVSDNode<"PMQRACC_W_H11", SDT_RISCVQFormatAccP>;
 def riscv_mqwacc  : RVSDNode<"MQWACC",  SDT_RISCVWideningAddSubAccumulate>;
 def riscv_mqrwacc : RVSDNode<"MQRWACC", SDT_RISCVWideningAddSubAccumulate>;
 
-// The immediate for these is the number of trailing ones in the max value.
-def riscv_sati : RVSDNode<"SATI", SDTIntBinOp>;
-def riscv_usati : RVSDNode<"USATI", SDTIntBinOp>;
+// The immediate for these is the number of trailing ones in the max value. The
+// saturated operand is a scalar (sati/usati) or a packed vector (psati/pusati).
+def SDT_RISCVSaturate : SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisSameAs<0, 1>,
+                                             SDTCisVT<2, XLenVT>]>;
+def riscv_sati : RVSDNode<"SATI", SDT_RISCVSaturate>;
+def riscv_usati : RVSDNode<"USATI", SDT_RISCVSaturate>;
 
 // Bitwise merge: res = (~op0 & op1) | (op0 & op2)
 def SDT_RISCVMERGE : SDTypeProfile<1, 3, [SDTCisInt<0>,
@@ -2160,6 +2163,16 @@ def IncImm : SDNodeXForm<imm, [{
     return CurDAG->getTargetConstant(N->getZExtValue() + 1, SDLoc(N),
                                      N->getValueType(0));
 }]>;
+
+// Matches the immediate of RISCVISD::SATI/USATI. The signed instructions count
+// the sign bit in their width field, which IncImm adds back.
+class RISCVSatWidthLeaf<int bitsNum, SDNodeXForm xform = NOOP_SDNodeXForm>
+    : TImmLeaf<XLenVT, "return isUInt<" # bitsNum # ">(Imm);", xform>;
+
+def sati_width4  : RISCVSatWidthLeaf<4, IncImm>;
+def sati_width5  : RISCVSatWidthLeaf<5, IncImm>;
+def usati_width4 : RISCVSatWidthLeaf<4>;
+def usati_width5 : RISCVSatWidthLeaf<5>;
 
 def SDT_RISCVBuildPairGPRVec : SDTypeProfile<1, 2, [SDTCisVec<0>,
                                                     SDTCisVT<1, i32>,
@@ -2358,6 +2371,10 @@ let Predicates = [HasStdExtP] in {
   def : PatGprShift<riscv_psshar, PSSHAR_HS, XLenVecI16VT>;
   def : PatGprShift<riscv_psshl, PSSHL_HS, XLenVecI16VT>;
   def : PatGprShift<riscv_psshlr, PSSHLR_HS, XLenVecI16VT>;
+
+  // 16-bit packed saturation patterns
+  def : PatGprImm<riscv_sati, PSATI_H, sati_width4, XLenVecI16VT>;
+  def : PatGprImm<riscv_usati, PUSATI_H, usati_width4, XLenVecI16VT>;
 
   // 8-bit logical shift left/right
   def : PatGprShiftMask<riscv_pshl, PSLL_BS, shiftMask32, XLenVecI8VT>;
@@ -2872,6 +2889,10 @@ let append Predicates = [IsRV32] in {
   def : PatGprPairShift<riscv_psshl, PSSHL_DHS, v4i16>;
   def : PatGprPairShift<riscv_psshlr, PSSHLR_DHS, v4i16>;
 
+  // 16-bit packed saturation patterns
+  def : PatGprPairImm<riscv_sati, PSATI_DH, sati_width4, v4i16>;
+  def : PatGprPairImm<riscv_usati, PUSATI_DH, usati_width4, v4i16>;
+
   // 32-bit saturating shift patterns
   def : PatGprPairImm<riscv_pssha, PSSLAI_DW, uimm5, v2i32>;
   def : PatGprPairImm<riscv_psshar, PSSLAI_DW, uimm5, v2i32>;
@@ -2881,6 +2902,10 @@ let append Predicates = [IsRV32] in {
   def : PatGprPairShift<riscv_psshar, PSSHAR_DWS, v2i32>;
   def : PatGprPairShift<riscv_psshl, PSSHL_DWS, v2i32>;
   def : PatGprPairShift<riscv_psshlr, PSSHLR_DWS, v2i32>;
+
+  // 32-bit packed saturation patterns
+  def : PatGprPairImm<riscv_sati, PSATI_DW, sati_width5, v2i32>;
+  def : PatGprPairImm<riscv_usati, PUSATI_DW, usati_width5, v2i32>;
 
   // 8-bit logical shift left/right
   def : PatGprPairShiftMask<riscv_pshl, PSLL_DBS, shiftMask32, v8i8>;
@@ -3343,6 +3368,10 @@ let append Predicates = [IsRV64] in {
   def : PatGprShift<riscv_psshar, PSSHAR_WS, v2i32>;
   def : PatGprShift<riscv_psshl, PSSHL_WS, v2i32>;
   def : PatGprShift<riscv_psshlr, PSSHLR_WS, v2i32>;
+
+  // 32-bit packed saturation patterns
+  def : PatGprImm<riscv_sati, PSATI_W, sati_width5, v2i32>;
+  def : PatGprImm<riscv_usati, PUSATI_W, usati_width5, v2i32>;
 
   // 32-bit logical shift left/right
   def : PatGprShiftMask<riscv_pshl, PSLL_WS, shiftMask32, v2i32>;
