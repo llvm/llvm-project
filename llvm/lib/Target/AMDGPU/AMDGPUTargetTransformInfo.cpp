@@ -558,6 +558,22 @@ static const Instruction *getFusedFMul(const SITargetLowering &TLI, Type *Ty,
   return nullptr;
 }
 
+static bool isFusedFMul(const SITargetLowering &TLI, Type *Ty,
+                        const Instruction *FMul, const Instruction *FAddSub) {
+  const Instruction *Fused = getFusedFMul(TLI, Ty, FAddSub);
+  if (Fused == FMul)
+    return true;
+  // (a * b + c * d) + e becomes fma(a, b, fma(c, d, e)) if the outer fadd has
+  // reassoc.
+  if (!Fused || FAddSub->getOpcode() != Instruction::FAdd ||
+      !FAddSub->hasOneUse())
+    return false;
+  const auto *Outer = dyn_cast<BinaryOperator>(*FAddSub->user_begin());
+  return Outer && Outer->getOpcode() == Instruction::FAdd &&
+         Outer->hasAllowReassoc() &&
+         canFuseFMulWithFAddSub(TLI, Ty, FMul, Outer);
+}
+
 InstructionCost GCNTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
@@ -625,7 +641,7 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
       if (FAddSub &&
           (FAddSub->getOpcode() == Instruction::FAdd ||
            FAddSub->getOpcode() == Instruction::FSub) &&
-          getFusedFMul(*TLI, Ty, FAddSub) == CxtI)
+          isFusedFMul(*TLI, Ty, CxtI, FAddSub))
         return TargetTransformInfo::TCC_Free;
     }
     [[fallthrough]];
