@@ -11,6 +11,7 @@
 #include "gtest/gtest.h"
 
 using ::testing::HasSubstr;
+using ::testing::Not;
 using ::testing::StartsWith;
 
 namespace clang {
@@ -831,6 +832,49 @@ TEST_F(ExtractFunctionTest, ConstParameters) {
   // const).
   EXPECT_THAT(apply("void use(int); void f(const int x) { [[use(x);]] }"),
               HasSubstr("void extracted(const int &x)"));
+}
+
+TEST_F(ExtractFunctionTest, ConstParametersReferenceAliasing) {
+  Context = File;
+  // A non-const reference bound to a captured variable conservatively
+  // mutates that variable too, without checking whether the reference
+  // itself is ever actually mutated -- even when the binding and a later
+  // mutation of the reference are two separate root statements of the same
+  // zone. Failing to notice this would incorrectly mark `x` const, which
+  // wouldn't compile (`int &r` can't bind to a `const int`).
+  EXPECT_THAT(apply(R"cpp(
+    void f(int x) {
+      [[int &r = x;
+      r = 2;]]
+    }
+  )cpp"),
+              HasSubstr("void extracted(int &x)"));
+}
+
+TEST_F(ExtractFunctionTest, ConstParametersConservativeAliasing) {
+  Context = File;
+  // Taking the address of a captured variable conservatively mutates it,
+  // regardless of what's later done with the pointer.
+  EXPECT_THAT(apply("void f(int x) { [[int *p = &x;]] }"),
+              HasSubstr("void extracted(int &x)"));
+  // Explicit cast to a non-const reference type: stays non-const.
+  EXPECT_THAT(apply("void f(int x) { [[static_cast<int &>(x) = 1;]] }"),
+              HasSubstr("void extracted(int &x)"));
+  // Captured by reference in a lambda: stays non-const, without checking
+  // whether the lambda actually mutates it.
+  EXPECT_THAT(apply("void f(int x) { [[auto l = [&x]() { int y = x; };]] }"),
+              HasSubstr("int &x"));
+  // Captured by value in a lambda: doesn't alias x, so becomes const.
+  EXPECT_THAT(apply("void f(int x) { [[auto l = [x]() { int y = x; };]] }"),
+              HasSubstr("const int &x"));
+  // Returning a captured variable is conservatively treated as a possible
+  // mutation, regardless of whether the return is actually by value (safe)
+  // or by non-const reference (not safe) -- telling these apart isn't
+  // worth the complexity here.
+  EXPECT_THAT(apply("int f(int x) { [[return x;]] }"), HasSubstr("&x"));
+  // Array-typed captures are never made const.
+  EXPECT_THAT(apply("void f() { int arr[5]; [[arr[0] = 1;]] }"),
+              Not(HasSubstr("const")));
 }
 
 } // namespace

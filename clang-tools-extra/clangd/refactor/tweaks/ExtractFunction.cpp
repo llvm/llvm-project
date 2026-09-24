@@ -60,7 +60,6 @@
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Stmt.h"
-#include "clang/Analysis/Analyses/ExprMutationAnalyzer.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
@@ -72,7 +71,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
-#include <memory>
 #include <optional>
 
 namespace clang {
@@ -587,7 +585,10 @@ struct CapturedZoneInfo {
     unsigned DeclIndex;
     bool IsReferencedInZone = false;
     bool IsReferencedInPostZone = false;
-    // FIXME: Capture mutation information
+    // Conservatively: could this Decl be mutated somewhere in the zone? See
+    // ExtractionZoneVisitor::markPossiblyMutated() for what "conservatively"
+    // means here.
+    bool IsPossiblyMutated = false;
     DeclInformation(const Decl *TheDecl, ZoneRelative DeclaredIn,
                     unsigned DeclIndex)
         : TheDecl(TheDecl), DeclaredIn(DeclaredIn), DeclIndex(DeclIndex){};
@@ -642,6 +643,30 @@ void CapturedZoneInfo::DeclInformation::markOccurence(
 bool isLoop(const Stmt *S) {
   return isa<ForStmt>(S) || isa<DoStmt>(S) || isa<WhileStmt>(S) ||
          isa<CXXForRangeStmt>(S);
+}
+
+// Strips E down to the Decl whose storage it ultimately refers to, chaining
+// through parens, casts, and member/array-element access (e.g. `a.b[i]`
+// resolves to `a`). Mutating any part of such a chain requires the base
+// Decl itself to be non-const if the chain is through value members/
+// elements (e.g. `a.b = 1` mutates `a`'s own storage); for a chain through a
+// pointer or reference, the base Decl's own binding usually isn't actually
+// touched (e.g. `p->b = 1` only mutates `*p`, not `p` itself), but treating
+// it as if it were is conservative and safe, just occasionally overcautious.
+// Returns null if E isn't ultimately grounded in a variable this way (e.g.
+// it's a temporary or a call result).
+const Decl *underlyingDecl(const Expr *E) {
+  E = E->IgnoreParenCasts();
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
+    return DRE->getDecl();
+  if (const auto *ME = dyn_cast<MemberExpr>(E))
+    return underlyingDecl(ME->getBase());
+  if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E))
+    return underlyingDecl(ASE->getBase());
+  if (const auto *BO = dyn_cast<BinaryOperator>(E))
+    if (BO->getOpcode() == BO_PtrMemD || BO->getOpcode() == BO_PtrMemI)
+      return underlyingDecl(BO->getLHS());
+  return nullptr;
 }
 
 // Captures information from Extraction Zone
@@ -699,13 +724,162 @@ CapturedZoneInfo captureZoneInfo(const ExtractionZone &ExtZone) {
       if (!DeclInfo)
         DeclInfo = Info.createDeclInfo(D, ZoneRelative::OutsideFunc);
       DeclInfo->markOccurence(CurrentLocation);
-      // FIXME: check if reference mutates the Decl being referred.
+      return true;
+    }
+
+    // Conservatively marks D as possibly mutated: used both for actual
+    // direct mutations (assignment, increment/decrement, ...) and for
+    // constructs that alias D in a way we don't want to trace further (a
+    // reference bound to D, D's address taken, D captured by reference in a
+    // lambda, ...). We never try to determine whether such an alias is
+    // itself later mutated -- that would require searching beyond this one
+    // occurrence, which is exactly the cost this design avoids (and what
+    // makes ExprMutationAnalyzer prohibitively slow). The price is
+    // that we sometimes keep a parameter non-const where a full alias
+    // analysis could prove it safe to const; we never get this wrong in the
+    // other, unsafe direction.
+    void markPossiblyMutated(const Decl *D) {
+      if (!D || CurrentLocation != ZoneRelative::Inside)
+        return;
+      if (auto *DeclInfo = Info.getDeclInfoFor(D))
+        DeclInfo->IsPossiblyMutated = true;
+    }
+    void markPossiblyMutated(const Expr *E) {
+      markPossiblyMutated(underlyingDecl(E));
+    }
+
+    bool VisitBinaryOperator(BinaryOperator *BO) {
+      if (BO->isAssignmentOp())
+        markPossiblyMutated(BO->getLHS());
+      return true;
+    }
+
+    bool VisitUnaryOperator(UnaryOperator *UO) {
+      if (UO->isIncrementDecrementOp() || UO->getOpcode() == UO_AddrOf)
+        markPossiblyMutated(UO->getSubExpr());
+      return true;
+    }
+
+    bool VisitExplicitCastExpr(ExplicitCastExpr *ECE) {
+      // An explicit cast to a non-const reference type allows mutating the
+      // result as if it were a plain non-const reference.
+      if (ECE->getType()->isReferenceType() &&
+          !ECE->getType()->getPointeeType().isConstQualified())
+        markPossiblyMutated(ECE->getSubExpr());
+      return true;
+    }
+
+    // Marks the object a non-const member function is (or may be) called
+    // on, whether through `.`, `->`, or an overloaded operator.
+    void markPossiblyMutatedCallee(const Expr *Object,
+                                   const CXXMethodDecl *Method) {
+      if (Method && !Method->isConst())
+        markPossiblyMutated(Object);
+    }
+
+    bool VisitCXXMemberCallExpr(CXXMemberCallExpr *MCE) {
+      markPossiblyMutatedCallee(MCE->getImplicitObjectArgument(),
+                                MCE->getMethodDecl());
+      return true;
+    }
+
+    bool VisitCXXOperatorCallExpr(CXXOperatorCallExpr *OCE) {
+      if (OCE->getNumArgs() >= 1)
+        markPossiblyMutatedCallee(
+            OCE->getArg(0),
+            dyn_cast_or_null<CXXMethodDecl>(OCE->getCalleeDecl()));
+      return true;
+    }
+
+    // Marks the arguments of a call that bind to a non-const reference
+    // parameter of Callee (a FunctionDecl or CXXConstructorDecl). If Callee
+    // is null (e.g. a call through a function pointer), conservatively marks
+    // every argument, since we don't know the parameter types.
+    void markPossiblyMutatedArgs(ArrayRef<const Expr *> Args,
+                                 const FunctionDecl *Callee) {
+      for (unsigned I = 0; I < Args.size(); ++I) {
+        if (!Callee || I >= Callee->getNumParams() ||
+            (Callee->getParamDecl(I)->getType()->isReferenceType() &&
+             !Callee->getParamDecl(I)
+                  ->getType()
+                  ->getPointeeType()
+                  .isConstQualified()))
+          markPossiblyMutated(Args[I]);
+      }
+    }
+
+    bool VisitCallExpr(CallExpr *CE) {
+      // Member/operator calls are already handled by their own visitors
+      // above (the callee there is a method, not a plain function).
+      if (isa<CXXMemberCallExpr>(CE) || isa<CXXOperatorCallExpr>(CE))
+        return true;
+      markPossiblyMutatedArgs(
+          llvm::ArrayRef<const Expr *>(CE->getArgs(), CE->getNumArgs()),
+          CE->getDirectCallee());
+      return true;
+    }
+
+    bool VisitCXXConstructExpr(CXXConstructExpr *CCE) {
+      markPossiblyMutatedArgs(
+          llvm::ArrayRef<const Expr *>(CCE->getArgs(), CCE->getNumArgs()),
+          CCE->getConstructor());
+      return true;
+    }
+
+    bool VisitVarDecl(VarDecl *VD) {
+      // A non-const reference bound to a captured Decl aliases it: treat any
+      // such binding as a possible mutation, without checking whether the
+      // reference itself is later mutated (see markPossiblyMutated). This
+      // also covers reference structured bindings (DecompositionDecl is a
+      // VarDecl), since binding `auto &[a, b] = x` conservatively counts as
+      // aliasing all of `x`.
+      if (VD->getType()->isReferenceType() &&
+          !VD->getType()->getPointeeType().isConstQualified() && VD->hasInit())
+        markPossiblyMutated(VD->getInit()->IgnoreParens());
+      return true;
+    }
+
+    bool VisitLambdaExpr(LambdaExpr *LE) {
+      // Init-captures (`[r = x]`/`[&r = x]`) are handled by VisitVarDecl
+      // above, since they introduce a real VarDecl visited independently.
+      // This only needs to handle plain captures (`[&x]`/`[&]`), which don't.
+      for (const LambdaCapture &C : LE->captures())
+        if (C.capturesVariable() && C.getCaptureKind() == LCK_ByRef)
+          markPossiblyMutated(C.getCapturedVar());
+      return true;
+    }
+
+    bool VisitCXXForRangeStmt(CXXForRangeStmt *FRS) {
+      // Conservatively: a non-const reference (or pointer) loop variable
+      // could mutate the range expression's elements, which -- like a
+      // member/array-element write -- requires the range expression's own
+      // Decl to be non-const if it's a value type (e.g. a plain array).
+      // We don't check whether the loop variable is actually mutated, and we
+      // don't special-case containers with const-qualified begin()/end():
+      // those are visited like any other (possibly non-const) member call.
+      QualType LoopVarType = FRS->getLoopVariable()->getType();
+      if ((LoopVarType->isReferenceType() &&
+           !LoopVarType->getPointeeType().isConstQualified()) ||
+          (LoopVarType->isPointerType() &&
+           !LoopVarType->getPointeeType().isConstQualified()))
+        if (const Expr *RangeInit = FRS->getRangeInit())
+          markPossiblyMutated(RangeInit);
       return true;
     }
 
     bool VisitReturnStmt(ReturnStmt *Return) {
-      if (CurrentLocation == ZoneRelative::Inside)
+      if (CurrentLocation == ZoneRelative::Inside) {
         Info.HasReturnStmt = true;
+        // Conservatively treat returning a captured Decl as a possible
+        // mutation, regardless of whether the return is actually by value
+        // (safe) or by non-const reference (not safe). Telling these apart
+        // needs the extracted function's return type, which is only
+        // decided later in generateReturnProperties(); duplicating its
+        // logic here would couple two distant functions for little gain,
+        // since directly returning a capture is rare.
+        if (const Expr *RV = Return->getRetValue())
+          markPossiblyMutated(RV);
+      }
       return true;
     }
 
@@ -739,33 +913,6 @@ CapturedZoneInfo captureZoneInfo(const ExtractionZone &ExtZone) {
   return Result;
 }
 
-// One ExprMutationAnalyzer per root statement of the extraction zone, built
-// once and reused for every captured variable: each analyzer keeps a
-// memoization cache keyed by Expr, which is only useful if it's actually
-// allowed to persist across the (typically many) isMutated() queries run
-// against the same statement.
-class ZoneMutationAnalyzer {
-public:
-  ZoneMutationAnalyzer(const ExtractionZone &ExtZone) {
-    ASTContext &Context = ExtZone.EnclosingFunction->getASTContext();
-    for (const Stmt *RootStmt : ExtZone.RootStmts)
-      Analyzers.push_back(
-          std::make_unique<ExprMutationAnalyzer>(*RootStmt, Context));
-  }
-
-  // Whether VD is mutated anywhere within the extraction zone. If not, the
-  // corresponding parameter can safely be made const, even though it's
-  // still passed by reference.
-  // FIXME: Pass non-mutated parameters of built-in type by value.
-  bool isMutated(const ValueDecl *VD) {
-    return llvm::any_of(
-        Analyzers, [VD](auto &Analyzer) { return Analyzer->isMutated(VD); });
-  }
-
-private:
-  std::vector<std::unique_ptr<ExprMutationAnalyzer>> Analyzers;
-};
-
 // Adds parameters to ExtractedFunc.
 // Returns true if able to find the parameters successfully and no hoisting
 // needed.
@@ -773,7 +920,7 @@ private:
 bool createParameters(NewFunction &ExtractedFunc,
                       const CapturedZoneInfo &CapturedInfo,
                       const ExtractionZone &ExtZone) {
-  ZoneMutationAnalyzer MutationAnalyzer(ExtZone);
+  // FIXME: Pass non-mutated parameters of built-in type by value.
   for (const auto &KeyVal : CapturedInfo.DeclInfoMap) {
     const auto &DeclInfo = KeyVal.second;
     // If a Decl was Declared in zone and referenced in post zone, it
@@ -795,10 +942,12 @@ bool createParameters(NewFunction &ExtractedFunc,
       return false;
     // Parameter qualifiers are same as the Decl's qualifiers.
     QualType TypeInfo = VD->getType().getNonReferenceType();
-    // Add const if it's not mutated in the zone: it's still passed by
-    // reference to avoid a copy, but the reference doesn't need to be
-    // mutable.
-    if (!MutationAnalyzer.isMutated(VD))
+    // Add const if it's not (conservatively) mutated in the zone: it's
+    // still passed by reference to avoid a copy, but the reference doesn't
+    // need to be mutable. Array types are never made const: mutating array
+    // elements through a non-const-ref loop variable or a decayed pointer
+    // argument is common and easy to miss conservatively, so we don't try.
+    if (!DeclInfo.IsPossiblyMutated && !TypeInfo->isArrayType())
       TypeInfo.addConst();
     bool IsPassedByReference = true;
     // We use the index of declaration as the ordering priority for parameters.
