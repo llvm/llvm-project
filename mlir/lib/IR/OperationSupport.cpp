@@ -15,11 +15,44 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
+#include "mlir/IR/OpImplementation.h"
 #include "llvm/Support/SHA1.h"
 #include <numeric>
 #include <optional>
 
 using namespace mlir;
+
+void mlir::detail::appendAttributeProperty(
+    llvm::SmallVectorImpl<NamedAttribute> &attrs, StringRef name,
+    Attribute attr) {
+  if (attr)
+    attrs.emplace_back(name, attr);
+}
+
+ParseResult mlir::detail::parseOptionalOperandInto(
+    OpAsmParser &parser,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &operands) {
+  OpAsmParser::UnresolvedOperand operand;
+  OptionalParseResult result = parser.parseOptionalOperand(operand);
+  if (!result.has_value())
+    return success();
+  if (failed(*result))
+    return failure();
+  operands.push_back(operand);
+  return success();
+}
+
+ParseResult mlir::detail::parseOptionalTypeInto(AsmParser &parser,
+                                                SmallVectorImpl<Type> &types) {
+  Type type;
+  OptionalParseResult result = parser.parseOptionalType(type);
+  if (!result.has_value())
+    return success();
+  if (failed(*result))
+    return failure();
+  types.push_back(type);
+  return success();
+}
 
 //===----------------------------------------------------------------------===//
 // NamedAttrList
