@@ -35,6 +35,7 @@
 #include <mutex>
 #include <string>
 
+#include "OffloadAPI.h"
 #include "OpenMP/InteropAPI.h"
 
 using GenericPluginTy = llvm::omp::target::plugin::GenericPluginTy;
@@ -155,7 +156,7 @@ private:
   llvm::SmallVector<__tgt_bin_desc *> DelayedBinDesc;
 
   // List of all plugins, in use or not.
-  llvm::SmallVector<std::unique_ptr<GenericPluginTy>> Plugins;
+  llvm::SmallVector<GenericPluginTy *> Plugins;
 
   // Mapping of plugins to the OpenMP device identifier.
   llvm::DenseMap<std::pair<const GenericPluginTy *, int32_t>, int32_t>

@@ -26,9 +26,10 @@ using namespace llvm::omp::target::debug;
 
 PluginManager *PM = nullptr;
 
-// Every plugin exports this method to create an instance of the plugin type.
-#define PLUGIN_TARGET(Name) extern "C" GenericPluginTy *createPlugin_##Name();
-#include "Shared/Targets.def"
+namespace llvm::offload::tmp {
+Error __ol_tgt_minimalOlInit(
+    llvm::SmallVector<GenericPluginTy *> &LoadedPlugins);
+} // namespace llvm::offload::tmp
 
 void PluginManager::init() {
   TIMESCOPE();
@@ -39,13 +40,16 @@ void PluginManager::init() {
 
   ODBG(ODT_Init) << "Loading RTLs";
 
-  // Attempt to create an instance of each supported plugin.
-#define PLUGIN_TARGET(Name)                                                    \
-  do {                                                                         \
-    Plugins.emplace_back(                                                      \
-        std::unique_ptr<GenericPluginTy>(createPlugin_##Name()));              \
-  } while (false);
-#include "Shared/Targets.def"
+  llvm::SmallVector<GenericPluginTy *> LoadedPlugins;
+  if (auto Err = llvm::offload::tmp::__ol_tgt_minimalOlInit(LoadedPlugins))
+    FATAL_MESSAGE(1, "Failed to initialize minimal offload layer: %s",
+                  toString(std::move(Err)).c_str());
+
+  for (auto *Plugin : LoadedPlugins) {
+    ODBG(ODT_Init) << "Loaded plugin: " << Plugin->getName()
+                   << " from liboffload";
+    PM->Plugins.push_back(Plugin);
+  }
 
   ODBG(ODT_Init) << "RTLs loaded!";
 }
@@ -54,16 +58,7 @@ void PluginManager::deinit() {
   TIMESCOPE();
   ODBG(ODT_Deinit) << "Unloading RTLs...";
 
-  for (auto &Plugin : Plugins) {
-    if (!Plugin->is_initialized())
-      continue;
-
-    if (auto Err = Plugin->deinit()) {
-      std::string InfoMsg = toString(std::move(Err));
-      ODBG(ODT_Deinit) << "Failed to deinit plugin: " << InfoMsg;
-    }
-    Plugin.release();
-  }
+  olShutDown();
 
   ODBG(ODT_Deinit) << "RTLs unloaded!";
 }
