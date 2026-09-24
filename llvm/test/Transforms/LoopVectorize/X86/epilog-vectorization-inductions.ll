@@ -27,8 +27,8 @@ define void @test_pr59459(i64 %iv.start, ptr %arr) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP3]], 15
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[IND_END:%.*]] = add i64 [[IV_START]], [[N_VEC]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = trunc i64 [[IV_START]] to i32
+; CHECK-NEXT:    [[IND_END:%.*]] = add i64 [[IV_START]], [[N_VEC]]
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <16 x i32> poison, i32 [[TMP9]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <16 x i32> [[DOTSPLATINSERT]], <16 x i32> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <16 x i32> [[DOTSPLAT]], <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -36,8 +36,8 @@ define void @test_pr59459(i64 %iv.start, ptr %arr) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <16 x i32> [ [[INDUCTION]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 [[IV_START]], [[INDEX]]
-; CHECK-NEXT:    [[TMP10:%.*]] = trunc i64 [[OFFSET_IDX]] to i32
+; CHECK-NEXT:    [[TMP18:%.*]] = trunc i64 [[INDEX]] to i32
+; CHECK-NEXT:    [[TMP10:%.*]] = add i32 [[TMP9]], [[TMP18]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = add i32 [[TMP10]], -1
 ; CHECK-NEXT:    [[TMP13:%.*]] = mul <16 x i32> [[VEC_IND]], splat (i32 196608)
 ; CHECK-NEXT:    [[TMP14:%.*]] = lshr exact <16 x i32> [[TMP13]], splat (i32 16)
@@ -60,8 +60,9 @@ define void @test_pr59459(i64 %iv.start, ptr %arr) {
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[IND_END]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[IV_START]], [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[N_MOD_VF3:%.*]] = and i64 [[TMP3]], 3
 ; CHECK-NEXT:    [[N_VEC4:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF3]]
-; CHECK-NEXT:    [[IND_END5:%.*]] = add i64 [[IV_START]], [[N_VEC4]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = trunc i64 [[BC_RESUME_VAL]] to i32
+; CHECK-NEXT:    [[TMP29:%.*]] = trunc i64 [[IV_START]] to i32
+; CHECK-NEXT:    [[IND_END5:%.*]] = add i64 [[IV_START]], [[N_VEC4]]
 ; CHECK-NEXT:    [[DOTSPLATINSERT9:%.*]] = insertelement <4 x i32> poison, i32 [[TMP20]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT10:%.*]] = shufflevector <4 x i32> [[DOTSPLATINSERT9]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[INDUCTION11:%.*]] = add <4 x i32> [[DOTSPLAT10]], <i32 0, i32 1, i32 2, i32 3>
@@ -69,8 +70,8 @@ define void @test_pr59459(i64 %iv.start, ptr %arr) {
 ; CHECK:       vec.epilog.vector.body:
 ; CHECK-NEXT:    [[INDEX8:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT15:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND12:%.*]] = phi <4 x i32> [ [[INDUCTION11]], [[VEC_EPILOG_PH]] ], [ [[VEC_IND_NEXT13:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX14:%.*]] = add i64 [[IV_START]], [[INDEX8]]
-; CHECK-NEXT:    [[TMP21:%.*]] = trunc i64 [[OFFSET_IDX14]] to i32
+; CHECK-NEXT:    [[TMP31:%.*]] = trunc i64 [[INDEX8]] to i32
+; CHECK-NEXT:    [[TMP21:%.*]] = add i32 [[TMP29]], [[TMP31]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = add i32 [[TMP21]], -1
 ; CHECK-NEXT:    [[TMP24:%.*]] = mul <4 x i32> [[VEC_IND12]], splat (i32 196608)
 ; CHECK-NEXT:    [[TMP25:%.*]] = lshr exact <4 x i32> [[TMP24]], splat (i32 16)
@@ -246,49 +247,18 @@ exit:
 ; Test case for https://github.com/llvm/llvm-project/issues/151686.
 define i8 @multiple_inductions_start_at_0() {
 ; CHECK-LABEL: @multiple_inductions_start_at_0(
-; CHECK-NEXT:  iter.check:
-; CHECK-NEXT:    br i1 false, label [[VEC_EPILOG_SCALAR_PH:%.*]], label [[VECTOR_MAIN_LOOP_ITER_CHECK:%.*]]
-; CHECK:       vector.main.loop.iter.check:
-; CHECK-NEXT:    br i1 false, label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
-; CHECK:       vector.ph:
-; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
-; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[STEP_ADD_3:%.*]] = phi <32 x i8> [ zeroinitializer, [[VECTOR_PH]] ], [ [[STEP_ADD_3]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 128
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[TMP0]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
-; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <32 x i8> [[STEP_ADD_3]], i64 31
-; CHECK-NEXT:    br i1 false, label [[EXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
-; CHECK:       vec.epilog.iter.check:
-; CHECK-NEXT:    br i1 false, label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF11:![0-9]+]]
-; CHECK:       vec.epilog.ph:
-; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i32 [ 1024, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
-; CHECK:       vec.epilog.vector.body:
-; CHECK-NEXT:    [[INDEX1:%.*]] = phi i32 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT3:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND2:%.*]] = phi <4 x i8> [ zeroinitializer, [[VEC_EPILOG_PH]] ], [ [[VEC_IND2]], [[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NEXT:    [[INDEX_NEXT3]] = add nuw i32 [[INDEX1]], 4
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT3]], 1052
-; CHECK-NEXT:    br i1 [[TMP3]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
-; CHECK:       vec.epilog.middle.block:
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i8> [[VEC_IND2]], i64 3
-; CHECK-NEXT:    br i1 true, label [[EXIT]], label [[VEC_EPILOG_SCALAR_PH]]
-; CHECK:       vec.epilog.scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL5:%.*]] = phi i32 [ 1052, [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 1024, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK:%.*]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL6:%.*]] = phi i32 [ -469762048, [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 0, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK]] ]
+; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL5]], [[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[IV_2:%.*]] = phi i32 [ [[BC_RESUME_VAL6]], [[VEC_EPILOG_SCALAR_PH]] ], [ [[ADD:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV_2:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[ADD:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[ADD]] = add i32 [[IV_2]], -16777216
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 [[IV_2]] to i8
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp ugt i32 [[IV]], 1050
-; CHECK-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP13:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[RES:%.*]] = phi i8 [ [[TRUNC]], [[LOOP]] ], [ [[TMP1]], [[MIDDLE_BLOCK]] ], [ [[TMP4]], [[VEC_EPILOG_MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[RES:%.*]] = phi i8 [ [[TRUNC]], [[LOOP]] ]
 ; CHECK-NEXT:    ret i8 [[RES]]
 ;
 entry:

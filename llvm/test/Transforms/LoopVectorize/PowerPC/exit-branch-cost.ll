@@ -150,8 +150,8 @@ define i1 @select_exit_cond(ptr %start, ptr %end, i64 %N) {
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[TMP64]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[TMP65:%.*]] = and i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[N_VEC36:%.*]] = sub i64 [[TMP2]], [[TMP65]]
-; CHECK-NEXT:    [[TMP66:%.*]] = getelementptr i8, ptr [[START]], i64 [[N_VEC36]]
 ; CHECK-NEXT:    [[TMP67:%.*]] = insertelement <2 x i64> zeroinitializer, i64 [[BC_MERGE_RDX]], i64 0
+; CHECK-NEXT:    [[TMP75:%.*]] = getelementptr i8, ptr [[START]], i64 [[N_VEC36]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[VEC_EPILOG_RESUME_VAL]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <2 x i64> [[BROADCAST_SPLAT]], <i64 0, i64 1>
@@ -177,7 +177,7 @@ define i1 @select_exit_cond(ptr %start, ptr %end, i64 %N) {
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL45:%.*]] = phi i64 [ [[N_VEC36]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX46:%.*]] = phi i64 [ [[TMP73]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP64]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL47:%.*]] = phi ptr [ [[TMP66]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP3]], %[[VEC_EPILOG_ITER_CHECK]] ], [ [[START]], %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL47:%.*]] = phi ptr [ [[TMP75]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP3]], %[[VEC_EPILOG_ITER_CHECK]] ], [ [[START]], %[[ITER_CHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL45]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]

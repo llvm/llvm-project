@@ -189,7 +189,7 @@ define void @print_replicate_predicated_phi(i64 %n, ptr %x) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    <xVFxUF> pred.udiv: {
 ; CHECK-NEXT:      pred.udiv.entry:
-; CHECK-NEXT:        BRANCH-ON-MASK ir<%cmp>
+; CHECK-NEXT:        BRANCH-ON-MASK ir<%cmp> (!vplan.execution.frequency 4611686018427387904 (50%, estimated))
 ; CHECK-NEXT:      Successor(s): pred.udiv.if, pred.udiv.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      pred.udiv.if:
@@ -391,14 +391,14 @@ define void @recipe_debug_loc_location(ptr nocapture %src) !dbg !5 {
 ; CHECK-NEXT:      WIDEN ir<%psd> = add nuw nsw ir<%lsd>, ir<23>, !dbg /tmp/s.c:7:3
 ; CHECK-NEXT:      WIDEN ir<%cmp1> = icmp slt ir<%lsd>, ir<100>, !dbg /tmp/s.c:8:3
 ; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = not ir<%cmp1>, !dbg /tmp/s.c:9:3
-; CHECK-NEXT:      WIDEN ir<%cmp2> = icmp sge ir<%lsd>, ir<200>, !dbg /tmp/s.c:10:3
+; CHECK-NEXT:      WIDEN ir<%cmp2> = icmp sge ir<%lsd>, ir<200>, !dbg /tmp/s.c:10:3 (!vplan.execution.frequency 4611686018427387904 (50%, estimated))
 ; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = logical-and vp<[[VP6]]>, ir<%cmp2>, !dbg /tmp/s.c:11:3
 ; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = or vp<[[VP7]]>, ir<%cmp1>
 ; CHECK-NEXT:    Successor(s): pred.sdiv
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    <xVFxUF> pred.sdiv: {
 ; CHECK-NEXT:      pred.sdiv.entry:
-; CHECK-NEXT:        BRANCH-ON-MASK vp<[[VP8]]>
+; CHECK-NEXT:        BRANCH-ON-MASK vp<[[VP8]]> (!vplan.execution.frequency 6917529027641081856 (75%, estimated))
 ; CHECK-NEXT:      Successor(s): pred.sdiv.if, pred.sdiv.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      pred.sdiv.if:
@@ -435,10 +435,10 @@ define void @recipe_debug_loc_location(ptr nocapture %src) !dbg !5 {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop>:
 ; CHECK-NEXT:    IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %if.end ] (extra operand: vp<%bc.resume.val> from scalar.ph)
-; CHECK-NEXT:    IR   %isd = getelementptr inbounds i32, ptr %src, i64 %iv, !dbg !{{[0-9]+}}
-; CHECK-NEXT:    IR   %lsd = load i32, ptr %isd, align 4, !dbg !{{[0-9]+}}
-; CHECK-NEXT:    IR   %psd = add nuw nsw i32 %lsd, 23, !dbg !{{[0-9]+}}
-; CHECK-NEXT:    IR   %cmp1 = icmp slt i32 %lsd, 100, !dbg !{{[0-9]+}}
+; CHECK-NEXT:    IR   %isd = getelementptr inbounds i32, ptr %src, i64 %iv, !dbg !24
+; CHECK-NEXT:    IR   %lsd = load i32, ptr %isd, align 4, !dbg !25
+; CHECK-NEXT:    IR   %psd = add nuw nsw i32 %lsd, 23, !dbg !26
+; CHECK-NEXT:    IR   %cmp1 = icmp slt i32 %lsd, 100, !dbg !27
 ; CHECK-NEXT:  No successors
 ; CHECK-NEXT:  }
 ;
@@ -489,20 +489,21 @@ define void @print_expand_scev(i64 %y, ptr %ptr) {
 ; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
-; CHECK-NEXT:    vp<[[VP5:%[0-9]+]]> = DERIVED-IV ir<0> + vp<[[VP2]]> * vp<[[VP3]]>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP5:%[0-9]+]]> = trunc vp<[[VP3]]> to i8
+; CHECK-NEXT:    vp<[[VP6:%[0-9]+]]> = DERIVED-IV ir<0> + vp<[[VP2]]> * vp<[[VP3]]>
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
-; CHECK-NEXT:  vp<[[VP6:%[0-9]+]]> = CANONICAL-IV
+; CHECK-NEXT:  vp<[[VP7:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, vp<[[VP3]]>, vp<[[VP0]]> (truncated to i8)
-; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = DERIVED-IV ir<0> + vp<[[VP6]]> * vp<[[VP3]]>
-; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = SCALAR-STEPS vp<[[VP7]]>, vp<[[VP3]]>, vp<[[VP0]]>
+; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, vp<[[VP5]]>, vp<[[VP0]]>
+; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = DERIVED-IV ir<0> + vp<[[VP7]]> * vp<[[VP3]]>
+; CHECK-NEXT:      vp<[[VP9:%[0-9]+]]> = SCALAR-STEPS vp<[[VP8]]>, vp<[[VP3]]>, vp<[[VP0]]>
 ; CHECK-NEXT:      WIDEN ir<%v3> = add nuw ir<%iv>, ir<1>
-; CHECK-NEXT:      REPLICATE ir<%gep> = getelementptr inbounds ir<%ptr>, vp<[[VP8]]>
+; CHECK-NEXT:      REPLICATE ir<%gep> = getelementptr inbounds ir<%ptr>, vp<[[VP9]]>
 ; CHECK-NEXT:      REPLICATE store ir<%v3>, ir<%gep>
-; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP6]]>, vp<[[VP1]]>
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP7]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:    No successors
 ; CHECK-NEXT:  }
@@ -517,7 +518,7 @@ define void @print_expand_scev(i64 %y, ptr %ptr) {
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP5]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP6]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop>:
@@ -805,7 +806,7 @@ define void @print_call_flags(ptr readonly %src, ptr noalias %dest, i64 %n) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    <xVFxUF> pred.call: {
 ; CHECK-NEXT:      pred.call.entry:
-; CHECK-NEXT:        BRANCH-ON-MASK ir<%ifcond>
+; CHECK-NEXT:        BRANCH-ON-MASK ir<%ifcond> (!vplan.execution.frequency 5764607523034234880 (62.5%, estimated))
 ; CHECK-NEXT:      Successor(s): pred.call.if, pred.call.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      pred.call.if:
@@ -821,7 +822,7 @@ define void @print_call_flags(ptr readonly %src, ptr noalias %dest, i64 %n) {
 ; CHECK-NEXT:    Successor(s): if.then.1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    if.then.1:
-; CHECK-NEXT:      WIDEN ir<%fadd> = fadd vp<[[VP6]]>, vp<[[VP7]]>
+; CHECK-NEXT:      WIDEN ir<%fadd> = fadd vp<[[VP6]]>, vp<[[VP7]]> (!vplan.execution.frequency 5764607523034234880 (62.5%, estimated))
 ; CHECK-NEXT:      BLEND ir<%st.value> = ir<%ld.value> ir<%fadd>/ir<%ifcond>
 ; CHECK-NEXT:      CLONE ir<%st.addr> = getelementptr inbounds ir<%dest>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-pointer inbounds float, ir<%st.addr>, ir<1>

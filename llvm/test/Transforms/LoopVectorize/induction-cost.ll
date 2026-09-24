@@ -65,13 +65,13 @@ exit:
 
 define void @trunc_induction(ptr noalias %dst, i64 %n) {
 ; VF2-LABEL: 'trunc_induction'
-; VF2:  Cost of 2 for VF 2: ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]> (truncated to i32)
+; VF2:  Cost of 2 for VF 2: ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; VF2:  Cost of 0 for VF 2: vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3:%[0-9]+]]>, ir<1>, vp<[[VP0]]>
 ; VF2:  Cost of 1 for VF 2: canonical IV increment
 ; VF2:  Cost for VF 2: 6 (Estimated cost per lane: 3)
 ;
 ; VF4-LABEL: 'trunc_induction'
-; VF4:  Cost of 2 for VF 4: ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]> (truncated to i32)
+; VF4:  Cost of 2 for VF 4: ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; VF4:  Cost of 0 for VF 4: vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3:%[0-9]+]]>, ir<1>, vp<[[VP0]]>
 ; VF4:  Cost of 1 for VF 4: canonical IV increment
 ; VF4:  Cost for VF 4: 6 (Estimated cost per lane: 1.5)
@@ -95,14 +95,14 @@ exit:
 define void @trunc_and_wide_induction(ptr noalias %dst, ptr noalias %dst2, i64 %n) {
 ; VF2-LABEL: 'trunc_and_wide_induction'
 ; VF2:  Cost of 2 for VF 2: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
-; VF2:  Cost of 2 for VF 2: ir<%iv>.1 = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]> (truncated to i32)
+; VF2:  Cost of 2 for VF 2: ir<%iv>.1 = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]>
 ; VF2:  Cost of 0 for VF 2: vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3:%[0-9]+]]>, ir<1>, vp<[[VP0]]>
 ; VF2:  Cost of 1 for VF 2: canonical IV increment
 ; VF2:  Cost for VF 2: 9 (Estimated cost per lane: 4.5)
 ;
 ; VF4-LABEL: 'trunc_and_wide_induction'
 ; VF4:  Cost of 2 for VF 4: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
-; VF4:  Cost of 2 for VF 4: ir<%iv>.1 = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]> (truncated to i32)
+; VF4:  Cost of 2 for VF 4: ir<%iv>.1 = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]>
 ; VF4:  Cost of 0 for VF 4: vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3:%[0-9]+]]>, ir<1>, vp<[[VP0]]>
 ; VF4:  Cost of 1 for VF 4: canonical IV increment
 ; VF4:  Cost for VF 4: 9 (Estimated cost per lane: 2.25)

@@ -188,7 +188,7 @@ define void @first_order_recurrence_using_induction(i32 %n, ptr %dst) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      FIRST-ORDER-RECURRENCE-PHI ir<%for> = phi ir<0>, vp<[[VP6:%[0-9]+]]>
-; CHECK-NEXT:      EMIT-SCALAR vp<[[VP5:%[0-9]+]]> = trunc vp<[[VP4]]> to i32
+; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = DERIVED-IV ir<0> + vp<[[VP4]]> * ir<1>
 ; CHECK-NEXT:      vp<[[VP6]]> = SCALAR-STEPS vp<[[VP5]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP4]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -251,15 +251,15 @@ define i16 @reduction_with_casts() {
 ; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
-; CHECK-NEXT:    vp<[[VP2:%[0-9]+]]> = DERIVED-IV ir<1> + vp<[[VP1]]> * ir<1>
-; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = reduction-start-vector ir<0>, ir<0>, ir<1>
+; CHECK-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = reduction-start-vector ir<0>, ir<0>, ir<1>
+; CHECK-NEXT:    vp<[[VP3:%[0-9]+]]> = DERIVED-IV ir<1> + vp<[[VP1]]> * ir<1>
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
 ; CHECK-NEXT:  vp<[[VP4:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%count.0.in1> = phi (add) vp<[[VP3]]>, ir<%add>
+; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%count.0.in1> = phi (add) vp<[[VP2]]>, ir<%add>
 ; CHECK-NEXT:      CLONE ir<%conv1> = and ir<%count.0.in1>, ir<65535>
 ; CHECK-NEXT:      CLONE ir<%add> = add ir<%conv1>, ir<1>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP4]]>, vp<[[VP0]]>
@@ -281,7 +281,7 @@ define i16 @reduction_with_casts() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
 ; CHECK-NEXT:    EMIT-SCALAR vp<%bc.merge.rdx> = phi [ vp<[[VP6]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP2]]>, middle.block ], [ ir<1>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP3]]>, middle.block ], [ ir<1>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop>:

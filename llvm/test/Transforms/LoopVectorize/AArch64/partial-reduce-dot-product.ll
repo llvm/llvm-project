@@ -2126,14 +2126,14 @@ define i32 @not_dotp_vscale1(ptr %a, ptr %b, i32 %n, i64 %cost) #0 {
 ; CHECK-INTERLEAVE1:       [[VECTOR_PH]]:
 ; CHECK-INTERLEAVE1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP2]]
 ; CHECK-INTERLEAVE1-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
+; CHECK-INTERLEAVE1-NEXT:    [[TMP3:%.*]] = insertelement <vscale x 2 x i64> zeroinitializer, i64 [[COST]], i64 0
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP4:%.*]] = trunc i64 [[N_VEC]] to i32
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[A]], i64 [[N_VEC]]
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[B]], i64 [[N_VEC]]
-; CHECK-INTERLEAVE1-NEXT:    [[TMP7:%.*]] = insertelement <vscale x 2 x i64> zeroinitializer, i64 [[COST]], i64 0
 ; CHECK-INTERLEAVE1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-INTERLEAVE1:       [[VECTOR_BODY]]:
 ; CHECK-INTERLEAVE1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-INTERLEAVE1-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 2 x i64> [ [[TMP7]], %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-INTERLEAVE1-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 2 x i64> [ [[TMP3]], %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-INTERLEAVE1-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[INDEX]]
 ; CHECK-INTERLEAVE1-NEXT:    [[NEXT_GEP1:%.*]] = getelementptr i8, ptr [[B]], i64 [[INDEX]]
 ; CHECK-INTERLEAVE1-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 16 x i8>, ptr [[NEXT_GEP]], align 1
@@ -2166,14 +2166,14 @@ define i32 @not_dotp_vscale1(ptr %a, ptr %b, i32 %n, i64 %cost) #0 {
 ; CHECK-INTERLEAVED-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP1]], 4
 ; CHECK-INTERLEAVED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP2]]
 ; CHECK-INTERLEAVED-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP4:%.*]] = insertelement <vscale x 2 x i64> zeroinitializer, i64 [[COST]], i64 0
 ; CHECK-INTERLEAVED-NEXT:    [[TMP5:%.*]] = trunc i64 [[N_VEC]] to i32
 ; CHECK-INTERLEAVED-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[A]], i64 [[N_VEC]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[B]], i64 [[N_VEC]]
-; CHECK-INTERLEAVED-NEXT:    [[TMP8:%.*]] = insertelement <vscale x 2 x i64> zeroinitializer, i64 [[COST]], i64 0
 ; CHECK-INTERLEAVED-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-INTERLEAVED:       [[VECTOR_BODY]]:
 ; CHECK-INTERLEAVED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 2 x i64> [ [[TMP8]], %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 2 x i64> [ [[TMP4]], %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI1:%.*]] = phi <vscale x 2 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE6:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-INTERLEAVED-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[INDEX]]
 ; CHECK-INTERLEAVED-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr [[B]], i64 [[INDEX]]
@@ -2215,14 +2215,14 @@ define i32 @not_dotp_vscale1(ptr %a, ptr %b, i32 %n, i64 %cost) #0 {
 ; CHECK-MAXBW:       [[VECTOR_PH]]:
 ; CHECK-MAXBW-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP2]]
 ; CHECK-MAXBW-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
+; CHECK-MAXBW-NEXT:    [[TMP3:%.*]] = insertelement <vscale x 2 x i64> zeroinitializer, i64 [[COST]], i64 0
 ; CHECK-MAXBW-NEXT:    [[TMP4:%.*]] = trunc i64 [[N_VEC]] to i32
 ; CHECK-MAXBW-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[A]], i64 [[N_VEC]]
 ; CHECK-MAXBW-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[B]], i64 [[N_VEC]]
-; CHECK-MAXBW-NEXT:    [[TMP7:%.*]] = insertelement <vscale x 2 x i64> zeroinitializer, i64 [[COST]], i64 0
 ; CHECK-MAXBW-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-MAXBW:       [[VECTOR_BODY]]:
 ; CHECK-MAXBW-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-MAXBW-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 2 x i64> [ [[TMP7]], %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-MAXBW-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 2 x i64> [ [[TMP3]], %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-MAXBW-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[INDEX]]
 ; CHECK-MAXBW-NEXT:    [[NEXT_GEP1:%.*]] = getelementptr i8, ptr [[B]], i64 [[INDEX]]
 ; CHECK-MAXBW-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 16 x i8>, ptr [[NEXT_GEP]], align 1

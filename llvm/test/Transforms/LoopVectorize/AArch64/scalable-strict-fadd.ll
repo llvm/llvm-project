@@ -407,9 +407,9 @@ define void @fadd_strict_interleave(ptr noalias nocapture readonly %a, ptr noali
 ; CHECK-UNORDERED:       [[VECTOR_PH]]:
 ; CHECK-UNORDERED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], [[TMP4]]
 ; CHECK-UNORDERED-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
-; CHECK-UNORDERED-NEXT:    [[TMP6:%.*]] = shl i64 [[N_VEC]], 1
 ; CHECK-UNORDERED-NEXT:    [[TMP7:%.*]] = insertelement <vscale x 4 x float> splat (float -0.000000e+00), float [[A2]], i64 0
 ; CHECK-UNORDERED-NEXT:    [[TMP8:%.*]] = insertelement <vscale x 4 x float> splat (float -0.000000e+00), float [[A1]], i64 0
+; CHECK-UNORDERED-NEXT:    [[TMP20:%.*]] = shl i64 [[N_VEC]], 1
 ; CHECK-UNORDERED-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-UNORDERED:       [[VECTOR_BODY]]:
 ; CHECK-UNORDERED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -434,7 +434,7 @@ define void @fadd_strict_interleave(ptr noalias nocapture readonly %a, ptr noali
 ; CHECK-UNORDERED:       [[SCALAR_PH]]:
 ; CHECK-UNORDERED-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP16]], %[[MIDDLE_BLOCK]] ], [ [[A2]], %[[ENTRY]] ]
 ; CHECK-UNORDERED-NEXT:    [[BC_MERGE_RDX2:%.*]] = phi float [ [[TMP17]], %[[MIDDLE_BLOCK]] ], [ [[A1]], %[[ENTRY]] ]
-; CHECK-UNORDERED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP6]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-UNORDERED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP20]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-UNORDERED-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK-UNORDERED:       [[FOR_BODY]]:
 ; CHECK-UNORDERED-NEXT:    [[ADD_PHI1:%.*]] = phi float [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[ADD2:%.*]], %[[FOR_BODY]] ]

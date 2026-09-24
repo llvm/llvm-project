@@ -322,8 +322,6 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
                 getSCEVExprForVPValue(R->getStartValue(), PSE, L);
             const SCEV *AddRec =
                 SE.getAddRecExpr(Start, Step, L, SCEV::FlagNone);
-            if (R->getTruncInst())
-              return SE.getTruncateExpr(AddRec, R->getScalarType());
             return AddRec;
           })
           .Case([&SE, &PSE,
@@ -626,37 +624,16 @@ vputils::getEarlyExits(const VPlan &Plan, const VPBlockBase *MiddleVPBB) {
 VPScalarIVStepsRecipe *vputils::createScalarIVSteps(
     VPlan &Plan, InductionDescriptor::InductionKind Kind,
     Instruction::BinaryOps InductionOpcode, FPMathOperator *FPBinOp,
-    Instruction *TruncI, VPValue *StartV, VPValue *Step, DebugLoc DL,
-    VPBuilder &Builder, const VPIRFlags::WrapFlagsTy &Flags) {
+    VPValue *StartV, VPValue *Step, DebugLoc DL, VPBuilder &Builder,
+    const VPIRFlags::WrapFlagsTy &Flags) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
-  VPBasicBlock *HeaderVPBB = LoopRegion->getEntryBasicBlock();
   VPValue *CanonicalIV = LoopRegion->getCanonicalIV();
-  VPSingleDefRecipe *BaseIV =
-      Builder.createDerivedIV(Kind, FPBinOp, StartV, CanonicalIV, Step, Flags);
+  VPSingleDefRecipe *BaseIV = Builder.createDerivedIV(
+      Kind, FPBinOp, StartV, CanonicalIV, Step, Flags, DL);
 
-  // Truncate base induction if needed.
-  Type *ResultTy = BaseIV->getScalarType();
-  if (TruncI) {
-    Type *TruncTy = TruncI->getType();
-    assert(ResultTy->getScalarSizeInBits() > TruncTy->getScalarSizeInBits() &&
-           "Not truncating.");
-    assert(ResultTy->isIntegerTy() && "Truncation requires an integer type");
-    BaseIV = Builder.createScalarCast(Instruction::Trunc, BaseIV, TruncTy, DL);
-    ResultTy = TruncTy;
-  }
-
-  // Truncate step if needed.
-  Type *StepTy = Step->getScalarType();
-  if (ResultTy != StepTy) {
-    assert(StepTy->getScalarSizeInBits() > ResultTy->getScalarSizeInBits() &&
-           "Not truncating.");
-    assert(StepTy->isIntegerTy() && "Truncation requires an integer type");
-    auto *VecPreheader =
-        cast<VPBasicBlock>(HeaderVPBB->getSingleHierarchicalPredecessor());
-    VPBuilder::InsertPointGuard Guard(Builder);
-    Builder.setInsertPoint(VecPreheader);
-    Step = Builder.createScalarCast(Instruction::Trunc, Step, ResultTy, DL);
-  }
+  assert(BaseIV->getScalarType()->getScalarSizeInBits() ==
+             Step->getScalarType()->getScalarSizeInBits() &&
+         "IV should already be truncated");
   return Builder.createScalarIVSteps(InductionOpcode, FPBinOp, BaseIV, Step,
                                      &Plan.getVF(), DL);
 }
@@ -669,7 +646,7 @@ vputils::scalarizeVPWidenPointerInduction(VPWidenPointerInductionRecipe *PtrIV,
   VPValue *StepV = PtrIV->getOperand(1);
   VPScalarIVStepsRecipe *Steps = createScalarIVSteps(
       Plan, InductionDescriptor::IK_IntInduction, Instruction::Add, nullptr,
-      nullptr, StartV, StepV, PtrIV->getDebugLoc(), Builder);
+      StartV, StepV, PtrIV->getDebugLoc(), Builder);
 
   return Builder.createPtrAdd(PtrIV->getStartValue(), Steps,
                               PtrIV->getDebugLoc(), "next.gep");

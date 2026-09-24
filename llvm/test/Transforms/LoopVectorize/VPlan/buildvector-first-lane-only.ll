@@ -9,17 +9,19 @@ define i16 @last_active_lane_live_out(i32 %x) {
 ; CHECK-NEXT:  Successor(s): vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP2:%[0-9]+]]> = trunc ir<%x> to i16
+; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = shl vp<[[VP2]]>, ir<1>
 ; CHECK-NEXT:  Successor(s): vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.body:
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT-SCALAR vp<[[VP2:%[0-9]+]]> = trunc ir<%x> to i16
+; CHECK-NEXT:    EMIT vp<%ind.escape> = sub vp<[[VP3]]>, vp<[[VP2]]>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<exit>:
-; CHECK-NEXT:    IR   %t.lcssa = phi i16 [ %t, %loop ] (extra operand: vp<[[VP2]]> from middle.block)
+; CHECK-NEXT:    IR   %t.lcssa = phi i16 [ %t, %loop ] (extra operand: vp<%ind.escape> from middle.block)
 ; CHECK-NEXT:  No successors
 ; CHECK-NEXT:  }
 ;
