@@ -27,3 +27,59 @@ vector unsigned char test_bcdsetsign_imm0(vector unsigned char a) {
 vector unsigned char test_bcdsetsign_imm1(vector unsigned char a) {
     return __builtin_ppc_bcdsetsign(a, '\1');
 }
+
+// CHECK-LABEL: test_bcdshift_imm0
+// CHECK:         [[TMP0:%.*]] = tail call <16 x i8> @llvm.ppc.bcdshift(<16 x i8> %a, i32 %b, i32 0)
+// CHECK-NEXT:    ret <16 x i8> [[TMP0]]
+vector unsigned char test_bcdshift_imm0(vector unsigned char a, int b, unsigned char c){
+        return __builtin_ppc_bcdshift(a,b,'\0');
+}
+
+// CHECK-LABEL: test_bcdshift_imm1
+// CHECK:         [[TMP0:%.*]] = tail call <16 x i8> @llvm.ppc.bcdshift(<16 x i8> %a, i32 %b, i32 1)
+// CHECK-NEXT:    ret <16 x i8> [[TMP0]]
+vector unsigned char test_bcdshift_imm1(vector unsigned char a, int b, unsigned char c){
+        return __builtin_ppc_bcdshift(a,b,'\1');
+}
+
+// CHECK-LABEL: test_bcdshiftround_imm0
+// CHECK:         [[TMP0:%.*]] = tail call <16 x i8> @llvm.ppc.bcdshiftround(<16 x i8> %a, i32 %b, i32 0)
+// CHECK-NEXT:    ret <16 x i8> [[TMP0]]
+vector unsigned char test_bcdshiftround_imm0(vector unsigned char a,int b, unsigned char c){
+        return __builtin_ppc_bcdshiftround(a,b,'\0');
+}
+
+// CHECK-LABEL: test_bcdshiftround_imm1
+// CHECK:         [[TMP0:%.*]] = tail call <16 x i8> @llvm.ppc.bcdshiftround(<16 x i8> %a, i32 %b, i32 1)
+// CHECK-NEXT:    ret <16 x i8> [[TMP0]]
+vector unsigned char test_bcdshiftround_imm1(vector unsigned char a,int b, unsigned char c){
+        return __builtin_ppc_bcdshiftround(a,b,'\1');
+}
+
+// CHECK-LABEL: test_bcdtruncate_imm0
+// CHECK:         [[TMP0:%.*]] = tail call <16 x i8> @llvm.ppc.bcdtruncate(<16 x i8> %a, i32 %b, i32 0)
+// CHECK-NEXT:    ret <16 x i8> [[TMP0]]
+vector unsigned char test_bcdtruncate_imm0(vector unsigned char a, int b, unsigned char c){
+        return __builtin_ppc_bcdtruncate(a,b,'\0');
+}
+
+// CHECK-LABEL: test_bcdtruncate_imm1
+// CHECK:         [[TMP0:%.*]] = tail call <16 x i8> @llvm.ppc.bcdtruncate(<16 x i8> %a, i32 %b, i32 1)
+// CHECK-NEXT:    ret <16 x i8> [[TMP0]]
+vector unsigned char test_bcdtruncate_imm1(vector unsigned char a, int b, unsigned char c){
+        return __builtin_ppc_bcdtruncate(a,b,'\1');
+}
+
+// CHECK-LABEL: test_bcdunsignedtruncate
+// CHECK:       [[TMP0:%.*]] = tail call <16 x i8> @llvm.ppc.bcdunsignedtruncate(<16 x i8> %a, i32 %b)
+// CHECK-NEXT:   ret <16 x i8> [[TMP0]]
+vector unsigned char test_bcdunsignedtruncate(vector unsigned char a, int b) {
+    return __builtin_ppc_bcdunsignedtruncate(a, b);
+}
+
+// CHECK-LABEL: test_bcdunsignedshift
+// CHECK:       [[TMP0:%.*]] = tail call <16 x i8> @llvm.ppc.bcdunsignedshift(<16 x i8> %a, i32 %b)
+// CHECK-NEXT:   ret <16 x i8> [[TMP0]]
+vector unsigned char test_bcdunsignedshift(vector unsigned char a, int b){
+        return __builtin_ppc_bcdunsignedshift(a,b);
+}

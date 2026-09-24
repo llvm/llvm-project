@@ -6,19 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "../lldb-python.h"
+
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Host/Config.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-enumerations.h"
-
-#if LLDB_ENABLE_PYTHON
-
-// clang-format off
-// LLDB Python header must be included first
-#include "../lldb-python.h"
-//clang-format on
 
 #include "../SWIGPythonBridge.h"
 #include "../ScriptInterpreterPythonImpl.h"
@@ -39,42 +33,28 @@ ScriptedPlatformPythonInterface::CreatePluginObject(
     StructuredData::DictionarySP args_sp, StructuredData::Generic *script_obj) {
   ExecutionContextRefSP exe_ctx_ref_sp =
       std::make_shared<ExecutionContextRef>(exe_ctx);
-  StructuredDataImpl sd_impl(args_sp);
-  return ScriptedPythonInterface::CreatePluginObject(class_name, script_obj,
-                                                     exe_ctx_ref_sp, sd_impl);
+  ScriptedMetadata scripted_metadata(class_name, args_sp);
+  return ScriptedPythonInterface::CreatePluginObject(
+      scripted_metadata, script_obj, exe_ctx_ref_sp, args_sp);
 }
 
 StructuredData::DictionarySP ScriptedPlatformPythonInterface::ListProcesses() {
-  Status error;
   StructuredData::DictionarySP dict_sp =
-      Dispatch<StructuredData::DictionarySP>("list_processes", error);
-
-  if (!dict_sp || !dict_sp->IsValid() || error.Fail()) {
-    return ScriptedInterface::ErrorWithMessage<StructuredData::DictionarySP>(
-        LLVM_PRETTY_FUNCTION,
-        llvm::Twine("Null or invalid object (" +
-                    llvm::Twine(error.AsCString()) + llvm::Twine(")."))
-            .str(),
-        error);
-  }
+      LogAndDefault(Dispatch<StructuredData::DictionarySP>("list_processes"),
+                    LLVM_PRETTY_FUNCTION);
+  if (!dict_sp || !dict_sp->IsValid())
+    return {};
 
   return dict_sp;
 }
 
 StructuredData::DictionarySP
 ScriptedPlatformPythonInterface::GetProcessInfo(lldb::pid_t pid) {
-  Status error;
-  StructuredData::DictionarySP dict_sp =
-      Dispatch<StructuredData::DictionarySP>("get_process_info", error, pid);
-
-  if (!dict_sp || !dict_sp->IsValid() || error.Fail()) {
-    return ScriptedInterface::ErrorWithMessage<StructuredData::DictionarySP>(
-        LLVM_PRETTY_FUNCTION,
-        llvm::Twine("Null or invalid object (" +
-                    llvm::Twine(error.AsCString()) + llvm::Twine(")."))
-            .str(),
-        error);
-  }
+  StructuredData::DictionarySP dict_sp = LogAndDefault(
+      Dispatch<StructuredData::DictionarySP>("get_process_info", pid),
+      LLVM_PRETTY_FUNCTION);
+  if (!dict_sp || !dict_sp->IsValid())
+    return {};
 
   return dict_sp;
 }
@@ -98,11 +78,10 @@ Status ScriptedPlatformPythonInterface::KillProcess(lldb::pid_t pid) {
 void ScriptedPlatformPythonInterface::Initialize() {
   PluginManager::RegisterPlugin(
       GetPluginNameStatic(), "Mock platform and interact with its processes.",
-      CreateInstance, eScriptLanguagePython, {});
+      CreateInstance, eScriptedExtensionScriptedPlatform, eScriptLanguagePython,
+      {});
 }
 
 void ScriptedPlatformPythonInterface::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
-
-#endif // LLDB_ENABLE_PYTHON

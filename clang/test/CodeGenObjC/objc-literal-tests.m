@@ -68,9 +68,9 @@ int main(void) {
   NSNumber *fortyTwoLong = @42l;
   // CHECK: call{{.*}}@objc_msgSend{{.*}}i64 noundef 42
   NSNumber *fortyTwoLongLong = @42ll;
-  // CHECK: call{{.*}}@objc_msgSend{{.*}}float noundef 0x400921FB60000000
+  // CHECK: call{{.*}}@objc_msgSend{{.*}}float noundef f0x40490FDB
   NSNumber *piFloat = @3.141592654f;
-  // CHECK: call{{.*}}@objc_msgSend{{.*}}double noundef 0x400921FB54411744
+  // CHECK: call{{.*}}@objc_msgSend{{.*}}double noundef f0x400921FB54411744
   NSNumber *piDouble = @3.1415926535;
   // CHECK: call{{.*}}@objc_msgSend{{.*}}i8 noundef signext 1
   NSNumber *yesNumber = @__objc_yes;

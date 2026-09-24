@@ -14,8 +14,8 @@
 #include "lldb/Core/DumpRegisterValue.h"
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Symbol/Symbol.h"
 #include "lldb/Target/ExecutionContext.h"
-#include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/ArchSpec.h"
@@ -25,6 +25,8 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
+#include "llvm/ADT/SmallSet.h"
+#include <deque>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -36,13 +38,12 @@ LLDB_PLUGIN_DEFINE(UnwindAssemblyInstEmulation)
 bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
     AddressRange &range, Thread &thread, UnwindPlan &unwind_plan) {
   std::vector<uint8_t> function_text(range.GetByteSize());
-  ProcessSP process_sp(thread.GetProcess());
-  if (process_sp) {
+  TargetSP target_sp(thread.CalculateTarget());
+  if (target_sp) {
     Status error;
-    const bool force_live_memory = true;
-    if (process_sp->GetTarget().ReadMemory(
-            range.GetBaseAddress(), function_text.data(), range.GetByteSize(),
-            error, force_live_memory) != range.GetByteSize()) {
+    if (target_sp->ReadMemory(range.GetBaseAddress(), function_text.data(),
+                              range.GetByteSize(),
+                              error) != range.GetByteSize()) {
       return false;
     }
   }
@@ -63,7 +64,7 @@ static void DumpUnwindRowsToLog(Log *log, AddressRange range,
 }
 
 static void DumpInstToLog(Log *log, Instruction &inst,
-                          InstructionList inst_list) {
+                          const InstructionList &inst_list) {
   if (!log || !log->GetVerbose())
     return;
   const bool show_address = true;
@@ -150,29 +151,39 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
   EmulateInstruction::InstructionCondition last_condition =
       EmulateInstruction::UnconditionalCondition;
 
-  for (const InstructionSP &inst : inst_list.Instructions()) {
-    if (!inst)
-      continue;
-    DumpInstToLog(log, *inst, inst_list);
+  std::deque<std::size_t> to_visit = {0};
+  llvm::SmallSet<std::size_t, 0> enqueued = {0};
+
+  // Instructions reachable through jumps are inserted on the front.
+  // The next instruction is inserted on the back.
+  // Pop from the back to ensure non-branching instructions are visited
+  // sequentially.
+  while (!to_visit.empty()) {
+    const std::size_t current_index = to_visit.back();
+    Instruction &inst = *inst_list.GetInstructionAtIndex(current_index);
+    to_visit.pop_back();
+    DumpInstToLog(log, inst, inst_list);
 
     m_curr_row_modified = false;
-    m_forward_branch_offset = 0;
+    m_branch_offset = 0;
+    m_branch_is_call = false;
 
     lldb::addr_t current_offset =
-        inst->GetAddress().GetFileAddress() - base_addr;
+        inst.GetAddress().GetFileAddress() - base_addr;
     auto it = saved_unwind_states.upper_bound(current_offset);
     assert(it != saved_unwind_states.begin() &&
            "Unwind row for the function entry missing");
     --it; // Move it to the row corresponding to the current offset
 
-    // If the offset of m_state.row doesn't match with the offset we see in
-    // saved_unwind_states then we have to update current unwind state to
-    // the saved values. It is happening after we processed an epilogue and a
-    // return to caller instruction.
+    // When state is forwarded through a branch, the offset of m_state.row is
+    // different from the offset available in saved_unwind_states. Use the
+    // forwarded state in this case, as the previous instruction may have been
+    // an unconditional jump.
+    // FIXME: this assignment can always be done unconditionally.
     if (it->second.row.GetOffset() != m_state.row.GetOffset())
       m_state = it->second;
 
-    m_inst_emulator_up->SetInstruction(inst->GetOpcode(), inst->GetAddress(),
+    m_inst_emulator_up->SetInstruction(inst.GetOpcode(), inst.GetAddress(),
                                        nullptr);
     const EmulateInstruction::InstructionCondition new_condition =
         m_inst_emulator_up->GetInstructionCondition();
@@ -197,28 +208,53 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
     m_inst_emulator_up->EvaluateInstruction(
         eEmulateInstructionOptionIgnoreConditions);
 
-    // If the current instruction is a branch forward then save the current
-    // CFI information for the offset where we are branching.
-    if (m_forward_branch_offset != 0 &&
-        range.ContainsFileAddress(inst->GetAddress().GetFileAddress() +
-                                  m_forward_branch_offset)) {
-      if (auto [it, inserted] = saved_unwind_states.emplace(
-              current_offset + m_forward_branch_offset, m_state);
-          inserted)
-        it->second.row.SetOffset(current_offset + m_forward_branch_offset);
+    Address branch_address = inst.GetAddress();
+    branch_address.Slide(m_branch_offset);
+    if (m_branch_offset != 0) {
+      if (range.ContainsFileAddress(branch_address.GetFileAddress())) {
+        // The current instruction is a branch: save the current CFI information
+        // for the offset where we are branching.
+        if (auto [it, inserted] = saved_unwind_states.emplace(
+                current_offset + m_branch_offset, m_state);
+            inserted) {
+          it->second.row.SetOffset(current_offset + m_branch_offset);
+          if (std::size_t dest_instr_index =
+                  inst_list.GetIndexOfInstructionAtAddress(branch_address);
+              dest_instr_index < inst_list.GetSize()) {
+            to_visit.push_front(dest_instr_index);
+            enqueued.insert(dest_instr_index);
+          }
+        }
+      } else if (m_branch_is_call) {
+        // The current instruction is a function call: this might be a call to
+        // outlined instructions that used to belong to this function, so try
+        // emulate the callee.
+        assert(!range.ContainsFileAddress(branch_address.GetFileAddress()) &&
+               "function call to instruction inside current function!");
+        EmulateOutlinedFunction(branch_address);
+      }
     }
+
+    // If inst is a barrier, do not propagate state to the next instruction.
+    if (inst.IsBarrier())
+      continue;
 
     // Were there any changes to the CFI while evaluating this instruction?
     if (m_curr_row_modified) {
       // Save the modified row if we don't already have a CFI row in the
       // current address
-      if (saved_unwind_states.count(current_offset +
-                                    inst->GetOpcode().GetByteSize()) == 0) {
-        m_state.row.SetOffset(current_offset + inst->GetOpcode().GetByteSize());
-        saved_unwind_states.emplace(
-            current_offset + inst->GetOpcode().GetByteSize(), m_state);
+      const lldb::addr_t next_inst_offset =
+          current_offset + inst.GetOpcode().GetByteSize();
+      if (saved_unwind_states.count(next_inst_offset) == 0) {
+        m_state.row.SetOffset(next_inst_offset);
+        saved_unwind_states.emplace(next_inst_offset, m_state);
       }
     }
+
+    const size_t next_idx = current_index + 1;
+    const bool never_enqueued = enqueued.insert(next_idx).second;
+    if (never_enqueued && next_idx < inst_list.GetSize())
+      to_visit.push_back(next_idx);
   }
 
   for (auto &[_, state] : saved_unwind_states)
@@ -227,6 +263,62 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
 
   DumpUnwindRowsToLog(log, range, unwind_plan);
   return unwind_plan.GetRowCount() > 0;
+}
+
+bool UnwindAssemblyInstEmulation::EmulateOutlinedFunction(Address func_addr) {
+  Symbol *symbol = func_addr.CalculateSymbolContextSymbol();
+  if (!symbol)
+    return false;
+
+  // The machine outliner names every outlined function OUTLINED_FUNCTION_<n>.
+  if (!symbol->GetName().GetStringRef().starts_with("OUTLINED_FUNCTION_"))
+    return false;
+
+  // Only a call to the helper's entry can be followed; the symbol lookup above
+  // also matches addresses inside it.
+  Address helper_addr = symbol->GetAddress();
+  if (helper_addr.GetFileAddress() != func_addr.GetFileAddress())
+    return false;
+
+  SectionSP section_sp = helper_addr.GetSection();
+  if (!section_sp)
+    return false;
+
+  const size_t byte_size = symbol->GetByteSize();
+  std::vector<uint8_t> text(byte_size);
+  if (section_sp->GetSectionData(text.data(), byte_size,
+                                 helper_addr.GetOffset()) != byte_size)
+    return false;
+
+  DisassemblerSP disasm_sp(Disassembler::DisassembleBytes(
+      m_arch, nullptr, nullptr, nullptr, nullptr, helper_addr, text.data(),
+      text.size(), 99999, /*data_from_file=*/true));
+  if (!disasm_sp)
+    return false;
+  InstructionList &insts = disasm_sp->GetInstructionList();
+  const size_t num_insts = insts.GetSize();
+  if (num_insts == 0)
+    return false;
+
+  // Only straight-line outlined functions are supported.
+  for (size_t i = 0; i + 1 < num_insts; ++i)
+    if (insts.GetInstructionAtIndex(i)->DoesBranch())
+      return false;
+  // The last instruction should be a return back to the caller.
+  if (!insts.GetInstructionAtIndex(num_insts - 1)->DoesBranch())
+    return false;
+
+  for (size_t i = 0; i + 1 < num_insts; ++i) {
+    Instruction &inst = *insts.GetInstructionAtIndex(i);
+    m_inst_emulator_up->SetInstruction(inst.GetOpcode(), inst.GetAddress(),
+                                       nullptr);
+    m_inst_emulator_up->EvaluateInstruction(
+        eEmulateInstructionOptionIgnoreConditions);
+  }
+
+  LLDB_LOGF(GetLog(LLDBLog::Unwind), "followed outlined function %s",
+            symbol->GetName().AsCString(""));
+  return true;
 }
 
 bool UnwindAssemblyInstEmulation::AugmentUnwindPlanFromCallSite(
@@ -377,14 +469,20 @@ size_t UnwindAssemblyInstEmulation::WriteMemory(
     assert(context.GetInfoType() ==
                EmulateInstruction::eInfoTypeRegisterToRegisterPlusOffset &&
            "unhandled case, add code to handle this!");
+    const RegisterInfo &data_reg =
+        context.info.RegisterToRegisterPlusOffset.data_reg;
     const uint32_t unwind_reg_kind = m_unwind_plan_ptr->GetRegisterKind();
-    reg_num = context.info.RegisterToRegisterPlusOffset.data_reg
-                  .kinds[unwind_reg_kind];
-    generic_regnum = context.info.RegisterToRegisterPlusOffset.data_reg
-                         .kinds[eRegisterKindGeneric];
+    reg_num = data_reg.kinds[unwind_reg_kind];
+    generic_regnum = data_reg.kinds[eRegisterKindGeneric];
+
+    // Only a register that still holds the value it had on entry to the
+    // function should be saved, otherwise we would be recording the location of
+    // a local.
+    const bool holds_entry_value =
+        m_state.register_values.count(MakeRegisterKindValuePair(data_reg)) == 0;
 
     if (reg_num != LLDB_INVALID_REGNUM &&
-        generic_regnum != LLDB_REGNUM_GENERIC_SP) {
+        generic_regnum != LLDB_REGNUM_GENERIC_SP && holds_entry_value) {
       if (m_pushed_regs.try_emplace(reg_num, addr).second) {
         const int32_t offset = addr - m_initial_cfa;
         m_state.row.SetRegisterLocationToAtCFAPlusOffset(reg_num, offset,
@@ -505,22 +603,25 @@ bool UnwindAssemblyInstEmulation::WriteRegister(
 
   case EmulateInstruction::eContextAbsoluteBranchRegister:
   case EmulateInstruction::eContextRelativeBranchImmediate: {
+    // If the instruction writes to the return address register, this is a
+    // function call.
+    if (reg_info->kinds[eRegisterKindGeneric] == LLDB_REGNUM_GENERIC_RA)
+      m_branch_is_call = true;
     if (context.GetInfoType() == EmulateInstruction::eInfoTypeISAAndImmediate &&
-        context.info.ISAAndImmediate.unsigned_data32 > 0) {
-      m_forward_branch_offset = context.info.ISAAndImmediate.unsigned_data32;
+        context.info.ISAAndImmediate.unsigned_data32 != 0) {
+      m_branch_offset = context.info.ISAAndImmediate.unsigned_data32;
     } else if (context.GetInfoType() ==
                    EmulateInstruction::eInfoTypeISAAndImmediateSigned &&
-               context.info.ISAAndImmediateSigned.signed_data32 > 0) {
-      m_forward_branch_offset =
-          context.info.ISAAndImmediateSigned.signed_data32;
+               context.info.ISAAndImmediateSigned.signed_data32 != 0) {
+      m_branch_offset = context.info.ISAAndImmediateSigned.signed_data32;
     } else if (context.GetInfoType() ==
                    EmulateInstruction::eInfoTypeImmediate &&
-               context.info.unsigned_immediate > 0) {
-      m_forward_branch_offset = context.info.unsigned_immediate;
+               context.info.unsigned_immediate != 0) {
+      m_branch_offset = context.info.unsigned_immediate;
     } else if (context.GetInfoType() ==
                    EmulateInstruction::eInfoTypeImmediateSigned &&
-               context.info.signed_immediate > 0) {
-      m_forward_branch_offset = context.info.signed_immediate;
+               context.info.signed_immediate != 0) {
+      m_branch_offset = context.info.signed_immediate;
     }
   } break;
 

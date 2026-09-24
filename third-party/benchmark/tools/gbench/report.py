@@ -14,7 +14,7 @@ from numpy import array
 from scipy.stats import gmean, mannwhitneyu
 
 
-class BenchmarkColor(object):
+class BenchmarkColor:
     def __init__(self, name, code):
         self.name = name
         self.code = code
@@ -249,8 +249,9 @@ def print_utest(bc_name, utest, utest_alpha, first_col_width, use_color=True):
     # We still got some results to show but issue a warning about it.
     if not utest["have_optimal_repetitions"]:
         dsc_color = BC_WARNING
-        dsc += ". WARNING: Results unreliable! {}+ repetitions recommended.".format(
-            UTEST_OPTIMAL_REPETITIONS
+        dsc += (
+            f". WARNING: Results unreliable! {UTEST_OPTIMAL_REPETITIONS}+"
+            " repetitions recommended."
         )
 
     special_str = "{}{:<{}s}{endc}{}{:16.4f}{endc}{}{:16.4f}{endc}{}      {}"
@@ -260,7 +261,7 @@ def print_utest(bc_name, utest, utest_alpha, first_col_width, use_color=True):
             use_color,
             special_str,
             BC_HEADER,
-            "{}{}".format(bc_name, UTEST_COL_NAME),
+            f"{bc_name}{UTEST_COL_NAME}",
             first_col_width,
             get_utest_color(utest["time_pvalue"]),
             utest["time_pvalue"],
@@ -285,7 +286,7 @@ def get_difference_report(json1, json2, utest=False):
     partitions = partition_benchmarks(json1, json2)
     for partition in partitions:
         benchmark_name = partition[0][0]["name"]
-        label = partition[0][0]["label"] if "label" in partition[0][0] else ""
+        label = partition[0][0].get("label", "")
         time_unit = partition[0][0]["time_unit"]
         measurements = []
         utest_results = {}
@@ -329,11 +330,7 @@ def get_difference_report(json1, json2, utest=False):
         # time units which are not compatible with other time units in the
         # benchmark suite.
         if measurements:
-            run_type = (
-                partition[0][0]["run_type"]
-                if "run_type" in partition[0][0]
-                else ""
-            )
+            run_type = partition[0][0].get("run_type", "")
             aggregate_name = (
                 partition[0][0]["aggregate_name"]
                 if run_type == "aggregate"
@@ -403,12 +400,17 @@ def print_difference_report(
     first_col_width = find_longest_name(json_diff_report)
     first_col_width = max(first_col_width, len("Benchmark"))
     first_col_width += len(UTEST_COL_NAME)
-    first_line = "{:<{}s}Time             CPU      Time Old      Time New       CPU Old       CPU New".format(
-        "Benchmark", 12 + first_col_width
+    fmt_str = (
+        "{:<{}s}Time             CPU      Time Old      Time New       CPU Old"
+        "       CPU New"
     )
+    first_line = fmt_str.format("Benchmark", 12 + first_col_width)
     output_strs = [first_line, "-" * len(first_line)]
 
-    fmt_str = "{}{:<{}s}{endc}{}{:+16.4f}{endc}{}{:+16.4f}{endc}{:14.0f}{:14.0f}{endc}{:14.0f}{:14.0f}"
+    fmt_str = (
+        "{}{:<{}s}{endc}{}{:+16.4f}{endc}{}{:+16.4f}{endc}{:14.0f}{:14.0f}"
+        "{endc}{:14.0f}{:14.0f}"
+    )
     for benchmark in json_diff_report:
         # *If* we were asked to only include aggregates,
         # and if it is non-aggregate, then don't print it.
@@ -464,7 +466,7 @@ class TestGetUniqueBenchmarkNames(unittest.TestCase):
             os.path.dirname(os.path.realpath(__file__)), "Inputs"
         )
         testOutput = os.path.join(testInputs, "test3_run0.json")
-        with open(testOutput, "r") as f:
+        with open(testOutput) as f:
             json = json.load(f)
         return json
 
@@ -480,8 +482,8 @@ class TestGetUniqueBenchmarkNames(unittest.TestCase):
         print("\n")
         print("\n".join(output_lines))
         self.assertEqual(len(output_lines), len(expect_lines))
-        for i in range(0, len(output_lines)):
-            self.assertEqual(expect_lines[i], output_lines[i])
+        for i, output_line in enumerate(output_lines):
+            self.assertEqual(expect_lines[i], output_line)
 
 
 class TestReportDifference(unittest.TestCase):
@@ -495,9 +497,9 @@ class TestReportDifference(unittest.TestCase):
             )
             testOutput1 = os.path.join(testInputs, "test1_run1.json")
             testOutput2 = os.path.join(testInputs, "test1_run2.json")
-            with open(testOutput1, "r") as f:
+            with open(testOutput1) as f:
                 json1 = json.load(f)
-            with open(testOutput2, "r") as f:
+            with open(testOutput2) as f:
                 json2 = json.load(f)
             return json1, json2
 
@@ -584,8 +586,8 @@ class TestReportDifference(unittest.TestCase):
         print("\n")
         print("\n".join(output_lines_with_header))
         self.assertEqual(len(output_lines), len(expect_lines))
-        for i in range(0, len(output_lines)):
-            parts = [x for x in output_lines[i].split(" ") if x]
+        for i, output_line in enumerate(output_lines):
+            parts = [x for x in output_line.split(" ") if x]
             self.assertEqual(len(parts), 7)
             self.assertEqual(expect_lines[i], parts)
 
@@ -819,7 +821,9 @@ class TestReportDifference(unittest.TestCase):
             },
         ]
         self.assertEqual(len(self.json_diff_report), len(expected_output))
-        for out, expected in zip(self.json_diff_report, expected_output):
+        for out, expected in zip(
+            self.json_diff_report, expected_output, strict=True
+        ):
             self.assertEqual(out["name"], expected["name"])
             self.assertEqual(out["label"], expected["label"])
             self.assertEqual(out["time_unit"], expected["time_unit"])
@@ -837,7 +841,7 @@ class TestReportDifferenceBetweenFamilies(unittest.TestCase):
                 os.path.dirname(os.path.realpath(__file__)), "Inputs"
             )
             testOutput = os.path.join(testInputs, "test2_run.json")
-            with open(testOutput, "r") as f:
+            with open(testOutput) as f:
                 json = json.load(f)
             return json
 
@@ -861,8 +865,8 @@ class TestReportDifferenceBetweenFamilies(unittest.TestCase):
         print("\n")
         print("\n".join(output_lines_with_header))
         self.assertEqual(len(output_lines), len(expect_lines))
-        for i in range(0, len(output_lines)):
-            parts = [x for x in output_lines[i].split(" ") if x]
+        for i, output_line in enumerate(output_lines):
+            parts = [x for x in output_line.split(" ") if x]
             self.assertEqual(len(parts), 7)
             self.assertEqual(expect_lines[i], parts)
 
@@ -947,7 +951,9 @@ class TestReportDifferenceBetweenFamilies(unittest.TestCase):
             },
         ]
         self.assertEqual(len(self.json_diff_report), len(expected_output))
-        for out, expected in zip(self.json_diff_report, expected_output):
+        for out, expected in zip(
+            self.json_diff_report, expected_output, strict=True
+        ):
             self.assertEqual(out["name"], expected["name"])
             self.assertEqual(out["time_unit"], expected["time_unit"])
             assert_utest(self, out, expected)
@@ -965,9 +971,9 @@ class TestReportDifferenceWithUTest(unittest.TestCase):
             )
             testOutput1 = os.path.join(testInputs, "test3_run0.json")
             testOutput2 = os.path.join(testInputs, "test3_run1.json")
-            with open(testOutput1, "r") as f:
+            with open(testOutput1) as f:
                 json1 = json.load(f)
-            with open(testOutput2, "r") as f:
+            with open(testOutput2) as f:
                 json2 = json.load(f)
             return json1, json2
 
@@ -1025,8 +1031,8 @@ class TestReportDifferenceWithUTest(unittest.TestCase):
         print("\n")
         print("\n".join(output_lines_with_header))
         self.assertEqual(len(output_lines), len(expect_lines))
-        for i in range(0, len(output_lines)):
-            parts = [x for x in output_lines[i].split(" ") if x]
+        for i, output_line in enumerate(output_lines):
+            parts = [x for x in output_line.split(" ") if x]
             self.assertEqual(expect_lines[i], parts)
 
     def test_json_diff_report_pretty_printing_aggregates_only(self):
@@ -1081,8 +1087,8 @@ class TestReportDifferenceWithUTest(unittest.TestCase):
         print("\n")
         print("\n".join(output_lines_with_header))
         self.assertEqual(len(output_lines), len(expect_lines))
-        for i in range(0, len(output_lines)):
-            parts = [x for x in output_lines[i].split(" ") if x]
+        for i, output_line in enumerate(output_lines):
+            parts = [x for x in output_line.split(" ") if x]
             self.assertEqual(expect_lines[i], parts)
 
     def test_json_diff_report(self):
@@ -1190,7 +1196,9 @@ class TestReportDifferenceWithUTest(unittest.TestCase):
             },
         ]
         self.assertEqual(len(self.json_diff_report), len(expected_output))
-        for out, expected in zip(self.json_diff_report, expected_output):
+        for out, expected in zip(
+            self.json_diff_report, expected_output, strict=True
+        ):
             self.assertEqual(out["name"], expected["name"])
             self.assertEqual(out["time_unit"], expected["time_unit"])
             assert_utest(self, out, expected)
@@ -1210,9 +1218,9 @@ class TestReportDifferenceWithUTestWhileDisplayingAggregatesOnly(
             )
             testOutput1 = os.path.join(testInputs, "test3_run0.json")
             testOutput2 = os.path.join(testInputs, "test3_run1.json")
-            with open(testOutput1, "r") as f:
+            with open(testOutput1) as f:
                 json1 = json.load(f)
-            with open(testOutput2, "r") as f:
+            with open(testOutput2) as f:
                 json2 = json.load(f)
             return json1, json2
 
@@ -1270,8 +1278,8 @@ class TestReportDifferenceWithUTestWhileDisplayingAggregatesOnly(
         print("\n")
         print("\n".join(output_lines_with_header))
         self.assertEqual(len(output_lines), len(expect_lines))
-        for i in range(0, len(output_lines)):
-            parts = [x for x in output_lines[i].split(" ") if x]
+        for i, output_line in enumerate(output_lines):
+            parts = [x for x in output_line.split(" ") if x]
             self.assertEqual(expect_lines[i], parts)
 
     def test_json_diff_report(self):
@@ -1380,7 +1388,9 @@ class TestReportDifferenceWithUTestWhileDisplayingAggregatesOnly(
             },
         ]
         self.assertEqual(len(self.json_diff_report), len(expected_output))
-        for out, expected in zip(self.json_diff_report, expected_output):
+        for out, expected in zip(
+            self.json_diff_report, expected_output, strict=True
+        ):
             self.assertEqual(out["name"], expected["name"])
             self.assertEqual(out["time_unit"], expected["time_unit"])
             assert_utest(self, out, expected)
@@ -1398,9 +1408,9 @@ class TestReportDifferenceForPercentageAggregates(unittest.TestCase):
             )
             testOutput1 = os.path.join(testInputs, "test4_run0.json")
             testOutput2 = os.path.join(testInputs, "test4_run1.json")
-            with open(testOutput1, "r") as f:
+            with open(testOutput1) as f:
                 json1 = json.load(f)
-            with open(testOutput2, "r") as f:
+            with open(testOutput2) as f:
                 json2 = json.load(f)
             return json1, json2
 
@@ -1416,8 +1426,8 @@ class TestReportDifferenceForPercentageAggregates(unittest.TestCase):
         print("\n")
         print("\n".join(output_lines_with_header))
         self.assertEqual(len(output_lines), len(expect_lines))
-        for i in range(0, len(output_lines)):
-            parts = [x for x in output_lines[i].split(" ") if x]
+        for i, output_line in enumerate(output_lines):
+            parts = [x for x in output_line.split(" ") if x]
             self.assertEqual(expect_lines[i], parts)
 
     def test_json_diff_report(self):
@@ -1439,7 +1449,9 @@ class TestReportDifferenceForPercentageAggregates(unittest.TestCase):
             }
         ]
         self.assertEqual(len(self.json_diff_report), len(expected_output))
-        for out, expected in zip(self.json_diff_report, expected_output):
+        for out, expected in zip(
+            self.json_diff_report, expected_output, strict=True
+        ):
             self.assertEqual(out["name"], expected["name"])
             self.assertEqual(out["time_unit"], expected["time_unit"])
             assert_utest(self, out, expected)
@@ -1456,7 +1468,7 @@ class TestReportSorting(unittest.TestCase):
                 os.path.dirname(os.path.realpath(__file__)), "Inputs"
             )
             testOutput = os.path.join(testInputs, "test4_run.json")
-            with open(testOutput, "r") as f:
+            with open(testOutput) as f:
                 json = json.load(f)
             return json
 
@@ -1480,13 +1492,15 @@ class TestReportSorting(unittest.TestCase):
             "88 family 1 instance 1 aggregate",
         ]
 
-        for n in range(len(self.json["benchmarks"]) ** 2):
+        for _n in range(len(self.json["benchmarks"]) ** 2):
             random.shuffle(self.json["benchmarks"])
             sorted_benchmarks = util.sort_benchmark_results(self.json)[
                 "benchmarks"
             ]
             self.assertEqual(len(expected_names), len(sorted_benchmarks))
-            for out, expected in zip(sorted_benchmarks, expected_names):
+            for out, expected in zip(
+                sorted_benchmarks, expected_names, strict=True
+            ):
                 self.assertEqual(out["name"], expected)
 
 
@@ -1503,12 +1517,12 @@ class TestReportDifferenceWithUTestWhileDisplayingAggregatesOnly2(
             )
             testOutput1 = os.path.join(testInputs, "test5_run0.json")
             testOutput2 = os.path.join(testInputs, "test5_run1.json")
-            with open(testOutput1, "r") as f:
+            with open(testOutput1) as f:
                 json1 = json.load(f)
                 json1["benchmarks"] = [
                     json1["benchmarks"][0] for i in range(1000)
                 ]
-            with open(testOutput2, "r") as f:
+            with open(testOutput2) as f:
                 json2 = json.load(f)
                 json2["benchmarks"] = [
                     json2["benchmarks"][0] for i in range(1000)
@@ -1535,8 +1549,8 @@ class TestReportDifferenceWithUTestWhileDisplayingAggregatesOnly2(
         )
         output_lines = output_lines_with_header[2:]
         found = False
-        for i in range(0, len(output_lines)):
-            parts = [x for x in output_lines[i].split(" ") if x]
+        for output_line in output_lines:
+            parts = [x for x in output_line.split(" ") if x]
             found = expect_line == parts
             if found:
                 break
@@ -1578,7 +1592,9 @@ class TestReportDifferenceWithUTestWhileDisplayingAggregatesOnly2(
             },
         ]
         self.assertEqual(len(self.json_diff_report), len(expected_output))
-        for out, expected in zip(self.json_diff_report, expected_output):
+        for out, expected in zip(
+            self.json_diff_report, expected_output, strict=True
+        ):
             self.assertEqual(out["name"], expected["name"])
             self.assertEqual(out["time_unit"], expected["time_unit"])
             assert_utest(self, out, expected)
@@ -1602,7 +1618,7 @@ def assert_utest(unittest_instance, lhs, rhs):
 
 
 def assert_measurements(unittest_instance, lhs, rhs):
-    for m1, m2 in zip(lhs["measurements"], rhs["measurements"]):
+    for m1, m2 in zip(lhs["measurements"], rhs["measurements"], strict=False):
         unittest_instance.assertEqual(m1["real_time"], m2["real_time"])
         unittest_instance.assertEqual(m1["cpu_time"], m2["cpu_time"])
         # m1['time'] and m1['cpu'] hold values which are being calculated,

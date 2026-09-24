@@ -31,11 +31,13 @@ LLVM_ABI extern StringRef ELFCtorArrayFuncSectionName;
 LLVM_ABI extern StringRef ELFDtorArrayFuncSectionName;
 
 LLVM_ABI extern StringRef ELFInitSectionNames[3];
+LLVM_ABI extern StringRef ELFFiniSectionNames[3];
 
 LLVM_ABI extern StringRef ELFThreadBSSSectionName;
 LLVM_ABI extern StringRef ELFThreadDataSectionName;
 
 LLVM_ABI bool isELFInitializerSection(StringRef SecName);
+LLVM_ABI bool isELFFinalizerSection(StringRef SecName);
 
 LLVM_ABI bool isCOFFInitializerSection(StringRef Name);
 

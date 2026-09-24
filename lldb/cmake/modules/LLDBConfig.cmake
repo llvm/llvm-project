@@ -18,7 +18,7 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
     "`CMakeFiles'. Please delete them.")
 endif()
 
-macro(add_optional_dependency variable description package found)
+macro(add_optional_dependency variable description package)
   cmake_parse_arguments(ARG
     "QUIET"
     "VERSION"
@@ -45,7 +45,7 @@ macro(add_optional_dependency variable description package found)
       set(maybe_quiet QUIET)
     endif()
     find_package(${package} ${ARG_VERSION} ${maybe_required} ${maybe_quiet})
-    set(${variable} "${${found}}")
+    set(${variable} "${${package}_FOUND}")
   endif()
 
   message(STATUS "${description}: ${${variable}}")
@@ -56,17 +56,51 @@ set(LLDB_LIBXML2_VERSION "2.8" CACHE STRING
   static builds of libxml 2. Use at your own risk.")
 mark_as_advanced(LLDB_LIBXML2_VERSION)
 
-add_optional_dependency(LLDB_ENABLE_SWIG "Enable SWIG to generate LLDB bindings" SWIG SWIG_FOUND VERSION 4)
-add_optional_dependency(LLDB_ENABLE_LIBEDIT "Enable editline support in LLDB" LibEdit LibEdit_FOUND)
-add_optional_dependency(LLDB_ENABLE_CURSES "Enable curses support in LLDB" CursesAndPanel CURSESANDPANEL_FOUND)
-add_optional_dependency(LLDB_ENABLE_LZMA "Enable LZMA compression support in LLDB" LibLZMA LIBLZMA_FOUND)
-add_optional_dependency(LLDB_ENABLE_LUA "Enable Lua scripting support in LLDB" LuaAndSwig LUAANDSWIG_FOUND)
-add_optional_dependency(LLDB_ENABLE_PYTHON "Enable Python scripting support in LLDB" PythonAndSwig PYTHONANDSWIG_FOUND)
-add_optional_dependency(LLDB_ENABLE_LIBXML2 "Enable Libxml 2 support in LLDB" LibXml2 LIBXML2_FOUND VERSION ${LLDB_LIBXML2_VERSION})
-add_optional_dependency(LLDB_ENABLE_FBSDVMCORE "Enable libfbsdvmcore support in LLDB" FBSDVMCore FBSDVMCore_FOUND QUIET)
+add_optional_dependency(LLDB_ENABLE_SWIG "Enable SWIG to generate LLDB bindings" SWIG VERSION 4)
+add_optional_dependency(LLDB_ENABLE_LIBEDIT "Enable editline support in LLDB" LibEdit)
+add_optional_dependency(LLDB_ENABLE_CURSES "Enable curses support in LLDB" CursesAndPanel)
+add_optional_dependency(LLDB_ENABLE_LUA "Enable Lua scripting support in LLDB" LuaAndSwig)
+add_optional_dependency(LLDB_ENABLE_PYTHON "Enable Python scripting support in LLDB" PythonAndSwig)
+add_optional_dependency(LLDB_ENABLE_LIBXML2 "Enable Libxml 2 support in LLDB" LibXml2 VERSION ${LLDB_LIBXML2_VERSION})
+add_optional_dependency(LLDB_ENABLE_TREESITTER "Enable Tree-sitter syntax highlighting" TreeSitter)
+
+# liblzma comes from LLVM, and a standalone build cannot change how LLVM was
+# built, so LLDB_ENABLE_LZMA can only be reported here.
+if(LLDB_BUILT_STANDALONE AND DEFINED LLDB_ENABLE_LZMA)
+  string(TOUPPER "${LLDB_ENABLE_LZMA}" lldb_enable_lzma)
+  if(NOT lldb_enable_lzma STREQUAL "AUTO")
+    # Auto is exempt because it never asked for a particular answer.
+    if((lldb_enable_lzma AND NOT LLVM_ENABLE_LZMA) OR
+       (NOT lldb_enable_lzma AND LLVM_ENABLE_LZMA))
+      message(FATAL_ERROR
+        "LLDB_ENABLE_LZMA=${LLDB_ENABLE_LZMA} disagrees with the LLVM this "
+        "build links against, which has LLVM_ENABLE_LZMA=${LLVM_ENABLE_LZMA}. "
+        "A standalone build cannot change that; set LLVM_ENABLE_LZMA when "
+        "configuring LLVM instead.")
+    endif()
+    message(DEPRECATION
+      "LLDB_ENABLE_LZMA is deprecated and will be removed. It has no effect in "
+      "a standalone build: liblzma comes from LLVM. Set LLVM_ENABLE_LZMA when "
+      "configuring LLVM instead.")
+  endif()
+  unset(lldb_enable_lzma)
+endif()
+message(STATUS "Enable LZMA compression support in LLDB: ${LLVM_ENABLE_LZMA}")
 
 option(LLDB_USE_ENTITLEMENTS "When codesigning, use entitlements if available" ON)
 option(LLDB_BUILD_FRAMEWORK "Build LLDB.framework (Darwin only)" OFF)
+if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
+  set(default_build_static_liblldb ON)
+else()
+  set(default_build_static_liblldb OFF)
+endif()
+option(LLDB_BUILD_STATIC_LIBLLDB
+  "Build liblldb as a static library"
+  ${default_build_static_liblldb})
+if(LLDB_BUILD_STATIC_LIBLLDB AND
+   NOT CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
+  message(FATAL_ERROR "LLDB_BUILD_STATIC_LIBLLDB is only supported for Emscripten")
+endif()
 option(LLDB_ENABLE_PROTOCOL_SERVERS "Enable protocol servers (e.g. MCP) in LLDB" ON)
 option(LLDB_NO_INSTALL_DEFAULT_RPATH "Disable default RPATH settings in binaries" OFF)
 option(LLDB_USE_SYSTEM_DEBUGSERVER "Use the system's debugserver for testing (Darwin only)." OFF)
@@ -78,6 +112,11 @@ option(LLDB_ENFORCE_STRICT_TEST_REQUIREMENTS
 set(LLDB_GLOBAL_INIT_DIRECTORY "" CACHE STRING
   "Path to the global lldbinit directory. Relative paths are resolved relative to the
   directory containing the LLDB library.")
+
+set(LLDB_DWO_DIAGNOSTIC_SUFFIX "Debugging will be degraded." CACHE STRING
+  "Text appended to diagnostics when LLDB cannot locate DWO debug information files. Clients can
+  customize this message with a URL or additional information to help users know how to fix or
+  troubleshoot the issue.")
 
 if (LLDB_USE_SYSTEM_DEBUGSERVER)
   # The custom target for the system debugserver has no install target, so we
@@ -99,6 +138,7 @@ if(LLDB_BUILD_FRAMEWORK)
 
   get_filename_component(LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR ${LLDB_FRAMEWORK_BUILD_DIR} ABSOLUTE
     BASE_DIR ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR})
+  set(LLDB_FRAMEWORK_DIR "${LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR}/LLDB.framework")
 
   # Essentially, emit the framework's dSYM outside of the framework directory.
   set(LLDB_DEBUGINFO_INSTALL_PREFIX ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin CACHE STRING
@@ -129,8 +169,8 @@ if(APPLE AND CMAKE_GENERATOR STREQUAL Xcode)
   endif()
 endif()
 
-set(LLDB_EXPORT_ALL_SYMBOLS 0 CACHE BOOL
-  "Causes lldb to export some private symbols when building liblldb. See lldb/source/API/liblldb-private.exports for the full list of symbols that get exported.")
+set(LLDB_EXPORT_ALL_SYMBOLS OFF CACHE BOOL
+  "Causes lldb to export all private symbols when building liblldb. See lldb/source/API/liblldb-private.exports for the full list of symbols that get exported.")
 
 set(LLDB_EXPORT_ALL_SYMBOLS_EXPORTS_FILE "" CACHE PATH
   "When `LLDB_EXPORT_ALL_SYMBOLS` is enabled, this specifies the exports file to use when building liblldb.")
@@ -162,6 +202,40 @@ if (LLDB_ENABLE_LIBEDIT)
   set(CMAKE_EXTRA_INCLUDE_FILES)
 endif()
 
+if (APPLE)
+  set(default_enable_mte OFF)
+
+  # The MTE launcher complicates injecting the sanitizer runtime libraries.
+  # Default to OFF when any sanitizer is enabled.
+  if (NOT LLVM_USE_SANITIZER)
+    execute_process(
+        COMMAND sysctl -n hw.optional.arm.FEAT_MTE4
+        OUTPUT_VARIABLE SYSCTL_OUTPUT
+        ERROR_QUIET
+        RESULT_VARIABLE SYSCTL_RESULT
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    if(SYSCTL_RESULT EQUAL 0 AND SYSCTL_OUTPUT STREQUAL "1")
+      set(default_enable_mte ON)
+    endif()
+  endif()
+
+  option(LLDB_ENABLE_MTE "Run the LLDB test suite with MTE enabled." ${default_enable_mte})
+
+  if (LLDB_ENABLE_MTE)
+    message(STATUS "Running the LLDB test suite with MTE")
+  endif()
+else()
+  set(LLDB_ENABLE_MTE OFF)
+endif()
+
+if (CMAKE_SYSTEM_NAME MATCHES "Darwin|FreeBSD" AND NOT CMAKE_GENERATOR MATCHES "Xcode")
+  set(default_enable_dynamic_scriptinterpreters ON)
+else()
+  set(default_enable_dynamic_scriptinterpreters OFF)
+endif()
+option(LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS "Build the script interpreter plugins as shared libraries" ${default_enable_dynamic_scriptinterpreters})
+
 if (LLDB_ENABLE_PYTHON)
   if(CMAKE_SYSTEM_NAME MATCHES "Windows")
     set(default_embed_python_home ON)
@@ -172,26 +246,46 @@ if (LLDB_ENABLE_PYTHON)
     "Embed PYTHONHOME in the binary. If set to OFF, PYTHONHOME environment variable will be used to to locate Python."
     ${default_embed_python_home})
 
-  include_directories(${Python3_INCLUDE_DIRS})
-
   if (LLDB_EMBED_PYTHON_HOME)
     get_filename_component(PYTHON_HOME "${Python3_EXECUTABLE}" DIRECTORY)
     set(LLDB_PYTHON_HOME "${PYTHON_HOME}" CACHE STRING
       "Path to use as PYTHONHOME in lldb. If a relative path is specified, it will be resolved at runtime relative to liblldb directory.")
   endif()
 
+  # Expose the build-time libpython through Config.h (its R"(...)"
+  # substitution avoids the per-platform path-escaping hazards of
+  # target_compile_definitions) so the loader has a runtime fallback.
+  # Skip Windows: FindPython3 returns the .lib import library, which is
+  # a different file from the .dll the loader actually needs.
+  if(TARGET Python3::Python AND NOT WIN32)
+    get_target_property(_Python3_LIB_PATH Python3::Python IMPORTED_LOCATION)
+    if(_Python3_LIB_PATH)
+      set(LLDB_PYTHON_RUNTIME_LIBRARY_BUILD_PATH "${_Python3_LIB_PATH}")
+    endif()
+  endif()
+
   # Enable targeting the Python Limited C API.
   set(PYTHON_LIMITED_API_MIN_SWIG_VERSION "4.2")
+  if (SWIG_VERSION VERSION_EQUAL "4.4.0" AND Python3_VERSION VERSION_GREATER_EQUAL "3.13")
+    set(AFFECTED_BY_SWIG_BUG TRUE)
+  else()
+    set(AFFECTED_BY_SWIG_BUG FALSE)
+  endif()
+
   if (SWIG_VERSION VERSION_GREATER_EQUAL PYTHON_LIMITED_API_MIN_SWIG_VERSION
-      AND NOT LLDB_EMBED_PYTHON_HOME)
+      AND NOT LLDB_EMBED_PYTHON_HOME AND NOT AFFECTED_BY_SWIG_BUG)
     set(default_enable_python_limited_api ON)
   else()
     set(default_enable_python_limited_api OFF)
   endif()
+
   option(LLDB_ENABLE_PYTHON_LIMITED_API "Force LLDB to only use the Python Limited API (requires SWIG 4.2 or later)"
     ${default_enable_python_limited_api})
 
   # Diagnose unsupported configurations.
+  if (LLDB_ENABLE_PYTHON_LIMITED_API AND AFFECTED_BY_SWIG_BUG)
+    message(SEND_ERROR "LLDB_ENABLE_PYTHON_LIMITED_API is not compatible with SWIG 4.4.0 and Python >= 3.13 due to a bug in SWIG: https://github.com/swig/swig/issues/3283")
+  endif()
   if (LLDB_ENABLE_PYTHON_LIMITED_API AND LLDB_EMBED_PYTHON_HOME)
     message(SEND_ERROR "LLDB_ENABLE_PYTHON_LIMITED_API is not compatible with LLDB_EMBED_PYTHON_HOME")
   endif()
@@ -258,6 +352,7 @@ if( MSVC )
     -wd4068 # Suppress 'warning C4068: unknown pragma'
     -wd4150 # Suppress 'warning C4150: deletion of pointer to incomplete type'
     -wd4201 # Suppress 'warning C4201: nonstandard extension used: nameless struct/union'
+    -wd4250 # Suppress 'warning C4250: 'class1' : inherits 'class2::member' via dominance
     -wd4251 # Suppress 'warning C4251: T must have dll-interface to be used by clients of class U.'
     -wd4521 # Suppress 'warning C4521: 'type' : multiple copy constructors specified'
     -wd4530 # Suppress 'warning C4530: C++ exception handler used, but unwind semantics are not enabled.'
@@ -285,10 +380,6 @@ if(NOT DEFINED LLDB_VERSION_SUFFIX)
 endif()
 set(LLDB_VERSION "${LLDB_VERSION_MAJOR}.${LLDB_VERSION_MINOR}.${LLDB_VERSION_PATCH}${LLDB_VERSION_SUFFIX}")
 message(STATUS "LLDB version: ${LLDB_VERSION}")
-
-if (LLDB_ENABLE_LZMA)
-  include_directories(${LIBLZMA_INCLUDE_DIRS})
-endif()
 
 include_directories(BEFORE
   ${CMAKE_CURRENT_BINARY_DIR}/include
@@ -355,32 +446,6 @@ if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
     set(LLDB_CAN_USE_DEBUGSERVER ON)
 else()
     set(LLDB_CAN_USE_DEBUGSERVER OFF)
-endif()
-
-# In a cross-compile build, we need to skip building the generated
-# lldb-rpc sources in the first phase of host build so that they can
-# get built using the just-built Clang toolchain in the second phase.
-if (NOT DEFINED LLDB_CAN_USE_LLDB_RPC_SERVER)
-  set(LLDB_CAN_USE_LLDB_RPC_SERVER OFF)
-else()
-  if ((CMAKE_CROSSCOMPILING OR LLVM_HOST_TRIPLE MATCHES "${LLVM_DEFAULT_TARGET_TRIPLE}") AND
-      CMAKE_SYSTEM_NAME MATCHES "AIX|Android|Darwin|FreeBSD|Linux|NetBSD|OpenBSD|Windows")
-    set(LLDB_CAN_USE_LLDB_RPC_SERVER ON)
-  else()
-    set(LLDB_CAN_USE_LLDB_RPC_SERVER OFF)
-  endif()
-endif()
-
-
-if (NOT DEFINED LLDB_BUILD_LLDBRPC)
-  set(LLDB_BUILD_LLDBRPC OFF)
-else()
-  if (CMAKE_CROSSCOMPILING)
-    set(LLDB_BUILD_LLDBRPC OFF CACHE BOOL "")
-    get_host_tool_path(lldb-rpc-gen LLDB_RPC_GEN_EXE lldb_rpc_gen_exe lldb_rpc_gen_target)
-  else()
-    set(LLDB_BUILD_LLDBRPC ON CACHE BOOL "")
-  endif()
 endif()
 
 include(LLDBGenerateConfig)

@@ -25,6 +25,7 @@
 #include "clang/Sema/SemaCodeCompletion.h"
 #include "clang/Sema/SemaRISCV.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringSwitch.h"
 #include <optional>
 using namespace clang;
@@ -236,6 +237,7 @@ struct PragmaCommentHandler : public PragmaHandler {
 
 private:
   Sema &Actions;
+  bool SeenCopyrightInTU = false; // TU-scoped
 };
 
 struct PragmaDetectMismatchHandler : public PragmaHandler {
@@ -395,6 +397,12 @@ struct PragmaMaxTokensTotalHandler : public PragmaHandler {
                     Token &FirstToken) override;
 };
 
+struct PragmaExportHandler : public PragmaHandler {
+  explicit PragmaExportHandler() : PragmaHandler("export") {}
+  void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
+                    Token &FirstToken) override;
+};
+
 struct PragmaRISCVHandler : public PragmaHandler {
   PragmaRISCVHandler(Sema &Actions)
       : PragmaHandler("riscv"), Actions(Actions) {}
@@ -473,7 +481,8 @@ void Parser::initializePragmaHandlers() {
   PP.AddPragmaHandler(OpenACCHandler.get());
 
   if (getLangOpts().MicrosoftExt ||
-      getTargetInfo().getTriple().isOSBinFormatELF()) {
+      getTargetInfo().getTriple().isOSBinFormatELF() ||
+      getTargetInfo().getTriple().isOSAIX()) {
     MSCommentHandler = std::make_unique<PragmaCommentHandler>(Actions);
     PP.AddPragmaHandler(MSCommentHandler.get());
   }
@@ -558,6 +567,11 @@ void Parser::initializePragmaHandlers() {
   MaxTokensTotalPragmaHandler = std::make_unique<PragmaMaxTokensTotalHandler>();
   PP.AddPragmaHandler("clang", MaxTokensTotalPragmaHandler.get());
 
+  if (getLangOpts().ZOSExt) {
+    ExportHandler = std::make_unique<PragmaExportHandler>();
+    PP.AddPragmaHandler(ExportHandler.get());
+  }
+
   if (getTargetInfo().getTriple().isRISCV()) {
     RISCVPragmaHandler = std::make_unique<PragmaRISCVHandler>(Actions);
     PP.AddPragmaHandler("clang", RISCVPragmaHandler.get());
@@ -595,7 +609,8 @@ void Parser::resetPragmaHandlers() {
   OpenACCHandler.reset();
 
   if (getLangOpts().MicrosoftExt ||
-      getTargetInfo().getTriple().isOSBinFormatELF()) {
+      getTargetInfo().getTriple().isOSBinFormatELF() ||
+      getTargetInfo().getTriple().isOSAIX()) {
     PP.RemovePragmaHandler(MSCommentHandler.get());
     MSCommentHandler.reset();
   }
@@ -691,6 +706,11 @@ void Parser::resetPragmaHandlers() {
 
   PP.RemovePragmaHandler("clang", MaxTokensTotalPragmaHandler.get());
   MaxTokensTotalPragmaHandler.reset();
+
+  if (getLangOpts().ZOSExt) {
+    PP.RemovePragmaHandler(ExportHandler.get());
+    ExportHandler.reset();
+  }
 
   if (getTargetInfo().getTriple().isRISCV()) {
     PP.RemovePragmaHandler("clang", RISCVPragmaHandler.get());
@@ -1386,6 +1406,74 @@ bool Parser::HandlePragmaMSAllocText(StringRef PragmaName,
   return true;
 }
 
+void Parser::zOSHandlePragmaHelper(tok::TokenKind PragmaKind) {
+  assert(Tok.is(PragmaKind));
+
+  StringRef PragmaName = "export";
+
+  using namespace clang::charinfo;
+  auto *TheTokens = static_cast<std::pair<std::unique_ptr<Token[]>, size_t> *>(
+      Tok.getAnnotationValue());
+  PP.EnterTokenStream(std::move(TheTokens->first), TheTokens->second, true,
+                      /*IsReinject=*/true);
+  Tok.setAnnotationValue(nullptr);
+  ConsumeAnnotationToken();
+
+  llvm::scope_exit OnReturn([this]() {
+    while (Tok.isNot(tok::eof))
+      PP.Lex(Tok);
+    PP.Lex(Tok);
+  });
+
+  do {
+    PP.Lex(Tok);
+    if (Tok.isNot(tok::l_paren)) {
+      PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_lparen)
+          << PragmaName;
+      return;
+    }
+
+    PP.Lex(Tok);
+    if (Tok.isNot(tok::identifier)) {
+      PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_identifier)
+          << PragmaName;
+      return;
+    }
+
+    IdentifierInfo *IdentName = Tok.getIdentifierInfo();
+    SourceLocation IdentNameLoc = Tok.getLocation();
+    PP.Lex(Tok);
+
+    if (Tok.isNot(tok::r_paren)) {
+      PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_rparen)
+          << PragmaName;
+      return;
+    }
+
+    PP.Lex(Tok);
+    Actions.ActOnPragmaExport(IdentName, IdentNameLoc, getCurScope());
+
+    // Because export is also a C++ keyword, we also check for that.
+    if (Tok.is(tok::identifier) || Tok.is(tok::kw_export)) {
+      PragmaName = Tok.getIdentifierInfo()->getName();
+      if (PragmaName != "export")
+        PP.Diag(Tok.getLocation(), diag::warn_pragma_extra_tokens_at_eol)
+            << PragmaName;
+    } else if (Tok.isNot(tok::eof)) {
+      PP.Diag(Tok.getLocation(), diag::warn_pragma_extra_tokens_at_eol)
+          << PragmaName;
+      return;
+    }
+  } while (Tok.isNot(tok::eof));
+  return;
+}
+
+void Parser::HandlePragmaExport() {
+  assert(Tok.is(tok::annot_pragma_export));
+
+  zOSHandlePragmaHelper(tok::annot_pragma_export);
+}
+
 static std::string PragmaLoopHintString(Token PragmaName, Token Option) {
   StringRef Str = PragmaName.getIdentifierInfo()->getName();
   std::string ClangLoopStr("clang loop ");
@@ -1441,23 +1529,26 @@ bool Parser::HandlePragmaLoopHint(LoopHint &Hint) {
   bool OptionUnrollAndJam = false;
   bool OptionDistribute = false;
   bool OptionPipelineDisabled = false;
+  bool OptionLICMDisabled = false;
   bool StateOption = false;
   if (OptionInfo) { // Pragma Unroll does not specify an option.
     OptionUnroll = OptionInfo->isStr("unroll");
     OptionUnrollAndJam = OptionInfo->isStr("unroll_and_jam");
     OptionDistribute = OptionInfo->isStr("distribute");
     OptionPipelineDisabled = OptionInfo->isStr("pipeline");
+    OptionLICMDisabled = OptionInfo->isStr("licm");
     StateOption = llvm::StringSwitch<bool>(OptionInfo->getName())
                       .Case("vectorize", true)
                       .Case("interleave", true)
                       .Case("vectorize_predicate", true)
                       .Default(false) ||
                   OptionUnroll || OptionUnrollAndJam || OptionDistribute ||
-                  OptionPipelineDisabled;
+                  OptionPipelineDisabled || OptionLICMDisabled;
   }
 
   bool AssumeSafetyArg = !OptionUnroll && !OptionUnrollAndJam &&
-                         !OptionDistribute && !OptionPipelineDisabled;
+                         !OptionDistribute && !OptionPipelineDisabled &&
+                         !OptionLICMDisabled;
   // Verify loop hint has an argument.
   if (Toks[0].is(tok::eof)) {
     ConsumeAnnotationToken();
@@ -1474,15 +1565,16 @@ bool Parser::HandlePragmaLoopHint(LoopHint &Hint) {
     SourceLocation StateLoc = Toks[0].getLocation();
     IdentifierInfo *StateInfo = Toks[0].getIdentifierInfo();
 
-    bool Valid = StateInfo &&
-                 llvm::StringSwitch<bool>(StateInfo->getName())
-                     .Case("disable", true)
-                     .Case("enable", !OptionPipelineDisabled)
-                     .Case("full", OptionUnroll || OptionUnrollAndJam)
-                     .Case("assume_safety", AssumeSafetyArg)
-                     .Default(false);
+    bool Valid =
+        StateInfo &&
+        llvm::StringSwitch<bool>(StateInfo->getName())
+            .Case("disable", true)
+            .Case("enable", !OptionPipelineDisabled && !OptionLICMDisabled)
+            .Case("full", OptionUnroll || OptionUnrollAndJam)
+            .Case("assume_safety", AssumeSafetyArg)
+            .Default(false);
     if (!Valid) {
-      if (OptionPipelineDisabled) {
+      if (OptionPipelineDisabled || OptionLICMDisabled) {
         Diag(Toks[0].getLocation(), diag::err_pragma_pipeline_invalid_keyword);
       } else {
         Diag(Toks[0].getLocation(), diag::err_pragma_invalid_keyword)
@@ -1531,7 +1623,7 @@ bool Parser::HandlePragmaLoopHint(LoopHint &Hint) {
         PP.Lex(Tok); // ,
 
         StateInfo = Tok.getIdentifierInfo();
-        IsScalableStr = StateInfo->getName();
+        IsScalableStr = StateInfo ? StateInfo->getName() : "";
 
         if (IsScalableStr != "scalable" && IsScalableStr != "fixed") {
           Diag(Tok.getLocation(),
@@ -1897,7 +1989,8 @@ void Parser::HandlePragmaAttribute() {
   if ((Tok.is(tok::l_square) && NextToken().is(tok::l_square)) ||
       Tok.isRegularKeywordAttribute()) {
     // Parse the CXX11 style attribute.
-    ParseCXX11AttributeSpecifier(Attrs);
+    SourceLocation EndLoc = Tok.getLocation();
+    ParseCXX11AttributeSpecifier(Attrs, &EndLoc);
   } else if (Tok.is(tok::kw___attribute)) {
     ConsumeToken();
     if (ExpectAndConsume(tok::l_paren, diag::err_expected_lparen_after,
@@ -3179,7 +3272,9 @@ void PragmaDetectMismatchHandler::HandlePragma(Preprocessor &PP,
 /// \code
 ///   #pragma comment(linker, "foo")
 /// \endcode
-/// 'linker' is one of five identifiers: compiler, exestr, lib, linker, user.
+/// 'linker' is one of six identifiers: compiler, copyright, exestr, lib,
+/// linker, user.
+///
 /// "foo" is a string, which is fully macro expanded, and permits string
 /// concatenation, embedded escape characters etc.  See MSDN for more details.
 void PragmaCommentHandler::HandlePragma(Preprocessor &PP,
@@ -3199,18 +3294,27 @@ void PragmaCommentHandler::HandlePragma(Preprocessor &PP,
     return;
   }
 
-  // Verify that this is one of the 5 explicitly listed options.
+  // Verify that this is one of the 6 explicitly listed options.
   IdentifierInfo *II = Tok.getIdentifierInfo();
   PragmaMSCommentKind Kind =
-    llvm::StringSwitch<PragmaMSCommentKind>(II->getName())
-    .Case("linker",   PCK_Linker)
-    .Case("lib",      PCK_Lib)
-    .Case("compiler", PCK_Compiler)
-    .Case("exestr",   PCK_ExeStr)
-    .Case("user",     PCK_User)
-    .Default(PCK_Unknown);
+      llvm::StringSwitch<PragmaMSCommentKind>(II->getName())
+          .Case("linker", PCK_Linker)
+          .Case("lib", PCK_Lib)
+          .Case("compiler", PCK_Compiler)
+          .Case("exestr", PCK_ExeStr)
+          .Case("user", PCK_User)
+          .Case("copyright", PCK_Copyright)
+          .Default(PCK_Unknown);
   if (Kind == PCK_Unknown) {
     PP.Diag(Tok.getLocation(), diag::err_pragma_comment_unknown_kind);
+    return;
+  }
+
+  if (PP.getTargetInfo().getTriple().isOSAIX() && Kind != PCK_Copyright) {
+    // Currently, pragma comment kinds aside from "copyright" are not fully
+    // implemented by Clang for AIX targets.
+    PP.Diag(Tok.getLocation(), diag::warn_pragma_comment_ignored)
+        << II->getName();
     return;
   }
 
@@ -3218,6 +3322,17 @@ void PragmaCommentHandler::HandlePragma(Preprocessor &PP,
     PP.Diag(Tok.getLocation(), diag::warn_pragma_comment_ignored)
         << II->getName();
     return;
+  }
+
+  // Handle pragma comment copyright kind.
+  if (Kind == PCK_Copyright) {
+    if (SeenCopyrightInTU) {
+      // pragma comment copyright can each appear only once in a TU.
+      PP.Diag(Tok.getLocation(), diag::warn_pragma_comment_once)
+          << II->getName();
+      return;
+    }
+    SeenCopyrightInTU = true;
   }
 
   // Read the optional string if present.
@@ -3245,6 +3360,10 @@ void PragmaCommentHandler::HandlePragma(Preprocessor &PP,
     PP.Diag(Tok.getLocation(), diag::err_pragma_comment_malformed);
     return;
   }
+
+  // Skip further processing for well-formed copyright with an empty string.
+  if (Kind == PCK_Copyright && ArgumentString.empty())
+    return;
 
   // If the pragma is lexically sound, notify any interested PPCallbacks.
   if (PP.getPPCallbacks())
@@ -3640,6 +3759,7 @@ void PragmaLoopHintHandler::HandlePragma(Preprocessor &PP,
                            .Case("unroll_count", true)
                            .Case("pipeline", true)
                            .Case("pipeline_initiation_interval", true)
+                           .Case("licm", true)
                            .Default(false);
     if (!OptionValid) {
       PP.Diag(Tok.getLocation(), diag::err_pragma_loop_invalid_option)
@@ -4131,6 +4251,44 @@ void PragmaMaxTokensTotalHandler::HandlePragma(Preprocessor &PP,
   }
 
   PP.overrideMaxTokens(MaxTokens, Loc);
+}
+
+static void zOSPragmaHandlerHelper(Preprocessor &PP, Token &Tok,
+                                   tok::TokenKind TokKind) {
+  Token AnnotTok;
+  AnnotTok.startToken();
+  AnnotTok.setKind(TokKind);
+  AnnotTok.setLocation(Tok.getLocation());
+  AnnotTok.setAnnotationEndLoc(Tok.getLocation());
+  SmallVector<Token, 8> TokenVector;
+  // Suck up all of the tokens before the eod.
+  for (; Tok.isNot(tok::eod); PP.Lex(Tok)) {
+    TokenVector.push_back(Tok);
+    AnnotTok.setAnnotationEndLoc(Tok.getLocation());
+  }
+  // Add a sentinel EoF token to the end of the list.
+  Token EoF;
+  EoF.startToken();
+  EoF.setKind(tok::eof);
+  EoF.setLocation(Tok.getLocation());
+  TokenVector.push_back(EoF);
+  // We must allocate this array with new because EnterTokenStream is going to
+  // delete it later.
+  markAsReinjectedForRelexing(TokenVector);
+  auto TokenArray = std::make_unique<Token[]>(TokenVector.size());
+  std::copy(TokenVector.begin(), TokenVector.end(), TokenArray.get());
+  auto Value = new (PP.getPreprocessorAllocator())
+      std::pair<std::unique_ptr<Token[]>, size_t>(std::move(TokenArray),
+                                                  TokenVector.size());
+  AnnotTok.setAnnotationValue(Value);
+  PP.EnterToken(AnnotTok, /*IsReinject*/ false);
+}
+
+/// Handle #pragma export.
+void PragmaExportHandler::HandlePragma(Preprocessor &PP,
+                                       PragmaIntroducer Introducer,
+                                       Token &FirstToken) {
+  zOSPragmaHandlerHelper(PP, FirstToken, tok::annot_pragma_export);
 }
 
 // Handle '#pragma clang riscv intrinsic vector'.

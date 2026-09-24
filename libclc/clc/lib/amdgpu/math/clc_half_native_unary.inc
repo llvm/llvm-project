@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/utils.h>
+#include "clc/utils.h"
 
 #define __CLC_HALF_FUNC(x) __CLC_CONCAT(__clc_half_, x)
 #define __CLC_NATIVE_FUNC(x) __CLC_CONCAT(__clc_native_, x)

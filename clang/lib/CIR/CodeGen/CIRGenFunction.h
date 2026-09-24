@@ -30,10 +30,14 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
+#include "clang/Basic/OpenACCKinds.h"
+#include "clang/Basic/OperatorKinds.h"
+#include "clang/Basic/TargetBuiltins.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "clang/CIR/TypeEvaluationKind.h"
 #include "llvm/ADT/ScopedHashTable.h"
+#include "llvm/IR/Instructions.h"
 
 namespace {
 class ScalarExprEmitter;
@@ -44,6 +48,11 @@ namespace acc {
 class LoopOp;
 } // namespace acc
 } // namespace mlir
+
+namespace clang {
+class OutlinedFunctionDecl;
+class SYCLKernelCallStmt;
+} // namespace clang
 
 namespace clang::CIRGen {
 
@@ -60,41 +69,37 @@ private:
   /// is where the next operations will be introduced.
   CIRGenBuilderTy &builder;
 
-  /// A jump destination is an abstract label, branching to which may
-  /// require a jump out through normal cleanups.
-  struct JumpDest {
-    JumpDest() = default;
-    JumpDest(mlir::Block *block, EHScopeStack::stable_iterator depth = {},
-             unsigned index = 0)
-        : block(block) {}
+  /// Saves the builder's constrained floating-point configuration on
+  /// construction and restores it on destruction. The builder is shared
+  /// across all functions in the module, so its constrained-FP state must be
+  /// scoped to each function's emission.
+  ///
+  /// Note that the similarly named CIRGenFunction::CIRGenFPOptionsRAII
+  /// intentionally avoids restoring the "isFPConstrained" state because that
+  /// state is function-wide, but this object does restore the state so that
+  /// any CIRGenFunction instance created while we are in the process of
+  /// emitting another function cannot corrupt the prior functions state.
+  struct ConstrainedFPRAII {
+    CIRGenBuilderTy &builder;
+    bool savedIsFPConstrained;
+    LangOptions::FPExceptionModeKind savedExcept;
+    llvm::RoundingMode savedRounding;
 
-    bool isValid() const { return block != nullptr; }
-    mlir::Block *getBlock() const { return block; }
-    EHScopeStack::stable_iterator getScopeDepth() const { return scopeDepth; }
-    unsigned getDestIndex() const { return index; }
-
-    // This should be used cautiously.
-    void setScopeDepth(EHScopeStack::stable_iterator depth) {
-      scopeDepth = depth;
+    explicit ConstrainedFPRAII(CIRGenBuilderTy &builder)
+        : builder(builder), savedIsFPConstrained(builder.getIsFPConstrained()),
+          savedExcept(builder.getDefaultConstrainedExcept()),
+          savedRounding(builder.getDefaultConstrainedRounding()) {}
+    ~ConstrainedFPRAII() {
+      builder.setIsFPConstrained(savedIsFPConstrained);
+      builder.setDefaultConstrainedExcept(savedExcept);
+      builder.setDefaultConstrainedRounding(savedRounding);
     }
-
-  private:
-    mlir::Block *block = nullptr;
-    EHScopeStack::stable_iterator scopeDepth;
-    unsigned index;
-  };
+  } constrainedFPState{builder};
 
 public:
   /// The GlobalDecl for the current function being compiled or the global
   /// variable currently being initialized.
   clang::GlobalDecl curGD;
-
-  /// Unified return block.
-  /// In CIR this is a function because each scope might have
-  /// its associated return block.
-  JumpDest returnBlock(mlir::Block *retBlock) {
-    return getJumpDestInCurrentScope(retBlock);
-  }
 
   unsigned nextCleanupDestIndex = 1;
 
@@ -120,7 +125,129 @@ public:
   /// Tracks function scope overall cleanup handling.
   EHScopeStack ehStack;
 
+  typedef void Destroyer(CIRGenFunction &cgf, Address addr, QualType ty);
+
+  /// A cleanup whose destructor call is not emitted where the cleanup is
+  /// registered. Used by the lifetime-extended cleanup stack, whose entries
+  /// are later promoted onto the EH scope stack, and by the deferred
+  /// conditional cleanup stack, whose entries are emitted directly into a
+  /// conditional scope's cleanup region.
+  ///
+  /// A valid \c activeFlag means the cleanup is conditional. The flag tracks
+  /// at run time whether the object has been constructed, and guards the
+  /// destructor call.
+  ///
+  /// Currently only DestroyObject cleanups use this. When other cleanup types
+  /// are needed (e.g., CallLifetimeEnd), this struct can be extended with a
+  /// std::variant of cleanup data types.
+  struct PendingCleanupEntry {
+    CleanupKind kind;
+    Address addr;
+    QualType type;
+    Destroyer *destroyer;
+    Address activeFlag = Address::invalid();
+  };
+
+  llvm::SmallVector<PendingCleanupEntry> lifetimeExtendedCleanupStack;
+
+  /// Cleanups for temporaries constructed inside a conditional.
+  ///
+  /// Temporaries are destroyed in reverse order of construction at the end of
+  /// the full expression. A cleanup lives in the cleanup region of a
+  /// cir.cleanup.scope, and those scopes nest, so nesting is what encodes the
+  /// order.
+  ///
+  /// For an unconditionally constructed temporary, EHScopeStack::pushCleanup
+  /// opens a scope where the temporary is constructed and leaves the builder in
+  /// its body, so each later temporary nests one level deeper and is destroyed
+  /// first.
+  ///
+  /// For a temporary constructed inside a conditional, pushFullExprCleanup
+  /// records the cleanup on this stack, paired with an active flag that is
+  /// cleared ahead of the conditional and set once the object is constructed.
+  /// The destructor call is emitted guarded by that flag, so it runs only on
+  /// the paths that constructed the object.
+  ///
+  /// ConditionalEvaluation opens the region holding those calls where the
+  /// conditional begins, nesting it inside the scopes of earlier temporaries
+  /// and outside later ones. Its body stays open for the rest of the full
+  /// expression, so its cleanup region runs at the end of it.
+  /// FullExprCleanupScope::exit closes these innermost first, then pops the
+  /// enclosing EH-stack cleanups.
+  llvm::SmallVector<PendingCleanupEntry> deferredConditionalCleanupStack;
+
+  /// One record per cir.cleanup.scope opened by a ConditionalEvaluation, as
+  /// described above. These are bookkeeping owned by CIRGenFunction, not RAII
+  /// objects. The scope outlives the ConditionalEvaluation that opened it,
+  /// and the enclosing FullExprCleanupScope is what closes it.
+  struct ConditionalCleanupScope {
+    cir::CleanupScopeOp scope;
+
+    /// The size of deferredConditionalCleanupStack when this scope was
+    /// opened. Every open conditional scope shares that one stack, so the
+    /// entries from this index onward are the ones deferred from inside this
+    /// conditional. They are emitted into this scope's cleanup region, in
+    /// reverse, when it is closed.
+    size_t deferredCleanupStackSize;
+  };
+  llvm::SmallVector<ConditionalCleanupScope> conditionalCleanupScopes;
+
+  /// The cir.cleanup.scope of the innermost FullExprCleanupScope that
+  /// materialized one, or null. ConditionalEvaluation opens a conditional
+  /// cleanup scope only while this is set, since a FullExprCleanupScope is
+  /// what closes those scopes.
+  cir::CleanupScopeOp currentFullExprCleanupScope = nullptr;
+
+  /// A cleanup that was pushed to the EH stack but whose deactivation is
+  /// deferred until the enclosing CleanupDeactivationScope exits. Used to
+  /// protect partially-constructed aggregates (e.g. lambda captures) so that
+  /// already-initialized sub-objects are destroyed if a later initializer
+  /// throws, while avoiding double-destruction after full construction.
+  struct DeferredDeactivateCleanup {
+    EHScopeStack::stable_iterator cleanup;
+    mlir::Operation *dominatingIP;
+  };
+  llvm::SmallVector<DeferredDeactivateCleanup> deferredDeactivationCleanupStack;
+
+  /// Scope that deactivates all enclosed deferred cleanups on exit.
+  /// Mirrors CodeGenFunction::CleanupDeactivationScope in classic codegen.
+  struct CleanupDeactivationScope {
+    CIRGenFunction &cgf;
+    size_t oldDeactivateCleanupStackSize;
+    bool deactivated = false;
+
+    CleanupDeactivationScope(CIRGenFunction &cgf)
+        : cgf(cgf), oldDeactivateCleanupStackSize(
+                        cgf.deferredDeactivationCleanupStack.size()) {}
+
+    void forceDeactivate() {
+      assert(!deactivated && "Deactivating already deactivated scope");
+      auto &stack = cgf.deferredDeactivationCleanupStack;
+      for (size_t i = stack.size(); i > oldDeactivateCleanupStackSize; i--) {
+        cgf.deactivateCleanupBlock(stack[i - 1].cleanup,
+                                   stack[i - 1].dominatingIP);
+        stack[i - 1].dominatingIP->erase();
+      }
+      stack.resize(oldDeactivateCleanupStackSize);
+      deactivated = true;
+    }
+
+    ~CleanupDeactivationScope() {
+      if (!deactivated)
+        forceDeactivate();
+    }
+  };
+
   GlobalDecl curSEHParent;
+
+  /// If a ParmVarDecl had the pass_object_size attribute, this will contain a
+  /// mapping from said ParmVarDecl to its implicit "object_size" parameter.
+  llvm::SmallDenseMap<const ParmVarDecl *, const ImplicitParamDecl *>
+      sizeArguments;
+
+  /// A mapping from NRVO variables to the flags used to indicate
+  /// when the NRVO has been applied to this variable.
+  llvm::DenseMap<const VarDecl *, mlir::Value> nrvoFlags;
 
   llvm::DenseMap<const clang::ValueDecl *, clang::FieldDecl *>
       lambdaCaptureFields;
@@ -131,6 +258,7 @@ public:
   ImplicitParamDecl *cxxabiThisDecl = nullptr;
   mlir::Value cxxabiThisValue = nullptr;
   mlir::Value cxxThisValue = nullptr;
+  clang::CharUnits cxxabiThisAlignment;
   clang::CharUnits cxxThisAlignment;
 
   /// When generating code for a constructor or destructor, this will hold the
@@ -142,15 +270,33 @@ public:
   /// expression.
   Address cxxDefaultInitExprThis = Address::invalid();
 
+  /// The values of function arguments to use when evaluating
+  /// CXXInheritedCtorInitExprs within this context.
+  CallArgList cxxInheritedCtorInitExprArgs;
+
+  /// The current array initialization index when evaluating an
+  /// ArrayInitIndexExpr within an ArrayInitLoopExpr.
+  mlir::Value arrayInitIndex = nullptr;
+
   // Holds the Decl for the current outermost non-closure context
   const clang::Decl *curFuncDecl = nullptr;
   /// This is the inner-most code context, which includes blocks.
   const clang::Decl *curCodeDecl = nullptr;
+  const CIRGenFunctionInfo *curFnInfo = nullptr;
+  QualType fnRetTy;
 
   /// The current function or global initializer that is generated code for.
   /// This is usually a cir::FuncOp, but it can also be a cir::GlobalOp for
   /// global initializers.
   mlir::Operation *curFn = nullptr;
+
+  /// While the initializer of a variable with static storage duration is being
+  /// emitted, the region that destructors registered by that initializer belong
+  /// in: the cir.global's own dtor region for a namespace-scope variable, and
+  /// the enclosing cir.local_init's for a function-local static, which has to
+  /// be destroyed in-function under its guard. Null outside such an
+  /// initializer.
+  mlir::Region *curStaticVarDtorRegion = nullptr;
 
   /// Save Parameter Decl for coroutine.
   llvm::SmallVector<const ParmVarDecl *> fnArgs;
@@ -179,6 +325,21 @@ public:
   /// Sanitizers enabled for this function.
   clang::SanitizerSet sanOpts;
 
+  class CIRGenFPOptionsRAII {
+  public:
+    CIRGenFPOptionsRAII(CIRGenFunction &cgf, FPOptions FPFeatures);
+    CIRGenFPOptionsRAII(CIRGenFunction &cgf, const clang::Expr *E);
+    ~CIRGenFPOptionsRAII();
+
+  private:
+    void ConstructorHelper(clang::FPOptions FPFeatures);
+    CIRGenFunction &cgf;
+    clang::FPOptions oldFPFeatures;
+    LangOptions::FPExceptionModeKind oldExcept;
+    llvm::RoundingMode oldRounding;
+  };
+  clang::FPOptions curFPFeatures;
+
   /// The symbol table maps a variable name to a value in the current scope.
   /// Entering a function creates a new scope, and the function arguments are
   /// added to the mapping. When the processing of a function is terminated,
@@ -195,11 +356,30 @@ public:
   /// this fuction. These can potentially set the return value.
   bool sawAsmBlock = false;
 
+  /// In C++, whether we are code generating a thunk. This controls whether we
+  /// should emit cleanups.
+  bool curFuncIsThunk = false;
+
   mlir::Type convertTypeForMem(QualType t);
 
   mlir::Type convertType(clang::QualType t);
   mlir::Type convertType(const TypeDecl *t) {
     return convertType(getContext().getTypeDeclType(t));
+  }
+
+  /// Get integer from a mlir::Value that is an int constant or a constant op.
+  static int64_t getSExtIntValueFromConstOp(mlir::Value val) {
+    auto constOp = val.getDefiningOp<cir::ConstantOp>();
+    assert(constOp && "getSExtIntValueFromConstOp call with non ConstantOp");
+    return constOp.getIntValue().getSExtValue();
+  }
+
+  /// Get zero-extended integer from a mlir::Value that is an int constant or a
+  /// constant op.
+  static int64_t getZExtIntValueFromConstOp(mlir::Value val) {
+    auto constOp = val.getDefiningOp<cir::ConstantOp>();
+    assert(constOp && "getZExtIntValueFromConstOp call with non ConstantOp");
+    return constOp.getIntValue().getZExtValue();
   }
 
   ///  Return the cir::TypeEvaluationKind of QualType \c type.
@@ -407,13 +587,14 @@ private:
 public:
   /// Use to track source locations across nested visitor traversals.
   /// Always use a `SourceLocRAIIObject` to change currSrcLoc.
-  std::optional<mlir::Location> currSrcLoc;
+  std::optional<SourceRange> currSrcLoc;
+
   class SourceLocRAIIObject {
     CIRGenFunction &cgf;
-    std::optional<mlir::Location> oldLoc;
+    std::optional<SourceRange> oldLoc;
 
   public:
-    SourceLocRAIIObject(CIRGenFunction &cgf, mlir::Location value) : cgf(cgf) {
+    SourceLocRAIIObject(CIRGenFunction &cgf, SourceRange value) : cgf(cgf) {
       if (cgf.currSrcLoc)
         oldLoc = cgf.currSrcLoc;
       cgf.currSrcLoc = value;
@@ -441,6 +622,22 @@ public:
 
   const clang::LangOptions &getLangOpts() const { return cgm.getLangOpts(); }
 
+  bool checkIfFunctionMustProgress() {
+    if (cgm.getCodeGenOpts().getFiniteLoops() ==
+        clang::CodeGenOptions::FiniteLoopsKind::Never)
+      return false;
+
+    // C++11 and later guarantees that a thread eventually will do one of the
+    // following (C++11 [intro.multithread]p24 and C++17 [intro.progress]p1):
+    // - terminate,
+    //  - make a call to a library I/O function,
+    //  - perform an access through a volatile glvalue, or
+    //  - perform a synchronization operation or an atomic operation.
+    //
+    // Hence each function is 'mustprogress' in C++11 or later.
+    return getLangOpts().CPlusPlus11;
+  }
+
   /// True if an insertion point is defined. If not, this indicates that the
   /// current code being emitted is unreachable.
   /// FIXME(cir): we need to inspect this and perhaps use a cleaner mechanism
@@ -463,6 +660,12 @@ public:
 
   bool isLValueSuitableForInlineAtomic(LValue lv);
 
+  RValue emitAtomicLoad(LValue lvalue, SourceLocation loc,
+                        AggValueSlot slot = AggValueSlot::ignored());
+  RValue emitAtomicLoad(LValue lvalue, SourceLocation loc, cir::MemOrder order,
+                        bool isVolatile = false,
+                        AggValueSlot slot = AggValueSlot::ignored());
+
   /// An abstract representation of regular/ObjC call/message targets.
   class AbstractCallee {
     /// The function declaration of the callee.
@@ -475,6 +678,8 @@ public:
     bool hasFunctionDecl() const {
       return llvm::isa_and_nonnull<clang::FunctionDecl>(calleeDecl);
     }
+
+    const clang::Decl *getDecl() const { return calleeDecl; }
 
     unsigned getNumParams() const {
       if (const auto *fd = llvm::dyn_cast<clang::FunctionDecl>(calleeDecl))
@@ -490,12 +695,26 @@ public:
     }
   };
 
+  /// True if the current statement has noinline attribute.
+  bool inNoInlineAttributedStmt = false;
+
+  /// True if the current statement has always_inline attribute.
+  bool inAlwaysInlineAttributedStmt = false;
+
+  // The CallExpr within the current statement that the musttail attribute
+  // applies to.  nullptr if there is no 'musttail' on the current statement.
+  const CallExpr *mustTailCall = nullptr;
+
   struct VlaSizePair {
     mlir::Value numElts;
     QualType type;
 
     VlaSizePair(mlir::Value num, QualType ty) : numElts(num), type(ty) {}
   };
+
+  /// Return the number of elements for a single dimension
+  /// for the given array type.
+  VlaSizePair getVLAElements1D(const VariableArrayType *vla);
 
   /// Returns an MLIR::Value+QualType pair that corresponds to the size,
   /// in non-variably-sized elements, of a variable length array type,
@@ -529,6 +748,8 @@ public:
   /// this statement is not executed normally, it not containing a label means
   /// that we can just remove the code.
   bool containsLabel(const clang::Stmt *s, bool ignoreCaseStmts = false);
+
+  Address emitExtVectorElementLValue(LValue lv, mlir::Location loc);
 
   class ConstantEmission {
     // Cannot use mlir::TypedAttr directly here because of bit availability.
@@ -586,6 +807,9 @@ public:
     /// have the same sort of alloca initialization.
     bool emittedAsOffload = false;
 
+    /// True if lifetime op should be used.
+    bool useLifetimeMarkers = false;
+
     mlir::Value nrvoFlag{};
 
     struct Invalid {};
@@ -621,16 +845,6 @@ public:
       return Address::invalid();
     }
   };
-
-  /// The given basic block lies in the current EH scope, but may be a
-  /// target of a potentially scope-crossing jump; get a stable handle
-  /// to which we can perform this jump later.
-  /// CIRGen: this mostly tracks state for figuring out the proper scope
-  /// information, no actual branches are emitted.
-  JumpDest getJumpDestInCurrentScope(mlir::Block *target) {
-    return JumpDest(target, ehStack.getInnermostNormalCleanup(),
-                    nextCleanupDestIndex++);
-  }
 
   /// Perform the usual unary conversions on the specified expression and
   /// compare the result against zero, returning an Int1Ty value.
@@ -802,6 +1016,33 @@ public:
         : SourceLocExprScopeGuard(e, cfg.curSourceLocExprScope) {}
   };
 
+  /// The scope of an ArrayInitLoopExpr. Within this scope, the value of the
+  /// current loop index is overridden. In order to encourage re-use of existing
+  /// array initialization, this uses a flag to determine if it is a 'no-op' or
+  /// not.
+  class ArrayInitLoopExprScope {
+  public:
+    ArrayInitLoopExprScope(CIRGenFunction &cgf, bool setIdx, mlir::Value index)
+        : cgf(cgf),
+          oldArrayInitIndex(setIdx
+                                ? std::optional<mlir::Value>(cgf.arrayInitIndex)
+                                : std::nullopt) {
+      if (setIdx)
+        cgf.arrayInitIndex = index;
+    }
+    ~ArrayInitLoopExprScope() {
+      if (oldArrayInitIndex.has_value())
+        cgf.arrayInitIndex = *oldArrayInitIndex;
+    }
+
+  private:
+    CIRGenFunction &cgf;
+    std::optional<mlir::Value> oldArrayInitIndex;
+  };
+
+  /// Get the index of the current ArrayInitLoopExpr, if any.
+  mlir::Value getArrayInitIndex() { return arrayInitIndex; }
+
   LValue makeNaturalAlignPointeeAddrLValue(mlir::Value v, clang::QualType t);
   LValue makeNaturalAlignAddrLValue(mlir::Value val, QualType ty);
 
@@ -907,10 +1148,10 @@ public:
                                                 const CXXRecordDecl *baseRD,
                                                 bool isVirtual);
 
+  /// Return a CIR constant for an undefined value of \p cirTy.
+  mlir::Value getUndefConstant(mlir::Location loc, mlir::Type cirTy);
+
   /// Get an appropriate 'undef' rvalue for the given type.
-  /// TODO: What's the equivalent for MLIR? Currently we're only using this for
-  /// void types so it just returns RValue::get(nullptr) but it'll need
-  /// addressed later.
   RValue getUndefRValue(clang::QualType ty);
 
   cir::FuncOp generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
@@ -918,6 +1159,11 @@ public:
 
   clang::QualType buildFunctionArgList(clang::GlobalDecl gd,
                                        FunctionArgList &args);
+
+  /// Emit the function prologue: declare function arguments in the symbol
+  /// table.
+  void emitFunctionProlog(const FunctionArgList &args, mlir::Block *entryBB,
+                          const FunctionDecl *fd, SourceLocation bodyBeginLoc);
 
   /// Emit code for the start of a function.
   /// \param loc       The location to be associated with the function.
@@ -927,6 +1173,15 @@ public:
                      FunctionArgList args, clang::SourceLocation loc,
                      clang::SourceLocation startLoc);
 
+  /// Wrap the function body in a `cir.try` that enforces the exception
+  /// specification of \p d: a filter handler for a dynamic specification
+  /// (`throw(T...)` or pre-C++17 `throw()`), or a terminate handler for a
+  /// specification that permits nothing to escape.
+  void emitStartEHSpec(const clang::Decl *d);
+
+  /// Close the `cir.try` opened by emitStartEHSpec.
+  void emitEndEHSpec(const clang::Decl *d);
+
   /// returns true if aggregate type has a volatile member.
   bool hasVolatileMember(QualType t) {
     if (const auto *rd = t->getAsRecordDecl())
@@ -934,38 +1189,121 @@ public:
     return false;
   }
 
-  void populateEHCatchRegions(EHScopeStack::stable_iterator scope,
-                              cir::TryOp tryOp);
+  void addCatchHandlerAttr(const CXXCatchStmt *catchStmt,
+                           SmallVector<mlir::Attribute> &handlerAttrs);
 
   /// The cleanup depth enclosing all the cleanups associated with the
   /// parameters.
   EHScopeStack::stable_iterator prologueCleanupDepth;
 
+  /// The `cir.try` wrapping a function whose exception specification has to be
+  /// enforced. Null when the current function needs no such wrapper.
+  cir::TryOp ehSpecTryOp;
+
+  /// Whether the wrapper opened by emitStartEHSpec is a terminate scope, whose
+  /// handler calls std::terminate() for any escaping exception, rather than the
+  /// filter of a dynamic exception specification.
+  bool inEHSpecTerminateScope() {
+    return ehSpecTryOp &&
+           mlir::isa<cir::CatchAllAttr>(ehSpecTryOp.getHandlerTypes()[0]);
+  }
+
   bool isCatchOrCleanupRequired();
-  void populateCatchHandlersIfRequired(cir::TryOp tryOp);
 
   /// Takes the old cleanup stack size and emits the cleanup blocks
   /// that have been added.
-  void popCleanupBlocks(EHScopeStack::stable_iterator oldCleanupStackDepth);
-  void popCleanupBlock();
+  void popCleanupBlocks(EHScopeStack::stable_iterator oldCleanupStackDepth,
+                        ArrayRef<mlir::Value *> valuesToReload = {});
+
+  /// Pops cleanup blocks until the given savepoint is reached, then adds the
+  /// cleanups from the given savepoint in the lifetime-extended cleanups stack.
+  void popCleanupBlocks(EHScopeStack::stable_iterator oldCleanupStackDepth,
+                        size_t oldLifetimeExtendedSize,
+                        ArrayRef<mlir::Value *> valuesToReload = {});
+  void popCleanupBlock(bool forDeactivation = false);
+
+  /// Emit the cleanups captured for a loop's condition variable (those pushed
+  /// above \p depth while EHScopeStack was capturing condition cleanups) at
+  /// the current insertion point, which must be inside the loop op's cleanup
+  /// region, and pop them off the EH stack.
+  void emitLoopConditionCleanups(EHScopeStack::stable_iterator depth,
+                                 mlir::Location loc);
+
+  void terminateStructuredRegionBody(mlir::Region &r, mlir::Location loc);
+
+  /// Deactivates the given cleanup block. The block cannot be reactivated. Pops
+  /// it if it's the top of the stack.
+  ///
+  /// \param DominatingIP - An instruction which is known to
+  ///   dominate the current IP (if set) and which lies along
+  ///   all paths of execution between the current IP and the
+  ///   the point at which the cleanup comes into scope.
+  void deactivateCleanupBlock(EHScopeStack::stable_iterator cleanup,
+                              mlir::Operation *dominatingIP);
+
+  /// Create an active flag variable for use with conditional cleanups. The
+  /// flag is initialized to false before the outermost conditional and set to
+  /// true at the current insertion point (inside the conditional branch).
+  Address createCleanupActiveFlag();
+
+  /// Set up the last cleanup that was pushed as a conditional
+  /// full-expression cleanup.
+  void initFullExprCleanup();
+  void initFullExprCleanupWithFlag(Address activeFlag);
+
+  /// Promote a single pending cleanup entry onto the EH scope stack. If the
+  /// entry has a valid activeFlag, the cleanup is configured as conditional.
+  /// Defined in CIRGenDecl.cpp where the concrete cleanup types are visible.
+  void pushPendingCleanupToEHStack(const PendingCleanupEntry &entry);
 
   /// Push a cleanup to be run at the end of the current full-expression.  Safe
   /// against the possibility that we're currently inside a
   /// conditionally-evaluated expression.
   template <class T, class... As>
   void pushFullExprCleanup(CleanupKind kind, As... a) {
-    // If we're not in a conditional branch, or if none of the
-    // arguments requires saving, then use the unconditional cleanup.
+    // Outside a conditional the EH stack opens a scope here.
     if (!isInConditionalBranch())
       return ehStack.pushCleanup<T>(kind, a...);
 
-    cgm.errorNYI("pushFullExprCleanup in conditional branch");
+    // Inside a conditional, record the cleanup for the scope that
+    // ConditionalEvaluation opened where the conditional began, guarded by a
+    // flag set only where the object is constructed.
+    Address activeFlag = createCleanupActiveFlag();
+    deferredConditionalCleanupStack.push_back(
+        PendingCleanupEntry{kind, a..., activeFlag});
+  }
+
+  /// Push a cleanup and record it for deferred deactivation. The cleanup will
+  /// be deactivated when the enclosing CleanupDeactivationScope exits.
+  template <class T, class... As>
+  void pushCleanupAndDeferDeactivation(CleanupKind kind, As... a) {
+    mlir::Location loc = builder.getUnknownLoc();
+    mlir::Operation *dominatingIP = builder.getBool(false, loc).getOperation();
+    ehStack.pushCleanup<T>(kind, a...);
+    deferredDeactivationCleanupStack.push_back(
+        {ehStack.stable_begin(), dominatingIP});
+  }
+
+  void pushDestroyAndDeferDeactivation(QualType::DestructionKind dtorKind,
+                                       Address addr, QualType type);
+  void pushDestroyAndDeferDeactivation(CleanupKind cleanupKind, Address addr,
+                                       QualType type, Destroyer *destroyer,
+                                       bool useEHCleanupForArray);
+
+  /// Queue a cleanup to be pushed after finishing the current full-expression.
+  /// When the enclosing RunCleanupsScope exits, popCleanupBlocks promotes these
+  /// entries onto the EH scope stack for the enclosing scope.
+  void pushCleanupAfterFullExpr(CleanupKind kind, Address addr, QualType type,
+                                Destroyer *destroyer) {
+    lifetimeExtendedCleanupStack.push_back({kind, addr, type, destroyer});
   }
 
   /// Enters a new scope for capturing cleanups, all of which
   /// will be executed once the scope is exited.
   class RunCleanupsScope {
     EHScopeStack::stable_iterator cleanupStackDepth, oldCleanupStackDepth;
+    size_t lifetimeExtendedCleanupStackSize;
+    CleanupDeactivationScope deactivateCleanups;
 
   protected:
     bool performCleanup;
@@ -981,8 +1319,10 @@ public:
   public:
     /// Enter a new cleanup scope.
     explicit RunCleanupsScope(CIRGenFunction &cgf)
-        : performCleanup(true), cgf(cgf) {
+        : deactivateCleanups(cgf), performCleanup(true), cgf(cgf) {
       cleanupStackDepth = cgf.ehStack.stable_begin();
+      lifetimeExtendedCleanupStackSize =
+          cgf.lifetimeExtendedCleanupStack.size();
       oldDidCallStackSave = cgf.didCallStackSave;
       cgf.didCallStackSave = false;
       oldCleanupStackDepth = cgf.currentCleanupStackDepth;
@@ -997,20 +1337,175 @@ public:
 
     /// Force the emission of cleanups now, instead of waiting
     /// until this object is destroyed.
-    void forceCleanup() {
+    void forceCleanup(ArrayRef<mlir::Value *> valuesToReload = {}) {
       assert(performCleanup && "Already forced cleanup");
-      {
-        mlir::OpBuilder::InsertionGuard guard(cgf.getBuilder());
-        cgf.didCallStackSave = oldDidCallStackSave;
-        cgf.popCleanupBlocks(cleanupStackDepth);
-        performCleanup = false;
-        cgf.currentCleanupStackDepth = oldCleanupStackDepth;
+      cgf.didCallStackSave = oldDidCallStackSave;
+
+      // forceDeactivate() can pop cleanup scopes that were pushed with
+      // deferred deactivation, which moves the insertion point out of the
+      // cleanup body region. Any caller value defined inside such a body
+      // would no longer dominate uses past the scope. The downstream
+      // popCleanupBlocks() handles the spill for any cleanups it pops
+      // itself, but it cannot help with cleanups that forceDeactivate has
+      // already popped. Spill those values here, while the insertion point
+      // is still inside the body, so we can reload them after all popping
+      // is done. We only spill values whose defining op lives inside a
+      // cir.cleanup.scope, since values defined outside any cleanup scope
+      // (e.g. allocas in the entry block) already dominate the post-scope
+      // insertion point.
+      const bool hasPendingDeactivations =
+          cgf.deferredDeactivationCleanupStack.size() >
+          deactivateCleanups.oldDeactivateCleanupStackSize;
+
+      llvm::SmallVector<Address> tempAllocas;
+      bool didSpillAny = false;
+      if (hasPendingDeactivations) {
+        tempAllocas.reserve(valuesToReload.size());
+        for (mlir::Value *valPtr : valuesToReload) {
+          mlir::Value val = *valPtr;
+          if (!val || !val.getDefiningOp() ||
+              !val.getDefiningOp()->getParentOfType<cir::CleanupScopeOp>()) {
+            tempAllocas.push_back(Address::invalid());
+            continue;
+          }
+          Address temp = cgf.createDefaultAlignTempAlloca(
+              val.getType(), val.getLoc(), "tmp.exprcleanup");
+          tempAllocas.push_back(temp);
+          cgf.builder.createStore(val.getLoc(), val, temp);
+          didSpillAny = true;
+        }
       }
+
+      deactivateCleanups.forceDeactivate();
+      // If we already spilled some of the caller's values, don't ask
+      // popCleanupBlocks to spill them again. Values we did not pre-spill
+      // are not inside any cir.cleanup.scope, so they cannot be invalidated
+      // by either forceDeactivate's or popCleanupBlocks's pops (both only
+      // pop cir.cleanup.scope ops); they already dominate the post-scope
+      // insertion point on their own.
+      if (didSpillAny) {
+        cgf.popCleanupBlocks(cleanupStackDepth,
+                             lifetimeExtendedCleanupStackSize);
+
+        // Reload the spilled values now that all cleanup popping (and
+        // promotion of any lifetime-extended cleanups onto the EH stack) is
+        // done.
+        for (auto [addr, valPtr] : llvm::zip(tempAllocas, valuesToReload)) {
+          if (!addr.isValid())
+            continue;
+          *valPtr = cgf.builder.createLoad(valPtr->getLoc(), addr);
+        }
+      } else {
+        cgf.popCleanupBlocks(cleanupStackDepth,
+                             lifetimeExtendedCleanupStackSize, valuesToReload);
+      }
+
+      performCleanup = false;
+      cgf.currentCleanupStackDepth = oldCleanupStackDepth;
+    }
+
+    /// Force the emission of EH cleanups now, but defer promoting any
+    /// lifetime-extended cleanup entries onto the EH scope stack. The caller
+    /// must subsequently call forceLifetimeExtendedCleanups() to finalize the
+    /// scope.
+    void forceCleanupExceptLifetimeExtended() {
+      assert(performCleanup && "Already forced cleanup");
+      cgf.didCallStackSave = oldDidCallStackSave;
+      deactivateCleanups.forceDeactivate();
+      cgf.popCleanupBlocks(cleanupStackDepth);
+    }
+
+    /// Promote any pending lifetime-extended cleanup entries onto the EH scope
+    /// stack at the current insertion point and finalize this scope. This must
+    /// be paired with a prior call to forceCleanupExceptLifetimeExtended().
+    void forceLifetimeExtendedCleanups() {
+      assert(performCleanup && "Already forced cleanup");
+      assert(deactivateCleanups.deactivated &&
+             "forceCleanupExceptLifetimeExtended() must be called first");
+      cgf.popCleanupBlocks(cleanupStackDepth, lifetimeExtendedCleanupStackSize);
+      performCleanup = false;
+      cgf.currentCleanupStackDepth = oldCleanupStackDepth;
+    }
+
+    /// Whether there are any pending cleanups that have been pushed since
+    /// this scope was entered.
+    bool hasPendingCleanups() const {
+      return cgf.ehStack.stable_begin() != cleanupStackDepth;
     }
   };
 
   // Cleanup stack depth of the RunCleanupsScope that was pushed most recently.
   EHScopeStack::stable_iterator currentCleanupStackDepth = ehStack.stable_end();
+
+  class FullExprCleanupScope {
+    CIRGenFunction &cgf;
+    RunCleanupsScope cleanups;
+    cir::CleanupScopeOp scope;
+    cir::CleanupScopeOp oldFullExprCleanupScope;
+    size_t deferredCleanupStackSize;
+    size_t conditionalScopeDepth;
+    bool exited = false;
+
+  public:
+    FullExprCleanupScope(CIRGenFunction &cgf, const Expr *subExpr);
+
+    void exit(ArrayRef<mlir::Value *> valuesToReload = {});
+
+    ~FullExprCleanupScope() {
+      if (!exited)
+        exit();
+    }
+
+  private:
+    FullExprCleanupScope(const FullExprCleanupScope &) = delete;
+    void operator=(const FullExprCleanupScope &) = delete;
+  };
+
+  /// Captures cleanups for a loop's condition variable so that they can be
+  /// emitted into the loop op's per-iteration cleanup region.
+  class DeferredLoopConditionCleanup {
+    CIRGenFunction &cgf;
+    EHScopeStack::stable_iterator depth;
+    bool active;
+
+  public:
+    DeferredLoopConditionCleanup(CIRGenFunction &cgf, bool active)
+        : cgf(cgf), depth(cgf.ehStack.stable_begin()), active(active) {}
+
+    /// An RAII class that suppresses cir.cleanup.scope creation for cleanups
+    /// pushed onto the EH stack while a loop condition variable is being
+    /// emitted and instead captures these cleanups so that they can be emitted
+    /// into the loop op's cleanup region after the condition region is built.
+    class CaptureScope {
+      EHScopeStack &ehStack;
+
+    public:
+      explicit CaptureScope(DeferredLoopConditionCleanup &scope)
+          : ehStack(scope.cgf.ehStack) {
+        // Capture scopes deliberately wrap individual cleanup-producing
+        // operations, so they must never nest.
+        assert(!ehStack.isCapturingLoopConditionCleanups() &&
+               "loop condition cleanup capturing should not nest");
+        if (scope.active)
+          ehStack.setCapturingLoopConditionCleanups(true);
+      }
+      ~CaptureScope() { ehStack.setCapturingLoopConditionCleanups(false); }
+
+      CaptureScope(const CaptureScope &) = delete;
+      void operator=(const CaptureScope &) = delete;
+    };
+
+    /// Emit the captured condition-variable cleanups into the current insertion
+    /// point (the loop's cleanup region).
+    void emitIntoLoopCleanupRegion(mlir::Location loc) {
+      if (active)
+        cgf.emitLoopConditionCleanups(depth, loc);
+    }
+
+  private:
+    DeferredLoopConditionCleanup(const DeferredLoopConditionCleanup &) = delete;
+    void operator=(const DeferredLoopConditionCleanup &) = delete;
+  };
 
 public:
   /// Represents a scope, including function bodies, compound statements, and
@@ -1018,10 +1513,6 @@ public:
   /// handles any automatic cleanup, along with the return value.
   struct LexicalScope : public RunCleanupsScope {
   private:
-    // Block containing cleanup code for things initialized in this
-    // lexical context (scope).
-    mlir::Block *cleanupBlock = nullptr;
-
     // Points to the scope entry block. This is useful, for instance, for
     // helping to insert allocas before finalizing any recursive CodeGen from
     // switches.
@@ -1031,6 +1522,12 @@ public:
 
     // Holds the actual value for ScopeKind::Try
     cir::TryOp tryOp = nullptr;
+
+    // On a coroutine body, the OnFallthrough sub stmt holds the handler
+    // (CoreturnStmt) for control flow falling off the body. Keep track
+    // of emitted co_return in this scope and allow OnFallthrough to be
+    // skipeed.
+    bool hasCoreturnStmt = false;
 
     // Only Regular is used at the moment. Support for other kinds will be
     // added as the relevant statements/expressions are upstreamed.
@@ -1080,6 +1577,12 @@ public:
     }
 
     // ---
+    // Coroutine tracking
+    // ---
+    bool hasCoreturn() const { return hasCoreturnStmt; }
+    void setCoreturn() { hasCoreturnStmt = true; }
+
+    // ---
     // Kind
     // ---
     bool isGlobalInit() { return scopeKind == Kind::GlobalInit; }
@@ -1096,30 +1599,9 @@ public:
       tryOp = op;
     }
 
-    // Lazy create cleanup block or return what's available.
-    mlir::Block *getOrCreateCleanupBlock(mlir::OpBuilder &builder) {
-      if (cleanupBlock)
-        return cleanupBlock;
-      cleanupBlock = createCleanupBlock(builder);
-      return cleanupBlock;
-    }
-
     cir::TryOp getTry() {
       assert(isTry());
       return tryOp;
-    }
-
-    mlir::Block *getCleanupBlock(mlir::OpBuilder &builder) {
-      return cleanupBlock;
-    }
-
-    mlir::Block *createCleanupBlock(mlir::OpBuilder &builder) {
-      // Create the cleanup block but dont hook it up around just yet.
-      mlir::OpBuilder::InsertionGuard guard(builder);
-      mlir::Region *r = builder.getBlock() ? builder.getBlock()->getParent()
-                                           : &cgf.curFn->getRegion(0);
-      cleanupBlock = builder.createBlock(r);
-      return cleanupBlock;
     }
 
     // ---
@@ -1197,9 +1679,10 @@ public:
 
   LexicalScope *curLexScope = nullptr;
 
-  typedef void Destroyer(CIRGenFunction &cgf, Address addr, QualType ty);
-
   static Destroyer destroyCXXObject;
+
+  void pushEHDestroyIfNeeded(QualType::DestructionKind dtorKind, Address addr,
+                             QualType type);
 
   void pushDestroy(QualType::DestructionKind dtorKind, Address addr,
                    QualType type);
@@ -1207,12 +1690,49 @@ public:
   void pushDestroy(CleanupKind kind, Address addr, QualType type,
                    Destroyer *destroyer);
 
+  void pushLifetimeExtendedDestroy(CleanupKind kind, Address addr,
+                                   QualType type, Destroyer *destroyer,
+                                   bool useEHCleanupForArray);
+
   Destroyer *getDestroyer(clang::QualType::DestructionKind kind);
+
+  void pushIrregularPartialArrayCleanup(mlir::Value arrayBegin,
+                                        Address arrayEndPointer,
+                                        QualType elementType,
+                                        CharUnits elementAlign,
+                                        Destroyer *destroyer);
+
+  /// Start generating a thunk function.
+  void startThunk(cir::FuncOp fn, GlobalDecl gd,
+                  const CIRGenFunctionInfo &fnInfo, bool isUnprototyped);
+
+  /// Finish generating a thunk function.
+  void finishThunk();
+
+  /// Generate code for a thunk function.
+  void generateThunk(cir::FuncOp fn, SourceRange fnLoc,
+                     const CIRGenFunctionInfo &fnInfo, GlobalDecl gd,
+                     const ThunkInfo &thunk, bool isUnprototyped);
 
   /// ----------------------
   /// CIR emit functions
   /// ----------------------
 public:
+  bool getAArch64SVEProcessedOperands(unsigned builtinID, const CallExpr *expr,
+                                      SmallVectorImpl<mlir::Value> &ops,
+                                      clang::SVETypeFlags typeFlags);
+  mlir::Value emitSVEPredicateCast(mlir::Value pred, unsigned minNumElts,
+                                   mlir::Location loc);
+  std::optional<mlir::Value>
+  emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
+                         ReturnValueSlot returnValue,
+                         llvm::Triple::ArchType arch);
+  std::optional<mlir::Value> emitAArch64SMEBuiltinExpr(unsigned builtinID,
+                                                       const CallExpr *expr);
+  std::optional<mlir::Value> emitAArch64SVEBuiltinExpr(unsigned builtinID,
+                                                       const CallExpr *expr);
+  cir::VectorType getSVEType(const SVETypeFlags &typeFlags);
+
   mlir::Value emitAlignmentAssumption(mlir::Value ptrValue, QualType ty,
                                       SourceLocation loc,
                                       SourceLocation assumptionLoc,
@@ -1223,6 +1743,9 @@ public:
                                       SourceLocation assumptionLoc,
                                       int64_t alignment,
                                       mlir::Value offsetValue = nullptr);
+
+  bool emitLifetimeStartOp(mlir::Location loc, mlir::Value addr);
+  void emitLifetimeEndOp(mlir::Location loc, mlir::Value addr);
 
 private:
   void emitAndUpdateRetAlloca(clang::QualType type, mlir::Location loc,
@@ -1247,6 +1770,8 @@ public:
   void emitAggregateStore(mlir::Value value, Address dest);
 
   void emitAggExpr(const clang::Expr *e, AggValueSlot slot);
+
+  enum ExprValueKind { EVK_RValue, EVK_NonRValue };
 
   LValue emitAggExprToLValue(const Expr *e);
 
@@ -1287,12 +1812,20 @@ public:
   mlir::Value emitArrayLength(const clang::ArrayType *arrayType,
                               QualType &baseType, Address &addr);
   LValue emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e);
+  LValue emitInitListLValue(const InitListExpr *e);
 
   LValue emitExtVectorElementExpr(const ExtVectorElementExpr *e);
 
   Address emitArrayToPointerDecay(const Expr *e,
                                   LValueBaseInfo *baseInfo = nullptr);
 
+  std::pair<mlir::Value, mlir::Type>
+  emitAsmInputLValue(const TargetInfo::ConstraintInfo &info, LValue inputValue,
+                     QualType inputType, std::string &constraintString,
+                     SourceLocation loc);
+  std::pair<mlir::Value, mlir::Type>
+  emitAsmInput(const TargetInfo::ConstraintInfo &info, const Expr *inputExpr,
+               std::string &constraintString);
   mlir::LogicalResult emitAsmStmt(const clang::AsmStmt &s);
 
   RValue emitAtomicExpr(AtomicExpr *e);
@@ -1300,9 +1833,32 @@ public:
   void emitAtomicStore(RValue rvalue, LValue dest, bool isInit);
   void emitAtomicStore(RValue rvalue, LValue dest, cir::MemOrder order,
                        bool isVolatile, bool isInit);
+  void emitAtomicExprWithMemOrder(
+      const Expr *memOrder, bool isStore, bool isLoad, bool isFence,
+      llvm::function_ref<void(cir::MemOrder)> emitAtomicOp);
+
+  mlir::Value makeBinaryAtomicValue(
+      cir::AtomicFetchKind kind, const clang::CallExpr *expr,
+      mlir::Type *originalArgType = nullptr,
+      mlir::Value *emittedArgValue = nullptr,
+      cir::MemOrder ordering = cir::MemOrder::SequentiallyConsistent);
+
+  /// Emit `cir.atomic.cmpxchg`. Returns the old value, or the success flag
+  /// when `returnBool` is true.
+  mlir::Value emitAtomicCmpXchg(
+      const clang::CallExpr *expr, bool returnBool,
+      cir::MemOrder successOrder = cir::MemOrder::SequentiallyConsistent,
+      cir::MemOrder failureOrder = cir::MemOrder::SequentiallyConsistent,
+      cir::SyncScopeKind scope = cir::SyncScopeKind::System);
+
+  mlir::LogicalResult emitAttributedStmt(const AttributedStmt &s);
 
   AutoVarEmission emitAutoVarAlloca(const clang::VarDecl &d,
                                     mlir::OpBuilder::InsertPoint ip = {});
+
+  RValue emitPseudoObjectRValue(const PseudoObjectExpr *e,
+                                AggValueSlot slot = AggValueSlot::ignored());
+  LValue emitPseudoObjectLValue(const PseudoObjectExpr *E);
 
   /// Emit code and set up symbol table for a variable declaration with auto,
   /// register, or no storage class specifier. These turn into simple stack
@@ -1310,6 +1866,12 @@ public:
   void emitAutoVarDecl(const clang::VarDecl &d);
 
   void emitAutoVarCleanups(const AutoVarEmission &emission);
+
+  /// Emit a loop's condition-variable declaration. This needs special handling
+  /// so that we can manage per-iteration cleanups for the loop condition.
+  void emitLoopConditionVariable(const clang::VarDecl &d,
+                                 DeferredLoopConditionCleanup &condCleanup);
+
   /// Emit the initializer for an allocated variable.  If this call is not
   /// associated with the call to emitAutoVarAlloca (as the address of the
   /// emission is not directly an alloca), the allocatedSeparately parameter can
@@ -1325,8 +1887,6 @@ public:
                            CXXCtorInitializer *baseInit);
 
   LValue emitBinaryOperatorLValue(const BinaryOperator *e);
-
-  cir::BrOp emitBranchThroughCleanup(mlir::Location loc, JumpDest dest);
 
   mlir::LogicalResult emitBreakStmt(const clang::BreakStmt &s);
 
@@ -1357,21 +1917,50 @@ public:
 
   int64_t getAccessedFieldNo(unsigned idx, mlir::ArrayAttr elts);
 
+  /// Emit a simple LLVM intrinsic that takes N scalar arguments.  The intrinsic
+  /// name is used verbatim; any overload mangling (e.g. `.f32`, `.p1`) must be
+  /// baked into \p intrinName by the caller.  The result type defaults to the
+  /// type of the first argument; pass \p resultType for intrinsics whose result
+  /// differs from the operand, such as a vector reduction that returns the
+  /// element type.  Unlike classic CodeGen, CIR has no intrinsic registry to
+  /// derive the result type from the operand, so it must be supplied here.
+  template <unsigned N>
+  [[maybe_unused]] RValue
+  emitBuiltinWithOneOverloadedType(const CallExpr *e,
+                                   llvm::StringRef intrinName,
+                                   mlir::Type resultType = {}) {
+    static_assert(N, "expect non-empty argument");
+    mlir::Type cirTy =
+        resultType ? resultType : convertType(e->getArg(0)->getType());
+    SmallVector<mlir::Value, N> args;
+    for (unsigned i = 0; i < N; ++i)
+      args.push_back(emitScalarExpr(e->getArg(i)));
+    const auto call = cir::LLVMIntrinsicCallOp::create(
+        builder, getLoc(e->getExprLoc()), builder.getStringAttr(intrinName),
+        cirTy, args);
+    return RValue::get(call->getResult(0));
+  }
+
   RValue emitCall(const CIRGenFunctionInfo &funcInfo,
                   const CIRGenCallee &callee, ReturnValueSlot returnValue,
                   const CallArgList &args, cir::CIRCallOpInterface *callOp,
-                  mlir::Location loc);
+                  bool isMustTail, SourceRange clangLoc);
   RValue emitCall(const CIRGenFunctionInfo &funcInfo,
                   const CIRGenCallee &callee, ReturnValueSlot returnValue,
-                  const CallArgList &args,
+                  const CallArgList &args, bool isMustTail,
                   cir::CIRCallOpInterface *callOrTryCall = nullptr) {
     assert(currSrcLoc && "source location must have been set");
     return emitCall(funcInfo, callee, returnValue, args, callOrTryCall,
-                    *currSrcLoc);
+                    isMustTail, *currSrcLoc);
   }
 
   RValue emitCall(clang::QualType calleeTy, const CIRGenCallee &callee,
                   const clang::CallExpr *e, ReturnValueSlot returnValue);
+
+  /// Emit the call and return for a thunk function.
+  void emitCallAndReturnForThunk(cir::FuncOp callee, SourceRange fnLoc,
+                                 const ThunkInfo *thunk, bool isUnprototyped);
+
   void emitCallArg(CallArgList &args, const clang::Expr *e,
                    clang::QualType argType);
   void emitCallArgs(
@@ -1381,6 +1970,9 @@ public:
   RValue emitCallExpr(const clang::CallExpr *e,
                       ReturnValueSlot returnValue = ReturnValueSlot());
   LValue emitCallExprLValue(const clang::CallExpr *e);
+
+  LValue emitCXXBindTemporaryLValue(const CXXBindTemporaryExpr *e);
+  LValue emitCXXConstructLValue(const CXXConstructExpr *e);
   CIRGenCallee emitCallee(const clang::Expr *e);
 
   template <typename T>
@@ -1388,6 +1980,8 @@ public:
                                              mlir::ArrayAttr value,
                                              cir::CaseOpKind kind,
                                              bool buildingTopLevelCase);
+
+  LValue emitCXXTypeidLValue(const CXXTypeidExpr *e);
 
   mlir::LogicalResult emitCaseStmt(const clang::CaseStmt &s,
                                    mlir::Type condType,
@@ -1410,17 +2004,26 @@ public:
   void emitConstructorBody(FunctionArgList &args);
 
   mlir::LogicalResult emitCoroutineBody(const CoroutineBodyStmt &s);
-  cir::CallOp emitCoroEndBuiltinCall(mlir::Location loc, mlir::Value nullPtr);
-  cir::CallOp emitCoroIDBuiltinCall(mlir::Location loc, mlir::Value nullPtr);
-  cir::CallOp emitCoroAllocBuiltinCall(mlir::Location loc);
-  cir::CallOp emitCoroBeginBuiltinCall(mlir::Location loc,
-                                       mlir::Value coroframeAddr);
+  cir::CoroEndOp emitCoroEndBuiltinCall(const CallExpr *e);
+  cir::CoroIdOp emitCoroIDBuiltinCall(const CallExpr *e);
+  cir::CoroAllocOp emitCoroAllocBuiltinCall(const CallExpr *e);
+  cir::CoroBeginOp emitCoroBeginBuiltinCall(const CallExpr *e);
+  cir::CoroPromiseOp emitCoroPromiseBuiltinCall(const CallExpr *e);
+  cir::CoroDoneOp emitCoroDoneBuiltinCall(const CallExpr *e);
+  cir::CoroResumeOp emitCoroResumeBuiltinCall(const CallExpr *e);
+  cir::CoroDestroyOp emitCoroDestroyBuiltinCall(const CallExpr *e);
+
+  cir::CoroSizeOp emitCoroSizeBuiltinCall(const CallExpr *e);
+  cir::CoroFreeOp emitCoroFreeBuiltin(const CallExpr *e);
+  RValue emitCoroutineFrame();
 
   void emitDestroy(Address addr, QualType type, Destroyer *destroyer);
 
   void emitDestructorBody(FunctionArgList &args);
 
   mlir::LogicalResult emitContinueStmt(const clang::ContinueStmt &s);
+
+  mlir::LogicalResult emitCoreturnStmt(const CoreturnStmt &s);
 
   void emitCXXConstructExpr(const clang::CXXConstructExpr *e,
                             AggValueSlot dest);
@@ -1433,8 +2036,8 @@ public:
   void emitCXXAggrConstructorCall(const CXXConstructorDecl *ctor,
                                   mlir::Value numElements, Address arrayBase,
                                   const CXXConstructExpr *e,
-                                  bool newPointerIsChecked,
-                                  bool zeroInitialize);
+                                  bool newPointerIsChecked, bool zeroInitialize,
+                                  Address endOfInit);
   void emitCXXConstructorCall(const clang::CXXConstructorDecl *d,
                               clang::CXXCtorType type, bool forVirtualBase,
                               bool delegating, AggValueSlot thisAVS,
@@ -1444,6 +2047,15 @@ public:
                               clang::CXXCtorType type, bool forVirtualBase,
                               bool delegating, Address thisAddr,
                               CallArgList &args, clang::SourceLocation loc);
+
+  void emitInheritedCXXConstructorCall(const CXXConstructorDecl *d,
+                                       bool forVirtualBase, Address thisAddr,
+                                       bool inheritedFromVBase,
+                                       const CXXInheritedCtorInitExpr *e);
+
+  void emitInlinedInheritingCXXConstructorCall(
+      SourceLocation loc, const CXXConstructorDecl *d, CXXCtorType ctorType,
+      bool forVirtualBase, bool delegating, CallArgList &args);
 
   void emitCXXDeleteExpr(const CXXDeleteExpr *e);
 
@@ -1462,6 +2074,10 @@ public:
   RValue emitCXXMemberCallExpr(const clang::CXXMemberCallExpr *e,
                                ReturnValueSlot returnValue);
 
+  Address emitCXXMemberDataPointerAddress(
+      const Expr *e, Address base, mlir::Value memberPtr,
+      const MemberPointerType *memberPtrType, LValueBaseInfo *baseInfo);
+
   RValue emitCXXMemberOrOperatorCall(
       const clang::CXXMethodDecl *md, const CIRGenCallee &callee,
       ReturnValueSlot returnValue, mlir::Value thisPtr,
@@ -1474,6 +2090,9 @@ public:
       clang::NestedNameSpecifier qualifier, bool isArrow,
       const clang::Expr *base);
 
+  RValue emitCXXMemberPointerCallExpr(const CXXMemberCallExpr *ce,
+                                      ReturnValueSlot returnValue);
+
   mlir::Value emitCXXNewExpr(const CXXNewExpr *e);
 
   void emitNewArrayInitializer(const CXXNewExpr *e, QualType elementType,
@@ -1481,25 +2100,39 @@ public:
                                mlir::Value numElements,
                                mlir::Value allocSizeWithoutCookie);
 
+  /// Create a check for a function parameter that may potentially be
+  /// declared as non-null.
+  void emitNonNullArgCheck(RValue rv, QualType argType, SourceLocation argLoc,
+                           AbstractCallee ac, unsigned paramNum);
+
   RValue emitCXXOperatorMemberCallExpr(const CXXOperatorCallExpr *e,
                                        const CXXMethodDecl *md,
                                        ReturnValueSlot returnValue);
 
+  RValue emitCUDAKernelCallExpr(const CUDAKernelCallExpr *expr,
+                                ReturnValueSlot returnValue);
+
   RValue emitCXXPseudoDestructorExpr(const CXXPseudoDestructorExpr *expr);
+
+  RValue emitNewOrDeleteBuiltinCall(const FunctionProtoType *type,
+                                    const CallExpr *callExpr,
+                                    OverloadedOperatorKind op);
 
   void emitCXXTemporary(const CXXTemporary *temporary, QualType tempType,
                         Address ptr);
 
   void emitCXXThrowExpr(const CXXThrowExpr *e);
 
+  struct cxxTryBodyEmitter {
+    virtual mlir::LogicalResult operator()(CIRGenFunction &cgf) = 0;
+    virtual ~cxxTryBodyEmitter() = default;
+  };
+
+  void emitBeginCatch(const CXXCatchStmt *catchStmt, mlir::Value ehToken);
+
+  mlir::LogicalResult emitCXXTryStmt(const clang::CXXTryStmt &s,
+                                     cxxTryBodyEmitter &bodyCallback);
   mlir::LogicalResult emitCXXTryStmt(const clang::CXXTryStmt &s);
-
-  mlir::LogicalResult emitCXXTryStmtUnderScope(const clang::CXXTryStmt &s);
-
-  void enterCXXTryStmt(const CXXTryStmt &s, cir::TryOp tryOp,
-                       bool isFnTryBlock = false);
-
-  void exitCXXTryStmt(const CXXTryStmt &s, bool isFnTryBlock = false);
 
   void emitCtorPrologue(const clang::CXXConstructorDecl *ctor,
                         clang::CXXCtorType ctorType, FunctionArgList &args);
@@ -1516,6 +2149,7 @@ public:
 
   mlir::LogicalResult emitDoStmt(const clang::DoStmt &s);
 
+  mlir::Value emitCXXTypeidExpr(const CXXTypeidExpr *e);
   mlir::Value emitDynamicCast(Address thisAddr, const CXXDynamicCastExpr *dce);
 
   /// Emit an expression as an initializer for an object (variable, field, etc.)
@@ -1535,6 +2169,8 @@ public:
 
   mlir::LogicalResult emitGotoStmt(const clang::GotoStmt &s);
 
+  mlir::LogicalResult emitIndirectGotoStmt(const IndirectGotoStmt &s);
+
   void emitImplicitAssignmentOperatorBody(FunctionArgList &args);
 
   void emitInitializerForField(clang::FieldDecl *field, LValue lhs,
@@ -1551,14 +2187,16 @@ public:
   void emitReturnOfRValue(mlir::Location loc, RValue rv, QualType ty);
 
   mlir::Value emitRuntimeCall(mlir::Location loc, cir::FuncOp callee,
-                              llvm::ArrayRef<mlir::Value> args = {});
+                              llvm::ArrayRef<mlir::Value> args = {},
+                              mlir::NamedAttrList attrs = {});
+
+  void emitInvariantStart(CharUnits size, mlir::Value addr, mlir::Location loc);
 
   /// Emit the computation of the specified expression of scalar type.
   mlir::Value emitScalarExpr(const clang::Expr *e,
                              bool ignoreResultAssign = false);
 
-  mlir::Value emitScalarPrePostIncDec(const UnaryOperator *e, LValue lv,
-                                      cir::UnaryOpKind kind, bool isPre);
+  mlir::Value emitScalarPrePostIncDec(const UnaryOperator *e, LValue lv);
 
   /// Build a debug stoppoint if we are emitting debug info.
   void emitStopPoint(const Stmt *s);
@@ -1576,14 +2214,20 @@ public:
   void emitForwardingCallToLambda(const CXXMethodDecl *lambdaCallOperator,
                                   CallArgList &callArgs);
 
+  RValue emitCoawaitExpr(const CoawaitExpr &e,
+                         AggValueSlot aggSlot = AggValueSlot::ignored(),
+                         bool ignoreResult = false);
+
+  RValue emitCoyieldExpr(const CoyieldExpr &e,
+                         AggValueSlot aggSlot = AggValueSlot::ignored(),
+                         bool ignoreResult = false);
   /// Emit the computation of the specified expression of complex type,
   /// returning the result.
   mlir::Value emitComplexExpr(const Expr *e);
 
   void emitComplexExprIntoLValue(const Expr *e, LValue dest, bool isInit);
 
-  mlir::Value emitComplexPrePostIncDec(const UnaryOperator *e, LValue lv,
-                                       cir::UnaryOpKind op, bool isPre);
+  mlir::Value emitComplexPrePostIncDec(const UnaryOperator *e, LValue lv);
 
   LValue emitComplexAssignmentLValue(const BinaryOperator *e);
   LValue emitComplexCompoundAssignmentLValue(const CompoundAssignOperator *e);
@@ -1633,15 +2277,22 @@ public:
                              BuilderCallbackRef elseBuilder,
                              std::optional<mlir::Location> elseLoc = {});
 
+  /// Build the cir.if for an already-emitted condition value.
+  cir::IfOp emitIfOnBoolValue(mlir::Value condV, mlir::Location loc,
+                              BuilderCallbackRef thenBuilder,
+                              mlir::Location thenLoc,
+                              BuilderCallbackRef elseBuilder,
+                              std::optional<mlir::Location> elseLoc = {});
+
   mlir::Value emitOpOnBoolExpr(mlir::Location loc, const clang::Expr *cond);
+
+  LValue emitPointerToDataMemberBinaryExpr(const BinaryOperator *e);
 
   mlir::LogicalResult emitLabel(const clang::LabelDecl &d);
   mlir::LogicalResult emitLabelStmt(const clang::LabelStmt &s);
 
   void emitLambdaDelegatingInvokeBody(const CXXMethodDecl *md);
   void emitLambdaStaticInvokeBody(const CXXMethodDecl *md);
-
-  void populateCatchHandlers(cir::TryOp tryOp);
 
   mlir::LogicalResult emitIfStmt(const clang::IfStmt &s);
 
@@ -1672,7 +2323,8 @@ public:
   /// l-value.
   mlir::Value emitLoadOfScalar(LValue lvalue, SourceLocation loc);
   mlir::Value emitLoadOfScalar(Address addr, bool isVolatile, QualType ty,
-                               SourceLocation loc, LValueBaseInfo baseInfo);
+                               SourceLocation loc, LValueBaseInfo baseInfo,
+                               bool isNontemporal = false);
 
   /// Emit code to compute a designator that specifies the location
   /// of the expression.
@@ -1695,6 +2347,21 @@ public:
   LValue emitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *e);
 
   LValue emitMemberExpr(const MemberExpr *e);
+
+  /// Emit a musttail call for a thunk with a potentially different ABI.
+  void emitMustTailThunk(GlobalDecl gd, mlir::Value adjustedThisPtr,
+                         cir::FuncOp callee);
+
+  /// Emit a call to an AMDGPU builtin function.
+  std::optional<mlir::Value> emitAMDGPUBuiltinExpr(unsigned builtinID,
+                                                   const CallExpr *expr);
+
+  /// Emit a call to an NVPTX builtin function.
+  std::optional<mlir::Value> emitNVPTXBuiltinExpr(unsigned builtinID,
+                                                  const CallExpr *expr);
+
+  /// Emit a device-side printf call for NVPTX targets.
+  mlir::Value emitNVPTXDevicePrintfCallExpr(const CallExpr *expr);
 
   LValue emitOpaqueValueLValue(const OpaqueValueExpr *e);
 
@@ -1728,13 +2395,17 @@ public:
                                    clang::QualType dstType,
                                    clang::SourceLocation loc);
 
-  void emitScalarInit(const clang::Expr *init, mlir::Location loc,
-                      LValue lvalue, bool capturedByInit = false);
+  void emitScalarInit(const clang::Expr *init, LValue lvalue,
+                      bool capturedByInit = false);
 
   mlir::Value emitScalarOrConstFoldImmArg(unsigned iceArguments, unsigned idx,
                                           const Expr *argExpr);
 
   void emitStaticVarDecl(const VarDecl &d, cir::GlobalLinkageKind linkage);
+
+  /// Emit a guarded initializer for a static local variable.
+  void emitCXXGuardedInit(const VarDecl &varDecl, cir::GlobalOp globalOp,
+                          bool performInit);
 
   void emitStoreOfComplex(mlir::Location loc, mlir::Value v, LValue dest,
                           bool isInit);
@@ -1744,9 +2415,11 @@ public:
                          bool isInit = false, bool isNontemporal = false);
   void emitStoreOfScalar(mlir::Value value, LValue lvalue, bool isInit);
 
+  void emitStoreThroughExtVectorComponentLValue(RValue src, LValue dst);
+
   /// Store the specified rvalue into the specified
-  /// lvalue, where both are guaranteed to the have the same type, and that type
-  /// is 'Ty'.
+  /// lvalue, where both are guaranteed to the have the same type, and that
+  /// type is 'Ty'.
   void emitStoreThroughLValue(RValue src, LValue dst, bool isInit = false);
 
   mlir::Value emitStoreThroughBitfieldLValue(RValue src, LValue dstresult);
@@ -1759,15 +2432,35 @@ public:
                                      bool buildingTopLevelCase);
   mlir::LogicalResult emitSwitchStmt(const clang::SwitchStmt &s);
 
-  mlir::Value emitTargetBuiltinExpr(unsigned builtinID,
-                                    const clang::CallExpr *e,
-                                    ReturnValueSlot &returnValue);
+  mlir::LogicalResult emitSYCLKernelCallStmt(const SYCLKernelCallStmt &s);
+
+  void emitSYCLKernelCaller(const clang::OutlinedFunctionDecl *outlinedFnDecl,
+                            cir::FuncOp funcOp, cir::FuncType funcType,
+                            FunctionArgList &args);
+
+  /// Remove leftover empty and unreachable blocks from an emitted function.
+  static void eraseEmptyAndUnusedBlocks(cir::FuncOp func);
+
+  std::optional<mlir::Value>
+  emitTargetBuiltinExpr(unsigned builtinID, const clang::CallExpr *e,
+                        ReturnValueSlot &returnValue);
+
+  /// Emit a diagnostic if the target features required by \p targetDecl are
+  /// not available in the calling function. Mirrors CodeGenFunction behavior.
+  void checkTargetFeatures(const clang::CallExpr *e,
+                           const clang::FunctionDecl *targetDecl);
+  void checkTargetFeatures(clang::SourceLocation loc,
+                           const clang::FunctionDecl *targetDecl);
 
   /// Given a value and its clang type, returns the value casted to its memory
   /// representation.
   /// Note: CIR defers most of the special casting to the final lowering passes
   /// to conserve the high level information.
   mlir::Value emitToMemory(mlir::Value value, clang::QualType ty);
+
+  /// EmitFromMemory - Change a scalar value from its memory
+  /// representation to its value representation.
+  mlir::Value emitFromMemory(mlir::Value value, clang::QualType ty);
 
   /// Emit a trap instruction, which is used to abort the program in an abnormal
   /// way, usually for debugging purposes.
@@ -1801,7 +2494,20 @@ public:
 
   mlir::LogicalResult emitWhileStmt(const clang::WhileStmt &s);
 
-  mlir::Value emitX86BuiltinExpr(unsigned builtinID, const CallExpr *e);
+  std::optional<mlir::Value> emitRISCVBuiltinExpr(unsigned builtinID,
+                                                  const CallExpr *expr);
+  cir::GetGlobalOp createGetCpuModel(mlir::Location loc);
+  cir::GetGlobalOp createGetCpuFeatures2(mlir::Location loc);
+  mlir::Value emitX86CpuIs(const CallExpr *expr);
+  mlir::Value emitX86CpuIs(mlir::Location loc, StringRef cpuStr);
+  mlir::Value emitX86CpuSupports(const CallExpr *expr);
+  mlir::Value emitX86CpuSupports(mlir::Location loc,
+                                 ArrayRef<StringRef> FeatureStrs);
+  mlir::Value emitX86CpuSupports(mlir::Location loc,
+                                 std::array<uint32_t, 4> FeatureMask);
+  mlir::Value emitX86CpuInit(mlir::Location loc);
+  std::optional<mlir::Value> emitX86BuiltinExpr(unsigned builtinID,
+                                                const CallExpr *expr);
 
   /// Given an assignment `*lhs = rhs`, emit a test that checks if \p rhs is
   /// nonnull, if 1\p LHS is marked _Nonnull.
@@ -1811,13 +2517,43 @@ public:
   /// An object to manage conditionally-evaluated expressions.
   class ConditionalEvaluation {
     CIRGenFunction &cgf;
-    mlir::OpBuilder::InsertPoint insertPt;
+
+    /// The insertion point that precedes the conditional, stored as the
+    /// enclosing block and the operation immediately before that point. Later
+    /// operations (the condition, cleanup scopes) can be appended without
+    /// moving this point. A null \c anchorAfter means the insertion point is
+    /// the start of \c anchorBlock.
+    mlir::Block *anchorBlock;
+    mlir::Operation *anchorAfter = nullptr;
 
   public:
-    ConditionalEvaluation(CIRGenFunction &cgf)
-        : cgf(cgf), insertPt(cgf.builder.saveInsertionPoint()) {}
-    ConditionalEvaluation(CIRGenFunction &cgf, mlir::OpBuilder::InsertPoint ip)
-        : cgf(cgf), insertPt(ip) {}
+    /// \p loc is the location of the conditional expression. It is used for
+    /// the cleanup scope this may open.
+    ConditionalEvaluation(CIRGenFunction &cgf, mlir::Location loc) : cgf(cgf) {
+      // Open the cleanup scope that hosts cleanups deferred from inside this
+      // conditional (see deferredConditionalCleanupStack). Only the outermost
+      // conditional opens one, and only while a FullExprCleanupScope is
+      // active to close it. When nothing is deferred into it the cleanup
+      // region stays trivial and canonicalization inlines the scope away.
+      if (cgf.currentFullExprCleanupScope && !cgf.isInConditionalBranch()) {
+        cir::CleanupKind cleanupKind = cgf.getLangOpts().Exceptions
+                                           ? cir::CleanupKind::All
+                                           : cir::CleanupKind::Normal;
+        cir::CleanupScopeOp scope = cir::CleanupScopeOp::create(
+            cgf.builder, loc, cleanupKind,
+            /*bodyBuilder=*/[](mlir::OpBuilder &, mlir::Location) {},
+            /*cleanupBuilder=*/[](mlir::OpBuilder &, mlir::Location) {});
+        cgf.conditionalCleanupScopes.push_back(
+            {scope, cgf.deferredConditionalCleanupStack.size()});
+        cgf.builder.setInsertionPointToEnd(&scope.getBodyRegion().front());
+      }
+
+      anchorBlock = cgf.builder.getInsertionBlock();
+      assert(anchorBlock && "conditional evaluation needs an insertion point");
+      mlir::Block::iterator ip = cgf.builder.getInsertionPoint();
+      if (ip != anchorBlock->begin())
+        anchorAfter = &*std::prev(ip);
+    }
 
     void beginEvaluation() {
       assert(cgf.outermostConditional != this);
@@ -1831,10 +2567,20 @@ public:
         cgf.outermostConditional = nullptr;
     }
 
+    /// Records \p op as the last operation emitted at the pre-conditional
+    /// insertion point, so that a later emission lands after it rather than
+    /// ahead of it.
+    void advanceInsertPoint(mlir::Operation *op) { anchorAfter = op; }
+
     /// Returns the insertion point which will be executed prior to each
     /// evaluation of the conditional code. In LLVM OG, this method
     /// is called getStartingBlock.
-    mlir::OpBuilder::InsertPoint getInsertPoint() const { return insertPt; }
+    mlir::OpBuilder::InsertPoint getInsertPoint() const {
+      if (!anchorAfter)
+        return mlir::OpBuilder::InsertPoint(anchorBlock, anchorBlock->begin());
+      return mlir::OpBuilder::InsertPoint(
+          anchorAfter->getBlock(), std::next(anchorAfter->getIterator()));
+    }
   };
 
   struct ConditionalInfo {
@@ -1851,11 +2597,13 @@ public:
     {
       mlir::OpBuilder::InsertionGuard guard(builder);
       builder.restoreInsertionPoint(outermostConditional->getInsertPoint());
-      builder.createStore(
+      cir::StoreOp store = builder.createStore(
           value.getLoc(), value, addr, /*isVolatile=*/false,
+          /*isNontemporal=*/false,
           mlir::IntegerAttr::get(
               mlir::IntegerType::get(value.getContext(), 64),
               (uint64_t)addr.getAlignment().getAsAlign().value()));
+      outermostConditional->advanceInsertPoint(store);
     }
   }
 
@@ -1900,9 +2648,7 @@ public:
   ///
   /// \param vaList A reference to the \c va_list as emitted by either
   /// \c emitVAListRef or \c emitMSVAListRef.
-  ///
-  /// \param count The number of arguments in \c vaList
-  void emitVAStart(mlir::Value vaList, mlir::Value count);
+  void emitVAStart(mlir::Value vaList);
 
   /// Emits the end of a CIR variable-argument operation (`cir.va_start`)
   ///
@@ -1938,11 +2684,24 @@ public:
                            mlir::Value arraySize = nullptr,
                            Address *alloca = nullptr,
                            mlir::OpBuilder::InsertPoint ip = {});
+  Address createTempAlloca(mlir::Type ty,
+                           mlir::ptr::MemorySpaceAttrInterface destAddrSpace,
+                           CharUnits align, mlir::Location loc,
+                           const Twine &name = "tmp",
+                           mlir::Value arraySize = nullptr,
+                           Address *alloca = nullptr,
+                           mlir::OpBuilder::InsertPoint ip = {});
   Address createTempAllocaWithoutCast(mlir::Type ty, CharUnits align,
                                       mlir::Location loc,
                                       const Twine &name = "tmp",
                                       mlir::Value arraySize = nullptr,
                                       mlir::OpBuilder::InsertPoint ip = {});
+  Address
+  maybeCastStackAddressSpace(Address alloca,
+                             mlir::ptr::MemorySpaceAttrInterface destAddrSpace,
+                             mlir::Value arraySize = nullptr);
+  Address createDefaultAlignTempAlloca(mlir::Type ty, mlir::Location loc,
+                                       const Twine &name);
 
   /// Create a temporary memory object of the given type, with
   /// appropriate alignmen and cast it to the default address space. Returns
@@ -1953,6 +2712,152 @@ public:
   Address createMemTemp(QualType t, CharUnits align, mlir::Location loc,
                         const Twine &name = "tmp", Address *alloca = nullptr,
                         mlir::OpBuilder::InsertPoint ip = {});
+  Address createMemTempWithoutCast(QualType t, mlir::Location loc,
+                                   const Twine &name = "tmp");
+
+  mlir::Value performAddrSpaceCast(mlir::Value v, mlir::Type destTy) const {
+    if (cir::GlobalOp globalOp = v.getDefiningOp<cir::GlobalOp>())
+      cgm.errorNYI("Global op addrspace cast");
+    return builder.createAddrSpaceCast(v, destTy);
+  }
+
+  //===--------------------------------------------------------------------===//
+  //                         OpenMP Emission
+  //===--------------------------------------------------------------------===//
+public:
+  mlir::LogicalResult emitOMPScopeDirective(const OMPScopeDirective &s);
+  mlir::LogicalResult emitOMPErrorDirective(const OMPErrorDirective &s);
+  mlir::LogicalResult emitOMPParallelDirective(const OMPParallelDirective &s);
+  mlir::LogicalResult emitOMPTaskwaitDirective(const OMPTaskwaitDirective &s);
+  mlir::LogicalResult emitOMPTaskyieldDirective(const OMPTaskyieldDirective &s);
+  mlir::LogicalResult emitOMPBarrierDirective(const OMPBarrierDirective &s);
+  mlir::LogicalResult emitOMPMetaDirective(const OMPMetaDirective &s);
+  mlir::LogicalResult emitOMPCanonicalLoop(const OMPCanonicalLoop &s);
+  mlir::LogicalResult emitOMPSimdDirective(const OMPSimdDirective &s);
+  mlir::LogicalResult emitOMPTileDirective(const OMPTileDirective &s);
+  mlir::LogicalResult emitOMPUnrollDirective(const OMPUnrollDirective &s);
+  mlir::LogicalResult emitOMPFuseDirective(const OMPFuseDirective &s);
+  mlir::LogicalResult emitOMPForDirective(const OMPForDirective &s);
+  mlir::LogicalResult emitOMPForSimdDirective(const OMPForSimdDirective &s);
+  mlir::LogicalResult emitOMPSectionsDirective(const OMPSectionsDirective &s);
+  mlir::LogicalResult emitOMPSectionDirective(const OMPSectionDirective &s);
+  mlir::LogicalResult emitOMPSingleDirective(const OMPSingleDirective &s);
+  mlir::LogicalResult emitOMPMasterDirective(const OMPMasterDirective &s);
+  mlir::LogicalResult emitOMPCriticalDirective(const OMPCriticalDirective &s);
+  mlir::LogicalResult
+  emitOMPParallelForDirective(const OMPParallelForDirective &s);
+  mlir::LogicalResult
+  emitOMPParallelForSimdDirective(const OMPParallelForSimdDirective &s);
+  mlir::LogicalResult
+  emitOMPParallelMasterDirective(const OMPParallelMasterDirective &s);
+  mlir::LogicalResult
+  emitOMPParallelSectionsDirective(const OMPParallelSectionsDirective &s);
+  mlir::LogicalResult emitOMPTaskDirective(const OMPTaskDirective &s);
+  mlir::LogicalResult emitOMPTaskgroupDirective(const OMPTaskgroupDirective &s);
+  mlir::LogicalResult emitOMPFlushDirective(const OMPFlushDirective &s);
+  mlir::LogicalResult emitOMPDepobjDirective(const OMPDepobjDirective &s);
+  mlir::LogicalResult emitOMPScanDirective(const OMPScanDirective &s);
+  mlir::LogicalResult
+  emitOMPOrderedStandaloneDirective(const OMPOrderedStandaloneDirective &s);
+  mlir::LogicalResult
+  emitOMPOrderedBlockAssocDirective(const OMPOrderedBlockAssocDirective &s);
+  mlir::LogicalResult emitOMPAtomicDirective(const OMPAtomicDirective &s);
+  mlir::LogicalResult emitOMPTargetDirective(const OMPTargetDirective &s);
+  mlir::LogicalResult emitOMPTeamsDirective(const OMPTeamsDirective &s);
+  mlir::LogicalResult
+  emitOMPCancellationPointDirective(const OMPCancellationPointDirective &s);
+  mlir::LogicalResult emitOMPCancelDirective(const OMPCancelDirective &s);
+  mlir::LogicalResult
+  emitOMPTargetDataDirective(const OMPTargetDataDirective &s);
+  mlir::LogicalResult
+  emitOMPTargetEnterDataDirective(const OMPTargetEnterDataDirective &s);
+  mlir::LogicalResult
+  emitOMPTargetExitDataDirective(const OMPTargetExitDataDirective &s);
+  mlir::LogicalResult
+  emitOMPTargetParallelDirective(const OMPTargetParallelDirective &s);
+  mlir::LogicalResult
+  emitOMPTargetParallelForDirective(const OMPTargetParallelForDirective &s);
+  mlir::LogicalResult emitOMPTaskLoopDirective(const OMPTaskLoopDirective &s);
+  mlir::LogicalResult
+  emitOMPTaskLoopSimdDirective(const OMPTaskLoopSimdDirective &s);
+  mlir::LogicalResult
+  emitOMPMaskedTaskLoopDirective(const OMPMaskedTaskLoopDirective &s);
+  mlir::LogicalResult
+  emitOMPMaskedTaskLoopSimdDirective(const OMPMaskedTaskLoopSimdDirective &s);
+  mlir::LogicalResult
+  emitOMPMasterTaskLoopDirective(const OMPMasterTaskLoopDirective &s);
+  mlir::LogicalResult
+  emitOMPMasterTaskLoopSimdDirective(const OMPMasterTaskLoopSimdDirective &s);
+  mlir::LogicalResult
+  emitOMPParallelGenericLoopDirective(const OMPParallelGenericLoopDirective &s);
+  mlir::LogicalResult
+  emitOMPParallelMaskedDirective(const OMPParallelMaskedDirective &s);
+  mlir::LogicalResult emitOMPParallelMaskedTaskLoopDirective(
+      const OMPParallelMaskedTaskLoopDirective &s);
+  mlir::LogicalResult emitOMPParallelMaskedTaskLoopSimdDirective(
+      const OMPParallelMaskedTaskLoopSimdDirective &s);
+  mlir::LogicalResult emitOMPParallelMasterTaskLoopDirective(
+      const OMPParallelMasterTaskLoopDirective &s);
+  mlir::LogicalResult emitOMPParallelMasterTaskLoopSimdDirective(
+      const OMPParallelMasterTaskLoopSimdDirective &s);
+  mlir::LogicalResult
+  emitOMPDistributeDirective(const OMPDistributeDirective &s);
+  mlir::LogicalResult emitOMPDistributeParallelForDirective(
+      const OMPDistributeParallelForDirective &s);
+  mlir::LogicalResult emitOMPDistributeParallelForSimdDirective(
+      const OMPDistributeParallelForSimdDirective &s);
+  mlir::LogicalResult
+  emitOMPDistributeSimdDirective(const OMPDistributeSimdDirective &s);
+  mlir::LogicalResult emitOMPTargetParallelGenericLoopDirective(
+      const OMPTargetParallelGenericLoopDirective &s);
+  mlir::LogicalResult emitOMPTargetParallelForSimdDirective(
+      const OMPTargetParallelForSimdDirective &s);
+  mlir::LogicalResult
+  emitOMPTargetSimdDirective(const OMPTargetSimdDirective &s);
+  mlir::LogicalResult emitOMPTargetTeamsGenericLoopDirective(
+      const OMPTargetTeamsGenericLoopDirective &s);
+  mlir::LogicalResult
+  emitOMPTargetUpdateDirective(const OMPTargetUpdateDirective &s);
+  mlir::LogicalResult
+  emitOMPTeamsDistributeDirective(const OMPTeamsDistributeDirective &s);
+  mlir::LogicalResult
+  emitOMPTeamsDistributeSimdDirective(const OMPTeamsDistributeSimdDirective &s);
+  mlir::LogicalResult emitOMPTeamsDistributeParallelForSimdDirective(
+      const OMPTeamsDistributeParallelForSimdDirective &s);
+  mlir::LogicalResult emitOMPTeamsDistributeParallelForDirective(
+      const OMPTeamsDistributeParallelForDirective &s);
+  mlir::LogicalResult
+  emitOMPTeamsGenericLoopDirective(const OMPTeamsGenericLoopDirective &s);
+  mlir::LogicalResult
+  emitOMPTargetTeamsDirective(const OMPTargetTeamsDirective &s);
+  mlir::LogicalResult emitOMPTargetTeamsDistributeDirective(
+      const OMPTargetTeamsDistributeDirective &s);
+  mlir::LogicalResult emitOMPTargetTeamsDistributeParallelForDirective(
+      const OMPTargetTeamsDistributeParallelForDirective &s);
+  mlir::LogicalResult emitOMPTargetTeamsDistributeParallelForSimdDirective(
+      const OMPTargetTeamsDistributeParallelForSimdDirective &s);
+  mlir::LogicalResult emitOMPTargetTeamsDistributeSimdDirective(
+      const OMPTargetTeamsDistributeSimdDirective &s);
+  mlir::LogicalResult emitOMPInteropDirective(const OMPInteropDirective &s);
+  mlir::LogicalResult emitOMPDispatchDirective(const OMPDispatchDirective &s);
+  mlir::LogicalResult
+  emitOMPGenericLoopDirective(const OMPGenericLoopDirective &s);
+  mlir::LogicalResult emitOMPReverseDirective(const OMPReverseDirective &s);
+  mlir::LogicalResult emitOMPSplitDirective(const OMPSplitDirective &s);
+  mlir::LogicalResult
+  emitOMPInterchangeDirective(const OMPInterchangeDirective &s);
+  mlir::LogicalResult emitOMPFlattenDirective(const OMPFlattenDirective &s);
+  mlir::LogicalResult emitOMPAssumeDirective(const OMPAssumeDirective &s);
+  mlir::LogicalResult emitOMPMaskedDirective(const OMPMaskedDirective &s);
+  mlir::LogicalResult emitOMPStripeDirective(const OMPStripeDirective &s);
+
+  void emitOMPThreadPrivateDecl(const OMPThreadPrivateDecl &d);
+  void emitOMPGroupPrivateDecl(const OMPGroupPrivateDecl &d);
+  void emitOMPCapturedExpr(const OMPCapturedExprDecl &d);
+  void emitOMPAllocateDecl(const OMPAllocateDecl &d);
+  void emitOMPDeclareReduction(const OMPDeclareReductionDecl &d);
+  void emitOMPDeclareMapper(const OMPDeclareMapperDecl &d);
+  void emitOMPRequiresDecl(const OMPRequiresDecl &d);
 
   //===--------------------------------------------------------------------===//
   //                         OpenACC Emission
@@ -1960,25 +2865,23 @@ public:
 private:
   template <typename Op>
   Op emitOpenACCOp(mlir::Location start, OpenACCDirectiveKind dirKind,
-                   SourceLocation dirLoc,
                    llvm::ArrayRef<const OpenACCClause *> clauses);
   // Function to do the basic implementation of an operation with an Associated
   // Statement.  Models AssociatedStmtConstruct.
   template <typename Op, typename TermOp>
-  mlir::LogicalResult emitOpenACCOpAssociatedStmt(
-      mlir::Location start, mlir::Location end, OpenACCDirectiveKind dirKind,
-      SourceLocation dirLoc, llvm::ArrayRef<const OpenACCClause *> clauses,
-      const Stmt *associatedStmt);
+  mlir::LogicalResult
+  emitOpenACCOpAssociatedStmt(mlir::Location start, mlir::Location end,
+                              OpenACCDirectiveKind dirKind,
+                              llvm::ArrayRef<const OpenACCClause *> clauses,
+                              const Stmt *associatedStmt);
 
   template <typename Op, typename TermOp>
   mlir::LogicalResult emitOpenACCOpCombinedConstruct(
       mlir::Location start, mlir::Location end, OpenACCDirectiveKind dirKind,
-      SourceLocation dirLoc, llvm::ArrayRef<const OpenACCClause *> clauses,
-      const Stmt *loopStmt);
+      llvm::ArrayRef<const OpenACCClause *> clauses, const Stmt *loopStmt);
 
   template <typename Op>
   void emitOpenACCClauses(Op &op, OpenACCDirectiveKind dirKind,
-                          SourceLocation dirLoc,
                           ArrayRef<const OpenACCClause *> clauses);
   // The second template argument doesn't need to be a template, since it should
   // always be an mlir::acc::LoopOp, but as this is a template anyway, we make
@@ -1988,7 +2891,7 @@ private:
   // instantiated 3x.
   template <typename ComputeOp, typename LoopOp>
   void emitOpenACCClauses(ComputeOp &op, LoopOp &loopOp,
-                          OpenACCDirectiveKind dirKind, SourceLocation dirLoc,
+                          OpenACCDirectiveKind dirKind,
                           ArrayRef<const OpenACCClause *> clauses);
 
   // The OpenACC LoopOp requires that we have auto, seq, or independent on all
@@ -2084,6 +2987,71 @@ public:
 
 private:
   QualType getVarArgType(const Expr *arg);
+
+  bool shouldEmitLifetimeMarkers = false;
+  /// Set when the current function has a goto/switch that may bypass a local's
+  /// init; lifetime markers are then suppressed. See functionMightHaveBypass.
+  bool fnHasBypassStmt = false;
+
+  bool shouldEmitLifetimeMarkersForAutoVar() const {
+    return shouldEmitLifetimeMarkers && !fnHasBypassStmt;
+  }
+
+  class InlinedInheritingConstructorScope {
+  public:
+    InlinedInheritingConstructorScope(CIRGenFunction &cgf, GlobalDecl gd)
+        : cgf(cgf), oldCurGD(cgf.curGD), oldCurFuncDecl(cgf.curFuncDecl),
+          oldCurCodeDecl(cgf.curCodeDecl),
+          oldCxxabiThisDecl(cgf.cxxabiThisDecl),
+          oldCxxThisValue(cgf.cxxThisValue),
+          oldCxxabiThisAlignment(cgf.cxxabiThisAlignment),
+          oldCxxThisAlignment(cgf.cxxThisAlignment),
+          oldReturnValue(cgf.returnValue), oldFnRetTy(cgf.fnRetTy),
+          oldCxxInheritedCtorInitExprArgs(
+              std::move(cgf.cxxInheritedCtorInitExprArgs)) {
+      cgf.curGD = gd;
+      cgf.curFuncDecl = cast<CXXConstructorDecl>(gd.getDecl());
+      cgf.curCodeDecl = cgf.curFuncDecl;
+      cgf.cxxabiThisDecl = nullptr;
+      cgf.cxxabiThisValue = nullptr;
+      cgf.cxxThisValue = nullptr;
+      cgf.cxxThisAlignment = CharUnits();
+      cgf.cxxabiThisAlignment = CharUnits();
+      cgf.returnValue = Address::invalid();
+      cgf.fnRetTy = QualType();
+      cgf.cxxInheritedCtorInitExprArgs.clear();
+      // FIXME: at one point when we want to call one of these, we'll need
+      // CXXInheritedCtorInitExprArgs here too.
+    }
+    ~InlinedInheritingConstructorScope() {
+      cgf.curGD = oldCurGD;
+      cgf.curFuncDecl = oldCurFuncDecl;
+      cgf.curCodeDecl = oldCurCodeDecl;
+      cgf.cxxabiThisDecl = oldCxxabiThisDecl;
+      cgf.cxxabiThisValue = oldCxxabiThisValue;
+      cgf.cxxThisValue = oldCxxThisValue;
+      cgf.cxxThisAlignment = oldCxxThisAlignment;
+      cgf.cxxabiThisAlignment = oldCxxabiThisAlignment;
+      cgf.returnValue = oldReturnValue;
+      cgf.fnRetTy = oldFnRetTy;
+      cgf.cxxInheritedCtorInitExprArgs =
+          std::move(oldCxxInheritedCtorInitExprArgs);
+    }
+
+  private:
+    CIRGenFunction &cgf;
+    GlobalDecl oldCurGD;
+    const Decl *oldCurFuncDecl;
+    const Decl *oldCurCodeDecl;
+    ImplicitParamDecl *oldCxxabiThisDecl;
+    mlir::Value oldCxxabiThisValue;
+    mlir::Value oldCxxThisValue;
+    clang::CharUnits oldCxxabiThisAlignment;
+    clang::CharUnits oldCxxThisAlignment;
+    Address oldReturnValue;
+    QualType oldFnRetTy;
+    CallArgList oldCxxInheritedCtorInitExprArgs;
+  };
 };
 
 } // namespace clang::CIRGen

@@ -47,6 +47,7 @@ IncrementalAction::IncrementalAction(CompilerInstance &Instance,
         case frontend::EmitBC:
         case frontend::EmitObj:
         case frontend::PrintPreprocessedInput:
+        case frontend::EmitLLVM:
         case frontend::EmitLLVMOnly:
           Act.reset(new EmitLLVMOnlyAction(&LLVMCtx));
           break;
@@ -133,6 +134,11 @@ InProcessPrintingASTConsumer::InProcessPrintingASTConsumer(
 
 bool InProcessPrintingASTConsumer::HandleTopLevelDecl(DeclGroupRef DGR) {
   if (DGR.isNull())
+    return true;
+
+  CompilerInstance *CI = Interp.getCompilerInstance();
+  DiagnosticsEngine &Diags = CI->getDiagnostics();
+  if (Diags.hasErrorOccurred())
     return true;
 
   for (Decl *D : DGR)

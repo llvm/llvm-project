@@ -15,11 +15,44 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
+#include "mlir/IR/OpImplementation.h"
 #include "llvm/Support/SHA1.h"
 #include <numeric>
 #include <optional>
 
 using namespace mlir;
+
+void mlir::detail::appendAttributeProperty(
+    llvm::SmallVectorImpl<NamedAttribute> &attrs, StringRef name,
+    Attribute attr) {
+  if (attr)
+    attrs.emplace_back(name, attr);
+}
+
+ParseResult mlir::detail::parseOptionalOperandInto(
+    OpAsmParser &parser,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &operands) {
+  OpAsmParser::UnresolvedOperand operand;
+  OptionalParseResult result = parser.parseOptionalOperand(operand);
+  if (!result.has_value())
+    return success();
+  if (failed(*result))
+    return failure();
+  operands.push_back(operand);
+  return success();
+}
+
+ParseResult mlir::detail::parseOptionalTypeInto(AsmParser &parser,
+                                                SmallVectorImpl<Type> &types) {
+  Type type;
+  OptionalParseResult result = parser.parseOptionalType(type);
+  if (!result.has_value())
+    return success();
+  if (failed(*result))
+    return failure();
+  types.push_back(type);
+  return success();
+}
 
 //===----------------------------------------------------------------------===//
 // NamedAttrList
@@ -523,7 +556,7 @@ void MutableOperandRange::updateLength(unsigned newLength) {
     segments[segment.first] += diff;
     segment.second.setValue(
         DenseI32ArrayAttr::get(attr.getContext(), segments));
-    owner->setAttr(segment.second.getName(), segment.second.getValue());
+    owner->setInherentAttr(segment.second.getName(), segment.second.getValue());
   }
 }
 
@@ -654,6 +687,9 @@ ValueRange::OwnerT ValueRange::offset_base(const OwnerT &owner,
     return {value + index};
   if (auto *operand = llvm::dyn_cast_if_present<OpOperand *>(owner))
     return {operand + index};
+  // All elements are identical; the owner pointer never advances.
+  if (llvm::isa<const Repeated<Value> *>(owner))
+    return owner;
   return cast<detail::OpResultImpl *>(owner)->getNextResultAtOffset(index);
 }
 /// See `llvm::detail::indexed_accessor_range_base` for details.
@@ -662,6 +698,9 @@ Value ValueRange::dereference_iterator(const OwnerT &owner, ptrdiff_t index) {
     return value[index];
   if (auto *operand = llvm::dyn_cast_if_present<OpOperand *>(owner))
     return operand[index].get();
+  if (auto *repeated =
+          llvm::dyn_cast_if_present<const Repeated<Value> *>(owner))
+    return repeated->value();
   return cast<detail::OpResultImpl *>(owner)->getNextResultAtOffset(index);
 }
 
@@ -689,7 +728,8 @@ llvm::hash_code OperationEquivalence::computeHash(
     hash = llvm::hash_combine(hash, op->getLoc());
 
   //   - Operands
-  if (op->hasTrait<mlir::OpTrait::IsCommutative>() &&
+  if (!(flags & Flags::IgnoreCommutativity) &&
+      op->hasTrait<mlir::OpTrait::IsCommutative>() &&
       op->getNumOperands() > 0) {
     size_t operandHash = hashOperands(op->getOperand(0));
     for (auto operand : op->getOperands().drop_front())
@@ -784,11 +824,12 @@ struct ValueEquivalenceCache {
     if (lhsIt == lhsRange.end())
       return success();
 
-    // Handle another simple case where operands are just a permutation.
-    // Note: This is not sufficient, this handles simple cases relatively
-    // cheaply.
-    auto sortValues = [](ValueRange values) {
-      SmallVector<Value> sortedValues = llvm::to_vector(values);
+    // Replace values with their entry in equivalentValues if they're in there
+    // that way, a sorted pointer comparison is enough to determine
+    // commutativity.
+    auto sortValues = [this](ValueRange values) {
+      SmallVector<Value> sortedValues = llvm::map_to_vector(
+          values, [this](Value a) { return equivalentValues.lookup_or(a, a); });
       llvm::sort(sortedValues, [](Value a, Value b) {
         return a.getAsOpaquePointer() < b.getAsOpaquePointer();
       });
@@ -854,7 +895,7 @@ OperationEquivalence::isRegionEquivalentTo(Region *lhs, Region *rhs,
     return false;
 
   // 2. Compare operands.
-  if (checkCommutativeEquivalent &&
+  if (!(flags & IgnoreCommutativity) && checkCommutativeEquivalent &&
       lhs->hasTrait<mlir::OpTrait::IsCommutative>()) {
     auto lhsRange = lhs->getOperands();
     auto rhsRange = rhs->getOperands();
@@ -886,9 +927,9 @@ OperationEquivalence::isRegionEquivalentTo(Region *lhs, Region *rhs,
 
   // 4. Compare regions.
   for (auto regionPair : llvm::zip(lhs->getRegions(), rhs->getRegions()))
-    if (!isRegionEquivalentTo(&std::get<0>(regionPair),
-                              &std::get<1>(regionPair), checkEquivalent,
-                              markEquivalent, flags))
+    if (!isRegionEquivalentTo(
+            &std::get<0>(regionPair), &std::get<1>(regionPair), checkEquivalent,
+            markEquivalent, flags, checkCommutativeEquivalent))
       return false;
 
   return true;
@@ -965,3 +1006,5 @@ OperationFingerPrint::OperationFingerPrint(Operation *topOp,
 
   hash = hasher.result();
 }
+
+MLIR_DEFINE_EXPLICIT_TYPE_ID(mlir::EmptyProperties)

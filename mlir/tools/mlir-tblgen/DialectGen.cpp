@@ -31,20 +31,12 @@
 
 using namespace mlir;
 using namespace mlir::tblgen;
-using llvm::Record;
 using llvm::RecordKeeper;
 
 static llvm::cl::OptionCategory dialectGenCat("Options for -gen-dialect-*");
 static llvm::cl::opt<std::string>
     selectedDialect("dialect", llvm::cl::desc("The dialect to gen for"),
                     llvm::cl::cat(dialectGenCat), llvm::cl::CommaSeparated);
-
-/// Utility iterator used for filtering records for a specific dialect.
-namespace {
-using DialectFilterIterator =
-    llvm::filter_iterator<ArrayRef<Record *>::iterator,
-                          std::function<bool(const Record *)>>;
-} // namespace
 
 static void populateDiscardableAttributes(
     Dialect &dialect, const llvm::DagInit *discardableAttrDag,
@@ -59,18 +51,6 @@ static void populateDiscardableAttributes(
     discardableAttributes.push_back(
         {givenName.str(), arg->getAsUnquotedString()});
   }
-}
-
-/// Given a set of records for a T, filter the ones that correspond to
-/// the given dialect.
-template <typename T>
-static iterator_range<DialectFilterIterator>
-filterForDialect(ArrayRef<Record *> records, Dialect &dialect) {
-  auto filterFn = [&](const Record *record) {
-    return T(record).getDialect() == dialect;
-  };
-  return {DialectFilterIterator(records.begin(), records.end(), filterFn),
-          DialectFilterIterator(records.end(), records.end(), filterFn)};
 }
 
 std::optional<Dialect>
@@ -207,25 +187,25 @@ static const char *const discardableAttrHelperDecl = R"(
       static constexpr ::llvm::StringLiteral getNameStr() {{
         return "{4}.{1}";
       }
-      constexpr ::mlir::StringAttr getName() {{
+      constexpr ::mlir::StringAttr getName() const {{
         return name;
       }
 
-      {0}AttrHelper(::mlir::MLIRContext *ctx)
+      explicit {0}AttrHelper(::mlir::MLIRContext *ctx)
         : name(::mlir::StringAttr::get(ctx, getNameStr())) {{}
 
-     {2} getAttr(::mlir::Operation *op) {{
-       return op->getAttrOfType<{2}>(name);
+     {2} getAttr(::mlir::Operation *op) const {{
+       return op->getDiscardableAttrOfType<{2}>(name);
      }
-     void setAttr(::mlir::Operation *op, {2} val) {{
-       op->setAttr(name, val);
+     void setAttr(::mlir::Operation *op, {2} val) const {{
+       op->setDiscardableAttr(name, val);
      }
-     bool isAttrPresent(::mlir::Operation *op) {{
-       return op->hasAttrOfType<{2}>(name);
+     bool isAttrPresent(::mlir::Operation *op) const {{
+       return op->hasDiscardableAttrOfType<{2}>(name);
      }
-     void removeAttr(::mlir::Operation *op) {{
-       assert(op->hasAttrOfType<{2}>(name));
-       op->removeAttr(name);
+     void removeAttr(::mlir::Operation *op) const {{
+       assert(op->hasDiscardableAttrOfType<{2}>(name));
+       op->removeDiscardableAttr(name);
      }
    };
    {0}AttrHelper get{0}AttrHelper() {

@@ -34,9 +34,9 @@ TEST(PhiValuesTest, SimplePhi) {
   BasicBlock *If = BasicBlock::Create(C, "if", F);
   BasicBlock *Else = BasicBlock::Create(C, "else", F);
   BasicBlock *Then = BasicBlock::Create(C, "then", F);
-  BranchInst::Create(If, Else, PoisonValue::get(I1Ty), Entry);
-  BranchInst::Create(Then, If);
-  BranchInst::Create(Then, Else);
+  CondBrInst::Create(PoisonValue::get(I1Ty), If, Else, Entry);
+  UncondBrInst::Create(Then, If);
+  UncondBrInst::Create(Then, Else);
 
   Value *Val1 = new LoadInst(I32Ty, PoisonValue::get(PtrTy), "val1", Entry);
   Value *Val2 = new LoadInst(I32Ty, PoisonValue::get(PtrTy), "val2", Entry);
@@ -104,12 +104,12 @@ TEST(PhiValuesTest, DependentPhi) {
   BasicBlock *If2 = BasicBlock::Create(C, "if2", F);
   BasicBlock *Else2 = BasicBlock::Create(C, "else2", F);
   BasicBlock *End = BasicBlock::Create(C, "then", F);
-  BranchInst::Create(If1, Else1, PoisonValue::get(I1Ty), Entry);
-  BranchInst::Create(Then, If1);
-  BranchInst::Create(Then, Else1);
-  BranchInst::Create(If2, Else2, PoisonValue::get(I1Ty), Then);
-  BranchInst::Create(End, If2);
-  BranchInst::Create(End, Else2);
+  CondBrInst::Create(PoisonValue::get(I1Ty), If1, Else1, Entry);
+  UncondBrInst::Create(Then, If1);
+  UncondBrInst::Create(Then, Else1);
+  CondBrInst::Create(PoisonValue::get(I1Ty), If2, Else2, Then);
+  UncondBrInst::Create(End, If2);
+  UncondBrInst::Create(End, Else2);
 
   Value *Val1 = new LoadInst(I32Ty, PoisonValue::get(PtrTy), "val1", Entry);
   Value *Val2 = new LoadInst(I32Ty, PoisonValue::get(PtrTy), "val2", Entry);

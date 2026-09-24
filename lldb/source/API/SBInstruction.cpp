@@ -14,6 +14,7 @@
 #include "lldb/API/SBFrame.h"
 
 #include "lldb/API/SBStream.h"
+#include "lldb/API/SBStructuredData.h"
 #include "lldb/API/SBTarget.h"
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/EmulateInstruction.h"
@@ -26,6 +27,7 @@
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/StructuredData.h"
 
 #include <memory>
 
@@ -115,9 +117,11 @@ const char *SBInstruction::GetMnemonic(SBTarget target) {
 
   ExecutionContext exe_ctx;
   TargetSP target_sp(target.GetSP());
-  std::unique_lock<std::recursive_mutex> lock;
+  TargetAPIMutex api_lock;
+  std::unique_lock<TargetAPIMutex> guard;
   if (target_sp) {
-    lock = std::unique_lock<std::recursive_mutex>(target_sp->GetAPIMutex());
+    api_lock = TargetAPIMutex(target_sp->GetAPIMutex());
+    guard = std::unique_lock<TargetAPIMutex>(api_lock);
 
     target_sp->CalculateExecutionContext(exe_ctx);
     exe_ctx.SetProcessSP(target_sp->GetProcessSP());
@@ -134,9 +138,11 @@ const char *SBInstruction::GetOperands(SBTarget target) {
 
   ExecutionContext exe_ctx;
   TargetSP target_sp(target.GetSP());
-  std::unique_lock<std::recursive_mutex> lock;
+  TargetAPIMutex api_lock;
+  std::unique_lock<TargetAPIMutex> guard;
   if (target_sp) {
-    lock = std::unique_lock<std::recursive_mutex>(target_sp->GetAPIMutex());
+    api_lock = TargetAPIMutex(target_sp->GetAPIMutex());
+    guard = std::unique_lock<TargetAPIMutex>(api_lock);
 
     target_sp->CalculateExecutionContext(exe_ctx);
     exe_ctx.SetProcessSP(target_sp->GetProcessSP());
@@ -153,9 +159,11 @@ const char *SBInstruction::GetComment(SBTarget target) {
 
   ExecutionContext exe_ctx;
   TargetSP target_sp(target.GetSP());
-  std::unique_lock<std::recursive_mutex> lock;
+  TargetAPIMutex api_lock;
+  std::unique_lock<TargetAPIMutex> guard;
   if (target_sp) {
-    lock = std::unique_lock<std::recursive_mutex>(target_sp->GetAPIMutex());
+    api_lock = TargetAPIMutex(target_sp->GetAPIMutex());
+    guard = std::unique_lock<TargetAPIMutex>(api_lock);
 
     target_sp->CalculateExecutionContext(exe_ctx);
     exe_ctx.SetProcessSP(target_sp->GetProcessSP());
@@ -163,16 +171,19 @@ const char *SBInstruction::GetComment(SBTarget target) {
   return ConstString(inst_sp->GetComment(&exe_ctx)).GetCString();
 }
 
-lldb::InstructionControlFlowKind SBInstruction::GetControlFlowKind(lldb::SBTarget target) {
+lldb::InstructionControlFlowKind
+SBInstruction::GetControlFlowKind(lldb::SBTarget target) {
   LLDB_INSTRUMENT_VA(this, target);
 
   lldb::InstructionSP inst_sp(GetOpaque());
   if (inst_sp) {
     ExecutionContext exe_ctx;
     TargetSP target_sp(target.GetSP());
-    std::unique_lock<std::recursive_mutex> lock;
+    TargetAPIMutex api_lock;
+    std::unique_lock<TargetAPIMutex> guard;
     if (target_sp) {
-      lock = std::unique_lock<std::recursive_mutex>(target_sp->GetAPIMutex());
+      api_lock = TargetAPIMutex(target_sp->GetAPIMutex());
+      guard = std::unique_lock<TargetAPIMutex>(api_lock);
 
       target_sp->CalculateExecutionContext(exe_ctx);
       exe_ctx.SetProcessSP(target_sp->GetProcessSP());
@@ -347,4 +358,22 @@ bool SBInstruction::TestEmulation(lldb::SBStream &output_stream,
   if (inst_sp)
     return inst_sp->TestEmulation(output_stream.ref(), test_file);
   return false;
+}
+
+SBStructuredData SBInstruction::GetVariableAnnotations() {
+  LLDB_INSTRUMENT_VA(this);
+
+  SBStructuredData result;
+
+  if (!m_opaque_sp || !m_opaque_sp->IsValid())
+    return result;
+
+  lldb::InstructionSP inst_sp = m_opaque_sp->GetSP();
+  if (!inst_sp)
+    return result;
+
+  StructuredData::ArraySP array_sp = inst_sp->GetVariableAnnotations();
+  result.m_impl_up->SetObjectSP(array_sp);
+
+  return result;
 }

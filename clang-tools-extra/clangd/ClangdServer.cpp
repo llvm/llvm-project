@@ -223,12 +223,14 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
       UseDirtyHeaders(Opts.UseDirtyHeaders),
       LineFoldingOnly(Opts.LineFoldingOnly),
       PreambleParseForwardingFunctions(Opts.PreambleParseForwardingFunctions),
+      SkipPreambleBuild(Opts.SkipPreambleBuild),
       ImportInsertions(Opts.ImportInsertions),
       PublishInactiveRegions(Opts.PublishInactiveRegions),
       WorkspaceRoot(Opts.WorkspaceRoot),
       Transient(Opts.ImplicitCancellation ? TUScheduler::InvalidateOnUpdate
                                           : TUScheduler::NoInvalidation),
-      DirtyFS(std::make_unique<DraftStoreFS>(TFS, DraftMgr)) {
+      DirtyFS(std::make_unique<DraftStoreFS>(TFS, DraftMgr)),
+      ContextProvider(Opts.ContextProvider) {
   if (Opts.AsyncThreadsCount != 0)
     IndexTasks.emplace();
   // Pass a callback into `WorkScheduler` to extract symbols from a newly
@@ -297,6 +299,8 @@ ClangdServer::~ClangdServer() {
 void ClangdServer::addDocument(PathRef File, llvm::StringRef Contents,
                                llvm::StringRef Version,
                                WantDiagnostics WantDiags, bool ForceRebuild) {
+  bool NewModule = ModulesManager && ModulesManager->observeSourcePath(File);
+
   std::string ActualVersion = DraftMgr.addDraft(File, Version, Contents);
   ParseOptions Opts;
   Opts.PreambleParseForwardingFunctions = PreambleParseForwardingFunctions;
@@ -313,10 +317,14 @@ void ClangdServer::addDocument(PathRef File, llvm::StringRef Contents,
   Inputs.ClangTidyProvider = ClangTidyProvider;
   Inputs.FeatureModules = FeatureModules;
   Inputs.ModulesManager = ModulesManager;
+  adjustParseInputs(Inputs, File);
   bool NewFile = WorkScheduler->update(File, Inputs, WantDiags);
   // If we loaded Foo.h, we want to make sure Foo.cpp is indexed.
   if (NewFile && BackgroundIdx)
     BackgroundIdx->boostRelated(File);
+  if (NewModule)
+    reparseOpenFilesIfNeeded(
+        [&](PathRef OpenFile) { return !pathEqual(OpenFile, File); });
 }
 
 void ClangdServer::reparseOpenFilesIfNeeded(
@@ -458,6 +466,8 @@ void ClangdServer::codeComplete(PathRef File, Position Pos,
     CodeCompleteOpts.InsertIncludes =
         Config::current().Completion.HeaderInsertion;
     CodeCompleteOpts.CodePatterns = Config::current().Completion.CodePatterns;
+    CodeCompleteOpts.MacroFilter = Config::current().Completion.MacroFilter;
+    adjustParseInputs(ParseInput, File);
     // FIXME(ibiryukov): even if Preamble is non-null, we may want to check
     // both the old and the new version in case only one of them matches.
     CodeCompleteResult Result = clangd::codeComplete(
@@ -937,8 +947,13 @@ void ClangdServer::outgoingCalls(
 }
 
 void ClangdServer::onFileEvent(const DidChangeWatchedFilesParams &Params) {
-  // FIXME: Do nothing for now. This will be used for indexing and potentially
-  // invalidating other caches.
+  if (!ModulesManager)
+    return;
+  bool ModulesChanged = false;
+  for (const auto &Change : Params.changes)
+    ModulesChanged |= ModulesManager->onFileEvent(Change);
+  if (ModulesChanged)
+    reparseOpenFilesIfNeeded([](PathRef) { return true; });
 }
 
 void ClangdServer::workspaceSymbols(
@@ -1188,5 +1203,25 @@ void ClangdServer::profile(MemoryTree &MT) const {
     BackgroundIdx->profile(MT.child("background_index"));
   WorkScheduler->profile(MT.child("tuscheduler"));
 }
+
+void ClangdServer::adjustParseInputs(ParseInputs &Inputs, PathRef File) const {
+  // FIXME: Don't perform optimization when the TU requires C++20
+  // named modules. Mixing PCH and modules may cause different issues (incorrect
+  // diagnostics, crashes) due to instability of such scenario support in the
+  // clang.
+  auto HasRequiredModules = [this, File]() {
+    if (!ModulesManager)
+      return false;
+    // Required modules check uses compile commands extracted from the
+    // compilation database.
+    // We use context provider here to make command mangler to use compile
+    // command adjustments from the config.
+    WithContext Ctx(ContextProvider ? ContextProvider(File)
+                                    : Context::current().clone());
+    return ModulesManager->hasRequiredModules(File);
+  };
+  Inputs.Opts.SkipPreambleBuild = SkipPreambleBuild || HasRequiredModules();
+}
+
 } // namespace clangd
 } // namespace clang

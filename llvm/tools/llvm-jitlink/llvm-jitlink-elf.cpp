@@ -176,6 +176,8 @@ Error registerELFGraphInfo(Session &S, LinkGraph &G) {
     }
 
     // Add symbol info for absolute symbols.
+    // MemoryRegionInfo doesn't support zero-sized symbols, so use a minimum of
+    // 1.
     for (auto *Sym : G.absolute_symbols())
       S.SymbolInfos[Sym->getName()] = {Sym->getSize(),
                                        Sym->getAddress().getValue()};

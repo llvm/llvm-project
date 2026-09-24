@@ -23,13 +23,13 @@ namespace impl {
 /// Lookup a device-side function using a host pointer /p HstPtr using the table
 /// provided by the device plugin. The table is an ordered pair of host and
 /// device pointers sorted on the value of the host pointer.
-static void *indirectCallLookup(void *HstPtr) {
+static FnPtrTy indirectCallLookup(FnPtrTy HstPtr) {
   if (!HstPtr)
     return nullptr;
 
   struct IndirectCallTable {
-    void *HstPtr;
-    void *DevPtr;
+    FnPtrTy HstPtr;
+    FnPtrTy DevPtr;
   };
   IndirectCallTable *Table =
       reinterpret_cast<IndirectCallTable *>(config::getIndirectCallTablePtr());
@@ -77,6 +77,18 @@ int32_t __kmpc_cancellationpoint(IdentTy *, int32_t, int32_t) { return 0; }
 
 int32_t __kmpc_cancel(IdentTy *, int32_t, int32_t) { return 0; }
 
+// TODO: Report the source location from Loc->psource like the host runtime.
+void __kmpc_error(IdentTy *, int32_t Severity, const char *Message) {
+  const char *Kind = Severity == 1 ? "warning" : "error";
+  if (Message)
+    ompx::printf("OMP: Encountered user-directed %s: %s.\n", Kind, Message);
+  else
+    ompx::printf("OMP: Encountered user-directed %s.\n", Kind);
+
+  if (Severity != 1)
+    __builtin_trap();
+}
+
 double omp_get_wtick(void) {
   // The number of ticks per second for the AMDGPU clock varies by card and can
   // only be retrieved by querying the driver. We rely on the device environment
@@ -89,7 +101,7 @@ double omp_get_wtime(void) {
   return static_cast<double>(__builtin_readsteadycounter()) * omp_get_wtick();
 }
 
-void *__llvm_omp_indirect_call_lookup(void *HstPtr) {
+FnPtrTy __llvm_omp_indirect_call_lookup(FnPtrTy HstPtr) {
   return ompx::impl::indirectCallLookup(HstPtr);
 }
 
@@ -131,9 +143,14 @@ unsigned long long __llvm_omp_host_call(void *fn, void *data, size_t size) {
   Port.recv([&](rpc::Buffer *Buffer, uint32_t) {
     Ret = static_cast<unsigned long long>(Buffer->data[0]);
   });
-  Port.close();
   return Ret;
 }
+}
+
+// C++ ABI helpers.
+extern "C" {
+[[gnu::weak]] void __cxa_pure_virtual(void) { __builtin_trap(); }
+[[gnu::weak]] void __cxa_deleted_virtual(void) { __builtin_trap(); }
 }
 
 ///}

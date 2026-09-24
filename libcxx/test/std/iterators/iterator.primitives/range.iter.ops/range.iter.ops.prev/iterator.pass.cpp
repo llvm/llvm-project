@@ -12,6 +12,7 @@
 
 #include <iterator>
 #include <cassert>
+#include <utility>
 
 #include "test_iterators.h"
 

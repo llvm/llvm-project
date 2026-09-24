@@ -26,7 +26,7 @@ func.func @do_concurrent_basic() attributes {fir.bindc_name = "do_concurrent_bas
 
     // CHECK: omp.parallel {
 
-    // CHECK-NEXT: %[[ITER_VAR:.*]] = fir.alloca i32 {bindc_name = "i"}
+    // CHECK-NEXT: %[[ITER_VAR:.*]] = fir.alloca i32 <{bindc_name = "i"}>
     // CHECK-NEXT: %[[BINDING:.*]]:2 = hlfir.declare %[[ITER_VAR]] {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
     // CHECK: omp.wsloop {
@@ -43,7 +43,7 @@ func.func @do_concurrent_basic() attributes {fir.bindc_name = "do_concurrent_bas
     // CHECK-NEXT: }
 
     // CHECK-NEXT: omp.terminator
-    // CHECK-NEXT: }
+    // CHECK-NEXT: } {omp.combined}
     fir.do_concurrent {
       %0 = fir.alloca i32 {bindc_name = "i"}
       %1:2 = hlfir.declare %0 {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)

@@ -17,6 +17,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SmallVector.h"
+#include <vector>
 
 namespace llvm {
 
@@ -112,8 +113,8 @@ struct ProfiParams {
   const int64_t CostUnlikely = ((int64_t)1) << 30;
 };
 
-void applyFlowInference(const ProfiParams &Params, FlowFunction &Func);
-void applyFlowInference(FlowFunction &Func);
+LLVM_ABI void applyFlowInference(const ProfiParams &Params, FlowFunction &Func);
+LLVM_ABI void applyFlowInference(FlowFunction &Func);
 
 /// Sample profile inference pass.
 template <typename FT> class SampleProfileInference {
@@ -130,6 +131,11 @@ public:
   SampleProfileInference(FunctionT &F, BlockEdgeMap &Successors,
                          BlockWeightMap &SampleBlockWeights)
       : F(F), Successors(Successors), SampleBlockWeights(SampleBlockWeights) {}
+  SampleProfileInference(FunctionT &F, BlockEdgeMap &Successors,
+                         BlockWeightMap &SampleBlockWeights,
+                         EdgeWeightMap &SampleEdgeWeights)
+      : F(F), Successors(Successors), SampleBlockWeights(SampleBlockWeights),
+        SampleEdgeWeights(SampleEdgeWeights) {}
 
   /// Apply the profile inference algorithm for a given function
   void apply(BlockWeightMap &BlockWeights, EdgeWeightMap &EdgeWeights);
@@ -157,6 +163,9 @@ private:
 
   /// Map basic blocks to their sampled weights.
   BlockWeightMap &SampleBlockWeights;
+
+  /// Map edges to their sampled weights.
+  EdgeWeightMap SampleEdgeWeights;
 };
 
 template <typename BT>
@@ -266,6 +275,14 @@ FlowFunction SampleProfileInference<BT>::createFlowFunction(
       FlowJump Jump;
       Jump.Source = BlockIndex[BB];
       Jump.Target = BlockIndex[Succ];
+      auto It = SampleEdgeWeights.find(std::make_pair(BB, Succ));
+      if (It != SampleEdgeWeights.end()) {
+        Jump.HasUnknownWeight = false;
+        Jump.Weight = It->second;
+      } else {
+        Jump.HasUnknownWeight = true;
+        Jump.Weight = 0;
+      }
       Func.Jumps.push_back(Jump);
     }
   }

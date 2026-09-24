@@ -15,19 +15,19 @@ body:             |
     ; CHECK-LABEL: name: dont_combine_ptr_add
     ; CHECK: liveins: $x0, $x1, $x2
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg0:_(s64) = COPY $x0
-    ; CHECK-NEXT: %reg1:_(s64) = COPY $x1
+    ; CHECK-NEXT: %reg0:_(i64) = COPY $x0
+    ; CHECK-NEXT: %reg1:_(i64) = COPY $x1
     ; CHECK-NEXT: %ptr:_(p0) = COPY $x2
-    ; CHECK-NEXT: %cst:_(s64) = G_CONSTANT i64 6
-    ; CHECK-NEXT: %mul:_(s64) = nsw G_MUL %reg0, %cst
-    ; CHECK-NEXT: %ptr_add:_(p0) = G_PTR_ADD %ptr, %mul(s64)
+    ; CHECK-NEXT: %cst:_(i64) = G_CONSTANT i64 6
+    ; CHECK-NEXT: %mul:_(i64) = nsw G_MUL %reg0, %cst
+    ; CHECK-NEXT: %ptr_add:_(p0) = G_PTR_ADD %ptr, %mul(i64)
     ; CHECK-NEXT: $x0 = COPY %ptr_add(p0)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %reg0:_(s64) = COPY $x0
-    %reg1:_(s64) = COPY $x1
+    %reg0:_(i64) = COPY $x0
+    %reg1:_(i64) = COPY $x1
     %ptr:_(p0) = COPY $x2
-    %cst:_(s64) = G_CONSTANT i64 6
-    %mul:_(s64) = nsw G_MUL %reg0, %cst
+    %cst:_(i64) = G_CONSTANT i64 6
+    %mul:_(i64) = nsw G_MUL %reg0, %cst
     %ptr_add:_(p0) = G_PTR_ADD %ptr, %mul
     $x0 = COPY %ptr_add(p0)
     RET_ReallyLR implicit $x0

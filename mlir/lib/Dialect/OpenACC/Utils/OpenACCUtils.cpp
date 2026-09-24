@@ -8,22 +8,47 @@
 
 #include "mlir/Dialect/OpenACC/OpenACCUtils.h"
 
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
+#include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/Dominance.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/Casting.h"
 
 mlir::Operation *mlir::acc::getEnclosingComputeOp(mlir::Region &region) {
-  mlir::Operation *parentOp = region.getParentOp();
-  while (parentOp) {
-    if (mlir::isa<ACC_COMPUTE_CONSTRUCT_OPS>(parentOp))
-      return parentOp;
-    parentOp = parentOp->getParentOp();
-  }
-  return nullptr;
+  return region
+      .getParentOfType<ACC_COMPUTE_CONSTRUCT_OPS, mlir::acc::ComputeRegionOp>();
+}
+
+mlir::Value mlir::acc::getACCOperandForBlockArg(mlir::Value v) {
+  auto barg = mlir::dyn_cast<mlir::BlockArgument>(v);
+  if (!barg)
+    return nullptr;
+
+  mlir::Block *block = barg.getOwner();
+  auto computeReg =
+      mlir::dyn_cast<mlir::acc::ComputeRegionOp>(block->getParentOp());
+  if (!computeReg)
+    return nullptr;
+  assert(block == computeReg.getBody() &&
+         "block must be the body of acc.compute_region");
+  return computeReg.getOperand(barg);
+}
+
+mlir::Operation *mlir::acc::getACCDataClauseOpForBlockArg(mlir::Value v) {
+  mlir::Value orig = getACCOperandForBlockArg(v);
+  if (!orig)
+    return nullptr;
+  mlir::Operation *def = orig.getDefiningOp();
+  return mlir::isa_and_nonnull<ACC_DATA_ENTRY_OPS>(def) ? def : nullptr;
 }
 
 template <typename OpTy>
@@ -84,20 +109,32 @@ mlir::acc::VariableTypeCategory mlir::acc::getTypeCategory(mlir::Value var) {
   return typeCategory;
 }
 
+llvm::StringLiteral mlir::acc::getVarNamePlaceholder() {
+  return llvm::StringLiteral("<acc.varname.placeholder>");
+}
+
 std::string mlir::acc::getVariableName(mlir::Value v) {
   Value current = v;
 
   // Walk through view operations until a name is found or can't go further
   while (Operation *definingOp = current.getDefiningOp()) {
+    // For integer constants, return their value as a string.
+    if (std::optional<int64_t> constVal = getConstantIntValue(current))
+      return std::to_string(*constVal);
+
     // Check for `acc.var_name` attribute
-    if (auto varNameAttr =
-            definingOp->getAttrOfType<VarNameAttr>(getVarNameAttrName()))
+    if (auto varNameAttr = definingOp->getDiscardableAttrOfType<VarNameAttr>(
+            getVarNameAttrName()))
       return varNameAttr.getName().str();
 
     // If it is a data entry operation, get name via getVarName
-    if (isa<ACC_DATA_ENTRY_OPS>(definingOp))
+    if (isa<ACC_DATA_ENTRY_OPS, MapInfoOp>(definingOp))
       if (auto name = acc::getVarName(definingOp))
         return name->str();
+
+    // A global goes by the symbol it is addressed through.
+    if (auto addressOf = dyn_cast<AddressOfGlobalOpInterface>(definingOp))
+      return addressOf.getSymbol().getLeafReference().str();
 
     // If it's a view operation, continue to the source
     if (auto viewOp = dyn_cast<ViewLikeOpInterface>(definingOp)) {
@@ -151,7 +188,7 @@ std::string mlir::acc::getRecipeName(mlir::acc::RecipeKind kind,
 
 mlir::Value mlir::acc::getBaseEntity(mlir::Value val) {
   if (auto partialEntityAccessOp =
-          dyn_cast<PartialEntityAccessOpInterface>(val.getDefiningOp())) {
+          val.getDefiningOp<PartialEntityAccessOpInterface>()) {
     if (!partialEntityAccessOp.isCompleteView())
       return partialEntityAccessOp.getBaseEntity();
   }
@@ -159,9 +196,34 @@ mlir::Value mlir::acc::getBaseEntity(mlir::Value val) {
   return val;
 }
 
+/// Look up `symbol` in the `gpu.module`s of the enclosing module. A
+/// `gpu.module` is its own symbol table, so `lookupNearestSymbolFrom` from a
+/// user outside of it does not find definitions placed inside.
+static mlir::Operation *lookupSymbolInGPUModules(mlir::Operation *user,
+                                                 mlir::SymbolRefAttr symbol) {
+  auto moduleOp = user->getParentOfType<mlir::ModuleOp>();
+  if (!moduleOp)
+    return nullptr;
+  for (auto gpuModule : moduleOp.getOps<mlir::gpu::GPUModuleOp>()) {
+    if (mlir::Operation *op = mlir::SymbolTable::lookupSymbolIn(
+            gpuModule, symbol.getRootReference()))
+      return op;
+  }
+  return nullptr;
+}
+
 bool mlir::acc::isValidSymbolUse(mlir::Operation *user,
                                  mlir::SymbolRefAttr symbol,
                                  mlir::Operation **definingOpPtr) {
+  // A pass may prepare the device-side definition of a symbol inside a
+  // `gpu.module` while the use is still a reference from host IR. Such a
+  // symbol is meant to be used on device, so the use is valid.
+  if (mlir::Operation *gpuOp = lookupSymbolInGPUModules(user, symbol)) {
+    if (definingOpPtr)
+      *definingOpPtr = gpuOp;
+    return true;
+  }
+
   mlir::Operation *definingOp =
       mlir::SymbolTable::lookupNearestSymbolFrom(user, symbol);
 
@@ -173,19 +235,26 @@ bool mlir::acc::isValidSymbolUse(mlir::Operation *user,
   if (definingOpPtr)
     *definingOpPtr = definingOp;
 
-  // Check if the defining op is a recipe (private, reduction, firstprivate).
+  // Check if the defining op is a recipe.
   // Recipes are valid as they get materialized before being offloaded to
   // device. They are only instructions for how to materialize.
-  if (mlir::isa<mlir::acc::PrivateRecipeOp, mlir::acc::ReductionRecipeOp,
-                mlir::acc::FirstprivateRecipeOp>(definingOp))
+  if (mlir::isa<mlir::accomp::RecipeInterface>(definingOp))
     return true;
+
+  // Check if the defining op is a global variable that is device data.
+  // Device data is already resident on the device and does not need mapping.
+  if (auto globalVar =
+          mlir::dyn_cast<mlir::acc::GlobalVariableOpInterface>(definingOp))
+    if (globalVar.isDeviceAccessible())
+      return true;
 
   // Check if the defining op is a function
   if (auto func =
           mlir::dyn_cast_if_present<mlir::FunctionOpInterface>(definingOp)) {
-    // If this symbol is actually an acc routine - then it is expected for it
-    // to be offloaded - therefore it is valid.
-    if (func->hasAttr(mlir::acc::getRoutineInfoAttrName()))
+    // If this symbol is actually an acc routine or a specialized acc routine -
+    // then it is expected for it to be offloaded - therefore it is valid.
+    if (func->hasDiscardableAttr(mlir::acc::getRoutineInfoAttrName()) ||
+        func->hasDiscardableAttr(mlir::acc::getSpecializedRoutineAttrName()))
       return true;
 
     // If this symbol is a call to an LLVM intrinsic, then it is likely valid.
@@ -202,6 +271,212 @@ bool mlir::acc::isValidSymbolUse(mlir::Operation *user,
   }
 
   // A declare attribute is needed for symbol references.
-  bool hasDeclare = definingOp->hasAttr(mlir::acc::getDeclareAttrName());
+  bool hasDeclare =
+      definingOp->hasDiscardableAttr(mlir::acc::getDeclareAttrName());
   return hasDeclare;
+}
+
+bool mlir::acc::isDeviceAccessibleValue(mlir::Value val) {
+  // Check if the value is device data via type interfaces.
+  // Device data is already resident on the device and does not need mapping.
+  if (auto mappableTy = dyn_cast<mlir::acc::MappableType>(val.getType()))
+    if (mappableTy.isDeviceAccessible(val))
+      return true;
+
+  if (auto pointerLikeTy = dyn_cast<mlir::acc::PointerLikeType>(val.getType()))
+    if (pointerLikeTy.isDeviceAccessible(val))
+      return true;
+
+  mlir::Operation *defOp = val.getDefiningOp();
+  if (!defOp)
+    return false;
+
+  // `acc.declare` with deviceptr marks data that is already associated with
+  // the device.
+  if (auto declareAttr =
+          defOp->getDiscardableAttrOfType<mlir::acc::DeclareAttr>(
+              mlir::acc::getDeclareAttrName()))
+    if (declareAttr.getDataClause().getValue() ==
+        mlir::acc::DataClause::acc_deviceptr)
+      return true;
+
+  // Handle operations that access a partial entity - check if the base entity
+  // is device data.
+  if (auto partialAccess =
+          dyn_cast<mlir::acc::PartialEntityAccessOpInterface>(defOp)) {
+    if (mlir::Value base = partialAccess.getBaseEntity())
+      return isDeviceAccessibleValue(base);
+  }
+
+  // Handle address_of - check if the referenced global is device data.
+  if (auto addrOfIface =
+          dyn_cast<mlir::acc::AddressOfGlobalOpInterface>(defOp)) {
+    auto symbol = addrOfIface.getSymbol();
+    if (auto global = mlir::SymbolTable::lookupNearestSymbolFrom<
+            mlir::acc::GlobalVariableOpInterface>(defOp, symbol))
+      return global.isDeviceAccessible();
+  }
+
+  return false;
+}
+
+bool mlir::acc::isInDeviceMemoryValue(mlir::Value val) {
+  // In-device-memory data is a subset of device-accessible data: it must be
+  // accessible and its storage must physically reside in device memory.
+  if (auto mappableTy = dyn_cast<mlir::acc::MappableType>(val.getType()))
+    if (mappableTy.isInDeviceMemory(val))
+      return true;
+
+  if (auto pointerLikeTy = dyn_cast<mlir::acc::PointerLikeType>(val.getType()))
+    if (pointerLikeTy.isInDeviceMemory(val))
+      return true;
+
+  mlir::Operation *defOp = val.getDefiningOp();
+  if (!defOp)
+    return false;
+
+  // `acc.declare` with deviceptr marks data whose storage is already in device
+  // memory.
+  if (auto declareAttr =
+          defOp->getDiscardableAttrOfType<mlir::acc::DeclareAttr>(
+              mlir::acc::getDeclareAttrName()))
+    if (declareAttr.getDataClause().getValue() ==
+        mlir::acc::DataClause::acc_deviceptr)
+      return true;
+
+  // Handle operations that access a partial entity - check if the base entity
+  // is in device memory.
+  if (auto partialAccess =
+          dyn_cast<mlir::acc::PartialEntityAccessOpInterface>(defOp)) {
+    if (mlir::Value base = partialAccess.getBaseEntity())
+      return isInDeviceMemoryValue(base);
+  }
+
+  // Handle address_of - check if the referenced global is in device memory.
+  if (auto addrOfIface =
+          dyn_cast<mlir::acc::AddressOfGlobalOpInterface>(defOp)) {
+    auto symbol = addrOfIface.getSymbol();
+    if (auto global = mlir::SymbolTable::lookupNearestSymbolFrom<
+            mlir::acc::GlobalVariableOpInterface>(defOp, symbol))
+      return global.isInDeviceMemory();
+  }
+
+  return false;
+}
+
+bool mlir::acc::isValidValueUse(mlir::Value val, mlir::Region &region) {
+  // Types that can be passed by value are legal.
+  Type type = val.getType();
+  if (type.isIntOrIndexOrFloat() || isa<mlir::ComplexType>(type) ||
+      llvm::isa<mlir::VectorType>(type))
+    return true;
+
+  // If this is produced by an ACC data entry operation, it is valid.
+  if (isa_and_nonnull<ACC_DATA_ENTRY_OPS>(val.getDefiningOp()))
+    return true;
+
+  // If the value is only used by private clauses, it is not a live-in.
+  if (isOnlyUsedByPrivateClauses(val, region))
+    return true;
+
+  // If this is device data, it is valid.
+  if (isDeviceAccessibleValue(val))
+    return true;
+
+  // Arguments of an enclosing acc routine are already on the device.
+  if (mlir::Operation *parent = region.getParentOp()) {
+    if (auto func = parent->getParentOfType<mlir::FunctionOpInterface>()) {
+      if ((mlir::acc::isAccRoutine(func) ||
+           mlir::acc::isSpecializedAccRoutine(func)) &&
+          llvm::is_contained(func.getArguments(), val))
+        return true;
+    }
+  }
+
+  return false;
+}
+
+llvm::SmallVector<mlir::Value>
+mlir::acc::getDominatingDataClauses(mlir::Operation *computeConstructOp,
+                                    mlir::DominanceInfo &domInfo,
+                                    mlir::PostDominanceInfo &postDomInfo) {
+  llvm::SmallSetVector<mlir::Value, 8> dominatingDataClauses;
+
+  llvm::TypeSwitch<mlir::Operation *>(computeConstructOp)
+      .Case<mlir::acc::ParallelOp, mlir::acc::KernelsOp, mlir::acc::SerialOp>(
+          [&](auto op) {
+            for (auto dataClause : op.getDataClauseOperands()) {
+              dominatingDataClauses.insert(dataClause);
+            }
+          })
+      .Default([](mlir::Operation *) {});
+
+  // Collect the data clauses from enclosing data constructs.
+  mlir::Operation *currParentOp = computeConstructOp->getParentOp();
+  while (currParentOp) {
+    if (mlir::isa<mlir::acc::DataOp>(currParentOp)) {
+      for (auto dataClause : mlir::dyn_cast<mlir::acc::DataOp>(currParentOp)
+                                 .getDataClauseOperands()) {
+        dominatingDataClauses.insert(dataClause);
+      }
+    }
+    currParentOp = currParentOp->getParentOp();
+  }
+
+  // Find the enclosing function/subroutine
+  auto funcOp =
+      computeConstructOp->getParentOfType<mlir::FunctionOpInterface>();
+  if (!funcOp)
+    return dominatingDataClauses.takeVector();
+
+  // Walk the function to find `acc.declare_enter`/`acc.declare_exit` pairs that
+  // dominate and post-dominate the compute construct and add their data
+  // clauses to the list.
+  funcOp->walk([&](mlir::acc::DeclareEnterOp declareEnterOp) {
+    if (domInfo.dominates(declareEnterOp.getOperation(), computeConstructOp)) {
+      // Collect all `acc.declare_exit` ops for this token.
+      llvm::SmallVector<mlir::acc::DeclareExitOp> exits;
+      for (auto *user : declareEnterOp.getToken().getUsers())
+        if (auto declareExit = mlir::dyn_cast<mlir::acc::DeclareExitOp>(user))
+          exits.push_back(declareExit);
+
+      // Only add clauses if every `acc.declare_exit` op post-dominates the
+      // compute construct.
+      if (!exits.empty() &&
+          llvm::all_of(exits, [&](mlir::acc::DeclareExitOp exitOp) {
+            return postDomInfo.postDominates(exitOp, computeConstructOp);
+          })) {
+        for (auto dataClause : declareEnterOp.getDataClauseOperands())
+          dominatingDataClauses.insert(dataClause);
+      }
+    }
+  });
+
+  return dominatingDataClauses.takeVector();
+}
+
+mlir::remark::detail::InFlightRemark
+mlir::acc::emitRemark(mlir::Operation *op,
+                      const std::function<std::string()> &messageFn,
+                      llvm::StringRef category) {
+  using namespace mlir::remark;
+  mlir::Location loc = op->getLoc();
+  auto *engine = loc->getContext()->getRemarkEngine();
+  if (!engine)
+    return remark::detail::InFlightRemark{};
+
+  llvm::StringRef funcName;
+  if (auto func = dyn_cast<mlir::FunctionOpInterface>(op))
+    funcName = func.getName();
+  else if (auto funcOp = op->getParentOfType<mlir::FunctionOpInterface>())
+    funcName = funcOp.getName();
+
+  auto opts = RemarkOpts::name("openacc").category(category);
+  if (!funcName.empty())
+    opts = opts.function(funcName);
+
+  auto remark = engine->emitOptimizationRemark(loc, opts);
+  if (remark)
+    remark << messageFn();
+  return remark;
 }

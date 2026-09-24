@@ -13,7 +13,7 @@ define i32 @foo(ptr nocapture %A, i32 %n) {
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i32>, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i32> poison, i32 [[N]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i32> poison, i32 [[N]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nsw <8 x i32> [[TMP0]], [[TMP2]]
 ; CHECK-NEXT:    store <8 x i32> [[TMP3]], ptr [[ARRAYIDX]], align 4

@@ -1,7 +1,7 @@
 ! RUN: bbc -emit-hlfir -fopenmp --force-byref-reduction -o - %s 2>&1 | FileCheck %s
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --force-byref-reduction -o - %s 2>&1 | FileCheck %s
 
-!CHECK:  omp.declare_reduction @[[REDUCTION_DECLARE:[_a-z0-9]+]] : !fir.ref<i32>
+!CHECK:  omp.declare_reduction @[[REDUCTION_DECLARE:[_a-z0-9]+]] byref_element_type({{.*}}) : !fir.ref<i32>
 !CHECK-SAME: alloc {
 !CHECK:    %[[REF:.*]] = fir.alloca i32
 !CHECK:    omp.yield(%[[REF]] : !fir.ref<i32>)
@@ -19,7 +19,7 @@
 !CHECK:    omp.yield(%[[C0]] : !fir.ref<i32>)
 !CHECK:  }
 !CHECK:  func.func @_QQmain() attributes {fir.bindc_name = "MN"} {
-!CHECK:    %[[RED_ACCUM_REF:[_a-z0-9]+]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFEi"}
+!CHECK:    %[[RED_ACCUM_REF:[_a-z0-9]+]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFEi"}>
 !CHECK:    %[[RED_ACCUM_DECL:[_a-z0-9]+]]:2 = hlfir.declare %[[RED_ACCUM_REF]] {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:    %[[C0:[_a-z0-9]+]] = arith.constant 0 : i32
 !CHECK:    hlfir.assign %[[C0]] to %[[RED_ACCUM_DECL]]#0 : i32, !fir.ref<i32>

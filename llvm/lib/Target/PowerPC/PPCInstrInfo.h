@@ -17,7 +17,6 @@
 #include "PPC.h"
 #include "PPCRegisterInfo.h"
 #include "llvm/ADT/SmallSet.h"
-#include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 
 #define GET_INSTRINFO_HEADER
@@ -297,7 +296,8 @@ class PPCInstrInfo : public PPCGenInstrInfo {
   // Replace the instruction with single LI if possible. \p DefMI must be LI or
   // LI8.
   bool simplifyToLI(MachineInstr &MI, MachineInstr &DefMI,
-                    unsigned OpNoForForwarding, MachineInstr **KilledDef) const;
+                    unsigned OpNoForForwarding, MachineInstr **KilledDef,
+                    SmallSet<Register, 4> *RegsToUpdate = nullptr) const;
   // If the inst is imm-form and its register operand is produced by a ADDI, put
   // the imm into the inst directly and remove the ADDI if possible.
   bool transformToNewImmFormFedByAdd(MachineInstr &MI, MachineInstr &DefMI,
@@ -379,6 +379,9 @@ public:
   /// always be able to get register info as well (through this method).
   ///
   const PPCRegisterInfo &getRegisterInfo() const { return RI; }
+
+  const TargetRegisterClass *
+  getInlineAsmMemoryOperandRegClass(InlineAsm::ConstraintCode C) const override;
 
   bool isXFormMemOp(unsigned Opcode) const {
     return get(Opcode).TSFlags & PPCII::XFormMemOp;
@@ -585,8 +588,7 @@ public:
   void loadRegFromStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
       Register DestReg, int FrameIndex, const TargetRegisterClass *RC,
-
-      Register VReg,
+      Register VReg, unsigned SubReg = 0,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   // Emits a register reload without updating the register class for vector
@@ -700,6 +702,9 @@ public:
   ///
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
 
+  InstSizeVerifyMode
+  getInstSizeVerifyMode(const MachineInstr &MI) const override;
+
   MCInst getNop() const override;
 
   std::pair<unsigned, unsigned>
@@ -713,6 +718,7 @@ public:
 
   // Lower pseudo instructions after register allocation.
   bool expandPostRAPseudo(MachineInstr &MI) const override;
+  bool expandAMOCSNEPseudo(MachineInstr &MI) const;
 
   const TargetRegisterClass *updatedRC(const TargetRegisterClass *RC) const;
   static int getRecordFormOpcode(unsigned Opcode);
@@ -736,8 +742,7 @@ public:
   }
   void promoteInstr32To64ForElimEXTSW(const Register &Reg,
                                       MachineRegisterInfo *MRI,
-                                      unsigned BinOpDepth,
-                                      LiveVariables *LV) const;
+                                      unsigned BinOpDepth) const;
 
   bool convertToImmediateForm(MachineInstr &MI,
                               SmallSet<Register, 4> &RegsToUpdate,

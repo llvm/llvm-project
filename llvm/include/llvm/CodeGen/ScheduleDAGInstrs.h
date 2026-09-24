@@ -15,7 +15,7 @@
 #define LLVM_CODEGEN_SCHEDULEDAGINSTRS_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SparseMultiSet.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -104,15 +104,7 @@ namespace llvm {
 
   using ValueType = PointerUnion<const Value *, const PseudoSourceValue *>;
 
-  struct UnderlyingObject : PointerIntPair<ValueType, 1, bool> {
-    UnderlyingObject(ValueType V, bool MayAlias)
-        : PointerIntPair<ValueType, 1, bool>(V, MayAlias) {}
-
-    ValueType getValue() const { return getPointer(); }
-    bool mayAlias() const { return getInt(); }
-  };
-
-  using UnderlyingObjectsVector = SmallVector<UnderlyingObject, 4>;
+  using UnderlyingObjectsVector = SmallVector<ValueType, 4>;
 
   /// A ScheduleDAG for scheduling lists of MachineInstr.
   class LLVM_ABI ScheduleDAGInstrs : public ScheduleDAG {
@@ -158,6 +150,8 @@ namespace llvm {
     /// After calling BuildSchedGraph, each machine instruction in the current
     /// scheduling region is mapped to an SUnit.
     DenseMap<MachineInstr*, SUnit*> MISUnitMap;
+
+    unsigned MemOpsProcessed = 0;
 
     // State internal to DAG building.
     // -------------------------------
@@ -217,13 +211,6 @@ namespace llvm {
       return nullptr;
     }
 
-    /// Reduces maps in FIFO order, by N SUs. This is better than turning
-    /// every Nth memory SU into BarrierChain in buildSchedGraph(), since
-    /// it avoids unnecessary edges between seen SUs above the new BarrierChain,
-    /// and those below it.
-    void reduceHugeMemNodeMaps(Value2SUsMap &stores,
-                               Value2SUsMap &loads, unsigned N);
-
     /// Adds a chain edge between SUa and SUb, but only if both
     /// AAResults and Target fail to deny the dependency.
     void addChainDependency(SUnit *SUa, SUnit *SUb,
@@ -248,12 +235,6 @@ namespace llvm {
     /// NodeNum than all SUs in map. It is assumed BarrierChain has been set
     /// before calling this.
     void addBarrierChain(Value2SUsMap &map);
-
-    /// Inserts a barrier chain in a huge region, far below current SU.
-    /// Adds barrier chain edges from all SUs in map with higher NodeNums than
-    /// this new BarrierChain, and remove them from map. It is assumed
-    /// BarrierChain has been set before calling this.
-    void insertBarrierChain(Value2SUsMap &map);
 
     /// For an unanalyzable memory access, this Value is used in maps.
     UndefValue *UnknownValue;

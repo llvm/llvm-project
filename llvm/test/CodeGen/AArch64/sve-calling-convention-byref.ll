@@ -111,16 +111,10 @@ define aarch64_sve_vector_pcs <vscale x 16 x i1> @caller_with_svepred_arg_1xv16i
 define aarch64_sve_vector_pcs [4 x <vscale x 16 x i1>] @callee_with_svepred_arg_4xv16i1_4xv16i1([4 x <vscale x 16 x i1>] %arg1, [4 x <vscale x 16 x i1>] %arg2) {
 ; CHECK: name: callee_with_svepred_arg_4xv16i1_4xv16i1
 ; CHECK:    [[BASE:%[0-9]+]]:gpr64common = COPY $x0
-; CHECK:    [[OFFSET1:%[0-9]+]]:gpr64 = CNTD_XPiI 31, 1, implicit $vg
-; CHECK:    [[ADDR1:%[0-9]+]]:gpr64common = nuw ADDXrr [[BASE]], killed [[OFFSET1]]
-; CHECK:    [[PRED1:%[0-9]+]]:ppr = LDR_PXI killed [[ADDR1]], 0 :: (load (<vscale x 1 x s16>))
-; CHECK:    [[OFFSET2:%[0-9]+]]:gpr64 = CNTW_XPiI 31, 1, implicit $vg
-; CHECK:    [[ADDR2:%[0-9]+]]:gpr64common = ADDXrr [[BASE]], killed [[OFFSET2]]
-; CHECK:    [[PRED2:%[0-9]+]]:ppr = LDR_PXI killed [[ADDR2]], 0 :: (load (<vscale x 1 x s16>))
-; CHECK:    [[OFFSET3:%[0-9]+]]:gpr64 = CNTD_XPiI 31, 3, implicit $vg
-; CHECK:    [[ADDR3:%[0-9]+]]:gpr64common = ADDXrr [[BASE]], killed [[OFFSET3]]
-; CHECK:    [[PRED3:%[0-9]+]]:ppr = LDR_PXI killed [[ADDR3]], 0 :: (load (<vscale x 1 x s16>))
 ; CHECK:    [[PRED0:%[0-9]+]]:ppr = LDR_PXI [[BASE]], 0 :: (load (<vscale x 1 x s16>))
+; CHECK:    [[PRED1:%[0-9]+]]:ppr = LDR_PXI [[BASE]], 1 :: (load (<vscale x 1 x s16>))
+; CHECK:    [[PRED2:%[0-9]+]]:ppr = LDR_PXI [[BASE]], 2 :: (load (<vscale x 1 x s16>))
+; CHECK:    [[PRED3:%[0-9]+]]:ppr = LDR_PXI [[BASE]], 3 :: (load (<vscale x 1 x s16>))
 ; CHECK:    $p0 = COPY [[PRED0]]
 ; CHECK:    $p1 = COPY [[PRED1]]
 ; CHECK:    $p2 = COPY [[PRED2]]
@@ -144,18 +138,12 @@ define [4 x <vscale x 16 x i1>] @caller_with_svepred_arg_4xv16i1_4xv16i1([4 x <v
 ; CHECK:    [[PRED2:%[0-9]+]]:ppr = COPY $p2
 ; CHECK:    [[PRED1:%[0-9]+]]:ppr = COPY $p1
 ; CHECK:    [[PRED0:%[0-9]+]]:ppr = COPY $p0
-; CHECK:    [[OFFSET1:%[0-9]+]]:gpr64 = CNTD_XPiI 31, 1, implicit $vg
-; CHECK:    [[OFFSET2:%[0-9]+]]:gpr64 = CNTW_XPiI 31, 1, implicit $vg
-; CHECK:    [[OFFSET3:%[0-9]+]]:gpr64 = CNTD_XPiI 31, 3, implicit $vg
-; CHECK:    [[STACK:%[0-9]+]]:gpr64common = ADDXri %stack.0, 0, 0
-; CHECK:    [[ADDR3:%[0-9]+]]:gpr64common = ADDXrr [[STACK]], [[OFFSET3]]
 ; CHECK:    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
-; CHECK:    STR_PXI [[PRED3]], killed [[ADDR3]], 0 :: (store (<vscale x 1 x s16>))
-; CHECK:    [[ADDR2:%[0-9]+]]:gpr64common = ADDXrr [[STACK]], [[OFFSET2]]
-; CHECK:    STR_PXI [[PRED2]], killed [[ADDR2]], 0 :: (store (<vscale x 1 x s16>))
-; CHECK:    [[ADDR1:%[0-9]+]]:gpr64common = nuw ADDXrr [[STACK]], [[OFFSET1]]
-; CHECK:    STR_PXI [[PRED1]], killed [[ADDR1]], 0 :: (store (<vscale x 1 x s16>))
+; CHECK:    STR_PXI [[PRED3]], %stack.0, 3 :: (store (<vscale x 1 x s16>))
+; CHECK:    STR_PXI [[PRED2]], %stack.0, 2 :: (store (<vscale x 1 x s16>))
+; CHECK:    STR_PXI [[PRED1]], %stack.0, 1 :: (store (<vscale x 1 x s16>))
 ; CHECK:    STR_PXI [[PRED0]], %stack.0, 0 :: (store (<vscale x 1 x s16>) into %stack.0)
+; CHECK:    [[STACK:%[0-9]+]]:gpr64sp = ADDXri %stack.0, 0, 0
 ; CHECK:    $x0 = COPY [[STACK]]
 ; LINUX:    BL @callee_with_svepred_arg_4xv16i1_4xv16i1, csr_aarch64_sve_aapcs, implicit-def dead $lr, implicit $sp, implicit $p0, implicit $p1, implicit $p2, implicit $p3, implicit $x0, implicit-def $sp, implicit-def $p0, implicit-def $p1, implicit-def $p2, implicit-def $p3
 ; DARWIN:   BL @callee_with_svepred_arg_4xv16i1_4xv16i1, csr_darwin_aarch64_sve_aapcs, implicit-def dead $lr, implicit $sp, implicit $p0, implicit $p1, implicit $p2, implicit $p3, implicit $x0, implicit-def $sp, implicit-def $p0, implicit-def $p1, implicit-def $p2, implicit-def $p3
@@ -172,16 +160,10 @@ define [4 x <vscale x 16 x i1>] @caller_with_svepred_arg_4xv16i1_4xv16i1([4 x <v
 define aarch64_sve_vector_pcs [2 x <vscale x 32 x i1>] @callee_with_svepred_arg_1xv16i1_2xv32i1([1 x <vscale x 16 x i1>] %arg1, [2 x <vscale x 32 x i1>] %arg2) {
 ; CHECK: name: callee_with_svepred_arg_1xv16i1_2xv32i1
 ; CHECK:    [[BASE:%[0-9]+]]:gpr64common = COPY $x0
-; CHECK:    [[OFFSET1:%[0-9]+]]:gpr64 = CNTD_XPiI 31, 1, implicit $vg
-; CHECK:    [[ADDR1:%[0-9]+]]:gpr64common = nuw ADDXrr [[BASE]], killed [[OFFSET1]]
-; CHECK:    [[PRED1:%[0-9]+]]:ppr = LDR_PXI killed [[ADDR1]], 0 :: (load (<vscale x 1 x s16>))
-; CHECK:    [[OFFSET2:%[0-9]+]]:gpr64 = CNTW_XPiI 31, 1, implicit $vg
-; CHECK:    [[ADDR2:%[0-9]+]]:gpr64common = ADDXrr [[BASE]], killed [[OFFSET2]]
-; CHECK:    [[PRED2:%[0-9]+]]:ppr = LDR_PXI killed [[ADDR2]], 0 :: (load (<vscale x 1 x s16>))
-; CHECK:    [[OFFSET3:%[0-9]+]]:gpr64 = CNTD_XPiI 31, 3, implicit $vg
-; CHECK:    [[ADDR3:%[0-9]+]]:gpr64common = ADDXrr [[BASE]], killed [[OFFSET3]]
-; CHECK:    [[PRED3:%[0-9]+]]:ppr = LDR_PXI killed [[ADDR3]], 0 :: (load (<vscale x 1 x s16>))
 ; CHECK:    [[PRED0:%[0-9]+]]:ppr = LDR_PXI [[BASE]], 0 :: (load (<vscale x 1 x s16>))
+; CHECK:    [[PRED1:%[0-9]+]]:ppr = LDR_PXI [[BASE]], 1 :: (load (<vscale x 1 x s16>))
+; CHECK:    [[PRED2:%[0-9]+]]:ppr = LDR_PXI [[BASE]], 2 :: (load (<vscale x 1 x s16>))
+; CHECK:    [[PRED3:%[0-9]+]]:ppr = LDR_PXI [[BASE]], 3 :: (load (<vscale x 1 x s16>))
 ; CHECK:    $p0 = COPY [[PRED0]]
 ; CHECK:    $p1 = COPY [[PRED1]]
 ; CHECK:    $p2 = COPY [[PRED2]]
@@ -205,18 +187,12 @@ define [2 x <vscale x 32 x i1>] @caller_with_svepred_arg_2xv32i1_1xv16i1([2 x <v
 ; CHECK:    [[PRED2:%[0-9]+]]:ppr = COPY $p2
 ; CHECK:    [[PRED1:%[0-9]+]]:ppr = COPY $p1
 ; CHECK:    [[PRED0:%[0-9]+]]:ppr = COPY $p0
-; CHECK:    [[OFFSET3:%[0-9]+]]:gpr64 = CNTD_XPiI 31, 3, implicit $vg
-; CHECK:    [[STACK:%[0-9]+]]:gpr64common = ADDXri %stack.0, 0, 0
-; CHECK:    [[ADDR3:%[0-9]+]]:gpr64common = ADDXrr [[STACK]], killed [[OFFSET3]]
 ; CHECK:    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
-; CHECK:    STR_PXI [[PRED3]], killed [[ADDR3]], 0 :: (store (<vscale x 1 x s16>))
-; CHECK:    [[OFFSET2:%[0-9]+]]:gpr64 = CNTW_XPiI 31, 1, implicit $vg
-; CHECK:    [[ADDR2:%[0-9]+]]:gpr64common = ADDXrr [[STACK]], killed [[OFFSET2]]
-; CHECK:    STR_PXI [[PRED2]], killed [[ADDR2]], 0 :: (store (<vscale x 1 x s16>))
-; CHECK:    [[OFFSET1:%[0-9]+]]:gpr64 = CNTD_XPiI 31, 1, implicit $vg
-; CHECK:    [[ADDR1:%[0-9]+]]:gpr64common = nuw ADDXrr [[STACK]], killed [[OFFSET1]]
-; CHECK:    STR_PXI [[PRED1]], killed [[ADDR1]], 0 :: (store (<vscale x 1 x s16>))
+; CHECK:    STR_PXI [[PRED3]], %stack.0, 3 :: (store (<vscale x 1 x s16>))
+; CHECK:    STR_PXI [[PRED2]], %stack.0, 2 :: (store (<vscale x 1 x s16>))
+; CHECK:    STR_PXI [[PRED1]], %stack.0, 1 :: (store (<vscale x 1 x s16>))
 ; CHECK:    STR_PXI [[PRED0]], %stack.0, 0 :: (store (<vscale x 1 x s16>) into %stack.0)
+; CHECK:    [[STACK:%[0-9]+]]:gpr64sp = ADDXri %stack.0, 0, 0
 ; CHECK:    $x0 = COPY [[STACK]]
 ; LINUX:    BL @callee_with_svepred_arg_1xv16i1_2xv32i1, csr_aarch64_sve_aapcs, implicit-def dead $lr, implicit $sp, implicit $p0, implicit $x0, implicit-def $sp, implicit-def $p0, implicit-def $p1, implicit-def $p2, implicit-def $p3
 ; DARWIN:   BL @callee_with_svepred_arg_1xv16i1_2xv32i1, csr_darwin_aarch64_sve_aapcs, implicit-def dead $lr, implicit $sp, implicit $p0, implicit $x0, implicit-def $sp, implicit-def $p0, implicit-def $p1, implicit-def $p2, implicit-def $p3
@@ -233,15 +209,9 @@ define aarch64_sve_vector_pcs [4 x <vscale x 16 x i1>] @callee_with_svepred_arg_
 ; CHECK:    [[X0:%[0-9]+]]:gpr64common = COPY $x0
 ; CHECK:    [[P1:%[0-9]+]]:ppr = COPY $p1
 ; CHECK:    [[P0:%[0-9]+]]:ppr = COPY $p0
-; CHECK:    [[OFFSET3:%[0-9]+]]:gpr64 = CNTD_XPiI 31, 3, implicit $vg
-; CHECK:    [[ADDR3:%[0-9]+]]:gpr64common = ADDXrr [[X0]], killed [[OFFSET3]]
-; CHECK:    [[P7:%[0-9]+]]:ppr = LDR_PXI killed [[ADDR3]], 0 :: (load (<vscale x 1 x s16>))
-; CHECK:    [[OFFSET2:%[0-9]+]]:gpr64 = CNTW_XPiI 31, 1, implicit $vg
-; CHECK:    [[ADDR2:%[0-9]+]]:gpr64common = ADDXrr [[X0]], killed [[OFFSET2]]
-; CHECK:    [[P6:%[0-9]+]]:ppr = LDR_PXI killed [[ADDR2]], 0 :: (load (<vscale x 1 x s16>))
-; CHECK:    [[OFFSET1:%[0-9]+]]:gpr64 = CNTD_XPiI 31, 1, implicit $vg
-; CHECK:    [[ADDR1:%[0-9]+]]:gpr64common = nuw ADDXrr [[X0]], killed [[OFFSET1]]
-; CHECK:    [[P5:%[0-9]+]]:ppr = LDR_PXI killed [[ADDR1]], 0 :: (load (<vscale x 1 x s16>))
+; CHECK:    [[P7:%[0-9]+]]:ppr = LDR_PXI [[X0]], 3 :: (load (<vscale x 1 x s16>))
+; CHECK:    [[P6:%[0-9]+]]:ppr = LDR_PXI [[X0]], 2 :: (load (<vscale x 1 x s16>))
+; CHECK:    [[P5:%[0-9]+]]:ppr = LDR_PXI [[X0]], 1 :: (load (<vscale x 1 x s16>))
 ; CHECK:    [[P4:%[0-9]+]]:ppr = LDR_PXI [[X0]], 0 :: (load (<vscale x 1 x s16>))
 ; CHECK:    [[RES0:%[0-9]+]]:ppr = AND_PPzPP [[P0]], [[P0]], killed [[P4]]
 ; CHECK:    [[RES1:%[0-9]+]]:ppr = AND_PPzPP [[P1]], [[P1]], killed [[P5]]

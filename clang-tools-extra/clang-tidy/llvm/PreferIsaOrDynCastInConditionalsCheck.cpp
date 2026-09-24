@@ -22,7 +22,7 @@ AST_MATCHER(Expr, isMacroID) { return Node.getExprLoc().isMacroID(); }
 
 void PreferIsaOrDynCastInConditionalsCheck::registerMatchers(
     MatchFinder *Finder) {
-  auto AnyCalleeName = [](ArrayRef<StringRef> CalleeName) {
+  const auto AnyCalleeName = [](ArrayRef<StringRef> CalleeName) {
     return allOf(unless(isMacroID()), unless(cxxMemberCallExpr()),
                  callee(expr(ignoringImpCasts(
                      declRefExpr(to(namedDecl(hasAnyName(CalleeName))),
@@ -33,29 +33,30 @@ void PreferIsaOrDynCastInConditionalsCheck::registerMatchers(
   auto CondExpr = hasCondition(implicitCastExpr(
       has(callExpr(AnyCalleeName({"cast", "dyn_cast"})).bind("cond"))));
 
-  auto CondExprOrCondVar =
+  const auto CondExprOrCondVar =
       anyOf(hasConditionVariableStatement(containsDeclaration(
                 0, varDecl(hasInitializer(callExpr(AnyCalleeName({"cast"}))))
                        .bind("var"))),
             CondExpr);
 
-  auto CallWithBindedArg =
+  const auto CallWithBindedArg =
       callExpr(
           AnyCalleeName(
               {"isa", "cast", "cast_or_null", "dyn_cast", "dyn_cast_or_null"}),
           hasArgument(0, mapAnyOf(declRefExpr, cxxMemberCallExpr).bind("arg")))
           .bind("rhs");
 
-  Finder->addMatcher(
-      stmt(anyOf(ifStmt(CondExprOrCondVar), forStmt(CondExprOrCondVar),
-                 whileStmt(CondExprOrCondVar), doStmt(CondExpr),
-                 binaryOperator(unless(isExpansionInFileMatching(
-                                    "llvm/include/llvm/Support/Casting.h")),
-                                hasOperatorName("&&"),
-                                hasLHS(implicitCastExpr().bind("lhs")),
-                                hasRHS(ignoringImpCasts(CallWithBindedArg)))
-                     .bind("and"))),
-      this);
+  Finder->addMatcher(ifStmt(CondExprOrCondVar), this);
+  Finder->addMatcher(forStmt(CondExprOrCondVar), this);
+  Finder->addMatcher(whileStmt(CondExprOrCondVar), this);
+  Finder->addMatcher(doStmt(CondExpr), this);
+  Finder->addMatcher(binaryOperator(hasRHS(ignoringImpCasts(CallWithBindedArg)),
+                                    hasLHS(implicitCastExpr().bind("lhs")),
+                                    hasOperatorName("&&"),
+                                    unless(isExpansionInFileMatching(
+                                        "llvm/include/llvm/Support/Casting.h")))
+                         .bind("and"),
+                     this);
 }
 
 void PreferIsaOrDynCastInConditionalsCheck::check(
@@ -93,7 +94,7 @@ void PreferIsaOrDynCastInConditionalsCheck::check(
     assert(RHS && "RHS is null");
     assert(Arg && "Arg is null");
 
-    auto GetText = [&](SourceRange R) {
+    const auto GetText = [&](SourceRange R) {
       return Lexer::getSourceText(CharSourceRange::getTokenRange(R),
                                   *Result.SourceManager, getLangOpts());
     };

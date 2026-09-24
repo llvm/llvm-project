@@ -1,18 +1,13 @@
-<!--===- docs/Unsigned.md 
-  
+<!--===- docs/Unsigned.md
+
    Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
    See https://llvm.org/LICENSE.txt for license information.
    SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-  
+
 -->
 
-# Fortran Extensions supported by Flang
+# Flang support for UNSIGNED type
 
-```{contents}
----
-local:
----
-```
 
 For better compatibility with GNU Fortran and Sun Fortran,
 this compiler supports an option (`-funsigned`) that enables

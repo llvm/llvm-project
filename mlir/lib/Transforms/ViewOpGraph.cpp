@@ -21,7 +21,7 @@
 #include <utility>
 
 namespace mlir {
-#define GEN_PASS_DEF_VIEWOPGRAPH
+#define GEN_PASS_DEF_VIEWOPGRAPHPASS
 #include "mlir/Transforms/Passes.h.inc"
 } // namespace mlir
 
@@ -57,7 +57,7 @@ static std::string quoteString(const std::string &str) {
 /// For Graphviz record nodes:
 /// " Braces, vertical bars and angle brackets must be escaped with a backslash
 /// character if you wish them to appear as a literal character "
-std::string escapeLabelString(const std::string &str) {
+static std::string escapeLabelString(const std::string &str) {
   std::string buf;
   llvm::raw_string_ostream os(buf);
   for (char c : str) {
@@ -97,8 +97,12 @@ struct DataFlowEdge {
 /// This pass generates a Graphviz dataflow visualization of an MLIR operation.
 /// Note: See https://www.graphviz.org/doc/info/lang.html for more information
 /// about the Graphviz DOT language.
-class PrintOpPass : public impl::ViewOpGraphBase<PrintOpPass> {
+class PrintOpPass : public impl::ViewOpGraphPassBase<PrintOpPass> {
 public:
+  PrintOpPass() : os(llvm::errs()) {}
+  explicit PrintOpPass(ViewOpGraphPassOptions options)
+      : impl::ViewOpGraphPassBase<PrintOpPass>(std::move(options)),
+        os(llvm::errs()) {}
   PrintOpPass(raw_ostream &os) : os(os) {}
   PrintOpPass(const PrintOpPass &o) : PrintOpPass(o.os.getOStream()) {}
 
@@ -312,7 +316,11 @@ private:
       // Print attributes.
       if (printAttrs) {
         os << "\\l";
-        for (const NamedAttribute &attr : op->getAttrs()) {
+        NamedAttrList attrs(op->getDiscardableAttrDictionary());
+        op->getName().walkInherentAttrs(
+            op,
+            [&](StringRef name, Attribute &attr) { attrs.append(name, attr); });
+        for (const NamedAttribute &attr : attrs) {
           os << escapeLabelString(attr.getName().getValue().str()) << ": ";
           emitMlirAttr(os, attr.getValue());
           os << "\\l";
@@ -340,10 +348,14 @@ private:
       os << op->getName() << "\\l";
 
       // Print attributes.
-      if (printAttrs && !op->getAttrs().empty()) {
+      NamedAttrList attrs(op->getDiscardableAttrDictionary());
+      op->getName().walkInherentAttrs(op, [&](StringRef name, Attribute &attr) {
+        attrs.append(name, attr);
+      });
+      if (printAttrs && !attrs.empty()) {
         // Extra line break to separate attributes from the operation name.
         os << "\\l";
-        for (const NamedAttribute &attr : op->getAttrs()) {
+        for (const NamedAttribute &attr : attrs) {
           os << attr.getName().getValue() << ": ";
           emitMlirAttr(os, attr.getValue());
           os << "\\l";
@@ -459,7 +471,7 @@ private:
 
 } // namespace
 
-std::unique_ptr<Pass> mlir::createPrintOpGraphPass(raw_ostream &os) {
+std::unique_ptr<Pass> mlir::createViewOpGraphPass(raw_ostream &os) {
   return std::make_unique<PrintOpPass>(os);
 }
 

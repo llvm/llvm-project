@@ -24,6 +24,7 @@ define void @PR24199(i32 %a0) {
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:  .LBB0_3: # %if.end
 ; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    # implicit-def: $rdi
 ; CHECK-NEXT:    callq foo@PLT
 ; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 4-byte Reload
@@ -91,7 +92,9 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)
 !1 = !DIFile(filename: "24199.cpp", directory: "/bin")
 !2 = !{i32 2, !"Debug Info Version", i32 3}
-!3 = distinct !DISubprogram(linkageName: "foo", file: !1, line: 18, isLocal: false, isDefinition: true, scopeLine: 18, unit: !0)
+!3 = distinct !DISubprogram(linkageName: "foo", file: !1, line: 18, isLocal: false, isDefinition: true, scopeLine: 18, unit: !0, type: !8)
 !4 = !DIExpression()
 !5 = !DILocalVariable(name: "this", arg: 1, scope: !3, flags: DIFlagArtificial | DIFlagObjectPointer)
 !6 = !DILocation(line: 0, scope: !3)
+!7 = !{null}
+!8 = !DISubroutineType(types: !7)

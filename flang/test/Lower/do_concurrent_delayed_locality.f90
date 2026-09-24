@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -emit-hlfir -mmlir --enable-delayed-privatization-staging=true -o - %s | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir -o - %s | FileCheck %s
 
 subroutine do_concurrent_with_locality_specs
   implicit none
@@ -7,7 +7,7 @@ subroutine do_concurrent_with_locality_specs
   do concurrent (i=1:10) local(local_var) local_init(local_init_var)
     if (i < 5) then
       local_var = 42
-    else 
+    else
       local_init_var = 84
     end if
   end do
@@ -23,10 +23,10 @@ end subroutine
 ! CHECK:         fir.local {type = local} @[[LOCAL_SYM:.*]] : i32
 
 ! CHECK-LABEL:   func.func @_QPdo_concurrent_with_locality_specs() {
-! CHECK:           %[[ORIG_LOCAL_INIT_ALLOC:.*]] = fir.alloca i32 {bindc_name = "local_init_var", {{.*}}}
+! CHECK:           %[[ORIG_LOCAL_INIT_ALLOC:.*]] = fir.alloca i32 <{bindc_name = "local_init_var", {{.*}}}>
 ! CHECK:           %[[ORIG_LOCAL_INIT_DECL:.*]]:2 = hlfir.declare %[[ORIG_LOCAL_INIT_ALLOC]]
 
-! CHECK:           %[[ORIG_LOCAL_ALLOC:.*]] = fir.alloca i32 {bindc_name = "local_var", {{.*}}}
+! CHECK:           %[[ORIG_LOCAL_ALLOC:.*]] = fir.alloca i32 <{bindc_name = "local_var", {{.*}}}>
 ! CHECK:           %[[ORIG_LOCAL_DECL:.*]]:2 = hlfir.declare %[[ORIG_LOCAL_ALLOC]]
 
 ! CHECK:           fir.do_concurrent {

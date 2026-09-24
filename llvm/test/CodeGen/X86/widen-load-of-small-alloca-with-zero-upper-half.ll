@@ -171,8 +171,8 @@ define void @load_2byte_chunk_of_4byte_alloca_with_zero_upper_half(ptr %src, i64
 define void @load_1byte_chunk_of_8byte_alloca_with_zero_upper_half(ptr %src, i64 %byteOff, ptr %dst) nounwind {
 ; X64-NO-BMI2-LABEL: load_1byte_chunk_of_8byte_alloca_with_zero_upper_half:
 ; X64-NO-BMI2:       # %bb.0:
-; X64-NO-BMI2-NEXT:    leal (,%rsi,8), %ecx
 ; X64-NO-BMI2-NEXT:    movl (%rdi), %eax
+; X64-NO-BMI2-NEXT:    leal (,%rsi,8), %ecx
 ; X64-NO-BMI2-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NO-BMI2-NEXT:    shrq %cl, %rax
 ; X64-NO-BMI2-NEXT:    movb %al, (%rdx)
@@ -180,8 +180,8 @@ define void @load_1byte_chunk_of_8byte_alloca_with_zero_upper_half(ptr %src, i64
 ;
 ; X64-BMI2-LABEL: load_1byte_chunk_of_8byte_alloca_with_zero_upper_half:
 ; X64-BMI2:       # %bb.0:
-; X64-BMI2-NEXT:    shll $3, %esi
 ; X64-BMI2-NEXT:    movl (%rdi), %eax
+; X64-BMI2-NEXT:    shll $3, %esi
 ; X64-BMI2-NEXT:    shrxq %rsi, %rax, %rax
 ; X64-BMI2-NEXT:    movb %al, (%rdx)
 ; X64-BMI2-NEXT:    retq
@@ -248,8 +248,8 @@ define void @load_1byte_chunk_of_8byte_alloca_with_zero_upper_half(ptr %src, i64
 define void @load_2byte_chunk_of_8byte_alloca_with_zero_upper_half(ptr %src, i64 %byteOff, ptr %dst) nounwind {
 ; X64-NO-BMI2-LABEL: load_2byte_chunk_of_8byte_alloca_with_zero_upper_half:
 ; X64-NO-BMI2:       # %bb.0:
-; X64-NO-BMI2-NEXT:    leal (,%rsi,8), %ecx
 ; X64-NO-BMI2-NEXT:    movl (%rdi), %eax
+; X64-NO-BMI2-NEXT:    leal (,%rsi,8), %ecx
 ; X64-NO-BMI2-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NO-BMI2-NEXT:    shrq %cl, %rax
 ; X64-NO-BMI2-NEXT:    movw %ax, (%rdx)
@@ -257,8 +257,8 @@ define void @load_2byte_chunk_of_8byte_alloca_with_zero_upper_half(ptr %src, i64
 ;
 ; X64-BMI2-LABEL: load_2byte_chunk_of_8byte_alloca_with_zero_upper_half:
 ; X64-BMI2:       # %bb.0:
-; X64-BMI2-NEXT:    shll $3, %esi
 ; X64-BMI2-NEXT:    movl (%rdi), %eax
+; X64-BMI2-NEXT:    shll $3, %esi
 ; X64-BMI2-NEXT:    shrxq %rsi, %rax, %rax
 ; X64-BMI2-NEXT:    movw %ax, (%rdx)
 ; X64-BMI2-NEXT:    retq
@@ -324,8 +324,8 @@ define void @load_2byte_chunk_of_8byte_alloca_with_zero_upper_half(ptr %src, i64
 define void @load_4byte_chunk_of_8byte_alloca_with_zero_upper_half(ptr %src, i64 %byteOff, ptr %dst) nounwind {
 ; X64-NO-BMI2-LABEL: load_4byte_chunk_of_8byte_alloca_with_zero_upper_half:
 ; X64-NO-BMI2:       # %bb.0:
-; X64-NO-BMI2-NEXT:    leal (,%rsi,8), %ecx
 ; X64-NO-BMI2-NEXT:    movl (%rdi), %eax
+; X64-NO-BMI2-NEXT:    leal (,%rsi,8), %ecx
 ; X64-NO-BMI2-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NO-BMI2-NEXT:    shrq %cl, %rax
 ; X64-NO-BMI2-NEXT:    movl %eax, (%rdx)
@@ -333,8 +333,8 @@ define void @load_4byte_chunk_of_8byte_alloca_with_zero_upper_half(ptr %src, i64
 ;
 ; X64-BMI2-LABEL: load_4byte_chunk_of_8byte_alloca_with_zero_upper_half:
 ; X64-BMI2:       # %bb.0:
-; X64-BMI2-NEXT:    shll $3, %esi
 ; X64-BMI2-NEXT:    movl (%rdi), %eax
+; X64-BMI2-NEXT:    shll $3, %esi
 ; X64-BMI2-NEXT:    shrxq %rsi, %rax, %rax
 ; X64-BMI2-NEXT:    movl %eax, (%rdx)
 ; X64-BMI2-NEXT:    retq
@@ -2488,7 +2488,7 @@ define void @load_8byte_chunk_of_64byte_alloca_with_zero_upper_half(ptr %src, i6
 ; X86-SHLD-NEXT:    pushl %ebx
 ; X86-SHLD-NEXT:    pushl %edi
 ; X86-SHLD-NEXT:    pushl %esi
-; X86-SHLD-NEXT:    subl $128, %esp
+; X86-SHLD-NEXT:    addl $-128, %esp
 ; X86-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -2516,7 +2516,7 @@ define void @load_8byte_chunk_of_64byte_alloca_with_zero_upper_half(ptr %src, i6
 ; X86-SHLD-NEXT:    shrdl %cl, %esi, %edx
 ; X86-SHLD-NEXT:    movl %ebx, 4(%eax)
 ; X86-SHLD-NEXT:    movl %edx, (%eax)
-; X86-SHLD-NEXT:    addl $128, %esp
+; X86-SHLD-NEXT:    subl $-128, %esp
 ; X86-SHLD-NEXT:    popl %esi
 ; X86-SHLD-NEXT:    popl %edi
 ; X86-SHLD-NEXT:    popl %ebx

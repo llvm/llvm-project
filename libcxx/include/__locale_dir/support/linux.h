@@ -17,6 +17,9 @@
 #include <cstdio>
 #include <cstdlib>
 #include <ctype.h>
+#if defined(_LIBCPP_BUILDING_LIBRARY)
+#  include <langinfo.h>
+#endif
 #include <stdarg.h>
 #include <string.h>
 #include <time.h>
@@ -94,25 +97,6 @@ inline _LIBCPP_HIDE_FROM_ABI long double __strtold(const char* __nptr, char** __
   return ::strtold_l(__nptr, __endptr, __loc);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI long long __strtoll(const char* __nptr, char** __endptr, int __base, __locale_t __loc) {
-#if !_LIBCPP_HAS_MUSL_LIBC
-  return ::strtoll_l(__nptr, __endptr, __base, __loc);
-#else
-  (void)__loc;
-  return ::strtoll(__nptr, __endptr, __base);
-#endif
-}
-
-inline _LIBCPP_HIDE_FROM_ABI unsigned long long
-__strtoull(const char* __nptr, char** __endptr, int __base, __locale_t __loc) {
-#if !_LIBCPP_HAS_MUSL_LIBC
-  return ::strtoull_l(__nptr, __endptr, __base, __loc);
-#else
-  (void)__loc;
-  return ::strtoull(__nptr, __endptr, __base);
-#endif
-}
-
 //
 // Character manipulation functions
 //
@@ -167,8 +151,8 @@ inline _LIBCPP_HIDE_FROM_ABI size_t __wcsxfrm(wchar_t* __dest, const wchar_t* __
 }
 #  endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
-inline _LIBCPP_HIDE_FROM_ABI size_t
-__strftime(char* __s, size_t __max, const char* __format, const struct tm* __tm, __locale_t __loc) {
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_ATTRIBUTE_FORMAT(__strftime__, 3, 0) size_t
+    __strftime(char* __s, size_t __max, const char* __format, const struct tm* __tm, __locale_t __loc) {
   return strftime_l(__s, __max, __format, __tm, __loc);
 }
 
@@ -230,7 +214,15 @@ __mbsrtowcs(wchar_t* __dest, const char** __src, size_t __len, mbstate_t* __ps, 
   return std::mbsrtowcs(__dest, __src, __len, __ps);
 }
 #  endif // _LIBCPP_HAS_WIDE_CHARACTERS
-#endif   // _LIBCPP_BUILDING_LIBRARY
+
+inline _LIBCPP_HIDE_FROM_ABI const char* __get_locale_encoding([[maybe_unused]] __locale_t __loc) {
+#  if defined(__ANDROID__)
+  return "UTF-8";
+#  else
+  return ::nl_langinfo_l(CODESET, __loc);
+#  endif
+}
+#endif // _LIBCPP_BUILDING_LIBRARY
 
 #ifndef _LIBCPP_COMPILER_GCC // GCC complains that this can't be always_inline due to C-style varargs
 _LIBCPP_HIDE_FROM_ABI
@@ -257,21 +249,15 @@ inline _LIBCPP_ATTRIBUTE_FORMAT(__printf__, 3, 4) int __asprintf(
   va_end(__va);
   return __res;
 }
-
-#ifndef _LIBCPP_COMPILER_GCC // GCC complains that this can't be always_inline due to C-style varargs
-_LIBCPP_HIDE_FROM_ABI
-#endif
-inline _LIBCPP_ATTRIBUTE_FORMAT(__scanf__, 3, 4) int __sscanf(
-    const char* __s, __locale_t __loc, const char* __format, ...) {
-  va_list __va;
-  va_start(__va, __format);
-  __locale_guard __current(__loc);
-  int __res = std::vsscanf(__s, __format, __va);
-  va_end(__va);
-  return __res;
-}
-
 } // namespace __locale
 _LIBCPP_END_NAMESPACE_STD
+
+#if defined(__BIONIC__) || _LIBCPP_HAS_MUSL_LIBC
+#  define _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE 1
+#else
+#  define _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE 0
+#endif
+
+#include <__locale_dir/support/default/get_c_locale.h>
 
 #endif // _LIBCPP___LOCALE_DIR_SUPPORT_LINUX_H

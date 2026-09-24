@@ -23,6 +23,7 @@
 
 #include "bolt/Passes/RetpolineInsertion.h"
 #include "llvm/MC/MCInstPrinter.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "bolt-retpoline"
@@ -41,7 +42,7 @@ static llvm::cl::opt<bool>
 static llvm::cl::opt<bool> RetpolineLfence(
     "retpoline-lfence",
     cl::desc("determine if lfence instruction should exist in the retpoline"),
-    cl::init(true), cl::ZeroOrMore, cl::Hidden, cl::cat(BoltCategory));
+    cl::init(true), cl::Hidden, cl::cat(BoltCategory));
 
 static cl::opt<RetpolineInsertion::AvailabilityOptions> R11Availability(
     "r11-availability",
@@ -53,7 +54,7 @@ static cl::opt<RetpolineInsertion::AvailabilityOptions> R11Availability(
                           "always", "r11 available before calls and jumps"),
                clEnumValN(RetpolineInsertion::AvailabilityOptions::ABI, "abi",
                           "r11 available before calls but not before jumps")),
-    cl::ZeroOrMore, cl::cat(BoltCategory));
+    cl::cat(BoltCategory));
 
 } // namespace opts
 
@@ -271,8 +272,10 @@ Error RetpolineInsertion::runOnFunctions(BinaryContext &BC) {
   if (!opts::InsertRetpolines)
     return Error::success();
 
-  assert(BC.isX86() &&
-         "retpoline insertion not supported for target architecture");
+  if (!BC.isX86()) {
+    BC.errs() << "BOLT-ERROR: " << getName() << " is specific to X86\n";
+    exit(1);
+  }
 
   assert(BC.HasRelocations && "retpoline mode not supported in non-reloc");
 

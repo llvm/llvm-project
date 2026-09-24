@@ -6,7 +6,7 @@ import lldb
 import sys
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test.lldbutil import get_stopped_thread, state_type_to_str
+from lldbsuite.test.lldbutil import state_type_to_str
 
 
 class ProcessAPITestCase(TestBase):
@@ -29,23 +29,28 @@ class ProcessAPITestCase(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
         self.assertEqual(process.GetScriptedImplementation(), None)
 
+    def test_is_live_debug_session(self):
+        """Test that a launched process reports as a live debug session."""
+        self.build()
+
+        (target, process, _, _) = lldbutil.run_to_source_breakpoint(
+            self, "Set break point", lldb.SBFileSpec("main.cpp")
+        )
+
+        self.assertTrue(process, PROCESS_IS_VALID)
+        self.assertTrue(process.IsLiveDebugSession())
+
+    def test_is_live_debug_session_invalid_process(self):
+        """Test that an invalid process is not reported as a live session."""
+        process = lldb.SBProcess()
+        self.assertFalse(process.IsValid())
+        self.assertFalse(process.IsLiveDebugSession())
+
     def test_read_memory(self):
         """Test Python SBProcess.ReadMemory() API."""
         self.build()
-        exe = self.getBuildArtifact("a.out")
-
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        breakpoint = target.BreakpointCreateByLocation("main.cpp", self.line)
-        self.assertTrue(breakpoint, VALID_BREAKPOINT)
-
-        # Launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-
-        thread = get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-        self.assertTrue(
-            thread.IsValid(), "There should be a thread stopped due to breakpoint"
+        _, process, thread, _ = lldbutil.run_to_line_breakpoint(
+            self, lldb.SBFileSpec("main.cpp"), self.line
         )
         frame = thread.GetFrameAtIndex(0)
 
@@ -132,20 +137,8 @@ class ProcessAPITestCase(TestBase):
     def test_write_memory(self):
         """Test Python SBProcess.WriteMemory() API."""
         self.build()
-        exe = self.getBuildArtifact("a.out")
-
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        breakpoint = target.BreakpointCreateByLocation("main.cpp", self.line)
-        self.assertTrue(breakpoint, VALID_BREAKPOINT)
-
-        # Launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-
-        thread = get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-        self.assertTrue(
-            thread.IsValid(), "There should be a thread stopped due to breakpoint"
+        _, process, thread, _ = lldbutil.run_to_line_breakpoint(
+            self, lldb.SBFileSpec("main.cpp"), self.line
         )
         frame = thread.GetFrameAtIndex(0)
 
@@ -216,20 +209,8 @@ class ProcessAPITestCase(TestBase):
     def test_access_my_int(self):
         """Test access 'my_int' using Python SBProcess.GetByteOrder() and other APIs."""
         self.build()
-        exe = self.getBuildArtifact("a.out")
-
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        breakpoint = target.BreakpointCreateByLocation("main.cpp", self.line)
-        self.assertTrue(breakpoint, VALID_BREAKPOINT)
-
-        # Launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-
-        thread = get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-        self.assertTrue(
-            thread.IsValid(), "There should be a thread stopped due to breakpoint"
+        _, process, thread, _ = lldbutil.run_to_line_breakpoint(
+            self, lldb.SBFileSpec("main.cpp"), self.line
         )
         frame = thread.GetFrameAtIndex(0)
 
@@ -357,6 +338,7 @@ class ProcessAPITestCase(TestBase):
 
     @no_debug_info_test
     @skipIfRemote
+    @skipIfWasm  # the Wasm platform cannot look a process up by its id
     def test_get_process_info(self):
         """Test SBProcess::GetProcessInfo() API with a locally launched process."""
         self.build()
@@ -445,6 +427,41 @@ class ProcessAPITestCase(TestBase):
 
         process_info.GetParentProcessID()
 
+    @expectedFailureWindows  # Not yet implemented.
+    @skipIfWasm  # the Wasm platform cannot look a process up by its id
+    def test_get_process_info_arguments(self):
+        """Test SBProcessInfo Arguments returns the correct values."""
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
+
+        target = self.dbg.CreateTarget(exe)
+        self.assertTrue(target, VALID_TARGET)
+
+        # Launch the process and stop at the entry point.
+        launch_info = target.GetLaunchInfo()
+        launch_info.SetWorkingDirectory(self.get_process_working_directory())
+        launch_flags = launch_info.GetLaunchFlags()
+        launch_flags |= lldb.eLaunchFlagStopAtEntry
+        launch_info.SetLaunchFlags(launch_flags)
+        expected_arguments = ["10", "qu'o'tes\"", "hello", "מזל טוב"]
+        launch_info.SetArguments(expected_arguments, False)
+        error = lldb.SBError()
+        process = target.Launch(launch_info, error)
+
+        if not error.Success():
+            self.fail("Failed to launch process")
+
+        process_info: lldb.SBProcessInfo = process.GetProcessInfo()
+        self.assertListEqual(process_info.arguments, expected_arguments)
+        self.assertEqual(process_info.GetNumArguments(), 4)
+        self.assertEqual(process_info.GetArgumentAtIndex(0), "10")
+        self.assertEqual(process_info.GetArgumentAtIndex(1), "qu'o'tes\"")
+        self.assertEqual(process_info.GetArgumentAtIndex(2), "hello")
+        self.assertEqual(process_info.GetArgumentAtIndex(3), "מזל טוב")
+        self.assertEqual(process_info.GetArgumentAtIndex(4), None)
+
+    @skipIfWasm  # the test reads the allocation back with an expression
     def test_allocate_deallocate_memory(self):
         """Test Python SBProcess.AllocateMemory() and SBProcess.DeallocateMemory() APIs."""
         self.build()

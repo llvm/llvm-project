@@ -124,7 +124,7 @@
 //   func.func @test() {
 //     %scalar = memref.alloca() {acc.var_name = "n"} : memref<i32>
 //     %copyin = acc.copyin varPtr(%scalar : memref<i32>) -> memref<i32>
-//                 {dataClause = #acc<data_clause acc_copy>,
+//                 {dataClause = #acc.data_clause<acc_copy>,
 //                  implicit = true, name = "n"}
 //     acc.kernels dataOperands(%copyin : memref<i32>) {
 //       %val = memref.load %copyin[] : memref<i32>
@@ -132,7 +132,7 @@
 //     }
 //     acc.copyout accPtr(%copyin : memref<i32>)
 //                 to varPtr(%scalar : memref<i32>)
-//                 {dataClause = #acc<data_clause acc_copy>,
+//                 {dataClause = #acc.data_clause<acc_copy>,
 //                  implicit = true, name = "n"}
 //   }
 //
@@ -153,7 +153,7 @@
 //     %array = memref.alloca() {acc.var_name = "arr"} : memref<100xf32>
 //     %copyin = acc.copyin varPtr(%array : memref<100xf32>)
 //                 -> memref<100xf32>
-//                 {dataClause = #acc<data_clause acc_copy>,
+//                 {dataClause = #acc.data_clause<acc_copy>,
 //                  implicit = true, name = "arr"}
 //     acc.parallel dataOperands(%copyin : memref<100xf32>) {
 //       %c0 = arith.constant 0 : index
@@ -162,7 +162,7 @@
 //     }
 //     acc.copyout accPtr(%copyin : memref<100xf32>)
 //                 to varPtr(%array : memref<100xf32>)
-//                 {dataClause = #acc<data_clause acc_copy>,
+//                 {dataClause = #acc.data_clause<acc_copy>,
 //                  implicit = true, name = "arr"}
 //   }
 //
@@ -175,7 +175,7 @@
 //       %c0 = arith.constant 0 : index
 //       %val = memref.load %array[%c0] : memref<100xf32>
 //       acc.yield
-//     } attributes {defaultAttr = #acc<defaultvalue present>}
+//     } attributes {defaultAttr = #acc.defaultvalue<present>}
 //   }
 //
 // After:
@@ -185,19 +185,20 @@
 //                  -> memref<100xf32>
 //                  {implicit = true, name = "arr"}
 //     acc.parallel dataOperands(%present : memref<100xf32>)
-//                  attributes {defaultAttr = #acc<defaultvalue present>} {
+//                  attributes {defaultAttr = #acc.defaultvalue<present>} {
 //       %c0 = arith.constant 0 : index
 //       %val = memref.load %present[%c0] : memref<100xf32>
 //       acc.yield
 //     }
 //     acc.delete accPtr(%present : memref<100xf32>)
-//                {dataClause = #acc<data_clause acc_present>,
+//                {dataClause = #acc.data_clause<acc_present>,
 //                 implicit = true, name = "arr"}
 //   }
 //
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 
 #include "mlir/Analysis/AliasAnalysis.h"
 #include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
@@ -215,6 +216,8 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
+#include <string>
 #include <type_traits>
 
 namespace mlir {
@@ -237,11 +240,6 @@ public:
   void runOnOperation() override;
 
 private:
-  /// Collects all data clauses that dominate the compute construct.
-  /// Needed to determine if a variable is already covered by an existing data
-  /// clause.
-  SmallVector<Value> getDominatingDataClauses(Operation *computeConstructOp);
-
   /// Looks through the `dominatingDataClauses` to find the original data clause
   /// op for an alias. Returns nullptr if no original data clause op is found.
   template <typename OpT>
@@ -259,9 +257,10 @@ private:
 
   /// Generates the implicit data ops for a compute construct.
   template <typename OpT>
-  void generateImplicitDataOps(
-      ModuleOp &module, OpT computeConstructOp,
-      std::optional<acc::ClauseDefaultValue> &defaultClause);
+  void
+  generateImplicitDataOps(ModuleOp &module, OpT computeConstructOp,
+                          std::optional<acc::ClauseDefaultValue> &defaultClause,
+                          acc::OpenACCSupport &accSupport);
 
   /// Generates a private recipe for a variable.
   acc::PrivateRecipeOp generatePrivateRecipe(ModuleOp &module, Value var,
@@ -277,13 +276,13 @@ private:
   /// Generates recipes for a list of variables.
   void generateRecipes(ModuleOp &module, OpBuilder &builder,
                        Operation *computeConstructOp,
-                       const SmallVector<Value> &newOperands,
-                       SmallVector<Attribute> &newRecipeSyms);
+                       const SmallVector<Value> &newOperands);
 };
 
 /// Determines if a variable is a candidate for implicit data mapping.
 /// Returns true if the variable is a candidate, false otherwise.
-static bool isCandidateForImplicitData(Value val, Region &accRegion) {
+static bool isCandidateForImplicitData(Value val, Region &accRegion,
+                                       acc::OpenACCSupport &accSupport) {
   // Ensure the variable is an allowed type for data clause.
   if (!acc::isPointerLikeType(val.getType()) &&
       !acc::isMappableType(val.getType()))
@@ -294,67 +293,15 @@ static bool isCandidateForImplicitData(Value val, Region &accRegion) {
   if (isa_and_nonnull<ACC_DATA_ENTRY_OPS>(val.getDefiningOp()))
     return false;
 
-  // If this is only used by private clauses, it is not a real live-in.
-  if (acc::isOnlyUsedByPrivateClauses(val, accRegion))
+  // Device data is a candidate - it will get a deviceptr clause.
+  if (acc::isDeviceAccessibleValue(val))
+    return true;
+
+  // If it is otherwise valid, skip it.
+  if (accSupport.isValidValueUse(val, accRegion))
     return false;
 
   return true;
-}
-
-SmallVector<Value>
-ACCImplicitData::getDominatingDataClauses(Operation *computeConstructOp) {
-  llvm::SmallSetVector<Value, 8> dominatingDataClauses;
-
-  llvm::TypeSwitch<Operation *>(computeConstructOp)
-      .Case<acc::ParallelOp, acc::KernelsOp, acc::SerialOp>([&](auto op) {
-        for (auto dataClause : op.getDataClauseOperands()) {
-          dominatingDataClauses.insert(dataClause);
-        }
-      })
-      .Default([](Operation *) {});
-
-  // Collect the data clauses from enclosing data constructs.
-  Operation *currParentOp = computeConstructOp->getParentOp();
-  while (currParentOp) {
-    if (isa<acc::DataOp>(currParentOp)) {
-      for (auto dataClause :
-           dyn_cast<acc::DataOp>(currParentOp).getDataClauseOperands()) {
-        dominatingDataClauses.insert(dataClause);
-      }
-    }
-    currParentOp = currParentOp->getParentOp();
-  }
-
-  // Find the enclosing function/subroutine
-  auto funcOp = computeConstructOp->getParentOfType<FunctionOpInterface>();
-  if (!funcOp)
-    return dominatingDataClauses.takeVector();
-
-  // Walk the function to find `acc.declare_enter`/`acc.declare_exit` pairs that
-  // dominate and post-dominate the compute construct and add their data
-  // clauses to the list.
-  auto &domInfo = this->getAnalysis<DominanceInfo>();
-  auto &postDomInfo = this->getAnalysis<PostDominanceInfo>();
-  funcOp->walk([&](acc::DeclareEnterOp declareEnterOp) {
-    if (domInfo.dominates(declareEnterOp.getOperation(), computeConstructOp)) {
-      // Collect all `acc.declare_exit` ops for this token.
-      SmallVector<acc::DeclareExitOp> exits;
-      for (auto *user : declareEnterOp.getToken().getUsers())
-        if (auto declareExit = dyn_cast<acc::DeclareExitOp>(user))
-          exits.push_back(declareExit);
-
-      // Only add clauses if every `acc.declare_exit` op post-dominates the
-      // compute construct.
-      if (!exits.empty() && llvm::all_of(exits, [&](acc::DeclareExitOp exitOp) {
-            return postDomInfo.postDominates(exitOp, computeConstructOp);
-          })) {
-        for (auto dataClause : declareEnterOp.getDataClauseOperands())
-          dominatingDataClauses.insert(dataClause);
-      }
-    }
-  });
-
-  return dominatingDataClauses.takeVector();
 }
 
 template <typename OpT>
@@ -367,8 +314,13 @@ Operation *ACCImplicitData::getOriginalDataClauseOpForAlias(
       // Only accept clauses that guarantee that the alias is present.
       if (isa<acc::CopyinOp, acc::CreateOp, acc::PresentOp, acc::NoCreateOp,
               acc::DevicePtrOp>(dataClauseOp))
-        if (aliasAnalysis.alias(acc::getVar(dataClauseOp), var).isMust())
+        if (aliasAnalysis.alias(acc::getVar(dataClauseOp), var).isMust()) {
+          LLVM_DEBUG(llvm::dbgs()
+                         << "Using existing data clause:\n\t" << *dataClauseOp
+                         << "\n\tas reference when processing var:\n\t" << var
+                         << "\n";);
           return dataClauseOp;
+        }
     }
   }
   return nullptr;
@@ -420,7 +372,7 @@ ACCImplicitData::generatePrivateRecipe(ModuleOp &module, Value var,
   builder.setInsertionPointToStart(module.getBody());
 
   auto recipe =
-      acc::PrivateRecipeOp::createAndPopulate(builder, loc, recipeName, type);
+      acc::PrivateRecipeOp::createAndPopulate(builder, loc, recipeName, var);
   if (!recipe.has_value())
     return accSupport.emitNYI(loc, "implicit private"), nullptr;
   return recipe.value();
@@ -445,7 +397,7 @@ ACCImplicitData::generateFirstprivateRecipe(ModuleOp &module, Value var,
   builder.setInsertionPointToStart(module.getBody());
 
   auto recipe = acc::FirstprivateRecipeOp::createAndPopulate(builder, loc,
-                                                             recipeName, type);
+                                                             recipeName, var);
   if (!recipe.has_value())
     return accSupport.emitNYI(loc, "implicit firstprivate"), nullptr;
   return recipe.value();
@@ -453,23 +405,22 @@ ACCImplicitData::generateFirstprivateRecipe(ModuleOp &module, Value var,
 
 void ACCImplicitData::generateRecipes(ModuleOp &module, OpBuilder &builder,
                                       Operation *computeConstructOp,
-                                      const SmallVector<Value> &newOperands,
-                                      SmallVector<Attribute> &newRecipeSyms) {
+                                      const SmallVector<Value> &newOperands) {
   auto &accSupport = this->getAnalysis<acc::OpenACCSupport>();
   for (auto var : newOperands) {
     auto loc{var.getLoc()};
-    if (isa<acc::PrivateOp>(var.getDefiningOp())) {
+    if (auto privateOp = var.getDefiningOp<acc::PrivateOp>()) {
       auto recipe = generatePrivateRecipe(
           module, acc::getVar(var.getDefiningOp()), loc, builder, accSupport);
       if (recipe)
-        newRecipeSyms.push_back(SymbolRefAttr::get(module->getContext(),
-                                                   recipe.getSymName().str()));
-    } else if (isa<acc::FirstprivateOp>(var.getDefiningOp())) {
+        privateOp.setRecipeAttr(
+            SymbolRefAttr::get(module->getContext(), recipe.getSymName()));
+    } else if (auto firstprivateOp = var.getDefiningOp<acc::FirstprivateOp>()) {
       auto recipe = generateFirstprivateRecipe(
           module, acc::getVar(var.getDefiningOp()), loc, builder, accSupport);
       if (recipe)
-        newRecipeSyms.push_back(SymbolRefAttr::get(module->getContext(),
-                                                   recipe.getSymName().str()));
+        firstprivateOp.setRecipeAttr(SymbolRefAttr::get(
+            module->getContext(), recipe.getSymName().str()));
     } else {
       accSupport.emitNYI(var.getLoc(), "implicit reduction");
     }
@@ -508,6 +459,20 @@ Operation *ACCImplicitData::generateDataClauseOpForCandidate(
       typeCategory, acc::VariableTypeCategory::aggregate);
   Location loc = computeConstructOp->getLoc();
 
+  // `deviceptr` asserts the value's storage is already in device memory; no
+  // runtime mapping or attach is performed. Storage that is device-accessible
+  // but physically shared with the host may migrate on demand, so it is not
+  // guaranteed to be in device memory and must still be mapped rather than
+  // treated as deviceptr.
+  if (acc::isInDeviceMemoryValue(var)) {
+    // If the variable is in device memory, use deviceptr clause.
+    LLVM_DEBUG(llvm::dbgs() << "Using deviceptr clause because variable is "
+                               "in device memory\n");
+    return acc::DevicePtrOp::create(builder, loc, var,
+                                    /*structured=*/true, /*implicit=*/true,
+                                    accSupport.getVariableName(var));
+  }
+
   Operation *op = nullptr;
   op = getOriginalDataClauseOpForAlias(var, builder, computeConstructOp,
                                        dominatingDataClauses);
@@ -530,7 +495,9 @@ Operation *ACCImplicitData::generateDataClauseOpForCandidate(
                                   /*structured=*/true, /*implicit=*/true,
                                   accSupport.getVariableName(var),
                                   acc::getBounds(op));
-  } else if (isScalar) {
+  }
+
+  if (isScalar) {
     if (enableImplicitReductionCopy &&
         acc::isOnlyUsedByReductionClauses(var,
                                           computeConstructOp->getRegion(0))) {
@@ -541,14 +508,8 @@ Operation *ACCImplicitData::generateDataClauseOpForCandidate(
       copyinOp.setDataClause(acc::DataClause::acc_reduction);
       return copyinOp.getOperation();
     }
-    if constexpr (std::is_same_v<OpT, acc::KernelsOp> ||
-                  std::is_same_v<OpT, acc::KernelEnvironmentOp>) {
+    if constexpr (std::is_same_v<OpT, acc::KernelsOp>) {
       // Scalars are implicit copyin in kernels construct.
-      // We also do the same for acc.kernel_environment because semantics
-      // of user variable mappings should be applied while ACC construct exists
-      // and at this point we should only be dealing with unmapped variables
-      // that were made live-in by the compiler.
-      // TODO: This may be revisited.
       auto copyinOp =
           acc::CopyinOp::create(builder, loc, var,
                                 /*structured=*/true, /*implicit=*/true,
@@ -570,6 +531,8 @@ Operation *ACCImplicitData::generateDataClauseOpForCandidate(
       newDataOp = acc::PresentOp::create(builder, loc, var,
                                          /*structured=*/true, /*implicit=*/true,
                                          accSupport.getVariableName(var));
+      newDataOp->setDiscardableAttr(acc::getFromDefaultClauseAttrName(),
+                                    builder.getUnitAttr());
     } else {
       auto copyinOp =
           acc::CopyinOp::create(builder, loc, var,
@@ -611,56 +574,22 @@ static void legalizeValuesInRegion(Region &accRegion,
   }
 }
 
-// Adds the private operands and private recipes to the data construct
-// operation in a valid way (ensures that the index in the privatizationRecipes
-// array matches the position of the private operand).
+// Adds the private operands to the compute construct operation.
 template <typename OpT>
-static void
-addNewPrivateOperands(OpT &accOp, const SmallVector<Value> &privateOperands,
-                      const SmallVector<Attribute> &privateRecipeSyms) {
-  assert(privateOperands.size() == privateRecipeSyms.size());
+static void addNewPrivateOperands(OpT &accOp,
+                                  const SmallVector<Value> &privateOperands) {
   if (privateOperands.empty())
     return;
 
-  SmallVector<Attribute> completePrivateRecipesSyms;
-  SmallVector<Attribute> completeFirstprivateRecipesSyms;
-  SmallVector<Value> newPrivateOperands;
-  SmallVector<Value> newFirstprivateOperands;
-
-  // Collect all of the existing recipes since they are held in an attribute.
-  // To add to it, we need to create a brand new one.
-  if (accOp.getPrivatizationRecipes().has_value())
-    for (auto privatization : accOp.getPrivatizationRecipesAttr())
-      completePrivateRecipesSyms.push_back(privatization);
-  if (accOp.getFirstprivatizationRecipes().has_value())
-    for (auto privatization : accOp.getFirstprivatizationRecipesAttr())
-      completeFirstprivateRecipesSyms.push_back(privatization);
-
-  // Now separate between private and firstprivate operands.
-  for (auto [priv, privateRecipeSym] :
-       llvm::zip(privateOperands, privateRecipeSyms)) {
+  for (auto priv : privateOperands) {
     if (isa<acc::PrivateOp>(priv.getDefiningOp())) {
-      newPrivateOperands.push_back(priv);
-      completePrivateRecipesSyms.push_back(privateRecipeSym);
+      accOp.getPrivateOperandsMutable().append(priv);
     } else if (isa<acc::FirstprivateOp>(priv.getDefiningOp())) {
-      newFirstprivateOperands.push_back(priv);
-      completeFirstprivateRecipesSyms.push_back(privateRecipeSym);
+      accOp.getFirstprivateOperandsMutable().append(priv);
     } else {
-      llvm_unreachable("unhandled private operand");
+      llvm_unreachable("unhandled reduction operand");
     }
   }
-
-  // Append all of the new private operands to their appropriate list.
-  accOp.getPrivateOperandsMutable().append(newPrivateOperands);
-  accOp.getFirstprivateOperandsMutable().append(newFirstprivateOperands);
-
-  // Update the privatizationRecipes attributes to hold all of the new recipes.
-  if (!completePrivateRecipesSyms.empty())
-    accOp.setPrivatizationRecipesAttr(
-        ArrayAttr::get(accOp.getContext(), completePrivateRecipesSyms));
-  if (!completeFirstprivateRecipesSyms.empty())
-    accOp.setFirstprivatizationRecipesAttr(
-        ArrayAttr::get(accOp.getContext(), completeFirstprivateRecipesSyms));
 }
 
 static Operation *findDataExitOp(Operation *dataEntryOp) {
@@ -777,14 +706,17 @@ static void insertInSortedOrder(SmallVector<Value> &sortedDataClauseOperands,
 template <typename OpT>
 void ACCImplicitData::generateImplicitDataOps(
     ModuleOp &module, OpT computeConstructOp,
-    std::optional<acc::ClauseDefaultValue> &defaultClause) {
+    std::optional<acc::ClauseDefaultValue> &defaultClause,
+    acc::OpenACCSupport &accSupport) {
   // Implicit data attributes are only applied if "[t]here is no default(none)
-  // clause visible at the compute construct."
-  if (defaultClause.has_value() &&
+  // clause visible at the compute construct", unless ignoreDefaultNone is set.
+  if (!ignoreDefaultNone && defaultClause.has_value() &&
       defaultClause.value() == acc::ClauseDefaultValue::None)
     return;
   assert(!defaultClause.has_value() ||
-         defaultClause.value() == acc::ClauseDefaultValue::Present);
+         defaultClause.value() == acc::ClauseDefaultValue::Present ||
+         (ignoreDefaultNone &&
+          defaultClause.value() == acc::ClauseDefaultValue::None));
 
   // 1) Collect live-in values.
   Region &accRegion = computeConstructOp->getRegion(0);
@@ -793,10 +725,9 @@ void ACCImplicitData::generateImplicitDataOps(
 
   // 2) Run the filtering to find relevant pointers that need copied.
   auto isCandidate{[&](Value val) -> bool {
-    return isCandidateForImplicitData(val, accRegion);
+    return isCandidateForImplicitData(val, accRegion, accSupport);
   }};
-  auto candidateVars(
-      llvm::to_vector(llvm::make_filter_range(liveInValues, isCandidate)));
+  auto candidateVars(llvm::filter_to_vector(liveInValues, isCandidate));
   if (candidateVars.empty())
     return;
 
@@ -808,7 +739,10 @@ void ACCImplicitData::generateImplicitDataOps(
     LLVM_DEBUG(llvm::dbgs() << "== Generating clauses for ==\n"
                             << computeConstructOp << "\n");
   }
-  auto dominatingDataClauses = getDominatingDataClauses(computeConstructOp);
+  auto &domInfo = this->getAnalysis<DominanceInfo>();
+  auto &postDomInfo = this->getAnalysis<PostDominanceInfo>();
+  auto dominatingDataClauses =
+      acc::getDominatingDataClauses(computeConstructOp, domInfo, postDomInfo);
   for (auto var : candidateVars) {
     auto newDataClauseOp = generateDataClauseOpForCandidate(
         var, module, builder, computeConstructOp, dominatingDataClauses,
@@ -829,13 +763,10 @@ void ACCImplicitData::generateImplicitDataOps(
   // of the data clause ops)
   legalizeValuesInRegion(accRegion, newPrivateOperands, newDataClauseOperands);
 
-  SmallVector<Attribute> newPrivateRecipeSyms;
   // 5) Generate private recipes which are required for properly attaching
   // private operands.
-  if constexpr (!std::is_same_v<OpT, acc::KernelsOp> &&
-                !std::is_same_v<OpT, acc::KernelEnvironmentOp>)
-    generateRecipes(module, builder, computeConstructOp, newPrivateOperands,
-                    newPrivateRecipeSyms);
+  if constexpr (!std::is_same_v<OpT, acc::KernelsOp>)
+    generateRecipes(module, builder, computeConstructOp, newPrivateOperands);
 
   // 6) Figure out insertion order for the new data clause operands.
   SmallVector<Value> sortedDataClauseOperands(
@@ -846,31 +777,27 @@ void ACCImplicitData::generateImplicitDataOps(
   // 7) Generate the data exit operations.
   generateDataExitOperations(builder, computeConstructOp, newDataClauseOperands,
                              sortedDataClauseOperands);
-
   // 8) Add all of the new operands to the compute construct op.
-  assert(newPrivateOperands.size() == newPrivateRecipeSyms.size() &&
-         "sizes must match");
-  if constexpr (!std::is_same_v<OpT, acc::KernelsOp> &&
-                !std::is_same_v<OpT, acc::KernelEnvironmentOp>)
-    addNewPrivateOperands(computeConstructOp, newPrivateOperands,
-                          newPrivateRecipeSyms);
-
+  if constexpr (!std::is_same_v<OpT, acc::KernelsOp>)
+    addNewPrivateOperands(computeConstructOp, newPrivateOperands);
   computeConstructOp.getDataClauseOperandsMutable().assign(
       sortedDataClauseOperands);
 }
 
 void ACCImplicitData::runOnOperation() {
   ModuleOp module = this->getOperation();
+
+  acc::OpenACCSupport &accSupport = getAnalysis<acc::OpenACCSupport>();
+
   module.walk([&](Operation *op) {
-    if (isa<ACC_COMPUTE_CONSTRUCT_OPS, acc::KernelEnvironmentOp>(op)) {
+    if (isa<ACC_COMPUTE_CONSTRUCT_OPS>(op)) {
       assert(op->getNumRegions() == 1 && "must have 1 region");
 
       auto defaultClause = acc::getDefaultAttr(op);
       llvm::TypeSwitch<Operation *, void>(op)
-          .Case<ACC_COMPUTE_CONSTRUCT_OPS, acc::KernelEnvironmentOp>(
-              [&](auto op) {
-                generateImplicitDataOps(module, op, defaultClause);
-              })
+          .Case<ACC_COMPUTE_CONSTRUCT_OPS>([&](auto op) {
+            generateImplicitDataOps(module, op, defaultClause, accSupport);
+          })
           .Default([&](Operation *) {});
     }
   });

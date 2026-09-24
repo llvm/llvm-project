@@ -46,7 +46,12 @@ def NoEGPR       : Predicate<"!Subtarget->hasEGPR()">;
 def HasNDD       : Predicate<"Subtarget->hasNDD()">;
 def NoNDD        : Predicate<"!Subtarget->hasNDD()">;
 def HasZU        : Predicate<"Subtarget->hasZU()">;
+def PreferLegacySetCC  : Predicate<"!Subtarget->hasZU() || "
+                                   "Subtarget->preferLegacySetCC()">;
+def PreferNoLegacySetCC : Predicate<"Subtarget->hasZU() && "
+                                    "!Subtarget->preferLegacySetCC()">;
 def HasCF        : Predicate<"Subtarget->hasCF()">;
+def HasJMPABS    : Predicate<"Subtarget->hasJMPABS()">;
 def HasCMOV      : Predicate<"Subtarget->canUseCMOV()">;
 def NoCMOV       : Predicate<"!Subtarget->canUseCMOV()">;
 def HasNOPL      : Predicate<"Subtarget->hasNOPL()">;
@@ -72,6 +77,7 @@ def HasAVX1Only  : Predicate<"Subtarget->hasAVX() && !Subtarget->hasAVX2()">;
 def HasAVX10_1   : Predicate<"Subtarget->hasAVX10_1()">;
 def HasAVX10_2   : Predicate<"Subtarget->hasAVX10_2()">;
 def NoAVX10_2    : Predicate<"!Subtarget->hasAVX10_2()">;
+def HasAVX10_V2_AUX : Predicate<"Subtarget->hasAVX10_V2_AUX()">;
 def HasAVX512    : Predicate<"Subtarget->hasAVX512()">;
 def UseAVX       : Predicate<"Subtarget->hasAVX() && !Subtarget->hasAVX512()">;
 def UseAVX2      : Predicate<"Subtarget->hasAVX2() && !Subtarget->hasAVX512()">;
@@ -81,6 +87,7 @@ def HasVPOPCNTDQ : Predicate<"Subtarget->hasVPOPCNTDQ()">;
 def HasDQI       : Predicate<"Subtarget->hasDQI()">;
 def NoDQI        : Predicate<"!Subtarget->hasDQI()">;
 def HasBWI       : Predicate<"Subtarget->hasBWI()">;
+def HasBMM       : Predicate<"Subtarget->hasBMM()">;
 def NoBWI        : Predicate<"!Subtarget->hasBWI()">;
 def HasVLX       : Predicate<"Subtarget->hasVLX()">;
 def NoVLX        : Predicate<"!Subtarget->hasVLX()">;
@@ -184,10 +191,10 @@ def HasAMXCOMPLEX : Predicate<"Subtarget->hasAMXCOMPLEX()">;
 def HasAMXFP8    : Predicate<"Subtarget->hasAMXFP8()">;
 def HasAMXMOVRS  : Predicate<"Subtarget->hasAMXMOVRS()">;
 def HasAMXAVX512 : Predicate<"Subtarget->hasAMXAVX512()">;
-def HasAMXTF32   : Predicate<"Subtarget->hasAMXTF32()">;
 def HasUINTR     : Predicate<"Subtarget->hasUINTR()">;
 def HasUSERMSR   : Predicate<"Subtarget->hasUSERMSR()">;
 def HasCRC32     : Predicate<"Subtarget->hasCRC32()">;
+def HasADX       : Predicate<"Subtarget->hasADX()">;
 
 def HasX86_64    : Predicate<"Subtarget->hasX86_64()">;
 def Not64BitMode : Predicate<"!Subtarget->is64Bit()">,
@@ -245,7 +252,8 @@ let RecomputePerFunction = 1 in {
 }
 
 def CallImmAddr  : Predicate<"Subtarget->isLegalToCallImmediateAddr()">;
-def FavorMemIndirectCall  : Predicate<"!Subtarget->slowTwoMemOps()">;
+def FavorMemIndirectCall  : Predicate<"!Subtarget->slowTwoMemOps() && "
+                                      "!Subtarget->slowIndirectCall()">;
 def HasFastMem32 : Predicate<"!Subtarget->isUnalignedMem32Slow()">;
 def HasFastLZCNT : Predicate<"Subtarget->hasFastLZCNT()">;
 def HasFastSHLDRotate : Predicate<"Subtarget->hasFastSHLDRotate()">;

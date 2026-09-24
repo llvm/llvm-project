@@ -124,7 +124,7 @@ View the diff from {self.name} here.
         import github
         from github import IssueComment, PullRequest
 
-        repo = github.Github(args.token).get_repo(args.repo)
+        repo = github.Github(auth=github.Auth.Token(args.token)).get_repo(args.repo)
         pr = repo.get_issue(args.issue_number).as_pull_request()
 
         comment_text = self.comment_tag + "\n\n" + comment_text
@@ -423,11 +423,11 @@ You can test this locally with the following command:
             match = re.match("a/([^ ]+)", lines[0] if lines else "")
             filename = match[1] if match else ""
             if filename.endswith(".ll"):
-                undef_regex = r"(?<!%)\bundef\b"
+                undef_regex = r"^[+][^;\n]*(?<!%)\bundef\b"
             else:
-                undef_regex = r"UndefValue::get"
+                undef_regex = r"^[+].*UndefValue::get"
             # search for additions of undef
-            if re.search(r"^[+].*" + undef_regex, file, re.MULTILINE):
+            if re.search(undef_regex, file, re.MULTILINE):
                 files.append(filename)
 
         if not files:

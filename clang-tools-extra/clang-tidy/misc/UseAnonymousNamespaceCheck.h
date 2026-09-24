@@ -10,7 +10,6 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_USEANONYMOUSNAMESPACECHECK_H
 
 #include "../ClangTidyCheck.h"
-#include "../utils/FileExtensionsUtils.h"
 
 namespace clang::tidy::misc {
 
@@ -27,9 +26,6 @@ public:
   }
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
-
-private:
-  FileExtensionsSet HeaderFileExtensions;
 };
 
 } // namespace clang::tidy::misc

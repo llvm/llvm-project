@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -std=c++98 %s -ast-dump | FileCheck %s
-// RUN: %clang_cc1 -std=c++11 %s -ast-dump | FileCheck %s
-// RUN: %clang_cc1 -std=c++14 %s -ast-dump | FileCheck %s
-// RUN: %clang_cc1 -std=c++17 %s -ast-dump | FileCheck %s
-// RUN: %clang_cc1 -std=c++20 %s -ast-dump | FileCheck %s
-// RUN: %clang_cc1 -std=c++23 %s -ast-dump | FileCheck %s
-// RUN: %clang_cc1 -std=c++2c %s -ast-dump | FileCheck %s
+// RUN: %clang_cc1 -std=c++98 %s -fexceptions -fcxx-exceptions -pedantic-errors -ast-dump | FileCheck %s
+// RUN: %clang_cc1 -std=c++11 %s -fexceptions -fcxx-exceptions -pedantic-errors -ast-dump | FileCheck %s
+// RUN: %clang_cc1 -std=c++14 %s -fexceptions -fcxx-exceptions -pedantic-errors -ast-dump | FileCheck %s
+// RUN: %clang_cc1 -std=c++17 %s -fexceptions -fcxx-exceptions -pedantic-errors -ast-dump | FileCheck %s
+// RUN: %clang_cc1 -std=c++20 %s -fexceptions -fcxx-exceptions -pedantic-errors -ast-dump | FileCheck %s
+// RUN: %clang_cc1 -std=c++23 %s -fexceptions -fcxx-exceptions -pedantic-errors -ast-dump | FileCheck %s
+// RUN: %clang_cc1 -std=c++2c %s -fexceptions -fcxx-exceptions -pedantic-errors -ast-dump | FileCheck %s
 
 namespace cwg2771 { // cwg2771: 18
 

@@ -16,6 +16,7 @@
 #include "mlir/IR/BlockSupport.h"
 #include "mlir/IR/Visitors.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 
 namespace llvm {
@@ -52,6 +53,20 @@ public:
   /// model.
   Region *getParent() const;
 
+  /// Return an ID uniquely identifying this block within its parent region.
+  /// The ID is assigned when the block joins a region and reassigned when the
+  /// block is moved to a different region; it is stable while the block stays
+  /// in a region, and removing a block leaves a hole (IDs are not reused). Only
+  /// valid for a block that is in a region.
+  ///
+  /// Unlike computeBlockNumber(), this is O(1) and stable; it exists so that
+  /// generic graph algorithms (e.g. LoopInfo, DominatorTree) can index blocks
+  /// by ID.
+  unsigned getBlockID() const {
+    assert(getParent() && "only blocks in a region have a valid ID");
+    return blockID;
+  }
+
   /// Returns the closest surrounding operation that contains this block.
   Operation *getParentOp();
 
@@ -76,6 +91,16 @@ public:
 
   /// Unlink this Block from its parent region and delete it.
   void erase();
+
+  /// Compute the position of this block within its parent region using an O(N)
+  /// linear scan.
+  ///
+  /// Note: There is no semantic meaning to a block number. Blocks are used for
+  /// unstructured control flow and relying on block numbers for functional
+  /// purposes may indicate a design flaw. (You can give semantic meaning to
+  /// region numbers instead.) Block numbers are useful for debugging purposes
+  /// and for error messages.
+  unsigned computeBlockNumber();
 
   //===--------------------------------------------------------------------===//
   // Block argument management
@@ -182,26 +207,11 @@ public:
   /// Recomputes the ordering of child operations within the block.
   void recomputeOpOrder();
 
-  /// This class provides iteration over the held operations of a block for a
-  /// specific operation type.
-  template <typename OpT>
-  using op_iterator = detail::op_iterator<OpT, iterator>;
-
   /// Return an iterator range over the operations within this block that are of
   /// 'OpT'.
   template <typename OpT>
-  iterator_range<op_iterator<OpT>> getOps() {
-    auto endIt = end();
-    return {detail::op_filter_iterator<OpT, iterator>(begin(), endIt),
-            detail::op_filter_iterator<OpT, iterator>(endIt, endIt)};
-  }
-  template <typename OpT>
-  op_iterator<OpT> op_begin() {
-    return detail::op_filter_iterator<OpT, iterator>(begin(), end());
-  }
-  template <typename OpT>
-  op_iterator<OpT> op_end() {
-    return detail::op_filter_iterator<OpT, iterator>(end(), end());
+  auto getOps() {
+    return llvm::make_isa_range<OpT>(*this);
   }
 
   /// Return an iterator range over the operation within this block excluding
@@ -412,6 +422,10 @@ private:
   /// the operations within this block have a valid ordering.
   llvm::PointerIntPair<Region *, /*IntBits=*/1, bool> parentValidOpOrderPair;
 
+  /// Unique ID of this block within its parent region, (re)assigned when the
+  /// block joins a region; -1u while the block has no parent. See getBlockID().
+  unsigned blockID = -1u;
+
   /// This is the list of operations in the block.
   OpListType operations;
 
@@ -422,6 +436,7 @@ private:
   void operator=(Block &) = delete;
 
   friend struct llvm::ilist_traits<Block>;
+  friend class Region;
 };
 
 raw_ostream &operator<<(raw_ostream &, Block &);
@@ -430,14 +445,6 @@ raw_ostream &operator<<(raw_ostream &, Block &);
 namespace llvm {
 template <>
 struct DenseMapInfo<mlir::Block::iterator> {
-  static mlir::Block::iterator getEmptyKey() {
-    void *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
-    return mlir::Block::iterator((mlir::Operation *)pointer);
-  }
-  static mlir::Block::iterator getTombstoneKey() {
-    void *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
-    return mlir::Block::iterator((mlir::Operation *)pointer);
-  }
   static unsigned getHashValue(mlir::Block::iterator iter) {
     return hash_value(iter.getNodePtr());
   }

@@ -6,7 +6,7 @@
 ; RUN: %if aarch64-registered-target     %{ llc %s -o - -mtriple=aarch64-pc-windows-msvc         | FileCheck %s --check-prefixes=ALL,CHECK-COPYSIGN,CHECK-FMA %}
 ; RUN: %if aarch64-registered-target     %{ llc %s -o - -mtriple=aarch64-unknown-linux-gnu       | FileCheck %s --check-prefixes=ALL,CHECK-COPYSIGN,CHECK-FMA %}
 ; RUN: %if aarch64-registered-target     %{ llc %s -o - -mtriple=arm64ec-pc-windows-msvc         | FileCheck %s --check-prefixes=ALL,CHECK-COPYSIGN,CHECK-FMA %}
-; RUN: %if amdgpu-registered-target      %{ llc %s -o - -mtriple=amdgcn-amd-amdhsa               | FileCheck %s --check-prefixes=ALL,CHECK-COPYSIGN,CHECK-FMA %}
+; RUN: %if amdgpu-registered-target      %{ llc %s -o - -mtriple=amdgpu7.00-amd-amdhsa               | FileCheck %s --check-prefixes=ALL,CHECK-COPYSIGN,CHECK-FMA %}
 ; RUN: %if arc-registered-target         %{ llc %s -o - -mtriple=arc-elf                         | FileCheck %s --check-prefixes=ALL,CHECK-COPYSIGN,BAD-FMA %}
 ; RUN: %if arm-registered-target         %{ llc %s -o - -mtriple=arm-unknown-linux-gnueabi       | FileCheck %s --check-prefixes=ALL,CHECK-COPYSIGN,BAD-FMA %}
 ; RUN: %if arm-registered-target         %{ llc %s -o - -mtriple=thumbv7em-none-eabi             | FileCheck %s --check-prefixes=ALL,CHECK-COPYSIGN,BAD-FMA %}
@@ -66,7 +66,7 @@ define void @test_fabs(ptr %p1, ptr %p2) {
 ; ALL-ABS-NOT: __gnu
 ; ALL-ABS-NOT: __aeabi
   %a = load bfloat, ptr %p1
-  %r = call bfloat @llvm.fabs.f16(bfloat %a)
+  %r = call bfloat @llvm.fabs.bf16(bfloat %a)
   store bfloat %r, ptr %p2
   ret void
 }
@@ -80,7 +80,7 @@ define void @test_copysign(ptr %p1, ptr %p2, ptr %p3) {
 ; BAD-COPYSIGN: __truncsfbf2
   %a = load bfloat, ptr %p1
   %b = load bfloat, ptr %p2
-  %r = call bfloat @llvm.copysign.f16(bfloat %a, bfloat %b)
+  %r = call bfloat @llvm.copysign.bf16(bfloat %a, bfloat %b)
   store bfloat %r, ptr %p3
   ret void
 }
@@ -98,7 +98,7 @@ define void @test_fma(ptr %p1, ptr %p2, ptr %p3, ptr %p4) {
   %a = load bfloat, ptr %p1
   %b = load bfloat, ptr %p2
   %c = load bfloat, ptr %p3
-  %r = call bfloat @llvm.fma.f16(bfloat %a, bfloat %b, bfloat %c)
+  %r = call bfloat @llvm.fma.bf16(bfloat %a, bfloat %b, bfloat %c)
   store bfloat %r, ptr %p4
   ret void
 }

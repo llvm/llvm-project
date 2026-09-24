@@ -11,11 +11,8 @@ func.func @store_1D_vector(%vec: vector<8xf32>,
 // CHECK-SAME:  %[[VEC:.+]]: vector<8xf32>,
 // CHECK-SAME:  %[[SRC:.+]]: memref<8x16x32xf32>,
 // CHECK-SAME:  %[[OFFSET:.+]]: index
-// CHECK:       %[[COLLAPSED:.+]] = memref.subview %[[SRC]][%[[OFFSET]], %[[OFFSET]], 0]
-// CHECK:       %[[DESC:.+]] = xegpu.create_nd_tdesc
-// CHECK-SAME:    %[[COLLAPSED]]
-// CHECK-SAME:    memref<32xf32, strided<[1], offset: ?>> -> !xegpu.tensor_desc<8xf32,
-// CHECK-SAME:    boundary_check = false
+// CHECK:       %[[COLLAPSED:.+]] = memref.subview %[[SRC]][%[[OFFSET]], %[[OFFSET]], 0] [1, 1, 32] [1, 1, 1] : memref<8x16x32xf32> to memref<32xf32, strided<[1], offset: ?>>
+// CHECK:       %[[DESC:.+]] = xegpu.create_nd_tdesc %[[COLLAPSED]] : memref<32xf32, strided<[1], offset: ?>> -> !xegpu.tensor_desc<8xf32, #xegpu.block_tdesc_attr<boundary_check = false>>
 // CHECK:       xegpu.store_nd %[[VEC]], %[[DESC]][%[[OFFSET]]] : vector<8xf32>
 
 // -----
@@ -31,10 +28,8 @@ func.func @store_2D_vector(%vec: vector<8x16xf32>,
 // CHECK-SAME:  %[[VEC:.+]]: vector<8x16xf32>,
 // CHECK-SAME:  %[[SRC:.+]]: memref<8x16x32xf32>,
 // CHECK-SAME:  %[[OFFSET:.+]]: index
-// CHECK:       %[[COLLAPSED:.+]] = memref.subview %[[SRC]][%[[OFFSET]], 0, 0]
-// CHECK:       %[[DESC:.+]] = xegpu.create_nd_tdesc
-// CHECK-SAME:    %[[COLLAPSED]]
-// CHECK-SAME:    memref<16x32xf32, strided<[32, 1], offset: ?>> -> !xegpu.tensor_desc<8x16xf32>
+// CHECK:       %[[COLLAPSED:.+]] = memref.subview %[[SRC]][%[[OFFSET]], 0, 0] [1, 16, 32] [1, 1, 1] : memref<8x16x32xf32> to memref<16x32xf32, strided<[32, 1], offset: ?>>
+// CHECK:       %[[DESC:.+]] = xegpu.create_nd_tdesc %[[COLLAPSED]] : memref<16x32xf32, strided<[32, 1], offset: ?>> -> !xegpu.tensor_desc<8x16xf32>
 // CHECK:       xegpu.store_nd %[[VEC]], %[[DESC]][%[[OFFSET]], %[[OFFSET]]] : vector<8x16xf32>
 
 // -----
@@ -50,9 +45,9 @@ func.func @store_dynamic_source(%vec: vector<8x16xf32>,
 // CHECK-SAME:  %[[VEC:.+]]: vector<8x16xf32>,
 // CHECK-SAME:  %[[SRC:.+]]: memref<?x?x?xf32>,
 // CHECK-SAME:  %[[OFF0:.+]]: index, %[[OFF1:.+]]: index, %[[OFF2:.+]]: index
-// CHECK:       %[[COLLAPSED:.+]] = memref.subview %[[SRC]][%[[OFF0]], 0, 0]
-// CHECK:       {{.*}} %[[SIZES:.+]]:2, %[[STRIDES:.+]]:2 = memref.extract_strided_metadata %[[COLLAPSED]]
-// CHECK:       %[[DESC:.+]] = xegpu.create_nd_tdesc %[[COLLAPSED]]
+// CHECK:       %{{.*}}, %{{.*}}, %[[SIZES:.+]]:3, %{{.+}}:3 = memref.extract_strided_metadata %[[SRC]]
+// CHECK:       %[[COLLAPSED:.+]] = memref.subview %[[SRC]][%[[OFF0]], 0, 0] [1, %[[SIZES]]#1, %[[SIZES]]#2] [1, 1, 1] : memref<?x?x?xf32> to memref<?x?xf32, strided<[?, 1], offset: ?>>
+// CHECK:       %[[DESC:.+]] = xegpu.create_nd_tdesc %[[COLLAPSED]] : memref<?x?xf32, strided<[?, 1], offset: ?>> -> !xegpu.tensor_desc<8x16xf32>
 // CHECK:       xegpu.store_nd %[[VEC]], %[[DESC]][%[[OFF1]], %[[OFF2]]] : vector<8x16xf32>
 
 // -----
@@ -96,3 +91,19 @@ func.func @no_store_zero_dim_vector(%vec: vector<f32>,
 
 // CHECK-LABEL: @no_store_zero_dim_vector(
 // CHECK:       vector.store
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/181463:
+// vector.store with a memref whose element type is a vector (e.g.
+// memref<?xvector<4xf32>>) must not crash. The pass used to call
+// getElementTypeBitWidth() on the vector element type which asserts on
+// non-integer/float types; now it bails out gracefully instead.
+
+// CHECK-LABEL: @no_store_vec_element_memref(
+// CHECK:       vector.store
+func.func @no_store_vec_element_memref(%vec: vector<4xf32>,
+    %source: memref<?xvector<4xf32>>, %offset: index) {
+  vector.store %vec, %source[%offset] : memref<?xvector<4xf32>>, vector<4xf32>
+  return
+}

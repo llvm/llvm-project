@@ -2,24 +2,22 @@
 Test lldb-dap disconnect request
 """
 
+import os
+import subprocess
+import uuid
 
+from lldbsuite.test import lldbutil
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
-import lldbdap_testcase
-import time
-import os
+from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
+from lldbsuite.test.tools.lldb_dap.types import *
 
 
-class TestDAP_disconnect(lldbdap_testcase.DAPTestCaseBase):
+@requireNotWasm("no attach support")
+class TestDAP_disconnect(DAPTestCaseBase):
+    SHARED_BUILD_TESTCASE = False
+
     source = "main.cpp"
-
-    def disconnect_and_assert_no_output_printed(self):
-        self.dap_server.request_disconnect()
-        # verify we didn't get any input after disconnect
-        time.sleep(2)
-        output = self.get_stdout()
-        self.assertTrue(output is None or len(output) == 0)
 
     @skipIfWindows
     def test_launch(self):
@@ -29,22 +27,23 @@ class TestDAP_disconnect(lldbdap_testcase.DAPTestCaseBase):
         created.
         """
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program, stopOnEntry=True, disconnectAutomatically=False)
+        side_effect = f"{program}.side_effect"
+        session = self.build_and_create_session(disconnect_automatically=False)
+        with session.configure(LaunchArgs(program, stopOnEntry=True)) as ctx:
+            # We set a breakpoint right before the side effect file is created
+            session.resolve_source_breakpoints(
+                self.source, [line_number(self.source, "// breakpoint")]
+            )
+        stop_event = session.verify_stopped_on_entry(after=ctx.process_event)
 
-        # We set a breakpoint right before the side effect file is created
-        self.set_source_breakpoints(
-            self.source, [line_number(self.source, "// breakpoint")]
-        )
-        self.continue_to_next_stop()
+        # Verify we haven't produced the side effect file yet.
+        self.assertFalse(os.path.exists(side_effect))
 
-        # verify we haven't produced the side effect file yet
-        self.assertFalse(os.path.exists(program + ".side_effect"))
+        session.disconnect(terminateDebuggee=True)
+        session.wait_for_event(TerminatedEvent, after=stop_event)
 
-        self.dap_server.request_disconnect()
-
-        # verify we didn't produce the side effect file
-        time.sleep(1)
-        self.assertFalse(os.path.exists(program + ".side_effect"))
+        # Verify we didn't produce the side effect file.
+        self.assertFalse(os.path.exists(side_effect))
 
     @skipIfWindows
     @expectedFailureNetBSD
@@ -54,29 +53,40 @@ class TestDAP_disconnect(lldbdap_testcase.DAPTestCaseBase):
         before the file is created, and as the process is not terminated upon disconnection,
         the file is created anyway.
         """
-        self.build_and_create_debug_adapter()
+        session = self.build_and_create_session(disconnect_automatically=False)
         program = self.getBuildArtifact("a.out")
+        side_effect = program + ".side_effect"
 
         # Use a file as a synchronization point between test and inferior.
         sync_file_path = lldbutil.append_to_process_working_directory(
-            self, "sync_file_%d" % (int(time.time()))
-        )
-        self.addTearDownHook(
-            lambda: self.run_platform_command("rm %s" % (sync_file_path))
+            self, f"sync_file_{uuid.uuid4().hex}"
         )
 
-        proc = self.spawnSubprocess(program, [sync_file_path])
+        proc = self.spawnSubprocess(
+            program, [sync_file_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        )
+        self.addTearDownHook(lambda: proc.kill())
+
         lldbutil.wait_for_file_on_target(self, sync_file_path)
 
-        self.attach(pid=proc.pid, disconnectAutomatically=False, stopOnEntry=True)
-        self.continue_to_next_stop()
-        response = self.dap_server.request_evaluate("wait_for_attach = false;")
-        self.assertTrue(response["success"])
+        with session.configure(AttachArgs(pid=proc.pid)) as cm:
+            line = line_number(self.source, "// attach breakpoint")
+            [bp_id] = session.resolve_source_breakpoints(self.source, [line])
+        stop_event = session.verify_stopped_on_breakpoint(bp_id, after=cm.process_event)
 
-        # verify we haven't produced the side effect file yet
-        self.assertFalse(os.path.exists(program + ".side_effect"))
+        self.assertFalse(os.path.exists(side_effect))
 
-        self.dap_server.request_disconnect()
-        time.sleep(2)
-        # verify we produced the side effect file, as the program continued after disconnecting
-        self.assertTrue(os.path.exists(program + ".side_effect"))
+        top_frame = session.top_frame_from(stop_event)
+        self.logger.info("frame name: %s", top_frame.name)
+        top_frame.evaluate("`expr wait_for_attach = false;", context="repl")
+
+        # Verify the variable changed.
+        wait_for_attach_var = top_frame.evaluate("wait_for_attach", context="hover")
+        self.assertEqual(wait_for_attach_var.result, "false")
+
+        session.disconnect()
+
+        # Wait for the process to run to completion.
+        proc.wait(timeout=10)
+
+        self.assertTrue(os.path.exists(side_effect))

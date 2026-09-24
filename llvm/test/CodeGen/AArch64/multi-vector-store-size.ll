@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=aarch64-linux-gnu -stop-after=instruction-select < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-linux-gnu -stop-after=aarch64-isel < %s | FileCheck %s
 
 declare void @llvm.aarch64.neon.st2.v4f32.p0(<4 x float>, <4 x float>, ptr)
 declare void @llvm.aarch64.neon.st3.v4f32.p0(<4 x float>, <4 x float>, <4 x float>, ptr)

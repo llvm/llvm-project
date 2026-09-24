@@ -4,7 +4,7 @@
 
 ; CHECK:      DW_TAG_variable
 ; CHECK-NEXT:   DW_AT_name      ("global_var")
-; CHECK-NEXT:   DW_AT_type      ({{0x[0-9]+}} "char")
+; CHECK-NEXT:   DW_AT_type      ({{0x[0-9a-f]+}} "char")
 ; CHECK-NEXT:   DW_AT_external  (true)
 ; CHECK-NEXT:   DW_AT_decl_file ("/tmp{{[/\\]}}global-var.c")
 ; CHECK-NEXT:   DW_AT_decl_line (1)

@@ -8,6 +8,7 @@
 
 #include "lldb/Utility/RegisterValue.h"
 
+#include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
@@ -19,7 +20,9 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 
+#include <algorithm>
 #include <cstdint>
+#include <memory>
 #include <string>
 #include <tuple>
 #include <vector>
@@ -33,6 +36,36 @@ using namespace lldb_private;
 
 bool RegisterValue::GetData(DataExtractor &data) const {
   return data.SetData(GetBytes(), GetByteSize(), GetByteOrder()) > 0;
+}
+
+bool RegisterValue::GetData(DataExtractor &data, uint32_t byte_size,
+                            lldb::ByteOrder byte_order) const {
+  DataExtractor source;
+  if (!GetData(source) || source.GetByteSize() < byte_size)
+    return false;
+
+  const lldb::ByteOrder source_byte_order = source.GetByteOrder();
+  if ((source_byte_order != lldb::eByteOrderBig &&
+       source_byte_order != lldb::eByteOrderLittle) ||
+      (byte_order != lldb::eByteOrderBig &&
+       byte_order != lldb::eByteOrderLittle))
+    return false;
+
+  auto buffer_sp = std::make_shared<DataBufferHeap>(byte_size, 0);
+  size_t source_offset = source_byte_order == lldb::eByteOrderBig
+                             ? source.GetByteSize() - byte_size
+                             : 0;
+  const uint8_t *source_bytes = source.GetDataStart() + source_offset;
+  uint8_t *destination_bytes = buffer_sp->GetBytes();
+  if (source_byte_order == byte_order)
+    std::copy_n(source_bytes, byte_size, destination_bytes);
+  else
+    std::reverse_copy(source_bytes, source_bytes + byte_size,
+                      destination_bytes);
+
+  data.Clear();
+  data.SetByteOrder(byte_order);
+  return data.SetData(buffer_sp) == byte_size;
 }
 
 uint32_t RegisterValue::GetAsMemoryData(const RegisterInfo &reg_info, void *dst,
@@ -196,9 +229,7 @@ Status RegisterValue::SetValueFromData(const RegisterInfo &reg_info,
       SetUInt64(src.GetMaxU64(&src_offset, src_len));
     else {
       std::vector<uint8_t> native_endian_src(src_len, 0);
-      src.ExtractBytes(src_offset, src_len,
-                       llvm::sys::IsLittleEndianHost ? eByteOrderLittle
-                                                     : eByteOrderBig,
+      src.ExtractBytes(src_offset, src_len, endian::InlHostByteOrder(),
                        native_endian_src.data());
       llvm::APInt uint = llvm::APInt::getZero(src_len * 8);
       llvm::LoadIntFromMemory(uint, native_endian_src.data(), src_len);

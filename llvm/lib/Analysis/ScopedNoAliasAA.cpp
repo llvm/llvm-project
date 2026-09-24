@@ -36,6 +36,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/InitializePasses.h"
@@ -52,9 +53,7 @@ static cl::opt<bool> EnableScopedNoAlias("enable-scoped-noalias",
                                          cl::init(true), cl::Hidden);
 
 AliasResult ScopedNoAliasAAResult::alias(const MemoryLocation &LocA,
-                                         const MemoryLocation &LocB,
-                                         AAQueryInfo &AAQI,
-                                         const Instruction *) {
+                                         const MemoryLocation &LocB) {
   if (!EnableScopedNoAlias)
     return AliasResult::MayAlias;
 
@@ -72,6 +71,12 @@ AliasResult ScopedNoAliasAAResult::alias(const MemoryLocation &LocA,
   return AliasResult::MayAlias;
 }
 
+AliasResult ScopedNoAliasAAResult::alias(const MemoryLocation &LocA,
+                                         const MemoryLocation &LocB,
+                                         AAQueryInfo &, const Instruction *) {
+  return alias(LocA, LocB);
+}
+
 ModRefInfo ScopedNoAliasAAResult::getModRefInfo(const CallBase *Call,
                                                 const MemoryLocation &Loc,
                                                 AAQueryInfo &AAQI) {
@@ -83,6 +88,23 @@ ModRefInfo ScopedNoAliasAAResult::getModRefInfo(const CallBase *Call,
     return ModRefInfo::NoModRef;
 
   if (!mayAliasInScopes(Call->getMetadata(LLVMContext::MD_alias_scope),
+                        Loc.AATags.NoAlias))
+    return ModRefInfo::NoModRef;
+
+  return ModRefInfo::ModRef;
+}
+
+ModRefInfo ScopedNoAliasAAResult::getModRefInfo(const FenceInst *F,
+                                                const MemoryLocation &Loc,
+                                                AAQueryInfo &AAQI) {
+  if (!EnableScopedNoAlias)
+    return ModRefInfo::ModRef;
+
+  if (!mayAliasInScopes(Loc.AATags.Scope,
+                        F->getMetadata(LLVMContext::MD_noalias)))
+    return ModRefInfo::NoModRef;
+
+  if (!mayAliasInScopes(F->getMetadata(LLVMContext::MD_alias_scope),
                         Loc.AATags.NoAlias))
     return ModRefInfo::NoModRef;
 

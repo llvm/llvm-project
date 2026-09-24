@@ -92,7 +92,7 @@ RT_API_ATTRS TypeCode::TypeCode(TypeCategory f, int kind) {
       raw_ = CFI_type_extended_double_Complex;
       break;
     case 16:
-      raw_ = CFI_type_long_double_Complex;
+      raw_ = CFI_type_float128_Complex;
       break;
     }
     break;

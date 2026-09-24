@@ -50,6 +50,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
+#include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/LoopVersioning.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include "llvm/Transforms/Utils/SizeOpts.h"
@@ -189,21 +190,22 @@ public:
       return Candidates;
 
     // Find store->load dependences (consequently true dep).  Both lexically
-    // forward and backward dependences qualify.  Disqualify loads that have
-    // other unknown dependences.
+    // forward and backward dependences qualify.
+    // Disqualify loads that have other unsafe dependences.
 
-    SmallPtrSet<Instruction *, 4> LoadsWithUnknownDependence;
+    SmallPtrSet<Instruction *, 4> LoadsWithUnsafeDependence;
 
     for (const auto &Dep : *Deps) {
       Instruction *Source = Dep.getSource(DepChecker);
       Instruction *Destination = Dep.getDestination(DepChecker);
 
       if (Dep.Type == MemoryDepChecker::Dependence::Unknown ||
-          Dep.Type == MemoryDepChecker::Dependence::IndirectUnsafe) {
+          Dep.Type == MemoryDepChecker::Dependence::IndirectUnsafe ||
+          Dep.Type == MemoryDepChecker::Dependence::InvariantUnsafe) {
         if (isa<LoadInst>(Source))
-          LoadsWithUnknownDependence.insert(Source);
+          LoadsWithUnsafeDependence.insert(Source);
         if (isa<LoadInst>(Destination))
-          LoadsWithUnknownDependence.insert(Destination);
+          LoadsWithUnsafeDependence.insert(Destination);
         continue;
       }
 
@@ -223,17 +225,21 @@ public:
         continue;
 
       // Only propagate if the stored values are bit/pointer castable.
-      if (!CastInst::isBitOrNoopPointerCastable(
-              getLoadStoreType(Store), getLoadStoreType(Load),
-              Store->getDataLayout()))
+      if (!CastInst::isBitOrNoopPointerCastable(getLoadStoreType(Store),
+                                                getLoadStoreType(Load),
+                                                Store->getDataLayout())) {
+        // This store may partially clobber the value from another forwarding
+        // candidate.
+        LoadsWithUnsafeDependence.insert(Load);
         continue;
+      }
 
       Candidates.emplace_front(Load, Store);
     }
 
-    if (!LoadsWithUnknownDependence.empty())
+    if (!LoadsWithUnsafeDependence.empty())
       Candidates.remove_if([&](const StoreToLoadForwardingCandidate &C) {
-        return LoadsWithUnknownDependence.count(C.Load);
+        return LoadsWithUnsafeDependence.count(C.Load);
       });
 
     return Candidates;
@@ -598,6 +604,10 @@ public:
       // Point of no-return, start the transformation.  First, version the loop
       // if necessary.
 
+      // Forming LCSSA is a precondition of versioning.
+      if (!L->isRecursivelyLCSSAForm(*DT, *LI))
+        formLCSSARecursively(*L, *DT, LI, PSE.getSE());
+
       LoopVersioning LV(LAI, Checks, L, LI, DT, PSE.getSE());
       LV.versionLoop();
 
@@ -615,8 +625,7 @@ public:
 
     // Next, propagate the value stored by the store to the users of the load.
     // Also for the first iteration, generate the initial value of the load.
-    SCEVExpander SEE(*PSE.getSE(), L->getHeader()->getDataLayout(),
-                     "storeforward");
+    SCEVExpander SEE(*PSE.getSE(), "storeforward");
     for (const auto &Cand : Candidates)
       propagateStoredValueToLoadUsers(Cand, SEE);
     NumLoopLoadEliminted += Candidates.size();

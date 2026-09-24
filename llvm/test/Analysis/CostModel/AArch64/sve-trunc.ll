@@ -5,18 +5,18 @@ target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
 define void @sve_truncs() {
 ; CHECK-LABEL: 'sve_truncs'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %trunc_nxv2i8_to_i1 = trunc <vscale x 2 x i8> poison to <vscale x 2 x i1>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %trunc_nxv2i16_to_i1 = trunc <vscale x 2 x i16> poison to <vscale x 2 x i1>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %trunc_nxv2i32_to_i1 = trunc <vscale x 2 x i32> poison to <vscale x 2 x i1>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %trunc_nxv2i64_to_i1 = trunc <vscale x 2 x i64> poison to <vscale x 2 x i1>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %trunc_nxv4i8_to_i1 = trunc <vscale x 4 x i8> poison to <vscale x 4 x i1>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %trunc_nxv4i16_to_i1 = trunc <vscale x 4 x i16> poison to <vscale x 4 x i1>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %trunc_nxv4i32_to_i1 = trunc <vscale x 4 x i32> poison to <vscale x 4 x i1>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:1 Lat:1 SizeLat:1 for: %trunc_nxv4i64_to_i1 = trunc <vscale x 4 x i64> poison to <vscale x 4 x i1>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %trunc_nxv8i8_to_i1 = trunc <vscale x 8 x i8> poison to <vscale x 8 x i1>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %trunc_nxv8i16_to_i1 = trunc <vscale x 8 x i16> poison to <vscale x 8 x i1>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:1 Lat:1 SizeLat:1 for: %trunc_nxv8i32_to_i1 = trunc <vscale x 8 x i32> poison to <vscale x 8 x i1>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:1 Lat:1 SizeLat:1 for: %trunc_nxv8i64_to_i1 = trunc <vscale x 8 x i64> poison to <vscale x 8 x i1>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %trunc_nxv2i8_to_i1 = trunc <vscale x 2 x i8> poison to <vscale x 2 x i1>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %trunc_nxv2i16_to_i1 = trunc <vscale x 2 x i16> poison to <vscale x 2 x i1>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %trunc_nxv2i32_to_i1 = trunc <vscale x 2 x i32> poison to <vscale x 2 x i1>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %trunc_nxv2i64_to_i1 = trunc <vscale x 2 x i64> poison to <vscale x 2 x i1>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %trunc_nxv4i8_to_i1 = trunc <vscale x 4 x i8> poison to <vscale x 4 x i1>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %trunc_nxv4i16_to_i1 = trunc <vscale x 4 x i16> poison to <vscale x 4 x i1>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %trunc_nxv4i32_to_i1 = trunc <vscale x 4 x i32> poison to <vscale x 4 x i1>
+; CHECK-NEXT:  Cost Model: Found costs of 5 for: %trunc_nxv4i64_to_i1 = trunc <vscale x 4 x i64> poison to <vscale x 4 x i1>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %trunc_nxv8i8_to_i1 = trunc <vscale x 8 x i8> poison to <vscale x 8 x i1>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %trunc_nxv8i16_to_i1 = trunc <vscale x 8 x i16> poison to <vscale x 8 x i1>
+; CHECK-NEXT:  Cost Model: Found costs of 5 for: %trunc_nxv8i32_to_i1 = trunc <vscale x 8 x i32> poison to <vscale x 8 x i1>
+; CHECK-NEXT:  Cost Model: Found costs of 11 for: %trunc_nxv8i64_to_i1 = trunc <vscale x 8 x i64> poison to <vscale x 8 x i1>
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %trunc_nxv2i16_to_i8 = trunc <vscale x 2 x i16> poison to <vscale x 2 x i8>
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %trunc_nxv2i32_to_i8 = trunc <vscale x 2 x i32> poison to <vscale x 2 x i8>
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %trunc_nxv2i64_to_i8 = trunc <vscale x 2 x i64> poison to <vscale x 2 x i8>
@@ -31,12 +31,12 @@ define void @sve_truncs() {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %trunc_nxv4i64_to_i32 = trunc <vscale x 4 x i64> poison to <vscale x 4 x i32>
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %trunc_nxv8i16_to_i8 = trunc <vscale x 8 x i16> poison to <vscale x 8 x i8>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %trunc_nxv8i32_to_i8 = trunc <vscale x 8 x i32> poison to <vscale x 8 x i8>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %trunc_nxv8i64_to_i8 = trunc <vscale x 8 x i64> poison to <vscale x 8 x i8>
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %trunc_nxv8i64_to_i8 = trunc <vscale x 8 x i64> poison to <vscale x 8 x i8>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %trunc_nxv8i32_to_i16 = trunc <vscale x 8 x i32> poison to <vscale x 8 x i16>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %trunc_nxv8i64_to_i16 = trunc <vscale x 8 x i64> poison to <vscale x 8 x i16>
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %trunc_nxv8i64_to_i16 = trunc <vscale x 8 x i64> poison to <vscale x 8 x i16>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %trunc_nxv16i16_to_i8 = trunc <vscale x 16 x i16> poison to <vscale x 16 x i8>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %trunc_nxv16i32_to_i8 = trunc <vscale x 16 x i32> poison to <vscale x 16 x i8>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:1 Lat:1 SizeLat:1 for: %trunc_nxv16i64_to_i8 = trunc <vscale x 16 x i64> poison to <vscale x 16 x i8>
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %trunc_nxv16i32_to_i8 = trunc <vscale x 16 x i32> poison to <vscale x 16 x i8>
+; CHECK-NEXT:  Cost Model: Found costs of 7 for: %trunc_nxv16i64_to_i8 = trunc <vscale x 16 x i64> poison to <vscale x 16 x i8>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %trunc_nxv2i8_to_i1   = trunc <vscale x 2 x i8>  poison to <vscale x 2 x i1>

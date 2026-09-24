@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Utility/StreamString.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "gtest/gtest.h"
 
 using namespace lldb_private;
@@ -416,6 +417,14 @@ TEST_F(StreamTest, ShiftOperatorStrings) {
   EXPECT_EQ("cstring\nllvm::StringRef\n", TakeValue());
 }
 
+TEST_F(StreamTest, ShiftOperatorFormatv) {
+  s << llvm::formatv("x{0}y", 42);
+  EXPECT_EQ("x42y", TakeValue());
+
+  s << llvm::formatv("{0} {1}", "hello", "world") << '!';
+  EXPECT_EQ("hello world!", TakeValue());
+}
+
 TEST_F(StreamTest, ShiftOperatorPtr) {
   // This test is a bit tricky because pretty much everything related to
   // pointer printing seems to lead to UB or IB. So let's make the most basic
@@ -504,7 +513,7 @@ TEST_F(StreamTest, PutRawBytesToMixedEndian) {
 #endif
 }
 
-TEST_F(StreamTest, PutRawBytesZeroLenght) {
+TEST_F(StreamTest, PutRawBytesZeroLength) {
   uint32_t value = 0x12345678;
 
   s.PutRawBytes(static_cast<void *>(&value), 0, hostByteOrder,
@@ -516,7 +525,7 @@ TEST_F(StreamTest, PutRawBytesZeroLenght) {
   EXPECT_EQ(0U, s.GetWrittenBytes());
 }
 
-TEST_F(StreamTest, PutBytesAsRawHex8ZeroLenght) {
+TEST_F(StreamTest, PutBytesAsRawHex8ZeroLength) {
   uint32_t value = 0x12345678;
 
   s.PutBytesAsRawHex8(static_cast<void *>(&value), 0, hostByteOrder,
@@ -717,4 +726,31 @@ TEST_F(StreamTest, PutSLEB128) {
   EXPECT_EQ(6U, s.GetWrittenBytes());
   EXPECT_EQ("0x6533", TakeValue());
   EXPECT_EQ(6U, bytes);
+}
+
+TEST_F(StreamTest, PutCStringColorHighlightedCaseInsensitive) {
+  Stream::HighlightSettings settings("hello", "[", "]", true);
+  s.PutCStringColorHighlighted("Say Hello World", settings);
+  EXPECT_EQ("Say [Hello] World", TakeValue());
+}
+
+TEST_F(StreamTest, PutCStringColorHighlightedCaseSensitive) {
+  Stream::HighlightSettings settings("hello", "[", "]", false);
+  s.PutCStringColorHighlighted("Say Hello World", settings);
+  EXPECT_EQ("Say Hello World", TakeValue());
+}
+
+TEST_F(StreamTest, PutCStringColorHighlightedMultipleMatches) {
+  Stream::HighlightSettings settings("o", "[", "]", false);
+  s.PutCStringColorHighlighted("foo bar boo", settings);
+  EXPECT_EQ("f[o][o] bar b[o][o]", TakeValue());
+}
+
+TEST_F(StreamTest, BoolOperator) {
+  s << true;
+  EXPECT_EQ("true", TakeValue());
+  s << false;
+  EXPECT_EQ("false", TakeValue());
+  s << "x=" << true << " y=" << false;
+  EXPECT_EQ("x=true y=false", TakeValue());
 }

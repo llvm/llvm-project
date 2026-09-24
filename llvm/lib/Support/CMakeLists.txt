@@ -1,3 +1,4 @@
+include(CheckFunctionExists)
 include(GetLibraryName)
 
 # Ensure that libSupport does not carry any static global initializer.
@@ -37,11 +38,18 @@ if(LLVM_ENABLE_ZSTD)
   list(APPEND imported_libs ${zstd_target})
 endif()
 
+if(LLVM_ENABLE_LZMA)
+  list(APPEND imported_libs LibLZMA::LibLZMA)
+endif()
+
 if( WIN32 )
   # libuuid required for FOLDERID_Profile usage in lib/Support/Windows/Path.inc.
   # advapi32 required for CryptAcquireContextW in lib/Support/Windows/Path.inc.
   # ntdll required for RtlGetLastNtStatus in lib/Support/ErrorHandling.cpp.
   set(system_libs ${system_libs} psapi shell32 ole32 uuid advapi32 ws2_32 ntdll)
+  if( HAVE_WINDOWS_ICU )
+    list(APPEND system_libs icu)
+  endif()
 elseif( CMAKE_HOST_UNIX )
   if( HAVE_LIBRT )
     set(system_libs ${system_libs} rt)
@@ -64,6 +72,12 @@ elseif( CMAKE_HOST_UNIX )
   endif()
   if( UNIX AND "${CMAKE_SYSTEM_NAME}" MATCHES "SunOS" )
     set(system_libs ${system_libs} kstat socket)
+  endif()
+  if( UNIX AND "${CMAKE_SYSTEM_NAME}" MATCHES "OpenBSD" )
+    check_function_exists(getexecpath HAVE_GETEXECPATH)
+    if (HAVE_GETEXECPATH)
+      add_compile_definitions(HAVE_GETEXECPATH)
+    endif()
   endif()
   if( FUCHSIA )
     set(system_libs ${system_libs} zircon)
@@ -111,12 +125,15 @@ if(LLVM_INTEGRATED_CRT_ALLOC)
 
   if((LLVM_INTEGRATED_CRT_ALLOC MATCHES "rpmalloc$") OR LLVM_ENABLE_RPMALLOC)
     add_compile_definitions(ENABLE_OVERRIDE ENABLE_PRELOAD)
+    add_compile_definitions(LLVM_INTEGRATED_CRT_ALLOC="rpmalloc")
     set(ALLOCATOR_FILES "${LLVM_INTEGRATED_CRT_ALLOC}/rpmalloc/rpmalloc.c")
     list(APPEND delayload_flags "${WL}-INCLUDE:malloc")
   elseif(LLVM_INTEGRATED_CRT_ALLOC MATCHES "snmalloc$")
+    add_compile_definitions(LLVM_INTEGRATED_CRT_ALLOC="snmalloc")
     set(ALLOCATOR_FILES "${LLVM_INTEGRATED_CRT_ALLOC}/src/snmalloc/override/new.cc")
     set(system_libs ${system_libs} "mincore.lib" "${WL}-INCLUDE:malloc")
   elseif(LLVM_INTEGRATED_CRT_ALLOC MATCHES "mimalloc$")
+    add_compile_definitions(LLVM_INTEGRATED_CRT_ALLOC="mimalloc")
     set(MIMALLOC_LIB "${LLVM_INTEGRATED_CRT_ALLOC}/out/msvc-x64/Release/mimalloc-static.lib")
     if(NOT EXISTS "${MIMALLOC_LIB}")
 	  message(FATAL_ERROR "Cannot find the mimalloc static library. To build it, first apply the patch from https://github.com/microsoft/mimalloc/issues/268 then build the Release x64 target through ${LLVM_INTEGRATED_CRT_ALLOC}\\ide\\vs2019\\mimalloc.sln")
@@ -135,7 +152,6 @@ if (UNIX AND "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
 endif()
 
 add_subdirectory(BLAKE3)
-add_subdirectory(LSP)
 
 add_llvm_component_library(LLVMSupport
   ABIBreak.cpp
@@ -163,6 +179,7 @@ add_llvm_component_library(LLVMSupport
   BuryPointer.cpp
   CachePruning.cpp
   Caching.cpp
+  CHERICapabilityFormat.cpp
   circular_raw_ostream.cpp
   Chrono.cpp
   COM.cpp
@@ -214,6 +231,7 @@ add_llvm_component_library(LLVMSupport
   KnownFPClass.cpp
   LEB128.cpp
   LineIterator.cpp
+  Driver.cpp
   Locale.cpp
   LockFileManager.cpp
   ManagedStatic.cpp
@@ -235,6 +253,7 @@ add_llvm_component_library(LLVMSupport
   PluginLoader.cpp
   PrettyStackTrace.cpp
   RandomNumberGenerator.cpp
+  IntegerInclusiveInterval.cpp
   Regex.cpp
   RewriteBuffer.cpp
   RewriteRope.cpp
@@ -279,6 +298,7 @@ add_llvm_component_library(LLVMSupport
   VirtualOutputConfig.cpp
   VirtualOutputError.cpp
   VirtualOutputFile.cpp
+  Win64EH.cpp
   WithColor.cpp
   YAMLParser.cpp
   YAMLTraits.cpp
@@ -320,6 +340,9 @@ add_llvm_component_library(LLVMSupport
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Support
   ${Backtrace_INCLUDE_DIRS}
 
+  PRECOMPILE_HEADERS
+  [["llvm/Support/pch.h"]]
+
   LINK_LIBS
   ${system_libs} ${imported_libs} ${delayload_flags}
 
@@ -328,7 +351,7 @@ add_llvm_component_library(LLVMSupport
   )
 
 # Link ICU library if it is an external library.
-if(ICU_FOUND)
+if(ICU_FOUND AND NOT HAVE_WINDOWS_ICU)
   target_link_libraries(LLVMSupport
   PRIVATE
   ${ICU_LIBRARIES}
@@ -369,6 +392,19 @@ if(LLVM_ENABLE_ZSTD)
   endif()
 endif()
 
+if(LLVM_ENABLE_LZMA)
+  # CMAKE_BUILD_TYPE is only meaningful to single-configuration generators.
+  if(CMAKE_BUILD_TYPE)
+    string(TOUPPER ${CMAKE_BUILD_TYPE} build_type)
+    get_property(lzma_library TARGET LibLZMA::LibLZMA PROPERTY LOCATION_${build_type})
+  endif()
+  if(NOT lzma_library)
+    get_property(lzma_library TARGET LibLZMA::LibLZMA PROPERTY LOCATION)
+  endif()
+  get_library_name(${lzma_library} lzma_library)
+  set(llvm_system_libs ${llvm_system_libs} "${lzma_library}")
+endif()
+
 set_property(TARGET LLVMSupport PROPERTY LLVM_SYSTEM_LIBS "${llvm_system_libs}")
 
 
@@ -393,4 +429,12 @@ endif()
 target_include_directories(LLVMSupport
   PRIVATE
   ${LLVM_THIRD_PARTY_DIR}/siphash/include
+  ${LLVM_SOURCE_DIR}/../libc
 )
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  target_compile_options(LLVMSupport PRIVATE "-Wno-c99-extensions") # _Complex warnings.
+endif()
+
+# SupportLSP depends on Support and therefore must be included afterwards.
+add_subdirectory(LSP)

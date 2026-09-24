@@ -12,7 +12,6 @@
 
 #include "flang/Optimizer/CodeGen/TBAABuilder.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
-#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include <mlir/Dialect/LLVMIR/LLVMAttrs.h>

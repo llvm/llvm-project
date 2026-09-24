@@ -1,0 +1,52 @@
+# RUN: llc -mtriple=hexagon -run-pass tfr-cleanup -o - %s | FileCheck %s
+
+# Test coverage for HexagonTfrCleanup: exercise the 64-bit register
+# immediate rewrite paths including the A2_combineii case and the
+# A2_tfrpi case.
+
+--- |
+  define void @test_double_imm() { ret void }
+  define void @test_combine_imm() { ret void }
+  define void @test_self_copy() { ret void }
+...
+
+---
+# Test: 64-bit register copy rewritten to A2_tfrpi when source holds
+# a small immediate (fits in int8).
+# CHECK-LABEL: name: test_double_imm
+# CHECK: A2_tfrpi
+name: test_double_imm
+tracksRegLiveness: true
+body: |
+  bb.0:
+    $r0 = A2_tfrsi 3
+    $r1 = A2_tfrsi 0
+    $d1 = A2_tfrp $d0
+...
+
+---
+# Test: 64-bit register copy rewritten to A2_combineii when the source
+# value has both halves fitting in int8 but the full value does not.
+# CHECK-LABEL: name: test_combine_imm
+# CHECK: A2_combineii
+name: test_combine_imm
+tracksRegLiveness: true
+body: |
+  bb.0:
+    $r0 = A2_tfrsi 5
+    $r1 = A2_tfrsi 7
+    $d1 = A2_tfrp $d0
+...
+
+---
+# Test: eraseIfRedundant - self-assignment A2_tfr should be removed.
+# CHECK-LABEL: name: test_self_copy
+# CHECK-NOT: A2_tfr $r0, $r0
+name: test_self_copy
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $r0
+    $r0 = A2_tfr $r0
+    J2_jumpr $r31, implicit-def dead $pc
+...

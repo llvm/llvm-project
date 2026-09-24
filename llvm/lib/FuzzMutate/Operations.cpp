@@ -176,7 +176,7 @@ OpDescriptor llvm::fuzzerop::splitBlockDescriptor(unsigned Weight) {
     // Loop back on this block by replacing the unconditional forward branch
     // with a conditional with a backedge.
     if (Block != &Block->getParent()->getEntryBlock()) {
-      BranchInst::Create(Block, Next, Srcs[0],
+      CondBrInst::Create(Srcs[0], Block, Next,
                          Block->getTerminator()->getIterator());
       Block->getTerminator()->eraseFromParent();
 

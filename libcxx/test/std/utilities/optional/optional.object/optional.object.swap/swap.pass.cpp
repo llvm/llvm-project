@@ -397,6 +397,51 @@ int main(int, char**)
         assert(static_cast<bool>(opt2) == true);
         assert(*opt2 == 2);
     }
+
+#  if TEST_STD_VER >= 26
+    {
+      Z z{1};
+      optional<Z&> opt1{z};
+      optional<Z&> opt2;
+      ASSERT_NOEXCEPT(opt1.swap(opt2));
+      assert(opt1);
+      assert(*opt1 == 1);
+      assert(&(*opt1) == &z);
+      assert(!opt2);
+
+      opt1.swap(opt2);
+      assert(*opt2 == 1);
+      assert(&(*opt2) == &z);
+      assert(opt2 && !opt1);
+    }
+
+    {
+      Z z1{1};
+      optional<Z&> opt1;
+      optional<Z&> opt2{z1};
+      ASSERT_NOEXCEPT(opt1.swap(opt2));
+
+      opt1.swap(opt2);
+      assert(opt1 && !opt2);
+      assert(*opt1 == 1);
+      assert(&(*opt1) == &z1);
+    }
+
+    {
+      Z z1{1};
+      Z z2{2};
+      optional<Z&> opt1{z1};
+      optional<Z&> opt2{z2};
+      ASSERT_NOEXCEPT(opt1.swap(opt2));
+
+      opt1.swap(opt2);
+      assert(opt1 && opt2);
+      assert(*opt1 == 2);
+      assert(*opt2 == 1);
+      assert(&(*opt1) == &z2);
+      assert(&(*opt2) == &z1);
+    }
+#  endif
 #endif
 
   return 0;

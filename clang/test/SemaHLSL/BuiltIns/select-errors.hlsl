@@ -2,7 +2,7 @@
 
 
 int test_select_first_arg_wrong_type(int1 p0, int t0, int f0) {
-  return select(p0, t0, f0); // No diagnostic expected.
+  return select(p0, t0, f0); // expected-warning{{implicit conversion turns vector to scalar: 'int1' (aka 'vector<int, 1>') to 'bool'}}
 }
 
 int1 test_select_bool_vals_diff_vecs(bool p0, int1 t0, int1 f0) {
@@ -15,7 +15,7 @@ int2 test_select_vector_vals_not_vecs(bool2 p0, int t0,
 }
 
 int1 test_select_vector_vals_wrong_size(bool2 p0, int1 t0, int1 f0) {
-  return select<int1>(p0, t0, f0); // No diagnostic expected.
+  return select<int1>(p0, t0, f0); // expected-warning{{implicit conversion turns vector to scalar: 'bool2' (aka 'vector<bool, 2>') to 'bool'}}
 }
 
 int test_select_no_args() {

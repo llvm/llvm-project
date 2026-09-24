@@ -56,13 +56,13 @@ class StoredDeclsList {
       if (!ShouldErase(*DeclListNode::iterator(List))) {
         NewLast = NewTail;
         *NewTail = List;
-        if (auto *Node = List.dyn_cast<DeclListNode*>()) {
+        if (auto *Node = dyn_cast<DeclListNode *>(List)) {
           NewTail = &Node->Rest;
           List = Node->Rest;
         } else {
           break;
         }
-      } else if (DeclListNode *N = List.dyn_cast<DeclListNode*>()) {
+      } else if (DeclListNode *N = dyn_cast<DeclListNode *>(List)) {
         List = N->Rest;
         C.DeallocateDeclListNode(N);
       } else {
@@ -111,7 +111,7 @@ public:
     // If this is a list-form, free the list.
     ASTContext &C = getASTContext();
     Decls List = Data.getPointer();
-    while (DeclListNode *ToDealloc = List.dyn_cast<DeclListNode *>()) {
+    while (DeclListNode *ToDealloc = dyn_cast<DeclListNode *>(List)) {
       List = ToDealloc->Rest;
       C.DeallocateDeclListNode(ToDealloc);
     }
@@ -174,7 +174,9 @@ public:
     // Remove all declarations that are either external or are replaced with
     // external declarations with higher visibilities.
     DeclListNode::Decls *Tail = erase_if([Decls](NamedDecl *ND) {
-      if (ND->isFromASTFile())
+      // If the declaration is promoted intentionally, keep it.
+      if (ND->isFromASTFile() && ND->getModuleOwnershipKind() !=
+                                     Decl::ModuleOwnershipKind::VisiblePromoted)
         return true;
       // FIXME: Can we get rid of this loop completely?
       return llvm::any_of(Decls, [ND](NamedDecl *D) {
@@ -288,7 +290,7 @@ public:
     }
 
     while (true) {
-      if (auto *Node = D.dyn_cast<DeclListNode*>()) {
+      if (auto *Node = dyn_cast<DeclListNode *>(D)) {
         llvm::errs() << '[' << Node->D << "] -> ";
         D = Node->Rest;
       } else {

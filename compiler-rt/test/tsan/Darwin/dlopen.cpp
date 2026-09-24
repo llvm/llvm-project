@@ -4,7 +4,7 @@
 
 // REQUIRES: osx-autointerception
 
-// XFAIL: ios
+// XFAIL: darwin-remote
 
 // RUN: %clangxx_tsan %s -o %t.so -shared -DSHARED_LIB
 // RUN: %clangxx_tsan -fno-sanitize=thread %s -o %t

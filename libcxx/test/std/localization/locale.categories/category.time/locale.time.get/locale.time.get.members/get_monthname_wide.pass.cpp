@@ -16,8 +16,11 @@
 
 // XFAIL: no-wide-characters
 
-#include <locale>
 #include <cassert>
+#include <ctime>
+#include <ios>
+#include <locale>
+
 #include "test_macros.h"
 #include "test_iterators.h"
 

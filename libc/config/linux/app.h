@@ -10,6 +10,7 @@
 #define LLVM_LIBC_CONFIG_LINUX_APP_H
 
 #include "hdr/stdint_proxy.h"
+#include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
 
@@ -61,7 +62,7 @@ struct AppProperties {
   uintptr_t *env_ptr;
 };
 
-[[gnu::weak]] extern AppProperties app;
+LIBC_INLINE_VAR AppProperties app;
 
 // The descriptor of a thread's TLS area.
 struct TLSDescriptor {
@@ -76,8 +77,6 @@ struct TLSDescriptor {
   // Note that, dependending the target architecture ABI, it can be the
   // same as |addr| or something else.
   uintptr_t tp = 0;
-
-  constexpr TLSDescriptor() = default;
 };
 
 // Create and initialize the TLS area for the current thread. Should not

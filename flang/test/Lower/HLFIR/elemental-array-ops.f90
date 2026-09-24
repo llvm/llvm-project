@@ -157,8 +157,8 @@ end subroutine char_return
 ! CHECK-LABEL:   func.func @_QPchar_return(
 ! CHECK-SAME:                              %[[VAL_0:.*]]: !fir.box<!fir.array<?x!fir.char<1,3>>> {fir.bindc_name = "x"},
 ! CHECK-SAME:                              %[[VAL_1:.*]]: !fir.box<!fir.array<?x!fir.char<1,3>>> {fir.bindc_name = "y"}) {
-! CHECK:           %[[VAL_2:.*]] = fir.alloca !fir.char<1,3> {bindc_name = ".result"}
-! CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>> {bindc_name = "l", uniq_name = "_QFchar_returnEl"}
+! CHECK:           %[[VAL_2:.*]] = fir.alloca !fir.char<1,3> <{bindc_name = ".result"}>
+! CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>> <{bindc_name = "l", uniq_name = "_QFchar_returnEl"}>
 ! CHECK:           %[[VAL_4:.*]] = fir.zero_bits !fir.heap<!fir.array<?x!fir.logical<4>>>
 ! CHECK:           %[[VAL_5:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_6:.*]] = fir.shape %[[VAL_5]] : (index) -> !fir.shape<1>
@@ -177,8 +177,8 @@ end subroutine char_return
 ! CHECK:           ^bb0(%[[VAL_18:.*]]: index):
 ! CHECK:             %[[VAL_19:.*]] = hlfir.designate %[[VAL_12]]#0 (%[[VAL_18]])  typeparams %[[VAL_11]] : (!fir.box<!fir.array<?x!fir.char<1,3>>>, index, index) -> !fir.ref<!fir.char<1,3>>
 ! CHECK:             %[[VAL_20:.*]] = fir.emboxchar %[[VAL_19]], %[[VAL_11]] : (!fir.ref<!fir.char<1,3>>, index) -> !fir.boxchar<1>
-! CHECK:             %[[VAL_27:.*]] = fir.call @_QPcallee(%[[VAL_2]], %[[VAL_16]], %[[VAL_20]]) proc_attrs<elemental, pure> fastmath<contract> : (!fir.ref<!fir.char<1,3>>, index, !fir.boxchar<1>) -> !fir.boxchar<1>
 ! CHECK:             %[[VAL_28:.*]]:2 = hlfir.declare %[[VAL_2]] typeparams %[[VAL_16]] {uniq_name = ".tmp.func_result"} : (!fir.ref<!fir.char<1,3>>, index) -> (!fir.ref<!fir.char<1,3>>, !fir.ref<!fir.char<1,3>>)
+! CHECK:             %[[VAL_27:.*]] = fir.call @_QPcallee(%[[VAL_2]], %[[VAL_16]], %[[VAL_20]]) proc_attrs<elemental, pure> fastmath<contract> : (!fir.ref<!fir.char<1,3>>, index, !fir.boxchar<1>) -> !fir.boxchar<1>
 ! CHECK:             %[[MustFree:.*]] = arith.constant false
 ! CHECK:             %[[ResultTemp:.*]] = hlfir.as_expr %[[VAL_28]]#0 move %[[MustFree]] : (!fir.ref<!fir.char<1,3>>, i1) -> !hlfir.expr<!fir.char<1,3>>
 ! CHECK:             hlfir.yield_element %[[ResultTemp]] : !hlfir.expr<!fir.char<1,3>>

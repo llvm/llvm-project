@@ -157,9 +157,10 @@ static cl::opt<bool, true> XUseInstructionNames(
     cl::desc("Use LLVM-IR names when deriving statement names"),
     cl::location(UseInstructionNames), cl::Hidden, cl::cat(PollyCategory));
 
-static cl::opt<bool> PollyPrintInstructions(
-    "polly-print-instructions", cl::desc("Output instructions per ScopStmt"),
-    cl::Hidden, cl::Optional, cl::init(false), cl::cat(PollyCategory));
+static cl::opt<bool>
+    PollyPrintInstructions("polly-print-instructions",
+                           cl::desc("Output instructions per ScopStmt"),
+                           cl::Hidden, cl::init(false), cl::cat(PollyCategory));
 
 static cl::list<std::string> IslArgs("polly-isl-arg",
                                      cl::value_desc("argument"),
@@ -279,6 +280,22 @@ bool ScopArrayInfo::isCompatibleWith(const ScopArrayInfo *Array) const {
   return true;
 }
 
+/// Multiply the innermost of @p Sizes by @p Factor.
+///
+/// Dimension sizes count elements of an array's canonical element type, so a
+/// row holds @p Factor times as many of them once that type becomes @p Factor
+/// times smaller. Only the innermost size changes: the outer ones count rows,
+/// and a row grows together with the innermost dimension.
+static void stretchInnermostSize(SmallVectorImpl<const SCEV *> &Sizes,
+                                 uint64_t Factor, ScalarEvolution &SE) {
+  if (Factor == 1 || Sizes.empty() || !Sizes.back())
+    return;
+
+  const SCEV *Innermost = Sizes.back();
+  Sizes.back() =
+      SE.getMulExpr(Innermost, SE.getConstant(Innermost->getType(), Factor));
+}
+
 void ScopArrayInfo::updateElementType(Type *NewElementType) {
   if (NewElementType == ElementType)
     return;
@@ -289,12 +306,38 @@ void ScopArrayInfo::updateElementType(Type *NewElementType) {
   if (NewElementSize == OldElementSize || NewElementSize == 0)
     return;
 
+  Type *CanonicalType;
   if (NewElementSize % OldElementSize == 0 && NewElementSize < OldElementSize) {
-    ElementType = NewElementType;
+    CanonicalType = NewElementType;
   } else {
     auto GCD = std::gcd((uint64_t)NewElementSize, (uint64_t)OldElementSize);
-    ElementType = IntegerType::get(ElementType->getContext(), GCD);
+    CanonicalType = IntegerType::get(ElementType->getContext(), GCD);
   }
+
+  // The sizes on record count elements of the type being replaced, so they no
+  // longer describe the same memory once it changes. Restate them in the new
+  // element. Leaving them alone would shrink every row along with the element
+  // type and model in-bounds accesses as running past its end, which makes the
+  // inbounds assumption infeasible and drops the SCoP.
+  //
+  // The canonical type is an integer of the greatest common divisor of two
+  // sizes, and rounding that up to its allocation size can leave it not
+  // dividing the type it replaces. There is then no whole number of new
+  // elements per old one to restate the sizes in. Give up before touching
+  // anything rather than leave the element type and the sizes disagreeing.
+  uint64_t CanonicalSize = DL.getTypeAllocSizeInBits(CanonicalType);
+  if (CanonicalSize == 0 || (uint64_t)OldElementSize % CanonicalSize != 0)
+    return;
+
+  ElementType = CanonicalType;
+
+  uint64_t Factor = (uint64_t)OldElementSize / CanonicalSize;
+  if (Factor == 1)
+    return;
+
+  SmallVector<const SCEV *, 4> Stretched(DimensionSizes);
+  stretchInnermostSize(Stretched, Factor, *S.getSE());
+  updateSizes(Stretched, false /* CheckConsistency */);
 }
 
 bool ScopArrayInfo::updateSizes(ArrayRef<const SCEV *> NewSizes,
@@ -493,7 +536,14 @@ void MemoryAccess::updateDimensionality() {
   // access is larger than the canonical element type of the array.
   //
   // An access ((float *)A)[i] to an array char *A is modeled as
-  // {[i] -> A[o] : 4 i <= o <= 4 i + 3
+  // {[i] -> A[o] : 4 i <= o <= 4 i + 3}
+  //
+  // The subscript of a non-delinearized access was divided by ArrayElemSize
+  // above, which already stated it in canonical elements. A delinearized one
+  // still counts elements of the type it reads or writes, so it is scaled
+  // here instead. Only the innermost subscript is scaled: the outer ones count
+  // rows and are already stated in the sizes the access was delinearized
+  // against.
   if (ElemBytes > ArrayElemSize) {
     assert(ElemBytes % ArrayElemSize == 0 &&
            "Loaded element size should be multiple of canonical element size");
@@ -508,15 +558,18 @@ void MemoryAccess::updateDimensionality() {
 
     LS = isl::local_space(Map.get_space());
     int Num = ElemBytes / getScopArrayInfo()->getElemSizeInBytes();
+    int Scale = DimsAccess == 1 ? 1 : Num;
 
+    // Scale * i - o + (Num - 1) >= 0, that is o <= Scale * i + Num - 1.
     C = isl::constraint::alloc_inequality(LS);
     C = C.set_constant_val(isl::val(Ctx, Num - 1));
-    C = C.set_coefficient_si(isl::dim::in, DimsArray - 1, 1);
+    C = C.set_coefficient_si(isl::dim::in, DimsArray - 1, Scale);
     C = C.set_coefficient_si(isl::dim::out, DimsArray - 1, -1);
     Map = Map.add_constraint(C);
 
+    // o - Scale * i >= 0, that is o >= Scale * i.
     C = isl::constraint::alloc_inequality(LS);
-    C = C.set_coefficient_si(isl::dim::in, DimsArray - 1, -1);
+    C = C.set_coefficient_si(isl::dim::in, DimsArray - 1, -Scale);
     C = C.set_coefficient_si(isl::dim::out, DimsArray - 1, 1);
     C = C.set_constant_val(isl::val(Ctx, 0));
     Map = Map.add_constraint(C);
@@ -1384,7 +1437,7 @@ public:
     const SCEV *Start = visit(E->getStart());
     const SCEV *AddRec = SE.getAddRecExpr(SE.getConstant(E->getType(), 0),
                                           visit(E->getStepRecurrence(SE)),
-                                          E->getLoop(), SCEV::FlagAnyWrap);
+                                          E->getLoop(), SCEV::FlagNone);
     return SE.getAddExpr(Start, AddRec);
   }
 
@@ -1490,14 +1543,6 @@ isl::id Scop::getIdForParam(const SCEV *Parameter) const {
 
 bool Scop::isDominatedBy(const DominatorTree &DT, BasicBlock *BB) const {
   return DT.dominates(BB, getEntry());
-}
-
-void Scop::buildContext() {
-  isl::space Space = isl::space::params_alloc(getIslCtx(), 0);
-  Context = isl::set::universe(Space);
-  InvalidContext = isl::set::empty(Space);
-  AssumedContext = isl::set::universe(Space);
-  DefinedBehaviorContext = isl::set::universe(Space);
 }
 
 void Scop::addParameterBounds() {
@@ -1630,8 +1675,20 @@ Scop::Scop(Region &R, ScalarEvolution &ScalarEvolution, LoopInfo &LI,
                         IslParseFlags);
 
   if (IslOnErrorAbort)
-    isl_options_set_on_error(getIslCtx().get(), ISL_ON_ERROR_ABORT);
-  buildContext();
+    isl_options_set_on_error(IslCtx.get(), ISL_ON_ERROR_ABORT);
+
+  isl::space Space = isl::space::params_alloc(getIslCtx(), 0);
+  Context = isl::set::universe(Space);
+  InvalidContext = isl::set::empty(Space);
+  AssumedContext = isl::set::universe(Space);
+  DefinedBehaviorContext = isl::set::universe(Space);
+}
+
+std::unique_ptr<Scop> Scop::makeScop(Region &R, ScalarEvolution &SE,
+                                     LoopInfo &LI, DominatorTree &DT,
+                                     ScopDetection::DetectionContext &DC,
+                                     OptimizationRemarkEmitter &ORE, int ID) {
+  return std::unique_ptr<Scop>{new Scop(R, SE, LI, DT, DC, ORE, ID)};
 }
 
 Scop::~Scop() = default;
@@ -1682,9 +1739,33 @@ void Scop::removeStmts(function_ref<bool(ScopStmt &)> ShouldDelete,
 void Scop::removeStmtNotInDomainMap() {
   removeStmts([this](ScopStmt &Stmt) -> bool {
     isl::set Domain = DomainMap.lookup(Stmt.getEntryBlock());
-    if (Domain.is_null())
-      return true;
-    return Domain.is_empty();
+    if (!Domain.is_null() && !Domain.is_empty())
+      return false;
+
+    // This ScopStmt is being removed. For all the MAs belonging to this
+    // ScopStmt if it is 1) a scalar (MemoryKind::Value) 2) escaping 3) a
+    // must-write access 4) empty domain ScopStmt,  must therefore be preserved
+    // via SAI registration. This allows code generation to create the required
+    // merge PHIs and repair use sites after versioning has pruned the defining
+    // statement from optimized copy (due to its null/empty domain). Without
+    // this, Polly may generate invalid IR with broken dominance.
+    // ----------- TODO ----------
+    // If domain information is available before memory accesses are
+    // determined for a ScopStmt, then we can remove this SAI registration
+    // for escaping scalars whose containing ScopStmt's domain is actually
+    // invalid/null, and instead do this in
+    // ScopBuilder::buildEscapingDependences. A related TODO is also mentioned
+    // there.
+    for (MemoryAccess *MA : Stmt) {
+      if (!MA->isMustWrite() || !MA->isOriginalValueKind())
+        continue;
+      auto *Inst = dyn_cast_or_null<Instruction>(MA->getAccessValue());
+      if (!Inst || !contains(Inst) || !isEscaping(Inst))
+        continue;
+      getOrCreateScopArrayInfo(Inst, Inst->getType(), {}, MemoryKind::Value);
+    }
+
+    return true;
   });
 }
 
@@ -1754,9 +1835,23 @@ ScopArrayInfo *Scop::getOrCreateScopArrayInfo(Value *BasePtr, Type *ElementType,
     ScopArrayInfoSet.insert(SAI.get());
   } else {
     SAI->updateElementType(ElementType);
+
+    // The sizes handed in count elements of ElementType, which is larger than
+    // the canonical element type of the array whenever some other access to it
+    // uses a smaller one. Restate them in the canonical element, so that they
+    // are compared against, and stored next to, sizes in the same unit.
+    auto &DL = getFunction().getParent()->getDataLayout();
+    uint64_t AccessElemSize = DL.getTypeAllocSize(ElementType);
+    uint64_t CanonicalElemSize = SAI->getElemSizeInBytes();
+
+    SmallVector<const SCEV *, 4> CanonicalSizes(Sizes);
+    if (CanonicalElemSize != 0 && AccessElemSize % CanonicalElemSize == 0)
+      stretchInnermostSize(CanonicalSizes, AccessElemSize / CanonicalElemSize,
+                           *getSE());
+
     // In case of mismatching array sizes, we bail out by setting the run-time
     // context to false.
-    if (!SAI->updateSizes(Sizes))
+    if (!SAI->updateSizes(CanonicalSizes))
       invalidate(DELINEARIZATION, DebugLoc());
   }
   return SAI.get();
@@ -2169,13 +2264,14 @@ isl::ctx Scop::getIslCtx() const { return IslCtx.get(); }
 
 __isl_give PWACtx Scop::getPwAff(const SCEV *E, BasicBlock *BB,
                                  bool NonNegative,
-                                 RecordedAssumptionsTy *RecordedAssumptions) {
+                                 RecordedAssumptionsTy *RecordedAssumptions,
+                                 bool IsInsideDomain) {
   // First try to use the SCEVAffinator to generate a piecewise defined
   // affine function from @p E in the context of @p BB. If that tasks becomes to
   // complex the affinator might return a nullptr. In such a case we invalidate
   // the SCoP and return a dummy value. This way we do not need to add error
   // handling code to all users of this function.
-  auto PWAC = Affinator.getPwAff(E, BB, RecordedAssumptions);
+  PWACtx PWAC = Affinator.getPwAff(E, BB, RecordedAssumptions, IsInsideDomain);
   if (!PWAC.first.is_null()) {
     // TODO: We could use a heuristic and either use:
     //         SCEVAffinator::takeNonNegativeAssumption
@@ -2579,73 +2675,30 @@ void updateLoopCountStatistic(ScopDetection::LoopStats Stats,
 ScopInfo::ScopInfo(const DataLayout &DL, ScopDetection &SD, ScalarEvolution &SE,
                    LoopInfo &LI, AliasAnalysis &AA, DominatorTree &DT,
                    AssumptionCache &AC, OptimizationRemarkEmitter &ORE)
-    : DL(DL), SD(SD), SE(SE), LI(LI), AA(AA), DT(DT), AC(AC), ORE(ORE) {
-  recompute();
-}
+    : DL(DL), SD(SD), SE(SE), LI(LI), AA(AA), DT(DT), AC(AC), ORE(ORE) {}
 
-void ScopInfo::recompute() {
-  RegionToScopMap.clear();
-  /// Create polyhedral description of scops for all the valid regions of a
-  /// function.
-  for (auto &It : SD) {
-    Region *R = const_cast<Region *>(It);
-    if (!SD.isMaxRegionInScop(*R))
-      continue;
+Scop *ScopInfo::getScop(const Region *R) {
+  auto &&[It, Inserted] = RegionToScopMap.try_emplace(R);
+  if (Inserted && SD.isMaxRegionInScop(*R)) {
+    ScopBuilder SB(const_cast<Region *>(R), AC, AA, DL, DT, LI, SD, SE, ORE);
+    It->second = SB.getScop();
+    Scop *S = It->second.get();
 
-    ScopBuilder SB(R, AC, AA, DL, DT, LI, SD, SE, ORE);
-    std::unique_ptr<Scop> S = SB.getScop();
-    if (!S)
-      continue;
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_STATS)
-    ScopDetection::LoopStats Stats =
-        ScopDetection::countBeneficialLoops(&S->getRegion(), SE, LI, 0);
-    updateLoopCountStatistic(Stats, S->getStatistics());
+    if (S) {
+      ScopDetection::LoopStats Stats =
+          ScopDetection::countBeneficialLoops(&S->getRegion(), SE, LI, 0);
+      updateLoopCountStatistic(Stats, S->getStatistics());
+    }
 #endif
-    bool Inserted = RegionToScopMap.insert({R, std::move(S)}).second;
-    assert(Inserted && "Building Scop for the same region twice!");
-    (void)Inserted;
+
+    return S;
   }
+
+  return It->second.get();
 }
 
-bool ScopInfo::invalidate(Function &F, const PreservedAnalyses &PA,
-                          FunctionAnalysisManager::Invalidator &Inv) {
-  // Check whether the analysis, all analyses on functions have been preserved
-  // or anything we're holding references to is being invalidated
-  auto PAC = PA.getChecker<ScopInfoAnalysis>();
-  return !(PAC.preserved() || PAC.preservedSet<AllAnalysesOn<Function>>()) ||
-         Inv.invalidate<ScopAnalysis>(F, PA) ||
-         Inv.invalidate<ScalarEvolutionAnalysis>(F, PA) ||
-         Inv.invalidate<LoopAnalysis>(F, PA) ||
-         Inv.invalidate<AAManager>(F, PA) ||
-         Inv.invalidate<DominatorTreeAnalysis>(F, PA) ||
-         Inv.invalidate<AssumptionAnalysis>(F, PA);
-}
-
-AnalysisKey ScopInfoAnalysis::Key;
-
-ScopInfoAnalysis::Result ScopInfoAnalysis::run(Function &F,
-                                               FunctionAnalysisManager &FAM) {
-  auto &SD = FAM.getResult<ScopAnalysis>(F);
-  auto &SE = FAM.getResult<ScalarEvolutionAnalysis>(F);
-  auto &LI = FAM.getResult<LoopAnalysis>(F);
-  auto &AA = FAM.getResult<AAManager>(F);
-  auto &DT = FAM.getResult<DominatorTreeAnalysis>(F);
-  auto &AC = FAM.getResult<AssumptionAnalysis>(F);
-  auto &DL = F.getParent()->getDataLayout();
-  auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
-  return {DL, SD, SE, LI, AA, DT, AC, ORE};
-}
-
-PreservedAnalyses ScopInfoPrinterPass::run(Function &F,
-                                           FunctionAnalysisManager &FAM) {
-  auto &SI = FAM.getResult<ScopInfoAnalysis>(F);
-  // Since the legacy PM processes Scops in bottom up, we print them in reverse
-  // order here to keep the output persistent
-  for (auto &It : reverse(SI)) {
-    if (It.second)
-      It.second->print(Stream, PollyPrintInstructions);
-    else
-      Stream << "Invalid Scop!\n";
-  }
-  return PreservedAnalyses::all();
+void ScopInfo::invalidate() {
+  // Recompute all SCoPs on-demand
+  RegionToScopMap.clear();
 }

@@ -212,7 +212,7 @@ define i32 @test4(i8 zeroext %c) nounwind ssp noredzone {
 ; CHECK:       lor.rhs:
 ; CHECK-NEXT:    br label [[LOR_END]]
 ; CHECK:       lor.end:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi i1 [ true, [[ENTRY:%.*]] ], [ false, [[LOR_RHS]] ], [ true, [[ENTRY]] ], [ true, [[ENTRY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i1 [ true, [[ENTRY:%.*]] ], [ true, [[ENTRY]] ], [ false, [[LOR_RHS]] ], [ true, [[ENTRY]] ]
 ; CHECK-NEXT:    [[LOR_EXT:%.*]] = zext i1 [[TMP0]] to i32
 ; CHECK-NEXT:    ret i32 [[LOR_EXT]]
 ;

@@ -20,6 +20,7 @@ def UB_Dialect : Dialect {
 
   let hasConstantMaterializer = 1;
   let useDefaultAttributePrinterParser = 1;
+  let useStrictPropertiesInAssemblyFormat = 1;
 }
 
 // Base class for UB dialect attributes.
@@ -64,6 +65,26 @@ def PoisonOp : UB_Op<"poison", [ConstantLike, Pure]> {
   let assemblyFormat = "attr-dict (`<` $value^ `>`)? `:` type($result)";
 
   let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// UnreachableOp
+//===----------------------------------------------------------------------===//
+
+def UnreachableOp : UB_Op<"unreachable", [Terminator]> {
+  let summary = "Unreachable operation.";
+  let description = [{
+    The `unreachable` operation triggers immediate undefined behavior if
+    executed.
+
+    Example:
+
+    ```
+    ub.unreachable
+    ```
+  }];
+
+  let assemblyFormat = "attr-dict";
 }
 
 #endif // MLIR_DIALECT_UB_IR_UBOPS_TD

@@ -36,36 +36,36 @@ entry:
   %tobool4 = icmp eq i32 %tmp2, 0
   br i1 %tobool4, label %while.end, label %while.body.lr.ph
 
-while.body.lr.ph:                                 ; preds = %entry
+while.body.lr.ph:
   %tmp1 = load i32, ptr @a, align 4
   %and = and i32 %tmp1, 3
   %switch = icmp eq i32 %and, 0
   br label %while.body
 
-while.cond:                                       ; preds = %do.cond
+while.cond:
   %dec = add nsw i32 %dec7, -1
   %tobool = icmp eq i32 %dec7, 0
   br i1 %tobool, label %while.cond.while.end_crit_edge, label %while.body
 
-while.body:                                       ; preds = %while.body.lr.ph, %while.cond
+while.body:
   %dec7 = phi i32 [ %dec3, %while.body.lr.ph ], [ %dec, %while.cond ]
   br i1 %switch, label %do.body, label %do.cond
 
-do.body:                                          ; preds = %do.cond, %while.body
+do.body:
   %dec25 = phi i32 [ %dec2, %do.cond ], [ %tmp1, %while.body ]
   br label %do.cond
 
-do.cond:                                          ; preds = %do.body, %while.body
+do.cond:
   %dec26 = phi i32 [ %dec25, %do.body ], [ %tmp1, %while.body ]
   %dec2 = add nsw i32 %dec26, -1
   %tobool3 = icmp eq i32 %dec2, 0
   br i1 %tobool3, label %while.cond, label %do.body
 
-while.cond.while.end_crit_edge:                   ; preds = %while.cond
+while.cond.while.end_crit_edge:
   store i32 0, ptr @c, align 4
   store i32 -1, ptr @b, align 4
   br label %while.end
 
-while.end:                                        ; preds = %while.cond.while.end_crit_edge, %entry
+while.end:
   ret void
 }

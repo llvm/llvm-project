@@ -56,9 +56,9 @@ Status FileSystem::Readlink(const FileSpec &src, FileSpec &dst) {
     return error;
   }
 
-  HANDLE h = ::CreateFileW(wsrc.c_str(), GENERIC_READ,
-                           FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
-                           OPEN_EXISTING, FILE_FLAG_OPEN_REPARSE_POINT, NULL);
+  HANDLE h = ::CreateFileW(
+      wsrc.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr,
+      OPEN_EXISTING, FILE_FLAG_OPEN_REPARSE_POINT, nullptr);
   if (h == INVALID_HANDLE_VALUE) {
     error = Status(::GetLastError(), lldb::eErrorTypeWin32);
     return error;

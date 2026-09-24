@@ -52,13 +52,12 @@ define <8 x i1> @test3(<4 x i1> %a) {
 define <8 x i1> @test4(<4 x i1> %a, <4 x i1>%b) {
 ; CHECK-LABEL: test4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpslld $31, %xmm1, %xmm1
-; CHECK-NEXT:    vpmovd2m %xmm1, %k0
-; CHECK-NEXT:    vpslld $31, %xmm0, %xmm0
-; CHECK-NEXT:    vpmovd2m %xmm0, %k1
-; CHECK-NEXT:    kshiftlb $4, %k0, %k0
-; CHECK-NEXT:    korb %k0, %k1, %k0
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; CHECK-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; CHECK-NEXT:    vpslld $31, %ymm0, %ymm0
+; CHECK-NEXT:    vpmovd2m %ymm0, %k0
 ; CHECK-NEXT:    vpmovm2w %k0, %xmm0
+; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
 
   %res = shufflevector <4 x i1> %a, <4 x i1> %b, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -68,13 +67,12 @@ define <8 x i1> @test4(<4 x i1> %a, <4 x i1>%b) {
 define <4 x i1> @test5(<2 x i1> %a, <2 x i1>%b) {
 ; CHECK-LABEL: test5:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpsllq $63, %xmm1, %xmm1
-; CHECK-NEXT:    vpmovq2m %xmm1, %k0
-; CHECK-NEXT:    vpsllq $63, %xmm0, %xmm0
-; CHECK-NEXT:    vpmovq2m %xmm0, %k1
-; CHECK-NEXT:    kshiftlb $2, %k0, %k0
-; CHECK-NEXT:    korw %k0, %k1, %k0
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; CHECK-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; CHECK-NEXT:    vpsllq $63, %ymm0, %ymm0
+; CHECK-NEXT:    vpmovq2m %ymm0, %k0
 ; CHECK-NEXT:    vpmovm2d %k0, %xmm0
+; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
 
   %res = shufflevector <2 x i1> %a, <2 x i1> %b, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -100,12 +98,10 @@ define <16 x i1> @test6(<2 x i1> %a, <2 x i1>%b) {
 define <32 x i1> @test7(<4 x i1> %a, <4 x i1>%b) {
 ; CHECK-LABEL: test7:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpslld $31, %xmm1, %xmm1
-; CHECK-NEXT:    vpmovd2m %xmm1, %k0
-; CHECK-NEXT:    vpslld $31, %xmm0, %xmm0
-; CHECK-NEXT:    vpmovd2m %xmm0, %k1
-; CHECK-NEXT:    kshiftlb $4, %k0, %k0
-; CHECK-NEXT:    korb %k0, %k1, %k0
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; CHECK-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; CHECK-NEXT:    vpslld $31, %ymm0, %ymm0
+; CHECK-NEXT:    vpmovd2m %ymm0, %k0
 ; CHECK-NEXT:    vpmovm2b %k0, %ymm0
 ; CHECK-NEXT:    retq
 
@@ -212,4 +208,25 @@ define i8 @test15(<2 x i64> %x) {
   %b = shufflevector <2 x i1> %a, <2 x i1> <i1 false, i1 undef>, <8 x i32> <i32 0, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
   %c = bitcast <8 x i1> %b to i8
   ret i8 %c
+}
+
+; Ensure multiple uses of mask source doesn't cause infinite loop
+define <16 x i8> @test_insert_subvector_v8i1_v16i1(i8 %a0) {
+; CHECK-LABEL: test_insert_subvector_v8i1_v16i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorb $1, %dil
+; CHECK-NEXT:    kmovd %edi, %k1
+; CHECK-NEXT:    kmovb %k1, %k2
+; CHECK-NEXT:    vmovdqu8 0, %xmm0 {%k2} {z}
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vmovdqu64 %zmm1, 0 {%k1}
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %xor = xor i8 %a0, 1
+  %zext = zext i8 %xor to i16
+  %mask16 = bitcast i16 %zext to <16 x i1>
+  %load = call <16 x i8> @llvm.masked.load.v16i8.p0(ptr null, <16 x i1> %mask16, <16 x i8> zeroinitializer)
+  %mask8 = bitcast i8 %xor to <8 x i1>
+  call void @llvm.masked.store.v8i64.p0(<8 x i64> zeroinitializer, ptr null, <8 x i1> %mask8)
+  ret <16 x i8> %load
 }

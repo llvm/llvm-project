@@ -2,7 +2,8 @@
 ;
 ; Check that this testcase compiles successfully and that a new-value jump
 ; has been created.
-; CHECK: if (cmp.gtu(r{{[0-9]+}}.new,r{{[0-9]+}})) jump
+; CHECK: p{{[0-3]+}} = cmp.gtu(r{{[0-9]+}},r{{[0-9]+}})
+; CHECK-SAME: if (p{{[0-3]+}}.new) jump
 
 target triple = "hexagon"
 

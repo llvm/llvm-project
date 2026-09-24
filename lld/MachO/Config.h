@@ -9,6 +9,7 @@
 #ifndef LLD_MACHO_CONFIG_H
 #define LLD_MACHO_CONFIG_H
 
+#include "lld/Common/BPSectionOrdererBase.h"
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -146,6 +147,7 @@ struct Configuration {
   bool dedupSymbolStrings = true;
   bool deadStripDuplicates = false;
   bool omitDebugInfo = false;
+  bool stripSwiftForceLoad = false;
   bool warnDylibInstallName = false;
   bool ignoreOptimizationHints = false;
   bool forceExactCpuSubtypeMatch = false;
@@ -216,14 +218,17 @@ struct Configuration {
   std::vector<SectionAlign> sectionAlignments;
   std::vector<SegmentProtection> segmentProtections;
   bool ltoDebugPassManager = false;
+  bool emitLLVM = false;
   llvm::StringRef codegenDataGeneratePath;
   bool csProfileGenerate = false;
   llvm::StringRef csProfilePath;
   bool pgoWarnMismatch;
   bool warnThinArchiveMissingMembers;
+  bool warnMissingSubsectionsViaSymbols = false;
   bool disableVerify;
   bool separateCstringLiteralSections;
   bool tailMergeStrings;
+  unsigned slopScale = 256;
 
   bool callGraphProfileSort = false;
   llvm::StringRef printSymbolOrder;
@@ -233,6 +238,7 @@ struct Configuration {
   bool bpCompressionSortStartupFunctions = false;
   bool bpFunctionOrderForCompression = false;
   bool bpDataOrderForCompression = false;
+  llvm::SmallVector<BPCompressionSortSpec> bpCompressionSortSpecs;
   bool bpVerboseSectionOrderer = false;
 
   SectionRenameMap sectionRenameMap;

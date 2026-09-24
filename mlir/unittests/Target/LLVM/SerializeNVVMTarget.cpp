@@ -10,6 +10,8 @@
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/IR/MLIRContext.h"
+#include "mlir/IR/Remarks.h"
+#include "mlir/IR/SymbolTable.h"
 #include "mlir/InitAllDialects.h"
 #include "mlir/Parser/Parser.h"
 #include "mlir/Target/LLVM/NVVM/Target.h"
@@ -86,15 +88,16 @@ TEST_F(MLIRTargetLLVMNVVM, SKIP_WITHOUT_NVPTX(SerializeNVVMMToLLVM)) {
   ASSERT_TRUE(!!serializer);
   gpu::TargetOptions options("", {}, "", "", gpu::CompilationTarget::Offload);
   for (auto gpuModule : (*module).getBody()->getOps<gpu::GPUModuleOp>()) {
-    std::optional<SmallVector<char, 0>> object =
+    std::optional<mlir::gpu::SerializedObject> object =
         serializer.serializeToObject(gpuModule, options);
     // Check that the serializer was successful.
     ASSERT_TRUE(object != std::nullopt);
-    ASSERT_TRUE(!object->empty());
+    ASSERT_TRUE(!object->getObject().empty());
 
     // Read the serialized module.
-    llvm::MemoryBufferRef buffer(StringRef(object->data(), object->size()),
-                                 "module");
+    llvm::MemoryBufferRef buffer(
+        StringRef(object->getObject().data(), object->getObject().size()),
+        "module");
     llvm::LLVMContext llvmContext;
     llvm::Expected<std::unique_ptr<llvm::Module>> llvmModule =
         llvm::getLazyBitcodeModule(buffer, llvmContext);
@@ -122,15 +125,18 @@ TEST_F(MLIRTargetLLVMNVVM, SKIP_WITHOUT_NVPTX(SerializeNVVMToPTX)) {
   ASSERT_TRUE(!!serializer);
   gpu::TargetOptions options("", {}, "", "", gpu::CompilationTarget::Assembly);
   for (auto gpuModule : (*module).getBody()->getOps<gpu::GPUModuleOp>()) {
-    std::optional<SmallVector<char, 0>> object =
+    std::optional<mlir::gpu::SerializedObject> object =
         serializer.serializeToObject(gpuModule, options);
     // Check that the serializer was successful.
     ASSERT_TRUE(object != std::nullopt);
-    ASSERT_TRUE(!object->empty());
+    ASSERT_TRUE(!object->getObject().empty());
 
     ASSERT_TRUE(
-        StringRef(object->data(), object->size()).contains("nvvm_kernel"));
-    ASSERT_TRUE(StringRef(object->data(), object->size()).count('\0') == 0);
+        StringRef(object->getObject().data(), object->getObject().size())
+            .contains("nvvm_kernel"));
+    ASSERT_TRUE(
+        StringRef(object->getObject().data(), object->getObject().size())
+            .count('\0') == 0);
   }
 }
 
@@ -153,11 +159,11 @@ TEST_F(MLIRTargetLLVMNVVM, SKIP_WITHOUT_NVPTX(SerializeNVVMToBinary)) {
   ASSERT_TRUE(!!serializer);
   gpu::TargetOptions options("", {}, "", "", gpu::CompilationTarget::Binary);
   for (auto gpuModule : (*module).getBody()->getOps<gpu::GPUModuleOp>()) {
-    std::optional<SmallVector<char, 0>> object =
+    std::optional<mlir::gpu::SerializedObject> object =
         serializer.serializeToObject(gpuModule, options);
     // Check that the serializer was successful.
     ASSERT_TRUE(object != std::nullopt);
-    ASSERT_TRUE(!object->empty());
+    ASSERT_TRUE(!object->getObject().empty());
   }
 }
 
@@ -203,11 +209,11 @@ TEST_F(MLIRTargetLLVMNVVM,
                              optimizedCallback, isaCallback);
 
   for (auto gpuModule : (*module).getBody()->getOps<gpu::GPUModuleOp>()) {
-    std::optional<SmallVector<char, 0>> object =
+    std::optional<mlir::gpu::SerializedObject> object =
         serializer.serializeToObject(gpuModule, options);
 
     ASSERT_TRUE(object != std::nullopt);
-    ASSERT_TRUE(!object->empty());
+    ASSERT_TRUE(!object->getObject().empty());
     ASSERT_TRUE(!initialLLVMIR.empty());
     ASSERT_TRUE(!linkedLLVMIR.empty());
     ASSERT_TRUE(!optimizedLLVMIR.empty());
@@ -217,6 +223,85 @@ TEST_F(MLIRTargetLLVMNVVM,
     linkedLLVMIR.clear();
     optimizedLLVMIR.clear();
     isaResult.clear();
+  }
+}
+
+// Test that LLVM optimization remarks are imported into the remark engine.
+TEST_F(MLIRTargetLLVMNVVM, SKIP_WITHOUT_NVPTX(LLVMRemarksAreImported)) {
+  MLIRContext context(registry);
+  std::string moduleStr = R"mlir(
+    gpu.module @nvvm_test {
+      llvm.func @helper(%a: f32, %b: f32) -> f32 {
+        %0 = llvm.fadd %a, %b : f32
+        llvm.return %0 : f32
+      }
+      llvm.func @nvvm_kernel(%arg0: f32, %arg1: !llvm.ptr)
+          attributes {gpu.kernel, nvvm.kernel} {
+        %0 = llvm.call @helper(%arg0, %arg0) : (f32, f32) -> f32
+        llvm.store %0, %arg1 : f32, !llvm.ptr
+        llvm.return
+      }
+    }
+  )mlir";
+  OwningOpRef<ModuleOp> module =
+      parseSourceString<ModuleOp>(moduleStr, &context);
+  ASSERT_TRUE(!!module);
+
+  struct CollectingStreamer : public remark::detail::MLIRRemarkStreamerBase {
+    CollectingStreamer(std::vector<remark::detail::Remark> &remarks)
+        : remarks(remarks) {}
+    void
+    streamOptimizationRemark(const remark::detail::Remark &remark) override {
+      remarks.push_back(remark);
+    }
+    std::vector<remark::detail::Remark> &remarks;
+  };
+  std::vector<remark::detail::Remark> remarks;
+  remark::RemarkCategories cats{/*all=*/std::nullopt, /*passed=*/"llvm-inline",
+                                /*missed=*/std::nullopt,
+                                /*analysis=*/"llvm-asm-printer",
+                                /*failed=*/std::nullopt};
+  ASSERT_TRUE(succeeded(remark::enableOptimizationRemarks(
+      context, std::make_unique<CollectingStreamer>(remarks),
+      std::make_unique<remark::RemarkEmittingPolicyAll>(), cats)));
+
+  NVVM::NVVMTargetAttr target = NVVM::NVVMTargetAttr::get(&context);
+  auto serializer = dyn_cast<gpu::TargetAttrInterface>(target);
+  ASSERT_TRUE(!!serializer);
+  gpu::TargetOptions options("", {}, "", "", gpu::CompilationTarget::Assembly);
+  for (auto gpuModule : (*module).getBody()->getOps<gpu::GPUModuleOp>()) {
+    std::optional<mlir::gpu::SerializedObject> object =
+        serializer.serializeToObject(gpuModule, options);
+    ASSERT_TRUE(object != std::nullopt);
+    ASSERT_TRUE(!object->getObject().empty());
+
+    Operation *kernel =
+        SymbolTable::lookupSymbolIn(gpuModule.getOperation(), "nvvm_kernel");
+    ASSERT_TRUE(kernel);
+
+    // Middle-end remark.
+    auto inlined =
+        llvm::find_if(remarks, [](const remark::detail::Remark &remark) {
+          return remark.getCategoryName() == "llvm-inline" &&
+                 remark.getRemarkName() == "Inlined";
+        });
+    ASSERT_TRUE(inlined != remarks.end());
+    EXPECT_EQ(inlined->getRemarkKind(), remark::RemarkKind::RemarkPassed);
+    EXPECT_EQ(inlined->getFunction(), "nvvm_kernel");
+    EXPECT_EQ(inlined->getLocation(), kernel->getLoc());
+
+    // Codegen remark.
+    auto instructionCount =
+        llvm::find_if(remarks, [](const remark::detail::Remark &remark) {
+          return remark.getCategoryName() == "llvm-asm-printer" &&
+                 remark.getRemarkName() == "InstructionCount" &&
+                 remark.getFunction() == "nvvm_kernel";
+        });
+    ASSERT_TRUE(instructionCount != remarks.end());
+    EXPECT_EQ(instructionCount->getRemarkKind(),
+              remark::RemarkKind::RemarkAnalysis);
+    EXPECT_EQ(instructionCount->getLocation(), kernel->getLoc());
+    remarks.clear();
   }
 }
 
@@ -275,7 +360,7 @@ TEST_F(MLIRTargetLLVMNVVM, SKIP_WITHOUT_NVPTX(LinkedLLVMIRResource)) {
                              gpu::CompilationTarget::Assembly, {}, {},
                              linkedCallback);
   for (auto gpuModule : (*module).getBody()->getOps<gpu::GPUModuleOp>()) {
-    std::optional<SmallVector<char, 0>> object =
+    std::optional<mlir::gpu::SerializedObject> object =
         serializer.serializeToObject(gpuModule, options);
 
     // Verify that we correctly linked in the library: the external call is
@@ -294,6 +379,6 @@ TEST_F(MLIRTargetLLVMNVVM, SKIP_WITHOUT_NVPTX(LinkedLLVMIRResource)) {
       ASSERT_FALSE(bar->empty());
     }
     ASSERT_TRUE(object != std::nullopt);
-    ASSERT_TRUE(!object->empty());
+    ASSERT_TRUE(!object->getObject().empty());
   }
 }

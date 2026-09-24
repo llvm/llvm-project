@@ -1,0 +1,16 @@
+# REQUIRES: exegesis-can-measure-latency, x86_64-linux
+
+# Check that the snippet we generate is exactly the same between runs when we
+# use a fixed RNG seed.
+
+# RUN: llvm-exegesis -mtriple=x86_64-unknown-unknown -mode=latency -opcode-name=ADD64rr --benchmark-phase=prepare-snippet -random-generator-seed=5 | FileCheck %s
+
+# CHECK: ---
+# CHECK: mode:            latency
+# CHECK: key:
+# CHECK:   instructions:
+# CHECK:     - 'ADD64rr RCX RCX RAX'
+# CHECK:   config:          ''
+# CHECK:   register_initial_values:
+# CHECK:     - 'RCX=0x0'
+# CHECK:     - 'RAX=0x0'

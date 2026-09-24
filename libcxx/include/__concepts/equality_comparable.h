@@ -11,6 +11,7 @@
 
 #include <__concepts/boolean_testable.h>
 #include <__concepts/common_reference_with.h>
+#include <__concepts/comparison_common_type.h>
 #include <__config>
 #include <__type_traits/common_reference.h>
 #include <__type_traits/make_const_lvalue_ref.h>
@@ -19,9 +20,9 @@
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 // [concept.equalitycomparable]
 
@@ -41,7 +42,7 @@ concept equality_comparable = __weakly_equality_comparable_with<_Tp, _Tp>;
 template <class _Tp, class _Up>
 concept equality_comparable_with =
     equality_comparable<_Tp> && equality_comparable<_Up> &&
-    common_reference_with<__make_const_lvalue_ref<_Tp>, __make_const_lvalue_ref<_Up>> &&
+    __comparison_common_type_with<_Tp, _Up> &&
     equality_comparable<
         common_reference_t<
             __make_const_lvalue_ref<_Tp>,
@@ -49,8 +50,8 @@ concept equality_comparable_with =
     __weakly_equality_comparable_with<_Tp, _Up>;
 // clang-format on
 
-#endif // _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 #endif // _LIBCPP___CONCEPTS_EQUALITY_COMPARABLE_H

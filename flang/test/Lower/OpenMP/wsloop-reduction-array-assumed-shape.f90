@@ -22,7 +22,7 @@ subroutine reduce(r)
 end subroutine
 end program
 
-! CHECK-LABEL:   omp.declare_reduction @add_reduction_byref_box_Uxf64 : !fir.ref<!fir.box<!fir.array<?xf64>>> alloc {
+! CHECK-LABEL:   omp.declare_reduction @add_reduction_byref_box_Uxf64 byref_element_type({{.*}}) : !fir.ref<!fir.box<!fir.array<?xf64>>> alloc {
 ! CHECK:           %[[VAL_8:.*]] = fir.alloca !fir.box<!fir.array<?xf64>>
 ! CHECK:           omp.yield(%[[VAL_8]] : !fir.ref<!fir.box<!fir.array<?xf64>>>)
 ! CHECK-LABEL:   } init {
@@ -32,7 +32,7 @@ end program
 ! CHECK:           %[[VAL_3:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_4:.*]]:3 = fir.box_dims %[[VAL_2]], %[[VAL_3]] : (!fir.box<!fir.array<?xf64>>, index) -> (index, index, index)
 ! CHECK:           %[[VAL_5:.*]] = fir.shape %[[VAL_4]]#1 : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_6:.*]] = fir.allocmem !fir.array<?xf64>, %[[VAL_4]]#1 {bindc_name = ".tmp", uniq_name = ""}
+! CHECK:           %[[VAL_6:.*]] = fir.allocmem !fir.array<?xf64>, %[[VAL_4]]#1 <{bindc_name = ".tmp", uniq_name = ""}>
 ! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]](%[[VAL_5]]) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<?xf64>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xf64>>, !fir.heap<!fir.array<?xf64>>)
 ! CHECK:           %[[C0:.*]] = arith.constant 0 : index
 ! CHECK:           %[[DIMS:.*]]:3 = fir.box_dims %[[VAL_2]], %[[C0]] : (!fir.box<!fir.array<?xf64>>, index) -> (index, index, index)

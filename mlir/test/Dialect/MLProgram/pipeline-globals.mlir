@@ -1,4 +1,4 @@
-// RUN: mlir-opt -split-input-file -pass-pipeline="builtin.module(mlprogram-pipeline-globals)" --allow-unregistered-dialect %s
+// RUN: mlir-opt -split-input-file -pass-pipeline="builtin.module(mlprogram-pipeline-globals)" %s
 
 // CHECK-LABEL: @global_variable
 ml_program.global private mutable @global_variable(dense<4> : tensor<4xi32>) : tensor<4xi32>
@@ -10,8 +10,8 @@ func.func @global_double_load() {
   %0 = ml_program.global_load @global_variable : tensor<4xi32>
   %1 = ml_program.global_load @global_variable : tensor<4xi32>
 
-  // CHECK: %[[DUMMY:.+]] = "unregistered.dummy"(%[[LOAD]], %[[LOAD]])
-  %2 = "unregistered.dummy"(%0, %1) : (tensor<4xi32>, tensor<4xi32>) -> (tensor<4xi32>)
+  // CHECK: %[[DUMMY:.+]] = "test.dummy"(%[[LOAD]], %[[LOAD]])
+  %2 = "test.dummy"(%0, %1) : (tensor<4xi32>, tensor<4xi32>) -> (tensor<4xi32>)
 
   // CHECK: ml_program.global_store @global_variable %[[DUMMY]]
   ml_program.global_store @global_variable = %2 : tensor<4xi32>
@@ -28,8 +28,8 @@ func.func @global_double_store() {
   // CHECK: %[[LOAD:.+]] = ml_program.global_load @global_variable
   %0 = ml_program.global_load @global_variable : tensor<4xi32>
 
-  // CHECK: %[[DUMMY:.+]] = "unregistered.dummy"(%[[LOAD]])
-  %1 = "unregistered.dummy"(%0) : (tensor<4xi32>) -> (tensor<4xi32>)
+  // CHECK: %[[DUMMY:.+]] = "test.dummy"(%[[LOAD]])
+  %1 = "test.dummy"(%0) : (tensor<4xi32>) -> (tensor<4xi32>)
 
   // CHECK: ml_program.global_store @global_variable %[[DUMMY]]
   ml_program.global_store @global_variable = %1 : tensor<4xi32>
@@ -49,12 +49,12 @@ func.func @global_store_load() {
   // CHECK: %[[LOAD:.+]] = ml_program.global_load @global_variable
   %0 = ml_program.global_load @global_variable : tensor<4xi32>
 
-  // CHECK: %[[DUMMY:.+]] = "unregistered.dummy"(%[[LOAD]])
-  // CHECK: %[[DUMMY2:.+]] = "unregistered.dummy"(%[[DUMMY2]])
-  %1 = "unregistered.dummy"(%0) : (tensor<4xi32>) -> (tensor<4xi32>)
+  // CHECK: %[[DUMMY:.+]] = "test.dummy"(%[[LOAD]])
+  // CHECK: %[[DUMMY2:.+]] = "test.dummy"(%[[DUMMY2]])
+  %1 = "test.dummy"(%0) : (tensor<4xi32>) -> (tensor<4xi32>)
   ml_program.global_store @global_variable = %1 : tensor<4xi32>
   %2 = ml_program.global_load @global_variable : tensor<4xi32>
-  %3 = "unregistered.dummy"(%2) : (tensor<4xi32>) -> (tensor<4xi32>)
+  %3 = "test.dummy"(%2) : (tensor<4xi32>) -> (tensor<4xi32>)
 
   // CHECK: ml_program.global_store @global_variable %[[DUMMY2]]
   ml_program.global_store @global_variable = %3 : tensor<4xi32>
@@ -71,26 +71,26 @@ func.func @global_store_load_region() {
   // CHECK: %[[LOAD:.+]] = ml_program.global_load @global_variable
   %0 = ml_program.global_load @global_variable : tensor<4xi32>
 
-  // CHECK: %[[DUMMY:.+]] = "unregistered.dummy"(%[[LOAD]])
-  %1 = "unregistered.dummy"(%0) : (tensor<4xi32>) -> (tensor<4xi32>)
+  // CHECK: %[[DUMMY:.+]] = "test.dummy"(%[[LOAD]])
+  %1 = "test.dummy"(%0) : (tensor<4xi32>) -> (tensor<4xi32>)
 
   // CHECK: ml_program.global_store @global_variable %[[DUMMY]]
   ml_program.global_store @global_variable = %1 : tensor<4xi32>
 
-  // CHECK: "unregistered.dummy2"
-  "unregistered.dummy2"() ({
+  // CHECK: "test.dummy2"
+  "test.dummy2"() ({
     ^bb():
     %cst = arith.constant dense<0> : tensor<4xi32>
     // CHECK: ml_program.global_store @global_variable
     ml_program.global_store @global_variable = %cst : tensor<4xi32>
-    "unregistered.terminator"() : () -> ()
+    "test.terminator"() : () -> ()
   }) : () -> ()
 
   // CHECK: %[[LOAD:.+]] ml_program.global_load @global_variable
   %2 = ml_program.global_load @global_variable : tensor<4xi32>
 
-  // CHECK: %[[DUMMY2:.+]] = "unregistered.dummy"(%[[LOAD]])
-  %3 = "unregistered.dummy"(%2) : (tensor<4xi32>) -> (tensor<4xi32>)
+  // CHECK: %[[DUMMY2:.+]] = "test.dummy"(%[[LOAD]])
+  %3 = "test.dummy"(%2) : (tensor<4xi32>) -> (tensor<4xi32>)
 
   // CHECK: ml_program.global_store @global_variable %[[DUMMY2]]
   ml_program.global_store @global_variable = %3 : tensor<4xi32>
@@ -115,8 +115,8 @@ func.func @call_global_store() {
   // CHECK: %[[LOAD:.+]] = ml_program.global_load @global_variable
   %0 = ml_program.global_load @global_variable : tensor<4xi32>
 
-  // CHECK: %[[DUMMY:.+]] = "unregistered.dummy"(%[[LOAD]])
-  %1 = "unregistered.dummy"(%0) : (tensor<4xi32>) -> (tensor<4xi32>)
+  // CHECK: %[[DUMMY:.+]] = "test.dummy"(%[[LOAD]])
+  %1 = "test.dummy"(%0) : (tensor<4xi32>) -> (tensor<4xi32>)
 
   // CHECK: ml_program.global_store @global_variable %[[DUMMY]]
   ml_program.global_store @global_variable = %1 : tensor<4xi32>
@@ -125,8 +125,8 @@ func.func @call_global_store() {
   // CHECK: %[[LOAD:.+]] ml_program.global_load @global_variable
   %2 = ml_program.global_load @global_variable : tensor<4xi32>
 
-  // CHECK: %[[DUMMY:.+]] = "unregistered.dummy"(%[[LOAD]])
-  %3 = "unregistered.dummy"(%2) : (tensor<4xi32>) -> (tensor<4xi32>)
+  // CHECK: %[[DUMMY:.+]] = "test.dummy"(%[[LOAD]])
+  %3 = "test.dummy"(%2) : (tensor<4xi32>) -> (tensor<4xi32>)
 
   // CHECK: ml_program.global_store @global_variable %[[DUMMY]]
   ml_program.global_store @global_variable = %3 : tensor<4xi32>
@@ -158,8 +158,8 @@ func.func @call_indirect_store() {
   // CHECK: %[[LOAD:.+]] = ml_program.global_load @global_variable
   %0 = ml_program.global_load @global_variable : tensor<4xi32>
 
-  // CHECK: %[[DUMMY:.+]] = "unregistered.dummy"(%[[LOAD]])
-  %1 = "unregistered.dummy"(%0) : (tensor<4xi32>) -> (tensor<4xi32>)
+  // CHECK: %[[DUMMY:.+]] = "test.dummy"(%[[LOAD]])
+  %1 = "test.dummy"(%0) : (tensor<4xi32>) -> (tensor<4xi32>)
 
   // CHECK: ml_program.global_store @global_variable %[[DUMMY]]
   ml_program.global_store @global_variable = %1 : tensor<4xi32>
@@ -168,8 +168,8 @@ func.func @call_indirect_store() {
   // CHECK: %[[LOAD:.+]] ml_program.global_load @global_variable
   %2 = ml_program.global_load @global_variable : tensor<4xi32>
 
-  // CHECK: %[[DUMMY:.+]] = "unregistered.dummy"(%[[LOAD]])
-  %3 = "unregistered.dummy"(%2) : (tensor<4xi32>) -> (tensor<4xi32>)
+  // CHECK: %[[DUMMY:.+]] = "test.dummy"(%[[LOAD]])
+  %3 = "test.dummy"(%2) : (tensor<4xi32>) -> (tensor<4xi32>)
 
   // CHECK: ml_program.global_store @global_variable %[[DUMMY]]
   ml_program.global_store @global_variable = %3 : tensor<4xi32>
@@ -192,7 +192,7 @@ func.func @interrupt_indirect() -> tensor<4xi32> {
 // CHECK-LABEL: @interrupt
 func.func @interrupt() {
   %0 = call @interrupt_indirect() : () -> (tensor<4xi32>)
-  "unregistered.dummy"(%0) : (tensor<4xi32>) -> ()
+  "test.dummy"(%0) : (tensor<4xi32>) -> ()
   func.return
 }
 
@@ -201,19 +201,41 @@ func.func @call_indirect_load() {
   // CHECK: %[[LOAD:.+]] = ml_program.global_load @global_variable
   %0 = ml_program.global_load @global_variable : tensor<4xi32>
 
-  // CHECK: %[[DUMMY:.+]] = "unregistered.dummy"(%[[LOAD]])
-  %1 = "unregistered.dummy"(%0) : (tensor<4xi32>) -> (tensor<4xi32>)
+  // CHECK: %[[DUMMY:.+]] = "test.dummy"(%[[LOAD]])
+  %1 = "test.dummy"(%0) : (tensor<4xi32>) -> (tensor<4xi32>)
 
   // CHECK: ml_program.global_store @global_variable %[[DUMMY]]
   ml_program.global_store @global_variable = %1 : tensor<4xi32>
   call @interrupt() : () -> ()
 
-  // CHECK: %[[DUMMY:.+]] = "unregistered.dummy"(%[[LOAD]])
+  // CHECK: %[[DUMMY:.+]] = "test.dummy"(%[[LOAD]])
   %2 = ml_program.global_load @global_variable : tensor<4xi32>
-  %3 = "unregistered.dummy"(%2) : (tensor<4xi32>) -> (tensor<4xi32>)
+  %3 = "test.dummy"(%2) : (tensor<4xi32>) -> (tensor<4xi32>)
 
   // CHECK: ml_program.global_store @global_variable %[[DUMMY]]
   ml_program.global_store @global_variable = %3 : tensor<4xi32>
+  func.return
+}
+
+// -----
+
+// Calling via a CallOpInterface op whose callee symbol is not defined in this
+// module should not crash - the pass should bail out gracefully.
+// See https://github.com/llvm/llvm-project/issues/109649
+
+// CHECK-LABEL: @global_variable
+ml_program.global private mutable @global_variable(dense<4> : tensor<4xi32>) : tensor<4xi32>
+
+// CHECK-LABEL: @call_with_unresolvable_callee
+func.func @call_with_unresolvable_callee(%arg0: memref<f32>) {
+  // Both loads must be preserved; the pass conservatively bails out when it
+  // encounters a call whose callee symbol cannot be resolved.
+  // CHECK: ml_program.global_load @global_variable
+  %0 = ml_program.global_load @global_variable : tensor<4xi32>
+  // @callee is not defined anywhere in this module.
+  test.call_and_store @callee(%arg0), %arg0 {store_before_call = false} : (memref<f32>, memref<f32>) -> ()
+  // CHECK: ml_program.global_load @global_variable
+  %1 = ml_program.global_load @global_variable : tensor<4xi32>
   func.return
 }
 
@@ -227,8 +249,8 @@ func.func @call_recursive() {
   // CHECK: %[[LOAD:.+]] = ml_program.global_load @global_variable
   %0 = ml_program.global_load @global_variable : tensor<4xi32>
 
-  // CHECK: %[[DUMMY:.+]] = "unregistered.dummy"(%[[LOAD]])
-  %1 = "unregistered.dummy"(%0) : (tensor<4xi32>) -> (tensor<4xi32>)
+  // CHECK: %[[DUMMY:.+]] = "test.dummy"(%[[LOAD]])
+  %1 = "test.dummy"(%0) : (tensor<4xi32>) -> (tensor<4xi32>)
 
   // CHECK: ml_program.global_store @global_variable %[[DUMMY]]
   ml_program.global_store @global_variable = %1 : tensor<4xi32>
@@ -237,8 +259,8 @@ func.func @call_recursive() {
   // CHECK: %[[LOAD:.+]] ml_program.global_load @global_variable
   %2 = ml_program.global_load @global_variable : tensor<4xi32>
 
-  // CHECK: %[[DUMMY:.+]] = "unregistered.dummy"(%[[LOAD]])
-  %3 = "unregistered.dummy"(%2) : (tensor<4xi32>) -> (tensor<4xi32>)
+  // CHECK: %[[DUMMY:.+]] = "test.dummy"(%[[LOAD]])
+  %3 = "test.dummy"(%2) : (tensor<4xi32>) -> (tensor<4xi32>)
 
   // CHECK: ml_program.global_store @global_variable %[[DUMMY]]
   ml_program.global_store @global_variable = %3 : tensor<4xi32>

@@ -28,6 +28,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassTimingInfo.h"
 #include "llvm/IR/PrintPasses.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -317,8 +318,7 @@ bool CGPassManager::RefreshCallGraph(const CallGraphSCC &CurSCC, CallGraph &CG,
 
         // If this call site already existed in the callgraph, just verify it
         // matches up to expectations and remove it from Calls.
-        DenseMap<Value *, CallGraphNode *>::iterator ExistingIt =
-            Calls.find(Call);
+        auto ExistingIt = Calls.find(Call);
         if (ExistingIt != Calls.end()) {
           CallGraphNode *ExistingNode = ExistingIt->second;
 
@@ -678,12 +678,12 @@ namespace {
       auto PrintBannerOnce = [&]() {
         if (BannerPrinted)
           return;
-        OS << Banner;
+        OS << Banner << "\n";
         BannerPrinted = true;
       };
 
       bool NeedModule = llvm::forcePrintModuleIR();
-      if (isFunctionInPrintList("*") && NeedModule) {
+      if (shouldPrintAllFunctions() && NeedModule) {
         PrintBannerOnce();
         OS << "\n";
         SCC.getCallGraph().getModule().print(OS, nullptr);
@@ -692,14 +692,14 @@ namespace {
       bool FoundFunction = false;
       for (CallGraphNode *CGN : SCC) {
         if (Function *F = CGN->getFunction()) {
-          if (!F->isDeclaration() && isFunctionInPrintList(F->getName())) {
+          if (!F->isDeclaration() && shouldPrintFunction(*F)) {
             FoundFunction = true;
             if (!NeedModule) {
               PrintBannerOnce();
               F->print(OS);
             }
           }
-        } else if (isFunctionInPrintList("*")) {
+        } else if (shouldPrintAllFunctions()) {
           PrintBannerOnce();
           OS << "\nPrinting <null> Function\n";
         }

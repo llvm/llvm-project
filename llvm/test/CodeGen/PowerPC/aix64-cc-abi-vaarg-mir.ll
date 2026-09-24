@@ -7,23 +7,23 @@ define i32 @int_va_arg(i32 %a, ...) local_unnamed_addr  {
   ; CHECK-NEXT:   liveins: $x3, $x4, $x5, $x6, $x7, $x8, $x9, $x10
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $x11 = ADDI8 %fixed-stack.0, 0
-  ; CHECK-NEXT:   STD killed renamable $x6, 16, %fixed-stack.0 :: (store (s64))
-  ; CHECK-NEXT:   STD killed renamable $x7, 24, %fixed-stack.0 :: (store (s64))
-  ; CHECK-NEXT:   STD killed renamable $x8, 32, %fixed-stack.0 :: (store (s64))
-  ; CHECK-NEXT:   STD killed renamable $x9, 40, %fixed-stack.0 :: (store (s64))
-  ; CHECK-NEXT:   STD killed renamable $x10, 48, %fixed-stack.0 :: (store (s64))
-  ; CHECK-NEXT:   STD renamable $x11, 0, %stack.1.arg2 :: (store (s64) into %ir.arg2)
-  ; CHECK-NEXT:   renamable $x6 = LD 0, %stack.1.arg2 :: (load (s64) from %ir.arg2)
-  ; CHECK-NEXT:   renamable $x7 = disjoint ADDI8 %fixed-stack.0, 4
-  ; CHECK-NEXT:   renamable $r8 = LWZ 0, %fixed-stack.0 :: (load (s32) from %fixed-stack.0, align 8)
-  ; CHECK-NEXT:   renamable $x9 = ADDI8 renamable $x6, 4
   ; CHECK-NEXT:   STD killed renamable $x4, 0, %fixed-stack.0 :: (store (s64) into %fixed-stack.0)
   ; CHECK-NEXT:   STD killed renamable $x5, 8, %fixed-stack.0 :: (store (s64) into %fixed-stack.0 + 8)
+  ; CHECK-NEXT:   STD killed renamable $x6, 16, %fixed-stack.0 :: (store (s64) into %fixed-stack.0 + 16)
+  ; CHECK-NEXT:   STD killed renamable $x7, 24, %fixed-stack.0 :: (store (s64) into %fixed-stack.0 + 24)
+  ; CHECK-NEXT:   STD killed renamable $x8, 32, %fixed-stack.0 :: (store (s64) into %fixed-stack.0 + 32)
+  ; CHECK-NEXT:   STD killed renamable $x9, 40, %fixed-stack.0 :: (store (s64) into %fixed-stack.0 + 40)
+  ; CHECK-NEXT:   STD killed renamable $x10, 48, %fixed-stack.0 :: (store (s64) into %fixed-stack.0 + 48)
+  ; CHECK-NEXT:   STD renamable $x11, 0, %stack.1.arg2 :: (store (s64) into %ir.arg2)
+  ; CHECK-NEXT:   renamable $x4 = LD 0, %stack.1.arg2 :: (load (s64) from %ir.arg2)
+  ; CHECK-NEXT:   renamable $x5 = disjoint ADDI8 %fixed-stack.0, 4
   ; CHECK-NEXT:   STD killed renamable $x11, 0, %stack.0.arg1 :: (store (s64) into %ir.arg1)
-  ; CHECK-NEXT:   STD killed renamable $x7, 0, %stack.0.arg1 :: (store (s64) into %ir.arg1)
-  ; CHECK-NEXT:   STD killed renamable $x9, 0, %stack.1.arg2 :: (store (s64) into %ir.arg2)
-  ; CHECK-NEXT:   renamable $r4 = LWZ 0, killed renamable $x6 :: (load (s32))
-  ; CHECK-NEXT:   renamable $r3 = nsw ADD4 killed renamable $r8, renamable $r3, implicit killed $x3
+  ; CHECK-NEXT:   STD killed renamable $x5, 0, %stack.0.arg1 :: (store (s64) into %ir.arg1)
+  ; CHECK-NEXT:   renamable $r5 = LWZ 0, %fixed-stack.0 :: (load (s32) from %fixed-stack.0, align 8)
+  ; CHECK-NEXT:   renamable $x6 = ADDI8 renamable $x4, 4
+  ; CHECK-NEXT:   STD killed renamable $x6, 0, %stack.1.arg2 :: (store (s64) into %ir.arg2)
+  ; CHECK-NEXT:   renamable $r4 = LWZ 0, killed renamable $x4 :: (load (s32))
+  ; CHECK-NEXT:   renamable $r3 = nsw ADD4 killed renamable $r5, renamable $r3, implicit killed $x3
   ; CHECK-NEXT:   renamable $r4 = RLWINM killed renamable $r4, 1, 0, 30
   ; CHECK-NEXT:   renamable $r3 = nsw ADD4 killed renamable $r3, killed renamable $r4, implicit-def $x3
   ; CHECK-NEXT:   BLR8 implicit $lr8, implicit $rm, implicit $x3
@@ -101,22 +101,22 @@ define double @double_va_arg(double %a, ...) local_unnamed_addr  {
   ; CHECK-NEXT:   liveins: $f1, $x4, $x5, $x6, $x7, $x8, $x9, $x10
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $x3 = ADDI8 %fixed-stack.0, 0
-  ; CHECK-NEXT:   STD killed renamable $x6, 16, %fixed-stack.0 :: (store (s64))
-  ; CHECK-NEXT:   STD killed renamable $x7, 24, %fixed-stack.0 :: (store (s64))
-  ; CHECK-NEXT:   STD killed renamable $x8, 32, %fixed-stack.0 :: (store (s64))
-  ; CHECK-NEXT:   STD killed renamable $x9, 40, %fixed-stack.0 :: (store (s64))
-  ; CHECK-NEXT:   STD killed renamable $x10, 48, %fixed-stack.0 :: (store (s64))
-  ; CHECK-NEXT:   STD renamable $x3, 0, %stack.1.arg2 :: (store (s64) into %ir.arg2)
-  ; CHECK-NEXT:   renamable $x6 = LD 0, %stack.1.arg2 :: (load (s64) from %ir.arg2)
-  ; CHECK-NEXT:   renamable $x7 = ADDI8 %fixed-stack.0, 8
   ; CHECK-NEXT:   STD killed renamable $x4, 0, %fixed-stack.0 :: (store (s64) into %fixed-stack.0)
-  ; CHECK-NEXT:   STD killed renamable $x3, 0, %stack.0.arg1 :: (store (s64) into %ir.arg1)
-  ; CHECK-NEXT:   STD killed renamable $x7, 0, %stack.0.arg1 :: (store (s64) into %ir.arg1)
-  ; CHECK-NEXT:   renamable $f0 = LFD 0, %fixed-stack.0 :: (load (s64))
-  ; CHECK-NEXT:   renamable $x3 = ADDI8 renamable $x6, 8
   ; CHECK-NEXT:   STD killed renamable $x5, 8, %fixed-stack.0 :: (store (s64) into %fixed-stack.0 + 8)
+  ; CHECK-NEXT:   STD killed renamable $x6, 16, %fixed-stack.0 :: (store (s64) into %fixed-stack.0 + 16)
+  ; CHECK-NEXT:   STD killed renamable $x7, 24, %fixed-stack.0 :: (store (s64) into %fixed-stack.0 + 24)
+  ; CHECK-NEXT:   STD killed renamable $x8, 32, %fixed-stack.0 :: (store (s64) into %fixed-stack.0 + 32)
+  ; CHECK-NEXT:   STD killed renamable $x9, 40, %fixed-stack.0 :: (store (s64) into %fixed-stack.0 + 40)
+  ; CHECK-NEXT:   STD killed renamable $x10, 48, %fixed-stack.0 :: (store (s64) into %fixed-stack.0 + 48)
+  ; CHECK-NEXT:   STD renamable $x3, 0, %stack.1.arg2 :: (store (s64) into %ir.arg2)
+  ; CHECK-NEXT:   renamable $x4 = LD 0, %stack.1.arg2 :: (load (s64) from %ir.arg2)
+  ; CHECK-NEXT:   renamable $x5 = ADDI8 %fixed-stack.0, 8
+  ; CHECK-NEXT:   STD killed renamable $x3, 0, %stack.0.arg1 :: (store (s64) into %ir.arg1)
+  ; CHECK-NEXT:   STD killed renamable $x5, 0, %stack.0.arg1 :: (store (s64) into %ir.arg1)
+  ; CHECK-NEXT:   renamable $f0 = LFD 0, %fixed-stack.0 :: (load (s64) from %fixed-stack.0)
+  ; CHECK-NEXT:   renamable $x3 = ADDI8 renamable $x4, 8
   ; CHECK-NEXT:   STD killed renamable $x3, 0, %stack.1.arg2 :: (store (s64) into %ir.arg2)
-  ; CHECK-NEXT:   renamable $f2 = LFD 0, killed renamable $x6 :: (load (s64))
+  ; CHECK-NEXT:   renamable $f2 = LFD 0, killed renamable $x4 :: (load (s64), align 4)
   ; CHECK-NEXT:   renamable $f0 = nofpexcept FADD killed renamable $f0, killed renamable $f1, implicit $rm
   ; CHECK-NEXT:   renamable $f1 = nofpexcept FADD killed renamable $f2, renamable $f2, implicit $rm
   ; CHECK-NEXT:   renamable $f1 = nofpexcept FADD killed renamable $f0, killed renamable $f1, implicit $rm
@@ -145,7 +145,7 @@ define double @double_stack_va_arg(double %one, double %two, double %three, doub
   ; CHECK: bb.0.entry:
   ; CHECK-NEXT:   liveins: $f1, $f2, $f3, $f4, $f5, $f6, $f7, $f8, $f9, $f10, $f11, $f12, $f13
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   renamable $f0 = LFD 0, %fixed-stack.0 :: (load (s64))
+  ; CHECK-NEXT:   renamable $f0 = LFD 0, %fixed-stack.0 :: (load (s64) from %fixed-stack.0)
   ; CHECK-NEXT:   renamable $f1 = nofpexcept FADD killed renamable $f1, killed renamable $f2, implicit $rm
   ; CHECK-NEXT:   renamable $f1 = nofpexcept FADD killed renamable $f1, killed renamable $f3, implicit $rm
   ; CHECK-NEXT:   renamable $f1 = nofpexcept FADD killed renamable $f1, killed renamable $f4, implicit $rm

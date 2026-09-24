@@ -2,7 +2,7 @@
 ! from a common block.
 
 !RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | FileCheck %s
-!RUN: bbc -hlfir -emit-hlfir -fopenmp %s -o - | FileCheck %s
+!RUN: bbc -emit-hlfir -fopenmp %s -o - | FileCheck %s
 
 ! Regression test for a compiler crash
 
@@ -17,7 +17,7 @@ use mmm
 end
 
 
-! CHECK-LABEL:   fir.global common @com1_(dense<0> : vector<28xi8>) {alignment = 8 : i64} : !fir.array<28xi8>
+! CHECK-LABEL:   fir.global common @com1_(dense<0> : vector<28xi8>) <{alignment = 8 : i64}> : !fir.array<28xi8>
 
 ! CHECK-LABEL:   func.func @_QQmain() {
 ! CHECK:           %[[VAL_0:.*]] = fir.address_of(@com1_) : !fir.ref<!fir.array<28xi8>>

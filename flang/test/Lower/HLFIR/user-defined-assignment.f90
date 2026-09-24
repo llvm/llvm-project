@@ -142,11 +142,8 @@ end subroutine
 ! CHECK:          %[[VAL_12:.*]] = hlfir.designate %[[VAL_5]]#0 (%[[VAL_10]])  : (!fir.box<!fir.array<?x!fir.logical<4>>>, index) -> !fir.ref<!fir.logical<4>>
 ! CHECK:          %[[VAL_13:.*]] = fir.load %[[VAL_11]] : !fir.ref<!fir.logical<4>>
 ! CHECK:          %[[VAL_14:.*]] = fir.load %[[VAL_12]] : !fir.ref<!fir.logical<4>>
-! CHECK:          %[[VAL_15:.*]] = fir.convert %[[VAL_13]] : (!fir.logical<4>) -> i1
-! CHECK:          %[[VAL_16:.*]] = fir.convert %[[VAL_14]] : (!fir.logical<4>) -> i1
-! CHECK:          %[[VAL_17:.*]] = arith.cmpi ne, %[[VAL_15]], %[[VAL_16]] : i1
-! CHECK:          %[[VAL_18:.*]] = fir.convert %[[VAL_17]] : (i1) -> !fir.logical<4>
-! CHECK:          hlfir.yield_element %[[VAL_18]] : !fir.logical<4>
+! CHECK:          %[[VAL_15:.*]] = fir.neqv %[[VAL_13]], %[[VAL_14]] : !fir.logical<4>
+! CHECK:          hlfir.yield_element %[[VAL_15]] : !fir.logical<4>
 ! CHECK:        }
 ! CHECK:        hlfir.yield %[[VAL_19:.*]] : !hlfir.expr<?x!fir.logical<4>> cleanup {
 ! CHECK:          hlfir.destroy %[[VAL_19]] : !hlfir.expr<?x!fir.logical<4>>
@@ -314,7 +311,7 @@ end subroutine test_char_get_length
 ! CHECK-SAME:                                       %[[VAL_0:.*]]: !fir.boxchar<1> {fir.bindc_name = "ch"}) {
 ! CHECK:           %[[VAL_1:.*]]:2 = fir.unboxchar %[[VAL_0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 ! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]]#0 typeparams %[[VAL_1]]#1 dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFtest_char_get_lengthEch"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
-! CHECK:           %[[VAL_3:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFtest_char_get_lengthEx"}
+! CHECK:           %[[VAL_3:.*]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFtest_char_get_lengthEx"}>
 ! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]] {uniq_name = "_QFtest_char_get_lengthEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           hlfir.region_assign {
 ! CHECK:             %[[VAL_5:.*]] = fir.address_of(@_QQclX616263) : !fir.ref<!fir.char<1,3>>

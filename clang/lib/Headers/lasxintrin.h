@@ -10,6 +10,8 @@
 #ifndef _LOONGSON_ASXINTRIN_H
 #define _LOONGSON_ASXINTRIN_H 1
 
+#include <lsxintrin.h>
+
 #if defined(__loongarch_asx)
 
 typedef signed char v32i8 __attribute__((vector_size(32), aligned(32)));
@@ -3882,5 +3884,116 @@ extern __inline
 
 #define __lasx_xvrepli_w(/*si10*/ _1) ((__m256i)__builtin_lasx_xvrepli_w((_1)))
 
+#if defined(__loongarch_asx_sx_conv)
+
+extern __inline
+    __attribute__((__gnu_inline__, __always_inline__,
+                   __artificial__)) __m256 __lasx_cast_128_s(__m128 _1) {
+  return (__m256)__builtin_lasx_cast_128_s((v4f32)_1);
+}
+
+extern __inline
+    __attribute__((__gnu_inline__, __always_inline__, __artificial__)) __m256d
+    __lasx_cast_128_d(__m128d _1) {
+  return (__m256d)__builtin_lasx_cast_128_d((v2f64)_1);
+}
+
+extern __inline
+    __attribute__((__gnu_inline__, __always_inline__, __artificial__)) __m256i
+    __lasx_cast_128(__m128i _1) {
+  return (__m256i)__builtin_lasx_cast_128((v2i64)_1);
+}
+
+extern __inline
+    __attribute__((__gnu_inline__, __always_inline__, __artificial__)) __m256
+    __lasx_concat_128_s(__m128 _1, __m128 _2) {
+  return (__m256)__builtin_lasx_concat_128_s((v4f32)_1, (v4f32)_2);
+}
+
+extern __inline
+    __attribute__((__gnu_inline__, __always_inline__, __artificial__)) __m256d
+    __lasx_concat_128_d(__m128d _1, __m128d _2) {
+  return (__m256d)__builtin_lasx_concat_128_d((v2f64)_1, (v2f64)_2);
+}
+
+extern __inline
+    __attribute__((__gnu_inline__, __always_inline__, __artificial__)) __m256i
+    __lasx_concat_128(__m128i _1, __m128i _2) {
+  return (__m256i)__builtin_lasx_concat_128((v2i64)_1, (v2i64)_2);
+}
+
+extern __inline
+    __attribute__((__gnu_inline__, __always_inline__, __artificial__)) __m128
+    __lasx_extract_128_lo_s(__m256 _1) {
+  return (__m128)__builtin_lasx_extract_128_lo_s((v8f32)_1);
+}
+
+extern __inline
+    __attribute__((__gnu_inline__, __always_inline__, __artificial__)) __m128d
+    __lasx_extract_128_lo_d(__m256d _1) {
+  return (__m128d)__builtin_lasx_extract_128_lo_d((v4f64)_1);
+}
+
+extern __inline
+    __attribute__((__gnu_inline__, __always_inline__, __artificial__)) __m128i
+    __lasx_extract_128_lo(__m256i _1) {
+  return (__m128i)__builtin_lasx_extract_128_lo((v4i64)_1);
+}
+
+extern __inline
+    __attribute__((__gnu_inline__, __always_inline__, __artificial__)) __m128
+    __lasx_extract_128_hi_s(__m256 _1) {
+  return (__m128)__builtin_lasx_extract_128_hi_s((v8f32)_1);
+}
+
+extern __inline
+    __attribute__((__gnu_inline__, __always_inline__, __artificial__)) __m128d
+    __lasx_extract_128_hi_d(__m256d _1) {
+  return (__m128d)__builtin_lasx_extract_128_hi_d((v4f64)_1);
+}
+
+extern __inline
+    __attribute__((__gnu_inline__, __always_inline__, __artificial__)) __m128i
+    __lasx_extract_128_hi(__m256i _1) {
+  return (__m128i)__builtin_lasx_extract_128_hi((v4i64)_1);
+}
+
+extern __inline
+    __attribute__((__gnu_inline__, __always_inline__, __artificial__)) __m256
+    __lasx_insert_128_lo_s(__m256 _1, __m128 _2) {
+  return (__m256)__builtin_lasx_insert_128_lo_s((v8f32)_1, (v4f32)_2);
+}
+
+extern __inline
+    __attribute__((__gnu_inline__, __always_inline__, __artificial__)) __m256d
+    __lasx_insert_128_lo_d(__m256d _1, __m128d _2) {
+  return (__m256d)__builtin_lasx_insert_128_lo_d((v4f64)_1, (v2f64)_2);
+}
+
+extern __inline
+    __attribute__((__gnu_inline__, __always_inline__, __artificial__)) __m256i
+    __lasx_insert_128_lo(__m256i _1, __m128i _2) {
+  return (__m256i)__builtin_lasx_insert_128_lo((v4i64)_1, (v2i64)_2);
+}
+
+extern __inline
+    __attribute__((__gnu_inline__, __always_inline__, __artificial__)) __m256
+    __lasx_insert_128_hi_s(__m256 _1, __m128 _2) {
+  return (__m256)__builtin_lasx_insert_128_hi_s((v8f32)_1, (v4f32)_2);
+}
+
+extern __inline
+    __attribute__((__gnu_inline__, __always_inline__, __artificial__)) __m256d
+    __lasx_insert_128_hi_d(__m256d _1, __m128d _2) {
+  return (__m256d)__builtin_lasx_insert_128_hi_d((v4f64)_1, (v2f64)_2);
+}
+
+extern __inline
+    __attribute__((__gnu_inline__, __always_inline__, __artificial__)) __m256i
+    __lasx_insert_128_hi(__m256i _1, __m128i _2) {
+  return (__m256i)__builtin_lasx_insert_128_hi((v4i64)_1, (v2i64)_2);
+}
+
+#endif /* defined(__loongarch_asx_sx_conv).  */
 #endif /* defined(__loongarch_asx).  */
 #endif /* _LOONGSON_ASXINTRIN_H.  */

@@ -1,8 +1,11 @@
 ! Tests for 2.9.3.1 Simd
 
 ! The "if" clause was added to the "simd" directive in OpenMP 5.0.
-! RUN: %flang_fc1 -flang-experimental-hlfir -emit-hlfir -fopenmp -fopenmp-version=50 %s -o - | FileCheck %s
-! RUN: bbc -hlfir -emit-hlfir -fopenmp -fopenmp-version=50 %s -o - | FileCheck %s
+
+! To prevent testing for unrelated clauses like implicit linear clause and focusing on the
+! clauses of interest here, the OpenMP version is 6.0
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=60 %s -o - | FileCheck %s
+! RUN: bbc -emit-hlfir -fopenmp -fopenmp-version=60 %s -o - | FileCheck %s
 
 !CHECK: omp.declare_reduction @[[REDUCER:.*]] : i32
 
@@ -213,7 +216,7 @@ subroutine simdloop_aligned_allocatable()
   integer :: i
   integer, allocatable :: A(:)
   allocate(A(10))
-!CHECK: %[[A_PTR:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> {bindc_name = "a",
+!CHECK: %[[A_PTR:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> <{bindc_name = "a",
 !CHECK-SAME: uniq_name = "_QFsimdloop_aligned_allocatableEa"}
 !CHECK: %[[A_DECL:.*]]:2 = hlfir.declare %[[A_PTR]] {fortran_attrs = #fir.var_attrs<allocatable>,
 !CHECK-SAME: uniq_name = "_QFsimdloop_aligned_allocatableEa"} :
@@ -230,7 +233,7 @@ subroutine aligned_non_power_of_two()
   integer :: i
   integer, allocatable :: A(:)
   allocate(A(10))
-!CHECK: %[[A_PTR:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> {bindc_name = "a",
+!CHECK: %[[A_PTR:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> <{bindc_name = "a",
 !CHECK-SAME: uniq_name = "_QFaligned_non_power_of_twoEa"}
 !CHECK: %[[A_DECL:.*]]:2 = hlfir.declare %[[A_PTR]] {fortran_attrs = #fir.var_attrs<allocatable>,
 !CHECK-SAME: uniq_name = "_QFaligned_non_power_of_twoEa"} :
@@ -264,13 +267,13 @@ end subroutine
 !CHECK-LABEL: func.func @_QPlastprivate_with_simd() {
 subroutine lastprivate_with_simd
 
-!CHECK: %[[VAR_SUM:.*]] = fir.alloca f32 {bindc_name = "sum", uniq_name = "_QFlastprivate_with_simdEsum"}
+!CHECK: %[[VAR_SUM:.*]] = fir.alloca f32 <{bindc_name = "sum", uniq_name = "_QFlastprivate_with_simdEsum"}>
 !CHECK: %[[VAR_SUM_DECLARE:.*]]:2 = hlfir.declare %[[VAR_SUM]] {{.*}}
   implicit none
   integer :: i
   real :: sum
 
-  
+
 !CHECK: omp.simd private(@_QFlastprivate_with_simdEsum_private_f32 %[[VAR_SUM_DECLARE]]#0 -> %[[VAR_SUM_PINNED:.*]], @{{.*}}) {
 !CHECK: omp.loop_nest (%[[ARG:.*]]) : i32 = ({{.*}} to ({{.*}}) inclusive step ({{.*}}) {
 !CHECK: %[[VAR_SUM_PINNED_DECLARE:.*]]:2 = hlfir.declare %[[VAR_SUM_PINNED]] {{.*}}

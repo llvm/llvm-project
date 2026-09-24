@@ -19,7 +19,7 @@
 #define CSTR(S) MAKE_CSTRING(CharT, S)
 
 template <class CharT>
-static void BM_formatted_size_string(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void BM_formatted_size_string(benchmark::State& state) {
   size_t size = state.range(0);
   std::basic_string<CharT> str(size, CharT('*'));
 
@@ -28,9 +28,9 @@ static void BM_formatted_size_string(benchmark::State& state) {
 
   state.SetBytesProcessed(state.iterations() * size * sizeof(CharT));
 }
-BENCHMARK(BM_formatted_size_string<char>)->RangeMultiplier(2)->Range(1, 1 << 20);
+BENCHMARK(BM_formatted_size_string<char>)->Arg(1)->Arg(16384)->Arg(1048576);
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-BENCHMARK(BM_formatted_size_string<wchar_t>)->RangeMultiplier(2)->Range(1, 1 << 20);
+BENCHMARK(BM_formatted_size_string<wchar_t>)->Arg(1)->Arg(16384)->Arg(1048576);
 #endif
 
 BENCHMARK_MAIN();

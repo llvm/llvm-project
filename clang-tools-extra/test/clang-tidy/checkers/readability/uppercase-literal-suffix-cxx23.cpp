@@ -4,7 +4,7 @@
 //    3. Deleting this message.
 // These suffixes may be relevant to C too: https://github.com/llvm/llvm-project/issues/97335
 
-// RUN: %check_clang_tidy -std=c++23-or-later %s readability-uppercase-literal-suffix %t -- -- -target aarch64-linux-gnu -I %clang_tidy_headers
+// RUN: %check_clang_tidy -std=c++23-or-later %s readability-uppercase-literal-suffix %t -- -- -target aarch64-linux-gnu
 
 #include "integral_constant.h"
 #include <cstddef>

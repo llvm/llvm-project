@@ -8,11 +8,13 @@ add_distinct_clang_unittest(SemaTests
   HeuristicResolverTest.cpp
   GslOwnerPointerInference.cpp
   SemaLookupTest.cpp
+  SemaModuleTest.cpp
   SemaNoloadLookupTest.cpp
   CLANG_LIBS
   clangAST
   clangASTMatchers
   clangBasic
+  clangDriver
   clangFrontend
   clangParse
   clangSema

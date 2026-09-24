@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Affine/Passes.h"
+#include "mlir/Dialect/Affine/Transforms/Passes.h"
 
 #include "mlir/Dialect/Affine/Analysis/AffineAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/AffineStructures.h"
@@ -27,7 +27,7 @@
 namespace mlir {
 namespace affine {
 #define GEN_PASS_DEF_AFFINELOOPTILING
-#include "mlir/Dialect/Affine/Passes.h.inc"
+#include "mlir/Dialect/Affine/Transforms/Passes.h.inc"
 } // namespace affine
 } // namespace mlir
 
@@ -91,12 +91,13 @@ static void adjustToDivisorsOfTripCounts(ArrayRef<AffineForOp> band,
   assert(band.size() == tileSizes->size() && "invalid tile size count");
   for (unsigned i = 0, e = band.size(); i < e; i++) {
     unsigned &tSizeAdjusted = (*tileSizes)[i];
-    std::optional<uint64_t> mayConst = getConstantTripCount(band[i]);
+    AffineForOp forOp = band[i];
+    std::optional<APInt> mayConst = forOp.getStaticTripCount();
     if (!mayConst)
       continue;
     // Adjust the tile size to largest factor of the trip count less than
     // tSize.
-    uint64_t constTripCount = *mayConst;
+    uint64_t constTripCount = mayConst->getZExtValue();
     if (constTripCount > 1 && tSizeAdjusted > constTripCount / 2)
       tSizeAdjusted = constTripCount / 2;
     while (constTripCount % tSizeAdjusted != 0)

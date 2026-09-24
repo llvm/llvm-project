@@ -66,6 +66,53 @@ define <16 x i8> @test_v16i8_nosignbit(<16 x i8> %a, <16 x i8> %b) {
   ret <16 x i8> %4
 }
 
+define <16 x i8> @test_v16i8_knownnegative(<16 x i8> %a, <16 x i8> %b) {
+; SSE2-LABEL: test_v16i8_knownnegative:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128]
+; SSE2-NEXT:    por %xmm2, %xmm0
+; SSE2-NEXT:    por %xmm1, %xmm2
+; SSE2-NEXT:    pminub %xmm2, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: test_v16i8_knownnegative:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128]
+; SSE41-NEXT:    por %xmm2, %xmm0
+; SSE41-NEXT:    por %xmm1, %xmm2
+; SSE41-NEXT:    pminsb %xmm2, %xmm0
+; SSE41-NEXT:    retq
+;
+; SSE42-LABEL: test_v16i8_knownnegative:
+; SSE42:       # %bb.0:
+; SSE42-NEXT:    movdqa {{.*#+}} xmm2 = [128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128]
+; SSE42-NEXT:    por %xmm2, %xmm0
+; SSE42-NEXT:    por %xmm1, %xmm2
+; SSE42-NEXT:    pminsb %xmm2, %xmm0
+; SSE42-NEXT:    retq
+;
+; AVX1-LABEL: test_v16i8_knownnegative:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128]
+; AVX1-NEXT:    vpor %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpor %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpminsb %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: test_v16i8_knownnegative:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpbroadcastb {{.*#+}} xmm2 = [128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128]
+; AVX2-NEXT:    vpor %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    vpor %xmm2, %xmm1, %xmm1
+; AVX2-NEXT:    vpminsb %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    retq
+  %1 = or <16 x i8> %a, <i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128>
+  %2 = or <16 x i8> %b, <i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128>
+  %3 = icmp slt <16 x i8> %1, %2
+  %4 = select <16 x i1> %3, <16 x i8> %1, <16 x i8> %2
+  ret <16 x i8> %4
+}
+
 define <16 x i8> @test_v16i8_reassociation(<16 x i8> %a) {
 ; SSE2-LABEL: test_v16i8_reassociation:
 ; SSE2:       # %bb.0:
@@ -99,16 +146,13 @@ define <16 x i8> @test_v16i8_reassociation(<16 x i8> %a) {
 define <16 x i8> @test_v16i8_demandedbits(<16 x i8> %x, <16 x i8> %y, <16 x i8> %a, <16 x i8> %b) {
 ; SSE2-LABEL: test_v16i8_demandedbits:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa %xmm1, %xmm4
-; SSE2-NEXT:    pcmpgtb %xmm0, %xmm4
-; SSE2-NEXT:    pand %xmm4, %xmm0
-; SSE2-NEXT:    pandn %xmm1, %xmm4
-; SSE2-NEXT:    por %xmm0, %xmm4
-; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:    pcmpgtb %xmm4, %xmm0
-; SSE2-NEXT:    pand %xmm0, %xmm3
-; SSE2-NEXT:    pandn %xmm2, %xmm0
-; SSE2-NEXT:    por %xmm3, %xmm0
+; SSE2-NEXT:    por %xmm1, %xmm0
+; SSE2-NEXT:    pxor %xmm1, %xmm1
+; SSE2-NEXT:    pcmpgtb %xmm0, %xmm1
+; SSE2-NEXT:    pand %xmm1, %xmm3
+; SSE2-NEXT:    pandn %xmm2, %xmm1
+; SSE2-NEXT:    por %xmm3, %xmm1
+; SSE2-NEXT:    movdqa %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: test_v16i8_demandedbits:
@@ -141,7 +185,7 @@ define <16 x i8> @test_v16i8_demandedbits(<16 x i8> %x, <16 x i8> %y, <16 x i8> 
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    # kill: def $xmm3 killed $xmm3 def $zmm3
 ; AVX512BW-NEXT:    # kill: def $xmm2 killed $xmm2 def $zmm2
-; AVX512BW-NEXT:    vpminsb %xmm1, %xmm0, %xmm0
+; AVX512BW-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX512BW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512BW-NEXT:    vpcmpnltb %zmm1, %zmm0, %k1
 ; AVX512BW-NEXT:    vpblendmb %zmm2, %zmm3, %zmm0 {%k1}
@@ -154,5 +198,37 @@ define <16 x i8> @test_v16i8_demandedbits(<16 x i8> %x, <16 x i8> %y, <16 x i8> 
   ret <16 x i8> %res
 }
 
-declare i8 @llvm.smin.i8(i8, i8)
-declare <16 x i8> @llvm.smin.v16i8(<16 x i8>, <16 x i8>)
+; smin(X, 0) -> and(X, ashr(X, BW-1)): saves a byte vs compare+cmov on x86-64.
+define i32 @smin_zero_i32(i32 %x) {
+; CHECK-LABEL: smin_zero_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    sarl $31, %eax
+; CHECK-NEXT:    andl %edi, %eax
+; CHECK-NEXT:    retq
+  %r = call i32 @llvm.smin.i32(i32 %x, i32 0)
+  ret i32 %r
+}
+
+define i64 @smin_zero_i64(i64 %x) {
+; CHECK-LABEL: smin_zero_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    sarq $63, %rax
+; CHECK-NEXT:    andq %rdi, %rax
+; CHECK-NEXT:    retq
+  %r = call i64 @llvm.smin.i64(i64 %x, i64 0)
+  ret i64 %r
+}
+
+; smin(X, -1) should NOT transform -- no 2-instruction bitwise form exists.
+define i32 @smin_allones_i32(i32 %x) {
+; CHECK-LABEL: smin_allones_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cmpl $-1, %edi
+; CHECK-NEXT:    movl $-1, %eax
+; CHECK-NEXT:    cmovll %edi, %eax
+; CHECK-NEXT:    retq
+  %r = call i32 @llvm.smin.i32(i32 %x, i32 -1)
+  ret i32 %r
+}

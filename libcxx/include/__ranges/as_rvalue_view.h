@@ -48,27 +48,27 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI constexpr explicit as_rvalue_view(_View __base) : __base_(std::move(__base)) {}
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _View base() const&
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _View base() const&
     requires copy_constructible<_View>
   {
     return __base_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _View base() && { return std::move(__base_); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _View base() && { return std::move(__base_); }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto begin()
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto begin()
     requires(!__simple_view<_View>)
   {
     return move_iterator(ranges::begin(__base_));
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto begin() const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto begin() const
     requires range<const _View>
   {
     return move_iterator(ranges::begin(__base_));
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto end()
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto end()
     requires(!__simple_view<_View>)
   {
     if constexpr (common_range<_View>) {
@@ -78,7 +78,7 @@ public:
     }
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto end() const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto end() const
     requires range<const _View>
   {
     if constexpr (common_range<const _View>) {
@@ -88,13 +88,13 @@ public:
     }
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto size()
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto size()
     requires sized_range<_View>
   {
     return ranges::size(__base_);
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto size() const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto size() const
     requires sized_range<const _View>
   {
     return ranges::size(__base_);

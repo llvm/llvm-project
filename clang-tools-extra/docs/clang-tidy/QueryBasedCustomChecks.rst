@@ -28,7 +28,8 @@ Configuration
   - Diagnostic: list of diagnostics to be reported.
     - BindName: name of the node to be bound in `Query`.
     - Message: message to be reported.
-    - Level: severity of the diagnostic, the possible values are `Note`, `Warning`.
+    - Level: severity of the diagnostic, the possible values are
+    `Note`, `Warning`.
 
 `CustomChecks` can be configured by `Checks` option in the configuration file.
 
@@ -61,6 +62,25 @@ Example
   void bar() {
     main(); // warning: call to main function. [custom-call-main-function]
   }
+
+Using with clangd
+=================
+
+To enable query-based custom checks in clangd, add the following to the clangd
+configuration:
+
+.. code-block:: yaml
+
+  Diagnostics:
+    ClangTidy:
+      ExperimentalCustomChecks: true
+      FastCheckFilter: Loose
+
+The custom-check definitions and check selection remain part of the clang-tidy
+configuration. `ExperimentalCustomChecks` does not override clangd's
+`FastCheckFilter`. Because custom checks are not present in clangd's
+fast-check database, `Strict` excludes them, while `Loose` and `None`
+allow them.
 
 Matters Need Attention
 ======================

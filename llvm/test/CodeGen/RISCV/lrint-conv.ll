@@ -5,14 +5,25 @@
 ; RUN: sed 's/ITy/i32/g' %s | llc -mtriple=riscv64 | FileCheck %s --check-prefixes=RV64
 ; RUN: sed 's/ITy/i64/g' %s | llc -mtriple=riscv64 | FileCheck %s --check-prefixes=RV64
 
-; FIXME: crash
-; define ITy @test_lrint_ixx_f16(half %x) nounwind {
-;   %res = tail call ITy @llvm.lrint.ITy.f16(half %x)
-; }
+define ITy @test_lrint_ixx_f16(half %x) nounwind {
+; RV32-LABEL: test_lrint_ixx_f16:
+; RV32:         call lrintf
+;
+; RV64-LABEL: test_lrint_ixx_f16:
+; RV64:         call lrintf
+  %res = tail call ITy @llvm.lrint.ITy.f16(half %x)
+  ret ITy %res
+}
 
-; define ITy @test_llrint_ixx_f16(half %x) nounwind {
-;   %res = tail call ITy @llvm.llrint.ITy.f16(half %x)
-; }
+define ITy @test_llrint_ixx_f16(half %x) nounwind {
+; RV32-LABEL: test_llrint_ixx_f16:
+; RV32:         call llrintf
+;
+; RV64-LABEL: test_llrint_ixx_f16:
+; RV64:         call llrintf
+  %res = tail call ITy @llvm.llrint.ITy.f16(half %x)
+  ret ITy %res
+}
 
 define ITy @test_lrint_ixx_f32(float %x) nounwind {
 ; RV32-LABEL: test_lrint_ixx_f32:

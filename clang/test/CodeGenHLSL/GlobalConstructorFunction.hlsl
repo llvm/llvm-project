@@ -24,22 +24,23 @@ void main(unsigned GI : SV_GroupIndex) {}
 
 // CHECK: define void @main()
 // CHECK-NEXT: entry:
+// INLINE-NEXT:   alloca
+// CHECK: %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // Verify function constructors are emitted
 // NOINLINE-NEXT:   call void @_Z13call_me_firstv()
 // NOINLINE-NEXT:   call void @_Z12then_call_mev()
 // NOINLINE-NEXT:   call void @_GLOBAL__sub_I_GlobalConstructorFunction.hlsl()
-// NOINLINE-NEXT:   %0 = call i32 @llvm.dx.flattened.thread.id.in.group()
-// NOINLINE-NEXT:   call void @_Z4mainj(i32 %0)
+// NOINLINE-NEXT:   %[[#THREAD_ID:]] = call i32 @llvm.dx.flattened.thread.id.in.group()
+// NOINLINE-NEXT:   call void @_Z4mainj(i32 %[[#THREAD_ID]])
 // NOINLINE-NEXT:   call void @_Z12call_me_lastv(
 // NOINLINE-NEXT:   ret void
 
 // Verify constructor calls are inlined when AlwaysInline is run
-// INLINE-NEXT:   alloca
 // INLINE-NEXT:   store i32 12
 // INLINE-NEXT:   store i32 13
 // INLINE-NEXT:   %[[HANDLE:.*]] = call target("dx.CBuffer", %"__cblayout_$Globals") @"llvm.dx.resource.handlefromimplicitbinding.tdx.CBuffer_s___cblayout_$Globalsst"(i32 0, i32 0, i32 1, i32 0, ptr @"$Globals.str")
 // INLINE-NEXT:   store target("dx.CBuffer", %"__cblayout_$Globals") %[[HANDLE]], ptr @"$Globals.cb", align 4
-// INLINE-NEXT:   %0 = call i32 @llvm.dx.flattened.thread.id.in.group()
-// INLINE-NEXT:   store i32 %
+// INLINE-NEXT:   %[[#THREAD_ID:]] = call i32 @llvm.dx.flattened.thread.id.in.group()
+// INLINE-NEXT:   store i32 %[[#THREAD_ID]]
 // INLINE-NEXT:   store i32 0
 // INLINE:   ret void

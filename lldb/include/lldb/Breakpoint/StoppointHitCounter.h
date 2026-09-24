@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_BREAKPOINT_STOPPOINT_HIT_COUNTER_H
-#define LLDB_BREAKPOINT_STOPPOINT_HIT_COUNTER_H
+#ifndef LLDB_BREAKPOINT_STOPPOINTHITCOUNTER_H
+#define LLDB_BREAKPOINT_STOPPOINTHITCOUNTER_H
 
 #include <cassert>
 #include <cstdint>
@@ -40,4 +40,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_BREAKPOINT_STOPPOINT_HIT_COUNTER_H
+#endif // LLDB_BREAKPOINT_STOPPOINTHITCOUNTER_H

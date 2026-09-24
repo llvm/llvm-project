@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "HeaderGuard.h"
+#include "../utils/FileExtensionsUtils.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
@@ -48,8 +49,8 @@ public:
       return;
 
     // Record #ifndefs that succeeded. We also need the Location of the Name.
-    Ifndefs[MacroNameTok.getIdentifierInfo()] =
-        std::make_pair(Loc, MacroNameTok.getLocation());
+    Ifndefs[MacroNameTok.getIdentifierInfo()] = {Loc,
+                                                 MacroNameTok.getLocation()};
   }
 
   void MacroDefined(const Token &MacroNameTok,
@@ -238,16 +239,21 @@ public:
       if (SeenMacro)
         continue;
 
+      const StringRef LineEnding = SM.getBufferData(FID).detectEOL();
+
       Check->diag(StartLoc, "header is missing header guard")
           << FixItHint::CreateInsertion(
-                 StartLoc,
-                 (Twine("#ifndef ") + CPPVar + "\n#define " + CPPVar + "\n\n")
-                     .str())
+                 StartLoc, (Twine("#ifndef ") + CPPVar + LineEnding +
+                            "#define " + CPPVar + LineEnding + LineEnding)
+                               .str())
           << FixItHint::CreateInsertion(
                  SM.getLocForEndOfFile(FID),
-                 Check->shouldSuggestEndifComment(FileName)
-                     ? "\n#" + Check->formatEndIf(CPPVar) + "\n"
-                     : "\n#endif\n");
+                 (Twine(LineEnding) + "#" +
+                  (Check->shouldSuggestEndifComment(FileName)
+                       ? Check->formatEndIf(CPPVar)
+                       : "endif") +
+                  LineEnding)
+                     .str());
     }
   }
 
@@ -261,9 +267,10 @@ private:
 
   std::vector<std::pair<Token, const MacroInfo *>> Macros;
   llvm::StringMap<const FileEntry *> Files;
-  std::map<const IdentifierInfo *, std::pair<SourceLocation, SourceLocation>>
+  llvm::DenseMap<const IdentifierInfo *,
+                 std::pair<SourceLocation, SourceLocation>>
       Ifndefs;
-  std::map<SourceLocation, SourceLocation> EndIfs;
+  llvm::DenseMap<SourceLocation, SourceLocation> EndIfs;
 
   Preprocessor *PP;
   HeaderGuardCheck *Check;
@@ -282,16 +289,17 @@ std::string HeaderGuardCheck::sanitizeHeaderGuard(StringRef Guard) {
 }
 
 bool HeaderGuardCheck::shouldSuggestEndifComment(StringRef FileName) {
-  return utils::isFileExtension(FileName, HeaderFileExtensions);
+  return utils::isFileExtension(FileName, getHeaderFileExtensions());
 }
 
 bool HeaderGuardCheck::shouldFixHeaderGuard(StringRef FileName) { return true; }
 
 bool HeaderGuardCheck::shouldSuggestToAddHeaderGuard(StringRef FileName) {
-  return utils::isFileExtension(FileName, HeaderFileExtensions);
+  return utils::isFileExtension(FileName, getHeaderFileExtensions());
 }
 
 std::string HeaderGuardCheck::formatEndIf(StringRef HeaderGuard) {
   return "endif // " + HeaderGuard.str();
 }
+
 } // namespace clang::tidy::utils

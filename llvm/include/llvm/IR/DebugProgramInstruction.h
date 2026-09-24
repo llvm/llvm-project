@@ -47,6 +47,7 @@
 #ifndef LLVM_IR_DEBUGPROGRAMINSTRUCTION_H
 #define LLVM_IR_DEBUGPROGRAMINSTRUCTION_H
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/ADT/iterator.h"
@@ -189,9 +190,11 @@ public:
   LLVM_ABI LLVMContext &getContext();
   LLVM_ABI const LLVMContext &getContext() const;
 
+  LLVM_ABI Instruction *getInstruction();
   LLVM_ABI const Instruction *getInstruction() const;
-  LLVM_ABI const BasicBlock *getParent() const;
+
   LLVM_ABI BasicBlock *getParent();
+  LLVM_ABI const BasicBlock *getParent() const;
 
   LLVM_ABI void removeFromParent();
   LLVM_ABI void eraseFromParent();
@@ -240,7 +243,7 @@ class DbgLabelRecord : public DbgRecord {
   /// This constructor intentionally left private, so that it is only called via
   /// "createUnresolvedDbgLabelRecord", which clearly expresses that it is for
   /// parsing only.
-  DbgLabelRecord(MDNode *Label, MDNode *DL);
+  DbgLabelRecord(MDNode *Label);
 
 public:
   LLVM_ABI DbgLabelRecord(DILabel *Label, DebugLoc DL);
@@ -249,8 +252,7 @@ public:
   /// MDNodes. Trying to access the resulting DbgLabelRecord's fields before
   /// they are resolved, or if they resolve to the wrong type, will result in a
   /// crash.
-  LLVM_ABI static DbgLabelRecord *createUnresolvedDbgLabelRecord(MDNode *Label,
-                                                                 MDNode *DL);
+  LLVM_ABI static DbgLabelRecord *createUnresolvedDbgLabelRecord(MDNode *Label);
 
   LLVM_ABI DbgLabelRecord *clone() const;
   LLVM_ABI void print(raw_ostream &O, bool IsForDebug = false) const;
@@ -261,7 +263,7 @@ public:
 
   void setLabel(DILabel *NewLabel) { Label = NewLabel; }
   DILabel *getLabel() const { return Label.get(); }
-  MDNode *getRawLabel() const { return Label.getAsMDNode(); };
+  MDNode *getRawLabel() const { return Label.getAsMDNode(); }
 
   /// Support type inquiry through isa, cast, and dyn_cast.
   static bool classof(const DbgRecord *E) {
@@ -282,6 +284,7 @@ public:
     Declare,
     Value,
     Assign,
+    DeclareValue,
 
     End, ///< Marks the end of the concrete types.
     Any, ///< To indicate all LocationTypes in searches.
@@ -322,7 +325,7 @@ private:
   /// depending on which Type is passed.
   DbgVariableRecord(LocationType Type, Metadata *Val, MDNode *Variable,
                     MDNode *Expression, MDNode *AssignID, Metadata *Address,
-                    MDNode *AddressExpression, MDNode *DI);
+                    MDNode *AddressExpression);
 
 public:
   /// Used to create DbgVariableRecords during parsing, where some metadata
@@ -332,11 +335,9 @@ public:
   /// for all types of DbgVariableRecords for simplicity while parsing, but
   /// asserts if any necessary fields are empty or unused fields are not empty,
   /// i.e. if the #dbg_assign fields are used for a non-dbg-assign type.
-  LLVM_ABI static DbgVariableRecord *
-  createUnresolvedDbgVariableRecord(LocationType Type, Metadata *Val,
-                                    MDNode *Variable, MDNode *Expression,
-                                    MDNode *AssignID, Metadata *Address,
-                                    MDNode *AddressExpression, MDNode *DI);
+  LLVM_ABI static DbgVariableRecord *createUnresolvedDbgVariableRecord(
+      LocationType Type, Metadata *Val, MDNode *Variable, MDNode *Expression,
+      MDNode *AssignID, Metadata *Address, MDNode *AddressExpression);
 
   LLVM_ABI static DbgVariableRecord *
   createDVRAssign(Value *Val, DILocalVariable *Variable,
@@ -364,6 +365,13 @@ public:
   createDVRDeclare(Value *Address, DILocalVariable *DV, DIExpression *Expr,
                    const DILocation *DI, DbgVariableRecord &InsertBefore);
 
+  LLVM_ABI static DbgVariableRecord *
+  createDVRDeclareValue(Value *Address, DILocalVariable *DV, DIExpression *Expr,
+                        const DILocation *DI);
+  LLVM_ABI static DbgVariableRecord *
+  createDVRDeclareValue(Value *Address, DILocalVariable *DV, DIExpression *Expr,
+                        const DILocation *DI, DbgVariableRecord &InsertBefore);
+
   /// Iterator for ValueAsMetadata that internally uses direct pointer iteration
   /// over either a ValueAsMetadata* or a ValueAsMetadata**, dereferencing to the
   /// ValueAsMetadata .
@@ -389,7 +397,7 @@ public:
                                  ? cast<ValueAsMetadata *>(I)
                                  : *cast<ValueAsMetadata **>(I);
       return VAM->getValue();
-    };
+    }
     Value *operator*() {
       ValueAsMetadata *VAM = isa<ValueAsMetadata *>(I)
                                  ? cast<ValueAsMetadata *>(I)
@@ -414,6 +422,7 @@ public:
 
   bool isDbgDeclare() const { return Type == LocationType::Declare; }
   bool isDbgValue() const { return Type == LocationType::Value; }
+  bool isDbgDeclareValue() const { return Type == LocationType::DeclareValue; }
 
   /// Get the locations corresponding to the variable referenced by the debug
   /// info intrinsic.  Depending on the intrinsic, this could be the
@@ -439,12 +448,16 @@ public:
   bool hasValidLocation() const { return getVariableLocationOp(0) != nullptr; }
 
   /// Does this describe the address of a local variable. True for dbg.addr
-  /// and dbg.declare, but not dbg.value, which describes its value.
+  /// and dbg.declare, but not dbg.value or dbg.declare_value, which describes
+  /// its value.
   bool isAddressOfVariable() const { return Type == LocationType::Declare; }
 
   /// Determine if this describes the value of a local variable. It is false for
-  /// dbg.declare, but true for dbg.value, which describes its value.
-  bool isValueOfVariable() const { return Type == LocationType::Value; }
+  /// dbg.declare, but true for dbg.value and dbg.declare_value, which describes
+  /// its value.
+  bool isValueOfVariable() const {
+    return Type == LocationType::Value || Type == LocationType::DeclareValue;
+  }
 
   LocationType getType() const { return Type; }
 
@@ -452,7 +465,7 @@ public:
   LLVM_ABI bool isKillLocation() const;
 
   void setVariable(DILocalVariable *NewVar) { Variable = NewVar; }
-  DILocalVariable *getVariable() const { return Variable.get(); };
+  DILocalVariable *getVariable() const { return Variable.get(); }
   MDNode *getRawVariable() const { return Variable.getAsMDNode(); }
 
   void setExpression(DIExpression *NewExpr) { Expression = NewExpr; }
@@ -515,7 +528,7 @@ public:
   Metadata *getRawAddress() const {
     return isDbgAssign() ? DebugValues[1] : DebugValues[0];
   }
-  Metadata *getRawAssignID() const { return DebugValues[2]; }
+  Metadata *getRawAssignID() const { return DebugValues[AssignIDIdx]; }
   LLVM_ABI DIAssignID *getAssignID() const;
   DIExpression *getAddressExpression() const { return AddressExpression.get(); }
   MDNode *getRawAddressExpression() const {
@@ -543,10 +556,6 @@ public:
   LLVM_ABI DbgVariableIntrinsic *
   createDebugIntrinsic(Module *M, Instruction *InsertBefore) const;
 
-  /// Handle changes to the location of the Value(s) that we refer to happening
-  /// "under our feet".
-  LLVM_ABI void handleChangedLocation(Metadata *NewLocation);
-
   LLVM_ABI void print(raw_ostream &O, bool IsForDebug = false) const;
   LLVM_ABI void print(raw_ostream &ROS, ModuleSlotTracker &MST,
                       bool IsForDebug) const;
@@ -560,10 +569,7 @@ public:
 /// Filter the DbgRecord range to DbgVariableRecord types only and downcast.
 static inline auto
 filterDbgVars(iterator_range<simple_ilist<DbgRecord>::iterator> R) {
-  return map_range(
-      make_filter_range(R,
-                        [](DbgRecord &E) { return isa<DbgVariableRecord>(E); }),
-      [](DbgRecord &E) { return std::ref(cast<DbgVariableRecord>(E)); });
+  return make_isa_range<DbgVariableRecord>(R);
 }
 
 /// Per-instruction record of debug-info. If an Instruction is the position of

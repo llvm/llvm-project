@@ -19,12 +19,14 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/VectorInterfaces.h"
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 
 #define DEBUG_TYPE "vector-transfer-split"
 
@@ -211,8 +213,8 @@ createSubViewIntersection(RewriterBase &b, VectorTransferOpInterface xferOp,
     sizes.push_back(affineMin);
   });
 
-  SmallVector<OpFoldResult> srcIndices = llvm::to_vector<4>(llvm::map_range(
-      xferOp.getIndices(), [](Value idx) -> OpFoldResult { return idx; }));
+  SmallVector<OpFoldResult> srcIndices = llvm::map_to_vector<4>(
+      xferOp.getIndices(), [](Value idx) -> OpFoldResult { return idx; });
   SmallVector<OpFoldResult> destIndices(memrefRank, b.getIndexAttr(0));
   SmallVector<OpFoldResult> strides(memrefRank, b.getIndexAttr(1));
   auto copySrc = memref::SubViewOp::create(
@@ -516,7 +518,8 @@ LogicalResult mlir::vector::splitFullAndPartialTransfer(
   auto inBoundsAttr = b.getBoolArrayAttr(bools);
   if (options.vectorTransferSplit == VectorTransferSplit::ForceInBounds) {
     b.modifyOpInPlace(xferOp, [&]() {
-      xferOp->setAttr(xferOp.getInBoundsAttrName(), inBoundsAttr);
+      xferOp->setInherentAttr(b.getStringAttr(xferOp.getInBoundsAttrName()),
+                              inBoundsAttr);
     });
     return success();
   }
@@ -589,7 +592,8 @@ LogicalResult mlir::vector::splitFullAndPartialTransfer(
       xferReadOp.setOperand(i, fullPartialIfOp.getResult(i));
 
     b.modifyOpInPlace(xferOp, [&]() {
-      xferOp->setAttr(xferOp.getInBoundsAttrName(), inBoundsAttr);
+      xferOp->setInherentAttr(b.getStringAttr(xferOp.getInBoundsAttrName()),
+                              inBoundsAttr);
     });
 
     return success();
@@ -608,7 +612,7 @@ LogicalResult mlir::vector::splitFullAndPartialTransfer(
   mapping.map(xferWriteOp.getBase(), memrefAndIndices.front());
   mapping.map(xferWriteOp.getIndices(), memrefAndIndices.drop_front());
   auto *clone = b.clone(*xferWriteOp, mapping);
-  clone->setAttr(xferWriteOp.getInBoundsAttrName(), inBoundsAttr);
+  clone->setInherentAttr(xferWriteOp.getInBoundsAttrName(), inBoundsAttr);
 
   // Create a potential copy from the allocated buffer to the final output in
   // the slow path case.

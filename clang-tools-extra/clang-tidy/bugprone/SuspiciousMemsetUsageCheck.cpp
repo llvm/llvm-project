@@ -20,7 +20,7 @@ namespace clang::tidy::bugprone {
 void SuspiciousMemsetUsageCheck::registerMatchers(MatchFinder *Finder) {
   // Match the standard memset:
   // void *memset(void *buffer, int fill_char, size_t byte_count);
-  auto MemsetDecl =
+  const auto MemsetDecl =
       functionDecl(hasName("::memset"), parameterCountIs(3),
                    hasParameter(0, hasType(pointerType(pointee(voidType())))),
                    hasParameter(1, hasType(isInteger())),
@@ -61,7 +61,7 @@ void SuspiciousMemsetUsageCheck::check(const MatchFinder::MatchResult &Result) {
     // integer zero was intended.
 
     const SourceRange CharRange = CharZeroFill->getSourceRange();
-    auto Diag =
+    const auto Diag =
         diag(CharZeroFill->getBeginLoc(), "memset fill value is char '0', "
                                           "potentially mistaken for int 0");
 
@@ -70,10 +70,8 @@ void SuspiciousMemsetUsageCheck::check(const MatchFinder::MatchResult &Result) {
       return;
     Diag << FixItHint::CreateReplacement(
         CharSourceRange::getTokenRange(CharRange), "0");
-  }
-
-  else if (const auto *NumFill =
-               Result.Nodes.getNodeAs<IntegerLiteral>("num-fill")) {
+  } else if (const auto *NumFill =
+                 Result.Nodes.getNodeAs<IntegerLiteral>("num-fill")) {
     // Case 2: fill_char of memset() is larger in size than an unsigned char
     // so it gets truncated during conversion.
 
@@ -88,9 +86,7 @@ void SuspiciousMemsetUsageCheck::check(const MatchFinder::MatchResult &Result) {
 
     diag(NumFill->getBeginLoc(), "memset fill value is out of unsigned "
                                  "character range, gets truncated");
-  }
-
-  else if (const auto *Call = Result.Nodes.getNodeAs<CallExpr>("call")) {
+  } else if (const auto *Call = Result.Nodes.getNodeAs<CallExpr>("call")) {
     // Case 3: byte_count of memset() is zero. This is most likely an
     // argument swap.
 
@@ -118,8 +114,8 @@ void SuspiciousMemsetUsageCheck::check(const MatchFinder::MatchResult &Result) {
     // `byte_count` is known to be zero at compile time, and `fill_char` is
     // either not known or known to be a positive integer. Emit a warning
     // and fix-its to swap the arguments.
-    auto D = diag(Call->getBeginLoc(),
-                  "memset of size zero, potentially swapped arguments");
+    const auto D = diag(Call->getBeginLoc(),
+                        "memset of size zero, potentially swapped arguments");
     const StringRef RHSString =
         tooling::fixit::getText(*ByteCount, *Result.Context);
     const StringRef LHSString =

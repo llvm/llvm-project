@@ -288,14 +288,12 @@ define i32 @ctlo_i32_undef(i32 %x) {
 define i64 @ctlo_i64(i64 %x) nounwind {
 ; X86-NOCMOV-LABEL: ctlo_i64:
 ; X86-NOCMOV:       # %bb.0:
-; X86-NOCMOV-NEXT:    pushl %esi
 ; X86-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NOCMOV-NEXT:    notl %ecx
 ; X86-NOCMOV-NEXT:    notl %eax
-; X86-NOCMOV-NEXT:    xorl %edx, %edx
-; X86-NOCMOV-NEXT:    movl %eax, %esi
-; X86-NOCMOV-NEXT:    orl %ecx, %esi
+; X86-NOCMOV-NEXT:    movl %eax, %edx
+; X86-NOCMOV-NEXT:    orl %ecx, %edx
 ; X86-NOCMOV-NEXT:    je .LBB6_1
 ; X86-NOCMOV-NEXT:  # %bb.2: # %cond.false
 ; X86-NOCMOV-NEXT:    testl %ecx, %ecx
@@ -304,16 +302,16 @@ define i64 @ctlo_i64(i64 %x) nounwind {
 ; X86-NOCMOV-NEXT:    bsrl %eax, %eax
 ; X86-NOCMOV-NEXT:    xorl $31, %eax
 ; X86-NOCMOV-NEXT:    orl $32, %eax
-; X86-NOCMOV-NEXT:    popl %esi
+; X86-NOCMOV-NEXT:    xorl %edx, %edx
 ; X86-NOCMOV-NEXT:    retl
 ; X86-NOCMOV-NEXT:  .LBB6_1:
 ; X86-NOCMOV-NEXT:    movl $64, %eax
-; X86-NOCMOV-NEXT:    popl %esi
+; X86-NOCMOV-NEXT:    xorl %edx, %edx
 ; X86-NOCMOV-NEXT:    retl
 ; X86-NOCMOV-NEXT:  .LBB6_3:
 ; X86-NOCMOV-NEXT:    bsrl %ecx, %eax
 ; X86-NOCMOV-NEXT:    xorl $31, %eax
-; X86-NOCMOV-NEXT:    popl %esi
+; X86-NOCMOV-NEXT:    xorl %edx, %edx
 ; X86-NOCMOV-NEXT:    retl
 ;
 ; X86-CMOV-LABEL: ctlo_i64:

@@ -33,6 +33,77 @@ llvm.func @fold_icmp_alloca() -> i1 {
 
 // -----
 
+// CHECK-LABEL: @canonicalize_constant_array_alloca
+llvm.func @canonicalize_constant_array_alloca() -> !llvm.ptr {
+  // CHECK-NEXT: %[[ONE:.*]] = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-NEXT: %[[ALLOCA:.*]] = llvm.alloca inalloca %[[ONE]] x !llvm.array<4 x i32> {tag = "preserved", alignment = 16 : i64} : (i32) -> !llvm.ptr
+  %c4 = arith.constant 4 : i64
+  %alloca = llvm.alloca inalloca %c4 x i32 {alignment = 16 : i64, tag = "preserved"} : (i64) -> !llvm.ptr
+  // CHECK-NEXT: llvm.return %[[ALLOCA]] : !llvm.ptr
+  llvm.return %alloca : !llvm.ptr
+}
+
+// -----
+
+// CHECK-LABEL: @canonicalize_nested_array_alloca
+llvm.func @canonicalize_nested_array_alloca() -> !llvm.ptr {
+  // CHECK-NEXT: %[[ONE:.*]] = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-NEXT: %[[ALLOCA:.*]] = llvm.alloca %[[ONE]] x !llvm.array<4 x array<2 x i32>> : (i32) -> !llvm.ptr
+  %c4 = arith.constant 4 : i64
+  %alloca = llvm.alloca %c4 x !llvm.array<2 x i32> : (i64) -> !llvm.ptr
+  // CHECK-NEXT: llvm.return %[[ALLOCA]] : !llvm.ptr
+  llvm.return %alloca : !llvm.ptr
+}
+
+// -----
+
+// CHECK-LABEL: @canonicalize_zero_array_alloca
+llvm.func @canonicalize_zero_array_alloca() -> !llvm.ptr {
+  // CHECK-NEXT: %[[ONE:.*]] = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-NEXT: %[[ALLOCA:.*]] = llvm.alloca %[[ONE]] x !llvm.array<0 x i8> : (i32) -> !llvm.ptr
+  %c0 = llvm.mlir.constant(0 : i32) : i32
+  %alloca = llvm.alloca %c0 x i8 : (i32) -> !llvm.ptr
+  // CHECK-NEXT: llvm.return %[[ALLOCA]] : !llvm.ptr
+  llvm.return %alloca : !llvm.ptr
+}
+
+// -----
+
+// CHECK-LABEL: @do_not_canonicalize_scalar_alloca
+llvm.func @do_not_canonicalize_scalar_alloca() -> !llvm.ptr {
+  // CHECK-NEXT: %[[ONE:.*]] = arith.constant 1 : i64
+  // CHECK-NEXT: %[[ALLOCA:.*]] = llvm.alloca %[[ONE]] x i32 : (i64) -> !llvm.ptr
+  %c1 = arith.constant 1 : i64
+  %alloca = llvm.alloca %c1 x i32 : (i64) -> !llvm.ptr
+  // CHECK-NEXT: llvm.return %[[ALLOCA]] : !llvm.ptr
+  llvm.return %alloca : !llvm.ptr
+}
+
+// -----
+
+// CHECK-LABEL: @do_not_canonicalize_dynamic_array_alloca
+// CHECK-SAME: (%[[SIZE:.*]]: i64)
+llvm.func @do_not_canonicalize_dynamic_array_alloca(%size : i64) -> !llvm.ptr {
+  // CHECK-NEXT: %[[ALLOCA:.*]] = llvm.alloca %[[SIZE]] x i32 : (i64) -> !llvm.ptr
+  %alloca = llvm.alloca %size x i32 : (i64) -> !llvm.ptr
+  // CHECK-NEXT: llvm.return %[[ALLOCA]] : !llvm.ptr
+  llvm.return %alloca : !llvm.ptr
+}
+
+// -----
+
+// CHECK-LABEL: @do_not_canonicalize_large_array_size
+llvm.func @do_not_canonicalize_large_array_size() -> !llvm.ptr {
+  // CHECK-NEXT: %[[SIZE:.*]] = llvm.mlir.constant(18446744073709551616 : i128) : i128
+  // CHECK-NEXT: %[[ALLOCA:.*]] = llvm.alloca %[[SIZE]] x i8 : (i128) -> !llvm.ptr
+  %size = llvm.mlir.constant(18446744073709551616 : i128) : i128
+  %alloca = llvm.alloca %size x i8 : (i128) -> !llvm.ptr
+  // CHECK-NEXT: llvm.return %[[ALLOCA]] : !llvm.ptr
+  llvm.return %alloca : !llvm.ptr
+}
+
+// -----
+
 // CHECK-LABEL: fold_extractvalue
 llvm.func @fold_extractvalue() -> i32 {
   //  CHECK-DAG: %[[C0:.*]] = arith.constant 0 : i32
@@ -78,14 +149,28 @@ llvm.func @no_fold_extractvalue(%arr: !llvm.array<4 x f32>) -> f32 {
   %f0 = arith.constant 0.0 : f32
   %0 = llvm.mlir.undef : !llvm.array<4 x !llvm.array<4 x f32>>
 
-  // CHECK: insertvalue
-  // CHECK: insertvalue
+  // CHECK-NOT: insertvalue
   // CHECK: extractvalue
   %1 = llvm.insertvalue %f0, %0[0, 0] : !llvm.array<4 x !llvm.array<4 x f32>>
   %2 = llvm.insertvalue %arr, %1[0] : !llvm.array<4 x !llvm.array<4 x f32>>
   %3 = llvm.extractvalue %2[0, 0] : !llvm.array<4 x !llvm.array<4 x f32>>
 
   llvm.return %3 : f32
+}
+
+// -----
+
+// CHECK-LABEL: fold_nested_extractvalue
+// CHECK-SAME:     %[[arg1:.*]]: i32, %[[arg2:.*]]: i32)
+// CHECK-NOT: insertvalue
+// CHECK-NOT: extractvalue
+// CHECK: llvm.return %[[arg1]] : i32
+llvm.func @fold_nested_extractvalue(%arg1: i32, %arg2: i32) -> i32 {
+  %0 = llvm.mlir.undef : !llvm.struct<(struct<(i32, i32)>, i32)>
+  %1 = llvm.insertvalue %arg1, %0[0, 0] : !llvm.struct<(struct<(i32, i32)>, i32)>
+  %2 = llvm.insertvalue %arg2, %1[0, 1] : !llvm.struct<(struct<(i32, i32)>, i32)>
+  %3 = llvm.extractvalue %2[0, 0] : !llvm.struct<(struct<(i32, i32)>, i32)>
+  llvm.return %3 : i32
 }
 
 // -----
@@ -103,22 +188,33 @@ llvm.func @fold_unrelated_extractvalue(%arr: !llvm.array<4 x f32>) -> f32 {
 // -----
 // CHECK-LABEL: fold_extract_extractvalue
 llvm.func @fold_extract_extractvalue(%arr: !llvm.struct<(i64, array<1 x ptr<1>>)>) -> !llvm.ptr<1> {
-  // CHECK: llvm.extractvalue %{{.*}}[1, 0] 
+  // CHECK: llvm.extractvalue %{{.*}}[1, 0]
   // CHECK-NOT: extractvalue
-  %a = llvm.extractvalue %arr[1] : !llvm.struct<(i64, array<1 x ptr<1>>)> 
-  %b = llvm.extractvalue %a[0] : !llvm.array<1 x ptr<1>> 
+  %a = llvm.extractvalue %arr[1] : !llvm.struct<(i64, array<1 x ptr<1>>)>
+  %b = llvm.extractvalue %a[0] : !llvm.array<1 x ptr<1>>
   llvm.return %b : !llvm.ptr<1>
 }
 
 // -----
 
-// CHECK-LABEL: fold_extract_const
+// CHECK-LABEL: fold_extract_const_array
 // CHECK-NOT: extractvalue
 // CHECK:  llvm.mlir.constant(5.000000e-01 : f64)
-llvm.func @fold_extract_const() -> f64 {
+llvm.func @fold_extract_const_array() -> f64 {
   %a = llvm.mlir.constant(dense<[-8.900000e+01, 5.000000e-01]> : tensor<2xf64>) : !llvm.array<2 x f64>
   %b = llvm.extractvalue %a[1] : !llvm.array<2 x f64>
   llvm.return %b : f64
+}
+
+// -----
+
+// CHECK-LABEL: fold_extract_const_struct
+llvm.func @fold_extract_const_struct() -> i32 {
+  // CHECK-NOT: extractvalue
+  // CHECK: llvm.mlir.constant(2 : i32)
+  %a = llvm.mlir.constant([1 : i16, 2 : i32]) : !llvm.struct<(i16, i32)>
+  %b = llvm.extractvalue %a[1] : !llvm.struct<(i16, i32)>
+  llvm.return %b : i32
 }
 
 // -----
@@ -130,6 +226,114 @@ llvm.func @fold_extract_splat() -> f64 {
   %a = llvm.mlir.constant(dense<-8.900000e+01> : tensor<2xf64>) : !llvm.array<2 x f64>
   %b = llvm.extractvalue %a[1] : !llvm.array<2 x f64>
   llvm.return %b : f64
+}
+
+// -----
+
+// CHECK-LABEL: fold_extract_splat_nested
+llvm.func @fold_extract_splat_nested() -> i32 {
+  // CHECK-NOT: extractvalue
+  // CHECK: llvm.mlir.constant(1 : i32)
+  %a = llvm.mlir.constant(dense<(0, 1)> : tensor<2xcomplex<i32>>) : !llvm.array<2 x !llvm.struct<(i32, i32)>>
+  %b = llvm.extractvalue %a[1, 1] : !llvm.array<2 x !llvm.struct<(i32, i32)>>
+  llvm.return %b : i32
+}
+
+// -----
+
+// CHECK-LABEL: fold_extract_sparse
+llvm.func @fold_extract_sparse() -> f32 {
+  // CHECK-NOT: extractvalue
+  // CHECK-DAG: %[[C0:.*]] = llvm.mlir.constant(0.000000e+00 : f32)
+  // CHECK-DAG: %[[C42:.*]] = llvm.mlir.constant(4.200000e+01 : f32)
+  %0 = llvm.mlir.constant(sparse<[0], [4.2e+01]> : tensor<4xf32>) : !llvm.array<4 x f32>
+  %1 = llvm.extractvalue %0[0] : !llvm.array<4 x f32>
+  %2 = llvm.extractvalue %0[1] : !llvm.array<4 x f32>
+  // CHECK: llvm.fadd %[[C42]], %[[C0]]
+  %3 = llvm.fadd %1, %2 : f32
+  llvm.return %3 : f32
+}
+
+// -----
+
+// CHECK-LABEL: no_fold_extract_splat_rank_mismatch
+llvm.func @no_fold_extract_splat_rank_mismatch() -> vector<2xi32> {
+  %0 = llvm.mlir.constant(dense<12> : vector<2xi32>) : vector<2xi32>
+  %1 = llvm.mlir.constant(dense<23> : vector<4x2xi32>) : !llvm.array<4 x vector<2xi32>>
+  // CHECK: extractvalue
+  %2 = llvm.extractvalue %1[0] : !llvm.array<4 x vector<2xi32>>
+  %3 = llvm.shl %0, %2 : vector<2xi32>
+  llvm.return %3 : vector<2xi32>
+}
+
+// -----
+
+// CHECK-LABEL: no_fold_extract_sparse_rank_mismatch
+llvm.func @no_fold_extract_sparse_rank_mismatch() -> vector<2xi32> {
+  %0 = llvm.mlir.constant(dense<12> : vector<2xi32>) : vector<2xi32>
+  %1 = llvm.mlir.constant(sparse<[[0, 0]], [23]> : vector<4x2xi32>) : !llvm.array<4 x vector<2xi32>>
+  // CHECK: extractvalue
+  %2 = llvm.extractvalue %1[0] : !llvm.array<4 x vector<2xi32>>
+  %3 = llvm.shl %0, %2 : vector<2xi32>
+  llvm.return %3 : vector<2xi32>
+}
+
+// -----
+
+// CHECK-LABEL: fold_zero
+llvm.func @fold_zero() -> i32 {
+  // CHECK-NOT: insertvalue
+  // CHECK-NOT: extractvalue
+  // CHECK: %[[ZERO:.*]] = llvm.mlir.zero : i32
+  %0 = llvm.mlir.zero : !llvm.struct<(i16, i32)>
+
+  %1 = llvm.mlir.undef : !llvm.array<2 x !llvm.struct<(i16, i32)>>
+  %2 = llvm.insertvalue %0, %1[0] : !llvm.array<2 x !llvm.struct<(i16, i32)>>
+  %3 = llvm.extractvalue %2[0, 1] : !llvm.array<2 x !llvm.struct<(i16, i32)>>
+  // CHECK: llvm.return %[[ZERO]]
+  llvm.return %3 : i32
+}
+
+// -----
+
+llvm.func @use_struct(!llvm.struct<(i16, i32)>)
+
+// CHECK-LABEL: fold_undef
+llvm.func @fold_undef() -> i32 {
+  // CHECK-NOT: insertvalue
+  // CHECK-NOT: extractvalue
+  // CHECK-DAG: %[[UNDEF_I32:.*]] = llvm.mlir.undef : i32
+  // CHECK-DAG: %[[UNDEF_STRUCT:.*]] = llvm.mlir.undef : !llvm.struct<(i16, i32)>
+  %0 = llvm.mlir.undef : !llvm.struct<(i8, !llvm.struct<(i16, i32)>)>
+
+  %1 = llvm.extractvalue %0[1] : !llvm.struct<(i8, !llvm.struct<(i16, i32)>)>
+  // CHECK: llvm.call @use_struct(%[[UNDEF_STRUCT]])
+  llvm.call @use_struct(%1) : (!llvm.struct<(i16, i32)>) -> ()
+
+  %2 = llvm.extractvalue %0[1, 1] : !llvm.struct<(i8, !llvm.struct<(i16, i32)>)>
+  // CHECK: llvm.return %[[UNDEF_I32]]
+  llvm.return %2 : i32
+}
+
+// -----
+
+llvm.func @use_array(!llvm.array<8 x f32>)
+
+// CHECK-LABEL: fold_poison
+llvm.func @fold_poison() -> f32 {
+  // CHECK-NOT: insertvalue
+  // CHECK-NOT: extractvalue
+  // CHECK-DAG: %[[POISON_F32:.*]] = llvm.mlir.poison : f32
+  // CHECK-DAG: %[[POISON_ARRAY:.*]] = llvm.mlir.poison : !llvm.array<8 x f32>
+  %0 = llvm.mlir.poison : !llvm.array<2 x !llvm.array<8 x f32>>
+
+  %1 = llvm.extractvalue %0[1] : !llvm.array<2 x !llvm.array<8 x f32>>
+  // CHECK: llvm.call @use_array(%[[POISON_ARRAY]])
+  llvm.call @use_array(%1) : (!llvm.array<8 x f32>) -> ()
+
+  %2 = llvm.extractvalue %0[1, 1] : !llvm.array<2 x !llvm.array<8 x f32>>
+  // CHECK: llvm.return %[[POISON_F32]]
+  llvm.return %2 : f32
 }
 
 // -----
@@ -207,6 +411,17 @@ llvm.func @fold_gep(%x : !llvm.ptr) -> !llvm.ptr {
   %c0 = arith.constant 0 : i32
   %c = llvm.getelementptr %x[%c0] : (!llvm.ptr, i32) -> !llvm.ptr, i8
   llvm.return %c : !llvm.ptr
+}
+
+// -----
+
+// CHECK-LABEL: fold_gep_inrange
+// CHECK-SAME: %[[ARG:[[:alnum:]]+]]
+// CHECK-NEXT: %[[GEP:.*]] = llvm.getelementptr inrange <i64, -4, 4> %[[ARG]][0]
+// CHECK-NEXT: llvm.return %[[GEP]]
+llvm.func @fold_gep_inrange(%x : !llvm.ptr) -> !llvm.ptr {
+  %0 = llvm.getelementptr inrange <i64, -4, 4> %x[0] : (!llvm.ptr) -> !llvm.ptr, i8
+  llvm.return %0 : !llvm.ptr
 }
 
 // -----
@@ -301,10 +516,10 @@ llvm.func @volatile_load(%x : !llvm.ptr) {
   %0 = llvm.load volatile %x : !llvm.ptr -> i8
   // Same with monotonic atomics and any stricter modes.
   // CHECK: llvm.load %{{.*}} atomic monotonic
-  %2 = llvm.load %x atomic monotonic { alignment = 1 } : !llvm.ptr -> i8
+  %2 = llvm.load %x atomic monotonic <alignment = 1> : !llvm.ptr -> i8
   // But not unordered!
   // CHECK-NOT: llvm.load %{{.*}} atomic unordered
-  %3 = llvm.load %x  atomic unordered { alignment = 1 } : !llvm.ptr -> i8
+  %3 = llvm.load %x  atomic unordered <alignment = 1> : !llvm.ptr -> i8
   llvm.return
 }
 
@@ -317,4 +532,20 @@ llvm.func @inline_asm_side_effects(%x : i32) {
   // CHECK: llvm.inline_asm has_side_effects "inline asm with side effects"
   llvm.inline_asm has_side_effects "inline asm with side effects", "r" %x : (i32) -> ()
   llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: func @metadata_as_value_dedup
+llvm.func @metadata_as_value_dedup() -> i32 {
+  // CHECK: %[[MD:.*]] = llvm.mlir.metadata_as_value #llvm.md_node<#llvm.md_string<"sp">>
+  // CHECK-NOT: llvm.mlir.metadata_as_value
+  %0 = llvm.mlir.metadata_as_value #llvm.md_node<#llvm.md_string<"sp">>
+  %1 = llvm.mlir.metadata_as_value #llvm.md_node<#llvm.md_string<"sp">>
+  // CHECK: llvm.call_intrinsic "llvm.read_register.i32"(%[[MD]])
+  %2 = llvm.call_intrinsic "llvm.read_register.i32"(%0) : (!llvm.metadata) -> i32
+  // CHECK: llvm.call_intrinsic "llvm.read_register.i32"(%[[MD]])
+  %3 = llvm.call_intrinsic "llvm.read_register.i32"(%1) : (!llvm.metadata) -> i32
+  %4 = llvm.add %2, %3 : i32
+  llvm.return %4 : i32
 }

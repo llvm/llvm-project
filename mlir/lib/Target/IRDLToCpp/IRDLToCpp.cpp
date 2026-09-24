@@ -371,7 +371,7 @@ static void generateRegionConstraintVerifiers(
     std::string textualConditionName = "any region";
 
     if (auto regionDefOp =
-            dyn_cast<irdl::RegionOp>(regionsOp->getArgs()[i].getDefiningOp())) {
+            regionsOp->getArgs()[i].getDefiningOp<irdl::RegionOp>()) {
       // Generate constraint condition based on RegionOp attributes
       SmallVector<std::string> conditionParts;
       SmallVector<std::string> descriptionParts;
@@ -500,9 +500,9 @@ void {0}::build(::mlir::OpBuilder &opBuilder, ::mlir::OperationState &opState, {
 {0} {0}::create(::mlir::OpBuilder &opBuilder, ::mlir::Location location, {1} {2} ::llvm::ArrayRef<::mlir::NamedAttribute> attributes) {{
   ::mlir::OperationState __state__(location, getOperationName());
   build(opBuilder, __state__, {5} {6} attributes);
-  auto __res__ = ::llvm::dyn_cast<{0}>(opBuilder.create(__state__));
-  assert(__res__ && "builder didn't return the right type");
-  return __res__;
+  auto __res__ = opBuilder.create(__state__);
+  assert((::llvm::isa<{0}>(__res__)) && "builder didn't return the right type");
+  return ::llvm::cast<{0}>(__res__);
 }
 
 {0} {0}::create(::mlir::ImplicitLocOpBuilder &opBuilder, {1} {2} ::llvm::ArrayRef<::mlir::NamedAttribute> attributes) {{
@@ -647,11 +647,10 @@ static LogicalResult verifySupported(irdl::DialectOp dialect) {
   dialect.walk([&](mlir::Operation *op) {
     res =
         llvm::TypeSwitch<Operation *, LogicalResult>(op)
-            .Case<irdl::DialectOp>(([](irdl::DialectOp) { return success(); }))
-            .Case<irdl::OperationOp>(
-                ([](irdl::OperationOp) { return success(); }))
-            .Case<irdl::TypeOp>(([](irdl::TypeOp) { return success(); }))
-            .Case<irdl::OperandsOp>(([](irdl::OperandsOp op) -> LogicalResult {
+            .Case(([](irdl::DialectOp) { return success(); }))
+            .Case(([](irdl::OperationOp) { return success(); }))
+            .Case(([](irdl::TypeOp) { return success(); }))
+            .Case(([](irdl::OperandsOp op) -> LogicalResult {
               if (llvm::all_of(
                       op.getVariadicity(), [](irdl::VariadicityAttr attr) {
                         return attr.getValue() == irdl::Variadicity::single;
@@ -660,7 +659,7 @@ static LogicalResult verifySupported(irdl::DialectOp dialect) {
               return op.emitError("IRDL C++ translation does not yet support "
                                   "variadic operations");
             }))
-            .Case<irdl::ResultsOp>(([](irdl::ResultsOp op) -> LogicalResult {
+            .Case(([](irdl::ResultsOp op) -> LogicalResult {
               if (llvm::all_of(
                       op.getVariadicity(), [](irdl::VariadicityAttr attr) {
                         return attr.getValue() == irdl::Variadicity::single;
@@ -669,9 +668,9 @@ static LogicalResult verifySupported(irdl::DialectOp dialect) {
               return op.emitError(
                   "IRDL C++ translation does not yet support variadic results");
             }))
-            .Case<irdl::AnyOp>(([](irdl::AnyOp) { return success(); }))
-            .Case<irdl::RegionOp>(([](irdl::RegionOp) { return success(); }))
-            .Case<irdl::RegionsOp>(([](irdl::RegionsOp) { return success(); }))
+            .Case(([](irdl::AnyOp) { return success(); }))
+            .Case(([](irdl::RegionOp) { return success(); }))
+            .Case(([](irdl::RegionsOp) { return success(); }))
             .Default([](mlir::Operation *op) -> LogicalResult {
               return op->emitError("IRDL C++ translation does not yet support "
                                    "translation of ")
@@ -711,9 +710,11 @@ irdl::translateIRDLDialectToCpp(llvm::ArrayRef<irdl::DialectOp> dialects,
     llvm::raw_string_ostream namespacePathStream(namespacePath);
     for (auto &pathElement : namespaceAbsolutePath) {
       namespaceOpenStream << "namespace " << pathElement << " {\n";
-      namespaceCloseStream << "} // namespace " << pathElement << "\n";
       namespacePathStream << "::" << pathElement;
     }
+
+    for (auto &pathElement : llvm::reverse(namespaceAbsolutePath))
+      namespaceCloseStream << "} // namespace " << pathElement << "\n";
 
     std::string cppShortName =
         llvm::convertToCamelFromSnakeCase(dialectName, true);
@@ -722,12 +723,12 @@ irdl::translateIRDLDialectToCpp(llvm::ArrayRef<irdl::DialectOp> dialects,
 
     DialectStrings dialectStrings;
     dialectStrings.dialectName = dialectName;
-    dialectStrings.dialectBaseTypeName = dialectBaseTypeName;
-    dialectStrings.dialectCppName = cppName;
-    dialectStrings.dialectCppShortName = cppShortName;
-    dialectStrings.namespaceOpen = namespaceOpen;
-    dialectStrings.namespaceClose = namespaceClose;
-    dialectStrings.namespacePath = namespacePath;
+    dialectStrings.dialectBaseTypeName = std::move(dialectBaseTypeName);
+    dialectStrings.dialectCppName = std::move(cppName);
+    dialectStrings.dialectCppShortName = std::move(cppShortName);
+    dialectStrings.namespaceOpen = std::move(namespaceOpen);
+    dialectStrings.namespaceClose = std::move(namespaceClose);
+    dialectStrings.namespacePath = std::move(namespacePath);
 
     dialectStringTable[dialect] = std::move(dialectStrings);
   }

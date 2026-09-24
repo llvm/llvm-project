@@ -31,7 +31,7 @@ body:             |
   ; CHECK-NEXT:   frame-setup PUSH32r killed $edi, implicit-def $esp, implicit $esp
   ; CHECK-NEXT:   frame-setup PUSH32r killed $esi, implicit-def $esp, implicit $esp
   ; CHECK-NEXT:   $esp = frame-setup SUB32ri $esp, 12, implicit-def dead $eflags
-  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $ebp, 12 /* clobber */, implicit-def dead early-clobber $eax, 12 /* clobber */, implicit-def dead early-clobber $ebx, 12 /* clobber */, implicit-def dead early-clobber $ecx, 12 /* clobber */, implicit-def dead early-clobber $edx, 12 /* clobber */, implicit-def dead early-clobber $esi, 12 /* clobber */, implicit-def dead early-clobber $edi, 12 /* clobber */, implicit-def dead early-clobber $df, 12 /* clobber */, implicit-def early-clobber $fpsw, 12 /* clobber */, implicit-def dead early-clobber $eflags
+  ; CHECK-NEXT:   INLINEASM &"", sideeffect attdialect, clobber, implicit-def dead early-clobber $ebp, clobber, implicit-def dead early-clobber $eax, clobber, implicit-def dead early-clobber $ebx, clobber, implicit-def dead early-clobber $ecx, clobber, implicit-def dead early-clobber $edx, clobber, implicit-def dead early-clobber $esi, clobber, implicit-def dead early-clobber $edi, clobber, implicit-def dead early-clobber $df, clobber, implicit-def early-clobber $fpsw, clobber, implicit-def dead early-clobber $eflags
   ; CHECK-NEXT:   early-clobber renamable $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags
   ; CHECK-NEXT:   TEST8rr renamable $al, renamable $al, implicit-def $eflags
   ; CHECK-NEXT:   JCC_1 %bb.2, 5, implicit $eflags
@@ -54,7 +54,7 @@ body:             |
     successors: %bb.1, %bb.2
 
     early-clobber %0:gr32_abcd = MOV32r0 implicit-def dead $eflags
-    INLINEASM &"", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $ebp, 12 /* clobber */, implicit-def dead early-clobber $eax, 12 /* clobber */, implicit-def dead early-clobber $ebx, 12 /* clobber */, implicit-def dead early-clobber $ecx, 12 /* clobber */, implicit-def dead early-clobber $edx, 12 /* clobber */, implicit-def dead early-clobber $esi, 12 /* clobber */, implicit-def dead early-clobber $edi, 12 /* clobber */, implicit-def dead early-clobber $df, 12 /* clobber */, implicit-def early-clobber $fpsw, 12 /* clobber */, implicit-def dead early-clobber $eflags
+    INLINEASM &"", sideeffect attdialect, clobber, implicit-def dead early-clobber $ebp, clobber, implicit-def dead early-clobber $eax, clobber, implicit-def dead early-clobber $ebx, clobber, implicit-def dead early-clobber $ecx, clobber, implicit-def dead early-clobber $edx, clobber, implicit-def dead early-clobber $esi, clobber, implicit-def dead early-clobber $edi, clobber, implicit-def dead early-clobber $df, clobber, implicit-def early-clobber $fpsw, clobber, implicit-def dead early-clobber $eflags
     %4:gr8 = COPY %0.sub_8bit
     TEST8rr killed %4, %4, implicit-def $eflags
     JCC_1 %bb.2, 5, implicit killed $eflags

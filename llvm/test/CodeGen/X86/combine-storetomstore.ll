@@ -39,7 +39,7 @@ define void @test_masked_store_success_v4i8(<4 x i8> %x, ptr %ptr, <4 x i1> %mas
 define void @test_masked_store_success_v4i16(<4 x i16> %x, ptr %ptr, <4 x i1> %mask) {
 ; AVX-LABEL: test_masked_store_success_v4i16:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpshufb {{.*#+}} xmm1 = xmm1[0,u,4,u,8,u,12,u,8,u,12,u,12,u,14,u]
+; AVX-NEXT:    vpshufb {{.*#+}} xmm1 = xmm1[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
 ; AVX-NEXT:    vpsllw $15, %xmm1, %xmm1
 ; AVX-NEXT:    vpsraw $15, %xmm1, %xmm1
 ; AVX-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
@@ -49,7 +49,7 @@ define void @test_masked_store_success_v4i16(<4 x i16> %x, ptr %ptr, <4 x i1> %m
 ;
 ; AVX2-LABEL: test_masked_store_success_v4i16:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpshufb {{.*#+}} xmm1 = xmm1[0,u,4,u,8,u,12,u,8,u,12,u,12,u,14,u]
+; AVX2-NEXT:    vpshufb {{.*#+}} xmm1 = xmm1[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
 ; AVX2-NEXT:    vpsllw $15, %xmm1, %xmm1
 ; AVX2-NEXT:    vpsraw $15, %xmm1, %xmm1
 ; AVX2-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
@@ -1195,6 +1195,7 @@ define void @test_masked_store_intervening(<8 x i32> %x, ptr %ptr, <8 x i1> %mas
 ; AVX-NEXT:    vmovups %ymm0, (%rsp) # 32-byte Spill
 ; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vmovaps %ymm0, (%rdi)
+; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    callq use_vec@PLT
 ; AVX-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
 ; AVX-NEXT:    vmovaps %ymm0, (%rbx)
@@ -1215,6 +1216,7 @@ define void @test_masked_store_intervening(<8 x i32> %x, ptr %ptr, <8 x i1> %mas
 ; AVX2-NEXT:    vmovups %ymm0, (%rsp) # 32-byte Spill
 ; AVX2-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX2-NEXT:    vmovaps %ymm0, (%rdi)
+; AVX2-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX2-NEXT:    callq use_vec@PLT
 ; AVX2-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
 ; AVX2-NEXT:    vmovaps %ymm0, (%rbx)
@@ -1236,6 +1238,7 @@ define void @test_masked_store_intervening(<8 x i32> %x, ptr %ptr, <8 x i1> %mas
 ; AVX512-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovaps %ymm0, (%rdi)
+; AVX512-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    callq use_vec@PLT
 ; AVX512-NEXT:    vmovdqu {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
 ; AVX512-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k1 # 2-byte Reload

@@ -14,6 +14,7 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/OpenACC/Passes.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "mlir/Dialect/OpenACC/OpenACCUtils.h"
 #include "mlir/IR/Block.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -76,6 +77,11 @@ static void bufferizeRegionArgsAndYields(mlir::Region &region,
         builder.setInsertionPoint(yield);
         mlir::Value alloca =
             BufferizeInterface::placeInMemory(builder, loc, oldYieldArg);
+        if (mlir::Operation *allocOp = alloca.getDefiningOp())
+          allocOp->setAttr(
+              mlir::acc::getVarNameAttrName(),
+              mlir::acc::VarNameAttr::get(allocOp->getContext(),
+                                          mlir::acc::getVarNamePlaceholder()));
         newOperands.push_back(alloca);
         changed = true;
       } else {
@@ -87,30 +93,62 @@ static void bufferizeRegionArgsAndYields(mlir::Region &region,
   }
 }
 
-static void updateRecipeUse(mlir::ArrayAttr recipes, mlir::ValueRange operands,
+/// Positions \p builder where the memory holding the bufferized descriptor of
+/// \p clauseOp should be created.
+///
+/// Device code reads the descriptor through this memory, so the memory and the
+/// value stored into it must end up on the same side of the host/device
+/// boundary. Placing it next to the variable - the default - satisfies that for
+/// a host variable, whose memory a data clause can then map.
+///
+/// Device memory is required, and legal, only when all three conditions hold:
+///   - there is an enclosing compute construct, whose region is device memory
+///     needing no data clause of its own. A clause on an orphaned loop or on
+///     the construct itself has none.
+///   - the variable comes from a data entry operation, so the value stored is
+///     a device address rather than a host one.
+///   - that operation is outside the construct, so the value is a legal live-in
+///     and its definition dominates the region entry block.
+///
+/// The entry block is used rather than the clause operation so that a clause on
+/// a nested loop does not allocate on every iteration.
+static void setDescriptorInsertionPoint(mlir::OpBuilder &builder,
+                                        mlir::Operation *clauseOp,
+                                        mlir::Value var) {
+  mlir::Operation *varOp = var.getDefiningOp();
+  mlir::Operation *construct =
+      clauseOp->getParentOfType<ACC_COMPUTE_CONSTRUCT_OPS>();
+  if (construct && llvm::isa_and_nonnull<ACC_DATA_ENTRY_OPS>(varOp) &&
+      !construct->isProperAncestor(varOp)) {
+    mlir::Region &region = construct->getRegion(0);
+    if (!region.empty()) {
+      builder.setInsertionPointToStart(&region.front());
+      return;
+    }
+  }
+  builder.setInsertionPointAfterValue(var);
+}
+
+template <typename OpTy>
+static void updateRecipeUse(mlir::ValueRange operands,
                             llvm::StringRef recipeSymName,
                             mlir::Operation *computeOp) {
-  if (!recipes)
-    return;
-  for (auto [recipeSym, oldRes] : llvm::zip(recipes, operands)) {
-    if (llvm::cast<mlir::SymbolRefAttr>(recipeSym).getLeafReference() !=
-        recipeSymName)
+  for (auto operand : operands) {
+    auto op = operand.getDefiningOp<OpTy>();
+    if (!op || !op.getRecipe().has_value() ||
+        op.getRecipeAttr().getLeafReference() != recipeSymName)
       continue;
 
-    mlir::Operation *dataOp = oldRes.getDefiningOp();
-    assert(dataOp && "dataOp must be paired with computeOp");
-    mlir::Location loc = dataOp->getLoc();
-    mlir::OpBuilder builder(dataOp);
-    llvm::TypeSwitch<mlir::Operation *, void>(dataOp)
-        .Case<mlir::acc::PrivateOp, mlir::acc::FirstprivateOp,
-              mlir::acc::ReductionOp>([&](auto privateOp) {
-          builder.setInsertionPointAfterValue(privateOp.getVar());
-          mlir::Value alloca = BufferizeInterface::placeInMemory(
-              builder, loc, privateOp.getVar());
-          privateOp.getVarMutable().assign(alloca);
-          privateOp.getAccVar().setType(alloca.getType());
-        });
+    mlir::Location loc = op->getLoc();
 
+    mlir::OpBuilder builder(op);
+    setDescriptorInsertionPoint(builder, op, op.getVar());
+    mlir::Value alloca =
+        BufferizeInterface::placeInMemory(builder, loc, op.getVar());
+    op.getVarMutable().assign(alloca);
+    op.getAccVar().setType(alloca.getType());
+
+    mlir::Value oldRes = op.getAccVar();
     llvm::SmallVector<mlir::Operation *> users(oldRes.getUsers().begin(),
                                                oldRes.getUsers().end());
     for (mlir::Operation *useOp : users) {
@@ -166,18 +204,15 @@ public:
           .Case<mlir::acc::LoopOp, mlir::acc::ParallelOp, mlir::acc::SerialOp>(
               [&](auto computeOp) {
                 for (llvm::StringRef recipeName : recipeNames) {
-                  if (computeOp.getPrivatizationRecipes())
-                    updateRecipeUse(computeOp.getPrivatizationRecipesAttr(),
-                                    computeOp.getPrivateOperands(), recipeName,
-                                    op);
-                  if (computeOp.getFirstprivatizationRecipes())
-                    updateRecipeUse(
-                        computeOp.getFirstprivatizationRecipesAttr(),
+                  if (!computeOp.getPrivateOperands().empty())
+                    updateRecipeUse<mlir::acc::PrivateOp>(
+                        computeOp.getPrivateOperands(), recipeName, op);
+                  if (!computeOp.getFirstprivateOperands().empty())
+                    updateRecipeUse<mlir::acc::FirstprivateOp>(
                         computeOp.getFirstprivateOperands(), recipeName, op);
-                  if (computeOp.getReductionRecipes())
-                    updateRecipeUse(computeOp.getReductionRecipesAttr(),
-                                    computeOp.getReductionOperands(),
-                                    recipeName, op);
+                  if (!computeOp.getReductionOperands().empty())
+                    updateRecipeUse<mlir::acc::ReductionOp>(
+                        computeOp.getReductionOperands(), recipeName, op);
                 }
               });
     });

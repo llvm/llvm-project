@@ -66,8 +66,8 @@ template <class _Tp,
           class _Proj2,
           class _Comp,
           __enable_if_t<__desugars_to_v<__totally_ordered_less_tag, _Comp, _Tp, _Tp> && !is_volatile<_Tp>::value &&
-                            __libcpp_is_trivially_equality_comparable<_Tp, _Tp>::value &&
-                            __is_identity<_Proj1>::value && __is_identity<_Proj2>::value,
+                            __is_trivially_equality_comparable_v<_Tp, _Tp> && __is_identity<_Proj1>::value &&
+                            __is_identity<_Proj2>::value,
                         int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
 __lexicographical_compare(_Tp* __first1, _Tp* __last1, _Tp* __first2, _Tp* __last2, _Comp&, _Proj1&, _Proj2&) {

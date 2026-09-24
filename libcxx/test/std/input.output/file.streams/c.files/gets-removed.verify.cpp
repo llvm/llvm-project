@@ -12,6 +12,9 @@
 
 #include <cstdio>
 
-void f(char const* str) {
+void f(char* str) {
   (void)std::gets(str); // expected-error {{no member named 'gets' in namespace 'std'}}
+
+  // Apple platforms might diagnose `gets` as deprecated
+  // expected-warning@*:* 0-1 {{deprecated}}
 }

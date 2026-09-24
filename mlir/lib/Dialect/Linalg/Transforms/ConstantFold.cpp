@@ -15,6 +15,7 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LLVM.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include <optional>
 
 using namespace mlir;
@@ -114,7 +115,7 @@ public:
 
     // All inputs should be constants.
     int numInputs = linalgOp.getNumDpsInputs();
-    SmallVector<DenseIntOrFPElementsAttr> inputValues(numInputs);
+    SmallVector<DenseTypedElementsAttr> inputValues(numInputs);
     for (const auto &en : llvm::enumerate(linalgOp.getDpsInputOperands())) {
       if (!matchPattern(en.value()->get(),
                         m_Constant(&inputValues[en.index()])))
@@ -170,10 +171,10 @@ public:
     // here as they will be overwritten later.
     APIntOrFloatArray computeFnInputs;
 
-    auto inputShapes = llvm::to_vector<4>(
-        llvm::map_range(linalgOp.getDpsInputs(), [](Value value) {
+    auto inputShapes =
+        llvm::map_to_vector<4>(linalgOp.getDpsInputs(), [](Value value) {
           return cast<ShapedType>(value.getType()).getShape();
-        }));
+        });
 
     // Given a `linearIndex`, remap it to a linear index to access linalg op
     // inputs/ouputs. This mutates `indices`, `srcIndices`, `dstIndices`,

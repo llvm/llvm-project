@@ -96,19 +96,7 @@ AArch64PrologueEpilogueCommon::AArch64PrologueEpilogueCommon(
   HasFP = AFL.hasFP(MF);
   NeedsWinCFI = AFL.needsWinCFI(MF);
 
-  // Windows unwind can't represent the required stack adjustments if we have
-  // both SVE callee-saves and dynamic stack allocations, and the frame pointer
-  // is before the SVE spills.  The allocation of the frame pointer must be the
-  // last instruction in the prologue so the unwinder can restore the stack
-  // pointer correctly. (And there isn't any unwind opcode for `addvl sp, x29,
-  // -17`.)
-  //
-  // Because of this, we do spills in the opposite order on Windows: first SVE,
-  // then GPRs. The main side-effect of this is that it makes accessing
-  // parameters passed on the stack more expensive.
-  //
-  // We could consider rearranging the spills for simpler cases.
-  if (Subtarget.isTargetWindows() && AFI->getSVECalleeSavedStackSize()) {
+  if (AFL.hasSVECalleeSavesAboveFrameRecord(MF)) {
     if (AFI->hasStackHazardSlotIndex())
       reportFatalUsageError("SME hazard padding is not supported on Windows");
     SVELayout = SVEStackLayout::CalleeSavesAboveFrameRecord;
@@ -174,16 +162,22 @@ AArch64PrologueEpilogueCommon::convertCalleeSaveRestoreToSPPrePostIncDec(
   }
   TypeSize Scale = TypeSize::getFixed(1), Width = TypeSize::getFixed(0);
   int64_t MinOffset, MaxOffset;
-  bool Success = static_cast<const AArch64InstrInfo *>(TII)->getMemOpInfo(
-      NewOpc, Scale, Width, MinOffset, MaxOffset);
+  bool Success = TII->getMemOpInfo(NewOpc, Scale, Width, MinOffset, MaxOffset);
   (void)Success;
   assert(Success && "unknown load/store opcode");
 
   // If the first store isn't right where we want SP then we can't fold the
   // update in so create a normal arithmetic instruction instead.
+  //
+  // On Windows, some register pairs involving LR can't be folded because
+  // there isn't a corresponding unwind opcode.
   if (MBBI->getOperand(MBBI->getNumOperands() - 1).getImm() != 0 ||
       CSStackSizeInc < MinOffset * (int64_t)Scale.getFixedValue() ||
-      CSStackSizeInc > MaxOffset * (int64_t)Scale.getFixedValue()) {
+      CSStackSizeInc > MaxOffset * (int64_t)Scale.getFixedValue() ||
+      (NeedsWinCFI &&
+       (NewOpc == AArch64::LDPXpost || NewOpc == AArch64::STPXpre) &&
+       RegInfo.getEncodingValue(MBBI->getOperand(0).getReg()) + 1 !=
+           RegInfo.getEncodingValue(MBBI->getOperand(1).getReg()))) {
     // If we are destroying the frame, make sure we add the increment after the
     // last frame operation.
     if (FrameFlag == MachineInstr::FrameDestroy) {
@@ -323,6 +317,11 @@ bool AArch64PrologueEpilogueCommon::shouldCombineCSRLocalStackBump(
   // (to force a stp with predecrement) to match the packed unwind format,
   // provided that there actually are any callee saved registers to merge the
   // decrement with.
+  //
+  // Note that for certain paired saves, like "x19, lr", we can't actually
+  // emit an predecrement stp, but packed unwind still expects a separate stack
+  // adjustment.
+  //
   // This is potentially marginally slower, but allows using the packed
   // unwind format for functions that both have a local area and callee saved
   // registers. Using the packed unwind format notably reduces the size of
@@ -544,7 +543,7 @@ void AArch64PrologueEmitter::allocateStackSpace(
   // have SVE objects, we can use a more efficient sequence for stack probing.
   if (AllocSize.getScalable() == 0 && RealignmentPadding == 0) {
     Register ScratchReg = AFL.findScratchNonCalleeSaveRegister(&MBB);
-    assert(ScratchReg != AArch64::NoRegister);
+    assert(ScratchReg.isValid());
     BuildMI(MBB, MBBI, DL, TII->get(AArch64::PROBED_STACKALLOC))
         .addDef(ScratchReg)
         .addImm(AllocSize.getFixed())
@@ -555,11 +554,15 @@ void AArch64PrologueEmitter::allocateStackSpace(
     // objects), we need to issue an extra probe, so these allocations start in
     // a known state.
     if (FollowupAllocs) {
-      // STR XZR, [SP]
-      BuildMI(MBB, MBBI, DL, TII->get(AArch64::STRXui))
-          .addReg(AArch64::XZR)
+      // LDR XZR, [SP]
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::LDRXui))
+          .addDef(AArch64::XZR)
           .addReg(AArch64::SP)
           .addImm(0)
+          .addMemOperand(MF.getMachineMemOperand(
+              MachinePointerInfo::getUnknownStack(MF),
+              MachineMemOperand::MOLoad | MachineMemOperand::MOVolatile, 8,
+              Align(8)))
           .setMIFlags(MachineInstr::FrameSetup);
     }
 
@@ -575,7 +578,7 @@ void AArch64PrologueEmitter::allocateStackSpace(
     Register ScratchReg = RealignmentPadding
                               ? AFL.findScratchNonCalleeSaveRegister(&MBB)
                               : AArch64::SP;
-    assert(ScratchReg != AArch64::NoRegister);
+    assert(ScratchReg.isValid());
     // SUB Xd, SP, AllocSize
     emitFrameOffset(MBB, MBBI, DL, ScratchReg, AArch64::SP, -AllocSize, TII,
                     MachineInstr::FrameSetup, false, NeedsWinCFI, &HasWinCFI,
@@ -590,11 +593,15 @@ void AArch64PrologueEmitter::allocateStackSpace(
     }
     if (FollowupAllocs || upperBound(AllocSize) + RealignmentPadding >
                               AArch64::StackProbeMaxUnprobedStack) {
-      // STR XZR, [SP]
-      BuildMI(MBB, MBBI, DL, TII->get(AArch64::STRXui))
-          .addReg(AArch64::XZR)
+      // LDR XZR, [SP]
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::LDRXui))
+          .addDef(AArch64::XZR)
           .addReg(AArch64::SP)
           .addImm(0)
+          .addMemOperand(MF.getMachineMemOperand(
+              MachinePointerInfo::getUnknownStack(MF),
+              MachineMemOperand::MOLoad | MachineMemOperand::MOVolatile, 8,
+              Align(8)))
           .setMIFlags(MachineInstr::FrameSetup);
     }
     return;
@@ -604,7 +611,7 @@ void AArch64PrologueEmitter::allocateStackSpace(
   // TODO: As an optimisation, the loop can be "unrolled" into a few parts,
   // each of them guaranteed to adjust the stack by less than the probe size.
   Register TargetReg = AFL.findScratchNonCalleeSaveRegister(&MBB);
-  assert(TargetReg != AArch64::NoRegister);
+  assert(TargetReg.isValid());
   // SUB Xd, SP, AllocSize
   emitFrameOffset(MBB, MBBI, DL, TargetReg, AArch64::SP, -AllocSize, TII,
                   MachineInstr::FrameSetup, false, NeedsWinCFI, &HasWinCFI,
@@ -646,7 +653,7 @@ void AArch64PrologueEmitter::emitPrologue() {
   // the epilogue. In this case, we still need to emit a SEH prologue sequence.
   // See `seh-minimal-prologue-epilogue.ll` test cases.
   if (AFI->getArgumentStackToRestore())
-    HasWinCFI = true;
+    HasWinCFI |= NeedsWinCFI;
 
   if (AFI->shouldSignReturnAddress(MF)) {
     // If pac-ret+leaf is in effect, PAUTH_PROLOGUE pseudo instructions
@@ -1082,14 +1089,14 @@ void AArch64PrologueEmitter::emitWindowsStackProbe(
 
   // Find an available register to spill the value of X15 to, if X15 is being
   // used already for nest.
-  unsigned X15Scratch = AArch64::NoRegister;
+  Register X15Scratch;
   if (llvm::any_of(MBB.liveins(),
                    [this](const MachineBasicBlock::RegisterMaskPair &LiveIn) {
                      return RegInfo.isSuperOrSubRegisterEq(AArch64::X15,
                                                            LiveIn.PhysReg);
                    })) {
     X15Scratch = AFL.findScratchNonCalleeSaveRegister(&MBB, /*HasCall=*/true);
-    assert(X15Scratch != AArch64::NoRegister &&
+    assert(X15Scratch.isValid() &&
            (X15Scratch < AArch64::X15 || X15Scratch > AArch64::X17));
 #ifndef NDEBUG
     LiveRegs.removeReg(AArch64::X15); // ignore X15 since we restore it
@@ -1135,7 +1142,12 @@ void AArch64PrologueEmitter::emitWindowsStackProbe(
         .setMIFlags(MachineInstr::FrameSetup);
   }
 
-  const char *ChkStk = Subtarget.getChkStkName();
+  const AArch64TargetLowering *TLI = Subtarget.getTargetLowering();
+  RTLIB::LibcallImpl ChkStkLibcall = TLI->getLibcallImpl(RTLIB::STACK_PROBE);
+  if (ChkStkLibcall == RTLIB::Unsupported)
+    reportFatalUsageError("no available implementation of __chkstk");
+
+  const char *ChkStk = TLI->getLibcallImplName(ChkStkLibcall).data();
   switch (MF.getTarget().getCodeModel()) {
   case CodeModel::Tiny:
   case CodeModel::Small:
@@ -1229,7 +1241,7 @@ void AArch64PrologueEmitter::emitWindowsStackProbe(
     // we've set a frame pointer and already finished the SEH prologue.
     assert(!NeedsWinCFI);
   }
-  if (X15Scratch != AArch64::NoRegister) {
+  if (X15Scratch.isValid()) {
     BuildMI(MBB, MBBI, DL, TII->get(AArch64::ORRXrr), AArch64::X15)
         .addReg(AArch64::XZR)
         .addReg(X15Scratch, RegState::Undef)
@@ -1762,11 +1774,8 @@ void AArch64EpilogueEmitter::finalizeEpilogue() const {
   if (AFI->shouldSignReturnAddress(MF)) {
     // If pac-ret+leaf is in effect, PAUTH_EPILOGUE pseudo instructions
     // are inserted by emitPacRetPlusLeafHardening().
-    if (!AFL.shouldSignReturnAddressEverywhere(MF)) {
-      BuildMI(MBB, MBB.getFirstTerminator(), DL,
-              TII->get(AArch64::PAUTH_EPILOGUE))
-          .setMIFlag(MachineInstr::FrameDestroy);
-    }
+    if (!AFL.shouldSignReturnAddressEverywhere(MF))
+      TII->createPauthEpilogueInstr(MBB, DL);
     // AArch64PointerAuth pass will insert SEH_PACSignLR
     HasWinCFI |= NeedsWinCFI;
   }

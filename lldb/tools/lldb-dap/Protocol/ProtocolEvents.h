@@ -117,6 +117,143 @@ struct MemoryEventBody {
 };
 llvm::json::Value toJSON(const MemoryEventBody &);
 
+enum StoppedReason : unsigned {
+  eStoppedReasonUninitialized,
+  eStoppedReasonStep,
+  eStoppedReasonBreakpoint,
+  eStoppedReasonException,
+  eStoppedReasonPause,
+  eStoppedReasonEntry,
+  eStoppedReasonGoto,
+  eStoppedReasonFunctionBreakpoint,
+  eStoppedReasonDataBreakpoint,
+  eStoppedReasonInstructionBreakpoint,
+};
+
+/// The event indicates that the execution of the debuggee has stopped due to
+/// some condition.
+///
+/// This can be caused by a breakpoint previously set, a stepping request has
+/// completed, by executing a debugger statement etc.
+struct StoppedEventBody {
+  /// The reason for the event.
+  ///
+  /// For backward compatibility this string is shown in the UI if the
+  /// `description` attribute is missing (but it must not be translated).
+  StoppedReason reason = eStoppedReasonUninitialized;
+
+  /// The full reason for the event, e.g. 'Paused on exception'. This string is
+  /// shown in the UI as is and can be translated.
+  std::string description;
+
+  /// The thread which was stopped.
+  lldb::tid_t threadId = LLDB_INVALID_THREAD_ID;
+
+  /// A value of true hints to the client that this event should not change the
+  /// focus.
+  bool preserveFocusHint = false;
+
+  /// Additional information. E.g. if reason is `exception`, text contains the
+  /// exception name. This string is shown in the UI.
+  std::string text;
+
+  /// "If `allThreadsStopped` is true, a debug adapter can announce that all
+  /// threads have stopped.
+  ///
+  /// - The client should use this information to enable that all threads can be
+  /// expanded to access their stacktraces.
+  /// - If the attribute is missing or false, only the thread with the given
+  /// `threadId` can be expanded.
+  bool allThreadsStopped = false;
+
+  /// Ids of the breakpoints that triggered the event. In most cases there is
+  /// only a single breakpoint but here are some examples for multiple
+  /// breakpoints:
+  ///
+  /// - Different types of breakpoints map to the same location.
+  /// - Multiple source breakpoints get collapsed to the same instruction by the
+  /// compiler/runtime.
+  /// - Multiple function breakpoints with different function names map to the
+  /// same location.
+  std::vector<lldb::break_id_t> hitBreakpointIds;
+};
+llvm::json::Value toJSON(const StoppedEventBody &);
+
+/// The event signals that a long running operation is about to start and
+/// provides additional information for the client to set up a corresponding
+/// progress and cancellation UI.
+///
+/// The client is free to delay the showing of the UI in order to reduce
+/// flicker.
+///
+/// This event should only be sent if the corresponding capability
+/// `supportsProgressReporting` is true
+struct ProgressStartEventBody {
+  /// An ID that can be used in subsequent `progressUpdate` and `progressEnd`
+  /// events to make them refer to the same progress reporting. IDs must be
+  /// unique within a debug session.
+  String progressId;
+
+  /// Short title of the progress reporting. Shown in the UI to describe the
+  /// long running operation.
+  String title;
+
+  /// More detailed progress message.
+  std::optional<String> message;
+
+  /// The request ID that this progress report is related to. If specified a
+  /// debug adapter is expected to emit progress events for the long running
+  /// request until the request has been either completed or cancelled.  If the
+  /// request ID is omitted, the progress report is assumed to be related to
+  /// some general activity of the debug adapter.
+  std::optional<uint32_t> requestId;
+
+  /// Progress percentage to display (value range: 0 to 100). If omitted no
+  /// percentage is shown.
+  std::optional<uint32_t> percentage;
+
+  /// If true, the request that reports progress may be cancelled with a
+  /// `cancel` request.
+  std::optional<bool> cancellable;
+};
+llvm::json::Value toJSON(const ProgressStartEventBody &);
+
+/// The event signals that the progress reporting needs to be updated with a new
+/// message and/or percentage.
+///
+/// The client does not have to update the UI immediately, but the clients needs
+/// to keep track of the message and/or percentage values.
+///
+/// This event should only be sent if the corresponding capability
+/// `supportsProgressReporting` is true.
+struct ProgressUpdateEventBody {
+  /// The ID that was introduced in the initial `ProgressStartEventBody` event.
+  String progressId;
+
+  /// More detailed progress message. If omitted, the previous message (if any)
+  /// is used.
+  std::optional<String> message;
+
+  /// Progress percentage to display (value range: 0 to 100). If omitted no
+  /// percentage is shown.
+  std::optional<uint32_t> percentage;
+};
+llvm::json::Value toJSON(const ProgressUpdateEventBody &);
+
+/// The event signals the end of the progress reporting with a final message.
+///
+/// This event should only be sent if the corresponding capability
+/// `supportsProgressReporting` is true.
+struct ProgressEndEventBody {
+  /// The ID that was introduced in the initial `ProgressStartEventBody` event.
+  String progressId;
+
+  /// More detailed progress message. If omitted, the previous message (if any)
+  /// is used.
+  std::optional<String> message;
+};
+llvm::json::Value toJSON(const ProgressEndEventBody &);
+
 } // end namespace lldb_dap::protocol
 
 #endif

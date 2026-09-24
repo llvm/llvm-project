@@ -11,7 +11,6 @@
 
 #include "flang/Runtime/descriptor-consts.h"
 #include "flang/Runtime/entry-names.h"
-#include <cstdint>
 
 namespace Fortran::runtime {
 struct ArrayConstructorVector;
