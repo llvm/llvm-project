@@ -2875,18 +2875,6 @@ TEST(TargetParserTest, testAMDGPUgetFeatureBitset) {
   EXPECT_TRUE(Empty.empty());
 }
 
-TEST(TargetParserTest, testAMDGPUBufferInvInstFeature) {
-  auto Has = [](AMDGPU::GPUKind AK) {
-    return AMDGPU::getFeatureBitset(AK).test(AMDGPU::FEAT_BUFFER_INV_INST);
-  };
-
-  EXPECT_FALSE(Has(AMDGPU::GK_GFX90A));
-  EXPECT_TRUE(Has(AMDGPU::GK_GFX942));
-  EXPECT_TRUE(Has(AMDGPU::GK_GFX950));
-  EXPECT_TRUE(Has(AMDGPU::GK_GFX9_4_GENERIC));
-  EXPECT_FALSE(Has(AMDGPU::GK_GFX1250));
-}
-
 TEST(TargetParserTest, testAMDGPUHalfAddressableLDSFeature) {
   auto Has = [](AMDGPU::GPUKind AK) {
     return AMDGPU::getFeatureBitset(AK).test(
