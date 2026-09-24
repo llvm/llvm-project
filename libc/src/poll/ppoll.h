@@ -22,8 +22,9 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-int ppoll(struct pollfd *fds, nfds_t nfds, const struct timespec *tmo_p,
-          const sigset_t *sigmask);
+int ppoll(struct pollfd *fds, nfds_t nfds,
+          const struct timespec *__restrict tmo_p,
+          const sigset_t *__restrict sigmask);
 
 } // namespace LIBC_NAMESPACE_DECL
 

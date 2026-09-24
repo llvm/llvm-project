@@ -44,5 +44,5 @@ functions:
     arguments:
       - type: struct pollfd *
       - type: nfds_t
-      - type: const struct timespec *
-      - type: const sigset_t *
+      - type: const struct timespec *__restrict
+      - type: const sigset_t *__restrict
