@@ -1745,21 +1745,20 @@ define void @foo(ptr %ptr) {
 
 TEST_F(SandboxIRTest, Value_stripAndAccumulate) {
   parseIR(C, R"IR(
-define void @foo(ptr %ptr, <2 x ptr> %ptrs) {
-  %gep0 = getelementptr i8, ptr %ptr, i32 0
+define void @foo(ptr %ptr, i32 %val) {
+  %idx = add i32 %val, 1
+  %gep = getelementptr i8, ptr %ptr, i32 %idx
   ret void
 }
 )IR");
   Function &LLVMF = *M->getFunction("foo");
   const DataLayout &DL = M->getDataLayout();
   BasicBlock *LLVMBB = &*LLVMF.begin();
-  auto LLVMIt = LLVMBB->begin();
-  auto *LLVMGEP = &*LLVMIt++;
   sandboxir::Context Ctx(C);
   Ctx.createFunction(&LLVMF);
   auto *BB = cast<sandboxir::BasicBlock>(Ctx.getValue(LLVMBB));
-  auto It = BB->begin();
-  auto *GEP = &*It++;
+  auto *LLVMGEP = &*std::next(LLVMBB->begin(), 1);
+  auto *GEP = &*std::next(BB->begin(), 1);
 
   unsigned Bits = DL.getIndexTypeSizeInBits(LLVMGEP->getType());
   APInt Offset(Bits, 0);

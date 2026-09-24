@@ -546,6 +546,34 @@ static bool canFuseFMulWithFAddSub(const SITargetLowering &TLI, Type *Ty,
   return HasFMAD || (FAddSub->hasAllowContract() && FMul->hasAllowContract());
 }
 
+/// An fma holds one multiply, so only one fmul operand fuses with \p FAddSub.
+static const Instruction *getFusedFMul(const SITargetLowering &TLI, Type *Ty,
+                                       const Instruction *FAddSub) {
+  for (const Value *Op : FAddSub->operands()) {
+    const auto *FMul = dyn_cast<Instruction>(Op);
+    if (FMul && FMul->getOpcode() == Instruction::FMul && FMul->hasOneUse() &&
+        canFuseFMulWithFAddSub(TLI, Ty, FMul, FAddSub))
+      return FMul;
+  }
+  return nullptr;
+}
+
+static bool isFusedFMul(const SITargetLowering &TLI, Type *Ty,
+                        const Instruction *FMul, const Instruction *FAddSub) {
+  const Instruction *Fused = getFusedFMul(TLI, Ty, FAddSub);
+  if (Fused == FMul)
+    return true;
+  // (a * b + c * d) + e becomes fma(a, b, fma(c, d, e)) if the outer fadd has
+  // reassoc.
+  if (!Fused || FAddSub->getOpcode() != Instruction::FAdd ||
+      !FAddSub->hasOneUse())
+    return false;
+  const auto *Outer = dyn_cast<BinaryOperator>(*FAddSub->user_begin());
+  return Outer && Outer->getOpcode() == Instruction::FAdd &&
+         Outer->hasAllowReassoc() &&
+         canFuseFMulWithFAddSub(TLI, Ty, FMul, Outer);
+}
+
 InstructionCost GCNTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
@@ -613,7 +641,7 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
       if (FAddSub &&
           (FAddSub->getOpcode() == Instruction::FAdd ||
            FAddSub->getOpcode() == Instruction::FSub) &&
-          canFuseFMulWithFAddSub(*TLI, Ty, CxtI, FAddSub))
+          isFusedFMul(*TLI, Ty, CxtI, FAddSub))
         return TargetTransformInfo::TCC_Free;
     }
     [[fallthrough]];
@@ -1533,17 +1561,9 @@ bool GCNTTIImpl::isProfitableToSinkOperands(Instruction *I,
   // so this stays a move.
   if (I->getOpcode() == Instruction::FAdd ||
       I->getOpcode() == Instruction::FSub) {
-    for (Use &Op : I->operands()) {
-      auto *FMul = dyn_cast<Instruction>(Op.get());
-      if (!FMul || FMul->getOpcode() != Instruction::FMul ||
-          !FMul->hasOneUse() ||
-          !canFuseFMulWithFAddSub(*TLI, I->getType(), FMul, I))
-        continue;
-      // The fused operand. Sink it when it sits in another block, then stop.
-      if (FMul->getParent() != I->getParent())
-        Ops.push_back(&Op);
-      break;
-    }
+    const Instruction *FMul = getFusedFMul(*TLI, I->getType(), I);
+    if (FMul && FMul->getParent() != I->getParent())
+      Ops.push_back(&I->getOperandUse(I->getOperand(0) == FMul ? 0 : 1));
   }
 
   for (auto &Op : I->operands()) {

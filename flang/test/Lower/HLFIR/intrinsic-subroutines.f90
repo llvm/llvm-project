@@ -26,13 +26,13 @@ program main
 end program
 ! CHECK-LABEL:   func.func @_QQmain() attributes {fir.bindc_name = "MAIN"} {
 ! CHECK:           %[[VAL_0:.*]] = arith.constant 3 : index
-! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.array<3xi32> {bindc_name = "from", uniq_name = "_QFEfrom"}
+! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.array<3xi32> <{bindc_name = "from", uniq_name = "_QFEfrom"}>
 ! CHECK:           %[[VAL_2:.*]] = fir.shape %[[VAL_0]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_2]]) {uniq_name = "_QFEfrom"} : (!fir.ref<!fir.array<3xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<3xi32>>, !fir.ref<!fir.array<3xi32>>)
 ! CHECK:           %[[VAL_4:.*]] = fir.address_of(@_QFECn) : !fir.ref<i32>
 ! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QFECn"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_6:.*]] = arith.constant 3 : index
-! CHECK:           %[[VAL_7:.*]] = fir.alloca !fir.array<3xi32> {bindc_name = "to", uniq_name = "_QFEto"}
+! CHECK:           %[[VAL_7:.*]] = fir.alloca !fir.array<3xi32> <{bindc_name = "to", uniq_name = "_QFEto"}>
 ! CHECK:           %[[VAL_8:.*]] = fir.shape %[[VAL_6]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_7]](%[[VAL_8]]) {uniq_name = "_QFEto"} : (!fir.ref<!fir.array<3xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<3xi32>>, !fir.ref<!fir.array<3xi32>>)
 ! CHECK:           %[[VAL_10:.*]] = arith.constant 7 : i32

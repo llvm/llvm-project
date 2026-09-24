@@ -13158,6 +13158,15 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getNode(getRVPShiftOpcode(IntNo), DL, Op.getValueType(),
                        Op.getOperand(1), ShAmt);
   }
+  case Intrinsic::riscv_psati:
+  case Intrinsic::riscv_pusati: {
+    bool IsSigned = IntNo == Intrinsic::riscv_psati;
+    unsigned Opc = IsSigned ? RISCVISD::SATI : RISCVISD::USATI;
+    // psati's width counts the sign bit, RISCVISD::SATI's immediate does not.
+    unsigned Width = Op.getConstantOperandVal(2) - (IsSigned ? 1 : 0);
+    return DAG.getNode(Opc, DL, Op.getValueType(), Op.getOperand(1),
+                       DAG.getTargetConstant(Width, DL, XLenVT));
+  }
   case Intrinsic::riscv_psext_b:
   case Intrinsic::riscv_psext_h: {
     EVT VT = Op.getValueType();
@@ -17704,7 +17713,9 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     case Intrinsic::riscv_pmulhru:
     case Intrinsic::riscv_pmulhsu:
     case Intrinsic::riscv_pmulhrsu:
-    case Intrinsic::riscv_psabs: {
+    case Intrinsic::riscv_psabs:
+    case Intrinsic::riscv_psati:
+    case Intrinsic::riscv_pusati: {
       EVT VT = N->getValueType(0);
       if (!Subtarget.is64Bit() || (VT != MVT::v4i8 && VT != MVT::v2i16))
         return;
@@ -17747,8 +17758,8 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
         Opc = getRVPMulHighOpcode(IntNo);
         break;
       default:
-        // pas/psa/psas/pssa/paas/pasa and pmerge: re-emit at the widened type
-        // rather than lowering to a generic node.
+        // pas/psa/psas/pssa/paas/pasa, pmerge and psati/pusati: re-emit at the
+        // widened type rather than lowering to a generic node.
         Opc = ISD::INTRINSIC_WO_CHAIN;
         break;
       }
@@ -18956,6 +18967,61 @@ static SDValue combinePExtWideningAddAcc(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(Opc, DL, VT, Acc, Zip, Ones);
 }
 
+// Fold sub(add(Acc, ext A), ext B) to Acc + (A - B), where ext is sext/zext.
+static SDValue combinePExtWideningSubAcc(SDNode *N, SelectionDAG &DAG,
+                                         const RISCVSubtarget &Subtarget) {
+  using namespace SDPatternMatch;
+
+  if (!Subtarget.hasStdExtP() || !Subtarget.is64Bit())
+    return SDValue();
+
+  if (N->getOpcode() != ISD::SUB)
+    return SDValue();
+
+  MVT VT = N->getSimpleValueType(0);
+  if (VT != MVT::v4i16 && VT != MVT::v2i32)
+    return SDValue();
+
+  MVT SrcVT = VT == MVT::v4i16 ? MVT::v4i8 : MVT::v2i16;
+  auto Extend = [&](SDValue &Ext, SDValue &Src) {
+    return m_Value(
+        Ext, m_OneUse(m_AnyOf(m_SExt(m_Value(Src, m_SpecificVT(SrcVT))),
+                              m_ZExt(m_Value(Src, m_SpecificVT(SrcVT))))));
+  };
+
+  SDValue Acc, ExtA, A, ExtB, B;
+  if (!sd_match(N, m_Sub(m_OneUse(m_Add(m_Value(Acc), Extend(ExtA, A))),
+                         Extend(ExtB, B))) ||
+      ExtA.getOpcode() != ExtB.getOpcode())
+    return SDValue();
+
+  SDLoc DL(N);
+  if (ExtA.getOpcode() == ISD::ZERO_EXTEND) {
+    // No unsigned PM2 accumulate-subtract; keep the binary widening subtract
+    // off the accumulator's dependency chain.
+    return DAG.getNode(ISD::ADD, DL, VT, Acc,
+                       DAG.getNode(ISD::SUB, DL, VT, ExtA, ExtB));
+  }
+
+  MVT LegalSrcVT = VT == MVT::v4i16 ? MVT::v8i8 : MVT::v4i16;
+  A = DAG.getNode(ISD::CONCAT_VECTORS, DL, LegalSrcVT, A, DAG.getUNDEF(SrcVT));
+  B = DAG.getNode(ISD::CONCAT_VECTORS, DL, LegalSrcVT, B, DAG.getUNDEF(SrcVT));
+
+  SDValue Zip = DAG.getNode(RISCVISD::PZIP, DL, LegalSrcVT, A, B);
+  if (VT == MVT::v4i16) {
+    SDValue ZipAsVT = DAG.getBitcast(VT, Zip);
+    SDValue Low = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, VT, ZipAsVT,
+                              DAG.getValueType(MVT::v4i8));
+    SDValue High = DAG.getNode(RISCVISD::PSRA, DL, VT, ZipAsVT,
+                               DAG.getConstant(8, DL, MVT::i64));
+    return DAG.getNode(ISD::ADD, DL, VT, Acc,
+                       DAG.getNode(ISD::SUB, DL, VT, Low, High));
+  }
+
+  SDValue Ones = DAG.getConstant(1, DL, LegalSrcVT);
+  return DAG.getNode(RISCVISD::PM2SUBA_H, DL, VT, Acc, Zip, Ones);
+}
+
 static SDValue performADDCombine(SDNode *N,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  const RISCVSubtarget &Subtarget) {
@@ -19109,6 +19175,8 @@ static SDValue performSUBCombine(SDNode *N, SelectionDAG &DAG,
     }
   }
 
+  if (SDValue V = combinePExtWideningSubAcc(N, DAG, Subtarget))
+    return V;
   if (SDValue V = combinePExtWideningAddSub(N, DAG, Subtarget))
     return V;
   if (SDValue V = combineBinOpOfZExt(N, DAG))
@@ -27863,12 +27931,25 @@ bool RISCVTargetLowering::isEligibleForTailCallOptimization(
     if (VA.getLocInfo() == CCValAssign::Indirect)
       return false;
 
-  // Do not tail call opt if either caller or callee uses struct return
-  // semantics.
-  auto IsCallerStructRet = Caller.hasStructRetAttr();
-  auto IsCalleeStructRet = Outs.empty() ? false : Outs[0].Flags.isSRet();
-  if (IsCallerStructRet || IsCalleeStructRet)
-    return false;
+  // If the callee has an sret parameter, conservatively require it to receive
+  // the caller's sret pointer. If only the caller has an sret parameter, treat
+  // that pointer like an ordinary pointer when passing call arguments.
+  // TODO: Support other sret buffers that outlive the caller, such as globals.
+  bool IsCalleeStructRet = llvm::any_of(
+      Outs, [](const ISD::OutputArg &Out) { return Out.Flags.isSRet(); });
+  if (IsCalleeStructRet) {
+    // Do not allow the tail call if the caller has no sret parameter.
+    if (!Caller.hasStructRetAttr() || !CLI.CB || CLI.CB->arg_empty())
+      return false;
+
+    // RISC-V psABI passes the sret pointer as the first argument. The Microsoft
+    // C++ ABI may instead pass it as the second argument after `this`, but that
+    // ABI is rarely used on RISC-V and is not supported here.
+    assert(Caller.getArg(0)->hasStructRetAttr() && Outs[0].Flags.isSRet() &&
+           "sret pointer must be argument 0");
+    if (CLI.CB->getArgOperand(0) != Caller.getArg(0))
+      return false;
+  }
 
   // The callee has to preserve all registers the caller needs to preserve.
   const RISCVRegisterInfo *TRI = Subtarget.getRegisterInfo();

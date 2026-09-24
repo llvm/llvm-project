@@ -3439,6 +3439,9 @@ def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
                        OptionalAttr<CIR_TLSModelAttr>:$tls_model,
                        OptionalAttr<CIR_ThreadLocalGlobalWrapperInitAttr>:$tls_refs,
                        OptionalAttr<AnyAttr>:$initial_value,
+                       // FIXME(cir): This eventually needs to become a
+                       // stringattr like FuncOp to allow customization of the
+                       // group name.
                        UnitProp:$comdat,
                        UnitProp:$constant,
                        UnitProp:$dso_local,
@@ -4277,6 +4280,10 @@ def CIR_FuncOp : CIR_Op<"func", [
     exception handling. This is a symbol reference to the personality function
     (e.g., `@__gxx_personality_v0` for C++ exceptions).
 
+    The 'comdat' attribute marks the function as belonging to a COMDAT group.
+    This attribute includes an optional 'group' name, which if not provided,
+    results in the function's symbol name being used.
+
     Example:
 
     ```
@@ -4329,7 +4336,7 @@ def CIR_FuncOp : CIR_Op<"func", [
       "cir::CallingConv::C"
     >:$calling_conv,
     OptionalAttr<StrAttr>:$sym_visibility,
-    UnitAttr:$comdat,
+    OptionalAttr<StrAttr>:$comdat,
     OptionalAttr<I64Attr>:$alignment,
     OptionalAttr<I64Attr>:$preferred_alignment,
     OptionalAttr<DictArrayAttr>:$arg_attrs,
@@ -4374,6 +4381,10 @@ def CIR_FuncOp : CIR_Op<"func", [
     /// returing void)
     llvm::ArrayRef<mlir::Type> getResultTypes() {
        return getFunctionType().getReturnTypes();
+    }
+
+    void setComdat(bool) {
+      setComdat(llvm::StringRef(""));
     }
 
     //===------------------------------------------------------------------===//
@@ -7006,6 +7017,68 @@ def CIR_RotateOp : CIR_Op<"rotate", [Pure, SameOperandsAndResultType]> {
   }];
 
   let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// Funnel Shift Operations
+//===----------------------------------------------------------------------===//
+
+// Concatenate `a` and `b`, shift by `c`, and return one half of the doubled
+// width. All operands and the result share an integer or vector-of-integer
+// type.
+class CIR_FunnelShiftOp<string mnemonic, string llvmOpName>
+    : CIR_Op<mnemonic, [Pure, SameOperandsAndResultType]> {
+  let arguments = (ins
+    CIR_AnyIntOrVecOfIntType:$a,
+    CIR_AnyIntOrVecOfIntType:$b,
+    CIR_AnyIntOrVecOfIntType:$c
+  );
+
+  let results = (outs CIR_AnyIntOrVecOfIntType:$result);
+
+  let assemblyFormat = "$a `,` $b `,` $c `:` type($a) attr-dict";
+
+  let llvmOp = llvmOpName;
+}
+
+def CIR_FshlOp : CIR_FunnelShiftOp<"fshl", "FshlOp"> {
+  let summary = "Funnel shift left";
+  let description = [{
+    The `cir.fshl` operation concatenates `a` and `b` (with `a` in the high
+    half), shifts the concatenation left by `c` bit positions, and returns the
+    high half of the result. The shift amount is treated modulo the bitwidth
+    of the operands.
+
+    All operands and the result must have the same integer type or
+    vector-of-integer type.
+
+    Example:
+
+    ```
+    %r = cir.fshl %a, %b, %c : !u32i
+    %v = cir.fshl %va, %vb, %vc : !cir.vector<4 x !s32i>
+    ```
+  }];
+}
+
+def CIR_FshrOp : CIR_FunnelShiftOp<"fshr", "FshrOp"> {
+  let summary = "Funnel shift right";
+  let description = [{
+    The `cir.fshr` operation concatenates `a` and `b` (with `a` in the high
+    half), shifts the concatenation right by `c` bit positions, and returns
+    the low half of the result. The shift amount is treated modulo the bitwidth
+    of the operands.
+
+    All operands and the result must have the same integer type or
+    vector-of-integer type.
+
+    Example:
+
+    ```
+    %r = cir.fshr %a, %b, %c : !u32i
+    %v = cir.fshr %va, %vb, %vc : !cir.vector<4 x !s32i>
+    ```
+  }];
 }
 
 //===----------------------------------------------------------------------===//

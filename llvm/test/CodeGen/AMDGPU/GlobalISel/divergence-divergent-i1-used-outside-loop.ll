@@ -284,13 +284,11 @@ define void @divergent_i1_xor_used_outside_loop_larger_loop_body(i32 %num.elts, 
 ; GFX10-NEXT:  ; %bb.4: ; %loop.cond
 ; GFX10-NEXT:    ; in Loop: Header=BB4_3 Depth=1
 ; GFX10-NEXT:    v_cmp_lt_i32_e32 vcc_lo, s4, v0
-; GFX10-NEXT:    s_andn2_b32 s11, s11, exec_lo
-; GFX10-NEXT:    s_and_b32 s12, exec_lo, 0
 ; GFX10-NEXT:    s_andn2_b32 s10, s10, exec_lo
 ; GFX10-NEXT:    s_add_i32 s4, s4, 1
-; GFX10-NEXT:    s_and_b32 s13, exec_lo, vcc_lo
-; GFX10-NEXT:    s_or_b32 s11, s11, s12
-; GFX10-NEXT:    s_or_b32 s10, s10, s13
+; GFX10-NEXT:    s_andn2_b32 s11, s11, exec_lo
+; GFX10-NEXT:    s_and_b32 s12, exec_lo, vcc_lo
+; GFX10-NEXT:    s_or_b32 s10, s10, s12
 ; GFX10-NEXT:    s_branch .LBB4_2
 ; GFX10-NEXT:  .LBB4_5: ; %loop.exit.guard
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s8
@@ -387,10 +385,8 @@ define void @divergent_i1_icmp_used_outside_loop(i32 %v0, i32 %v1, ptr addrspace
 ; GFX10-NEXT:    s_cbranch_execz .LBB5_1
 ; GFX10-NEXT:  ; %bb.5: ; %loop.cond
 ; GFX10-NEXT:    ; in Loop: Header=BB5_2 Depth=1
-; GFX10-NEXT:    s_andn2_b32 s5, s5, exec_lo
-; GFX10-NEXT:    s_and_b32 s9, exec_lo, 0
 ; GFX10-NEXT:    s_add_i32 s4, s4, 1
-; GFX10-NEXT:    s_or_b32 s5, s5, s9
+; GFX10-NEXT:    s_andn2_b32 s5, s5, exec_lo
 ; GFX10-NEXT:    s_branch .LBB5_1
 ; GFX10-NEXT:  .LBB5_6: ; %cond.block.1
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s6
@@ -573,11 +569,9 @@ define amdgpu_cs void @loop_with_1break(ptr addrspace(1) %x, ptr addrspace(1) %a
 ; GFX10-NEXT:    s_cmpk_lt_u32 s1, 0x64
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
 ; GFX10-NEXT:    s_cselect_b32 s6, exec_lo, 0
-; GFX10-NEXT:    s_andn2_b32 s4, s4, exec_lo
-; GFX10-NEXT:    s_and_b32 s7, exec_lo, 0
 ; GFX10-NEXT:    s_andn2_b32 s3, s3, exec_lo
 ; GFX10-NEXT:    s_and_b32 s6, exec_lo, s6
-; GFX10-NEXT:    s_or_b32 s4, s4, s7
+; GFX10-NEXT:    s_andn2_b32 s4, s4, exec_lo
 ; GFX10-NEXT:    s_or_b32 s3, s3, s6
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_add_nc_u32_e32 v6, 1, v6

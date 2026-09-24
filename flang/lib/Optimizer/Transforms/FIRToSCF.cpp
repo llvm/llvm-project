@@ -19,6 +19,10 @@ namespace fir {
 } // namespace fir
 
 namespace {
+static void copyDiscardableAttrs(mlir::Operation *from, mlir::Operation *to) {
+  to->setDiscardableAttrs(from->getDiscardableAttrDictionary());
+}
+
 class FIRToSCFPass : public fir::impl::FIRToSCFPassBase<FIRToSCFPass> {
   using FIRToSCFPassBase::FIRToSCFPassBase;
 
@@ -299,7 +303,7 @@ struct IterWhileConversion : public mlir::OpRewritePattern<fir::IterWhileOp> {
     rewriter.setInsertionPointToEnd(afterBody);
     rewriter.replaceOpWithNewOp<mlir::scf::YieldOp>(resultOp, results);
 
-    scfWhileOp->setAttrs(iterWhileOp->getAttrs());
+    copyDiscardableAttrs(iterWhileOp, scfWhileOp);
     rewriter.replaceOp(iterWhileOp,
                        hasFinalValue ? scfWhileOp->getResults()
                                      : scfWhileOp->getResults().drop_front());
@@ -345,7 +349,9 @@ struct IfConversion : public mlir::OpRewritePattern<fir::IfOp> {
                                   scfIfOp.getElseRegion().front());
     }
 
-    scfIfOp->setAttrs(ifOp->getAttrs());
+    copyDiscardableAttrs(ifOp, scfIfOp);
+    if (mlir::DenseI32ArrayAttr weights = ifOp.getRegionWeightsAttr())
+      scfIfOp->setDiscardableAttr(ifOp.getRegionWeightsAttrName(), weights);
     rewriter.replaceOp(ifOp, scfIfOp);
     return mlir::success();
   }

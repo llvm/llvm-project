@@ -1052,7 +1052,7 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 
   // Block and string pointers are the only ones we can actually read from.
   if (!Ptr.isReadablePointerType())
-    return CheckDummy(S, OpPC, Ptr, AK);
+    return diagnoseDummy(S, OpPC, Ptr, AK);
 
   assert(Ptr.isStringPointer());
 
@@ -1070,7 +1070,7 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 bool CheckFinalLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   assert(!Ptr.isZero());
   if (!Ptr.isReadablePointerType())
-    return CheckDummy(S, OpPC, Ptr, AK_Read);
+    return diagnoseDummy(S, OpPC, Ptr, AK_Read);
 
   if (Ptr.isBlockPointer() && !Ptr.block()->isAccessible()) {
     if (!CheckLive(S, OpPC, Ptr, AK_Read))
@@ -1107,7 +1107,7 @@ bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     return false;
 
   if (Ptr.isOpaquePointer())
-    return CheckDummy(S, OpPC, Ptr, AK);
+    return diagnoseDummy(S, OpPC, Ptr, AK);
 
   if (!Ptr.isBlockPointer())
     return false;
@@ -1428,11 +1428,8 @@ bool InvalidDeclRef(InterpState &S, CodePtr OpPC, const DeclRefExpr *DR,
   return CheckDeclRef(S, OpPC, DR);
 }
 
-bool CheckDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
-                AccessKinds AK) {
-  if (!Ptr.isDummy())
-    return true;
-
+bool diagnoseDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                   AccessKinds AK) {
   if (!S.diagnosing())
     return false;
 
@@ -1446,6 +1443,13 @@ bool CheckDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   if (AK == AK_Destroy || S.getLangOpts().CPlusPlus14)
     S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_modify_global);
   return false;
+}
+
+bool CheckDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                AccessKinds AK) {
+  if (!Ptr.isDummy())
+    return true;
+  return diagnoseDummy(S, OpPC, Ptr, AK);
 }
 
 static bool CheckNonNullArgs(InterpState &S, CodePtr OpPC, const Function *F,
@@ -2839,8 +2843,10 @@ bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
     return false;
   }
 
+  if (Ptr.isDummy())
+    return diagnoseDummy(S, OpPC, Ptr, AK_Construct);
   if (!Ptr.isBlockPointer())
-    return CheckDummy(S, OpPC, Ptr, AK_Construct);
+    return false;
 
   if (!CheckRange(S, OpPC, Ptr, AK_Construct))
     return false;
@@ -2854,7 +2860,7 @@ bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
       return false;
     if (!CheckLive(S, OpPC, Ptr, AK_Construct))
       return false;
-    return CheckDummy(S, OpPC, Ptr, AK_Construct);
+    return diagnoseDummy(S, OpPC, Ptr, AK_Construct);
   }
   if (!CheckTemporary(S, OpPC, Ptr, AK_Construct))
     return false;

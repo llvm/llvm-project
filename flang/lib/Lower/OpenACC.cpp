@@ -735,8 +735,8 @@ public:
   /// other regions while preserving Fortran information about the symbols for
   /// optimizations.
   void remapDataOperandSymbols(Fortran::lower::AbstractConverter &converter,
-                               fir::FirOpBuilder &builder,
-                               mlir::Region &region) const;
+                               fir::FirOpBuilder &builder, mlir::Region &region,
+                               bool deviceBindingsOnly = false) const;
 
   llvm::SmallVector<std::pair<mlir::Value, Fortran::semantics::SymbolRef>>
       symbols;
@@ -2074,7 +2074,7 @@ static void remapCommonBlockMember(
 
 void AccDataMap::remapDataOperandSymbols(
     Fortran::lower::AbstractConverter &converter, fir::FirOpBuilder &builder,
-    mlir::Region &region) const {
+    mlir::Region &region, bool deviceBindingsOnly) const {
   if (!enableSymbolRemapping || empty())
     return;
 
@@ -2103,6 +2103,10 @@ void AccDataMap::remapDataOperandSymbols(
     // could be improved to reduce IR noise.
     if (const auto *commonBlock = symbol->template detailsIf<
                                   Fortran::semantics::CommonBlockDetails>()) {
+      // Common block members keep their host binding; only whole objects get
+      // an alternate device binding.
+      if (deviceBindingsOnly)
+        continue;
       const Fortran::semantics::Scope &commonScope = symbol->owner();
       if (commonScope.equivalenceSets().empty()) {
         for (auto member : commonBlock->objects())
@@ -2136,7 +2140,10 @@ void AccDataMap::remapDataOperandSymbols(
           builder, loc, value, uniqName, /*shape=*/nullptr,
           /*typeparams=*/{}, /*dummyScope=*/nullptr, /*storage=*/nullptr,
           /*storage_offset=*/0, attributes);
-      symbolMap.addVariableDefinition(symbol, declare, /*force=*/true);
+      if (deviceBindingsOnly)
+        symbolMap.addDeviceVariableDefinition(symbol, declare, /*force=*/true);
+      else
+        symbolMap.addVariableDefinition(symbol, declare, /*force=*/true);
       continue;
     }
     auto hostDeclare = llvm::cast<hlfir::DeclareOp>(*hostDef);
@@ -2187,10 +2194,17 @@ void AccDataMap::remapDataOperandSymbols(
     if (llvm::isa<fir::BaseBoxType>(hostDeclare.getMemref().getType()))
       llvm::cast<hlfir::DeclareOp>(*computeDef).setSkipRebox(true);
 
-    symbolMap.addVariableDefinition(
-        symbol, llvm::cast<fir::FortranVariableOpInterface>(computeDef),
-        /*force=*/true);
+    auto variable{llvm::cast<fir::FortranVariableOpInterface>(computeDef)};
+    if (deviceBindingsOnly)
+      symbolMap.addDeviceVariableDefinition(symbol, variable, /*force=*/true);
+    else
+      symbolMap.addVariableDefinition(symbol, variable, /*force=*/true);
   }
+
+  // Component references keep their host binding; only whole objects get an
+  // alternate device binding.
+  if (deviceBindingsOnly)
+    return;
 
   for (const auto &comp : components) {
     mlir::Location loc = comp.accValue.getLoc();
@@ -3179,6 +3193,7 @@ static void genACCDataOp(Fortran::lower::AbstractConverter &converter,
 
   bool hasDefaultNone = false;
   bool hasDefaultPresent = false;
+  AccDataMap dataMap;
 
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
@@ -3225,7 +3240,7 @@ static void genACCDataOp(Fortran::lower::AbstractConverter &converter,
           copyClause->v, converter, semanticsContext, stmtCtx,
           dataClauseOperands, mlir::acc::DataClause::acc_copy,
           /*structured=*/true, /*implicit=*/false, async, asyncDeviceTypes,
-          asyncOnlyDeviceTypes);
+          asyncOnlyDeviceTypes, /*setDeclareAttr=*/false, &dataMap);
       copyEntryOperands.append(dataClauseOperands.begin() + crtDataStart,
                                dataClauseOperands.end());
     } else if (const auto *copyinClause =
@@ -3237,7 +3252,7 @@ static void genACCDataOp(Fortran::lower::AbstractConverter &converter,
           Fortran::parser::AccDataModifier::Modifier::ReadOnly,
           dataClauseOperands, mlir::acc::DataClause::acc_copyin,
           mlir::acc::DataClause::acc_copyin_readonly, async, asyncDeviceTypes,
-          asyncOnlyDeviceTypes);
+          asyncOnlyDeviceTypes, /*setDeclareAttr=*/false, &dataMap);
       copyinEntryOperands.append(dataClauseOperands.begin() + crtDataStart,
                                  dataClauseOperands.end());
     } else if (const auto *copyoutClause =
@@ -3250,7 +3265,7 @@ static void genACCDataOp(Fortran::lower::AbstractConverter &converter,
           Fortran::parser::AccDataModifier::Modifier::Zero, dataClauseOperands,
           mlir::acc::DataClause::acc_copyout,
           mlir::acc::DataClause::acc_copyout_zero, async, asyncDeviceTypes,
-          asyncOnlyDeviceTypes);
+          asyncOnlyDeviceTypes, /*setDeclareAttr=*/false, &dataMap);
       copyoutEntryOperands.append(dataClauseOperands.begin() + crtDataStart,
                                   dataClauseOperands.end());
     } else if (const auto *createClause =
@@ -3262,7 +3277,7 @@ static void genACCDataOp(Fortran::lower::AbstractConverter &converter,
           Fortran::parser::AccDataModifier::Modifier::Zero, dataClauseOperands,
           mlir::acc::DataClause::acc_create,
           mlir::acc::DataClause::acc_create_zero, async, asyncDeviceTypes,
-          asyncOnlyDeviceTypes);
+          asyncOnlyDeviceTypes, /*setDeclareAttr=*/false, &dataMap);
       createEntryOperands.append(dataClauseOperands.begin() + crtDataStart,
                                  dataClauseOperands.end());
     } else if (const auto *noCreateClause =
@@ -3273,7 +3288,7 @@ static void genACCDataOp(Fortran::lower::AbstractConverter &converter,
           noCreateClause->v, converter, semanticsContext, stmtCtx,
           dataClauseOperands, mlir::acc::DataClause::acc_no_create,
           /*structured=*/true, /*implicit=*/false, async, asyncDeviceTypes,
-          asyncOnlyDeviceTypes);
+          asyncOnlyDeviceTypes, /*setDeclareAttr=*/false, &dataMap);
       nocreateEntryOperands.append(dataClauseOperands.begin() + crtDataStart,
                                    dataClauseOperands.end());
     } else if (const auto *presentClause =
@@ -3297,7 +3312,7 @@ static void genACCDataOp(Fortran::lower::AbstractConverter &converter,
           presentClause->v, converter, semanticsContext, stmtCtx,
           dataClauseOperands, mlir::acc::DataClause::acc_present,
           /*structured=*/true, /*implicit=*/false, async, asyncDeviceTypes,
-          asyncOnlyDeviceTypes, /*setDeclareAttr=*/false, /*dataMap=*/nullptr,
+          asyncOnlyDeviceTypes, /*setDeclareAttr=*/false, &dataMap,
           /*filter=*/[&](const Fortran::parser::AccObject &obj) {
             return !isCUDADevice(obj);
           });
@@ -3310,7 +3325,7 @@ static void genACCDataOp(Fortran::lower::AbstractConverter &converter,
           deviceptrClause->v, converter, semanticsContext, stmtCtx,
           dataClauseOperands, mlir::acc::DataClause::acc_deviceptr,
           /*structured=*/true, /*implicit=*/false, async, asyncDeviceTypes,
-          asyncOnlyDeviceTypes);
+          asyncOnlyDeviceTypes, /*setDeclareAttr=*/false, &dataMap);
     } else if (const auto *attachClause =
                    std::get_if<Fortran::parser::AccClause::Attach>(&clause.u)) {
       auto crtDataStart = dataClauseOperands.size();
@@ -3347,6 +3362,8 @@ static void genACCDataOp(Fortran::lower::AbstractConverter &converter,
   auto dataOp = createRegionOp<mlir::acc::DataOp, mlir::acc::TerminatorOp>(
       builder, currentLocation, currentLocation, eval, operands,
       operandSegments);
+  dataMap.remapDataOperandSymbols(converter, builder, dataOp.getRegion(),
+                                  /*deviceBindingsOnly=*/true);
 
   if (!asyncDeviceTypes.empty())
     dataOp.setAsyncOperandsDeviceTypeAttr(

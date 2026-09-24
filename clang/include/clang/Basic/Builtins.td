@@ -5576,6 +5576,12 @@ def HLSLInterlockedAnd : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void (...)";
 }
 
+def HLSLInterlockedExchange : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_interlocked_exchange"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void (...)";
+}
+
 def HLSLInterlockedMax : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_interlocked_max"];
   let Attributes = [NoThrow];

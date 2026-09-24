@@ -16,7 +16,7 @@ subroutine fixed(a, b, m)
   integer :: i, m, a(m), b(m)
 
   !dir$ vector vectorlength(fixed)
-  ! CHECK: fir.do_loop {{.*}} attributes {loopAnnotation = #[[FIXED_TAG]]}
+  ! CHECK: fir.do_loop {{.*}} <{loopAnnotation = #[[FIXED_TAG]]}>
   do i = 1, m
     b(i) = a(i) + 1
   end do
@@ -27,7 +27,7 @@ subroutine scalable(a, b, m)
   integer :: i, m, a(m), b(m)
 
   !dir$ vector vectorlength(scalable)
-  ! CHECK: fir.do_loop {{.*}} attributes {loopAnnotation = #[[SCALABLE_TAG]]}
+  ! CHECK: fir.do_loop {{.*}} <{loopAnnotation = #[[SCALABLE_TAG]]}>
   do i = 1, m
     b(i) = a(i) + 1
   end do
@@ -38,7 +38,7 @@ subroutine len2(a, b, m)
   integer :: i, m, a(m), b(m)
 
   !dir$ vector vectorlength(2)
-  ! CHECK: fir.do_loop {{.*}} attributes {loopAnnotation = #[[WIDTH2_TAG]]}
+  ! CHECK: fir.do_loop {{.*}} <{loopAnnotation = #[[WIDTH2_TAG]]}>
   do i = 1, m
     b(i) = a(i) + 1
   end do
@@ -49,7 +49,7 @@ subroutine len2fixed(a, b, m)
   integer :: i, m, a(m), b(m)
 
   !dir$ vector vectorlength(2,fixed)
-  ! CHECK: fir.do_loop {{.*}} attributes {loopAnnotation = #[[FIXED_WIDTH2_TAG]]}
+  ! CHECK: fir.do_loop {{.*}} <{loopAnnotation = #[[FIXED_WIDTH2_TAG]]}>
   do i = 1, m
     b(i) = a(i) + 1
   end do
@@ -60,7 +60,7 @@ subroutine len2scalable(a, b, m)
   integer :: i, m, a(m), b(m)
 
   !dir$ vector vectorlength(2,scalable)
-  ! CHECK: fir.do_loop {{.*}} attributes {loopAnnotation = #[[SCALABLE_WIDTH2_TAG]]}
+  ! CHECK: fir.do_loop {{.*}} <{loopAnnotation = #[[SCALABLE_WIDTH2_TAG]]}>
   do i = 1, m
     b(i) = a(i) + 1
   end do
