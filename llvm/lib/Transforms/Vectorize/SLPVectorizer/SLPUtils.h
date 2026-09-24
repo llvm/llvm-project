@@ -36,8 +36,11 @@ namespace llvm {
 class AssumptionCache;
 class Constant;
 class DataLayout;
+class GetElementPtrInst;
 class Instruction;
 class IRBuilderBase;
+class LoopInfo;
+class ScalarEvolution;
 class TargetLibraryInfo;
 class Type;
 class Value;
@@ -378,6 +381,20 @@ Intrinsic::ID getMaskedDivRemIntrinsic(unsigned Opcode);
 /// values, feeding the inserts, are vectorized together with them by the
 /// dedicated attempt.
 bool isOnceUsedSeed(const Instruction *I);
+
+/// Leave related affine address recurrences feeding scalar accesses for loop
+/// strength reduction. Vectorizing their indices can retain expensive
+/// arithmetic and require an extract for each lane instead of a scalar pointer
+/// increment.
+bool isStrengthReducibleIndexBundle(ArrayRef<Value *> VL, ScalarEvolution &SE,
+                                    LoopInfo &LI, bool ReVec);
+
+/// Returns true if each value in \p VL is an in-loop index computation ending
+/// at a getelementptr accepted by \p IsCandidate and used only by scalar
+/// accesses.
+bool isGEPCandidateIndexBundle(
+    ArrayRef<Value *> VL, LoopInfo &LI, bool ReVec,
+    function_ref<bool(GetElementPtrInst *)> IsCandidate);
 
 /// If \p V is a single-use fpext of a single-use fptrunc forming a round-trip
 /// back to the type of \p V, returns the fptrunc; the round-trip source is its

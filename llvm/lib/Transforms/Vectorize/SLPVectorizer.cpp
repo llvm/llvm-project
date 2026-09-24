@@ -29057,6 +29057,9 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
           R.isScalarFallbackBlock(BB))
         continue;
       R.clearReductionData();
+      // GEPs is collected per block and is also used to keep its index
+      // computations out of the standalone-seed attempt.
+      collectSeedInstructions(BB);
       Changed |= vectorizeOnceUsedSeeds(BB, R);
     }
   }
@@ -30178,71 +30181,6 @@ void SLPVectorizerPass::collectSeedInstructions(BasicBlock *BB) {
   }
 }
 
-/// Returns true if \p Ptr is only used by scalar loads and stores, directly or
-/// through getelementptrs with constant offsets.
-static bool onlyFeedsScalarAccesses(const Value *Ptr, unsigned Depth = 0) {
-  constexpr unsigned MaxDepth = 2;
-  return !Ptr->use_empty() && all_of(Ptr->users(), [&](const User *U) {
-    if (const auto *Load = dyn_cast<LoadInst>(U))
-      return !Load->getType()->isVectorTy();
-    if (const auto *Store = dyn_cast<StoreInst>(U))
-      return Store->getPointerOperand() == Ptr &&
-             !Store->getValueOperand()->getType()->isVectorTy();
-    if (const auto *GEP = dyn_cast<GetElementPtrInst>(U))
-      return Depth < MaxDepth && GEP->getPointerOperand() == Ptr &&
-             GEP->hasAllConstantIndices() &&
-             onlyFeedsScalarAccesses(GEP, Depth + 1);
-    return false;
-  });
-}
-
-/// Leave related affine address recurrences feeding scalar accesses for loop
-/// strength reduction. Vectorizing their indices can retain expensive
-/// arithmetic and require an extract for each lane instead of a scalar pointer
-/// increment.
-static bool isStrengthReducibleIndexBundle(ArrayRef<Value *> VL,
-                                           ScalarEvolution &SE, LoopInfo &LI) {
-  constexpr unsigned MaxIndexChainLength = 3;
-  const Loop *L = nullptr;
-  SmallVector<GetElementPtrInst *> GEPs;
-  for (Value *V : VL) {
-    Value *Cur = V;
-    GetElementPtrInst *GEP = nullptr;
-    for ([[maybe_unused]] unsigned _ : seq<unsigned>(MaxIndexChainLength)) {
-      if (!isa<BinaryOperator, CastInst>(Cur) || !Cur->hasOneUse())
-        return false;
-      User *U = Cur->user_back();
-      if ((GEP = dyn_cast<GetElementPtrInst>(U)))
-        break;
-      Cur = U;
-    }
-    if (!GEP || GEP->getPointerOperand() == Cur ||
-        !onlyFeedsScalarAccesses(GEP))
-      return false;
-    // LSR only removes the arithmetic computed in the loop itself.
-    const Loop *GEPLoop = LI.getLoopFor(GEP->getParent());
-    if (!GEPLoop || (L && L != GEPLoop) ||
-        LI.getLoopFor(cast<Instruction>(V)->getParent()) != GEPLoop)
-      return false;
-    L = GEPLoop;
-    GEPs.push_back(GEP);
-  }
-  const SCEV *FirstAddr = nullptr;
-  for (GetElementPtrInst *GEP : GEPs) {
-    const auto *Addr = dyn_cast<SCEVAddRecExpr>(SE.getSCEV(GEP));
-    if (!Addr || Addr->getLoop() != L || !Addr->isAffine())
-      return false;
-    if (!FirstAddr) {
-      FirstAddr = Addr;
-      continue;
-    }
-    const SCEV *Diff = SE.getMinusSCEV(Addr, FirstAddr);
-    if (isa<SCEVCouldNotCompute>(Diff) || !SE.isLoopInvariant(Diff, L))
-      return false;
-  }
-  return true;
-}
-
 bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
                                            bool MaxVFOnly,
                                            bool StandaloneSeeds) {
@@ -30374,9 +30312,15 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
         continue;
       }
 
-      if (isStrengthReducibleIndexBundle(Ops, *SE, *LI)) {
-        LLVM_DEBUG(dbgs() << "SLP: Not vectorizing strength-reducible address "
-                             "computations.\n");
+      auto IsCollectedGEP = [&](GetElementPtrInst *GEP) {
+        auto It = GEPs.find(GEP->getPointerOperand());
+        return It != GEPs.end() && It->second.size() >= 2 &&
+               is_contained(It->second, GEP);
+      };
+      if (StandaloneSeeds &&
+          isGEPCandidateIndexBundle(Ops, *LI, SLPReVec, IsCollectedGEP)) {
+        LLVM_DEBUG(dbgs() << "SLP: Leaving collected GEP index computations "
+                             "to vectorizeGEPIndices.\n");
         continue;
       }
 
@@ -36219,6 +36163,12 @@ bool SLPVectorizerPass::vectorizeGEPIndices(BasicBlock *BB, BoUpSLP &R) {
         auto *GEPIdx = GEP->idx_begin()->get();
         assert(GEP->getNumIndices() == 1 && !isa<Constant>(GEPIdx));
         Bundle[BundleIndex++] = GEPIdx;
+      }
+
+      if (isStrengthReducibleIndexBundle(Bundle, *SE, *LI, SLPReVec)) {
+        LLVM_DEBUG(dbgs() << "SLP: Not vectorizing strength-reducible address "
+                             "computations.\n");
+        continue;
       }
 
       // Try and vectorize the indices. We are currently only interested in
