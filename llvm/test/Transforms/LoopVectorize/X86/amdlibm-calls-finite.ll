@@ -482,6 +482,121 @@ for.end:
   ret void
 }
 
+define void @exp10_vf4_f64_finite(ptr nocapture %varray) {
+; CHECK-LABEL: @exp10_vf4_f64_finite(
+; CHECK:    call <4 x double> @amd_vrd4_exp10(<4 x double> {{.*}})
+; CHECK:    ret void
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to double
+  %call = tail call double @__exp10_finite(double %conv)
+  %arrayidx = getelementptr inbounds double, ptr %varray, i64 %iv
+  store double %call, ptr %arrayidx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !4
+
+for.end:
+  ret void
+}
+
+define void @exp10_vf8_f64_finite(ptr nocapture %varray) {
+; CHECK-LABEL: @exp10_vf8_f64_finite(
+; CHECK:    call <8 x double> @amd_vrd8_exp10(<8 x double> {{.*}})
+; CHECK:    ret void
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to double
+  %call = tail call double @__exp10_finite(double %conv)
+  %arrayidx = getelementptr inbounds double, ptr %varray, i64 %iv
+  store double %call, ptr %arrayidx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !7
+
+for.end:
+  ret void
+}
+
+define void @exp10_vf8_f32_finite(ptr nocapture %varray) {
+; CHECK-LABEL: @exp10_vf8_f32_finite(
+; CHECK:    call {{.*}}<8 x float> @amd_vrs8_exp10f(<8 x float> {{.*}})
+; CHECK:    ret void
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to float
+  %call = tail call fast float @__exp10f_finite(float %conv)
+  %arrayidx = getelementptr inbounds float, ptr %varray, i64 %iv
+  store float %call, ptr %arrayidx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !7
+
+for.end:
+  ret void
+}
+
+define void @exp10_vf16_f32_finite(ptr nocapture %varray) {
+; CHECK-LABEL: @exp10_vf16_f32_finite(
+; CHECK:    call {{.*}}<16 x float> @amd_vrs16_exp10f(<16 x float> {{.*}})
+; CHECK:    ret void
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to float
+  %call = tail call fast float @__exp10f_finite(float %conv)
+  %arrayidx = getelementptr inbounds float, ptr %varray, i64 %iv
+  store float %call, ptr %arrayidx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !10
+
+for.end:
+  ret void
+}
+
+define void @acos_vf8_f64_finite(ptr nocapture %varray) {
+; CHECK-LABEL: @acos_vf8_f64_finite(
+; CHECK:    call <8 x double> @amd_vrd8_acos(<8 x double> {{.*}})
+; CHECK:    ret void
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to double
+  %call = tail call double @__acos_finite(double %conv)
+  %arrayidx = getelementptr inbounds double, ptr %varray, i64 %iv
+  store double %call, ptr %arrayidx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !7
+
+for.end:
+  ret void
+}
+
 !1 = distinct !{!1, !2, !3}
 !2 = !{!"llvm.loop.vectorize.width", i32 2}
 !3 = !{!"llvm.loop.vectorize.enable"}
@@ -493,6 +608,10 @@ for.end:
 !7 = distinct !{!7, !8, !9}
 !8 = !{!"llvm.loop.vectorize.width", i32 8}
 !9 = !{!"llvm.loop.vectorize.enable"}
+
+!10 = distinct !{!10, !11, !12}
+!11 = !{!"llvm.loop.vectorize.width", i32 16}
+!12 = !{!"llvm.loop.vectorize.enable"}
 
 declare float @__expf_finite(float) #0
 declare double @__exp_finite(double) #0

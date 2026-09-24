@@ -4536,9 +4536,12 @@ defset list<RuntimeLibcallImpl> ARMPL_VECFUNCS = {
 //===----------------------------------------------------------------------===//
 
 defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
+  def amd_vrd2_acos : RuntimeLibcallImpl<ACOS_V2F64>;
   def amd_vrd2_atan : RuntimeLibcallImpl<ATAN_V2F64>;
+  def amd_vrd2_atan2 : RuntimeLibcallImpl<ATAN2_V2F64>;
   def amd_vrd2_cbrt : RuntimeLibcallImpl<CBRT_V2F64>;
   def amd_vrd2_cos : RuntimeLibcallImpl<COS_V2F64>;
+  def amd_vrd2_cosh : RuntimeLibcallImpl<COSH_V2F64>;
   def amd_vrd2_erf : RuntimeLibcallImpl<ERF_V2F64>;
   def amd_vrd2_exp : RuntimeLibcallImpl<EXP_V2F64>;
   def amd_vrd2_exp10 : RuntimeLibcallImpl<EXP10_V2F64>;
@@ -4551,10 +4554,15 @@ defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
   def amd_vrd2_sin : RuntimeLibcallImpl<SIN_V2F64>;
   def amd_vrd2_sincos : RuntimeLibcallImpl<SINCOS_V2F64>;
   def amd_vrd2_tan : RuntimeLibcallImpl<TAN_V2F64>;
+  def amd_vrd2_tanh : RuntimeLibcallImpl<TANH_V2F64>;
+  def amd_vrd4_acos : RuntimeLibcallImpl<ACOS_V4F64>;
   def amd_vrd4_atan : RuntimeLibcallImpl<ATAN_V4F64>;
+  def amd_vrd4_atan2 : RuntimeLibcallImpl<ATAN2_V4F64>;
   def amd_vrd4_cos : RuntimeLibcallImpl<COS_V4F64>;
+  def amd_vrd4_cosh : RuntimeLibcallImpl<COSH_V4F64>;
   def amd_vrd4_erf : RuntimeLibcallImpl<ERF_V4F32>;
   def amd_vrd4_exp : RuntimeLibcallImpl<EXP_V4F64>;
+  def amd_vrd4_exp10 : RuntimeLibcallImpl<EXP10_V4F64>;
   def amd_vrd4_exp2 : RuntimeLibcallImpl<EXP2_V4F64>;
   def amd_vrd4_log : RuntimeLibcallImpl<LOG_V4F64>;
   def amd_vrd4_log2 : RuntimeLibcallImpl<LOG2_V4F64>;
@@ -4562,11 +4570,16 @@ defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
   def amd_vrd4_sin : RuntimeLibcallImpl<SIN_V4F64>;
   def amd_vrd4_sincos : RuntimeLibcallImpl<SINCOS_V4F64>;
   def amd_vrd4_tan : RuntimeLibcallImpl<TAN_V4F64>;
+  def amd_vrd4_tanh : RuntimeLibcallImpl<TANH_V4F64>;
+  def amd_vrd8_acos : RuntimeLibcallImpl<ACOS_V8F64>;
   def amd_vrd8_asin : RuntimeLibcallImpl<ASIN_V8F64>;
   def amd_vrd8_atan : RuntimeLibcallImpl<ATAN_V8F64>;
+  def amd_vrd8_atan2 : RuntimeLibcallImpl<ATAN2_V8F64>;
   def amd_vrd8_cos : RuntimeLibcallImpl<COS_V8F64>;
+  def amd_vrd8_cosh : RuntimeLibcallImpl<COSH_V8F64>;
   def amd_vrd8_erf : RuntimeLibcallImpl<ERF_V8F32>;
   def amd_vrd8_exp : RuntimeLibcallImpl<EXP_V8F64>;
+  def amd_vrd8_exp10 : RuntimeLibcallImpl<EXP10_V8F64>;
   def amd_vrd8_exp2 : RuntimeLibcallImpl<EXP2_V8F64>;
   def amd_vrd8_log : RuntimeLibcallImpl<LOG_V8F64>;
   def amd_vrd8_log2 : RuntimeLibcallImpl<LOG2_V8F64>;
@@ -4574,6 +4587,7 @@ defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
   def amd_vrd8_sin : RuntimeLibcallImpl<SIN_V8F64>;
   def amd_vrd8_sincos : RuntimeLibcallImpl<SINCOS_V8F64>;
   def amd_vrd8_tan : RuntimeLibcallImpl<TAN_V8F64>;
+  def amd_vrd8_tanh : RuntimeLibcallImpl<TANH_V8F64>;
   def amd_vrd2_erfinv : RuntimeLibcallImpl<ERFINV_V2F64>;
   def amd_vrd4_erfinv : RuntimeLibcallImpl<ERFINV_V4F64>;
   def amd_vrd8_erfinv : RuntimeLibcallImpl<ERFINV_V8F64>;
@@ -4584,7 +4598,9 @@ defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
   def amd_vrs16_asinf : RuntimeLibcallImpl<ASIN_V16F32>;
   def amd_vrs16_atanf : RuntimeLibcallImpl<ATAN_V16F32>;
   def amd_vrs16_cosf : RuntimeLibcallImpl<COS_V16F32>;
+  def amd_vrs16_coshf : RuntimeLibcallImpl<COSH_V16F32>;
   def amd_vrs16_erff : RuntimeLibcallImpl<ERF_V16F32>;
+  def amd_vrs16_exp10f : RuntimeLibcallImpl<EXP10_V16F32>;
   def amd_vrs16_exp2f : RuntimeLibcallImpl<EXP2_V16F32>;
   def amd_vrs16_expf : RuntimeLibcallImpl<EXP_V16F32>;
   def amd_vrs16_log10f : RuntimeLibcallImpl<LOG10_V16F32>;
@@ -4622,6 +4638,7 @@ defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
   def amd_vrs8_cosf : RuntimeLibcallImpl<COS_V8F32>;
   def amd_vrs8_coshf : RuntimeLibcallImpl<COSH_V8F32>;
   def amd_vrs8_erff : RuntimeLibcallImpl<ERF_V8F32>;
+  def amd_vrs8_exp10f : RuntimeLibcallImpl<EXP10_V8F32>;
   def amd_vrs8_exp2f : RuntimeLibcallImpl<EXP2_V8F32>;
   def amd_vrs8_expf : RuntimeLibcallImpl<EXP_V8F32>;
   def amd_vrs8_log10f : RuntimeLibcallImpl<LOG10_V8F32>;
