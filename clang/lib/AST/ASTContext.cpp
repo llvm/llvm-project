@@ -4925,9 +4925,6 @@ QualType ASTContext::getCooperativeMatrixType(QualType ElementTy,
 
   assert(MatrixType::isValidElementType(ElementTy, getLangOpts()) &&
          "need a valid element type");
-  assert(CooperativeMatrixType::isDimensionValid(NumRows) &&
-         CooperativeMatrixType::isDimensionValid(NumColumns) &&
-         "need valid matrix dimensions");
   assert(CooperativeMatrixType::isScopeValid(Scope) &&
          "need valid matrix scope");
   assert(CooperativeMatrixType::isUseValid(Use) && "need valid matrix use");

@@ -4580,8 +4580,6 @@ protected:
   unsigned Scope;
   unsigned Use;
 
-  static constexpr unsigned MaxElementsPerDimension = (1 << 20) - 1;
-
   CooperativeMatrixType(QualType ElementType, unsigned Scope, unsigned NumRows,
                         unsigned NumColumns, unsigned Use,
                         QualType CanonicalType)
@@ -4606,11 +4604,6 @@ public:
   /// Returns the cooperative matrix use.
   unsigned getUse() const { return Use; }
 
-  /// Returns true if \p NumElements is a valid cooperative matrix dimension.
-  static constexpr bool isDimensionValid(size_t NumElements) {
-    return NumElements > 0 && NumElements <= MaxElementsPerDimension;
-  }
-
   /// Returns true if \p Scope is a valid cooperative matrix scope.
   static constexpr bool isScopeValid(size_t Scope) {
     return Scope == 3; // CLK_COOPERATIVE_MATRIX_SCOPE_SUBGROUP
@@ -4621,11 +4614,6 @@ public:
     return Use == 0 || // CLK_COOPERATIVE_MATRIX_A
            Use == 1 || // CLK_COOPERATIVE_MATRIX_B
            Use == 2;   // CLK_COOPERATIVE_MATRIX_ACCUMULATOR
-  }
-
-  /// Returns the maximum valid number of elements per dimension.
-  static constexpr unsigned getMaxElementsPerDimension() {
-    return MaxElementsPerDimension;
   }
 
   void Profile(llvm::FoldingSetNodeID &ID) {
