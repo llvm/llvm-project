@@ -3691,19 +3691,27 @@ defset list<RuntimeLibcallImpl> ACCELERATE_VECFUNCS = {
   def vceilf : RuntimeLibcallImpl<CEIL_V4F32>;
   def vcosf : RuntimeLibcallImpl<COS_V4F32>;
   def vcoshf : RuntimeLibcallImpl<COSH_V4F32>;
+  def vcospif : RuntimeLibcallImpl<COSPI_V4F32>;
+  def vexp2f : RuntimeLibcallImpl<EXP2_V4F32>;
   def vexpf : RuntimeLibcallImpl<EXP_V4F32>;
   def vexpm1f : RuntimeLibcallImpl<EXPM1_V4F32>;
   def vfabsf : RuntimeLibcallImpl<FABS_V4F32>;
   def vfloorf : RuntimeLibcallImpl<FLOOR_V4F32>;
   def vlog10f : RuntimeLibcallImpl<LOG10_V4F32>;
   def vlog1pf : RuntimeLibcallImpl<LOG1P_V4F32>;
+  def vlog2f : RuntimeLibcallImpl<LOG2_V4F32>;
   def vlogbf : RuntimeLibcallImpl<LOGB_V4F32>;
   def vlogf : RuntimeLibcallImpl<LOG_V4F32>;
+  def vnextafterf : RuntimeLibcallImpl<NEXTAFTER_V4F32>;
+  def vpowf : RuntimeLibcallImpl<POW_V4F32>;
+  def vremainderf : RuntimeLibcallImpl<REMAINDER_V4F32>;
   def vsinf : RuntimeLibcallImpl<SIN_V4F32>;
   def vsinhf : RuntimeLibcallImpl<SINH_V4F32>;
+  def vsinpif : RuntimeLibcallImpl<SINPI_V4F32>;
   def vsqrtf : RuntimeLibcallImpl<SQRT_V4F32>;
   def vtanf : RuntimeLibcallImpl<TAN_V4F32>;
   def vtanhf : RuntimeLibcallImpl<TANH_V4F32>;
+  def vtanpif : RuntimeLibcallImpl<TANPI_V4F32>;
 }
 
 //===----------------------------------------------------------------------===//
