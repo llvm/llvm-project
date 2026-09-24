@@ -22,7 +22,9 @@
 // subgroup operand tile. At bf16 the same step would need four times the
 // registers and spill, which would make the comparison measure spilling rather
 // than dpas throughput. A K step of 256 gives bf16 the same 8 KB per subgroup
-// tile, so register pressure matches and only the arithmetic differs.
+// tile, so register pressure matches and only the arithmetic differs. A bf16
+// kernel on its own would step K by 32; 256 is here for comparability with the
+// mx-fp kernels, and will be revisited when those tests are.
 #a = #xegpu.layout<sg_layout = [2, 2], sg_data = [16, 256], inst_data = [8, 16]>
 #b = #xegpu.layout<sg_layout = [2, 2], sg_data = [256, 16], inst_data = [16, 16]>
 #c = #xegpu.layout<sg_layout = [2, 2], sg_data = [16, 16], inst_data = [8, 16]>
@@ -101,6 +103,10 @@ module @gemm attributes {gpu.container_module} {
     // quantize can realise the same values with their own scales: for A the
     // divisor is what the MX rule derives from the block's amax, and for B the
     // scale is passed in. bf16 has no scales, so it stores the values directly.
+    //
+    // bf16 needs no block scales of its own. It takes the same values because
+    // this test is the unquantized comparison point: only operands that match
+    // the quantized tests element for element make the results comparable.
     %lut = memref.alloc() : memref<8xf32>
     %i1 = arith.constant 1 : index
     %i2 = arith.constant 2 : index
@@ -142,6 +148,9 @@ module @gemm attributes {gpu.container_module} {
 
     // f32 shadows of A and B, filled from the same loop that writes the device
     // operands, so the reference cannot drift from what the kernel is given.
+    // They are f32 rather than bf16 because the device accumulates in f32: a
+    // bf16 reference would round each of the 4096 accumulations into an 8 bit
+    // mantissa and force a tolerance, where in f32 the sum below is exact.
     %A_f32 = memref.alloc() : memref<256x4096xf32>
     %B_f32 = memref.alloc() : memref<4096x256xf32>
 

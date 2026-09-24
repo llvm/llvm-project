@@ -21,6 +21,13 @@
 // 4. Keeping fp4's step would double the tile and spill heavily, which would
 // make any measurement of this kernel be about spilling rather than dpas_mx.
 
+// Operands, as they arrive and as the kernel uses them:
+//   A        memref<256x4096xf8E5M2>, loaded directly; no packing.
+//   B        memref<4096x256xf8E5M2>, loaded directly; no packing.
+//   scales   memref<256x128xf8E8M0FNU> for A and memref<128x256xf8E8M0FNU> for
+//            B, one f8E8M0 scale per 32 elements of K.
+//   C        f32, a 32x32 workgroup tile with sg_layout [2, 2].
+
 // Note: layouts used by dpas_mx need to match HW constaint. Otherwise dpas_mx is not unrolled.
 #a = #xegpu.layout<sg_layout = [2, 2], sg_data = [16, 512], inst_data = [8, 32], lane_layout = [1, 16], lane_data = [1, 2]>
 #b = #xegpu.layout<sg_layout = [2, 2], sg_data = [512, 16], inst_data = [32, 16], lane_layout = [1, 16], lane_data = [4, 1]>

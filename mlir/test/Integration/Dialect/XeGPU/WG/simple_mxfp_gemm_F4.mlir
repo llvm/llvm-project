@@ -7,6 +7,18 @@
 // RUN-DISABLED:   --entry-point-result=void \
 // RUN-DISABLED: | FileCheck --check-prefix=MISMATCH %s
 
+// Operands, as they arrive and as the kernel uses them:
+//   A        packed fp4, two values per byte along K: it crosses as
+//            memref<524288xi8> and is viewed as memref<256x4096xf4E2M1FN> on
+//            the device (see @test for why the bytes cross flat).
+//   B        pre-packed as memref<2048x256xi8>, byte [t, j] holding K elements
+//            2t and 2t+1 of column j. The kernel bitcasts each byte into two
+//            fp4 along N, then deinterleaves, interleaves and transposes to
+//            rebuild the 1024x32 K-major operand dpas_mx takes.
+//   scales   memref<256x128xf8E8M0FNU> for A and memref<128x256xf8E8M0FNU> for
+//            B, one f8E8M0 scale per 32 elements of K.
+//   C        f32, a 32x32 workgroup tile with sg_layout [2, 2].
+
 // Note: layouts used by dpas_mx need to match HW constaint. Otherwise dpas_mx is not unrolled.
 #a = #xegpu.layout<sg_layout = [2, 2], sg_data = [16, 1024], inst_data = [8, 64], lane_layout = [1, 16], lane_data = [1, 4]>
 #b_packed = #xegpu.layout<sg_layout = [2, 2], sg_data = [512, 16], inst_data = [32, 16], lane_layout = [1, 16], lane_data = [4, 1]>
