@@ -3,6 +3,7 @@
 // RUN: %clang_cc1 -triple amdgpu12.00-unknown-unknown -verify -emit-llvm -o - %s
 
 typedef unsigned int uint;
+typedef unsigned short ushort;
 
 #pragma OPENCL EXTENSION cl_khr_fp64:enable
 
@@ -32,6 +33,7 @@ void builtin_test_unsupported(double a_double, float a_float,
                               v2i a_v2i, v4i a_v4i, v16i a_v16i, v32i a_v32i,
                               v2f a_v2f, v4f a_v4f, v16f a_v16f, v32f  a_v32f,
                               v4h a_v4h, v8h a_v8h,
+                              short a_short, ushort a_ushort,
 
                               uint a, uint b) {
 
@@ -94,4 +96,18 @@ void builtin_test_unsupported(double a_double, float a_float,
   a_v16f = __builtin_amdgcn_smfmac_f32_32x32x32_bf8_fp8(a_v2i, a_v4i, a_v16f, a_int, 0, 0); // expected-error {{'__builtin_amdgcn_smfmac_f32_32x32x32_bf8_fp8' needs target feature fp8-insts}}
   a_v16f = __builtin_amdgcn_smfmac_f32_32x32x32_fp8_bf8(a_v2i, a_v4i, a_v16f, a_int, 0, 0); // expected-error {{'__builtin_amdgcn_smfmac_f32_32x32x32_fp8_bf8' needs target feature fp8-insts}}
   a_v16f = __builtin_amdgcn_smfmac_f32_32x32x32_fp8_fp8(a_v2i, a_v4i, a_v16f, a_int, 0, 0); // expected-error {{'__builtin_amdgcn_smfmac_f32_32x32x32_fp8_fp8' needs target feature fp8-insts}}
+
+  a_int = __builtin_amdgcn_exclusive_scan_sum_i32(a_int, a_int, true); // expected-error {{'__builtin_amdgcn_exclusive_scan_sum_i32' needs target feature exclusive-scan-insts}}
+  a = __builtin_amdgcn_exclusive_scan_sum_u32(a, a, true); // expected-error {{'__builtin_amdgcn_exclusive_scan_sum_u32' needs target feature exclusive-scan-insts}}
+  a_int = __builtin_amdgcn_exclusive_scan_xor_b32(a_int, a_int); // expected-error {{'__builtin_amdgcn_exclusive_scan_xor_b32' needs target feature exclusive-scan-insts}}
+  a_int = __builtin_amdgcn_exclusive_scan_or_b32(a_int, a_int); // expected-error {{'__builtin_amdgcn_exclusive_scan_or_b32' needs target feature exclusive-scan-insts}}
+  a_int = __builtin_amdgcn_exclusive_scan_and_b32(a_int, a_int); // expected-error {{'__builtin_amdgcn_exclusive_scan_and_b32' needs target feature exclusive-scan-insts}}
+  a_short = __builtin_amdgcn_exclusive_scan_min_i16(a_short, a_int); // expected-error {{'__builtin_amdgcn_exclusive_scan_min_i16' needs target feature exclusive-scan-insts}}
+  a_ushort = __builtin_amdgcn_exclusive_scan_min_u16(a_ushort, a_int); // expected-error {{'__builtin_amdgcn_exclusive_scan_min_u16' needs target feature exclusive-scan-insts}}
+  a_int = __builtin_amdgcn_exclusive_scan_min_i32(a_int, a_int); // expected-error {{'__builtin_amdgcn_exclusive_scan_min_i32' needs target feature exclusive-scan-insts}}
+  a = __builtin_amdgcn_exclusive_scan_min_u32(a, a); // expected-error {{'__builtin_amdgcn_exclusive_scan_min_u32' needs target feature exclusive-scan-insts}}
+  a_short = __builtin_amdgcn_exclusive_scan_max_i16(a_short, a_int); // expected-error {{'__builtin_amdgcn_exclusive_scan_max_i16' needs target feature exclusive-scan-insts}}
+  a_ushort = __builtin_amdgcn_exclusive_scan_max_u16(a_ushort, a_int); // expected-error {{'__builtin_amdgcn_exclusive_scan_max_u16' needs target feature exclusive-scan-insts}}
+  a_int = __builtin_amdgcn_exclusive_scan_max_i32(a_int, a_int); // expected-error {{'__builtin_amdgcn_exclusive_scan_max_i32' needs target feature exclusive-scan-insts}}
+  a = __builtin_amdgcn_exclusive_scan_max_u32(a, a); // expected-error {{'__builtin_amdgcn_exclusive_scan_max_u32' needs target feature exclusive-scan-insts}}
 }

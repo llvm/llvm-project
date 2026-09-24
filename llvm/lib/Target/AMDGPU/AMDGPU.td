@@ -3326,7 +3326,7 @@ def AMDGPUFrontendVisibleFeatures {
   FeatureDot13Insts, FeatureDot1Insts, FeatureDot2Insts,
   FeatureDot3Insts, FeatureDot4Insts, FeatureDot5Insts,
   FeatureDot6Insts, FeatureDot7Insts, FeatureDot8Insts,
-  FeatureDot9Insts, FeatureExtendedImageInsts, FeatureF16BF16ToFP6BF6ConversionScaleInsts,
+  FeatureDot9Insts, FeatureExclusiveScanInsts, FeatureExtendedImageInsts, FeatureF16BF16ToFP6BF6ConversionScaleInsts,
   FeatureF32ToF16BF16ConversionSRInsts, FeatureF32ToFP6BF6ConversionScaleInsts, FeatureFP4ConversionScaleInsts,
   FeatureFP6BF6ConversionScaleInsts, FeatureFP8ConversionInsts, FeatureFP8ConversionScaleInsts,
   FeatureBlock16ConversionScaleInsts, FeatureFP8E5M3Insts, FeatureFP8Insts,
