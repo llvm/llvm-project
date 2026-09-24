@@ -226,84 +226,164 @@ define {<3 x i32>, <3 x i32>, <3 x i32>} @vector_deinterleave3_v3i32_v9i32(<9 x 
 define {<15 x i32>, <15 x i32>, <15 x i32>} @vector_deinterleave3_v15i32_v45i32(<45 x i32> %v) nounwind {
 ; RV32-LABEL: vector_deinterleave3_v15i32_v45i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi sp, sp, -640
-; RV32-NEXT:    sw ra, 636(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s0, 632(sp) # 4-byte Folded Spill
-; RV32-NEXT:    addi s0, sp, 640
+; RV32-NEXT:    addi sp, sp, -768
+; RV32-NEXT:    sw ra, 764(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s0, 760(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s1, 756(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s2, 752(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s3, 748(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s4, 744(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s5, 740(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s6, 736(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s7, 732(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s8, 728(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s9, 724(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s10, 720(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s11, 716(sp) # 4-byte Folded Spill
+; RV32-NEXT:    addi s0, sp, 768
 ; RV32-NEXT:    andi sp, sp, -128
-; RV32-NEXT:    addi a1, sp, 252
+; RV32-NEXT:    lw a1, 64(a0)
+; RV32-NEXT:    lw a2, 68(a0)
+; RV32-NEXT:    lw t2, 72(a0)
+; RV32-NEXT:    lw s4, 76(a0)
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV32-NEXT:    vmv.v.x v24, a1
+; RV32-NEXT:    vslide1down.vx v24, v24, a2
+; RV32-NEXT:    lw a1, 112(a0)
+; RV32-NEXT:    lw a2, 0(a0)
+; RV32-NEXT:    lw a3, 4(a0)
+; RV32-NEXT:    lw a4, 8(a0)
+; RV32-NEXT:    lw a5, 12(a0)
+; RV32-NEXT:    lw a6, 16(a0)
+; RV32-NEXT:    lw a7, 20(a0)
+; RV32-NEXT:    lw t0, 24(a0)
+; RV32-NEXT:    lw t1, 28(a0)
+; RV32-NEXT:    vslide1down.vx v24, v24, t2
+; RV32-NEXT:    lw t2, 32(a0)
+; RV32-NEXT:    lw t3, 36(a0)
+; RV32-NEXT:    lw t4, 40(a0)
+; RV32-NEXT:    lw t5, 44(a0)
+; RV32-NEXT:    lw t6, 48(a0)
+; RV32-NEXT:    lw s1, 52(a0)
+; RV32-NEXT:    lw s2, 56(a0)
+; RV32-NEXT:    lw s3, 60(a0)
+; RV32-NEXT:    vslide1down.vx v24, v24, s4
+; RV32-NEXT:    lw s4, 80(a0)
+; RV32-NEXT:    lw s5, 84(a0)
+; RV32-NEXT:    lw s6, 88(a0)
+; RV32-NEXT:    lw s7, 92(a0)
+; RV32-NEXT:    lw s8, 96(a0)
+; RV32-NEXT:    lw s9, 100(a0)
+; RV32-NEXT:    lw s10, 104(a0)
+; RV32-NEXT:    lw a0, 108(a0)
+; RV32-NEXT:    addi s11, sp, 316
 ; RV32-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; RV32-NEXT:    vse32.v v23, (a1)
-; RV32-NEXT:    addi a1, sp, 248
-; RV32-NEXT:    vse32.v v22, (a1)
-; RV32-NEXT:    addi a1, sp, 244
-; RV32-NEXT:    vse32.v v21, (a1)
-; RV32-NEXT:    addi a1, sp, 240
-; RV32-NEXT:    vse32.v v20, (a1)
-; RV32-NEXT:    addi a1, sp, 236
-; RV32-NEXT:    vse32.v v19, (a1)
-; RV32-NEXT:    addi a1, sp, 232
-; RV32-NEXT:    vse32.v v18, (a1)
-; RV32-NEXT:    addi a1, sp, 228
-; RV32-NEXT:    vse32.v v17, (a1)
-; RV32-NEXT:    addi a1, sp, 224
-; RV32-NEXT:    vse32.v v16, (a1)
-; RV32-NEXT:    addi a1, sp, 220
-; RV32-NEXT:    vse32.v v15, (a1)
-; RV32-NEXT:    addi a1, sp, 216
-; RV32-NEXT:    vse32.v v14, (a1)
-; RV32-NEXT:    addi a1, sp, 212
-; RV32-NEXT:    vse32.v v13, (a1)
-; RV32-NEXT:    addi a1, sp, 208
-; RV32-NEXT:    vse32.v v12, (a1)
-; RV32-NEXT:    addi a1, sp, 204
-; RV32-NEXT:    vse32.v v11, (a1)
-; RV32-NEXT:    addi a1, sp, 200
-; RV32-NEXT:    vse32.v v10, (a1)
-; RV32-NEXT:    addi a1, sp, 196
-; RV32-NEXT:    vse32.v v9, (a1)
-; RV32-NEXT:    addi a1, sp, 192
-; RV32-NEXT:    vse32.v v8, (a1)
-; RV32-NEXT:    addi a2, a0, 64
+; RV32-NEXT:    vse32.v v23, (s11)
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV32-NEXT:    vle32.v v8, (a2)
-; RV32-NEXT:    addi a2, sp, 384
-; RV32-NEXT:    vse32.v v8, (a2)
-; RV32-NEXT:    addi a3, a0, 96
+; RV32-NEXT:    vslide1down.vx v24, v24, s4
+; RV32-NEXT:    addi s4, sp, 312
+; RV32-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; RV32-NEXT:    vse32.v v22, (s4)
+; RV32-NEXT:    addi s4, sp, 308
+; RV32-NEXT:    vse32.v v21, (s4)
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV32-NEXT:    vslide1down.vx v22, v24, s5
+; RV32-NEXT:    addi s4, sp, 304
+; RV32-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; RV32-NEXT:    vse32.v v20, (s4)
+; RV32-NEXT:    addi s4, sp, 300
+; RV32-NEXT:    vse32.v v19, (s4)
+; RV32-NEXT:    addi s4, sp, 296
+; RV32-NEXT:    vse32.v v18, (s4)
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV32-NEXT:    vslide1down.vx v18, v22, s6
+; RV32-NEXT:    addi s4, sp, 292
+; RV32-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; RV32-NEXT:    vse32.v v17, (s4)
+; RV32-NEXT:    addi s4, sp, 288
+; RV32-NEXT:    vse32.v v16, (s4)
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV32-NEXT:    vslide1down.vx v16, v18, s7
+; RV32-NEXT:    addi s4, sp, 284
+; RV32-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; RV32-NEXT:    vse32.v v15, (s4)
+; RV32-NEXT:    addi s4, sp, 280
+; RV32-NEXT:    vse32.v v14, (s4)
+; RV32-NEXT:    addi s4, sp, 276
+; RV32-NEXT:    vse32.v v13, (s4)
 ; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32-NEXT:    vle32.v v8, (a3)
-; RV32-NEXT:    addi a3, sp, 416
-; RV32-NEXT:    vse32.v v8, (a3)
-; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; RV32-NEXT:    vle32.v v8, (a0)
-; RV32-NEXT:    addi a3, sp, 64
+; RV32-NEXT:    vmv.v.x v13, s8
+; RV32-NEXT:    addi s4, sp, 272
+; RV32-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; RV32-NEXT:    vse32.v v12, (s4)
+; RV32-NEXT:    addi s4, sp, 268
+; RV32-NEXT:    vse32.v v11, (s4)
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32-NEXT:    vslide1down.vx v11, v13, s9
+; RV32-NEXT:    addi s4, sp, 264
+; RV32-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; RV32-NEXT:    vse32.v v10, (s4)
+; RV32-NEXT:    addi s4, sp, 260
+; RV32-NEXT:    vse32.v v9, (s4)
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32-NEXT:    vslide1down.vx v9, v11, s10
+; RV32-NEXT:    addi s5, sp, 256
+; RV32-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; RV32-NEXT:    vse32.v v8, (s5)
+; RV32-NEXT:    addi s4, sp, 512
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV32-NEXT:    vse32.v v8, (a3)
+; RV32-NEXT:    vse32.v v16, (s4)
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32-NEXT:    vslide1down.vx v8, v9, a0
+; RV32-NEXT:    addi a0, sp, 544
+; RV32-NEXT:    vse32.v v8, (a0)
 ; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; RV32-NEXT:    vle32.v v12, (a1)
-; RV32-NEXT:    vsetivli zero, 8, e32, m4, ta, ma
-; RV32-NEXT:    vslidedown.vi v16, v12, 8
-; RV32-NEXT:    mv a1, sp
-; RV32-NEXT:    vslidedown.vi v8, v8, 8
-; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV32-NEXT:    vse32.v v12, (a1)
-; RV32-NEXT:    addi a3, sp, 32
-; RV32-NEXT:    vse32.v v16, (a3)
-; RV32-NEXT:    addi a3, sp, 96
-; RV32-NEXT:    vse32.v v8, (a3)
-; RV32-NEXT:    lw a0, 112(a0)
-; RV32-NEXT:    sw a0, 432(sp)
-; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; RV32-NEXT:    vle32.v v8, (a2)
-; RV32-NEXT:    vsetivli zero, 8, e32, m4, ta, ma
-; RV32-NEXT:    vslidedown.vi v12, v8, 8
-; RV32-NEXT:    addi a0, sp, 128
+; RV32-NEXT:    vle32.v v8, (s5)
+; RV32-NEXT:    addi a0, sp, 64
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vse32.v v8, (a0)
-; RV32-NEXT:    addi a0, sp, 160
-; RV32-NEXT:    vse32.v v12, (a0)
-; RV32-NEXT:    vlseg3e32.v v20, (a3)
-; RV32-NEXT:    vlseg3e32.v v12, (a1)
+; RV32-NEXT:    sw t6, 368(sp)
+; RV32-NEXT:    sw s1, 372(sp)
+; RV32-NEXT:    sw s2, 376(sp)
+; RV32-NEXT:    sw s3, 380(sp)
+; RV32-NEXT:    sw t2, 352(sp)
+; RV32-NEXT:    sw t3, 356(sp)
+; RV32-NEXT:    sw t4, 360(sp)
+; RV32-NEXT:    sw t5, 364(sp)
+; RV32-NEXT:    sw a6, 336(sp)
+; RV32-NEXT:    sw a7, 340(sp)
+; RV32-NEXT:    sw t0, 344(sp)
+; RV32-NEXT:    sw t1, 348(sp)
+; RV32-NEXT:    sw a2, 320(sp)
+; RV32-NEXT:    sw a3, 324(sp)
+; RV32-NEXT:    sw a4, 328(sp)
+; RV32-NEXT:    sw a5, 332(sp)
+; RV32-NEXT:    addi a2, sp, 320
+; RV32-NEXT:    vsetivli zero, 8, e32, m4, ta, ma
+; RV32-NEXT:    vslidedown.vi v8, v8, 8
+; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; RV32-NEXT:    vle32.v v12, (a2)
+; RV32-NEXT:    addi a2, sp, 128
+; RV32-NEXT:    vsetivli zero, 8, e32, m4, ta, ma
+; RV32-NEXT:    vslidedown.vi v16, v12, 8
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV32-NEXT:    vse32.v v12, (a2)
+; RV32-NEXT:    addi a2, sp, 96
+; RV32-NEXT:    vse32.v v8, (a2)
+; RV32-NEXT:    addi a2, sp, 160
+; RV32-NEXT:    vse32.v v16, (a2)
+; RV32-NEXT:    sw a1, 560(sp)
+; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; RV32-NEXT:    vle32.v v8, (s4)
+; RV32-NEXT:    vsetivli zero, 8, e32, m4, ta, ma
+; RV32-NEXT:    vslidedown.vi v12, v8, 8
+; RV32-NEXT:    addi a1, sp, 192
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV32-NEXT:    vse32.v v8, (a1)
+; RV32-NEXT:    addi a1, sp, 224
+; RV32-NEXT:    vse32.v v12, (a1)
+; RV32-NEXT:    vlseg3e32.v v20, (a2)
+; RV32-NEXT:    vlseg3e32.v v12, (a0)
 ; RV32-NEXT:    vmv4r.v v28, v20
 ; RV32-NEXT:    vmv2r.v v30, v8
 ; RV32-NEXT:    vmv4r.v v8, v12
@@ -313,10 +393,21 @@ define {<15 x i32>, <15 x i32>, <15 x i32>} @vector_deinterleave3_v15i32_v45i32(
 ; RV32-NEXT:    vmv2r.v v20, v22
 ; RV32-NEXT:    vslideup.vi v12, v20, 8
 ; RV32-NEXT:    vslideup.vi v16, v24, 8
-; RV32-NEXT:    addi sp, s0, -640
-; RV32-NEXT:    lw ra, 636(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 632(sp) # 4-byte Folded Reload
-; RV32-NEXT:    addi sp, sp, 640
+; RV32-NEXT:    addi sp, s0, -768
+; RV32-NEXT:    lw ra, 764(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s0, 760(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s1, 756(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s2, 752(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s3, 748(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s4, 744(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s5, 740(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s6, 736(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s7, 732(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s8, 728(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s9, 724(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s10, 720(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s11, 716(sp) # 4-byte Folded Reload
+; RV32-NEXT:    addi sp, sp, 768
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vector_deinterleave3_v15i32_v45i32:

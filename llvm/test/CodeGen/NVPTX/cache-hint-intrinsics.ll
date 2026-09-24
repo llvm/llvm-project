@@ -420,9 +420,9 @@ define <8 x i32> @test_masked_load_l2_prefetch_v8i32(ptr addrspace(1) %p) {
 define void @test_masked_store_l2_cache_hint_v8i32(<8 x i32> %v, ptr addrspace(1) %p) {
 ; SM80-LABEL: test_masked_store_l2_cache_hint_v8i32(
 ; SM80:    mov.b64 %rd2, 12345;
-; SM80:    st.global.L2::cache_hint.b32 [%rd1], %r5, %rd2;
-; SM80:    st.global.L2::cache_hint.b32 [%rd1+8], %r7, %rd2;
-; SM80:    st.global.L2::cache_hint.b32 [%rd1+28], %r4, %rd2;
+; SM80:    st.global.L2::cache_hint.b32 [%rd1], %r2, %rd2;
+; SM80:    st.global.L2::cache_hint.b32 [%rd1+8], %r4, %rd2;
+; SM80:    st.global.L2::cache_hint.b32 [%rd1+28], %r1, %rd2;
 ;
 ; SM100-LABEL: test_masked_store_l2_cache_hint_v8i32(
 ; SM100:    mov.b64 %rd1, 12345;
@@ -435,9 +435,9 @@ define void @test_masked_store_l2_cache_hint_v8i32(<8 x i32> %v, ptr addrspace(1
 ; scalar stores, which don't support l2 eviction.
 define void @test_masked_store_l2_eviction_v8i32(<8 x i32> %v, ptr addrspace(1) %p) {
 ; SM80-LABEL: test_masked_store_l2_eviction_v8i32(
-; SM80:    st.global.b32 [%rd1], %r5;
-; SM80:    st.global.b32 [%rd1+8], %r7;
-; SM80:    st.global.b32 [%rd1+28], %r4;
+; SM80:    st.global.b32 [%rd1], %r2;
+; SM80:    st.global.b32 [%rd1+8], %r4;
+; SM80:    st.global.b32 [%rd1+28], %r1;
 ;
 ; SM100-LABEL: test_masked_store_l2_eviction_v8i32(
 ; SM100:    st.global.L2::evict_last.v8.b32 [%rd1], {%r5, _, %r7, _, _, _, _, %r4};

@@ -56,7 +56,8 @@ define double @semi_strict1(double %e) nounwind {
 ; CHECK-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vsubsd %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    callq sin@PLT
-; CHECK-NEXT:    vxorpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-NEXT:    vmovsd {{.*#+}} xmm1 = [-0.0E+0,0.0E+0]
+; CHECK-NEXT:    vxorpd %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
   %f = fsub double 0.0, %e

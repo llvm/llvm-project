@@ -370,12 +370,12 @@ define <4 x i32> @load_splat_4i32_4i32_1111(ptr %ptr) nounwind uwtable readnone 
 ; X86-LABEL: load_splat_4i32_4i32_1111:
 ; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vpermilps {{.*#+}} xmm0 = mem[1,1,1,1]
+; X86-NEXT:    vbroadcastss 4(%eax), %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: load_splat_4i32_4i32_1111:
 ; X64:       ## %bb.0: ## %entry
-; X64-NEXT:    vpermilps {{.*#+}} xmm0 = mem[1,1,1,1]
+; X64-NEXT:    vbroadcastss 4(%rdi), %xmm0
 ; X64-NEXT:    retq
 entry:
   %ld = load <4 x i32>, ptr %ptr
@@ -477,7 +477,7 @@ define <2 x i64> @load_splat_2i64_2i64_1111(ptr %ptr) nounwind uwtable readnone 
 ;
 ; X64-LABEL: load_splat_2i64_2i64_1111:
 ; X64:       ## %bb.0: ## %entry
-; X64-NEXT:    vpermilps {{.*#+}} xmm0 = mem[2,3,2,3]
+; X64-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; X64-NEXT:    retq
 entry:
   %ld = load <2 x i64>, ptr %ptr

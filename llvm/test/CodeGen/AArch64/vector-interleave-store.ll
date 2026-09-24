@@ -369,21 +369,18 @@ define void @wide_vector_interleave_st3_i16_dreg(ptr %output, ptr %input0, ptr %
 ; CHECK-NEXT:    st3 { v0.8h, v1.8h, v2.8h }, [x8]
 ; CHECK-NEXT:    add x8, sp, #48
 ; CHECK-NEXT:    st3 { v3.8h, v4.8h, v5.8h }, [x8]
-; CHECK-NEXT:    ldr q0, [sp, #32]
+; CHECK-NEXT:    ldp q0, q5, [sp, #32]
+; CHECK-NEXT:    ldr q4, [sp, #64]
 ; CHECK-NEXT:    dup v1.2d, v0.d[1]
 ; CHECK-NEXT:    str d1, [sp, #144]
-; CHECK-NEXT:    ldr q1, [sp, #64]
-; CHECK-NEXT:    ldr q3, [sp, #144]
-; CHECK-NEXT:    str d1, [sp, #112]
 ; CHECK-NEXT:    ldp q2, q1, [sp]
+; CHECK-NEXT:    ldr q3, [sp, #144]
+; CHECK-NEXT:    str d4, [x0, #64]
 ; CHECK-NEXT:    ext v0.16b, v1.16b, v0.16b, #8
 ; CHECK-NEXT:    mov v1.d[1], v0.d[0]
 ; CHECK-NEXT:    ext v0.16b, v0.16b, v3.16b, #8
-; CHECK-NEXT:    ldr q3, [sp, #48]
 ; CHECK-NEXT:    stp q2, q1, [x0]
-; CHECK-NEXT:    stp q0, q3, [x0, #32]
-; CHECK-NEXT:    ldr q0, [sp, #112]
-; CHECK-NEXT:    str d0, [x0, #64]
+; CHECK-NEXT:    stp q0, q5, [x0, #32]
 ; CHECK-NEXT:    add sp, sp, #192
 ; CHECK-NEXT:    ret
   %v0 = load <12 x i16>, ptr %input0, align 2
@@ -460,21 +457,18 @@ define void @wide_vector_interleave_st3_i8_dreg(ptr %output, ptr %input0, ptr %i
 ; CHECK-NEXT:    st3 { v0.16b, v1.16b, v2.16b }, [x8]
 ; CHECK-NEXT:    add x8, sp, #48
 ; CHECK-NEXT:    st3 { v3.16b, v4.16b, v5.16b }, [x8]
-; CHECK-NEXT:    ldr q0, [sp, #32]
+; CHECK-NEXT:    ldp q0, q5, [sp, #32]
+; CHECK-NEXT:    ldr q4, [sp, #64]
 ; CHECK-NEXT:    dup v1.2d, v0.d[1]
 ; CHECK-NEXT:    str d1, [sp, #144]
-; CHECK-NEXT:    ldr q1, [sp, #64]
-; CHECK-NEXT:    ldr q3, [sp, #144]
-; CHECK-NEXT:    str d1, [sp, #112]
 ; CHECK-NEXT:    ldp q2, q1, [sp]
+; CHECK-NEXT:    ldr q3, [sp, #144]
+; CHECK-NEXT:    str d4, [x0, #64]
 ; CHECK-NEXT:    ext v0.16b, v1.16b, v0.16b, #8
 ; CHECK-NEXT:    mov v1.d[1], v0.d[0]
 ; CHECK-NEXT:    ext v0.16b, v0.16b, v3.16b, #8
-; CHECK-NEXT:    ldr q3, [sp, #48]
 ; CHECK-NEXT:    stp q2, q1, [x0]
-; CHECK-NEXT:    stp q0, q3, [x0, #32]
-; CHECK-NEXT:    ldr q0, [sp, #112]
-; CHECK-NEXT:    str d0, [x0, #64]
+; CHECK-NEXT:    stp q0, q5, [x0, #32]
 ; CHECK-NEXT:    add sp, sp, #192
 ; CHECK-NEXT:    ret
   %v0 = load <24 x i8>, ptr %input0, align 1

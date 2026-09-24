@@ -8,9 +8,10 @@ define float @fneg_strict_fsub_to_strict_fadd(float %x, float %y) nounwind stric
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %eax
 ; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X86-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
-; X86-NEXT:    subss %xmm1, %xmm0
+; X86-NEXT:    movss {{.*#+}} xmm1 = [-0.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; X86-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; X86-NEXT:    xorps %xmm1, %xmm2
+; X86-NEXT:    subss %xmm2, %xmm0
 ; X86-NEXT:    movss %xmm0, (%esp)
 ; X86-NEXT:    flds (%esp)
 ; X86-NEXT:    wait
@@ -19,8 +20,9 @@ define float @fneg_strict_fsub_to_strict_fadd(float %x, float %y) nounwind stric
 ;
 ; X64-LABEL: fneg_strict_fsub_to_strict_fadd:
 ; X64:       # %bb.0:
-; X64-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; X64-NEXT:    subss %xmm1, %xmm0
+; X64-NEXT:    movss {{.*#+}} xmm2 = [-0.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; X64-NEXT:    xorps %xmm1, %xmm2
+; X64-NEXT:    subss %xmm2, %xmm0
 ; X64-NEXT:    retq
   %neg = fneg float %y
   %sub = call float @llvm.experimental.constrained.fsub.f32(float %x, float %neg, metadata!"round.dynamic", metadata!"fpexcept.strict")
@@ -48,8 +50,9 @@ define double @fneg_strict_fsub_to_strict_fadd_d(double %x, double %y) nounwind 
 ;
 ; X64-LABEL: fneg_strict_fsub_to_strict_fadd_d:
 ; X64:       # %bb.0:
-; X64-NEXT:    xorpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; X64-NEXT:    subsd %xmm1, %xmm0
+; X64-NEXT:    movsd {{.*#+}} xmm2 = [-0.0E+0,0.0E+0]
+; X64-NEXT:    xorpd %xmm1, %xmm2
+; X64-NEXT:    subsd %xmm2, %xmm0
 ; X64-NEXT:    retq
   %neg = fneg double %y
   %sub = call double @llvm.experimental.constrained.fsub.f64(double %x, double %neg, metadata!"round.dynamic", metadata!"fpexcept.strict")
@@ -63,8 +66,9 @@ define float @strict_fsub_fneg_to_strict_fsub(float %x, float %y) nounwind stric
 ; X86-NEXT:    pushl %eax
 ; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-NEXT:    subss {{[0-9]+}}(%esp), %xmm0
-; X86-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-NEXT:    movss %xmm0, (%esp)
+; X86-NEXT:    movss {{.*#+}} xmm1 = [-0.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; X86-NEXT:    xorps %xmm0, %xmm1
+; X86-NEXT:    movss %xmm1, (%esp)
 ; X86-NEXT:    flds (%esp)
 ; X86-NEXT:    wait
 ; X86-NEXT:    popl %eax
@@ -73,7 +77,8 @@ define float @strict_fsub_fneg_to_strict_fsub(float %x, float %y) nounwind stric
 ; X64-LABEL: strict_fsub_fneg_to_strict_fsub:
 ; X64:       # %bb.0:
 ; X64-NEXT:    subss %xmm1, %xmm0
-; X64-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-NEXT:    movss {{.*#+}} xmm1 = [-0.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; X64-NEXT:    xorps %xmm1, %xmm0
 ; X64-NEXT:    retq
   %sub = call float @llvm.experimental.constrained.fsub.f32(float %x, float %y, metadata!"round.dynamic", metadata!"fpexcept.strict")
   %neg = fneg float %sub
@@ -101,7 +106,8 @@ define double @strict_fsub_fneg_to_strict_fsub_d(double %x, double %y) nounwind 
 ; X64-LABEL: strict_fsub_fneg_to_strict_fsub_d:
 ; X64:       # %bb.0:
 ; X64-NEXT:    subsd %xmm1, %xmm0
-; X64-NEXT:    xorpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-NEXT:    movsd {{.*#+}} xmm1 = [-0.0E+0,0.0E+0]
+; X64-NEXT:    xorpd %xmm1, %xmm0
 ; X64-NEXT:    retq
   %sub = call double @llvm.experimental.constrained.fsub.f64(double %x, double %y, metadata!"round.dynamic", metadata!"fpexcept.strict")
   %neg = fneg double %sub
