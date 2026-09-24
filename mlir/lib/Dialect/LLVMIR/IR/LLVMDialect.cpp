@@ -4128,15 +4128,17 @@ Value LLVM::GEPOp::getViewSource() { return getBase(); }
 //===----------------------------------------------------------------------===//
 
 OpFoldResult LLVM::ShlOp::fold(FoldAdaptor adaptor) {
+  // A constant-like op may fold to an attribute whose type differs from its
+  // result type.
   auto rhs = dyn_cast_or_null<IntegerAttr>(adaptor.getRhs());
-  if (!rhs)
+  if (!rhs || rhs.getType() != getType())
     return {};
 
   if (rhs.getValue().uge(getLhs().getType().getIntOrFloatBitWidth()))
     return {}; // TODO: Fold into poison.
 
   auto lhs = dyn_cast_or_null<IntegerAttr>(adaptor.getLhs());
-  if (!lhs)
+  if (!lhs || lhs.getType() != getType())
     return {};
 
   return IntegerAttr::get(getType(), lhs.getValue().shl(rhs.getValue()));
@@ -4147,6 +4149,8 @@ OpFoldResult LLVM::ShlOp::fold(FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult LLVM::OrOp::fold(FoldAdaptor adaptor) {
+  // A constant-like op may fold to an attribute whose type differs from its
+  // result type.
   auto lhs = dyn_cast_or_null<IntegerAttr>(adaptor.getLhs());
   if (!lhs || lhs.getType() != getType())
     return {};

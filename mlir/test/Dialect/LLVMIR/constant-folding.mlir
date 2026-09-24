@@ -76,6 +76,37 @@ llvm.func @shl_largest_valid_shift() -> i128 {
 
 // -----
 
+// A constant-like op can fold to an attribute whose type differs from its
+// result type. Do not fold llvm.shl using such an attribute.
+
+// CHECK-LABEL: llvm.func @shl_mismatched_lhs
+llvm.func @shl_mismatched_lhs() -> i32 {
+  // CHECK: %[[LHS:.*]] = "test.constant"() <{value = 1 : i64}> : () -> i32
+  %lhs = "test.constant"() {value = 1 : i64} : () -> i32
+  // CHECK: %[[RHS:.*]] = "test.constant"() <{value = 2 : i32}> : () -> i32
+  %rhs = "test.constant"() {value = 2 : i32} : () -> i32
+  // CHECK: %[[RESULT:.*]] = llvm.shl %[[LHS]], %[[RHS]] : i32
+  %result = llvm.shl %lhs, %rhs : i32
+  // CHECK: llvm.return %[[RESULT]] : i32
+  llvm.return %result : i32
+}
+
+// -----
+
+// CHECK-LABEL: llvm.func @shl_mismatched_rhs
+llvm.func @shl_mismatched_rhs() -> i32 {
+  // CHECK: %[[LHS:.*]] = "test.constant"() <{value = 1 : i32}> : () -> i32
+  %lhs = "test.constant"() {value = 1 : i32} : () -> i32
+  // CHECK: %[[RHS:.*]] = "test.constant"() <{value = 2 : i64}> : () -> i32
+  %rhs = "test.constant"() {value = 2 : i64} : () -> i32
+  // CHECK: %[[RESULT:.*]] = llvm.shl %[[LHS]], %[[RHS]] : i32
+  %result = llvm.shl %lhs, %rhs : i32
+  // CHECK: llvm.return %[[RESULT]] : i32
+  llvm.return %result : i32
+}
+
+// -----
+
 // CHECK-LABEL: llvm.func @or_basic
 llvm.func @or_basic() -> i32 {
   %0 = llvm.mlir.constant(5 : i32) : i32
@@ -90,6 +121,7 @@ llvm.func @or_basic() -> i32 {
 
 // A constant-like op can fold to an attribute whose type differs from its
 // result type. Do not fold llvm.or using such an attribute.
+
 // CHECK-LABEL: llvm.func @or_mismatched_lhs
 llvm.func @or_mismatched_lhs() -> i32 {
   // CHECK: %[[LHS:.*]] = "test.constant"() <{value = 1 : i64}> : () -> i32
