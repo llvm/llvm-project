@@ -181,11 +181,17 @@ define i32 @test.cv.cnt(i32 %a) {
 }
 
 define i32 @test.llvm.fshl.imm(i32 %a) {
-; CHECK-LABEL: test.llvm.fshl.imm:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 30
-; CHECK-NEXT:    cv.ror a0, a0, a1
-; CHECK-NEXT:    ret
+; CHECK-O0-LABEL: test.llvm.fshl.imm:
+; CHECK-O0:       # %bb.0:
+; CHECK-O0-NEXT:    li a1, -2
+; CHECK-O0-NEXT:    cv.ror a0, a0, a1
+; CHECK-O0-NEXT:    ret
+;
+; CHECK-O3-LABEL: test.llvm.fshl.imm:
+; CHECK-O3:       # %bb.0:
+; CHECK-O3-NEXT:    li a1, 30
+; CHECK-O3-NEXT:    cv.ror a0, a0, a1
+; CHECK-O3-NEXT:    ret
   %1 = call i32 @llvm.fshl.i32(i32 %a, i32 %a, i32 2)
   ret i32 %1
 }
