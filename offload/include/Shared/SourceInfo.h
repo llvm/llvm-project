@@ -75,21 +75,15 @@ class SourceInfo {
     return SourceStr.substr(Begin + 1, End - Begin - 1);
   };
 
-  /// Get the filename from a full path.
-  std::string removePath(const std::string &Path) const {
-    std::size_t Pos = (OSWindows) ? Path.rfind('\\') : Path.rfind('/');
-    return Path.substr(Pos + 1);
-  };
-
 public:
   SourceInfo(const ident_t *Loc)
       : SourceStr(initStr(Loc)), Name(getSubstring(1)),
-        Filename(removePath(getSubstring(0))), Line(std::stoi(getSubstring(2))),
+        Filename(getSubstring(0)), Line(std::stoi(getSubstring(2))),
         Column(std::stoi(getSubstring(3))) {}
 
   SourceInfo(const map_var_info_t Name)
       : SourceStr(initStr(Name)), Name(getSubstring(0)),
-        Filename(removePath(getSubstring(1))), Line(std::stoi(getSubstring(2))),
+        Filename(getSubstring(1)), Line(std::stoi(getSubstring(2))),
         Column(std::stoi(getSubstring(3))) {}
 
   const char *getName() const { return Name.c_str(); }
