@@ -140,10 +140,20 @@ add_object_library(
     -fno-stack-protector # stack protect canary is not available yet.
 )
 
+# A program linked against libc.so cannot reach the TLS routines there, which
+# are hidden, so a shared build carries its own copy of them in crt1.o. A
+# static link takes them from crt1.o in the same way and leaves libc.a's.
+set(crt1_tls "")
+if(LIBC_ENABLE_SHARED)
+  set(crt1_tls
+    libc.src.__support.threads.linux.${LIBC_TARGET_ARCHITECTURE}.tls)
+endif()
+
 # TODO: factor out crt1 into multiple objects
 merge_relocatable_object(
   crt1
   .${LIBC_TARGET_ARCHITECTURE}.start
+  ${crt1_tls}
   .${LIBC_TARGET_ARCHITECTURE}.irelative
   .do_start
   .gnu_property_section
