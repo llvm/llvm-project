@@ -583,11 +583,10 @@ func.func @sequential_loop_then_diamond(%c: i1, %enter: i1) -> tensor<5xf32> {
 
 // -----
 
-// Sequential inner loops inside an outer loop. There is no actual RaW
-// conflict: the only CFG path from the l2 insert to the later l1 insert is
-// the outer-loop back-edge, which is a different outer iteration. The
-// analysis is currently conservative with regards to that back-edge, so the
-// first insert dest is out-of-place.
+// Sequential inner loops inside an outer loop. There is no RaW conflict:
+// the only CFG path from the l2 insert to the later l1 insert is the
+// outer-loop back-edge, a different outer iteration. CFGLoopInfo ignores
+// paths through that parent header, so the inserts are in-place.
 // CHECK-LABEL: func @outer_loop_sequential_inner_loops(
 func.func @outer_loop_sequential_inner_loops(%again: i1) -> tensor<5xf32> {
   %init = tensor.empty() : tensor<5xf32>
@@ -600,15 +599,16 @@ func.func @outer_loop_sequential_inner_loops(%again: i1) -> tensor<5xf32> {
 ^l1body:
   %pos = "test.foo"() : () -> (index)
   %val = "test.bar"() : () -> (f32)
-  // No actual conflict; conservative on the outer-loop back-edge.
 // CHECK: tensor.insert
-// CHECK-SAME: __inplace_operands_attr__ = ["none", "false", "none"]
+// CHECK-SAME: __inplace_operands_attr__ = ["none", "true", "none"]
   %mid = tensor.insert %val into %c1[%pos] : tensor<5xf32>
   %pos2 = "test.foo"() : () -> (index)
   %val2 = "test.bar"() : () -> (f32)
 // CHECK: tensor.insert
 // CHECK-SAME: __inplace_operands_attr__ = ["none", "true", "none"]
   %upd1 = tensor.insert %val2 into %mid[%pos2] : tensor<5xf32>
+// CHECK: cf.br
+// CHECK-SAME: {__inplace_operands_attr__ = ["true"]}
   cf.br ^l1(%upd1 : tensor<5xf32>)
 ^l2entry:
   cf.br ^l2(%c1 : tensor<5xf32>)
@@ -688,6 +688,8 @@ func.func @l1_write_then_extract_bbarg(%again: i1) -> tensor<5xf32> {
   %posr = "test.foo"() : () -> (index)
   %old = tensor.extract %c1[%posr] : tensor<5xf32>
   "test.qux"(%old) : (f32) -> ()
+// CHECK: cf.br
+// CHECK-SAME: {__inplace_operands_attr__ = ["true"]}
   cf.br ^l1(%upd1 : tensor<5xf32>)
 ^l2entry:
   cf.br ^l2(%c1 : tensor<5xf32>)
@@ -756,9 +758,10 @@ func.func @irreducible_l2_to_l1(%again: i1, %weird: i1) -> tensor<5xf32> {
 
 // -----
 
-// l1 writes the carried dest then extracts the outer bbarg. The extract must
-// observe %cache before the first write, so that insert dest is out-of-place.
-// The chained insert writes the copy and is inplace.
+// l1 writes the carried dest then extracts the outer bbarg. The inner
+// backedge is in-place, so the chained insert's result aliases %cache.
+// The extract must observe %cache before those writes, so both insert
+// dests are out-of-place.
 // CHECK-LABEL: func @l1_write_then_extract_carried(
 func.func @l1_write_then_extract_carried(%again: i1) -> tensor<5xf32> {
   %init = tensor.empty() : tensor<5xf32>
@@ -777,11 +780,13 @@ func.func @l1_write_then_extract_carried(%again: i1) -> tensor<5xf32> {
   %pos2 = "test.foo"() : () -> (index)
   %val2 = "test.bar"() : () -> (f32)
 // CHECK: tensor.insert
-// CHECK-SAME: __inplace_operands_attr__ = ["none", "true", "none"]
+// CHECK-SAME: __inplace_operands_attr__ = ["none", "false", "none"]
   %upd1 = tensor.insert %val2 into %mid[%pos2] : tensor<5xf32>
   %posr = "test.foo"() : () -> (index)
   %old = tensor.extract %cache[%posr] : tensor<5xf32>
   "test.qux"(%old) : (f32) -> ()
+// CHECK: cf.br
+// CHECK-SAME: {__inplace_operands_attr__ = ["true"]}
   cf.br ^l1(%upd1 : tensor<5xf32>)
 ^l2entry:
   cf.br ^l2(%c1 : tensor<5xf32>)

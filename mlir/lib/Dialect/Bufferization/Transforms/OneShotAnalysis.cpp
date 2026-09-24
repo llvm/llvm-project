@@ -40,9 +40,11 @@
 
 #include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
 
+#include <memory>
 #include <random>
 #include <tuple>
 
+#include "mlir/Analysis/CFGLoopInfo.h"
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
@@ -382,6 +384,54 @@ private:
 
 OneShotAnalysisState::~OneShotAnalysisState() = default;
 
+using CFGLoopInfoCache = DenseMap<Region *, std::unique_ptr<CFGLoopInfo>>;
+
+/// Return cached CFG loop info for `region`, or nullptr for single-block
+/// regions (no unstructured loop nest).
+static CFGLoopInfo *getCFGLoopInfo(Region *region, const DominanceInfo &domInfo,
+                                   CFGLoopInfoCache &cache) {
+  if (region->hasOneBlock())
+    return nullptr;
+  std::unique_ptr<CFGLoopInfo> &entry = cache[region];
+  if (!entry)
+    entry = std::make_unique<CFGLoopInfo>(domInfo.getDomTree(region));
+  return entry.get();
+}
+
+/// Parent loop headers of `a` and `b`. Paths through these are outer backedges
+/// of a loop nest that contains both blocks; they should not count as
+/// "happens after" for sibling inner loops. Same-loop pairs contribute nothing.
+static SmallPtrSet<Block *, 16>
+collectParentLoopHeaders(Block *aBlock, Block *bBlock, CFGLoopInfo *loopInfo) {
+  SmallPtrSet<Block *, 16> barriers;
+  if (!loopInfo)
+    return barriers;
+  CFGLoop *loopA = loopInfo->getLoopFor(aBlock);
+  CFGLoop *loopB = loopInfo->getLoopFor(bBlock);
+  if (loopA == loopB)
+    return barriers;
+  for (CFGLoop *common = loopInfo->getSmallestCommonLoop(loopA, loopB); common;
+       common = common->getParentLoop()) {
+    if (common == loopA || common == loopB)
+      continue;
+    Block *header = common->getHeader();
+    if (header != aBlock && header != bBlock)
+      barriers.insert(header);
+  }
+  return barriers;
+}
+
+/// Insert parent-loop headers of `aBlock` and `bBlock` into `barriers`.
+static void addParentLoopHeaderBarriers(Block *aBlock, Block *bBlock,
+                                         const DominanceInfo &domInfo,
+                                         CFGLoopInfoCache &cache,
+                                         SmallPtrSetImpl<Block *> &barriers) {
+  assert(aBlock->getParent() == bBlock->getParent() && "expected same region");
+  CFGLoopInfo *loopInfo = getCFGLoopInfo(aBlock->getParent(), domInfo, cache);
+  for (Block *header : collectParentLoopHeaders(aBlock, bBlock, loopInfo))
+    barriers.insert(header);
+}
+
 /// Return true if `a` cannot happen after `b`.
 /// True if `a` properly dominates `b` and `b` is not inside `a`, or if they
 /// are in the same region with no CFG path from `b` to `a`.
@@ -401,8 +451,11 @@ OneShotAnalysisState::~OneShotAnalysisState() = default;
 /// `op_a`, so `op_a` cannot happen after `op_b`.
 ///
 /// `extraBarriers` are extra blocks a CFG path from `b` to `a` must not cross.
+/// If `useCFGLoops`, also ignore paths through parent loop headers. That is
+/// sound only when DEF is on every READ-WRITE cycle.
 static bool cannotHappenAfter(Operation *a, Operation *b,
                               const DominanceInfo &domInfo,
+                              CFGLoopInfoCache &loopInfoCache, bool useCFGLoops,
                               OneShotAnalysisState &state,
                               SmallPtrSet<Block *, 16> extraBarriers = {}) {
   do {
@@ -419,9 +472,13 @@ static bool cannotHappenAfter(Operation *a, Operation *b,
     if (state.mayHaveUnstructuredControlFlow()) {
       Block *aBlock = a->getBlock();
       Block *bBlock = b->getBlock();
-      if (aBlock != bBlock && aBlock->getParent() == bBlock->getParent() &&
-          !state.isReachableCached(bBlock, aBlock, &extraBarriers))
-        return true;
+      if (aBlock != bBlock && aBlock->getParent() == bBlock->getParent()) {
+        if (useCFGLoops)
+          addParentLoopHeaderBarriers(aBlock, bBlock, domInfo, loopInfoCache,
+                                      extraBarriers);
+        if (!state.isReachableCached(bBlock, aBlock, &extraBarriers))
+          return true;
+      }
     }
   } while ((a = a->getParentOp()));
   return false;
@@ -787,6 +844,7 @@ static bool
 hasReadAfterWriteInterference(const DenseSet<OpOperand *> &usesRead,
                               const DenseSet<OpOperand *> &usesWrite,
                               const DominanceInfo &domInfo,
+                              CFGLoopInfoCache &loopInfoCache,
                               OneShotAnalysisState &state) {
   const BufferizationOptions &options = state.getOptions();
 
@@ -896,7 +954,8 @@ hasReadAfterWriteInterference(const DenseSet<OpOperand *> &usesRead,
         // Note: If ops are executed multiple times (e.g., because they are
         //       inside a loop), there may be no meaningful `cannotHappenAfter`
         //       relationship.
-        if (cannotHappenAfter(readingOp, conflictingWritingOp, domInfo, state,
+        if (cannotHappenAfter(readingOp, conflictingWritingOp, domInfo,
+                              loopInfoCache, /*useCFGLoops=*/true, state,
                               bbArgDefBlocks)) {
           LDBG() << "  no conflict: read cannot happen after write";
           continue;
@@ -977,7 +1036,9 @@ hasReadAfterWriteInterference(const DenseSet<OpOperand *> &usesRead,
         // No conflict if the conflicting write cannot happen after the
         // definition.
         if (Operation *defOp = definition.getDefiningOp()) {
-          if (cannotHappenAfter(conflictingWritingOp, defOp, domInfo, state)) {
+          if (cannotHappenAfter(conflictingWritingOp, defOp, domInfo,
+                                loopInfoCache, /*useCFGLoops=*/useDominance,
+                                state)) {
             LDBG() << "    no conflict: write cannot happen after definition";
             continue;
           }
@@ -989,13 +1050,20 @@ hasReadAfterWriteInterference(const DenseSet<OpOperand *> &usesRead,
         } else {
           // A bbArg is defined at block entry. The write happens after that
           // only if it is in the same block or in a reachable block (e.g. a
-          // successor).
+          // successor). Re-entering the block is a new definition. When op
+          // dominance applies, paths through a parent loop header are outer
+          // backedges and do not count.
           Block *defBlock = cast<BlockArgument>(definition).getOwner();
           Operation *writeOp = defBlock->getParent()->findAncestorOpInRegion(
               *conflictingWritingOp);
+          SmallPtrSet<Block *, 16> loopHeaders;
+          if (writeOp && useDominance && writeOp->getBlock() != defBlock)
+            addParentLoopHeaderBarriers(defBlock, writeOp->getBlock(), domInfo,
+                                        loopInfoCache, loopHeaders);
           if (!writeOp ||
               (writeOp->getBlock() != defBlock &&
-               !state.isReachableCached(defBlock, writeOp->getBlock()))) {
+               !state.isReachableCached(defBlock, writeOp->getBlock(),
+                                        &loopHeaders))) {
             LDBG() << "    no conflict: definition is bbArg and write cannot "
                       "happen after def";
             continue;
@@ -1103,7 +1171,8 @@ static void getAliasingReads(DenseSet<OpOperand *> &res, Value root,
 /// involving aliases of the given OpOperand are checked.
 static bool wouldCreateReadAfterWriteInterference(
     OpOperand &operand, const DominanceInfo &domInfo,
-    OneShotAnalysisState &state, bool checkConsistencyOnly = false) {
+    CFGLoopInfoCache &loopInfoCache, OneShotAnalysisState &state,
+    bool checkConsistencyOnly = false) {
   // Collect reads and writes of all aliases of OpOperand and OpResult.
   DenseSet<OpOperand *> usesRead, usesWrite;
   getAliasingReads(usesRead, operand.get(), state);
@@ -1115,7 +1184,8 @@ static bool wouldCreateReadAfterWriteInterference(
   if (!checkConsistencyOnly && state.bufferizesToMemoryWrite(operand))
     usesWrite.insert(&operand);
 
-  return hasReadAfterWriteInterference(usesRead, usesWrite, domInfo, state);
+  return hasReadAfterWriteInterference(usesRead, usesWrite, domInfo,
+                                       loopInfoCache, state);
 }
 
 /// Annotate IR with details about the detected non-writability conflict.
@@ -1227,14 +1297,16 @@ void OneShotAnalysisState::resetCache() {
 /// Determine if `operand` can be bufferized in-place.
 static LogicalResult
 bufferizableInPlaceAnalysisImpl(OpOperand &operand, OneShotAnalysisState &state,
-                                const DominanceInfo &domInfo) {
+                                const DominanceInfo &domInfo,
+                                CFGLoopInfoCache &loopInfoCache) {
   LDBG() << "//===-------------------------------------------===//\n"
          << "Analyzing operand #" << operand.getOperandNumber() << " of "
          << OpWithFlags(operand.getOwner(), OpPrintingFlags().skipRegions());
 
   bool foundInterference =
       wouldCreateWriteToNonWritableBuffer(operand, state) ||
-      wouldCreateReadAfterWriteInterference(operand, domInfo, state);
+      wouldCreateReadAfterWriteInterference(operand, domInfo, loopInfoCache,
+                                            state);
 
   if (foundInterference)
     state.bufferizeOutOfPlace(operand);
@@ -1245,14 +1317,25 @@ bufferizableInPlaceAnalysisImpl(OpOperand &operand, OneShotAnalysisState &state,
   return success();
 }
 
+static LogicalResult analyzeSingleOpImpl(Operation *op,
+                                         const DominanceInfo &domInfo,
+                                         CFGLoopInfoCache &loopInfoCache,
+                                         OneShotAnalysisState &state) {
+  for (OpOperand &opOperand : op->getOpOperands())
+    if (isa<TensorLikeType>(opOperand.get().getType()))
+      if (failed(bufferizableInPlaceAnalysisImpl(opOperand, state, domInfo,
+                                                 loopInfoCache)))
+        return failure();
+  return success();
+}
+
 LogicalResult
 OneShotAnalysisState::analyzeSingleOp(Operation *op,
                                       const DominanceInfo &domInfo) {
-  for (OpOperand &opOperand : op->getOpOperands())
-    if (isa<TensorLikeType>(opOperand.get().getType()))
-      if (failed(bufferizableInPlaceAnalysisImpl(opOperand, *this, domInfo)))
-        return failure();
-  return success();
+  // CFGLoopInfo points into this dominator tree, so the cache must not outlive
+  // `domInfo`.
+  CFGLoopInfoCache loopInfoCache;
+  return analyzeSingleOpImpl(op, domInfo, loopInfoCache, *this);
 }
 
 /// Analyze equivalence of tied OpResult/OpOperand pairs of the given ops.
@@ -1412,9 +1495,11 @@ LogicalResult OneShotAnalysisState::analyzeOp(Operation *op,
     }
   }
 
-  // Analyze ops in the computed order.
+  // Analyze ops in the computed order. One loop-info cache for this dominator
+  // tree: CFGLoopInfo holds pointers into it.
+  CFGLoopInfoCache loopInfoCache;
   for (Operation *op : orderedOps)
-    if (failed(analyzeSingleOp(op, domInfo)))
+    if (failed(analyzeSingleOpImpl(op, domInfo, loopInfoCache, *this)))
       return failure();
 
   equivalenceAnalysis(op, *this);
@@ -1450,6 +1535,8 @@ LogicalResult bufferization::checkPreBufferizationAssumptions(
   if (walkResult.wasInterrupted())
     return failure();
 
+  // CFGLoopInfo points into `domInfo`, so this cache dies with the walk.
+  CFGLoopInfoCache loopInfoCache;
   walkResult = op->walk([&](BufferizableOpInterface op) {
     // Skip ops that are not in the filter.
     if (!options.isOpAllowed(op.getOperation()))
@@ -1469,7 +1556,7 @@ LogicalResult bufferization::checkPreBufferizationAssumptions(
     for (OpOperand &opOperand : op->getOpOperands()) {
       if (isa<TensorLikeType>(opOperand.get().getType())) {
         if (wouldCreateReadAfterWriteInterference(
-                opOperand, domInfo, state,
+                opOperand, domInfo, loopInfoCache, state,
                 /*checkConsistencyOnly=*/true)) {
           // This error can happen if certain "mustBufferizeInPlace" interface
           // methods are implemented incorrectly, such that the IR already has
