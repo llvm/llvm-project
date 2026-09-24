@@ -183,7 +183,8 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
 /// Helper for extra no-alias checks via known-safe recipe and SCEV.
 class SinkStoreInfo {
   SmallPtrSet<VPReplicateRecipe *, 4> ExcludeRecipes;
-  VPReplicateRecipe &GroupLeader;
+  VPReplicateRecipe *GroupLeader;
+  Instruction *GroupLeaderI = nullptr;
   PredicatedScalarEvolution *PSE = nullptr;
   const Loop *L = nullptr;
 
@@ -232,17 +233,27 @@ public:
                 VPReplicateRecipe &GroupLeader, PredicatedScalarEvolution &PSE,
                 const Loop &L)
       : ExcludeRecipes(ExcludeRecipes.begin(), ExcludeRecipes.end()),
-        GroupLeader(GroupLeader), PSE(&PSE), L(&L) {}
+        GroupLeader(&GroupLeader),
+        GroupLeaderI(GroupLeader.getUnderlyingInstr()), PSE(&PSE), L(&L) {}
 
-  SinkStoreInfo(VPReplicateRecipe &GroupLeader) : GroupLeader(GroupLeader) {}
+  SinkStoreInfo(VPReplicateRecipe &GroupLeader)
+      : GroupLeader(&GroupLeader),
+        GroupLeaderI(GroupLeader.getUnderlyingInstr()) {}
+
+  SinkStoreInfo(Instruction &GroupLeader)
+      : GroupLeader(nullptr), GroupLeaderI(&GroupLeader) {}
 
   /// Return true if \p R should be skipped during alias checking, either
   /// because it's in the exclude set or because no-alias can be proven via
   /// SCEV.
   bool shouldSkip(VPRecipeBase &R) const {
     auto *Store = dyn_cast<VPReplicateRecipe>(&R);
-    return ExcludeRecipes.contains(Store) ||
-           (Store && isNoAliasViaDistance(Store, &GroupLeader));
+    if (ExcludeRecipes.contains(Store))
+      return true;
+    if (Store && GroupLeader && isNoAliasViaDistance(Store, GroupLeader))
+      return true;
+    auto *WidenStore = dyn_cast<VPWidenStoreRecipe>(&R);
+    return WidenStore && GroupLeaderI == &WidenStore->getIngredient();
   }
 };
 
@@ -1803,8 +1814,42 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
            vp_depth_first_deep(Plan.getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
       if (!isa<VPWidenRecipe, VPWidenGEPRecipe, VPReplicateRecipe,
-               VPWidenIntrinsicRecipe>(&R))
+               VPWidenIntrinsicRecipe, VPWidenStoreRecipe>(&R))
         continue;
+
+      // Narrow header masked scatter to scalar store.
+      auto *WidenStoreR = dyn_cast<VPWidenStoreRecipe>(&R);
+      if (WidenStoreR) {
+        if (!vputils::isUniformAcrossVFsAndUFs(WidenStoreR->getAddr()) ||
+            WidenStoreR->isConsecutive())
+          continue;
+        VPValue *Mask = WidenStoreR->getMask();
+        if (!Mask || !match(Mask, m_HeaderMask()))
+          continue;
+
+        // Only narrow scatters that can be sunk to the middle block.
+        VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+        auto MemLoc = vputils::getMemoryLocation(*WidenStoreR);
+        SinkStoreInfo SinkInfo(WidenStoreR->getIngredient());
+        if (!MemLoc || !canHoistOrSinkWithNoAliasCheck(
+                           *MemLoc, LoopRegion->getEntryBasicBlock(),
+                           LoopRegion->getExitingBasicBlock(), SinkInfo))
+          continue;
+
+        VPBuilder Builder(WidenStoreR);
+        VPInstruction *LastActiveLane = Builder.createLastActiveLane(Mask);
+        VPInstruction *Extract = Builder.createNaryOp(
+            VPInstruction::ExtractLane,
+            {LastActiveLane, WidenStoreR->getStoredValue()});
+        auto *ScalarStore = new VPReplicateRecipe(
+            &WidenStoreR->getIngredient(), {Extract, WidenStoreR->getAddr()},
+            /*IsSingleScalar*/ true, /*Mask*/ nullptr, {},
+            /*Metadata*/ *WidenStoreR);
+        ScalarStore->insertBefore(WidenStoreR);
+        WidenStoreR->eraseFromParent();
+        continue;
+      }
+
       auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
       if (RepR && (RepR->isSingleScalar() || RepR->isPredicated()))
         continue;
