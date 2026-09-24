@@ -693,16 +693,22 @@ void IRPromoter::ConvertTruncs() {
     IntegerType *DestTy = cast<IntegerType>(TruncTysMap[Trunc][0]);
 
     unsigned NumBits = DestTy->getScalarSizeInBits();
-    ConstantInt *Mask =
-        ConstantInt::get(SrcTy, APInt::getMaxValue(NumBits).getZExtValue());
-    Value *Masked = Builder.CreateAnd(Trunc->getOperand(0), Mask);
-    if (SrcTy->getBitWidth() > ExtTy->getBitWidth())
-      Masked = Builder.CreateTrunc(Masked, ExtTy);
-
-    if (auto *I = dyn_cast<Instruction>(Masked))
+    // Signed promotion path truncates then sign extends
+    Value *Final;
+    if (UseSExt) {
+      Value *Narrow = Builder.CreateTrunc(Trunc->getOperand(0), DestTy);
+      Final = Builder.CreateSExt(Narrow, ExtTy);
+    } else {
+      ConstantInt *Mask =
+          ConstantInt::get(SrcTy, APInt::getMaxValue(NumBits).getZExtValue());
+      Final = Builder.CreateAnd(Trunc->getOperand(0), Mask);
+      if (SrcTy->getBitWidth() > ExtTy->getBitWidth())
+        Final = Builder.CreateTrunc(Final, ExtTy);
+    }
+    if (auto *I = dyn_cast<Instruction>(Final))
       NewInsts.insert(I);
 
-    ReplaceAllUsersOfWith(Trunc, Masked);
+    ReplaceAllUsersOfWith(Trunc, Final);
   }
 }
 
