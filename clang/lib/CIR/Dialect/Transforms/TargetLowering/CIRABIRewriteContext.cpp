@@ -562,11 +562,11 @@ static void eraseDeadRecordLoads(ArrayRef<cir::LoadOp> loads) {
 }
 
 /// The store that spills non-byval indirect parameter \p blockArg, and the
-/// slot it spills into.  CIRGen spills every by-value parameter into a local
-/// alloca with a single store before any other use, and this pass runs on that
-/// CIRGen output before any alloca-promoting or splitting pass, so the block
-/// argument has exactly that one use.  Both results are null when DCE already
-/// removed a dead spill.
+/// slot it spills into.  prepareNonByvalParameters has already established
+/// that the spill is the block argument's only use and that it stores into
+/// an alloca, which is what the assertions below rest on.  Both results are
+/// null when the parameter has no spill, which is so only when nothing uses
+/// it at all.
 static std::pair<cir::StoreOp, cir::AllocaOp>
 findParamSpill(mlir::BlockArgument blockArg) {
   if (blockArg.use_empty())
@@ -585,7 +585,7 @@ findParamSpill(mlir::BlockArgument blockArg) {
 /// change the block argument's type to a pointer and insert a load at entry
 /// so the body sees a local copy of the original value type.  For each
 /// Indirect non-byval arg, change the block argument to a pointer and queue
-/// the CIRGen param-slot alloca to be replaced by it (no entry load /
+/// the param-slot alloca to be replaced by it (no entry load /
 /// byte-copy) so the body operates on the caller's storage in place.  For each
 /// Expand arg, replace the single struct block argument with N scalar block
 /// arguments (one per field) and store each field directly into the parameter's
@@ -793,7 +793,7 @@ void insertArgCoercion(
 
         // Pointing the slot's uses at the incoming pointer waits until every
         // call site has been rewritten.  A call that hands this parameter
-        // straight on recognises it by the slot its operand was loaded from,
+        // straight on recognizes it by the slot its operand was loaded from,
         // and collapsing the slot here would leave that call reading a block
         // argument with no defining operation to inspect.  A dead spill DCE
         // already removed leaves nothing to collapse.
@@ -1086,14 +1086,148 @@ bool isSSERegisterClass(mlir::Type ty) {
 
 } // namespace
 
-void CIRABIRewriteContext::normalizeParameterSlotAlignments(
+/// Bring \p funcOp's non-byval indirect parameter \p argNo into the shape the
+/// rest of the rewrite assumes.  \p claimedSlots carries the slots \p funcOp's
+/// earlier non-byval indirect parameters took.  The shape itself, and the
+/// cases reported rather than repaired, are documented on
+/// CIRABIRewriteContext::prepareNonByvalParameters in the header.
+static mlir::LogicalResult prepareOneNonByvalParameter(
+    cir::FuncOp funcOp, unsigned argNo, const ArgClassification &ac,
+    mlir::BlockArgument blockArg, mlir::DominanceInfo &dom,
+    SmallPtrSetImpl<mlir::Operation *> &claimedSlots) {
+  // The spill is the store that writes the parameter itself.  Any other use
+  // consumes the record value.  At -O1 and above such a use comes from
+  // cir-simplify: CIRGen marks a const-qualified parameter's slot const, so
+  // the load of it folds to the stored parameter.
+  cir::StoreOp spill;
+  cir::StoreOp extraSpill;
+  mlir::Operation *otherUse = nullptr;
+  SmallVector<mlir::OpOperand *> callArgs;
+  for (mlir::OpOperand &use : blockArg.getUses()) {
+    auto store = dyn_cast<cir::StoreOp>(use.getOwner());
+    if (store && store.getValue() == blockArg) {
+      // Which of two stores is the spill decides which slot stands in for the
+      // parameter, and the use list is in no particular order, so there is
+      // nothing to prefer between them.
+      if (spill)
+        extraSpill = store;
+      else
+        spill = store;
+      continue;
+    }
+    // Only an argument is served by a load of the slot.  Any other consumer
+    // belongs to a rewrite that reads the parameter its own way: a returned
+    // record, for one, is rewritten through the sret slot, which assumes the
+    // returned load names the return slot and not this one.
+    auto call = dyn_cast<cir::CIRCallOpInterface>(use.getOwner());
+    if (call && llvm::is_contained(call.getArgOperands(), blockArg))
+      callArgs.push_back(&use);
+    else if (!otherUse)
+      otherUse = use.getOwner();
+  }
+
+  if (extraSpill)
+    return extraSpill->emitOpError()
+           << "non-byval parameter " << argNo
+           << " spilled more than once is not yet implemented in "
+              "CallConvLowering";
+
+  if (otherUse)
+    return otherUse->emitOpError()
+           << "non-byval parameter " << argNo
+           << " consumed other than as a call argument is not yet implemented "
+              "in CallConvLowering";
+
+  if (!spill) {
+    // Every other kind of use was reported above, so the parameter has no
+    // uses at all and needs neither a slot nor a read.
+    if (callArgs.empty())
+      return mlir::success();
+
+    // Without a spill the parameter becomes the incoming pointer directly,
+    // which is the storage an argument taken from it has to name.  Giving it
+    // the spill it lacks lets the checks and the read below apply unchanged,
+    // and neither survives the pass: insertArgCoercion erases the store and
+    // finalizeParameterSlots replaces the slot.
+    mlir::OpBuilder builder(funcOp.getContext());
+    builder.setInsertionPointToStart(blockArg.getOwner());
+    auto synthesized = cir::AllocaOp::create(
+        builder, funcOp.getLoc(), cir::PointerType::get(blockArg.getType()),
+        builder.getStringAttr("nonbyval.param"),
+        builder.getI64IntegerAttr(ac.indirectAlign.value()));
+    spill =
+        cir::StoreOp::create(builder, funcOp.getLoc(), blockArg, synthesized);
+  }
+
+  // The incoming pointer replaces the slot itself, in the default address
+  // space.  Retargeting a cast of it would leave the allocation's other views
+  // reading storage nothing writes.  Storage in another address space, or
+  // storage that is not a local alloca at all, is not something the incoming
+  // pointer can be substituted for.
+  cir::AllocaOp slot = spill.getAddr().getDefiningOp<cir::AllocaOp>();
+  if (!slot ||
+      spill.getAddr().getType() != cir::PointerType::get(blockArg.getType()))
+    return spill->emitOpError()
+           << "non-byval parameter " << argNo
+           << " spilled to storage that cannot take the incoming pointer is "
+              "not yet implemented in CallConvLowering";
+
+  // One slot stands in for one non-byval parameter, since the incoming
+  // pointer replaces it.  Two of them spilled to the same slot are each
+  // spilled once, so the check above cannot see the collision and only
+  // comparing the slots can.
+  if (!claimedSlots.insert(slot).second)
+    return spill->emitOpError()
+           << "non-byval parameter " << argNo
+           << " sharing its spill slot with another parameter is not yet "
+              "implemented in CallConvLowering";
+
+  // CIRGen picked the slot's alignment for a local copy of the record, but the
+  // slot is about to stand in for the parameter, and a call forwarding it may
+  // only promise what the incoming pointer does.
+  slot.setAlignment(ac.indirectAlign.value());
+
+  if (callArgs.empty())
+    return mlir::success();
+
+  // A reader the spill does not dominate could read the slot before anything
+  // wrote it, and a load placed at the spill would not dominate it either.
+  for (mlir::OpOperand *callArg : callArgs)
+    if (!dom.properlyDominates(spill, callArg->getOwner()))
+      return callArg->getOwner()->emitOpError()
+             << "non-byval parameter " << argNo
+             << " read before its spill is not yet implemented in "
+                "CallConvLowering";
+
+  // Read the record back out of the slot instead, so every reader sees the
+  // shape CIRGen emits without cir-simplify: a load naming the storage the
+  // argument would have to name anyway.  Reading at the spill, not at the
+  // reader, keeps the value the parameter's own whatever the body later
+  // stores into the slot, and the load promises only the alignment the
+  // classification gives the incoming pointer.
+  //
+  // A call that forwards the argument consumes the load once it recognizes
+  // the slot.  One that wants a copy keeps it, reading the incoming pointer
+  // once finalizeParameterSlots replaces the slot.
+  mlir::OpBuilder builder(spill);
+  builder.setInsertionPointAfter(spill);
+  auto reload = cir::LoadOp::create(builder, spill.getLoc(), slot);
+  reload.setAlignment(ac.indirectAlign.value());
+  for (mlir::OpOperand *callArg : callArgs)
+    callArg->set(reload.getResult());
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRABIRewriteContext::prepareNonByvalParameters(
     cir::FuncOp funcOp, const FunctionClassification &fc) {
   if (!funcOp.isDefinition())
-    return;
+    return mlir::success();
   mlir::Region &body = funcOp->getRegion(0);
   if (body.empty())
-    return;
+    return mlir::success();
   mlir::Block &entry = body.front();
+  mlir::DominanceInfo dom;
+  SmallPtrSet<mlir::Operation *, 4> claimedSlots;
 
   // No signature has been rewritten yet, so no sret pointer has been prepended
   // and no Expand argument has been split into its fields.  Every
@@ -1104,9 +1238,11 @@ void CIRABIRewriteContext::normalizeParameterSlotAlignments(
       continue;
     assert(idx < entry.getNumArguments() &&
            "classification count must not exceed entry block arguments");
-    if (cir::AllocaOp slot = findParamSpill(entry.getArgument(idx)).second)
-      slot.setAlignment(ac.indirectAlign.value());
+    if (failed(prepareOneNonByvalParameter(
+            funcOp, idx, ac, entry.getArgument(idx), dom, claimedSlots)))
+      return mlir::failure();
   }
+  return mlir::success();
 }
 
 void CIRABIRewriteContext::finalizeParameterSlots() {

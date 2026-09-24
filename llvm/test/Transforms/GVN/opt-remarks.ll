@@ -134,4 +134,5 @@ define i8 @lifetime_end(i8 %val) {
 !11 = !DILocation(line: 3, column: 3, scope: !7)
 
 !12 = !{ !"tbaa root" }
-!13 = !{ !"int", !12 }
+!13 = !{!14, !14, i64 0}
+!14 = !{!"int", !12}

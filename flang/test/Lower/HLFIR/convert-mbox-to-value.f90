@@ -50,7 +50,7 @@ end subroutine test_char_allocatable
 ! CHECK-SAME:                                        %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.char<1,11>>>> {fir.bindc_name = "a"}) {
 ! CHECK:           %[[VAL_1:.*]] = arith.constant 11 : index
 ! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] typeparams %[[VAL_1]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest_char_allocatableEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.char<1,11>>>>, index, !fir.dscope) -> (!fir.ref<!fir.box<!fir.heap<!fir.char<1,11>>>>, !fir.ref<!fir.box<!fir.heap<!fir.char<1,11>>>>)
-! CHECK:           %[[VAL_3:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_char_allocatableEi"}
+! CHECK:           %[[VAL_3:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFtest_char_allocatableEi"}>
 ! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]] {uniq_name = "_QFtest_char_allocatableEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_5:.*]] = fir.load %[[VAL_2]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.char<1,11>>>>
 ! CHECK:           %[[VAL_6:.*]] = fir.box_addr %[[VAL_5]] : (!fir.box<!fir.heap<!fir.char<1,11>>>) -> !fir.heap<!fir.char<1,11>>
@@ -83,7 +83,7 @@ subroutine test_char_pointer(p)
 end subroutine test_char_pointer
 ! CHECK-LABEL:   func.func @_QPtest_char_pointer(
 ! CHECK-SAME:                                    %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.char<1,11>>>> {fir.bindc_name = "p"}) {
-! CHECK:           %[[VAL_1:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_char_pointerEi"}
+! CHECK:           %[[VAL_1:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFtest_char_pointerEi"}>
 ! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "_QFtest_char_pointerEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_3:.*]] = arith.constant 11 : index
 ! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]] typeparams %[[VAL_3]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest_char_pointerEp"} : (!fir.ref<!fir.box<!fir.ptr<!fir.char<1,11>>>>, index, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.char<1,11>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.char<1,11>>>>)
@@ -121,7 +121,7 @@ end subroutine test_dyn_char_allocatable
 ! CHECK:           %[[VAL_1:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
 ! CHECK:           %[[VAL_2:.*]] = fir.box_elesize %[[VAL_1]] : (!fir.box<!fir.heap<!fir.char<1,?>>>) -> index
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] typeparams %[[VAL_2]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest_dyn_char_allocatableEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>, index, !fir.dscope) -> (!fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>, !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>)
-! CHECK:           %[[VAL_4:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_dyn_char_allocatableEi"}
+! CHECK:           %[[VAL_4:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFtest_dyn_char_allocatableEi"}>
 ! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] {uniq_name = "_QFtest_dyn_char_allocatableEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_6:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
 ! CHECK:           %[[VAL_7:.*]] = fir.box_addr %[[VAL_6]] : (!fir.box<!fir.heap<!fir.char<1,?>>>) -> !fir.heap<!fir.char<1,?>>
@@ -153,7 +153,7 @@ subroutine test_dyn_char_pointer(p)
 end subroutine test_dyn_char_pointer
 ! CHECK-LABEL:   func.func @_QPtest_dyn_char_pointer(
 ! CHECK-SAME:                                        %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>> {fir.bindc_name = "p"}) {
-! CHECK:           %[[VAL_1:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_dyn_char_pointerEi"}
+! CHECK:           %[[VAL_1:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFtest_dyn_char_pointerEi"}>
 ! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "_QFtest_dyn_char_pointerEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_3:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>
 ! CHECK:           %[[VAL_4:.*]] = fir.box_elesize %[[VAL_3]] : (!fir.box<!fir.ptr<!fir.char<1,?>>>) -> index
@@ -191,18 +191,18 @@ subroutine test_derived_allocatable(l)
 end subroutine test_derived_allocatable
 ! CHECK-LABEL:   func.func @_QPtest_derived_allocatable(
 ! CHECK-SAME:                                           %[[VAL_0:.*]]: !fir.ref<!fir.logical<4>> {fir.bindc_name = "l"}) {
-! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.box<!fir.heap<!fir.type<_QFtest_derived_allocatableTt>>> {bindc_name = "a1", uniq_name = "_QFtest_derived_allocatableEa1"}
+! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.box<!fir.heap<!fir.type<_QFtest_derived_allocatableTt>>> <{bindc_name = "a1", uniq_name = "_QFtest_derived_allocatableEa1"}>
 ! CHECK:           %[[VAL_2:.*]] = fir.zero_bits !fir.heap<!fir.type<_QFtest_derived_allocatableTt>>
 ! CHECK:           %[[VAL_3:.*]] = fir.embox %[[VAL_2]] : (!fir.heap<!fir.type<_QFtest_derived_allocatableTt>>) -> !fir.box<!fir.heap<!fir.type<_QFtest_derived_allocatableTt>>>
 ! CHECK:           fir.store %[[VAL_3]] to %[[VAL_1]] : !fir.ref<!fir.box<!fir.heap<!fir.type<_QFtest_derived_allocatableTt>>>>
 ! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_1]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest_derived_allocatableEa1"} : (!fir.ref<!fir.box<!fir.heap<!fir.type<_QFtest_derived_allocatableTt>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.type<_QFtest_derived_allocatableTt>>>>, !fir.ref<!fir.box<!fir.heap<!fir.type<_QFtest_derived_allocatableTt>>>>)
-! CHECK:           %[[VAL_5:.*]] = fir.alloca !fir.class<!fir.heap<!fir.type<_QFtest_derived_allocatableTt>>> {bindc_name = "a2", uniq_name = "_QFtest_derived_allocatableEa2"}
+! CHECK:           %[[VAL_5:.*]] = fir.alloca !fir.class<!fir.heap<!fir.type<_QFtest_derived_allocatableTt>>> <{bindc_name = "a2", uniq_name = "_QFtest_derived_allocatableEa2"}>
 ! CHECK:           %[[VAL_6:.*]] = fir.zero_bits !fir.heap<!fir.type<_QFtest_derived_allocatableTt>>
 ! CHECK:           %[[VAL_7:.*]] = fir.embox %[[VAL_6]] : (!fir.heap<!fir.type<_QFtest_derived_allocatableTt>>) -> !fir.class<!fir.heap<!fir.type<_QFtest_derived_allocatableTt>>>
 ! CHECK:           fir.store %[[VAL_7]] to %[[VAL_5]] : !fir.ref<!fir.class<!fir.heap<!fir.type<_QFtest_derived_allocatableTt>>>>
 ! CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_5]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest_derived_allocatableEa2"} : (!fir.ref<!fir.class<!fir.heap<!fir.type<_QFtest_derived_allocatableTt>>>>) -> (!fir.ref<!fir.class<!fir.heap<!fir.type<_QFtest_derived_allocatableTt>>>>, !fir.ref<!fir.class<!fir.heap<!fir.type<_QFtest_derived_allocatableTt>>>>)
 ! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFtest_derived_allocatableEl"} : (!fir.ref<!fir.logical<4>>, !fir.dscope) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
-! CHECK:           %[[VAL_10:.*]] = fir.alloca !fir.class<!fir.heap<!fir.type<_QFtest_derived_allocatableTt>>> {bindc_name = "r", uniq_name = "_QFtest_derived_allocatableEr"}
+! CHECK:           %[[VAL_10:.*]] = fir.alloca !fir.class<!fir.heap<!fir.type<_QFtest_derived_allocatableTt>>> <{bindc_name = "r", uniq_name = "_QFtest_derived_allocatableEr"}>
 ! CHECK:           %[[VAL_11:.*]] = fir.zero_bits !fir.heap<!fir.type<_QFtest_derived_allocatableTt>>
 ! CHECK:           %[[VAL_12:.*]] = fir.embox %[[VAL_11]] : (!fir.heap<!fir.type<_QFtest_derived_allocatableTt>>) -> !fir.class<!fir.heap<!fir.type<_QFtest_derived_allocatableTt>>>
 ! CHECK:           fir.store %[[VAL_12]] to %[[VAL_10]] : !fir.ref<!fir.class<!fir.heap<!fir.type<_QFtest_derived_allocatableTt>>>>
@@ -231,18 +231,18 @@ subroutine test_derived_pointer(l)
 end subroutine test_derived_pointer
 ! CHECK-LABEL:   func.func @_QPtest_derived_pointer(
 ! CHECK-SAME:                                       %[[VAL_0:.*]]: !fir.ref<!fir.logical<4>> {fir.bindc_name = "l"}) {
-! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.type<_QFtest_derived_pointerTt>>> {bindc_name = "a1", uniq_name = "_QFtest_derived_pointerEa1"}
+! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.type<_QFtest_derived_pointerTt>>> <{bindc_name = "a1", uniq_name = "_QFtest_derived_pointerEa1"}>
 ! CHECK:           %[[VAL_2:.*]] = fir.zero_bits !fir.ptr<!fir.type<_QFtest_derived_pointerTt>>
 ! CHECK:           %[[VAL_3:.*]] = fir.embox %[[VAL_2]] : (!fir.ptr<!fir.type<_QFtest_derived_pointerTt>>) -> !fir.box<!fir.ptr<!fir.type<_QFtest_derived_pointerTt>>>
 ! CHECK:           fir.store %[[VAL_3]] to %[[VAL_1]] : !fir.ref<!fir.box<!fir.ptr<!fir.type<_QFtest_derived_pointerTt>>>>
 ! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_1]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest_derived_pointerEa1"} : (!fir.ref<!fir.box<!fir.ptr<!fir.type<_QFtest_derived_pointerTt>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.type<_QFtest_derived_pointerTt>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.type<_QFtest_derived_pointerTt>>>>)
-! CHECK:           %[[VAL_5:.*]] = fir.alloca !fir.class<!fir.heap<!fir.type<_QFtest_derived_pointerTt>>> {bindc_name = "a2", uniq_name = "_QFtest_derived_pointerEa2"}
+! CHECK:           %[[VAL_5:.*]] = fir.alloca !fir.class<!fir.heap<!fir.type<_QFtest_derived_pointerTt>>> <{bindc_name = "a2", uniq_name = "_QFtest_derived_pointerEa2"}>
 ! CHECK:           %[[VAL_6:.*]] = fir.zero_bits !fir.heap<!fir.type<_QFtest_derived_pointerTt>>
 ! CHECK:           %[[VAL_7:.*]] = fir.embox %[[VAL_6]] : (!fir.heap<!fir.type<_QFtest_derived_pointerTt>>) -> !fir.class<!fir.heap<!fir.type<_QFtest_derived_pointerTt>>>
 ! CHECK:           fir.store %[[VAL_7]] to %[[VAL_5]] : !fir.ref<!fir.class<!fir.heap<!fir.type<_QFtest_derived_pointerTt>>>>
 ! CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_5]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest_derived_pointerEa2"} : (!fir.ref<!fir.class<!fir.heap<!fir.type<_QFtest_derived_pointerTt>>>>) -> (!fir.ref<!fir.class<!fir.heap<!fir.type<_QFtest_derived_pointerTt>>>>, !fir.ref<!fir.class<!fir.heap<!fir.type<_QFtest_derived_pointerTt>>>>)
 ! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFtest_derived_pointerEl"} : (!fir.ref<!fir.logical<4>>, !fir.dscope) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
-! CHECK:           %[[VAL_10:.*]] = fir.alloca !fir.class<!fir.heap<!fir.type<_QFtest_derived_pointerTt>>> {bindc_name = "r", uniq_name = "_QFtest_derived_pointerEr"}
+! CHECK:           %[[VAL_10:.*]] = fir.alloca !fir.class<!fir.heap<!fir.type<_QFtest_derived_pointerTt>>> <{bindc_name = "r", uniq_name = "_QFtest_derived_pointerEr"}>
 ! CHECK:           %[[VAL_11:.*]] = fir.zero_bits !fir.heap<!fir.type<_QFtest_derived_pointerTt>>
 ! CHECK:           %[[VAL_12:.*]] = fir.embox %[[VAL_11]] : (!fir.heap<!fir.type<_QFtest_derived_pointerTt>>) -> !fir.class<!fir.heap<!fir.type<_QFtest_derived_pointerTt>>>
 ! CHECK:           fir.store %[[VAL_12]] to %[[VAL_10]] : !fir.ref<!fir.class<!fir.heap<!fir.type<_QFtest_derived_pointerTt>>>>

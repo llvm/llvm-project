@@ -2,6 +2,10 @@ name: "Check LLVM ABI annotations"
 
 on:
   pull_request:
+    paths:
+      - 'llvm/**'
+      - '.github/workflows/ids-check.yml'
+      - '!llvm/docs/**'
 
 permissions:
   contents: read
@@ -14,7 +18,7 @@ jobs:
   build:
     if: github.repository_owner == 'llvm'
     name: Check LLVM_ABI annotations with ids
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     container:
       image: 'ghcr.io/llvm/ci-ubuntu-26.04-ids-checks:latest@sha256:610825c41aea545132a5b441ee864acf050ac54ff40009fbaaf3e158f139e5d7'
     timeout-minutes: 20
@@ -94,4 +98,4 @@ jobs:
         with:
           name: workflow-args
           path: |
-            llvm-project/comments
+            comments

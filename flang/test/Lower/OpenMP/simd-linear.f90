@@ -4,13 +4,13 @@
 ! RUN: %flang_fc1 -fopenmp -emit-hlfir -fopenmp-version=60 %s -o - 2>&1 | FileCheck %s
 ! RUN: %flang_fc1 -fopenmp -emit-hlfir -fopenmp-version=45 %s -o - 2>&1 | FileCheck %s --check-prefix=IMPLICIT
 
-!CHECK: %[[X_alloca:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFsimple_linearEx"}
+!CHECK: %[[X_alloca:.*]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFsimple_linearEx"}>
 !CHECK: %[[X:.*]]:2 = hlfir.declare %[[X_alloca]] {uniq_name = "_QFsimple_linearEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[const:.*]] = arith.constant 1 : i32
 
-!IMPLICIT: %[[I_ALLOCA:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFsimple_linearEi"}
+!IMPLICIT: %[[I_ALLOCA:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFsimple_linearEi"}>
 !IMPLICIT: %[[I:.*]]:2 = hlfir.declare %[[I_ALLOCA]] {{.*}} 
-!IMPLICIT: %[[X_alloca:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFsimple_linearEx"}
+!IMPLICIT: %[[X_alloca:.*]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFsimple_linearEx"}>
 !IMPLICIT: %[[X:.*]]:2 = hlfir.declare %[[X_alloca]] {uniq_name = "_QFsimple_linearEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !IMPLICIT: %[[const:.*]] = arith.constant 1 : i32
 subroutine simple_linear
@@ -27,12 +27,12 @@ subroutine simple_linear
 end subroutine
 
 
-!CHECK: %[[X_alloca:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFlinear_stepEx"}
+!CHECK: %[[X_alloca:.*]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFlinear_stepEx"}>
 !CHECK: %[[X:.*]]:2 = hlfir.declare %[[X_alloca]] {uniq_name = "_QFlinear_stepEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
-!IMPLICIT: %[[I_ALLOCA:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFlinear_stepEi"}
+!IMPLICIT: %[[I_ALLOCA:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFlinear_stepEi"}>
 !IMPLICIT: %[[I:.*]]:2 = hlfir.declare %[[I_ALLOCA]] {{.*}} 
-!IMPLICIT: %[[X_alloca:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFlinear_stepEx"}
+!IMPLICIT: %[[X_alloca:.*]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFlinear_stepEx"}>
 !IMPLICIT: %[[X:.*]]:2 = hlfir.declare %[[X_alloca]] {uniq_name = "_QFlinear_stepEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !IMPLICIT: %[[const:.*]] = arith.constant 4 : i32
 subroutine linear_step
@@ -49,16 +49,16 @@ subroutine linear_step
     !IMPLICIT: }
 end subroutine
 
-!CHECK: %[[A_alloca:.*]] = fir.alloca i32 {bindc_name = "a", uniq_name = "_QFlinear_exprEa"}
+!CHECK: %[[A_alloca:.*]] = fir.alloca i32 <{bindc_name = "a", uniq_name = "_QFlinear_exprEa"}>
 !CHECK: %[[A:.*]]:2 = hlfir.declare %[[A_alloca]] {uniq_name = "_QFlinear_exprEa"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK: %[[X_alloca:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFlinear_exprEx"}
+!CHECK: %[[X_alloca:.*]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFlinear_exprEx"}>
 !CHECK: %[[X:.*]]:2 = hlfir.declare %[[X_alloca]] {uniq_name = "_QFlinear_exprEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
-!IMPLICIT: %[[A_alloca:.*]] = fir.alloca i32 {bindc_name = "a", uniq_name = "_QFlinear_exprEa"}
+!IMPLICIT: %[[A_alloca:.*]] = fir.alloca i32 <{bindc_name = "a", uniq_name = "_QFlinear_exprEa"}>
 !IMPLICIT: %[[A:.*]]:2 = hlfir.declare %[[A_alloca]] {uniq_name = "_QFlinear_exprEa"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!IMPLICIT: %[[I_ALLOCA:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFlinear_exprEi"}
+!IMPLICIT: %[[I_ALLOCA:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFlinear_exprEi"}>
 !IMPLICIT: %[[I:.*]]:2 = hlfir.declare %[[I_ALLOCA]] {uniq_name = "_QFlinear_exprEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!IMPLICIT: %[[X_alloca:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFlinear_exprEx"}
+!IMPLICIT: %[[X_alloca:.*]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFlinear_exprEx"}>
 !IMPLICIT: %[[X:.*]]:2 = hlfir.declare %[[X_alloca]] {uniq_name = "_QFlinear_exprEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 subroutine linear_expr
     implicit none

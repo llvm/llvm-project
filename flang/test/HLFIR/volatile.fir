@@ -21,12 +21,12 @@ func.func @foo() {
 // CHECK-LABEL:   func.func @foo() {
 // CHECK:           %[[VAL_0:.*]] = arith.constant true
 // CHECK:           %[[VAL_1:.*]] = arith.constant false
-// CHECK:           %[[VAL_2:.*]] = fir.alloca !fir.logical<4> {bindc_name = "a", uniq_name = "_QFEa"}
+// CHECK:           %[[VAL_2:.*]] = fir.alloca !fir.logical<4> <{bindc_name = "a", uniq_name = "_QFEa"}>
 // CHECK:           %[[VAL_3:.*]] = fir.volatile_cast %[[VAL_2]] : (!fir.ref<!fir.logical<4>>) -> !fir.ref<!fir.logical<4>, volatile>
 // CHECK:           %[[VAL_4:.*]] = fir.declare %[[VAL_3]] {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "_QFEa"} : (!fir.ref<!fir.logical<4>, volatile>) -> !fir.ref<!fir.logical<4>, volatile>
-// CHECK:           %[[VAL_5:.*]] = fir.alloca !fir.logical<4> {bindc_name = "b", uniq_name = "_QFEb"}
+// CHECK:           %[[VAL_5:.*]] = fir.alloca !fir.logical<4> <{bindc_name = "b", uniq_name = "_QFEb"}>
 // CHECK:           %[[VAL_6:.*]] = fir.declare %[[VAL_5]] {uniq_name = "_QFEb"} : (!fir.ref<!fir.logical<4>>) -> !fir.ref<!fir.logical<4>>
-// CHECK:           %[[VAL_7:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFEi"}
+// CHECK:           %[[VAL_7:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFEi"}>
 // CHECK:           %[[VAL_8:.*]] = fir.declare %[[VAL_7]] {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           %[[VAL_9:.*]] = fir.convert %[[VAL_1]] : (i1) -> !fir.logical<4>
 // CHECK:           fir.store %[[VAL_9]] to %[[VAL_4]] : !fir.ref<!fir.logical<4>, volatile>

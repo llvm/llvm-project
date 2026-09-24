@@ -1172,8 +1172,9 @@ void LowerTypeTestsModule::buildBitSetsFromGlobalVariables(
     // Multiply by 2 to account for padding elements.
     Constant *CombinedGlobalIdxs[] = {ConstantInt::get(Int32Ty, 0),
                                       ConstantInt::get(Int32Ty, I * 2)};
-    Constant *CombinedGlobalElemPtr = ConstantExpr::getInBoundsGetElementPtr(
-        NewInit->getType(), CombinedGlobal, CombinedGlobalIdxs);
+    Constant *CombinedGlobalElemPtr = ConstantExpr::getGetElementPtr(
+        DL, NewInit->getType(), CombinedGlobal, CombinedGlobalIdxs,
+        GEPNoWrapFlags::inBounds());
     assert(GV->getType()->getAddressSpace() == 0);
     GlobalAlias *GAlias =
         GlobalAlias::create(NewTy->getElementType(I * 2), 0, GV->getLinkage(),
@@ -2096,10 +2097,10 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
     Function *F = cast<Function>(Functions[I]->getGlobal());
     bool IsJumpTableCanonical = Functions[I]->isJumpTableCanonical();
 
-    Constant *CombinedGlobalElemPtr = ConstantExpr::getInBoundsGetElementPtr(
-        JumpTableType, JumpTable,
-        ArrayRef<Constant *>{ConstantInt::get(IntPtrTy, 0),
-                             ConstantInt::get(IntPtrTy, I)});
+    Constant *CombinedGlobalElemPtr = ConstantExpr::getGetElementPtr(
+        F->getDataLayout(), JumpTableType, JumpTable,
+        {ConstantInt::get(IntPtrTy, 0), ConstantInt::get(IntPtrTy, I)},
+        GEPNoWrapFlags::inBounds());
 
     const bool IsExported = Functions[I]->isExported();
     if (!IsJumpTableCanonical) {
