@@ -67,6 +67,69 @@ exit:
   ret void
 }
 
+define void @single_pred_zero_weight(ptr noalias %a, ptr noalias %b, ptr noalias %idx) {
+; %if.then is only entered via an edge with zero branch weight. BFI treats the
+; edge as cold, not as never taken, and gives %if.then the minimum non-zero
+; frequency of 2^-31.
+;
+;   %loop       1 =        1
+;   %if.then 2^-31 ~ 4.66e-10
+;   %latch      1 =        1
+;
+; TODO: VPlan currently records a frequency of 0 for %if.then.
+;
+; BFI-LABEL: block-frequency-info: single_pred_zero_weight
+; BFI-NEXT:   - entry: float = 1.0,
+; BFI-NEXT:   - loop: float = 1000.0,
+; BFI-NEXT:   - if.then: float = 0.00000046566,
+; BFI-NEXT:   - latch: float = 1000.0,
+; BFI-NEXT:   - exit: float = 1.0,
+;
+; VPLAN-LABEL: VPlan for loop in 'single_pred_zero_weight'
+; VPLAN:         vector.body:
+; VPLAN-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<%{{.+}}>
+; VPLAN-NEXT:      EMIT ir<%gep.idx> = getelementptr inbounds ir<%idx>, ir<%iv>
+; VPLAN-NEXT:      EMIT-SCALAR ir<%i> = load ir<%gep.idx>
+; VPLAN-NEXT:      EMIT ir<%gep.b> = getelementptr inbounds ir<%b>, ir<%iv>
+; VPLAN-NEXT:      EMIT store ir<%i>, ir<%gep.b>{{$}}
+; VPLAN-NEXT:      EMIT ir<%c.0> = icmp sgt ir<%i>, ir<0>
+; VPLAN-NEXT:    Successor(s): if.then
+; VPLAN-EMPTY:
+; VPLAN-NEXT:    if.then:
+; VPLAN-NEXT:      EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv>
+; VPLAN-NEXT:      EMIT store ir<%i>, ir<%gep.a>, ir<%c.0>{{$}}
+; VPLAN-NEXT:    Successor(s): latch
+; VPLAN-EMPTY:
+; VPLAN-NEXT:    latch:
+; VPLAN-NEXT:      EMIT ir<%iv.next> = add ir<%iv>, ir<1>
+; VPLAN-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<1024>
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %latch ]
+  %gep.idx = getelementptr inbounds i32, ptr %idx, i64 %iv
+  %i = load i32, ptr %gep.idx, align 4
+  %gep.b = getelementptr inbounds i32, ptr %b, i64 %iv
+  store i32 %i, ptr %gep.b, align 4
+  %c.0 = icmp sgt i32 %i, 0
+  br i1 %c.0, label %if.then, label %latch, !prof !13
+
+if.then:
+  %gep.a = getelementptr inbounds i32, ptr %a, i64 %iv
+  store i32 %i, ptr %gep.a, align 4
+  br label %latch
+
+latch:
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 1024
+  br i1 %ec, label %exit, label %loop, !prof !3
+
+exit:
+  ret void
+}
+
 define void @two_preds(ptr noalias %a, ptr noalias %b, ptr noalias %c, ptr noalias %idx) {
 ; Execution frequency of each block of the loop. %merge is reached from both
 ; %then (1/4) and %else (3/4 * 1/3 = 1/4).
@@ -975,3 +1038,4 @@ exit:
 !8 = !{!"branch_weights", i32 1, i32 1, i32 1, i32 1, i32 1}
 !9 = !{!"branch_weights", i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1}
 !12 = !{!"branch_weights", i32 2, i32 2863311531, i32 2863311531, i32 2863311531}
+!13 = !{!"branch_weights", i32 0, i32 1000}
