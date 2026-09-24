@@ -137,7 +137,7 @@ private:
   // Parser doesn't own the evaluation context. The produced AST may depend on
   // it (for example, for source locations), so it's expected that expression
   // context will outlive the parser.
-  ExecutionContext &m_exe_ctx;
+  ExecutionContext m_exe_ctx;
 
   llvm::StringRef m_input_expr;
 

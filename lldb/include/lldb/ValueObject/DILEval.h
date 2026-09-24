@@ -178,8 +178,8 @@ private:
                                           CompilerType target_type,
                                           int location);
 
-  // Interpreter doesn't own the evaluation context.
-  ExecutionContext &m_exe_ctx;
+  // Used by the interpreter to create objects, perform casts, etc.
+  ExecutionContext m_exe_ctx;
   llvm::StringRef m_expr;
   lldb::ValueObjectSP m_scope;
   lldb::DynamicValueType m_use_dynamic;
