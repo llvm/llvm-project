@@ -14,7 +14,7 @@
 #ifndef LLVM_LIBC_TYPES___SCANDIR_FILTER_T_H
 #define LLVM_LIBC_TYPES___SCANDIR_FILTER_T_H
 
-#include "struct_dirent.h"
+struct dirent;
 
 typedef int (*__scandir_filter_t)(const struct dirent *);
 
