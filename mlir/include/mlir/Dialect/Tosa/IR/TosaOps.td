@@ -63,6 +63,42 @@ def Tosa_ArgMaxOp : Tosa_InferShapedTypeOp<"argmax", [NoMemoryEffect]> {
       "functional-type(operands, results)";
 }
 
+
+//===----------------------------------------------------------------------===//
+// Operator: argmin
+//===----------------------------------------------------------------------===//
+def Tosa_ArgMinOp : Tosa_InferShapedTypeOp<"argmin", [NoMemoryEffect]> {
+  let summary = "Perform argmin on the input.";
+
+  let description = [{
+    This returns the index with the smallest value across the given axis of the
+    input tensor. If multiple locations have equal values, returns the first
+    match along the search axis.
+
+    This operation is not pure. Undefined behaviour may occur if the min index
+    is out of bounds for the output data type.
+  }];
+
+  let arguments = (ins
+    Tosa_TensorAtLeast1D: $input,
+    I32Attr: $axis,
+    DefaultValuedAttr<Tosa_NanPropagationModeAttr, "::mlir::tosa::NanPropagationMode::PROPAGATE">:$nan_mode
+  );
+
+  let results = (outs
+    Tosa_Tensor: $output
+  );
+
+  let hasFolder = 1;
+  let hasVerifier = 1;
+
+  let assemblyFormat =
+      "operands `axis` `(` $axis `)` "
+      "oilist(`nan_mode` `` $nan_mode) attr-dict `:` "
+      "functional-type(operands, results)";
+}
+
+
 //===----------------------------------------------------------------------===//
 // Accumulator types.
 //===----------------------------------------------------------------------===//

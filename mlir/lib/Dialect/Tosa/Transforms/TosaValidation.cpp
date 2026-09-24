@@ -716,6 +716,21 @@ LogicalResult TosaValidation::levelCheckRanks(tosa::ArgMaxOp tosaOp) {
 }
 
 template <>
+LogicalResult TosaValidation::levelCheckRanks(tosa::ArgMinOp tosaOp) {
+  auto *op = tosaOp.getOperation();
+  if (failed(levelCheckRank(op, tosaOp.getInput(), "operand",
+                            targetEnv.getLevel().MAX_RANK)))
+    return failure();
+
+  // rank(output) = rank(input) - 1
+  if (failed(levelCheckRank(op, tosaOp.getOutput(), "result",
+                            targetEnv.getLevel().MAX_RANK - 1)))
+    return failure();
+
+  return success();
+}
+
+template <>
 LogicalResult TosaValidation::levelCheckRanks(tosa::IfOp tosaOp) {
   auto *op = tosaOp.getOperation();
 
@@ -771,6 +786,7 @@ LogicalResult TosaValidation::levelCheckRanksAndSizes(Operation *op) {
 
   // Tensor Operators
   CHECK_RANKS_AND_SIZES(ArgMax);
+  CHECK_RANKS_AND_SIZES(ArgMin);
   // Activation Functions
   CHECK_RANKS_AND_SIZES(Clamp);
   CHECK_RANKS_AND_SIZES(Erf);

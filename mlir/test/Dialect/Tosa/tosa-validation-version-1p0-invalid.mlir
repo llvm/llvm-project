@@ -218,6 +218,14 @@ func.func @test_dyanmic_dims(%arg0: tensor<1x8x16xi8>) {
 
 // -----
 
+func.func @test_dyanmic_dims(%arg0: tensor<1x8x16xi8>) {
+  // expected-error@+1 {{'tosa.argmin' op illegal: requires specification version compatible with 1.1.draft (got 1.0)}}
+  %1 = tosa.argmin %arg0 axis(1) : (tensor<1x8x16xi8>) -> tensor<1x16xi32>
+  return
+}
+
+// -----
+
 func.func @test_block_scaled_identity(%arg0: tensor<13x21x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E2M3FN>>) -> tensor<13x21x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E2M3FN>> {
   // expected-error@+1 {{'tosa.identity' op illegal: requires specification version compatible with 1.1.draft (got 1.0) and requires all of [mx_common, mx_fp6e2m3] profiles/extensions to be specified in the target environment}}
   %0 = tosa.identity %arg0 : (tensor<13x21x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E2M3FN>>) -> tensor<13x21x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E2M3FN>>

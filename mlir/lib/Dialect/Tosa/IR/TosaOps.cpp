@@ -587,8 +587,70 @@ LogicalResult mlir::tosa::BlockScaledType::convertFromAttribute(
 }
 
 //===----------------------------------------------------------------------===//
+// TOSA Operator shape inference
+//===----------------------------------------------------------------------===//
+
+template <typename A, std::enable_if_t<std::is_same_v<A, ArgMaxOp::Adaptor> ||
+                                           std::is_same_v<A, ArgMinOp::Adaptor>,
+                                       int> = 0>
+LogicalResult inferArgMaxMinReturnTypeComponents(
+    MLIRContext *context, ::std::optional<Location> location, A adaptor,
+    SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
+  ShapeAdaptor inputShape(adaptor.getInput().getType());
+  IntegerAttr axis = adaptor.getProperties().axis;
+  int32_t axisVal = axis.getValue().getSExtValue();
+
+  if (!inputShape.hasRank()) {
+    inferredReturnShapes.push_back(ShapedTypeComponents());
+    return success();
+  }
+
+  const auto inputRank = inputShape.getRank();
+  SmallVector<int64_t> outShape;
+  outShape.reserve(inputRank - 1);
+  for (int i = 0, s = inputRank; i < s; i++) {
+    if (i == axisVal)
+      continue;
+    outShape.push_back(inputShape.getDimSize(i));
+  }
+
+  inferredReturnShapes.push_back(ShapedTypeComponents(outShape));
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // TOSA Operator Verifiers.
 //===----------------------------------------------------------------------===//
+template <typename T>
+LogicalResult argMaxMinVerify(T op) {
+  const ShapedType resultType = llvm::cast<ShapedType>(op.getType());
+
+  if (const auto resultETy = resultType.getElementType();
+      !resultETy.isIntOrIndex())
+    return op.emitOpError("result tensor is not of integer type");
+
+  const auto inputType = llvm::cast<ShapedType>(op.getInput().getType());
+  if (!inputType.hasRank())
+    return success();
+
+  // Ensure axis is within the tensor rank
+  const int64_t axis = op.getAxisAttr().getInt();
+  if (((axis < 0) || axis >= inputType.getRank()))
+    return op.emitOpError("specified axis is outside the rank of the tensor");
+
+  if (!resultType.hasRank())
+    return success();
+
+  const ArrayRef<int64_t> inputShape = inputType.getShape();
+  const ArrayRef<int64_t> outputShape = resultType.getShape();
+  llvm::SmallVector<int64_t> expectedOutputShape(inputShape);
+  expectedOutputShape.erase(expectedOutputShape.begin() + axis);
+  if (failed(verifyCompatibleShape(expectedOutputShape, outputShape)))
+    return op.emitOpError("expected output shape '")
+           << expectedOutputShape << "', got '" << outputShape << "'";
+
+  return success();
+}
 
 template <typename T>
 static LogicalResult verifyConvOp(T op) {
@@ -973,36 +1035,9 @@ static LogicalResult verifySameElementTypes(Operation *op, Type aType,
   return success();
 }
 
-LogicalResult tosa::ArgMaxOp::verify() {
-  const ShapedType resultType = llvm::cast<ShapedType>(getType());
+LogicalResult tosa::ArgMaxOp::verify() { return argMaxMinVerify(*this); }
 
-  // Ensure output is of 32-bit integer
-  if (const auto resultETy = resultType.getElementType();
-      !resultETy.isIntOrIndex())
-    return emitOpError("result tensor is not of integer type");
-
-  const auto inputType = llvm::cast<ShapedType>(getInput().getType());
-  if (!inputType.hasRank())
-    return success();
-
-  // Ensure axis is within the tensor rank
-  const int64_t axis = getAxisAttr().getInt();
-  if (((axis < 0) || axis >= inputType.getRank()))
-    return emitOpError("specified axis is outside the rank of the tensor");
-
-  if (!resultType.hasRank())
-    return success();
-
-  const ArrayRef<int64_t> inputShape = inputType.getShape();
-  const ArrayRef<int64_t> outputShape = resultType.getShape();
-  llvm::SmallVector<int64_t> expectedOutputShape(inputShape);
-  expectedOutputShape.erase(expectedOutputShape.begin() + axis);
-  if (failed(verifyCompatibleShape(expectedOutputShape, outputShape)))
-    return emitOpError("expected output shape '")
-           << expectedOutputShape << "', got '" << outputShape << "'";
-
-  return success();
-}
+LogicalResult tosa::ArgMinOp::verify() { return argMaxMinVerify(*this); }
 
 static LogicalResult verifyPoolingOpImpl(Operation *op,
                                          ArrayRef<int64_t> kernel,
@@ -1581,25 +1616,16 @@ LogicalResult tosa::ArgMaxOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
     ArgMaxOp::Adaptor adaptor,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
-  ShapeAdaptor inputShape(adaptor.getInput().getType());
-  IntegerAttr axis = adaptor.getProperties().axis;
-  int32_t axisVal = axis.getValue().getSExtValue();
+  return inferArgMaxMinReturnTypeComponents(context, location, adaptor,
+                                            inferredReturnShapes);
+}
 
-  if (!inputShape.hasRank()) {
-    inferredReturnShapes.push_back(ShapedTypeComponents());
-    return success();
-  }
-
-  SmallVector<int64_t> outShape;
-  outShape.reserve(inputShape.getRank() - 1);
-  for (int i = 0, s = inputShape.getRank(); i < s; i++) {
-    if (i == axisVal)
-      continue;
-    outShape.push_back(inputShape.getDimSize(i));
-  }
-
-  inferredReturnShapes.push_back(ShapedTypeComponents(outShape));
-  return success();
+LogicalResult tosa::ArgMinOp::inferReturnTypeComponents(
+    MLIRContext *context, ::std::optional<Location> location,
+    ArgMinOp::Adaptor adaptor,
+    SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
+  return inferArgMaxMinReturnTypeComponents(context, location, adaptor,
+                                            inferredReturnShapes);
 }
 
 LogicalResult tosa::RFFT2dOp::inferReturnTypeComponents(
