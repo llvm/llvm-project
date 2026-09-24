@@ -1,8 +1,7 @@
 ! RUN: %flang_fc1 -fdebug-dump-symbols -fenumeration-type %s 2>&1 | FileCheck %s
 ! Regression test: a derived type with an enumeration-type component must be
 ! correctly sized once the enclosing type is instantiated (which happens as
-! soon as a variable of it is declared).  Previously the enumeration component
-! collapsed to size 0 / offset 0, freezing the enclosing type at size 0.
+! soon as a variable of it is declared).
 
 subroutine test_enum_component_offset()
   enumeration type :: color

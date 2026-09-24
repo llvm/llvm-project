@@ -130,7 +130,7 @@ subroutine test_constructor_errors_use()
 end subroutine
 
 ! A duplicate enumerator name within an enumeration type is diagnosed as a
-! clean semantic error (previously it aborted during name resolution).
+! clean semantic error.
 subroutine test_duplicate_enumerator()
   !WARNING: ENUMERATION TYPE support is incomplete and should be enabled only for testing
   enumeration type :: color

@@ -6,7 +6,7 @@
 ! component unless it is processed by defined I/O.  The check memoizes its walk;
 ! keying that memo on the shared type symbol (never erased on unwind) let a
 ! shielded parameterized-derived-type instantiation prune an unshielded sibling
-! instantiation, silently suppressing the error.  The walk is now memoized on
+! instantiation, silently suppressing the error.  The walk is now memorized on
 ! the instantiated scope, so the error surfaces regardless of traversal order.
 
 module unsafe_pdt_order_mod
