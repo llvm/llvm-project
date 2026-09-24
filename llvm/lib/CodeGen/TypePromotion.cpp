@@ -419,13 +419,15 @@ static bool isPromotedResultSafe(Instruction *I, bool UseSExt) {
   if (GenerateSignBits(I))
     return false;
 
-  if (UseSExt && I->getOpcode() == Instruction::LShr)
+  if (UseSExt && (I->getOpcode() == Instruction::LShr ||
+                  I->getOpcode() == Instruction::UDiv ||
+                  I->getOpcode() == Instruction::URem))
     return false;
 
   if (!isa<OverflowingBinaryOperator>(I))
     return true;
 
-  return I->hasNoUnsignedWrap();
+  return UseSExt ? I->hasNoSignedWrap() : I->hasNoUnsignedWrap();
 }
 
 void IRPromoter::ReplaceAllUsersOfWith(Value *From, Value *To) {
