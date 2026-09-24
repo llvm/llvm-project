@@ -7,6 +7,24 @@
 // Test outside of an executable context.
 #pragma omp error severity(warning) message("msg") at(compilation) // expected-warning {{msg}}
 
+// GH140338
+// expected-warning@+2 {{expected string in 'clause message' - ignoring}}
+// expected-error@+1 {{ERROR}}
+#pragma omp error message(L"")
+// expected-warning@+2 {{expected string in 'clause message' - ignoring}}
+// expected-error@+1 {{ERROR}}
+#pragma omp error message(L"msg")
+// expected-warning@+2 {{expected string in 'clause message' - ignoring}}
+// expected-error@+1 {{ERROR}}
+#pragma omp error message(u"msg")
+// expected-warning@+2 {{expected string in 'clause message' - ignoring}}
+// expected-error@+1 {{ERROR}}
+#pragma omp error message(U"msg")
+// expected-warning@+2 {{expected string in 'clause message' - ignoring}}
+// expected-warning@+1 {{WARNING}}
+#pragma omp error severity(warning) message(L"msg")
+#pragma omp error message(u8"msg") // expected-error {{msg}}
+
 template <class T>
 T tmain(T argc) {
   if (argc)
@@ -201,6 +219,9 @@ label1 : {
 if (1)
   label2:
 #pragma omp error // expected-error {{'#pragma omp error' cannot be an immediate substatement}}
+
+// expected-warning@+1 {{expected string in 'clause message' - ignoring}}
+#pragma omp error at(execution) message(L"msg") // no error
 
   return tmain(argc);// expected-note {{in instantiation of function template specialization 'tmain<int>' requested here}}
 }
