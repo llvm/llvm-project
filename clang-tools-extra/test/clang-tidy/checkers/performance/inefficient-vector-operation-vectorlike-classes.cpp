@@ -38,6 +38,18 @@ public:
   int size() const;
 };
 
+class UnconfiguredRangeLike {
+public:
+  int *begin();
+  int *end();
+  int size() const;
+};
+
+class RangeHolder {
+public:
+  RangeLike range;
+};
+
 void testVectorLikeClasses() {
   {
     VectorLikeInheritedPushBack inheritedPushBackVector;
@@ -71,6 +83,26 @@ void testVectorLikeClasses() {
     VectorLikeDirectPushBack vector;
     // CHECK-FIXES: vector.reserve(range.size());
     for (int value : range) {
+      vector.push_back(value);
+      // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: 'push_back' is called inside a loop; consider pre-allocating the container capacity before the loop
+    }
+  }
+
+  {
+    UnconfiguredRangeLike range;
+    VectorLikeDirectPushBack vector;
+    // CHECK-FIXES-NOT: vector.reserve(range.size());
+    for (int value : range) {
+      vector.push_back(value);
+      // CHECK-MESSAGES-NOT: :[[@LINE-1]]:7: warning: 'push_back' is called inside a loop
+    }
+  }
+
+  {
+    RangeHolder holder;
+    VectorLikeDirectPushBack vector;
+    // CHECK-FIXES: vector.reserve(holder.range.size());
+    for (int value : holder.range) {
       vector.push_back(value);
       // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: 'push_back' is called inside a loop; consider pre-allocating the container capacity before the loop
     }
