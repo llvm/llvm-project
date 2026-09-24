@@ -670,16 +670,28 @@ entry:
 
 ; A chain of two multiply-sub/adds: both levels could become FMSUBADD.
 define <4 x double> @mul_subadd_chain_pd256(<4 x double> %A, <4 x double> %B, <4 x double> %C, <4 x double> %D, <4 x double> %E) {
-; CHECK-LABEL: mul_subadd_chain_pd256:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmulpd %ymm1, %ymm0, %ymm0
-; CHECK-NEXT:    vsubpd %ymm4, %ymm0, %ymm1
-; CHECK-NEXT:    vaddpd %ymm4, %ymm0, %ymm0
-; CHECK-NEXT:    vmulpd %ymm3, %ymm2, %ymm2
-; CHECK-NEXT:    vsubpd %ymm1, %ymm2, %ymm1
-; CHECK-NEXT:    vaddpd %ymm0, %ymm2, %ymm0
-; CHECK-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2],ymm1[3]
-; CHECK-NEXT:    retq
+; NOFMA-LABEL: mul_subadd_chain_pd256:
+; NOFMA:       # %bb.0:
+; NOFMA-NEXT:    vmulpd %ymm1, %ymm0, %ymm0
+; NOFMA-NEXT:    vsubpd %ymm4, %ymm0, %ymm1
+; NOFMA-NEXT:    vaddpd %ymm4, %ymm0, %ymm0
+; NOFMA-NEXT:    vmulpd %ymm3, %ymm2, %ymm2
+; NOFMA-NEXT:    vsubpd %ymm1, %ymm2, %ymm1
+; NOFMA-NEXT:    vaddpd %ymm0, %ymm2, %ymm0
+; NOFMA-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2],ymm1[3]
+; NOFMA-NEXT:    retq
+;
+; FMA3-LABEL: mul_subadd_chain_pd256:
+; FMA3:       # %bb.0:
+; FMA3-NEXT:    vfmsubadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) -/+ ymm4
+; FMA3-NEXT:    vfmsubadd231pd {{.*#+}} ymm0 = (ymm3 * ymm2) -/+ ymm0
+; FMA3-NEXT:    retq
+;
+; FMA4-LABEL: mul_subadd_chain_pd256:
+; FMA4:       # %bb.0:
+; FMA4-NEXT:    vfmsubaddpd {{.*#+}} ymm0 = (ymm0 * ymm1) -/+ ymm4
+; FMA4-NEXT:    vfmsubaddpd {{.*#+}} ymm0 = (ymm2 * ymm3) -/+ ymm0
+; FMA4-NEXT:    retq
   %AB = fmul contract <4 x double> %A, %B
   %Sub0 = fsub contract <4 x double> %AB, %E
   %Add0 = fadd contract <4 x double> %AB, %E
