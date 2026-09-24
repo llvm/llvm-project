@@ -2263,9 +2263,10 @@ void GISelValueTracking::computeKnownFPClass(Register R,
   }
   case TargetOpcode::G_FREEZE: {
     Register Src = MI.getOperand(1).getReg();
-    if (isGuaranteedNotToBeUndefOrPoison(Src, MRI, Depth + 1))
+    if (isGuaranteedNotToBeUndefOrPoison(Src, MRI, Depth + 1)) {
       computeKnownFPClass(Src, DemandedElts, InterestedClasses, Known,
                           Depth + 1);
+    }
     break;
   }
   case TargetOpcode::COPY: {
