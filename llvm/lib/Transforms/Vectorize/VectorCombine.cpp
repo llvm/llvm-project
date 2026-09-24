@@ -5930,8 +5930,10 @@ bool VectorCombine::shrinkType(Instruction &I) {
     std::swap(Op0, Op1);
   Value *NewBinOp =
       Builder.CreateBinOp((Instruction::BinaryOps)I.getOpcode(), Op0, Op1);
-  cast<Instruction>(NewBinOp)->copyIRFlags(&I);
-  cast<Instruction>(NewBinOp)->copyMetadata(I);
+  if (auto *NewBinOpI = dyn_cast<Instruction>(NewBinOp)) {
+    NewBinOpI->copyIRFlags(&I);
+    NewBinOpI->copyMetadata(I);
+  }
   Value *NewZExtr = Builder.CreateZExt(NewBinOp, BigTy);
   replaceValue(I, *NewZExtr);
   return true;
