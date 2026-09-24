@@ -68,7 +68,7 @@ void test() {
   std::views::as_const(std::span<int>{});
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::views::as_const(std::ref_view{arr});
+  std::views::as_const(std::ranges::ref_view<int[1]>{arr});
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::views::as_const(arr);
