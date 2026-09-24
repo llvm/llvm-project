@@ -69,25 +69,16 @@ define <8 x half> @mul_addsub_chain_ph128(<8 x half> %A, <8 x half> %B, <8 x hal
 ; NOVLX-NEXT:    # kill: def $xmm2 killed $xmm2 def $zmm2
 ; NOVLX-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
 ; NOVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NOVLX-NEXT:    vmulph %zmm1, %zmm0, %zmm0
-; NOVLX-NEXT:    vsubph %zmm4, %zmm0, %zmm1
-; NOVLX-NEXT:    vaddph %zmm4, %zmm0, %zmm0
-; NOVLX-NEXT:    vmulph %zmm3, %zmm2, %zmm2
-; NOVLX-NEXT:    vsubph %zmm1, %zmm2, %zmm1
-; NOVLX-NEXT:    vaddph %zmm0, %zmm2, %zmm0
-; NOVLX-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0],xmm0[1],xmm1[2],xmm0[3],xmm1[4],xmm0[5],xmm1[6],xmm0[7]
+; NOVLX-NEXT:    vfmaddsub213ph %zmm4, %zmm0, %zmm1
+; NOVLX-NEXT:    vfmaddsub213ph %zmm1, %zmm2, %zmm3
+; NOVLX-NEXT:    vmovaps %xmm3, %xmm0
 ; NOVLX-NEXT:    vzeroupper
 ; NOVLX-NEXT:    retq
 ;
 ; VLX-LABEL: mul_addsub_chain_ph128:
 ; VLX:       # %bb.0:
-; VLX-NEXT:    vmulph %xmm1, %xmm0, %xmm0
-; VLX-NEXT:    vsubph %xmm4, %xmm0, %xmm1
-; VLX-NEXT:    vaddph %xmm4, %xmm0, %xmm0
-; VLX-NEXT:    vmulph %xmm3, %xmm2, %xmm2
-; VLX-NEXT:    vsubph %xmm1, %xmm2, %xmm1
-; VLX-NEXT:    vaddph %xmm0, %xmm2, %xmm0
-; VLX-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0],xmm0[1],xmm1[2],xmm0[3],xmm1[4],xmm0[5],xmm1[6],xmm0[7]
+; VLX-NEXT:    vfmaddsub213ph %xmm4, %xmm1, %xmm0
+; VLX-NEXT:    vfmaddsub231ph %xmm2, %xmm3, %xmm0
 ; VLX-NEXT:    retq
   %AB = fmul contract <8 x half> %A, %B
   %Sub0 = fsub contract <8 x half> %AB, %E
@@ -108,24 +99,15 @@ define <16 x half> @mul_addsub_chain_ph256(<16 x half> %A, <16 x half> %B, <16 x
 ; NOVLX-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
 ; NOVLX-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
 ; NOVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NOVLX-NEXT:    vmulph %zmm1, %zmm0, %zmm0
-; NOVLX-NEXT:    vsubph %zmm4, %zmm0, %zmm1
-; NOVLX-NEXT:    vaddph %zmm4, %zmm0, %zmm0
-; NOVLX-NEXT:    vmulph %zmm3, %zmm2, %zmm2
-; NOVLX-NEXT:    vsubph %zmm1, %zmm2, %zmm1
-; NOVLX-NEXT:    vaddph %zmm0, %zmm2, %zmm0
-; NOVLX-NEXT:    vpblendw {{.*#+}} ymm0 = ymm1[0],ymm0[1],ymm1[2],ymm0[3],ymm1[4],ymm0[5],ymm1[6],ymm0[7],ymm1[8],ymm0[9],ymm1[10],ymm0[11],ymm1[12],ymm0[13],ymm1[14],ymm0[15]
+; NOVLX-NEXT:    vfmaddsub213ph %zmm4, %zmm0, %zmm1
+; NOVLX-NEXT:    vfmaddsub213ph %zmm1, %zmm2, %zmm3
+; NOVLX-NEXT:    vmovaps %ymm3, %ymm0
 ; NOVLX-NEXT:    retq
 ;
 ; VLX-LABEL: mul_addsub_chain_ph256:
 ; VLX:       # %bb.0:
-; VLX-NEXT:    vmulph %ymm1, %ymm0, %ymm0
-; VLX-NEXT:    vsubph %ymm4, %ymm0, %ymm1
-; VLX-NEXT:    vaddph %ymm4, %ymm0, %ymm0
-; VLX-NEXT:    vmulph %ymm3, %ymm2, %ymm2
-; VLX-NEXT:    vsubph %ymm1, %ymm2, %ymm1
-; VLX-NEXT:    vaddph %ymm0, %ymm2, %ymm0
-; VLX-NEXT:    vpblendw {{.*#+}} ymm0 = ymm1[0],ymm0[1],ymm1[2],ymm0[3],ymm1[4],ymm0[5],ymm1[6],ymm0[7],ymm1[8],ymm0[9],ymm1[10],ymm0[11],ymm1[12],ymm0[13],ymm1[14],ymm0[15]
+; VLX-NEXT:    vfmaddsub213ph %ymm4, %ymm1, %ymm0
+; VLX-NEXT:    vfmaddsub231ph %ymm2, %ymm3, %ymm0
 ; VLX-NEXT:    retq
   %AB = fmul contract <16 x half> %A, %B
   %Sub0 = fsub contract <16 x half> %AB, %E
@@ -141,15 +123,8 @@ define <16 x half> @mul_addsub_chain_ph256(<16 x half> %A, <16 x half> %B, <16 x
 define <32 x half> @mul_addsub_chain_ph512(<32 x half> %A, <32 x half> %B, <32 x half> %C, <32 x half> %D, <32 x half> %E) nounwind {
 ; CHECK-LABEL: mul_addsub_chain_ph512:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmulph %zmm1, %zmm0, %zmm0
-; CHECK-NEXT:    vsubph %zmm4, %zmm0, %zmm1
-; CHECK-NEXT:    vaddph %zmm4, %zmm0, %zmm4
-; CHECK-NEXT:    vmulph %zmm3, %zmm2, %zmm2
-; CHECK-NEXT:    vsubph %zmm1, %zmm2, %zmm0
-; CHECK-NEXT:    vaddph %zmm4, %zmm2, %zmm1
-; CHECK-NEXT:    movl $-1431655766, %eax # imm = 0xAAAAAAAA
-; CHECK-NEXT:    kmovd %eax, %k1
-; CHECK-NEXT:    vmovdqu16 %zmm1, %zmm0 {%k1}
+; CHECK-NEXT:    vfmaddsub213ph %zmm4, %zmm1, %zmm0
+; CHECK-NEXT:    vfmaddsub231ph %zmm2, %zmm3, %zmm0
 ; CHECK-NEXT:    retq
   %AB = fmul contract <32 x half> %A, %B
   %Sub0 = fsub contract <32 x half> %AB, %E
