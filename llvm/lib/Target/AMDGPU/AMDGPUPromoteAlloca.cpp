@@ -29,6 +29,7 @@
 #include "GCNSubtarget.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/InstructionSimplify.h"
@@ -86,14 +87,20 @@ static cl::opt<unsigned>
                             "when sorting profitable allocas"),
                    cl::init(4));
 
-// We support vector indices of the form ((A * stride) >> shift) + B
-// VarIndex is A, VarMul is stride, VarShift is shift and ConstIndex is B. All
-// parts are optional.
-struct GEPToVectorIndex {
+// We support vector indices of the form ((A * stride) >> shift) + B + index(P)
+// VarIndex is A, VarMul is stride, VarShift is shift, ConstIndex is B and Base
+// is P. All parts are optional.
+//
+// Base is set when the pointer is derived from a phi or select instead of
+// directly from the alloca, in which case its index is computed recursively.
+// Because there is only one variable slot, a pointer with a Base must have no
+// variable offset of its own.
+struct PtrToVectorIndex {
   WeakTrackingVH VarIndex = nullptr; // defaults to 0
   ConstantInt *VarMul = nullptr;     // defaults to 1
   ConstantInt *VarShift = nullptr;   // defaults to 0
   ConstantInt *ConstIndex = nullptr; // defaults to 0
+  Value *Base = nullptr;             // defaults to the alloca (index 0)
   Value *Full = nullptr;
 };
 
@@ -108,12 +115,14 @@ struct AllocaAnalysis {
   DenseSet<Value *> Pointers;
   SmallVector<Use *> Uses;
   unsigned Score = 0;
-  bool HaveSelectOrPHI = false;
   struct {
     FixedVectorType *Ty = nullptr;
     SmallVector<Instruction *> Worklist;
-    SmallVector<Instruction *> UsersToRemove;
-    MapVector<GetElementPtrInst *, GEPToVectorIndex> GEPVectorIdx;
+    // A pointer may be reached through more than one use edge (e.g. a phi whose
+    // incoming values are all derived from the alloca), so this must not hold
+    // duplicates.
+    SetVector<Instruction *> UsersToRemove;
+    MapVector<Value *, PtrToVectorIndex> PtrVectorIdx;
     MapVector<MemTransferInst *, MemTransferInfo> TransferInfo;
   } Vector;
   struct {
@@ -305,7 +314,6 @@ bool AMDGPUPromoteAllocaImpl::collectAllocaUses(AllocaAnalysis &AA) const {
         if (!binaryOpIsDerivedFromSameAlloca(AA.Alloca, Cur, SI, 1, 2))
           return RejectUser(Inst, "select from mixed objects");
         WorkList.push_back(Inst);
-        AA.HaveSelectOrPHI = true;
       } else if (auto *Phi = dyn_cast<PHINode>(Inst)) {
         // Repeat for phis.
 
@@ -324,7 +332,6 @@ bool AMDGPUPromoteAllocaImpl::collectAllocaUses(AllocaAnalysis &AA) const {
         }
 
         WorkList.push_back(Inst);
-        AA.HaveSelectOrPHI = true;
       }
     }
   }
@@ -467,6 +474,11 @@ static bool isSupportedMemset(MemSetInst *I, AllocaInst *AI,
          match(I->getOperand(2), m_SpecificInt(Size)) && !I->isVolatile();
 }
 
+/// Materializes the vector element index that \p Ptr refers to.
+///
+/// Recurses through phis and selects, which contribute an index that is itself
+/// a phi or select. All entries are expected to have been created during
+/// analysis, so this only ever updates them and never invalidates the map.
 static Value *calculateVectorIndex(Value *Ptr, AllocaAnalysis &AA) {
   IRBuilder<> B(Ptr->getContext());
 
@@ -474,43 +486,88 @@ static Value *calculateVectorIndex(Value *Ptr, AllocaAnalysis &AA) {
   if (Ptr == AA.Alloca)
     return B.getInt32(0);
 
-  auto *GEP = cast<GetElementPtrInst>(Ptr);
-  auto I = AA.Vector.GEPVectorIdx.find(GEP);
-  assert(I != AA.Vector.GEPVectorIdx.end() && "Must have entry for GEP!");
+  auto I = AA.Vector.PtrVectorIdx.find(Ptr);
+  assert(I != AA.Vector.PtrVectorIdx.end() && "Must have entry for pointer!");
 
-  if (!I->second.Full) {
-    Value *Result = nullptr;
-    B.SetInsertPoint(GEP);
+  if (Value *Full = I->second.Full)
+    return Full;
 
-    if (I->second.VarIndex) {
-      Result = I->second.VarIndex;
-      Result = B.CreateSExtOrTrunc(Result, B.getInt32Ty());
+  // Phis and selects have no index of their own: theirs is built out of the
+  // indices of their operands.
+  if (auto *Phi = dyn_cast<PHINode>(Ptr)) {
+    // Memoize the new phi before recursing. The pointer phi may be
+    // loop-carried, in which case resolving an incoming value comes back here.
+    PHINode *NewPhi =
+        PHINode::Create(B.getInt32Ty(), Phi->getNumIncomingValues(),
+                        Phi->getName() + ".vecidx", Phi->getIterator());
+    I->second.Full = NewPhi;
 
-      if (I->second.VarMul)
-        Result = B.CreateMul(Result, I->second.VarMul);
-
-      if (I->second.VarShift)
-        Result = B.CreateAShr(Result, I->second.VarShift, "", /*isExact*/ true);
+    for (unsigned Idx = 0, E = Phi->getNumIncomingValues(); Idx != E; ++Idx) {
+      // SSA guarantees the incoming value dominates the end of the incoming
+      // block, and each index is materialized at its own pointer's definition,
+      // so the index dominates the edge as well.
+      Value *IncomingIdx = calculateVectorIndex(Phi->getIncomingValue(Idx), AA);
+      NewPhi->addIncoming(IncomingIdx, Phi->getIncomingBlock(Idx));
     }
-
-    if (I->second.ConstIndex) {
-      if (Result)
-        Result = B.CreateAdd(Result, I->second.ConstIndex);
-      else
-        Result = I->second.ConstIndex;
-    }
-
-    if (!Result)
-      Result = B.getInt32(0);
-
-    I->second.Full = Result;
+    return NewPhi;
   }
 
-  return I->second.Full;
+  if (auto *Sel = dyn_cast<SelectInst>(Ptr)) {
+    Value *TrueIdx = calculateVectorIndex(Sel->getTrueValue(), AA);
+    Value *FalseIdx = calculateVectorIndex(Sel->getFalseValue(), AA);
+    B.SetInsertPoint(Sel);
+    Value *Result = B.CreateSelect(Sel->getCondition(), TrueIdx, FalseIdx,
+                                   Sel->getName() + ".vecidx");
+    // Re-find rather than reusing I, which was obtained before recursing.
+    AA.Vector.PtrVectorIdx.find(Ptr)->second.Full = Result;
+    return Result;
+  }
+
+  auto *GEP = cast<GetElementPtrInst>(Ptr);
+
+  // Resolve the base index first, as this may create instructions and
+  // invalidate iterators into the map.
+  Value *BaseIdx =
+      I->second.Base ? calculateVectorIndex(I->second.Base, AA) : nullptr;
+
+  PtrToVectorIndex &Entry = AA.Vector.PtrVectorIdx.find(Ptr)->second;
+  Value *Result = nullptr;
+  B.SetInsertPoint(GEP);
+
+  if (Entry.VarIndex) {
+    Result = Entry.VarIndex;
+    Result = B.CreateSExtOrTrunc(Result, B.getInt32Ty());
+
+    if (Entry.VarMul)
+      Result = B.CreateMul(Result, Entry.VarMul);
+
+    if (Entry.VarShift)
+      Result = B.CreateAShr(Result, Entry.VarShift, "", /*isExact*/ true);
+  }
+
+  if (Entry.ConstIndex) {
+    if (Result)
+      Result = B.CreateAdd(Result, Entry.ConstIndex);
+    else
+      Result = Entry.ConstIndex;
+  }
+
+  if (BaseIdx) {
+    // A pointer with a Base has no variable offset of its own, so this is at
+    // most a constant added to the base index.
+    assert(!Entry.VarIndex && "Base already occupies the variable slot");
+    Result = Result ? B.CreateAdd(BaseIdx, Result) : BaseIdx;
+  }
+
+  if (!Result)
+    Result = B.getInt32(0);
+
+  Entry.Full = Result;
+  return Result;
 }
 
-static std::optional<GEPToVectorIndex>
-computeGEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
+static std::optional<PtrToVectorIndex>
+computeGEPToVectorIndex(GetElementPtrInst *GEP, const AllocaAnalysis &AA,
                         Type *VecElemTy, const DataLayout &DL) {
   // TODO: Extracting a "multiple of X" from a GEP might be a useful generic
   // helper.
@@ -545,7 +602,18 @@ computeGEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
     CurPtr = CurGEP->getPointerOperand();
   }
 
-  assert(CurPtr == Alloca && "GEP not based on alloca");
+  // The walk ends either at the alloca itself or at a phi/select that merges
+  // pointers into the alloca, whose index is resolved separately.
+  Value *Base = nullptr;
+  if (CurPtr != AA.Alloca) {
+    if (!isa<PHINode, SelectInst>(CurPtr) || !AA.Pointers.contains(CurPtr))
+      return {};
+    // The base index occupies the single variable slot, so this GEP can only
+    // add a constant of its own.
+    if (!VarOffsets.empty())
+      return {};
+    Base = CurPtr;
+  }
 
   int64_t VecElemSize = DL.getTypeAllocSize(VecElemTy);
   if (VarOffsets.size() > 1)
@@ -558,7 +626,8 @@ computeGEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
     return {};
   APInt IndexQuot = ConstOffset.sdiv(VecElemSize);
 
-  GEPToVectorIndex Result;
+  PtrToVectorIndex Result;
+  Result.Base = Base;
 
   if (!ConstOffset.isZero())
     Result.ConstIndex = ConstantInt::get(Ctx, IndexQuot.sextOrTrunc(BW));
@@ -981,11 +1050,6 @@ AMDGPUPromoteAllocaImpl::getVectorTypeForAlloca(Type *AllocaTy) const {
 }
 
 void AMDGPUPromoteAllocaImpl::analyzePromoteToVector(AllocaAnalysis &AA) const {
-  if (AA.HaveSelectOrPHI) {
-    LLVM_DEBUG(dbgs() << "  Cannot convert to vector due to select or phi\n");
-    return;
-  }
-
   Type *AllocaTy = AA.Alloca->getAllocatedType();
   AA.Vector.Ty = getVectorTypeForAlloca(AllocaTy);
   if (!AA.Vector.Ty)
@@ -1038,12 +1102,32 @@ void AMDGPUPromoteAllocaImpl::analyzePromoteToVector(AllocaAnalysis &AA) const {
     if (auto *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
       // If we can't compute a vector index from this GEP, then we can't
       // promote this alloca to vector.
-      auto Index = computeGEPToVectorIndex(GEP, AA.Alloca, VecEltTy, DL);
+      auto Index = computeGEPToVectorIndex(GEP, AA, VecEltTy, DL);
       if (!Index)
         return RejectUser(Inst, "cannot compute vector index for GEP");
 
-      AA.Vector.GEPVectorIdx[GEP] = std::move(Index.value());
-      AA.Vector.UsersToRemove.push_back(Inst);
+      AA.Vector.PtrVectorIdx[GEP] = std::move(Index.value());
+      AA.Vector.UsersToRemove.insert(Inst);
+      continue;
+    }
+
+    // A phi or select merging pointers into this alloca becomes a phi or select
+    // of their vector indices. collectAllocaUses has already checked that every
+    // operand is derived from this alloca, but that also admits null, for which
+    // there is no index.
+    if (isa<PHINode, SelectInst>(Inst)) {
+      for (Value *Op : Inst->operands()) {
+        if (!Op->getType()->isPointerTy())
+          continue;
+        Value *Ptr = Op->stripPointerCasts();
+        if (Ptr != AA.Alloca && !AA.Pointers.contains(Ptr))
+          return RejectUser(Inst, "operand is not derived from this alloca");
+      }
+
+      // The index itself is built during promotion; this only reserves the
+      // entry so the commit phase never has to insert into the map.
+      AA.Vector.PtrVectorIdx.insert({Inst, PtrToVectorIndex{}});
+      AA.Vector.UsersToRemove.insert(Inst);
       continue;
     }
 
@@ -1066,9 +1150,11 @@ void AMDGPUPromoteAllocaImpl::analyzePromoteToVector(AllocaAnalysis &AA) const {
         if (Ptr == AA.Alloca)
           return ConstantInt::get(Ptr->getContext(), APInt(32, 0));
 
-        GetElementPtrInst *GEP = cast<GetElementPtrInst>(Ptr);
-        const auto &GEPI = AA.Vector.GEPVectorIdx.find(GEP)->second;
-        if (GEPI.VarIndex)
+        auto *GEP = dyn_cast<GetElementPtrInst>(Ptr);
+        if (!GEP)
+          return nullptr;
+        const auto &GEPI = AA.Vector.PtrVectorIdx.find(GEP)->second;
+        if (GEPI.VarIndex || GEPI.Base)
           return nullptr;
         if (GEPI.ConstIndex)
           return GEPI.ConstIndex;
@@ -1106,14 +1192,14 @@ void AMDGPUPromoteAllocaImpl::analyzePromoteToVector(AllocaAnalysis &AA) const {
     if (isAssumeLikeIntrinsic(Inst)) {
       if (!Inst->use_empty())
         return RejectUser(Inst, "assume-like intrinsic cannot have any users");
-      AA.Vector.UsersToRemove.push_back(Inst);
+      AA.Vector.UsersToRemove.insert(Inst);
       continue;
     }
 
     if (isa<ICmpInst>(Inst) && all_of(Inst->users(), [](User *U) {
           return isAssumeLikeIntrinsic(cast<Instruction>(U));
         })) {
-      AA.Vector.UsersToRemove.push_back(Inst);
+      AA.Vector.UsersToRemove.insert(Inst);
       continue;
     }
 
@@ -1202,12 +1288,22 @@ void AMDGPUPromoteAllocaImpl::promoteAllocaToVector(AllocaAnalysis &AA) {
     I->eraseFromParent();
   }
 
-  // Delete all the users that are known to be removeable.
-  for (Instruction *I : reverse(AA.Vector.UsersToRemove)) {
+  // Delete all the users that are known to be removeable. A loop-carried
+  // pointer phi forms a use cycle with the pointers derived from it, so break
+  // all the references first rather than relying on a deletion order.
+  for (Instruction *I : AA.Vector.UsersToRemove) {
     I->dropDroppableUses();
-    assert(I->use_empty());
-    I->eraseFromParent();
+    assert(all_of(I->users(),
+                  [&](User *U) {
+                    return AA.Vector.UsersToRemove.contains(
+                        cast<Instruction>(U));
+                  }) &&
+           "Removed instruction still used outside the removed set");
   }
+  for (Instruction *I : AA.Vector.UsersToRemove)
+    I->replaceAllUsesWith(PoisonValue::get(I->getType()));
+  for (Instruction *I : AA.Vector.UsersToRemove)
+    I->eraseFromParent();
 
   // Alloca should now be dead too.
   assert(AA.Alloca->use_empty());
@@ -1386,11 +1482,11 @@ bool AMDGPUPromoteAllocaImpl::binaryOpIsDerivedFromSameAlloca(
 
 bool AMDGPUPromoteAllocaImpl::allOpsAreDerivedFromSameAlloca(
     Value *Alloca, Value *Val, Instruction *Inst) const {
-  for (int i = 0; i < Inst->getNumOperands(); i++) {
-    Value *Op = Inst->getOperand(i);
+  for (unsigned I = 0, E = Inst->getNumOperands(); I != E; ++I) {
+    Value *Op = Inst->getOperand(I);
     if (Op == Val)
       continue;
-    if (!binaryOpIsDerivedFromSameAlloca(Alloca, Op, Inst, i, i))
+    if (!binaryOpIsDerivedFromSameAlloca(Alloca, Op, Inst, I, I))
       return false;
   }
   return true;
