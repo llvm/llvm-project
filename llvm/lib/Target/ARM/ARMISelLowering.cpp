@@ -199,7 +199,7 @@ void ARMTargetLowering::addTypeForNEON(MVT VT, MVT PromotedLdStVT) {
   setOperationAction(ISD::BUILD_VECTOR,      VT, Custom);
   setOperationAction(ISD::VECTOR_SHUFFLE,    VT, Custom);
   setVectorInterleaveAction({ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE},
-                            {2, 3, 4}, VT, Custom);
+                            {2, 3}, VT, Custom);
   setOperationAction(ISD::CONCAT_VECTORS,    VT, Legal);
   setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Legal);
   setOperationAction(ISD::SELECT,            VT, Expand);
@@ -9083,7 +9083,7 @@ static SDValue LowerVECTOR_INTERLEAVE(SDValue Op, SelectionDAG &DAG,
     return DAG.getMergeValues({Zip, Zip.getValue(1)}, DL);
   }
 
-  if (Op->getNumOperands() == 3) {
+  if (Factor == 3) {
     Align Alignment = DAG.getReducedAlign(OpVT, /*UseABI=*/false);
     SDValue StackPtr =
         DAG.CreateStackTemporary(OpVT.getStoreSize() * 3, Alignment);
@@ -9132,7 +9132,7 @@ static SDValue LowerVECTOR_DEINTERLEAVE(SDValue Op, SelectionDAG &DAG,
     return DAG.getMergeValues({Unzip, Unzip.getValue(1)}, DL);
   }
 
-  if (Op->getNumOperands() == 3) {
+  if (Factor == 3) {
     Align Alignment = DAG.getReducedAlign(OpVT, /*UseABI=*/false);
     SDValue StackPtr =
         DAG.CreateStackTemporary(OpVT.getStoreSize() * 3, Alignment);
