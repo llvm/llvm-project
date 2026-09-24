@@ -35,7 +35,7 @@ static cl::opt<bool> EnableSpillSGPRToVGPR(
 static cl::opt<bool> EnableSpillCFISavedRegs(
     "amdgpu-spill-cfi-saved-regs",
     cl::desc("Enable spilling the registers required for CFI emission"),
-    cl::ReallyHidden, cl::init(false), cl::ZeroOrMore);
+    cl::ReallyHidden, cl::init(false));
 
 static cl::opt<unsigned> StressVGPRLimit(
     "amdgpu-stress-vgpr", cl::Hidden, cl::init(0),

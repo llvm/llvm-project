@@ -47,6 +47,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
@@ -56,6 +57,8 @@
 #include "llvm/Support/WithColor.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/SplitModuleByCategory.h"
+
+#include <mutex>
 
 using namespace llvm;
 using namespace llvm::opt;
@@ -169,8 +172,11 @@ static void printCommands(ArrayRef<StringRef> CmdArgs) {
 /// Execute the command \p ExecutablePath with the arguments \p Args.
 static Error executeCommands(StringRef ExecutablePath,
                              ArrayRef<StringRef> Args) {
-  if (Verbose || DryRun)
+  if (Verbose || DryRun) {
+    static std::mutex PrintMutex;
+    std::lock_guard<std::mutex> Lock(PrintMutex);
     printCommands(Args);
+  }
 
   if (DryRun)
     return Error::success();
@@ -912,6 +918,33 @@ static bool canSkipModuleSplit(IRSplitMode Mode, const Module &M,
   });
 }
 
+/// AOT-compiles every JIT image in \p SplitModules concurrently and swaps each
+/// module's path to point at the compiled object.
+static Error aotCompileSplitModules(SmallVectorImpl<SplitModule> &SplitModules,
+                                    const ArgList &Args) {
+  // Each worker thread writes only its own index, so this is race-free.
+  SmallVector<std::string, 0> AOTFiles(SplitModules.size());
+  for (size_t I = 0, E = SplitModules.size(); I != E; ++I) {
+    // Reuse the codegen file's unique name so the AOT output can be
+    // correlated with the SPIR-V file it was compiled from.
+    SmallString<128> AOTFile(SplitModules[I].ModuleFilePath);
+    sys::path::replace_extension(AOTFile, "out");
+    TempFiles.push_back(AOTFile);
+    AOTFiles[I] = std::string(TempFiles.back());
+  }
+
+  if (Error Err = parallelForEachError(
+          llvm::seq<size_t>(0, SplitModules.size()), [&](size_t I) -> Error {
+            return runAOTCompile(SplitModules[I].ModuleFilePath, AOTFiles[I],
+                                 Args);
+          }))
+    return Err;
+
+  for (size_t I = 0, E = AOTFiles.size(); I != E; ++I)
+    SplitModules[I].ModuleFilePath = AOTFiles[I];
+  return Error::success();
+}
+
 /// Performs the following steps:
 /// 1. Link all input bitcode files together with library files.
 /// 2. Optionally split the linked module according to the requested
@@ -992,18 +1025,11 @@ static Error runSYCLLink(ArrayRef<std::unique_ptr<MemoryBuffer>> Inputs,
     }
 
     SplitModules[I].ModuleFilePath = CodeGenFile;
-    if (IsAOTCompileNeeded) {
-      // Reuse CodeGenFile's unique name so the AOT output can be correlated
-      // with the SPIR-V file it was compiled from.
-      SmallString<128> AOTFile(CodeGenFile);
-      sys::path::replace_extension(AOTFile, "out");
-      TempFiles.push_back(AOTFile);
-      StringRef AOTFileRef = TempFiles.back();
-      if (Error Err = runAOTCompile(CodeGenFile, AOTFileRef, Args))
-        return Err;
-      SplitModules[I].ModuleFilePath = AOTFileRef;
-    }
   }
+
+  if (IsAOTCompileNeeded)
+    if (Error Err = aotCompileSplitModules(SplitModules, Args))
+      return Err;
 
   // Collect all images to be packed into a single OffloadBinary.
   SmallVector<OffloadingImage> Images;

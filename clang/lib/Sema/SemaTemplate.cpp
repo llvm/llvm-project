@@ -5958,7 +5958,7 @@ bool Sema::CheckTemplateArgumentList(
       llvm::SmallVector<UnexpandedParameterPack> Unexpanded;
       collectUnexpandedParameterPacks(TL.getPatternLoc(), Unexpanded);
       for (const auto &UPP : Unexpanded) {
-        auto *TST = UPP.first.dyn_cast<const TemplateSpecializationType *>();
+        auto *TST = dyn_cast<const TemplateSpecializationType *>(UPP.first);
         if (!TST)
           continue;
         assert(isPackProducingBuiltinTemplateName(TST->getTemplateName()));

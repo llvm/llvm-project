@@ -29,9 +29,9 @@ end program
 ! CHECK:           %[[VAL_5:.*]] = arith.constant 3 : index
 ! CHECK:           %[[VAL_6:.*]] = fir.alloca !fir.box<!fir.heap<!fir.char<1,3>>>
 ! CHECK:           %[[VAL_7:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:           %[[VAL_8:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFEi"}
+! CHECK:           %[[VAL_8:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFEi"}>
 ! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_8]] {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:           %[[VAL_10:.*]] = fir.alloca !fir.char<1,3> {bindc_name = "nonvolatile_string", uniq_name = "_QFEnonvolatile_string"}
+! CHECK:           %[[VAL_10:.*]] = fir.alloca !fir.char<1,3> <{bindc_name = "nonvolatile_string", uniq_name = "_QFEnonvolatile_string"}>
 ! CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_10]] typeparams %[[VAL_5]] {uniq_name = "_QFEnonvolatile_string"} : (!fir.ref<!fir.char<1,3>>, index) -> (!fir.ref<!fir.char<1,3>>, !fir.ref<!fir.char<1,3>>)
 ! CHECK:           %[[VAL_12:.*]] = fir.address_of(@_QFEstring) : !fir.ref<!fir.char<1,3>>
 ! CHECK:           %[[VAL_13:.*]] = fir.volatile_cast %[[VAL_12]] : (!fir.ref<!fir.char<1,3>>) -> !fir.ref<!fir.char<1,3>, volatile>

@@ -9,6 +9,7 @@
 #include "llvm/Transforms/Utils/CodeExtractor.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/AsmParser/Parser.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -813,7 +814,7 @@ TEST(CodeExtractor, ArgsDebugInfo) {
   define void @foo(i32 %a, i32 %b) !dbg !2 {
     %1 = alloca i32, i64 1, align 4, !dbg !1
     store i32 %a, ptr %1, align 4, !dbg !1
-    #dbg_declare(ptr %1, !8, !DIExpression(), !1)
+    #dbg_declare(ptr %1, !8, !DIExpression(DW_OP_plus_uconst, 4), !1)
     #dbg_value(i32 %b, !9, !DIExpression(), !1)
     br label %entry
 
@@ -864,9 +865,14 @@ TEST(CodeExtractor, ArgsDebugInfo) {
     for (DbgVariableRecord &DVR : filterDbgVars(Term->getDbgRecordRange())) {
       DILocalVariable *Var = DVR.getVariable();
       EXPECT_TRUE(Var);
-      if (DVR.isDbgDeclare())
+      const DIExpression *Expr = DVR.getExpression();
+      ASSERT_TRUE(Expr);
+      if (DVR.isDbgDeclare()) {
         EXPECT_TRUE(Var->getName() == "a");
-      else
+        ASSERT_EQ(Expr->getNumElements(), 2u);
+        EXPECT_EQ(Expr->getElement(0), dwarf::DW_OP_plus_uconst);
+        EXPECT_EQ(Expr->getElement(1), 4u);
+      } else
         EXPECT_TRUE(Var->getName() == "b");
       for (Value *Loc : DVR.location_ops()) {
         if (Instruction *I = dyn_cast<Instruction>(Loc))

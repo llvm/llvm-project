@@ -79,9 +79,9 @@ end subroutine single_allocate
 ! CHECK:           %[[X_DECL:.*]]:2 = hlfir.declare %[[X]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFsingle_privatizationEx"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
 ! CHECK:           %[[Y_DECL:.*]]:2 = hlfir.declare %[[Y]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFsingle_privatizationEy"} : (!fir.ref<f64>, !fir.dscope) -> (!fir.ref<f64>, !fir.ref<f64>)
 ! CHECK:           omp.single   {
-! CHECK:             %[[X_PVT:.*]] = fir.alloca f32 {bindc_name = "x", pinned, uniq_name = "_QFsingle_privatizationEx"}
+! CHECK:             %[[X_PVT:.*]] = fir.alloca f32 <{bindc_name = "x", pinned, uniq_name = "_QFsingle_privatizationEx"}>
 ! CHECK:             %[[X_PVT_DECL:.*]]:2 = hlfir.declare %[[X_PVT]] {uniq_name = "_QFsingle_privatizationEx"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
-! CHECK:             %[[Y_PVT:.*]] = fir.alloca f64 {bindc_name = "y", pinned, uniq_name = "_QFsingle_privatizationEy"}
+! CHECK:             %[[Y_PVT:.*]] = fir.alloca f64 <{bindc_name = "y", pinned, uniq_name = "_QFsingle_privatizationEy"}>
 ! CHECK:             %[[Y_PVT_DECL:.*]]:2 = hlfir.declare %[[Y_PVT]] {uniq_name = "_QFsingle_privatizationEy"} : (!fir.ref<f64>) -> (!fir.ref<f64>, !fir.ref<f64>)
 ! CHECK:             %[[Y_LOAD:.*]] = fir.load %[[Y_DECL]]#0 : !fir.ref<f64>
 ! CHECK:             hlfir.assign %[[Y_LOAD]] to %[[Y_PVT_DECL]]#0 : f64, !fir.ref<f64>
@@ -107,9 +107,9 @@ end subroutine
 ! CHECK:         %[[Y_DECL:.*]]:2 = hlfir.declare %[[Y]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFsingle_privatization2Ey"} : (!fir.ref<f64>, !fir.dscope) -> (!fir.ref<f64>, !fir.ref<f64>)
 ! CHECK:         omp.parallel   {
 ! CHECK:           omp.single   {
-! CHECK:             %[[X_PVT:.*]] = fir.alloca f32 {bindc_name = "x", pinned, uniq_name = "_QFsingle_privatization2Ex"}
+! CHECK:             %[[X_PVT:.*]] = fir.alloca f32 <{bindc_name = "x", pinned, uniq_name = "_QFsingle_privatization2Ex"}>
 ! CHECK:             %[[X_PVT_DECL:.*]]:2 = hlfir.declare %[[X_PVT]] {uniq_name = "_QFsingle_privatization2Ex"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
-! CHECK:             %[[Y_PVT:.*]] = fir.alloca f64 {bindc_name = "y", pinned, uniq_name = "_QFsingle_privatization2Ey"}
+! CHECK:             %[[Y_PVT:.*]] = fir.alloca f64 <{bindc_name = "y", pinned, uniq_name = "_QFsingle_privatization2Ey"}>
 ! CHECK:             %[[Y_PVT_DECL:.*]]:2 = hlfir.declare %[[Y_PVT]] {uniq_name = "_QFsingle_privatization2Ey"} : (!fir.ref<f64>) -> (!fir.ref<f64>, !fir.ref<f64>)
 ! CHECK:             %[[Y_LOAD:.*]] = fir.load %[[Y_DECL]]#0 : !fir.ref<f64>
 ! CHECK:             hlfir.assign %[[Y_LOAD]] to %[[Y_PVT_DECL]]#0 : f64, !fir.ref<f64>
