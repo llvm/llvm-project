@@ -14,7 +14,6 @@
 #include "src/__support/File/dir.h"
 
 #include "hdr/errno_macros.h"
-#include "hdr/func/free.h"
 #include "include/llvm-libc-types/__scandir_compare_t.h"
 #include "include/llvm-libc-types/__scandir_filter_t.h"
 #include "src/__support/CPP/mutex.h" // lock_guard
