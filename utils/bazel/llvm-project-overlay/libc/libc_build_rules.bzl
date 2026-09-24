@@ -75,42 +75,39 @@ def libc_release_copts():
     })
     return copts + platform_copts
 
-# Allowlisted sets of copts that may be used for a single libc library target.
+# Allowlisted copts that may be used for a single libc library target. These
+# mirror per-target COMPILE_OPTIONS in the CMake build; targets should list
+# exactly the options their CMake counterpart uses.
 # Adding copts here is discouraged, as it complicates the build.
-_LIBC_LIBRARY_COPT_SETS = {
-    "startup_object": [
-        "-ffreestanding",
-        "-fno-builtin",
-        "-fno-omit-frame-pointer",
-        "-fno-stack-protector",
-    ],
-    "threading": [
-        "-fno-omit-frame-pointer",
-        "-Wno-frame-address",
-    ],
-}
+_LIBC_LIBRARY_ALLOWED_COPTS = [
+    # CMake's ${libc_opt_high_flag}.
+    "-O3",
+    "-ffreestanding",
+    "-fno-builtin",
+    "-fno-omit-frame-pointer",
+    "-fno-stack-protector",
+]
 
 def _libc_library(
         name,
         deps = [],
-        copt_sets = [],
+        copts = [],
         **kwargs):
     """Internal macro to serve as a base for all other libc library rules.
 
     Args:
       name: Target name.
       deps: cc_library deps.
-      copt_sets: Which sets of allow-listed copts to include.
+      copts: Additional copts. Each must be in _LIBC_LIBRARY_ALLOWED_COPTS.
       **kwargs: All other attributes relevant for the cc_library rule.
     """
 
-    for attr in ["copts", "local_defines"]:
-        if attr in kwargs:
-            fail("disallowed attribute: '{}' in rule: '{}'".format(attr, name))
+    if "local_defines" in kwargs:
+        fail("disallowed attribute: 'local_defines' in rule: '{}'".format(name))
 
-    copts = []
-    for feature in copt_sets:
-        copts.extend(_LIBC_LIBRARY_COPT_SETS[feature])
+    for copt in copts:
+        if copt not in _LIBC_LIBRARY_ALLOWED_COPTS:
+            fail("disallowed copt: '{}' in rule: '{}'".format(copt, name))
 
     cc_library(
         name = name,
@@ -137,7 +134,6 @@ def libc_startup_library(name, **kwargs):
 
     _libc_library(
         name = name,
-        copt_sets = ["startup_object"],
         target_compatible_with = select({
             Label("//libc:full_build_linux"): [],
             "//conditions:default": ["@platforms//:incompatible"],
