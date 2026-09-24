@@ -2328,7 +2328,7 @@ func.func @test_partially_foldable(%arg0: tensor<1x1x8x8xf32>, %arg1: tensor<1x2
 
 // CHECK-LABEL: @reverse_block_scaled_splat
 func.func @reverse_block_scaled_splat() -> tensor<64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>> {
-  // CHECK: %[[CST:.*]] = "tosa.const"
+  // CHECK: %[[CST:.*]] = tosa.const values(
   %0 = "tosa.const"() <{values = dense<tensor<64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN, {1.0, 2.0}>> : 1.0 : f8E4M3FN>}> : () -> tensor<64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>
   // CHECK: %[[REV:.*]] = tosa.reverse %[[CST]]
   // CHECK: return %[[REV]]
