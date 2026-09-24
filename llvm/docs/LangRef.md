@@ -9557,7 +9557,8 @@ lowered. The value is a string and must be one of:
 
 When the flag is absent, the target's default thread model is used. The flag
 must use the `error` merge behavior. For example:
-```
+
+```llvm
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"thread-model", !"single"}
 ```
@@ -9570,15 +9571,18 @@ interpretation target-specific.
 
 For example, RISC-V uses names such as `"ilp32"`, `"ilp32d"`, `"lp64"`, and
 `"lp64d"`:
-```
+
+```llvm
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"target-abi", !"lp64d"}
 ```
 while ARM uses names such as `"aapcs"` and `"apcs-gnu"`:
-```
+
+```llvm
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"target-abi", !"aapcs"}
 ...
+```
 
 ### Exception Model Module Flags Metadata
 

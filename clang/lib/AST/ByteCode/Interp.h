@@ -2220,8 +2220,6 @@ bool Load(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr))
     return false;
-  if (!Ptr.isReadablePointerType())
-    return false;
   if (!Ptr.canDeref(Name))
     return false;
   S.Stk.push<T>(Ptr.load<T>());
@@ -2232,8 +2230,6 @@ template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool LoadPop(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr))
-    return false;
-  if (!Ptr.isReadablePointerType())
     return false;
   if (!Ptr.canDeref(Name))
     return false;
