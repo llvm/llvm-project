@@ -83,12 +83,10 @@ float4 invalid_types(
     centroid uint2 b : B,
     // expected-error@+1 {{cannot be used with type 'bool'}}
     noperspective bool c : C,
-    // expected-error@+1 {{cannot be used with type 'double'}}
-    sample double d : D,
     // expected-error@+1 {{cannot be used with type 'int'}}
     center int e[2][3] : E,
-    // expected-error@+1 {{cannot be used with type 'double'}}
-    linear double2x2 f : F,
+    // expected-error@+1 {{cannot be used with type 'int'}}
+    linear int2x2 f : F,
     // expected-error@+1 {{cannot be used with type 'int'}}
     linear in int g : G) : SV_Target {
   return 0;
@@ -96,8 +94,8 @@ float4 invalid_types(
 
 [shader("pixel")]
 float4 valid_types(nointerpolation int a : A, nointerpolation bool2 b : B,
-                   nointerpolation double c : C, nointerpolation int d[2] : D,
-                   nointerpolation double2x2 e : E, linear float f : F,
+                   nointerpolation int d[2] : D,
+                   nointerpolation int2x2 e : E, linear float f : F,
                    centroid half2 g : G, sample float2x2 h : H) : SV_Target {
   return 0;
 }

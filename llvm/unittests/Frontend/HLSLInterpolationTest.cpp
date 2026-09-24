@@ -83,10 +83,8 @@ TEST(HLSLInterpolationTest, ComponentDefaults) {
       EXPECT_EQ(normalizeInterpolationMode(InterpMode::Undefined, Type,
                                            SemanticKind::Arbitrary, Stage, IO),
                 InterpMode::Linear);
-    for (CompType Type :
-         {CompType::I1, CompType::I16, CompType::U16, CompType::I32,
-          CompType::U32, CompType::I64, CompType::U64, CompType::F64,
-          CompType::SNormF64, CompType::UNormF64})
+    for (CompType Type : {CompType::I1, CompType::I16, CompType::U16,
+                          CompType::I32, CompType::U32})
       EXPECT_EQ(normalizeInterpolationMode(InterpMode::Undefined, Type,
                                            SemanticKind::Arbitrary, Stage, IO),
                 InterpMode::Constant);

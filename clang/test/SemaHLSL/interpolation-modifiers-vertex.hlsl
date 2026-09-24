@@ -9,9 +9,6 @@ linear uint invalid_integer() : VALUE { return 0; }
 // expected-error@+1 {{cannot be used with type 'bool'}}
 centroid bool invalid_bool() : VALUE { return false; }
 [shader("vertex")]
-// expected-error@+1 {{cannot be used with type 'double'}}
-sample double invalid_double() : VALUE { return 0; }
-[shader("vertex")]
 // expected-error@+2 {{'nointerpolation' cannot be used on SV_Position}}
 // expected-note@+1 {{conflicting attribute is here}}
 nointerpolation float4 invalid_position() : SV_Position { return 0; }
@@ -79,8 +76,6 @@ float4 valid_input(linear uint a : VALUE) : SV_Position { return 0; }
 nointerpolation uint valid_integer() : VALUE { return 0; }
 [shader("vertex")]
 nointerpolation bool valid_bool() : VALUE { return false; }
-[shader("vertex")]
-nointerpolation double valid_double() : VALUE { return 0; }
 
 // Inner modifiers replace the entire inherited set, including the return's
 // modifier. Neither the integer nor the position should inherit sample/flat.

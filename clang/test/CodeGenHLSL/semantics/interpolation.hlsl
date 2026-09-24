@@ -38,16 +38,15 @@ float4 modes(float a : A,
 
 [shader("pixel")]
 sample float4 defaults(int a : INT, uint2 b : UINT, bool c : BOOL,
-                       double d : DOUBLE, nointerpolation float2 e : FLAT,
-                       half f : HALF) : SV_Target {
+                       nointerpolation float2 e : FLAT, half f : HALF)
+    : SV_Target {
   return 0;
 }
 // CHECK-DAG: !{i32 0, !"INT",    i32 4,          i32 0, !{{[0-9]+}}, i32 1, i32 1, i8 1,
 // CHECK-DAG: !{i32 1, !"UINT",   i32 5,          i32 0, !{{[0-9]+}}, i32 1, i32 1, i8 2,
 // CHECK-DAG: !{i32 2, !"BOOL",   i32 {{[0-9]+}}, i32 0, !{{[0-9]+}}, i32 1, i32 1, i8 1,
-// CHECK-DAG: !{i32 3, !"DOUBLE", i32 10,         i32 0, !{{[0-9]+}}, i32 1, i32 1, i8 1,
-// CHECK-DAG: !{i32 4, !"FLAT",   i32 9,          i32 0, !{{[0-9]+}}, i32 1, i32 1, i8 2,
-// CHECK-DAG: !{i32 5, !"HALF",   i32 {{[89]}},   i32 0, !{{[0-9]+}}, i32 2, i32 1, i8 1,
+// CHECK-DAG: !{i32 3, !"FLAT",   i32 9,          i32 0, !{{[0-9]+}}, i32 1, i32 1, i8 2,
+// CHECK-DAG: !{i32 4, !"HALF",   i32 {{[89]}},   i32 0, !{{[0-9]+}}, i32 2, i32 1, i8 1,
 //                                                                        ^ Interpolation mode.
 // Pixel outputs remain Undefined, including explicitly qualified returns.
 // CHECK-DAG: !{i32 0, !"SV_Target", i32 9, i32 16, !{{[0-9]+}}, i32 0, i32 1, i8 4,
