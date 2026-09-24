@@ -8,11 +8,6 @@
 
 # Module Files
 
-```{contents}
----
-local:
----
-```
 
 Module files hold information from a module (or submodule) that is
 necessary to compile program units in other source files that depend on that module.
@@ -43,7 +38,10 @@ this is needed, Flang accepts the option `-module-suffix` to alter the suffix.
 
 Module files are Fortran free form source code.
 (One can, in principle, copy `foo.mod` into `tmp.f90`, recompile it,
-and obtain a matching `foo.mod` file.)
+and obtain a matching `foo.mod` file.  The exception is a module file that
+records an attribute the compiler applied on the user's behalf, described
+under Body below: those spellings are accepted only while a module file is
+being read, so such a module file does not recompile as ordinary source.)
 They include the declarations of all visible locally defined entities along
 with the private entities on which they depend.
 
@@ -77,6 +75,24 @@ Constant expressions that appear in initializers, bounds, and other sites
 appear in the module file as their folded values.
 Any compiler directives (`!omp$`, `!acc$`, &c.) relevant to the declarations
 of names are also included in the module file.
+
+An attribute that the compiler applied on the user's behalf, rather than one
+that appeared in the source, is marked as such so that a reader can tell the
+two apart.  Under `-gpu=mem:managed`, for example, an unattributed
+ALLOCATABLE or POINTER is attributed as managed, and the module file records
+that as `MANAGED(IMPLICIT)`:
+
+```
+real(4),allocatable,managed(implicit)::a(:)   ! applied by the compiler
+real(4),allocatable,managed::b(:)             ! written by the user
+```
+
+The distinction matters because an attribute the user did not ask for does
+not constrain them: a memory space they did request on an enclosing object
+takes precedence over it, and such a module does not count as defining CUDA
+symbols for the purposes of using it from code compiled without CUDA Fortran.
+These parenthesized qualifiers are enabled only while reading a module file
+and cannot be written in user code.
 
 Executable statements are omitted.
 If we ever want to do Fortran-level inline expansion of procedures

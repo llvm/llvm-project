@@ -1381,14 +1381,13 @@ public:
                                size_t dst_max_len, Status &result_error,
                                bool force_live_memory = false);
 
-  /// Read a NULL terminated string from memory
+  /// Read a null-terminated string from memory
   ///
-  /// This function will read a cache page at a time until a NULL string
-  /// terminator is found. It will stop reading if an aligned sequence of NULL
-  /// termination \a type_width bytes is not found before reading \a
-  /// cstr_max_len bytes.  The results are always guaranteed to be NULL
-  /// terminated, and that no more than (max_bytes - type_width) bytes will be
-  /// read.
+  /// This function will read a cache page at a time until a null terminator
+  /// is found. It will stop reading if an aligned null terminator of \a
+  /// type_width bytes is not found before reading \a cstr_max_len bytes. The
+  /// results are always guaranteed to be null-terminated, and that no more
+  /// than (max_bytes - type_width) bytes will be read.
   ///
   /// \param[in] addr
   ///     The address to start the memory read.

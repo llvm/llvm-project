@@ -104,7 +104,7 @@ using namespace llvm;
 static cl::opt<bool>
     EnableCSEInIRTranslator("enable-cse-in-irtranslator",
                             cl::desc("Should enable CSE in irtranslator"),
-                            cl::Optional, cl::init(false));
+                            cl::init(false));
 
 namespace llvm {
 
@@ -3287,7 +3287,6 @@ bool IRTranslatorImpl::translateKnownIntrinsic(const CallInst &CI,
   case Intrinsic::annotation:
   case Intrinsic::ptr_annotation:
   case Intrinsic::launder_invariant_group:
-  case Intrinsic::strip_invariant_group:
   case Intrinsic::threadlocal_address: {
     // Drop the intrinsic, but forward the value.
     MIRBuilder.buildCopy(getOrCreateVReg(CI),
@@ -3478,6 +3477,24 @@ bool IRTranslatorImpl::translateKnownIntrinsic(const CallInst &CI,
     MIRBuilder.buildPrefetch(getOrCreateVReg(*Addr), RW, Locality, CacheType,
                              MMO);
 
+    return true;
+  }
+
+  case Intrinsic::speculative_load: {
+    // Only the pointer operand is needed at codegen; the remaining arguments
+    // carry IR-level semantics only.
+    const Value *Ptr = CI.getArgOperand(0);
+    Register Dst = getOrCreateVReg(CI);
+    MachineMemOperand::Flags Flags = MachineMemOperand::MOLoad;
+    Flags |= TLI->getTargetMMOFlags(CI);
+    if (CI.hasMetadata(LLVMContext::MD_nontemporal))
+      Flags |= MachineMemOperand::MONonTemporal;
+    if (CI.hasMetadata(LLVMContext::MD_invariant_load))
+      Flags |= MachineMemOperand::MOInvariant;
+    auto *MMO = MF->getMachineMemOperand(
+        MachinePointerInfo(Ptr), Flags, MRI->getType(Dst),
+        CI.getParamAlign(0).valueOrOne(), MMOMetadata(CI.getAAMetadata()));
+    MIRBuilder.buildLoad(Dst, getOrCreateVReg(*Ptr), *MMO);
     return true;
   }
 
@@ -5282,7 +5299,8 @@ PreservedAnalyses IRTranslatorPass::run(MachineFunction &MF,
   const TargetSubtargetInfo &Subtarget = MF.getSubtarget();
   Function &F = MF.getFunction();
 
-  bool ShouldSkipOpts = MF.getFunction().hasOptNone();
+  bool ShouldSkipOpts = MF.getFunction().hasOptNone() ||
+                        shouldSkipOptimizationForOptBisect(MF.getFunction());
   auto &FAM = MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
                   .getManager();
   auto &MAMProxy =

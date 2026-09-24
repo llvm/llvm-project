@@ -397,7 +397,7 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
                                  []>, Sched<[WriteJump]>;
 
     let mayLoad = 1 in
-    def TAILJMPm64_REX : PseudoI<(outs), (ins i64mem_TC:$dst),
+    def TAILJMPm64_REX : PseudoI<(outs), (ins i64mem:$dst),
                                  []>, Sched<[WriteJumpLd]>;
   }
 }

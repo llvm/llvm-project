@@ -159,7 +159,8 @@ func.func @data_if(%arg0: !llvm.ptr, %cond: i1) {
 // CHECK-LABEL: llvm.func @enter_data_wait_all
 // CHECK: %[[WAITNUM:.*]] = llvm.mlir.constant(0 : i32) : i32
 // CHECK: %[[WAITLIST:.*]] = llvm.mlir.zero : !llvm.ptr
-// CHECK: llvm.call @__tgt_acc_wait({{.*}}, %[[WAITNUM]], %[[WAITLIST]], {{.*}})
+// CHECK: %[[DEFAULT_DEVICE:.*]] = llvm.mlir.constant(0 : i32)
+// CHECK: llvm.call @__tgt_acc_wait(%{{[^,]+}}, %{{[^,]+}}, %{{[^,]+}}, %[[DEFAULT_DEVICE]], %[[WAITNUM]], %[[WAITLIST]], {{.*}})
 // CHECK: llvm.call @__tgt_acc_data_enter
 func.func @enter_data_wait_all(%arg0: !llvm.ptr) {
   %size = arith.constant 4 : i64
@@ -184,7 +185,7 @@ func.func @enter_data_wait_all(%arg0: !llvm.ptr) {
 // CHECK-DAG: llvm.mlir.constant(1048576 : i64) : i64
 // CHECK-DAG: llvm.mlir.constant(8192 : i64) : i64
 // CHECK-DAG: llvm.mlir.constant(1024 : i64) : i64
-// CHECK-DAG: llvm.mlir.constant(16 : i64) : i64
+// CHECK-DAG: llvm.mlir.constant(8388624 : i64) : i64
 // CHECK-DAG: llvm.store %arg2, %{{.*}} : !llvm.ptr, !llvm.ptr
 // CHECK: llvm.call @__tgt_acc_data_begin
 // CHECK: llvm.call @__tgt_acc_data_end

@@ -35,7 +35,7 @@ static cl::opt<bool> EnableSpillSGPRToVGPR(
 static cl::opt<bool> EnableSpillCFISavedRegs(
     "amdgpu-spill-cfi-saved-regs",
     cl::desc("Enable spilling the registers required for CFI emission"),
-    cl::ReallyHidden, cl::init(false), cl::ZeroOrMore);
+    cl::ReallyHidden, cl::init(false));
 
 static cl::opt<unsigned> StressVGPRLimit(
     "amdgpu-stress-vgpr", cl::Hidden, cl::init(0),
@@ -1138,14 +1138,6 @@ bool SIRegisterInfo::isFrameOffsetLegal(const MachineInstr *MI,
 
   return TII->isLegalFLATOffset(NewOffset, AMDGPUAS::PRIVATE_ADDRESS,
                                 AMDGPU::FlatAddrSpace::FlatScratch);
-}
-
-const TargetRegisterClass *
-SIRegisterInfo::getPointerRegClass(unsigned Kind) const {
-  // This is inaccurate. It depends on the instruction and address space. The
-  // only place where we should hit this is for dealing with frame indexes /
-  // private accesses, so this is correct in that case.
-  return &AMDGPU::VGPR_32RegClass;
 }
 
 const TargetRegisterClass *
@@ -2549,6 +2541,13 @@ static bool foldingOffsetChangesCarry(const MachineOperand &OtherOp,
                          : FrameReg.isValid();
 }
 
+// Is SCC live into MI, so that frame index lowering must not clobber it?
+static bool isSCCLiveInto(const RegScavenger &RS, const MachineInstr &MI) {
+  return (RS.isRegUsed(AMDGPU::SCC) &&
+          !MI.definesRegister(AMDGPU::SCC, /*TRI=*/nullptr)) ||
+         MI.readsRegister(AMDGPU::SCC, /*TRI=*/nullptr);
+}
+
 bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                                         int SPAdj, unsigned FIOperandNum,
                                         RegScavenger *RS) const {
@@ -3275,9 +3274,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
         return false;
       }
 
-      bool NeedSaveSCC = (RS->isRegUsed(AMDGPU::SCC) &&
-                          !MI->definesRegister(AMDGPU::SCC, /*TRI=*/nullptr)) ||
-                         MI->readsRegister(AMDGPU::SCC, /*TRI=*/nullptr);
+      bool NeedSaveSCC = isSCCLiveInto(*RS, *MI);
 
       Register TmpSReg =
           UseSGPR ? TmpReg
@@ -3411,8 +3408,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
       // Convert to a swizzled stack address by scaling by the wave size.
       // In an entry function/kernel the offset is already swizzled.
       bool IsSALU = isSGPRClass(TII->getRegClass(MI->getDesc(), FIOperandNum));
-      bool LiveSCC = RS->isRegUsed(AMDGPU::SCC) &&
-                     !MI->definesRegister(AMDGPU::SCC, /*TRI=*/nullptr);
+      bool LiveSCC = isSCCLiveInto(*RS, *MI);
       const TargetRegisterClass *RC = IsSALU && !LiveSCC
                                           ? &AMDGPU::SReg_32RegClass
                                           : &AMDGPU::VGPR_32RegClass;

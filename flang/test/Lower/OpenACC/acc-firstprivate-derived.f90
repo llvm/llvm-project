@@ -32,11 +32,11 @@ module m_firstprivate_derived
 !
 ! CHECK-LABEL:   func.func @_QMm_firstprivate_derivedPtest() {
 ! CHECK:           %[[VAL_0:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.type<_QMm_firstprivate_derivedTpoint{x:f32,y:f32,z:f32}> {bindc_name = "a", uniq_name = "_QMm_firstprivate_derivedFtestEa"}
+! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.type<_QMm_firstprivate_derivedTpoint{x:f32,y:f32,z:f32}> <{bindc_name = "a", uniq_name = "_QMm_firstprivate_derivedFtestEa"}>
 ! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "_QMm_firstprivate_derivedFtestEa"} : (!fir.ref<!fir.type<_QMm_firstprivate_derivedTpoint{x:f32,y:f32,z:f32}>>) -> (!fir.ref<!fir.type<_QMm_firstprivate_derivedTpoint{x:f32,y:f32,z:f32}>>, !fir.ref<!fir.type<_QMm_firstprivate_derivedTpoint{x:f32,y:f32,z:f32}>>)
-! CHECK:           %[[VAL_3:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QMm_firstprivate_derivedFtestEi"}
+! CHECK:           %[[VAL_3:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QMm_firstprivate_derivedFtestEi"}>
 ! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]] {uniq_name = "_QMm_firstprivate_derivedFtestEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:           %[[VAL_5:.*]] = fir.alloca i32 {bindc_name = "n", uniq_name = "_QMm_firstprivate_derivedFtestEn"}
+! CHECK:           %[[VAL_5:.*]] = fir.alloca i32 <{bindc_name = "n", uniq_name = "_QMm_firstprivate_derivedFtestEn"}>
 ! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]] {uniq_name = "_QMm_firstprivate_derivedFtestEn"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_7:.*]] = acc.firstprivate varPtr(%[[VAL_2]]#0 : !fir.ref<!fir.type<_QMm_firstprivate_derivedTpoint{x:f32,y:f32,z:f32}>>) recipe(@firstprivatization_ref_rec__QMm_firstprivate_derivedTpoint) name("a") -> !fir.ref<!fir.type<_QMm_firstprivate_derivedTpoint{x:f32,y:f32,z:f32}>>
 ! CHECK:           acc.parallel combined(loop) firstprivate(%[[VAL_7]] : !fir.ref<!fir.type<_QMm_firstprivate_derivedTpoint{x:f32,y:f32,z:f32}>>) {
@@ -67,23 +67,6 @@ module m_firstprivate_derived
 ! FIR-CHECK:           acc.yield %[[VAL_1]] : !fir.ref<!fir.type<_QMm_firstprivate_derivedTpoint{x:f32,y:f32,z:f32}>>
 ! FIR-CHECK:        } copy {
 ! FIR-CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.type<_QMm_firstprivate_derivedTpoint{x:f32,y:f32,z:f32}>>, %[[VAL_1:.*]]: !fir.ref<!fir.type<_QMm_firstprivate_derivedTpoint{x:f32,y:f32,z:f32}>>):
-! FIR-CHECK:           %[[VAL_2:.*]] = fir.field_index x, !fir.type<_QMm_firstprivate_derivedTpoint{x:f32,y:f32,z:f32}>
-! FIR-CHECK:           %[[VAL_3:.*]] = fir.coordinate_of %[[VAL_0]], x : (!fir.ref<!fir.type<_QMm_firstprivate_derivedTpoint{x:f32,y:f32,z:f32}>>) -> !fir.ref<f32>
-! FIR-CHECK:           %[[VAL_4:.*]] = fir.field_index x, !fir.type<_QMm_firstprivate_derivedTpoint{x:f32,y:f32,z:f32}>
-! FIR-CHECK:           %[[VAL_5:.*]] = fir.coordinate_of %[[VAL_1]], x : (!fir.ref<!fir.type<_QMm_firstprivate_derivedTpoint{x:f32,y:f32,z:f32}>>) -> !fir.ref<f32>
-! FIR-CHECK:           %[[VAL_6:.*]] = fir.load %[[VAL_3]] : !fir.ref<f32>
-! FIR-CHECK:           fir.store %[[VAL_6]] to %[[VAL_5]] : !fir.ref<f32>
-! FIR-CHECK:           %[[VAL_7:.*]] = fir.field_index y, !fir.type<_QMm_firstprivate_derivedTpoint{x:f32,y:f32,z:f32}>
-! FIR-CHECK:           %[[VAL_8:.*]] = fir.coordinate_of %[[VAL_0]], y : (!fir.ref<!fir.type<_QMm_firstprivate_derivedTpoint{x:f32,y:f32,z:f32}>>) -> !fir.ref<f32>
-! FIR-CHECK:           %[[VAL_9:.*]] = fir.field_index y, !fir.type<_QMm_firstprivate_derivedTpoint{x:f32,y:f32,z:f32}>
-! FIR-CHECK:           %[[VAL_10:.*]] = fir.coordinate_of %[[VAL_1]], y : (!fir.ref<!fir.type<_QMm_firstprivate_derivedTpoint{x:f32,y:f32,z:f32}>>) -> !fir.ref<f32>
-! FIR-CHECK:           %[[VAL_11:.*]] = fir.load %[[VAL_8]] : !fir.ref<f32>
-! FIR-CHECK:           fir.store %[[VAL_11]] to %[[VAL_10]] : !fir.ref<f32>
-! FIR-CHECK:           %[[VAL_12:.*]] = fir.field_index z, !fir.type<_QMm_firstprivate_derivedTpoint{x:f32,y:f32,z:f32}>
-! FIR-CHECK:           %[[VAL_13:.*]] = fir.coordinate_of %[[VAL_0]], z : (!fir.ref<!fir.type<_QMm_firstprivate_derivedTpoint{x:f32,y:f32,z:f32}>>) -> !fir.ref<f32>
-! FIR-CHECK:           %[[VAL_14:.*]] = fir.field_index z, !fir.type<_QMm_firstprivate_derivedTpoint{x:f32,y:f32,z:f32}>
-! FIR-CHECK:           %[[VAL_15:.*]] = fir.coordinate_of %[[VAL_1]], z : (!fir.ref<!fir.type<_QMm_firstprivate_derivedTpoint{x:f32,y:f32,z:f32}>>) -> !fir.ref<f32>
-! FIR-CHECK:           %[[VAL_16:.*]] = fir.load %[[VAL_13]] : !fir.ref<f32>
-! FIR-CHECK:           fir.store %[[VAL_16]] to %[[VAL_15]] : !fir.ref<f32>
+! FIR-CHECK:           fir.copy %[[VAL_0]] to %[[VAL_1]] no_overlap : !fir.ref<!fir.type<_QMm_firstprivate_derivedTpoint{x:f32,y:f32,z:f32}>>, !fir.ref<!fir.type<_QMm_firstprivate_derivedTpoint{x:f32,y:f32,z:f32}>>
 ! FIR-CHECK:           acc.terminator
 ! FIR-CHECK:         }

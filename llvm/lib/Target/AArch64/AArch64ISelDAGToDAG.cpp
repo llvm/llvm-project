@@ -23,6 +23,7 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
+#include "llvm/Support/AArch64MemoryHints.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
@@ -516,6 +517,10 @@ private:
 
   bool SelectCMP_SWAP(SDNode *N);
 
+  AArch64MemoryHint decodeMemoryHintFlags(MachineMemOperand *MMO) const;
+  bool isAtomicSTSHH_KEEP(SDNode *N) const;
+  bool isAtomicSTSHH_STRM(SDNode *N) const;
+
   bool SelectSVEAddSubImm(SDValue N, MVT VT, SDValue &Imm, SDValue &Shift,
                           bool Negate);
   bool SelectSVEAddSubImm(SDLoc DL, APInt Value, MVT VT, SDValue &Imm,
@@ -750,9 +755,10 @@ bool AArch64DAGToDAGISel::SelectInlineAsmMemoryOperand(
   case InlineAsm::ConstraintCode::o:
   case InlineAsm::ConstraintCode::Q:
     // We need to make sure that this one operand does not end up in XZR, thus
-    // require the address to be in a PointerRegClass register.
-    const TargetRegisterInfo *TRI = Subtarget->getRegisterInfo();
-    const TargetRegisterClass *TRC = TRI->getPointerRegClass();
+    // require the address to be in a pointer register.
+    const TargetInstrInfo *TII = Subtarget->getInstrInfo();
+    const TargetRegisterClass *TRC =
+        TII->getInlineAsmMemoryOperandRegClass(ConstraintID);
     SDLoc dl(Op);
     SDValue RC = CurDAG->getTargetConstant(TRC->getID(), dl, MVT::i64);
     SDValue NewOp =
@@ -4611,6 +4617,34 @@ bool AArch64DAGToDAGISel::SelectCMP_SWAP(SDNode *N) {
   CurDAG->RemoveDeadNode(N);
 
   return true;
+}
+
+AArch64MemoryHint
+AArch64DAGToDAGISel::decodeMemoryHintFlags(MachineMemOperand *MMO) const {
+  int MemoryHint = -1;
+  const MDNode *MemCacheHint = MMO->getMemCacheHint();
+  if (!MemCacheHint)
+    return AArch64MemoryHint::HINT_NONE;
+
+  for (unsigned I = 0; I + 1 < MemCacheHint->getNumOperands(); I += 2) {
+    if (MemCacheHint->getOperand(I).equalsStr("aarch64.mem_hint")) {
+      const Metadata *Val = MemCacheHint->getOperand(I + 1).get();
+      MemoryHint = cast<ConstantInt>(cast<ConstantAsMetadata>(Val)->getValue())
+                       ->getZExtValue();
+    }
+  }
+
+  return toAArch64MemoryHint(MemoryHint);
+}
+
+bool AArch64DAGToDAGISel::isAtomicSTSHH_KEEP(SDNode *N) const {
+  return decodeMemoryHintFlags(cast<MemSDNode>(N)->getMemOperand()) ==
+         AArch64MemoryHint::HINT_STSHH_KEEP;
+}
+
+bool AArch64DAGToDAGISel::isAtomicSTSHH_STRM(SDNode *N) const {
+  return decodeMemoryHintFlags(cast<MemSDNode>(N)->getMemOperand()) ==
+         AArch64MemoryHint::HINT_STSHH_STRM;
 }
 
 bool AArch64DAGToDAGISel::SelectSVEAddSubImm(SDValue N, MVT VT, SDValue &Imm,

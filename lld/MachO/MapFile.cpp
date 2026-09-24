@@ -141,6 +141,14 @@ static void printStubsEntries(
                  sym->getName().str().data());
 }
 
+// For printing the contents of the __objc_stubs section.
+static void printObjCStubsEntries(raw_fd_ostream &os,
+                                  const ObjCStubsSection *osec) {
+  for (const Defined *sym : osec->getSymbols())
+    os << format("0x%08llX\t0x%08llX\t[  0] ", sym->getVA(), sym->size)
+       << sym->getName() << '\n';
+}
+
 static void printNonLazyPointerSection(raw_fd_ostream &os, GotSection *osec) {
   // ld64 considers stubs to belong to particular files, but considers GOT
   // entries to be linker-synthesized. Not sure why they made that decision, but
@@ -256,6 +264,8 @@ void macho::writeMapFile() {
                      osec->addr, osec->getSize());
       } else if (osec == in.stubs) {
         printStubsEntries(os, readerToFileOrdinal, osec, target->stubSize);
+      } else if (osec == in.objcStubs) {
+        printObjCStubsEntries(os, in.objcStubs);
       } else if (osec == in.lazyPointers) {
         printStubsEntries(os, readerToFileOrdinal, osec, target->wordSize);
       } else if (osec == in.stubHelper) {
