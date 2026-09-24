@@ -1479,6 +1479,33 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     break;
   }
 
+  case Builtin::BIpoll:
+  case Builtin::BIppoll:
+  case Builtin::BIppoll64: {
+    unsigned ExpectedArgs = BuiltinID == Builtin::BIpoll ? 3 : 4;
+    if (TheCall->getNumArgs() != ExpectedArgs ||
+        !TheCall->getArg(1)->getType()->isIntegerType())
+      return;
+    QualType PointeeTy = TheCall->getArg(0)->getType()->getPointeeType();
+    if (PointeeTy.isNull() || !PointeeTy->isStructureOrClassType())
+      return;
+    std::optional<CharUnits> ElemSize =
+        Context.getTypeSizeInCharsIfKnown(PointeeTy);
+    if (!ElemSize)
+      return;
+    std::optional<llvm::APSInt> Count =
+        Checker.ComputeExplicitObjectSizeArgument(1);
+    if (!Count)
+      return;
+    DiagID = diag::warn_fortify_source_size_mismatch;
+    unsigned WideWidth = SizeTypeWidth * 2;
+    SourceSize = Count->extOrTrunc(WideWidth) *
+                 llvm::APSInt(llvm::APInt(WideWidth, ElemSize->getQuantity()),
+                              /*isUnsigned=*/true);
+    DestinationSize = Checker.ComputeSizeArgument(0);
+    break;
+  }
+
   case Builtin::BIbzero:
   case Builtin::BI__builtin_bzero:
   case Builtin::BImemcpy:
