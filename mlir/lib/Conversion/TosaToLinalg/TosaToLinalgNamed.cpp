@@ -42,8 +42,8 @@ static std::optional<linalg::ElementwiseKind>
 getElementwiseKind(Operation *op, Type elementTy) {
   using linalg::ElementwiseKind;
   const bool isFloat = isa<FloatType>(elementTy);
-  const bool isSignlessInt =
-      elementTy.isSignlessInteger() && !elementTy.isInteger(1);
+  const bool isSignlessInt = elementTy.isSignlessInteger();
+  const bool isBoolean = elementTy.isInteger(1);
 
   // Unary ops. linalg.elementwise only defines these on floating point types.
   if (isFloat) {
@@ -74,7 +74,7 @@ getElementwiseKind(Operation *op, Type elementTy) {
   }
 
   // Binary ops defined on both floating point and (non-boolean) integers.
-  if (isFloat || isSignlessInt) {
+  if (isFloat || (isSignlessInt && !isBoolean)) {
     if (isa<tosa::AddOp>(op))
       return ElementwiseKind::add;
     if (isa<tosa::SubOp>(op))
@@ -82,7 +82,7 @@ getElementwiseKind(Operation *op, Type elementTy) {
   }
 
   // Signed integer division.
-  if (isSignlessInt && isa<tosa::IntDivOp>(op))
+  if (isSignlessInt && !isBoolean && isa<tosa::IntDivOp>(op))
     return ElementwiseKind::div;
 
   // Multiply maps to a plain elementwise multiply only when no rescaling shift
@@ -99,7 +99,7 @@ getElementwiseKind(Operation *op, Type elementTy) {
             elementTy &&
         cast<ShapedType>(mulOp.getInput2().getType()).getElementType() ==
             elementTy;
-    if ((isFloat || isSignlessInt) && zeroShift && matchingTypes)
+    if ((isFloat || (isSignlessInt && !isBoolean)) && zeroShift && matchingTypes)
       return ElementwiseKind::mul;
   }
 
@@ -120,7 +120,7 @@ getElementwiseKind(Operation *op, Type elementTy) {
   auto nanModeIsPropagate = [](auto tosaOp) {
     return tosaOp.getNanMode() == NanPropagationMode::PROPAGATE;
   };
-  if (isFloat || isSignlessInt) {
+  if (isFloat || (isSignlessInt && !isBoolean)) {
     if (auto maxOp = dyn_cast<tosa::MaximumOp>(op)) {
       if (!isFloat || nanModeIsPropagate(maxOp))
         return ElementwiseKind::max_signed;
