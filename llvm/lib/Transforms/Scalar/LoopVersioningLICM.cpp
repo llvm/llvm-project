@@ -251,7 +251,6 @@ bool LoopVersioningLICM::legalLoopStructure() {
       LLVM_DEBUG(dbgs() << "    loop exit condition is not an icmp instruction\n");
       return false;
     }
-    
     PHINode *IndVar = CurLoop->getInductionVariable(*SE);
     if (!IndVar) {
       LLVM_DEBUG(dbgs() << "    unable to find loop induction variable\n");
@@ -316,7 +315,6 @@ bool LoopVersioningLICM::legalLoopStructure() {
 
       HoistedDependencies.push_back(I);
     }
-    return true;
   }
   return true;
 }
@@ -699,7 +697,9 @@ bool LoopVersioningLICM::run(DominatorTree *DT) {
   // Do not do the transformation if disabled by metadata.
   if (hasLICMVersioningTransformation(CurLoop) & TM_Disable)
     return false;
+
   bool Changed = false;
+
   // Check feasiblity of LoopVersioningLICM.
   // If versioning found to be feasible and beneficial then proceed
   // else simply return, by cleaning up memory.
@@ -741,22 +741,12 @@ bool LoopVersioningLICM::run(DominatorTree *DT) {
         }
       }
 
-// #ifdef EXPENSIVE_CHECKS
-      assert(!verifyFunction(*LVer.getVersionedLoop()->getHeader()->getParent(), &dbgs())
-             && "Verification failure after dynamic bounds");
-// #endif
-
       SE->forgetLoop(CurLoop);
       // Recompute LoopAccessInfo after hoisting the dynamic bound
       LoopAccessInfoManager FreshLAIs(*SE, *AA, *DT, LI, nullptr, nullptr, AC);
       LAI = &FreshLAIs.getInfo(*CurLoop);
 
       generateAndAddRuntimeChecks(DT);
-
-// #ifdef EXPENSIVE_CHECKS
-      assert(!verifyFunction(*LVer.getVersionedLoop()->getHeader()->getParent(), &dbgs())
-             && "Verification failure after runtime checks");
-// #endif
 
       // LAI isn't used anymore, so clear it to avoid dangling reference
       LAI = nullptr;
@@ -765,21 +755,17 @@ bool LoopVersioningLICM::run(DominatorTree *DT) {
     addStringMetadataToLoop(LVer.getNonVersionedLoop(), LICMVersioningMetaData);
     // Set Loop Versioning metaData for version loop.
     addStringMetadataToLoop(LVer.getVersionedLoop(), LICMVersioningMetaData);
-
     // Set "llvm.mem.parallel_loop_access" metaData to versioned loop.
     // FIXME: "llvm.mem.parallel_loop_access" annotates memory access
     // instructions, not loops.
     addStringMetadataToLoop(LVer.getVersionedLoop(),
                             "llvm.mem.parallel_loop_access");
-
     // Update version loop with aggressive aliasing assumption.
     LVer.annotateLoopWithNoAlias();
     Changed = true;
   }
   return Changed;
 }
-
-namespace llvm {
 
 PreservedAnalyses LoopVersioningLICMPass::run(Loop &L, LoopAnalysisManager &AM,
                                               LoopStandardAnalysisResults &LAR,
@@ -795,4 +781,3 @@ PreservedAnalyses LoopVersioningLICMPass::run(Loop &L, LoopAnalysisManager &AM,
     return PreservedAnalyses::all();
   return getLoopPassPreservedAnalyses();
 }
-} // namespace llvm
