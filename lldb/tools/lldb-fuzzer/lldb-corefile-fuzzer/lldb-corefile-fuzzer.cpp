@@ -5,10 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// Fuzzes the metadata parsers that run when LLDB opens a corefile.
-//
-//===----------------------------------------------------------------------===//
 
 #include "utils/TempFile.h"
 
