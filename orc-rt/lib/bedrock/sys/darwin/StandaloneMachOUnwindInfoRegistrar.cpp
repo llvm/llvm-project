@@ -13,7 +13,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/bedrock/StandaloneMachOUnwindInfoRegistrar.h"
+#include "orc-rt-internal/bedrock/sys/darwin/StandaloneMachOUnwindInfoRegistrar.h"
 #include "orc-rt/support/Compiler.h"
 
 #include <mutex>

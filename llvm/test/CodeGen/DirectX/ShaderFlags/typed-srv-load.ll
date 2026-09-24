@@ -35,6 +35,16 @@ define float @onecomponent() #0 {
   ret float %val
 }
 
+; CHECK: Function texture_multicomponent : 0x00000000
+define <4 x float> @texture_multicomponent(<2 x i32> %coords) #0 {
+  %res = call target("dx.Texture", <4 x float>, 0, 0, 0, 2)
+      @llvm.dx.resource.handlefrombinding(i32 0, i32 2, i32 1, i32 0, ptr null)
+  %load = call <4 x float> @llvm.dx.resource.load.level(
+      target("dx.Texture", <4 x float>, 0, 0, 0, 2) %res,
+      <2 x i32> %coords, i32 0, <2 x i32> zeroinitializer)
+  ret <4 x float> %load
+}
+
 !llvm.module.flags = !{!0}
 !dx.valver = !{!1}
 !0 = !{i32 1, !"dx.resmayalias", i32 1}

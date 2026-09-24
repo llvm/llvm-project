@@ -49,6 +49,7 @@ struct PtrView {
   bool isMutable() const {
     return !isRoot() && getInlineDesc()->IsFieldMutable;
   }
+  bool isExtern() const { return Pointee && Pointee->isExtern(); }
   bool isVolatile() const {
     return isRoot() ? getDeclDesc()->IsVolatile : getInlineDesc()->IsVolatile;
   }
@@ -874,7 +875,7 @@ public:
   /// Checks if the storage is extern.
   bool isExtern() const {
     if (isBlockPointer())
-      return BS.Pointee && BS.Pointee->isExtern();
+      return view().isExtern();
     return false;
   }
   /// Checks if the storage is static.

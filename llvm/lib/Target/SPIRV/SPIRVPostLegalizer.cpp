@@ -523,6 +523,7 @@ static void generateAssignType(MachineInstr &MI, Register ResultRegister,
                     << " with type: " << *ResultType);
   MachineIRBuilder MIB(MI);
   updateRegType(ResultRegister, nullptr, ResultType, GR, MIB, MRI);
+  MIB.setInsertPt(*MI.getParent(), std::next(MI.getIterator()));
 
   // Tablegen definition assumes SPIRV::ASSIGN_TYPE pseudo-instruction is
   // present after each auto-folded instruction to take a type reference
