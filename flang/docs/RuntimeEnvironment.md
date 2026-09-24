@@ -6,11 +6,6 @@
 
 -->
 
-```{contents}
----
-local:
----
-```
 
 # Environment variables of significance to Fortran execution
 

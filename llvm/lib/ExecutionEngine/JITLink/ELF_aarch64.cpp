@@ -31,16 +31,19 @@ namespace {
 
 constexpr StringRef ELFGOTSymbolName = "_GLOBAL_OFFSET_TABLE_";
 
-class ELFJITLinker_aarch64 : public JITLinker<ELFJITLinker_aarch64> {
-  friend class JITLinker<ELFJITLinker_aarch64>;
+template <llvm::endianness Endianness>
+class ELFJITLinker_aarch64
+    : public JITLinker<ELFJITLinker_aarch64<Endianness>> {
+  using JITLinkerBase = JITLinker<ELFJITLinker_aarch64<Endianness>>;
+  friend JITLinkerBase;
 
 public:
   ELFJITLinker_aarch64(std::unique_ptr<JITLinkContext> Ctx,
                        std::unique_ptr<LinkGraph> G,
                        PassConfiguration PassConfig)
-      : JITLinker(std::move(Ctx), std::move(G), std::move(PassConfig)) {
-    if (shouldAddDefaultTargetPasses(getGraph().getTargetTriple()))
-      getPassConfig().PostAllocationPasses.push_back(
+      : JITLinkerBase(std::move(Ctx), std::move(G), std::move(PassConfig)) {
+    if (this->shouldAddDefaultTargetPasses(this->getGraph().getTargetTriple()))
+      this->getPassConfig().PostAllocationPasses.push_back(
           [this](LinkGraph &G) { return getOrCreateGOTSymbol(G); });
   }
 
@@ -48,7 +51,7 @@ private:
   Symbol *GOTSymbol = nullptr;
 
   Error applyFixup(LinkGraph &G, Block &B, const Edge &E) const {
-    return aarch64::applyFixup(G, B, E, GOTSymbol);
+    return aarch64::applyFixup<Endianness>(G, B, E, GOTSymbol);
   }
 
   Error getOrCreateGOTSymbol(LinkGraph &G) {
@@ -237,6 +240,8 @@ private:
   Error addSingleRelocation(const typename ELFT::Rela &Rel,
                             const typename ELFT::Shdr &FixupSect,
                             Block &BlockToFix) {
+    // AArch64 BE8: instructions are always LE-encoded regardless of the ELF
+    // data endianness, so instruction words are read as ulittle32_t below.
     using support::ulittle32_t;
     using Base = ELFLinkGraphBuilder<ELFT>;
 
@@ -672,6 +677,7 @@ Error buildTables_ELF_aarch64(LinkGraph &G) {
 namespace llvm {
 namespace jitlink {
 
+template <llvm::endianness Endianness>
 Expected<std::unique_ptr<LinkGraph>> createLinkGraphFromELFObject_aarch64(
     MemoryBufferRef ObjectBuffer, std::shared_ptr<orc::SymbolStringPool> SSP) {
   LLVM_DEBUG({
@@ -687,16 +693,27 @@ Expected<std::unique_ptr<LinkGraph>> createLinkGraphFromELFObject_aarch64(
   if (!Features)
     return Features.takeError();
 
-  assert((*ELFObj)->getArch() == Triple::aarch64 &&
-         "Only AArch64 (little endian) is supported for now");
-
-  auto &ELFObjFile = cast<object::ELFObjectFile<object::ELF64LE>>(**ELFObj);
-  return ELFLinkGraphBuilder_aarch64<object::ELF64LE>(
+  using ELFT = object::ELFType<Endianness, true>;
+  auto &ELFObjFile = cast<object::ELFObjectFile<ELFT>>(**ELFObj);
+  return ELFLinkGraphBuilder_aarch64<ELFT>(
              (*ELFObj)->getFileName(), ELFObjFile.getELFFile(), std::move(SSP),
              (*ELFObj)->makeTriple(), std::move(*Features))
       .buildGraph();
 }
 
+Expected<std::unique_ptr<LinkGraph>> createLinkGraphFromELFObject_aarch64(
+    MemoryBufferRef ObjectBuffer, std::shared_ptr<orc::SymbolStringPool> SSP) {
+  return createLinkGraphFromELFObject_aarch64<llvm::endianness::little>(
+      std::move(ObjectBuffer), std::move(SSP));
+}
+
+Expected<std::unique_ptr<LinkGraph>> createLinkGraphFromELFObject_aarch64_be(
+    MemoryBufferRef ObjectBuffer, std::shared_ptr<orc::SymbolStringPool> SSP) {
+  return createLinkGraphFromELFObject_aarch64<llvm::endianness::big>(
+      std::move(ObjectBuffer), std::move(SSP));
+}
+
+template <llvm::endianness Endianness>
 void link_ELF_aarch64(std::unique_ptr<LinkGraph> G,
                       std::unique_ptr<JITLinkContext> Ctx) {
   PassConfiguration Config;
@@ -727,7 +744,18 @@ void link_ELF_aarch64(std::unique_ptr<LinkGraph> G,
   if (auto Err = Ctx->modifyPassConfig(*G, Config))
     return Ctx->notifyFailed(std::move(Err));
 
-  ELFJITLinker_aarch64::link(std::move(Ctx), std::move(G), std::move(Config));
+  ELFJITLinker_aarch64<Endianness>::link(std::move(Ctx), std::move(G),
+                                         std::move(Config));
+}
+
+void link_ELF_aarch64(std::unique_ptr<LinkGraph> G,
+                      std::unique_ptr<JITLinkContext> Ctx) {
+  link_ELF_aarch64<llvm::endianness::little>(std::move(G), std::move(Ctx));
+}
+
+void link_ELF_aarch64_be(std::unique_ptr<LinkGraph> G,
+                         std::unique_ptr<JITLinkContext> Ctx) {
+  link_ELF_aarch64<llvm::endianness::big>(std::move(G), std::move(Ctx));
 }
 
 } // namespace jitlink
