@@ -15480,20 +15480,20 @@ static void processForLoadTimeCommentVar(Sema &S, VarDecl *VD) {
   if (VD->isThisDeclarationADefinition(S.Context) != VarDecl::Definition)
     return;
 
-  // Only plain `char` pointers/arrays with an initializer are supported; a
-  // matched variable of any other form (int, struct, wide or explicitly
-  // signed/unsigned character types, no initializer, ...) is silently
-  // ignored.
+  // A definition without an initializer carries no string and is silently
+  // skipped.
+  if (!VD->hasInit())
+    return;
+
+  // Extract the character type a pointer points to or an array holds; it is
+  // null for any other type, which is classified (and diagnosed) below once
+  // the name has matched.
   QualType Ty = VD->getType();
   const PointerType *PT = Ty->getAsCanonical<PointerType>();
   const ArrayType *AT = PT ? nullptr : S.Context.getAsArrayType(Ty);
   QualType Pointee = PT   ? PT->getPointeeType()
                      : AT ? AT->getElementType()
                           : QualType();
-  if (Pointee.isNull() ||
-      !S.Context.hasSameUnqualifiedType(Pointee, S.Context.CharTy) ||
-      !VD->hasInit())
-    return;
 
   // Names are matched against the mangled name, as it appears in the object
   // file. For plain C file-scope variables this is the source identifier; for
@@ -15516,6 +15516,13 @@ static void processForLoadTimeCommentVar(Sema &S, VarDecl *VD) {
     Reason = diag::LoadTimeCommentVarReason::TemplateSpecialization;
   else if (VD->isStaticDataMember())
     Reason = diag::LoadTimeCommentVarReason::StaticDataMember;
+  else if (Pointee.isNull() ||
+           !S.Context.hasSameUnqualifiedType(Pointee, S.Context.CharTy))
+    // Only plain `char` pointers/arrays are supported. A name match on a
+    // variable of any other type (int, struct, wide or explicitly
+    // signed/unsigned character types, ...) still demonstrates intent, so it
+    // is diagnosed.
+    Reason = diag::LoadTimeCommentVarReason::UnsupportedType;
   else if (VD->getStorageDuration() != SD_Static)
     // The string must have static storage duration; a thread-local variable
     // is not preserved.

@@ -7,7 +7,9 @@
 //              diagnosed and left unpreserved (still emitted as ordinary
 //              definitions). A second pass (NOEMIT) over the same output
 //              proves that listed variables of non-plain-char element type
-//              (wchar_t, char16_t) are silently ignored and not emitted.
+//              (wchar_t, char16_t, char8_t) and of non-character type are
+//              not preserved and not emitted. Their diagnostic is covered
+//              by the Sema tests and silenced here.
 //
 //  STORAGE   — storage-duration filtering: thread_local variables are
 //              diagnosed by Sema and receive no metadata; a function-local
@@ -26,10 +28,10 @@
 //   A::x          _ZN1A1xE         static data member: diagnosed, unpreserved
 //   B::ver        _ZN1B3verE       static data member: diagnosed, unpreserved
 //   C::info       _ZN1C4infoE      no definition in this TU: skipped
-//   wstr          _ZL4wstr         wchar_t element type: ignored, not emitted
-//   u16str        _ZL6u16str       char16_t element type: ignored, not emitted
-//   u8str         _ZL5u8str        char8_t element type: ignored, not emitted
-//   not_string    not_string       int: unsupported type, silently skipped
+//   wstr          _ZL4wstr         wchar_t element type: diagnosed, not emitted
+//   u16str        _ZL6u16str       char16_t element type: diagnosed, not emitted
+//   u8str         _ZL5u8str        char8_t element type: diagnosed, not emitted
+//   not_string    not_string       int: unsupported type: diagnosed, not emitted
 //   sccsid_ce     _ZL9sccsid_ce    preserved (static constexpr, internal)
 //   sccsid_ci     sccsid_ci        preserved (constinit; needs -std=c++20)
 //   sccsid_inl    sccsid_inl       preserved (inline variable, linkonce_odr)
@@ -47,7 +49,7 @@
 //   T::tm         _ZN1T2tmE        thread_local static data member: diagnosed
 //   g()::fn       _ZZ1gvE2fn       function-local static: diagnosed, no metadata
 
-// RUN: %clang_cc1 -std=c++20 -O2 -triple powerpc64-ibm-aix \
+// RUN: %clang_cc1 -std=c++20 -O2 -triple powerpc64-ibm-aix -Wno-loadtime-comment-var \
 // RUN:   -mloadtime-comment-vars=x,_ZN1N1xE,_ZN1NL3ptrE,_ZN1A1xE,_ZN1B3verE,_ZN1C4infoE,not_string,_ZL4wstr,_ZL6u16str,_ZL5u8str,_ZL9sccsid_ce,sccsid_ci,sccsid_inl,_ZDC1a1b1cE \
 // RUN:   -emit-llvm -disable-llvm-passes -o %t.ll %s
 // RUN: FileCheck %s < %t.ll
@@ -102,13 +104,13 @@ const char *B::ver = "@(#) class ver";
 //    so it is silently skipped.
 struct C { static const char *info; };
 
-// 7. An int has an unsupported type and must not be tagged, even though its
-//    IR name matches a listed name.
+// 7. An int has an unsupported type: it is diagnosed (see the Sema tests) and
+//    must not be tagged, even though its IR name matches a listed name.
 int not_string = 7;
 
 // 8. These are listed, but their element type is not plain char, so they are
-//    silently ignored and, being unreferenced internal-linkage statics, not
-//    emitted at all.
+//    diagnosed (see the Sema tests), not preserved, and -- being unreferenced
+//    internal-linkage statics -- not emitted at all.
 static wchar_t wstr[] = L"@(#) wide";
 static char16_t u16str[] = u"@(#) u16";
 static char8_t u8str[] = u8"@(#) u8";
@@ -211,8 +213,8 @@ char bar[] = "@(#) bar";
 // CHECK-SAME: section "llvm.metadata"
 
 // ===========================================================================
-// NOEMIT patterns — listed variables of non-plain-char element type
-// are silently ignored and, being unreferenced, not emitted at all.
+// NOEMIT patterns — listed variables of non-plain-char element type are
+// diagnosed, not preserved, and, being unreferenced, not emitted at all.
 // ===========================================================================
 
 // NOEMIT-NOT: @_ZL4wstr

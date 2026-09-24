@@ -6,7 +6,9 @@
 //
 //   storage — storage duration: thread_local variables and a name-matched
 //             function-local static are diagnosed; a namespace-scope
-//             variable is accepted without diagnostic.
+//             variable is accepted without diagnostic. Also covers a
+//             name-matched variable of an unsupported (wide character)
+//             type, which is diagnosed.
 //   init    — initializer form: dynamically initialized pointers, and
 //             constant initializers that are not a direct string literal
 //             (pointer to another global, consteval call, user-defined
@@ -17,7 +19,7 @@
 //             (explicit and implicit) are diagnosed.
 
 // RUN: %clang_cc1 -std=c++20 -triple powerpc64-ibm-aix \
-// RUN:   -mloadtime-comment-vars=keep,_ZN1N2tlE,_ZL3stl,_ZN1A2tmE,_ZZ1fvE2fn \
+// RUN:   -mloadtime-comment-vars=keep,_ZN1N2tlE,_ZL3stl,_ZN1A2tmE,_ZZ1fvE2fn,_ZL4wstr \
 // RUN:   -fsyntax-only -verify=storage %s
 
 // RUN: %clang_cc1 -std=c++20 -triple powerpc64-ibm-aix \
@@ -52,6 +54,9 @@ thread_local const char *A::tm = "@(#) tm"; // storage-warning {{'tm' named in '
 // Function-local static: a name match demonstrates intent, so it is
 // diagnosed rather than silently ignored.
 void f() { static const char *fn = "@(#) fn"; (void)fn; } // storage-warning {{'fn' named in '-mloadtime-comment-vars=' is a function-local variable and will not be preserved}}
+
+// A name match on a variable of an unsupported type is diagnosed as well.
+static wchar_t wstr[] = L"@(#) w"; // storage-warning {{'wstr' named in '-mloadtime-comment-vars=' does not have a plain char pointer or array type and will not be preserved}}
 
 // ---- init: initializer-form cases --------------------------------------------
 

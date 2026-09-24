@@ -8,6 +8,7 @@
 //   - volatile character array (volatile char[])
 //   - thread-local variable (__thread, not static storage duration)
 //   - pointer not initialized directly with a string literal
+//   - name-matched variables of an unsupported type (int, unsigned char)
 //   - valid const char array — no diagnostic
 //   - a preserved variable counts as used: no -Wunused-const-variable for it,
 //     while an unlisted static const variable still warns
@@ -16,7 +17,7 @@
 // is rejected with an error.
 
 // RUN: %clang_cc1 -triple powerpc64-ibm-aix -Wunused-const-variable \
-// RUN:   -mloadtime-comment-vars=vol_ptr,vol_char,vol_arr,tls_ptr,ind_ptr,const_arr,lfn,kept \
+// RUN:   -mloadtime-comment-vars=vol_ptr,vol_char,vol_arr,tls_ptr,ind_ptr,const_arr,lfn,kept,notchar,ustr \
 // RUN:   -fsyntax-only -verify %s
 
 // RUN: not %clang_cc1 -triple x86_64-unknown-linux-gnu \
@@ -56,3 +57,8 @@ static const char kept[] = "@(#) kept";
 // An unlisted static const variable is unaffected by the option and still
 // gets the unused warning.
 static const char dropped[] = "@(#) dropped"; // expected-warning {{unused variable 'dropped'}}
+
+// A name match on a variable of any other type still demonstrates intent, so
+// it is diagnosed rather than silently ignored.
+static int notchar = 42; // expected-warning {{'notchar' named in '-mloadtime-comment-vars=' does not have a plain char pointer or array type and will not be preserved}}
+static unsigned char ustr[] = "@(#) u"; // expected-warning {{'ustr' named in '-mloadtime-comment-vars=' does not have a plain char pointer or array type and will not be preserved}}

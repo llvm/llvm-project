@@ -3871,7 +3871,8 @@ def warn_loadtime_comment_var_not_preserved
               "%NotStringLiteral{is not initialized with a string literal}|"
               "%FunctionLocal{is a function-local variable}|"
               "%StaticDataMember{is a static data member}|"
-              "%TemplateSpecialization{is a variable template specialization}"
+              "%TemplateSpecialization{is a variable template specialization}|"
+              "%UnsupportedType{does not have a plain char pointer or array type}"
               "}1 and will not be preserved">,
       InGroup<LoadtimeCommentVar>;
 def warn_redeclaration_without_attribute_prev_attribute_ignored : Warning<

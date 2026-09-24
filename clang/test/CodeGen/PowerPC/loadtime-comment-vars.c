@@ -3,8 +3,10 @@
 //   * supported forms (plain-char pointer/array with a string-literal
 //     initializer) named in the list get !loadtime_comment metadata and are
 //     kept alive in llvm.compiler.used, even when otherwise unreferenced;
-//   * unsupported or unlisted variables are silently ignored and, when
-//     unreferenced, are not emitted at all;
+//   * unlisted variables, and listed variables of an unsupported type, are
+//     not preserved and, when unreferenced, are not emitted at all (the
+//     unsupported-type diagnostic itself is covered by the Sema tests; it is
+//     silenced here with -Wno-loadtime-comment-var);
 //   * names are matched against the mangled IR name: in C that is the source
 //     identifier; in C++ a file-scope static mangles (sccsid -> _ZL6sccsid).
 //
@@ -14,8 +16,8 @@
 
 
 // C, 32-bit and 64-bit AIX.
-// RUN: %clang_cc1 -O2 -triple powerpc-ibm-aix -mloadtime-comment-vars=sccsid,version,build_number,same_copyright,active,not_defined_here,tdefchar,ustr,sstr -emit-llvm -disable-llvm-passes -o %t-c32.ll %s
-// RUN: %clang_cc1 -O2 -triple powerpc64-ibm-aix -mloadtime-comment-vars=sccsid,version,build_number,same_copyright,active,not_defined_here,tdefchar,ustr,sstr -emit-llvm -disable-llvm-passes -o %t-c64.ll %s
+// RUN: %clang_cc1 -O2 -triple powerpc-ibm-aix -Wno-loadtime-comment-var -mloadtime-comment-vars=sccsid,version,build_number,same_copyright,active,not_defined_here,tdefchar,ustr,sstr -emit-llvm -disable-llvm-passes -o %t-c32.ll %s
+// RUN: %clang_cc1 -O2 -triple powerpc64-ibm-aix -Wno-loadtime-comment-var -mloadtime-comment-vars=sccsid,version,build_number,same_copyright,active,not_defined_here,tdefchar,ustr,sstr -emit-llvm -disable-llvm-passes -o %t-c64.ll %s
 // RUN: FileCheck %s -DSCCSID=sccsid -DVERSION=version -DSAME=same_copyright -DACTIVE=active -DTYPEDEFCHAR=tdefchar < %t-c32.ll
 // RUN: FileCheck %s -DSCCSID=sccsid -DVERSION=version -DSAME=same_copyright -DACTIVE=active -DTYPEDEFCHAR=tdefchar < %t-c64.ll
 // RUN: FileCheck %s --check-prefix=NOEMIT -DCOPYRIGHT=copyright -DBUILDNUM=build_number -DBUILDDATA=build_data -DUSTR=ustr -DSSTR=sstr < %t-c32.ll
@@ -24,7 +26,7 @@
 // The same source as C++: internal-linkage statics are matched by mangled
 // name. (-w silences the C++ writable-strings compatibility warning for the
 // legacy `static char *` idiom.)
-// RUN: %clang_cc1 -x c++ -w -O2 -triple powerpc64-ibm-aix -mloadtime-comment-vars=_ZL6sccsid,_ZL7version,_ZL12build_number,_ZL14same_copyright,_ZL6active,not_defined_here,_ZL8tdefchar,_ZL4ustr,_ZL4sstr -emit-llvm -disable-llvm-passes -o %t-cxx.ll %s
+// RUN: %clang_cc1 -x c++ -w -O2 -triple powerpc64-ibm-aix -Wno-loadtime-comment-var -mloadtime-comment-vars=_ZL6sccsid,_ZL7version,_ZL12build_number,_ZL14same_copyright,_ZL6active,not_defined_here,_ZL8tdefchar,_ZL4ustr,_ZL4sstr -emit-llvm -disable-llvm-passes -o %t-cxx.ll %s
 // RUN: FileCheck %s -DSCCSID=_ZL6sccsid -DVERSION=_ZL7version -DSAME=_ZL14same_copyright -DACTIVE=_ZL6active -DTYPEDEFCHAR=_ZL8tdefchar < %t-cxx.ll
 // RUN: FileCheck %s --check-prefix=NOEMIT -DCOPYRIGHT=_ZL9copyright -DBUILDNUM=_ZL12build_number -DBUILDDATA=_ZL10build_data -DUSTR=_ZL4ustr -DSSTR=_ZL4sstr < %t-cxx.ll
 
@@ -37,7 +39,7 @@ static char version[] = "@(#) Copyright Version 2.0";
 // 3. Const string (not in the list; unreferenced, so not emitted)
 static const char *copyright = "@(#) Copyright 2026";
 
-// 4. Integer (in the list but unsupported type; not emitted)
+// 4. Integer (in the list but unsupported type: diagnosed, not emitted)
 static int build_number = 12345;
 
 // 5. Struct (not in the list and unsupported type; not emitted)
@@ -62,7 +64,7 @@ typedef char CHAR;
 static CHAR *tdefchar = "@(#) typedef char";
 
 // 10. These are listed, but their element type is not plain char, so they
-//     are silently ignored and not emitted.
+//     are diagnosed (see the Sema tests), not preserved, and not emitted.
 static unsigned char ustr[] = "@(#) unsigned char string";
 static signed char sstr[] = "@(#) signed char string";
 
@@ -88,8 +90,9 @@ void foo() {}
 // CHECK-SAME: section "llvm.metadata"
 
 // The unlisted const string, the unsupported-type variables (including the
-// listed signed/unsigned char strings, whose element type is not plain char),
-// and the extern declaration are not emitted in any configuration.
+// listed signed/unsigned char strings, whose element type is not plain char
+// and which are therefore diagnosed rather than preserved), and the extern
+// declaration are not emitted in any configuration.
 // NOEMIT-NOT: @[[COPYRIGHT]]
 // NOEMIT-NOT: @[[BUILDNUM]]
 // NOEMIT-NOT: @[[BUILDDATA]]

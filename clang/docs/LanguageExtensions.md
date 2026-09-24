@@ -6619,10 +6619,11 @@ dynamically initialized, or is a pointer not bound to a string literal, is
 diagnosed with a warning and is not preserved. The same applies to name-matched
 variables of unsupported kinds: function-local `static` variables, static data
 members, and variable template specializations (implicit specializations are
-diagnosed in each translation unit that instantiates them). Variables of an
-unsupported type -- for example, an `int` or a `struct` -- or without an
-initializer are silently skipped, as are names that are not defined in the
-translation unit.
+diagnosed in each translation unit that instantiates them). A name-matched
+variable of any other type -- for example, an `int` or a `struct` -- is
+likewise diagnosed. A definition without an initializer is silently skipped.
+Names that match no variable defined in the translation unit are also
+silently ignored.
 
 For C++20 modules, a named variable defined in a module unit is processed when
 the module unit itself is compiled, and the option must be present on that
