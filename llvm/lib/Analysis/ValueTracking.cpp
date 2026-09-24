@@ -1906,6 +1906,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
       case Instruction::Sub:
       case Instruction::And:
       case Instruction::Or:
+      case Instruction::Xor:
       case Instruction::Mul: {
         // Ok, we have a recurrence of the form {Start,op,Step}. Check for low
         // zero bits.
@@ -1913,8 +1914,17 @@ static void computeKnownBitsFromOperator(const Operator *I,
         computeKnownBitsForRecurrenceOperands(P, Start, Step, DemandedElts,
                                               KnownStart, KnownStep, Q, Depth);
 
-        Known.Zero.setLowBits(std::min(KnownStart.countMinTrailingZeros(),
-                                       KnownStep.countMinTrailingZeros()));
+        if (Opcode == Instruction::Or || Opcode == Instruction::Xor) {
+          Known.Zero |= KnownStart.Zero & KnownStep.Zero;
+          if (Opcode == Instruction::Or)
+            Known.One |= KnownStart.One;
+        } else if (Opcode == Instruction::And) {
+          Known.Zero |= KnownStart.Zero;
+          Known.One |= KnownStart.One & KnownStep.One;
+        } else {
+          Known.Zero.setLowBits(std::min(KnownStart.countMinTrailingZeros(),
+                                         KnownStep.countMinTrailingZeros()));
+        }
 
         auto *OverflowOp = dyn_cast<OverflowingBinaryOperator>(BO);
         if (!OverflowOp || !Q.IIQ.hasNoSignedWrap(OverflowOp))
