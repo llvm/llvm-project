@@ -310,3 +310,26 @@ define i64 @shl_i64_add64(i64 %x, i64 %amt) {
   %r = shl i64 %x, %add
   ret i64 %r
 }
+
+; Test SUB N-X where N == 0 mod size generates NEG.
+define i32 @shl_i32_sub64(i32 %x, i32 %amt) {
+; CHECK-LABEL: shl_i32_sub64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    neg w8, w1
+; CHECK-NEXT:    lsl w0, w0, w8
+; CHECK-NEXT:    ret
+  %sub = sub i32 64, %amt
+  %r = shl i32 %x, %sub
+  ret i32 %r
+}
+
+define i64 @lshr_i64_sub64(i64 %x, i64 %amt) {
+; CHECK-LABEL: lshr_i64_sub64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    neg x8, x1
+; CHECK-NEXT:    lsr x0, x0, x8
+; CHECK-NEXT:    ret
+  %sub = sub i64 64, %amt
+  %r = lshr i64 %x, %sub
+  ret i64 %r
+}

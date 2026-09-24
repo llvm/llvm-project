@@ -85,36 +85,35 @@ define i128 @fshl_i128(i128 %x, i128 %y, i128 %z) nounwind {
 ;
 ; CHECK-GI-LABEL: fshl_i128:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov w8, #64 // =0x40
 ; CHECK-GI-NEXT:    and x9, x4, #0x7f
-; CHECK-GI-NEXT:    mov w10, #127 // =0x7f
-; CHECK-GI-NEXT:    sub x12, x8, x9
-; CHECK-GI-NEXT:    bic x10, x10, x4
-; CHECK-GI-NEXT:    lsl x13, x1, x9
-; CHECK-GI-NEXT:    lsr x12, x0, x12
-; CHECK-GI-NEXT:    extr x14, x3, x2, #1
-; CHECK-GI-NEXT:    lsr x16, x3, #1
+; CHECK-GI-NEXT:    mov w8, #127 // =0x7f
+; CHECK-GI-NEXT:    extr x13, x3, x2, #1
+; CHECK-GI-NEXT:    neg x11, x9
+; CHECK-GI-NEXT:    bic x8, x8, x4
+; CHECK-GI-NEXT:    lsl x12, x1, x9
+; CHECK-GI-NEXT:    lsr x11, x0, x11
+; CHECK-GI-NEXT:    lsr x14, x3, #1
 ; CHECK-GI-NEXT:    lsl x15, x0, x9
-; CHECK-GI-NEXT:    sub x8, x8, x10
 ; CHECK-GI-NEXT:    cmp x9, #64
-; CHECK-GI-NEXT:    orr x9, x12, x13
-; CHECK-GI-NEXT:    lsr x13, x14, x10
-; CHECK-GI-NEXT:    lsl x8, x16, x8
-; CHECK-GI-NEXT:    csel x12, x15, xzr, lo
-; CHECK-GI-NEXT:    csel x9, x9, x15, lo
+; CHECK-GI-NEXT:    neg x9, x8
+; CHECK-GI-NEXT:    mvn x10, x4
+; CHECK-GI-NEXT:    orr x11, x11, x12
+; CHECK-GI-NEXT:    lsr x12, x13, x8
+; CHECK-GI-NEXT:    lsl x9, x14, x9
+; CHECK-GI-NEXT:    csel x11, x11, x15, lo
+; CHECK-GI-NEXT:    csel x15, x15, xzr, lo
 ; CHECK-GI-NEXT:    tst x4, #0x7f
-; CHECK-GI-NEXT:    lsr x15, x16, x10
-; CHECK-GI-NEXT:    mvn x11, x4
-; CHECK-GI-NEXT:    csel x9, x1, x9, eq
-; CHECK-GI-NEXT:    orr x8, x13, x8
-; CHECK-GI-NEXT:    cmp x10, #64
-; CHECK-GI-NEXT:    csel x8, x8, x15, lo
-; CHECK-GI-NEXT:    tst x11, #0x7f
-; CHECK-GI-NEXT:    csel x8, x14, x8, eq
-; CHECK-GI-NEXT:    cmp x10, #64
-; CHECK-GI-NEXT:    csel x10, x15, xzr, lo
-; CHECK-GI-NEXT:    orr x0, x12, x8
-; CHECK-GI-NEXT:    orr x1, x9, x10
+; CHECK-GI-NEXT:    lsr x14, x14, x8
+; CHECK-GI-NEXT:    csel x11, x1, x11, eq
+; CHECK-GI-NEXT:    orr x9, x12, x9
+; CHECK-GI-NEXT:    cmp x8, #64
+; CHECK-GI-NEXT:    csel x9, x9, x14, lo
+; CHECK-GI-NEXT:    tst x10, #0x7f
+; CHECK-GI-NEXT:    csel x9, x13, x9, eq
+; CHECK-GI-NEXT:    cmp x8, #64
+; CHECK-GI-NEXT:    csel x8, x14, xzr, lo
+; CHECK-GI-NEXT:    orr x0, x15, x9
+; CHECK-GI-NEXT:    orr x1, x11, x8
 ; CHECK-GI-NEXT:    ret
   %f = call i128 @llvm.fshl.i128(i128 %x, i128 %y, i128 %z)
   ret i128 %f
