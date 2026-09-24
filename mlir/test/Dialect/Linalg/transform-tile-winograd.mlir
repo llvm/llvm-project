@@ -386,3 +386,54 @@ module attributes {transform.with_named_sequence} {
 // CHECK:           %[[S8:.*]] = affine.apply #[[$MAP2]]()
 // CHECK:           %[[EXTRACTED_SLICE_9:.*]] = tensor.extract_slice %[[ARG12]][%[[ARG6]], %[[S5]], %[[S6]], %[[ARG8]]] [1, %[[S7]], 1, 1] [1, 1, 1, 1] : tensor<3x8x1x5xf32> to tensor<1x?x1x1xf32>
 // CHECK:           %[[S9:.*]] = linalg.winograd_output_transform fmr(F_4_3) ins(%[[EXTRACTED_SLICE]] : tensor<6x1x1x1x1x1xf32>) outs(%[[EXTRACTED_SLICE_9]] : tensor<1x?x1x1xf32>) -> tensor<1x?x1x1xf32>
+
+// -----
+
+func.func @tile_winograd_input_alpha_h_one(%arg0: tensor<1x3x10x2xf32>, %arg1: tensor<1x6x3x2x1x2xf32>) -> tensor<1x6x3x2x1x2xf32> {
+  %0 = linalg.winograd_input_transform fmr(F_4_3) ins(%arg0 : tensor<1x3x10x2xf32>) outs(%arg1 : tensor<1x6x3x2x1x2xf32>) -> tensor<1x6x3x2x1x2xf32>
+  return %0 : tensor<1x6x3x2x1x2xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.winograd_input_transform"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1, %loop:2 = transform.structured.tile_using_for %0 tile_sizes [0, 0, 2, 1, 0, 0] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// The untransformed H axis maps one to one, so the input slice must use the
+// tile size rather than a single row.
+// CHECK-LABEL: func.func @tile_winograd_input_alpha_h_one(
+// CHECK-SAME:  %[[ARG0:.*]]: tensor<1x3x10x2xf32>, %[[ARG1:.*]]: tensor<1x6x3x2x1x2xf32>)
+// CHECK: scf.for %[[ARG2:.*]] = {{.*}} iter_args(%[[ARG3:.*]] = %[[ARG1]])
+// CHECK:   scf.for %[[ARG4:.*]] = {{.*}} iter_args(%[[ARG5:.*]] = %[[ARG3]])
+// CHECK:     %[[SIZE_H:.*]] = affine.min
+// CHECK:     %[[IN:.*]] = tensor.extract_slice %[[ARG0]][0, %{{.*}}, %{{.*}}, 0] [1, %[[SIZE_H]], %{{.*}}, 2] [1, 1, 1, 1] : tensor<1x3x10x2xf32> to tensor<1x?x?x2xf32>
+// CHECK:     %[[OUT:.*]] = tensor.extract_slice %[[ARG5]][0, 0, %[[ARG2]], %[[ARG4]], 0, 0] [1, 6, %[[SIZE_H]], 1, 1, 2] [1, 1, 1, 1, 1, 1] : tensor<1x6x3x2x1x2xf32> to tensor<1x6x?x1x1x2xf32>
+// CHECK:     linalg.winograd_input_transform fmr(F_4_3) ins(%[[IN]] : tensor<1x?x?x2xf32>) outs(%[[OUT]] : tensor<1x6x?x1x1x2xf32>)
+
+// -----
+
+func.func @tile_winograd_output_alpha_h_one(%arg0: tensor<1x6x3x2x1x2xf32>, %arg1: tensor<1x3x8x2xf32>) -> tensor<1x3x8x2xf32> {
+  %0 = linalg.winograd_output_transform fmr(F_4_3) ins(%arg0 : tensor<1x6x3x2x1x2xf32>) outs(%arg1 : tensor<1x3x8x2xf32>) -> tensor<1x3x8x2xf32>
+  return %0 : tensor<1x3x8x2xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.winograd_output_transform"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1, %loop:2 = transform.structured.tile_using_for %0 tile_sizes [0, 0, 2, 1, 0, 0] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// CHECK-LABEL: func.func @tile_winograd_output_alpha_h_one(
+// CHECK-SAME:  %[[ARG0:.*]]: tensor<1x6x3x2x1x2xf32>, %[[ARG1:.*]]: tensor<1x3x8x2xf32>)
+// CHECK: scf.for %[[ARG2:.*]] = {{.*}} iter_args(%[[ARG3:.*]] = %[[ARG1]])
+// CHECK:   scf.for %[[ARG4:.*]] = {{.*}} iter_args(%[[ARG5:.*]] = %[[ARG3]])
+// CHECK:     %[[SIZE_H:.*]] = affine.min
+// CHECK:     %[[IN:.*]] = tensor.extract_slice %[[ARG0]][0, 0, %[[ARG2]], %[[ARG4]], 0, 0] [1, 6, %[[SIZE_H]], 1, 1, 2] [1, 1, 1, 1, 1, 1] : tensor<1x6x3x2x1x2xf32> to tensor<1x6x?x1x1x2xf32>
+// CHECK:     %[[OUT:.*]] = tensor.extract_slice %[[ARG5]][0, %{{.*}}, %{{.*}}, 0] [1, %[[SIZE_H]], %{{.*}}, 2] [1, 1, 1, 1] : tensor<1x3x8x2xf32> to tensor<1x?x?x2xf32>
+// CHECK:     %[[RES:.*]] = linalg.winograd_output_transform fmr(F_4_3) ins(%[[IN]] : tensor<1x6x?x1x1x2xf32>) outs(%[[OUT]] : tensor<1x?x?x2xf32>)
+// CHECK:     tensor.insert_slice %[[RES]] into %[[ARG5]][0, %{{.*}}, %{{.*}}, 0] [1, %[[SIZE_H]], %{{.*}}, 2] [1, 1, 1, 1]

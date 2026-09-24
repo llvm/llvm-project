@@ -3550,7 +3550,7 @@ LogicalResult WinogradInputTransformOp::verify() {
 
   SmallVector<int64_t> expectedOutputShape(6, inputH);
   if (ShapedType::isDynamic(inputH)) {
-    expectedOutputShape[getOutputAlphaHDim()] = tileSize;
+    expectedOutputShape[getOutputAlphaHDim()] = leftTransform ? tileSize : 1;
     expectedOutputShape[getOutputTileHDim()] = ShapedType::kDynamic;
   } else {
     expectedOutputShape[getOutputAlphaHDim()] = leftTransform ? tileSize : 1;
@@ -3558,7 +3558,7 @@ LogicalResult WinogradInputTransformOp::verify() {
         leftTransform ? (inputH - (r - 1)) / m : inputH;
   }
   if (ShapedType::isDynamic(inputW)) {
-    expectedOutputShape[getOutputAlphaWDim()] = tileSize;
+    expectedOutputShape[getOutputAlphaWDim()] = rightTransform ? tileSize : 1;
     expectedOutputShape[getOutputTileWDim()] = ShapedType::kDynamic;
   } else {
     expectedOutputShape[getOutputAlphaWDim()] = rightTransform ? tileSize : 1;
@@ -3685,9 +3685,9 @@ WinogradInputTransformOp::getTiledImplementation(OpBuilder &builder,
   sliceOffsets.append(
       {offsets[getOutputNDim()], offsetH, offsetW, offsets[getOutputCDim()]});
   OpFoldResult sizeH =
-      alphaH != 1 ? OpFoldResult(mappedSizeH) : OpFoldResult(oneAttr);
+      alphaH != 1 ? OpFoldResult(mappedSizeH) : sizes[getOutputTileHDim()];
   OpFoldResult sizeW =
-      alphaW != 1 ? OpFoldResult(mappedSizeW) : OpFoldResult(oneAttr);
+      alphaW != 1 ? OpFoldResult(mappedSizeW) : sizes[getOutputTileWDim()];
   sliceSizes.append(
       {sizes[getOutputNDim()], sizeH, sizeW, sizes[getOutputCDim()]});
   int64_t inputRank = getInputOperandRank();
@@ -3818,13 +3818,12 @@ LogicalResult WinogradOutputTransformOp::getResultTilePosition(
   Value mappedSizeW = affine::makeComposedAffineApply(
       builder, loc, affineMap, sizes[getValueTileWDim()]);
 
-  IntegerAttr oneAttr = builder.getI64IntegerAttr(1);
   OpFoldResult offsetH = OpFoldResult(mappedOffsetH);
   OpFoldResult offsetW = OpFoldResult(mappedOffsetW);
   OpFoldResult sizeH =
-      valueH != 1 ? OpFoldResult(mappedSizeH) : OpFoldResult(oneAttr);
+      valueH != 1 ? OpFoldResult(mappedSizeH) : sizes[getValueTileHDim()];
   OpFoldResult sizeW =
-      valueW != 1 ? OpFoldResult(mappedSizeW) : OpFoldResult(oneAttr);
+      valueW != 1 ? OpFoldResult(mappedSizeW) : sizes[getValueTileWDim()];
 
   resultOffsets.append(
       {offsets[getValueNDim()], offsetH, offsetW, offsets[getValueFDim()]});
