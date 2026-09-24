@@ -12,7 +12,7 @@
 // type width is a value; the rest is padding, and the value bits come first.
 // Big endian (AArch64, SystemZ, PowerPC) places 0xAB in the high byte of the
 // 16-bit container (memory AB 00). A load therefore shifts the container right
-// by 8.
+// by 8. A store shifts the new value left by 8 and keeps the low byte.
 
 #pragma clang diagnostic ignored "-Wbitfield-width"
 
@@ -26,13 +26,28 @@ struct S {
 
 // First byte is 0xAB. The padding byte is not the value.
 // BE: @global = global { i8, i8 } { i8 -85, i8 undef }, align 2
-extern "C" S global = {0xAB};
+S global = {0xAB};
 
-// BE-LABEL: define {{.*}} @get(
+// BE-LABEL: define {{.*}} @_Z3getPK1S(
 // BE: [[P:%.*]] = load ptr, ptr %p.addr
 // BE: [[LOAD:%.*]] = load i16, ptr [[P]]
 // BE-NEXT: [[SHL:%.*]] = lshr i16 [[LOAD]], 8
 // BE-NEXT: trunc i16 [[SHL]] to i8
-extern "C" unsigned char get(const S *p) {
+unsigned char get(const S *p) {
   return p->value;
+}
+
+// The value goes in the high byte. The low byte is padding and is preserved.
+// BE-LABEL: define {{.*}} @_Z3setP1Sh(
+// BE: [[V:%.*]] = load i8, ptr %v.addr
+// BE: [[PTR:%.*]] = load ptr, ptr %p.addr
+// BE: [[EXT:%.*]] = zext i8 [[V]] to i16
+// BE: [[OLD:%.*]] = load i16, ptr [[PTR]]
+// BE-NEXT: [[MASKED:%.*]] = and i16 [[EXT]], 255
+// BE-NEXT: [[SHIFTED:%.*]] = shl i16 [[MASKED]], 8
+// BE-NEXT: [[KEPT:%.*]] = and i16 [[OLD]], 255
+// BE-NEXT: [[MERGED:%.*]] = or i16 [[KEPT]], [[SHIFTED]]
+// BE-NEXT: store i16 [[MERGED]], ptr [[PTR]]
+void set(S *p, unsigned char v) {
+  p->value = v;
 }
