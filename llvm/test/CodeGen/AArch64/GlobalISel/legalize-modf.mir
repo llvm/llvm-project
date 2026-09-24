@@ -11,7 +11,7 @@ body:             |
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $s0 = COPY [[FPEXT]](f32)
     ; CHECK-NEXT: $x0 = COPY [[FRAME_INDEX]](p0)
-    ; CHECK-NEXT: BL &modff, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $s0, implicit $x0, implicit-def $s0
+    ; CHECK-NEXT: BL &modff, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $s0, implicit $x0, implicit-def $s0
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(f32) = COPY $s0
     ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(f32) = G_LOAD [[FRAME_INDEX]](p0) :: (load (s32) from %stack.0)
@@ -37,7 +37,7 @@ body:             |
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $s0 = COPY [[FPEXT]](f32)
     ; CHECK-NEXT: $x0 = COPY [[FRAME_INDEX]](p0)
-    ; CHECK-NEXT: BL &modff, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $s0, implicit $x0, implicit-def $s0
+    ; CHECK-NEXT: BL &modff, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $s0, implicit $x0, implicit-def $s0
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(f32) = COPY $s0
     ; CHECK-NEXT: [[FPTRUNC:%[0-9]+]]:_(f16) = G_FPTRUNC [[COPY1]](f32)
@@ -60,7 +60,7 @@ body:             |
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $s0 = COPY [[FPEXT]](f32)
     ; CHECK-NEXT: $x0 = COPY [[FRAME_INDEX]](p0)
-    ; CHECK-NEXT: BL &modff, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $s0, implicit $x0, implicit-def $s0
+    ; CHECK-NEXT: BL &modff, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $s0, implicit $x0, implicit-def $s0
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(f32) = COPY $s0
     ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(f32) = G_LOAD [[FRAME_INDEX]](p0) :: (load (s32) from %stack.1)
@@ -71,7 +71,7 @@ body:             |
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $s0 = COPY [[FPEXT1]](f32)
     ; CHECK-NEXT: $x0 = COPY [[FRAME_INDEX1]](p0)
-    ; CHECK-NEXT: BL &modff, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $s0, implicit $x0, implicit-def $s0
+    ; CHECK-NEXT: BL &modff, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $s0, implicit $x0, implicit-def $s0
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(f32) = COPY $s0
     ; CHECK-NEXT: [[LOAD1:%[0-9]+]]:_(f32) = G_LOAD [[FRAME_INDEX1]](p0) :: (load (s32) from %stack.0)
@@ -107,7 +107,7 @@ body:             |
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $s0 = COPY [[UV]](f32)
     ; CHECK-NEXT: $x0 = COPY [[FRAME_INDEX]](p0)
-    ; CHECK-NEXT: BL &modff, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $s0, implicit $x0, implicit-def $s0
+    ; CHECK-NEXT: BL &modff, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $s0, implicit $x0, implicit-def $s0
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(f32) = COPY $s0
     ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(f32) = G_LOAD [[FRAME_INDEX]](p0) :: (load (s32) from %stack.2)
@@ -115,7 +115,7 @@ body:             |
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $s0 = COPY [[UV1]](f32)
     ; CHECK-NEXT: $x0 = COPY [[FRAME_INDEX1]](p0)
-    ; CHECK-NEXT: BL &modff, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $s0, implicit $x0, implicit-def $s0
+    ; CHECK-NEXT: BL &modff, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $s0, implicit $x0, implicit-def $s0
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(f32) = COPY $s0
     ; CHECK-NEXT: [[LOAD1:%[0-9]+]]:_(f32) = G_LOAD [[FRAME_INDEX1]](p0) :: (load (s32) from %stack.1)
@@ -123,7 +123,7 @@ body:             |
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $s0 = COPY [[UV2]](f32)
     ; CHECK-NEXT: $x0 = COPY [[FRAME_INDEX2]](p0)
-    ; CHECK-NEXT: BL &modff, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $s0, implicit $x0, implicit-def $s0
+    ; CHECK-NEXT: BL &modff, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $s0, implicit $x0, implicit-def $s0
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(f32) = COPY $s0
     ; CHECK-NEXT: [[LOAD2:%[0-9]+]]:_(f32) = G_LOAD [[FRAME_INDEX2]](p0) :: (load (s32) from %stack.0)
@@ -158,7 +158,7 @@ body:             |
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $d0 = COPY [[UV]](f64)
     ; CHECK-NEXT: $x0 = COPY [[FRAME_INDEX]](p0)
-    ; CHECK-NEXT: BL &modf, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $d0, implicit $x0, implicit-def $d0
+    ; CHECK-NEXT: BL &modf, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $d0, implicit $x0, implicit-def $d0
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(f64) = COPY $d0
     ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(f64) = G_LOAD [[FRAME_INDEX]](p0) :: (load (s64) from %stack.1)
@@ -166,7 +166,7 @@ body:             |
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $d0 = COPY [[UV1]](f64)
     ; CHECK-NEXT: $x0 = COPY [[FRAME_INDEX1]](p0)
-    ; CHECK-NEXT: BL &modf, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $d0, implicit $x0, implicit-def $d0
+    ; CHECK-NEXT: BL &modf, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $d0, implicit $x0, implicit-def $d0
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(f64) = COPY $d0
     ; CHECK-NEXT: [[LOAD1:%[0-9]+]]:_(f64) = G_LOAD [[FRAME_INDEX1]](p0) :: (load (s64) from %stack.0)
@@ -191,7 +191,7 @@ body:             |
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $q0 = COPY [[COPY]](f128)
     ; CHECK-NEXT: $x0 = COPY [[FRAME_INDEX]](p0)
-    ; CHECK-NEXT: BL &modfl, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $q0, implicit $x0, implicit-def $q0
+    ; CHECK-NEXT: BL &modfl, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $q0, implicit $x0, implicit-def $q0
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(f128) = COPY $q0
     ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(f128) = G_LOAD [[FRAME_INDEX]](p0) :: (load (s128) from %stack.0)

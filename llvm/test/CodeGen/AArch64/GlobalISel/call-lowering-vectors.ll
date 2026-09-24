@@ -56,7 +56,7 @@ define void @test_return_v3f32() {
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(f32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   $s0 = COPY [[DEF]](f32)
-  ; CHECK-NEXT:   BL @bar, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $s0, implicit-def $q0
+  ; CHECK-NEXT:   BL @bar, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $s0, implicit-def $q0
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x i64>) = COPY $q0
   ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(<4 x f32>) = G_BITCAST [[COPY]](<2 x i64>)
@@ -78,7 +78,7 @@ define void @test_v3i32_arg() {
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(i32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x i32>) = G_BUILD_VECTOR [[UV]](i32), [[UV1]](i32), [[UV2]](i32), [[DEF]](i32)
   ; CHECK-NEXT:   $q0 = COPY [[BUILD_VECTOR1]](<4 x i32>)
-  ; CHECK-NEXT:   BL @foo, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $q0
+  ; CHECK-NEXT:   BL @foo, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $q0
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   RET_ReallyLR
   call void @foo(<3 x i32> zeroinitializer)

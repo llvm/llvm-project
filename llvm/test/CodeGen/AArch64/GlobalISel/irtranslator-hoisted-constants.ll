@@ -35,7 +35,7 @@ define i32 @test(i32 %a, i1 %c) {
   ; TRANSLATED-NEXT: {{  $}}
   ; TRANSLATED-NEXT:   [[ADD:%[0-9]+]]:_(i32) = G_ADD [[COPY]], [[CONSTANT_FOLD_BARRIER]]
   ; TRANSLATED-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-  ; TRANSLATED-NEXT:   BL @callee, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp
+  ; TRANSLATED-NEXT:   BL @callee, csr_darwin_aarch64_aapcs, implicit-def dead $lr, implicit $sp
   ; TRANSLATED-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; TRANSLATED-NEXT:   G_BR %bb.2
   ;
@@ -64,7 +64,7 @@ define i32 @test(i32 %a, i1 %c) {
   ; PRESELECTION-NEXT: {{  $}}
   ; PRESELECTION-NEXT:   [[ADD:%[0-9]+]]:gpr(i32) = G_ADD [[COPY]], [[CONSTANT_FOLD_BARRIER]]
   ; PRESELECTION-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-  ; PRESELECTION-NEXT:   BL @callee, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp
+  ; PRESELECTION-NEXT:   BL @callee, csr_darwin_aarch64_aapcs, implicit-def dead $lr, implicit $sp
   ; PRESELECTION-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; PRESELECTION-NEXT:   G_BR %bb.2
   ;
@@ -90,7 +90,7 @@ define i32 @test(i32 %a, i1 %c) {
   ; POSTSELECTION-NEXT: {{  $}}
   ; POSTSELECTION-NEXT:   [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr [[COPY]], [[MOVi32imm]]
   ; POSTSELECTION-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-  ; POSTSELECTION-NEXT:   BL @callee, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp
+  ; POSTSELECTION-NEXT:   BL @callee, csr_darwin_aarch64_aapcs, implicit-def dead $lr, implicit $sp
   ; POSTSELECTION-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; POSTSELECTION-NEXT:   B %bb.2
 entry:

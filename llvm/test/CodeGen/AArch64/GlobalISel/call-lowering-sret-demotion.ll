@@ -44,7 +44,7 @@ define i64 @caller() {
   ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   $x8 = COPY [[FRAME_INDEX]](p0)
-  ; CHECK-NEXT:   BL @callee_sret_demotion, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x8
+  ; CHECK-NEXT:   BL @callee_sret_demotion, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x8
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i64) = G_LOAD [[FRAME_INDEX]](p0) :: (load (i64) from %stack.0)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 8
@@ -84,7 +84,7 @@ define i64 @caller_tail() {
   ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   $x8 = COPY [[FRAME_INDEX]](p0)
-  ; CHECK-NEXT:   BL @callee_sret_demotion, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x8
+  ; CHECK-NEXT:   BL @callee_sret_demotion, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x8
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i64) = G_LOAD [[FRAME_INDEX]](p0) :: (load (i64) from %stack.0)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 8

@@ -13,7 +13,7 @@ define void @caller() sspreq {
   ; CHECK-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1.x
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   $x0 = COPY [[FRAME_INDEX1]](p0)
-  ; CHECK-NEXT:   BL @callee, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0
+  ; CHECK-NEXT:   BL @callee, csr_darwin_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.StackGuardSlot
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i64) = G_LOAD [[FRAME_INDEX2]](p0) :: (volatile load (i64) from %stack.0.StackGuardSlot)
@@ -26,7 +26,7 @@ define void @caller() sspreq {
   ; CHECK-NEXT:   successors:
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-  ; CHECK-NEXT:   BL &__stack_chk_fail, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp
+  ; CHECK-NEXT:   BL &__stack_chk_fail, csr_darwin_aarch64_aapcs, implicit-def dead $lr, implicit $sp
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.entry:

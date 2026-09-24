@@ -24,7 +24,7 @@ define ptr @C_ctor_base(ptr returned %this, i32 %x) {
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   $x0 = COPY [[COPY]](p0)
-  ; CHECK-NEXT:   BL @A_ctor_base, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0
+  ; CHECK-NEXT:   BL @A_ctor_base, csr_aarch64_aapcs_thisreturn, implicit-def dead $lr, implicit $sp, implicit $x0
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(p0) = COPY [[COPY]](p0)
   ; CHECK-NEXT:   $x0 = COPY [[COPY]](p0)
@@ -45,13 +45,13 @@ define ptr @C_ctor_base_nothisret(ptr %this, i32 %x) {
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   $x0 = COPY [[COPY]](p0)
-  ; CHECK-NEXT:   BL @A_ctor_base_nothisret, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit-def $x0
+  ; CHECK-NEXT:   BL @A_ctor_base_nothisret, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit-def $x0
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(p0) = COPY $x0
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   $x0 = COPY [[COPY]](p0)
   ; CHECK-NEXT:   $w1 = COPY [[COPY1]](i32)
-  ; CHECK-NEXT:   BL @B_ctor_base_nothisret, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $w1, implicit-def $x0
+  ; CHECK-NEXT:   BL @B_ctor_base_nothisret, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit $w1, implicit-def $x0
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(p0) = COPY $x0
   ; CHECK-NEXT:   $x0 = COPY [[COPY]](p0)
@@ -87,7 +87,7 @@ define ptr @C_ctor_complete_nothisret(ptr %this, i32 %x) {
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   $x0 = COPY [[COPY]](p0)
   ; CHECK-NEXT:   $w1 = COPY [[COPY1]](i32)
-  ; CHECK-NEXT:   BL @C_ctor_base_nothisret, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $w1, implicit-def $x0
+  ; CHECK-NEXT:   BL @C_ctor_base_nothisret, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit $w1, implicit-def $x0
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(p0) = COPY $x0
   ; CHECK-NEXT:   $x0 = COPY [[COPY]](p0)
@@ -107,7 +107,7 @@ define ptr @D_ctor_base(ptr %this, i32 %x) {
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   $x0 = COPY [[COPY]](p0)
   ; CHECK-NEXT:   $w1 = COPY [[COPY1]](i32)
-  ; CHECK-NEXT:   BL @B_ctor_complete, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $w1
+  ; CHECK-NEXT:   BL @B_ctor_complete, csr_aarch64_aapcs_thisreturn, implicit-def dead $lr, implicit $sp, implicit $x0, implicit $w1
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(p0) = COPY [[COPY]](p0)
   ; CHECK-NEXT:   $x0 = COPY [[COPY]](p0)
@@ -129,7 +129,7 @@ define ptr @E_ctor_base(ptr %this, i32 %x) {
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   $x0 = COPY [[COPY]](p0)
   ; CHECK-NEXT:   $w1 = COPY [[COPY1]](i32)
-  ; CHECK-NEXT:   BL @B_ctor_complete, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $w1
+  ; CHECK-NEXT:   BL @B_ctor_complete, csr_aarch64_aapcs_thisreturn, implicit-def dead $lr, implicit $sp, implicit $x0, implicit $w1
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(p0) = COPY [[COPY]](p0)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 4
@@ -137,7 +137,7 @@ define ptr @E_ctor_base(ptr %this, i32 %x) {
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   $x0 = COPY [[PTR_ADD]](p0)
   ; CHECK-NEXT:   $w1 = COPY [[COPY1]](i32)
-  ; CHECK-NEXT:   BL @B_ctor_complete, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $w1
+  ; CHECK-NEXT:   BL @B_ctor_complete, csr_aarch64_aapcs_thisreturn, implicit-def dead $lr, implicit $sp, implicit $x0, implicit $w1
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(p0) = COPY [[PTR_ADD]](p0)
   ; CHECK-NEXT:   $x0 = COPY [[COPY]](p0)

@@ -799,7 +799,7 @@ define void @jt_multiple_jump_tables(ptr %arg, i32 %arg1, ptr %arg2) {
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   $x0 = COPY [[COPY]](p0)
   ; CHECK-NEXT:   $x1 = COPY [[LOAD]](p0)
-  ; CHECK-NEXT:   BL @wibble, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1
+  ; CHECK-NEXT:   BL @wibble, csr_aarch64_aapcs_thisreturn, implicit-def dead $lr, implicit $sp, implicit $x0, implicit $x1
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(p0) = COPY [[COPY]](p0)
   ; CHECK-NEXT:   G_BR %bb.59
@@ -808,7 +808,7 @@ define void @jt_multiple_jump_tables(ptr %arg, i32 %arg1, ptr %arg2) {
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   $x0 = COPY [[COPY]](p0)
   ; CHECK-NEXT:   $x1 = COPY [[COPY2]](p0)
-  ; CHECK-NEXT:   BL @wibble, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1
+  ; CHECK-NEXT:   BL @wibble, csr_aarch64_aapcs_thisreturn, implicit-def dead $lr, implicit $sp, implicit $x0, implicit $x1
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(p0) = COPY [[COPY]](p0)
   ; CHECK-NEXT:   G_BR %bb.59
@@ -817,12 +817,12 @@ define void @jt_multiple_jump_tables(ptr %arg, i32 %arg1, ptr %arg2) {
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   $w0 = COPY [[COPY1]](i32)
   ; CHECK-NEXT:   $x1 = COPY [[FRAME_INDEX]](p0)
-  ; CHECK-NEXT:   BL @baz, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $w0, implicit $x1
+  ; CHECK-NEXT:   BL @baz, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $w0, implicit $x1
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   $x0 = COPY [[COPY]](p0)
   ; CHECK-NEXT:   $x1 = COPY [[FRAME_INDEX]](p0)
-  ; CHECK-NEXT:   BL @wibble, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1
+  ; CHECK-NEXT:   BL @wibble, csr_aarch64_aapcs_thisreturn, implicit-def dead $lr, implicit $sp, implicit $x0, implicit $x1
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(p0) = COPY [[COPY]](p0)
   ; CHECK-NEXT:   G_BR %bb.59
@@ -1231,7 +1231,7 @@ define void @jt_2_tables_phi_edge_from_second() {
   ; CHECK-NEXT:   successors:
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-  ; CHECK-NEXT:   BL @jt_2_tables_phi_edge_from_second, csr_aarch64_aapcs, implicit-def $lr, implicit $sp
+  ; CHECK-NEXT:   BL @jt_2_tables_phi_edge_from_second, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.18.while.end:
@@ -1405,7 +1405,7 @@ define ptr @test_range_phi_switch_cycle() {
   ; CHECK-NEXT: bb.5.bb4:
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   $w0 = COPY [[PHI]](i32)
-  ; CHECK-NEXT:   BL @ham, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $w0, implicit-def $x0
+  ; CHECK-NEXT:   BL @ham, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $w0, implicit-def $x0
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
 bb:
@@ -1457,7 +1457,7 @@ define i1 @i1_value_cmp_is_signed(i1) {
   ; CHECK-NEXT:   successors:
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-  ; CHECK-NEXT:   BL @bar, csr_aarch64_aapcs, implicit-def $lr, implicit $sp
+  ; CHECK-NEXT:   BL @bar, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.OkValue:

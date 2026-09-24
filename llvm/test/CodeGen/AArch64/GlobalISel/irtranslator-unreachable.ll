@@ -16,7 +16,7 @@ define void @trap_call_noreturn() {
   ; CHECK-LABEL: name: trap_call_noreturn
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-  ; CHECK-NEXT:   BL @foo, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp
+  ; CHECK-NEXT:   BL @foo, csr_darwin_aarch64_aapcs, implicit-def dead $lr, implicit $sp
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   call void @foo()
   unreachable

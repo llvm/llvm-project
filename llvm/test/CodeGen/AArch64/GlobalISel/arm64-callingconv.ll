@@ -96,7 +96,7 @@ define void @test_varargs() {
   ; CHECK-NEXT:   $w4 = COPY [[C5]](i32)
   ; CHECK-NEXT:   $s1 = COPY [[C6]](f32)
   ; CHECK-NEXT:   $d2 = COPY [[C7]](f64)
-  ; CHECK-NEXT:   BL @varargs, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $w0, implicit $d0, implicit $x1, implicit $w2, implicit $w3, implicit $w4, implicit $s1, implicit $d2
+  ; CHECK-NEXT:   BL @varargs, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $w0, implicit $d0, implicit $x1, implicit $w2, implicit $w3, implicit $w4, implicit $s1, implicit $d2
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   RET_ReallyLR
   call void(i32, double, i64, ...) @varargs(i32 42, double 1.0, i64 12, i8 3, i16 1, i32 4, float 1.0, double 2.0)
@@ -126,7 +126,7 @@ define void @test_stack_ext_needed() {
   ; CHECK-NEXT:   $x5 = COPY [[DEF]](i64)
   ; CHECK-NEXT:   $x6 = COPY [[DEF]](i64)
   ; CHECK-NEXT:   $x7 = COPY [[DEF]](i64)
-  ; CHECK-NEXT:   BL @stack_ext_needed, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2, implicit $x3, implicit $x4, implicit $x5, implicit $x6, implicit $x7
+  ; CHECK-NEXT:   BL @stack_ext_needed, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2, implicit $x3, implicit $x4, implicit $x5, implicit $x6, implicit $x7
   ; CHECK-NEXT:   ADJCALLSTACKUP 8, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   RET_ReallyLR
   call void @stack_ext_needed([8 x i64] undef, i8 signext 42)
@@ -168,7 +168,7 @@ define void @caller_s128(ptr %ptr) {
   ; CHECK-NEXT:   $x2 = COPY [[UV2]](i64)
   ; CHECK-NEXT:   $x3 = COPY [[UV3]](i64)
   ; CHECK-NEXT:   $x4 = COPY [[COPY]](p0)
-  ; CHECK-NEXT:   BL @callee_s128, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2, implicit $x3, implicit $x4
+  ; CHECK-NEXT:   BL @callee_s128, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2, implicit $x3, implicit $x4
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   RET_ReallyLR
   %v = load i128, ptr %ptr
@@ -218,7 +218,7 @@ define i32 @i8i16caller() nounwind readnone {
   ; CHECK-NEXT:   $x5 = COPY [[C5]](i64)
   ; CHECK-NEXT:   $x6 = COPY [[C6]](i64)
   ; CHECK-NEXT:   $x7 = COPY [[C7]](i64)
-  ; CHECK-NEXT:   BL @i8i16callee, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2, implicit $w3, implicit $w4, implicit $x5, implicit $x6, implicit $x7, implicit-def $x0
+  ; CHECK-NEXT:   BL @i8i16callee, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2, implicit $w3, implicit $w4, implicit $x5, implicit $x6, implicit $x7, implicit-def $x0
   ; CHECK-NEXT:   ADJCALLSTACKUP 32, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i64) = COPY $x0
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC [[COPY1]](i64)
