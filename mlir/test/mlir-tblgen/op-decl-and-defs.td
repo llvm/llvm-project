@@ -212,6 +212,8 @@ def NS_BOp : NS_Op<"op_with_no_operand", []> {
 
 // CHECK-LABEL: NS::BOp declarations
 // CHECK: OpTrait::ZeroOperands
+// DEFS-LABEL: void BOp::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState) {
+// DEFS-NEXT:   build(odsBuilder, odsState, ::mlir::TypeRange{});
 
 def NS_COp : NS_Op<"op_with_one_operand", []> {
   let arguments = (ins I32:$operand);

@@ -2473,6 +2473,15 @@ void OpEmitter::genSeparateArgParamBuilder() {
     genInlineCreateBody(paramList);
 
     auto &body = m->body();
+    // The no-result builder can reuse the collective builder. Both forms
+    // otherwise emit identical operand, attribute, and region handling.
+    if (paramKind == TypeParamKind::Separate && op.getNumResults() == 0) {
+      body << "  build(odsBuilder, odsState, ::mlir::TypeRange{}";
+      for (const MethodParameter &param : llvm::drop_begin(paramList, 2))
+        body << ", " << param.getName();
+      body << ");\n";
+      return;
+    }
     genCodeForAddingArgAndRegionForBuilder(body, inferredAttributes,
                                            /*isRawValueAttr=*/attrType ==
                                                AttrParamKind::UnwrappedValue);
