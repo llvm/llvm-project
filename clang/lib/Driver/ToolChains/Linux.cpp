@@ -1007,7 +1007,7 @@ Linux::getSupportedSanitizers(BoundArch BA,
   if (IsX86_64 || IsMIPS64 || IsAArch64 || IsPowerPC64 || IsSystemZ ||
       IsLoongArch64 || IsRISCV64)
     Res |= SanitizerKind::Thread;
-  if (IsX86_64)
+  if (IsX86_64 && !IsAndroid)
     Res |= SanitizerKind::Concurrency;
   if (IsX86_64 || IsAArch64 || IsSystemZ || IsHexagon)
     Res |= SanitizerKind::Type;

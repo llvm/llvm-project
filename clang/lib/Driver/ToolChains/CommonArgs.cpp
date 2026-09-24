@@ -1658,9 +1658,9 @@ void tools::linkSanitizerRuntimeDeps(const ToolChain &TC,
     CmdArgs.push_back("-lresolv");
 }
 
-template <typename Predicate>
-static bool hostNeedsOffloadRt(Compilation &C, const ToolChain &HostTC,
-                               Predicate NeedsRuntime) {
+static bool hostNeedsOffloadRt(
+    Compilation &C, const ToolChain &HostTC,
+    llvm::function_ref<bool(const SanitizerArgs &)> NeedsRuntime) {
   if (HostTC.getTriple().isGPU())
     return false;
 
@@ -1774,8 +1774,7 @@ collectSanitizerRuntimes(Compilation &C, const ToolChain &TC,
     if (NeedsUbsanOffloadRt && !SanArgs.needsSharedRt() &&
         !SanArgs.needsUbsanRt())
       StaticRuntimes.push_back("ubsan_standalone");
-    if (NeedsCsanOffloadRt && !SanArgs.needsSharedRt() &&
-        !SanArgs.needsCsanRt())
+    if (NeedsCsanOffloadRt && !SanArgs.needsCsanRt())
       StaticRuntimes.push_back("csan");
     return;
   }
@@ -1835,7 +1834,7 @@ collectSanitizerRuntimes(Compilation &C, const ToolChain &TC,
       StaticRuntimes.push_back("ubsan_standalone");
     }
   }
-  if (!SanArgs.needsSharedRt() && NeedsCsanRt)
+  if (NeedsCsanRt)
     StaticRuntimes.push_back("csan");
   if (SanArgs.needsSafeStackRt()) {
     NonWholeStaticRuntimes.push_back("safestack");
