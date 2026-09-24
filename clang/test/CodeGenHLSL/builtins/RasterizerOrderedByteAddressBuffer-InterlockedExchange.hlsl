@@ -8,36 +8,20 @@
 
 RasterizerOrderedByteAddressBuffer ROVB : register(u1);
 
-// CHECK-LABEL: define void @{{.*}}test_rovb_int_2arg
-// DXCHECK: %[[HANDLE:.*]] = load target("dx.RawBuffer", i8, 1, 1), ptr {{.*}}
-// DXCHECK: %[[PTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_i8_1_1t.i32(target("dx.RawBuffer", i8, 1, 1) %[[HANDLE]], i32 %{{.*}})
-// DXCHECK: atomicrmw and ptr %[[PTR]], i32 %{{.*}} syncscope("device") monotonic
-export void test_rovb_int_2arg(uint off, int v) {
-  ROVB.InterlockedAnd(off, v);
-}
-
 // CHECK-LABEL: define void @{{.*}}test_rovb_uint_3arg
 // DXCHECK: %[[HANDLE:.*]] = load target("dx.RawBuffer", i8, 1, 1), ptr {{.*}}
 // DXCHECK: %[[PTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_i8_1_1t.i32(target("dx.RawBuffer", i8, 1, 1) %[[HANDLE]], i32 %{{.*}})
-// DXCHECK: %[[R:.*]] = atomicrmw and ptr %[[PTR]], i32 %{{.*}} syncscope("device") monotonic
+// DXCHECK: %[[R:.*]] = atomicrmw xchg ptr %[[PTR]], i32 %{{.*}} syncscope("device") monotonic
 // DXCHECK: store i32 %[[R]], ptr {{.*}}
 export void test_rovb_uint_3arg(uint off, uint v, out uint orig) {
-  ROVB.InterlockedAnd(off, v, orig);
-}
-
-// CHECK-LABEL: define void @{{.*}}test_rovb_int64_2arg
-// DXCHECK: %[[HANDLE:.*]] = load target("dx.RawBuffer", i8, 1, 1), ptr {{.*}}
-// DXCHECK: %[[PTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_i8_1_1t.i32(target("dx.RawBuffer", i8, 1, 1) %[[HANDLE]], i32 %{{.*}})
-// DXCHECK: atomicrmw and ptr %[[PTR]], i64 %{{.*}} syncscope("device") monotonic
-export void test_rovb_int64_2arg(uint off, int64_t v) {
-  ROVB.InterlockedAnd64(off, v);
+  ROVB.InterlockedExchange(off, v, orig);
 }
 
 // CHECK-LABEL: define void @{{.*}}test_rovb_uint64_3arg
 // DXCHECK: %[[HANDLE:.*]] = load target("dx.RawBuffer", i8, 1, 1), ptr {{.*}}
 // DXCHECK: %[[PTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_i8_1_1t.i32(target("dx.RawBuffer", i8, 1, 1) %[[HANDLE]], i32 %{{.*}})
-// DXCHECK: %[[R:.*]] = atomicrmw and ptr %[[PTR]], i64 %{{.*}} syncscope("device") monotonic
+// DXCHECK: %[[R:.*]] = atomicrmw xchg ptr %[[PTR]], i64 %{{.*}} syncscope("device") monotonic
 // DXCHECK: store i64 %[[R]], ptr {{.*}}
 export void test_rovb_uint64_3arg(uint off, uint64_t v, out uint64_t orig) {
-  ROVB.InterlockedAnd64(off, v, orig);
+  ROVB.InterlockedExchange64(off, v, orig);
 }
