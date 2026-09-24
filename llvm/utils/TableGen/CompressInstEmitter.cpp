@@ -50,11 +50,16 @@
 // bool uncompressInst(MCInst &OutInst, const MCInst &MI,
 //                     const MCSubtargetInfo &STI);
 //
-// In addition, it exports a function for checking whether
-// an instruction is compressable:
+// In addition, it exports a function for checking whether an instruction is
+// compressible and, when it is, reporting the compressed instruction size:
 //
-// bool isCompressibleInst(const MachineInstr& MI,
-//                         const <TargetName>Subtarget &STI);
+// bool isCompressibleInst(const MachineInstr &MI,
+//                         const <TargetName>Subtarget &STI,
+//                         unsigned &Size);
+//
+// Size is initialized to zero. A successful match sets Size to the non-zero
+// compressed instruction size and returns true. If the instruction is not
+// compressible, the function returns false and Size remains zero.
 //
 // The clients that include this auto-generated header file and
 // invoke these functions can compress an instruction before emitting
@@ -635,6 +640,8 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
     FuncH << "static bool isCompressibleInst(const MachineInstr &MI,\n";
     FuncH.indent(31) << "const " << TargetName << "Subtarget &STI,\n";
     FuncH.indent(31) << "unsigned &Size) {\n";
+    FuncH.indent(2)
+        << "// Size is non-zero only when a compression pattern matches.\n";
     FuncH.indent(2) << "Size = 0;\n";
   }
   // HwModeId is used if we have any RegClassByHwMode patterns

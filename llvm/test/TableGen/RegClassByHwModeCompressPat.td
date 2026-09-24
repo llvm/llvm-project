@@ -276,6 +276,7 @@ def : CompressPat<(PTR_MOV PtrRC:$dst, PtrRC:$src),
 // CHECK:      static bool isCompressibleInst(const MachineInstr &MI,
 // CHECK-NEXT:                                const MyTargetSubtarget &STI,
 // CHECK-NEXT:                                unsigned &Size) {
+// CHECK-NEXT:   // Size is non-zero only when a compression pattern matches.
 // CHECK-NEXT:   Size = 0;
 // CHECK-NEXT:   {{\[\[}}maybe_unused]] unsigned HwModeId = STI.getHwMode(MCSubtargetInfo::HwMode_RegInfo);
 // CHECK-NEXT:   switch (MI.getOpcode()) {
