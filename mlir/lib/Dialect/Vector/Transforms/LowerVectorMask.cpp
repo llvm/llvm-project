@@ -16,6 +16,7 @@
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
 #include "mlir/Dialect/Vector/Transforms/Passes.h"
+#include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
@@ -205,16 +206,6 @@ protected:
                             PatternRewriter &rewriter) const = 0;
 };
 
-/// Returns the mask of `maskingOp` intersected with `opMask`, the mask the
-/// masked operation already carries, if any.
-static Value combineMasks(PatternRewriter &rewriter, Location loc,
-                          MaskingOpInterface maskingOp, Value opMask) {
-  Value mask = maskingOp.getMask();
-  if (!opMask)
-    return mask;
-  return arith::AndIOp::create(rewriter, loc, mask, opMask);
-}
-
 /// Lowers a masked `vector.transfer_read` operation.
 struct MaskedTransferReadOpPattern
     : public MaskOpRewritePattern<TransferReadOp> {
@@ -235,7 +226,8 @@ public:
     rewriter.replaceOpWithNewOp<TransferReadOp>(
         maskingOp.getOperation(), readOp.getVectorType(), readOp.getBase(),
         readOp.getIndices(), readOp.getPermutationMap(), readOp.getPadding(),
-        combineMasks(rewriter, readOp.getLoc(), maskingOp, readOp.getMask()),
+        vector::combineMasks(rewriter, readOp.getLoc(), maskingOp.getMask(),
+                             readOp.getMask()),
         readOp.getInBounds());
     return success();
   }
@@ -258,7 +250,8 @@ public:
     rewriter.replaceOpWithNewOp<TransferWriteOp>(
         maskingOp.getOperation(), resultType, writeOp.getVector(),
         writeOp.getBase(), writeOp.getIndices(), writeOp.getPermutationMap(),
-        combineMasks(rewriter, writeOp.getLoc(), maskingOp, writeOp.getMask()),
+        vector::combineMasks(rewriter, writeOp.getLoc(), maskingOp.getMask(),
+                             writeOp.getMask()),
         writeOp.getInBounds());
     return success();
   }
@@ -277,8 +270,8 @@ public:
     rewriter.replaceOpWithNewOp<GatherOp>(
         maskingOp.getOperation(), gatherOp.getVectorType(), gatherOp.getBase(),
         gatherOp.getOffsets(), gatherOp.getIndices(),
-        combineMasks(rewriter, gatherOp.getLoc(), maskingOp,
-                     gatherOp.getMask()),
+        vector::combineMasks(rewriter, gatherOp.getLoc(), maskingOp.getMask(),
+                             gatherOp.getMask()),
         gatherOp.getPassThru());
     return success();
   }
