@@ -10753,6 +10753,66 @@ TEST_P(ASTImporterOptionSpecificTestBase,
   EXPECT_EQ(ToFr1Imp, ToFr1);
 }
 
+const ast_matchers::internal::VariadicDynCastAllOfMatcher<
+    Decl, ExplicitInstantiationDecl>
+    explicitInstantiationDecl;
+
+struct ImportExplicitInstantiationDecl
+    : public ASTImporterOptionSpecificTestBase {
+protected:
+  void testImport(const char *FromCode) {
+    Decl *FromTU = getTuDecl(FromCode, Lang_CXX14);
+    Decl *ToTU = getToTuDecl("", Lang_CXX14);
+    auto *FromD = FirstDeclMatcher<ExplicitInstantiationDecl>().match(
+        FromTU, explicitInstantiationDecl());
+    ASSERT_TRUE(FromD);
+    ASSERT_EQ(FromD->getDeclContext(), cast<DeclContext>(FromTU));
+    auto *ToD = Import(FromD, Lang_CXX14);
+    EXPECT_TRUE(ToD);
+    EXPECT_EQ(ToD->getDeclContext(), cast<DeclContext>(ToTU));
+  }
+};
+
+TEST_P(ImportExplicitInstantiationDecl, FunctionTemplate) {
+  testImport(R"(
+    namespace ns {
+      template<typename T> void func(T) {}
+    }
+    template void ns::func<int>(int);
+    )");
+}
+
+TEST_P(ImportExplicitInstantiationDecl, ClassTemplate) {
+  testImport(R"(
+    namespace ns {
+      template<typename T> struct S {
+        void method(T) {};
+      };
+    }
+    extern template struct ns::S<int>;
+    )");
+}
+
+TEST_P(ImportExplicitInstantiationDecl, VariableTemplate) {
+  testImport(R"(
+    namespace ns {
+      template<typename T> T bar;
+    }
+    template int ns::bar<int>;
+    )");
+}
+
+TEST_P(ImportExplicitInstantiationDecl, MemberFunction) {
+  testImport(R"(
+    namespace ns {
+      template<typename T> struct S {
+        void method(T) {};
+      };
+    }
+    template void ns::S<int>::method(int);
+    )");
+}
+
 struct ImportAndMergeAnonymousNamespace
     : public ASTImporterOptionSpecificTestBase {
 protected:
@@ -10910,6 +10970,9 @@ INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportMatrixType,
                          DefaultTestValuesForRunOptions);
 
 INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportTemplateParmDeclDefaultValue,
+                         DefaultTestValuesForRunOptions);
+
+INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportExplicitInstantiationDecl,
                          DefaultTestValuesForRunOptions);
 
 INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportAndMergeAnonymousNamespace,
