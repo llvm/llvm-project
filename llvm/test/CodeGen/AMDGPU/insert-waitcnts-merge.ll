@@ -23,9 +23,9 @@ define amdgpu_kernel void @widget(ptr addrspace(1) %arg, i1 %arg1) #0 {
   ; CHECK-NEXT:   S_WAITCNT .Lgkmcnt_0
   ; CHECK-NEXT:   S_BITCMP1_B32 killed renamable $sgpr2, 0, implicit-def $scc
   ; CHECK-NEXT:   renamable $sgpr4_sgpr5 = S_MOV_B64 0
-  ; CHECK-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec, implicit $exec
   ; CHECK-NEXT:   renamable $sgpr2_sgpr3 = S_CSELECT_B64 -1, 0, implicit killed $scc
   ; CHECK-NEXT:   $vgpr2_vgpr3 = V_PK_MOV_B32 8, 0, 8, 0, 0, 0, 0, 0, 0, implicit $exec
+  ; CHECK-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   renamable $sgpr6_sgpr7 = IMPLICIT_DEF
   ; CHECK-NEXT:   S_BRANCH %bb.1
   ; CHECK-NEXT: {{  $}}

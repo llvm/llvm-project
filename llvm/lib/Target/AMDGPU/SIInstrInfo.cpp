@@ -7765,6 +7765,17 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
       if (!Op.isReg() || !Op.getReg().isVirtual())
         continue;
 
+      // No copy is needed if the classes differ only in AV-ness, e.g. an av_32
+      // incoming value for a vgpr_32 PHI.
+      const TargetRegisterClass *OpRC = MRI.getRegClass(Op.getReg());
+      if (!Op.getSubReg() && VRC != &AMDGPU::VReg_1RegClass &&
+          OpRC != &AMDGPU::VReg_1RegClass &&
+          (RI.isVectorSuperClass(OpRC) || RI.isVectorSuperClass(VRC))) {
+        const TargetRegisterClass *Common = RI.getCommonSubClass(OpRC, VRC);
+        if (Common && RI.isVGPRClass(Common))
+          continue;
+      }
+
       // MI is a PHI instruction.
       MachineBasicBlock *InsertBB = MI.getOperand(I + 1).getMBB();
       MachineBasicBlock::iterator Insert = InsertBB->getFirstTerminator();

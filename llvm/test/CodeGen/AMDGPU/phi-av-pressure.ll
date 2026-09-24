@@ -36,9 +36,9 @@ define amdgpu_kernel void @main(i1 %arg, ptr %ptr, ptr addrspace(1) %ptr1, ptr a
 ; GFX950-NEXT:    v_lshl_add_u64 v[10:11], v[0:1], 3, s[38:39]
 ; GFX950-NEXT:    global_load_dwordx4 v[2:5], v[10:11], off
 ; GFX950-NEXT:    global_load_dwordx4 v[6:9], v1, s[38:39]
-; GFX950-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX950-NEXT:    v_mov_b64_e32 v[10:11], s[36:37]
 ; GFX950-NEXT:    s_and_b64 vcc, exec, s[34:35]
+; GFX950-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX950-NEXT:    v_mov_b32_e32 v12, v1
 ; GFX950-NEXT:    v_mov_b32_e32 v14, v1
 ; GFX950-NEXT:    v_mov_b32_e32 v15, v1
