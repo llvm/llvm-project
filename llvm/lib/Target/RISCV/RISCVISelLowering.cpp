@@ -13158,6 +13158,15 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getNode(getRVPShiftOpcode(IntNo), DL, Op.getValueType(),
                        Op.getOperand(1), ShAmt);
   }
+  case Intrinsic::riscv_psati:
+  case Intrinsic::riscv_pusati: {
+    bool IsSigned = IntNo == Intrinsic::riscv_psati;
+    unsigned Opc = IsSigned ? RISCVISD::SATI : RISCVISD::USATI;
+    // psati's width counts the sign bit, RISCVISD::SATI's immediate does not.
+    unsigned Width = Op.getConstantOperandVal(2) - (IsSigned ? 1 : 0);
+    return DAG.getNode(Opc, DL, Op.getValueType(), Op.getOperand(1),
+                       DAG.getTargetConstant(Width, DL, XLenVT));
+  }
   case Intrinsic::riscv_psext_b:
   case Intrinsic::riscv_psext_h: {
     EVT VT = Op.getValueType();
@@ -17704,7 +17713,9 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     case Intrinsic::riscv_pmulhru:
     case Intrinsic::riscv_pmulhsu:
     case Intrinsic::riscv_pmulhrsu:
-    case Intrinsic::riscv_psabs: {
+    case Intrinsic::riscv_psabs:
+    case Intrinsic::riscv_psati:
+    case Intrinsic::riscv_pusati: {
       EVT VT = N->getValueType(0);
       if (!Subtarget.is64Bit() || (VT != MVT::v4i8 && VT != MVT::v2i16))
         return;
@@ -17747,8 +17758,8 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
         Opc = getRVPMulHighOpcode(IntNo);
         break;
       default:
-        // pas/psa/psas/pssa/paas/pasa and pmerge: re-emit at the widened type
-        // rather than lowering to a generic node.
+        // pas/psa/psas/pssa/paas/pasa, pmerge and psati/pusati: re-emit at the
+        // widened type rather than lowering to a generic node.
         Opc = ISD::INTRINSIC_WO_CHAIN;
         break;
       }
