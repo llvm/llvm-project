@@ -383,6 +383,25 @@ static void removeRegisterOperands(const MachineInstr *MI, MCInst &OutMI) {
 
   // Transform to _S instruction.
   auto RegOpcode = OutMI.getOpcode();
+  std::optional<wasm::ValType> SelectType;
+  switch (RegOpcode) {
+  case WebAssembly::SELECT_FUNCREF:
+  case WebAssembly::SELECT_EXTERNREF:
+  case WebAssembly::SELECT_EXNREF: {
+    const MachineRegisterInfo &MRI = MI->getMF()->getRegInfo();
+    assert(MI->getOperand(0).isReg() && "select result must be a register");
+    SelectType = WebAssembly::regClassToValType(
+        MRI.getRegClass(MI->getOperand(0).getReg())->getID());
+    assert(WebAssembly::isRefType(*SelectType) &&
+           "reference select result must have a reference type");
+    OutMI.setOpcode(WebAssembly::SELECT_T);
+    RegOpcode = WebAssembly::SELECT_T;
+    break;
+  }
+  default:
+    break;
+  }
+
   auto StackOpcode = WebAssembly::getStackOpcode(RegOpcode);
   assert(StackOpcode != -1 && "Failed to stackify instruction");
   OutMI.setOpcode(StackOpcode);
@@ -393,5 +412,10 @@ static void removeRegisterOperands(const MachineInstr *MI, MCInst &OutMI) {
     if (MO.isReg()) {
       OutMI.erase(&MO);
     }
+  }
+
+  if (SelectType) {
+    OutMI.addOperand(MCOperand::createImm(1));
+    OutMI.addOperand(MCOperand::createImm(static_cast<int64_t>(*SelectType)));
   }
 }
