@@ -58,14 +58,15 @@ public:
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(OpenMPContextFrame)
 
   OpenMPContextFrame(const pft::Evaluation &evaluation,
-                     llvm::omp::Directive directive, bool isPartial = false)
-      : evaluation{evaluation}, directive{directive}, isPartial{isPartial} {}
+                     llvm::omp::Directive directive, bool isReplacement = false)
+      : evaluation{evaluation}, directive{directive},
+        isReplacement{isReplacement} {}
 
   const pft::Evaluation &evaluation;
   llvm::omp::Directive directive;
-  // A partial frame records an entered constituent of a combined directive.
-  // A complete frame supplies the source context when it is absent from PFT.
-  bool isPartial;
+  // A replacement records the selected directive for nested evaluations.
+  // Other frames record constructs whose regions have already been entered.
+  bool isReplacement;
 };
 
 struct DeclareTargetCaptureInfo {

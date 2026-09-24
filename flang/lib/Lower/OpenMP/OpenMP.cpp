@@ -1896,8 +1896,12 @@ static void createBodyOfOp(mlir::Operation &op, const OpWithBodyGenInfo &info,
     return {};
   }();
 
+  // A loop body uses the collapsed DO evaluation, but its context belongs to
+  // the owning directive. This also covers intervening code between loops.
+  auto &contextEval =
+      info.outerCollapseEval ? *info.outerCollapseEval : info.eval;
   mlir::SaveStateStack<OpenMPContextFrame> context{
-      info.converter.getStateStack(), info.eval, info.dir, /*isPartial=*/true};
+      info.converter.getStateStack(), contextEval, info.dir};
 
   // Mark the earliest insertion point.
   mlir::Operation *marker = insertMarker(firOpBuilder);
@@ -2050,8 +2054,7 @@ static void genBodyOfTargetDataOp(
 
   genEntryBlock(firOpBuilder, args.asEntryBlockArgs(), dataOp.getRegion());
   mlir::SaveStateStack<OpenMPContextFrame> context{
-      converter.getStateStack(), eval, llvm::omp::Directive::OMPD_target_data,
-      /*isPartial=*/true};
+      converter.getStateStack(), eval, llvm::omp::Directive::OMPD_target_data};
   bindEntryBlockArgs(converter, dataOp, args);
   auto argIface = llvm::cast<mlir::omp::BlockArgOpenMPOpInterface>(*dataOp);
   llvm::SmallVector<const semantics::Symbol *> sourceUseDeviceAddrSyms{
@@ -2139,8 +2142,7 @@ static void genBodyOfTargetOp(
   mlir::Region &region = targetOp.getRegion();
   genEntryBlock(firOpBuilder, args.asEntryBlockArgs(), region);
   mlir::SaveStateStack<OpenMPContextFrame> context{
-      converter.getStateStack(), eval, llvm::omp::Directive::OMPD_target,
-      /*isPartial=*/true};
+      converter.getStateStack(), eval, llvm::omp::Directive::OMPD_target};
   bindEntryBlockArgs(converter, targetOp, args);
   if (HostEvalInfo *hostEvalInfo = getHostEvalInfoStackTop(converter))
     hostEvalInfo->bindOperands(argIface.getHostEvalBlockArgs());
@@ -5251,6 +5253,14 @@ static mlir::omp::DistributeOp genCompositeDistributeParallelDo(
   ConstructQueue::const_iterator parallelItem = std::next(distributeItem);
   ConstructQueue::const_iterator doItem = std::next(parallelItem);
 
+  // Clause expressions follow source nesting even though the composite
+  // operations place PARALLEL outside DISTRIBUTE.
+  mlir::omp::DistributeOperands distributeClauseOps;
+  genDistributeClauses(converter, semaCtx, stmtCtx, distributeItem->clauses,
+                       loc, distributeClauseOps);
+  mlir::SaveStateStack<OpenMPContextFrame> distributeContext{
+      converter.getStateStack(), eval, llvm::omp::Directive::OMPD_distribute};
+
   // Create parent omp.parallel first.
   mlir::omp::ParallelOperands parallelClauseOps;
   llvm::SmallVector<Object> parallelReductionObjects;
@@ -5271,14 +5281,9 @@ static mlir::omp::DistributeOp genCompositeDistributeParallelDo(
   genParallelOp(converter, symTable, semaCtx, eval, loc, queue, parallelItem,
                 parallelClauseOps, parallelArgs, &dsp, /*isComposite=*/true);
   mlir::SaveStateStack<OpenMPContextFrame> context{
-      converter.getStateStack(), eval, llvm::omp::Directive::OMPD_parallel,
-      /*isPartial=*/true};
+      converter.getStateStack(), eval, llvm::omp::Directive::OMPD_parallel};
 
   // Clause processing.
-  mlir::omp::DistributeOperands distributeClauseOps;
-  genDistributeClauses(converter, semaCtx, stmtCtx, distributeItem->clauses,
-                       loc, distributeClauseOps);
-
   mlir::omp::WsloopOperands wsloopClauseOps;
   llvm::SmallVector<Object> wsloopReductionObjects;
   genWsloopClauses(converter, semaCtx, stmtCtx, doItem->clauses, loc,
@@ -5322,6 +5327,14 @@ static mlir::omp::DistributeOp genCompositeDistributeParallelDoSimd(
   ConstructQueue::const_iterator doItem = std::next(parallelItem);
   ConstructQueue::const_iterator simdItem = std::next(doItem);
 
+  // Evaluate DISTRIBUTE clauses before entering its source context and then
+  // PARALLEL, as in the explicit nesting.
+  mlir::omp::DistributeOperands distributeClauseOps;
+  genDistributeClauses(converter, semaCtx, stmtCtx, distributeItem->clauses,
+                       loc, distributeClauseOps);
+  mlir::SaveStateStack<OpenMPContextFrame> distributeContext{
+      converter.getStateStack(), eval, llvm::omp::Directive::OMPD_distribute};
+
   // Create parent omp.parallel first.
   mlir::omp::ParallelOperands parallelClauseOps;
   llvm::SmallVector<Object> parallelReductionObjects;
@@ -5344,17 +5357,12 @@ static mlir::omp::DistributeOp genCompositeDistributeParallelDoSimd(
                 parallelClauseOps, parallelArgs, &parallelItemDSP,
                 /*isComposite=*/true);
   mlir::SaveStateStack<OpenMPContextFrame> context{
-      converter.getStateStack(), eval, llvm::omp::Directive::OMPD_parallel,
-      /*isPartial=*/true};
+      converter.getStateStack(), eval, llvm::omp::Directive::OMPD_parallel};
 
   // Clause processing.
   // Use a shared cache so that both wsloop and simd produce the same SSA
   // values for array/box reduction variables. See genCompositeDoSimd.
   llvm::DenseMap<const semantics::Symbol *, mlir::Value> reductionVarCache;
-
-  mlir::omp::DistributeOperands distributeClauseOps;
-  genDistributeClauses(converter, semaCtx, stmtCtx, distributeItem->clauses,
-                       loc, distributeClauseOps);
 
   mlir::omp::WsloopOperands wsloopClauseOps;
   llvm::SmallVector<Object> wsloopReductionObjects;
@@ -7670,7 +7678,8 @@ static void genMetadirective(lower::AbstractConverter &converter,
         TODO(variantLoc, "THREADPRIVATE loop iteration variable in "
                          "loop-associated METADIRECTIVE variant");
       mlir::SaveStateStack<OpenMPContextFrame> context{
-          converter.getStateStack(), eval, spec->DirId()};
+          converter.getStateStack(), eval, spec->DirId(),
+          /*isReplacement=*/true};
       genOMPDispatch(converter, symTable, semaCtx, eval, variantLoc, queue,
                      queue.begin(), dsaGuard.getMarkedSymbols());
       return;
@@ -7686,7 +7695,8 @@ static void genMetadirective(lower::AbstractConverter &converter,
 
     if (consumesBody) {
       mlir::SaveStateStack<OpenMPContextFrame> context{
-          converter.getStateStack(), eval, spec->DirId()};
+          converter.getStateStack(), eval, spec->DirId(),
+          /*isReplacement=*/true};
       genOMPDispatch(converter, symTable, semaCtx, eval, variantLoc, queue,
                      queue.begin());
     } else {
