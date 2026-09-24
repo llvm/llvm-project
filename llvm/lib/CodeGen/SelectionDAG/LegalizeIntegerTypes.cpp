@@ -90,6 +90,9 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::VECTOR_COMPRESS:
     Res = PromoteIntRes_VECTOR_COMPRESS(N);
     break;
+  case ISD::VECTOR_SHUFFLE_VAR:
+    Res = PromoteIntRes_VECTOR_SHUFFLE_VAR(N);
+    break;
   case ISD::SELECT:
   case ISD::VSELECT:
   case ISD::VP_MERGE:
@@ -1037,6 +1040,12 @@ SDValue DAGTypeLegalizer::PromoteIntRes_VECTOR_COMPRESS(SDNode *N) {
   SDValue Passthru = GetPromotedInteger(N->getOperand(2));
   return DAG.getNode(ISD::VECTOR_COMPRESS, SDLoc(N), Vec.getValueType(), Vec,
                      N->getOperand(1), Passthru);
+}
+
+SDValue DAGTypeLegalizer::PromoteIntRes_VECTOR_SHUFFLE_VAR(SDNode *N) {
+  SDValue V = GetPromotedInteger(N->getOperand(0));
+  return DAG.getNode(ISD::VECTOR_SHUFFLE_VAR, SDLoc(N), V.getValueType(), V,
+                     N->getOperand(1));
 }
 
 /// Promote the overflow flag of an overflowing arithmetic node.
@@ -2050,6 +2059,9 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::VECTOR_COMPRESS:
     Res = PromoteIntOp_VECTOR_COMPRESS(N, OpNo);
     break;
+  case ISD::VECTOR_SHUFFLE_VAR:
+    Res = PromoteIntOp_VECTOR_SHUFFLE_VAR(N, OpNo);
+    break;
   case ISD::TRUNCATE:     Res = PromoteIntOp_TRUNCATE(N); break;
   case ISD::BF16_TO_FP:
   case ISD::FP16_TO_FP:
@@ -2631,6 +2643,15 @@ SDValue DAGTypeLegalizer::PromoteIntOp_VECTOR_COMPRESS(SDNode *N,
   SDValue Passthru = N->getOperand(2);
   SDValue Mask = PromoteTargetBoolean(N->getOperand(1), VT);
   return DAG.getNode(ISD::VECTOR_COMPRESS, SDLoc(N), VT, Vec, Mask, Passthru);
+}
+
+SDValue DAGTypeLegalizer::PromoteIntOp_VECTOR_SHUFFLE_VAR(SDNode *N,
+                                                          unsigned OpNo) {
+  assert(OpNo == 1 && "The source shares the result's type, so promoting it "
+                      "is a result promotion.");
+  // Mask elements are unsigned.
+  SDValue Mask = ZExtPromotedInteger(N->getOperand(1));
+  return SDValue(DAG.UpdateNodeOperands(N, N->getOperand(0), Mask), 0);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_TRUNCATE(SDNode *N) {

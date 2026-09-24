@@ -13680,6 +13680,63 @@ SDValue TargetLowering::expandVECTOR_COMPRESS(SDNode *Node,
   return DAG.getLoad(VecVT, DL, Chain, StackPtr, PtrInfo, Alignment);
 }
 
+SDValue TargetLowering::expandVECTOR_SHUFFLE_VAR(SDNode *Node,
+                                                 SelectionDAG &DAG) const {
+  SDLoc DL(Node);
+  SDValue V = Node->getOperand(0);
+  SDValue Mask = Node->getOperand(1);
+
+  EVT VecVT = Node->getValueType(0);
+  EVT ScalarVT = VecVT.getScalarType();
+  EVT MaskScalarVT = Mask.getValueType().getScalarType();
+
+  // Needs to be handled by targets that have scalable vector types.
+  if (VecVT.isScalableVector())
+    report_fatal_error(
+        "Cannot expand vector_shuffle_var for scalable vectors.");
+
+  // Sub-byte elements can't be addressed on the stack, so shuffle a vector of
+  // wider integers instead.
+  if (!ScalarVT.isByteSized()) {
+    EVT WideVT;
+    for (MVT EltVT : {MVT::i8, MVT::i16, MVT::i32, MVT::i64}) {
+      WideVT = VecVT.changeVectorElementType(*DAG.getContext(), EltVT);
+      if (isTypeLegal(WideVT))
+        break;
+    }
+    SDValue Wide = DAG.getNode(ISD::ANY_EXTEND, DL, WideVT, V);
+    Wide = DAG.getNode(ISD::VECTOR_SHUFFLE_VAR, DL, WideVT, Wide, Mask);
+    return DAG.getNode(ISD::TRUNCATE, DL, VecVT, Wide);
+  }
+
+  // Store V to the stack and load Res[i] from V[umin(Mask[i], NumElts - 1)].
+  // Out-of-range lanes are poison, so clamping them to the last element is
+  // fine.
+  Align Alignment = DAG.getReducedAlign(VecVT, /*UseABI=*/false);
+  SDValue StackPtr = DAG.CreateStackTemporary(VecVT.getStoreSize(), Alignment);
+  auto &MF = DAG.getMachineFunction();
+  auto FrameIndex = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
+  auto PtrInfo = MachinePointerInfo::getFixedStack(MF, FrameIndex);
+
+  SDValue Chain =
+      DAG.getStore(DAG.getEntryNode(), DL, V, StackPtr, PtrInfo, Alignment);
+
+  // Freeze the mask so that poison or undef indices are still clamped.
+  Mask = DAG.getFreeze(Mask);
+
+  MVT IdxVT = getVectorIdxTy(DAG.getDataLayout());
+  unsigned NumElts = VecVT.getVectorNumElements();
+  SmallVector<SDValue, 16> Elts;
+  Elts.reserve(NumElts);
+  for (unsigned I = 0; I < NumElts; ++I) {
+    SDValue Idx = DAG.getExtractVectorElt(DL, MaskScalarVT, Mask, I);
+    Idx = DAG.getZExtOrTrunc(Idx, DL, IdxVT);
+    SDValue EltPtr = getVectorElementPointer(DAG, StackPtr, VecVT, Idx);
+    Elts.push_back(DAG.getLoad(ScalarVT, DL, Chain, EltPtr, PtrInfo));
+  }
+  return DAG.getBuildVector(VecVT, DL, Elts);
+}
+
 SDValue TargetLowering::expandCttzElts(SDNode *Node, SelectionDAG &DAG) const {
   SDLoc DL(Node);
   EVT VT = Node->getValueType(0);
