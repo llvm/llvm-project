@@ -71,7 +71,9 @@
 #define crt_copysignl(x, y) __builtin_copysignl((x), (y))
 // We define __has_builtin to always return 0 for GCC versions below 10,
 // but __builtin_copysignf128 is available since version 7.
-#if __has_builtin(__builtin_copysignf128) ||                                   \
+#if defined(__MVS__)
+#define crt_copysignf128(x, y) crt_copysignl((x), (y))
+#elif __has_builtin(__builtin_copysignf128) ||                                   \
     (defined(__GNUC__) && __GNUC__ >= 7)
 #define crt_copysignf128(x, y) __builtin_copysignf128((x), (y))
 #elif __has_builtin(__builtin_copysignq)
@@ -89,7 +91,9 @@
 #define crt_fabsl(x) __builtin_fabsl((x))
 // We define __has_builtin to always return 0 for GCC versions below 10,
 // but __builtin_fabsf128 is available since version 7.
-#if __has_builtin(__builtin_fabsf128) || (defined(__GNUC__) && __GNUC__ >= 7)
+#if defined(__MVS__)
+#define crt_fabsf128(x) __builtin_fabsl((x))
+#elif __has_builtin(__builtin_fabsf128) || (defined(__GNUC__) && __GNUC__ >= 7)
 #define crt_fabsf128(x) __builtin_fabsf128((x))
 #elif __has_builtin(__builtin_fabsq)
 #define crt_fabsf128(x) __builtin_fabsq((x))
