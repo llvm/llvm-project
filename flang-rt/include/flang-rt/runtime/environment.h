@@ -9,7 +9,6 @@
 #ifndef FLANG_RT_RUNTIME_ENVIRONMENT_H_
 #define FLANG_RT_RUNTIME_ENVIRONMENT_H_
 
-#include "array.h"
 #include "flang/Common/optional.h"
 #include "flang/Decimal/decimal.h"
 #include "flang/Runtime/entry-names.h"
@@ -78,7 +77,8 @@ struct ExecutionEnvironment {
   enum decimal::FortranRounding defaultOutputRoundingMode{
       decimal::FortranRounding::RoundNearest}; // RP(==PN)
   Convert conversion{Convert::Unknown}; // FORT_CONVERT
-  DynamicArray<ConvertUnit> convertUnits; // FORT_CONVERT_UNIT
+  ConvertUnit *convertUnits{nullptr}; // FORT_CONVERT_UNIT
+  std::size_t numConvertUnits{0};
   bool noStopMessage{false}; // NO_STOP_MESSAGE=1 inhibits "Fortran STOP"
   // FLANG_TIMEF_IN_MILLISECONDS=1 sets TIMEF resolution to milliseconds.
   // Default resolution is seconds.

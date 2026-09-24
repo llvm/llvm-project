@@ -210,11 +210,19 @@ bool ExecutionEnvironment::ParseFortConvertUnit(const char *cenvStr) {
         break;
       }
 
-      ConvertUnit cu;
-      cu.conversion = conversion;
-      cu.startUnit = lb;
-      cu.endUnit = ub;
-      convertUnits.emplace_back(std::move(cu));
+      // Resize convertUnits on each iteration.  This is a small array.
+      // Overhead of resizing convertUnits on each call is negligible.
+      ConvertUnit *tmpConvertUnits{(ConvertUnit *)std::realloc(
+          convertUnits, (numConvertUnits + 1) * sizeof(*convertUnits))};
+      if (!tmpConvertUnits) {
+        success = false;
+        break;
+      }
+      convertUnits = tmpConvertUnits;
+      convertUnits[numConvertUnits].conversion = conversion;
+      convertUnits[numConvertUnits].startUnit = lb;
+      convertUnits[numConvertUnits].endUnit = ub;
+      ++numConvertUnits;
     }
   }
 
@@ -223,8 +231,9 @@ bool ExecutionEnvironment::ParseFortConvertUnit(const char *cenvStr) {
   if (success) {
     conversion = gblConversion;
   } else {
-    // Failure(s)
-    convertUnits.clear();
+    // Failure(s) - backout anything that could be permanent.
+    std::free(convertUnits);
+    numConvertUnits = 0;
   }
   return success;
 }
@@ -237,11 +246,11 @@ bool ExecutionEnvironment::ParseFortConvertUnit(const char *cenvStr) {
 Convert ExecutionEnvironment::UnitRtConvert(int unitNumber) {
   Convert convertReturn{Convert::Unknown};
   // convertUnits is a small array, but still iterate backwards.
-  // rbegin() and rend() are not available.
-  for (auto it = convertUnits.end(); it != convertUnits.begin();) {
-    --it;
-    if (unitNumber >= it->startUnit && unitNumber <= it->endUnit) {
-      convertReturn = it->conversion;
+  for (auto i = numConvertUnits; i != 0;) {
+    --i;
+    if (unitNumber >= convertUnits[i].startUnit &&
+        unitNumber <= convertUnits[i].endUnit) {
+      convertReturn = convertUnits[i].conversion;
       break;
     }
   }
