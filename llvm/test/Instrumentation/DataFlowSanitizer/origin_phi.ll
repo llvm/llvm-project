@@ -7,7 +7,7 @@ define i32 @phiop(i32 %a, i32 %b, i1 %c) {
 ; CHECK-LABEL: define i32 @phiop(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i1 [[C:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr getelementptr inbounds (i8, ptr @__dfsan_arg_origin_tls, i64 4), align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @__dfsan_arg_origin_tls, align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr @__dfsan_arg_tls, align 2

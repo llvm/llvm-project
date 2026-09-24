@@ -2019,7 +2019,7 @@ public:
   Value *CreateGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
                    const Twine &Name = "",
                    GEPNoWrapFlags NW = GEPNoWrapFlags::none()) {
-    if (auto *V = Folder.FoldGEP(Ty, Ptr, IdxList, NW))
+    if (auto *V = Folder.FoldGEP(BB->getDataLayout(), Ty, Ptr, IdxList, NW))
       return V;
     return Insert(GetElementPtrInst::Create(Ty, Ptr, IdxList, NW), Name);
   }

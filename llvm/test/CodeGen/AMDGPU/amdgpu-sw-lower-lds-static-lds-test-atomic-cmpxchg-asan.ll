@@ -19,8 +19,8 @@ define amdgpu_kernel void @atomic_xchg_kernel(ptr addrspace(1) %out, [8 x i32], 
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[TMP6]], 0
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[MALLOC:%.*]], label [[TMP20:%.*]]
 ; CHECK:       Malloc:
-; CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds ([[LLVM_AMDGCN_SW_LDS_ATOMIC_XCHG_KERNEL_MD_TYPE:%.*]], ptr addrspace(1) @llvm.amdgcn.sw.lds.atomic_xchg_kernel.md, i32 0, i32 1, i32 0), align 4
-; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds ([[LLVM_AMDGCN_SW_LDS_ATOMIC_XCHG_KERNEL_MD_TYPE]], ptr addrspace(1) @llvm.amdgcn.sw.lds.atomic_xchg_kernel.md, i32 0, i32 1, i32 2), align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @llvm.amdgcn.sw.lds.atomic_xchg_kernel.md, i64 12), align 4
+; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @llvm.amdgcn.sw.lds.atomic_xchg_kernel.md, i64 20), align 4
 ; CHECK-NEXT:    [[TMP10:%.*]] = add i32 [[TMP8]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = zext i32 [[TMP10]] to i64
 ; CHECK-NEXT:    [[TMP12:%.*]] = call ptr @llvm.returnaddress.p0(i32 0)

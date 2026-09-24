@@ -124,7 +124,7 @@ define void @gep_4d_test ()  {
 
 define void @global_gep_load() {
   ; CHECK-LABEL: define void @global_gep_load(
-  ; CHECK: {{.*}} = load i32, ptr getelementptr inbounds ([24 x i32], ptr @a.1dim, i32 0, i32 6), align 4
+  ; CHECK: {{.*}} = load i32, ptr getelementptr inbounds (i8, ptr @a.1dim, i64 24), align 4
   ; CHECK-NEXT:    ret void
   %1 = getelementptr inbounds [2 x [3 x [4 x i32]]], [2 x [3 x [4 x i32]]]* @a, i32 0, i32 0
   %2 = getelementptr inbounds [3 x [4 x i32]], [3 x [4 x i32]]* %1, i32 0, i32 1
@@ -135,7 +135,7 @@ define void @global_gep_load() {
 
 define void @global_nested_geps() {
   ; CHECK-LABEL: define void @global_nested_geps(
-  ; CHECK: {{.*}} = load i32, ptr getelementptr inbounds ([24 x i32], ptr @a.1dim, i32 0, i32 6), align 4
+  ; CHECK: {{.*}} = load i32, ptr getelementptr inbounds (i8, ptr @a.1dim, i64 24), align 4
   ; CHECK-NEXT:    ret void
   %1 = load i32, i32* getelementptr inbounds ([4 x i32], [4 x i32]* getelementptr inbounds ([3 x [4 x i32]], [3 x [4 x i32]]* getelementptr inbounds ([2 x [3 x [4 x i32]]], [2 x [3 x [4 x i32]]]* @a, i32 0, i32 0), i32 0, i32 1), i32 0, i32 2), align 4
   ret void
@@ -185,7 +185,7 @@ define void @global_incomplete_gep_chain(i32 %row, i32 %col) {
 }
 
 define void @global_gep_store() {
-  ; CHECK: store i32 1, ptr getelementptr inbounds ([24 x i32], ptr @b.1dim, i32 0, i32 13), align 4
+  ; CHECK: store i32 1, ptr getelementptr inbounds (i8, ptr @b.1dim, i64 52), align 4
   ; CHECK-NEXT:    ret void
   %1 = getelementptr inbounds [2 x [3 x [4 x i32]]], [2 x [3 x [4 x i32]]]* @b, i32 0, i32 1
   %2 = getelementptr inbounds [3 x [4 x i32]], [3 x [4 x i32]]* %1, i32 0, i32 0
@@ -211,7 +211,7 @@ define void @two_index_gep() {
 
 define void @two_index_gep_const() {
   ; CHECK-LABEL: define void @two_index_gep_const(
-  ; CHECK-NEXT: load float, ptr addrspace(3) getelementptr inbounds nuw ([4 x float], ptr addrspace(3) @g.1dim, i32 0, i32 3), align 4
+  ; CHECK-NEXT: load float, ptr addrspace(3) getelementptr inbounds nuw (i8, ptr addrspace(3) @g.1dim, i64 12), align 4
   ; CHECK-NEXT: ret void
   %1 = getelementptr inbounds nuw [2 x [2 x float]], ptr addrspace(3) @g, i32 0, i32 1, i32 1
   %3 = load float, ptr addrspace(3) %1, align 4

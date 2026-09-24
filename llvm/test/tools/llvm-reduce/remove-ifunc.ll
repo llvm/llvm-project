@@ -117,8 +117,8 @@ define void @call_ifunc_removed_is_argument(ptr %ptr) {
 ; Check a call user calling the ifunc, and using the ifunc as an argument
 define void @call_ifunc_removed_both_call_argument(ptr %ptr) {
   ; CHECK-FINAL-LABEL: define void @call_ifunc_removed_both_call_argument(
-  ; CHECK-FINAL-NEXT: %1 = load ptr, ptr getelementptr inbounds ([[[TABLE_SIZE]] x ptr], ptr [[TABLE]], i32 0, i32 3), align 8
-  ; CHECK-FINAL-NEXT: %2 = load ptr, ptr getelementptr inbounds ([[[TABLE_SIZE]] x ptr], ptr [[TABLE]], i32 0, i32 3), align 8
+  ; CHECK-FINAL-NEXT: %1 = load ptr, ptr getelementptr inbounds (i8, ptr [[TABLE]], i64 24), align 8
+  ; CHECK-FINAL-NEXT: %2 = load ptr, ptr getelementptr inbounds (i8, ptr [[TABLE]], i64 24), align 8
   ; CHECK-FINAL-NEXT: call void %1(ptr %1)
   ; CHECK-FINAL-NEXT: ret void
   call void @ifunc_ptr_arg(ptr @ifunc_ptr_arg)
@@ -128,7 +128,7 @@ define void @call_ifunc_removed_both_call_argument(ptr %ptr) {
 define i32 @call_ifunc_nonvoid(double %arg) {
   ; CHECK-FINAL-LABEL: define i32 @call_ifunc_nonvoid(double %arg) {
   ; CHECK-FINAL-NEXT: %ret0 = call i32 @ifunc_nonvoid_kept0(double %arg)
-  ; CHECK-FINAL-NEXT: %1 = load ptr, ptr getelementptr inbounds ([[[TABLE_SIZE]] x ptr], ptr [[TABLE]], i32 0, i32 4), align 8
+  ; CHECK-FINAL-NEXT: %1 = load ptr, ptr getelementptr inbounds (i8, ptr [[TABLE]], i64 32), align 8
   ; CHECK-FINAL-NEXT: %ret1 = call i32 %1(double %arg)
   ; CHECK-FINAL-NEXT: %add = add i32 %ret0, %ret1
   ; CHECK-FINAL-NEXT: ret i32 %add
@@ -143,7 +143,7 @@ define float @call_different_type_ifunc_nonvoid(double %arg) {
   ; CHECK-FINAL-LABEL: define float @call_different_type_ifunc_nonvoid(double %arg) {
   ; CHECK-FINAL-NEXT: %cast.arg = bitcast double %arg to i64
   ; CHECK-FINAL-NEXT: %ret0 = call float @ifunc_nonvoid_kept0(i64 %cast.arg)
-  ; CHECK-FINAL-NEXT: %1 = load ptr, ptr getelementptr inbounds ([[[TABLE_SIZE]] x ptr], ptr [[TABLE]], i32 0, i32 4), align 8
+  ; CHECK-FINAL-NEXT: %1 = load ptr, ptr getelementptr inbounds (i8, ptr [[TABLE]], i64 32), align 8
   ; CHECK-FINAL-NEXT: %ret1 = call float %1(i64 %cast.arg)
   ; CHECK-FINAL-NEXT: %fadd = fadd float %ret0, %ret1
   ; CHECK-FINAL-NEXT: ret float %fadd
@@ -170,7 +170,7 @@ define i32 @call_addrspacecast_callee_type_ifunc_nonvoid(double %arg) {
 
 define i32 @call_used_in_initializer(double %arg) {
   ; CHECK-FINAL-LABEL: define i32 @call_used_in_initializer(double %arg) {
-  ; CHECK-FINAL-NEXT: %1 = load ptr, ptr getelementptr inbounds ([8 x ptr], ptr @0, i32 0, i32 7), align 8
+  ; CHECK-FINAL-NEXT: %1 = load ptr, ptr getelementptr inbounds (i8, ptr @0, i64 56), align 8
   ; CHECK-FINAL-NEXT: %ret = call i32 %1(double %arg)
   ; CHECK-FINAL-NEXT: ret i32 %ret
   %ret = call i32 @ifunc_constant_initializer_user(double %arg)
@@ -181,18 +181,18 @@ define i32 @call_used_in_initializer(double %arg) {
 ; CHECK-FINAL-NEXT: %1 = call ptr @resolver1()
 ; CHECK-FINAL-NEXT: store ptr %1, ptr @0, align 8
 ; CHECK-FINAL-NEXT: %2 = call ptr @resolver2()
-; CHECK-FINAL-NEXT: store ptr %2, ptr getelementptr inbounds ([8 x ptr], ptr @0, i32 0, i32 1), align 8
+; CHECK-FINAL-NEXT: store ptr %2, ptr getelementptr inbounds (i8, ptr @0, i64 8), align 8
 ; CHECK-FINAL-NEXT: %3 = call ptr @resolver3()
-; CHECK-FINAL-NEXT: store ptr %3, ptr getelementptr inbounds ([8 x ptr], ptr @0, i32 0, i32 2), align 8
+; CHECK-FINAL-NEXT: store ptr %3, ptr getelementptr inbounds (i8, ptr @0, i64 16), align 8
 ; CHECK-FINAL-NEXT: %4 = call ptr @resolver4()
-; CHECK-FINAL-NEXT: store ptr %4, ptr getelementptr inbounds ([8 x ptr], ptr @0, i32 0, i32 3), align 8
+; CHECK-FINAL-NEXT: store ptr %4, ptr getelementptr inbounds (i8, ptr @0, i64 24), align 8
 ; CHECK-FINAL-NEXT: %5 = call ptr @resolver5()
-; CHECK-FINAL-NEXT: store ptr %5, ptr getelementptr inbounds ([8 x ptr], ptr @0, i32 0, i32 4), align 8
+; CHECK-FINAL-NEXT: store ptr %5, ptr getelementptr inbounds (i8, ptr @0, i64 32), align 8
 ; CHECK-FINAL-NEXT: %6 = call ptr @resolver5()
-; CHECK-FINAL-NEXT: store ptr %6, ptr getelementptr inbounds ([8 x ptr], ptr @0, i32 0, i32 5), align 8
+; CHECK-FINAL-NEXT: store ptr %6, ptr getelementptr inbounds (i8, ptr @0, i64 40), align 8
 ; CHECK-FINAL-NEXT: %7 = call ptr @resolver5()
-; CHECK-FINAL-NEXT: store ptr %7, ptr getelementptr inbounds ([8 x ptr], ptr @0, i32 0, i32 6), align 8
+; CHECK-FINAL-NEXT: store ptr %7, ptr getelementptr inbounds (i8, ptr @0, i64 48), align 8
 ; CHECK-FINAL-NEXT: %8 = call ptr @resolver5()
-; CHECK-FINAL-NEXT: store ptr %8, ptr getelementptr inbounds ([8 x ptr], ptr @0, i32 0, i32 7), align 8
+; CHECK-FINAL-NEXT: store ptr %8, ptr getelementptr inbounds (i8, ptr @0, i64 56), align 8
 ; CHECK-FINAL-NEXT: ret void
 ; CHECK-FINAL-NEXT: }

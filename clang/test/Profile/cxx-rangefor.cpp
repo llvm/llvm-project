@@ -14,21 +14,21 @@
 void range_for() {
   int arr[] = {1, 2, 3, 4, 5};
   int sum = 0;
-  // PGOGEN: store {{.*}} @[[RFC]], i32 0, i32 1
+  // PGOGEN: store {{.*}} @[[RFC]], i64 8
   // PGOUSE: br {{.*}} !prof ![[RF1:[0-9]+]]
   for (auto i : arr) {
-    // PGOGEN: store {{.*}} @[[RFC]], i32 0, i32 2
+    // PGOGEN: store {{.*}} @[[RFC]], i64 16
     // PGOUSE: br {{.*}} !prof ![[RF2:[0-9]+]]
     if (i == 3)
       continue;
     sum += i;
-    // PGOGEN: store {{.*}} @[[RFC]], i32 0, i32 3
+    // PGOGEN: store {{.*}} @[[RFC]], i64 24
     // PGOUSE: br {{.*}} !prof ![[RF3:[0-9]+]]
     if (sum >= 7)
       break;
   }
 
-  // PGOGEN: store {{.*}} @[[RFC]], i32 0, i32 4
+  // PGOGEN: store {{.*}} @[[RFC]], i64 32
   // PGOUSE: br {{.*}} !prof ![[RF4:[0-9]+]]
   if (sum) {}
 }

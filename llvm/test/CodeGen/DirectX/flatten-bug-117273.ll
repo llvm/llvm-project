@@ -8,8 +8,8 @@
 define internal void @main() {
 ; CHECK-LABEL: define internal void @main() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[DOTI0:%.*]] = load float, ptr getelementptr ([6 x float], ptr @ZerroInitArr.1dim, i32 0, i32 3), align 16
-; CHECK-NEXT:    [[DOTI03:%.*]] = load float, ptr getelementptr ([6 x float], ptr @ZerroInitArr.1dim, i32 0, i32 6), align 16
+; CHECK-NEXT:    [[DOTI01:%.*]] = load float, ptr getelementptr (i8, ptr @ZerroInitArr.1dim, i32 12), align 16
+; CHECK-NEXT:    [[DOTI032:%.*]] = load float, ptr getelementptr (i8, ptr @ZerroInitArr.1dim, i32 24), align 16
 ; CHECK-NEXT:    ret void
 ;
 entry:
