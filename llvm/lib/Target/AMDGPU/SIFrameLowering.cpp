@@ -18,7 +18,6 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
-#include "llvm/Support/LEB128.h"
 #include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
@@ -51,19 +50,10 @@ static MCRegister findUnusedRegister(MachineRegisterInfo &MRI,
   return MCRegister();
 }
 
-static void encodeDwarfRegisterLocation(int DwarfReg, raw_ostream &OS) {
-  assert(DwarfReg >= 0);
-  if (DwarfReg < 32) {
-    OS << uint8_t(dwarf::DW_OP_reg0 + DwarfReg);
-  } else {
-    OS << uint8_t(dwarf::DW_OP_regx);
-    encodeULEB128(DwarfReg, OS);
-  }
-}
-
 static MCCFIInstruction createScaledCFAInPrivateWave(const GCNSubtarget &ST,
                                                      int64_t DwarfStackPtrReg) {
   assert(ST.hasFlatScratchEnabled());
+  assert(DwarfStackPtrReg >= 0);
 
   // When flat scratch is enabled, the stack pointer is an address in the
   // private_lane DWARF address space (i.e. swizzled), but in order to
@@ -72,26 +62,9 @@ static MCCFIInstruction createScaledCFAInPrivateWave(const GCNSubtarget &ST,
   // DWARF address space (i.e. unswizzled). To achieve this we scale the stack
   // pointer by the wavefront size, implemented as (SP << wave_size_log2).
   const unsigned WavefrontSizeLog2 = ST.getWavefrontSizeLog2();
-  assert(WavefrontSizeLog2 < 32);
-
-  SmallString<20> Block;
-  raw_svector_ostream OSBlock(Block);
-  encodeDwarfRegisterLocation(DwarfStackPtrReg, OSBlock);
-  OSBlock << uint8_t(dwarf::DW_OP_deref_size) << uint8_t(SGPRByteSize)
-          << uint8_t(dwarf::DW_OP_lit0 + WavefrontSizeLog2)
-          << uint8_t(dwarf::DW_OP_shl)
-          << uint8_t(dwarf::DW_OP_lit0 +
-                     dwarf::DW_ASPACE_LLVM_AMDGPU_private_wave)
-          << uint8_t(dwarf::DW_OP_LLVM_user)
-          << uint8_t(dwarf::DW_OP_LLVM_form_aspace_address);
-
-  SmallString<20> CFIInst;
-  raw_svector_ostream OSCFIInst(CFIInst);
-  OSCFIInst << uint8_t(dwarf::DW_CFA_def_cfa_expression);
-  encodeULEB128(Block.size(), OSCFIInst);
-  OSCFIInst << Block;
-
-  return MCCFIInstruction::createEscape(nullptr, OSCFIInst.str());
+  return MCCFIInstruction::createLLVMDefCfaRegisterAddressTransform(
+      nullptr, DwarfStackPtrReg, SGPRByteSize, WavefrontSizeLog2,
+      dwarf::DW_ASPACE_LLVM_AMDGPU_private_wave);
 }
 
 void SIFrameLowering::emitDefCFA(MachineBasicBlock &MBB,
@@ -775,20 +748,9 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
   if (MF.needsFrameMoves()) {
     // On entry the SP/FP are not set up, so we need to define the CFA in terms
     // of a literal location expression.
-    static const char CFAEncodedInstUserOpsArr[] = {
-        dwarf::DW_CFA_def_cfa_expression,
-        4, // length
-        static_cast<char>(dwarf::DW_OP_lit0),
-        static_cast<char>(dwarf::DW_OP_lit0 +
-                          dwarf::DW_ASPACE_LLVM_AMDGPU_private_wave),
-        static_cast<char>(dwarf::DW_OP_LLVM_user),
-        static_cast<char>(dwarf::DW_OP_LLVM_form_aspace_address)};
-    static StringRef CFAEncodedInstUserOps =
-        StringRef(CFAEncodedInstUserOpsArr, sizeof(CFAEncodedInstUserOpsArr));
     buildCFI(MBB, I, DL,
-             MCCFIInstruction::createEscape(nullptr, CFAEncodedInstUserOps,
-                                            SMLoc(),
-                                            "CFA is 0 in private_wave aspace"));
+             MCCFIInstruction::createLLVMDefCfaConstantAddress(
+                 nullptr, 0, dwarf::DW_ASPACE_LLVM_AMDGPU_private_wave));
     // Unwinding halts when the return address (PC) is undefined.
     buildCFI(MBB, I, DL,
              MCCFIInstruction::createUndefined(
