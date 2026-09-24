@@ -2132,6 +2132,25 @@ TEST_F(ComputeKnownFPClassTest, SelfPhiSecondArg) {
   expectKnownFPClass(~fcInf, std::nullopt);
 }
 
+// A phi with a single incoming value, as created by LCSSA, doesn't limit the
+// recursion depth.
+TEST_F(ComputeKnownFPClassTest, PhiSingleIncoming) {
+  parseAssembly("declare float @llvm.fabs.f32(float)\n"
+                "define float @test(float %arg, i1 %c) {\n"
+                "entry:\n"
+                "  br label %loop\n"
+                "loop:\n"
+                "  %a = call float @llvm.fabs.f32(float %arg)\n"
+                "  %b = fneg float %a\n"
+                "  %d = fneg float %b\n"
+                "  br i1 %c, label %loop, label %exit\n"
+                "exit:\n"
+                "  %A = phi float [ %d, %loop ]\n"
+                "  ret float %A\n"
+                "}\n");
+  expectKnownFPClass(fcPositive | fcNan, false);
+}
+
 TEST_F(ComputeKnownFPClassTest, CannotBeOrderedLessThanZero) {
   parseAssembly("define float @test(float %arg) {\n"
                 "  %A = fmul float %arg, %arg"
@@ -2732,6 +2751,54 @@ TEST_F(ValueTrackingTest, IsImpliedConditionBitMaskSigned) {
   )");
   const DataLayout &DL = M->getDataLayout();
   EXPECT_EQ(isImpliedCondition(A, A2, DL, true), true);
+}
+
+// A phi with a single incoming value, as created by LCSSA, doesn't limit the
+// recursion depth.
+TEST_F(ComputeKnownBitsTest, ComputeKnownBitsPhiSingleIncoming) {
+  parseAssembly("define i32 @test(i32 %x, i1 %c) {\n"
+                "entry:\n"
+                "  br label %loop\n"
+                "loop:\n"
+                "  %a = or i32 %x, 1\n"
+                "  %b = shl i32 %a, 2\n"
+                "  br i1 %c, label %loop, label %exit\n"
+                "exit:\n"
+                "  %A = phi i32 [ %b, %loop ]\n"
+                "  ret i32 %A\n"
+                "}\n");
+  expectKnownBits(/*Zero*/ 3u, /*One*/ 4u);
+}
+
+TEST_F(ComputeKnownBitsTest, KnownNonZeroPhiSingleIncoming) {
+  parseAssembly("define i32 @test(i32 %x, i1 %c) {\n"
+                "entry:\n"
+                "  br label %loop\n"
+                "loop:\n"
+                "  %a = or i32 %x, 1\n"
+                "  %b = shl nuw i32 %a, 2\n"
+                "  br i1 %c, label %loop, label %exit\n"
+                "exit:\n"
+                "  %A = phi i32 [ %b, %loop ]\n"
+                "  ret i32 %A\n"
+                "}\n");
+  EXPECT_TRUE(isKnownNonZero(A, SimplifyQuery(M->getDataLayout())));
+}
+
+TEST_F(ComputeKnownBitsTest, KnownPowerOfTwoPhiSingleIncoming) {
+  parseAssembly("define i32 @test(i32 %x, i1 %c) {\n"
+                "entry:\n"
+                "  br label %loop\n"
+                "loop:\n"
+                "  %a = shl i32 1, %x\n"
+                "  %b = shl nuw i32 %a, 1\n"
+                "  %d = shl nuw i32 %b, 1\n"
+                "  br i1 %c, label %loop, label %exit\n"
+                "exit:\n"
+                "  %A = phi i32 [ %d, %loop ]\n"
+                "  ret i32 %A\n"
+                "}\n");
+  EXPECT_TRUE(isKnownToBeAPowerOfTwo(A, M->getDataLayout()));
 }
 
 TEST_F(ComputeKnownBitsTest, KnownNonZeroShift) {
