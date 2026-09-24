@@ -20,6 +20,7 @@
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/Support/AlignOf.h"
 
 namespace clang {
@@ -63,31 +64,49 @@ public:
 
 /// Symbolic representation of a dynamic allocation.
 class DynamicAllocLValue {
-  unsigned Index;
+public:
+  static constexpr int NumLowBitsAvailable = 2;
+  static constexpr int NumAlignmentBits = 5;
+
+private:
+  // lower NumAlignmentBits: alignment exponent
+  // remaining bits: allocation index incremented by one
+  // value of zero indicates distinct empty state
+  uintptr_t Align : NumAlignmentBits;
+  uintptr_t Index : sizeof(uintptr_t) * CHAR_BIT - NumAlignmentBits;
 
 public:
-  DynamicAllocLValue() : Index(0) {}
-  explicit DynamicAllocLValue(unsigned Index) : Index(Index + 1) {}
-  unsigned getIndex() { return Index - 1; }
+  DynamicAllocLValue() : Align(0), Index(0) {}
+  explicit DynamicAllocLValue(unsigned Idx, uint64_t Align)
+      : Align(llvm::countr_zero(Align)), Index(Idx + 1) {
+    assert(Align > 0 && "Invalid alignment for DynamicAllocLValue constructor");
+    assert(Idx <= getMaxIndex() && "Index is out of range");
+  }
+  unsigned getIndex() const { return Index - 1; }
+  uint64_t getAlign() const { return uint64_t{1} << Align; }
 
-  explicit operator bool() const { return Index != 0; }
+  explicit operator bool() const { return Index != 0 && Align != 0; }
 
   const void *getOpaqueValue() const {
-    return reinterpret_cast<const void *>(static_cast<uintptr_t>(Index)
+    return reinterpret_cast<const void *>((Index << NumAlignmentBits | Align)
                                           << NumLowBitsAvailable);
   }
   static DynamicAllocLValue getFromOpaqueValue(const void *Value) {
     DynamicAllocLValue V;
-    V.Index = reinterpret_cast<uintptr_t>(Value) >> NumLowBitsAvailable;
+    uintptr_t Combined =
+        reinterpret_cast<uintptr_t>(Value) >> NumLowBitsAvailable;
+    V.Align = Combined & (1 << NumAlignmentBits) - 1;
+    V.Index = Combined >> NumAlignmentBits;
     return V;
   }
 
-  static unsigned getMaxIndex() {
-    return (std::numeric_limits<unsigned>::max() >> NumLowBitsAvailable) - 1;
+  static uintptr_t getMaxIndex() {
+    return (std::numeric_limits<uintptr_t>::max() >>
+            (NumLowBitsAvailable + NumAlignmentBits)) -
+           1;
   }
-
-  static constexpr int NumLowBitsAvailable = 3;
 };
+static_assert(sizeof(DynamicAllocLValue) == sizeof(uintptr_t));
 }
 
 namespace llvm {
