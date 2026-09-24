@@ -11,24 +11,57 @@
 define void @store_ptr_needs_wrap_predicate(ptr addrspace(1) noalias %A, ptr addrspace(1) noalias %B, i64 %N) {
 ; CHECK-LABEL: define void @store_ptr_needs_wrap_predicate(
 ; CHECK-SAME: ptr addrspace(1) noalias [[A:%.*]], ptr addrspace(1) noalias [[B:%.*]], i64 [[N:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], -2
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr addrspace(1) [[A]], i64 8
+; CHECK-NEXT:    [[MUL1:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 8, i64 [[TMP0]])
+; CHECK-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i64, i1 } [[MUL1]], 0
+; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i64, i1 } [[MUL1]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr addrspace(1) [[SCEVGEP]], i64 [[MUL_RESULT]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult ptr addrspace(1) [[TMP1]], [[SCEVGEP]]
+; CHECK-NEXT:    [[TMP3:%.*]] = or i1 [[TMP2]], [[MUL_OVERFLOW]]
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[LOOP_PH_LVER_ORIG:.*]], label %[[LOOP_PH:.*]]
+; CHECK:       [[LOOP_PH_LVER_ORIG]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 1, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 1, %[[LOOP_PH_LVER_ORIG]] ], [ [[IV_NEXT_LVER_ORIG:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[IV_PREV:%.*]] = add nsw i64 [[IV]], -1
 ; CHECK-NEXT:    [[GEP_A_PREV:%.*]] = getelementptr inbounds double, ptr addrspace(1) [[A]], i64 [[IV_PREV]]
 ; CHECK-NEXT:    [[A_PREV:%.*]] = load double, ptr addrspace(1) [[GEP_A_PREV]], align 8
 ; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds double, ptr addrspace(1) [[B]], i64 [[IV_PREV]]
-; CHECK-NEXT:    [[B:%.*]] = load double, ptr addrspace(1) [[GEP_B]], align 8
-; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr double, ptr addrspace(1) [[A]], i64 [[IV]]
+; CHECK-NEXT:    [[B_LVER_ORIG:%.*]] = load double, ptr addrspace(1) [[GEP_B]], align 8
+; CHECK-NEXT:    [[GEP_A_LVER_ORIG:%.*]] = getelementptr double, ptr addrspace(1) [[A]], i64 [[IV]]
+; CHECK-NEXT:    [[A_LVER_ORIG:%.*]] = load double, ptr addrspace(1) [[GEP_A_LVER_ORIG]], align 8
+; CHECK-NEXT:    [[MUL_LVER_ORIG:%.*]] = fmul double [[B_LVER_ORIG]], [[A_PREV]]
+; CHECK-NEXT:    [[SUB_LVER_ORIG:%.*]] = fsub double [[A_LVER_ORIG]], [[MUL_LVER_ORIG]]
+; CHECK-NEXT:    store double [[SUB_LVER_ORIG]], ptr addrspace(1) [[GEP_A_LVER_ORIG]], align 8
+; CHECK-NEXT:    [[IV_NEXT_LVER_ORIG]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EC_LVER_ORIG:%.*]] = icmp eq i64 [[IV_NEXT_LVER_ORIG]], [[N]]
+; CHECK-NEXT:    br i1 [[EC_LVER_ORIG]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[LOOP_PH]]:
+; CHECK-NEXT:    [[LOAD_INITIAL:%.*]] = load double, ptr addrspace(1) [[A]], align 8
+; CHECK-NEXT:    br label %[[LOOP1:.*]]
+; CHECK:       [[LOOP1]]:
+; CHECK-NEXT:    [[STORE_FORWARDED:%.*]] = phi double [ [[LOAD_INITIAL]], %[[LOOP_PH]] ], [ [[SUB:%.*]], %[[LOOP1]] ]
+; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ 1, %[[LOOP_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP1]] ]
+; CHECK-NEXT:    [[IV_PREV1:%.*]] = add nsw i64 [[IV1]], -1
+; CHECK-NEXT:    [[GEP_A_PREV1:%.*]] = getelementptr inbounds double, ptr addrspace(1) [[A]], i64 [[IV_PREV1]]
+; CHECK-NEXT:    [[A_PREV1:%.*]] = load double, ptr addrspace(1) [[GEP_A_PREV1]], align 8
+; CHECK-NEXT:    [[GEP_B1:%.*]] = getelementptr inbounds double, ptr addrspace(1) [[B]], i64 [[IV_PREV1]]
+; CHECK-NEXT:    [[B:%.*]] = load double, ptr addrspace(1) [[GEP_B1]], align 8
+; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr double, ptr addrspace(1) [[A]], i64 [[IV1]]
 ; CHECK-NEXT:    [[A:%.*]] = load double, ptr addrspace(1) [[GEP_A]], align 8
-; CHECK-NEXT:    [[MUL:%.*]] = fmul double [[B]], [[A_PREV]]
-; CHECK-NEXT:    [[SUB:%.*]] = fsub double [[A]], [[MUL]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul double [[B]], [[STORE_FORWARDED]]
+; CHECK-NEXT:    [[SUB]] = fsub double [[A]], [[MUL]]
 ; CHECK-NEXT:    store double [[SUB]], ptr addrspace(1) [[GEP_A]], align 8
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV1]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT_LOOPEXIT2:.*]], label %[[LOOP1]]
 ; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    br label %[[EXIT1:.*]]
+; CHECK:       [[EXIT_LOOPEXIT2]]:
+; CHECK-NEXT:    br label %[[EXIT1]]
+; CHECK:       [[EXIT1]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -57,24 +90,56 @@ exit:
 define void @load_ptr_needs_wrap_predicate(ptr addrspace(1) noalias %A, ptr addrspace(1) noalias %B, i64 %N) {
 ; CHECK-LABEL: define void @load_ptr_needs_wrap_predicate(
 ; CHECK-SAME: ptr addrspace(1) noalias [[A:%.*]], ptr addrspace(1) noalias [[B:%.*]], i64 [[N:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], -2
+; CHECK-NEXT:    [[MUL1:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 8, i64 [[TMP0]])
+; CHECK-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i64, i1 } [[MUL1]], 0
+; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i64, i1 } [[MUL1]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr addrspace(1) [[A]], i64 [[MUL_RESULT]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult ptr addrspace(1) [[TMP1]], [[A]]
+; CHECK-NEXT:    [[TMP3:%.*]] = or i1 [[TMP2]], [[MUL_OVERFLOW]]
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[LOOP_PH_LVER_ORIG:.*]], label %[[LOOP_PH:.*]]
+; CHECK:       [[LOOP_PH_LVER_ORIG]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 1, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 1, %[[LOOP_PH_LVER_ORIG]] ], [ [[IV_NEXT_LVER_ORIG:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[IV_PREV:%.*]] = add nsw i64 [[IV]], -1
 ; CHECK-NEXT:    [[GEP_A_PREV:%.*]] = getelementptr double, ptr addrspace(1) [[A]], i64 [[IV_PREV]]
 ; CHECK-NEXT:    [[A_PREV:%.*]] = load double, ptr addrspace(1) [[GEP_A_PREV]], align 8
 ; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds double, ptr addrspace(1) [[B]], i64 [[IV_PREV]]
-; CHECK-NEXT:    [[B:%.*]] = load double, ptr addrspace(1) [[GEP_B]], align 8
-; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds double, ptr addrspace(1) [[A]], i64 [[IV]]
+; CHECK-NEXT:    [[B_LVER_ORIG:%.*]] = load double, ptr addrspace(1) [[GEP_B]], align 8
+; CHECK-NEXT:    [[GEP_A_LVER_ORIG:%.*]] = getelementptr inbounds double, ptr addrspace(1) [[A]], i64 [[IV]]
+; CHECK-NEXT:    [[A_LVER_ORIG:%.*]] = load double, ptr addrspace(1) [[GEP_A_LVER_ORIG]], align 8
+; CHECK-NEXT:    [[MUL_LVER_ORIG:%.*]] = fmul double [[B_LVER_ORIG]], [[A_PREV]]
+; CHECK-NEXT:    [[SUB_LVER_ORIG:%.*]] = fsub double [[A_LVER_ORIG]], [[MUL_LVER_ORIG]]
+; CHECK-NEXT:    store double [[SUB_LVER_ORIG]], ptr addrspace(1) [[GEP_A_LVER_ORIG]], align 8
+; CHECK-NEXT:    [[IV_NEXT_LVER_ORIG]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EC_LVER_ORIG:%.*]] = icmp eq i64 [[IV_NEXT_LVER_ORIG]], [[N]]
+; CHECK-NEXT:    br i1 [[EC_LVER_ORIG]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[LOOP_PH]]:
+; CHECK-NEXT:    [[LOAD_INITIAL:%.*]] = load double, ptr addrspace(1) [[A]], align 8
+; CHECK-NEXT:    br label %[[LOOP1:.*]]
+; CHECK:       [[LOOP1]]:
+; CHECK-NEXT:    [[STORE_FORWARDED:%.*]] = phi double [ [[LOAD_INITIAL]], %[[LOOP_PH]] ], [ [[SUB:%.*]], %[[LOOP1]] ]
+; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ 1, %[[LOOP_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP1]] ]
+; CHECK-NEXT:    [[IV_PREV1:%.*]] = add nsw i64 [[IV1]], -1
+; CHECK-NEXT:    [[GEP_A_PREV1:%.*]] = getelementptr double, ptr addrspace(1) [[A]], i64 [[IV_PREV1]]
+; CHECK-NEXT:    [[A_PREV1:%.*]] = load double, ptr addrspace(1) [[GEP_A_PREV1]], align 8
+; CHECK-NEXT:    [[GEP_B1:%.*]] = getelementptr inbounds double, ptr addrspace(1) [[B]], i64 [[IV_PREV1]]
+; CHECK-NEXT:    [[B:%.*]] = load double, ptr addrspace(1) [[GEP_B1]], align 8
+; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds double, ptr addrspace(1) [[A]], i64 [[IV1]]
 ; CHECK-NEXT:    [[A:%.*]] = load double, ptr addrspace(1) [[GEP_A]], align 8
-; CHECK-NEXT:    [[MUL:%.*]] = fmul double [[B]], [[A_PREV]]
-; CHECK-NEXT:    [[SUB:%.*]] = fsub double [[A]], [[MUL]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul double [[B]], [[STORE_FORWARDED]]
+; CHECK-NEXT:    [[SUB]] = fsub double [[A]], [[MUL]]
 ; CHECK-NEXT:    store double [[SUB]], ptr addrspace(1) [[GEP_A]], align 8
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV1]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT_LOOPEXIT2:.*]], label %[[LOOP1]]
 ; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    br label %[[EXIT1:.*]]
+; CHECK:       [[EXIT_LOOPEXIT2]]:
+; CHECK-NEXT:    br label %[[EXIT1]]
+; CHECK:       [[EXIT1]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:
