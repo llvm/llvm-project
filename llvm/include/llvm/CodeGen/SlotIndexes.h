@@ -367,6 +367,12 @@ class raw_ostream;
       return SlotIndex(&indexList.back(), 0);
     }
 
+    /// Distance from \p A to \p B in instructions that still exist, scaled to
+    /// slot index units; a plain distance also counts erased ones, whose
+    /// entries survive. Walks the entries between. Always a multiple of
+    /// InstrDist, and 0 when the endpoints share one, so sizes tie more often.
+    LLVM_ABI unsigned getRealInstrSpan(SlotIndex A, SlotIndex B) const;
+
     /// Returns true if the given machine instr is mapped to an index,
     /// otherwise returns false.
     bool hasIndex(const MachineInstr &instr) const {
