@@ -144,11 +144,18 @@ def AOp : NS_Op<"a_op", []> {
 // ---
 
 // DEF:      void AOp::build(
+// DEF:        build(odsBuilder, odsState, ::mlir::TypeRange{}, aAttr, bAttr, cAttr, dAttr);
+
+// DEF:      void AOp::build(
 // DEF:        auto &odsProperties = odsState.getOrAddProperties<Properties>();
 // DEF:        odsProperties.aAttr = aAttr;
 // DEF:        odsProperties.bAttr = bAttr;
 // DEF:        if (cAttr) {
 // DEF-NEXT:     odsProperties.cAttr = cAttr;
+
+// DEF:      void AOp::build(
+// DEF:        some-return-type aAttr, some-return-type bAttr, /*optional*/some-attr-kind cAttr
+// DEF:        build(odsBuilder, odsState, ::mlir::TypeRange{}, aAttr, bAttr, cAttr, dAttr);
 
 // DEF:        odsProperties.aAttr = some-const-builder-call(odsBuilder, aAttr);
 // DEF-NEXT:   odsProperties.bAttr = some-const-builder-call(odsBuilder, bAttr);
@@ -157,10 +164,6 @@ def AOp : NS_Op<"a_op", []> {
 // DEF-NEXT:   }
 // DEF-NOT:    if (dAttr)
 // DEF:        odsProperties.dAttr = some-const-builder-call(odsBuilder, dAttr);
-
-// DEF:      void AOp::build(
-// DEF:        some-return-type aAttr, some-return-type bAttr, /*optional*/some-attr-kind cAttr
-// DEF:        odsProperties.aAttr = some-const-builder-call(odsBuilder, aAttr);
 
 // DEF:      void AOp::build(
 // DEF:        ::llvm::ArrayRef<::mlir::NamedAttribute> attributes
