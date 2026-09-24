@@ -26510,12 +26510,10 @@ void BoUpSLP::optimizeGatherSequence() {
     // Check if the last undefs actually change the final number of used vector
     // registers.
     return SM1.size() - LastUndefsCnt > 1 &&
-           getNumberOfParts(SI1->getType(),
-                            SI1->getType()->getElementType()) ==
-               getNumberOfParts(
-                   getWidenedType(SI1->getType()->getElementType(),
-                                  SM1.size() - LastUndefsCnt),
-                   SI1->getType()->getElementType());
+           getNumberOfParts(SI1->getType(), SI1->getType()->getElementType()) ==
+               getNumberOfParts(getWidenedType(SI1->getType()->getElementType(),
+                                               SM1.size() - LastUndefsCnt),
+                                SI1->getType()->getElementType());
   };
   // Perform O(N^2) search over the gather/shuffle sequences and merge identical
   // instructions. TODO: We can further optimize this scan if we split the
