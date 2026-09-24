@@ -1814,10 +1814,6 @@ void SCCPInstVisitor::visitBinaryOperator(Instruction &I) {
   auto *BO = cast<BinaryOperator>(&I);
   ConstantRange R = A.binaryOp(*BO, B);
   mergeInValue(ValueState[&I], &I, ValueLatticeElement::getRange(R));
-
-  // TODO: The lattice has no per-element information for vectors, so special
-  // values that only apply to some of the elements cannot be exploited, e.g.
-  // and <4 x i32> overdefined, <i32 0, i32 -1, i32 0, i32 -1>.
 }
 
 // Handle ICmpInst instruction.
