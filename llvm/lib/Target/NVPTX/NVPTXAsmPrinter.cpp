@@ -2023,8 +2023,9 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
 
       // non-pointer scalar to kernel func
       O << "\t.param .";
-      // Special case: predicate operands become .u8 types
-      if (Ty->isIntegerTy(1))
+      // PTX does not support sub-byte integer parameter types, so promote
+      // them to .u8 when emitting kernel parameter declarations.
+      if (Ty->isIntegerTy() && Ty->getIntegerBitWidth() < 8)
         O << "u8";
       else
         O << getPTXFundamentalTypeStr(Ty);
