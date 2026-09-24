@@ -12,6 +12,7 @@
 
 #include "mlir/Conversion/TosaToLinalg/TosaToLinalg.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
@@ -789,28 +790,24 @@ public:
     }
     indexingMaps.push_back(rewriter.getMultiDimIdentityMap(rank));
 
-    // Compute the output sizes, taking each dynamic result dimension from the
-    // first input that is not broadcast (statically 1) along that dimension.
-    SmallVector<OpFoldResult> sizes;
+    // Compute the runtime size of each dynamic output dimension. All operands
+    // share the result rank (SameOperandsAndResultRank) and any dimension of
+    // size 1 may be broadcast (ResultsBroadcastableShape), so reuse the generic
+    // TosaToLinalg helper, which correctly maxes over the broadcastable
+    // operands, instead of naively picking a single one.
+    IndexPool indexPool;
+    SmallVector<Value> dynSizes;
     for (int64_t i = 0; i < rank; ++i) {
-      if (!resultTy.isDynamicDim(i)) {
-        sizes.push_back(rewriter.getIndexAttr(resultTy.getDimSize(i)));
+      if (!resultTy.isDynamicDim(i))
         continue;
-      }
-      Value dimSource = inputs.front();
-      for (Value operand : inputs) {
-        auto operandTy = cast<ShapedType>(operand.getType());
-        if (operandTy.getRank() == rank && operandTy.getDimSize(i) != 1) {
-          dimSource = operand;
-          break;
-        }
-      }
-      sizes.push_back(
-          tensor::DimOp::create(rewriter, loc, dimSource, i).getResult());
+      OpFoldResult size =
+          computeTargetSize(rewriter, loc, indexPool, inputs, i).first;
+      dynSizes.push_back(getValueOrCreateConstantIndexOp(rewriter, loc, size));
     }
 
-    Value emptyTensor = tensor::EmptyOp::create(rewriter, loc, sizes,
-                                                resultTy.getElementType());
+    Value emptyTensor =
+        tensor::EmptyOp::create(rewriter, loc, resultTy.getShape(),
+                                resultTy.getElementType(), dynSizes);
 
     rewriter.replaceOpWithNewOp<linalg::ElementwiseOp>(
         op, inputs, ValueRange{emptyTensor}, *kind,

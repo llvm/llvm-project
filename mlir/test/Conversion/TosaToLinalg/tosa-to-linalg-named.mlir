@@ -1096,10 +1096,14 @@ func.func @elementwise_unary_dyn(%arg0: tensor<?x3xf32>) -> tensor<?x3xf32> {
 // CHECK-LABEL: @elementwise_binary_dyn
 func.func @elementwise_binary_dyn(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>) -> tensor<?x?xf32> {
   // CHECK: %[[C0:.+]] = arith.constant 0 : index
-  // CHECK: %[[DIM0:.+]] = tensor.dim %arg0, %[[C0]] : tensor<?x?xf32>
+  // CHECK: %[[DIM0_0:.+]] = tensor.dim %arg0, %[[C0]] : tensor<?x?xf32>
+  // CHECK: %[[DIM0_1:.+]] = tensor.dim %arg1, %[[C0]] : tensor<?x?xf32>
+  // CHECK: %[[MAX0:.+]] = arith.maxui %[[DIM0_0]], %[[DIM0_1]] : index
   // CHECK: %[[C1:.+]] = arith.constant 1 : index
-  // CHECK: %[[DIM1:.+]] = tensor.dim %arg0, %[[C1]] : tensor<?x?xf32>
-  // CHECK: %[[EMPTY:.+]] = tensor.empty(%[[DIM0]], %[[DIM1]]) : tensor<?x?xf32>
+  // CHECK: %[[DIM1_0:.+]] = tensor.dim %arg0, %[[C1]] : tensor<?x?xf32>
+  // CHECK: %[[DIM1_1:.+]] = tensor.dim %arg1, %[[C1]] : tensor<?x?xf32>
+  // CHECK: %[[MAX1:.+]] = arith.maxui %[[DIM1_0]], %[[DIM1_1]] : index
+  // CHECK: %[[EMPTY:.+]] = tensor.empty(%[[MAX0]], %[[MAX1]]) : tensor<?x?xf32>
   // CHECK: linalg.elementwise <add> ins(%arg0, %arg1 : tensor<?x?xf32>, tensor<?x?xf32>) outs(%[[EMPTY]] : tensor<?x?xf32>) -> tensor<?x?xf32>
   %0 = tosa.add %arg0, %arg1 : (tensor<?x?xf32>, tensor<?x?xf32>) -> tensor<?x?xf32>
   return %0 : tensor<?x?xf32>
@@ -1110,11 +1114,40 @@ func.func @elementwise_binary_dyn(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>
 // CHECK-LABEL: @elementwise_ternary_select_dyn
 func.func @elementwise_ternary_select_dyn(%arg0: tensor<?x?xi1>, %arg1: tensor<?x?xf32>, %arg2: tensor<?x?xf32>) -> tensor<?x?xf32> {
   // CHECK: %[[C0:.+]] = arith.constant 0 : index
-  // CHECK: %[[DIM0:.+]] = tensor.dim %arg0, %[[C0]] : tensor<?x?xi1>
+  // CHECK: %[[DIM0_0:.+]] = tensor.dim %arg0, %[[C0]] : tensor<?x?xi1>
+  // CHECK: %[[DIM0_1:.+]] = tensor.dim %arg1, %[[C0]] : tensor<?x?xf32>
+  // CHECK: %[[MAX0_0:.+]] = arith.maxui %[[DIM0_0]], %[[DIM0_1]] : index
+  // CHECK: %[[DIM0_2:.+]] = tensor.dim %arg2, %[[C0]] : tensor<?x?xf32>
+  // CHECK: %[[MAX0_1:.+]] = arith.maxui %[[MAX0_0]], %[[DIM0_2]] : index
   // CHECK: %[[C1:.+]] = arith.constant 1 : index
-  // CHECK: %[[DIM1:.+]] = tensor.dim %arg0, %[[C1]] : tensor<?x?xi1>
-  // CHECK: %[[EMPTY:.+]] = tensor.empty(%[[DIM0]], %[[DIM1]]) : tensor<?x?xf32>
+  // CHECK: %[[DIM1_0:.+]] = tensor.dim %arg0, %[[C1]] : tensor<?x?xi1>
+  // CHECK: %[[DIM1_1:.+]] = tensor.dim %arg1, %[[C1]] : tensor<?x?xf32>
+  // CHECK: %[[MAX1_0:.+]] = arith.maxui %[[DIM1_0]], %[[DIM1_1]] : index
+  // CHECK: %[[DIM1_2:.+]] = tensor.dim %arg2, %[[C1]] : tensor<?x?xf32>
+  // CHECK: %[[MAX1_1:.+]] = arith.maxui %[[MAX1_0]], %[[DIM1_2]] : index
+  // CHECK: %[[EMPTY:.+]] = tensor.empty(%[[MAX0_1]], %[[MAX1_1]]) : tensor<?x?xf32>
   // CHECK: linalg.elementwise <select> ins(%arg0, %arg1, %arg2 : tensor<?x?xi1>, tensor<?x?xf32>, tensor<?x?xf32>) outs(%[[EMPTY]] : tensor<?x?xf32>) -> tensor<?x?xf32>
   %0 = tosa.select %arg0, %arg1, %arg2 : (tensor<?x?xi1>, tensor<?x?xf32>, tensor<?x?xf32>) -> tensor<?x?xf32>
+  return %0 : tensor<?x?xf32>
+}
+
+// -----
+
+// CHECK-DAG: #[[$BCAST_MAP:.+]] = affine_map<(d0, d1) -> (d0, 0)>
+// CHECK-DAG: #[[$ID_MAP:.+]] = affine_map<(d0, d1) -> (d0, d1)>
+
+// CHECK-LABEL: @elementwise_binary_broadcast_dyn
+func.func @elementwise_binary_broadcast_dyn(%arg0: tensor<?x1xf32>, %arg1: tensor<?x?xf32>) -> tensor<?x?xf32> {
+  // The size-1 dimension of %arg0 is broadcast, so it does not participate in
+  // the size computation for that dimension.
+  // CHECK: %[[C0:.+]] = arith.constant 0 : index
+  // CHECK: %[[DIM0_0:.+]] = tensor.dim %arg0, %[[C0]] : tensor<?x1xf32>
+  // CHECK: %[[DIM0_1:.+]] = tensor.dim %arg1, %[[C0]] : tensor<?x?xf32>
+  // CHECK: %[[MAX0:.+]] = arith.maxui %[[DIM0_0]], %[[DIM0_1]] : index
+  // CHECK: %[[C1:.+]] = arith.constant 1 : index
+  // CHECK: %[[DIM1:.+]] = tensor.dim %arg1, %[[C1]] : tensor<?x?xf32>
+  // CHECK: %[[EMPTY:.+]] = tensor.empty(%[[MAX0]], %[[DIM1]]) : tensor<?x?xf32>
+  // CHECK: linalg.elementwise <add> indexing_maps = [#[[$BCAST_MAP]], #[[$ID_MAP]], #[[$ID_MAP]]] ins(%arg0, %arg1 : tensor<?x1xf32>, tensor<?x?xf32>) outs(%[[EMPTY]] : tensor<?x?xf32>) -> tensor<?x?xf32>
+  %0 = tosa.add %arg0, %arg1 : (tensor<?x1xf32>, tensor<?x?xf32>) -> tensor<?x?xf32>
   return %0 : tensor<?x?xf32>
 }

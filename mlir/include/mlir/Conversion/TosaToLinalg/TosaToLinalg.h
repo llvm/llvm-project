@@ -14,7 +14,11 @@
 #define MLIR_CONVERSION_TOSATOLINALG_TOSATOLINALG_H
 
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
+#include "llvm/ADT/DenseMap.h"
+
+#include <utility>
 
 namespace mlir {
 
@@ -57,6 +61,23 @@ void populateTosaToLinalgNamedConversionPatterns(
 /// Returns true if `op` is a TOSA elementwise operation that the
 /// TosaToLinalgNamed conversion can lower to a `linalg.elementwise` named op.
 bool isConvertibleToLinalgElementwise(Operation *op);
+
+/// Caches the `arith.constant index` values created for a set of dimension
+/// indices so that broadcasting helpers can avoid emitting redundant
+/// constants. Callers own the pool and reuse it across related queries.
+using IndexPool = llvm::DenseMap<int64_t, Value>;
+
+/// Compute the broadcasted runtime size of dimension `dim` of an elementwise
+/// operation whose `operands` all share the same rank (TOSA's
+/// `SameOperandsAndResultRank` and `ResultsBroadcastableShape` traits). The
+/// returned size is either a static `IndexAttr` or an SSA `Value` holding the
+/// runtime size, so dynamic dimensions (fixed rank, unknown size) are handled
+/// correctly. The second element of the pair is the operand that solely
+/// determines the size, or nullptr when it is inferred from several operands.
+/// `indexPool` caches constant index values across calls.
+std::pair<OpFoldResult, Value>
+computeTargetSize(PatternRewriter &rewriter, Location loc, IndexPool &indexPool,
+                  ValueRange operands, int64_t dim);
 
 } // namespace tosa
 } // namespace mlir
