@@ -287,6 +287,9 @@ features cannot lower the translation-unit ABI level;
 - `-Wfortify-source` now diagnoses when `strlcat`, `__builtin_strlcat`, `strlcpy`, or
   `__builtin_strlcpy` is called with a size argument larger than the destination buffer.
 
+- `-Wfortify-source` now diagnoses when `recv` or `recvfrom` is called with a
+  size argument larger than the destination buffer.
+
 - The `cannot overload a member function` diagnostic now describes the previous
   declaration first, matching the order in which the declarations appear in the
   source. (#GH219803)
@@ -525,6 +528,7 @@ features cannot lower the translation-unit ABI level;
 ### Bug Fixes in This Version
 
 - Fixed incorrect handling of C++ import preprocessing token when a digraph character after import. (#GH190693)
+- Fixed a crash when emitting RTTI for a `dllexport` class, or the fundamental type descriptors for `__cxxabiv1::__fundamental_type_info`, under `-fvisibility=hidden`. (#GH207963)
 - Fixed an assertion failure when passing a wide string literal to `__builtin_nan`. (#GH212108)
 - Fixed a constraint comparison bug in partial ordering. (#GH182671)
 - Fixed a rejected-valid case that used an explicit object parameter in an out-of-line definition of a nested class member. (#GH136472)
@@ -548,7 +552,10 @@ features cannot lower the translation-unit ABI level;
 - Fixed an ICE hat occurred when using `__imag int/float` as lvalue in assignment. (#GH119498)
 - Fixed an assertion failure in `-Wsign-compare` when a negated or complemented vector of unsigned integers was compared against a signed constant. (#GH203575)
 - Fixed an assertion failure when a constant statement expression that declares a variable is used as a bound of an OpenMP loop. A statement expression in a bound of a non-rectangular loop is now diagnosed. (#GH153987)
-
+- Fixed a bug where a bit-field accessed as the result of a statement expression
+  (e.g. `({ s.b; })`) was not subject to integer promotion, unlike an ordinary
+  bit-field access. (#GH221542)
+  
 #### Bug Fixes to Compiler Builtins
 
 - Fixed a crash when classifying a call to a builtin with dependent arguments,
