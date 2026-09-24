@@ -157,9 +157,10 @@ static cl::opt<bool, true> XUseInstructionNames(
     cl::desc("Use LLVM-IR names when deriving statement names"),
     cl::location(UseInstructionNames), cl::Hidden, cl::cat(PollyCategory));
 
-static cl::opt<bool> PollyPrintInstructions(
-    "polly-print-instructions", cl::desc("Output instructions per ScopStmt"),
-    cl::Hidden, cl::Optional, cl::init(false), cl::cat(PollyCategory));
+static cl::opt<bool>
+    PollyPrintInstructions("polly-print-instructions",
+                           cl::desc("Output instructions per ScopStmt"),
+                           cl::Hidden, cl::init(false), cl::cat(PollyCategory));
 
 static cl::list<std::string> IslArgs("polly-isl-arg",
                                      cl::value_desc("argument"),

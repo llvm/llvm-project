@@ -343,7 +343,8 @@ EOF
         --machine test-tools \
         --compiler "${CXX}" \
         --filter hash.bench.cpp \
-        --output "${BUILD_DIR}/report.json"
+        --output "${BUILD_DIR}/report.json" \
+        -- --param optimization=speed
 
     step "Submit a LNT report (dry-run)"
     "${MONOREPO_ROOT}/libcxx/utils/ci/lnt/submit-benchmarks" \
