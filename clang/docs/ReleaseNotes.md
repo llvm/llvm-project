@@ -97,6 +97,12 @@ features cannot lower the translation-unit ABI level;
 - On MIPS N32/N64, an `__int128` now correctly start in an even-numbered register
   or 16-byte aligned stack slot, matching GCC.
 
+- On 64-bit PowerPC ELFv1, a union argument that wraps a single floating-point
+  or vector value, or a struct that wraps such a union, is now passed in
+  general-purpose registers rather than in a floating-point or vector register,
+  matching GCC. ELFv2 is unchanged. `-fclang-abi-compat=23` restores the
+  previous behavior.
+
 - Except on PlayStation, on x86-64 System V a non-zero-width unnamed bit-field
   now classifies the eightbytes it occupies as INTEGER, like a named bit-field,
   matching GCC. Aggregates where this changes the classification may be passed
