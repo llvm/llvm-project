@@ -175,6 +175,99 @@ func.func @batch_matmul_to_vecmat(%arg0: memref<1x1x?xf32>, %arg1: memref<1x?x?x
 
 // -----
 
+// linalg.vecmat has no cast attribute (it always uses signed casts), so a
+// matmul with an unsigned cast must not be rank-reduced into it.
+func.func @negative_matmul_to_vecmat_unsigned_cast(
+    %arg0: tensor<1x8xi16>, %arg1: tensor<8x6xi64>,
+    %arg2: tensor<1x6xi32>) -> tensor<1x6xi32> {
+  // CHECK-LABEL: @negative_matmul_to_vecmat_unsigned_cast
+  // CHECK-NOT:   collapse_shape
+  // CHECK:       linalg.matmul {cast = #linalg.type_fn<cast_unsigned>}
+  // CHECK-NOT:   linalg.vecmat
+  %0 = linalg.matmul {cast = #linalg.type_fn<cast_unsigned>}
+      ins(%arg0, %arg1 : tensor<1x8xi16>, tensor<8x6xi64>)
+      outs(%arg2 : tensor<1x6xi32>) -> tensor<1x6xi32>
+  return %0 : tensor<1x6xi32>
+}
+
+// -----
+
+func.func @negative_matmul_to_matvec_unsigned_cast(
+    %arg0: tensor<6x8xi16>, %arg1: tensor<8x1xi64>,
+    %arg2: tensor<6x1xi32>) -> tensor<6x1xi32> {
+  // CHECK-LABEL: @negative_matmul_to_matvec_unsigned_cast
+  // CHECK-NOT:   collapse_shape
+  // CHECK:       linalg.matmul {cast = #linalg.type_fn<cast_unsigned>}
+  // CHECK-NOT:   linalg.matvec
+  %0 = linalg.matmul {cast = #linalg.type_fn<cast_unsigned>}
+      ins(%arg0, %arg1 : tensor<6x8xi16>, tensor<8x1xi64>)
+      outs(%arg2 : tensor<6x1xi32>) -> tensor<6x1xi32>
+  return %0 : tensor<6x1xi32>
+}
+
+// -----
+
+func.func @negative_batch_matmul_to_batch_vecmat_unsigned_cast(
+    %arg0: tensor<2x1x8xi16>, %arg1: tensor<2x8x6xi64>,
+    %arg2: tensor<2x1x6xi32>) -> tensor<2x1x6xi32> {
+  // CHECK-LABEL: @negative_batch_matmul_to_batch_vecmat_unsigned_cast
+  // CHECK-NOT:   collapse_shape
+  // CHECK:       linalg.batch_matmul {cast = #linalg.type_fn<cast_unsigned>}
+  // CHECK-NOT:   linalg.batch_vecmat
+  %0 = linalg.batch_matmul {cast = #linalg.type_fn<cast_unsigned>}
+      ins(%arg0, %arg1 : tensor<2x1x8xi16>, tensor<2x8x6xi64>)
+      outs(%arg2 : tensor<2x1x6xi32>) -> tensor<2x1x6xi32>
+  return %0 : tensor<2x1x6xi32>
+}
+
+// -----
+
+func.func @negative_batch_matmul_to_batch_matvec_unsigned_cast(
+    %arg0: tensor<2x6x8xi16>, %arg1: tensor<2x8x1xi64>,
+    %arg2: tensor<2x6x1xi32>) -> tensor<2x6x1xi32> {
+  // CHECK-LABEL: @negative_batch_matmul_to_batch_matvec_unsigned_cast
+  // CHECK-NOT:   collapse_shape
+  // CHECK:       linalg.batch_matmul {cast = #linalg.type_fn<cast_unsigned>}
+  // CHECK-NOT:   linalg.batch_matvec
+  %0 = linalg.batch_matmul {cast = #linalg.type_fn<cast_unsigned>}
+      ins(%arg0, %arg1 : tensor<2x6x8xi16>, tensor<2x8x1xi64>)
+      outs(%arg2 : tensor<2x6x1xi32>) -> tensor<2x6x1xi32>
+  return %0 : tensor<2x6x1xi32>
+}
+
+// -----
+
+// The unit batch dim can still be dropped since linalg.matmul preserves the
+// cast, but the rank reduction must stop there.
+func.func @singleton_batch_matmul_unsigned_cast_to_matmul_only(
+    %arg0: tensor<1x1x8xi16>, %arg1: tensor<1x8x6xi64>,
+    %arg2: tensor<1x1x6xi32>) -> tensor<1x1x6xi32> {
+  // CHECK-LABEL: @singleton_batch_matmul_unsigned_cast_to_matmul_only
+  // CHECK:       linalg.matmul {cast = #linalg.type_fn<cast_unsigned>}
+  // CHECK-NOT:   linalg.vecmat
+  // CHECK-NOT:   linalg.batch_vecmat
+  %0 = linalg.batch_matmul {cast = #linalg.type_fn<cast_unsigned>}
+      ins(%arg0, %arg1 : tensor<1x1x8xi16>, tensor<1x8x6xi64>)
+      outs(%arg2 : tensor<1x1x6xi32>) -> tensor<1x1x6xi32>
+  return %0 : tensor<1x1x6xi32>
+}
+
+// -----
+
+// An explicit signed cast matches the target's semantics and is rank-reduced.
+func.func @matmul_to_vecmat_signed_cast(
+    %arg0: tensor<1x8xi16>, %arg1: tensor<8x6xi64>,
+    %arg2: tensor<1x6xi32>) -> tensor<1x6xi32> {
+  // CHECK-LABEL: @matmul_to_vecmat_signed_cast
+  // CHECK:       linalg.vecmat
+  %0 = linalg.matmul {cast = #linalg.type_fn<cast_signed>}
+      ins(%arg0, %arg1 : tensor<1x8xi16>, tensor<8x6xi64>)
+      outs(%arg2 : tensor<1x6xi32>) -> tensor<1x6xi32>
+  return %0 : tensor<1x6xi32>
+}
+
+// -----
+
 func.func @matvec_to_dot(%arg0: memref<1x?xf32>, %arg1: memref<?xf32>, %arg2: memref<1xf32>) {
   // CHECK-LABEL: @matvec_to_dot
   //  CHECK-SAME:     %[[LHS:[a-zA-Z0-9]+]]: memref<1x?xf32>
