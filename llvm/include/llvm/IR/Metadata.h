@@ -397,8 +397,17 @@ public:
   using OwnerTy = MetadataTracking::OwnerTy;
 
 private:
-  uint64_t NextIndex = 0;
-  SmallDenseMap<void *, std::pair<OwnerTy, uint64_t>, 4> UseMap;
+  struct UseEntry {
+    void *Ref = nullptr;
+    OwnerTy Owner = nullptr;
+  };
+
+  static constexpr unsigned IndexThreshold = 16;
+  // Tracked uses stored in insertion order.
+  SmallVector<UseEntry, 4> UseMap;
+  // Lazily allocated map from Ref to its index in UseMap for large use lists.
+  using IndexMapTy = DenseMap<void *, unsigned>;
+  std::unique_ptr<IndexMapTy> IndexMap;
 
 protected:
   ~ReplaceableUses() {
@@ -429,6 +438,7 @@ public:
   unsigned getNumUses() const { return UseMap.size(); }
 
 private:
+  UseEntry *findRef(void *Ref, bool EraseFromIndex = false);
   void addRef(void *Ref, OwnerTy Owner);
   void dropRef(void *Ref);
   void moveRef(void *Ref, void *New, const Metadata &MD);
