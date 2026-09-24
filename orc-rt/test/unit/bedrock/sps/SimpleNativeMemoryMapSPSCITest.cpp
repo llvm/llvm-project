@@ -24,6 +24,7 @@
 #include "gtest/gtest.h"
 
 using namespace orc_rt;
+using namespace orc_rt::test;
 
 namespace orc_rt {
 
