@@ -1057,6 +1057,18 @@ add_header_library(
 )
 
 add_header_library(
+  renameat
+  HDRS
+    renameat.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
   lseek
   HDRS
     lseek.h

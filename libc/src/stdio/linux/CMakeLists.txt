@@ -30,7 +30,10 @@ add_entrypoint_object(
   HDRS
     ../renameat.h
   DEPENDS
-    libc.src.__support.OSUtil.linux.syscall_wrappers.rename
+    libc.src.__support.OSUtil.linux.syscall_wrappers.renameat
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
     libc.src.errno.errno
 )
 
