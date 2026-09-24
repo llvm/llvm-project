@@ -7376,6 +7376,30 @@ AArch64InstructionSelector::selectShiftMask(MachineOperand &Root) const {
     }}};
   }
 
+  // If shifting by N-X where N == -1 mod ShiftWidth, then just shift by ~X
+  // to generate a NOT (MVN) instead of a SUB from a constant.
+  Register NotSrcReg;
+  int64_t NotImm;
+  if (MRI.hasOneUse(ShAmtReg) &&
+      mi_match(ShAmtReg, MRI, m_GSub(m_ICst(NotImm), m_Reg(NotSrcReg))) &&
+      (NotImm % ShiftWidth == ShiftWidth - 1)) {
+    return {{[=](MachineInstrBuilder &MIB) {
+      MachineInstr *I = MIB.getInstr();
+      MachineRegisterInfo &MRI2 = I->getMF()->getRegInfo();
+      const TargetRegisterClass &RC =
+          ShiftWidth == 32 ? AArch64::GPR32RegClass : AArch64::GPR64RegClass;
+      unsigned NotOpc = ShiftWidth == 32 ? AArch64::ORNWrr : AArch64::ORNXrr;
+      Register ZeroReg = ShiftWidth == 32 ? AArch64::WZR : AArch64::XZR;
+      Register NotReg = MRI2.createVirtualRegister(&RC);
+      auto NotMI = BuildMI(*I->getParent(), *I, I->getDebugLoc(),
+                           TII.get(NotOpc), NotReg)
+                       .addReg(ZeroReg)
+                       .addReg(NotSrcReg);
+      constrainSelectedInstRegOperands(*NotMI, TII, TRI, RBI);
+      MIB.addReg(NotReg);
+    }}};
+  }
+
   return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(ShAmtReg); }}};
 }
 
