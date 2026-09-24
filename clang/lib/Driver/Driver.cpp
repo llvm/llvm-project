@@ -200,8 +200,8 @@ std::string CUIDOptions::getCUID(StringRef InputFile,
 Driver::Driver(StringRef DriverExecutable, StringRef TargetTriple,
                DiagnosticsEngine &Diags, std::string Title,
                IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS)
-    : Diags(Diags), VFS(std::move(VFS)), Mode(GCCMode),
-      SaveTemps(SaveTempsNone), BitcodeEmbed(EmbedNone),
+    : Diags(Diags), VFS(std::move(VFS)), VerboseOutputStream(&llvm::errs()),
+      Mode(GCCMode), SaveTemps(SaveTempsNone), BitcodeEmbed(EmbedNone),
       Offload(OffloadHostDevice), CXX20HeaderType(HeaderMode_None),
       ModulesModeCXX20(false), DriverExecutable(DriverExecutable),
       SysRoot(DEFAULT_SYSROOT), DriverTitle(Title), CCCPrintBindings(false),
@@ -2432,7 +2432,7 @@ int Driver::ExecuteCompilation(
     SmallVectorImpl<std::pair<int, const Command *>> &FailingCommands) {
   if (C.getArgs().hasArg(options::OPT_fdriver_only)) {
     if (C.getArgs().hasArg(options::OPT_v))
-      C.getJobs().Print(llvm::errs(), "\n", true);
+      C.getJobs().Print(getVerboseOutputStream(), "\n", true);
 
     C.ExecuteJobs(C.getJobs(), FailingCommands, /*LogOnly=*/true);
 
@@ -2445,7 +2445,7 @@ int Driver::ExecuteCompilation(
 
   // Just print if -### was present.
   if (C.getArgs().hasArg(options::OPT__HASH_HASH_HASH)) {
-    C.getJobs().Print(llvm::errs(), "\n", true);
+    C.getJobs().Print(getVerboseOutputStream(), "\n", true);
     return Diags.hasErrorOccurred() ? 1 : 0;
   }
 
@@ -2709,23 +2709,23 @@ bool Driver::HandleImmediateArgs(Compilation &C) {
       C.getArgs().hasArg(options::OPT_print_supported_cpus) ||
       C.getArgs().hasArg(options::OPT_print_supported_extensions) ||
       C.getArgs().hasArg(options::OPT_print_enabled_extensions)) {
-    PrintVersion(C, llvm::errs());
+    PrintVersion(C, getVerboseOutputStream());
     SuppressMissingInputWarning = true;
   }
 
   if (C.getArgs().hasArg(options::OPT_v)) {
     if (!SystemConfigDir.empty())
-      llvm::errs() << "System configuration file directory: "
-                   << SystemConfigDir << "\n";
+      getVerboseOutputStream()
+          << "System configuration file directory: " << SystemConfigDir << "\n";
     if (!UserConfigDir.empty())
-      llvm::errs() << "User configuration file directory: "
-                   << UserConfigDir << "\n";
+      getVerboseOutputStream()
+          << "User configuration file directory: " << UserConfigDir << "\n";
   }
 
   const ToolChain &TC = C.getDefaultToolChain();
 
   if (C.getArgs().hasArg(options::OPT_v))
-    TC.printVerboseInfo(llvm::errs());
+    TC.printVerboseInfo(getVerboseOutputStream());
 
   if (C.getArgs().hasArg(options::OPT_print_resource_dir)) {
     llvm::outs() << ResourceDir << '\n';

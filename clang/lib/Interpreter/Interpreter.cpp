@@ -269,6 +269,9 @@ IncrementalCompilerBuilder::create(std::string TT,
 
   driver::Driver Driver(/*MainBinaryName=*/ClangArgv[0], TT, Diags);
   Driver.setCheckInputsExist(false); // the input comes from mem buffers
+  llvm::raw_ostream &VerboseOS =
+      VerboseOutputStream ? *VerboseOutputStream : llvm::errs();
+  Driver.setVerboseOutputStream(VerboseOS);
   llvm::ArrayRef<const char *> RF = llvm::ArrayRef(ClangArgv);
   std::unique_ptr<driver::Compilation> Compilation(Driver.BuildCompilation(RF));
 
@@ -277,13 +280,16 @@ IncrementalCompilerBuilder::create(std::string TT,
       return std::move(Err);
 
   if (Compilation->getArgs().hasArg(options::OPT_v))
-    Compilation->getJobs().Print(llvm::errs(), "\n", /*Quote=*/false);
+    Compilation->getJobs().Print(VerboseOS, "\n", /*Quote=*/false);
 
   auto ErrOrCC1Args = GetCC1Arguments(&Diags, Compilation.get());
   if (auto Err = ErrOrCC1Args.takeError())
     return std::move(Err);
 
-  return CreateCI(**ErrOrCC1Args);
+  auto CI = CreateCI(**ErrOrCC1Args);
+  if (CI)
+    (*CI)->setVerboseOutputStream(VerboseOS);
+  return CI;
 }
 
 llvm::Expected<std::unique_ptr<CompilerInstance>>
