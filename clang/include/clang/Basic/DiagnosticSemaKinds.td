@@ -1008,7 +1008,7 @@ def warn_fortify_source_size_mismatch : Warning<
   " but size argument is %2">, InGroup<FortifySource>;
 
 def warn_fortify_source_negative_size : Warning<
-  " '%0' size argument is negative">,
+  "'%0' size argument is negative">,
   InGroup<FortifySource>;
 
 def warn_stringop_overread
