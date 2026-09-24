@@ -1,0 +1,14 @@
+REQUIRES: system-linux
+
+// Check that libLLVMSYCL has RPATH (or RUNPATH for more recent Linux systems)
+// set to start with $ORIGIN to ensure that dependent libraries like
+// libLLVMOffload are found when LD_LIBRARY_PATH is not set.
+
+RUN: llvm-readobj --dynamic-table %sycl_libs_dir/libLLVMSYCL.so | FileCheck --check-prefixes=CHECK-RPATH %s
+CHECK-RPATH:    DynamicSection [
+CHECK-RPATH-RE:   0x{{\[0-9A-F\]+}} {{\(RPATH\)|\(RUNPATH\)}}        Library {{\(rpath\)|\(runpath\)}}: [$ORIGIN{{.*}}]
+CHECK-RPATH:    ]
+
+RUN: ldd %sycl_libs_dir/libLLVMSYCL.so | FileCheck --check-prefixes=CHECK-RESOLVE %s
+CHECK-RESOLVE: libLLVMOffload.so
+CHECK-RESOLVE-NOT: not found
