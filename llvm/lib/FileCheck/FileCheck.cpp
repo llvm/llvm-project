@@ -1525,6 +1525,7 @@ StringRef FileCheck::CanonicalizeFile(MemoryBuffer &MB,
 
 FileCheckDiag::~FileCheckDiag() {}
 MatchResultDiag::~MatchResultDiag() {}
+LLVM_ABI_FOR_TEST MatchNoteDiag::~MatchNoteDiag() {}
 
 static bool IsPartOfWord(char c) {
   return (isAlnum(c) || c == '-' || c == '_');
