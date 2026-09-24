@@ -768,9 +768,14 @@ bool AArch64CallLowering::lowerFormalArguments(
       F.getCallingConv() == CallingConv::ARM64EC_Thunk_X64)
     return false;
 
-  bool IsWin64 =
-      Subtarget.isCallingConvWin64(F.getCallingConv(), F.isVarArg()) &&
-      !Subtarget.isWindowsArm64EC();
+  bool IsWin64 = Subtarget.isCallingConvWin64(F.getCallingConv(), F.isVarArg());
+
+  // If an argument is marked "sret" and "inreg", it must be returned in x0.
+  // Bail for now.
+  if (IsWin64 && any_of(F.args(), [](const Argument &A) {
+        return A.hasStructRetAttr() && A.hasInRegAttr();
+      }))
+    return false;
 
   SmallVector<ArgInfo, 8> SplitArgs;
   SmallVector<std::pair<Register, Register>> BoolArgs;

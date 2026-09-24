@@ -193,7 +193,6 @@ LiteThresholdPct("lite-threshold-pct",
             "threshold of 90 means only top 10 percent of functions with "
             "profile will be processed."),
   cl::init(0),
-  cl::ZeroOrMore,
   cl::Hidden,
   cl::cat(BoltOptCategory));
 
@@ -284,7 +283,6 @@ static cl::opt<bool>
 UseGnuStack("use-gnu-stack",
   cl::desc("use GNU_STACK program header for new segment (workaround for "
            "issues with strip/objcopy)"),
-  cl::ZeroOrMore,
   cl::cat(BoltCategory));
 
 static cl::opt<uint64_t> CustomAllocationVMA(
@@ -320,7 +318,7 @@ static cl::list<GadgetKindBitmask> GadgetScannersToRun(
         clEnumValN(GS_PTRAUTH_ALL_MASK, "ptrauth-all",
                    "All Pointer Authentication scanners"),
         clEnumValN(GS_ALL_MASK, "all", "All implemented scanners")),
-    cl::ZeroOrMore, cl::CommaSeparated, cl::cat(BinaryAnalysisCategory));
+    cl::CommaSeparated, cl::cat(BinaryAnalysisCategory));
 
 // Primary targets for hooking runtime library initialization hooking
 // with fallback to next item in case if current item is not available
@@ -342,7 +340,7 @@ cl::opt<RuntimeLibInitHookTarget> RuntimeLibInitHook(
                clEnumValN(RLIH_INIT, "init", "use ELF DT_INIT entry"),
                clEnumValN(RLIH_INIT_ARRAY, "init_array",
                           "use ELF .init_array entry")),
-    cl::ZeroOrMore, cl::cat(BoltOptCategory));
+    cl::cat(BoltOptCategory));
 
 } // namespace opts
 

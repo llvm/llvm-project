@@ -2789,11 +2789,6 @@ public:
   /// address space before call and casted back to Ptr type after call.
   LLVM_ABI Value *CreateLaunderInvariantGroup(Value *Ptr);
 
-  /// \brief Create a strip.invariant.group intrinsic call. If Ptr type is
-  /// different from pointer to i8, it's casted to pointer to i8 in the same
-  /// address space before call and casted back to Ptr type after call.
-  LLVM_ABI Value *CreateStripInvariantGroup(Value *Ptr);
-
   /// Return a vector value that contains the vector V reversed
   LLVM_ABI Value *CreateVectorReverse(Value *V, const Twine &Name = "");
 

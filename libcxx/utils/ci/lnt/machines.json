@@ -6,6 +6,7 @@
     "xcode-version": "26.5",
     "benchmark-suite-version": "8bb5e216937e6b541f351aa1637c67e85a43ada0",
     "cmake-cache": "libcxx/utils/ci/lnt/cmake/generic.cmake",
+    "lit-params": ["std=c++26", "optimization=speed"],
     "coverage": {
       "since": "2023-01-01",
       "every": "week",
@@ -21,6 +22,7 @@
     "xcode-version": "26.5",
     "benchmark-suite-version": "8bb5e216937e6b541f351aa1637c67e85a43ada0",
     "cmake-cache": "libcxx/utils/ci/lnt/cmake/hardened-fast.cmake",
+    "lit-params": ["std=c++26", "optimization=speed"],
     "coverage": {
       "since": "2023-12-01",
       "every": "week",
@@ -35,6 +37,7 @@
     "cxx": "clang++-22",
     "benchmark-suite-version": "8bb5e216937e6b541f351aa1637c67e85a43ada0",
     "cmake-cache": "libcxx/utils/ci/lnt/cmake/generic.cmake",
+    "lit-params": ["std=c++26", "optimization=speed"],
     "coverage": {
       "since": "2023-01-01",
       "every": "week",

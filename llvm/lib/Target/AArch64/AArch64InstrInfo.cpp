@@ -129,11 +129,10 @@ static std::optional<unsigned> getLFIInstSizeInBytes(const MachineInstr &MI) {
     // Indirect branches/calls expand to 2 instructions (guard + br/blr).
     return 8;
   case AArch64::RET:
-    // RET through LR is not rewritten, but RET through another register
-    // expands to 2 instructions (guard + ret).
-    if (MI.getOperand(0).getReg() != AArch64::LR)
-      return 8;
-    return 4;
+    // RET through another register expands to 2 instructions (guard + ret).
+    // RET through LR may also expand to 2 instructions if a deferred LR guard
+    // is flushed before the return.
+    return 8;
   case AArch64::RETAA:
   case AArch64::RETAB:
     // Authenticated returns expand to 3 instructions (authenticate + guard +
@@ -1281,7 +1280,16 @@ bool AArch64InstrInfo::canInsertSelect(const MachineBasicBlock &MBB,
     return true;
   }
 
-  // Can't do vectors.
+  // No single conditional move for a 128-bit vector, but we can emit a sequence
+  // of csetm (~1), dup (~5, cross domain), bsl (~2).
+  if (AArch64::FPR128RegClass.hasSubClassEq(RC) &&
+      Subtarget.isNeonAvailable() &&
+      !MBB.getParent()->getFunction().hasMinSize()) {
+    CondCycles = 8 + ExtraCondLat;
+    TrueCycles = FalseCycles = 2;
+    return true;
+  }
+
   return false;
 }
 
@@ -1293,6 +1301,26 @@ void AArch64InstrInfo::insertSelect(MachineBasicBlock &MBB,
 
   MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
   AArch64CC::CondCode CC = insertCmpForCondBr(MBB, I, DL, Cond);
+
+  // A 128-bit vector has no conditional move so blend the operands with a mask
+  // built from the flags.
+  if (MRI.constrainRegClass(DstReg, &AArch64::FPR128RegClass)) {
+    assert(Subtarget.isNeonAvailable() && "Expected NEON for a vector select");
+    MRI.constrainRegClass(TrueReg, &AArch64::FPR128RegClass);
+    MRI.constrainRegClass(FalseReg, &AArch64::FPR128RegClass);
+    Register CondSet = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
+    BuildMI(MBB, I, DL, get(AArch64::CSINVXr), CondSet)
+        .addReg(AArch64::XZR)
+        .addReg(AArch64::XZR)
+        .addImm(AArch64CC::getInvertedCondCode(CC));
+    Register Mask = MRI.createVirtualRegister(&AArch64::FPR128RegClass);
+    BuildMI(MBB, I, DL, get(AArch64::DUPv2i64gpr), Mask).addReg(CondSet);
+    BuildMI(MBB, I, DL, get(AArch64::BSPv16i8), DstReg)
+        .addReg(Mask)
+        .addReg(TrueReg)
+        .addReg(FalseReg);
+    return;
+  }
 
   unsigned Opc = 0;
   const TargetRegisterClass *RC = nullptr;

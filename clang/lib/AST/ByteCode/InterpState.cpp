@@ -32,9 +32,8 @@ InterpState::InterpState(const State &Parent, Program &P, InterpStack &Stk,
 }
 
 InterpState::InterpState(const State &Parent, Program &P, InterpStack &Stk,
-                         FrameAllocator &FrameAlloc,
-
-                         Context &Ctx, const Function *Func)
+                         FrameAllocator &FrameAlloc, Context &Ctx,
+                         const Function *Func)
     : State(Ctx.getASTContext(), Parent.getEvalStatus()), M(nullptr),
       FrameAlloc(FrameAlloc), P(P), Stk(Stk), Ctx(Ctx), BottomFrame(*this),
       Current(&BottomFrame), StepsLeft(Ctx.getLangOpts().ConstexprStepLimit),
@@ -44,6 +43,19 @@ InterpState::InterpState(const State &Parent, Program &P, InterpStack &Stk,
       Parent.CheckingPotentialConstantExpression;
   CheckingForUndefinedBehavior = Parent.CheckingForUndefinedBehavior;
   EvalMode = Parent.EvalMode;
+}
+
+InterpState::InterpState(Expr::EvalStatus &Status, Program &P, InterpStack &Stk,
+                         FrameAllocator &FrameAlloc, Context &Ctx,
+                         SourceMapper *M)
+    : State(Ctx.getASTContext(), Status), M(M), FrameAlloc(FrameAlloc), P(P),
+      Stk(Stk), Ctx(Ctx), BottomFrame(*this), Current(&BottomFrame),
+      StepsLeft(Ctx.getLangOpts().ConstexprStepLimit),
+      InfiniteSteps(StepsLeft == 0), EvalID(Ctx.getEvalID()) {
+  InConstantContext = true;
+  CheckingPotentialConstantExpression = false;
+  CheckingForUndefinedBehavior = true;
+  EvalMode = EvaluationMode::ConstantExpression;
 }
 
 bool InterpState::inConstantContext() const {

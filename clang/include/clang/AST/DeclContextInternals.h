@@ -56,13 +56,13 @@ class StoredDeclsList {
       if (!ShouldErase(*DeclListNode::iterator(List))) {
         NewLast = NewTail;
         *NewTail = List;
-        if (auto *Node = List.dyn_cast<DeclListNode*>()) {
+        if (auto *Node = dyn_cast<DeclListNode *>(List)) {
           NewTail = &Node->Rest;
           List = Node->Rest;
         } else {
           break;
         }
-      } else if (DeclListNode *N = List.dyn_cast<DeclListNode*>()) {
+      } else if (DeclListNode *N = dyn_cast<DeclListNode *>(List)) {
         List = N->Rest;
         C.DeallocateDeclListNode(N);
       } else {
@@ -111,7 +111,7 @@ public:
     // If this is a list-form, free the list.
     ASTContext &C = getASTContext();
     Decls List = Data.getPointer();
-    while (DeclListNode *ToDealloc = List.dyn_cast<DeclListNode *>()) {
+    while (DeclListNode *ToDealloc = dyn_cast<DeclListNode *>(List)) {
       List = ToDealloc->Rest;
       C.DeallocateDeclListNode(ToDealloc);
     }
@@ -290,7 +290,7 @@ public:
     }
 
     while (true) {
-      if (auto *Node = D.dyn_cast<DeclListNode*>()) {
+      if (auto *Node = dyn_cast<DeclListNode *>(D)) {
         llvm::errs() << '[' << Node->D << "] -> ";
         D = Node->Rest;
       } else {

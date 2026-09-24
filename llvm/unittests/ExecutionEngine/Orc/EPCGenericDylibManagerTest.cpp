@@ -30,7 +30,8 @@ TEST(EPCGenericDylibManagerTest, CreateFromExecutionSession) {
   public:
     EPCWithBootstrapSymbols(std::shared_ptr<SymbolStringPool> SSP,
                             StringMap<ExecutorAddr> BS)
-        : UnsupportedExecutorProcessControl(std::move(SSP)) {
+        : UnsupportedExecutorProcessControl(std::move(SSP), nullptr,
+                                            sys::getProcessTriple()) {
       this->BootstrapSymbols = std::move(BS);
     }
   };

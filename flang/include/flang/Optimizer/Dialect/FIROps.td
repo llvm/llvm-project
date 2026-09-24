@@ -2931,6 +2931,7 @@ def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, SymbolName,
     OptionalAttr<fir_Linkage>:$linkage,
     OptionalAttr<cuf_DataAttributeAttr>:$data_attr,
     OptionalAttr<I64Attr>:$alignment,
+    OptionalAttr<StrAttr>:$section,
     OptionalAttr<StrAttr>:$sym_visibility
   );
 

@@ -57,11 +57,13 @@ TEST_F(ABITypesTest, AtomicTypeProperties) {
   EXPECT_EQ(Atomic->getSizeInBits(), TypeSize::getFixed(32));
   EXPECT_EQ(Atomic->getAlignment(), Align(4));
   EXPECT_TRUE(llvm::isa<AtomicType>(Atomic));
+  EXPECT_FALSE(Atomic->isEmptyRecord());
 }
 
 TEST_F(ABITypesTest, EmptyCRecord) {
   const RecordType *Empty = makeRecord({}, 0, RecordFlags::CanPassInRegisters);
   EXPECT_TRUE(Empty->isEmpty());
+  EXPECT_TRUE(Empty->isEmptyRecord());
 }
 
 TEST_F(ABITypesTest, NestedEmptyCRecordField) {
@@ -155,6 +157,7 @@ TEST_F(ABITypesTest, GenericVector) {
   EXPECT_TRUE(V4I32->isFixedLength());
   EXPECT_FALSE(V4I32->isTuple());
   EXPECT_EQ(V4I32->getSizeInBits(), TypeSize::getFixed(128));
+  EXPECT_EQ(V4I32->getFixedSizeInBitsOrZero(), 128u);
 }
 
 // svint32_t is <vscale x 4 x i32>.
@@ -169,6 +172,7 @@ TEST_F(ABITypesTest, SVEDataVector) {
   EXPECT_TRUE(SVInt32->isScalable());
   EXPECT_FALSE(SVInt32->isTuple());
   EXPECT_EQ(SVInt32->getSizeInBits(), TypeSize::getScalable(128));
+  EXPECT_EQ(SVInt32->getFixedSizeInBitsOrZero(), 0u);
   EXPECT_EQ(SVInt32->getAlignment(), Align(16));
 }
 

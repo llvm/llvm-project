@@ -313,6 +313,7 @@ public:
     eKindStepThrough,
     eKindStepUntil,
     eKindSingleThreadTimeout,
+    eKindRunToBreakpoint
   };
 
   virtual ~ThreadPlan();

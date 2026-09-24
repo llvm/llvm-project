@@ -121,7 +121,7 @@ namespace objdump_opt {
 class ObjdumpOptTable : public CommonOptTable {
 public:
   ObjdumpOptTable()
-      : CommonOptTable(objdump_opt::OptionTables,
+      : CommonOptTable(objdump_opt::optionTables(),
                        " [options] <input object files>",
                        "llvm object file dumper") {}
 };
@@ -141,7 +141,7 @@ namespace otool {
 class OtoolOptTable : public CommonOptTable {
 public:
   OtoolOptTable()
-      : CommonOptTable(otool::OptionTables, " [option...] [file...]",
+      : CommonOptTable(otool::optionTables(), " [option...] [file...]",
                        "Mach-O object file displaying tool") {}
 };
 

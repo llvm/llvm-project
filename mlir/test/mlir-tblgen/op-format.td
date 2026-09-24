@@ -326,7 +326,7 @@ def LegacyUnquotedBitEnumOp : TestFormat_Op<"$attr attr-dict">,
 // CHECK-LABEL: OptionalGroupA::parse
 // CHECK: if (::mlir::succeeded(parser.parseOptionalQuestion())
 // CHECK-NEXT: else
-// CHECK: parser.parseOptionalOperand
+// CHECK: ::mlir::detail::parseOptionalOperandInto(parser, aOperands)
 // CHECK-LABEL: OptionalGroupA::print
 // CHECK: if (!getA())
 // CHECK-NEXT: odsPrinter << ' ' << "?";

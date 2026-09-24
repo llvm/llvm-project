@@ -18,7 +18,7 @@ subroutine simple_unstructured()
 end subroutine
 ! CHECK-LABEL: simple_unstructured
 ! CHECK:   %[[TRIP_VAR_REF:.*]] = fir.alloca i32
-! CHECK:   %[[LOOP_VAR_REF:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFsimple_unstructuredEi"}
+! CHECK:   %[[LOOP_VAR_REF:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFsimple_unstructuredEi"}>
 ! CHECK:   %[[LOOP_VAR_DECL:.*]]:2 = hlfir.declare %[[LOOP_VAR_REF]]
 ! CHECK:   %[[ONE:.*]] = arith.constant 1 : i32
 ! CHECK:   %[[HUNDRED:.*]] = arith.constant 100 : i32
@@ -58,7 +58,7 @@ subroutine simple_unstructured_with_step()
 end subroutine
 ! CHECK-LABEL: simple_unstructured_with_step
 ! CHECK:   %[[TRIP_VAR_REF:.*]] = fir.alloca i32
-! CHECK:   %[[LOOP_VAR_REF:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFsimple_unstructured_with_stepEi"}
+! CHECK:   %[[LOOP_VAR_REF:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFsimple_unstructured_with_stepEi"}>
 ! CHECK:   %[[LOOP_VAR_DECL:.*]]:2 = hlfir.declare %[[LOOP_VAR_REF]]
 ! CHECK:   %[[ONE:.*]] = arith.constant 1 : i32
 ! CHECK:   %[[HUNDRED:.*]] = arith.constant 100 : i32
@@ -106,11 +106,11 @@ end subroutine
 ! loops fold back to fir.do_loop.
 ! CHECK-LABEL: nested_unstructured
 ! CHECK:   %[[TRIP_VAR_K_REF:.*]] = fir.alloca i32
-! CHECK:   %[[LOOP_VAR_I_REF:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFnested_unstructuredEi"}
+! CHECK:   %[[LOOP_VAR_I_REF:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFnested_unstructuredEi"}>
 ! CHECK:   %[[LOOP_VAR_I_DECL:.*]]:2 = hlfir.declare %[[LOOP_VAR_I_REF]]
-! CHECK:   %[[LOOP_VAR_J_REF:.*]] = fir.alloca i32 {bindc_name = "j", uniq_name = "_QFnested_unstructuredEj"}
+! CHECK:   %[[LOOP_VAR_J_REF:.*]] = fir.alloca i32 <{bindc_name = "j", uniq_name = "_QFnested_unstructuredEj"}>
 ! CHECK:   %[[LOOP_VAR_J_DECL:.*]]:2 = hlfir.declare %[[LOOP_VAR_J_REF]]
-! CHECK:   %[[LOOP_VAR_K_REF:.*]] = fir.alloca i32 {bindc_name = "k", uniq_name = "_QFnested_unstructuredEk"}
+! CHECK:   %[[LOOP_VAR_K_REF:.*]] = fir.alloca i32 <{bindc_name = "k", uniq_name = "_QFnested_unstructuredEk"}>
 ! CHECK:   %[[LOOP_VAR_K_DECL:.*]]:2 = hlfir.declare %[[LOOP_VAR_K_REF]]
 ! CHECK:   fir.do_loop %{{[^ ]+}} = %{{.*}} to %{{.*}} step %{{.*}} : i32 {
 ! CHECK:     fir.do_loop %{{[^ ]+}} = %{{.*}} to %{{.*}} step %{{.*}} : i32 {
@@ -148,9 +148,9 @@ subroutine nested_structured_in_unstructured()
 end subroutine
 ! CHECK-LABEL: nested_structured_in_unstructured
 ! CHECK:   %[[TRIP_VAR_I_REF:.*]] = fir.alloca i32
-! CHECK:   %[[LOOP_VAR_I_REF:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFnested_structured_in_unstructuredEi"}
+! CHECK:   %[[LOOP_VAR_I_REF:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFnested_structured_in_unstructuredEi"}>
 ! CHECK:   %[[LOOP_VAR_I_DECL:.*]]:2 = hlfir.declare %[[LOOP_VAR_I_REF]]
-! CHECK:   %[[LOOP_VAR_J_REF:.*]] = fir.alloca i32 {bindc_name = "j", uniq_name = "_QFnested_structured_in_unstructuredEj"}
+! CHECK:   %[[LOOP_VAR_J_REF:.*]] = fir.alloca i32 <{bindc_name = "j", uniq_name = "_QFnested_structured_in_unstructuredEj"}>
 ! CHECK:   %[[LOOP_VAR_J_DECL:.*]]:2 = hlfir.declare %[[LOOP_VAR_J_REF]]
 ! CHECK:   %[[I_START:.*]] = arith.constant 1 : i32
 ! CHECK:   %[[I_END:.*]] = arith.constant 100 : i32
@@ -211,7 +211,7 @@ end
 ! CHECK:           %{{.*}} = fir.load %[[ITER_VAR]] : !fir.ref<i32>
 ! CHECK:           cf.cond_br %{{.*}}, ^[[BODY:.*]], ^[[EXIT:.*]]
 ! CHECK:         ^[[BODY]]:
-! CHECK-NEXT:      %{{.*}} = fir.alloca !fir.logical<4> {bindc_name = "success", {{.*}}}
+! CHECK-NEXT:      %{{.*}} = fir.alloca !fir.logical<4> <{bindc_name = "success", {{.*}}}>
 ! CHECK:         ^[[EXIT]]:
 ! CHECK-NEXT:      scf.yield
 ! CHECK:         }

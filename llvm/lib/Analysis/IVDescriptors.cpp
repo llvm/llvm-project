@@ -1765,7 +1765,7 @@ bool ConditionalInductionDescriptor::isConditionalInductionPHI(
   Value *Start = PN->getIncomingValueForBlock(Preheader);
   const SCEV *StartSCEV = SE.getSCEV(Start);
 
-  SCEV::NoWrapFlags NoWrapFlags = SCEV::FlagAnyWrap;
+  SCEV::NoWrapFlags NoWrapFlags = SCEV::FlagNone;
   if (auto *GEP = dyn_cast<GEPOperator>(StepInst)) {
     // With NUSW, we can add NUW if the step is non-negative. We can't add NSW
     // as the base address is unsigned.

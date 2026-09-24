@@ -1567,11 +1567,7 @@ namespace op_definition_impl {
 /// trait types `Traits`.
 template <template <typename T> class... Traits>
 inline bool hasTrait(TypeID traitID) {
-  TypeID traitIDs[] = {TypeID::get<Traits>()...};
-  for (unsigned i = 0, e = sizeof...(Traits); i != e; ++i)
-    if (traitIDs[i] == traitID)
-      return true;
-  return false;
+  return ((traitID == TypeID::get<Traits>()) || ...);
 }
 template <>
 inline bool hasTrait<>(TypeID traitID) {

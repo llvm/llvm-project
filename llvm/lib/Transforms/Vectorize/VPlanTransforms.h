@@ -171,7 +171,7 @@ struct VPlanTransforms {
   /// recurrences, also creates FirstOrderRecurrenceSplice instructions and
   /// sinks/hoists users as needed. Returns false if any fixed-order
   /// recurrence cannot be handled.
-  static bool createHeaderPhiRecipes(
+  LLVM_ABI_FOR_TEST static bool createHeaderPhiRecipes(
       VPlan &Plan, PredicatedScalarEvolution &PSE, Loop &OrigLoop,
       const VPDominatorTree &VPDT,
       const MapVector<PHINode *, InductionDescriptor> &Inductions,
@@ -235,6 +235,14 @@ struct VPlanTransforms {
                                  bool AddBranchWeights);
   static void attachCheckBlock(VPlan &Plan, Value *Cond, BasicBlock *CheckBlock,
                                bool AddBranchWeights);
+
+  /// Model the blocks the executed \p MainPlan generated for the main vector
+  /// loop in \p EpiPlan during epilogue vectorization, wrapping each in a
+  /// VPIRBasicBlock, with \p EnteredFrom the block \p EpiPlan is entered from.
+  /// Edges from blocks bypassing both vector loops are redirected to \p
+  /// EpiPlan's scalar preheader, all others are mirrored.
+  static void modelGeneratedMainLoopBlocks(VPlan &EpiPlan, VPlan &MainPlan,
+                                           VPIRBasicBlock *EnteredFrom);
 
   /// Replaces the VPInstructions in \p Plan with corresponding
   /// widen recipes. Returns false if any VPInstructions could not be converted
@@ -387,9 +395,10 @@ struct VPlanTransforms {
   /// latch exit condition. Multiple exits are handled with a dispatch block
   /// that determines which exit to take based on lane-by-lane semantics.
   LLVM_ABI_FOR_TEST static bool
-  handleUncountableEarlyExits(VPlan &Plan, Loop *TheLoop,
-                              PredicatedScalarEvolution &PSE, DominatorTree &DT,
-                              AssumptionCache *AC, UncountableExitStyle Style);
+  handleUncountableEarlyExits(VPlan &Plan, OptimizationRemarkEmitter *ORE,
+                              Loop *TheLoop, PredicatedScalarEvolution &PSE,
+                              DominatorTree &DT, AssumptionCache *AC,
+                              UncountableExitStyle Style);
 
   /// Disconnect countable early exits from the loop.
   LLVM_ABI_FOR_TEST static void handleCountableEarlyExits(VPlan &Plan);
@@ -628,6 +637,15 @@ struct VPlanTransforms {
   static void makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
                                         VPRecipeBuilder &RecipeBuilder,
                                         VPCostContext &CostCtx);
+
+  /// Replace truncates of a wide induction, or of that induction's increment,
+  /// by a VPWidenIntOrFpInductionRecipe producing the truncated type directly.
+  /// The canonical induction is narrowed even when the target reports the
+  /// truncate as free. If narrowing is only profitable for a subset of VFs in
+  /// \p Range, Range.End is updated.
+  static void narrowInductionTruncates(VPlan &Plan, VFRange &Range,
+                                       const TargetTransformInfo &TTI,
+                                       PredicatedScalarEvolution &PSE);
 };
 
 } // namespace llvm

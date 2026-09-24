@@ -352,9 +352,9 @@ struct VPCostContext {
   /// transform replaced the original recipe.
   void invalidateWideningDecision(Instruction *I, ElementCount VF);
 
-  /// \returns how much the cost of the block predicated by replicate region
-  /// \p Region should be divided by.
-  uint64_t getReplicateRegionCostDivisor(const VPRegionBlock *Region) const;
+  /// \returns how much the cost of a block executing with recorded frequency
+  /// \p Freq should be divided by.
+  uint64_t getCostDivisor(std::optional<VPExecutionFrequency> Freq) const;
 
   /// Returns true if \p I is known to be scalarized at \p VF.
   bool willBeScalarized(Instruction *I, ElementCount VF) const;

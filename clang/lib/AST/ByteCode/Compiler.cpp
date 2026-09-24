@@ -734,9 +734,28 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
   case CK_NonAtomicToAtomic:
   case CK_NoOp:
   case CK_UserDefinedConversion:
-  case CK_AddressSpaceConversion:
   case CK_CPointerToObjCPointerCast:
     return this->delegate(SubExpr);
+
+  case CK_AddressSpaceConversion: {
+    if (E->containsErrors())
+      return false;
+
+    if (!this->visit(SubExpr))
+      return false;
+
+    uint64_t Val;
+    if (E->getType()->isPointerType())
+      Val = Ctx.getASTContext().getTargetNullPointerValue(E->getType());
+    else
+      Val = 0;
+
+    if (!this->emitCastAddressSpace(Val, E->getType().getTypePtr(), E))
+      return false;
+    if (DiscardResult)
+      return this->emitPopPtr(E);
+    return true;
+  }
 
   case CK_BitCast: {
     if (E->containsErrors())
@@ -1862,12 +1881,19 @@ bool Compiler<Emitter>::VisitVectorBinOp(const BinaryOperator *E) {
   const Expr *RHS = E->getRHS();
   assert(!E->isCommaOp() &&
          "Comma op should be handled in VisitBinaryOperator");
+
+  QualType LHSType = LHS->getType();
+  if (const auto *AT = LHSType->getAs<AtomicType>())
+    LHSType = AT->getValueType();
+  QualType RHSType = RHS->getType();
+  if (const auto *AT = RHSType->getAs<AtomicType>())
+    RHSType = AT->getValueType();
   assert(E->getType()->isVectorType());
-  assert(LHS->getType()->isVectorType());
-  assert(RHS->getType()->isVectorType());
+  assert(LHSType->isVectorType());
+  assert(RHSType->isVectorType());
 
   // We can only handle vectors with primitive element types.
-  if (!canClassify(LHS->getType()->castAs<VectorType>()->getElementType()))
+  if (!canClassify(LHSType->castAs<VectorType>()->getElementType()))
     return false;
 
   // Prepare storage for result.
@@ -1884,14 +1910,14 @@ bool Compiler<Emitter>::VisitVectorBinOp(const BinaryOperator *E) {
                 ? BinaryOperator::getOpForCompoundAssignment(E->getOpcode())
                 : E->getOpcode();
 
-  PrimType ElemT = this->classifyVectorElementType(LHS->getType());
-  PrimType RHSElemT = this->classifyVectorElementType(RHS->getType());
+  PrimType ElemT = this->classifyVectorElementType(LHSType);
+  PrimType RHSElemT = this->classifyVectorElementType(RHSType);
   PrimType ResultElemT = this->classifyVectorElementType(E->getType());
 
   if (E->getOpcode() == BO_Assign) {
     assert(Ctx.getASTContext().hasSameUnqualifiedType(
-        LHS->getType()->castAs<VectorType>()->getElementType(),
-        RHS->getType()->castAs<VectorType>()->getElementType()));
+        LHSType->castAs<VectorType>()->getElementType(),
+        RHSType->castAs<VectorType>()->getElementType()));
     if (!this->visit(LHS))
       return false;
     if (!this->visit(RHS))
@@ -2362,8 +2388,16 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
     auto initPrimitiveField = [=](const Record::Field *FieldToInit,
                                   const Expr *Init, PrimType T,
                                   bool Activate = false) -> bool {
-      InitStackScope<Emitter> ISS(this, isa<CXXDefaultInitExpr>(Init));
+      bool DefaultInit = isa<CXXDefaultInitExpr>(Init);
+      InitStackScope<Emitter> ISS(this, DefaultInit);
+
+      if (DefaultInit && !this->emitStartFieldInit(FieldToInit->Offset, Init))
+        return false;
+
       if (!this->visit(Init))
+        return false;
+
+      if (DefaultInit && !this->emitEndInit(Init))
         return false;
 
       bool BitField = FieldToInit->isBitField();
@@ -2392,7 +2426,10 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
       if (Activate && !this->emitActivate(E))
         return false;
 
-      return this->visitInitializerPop(Init);
+      if (!this->emitStartInit(Init))
+        return false;
+
+      return this->visitInitializerPop(Init) && this->emitEndInit(Init);
     };
 
     if (R->isUnion()) {
@@ -2920,8 +2957,12 @@ bool Compiler<Emitter>::VisitMemberExpr(const MemberExpr *E) {
     return this->discard(Base);
 
   if (const auto *VD = dyn_cast<VarDecl>(Member)) {
-    // I am almost confident in saying that a var decl must be static
-    // and therefore registered as a global variable.
+    // If the member is a VarDecl, this is a static variable.
+    // We need to try to lazily evaluate its initializer here since the
+    // variable might've been deserialized and not registered
+    // as a global variable yet.
+    if (VD->getInit() && !VD->getInit()->isValueDependent())
+      VD->evaluateValue();
     if (auto GlobalIndex = P.getGlobal(VD)) {
       if (!this->emitGetPtrGlobal(*GlobalIndex, E))
         return false;
@@ -3897,6 +3938,16 @@ bool Compiler<Emitter>::VisitCXXConstructExpr(const CXXConstructExpr *E) {
       // If the constructor is trivial anyway, we're done.
       if (Ctor->isTrivial())
         return true;
+    }
+
+    // Trivial default constructors might never be implicitly defined by the
+    // AST, so we need to special-case them here.
+    if (Ctor->isTrivial() && Ctor->isDefaultConstructor()) {
+      if (!this->emitDefaultInit(Ctor, E))
+        return false;
+      if (DiscardResult)
+        return this->emitPopPtr(E);
+      return true;
     }
 
     // Avoid materializing a temporary for an elidable copy/move constructor.
@@ -6060,6 +6111,25 @@ bool Compiler<Emitter>::visitAPValueInitializer(const APValue &Val,
   // TODO: Other types.
 
   return false;
+}
+
+template <class Emitter>
+bool Compiler<Emitter>::registerRedecl(const VarDecl *VD, const APValue &Val) {
+  if (P.getGlobal(VD))
+    return true;
+
+  UnsignedOrNone GlobalIndex = P.createGlobal(VD, /*Init=*/nullptr);
+  if (!GlobalIndex) {
+    llvm_unreachable("Why didn't that work?");
+  }
+
+  assert(canClassify(VD->getType()) &&
+         "registerRedecl should only be called with primitive values");
+
+  PrimType T = classifyPrim(VD->getType());
+  if (!visitAPValue(Val, T, VD))
+    return false;
+  return this->emitInitGlobal(T, *GlobalIndex, {});
 }
 
 template <class Emitter>

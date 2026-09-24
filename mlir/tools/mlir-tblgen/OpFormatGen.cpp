@@ -673,17 +673,9 @@ const char *const variadicOperandParserCode = R"(
     return ::mlir::failure();
 )";
 const char *const optionalOperandParserCode = R"(
-  {
-    {0}OperandsLoc = parser.getCurrentLocation();
-    ::mlir::OpAsmParser::UnresolvedOperand operand;
-    ::mlir::OptionalParseResult parseResult =
-                                    parser.parseOptionalOperand(operand);
-    if (parseResult.has_value()) {
-      if (failed(*parseResult))
-        return ::mlir::failure();
-      {0}Operands.push_back(operand);
-    }
-  }
+  {0}OperandsLoc = parser.getCurrentLocation();
+  if (::mlir::detail::parseOptionalOperandInto(parser, {0}Operands))
+    return ::mlir::failure();
 )";
 const char *const operandParserCode = R"(
   {0}OperandsLoc = parser.getCurrentLocation();
@@ -727,16 +719,8 @@ const char *const variadicTypeParserCode = R"(
     return ::mlir::failure();
 )";
 const char *const optionalTypeParserCode = R"(
-  {
-    ::mlir::Type optionalType;
-    ::mlir::OptionalParseResult parseResult =
-                                    parser.parseOptionalType(optionalType);
-    if (parseResult.has_value()) {
-      if (failed(*parseResult))
-        return ::mlir::failure();
-      {0}Types.push_back(optionalType);
-    }
-  }
+  if (::mlir::detail::parseOptionalTypeInto(parser, {0}Types))
+    return ::mlir::failure();
 )";
 const char *const typeParserCode = R"(
   {

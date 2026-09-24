@@ -27,7 +27,7 @@ end function func_arg
 ! CHECK-LABEL:   func.func @_QPfunc_arg(
 ! CHECK-SAME:                           %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i32> {fir.bindc_name = "x"}) -> i32 {
 ! CHECK:           %[[VAL_1:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:           %[[VAL_2:.*]] = fir.alloca i32 {bindc_name = "func_arg", uniq_name = "_QFfunc_argEfunc_arg"}
+! CHECK:           %[[VAL_2:.*]] = fir.alloca i32 <{bindc_name = "func_arg", uniq_name = "_QFfunc_argEfunc_arg"}>
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFfunc_argEfunc_arg"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_1]] arg {{[0-9]+}} {uniq_name = "_QFfunc_argEx"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_5:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<i32>
@@ -43,7 +43,7 @@ function func_noarg
 end function func_noarg
 ! CHECK-LABEL:   func.func @_QPfunc_noarg() -> i32 {
 ! CHECK:           %[[VAL_0:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:           %[[VAL_1:.*]] = fir.alloca i32 {bindc_name = "func_noarg", uniq_name = "_QFfunc_noargEfunc_noarg"}
+! CHECK:           %[[VAL_1:.*]] = fir.alloca i32 <{bindc_name = "func_noarg", uniq_name = "_QFfunc_noargEfunc_noarg"}>
 ! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "_QFfunc_noargEfunc_noarg"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_3:.*]] = arith.constant 1 : i32
 ! CHECK:           hlfir.assign %[[VAL_3]] to %[[VAL_2]]#0 : i32, !fir.ref<i32>

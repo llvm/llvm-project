@@ -907,10 +907,10 @@ AMDGPUTargetMachine::AMDGPUTargetMachine(const Target &T, const Triple &TT,
                                          std::optional<Reloc::Model> RM,
                                          std::optional<CodeModel::Model> CM,
                                          CodeGenOptLevel OptLevel)
-    : CodeGenTargetMachineImpl(
-          T, TT.computeDataLayout(), TT, getGPUOrDefault(TT, CPU), FS, Options,
-          getEffectiveRelocModel(), getEffectiveCodeModel(CM, CodeModel::Small),
-          OptLevel),
+    : CodeGenTargetMachineImpl(T, TT, getGPUOrDefault(TT, CPU), FS, Options,
+                               getEffectiveRelocModel(),
+                               getEffectiveCodeModel(CM, CodeModel::Small),
+                               OptLevel),
       TLOF(createTLOF(getTargetTriple())) {
   initAsmInfo();
   if (TT.isAMDGCN()) {

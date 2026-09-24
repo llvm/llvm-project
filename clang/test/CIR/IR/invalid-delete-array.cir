@@ -9,7 +9,13 @@ module {
 
   cir.func @bad_delete_array_throw_without_dtor(%p: !cir.ptr<!rec_S>) {
     // expected-error@+1 {{'cir.delete_array' op 'dtor_may_throw' requires an 'element_dtor' to be present}}
-    cir.delete_array %p : !cir.ptr<!rec_S> dtor_may_throw {delete_fn = @_ZdaPvm, delete_params = #cir.usual_delete_params<size = true>}
+    cir.delete_array %p : !cir.ptr<!rec_S> dtor_may_throw {delete_fn = @_ZdaPvm, element_align = 1, delete_params = #cir.usual_delete_params<size = true>}
+    cir.return
+  }
+
+  cir.func @bad_delete_array_throw_without_align(%p: !cir.ptr<!rec_S>) {
+    // expected-error@+1 {{'cir.delete_array' op requires attribute 'element_align'}}
+    cir.delete_array %p : !cir.ptr<!rec_S> dtor_may_throw {delete_fn = @_ZdaPvm, dtor_may_throw = true, delete_params = #cir.usual_delete_params<size = true>}
     cir.return
   }
 }

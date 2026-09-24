@@ -64,7 +64,7 @@ enum ID {
 
 class MLOptTable : public opt::OptTable {
 public:
-  MLOptTable() : opt::OptTable(OptionTables, /*IgnoreCase=*/false) {}
+  MLOptTable() : opt::OptTable(optionTables(), /*IgnoreCase=*/false) {}
 };
 } // namespace
 

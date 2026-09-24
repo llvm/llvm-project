@@ -282,3 +282,22 @@ namespace NonRecordNonArrayDesc {
 
   F foo(42);
 }
+
+namespace CompositeFieldInit {
+  struct S {
+    static consteval int decrement(int &x) {
+      return --x;
+    }
+
+    int a = 10;
+    int b = decrement(a); // both-error {{is not a constant expression}} \
+                          // both-note {{declared here}} \
+                          // both-note {{implicit use of 'this'}}
+  };
+
+  struct S2 {
+     const S s{10}; // both-note {{in the default initializer of 'b'}}
+  };
+
+  constexpr S2 s2{};
+}

@@ -6322,42 +6322,32 @@ SDValue DAGTypeLegalizer::PromoteIntRes_CONCAT_VECTORS(SDNode *N) {
   unsigned NumOutElem = NOutVT.getVectorMinNumElements();
   EVT OutElemTy = NOutVT.getVectorElementType();
   if (OutVT.isScalableVector()) {
-    // Find the largest promoted element type for each of the operands.
-    SDUse *MaxSizedValue = std::max_element(
-        N->op_begin(), N->op_end(), [](const SDValue &A, const SDValue &B) {
-          EVT AVT = A.getValueType().getVectorElementType();
-          EVT BVT = B.getValueType().getVectorElementType();
-          return AVT.getScalarSizeInBits() < BVT.getScalarSizeInBits();
-        });
-    EVT MaxElementVT = MaxSizedValue->getValueType().getVectorElementType();
+    EVT OpVT = N->getOperand(0).getValueType();
+    TargetLowering::LegalizeTypeAction OpAction = getTypeAction(OpVT);
+    assert((OpAction == TargetLowering::TypeLegal ||
+            OpAction == TargetLowering::TypePromoteInteger ||
+            OpAction == TargetLowering::TypeWidenVector) &&
+           "Unhandled legalization type");
 
-    // Then promote all vectors to the largest element type.
+    EVT ExtendedOpVT =
+        OpVT.changeVectorElementType(*DAG.getContext(), OutElemTy);
+
     SmallVector<SDValue, 8> Ops;
     for (unsigned I = 0; I < NumOperands; ++I) {
       SDValue Op = N->getOperand(I);
-      EVT OpVT = Op.getValueType();
-      if (getTypeAction(OpVT) == TargetLowering::TypePromoteInteger)
+      if (OpAction == TargetLowering::TypePromoteInteger)
         Op = GetPromotedInteger(Op);
-      else
-        assert(getTypeAction(OpVT) == TargetLowering::TypeLegal &&
-               "Unhandled legalization type");
-
-      if (OpVT.getVectorElementType().getScalarSizeInBits() <
-          MaxElementVT.getScalarSizeInBits())
-        Op = DAG.getAnyExtOrTrunc(
-            Op, dl,
-            OpVT.changeVectorElementType(*DAG.getContext(), MaxElementVT));
+      else if (OpAction == TargetLowering::TypeWidenVector)
+        Op = DAG.getNode(ISD::ANY_EXTEND, dl, ExtendedOpVT, Op);
       Ops.push_back(Op);
     }
 
-    // Do the CONCAT on the promoted type and finally truncate to (the promoted)
-    // NOutVT.
+    // Do the CONCAT on the legalized operands' element type, then extend
+    // or truncate to the promoted result type.
+    EVT ConcatVT = OutVT.changeVectorElementType(
+        *DAG.getContext(), Ops[0].getValueType().getVectorElementType());
     return DAG.getAnyExtOrTrunc(
-        DAG.getNode(
-            ISD::CONCAT_VECTORS, dl,
-            OutVT.changeVectorElementType(*DAG.getContext(), MaxElementVT),
-            Ops),
-        dl, NOutVT);
+        DAG.getNode(ISD::CONCAT_VECTORS, dl, ConcatVT, Ops), dl, NOutVT);
   }
 
   unsigned NumElem = N->getOperand(0).getValueType().getVectorNumElements();

@@ -5089,10 +5089,10 @@ defm unique_basic_block_section_names : BoolFOption<"unique-basic-block-section-
   NegFlag<SetFalse>>;
 defm unique_internal_linkage_names : BoolFOption<"unique-internal-linkage-names",
   CodeGenOpts<"UniqueInternalLinkageNames">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+  PosFlag<SetTrue, [], [ClangOption, CC1Option, FlangOption, FC1Option],
           "Uniqueify Internal Linkage Symbol Names by appending"
             " the MD5 hash of the module path">,
-  NegFlag<SetFalse>>;
+  NegFlag<SetFalse, [], [ClangOption, CC1Option, FlangOption]>>;
 defm unique_section_names : BoolFOption<"unique-section-names",
   CodeGenOpts<"UniqueSectionNames">, DefaultTrue,
   NegFlag<SetFalse, [], [ClangOption, CC1Option],
@@ -7410,6 +7410,8 @@ def mavx10_1 : Flag<["-"], "mavx10.1">, Group<m_x86_Features_Group>;
 def mno_avx10_1 : Flag<["-"], "mno-avx10.1">, Group<m_x86_Features_Group>;
 def mavx10_2 : Flag<["-"], "mavx10.2">, Group<m_x86_Features_Group>;
 def mno_avx10_2 : Flag<["-"], "mno-avx10.2">, Group<m_x86_Features_Group>;
+def mavx10v2aux : Flag<["-"], "mavx10v2aux">, Group<m_x86_Features_Group>;
+def mno_avx10v2aux : Flag<["-"], "mno-avx10v2aux">, Group<m_x86_Features_Group>;
 def mavx2 : Flag<["-"], "mavx2">, Group<m_x86_Features_Group>;
 def mno_avx2 : Flag<["-"], "mno-avx2">, Group<m_x86_Features_Group>;
 def mavx512f : Flag<["-"], "mavx512f">, Group<m_x86_Features_Group>;

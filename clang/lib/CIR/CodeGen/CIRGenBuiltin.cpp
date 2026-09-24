@@ -542,10 +542,8 @@ RValue CIRGenFunction::emitRotate(const CallExpr *e, bool isRotateLeft) {
   mlir::Value input = emitScalarExpr(e->getArg(0));
   mlir::Value amount = emitScalarExpr(e->getArg(1));
 
-  // TODO(cir): MSVC flavor bit rotate builtins use different types for input
-  // and amount, but cir.rotate requires them to have the same type. Cast amount
-  // to the type of input when necessary.
-  assert(!cir::MissingFeatures::msvcBuiltins());
+  if (amount.getType() != input.getType())
+    amount = builder.createIntCast(amount, input.getType());
 
   auto r = cir::RotateOp::create(builder, getLoc(e->getSourceRange()), input,
                                  amount, isRotateLeft);
@@ -592,6 +590,20 @@ static RValue emitBinaryFPBuiltin(CIRGenFunction &cgf, const CallExpr &e) {
   mlir::Location loc = cgf.getLoc(e.getExprLoc());
   mlir::Type ty = cgf.convertType(e.getType());
   auto call = Op::create(cgf.getBuilder(), loc, ty, arg0, arg1);
+
+  return RValue::get(call->getResult(0));
+}
+
+template <typename Op>
+static RValue emitTernarySameTypeBuiltin(CIRGenFunction &cgf,
+                                         const CallExpr &e) {
+  mlir::Value arg0 = cgf.emitScalarExpr(e.getArg(0));
+  mlir::Value arg1 = cgf.emitScalarExpr(e.getArg(1));
+  mlir::Value arg2 = cgf.emitScalarExpr(e.getArg(2));
+
+  mlir::Location loc = cgf.getLoc(e.getExprLoc());
+  mlir::Type ty = cgf.convertType(e.getType());
+  auto call = Op::create(cgf.getBuilder(), loc, ty, arg0, arg1, arg2);
 
   return RValue::get(call->getResult(0));
 }
@@ -1725,13 +1737,58 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_rotateleft16:
   case Builtin::BI__builtin_rotateleft32:
   case Builtin::BI__builtin_rotateleft64:
+  case Builtin::BI__builtin_stdc_rotate_left:
+  case Builtin::BIstdc_rotate_left_uc:
+  case Builtin::BIstdc_rotate_left_us:
+  case Builtin::BIstdc_rotate_left_ui:
+  case Builtin::BIstdc_rotate_left_ul:
+  case Builtin::BIstdc_rotate_left_ull:
     return emitRotate(e, /*isRotateLeft=*/true);
 
   case Builtin::BI__builtin_rotateright8:
   case Builtin::BI__builtin_rotateright16:
   case Builtin::BI__builtin_rotateright32:
   case Builtin::BI__builtin_rotateright64:
+  case Builtin::BI__builtin_stdc_rotate_right:
+  case Builtin::BIstdc_rotate_right_uc:
+  case Builtin::BIstdc_rotate_right_us:
+  case Builtin::BIstdc_rotate_right_ui:
+  case Builtin::BIstdc_rotate_right_ul:
+  case Builtin::BIstdc_rotate_right_ull:
     return emitRotate(e, /*isRotateLeft=*/false);
+
+  // stdc_memreverse8u8 is a no-op (single byte, nothing to swap).
+  case Builtin::BIstdc_memreverse8u8:
+    return RValue::get(emitScalarExpr(e->getArg(0)));
+  case Builtin::BIstdc_memreverse8u16:
+  case Builtin::BIstdc_memreverse8u32:
+  case Builtin::BIstdc_memreverse8u64: {
+    mlir::Value arg = emitScalarExpr(e->getArg(0));
+    return RValue::get(cir::ByteSwapOp::create(builder, loc, arg));
+  }
+  case Builtin::BIstdc_memreverse8:
+  case Builtin::BI__builtin_stdc_memreverse8: {
+    Expr::EvalResult result;
+    if (e->getArg(0)->EvaluateAsInt(result, getContext())) {
+      uint64_t size = result.Val.getInt().getZExtValue();
+      if (size <= 1) {
+        emitIgnoredExpr(e->getArg(1));
+        return RValue::get(nullptr);
+      }
+      if (size == 2 || size == 4 || size == 8) {
+        mlir::Location loc = getLoc(e->getSourceRange());
+        Address ptrAddr = emitPointerWithAlignment(e->getArg(1));
+        mlir::Type intTy = builder.getUIntNTy(size * 8);
+        Address addr = builder.createElementBitCast(loc, ptrAddr, intTy);
+        mlir::Value val = builder.createLoad(loc, addr);
+        mlir::Value swapped = cir::ByteSwapOp::create(builder, loc, val);
+        builder.createStore(loc, swapped, addr);
+        return RValue::get(nullptr);
+      }
+    }
+    // General case: fall back to the library function stdc_memreverse8.
+    break;
+  }
 
   case Builtin::BI__builtin_coro_id:
     return RValue::get(emitCoroIDBuiltinCall(e).getResult());
@@ -2059,22 +2116,10 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_elementwise_canonicalize:
   case Builtin::BI__builtin_elementwise_copysign:
     return errorBuiltinNYI(*this, e, builtinID);
-  case Builtin::BI__builtin_elementwise_fshl: {
-    mlir::Location loc = getLoc(e->getExprLoc());
-    mlir::Value a = emitScalarExpr(e->getArg(0));
-    mlir::Value b = emitScalarExpr(e->getArg(1));
-    mlir::Value c = emitScalarExpr(e->getArg(2));
-    return RValue::get(builder.emitIntrinsicCallOp(loc, "fshl", a.getType(),
-                                                   mlir::ValueRange{a, b, c}));
-  }
-  case Builtin::BI__builtin_elementwise_fshr: {
-    mlir::Location loc = getLoc(e->getExprLoc());
-    mlir::Value a = emitScalarExpr(e->getArg(0));
-    mlir::Value b = emitScalarExpr(e->getArg(1));
-    mlir::Value c = emitScalarExpr(e->getArg(2));
-    return RValue::get(builder.emitIntrinsicCallOp(loc, "fshr", a.getType(),
-                                                   mlir::ValueRange{a, b, c}));
-  }
+  case Builtin::BI__builtin_elementwise_fshl:
+    return emitTernarySameTypeBuiltin<cir::FshlOp>(*this, *e);
+  case Builtin::BI__builtin_elementwise_fshr:
+    return emitTernarySameTypeBuiltin<cir::FshrOp>(*this, *e);
   case Builtin::BI__builtin_elementwise_clmul:
   case Builtin::BI__builtin_elementwise_pext:
   case Builtin::BI__builtin_elementwise_pdep:
@@ -2139,11 +2184,46 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
 
   case Builtin::BI__builtin_elementwise_maximumnum:
   case Builtin::BI__builtin_elementwise_minimumnum:
-  case Builtin::BI__builtin_reduce_max:
-  case Builtin::BI__builtin_reduce_min:
-  case Builtin::BI__builtin_reduce_add:
-  case Builtin::BI__builtin_reduce_mul:
     return errorBuiltinNYI(*this, e, builtinID);
+  case Builtin::BI__builtin_reduce_max:
+  case Builtin::BI__builtin_reduce_min: {
+    auto getIntrinsicName = [this, builtinIDIfNoAsmLabel](QualType type) {
+      if (const auto *vecTy = type->getAs<VectorType>())
+        type = vecTy->getElementType();
+      else if (type->isSizelessVectorType())
+        type = type->getSizelessVectorEltType(getContext());
+
+      if (builtinIDIfNoAsmLabel == Builtin::BI__builtin_reduce_max) {
+        if (type->isSignedIntegerType())
+          return "vector.reduce.smax";
+        if (type->isUnsignedIntegerType())
+          return "vector.reduce.umax";
+        assert(type->isFloatingType() && "must have a float here");
+        return "vector.reduce.fmax";
+      }
+
+      if (type->isSignedIntegerType())
+        return "vector.reduce.smin";
+      if (type->isUnsignedIntegerType())
+        return "vector.reduce.umin";
+      assert(type->isFloatingType() && "must have a float here");
+      return "vector.reduce.fmin";
+    };
+    return emitBuiltinWithOneOverloadedType<1>(
+        e, getIntrinsicName(e->getArg(0)->getType()),
+        cast<cir::VectorType>(convertType(e->getArg(0)->getType()))
+            .getElementType());
+  }
+  case Builtin::BI__builtin_reduce_add:
+    return emitBuiltinWithOneOverloadedType<1>(
+        e, "vector.reduce.add",
+        cast<cir::VectorType>(convertType(e->getArg(0)->getType()))
+            .getElementType());
+  case Builtin::BI__builtin_reduce_mul:
+    return emitBuiltinWithOneOverloadedType<1>(
+        e, "vector.reduce.mul",
+        cast<cir::VectorType>(convertType(e->getArg(0)->getType()))
+            .getElementType());
   case Builtin::BI__builtin_reduce_xor:
     return emitBuiltinWithOneOverloadedType<1>(
         e, "vector.reduce.xor",
@@ -2160,7 +2240,24 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
         cast<cir::VectorType>(convertType(e->getArg(0)->getType()))
             .getElementType());
   case Builtin::BI__builtin_reduce_assoc_fadd:
-  case Builtin::BI__builtin_reduce_in_order_fadd:
+    return errorBuiltinNYI(*this, e, builtinID);
+  case Builtin::BI__builtin_reduce_in_order_fadd: {
+    assert(e->getNumArgs() == 2 &&
+           "__builtin_reduce_in_order_fadd requires a start value");
+    mlir::Value vector = emitScalarExpr(e->getArg(0));
+    auto vectorTy = cast<cir::VectorType>(vector.getType());
+    mlir::Type scalarTy = vectorTy.getElementType();
+    mlir::Location loc = getLoc(e->getExprLoc());
+    mlir::Value startValue = emitScalarExpr(e->getArg(1));
+    if (startValue.getType() != scalarTy)
+      startValue =
+          builder.createCast(getLoc(e->getArg(1)->getExprLoc()),
+                             cir::CastKind::floating, startValue, scalarTy);
+    SmallVector<mlir::Value, 2> args = {startValue, vector};
+    mlir::Value result =
+        builder.emitIntrinsicCallOp(loc, "vector.reduce.fadd", scalarTy, args);
+    return RValue::get(result);
+  }
   case Builtin::BI__builtin_reduce_maximum:
   case Builtin::BI__builtin_reduce_minimum:
   case Builtin::BI__builtin_matrix_transpose:

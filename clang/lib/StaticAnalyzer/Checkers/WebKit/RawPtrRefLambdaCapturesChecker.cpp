@@ -70,6 +70,17 @@ public:
         ShouldVisitImplicitCode = false;
       }
 
+      bool TraverseDecl(Decl *D) override {
+        // A template pattern is checked through its instantiations, which are
+        // traversed from the TemplateDecl itself. In the pattern the callee of
+        // a call may still be an unresolved overload set, so whether a lambda
+        // argument can escape isn't known, and a lambda in a pattern which is
+        // never instantiated is never used. Don't enter it at all.
+        if (D && !isa<TemplateDecl>(D) && D->isTemplated())
+          return true;
+        return DynamicRecursiveASTVisitor::TraverseDecl(D);
+      }
+
       bool TraverseCXXConstructorDecl(CXXConstructorDecl *Ctor) override {
         llvm::SaveAndRestore SavedDecl(ClsType);
         ClsType = Ctor->getThisType();
@@ -84,7 +95,11 @@ public:
 
       bool TraverseCXXMethodDecl(CXXMethodDecl *CXXMD) override {
         llvm::SaveAndRestore SavedDecl(ClsType);
-        if (CXXMD->isInstance())
+        // 'this' in the body of a lambda's call operator refers to the object
+        // of the enclosing method, so keep the class of that method. This
+        // matters for the instantiations of a generic lambda, which are
+        // traversed as declarations rather than as a body.
+        if (CXXMD->isInstance() && !CXXMD->getParent()->isLambda())
           ClsType = CXXMD->getThisType();
         return DynamicRecursiveASTVisitor::TraverseCXXMethodDecl(CXXMD);
       }
@@ -119,21 +134,27 @@ public:
       }
 
       bool TraverseLambdaExpr(LambdaExpr *L) override {
-        if (!DynamicRecursiveASTVisitor::TraverseLambdaExpr(L))
+        auto *FTD = L->getLambdaClass()->getDependentLambdaCallOperator();
+        if (!FTD)
+          return DynamicRecursiveASTVisitor::TraverseLambdaExpr(L);
+        // The body of a generic lambda is the pattern of its call operator,
+        // but it is reached from the LambdaExpr as a statement, so TraverseDecl
+        // never gets to skip it. Visit the lambda itself, traverse the capture
+        // initializers, which are evaluated in the enclosing scope, and then
+        // the call operator, of which the pattern is skipped like any other and
+        // the instantiations are traversed. The initializers are traversed as
+        // expressions because the variable of an init capture is declared in
+        // the pattern.
+        if (!VisitLambdaExpr(L))
           return false;
-        // The body of a generic lambda is a template pattern in which calls may
-        // not have been resolved yet, so traverse the instantiations of its
-        // call operator as well. Only the body is traversed so that the lambda
-        // stays associated with the class enclosing it, like the pattern is.
-        if (auto *FTD = L->getLambdaClass()->getDependentLambdaCallOperator()) {
-          for (auto *Spec : FTD->specializations()) {
-            if (auto *Body = Spec->getBody()) {
-              if (!TraverseStmt(Body))
-                return false;
-            }
-          }
+        for (unsigned I = 0, N = L->capture_size(); I != N; ++I) {
+          if (!(L->capture_begin() + I)->isExplicit())
+            continue;
+          if (auto *Init = L->capture_init_begin()[I];
+              Init && !TraverseStmt(Init))
+            return false;
         }
-        return true;
+        return TraverseDecl(FTD);
       }
 
       bool VisitVarDecl(VarDecl *VD) override {
@@ -281,53 +302,13 @@ public:
           if (isVisitFunction(CE, Callee))
             return true;
           checkParameters(CE, Callee);
-          return true;
+        } else if (auto *CalleeE = CE->getCallee()) {
+          if (auto *DRE = dyn_cast<DeclRefExpr>(CalleeE->IgnoreParenCasts())) {
+            if (auto *Callee = dyn_cast_or_null<FunctionDecl>(DRE->getDecl()))
+              checkParameters(CE, Callee);
+          }
         }
-        auto *CalleeE = CE->getCallee();
-        if (!CalleeE)
-          return true;
-        CalleeE = CalleeE->IgnoreParenCasts();
-        if (auto *DRE = dyn_cast<DeclRefExpr>(CalleeE)) {
-          if (auto *Callee = dyn_cast_or_null<FunctionDecl>(DRE->getDecl()))
-            checkParameters(CE, Callee);
-          return true;
-        }
-        // The callee of a call in an uninstantiated template may not have been
-        // resolved yet, in which case whether each lambda argument can escape
-        // isn't known. Wait for the instantiation to check those lambdas.
-        if (isa<OverloadExpr, CXXDependentScopeMemberExpr,
-                DependentScopeDeclRefExpr>(CalleeE))
-          ignoreLambdasInArgs({CE->getArgs(), CE->getNumArgs()});
         return true;
-      }
-
-      // Lambdas passed to a constructor which isn't resolved until the
-      // enclosing template is instantiated are checked in the instantiation.
-      bool
-      VisitCXXUnresolvedConstructExpr(CXXUnresolvedConstructExpr *CE) override {
-        ignoreLambdasInArgs({CE->arg_begin(), CE->arg_end()});
-        return true;
-      }
-
-      bool VisitParenListExpr(ParenListExpr *PLE) override {
-        if (PLE->isTypeDependent())
-          ignoreLambdasInArgs(PLE->exprs());
-        return true;
-      }
-
-      bool VisitInitListExpr(InitListExpr *ILE) override {
-        if (ILE->isTypeDependent())
-          ignoreLambdasInArgs(ILE->inits());
-        return true;
-      }
-
-      void ignoreLambdasInArgs(ArrayRef<Expr *> Args) {
-        for (auto *Arg : Args) {
-          if (!Arg)
-            continue;
-          if (auto *L = findLambdaInArg(Arg->IgnoreParenCasts()))
-            LambdasToIgnore.insert(L);
-        }
       }
 
       bool isVisitFunction(CallExpr *CallExpr, FunctionDecl *FnDecl) {

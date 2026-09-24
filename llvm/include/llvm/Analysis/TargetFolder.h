@@ -125,7 +125,11 @@ public:
       // Every index must be constant.
       if (any_of(IdxList, [](Value *V) { return !isa<Constant>(V); }))
         return nullptr;
-      return Fold(ConstantExpr::getGetElementPtr(Ty, PC, IdxList, NW));
+      ArrayRef<Constant *> ConstIdxList =
+          ArrayRef((Constant *const *)IdxList.data(), IdxList.size());
+      if (Constant *GEP =
+              ConstantExpr::getGetElementPtr(DL, Ty, PC, ConstIdxList, NW))
+        return Fold(GEP);
     }
     return nullptr;
   }

@@ -714,6 +714,8 @@ KnownFPClass KnownFPClass::sqrt(const KnownFPClass &KnownSrc,
 KnownFPClass KnownFPClass::sin(const KnownFPClass &KnownSrc) {
   KnownFPClass Known;
 
+  Known.propagateNonSNaN(KnownSrc);
+
   // Return NaN on infinite inputs.
   Known.knownNot(fcInf);
   if (KnownSrc.isKnownNeverNaN() && KnownSrc.isKnownNeverInfinity())
@@ -731,6 +733,8 @@ KnownFPClass KnownFPClass::tan(const KnownFPClass &KnownSrc) {
 
   // tan never returns Inf (tan(+-Inf) = NaN; tan(finite) = finite).
   Known.knownNot(fcInf);
+
+  Known.propagateNonSNaN(KnownSrc);
 
   // NaN propagates. tan(+-Inf) is NaN.
   if (KnownSrc.isKnownNeverNaN() && KnownSrc.isKnownNeverInfinity())

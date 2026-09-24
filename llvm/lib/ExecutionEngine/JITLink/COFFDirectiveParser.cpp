@@ -17,14 +17,13 @@ using namespace jitlink;
 
 #define DEBUG_TYPE "jitlink"
 
-// Create table mapping all options defined in COFFOptions.td
 using namespace llvm::opt;
 #define OPTTABLE_CODE
 #include "COFFOptions.inc"
 
 class COFFOptTable : public opt::OptTable {
 public:
-  COFFOptTable() : OptTable(OptionTables, true) {}
+  COFFOptTable() : OptTable(optionTables(), true) {}
 };
 
 static COFFOptTable optTable;

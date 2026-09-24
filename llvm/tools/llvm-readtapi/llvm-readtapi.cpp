@@ -50,7 +50,9 @@ enum ID {
 
 class TAPIOptTable : public opt::OptTable {
 public:
-  TAPIOptTable() : opt::OptTable(OptionTables) { setGroupedShortOptions(true); }
+  TAPIOptTable() : opt::OptTable(optionTables()) {
+    setGroupedShortOptions(true);
+  }
 };
 
 struct StubOptions {

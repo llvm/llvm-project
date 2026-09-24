@@ -13,7 +13,7 @@
 !CHECK:       }
 
 !CHECK-LABEL: func.func @_QPomp_taskgroup_task_reduction() {
-!CHECK:         %[[VAL_0:.*]] = fir.alloca i32 {bindc_name = "res", uniq_name = "_QFomp_taskgroup_task_reductionEres"}
+!CHECK:         %[[VAL_0:.*]] = fir.alloca i32 <{bindc_name = "res", uniq_name = "_QFomp_taskgroup_task_reductionEres"}>
 !CHECK:         %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFomp_taskgroup_task_reductionEres"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:         omp.taskgroup task_reduction(@[[RED_I32_NAME]]  %[[VAL_1]]#0 -> %[[VAL_2:.*]] : !fir.ref<i32>) {
 !CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]]

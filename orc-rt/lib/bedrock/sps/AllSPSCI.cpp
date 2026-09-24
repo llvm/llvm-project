@@ -22,12 +22,16 @@ namespace orc_rt::sps_ci {
 
 Error addAll(SimpleSymbolTable &ST) {
   using AdderFn = Error (*)(SimpleSymbolTable &);
-  AdderFn Adders[] = {addCall,
-                      addGDBJITRegistrar,
-                      addMemoryAccess,
-                      addNativeDylibManager,
-                      addSimpleNativeMemoryMap,
-                      addStandaloneMachOUnwindInfoRegistrar};
+  AdderFn Adders[] = {
+      addCall,
+      addGDBJITRegistrar,
+      addMemoryAccess,
+      addNativeDylibManager,
+      addSimpleNativeMemoryMap,
+#if defined(__APPLE__)
+      addStandaloneMachOUnwindInfoRegistrar,
+#endif
+  };
 
   for (auto *Adder : Adders)
     if (auto Err = Adder(ST))

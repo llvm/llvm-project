@@ -40,7 +40,7 @@ using namespace llvm::opt;
 
 class DwpOptTable : public opt::OptTable {
 public:
-  DwpOptTable() : OptTable(OptionTables) {}
+  DwpOptTable() : OptTable(optionTables()) {}
 };
 } // end anonymous namespace
 

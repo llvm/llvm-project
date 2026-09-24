@@ -74,7 +74,7 @@ using namespace llvm::opt;
 
 class DsymutilOptTable : public opt::OptTable {
 public:
-  DsymutilOptTable() : opt::OptTable(OptionTables) {}
+  DsymutilOptTable() : opt::OptTable(optionTables()) {}
 };
 } // namespace
 

@@ -336,6 +336,9 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   PB.registerLoopAnalyses(LAM);
   PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
 
+  if (Conf.PassBuilderCallback)
+    Conf.PassBuilderCallback(PB);
+
   ModulePassManager MPM;
 
   if (!Conf.DisableVerify)

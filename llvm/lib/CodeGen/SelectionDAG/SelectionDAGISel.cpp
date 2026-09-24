@@ -451,13 +451,14 @@ SelectionDAGISelPass::run(MachineFunction &MF,
   // we change the optimisation level.
   MF.setUseDebugInstrRef(MF.shouldUseDebugInstrRef());
 
-  // Reset OptLevel to None for optnone functions.
+  // Reset OptLevel to None for optnone functions or when opt-bisect skips.
   // TODO: Add a function analysis to handle this.
   Selector->MF = &MF;
-  // Reset OptLevel to None for optnone functions.
-  CodeGenOptLevel NewOptLevel = MF.getFunction().hasOptNone()
-                                    ? CodeGenOptLevel::None
-                                    : Selector->OptLevel;
+  CodeGenOptLevel NewOptLevel =
+      (MF.getFunction().hasOptNone() ||
+       shouldSkipOptimizationForOptBisect(MF.getFunction()))
+          ? CodeGenOptLevel::None
+          : Selector->OptLevel;
 
   OptLevelChanger OLC(*Selector, NewOptLevel);
   Selector->initializeAnalysisResults(MFAM);

@@ -498,8 +498,6 @@ class FenceInst : public Instruction {
 
   constexpr static IntrusiveOperandsAllocMarker AllocMarker{0};
 
-  void Init(AtomicOrdering Ordering, SyncScope::ID SSID);
-
 protected:
   // Note: Instruction needs to be a friend here to call cloneImpl.
   friend class Instruction;

@@ -21,6 +21,10 @@ EvalEmitter::EvalEmitter(Context &Ctx, Program &P, State &Parent,
                          InterpStack &Stk, FrameAllocator &FA)
     : Ctx(Ctx), P(P), S(Parent, P, Stk, FA, Ctx, this), EvalResult(&Ctx) {}
 
+EvalEmitter::EvalEmitter(Context &Ctx, Program &P, Expr::EvalStatus &Status,
+                         InterpStack &Stk, FrameAllocator &FA)
+    : Ctx(Ctx), P(P), S(Status, P, Stk, FA, Ctx, this), EvalResult(&Ctx) {}
+
 /// Clean up all our resources. This needs to done in failed evaluations before
 /// we call InterpStack::clear(), because there might be a Pointer on the stack
 /// pointing into a Block in the EvalEmitter.

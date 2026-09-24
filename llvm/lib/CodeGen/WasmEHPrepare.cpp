@@ -347,7 +347,6 @@ void WasmEHPrepareImpl::prepareEHPad(BasicBlock *BB, bool NeedPersonality,
   // Pseudocode: __wasm_lpad_context.lpad_index = index;
   IRB.CreateStore(IRB.getInt32(Index), LPadIndexField);
 
-  auto *CPI = cast<CatchPadInst>(FPI);
   // TODO Sometimes storing the LSDA address every time is not necessary, in
   // case it is already set in a dominating EH pad and there is no function call
   // between from that EH pad to here. Consider optimizing those cases.
@@ -356,7 +355,7 @@ void WasmEHPrepareImpl::prepareEHPad(BasicBlock *BB, bool NeedPersonality,
 
   // Pseudocode: personality_fn(exn);
   CallInst *PersCI =
-      IRB.CreateCall(PersonalityF, CatchCI, OperandBundleDef("funclet", CPI));
+      IRB.CreateCall(PersonalityF, CatchCI, OperandBundleDef("funclet", FPI));
   PersCI->setDoesNotThrow();
 
   // Pseudocode: int selector = __wasm_lpad_context.selector;

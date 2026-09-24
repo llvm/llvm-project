@@ -28,6 +28,7 @@ class DataLayout;
 class DominatorTree;
 class Instruction;
 class LoadInst;
+struct LoadStoreInstProperties;
 class Loop;
 class MemoryLocation;
 class SCEV;
@@ -185,9 +186,7 @@ LLVM_ABI bool isStorePreservingMemoryLocation(const StoreInst *SI,
 ///
 /// \param Loc The location we want the load and store to originate from.
 /// \param AccessTy The access type of the pointer.
-/// \param AtLeastAtomic Are we looking for at-least an atomic load/store ? In
-/// case it is false, we can return an atomic or non-atomic load or store. In
-/// case it is true, we need to return an atomic load or store.
+/// \param AccessProps The properties of the load we want to replace.
 /// \param ScanBB The basic block to scan.
 /// \param [in,out] ScanFrom The location to start scanning from. When this
 /// function returns, it points at the last instruction scanned.
@@ -199,10 +198,12 @@ LLVM_ABI bool isStorePreservingMemoryLocation(const StoreInst *SI,
 /// location in memory, as opposed to the value operand of a store.
 ///
 /// \returns The found value, or nullptr if no value is found.
-LLVM_ABI Value *findAvailablePtrLoadStore(
-    const MemoryLocation &Loc, Type *AccessTy, bool AtLeastAtomic,
-    BasicBlock *ScanBB, BasicBlock::iterator &ScanFrom, unsigned MaxInstsToScan,
-    BatchAAResults *AA, bool *IsLoadCSE, unsigned *NumScanedInst);
+LLVM_ABI Value *
+findAvailablePtrLoadStore(const MemoryLocation &Loc, Type *AccessTy,
+                          const LoadStoreInstProperties &AccessProps,
+                          BasicBlock *ScanBB, BasicBlock::iterator &ScanFrom,
+                          unsigned MaxInstsToScan, BatchAAResults *AA,
+                          bool *IsLoadCSE, unsigned *NumScanedInst);
 
 /// Returns true if a pointer value \p From can be replaced with another pointer
 /// value \To if they are deemed equal through some means (e.g. information from

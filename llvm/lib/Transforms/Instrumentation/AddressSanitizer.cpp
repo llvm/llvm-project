@@ -222,8 +222,7 @@ static cl::opt<bool> ClInstrumentWrites(
 
 static cl::opt<bool>
     ClUseStackSafety("asan-use-stack-safety", cl::Hidden, cl::init(true),
-                     cl::Hidden, cl::desc("Use Stack Safety analysis results"),
-                     cl::Optional);
+                     cl::Hidden, cl::desc("Use Stack Safety analysis results"));
 
 static cl::opt<bool> ClInstrumentAtomics(
     "asan-instrument-atomics",

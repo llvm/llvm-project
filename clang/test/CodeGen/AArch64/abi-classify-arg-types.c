@@ -232,3 +232,29 @@ typedef struct {
 void arg_field_aligned32_hfa(FieldAligned32HFA h) {}
 // AAPCS64: define{{.*}} void @arg_field_aligned32_hfa([4 x double] alignstack(16) %{{.*}})
 // NOHFAALIGN: define{{.*}} void @arg_field_aligned32_hfa([4 x double] %{{.*}})
+
+// Empty records and zero-size types are ignored as arguments in C.
+typedef struct {
+} Empty;
+void arg_empty(Empty e) {}
+// CHECK: define{{.*}} void @arg_empty()
+
+void arg_empty_then_int(Empty e, int i) {}
+// CHECK: define{{.*}} void @arg_empty_then_int(i32 noundef %{{.*}})
+
+typedef union {
+} EmptyUnion;
+void arg_empty_union(EmptyUnion u) {}
+// CHECK: define{{.*}} void @arg_empty_union()
+
+typedef struct {
+  int arr[0];
+} ZeroSize;
+void arg_zerosize(ZeroSize z) {}
+// CHECK: define{{.*}} void @arg_zerosize()
+
+typedef struct {
+  ZeroSize inner;
+} NestedZeroSize;
+void arg_nested_zerosize(NestedZeroSize z) {}
+// CHECK: define{{.*}} void @arg_nested_zerosize()

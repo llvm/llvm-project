@@ -1743,6 +1743,41 @@ define void @foo(ptr %ptr) {
   EXPECT_EQ(St1->getOperand(0), Ld0);
 }
 
+TEST_F(SandboxIRTest, Value_stripAndAccumulate) {
+  parseIR(C, R"IR(
+define void @foo(ptr %ptr, <2 x ptr> %ptrs) {
+  %gep0 = getelementptr i8, ptr %ptr, i32 0
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  const DataLayout &DL = M->getDataLayout();
+  BasicBlock *LLVMBB = &*LLVMF.begin();
+  auto LLVMIt = LLVMBB->begin();
+  auto *LLVMGEP = &*LLVMIt++;
+  sandboxir::Context Ctx(C);
+  Ctx.createFunction(&LLVMF);
+  auto *BB = cast<sandboxir::BasicBlock>(Ctx.getValue(LLVMBB));
+  auto It = BB->begin();
+  auto *GEP = &*It++;
+
+  unsigned Bits = DL.getIndexTypeSizeInBits(LLVMGEP->getType());
+  APInt Offset(Bits, 0);
+  bool AllowNonInbounds = true;
+  bool AllowInvariantGroup = true;
+  function_ref<bool(sandboxir::Value &, APInt &)> ExternalAnalysis = nullptr;
+  auto *Res = GEP->stripAndAccumulateConstantOffsets(
+      DL, Offset, AllowNonInbounds, AllowInvariantGroup, ExternalAnalysis);
+
+  APInt LLVMOffset(Bits, 0);
+  function_ref<bool(llvm::Value &, APInt &)> LLVMExternalAnalysis = nullptr;
+  auto *LLVMRes = LLVMGEP->stripAndAccumulateConstantOffsets(
+      DL, LLVMOffset, AllowNonInbounds, AllowInvariantGroup,
+      LLVMExternalAnalysis);
+  EXPECT_EQ(Res, Ctx.getValue(LLVMRes));
+  EXPECT_EQ(Offset, LLVMOffset);
+}
+
 // Check that the operands/users are counted correctly.
 //  I1
 // /  \

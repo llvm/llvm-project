@@ -195,9 +195,13 @@ static void addDeclareAttr(fir::FirOpBuilder &builder, mlir::Operation *op,
                                               builder.getContext(), clause)));
 }
 
+/// The action of the declare directive that a recipe function carries out.
+enum class DeclareActionKind { PostAlloc, PreDealloc, PostDealloc };
+
 static mlir::func::FuncOp createDeclareFunc(
     mlir::OpBuilder &modBuilder, fir::FirOpBuilder &builder, mlir::Location loc,
-    llvm::StringRef funcName, llvm::SmallVector<mlir::Type> argsTy = {},
+    llvm::StringRef funcName, DeclareActionKind kind,
+    llvm::SmallVector<mlir::Type> argsTy = {},
     llvm::SmallVector<mlir::Location> locs = {}, bool linkable = false) {
   auto funcTy = mlir::FunctionType::get(modBuilder.getContext(), argsTy, {});
   auto funcOp = mlir::func::FuncOp::create(modBuilder, loc, funcName, funcTy);
@@ -208,9 +212,28 @@ static mlir::func::FuncOp createDeclareFunc(
   builder.setInsertionPointToEnd(&funcOp.getRegion().back());
   mlir::func::ReturnOp::create(builder, loc);
   builder.setInsertionPointToStart(&funcOp.getRegion().back());
-  if (linkable)
+  if (linkable) {
+    // The recipe names itself in the slot of the action it performs, so that
+    // the action can be told from the attribute rather than from the name.
+    mlir::MLIRContext *ctx = modBuilder.getContext();
+    auto self = mlir::SymbolRefAttr::get(ctx, funcName);
+    mlir::SymbolRefAttr postAlloc, preDealloc, postDealloc;
+    switch (kind) {
+    case DeclareActionKind::PostAlloc:
+      postAlloc = self;
+      break;
+    case DeclareActionKind::PreDealloc:
+      preDealloc = self;
+      break;
+    case DeclareActionKind::PostDealloc:
+      postDealloc = self;
+      break;
+    }
     funcOp->setAttr(mlir::acc::getDeclareActionAttrName(),
-                    mlir::UnitAttr::get(modBuilder.getContext()));
+                    mlir::acc::DeclareActionAttr::get(ctx, /*preAlloc=*/{},
+                                                      postAlloc, preDealloc,
+                                                      postDealloc));
+  }
   return funcOp;
 }
 
@@ -240,8 +263,9 @@ static void createDeclareAllocFuncWithArg(mlir::OpBuilder &modBuilder,
 
   if (!mlir::isa<fir::ReferenceType>(descTy))
     descTy = fir::ReferenceType::get(descTy);
-  auto registerFuncOp = createDeclareFunc(
-      modBuilder, builder, loc, registerFuncName.str(), {descTy}, {loc});
+  auto registerFuncOp =
+      createDeclareFunc(modBuilder, builder, loc, registerFuncName.str(),
+                        DeclareActionKind::PostAlloc, {descTy}, {loc});
 
   llvm::SmallVector<mlir::Value> bounds;
   std::stringstream asFortranDesc;
@@ -274,8 +298,9 @@ static void createDeclareDeallocFuncWithArg(
                      << Fortran::lower::declarePreDeallocSuffix.str();
   if (!mlir::isa<fir::ReferenceType>(descTy))
     descTy = fir::ReferenceType::get(descTy);
-  auto preDeallocOp = createDeclareFunc(
-      modBuilder, builder, loc, preDeallocFuncName.str(), {descTy}, {loc});
+  auto preDeallocOp =
+      createDeclareFunc(modBuilder, builder, loc, preDeallocFuncName.str(),
+                        DeclareActionKind::PreDealloc, {descTy}, {loc});
 
   mlir::Value var = preDeallocOp.getArgument(0);
 
@@ -310,8 +335,9 @@ static void createDeclareDeallocFuncWithArg(
   std::stringstream postDeallocFuncName;
   postDeallocFuncName << funcNamePrefix.str()
                       << Fortran::lower::declarePostDeallocSuffix.str();
-  auto postDeallocOp = createDeclareFunc(
-      modBuilder, builder, loc, postDeallocFuncName.str(), {descTy}, {loc});
+  auto postDeallocOp =
+      createDeclareFunc(modBuilder, builder, loc, postDeallocFuncName.str(),
+                        DeclareActionKind::PostDealloc, {descTy}, {loc});
 
   var = postDeallocOp.getArgument(0);
   // End structured region with declare_exit.
@@ -4094,6 +4120,7 @@ static void createDeclareAllocFunc(mlir::OpBuilder &modBuilder,
                    << Fortran::lower::declarePostAllocSuffix.str();
   auto registerFuncOp =
       createDeclareFunc(modBuilder, builder, loc, registerFuncName.str(),
+                        DeclareActionKind::PostAlloc,
                         /*argsTy=*/{}, /*locs=*/{}, /*linkable=*/true);
 
   fir::AddrOfOp addrOp = fir::AddrOfOp::create(
@@ -4137,6 +4164,7 @@ static void createDeclareDeallocFunc(mlir::OpBuilder &modBuilder,
                      << Fortran::lower::declarePreDeallocSuffix.str();
   auto preDeallocOp =
       createDeclareFunc(modBuilder, builder, loc, preDeallocFuncName.str(),
+                        DeclareActionKind::PreDealloc,
                         /*argsTy=*/{}, /*locs=*/{}, /*linkable=*/true);
   fir::AddrOfOp addrOp = fir::AddrOfOp::create(
       builder, loc, fir::ReferenceType::get(globalOp.getType()),

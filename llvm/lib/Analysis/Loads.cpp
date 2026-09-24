@@ -559,7 +559,7 @@ Value *llvm::FindAvailableLoadedValue(LoadInst *Load, BasicBlock *ScanBB,
     return nullptr;
 
   MemoryLocation Loc = MemoryLocation::get(Load);
-  return findAvailablePtrLoadStore(Loc, Load->getType(), Load->isAtomic(),
+  return findAvailablePtrLoadStore(Loc, Load->getType(), Load->getProperties(),
                                    ScanBB, ScanFrom, MaxInstsToScan, AA, IsLoad,
                                    NumScanedInst);
 }
@@ -590,9 +590,29 @@ static bool areNonOverlapSameBaseLoadAndStore(const Value *LoadPtr,
   return LoadRange.intersectWith(StoreRange).isEmptySet();
 }
 
+// For elementwise atomics, each vector element is a separate atomic access.
+// Reusing an operation with a different access size would change atomicity.
+static bool hasCompatibleAtomicAccessSize(
+    Type *AccessTy, const LoadStoreInstProperties &AccessProps,
+    Type *OtherAccessTy, const LoadStoreInstProperties &OtherProps,
+    const DataLayout &DL) {
+  if (AccessProps.Ordering == AtomicOrdering::NotAtomic)
+    return true;
+
+  Type *AtomicAccessTy =
+      AccessProps.IsElementwise ? AccessTy->getScalarType() : AccessTy;
+  Type *OtherAtomicAccessTy =
+      OtherProps.IsElementwise ? OtherAccessTy->getScalarType() : OtherAccessTy;
+  return DL.getTypeStoreSize(AtomicAccessTy) ==
+         DL.getTypeStoreSize(OtherAtomicAccessTy);
+}
+
 static Value *getAvailableLoadStore(Instruction *Inst, const Value *Ptr,
-                                    Type *AccessTy, bool AtLeastAtomic,
+                                    Type *AccessTy,
+                                    const LoadStoreInstProperties &AccessProps,
                                     const DataLayout &DL, bool *IsLoadCSE) {
+  const bool AtLeastAtomic = AccessProps.Ordering != AtomicOrdering::NotAtomic;
+
   // If this is a load of Ptr, the loaded value is available.
   // (This is true even if the load is volatile or atomic, although
   // those cases are unlikely.)
@@ -606,7 +626,9 @@ static Value *getAvailableLoadStore(Instruction *Inst, const Value *Ptr,
     if (!AreEquivalentAddressValues(LoadPtr, Ptr))
       return nullptr;
 
-    if (CastInst::isBitOrNoopPointerCastable(LI->getType(), AccessTy, DL)) {
+    if (hasCompatibleAtomicAccessSize(AccessTy, AccessProps, LI->getType(),
+                                      LI->getProperties(), DL) &&
+        CastInst::isBitOrNoopPointerCastable(LI->getType(), AccessTy, DL)) {
       if (IsLoadCSE)
         *IsLoadCSE = true;
       return LI;
@@ -630,6 +652,10 @@ static Value *getAvailableLoadStore(Instruction *Inst, const Value *Ptr,
       *IsLoadCSE = false;
 
     Value *Val = SI->getValueOperand();
+    if (!hasCompatibleAtomicAccessSize(AccessTy, AccessProps, Val->getType(),
+                                       SI->getProperties(), DL))
+      return nullptr;
+
     if (CastInst::isBitOrNoopPointerCastable(Val->getType(), AccessTy, DL))
       return Val;
 
@@ -685,9 +711,10 @@ static Value *getAvailableLoadStore(Instruction *Inst, const Value *Ptr,
 }
 
 Value *llvm::findAvailablePtrLoadStore(
-    const MemoryLocation &Loc, Type *AccessTy, bool AtLeastAtomic,
-    BasicBlock *ScanBB, BasicBlock::iterator &ScanFrom, unsigned MaxInstsToScan,
-    BatchAAResults *AA, bool *IsLoadCSE, unsigned *NumScanedInst) {
+    const MemoryLocation &Loc, Type *AccessTy,
+    const LoadStoreInstProperties &AccessProps, BasicBlock *ScanBB,
+    BasicBlock::iterator &ScanFrom, unsigned MaxInstsToScan, BatchAAResults *AA,
+    bool *IsLoadCSE, unsigned *NumScanedInst) {
   if (MaxInstsToScan == 0)
     MaxInstsToScan = ~0U;
 
@@ -714,7 +741,7 @@ Value *llvm::findAvailablePtrLoadStore(
     --ScanFrom;
 
     if (Value *Available = getAvailableLoadStore(Inst, StrippedPtr, AccessTy,
-                                                 AtLeastAtomic, DL, IsLoadCSE))
+                                                 AccessProps, DL, IsLoadCSE))
       return Available;
 
     // Try to get the store size for the type.
@@ -775,7 +802,7 @@ Value *llvm::FindAvailableLoadedValue(LoadInst *Load, BatchAAResults &AA,
   Value *StrippedPtr = Load->getPointerOperand()->stripPointerCasts();
   BasicBlock *ScanBB = Load->getParent();
   Type *AccessTy = Load->getType();
-  bool AtLeastAtomic = Load->isAtomic();
+  LoadStoreInstProperties AccessProps = Load->getProperties();
 
   if (!Load->isUnordered())
     return nullptr;
@@ -792,8 +819,8 @@ Value *llvm::FindAvailableLoadedValue(LoadInst *Load, BatchAAResults &AA,
     if (MaxInstsToScan-- == 0)
       return nullptr;
 
-    Available = getAvailableLoadStore(&Inst, StrippedPtr, AccessTy,
-                                      AtLeastAtomic, DL, IsLoadCSE);
+    Available = getAvailableLoadStore(&Inst, StrippedPtr, AccessTy, AccessProps,
+                                      DL, IsLoadCSE);
     if (Available)
       break;
 
