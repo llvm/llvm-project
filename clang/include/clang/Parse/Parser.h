@@ -7938,6 +7938,10 @@ private:
     explicit TemplateParameterDepthRAII(unsigned &Depth)
         : Depth(Depth), AddedLevels(0) {}
 
+    TemplateParameterDepthRAII(const TemplateParameterDepthRAII &) = delete;
+    TemplateParameterDepthRAII &
+    operator=(const TemplateParameterDepthRAII &) = delete;
+
     ~TemplateParameterDepthRAII() { Depth -= AddedLevels; }
 
     void operator++() {
@@ -7960,6 +7964,10 @@ private:
     ReenterTemplateScopeRAII(Parser &P, Decl *MaybeTemplated,
                              bool Enter = true);
     ReenterTemplateScopeRAII(Parser &P, const Declarator &D);
+
+    ReenterTemplateScopeRAII(const ReenterTemplateScopeRAII &) = delete;
+    ReenterTemplateScopeRAII &
+    operator=(const ReenterTemplateScopeRAII &) = delete;
   };
 
   /// Gathers and cleans up TemplateIdAnnotations when parsing of a
