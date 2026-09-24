@@ -55,7 +55,7 @@ TEST(IntelGPUTargetParserTest, EveryDeviceIsNamed) {
   // one is named after that earlier row. Compatibility names have no version of
   // their own and so cannot be looked up, which is why INTEL_GPU_COMPAT is left
   // alone.
-#define INTEL_GPU(NAME, KIND, MAJOR, MINOR, IGCA_TARGET, IGCA_SUFFIX)          \
+#define INTEL_GPU(NAME, KIND, MAJOR, MINOR, IGCA_TARGET, IGCA_FEATURE_SETS)    \
   EXPECT_FALSE(IntelGPU::getArchName(gpuIPVersion(MAJOR, MINOR, 0)).empty())   \
       << NAME;
 #include "llvm/TargetParser/IntelGPUTargetParser.def"

@@ -49,7 +49,7 @@ static constexpr uint32_t packDevice(uint32_t Major, uint32_t Minor) {
 
 StringRef llvm::IntelGPU::getArchName(uint32_t GPUIPVersion) {
   const uint32_t Device = GPUIPVersion & GPUIPDeviceMask;
-#define INTEL_GPU(NAME, KIND, MAJOR, MINOR, IGCA_TARGET, IGCA_SUFFIX)          \
+#define INTEL_GPU(NAME, KIND, MAJOR, MINOR, IGCA_TARGET, IGCA_FEATURE_SETS)    \
   if (Device == packDevice(MAJOR, MINOR))                                      \
     return NAME;
 #include "llvm/TargetParser/IntelGPUTargetParser.def"

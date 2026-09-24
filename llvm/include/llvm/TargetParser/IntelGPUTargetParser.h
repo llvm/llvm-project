@@ -28,8 +28,9 @@ namespace IntelGPU {
 /// compatibility names that stand for a whole product line.
 enum GPUKind : uint8_t {
   GK_NONE = 0,
-#define INTEL_GPU(NAME, KIND, MAJOR, MINOR, IGCA_TARGET, IGCA_SUFFIX) GK_##KIND,
-#define INTEL_GPU_COMPAT(NAME, KIND, IGCA_TARGET, IGCA_SUFFIX) GK_##KIND,
+#define INTEL_GPU(NAME, KIND, MAJOR, MINOR, IGCA_TARGET, IGCA_FEATURE_SETS)    \
+  GK_##KIND,
+#define INTEL_GPU_COMPAT(NAME, KIND, IGCA_TARGET, IGCA_FEATURE_SETS) GK_##KIND,
 #include "llvm/TargetParser/IntelGPUTargetParser.def"
 };
 

@@ -8,21 +8,22 @@
 //
 // This file is the single source of truth for the Intel GPU list. Each row
 // describes one architecture name that --offload-arch accepts, along with the
-// IGCA (Intel Graphics Compute Architecture) target the compiler compiles for
-// when the user names it. Adding a device is a single row here.
+// IGCA (Intel Graphics Compute Architecture) target and feature sets that the
+// name maps to. Adding a device is a single row here.
 //
-//   INTEL_GPU(NAME, KIND, MAJOR, MINOR, IGCA_TARGET, IGCA_SUFFIX)
-//     NAME        - Human-friendly device name, e.g. "xe-cri".
-//     KIND        - GPUKind enumerator suffix; the enumerator is GK_<KIND>.
-//     MAJOR       - Major component of the GPU IP version the device reports.
-//     MINOR       - Minor component of the GPU IP version the device reports.
-//     IGCA_TARGET - Numeric IGCA target.
-//     IGCA_SUFFIX - Token naming the feature sets that the target comprises:
-//                   Core (no suffix), Compute ("c"), Render ("r"),
-//                   ComputeExact ("ca") or RenderExact ("ra"). A consumer maps
-//                   the token onto an enumerator of its own.
+//   INTEL_GPU(NAME, KIND, MAJOR, MINOR, IGCA_TARGET, IGCA_FEATURE_SETS)
+//     NAME              - Human-friendly device name, e.g. "xe-cri".
+//     KIND              - GPUKind enumerator suffix; the enumerator is
+//                         GK_<KIND>.
+//     MAJOR             - Major component of the device's GPU IP version.
+//     MINOR             - Minor component of the device's GPU IP version.
+//     IGCA_TARGET       - Numeric IGCA target.
+//     IGCA_FEATURE_SETS - Token naming the IGCA feature sets the device
+//                         implements: Core (none), Compute ("c"),
+//                         Render ("r"), ComputeExact ("ca") or
+//                         RenderExact ("ra").
 //
-//   INTEL_GPU_COMPAT(NAME, KIND, IGCA_TARGET, IGCA_SUFFIX)
+//   INTEL_GPU_COMPAT(NAME, KIND, IGCA_TARGET, IGCA_FEATURE_SETS)
 //     A compatibility name that covers several minor versions, e.g. "xe-dg2",
 //     which covers every xe-dg2-* and xe-acm-* platform. These names have no
 //     GPU IP version of their own, so no device reports one and the
@@ -39,11 +40,7 @@
 //===----------------------------------------------------------------------===//
 
 #ifndef INTEL_GPU
-#define INTEL_GPU(NAME, KIND, MAJOR, MINOR, IGCA_TARGET, IGCA_SUFFIX)
-#endif
-
-#ifndef INTEL_GPU_COMPAT
-#define INTEL_GPU_COMPAT(NAME, KIND, IGCA_TARGET, IGCA_SUFFIX)
+#define INTEL_GPU(NAME, KIND, MAJOR, MINOR, IGCA_TARGET, IGCA_FEATURE_SETS)
 #endif
 
 INTEL_GPU("xe-cri",      XE_CRI,      35, 11,  60, Compute)
@@ -86,6 +83,10 @@ INTEL_GPU("xe-tgllp",    XE_TGLLP,    12, 0,   10, Render)
 INTEL_GPU("xe-tgl",      XE_TGL,      12, 0,   10, Render)
 
 // Compatibility names, which cover a group of platforms
+#ifndef INTEL_GPU_COMPAT
+#define INTEL_GPU_COMPAT(NAME, KIND, IGCA_TARGET, IGCA_FEATURE_SETS)
+#endif
+
 INTEL_GPU_COMPAT("xe-ptl", XE_PTL, 50, Render)
 INTEL_GPU_COMPAT("xe-bmg", XE_BMG, 40, Render)
 INTEL_GPU_COMPAT("xe-mtl", XE_MTL, 30, Render)
