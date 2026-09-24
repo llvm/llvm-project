@@ -571,8 +571,9 @@ uptr PointsIntoChunk(void *p) {
       reinterpret_cast<uptr>(__hwasan::allocator.GetBlockBeginFastLocked(p));
   if (!chunk)
     return 0;
-  __hwasan::Metadata *metadata = reinterpret_cast<__hwasan::Metadata *>(
-      __hwasan::allocator.GetMetaData(reinterpret_cast<void *>(chunk)));
+  __hwasan::Metadata* metadata = reinterpret_cast<__hwasan::Metadata*>(
+      __hwasan::allocator.GetMetaDataFastLocked(
+          reinterpret_cast<void*>(chunk)));
   if (!metadata || !metadata->IsAllocated())
     return 0;
   if (addr < chunk + metadata->GetRequestedSize())
@@ -588,8 +589,8 @@ uptr GetUserBegin(uptr chunk) {
       reinterpret_cast<void *>(chunk));
   if (!block)
     return 0;
-  __hwasan::Metadata *metadata = reinterpret_cast<__hwasan::Metadata *>(
-      __hwasan::allocator.GetMetaData(block));
+  __hwasan::Metadata* metadata = reinterpret_cast<__hwasan::Metadata*>(
+      __hwasan::allocator.GetMetaDataFastLocked(block));
   if (!metadata || !metadata->IsAllocated())
     return 0;
 
@@ -605,9 +606,9 @@ uptr GetUserAddr(uptr chunk) {
 
 LsanMetadata::LsanMetadata(uptr chunk) {
   CHECK_EQ(UntagAddr(chunk), chunk);
-  metadata_ =
-      chunk ? __hwasan::allocator.GetMetaData(reinterpret_cast<void *>(chunk))
-            : nullptr;
+  metadata_ = chunk ? __hwasan::allocator.GetMetaDataFastLocked(
+                          reinterpret_cast<void*>(chunk))
+                    : nullptr;
 }
 
 bool LsanMetadata::allocated() const {
