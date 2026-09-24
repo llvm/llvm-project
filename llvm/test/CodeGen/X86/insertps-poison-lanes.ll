@@ -14,7 +14,7 @@ define <2 x float> @div_two_scalars(ptr %p, float %y) nounwind {
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    cvtsi2ssq 8(%rdi), %xmm2
 ; SSE41-NEXT:    cvtsi2ssq (%rdi), %xmm1
-; SSE41-NEXT:    insertps {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[2,3]
+; SSE41-NEXT:    insertps {{.*#+}} xmm1 = xmm1[0],xmm2[0],zero,zero
 ; SSE41-NEXT:    movsldup {{.*#+}} xmm0 = xmm0[0,0,2,2]
 ; SSE41-NEXT:    divps %xmm0, %xmm1
 ; SSE41-NEXT:    movaps %xmm1, %xmm0
@@ -24,7 +24,7 @@ define <2 x float> @div_two_scalars(ptr %p, float %y) nounwind {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vcvtsi2ssq 8(%rdi), %xmm15, %xmm1
 ; AVX1-NEXT:    vcvtsi2ssq (%rdi), %xmm15, %xmm2
-; AVX1-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[2,3]
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0],xmm1[0],zero,zero
 ; AVX1-NEXT:    vmovsldup {{.*#+}} xmm0 = xmm0[0,0,2,2]
 ; AVX1-NEXT:    vdivps %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    retq
@@ -33,7 +33,7 @@ define <2 x float> @div_two_scalars(ptr %p, float %y) nounwind {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vcvtsi2ssq 8(%rdi), %xmm15, %xmm1
 ; AVX512-NEXT:    vcvtsi2ssq (%rdi), %xmm15, %xmm2
-; AVX512-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[2,3]
+; AVX512-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0],xmm1[0],zero,zero
 ; AVX512-NEXT:    vbroadcastss %xmm0, %xmm0
 ; AVX512-NEXT:    vdivps %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    retq
@@ -55,14 +55,14 @@ define <4 x float> @insert_lane1(i64 %a, i64 %b) nounwind {
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    cvtsi2ss %rdi, %xmm0
 ; SSE41-NEXT:    cvtsi2ss %rsi, %xmm1
-; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
+; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],zero,zero
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: insert_lane1:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vcvtsi2ss %rdi, %xmm15, %xmm0
 ; AVX-NEXT:    vcvtsi2ss %rsi, %xmm15, %xmm1
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
+; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],zero,zero
 ; AVX-NEXT:    retq
   %x = sitofp i64 %a to float
   %y = sitofp i64 %b to float
@@ -76,14 +76,14 @@ define <4 x float> @insert_lane2(i64 %a, i64 %b) nounwind {
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    cvtsi2ss %rdi, %xmm0
 ; SSE41-NEXT:    cvtsi2ss %rsi, %xmm1
-; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0],xmm0[3]
+; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],zero,xmm1[0],zero
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: insert_lane2:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vcvtsi2ss %rdi, %xmm15, %xmm0
 ; AVX-NEXT:    vcvtsi2ss %rsi, %xmm15, %xmm1
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0],xmm0[3]
+; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],zero,xmm1[0],zero
 ; AVX-NEXT:    retq
   %x = sitofp i64 %a to float
   %y = sitofp i64 %b to float
@@ -97,14 +97,14 @@ define <4 x float> @insert_lane3(i64 %a, i64 %b) nounwind {
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    cvtsi2ss %rdi, %xmm0
 ; SSE41-NEXT:    cvtsi2ss %rsi, %xmm1
-; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[0]
+; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],zero,zero,xmm1[0]
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: insert_lane3:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vcvtsi2ss %rdi, %xmm15, %xmm0
 ; AVX-NEXT:    vcvtsi2ss %rsi, %xmm15, %xmm1
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[0]
+; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],zero,zero,xmm1[0]
 ; AVX-NEXT:    retq
   %x = sitofp i64 %a to float
   %y = sitofp i64 %b to float
@@ -118,13 +118,13 @@ define <4 x float> @insert_lane1_load(i64 %a, ptr %p) nounwind {
 ; SSE41-LABEL: insert_lane1_load:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    cvtsi2ss %rdi, %xmm0
-; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
+; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],mem[0],zero,zero
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: insert_lane1_load:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vcvtsi2ss %rdi, %xmm15, %xmm0
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
+; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],mem[0],zero,zero
 ; AVX-NEXT:    retq
   %x = sitofp i64 %a to float
   %y = load float, ptr %p, align 4
@@ -140,7 +140,7 @@ define <4 x float> @insert_three(i64 %a, i64 %b, i64 %c) nounwind {
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    cvtsi2ss %rdi, %xmm0
 ; SSE41-NEXT:    cvtsi2ss %rsi, %xmm1
-; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
+; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],zero,zero
 ; SSE41-NEXT:    xorps %xmm1, %xmm1
 ; SSE41-NEXT:    cvtsi2ss %rdx, %xmm1
 ; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0],xmm0[3]
@@ -150,7 +150,7 @@ define <4 x float> @insert_three(i64 %a, i64 %b, i64 %c) nounwind {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vcvtsi2ss %rdi, %xmm15, %xmm0
 ; AVX-NEXT:    vcvtsi2ss %rsi, %xmm15, %xmm1
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
+; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],zero,zero
 ; AVX-NEXT:    vcvtsi2ss %rdx, %xmm15, %xmm1
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0],xmm0[3]
 ; AVX-NEXT:    retq
@@ -168,14 +168,14 @@ define <4 x float> @insert_from_lane2(i64 %a, <4 x float> %v) nounwind {
 ; SSE41-LABEL: insert_from_lane2:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    cvtsi2ss %rdi, %xmm1
-; SSE41-NEXT:    insertps {{.*#+}} xmm1 = xmm1[0],xmm0[2],xmm1[2,3]
+; SSE41-NEXT:    insertps {{.*#+}} xmm1 = xmm1[0],xmm0[2],zero,zero
 ; SSE41-NEXT:    movaps %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: insert_from_lane2:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vcvtsi2ss %rdi, %xmm15, %xmm1
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[2],xmm1[2,3]
+; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[2],zero,zero
 ; AVX-NEXT:    retq
   %x = sitofp i64 %a to float
   %base = insertelement <4 x float> poison, float %x, i64 0

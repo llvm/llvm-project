@@ -108,14 +108,14 @@ define <4 x float> @test_buildvector_v4f32_register(float %f0, float %f1, float 
 ;
 ; SSE41-LABEL: test_buildvector_v4f32_register:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
+; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],zero,zero
 ; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1],xmm2[0],xmm0[3]
 ; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm3[0]
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: test_buildvector_v4f32_register:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
+; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],zero,zero
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],xmm2[0],xmm0[3]
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm3[0]
 ; AVX-NEXT:    retq
@@ -141,7 +141,7 @@ define <4 x float> @test_buildvector_v4f32_load(ptr %p0, ptr %p1, ptr %p2, ptr %
 ; SSE41-LABEL: test_buildvector_v4f32_load:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
+; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],mem[0],zero,zero
 ; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
 ; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
 ; SSE41-NEXT:    retq
@@ -149,7 +149,7 @@ define <4 x float> @test_buildvector_v4f32_load(ptr %p0, ptr %p1, ptr %p2, ptr %
 ; AVX-LABEL: test_buildvector_v4f32_load:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
+; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],mem[0],zero,zero
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
 ; AVX-NEXT:    retq
@@ -175,14 +175,14 @@ define <4 x float> @test_buildvector_v4f32_partial_load(float %f0, float %f1, fl
 ;
 ; SSE41-LABEL: test_buildvector_v4f32_partial_load:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
+; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],zero,zero
 ; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1],xmm2[0],xmm0[3]
 ; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: test_buildvector_v4f32_partial_load:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
+; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],zero,zero
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],xmm2[0],xmm0[3]
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
 ; AVX-NEXT:    retq

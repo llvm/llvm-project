@@ -242,14 +242,14 @@ define <9 x float> @test_mul3x3_f32(<9 x float> %a0, <9 x float> %a1) nounwind {
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    movq %rdi, %rax
 ; AVX1-NEXT:    vmovss {{.*#+}} xmm8 = mem[0],zero,zero,zero
-; AVX1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],zero,zero
 ; AVX1-NEXT:    vbroadcastss {{[0-9]+}}(%rsp), %xmm1
 ; AVX1-NEXT:    vmulps %xmm1, %xmm0, %xmm9
-; AVX1-NEXT:    vinsertps {{.*#+}} xmm3 = xmm3[0],xmm4[0],xmm3[2,3]
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm3 = xmm3[0],xmm4[0],zero,zero
 ; AVX1-NEXT:    vbroadcastss {{[0-9]+}}(%rsp), %xmm4
 ; AVX1-NEXT:    vmulps %xmm4, %xmm3, %xmm10
 ; AVX1-NEXT:    vaddps %xmm10, %xmm9, %xmm9
-; AVX1-NEXT:    vinsertps {{.*#+}} xmm6 = xmm6[0],xmm7[0],xmm6[2,3]
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm6 = xmm6[0],xmm7[0],zero,zero
 ; AVX1-NEXT:    vbroadcastss {{[0-9]+}}(%rsp), %xmm7
 ; AVX1-NEXT:    vmulps %xmm7, %xmm6, %xmm10
 ; AVX1-NEXT:    vaddps %xmm10, %xmm9, %xmm9
@@ -297,14 +297,14 @@ define <9 x float> @test_mul3x3_f32(<9 x float> %a0, <9 x float> %a1) nounwind {
 ; AVX2:       # %bb.0: # %entry
 ; AVX2-NEXT:    movq %rdi, %rax
 ; AVX2-NEXT:    vmovss {{.*#+}} xmm8 = mem[0],zero,zero,zero
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
+; AVX2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],zero,zero
 ; AVX2-NEXT:    vbroadcastss {{[0-9]+}}(%rsp), %xmm1
 ; AVX2-NEXT:    vmulps %xmm1, %xmm0, %xmm9
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm3 = xmm3[0],xmm4[0],xmm3[2,3]
+; AVX2-NEXT:    vinsertps {{.*#+}} xmm3 = xmm3[0],xmm4[0],zero,zero
 ; AVX2-NEXT:    vbroadcastss {{[0-9]+}}(%rsp), %xmm4
 ; AVX2-NEXT:    vmulps %xmm4, %xmm3, %xmm10
 ; AVX2-NEXT:    vaddps %xmm10, %xmm9, %xmm9
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm6 = xmm6[0],xmm7[0],xmm6[2,3]
+; AVX2-NEXT:    vinsertps {{.*#+}} xmm6 = xmm6[0],xmm7[0],zero,zero
 ; AVX2-NEXT:    vbroadcastss {{[0-9]+}}(%rsp), %xmm7
 ; AVX2-NEXT:    vmulps %xmm7, %xmm6, %xmm10
 ; AVX2-NEXT:    vaddps %xmm10, %xmm9, %xmm9

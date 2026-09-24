@@ -452,10 +452,10 @@ define void @test_scatter_v2i32_data_index(<2 x i32> %a1, ptr %base, <2 x i32> %
 define void @test_mscatter_v17f32(ptr %base, <17 x i32> %index, <17 x float> %val)
 ; WIDEN_SKX-LABEL: test_mscatter_v17f32:
 ; WIDEN_SKX:       # %bb.0:
-; WIDEN_SKX-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0],xmm5[0],xmm4[2,3]
+; WIDEN_SKX-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0],xmm5[0],zero,zero
 ; WIDEN_SKX-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0,1],xmm6[0],xmm4[3]
 ; WIDEN_SKX-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0,1,2],xmm7[0]
-; WIDEN_SKX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
+; WIDEN_SKX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],zero,zero
 ; WIDEN_SKX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],xmm2[0],xmm0[3]
 ; WIDEN_SKX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm3[0]
 ; WIDEN_SKX-NEXT:    vinsertf128 $1, %xmm4, %ymm0, %ymm0
@@ -486,10 +486,10 @@ define void @test_mscatter_v17f32(ptr %base, <17 x i32> %index, <17 x float> %va
 ;
 ; WIDEN_KNL-LABEL: test_mscatter_v17f32:
 ; WIDEN_KNL:       # %bb.0:
-; WIDEN_KNL-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0],xmm5[0],xmm4[2,3]
+; WIDEN_KNL-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0],xmm5[0],zero,zero
 ; WIDEN_KNL-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0,1],xmm6[0],xmm4[3]
 ; WIDEN_KNL-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0,1,2],xmm7[0]
-; WIDEN_KNL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
+; WIDEN_KNL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],zero,zero
 ; WIDEN_KNL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],xmm2[0],xmm0[3]
 ; WIDEN_KNL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm3[0]
 ; WIDEN_KNL-NEXT:    vinsertf128 $1, %xmm4, %ymm0, %ymm0

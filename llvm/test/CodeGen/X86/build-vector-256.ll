@@ -31,10 +31,10 @@ define <8 x float> @test_buildvector_v8f32(float %a0, float %a1, float %a2, floa
 ;
 ; AVX-64-LABEL: test_buildvector_v8f32:
 ; AVX-64:       # %bb.0:
-; AVX-64-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0],xmm5[0],xmm4[2,3]
+; AVX-64-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0],xmm5[0],zero,zero
 ; AVX-64-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0,1],xmm6[0],xmm4[3]
 ; AVX-64-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0,1,2],xmm7[0]
-; AVX-64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
+; AVX-64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],zero,zero
 ; AVX-64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],xmm2[0],xmm0[3]
 ; AVX-64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm3[0]
 ; AVX-64-NEXT:    vinsertf128 $1, %xmm4, %ymm0, %ymm0
@@ -485,7 +485,7 @@ define <8 x float> @test_buildvector_8f32_2_var(float %a0, float %a1) {
 ; AVX1-64:       # %bb.0:
 ; AVX1-64-NEXT:    vshufps {{.*#+}} xmm2 = xmm0[0,0,0,3]
 ; AVX1-64-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1,2],xmm1[0]
-; AVX1-64-NEXT:    vinsertps {{.*#+}} xmm1 = xmm0[0],xmm1[0],xmm0[2,3]
+; AVX1-64-NEXT:    vinsertps {{.*#+}} xmm1 = xmm0[0],xmm1[0],zero,zero
 ; AVX1-64-NEXT:    vshufps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0,0]
 ; AVX1-64-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
 ; AVX1-64-NEXT:    retq

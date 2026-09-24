@@ -150,7 +150,7 @@ define <4 x float> @slto4f32_mem(ptr %a) {
 ; NODQ:       # %bb.0:
 ; NODQ-NEXT:    vcvtsi2ssq 8(%rdi), %xmm15, %xmm0
 ; NODQ-NEXT:    vcvtsi2ssq (%rdi), %xmm15, %xmm1
-; NODQ-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
+; NODQ-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],zero,zero
 ; NODQ-NEXT:    vcvtsi2ssq 16(%rdi), %xmm15, %xmm1
 ; NODQ-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0],xmm0[3]
 ; NODQ-NEXT:    vcvtsi2ssq 24(%rdi), %xmm15, %xmm1
@@ -249,7 +249,7 @@ define <4 x float> @slto4f32(<4 x i64> %a) {
 ; NODQ-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm1
 ; NODQ-NEXT:    vmovq %xmm0, %rax
 ; NODQ-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm2
-; NODQ-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[2,3]
+; NODQ-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0],xmm1[0],zero,zero
 ; NODQ-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; NODQ-NEXT:    vmovq %xmm0, %rax
 ; NODQ-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm2
@@ -284,7 +284,7 @@ define <4 x float> @ulto4f32(<4 x i64> %a) {
 ; NODQ-NEXT:    vcvtusi2ss %rax, %xmm15, %xmm1
 ; NODQ-NEXT:    vmovq %xmm0, %rax
 ; NODQ-NEXT:    vcvtusi2ss %rax, %xmm15, %xmm2
-; NODQ-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[2,3]
+; NODQ-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0],xmm1[0],zero,zero
 ; NODQ-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; NODQ-NEXT:    vmovq %xmm0, %rax
 ; NODQ-NEXT:    vcvtusi2ss %rax, %xmm15, %xmm2
@@ -319,7 +319,7 @@ define <4 x float> @ulto4f32_nneg(<4 x i64> %a) {
 ; NODQ-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm1
 ; NODQ-NEXT:    vmovq %xmm0, %rax
 ; NODQ-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm2
-; NODQ-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[2,3]
+; NODQ-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0],xmm1[0],zero,zero
 ; NODQ-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; NODQ-NEXT:    vmovq %xmm0, %rax
 ; NODQ-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm2
@@ -993,7 +993,7 @@ define <8 x float> @slto8f32(<8 x i64> %a) {
 ; NODQ-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm2
 ; NODQ-NEXT:    vmovq %xmm1, %rax
 ; NODQ-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm1
-; NODQ-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[2,3]
+; NODQ-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],xmm2[0],zero,zero
 ; NODQ-NEXT:    vextracti32x4 $3, %zmm0, %xmm2
 ; NODQ-NEXT:    vmovq %xmm2, %rax
 ; NODQ-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm3
@@ -1005,7 +1005,7 @@ define <8 x float> @slto8f32(<8 x i64> %a) {
 ; NODQ-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm2
 ; NODQ-NEXT:    vmovq %xmm0, %rax
 ; NODQ-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm3
-; NODQ-NEXT:    vinsertps {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[2,3]
+; NODQ-NEXT:    vinsertps {{.*#+}} xmm2 = xmm3[0],xmm2[0],zero,zero
 ; NODQ-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; NODQ-NEXT:    vmovq %xmm0, %rax
 ; NODQ-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm3
@@ -1037,7 +1037,7 @@ define <16 x float> @slto16f32(<16 x i64> %a) {
 ; NODQ-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm3
 ; NODQ-NEXT:    vmovq %xmm2, %rax
 ; NODQ-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm2
-; NODQ-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[2,3]
+; NODQ-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],xmm3[0],zero,zero
 ; NODQ-NEXT:    vextracti32x4 $3, %zmm1, %xmm3
 ; NODQ-NEXT:    vmovq %xmm3, %rax
 ; NODQ-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm4
@@ -1049,7 +1049,7 @@ define <16 x float> @slto16f32(<16 x i64> %a) {
 ; NODQ-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm3
 ; NODQ-NEXT:    vmovq %xmm1, %rax
 ; NODQ-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm4
-; NODQ-NEXT:    vinsertps {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[2,3]
+; NODQ-NEXT:    vinsertps {{.*#+}} xmm3 = xmm4[0],xmm3[0],zero,zero
 ; NODQ-NEXT:    vextracti128 $1, %ymm1, %xmm1
 ; NODQ-NEXT:    vmovq %xmm1, %rax
 ; NODQ-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm4
@@ -1063,7 +1063,7 @@ define <16 x float> @slto16f32(<16 x i64> %a) {
 ; NODQ-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm3
 ; NODQ-NEXT:    vmovq %xmm2, %rax
 ; NODQ-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm2
-; NODQ-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[2,3]
+; NODQ-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],xmm3[0],zero,zero
 ; NODQ-NEXT:    vextractf32x4 $3, %zmm0, %xmm3
 ; NODQ-NEXT:    vmovq %xmm3, %rax
 ; NODQ-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm4
@@ -1075,7 +1075,7 @@ define <16 x float> @slto16f32(<16 x i64> %a) {
 ; NODQ-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm3
 ; NODQ-NEXT:    vmovq %xmm0, %rax
 ; NODQ-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm4
-; NODQ-NEXT:    vinsertps {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[2,3]
+; NODQ-NEXT:    vinsertps {{.*#+}} xmm3 = xmm4[0],xmm3[0],zero,zero
 ; NODQ-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; NODQ-NEXT:    vmovq %xmm0, %rax
 ; NODQ-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm4
@@ -1228,7 +1228,7 @@ define <8 x float> @ulto8f32(<8 x i64> %a) {
 ; NODQ-NEXT:    vcvtusi2ss %rax, %xmm15, %xmm2
 ; NODQ-NEXT:    vmovq %xmm1, %rax
 ; NODQ-NEXT:    vcvtusi2ss %rax, %xmm15, %xmm1
-; NODQ-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[2,3]
+; NODQ-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],xmm2[0],zero,zero
 ; NODQ-NEXT:    vextracti32x4 $3, %zmm0, %xmm2
 ; NODQ-NEXT:    vmovq %xmm2, %rax
 ; NODQ-NEXT:    vcvtusi2ss %rax, %xmm15, %xmm3
@@ -1240,7 +1240,7 @@ define <8 x float> @ulto8f32(<8 x i64> %a) {
 ; NODQ-NEXT:    vcvtusi2ss %rax, %xmm15, %xmm2
 ; NODQ-NEXT:    vmovq %xmm0, %rax
 ; NODQ-NEXT:    vcvtusi2ss %rax, %xmm15, %xmm3
-; NODQ-NEXT:    vinsertps {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[2,3]
+; NODQ-NEXT:    vinsertps {{.*#+}} xmm2 = xmm3[0],xmm2[0],zero,zero
 ; NODQ-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; NODQ-NEXT:    vmovq %xmm0, %rax
 ; NODQ-NEXT:    vcvtusi2ss %rax, %xmm15, %xmm3
@@ -1272,7 +1272,7 @@ define <16 x float> @ulto16f32(<16 x i64> %a) {
 ; NODQ-NEXT:    vcvtusi2ss %rax, %xmm15, %xmm3
 ; NODQ-NEXT:    vmovq %xmm2, %rax
 ; NODQ-NEXT:    vcvtusi2ss %rax, %xmm15, %xmm2
-; NODQ-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[2,3]
+; NODQ-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],xmm3[0],zero,zero
 ; NODQ-NEXT:    vextracti32x4 $3, %zmm1, %xmm3
 ; NODQ-NEXT:    vmovq %xmm3, %rax
 ; NODQ-NEXT:    vcvtusi2ss %rax, %xmm15, %xmm4
@@ -1284,7 +1284,7 @@ define <16 x float> @ulto16f32(<16 x i64> %a) {
 ; NODQ-NEXT:    vcvtusi2ss %rax, %xmm15, %xmm3
 ; NODQ-NEXT:    vmovq %xmm1, %rax
 ; NODQ-NEXT:    vcvtusi2ss %rax, %xmm15, %xmm4
-; NODQ-NEXT:    vinsertps {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[2,3]
+; NODQ-NEXT:    vinsertps {{.*#+}} xmm3 = xmm4[0],xmm3[0],zero,zero
 ; NODQ-NEXT:    vextracti128 $1, %ymm1, %xmm1
 ; NODQ-NEXT:    vmovq %xmm1, %rax
 ; NODQ-NEXT:    vcvtusi2ss %rax, %xmm15, %xmm4
@@ -1298,7 +1298,7 @@ define <16 x float> @ulto16f32(<16 x i64> %a) {
 ; NODQ-NEXT:    vcvtusi2ss %rax, %xmm15, %xmm3
 ; NODQ-NEXT:    vmovq %xmm2, %rax
 ; NODQ-NEXT:    vcvtusi2ss %rax, %xmm15, %xmm2
-; NODQ-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[2,3]
+; NODQ-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],xmm3[0],zero,zero
 ; NODQ-NEXT:    vextractf32x4 $3, %zmm0, %xmm3
 ; NODQ-NEXT:    vmovq %xmm3, %rax
 ; NODQ-NEXT:    vcvtusi2ss %rax, %xmm15, %xmm4
@@ -1310,7 +1310,7 @@ define <16 x float> @ulto16f32(<16 x i64> %a) {
 ; NODQ-NEXT:    vcvtusi2ss %rax, %xmm15, %xmm3
 ; NODQ-NEXT:    vmovq %xmm0, %rax
 ; NODQ-NEXT:    vcvtusi2ss %rax, %xmm15, %xmm4
-; NODQ-NEXT:    vinsertps {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[2,3]
+; NODQ-NEXT:    vinsertps {{.*#+}} xmm3 = xmm4[0],xmm3[0],zero,zero
 ; NODQ-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; NODQ-NEXT:    vmovq %xmm0, %rax
 ; NODQ-NEXT:    vcvtusi2ss %rax, %xmm15, %xmm4

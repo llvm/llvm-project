@@ -112,7 +112,7 @@ define void @frem_v16f32(<16 x float> %a0, <16 x float> %a1, ptr%p3) nounwind {
 ; CHECK-NEXT:    # xmm1 = mem[1,1,3,3]
 ; CHECK-NEXT:    callq fmodf@PLT
 ; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
+; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],zero,zero
 ; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = mem[1,0]
@@ -146,7 +146,7 @@ define void @frem_v16f32(<16 x float> %a0, <16 x float> %a1, ptr%p3) nounwind {
 ; CHECK-NEXT:    # xmm1 = mem[1,1,3,3]
 ; CHECK-NEXT:    callq fmodf@PLT
 ; CHECK-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
+; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],zero,zero
 ; CHECK-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = mem[1,0]
@@ -177,7 +177,7 @@ define void @frem_v16f32(<16 x float> %a0, <16 x float> %a1, ptr%p3) nounwind {
 ; CHECK-NEXT:    # xmm1 = mem[1,1,3,3]
 ; CHECK-NEXT:    callq fmodf@PLT
 ; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
+; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],zero,zero
 ; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = mem[1,0]
@@ -211,7 +211,7 @@ define void @frem_v16f32(<16 x float> %a0, <16 x float> %a1, ptr%p3) nounwind {
 ; CHECK-NEXT:    # xmm1 = mem[1,1,3,3]
 ; CHECK-NEXT:    callq fmodf@PLT
 ; CHECK-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
+; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],zero,zero
 ; CHECK-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = mem[1,0]
@@ -262,7 +262,7 @@ define void @frem_v8f32(<8 x float> %a0, <8 x float> %a1, ptr%p3) nounwind {
 ; CHECK-NEXT:    # xmm1 = mem[1,1,3,3]
 ; CHECK-NEXT:    callq fmodf@PLT
 ; CHECK-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
+; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],zero,zero
 ; CHECK-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = mem[1,0]
@@ -296,7 +296,7 @@ define void @frem_v8f32(<8 x float> %a0, <8 x float> %a1, ptr%p3) nounwind {
 ; CHECK-NEXT:    # xmm1 = mem[1,1,3,3]
 ; CHECK-NEXT:    callq fmodf@PLT
 ; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
+; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],zero,zero
 ; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = mem[1,0]
@@ -340,7 +340,7 @@ define void @frem_v4f32(<4 x float> %a0, <4 x float> %a1, ptr%p3) nounwind {
 ; CHECK-NEXT:    # xmm1 = mem[1,1,3,3]
 ; CHECK-NEXT:    callq fmodf@PLT
 ; CHECK-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
+; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],zero,zero
 ; CHECK-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = mem[1,0]

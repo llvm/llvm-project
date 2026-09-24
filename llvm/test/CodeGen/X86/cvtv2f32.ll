@@ -18,7 +18,7 @@ define <2 x float> @uitofp_2i32_cvt_buildvector(i32 %x, i32 %y, <2 x float> %v) 
 ; X86-NEXT:    subsd %xmm2, %xmm3
 ; X86-NEXT:    xorps %xmm2, %xmm2
 ; X86-NEXT:    cvtsd2ss %xmm3, %xmm2
-; X86-NEXT:    insertps {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[2,3]
+; X86-NEXT:    insertps {{.*#+}} xmm1 = xmm1[0],xmm2[0],zero,zero
 ; X86-NEXT:    mulps %xmm1, %xmm0
 ; X86-NEXT:    retl
 ;
@@ -28,7 +28,7 @@ define <2 x float> @uitofp_2i32_cvt_buildvector(i32 %x, i32 %y, <2 x float> %v) 
 ; X64-NEXT:    cvtsi2ss %rax, %xmm1
 ; X64-NEXT:    movl %esi, %eax
 ; X64-NEXT:    cvtsi2ss %rax, %xmm2
-; X64-NEXT:    insertps {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[2,3]
+; X64-NEXT:    insertps {{.*#+}} xmm1 = xmm1[0],xmm2[0],zero,zero
 ; X64-NEXT:    mulps %xmm1, %xmm0
 ; X64-NEXT:    retq
   %t1 = uitofp i32 %x to float
