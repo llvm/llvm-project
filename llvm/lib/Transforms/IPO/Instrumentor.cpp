@@ -1171,22 +1171,7 @@ void AllocaIO::init(InstrumentationConfig &IConf, InstrumentorIRBuilderTy &IIRB,
 Value *AllocaIO::getSize(Value &V, Type &Ty, InstrumentationConfig &IO,
                          InstrumentorIRBuilderTy &IIRB) {
   auto &AI = cast<AllocaInst>(V);
-  const DataLayout &DL = AI.getDataLayout();
-  Value *SizeValue = nullptr;
-  TypeSize TypeSize = AI.getAllocationBaseSize(DL);
-  if (TypeSize.isFixed()) {
-    SizeValue = getCI(&Ty, TypeSize.getFixedValue());
-  } else {
-    auto *NullPtr = ConstantPointerNull::get(AI.getType());
-    SizeValue = IIRB.IRB.CreatePtrToInt(
-        IIRB.IRB.CreateGEP(AI.getAllocatedType(), NullPtr,
-                           {IIRB.IRB.getInt32(1)}),
-        &Ty);
-  }
-  if (AI.isArrayAllocation())
-    SizeValue = IIRB.IRB.CreateMul(
-        SizeValue, IIRB.IRB.CreateZExtOrBitCast(AI.getArraySize(), &Ty));
-  return SizeValue;
+  return IIRB.IRB.CreateAllocationSize(&Ty, &AI);
 }
 
 Value *AllocaIO::setSize(Value &V, Value &NewV, InstrumentationConfig &IO,
