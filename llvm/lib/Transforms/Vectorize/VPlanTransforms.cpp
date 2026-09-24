@@ -6270,15 +6270,35 @@ void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
         continue;
 
       VPValue *Op = VPI.getOperand(0);
-      auto *WideIV = getOptimizableIVOf(Op, PSE);
-      if (!WideIV)
+
+      // Look through a constant offset, which is folded into the start value
+      // of the narrowed induction below. The offset need not be the induction
+      // step, as start + C + i * step stays affine for any constant C.
+      VPValue *IVOp = Op;
+      APInt Offset;
+      VPValue *X;
+      const APInt *C;
+      if (match(Op, m_c_Add(m_VPValue(X), m_APInt(C)))) {
+        IVOp = X;
+        Offset = *C;
+      } else if (match(Op, m_Sub(m_VPValue(X), m_APInt(C)))) {
+        IVOp = X;
+        Offset = -*C;
+      }
+
+      auto *WideIV = getOptimizableIVOf(IVOp, PSE);
+      if (!WideIV || WideIV != IVOp)
         continue;
 
-      // getOptimizableIVOf also matches an add of the IV and its step, which
-      // is not handled here.
-      // TODO: Also narrow truncates of the incremented IV.
-      if (Op != WideIV)
-        continue;
+      // The offset is added in the induction's type, so it can only be folded
+      // into a start value of that same type.
+      VPValue *Start = WideIV->getStartValue();
+      if (IVOp != Op) {
+        const APInt *StartC;
+        if (!match(Start, m_APInt(StartC)))
+          continue;
+        Start = Plan.getConstantInt(*StartC + Offset);
+      }
 
       // Replacing a free truncate would add an induction update instruction to
       // each iteration of the loop. The canonical induction is exempt, as it
