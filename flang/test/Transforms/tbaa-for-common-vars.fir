@@ -35,8 +35,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 // CHECK: #[[$ATTR_8:.+]] = #llvm.tbaa_tag<base_type = #[[$ATTR_6]], access_type = #[[$ATTR_6]], offset = 0>
 // CHECK: #[[$ATTR_9:.+]] = #llvm.tbaa_tag<base_type = #[[$ATTR_7]], access_type = #[[$ATTR_7]], offset = 0>
 // CHECK-LABEL:   func.func @_QPtest1() {
-// CHECK:           fir.load{{.*}}{tbaa = [#[[$ATTR_8]]]} : !fir.ref<f32>
-// CHECK:           fir.store{{.*}}{tbaa = [#[[$ATTR_9]]]} : !fir.ref<f32>
+// CHECK:           fir.load{{.*}}<{tbaa = [#[[$ATTR_8]]]}> : !fir.ref<f32>
+// CHECK:           fir.store{{.*}}<{tbaa = [#[[$ATTR_9]]]}> : !fir.ref<f32>
 
 // -----
 
@@ -70,8 +70,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 // CHECK: #[[$ATTR_16:.+]] = #llvm.tbaa_type_desc<id = "global data/common2_/bytes_0_to_3", members = {<#[[$ATTR_15]], 0>}>
 // CHECK: #[[$ATTR_18:.+]] = #llvm.tbaa_tag<base_type = #[[$ATTR_16]], access_type = #[[$ATTR_16]], offset = 0>
 // CHECK-LABEL:   func.func @_QPtest2() {
-// CHECK:           fir.load{{.*}}{tbaa = [#[[$ATTR_18]]]} : !fir.ptr<f32>
-// CHECK:           fir.store{{.*}}{tbaa = [#[[$ATTR_18]]]} : !fir.ptr<f32>
+// CHECK:           fir.load{{.*}}<{tbaa = [#[[$ATTR_18]]]}> : !fir.ptr<f32>
+// CHECK:           fir.store{{.*}}<{tbaa = [#[[$ATTR_18]]]}> : !fir.ptr<f32>
 
 // -----
 
@@ -128,10 +128,10 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 // CHECK: #[[GLOBALBTAG:.+]] = #llvm.tbaa_tag<base_type = #[[GLOBALB]], access_type = #[[GLOBALB]], offset = 0>
 // CHECK: #[[GLOBALATAG:.+]] = #llvm.tbaa_tag<base_type = #[[GLOBALA]], access_type = #[[GLOBALA]], offset = 0>
 // CHECK-LABEL:   func.func @_QPtest3() {
-// CHECK:           fir.load{{.*}}{tbaa = [#[[GLOBALBTAG]]]} : !fir.ref<f32>
-// CHECK:           fir.store{{.*}}{tbaa = [#[[GLOBALATAG]]]} : !fir.ref<f32>
-// CHECK:           fir.load{{.*}}{tbaa = [#[[DUMMYDTAG]]]} : !fir.ref<f32>
-// CHECK:           fir.store{{.*}}{tbaa = [#[[DUMMYCTAG]]]} : !fir.ref<f32>
+// CHECK:           fir.load{{.*}}<{tbaa = [#[[GLOBALBTAG]]]}> : !fir.ref<f32>
+// CHECK:           fir.store{{.*}}<{tbaa = [#[[GLOBALATAG]]]}> : !fir.ref<f32>
+// CHECK:           fir.load{{.*}}<{tbaa = [#[[DUMMYDTAG]]]}> : !fir.ref<f32>
+// CHECK:           fir.store{{.*}}<{tbaa = [#[[DUMMYCTAG]]]}> : !fir.ref<f32>
 
 // -----
 
@@ -190,10 +190,10 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 // CHECK: #[[INNER4DTAG:.+]] = #llvm.tbaa_tag<base_type = #[[INNER4D]], access_type = #[[INNER4D]], offset = 0>
 // CHECK: #[[INNER4CTAG:.+]] = #llvm.tbaa_tag<base_type = #[[INNER4C]], access_type = #[[INNER4C]], offset = 0>
 // CHECK-LABEL:   func.func @_QPtest4() {
-// CHECK:           fir.load{{.*}}{tbaa = [#[[TEST4BTAG]]]} : !fir.ref<f32>
-// CHECK:           fir.store{{.*}}{tbaa = [#[[TEST4ATAG]]]} : !fir.ref<f32>
-// CHECK:           fir.load{{.*}}{tbaa = [#[[INNER4DTAG]]]} : !fir.ref<f32>
-// CHECK:           fir.store{{.*}}{tbaa = [#[[INNER4CTAG]]]} : !fir.ref<f32>
+// CHECK:           fir.load{{.*}}<{tbaa = [#[[TEST4BTAG]]]}> : !fir.ref<f32>
+// CHECK:           fir.store{{.*}}<{tbaa = [#[[TEST4ATAG]]]}> : !fir.ref<f32>
+// CHECK:           fir.load{{.*}}<{tbaa = [#[[INNER4DTAG]]]}> : !fir.ref<f32>
+// CHECK:           fir.store{{.*}}<{tbaa = [#[[INNER4CTAG]]]}> : !fir.ref<f32>
 
 // -----
 
@@ -230,8 +230,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 // CHECK: #[[TEST5A:.+]] = #llvm.tbaa_type_desc<id = "global data/common5_/bytes_0_to_3", members = {<#[[TEST5COMMON5]], 0>}>
 // CHECK: #[[TEST5ATAG:.+]] = #llvm.tbaa_tag<base_type = #[[TEST5A]], access_type = #[[TEST5A]], offset = 0>
 // CHECK-LABEL:   func.func @_QPtest5() {
-// CHECK:           fir.load{{.*}}{tbaa = [#[[TEST5COMMON5TAG]]]} : !fir.ref<f32>
-// CHECK:           fir.store{{.*}}{tbaa = [#[[TEST5ATAG]]]} : !fir.ref<f32>
+// CHECK:           fir.load{{.*}}<{tbaa = [#[[TEST5COMMON5TAG]]]}> : !fir.ref<f32>
+// CHECK:           fir.store{{.*}}<{tbaa = [#[[TEST5ATAG]]]}> : !fir.ref<f32>
 
 // -----
 
@@ -287,9 +287,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 // CHECK: #[[$ATTR_6:.+]] = #llvm.tbaa_type_desc<id = "global data/block_/bytes_0_to_79", members = {<#[[$ATTR_5]], 0>}>
 // CHECK: #[[$ATTR_7:.+]] = #llvm.tbaa_tag<base_type = #[[$ATTR_6]], access_type = #[[$ATTR_6]], offset = 0>
 // CHECK-LABEL:   func.func @_QPtest6() {
-// CHECK:           fir.load{{.*}}{tbaa = [#[[$ATTR_7]]]} : !fir.ref<f32>
-// CHECK:           fir.load{{.*}}{tbaa = [#[[$ATTR_7]]]} : !fir.ref<f32>
-// CHECK:           fir.store{{.*}}{tbaa = [#[[$ATTR_7]]]} : !fir.ref<f32>
+// CHECK:           fir.load{{.*}}<{tbaa = [#[[$ATTR_7]]]}> : !fir.ref<f32>
+// CHECK:           fir.load{{.*}}<{tbaa = [#[[$ATTR_7]]]}> : !fir.ref<f32>
+// CHECK:           fir.store{{.*}}<{tbaa = [#[[$ATTR_7]]]}> : !fir.ref<f32>
 
 // -----
 
@@ -354,8 +354,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 // CHECK: #[[$ATTR_81:.+]] = #llvm.tbaa_tag<base_type = #[[$ATTR_80]], access_type = #[[$ATTR_80]], offset = 0>
 // CHECK-LABEL:   func.func @_QPtest7() {
 // CHECK:           fir.load %{{[0-9]+}} : !fir.ref<!fir.box<!fir.ptr<f32>>>
-// CHECK:           fir.load{{.*}} {tbaa = [#[[$ATTR_77]]]} : !fir.ptr<f32>
-// CHECK:           fir.load{{.*}}{tbaa = [#[[$ATTR_81]]]} : !fir.ref<i32>
+// CHECK:           fir.load{{.*}} <{tbaa = [#[[$ATTR_77]]]}> : !fir.ptr<f32>
+// CHECK:           fir.load{{.*}}<{tbaa = [#[[$ATTR_81]]]}> : !fir.ref<i32>
 // CHECK:           fir.store %{{[0-9]+}} to %{{[0-9]+}} : !fir.ref<f32>
 
 // -----
@@ -424,7 +424,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 // CHECK: #[[$ATTR_86:.+]] = #llvm.tbaa_tag<base_type = #[[$ATTR_85]], access_type = #[[$ATTR_85]], offset = 0>
 // CHECK-LABEL:   func.func @_QPtest8() {
 // CHECK:           fir.load %{{[0-9]+}} : !fir.ref<!fir.box<!fir.ptr<f32>>>
-// CHECK:           fir.load %{{[0-9]+}} {tbaa = [#[[$ATTR_86]]]} : !fir.ptr<f32>
+// CHECK:           fir.load %{{[0-9]+}} <{tbaa = [#[[$ATTR_86]]]}> : !fir.ptr<f32>
 // CHECK:           fir.load %{{[0-9]+}} : !fir.ref<i32>
 // CHECK:           fir.store %{{[0-9]+}} to %{{[0-9]+}} : !fir.ref<f32>
 
@@ -474,5 +474,5 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 // CHECK-NEXT: #[[A_TAG:.*]] = #llvm.tbaa_tag<base_type = #[[A]], access_type = #[[A]], offset = 0>
 
 // CHECK-LABEL: func.func @_QPtarget_common_tbaa()
-// CHECK:         %[[LOAD:.*]] = fir.load %{{.*}} {tbaa = [#[[B_TAG]]]}
-// CHECK:         fir.store %[[LOAD]] to %{{.*}} {tbaa = [#[[A_TAG]]]}
+// CHECK:         %[[LOAD:.*]] = fir.load %{{.*}} <{tbaa = [#[[B_TAG]]]}>
+// CHECK:         fir.store %[[LOAD]] to %{{.*}} <{tbaa = [#[[A_TAG]]]}>

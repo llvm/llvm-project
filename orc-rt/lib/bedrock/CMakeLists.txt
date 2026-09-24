@@ -38,11 +38,13 @@ set(ORC_RT_BEDROCK_SOURCES
 # copy of them.
 
 set(ORC_RT_BEDROCK_POSIX_SOURCES
+  sys/posix/DWARFEHFrameRegistrar.cpp
   sys/posix/DynamicLibrary.cpp
   sys/posix/Memory.cpp
   sys/posix/PageSize.cpp
   sys/posix/SocketConnector.cpp
   sys/posix/SocketHandle.cpp
+  sys/posix/sps/DWARFEHFrameRegistrarSPSCI.cpp
   sys/posix/sps/SimpleRemoteCAOverSocket.cpp
 )
 

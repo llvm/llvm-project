@@ -546,6 +546,8 @@ features cannot lower the translation-unit ABI level;
 - Fixed a bug where a stray closing curley brace in an OpenMP/OpenACC pragma could cause pragma parsing issues when inside of a member function. (#GH214195)
 - Fixed a bug where preprocessor directives following comments were not correctly recognized when using -C. (#GH48361)
 - Fixed a crash when declaring a member template within a local class inside an OpenMP region. (#GH216052)
+- Fixed an assertion failure when a variable implicitly mapped by an OpenMP `target` directive has a class type
+  (such as `std::map`) whose mapper lookup instantiates a class template specialization. (#GH154704)
 - Fixed a bug where repeated #imports of modular headers in non-modular compilation were translated to #pragma clang module import. (#GH216924)
 - Fixed an assertion when `#pragma omp declare simd` or `#pragma omp declare variant` is followed by another OpenMP declarative directive containing a qualified identifier. (#GH217204)
 - Fixed a crash when an `asm` label names the register for a global variable of incomplete type. (#GH219746)
@@ -564,8 +566,9 @@ features cannot lower the translation-unit ABI level;
   inside a member function call synthesized by ``__builtin_invoke``. (#GH185241)
 - Fixed a crash in ``__builtin_dump_struct`` when ``-Werror`` promotes
   format warnings to errors. (#GH211943)
-- Fixed a wrong code generation in `__builtin_clear_padding` wherein the
-  wrong bits of the `_BitInt` type were cleared in big-endian mode.
+- Fixed wrong code generation in `__builtin_clear_padding` wherein the wrong
+  bits of the following types were cleared: `_BitInt`, struct bitfields, and
+  packed boolean vectors. (#GH215809), (#GH216063), (#GH224033)
 - Fixed an assertion failure when `__builtin_vectorelements` is applied to a
   reference to a vector type; `vec_step` (in C++ for OpenCL) and
   `__builtin_ptrauth_type_discriminator` similarly no longer accept reference
