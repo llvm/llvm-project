@@ -193,7 +193,7 @@ std::string Diagnostic::str() const {
 
 /// Converts each message part to a separate string.
 SmallVector<std::string> Diagnostic::strs() const {
-  SmallVector<std::string, 2> strs;
+  SmallVector<std::string> strs;
   size_t numMessageParts = messagePartEnds.size();
 
   // Include the current message part if there are no completed parts or if it
