@@ -2930,11 +2930,15 @@ MCSection *TargetLoweringObjectFileGOFF::SelectSectionForGlobal(
                      GOFF::ESD_LB_Deferred, GOFF::ESD_RQ_0, 0},
         SD);
     ED->setAlignment(Alignment.value_or(llvm::Align(8)));
-    return getContext().getGOFFSection(Kind, Symbol->getName(),
-                                       GOFF::PRAttr{false, GOFF::ESD_EXE_DATA,
-                                                    GOFF::ESD_LT_XPLink,
-                                                    PRBindingScope, 0},
-                                       ED);
+    MCSectionGOFF *PR = getContext().getGOFFSection(
+        Kind, Symbol->getName(),
+        GOFF::PRAttr{false, GOFF::ESD_EXE_DATA, GOFF::ESD_LT_XPLink,
+                     PRBindingScope, 0},
+        ED);
+    // The binder rejects zero-length PR sections. Mark the PR so the writer
+    // inflates it to a valid length if needed.
+    PR->setRequiresNonZeroLength();
+    return PR;
   }
   return TextSection;
 }
