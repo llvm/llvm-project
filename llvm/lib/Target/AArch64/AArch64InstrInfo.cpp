@@ -212,6 +212,12 @@ static std::optional<unsigned> getLFIInstSizeInBytes(const MachineInstr &MI) {
 /// GetInstSize - Return the number of bytes of code the specified
 /// instruction may be.  This returns the maximum number of bytes.
 unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
+  const MCInstrDesc &Desc = MI.getDesc();
+  if (!Desc.isPseudo() && !Subtarget.isLFI()) {
+    assert(Desc.getSize() == 4 && "Unexpected instruction size");
+    return 4;
+  }
+
   unsigned NumBytes = getInstSizeInBytesImpl(MI);
 
   // The LFI rewriter may flush a deferred LR guard (1 instruction) before any
@@ -226,12 +232,6 @@ unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
 
 unsigned
 AArch64InstrInfo::getInstSizeInBytesImpl(const MachineInstr &MI) const {
-  const MCInstrDesc &Desc = MI.getDesc();
-  if (!Desc.isPseudo() && !Subtarget.isLFI()) {
-    assert(Desc.getSize() == 4 && "Unexpected instruction size");
-    return 4;
-  }
-
   const MachineBasicBlock &MBB = *MI.getParent();
   const MachineFunction *MF = MBB.getParent();
   const Function &F = MF->getFunction();
