@@ -40,6 +40,18 @@ config_setting(
     },
 )
 
+# Use LLVM libunwind's per-FDE registration API. This does not link libunwind.
+# Usage: --@llvm-project//llvm:use_libunwind_for_eh_frame_registration=true
+bool_flag(
+    name = "use_libunwind_for_eh_frame_registration",
+    build_setting_default = False,
+)
+
+config_setting(
+    name = "libunwind_eh_frame_registration_enabled",
+    flag_values = {":use_libunwind_for_eh_frame_registration": "true"},
+)
+
 exports_files([
     "LICENSE.TXT",
     "cmake/modules/llvm-driver-template.cpp.in",
@@ -4366,6 +4378,10 @@ cc_library(
     ) + ["include/llvm-c/ExecutionEngine.h"],
     copts = llvm_copts,
     features = ["-parse_headers"],
+    local_defines = select({
+        ":libunwind_eh_frame_registration_enabled": ["HAVE_UNW_ADD_DYNAMIC_FDE=1"],
+        "//conditions:default": [],
+    }),
     deps = [
         ":BinaryFormat",
         ":CodeGen",
@@ -4584,6 +4600,10 @@ cc_library(
         "//conditions:default": [
             "-lrt",
         ],
+    }),
+    local_defines = select({
+        ":libunwind_eh_frame_registration_enabled": ["HAVE_UNW_ADD_DYNAMIC_FDE=1"],
+        "//conditions:default": [],
     }),
     deps = [
         ":BinaryFormat",
