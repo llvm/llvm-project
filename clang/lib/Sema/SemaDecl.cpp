@@ -18175,12 +18175,15 @@ QualType Sema::TryBuildMSVCEnumTypedefType(NamedDecl *Found,
                                            NestedNameSpecifier Qualifier,
                                            SourceLocation NameLoc,
                                            bool InFunctionPrototype) {
+  if (!getLangOpts().CPlusPlus || !getLangOpts().MSVCCompat)
+    return QualType();
+  if (InFunctionPrototype || Keyword != ElaboratedTypeKeyword::Enum)
+    return QualType();
+
   if (Qualifier)
     Found = Found->getUnderlyingDecl();
   auto *TD = dyn_cast<TypedefNameDecl>(Found);
-  if (!getLangOpts().CPlusPlus || !getLangOpts().MSVCCompat ||
-      InFunctionPrototype || !TD || Keyword != ElaboratedTypeKeyword::Enum ||
-      !TD->getUnderlyingType()->isEnumeralType())
+  if (!TD || !TD->getUnderlyingType()->isEnumeralType())
     return QualType();
   if (TagDecl *Tag = TD->getUnderlyingType()->getAsTagDecl()) {
     if (Tag->getDeclName() == TD->getDeclName() &&
