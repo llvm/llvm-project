@@ -63,9 +63,8 @@ long double _Complex divld(long double _Complex a, long double _Complex b) {
 // CIR-LABEL: cir.func {{.*}}@divld
 // CIR: cir.call @__divxc3({{.*}}) : (!cir.long_double<!cir.f80>, !cir.long_double<!cir.f80>, !cir.long_double<!cir.f80>, !cir.long_double<!cir.f80>) -> [[REC_LD]]{{[^0-9]}}
 
-// An x87 pair is passed indirectly, and CIR marks those byval slots noalias.
-// LLVMCIR: define dso_local { x86_fp80, x86_fp80 } @divld(ptr noalias noundef byval({ x86_fp80, x86_fp80 }) align 16 %{{.+}}, ptr noalias noundef byval({ x86_fp80, x86_fp80 }) align 16 %{{.+}})
-// OGCG: define dso_local { x86_fp80, x86_fp80 } @divld(ptr noundef byval({ x86_fp80, x86_fp80 }) align 16 %{{.+}}, ptr noundef byval({ x86_fp80, x86_fp80 }) align 16 %{{.+}})
+// An x87 pair is passed indirectly.
+// LLVM: define dso_local { x86_fp80, x86_fp80 } @divld(ptr noundef byval({ x86_fp80, x86_fp80 }) align 16 %{{.+}}, ptr noundef byval({ x86_fp80, x86_fp80 }) align 16 %{{.+}})
 
 // LLVMCIR: call { x86_fp80, x86_fp80 } @__divxc3(x86_fp80 %{{.+}}, x86_fp80 %{{.+}}, x86_fp80 %{{.+}}, x86_fp80 %{{.+}})
 // OGCG: call { x86_fp80, x86_fp80 } @__divxc3(x86_fp80 noundef %{{.+}}, x86_fp80 noundef %{{.+}}, x86_fp80 noundef %{{.+}}, x86_fp80 noundef %{{.+}})

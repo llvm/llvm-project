@@ -152,6 +152,15 @@ std::optional<int64_t> getConstantIntValue(OpFoldResult ofr) {
   return apInt->first.getSExtValue();
 }
 
+/// If ofr is a constant integer or an IntegerAttr, return the integer
+/// zero-extended to 64 bits.
+std::optional<uint64_t> getConstantUIntValue(OpFoldResult ofr) {
+  std::optional<std::pair<APInt, bool>> apInt = getConstantAPIntValue(ofr);
+  if (!apInt)
+    return std::nullopt;
+  return apInt->first.getZExtValue();
+}
+
 std::optional<SmallVector<int64_t>>
 getConstantIntValues(ArrayRef<OpFoldResult> ofrs) {
   SmallVector<int64_t> res;
@@ -438,16 +447,16 @@ LogicalResult foldDynamicIndexList(SmallVectorImpl<OpFoldResult> &ofrs,
   for (OpFoldResult &ofr : ofrs) {
     if (isa<Attribute>(ofr))
       continue;
-    Attribute attr;
-    if (matchPattern(cast<Value>(ofr), m_Constant(&attr))) {
-      // Note: All ofrs have index type.
-      if (onlyNonNegative && *getConstantIntValue(attr) < 0)
-        continue;
-      if (onlyNonZero && *getConstantIntValue(attr) == 0)
-        continue;
-      ofr = attr;
-      valuesChanged = true;
-    }
+    // Note: All ofrs have index type; the kDynamic sentinel stays dynamic.
+    std::optional<int64_t> intVal = getConstantIntValue(ofr);
+    if (!intVal || *intVal == ShapedType::kDynamic)
+      continue;
+    if (onlyNonNegative && *intVal < 0)
+      continue;
+    if (onlyNonZero && *intVal == 0)
+      continue;
+    ofr = getAsIndexOpFoldResult(cast<Value>(ofr).getContext(), *intVal);
+    valuesChanged = true;
   }
   return success(valuesChanged);
 }

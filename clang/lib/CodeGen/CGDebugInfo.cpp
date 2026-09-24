@@ -2535,10 +2535,17 @@ llvm::DISubprogram *CGDebugInfo::CreateCXXMemberFunction(
     SPFlags |= llvm::DISubprogram::SPFlagOptimized;
 
   // In this debug mode, emit type info for a class when its constructor type
-  // info is emitted.
-  if (DebugKind == llvm::codegenoptions::DebugInfoConstructor)
-    if (const CXXConstructorDecl *CD = dyn_cast<CXXConstructorDecl>(Method))
-      completeUnusedClass(*CD->getParent());
+  // info is emitted. Delegating constructors are ignored because the target
+  // constructor's definition will emit the type info.
+  if (DebugKind == llvm::codegenoptions::DebugInfoConstructor) {
+    if (const auto *CD = dyn_cast<CXXConstructorDecl>(Method)) {
+      if (const auto *Def =
+              dyn_cast_or_null<CXXConstructorDecl>(CD->getDefinition());
+          Def && !Def->isDelegatingConstructor()) {
+        completeUnusedClass(*CD->getParent());
+      }
+    }
+  }
 
   llvm::DINodeArray TParamsArray = CollectFunctionTemplateParams(Method, Unit);
   llvm::DISubprogram *SP = DBuilder.createMethod(
@@ -3240,6 +3247,14 @@ static bool canUseCtorHoming(const CXXRecordDecl *RD) {
   for (const CXXConstructorDecl *Ctor : RD->ctors()) {
     if (Ctor->isCopyOrMoveConstructor())
       continue;
+    if (const FunctionDecl *Def = Ctor->getDefinition()) {
+      const auto *CtorDef = cast<CXXConstructorDecl>(Def);
+      // Ignore delegating constructors, the target constructor will either be
+      // a non-deleted custom constructor that enables homing, or could be a
+      // copy/move constructor, which does not enable homing.
+      if (CtorDef->isDelegatingConstructor())
+        continue;
+    }
     if (!Ctor->isDeleted())
       return true;
   }
@@ -3342,6 +3357,46 @@ llvm::DIType *CGDebugInfo::GetPreferredNameType(const CXXRecordDecl *RD,
   return getOrCreateType(PNA->getTypedefType(), Unit);
 }
 
+static void completeStandardLayoutUnionType(CGDebugInfo &DebugInfo,
+                                            QualType QT);
+
+static void completeStandardLayoutUnionMembers(CGDebugInfo &DebugInfo,
+                                               const CXXRecordDecl *RD) {
+  for (const CXXBaseSpecifier &BS : RD->bases())
+    completeStandardLayoutUnionType(DebugInfo, BS.getType());
+
+  for (const FieldDecl *FD : RD->fields()) {
+    // Invalid declarations are skipped when determining the field layout of
+    // unions. This will of course cause a compiler error, but skip these
+    // fields anyway to avoid triggering the `isStandardLayout()` assertion in
+    // `completeStandardLayoutUnionType`.
+    if (FD->isInvalidDecl())
+      continue;
+    completeStandardLayoutUnionType(DebugInfo,
+                                    FD->getType()
+                                        ->getBaseElementTypeUnsafe()
+                                        ->getCanonicalTypeUnqualified());
+  }
+}
+
+static void completeStandardLayoutUnionType(CGDebugInfo &DebugInfo,
+                                            QualType QT) {
+  const auto *RT = QT->getAs<RecordType>();
+  if (!RT)
+    return;
+
+  auto *CRD = dyn_cast<CXXRecordDecl>(RT->getDecl()->getDefinitionOrSelf());
+  if (!CRD || !CRD->hasDefinition())
+    return;
+
+  // We checked at the root that this is a standard-layout type, which
+  // requires all its members / base types to be standard-layout.
+  assert(CRD->isStandardLayout());
+
+  DebugInfo.completeClassData(CRD);
+  completeStandardLayoutUnionMembers(DebugInfo, CRD);
+}
+
 std::pair<llvm::DIType *, llvm::DIType *>
 CGDebugInfo::CreateTypeDefinition(const RecordType *Ty) {
   RecordDecl *RD = Ty->getDecl()->getDefinitionOrSelf();
@@ -3398,6 +3453,21 @@ CGDebugInfo::CreateTypeDefinition(const RecordType *Ty) {
         llvm::MDNode::replaceWithPermanent(llvm::TempDICompositeType(FwdDecl));
 
   RegionMap[RD].reset(FwdDecl);
+
+  if (DebugKind == llvm::codegenoptions::DebugInfoConstructor) {
+    // For standard-layout unions, recursively emit full debug info for all
+    // user-defined types (and their bases/fields) in the union. Per the C++
+    // spec, "it is permitted to inspect the common initial part of any of" the
+    // "common initial sequence" of distinct types in a standard-layout union.
+    // This exception to strict aliasing enables producing a reference to a
+    // type without ever having constructed that type, breaking the assumption
+    // made by constructor homing that all interesting types we'd want debug
+    // info for must have been constructed.
+    //
+    // See: https://wg21.link/class.mem#general-30
+    if (CXXDecl && CXXDecl->isUnion() && CXXDecl->isStandardLayout())
+      completeStandardLayoutUnionMembers(*this, CXXDecl);
+  }
 
   if (CGM.getCodeGenOpts().getDebuggerTuning() == llvm::DebuggerKind::LLDB)
     if (auto *PrefDI = GetPreferredNameType(CXXDecl, DefUnit))
@@ -3733,13 +3803,17 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const ObjCInterfaceType *Ty,
       Flags |= llvm::DINode::FlagBitField;
 
     llvm::MDNode *PropertyNode = nullptr;
+    ObjCPropertyDecl *SynthesizedProperty = nullptr;
+    llvm::DIFile *PUnit = nullptr;
+    unsigned PLine = 0;
     if (ObjCImplementationDecl *ImpD = ID->getImplementation()) {
       if (ObjCPropertyImplDecl *PImpD =
               ImpD->FindPropertyImplIvarDecl(Field->getIdentifier())) {
         if (ObjCPropertyDecl *PD = PImpD->getPropertyDecl()) {
+          SynthesizedProperty = PD;
           SourceLocation Loc = PD->getLocation();
-          llvm::DIFile *PUnit = getOrCreateFile(Loc);
-          unsigned PLine = getLineNumber(Loc);
+          PUnit = getOrCreateFile(Loc);
+          PLine = getLineNumber(Loc);
           ObjCMethodDecl *Getter = PImpD->getGetterMethodDecl();
           ObjCMethodDecl *Setter = PImpD->getSetterMethodDecl();
           PropertyNode = DBuilder.createObjCProperty(
@@ -3755,10 +3829,17 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const ObjCInterfaceType *Ty,
         }
       }
     }
-    FieldTy = DBuilder.createObjCIVar(FieldName, FieldDefUnit, FieldLine,
-                                      FieldSize, FieldAlign, FieldOffset, Flags,
-                                      FieldTy, PropertyNode);
-    EltTys.push_back(FieldTy);
+    auto *IvarTy = DBuilder.createObjCIVar(FieldName, FieldDefUnit, FieldLine,
+                                           FieldSize, FieldAlign, FieldOffset,
+                                           Flags, FieldTy, PropertyNode);
+    EltTys.push_back(IvarTy);
+
+    if (SynthesizedProperty) {
+      assert(PUnit && "SynthesizedProperty implies PUnit");
+      EltTys.push_back(DBuilder.createProperty(
+          SynthesizedProperty->getName(), PUnit, PLine,
+          getOrCreateType(SynthesizedProperty->getType(), PUnit), IvarTy));
+    }
   }
 
   llvm::DINodeArray Elements = DBuilder.getOrCreateArray(EltTys);
@@ -5162,13 +5243,18 @@ void CGDebugInfo::EmitFuncDeclForCallSite(llvm::CallBase *CallOrInvoke,
     return;
   if (Func->getSubprogram())
     return;
+  // If the function has a definition, it either already has a
+  // subprogram or it is a nodebug function.
+  if (!Func->isDeclaration())
+    return;
 
   const FunctionDecl *CalleeDecl =
       cast<FunctionDecl>(CalleeGlobalDecl.getDecl());
 
   // Do not emit a declaration subprogram for a function with nodebug
-  // attribute, or if call site info isn't required.
-  if (CalleeDecl->hasAttr<NoDebugAttr>() ||
+  // attribute, or if call site info isn't required.  The attribute
+  // could be on a later redeclaration than the one the call resolves to.
+  if (CalleeDecl->getMostRecentDecl()->hasAttr<NoDebugAttr>() ||
       getCallSiteRelatedAttrs() == llvm::DINode::FlagZero)
     return;
 

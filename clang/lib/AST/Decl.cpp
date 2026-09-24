@@ -1567,9 +1567,7 @@ LinkageInfo LinkageComputer::computeLVForDecl(const NamedDecl *D,
   //   one such matching entity, the program is ill-formed. Otherwise,
   //   if no matching entity is found, the block scope entity receives
   //   external linkage.
-  if (D->getDeclContext()
-          ->getEnclosingNonExpansionStatementContext()
-          ->isFunctionOrMethod())
+  if (D->getDeclContext()->isFunctionOrMethod())
     return getLVForLocalDecl(D, computation);
 
   // C++ [basic.link]p6:
@@ -2258,8 +2256,8 @@ VarDecl::isThisDeclarationADefinition(ASTContext &C) const {
   // a static data member template outside the containing class?
   if (isStaticDataMember()) {
     if (isOutOfLine() &&
-        !(getCanonicalDecl()->isInline() &&
-          getCanonicalDecl()->isConstexpr()) &&
+        !(getCanonicalDecl()->isInline() && getCanonicalDecl()->isConstexpr() &&
+          !getCanonicalDecl()->isOutOfLine()) &&
         (hasInit() ||
          // If the first declaration is out-of-line, this may be an
          // instantiation of an out-of-line partial specialization of a variable
@@ -4070,12 +4068,9 @@ SourceRange FunctionDecl::getReturnTypeSourceRange() const {
   if (!FTL)
     return SourceRange();
 
-  // Skip self-referential return types.
-  const SourceManager &SM = getASTContext().getSourceManager();
   SourceRange RTRange = FTL.getReturnLoc().getSourceRange();
   SourceLocation Boundary = getNameInfo().getBeginLoc();
-  if (RTRange.isInvalid() || Boundary.isInvalid() ||
-      !SM.isBeforeInTranslationUnit(RTRange.getEnd(), Boundary))
+  if (RTRange.isInvalid() || Boundary.isInvalid())
     return SourceRange();
 
   return RTRange;
@@ -4396,7 +4391,7 @@ FunctionDecl::getTemplateSpecializationArgsAsWritten() const {
 
 void FunctionDecl::setFunctionTemplateSpecialization(
     ASTContext &C, FunctionTemplateDecl *Template,
-    TemplateArgumentList *TemplateArgs, void *InsertPos,
+    TemplateArgumentList *TemplateArgs, llvm::FoldingSetInsertToken InsertToken,
     TemplateSpecializationKind TSK,
     const TemplateArgumentListInfo *TemplateArgsAsWritten,
     SourceLocation PointOfInstantiation) {
@@ -4416,7 +4411,7 @@ void FunctionDecl::setFunctionTemplateSpecialization(
           dyn_cast_if_present<MemberSpecializationInfo *>(
               TemplateOrSpecialization));
   TemplateOrSpecialization = Info;
-  Template->addSpecialization(Info, InsertPos);
+  Template->addSpecialization(Info, InsertToken);
 }
 
 void FunctionDecl::setDependentTemplateSpecialization(
@@ -4643,10 +4638,12 @@ unsigned FunctionDecl::getMemoryFunctionKind() const {
   case Builtin::BImemmove:
     return Builtin::BImemmove;
 
+  case Builtin::BI__builtin_strlcpy:
   case Builtin::BIstrlcpy:
   case Builtin::BI__builtin___strlcpy_chk:
     return Builtin::BIstrlcpy;
 
+  case Builtin::BI__builtin_strlcat:
   case Builtin::BIstrlcat:
   case Builtin::BI__builtin___strlcat_chk:
     return Builtin::BIstrlcat;
@@ -4726,6 +4723,10 @@ unsigned FunctionDecl::getMemoryFunctionKind() const {
         return Builtin::BIbzero;
       if (FnInfo->isStr("bcopy"))
         return Builtin::BIbcopy;
+      if (FnInfo->isStr("strlcat"))
+        return Builtin::BIstrlcat;
+      if (FnInfo->isStr("strlcpy"))
+        return Builtin::BIstrlcpy;
     } else if (isInStdNamespace()) {
       if (FnInfo->isStr("free"))
         return Builtin::BIfree;
@@ -5935,7 +5936,9 @@ TopLevelStmtDecl *TopLevelStmtDecl::Create(ASTContext &C, Stmt *Statement) {
   SourceLocation Loc = Statement ? Statement->getBeginLoc() : SourceLocation();
   DeclContext *DC = C.getTranslationUnitDecl();
 
-  return new (C, DC) TopLevelStmtDecl(DC, Loc, Statement);
+  auto *D = new (C, DC) TopLevelStmtDecl(DC, Loc, Statement);
+  D->Ordinal = C.NumTopLevelStmtDecls++;
+  return D;
 }
 
 TopLevelStmtDecl *TopLevelStmtDecl::CreateDeserialized(ASTContext &C,

@@ -1,4 +1,4 @@
-; RUN: llc -O2 -mtriple=hexagon -fp-contract=fast -pipeliner-prune-loop-carried=false < %s | FileCheck %s
+; RUN: llc -O2 -mtriple=hexagon -pipeliner-prune-loop-carried=false < %s | FileCheck %s
 
 ; Test that there is 1 packet between the FP result and its use.
 
@@ -35,19 +35,19 @@ b2:                                               ; preds = %b2, %b1
   %v15 = add nsw i32 %v14, %v11
   %v16 = getelementptr inbounds [1000 x float], ptr %v1, i32 0, i32 %v15
   %v17 = load float, ptr %v16, align 4, !tbaa !0
-  %v18 = fmul float %v17, %v17
+  %v18 = fmul contract float %v17, %v17
   %v19 = mul nsw i32 %v13, 25
   %v20 = add nsw i32 %v19, %v11
   %v21 = getelementptr inbounds [1000 x float], ptr %v2, i32 0, i32 %v20
   %v22 = load float, ptr %v21, align 4, !tbaa !0
-  %v23 = fmul float %v22, %v22
-  %v24 = fadd float %v18, %v23
+  %v23 = fmul contract float %v22, %v22
+  %v24 = fadd contract float %v18, %v23
   %v25 = load float, ptr %v12, align 4, !tbaa !0
-  %v26 = fmul float %v25, %v25
-  %v27 = fadd float %v24, %v26
+  %v26 = fmul contract float %v25, %v25
+  %v27 = fadd contract float %v24, %v26
   %v28 = getelementptr inbounds [1000 x float], ptr %v0, i32 0, i32 %v20
   %v29 = load float, ptr %v28, align 4, !tbaa !0
-  %v30 = fadd float %v29, %v27
+  %v30 = fadd contract float %v29, %v27
   store float %v30, ptr %v28, align 4, !tbaa !0
   %v31 = add nuw nsw i32 %v13, 1
   %v32 = icmp eq i32 %v13, %v9

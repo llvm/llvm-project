@@ -32,6 +32,10 @@ portability/*
 readability/*
 ```
 
+:::{table}
+:class: clang-tidy-checks-table
+:widths: 90 10
+
 | Name | Offers fixes |
 | --- | --- |
 | {doc}`abseil-cleanup-ctad <abseil/cleanup-ctad>` | Yes |
@@ -245,6 +249,7 @@ readability/*
 | {doc}`llvm-formatv-string <llvm/formatv-string>` |  |
 | {doc}`llvm-header-guard <llvm/header-guard>` |  |
 | {doc}`llvm-include-order <llvm/include-order>` | Yes |
+| {doc}`llvm-invalid-regex-pattern <llvm/invalid-regex-pattern>` |  |
 | {doc}`llvm-namespace-comment <llvm/namespace-comment>` |  |
 | {doc}`llvm-prefer-isa-or-dyn-cast-in-conditionals <llvm/prefer-isa-or-dyn-cast-in-conditionals>` | Yes |
 | {doc}`llvm-prefer-register-over-unsigned <llvm/prefer-register-over-unsigned>` | Yes |
@@ -333,6 +338,7 @@ readability/*
 | {doc}`modernize-use-std-print <modernize/use-std-print>` | Yes |
 | {doc}`modernize-use-string-view <modernize/use-string-view>` | Yes |
 | {doc}`modernize-use-structured-binding <modernize/use-structured-binding>` | Yes |
+| {doc}`modernize-use-to-underlying <modernize/use-to-underlying>` | Yes |
 | {doc}`modernize-use-trailing-return-type <modernize/use-trailing-return-type>` | Yes |
 | {doc}`modernize-use-transparent-functors <modernize/use-transparent-functors>` | Yes |
 | {doc}`modernize-use-uncaught-exceptions <modernize/use-uncaught-exceptions>` | Yes |
@@ -443,7 +449,13 @@ readability/*
 | {doc}`readability-use-concise-preprocessor-directives <readability/use-concise-preprocessor-directives>` | Yes |
 | {doc}`readability-use-std-min-max <readability/use-std-min-max>` | Yes |
 
+:::
+
 ## Check aliases
+
+:::{table}
+:class: clang-tidy-checks-table
+:widths: 45 45 10
 
 | Name | Redirect | Offers fixes |
 | --- | --- | --- |
@@ -624,3 +636,5 @@ readability/*
 | {doc}`llvm-else-after-return <llvm/else-after-return>` | {doc}`readability-else-after-return <readability/else-after-return>` | Yes |
 | {doc}`llvm-qualified-auto <llvm/qualified-auto>` | {doc}`readability-qualified-auto <readability/qualified-auto>` | Yes |
 | {doc}`performance-faster-string-find <performance/faster-string-find>` | {doc}`performance-prefer-single-char-overloads <performance/prefer-single-char-overloads>` | Yes |
+
+:::

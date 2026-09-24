@@ -21,6 +21,13 @@
 
 using namespace mlir;
 
+void mlir::detail::appendAttributeProperty(
+    llvm::SmallVectorImpl<NamedAttribute> &attrs, StringRef name,
+    Attribute attr) {
+  if (attr)
+    attrs.emplace_back(name, attr);
+}
+
 //===----------------------------------------------------------------------===//
 // NamedAttrList
 //===----------------------------------------------------------------------===//
@@ -523,7 +530,7 @@ void MutableOperandRange::updateLength(unsigned newLength) {
     segments[segment.first] += diff;
     segment.second.setValue(
         DenseI32ArrayAttr::get(attr.getContext(), segments));
-    owner->setAttr(segment.second.getName(), segment.second.getValue());
+    owner->setInherentAttr(segment.second.getName(), segment.second.getValue());
   }
 }
 

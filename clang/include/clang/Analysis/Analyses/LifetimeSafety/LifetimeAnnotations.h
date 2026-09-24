@@ -66,14 +66,13 @@ bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD);
 using LifetimeBoundParamInfo =
     llvm::PointerUnion<const ParmVarDecl *, const CXXMethodDecl *>;
 
+/// Stores the callee and normalized arguments for a function call.
 struct FunctionCallInfo {
   const FunctionDecl *FD = nullptr;
   llvm::SmallVector<const Expr *, 4> Args;
-};
 
-/// Returns the callee and arguments corresponding to Call. For instance member
-/// calls, Args includes the implicit object argument as argument 0.
-FunctionCallInfo getFunctionCallInfo(const Expr *Call);
+  explicit FunctionCallInfo(const Expr *Call);
+};
 
 /// Returns the parameter corresponding to argument I when the argument should
 /// be tracked for lifetime safety.
@@ -113,6 +112,11 @@ bool isGslPointerType(QualType QT);
 // Tells whether the type is annotated with [[gsl::Owner]].
 bool isGslOwnerType(QualType QT);
 bool isGslOwnerType(const CXXRecordDecl *RD);
+
+// Tells whether the given constructor belongs to an Owner type and the
+// parameter is of pointer type. This is useful to disable inference on owning
+// pointers being captured by owners.
+bool isOwnerPtrCtor(const CXXConstructorDecl *Ctor, const ParmVarDecl *PVD);
 
 // Returns true if the given method is std::unique_ptr::release().
 // This is treated as a move in lifetime analysis to avoid false-positives
