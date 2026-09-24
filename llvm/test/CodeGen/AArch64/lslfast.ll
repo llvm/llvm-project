@@ -96,8 +96,8 @@ entry:
 define i64 @test3sext(i32 noundef %x, i64 noundef %y, i64 noundef %z) {
 ; CHECK-LABEL: test3sext:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    lsl w8, w0, #3
-; CHECK-NEXT:    sxtw x8, w8
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    sbfiz x8, x0, #3, #29
 ; CHECK-NEXT:    add x9, x8, x1
 ; CHECK-NEXT:    add x8, x8, x2
 ; CHECK-NEXT:    mul x0, x9, x8
