@@ -5949,6 +5949,8 @@ insertNewDbgInst(DIBuilder &DIB, DbgVariableRecord *Orig, AllocaInst *NewAddr,
   if (Orig->isDbgDeclareValue()) {
     DbgVariableRecord *DVR = DbgVariableRecord::createDVRDeclareValue(
         NewAddr, Orig->getVariable(), NewFragmentExpr, Orig->getDebugLoc());
+    if (!NewFragmentExpr->startsWithDeref())
+      DVR->setKillAddress();
     BeforeInst->getParent()->insertDbgRecordBefore(DVR,
                                                    BeforeInst->getIterator());
     return;

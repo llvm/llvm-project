@@ -208,9 +208,9 @@ entry:
 define i32 @fun5(ptr %source) !dbg !70 {
 entry:
   %t = alloca %struct.four, align 4
-    #dbg_declare_value(ptr %t, !74, !DIExpression(DW_OP_plus_uconst, 8), !75)
+    #dbg_declare_value(ptr %t, !74, !DIExpression(), !75)
   ; COMMON: [[FUN5_LOCAL:%.*]] = alloca %struct.two, align 8
-  ; COMMON: #dbg_declare_value(ptr [[FUN5_LOCAL]], ![[t:[0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 0, 64),
+  ; COMMON: #dbg_declare_value(ptr [[FUN5_LOCAL]], ![[t:[0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 64, 64),
   ; COMMON-NOT: #dbg_assign
   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %t, ptr align 4 %source, i64 16, i1 false)
   %1 = getelementptr inbounds %struct.four, ptr %t, i32 0, i32 0
