@@ -5,21 +5,19 @@ target triple = "aarch64-unknown-linux-gnu"
 define void @init_array_of_ptrs_to_structs(ptr noalias %arc_ptrs, ptr %arc_new, i64 %num_arcs) #0 {
 ; CHECK-LABEL: init_array_of_ptrs_to_structs:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cntd x8
-; CHECK-NEXT:    index z0.d, #0, #1
-; CHECK-NEXT:    mov z2.d, x1
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #72 // =0x48
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    index z0.d, x1, x9
+; CHECK-NEXT:    cntd x9
 ; CHECK-NEXT:    mov z1.d, x8
-; CHECK-NEXT:    mov z3.d, #72 // =0x48
-; CHECK-NEXT:    neg x8, x8
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    neg x8, x9
 ; CHECK-NEXT:    and x8, x8, x2
 ; CHECK-NEXT:  .LBB0_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movprfx z4, z2
-; CHECK-NEXT:    mla z4.d, p0/m, z0.d, z3.d
 ; CHECK-NEXT:    decd x8
+; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    add z0.d, z0.d, z1.d
-; CHECK-NEXT:    str z4, [x0]
 ; CHECK-NEXT:    incb x0
 ; CHECK-NEXT:    cbnz x8, .LBB0_1
 ; CHECK-NEXT:  // %bb.2: // %middle.block
