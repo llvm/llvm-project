@@ -59,8 +59,8 @@ exit.1:
 
 ; The latch compares the phi (%iv == %n), not the post-increment. The header
 ; check is not removable.
-define i1 @latch_counted_phi_not_removable(ptr %p, i64 %n, i64 %lim) {
-; CHECK-LABEL: define i1 @latch_counted_phi_not_removable(
+define i1 @latch_counted_phi(ptr %p, i64 %n, i64 %lim) {
+; CHECK-LABEL: define i1 @latch_counted_phi(
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[N:%.*]], i64 [[LIM:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[POS:%.*]] = icmp sgt i64 [[N]], 0
