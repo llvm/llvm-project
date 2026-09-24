@@ -105,10 +105,6 @@ private:
   SmallDenseMap<TableId, TableId, 8> SoftenedFloats;
 
   /// For floating-point nodes that have a smaller precision than the smallest
-  /// supported precision, this map indicates what promoted value to use.
-  SmallDenseMap<TableId, TableId, 8> PromotedFloats;
-
-  /// For floating-point nodes that have a smaller precision than the smallest
   /// supported precision, this map indicates the converted value to use.
   SmallDenseMap<TableId, TableId, 8> SoftPromotedHalfs;
 
@@ -190,7 +186,6 @@ public:
         PromotedIntegers.erase(OldId);
         ExpandedIntegers.erase(OldId);
         SoftenedFloats.erase(OldId);
-        PromotedFloats.erase(OldId);
         SoftPromotedHalfs.erase(OldId);
         ExpandedFloats.erase(OldId);
         ScalarizedVectors.erase(OldId);
@@ -359,6 +354,7 @@ private:
   SDValue PromoteIntRes_CLMUL(SDNode *N);
   SDValue PromoteIntRes_PEXT(SDNode *N);
   SDValue PromoteIntRes_PDEP(SDNode *N);
+  SDValue PromoteIntRes_MULH(SDNode *N);
   SDValue PromoteIntRes_IS_FPCLASS(SDNode *N);
   SDValue PromoteIntRes_PATCHPOINT(SDNode *N);
   SDValue PromoteIntRes_READ_REGISTER(SDNode *N);
@@ -504,6 +500,7 @@ private:
   void ExpandIntRes_CLMUL(SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_PEXT(SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_PDEP(SDNode *N, SDValue &Lo, SDValue &Hi);
+  void ExpandIntRes_MULH(SDNode *N, SDValue &Lo, SDValue &Hi);
 
   void ExpandIntRes_VSCALE            (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_READ_REGISTER(SDNode *N, SDValue &Lo, SDValue &Hi);
@@ -749,18 +746,6 @@ private:
                                 ISD::CondCode &CCCode, const SDLoc &dl,
                                 SDValue &Chain, bool IsSignaling = false);
 
-  //===--------------------------------------------------------------------===//
-  // Float promotion support: LegalizeFloatTypes.cpp
-  //===--------------------------------------------------------------------===//
-
-  SDValue GetPromotedFloat(SDValue Op) {
-    TableId &PromotedId = PromotedFloats[getTableId(Op)];
-    SDValue PromotedOp = getSDValue(PromotedId);
-    assert(PromotedOp.getNode() && "Operand wasn't promoted?");
-    return PromotedOp;
-  }
-  void SetPromotedFloat(SDValue Op, SDValue Result);
-
   SDValue BitcastToInt_ATOMIC_SWAP(SDNode *N);
 
   //===--------------------------------------------------------------------===//
@@ -804,6 +789,7 @@ private:
   bool SoftPromoteHalfOperand(SDNode *N, unsigned OpNo);
   SDValue SoftPromoteHalfOp_BITCAST(SDNode *N);
   SDValue SoftPromoteHalfOp_BUILD_VECTOR(SDNode *N);
+  SDValue SoftPromoteHalfOp_INSERT_VECTOR_ELT(SDNode *N, unsigned OpNo);
   SDValue SoftPromoteHalfOp_FAKE_USE(SDNode *N, unsigned OpNo);
   SDValue SoftPromoteHalfOp_FCOPYSIGN(SDNode *N, unsigned OpNo);
   SDValue SoftPromoteHalfOp_FP_EXTEND(SDNode *N);
@@ -1140,7 +1126,6 @@ private:
   SDValue WidenVecOp_VECREDUCE(SDNode *N);
   SDValue WidenVecOp_VECREDUCE_SEQ(SDNode *N);
   SDValue WidenVecOp_VP_REDUCE(SDNode *N);
-  SDValue WidenVecOp_ExpOp(SDNode *N);
   SDValue WidenVecOp_CttzElements(SDNode *N);
   SDValue WidenVecOp_VP_CttzElements(SDNode *N);
   SDValue WidenVecOp_VECTOR_FIND_LAST_ACTIVE(SDNode *N);
@@ -1182,9 +1167,34 @@ private:
   /// By default, the vector will be widened with undefined values.
   SDValue ModifyToType(SDValue InOp, EVT NVT, bool FillWithZeroes = false);
 
+  /// Adjust element width (sign-extend/truncate) and element count
+  /// (extract/concat) of Mask to match ToMaskVT.
+  SDValue adjustMaskToType(SDValue Mask, EVT ToMaskVT);
+
+  /// Pick an intermediate VT and adjust both operands to it, minimizing
+  /// extend/truncate overhead given the final target ToVT.
+  ///
+  /// IsOpLenient flags retain information on whether the corresponding
+  /// Op can be cheaply materialized to whatever type. If one of the
+  /// operands lenient, we force cast it to match other operand's type.
+  EVT unifyMaskTypes(SDValue &Op0, bool IsOpLenient0, SDValue &Op1,
+                     bool IsOpLenient1, EVT ToVT);
+
   /// Return a mask of vector type MaskVT to replace InMask. Also adjust
   /// MaskVT to ToMaskVT if needed with vector extension or truncation.
   SDValue convertMask(SDValue InMask, EVT MaskVT, EVT ToMaskVT);
+
+  /// Recursively convert a mask expression tree to ToVT, walking through
+  /// mask-preserving operations down to SETCC leaves. Avoids redundant
+  /// extend/truncate chains that arise when each node is converted
+  /// independently. Returns SDValue() if the tree cannot be converted.
+  SDValue convertMaskTree(SDValue V, EVT ToVT);
+
+  /// Recursive implementation of convertMaskTree.
+  /// In addition to the value returns a boolean flag signifying whether the
+  /// tree can be materialized with any type.
+  std::pair<SDValue, bool> convertMaskTreeImpl(SDValue V, EVT ToVT,
+                                               unsigned Depth = 0);
 
   //===--------------------------------------------------------------------===//
   // Generic Splitting: LegalizeTypesGeneric.cpp

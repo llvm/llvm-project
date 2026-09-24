@@ -555,7 +555,8 @@ void AMDGPUSwLowerLDS::replaceKernelLDSAccesses(Function *Func) {
                             ConstantInt::get(Int32Ty, Indices[1]),
                             ConstantInt::get(Int32Ty, Indices[2])};
       Constant *GEP = ConstantExpr::getGetElementPtr(
-          SwLDSMetadataStructType, SwLDSMetadata, GEPIdx, true);
+          Func->getDataLayout(), SwLDSMetadataStructType, SwLDSMetadata, GEPIdx,
+          GEPNoWrapFlags::inBounds());
       Value *Offset = IRB.CreateLoad(Int32Ty, GEP);
       Value *BasePlusOffset =
           IRB.CreateInBoundsGEP(IRB.getInt8Ty(), SwLDS, {Offset});
@@ -861,8 +862,6 @@ void AMDGPUSwLowerLDS::lowerKernelLDSAccesses(Function *Func,
   assert(SwLDS && SwLDSMetadata);
   StructType *MetadataStructType =
       cast<StructType>(SwLDSMetadata->getValueType());
-  uint32_t MallocSize = 0;
-  Value *CurrMallocSize;
   Type *Int32Ty = IRB.getInt32Ty();
   Type *Int64Ty = IRB.getInt64Ty();
 
@@ -877,28 +876,26 @@ void AMDGPUSwLowerLDS::lowerKernelLDSAccesses(Function *Func,
 
   GetUniqueLDSGlobals(LDSParams.DirectAccess.StaticLDSGlobals);
   GetUniqueLDSGlobals(LDSParams.IndirectAccess.StaticLDSGlobals);
-  unsigned NumStaticLDS = 1 + UniqueLDSGlobals.size();
+  // The metadata global always has an item for the SwLDS pointer itself, so
+  // there is at least one static item and the last one ends the static region.
+  unsigned LastStaticLDSIdx = UniqueLDSGlobals.size();
   UniqueLDSGlobals.clear();
 
-  if (NumStaticLDS) {
-    auto *GEPForEndStaticLDSOffset =
-        IRB.CreateInBoundsGEP(MetadataStructType, SwLDSMetadata,
-                              {ConstantInt::get(Int32Ty, 0),
-                               ConstantInt::get(Int32Ty, NumStaticLDS - 1),
-                               ConstantInt::get(Int32Ty, 0)});
+  auto *GEPForEndStaticLDSOffset =
+      IRB.CreateInBoundsGEP(MetadataStructType, SwLDSMetadata,
+                            {ConstantInt::get(Int32Ty, 0),
+                             ConstantInt::get(Int32Ty, LastStaticLDSIdx),
+                             ConstantInt::get(Int32Ty, 0)});
 
-    auto *GEPForEndStaticLDSSize =
-        IRB.CreateInBoundsGEP(MetadataStructType, SwLDSMetadata,
-                              {ConstantInt::get(Int32Ty, 0),
-                               ConstantInt::get(Int32Ty, NumStaticLDS - 1),
-                               ConstantInt::get(Int32Ty, 2)});
+  auto *GEPForEndStaticLDSSize =
+      IRB.CreateInBoundsGEP(MetadataStructType, SwLDSMetadata,
+                            {ConstantInt::get(Int32Ty, 0),
+                             ConstantInt::get(Int32Ty, LastStaticLDSIdx),
+                             ConstantInt::get(Int32Ty, 2)});
 
-    Value *EndStaticLDSOffset =
-        IRB.CreateLoad(Int32Ty, GEPForEndStaticLDSOffset);
-    Value *EndStaticLDSSize = IRB.CreateLoad(Int32Ty, GEPForEndStaticLDSSize);
-    CurrMallocSize = IRB.CreateAdd(EndStaticLDSOffset, EndStaticLDSSize);
-  } else
-    CurrMallocSize = IRB.getInt32(MallocSize);
+  Value *EndStaticLDSOffset = IRB.CreateLoad(Int32Ty, GEPForEndStaticLDSOffset);
+  Value *EndStaticLDSSize = IRB.CreateLoad(Int32Ty, GEPForEndStaticLDSSize);
+  Value *CurrMallocSize = IRB.CreateAdd(EndStaticLDSOffset, EndStaticLDSSize);
 
   if (LDSParams.SwDynLDS) {
     if (!(AMDGPU::getAMDHSACodeObjectVersion(M) >= AMDGPU::AMDHSA_COV5))
@@ -1031,8 +1028,9 @@ Constant *AMDGPUSwLowerLDS::getAddressesOfVariablesInKernel(
     Constant *GEPIdx[] = {ConstantInt::get(Int32Ty, Indices[0]),
                           ConstantInt::get(Int32Ty, Indices[1]),
                           ConstantInt::get(Int32Ty, Indices[2])};
-    Constant *GEP = ConstantExpr::getGetElementPtr(SwLDSMetadataStructType,
-                                                   SwLDSMetadata, GEPIdx, true);
+    Constant *GEP = ConstantExpr::getGetElementPtr(
+        Func->getDataLayout(), SwLDSMetadataStructType, SwLDSMetadata, GEPIdx,
+        GEPNoWrapFlags::inBounds());
     Elements.push_back(GEP);
   }
   return ConstantArray::get(KernelOffsetsType, Elements);
@@ -1258,27 +1256,25 @@ bool AMDGPUSwLowerLDS::run() {
     if (LDSParams.DirectAccess.StaticLDSGlobals.empty() &&
         LDSParams.DirectAccess.DynamicLDSGlobals.empty() &&
         LDSParams.IndirectAccess.StaticLDSGlobals.empty() &&
-        LDSParams.IndirectAccess.DynamicLDSGlobals.empty()) {
-      Changed = false;
-    } else {
-      removeFnAttrFromReachable(
-          CG, Func,
-          {"amdgpu-no-workitem-id-x", "amdgpu-no-workitem-id-y",
-           "amdgpu-no-workitem-id-z", "amdgpu-no-heap-ptr"});
-      if (!LDSParams.IndirectAccess.StaticLDSGlobals.empty() ||
-          !LDSParams.IndirectAccess.DynamicLDSGlobals.empty())
-        removeFnAttrFromReachable(CG, Func, {"amdgpu-no-lds-kernel-id"});
-      reorderStaticDynamicIndirectLDSSet(LDSParams);
-      buildSwLDSGlobal(Func);
-      buildSwDynLDSGlobal(Func);
-      populateSwMetadataGlobal(Func);
-      populateSwLDSAttributeAndMetadata(Func);
-      populateLDSToReplacementIndicesMap(Func);
-      DomTreeUpdater DTU(DTCallback(*Func),
-                         DomTreeUpdater::UpdateStrategy::Lazy);
-      lowerKernelLDSAccesses(Func, DTU);
-      Changed = true;
-    }
+        LDSParams.IndirectAccess.DynamicLDSGlobals.empty())
+      continue;
+
+    removeFnAttrFromReachable(
+        CG, Func,
+        {"amdgpu-no-workitem-id-x", "amdgpu-no-workitem-id-y",
+         "amdgpu-no-workitem-id-z", "amdgpu-no-heap-ptr"});
+    if (!LDSParams.IndirectAccess.StaticLDSGlobals.empty() ||
+        !LDSParams.IndirectAccess.DynamicLDSGlobals.empty())
+      removeFnAttrFromReachable(CG, Func, {"amdgpu-no-lds-kernel-id"});
+    reorderStaticDynamicIndirectLDSSet(LDSParams);
+    buildSwLDSGlobal(Func);
+    buildSwDynLDSGlobal(Func);
+    populateSwMetadataGlobal(Func);
+    populateSwLDSAttributeAndMetadata(Func);
+    populateLDSToReplacementIndicesMap(Func);
+    DomTreeUpdater DTU(DTCallback(*Func), DomTreeUpdater::UpdateStrategy::Lazy);
+    lowerKernelLDSAccesses(Func, DTU);
+    Changed = true;
   }
 
   // Get the Uses of LDS from non-kernels.

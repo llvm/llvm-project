@@ -12,14 +12,18 @@
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
 #include "VPlanPatternMatch.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
+#include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 
 using namespace llvm;
@@ -136,7 +140,7 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
     if (!L)
       return SE.getCouldNotCompute();
     return SE.getAddRecExpr(SE.getZero(RV->getType()), SE.getOne(RV->getType()),
-                            L, SCEV::FlagAnyWrap);
+                            L, SCEV::FlagNone);
   }
 
   if (isa<VPIRValue, VPSymbolicValue>(V)) {
@@ -163,16 +167,16 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
   VPValue *LHSVal, *RHSVal;
   if (match(V, m_Add(m_VPValue(LHSVal), m_VPValue(RHSVal))))
     return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<SCEVUse> Ops) {
-      return SE.getAddExpr(Ops[0], Ops[1], SCEV::FlagAnyWrap, 0);
+      return SE.getAddExpr(Ops[0], Ops[1], SCEV::FlagNone, 0);
     });
   if (match(V, m_BinaryOr(m_VPValue(LHSVal), m_VPValue(RHSVal))))
     if (cast<VPRecipeWithIRFlags>(V->getDefiningRecipe())->isDisjoint())
       return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<SCEVUse> Ops) {
-        return SE.getAddExpr(Ops[0], Ops[1], SCEV::FlagAnyWrap, 0);
+        return SE.getAddExpr(Ops[0], Ops[1], SCEV::FlagNone, 0);
       });
   if (match(V, m_Sub(m_VPValue(LHSVal), m_VPValue(RHSVal))))
     return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<SCEVUse> Ops) {
-      return SE.getMinusSCEV(Ops[0], Ops[1], SCEV::FlagAnyWrap, 0);
+      return SE.getMinusSCEV(Ops[0], Ops[1], SCEV::FlagNone, 0);
     });
   if (match(V, m_Not(m_VPValue(LHSVal)))) {
     // not X = xor X, -1 = -1 - X
@@ -182,7 +186,7 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
   }
   if (match(V, m_Mul(m_VPValue(LHSVal), m_VPValue(RHSVal))))
     return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<SCEVUse> Ops) {
-      return SE.getMulExpr(Ops[0], Ops[1], SCEV::FlagAnyWrap, 0);
+      return SE.getMulExpr(Ops[0], Ops[1], SCEV::FlagNone, 0);
     });
   // Handle shl by constant: x << c is equivalent to x * (1 << c). A shift
   // amount >= the bit width produces poison; do not rewrite it, as
@@ -317,12 +321,13 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
             const SCEV *Start =
                 getSCEVExprForVPValue(R->getStartValue(), PSE, L);
             const SCEV *AddRec =
-                SE.getAddRecExpr(Start, Step, L, SCEV::FlagAnyWrap);
+                SE.getAddRecExpr(Start, Step, L, SCEV::FlagNone);
             if (R->getTruncInst())
               return SE.getTruncateExpr(AddRec, R->getScalarType());
             return AddRec;
           })
-          .Case([&SE, &PSE, L](const VPWidenPointerInductionRecipe *R) {
+          .Case([&SE, &PSE,
+                 L](const VPWidenPointerInductionRecipe *R) -> const SCEV * {
             const SCEV *Start =
                 getSCEVExprForVPValue(R->getStartValue(), PSE, L);
             if (!L || isa<SCEVCouldNotCompute>(Start))
@@ -330,9 +335,9 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
             const SCEV *Step = getSCEVExprForVPValue(R->getStepValue(), PSE, L);
             if (isa<SCEVCouldNotCompute>(Step))
               return SE.getCouldNotCompute();
-            return SE.getAddRecExpr(Start, Step, L, SCEV::FlagAnyWrap);
+            return SE.getAddRecExpr(Start, Step, L, SCEV::FlagNone);
           })
-          .Case([&SE, &PSE, L](const VPDerivedIVRecipe *R) {
+          .Case([&SE, &PSE, L](const VPDerivedIVRecipe *R) -> const SCEV * {
             const SCEV *Start = getSCEVExprForVPValue(R->getOperand(0), PSE, L);
             const SCEV *IV = getSCEVExprForVPValue(R->getOperand(1), PSE, L);
             const SCEV *Scale = getSCEVExprForVPValue(R->getOperand(2), PSE, L);
@@ -358,6 +363,19 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
   return PSE.getPredicatedSCEV(Expr);
 }
 
+std::optional<int64_t>
+vputils::getConstantStride(VPValue *Addr, Type *AccessTy,
+                           PredicatedScalarEvolution &PSE, const Loop *L) {
+  assert(!hasIrregularType(AccessTy, L->getHeader()->getDataLayout()) &&
+         "should not try to widen irregular types");
+  const SCEV *AddrSCEV = getSCEVExprForVPValue(Addr, PSE, L);
+  auto *AddRec = dyn_cast<SCEVAddRecExpr>(AddrSCEV);
+  if (!AddRec)
+    return {};
+
+  return getStrideFromAddRec(AddRec, L, AccessTy, /*Ptr=*/nullptr, PSE);
+}
+
 bool vputils::isAddressSCEVForCost(const SCEV *Addr, ScalarEvolution &SE,
                                    const Loop *L) {
   // If address is an SCEVAddExpr, we require that all operands must be either
@@ -378,8 +396,8 @@ bool vputils::isAddressSCEVForCost(const SCEV *Addr, ScalarEvolution &SE,
 unsigned vputils::getOpcode(const VPValue *V) {
   return TypeSwitch<const VPValue *, unsigned>(V)
       .Case<VPInstruction, VPWidenRecipe, VPWidenCastRecipe, VPWidenGEPRecipe,
-            VPReplicateRecipe, VPWidenPHIRecipe>(
-          [](auto *I) { return I->getOpcode(); })
+            VPReplicateRecipe, VPWidenPHIRecipe, VPWidenLoadRecipe,
+            VPWidenLoadEVLRecipe>([](auto *I) { return I->getOpcode(); })
       .Case<VPVectorPointerRecipe, VPPredInstPHIRecipe, VPScalarIVStepsRecipe>(
           [](auto *I) {
             // For recipes that do not directly map to LLVM IR instructions,
@@ -960,7 +978,7 @@ VPValue *VPSCEVExpander::expand(const SCEV *S) {
       bool GuaranteedNotPoison =
           ScalarEvolution::isGuaranteedNotToBePoison(RHSExpr);
       if (!GuaranteedNotPoison)
-        RHS = Builder.createScalarFreeze(RHS, DL);
+        RHS = Builder.createFreeze(RHS, DL);
       if (!SE.isKnownNonZero(RHSExpr) || !GuaranteedNotPoison)
         RHS = Builder.createScalarIntrinsic(
             Intrinsic::umax, {RHS, Builder.getPlan().getConstantInt(Ty, 1)}, Ty,
@@ -1009,7 +1027,12 @@ VPValue *VPSCEVExpander::expand(const SCEV *S) {
       }
     }
 
-    return Builder.createScalarCast(Opcode, Op, S->getType(), DL);
+    std::optional<VPIRFlags> Flags;
+    if (Opcode == Instruction::ZExt)
+      Flags =
+          VPIRFlags::NonNegFlagsTy(SE.isKnownNonNegative(Cast->getOperand()));
+
+    return Builder.createScalarCast(Opcode, Op, S->getType(), DL, Flags);
   }
   case scUMaxExpr:
   case scSMaxExpr:
@@ -1050,7 +1073,7 @@ VPValue *VPSCEVExpander::expand(const SCEV *S) {
       VPValue *OpV = expand(SCEVOp);
       SafeUDivMode = PrevSafeMode;
       if (MayShortCircuit)
-        OpV = Builder.createScalarFreeze(OpV, DL);
+        OpV = Builder.createFreeze(OpV, DL);
       Ops.push_back(OpV);
     }
     VPValue *Result = Ops.front();
@@ -1151,6 +1174,116 @@ SmallVector<VPUser *> vputils::collectUsersRecursively(VPValue *V) {
   return Users.takeVector();
 }
 
+/// Returns \p Num / \p Denom as a BranchProbability, clamped so a ratio that is
+/// neither zero nor one does not round to zero or one. BlockFrequencyInfo also
+/// keeps a zero-weight edge distinguishable from an unreachable one.
+static BranchProbability getBranchProbabilityKeepingPartial(uint64_t Num,
+                                                            uint64_t Denom) {
+  BranchProbability P = BranchProbability::getBranchProbability(Num, Denom);
+  if (Num == 0 || Num == Denom)
+    return P;
+  return BranchProbability::getRaw(std::clamp(
+      P.getNumerator(), 1u, BranchProbability::getDenominator() - 1));
+}
+
+BranchProbability vputils::getExecutionProbability(BlockFrequency Freq) {
+  return getBranchProbabilityKeepingPartial(Freq.getFrequency(),
+                                            AlwaysExecutesFreq);
+}
+
+/// Returns the probability of reaching each unique successor of \p VPBB, taken
+/// from the branch weights recorded on its terminator, or unknown if not
+/// available. See llvm::getBranchProbability in
+/// llvm/Transforms/Utils/LoopUtils.h for the IR version.
+static SmallVector<std::pair<const VPBasicBlock *, BranchProbability>, 2>
+getSuccessorProbabilities(const VPBasicBlock *VPBB) {
+  ArrayRef<VPBlockBase *> Successors = VPBB->getSuccessors();
+  // With a single successor the edge is always taken and needs no weights.
+  if (VPBlockBase *Succ = VPBB->getSingleSuccessor())
+    return {{cast<VPBasicBlock>(Succ), BranchProbability::getOne()}};
+
+  // Take the branch weights off the terminator. Without usable weights all
+  // successors have unknown probability; zero the weights, so the accumulation
+  // below still visits each of them.
+  SmallVector<uint32_t> Weights;
+  auto *Term = dyn_cast_if_present<VPInstruction>(VPBB->getTerminator());
+  if (!Term || !extractBranchWeights(Term->getBranchWeights(), Weights) ||
+      Weights.size() != Successors.size())
+    Weights.assign(Successors.size(), 0);
+  uint64_t Total = sum_of(Weights, uint64_t(0));
+
+  // Sum the weights of parallel edges to the same successor, so that the
+  // division below rounds once per successor rather than once per edge.
+  SmallMapVector<const VPBasicBlock *, uint64_t, 2> WeightPerSuccessor;
+  for (const auto &[Succ, Weight] : zip_equal(Successors, Weights))
+    WeightPerSuccessor[cast<VPBasicBlock>(Succ)] += Weight;
+
+  return map_to_vector<2>(WeightPerSuccessor, [Total](const auto &SuccWeight) {
+    auto [Succ, Weight] = SuccWeight;
+    if (Total == 0)
+      return std::make_pair(Succ, BranchProbability::getUnknown());
+    return std::make_pair(Succ,
+                          getBranchProbabilityKeepingPartial(Weight, Total));
+  });
+}
+
+/// Returns \p Freq scaled by \p Prob, rounding up to 1 instead of 0 to keep a
+/// rarely executed block distinguishable from an unreachable one.
+static BlockFrequency scaleKeepingNonZero(BlockFrequency Freq,
+                                          BranchProbability Prob) {
+  BlockFrequency Scaled = Freq * Prob;
+  if (Scaled == BlockFrequency() && Freq != BlockFrequency() && !Prob.isZero())
+    return BlockFrequency(1);
+  return Scaled;
+}
+
+DenseMap<const VPBasicBlock *, std::optional<VPExecutionFrequency>>
+vputils::computeExecutionFrequencies(ArrayRef<VPBasicBlock *> Blocks) {
+  assert(!Blocks.empty() && "expected at least the header block");
+  // Push each block's frequency along its outgoing edges. Blocks is in reverse
+  // post-order and forms a DAG with the backedge from the latch (the last
+  // block) ignored, so a block's frequency is final by the time it is visited.
+  DenseMap<const VPBasicBlock *, std::optional<VPExecutionFrequency>>
+      Frequencies;
+  Frequencies.reserve(Blocks.size());
+  // The header (first block) always executes, the others start out unreachable.
+  Frequencies[Blocks.front()].emplace(BlockFrequency(AlwaysExecutesFreq),
+                                      false);
+  for (VPBasicBlock *VPBB : Blocks.drop_front())
+    Frequencies[VPBB].emplace(BlockFrequency(), false);
+
+  for (VPBasicBlock *VPBB : Blocks) {
+    std::optional<VPExecutionFrequency> Src = Frequencies.at(VPBB);
+    auto *Term = dyn_cast_if_present<VPInstruction>(VPBB->getTerminator());
+    bool TermIsEstimated = Term && Term->hasEstimatedBranchWeights();
+    for (const auto &[Succ, EdgeProb] : getSuccessorProbabilities(VPBB)) {
+      // Ignore the backedge to the header (already treated as always
+      // executing).
+      if (Succ == Blocks.front())
+        continue;
+      // Ignore edges leaving Blocks, i.e. a plain CFG's edges to the middle
+      // block or to an exit block.
+      auto It = Frequencies.find(Succ);
+      if (It == Frequencies.end())
+        continue;
+      std::optional<VPExecutionFrequency> &SuccFreq = It->second;
+      // An unknown edge or predecessor poisons the successor.
+      if (!Src || EdgeProb.isUnknown() || !SuccFreq) {
+        SuccFreq = std::nullopt;
+        continue;
+      }
+      // The sum can only exceed AlwaysExecutesFreq by rounding.
+      BlockFrequency NewFreq =
+          std::min(BlockFrequency(AlwaysExecutesFreq),
+                   SuccFreq->Freq + scaleKeepingNonZero(Src->Freq, EdgeProb));
+      bool NewIsEstimated =
+          SuccFreq->IsEstimated || Src->IsEstimated || TermIsEstimated;
+      SuccFreq.emplace(NewFreq, NewIsEstimated);
+    }
+  }
+  return Frequencies;
+}
+
 VPIRValue *vputils::tryToFoldLiveIns(VPSingleDefRecipe &R,
                                      ArrayRef<VPValue *> Operands,
                                      const DataLayout &DL) {
@@ -1230,30 +1363,71 @@ void vputils::detail::pullOutPermutationsImpl(
     function_ref<VPSingleDefRecipe *(VPSingleDefRecipe *X)> BuildPerm) {
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getEntry()))) {
-    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-      auto *Def = dyn_cast<VPSingleDefRecipe>(&R);
-      if (!Def || !isElementwise(Def))
+    for (VPSingleDefRecipe &Def :
+         make_early_inc_range(make_isa_range<VPSingleDefRecipe>(*VPBB))) {
+      if (!isElementwise(&Def))
         continue;
 
       // At least one of the ops must be a permutation.
-      if (none_of(Def->operands(), MatchPerm))
+      if (none_of(Def.operands(), MatchPerm))
         continue;
 
       // All operands must be a single-use permutation or a live in (splat).
-      if (!all_of(Def->operands(), [&MatchPerm](VPValue *Op) {
+      if (!all_of(Def.operands(), [&MatchPerm](VPValue *Op) {
             return (Op->hasOneUse() && MatchPerm(Op)) || match(Op, m_LiveIn());
           }))
         continue;
 
       // Remove the inner permutations.
-      for (unsigned I = 0, E = Def->getNumOperands(); I != E; ++I)
-        if (VPValue *X = MatchPerm(Def->getOperand(I)))
-          Def->setOperand(I, X);
+      for (unsigned I = 0, E = Def.getNumOperands(); I != E; ++I)
+        if (VPValue *X = MatchPerm(Def.getOperand(I)))
+          Def.setOperand(I, X);
 
-      VPSingleDefRecipe *Res = BuildPerm(Def);
-      Res->insertAfter(Def);
-      Def->replaceUsesWithIf(
+      VPSingleDefRecipe *Res = BuildPerm(&Def);
+      Res->insertAfter(&Def);
+      Def.replaceUsesWithIf(
           Res, [&Res](VPUser &U, unsigned _) { return &U != Res; });
     }
   }
+}
+
+// Implements the algorithm described in "Simple and Efficient Construction of
+// Static Single Assignment Form" by Braun et al.
+VPValue *vputils::reconstructSSA(VPBasicBlock *VPBB,
+                                 DenseMap<VPBasicBlock *, VPValue *> &Defs) {
+  assert(!Defs.empty() && "Defs shouldn't be empty");
+  assert(
+      is_contained(vp_depth_first_shallow(VPBB->getPlan()->getEntry()), VPBB) &&
+      "VPBB isn't reachable from entry");
+  if (VPValue *Def = Defs.lookup(VPBB))
+    return Def;
+  // If the entry block is reached and there's still no def, then Defs is
+  // missing a definition that covers this path.
+  assert(VPBB->getNumPredecessors() && "Not all paths have def");
+
+  if (VPBlockBase *Pred = VPBB->getSinglePredecessor())
+    return reconstructSSA(cast<VPBasicBlock>(Pred), Defs);
+
+  // Multiple predecessors, create a join.
+  Type *Ty = Defs.begin()->second->getScalarType();
+  VPPhi *Phi = VPBuilder(VPBB, VPBB->getFirstNonPhi())
+                   .createScalarPhi({}, DebugLoc::getUnknown(), "", {}, Ty);
+  Defs[VPBB] = Phi;
+  for (auto *Pred : VPBB->predecessors())
+    Phi->addIncoming(reconstructSSA(cast<VPBasicBlock>(Pred), Defs));
+
+  // Fold away trivial phis.
+  // TODO: Remove phi users which have become trivial too.
+  if (all_equal(Phi->incoming_values())) {
+    VPValue *Common = Phi->getIncomingValue(0);
+    Phi->replaceAllUsesWith(Common);
+    for (auto &[_, V] : Defs)
+      if (V == Phi)
+        V = Common;
+    Defs[VPBB] = Common;
+    Phi->eraseFromParent();
+    return Common;
+  }
+
+  return Phi;
 }

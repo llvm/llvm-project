@@ -470,12 +470,6 @@ public:
     Addr.replaceBasePointer(CreateLaunderInvariantGroup(Addr.getBasePointer()));
     return Addr;
   }
-
-  using CGBuilderBaseTy::CreateStripInvariantGroup;
-  Address CreateStripInvariantGroup(Address Addr) {
-    Addr.replaceBasePointer(CreateStripInvariantGroup(Addr.getBasePointer()));
-    return Addr;
-  }
 };
 
 } // end namespace CodeGen

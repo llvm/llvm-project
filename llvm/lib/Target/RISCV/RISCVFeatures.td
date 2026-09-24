@@ -702,7 +702,8 @@ def FeatureStdExtV
       RISCVExtensionBitmask<0, 21>;
 
 def FeatureStdExtZvabd
-    : RISCVExperimentalExtension<0, 9, "Vector Absolute Difference">;
+    : RISCVExperimentalExtension<0, 9, "Vector Absolute Difference",
+                                 [FeatureStdExtZve32x]>;
 def HasStdExtZvabd : Predicate<"Subtarget->hasStdExtZvabd()">,
                      AssemblerPredicate<(all_of FeatureStdExtZvabd),
                                         "'Zvabd' (Vector Absolute Difference)">;
@@ -924,7 +925,7 @@ def HasStdExtZvdot4a8i : Predicate<"Subtarget->hasStdExtZvdot4a8i()">,
 
 // Vector Reordering Structured Data
 def FeatureStdExtZvzip
-    : RISCVExperimentalExtension<0, 1, "Vector Reordering Structured Data",
+    : RISCVExperimentalExtension<0, 3, "Vector Reordering Structured Data",
                                  [FeatureStdExtZve32x]>;
 def HasStdExtZvzip : Predicate<"Subtarget->hasStdExtZvzip()">,
                      AssemblerPredicate<(all_of FeatureStdExtZvzip),
@@ -1099,6 +1100,15 @@ def FeatureStdExtSsdbltrp
 def FeatureStdExtSmepmp
     : RISCVExtension<1, 0, "Enhanced Physical Memory Protection">;
 
+def FeatureStdExtSmidctrl
+    : RISCVExperimentalExtension<0, 20,
+                                 "Interrupt Domain Control Interface at Machine Level",
+                                 [FeatureStdExtSmcsrind, FeatureStdExtSmaia]>;
+def FeatureStdExtSsidctrl
+    : RISCVExperimentalExtension<0, 20,
+                                 "Interrupt Domain Control Interface at Supervisor Level",
+                                 [FeatureStdExtSscsrind, FeatureStdExtSsaia]>;
+
 def FeatureStdExtSmijt
     : RISCVExperimentalExtension<0, 20,
                                  "Interrupt Jump Table at Machine Level">;
@@ -1129,6 +1139,15 @@ def HasStdExtSsip : Predicate<"Subtarget->hasStdExtSsip()">,
                     AssemblerPredicate<(all_of FeatureStdExtSsip),
                         "'Ssip' (Support for Interrupt Handler Push/Pop at "
                         "Supervisor Level)">;
+
+def FeatureStdExtSmnip
+    : RISCVExperimentalExtension<0, 20,
+                                 "Nested Interrupt Preemption Support at Machine Level",
+                                 [FeatureStdExtSmidctrl]>;
+def FeatureStdExtSsnip
+    : RISCVExperimentalExtension<0, 20,
+                                 "Nested Interrupt Preemption Support at Supervisor Level",
+                                 [FeatureStdExtSsidctrl]>;
 
 def FeatureStdExtSmpmpmt
     : RISCVExperimentalExtension<0, 6, "PMP-based Memory Types Extension">;
@@ -1315,14 +1334,6 @@ def HasStdExtY : Predicate<"Subtarget->hasStdExtY()">,
 //===----------------------------------------------------------------------===//
 // Vendor extensions
 //===----------------------------------------------------------------------===//
-
-// Ventana Extensions
-
-def FeatureVendorXVentanaCondOps
-    : RISCVExtension<1, 0, "Ventana Conditional Ops">;
-def HasVendorXVentanaCondOps : Predicate<"Subtarget->hasVendorXVentanaCondOps()">,
-                               AssemblerPredicate<(all_of FeatureVendorXVentanaCondOps),
-                                   "'XVentanaCondOps' (Ventana Conditional Ops)">;
 
 // T-Head Extensions
 
@@ -1692,6 +1703,15 @@ def HasVendorXqccmp
     : Predicate<"Subtarget->hasVendorXqccmp()">,
       AssemblerPredicate<(all_of FeatureVendorXqccmp),
                          "'Xqccmp' (Qualcomm 16-bit Push/Pop and Double Moves)">;
+
+def FeatureVendorXqccmi
+    : RISCVExperimentalExtension<0, 2,
+                     "Qualcomm 16-bit Instruction Lookup Table",
+                     [FeatureStdExtZca, FeatureStdExtZicsr]>;
+def HasVendorXqccmi
+    : Predicate<"Subtarget->hasVendorXqccmi()">,
+      AssemblerPredicate<(all_of FeatureVendorXqccmi),
+                         "'Xqccmi' (Qualcomm 16-bit Instruction Lookup Table)">;
 
 def FeatureVendorXqccmt
     : RISCVExperimentalExtension<0, 1, "Qualcomm 16-bit Table Jump",
@@ -2249,7 +2269,3 @@ def TuneMIPSP8700
 
 def TuneSiFive7 : SubtargetFeature<"sifive7", "RISCVProcFamily", "SiFive7",
                                    "SiFive 7-Series processors", [], InlineIgnore>;
-
-def TuneVentanaVeyron : SubtargetFeature<"ventana-veyron", "RISCVProcFamily", "VentanaVeyron",
-                                         "Ventana Veyron-Series processors",
-                                         [], InlineIgnore>;

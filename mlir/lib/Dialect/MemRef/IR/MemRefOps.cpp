@@ -9,6 +9,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/Utils/VerificationUtils.h"
 #include "mlir/IR/AffineMap.h"
@@ -2638,6 +2639,9 @@ void ExpandShapeOp::build(OpBuilder &builder, OperationState &result,
 }
 
 LogicalResult ExpandShapeOp::verify() {
+  if (failed(verifyReassociationIndicesNotEmpty(*this)))
+    return failure();
+
   MemRefType srcType = getSrcType();
   MemRefType resultType = getResultType();
 
@@ -2895,12 +2899,17 @@ void CollapseShapeOp::build(OpBuilder &b, OperationState &result, Value src,
   auto srcType = llvm::cast<MemRefType>(src.getType());
   MemRefType resultType =
       CollapseShapeOp::computeCollapsedType(srcType, reassociation);
-  result.addAttribute(::mlir::getReassociationAttrName(),
-                      getReassociationIndicesAttribute(b, reassociation));
-  build(b, result, resultType, src, attrs);
+  buildPropertiesAndDiscardableAttributes(result, attrs);
+  result.getOrAddProperties<Properties>().reassociation =
+      getReassociationIndicesAttribute(b, reassociation);
+  result.addOperands(src);
+  result.addTypes(resultType);
 }
 
 LogicalResult CollapseShapeOp::verify() {
+  if (failed(verifyReassociationIndicesNotEmpty(*this)))
+    return failure();
+
   MemRefType srcType = getSrcType();
   MemRefType resultType = getResultType();
 
@@ -3830,8 +3839,10 @@ void TransposeOp::build(OpBuilder &b, OperationState &result, Value in,
   // Compute result type.
   MemRefType resultType = inferTransposeResultType(memRefType, permutationMap);
 
-  result.addAttribute(TransposeOp::getPermutationAttrStrName(), permutation);
-  build(b, result, resultType, in, attrs);
+  buildPropertiesAndDiscardableAttributes(result, attrs);
+  result.getOrAddProperties<Properties>().permutation = permutation;
+  result.addOperands(in);
+  result.addTypes(resultType);
 }
 
 // transpose $in $permutation attr-dict : type($in) `to` type(results)

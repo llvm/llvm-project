@@ -262,8 +262,7 @@ InstructionCost RISCVTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
     if (Imm == UINT64_C(0xffff) && ST->hasStdExtZbb())
       return TTI::TCC_Free;
     // zext.w
-    if (Imm == UINT64_C(0xffffffff) &&
-        ((ST->hasStdExtZba() && ST->isRV64()) || ST->isRV32()))
+    if (Imm == UINT64_C(0xffffffff) && (!ST->is64Bit() || ST->hasStdExtZba()))
       return TTI::TCC_Free;
     // bclri
     if (ST->hasStdExtZbs() && (~Imm).isPowerOf2())
@@ -442,12 +441,6 @@ bool RISCVTTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {
   case Intrinsic::vector_reduce_fmul:
     return true;
   }
-}
-
-std::optional<unsigned> RISCVTTIImpl::getMaxVScale() const {
-  if (ST->hasVInstructions())
-    return ST->getRealMaxVLen() / RISCV::RVVBitsPerBlock;
-  return BaseT::getMaxVScale();
 }
 
 std::optional<unsigned> RISCVTTIImpl::getVScaleForTuning() const {
@@ -740,12 +733,11 @@ InstructionCost RISCVTTIImpl::getSlideCost(FixedVectorType *Tp,
   return FirstSlideCost + SecondSlideCost + MaskCost;
 }
 
-InstructionCost
-RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
-                             VectorType *SrcTy, TTI::TargetCostKind CostKind,
-                             ArrayRef<int> Mask, int Index, VectorType *SubTp,
-                             ArrayRef<const Value *> Args,
-                             const Instruction *CxtI) const {
+InstructionCost RISCVTTIImpl::getShuffleCost(
+    TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+    TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
+    VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CxtI,
+    TTI::VectorInstrContext VIC) const {
   assert((Mask.empty() || DstTy->isScalableTy() ||
           Mask.size() == DstTy->getElementCount().getKnownMinValue()) &&
          "Expected the Mask to match the return size if given");
@@ -753,6 +745,9 @@ RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
          "Expected the same scalar types");
 
   Kind = improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp);
+  if (VIC == TTI::VectorInstrContext::SplatOpFolded &&
+      ST->sinkSplatOperands() && Kind == TTI::SK_Broadcast)
+    return TTI::TCC_Free;
 
   // TODO: Add proper cost model for P extension fixed vectors (e.g., v4i16)
   // For now, skip all fixed vector cost analysis when P extension is available
@@ -1167,6 +1162,15 @@ RISCVTTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
       CostKind != TTI::TCK_RecipThroughput)
     return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
 
+  // Splitting involves additional evl arithmetic and vl toggles.
+  InstructionCost SplitCost = 0;
+  if (MICA.getID() == Intrinsic::vp_load ||
+      MICA.getID() == Intrinsic::vp_store) {
+    auto LT = getTypeLegalizationCost(Src);
+    if (LT.first > 1)
+      SplitCost += LT.first * TTI::TCC_Expensive;
+  }
+
   return getMemoryOpCost(Opcode, Src, Alignment, AddressSpace, CostKind);
 }
 
@@ -1307,6 +1311,8 @@ RISCVTTIImpl::getGatherScatterOpCost(const MemIntrinsicCostAttributes &MICA,
                 MICA.getID() == Intrinsic::vp_gather;
   unsigned Opcode = IsLoad ? Instruction::Load : Instruction::Store;
   Type *DataTy = MICA.getDataType();
+  Type *PtrTy = DataTy->getWithNewType(
+      DL.getAddressType(DataTy->getContext(), MICA.getAddressSpace()));
   Align Alignment = MICA.getAlignment();
   if (CostKind != TTI::TCK_RecipThroughput)
     return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
@@ -1317,12 +1323,24 @@ RISCVTTIImpl::getGatherScatterOpCost(const MemIntrinsicCostAttributes &MICA,
        !isLegalMaskedScatter(DataTy, Align(Alignment))))
     return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
 
+  // Splitting vp intrinsics involves additional evl arithmetic and vl toggles.
+  InstructionCost SplitCost = 0;
+  if (MICA.getID() == Intrinsic::vp_gather ||
+      MICA.getID() == Intrinsic::vp_scatter) {
+    auto DataLT = getTypeLegalizationCost(DataTy);
+    auto PtrLT = getTypeLegalizationCost(PtrTy);
+    if (DataLT.first > 1)
+      SplitCost += DataLT.first * TTI::TCC_Expensive;
+    if (PtrLT.first > 1)
+      SplitCost += PtrLT.first * TTI::TCC_Expensive;
+  }
+
   // Cost is proportional to the number of memory operations implied.  For
   // scalable vectors, we use an estimate on that number since we don't
   // know exactly what VL will be.
   auto &VTy = *cast<VectorType>(DataTy);
   unsigned NumLoads = getEstimatedVLFor(&VTy);
-  return NumLoads * TTI::TCC_Basic;
+  return SplitCost + NumLoads * TTI::TCC_Basic;
 }
 
 InstructionCost RISCVTTIImpl::getExpandCompressMemoryOpCost(
@@ -1380,12 +1398,18 @@ RISCVTTIImpl::getStridedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
   if (CostKind == TTI::TCK_CodeSize)
     return TTI::TCC_Basic;
 
+  // Splitting vp intrinsics involves additional evl arithmetic and vl toggles.
+  InstructionCost SplitCost = 0;
+  auto LT = getTypeLegalizationCost(DataTy);
+  if (LT.first > 1)
+    SplitCost += LT.first * TTI::TCC_Expensive;
+
   // Cost is proportional to the number of memory operations implied.  For
   // scalable vectors, we use an estimate on that number since we don't
   // know exactly what VL will be.
   auto &VTy = *cast<VectorType>(DataTy);
   unsigned NumLoads = getEstimatedVLFor(&VTy);
-  return NumLoads * TTI::TCC_Basic;
+  return SplitCost + NumLoads * TTI::TCC_Basic;
 }
 
 InstructionCost
@@ -1687,8 +1711,7 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   }
   case Intrinsic::clmul: {
     auto LT = getTypeLegalizationCost(RetTy);
-    if (!LT.second.isVector() && ST->hasStdExtZvbc() && !ST->hasStdExtZbc() &&
-        !ST->hasStdExtZbkc()) {
+    if (!LT.second.isVector() && ST->hasStdExtZvbc() && !ST->hasStdExtZbkc()) {
       // TODO: Once custom lowering in this case for RV32 is added, this guard
       // should be removed and the cost model should be updated.
       if (!ST->is64Bit() || LT.second != MVT::i64)
@@ -2628,6 +2651,13 @@ InstructionCost RISCVTTIImpl::getVectorInstrCost(
     return BaseT::getVectorInstrCost(Opcode, Val, CostKind, Index, Op0, Op1,
                                      VIC);
 
+  // Scalar splat operand can be folded for vector ops that support splatting
+  // the scalar operand, so the explicit insertelement is free in this context.
+  if (Opcode == Instruction::InsertElement &&
+      VIC == TTI::VectorInstrContext::SplatOpFolded &&
+      ST->sinkSplatOperands() && Index == 0)
+    return TTI::TCC_Free;
+
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Val);
 
@@ -3070,11 +3100,9 @@ void RISCVTTIImpl::getUnrollingPreferences(
         return;
 
       if (isa<CallInst>(I) || isa<InvokeInst>(I)) {
-        if (const Function *F = cast<CallBase>(I).getCalledFunction()) {
-          if (!isLoweredToCall(F))
-            continue;
-        }
-        return;
+        const Function *F = cast<CallBase>(I).getCalledFunction();
+        if (!F || isLoweredToCall(F))
+          return;
       }
 
       SmallVector<const Value *> Operands(I.operand_values());
@@ -3600,6 +3628,33 @@ bool RISCVTTIImpl::canSplatOperand(Instruction *I, int Operand) const {
   default:
     return false;
   }
+}
+
+TargetTransformInfo::VectorInstrContext RISCVTTIImpl::getBuildVectorContextHint(
+    ArrayRef<int> Mask, ArrayRef<Value *> Scalars,
+    function_ref<bool(SmallVectorImpl<TargetTransformInfo::BuildVectorUseOp> &)>
+        GatherUseOps) const {
+  if (Scalars.empty() || !ST->hasVInstructions() || !ST->sinkSplatOperands() ||
+      !ShuffleVectorInst::isZeroEltSplatMask(Mask, Mask.size()))
+    return VectorInstrContext::None;
+
+  const auto *SplatIt = find_if_not(Scalars, IsaPred<UndefValue>);
+  if (SplatIt == Scalars.end() || (*SplatIt)->getType()->isIntegerTy(1) ||
+      isa<VectorType>((*SplatIt)->getType()) ||
+      isa<ExtractElementInst>(*SplatIt))
+    return VectorInstrContext::None;
+
+  SmallVector<TargetTransformInfo::BuildVectorUseOp, 4> UserOps;
+  if (!GatherUseOps(UserOps) || UserOps.empty())
+    return VectorInstrContext::None;
+
+  if (all_of(UserOps,
+             [this](const TargetTransformInfo::BuildVectorUseOp &UserOp) {
+               return canSplatOperand(UserOp.Opcode, UserOp.OperandIndex);
+             }))
+    return VectorInstrContext::SplatOpFolded;
+
+  return VectorInstrContext::None;
 }
 
 /// Check if sinking \p I's operands to I's basic block is profitable, because

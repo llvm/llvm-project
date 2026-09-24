@@ -212,21 +212,26 @@ void FastISel::flushLocalValueMap() {
       }
     }
 
-    if (FirstNonValue != FuncInfo.MBB->end()) {
-      // See if there are any local value instructions left.  If so, we want to
-      // make sure the first one has a debug location; if it doesn't, use the
-      // first non-value instruction's debug location.
+    // See if there are any local value instructions left.  If so, we want to
+    // make sure the first one has a debug location; if it doesn't, use the
+    // first non-value instruction's debug location.
 
-      // If EmitStartPt is non-null, this block had copies at the top before
-      // FastISel started doing anything; it points to the last one, so the
-      // first local value instruction is the one after EmitStartPt.
-      // If EmitStartPt is null, the first local value instruction is at the
-      // top of the block.
-      MachineBasicBlock::iterator FirstLocalValue =
-          EmitStartPt ? ++MachineBasicBlock::iterator(EmitStartPt)
-                      : FuncInfo.MBB->begin();
-      if (FirstLocalValue != FirstNonValue && !FirstLocalValue->getDebugLoc())
+    // If EmitStartPt is non-null, this block had copies at the top before
+    // FastISel started doing anything; it points to the last one, so the
+    // first local value instruction is the one after EmitStartPt.
+    // If EmitStartPt is null, the first local value instruction is at the
+    // top of the block.
+    MachineBasicBlock::iterator FirstLocalValue =
+        EmitStartPt ? ++MachineBasicBlock::iterator(EmitStartPt)
+                    : FuncInfo.MBB->begin();
+    if (FirstLocalValue != FirstNonValue && !FirstLocalValue->getDebugLoc()) {
+      if (FirstNonValue != FuncInfo.MBB->end()) {
         FirstLocalValue->setDebugLoc(FirstNonValue->getDebugLoc());
+      } else if (const BasicBlock *BB = FuncInfo.MBB->getBasicBlock()) {
+        // Nothing follows them, e.g. a block only setting up a successor's PHI
+        // nodes before falling through. Use the terminator's location.
+        FirstLocalValue->setDebugLoc(BB->getTerminator()->getDebugLoc());
+      }
     }
   }
 
@@ -1408,7 +1413,6 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
   }
 
   case Intrinsic::launder_invariant_group:
-  case Intrinsic::strip_invariant_group:
   case Intrinsic::expect:
   case Intrinsic::expect_with_probability: {
     Register ResultReg = getRegForValue(II->getArgOperand(0));
@@ -2355,7 +2359,6 @@ FastISel::createMachineMemOperandFor(const Instruction *I) const {
 
   bool IsNonTemporal = I->hasMetadata(LLVMContext::MD_nontemporal);
   bool IsInvariant = I->hasMetadata(LLVMContext::MD_invariant_load);
-  bool IsDereferenceable = I->hasMetadata(LLVMContext::MD_dereferenceable);
   const MDNode *Ranges = I->getMetadata(LLVMContext::MD_range);
 
   AAMDNodes AAInfo = I->getAAMetadata();
@@ -2369,8 +2372,6 @@ FastISel::createMachineMemOperandFor(const Instruction *I) const {
     Flags |= MachineMemOperand::MOVolatile;
   if (IsNonTemporal)
     Flags |= MachineMemOperand::MONonTemporal;
-  if (IsDereferenceable)
-    Flags |= MachineMemOperand::MODereferenceable;
   if (IsInvariant)
     Flags |= MachineMemOperand::MOInvariant;
 

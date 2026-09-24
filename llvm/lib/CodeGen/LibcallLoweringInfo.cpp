@@ -57,7 +57,3 @@ void LibcallLoweringInfoWrapper::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 void LibcallLoweringInfoWrapper::releaseMemory() { Result.clear(); }
-
-ModulePass *llvm::createLibcallLoweringInfoWrapper() {
-  return new LibcallLoweringInfoWrapper();
-}

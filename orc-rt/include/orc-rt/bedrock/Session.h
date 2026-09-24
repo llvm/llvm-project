@@ -71,7 +71,7 @@ private:
   };
 
 public:
-  using ErrorReporterFn = move_only_function<void(Error)>;
+  using ErrorReporterFn = move_only_function<void(Error) noexcept>;
   using OnDisconnectFn = move_only_function<void(Error)>;
   using OnDetachFn = move_only_function<void()>;
   using OnShutdownFn = move_only_function<void()>;
@@ -190,7 +190,7 @@ public:
     virtual void disconnect() = 0;
 
     /// Report an error to the session.
-    void reportError(Error Err) { S.reportError(std::move(Err)); }
+    void reportError(Error Err) noexcept { S.reportError(std::move(Err)); }
 
     /// Call the handler in the controller associated with the given tag.
     ///
@@ -339,7 +339,7 @@ public:
   const ExecutorProcessInfo &processInfo() const noexcept { return EPI; }
 
   /// Report an error via the ErrorReporter function.
-  void reportError(Error Err) { ReportError(std::move(Err)); }
+  void reportError(Error Err) noexcept { ReportError(std::move(Err)); }
 
   /// Set a handler to be called when the Session's controller connection ends.
   ///
@@ -422,6 +422,18 @@ public:
     if (!Srv)
       return Srv.takeError();
     return addService(std::move(*Srv));
+  }
+
+  /// Attach to an already constructed ControllerAccess instance.
+  ///
+  /// A Session may be attached at most once, and attach must not be called
+  /// after -- or concurrently with -- detach or shutdown: by the time a detach
+  /// has been requested it may be arbitrarily far along, so there is no point
+  /// at which a newly attached controller could be connected, or its
+  /// disconnection coherently reported. Violating this is a programming error,
+  /// checked by assertion.
+  void attach(std::shared_ptr<ControllerAccess> CA, BootstrapInfo BI) noexcept {
+    doAttach(std::move(CA), std::move(BI));
   }
 
   /// Construct a ControllerAccessT and immediately attach using the given
