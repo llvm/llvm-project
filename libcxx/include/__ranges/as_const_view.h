@@ -26,11 +26,9 @@
 #include <__type_traits/is_reference.h>
 #include <__type_traits/is_specialization.h>
 #include <__type_traits/remove_cvref.h>
-#include <__utility/auto_cast.h>
 #include <__utility/declval.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
-#include <__utility/pair.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -125,7 +123,7 @@ struct __xtype<empty_view<_XType>> {
 template <class _XType, size_t _Extent>
 struct __xtype<span<_XType, _Extent>> {
   using type _LIBCPP_NODEBUG       = _XType;
-  constexpr static size_t __extent = _Extent;
+  static constexpr size_t __extent = _Extent;
 };
 template <class _XType>
 struct __xtype<ref_view<_XType>> {
@@ -144,8 +142,13 @@ struct __fn : __range_adaptor_closure<__fn> {
     __none,
   };
 
+  struct __strategy_noexcept_result {
+    __strategy __strategy_;
+    bool __is_noexcept_;
+  };
+
   template <class _Type>
-  static consteval pair<__strategy, bool> __choose_strategy() {
+  _LIBCPP_HIDE_FROM_ABI static consteval __strategy_noexcept_result __choose_strategy() {
     using _UType = remove_cvref_t<_Type>;
     using _XType = __xtype<_UType>::type;
 
@@ -168,13 +171,13 @@ struct __fn : __range_adaptor_closure<__fn> {
   }
 
   template <class _Type>
-    requires(__choose_strategy<_Type>().first != __strategy::__none)
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr static auto
-  operator()(_Type&& __range) noexcept(__choose_strategy<_Type>().second) {
+    requires(__choose_strategy<_Type>().__strategy_ != __strategy::__none)
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto
+  operator()(_Type&& __range) noexcept(__choose_strategy<_Type>().__is_noexcept_) {
     using _UType = remove_cvref_t<_Type>;
     using _XType = __xtype<_UType>::type;
 
-    constexpr auto __st = __choose_strategy<_Type>().first;
+    constexpr auto __st = __choose_strategy<_Type>().__strategy_;
 
     if constexpr (__st == __strategy::__already_const) {
       return views::all(std::forward<_Type>(__range));
