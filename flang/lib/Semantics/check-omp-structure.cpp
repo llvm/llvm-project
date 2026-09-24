@@ -3430,7 +3430,16 @@ void OmpStructureChecker::Leave(
 }
 
 void OmpStructureChecker::Leave(const parser::OpenMPFlushConstruct &x) {
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   auto &flushList{std::get<std::optional<parser::OmpArgumentList>>(x.v.t)};
+
+  llvm::omp::Clauses memOrder{
+      llvm::omp::Clause::OMPC_acq_rel,
+      llvm::omp::Clause::OMPC_acquire,
+      llvm::omp::Clause::OMPC_relaxed,
+      llvm::omp::Clause::OMPC_release,
+      llvm::omp::Clause::OMPC_seq_cst,
+  };
 
   auto isVariableListItemOrCommonBlock{[](const Symbol &sym) {
     return IsVariableListItem(sym) ||
@@ -3446,15 +3455,48 @@ void OmpStructureChecker::Leave(const parser::OpenMPFlushConstruct &x) {
       }
     }
 
-    if (FindClause(llvm::omp::Clause::OMPC_acquire) ||
-        FindClause(llvm::omp::Clause::OMPC_release) ||
-        FindClause(llvm::omp::Clause::OMPC_acq_rel)) {
-      context_.Say(flushList->source,
-          "If memory-order-clause is RELEASE, ACQUIRE, or ACQ_REL, list items must not be specified on the FLUSH directive"_err_en_US);
+    for (const parser::OmpClause &clause : x.v.Clauses().v) {
+      if (memOrder.test(clause.Id())) {
+        context_.Say(flushList->source,
+            "If a 'memory-order' clause is specified, list items must not be specified on the FLUSH directive"_err_en_US);
+        break;
+      }
     }
   }
 
-  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
+  for (const parser::OmpClause &clause : x.v.Clauses().v) {
+    llvm::omp::Clause clauseId{clause.Id()};
+    if (!memOrder.test(clauseId)) {
+      continue;
+    }
+    if (version == 50) {
+      // In 5.0 only ACQ_REL, ACQUIRE or RELEASE are allowed.
+      switch (clauseId) {
+      case llvm::omp::Clause::OMPC_acq_rel:
+      case llvm::omp::Clause::OMPC_acquire:
+      case llvm::omp::Clause::OMPC_release:
+        continue;
+      default:
+        context_.Say(clause.source,
+            "Only ACQ_REL, ACQUIRE or RELEASE memory-order clauses are allowed"_err_en_US);
+        break;
+      }
+    } else if (version >= 51) {
+      // In 5.1+ only ACQ_REL, ACQUIRE, RELEASE or SEQ_CST are allowed.
+      switch (clauseId) {
+      case llvm::omp::Clause::OMPC_acq_rel:
+      case llvm::omp::Clause::OMPC_acquire:
+      case llvm::omp::Clause::OMPC_release:
+      case llvm::omp::Clause::OMPC_seq_cst:
+        continue;
+      default:
+        context_.Say(clause.source,
+            "Only ACQ_REL, ACQUIRE, RELEASE or SEQ_CST memory-order clauses are allowed"_err_en_US);
+        break;
+      }
+    }
+  }
+
   if (version >= 52) {
     auto &flags{std::get<parser::OmpDirectiveSpecification::Flags>(x.v.t)};
     if (flags.test(parser::OmpDirectiveSpecification::Flag::DeprecatedSyntax)) {

@@ -28,6 +28,7 @@ use omp_lib
   if (omp_get_thread_num() == 1) THEN
     ! Not allowed clauses.
     !$omp flush seq_cst
+    !ERROR: Only ACQ_REL, ACQUIRE, RELEASE or SEQ_CST memory-order clauses are allowed
     !ERROR: RELAXED clause is not allowed on FLUSH directive
     !$omp flush relaxed
 
@@ -57,21 +58,21 @@ use omp_lib
 
   array = (/1, 2, 3, 4, 5, 6, 7, 8, 9, 10/)
   if (omp_get_thread_num() == 3) THEN
-    !ERROR: If memory-order-clause is RELEASE, ACQUIRE, or ACQ_REL, list items must not be specified on the FLUSH directive
+    !ERROR: If a 'memory-order' clause is specified, list items must not be specified on the FLUSH directive
     !$omp flush acq_rel (array)
-    !ERROR: If memory-order-clause is RELEASE, ACQUIRE, or ACQ_REL, list items must not be specified on the FLUSH directive
+    !ERROR: If a 'memory-order' clause is specified, list items must not be specified on the FLUSH directive
     !$omp flush acq_rel (array, a, i)
 
     array = (/1, 2, 3, 4, 5, 6, 7, 8, 9, 10/)
-    !ERROR: If memory-order-clause is RELEASE, ACQUIRE, or ACQ_REL, list items must not be specified on the FLUSH directive
+    !ERROR: If a 'memory-order' clause is specified, list items must not be specified on the FLUSH directive
     !$omp flush release (array)
-    !ERROR: If memory-order-clause is RELEASE, ACQUIRE, or ACQ_REL, list items must not be specified on the FLUSH directive
+    !ERROR: If a 'memory-order' clause is specified, list items must not be specified on the FLUSH directive
     !$omp flush release (array, a)
 
     array = (/1, 2, 3, 4, 5, 6, 7, 8, 9, 10/)
-    !ERROR: If memory-order-clause is RELEASE, ACQUIRE, or ACQ_REL, list items must not be specified on the FLUSH directive
+    !ERROR: If a 'memory-order' clause is specified, list items must not be specified on the FLUSH directive
     !$omp flush acquire (array)
-    !ERROR: If memory-order-clause is RELEASE, ACQUIRE, or ACQ_REL, list items must not be specified on the FLUSH directive
+    !ERROR: If a 'memory-order' clause is specified, list items must not be specified on the FLUSH directive
     !$omp flush acquire (array, a, structObj%rr)
   END IF
   !$omp end parallel

@@ -522,11 +522,12 @@ use omp_lib
   !WARNING: The syntax "FLUSH clause (object, ...)" has been deprecated, use "FLUSH(object, ...) clause" instead
   !$omp flush acquire
   !WARNING: The syntax "FLUSH clause (object, ...)" has been deprecated, use "FLUSH(object, ...) clause" instead
-  !ERROR: If memory-order-clause is RELEASE, ACQUIRE, or ACQ_REL, list items must not be specified on the FLUSH directive
+  !ERROR: If a 'memory-order' clause is specified, list items must not be specified on the FLUSH directive
   !$omp flush release (c)
   !WARNING: The syntax "FLUSH clause (object, ...)" has been deprecated, use "FLUSH(object, ...) clause" instead
   !$omp flush seq_cst
   !WARNING: The syntax "FLUSH clause (object, ...)" has been deprecated, use "FLUSH(object, ...) clause" instead
+  !ERROR: Only ACQ_REL, ACQUIRE, RELEASE or SEQ_CST memory-order clauses are allowed
   !ERROR: RELAXED clause is not allowed on FLUSH directive
   !$omp flush relaxed
 
