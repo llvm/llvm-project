@@ -14,6 +14,7 @@
 #define LLVM_CLANG_AST_INTERP_DESCRIPTOR_H
 
 #include "DeclOrExpr.h"
+#include "../ExprConstShared.h"
 #include "InitMap.h"
 #include "PrimType.h"
 #include "clang/AST/Decl.h"
@@ -269,14 +270,6 @@ public:
   /// Whether variables of this descriptor need their destructor called or not.
   bool hasTrivialDtor() const;
 
-  /// Kind of source for a dynamic allocation.
-  enum class DynAllocKind {
-    None,              // not a dynamic allocation
-    New,               // new expression
-    ArrayNew,          // new[] expression
-    StdAllocator,      // std::allocator::allocate call
-    BuiltinOperatorNew // __operator_builtin_new call
-  };
   /// Returns the kind of dynamic allocation source of this block.
   static DynAllocKind getDynAllocKindForExpr(const Expr *E);
   /// Returns the kind of dynamic allocation source of this block.

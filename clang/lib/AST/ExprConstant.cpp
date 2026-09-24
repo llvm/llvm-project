@@ -759,22 +759,16 @@ namespace {
     /// std::allocator<T>::allocate).
     const Expr *AllocExpr = nullptr;
 
-    enum Kind {
-      New,
-      ArrayNew,
-      StdAllocator
-    };
-
     /// Get the kind of the allocation. This must match between allocation
     /// and deallocation.
-    static Kind kindOfExpr(const Expr *AllocExpr) {
+    static DynAllocKind kindOfExpr(const Expr *AllocExpr) {
       if (auto *NE = dyn_cast<CXXNewExpr>(AllocExpr))
-        return NE->isArray() ? ArrayNew : New;
+        return NE->isArray() ? DynAllocKind::ArrayNew : DynAllocKind::New;
       assert(isa<CallExpr>(AllocExpr));
-      return StdAllocator;
+      return DynAllocKind::StdAllocator;
     }
 
-    Kind getKind() const { return kindOfExpr(AllocExpr); }
+    DynAllocKind getKind() const { return kindOfExpr(AllocExpr); }
   };
 
   struct DynAllocOrder {
@@ -1858,13 +1852,19 @@ APValue &CallStackFrame::createLocal(APValue::LValueBase Base, const void *Key,
   return Result;
 }
 
-uint64_t GetAlignOfDynamicAlloc(const ASTContext &Ctx, QualType AllocType,
-                                const Expr *AllocExpr) {
+uint64_t clang::GetAlignOfDynamicAlloc(const ASTContext &Ctx,
+                                       QualType AllocType,
+                                       DynAllocKind AllocKind) {
+  assert((AllocKind != DynAllocKind::None) &&
+         "should only be called on dynamically allocated blocks");
+  assert((AllocKind != DynAllocKind::BuiltinOperatorNew) &&
+         "__builtin_operator_new should have been allowed only from "
+         "std::allocator::allocate");
+
   const TargetInfo &TI = Ctx.getTargetInfo();
   uint64_t DefaultNewAlign = TI.getNewAlign();
   uint64_t MaxFundamentalAlign =
       std::max(TI.getLongLongAlign(), TI.getLongDoubleAlign());
-  DynAlloc::Kind AllocKind = DynAlloc::kindOfExpr(AllocExpr);
 
   uint64_t TypeAlignment = Ctx.getTypeAlign(AllocType);
   assert(TypeAlignment > 0 && "Unknown alignment for allocated type!");
@@ -1875,15 +1875,18 @@ uint64_t GetAlignOfDynamicAlloc(const ASTContext &Ctx, QualType AllocType,
     switch (AllocKind) {
     // Allocating a zero-sized array is allowed, however it doesn't have
     // any alignment guarantees.
-    case DynAlloc::Kind::ArrayNew:
-    case DynAlloc::Kind::StdAllocator:
+    case DynAllocKind::ArrayNew:
+    case DynAllocKind::StdAllocator:
       return TI.getCharWidth();
 
     // Flexible array members are allowed as only member as an extension.
     // In this case the size of the type will be zero, but the allocation
     // should still be suitable for the array element type.
-    case DynAlloc::Kind::New:
+    case DynAllocKind::New:
       return TypeAlignment;
+
+    default:
+      llvm_unreachable("Unhandled DynAllocKind");
     }
   }
 
@@ -1902,7 +1905,7 @@ uint64_t GetAlignOfDynamicAlloc(const ASTContext &Ctx, QualType AllocType,
   // According to C++ [allocator.members]p5 it is unspecified how the
   // memory obtained from ::operator new is used by
   // std::allocator::allocate, therefore be conservative here.
-  case DynAlloc::Kind::StdAllocator:
+  case DynAllocKind::StdAllocator:
     return TypeAlignment;
 
   // The non-array form of new does not permit allocation overhead and
@@ -1912,11 +1915,11 @@ uint64_t GetAlignOfDynamicAlloc(const ASTContext &Ctx, QualType AllocType,
   // with the exact size of the allocation. An object of the exact size
   // AllocSize can have alignment of at most the lowest bit set in
   // AllocSize.
-  case DynAlloc::Kind::New:
+  case DynAllocKind::New:
     return std::min(DefaultNewAlign,
                     uint64_t{1} << llvm::countr_zero(AllocSize));
 
-  case DynAlloc::Kind::ArrayNew: {
+  case DynAllocKind::ArrayNew: {
     const Type *ET = AllocType.getTypePtr()
                          ->getArrayElementTypeNoTypeQual()
                          ->getCanonicalTypeUnqualified()
@@ -1939,9 +1942,10 @@ uint64_t GetAlignOfDynamicAlloc(const ASTContext &Ctx, QualType AllocType,
     return std::min(
         {DefaultNewAlign, MaxFundamentalAlign, llvm::bit_floor(AllocSize)});
   }
-  }
 
-  llvm_unreachable("Unhandled DynAlloc::Kind");
+  default:
+    llvm_unreachable("Unhandled DynAllocKind");
+  }
 }
 
 APValue *EvalInfo::createHeapAlloc(const Expr *E, QualType T, LValue &LV) {
@@ -1950,7 +1954,8 @@ APValue *EvalInfo::createHeapAlloc(const Expr *E, QualType T, LValue &LV) {
     return nullptr;
   }
 
-  DynamicAllocLValue DA(NumHeapAllocs++, GetAlignOfDynamicAlloc(Ctx, T, E));
+  DynamicAllocLValue DA(
+      NumHeapAllocs++, GetAlignOfDynamicAlloc(Ctx, T, DynAlloc::kindOfExpr(E)));
   LV.set(APValue::LValueBase::getDynamicAlloc(DA, T));
   auto Result = HeapAllocs.emplace(std::piecewise_construct,
                                    std::forward_as_tuple(DA), std::tuple<>());
@@ -7911,7 +7916,7 @@ static const FunctionDecl *getVirtualOperatorDelete(QualType T) {
 /// a diagnostic and returns std::nullopt.
 static std::optional<DynAlloc *> CheckDeleteKind(EvalInfo &Info, const Expr *E,
                                                  const LValue &Pointer,
-                                                 DynAlloc::Kind DeallocKind) {
+                                                 DynAllocKind DeallocKind) {
   auto PointerAsString = [&] {
     return Pointer.toString(Info.Ctx, Info.Ctx.VoidPtrTy);
   };
@@ -7940,7 +7945,7 @@ static std::optional<DynAlloc *> CheckDeleteKind(EvalInfo &Info, const Expr *E,
   }
 
   bool Subobject = false;
-  if (DeallocKind == DynAlloc::New) {
+  if (DeallocKind == DynAllocKind::New) {
     Subobject = Pointer.Designator.MostDerivedPathLength != 0 ||
                 Pointer.Designator.isOnePastTheEnd();
   } else {
@@ -7984,7 +7989,7 @@ static bool HandleOperatorDeleteCall(EvalInfo &Info, const CallExpr *E) {
     return true;
   }
 
-  if (!CheckDeleteKind(Info, E, Pointer, DynAlloc::StdAllocator))
+  if (!CheckDeleteKind(Info, E, Pointer, DynAllocKind::StdAllocator))
     return false;
 
   Info.HeapAllocs.erase(Pointer.Base.get<DynamicAllocLValue>());
@@ -21733,7 +21738,8 @@ bool VoidExprEvaluator::VisitCXXDeleteExpr(const CXXDeleteExpr *E) {
   }
 
   std::optional<DynAlloc *> Alloc = CheckDeleteKind(
-      Info, E, Pointer, E->isArrayForm() ? DynAlloc::ArrayNew : DynAlloc::New);
+      Info, E, Pointer,
+      E->isArrayForm() ? DynAllocKind::ArrayNew : DynAllocKind::New);
   if (!Alloc)
     return false;
   QualType AllocType = Pointer.Base.getDynamicAllocType();

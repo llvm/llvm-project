@@ -30,6 +30,18 @@ class ASTContext;
 class CharUnits;
 class Expr;
 class CallExpr;
+
+/// Kind of source for a dynamic allocation.
+enum class DynAllocKind {
+  New,               // new expression
+  ArrayNew,          // new[] expression
+  StdAllocator,      // std::allocator::allocate call
+  None,              // not a dynamic allocation
+  BuiltinOperatorNew // __operator_builtin_new call
+};
+
+uint64_t GetAlignOfDynamicAlloc(const ASTContext &Ctx, QualType AllocType,
+                                DynAllocKind AllocKind);
 } // namespace clang
 using namespace clang;
 /// Values returned by __builtin_classify_type, chosen to match the values

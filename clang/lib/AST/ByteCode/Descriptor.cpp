@@ -9,6 +9,7 @@
 #include "Descriptor.h"
 #include "Boolean.h"
 #include "Char.h"
+#include "ExprConstShared.h"
 #include "FixedPoint.h"
 #include "Floating.h"
 #include "Integral.h"
@@ -506,7 +507,7 @@ unsigned Descriptor::getElemDataSize() const {
   return ElemSize;
 }
 
-Descriptor::DynAllocKind Descriptor::getDynAllocKindForExpr(const Expr *E) {
+DynAllocKind Descriptor::getDynAllocKindForExpr(const Expr *E) {
   // new or new[] expression
   if (const auto *NE = dyn_cast<CXXNewExpr>(E))
     return NE->isArray() ? DynAllocKind::ArrayNew : DynAllocKind::New;
@@ -523,100 +524,6 @@ Descriptor::DynAllocKind Descriptor::getDynAllocKindForExpr(const Expr *E) {
 }
 
 uint64_t Descriptor::computeAlignForDynamicAlloc(const ASTContext &Ctx) const {
-  const Expr *AllocExpr = asExpr();
-  QualType AllocType = getDataType(Ctx);
-
-  const TargetInfo &TI = Ctx.getTargetInfo();
-
-  uint64_t DefaultNewAlign = TI.getNewAlign();
-  uint64_t MaxFundamentalAlign =
-      std::max(TI.getLongLongAlign(), TI.getLongDoubleAlign());
-
-  DynAllocKind AllocKind = getDynAllocKindForExpr(AllocExpr);
-  assert((AllocKind != DynAllocKind::None) &&
-         "should only be called on dynamically allocated blocks");
-  assert((AllocKind != DynAllocKind::BuiltinOperatorNew) &&
-         "__builtin_operator_new should have been allowed only from "
-         "std::allocator::allocate");
-
-  uint64_t TypeAlignment = Ctx.getTypeAlign(AllocType);
-  assert(TypeAlignment > 0 && "Unknown alignment for allocated type!");
-
-  uint64_t AllocSize = Ctx.getTypeSize(AllocType);
-
-  if (AllocSize == 0) {
-    switch (AllocKind) {
-    // Allocating a zero-sized array is allowed, however it doesn't have
-    // any alignment guarantees.
-    case DynAllocKind::ArrayNew:
-    case DynAllocKind::StdAllocator:
-      return TI.getCharWidth();
-
-    // Flexible array members are allowed as only member as an extension.
-    // In this case the size of the type will be zero, but the allocation
-    // should still be suitable for the array element type.
-    case DynAllocKind::New:
-      return TypeAlignment;
-
-    default:
-      llvm_unreachable("Unhandled DynAllocKind");
-    }
-  }
-
-  assert(TypeAlignment <= AllocSize && "Invalid alignment/size for type!");
-  assert(AllocSize % TypeAlignment == 0 && "Invalid alignment/size for type!");
-
-  // For new-extended alignment the ::operator new overload with
-  // std::align_val_t parameter is used. According to C++
-  // [basic.stc.dynamic.allocation]p3.1 this overload returns memory
-  // according to the requested alignment. No stricter guarantees are
-  // made.
-  if (TypeAlignment > DefaultNewAlign)
-    return TypeAlignment;
-
-  switch (AllocKind) {
-  // According to C++ [allocator.members]p5 it is unspecified how the
-  // memory obtained from ::operator new is used by
-  // std::allocator::allocate, therefore be conservative here.
-  case DynAllocKind::StdAllocator:
-    return TypeAlignment;
-
-  // The non-array form of new does not permit allocation overhead and
-  // therefore provides alignment as guaranteed by ::operator new.
-  // According to C++ [basic.stc.dynamic.allocation]p3.3 the allocation
-  // is suitably aligned for all objects without new-extended alignment
-  // with the exact size of the allocation. An object of the exact size
-  // AllocSize can have alignment of at most the lowest bit set in
-  // AllocSize.
-  case DynAllocKind::New:
-    return std::min(DefaultNewAlign,
-                    uint64_t{1} << llvm::countr_zero(AllocSize));
-
-  case DynAllocKind::ArrayNew: {
-    const Type *ET = AllocType.getTypePtr()
-                         ->getArrayElementTypeNoTypeQual()
-                         ->getCanonicalTypeUnqualified()
-                         .getTypePtr();
-    // According to C++ [expr.new]p17, unless the element type of an
-    // array new expression is char, unsigned char or std::byte, the
-    // allocation may be offset into the allocation returned by
-    // ::operator new[]. Therefore no stricter alignment than the type's
-    // alignment is guaranteed. For char, unsigned char and std::byte
-    if (!ET->isSpecificBuiltinType(BuiltinType::UChar) &&
-        !ET->isSpecificBuiltinType(BuiltinType::Char_U) &&
-        !ET->isSpecificBuiltinType(BuiltinType::Char_S) && !ET->isStdByteType())
-      return TypeAlignment;
-
-    // Otherwise, the allocation is offset from the result of ::operator
-    // new[] by a multiple of the strictest fundamental alignment.
-    // According C++ [basic.stc.dynamic.allocation]p3.2 the allocation
-    // returned by ::operator new[] is suitably aligned for all objects
-    // without new-extended alignment and size up to the allocated size.
-    return std::min(
-        {DefaultNewAlign, MaxFundamentalAlign, llvm::bit_floor(AllocSize)});
-  }
-
-  default:
-    llvm_unreachable("Unhandled DynAllocKind");
-  }
+  return GetAlignOfDynamicAlloc(Ctx, getDataType(Ctx),
+                                getDynAllocKindForExpr(asExpr()));
 }
