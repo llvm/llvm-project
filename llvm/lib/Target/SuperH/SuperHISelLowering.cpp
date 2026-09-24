@@ -199,6 +199,8 @@ SDValue SuperHTargetLowering::getSHCmp(SDValue LHS, SDValue RHS,
       }
       }
     }
+    SHcc = SHCC::COND_GT;
+    SHocc = SHCC::COND_T;
     break;
   }
   case ISD::SETGE: {
