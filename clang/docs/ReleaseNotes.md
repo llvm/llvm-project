@@ -187,6 +187,10 @@ features cannot lower the translation-unit ABI level;
 
 #### Resolutions to C++ Defect Reports
 
+- Implemented [CWG3043](https://wg21.link/cwg3043): temporaries in an element
+  of the expansion-init-list of an enumerating expansion statement now persist
+  for the lifetime of the expansion variable initialized from that element.
+
 - Clang now falls back to alignment-aware allocation functions for
   non-overaligned types, implementing [CWG2282](https://wg21.link/cwg2282).
 
@@ -665,6 +669,12 @@ features cannot lower the translation-unit ABI level;
 - A workaround that was introduced to fix an issue with the `<format>` header present in some versions of
   libstdc++15 has been extended to support preprocessed input. Previously, splitting the preprocessing and
   compilation step would result in the fix not being applied. (#GH160314)
+
+- Fixed an assertion failure in an enumerating expansion statement
+  (`template for`) when an element of the expansion-init-list needed cleanups,
+  e.g. a temporary bound to a reference parameter such as `{g(1), g(2)}` with
+  `int g(const int&)`, or a temporary of a type with a non-trivial destructor.
+  Each element is now a full-expression of its own. (#GH212630)
 
 - A defaulted copy or move assignment operator for a union was left with an
   empty body and copied nothing when the operator was actually called, for
