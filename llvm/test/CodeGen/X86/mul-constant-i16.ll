@@ -409,19 +409,19 @@ define i16 @test_mul_by_21(i16 %x) {
 define i16 @test_mul_by_22(i16 %x) {
 ; X86-LABEL: test_mul_by_22:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    leal (%ecx,%ecx,4), %eax
-; X86-NEXT:    leal (%ecx,%eax,4), %eax
-; X86-NEXT:    addl %ecx, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    leal (%eax,%eax,4), %ecx
+; X86-NEXT:    addl %eax, %eax
+; X86-NEXT:    leal (%eax,%ecx,4), %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mul_by_22:
 ; X64:       # %bb.0:
 ; X64-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-NEXT:    leal (%rdi,%rdi,4), %eax
-; X64-NEXT:    leal (%rdi,%rax,4), %eax
-; X64-NEXT:    addl %edi, %eax
+; X64-NEXT:    leal (%rdi,%rdi), %eax
+; X64-NEXT:    leal (%rdi,%rdi,4), %ecx
+; X64-NEXT:    leal (%rax,%rcx,4), %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
   %mul = mul nsw i16 %x, 22
@@ -557,10 +557,10 @@ define i16 @test_mul_by_28(i16 %x) {
 define i16 @test_mul_by_29(i16 %x) {
 ; X86-LABEL: test_mul_by_29:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    leal (%eax,%eax,8), %ecx
-; X86-NEXT:    leal (%ecx,%ecx,2), %ecx
-; X86-NEXT:    addl %eax, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    leal (%ecx,%ecx,8), %eax
+; X86-NEXT:    addl %ecx, %ecx
+; X86-NEXT:    leal (%eax,%eax,2), %eax
 ; X86-NEXT:    addl %ecx, %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl

@@ -377,14 +377,14 @@ define i32 @multi_use(i32 %rd, <2 x i16> %a, <2 x i16> %b) {
 ; RV32-LABEL: multi_use:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    mul.h00 a1, a1, a2
-; RV32-NEXT:    add a0, a0, a1
+; RV32-NEXT:    add a1, a1, a1
 ; RV32-NEXT:    add a0, a0, a1
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: multi_use:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    pmul.w.h00 a1, a1, a2
-; RV64-NEXT:    add a0, a0, a1
+; RV64-NEXT:    add a1, a1, a1
 ; RV64-NEXT:    addw a0, a0, a1
 ; RV64-NEXT:    ret
   %m = call i32 @llvm.riscv.mul.00.i32.v2i16(<2 x i16> %a, <2 x i16> %b)

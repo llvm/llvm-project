@@ -7,7 +7,8 @@ define i128 @square(i128 %x) {
 ; CHECK-NEXT:    mul x8, x0, x1
 ; CHECK-NEXT:    umulh x9, x0, x0
 ; CHECK-NEXT:    mul x0, x0, x0
-; CHECK-NEXT:    add x1, x9, x8, lsl #1
+; CHECK-NEXT:    add x8, x8, x8
+; CHECK-NEXT:    add x1, x9, x8
 ; CHECK-NEXT:    ret
 entry:
   %mul = mul i128 %x, %x

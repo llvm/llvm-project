@@ -27,77 +27,37 @@ define amdgpu_kernel void @fence_barrier_latency_test(ptr addrspace(1) %global_p
 ; CHECK-NEXT:    ds_load_b128 v[20:23], v28 offset:160
 ; CHECK-NEXT:    ds_load_b128 v[24:27], v28 offset:192
 ; CHECK-NEXT:    ds_load_b128 v[28:31], v28 offset:224
-; CHECK-NEXT:    s_wait_dscnt 0x7
-; CHECK-NEXT:    v_readfirstlane_b32 s4, v3
 ; CHECK-NEXT:    s_wait_dscnt 0x6
-; CHECK-NEXT:    v_readfirstlane_b32 s5, v7
-; CHECK-NEXT:    v_readfirstlane_b32 s6, v6
-; CHECK-NEXT:    v_readfirstlane_b32 s7, v2
-; CHECK-NEXT:    v_readfirstlane_b32 s18, v5
-; CHECK-NEXT:    v_readfirstlane_b32 s19, v1
-; CHECK-NEXT:    v_readfirstlane_b32 s20, v4
-; CHECK-NEXT:    v_readfirstlane_b32 s21, v0
-; CHECK-NEXT:    s_add_co_i32 s4, s4, s5
-; CHECK-NEXT:    s_add_co_i32 s7, s7, s6
-; CHECK-NEXT:    s_add_co_i32 s19, s19, s18
-; CHECK-NEXT:    s_add_co_i32 s7, s7, s6
-; CHECK-NEXT:    s_add_co_i32 s21, s21, s20
-; CHECK-NEXT:    s_add_co_i32 s19, s19, s18
+; CHECK-NEXT:    v_dual_add_nc_u32 v3, v3, v7 :: v_dual_add_nc_u32 v2, v2, v6
+; CHECK-NEXT:    v_dual_add_nc_u32 v1, v1, v5 :: v_dual_add_nc_u32 v0, v0, v4
+; CHECK-NEXT:    v_dual_add_nc_u32 v4, v4, v4 :: v_dual_add_nc_u32 v5, v5, v5
+; CHECK-NEXT:    v_dual_add_nc_u32 v6, v6, v6 :: v_dual_add_nc_u32 v7, v7, v7
+; CHECK-NEXT:    s_wait_dscnt 0x4
+; CHECK-NEXT:    v_dual_add_nc_u32 v11, v11, v15 :: v_dual_add_nc_u32 v0, v4, v0
+; CHECK-NEXT:    v_dual_add_nc_u32 v1, v5, v1 :: v_dual_add_nc_u32 v2, v6, v2
+; CHECK-NEXT:    v_dual_add_nc_u32 v3, v7, v3 :: v_dual_add_nc_u32 v6, v6, v6
 ; CHECK-NEXT:    s_wait_dscnt 0x0
 ; CHECK-NEXT:    s_barrier_signal -1
-; CHECK-NEXT:    s_add_co_i32 s4, s4, s5
-; CHECK-NEXT:    s_add_co_i32 s21, s21, s20
-; CHECK-NEXT:    s_add_co_i32 s4, s4, s5
-; CHECK-NEXT:    s_add_co_i32 s7, s7, s6
-; CHECK-NEXT:    s_add_co_i32 s19, s19, s18
-; CHECK-NEXT:    s_add_co_i32 s21, s21, s20
-; CHECK-NEXT:    s_add_co_i32 s19, s19, s18
-; CHECK-NEXT:    s_add_co_i32 s21, s21, s20
-; CHECK-NEXT:    s_add_co_i32 s7, s7, s6
-; CHECK-NEXT:    s_add_co_i32 s4, s4, s5
-; CHECK-NEXT:    s_add_co_i32 s7, s7, s6
-; CHECK-NEXT:    s_add_co_i32 s4, s4, s5
-; CHECK-NEXT:    s_add_co_i32 s19, s19, s18
-; CHECK-NEXT:    s_add_co_i32 s21, s21, s20
-; CHECK-NEXT:    s_add_co_i32 s19, s19, s18
+; CHECK-NEXT:    v_dual_add_nc_u32 v7, v7, v7 :: v_dual_add_nc_u32 v5, v5, v5
+; CHECK-NEXT:    v_dual_add_nc_u32 v4, v4, v4 :: v_dual_add_nc_u32 v10, v10, v14
+; CHECK-NEXT:    v_dual_add_nc_u32 v6, v6, v6 :: v_dual_add_nc_u32 v7, v7, v7
+; CHECK-NEXT:    v_dual_add_nc_u32 v5, v5, v5 :: v_dual_add_nc_u32 v4, v4, v4
+; CHECK-NEXT:    v_dual_add_nc_u32 v9, v9, v13 :: v_dual_add_nc_u32 v2, v2, v6
+; CHECK-NEXT:    v_dual_add_nc_u32 v3, v3, v7 :: v_dual_add_nc_u32 v1, v1, v5
+; CHECK-NEXT:    v_dual_add_nc_u32 v0, v0, v4 :: v_dual_add_nc_u32 v5, v19, v23
+; CHECK-NEXT:    v_dual_add_nc_u32 v4, v8, v12 :: v_dual_add_nc_u32 v6, v18, v22
 ; CHECK-NEXT:    s_barrier_wait -1
 ; CHECK-NEXT:    s_wait_tensorcnt 0xa
 ; CHECK-NEXT:    tensor_load_to_lds s[0:3], s[8:15]
-; CHECK-NEXT:    s_add_co_i32 s21, s21, s20
-; CHECK-NEXT:    s_add_co_i32 s7, s7, s6
-; CHECK-NEXT:    s_add_co_i32 s4, s4, s5
-; CHECK-NEXT:    s_add_co_i32 s7, s7, s6
-; CHECK-NEXT:    s_add_co_i32 s4, s4, s5
-; CHECK-NEXT:    s_add_co_i32 s19, s19, s18
-; CHECK-NEXT:    s_add_co_i32 s21, s21, s20
-; CHECK-NEXT:    s_add_co_i32 s19, s19, s18
-; CHECK-NEXT:    s_add_co_i32 s21, s21, s20
-; CHECK-NEXT:    s_add_co_i32 s7, s7, s6
-; CHECK-NEXT:    s_add_co_i32 s4, s4, s5
-; CHECK-NEXT:    s_add_co_i32 s7, s7, s6
-; CHECK-NEXT:    s_add_co_i32 s4, s4, s5
-; CHECK-NEXT:    s_add_co_i32 s19, s19, s18
-; CHECK-NEXT:    s_add_co_i32 s21, s21, s20
-; CHECK-NEXT:    v_dual_add_nc_u32 v0, v11, v15 :: v_dual_add_nc_u32 v1, v10, v14
-; CHECK-NEXT:    v_dual_add_nc_u32 v2, v9, v13 :: v_dual_add_nc_u32 v3, v8, v12
-; CHECK-NEXT:    v_dual_add_nc_u32 v4, v19, v23 :: v_dual_add_nc_u32 v5, v18, v22
-; CHECK-NEXT:    v_dual_add_nc_u32 v6, v17, v21 :: v_dual_add_nc_u32 v7, v16, v20
-; CHECK-NEXT:    v_dual_add_nc_u32 v8, v27, v31 :: v_dual_add_nc_u32 v9, v26, v30
-; CHECK-NEXT:    v_dual_add_nc_u32 v10, v25, v29 :: v_dual_add_nc_u32 v11, v24, v28
-; CHECK-NEXT:    s_add_co_i32 s19, s19, s18
-; CHECK-NEXT:    s_add_co_i32 s21, s21, s20
-; CHECK-NEXT:    s_add_co_i32 s7, s7, s6
-; CHECK-NEXT:    s_add_co_i32 s4, s4, s5
-; CHECK-NEXT:    s_add_co_i32 s7, s7, s6
-; CHECK-NEXT:    s_add_co_i32 s4, s4, s5
-; CHECK-NEXT:    s_add_co_i32 s19, s19, s18
-; CHECK-NEXT:    s_add_co_i32 s21, s21, s20
-; CHECK-NEXT:    v_dual_add_nc_u32 v2, s19, v2 :: v_dual_add_nc_u32 v3, s21, v3
-; CHECK-NEXT:    v_dual_add_nc_u32 v12, s7, v1 :: v_dual_add_nc_u32 v13, s4, v0
-; CHECK-NEXT:    v_dual_add_nc_u32 v0, v7, v11 :: v_dual_add_nc_u32 v1, v6, v10
-; CHECK-NEXT:    v_dual_add_nc_u32 v5, v5, v9 :: v_dual_add_nc_u32 v4, v4, v8
-; CHECK-NEXT:    v_dual_add_nc_u32 v0, v3, v0 :: v_dual_add_nc_u32 v1, v2, v1
-; CHECK-NEXT:    v_dual_add_nc_u32 v2, v12, v5 :: v_dual_add_nc_u32 v3, v13, v4
+; CHECK-NEXT:    v_dual_add_nc_u32 v7, v17, v21 :: v_dual_add_nc_u32 v8, v16, v20
+; CHECK-NEXT:    v_dual_add_nc_u32 v12, v27, v31 :: v_dual_add_nc_u32 v13, v26, v30
+; CHECK-NEXT:    v_dual_add_nc_u32 v14, v25, v29 :: v_dual_add_nc_u32 v15, v24, v28
+; CHECK-NEXT:    v_dual_add_nc_u32 v0, v0, v4 :: v_dual_add_nc_u32 v1, v1, v9
+; CHECK-NEXT:    v_dual_add_nc_u32 v2, v2, v10 :: v_dual_add_nc_u32 v3, v3, v11
+; CHECK-NEXT:    v_dual_add_nc_u32 v4, v8, v15 :: v_dual_add_nc_u32 v7, v7, v14
+; CHECK-NEXT:    v_dual_add_nc_u32 v6, v6, v13 :: v_dual_add_nc_u32 v5, v5, v12
+; CHECK-NEXT:    v_dual_add_nc_u32 v0, v0, v4 :: v_dual_add_nc_u32 v1, v1, v7
+; CHECK-NEXT:    v_dual_add_nc_u32 v2, v2, v6 :: v_dual_add_nc_u32 v3, v3, v5
 ; CHECK-NEXT:    global_store_b128 v32, v[0:3], s[16:17]
 ; CHECK-NEXT:    s_endpgm
 entry:

@@ -1952,8 +1952,8 @@ define <8 x i32> @gather_v8i32_v8i32(<8 x i32> %trigger) {
 ; AVX2-GATHER-NEXT:    vpgatherdd %ymm3, c+12(,%ymm1), %ymm2
 ; AVX2-GATHER-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; AVX2-GATHER-NEXT:    vpgatherdd %ymm0, c+28(,%ymm1), %ymm3
-; AVX2-GATHER-NEXT:    vpaddd %ymm3, %ymm2, %ymm0
-; AVX2-GATHER-NEXT:    vpaddd %ymm3, %ymm0, %ymm0
+; AVX2-GATHER-NEXT:    vpaddd %ymm3, %ymm3, %ymm0
+; AVX2-GATHER-NEXT:    vpaddd %ymm0, %ymm2, %ymm0
 ; AVX2-GATHER-NEXT:    retq
 ;
 ; AVX512F-LABEL: gather_v8i32_v8i32:
@@ -1968,8 +1968,8 @@ define <8 x i32> @gather_v8i32_v8i32(<8 x i32> %trigger) {
 ; AVX512F-NEXT:    vpgatherdd c+12(,%zmm0), %zmm1 {%k2}
 ; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX512F-NEXT:    vpgatherdd c+28(,%zmm0), %zmm2 {%k1}
-; AVX512F-NEXT:    vpaddd %ymm2, %ymm1, %ymm0
-; AVX512F-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
+; AVX512F-NEXT:    vpaddd %ymm2, %ymm2, %ymm0
+; AVX512F-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: gather_v8i32_v8i32:
@@ -1981,8 +1981,8 @@ define <8 x i32> @gather_v8i32_v8i32(<8 x i32> %trigger) {
 ; AVX512VL-NEXT:    vpgatherdd c+12(,%ymm0), %ymm1 {%k2}
 ; AVX512VL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX512VL-NEXT:    vpgatherdd c+28(,%ymm0), %ymm2 {%k1}
-; AVX512VL-NEXT:    vpaddd %ymm2, %ymm1, %ymm0
-; AVX512VL-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
+; AVX512VL-NEXT:    vpaddd %ymm2, %ymm2, %ymm0
+; AVX512VL-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
 ; AVX512VL-NEXT:    retq
   %1 = icmp eq <8 x i32> %trigger, zeroinitializer
   %2 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> getelementptr (%struct.a, <8 x ptr> <ptr @c, ptr @c, ptr @c, ptr @c, ptr @c, ptr @c, ptr @c, ptr @c>, <8 x i64> zeroinitializer, i32 0, <8 x i64> <i64 3, i64 3, i64 3, i64 3, i64 3, i64 3, i64 3, i64 3>), i32 4, <8 x i1> %1, <8 x i32> undef)
@@ -2570,8 +2570,8 @@ define <8 x i32> @masked_gather_v8i32_v8i32(i8 %trigger) {
 ; AVX2-GATHER-NEXT:    vpgatherdd %ymm2, c+12(,%ymm1), %ymm3
 ; AVX2-GATHER-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX2-GATHER-NEXT:    vpgatherdd %ymm0, c+28(,%ymm1), %ymm2
-; AVX2-GATHER-NEXT:    vpaddd %ymm2, %ymm3, %ymm0
-; AVX2-GATHER-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
+; AVX2-GATHER-NEXT:    vpaddd %ymm2, %ymm2, %ymm0
+; AVX2-GATHER-NEXT:    vpaddd %ymm0, %ymm3, %ymm0
 ; AVX2-GATHER-NEXT:    retq
 ;
 ; AVX512F-LABEL: masked_gather_v8i32_v8i32:
@@ -2584,8 +2584,8 @@ define <8 x i32> @masked_gather_v8i32_v8i32(i8 %trigger) {
 ; AVX512F-NEXT:    vpgatherdd c+12(,%zmm0), %zmm1 {%k2}
 ; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX512F-NEXT:    vpgatherdd c+28(,%zmm0), %zmm2 {%k1}
-; AVX512F-NEXT:    vpaddd %ymm2, %ymm1, %ymm0
-; AVX512F-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
+; AVX512F-NEXT:    vpaddd %ymm2, %ymm2, %ymm0
+; AVX512F-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: masked_gather_v8i32_v8i32:
@@ -2597,8 +2597,8 @@ define <8 x i32> @masked_gather_v8i32_v8i32(i8 %trigger) {
 ; AVX512VL-NEXT:    vpgatherdd c+12(,%ymm0), %ymm1 {%k2}
 ; AVX512VL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX512VL-NEXT:    vpgatherdd c+28(,%ymm0), %ymm2 {%k1}
-; AVX512VL-NEXT:    vpaddd %ymm2, %ymm1, %ymm0
-; AVX512VL-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
+; AVX512VL-NEXT:    vpaddd %ymm2, %ymm2, %ymm0
+; AVX512VL-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
 ; AVX512VL-NEXT:    retq
   %1 = bitcast i8 %trigger to <8 x i1>
   %2 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> getelementptr (%struct.a, <8 x ptr> <ptr @c, ptr @c, ptr @c, ptr @c, ptr @c, ptr @c, ptr @c, ptr @c>, <8 x i64> zeroinitializer, i32 0, <8 x i64> <i64 3, i64 3, i64 3, i64 3, i64 3, i64 3, i64 3, i64 3>), i32 4, <8 x i1> %1, <8 x i32> undef)
