@@ -53,7 +53,10 @@ static uint32_t g_initialize_count = 0;
 // Upper bound on the timeout used when running a utility expression with
 // only one thread allowed to run.
 static std::chrono::microseconds GetLoaderOneThreadTimeout(Process *process) {
-  return std::chrono::microseconds(process->GetUtilityExpressionTimeout()) / 2;
+  constexpr std::chrono::seconds preferred(5);
+  return std::min<std::chrono::microseconds>(
+      preferred,
+      std::chrono::microseconds(process->GetUtilityExpressionTimeout()) / 2);
 }
 
 namespace {
