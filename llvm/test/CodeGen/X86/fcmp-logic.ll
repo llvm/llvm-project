@@ -433,3 +433,190 @@ define i1 @PR140534(i32 %a0, i32 %a1, i32 %a2) {
   %or = or i1 %cmp0, %cmp2
   ret i1 %or
 }
+
+; Two FP compares that another compare separates in a chain of logic ops.
+
+; Int64 > Float64 comparison. The olt against 2^63 becomes SETLT because
+; neither operand can be NaN, so the generic reassociation of compares with the
+; same predicate pairs it with the integer compare instead of the oeq.
+define i1 @sitofp_i64_gt_f64(i64 %x, double %y) {
+; SSE2-LABEL: sitofp_i64_gt_f64:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    cvtsi2sd %rdi, %xmm1
+; SSE2-NEXT:    ucomisd %xmm0, %xmm1
+; SSE2-NEXT:    seta %cl
+; SSE2-NEXT:    ucomisd %xmm1, %xmm0
+; SSE2-NEXT:    setnp %al
+; SSE2-NEXT:    sete %dl
+; SSE2-NEXT:    andb %al, %dl
+; SSE2-NEXT:    ucomisd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE2-NEXT:    setb %sil
+; SSE2-NEXT:    cvttsd2si %xmm1, %rax
+; SSE2-NEXT:    cmpq %rdi, %rax
+; SSE2-NEXT:    setl %al
+; SSE2-NEXT:    andb %dl, %al
+; SSE2-NEXT:    andb %sil, %al
+; SSE2-NEXT:    orb %cl, %al
+; SSE2-NEXT:    retq
+;
+; AVX-LABEL: sitofp_i64_gt_f64:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vcvtsi2sd %rdi, %xmm15, %xmm1
+; AVX-NEXT:    vucomisd %xmm0, %xmm1
+; AVX-NEXT:    seta %cl
+; AVX-NEXT:    vucomisd %xmm1, %xmm0
+; AVX-NEXT:    setnp %al
+; AVX-NEXT:    sete %dl
+; AVX-NEXT:    andb %al, %dl
+; AVX-NEXT:    vucomisd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; AVX-NEXT:    setb %sil
+; AVX-NEXT:    vcvttsd2si %xmm1, %rax
+; AVX-NEXT:    cmpq %rdi, %rax
+; AVX-NEXT:    setl %al
+; AVX-NEXT:    andb %dl, %al
+; AVX-NEXT:    andb %sil, %al
+; AVX-NEXT:    orb %cl, %al
+; AVX-NEXT:    retq
+  %d = sitofp i64 %x to double
+  %lt = fcmp olt double %y, %d
+  %eq = fcmp oeq double %y, %d
+  %inrange = fcmp olt double %d, 0x43E0000000000000
+  %and1 = and i1 %eq, %inrange
+  %t = fptosi double %d to i64
+  %cmp = icmp slt i64 %t, %x
+  %and2 = and i1 %and1, %cmp
+  %or = or i1 %lt, %and2
+  ret i1 %or
+}
+
+define i1 @olt_icmp_ole_or_f32(float %w, float %x, float %y, float %z, i32 %a, i32 %b) {
+; SSE2-LABEL: olt_icmp_ole_or_f32:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    ucomiss %xmm0, %xmm1
+; SSE2-NEXT:    seta %cl
+; SSE2-NEXT:    cmpl %esi, %edi
+; SSE2-NEXT:    setg %al
+; SSE2-NEXT:    ucomiss %xmm2, %xmm3
+; SSE2-NEXT:    setae %dl
+; SSE2-NEXT:    orb %cl, %al
+; SSE2-NEXT:    orb %dl, %al
+; SSE2-NEXT:    retq
+;
+; AVX-LABEL: olt_icmp_ole_or_f32:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vucomiss %xmm0, %xmm1
+; AVX-NEXT:    seta %cl
+; AVX-NEXT:    cmpl %esi, %edi
+; AVX-NEXT:    setg %al
+; AVX-NEXT:    vucomiss %xmm2, %xmm3
+; AVX-NEXT:    setae %dl
+; AVX-NEXT:    orb %cl, %al
+; AVX-NEXT:    orb %dl, %al
+; AVX-NEXT:    retq
+  %f1 = fcmp olt float %w, %x
+  %i = icmp sgt i32 %a, %b
+  %f2 = fcmp ole float %y, %z
+  %or1 = or i1 %f1, %i
+  %or2 = or i1 %or1, %f2
+  ret i1 %or2
+}
+
+define i1 @icmp_olt_ole_and_f64(double %w, double %x, double %y, double %z, i32 %a, i32 %b) {
+; SSE2-LABEL: icmp_olt_ole_and_f64:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    cmpl %esi, %edi
+; SSE2-NEXT:    setg %cl
+; SSE2-NEXT:    ucomisd %xmm0, %xmm1
+; SSE2-NEXT:    seta %al
+; SSE2-NEXT:    ucomisd %xmm2, %xmm3
+; SSE2-NEXT:    setae %dl
+; SSE2-NEXT:    andb %cl, %al
+; SSE2-NEXT:    andb %dl, %al
+; SSE2-NEXT:    retq
+;
+; AVX-LABEL: icmp_olt_ole_and_f64:
+; AVX:       # %bb.0:
+; AVX-NEXT:    cmpl %esi, %edi
+; AVX-NEXT:    setg %cl
+; AVX-NEXT:    vucomisd %xmm0, %xmm1
+; AVX-NEXT:    seta %al
+; AVX-NEXT:    vucomisd %xmm2, %xmm3
+; AVX-NEXT:    setae %dl
+; AVX-NEXT:    andb %cl, %al
+; AVX-NEXT:    andb %dl, %al
+; AVX-NEXT:    retq
+  %i = icmp sgt i32 %a, %b
+  %f1 = fcmp olt double %w, %x
+  %f2 = fcmp ole double %y, %z
+  %and1 = and i1 %i, %f1
+  %and2 = and i1 %f2, %and1
+  ret i1 %and2
+}
+
+define i1 @olt_icmp_ole_xor_f64(double %w, double %x, double %y, double %z, i32 %a, i32 %b) {
+; SSE2-LABEL: olt_icmp_ole_xor_f64:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    ucomisd %xmm0, %xmm1
+; SSE2-NEXT:    seta %cl
+; SSE2-NEXT:    cmpl %esi, %edi
+; SSE2-NEXT:    setg %al
+; SSE2-NEXT:    ucomisd %xmm2, %xmm3
+; SSE2-NEXT:    setae %dl
+; SSE2-NEXT:    xorb %cl, %al
+; SSE2-NEXT:    xorb %dl, %al
+; SSE2-NEXT:    retq
+;
+; AVX-LABEL: olt_icmp_ole_xor_f64:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vucomisd %xmm0, %xmm1
+; AVX-NEXT:    seta %cl
+; AVX-NEXT:    cmpl %esi, %edi
+; AVX-NEXT:    setg %al
+; AVX-NEXT:    vucomisd %xmm2, %xmm3
+; AVX-NEXT:    setae %dl
+; AVX-NEXT:    xorb %cl, %al
+; AVX-NEXT:    xorb %dl, %al
+; AVX-NEXT:    retq
+  %f1 = fcmp olt double %w, %x
+  %i = icmp sgt i32 %a, %b
+  %f2 = fcmp ole double %y, %z
+  %xor1 = xor i1 %f1, %i
+  %xor2 = xor i1 %xor1, %f2
+  ret i1 %xor2
+}
+
+; Negative test: the inner logic op has another use.
+define i1 @olt_icmp_ole_and_f64_use(double %w, double %x, double %y, double %z, i32 %a, i32 %b, ptr %p) {
+; SSE2-LABEL: olt_icmp_ole_and_f64_use:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    ucomisd %xmm0, %xmm1
+; SSE2-NEXT:    seta %cl
+; SSE2-NEXT:    cmpl %esi, %edi
+; SSE2-NEXT:    setg %al
+; SSE2-NEXT:    ucomisd %xmm2, %xmm3
+; SSE2-NEXT:    setae %sil
+; SSE2-NEXT:    andb %cl, %al
+; SSE2-NEXT:    movb %al, (%rdx)
+; SSE2-NEXT:    andb %sil, %al
+; SSE2-NEXT:    retq
+;
+; AVX-LABEL: olt_icmp_ole_and_f64_use:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vucomisd %xmm0, %xmm1
+; AVX-NEXT:    seta %cl
+; AVX-NEXT:    cmpl %esi, %edi
+; AVX-NEXT:    setg %al
+; AVX-NEXT:    vucomisd %xmm2, %xmm3
+; AVX-NEXT:    setae %sil
+; AVX-NEXT:    andb %cl, %al
+; AVX-NEXT:    movb %al, (%rdx)
+; AVX-NEXT:    andb %sil, %al
+; AVX-NEXT:    retq
+  %f1 = fcmp olt double %w, %x
+  %i = icmp sgt i32 %a, %b
+  %f2 = fcmp ole double %y, %z
+  %and1 = and i1 %f1, %i
+  store i1 %and1, ptr %p
+  %and2 = and i1 %and1, %f2
+  ret i1 %and2
+}
