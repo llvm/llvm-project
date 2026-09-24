@@ -27931,12 +27931,25 @@ bool RISCVTargetLowering::isEligibleForTailCallOptimization(
     if (VA.getLocInfo() == CCValAssign::Indirect)
       return false;
 
-  // Do not tail call opt if either caller or callee uses struct return
-  // semantics.
-  auto IsCallerStructRet = Caller.hasStructRetAttr();
-  auto IsCalleeStructRet = Outs.empty() ? false : Outs[0].Flags.isSRet();
-  if (IsCallerStructRet || IsCalleeStructRet)
-    return false;
+  // If the callee has an sret parameter, conservatively require it to receive
+  // the caller's sret pointer. If only the caller has an sret parameter, treat
+  // that pointer like an ordinary pointer when passing call arguments.
+  // TODO: Support other sret buffers that outlive the caller, such as globals.
+  bool IsCalleeStructRet = llvm::any_of(
+      Outs, [](const ISD::OutputArg &Out) { return Out.Flags.isSRet(); });
+  if (IsCalleeStructRet) {
+    // Do not allow the tail call if the caller has no sret parameter.
+    if (!Caller.hasStructRetAttr() || !CLI.CB || CLI.CB->arg_empty())
+      return false;
+
+    // RISC-V psABI passes the sret pointer as the first argument. The Microsoft
+    // C++ ABI may instead pass it as the second argument after `this`, but that
+    // ABI is rarely used on RISC-V and is not supported here.
+    assert(Caller.getArg(0)->hasStructRetAttr() && Outs[0].Flags.isSRet() &&
+           "sret pointer must be argument 0");
+    if (CLI.CB->getArgOperand(0) != Caller.getArg(0))
+      return false;
+  }
 
   // The callee has to preserve all registers the caller needs to preserve.
   const RISCVRegisterInfo *TRI = Subtarget.getRegisterInfo();
