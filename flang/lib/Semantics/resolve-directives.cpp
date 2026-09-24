@@ -1058,7 +1058,13 @@ private:
 
 void ResolveAccParts(SemanticsContext &context, const parser::ProgramUnit &node,
     Scope *topScope) {
-  if (context.IsEnabled(common::LanguageFeature::OpenACC)) {
+  // A CUDA Fortran compilation that was not given an OpenACC target still has
+  // to resolve the directives recovered from module files, because they can
+  // describe the device-side call target of a procedure through
+  // `acc routine bind(...)`. The sentinel is not recognized in the main source
+  // in that case, so no user directive can reach this point.
+  if (context.IsEnabled(common::LanguageFeature::OpenACC) ||
+      context.IsEnabled(common::LanguageFeature::CUDA)) {
     AccAttributeVisitor{context, topScope}.Walk(node);
   }
 }
@@ -2901,6 +2907,10 @@ static bool IsOpenMPAggregate(const Symbol &symbol) {
     return false;
 
   const auto *type{symbol.GetType()};
+  // Symbols without a declared type (e.g. a derived-type name) are not
+  // variables and belong to no defaultmap category.
+  if (!type)
+    return false;
   // OpenMP categorizes Fortran characters as aggregates.
   if (type->category() == Fortran::semantics::DeclTypeSpec::Category::Character)
     return true;
@@ -2924,6 +2934,8 @@ static bool IsOpenMPScalar(const Symbol &symbol) {
       IsAllocatable(symbol))
     return false;
   const auto *type{symbol.GetType()};
+  if (!type)
+    return false;
   if ((!symbol.GetShape() || symbol.GetShape()->empty()) &&
       (type->category() ==
               Fortran::semantics::DeclTypeSpec::Category::Numeric ||

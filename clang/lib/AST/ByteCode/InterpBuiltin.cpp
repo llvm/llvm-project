@@ -861,11 +861,9 @@ static bool interp__builtin_expect(InterpState &S, CodePtr OpPC,
   if (NumArgs == 3)
     S.Stk.discard<Floating>();
   discard(S.Stk, ArgT);
+  // Top of the stack is now the first paramter. Leave it there as the return
+  // value.
 
-  APSInt Val;
-  if (!popToAPSInt(S.Stk, ArgT, Val))
-    return false;
-  pushInteger(S, Val, Call->getType());
   return true;
 }
 

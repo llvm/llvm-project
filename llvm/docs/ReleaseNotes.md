@@ -161,6 +161,10 @@ Makes programs 10x faster by doing Special New Thing.
   The `llvm.vp.merge` will be folded away but the `%evl` will be propagated to
   the add instruction.
 
+* The `llvm.strip.invariant.group` intrinsic has been removed. It existed to
+  work around a bug relating to replacement of pointers with different
+  provenance based on dominating equality conditions, and is no longer needed.
+
 * Introduced the generic `!atomic.ignore.denormal.mode` metadata for
   floating-point `atomicrmw` instructions, generalizing the previously
   AMDGPU-specific `!amdgpu.ignore.denormal.mode`.
@@ -176,6 +180,11 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to building LLVM
 
+* A new `LLVM_ENABLE_LZMA` option (`ON`, `OFF` or `FORCE_ON`; default `ON`)
+  controls whether LLVM links liblzma for xz decompression. It replaces LLDB's
+  `LLDB_ENABLE_LZMA`, which is deprecated: a monorepo build maps it onto
+  `LLVM_ENABLE_LZMA`, and it has no effect in a standalone LLDB build.
+
 * The DirectX backend is now an official target and has moved from
   `LLVM_ALL_EXPERIMENTAL_TARGETS` to `LLVM_ALL_TARGETS`. It is now built by
   default and no longer requires `LLVM_EXPERIMENTAL_TARGETS_TO_BUILD`.
@@ -185,6 +194,12 @@ Makes programs 10x faster by doing Special New Thing.
   libraries, headers, resources, and CMake targets needed by Flang. Explicitly
   enabling Clang or MLIR retains the project's complete build, test, and
   install behavior.
+
+### Changes to the Windows installer
+
+* The project has migrated to MSI installers. Previous installations of LLVM,
+  prior (and including) 23.1.0, must be manually uninstalled first, before
+  installing this new release.
 
 ### Changes to TableGen
 
@@ -256,6 +271,9 @@ Makes programs 10x faster by doing Special New Thing.
   register, that is used when software guarded branch is needed.
 * Updated the experimental `Zvzip` extension to the v0.3 draft specification.
 * Added the experimental `RVA23P1S64` and `RVB23P1S64` profiles.
+* Updated the canonical order of one-letter RISC-V extensions to match the
+  latest specification, placing ``p`` after ``v`` and removing unused ``n``.
+* Adds experimental assembler support for the `Xqccmi` (Qualcomm 16-bit Instruction Lookup Table) vendor extension.
 
 ### Changes to the WebAssembly Backend
 
@@ -268,11 +286,21 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the X86 Backend
 
+* Added assembler and code generation support for the `AVX10_V2_AUX`
+  instruction set.
+
 ### Changes to the OCaml bindings
+
+* Removed the `size_of` and `align_of` functions. Create a constant based on
+  the result of `DataLayout.abi_size` or `DataLayout.abi_align` instead.
 
 ### Changes to the Python bindings
 
 ### Changes to the C API
+
+* `LLVMAlignOf()` and `LLVMSizeOf()` have been deprecated. Create a constant
+  based on the result of `LLVMABIAlignmentOfType()` or `LLVMABISizeOfType()`
+  instead.
 
 ### Changes to the CodeGen infrastructure
 
@@ -299,6 +327,9 @@ Makes programs 10x faster by doing Special New Thing.
   runtime's command line instead of following it. A runtime that dispatches on a
   leading subcommand can therefore name that subcommand through this setting,
   rather than needing a wrapper script.
+* MiniDebugInfo (the ELF `.gnu_debugdata` section) is now decompressed by LLVM
+  rather than by LLDB's own liblzma binding, and is enabled with
+  `LLVM_ENABLE_LZMA` instead of the deprecated `LLDB_ENABLE_LZMA`.
 
 #### SBAPI
 
@@ -335,7 +366,7 @@ Makes programs 10x faster by doing Special New Thing.
 
 A wide variety of additional information is available on the
 [LLVM web page](https://llvm.org/), in particular in the
-[documentation](https://llvm.org/docs/) section.  The web page also contains
+[documentation](index.md) section.  The web page also contains
 versions of the API documentation which is up-to-date with the Git version of
 the source code.  You can access versions of these documents specific to this
 release by going into the `llvm/docs/` directory in the LLVM tree.

@@ -185,6 +185,7 @@
 #include "llvm/CodeGen/RemoveRedundantDebugValues.h"
 #include "llvm/CodeGen/RenameIndependentSubregs.h"
 #include "llvm/CodeGen/ReplaceWithVeclib.h"
+#include "llvm/CodeGen/ResetMachineFunctionPass.h"
 #include "llvm/CodeGen/SafeStack.h"
 #include "llvm/CodeGen/SanitizerBinaryMetadata.h"
 #include "llvm/CodeGen/SelectOptimize.h"
@@ -1614,11 +1615,6 @@ parseStructuralHashPrinterPassOptions(StringRef Params) {
   return make_error<StringError>(
       formatv("invalid structural hash printer parameter '{}'", Params).str(),
       inconvertibleErrorCode());
-}
-
-Expected<bool> parseWinEHPrepareOptions(StringRef Params) {
-  return PassBuilder::parseSinglePassOption(Params, "demote-catchswitch-only",
-                                            "WinEHPreparePass");
 }
 
 Expected<GlobalMergeOptions> parseGlobalMergeOptions(StringRef Params) {

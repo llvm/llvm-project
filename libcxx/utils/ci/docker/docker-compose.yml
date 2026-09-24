@@ -8,23 +8,14 @@
 #
 
 services:
-  libcxx-linux-builder-base:
-    image: ghcr.io/llvm/libcxx-linux-builder-base:${TAG:-latest}
-    build:
-      context: ../../../.. # monorepo root
-      dockerfile: libcxx/utils/ci/docker/linux-builder-base.dockerfile
-      args:
-        GCC_HEAD_VERSION: 17
-        LLVM_HEAD_VERSION: 23
-
   libcxx-linux-builder:
     image: ghcr.io/llvm/libcxx-linux-builder:${TAG:-latest}
     build:
       context: ../../../.. # monorepo root
       dockerfile: libcxx/utils/ci/docker/linux-builder.dockerfile
       args:
-        BASE_IMAGE_VERSION: 8ece73c9f8b54fea6a98e9e4c55f9a2e6ccc9b3c
-        GITHUB_RUNNER_VERSION: 2.335.1
+        GCC_HEAD_VERSION: 17
+        LLVM_HEAD_VERSION: 23
 
   libcxx-android-builder:
     image: ghcr.io/llvm/libcxx-android-builder:${TAG:-latest}
