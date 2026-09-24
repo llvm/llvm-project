@@ -9,6 +9,7 @@
 #ifndef MLIR_TRANSFORMS_LOOPINVARIANTCODEMOTIONUTILS_H
 #define MLIR_TRANSFORMS_LOOPINVARIANTCODEMOTIONUTILS_H
 
+#include "mlir/Analysis/AliasAnalysis.h"
 #include "mlir/Support/LLVM.h"
 
 #include "llvm/ADT/SmallVector.h"
@@ -71,6 +72,11 @@ size_t moveLoopInvariantCode(
 /// Move side-effect free loop invariant code out of a loop-like op using
 /// methods provided by the interface.
 size_t moveLoopInvariantCode(LoopLikeOpInterface loopLike);
+
+/// Hoist loop-invariant load ops from the given loop-like op. Return the number
+/// of load ops that are hoisted.
+size_t hoistLoopInvariantLoadOps(LoopLikeOpInterface loopLike,
+                                 AliasAnalysis &aa);
 
 /// Hoist loop-invariant tensor subsets (subset extraction and subset insertion
 /// ops) from loop-like ops. Extraction ops are moved before the loop. Insertion
