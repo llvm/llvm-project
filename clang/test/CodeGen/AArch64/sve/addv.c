@@ -2,14 +2,16 @@
 
 // DEFINE: %{optimize} = opt -passes=mem2reg,instcombine,tailcallelim -S
 
-// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve                        -fclangir -emit-cir -disable-O0-optnone -o - %s                | FileCheck %s --check-prefixes=ALL,CIR %}
-// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve -DSVE_OVERLOADED_FORMS -fclangir -emit-cir -disable-O0-optnone -o - %s                | FileCheck %s --check-prefixes=ALL,CIR %}
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve                        -fclangir -emit-cir -disable-O0-optnone -o - %s                       | FileCheck %s --check-prefixes=C,CIR %}
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve -DSVE_OVERLOADED_FORMS -fclangir -emit-cir -disable-O0-optnone -o - %s                       | FileCheck %s --check-prefixes=C,CIR %}
 
-// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve                        -fclangir -emit-llvm -disable-O0-optnone -o - %s | %{optimize} | FileCheck %s --check-prefixes=ALL,LLVM %}
-// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve -DSVE_OVERLOADED_FORMS -fclangir -emit-llvm -disable-O0-optnone -o - %s | %{optimize} | FileCheck %s --check-prefixes=ALL,LLVM %}
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve                        -fclangir -emit-llvm -disable-O0-optnone -o - %s        | %{optimize} | FileCheck %s --check-prefixes=C,LLVM %}
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve -DSVE_OVERLOADED_FORMS -fclangir -emit-llvm -disable-O0-optnone -o - %s        | %{optimize} | FileCheck %s --check-prefixes=C,LLVM %}
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve -DSVE_OVERLOADED_FORMS -fclangir -emit-llvm -disable-O0-optnone -o - -x c++ %s | %{optimize} | FileCheck %s --check-prefixes=CPP,LLVM %}
 
-// RUN:                   %clang_cc1_cg_arm64_sve                                  -emit-llvm -disable-O0-optnone -o - %s | %{optimize} | FileCheck %s --check-prefixes=ALL,LLVM
-// RUN:                   %clang_cc1_cg_arm64_sve -DSVE_OVERLOADED_FORMS           -emit-llvm -disable-O0-optnone -o - %s | %{optimize} | FileCheck %s --check-prefixes=ALL,LLVM
+// RUN:                   %clang_cc1_cg_arm64_sve                                  -emit-llvm -disable-O0-optnone -o - %s        | %{optimize} | FileCheck %s --check-prefixes=C,LLVM
+// RUN:                   %clang_cc1_cg_arm64_sve -DSVE_OVERLOADED_FORMS           -emit-llvm -disable-O0-optnone -o - %s        | %{optimize} | FileCheck %s --check-prefixes=C,LLVM
+// RUN:                   %clang_cc1_cg_arm64_sve -DSVE_OVERLOADED_FORMS           -emit-llvm -disable-O0-optnone -o - -x c++ %s | %{optimize} | FileCheck %s --check-prefixes=CPP,LLVM
 
 //=============================================================================
 // NOTES
@@ -32,7 +34,8 @@
 #define SVE_ACLE_FUNC(A1,A2,A3,A4) A1##A2##A3##A4
 #endif
 
-// ALL-LABEL: @test_svaddv_s8
+// C-LABEL: @test_svaddv_s8(
+// CPP-LABEL: @_Z14test_svaddv_s8u10__SVBool_tu10__SVInt8_t(
 int64_t test_svaddv_s8(svbool_t pg, svint8_t op) MODE_ATTR
 {
 // CIR:           %[[RES:.*]] = cir.call_llvm_intrinsic "aarch64.sve.saddv" %{{.*}}, %{{.*}} :
@@ -44,7 +47,8 @@ int64_t test_svaddv_s8(svbool_t pg, svint8_t op) MODE_ATTR
   return SVE_ACLE_FUNC(svaddv,_s8,,)(pg, op);
 }
 
-// ALL-LABEL: @test_svaddv_s16
+// C-LABEL: @test_svaddv_s16(
+// CPP-LABEL: @_Z15test_svaddv_s16u10__SVBool_tu11__SVInt16_t(
 int64_t test_svaddv_s16(svbool_t pg, svint16_t op) MODE_ATTR
 {
 // CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
@@ -59,7 +63,8 @@ int64_t test_svaddv_s16(svbool_t pg, svint16_t op) MODE_ATTR
   return SVE_ACLE_FUNC(svaddv,_s16,,)(pg, op);
 }
 
-// ALL-LABEL: @test_svaddv_s32
+// C-LABEL: @test_svaddv_s32(
+// CPP-LABEL: @_Z15test_svaddv_s32u10__SVBool_tu11__SVInt32_t(
 int64_t test_svaddv_s32(svbool_t pg, svint32_t op) MODE_ATTR
 {
 // CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
@@ -74,7 +79,8 @@ int64_t test_svaddv_s32(svbool_t pg, svint32_t op) MODE_ATTR
   return SVE_ACLE_FUNC(svaddv,_s32,,)(pg, op);
 }
 
-// ALL-LABEL: @test_svaddv_s64
+// C-LABEL: @test_svaddv_s64(
+// CPP-LABEL: @_Z15test_svaddv_s64u10__SVBool_tu11__SVInt64_t(
 int64_t test_svaddv_s64(svbool_t pg, svint64_t op) MODE_ATTR
 {
 // CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
@@ -89,7 +95,8 @@ int64_t test_svaddv_s64(svbool_t pg, svint64_t op) MODE_ATTR
   return SVE_ACLE_FUNC(svaddv,_s64,,)(pg, op);
 }
 
-// ALL-LABEL: @test_svaddv_u8
+// C-LABEL: @test_svaddv_u8(
+// CPP-LABEL: @_Z14test_svaddv_u8u10__SVBool_tu11__SVUint8_t(
 uint64_t test_svaddv_u8(svbool_t pg, svuint8_t op) MODE_ATTR
 {
 // CIR:           %[[RES:.*]] = cir.call_llvm_intrinsic "aarch64.sve.uaddv" %{{.*}}, %{{.*}} :
@@ -101,7 +108,8 @@ uint64_t test_svaddv_u8(svbool_t pg, svuint8_t op) MODE_ATTR
   return SVE_ACLE_FUNC(svaddv,_u8,,)(pg, op);
 }
 
-// ALL-LABEL: @test_svaddv_u16
+// C-LABEL: @test_svaddv_u16(
+// CPP-LABEL: @_Z15test_svaddv_u16u10__SVBool_tu12__SVUint16_t(
 uint64_t test_svaddv_u16(svbool_t pg, svuint16_t op) MODE_ATTR
 {
 // CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
@@ -116,7 +124,8 @@ uint64_t test_svaddv_u16(svbool_t pg, svuint16_t op) MODE_ATTR
   return SVE_ACLE_FUNC(svaddv,_u16,,)(pg, op);
 }
 
-// ALL-LABEL: @test_svaddv_u32
+// C-LABEL: @test_svaddv_u32(
+// CPP-LABEL: @_Z15test_svaddv_u32u10__SVBool_tu12__SVUint32_t(
 uint64_t test_svaddv_u32(svbool_t pg, svuint32_t op) MODE_ATTR
 {
 // CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
@@ -131,7 +140,8 @@ uint64_t test_svaddv_u32(svbool_t pg, svuint32_t op) MODE_ATTR
   return SVE_ACLE_FUNC(svaddv,_u32,,)(pg, op);
 }
 
-// ALL-LABEL: @test_svaddv_u64
+// C-LABEL: @test_svaddv_u64(
+// CPP-LABEL: @_Z15test_svaddv_u64u10__SVBool_tu12__SVUint64_t(
 uint64_t test_svaddv_u64(svbool_t pg, svuint64_t op) MODE_ATTR
 {
 // CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
@@ -146,7 +156,8 @@ uint64_t test_svaddv_u64(svbool_t pg, svuint64_t op) MODE_ATTR
   return SVE_ACLE_FUNC(svaddv,_u64,,)(pg, op);
 }
 
-// ALL-LABEL: @test_svaddv_f16
+// C-LABEL: @test_svaddv_f16(
+// CPP-LABEL: @_Z15test_svaddv_f16u10__SVBool_tu13__SVFloat16_t(
 float16_t test_svaddv_f16(svbool_t pg, svfloat16_t op) MODE_ATTR
 {
 // CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
@@ -161,7 +172,8 @@ float16_t test_svaddv_f16(svbool_t pg, svfloat16_t op) MODE_ATTR
   return SVE_ACLE_FUNC(svaddv,_f16,,)(pg, op);
 }
 
-// ALL-LABEL: @test_svaddv_f32
+// C-LABEL: @test_svaddv_f32(
+// CPP-LABEL: @_Z15test_svaddv_f32u10__SVBool_tu13__SVFloat32_t(
 float32_t test_svaddv_f32(svbool_t pg, svfloat32_t op) MODE_ATTR
 {
 // CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
@@ -176,7 +188,8 @@ float32_t test_svaddv_f32(svbool_t pg, svfloat32_t op) MODE_ATTR
   return SVE_ACLE_FUNC(svaddv,_f32,,)(pg, op);
 }
 
-// ALL-LABEL: @test_svaddv_f64
+// C-LABEL: @test_svaddv_f64(
+// CPP-LABEL: @_Z15test_svaddv_f64u10__SVBool_tu13__SVFloat64_t(
 float64_t test_svaddv_f64(svbool_t pg, svfloat64_t op) MODE_ATTR
 {
 // CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
