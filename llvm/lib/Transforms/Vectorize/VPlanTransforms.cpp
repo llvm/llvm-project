@@ -873,28 +873,52 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
   }
 }
 
-/// Check if \p VPV is an untruncated wide induction, either before or after the
-/// increment. If so return the header IV (before the increment), otherwise
-/// return null.
-static VPWidenInductionRecipe *
-getOptimizableIVOf(VPValue *VPV, PredicatedScalarEvolution &PSE) {
+/// Return the start value of \p WideIV rebased by the constant \p Offset, or
+/// nullptr if that does not fold to another constant. \p Offset is computed in
+/// the type of the induction's value, which is the type of its start value
+/// unless the induction is truncated.
+static VPValue *rebaseStartValue(VPWidenInductionRecipe *WideIV,
+                                 const APInt &Offset, VPlan &Plan) {
+  const APInt *StartC;
+  if (!match(WideIV->getStartValue(), m_APInt(StartC)) ||
+      StartC->getBitWidth() != Offset.getBitWidth())
+    return nullptr;
+  return Plan.getConstantInt(*StartC + Offset);
+}
+
+/// Check if \p VPV is an untruncated wide induction, either the induction
+/// itself, the induction incremented by its step, or the induction offset by a
+/// constant. If so return the header IV (before the increment) together with
+/// the start value of the affine expression \p VPV computes, otherwise return
+/// {nullptr, nullptr}.
+///
+/// A constant offset is folded into the returned start value, and is only
+/// looked through when that fold yields another constant. The increment by the
+/// step is deliberately not folded into the start, as materializing the new
+/// start would pessimize the exit value users below; for it the induction's own
+/// start value is returned. Callers can tell the two apart by comparing the
+/// returned start against the induction's own start value.
+static std::pair<VPWidenInductionRecipe *, VPValue *>
+getOptimizableIVOf(VPValue *VPV, VPlan &Plan, PredicatedScalarEvolution &PSE) {
   auto *WideIV = dyn_cast<VPWidenInductionRecipe>(VPV);
   if (WideIV) {
     // VPV itself is a wide induction, separately compute the end value for exit
     // users if it is not a truncated IV.
     auto *IntOrFpIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(WideIV);
-    return (IntOrFpIV && IntOrFpIV->getTruncInst()) ? nullptr : WideIV;
+    if (IntOrFpIV && IntOrFpIV->getTruncInst())
+      return {nullptr, nullptr};
+    return {WideIV, WideIV->getStartValue()};
   }
 
   // Check if VPV is an optimizable induction increment.
   VPRecipeBase *Def = VPV->getDefiningRecipe();
   if (!Def || Def->getNumOperands() != 2)
-    return nullptr;
+    return {nullptr, nullptr};
   WideIV = dyn_cast<VPWidenInductionRecipe>(Def->getOperand(0));
   if (!WideIV)
     WideIV = dyn_cast<VPWidenInductionRecipe>(Def->getOperand(1));
   if (!WideIV)
-    return nullptr;
+    return {nullptr, nullptr};
 
   auto IsWideIVInc = [&]() {
     auto &ID = WideIV->getInductionDescriptor();
@@ -929,7 +953,26 @@ getOptimizableIVOf(VPValue *VPV, PredicatedScalarEvolution &PSE) {
     }
     llvm_unreachable("should have been covered by switch above");
   };
-  return IsWideIVInc() ? WideIV : nullptr;
+  if (IsWideIVInc())
+    return {WideIV, WideIV->getStartValue()};
+
+  // Look through a constant offset from the induction. The offset need not be
+  // the induction step, as start + C + i * step stays affine for any constant
+  // C, so it can be folded into the start value.
+  const APInt *C;
+  APInt Offset;
+  if (match(VPV, m_c_Add(m_Specific(WideIV), m_APInt(C))))
+    Offset = *C;
+  else if (match(VPV, m_Sub(m_Specific(WideIV), m_APInt(C))))
+    Offset = -*C;
+  else
+    return {nullptr, nullptr};
+
+  if (Offset.isZero())
+    return {nullptr, nullptr};
+  if (VPValue *Start = rebaseStartValue(WideIV, Offset, Plan))
+    return {WideIV, Start};
+  return {nullptr, nullptr};
 }
 
 /// Attempts to optimize the induction variable exit values for users in the
@@ -941,7 +984,7 @@ static VPValue *optimizeEarlyExitInductionUser(VPlan &Plan, VPValue *Op,
                                m_VPValue(Incoming))))
     return nullptr;
 
-  auto *WideIV = getOptimizableIVOf(Incoming, PSE);
+  auto [WideIV, Start] = getOptimizableIVOf(Incoming, Plan, PSE);
   if (!WideIV)
     return nullptr;
 
@@ -958,17 +1001,16 @@ static VPValue *optimizeEarlyExitInductionUser(VPlan &Plan, VPValue *Op,
       B.createScalarZExtOrTrunc(FirstActiveLane, CanonicalIVType, DL);
   VPValue *EndValue = B.createAdd(CanonicalIV, FirstActiveLane, DL);
 
-  // `getOptimizableIVOf()` always returns the pre-incremented IV, so if it
-  // changed it means the exit is using the incremented value, so we need to
-  // add the step.
-  if (Incoming != WideIV) {
+  // The step of an induction increment is not folded into the start value, so
+  // step the index on by one to account for it.
+  bool IsRebasedStart = Start != WideIV->getStartValue();
+  if (Incoming != WideIV && !IsRebasedStart) {
     VPValue *One = Plan.getConstantInt(CanonicalIVType, 1);
     EndValue = B.createAdd(EndValue, One, DL);
   }
 
-  if (!match(WideIV, m_CanonicalWidenIV())) {
+  if (IsRebasedStart || !match(WideIV, m_CanonicalWidenIV())) {
     const InductionDescriptor &ID = WideIV->getInductionDescriptor();
-    VPValue *Start = WideIV->getStartValue();
     VPValue *Step = WideIV->getStepValue();
     EndValue = B.createDerivedIV(
         ID.getKind(), dyn_cast_or_null<FPMathOperator>(ID.getInductionBinOp()),
@@ -1023,8 +1065,11 @@ optimizeLatchExitInductionUser(VPlan &Plan, VPValue *Op,
                                            m_VPValue(Incoming)))))
     return nullptr;
 
-  VPWidenInductionRecipe *WideIV = getOptimizableIVOf(Incoming, PSE);
-  if (!WideIV)
+  auto [WideIV, Start] = getOptimizableIVOf(Incoming, Plan, PSE);
+  // A start rebased by a constant offset is not reflected in the end values
+  // precomputed for each induction. Such users are left to
+  // optimizeLatchExitIVUserViaSCEV.
+  if (!WideIV || Start != WideIV->getStartValue())
     return nullptr;
 
   VPValue *EndValue = EndValues.lookup(WideIV);
@@ -5952,34 +5997,22 @@ void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
         continue;
 
       VPValue *Op = VPI.getOperand(0);
-
-      // Look through a constant offset, which is folded into the start value
-      // of the narrowed induction below. The offset need not be the induction
-      // step, as start + C + i * step stays affine for any constant C.
-      VPValue *IVOp = Op;
-      APInt Offset;
-      VPValue *X;
-      const APInt *C;
-      if (match(Op, m_c_Add(m_VPValue(X), m_APInt(C)))) {
-        IVOp = X;
-        Offset = *C;
-      } else if (match(Op, m_Sub(m_VPValue(X), m_APInt(C)))) {
-        IVOp = X;
-        Offset = -*C;
-      }
-
-      auto *WideIV = getOptimizableIVOf(IVOp, PSE);
-      if (!WideIV || WideIV != IVOp)
+      auto IVAndStart = getOptimizableIVOf(Op, Plan, PSE);
+      VPWidenInductionRecipe *WideIV = IVAndStart.first;
+      VPValue *Start = IVAndStart.second;
+      if (!WideIV)
         continue;
 
-      // The offset is added in the induction's type, so it can only be folded
-      // into a start value of that same type.
-      VPValue *Start = WideIV->getStartValue();
-      if (IVOp != Op) {
-        const APInt *StartC;
-        if (!match(Start, m_APInt(StartC)))
+      // getOptimizableIVOf does not fold the step of an induction increment
+      // into the start value, as that would pessimize its exit value users.
+      // Fold it here, which is only possible for a constant step.
+      if (Op != WideIV && Start == WideIV->getStartValue()) {
+        const APInt *StepC;
+        if (!match(WideIV->getStepValue(), m_APInt(StepC)))
           continue;
-        Start = Plan.getConstantInt(*StartC + Offset);
+        Start = rebaseStartValue(WideIV, *StepC, Plan);
+        if (!Start)
+          continue;
       }
 
       // Replacing a free truncate would add an induction update instruction to
