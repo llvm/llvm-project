@@ -158,6 +158,10 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
 // CHECK: };
 
 // DEFS-LABEL: NS::AOp definitions
+// DEFS: ::llvm::LogicalResult AOp::setPropertiesFromAttr
+// DEFS: ::mlir::detail::setAttributeProperty(
+// DEFS: ::mlir::Attribute AOp::getPropertiesAsAttr
+// DEFS: ::mlir::detail::appendAttributeProperty(attrs, "attr1", prop.attr1);
 // DEFS: void AOp::build(::mlir::OpBuilder &, ::mlir::OperationState &odsState, ::mlir::TypeRange resultTypes, ::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> attributes, unsigned numRegions) {
 // DEFS:   buildPropertiesAndDiscardableAttributes(odsState, attributes);
 // DEFS: void AOp::build(::mlir::OpBuilder &, ::mlir::OperationState &odsState, ::mlir::TypeRange resultTypes, ::mlir::ValueRange operands, const Properties &properties, ::llvm::ArrayRef<::mlir::NamedAttribute> discardableAttributes, unsigned numRegions) {
