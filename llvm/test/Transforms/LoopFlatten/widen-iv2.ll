@@ -2,9 +2,12 @@
 
 ; This checks updating of phi nodes when the transformation is deemed
 ; unprofitable after IV widening.
+; Assume the flattened trip count does not overflow so the test stays focused
+; on the widening/unprofitability path rather than the versioning fallback.
 
 ; RUN: opt < %s -S -passes='loop(loop-flatten),verify' \
-; RUN:     -verify-loop-info -verify-dom-info -verify-scev | \
+; RUN:     -verify-loop-info -verify-dom-info -verify-scev \
+; RUN:     -loop-flatten-assume-no-overflow=true | \
 ; RUN:     FileCheck %s --check-prefix=CHECK
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
