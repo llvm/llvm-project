@@ -83,8 +83,9 @@ hlsl::getInterpolationMode(InterpolationModifier Modifiers) {
 
 dxbc::PSV::InterpolationMode hlsl::normalizeInterpolationMode(
     dxbc::PSV::InterpolationMode Mode, dxil::ElementType CompType,
-    dxbc::PSV::SemanticKind Kind, Triple::EnvironmentType Stage) {
-  if (Stage != Triple::Pixel)
+    dxbc::PSV::SemanticKind Kind, Triple::EnvironmentType Stage, IOType IO) {
+  if (!((Stage == Triple::Pixel && IO == IOType::In) ||
+        (Stage == Triple::Vertex && IO == IOType::Out)))
     return InterpolationMode::Undefined;
 
   if (Mode == InterpolationMode::Undefined) {

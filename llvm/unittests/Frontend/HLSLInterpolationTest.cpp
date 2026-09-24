@@ -74,21 +74,23 @@ TEST(HLSLInterpolationTest, SamplingLocations) {
 }
 
 TEST(HLSLInterpolationTest, ComponentDefaults) {
-  for (CompType Type :
-       {CompType::F16, CompType::F32, CompType::SNormF16, CompType::UNormF16,
-        CompType::SNormF32, CompType::UNormF32})
-    EXPECT_EQ(normalizeInterpolationMode(InterpMode::Undefined, Type,
-                                         SemanticKind::Arbitrary,
-                                         Triple::Pixel),
-              InterpMode::Linear);
-  for (CompType Type :
-       {CompType::I1, CompType::I16, CompType::U16, CompType::I32,
-        CompType::U32, CompType::I64, CompType::U64, CompType::F64,
-        CompType::SNormF64, CompType::UNormF64})
-    EXPECT_EQ(normalizeInterpolationMode(InterpMode::Undefined, Type,
-                                         SemanticKind::Arbitrary,
-                                         Triple::Pixel),
-              InterpMode::Constant);
+  for (auto Stage : {Triple::Pixel, Triple::Vertex}) {
+    SCOPED_TRACE(Triple::getEnvironmentTypeName(Stage).str());
+    IOType IO = Stage == Triple::Pixel ? IOType::In : IOType::Out;
+    for (CompType Type :
+         {CompType::F16, CompType::F32, CompType::SNormF16, CompType::UNormF16,
+          CompType::SNormF32, CompType::UNormF32})
+      EXPECT_EQ(normalizeInterpolationMode(InterpMode::Undefined, Type,
+                                           SemanticKind::Arbitrary, Stage, IO),
+                InterpMode::Linear);
+    for (CompType Type :
+         {CompType::I1, CompType::I16, CompType::U16, CompType::I32,
+          CompType::U32, CompType::I64, CompType::U64, CompType::F64,
+          CompType::SNormF64, CompType::UNormF64})
+      EXPECT_EQ(normalizeInterpolationMode(InterpMode::Undefined, Type,
+                                           SemanticKind::Arbitrary, Stage, IO),
+                InterpMode::Constant);
+  }
 }
 
 TEST(HLSLInterpolationTest, PositionAndExplicitModes) {
@@ -102,26 +104,38 @@ TEST(HLSLInterpolationTest, PositionAndExplicitModes) {
       InterpMode::LinearNoperspectiveSample,
       InterpMode::LinearNoperspectiveSample,
       InterpMode::Invalid};
-  for (unsigned I = 0; I != 9; ++I) {
-    auto Mode = static_cast<InterpMode>(I);
-    EXPECT_EQ(normalizeInterpolationMode(Mode, CompType::F32,
-                                         SemanticKind::Position, Triple::Pixel),
-              PositionModes[I]);
-    if (Mode != InterpMode::Undefined)
+  for (auto Stage : {Triple::Pixel, Triple::Vertex}) {
+    SCOPED_TRACE(Triple::getEnvironmentTypeName(Stage).str());
+    IOType IO = Stage == Triple::Pixel ? IOType::In : IOType::Out;
+    for (unsigned I = 0; I != 9; ++I) {
+      SCOPED_TRACE(I);
+      auto Mode = static_cast<InterpMode>(I);
       EXPECT_EQ(normalizeInterpolationMode(Mode, CompType::F32,
-                                           SemanticKind::Arbitrary,
-                                           Triple::Pixel),
-                Mode);
+                                           SemanticKind::Position, Stage, IO),
+                PositionModes[I]);
+      if (Mode != InterpMode::Undefined)
+        EXPECT_EQ(normalizeInterpolationMode(
+                      Mode, CompType::F32, SemanticKind::Arbitrary, Stage, IO),
+                  Mode);
+    }
   }
 }
 
-TEST(HLSLInterpolationTest, OtherStages) {
-  for (auto Stage :
-       {Triple::Vertex, Triple::Geometry, Triple::Hull, Triple::Domain,
-        Triple::Mesh, Triple::Compute, Triple::Amplification, Triple::Library})
-    for (unsigned I = 0; I != 9; ++I)
-      for (auto Kind : {SemanticKind::Arbitrary, SemanticKind::Position})
-        EXPECT_EQ(normalizeInterpolationMode(static_cast<InterpMode>(I),
-                                             CompType::F32, Kind, Stage),
-                  InterpMode::Undefined);
+TEST(HLSLInterpolationTest, NonInterpolatedSignatures) {
+  for (auto Stage : {Triple::Pixel, Triple::Vertex, Triple::Geometry,
+                     Triple::Hull, Triple::Domain, Triple::Mesh,
+                     Triple::Compute, Triple::Amplification, Triple::Library}) {
+    SCOPED_TRACE(Triple::getEnvironmentTypeName(Stage).str());
+    for (auto IO : {IOType::In, IOType::Out}) {
+      SCOPED_TRACE(static_cast<unsigned>(IO));
+      if ((Stage == Triple::Pixel && IO == IOType::In) ||
+          (Stage == Triple::Vertex && IO == IOType::Out))
+        continue;
+      for (unsigned I = 0; I != 9; ++I)
+        for (auto Kind : {SemanticKind::Arbitrary, SemanticKind::Position})
+          EXPECT_EQ(normalizeInterpolationMode(static_cast<InterpMode>(I),
+                                               CompType::F32, Kind, Stage, IO),
+                    InterpMode::Undefined);
+    }
+  }
 }

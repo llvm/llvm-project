@@ -92,8 +92,9 @@ centroid float4 vertex(sample float4 a : VERTEX,
   return a;
 }
 
-// Non-pixel signatures remain Undefined even with explicit modifiers.
+// Vertex inputs remain Undefined; vertex outputs carry the interpolation mode
+// used to pack against pixel inputs. SV_Position is noperspective.
 // CHECK-DAG: !{i32 0, !"VERTEX",      i32 9, i32 0, !{{[0-9]+}}, i32 0, i32 1, i8 4,
 // CHECK-DAG: !{i32 1, !"SV_VertexID", i32 5, i32 1, !{{[0-9]+}}, i32 0, i32 1, i8 1,
-// CHECK-DAG: !{i32 0, !"SV_Position", i32 9, i32 3, !{{[0-9]+}}, i32 0, i32 1, i8 4,
+// CHECK-DAG: !{i32 0, !"SV_Position", i32 9, i32 3, !{{[0-9]+}}, i32 5, i32 1, i8 4,
 //                                                                    ^ Interpolation mode.

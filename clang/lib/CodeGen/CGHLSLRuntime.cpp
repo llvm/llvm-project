@@ -1299,8 +1299,8 @@ static llvm::hlsl::SemanticSignatureElement createSemanticSignatureElement(
     SemanticIndices.push_back(FirstSemanticIndex + I);
 
   // The remaining members keep their default value and will be filled at a
-  // later stage, either during packing or analysis of usage. Input
-  // interpolation is set by handleSemanticLoad after visiting each leaf.
+  // later stage, either during packing or analysis of usage. Interpolation
+  // is set by the load/store traversal after visiting each leaf.
   return llvm::hlsl::SemanticSignatureElement(
       SigId, Name, getSignatureComponentType(CGM, Shape.RowType),
       llvm::hlsl::getSemanticKind(Name), SemanticIndices,
@@ -1690,7 +1690,8 @@ CGHLSLRuntime::handleStructSemanticStore(
     const clang::DeclaratorDecl *Decl,
     specific_attr_iterator<HLSLAppliedSemanticAttr> AttrBegin,
     specific_attr_iterator<HLSLAppliedSemanticAttr> AttrEnd,
-    SemanticSignatures &Signature) {
+    SemanticSignatures &Signature,
+    llvm::hlsl::InterpolationModifier Modifiers) {
 
   const llvm::StructType *ST = cast<StructType>(Source->getType());
 
@@ -1707,7 +1708,7 @@ CGHLSLRuntime::handleStructSemanticStore(
   for (unsigned I = 0; I < ST->getNumElements(); ++I, ++FieldDecl) {
     llvm::Value *Extract = B.CreateExtractValue(Source, I);
     AttrBegin = handleSemanticStore(B, FD, Extract, *FieldDecl, AttrBegin,
-                                    AttrEnd, Signature);
+                                    AttrEnd, Signature, Modifiers);
   }
 
   return AttrBegin;
@@ -1737,12 +1738,13 @@ CGHLSLRuntime::handleSemanticLoad(
   llvm::Value *Value =
       handleScalarSemanticLoad(B, FD, Type, Decl, Attr, Signature);
   // Intrinsic-only system values and SPIR-V loads do not add DXIL signature
-  // elements. Outputs are not interpolated and retain Undefined.
+  // elements. Non-pixel inputs retain Undefined.
   if (Signature.size() != PreviousSize) {
     auto &Element = Signature.back();
     Element.InterpMode = llvm::hlsl::normalizeInterpolationMode(
         llvm::hlsl::getInterpolationMode(Modifiers), Element.CompType,
-        Element.SemanticKind, FD->getAttr<HLSLShaderAttr>()->getType());
+        Element.SemanticKind, FD->getAttr<HLSLShaderAttr>()->getType(),
+        llvm::hlsl::IOType::In);
   }
   return std::make_pair(Value, AttrBegin);
 }
@@ -1753,15 +1755,28 @@ CGHLSLRuntime::handleSemanticStore(
     const clang::DeclaratorDecl *Decl,
     specific_attr_iterator<HLSLAppliedSemanticAttr> AttrBegin,
     specific_attr_iterator<HLSLAppliedSemanticAttr> AttrEnd,
-    SemanticSignatures &Signature) {
+    SemanticSignatures &Signature,
+    llvm::hlsl::InterpolationModifier Modifiers) {
   assert(AttrBegin != AttrEnd);
+  // An inner field overrides the enclosing return declaration's modifiers.
+  if (const auto *A = Decl->getAttr<HLSLInterpolationModifierAttr>())
+    Modifiers =
+        static_cast<llvm::hlsl::InterpolationModifier>(A->getModifiers());
   if (Source->getType()->isStructTy())
     return handleStructSemanticStore(B, FD, Source, Decl, AttrBegin, AttrEnd,
-                                     Signature);
+                                     Signature, Modifiers);
 
   HLSLAppliedSemanticAttr *Attr = *AttrBegin;
   ++AttrBegin;
+  size_t PreviousSize = Signature.size();
   handleScalarSemanticStore(B, FD, Source, Decl, Attr, Signature);
+  if (Signature.size() != PreviousSize) {
+    auto &Element = Signature.back();
+    Element.InterpMode = llvm::hlsl::normalizeInterpolationMode(
+        llvm::hlsl::getInterpolationMode(Modifiers), Element.CompType,
+        Element.SemanticKind, FD->getAttr<HLSLShaderAttr>()->getType(),
+        llvm::hlsl::IOType::Out);
+  }
   return AttrBegin;
 }
 

@@ -910,8 +910,9 @@ bool SemaHLSL::checkInterpolationModifiers(
   if (!Semantic)
     Semantic = D->getAttr<HLSLParsedSemanticAttr>();
 
-  QualType T =
-      getASTContext().getBaseElementType(D->getType().getNonReferenceType());
+  const auto *FD = dyn_cast<FunctionDecl>(D);
+  QualType T = FD ? FD->getReturnType() : D->getType();
+  T = getASTContext().getBaseElementType(T.getNonReferenceType());
   if (T->isDependentType())
     return true;
   if (const auto *RT = T->getAs<RecordType>()) {
@@ -1197,9 +1198,10 @@ void SemaHLSL::CheckEntryPoint(FunctionDecl *FD) {
     const auto *MA = Param->getAttr<HLSLParamModifierAttr>();
     SemanticContext &SC = MA && MA->isAnyOut() ? OutputSC : InputSC;
 
-    // Interpolation only applies to pixel shader inputs, including the input
-    // side of inout parameters. Other stages and output signatures ignore it.
-    if (ST == llvm::Triple::Pixel && (!MA || MA->isAnyIn()) &&
+    // Interpolation applies to pixel inputs and vertex outputs, including the
+    // corresponding side of inout parameters.
+    if (((ST == llvm::Triple::Pixel && (!MA || MA->isAnyIn())) ||
+         (ST == llvm::Triple::Vertex && MA && MA->isAnyOut())) &&
         !checkInterpolationModifiers(Param, nullptr, nullptr))
       FD->setInvalidDecl();
 
@@ -1213,8 +1215,12 @@ void SemaHLSL::CheckEntryPoint(FunctionDecl *FD) {
   ActiveSemantic.Semantic = FD->getAttr<HLSLParsedSemanticAttr>();
   if (ActiveSemantic.Semantic)
     ActiveSemantic.Index = ActiveSemantic.Semantic->getSemanticIndex();
-  if (!FD->getReturnType()->isVoidType())
+  if (!FD->getReturnType()->isVoidType()) {
+    if (ST == llvm::Triple::Vertex &&
+        !checkInterpolationModifiers(FD, nullptr, nullptr))
+      FD->setInvalidDecl();
     determineActiveSemantic(FD, FD, FD, ActiveSemantic, OutputSC);
+  }
 }
 
 void SemaHLSL::checkSemanticAnnotation(

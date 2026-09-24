@@ -264,7 +264,8 @@ protected:
       const clang::DeclaratorDecl *Decl,
       specific_attr_iterator<HLSLAppliedSemanticAttr> AttrBegin,
       specific_attr_iterator<HLSLAppliedSemanticAttr> AttrEnd,
-      SemanticSignatures &Signature);
+      SemanticSignatures &Signature,
+      llvm::hlsl::InterpolationModifier Modifiers);
 
   std::pair<llvm::Value *, specific_attr_iterator<HLSLAppliedSemanticAttr>>
   handleSemanticLoad(llvm::IRBuilder<> &B, const FunctionDecl *FD,
@@ -280,7 +281,9 @@ protected:
                       llvm::Value *Source, const clang::DeclaratorDecl *Decl,
                       specific_attr_iterator<HLSLAppliedSemanticAttr> AttrBegin,
                       specific_attr_iterator<HLSLAppliedSemanticAttr> AttrEnd,
-                      SemanticSignatures &Signature);
+                      SemanticSignatures &Signature,
+                      llvm::hlsl::InterpolationModifier Modifiers =
+                          llvm::hlsl::InterpolationModifier::None);
 
 public:
   CGHLSLRuntime(CodeGenModule &CGM) : CGM(CGM) {}

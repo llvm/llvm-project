@@ -9390,20 +9390,22 @@ def HLSLInterpolationModifierDocs : Documentation {
   let Content = [{
 The HLSL keywords `nointerpolation`, `linear`, `centroid`,
 `noperspective`, `sample`, and `center` control interpolation of pixel
-shader inputs.
+shader inputs and vertex shader outputs.
 
 When applied to an aggregate type, the modifier propagates recursively to every
 scalar or vector of the type. A modifier on an inner field overrides one
 inherited from an enclosing declaration.
 
-`nointerpolation` cannot be combined with another interpolation modifier and
-cannot be used on `SV_Position`. Integer, boolean, and 64-bit floating-point
-input components only support `nointerpolation`.
+`nointerpolation` cannot be combined with another interpolation modifier.
+For pixel shader inputs and vertex shader outputs, it cannot be used on
+`SV_Position`, and integer, boolean, and 64-bit floating-point components only
+support `nointerpolation`.
 
-Unqualified pixel shader inputs default to `linear` for floating-point
-components of at most 32 bits and `nointerpolation` otherwise. `SV_Position`
-uses the corresponding `noperspective` mode. Other shader stages and output
-signatures have no interpolation mode and are ignored.
+Unqualified pixel shader inputs and vertex shader outputs default to `linear`
+for floating-point components of at most 32 bits and `nointerpolation` otherwise.
+`SV_Position` uses the corresponding `noperspective` mode. Vertex shader inputs,
+pixel shader outputs, and signatures in other shader stages have no
+interpolation mode; their interpolation modifiers are ignored.
   }];
 }
 
