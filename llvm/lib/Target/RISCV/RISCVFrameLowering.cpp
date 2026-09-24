@@ -1404,21 +1404,20 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
                    getUnmanagedCSI(MF, CSI, PreferAscendingLS).size());
   CFIBuilder.setInsertPoint(MBBI);
 
-  auto emitRestoreCFI =
-      [&](auto CSInfo) {
-        for (auto &CS : CSInfo) {
-          MCRegister Reg = CS.getReg();
-          // Emit CFI for both sub-registers.
-          if (RISCV::GPRPairRegClass.contains(Reg)) {
-            MCRegister EvenReg = RI->getSubReg(Reg, RISCV::sub_gpr_even);
-            MCRegister OddReg = RI->getSubReg(Reg, RISCV::sub_gpr_odd);
-            CFIBuilder.buildRestore(EvenReg);
-            CFIBuilder.buildRestore(OddReg);
-          } else {
-            CFIBuilder.buildRestore(Reg);
-          }
-        }
-      };
+  auto emitRestoreCFI = [&](auto CSInfo) {
+    for (auto &CS : CSInfo) {
+      MCRegister Reg = CS.getReg();
+      // Emit CFI for both sub-registers.
+      if (RISCV::GPRPairRegClass.contains(Reg)) {
+        MCRegister EvenReg = RI->getSubReg(Reg, RISCV::sub_gpr_even);
+        MCRegister OddReg = RI->getSubReg(Reg, RISCV::sub_gpr_odd);
+        CFIBuilder.buildRestore(EvenReg);
+        CFIBuilder.buildRestore(OddReg);
+      } else {
+        CFIBuilder.buildRestore(Reg);
+      }
+    }
+  };
 
   if (RVFI->useSaveRestoreLibCalls(MF)) {
     if (RVFI->hasShadowStack(MF)) {
