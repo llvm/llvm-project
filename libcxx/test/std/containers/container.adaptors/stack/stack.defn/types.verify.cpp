@@ -6,17 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-// <queue>
+// <stack>
 
-// template <class T, class Container = vector<T>,
-//           class Compare = less<typename Container::value_type>>
-// class priority_queue
+// template <class T, class Container = deque<T>>
+// class stack
 
-#include <queue>
-#include <cassert>
-#include <type_traits>
+#include <stack>
 
 void test() {
-  //  LWG#2566 says that the first template param must match the second one's value type
-  std::priority_queue<double, std::deque<int>> t;
+  // expected-error-re@*:* {{static assertion failed{{.*}}{{(The stored elements type must match the underlying container's value_type\.)?}}}}
+  std::stack<double, std::deque<int> > st;
 }
