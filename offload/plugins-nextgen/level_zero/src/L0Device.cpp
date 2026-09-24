@@ -159,7 +159,8 @@ void L0DeviceTy::reportDeviceInfo() const {
   });
 }
 
-Error L0DeviceTy::initImpl(GenericPluginTy &Plugin) {
+Error L0DeviceTy::initImpl(GenericPluginTy &Plugin,
+                           GenericProfilerTy *ProfilerPtr) {
   const auto &Options = getPlugin().getOptions();
 
   uint32_t Count = 1;

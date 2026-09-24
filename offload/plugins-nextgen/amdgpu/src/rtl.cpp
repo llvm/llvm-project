@@ -2282,7 +2282,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   ~AMDGPUDeviceTy() {}
 
   /// Initialize the device, its resources and get its properties.
-  Error initImpl(GenericPluginTy &Plugin) override {
+  Error initImpl(GenericPluginTy &Plugin,
+                 GenericProfilerTy *ProfilerPtr) override {
     // First setup all the memory pools.
     if (auto Err = initMemoryPools())
       return Err;
@@ -3988,10 +3989,10 @@ struct AMDGPUPluginContextTy final : public PluginContextTy {
   }
 
   Expected<void *> allocate(GenericDeviceTy &Device, int64_t Size,
-                            void *HostPtr, TargetAllocTy Kind,
-                            size_t Alignment) override;
-  Error deallocate(GenericDeviceTy &Device, void *Ptr,
-                   TargetAllocTy Kind) override;
+                            void *HostPtr, TargetAllocTy Kind, size_t Alignment,
+                            GenericProfilerTy *ProfilerPtr) override;
+  Error deallocate(GenericDeviceTy &Device, void *Ptr, TargetAllocTy Kind,
+                   GenericProfilerTy *ProfilerPtr) override;
   Expected<PluginAllocInfoTy> getAllocInfo(const void *Ptr) override;
 
 private:
@@ -4313,12 +4314,11 @@ private:
   AMDHostDeviceTy *HostDevice;
 };
 
-Expected<void *> AMDGPUPluginContextTy::allocate(GenericDeviceTy &Device,
-                                                 int64_t Size, void *HostPtr,
-                                                 TargetAllocTy Kind,
-                                                 size_t Alignment) {
-  auto PtrOrErr =
-      PluginContextTy::allocate(Device, Size, HostPtr, Kind, Alignment);
+Expected<void *> AMDGPUPluginContextTy::allocate(
+    GenericDeviceTy &Device, int64_t Size, void *HostPtr, TargetAllocTy Kind,
+    size_t Alignment, GenericProfilerTy *ProfilerPtr) {
+  auto PtrOrErr = PluginContextTy::allocate(Device, Size, HostPtr, Kind,
+                                            Alignment, ProfilerPtr);
   if (!PtrOrErr || !*PtrOrErr)
     return PtrOrErr;
   std::lock_guard<std::mutex> Lock(AllocationsMutex);
@@ -4327,7 +4327,8 @@ Expected<void *> AMDGPUPluginContextTy::allocate(GenericDeviceTy &Device,
 }
 
 Error AMDGPUPluginContextTy::deallocate(GenericDeviceTy &Device, void *Ptr,
-                                        TargetAllocTy Kind) {
+                                        TargetAllocTy Kind,
+                                        GenericProfilerTy *ProfilerPtr) {
   // Erase before base deallocate: once Ptr returns to the MM freelist a
   // concurrent alloc could reuse it and re-populate Allocations. On failure
   // Ptr is in an undetermined state (maybe freed, maybe not) so we don't
@@ -4336,7 +4337,7 @@ Error AMDGPUPluginContextTy::deallocate(GenericDeviceTy &Device, void *Ptr,
     std::lock_guard<std::mutex> Lock(AllocationsMutex);
     Allocations.erase(Ptr);
   }
-  return PluginContextTy::deallocate(Device, Ptr, Kind);
+  return PluginContextTy::deallocate(Device, Ptr, Kind, ProfilerPtr);
 }
 
 Expected<PluginAllocInfoTy>
