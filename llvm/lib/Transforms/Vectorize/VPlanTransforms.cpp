@@ -1339,21 +1339,17 @@ static VPValue *simplifyRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
   if (!Plan.isUnrolled())
     return nullptr;
 
-  // After unrolling, extract-lane may be used to extract values from multiple
-  // scalar sources. Only simplify when extracting from a single scalar source.
-  VPValue *LaneToExtract;
-  if (match(Def, m_ExtractLane(m_VPValue(LaneToExtract), m_VPValue(A)))) {
-    // Simplify extract-lane(%lane_num, %scalar_val) -> %scalar_val.
-    if (vputils::isSingleScalar(A))
-      return A;
+  // Simplify extracts of the same single-scalar.
+  if (match(Def, m_VPInstruction<VPInstruction::ExtractLane>()) &&
+      all_equal(drop_begin(Def->operands())) &&
+      vputils::isSingleScalar(Def->getOperand(1)))
+    return Def->getOperand(1);
 
-    // Replace extract-lane(0, canonical-WIDEN-INDUCTION) with the region's
-    // scalar canonical IV.
-    VPWidenIntOrFpInductionRecipe *WidenIV;
-    if (match(LaneToExtract, m_ZeroInt()) &&
-        match(A, m_CanonicalWidenIV(WidenIV)))
-      return WidenIV->getRegion()->getCanonicalIV();
-  }
+  // Replace extract-lane(0, canonical-WIDEN-INDUCTION) with the region's
+  // scalar canonical IV.
+  VPWidenIntOrFpInductionRecipe *WidenIV;
+  if (match(Def, m_ExtractLane(m_ZeroInt(), m_CanonicalWidenIV(WidenIV))))
+    return WidenIV->getRegion()->getCanonicalIV();
 
   // Simplify unrolled VectorPointer without offset, or with zero offset, to
   // just the pointer operand.
