@@ -5357,17 +5357,15 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
   TypeResult MSVCEnumType;
   const char *PrevSpec = nullptr;
   unsigned DiagID;
-  Decl *TagDecl =
-      Actions
-          .ActOnTag(getCurScope(), DeclSpec::TST_enum, TUK, StartLoc, SS, Name,
-                    NameLoc, attrs, AS, DS.getModulePrivateSpecLoc(), TParams,
-                    Owned, IsDependent, ScopedEnumKWLoc, IsScopedUsingClassTag,
-                    BaseType, DSC == DeclSpecContext::DSC_type_specifier,
-                    DSC == DeclSpecContext::DSC_template_param ||
-                        DSC == DeclSpecContext::DSC_template_type_arg,
-                    OffsetOfState, &SkipBody, &MSVCEnumType,
-                    DS.isFriendSpecified())
-          .get();
+  DeclResult TagResult = Actions.ActOnTag(
+      getCurScope(), DeclSpec::TST_enum, TUK, StartLoc, SS, Name, NameLoc,
+      attrs, AS, DS.getModulePrivateSpecLoc(), TParams, Owned, IsDependent,
+      ScopedEnumKWLoc, IsScopedUsingClassTag, BaseType,
+      DSC == DeclSpecContext::DSC_type_specifier,
+      DSC == DeclSpecContext::DSC_template_param ||
+          DSC == DeclSpecContext::DSC_template_type_arg,
+      OffsetOfState, &SkipBody, &MSVCEnumType, DS.isFriendSpecified());
+  Decl *TagDecl = TagResult.get();
 
   if (SkipBody.ShouldSkip) {
     assert(TUK == TagUseKind::Definition && "can only skip a definition");
