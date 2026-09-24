@@ -6055,7 +6055,8 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
 
       auto NewAccumulator =
           BuildMI(BB, MI, DL, TII->get(BitCountOpc), NumActiveLanes)
-              .addReg(ExecMask);
+              .addReg(ExecMask)
+              .setOperandDead(2); // Dead scc
 
       switch (Opc) {
       case AMDGPU::S_XOR_B32:
@@ -6113,7 +6114,8 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
         // Take the negation of the source operand.
         BuildMI(BB, MI, DL, TII->get(AMDGPU::S_SUB_I32), NegatedVal)
             .addImm(0)
-            .addReg(SrcReg);
+            .addReg(SrcReg)
+            .setOperandDead(3); // Dead scc
         BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_I32), DstReg)
             .addReg(NegatedVal)
             .addReg(NewAccumulator->getOperand(0).getReg());
@@ -6388,6 +6390,8 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
           OpInstr.addImm(0); // opsel
         if (hasOMod)
           OpInstr.addImm(0); // omod
+        if (TII->isSALU(Opc))
+          OpInstr.setOperandDead(3); // Dead scc
         if (ST.getInstrInfo()->isVALU(Opc, /*AllowLDSDMA=*/true)) {
           BuildMI(*ComputeLoop, I, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32),
                   DstReg)
@@ -6503,7 +6507,8 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
         case AMDGPU::S_SUB_U64_PSEUDO: {
           NewAccumulator = BuildMI(*ComputeLoop, I, DL, TII->get(Opc), DstReg)
                                .addReg(Accumulator->getOperand(0).getReg())
-                               .addReg(LaneValue->getOperand(0).getReg());
+                               .addReg(LaneValue->getOperand(0).getReg())
+                               .setOperandDead(3); // Dead scc
           ComputeLoop =
               expand64BitScalarArithmetic(*NewAccumulator, ComputeLoop);
           break;
@@ -6904,12 +6909,14 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
       if (Opc == AMDGPU::S_SUB_I32) {
         BuildMI(*CurrBB, MI, DL, TII->get(AMDGPU::S_SUB_I32), NegatedReducedVal)
             .addImm(0)
-            .addReg(ReducedValSGPR);
+            .addReg(ReducedValSGPR)
+            .setOperandDead(3); // Dead scc
       } else if (Opc == AMDGPU::S_SUB_U64_PSEUDO) {
         auto NegatedValInstr =
             BuildMI(*CurrBB, MI, DL, TII->get(Opc), NegatedReducedVal)
                 .addImm(0)
-                .addReg(ReducedValSGPR);
+                .addReg(ReducedValSGPR)
+                .setOperandDead(3); // Dead scc
         CurrBB = expand64BitScalarArithmetic(*NegatedValInstr, CurrBB);
       }
       // Mark the final result as a whole-wave-mode calculation.
