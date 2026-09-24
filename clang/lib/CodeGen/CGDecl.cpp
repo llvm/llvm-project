@@ -1876,12 +1876,12 @@ bool CodeGenFunction::isTrivialInitializer(const Expr *Init) {
 }
 
 LangOptions::TrivialAutoVarInitKind
-CodeGenFunction::getAutoVarInitKind(QualType type, const VarDecl &D) {
+CodeGenFunction::getAutoVarInitKind(QualType Ty, const VarDecl &D) {
   auto hasNoTrivialAutoVarInitAttr = [](const Decl *D) {
     return D && D->hasAttr<NoTrivialAutoVarInitAttr>();
   };
   if (D.isConstexpr() || D.getAttr<UninitializedAttr>() ||
-      hasNoTrivialAutoVarInitAttr(type->getAsTagDecl()) ||
+      hasNoTrivialAutoVarInitAttr(Ty->getAsTagDecl()) ||
       hasNoTrivialAutoVarInitAttr(CurFuncDecl))
     return LangOptions::TrivialAutoVarInitKind::Uninitialized;
   return getContext().getLangOpts().getTrivialAutoVarInit();

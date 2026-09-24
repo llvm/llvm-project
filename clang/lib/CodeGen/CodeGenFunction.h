@@ -5603,7 +5603,7 @@ private:
 
   void emitZeroOrPatternForAutoVarInit(QualType type, const VarDecl &D,
                                        Address Loc);
-  LangOptions::TrivialAutoVarInitKind getAutoVarInitKind(QualType type,
+  LangOptions::TrivialAutoVarInitKind getAutoVarInitKind(QualType Ty,
                                                          const VarDecl &D);
 
 public:
