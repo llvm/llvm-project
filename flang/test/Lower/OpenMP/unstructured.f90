@@ -61,7 +61,7 @@ end
 
 ! CHECK-LABEL: func @_QPss3{{.*}} {
 ! CHECK:   omp.parallel private(@{{.*}} %{{.*}}#0 -> %{{.*}} : {{.*}}) {
-! CHECK:     %[[ALLOCA_K:.*]] = fir.alloca i32 {bindc_name = "k", pinned}
+! CHECK:     %[[ALLOCA_K:.*]] = fir.alloca i32 <{bindc_name = "k", pinned}>
 ! CHECK:     %[[K_DECL:.*]]:2 = hlfir.declare %[[ALLOCA_K]] {uniq_name = "_QFss3Ek"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
 ! CHECK:     fir.do_loop

@@ -33,6 +33,7 @@ def cv_uimm10 : ImmLeaf<XLenVT, [{return isUInt<10>(Imm);}]>;
 
 def cv_insert_is2 : RISCVUImmOp<5> {
   let DecoderMethod = "decodeCVInsertIs2Operand";
+  let hasCompleteDecoder = false;
 }
 
 def CV_LO5: SDNodeXForm<imm, [{

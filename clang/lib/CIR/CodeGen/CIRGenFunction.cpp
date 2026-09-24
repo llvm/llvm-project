@@ -587,22 +587,19 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
     }
   }
 
-  // Only implicit-object member functions (without an explicit `this`
-  // parameter) receive an implicit `this` argument that the CXXABI prolog has
-  // to set up. C++23 explicit-object members (P0847R7) carry their object via a
-  // regular parameter and use the standard parameter prolog instead.
-  if (isa_and_nonnull<CXXMethodDecl>(d) &&
-      cast<CXXMethodDecl>(d)->isImplicitObjectMemberFunction()) {
-    cgm.getCXXABI().emitInstanceFunctionProlog(loc, *this);
+  if (const auto *md = dyn_cast_if_present<CXXMethodDecl>(d);
+      md && !md->isStatic()) {
+    bool isInLambda =
+        md->getParent()->isLambda() && md->getOverloadedOperator() == OO_Call;
 
-    const auto *md = cast<CXXMethodDecl>(d);
-    if (md->getParent()->isLambda() && md->getOverloadedOperator() == OO_Call) {
-      // We're in a lambda.
-      auto fn = dyn_cast<cir::FuncOp>(curFn);
-      assert(fn && "lambda in non-function region");
+    if (md->isImplicitObjectMemberFunction())
+      cgm.getCXXABI().emitInstanceFunctionProlog(loc, *this);
+
+    if (isInLambda) {
+      // We're in a lambda; figure out the captures.
+      auto fn = cast<cir::FuncOp>(curFn);
       fn.setLambda(true);
 
-      // Figure out the captures.
       md->getParent()->getCaptureFields(lambdaCaptureFields,
                                         lambdaThisCaptureField);
       if (lambdaThisCaptureField) {
@@ -629,7 +626,7 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
         if (fd->hasCapturedVLAType())
           cgm.errorNYI(loc, "lambda captured VLA type");
       }
-    } else {
+    } else if (md->isImplicitObjectMemberFunction()) {
       // Not in a lambda; just use 'this' from the method.
       // FIXME: Should we generate a new load for each use of 'this'? The fast
       // register allocator would be happier...

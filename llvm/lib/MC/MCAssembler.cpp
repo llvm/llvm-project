@@ -701,9 +701,12 @@ void MCAssembler::layout() {
   for (MCSection &Sec : *this)
     layoutSection(Sec);
   unsigned FirstStable = Sections.size();
-  while ((FirstStable = relaxOnce(FirstStable)) > 0)
-    if (getContext().hadError())
+  while ((FirstStable = relaxOnce(FirstStable)) > 0) {
+    if (getContext().hadError()) {
+      flushPendingErrors();
       return;
+    }
+  }
 
   // Some targets might want to adjust fragment offsets. If so, perform another
   // layout iteration.

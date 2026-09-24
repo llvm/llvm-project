@@ -38,6 +38,8 @@ endif()
 # support-to-bedrock dependency shows up here as a link error rather than going
 # unnoticed. BedrockTests links both, Bedrock being a Support client.
 add_orc_rt_unittest(SupportTests
+  ErrorMatchersTest.cpp
+
   support/AllocActionTest.cpp
   support/BitmaskEnumTest.cpp
   support/CAPICompileTest.c
@@ -99,7 +101,7 @@ endif()
 
 if (APPLE)
   set(ORC_RT_BEDROCK_TEST_APPLE_SOURCES
-    bedrock/StandaloneMachOUnwindInfoRegistrarTest.cpp
+    bedrock/sys/darwin/StandaloneMachOUnwindInfoRegistrarTest.cpp
     )
 else()
   set(ORC_RT_BEDROCK_TEST_APPLE_SOURCES)
@@ -139,6 +141,7 @@ add_library(NativeDylibManagerTestLib SHARED
   Inputs/NativeDylibManagerTestLib.cpp)
 set_target_properties(NativeDylibManagerTestLib PROPERTIES
   PREFIX ""
+  DEFINE_SYMBOL ORC_RT_TEST_DLL_EXPORTS
   FOLDER "orc-rt/Tests")
 target_compile_options(NativeDylibManagerTestLib PRIVATE
   ${ORC_RT_COMPILE_FLAGS})
@@ -158,10 +161,8 @@ set_target_properties(RTTICrossDylibTestLib PROPERTIES
   PREFIX ""
   CXX_VISIBILITY_PRESET hidden
   VISIBILITY_INLINES_HIDDEN ON
+  DEFINE_SYMBOL ORC_RT_TEST_DLL_EXPORTS
   FOLDER "orc-rt/Tests")
-
-target_compile_definitions(RTTICrossDylibTestLib PRIVATE
-  RTTI_CROSS_DYLIB_TEST_LIB_EXPORTS)
 
 target_compile_options(RTTICrossDylibTestLib PRIVATE ${ORC_RT_COMPILE_FLAGS})
 

@@ -55,7 +55,7 @@ end module
 
 !  CHECK-LABEL:   func.func @_QMtest_use_devicePtest_shadowed() {
 !  CHECK-NOT:      fir.address_of(@_QMtest_use_deviceEa)
-!  CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.array<100xf32> {bindc_name = "a", uniq_name = "_QMtest_use_deviceFtest_shadowedEa"}
+!  CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.array<100xf32> <{bindc_name = "a", uniq_name = "_QMtest_use_deviceFtest_shadowedEa"}>
 !  CHECK:           %[[DECLARE_0:.*]]:2 = hlfir.declare %[[ALLOCA_0]](
 !  CHECK-NOT:      fir.address_of(@_QMtest_use_deviceEa)
 !  CHECK:           %[[USE_DEVICE_0:.*]] = acc.use_device varPtr(%[[DECLARE_0]]#0
