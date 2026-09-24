@@ -306,6 +306,12 @@ infrastructure are described first, followed by tool-specific sections.
   written to, such as the `expected` parameter of
   `atomic_compare_exchange_strong()`.
 
+- Improved {doc}`readability-redundant-inline-specifier
+  <clang-tidy/checks/readability/redundant-inline-specifier>` check by flagging
+  `static inline` declarations outside of header files and suggesting `static`
+  alone. This is enabled by default and can be turned off with the new
+  {option}`DiagnoseStaticInline`.
+
 - Improved {doc}`readability-redundant-parentheses
   <clang-tidy/checks/readability/redundant-parentheses>` check by fixing a false
   positive on the required parentheses of `typeof` and `typeof_unqual` operands.
@@ -327,6 +333,7 @@ infrastructure are described first, followed by tool-specific sections.
 - Improved {doc}`readability-use-std-min-max
   <clang-tidy/checks/readability/use-std-min-max>` check by fixing spurious
   trailing semicolons and lost comments when the `if` body has no braces.
+
 
 #### Removed checks
 
