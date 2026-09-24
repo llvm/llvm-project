@@ -905,16 +905,14 @@ end:                                        ; preds = %unreachable, %entry
 }
 
 ; Issue #221943: X - 1 should be nonnegative when X > 0.
-; TODO: Requires isKnownNonZero to query assume. Currently not optimized.
+; Issue #221943: isKnownNonZero queries llvm.assume to enable copysign fold.
 define float @copysign_idiom_sub1_positive_assume(float %x, i32 %magx) {
 ; CHECK-LABEL: @copysign_idiom_sub1_positive_assume(
 ; CHECK-NEXT:    [[MAG:%.*]] = add nsw i32 [[MAGX:%.*]], -1
 ; CHECK-NEXT:    [[POSITIVE:%.*]] = icmp sgt i32 [[MAGX]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[POSITIVE]])
-; CHECK-NEXT:    [[BITS:%.*]] = bitcast float [[X:%.*]] to i32
-; CHECK-NEXT:    [[SIGN:%.*]] = and i32 [[BITS]], -2147483648
-; CHECK-NEXT:    [[RES:%.*]] = or i32 [[MAG]], [[SIGN]]
-; CHECK-NEXT:    [[Y:%.*]] = bitcast i32 [[RES]] to float
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 [[MAG]] to float
+; CHECK-NEXT:    [[Y:%.*]] = call float @llvm.copysign.f32(float [[TMP1]], float [[X:%.*]])
 ; CHECK-NEXT:    ret float [[Y]]
 ;
   %mag = add i32 %magx, -1
@@ -927,16 +925,14 @@ define float @copysign_idiom_sub1_positive_assume(float %x, i32 %magx) {
   ret float %y
 }
 
-; TODO: Requires isKnownNonZero to query assume.
+; Test with assume.
 define float @copysign_idiom_sub1_positive_sub_assume(float %x, i32 %magx) {
 ; CHECK-LABEL: @copysign_idiom_sub1_positive_sub_assume(
 ; CHECK-NEXT:    [[MAG:%.*]] = add nsw i32 [[MAGX:%.*]], -1
 ; CHECK-NEXT:    [[POSITIVE:%.*]] = icmp sgt i32 [[MAGX]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[POSITIVE]])
-; CHECK-NEXT:    [[BITS:%.*]] = bitcast float [[X:%.*]] to i32
-; CHECK-NEXT:    [[SIGN:%.*]] = and i32 [[BITS]], -2147483648
-; CHECK-NEXT:    [[RES:%.*]] = or i32 [[MAG]], [[SIGN]]
-; CHECK-NEXT:    [[Y:%.*]] = bitcast i32 [[RES]] to float
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 [[MAG]] to float
+; CHECK-NEXT:    [[Y:%.*]] = call float @llvm.copysign.f32(float [[TMP1]], float [[X:%.*]])
 ; CHECK-NEXT:    ret float [[Y]]
 ;
   %mag = sub i32 %magx, 1
@@ -949,16 +945,14 @@ define float @copysign_idiom_sub1_positive_sub_assume(float %x, i32 %magx) {
   ret float %y
 }
 
-; TODO: Requires isKnownNonZero to query assume.
+; Test with assume.
 define double @copysign_idiom_sub1_positive_f64_assume(double %x, i64 %magx) {
 ; CHECK-LABEL: @copysign_idiom_sub1_positive_f64_assume(
 ; CHECK-NEXT:    [[MAG:%.*]] = add nsw i64 [[MAGX:%.*]], -1
 ; CHECK-NEXT:    [[POSITIVE:%.*]] = icmp sgt i64 [[MAGX]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[POSITIVE]])
-; CHECK-NEXT:    [[BITS:%.*]] = bitcast double [[X:%.*]] to i64
-; CHECK-NEXT:    [[SIGN:%.*]] = and i64 [[BITS]], -9223372036854775808
-; CHECK-NEXT:    [[RES:%.*]] = or i64 [[MAG]], [[SIGN]]
-; CHECK-NEXT:    [[Y:%.*]] = bitcast i64 [[RES]] to double
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64 [[MAG]] to double
+; CHECK-NEXT:    [[Y:%.*]] = call double @llvm.copysign.f64(double [[TMP1]], double [[X:%.*]])
 ; CHECK-NEXT:    ret double [[Y]]
 ;
   %mag = add i64 %magx, -1
@@ -1012,14 +1006,12 @@ define float @copysign_idiom_sub1_no_assume(float %x, i32 %magx) {
   ret float %y
 }
 
-; TODO: Vector test requires isKnownNonZero to query range metadata.
+; Vector test: isKnownNonZero queries range metadata.
 define <4 x float> @copysign_idiom_sub1_positive_vec(<4 x float> %x, <4 x i32> range(i32 1, 2147483647) %magx) {
 ; CHECK-LABEL: @copysign_idiom_sub1_positive_vec(
 ; CHECK-NEXT:    [[MAG:%.*]] = add nsw <4 x i32> [[MAGX:%.*]], splat (i32 -1)
-; CHECK-NEXT:    [[BITS:%.*]] = bitcast <4 x float> [[X:%.*]] to <4 x i32>
-; CHECK-NEXT:    [[SIGN:%.*]] = and <4 x i32> [[BITS]], splat (i32 -2147483648)
-; CHECK-NEXT:    [[RES:%.*]] = or <4 x i32> [[MAG]], [[SIGN]]
-; CHECK-NEXT:    [[Y:%.*]] = bitcast <4 x i32> [[RES]] to <4 x float>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[MAG]] to <4 x float>
+; CHECK-NEXT:    [[Y:%.*]] = call <4 x float> @llvm.copysign.v4f32(<4 x float> [[TMP1]], <4 x float> [[X:%.*]])
 ; CHECK-NEXT:    ret <4 x float> [[Y]]
 ;
   %mag = add <4 x i32> %magx, splat (i32 -1)
@@ -1030,14 +1022,12 @@ define <4 x float> @copysign_idiom_sub1_positive_vec(<4 x float> %x, <4 x i32> r
   ret <4 x float> %y
 }
 
-; TODO: Requires isKnownNonZero to query range metadata.
+; Vector test with range metadata.
 define <2 x float> @copysign_idiom_sub1_positive_vec_sub(<2 x float> %x, <2 x i32> range(i32 1, 2147483647) %magx) {
 ; CHECK-LABEL: @copysign_idiom_sub1_positive_vec_sub(
 ; CHECK-NEXT:    [[MAG:%.*]] = add nsw <2 x i32> [[MAGX:%.*]], splat (i32 -1)
-; CHECK-NEXT:    [[BITS:%.*]] = bitcast <2 x float> [[X:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[SIGN:%.*]] = and <2 x i32> [[BITS]], splat (i32 -2147483648)
-; CHECK-NEXT:    [[RES:%.*]] = or <2 x i32> [[MAG]], [[SIGN]]
-; CHECK-NEXT:    [[Y:%.*]] = bitcast <2 x i32> [[RES]] to <2 x float>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[MAG]] to <2 x float>
+; CHECK-NEXT:    [[Y:%.*]] = call <2 x float> @llvm.copysign.v2f32(<2 x float> [[TMP1]], <2 x float> [[X:%.*]])
 ; CHECK-NEXT:    ret <2 x float> [[Y]]
 ;
   %mag = sub <2 x i32> %magx, splat (i32 1)
@@ -1048,14 +1038,12 @@ define <2 x float> @copysign_idiom_sub1_positive_vec_sub(<2 x float> %x, <2 x i3
   ret <2 x float> %y
 }
 
-; TODO: Requires isKnownNonZero to query range metadata.
+; Vector test with range metadata.
 define <2 x double> @copysign_idiom_sub1_positive_vec_f64(<2 x double> %x, <2 x i64> range(i64 1, 9223372036854775807) %magx) {
 ; CHECK-LABEL: @copysign_idiom_sub1_positive_vec_f64(
 ; CHECK-NEXT:    [[MAG:%.*]] = add nsw <2 x i64> [[MAGX:%.*]], splat (i64 -1)
-; CHECK-NEXT:    [[BITS:%.*]] = bitcast <2 x double> [[X:%.*]] to <2 x i64>
-; CHECK-NEXT:    [[SIGN:%.*]] = and <2 x i64> [[BITS]], splat (i64 -9223372036854775808)
-; CHECK-NEXT:    [[RES:%.*]] = or <2 x i64> [[MAG]], [[SIGN]]
-; CHECK-NEXT:    [[Y:%.*]] = bitcast <2 x i64> [[RES]] to <2 x double>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[MAG]] to <2 x double>
+; CHECK-NEXT:    [[Y:%.*]] = call <2 x double> @llvm.copysign.v2f64(<2 x double> [[TMP1]], <2 x double> [[X:%.*]])
 ; CHECK-NEXT:    ret <2 x double> [[Y]]
 ;
   %mag = add <2 x i64> %magx, splat (i64 -1)
@@ -1066,14 +1054,12 @@ define <2 x double> @copysign_idiom_sub1_positive_vec_f64(<2 x double> %x, <2 x 
   ret <2 x double> %y
 }
 
-; TODO: Requires isKnownNonZero to query range metadata.
+; Vector test with range metadata.
 define <8 x float> @copysign_idiom_sub1_positive_vec8(<8 x float> %x, <8 x i32> range(i32 1, 2147483647) %magx) {
 ; CHECK-LABEL: @copysign_idiom_sub1_positive_vec8(
 ; CHECK-NEXT:    [[MAG:%.*]] = add nsw <8 x i32> [[MAGX:%.*]], splat (i32 -1)
-; CHECK-NEXT:    [[BITS:%.*]] = bitcast <8 x float> [[X:%.*]] to <8 x i32>
-; CHECK-NEXT:    [[SIGN:%.*]] = and <8 x i32> [[BITS]], splat (i32 -2147483648)
-; CHECK-NEXT:    [[RES:%.*]] = or <8 x i32> [[MAG]], [[SIGN]]
-; CHECK-NEXT:    [[Y:%.*]] = bitcast <8 x i32> [[RES]] to <8 x float>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i32> [[MAG]] to <8 x float>
+; CHECK-NEXT:    [[Y:%.*]] = call <8 x float> @llvm.copysign.v8f32(<8 x float> [[TMP1]], <8 x float> [[X:%.*]])
 ; CHECK-NEXT:    ret <8 x float> [[Y]]
 ;
   %mag = add <8 x i32> %magx, splat (i32 -1)

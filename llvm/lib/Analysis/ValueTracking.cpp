@@ -534,16 +534,19 @@ static void computeKnownBitsAddSub(bool Add, const Value *Op0, const Value *Op1,
       KnownOut.makeNonNegative();
     }
     // X - 1 is nonnegative if X is known positive (nonnegative and nonzero).
+    // Use isKnownNonZero to query domain conditions (e.g., llvm.assume).
     else if (match(Op1, m_One()) && Known2.isNonNegative() &&
-             Known2.isNonZero()) {
+             (Known2.isNonZero() || isKnownNonZero(Op0, Q, Depth + 1))) {
       KnownOut.makeNonNegative();
     }
   }
 
   // Handle "add nsw X, -1" which is semantically "X - 1".
   // X + (-1) is nonnegative if X is known positive.
-  if (Add && NSW && !KnownOut.isNonNegative() &&
-      match(Op1, m_AllOnes()) && Known2.isNonNegative() && Known2.isNonZero()) {
+  // Use isKnownNonZero to query domain conditions (e.g., llvm.assume).
+  if (Add && NSW && !KnownOut.isNonNegative() && match(Op1, m_AllOnes()) &&
+      Known2.isNonNegative() &&
+      (Known2.isNonZero() || isKnownNonZero(Op0, Q, Depth + 1))) {
     KnownOut.makeNonNegative();
   }
 
