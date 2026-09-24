@@ -94,7 +94,7 @@ void test_goto_unreachable_value() {
   used(oops);
 }
 
-// Bypassed variables are initialized at the jump target.
+// Bypassed variables are initialized at the goto source (before the branch).
 // UNINIT-LABEL:  test_goto(
 // ZERO-LABEL:    test_goto(
 // ZERO: %oops = alloca i32, align 4
@@ -110,7 +110,7 @@ void test_goto(int i) {
   used(oops);
 }
 
-// Bypassed variables are initialized at the case target.
+// Bypassed variables are initialized before the switch dispatch.
 // UNINIT-LABEL:  test_switch(
 // ZERO-LABEL:    test_switch(
 // ZERO: %oops = alloca i32, align 4
@@ -551,7 +551,7 @@ void test_switch_default_bypass(int c) {
   }
 }
 
-// Multipe variables bypassed by the same goto so both must be initialized.
+// Multiple variables bypassed by the same goto so both must be initialized.
 // UNINIT-LABEL:  test_goto_multiple_vars(
 // ZERO-LABEL:    test_goto_multiple_vars(
 // ZERO: %a = alloca i32, align 4
@@ -600,9 +600,9 @@ jump:
   goto jump;
 }
 
-// C++ [basic.stc.auto]: scope re-entry restarts the lifetime, so the init is
-// emitted at the goto source and reruns each iteration (store in BEGIN, not
-// entry). Contrast the C version, which inits once in entry and returns 10.
+// Scope re-entry restarts the lifetime, so the init is emitted at the goto
+// source and reruns each iteration (store in BEGIN, not entry). C uses the same
+// rule; see CodeGen/trivial-auto-var-init-bypass.c.
 // UNINIT-LABEL:  test_backward_goto_around_decl(
 // ZERO-LABEL:    test_backward_goto_around_decl(
 // ZERO:      entry:
