@@ -770,6 +770,11 @@ public:
   /// gen prepare.
   virtual bool preferZeroCompareBranch() const { return false; }
 
+  /// Return true if the heuristic to prefer branching on
+  /// @llvm.usub.with.overflow's overflow flag should be used in
+  /// codegenprepare. Requires preferZeroCompareBranch() to be enabled.
+  virtual bool preferUSubOverflowBranch() const { return false; }
+
   /// Return true if it is cheaper to split the store of a merged int val
   /// from a pair of smaller values into multiple stores.
   virtual bool isMultiStoresCheaperThanBitsMerge(EVT LTy, EVT HTy) const {
