@@ -1186,8 +1186,7 @@ define <2 x i32> @test_insert_vector_32(<2 x i32> %a, i32 %val) {
 ;
 ; RV64-LABEL: test_insert_vector_32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    srli a0, a0, 32
-; RV64-NEXT:    pack a0, a1, a0
+; RV64-NEXT:    ppaireo.w a0, a1, a0
 ; RV64-NEXT:    ret
   %res = insertelement <2 x i32> %a, i32 %val, i32 0
   ret <2 x i32> %res

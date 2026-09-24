@@ -20,7 +20,6 @@ set(ORC_RT_HEADERS
     orc-rt/bedrock/SimpleNativeMemoryMap.h
     orc-rt/bedrock/SimpleSymbolTable.h
     orc-rt/bedrock/SocketHandle.h
-    orc-rt/bedrock/StandaloneMachOUnwindInfoRegistrar.h
     orc-rt/bedrock/TaskGroup.h
     orc-rt/bedrock/ThreadPoolRunner.h
     orc-rt/bedrock/sps/AllSPSCI.h
@@ -30,7 +29,6 @@ set(ORC_RT_HEADERS
     orc-rt/bedrock/sps/NativeDylibManagerSPSCI.h
     orc-rt/bedrock/sps/SimpleNativeMemoryMapSPSCI.h
     orc-rt/bedrock/sps/SimpleRemoteCA.h
-    orc-rt/bedrock/sps/StandaloneMachOUnwindInfoRegistrarSPSCI.h
     orc-rt/support/AllocAction.h
     orc-rt/support/BitmaskEnum.h
     orc-rt/support/CCallback.h
@@ -60,6 +58,13 @@ set(ORC_RT_HEADERS
     orc-rt/support/sps/SPSWrapperFunctionBuffer.h
     orc-rt/support/sps/SimplePackedSerialization.h
 )
+
+# Headers for Darwin-only interfaces, installed only where they're implemented.
+if (APPLE)
+  list(APPEND ORC_RT_HEADERS
+    orc-rt/bedrock/sps/StandaloneMachOUnwindInfoRegistrarSPSCI.h
+  )
+endif()
 
 # Add generated config header
 set(ORC_RT_GENERATED_HEADERS

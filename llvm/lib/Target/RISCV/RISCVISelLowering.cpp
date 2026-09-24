@@ -18956,6 +18956,61 @@ static SDValue combinePExtWideningAddAcc(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(Opc, DL, VT, Acc, Zip, Ones);
 }
 
+// Fold sub(add(Acc, ext A), ext B) to Acc + (A - B), where ext is sext/zext.
+static SDValue combinePExtWideningSubAcc(SDNode *N, SelectionDAG &DAG,
+                                         const RISCVSubtarget &Subtarget) {
+  using namespace SDPatternMatch;
+
+  if (!Subtarget.hasStdExtP() || !Subtarget.is64Bit())
+    return SDValue();
+
+  if (N->getOpcode() != ISD::SUB)
+    return SDValue();
+
+  MVT VT = N->getSimpleValueType(0);
+  if (VT != MVT::v4i16 && VT != MVT::v2i32)
+    return SDValue();
+
+  MVT SrcVT = VT == MVT::v4i16 ? MVT::v4i8 : MVT::v2i16;
+  auto Extend = [&](SDValue &Ext, SDValue &Src) {
+    return m_Value(
+        Ext, m_OneUse(m_AnyOf(m_SExt(m_Value(Src, m_SpecificVT(SrcVT))),
+                              m_ZExt(m_Value(Src, m_SpecificVT(SrcVT))))));
+  };
+
+  SDValue Acc, ExtA, A, ExtB, B;
+  if (!sd_match(N, m_Sub(m_OneUse(m_Add(m_Value(Acc), Extend(ExtA, A))),
+                         Extend(ExtB, B))) ||
+      ExtA.getOpcode() != ExtB.getOpcode())
+    return SDValue();
+
+  SDLoc DL(N);
+  if (ExtA.getOpcode() == ISD::ZERO_EXTEND) {
+    // No unsigned PM2 accumulate-subtract; keep the binary widening subtract
+    // off the accumulator's dependency chain.
+    return DAG.getNode(ISD::ADD, DL, VT, Acc,
+                       DAG.getNode(ISD::SUB, DL, VT, ExtA, ExtB));
+  }
+
+  MVT LegalSrcVT = VT == MVT::v4i16 ? MVT::v8i8 : MVT::v4i16;
+  A = DAG.getNode(ISD::CONCAT_VECTORS, DL, LegalSrcVT, A, DAG.getUNDEF(SrcVT));
+  B = DAG.getNode(ISD::CONCAT_VECTORS, DL, LegalSrcVT, B, DAG.getUNDEF(SrcVT));
+
+  SDValue Zip = DAG.getNode(RISCVISD::PZIP, DL, LegalSrcVT, A, B);
+  if (VT == MVT::v4i16) {
+    SDValue ZipAsVT = DAG.getBitcast(VT, Zip);
+    SDValue Low = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, VT, ZipAsVT,
+                              DAG.getValueType(MVT::v4i8));
+    SDValue High = DAG.getNode(RISCVISD::PSRA, DL, VT, ZipAsVT,
+                               DAG.getConstant(8, DL, MVT::i64));
+    return DAG.getNode(ISD::ADD, DL, VT, Acc,
+                       DAG.getNode(ISD::SUB, DL, VT, Low, High));
+  }
+
+  SDValue Ones = DAG.getConstant(1, DL, LegalSrcVT);
+  return DAG.getNode(RISCVISD::PM2SUBA_H, DL, VT, Acc, Zip, Ones);
+}
+
 static SDValue performADDCombine(SDNode *N,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  const RISCVSubtarget &Subtarget) {
@@ -19109,6 +19164,8 @@ static SDValue performSUBCombine(SDNode *N, SelectionDAG &DAG,
     }
   }
 
+  if (SDValue V = combinePExtWideningSubAcc(N, DAG, Subtarget))
+    return V;
   if (SDValue V = combinePExtWideningAddSub(N, DAG, Subtarget))
     return V;
   if (SDValue V = combineBinOpOfZExt(N, DAG))

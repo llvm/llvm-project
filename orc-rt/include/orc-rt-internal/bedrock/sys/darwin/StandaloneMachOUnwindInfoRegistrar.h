@@ -14,8 +14,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef ORC_RT_BEDROCK_STANDALONEMACHOUNWINDINFOREGISTRAR_H
-#define ORC_RT_BEDROCK_STANDALONEMACHOUNWINDINFOREGISTRAR_H
+#ifndef ORC_RT_INTERNAL_BEDROCK_SYS_DARWIN_STANDALONEMACHOUNWINDINFOREGISTRAR_H
+#define ORC_RT_INTERNAL_BEDROCK_SYS_DARWIN_STANDALONEMACHOUNWINDINFOREGISTRAR_H
 
 #include "orc-rt/bedrock/SimpleSymbolTable.h"
 #include "orc-rt/bedrock/sps/StandaloneMachOUnwindInfoRegistrarSPSCI.h"
@@ -39,7 +39,7 @@ namespace orc_rt {
 /// executors that deliberately omit the full platform.
 class StandaloneMachOUnwindInfoRegistrar {
   // Unit-test access to the private UnwindInfoMap. The fixture is defined in
-  // orc-rt/unittests/StandaloneMachOUnwindInfoRegistrarTest.cpp.
+  // test/unit/bedrock/sys/darwin/StandaloneMachOUnwindInfoRegistrarTest.cpp.
   friend class UnwindInfoMapTest;
 
 public:
@@ -129,4 +129,4 @@ private:
 
 } // namespace orc_rt
 
-#endif // ORC_RT_BEDROCK_STANDALONEMACHOUNWINDINFOREGISTRAR_H
+#endif // ORC_RT_INTERNAL_BEDROCK_SYS_DARWIN_STANDALONEMACHOUNWINDINFOREGISTRAR_H
