@@ -17,7 +17,8 @@
 ; DEFINE:       -dump-input-context=2 %{opts} %t/check.txt < %t/input.txt \
 ; DEFINE:       2>&1 | \
 ; DEFINE:     %{reveal-ansi-escapes} | \
-; DEFINE:     FileCheck %s -match-full-lines -check-prefixes
+; DEFINE:     FileCheck %s -match-full-lines -DCHK_FILE=%t/check.txt \
+; DEFINE:         -check-prefixes
 
 ; REDEFINE: %{opts} =
 ; RUN: %{run} CHECK-Q
@@ -37,10 +38,12 @@
 ; CHECK-Q-NEXT: <bold><reset><bold-bright-black> 1: <reset><bold><reset>hello <reset>
 ; CHECK-Q-NEXT: <bold-red>dag:2'0                                            {          search range start (exclusive)
 ; CHECK-Q-NEXT: <reset><bold-red>dag:2'1                                                error: no match found in search range
+; CHECK-Q-NEXT: <reset><bold-red>dag:2'2                                                for: CHECK-DAG: hello
+; CHECK-Q-NEXT: <reset><bold-red>dag:2'3                                                at: [[CHK_FILE]]:2
 ; CHECK-Q-NEXT: <reset><bold-bright-black>       2: <reset><bold><reset>jello <reset>
-; CHECK-Q-NEXT: <bold-magenta>dag:2'2                                   ?               possible intended match
+; CHECK-Q-NEXT: <bold-magenta>dag:2'4                                   ?               possible intended match
 ; CHECK-Q-NEXT: <reset><bold-bright-black>       3: <reset><bold><reset>end <reset>
-; CHECK-Q-NEXT: <bold-red>dag:2'3                                           }           search range end (exclusive)
+; CHECK-Q-NEXT: <bold-red>dag:2'5                                           }           search range end (exclusive)
 ; CHECK-Q-NEXT: <reset><bold-bright-black>       4: <reset><bold><reset>foo <reset>
 ; CHECK-Q-NEXT: <bold-bright-black>              5: <reset><bold><reset>foo <reset>
 ; CHECK-Q-NEXT: <bold-bright-black>              .<reset>
@@ -58,11 +61,13 @@
 ; CHECK-V-NEXT: <bold-green>dag:1                                                      ^~~~~
 ; CHECK-V-NEXT: <reset><bold-red>dag:2'0                                                                  {        search range start (exclusive)
 ; CHECK-V-NEXT: <reset><bold-red>dag:2'1                                                                           error: no match found in search range
+; CHECK-V-NEXT: <reset><bold-red>dag:2'2                                                                           for: CHECK-DAG: hello
+; CHECK-V-NEXT: <reset><bold-red>dag:2'3                                                                           at: [[CHK_FILE]]:2
 ; CHECK-V-NEXT: <reset><bold-bright-black>        2: <reset><bold><bg-bold-cyan>jello <reset>
-; CHECK-V-NEXT: <bold-magenta>dag:2'2                                           ?                                  possible intended match
+; CHECK-V-NEXT: <bold-magenta>dag:2'4                                           ?                                  possible intended match
 ; CHECK-V-NEXT: <reset><bold-bright-black>        3: <reset><bold><bg-bold-cyan><reset>end<bg-bold-cyan> <reset>
 ; CHECK-V-NEXT: <bold-green>label:3                                                    ^~~
-; CHECK-V-NEXT: <reset><bold-red>dag:2'3                                                                }          search range end (exclusive)
+; CHECK-V-NEXT: <reset><bold-red>dag:2'5                                                                }          search range end (exclusive)
 ; CHECK-V-NEXT: <reset><bold-bright-black>        4: <reset><bold><bg-bold-cyan>foo <reset>
 ; CHECK-V-NEXT: <bold-bright-black>               5: <reset><bold><bg-bold-cyan>foo <reset>
 ; CHECK-V-NEXT: <bold-bright-black>               .<reset>
@@ -80,11 +85,13 @@
 ; CHECK-VV-NEXT: <reset><bold-cyan>dag:2'0                                              !~~~~                       discard: overlaps earlier match
 ; CHECK-VV-NEXT: <reset><bold-red>dag:2'1                                                                  {        search range start (exclusive)
 ; CHECK-VV-NEXT: <reset><bold-red>dag:2'2                                                                           error: no match found in search range
+; CHECK-VV-NEXT: <reset><bold-red>dag:2'3                                                                           for: CHECK-DAG: hello
+; CHECK-VV-NEXT: <reset><bold-red>dag:2'4                                                                           at: [[CHK_FILE]]:2
 ; CHECK-VV-NEXT: <reset><bold-bright-black>        2: <reset><bold><bg-bold-cyan>jello <reset>
-; CHECK-VV-NEXT: <bold-magenta>dag:2'3                                           ?                                  possible intended match
+; CHECK-VV-NEXT: <bold-magenta>dag:2'5                                           ?                                  possible intended match
 ; CHECK-VV-NEXT: <reset><bold-bright-black>        3: <reset><bold><bg-bold-cyan><reset>end<bg-bold-cyan> <reset>
 ; CHECK-VV-NEXT: <bold-green>label:3                                                    ^~~
-; CHECK-VV-NEXT: <reset><bold-red>dag:2'4                                                                }          search range end (exclusive)
+; CHECK-VV-NEXT: <reset><bold-red>dag:2'6                                                                }          search range end (exclusive)
 ; CHECK-VV-NEXT: <reset><bold-bright-black>        4: <reset><bold><bg-bold-cyan>foo <reset>
 ; CHECK-VV-NEXT: <bold-bright-black>               5: <reset><bold><bg-bold-cyan>foo <reset>
 ; CHECK-VV-NEXT: <bold-bright-black>               .<reset>
