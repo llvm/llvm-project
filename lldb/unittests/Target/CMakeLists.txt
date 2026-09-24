@@ -21,6 +21,7 @@ add_lldb_unittest(TargetTests
   FindFileTest.cpp
 
   LINK_COMPONENTS
+      Option
       Support
   LINK_LIBS
       lldbCore

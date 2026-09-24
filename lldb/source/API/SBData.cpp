@@ -364,13 +364,12 @@ void SBData::SetDataWithOwnership(lldb::SBError &error, const void *buf,
 
   lldb::DataBufferSP buffer_sp = std::make_shared<DataBufferHeap>(buf, size);
 
-  if (!m_opaque_sp.get())
-    m_opaque_sp = std::make_shared<DataExtractor>(buf, size, endian, addr_size);
-  else {
-    m_opaque_sp->SetData(buffer_sp);
-    m_opaque_sp->SetByteOrder(endian);
-    m_opaque_sp->SetAddressByteSize(addr_size);
-  }
+  if (!m_opaque_sp)
+    m_opaque_sp = std::make_shared<DataExtractor>();
+
+  m_opaque_sp->SetData(buffer_sp);
+  m_opaque_sp->SetByteOrder(endian);
+  m_opaque_sp->SetAddressByteSize(addr_size);
 }
 
 bool SBData::Append(const SBData &rhs) {

@@ -177,7 +177,8 @@ static bool coalesceFeaturesAndStripAtomics(Module &M,
   // In cooperative threading mode, thread locals are meaningful even without
   // atomics.
   const WebAssemblySubtarget *ST = WasmTM->getSubtargetImpl(
-      WasmTM->getTargetCPU(), WasmTM->getTargetFeatureString());
+      WasmTM->getTargetCPU(), WasmTM->getTargetFeatureString(),
+      WasmTM->getTargetABIName(M));
   bool CooperativeThreading = ST->hasCooperativeMultithreading();
 
   if (!Features[WebAssembly::FeatureAtomics]) {

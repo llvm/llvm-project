@@ -212,7 +212,8 @@ bool Pointer::operator==(const Pointer &P) const {
 
   switch (StorageKind) {
   case Storage::Int:
-    return P.Int.Value == Int.Value && P.Int.Ty == Int.Ty && P.Offset == Offset;
+    return P.Int.Value == Int.Value && P.Int.getType() == Int.getType() &&
+           P.Offset == Offset;
   case Storage::Block:
     return P.view() == view();
   case Storage::Fn:
@@ -288,7 +289,24 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
                    CharUnits::fromQuantity(Offset * elemSize()), Path,
                    /*OnePastTheEnd=*/false, /*IsNull=*/false);
   case Storage::Opaque: {
-    if (!Opaque.Base.getType()->isPointerType()) {
+    bool ValidBase = Opaque.hasValidBase() || this->Offset <= 1;
+
+    size_t LayoutOffset = Opaque.computeLayoutOffset(ASTCtx).value_or(0);
+    size_t ElemSize = 0;
+    if (validType(Opaque.getFieldType()))
+      ElemSize = ASTCtx.getTypeSizeInChars(Opaque.getFieldType()).getQuantity();
+
+    auto LValueOffset =
+        CharUnits::fromQuantity(LayoutOffset + (this->Offset * ElemSize));
+    APValue::LValueBase Base;
+    if (const Expr *E = Opaque.Base.asExpr())
+      Base = E;
+    else
+      Base = Opaque.Base.asValueDecl();
+
+    // For valid bases, assemble the LValuePath.
+    APValue Result;
+    if (ValidBase) {
       for (const PointerPathEntry &Entry : Opaque.path()) {
         switch (Entry.Kind) {
         case PointerPathEntry::Field:
@@ -306,21 +324,13 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
           break;
         }
       }
-    }
-    size_t LayoutOffset = Opaque.computeLayoutOffset(ASTCtx).value_or(0);
-    size_t ElemSize = 0;
-    if (validType(Opaque.getFieldType()))
-      ElemSize = ASTCtx.getTypeSizeInChars(Opaque.getFieldType()).getQuantity();
-    auto Offset =
-        CharUnits::fromQuantity(LayoutOffset + (this->Offset * ElemSize));
 
-    APValue::LValueBase Base;
-    if (const Expr *E = Opaque.Base.asExpr())
-      Base = E;
-    else
-      Base = Opaque.Base.asValueDecl();
-    APValue Result =
-        APValue(Base, Offset, Path, Opaque.isOnePastEnd(), /*IsNullPtr=*/false);
+      Result = APValue(Base, LValueOffset, Path, Opaque.isOnePastEnd(),
+                       /*IsNullPtr=*/false);
+
+    } else {
+      Result = APValue(Base, LValueOffset, APValue::NoLValuePath{});
+    }
     Result.setConstexprUnknown(Opaque.isConstexprUnknown());
     return Result;
   }
@@ -477,7 +487,8 @@ void Pointer::print(llvm::raw_ostream &OS) const {
     OS << "}";
   } break;
   case Storage::Int:
-    OS << "(Int) {" << Int.Value << " + " << Offset << ", " << Int.Ty << "}";
+    OS << "(Int) {" << Int.Value << " + " << Offset << ", " << Int.getType()
+       << ", " << (Int.isNull() ? "null" : "nonnull") << '}';
     break;
   case Storage::Fn:
     OS << "(Fn) { " << Fn.Func << " + " << Offset << " }";
@@ -1361,16 +1372,21 @@ std::optional<IntPointer> IntPointer::atOffset(const interp::Context &Ctx,
       ASTCtx.toCharUnitsFromBits(Layout.getFieldOffset(FieldIndex))
           .getQuantity();
 
-  return IntPointer{FD->getType().getTypePtr(), this->Value + FieldOffset};
+  uint64_t NewValue = this->Value + FieldOffset;
+  return IntPointer{{FD->getType().getTypePtr(), NewValue == 0}, NewValue};
 }
 
 IntPointer IntPointer::baseCast(const interp::Context &Ctx,
                                 unsigned BaseOffset) const {
-  if (!Ty)
+  if (!getType())
     return *this;
 
   QualType CurType = getPointeeType();
   if (CurType.isNull() || !CurType->isRecordType())
+    return *this;
+
+  // null pointers stay null during a cast, per conv.ptr
+  if (Value == 0)
     return *this;
 
   const Record *R = Ctx.getRecord(CurType->getAsRecordDecl());
@@ -1391,7 +1407,8 @@ IntPointer IntPointer::baseCast(const interp::Context &Ctx,
   const RecordDecl *RD = BaseDesc->ElemRecord->getDecl();
   QualType T = RD->getASTContext().getTagType(ElaboratedTypeKeyword::None,
                                               std::nullopt, RD, false);
-  return {T.getTypePtr(), Value + BaseLayoutOffset.getQuantity()};
+  uint64_t NewValue = Value + BaseLayoutOffset.getQuantity();
+  return {{T.getTypePtr(), NewValue == 0}, NewValue};
 }
 
 std::optional<size_t>
@@ -1566,4 +1583,11 @@ bool OpaquePointer::isOnePastEndOrElementPastEnd() const {
   }
 
   return false;
+}
+
+bool OpaquePointer::hasValidBase() const {
+  if (const VarDecl *VD = Base.asVarDecl())
+    return !VD->hasExternalStorage();
+
+  return !Base.getType()->isPointerType();
 }

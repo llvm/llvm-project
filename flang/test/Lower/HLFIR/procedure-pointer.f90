@@ -30,7 +30,7 @@ end module m
 subroutine  sub1()
 use m
   procedure(real_func), pointer :: p1
-! CHECK: %[[VAL_0:.*]] = fir.alloca !fir.boxproc<(!fir.ref<f32>) -> f32> {bindc_name = "p1", uniq_name = "_QFsub1Ep1"}
+! CHECK: %[[VAL_0:.*]] = fir.alloca !fir.boxproc<(!fir.ref<f32>) -> f32> <{bindc_name = "p1", uniq_name = "_QFsub1Ep1"}>
 ! CHECK: %[[VAL_1:.*]] = fir.zero_bits (!fir.ref<f32>) -> f32
 ! CHECK: %[[VAL_2:.*]] = fir.emboxproc %[[VAL_1]] : ((!fir.ref<f32>) -> f32) -> !fir.boxproc<(!fir.ref<f32>) -> f32>
 ! CHECK: fir.store %[[VAL_2]] to %[[VAL_0]] : !fir.ref<!fir.boxproc<(!fir.ref<f32>) -> f32>>
@@ -45,21 +45,21 @@ use m
 ! CHECK: %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFsub1Ep3"} : (!fir.ref<!fir.boxproc<(!fir.ref<f32>) -> f32>>) -> (!fir.ref<!fir.boxproc<(!fir.ref<f32>) -> f32>>, !fir.ref<!fir.boxproc<(!fir.ref<f32>) -> f32>>)
 
   procedure(), pointer :: p4
-! CHECK: %[[VAL_0:.*]] = fir.alloca !fir.boxproc<() -> ()> {bindc_name = "p4", uniq_name = "_QFsub1Ep4"}
+! CHECK: %[[VAL_0:.*]] = fir.alloca !fir.boxproc<() -> ()> <{bindc_name = "p4", uniq_name = "_QFsub1Ep4"}>
 ! CHECK: %[[VAL_1:.*]] = fir.zero_bits () -> ()
 ! CHECK: %[[VAL_2:.*]] = fir.emboxproc %[[VAL_1]] : (() -> ()) -> !fir.boxproc<() -> ()>
 ! CHECK: fir.store %[[VAL_2]] to %[[VAL_0]] : !fir.ref<!fir.boxproc<() -> ()>>
 ! CHECK: %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFsub1Ep4"} : (!fir.ref<!fir.boxproc<() -> ()>>) -> (!fir.ref<!fir.boxproc<() -> ()>>, !fir.ref<!fir.boxproc<() -> ()>>)
 
   procedure(real), pointer :: p5
-! CHECK: %[[VAL_0:.*]] = fir.alloca !fir.boxproc<() -> f32> {bindc_name = "p5", uniq_name = "_QFsub1Ep5"}
+! CHECK: %[[VAL_0:.*]] = fir.alloca !fir.boxproc<() -> f32> <{bindc_name = "p5", uniq_name = "_QFsub1Ep5"}>
 ! CHECK: %[[VAL_1:.*]] = fir.zero_bits () -> f32
 ! CHECK: %[[VAL_2:.*]] = fir.emboxproc %[[VAL_1]] : (() -> f32) -> !fir.boxproc<() -> f32>
 ! CHECK: fir.store %[[VAL_2]] to %[[VAL_0]] : !fir.ref<!fir.boxproc<() -> f32>>
 ! CHECK: %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFsub1Ep5"} : (!fir.ref<!fir.boxproc<() -> f32>>) -> (!fir.ref<!fir.boxproc<() -> f32>>, !fir.ref<!fir.boxproc<() -> f32>>)
 
   procedure(char_func), pointer :: p6
-! CHECK: %[[VAL_0:.*]] = fir.alloca !fir.boxproc<(!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>> {bindc_name = "p6", uniq_name = "_QFsub1Ep6"}
+! CHECK: %[[VAL_0:.*]] = fir.alloca !fir.boxproc<(!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>> <{bindc_name = "p6", uniq_name = "_QFsub1Ep6"}>
 ! CHECK: %[[VAL_1:.*]] = fir.zero_bits (!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>
 ! CHECK: %[[VAL_2:.*]] = fir.emboxproc %[[VAL_1]] : ((!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>) -> !fir.boxproc<(!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>>
 ! CHECK: fir.store %[[VAL_2]] to %[[VAL_0]] : !fir.ref<!fir.boxproc<(!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>>>
@@ -78,7 +78,7 @@ use m
   procedure(real_func), pointer :: p1
 
   p1 => null()
-! CHECK: %[[VAL_0:.*]] = fir.alloca !fir.boxproc<(!fir.ref<f32>) -> f32> {bindc_name = "p1", uniq_name = "_QFsub2Ep1"}
+! CHECK: %[[VAL_0:.*]] = fir.alloca !fir.boxproc<(!fir.ref<f32>) -> f32> <{bindc_name = "p1", uniq_name = "_QFsub2Ep1"}>
 ! CHECK: %[[VAL_1:.*]] = fir.zero_bits (!fir.ref<f32>) -> f32
 ! CHECK: %[[VAL_2:.*]] = fir.emboxproc %[[VAL_1]] : ((!fir.ref<f32>) -> f32) -> !fir.boxproc<(!fir.ref<f32>) -> f32>
 ! CHECK: fir.store %[[VAL_2]] to %[[VAL_0]] : !fir.ref<!fir.boxproc<(!fir.ref<f32>) -> f32>>
@@ -95,7 +95,7 @@ use m
   real :: res, r
 
   p1 => real_func
-! CHECK: %[[VAL_0:.*]] = fir.alloca !fir.boxproc<(!fir.ref<f32>) -> f32> {bindc_name = "p1", uniq_name = "_QFsub3Ep1"}
+! CHECK: %[[VAL_0:.*]] = fir.alloca !fir.boxproc<(!fir.ref<f32>) -> f32> <{bindc_name = "p1", uniq_name = "_QFsub3Ep1"}>
 ! CHECK: %[[VAL_1:.*]] = fir.zero_bits (!fir.ref<f32>) -> f32
 ! CHECK: %[[VAL_2:.*]] = fir.emboxproc %[[VAL_1]] : ((!fir.ref<f32>) -> f32) -> !fir.boxproc<(!fir.ref<f32>) -> f32>
 ! CHECK: fir.store %[[VAL_2]] to %[[VAL_0]] : !fir.ref<!fir.boxproc<(!fir.ref<f32>) -> f32>>
@@ -124,7 +124,7 @@ use m
   integer :: i
 
   p2 => char_func
-! CHECK: %[[VAL_0:.*]] = fir.alloca !fir.boxproc<(!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>> {bindc_name = "p2", uniq_name = "_QFsub4Ep2"}
+! CHECK: %[[VAL_0:.*]] = fir.alloca !fir.boxproc<(!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>> <{bindc_name = "p2", uniq_name = "_QFsub4Ep2"}>
 ! CHECK: %[[VAL_1:.*]] = fir.zero_bits (!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>
 ! CHECK: %[[VAL_2:.*]] = fir.emboxproc %[[VAL_1]] : ((!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>) -> !fir.boxproc<(!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>>
 ! CHECK: fir.store %[[VAL_2]] to %[[VAL_0]] : !fir.ref<!fir.boxproc<(!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>>>
@@ -151,7 +151,7 @@ use m
   procedure(real), pointer :: p3
 
   p3 => real_func
-! CHECK: %[[VAL_0:.*]] = fir.alloca !fir.boxproc<() -> f32> {bindc_name = "p3", uniq_name = "_QFsub5Ep3"}
+! CHECK: %[[VAL_0:.*]] = fir.alloca !fir.boxproc<() -> f32> <{bindc_name = "p3", uniq_name = "_QFsub5Ep3"}>
 ! CHECK: %[[VAL_1:.*]] = fir.zero_bits () -> f32
 ! CHECK: %[[VAL_2:.*]] = fir.emboxproc %[[VAL_1]] : (() -> f32) -> !fir.boxproc<() -> f32>
 ! CHECK: fir.store %[[VAL_2]] to %[[VAL_0]] : !fir.ref<!fir.boxproc<() -> f32>>
@@ -168,7 +168,7 @@ use m
   real :: r
 
   p4 => sub
-! CHECK: %[[VAL_0:.*]] = fir.alloca !fir.boxproc<() -> ()> {bindc_name = "p4", uniq_name = "_QFsub6Ep4"}
+! CHECK: %[[VAL_0:.*]] = fir.alloca !fir.boxproc<() -> ()> <{bindc_name = "p4", uniq_name = "_QFsub6Ep4"}>
 ! CHECK: %[[VAL_1:.*]] = fir.zero_bits () -> ()
 ! CHECK: %[[VAL_2:.*]] = fir.emboxproc %[[VAL_1]] : (() -> ()) -> !fir.boxproc<() -> ()>
 ! CHECK: fir.store %[[VAL_2]] to %[[VAL_0]] : !fir.ref<!fir.boxproc<() -> ()>>
@@ -224,14 +224,14 @@ end
 subroutine sub9()
 use m
   procedure(real_func), pointer :: p1
-! CHECK: %[[VAL_0:.*]] = fir.alloca !fir.boxproc<(!fir.ref<f32>) -> f32> {bindc_name = "p1", uniq_name = "_QFsub9Ep1"}
+! CHECK: %[[VAL_0:.*]] = fir.alloca !fir.boxproc<(!fir.ref<f32>) -> f32> <{bindc_name = "p1", uniq_name = "_QFsub9Ep1"}>
 ! CHECK: %[[VAL_1:.*]] = fir.zero_bits (!fir.ref<f32>) -> f32
 ! CHECK: %[[VAL_2:.*]] = fir.emboxproc %[[VAL_1]] : ((!fir.ref<f32>) -> f32) -> !fir.boxproc<(!fir.ref<f32>) -> f32>
 ! CHECK: fir.store %[[VAL_2]] to %[[VAL_0]] : !fir.ref<!fir.boxproc<(!fir.ref<f32>) -> f32>>
 ! CHECK: %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFsub9Ep1"} : (!fir.ref<!fir.boxproc<(!fir.ref<f32>) -> f32>>) -> (!fir.ref<!fir.boxproc<(!fir.ref<f32>) -> f32>>, !fir.ref<!fir.boxproc<(!fir.ref<f32>) -> f32>>)
 
   procedure(char_func), pointer :: p2
-! CHECK: %[[VAL_4:.*]] = fir.alloca !fir.boxproc<(!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>> {bindc_name = "p2", uniq_name = "_QFsub9Ep2"}
+! CHECK: %[[VAL_4:.*]] = fir.alloca !fir.boxproc<(!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>> <{bindc_name = "p2", uniq_name = "_QFsub9Ep2"}>
 ! CHECK: %[[VAL_5:.*]] = fir.zero_bits (!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>
 ! CHECK: %[[VAL_6:.*]] = fir.emboxproc %[[VAL_5]] : ((!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>) -> !fir.boxproc<(!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>>
 ! CHECK: fir.store %[[VAL_6]] to %[[VAL_4]] : !fir.ref<!fir.boxproc<(!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>>>
@@ -251,7 +251,7 @@ subroutine sub10()
 use m
 
   procedure(real_func), pointer :: p1
-! CHECK: %[[VAL_0:.*]] = fir.alloca !fir.boxproc<(!fir.ref<f32>) -> f32> {bindc_name = "p1", uniq_name = "_QFsub10Ep1"}
+! CHECK: %[[VAL_0:.*]] = fir.alloca !fir.boxproc<(!fir.ref<f32>) -> f32> <{bindc_name = "p1", uniq_name = "_QFsub10Ep1"}>
 ! CHECK: %[[VAL_1:.*]] = fir.zero_bits (!fir.ref<f32>) -> f32
 ! CHECK: %[[VAL_2:.*]] = fir.emboxproc %[[VAL_1]] : ((!fir.ref<f32>) -> f32) -> !fir.boxproc<(!fir.ref<f32>) -> f32>
 ! CHECK: fir.store %[[VAL_2]] to %[[VAL_0]] : !fir.ref<!fir.boxproc<(!fir.ref<f32>) -> f32>>
@@ -268,7 +268,7 @@ contains
     integer :: arg
     procedure(real_func), pointer :: pp
 ! CHECK: %[[VAL_0:.*]]:2 = hlfir.declare %arg0 dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFsub10FreffuncEarg"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK: %[[VAL_1:.*]] = fir.alloca !fir.boxproc<(!fir.ref<f32>) -> f32> {bindc_name = "pp", uniq_name = "_QFsub10FreffuncEpp"}
+! CHECK: %[[VAL_1:.*]] = fir.alloca !fir.boxproc<(!fir.ref<f32>) -> f32> <{bindc_name = "pp", uniq_name = "_QFsub10FreffuncEpp"}>
 ! CHECK: %[[VAL_2:.*]] = fir.zero_bits (!fir.ref<f32>) -> f32
 ! CHECK: %[[VAL_3:.*]] = fir.emboxproc %[[VAL_2]] : ((!fir.ref<f32>) -> f32) -> !fir.boxproc<(!fir.ref<f32>) -> f32>
 ! CHECK: fir.store %[[VAL_3]] to %[[VAL_1]] : !fir.ref<!fir.boxproc<(!fir.ref<f32>) -> f32>>
@@ -295,7 +295,7 @@ use m
   end interface
 
   procedure(char_func), pointer :: p1
-! CHECK: %[[VAL_0:.*]] = fir.alloca !fir.boxproc<(!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>> {bindc_name = "p1", uniq_name = "_QFsub11Ep1"}
+! CHECK: %[[VAL_0:.*]] = fir.alloca !fir.boxproc<(!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>> <{bindc_name = "p1", uniq_name = "_QFsub11Ep1"}>
 ! CHECK: %[[VAL_1:.*]] = fir.zero_bits (!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>
 ! CHECK: %[[VAL_2:.*]] = fir.emboxproc %[[VAL_1]] : ((!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>) -> !fir.boxproc<(!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>>
 ! CHECK: fir.store %[[VAL_2]] to %[[VAL_0]] : !fir.ref<!fir.boxproc<(!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>>>
@@ -314,12 +314,12 @@ use m
   procedure(char_func), pointer :: p1, p2
 ! CHECK: %[[VAL_0:.*]] = fir.alloca !fir.boxproc<(!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>>
 ! CHECK: %[[VAL_1:.*]] = fir.alloca !fir.boxproc<(!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>>
-! CHECK: %[[VAL_2:.*]] = fir.alloca !fir.boxproc<(!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>> {bindc_name = "p1", uniq_name = "_QFsub12Ep1"}
+! CHECK: %[[VAL_2:.*]] = fir.alloca !fir.boxproc<(!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>> <{bindc_name = "p1", uniq_name = "_QFsub12Ep1"}>
 ! CHECK: %[[VAL_3:.*]] = fir.zero_bits (!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>
 ! CHECK: %[[VAL_4:.*]] = fir.emboxproc %[[VAL_3]] : ((!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>) -> !fir.boxproc<(!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>>
 ! CHECK: fir.store %[[VAL_4]] to %[[VAL_2]] : !fir.ref<!fir.boxproc<(!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>>>
 ! CHECK: %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_2]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFsub12Ep1"} : (!fir.ref<!fir.boxproc<(!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>>>) -> (!fir.ref<!fir.boxproc<(!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>>>, !fir.ref<!fir.boxproc<(!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>>>)
-! CHECK: %[[VAL_6:.*]] = fir.alloca !fir.boxproc<(!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>> {bindc_name = "p2", uniq_name = "_QFsub12Ep2"}
+! CHECK: %[[VAL_6:.*]] = fir.alloca !fir.boxproc<(!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>> <{bindc_name = "p2", uniq_name = "_QFsub12Ep2"}>
 ! CHECK: %[[VAL_7:.*]] = fir.zero_bits (!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>
 ! CHECK: %[[VAL_8:.*]] = fir.emboxproc %[[VAL_7]] : ((!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>) -> !fir.boxproc<(!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>>
 ! CHECK: fir.store %[[VAL_8]] to %[[VAL_6]] : !fir.ref<!fir.boxproc<(!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>>>

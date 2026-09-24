@@ -13,9 +13,9 @@ subroutine test_temp_io_options(status)
   end interface
   integer :: status
   open (10, encoding=gen_temp_character(), file=gen_temp_character(), pad=gen_temp_character(), iostat=status)
-! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.box<!fir.heap<!fir.char<1,?>>> {bindc_name = ".result"}
-! CHECK:           %[[ALLOCA_1:.*]] = fir.alloca !fir.box<!fir.heap<!fir.char<1,?>>> {bindc_name = ".result"}
-! CHECK:           %[[ALLOCA_2:.*]] = fir.alloca !fir.box<!fir.heap<!fir.char<1,?>>> {bindc_name = ".result"}
+! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.box<!fir.heap<!fir.char<1,?>>> <{bindc_name = ".result"}>
+! CHECK:           %[[ALLOCA_1:.*]] = fir.alloca !fir.box<!fir.heap<!fir.char<1,?>>> <{bindc_name = ".result"}>
+! CHECK:           %[[ALLOCA_2:.*]] = fir.alloca !fir.box<!fir.heap<!fir.char<1,?>>> <{bindc_name = ".result"}>
 ! CHECK:           fir.call @_FortranAioBeginOpenUnit
 ! CHECK:           %[[DECLARE_1:.*]] = fir.declare %[[ALLOCA_2]] {uniq_name = ".tmp.func_result"} : (!fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
 ! CHECK:           %[[CALL_1:.*]] = fir.call @_QPgen_temp_character() {{.*}}: () -> !fir.box<!fir.heap<!fir.char<1,?>>>

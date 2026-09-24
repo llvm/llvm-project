@@ -33,7 +33,7 @@ func.func @_QPmax1(%arg0: !fir.boxchar<1> {fir.bindc_name = "c1"}, %arg1: !fir.b
 // CHECK:   %[[VAL_13:.*]] = arith.cmpi sgt, %[[VAL_12]], %[[C0_I32]] : i32
 // CHECK:   %[[VAL_14:.*]] = arith.select %[[VAL_13]], %[[VAL_5]]#1, %[[VAL_3]]#1 : !fir.ref<!fir.char<1,?>>
 // CHECK:   %[[VAL_15:.*]] = arith.select %[[VAL_13]], %[[VAL_4]]#1, %[[VAL_2]]#1 : index
-// CHECK:   %[[VAL_16:.*]] = fir.alloca !fir.char<1,?>(%[[VAL_7]] : index) {bindc_name = ".chrtmp"}
+// CHECK:   %[[VAL_16:.*]] = fir.alloca !fir.char<1,?>(%[[VAL_7]] : index) <{bindc_name = ".chrtmp"}>
 // CHECK:   %[[VAL_17:.*]] = arith.cmpi slt, %[[VAL_7]], %[[VAL_15]] : index
 // CHECK:   %[[VAL_18:.*]] = arith.select %[[VAL_17]], %[[VAL_7]], %[[VAL_15]] : index
 // CHECK:   %[[C1_I64:.*]] = arith.constant 1 : i64
@@ -94,7 +94,7 @@ func.func @_QPmin1(%arg0: !fir.boxchar<1> {fir.bindc_name = "c1"}, %arg1: !fir.b
 // CHECK:   %[[VAL_13:.*]] = arith.cmpi slt, %[[VAL_12]], %[[C0_I32]] : i32
 // CHECK:   %[[VAL_14:.*]] = arith.select %[[VAL_13]], %[[VAL_5]]#1, %[[VAL_3]]#1 : !fir.ref<!fir.char<1,?>>
 // CHECK:   %[[VAL_15:.*]] = arith.select %[[VAL_13]], %[[VAL_4]]#1, %[[VAL_2]]#1 : index
-// CHECK:   %[[VAL_16:.*]] = fir.alloca !fir.char<1,?>(%[[VAL_7]] : index) {bindc_name = ".chrtmp"}
+// CHECK:   %[[VAL_16:.*]] = fir.alloca !fir.char<1,?>(%[[VAL_7]] : index) <{bindc_name = ".chrtmp"}>
 // CHECK:   %[[VAL_17:.*]] = arith.cmpi slt, %[[VAL_7]], %[[VAL_15]] : index
 // CHECK:   %[[VAL_18:.*]] = arith.select %[[VAL_17]], %[[VAL_7]], %[[VAL_15]] : index
 // CHECK:   %[[C1_I64:.*]] = arith.constant 1 : i64
@@ -188,7 +188,7 @@ func.func @_QPmax2(%arg0: !fir.boxchar<1> {fir.bindc_name = "c1"}, %arg1: !fir.b
 // CHECK:   %[[VAL_23:.*]] = fir.convert %[[VAL_13]] : (!fir.ref<!fir.char<1,20>>) -> !fir.ref<!fir.char<1,?>>
 // CHECK:   %[[VAL_24:.*]] = arith.select %[[VAL_21]], %[[VAL_23]], %[[VAL_22]] : !fir.ref<!fir.char<1,?>>
 // CHECK:   %[[VAL_25:.*]] = arith.select %[[VAL_21]], %[[C20]], %[[C10]] : index
-// CHECK:   %[[VAL_26:.*]] = fir.alloca !fir.char<1,?>(%[[VAL_15]] : index) {bindc_name = ".chrtmp"}
+// CHECK:   %[[VAL_26:.*]] = fir.alloca !fir.char<1,?>(%[[VAL_15]] : index) <{bindc_name = ".chrtmp"}>
 // CHECK:   %[[VAL_27:.*]] = arith.cmpi slt, %[[VAL_15]], %[[VAL_25]] : index
 // CHECK:   %[[VAL_28:.*]] = arith.select %[[VAL_27]], %[[VAL_15]], %[[VAL_25]] : index
 // CHECK:   %[[C1_I64:.*]] = arith.constant 1 : i64
@@ -285,7 +285,7 @@ func.func @_QPmin2(%arg0: !fir.boxchar<1> {fir.bindc_name = "c1"}, %arg1: !fir.b
 // CHECK:   %[[VAL_23:.*]] = fir.convert %[[VAL_13]] : (!fir.ref<!fir.char<1,20>>) -> !fir.ref<!fir.char<1,?>>
 // CHECK:   %[[VAL_24:.*]] = arith.select %[[VAL_21]], %[[VAL_23]], %[[VAL_22]] : !fir.ref<!fir.char<1,?>>
 // CHECK:   %[[VAL_25:.*]] = arith.select %[[VAL_21]], %[[C20]], %[[C10]] : index
-// CHECK:   %[[VAL_26:.*]] = fir.alloca !fir.char<1,?>(%[[VAL_15]] : index) {bindc_name = ".chrtmp"}
+// CHECK:   %[[VAL_26:.*]] = fir.alloca !fir.char<1,?>(%[[VAL_15]] : index) <{bindc_name = ".chrtmp"}>
 // CHECK:   %[[VAL_27:.*]] = arith.cmpi slt, %[[VAL_15]], %[[VAL_25]] : index
 // CHECK:   %[[VAL_28:.*]] = arith.select %[[VAL_27]], %[[VAL_15]], %[[VAL_25]] : index
 // CHECK:   %[[C1_I64:.*]] = arith.constant 1 : i64
@@ -363,7 +363,7 @@ func.func @_QPmax3(%arg0: !fir.boxchar<1> {fir.bindc_name = "c1"}, %arg1: !fir.b
 // CHECK:   %[[VAL_25:.*]] = arith.cmpi sgt, %[[VAL_24]], %[[C0_I32_0]] : i32
 // CHECK:   %[[VAL_26:.*]] = arith.select %[[VAL_25]], %[[VAL_7]]#1, %[[VAL_16]] : !fir.ref<!fir.char<1,?>>
 // CHECK:   %[[VAL_27:.*]] = arith.select %[[VAL_25]], %[[VAL_6]]#1, %[[VAL_17]] : index
-// CHECK:   %[[VAL_28:.*]] = fir.alloca !fir.char<1,?>(%[[VAL_19]] : index) {bindc_name = ".chrtmp"}
+// CHECK:   %[[VAL_28:.*]] = fir.alloca !fir.char<1,?>(%[[VAL_19]] : index) <{bindc_name = ".chrtmp"}>
 // CHECK:   %[[VAL_29:.*]] = arith.cmpi slt, %[[VAL_19]], %[[VAL_27]] : index
 // CHECK:   %[[VAL_30:.*]] = arith.select %[[VAL_29]], %[[VAL_19]], %[[VAL_27]] : index
 // CHECK:   %[[C1_I64:.*]] = arith.constant 1 : i64
@@ -438,7 +438,7 @@ func.func @_QPmin3(%arg0: !fir.boxchar<1> {fir.bindc_name = "c1"}, %arg1: !fir.b
 // CHECK:   %[[VAL_25:.*]] = arith.cmpi slt, %[[VAL_24]], %[[C0_I32_0]] : i32
 // CHECK:   %[[VAL_26:.*]] = arith.select %[[VAL_25]], %[[VAL_7]]#1, %[[VAL_16]] : !fir.ref<!fir.char<1,?>>
 // CHECK:   %[[VAL_27:.*]] = arith.select %[[VAL_25]], %[[VAL_6]]#1, %[[VAL_17]] : index
-// CHECK:   %[[VAL_28:.*]] = fir.alloca !fir.char<1,?>(%[[VAL_19]] : index) {bindc_name = ".chrtmp"}
+// CHECK:   %[[VAL_28:.*]] = fir.alloca !fir.char<1,?>(%[[VAL_19]] : index) <{bindc_name = ".chrtmp"}>
 // CHECK:   %[[VAL_29:.*]] = arith.cmpi slt, %[[VAL_19]], %[[VAL_27]] : index
 // CHECK:   %[[VAL_30:.*]] = arith.select %[[VAL_29]], %[[VAL_19]], %[[VAL_27]] : index
 // CHECK:   %[[C1_I64:.*]] = arith.constant 1 : i64
