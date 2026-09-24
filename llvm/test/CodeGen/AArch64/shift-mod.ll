@@ -333,3 +333,26 @@ define i64 @lshr_i64_sub64(i64 %x, i64 %amt) {
   %r = lshr i64 %x, %sub
   ret i64 %r
 }
+
+; Test SUB N-X where N == -1 mod size generates MVN.
+define i32 @shl_i32_sub63(i32 %x, i32 %amt) {
+; CHECK-LABEL: shl_i32_sub63:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn w8, w1
+; CHECK-NEXT:    lsl w0, w0, w8
+; CHECK-NEXT:    ret
+  %sub = sub i32 63, %amt
+  %r = shl i32 %x, %sub
+  ret i32 %r
+}
+
+define i64 @lshr_i64_sub63(i64 %x, i64 %amt) {
+; CHECK-LABEL: lshr_i64_sub63:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn x8, x1
+; CHECK-NEXT:    lsr x0, x0, x8
+; CHECK-NEXT:    ret
+  %sub = sub i64 63, %amt
+  %r = lshr i64 %x, %sub
+  ret i64 %r
+}
