@@ -7,9 +7,10 @@
 
 // An oversized bit-field has a declared width larger than its type. Only the
 // type width is a value; the rest is padding, and the value bits come first.
-// Big endian (AArch64, SystemZ, PowerPC) places 0xAB in the high byte of the
-// 16-bit container (memory AB 00). A load therefore shifts the container right
-// by 8. A store shifts the new value left by 8 and keeps the low byte.
+// Big endian places 0xAB at the higher bits of the 16-bit storage type, although in memory it resides
+// at the low byte because of the reversed byte order. A load therefore
+// shifts the storage type (i16) right by 8. A store shifts the new value left by 8
+// and keeps the lower bits.
 
 #pragma clang diagnostic ignored "-Wbitfield-width"
 
