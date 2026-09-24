@@ -32,7 +32,7 @@ file hash table, the appropriate hash function is being used.
 .--------------------.-- +M+4                 │
 |       Value        |                        │
 .--------------------.-- +M+4+sizeof(Value)   │
-         ...                                  ├─ |Capacity| Bucket entries
+         ...                                  ├─ |Size| Bucket entries
 .--------------------.                        │
 |        Key         |                        │
 .--------------------.                        │
@@ -51,10 +51,12 @@ file hash table, the appropriate hash function is being used.
 - **Deleted Bit Vector** - A serialized bit vector which contains information
   about which buckets have tombstone values. If the entry in this bucket is
   deleted, the bit will be set, otherwise it will be unset.
-- **Keys and Values** - A list of `Capacity` hash buckets, where the first
+- **Keys and Values** - A list of `Size` key value pairs, where the first
   entry is the key (always a uint32), and the second entry is the value. The
-  state of each bucket (valid, empty, deleted) can be determined by examining
-  the present and deleted bit vectors.
+  present bit vector can be examined to determine the bucket for the pair.
+  In other words, if size is 2 and the present bit vector has bits 4 and 9
+  set, then the first element is in bucket 4 and the second element is in
+  bucket 9.
 
 (hash_bit_vectors)=
 

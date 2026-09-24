@@ -545,3 +545,312 @@ module attributes {
   // CHECK-NEXT: cir.call @takes_big_non_byval(%v)
 
 }
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#non_byval_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  cir.func private @takes_big_non_byval(%arg0: !rec_Big)
+      attributes { test_classify = #non_byval_arg }
+
+  // The read comes before the spill, so reading the slot there would read it
+  // before anything wrote it.
+  cir.func @param_read_before_spill(%arg0: !rec_Big)
+      attributes { test_classify = #non_byval_arg } {
+    %spill = cir.alloca "arg0" align(8) init : !cir.ptr<!rec_Big>
+    cir.call @takes_big_non_byval(%arg0) : (!rec_Big) -> ()
+    cir.store %arg0, %spill : !rec_Big, !cir.ptr<!rec_Big>
+    cir.return
+  }
+
+  // CHECK: error: 'cir.call' op non-byval parameter 0 read before its spill
+  // CHECK-SAME: is not yet implemented in CallConvLowering
+  // CHECK-NEXT: cir.call @takes_big_non_byval(%arg0)
+
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#non_byval_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // Either slot could be the one the incoming pointer replaces, and there is
+  // nothing to prefer between them.
+  cir.func @param_spilled_twice(%arg0: !rec_Big)
+      attributes { test_classify = #non_byval_arg } {
+    %spill = cir.alloca "arg0" align(8) init : !cir.ptr<!rec_Big>
+    %copy = cir.alloca "copy" align(8) : !cir.ptr<!rec_Big>
+    cir.store %arg0, %spill : !rec_Big, !cir.ptr<!rec_Big>
+    cir.store %arg0, %copy : !rec_Big, !cir.ptr<!rec_Big>
+    cir.return
+  }
+
+  // CHECK: error: 'cir.store' op non-byval parameter 0 spilled more than once
+  // CHECK-SAME: is not yet implemented in CallConvLowering
+  // CHECK-NEXT: cir.store %arg0,
+
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#non_byval_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  cir.global "private" external @g : !rec_Big
+
+  // The spill stores to a global rather than to a slot the incoming pointer
+  // can replace.
+  cir.func @spill_to_global(%arg0: !rec_Big)
+      attributes { test_classify = #non_byval_arg } {
+    %slot = cir.get_global @g : !cir.ptr<!rec_Big>
+    cir.store %arg0, %slot : !rec_Big, !cir.ptr<!rec_Big>
+    cir.return
+  }
+
+  // CHECK: error: 'cir.store' op non-byval parameter 0 spilled to storage that
+  // CHECK-SAME: cannot take the incoming pointer is not yet implemented in
+  // CHECK-SAME: CallConvLowering
+  // CHECK-NEXT: cir.store %arg0, %slot
+
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#non_byval_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // The spill stores through a cast rather than to the slot itself.
+  cir.func @spill_through_cast(%arg0: !rec_Big)
+      attributes { test_classify = #non_byval_arg } {
+    %raw = cir.alloca "arg0" align(8) : !cir.ptr<!cir.array<!u8i x 32>>
+    %slot = cir.cast bitcast %raw
+        : !cir.ptr<!cir.array<!u8i x 32>> -> !cir.ptr<!rec_Big>
+    cir.store %arg0, %slot : !rec_Big, !cir.ptr<!rec_Big>
+    cir.return
+  }
+
+  // CHECK: error: 'cir.store' op non-byval parameter 0 spilled to storage that
+  // CHECK-SAME: cannot take the incoming pointer is not yet implemented in
+  // CHECK-SAME: CallConvLowering
+  // CHECK-NEXT: cir.store %arg0, %slot
+
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#non_byval_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // A slot in another address space is an allocation, but not one the incoming
+  // pointer can be substituted for.
+  cir.func @spill_to_other_address_space(%arg0: !rec_Big)
+      attributes { test_classify = #non_byval_arg } {
+    %slot = cir.alloca "arg0" align(8)
+        : !cir.ptr<!rec_Big, target_address_space(5)>
+    cir.store %arg0, %slot
+        : !rec_Big, !cir.ptr<!rec_Big, target_address_space(5)>
+    cir.return
+  }
+
+  // CHECK: error: 'cir.store' op non-byval parameter 0 spilled to storage that
+  // CHECK-SAME: cannot take the incoming pointer is not yet implemented in
+  // CHECK-SAME: CallConvLowering
+  // CHECK-NEXT: cir.store %arg0, %slot
+
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#sret_and_non_byval = {
+  return = { kind = "indirect", indirect_align = 8 },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // The parameter is returned directly, so it is not a call argument.
+  cir.func @param_returned_directly(%arg0: !rec_Big) -> !rec_Big
+      attributes { test_classify = #sret_and_non_byval } {
+    %spill = cir.alloca "arg0" align(8) init const : !cir.ptr<!rec_Big>
+    cir.store %arg0, %spill : !rec_Big, !cir.ptr<!rec_Big>
+    cir.return %arg0 : !rec_Big
+  }
+
+  // CHECK: error: 'cir.return' op non-byval parameter 0 consumed other than as
+  // CHECK-SAME: a call argument is not yet implemented in CallConvLowering
+  // CHECK-NEXT: cir.return %arg0
+
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#two_non_byval = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false },
+             { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // Each parameter is spilled exactly once, but into the same slot, and the
+  // incoming pointer can only replace that slot for one of them.
+  cir.func @params_share_a_spill_slot(%arg0: !rec_Big, %arg1: !rec_Big)
+      attributes { test_classify = #two_non_byval } {
+    %shared = cir.alloca "shared" align(8) init : !cir.ptr<!rec_Big>
+    cir.store %arg0, %shared : !rec_Big, !cir.ptr<!rec_Big>
+    cir.store %arg1, %shared : !rec_Big, !cir.ptr<!rec_Big>
+    cir.return
+  }
+
+  // CHECK: error: 'cir.store' op non-byval parameter 1 sharing its spill slot
+  // CHECK-SAME: with another parameter is not yet implemented in
+  // CHECK-SAME: CallConvLowering
+  // CHECK-NEXT: cir.store %arg1, %shared
+
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#non_byval_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  cir.func private @takes_big_non_byval(%arg0: !rec_Big)
+      attributes { test_classify = #non_byval_arg }
+
+  // A cir.try_call operand counts as a call argument, so the read is routed
+  // through the slot, and the call is left to the rewrite, which does not
+  // implement this op.
+  cir.func @unloaded_param_to_try_call(%arg0: !rec_Big)
+      attributes { test_classify = #non_byval_arg } {
+    %spill = cir.alloca "arg0" align(8) init const : !cir.ptr<!rec_Big>
+    cir.store %arg0, %spill : !rec_Big, !cir.ptr<!rec_Big>
+    cir.try_call @takes_big_non_byval(%arg0) ^bb1, ^bb2 : (!rec_Big) -> ()
+  ^bb1:
+    cir.return
+  ^bb2:
+    cir.return
+  }
+
+  // CHECK: error: 'cir.try_call' op TryCallOp not yet implemented in
+  // CHECK-SAME: CallConvLowering
+  // CHECK-NEXT: cir.try_call @takes_big_non_byval(%arg0)
+
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#non_byval_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+#non_byval_then_direct = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false },
+             { kind = "direct" } ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  cir.func private @takes_big_non_byval(%arg0: !rec_Big)
+      attributes { test_classify = #non_byval_arg }
+
+  // The spill is on one path only, so it reaches the argument without
+  // dominating it, and a read at the spill would not either.
+  cir.func @spill_does_not_dominate_read(%arg0: !rec_Big, %c: !cir.bool)
+      attributes { test_classify = #non_byval_then_direct } {
+    cir.brcond %c ^bb1, ^bb2
+  ^bb1:
+    %spill = cir.alloca "arg0" align(8) init const : !cir.ptr<!rec_Big>
+    cir.store %arg0, %spill : !rec_Big, !cir.ptr<!rec_Big>
+    cir.br ^bb2
+  ^bb2:
+    cir.call @takes_big_non_byval(%arg0) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK: error: 'cir.call' op non-byval parameter 0 read before its spill
+  // CHECK-SAME: is not yet implemented in CallConvLowering
+  // CHECK-NEXT: cir.call @takes_big_non_byval(%arg0)
+
+}

@@ -1702,12 +1702,8 @@ define void @v_set_rounding_select_1_3(i32 %cond) {
 ; GFX678-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX678-GISEL-NEXT:    v_cndmask_b32_e64 v0, 3, 1, vcc
 ; GFX678-GISEL-NEXT:    v_readfirstlane_b32 s4, v0
-; GFX678-GISEL-NEXT:    s_add_i32 s5, s4, -4
-; GFX678-GISEL-NEXT:    s_min_u32 s4, s4, s5
-; GFX678-GISEL-NEXT:    s_lshl_b32 s6, s4, 2
-; GFX678-GISEL-NEXT:    s_mov_b32 s4, 0x1c84a50f
-; GFX678-GISEL-NEXT:    s_mov_b32 s5, 0xb73e62d9
-; GFX678-GISEL-NEXT:    s_lshr_b64 s[4:5], s[4:5], s6
+; GFX678-GISEL-NEXT:    s_lshl_b32 s4, s4, 2
+; GFX678-GISEL-NEXT:    s_lshr_b32 s4, 0xa50f, s4
 ; GFX678-GISEL-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE, 0, 4), s4
 ; GFX678-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1727,12 +1723,8 @@ define void @v_set_rounding_select_1_3(i32 %cond) {
 ; GFX9-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v0, 3, 1, vcc
 ; GFX9-GISEL-NEXT:    v_readfirstlane_b32 s4, v0
-; GFX9-GISEL-NEXT:    s_add_i32 s5, s4, -4
-; GFX9-GISEL-NEXT:    s_min_u32 s4, s4, s5
-; GFX9-GISEL-NEXT:    s_lshl_b32 s6, s4, 2
-; GFX9-GISEL-NEXT:    s_mov_b32 s4, 0x1c84a50f
-; GFX9-GISEL-NEXT:    s_mov_b32 s5, 0xb73e62d9
-; GFX9-GISEL-NEXT:    s_lshr_b64 s[4:5], s[4:5], s6
+; GFX9-GISEL-NEXT:    s_lshl_b32 s4, s4, 2
+; GFX9-GISEL-NEXT:    s_lshr_b32 s4, 0xa50f, s4
 ; GFX9-GISEL-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE, 0, 4), s4
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1751,12 +1743,8 @@ define void @v_set_rounding_select_1_3(i32 %cond) {
 ; GFX10-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX10-GISEL-NEXT:    v_cndmask_b32_e64 v0, 3, 1, vcc_lo
 ; GFX10-GISEL-NEXT:    v_readfirstlane_b32 s4, v0
-; GFX10-GISEL-NEXT:    s_add_i32 s5, s4, -4
-; GFX10-GISEL-NEXT:    s_min_u32 s4, s4, s5
-; GFX10-GISEL-NEXT:    s_mov_b32 s5, 0xb73e62d9
-; GFX10-GISEL-NEXT:    s_lshl_b32 s6, s4, 2
-; GFX10-GISEL-NEXT:    s_mov_b32 s4, 0x1c84a50f
-; GFX10-GISEL-NEXT:    s_lshr_b64 s[4:5], s[4:5], s6
+; GFX10-GISEL-NEXT:    s_lshl_b32 s4, s4, 2
+; GFX10-GISEL-NEXT:    s_lshr_b32 s4, 0xa50f, s4
 ; GFX10-GISEL-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE, 0, 4), s4
 ; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1775,12 +1763,8 @@ define void @v_set_rounding_select_1_3(i32 %cond) {
 ; GFX11-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX11-GISEL-NEXT:    v_cndmask_b32_e64 v0, 3, 1, vcc_lo
 ; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-GISEL-NEXT:    s_add_i32 s1, s0, -4
-; GFX11-GISEL-NEXT:    s_min_u32 s0, s0, s1
-; GFX11-GISEL-NEXT:    s_mov_b32 s1, 0xb73e62d9
-; GFX11-GISEL-NEXT:    s_lshl_b32 s2, s0, 2
-; GFX11-GISEL-NEXT:    s_mov_b32 s0, 0x1c84a50f
-; GFX11-GISEL-NEXT:    s_lshr_b64 s[0:1], s[0:1], s2
+; GFX11-GISEL-NEXT:    s_lshl_b32 s0, s0, 2
+; GFX11-GISEL-NEXT:    s_lshr_b32 s0, 0xa50f, s0
 ; GFX11-GISEL-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE, 0, 4), s0
 ; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %cmp = icmp eq i32 %cond, 0

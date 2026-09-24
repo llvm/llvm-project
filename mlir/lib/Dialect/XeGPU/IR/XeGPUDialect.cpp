@@ -604,25 +604,23 @@ DistributeLayoutAttr LayoutAttr::collapseDims(SmallVector<int64_t> dimGroup) {
 
   SmallVector<int64_t> sortedDimGroup = dimGroup;
   llvm::sort(sortedDimGroup);
-  int64_t dimBeforeCurrent = -1;
-  for (auto dimIdx : sortedDimGroup) {
-    // when order attr is present, adjacency dims are values like [3, 2, 1, 0]
-    // in decreasing order; otherwise based on dim indices like [0, 1, 2, 3]
-    // in increasing order
-    if (dimBeforeCurrent >= 0) {
-      if (getOrder() && !getOrder().empty()) {
-        int64_t orderBefore = origOrder[dimBeforeCurrent];
-        int64_t orderCurrent = origOrder[dimIdx];
-        if (orderBefore != (orderCurrent - 1))
-          llvm::report_fatal_error(
-              "dimensions being collapsed must be adjacent in order");
-      } else {
-        if (dimIdx != (dimBeforeCurrent + 1))
-          llvm::report_fatal_error(
-              "dimensions being collapsed must be adjacent");
-      }
-    }
-    dimBeforeCurrent = dimIdx;
+  // Dims must be adjacent in the walk order
+  bool hasExplicitWalkOrder = getOrder() && !getOrder().empty();
+  for (size_t dimIdx = 1; dimIdx < sortedDimGroup.size(); ++dimIdx) {
+    int64_t prev = sortedDimGroup[dimIdx - 1];
+    int64_t curr = sortedDimGroup[dimIdx];
+
+    if (hasExplicitWalkOrder) {
+      // Walk order matters if dims are not trivially collapsible
+      if ((sgLayout.empty() || (sgLayout[prev] == 1 && sgLayout[curr] == 1)) &&
+          (laneLayout.empty() ||
+           (laneLayout[prev] == 1 && laneLayout[curr] == 1)))
+        continue;
+      if (std::abs(origOrder[prev] - origOrder[curr]) != 1)
+        llvm::report_fatal_error(
+            "dimensions being collapsed must be adjacent in order");
+    } else if (curr - prev != 1)
+      llvm::report_fatal_error("dimensions being collapsed must be adjacent");
   }
 
   int firstDim = sortedDimGroup.front();
