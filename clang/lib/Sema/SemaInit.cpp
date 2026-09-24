@@ -363,10 +363,6 @@ class InitListChecker {
   SmallVectorImpl<QualType> *AggrDeductionCandidateParamTypes = nullptr;
   EmbedExpr *CurEmbed = nullptr; // Save current embed we're processing.
   unsigned CurEmbedIndex = 0;
-  /// Indices of a record's unnamed bitfields, in increasing order. Usually
-  /// empty. getFieldIndex() counts them, designators don't.
-  llvm::SmallDenseMap<const RecordDecl *, SmallVector<unsigned, 0>, 2>
-      UnnamedBitFieldIndices;
 
   NoInitExpr *getDummyInit() {
     if (!DummyExpr)
@@ -3018,15 +3014,9 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
 
     // Avoid a quadratic per-designator scan; the AST caches each field's
     // index.
-    if (KnownField->getParent() == RD) {
-      auto [It, Inserted] = UnnamedBitFieldIndices.try_emplace(RD);
-      if (Inserted)
-        for (const FieldDecl *FI : RD->fields())
-          if (FI->isUnnamedBitField())
-            It->second.push_back(FI->getFieldIndex());
-      unsigned Index = KnownField->getFieldIndex();
-      FieldIndex +=
-          Index - (llvm::lower_bound(It->second, Index) - It->second.begin());
+    if (std::optional<unsigned> SelfIndex =
+            SemaRef.Context.getFieldIndex(RD, KnownField)) {
+      FieldIndex += *SelfIndex;
     } else {
       // A field of another record: its cached index isn't RD's numbering.
       for (auto *FI : RD->fields()) {

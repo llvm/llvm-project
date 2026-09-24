@@ -330,6 +330,10 @@ class ASTContext : public RefCountedBase<ASTContext> {
   /// This is lazily created.  This is intentionally not serialized.
   mutable llvm::DenseMap<const RecordDecl*, const ASTRecordLayout*>
     ASTRecordLayouts;
+  /// Indices of a record's unnamed bitfields, in increasing order. Usually
+  /// empty. getFieldIndex() counts them, designators don't.
+  mutable llvm::DenseMap<const RecordDecl *, llvm::SmallVector<unsigned, 0>>
+      UnnamedBitFieldIndices;
   mutable llvm::DenseMap<const ObjCInterfaceDecl *, const ASTRecordLayout *>
       ObjCLayouts;
 
@@ -2874,6 +2878,11 @@ public:
   /// record (struct/union/class) \p D, which indicates its size and field
   /// position information.
   const ASTRecordLayout &getASTRecordLayout(const RecordDecl *D) const;
+
+  /// Returns the index of Field among RD's named fields, the numbering
+  /// designators use.
+  std::optional<unsigned> getFieldIndex(const RecordDecl *RD,
+                                        const FieldDecl *Field) const;
 
   /// Get or compute information about the layout of the specified
   /// Objective-C interface.
