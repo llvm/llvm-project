@@ -349,9 +349,9 @@ static RecurrenceDescriptor getMinMaxRecurrence(PHINode *Phi, Loop *TheLoop,
   // that are not intermediate min/max operations (which are handled below).
   // Requires integer min/max, and single-use BackedgeValue (so vectorizer can
   // handle both PHIs together).
-  bool PhiHasInvalidUses = any_of(Phi->users(), [&](User *U) {
+  bool PhiHasInvalidUses = any_of(Phi->users(), [&](Instruction *U) {
     Value *A, *B;
-    return !Chain.contains(U) && TheLoop->contains(cast<Instruction>(U)) &&
+    return !Chain.contains(U) && TheLoop->contains(U) &&
            GetMinMaxRK(U, A, B) == RecurKind::None;
   });
   if (PhiHasInvalidUses) {
@@ -1694,5 +1694,95 @@ bool InductionDescriptor::isInductionPHI(
   // This allows induction variables w/non-constant steps.
   D = InductionDescriptor(StartValue, IK_PtrInduction, Step,
                           /*InductionBinOp=*/nullptr, /*Casts=*/nullptr, Preds);
+  return true;
+}
+
+// Recognize a conditional induction PHI by matching the following pattern:
+// loop_header:
+//   %conditional_iv = phi [ %start, %preheader ], [ %latch_phi, %latch ]
+//   br i1 %do_step, label %step_bb, label %latch
+//
+// step_bb:
+//   %step = add/gep %conditional_iv, %step_val
+//   br label %latch
+//
+// latch:
+//   %latch_phi = phi [ %conditional_iv, %loop_header ], [ %step, %step_bb ]
+//   br label %loop_header
+bool ConditionalInductionDescriptor::isConditionalInductionPHI(
+    PHINode *PN, const Loop *L, ConditionalInductionDescriptor &Desc,
+    ScalarEvolution &SE) {
+  BasicBlock *Preheader = L->getLoopPreheader();
+  if (!Preheader)
+    return false;
+
+  BasicBlock *Latch = L->getLoopLatch();
+  if (!Latch || !PN->getType()->isIntOrPtrTy() ||
+      PN->getParent() != L->getHeader())
+    return false;
+
+  auto *BackedgePHI = dyn_cast<PHINode>(PN->getIncomingValueForBlock(Latch));
+  if (!BackedgePHI)
+    return false;
+
+  // Ensure the only users of the backedge PHI are outside the loop or the
+  // header PHI (PN).
+  for (User *U : BackedgePHI->users()) {
+    auto *UI = cast<Instruction>(U);
+    if (UI != PN && L->contains(UI))
+      return false;
+  }
+
+  // Find the step operation used to increment the conditional induction PHI.
+  // TODO: Support chains of PHIs.
+  Value *StepOp =
+      find_singleton<Value>(BackedgePHI->incoming_values(),
+                            [&](Use &Incoming, bool /*AllowRepeats*/) {
+                              return Incoming != PN ? Incoming.get() : nullptr;
+                            });
+  if (!StepOp || !StepOp->hasOneUse())
+    return false;
+
+  auto *StepInst = dyn_cast<Instruction>(StepOp);
+  if (!StepInst)
+    return false;
+
+  Value *Step = nullptr;
+  bool StepMatch =
+      PN->getType()->isPointerTy()
+          ? match(StepInst, m_PtrAdd(m_Specific(PN), m_Value(Step)))
+          : match(StepInst, m_c_Add(m_Specific(PN), m_Value(Step)));
+  if (!StepMatch || !L->isLoopInvariant(Step))
+    return false;
+
+  // Ensure GEP offsets are extended to the size of the PHI.
+  const SCEV *StepSCEV = SE.getTruncateOrSignExtend(
+      SE.getSCEV(Step), SE.getEffectiveSCEVType(PN->getType()));
+
+  if (StepSCEV->isZero())
+    return false;
+
+  Value *Start = PN->getIncomingValueForBlock(Preheader);
+  const SCEV *StartSCEV = SE.getSCEV(Start);
+
+  SCEV::NoWrapFlags NoWrapFlags = SCEV::FlagNone;
+  if (auto *GEP = dyn_cast<GEPOperator>(StepInst)) {
+    // With NUSW, we can add NUW if the step is non-negative. We can't add NSW
+    // as the base address is unsigned.
+    if (GEP->hasNoUnsignedWrap() ||
+        (GEP->hasNoUnsignedSignedWrap() && SE.isKnownNonNegative(StepSCEV)))
+      NoWrapFlags = ScalarEvolution::setFlags(NoWrapFlags, SCEV::FlagNUW);
+  } else if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(StepInst)) {
+    if (OBO->hasNoUnsignedWrap())
+      NoWrapFlags = ScalarEvolution::setFlags(NoWrapFlags, SCEV::FlagNUW);
+    if (OBO->hasNoSignedWrap())
+      NoWrapFlags = ScalarEvolution::setFlags(NoWrapFlags, SCEV::FlagNSW);
+  }
+
+  LLVM_DEBUG(dbgs() << "LV: Found a conditional induction phi: HeaderPHI: "
+                    << *PN << ", StepInst: " << *StepInst << "\n");
+
+  Desc = ConditionalInductionDescriptor(PN, BackedgePHI, StepInst, StartSCEV,
+                                        StepSCEV, NoWrapFlags);
   return true;
 }

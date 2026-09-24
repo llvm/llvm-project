@@ -167,9 +167,6 @@ public:
   OptionalDiagnostic Note(SourceLocation Loc, diag::kind DiagId);
   OptionalDiagnostic Note(SourceInfo Loc, diag::kind DiagId);
 
-  /// Add a stack of notes to a prior diagnostic.
-  void addNotes(ArrayRef<PartialDiagnosticAt> Diags);
-
   /// Directly reports a diagnostic message.
   DiagnosticBuilder report(SourceLocation Loc, diag::kind DiagId);
 
@@ -210,7 +207,7 @@ private:
   void addExtendedDiag(SourceLocation Loc, diag::kind DiagId);
 
   OptionalDiagnostic diag(SourceLocation Loc, diag::kind DiagId,
-                          unsigned ExtraNotes, bool IsCCEDiag);
+                          unsigned ExtraNotes, bool IsFFDiag);
 
   /// Should we continue evaluation after encountering undefined behavior?
   bool keepEvaluatingAfterUndefinedBehavior() const;

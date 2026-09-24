@@ -141,6 +141,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fdatasync
+  SRCS
+    fdatasync.cpp
+  HDRS
+    ../fdatasync.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.linux.syscall_wrappers.fdatasync
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   fork
   SRCS
     fork.cpp
@@ -174,6 +188,23 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  execl
+  SRCS
+    execl.cpp
+  HDRS
+    ../execl.h
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.src.__support.OSUtil.linux.syscall_wrappers.execve
+    libc.src.errno.errno
+    libc.src.unistd.environ
+)
+
+add_entrypoint_object(
   execle
   SRCS
     execle.cpp
@@ -181,6 +212,10 @@ add_entrypoint_object(
     ../execle.h
   DEPENDS
     libc.hdr.types.size_t
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
     libc.src.__support.OSUtil.linux.syscall_wrappers.execve
     libc.src.errno.errno
 )
@@ -192,8 +227,10 @@ add_entrypoint_object(
   HDRS
     ../execv.h
   DEPENDS
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.linux.syscall_wrappers.execve
     libc.src.errno.errno
     libc.src.unistd.environ
 )
@@ -205,8 +242,10 @@ add_entrypoint_object(
   HDRS
     ../execve.h
   DEPENDS
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.linux.syscall_wrappers.execve
     libc.src.errno.errno
 )
 
@@ -483,6 +522,19 @@ add_object_library(
     libc.hdr.unistd_macros
     libc.src.errno.errno
     libc.hdr.types.struct_statfs
+)
+
+add_entrypoint_object(
+  pause
+  SRCS
+    pause.cpp
+  HDRS
+    ../pause.h
+  DEPENDS
+    libc.src.__support.OSUtil.linux.syscall_wrappers.pause
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.errno.errno
 )
 
 add_entrypoint_object(

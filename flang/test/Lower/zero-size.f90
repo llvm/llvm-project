@@ -11,7 +11,7 @@ subroutine zero2
   type dt
     integer :: j = 17
   end type
-  ! CHECK: %[[z:[0-9]*]] = fir.alloca !fir.array<0x!fir.type<_QFzero2Tdt{j:i32}>> {bindc_name = "z", uniq_name = "_QFzero2Ez"}
+  ! CHECK: %[[z:[0-9]*]] = fir.alloca !fir.array<0x!fir.type<_QFzero2Tdt{j:i32}>> <{bindc_name = "z", uniq_name = "_QFzero2Ez"}>
   ! CHECK: %[[shape:[0-9]*]] = fir.shape %c0 : (index) -> !fir.shape<1>
   ! CHECK: %{{.*}}:2 = hlfir.declare %[[z]](%[[shape]]) {uniq_name = "_QFzero2Ez"}
   type(dt) :: z(0)

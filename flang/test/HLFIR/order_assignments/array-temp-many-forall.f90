@@ -34,7 +34,7 @@ end module
 ! There must be a counter in memory (fir.alloca index).
 ! CHECK:         %[[CTR:.*]] = fir.alloca index
 ! The temporary is a 1D fir.array<?xf32>.
-! CHECK:         %[[ALLOC:.*]] = fir.allocmem !fir.array<?xf32>, %{{.*}} {bindc_name = ".tmp.forall", uniq_name = ""}
+! CHECK:         %[[ALLOC:.*]] = fir.allocmem !fir.array<?xf32>, %{{.*}} <{bindc_name = ".tmp.forall", uniq_name = ""}>
 ! Plain fir.shape (no shift), since the temp is indexed by the counter.
 ! CHECK:         %[[SHAPE:.*]] = fir.shape %{{.*}} : (index) -> !fir.shape<1>
 ! CHECK:         hlfir.declare %[[ALLOC]](%[[SHAPE]]) {uniq_name = ".tmp.forall"} : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xf32>>, !fir.heap<!fir.array<?xf32>>)

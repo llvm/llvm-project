@@ -19,7 +19,9 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+#include "BedrockTestUtils.h"
 #include "CommonTestUtils.h"
+#include "ErrorMatchers.h"
 
 #include <chrono>
 #include <deque>
@@ -27,6 +29,7 @@
 #include <optional>
 
 using namespace orc_rt;
+using namespace orc_rt::test;
 using ::testing::Eq;
 using ::testing::Optional;
 
@@ -337,13 +340,10 @@ TEST(SessionTest, ReportError) {
   cantFail(std::move(E)); // Force error into checked state.
 
   Session S(mockExecutorProcessInfo(), noDispatch,
-            [&](Error Err) { E = std::move(Err); });
+            [&](Error Err) noexcept { E = std::move(Err); });
   S.reportError(make_error<StringError>("foo"));
 
-  if (E)
-    EXPECT_EQ(toString(std::move(E)), "foo");
-  else
-    ADD_FAILURE() << "Missing error value";
+  EXPECT_THAT_ERROR(std::move(E), FailedWithMessage("foo"));
 }
 
 TEST(SessionTest, ReportErrorsViaSession) {
@@ -352,13 +352,10 @@ TEST(SessionTest, ReportErrorsViaSession) {
 
   // Check that the ReportErrorsViaSession utility works as advertised.
   Session S(mockExecutorProcessInfo(), noDispatch,
-            [&](Error Err) { E = std::move(Err); });
+            [&](Error Err) noexcept { E = std::move(Err); });
   (ReportErrorsViaSession(S))(make_error<StringError>("foo"));
 
-  if (E)
-    EXPECT_EQ(toString(std::move(E)), "foo");
-  else
-    ADD_FAILURE() << "Missing error value";
+  EXPECT_THAT_ERROR(std::move(E), FailedWithMessage("foo"));
 }
 
 TEST(SessionTest, SingleService) {
@@ -857,9 +854,9 @@ TEST(ControllerAccessTest, FailConnect) {
   // Simulate failure to connect.
   bool GotError = false;
   std::string ErrMsg = "failed to connect";
-  Session S(mockExecutorProcessInfo(), noDispatch, [&](Error Err) {
+  Session S(mockExecutorProcessInfo(), noDispatch, [&](Error Err) noexcept {
     GotError = true;
-    EXPECT_EQ(toString(std::move(Err)), ErrMsg);
+    EXPECT_THAT_ERROR(std::move(Err), FailedWithMessage(ErrMsg));
   });
   BootstrapInfo BI(S);
   S.attach<MockControllerAccess>(
@@ -879,21 +876,40 @@ TEST(ControllerAccessTest, BootstrapInfoPassedToConnect) {
 
   // Build a BootstrapInfo with custom symbols and values.
   BootstrapInfo BI(S);
-  std::pair<const char *, const void *> TestSyms[] = {
-      {SymName, static_cast<const void *>(&Sym)}};
+  std::pair<SymbolNameSpec, const void *> TestSyms[] = {
+      {SymbolNameSpec::linker(SymName), static_cast<const void *>(&Sym)}};
   cantFail(BI.symbols().addUnique(TestSyms));
   BI.values()[SecretKey] = SecretValue;
 
   bool OnConnectRan = false;
   S.attach<MockControllerAccess>(
       std::move(BI), MockControllerAccess::PostFn{}, [&](BootstrapInfo &BI) {
-        EXPECT_EQ(BI.symbols().at(SymName), static_cast<const void *>(&Sym));
+        EXPECT_EQ(BI.symbols().at(SymbolNameSpec::linker(SymName)),
+                  static_cast<const void *>(&Sym));
         EXPECT_EQ(BI.values().at(SecretKey), SecretValue);
         OnConnectRan = true;
         return Error::success();
       });
 
   ASSERT_TRUE(OnConnectRan);
+}
+
+TEST(ControllerAccessTest, PlainAttach) {
+  // Attach a with pre-constructed ControllerAccess instance.
+  QueueingRunner<>::WorkQueue Tasks;
+  Session S(mockExecutorProcessInfo(), QueueingRunner(Tasks), noErrors);
+  auto CA = cantFail(MockControllerAccess::Create(S, false, postOnto(Tasks)));
+  S.attach(std::move(CA), BootstrapInfo(S));
+
+  int32_t Result = 0;
+  SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
+      S.controllerCaller(
+          reinterpret_cast<orc_rt_ControllerHandlerTag>(add_sps_wrapper)),
+      [&](Expected<int32_t> R) { Result = cantFail(std::move(R)); }, 41, 1);
+
+  QueueingRunner<>::runFIFOUntilEmpty(Tasks);
+
+  EXPECT_EQ(Result, 42);
 }
 
 TEST(ControllerAccessTest, TryAttachSuccess) {

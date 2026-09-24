@@ -834,6 +834,11 @@ void StmtPrinter::VisitOMPInterchangeDirective(OMPInterchangeDirective *Node) {
   PrintOMPExecutableDirective(Node);
 }
 
+void StmtPrinter::VisitOMPFlattenDirective(OMPFlattenDirective *Node) {
+  Indent() << "#pragma omp flatten";
+  PrintOMPExecutableDirective(Node);
+}
+
 void StmtPrinter::VisitOMPSplitDirective(OMPSplitDirective *Node) {
   Indent() << "#pragma omp split";
   PrintOMPExecutableDirective(Node);
@@ -1378,7 +1383,8 @@ void StmtPrinter::VisitDeclRefExpr(DeclRefExpr *Node) {
   bool CleanUglifiedParameter = Policy.CleanUglifiedParameters &&
                                 isa<ParmVarDecl, NonTypeTemplateParmDecl>(VD);
 
-  if (Policy.FullyQualifiedName && !ForceAnonymous && !CleanUglifiedParameter) {
+  if (Policy.FullyQualifiedName && !ForceAnonymous && !CleanUglifiedParameter &&
+      !VD->isTemplateParameter()) {
     VD->printQualifiedName(OS, Policy);
   } else {
     Node->getQualifier().print(OS, Policy);

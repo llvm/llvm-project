@@ -600,9 +600,30 @@ CIRRecordLowering::accumulateBitFields(RecordDecl::field_iterator field,
         // Determine if accumulating the just-seen span will create an expensive
         // access unit or not.
         mlir::Type type = getUIntNType(astContext.toBits(accessSize));
-        if (!astContext.getTargetInfo().hasCheapUnalignedBitFieldAccess())
-          cirGenTypes.getCGModule().errorNYI(
-              field->getSourceRange(), "NYI CheapUnalignedBitFieldAccess");
+        if (!astContext.getTargetInfo().hasCheapUnalignedBitFieldAccess()) {
+          // Unaligned accesses are expensive. Only accumulate if the new unit
+          // is naturally aligned. Otherwise install the best we have, which is
+          // either the initial access unit (can't do better), or a naturally
+          // aligned accumulation (since we would have already installed it if
+          // it wasn't naturally aligned).
+          CharUnits align = getMemberAlignment(type);
+          if (align > astRecordLayout.getAlignment()) {
+            // The alignment required is greater than the containing structure
+            // itself.
+            installBest = true;
+          } else if (!beginOffset.isMultipleOf(align)) {
+            // The access unit is not at a naturally aligned offset within the
+            // structure.
+            installBest = true;
+          }
+
+          if (installBest && bestEnd == field) {
+            // We're installing the first span, whose clipping was presumed
+            // above. Compute it correctly.
+            if (getSize(type) == accessSize)
+              bestClipped = false;
+          }
+        }
 
         if (!installBest) {
           // Find the next used storage offset to determine what the limit of

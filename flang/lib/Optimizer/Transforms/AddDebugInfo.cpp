@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Builder/FIRBuilder.h"
+#include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"
 #include "flang/Optimizer/Dialect/FIRCG/CGOps.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
@@ -69,6 +70,8 @@ public:
 private:
   llvm::StringMap<mlir::LLVM::DIModuleAttr> moduleMap;
   llvm::StringMap<mlir::LLVM::DICommonBlockAttr> commonBlockMap;
+  /// Whether this module is being compiled for an OpenMP target device.
+  bool isTargetDevice = false;
   // List of GlobalVariableExpressionAttr that are attached to a given global
   // that represents the storage for common block.
   llvm::DenseMap<fir::GlobalOp, llvm::SmallVector<mlir::Attribute>>
@@ -145,13 +148,17 @@ private:
                            fir::cg::XDeclareOp typeGenDeclOp);
 };
 
+/// Whether \p loc already carries debug information of type \c AttrT, fused
+/// onto it by this pass. A location is fused for unrelated reasons too, most
+/// notably one that came from an INCLUDE'd file, so what the fusion holds has
+/// to be examined rather than the fusion merely detected. Each caller names
+/// the attribute it would attach itself, so nothing here needs updating when
+/// another kind of debug information is generated elsewhere. Only the
+/// outermost fusion is examined, because that is the one this pass adds.
+template <typename AttrT>
 bool debugInfoIsAlreadySet(mlir::Location loc) {
-  if (mlir::isa<mlir::FusedLoc>(loc)) {
-    if (loc->findInstanceOf<mlir::FusedLocWith<fir::LocationKindAttr>>())
-      return false;
-    return true;
-  }
-  return false;
+  auto fusedLoc = mlir::dyn_cast<mlir::FusedLoc>(loc);
+  return fusedLoc && mlir::isa_and_present<AttrT>(fusedLoc.getMetadata());
 }
 
 // Generates the name for the artificial DISubprogram that we are going to
@@ -197,6 +204,46 @@ static bool isDataObjectName(fir::NameUniquer::NameKind kind) {
 // Check if a name belongs to a module rather than to a procedure.
 static bool isModuleLevelName(const fir::NameUniquer::DeconstructedName &name) {
   return name.procs.empty() && !name.modules.empty();
+}
+
+// Check if the storage of a variable with the given CUDA Fortran data
+// attribute can be addressed by the host.
+static bool isHostAddressable(cuf::DataAttributeAttr dataAttr) {
+  if (!dataAttr)
+    return true;
+  switch (dataAttr.getValue()) {
+  case cuf::DataAttribute::Constant:
+  case cuf::DataAttribute::Device:
+  case cuf::DataAttribute::Shared:
+    return false;
+  case cuf::DataAttribute::Managed:
+  case cuf::DataAttribute::Pinned:
+  case cuf::DataAttribute::Unified:
+    return true;
+  }
+  llvm_unreachable("unknown CUDA Fortran data attribute");
+}
+
+// Check if the operation belongs to a procedure that is compiled for the
+// device only, whose debug info is generated separately.
+static bool isInDeviceOnlyProcedure(mlir::Operation *op) {
+  auto funcOp = op->getParentOfType<mlir::func::FuncOp>();
+  if (!funcOp)
+    return false;
+  auto procAttr =
+      funcOp->getAttrOfType<cuf::ProcAttributeAttr>(cuf::getProcAttrName());
+  if (!procAttr)
+    return false;
+  switch (procAttr.getValue()) {
+  case cuf::ProcAttribute::Host:
+  case cuf::ProcAttribute::HostDevice:
+    return false;
+  case cuf::ProcAttribute::Device:
+  case cuf::ProcAttribute::Global:
+  case cuf::ProcAttribute::GridGlobal:
+    return true;
+  }
+  llvm_unreachable("unknown CUDA Fortran procedure attribute");
 }
 
 // Check if a global represents a data object declared in a module.
@@ -280,8 +327,9 @@ bool AddDebugInfoPass::createCommonBlockGlobal(
 
   // Create the debug attributes.
   unsigned line = fir::getLineFromLoc(global.getLoc());
-  mlir::LLVM::DICommonBlockAttr commonBlock =
-      getOrCreateCommonBlockAttr(commonName, fileAttr, scopeAttr, line);
+  mlir::LLVM::DICommonBlockAttr commonBlock = getOrCreateCommonBlockAttr(
+      commonName, fir::getFileAttrFromLoc(global.getLoc(), fileAttr), scopeAttr,
+      line);
 
   mlir::LLVM::DITypeAttr diType = typeGen.convertType(
       fir::unwrapRefType(declOp.getType()), fileAttr, scopeAttr, declOp);
@@ -289,7 +337,8 @@ bool AddDebugInfoPass::createCommonBlockGlobal(
   line = fir::getLineFromLoc(declOp.getLoc());
   auto gvAttr = mlir::LLVM::DIGlobalVariableAttr::get(
       context, commonBlock, mlir::StringAttr::get(context, name),
-      declOp.getUniqName(), fileAttr, line, diType,
+      declOp.getUniqName(), fir::getFileAttrFromLoc(declOp.getLoc(), fileAttr),
+      line, diType,
       /*isLocalToUnit*/ false, /*isDefinition*/ true, /* alignInBits*/ 0);
 
   // Create DIExpression for offset if needed
@@ -337,6 +386,11 @@ void AddDebugInfoPass::handleLocalVariable(Op declOp, llvm::StringRef name,
                                            mlir::Value dummyScope,
                                            mlir::Type typeToConvert,
                                            fir::cg::XDeclareOp typeGenDeclOp) {
+  // Exclude variables that the host cannot address.
+  if (!isInDeviceOnlyProcedure(declOp) &&
+      !isHostAddressable(declOp.getDataAttrAttr()))
+    return;
+
   mlir::MLIRContext *context = &getContext();
   mlir::OpBuilder builder(context);
 
@@ -382,7 +436,8 @@ void AddDebugInfoPass::handleLocalVariable(Op declOp, llvm::StringRef name,
   }
 
   auto localVarAttr = mlir::LLVM::DILocalVariableAttr::get(
-      context, scopeAttr, mlir::StringAttr::get(context, name), fileAttr,
+      context, scopeAttr, mlir::StringAttr::get(context, name),
+      fir::getFileAttrFromLoc(declOp.getLoc(), fileAttr),
       fir::getLineFromLoc(declOp.getLoc()), argNo, /* alignInBits*/ 0, tyAttr,
       mlir::LLVM::DIFlags::Zero);
   declOp->setLoc(builder.getFusedLoc({declOp->getLoc()}, localVarAttr));
@@ -466,8 +521,10 @@ AddDebugInfoPass::getOrCreateModuleAttr(const std::string &name,
     // The location of the fir.module_debug_imports is that of the MODULE
     // statement. A module that has none is not defined here, and gets no line.
     if (auto iter{moduleDebugImportsByName.find(name)};
-        iter != moduleDebugImportsByName.end())
+        iter != moduleDebugImportsByName.end()) {
       line = fir::getLineFromLoc(iter->second.getLoc());
+      fileAttr = fir::getFileAttrFromLoc(iter->second.getLoc(), fileAttr);
+    }
 
     // When decl is true, it means that module is only being used in this
     // compilation unit and it is defined elsewhere. But if the file/line/scope
@@ -520,7 +577,8 @@ void AddDebugInfoPass::handleGlobalOp(fir::GlobalOp globalOp,
                                       fir::DebugTypeGenerator &typeGen,
                                       mlir::SymbolTable *symbolTable,
                                       fir::cg::XDeclareOp declOp) {
-  if (debugInfoIsAlreadySet(globalOp.getLoc()))
+  // A global is described by an array of DIGlobalVariableExpressionAttr.
+  if (debugInfoIsAlreadySet<mlir::ArrayAttr>(globalOp.getLoc()))
     return;
   mlir::MLIRContext *context = &getContext();
   mlir::OpBuilder builder(context);
@@ -571,7 +629,8 @@ void AddDebugInfoPass::handleGlobalOp(fir::GlobalOp globalOp,
       typeGen.convertType(globalOp.getType(), fileAttr, scope, declOp);
   auto gvAttr = mlir::LLVM::DIGlobalVariableAttr::get(
       context, scope, mlir::StringAttr::get(context, result.second.name),
-      linkageName, fileAttr, line, diType, isLocalToUnit,
+      linkageName, fir::getFileAttrFromLoc(globalOp.getLoc(), fileAttr), line,
+      diType, isLocalToUnit,
       /*isDefinition*/ globalOp.isInitialized(), /* alignInBits*/ 0);
   auto dbgExpr = mlir::LLVM::DIGlobalVariableExpressionAttr::get(
       globalOp.getContext(), gvAttr, nullptr);
@@ -598,22 +657,16 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
                                     mlir::SymbolTable *symbolTable) {
   mlir::Location l = funcOp->getLoc();
   // If fused location has already been created then nothing to do
-  // Otherwise, create a fused location.
-  if (debugInfoIsAlreadySet(l))
+  // Otherwise, create a fused location. A function is described by a
+  // DISubprogramAttr.
+  if (debugInfoIsAlreadySet<mlir::LLVM::DISubprogramAttr>(l))
     return;
 
   mlir::MLIRContext *context = &getContext();
   mlir::OpBuilder builder(context);
-  llvm::StringRef fileName(fileAttr.getName());
-  llvm::StringRef filePath(fileAttr.getDirectory());
   unsigned int CC = (funcOp.getName() == fir::NameUniquer::doProgramEntry())
                         ? llvm::dwarf::getCallingConvention("DW_CC_program")
                         : llvm::dwarf::getCallingConvention("DW_CC_normal");
-
-  if (auto funcLoc = mlir::dyn_cast<mlir::FileLineColLoc>(l)) {
-    fileName = llvm::sys::path::filename(funcLoc.getFilename().getValue());
-    filePath = llvm::sys::path::parent_path(funcLoc.getFilename().getValue());
-  }
 
   mlir::StringAttr fullName = mlir::StringAttr::get(context, funcOp.getName());
   mlir::Attribute attr = funcOp->getAttr(fir::getInternalFuncNameAttrName());
@@ -636,25 +689,31 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
         mlir::StringAttr::get(context, fir::getPresentableFunctionName(funcOp));
   }
 
+  bool lineTableOrDirectivesOnly =
+      debugLevel == mlir::LLVM::DIEmissionKind::LineTablesOnly ||
+      debugLevel == mlir::LLVM::DIEmissionKind::DebugDirectivesOnly;
+
+  // Dont generate any type at LineTablesOnly and DebugDirectivesOnly level.
   llvm::SmallVector<mlir::LLVM::DITypeAttr> types;
-  for (auto resTy : funcOp.getResultTypes()) {
-    auto tyAttr =
-        typeGen.convertType(resTy, fileAttr, cuAttr, /*declOp=*/nullptr);
-    types.push_back(tyAttr);
-  }
-  // If no return type then add a null type as a place holder for that.
-  if (types.empty())
-    types.push_back(mlir::LLVM::DINullTypeAttr::get(context));
-  for (auto inTy : funcOp.getArgumentTypes()) {
-    auto tyAttr = typeGen.convertType(fir::unwrapRefType(inTy), fileAttr,
-                                      cuAttr, /*declOp=*/nullptr);
-    types.push_back(tyAttr);
+  if (!lineTableOrDirectivesOnly) {
+    for (auto resTy : funcOp.getResultTypes()) {
+      auto tyAttr =
+          typeGen.convertType(resTy, fileAttr, cuAttr, /*declOp=*/nullptr);
+      types.push_back(tyAttr);
+    }
+    // If no return type then add a null type as a place holder for that.
+    if (types.empty())
+      types.push_back(mlir::LLVM::DINullTypeAttr::get(context));
+    for (auto inTy : funcOp.getArgumentTypes()) {
+      auto tyAttr = typeGen.convertType(fir::unwrapRefType(inTy), fileAttr,
+                                        cuAttr, /*declOp=*/nullptr);
+      types.push_back(tyAttr);
+    }
   }
 
   mlir::LLVM::DISubroutineTypeAttr subTypeAttr =
       mlir::LLVM::DISubroutineTypeAttr::get(context, CC, types);
-  mlir::LLVM::DIFileAttr funcFileAttr =
-      mlir::LLVM::DIFileAttr::get(context, fileName, filePath);
+  mlir::LLVM::DIFileAttr funcFileAttr = fir::getFileAttrFromLoc(l, fileAttr);
 
   // Only definitions need a distinct identifier and a compilation unit.
   mlir::DistinctAttr id, id2;
@@ -691,7 +750,13 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
         subprogramFlags | mlir::LLVM::DISubprogramFlags::Recursive;
 
   unsigned line = fir::getLineFromLoc(l);
-  if (fir::isInternalProcedure(funcOp)) {
+  // A target device module holds the internal procedures and the outlined
+  // target regions, but not the host procedure they are contained in, which
+  // only the host runs. Scoping them at it would leave a DW_TAG_subprogram
+  // with no code as their parent, and a debugger does not look inside such a
+  // subtree, so scope them at the file instead. Nothing on the device reads a
+  // variable through that scope, so only the name qualification is lost.
+  if (fir::isInternalProcedure(funcOp) && !isTargetDevice) {
     // For contained functions, the scope is the parent subroutine.
     mlir::SymbolRefAttr sym = mlir::cast<mlir::SymbolRefAttr>(
         funcOp->getAttr(fir::getHostSymbolAttrName()));
@@ -713,8 +778,7 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
     Scope = getOrCreateModuleAttr(result.second.modules[0], fileAttr, cuAttr);
   }
 
-  auto addTargetOpDISP = [&](bool lineTableOnly,
-                             llvm::ArrayRef<mlir::Attribute> entities) {
+  auto addTargetOpDISP = [&](llvm::ArrayRef<mlir::Attribute> entities) {
     // When we process the DeclareOp inside the OpenMP target region, all the
     // variables get the DISubprogram of the parent function of the target op as
     // the scope. In the codegen (to llvm ir), OpenMP target op results in the
@@ -741,16 +805,19 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
       mlir::DistinctAttr id =
           mlir::DistinctAttr::create(mlir::UnitAttr::get(context));
       llvm::SmallVector<mlir::LLVM::DITypeAttr> types;
-      types.push_back(mlir::LLVM::DINullTypeAttr::get(context));
-      for (auto arg : targetOp.getRegion().getArguments()) {
-        auto tyAttr = typeGen.convertType(fir::unwrapRefType(arg.getType()),
-                                          fileAttr, cuAttr, /*declOp=*/nullptr);
-        types.push_back(tyAttr);
+      if (!lineTableOrDirectivesOnly) {
+        types.push_back(mlir::LLVM::DINullTypeAttr::get(context));
+        for (auto arg : targetOp.getRegion().getArguments()) {
+          auto tyAttr =
+              typeGen.convertType(fir::unwrapRefType(arg.getType()), fileAttr,
+                                  cuAttr, /*declOp=*/nullptr);
+          types.push_back(tyAttr);
+        }
       }
       CC = llvm::dwarf::getCallingConvention("DW_CC_normal");
       mlir::LLVM::DISubroutineTypeAttr spTy =
           mlir::LLVM::DISubroutineTypeAttr::get(context, CC, types);
-      if (lineTableOnly || entities.empty()) {
+      if (lineTableOrDirectivesOnly || entities.empty()) {
         auto spAttr = mlir::LLVM::DISubprogramAttr::get(
             context, id, compilationUnit, Scope, name, name, funcFileAttr, line,
             line, flags, spTy, /*retainedNodes=*/{}, /*annotations=*/{});
@@ -788,14 +855,13 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
 
   // Don't process variables if user asked for line tables or debug directives
   // only.
-  if (debugLevel == mlir::LLVM::DIEmissionKind::LineTablesOnly ||
-      debugLevel == mlir::LLVM::DIEmissionKind::DebugDirectivesOnly) {
+  if (lineTableOrDirectivesOnly) {
     auto spAttr = mlir::LLVM::DISubprogramAttr::get(
         context, id, compilationUnit, Scope, funcName, fullName, funcFileAttr,
         line, line, subprogramFlags, subTypeAttr, /*retainedNodes=*/{},
         /*annotations=*/{});
     funcOp->setLoc(builder.getFusedLoc({l}, spAttr));
-    addTargetOpDISP(/*lineTableOnly=*/true, /*entities=*/{});
+    addTargetOpDISP(/*entities=*/{});
     return;
   }
 
@@ -849,7 +915,7 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
         /*annotations=*/{});
 
   funcOp->setLoc(builder.getFusedLoc({l}, spAttr));
-  addTargetOpDISP(/*lineTableOnly=*/false, retainedNodes);
+  addTargetOpDISP(retainedNodes);
 
   // Find the first dummy_scope definition. This is the one of the current
   // function. The other ones may come from inlined calls. The variables inside
@@ -1077,6 +1143,9 @@ void AddDebugInfoPass::runOnOperation() {
   mlir::ModuleOp module = getOperation();
   mlir::MLIRContext *context = &getContext();
   mlir::SymbolTable symbolTable(module);
+  if (auto offloadMod =
+          mlir::dyn_cast<mlir::omp::OffloadModuleInterface>(*module))
+    isTargetDevice = offloadMod.getIsTargetDevice();
   buildModuleDebugImportsMap(module);
   buildDefinedModuleNames(module);
   llvm::StringRef fileName;

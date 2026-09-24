@@ -1523,7 +1523,7 @@ define <8 x bfloat> @fptrunc_v8f64(<8 x double> %a) nounwind {
 ; X86-NEXT:    vmovaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
 ; X86-NEXT:    vmovhps %xmm0, (%esp)
 ; X86-NEXT:    calll __truncdfbf2
-; X86-NEXT:    vmovdqa {{[-0-9]+}}(%e{{[sb]}}p), %xmm1 # 16-byte Reload
+; X86-NEXT:    vmovdqa64 {{[-0-9]+}}(%e{{[sb]}}p), %xmm1 # 16-byte Reload
 ; X86-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
 ; X86-NEXT:    vmovdqa {{[-0-9]+}}(%e{{[sb]}}p), %xmm1 # 16-byte Reload
 ; X86-NEXT:    vpunpcklwd {{[-0-9]+}}(%e{{[sb]}}p), %xmm1, %xmm1 # 16-byte Folded Reload
@@ -2006,6 +2006,8 @@ define void @PR92471(ptr %0, ptr %1) nounwind {
 ; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; SSE2-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    pinsrw $2, 12(%rdi), %xmm1
+; SSE2-NEXT:    pextrw $7, %xmm0, %eax
+; SSE2-NEXT:    pinsrw $3, %eax, %xmm1
 ; SSE2-NEXT:    pxor %xmm2, %xmm2
 ; SSE2-NEXT:    pxor %xmm3, %xmm3
 ; SSE2-NEXT:    punpcklwd {{.*#+}} xmm3 = xmm3[0],xmm1[0],xmm3[1],xmm1[1],xmm3[2],xmm1[2],xmm3[3],xmm1[3]
