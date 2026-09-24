@@ -299,6 +299,9 @@ extern char &SIWholeQuadModeID;
 void initializeSILowerControlFlowLegacyPass(PassRegistry &);
 extern char &SILowerControlFlowLegacyID;
 
+void initializeSISinkAsyncDMALegacyPass(PassRegistry &);
+extern char &SISinkAsyncDMALegacyID;
+
 void initializeSIPreEmitPeepholeLegacyPass(PassRegistry &);
 extern char &SIPreEmitPeepholeID;
 

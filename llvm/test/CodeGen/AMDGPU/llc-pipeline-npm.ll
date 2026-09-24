@@ -289,6 +289,7 @@
 ; GCN-O2-SDAG-NEXT:     StructurizeCFGPass
 ; GCN-O2-SDAG-NEXT:     amdgpu-annotate-uniform
 ; GCN-O2-SDAG-NEXT:     si-annotate-control-flow
+; GCN-O2-SDAG-NEXT:     si-sink-async-dma
 ; GCN-O2-SDAG-NEXT:     amdgpu-rewrite-undef-for-phi
 ; GCN-O2-SDAG-NEXT:     lcssa
 ; GCN-O2-SDAG-NEXT: amdgpu-perf-hint
@@ -476,6 +477,7 @@
 ; GCN-O2-GISEL-NEXT:     StructurizeCFGPass
 ; GCN-O2-GISEL-NEXT:     amdgpu-annotate-uniform
 ; GCN-O2-GISEL-NEXT:     si-annotate-control-flow
+; GCN-O2-GISEL-NEXT:     si-sink-async-dma
 ; GCN-O2-GISEL-NEXT:     amdgpu-rewrite-undef-for-phi
 ; GCN-O2-GISEL-NEXT: amdgpu-perf-hint
 ; GCN-O2-GISEL-NEXT: cgscc
@@ -670,6 +672,7 @@
 ; GCN-O3-SDAG-NEXT:     StructurizeCFGPass
 ; GCN-O3-SDAG-NEXT:     amdgpu-annotate-uniform
 ; GCN-O3-SDAG-NEXT:     si-annotate-control-flow
+; GCN-O3-SDAG-NEXT:     si-sink-async-dma
 ; GCN-O3-SDAG-NEXT:     amdgpu-rewrite-undef-for-phi
 ; GCN-O3-SDAG-NEXT:     lcssa
 ; GCN-O3-SDAG-NEXT: amdgpu-perf-hint
@@ -857,6 +860,7 @@
 ; GCN-O3-GISEL-NEXT:     StructurizeCFGPass
 ; GCN-O3-GISEL-NEXT:     amdgpu-annotate-uniform
 ; GCN-O3-GISEL-NEXT:     si-annotate-control-flow
+; GCN-O3-GISEL-NEXT:     si-sink-async-dma
 ; GCN-O3-GISEL-NEXT:     amdgpu-rewrite-undef-for-phi
 ; GCN-O3-GISEL-NEXT: amdgpu-perf-hint
 ; GCN-O3-GISEL-NEXT: cgscc
