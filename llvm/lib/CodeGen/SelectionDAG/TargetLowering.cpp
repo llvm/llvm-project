@@ -822,6 +822,34 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
 
     break;
   }
+  // On little-endian targets, a scalar-to-vector round trip from lane zero
+  // preserves the demanded low bits when the source and destination widths
+  // match.
+  case ISD::SCALAR_TO_VECTOR: {
+    if (!IsLE || !VT.isFixedLengthVector() ||
+        !VT.getVectorElementType().isInteger())
+      break;
+
+    EVT DstEltVT = VT.getVectorElementType();
+    SDValue Scalar = Op.getOperand(0);
+    bool IsTruncate = Scalar.getOpcode() == ISD::TRUNCATE;
+    SDValue Extract = IsTruncate ? Scalar.getOperand(0) : Scalar;
+    if (Extract.getOpcode() != ISD::EXTRACT_VECTOR_ELT)
+      break;
+
+    SDValue Vec = Extract.getOperand(0);
+    EVT VecVT = Vec.getValueType();
+    if (!VecVT.isFixedLengthVector() ||
+        !VecVT.getVectorElementType().isInteger() ||
+        Extract.getValueType() != VecVT.getVectorElementType() ||
+        (IsTruncate && Scalar.getValueType() != DstEltVT) ||
+        !isNullConstant(Extract.getOperand(1)) ||
+        VecVT.getScalarSizeInBits() < VT.getScalarSizeInBits() ||
+        VecVT.getSizeInBits() != VT.getSizeInBits())
+      break;
+
+    return DAG.getBitcast(VT, Vec);
+  }
   case ISD::AND: {
     LHSKnown = DAG.computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     RHSKnown = DAG.computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
