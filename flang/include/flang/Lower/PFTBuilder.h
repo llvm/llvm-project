@@ -733,8 +733,10 @@ struct FunctionLikeUnit : public ProgramUnit {
   const semantics::Scope *scope;
   LabelEvalMap labelEvaluationMap;
   SymbolLabelMap assignSymbolLabelMap;
-  /// Evaluations that branch to a given evaluation -- the inverse of the
-  /// controlSuccessor / extraControlSuccessors edges.
+  /// Evaluations that branch to a given evaluation. A construct transferring
+  /// control between its own statements is not a branch (F2023 11.2.1 p1), so
+  /// the control successors analyzeBranches sets for CASE, ELSE IF, ELSE,
+  /// SELECT RANK and a DO statement and its EndDoStmt are not recorded here.
   IncomingBranchMap incomingBranches;
   ContainedUnitList containedUnitList;
   EvaluationList evaluationList;
