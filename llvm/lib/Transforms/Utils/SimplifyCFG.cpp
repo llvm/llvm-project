@@ -29,10 +29,15 @@
 #include "llvm/Analysis/GuardUtils.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/Loads.h"
+#include "llvm/Analysis/LoopAccessAnalysis.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
+#include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
@@ -2420,10 +2425,55 @@ static void sinkLastInstruction(ArrayRef<BasicBlock*> Blocks) {
   }
 }
 
+/// Return true if \p I is a memory access with a stride of one element per
+/// iteration of the loop it belongs to.
+static bool isUnitStrideMemOp(Instruction *I, const SimplifyCFGOptions &Opts) {
+  if (!Opts.LI || !Opts.SE)
+    return false;
+  Loop *L = Opts.LI->getLoopFor(I->getParent());
+  if (!L)
+    return false;
+  Type *AccessTy = getLoadStoreType(I);
+  const DataLayout &DL = I->getDataLayout();
+  if (DL.getTypeAllocSizeInBits(AccessTy) != DL.getTypeSizeInBits(AccessTy))
+    return false;
+  Value *Ptr = getLoadStorePointerOperand(I);
+  PredicatedScalarEvolution PSE(*Opts.SE, *L);
+  auto *AR = dyn_cast<SCEVAddRecExpr>(PSE.getSCEV(Ptr));
+  if (!AR)
+    return false;
+  std::optional<int64_t> Stride =
+      getStrideFromAddRec(AR, L, AccessTy, Ptr, PSE);
+  return Stride == 1 || Stride == -1;
+}
+
+/// Estimate whether commoning the loads or stores \p Insts, which access
+/// distinct addresses, penalizes a later vectorizer. Commoning needs a pointer
+/// PHI, so consecutive accesses that each could be widened into a masked load
+/// or store are widened as a gather or scatter instead.
+static bool
+sinkingMemOpCouldPenalizeVectorization(const TargetTransformInfo &TTI,
+                                       ArrayRef<Instruction *> Insts,
+                                       const SimplifyCFGOptions &Opts) {
+  Instruction *I = Insts.front();
+  bool IsLoad = isa<LoadInst>(I);
+  assert((IsLoad || isa<StoreInst>(I)) && "Expected a load or store");
+  if (!all_of(Insts,
+              [&](Instruction *I) { return isUnitStrideMemOp(I, Opts); }))
+    return false;
+
+  Type *ScalarTy = getLoadStoreType(I);
+  return VectorType::isValidElementType(ScalarTy) &&
+         isLegalMaskedLoadOrStore(TTI, IsLoad, ScalarTy,
+                                  getLoadStoreAlignment(I),
+                                  getLoadStoreAddressSpace(I));
+}
+
 /// Check whether BB's predecessors end with unconditional branches. If it is
 /// true, sink any common code from the predecessors to BB.
-static bool sinkCommonCodeFromPredecessors(BasicBlock *BB,
-                                           DomTreeUpdater *DTU) {
+static bool sinkCommonCodeFromPredecessors(BasicBlock *BB, DomTreeUpdater *DTU,
+                                           const TargetTransformInfo &TTI,
+                                           const SimplifyCFGOptions &Options) {
   // We support two situations:
   //   (1) all incoming arcs are unconditional
   //   (2) there are non-unconditional incoming arcs
@@ -2523,10 +2573,29 @@ static bool sinkCommonCodeFromPredecessors(BasicBlock *BB,
       return false;
     };
 
+    // Check whether the memory operations in \p Insts all access the same
+    // address, so that commoning them needs no PHI for the pointer operand.
+    auto HaveSameMemAddress = [](ArrayRef<Instruction *> Insts) {
+      Value *Ptr = getLoadStorePointerOperand(Insts.front());
+      auto *PtrI = dyn_cast<Instruction>(Ptr);
+      return all_of(drop_begin(Insts), [&](Instruction *I) {
+        Value *OtherPtr = getLoadStorePointerOperand(I);
+        if (OtherPtr == Ptr)
+          return true;
+        auto *OtherPtrI = dyn_cast<Instruction>(OtherPtr);
+        return PtrI && OtherPtrI && PtrI->isIdenticalTo(OtherPtrI);
+      });
+    };
+
     // Okay, we *could* sink last ScanIdx instructions. But how many can we
     // actually sink before encountering instruction that is unprofitable to
     // sink?
     auto ProfitableToSinkInstruction = [&](LockstepReverseIterator<true> &LRI) {
+      ArrayRef<Instruction *> Insts = *LRI;
+      if (isa<LoadInst, StoreInst>(Insts[0]) && !HaveSameMemAddress(Insts) &&
+          sinkingMemOpCouldPenalizeVectorization(TTI, Insts, Options))
+        return false;
+
       unsigned NumPHIInsts = 0;
       for (Use &U : (*LRI)[0]->operands()) {
         auto It = PHIOperands.find(&U);
@@ -9334,7 +9403,7 @@ bool SimplifyCFGOpt::simplifyOnce(BasicBlock *BB) {
     return true;
 
   if (SinkCommon && Options.SinkCommonInsts) {
-    if (sinkCommonCodeFromPredecessors(BB, DTU) ||
+    if (sinkCommonCodeFromPredecessors(BB, DTU, TTI, Options) ||
         mergeCompatibleInvokes(BB, DTU)) {
       // sinkCommonCodeFromPredecessors() does not automatically CSE PHI's,
       // so we may now how duplicate PHI's.
