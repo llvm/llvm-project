@@ -1,7 +1,9 @@
 // RUN: %check_clang_tidy %s performance-inefficient-vector-operation %t -- \
 // RUN: -config='{CheckOptions: \
 // RUN:  {performance-inefficient-vector-operation.VectorLikeClasses: \
-// RUN:   "VectorLikeInheritedPushBack;VectorLikeDirectPushBack;VectorLikeInheritedEmplaceBack"}}'
+// RUN:   "VectorLikeInheritedPushBack;VectorLikeDirectPushBack;VectorLikeInheritedEmplaceBack", \
+// RUN:   performance-inefficient-vector-operation.RangeLikeClasses: \
+// RUN:   "RangeLike"}}'
 
 class VectorLikePushBackBase {
 public:
@@ -29,6 +31,13 @@ public:
   void reserve(int);
 };
 
+class RangeLike {
+public:
+  int *begin();
+  int *end();
+  int size() const;
+};
+
 void testVectorLikeClasses() {
   {
     VectorLikeInheritedPushBack inheritedPushBackVector;
@@ -54,6 +63,16 @@ void testVectorLikeClasses() {
     for (int I = 0; I < 100; ++I) {
       inheritedEmplaceBackVector.emplace_back(I);
       // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: 'emplace_back' is called inside a loop; consider pre-allocating the container capacity before the loop
+    }
+  }
+
+  {
+    RangeLike range;
+    VectorLikeDirectPushBack vector;
+    // CHECK-FIXES: vector.reserve(range.size());
+    for (int value : range) {
+      vector.push_back(value);
+      // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: 'push_back' is called inside a loop; consider pre-allocating the container capacity before the loop
     }
   }
 }
