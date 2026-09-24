@@ -161,7 +161,7 @@ void fir::runtime::genBesselJn(fir::FirOpBuilder &builder, mlir::Location loc,
   else if (xTy.isF128())
     func = fir::runtime::getRuntimeFunc<ForcedBesselJn_16>(loc, builder);
   else
-    fir::intrinsicTypeTODO(builder, xTy, loc, "BESSEL_JN");
+    fir::intrinsicTypeTODO(xTy, loc, "BESSEL_JN");
 
   auto fTy = func.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
@@ -188,7 +188,7 @@ void fir::runtime::genBesselJnX0(fir::FirOpBuilder &builder, mlir::Location loc,
   else if (xTy.isF128())
     func = fir::runtime::getRuntimeFunc<ForcedBesselJnX0_16>(loc, builder);
   else
-    fir::intrinsicTypeTODO(builder, xTy, loc, "BESSEL_JN");
+    fir::intrinsicTypeTODO(xTy, loc, "BESSEL_JN");
 
   auto fTy = func.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
@@ -216,7 +216,7 @@ void fir::runtime::genBesselYn(fir::FirOpBuilder &builder, mlir::Location loc,
   else if (xTy.isF128())
     func = fir::runtime::getRuntimeFunc<ForcedBesselYn_16>(loc, builder);
   else
-    fir::intrinsicTypeTODO(builder, xTy, loc, "BESSEL_YN");
+    fir::intrinsicTypeTODO(xTy, loc, "BESSEL_YN");
 
   auto fTy = func.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
@@ -243,7 +243,7 @@ void fir::runtime::genBesselYnX0(fir::FirOpBuilder &builder, mlir::Location loc,
   else if (xTy.isF128())
     func = fir::runtime::getRuntimeFunc<ForcedBesselYnX0_16>(loc, builder);
   else
-    fir::intrinsicTypeTODO(builder, xTy, loc, "BESSEL_YN");
+    fir::intrinsicTypeTODO(xTy, loc, "BESSEL_YN");
 
   auto fTy = func.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
@@ -379,7 +379,7 @@ void fir::runtime::genMatmul(fir::FirOpBuilder &builder, mlir::Location loc,
 #include "flang/Runtime/matmul-instances.inc"
 
   if (!func) {
-    fir::intrinsicTypeTODO2(builder, arrAEleTy, arrBEleTy, loc, "MATMUL");
+    fir::intrinsicTypeTODO2(arrAEleTy, arrBEleTy, loc, "MATMUL");
   }
   auto fTy = func.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
@@ -430,8 +430,7 @@ void fir::runtime::genMatmulTranspose(fir::FirOpBuilder &builder,
 #include "flang/Runtime/matmul-instances.inc"
 
   if (!func) {
-    fir::intrinsicTypeTODO2(builder, arrAEleTy, arrBEleTy, loc,
-                            "MATMUL-TRANSPOSE");
+    fir::intrinsicTypeTODO2(arrAEleTy, arrBEleTy, loc, "MATMUL-TRANSPOSE");
   }
   auto fTy = func.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);

@@ -1,6 +1,15 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("Opts") {
+  visibility = [ ":yaml2obj" ]
+  args = [ "-gen-opt-parser-defs" ]
+}
+
 executable("yaml2obj") {
   deps = [
+    ":Opts",
     "//llvm/lib/ObjectYAML",
+    "//llvm/lib/Option",
     "//llvm/lib/Support",
   ]
   sources = [ "yaml2obj.cpp" ]

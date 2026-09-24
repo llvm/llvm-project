@@ -84,7 +84,7 @@ class LoadStoreOptImpl {
     // after the potential alias is recorded.
     SmallVector<std::pair<MachineInstr *, unsigned>> PotentialAliases;
 
-    LLVM_ABI void addPotentialAlias(MachineInstr &MI);
+    void addPotentialAlias(MachineInstr &MI);
 
     /// Reset this candidate back to an empty one.
     void reset() {
