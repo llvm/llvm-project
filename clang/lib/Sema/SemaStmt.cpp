@@ -78,8 +78,7 @@ StmtResult Sema::ActOnDeclStmt(DeclGroupPtrTy dg, SourceLocation StartLoc,
   DeclGroupRef DG = dg.get();
 
   // If we have an invalid decl, just return an error.
-  if (DG.isNull())
-    return StmtError();
+  if (DG.isNull()) return StmtError();
 
   return new (Context) DeclStmt(DG, StartLoc, EndLoc);
 }

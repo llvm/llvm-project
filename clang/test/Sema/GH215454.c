@@ -10,6 +10,12 @@ void d2(int e) {
                                  // expected-error {{statement requires expression of scalar type ('void' invalid)}}
 }
 
+// In C a declaration is not a statement, so this never reaches the fixed code.
+void d3(void) {
+  if (1)
+    int; // expected-error {{expected expression}}
+}
+
 // Reproducer from the issue; the unclosed '({' makes recovery run to EOF.
 #define c(a, b)                                                                \
   {;__typeof__(b);}
