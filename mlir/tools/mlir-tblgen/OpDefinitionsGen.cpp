@@ -2096,8 +2096,13 @@ generateNamedOperandGetters(const Operator &op, Class &opClass,
                                     MethodParameter("unsigned", "index"));
   ERROR_IF_PRUNED(m, "getODSOperands", op);
   auto &body = m->body();
-  body << formatv(valueRangeReturnCode, rangeBeginCall,
-                  "getODSOperandIndexAndLength(index)");
+  if (isGenericAdaptorBase) {
+    body << formatv(valueRangeReturnCode, rangeBeginCall,
+                    "getODSOperandIndexAndLength(index)");
+  } else {
+    body << "  auto [start, length] = getODSOperandIndexAndLength(index);\n"
+            "  return getOperation()->getOperands().slice(start, length);\n";
+  }
 
   // Then we emit nicer named getter methods by redirecting to the "sink" getter
   // method.

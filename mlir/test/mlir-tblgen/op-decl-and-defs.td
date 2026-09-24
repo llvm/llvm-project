@@ -100,6 +100,8 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
 // CHECK:     return ::llvm::StringLiteral("test.a_op");
 // CHECK:   }
 // CHECK:   ::mlir::Operation::operand_range getODSOperands(unsigned index) {
+// CHECK-NEXT:     auto [start, length] = getODSOperandIndexAndLength(index);
+// CHECK-NEXT:     return getOperation()->getOperands().slice(start, length);
 // CHECK:   ::mlir::TypedValue<::mlir::IntegerType> getA() {
 // CHECK:   ::mlir::Operation::operand_range getB() {
 // CHECK:   ::mlir::OpOperand &getAMutable() {
