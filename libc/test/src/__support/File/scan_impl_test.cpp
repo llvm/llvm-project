@@ -35,11 +35,12 @@ struct MockDir {
       return LIBC_NAMESPACE::Error(read_errno_val);
     }
 
-    dummy_entry.d_reclen = sizeof(struct dirent);
     dummy_entry.d_name[0] = 'a';
     dummy_entry.d_name[1] = '\0';
     return &dummy_entry;
   }
+
+  static size_t reclen(struct dirent *) { return sizeof(struct dirent); }
 
   int close() {
     delete this;
