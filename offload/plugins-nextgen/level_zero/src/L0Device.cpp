@@ -347,7 +347,8 @@ Error L0DeviceTy::free(void *TgtPtr, TargetAllocTy Kind) {
 }
 
 Error L0DeviceTy::dataSubmitImpl(void *TgtPtr, const void *HstPtr, int64_t Size,
-                                 AsyncInfoWrapperTy &AsyncInfoWrapper) {
+                                 AsyncInfoWrapperTy &AsyncInfoWrapper,
+                                 GenericProfilerTy *ProfilerPtr) {
   if (Size == 0)
     return Plugin::success();
 
@@ -368,7 +369,8 @@ Error L0DeviceTy::dataSubmitImpl(void *TgtPtr, const void *HstPtr, int64_t Size,
 
 Error L0DeviceTy::dataRetrieveImpl(void *HstPtr, const void *TgtPtr,
                                    int64_t Size,
-                                   AsyncInfoWrapperTy &AsyncInfoWrapper) {
+                                   AsyncInfoWrapperTy &AsyncInfoWrapper,
+                                   GenericProfilerTy *ProfilerPtr) {
   if (Size == 0)
     return Plugin::success();
 
@@ -405,7 +407,8 @@ Error L0DeviceTy::enqueueHostCallImpl(void (*Callback)(void *), void *UserData,
 
 Error L0DeviceTy::dataExchangeImpl(const void *SrcPtr, GenericDeviceTy &DstDev,
                                    void *DstPtr, int64_t Size,
-                                   AsyncInfoWrapperTy &AsyncInfoWrapper) {
+                                   AsyncInfoWrapperTy &AsyncInfoWrapper,
+                                   GenericProfilerTy *ProfilerPtr) {
   if (auto Err =
           enqueueMemCopy(DstPtr, SrcPtr, Size,
                          static_cast<__tgt_async_info *>(AsyncInfoWrapper)))
@@ -963,7 +966,8 @@ Error L0DeviceTy::callGlobalCtorDtorCommon(GenericPluginTy &Plugin,
   uint32_t NumBlocksAndThreads[3] = {1u, 1u, 1u};
   auto Err =
       L0Kernel.launchImpl(*this, NumBlocksAndThreads, NumBlocksAndThreads, 0,
-                          LaunchArgs, AsyncInfoWrapper);
+                          LaunchArgs, AsyncInfoWrapper,
+                          /*ProfilerPtr=*/nullptr);
 
   AsyncInfoWrapper.finalize(Err);
   return CleanupBufferAndErr(std::move(Err));
