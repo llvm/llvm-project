@@ -211,6 +211,10 @@ private:
   LLVM_ABI static const uint16_t RuntimeLibcallNameOffsetTable[];
   LLVM_ABI static const uint8_t RuntimeLibcallNameSizeTable[];
 
+  /// Function signature of runtime lib calls
+  LLVM_ABI static const FuncArgTypeID SignatureTable[];
+  LLVM_ABI static const uint16_t SignatureOffset[];
+
   /// Map from a concrete LibcallImpl implementation to its RTLIB::Libcall kind.
   LLVM_ABI static const RTLIB::Libcall ImplToLibcall[RTLIB::NumLibcallImpls];
 
