@@ -25,7 +25,7 @@ if(COMPILER_RT_GPU_BUILD)
 
   add_compiler_rt_runtime(clang_rt.csan
     STATIC
-    ARCHS ${UBSAN_SUPPORTED_ARCH}
+    ARCHS ${CSAN_SUPPORTED_ARCH}
     SOURCES ${CSAN_SOURCES}
     ADDITIONAL_HEADERS ${CSAN_HEADERS}
     CFLAGS ${CSAN_CFLAGS}
@@ -42,7 +42,7 @@ add_compiler_rt_component(csan)
 
 add_compiler_rt_runtime(clang_rt.csan
   STATIC
-  ARCHS ${UBSAN_SUPPORTED_ARCH}
+  ARCHS ${CSAN_SUPPORTED_ARCH}
   SOURCES csan.cpp csan_report.cpp
   ADDITIONAL_HEADERS csan.h csan_defs.h csan_flags.inc csan_watch.h
   OBJECT_LIBS RTSanitizerCommon
