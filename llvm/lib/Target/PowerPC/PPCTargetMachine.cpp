@@ -192,26 +192,23 @@ static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
   return std::make_unique<PPC64LinuxTargetObjectFile>();
 }
 
-static PPCTargetMachine::PPCABI computeTargetABI(const Triple &TT,
-                                                 const TargetOptions &Options) {
-  if (Options.MCOptions.getABIName().starts_with("elfv1"))
-    return PPCTargetMachine::PPC_ABI_ELFv1;
-  else if (Options.MCOptions.getABIName().starts_with("elfv2"))
-    return PPCTargetMachine::PPC_ABI_ELFv2;
+// An explicit ABI name takes precedence; otherwise use the triple default.
+PPCABI PPCTargetMachine::computeABI(const Triple &TT, StringRef ABIName) {
+  if (ABIName.starts_with("elfv1"))
+    return PPC_ABI_ELFv1;
+  if (ABIName.starts_with("elfv2"))
+    return PPC_ABI_ELFv2;
 
-  assert(Options.MCOptions.getABIName().empty() &&
-         "Unknown target-abi option!");
+  if (TT.isOSAIX())
+    return ABIName == "vec-extabi" ? PPC_ABI_AIX_EXTABI : PPC_ABI_UNKNOWN;
 
   switch (TT.getArch()) {
   case Triple::ppc64le:
-    return PPCTargetMachine::PPC_ABI_ELFv2;
+    return PPC_ABI_ELFv2;
   case Triple::ppc64:
-    if (TT.isPPC64ELFv2ABI())
-      return PPCTargetMachine::PPC_ABI_ELFv2;
-    else
-      return PPCTargetMachine::PPC_ABI_ELFv1;
+    return TT.isPPC64ELFv2ABI() ? PPC_ABI_ELFv2 : PPC_ABI_ELFv1;
   default:
-    return PPCTargetMachine::PPC_ABI_UNKNOWN;
+    return PPC_ABI_UNKNOWN;
   }
 }
 
@@ -300,13 +297,10 @@ PPCTargetMachine::PPCTargetMachine(const Target &T, const Triple &TT,
                                    std::optional<Reloc::Model> RM,
                                    std::optional<CodeModel::Model> CM,
                                    CodeGenOptLevel OL, bool JIT)
-    : CodeGenTargetMachineImpl(T,
-                               TT.computeDataLayout(Options.MCOptions.ABIName),
-                               TT, CPU, computeFSAdditions(FS, OL, TT), Options,
-                               getEffectiveRelocModel(TT, RM),
+    : CodeGenTargetMachineImpl(T, TT, CPU, computeFSAdditions(FS, OL, TT),
+                               Options, getEffectiveRelocModel(TT, RM),
                                getEffectivePPCCodeModel(TT, CM, JIT), OL),
       TLOF(createTLOF(getTargetTriple())),
-      TargetABI(computeTargetABI(TT, Options)),
       Endianness(TT.isLittleEndian() ? Endian::LITTLE : Endian::BIG) {
   initAsmInfo();
 }
@@ -337,7 +331,11 @@ PPCTargetMachine::getSubtargetImpl(const Function &F) const {
   if (SoftFloat)
     FS += FS.empty() ? "-hard-float" : ",-hard-float";
 
-  auto &I = SubtargetMap[CPU + TuneCPU + FS];
+  // Prefer the "target-abi" module flag, falling back to the -target-abi
+  // option.
+  StringRef ABIName = getTargetABIName(*F.getParent());
+
+  auto &I = SubtargetMap[CPU + TuneCPU + FS + ABIName.str()];
   if (!I) {
     I = std::make_unique<PPCSubtarget>(
         TargetTriple, CPU, TuneCPU,
@@ -347,7 +345,8 @@ PPCTargetMachine::getSubtargetImpl(const Function &F) const {
         // shouldn't require adding them. Fixing this means pulling Feature64Bit
         // out of most of the target cpus in the .td file and making it set only
         // as part of initialization via the TargetTriple.
-        computeFSAdditions(FS, getOptLevel(), getTargetTriple()), *this);
+        computeFSAdditions(FS, getOptLevel(), getTargetTriple()), ABIName,
+        *this);
   }
   return I.get();
 }

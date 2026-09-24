@@ -347,17 +347,7 @@ public:
   }
 
   bool isLegalMaskedCompressStore(Type *DataType,
-                                  Align Alignment) const override {
-    if (!(ST->isSVEAvailable() ||
-          (ST->isSVEorStreamingSVEAvailable() && ST->hasSME2p2())))
-      return false;
-
-    if (isa<FixedVectorType>(DataType) &&
-        DataType->getPrimitiveSizeInBits() < 128)
-      return false;
-
-    return isElementTypeLegalForCompressStore(DataType->getScalarType());
-  }
+                                  Align Alignment) const override;
 
   bool isLegalMaskedGatherScatter(Type *DataType) const {
     if (!ST->isSVEAvailable())
@@ -516,7 +506,9 @@ public:
   getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
                  TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
                  VectorType *SubTp, ArrayRef<const Value *> Args = {},
-                 const Instruction *CxtI = nullptr) const override;
+                 const Instruction *CxtI = nullptr,
+                 TTI::VectorInstrContext VIC =
+                     TTI::VectorInstrContext::None) const override;
 
   InstructionCost
   getScalarizationOverhead(VectorType *Ty, const APInt &DemandedElts,

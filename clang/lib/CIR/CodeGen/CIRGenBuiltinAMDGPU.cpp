@@ -240,12 +240,9 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
   case AMDGPU::BI__builtin_amdgcn_readfirstlane:
     return emitBuiltinWithOneOverloadedType<1>(expr, "amdgcn.readfirstlane")
         .getValue();
-  case AMDGPU::BI__builtin_amdgcn_wave_shuffle: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
-  }
+  case AMDGPU::BI__builtin_amdgcn_wave_shuffle:
+    return emitBuiltinWithOneOverloadedType<2>(expr, "amdgcn.wave.shuffle")
+        .getValue();
   case AMDGPU::BI__builtin_amdgcn_div_fixup:
   case AMDGPU::BI__builtin_amdgcn_div_fixupf:
   case AMDGPU::BI__builtin_amdgcn_div_fixuph: {
@@ -436,12 +433,8 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
                                                convertType(expr->getType()))
         .getValue();
   case AMDGPU::BI__builtin_amdgcn_fmed3f:
-  case AMDGPU::BI__builtin_amdgcn_fmed3h: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
-  }
+  case AMDGPU::BI__builtin_amdgcn_fmed3h:
+    return emitBuiltinWithOneOverloadedType<3>(expr, "amdgcn.fmed3").getValue();
   case AMDGPU::BI__builtin_amdgcn_ds_append:
   case AMDGPU::BI__builtin_amdgcn_ds_consume: {
     cgm.errorNYI(expr->getSourceRange(),
@@ -1017,12 +1010,9 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
     return mlir::Value{};
   }
   case AMDGPU::BI__builtin_amdgcn_bitop3_b32:
-  case AMDGPU::BI__builtin_amdgcn_bitop3_b16: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
-  }
+  case AMDGPU::BI__builtin_amdgcn_bitop3_b16:
+    return emitBuiltinWithOneOverloadedType<4>(expr, "amdgcn.bitop3")
+        .getValue();
   case AMDGPU::BI__builtin_amdgcn_make_buffer_rsrc: {
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AMDGPU builtin call: ") +
@@ -1079,18 +1069,16 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
                      getContext().BuiltinInfo.getName(builtinId));
     return mlir::Value{};
   }
-  case AMDGPU::BI__builtin_amdgcn_s_prefetch_data: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
-  }
-  case AMDGPU::BI__builtin_amdgcn_s_prefetch_inst: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
-  }
+  case AMDGPU::BI__builtin_amdgcn_s_prefetch_data:
+    return emitBuiltinWithOneOverloadedType<2>(
+               expr, "amdgcn.s.prefetch.data",
+               cir::VoidType::get(builder.getContext()))
+        .getValue();
+  case AMDGPU::BI__builtin_amdgcn_s_prefetch_inst:
+    return emitBuiltinWithOneOverloadedType<2>(
+               expr, "amdgcn.s.prefetch.inst",
+               cir::VoidType::get(builder.getContext()))
+        .getValue();
   case Builtin::BIlogbf:
   case Builtin::BI__builtin_logbf:
     return emitLogbBuiltin(*this, expr, llvm::APFloat::IEEEsingle());

@@ -47,6 +47,14 @@ using namespace llvm;
 namespace llvm::AMDGPU {
 #define GET_ImageDimIntrinsicTable_IMPL
 #define GET_RsrcIntrinsics_IMPL
+#define GET_GFX1250BlockingCyclesTable_DECL
+#define GET_GFX1250BlockingCyclesTable_IMPL
+
+struct AMDGPUBlockingCyclesInfo {
+  uint16_t Opcode;
+  uint8_t GFX1250BlockingCycles;
+};
+
 #include "AMDGPUGenSearchableTables.inc"
 } // namespace llvm::AMDGPU
 
@@ -4214,6 +4222,11 @@ bool SIInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
       // constant and SGPR are illegal.
       legalizeOperands(UseMI);
 
+      int NewSrc0Idx =
+          AMDGPU::getNamedOperandIdx(UseMI.getOpcode(), AMDGPU::OpName::src0);
+      if (!isOperandLegal(UseMI, NewSrc0Idx))
+        legalizeOpWithMove(UseMI, NewSrc0Idx);
+
       bool DeleteDef = MRI->use_nodbg_empty(Reg);
       if (DeleteDef)
         DefMI.eraseFromParent();
@@ -5265,6 +5278,16 @@ MachineInstr *SIInstrInfo::buildShrunkInst(MachineInstr &MI,
 
   // FIXME: Losing implicit operands
   fixImplicitOperands(*Inst32);
+
+  // The explicit carry/result def is dropped in favor of an implicit VCC def;
+  // preserve the dead flag.
+  const MachineOperand *OldSDst = getNamedOperand(MI, AMDGPU::OpName::sdst);
+  if (OldSDst && OldSDst->isDead()) {
+    if (MachineOperand *NewVCC =
+            Inst32->findRegisterDefOperand(RI.getVCC(), &RI))
+      NewVCC->setIsDead();
+  }
+
   return Inst32;
 }
 
@@ -6042,6 +6065,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
 
     if (Opcode != AMDGPU::V_MOV_B64_DPP_PSEUDO &&
         !AMDGPU::isLegalDPALU_DPPControl(ST, DC) &&
+        ST.hasFeature(AMDGPU::FeatureDPALU_DPP) &&
         AMDGPU::isDPALU_DPP(Desc, *this, ST)) {
       ErrInfo = "Invalid dpp_ctrl value: "
                 "DP ALU dpp only support row_newbcast";
@@ -6503,6 +6527,11 @@ void SIInstrInfo::legalizeOpWithMove(MachineInstr &MI, unsigned OpIdx) const {
         .addImm(AMDGPU::sub0_sub1)
         .addReg(Low64, RegState::Kill)
         .addImm(AMDGPU::sub2_sub3);
+  } else if (Opcode == AMDGPU::V_MOV_B16_t16_e64) {
+    BuildMI(*MBB, I, DL, get(Opcode), Reg)
+        .addImm(0) // src0_modifiers
+        .add(MO)
+        .addImm(0); // op_sel
   } else {
     BuildMI(*MBB, I, DL, get(Opcode), Reg).add(MO);
   }
@@ -8901,13 +8930,19 @@ void SIInstrInfo::moveToVALUImpl(
   // Remove any references to SCC. Vector instructions can't read from it, and
   // We're just about to add the implicit use / defs of VCC, and we don't want
   // both.
+  bool DeadSCCDef = false;
   for (MachineOperand &Op : Inst.implicit_operands()) {
     if (Op.getReg() == AMDGPU::SCC) {
       // Only propagate through live-def of SCC.
-      if (Op.isDef() && !Op.isDead())
-        addSCCDefUsersToVALUWorklist(Op, Inst, Worklist);
-      if (Op.isUse())
-        addSCCDefsToVALUWorklist(NewInstr, Worklist);
+      if (Op.isDef()) {
+        if (Op.isDead())
+          DeadSCCDef = true;
+        else
+          addSCCDefUsersToVALUWorklist(Op, Inst, Worklist);
+        continue;
+      }
+
+      addSCCDefsToVALUWorklist(NewInstr, Worklist);
     }
   }
   Inst.eraseFromParent();
@@ -8922,6 +8957,14 @@ void SIInstrInfo::moveToVALUImpl(
     MRI.replaceRegWith(DstReg, NewDstReg);
   }
   fixImplicitOperands(*NewInstr);
+
+  if (DeadSCCDef) {
+    // A scalar op with a dead SCC def lowers to a VALU op whose VCC def will
+    // also be dead.
+    if (MachineOperand *VCCDef =
+            NewInstr->findRegisterDefOperand(RI.getVCC(), &RI))
+      VCCDef->setIsDead();
+  }
 
   // Legalize the operands
   legalizeOperands(*NewInstr, MDT);
@@ -9076,12 +9119,14 @@ void SIInstrInfo::lowerScalarAbs(SIInstrWorklist &Worklist,
   Register TmpReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
   Register ResultReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
 
-  unsigned SubOp = ST.hasAddNoCarryInsts() ? AMDGPU::V_SUB_U32_e32
-                                           : AMDGPU::V_SUB_CO_U32_e32;
+  bool HasCarryOut = !ST.hasAddNoCarryInsts();
+  unsigned SubOp =
+      HasCarryOut ? AMDGPU::V_SUB_CO_U32_e32 : AMDGPU::V_SUB_U32_e32;
 
-  BuildMI(MBB, MII, DL, get(SubOp), TmpReg)
-    .addImm(0)
-    .addReg(Src.getReg());
+  MachineInstrBuilder Sub =
+      BuildMI(MBB, MII, DL, get(SubOp), TmpReg).addImm(0).addReg(Src.getReg());
+  if (HasCarryOut)
+    Sub.setOperandDead(3); // Dead vcc
 
   BuildMI(MBB, MII, DL, get(AMDGPU::V_MAX_I32_e64), ResultReg)
     .addReg(Src.getReg())
@@ -9105,14 +9150,21 @@ void SIInstrInfo::lowerScalarAbsDiff(SIInstrWorklist &Worklist,
   Register TmpReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
   Register ResultReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
 
-  unsigned SubOp = ST.hasAddNoCarryInsts() ? AMDGPU::V_SUB_U32_e32
-                                           : AMDGPU::V_SUB_CO_U32_e32;
+  bool HasCarryOut = !ST.hasAddNoCarryInsts();
+  unsigned SubOp =
+      HasCarryOut ? AMDGPU::V_SUB_CO_U32_e32 : AMDGPU::V_SUB_U32_e32;
 
-  BuildMI(MBB, MII, DL, get(SubOp), SubResultReg)
-      .addReg(Src1.getReg())
-      .addReg(Src2.getReg());
+  MachineInstrBuilder Sub1 = BuildMI(MBB, MII, DL, get(SubOp), SubResultReg)
+                                 .addReg(Src1.getReg())
+                                 .addReg(Src2.getReg());
 
-  BuildMI(MBB, MII, DL, get(SubOp), TmpReg).addImm(0).addReg(SubResultReg);
+  MachineInstrBuilder Sub2 =
+      BuildMI(MBB, MII, DL, get(SubOp), TmpReg).addImm(0).addReg(SubResultReg);
+
+  if (HasCarryOut) {
+    Sub1.setOperandDead(3); // Dead vcc
+    Sub2.setOperandDead(3); // Dead vcc
+  }
 
   BuildMI(MBB, MII, DL, get(AMDGPU::V_MAX_I32_e64), ResultReg)
       .addReg(SubResultReg)
@@ -11154,6 +11206,17 @@ unsigned SIInstrInfo::getInstrLatency(const InstrItineraryData *ItinData,
   }
 
   return SchedModel.computeInstrLatency(&MI);
+}
+
+unsigned SIInstrInfo::getBlockingCycles(const MachineInstr &MI) const {
+  if (!ST.hasGFX1250VALUBlockingCycles())
+    return 0;
+
+  // Use processor-specific lookup table
+  if (const auto *Entry = AMDGPU::getGFX1250BlockingCyclesInfo(MI.getOpcode()))
+    return Entry->GFX1250BlockingCycles;
+
+  return 0;
 }
 
 const MachineOperand &

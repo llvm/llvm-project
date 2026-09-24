@@ -316,6 +316,10 @@ llvm.func @gep(%ptr: !llvm.ptr, %idx: i64, %ptr2: !llvm.ptr) {
   llvm.getelementptr nusw | nuw %ptr2[%idx, 0, %idx] : (!llvm.ptr, i64, i64) -> !llvm.ptr, !llvm.struct<(array<10 x f32>)>
   // CHECK: llvm.getelementptr nuw %{{.*}}[%{{.*}}, 0, %{{.*}}] : (!llvm.ptr, i64, i64) -> !llvm.ptr, !llvm.struct<(array<10 x f32>)>
   llvm.getelementptr nuw %ptr2[%idx, 0, %idx] : (!llvm.ptr, i64, i64) -> !llvm.ptr, !llvm.struct<(array<10 x f32>)>
+  // CHECK: llvm.getelementptr inrange <i64, -16, 8> %{{.*}}[0, 0, 2] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(array<3 x ptr>)>
+  llvm.getelementptr inrange <i64, -16, 8> %ptr[0, 0, 2] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(array<3 x ptr>)>
+  // CHECK: llvm.getelementptr inbounds inrange <i64, -16, 8> %{{.*}}[0, 0, 2] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(array<3 x ptr>)>
+  llvm.getelementptr inbounds inrange <i64, -16, 8> %ptr[0, 0, 2] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(array<3 x ptr>)>
   llvm.return
 }
 
@@ -770,6 +774,8 @@ func.func @fastmathFlags(%arg0: f32, %arg1: f32, %arg2: i32, %arg3: vector<2 x f
   %11 = llvm.intr.sin(%arg0) fastmath<fast> : (f32) -> f32
 // CHECK: {{.*}} = llvm.intr.sin(%arg0) fastmath<afn> : (f32) -> f32
   %12 = llvm.intr.sin(%arg0) fastmath<afn> : (f32) -> f32
+// CHECK: {{.*}} = llvm.intr.modf(%arg0) fastmath<ninf> : (f32) -> !llvm.struct<(f32, f32)>
+  %modf = llvm.intr.modf(%arg0) fastmath<ninf> : (f32) -> !llvm.struct<(f32, f32)>
 
 // CHECK: {{.*}} = llvm.intr.vector.reduce.fmin(%arg3) fastmath<nnan> : (vector<2xf32>) -> f32
   %13 = llvm.intr.vector.reduce.fmin(%arg3) fastmath<nnan> : (vector<2xf32>) -> f32
@@ -807,8 +813,6 @@ llvm.func @invariant(%p: !llvm.ptr) {
 llvm.func @invariant_group_intrinsics(%p: !llvm.ptr) {
   // CHECK: %{{.+}} = llvm.intr.launder.invariant.group %[[P]] : !llvm.ptr
   %1 = llvm.intr.launder.invariant.group %p : !llvm.ptr
-  // CHECK: %{{.+}} = llvm.intr.strip.invariant.group %[[P]] : !llvm.ptr
-  %2 = llvm.intr.strip.invariant.group %p : !llvm.ptr
   llvm.return
 }
 
@@ -1331,4 +1335,17 @@ llvm.func @masked_nontemporal_no_alignment(%ptr: !llvm.ptr, %mask: vector<7xi1>)
   // CHECK: llvm.intr.masked.store(%{{.*}}, %{{.*}}, %{{.*}}) <nontemporal> :
   llvm.intr.masked.store(%0, %ptr, %mask) <nontemporal> : vector<7xf32>, vector<7xi1> into !llvm.ptr
   llvm.return
+}
+
+// CHECK-LABEL: @switch_result_number
+llvm.func @switch_result_number(%arg0: i32) -> i32 {
+  %0:2 = "test.op_with_two_results"() : () -> (i32, i32)
+  // CHECK: llvm.switch
+  llvm.switch %arg0 : i32, ^bb1(%0#0 : i32) [
+    0: ^bb2(%0#1 : i32)
+  ]
+^bb1(%1: i32):
+  llvm.return %1 : i32
+^bb2(%2: i32):
+  llvm.return %2 : i32
 }

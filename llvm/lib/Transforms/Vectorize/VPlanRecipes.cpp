@@ -1036,9 +1036,9 @@ Value *VPInstruction::generate(VPTransformState &State) {
     return Builder.CreatePtrAdd(Ptr, Addend, Name, getGEPNoWrapFlags());
   }
   case VPInstruction::AnyOf: {
-    Value *Res = Builder.CreateFreeze(State.get(getOperand(0)));
+    Value *Res = State.get(getOperand(0));
     for (VPValue *Op : drop_begin(operands()))
-      Res = Builder.CreateOr(Res, Builder.CreateFreeze(State.get(Op)));
+      Res = Builder.CreateOr(Res, State.get(Op));
     return State.VF.isScalar() ? Res : Builder.CreateOrReduce(Res);
   }
   case VPInstruction::ExtractLane: {
@@ -1360,9 +1360,15 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
   // NOTE: At the moment it seems only possible to expose this path for
   // the trunc, zext and sext opcodes.
   // TODO: Update VF arg to use onlyFirstLaneUsed once WidenCast is unified.
-  if (Instruction::isCast(getOpcode()))
+  if (Instruction::isCast(getOpcode())) {
+    // A scalar zext/trunc that only adjusts the width of an
+    // ExplicitVectorLength to the canonical IV type is free: it feeds only
+    // the IV increment and AVL decrement, which are modeled as free below.
+    if (match(this, m_ZExtOrTrunc(m_EVL(m_VPValue()))))
+      return 0;
     return getCostForRecipeWithOpcode(getOpcode(), ElementCount::getFixed(1),
                                       Ctx);
+  }
 
   if (Instruction::isBinaryOp(getOpcode())) {
     if (!getUnderlyingValue() && getOpcode() != Instruction::FMul) {
@@ -3236,7 +3242,8 @@ InstructionCost VPScalarIVStepsRecipe::computeCost(ElementCount VF,
   // probability.
   const VPRegionBlock *Region = getRegion();
   if (Region && Region->isReplicator())
-    Cost /= Ctx.getReplicateRegionCostDivisor(Region);
+    Cost /= Ctx.getCostDivisor(
+        Region->getEntryBranchOnMask()->getExecutionFrequency());
   return Cost;
 }
 
@@ -3268,30 +3275,15 @@ void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
     MulOp = Instruction::FMul;
   }
 
-  // Determine the number of scalars we need to generate.
-  bool FirstLaneOnly = vputils::onlyFirstLaneUsed(this);
-  // Compute the scalar steps and save the results in State.
-
-  unsigned EndLane = FirstLaneOnly ? 1 : State.VF.getKnownMinValue();
-  Value *StartIdx0 = getStartIndex() ? State.get(getStartIndex(), true)
-                                     : Constant::getNullValue(BaseIVTy);
-
-  for (unsigned Lane = 0; Lane < EndLane; ++Lane) {
-    // It is okay if the induction variable type cannot hold the lane number,
-    // we expect truncation in this case.
-    Constant *LaneValue =
-        BaseIVTy->isIntegerTy()
-            ? ConstantInt::get(BaseIVTy, Lane, /*IsSigned=*/false,
-                               /*ImplicitTrunc=*/true)
-            : ConstantFP::get(BaseIVTy, Lane);
-    Value *StartIdx = Builder.CreateBinOp(AddOp, StartIdx0, LaneValue);
-    assert((State.VF.isScalable() || isa<Constant>(StartIdx)) &&
-           "Expected StartIdx to be folded to a constant when VF is not "
-           "scalable");
-    auto *Mul = Builder.CreateBinOp(MulOp, StartIdx, Step);
-    auto *Add = Builder.CreateBinOp(AddOp, BaseIV, Mul);
-    State.set(this, Add, VPLane(Lane));
-  }
+  // Lanes other than the first have been materialized as separate
+  // single-scalar recipes by replicateByVF, each with its own start index.
+  assert((vputils::onlyFirstLaneUsed(this) || State.VF.isScalar()) &&
+         "must have been replicated by VF");
+  Value *StartIdx = getStartIndex() ? State.get(getStartIndex(), true)
+                                    : Constant::getNullValue(BaseIVTy);
+  auto *Mul = Builder.CreateBinOp(MulOp, StartIdx, Step);
+  auto *Add = Builder.CreateBinOp(AddOp, BaseIV, Mul);
+  State.set(this, Add, VPLane(0));
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -4082,7 +4074,8 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     // Scale the cost by the probability of executing the predicated blocks.
     // This assumes the predicated block for each vector lane is equally
     // likely.
-    ScalarCost /= Ctx.getReplicateRegionCostDivisor(getRegion());
+    ScalarCost /= Ctx.getCostDivisor(
+        getRegion()->getEntryBranchOnMask()->getExecutionFrequency());
     return ScalarCost;
   }
   case Instruction::Load:
@@ -4141,7 +4134,8 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     if (ParentRegion && ParentRegion->isReplicator()) {
       if (!PtrSCEV)
         break;
-      Cost /= Ctx.getReplicateRegionCostDivisor(ParentRegion);
+      Cost /= Ctx.getCostDivisor(
+          ParentRegion->getEntryBranchOnMask()->getExecutionFrequency());
       Cost += Ctx.TTI.getCFInstrCost(Instruction::CondBr, Ctx.CostKind);
 
       auto *VecI1Ty = VectorType::get(
@@ -4987,6 +4981,15 @@ InstructionCost VPInterleaveBase::computeCost(ElementCount VF,
                     Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Reverse,
                                            VectorTy, VectorTy, Ctx.CostKind, {},
                                            0);
+}
+
+InstructionCost
+VPWidenPointerInductionRecipe::computeCost(ElementCount VF,
+                                           VPCostContext &Ctx) const {
+  // The recipe creates a scalar phi, a GEP to increment the induction and
+  // vector add to compute the vector of pointers.
+  // TODO: Charge costs for induction increment and vector add as well.
+  return Ctx.TTI.getCFInstrCost(Instruction::PHI, Ctx.CostKind);
 }
 
 bool VPWidenPointerInductionRecipe::onlyScalarsGenerated(bool IsScalable) {

@@ -1265,7 +1265,7 @@ bool TargetLowering::SimplifyDemandedBits(
     if (VT.isScalableVector())
       return false;
     if (!DemandedElts[0])
-      return TLO.CombineTo(Op, TLO.DAG.getUNDEF(VT));
+      return TLO.CombineTo(Op, TLO.DAG.getPOISON(VT));
 
     KnownBits SrcKnown;
     SDValue Src = Op.getOperand(0);
@@ -1274,7 +1274,7 @@ bool TargetLowering::SimplifyDemandedBits(
     if (SimplifyDemandedBits(Src, SrcDemandedBits, SrcKnown, TLO, Depth + 1))
       return true;
 
-    // Upper elements are undef, so only get the knownbits if we just demand
+    // Upper elements are poison, so only get the knownbits if we just demand
     // the bottom element.
     if (DemandedElts == 1)
       Known = SrcKnown.anyextOrTrunc(BitWidth);
@@ -3352,11 +3352,9 @@ bool TargetLowering::SimplifyDemandedVectorElts(
 
   switch (Opcode) {
   case ISD::SCALAR_TO_VECTOR: {
-    if (!DemandedElts[0]) {
-      KnownUndef.setAllBits();
-      return TLO.CombineTo(Op, TLO.DAG.getUNDEF(VT));
-    }
-    KnownUndef.setHighBits(NumElts - 1);
+    if (!DemandedElts[0])
+      return TLO.CombineTo(Op, TLO.DAG.getPOISON(VT));
+    // Upper elements are poison, not undef - don't mark them as KnownUndef.
     break;
   }
   case ISD::BITCAST: {
@@ -3476,10 +3474,21 @@ bool TargetLowering::SimplifyDemandedVectorElts(
 
     // TODO: Replace this with the general fold from DAGCombiner::visitFREEZE
     // freeze(op(x, ...)) -> op(freeze(x), ...).
-    if (N0.getOpcode() == ISD::SCALAR_TO_VECTOR && DemandedElts == 1)
-      return TLO.CombineTo(
-          Op, TLO.DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VT,
-                              TLO.DAG.getFreeze(N0.getOperand(0))));
+    // Don't sink the freeze below SCALAR_TO_VECTOR when the scalar is a load
+    // of a promoted (wider than the element) type: freeze(load) can never be
+    // folded away (the loaded value may be poison in memory), and the extra
+    // freeze node then blocks ISel patterns matching scalar_to_vector of a
+    // load, e.g. the AArch64 scalar_to_vector(extload) -> ldr b/h forms.
+    // freeze(scalar_to_vector(load)) is equivalent for the demanded element
+    // zero, and ISel selects the freeze as a plain copy.
+    if (N0.getOpcode() == ISD::SCALAR_TO_VECTOR && DemandedElts == 1) {
+      SDValue Scalar = N0.getOperand(0);
+      bool IsPromotedLoad = Scalar.getOpcode() == ISD::LOAD &&
+                            Scalar.getValueType() != VT.getVectorElementType();
+      if (!IsPromotedLoad)
+        return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VT,
+                                                 TLO.DAG.getFreeze(Scalar)));
+    }
     break;
   }
   case ISD::BUILD_VECTOR: {
@@ -9870,9 +9879,10 @@ TargetLowering::expandCONVERT_FROM_ARBITRARY_FP(SDNode *Node,
                   DAG.getNode(ISD::OR, dl, IntVT, SignShifted, NormExpShifted),
                   NormDstMant);
 
-  // Denormal value conversion.
-  SDValue DenormResult;
-  {
+  // With identical exponent biases, denormal values remain denormal and the
+  // normal conversion's mantissa shift is sufficient.
+  SDValue DenormResult = NormResult;
+  if (BiasAdjust != 0) {
     const unsigned IntVTBits = IntVT.getScalarSizeInBits();
     SDValue LeadingZeros =
         DAG.getNode(ISD::CTLZ_ZERO_POISON, dl, IntVT, MantField);
@@ -9915,6 +9925,18 @@ TargetLowering::expandCONVERT_FROM_ARBITRARY_FP(SDNode *Node,
   SDValue InfResult =
       DAG.getNode(ISD::OR, dl, IntVT, SignShifted,
                   DAG.getConstant(DstExpAllOnes << DstMant, dl, IntVT));
+
+  // A source format may have a larger finite exponent range despite having
+  // fewer bits, as with Float8E5M3FNU converted to half. Its overflowing finite
+  // values become infinity. The NaN selection below still takes precedence.
+  if (APFloat::semanticsMaxExponent(SrcSem) >
+      APFloat::semanticsMaxExponent(DstSem)) {
+    SDValue IsOverflow =
+        DAG.getSetCC(dl, SetCCVT, NormDstExp,
+                     DAG.getConstant(DstExpAllOnes, dl, IntVT), ISD::SETUGE);
+    FiniteResult =
+        DAG.getSelect(dl, IntVT, IsOverflow, InfResult, FiniteResult);
+  }
 
   SDValue ZeroResult = SignShifted;
 
@@ -13091,6 +13113,41 @@ bool TargetLowering::expandMULO(SDNode *Node, SDValue &Result,
   assert(RType.getSizeInBits() == Overflow.getValueSizeInBits() &&
          "Unexpected result type for S/UMULO legalization");
   return true;
+}
+
+SDValue TargetLowering::expandMULH(SDNode *Node, SelectionDAG &DAG) const {
+  SDLoc dl(Node);
+  EVT VT = Node->getValueType(0);
+  SDValue LHS = Node->getOperand(0);
+  SDValue RHS = Node->getOperand(1);
+  bool IsSigned = Node->getOpcode() == ISD::MULHS;
+
+  // Use MUL_LOHI if legal/custom for the original type.
+  unsigned LoHiOp = IsSigned ? ISD::SMUL_LOHI : ISD::UMUL_LOHI;
+  if (isOperationLegalOrCustom(LoHiOp, VT))
+    return DAG.getNode(LoHiOp, dl, DAG.getVTList(VT, VT), LHS, RHS).getValue(1);
+
+  // Use a wide multiply if available.
+  EVT WideVT = VT.widenIntegerElementType(*DAG.getContext());
+  if (isOperationLegalOrCustom(ISD::MUL, WideVT)) {
+    unsigned BW = VT.getScalarSizeInBits();
+    LHS = DAG.getExtOrTrunc(IsSigned, LHS, dl, WideVT);
+    RHS = DAG.getExtOrTrunc(IsSigned, RHS, dl, WideVT);
+    return DAG.getNode(ISD::TRUNCATE, dl, VT,
+                       DAG.getNode(ISD::SRL, dl, WideVT,
+                                   DAG.getNode(ISD::MUL, dl, WideVT, LHS, RHS),
+                                   DAG.getShiftAmountConstant(BW, WideVT, dl)));
+  }
+
+  // Let fixed-length vectors be scalarised by the caller.
+  // Expand everything else with a wide multiply.
+  if (!VT.isFixedLengthVector()) {
+    SDValue Lo, Hi;
+    forceExpandWideMUL(DAG, dl, IsSigned, LHS, RHS, Lo, Hi);
+    return Hi;
+  }
+
+  return SDValue();
 }
 
 SDValue TargetLowering::expandVecReduce(SDNode *Node, SelectionDAG &DAG) const {
