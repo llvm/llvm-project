@@ -131,6 +131,7 @@ static void expectAlignedIndirect(const ArgInfo &Info, llvm::Align Align,
   EXPECT_TRUE(Info.isIndirect());
   EXPECT_EQ(Info.getIndirectAlign(), Align);
   EXPECT_EQ(Info.getIndirectByVal(), ByVal);
+  EXPECT_EQ(Info.getIndirectAddrSpace(), 0u);
 }
 
 TEST_F(AArch64TargetInfoTest, ClassifyReturnVoidIsIgnore) {
@@ -406,6 +407,7 @@ static void expectNaturalAlignIndirect(const ArgInfo &Info,
   EXPECT_TRUE(Info.isIndirect());
   EXPECT_EQ(Info.getIndirectAlign(), ExpectedAlign);
   EXPECT_EQ(Info.getIndirectByVal(), ByVal);
+  EXPECT_EQ(Info.getIndirectAddrSpace(), 0u);
 }
 
 static void expectHFADirectArg(const ArgInfo &Info, const ABIType *Base,

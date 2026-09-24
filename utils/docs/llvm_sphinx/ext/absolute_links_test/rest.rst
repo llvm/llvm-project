@@ -1,3 +1,5 @@
+.. _rest-section:
+
 reST Absolute Link Tests
 ========================
 

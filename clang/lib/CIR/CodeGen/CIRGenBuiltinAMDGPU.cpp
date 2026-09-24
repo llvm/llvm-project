@@ -240,12 +240,9 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
   case AMDGPU::BI__builtin_amdgcn_readfirstlane:
     return emitBuiltinWithOneOverloadedType<1>(expr, "amdgcn.readfirstlane")
         .getValue();
-  case AMDGPU::BI__builtin_amdgcn_wave_shuffle: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
-  }
+  case AMDGPU::BI__builtin_amdgcn_wave_shuffle:
+    return emitBuiltinWithOneOverloadedType<2>(expr, "amdgcn.wave.shuffle")
+        .getValue();
   case AMDGPU::BI__builtin_amdgcn_div_fixup:
   case AMDGPU::BI__builtin_amdgcn_div_fixupf:
   case AMDGPU::BI__builtin_amdgcn_div_fixuph: {
@@ -1072,18 +1069,16 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
                      getContext().BuiltinInfo.getName(builtinId));
     return mlir::Value{};
   }
-  case AMDGPU::BI__builtin_amdgcn_s_prefetch_data: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
-  }
-  case AMDGPU::BI__builtin_amdgcn_s_prefetch_inst: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
-  }
+  case AMDGPU::BI__builtin_amdgcn_s_prefetch_data:
+    return emitBuiltinWithOneOverloadedType<2>(
+               expr, "amdgcn.s.prefetch.data",
+               cir::VoidType::get(builder.getContext()))
+        .getValue();
+  case AMDGPU::BI__builtin_amdgcn_s_prefetch_inst:
+    return emitBuiltinWithOneOverloadedType<2>(
+               expr, "amdgcn.s.prefetch.inst",
+               cir::VoidType::get(builder.getContext()))
+        .getValue();
   case Builtin::BIlogbf:
   case Builtin::BI__builtin_logbf:
     return emitLogbBuiltin(*this, expr, llvm::APFloat::IEEEsingle());
