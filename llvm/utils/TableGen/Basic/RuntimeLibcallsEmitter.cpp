@@ -435,7 +435,7 @@ const uint8_t RTLIB::RuntimeLibcallsInfo::RuntimeLibcallNameSizeTable[] = {
 
 void RuntimeLibcallEmitter::emitGetInitRuntimeLibcallSignatures(
     raw_ostream &OS) const {
-      
+
   using Signature = std::vector<StringRef>;
   SequenceToOffsetTable<Signature> SignatureTable("NoFuncArgType");
 
@@ -469,8 +469,7 @@ const uint16_t RTLIB::RuntimeLibcallsInfo::SignatureOffset[] = {
 )";
   for (const RuntimeLibcall &LC : Libcalls.getRuntimeLibcallDefList()) {
     const Record *LibcallDef = LC.getDef();
-    OS << formatv("  {}, // {}\n",
-                  SignatureTable.get(GetSignature(LibcallDef)),
+    OS << formatv("  {}, // {}\n", SignatureTable.get(GetSignature(LibcallDef)),
                   LibcallDef->getName());
   }
   OS << "};\n";
