@@ -1269,7 +1269,7 @@ public:
       case LookupResultKind::FoundOverloaded:
       case LookupResultKind::FoundUnresolvedValue: {
         NamedDecl *SomeDecl = Result.getRepresentativeDecl();
-        if (QualType T = SemaRef.BuildMSVCEnumTypedefType(
+        if (QualType T = SemaRef.TryBuildMSVCEnumTypedefType(
                 SomeDecl, Keyword, QualifierLoc.getNestedNameSpecifier(), IdLoc,
                 getDerived().isTransformingFunctionParameterType());
             !T.isNull())
