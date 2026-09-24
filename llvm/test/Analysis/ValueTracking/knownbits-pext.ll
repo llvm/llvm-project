@@ -66,8 +66,7 @@ define <2 x i1> @pext_zero_mask_known_zero_vector(<2 x i8> %x) nounwind {
 ; Negative: pext(x, 0b11001100) can have bits 0-3 set; can't prove bit 0 is zero.
 define i1 @pext_low_bits_not_known(i8 %x) nounwind {
 ; CHECK-LABEL: @pext_low_bits_not_known(
-; CHECK-NEXT:    [[PEXT:%.*]] = call i8 @llvm.pext.i8(i8 [[X:%.*]], i8 -52)
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[PEXT]], 1
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X:%.*]], 4
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[AND]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -79,8 +78,7 @@ define i1 @pext_low_bits_not_known(i8 %x) nounwind {
 
 define <2 x i1> @pext_low_bits_not_known_vector(<2 x i8> %x) nounwind {
 ; CHECK-LABEL: @pext_low_bits_not_known_vector(
-; CHECK-NEXT:    [[PEXT:%.*]] = call <2 x i8> @llvm.pext.v2i8(<2 x i8> [[X:%.*]], <2 x i8> splat (i8 -52))
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i8> [[PEXT]], splat (i8 1)
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i8> [[X:%.*]], splat (i8 4)
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i8> [[AND]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
