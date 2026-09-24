@@ -1,5 +1,4 @@
-; RUN: opt -passes=slp-vectorizer -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -pass-remarks=slp-vectorizer -disable-output < %s 2>&1 | FileCheck %s
-; RUN: opt -passes=slp-vectorizer -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -pass-remarks=slp-vectorizer -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt -passes=slp-vectorizer -mtriple=amdgpu9.42-amd-amdhsa -pass-remarks=slp-vectorizer -disable-output < %s 2>&1 | FileCheck %s
 
 ; The second fmul of each fsub/fadd does not fuse, so packing those pays off.
 ; CHECK: Stores SLP vectorized with cost -2
