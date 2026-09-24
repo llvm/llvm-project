@@ -25,6 +25,7 @@
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/OpenMPClause.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/Stmt.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/AST/StmtVisitor.h"
@@ -19239,8 +19240,10 @@ OMPClause *SemaOpenMP::ActOnOpenMPMessageClause(Expr *ME,
                                                 SourceLocation EndLoc) {
   assert(ME && "NULL expr in Message clause");
   QualType Type = ME->getType();
+  // OpenMP 5.1 [2.5.4, error Directive]
+  // msg-string is a string of const char * type.
   if ((!Type->isPointerType() && !Type->isArrayType()) ||
-      !Type->getPointeeOrArrayElementType()->isAnyCharacterType()) {
+      !Type->getPointeeOrArrayElementType()->isCharType()) {
     Diag(ME->getBeginLoc(), diag::warn_clause_expected_string)
         << getOpenMPClauseNameForDiag(OMPC_message) << 0;
     return nullptr;
@@ -25622,6 +25625,17 @@ VarDecl *SemaOpenMP::ActOnOpenMPDeclareReductionInitializerStart(Scope *S,
 void SemaOpenMP::ActOnOpenMPDeclareReductionInitializerEnd(
     Decl *D, Expr *Initializer, VarDecl *OmpPrivParm) {
   auto *DRD = cast<OMPDeclareReductionDecl>(D);
+
+  // Ensure OmpPrivParm is default-constructed before the user initializer runs
+  // (required for class types with non-trivial default constructors).
+  if (Initializer && !DRD->getDeclContext()->isDependentContext()) {
+    QualType ReductionType = DRD->getType();
+    if (CXXRecordDecl *RD = ReductionType->getAsCXXRecordDecl()) {
+      if (!RD->hasTrivialDefaultConstructor())
+        SemaRef.ActOnUninitializedDecl(OmpPrivParm);
+    }
+  }
+
   SemaRef.DiscardCleanupsInEvaluationContext();
   SemaRef.PopExpressionEvaluationContext();
 

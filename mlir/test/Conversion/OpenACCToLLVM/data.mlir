@@ -159,7 +159,8 @@ func.func @data_if(%arg0: !llvm.ptr, %cond: i1) {
 // CHECK-LABEL: llvm.func @enter_data_wait_all
 // CHECK: %[[WAITNUM:.*]] = llvm.mlir.constant(0 : i32) : i32
 // CHECK: %[[WAITLIST:.*]] = llvm.mlir.zero : !llvm.ptr
-// CHECK: llvm.call @__tgt_acc_wait({{.*}}, %[[WAITNUM]], %[[WAITLIST]], {{.*}})
+// CHECK: %[[DEFAULT_DEVICE:.*]] = llvm.mlir.constant(0 : i32)
+// CHECK: llvm.call @__tgt_acc_wait(%{{[^,]+}}, %{{[^,]+}}, %{{[^,]+}}, %[[DEFAULT_DEVICE]], %[[WAITNUM]], %[[WAITLIST]], {{.*}})
 // CHECK: llvm.call @__tgt_acc_data_enter
 func.func @enter_data_wait_all(%arg0: !llvm.ptr) {
   %size = arith.constant 4 : i64

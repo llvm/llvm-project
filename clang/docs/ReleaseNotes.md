@@ -533,6 +533,7 @@ features cannot lower the translation-unit ABI level;
 - Fixed a constraint comparison bug in partial ordering. (#GH182671)
 - Fixed a rejected-valid case that used an explicit object parameter in an out-of-line definition of a nested class member. (#GH136472)
 - Fixed an assertion on omp taskloop transparent (#GH197162)
+- Fixed an assertion failure and a garbled diagnostic when the `message` clause of `#pragma omp error` was given a string literal that is not of `char` type, such as a wide string literal. Such literals are now diagnosed and ignored. (#GH140338)
 - Fixed a bug where `__func__`, `__PRETTY_FUNCTION__` and `__FUNCTION__` were not resolving to the proper function when inside a lambda return type (#GH211811)
 - Fixed USR generation for declarations whose signature mentions a class-type
   non-type template parameter. (#GH212351)
@@ -725,6 +726,10 @@ features cannot lower the translation-unit ABI level;
 - Fixed an assertion when an ill-formed qualified member function definition
   inside a union caused the union to be treated as a polymorphic class.
   (#GH213854)
+
+- Fixed a crash, a miscompile and a rejected-valid case when instantiating a
+  constructor whose mem-initializer used parenthesized aggregate initialization,
+  e.g. ``: agg({1, 2})`` or ``: arr(1, 2)``. (#GH176161, #GH189005, #GH213284)
 
 - Fixed an assertion when a type-trait keyword that had already been made
   available as an identifier (e.g. `struct __make_unsigned`) was seen again
