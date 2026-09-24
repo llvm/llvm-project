@@ -101,15 +101,15 @@ class ScriptedProcesTestCase(TestBase):
             log = f.read()
 
         self.assertIn(
-            "Abstract method MissingMethodsScriptedProcess.read_memory_at_address not implemented",
+            "abstract method MissingMethodsScriptedProcess.read_memory_at_address not implemented",
             log,
         )
         self.assertIn(
-            "Abstract method MissingMethodsScriptedProcess.is_alive not implemented",
+            "abstract method MissingMethodsScriptedProcess.is_alive not implemented",
             log,
         )
         self.assertIn(
-            "Abstract method MissingMethodsScriptedProcess.get_scripted_thread_plugin not implemented",
+            "abstract method MissingMethodsScriptedProcess.get_scripted_thread_plugin not implemented",
             log,
         )
 

@@ -1,10 +1,5 @@
 # Fortran Tests in the LLVM Test Suite
 
-```{contents}
----
-local:
----
-```
 
 The [LLVM Test Suite](https://github.com/llvm/llvm-test-suite) is a
 separate git repo from the main LLVM project. We recommend that

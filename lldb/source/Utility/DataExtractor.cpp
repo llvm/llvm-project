@@ -694,9 +694,9 @@ DataExtractor::CopyByteOrderedData(offset_t src_offset, offset_t src_len,
   return 0;
 }
 
-// Extracts a variable length NULL terminated C string from the data at the
+// Extracts a variable length null-terminated C string from the data at the
 // offset pointed to by "offset_ptr".  The "offset_ptr" will be updated with
-// the offset of the byte that follows the NULL terminator byte.
+// the offset of the byte that follows the null terminator.
 //
 // If the offset pointed to by "offset_ptr" is out of bounds, or if "length" is
 // non-zero and there aren't enough available bytes, nullptr will be returned
@@ -711,14 +711,14 @@ const char *DataExtractor::GetCStr(offset_t *offset_ptr) const {
   return str->data();
 }
 
-// Extracts a NULL terminated C string from the fixed length field of length
+// Extracts a null-terminated C string from the fixed length field of length
 // "len" at the offset pointed to by "offset_ptr". The "offset_ptr" will be
 // updated with the offset of the byte that follows the fixed length field.
 //
 // If the offset pointed to by "offset_ptr" is out of bounds, or if the offset
 // plus the length of the field is out of bounds, or if the field does not
-// contain a NULL terminator byte, nullptr will be returned and "offset_ptr"
-// will not be updated.
+// contain a null terminator, nullptr will be returned and "offset_ptr" will
+// not be updated.
 const char *DataExtractor::GetCStr(offset_t *offset_ptr, offset_t len) const {
   const char *cstr = reinterpret_cast<const char *>(PeekData(*offset_ptr, len));
   if (cstr != nullptr) {

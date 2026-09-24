@@ -111,7 +111,7 @@ subroutine pointer_result_as_value()
       integer, pointer :: returns_int_pointer
     end function
   end interface
-! CHECK:  %[[VAL_0:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> {bindc_name = ".result"}
+! CHECK:  %[[VAL_0:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> <{bindc_name = ".result"}>
 ! CHECK:  %[[VAL_6:.*]] = fir.call @_QPreturns_int_pointer() {{.*}}: () -> !fir.box<!fir.ptr<i32>>
 ! CHECK:  fir.save_result %[[VAL_6]] to %[[VAL_0]] : !fir.box<!fir.ptr<i32>>, !fir.ref<!fir.box<!fir.ptr<i32>>>
 ! CHECK:  %[[VAL_RES:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}} : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)

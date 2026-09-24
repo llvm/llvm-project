@@ -268,23 +268,3 @@ define i1 @neg_srem_wrong_direction(i32 noundef %x, i32 noundef %n, i32 noundef 
   %c = icmp slt i32 %r, %m
   ret i1 %c
 }
-
-define i1 @neg_sdiv_not_handled(i32 noundef %x, i32 noundef %n, i32 noundef %limit) {
-; CHECK-LABEL: define i1 @neg_sdiv_not_handled(
-; CHECK-SAME: i32 noundef [[X:%.*]], i32 noundef [[N:%.*]], i32 noundef [[LIMIT:%.*]]) {
-; CHECK-NEXT:    [[NNEG:%.*]] = icmp sge i32 [[X]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[NNEG]])
-; CHECK-NEXT:    [[LE:%.*]] = icmp sle i32 [[X]], [[LIMIT]]
-; CHECK-NEXT:    call void @llvm.assume(i1 [[LE]])
-; CHECK-NEXT:    [[Q:%.*]] = sdiv i32 [[X]], [[N]]
-; CHECK-NEXT:    [[C:%.*]] = icmp sle i32 [[Q]], [[LIMIT]]
-; CHECK-NEXT:    ret i1 [[C]]
-;
-  %nneg = icmp sge i32 %x, 0
-  call void @llvm.assume(i1 %nneg)
-  %le = icmp sle i32 %x, %limit
-  call void @llvm.assume(i1 %le)
-  %q = sdiv i32 %x, %n
-  %c = icmp sle i32 %q, %limit
-  ret i1 %c
-}

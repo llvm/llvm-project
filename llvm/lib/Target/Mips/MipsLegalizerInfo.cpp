@@ -370,9 +370,13 @@ bool MipsLegalizerInfo::legalizeCustom(
     Register BaseAddr = MI.getOperand(1).getReg();
     LLT PtrTy = MRI.getType(BaseAddr);
     MachineFunction &MF = MIRBuilder.getMF();
+    bool IsLittle = MF.getDataLayout().isLittleEndian();
+    unsigned FirstMemSize = IsLittle ? P2HalfMemSize : RemMemSize;
 
-    auto P2HalfMemOp = MF.getMachineMemOperand(MMOBase, 0, P2HalfMemSize);
-    auto RemMemOp = MF.getMachineMemOperand(MMOBase, P2HalfMemSize, RemMemSize);
+    auto P2HalfMemOp = MF.getMachineMemOperand(
+        MMOBase, IsLittle ? 0 : RemMemSize, P2HalfMemSize);
+    auto RemMemOp = MF.getMachineMemOperand(
+        MMOBase, IsLittle ? P2HalfMemSize : 0, RemMemSize);
 
     if (MI.getOpcode() == G_STORE) {
       // Widen Val to s32 or s64 in order to create legal G_LSHR or G_UNMERGE.
@@ -381,18 +385,20 @@ bool MipsLegalizerInfo::legalizeCustom(
       if (Size > 32 && Size < 64)
         Val = MIRBuilder.buildAnyExt(s64, Val).getReg(0);
 
-      auto C_P2HalfMemSize = MIRBuilder.buildConstant(s32, P2HalfMemSize);
-      auto Addr = MIRBuilder.buildPtrAdd(PtrTy, BaseAddr, C_P2HalfMemSize);
+      auto Offset = MIRBuilder.buildConstant(s32, FirstMemSize);
+      Register Addr = MIRBuilder.buildPtrAdd(PtrTy, BaseAddr, Offset).getReg(0);
+      Register LoAddr = IsLittle ? BaseAddr : Addr;
+      Register HiAddr = IsLittle ? Addr : BaseAddr;
 
       if (MI.getOpcode() == G_STORE && MemSize <= 4) {
-        MIRBuilder.buildStore(Val, BaseAddr, *P2HalfMemOp);
+        MIRBuilder.buildStore(Val, LoAddr, *P2HalfMemOp);
         auto C_P2Half_InBits = MIRBuilder.buildConstant(s32, P2HalfMemSize * 8);
         auto Shift = MIRBuilder.buildLShr(s32, Val, C_P2Half_InBits);
-        MIRBuilder.buildStore(Shift, Addr, *RemMemOp);
+        MIRBuilder.buildStore(Shift, HiAddr, *RemMemOp);
       } else {
         auto Unmerge = MIRBuilder.buildUnmerge(s32, Val);
-        MIRBuilder.buildStore(Unmerge.getReg(0), BaseAddr, *P2HalfMemOp);
-        MIRBuilder.buildStore(Unmerge.getReg(1), Addr, *RemMemOp);
+        MIRBuilder.buildStore(Unmerge.getReg(0), LoAddr, *P2HalfMemOp);
+        MIRBuilder.buildStore(Unmerge.getReg(1), HiAddr, *RemMemOp);
       }
     }
 
@@ -402,7 +408,12 @@ bool MipsLegalizerInfo::legalizeCustom(
         // This is anyextending load, use 4 byte lwr/lwl.
         auto *Load4MMO = MF.getMachineMemOperand(MMOBase, 0, 4);
 
-        if (Size == 32)
+        if (!IsLittle) {
+          auto Load = MIRBuilder.buildLoad(s32, BaseAddr, *Load4MMO);
+          auto ShiftAmt = MIRBuilder.buildConstant(s32, (4 - MemSize) * 8);
+          auto Shift = MIRBuilder.buildLShr(s32, Load, ShiftAmt);
+          MIRBuilder.buildAnyExtOrTrunc(Val, Shift);
+        } else if (Size == 32)
           MIRBuilder.buildLoad(Val, BaseAddr, *Load4MMO);
         else {
           auto Load = MIRBuilder.buildLoad(s32, BaseAddr, *Load4MMO);
@@ -410,11 +421,14 @@ bool MipsLegalizerInfo::legalizeCustom(
         }
 
       } else {
-        auto C_P2HalfMemSize = MIRBuilder.buildConstant(s32, P2HalfMemSize);
-        auto Addr = MIRBuilder.buildPtrAdd(PtrTy, BaseAddr, C_P2HalfMemSize);
+        auto Offset = MIRBuilder.buildConstant(s32, FirstMemSize);
+        Register Addr =
+            MIRBuilder.buildPtrAdd(PtrTy, BaseAddr, Offset).getReg(0);
+        Register LoAddr = IsLittle ? BaseAddr : Addr;
+        Register HiAddr = IsLittle ? Addr : BaseAddr;
 
-        auto Load_P2Half = MIRBuilder.buildLoad(s32, BaseAddr, *P2HalfMemOp);
-        auto Load_Rem = MIRBuilder.buildLoad(s32, Addr, *RemMemOp);
+        auto Load_P2Half = MIRBuilder.buildLoad(s32, LoAddr, *P2HalfMemOp);
+        auto Load_Rem = MIRBuilder.buildLoad(s32, HiAddr, *RemMemOp);
 
         if (Size == 64)
           MIRBuilder.buildMergeLikeInstr(Val, {Load_P2Half, Load_Rem});
