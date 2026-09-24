@@ -28,13 +28,23 @@
 
 #include "llvm/CodeGen/SpillPlacement.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/EdgeBundles.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/IR/CFG.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/ScaledNumber.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -43,6 +53,13 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "spill-code-placement"
+
+static cl::opt<bool> EnableWaveProfiledSpill(
+    "enable-wave-profiled-spill", cl::Hidden, cl::init(false),
+    cl::desc("Use validated AMDGPU wave counts for spill placement"));
+static cl::opt<bool> ReportWaveProfiledSpill(
+    "report-wave-profiled-spill", cl::Hidden, cl::init(false),
+    cl::desc("Report wave-count mapping and spill-cost coverage"));
 
 char SpillPlacementWrapperLegacy::ID = 0;
 
@@ -229,6 +246,26 @@ void SpillPlacement::releaseMemory() {
   TodoList.clear();
 }
 
+static bool hasMatchingWaveProfileBlock(
+    const MachineBasicBlock &MBB,
+    const DenseMap<const BasicBlock *, const MachineBasicBlock *> &UniqueMBBs) {
+  const BasicBlock *BB = MBB.getBasicBlock();
+  auto HasMatchingEdges = [&](auto IRBlocks, auto MachineBlocks) {
+    SmallPtrSet<const BasicBlock *, 4> Expected;
+    for (const BasicBlock *IRBlock : IRBlocks)
+      Expected.insert(IRBlock);
+    for (const MachineBasicBlock *MachineBlock : MachineBlocks) {
+      const BasicBlock *IRBlock = MachineBlock->getBasicBlock();
+      if (!IRBlock || UniqueMBBs.lookup(IRBlock) != MachineBlock ||
+          !Expected.erase(IRBlock))
+        return false;
+    }
+    return Expected.empty();
+  };
+  return HasMatchingEdges(predecessors(BB), MBB.predecessors()) &&
+         HasMatchingEdges(successors(BB), MBB.successors());
+}
+
 void SpillPlacement::run(MachineFunction &mf, EdgeBundles *Bundles,
                          MachineBlockFrequencyInfo *MBFI) {
   MF = &mf;
@@ -240,13 +277,72 @@ void SpillPlacement::run(MachineFunction &mf, EdgeBundles *Bundles,
   TodoList.clear();
   TodoList.setUniverse(bundles->getNumBundles());
 
+  SmallVector<uint64_t> WaveCounts;
+  BitVector HasWaveCount;
+  uint64_t EntryWaveCount = 0;
+  DenseMap<const BasicBlock *, BlockFrequency> WaveFrequencies;
+  unsigned RejectedWaveBlocks = 0;
+  const bool HasWaveProfile =
+      EnableWaveProfiledSpill &&
+      mf.getFunction().getParent()->getTargetTriple().isAMDGPU() &&
+      extractMappedBlockWaveCounts(mf.getFunction(), WaveCounts, HasWaveCount,
+                                   EntryWaveCount) &&
+      EntryWaveCount != 0;
+  if (HasWaveProfile) {
+    DenseMap<const BasicBlock *, const MachineBasicBlock *> UniqueMBBs;
+    for (const MachineBasicBlock &MBB : mf) {
+      const BasicBlock *BB = MBB.getBasicBlock();
+      if (!BB || BB->getParent() != &mf.getFunction())
+        continue;
+      auto [It, Inserted] = UniqueMBBs.try_emplace(BB, &MBB);
+      if (!Inserted)
+        It->second = nullptr;
+    }
+
+    unsigned Index = 0;
+    for (const BasicBlock &BB : mf.getFunction()) {
+      if (!HasWaveCount[Index]) {
+        ++Index;
+        continue;
+      }
+      const MachineBasicBlock *MBB = UniqueMBBs.lookup(&BB);
+      if (!MBB || !hasMatchingWaveProfileBlock(*MBB, UniqueMBBs)) {
+        if (ReportWaveProfiledSpill)
+          ++RejectedWaveBlocks;
+        ++Index;
+        continue;
+      }
+      uint64_t Count = WaveCounts[Index++];
+      uint64_t Frequency =
+          ScaledNumber<uint64_t>::getFraction(Count, EntryWaveCount)
+              .scale(MBFI->getEntryFreq().getFrequency());
+      WaveFrequencies[&BB] =
+          BlockFrequency(Count ? std::max(Frequency, uint64_t(1)) : 0);
+    }
+  }
+
   // Compute total ingoing and outgoing block frequencies for all bundles.
   BlockFrequencies.resize(mf.getNumBlockIDs());
   setThreshold(MBFI->getEntryFreq());
+  unsigned ChangedWaveCosts = 0;
   for (auto &I : mf) {
     unsigned Num = I.getNumber();
-    BlockFrequencies[Num] = MBFI->getBlockFreq(&I);
+    auto Wave = WaveFrequencies.find(I.getBasicBlock());
+    BlockFrequencies[Num] =
+        Wave == WaveFrequencies.end() ? MBFI->getBlockFreq(&I) : Wave->second;
+    if (Wave != WaveFrequencies.end()) {
+      if (ReportWaveProfiledSpill)
+        ChangedWaveCosts += Wave->second != MBFI->getBlockFreq(&I);
+      LLVM_DEBUG(dbgs() << "Wave spill frequency " << mf.getName() << " "
+                        << printMBBReference(I) << " = "
+                        << Wave->second.getFrequency() << " (entry "
+                        << MBFI->getEntryFreq().getFrequency() << ")\n");
+    }
   }
+  if (ReportWaveProfiledSpill && EnableWaveProfiledSpill)
+    errs() << "WAVE_PROFILED_SPILL\t" << mf.getName() << "\t" << HasWaveProfile
+           << "\t" << WaveFrequencies.size() << "\t" << RejectedWaveBlocks
+           << "\t" << ChangedWaveCosts << "\n";
 }
 
 /// activate - mark node n as active if it wasn't already.
