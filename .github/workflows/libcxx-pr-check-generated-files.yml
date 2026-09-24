@@ -3,6 +3,7 @@ on:
   pull_request:
     paths:
       - 'libcxx/**'
+      - '.github/workflows/libcxx-pr-check-generated-files.yml'
 
 permissions:
   contents: read
