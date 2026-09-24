@@ -154,6 +154,7 @@ OMPLoopBasedDirective::tryToFindNextInnerLoop(Stmt *CurStmt,
             CurStmt = S;
             continue;
           }
+          S = OMPLoopBasedDirective::ignoreIntraTileHint(S);
           if (auto *InnerCS = dyn_cast_or_null<CompoundStmt>(S))
             NextStatements.push_back(InnerCS);
         }
