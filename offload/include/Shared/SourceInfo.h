@@ -16,12 +16,6 @@
 #include <cstdint>
 #include <string>
 
-#ifdef _WIN32
-constexpr bool OSWindows = true;
-#else
-constexpr bool OSWindows = false;
-#endif
-
 /// Type alias for source location information for variable mappings with
 /// data layout ";name;filename;row;col;;\0" from clang.
 using map_var_info_t = void *;
