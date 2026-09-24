@@ -1175,6 +1175,44 @@ __packed_subvector_extract8(pget_u8x8_u8x4, uint8x4_t, uint8x8_t)
 __packed_subvector_extract4(pget_i16x4_i16x2, int16x2_t, int16x4_t)
 __packed_subvector_extract4(pget_u16x4_u16x2, uint16x2_t, uint16x4_t)
 
+/* Packed Subvector Insert */
+static __inline__ int8x8_t __DEFAULT_FN_ATTRS
+__riscv_pset_i8x4_i8x8(int8x8_t __v, int8x4_t __s, unsigned __idx)
+    __attribute__((__enable_if__(__idx <= 1, "index must be a constant integer "
+                                            "from 0 to 1"))) {
+  return __idx ? __riscv_pjoin2_i8x8(
+                     __builtin_shufflevector(__v, __v, 0, 1, 2, 3), __s)
+               : __riscv_pjoin2_i8x8(
+                     __s, __builtin_shufflevector(__v, __v, 4, 5, 6, 7));
+}
+static __inline__ uint8x8_t __DEFAULT_FN_ATTRS
+__riscv_pset_u8x4_u8x8(uint8x8_t __v, uint8x4_t __s, unsigned __idx)
+    __attribute__((__enable_if__(__idx <= 1, "index must be a constant integer "
+                                            "from 0 to 1"))) {
+  return __idx ? __riscv_pjoin2_u8x8(
+                     __builtin_shufflevector(__v, __v, 0, 1, 2, 3), __s)
+               : __riscv_pjoin2_u8x8(
+                     __s, __builtin_shufflevector(__v, __v, 4, 5, 6, 7));
+}
+static __inline__ int16x4_t __DEFAULT_FN_ATTRS
+__riscv_pset_i16x2_i16x4(int16x4_t __v, int16x2_t __s, unsigned __idx)
+    __attribute__((__enable_if__(__idx <= 1, "index must be a constant integer "
+                                            "from 0 to 1"))) {
+  return __idx ? __riscv_pjoin2_i16x4(
+                     __builtin_shufflevector(__v, __v, 0, 1), __s)
+               : __riscv_pjoin2_i16x4(
+                     __s, __builtin_shufflevector(__v, __v, 2, 3));
+}
+static __inline__ uint16x4_t __DEFAULT_FN_ATTRS
+__riscv_pset_u16x2_u16x4(uint16x4_t __v, uint16x2_t __s, unsigned __idx)
+    __attribute__((__enable_if__(__idx <= 1, "index must be a constant integer "
+                                            "from 0 to 1"))) {
+  return __idx ? __riscv_pjoin2_u16x4(
+                     __builtin_shufflevector(__v, __v, 0, 1), __s)
+               : __riscv_pjoin2_u16x4(
+                     __s, __builtin_shufflevector(__v, __v, 2, 3));
+}
+
 /* Packed Store (32-bit) */
 __packed_store(pst_i8x4, int8x4_t, int8_t)
 __packed_store(pst_u8x4, uint8x4_t, uint8_t)

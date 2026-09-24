@@ -12579,3 +12579,309 @@ uint16x2_t test_pget_u16x4_u16x2(uint16x4_t v) {
 uint16x2_t test_pget_u16x4_u16x2_idx1(uint16x4_t v) {
   return __riscv_pget_u16x4_u16x2(v, 1);
 }
+
+/* Packed Subvector Insert */
+
+// RV32-LABEL: define dso_local i64 @test_pset_i8x4_i8x8_lo(
+// RV32-SAME: i64 noundef [[V_COERCE:%.*]], i32 noundef [[S_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    br i1 false, label %[[COND_TRUE_I:.*]], label %[[COND_FALSE_I:.*]]
+// RV32:       [[COND_TRUE_I]]:
+// RV32-NEXT:    br label %[[__RISCV_PSET_I8X4_I8X8_EXIT:.*]]
+// RV32:       [[COND_FALSE_I]]:
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[V_COERCE]] to <8 x i8>
+// RV32-NEXT:    [[SHUFFLE5_I:%.*]] = shufflevector <8 x i8> [[TMP0]], <8 x i8> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+// RV32-NEXT:    [[TMP1:%.*]] = bitcast i32 [[S_COERCE]] to <4 x i8>
+// RV32-NEXT:    [[SHUFFLE_I_I:%.*]] = shufflevector <4 x i8> [[TMP1]], <4 x i8> [[SHUFFLE5_I]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+// RV32-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[SHUFFLE_I_I]] to i64
+// RV32-NEXT:    br label %[[__RISCV_PSET_I8X4_I8X8_EXIT]]
+// RV32:       [[__RISCV_PSET_I8X4_I8X8_EXIT]]:
+// RV32-NEXT:    [[TMP3:%.*]] = phi i64 [ poison, %[[COND_TRUE_I]] ], [ [[TMP2]], %[[COND_FALSE_I]] ]
+// RV32-NEXT:    ret i64 [[TMP3]]
+//
+// RV64-LABEL: define dso_local i64 @test_pset_i8x4_i8x8_lo(
+// RV64-SAME: i64 noundef [[V_COERCE:%.*]], i32 noundef [[S_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    br i1 false, label %[[COND_TRUE_I:.*]], label %[[COND_FALSE_I:.*]]
+// RV64:       [[COND_TRUE_I]]:
+// RV64-NEXT:    br label %[[__RISCV_PSET_I8X4_I8X8_EXIT:.*]]
+// RV64:       [[COND_FALSE_I]]:
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[V_COERCE]] to <8 x i8>
+// RV64-NEXT:    [[SHUFFLE5_I:%.*]] = shufflevector <8 x i8> [[TMP0]], <8 x i8> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+// RV64-NEXT:    [[TMP1:%.*]] = bitcast i32 [[S_COERCE]] to <4 x i8>
+// RV64-NEXT:    [[SHUFFLE_I_I:%.*]] = shufflevector <4 x i8> [[TMP1]], <4 x i8> [[SHUFFLE5_I]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+// RV64-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[SHUFFLE_I_I]] to i64
+// RV64-NEXT:    br label %[[__RISCV_PSET_I8X4_I8X8_EXIT]]
+// RV64:       [[__RISCV_PSET_I8X4_I8X8_EXIT]]:
+// RV64-NEXT:    [[TMP3:%.*]] = phi i64 [ poison, %[[COND_TRUE_I]] ], [ [[TMP2]], %[[COND_FALSE_I]] ]
+// RV64-NEXT:    ret i64 [[TMP3]]
+//
+int8x8_t test_pset_i8x4_i8x8_lo(int8x8_t v, int8x4_t s) {
+  return __riscv_pset_i8x4_i8x8(v, s, 0);
+}
+
+// RV32-LABEL: define dso_local i64 @test_pset_i8x4_i8x8_hi(
+// RV32-SAME: i64 noundef [[V_COERCE:%.*]], i32 noundef [[S_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    br i1 true, label %[[COND_TRUE_I:.*]], label %[[COND_FALSE_I:.*]]
+// RV32:       [[COND_TRUE_I]]:
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[V_COERCE]] to <8 x i8>
+// RV32-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <8 x i8> [[TMP0]], <8 x i8> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+// RV32-NEXT:    [[TMP1:%.*]] = bitcast i32 [[S_COERCE]] to <4 x i8>
+// RV32-NEXT:    [[SHUFFLE_I17_I:%.*]] = shufflevector <4 x i8> [[SHUFFLE_I]], <4 x i8> [[TMP1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+// RV32-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[SHUFFLE_I17_I]] to i64
+// RV32-NEXT:    br label %[[__RISCV_PSET_I8X4_I8X8_EXIT:.*]]
+// RV32:       [[COND_FALSE_I]]:
+// RV32-NEXT:    br label %[[__RISCV_PSET_I8X4_I8X8_EXIT]]
+// RV32:       [[__RISCV_PSET_I8X4_I8X8_EXIT]]:
+// RV32-NEXT:    [[TMP3:%.*]] = phi i64 [ [[TMP2]], %[[COND_TRUE_I]] ], [ poison, %[[COND_FALSE_I]] ]
+// RV32-NEXT:    ret i64 [[TMP3]]
+//
+// RV64-LABEL: define dso_local i64 @test_pset_i8x4_i8x8_hi(
+// RV64-SAME: i64 noundef [[V_COERCE:%.*]], i32 noundef [[S_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    br i1 true, label %[[COND_TRUE_I:.*]], label %[[COND_FALSE_I:.*]]
+// RV64:       [[COND_TRUE_I]]:
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[V_COERCE]] to <8 x i8>
+// RV64-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <8 x i8> [[TMP0]], <8 x i8> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+// RV64-NEXT:    [[TMP1:%.*]] = bitcast i32 [[S_COERCE]] to <4 x i8>
+// RV64-NEXT:    [[SHUFFLE_I17_I:%.*]] = shufflevector <4 x i8> [[SHUFFLE_I]], <4 x i8> [[TMP1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+// RV64-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[SHUFFLE_I17_I]] to i64
+// RV64-NEXT:    br label %[[__RISCV_PSET_I8X4_I8X8_EXIT:.*]]
+// RV64:       [[COND_FALSE_I]]:
+// RV64-NEXT:    br label %[[__RISCV_PSET_I8X4_I8X8_EXIT]]
+// RV64:       [[__RISCV_PSET_I8X4_I8X8_EXIT]]:
+// RV64-NEXT:    [[TMP3:%.*]] = phi i64 [ [[TMP2]], %[[COND_TRUE_I]] ], [ poison, %[[COND_FALSE_I]] ]
+// RV64-NEXT:    ret i64 [[TMP3]]
+//
+int8x8_t test_pset_i8x4_i8x8_hi(int8x8_t v, int8x4_t s) {
+  return __riscv_pset_i8x4_i8x8(v, s, 1);
+}
+
+// RV32-LABEL: define dso_local i64 @test_pset_u8x4_u8x8_lo(
+// RV32-SAME: i64 noundef [[V_COERCE:%.*]], i32 noundef [[S_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    br i1 false, label %[[COND_TRUE_I:.*]], label %[[COND_FALSE_I:.*]]
+// RV32:       [[COND_TRUE_I]]:
+// RV32-NEXT:    br label %[[__RISCV_PSET_U8X4_U8X8_EXIT:.*]]
+// RV32:       [[COND_FALSE_I]]:
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[V_COERCE]] to <8 x i8>
+// RV32-NEXT:    [[SHUFFLE5_I:%.*]] = shufflevector <8 x i8> [[TMP0]], <8 x i8> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+// RV32-NEXT:    [[TMP1:%.*]] = bitcast i32 [[S_COERCE]] to <4 x i8>
+// RV32-NEXT:    [[SHUFFLE_I_I:%.*]] = shufflevector <4 x i8> [[TMP1]], <4 x i8> [[SHUFFLE5_I]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+// RV32-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[SHUFFLE_I_I]] to i64
+// RV32-NEXT:    br label %[[__RISCV_PSET_U8X4_U8X8_EXIT]]
+// RV32:       [[__RISCV_PSET_U8X4_U8X8_EXIT]]:
+// RV32-NEXT:    [[TMP3:%.*]] = phi i64 [ poison, %[[COND_TRUE_I]] ], [ [[TMP2]], %[[COND_FALSE_I]] ]
+// RV32-NEXT:    ret i64 [[TMP3]]
+//
+// RV64-LABEL: define dso_local i64 @test_pset_u8x4_u8x8_lo(
+// RV64-SAME: i64 noundef [[V_COERCE:%.*]], i32 noundef [[S_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    br i1 false, label %[[COND_TRUE_I:.*]], label %[[COND_FALSE_I:.*]]
+// RV64:       [[COND_TRUE_I]]:
+// RV64-NEXT:    br label %[[__RISCV_PSET_U8X4_U8X8_EXIT:.*]]
+// RV64:       [[COND_FALSE_I]]:
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[V_COERCE]] to <8 x i8>
+// RV64-NEXT:    [[SHUFFLE5_I:%.*]] = shufflevector <8 x i8> [[TMP0]], <8 x i8> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+// RV64-NEXT:    [[TMP1:%.*]] = bitcast i32 [[S_COERCE]] to <4 x i8>
+// RV64-NEXT:    [[SHUFFLE_I_I:%.*]] = shufflevector <4 x i8> [[TMP1]], <4 x i8> [[SHUFFLE5_I]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+// RV64-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[SHUFFLE_I_I]] to i64
+// RV64-NEXT:    br label %[[__RISCV_PSET_U8X4_U8X8_EXIT]]
+// RV64:       [[__RISCV_PSET_U8X4_U8X8_EXIT]]:
+// RV64-NEXT:    [[TMP3:%.*]] = phi i64 [ poison, %[[COND_TRUE_I]] ], [ [[TMP2]], %[[COND_FALSE_I]] ]
+// RV64-NEXT:    ret i64 [[TMP3]]
+//
+uint8x8_t test_pset_u8x4_u8x8_lo(uint8x8_t v, uint8x4_t s) {
+  return __riscv_pset_u8x4_u8x8(v, s, 0);
+}
+
+// RV32-LABEL: define dso_local i64 @test_pset_u8x4_u8x8_hi(
+// RV32-SAME: i64 noundef [[V_COERCE:%.*]], i32 noundef [[S_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    br i1 true, label %[[COND_TRUE_I:.*]], label %[[COND_FALSE_I:.*]]
+// RV32:       [[COND_TRUE_I]]:
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[V_COERCE]] to <8 x i8>
+// RV32-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <8 x i8> [[TMP0]], <8 x i8> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+// RV32-NEXT:    [[TMP1:%.*]] = bitcast i32 [[S_COERCE]] to <4 x i8>
+// RV32-NEXT:    [[SHUFFLE_I17_I:%.*]] = shufflevector <4 x i8> [[SHUFFLE_I]], <4 x i8> [[TMP1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+// RV32-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[SHUFFLE_I17_I]] to i64
+// RV32-NEXT:    br label %[[__RISCV_PSET_U8X4_U8X8_EXIT:.*]]
+// RV32:       [[COND_FALSE_I]]:
+// RV32-NEXT:    br label %[[__RISCV_PSET_U8X4_U8X8_EXIT]]
+// RV32:       [[__RISCV_PSET_U8X4_U8X8_EXIT]]:
+// RV32-NEXT:    [[TMP3:%.*]] = phi i64 [ [[TMP2]], %[[COND_TRUE_I]] ], [ poison, %[[COND_FALSE_I]] ]
+// RV32-NEXT:    ret i64 [[TMP3]]
+//
+// RV64-LABEL: define dso_local i64 @test_pset_u8x4_u8x8_hi(
+// RV64-SAME: i64 noundef [[V_COERCE:%.*]], i32 noundef [[S_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    br i1 true, label %[[COND_TRUE_I:.*]], label %[[COND_FALSE_I:.*]]
+// RV64:       [[COND_TRUE_I]]:
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[V_COERCE]] to <8 x i8>
+// RV64-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <8 x i8> [[TMP0]], <8 x i8> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+// RV64-NEXT:    [[TMP1:%.*]] = bitcast i32 [[S_COERCE]] to <4 x i8>
+// RV64-NEXT:    [[SHUFFLE_I17_I:%.*]] = shufflevector <4 x i8> [[SHUFFLE_I]], <4 x i8> [[TMP1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+// RV64-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[SHUFFLE_I17_I]] to i64
+// RV64-NEXT:    br label %[[__RISCV_PSET_U8X4_U8X8_EXIT:.*]]
+// RV64:       [[COND_FALSE_I]]:
+// RV64-NEXT:    br label %[[__RISCV_PSET_U8X4_U8X8_EXIT]]
+// RV64:       [[__RISCV_PSET_U8X4_U8X8_EXIT]]:
+// RV64-NEXT:    [[TMP3:%.*]] = phi i64 [ [[TMP2]], %[[COND_TRUE_I]] ], [ poison, %[[COND_FALSE_I]] ]
+// RV64-NEXT:    ret i64 [[TMP3]]
+//
+uint8x8_t test_pset_u8x4_u8x8_hi(uint8x8_t v, uint8x4_t s) {
+  return __riscv_pset_u8x4_u8x8(v, s, 1);
+}
+
+// RV32-LABEL: define dso_local i64 @test_pset_i16x2_i16x4_lo(
+// RV32-SAME: i64 noundef [[V_COERCE:%.*]], i32 noundef [[S_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    br i1 false, label %[[COND_TRUE_I:.*]], label %[[COND_FALSE_I:.*]]
+// RV32:       [[COND_TRUE_I]]:
+// RV32-NEXT:    br label %[[__RISCV_PSET_I16X2_I16X4_EXIT:.*]]
+// RV32:       [[COND_FALSE_I]]:
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[V_COERCE]] to <4 x i16>
+// RV32-NEXT:    [[SHUFFLE5_I:%.*]] = shufflevector <4 x i16> [[TMP0]], <4 x i16> poison, <2 x i32> <i32 2, i32 3>
+// RV32-NEXT:    [[TMP1:%.*]] = bitcast i32 [[S_COERCE]] to <2 x i16>
+// RV32-NEXT:    [[SHUFFLE_I_I:%.*]] = shufflevector <2 x i16> [[TMP1]], <2 x i16> [[SHUFFLE5_I]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+// RV32-NEXT:    [[TMP2:%.*]] = bitcast <4 x i16> [[SHUFFLE_I_I]] to i64
+// RV32-NEXT:    br label %[[__RISCV_PSET_I16X2_I16X4_EXIT]]
+// RV32:       [[__RISCV_PSET_I16X2_I16X4_EXIT]]:
+// RV32-NEXT:    [[TMP3:%.*]] = phi i64 [ poison, %[[COND_TRUE_I]] ], [ [[TMP2]], %[[COND_FALSE_I]] ]
+// RV32-NEXT:    ret i64 [[TMP3]]
+//
+// RV64-LABEL: define dso_local i64 @test_pset_i16x2_i16x4_lo(
+// RV64-SAME: i64 noundef [[V_COERCE:%.*]], i32 noundef [[S_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    br i1 false, label %[[COND_TRUE_I:.*]], label %[[COND_FALSE_I:.*]]
+// RV64:       [[COND_TRUE_I]]:
+// RV64-NEXT:    br label %[[__RISCV_PSET_I16X2_I16X4_EXIT:.*]]
+// RV64:       [[COND_FALSE_I]]:
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[V_COERCE]] to <4 x i16>
+// RV64-NEXT:    [[SHUFFLE5_I:%.*]] = shufflevector <4 x i16> [[TMP0]], <4 x i16> poison, <2 x i32> <i32 2, i32 3>
+// RV64-NEXT:    [[TMP1:%.*]] = bitcast i32 [[S_COERCE]] to <2 x i16>
+// RV64-NEXT:    [[SHUFFLE_I_I:%.*]] = shufflevector <2 x i16> [[TMP1]], <2 x i16> [[SHUFFLE5_I]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+// RV64-NEXT:    [[TMP2:%.*]] = bitcast <4 x i16> [[SHUFFLE_I_I]] to i64
+// RV64-NEXT:    br label %[[__RISCV_PSET_I16X2_I16X4_EXIT]]
+// RV64:       [[__RISCV_PSET_I16X2_I16X4_EXIT]]:
+// RV64-NEXT:    [[TMP3:%.*]] = phi i64 [ poison, %[[COND_TRUE_I]] ], [ [[TMP2]], %[[COND_FALSE_I]] ]
+// RV64-NEXT:    ret i64 [[TMP3]]
+//
+int16x4_t test_pset_i16x2_i16x4_lo(int16x4_t v, int16x2_t s) {
+  return __riscv_pset_i16x2_i16x4(v, s, 0);
+}
+
+// RV32-LABEL: define dso_local i64 @test_pset_i16x2_i16x4_hi(
+// RV32-SAME: i64 noundef [[V_COERCE:%.*]], i32 noundef [[S_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    br i1 true, label %[[COND_TRUE_I:.*]], label %[[COND_FALSE_I:.*]]
+// RV32:       [[COND_TRUE_I]]:
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[V_COERCE]] to <4 x i16>
+// RV32-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <4 x i16> [[TMP0]], <4 x i16> poison, <2 x i32> <i32 0, i32 1>
+// RV32-NEXT:    [[TMP1:%.*]] = bitcast i32 [[S_COERCE]] to <2 x i16>
+// RV32-NEXT:    [[SHUFFLE_I17_I:%.*]] = shufflevector <2 x i16> [[SHUFFLE_I]], <2 x i16> [[TMP1]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+// RV32-NEXT:    [[TMP2:%.*]] = bitcast <4 x i16> [[SHUFFLE_I17_I]] to i64
+// RV32-NEXT:    br label %[[__RISCV_PSET_I16X2_I16X4_EXIT:.*]]
+// RV32:       [[COND_FALSE_I]]:
+// RV32-NEXT:    br label %[[__RISCV_PSET_I16X2_I16X4_EXIT]]
+// RV32:       [[__RISCV_PSET_I16X2_I16X4_EXIT]]:
+// RV32-NEXT:    [[TMP3:%.*]] = phi i64 [ [[TMP2]], %[[COND_TRUE_I]] ], [ poison, %[[COND_FALSE_I]] ]
+// RV32-NEXT:    ret i64 [[TMP3]]
+//
+// RV64-LABEL: define dso_local i64 @test_pset_i16x2_i16x4_hi(
+// RV64-SAME: i64 noundef [[V_COERCE:%.*]], i32 noundef [[S_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    br i1 true, label %[[COND_TRUE_I:.*]], label %[[COND_FALSE_I:.*]]
+// RV64:       [[COND_TRUE_I]]:
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[V_COERCE]] to <4 x i16>
+// RV64-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <4 x i16> [[TMP0]], <4 x i16> poison, <2 x i32> <i32 0, i32 1>
+// RV64-NEXT:    [[TMP1:%.*]] = bitcast i32 [[S_COERCE]] to <2 x i16>
+// RV64-NEXT:    [[SHUFFLE_I17_I:%.*]] = shufflevector <2 x i16> [[SHUFFLE_I]], <2 x i16> [[TMP1]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+// RV64-NEXT:    [[TMP2:%.*]] = bitcast <4 x i16> [[SHUFFLE_I17_I]] to i64
+// RV64-NEXT:    br label %[[__RISCV_PSET_I16X2_I16X4_EXIT:.*]]
+// RV64:       [[COND_FALSE_I]]:
+// RV64-NEXT:    br label %[[__RISCV_PSET_I16X2_I16X4_EXIT]]
+// RV64:       [[__RISCV_PSET_I16X2_I16X4_EXIT]]:
+// RV64-NEXT:    [[TMP3:%.*]] = phi i64 [ [[TMP2]], %[[COND_TRUE_I]] ], [ poison, %[[COND_FALSE_I]] ]
+// RV64-NEXT:    ret i64 [[TMP3]]
+//
+int16x4_t test_pset_i16x2_i16x4_hi(int16x4_t v, int16x2_t s) {
+  return __riscv_pset_i16x2_i16x4(v, s, 1);
+}
+
+// RV32-LABEL: define dso_local i64 @test_pset_u16x2_u16x4_lo(
+// RV32-SAME: i64 noundef [[V_COERCE:%.*]], i32 noundef [[S_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    br i1 false, label %[[COND_TRUE_I:.*]], label %[[COND_FALSE_I:.*]]
+// RV32:       [[COND_TRUE_I]]:
+// RV32-NEXT:    br label %[[__RISCV_PSET_U16X2_U16X4_EXIT:.*]]
+// RV32:       [[COND_FALSE_I]]:
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[V_COERCE]] to <4 x i16>
+// RV32-NEXT:    [[SHUFFLE5_I:%.*]] = shufflevector <4 x i16> [[TMP0]], <4 x i16> poison, <2 x i32> <i32 2, i32 3>
+// RV32-NEXT:    [[TMP1:%.*]] = bitcast i32 [[S_COERCE]] to <2 x i16>
+// RV32-NEXT:    [[SHUFFLE_I_I:%.*]] = shufflevector <2 x i16> [[TMP1]], <2 x i16> [[SHUFFLE5_I]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+// RV32-NEXT:    [[TMP2:%.*]] = bitcast <4 x i16> [[SHUFFLE_I_I]] to i64
+// RV32-NEXT:    br label %[[__RISCV_PSET_U16X2_U16X4_EXIT]]
+// RV32:       [[__RISCV_PSET_U16X2_U16X4_EXIT]]:
+// RV32-NEXT:    [[TMP3:%.*]] = phi i64 [ poison, %[[COND_TRUE_I]] ], [ [[TMP2]], %[[COND_FALSE_I]] ]
+// RV32-NEXT:    ret i64 [[TMP3]]
+//
+// RV64-LABEL: define dso_local i64 @test_pset_u16x2_u16x4_lo(
+// RV64-SAME: i64 noundef [[V_COERCE:%.*]], i32 noundef [[S_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    br i1 false, label %[[COND_TRUE_I:.*]], label %[[COND_FALSE_I:.*]]
+// RV64:       [[COND_TRUE_I]]:
+// RV64-NEXT:    br label %[[__RISCV_PSET_U16X2_U16X4_EXIT:.*]]
+// RV64:       [[COND_FALSE_I]]:
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[V_COERCE]] to <4 x i16>
+// RV64-NEXT:    [[SHUFFLE5_I:%.*]] = shufflevector <4 x i16> [[TMP0]], <4 x i16> poison, <2 x i32> <i32 2, i32 3>
+// RV64-NEXT:    [[TMP1:%.*]] = bitcast i32 [[S_COERCE]] to <2 x i16>
+// RV64-NEXT:    [[SHUFFLE_I_I:%.*]] = shufflevector <2 x i16> [[TMP1]], <2 x i16> [[SHUFFLE5_I]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+// RV64-NEXT:    [[TMP2:%.*]] = bitcast <4 x i16> [[SHUFFLE_I_I]] to i64
+// RV64-NEXT:    br label %[[__RISCV_PSET_U16X2_U16X4_EXIT]]
+// RV64:       [[__RISCV_PSET_U16X2_U16X4_EXIT]]:
+// RV64-NEXT:    [[TMP3:%.*]] = phi i64 [ poison, %[[COND_TRUE_I]] ], [ [[TMP2]], %[[COND_FALSE_I]] ]
+// RV64-NEXT:    ret i64 [[TMP3]]
+//
+uint16x4_t test_pset_u16x2_u16x4_lo(uint16x4_t v, uint16x2_t s) {
+  return __riscv_pset_u16x2_u16x4(v, s, 0);
+}
+
+// RV32-LABEL: define dso_local i64 @test_pset_u16x2_u16x4_hi(
+// RV32-SAME: i64 noundef [[V_COERCE:%.*]], i32 noundef [[S_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    br i1 true, label %[[COND_TRUE_I:.*]], label %[[COND_FALSE_I:.*]]
+// RV32:       [[COND_TRUE_I]]:
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[V_COERCE]] to <4 x i16>
+// RV32-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <4 x i16> [[TMP0]], <4 x i16> poison, <2 x i32> <i32 0, i32 1>
+// RV32-NEXT:    [[TMP1:%.*]] = bitcast i32 [[S_COERCE]] to <2 x i16>
+// RV32-NEXT:    [[SHUFFLE_I17_I:%.*]] = shufflevector <2 x i16> [[SHUFFLE_I]], <2 x i16> [[TMP1]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+// RV32-NEXT:    [[TMP2:%.*]] = bitcast <4 x i16> [[SHUFFLE_I17_I]] to i64
+// RV32-NEXT:    br label %[[__RISCV_PSET_U16X2_U16X4_EXIT:.*]]
+// RV32:       [[COND_FALSE_I]]:
+// RV32-NEXT:    br label %[[__RISCV_PSET_U16X2_U16X4_EXIT]]
+// RV32:       [[__RISCV_PSET_U16X2_U16X4_EXIT]]:
+// RV32-NEXT:    [[TMP3:%.*]] = phi i64 [ [[TMP2]], %[[COND_TRUE_I]] ], [ poison, %[[COND_FALSE_I]] ]
+// RV32-NEXT:    ret i64 [[TMP3]]
+//
+// RV64-LABEL: define dso_local i64 @test_pset_u16x2_u16x4_hi(
+// RV64-SAME: i64 noundef [[V_COERCE:%.*]], i32 noundef [[S_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    br i1 true, label %[[COND_TRUE_I:.*]], label %[[COND_FALSE_I:.*]]
+// RV64:       [[COND_TRUE_I]]:
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[V_COERCE]] to <4 x i16>
+// RV64-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <4 x i16> [[TMP0]], <4 x i16> poison, <2 x i32> <i32 0, i32 1>
+// RV64-NEXT:    [[TMP1:%.*]] = bitcast i32 [[S_COERCE]] to <2 x i16>
+// RV64-NEXT:    [[SHUFFLE_I17_I:%.*]] = shufflevector <2 x i16> [[SHUFFLE_I]], <2 x i16> [[TMP1]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+// RV64-NEXT:    [[TMP2:%.*]] = bitcast <4 x i16> [[SHUFFLE_I17_I]] to i64
+// RV64-NEXT:    br label %[[__RISCV_PSET_U16X2_U16X4_EXIT:.*]]
+// RV64:       [[COND_FALSE_I]]:
+// RV64-NEXT:    br label %[[__RISCV_PSET_U16X2_U16X4_EXIT]]
+// RV64:       [[__RISCV_PSET_U16X2_U16X4_EXIT]]:
+// RV64-NEXT:    [[TMP3:%.*]] = phi i64 [ [[TMP2]], %[[COND_TRUE_I]] ], [ poison, %[[COND_FALSE_I]] ]
+// RV64-NEXT:    ret i64 [[TMP3]]
+//
+uint16x4_t test_pset_u16x2_u16x4_hi(uint16x4_t v, uint16x2_t s) {
+  return __riscv_pset_u16x2_u16x4(v, s, 1);
+}
