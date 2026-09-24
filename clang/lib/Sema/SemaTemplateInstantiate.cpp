@@ -2937,6 +2937,42 @@ TypeSourceInfo *Sema::SubstType(TypeLoc TL,
   return TLB.getTypeSourceInfo(Context, Result);
 }
 
+TypeSourceInfo *
+Sema::SubstFunctionParameterType(TypeSourceInfo *T,
+                                 const MultiLevelTemplateArgumentList &Args,
+                                 SourceLocation Loc, DeclarationName Entity) {
+  if (!T->getType()->isInstantiationDependentType() &&
+      !T->getType()->isVariablyModifiedType())
+    return T;
+
+  TemplateInstantiator Instantiator(*this, Args, Loc, Entity);
+  return Instantiator.TransformFunctionParameterType(T);
+}
+
+TypeSourceInfo *
+Sema::SubstFunctionParameterType(TypeLoc TL,
+                                 const MultiLevelTemplateArgumentList &Args,
+                                 SourceLocation Loc, DeclarationName Entity) {
+  if (TL.getType().isNull())
+    return nullptr;
+
+  if (!TL.getType()->isInstantiationDependentType() &&
+      !TL.getType()->isVariablyModifiedType()) {
+    TypeLocBuilder TLB;
+    TLB.pushFullCopy(TL);
+    return TLB.getTypeSourceInfo(Context, TL.getType());
+  }
+
+  TemplateInstantiator Instantiator(*this, Args, Loc, Entity);
+  TypeLocBuilder TLB;
+  TLB.reserve(TL.getFullDataSize());
+  QualType Result = Instantiator.TransformFunctionParameterType(TLB, TL);
+  if (Result.isNull())
+    return nullptr;
+
+  return TLB.getTypeSourceInfo(Context, Result);
+}
+
 /// Deprecated form of the above.
 QualType Sema::SubstType(QualType T,
                          const MultiLevelTemplateArgumentList &TemplateArgs,
@@ -3173,16 +3209,15 @@ Sema::SubstParmVarDecl(ParmVarDecl *OldParm,
                        bool ExpectParameterPack, bool EvaluateConstraint) {
   TypeSourceInfo *OldTSI = OldParm->getTypeSourceInfo();
   TypeSourceInfo *NewTSI = nullptr;
-  llvm::SaveAndRestore InParameterType(InFunctionParameterTypeInstantiation,
-                                       true);
 
   TypeLoc OldTL = OldTSI->getTypeLoc();
   if (PackExpansionTypeLoc ExpansionTL = OldTL.getAs<PackExpansionTypeLoc>()) {
 
     // We have a function parameter pack. Substitute into the pattern of the
     // expansion.
-    NewTSI = SubstType(ExpansionTL.getPatternLoc(), TemplateArgs,
-                       OldParm->getLocation(), OldParm->getDeclName());
+    NewTSI = SubstFunctionParameterType(ExpansionTL.getPatternLoc(),
+                                        TemplateArgs, OldParm->getLocation(),
+                                        OldParm->getDeclName());
     if (!NewTSI)
       return nullptr;
 
@@ -3203,8 +3238,8 @@ Sema::SubstParmVarDecl(ParmVarDecl *OldParm,
       return nullptr;
     }
   } else {
-    NewTSI = SubstType(OldTSI, TemplateArgs, OldParm->getLocation(),
-                       OldParm->getDeclName());
+    NewTSI = SubstFunctionParameterType(
+        OldTSI, TemplateArgs, OldParm->getLocation(), OldParm->getDeclName());
   }
 
   if (!NewTSI)

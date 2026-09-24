@@ -283,6 +283,33 @@ struct DependentParameterUse {
 
 template struct DependentParameterUse<DependentHost>; // msvc-note {{in instantiation of template class 'DependentParameterUse<DependentHost>' requested here}}
 
+#ifdef MSVC_COMPAT
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wmicrosoft-enum-typedef"
+template <class T, class U = enum T::Alias>
+struct DependentDefaultArgCarrier {
+  U value;
+};
+
+template <class T>
+void dependent_default_arg_param(DependentDefaultArgCarrier<T>) {}
+
+template void dependent_default_arg_param<DependentHost>(
+    DependentDefaultArgCarrier<DependentHost>);
+#pragma clang diagnostic pop
+
+struct DependentPackHost {
+  typedef enum Named { Value } Alias; // msvc-note {{declared here}}
+};
+
+template <class... Ts>
+struct DependentPackUse {
+  void f(enum Ts::Alias *...); // msvc-error {{typedef 'Alias' cannot be referenced with the 'enum' specifier}}
+};
+
+template struct DependentPackUse<DependentPackHost>; // msvc-note {{in instantiation of template class 'DependentPackUse<DependentPackHost>' requested here}}
+#endif
+
 template <class T>
 using DependentFunctionType = void(enum T::Alias *); // msvc-error {{typedef 'Alias' cannot be referenced with the 'enum' specifier}}
 

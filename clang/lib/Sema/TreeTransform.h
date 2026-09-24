@@ -403,6 +403,18 @@ public:
   TypeSourceInfo *TransformTypeWithDeducedTST(TypeSourceInfo *TSI);
   /// @}
 
+  TypeSourceInfo *TransformFunctionParameterType(TypeSourceInfo *TSI) {
+    llvm::SaveAndRestore TransformingParameter(
+        TransformingFunctionParameterType, true);
+    return getDerived().TransformType(TSI);
+  }
+
+  QualType TransformFunctionParameterType(TypeLocBuilder &TLB, TypeLoc TL) {
+    llvm::SaveAndRestore TransformingParameter(
+        TransformingFunctionParameterType, true);
+    return getDerived().TransformType(TLB, TL);
+  }
+
   /// The reason why the value of a statement is not discarded, if any.
   enum class StmtDiscardKind {
     Discarded,

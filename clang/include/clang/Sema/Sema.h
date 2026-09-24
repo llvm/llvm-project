@@ -1608,8 +1608,6 @@ private:
   /// The parser maintains this state here.
   Scope *CurScope;
 
-  bool InFunctionParameterTypeInstantiation = false;
-
   mutable IdentifierInfo *Ident_super;
 
   std::unique_ptr<SemaAMDGPU> AMDGPUPtr;
@@ -13891,6 +13889,16 @@ public:
   TypeSourceInfo *SubstType(TypeLoc TL,
                             const MultiLevelTemplateArgumentList &TemplateArgs,
                             SourceLocation Loc, DeclarationName Entity);
+
+  TypeSourceInfo *
+  SubstFunctionParameterType(TypeSourceInfo *T,
+                             const MultiLevelTemplateArgumentList &TemplateArgs,
+                             SourceLocation Loc, DeclarationName Entity);
+
+  TypeSourceInfo *
+  SubstFunctionParameterType(TypeLoc TL,
+                             const MultiLevelTemplateArgumentList &TemplateArgs,
+                             SourceLocation Loc, DeclarationName Entity);
 
   TypeSourceInfo *
   SubstFriendType(TypeSourceInfo *TSI,
