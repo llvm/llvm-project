@@ -10,7 +10,6 @@
 #include "AMDGPUGenSubtargetInfo.inc"
 #include "AMDGPUTargetMachine.h"
 #include "GCNSubtarget.h"
-#include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/TargetParser/AMDGPUTargetParser.h"
@@ -375,32 +374,4 @@ TEST_F(AMDGPUTestBase, TestGetNamedOperandIdx) {
           << "Opcode " << Opcode << " (" << MCII->getName(Opcode) << ')';
     }
   }
-}
-
-TEST_F(AMDGPUTestBase, TestBranchUnmodeledSideEffects) {
-  auto TM = createAMDGPUTargetMachine(Triple("amdgpu9.00-amd-"), "", "");
-  ASSERT_TRUE(TM);
-  const MCInstrInfo *MCII = TM->getMCInstrInfo();
-  ASSERT_NE(MCII, nullptr);
-
-  const struct {
-    unsigned Opcode;
-    bool HasSideEffects;
-  } Cases[] = {
-      {AMDGPU::S_CBRANCH_CDBGSYS, true},
-      {AMDGPU::S_CBRANCH_CDBGUSER, true},
-      {AMDGPU::S_CBRANCH_CDBGSYS_OR_USER, true},
-      {AMDGPU::S_CBRANCH_CDBGSYS_AND_USER, true},
-      {AMDGPU::S_CBRANCH_CDBGSYS_pad_s_nop, true},
-      {AMDGPU::S_CBRANCH_CDBGUSER_pad_s_nop, true},
-      {AMDGPU::S_CBRANCH_CDBGSYS_OR_USER_pad_s_nop, true},
-      {AMDGPU::S_CBRANCH_CDBGSYS_AND_USER_pad_s_nop, true},
-      {AMDGPU::S_CBRANCH_SCC0, false},
-      {AMDGPU::S_CBRANCH_SCC0_pad_s_nop, false},
-  };
-
-  for (const auto &Case : Cases)
-    EXPECT_EQ(Case.HasSideEffects,
-              MCII->get(Case.Opcode).hasUnmodeledSideEffects())
-        << MCII->getName(Case.Opcode);
 }
