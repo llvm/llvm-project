@@ -328,6 +328,8 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VSELECT, VT, Legal);
       setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
       setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Legal);
+      setOperationAction({ISD::CTTZ_ELTS, ISD::CTTZ_ELTS_ZERO_POISON}, VT,
+                         Custom);
     }
     for (MVT VT : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v2i64}) {
       setOperationAction({ISD::ADD, ISD::SUB}, VT, Legal);
@@ -430,6 +432,8 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::SETCC, VT, Custom);
       setOperationAction(ISD::VSELECT, VT, Legal);
       setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
+      setOperationAction({ISD::CTTZ_ELTS, ISD::CTTZ_ELTS_ZERO_POISON}, VT,
+                         Custom);
     }
     for (MVT VT : {MVT::v4i64, MVT::v8i32, MVT::v16i16, MVT::v32i8}) {
       setOperationAction({ISD::ADD, ISD::SUB}, VT, Legal);
@@ -670,6 +674,9 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
   case ISD::ROTL:
   case ISD::ROTR:
     return lowerRotate(Op, DAG);
+  case ISD::CTTZ_ELTS:
+  case ISD::CTTZ_ELTS_ZERO_POISON:
+    return lowerCTTZ_ELTS(Op, DAG);
   case ISD::VECREDUCE_AND:
   case ISD::VECREDUCE_OR:
   case ISD::VECREDUCE_XOR:
@@ -10984,6 +10991,40 @@ bool LoongArchTargetLowering::shouldInsertFencesForAtomic(
   }
 
   return false;
+}
+
+SDValue LoongArchTargetLowering::lowerCTTZ_ELTS(SDValue Op,
+                                                SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  MVT GRLenVT = Subtarget.getGRLenVT();
+  SDValue Src = Op.getOperand(0);
+  EVT SrcVT = Src.getValueType();
+  unsigned NumElts = SrcVT.getVectorNumElements();
+  unsigned SrcBits = SrcVT.getSizeInBits();
+
+  // Only masks occupying exactly one LSX or LASX register are handled; anything
+  // else is left to the generic expansion.
+  if (SrcBits != 128 && SrcBits != 256)
+    return SDValue();
+
+  // [X]VMSKLTZ collect each lane's sign bit into lowest bits of a VPR, copy
+  // them into GPR and count trailing zeros.
+  SDValue Bits = DAG.getNode(SrcBits == 256 ? LoongArchISD::XVMSKLTZ
+                                            : LoongArchISD::VMSKLTZ,
+                             DL, GRLenVT, Src);
+
+  // CTTZ_ELTS must produce the vector length when no lane is set.
+  if (Op.getOpcode() == ISD::CTTZ_ELTS) {
+    // When GRLen is 32, it's possible that NumElts is 32 too.
+    if (NumElts >= GRLenVT.getSizeInBits())
+      return SDValue();
+    Bits = DAG.getNode(ISD::OR, DL, GRLenVT, Bits,
+                       DAG.getConstant(1ULL << NumElts, DL, GRLenVT));
+  }
+
+  return DAG.getZExtOrTrunc(
+      DAG.getNode(ISD::CTTZ_ZERO_POISON, DL, GRLenVT, Bits), DL,
+      Op.getValueType());
 }
 
 EVT LoongArchTargetLowering::getSetCCResultType(const DataLayout &DL,

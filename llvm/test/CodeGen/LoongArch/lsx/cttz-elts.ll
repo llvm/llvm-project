@@ -12,15 +12,11 @@ define void @first_set_lane_v2i64(ptr %src, ptr %dst) {
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    vld $vr0, $a0, 0
 ; LA32-NEXT:    vld $vr1, $a1, 0
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI0_0)
-; LA32-NEXT:    vld $vr2, $a0, %pc_lo12(.LCPI0_0)
 ; LA32-NEXT:    vseq.d $vr0, $vr0, $vr1
-; LA32-NEXT:    vand.v $vr0, $vr0, $vr2
-; LA32-NEXT:    vbsrl.v $vr1, $vr0, 8
-; LA32-NEXT:    vmax.du $vr0, $vr1, $vr0
-; LA32-NEXT:    vpickve2gr.w $a0, $vr0, 0
-; LA32-NEXT:    ori $a2, $zero, 2
-; LA32-NEXT:    sub.w $a0, $a2, $a0
+; LA32-NEXT:    vmskltz.d $vr0, $vr0
+; LA32-NEXT:    vpickve2gr.hu $a0, $vr0, 0
+; LA32-NEXT:    ori $a0, $a0, 4
+; LA32-NEXT:    ctz.w $a0, $a0
 ; LA32-NEXT:    st.w $zero, $a1, 4
 ; LA32-NEXT:    st.w $a0, $a1, 0
 ; LA32-NEXT:    ret
@@ -29,15 +25,11 @@ define void @first_set_lane_v2i64(ptr %src, ptr %dst) {
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    vld $vr0, $a0, 0
 ; LA64-NEXT:    vld $vr1, $a1, 0
-; LA64-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI0_0)
-; LA64-NEXT:    vld $vr2, $a0, %pc_lo12(.LCPI0_0)
 ; LA64-NEXT:    vseq.d $vr0, $vr0, $vr1
-; LA64-NEXT:    vand.v $vr0, $vr0, $vr2
-; LA64-NEXT:    vbsrl.v $vr1, $vr0, 8
-; LA64-NEXT:    vmax.du $vr0, $vr1, $vr0
-; LA64-NEXT:    vpickve2gr.d $a0, $vr0, 0
-; LA64-NEXT:    ori $a2, $zero, 2
-; LA64-NEXT:    sub.d $a0, $a2, $a0
+; LA64-NEXT:    vmskltz.d $vr0, $vr0
+; LA64-NEXT:    vpickve2gr.hu $a0, $vr0, 0
+; LA64-NEXT:    ori $a0, $a0, 4
+; LA64-NEXT:    ctz.d $a0, $a0
 ; LA64-NEXT:    st.d $a0, $a1, 0
 ; LA64-NEXT:    ret
   %a = load <2 x i64>, ptr %src
@@ -53,15 +45,10 @@ define void @first_set_lane_v2i64_poison(ptr %src, ptr %dst) {
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    vld $vr0, $a0, 0
 ; LA32-NEXT:    vld $vr1, $a1, 0
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI1_0)
-; LA32-NEXT:    vld $vr2, $a0, %pc_lo12(.LCPI1_0)
 ; LA32-NEXT:    vseq.d $vr0, $vr0, $vr1
-; LA32-NEXT:    vand.v $vr0, $vr0, $vr2
-; LA32-NEXT:    vbsrl.v $vr1, $vr0, 8
-; LA32-NEXT:    vmax.du $vr0, $vr1, $vr0
-; LA32-NEXT:    vpickve2gr.w $a0, $vr0, 0
-; LA32-NEXT:    ori $a2, $zero, 2
-; LA32-NEXT:    sub.w $a0, $a2, $a0
+; LA32-NEXT:    vmskltz.d $vr0, $vr0
+; LA32-NEXT:    vpickve2gr.hu $a0, $vr0, 0
+; LA32-NEXT:    ctz.w $a0, $a0
 ; LA32-NEXT:    st.w $zero, $a1, 4
 ; LA32-NEXT:    st.w $a0, $a1, 0
 ; LA32-NEXT:    ret
@@ -70,15 +57,10 @@ define void @first_set_lane_v2i64_poison(ptr %src, ptr %dst) {
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    vld $vr0, $a0, 0
 ; LA64-NEXT:    vld $vr1, $a1, 0
-; LA64-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI1_0)
-; LA64-NEXT:    vld $vr2, $a0, %pc_lo12(.LCPI1_0)
 ; LA64-NEXT:    vseq.d $vr0, $vr0, $vr1
-; LA64-NEXT:    vand.v $vr0, $vr0, $vr2
-; LA64-NEXT:    vbsrl.v $vr1, $vr0, 8
-; LA64-NEXT:    vmax.du $vr0, $vr1, $vr0
-; LA64-NEXT:    vpickve2gr.d $a0, $vr0, 0
-; LA64-NEXT:    ori $a2, $zero, 2
-; LA64-NEXT:    sub.d $a0, $a2, $a0
+; LA64-NEXT:    vmskltz.d $vr0, $vr0
+; LA64-NEXT:    vpickve2gr.hu $a0, $vr0, 0
+; LA64-NEXT:    ctz.d $a0, $a0
 ; LA64-NEXT:    st.d $a0, $a1, 0
 ; LA64-NEXT:    ret
   %a = load <2 x i64>, ptr %src
@@ -94,17 +76,11 @@ define void @first_set_lane_v4i32(ptr %src, ptr %dst) {
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    vld $vr0, $a0, 0
 ; LA32-NEXT:    vld $vr1, $a1, 0
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI2_0)
-; LA32-NEXT:    vld $vr2, $a0, %pc_lo12(.LCPI2_0)
 ; LA32-NEXT:    vseq.w $vr0, $vr0, $vr1
-; LA32-NEXT:    vand.v $vr0, $vr0, $vr2
-; LA32-NEXT:    vbsrl.v $vr1, $vr0, 8
-; LA32-NEXT:    vmax.wu $vr0, $vr1, $vr0
-; LA32-NEXT:    vbsrl.v $vr1, $vr0, 4
-; LA32-NEXT:    vmax.wu $vr0, $vr1, $vr0
-; LA32-NEXT:    vpickve2gr.w $a0, $vr0, 0
-; LA32-NEXT:    ori $a2, $zero, 4
-; LA32-NEXT:    sub.w $a0, $a2, $a0
+; LA32-NEXT:    vmskltz.w $vr0, $vr0
+; LA32-NEXT:    vpickve2gr.hu $a0, $vr0, 0
+; LA32-NEXT:    ori $a0, $a0, 16
+; LA32-NEXT:    ctz.w $a0, $a0
 ; LA32-NEXT:    st.w $zero, $a1, 4
 ; LA32-NEXT:    st.w $a0, $a1, 0
 ; LA32-NEXT:    ret
@@ -113,17 +89,11 @@ define void @first_set_lane_v4i32(ptr %src, ptr %dst) {
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    vld $vr0, $a0, 0
 ; LA64-NEXT:    vld $vr1, $a1, 0
-; LA64-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI2_0)
-; LA64-NEXT:    vld $vr2, $a0, %pc_lo12(.LCPI2_0)
 ; LA64-NEXT:    vseq.w $vr0, $vr0, $vr1
-; LA64-NEXT:    vand.v $vr0, $vr0, $vr2
-; LA64-NEXT:    vbsrl.v $vr1, $vr0, 8
-; LA64-NEXT:    vmax.wu $vr0, $vr1, $vr0
-; LA64-NEXT:    vbsrl.v $vr1, $vr0, 4
-; LA64-NEXT:    vmax.wu $vr0, $vr1, $vr0
-; LA64-NEXT:    vpickve2gr.wu $a0, $vr0, 0
-; LA64-NEXT:    ori $a2, $zero, 4
-; LA64-NEXT:    sub.d $a0, $a2, $a0
+; LA64-NEXT:    vmskltz.w $vr0, $vr0
+; LA64-NEXT:    vpickve2gr.hu $a0, $vr0, 0
+; LA64-NEXT:    ori $a0, $a0, 16
+; LA64-NEXT:    ctz.d $a0, $a0
 ; LA64-NEXT:    st.d $a0, $a1, 0
 ; LA64-NEXT:    ret
   %a = load <4 x i32>, ptr %src
@@ -139,19 +109,11 @@ define void @first_set_lane_v8i16(ptr %src, ptr %dst) {
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    vld $vr0, $a0, 0
 ; LA32-NEXT:    vld $vr1, $a1, 0
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_0)
-; LA32-NEXT:    vld $vr2, $a0, %pc_lo12(.LCPI3_0)
 ; LA32-NEXT:    vseq.h $vr0, $vr0, $vr1
-; LA32-NEXT:    vand.v $vr0, $vr0, $vr2
-; LA32-NEXT:    vbsrl.v $vr1, $vr0, 8
-; LA32-NEXT:    vmax.hu $vr0, $vr1, $vr0
-; LA32-NEXT:    vbsrl.v $vr1, $vr0, 4
-; LA32-NEXT:    vmax.hu $vr0, $vr1, $vr0
-; LA32-NEXT:    vbsrl.v $vr1, $vr0, 2
-; LA32-NEXT:    vmax.hu $vr0, $vr1, $vr0
+; LA32-NEXT:    vmskltz.h $vr0, $vr0
 ; LA32-NEXT:    vpickve2gr.hu $a0, $vr0, 0
-; LA32-NEXT:    ori $a2, $zero, 8
-; LA32-NEXT:    sub.w $a0, $a2, $a0
+; LA32-NEXT:    ori $a0, $a0, 256
+; LA32-NEXT:    ctz.w $a0, $a0
 ; LA32-NEXT:    st.w $zero, $a1, 4
 ; LA32-NEXT:    st.w $a0, $a1, 0
 ; LA32-NEXT:    ret
@@ -160,19 +122,11 @@ define void @first_set_lane_v8i16(ptr %src, ptr %dst) {
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    vld $vr0, $a0, 0
 ; LA64-NEXT:    vld $vr1, $a1, 0
-; LA64-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_0)
-; LA64-NEXT:    vld $vr2, $a0, %pc_lo12(.LCPI3_0)
 ; LA64-NEXT:    vseq.h $vr0, $vr0, $vr1
-; LA64-NEXT:    vand.v $vr0, $vr0, $vr2
-; LA64-NEXT:    vbsrl.v $vr1, $vr0, 8
-; LA64-NEXT:    vmax.hu $vr0, $vr1, $vr0
-; LA64-NEXT:    vbsrl.v $vr1, $vr0, 4
-; LA64-NEXT:    vmax.hu $vr0, $vr1, $vr0
-; LA64-NEXT:    vbsrl.v $vr1, $vr0, 2
-; LA64-NEXT:    vmax.hu $vr0, $vr1, $vr0
+; LA64-NEXT:    vmskltz.h $vr0, $vr0
 ; LA64-NEXT:    vpickve2gr.hu $a0, $vr0, 0
-; LA64-NEXT:    ori $a2, $zero, 8
-; LA64-NEXT:    sub.d $a0, $a2, $a0
+; LA64-NEXT:    ori $a0, $a0, 256
+; LA64-NEXT:    ctz.d $a0, $a0
 ; LA64-NEXT:    st.d $a0, $a1, 0
 ; LA64-NEXT:    ret
   %a = load <8 x i16>, ptr %src
@@ -188,21 +142,12 @@ define void @first_set_lane_v16i8(ptr %src, ptr %dst) {
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    vld $vr0, $a0, 0
 ; LA32-NEXT:    vld $vr1, $a1, 0
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI4_0)
-; LA32-NEXT:    vld $vr2, $a0, %pc_lo12(.LCPI4_0)
 ; LA32-NEXT:    vseq.b $vr0, $vr0, $vr1
-; LA32-NEXT:    vand.v $vr0, $vr0, $vr2
-; LA32-NEXT:    vbsrl.v $vr1, $vr0, 8
-; LA32-NEXT:    vmax.bu $vr0, $vr1, $vr0
-; LA32-NEXT:    vbsrl.v $vr1, $vr0, 4
-; LA32-NEXT:    vmax.bu $vr0, $vr1, $vr0
-; LA32-NEXT:    vbsrl.v $vr1, $vr0, 2
-; LA32-NEXT:    vmax.bu $vr0, $vr1, $vr0
-; LA32-NEXT:    vbsrl.v $vr1, $vr0, 1
-; LA32-NEXT:    vmax.bu $vr0, $vr1, $vr0
-; LA32-NEXT:    vpickve2gr.bu $a0, $vr0, 0
-; LA32-NEXT:    ori $a2, $zero, 16
-; LA32-NEXT:    sub.w $a0, $a2, $a0
+; LA32-NEXT:    vmskltz.b $vr0, $vr0
+; LA32-NEXT:    vpickve2gr.hu $a0, $vr0, 0
+; LA32-NEXT:    lu12i.w $a2, 16
+; LA32-NEXT:    or $a0, $a0, $a2
+; LA32-NEXT:    ctz.w $a0, $a0
 ; LA32-NEXT:    st.w $zero, $a1, 4
 ; LA32-NEXT:    st.w $a0, $a1, 0
 ; LA32-NEXT:    ret
@@ -211,21 +156,12 @@ define void @first_set_lane_v16i8(ptr %src, ptr %dst) {
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    vld $vr0, $a0, 0
 ; LA64-NEXT:    vld $vr1, $a1, 0
-; LA64-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI4_0)
-; LA64-NEXT:    vld $vr2, $a0, %pc_lo12(.LCPI4_0)
 ; LA64-NEXT:    vseq.b $vr0, $vr0, $vr1
-; LA64-NEXT:    vand.v $vr0, $vr0, $vr2
-; LA64-NEXT:    vbsrl.v $vr1, $vr0, 8
-; LA64-NEXT:    vmax.bu $vr0, $vr1, $vr0
-; LA64-NEXT:    vbsrl.v $vr1, $vr0, 4
-; LA64-NEXT:    vmax.bu $vr0, $vr1, $vr0
-; LA64-NEXT:    vbsrl.v $vr1, $vr0, 2
-; LA64-NEXT:    vmax.bu $vr0, $vr1, $vr0
-; LA64-NEXT:    vbsrl.v $vr1, $vr0, 1
-; LA64-NEXT:    vmax.bu $vr0, $vr1, $vr0
-; LA64-NEXT:    vpickve2gr.bu $a0, $vr0, 0
-; LA64-NEXT:    ori $a2, $zero, 16
-; LA64-NEXT:    sub.d $a0, $a2, $a0
+; LA64-NEXT:    vmskltz.b $vr0, $vr0
+; LA64-NEXT:    vpickve2gr.hu $a0, $vr0, 0
+; LA64-NEXT:    lu12i.w $a2, 16
+; LA64-NEXT:    or $a0, $a0, $a2
+; LA64-NEXT:    ctz.d $a0, $a0
 ; LA64-NEXT:    st.d $a0, $a1, 0
 ; LA64-NEXT:    ret
   %a = load <16 x i8>, ptr %src
