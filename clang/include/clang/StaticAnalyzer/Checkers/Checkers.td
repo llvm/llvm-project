@@ -289,6 +289,22 @@ def StdVariantChecker : Checker<"StdVariant">,
   HelpText<"Check for bad type access for std::variant.">,
   Documentation<HasDocumentation>;
 
+def LifetimeModeling : Checker<"LifetimeModeling">,
+  HelpText<"Model lifetime annotations for other checkers">,
+  Documentation<NotDocumented>,
+  Hidden;
+
+def UseAfterLifetimeEnd : Checker<"UseAfterLifetimeEnd">,
+  HelpText<"Check for uses of references or pointers that "
+           "outlive their bound object">,
+  Dependencies<[LifetimeModeling]>,
+  Documentation<HasDocumentation>;
+
+def DanglingPtrDeref : Checker<"DanglingPtrDeref">,
+  HelpText<"Check for dereferences of a dangling pointer">,
+  Dependencies<[LifetimeModeling]>,
+  Documentation<HasDocumentation>;
+
 } // end "alpha.core"
 
 //===----------------------------------------------------------------------===//
@@ -801,22 +817,6 @@ def SmartPtrChecker: Checker<"SmartPtr">,
   HelpText<"Find the dereference of null SmrtPtr">,
   Dependencies<[SmartPtrModeling]>,
   Documentation<HasDocumentation>;
-
-def LifetimeModeling : Checker<"LifetimeModeling">,
-  HelpText<"Model lifetime annotations for other checkers">,
-  Documentation<NotDocumented>,
-  Hidden;
-
-def UseAfterLifetimeEnd : Checker<"UseAfterLifetimeEnd">,
-  HelpText<"Check for uses of references or pointers that "
-           "outlive their bound object">,
-  Dependencies<[LifetimeModeling]>,
-  Documentation<NotDocumented>;
-
-def DanglingPtrDeref : Checker<"DanglingPtrDeref">,
-  HelpText<"Check for dereferences of a dangling pointer">,
-  Dependencies<[LifetimeModeling]>,
-  Documentation<NotDocumented>;
 
 } // end: "alpha.cplusplus"
 
@@ -1786,6 +1786,10 @@ def UnretainedCallArgsChecker : Checker<"UnretainedCallArgsChecker">,
   HelpText<"Check unretained call arguments.">,
   Documentation<HasDocumentation>;
 
+def UnborrowedCallArgsChecker : Checker<"UnborrowedCallArgsChecker">,
+  HelpText<"Check call arguments holding a loan on a CanBorrow object that is not guarded by a Borrow.">,
+  Documentation<HasDocumentation>;
+
 def UncountedLocalVarsChecker : Checker<"UncountedLocalVarsChecker">,
   HelpText<"Check uncounted local variables.">,
   Documentation<HasDocumentation>;
@@ -1800,6 +1804,10 @@ def UncheckedLocalVarsChecker : Checker<"UncheckedLocalVarsChecker">,
 
 def UnretainedLocalVarsChecker : Checker<"UnretainedLocalVarsChecker">,
   HelpText<"Check unretained local variables.">,
+  Documentation<HasDocumentation>;
+
+def UnborrowedLocalVarsChecker : Checker<"UnborrowedLocalVarsChecker">,
+  HelpText<"Check local variables holding a loan on a CanBorrow object that is not guarded by a Borrow.">,
   Documentation<HasDocumentation>;
 
 def RetainPtrCtorAdoptChecker : Checker<"RetainPtrCtorAdoptChecker">,

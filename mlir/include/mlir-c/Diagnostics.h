@@ -94,6 +94,16 @@ mlirContextDetachDiagnosticHandler(MlirContext context,
 MLIR_CAPI_EXPORTED void mlirEmitError(MlirLocation location,
                                       const char *message);
 
+/// Emits a warning at the given location through the diagnostics engine. Used
+/// for testing purposes.
+MLIR_CAPI_EXPORTED void mlirEmitWarning(MlirLocation location,
+                                        const char *message);
+
+/// Emits a remark at the given location through the diagnostics engine. Used
+/// for testing purposes.
+MLIR_CAPI_EXPORTED void mlirEmitRemark(MlirLocation location,
+                                       const char *message);
+
 #ifdef __cplusplus
 }
 #endif

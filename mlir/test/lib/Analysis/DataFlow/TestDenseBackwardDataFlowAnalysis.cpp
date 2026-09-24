@@ -320,7 +320,7 @@ struct TestNextAccessPass
       innerAttrs.reserve(nextAcc->get().size());
       for (Operation *nextAccOp : nextAcc->get()) {
         if (auto nextAccTag =
-                nextAccOp->getAttrOfType<StringAttr>(kTagAttrName)) {
+                nextAccOp->getDiscardableAttrOfType<StringAttr>(kTagAttrName)) {
           innerAttrs.push_back(nextAccTag);
           continue;
         }
@@ -356,7 +356,7 @@ struct TestNextAccessPass
     LDBG() << "  Dataflow solver completed successfully";
     LDBG() << "  Walking operations to set next access attributes";
     op->walk([&](Operation *op) {
-      auto tag = op->getAttrOfType<StringAttr>(kTagAttrName);
+      auto tag = op->getDiscardableAttrOfType<StringAttr>(kTagAttrName);
       if (!tag)
         return;
 
@@ -364,8 +364,8 @@ struct TestNextAccessPass
              << OpWithFlags(op, OpPrintingFlags().skipRegions());
       const NextAccess *nextAccess =
           solver.lookupState<NextAccess>(solver.getProgramPointAfter(op));
-      op->setAttr(kNextAccessAttrName,
-                  makeNextAccessAttribute(op, solver, nextAccess));
+      op->setDiscardableAttr(kNextAccessAttrName,
+                             makeNextAccessAttribute(op, solver, nextAccess));
 
       auto iface = dyn_cast<RegionBranchOpInterface>(op);
       if (!iface)
@@ -383,8 +383,9 @@ struct TestNextAccessPass
         entryPointNextAccess.push_back(makeNextAccessAttribute(
             op, solver, solver.lookupState<NextAccess>(successorPoint)));
       }
-      op->setAttr(kAtEntryPointAttrName,
-                  ArrayAttr::get(op->getContext(), entryPointNextAccess));
+      op->setDiscardableAttr(
+          kAtEntryPointAttrName,
+          ArrayAttr::get(op->getContext(), entryPointNextAccess));
     });
   }
 };

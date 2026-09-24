@@ -72,8 +72,8 @@ subroutine where_cleanup()
   where (return_temporary_mask()) x = return_temporary_array()
 end subroutine
 ! CHECK-LABEL:   func.func @_QPwhere_cleanup() {
-! CHECK:  %[[VAL_0:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = ".result"}
-! CHECK:  %[[VAL_1:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>> {bindc_name = ".result"}
+! CHECK:  %[[VAL_0:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>> <{bindc_name = ".result"}>
+! CHECK:  %[[VAL_1:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>> <{bindc_name = ".result"}>
 ! CHECK:  %[[VAL_5:.*]]:2 = hlfir.declare {{.*}}Ex
 ! CHECK:  hlfir.where {
 ! CHECK:    %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = ".tmp.func_result"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>>)

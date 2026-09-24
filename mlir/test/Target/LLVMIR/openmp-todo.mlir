@@ -57,10 +57,10 @@ omp.private {type = private} @parallel_bad_allocator_private : i32
 llvm.func @parallel_bad_allocator(%allocator : f32, %x : !llvm.ptr) {
   // expected-error@below {{OpenMP allocator operand must have integer or pointer type}}
   // expected-error@below {{LLVM Translation failed for operation: omp.parallel}}
-  omp.parallel allocate(%allocator : f32 -> %x : !llvm.ptr)
+  omp.parallel allocate(%allocator : f32 -> %x : !llvm.ptr) allocate_private_indices([0])
       private(@parallel_bad_allocator_private %x -> %private : !llvm.ptr) {
     omp.terminator
-  } {allocate_private_indices = array<i64: 0>}
+  }
   llvm.return
 }
 
@@ -638,6 +638,21 @@ llvm.func @taskwait_nowait() {
 
 // -----
 
+// `nowait` on dispatch is unimplemented for OpenMP <= 5.1; from 5.2 it has no
+// effect and is accepted (see openmp-dispatch.mlir).
+module attributes {omp.version = #omp.version<version = 51>} {
+  llvm.func @dispatch_nowait() {
+    // expected-error@below {{not yet implemented: Unhandled clause nowait in omp.dispatch operation}}
+    // expected-error@below {{LLVM Translation failed for operation: omp.dispatch}}
+    omp.dispatch nowait {
+      omp.terminator
+    }
+    llvm.return
+  }
+}
+
+// -----
+
 llvm.func @teams_allocate(%x : !llvm.ptr) {
   // expected-error@below {{not yet implemented: Unhandled clause allocate in omp.teams operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.teams}}
@@ -740,7 +755,7 @@ llvm.func @target_enter_data_map_iterator(%addr : !llvm.ptr) {
   %c10 = llvm.mlir.constant(10 : i64) : i64
   %c1 = llvm.mlir.constant(1 : i64) : i64
   %it = omp.iterator(%iv: i64) = (%c0 to %c10 step %c1) {
-    %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(to) capture(ByRef) -> !llvm.ptr {name = ""}
+    %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(to) capture(ByRef) name("") -> !llvm.ptr
     omp.yield(%m : !llvm.ptr)
   } -> !omp.iterated<!llvm.ptr>
   // expected-error@below {{not yet implemented: Unhandled clause map/motion clause with iterator modifier in omp.target_enter_data operation}}
@@ -756,7 +771,7 @@ llvm.func @target_exit_data_map_iterator(%addr : !llvm.ptr) {
   %c10 = llvm.mlir.constant(10 : i64) : i64
   %c1 = llvm.mlir.constant(1 : i64) : i64
   %it = omp.iterator(%iv: i64) = (%c0 to %c10 step %c1) {
-    %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(from) capture(ByRef) -> !llvm.ptr {name = ""}
+    %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(from) capture(ByRef) name("") -> !llvm.ptr
     omp.yield(%m : !llvm.ptr)
   } -> !omp.iterated<!llvm.ptr>
   // expected-error@below {{not yet implemented: Unhandled clause map/motion clause with iterator modifier in omp.target_exit_data operation}}
@@ -772,7 +787,7 @@ llvm.func @target_update_map_iterator(%addr : !llvm.ptr) {
   %c10 = llvm.mlir.constant(10 : i64) : i64
   %c1 = llvm.mlir.constant(1 : i64) : i64
   %it = omp.iterator(%iv: i64) = (%c0 to %c10 step %c1) {
-    %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(to) capture(ByRef) -> !llvm.ptr {name = ""}
+    %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(to) capture(ByRef) name("") -> !llvm.ptr
     omp.yield(%m : !llvm.ptr)
   } -> !omp.iterated<!llvm.ptr>
   // expected-error@below {{not yet implemented: Unhandled clause map/motion clause with iterator modifier in omp.target_update operation}}
@@ -787,9 +802,9 @@ llvm.func @target_map_iterated_unsupported(%addr : !llvm.ptr) {
   %c0 = llvm.mlir.constant(0 : i64) : i64
   %c10 = llvm.mlir.constant(10 : i64) : i64
   %c1 = llvm.mlir.constant(1 : i64) : i64
-  %map = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+  %map = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) name("") -> !llvm.ptr
   %it = omp.iterator(%iv: i64) = (%c0 to %c10 step %c1) {
-    %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+    %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) name("") -> !llvm.ptr
     omp.yield(%m : !llvm.ptr)
   } -> !omp.iterated<!llvm.ptr>
   // expected-error@below {{not yet implemented: Unhandled clause map/motion clause with iterator modifier in omp.target operation}}
@@ -807,7 +822,7 @@ llvm.func @target_data_map_iterator(%addr : !llvm.ptr) {
   %c10 = llvm.mlir.constant(10 : i64) : i64
   %c1 = llvm.mlir.constant(1 : i64) : i64
   %it = omp.iterator(%iv: i64) = (%c0 to %c10 step %c1) {
-    %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+    %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) name("") -> !llvm.ptr
     omp.yield(%m : !llvm.ptr)
   } -> !omp.iterated<!llvm.ptr>
   // expected-error@below {{not yet implemented: Unhandled clause map/motion clause with iterator modifier in omp.target_data operation}}
@@ -825,7 +840,7 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
     %c10 = llvm.mlir.constant(10 : i64) : i64
     %c1 = llvm.mlir.constant(1 : i64) : i64
     %it = omp.iterator(%iv: i64) = (%c0 to %c10 step %c1) {
-      %m = omp.map.info var_ptr(%arg : !llvm.ptr, !llvm.struct<"mapper_type", (i32)>) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+      %m = omp.map.info var_ptr(%arg : !llvm.ptr, !llvm.struct<"mapper_type", (i32)>) map_clauses(tofrom) capture(ByRef) name("") -> !llvm.ptr
       omp.yield(%m : !llvm.ptr)
     } -> !omp.iterated<!llvm.ptr>
     // expected-error@below {{not yet implemented: Unhandled clause map/motion clause with iterator modifier in omp.declare_mapper.info operation}}
@@ -833,7 +848,7 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
   }
 
   llvm.func @target_data_mapper_iterator(%addr : !llvm.ptr) {
-    %map = omp.map.info var_ptr(%addr : !llvm.ptr, !llvm.struct<"mapper_type", (i32)>) map_clauses(tofrom) capture(ByRef) mapper(@mapper_with_iterator) -> !llvm.ptr {name = ""}
+    %map = omp.map.info var_ptr(%addr : !llvm.ptr, !llvm.struct<"mapper_type", (i32)>) map_clauses(tofrom) capture(ByRef) mapper(@mapper_with_iterator) name("") -> !llvm.ptr
     // expected-error@below {{LLVM Translation failed for operation: omp.target_data}}
     omp.target_data map_entries(%map : !llvm.ptr) {}
     llvm.return

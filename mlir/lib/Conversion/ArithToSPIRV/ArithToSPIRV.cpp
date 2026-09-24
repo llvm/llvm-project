@@ -214,12 +214,14 @@ struct ElementwiseArithOpPattern final : OpConversionPattern<Op> {
         op, dstType, adaptor.getOperands());
 
     if (bitEnumContainsAny(overflowFlags, arith::IntegerOverflowFlags::nsw))
-      newOp->setAttr(getDecorationString(spirv::Decoration::NoSignedWrap),
-                     rewriter.getUnitAttr());
+      newOp->setDiscardableAttr(
+          getDecorationString(spirv::Decoration::NoSignedWrap),
+          rewriter.getUnitAttr());
 
     if (bitEnumContainsAny(overflowFlags, arith::IntegerOverflowFlags::nuw))
-      newOp->setAttr(getDecorationString(spirv::Decoration::NoUnsignedWrap),
-                     rewriter.getUnitAttr());
+      newOp->setDiscardableAttr(
+          getDecorationString(spirv::Decoration::NoUnsignedWrap),
+          rewriter.getUnitAttr());
 
     return success();
   }
@@ -1059,7 +1061,7 @@ struct TypeCastingOpPattern final : public OpConversionPattern<Op> {
       auto newOp = rewriter.template replaceOpWithNewOp<SPIRVOp>(
           op, dstType, adaptor.getOperands());
       if (rm) {
-        newOp->setAttr(
+        newOp->setDiscardableAttr(
             getDecorationString(spirv::Decoration::FPRoundingMode),
             spirv::FPRoundingModeAttr::get(rewriter.getContext(), *rm));
       }
@@ -1500,6 +1502,7 @@ void mlir::arith::populateArithToSPIRVPatterns(
     TypeCastingOpPattern<arith::ExtFOp, spirv::FConvertOp>,
     TruncIPattern, TruncII1Pattern,
     TypeCastingOpPattern<arith::TruncFOp, spirv::FConvertOp>,
+    TypeCastingOpPattern<arith::ConvertFOp, spirv::FConvertOp>,
     IntToFPPattern<arith::UIToFPOp, spirv::ConvertUToFOp, false>,
     BoolToValuePattern<arith::UIToFPOp>,
     IntToFPPattern<arith::SIToFPOp, spirv::ConvertSToFOp, true>,

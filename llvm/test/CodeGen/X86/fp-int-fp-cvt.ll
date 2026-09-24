@@ -339,19 +339,41 @@ define float @ucvtf32_i64(float %a0) {
   ret float %ff
 }
 
-; FIXME: Negative test - signed/unsigned mismatch
+; Signed/unsigned mismatch
 define float @PR217355(float %x) {
 ; SSE-LABEL: PR217355:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    cvttps2dq %xmm0, %xmm0
-; SSE-NEXT:    cvtdq2ps %xmm0, %xmm0
+; SSE-NEXT:    cvttss2si %xmm0, %eax
+; SSE-NEXT:    xorps %xmm0, %xmm0
+; SSE-NEXT:    cvtsi2ss %rax, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: PR217355:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vcvttps2dq %xmm0, %xmm0
-; AVX-NEXT:    vcvtdq2ps %xmm0, %xmm0
-; AVX-NEXT:    retq
+; AVX2-LABEL: PR217355:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vcvttss2si %xmm0, %eax
+; AVX2-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512-VL-LABEL: PR217355:
+; AVX512-VL:       # %bb.0:
+; AVX512-VL-NEXT:    vcvttps2dq %xmm0, %xmm0
+; AVX512-VL-NEXT:    vcvtudq2ps %xmm0, %xmm0
+; AVX512-VL-NEXT:    retq
+;
+; AVX512-NOVL-LABEL: PR217355:
+; AVX512-NOVL:       # %bb.0:
+; AVX512-NOVL-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512-NOVL-NEXT:    vcvttps2dq %zmm0, %zmm0
+; AVX512-NOVL-NEXT:    vcvtudq2ps %zmm0, %zmm0
+; AVX512-NOVL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; AVX512-NOVL-NEXT:    vzeroupper
+; AVX512-NOVL-NEXT:    retq
+;
+; AVX512F-LABEL: PR217355:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vcvttss2si %xmm0, %eax
+; AVX512F-NEXT:    vcvtusi2ss %eax, %xmm15, %xmm0
+; AVX512F-NEXT:    retq
   %integer = fptosi float %x to i32
   %result = uitofp i32 %integer to float
   ret float %result

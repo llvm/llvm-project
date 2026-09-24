@@ -28,6 +28,10 @@ add_mlir_translation_library(MLIRSPIRVTranslateRegistration
 add_mlir_dialect_library(MLIRSPIRVTarget
   Target.cpp
 
+  # Target.cpp includes llvm/IR/Attributes.h.
+  DEPENDS
+  intrinsics_gen
+
   LINK_LIBS PUBLIC
   MLIRIR
   MLIRGPUDialect

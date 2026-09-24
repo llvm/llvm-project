@@ -105,7 +105,6 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
-#include <cstdlib>
 #include <iterator>
 #include <limits>
 #include <optional>
@@ -1706,7 +1705,7 @@ ARMTargetLowering::getEffectiveCallingConv(CallingConv::ID CC,
     return isVarArg ? CallingConv::ARM_AAPCS : CallingConv::ARM_AAPCS_VFP;
   case CallingConv::C:
   case CallingConv::Tail:
-    if (!getTM().isAAPCS_ABI())
+    if (!Subtarget->isAAPCS_ABI())
       return CallingConv::ARM_APCS;
     else if (Subtarget->isTargetHardFloat() && !isVarArg)
       return CallingConv::ARM_AAPCS_VFP;
@@ -1714,7 +1713,7 @@ ARMTargetLowering::getEffectiveCallingConv(CallingConv::ID CC,
       return CallingConv::ARM_AAPCS;
   case CallingConv::Fast:
   case CallingConv::CXX_FAST_TLS:
-    if (!getTM().isAAPCS_ABI()) {
+    if (!Subtarget->isAAPCS_ABI()) {
       if (Subtarget->hasFPRegs() && !Subtarget->isThumb1Only() && !isVarArg)
         return CallingConv::Fast;
       return CallingConv::ARM_APCS;
@@ -13487,7 +13486,7 @@ static SDValue PerformVSetCCToVCTPCombine(SDNode *N,
       !DCI.DAG.getTargetLoweringInfo().isTypeLegal(VT))
     return SDValue();
 
-  if (CC == ISD::SETUGE) {
+  if (CC == ISD::SETUGT) {
     std::swap(Op0, Op1);
     CC = ISD::SETULT;
   }
@@ -13511,9 +13510,6 @@ static SDValue PerformVSetCCToVCTPCombine(SDNode *N,
 
   unsigned Opc;
   switch (VT.getVectorNumElements()) {
-  case 2:
-    Opc = Intrinsic::arm_mve_vctp64;
-    break;
   case 4:
     Opc = Intrinsic::arm_mve_vctp32;
     break;

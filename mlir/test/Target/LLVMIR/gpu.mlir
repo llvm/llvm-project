@@ -26,7 +26,7 @@ module attributes {gpu.container_module} {
     // CHECK: call void @mgpuLaunchKernel(ptr [[FUNC]], i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i32 256, ptr [[STREAM]], ptr [[ARGS_ARRAY]], ptr null, i64 2)
     // CHECK: call void @mgpuStreamSynchronize(ptr [[STREAM]])
     // CHECK: call void @mgpuStreamDestroy(ptr [[STREAM]])
-    %0 = llvm.mlir.constant(8 : index) : i64
+    %0 = llvm.mlir.constant(8 : i64) : i64
     %1 = llvm.mlir.constant(32 : i32) : i32
     %2 = llvm.mlir.constant(256 : i32) : i32
     gpu.launch_func @kernel_module::@kernel blocks in (%0, %0, %0) threads in (%0, %0, %0) : i64 dynamic_shared_memory_size %2 args(%1 : i32, %1 : i32)
@@ -70,7 +70,7 @@ module {
 module attributes {gpu.container_module} {
   gpu.binary @kernel_module  [#gpu.object<#rocdl.target, "BLOB">]
   llvm.func @foo(%stream : !llvm.ptr) {
-    %0 = llvm.mlir.constant(8 : index) : i64
+    %0 = llvm.mlir.constant(8 : i64) : i64
     // CHECK-NOT: @mgpuStreamCreate
     // CHECK: call void @mgpuLaunchKernel
     gpu.launch_func <%stream : !llvm.ptr> @kernel_module::@kernel blocks in (%0, %0, %0) threads in (%0, %0, %0) : i64
@@ -90,9 +90,9 @@ module attributes {gpu.container_module} {
   // CHECK-SAME: i64 1, i64 1, i64 1,
   // CHECK-SAME: i64 2, i64 2, i64 2,
   // CHECK-SAME: i64 3, i64 3, i64 3, i32 0, ptr
-    %c1 = llvm.mlir.constant(1 : index) : i64
-    %c2 = llvm.mlir.constant(2 : index) : i64
-    %c3 = llvm.mlir.constant(3 : index) : i64
+    %c1 = llvm.mlir.constant(1 : i64) : i64
+    %c2 = llvm.mlir.constant(2 : i64) : i64
+    %c3 = llvm.mlir.constant(3 : i64) : i64
     gpu.launch_func @kernel_module::@kernel
         clusters in (%c1, %c1, %c1)
         blocks in (%c2, %c2, %c2)
@@ -112,8 +112,8 @@ module attributes {gpu.container_module} {
   // CHECK-SAME: i64 2, i64 2, i64 2,
   // CHECK-SAME: i64 0, i64 0, i64 0,
   // CHECK-SAME: i64 3, i64 3, i64 3,
-    %c2 = llvm.mlir.constant(2 : index) : i64
-    %c3 = llvm.mlir.constant(3 : index) : i64
+    %c2 = llvm.mlir.constant(2 : i64) : i64
+    %c3 = llvm.mlir.constant(3 : i64) : i64
     gpu.launch_func @kernel_module::@kernel
         blocks in (%c2, %c2, %c2)
         threads in (%c3, %c3, %c3) : i64
@@ -133,9 +133,9 @@ module attributes {gpu.container_module} {
   // CHECK-SAME: i64 2, i64 2, i64 2,
   // CHECK-SAME: i64 1, i64 1, i64 1,
   // CHECK-SAME: i64 3, i64 3, i64 3,
-    %c1 = llvm.mlir.constant(1 : index) : i64
-    %c2 = llvm.mlir.constant(2 : index) : i64
-    %c3 = llvm.mlir.constant(3 : index) : i64
+    %c1 = llvm.mlir.constant(1 : i64) : i64
+    %c2 = llvm.mlir.constant(2 : i64) : i64
+    %c3 = llvm.mlir.constant(3 : i64) : i64
     gpu.launch_func @kernel_module::@kernel
         clusters in (%c1, %c1, %c1)
         blocks in (%c2, %c2, %c2)

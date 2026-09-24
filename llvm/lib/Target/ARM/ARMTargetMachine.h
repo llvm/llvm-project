@@ -57,6 +57,11 @@ public:
   /// explicit -target-abi=aapcs16 forces the hard-float ABI.
   FloatABI::ABIType getFloatABI(const Module &M) const;
 
+  /// Returns the ABI in effect for \p M: the "target-abi" module flag if
+  /// present, otherwise the legacy -target-abi option; falling back to the
+  /// TargetMachine-level ABI computed at construction.
+  ARM::ARMABI getEffectiveABI(const Module &M) const;
+
   TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
 
   // Pass Pipeline Configuration
