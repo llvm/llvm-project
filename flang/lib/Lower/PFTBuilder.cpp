@@ -2854,9 +2854,29 @@ static bool isStructurableWithUnstructuredInternals(
         isInfiniteDo(e.getIf<parser::DoConstruct>()))
       return false;
 
-    if (const auto *g = e.getIf<parser::AssignedGotoStmt>())
-      if (std::get<std::list<parser::Label>>(g->t).empty())
+    // An assigned GO TO reaches any label ASSIGNed to its variable, and a label
+    // list does not bound that: lowering deliberately allows a branch to any
+    // ASSIGNed label whether or not the list names it. The successors
+    // analyzeBranches recorded are therefore incomplete, since it only sees the
+    // ASSIGNs that precede the GO TO in program order.
+    //
+    // The symbol-to-labels map is complete once branch analysis has finished,
+    // which is when this runs, so ask it for the full target set instead of
+    // trusting the recorded successors.
+    if (const auto *g = e.getIf<parser::AssignedGotoStmt>()) {
+      const semantics::Symbol *sym = std::get<parser::Name>(g->t).symbol;
+      if (!sym)
         return false;
+      auto assigned = unit.assignSymbolLabelMap.find(*sym);
+      if (assigned == unit.assignSymbolLabelMap.end())
+        return false;
+      for (parser::Label label : assigned->second) {
+        auto target = unit.labelEvaluationMap.find(label);
+        if (target == unit.labelEvaluationMap.end() ||
+            targetEscapes(target->second))
+          return false;
+      }
+    }
 
     // Condition 1: nothing leaves the body, CYCLE excepted.
     if (e.controlSuccessor && targetEscapes(e.controlSuccessor))
