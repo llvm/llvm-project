@@ -15466,6 +15466,9 @@ void Sema::CheckThreadLocalForLargeAlignment(VarDecl *VD) {
 /// string variables so CodeGen preserves them as loadtime identifying
 /// strings, and warn when a named variable cannot be preserved.
 static void processForLoadTimeCommentVar(Sema &S, VarDecl *VD) {
+  if (S.getLangOpts().LoadTimeCommentVars.empty() || VD->isInvalidDecl())
+    return;
+
   // Declarations that cannot be name-matched are silently skipped: an
   // automatic variable has no symbol of its own, and neither does a template
   // pattern (only its specializations do, and those are processed
@@ -15495,54 +15498,47 @@ static void processForLoadTimeCommentVar(Sema &S, VarDecl *VD) {
   // Names are matched against the mangled name, as it appears in the object
   // file. For plain C file-scope variables this is the source identifier; for
   // C++ variables it is the mangled symbol.
+  if (!S.LoadTimeCommentVarNameGenerator)
+    S.LoadTimeCommentVarNameGenerator =
+        std::make_unique<ASTNameGenerator>(S.Context);
   if (!S.getLangOpts().isLoadTimeCommentVar(
-          ASTNameGenerator(S.Context).getName(VD)))
+          S.LoadTimeCommentVarNameGenerator->getName(VD)))
     return;
 
-  // Indices of the %select in warn_loadtime_comment_var_not_preserved.
-  enum {
-    Volatile,
-    BadStorage,
-    DynamicInit,
-    NotStringLiteral,
-    FunctionLocal,
-    StaticDataMember,
-    TemplateSpecialization
-  };
-  int Reason = -1;
+  std::optional<unsigned> Reason;
   if (VD->isLocalVarDecl())
     // Only file- and namespace-scope variables are supported. A name match
     // on anything else demonstrates intent (scope participates in the
     // mangled name), so the unsupported kinds are diagnosed rather than
     // silently ignored.
-    Reason = FunctionLocal;
+    Reason = diag::LoadTimeCommentVarReason::FunctionLocal;
   else if (isa<VarTemplateSpecializationDecl>(VD))
-    Reason = TemplateSpecialization;
+    Reason = diag::LoadTimeCommentVarReason::TemplateSpecialization;
   else if (VD->isStaticDataMember())
-    Reason = StaticDataMember;
+    Reason = diag::LoadTimeCommentVarReason::StaticDataMember;
   else if (VD->getStorageDuration() != SD_Static)
     // The string must have static storage duration; a thread-local variable
     // is not preserved.
-    Reason = BadStorage;
+    Reason = diag::LoadTimeCommentVarReason::BadStorage;
   else if (Ty.isVolatileQualified() || Pointee.isVolatileQualified())
     // The intended usage does not intersect with use cases where the character
     // array or the pointer to it is volatile-qualified; such variables are not
     // preserved.
-    Reason = Volatile;
+    Reason = diag::LoadTimeCommentVarReason::Volatile;
   else if (!VD->hasConstantInitialization())
     // The string has to be present in the object at load time. A dynamically
     // initialized variable only gets its value from a startup constructor, so
     // the object would not contain the intended string.
-    Reason = DynamicInit;
+    Reason = diag::LoadTimeCommentVarReason::DynamicInit;
   else if (PT && !isa<StringLiteral>(VD->getInit()->IgnoreParenImpCasts()))
     // For the pointer form, the variable must point directly at a string
     // literal. A pointer initialized with some other (even constant) address
     // does not carry the identifying string itself.
-    Reason = NotStringLiteral;
+    Reason = diag::LoadTimeCommentVarReason::NotStringLiteral;
 
-  if (Reason >= 0) {
+  if (Reason) {
     S.Diag(VD->getLocation(), diag::warn_loadtime_comment_var_not_preserved)
-        << VD << Reason;
+        << VD << *Reason;
     return;
   }
 
@@ -15682,8 +15678,7 @@ void Sema::FinalizeDeclaration(Decl *ThisDecl) {
   // Validate variables named in '-mloadtime-comment-vars=': supported string
   // variables get an implicit attribute that CodeGen uses to preserve them;
   // named variables that cannot be preserved are diagnosed.
-  if (!getLangOpts().LoadTimeCommentVars.empty() && !VD->isInvalidDecl())
-    processForLoadTimeCommentVar(*this, VD);
+  ProcessLoadTimeCommentVar(VD);
 
   const DeclContext *DC = VD->getDeclContext();
   // If there's a #pragma GCC visibility in scope, and this isn't a class

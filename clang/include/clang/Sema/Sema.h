@@ -120,6 +120,7 @@ class ASTConsumer;
 class ASTContext;
 class ASTDeclReader;
 class ASTMutationListener;
+class ASTNameGenerator;
 class ASTReader;
 class ASTWriter;
 class CXXBasePath;
@@ -4198,6 +4199,10 @@ public:
   /// Exposed for instantiated variable definitions, which do not pass
   /// through FinalizeDeclaration.
   void ProcessLoadTimeCommentVar(VarDecl *VD);
+  /// Lazily created mangler for '-mloadtime-comment-vars=' name matching. Only
+  /// allocated if the option is in use.
+  std::unique_ptr<ASTNameGenerator> LoadTimeCommentVarNameGenerator;
+
   DeclGroupPtrTy FinalizeDeclaratorGroup(Scope *S, const DeclSpec &DS,
                                          ArrayRef<Decl *> Group);
 
