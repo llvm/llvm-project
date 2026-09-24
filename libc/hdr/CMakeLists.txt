@@ -121,6 +121,14 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  poll_macros
+  HDRS
+    poll_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.poll-macros
+)
+
+add_proxy_header_library(
   pthread_macros
   HDRS
     pthread_macros.h
