@@ -1163,12 +1163,12 @@ public:
     // argument index to refer to the arguments of the called function. Unless
     // the index is out of bounds, which presumably means it's a variadic
     // function.
-    if (!DABAttr)
-      return Index;
-    unsigned DABIndices = DABAttr->argIndices_size();
-    unsigned NewIndex = Index < DABIndices
-                            ? DABAttr->argIndices_begin()[Index]
-                            : Index - DABIndices + FD->getNumParams();
+    unsigned NewIndex = Index;
+    if (DABAttr) {
+      unsigned DABIndices = DABAttr->argIndices_size();
+      NewIndex = Index < DABIndices ? DABAttr->argIndices_begin()[Index]
+                                    : Index - DABIndices + FD->getNumParams();
+    }
     if (NewIndex >= TheCall->getNumArgs())
       return std::nullopt;
     return NewIndex;
@@ -1190,12 +1190,16 @@ public:
 
   std::optional<llvm::APSInt>
   ComputeExplicitObjectSizeArgument(unsigned Index) {
-    std::optional<llvm::APSInt> Integer = EvaluateIntegerArgument(Index);
-    if (!Integer)
+    std::optional<unsigned> IndexOptional = TranslateIndex(Index);
+    if (!IndexOptional)
       return std::nullopt;
-
-    assert(Integer->isUnsigned() &&
-           "size arg should be unsigned after implicit conversion to size_t");
+    unsigned NewIndex = *IndexOptional;
+    Expr::EvalResult Result;
+    Expr *SizeArg = TheCall->getArg(NewIndex);
+    if (!SizeArg->EvaluateAsInt(Result, S.getASTContext()))
+      return std::nullopt;
+    llvm::APSInt Integer = Result.Val.getInt().extOrTrunc(SizeTypeWidth);
+    Integer.setIsUnsigned(true);
     return Integer;
   }
 
@@ -1214,12 +1218,8 @@ public:
     std::optional<unsigned> IndexOptional = TranslateIndex(Index);
     if (!IndexOptional)
       return std::nullopt;
-    unsigned NewIndex = *IndexOptional;
 
-    if (NewIndex >= TheCall->getNumArgs())
-      return std::nullopt;
-
-    const Expr *ObjArg = TheCall->getArg(NewIndex);
+    const Expr *ObjArg = TheCall->getArg(*IndexOptional);
     if (std::optional<uint64_t> ObjSize =
             ObjArg->tryEvaluateObjectSize(S.getASTContext(), BOSType)) {
       // Get the object size in the target's size_t width.
@@ -1500,8 +1500,8 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
         !TheCall->getArg(2)->getType()->isIntegerType())
       return;
     DiagID = diag::warn_fortify_source_size_mismatch;
-    SourceSize = Checker.ComputeExplicitObjectSizeArgument(2);
-    DestinationSize = Checker.ComputeSizeArgument(1);
+    AccessSize = Checker.ComputeExplicitObjectSizeArgument(2);
+    BufferSize = Checker.ComputeSizeArgument(1);
     break;
   }
 
