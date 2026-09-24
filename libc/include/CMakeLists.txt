@@ -1257,6 +1257,8 @@ add_header_macro(
   DEPENDS
     .llvm-libc-types.struct_pollfd
     .llvm-libc-types.nfds_t
+    .llvm-libc-types.struct_timespec
+    .llvm-libc-types.sigset_t
     .llvm-libc-macros.poll-macros
 )
 

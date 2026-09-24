@@ -549,6 +549,8 @@ public:
   void visitLambdaExpr(const LambdaExpr *L, bool shouldCheckThis,
                        const QualType T,
                        bool ignoreParamVarDecl = false) const {
+    if (BR->getSourceManager().isInSystemHeader(L->getBeginLoc()))
+      return;
     if (TFA.isTrivial(L->getBody()))
       return;
     for (const LambdaCapture &C : L->captures()) {

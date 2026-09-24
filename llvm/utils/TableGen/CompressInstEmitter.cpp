@@ -50,11 +50,12 @@
 // bool uncompressInst(MCInst &OutInst, const MCInst &MI,
 //                     const MCSubtargetInfo &STI);
 //
-// In addition, it exports a function for checking whether
-// an instruction is compressable:
+// In addition, it exports a function that returns the compressed instruction
+// size, or zero when the instruction is not compressible:
 //
-// bool isCompressibleInst(const MachineInstr& MI,
-//                         const <TargetName>Subtarget &STI);
+// unsigned getCompressedSize(const MachineInstr &MI,
+//                            const <TargetName>Subtarget &STI);
+//
 //
 // The clients that include this auto-generated header file and
 // invoke these functions can compress an instruction before emitting
@@ -568,10 +569,14 @@ static void printPredicates(ArrayRef<const Record *> Predicates, StringRef Name,
 }
 
 static void mergeCondAndCode(raw_ostream &CombinedStream, StringRef CondStr,
-                             StringRef CodeStr) {
+                             StringRef CodeStr, unsigned CompressedSize,
+                             bool ReturnSize) {
   CombinedStream.indent(4) << "if (" << CondStr << ") {\n";
   CombinedStream << CodeStr;
-  CombinedStream.indent(4) << "  return true;\n";
+  CombinedStream.indent(4) << "  return "
+                           << (ReturnSize ? std::to_string(CompressedSize)
+                                          : "true")
+                           << ";\n";
   CombinedStream.indent(4) << "} // if\n";
 }
 
@@ -632,8 +637,10 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
     FuncH.indent(27) << "const MCInst &MI,\n";
     FuncH.indent(27) << "const MCSubtargetInfo &STI) {\n";
   } else if (EType == EmitterType::CheckCompress) {
-    FuncH << "static bool isCompressibleInst(const MachineInstr &MI,\n";
-    FuncH.indent(31) << "const " << TargetName << "Subtarget &STI) {\n";
+    FuncH << "static unsigned getCompressedSize(const MachineInstr &MI,\n";
+    FuncH.indent(34) << "const " << TargetName << "Subtarget &STI) {\n";
+    FuncH.indent(2)
+        << "// Returns the compressed size, or zero if not compressible.\n";
   }
   // HwModeId is used if we have any RegClassByHwMode patterns
   if (!Target.getAllRegClassByHwMode().empty())
@@ -642,7 +649,9 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
 
   if (CompressPatterns.empty()) {
     OS << FH;
-    OS.indent(2) << "return false;\n}\n";
+    OS.indent(2) << "return "
+                 << (EType == EmitterType::CheckCompress ? "0" : "false")
+                 << ";\n}\n";
     return;
   }
 
@@ -651,7 +660,8 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
   StringRef PrevOp;
   StringRef CurOp;
   CaseStream << "  switch (MI.getOpcode()) {\n";
-  CaseStream << "  default: return false;\n";
+  CaseStream << "  default: return "
+             << (EType == EmitterType::CheckCompress ? "0" : "false") << ";\n";
 
   bool CompressOrCheck =
       EType == EmitterType::Compress || EType == EmitterType::CheckCompress;
@@ -903,7 +913,9 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
     }
     if (CompressOrUncompress)
       CodeStream.indent(6) << "OutInst.setLoc(MI.getLoc());\n";
-    mergeCondAndCode(CaseStream, CondString, CodeString);
+    mergeCondAndCode(CaseStream, CondString, CodeString,
+                     Dest.TheDef->getValueAsInt("Size"),
+                     EType == EmitterType::CheckCompress);
     PrevOp = CurOp;
   }
   Func << CaseString;
@@ -911,7 +923,9 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
   // Close brace for the last case.
   Func.indent(2) << "} // case " << CurOp << "\n";
   Func.indent(2) << "} // switch\n";
-  Func.indent(2) << "return false;\n}\n";
+  Func.indent(2) << "return "
+                 << (EType == EmitterType::CheckCompress ? "0" : "false")
+                 << ";\n}\n";
 
   if (!MCOpPredicates.empty()) {
     auto IndentLength = ValidatorName.size() + 13;
@@ -964,7 +978,7 @@ void CompressInstEmitter::run(raw_ostream &OS) {
   emitCompressInstEmitter(OS, EmitterType::Compress);
   // Generate uncompressInst() function.
   emitCompressInstEmitter(OS, EmitterType::Uncompress);
-  // Generate isCompressibleInst() function.
+  // Generate getCompressedSize() function.
   emitCompressInstEmitter(OS, EmitterType::CheckCompress);
 }
 

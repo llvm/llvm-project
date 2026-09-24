@@ -76,6 +76,7 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # poll.h entrypoints
     libc.src.poll.poll
+    libc.src.poll.ppoll
 
     # pwd.h entrypoints
     libc.src.pwd.endpwent
