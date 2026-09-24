@@ -4,27 +4,24 @@
 define aarch64_sve_vector_pcs void @pair() nounwind {
 ; CHECK-LABEL: pair:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    addvl sp, sp, #-5
+; CHECK-NEXT:    addvl sp, sp, #-4
 ; CHECK-NEXT:    str p8, [sp] // 2-byte Spill
 ; CHECK-NEXT:    ptrue pn8.b
 ; CHECK-NEXT:    str z9, [sp, #1, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    st1b { z10.b, z11.b }, pn8, [sp, #2, mul vl] // 32-byte Folded Spill
-; CHECK-NEXT:    str z12, [sp, #4, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    //APP
 ; CHECK-NEXT:    //NO_APP
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ptrue pn8.b
 ; CHECK-NEXT:    ldr z9, [sp, #1, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr z12, [sp, #4, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ld1b { z10.b, z11.b }, pn8/z, [sp, #2, mul vl] // 32-byte Folded Reload
 ; CHECK-NEXT:    ldr p8, [sp] // 2-byte Reload
-; CHECK-NEXT:    addvl sp, sp, #5
+; CHECK-NEXT:    addvl sp, sp, #4
 ; CHECK-NEXT:    ret
-  call void asm sideeffect "", "~{z9},~{z10},~{z12},~{z13}"()
+  call void asm sideeffect "", "~{z9},~{z10},~{z11}"()
   ret void
 }
-
 
 define aarch64_sve_vector_pcs void @quad() nounwind {
 ; CHECK-LABEL: quad:
@@ -33,22 +30,20 @@ define aarch64_sve_vector_pcs void @quad() nounwind {
 ; CHECK-NEXT:    str p8, [sp] // 2-byte Spill
 ; CHECK-NEXT:    ptrue pn8.b
 ; CHECK-NEXT:    str z8, [sp, #1, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    st1b { z10.b, z11.b }, pn8, [sp, #2, mul vl] // 32-byte Folded Spill
 ; CHECK-NEXT:    st1b { z12.b - z15.b }, pn8, [sp, #4, mul vl] // 64-byte Folded Spill
-; CHECK-NEXT:    str z9, [sp, #2, mul vl] // 16-byte Folded Spill
-; CHECK-NEXT:    str z10, [sp, #3, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    //APP
 ; CHECK-NEXT:    //NO_APP
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ptrue pn8.b
 ; CHECK-NEXT:    ldr z8, [sp, #1, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr z9, [sp, #2, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr z10, [sp, #3, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ld1b { z10.b, z11.b }, pn8/z, [sp, #2, mul vl] // 32-byte Folded Reload
 ; CHECK-NEXT:    ld1b { z12.b - z15.b }, pn8/z, [sp, #4, mul vl] // 64-byte Folded Reload
 ; CHECK-NEXT:    ldr p8, [sp] // 2-byte Reload
 ; CHECK-NEXT:    addvl sp, sp, #8
 ; CHECK-NEXT:    ret
 entry:
-  call void asm sideeffect "", "~{z8},~{z12},~{z13},~{z14},~{z15}"()
+  call void asm sideeffect "", "~{z8},~{z10},~{z11},~{z12},~{z13},~{z14},~{z15}"()
   ret void
 }

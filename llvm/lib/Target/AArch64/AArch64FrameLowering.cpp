@@ -2178,7 +2178,7 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
     unsigned FrameIdxReg3 = RGI.FrameIdx + 2;
     unsigned FrameIdxReg4 = RGI.FrameIdx + 3;
 
-    if ((RGI.isGrouped()) && RGI.isScalable()) {
+    if (RGI.isGrouped() && RGI.isScalable()) {
       assert(!NeedsWinCFI &&
              "Scalable register groups are not supported by Windows WinCFI");
       [[maybe_unused]] const AArch64Subtarget &Subtarget =
@@ -2270,22 +2270,12 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
     }
     // Update the StackIDs of the SVE stack slots.
     MachineFrameInfo &MFI = MF.getFrameInfo();
-    if (RGI.Type == RegGroupInfo::ZPR) {
-      MFI.setStackID(FrameIdxReg1, TargetStackID::ScalableVector);
-      if (RGI.isGrouped())
-        MFI.setStackID(FrameIdxReg2, TargetStackID::ScalableVector);
-      if (RGI.isQuad()) {
-        MFI.setStackID(FrameIdxReg3, TargetStackID::ScalableVector);
-        MFI.setStackID(FrameIdxReg4, TargetStackID::ScalableVector);
-      }
-    } else if (RGI.Type == RegGroupInfo::PPR) {
-      MFI.setStackID(FrameIdxReg1, TargetStackID::ScalablePredicateVector);
-      if (RGI.isGrouped())
-        MFI.setStackID(FrameIdxReg2, TargetStackID::ScalablePredicateVector);
-      if (RGI.isQuad()) {
-        MFI.setStackID(FrameIdxReg3, TargetStackID::ScalablePredicateVector);
-        MFI.setStackID(FrameIdxReg4, TargetStackID::ScalablePredicateVector);
-      }
+    for (unsigned I = 0; I < RGI.getNumRegs(); ++I) {
+      if (RGI.Type == RegGroupInfo::ZPR)
+        MFI.setStackID(RGI.FrameIdx + I, TargetStackID::ScalableVector);
+      else if (RGI.Type == RegGroupInfo::PPR)
+        MFI.setStackID(RGI.FrameIdx + I,
+                       TargetStackID::ScalablePredicateVector);
     }
   }
   return true;
@@ -2392,7 +2382,7 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
     unsigned FrameIdxReg4 = RGI.FrameIdx + 3;
 
     AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
-    if ((RGI.isGrouped()) && RGI.isScalable()) {
+    if (RGI.isGrouped() && RGI.isScalable()) {
       assert(!NeedsWinCFI &&
              "Scalable register groups are not supported by Windows WinCFI");
       [[maybe_unused]] const AArch64Subtarget &Subtarget =
