@@ -1660,12 +1660,13 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
         BypassedVarInits.insert({&D, address});
         for (const BypassingForwardJump &FG : BypassingForwardJumps) {
           const auto *Vars = Bypasses.getBypassedVarsForSource(FG.Source);
-          if (Vars && Vars->contains(&D))
-            if (llvm::Instruction *Term = FG.Block->getTerminator()) {
-              llvm::IRBuilderBase::InsertPointGuard IPG(Builder);
-              Builder.SetInsertPoint(Term);
-              emitZeroOrPatternForAutoVarInit(Ty, D, address);
-            }
+          if (!Vars || !Vars->contains(&D))
+            continue;
+          if (llvm::Instruction *Term = FG.Block->getTerminator()) {
+            llvm::IRBuilderBase::InsertPointGuard IPG(Builder);
+            Builder.SetInsertPoint(Term);
+            emitZeroOrPatternForAutoVarInit(Ty, D, address);
+          }
         }
       } else {
         // A computed goto can jump anywhere, so we can't identify the jumps
