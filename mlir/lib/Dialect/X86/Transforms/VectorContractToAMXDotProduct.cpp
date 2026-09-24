@@ -1477,14 +1477,6 @@ struct VectorContractToAMXDotProduct
       }
     }
 
-    // Update insertion point, if acc memref after contraction loop.
-    Operation *memrefOp = srcBuffAcc.getDefiningOp();
-    if (memrefOp && outerLoop &&
-        !(memrefOp->isBeforeInBlock(outerLoop.getOperation()))) {
-      rewriter.setInsertionPoint(memrefOp);
-      loc = memrefOp->getLoc();
-    }
-
     auto c0 = arith::ConstantIndexOp::create(rewriter, loc, 0);
     auto c16 = arith::ConstantIndexOp::create(rewriter, loc, 16);
     auto one = arith::ConstantIndexOp::create(rewriter, loc, 1);
