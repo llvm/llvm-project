@@ -243,8 +243,7 @@ static cl::opt<int> ProfileDensityCutOffHot(
 static cl::opt<double> ProfileDensityThreshold(
     "profile-density-threshold", cl::init(60),
     cl::desc("If the profile density is below the given threshold, it "
-             "will be suggested to increase the sampling rate."),
-    cl::Optional);
+             "will be suggested to increase the sampling rate."));
 
 } // namespace opts
 

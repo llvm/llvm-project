@@ -1968,6 +1968,44 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     Result = scalbn(Result, Scale, RoundingMode::NearestTiesToEven);
     return IC.replaceInstUsesWith(II, ConstantFP::get(Src->getType(), Result));
   }
+  case Intrinsic::amdgcn_sdot2:
+  case Intrinsic::amdgcn_udot2:
+  case Intrinsic::amdgcn_sdot4:
+  case Intrinsic::amdgcn_udot4:
+  case Intrinsic::amdgcn_sdot8:
+  case Intrinsic::amdgcn_udot8: {
+    Value *Src0 = II.getArgOperand(0);
+    Value *Src1 = II.getArgOperand(1);
+
+    // Canonicalize the constant multiplicand to Src1.
+    if (isa<Constant>(Src0) && !isa<Constant>(Src1)) {
+      II.setArgOperand(0, Src1);
+      II.setArgOperand(1, Src0);
+      return &II;
+    }
+
+    if (!match(II.getArgOperand(3), m_Zero()) || !II.hasOneUse())
+      break;
+
+    const APInt *Acc;
+    if (!match(II.getArgOperand(2), m_APInt(Acc)))
+      break;
+
+    auto *AccumUser = dyn_cast<BinaryOperator>(II.user_back());
+    if (!AccumUser)
+      break;
+
+    const APInt *AccumDelta;
+    Constant *NewAcc;
+    if (!match(AccumUser, m_c_Add(m_Specific(&II), m_APInt(AccumDelta))))
+      break;
+
+    NewAcc = ConstantInt::get(II.getType(), *Acc + *AccumDelta);
+
+    IC.replaceInstUsesWith(*AccumUser, &II);
+    IC.eraseInstFromFunction(*AccumUser);
+    return IC.replaceOperand(II, 2, NewAcc);
+  }
   case Intrinsic::amdgcn_fmul_legacy: {
     Value *Op0 = II.getArgOperand(0);
     Value *Op1 = II.getArgOperand(1);

@@ -404,6 +404,26 @@ def mulu_w11_u64 : RISCVBuiltin<"uint64_t(_Vector<2, unsigned int>, _Vector<2, u
 def mulsu_w00_i64 : RISCVBuiltin<"int64_t(_Vector<2, int>, _Vector<2, unsigned int>)">;
 def mulsu_w11_i64 : RISCVBuiltin<"int64_t(_Vector<2, int>, _Vector<2, unsigned int>)">;
 
+// Packed Multiply High Parts (32-bit)
+def pmulh_b0_i16x2 : RISCVBuiltin<"_Vector<2, short>(_Vector<2, short>, _Vector<4, signed char>)">;
+def pmulh_b1_i16x2 : RISCVBuiltin<"_Vector<2, short>(_Vector<2, short>, _Vector<4, signed char>)">;
+def pmulhsu_b0_i16x2 : RISCVBuiltin<"_Vector<2, short>(_Vector<2, short>, _Vector<4, unsigned char>)">;
+def pmulhsu_b1_i16x2 : RISCVBuiltin<"_Vector<2, short>(_Vector<2, short>, _Vector<4, unsigned char>)">;
+def mulh_h0_i32 : RISCVBuiltin<"int(int, _Vector<2, short>)">;
+def mulh_h1_i32 : RISCVBuiltin<"int(int, _Vector<2, short>)">;
+def mulhsu_h0_i32 : RISCVBuiltin<"int(int, _Vector<2, unsigned short>)">;
+def mulhsu_h1_i32 : RISCVBuiltin<"int(int, _Vector<2, unsigned short>)">;
+
+// Packed Multiply High Parts (64-bit)
+def pmulh_b0_i16x4 : RISCVBuiltin<"_Vector<4, short>(_Vector<4, short>, _Vector<8, signed char>)">;
+def pmulh_b1_i16x4 : RISCVBuiltin<"_Vector<4, short>(_Vector<4, short>, _Vector<8, signed char>)">;
+def pmulhsu_b0_i16x4 : RISCVBuiltin<"_Vector<4, short>(_Vector<4, short>, _Vector<8, unsigned char>)">;
+def pmulhsu_b1_i16x4 : RISCVBuiltin<"_Vector<4, short>(_Vector<4, short>, _Vector<8, unsigned char>)">;
+def pmulh_h0_i32x2 : RISCVBuiltin<"_Vector<2, int>(_Vector<2, int>, _Vector<4, short>)">;
+def pmulh_h1_i32x2 : RISCVBuiltin<"_Vector<2, int>(_Vector<2, int>, _Vector<4, short>)">;
+def pmulhsu_h0_i32x2 : RISCVBuiltin<"_Vector<2, int>(_Vector<2, int>, _Vector<4, unsigned short>)">;
+def pmulhsu_h1_i32x2 : RISCVBuiltin<"_Vector<2, int>(_Vector<2, int>, _Vector<4, unsigned short>)">;
+
 // Packed "Q-format" Multiply Parts Accumulate (32-bit)
 def mqacc_h00_i32  : RISCVBuiltin<"int(int, _Vector<2, short>, _Vector<2, short>)">;
 def mqacc_h01_i32  : RISCVBuiltin<"int(int, _Vector<2, short>, _Vector<2, short>)">;

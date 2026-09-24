@@ -104,7 +104,7 @@ using namespace llvm;
 static cl::opt<bool>
     EnableCSEInIRTranslator("enable-cse-in-irtranslator",
                             cl::desc("Should enable CSE in irtranslator"),
-                            cl::Optional, cl::init(false));
+                            cl::init(false));
 
 namespace llvm {
 
