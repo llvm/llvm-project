@@ -13,9 +13,9 @@
 ;; expected one - the index of the first legal register
 ; CHECK: context: SyFgets
 ; CHECK-NEXT: observation: 0
-; CHECK-NEXT: mask: 0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1
+; CHECK-NEXT: mask: 0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0,1
 ; CHECK: observation: 1
-; CHECK-NEXT: mask: 0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1
+; CHECK-NEXT: mask: 0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,0,1
 ; CHECK: context: SyFgetsCopy
 ; CHECK-NEXT: observation: 0
 

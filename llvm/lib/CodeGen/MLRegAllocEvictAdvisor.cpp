@@ -38,7 +38,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 
-#include <array>
 #include <bitset>
 #include <memory>
 
@@ -176,10 +175,6 @@ INITIALIZE_PASS(RegAllocScoring, "regallocscoringpass",
 // Common ML Advisor declarations
 // ===================================
 namespace {
-// Most features are as described above, so we'll reuse this vector in defining
-// them.
-static const std::vector<int64_t> PerLiveRangeShape{1, NumberOfInterferences};
-
 // --------------
 // Features table
 // --------------
@@ -265,19 +260,9 @@ enum FeatureIDs {
 // various phys regs won't be available. It's easier (maintenance-wise) to
 // bulk-reset the state of the evaluator each time we are about to use it
 // again.
-template <typename T> size_t getTotalSize(const std::vector<int64_t> &Shape) {
-  size_t Ret = sizeof(T);
-  for (const auto V : Shape)
-    Ret *= V;
-  return Ret;
-}
-
-void resetInputs(MLModelRunner &Runner) {
-#define _RESET(TYPE, NAME, SHAPE, __)                                          \
-  std::memset(Runner.getTensorUntyped(FeatureIDs::NAME), 0,                    \
-              getTotalSize<TYPE>(SHAPE));
-  RA_EVICT_FEATURES_LIST(_RESET)
-#undef _RESET
+void resetInputs(MLModelRunner &Runner, ArrayRef<TensorSpec> InputFeatures) {
+  for (auto [I, Spec] : enumerate(InputFeatures))
+    std::memset(Runner.getTensorUntyped(I), 0, Spec.getTotalTensorBufferSize());
 }
 
 // Per-live interval components that get aggregated into the feature values
@@ -294,7 +279,7 @@ struct LIFeatureComponents {
 };
 
 using CandidateRegList =
-    std::array<std::pair<MCRegister, bool>, NumberOfInterferences>;
+    SmallVector<std::pair<MCRegister, bool>, CompiledModelNumColumns>;
 using FeaturesListNormalizer =
     llvm::SmallVector<float, FeatureIDs::FeatureCount>;
 
@@ -302,13 +287,18 @@ using FeaturesListNormalizer =
 class MLEvictAdvisor : public RegAllocEvictionAdvisor {
 public:
   MLEvictAdvisor(const MachineFunction &MF, const RAGreedy &RA,
-                 MLModelRunner *Runner, const MachineBlockFrequencyInfo &MBFI,
+                 MLModelRunner *Runner, ArrayRef<TensorSpec> InputFeatures,
+                 const MachineBlockFrequencyInfo &MBFI,
                  const MachineLoopInfo &Loops);
 
 protected:
   const RegAllocEvictionAdvisor &getDefaultAdvisor() const {
     return static_cast<const RegAllocEvictionAdvisor &>(DefaultAdvisor);
   }
+
+  const ArrayRef<TensorSpec> InputFeatures;
+  const size_t NumColumns;
+  const size_t CandidateVirtRegPos = NumColumns - 1;
 
   // The assumption is that if the Runner could not be constructed, we emit-ed
   // error, and we shouldn't be asking for it here.
@@ -394,6 +384,15 @@ private:
 #define _DECL_FEATURES(type, name, shape, _)                                   \
   TensorSpec::createSpec<type>(#name, shape),
 
+static int64_t getRequiredNumColumns(const TargetRegisterInfo &TRI,
+                                     const RegisterClassInfo &RegClassInfo) {
+  unsigned MaxOrder = 0;
+  for (const TargetRegisterClass &RC : TRI.regclasses())
+    if (RC.isAllocatable())
+      MaxOrder = std::max(MaxOrder, RegClassInfo.getNumAllocatableRegs(&RC));
+  return MaxOrder + 1;
+}
+
 // ===================================
 // Release (AOT) - specifics
 // ===================================
@@ -402,9 +401,7 @@ class ReleaseModeEvictionAdvisorProvider final
     : public RegAllocEvictionAdvisorProvider {
 public:
   ReleaseModeEvictionAdvisorProvider(LLVMContext &Ctx)
-      : RegAllocEvictionAdvisorProvider(AdvisorMode::Release, Ctx) {
-    InputFeatures = {RA_EVICT_FEATURES_LIST(_DECL_FEATURES)};
-  }
+      : RegAllocEvictionAdvisorProvider(AdvisorMode::Release, Ctx) {}
   // support for isa<> and dyn_cast.
   static bool classof(const RegAllocEvictionAdvisorProvider *R) {
     return R->getAdvisorMode() == AdvisorMode::Release;
@@ -414,6 +411,13 @@ public:
   getAdvisor(const MachineFunction &MF, const RAGreedy &RA,
              MachineBlockFrequencyInfo *MBFI, MachineLoopInfo *Loops) override {
     if (!Runner) {
+      NumColumns =
+          InteractiveChannelBaseName.empty()
+              ? CompiledModelNumColumns
+              : getRequiredNumColumns(*MF.getSubtarget().getRegisterInfo(),
+                                      RA.getRegClassInfo());
+      const std::vector<int64_t> PerLiveRangeShape{1, NumColumns};
+      InputFeatures = {RA_EVICT_FEATURES_LIST(_DECL_FEATURES)};
       Runner = createReleaseModeModelRunner<CompiledModelType,
                                             HaveMLIRLoweringRegAlloc>(
           MF.getFunction().getContext(), InputFeatures, DecisionName,
@@ -422,13 +426,14 @@ public:
     }
     assert(MBFI && Loops &&
            "Invalid provider state: must have analysis available");
-    return std::make_unique<MLEvictAdvisor>(MF, RA, Runner.get(), *MBFI,
-                                            *Loops);
+    return std::make_unique<MLEvictAdvisor>(MF, RA, Runner.get(), InputFeatures,
+                                            *MBFI, *Loops);
   }
 
 private:
   std::vector<TensorSpec> InputFeatures;
   std::unique_ptr<MLModelRunner> Runner;
+  int64_t NumColumns = CompiledModelNumColumns;
 };
 
 class ReleaseModeEvictionAdvisorAnalysisLegacy final
@@ -477,9 +482,10 @@ class DevelopmentModeEvictAdvisor : public MLEvictAdvisor {
 public:
   DevelopmentModeEvictAdvisor(const MachineFunction &MF, const RAGreedy &RA,
                               MLModelRunner *Runner,
+                              ArrayRef<TensorSpec> InputFeatures,
                               const MachineBlockFrequencyInfo &MBFI,
                               const MachineLoopInfo &Loops, Logger *Log)
-      : MLEvictAdvisor(MF, RA, Runner, MBFI, Loops), Log(Log) {}
+      : MLEvictAdvisor(MF, RA, Runner, InputFeatures, MBFI, Loops), Log(Log) {}
 
 private:
   int64_t tryFindEvictionCandidatePosition(
@@ -495,6 +501,7 @@ class DevelopmentModeEvictionAdvisorProvider final
 public:
   DevelopmentModeEvictionAdvisorProvider(LLVMContext &Ctx)
       : RegAllocEvictionAdvisorProvider(AdvisorMode::Development, Ctx) {
+    const std::vector<int64_t> PerLiveRangeShape{1, CompiledModelNumColumns};
     InputFeatures = {RA_EVICT_FEATURES_LIST(_DECL_FEATURES)};
     TrainingInputFeatures = {
         RA_EVICT_FEATURES_LIST(_DECL_TRAIN_FEATURES)
@@ -567,7 +574,7 @@ public:
     assert(MBFI && Loops &&
            "Invalid provider state: must have analysis available");
     return std::make_unique<DevelopmentModeEvictAdvisor>(
-        MF, RA, Runner.get(), *MBFI, *Loops, Log.get());
+        MF, RA, Runner.get(), InputFeatures, *MBFI, *Loops, Log.get());
   }
 
 private:
@@ -622,11 +629,13 @@ float MLEvictAdvisor::getInitialQueueSize(const MachineFunction &MF) {
 
 MLEvictAdvisor::MLEvictAdvisor(const MachineFunction &MF, const RAGreedy &RA,
                                MLModelRunner *Runner,
+                               ArrayRef<TensorSpec> InputFeatures,
                                const MachineBlockFrequencyInfo &MBFI,
                                const MachineLoopInfo &Loops)
-    : RegAllocEvictionAdvisor(MF, RA), DefaultAdvisor(MF, RA),
-      Runner(std::move(Runner)), MBFI(MBFI), Loops(Loops),
-      InitialQSize(MLEvictAdvisor::getInitialQueueSize(MF)) {
+    : RegAllocEvictionAdvisor(MF, RA), InputFeatures(InputFeatures),
+      NumColumns(InputFeatures[FeatureIDs::mask].shape()[1]),
+      DefaultAdvisor(MF, RA), Runner(std::move(Runner)), MBFI(MBFI),
+      Loops(Loops), InitialQSize(MLEvictAdvisor::getInitialQueueSize(MF)) {
   assert(this->Runner);
   Runner->switchContext(MF.getName());
   DoNotNormalize.set(FeatureIDs::mask);
@@ -643,7 +652,7 @@ int64_t MLEvictAdvisor::tryFindEvictionCandidatePosition(
     const SmallVirtRegSet &) const {
   int64_t Ret = Runner->evaluate<int64_t>();
   assert(Ret >= 0);
-  assert(Ret <= CandidateVirtRegPos);
+  assert(static_cast<size_t>(Ret) <= CandidateVirtRegPos);
   return Ret;
 }
 
@@ -665,7 +674,7 @@ bool MLEvictAdvisor::loadInterferenceFeatures(
   // The cascade tracking is the same as in the default advisor
   unsigned Cascade = RA.getExtraInfo().getCascadeOrCurrentNext(VirtReg.reg());
 
-  SmallVector<const LiveInterval *, MaxInterferences> InterferingIntervals;
+  SmallVector<const LiveInterval *, 32> InterferingIntervals;
   for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
     LiveIntervalUnion::Query &Q = Matrix->query(VirtReg, Unit);
     // Different from the default heuristic, we don't make any assumptions
@@ -744,13 +753,12 @@ MCRegister MLEvictAdvisor::tryFindEvictionCandidate(
   size_t Available = 0;
   // Make sure we don't have leftover partial state from an attempt where we
   // had no available candidates and bailed out early.
-  resetInputs(*Runner);
+  resetInputs(*Runner, InputFeatures);
 
   // Track the index->register mapping because AllocationOrder doesn't do that
   // and we'd have to scan it.
   // Also track their mask, to write asserts/debug.
-  CandidateRegList Regs;
-  Regs.fill({0, false});
+  CandidateRegList Regs(NumColumns);
 
   // Track the largest value of features seen during this eviction session. We
   // only normalize (some of) the float features, but it's just simpler to
@@ -764,9 +772,11 @@ MCRegister MLEvictAdvisor::tryFindEvictionCandidate(
   // reset all the features to 0) Use Pos to capture the column we load
   // features at - in AllocationOrder order.
   size_t Pos = 0;
-  SmallVector<LRStartEndInfo, NumberOfInterferences> LRPosInfo;
-  for (auto I = Order.begin(), E = Order.getOrderLimitEnd(OrderLimit); I != E;
-       ++I, ++Pos) {
+  SmallVector<LRStartEndInfo, CompiledModelNumColumns> LRPosInfo;
+  // The order can outrun the tensor width (fixed-width precompiled model,
+  // duplicated hints), so drop the tail rather than write out of bounds.
+  for (auto I = Order.begin(), E = Order.getOrderLimitEnd(OrderLimit);
+       I != E && Pos < CandidateVirtRegPos; ++I, ++Pos) {
     MCRegister PhysReg = *I;
     assert(!Regs[Pos].second);
     assert(PhysReg);
@@ -802,9 +812,9 @@ MCRegister MLEvictAdvisor::tryFindEvictionCandidate(
        ++FeatureIndex) {
     if (DoNotNormalize.test(FeatureIndex))
       continue;
-    for (size_t Pos = 0; Pos < NumberOfInterferences; ++Pos) {
-      Runner->getTensor<float>(FeatureIndex)[Pos] /= Largest[FeatureIndex];
-    }
+    float *Tensor = Runner->getTensor<float>(FeatureIndex);
+    for (size_t Pos = 0; Pos < NumColumns; ++Pos)
+      Tensor[Pos] /= Largest[FeatureIndex];
   }
   *Runner->getTensor<float>(FeatureIDs::progress) =
       static_cast<float>(RA.getQueueSize()) / InitialQSize;
