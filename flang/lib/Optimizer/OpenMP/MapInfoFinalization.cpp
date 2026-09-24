@@ -33,8 +33,10 @@
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/OpenMP/Passes.h"
 #include "mlir/Analysis/SliceAnalysis.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include "mlir/Dialect/OpenMP/Utils/Utils.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/SymbolTable.h"
@@ -548,6 +550,93 @@ class MapInfoFinalizationPass
     return mapType;
   }
 
+  static bool shouldMapDescriptorTypeDesc(mlir::Value descriptor,
+                                          bool supportsPolymorphicMap) {
+    if (!supportsPolymorphicMap)
+      return false;
+    auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(
+        fir::unwrapRefType(descriptor.getType()));
+    return boxTy && fir::isPolymorphicType(boxTy) && fir::boxHasAddendum(boxTy);
+  }
+
+  static bool shouldMapPolymorphicDescriptorWithRuntimeElementSize(
+      mlir::Value descriptor, bool supportsPolymorphicMap) {
+    if (!supportsPolymorphicMap)
+      return false;
+    auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(
+        fir::unwrapRefType(descriptor.getType()));
+    return boxTy && fir::isPolymorphicType(boxTy);
+  }
+
+  mlir::Value getAsIndex(mlir::Location loc, mlir::Value value,
+                         fir::FirOpBuilder &builder) {
+    if (value.getType() == builder.getIndexType())
+      return value;
+    return builder.createConvert(loc, builder.getIndexType(), value);
+  }
+
+  /// For polymorphic boxes, we currently need to readjust the bounds to
+  /// use the descriptor's elem_len as the dynamic type may extend the
+  /// declared type on the map at runtime. So we turn the bounds calculation
+  /// into a 1-D byte mapping so polymorphic objects and arrays are sized by
+  /// the runtime element length.
+  ///
+  /// This could in theory be incorporated into the earlier lowering stage,
+  /// but there's a number of areas in the lowering that require bounds
+  /// adjustments and a number of passes that themselves generate maps that
+  /// may depend on this regeneration, so this is for the moment the most
+  /// consistent place for re-adjustment of these cases, and generally we
+  /// adjust a lot of the descriptor / data relationship here as we expand
+  /// into multiple maps.
+  llvm::SmallVector<mlir::Value>
+  genRuntimeSizedBaseAddrBounds(mlir::Location loc, mlir::Value descriptor,
+                                mlir::ValueRange existingBounds,
+                                fir::FirOpBuilder &builder) {
+    mlir::Type idxTy = builder.getIndexType();
+    mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
+    mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
+    mlir::Value box = descriptor;
+    if (fir::isa_ref_type(box.getType()))
+      box = fir::LoadOp::create(builder, loc, box);
+    mlir::Value elemSize = fir::BoxEleSizeOp::create(builder, loc, idxTy, box);
+
+    mlir::Value elemCount = one;
+    mlir::Value elemOffset = zero;
+    for (mlir::Value bound : llvm::reverse(existingBounds)) {
+      auto boundOp = mlir::dyn_cast_if_present<mlir::omp::MapBoundsOp>(
+          bound.getDefiningOp());
+      if (!boundOp)
+        continue;
+      mlir::Value lowerBound =
+          getAsIndex(loc, boundOp.getLowerBound(), builder);
+      mlir::Value upperBound =
+          getAsIndex(loc, boundOp.getUpperBound(), builder);
+      mlir::Value extent = getAsIndex(loc, boundOp.getExtent(), builder);
+      mlir::Value boundElemCount = mlir::arith::AddIOp::create(
+          builder, loc,
+          mlir::arith::SubIOp::create(builder, loc, upperBound, lowerBound),
+          one);
+      elemCount =
+          mlir::arith::MulIOp::create(builder, loc, elemCount, boundElemCount);
+      elemOffset = mlir::arith::AddIOp::create(
+          builder, loc,
+          mlir::arith::MulIOp::create(builder, loc, elemOffset, extent),
+          lowerBound);
+    }
+
+    mlir::Value byteOffset =
+        mlir::arith::MulIOp::create(builder, loc, elemOffset, elemSize);
+    mlir::Value byteExtent =
+        mlir::arith::MulIOp::create(builder, loc, elemCount, elemSize);
+    mlir::Value upperBound = mlir::arith::SubIOp::create(
+        builder, loc,
+        mlir::arith::AddIOp::create(builder, loc, byteOffset, byteExtent), one);
+    mlir::Type mapBoundsTy = builder.getType<mlir::omp::MapBoundsType>();
+    return {mlir::omp::MapBoundsOp::create(
+        builder, loc, mapBoundsTy, byteOffset, upperBound, byteExtent, one,
+        /*strideInBytes=*/true, zero)};
+  }
+
   /// Function that generates a FIR operation accessing the descriptor's
   /// base address (BoxOffsetOp) and a MapInfoOp for it. The most
   /// important thing to note is that we normally move the bounds from
@@ -557,11 +646,14 @@ class MapInfoFinalizationPass
   /// descriptor map before this pass splits it). Lowering attaches a NameLoc
   /// there for the Fortran map text. This is used with new Ops being
   /// created by this function.
+  /// \p parentOp is the MapInfoOp being expanded (the descriptor map before
+  /// this pass splits it). Lowering attaches a NameLoc there for the Fortran
+  /// map text. New ops created here use its location so NameLoc is preserved.
   mlir::omp::MapInfoOp
   genBaseAddrMap(mlir::Location mapInfoOpLoc, mlir::Value descriptor,
                  mlir::omp::MapInfoOp parentOp,
                  mlir::omp::ClauseMapFlags mapType, fir::FirOpBuilder &builder,
-                 bool isRefPtee = false,
+                 bool supportsPolymorphicMap, bool isRefPtee = false,
                  mlir::FlatSymbolRefAttr mapperId = mlir::FlatSymbolRefAttr()) {
     mlir::Value baseAddr = fir::BoxOffsetOp::create(
         builder, mapInfoOpLoc, descriptor, fir::BoxFieldAttr::base_addr);
@@ -577,6 +669,15 @@ class MapInfoFinalizationPass
 
     mlir::Type underlyingDescType = fir::unwrapRefType(descriptor.getType());
 
+    llvm::SmallVector<mlir::Value> bounds(parentOp.getBounds().begin(),
+                                          parentOp.getBounds().end());
+    if (shouldMapPolymorphicDescriptorWithRuntimeElementSize(
+            descriptor, supportsPolymorphicMap)) {
+      bounds = genRuntimeSizedBaseAddrBounds(mapInfoOpLoc, descriptor,
+                                             parentOp.getBounds(), builder);
+      underlyingBaseAddrType = builder.getI8Type();
+    }
+
     // Member of the descriptor pointing at the allocated data
     return mlir::omp::MapInfoOp::create(
         builder, mapInfoOpLoc, baseAddr.getType(), descriptor,
@@ -587,8 +688,7 @@ class MapInfoFinalizationPass
             mlir::omp::VariableCaptureKind::ByRef),
         baseAddr, mlir::TypeAttr::get(underlyingBaseAddrType),
         isRefPtee ? parentOp.getMembers() : mlir::SmallVector<mlir::Value>{},
-        isRefPtee ? parentOp.getMembersIndexAttr() : mlir::ArrayAttr{},
-        parentOp.getBounds(),
+        isRefPtee ? parentOp.getMembersIndexAttr() : mlir::ArrayAttr{}, bounds,
         /*mapperId=*/mapperId,
         /*name=*/builder.getStringAttr(""),
         /*partial_map=*/builder.getBoolAttr(false));
@@ -986,6 +1086,35 @@ class MapInfoFinalizationPass
     return baseAddrType;
   }
 
+  mlir::Operation *genImplicitPointerAttachMap(
+      mlir::omp::MapInfoOp descMapOp, mlir::Value attachBase,
+      mlir::Type attachBaseType, mlir::Value pointerSlotAddr,
+      mlir::Type pointerSlotPointeeType, mlir::ValueRange bounds,
+      llvm::SmallVectorImpl<ParentAndPlacement> &mapMemberUsers,
+      mlir::Operation *target, fir::FirOpBuilder &builder,
+      mlir::omp::ClauseMapFlags refFlagType, mlir::Type resultType,
+      bool isAttachAlways = false) {
+    auto implicitAttachMap = mlir::omp::MapInfoOp::create(
+        builder, descMapOp->getLoc(), resultType, attachBase,
+        mlir::TypeAttr::get(attachBaseType),
+        builder.getAttr<mlir::omp::ClauseMapFlagsAttr>(
+            mlir::omp::ClauseMapFlags::attach | refFlagType |
+            (isAttachAlways ? mlir::omp::ClauseMapFlags::always
+                            : mlir::omp::ClauseMapFlags::none)),
+        descMapOp.getMapCaptureTypeAttr(), /*varPtrPtr=*/
+        pointerSlotAddr, mlir::TypeAttr::get(pointerSlotPointeeType),
+        /*members=*/mlir::SmallVector<mlir::Value>{},
+        /*membersIndex=*/mlir::ArrayAttr{}, bounds,
+        /*mapperId*/ mlir::FlatSymbolRefAttr(), descMapOp.getNameAttr(),
+        /*partial_map=*/builder.getBoolAttr(false));
+
+    // Has to be added to the target immediately, as we expect all maps
+    // processed by this pass to have a user that is a target.
+    addAttachMemberToTarget(descMapOp, implicitAttachMap, mapMemberUsers,
+                            builder, target);
+    return implicitAttachMap;
+  }
+
   /// This function generates an attach map, which is an type of OpenMP map that
   /// binds a pointer to its data. In the case of Fortran, this binding is
   /// primarily for binding the pointer inside of descriptors to the underlying
@@ -1001,7 +1130,8 @@ class MapInfoFinalizationPass
       llvm::SmallVectorImpl<ParentAndPlacement> &mapMemberUsers,
       mlir::Operation *target, fir::FirOpBuilder &builder,
       mlir::omp::ClauseMapFlags refFlagType, bool isAttachAlways = false,
-      mlir::Value reuseBaseAddr = mlir::Value{}) {
+      mlir::Value reuseBaseAddr = mlir::Value{},
+      bool supportsPolymorphicMap = false) {
     auto baseAddr =
         reuseBaseAddr
             ? reuseBaseAddr
@@ -1009,28 +1139,44 @@ class MapInfoFinalizationPass
                                        fir::BoxFieldAttr::base_addr);
 
     mlir::Type underlyingVarType = getUnderlyingVarType(baseAddr.getType());
+    llvm::SmallVector<mlir::Value> bounds(descMapOp.getBounds().begin(),
+                                          descMapOp.getBounds().end());
+    if (shouldMapPolymorphicDescriptorWithRuntimeElementSize(
+            descriptor, supportsPolymorphicMap)) {
+      bounds = genRuntimeSizedBaseAddrBounds(descMapOp->getLoc(), descriptor,
+                                             descMapOp.getBounds(), builder);
+      underlyingVarType = builder.getI8Type();
+    }
+    mlir::Type runtimePtrType = fir::unwrapRefType(descriptor.getType());
 
-    auto implicitAttachMap = mlir::omp::MapInfoOp::create(
-        builder, descMapOp->getLoc(), descMapOp.getResult().getType(),
-        descriptor,
-        mlir::TypeAttr::get(fir::unwrapRefType(descriptor.getType())),
-        builder.getAttr<mlir::omp::ClauseMapFlagsAttr>(
-            mlir::omp::ClauseMapFlags::attach | refFlagType |
-            (isAttachAlways ? mlir::omp::ClauseMapFlags::always
-                            : mlir::omp::ClauseMapFlags::none)),
-        descMapOp.getMapCaptureTypeAttr(), /*varPtrPtr=*/
-        baseAddr, mlir::TypeAttr::get(underlyingVarType),
-        /*members=*/mlir::SmallVector<mlir::Value>{},
-        /*membersIndex=*/mlir::ArrayAttr{},
-        /*bounds=*/descMapOp.getBounds(),
-        /*mapperId*/ mlir::FlatSymbolRefAttr(), descMapOp.getNameAttr(),
-        /*partial_map=*/builder.getBoolAttr(false));
+    return genImplicitPointerAttachMap(
+        descMapOp, descriptor, runtimePtrType, baseAddr, underlyingVarType,
+        bounds, mapMemberUsers, target, builder, refFlagType,
+        descMapOp.getResult().getType(), isAttachAlways);
+  }
 
-    // Has to be added to the target immediately, as we expect all maps
-    // processed by this pass to have a user that is a target.
-    addAttachMemberToTarget(descMapOp, implicitAttachMap, mapMemberUsers,
-                            builder, target);
-    return implicitAttachMap;
+  [[maybe_unused]] mlir::Operation *genImplicitTypeDescAttachMap(
+      mlir::omp::MapInfoOp descMapOp, mlir::Value descriptor,
+      llvm::SmallVectorImpl<ParentAndPlacement> &mapMemberUsers,
+      mlir::Operation *target, fir::FirOpBuilder &builder,
+      mlir::omp::ClauseMapFlags refFlagType, bool isAttachAlways = false) {
+    auto typeDescFieldAddr =
+        fir::BoxOffsetOp::create(builder, descMapOp->getLoc(), descriptor,
+                                 fir::BoxFieldAttr::derived_type);
+
+    // This attach entry binds the device copy of the dynamic type descriptor to
+    // the descriptor addendum's derived_type pointer slot. The var_ptr must
+    // therefore be the address of that pointer slot in the originating
+    // descriptor, not the descriptor base address. Model both var_ptr and
+    // var_ptr_ptr as pointer-sized objects for this attach map so lowering
+    // produces an 8-byte pointer attach entry.
+    mlir::Type runtimePtrType =
+        fir::LLVMPointerType::get(builder.getContext(), builder.getI8Type());
+
+    return genImplicitPointerAttachMap(
+        descMapOp, typeDescFieldAddr, runtimePtrType, typeDescFieldAddr,
+        runtimePtrType, mlir::ValueRange{}, mapMemberUsers, target, builder,
+        refFlagType, typeDescFieldAddr.getType(), isAttachAlways);
   }
 
   // If the operation that we are expanding with a descriptor has a user
@@ -1103,7 +1249,8 @@ class MapInfoFinalizationPass
   genRefPtrMap(mlir::omp::MapInfoOp op, fir::FirOpBuilder &builder,
                mlir::Operation *target, mlir::Value descriptor,
                llvm::SmallVectorImpl<ParentAndPlacement> &mapMemberUsers,
-               bool isAttachNever, bool isAttachAlways) {
+               bool isAttachNever, bool isAttachAlways,
+               bool supportsPolymorphicMap) {
     auto newMapInfoOp = mlir::omp::MapInfoOp::create(
         builder, op->getLoc(), op.getResult().getType(), descriptor,
         mlir::TypeAttr::get(fir::unwrapRefType(descriptor.getType())),
@@ -1117,7 +1264,15 @@ class MapInfoFinalizationPass
 
     if (!isAttachNever)
       genImplicitAttachMap(op, descriptor, mapMemberUsers, target, builder,
-                           mlir::omp::ClauseMapFlags::ref_ptr, isAttachAlways);
+                           mlir::omp::ClauseMapFlags::ref_ptr, isAttachAlways,
+                           /*reuseBaseAddr=*/mlir::Value{},
+                           supportsPolymorphicMap);
+
+    if (shouldMapDescriptorTypeDesc(descriptor, supportsPolymorphicMap))
+      genImplicitTypeDescAttachMap(op, descriptor, mapMemberUsers, target,
+                                   builder, mlir::omp::ClauseMapFlags::ref_ptr,
+                                   isAttachAlways);
+
     op.replaceAllUsesWith(newMapInfoOp.getResult());
     op->erase();
     return newMapInfoOp;
@@ -1137,7 +1292,7 @@ class MapInfoFinalizationPass
                 mlir::Operation *target, mlir::Value descriptor,
                 llvm::SmallVectorImpl<ParentAndPlacement> &mapMemberUsers,
                 bool isAttachNever, bool isAttachAlways,
-                mlir::FlatSymbolRefAttr mapperId) {
+                mlir::FlatSymbolRefAttr mapperId, bool supportsPolymorphicMap) {
     // NOTE: We replace the descriptor map with the base address map. This
     // effectively replaces the descriptor's index position in any complex
     // structure mapping. This is a little different to the
@@ -1147,12 +1302,12 @@ class MapInfoFinalizationPass
     // issues do pop up.
     auto newMapInfoOp =
         genBaseAddrMap(op.getLoc(), descriptor, op, op.getMapType(), builder,
-                       /*IsRefPtee=*/true, mapperId);
+                       supportsPolymorphicMap, /*IsRefPtee=*/true, mapperId);
 
     if (!isAttachNever)
       genImplicitAttachMap(op, descriptor, mapMemberUsers, target, builder,
                            mlir::omp::ClauseMapFlags::ref_ptee, isAttachAlways,
-                           newMapInfoOp.getVarPtrPtr());
+                           newMapInfoOp.getVarPtrPtr(), supportsPolymorphicMap);
     op.replaceAllUsesWith(newMapInfoOp.getResult());
     op->erase();
     return newMapInfoOp;
@@ -1172,7 +1327,7 @@ class MapInfoFinalizationPass
       llvm::SmallVectorImpl<ParentAndPlacement> &mapMemberUsers,
       bool isAttachNever, bool isAttachAlways, bool mapOnlyDescriptor,
       bool descCanBeDeferred, bool canOptimizeDescViaPrivatization,
-      mlir::FlatSymbolRefAttr mapperId) {
+      mlir::FlatSymbolRefAttr mapperId, bool supportsPolymorphicMap) {
     bool isRefPtrPtee =
         bitEnumContainsAll(op.getMapType(),
                            mlir::omp::ClauseMapFlags::ref_ptr) &&
@@ -1194,7 +1349,7 @@ class MapInfoFinalizationPass
     if (!mapOnlyDescriptor) {
       baseAddr =
           genBaseAddrMap(op.getLoc(), descriptor, op, op.getMapType(), builder,
-                         /*IsRefPtee=*/false, mapperId);
+                         supportsPolymorphicMap, /*IsRefPtee=*/false, mapperId);
       createBaseAddrInsertion(builder, op, baseAddr, mapMemberUsers,
                               newMembersAttr, newMembers, memberIndices);
     }
@@ -1229,12 +1384,19 @@ class MapInfoFinalizationPass
 
     mlir::Operation *attachMap = nullptr;
     if (!isAttachNever && !mapOnlyDescriptor) {
-      attachMap =
-          genImplicitAttachMap(op, descriptor, mapMemberUsers, target, builder,
-                               mlir::omp::ClauseMapFlags::ref_ptr |
-                                   mlir::omp::ClauseMapFlags::ref_ptee,
-                               isAttachAlways, baseAddr.getVarPtrPtr());
+      attachMap = genImplicitAttachMap(
+          op, descriptor, mapMemberUsers, target, builder,
+          mlir::omp::ClauseMapFlags::ref_ptr |
+              mlir::omp::ClauseMapFlags::ref_ptee,
+          isAttachAlways, baseAddr.getVarPtrPtr(), supportsPolymorphicMap);
     }
+
+    if (shouldMapDescriptorTypeDesc(descriptor, supportsPolymorphicMap))
+      genImplicitTypeDescAttachMap(op, descriptor, mapMemberUsers, target,
+                                   builder,
+                                   mlir::omp::ClauseMapFlags::ref_ptr |
+                                       mlir::omp::ClauseMapFlags::ref_ptee,
+                                   isAttachAlways);
 
     op.replaceAllUsesWith(newMapInfoOp.getResult());
     op->erase();
@@ -1355,7 +1517,8 @@ class MapInfoFinalizationPass
   mlir::omp::MapInfoOp genDescriptorMaps(mlir::omp::MapInfoOp op,
                                          fir::FirOpBuilder &builder,
                                          mlir::Operation *target,
-                                         bool &canOptimizeUseDeviceAddr) {
+                                         bool &canOptimizeUseDeviceAddr,
+                                         bool supportsPolymorphicMap) {
     bool descCanBeDeferred = false;
     bool canOptimizeDescViaPrivatization = false;
     llvm::SmallVector<ParentAndPlacement> mapMemberUsers;
@@ -1409,17 +1572,18 @@ class MapInfoFinalizationPass
     // case where we do a similar style of mapping for deeper nestings.
     mlir::omp::MapInfoOp newMapInfo;
     if (isRefPtr && op.getMembers().empty()) {
-      newMapInfo = genRefPtrMap(op, builder, target, descriptor, mapMemberUsers,
-                                isAttachNever, isAttachAlways);
-    } else if (isRefPtee) {
       newMapInfo =
-          genRefPteeMap(op, builder, target, descriptor, mapMemberUsers,
-                        isAttachNever, isAttachAlways, mapperId);
+          genRefPtrMap(op, builder, target, descriptor, mapMemberUsers,
+                       isAttachNever, isAttachAlways, supportsPolymorphicMap);
+    } else if (isRefPtee) {
+      newMapInfo = genRefPteeMap(op, builder, target, descriptor,
+                                 mapMemberUsers, isAttachNever, isAttachAlways,
+                                 mapperId, supportsPolymorphicMap);
     } else {
       newMapInfo = genRefPtrPteeOrDefaultMap(
           op, builder, target, descriptor, mapMemberUsers, isAttachNever,
           isAttachAlways, mapOnlyDescriptor, descCanBeDeferred,
-          canOptimizeDescViaPrivatization, mapperId);
+          canOptimizeDescViaPrivatization, mapperId, supportsPolymorphicMap);
     }
     return newMapInfo;
   }
@@ -1725,6 +1889,8 @@ class MapInfoFinalizationPass
   // will mutate siblings of MapInfoOp.
   void runOnOperation() override {
     mlir::ModuleOp module = mlir::cast<mlir::ModuleOp>(getOperation());
+    bool supportsPolymorphicMap =
+        mlir::omp::getOpenMPVersionAttribute(module, /*fallback=*/0) >= 61;
     fir::KindMapping kindMap = fir::getKindMapping(module);
     fir::FirOpBuilder builder{module, std::move(kindMap)};
 
@@ -1783,7 +1949,8 @@ class MapInfoFinalizationPass
               llvm::dyn_cast<mlir::omp::TargetDataOp>(*targetUser);
           bool canOptimizeUseDeviceAddr = false;
           mlir::omp::MapInfoOp newMapInfo = genDescriptorMaps(
-              op, builder, targetUser, canOptimizeUseDeviceAddr);
+              op, builder, targetUser, canOptimizeUseDeviceAddr,
+              supportsPolymorphicMap);
           if (canOptimizeUseDeviceAddr && targetDataOp) {
             genOptimizedUseDeviceAddr(builder, targetDataOp, newMapInfo,
                                       module);

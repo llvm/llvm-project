@@ -172,6 +172,14 @@ void gatherFuncAndVarSyms(
     symbolAndClause.emplace_back(clause, *object.sym(), automap);
 }
 
+void markDeclareTarget(mlir::Operation *op, bool implicit) {
+  if (auto declareTargetOp =
+          llvm::dyn_cast<mlir::omp::DeclareTargetInterface>(op))
+    declareTargetOp.setDeclareTarget(mlir::omp::DeclareTargetDeviceType::any,
+                                     mlir::omp::DeclareTargetCaptureClause::to,
+                                     /*automap=*/false, implicit);
+}
+
 // This function gathers the individual omp::Object's that make up a
 // larger omp::Object symbol.
 //
