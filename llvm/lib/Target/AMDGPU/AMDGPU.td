@@ -1266,6 +1266,12 @@ defm VOPDInsts : AMDGPUSubtargetFeature<"vopd",
   /*GenPredicate=*/0
 >;
 
+defm VOPDInterlockHazard : AMDGPUSubtargetFeature<"vopd-interlock-hazard",
+  "VOPD destination buffer forwarding drops the interlock when SRC0 or SRC1 "
+  "X/Y are distinct VGPRs with the same register-number parity",
+  /*GenPredicate=*/0
+>;
+
 defm VALUTransUseHazard : AMDGPUGenericAnySubtargetFeature<"valu-trans-use-hazard",
   "Hazard when TRANS instructions are closely followed by a use of the result",
   /*GenPredicate=*/0
@@ -2276,6 +2282,7 @@ def FeatureISAVersion11_Generic: FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [FeatureMSAALoadDstSelBug,
      FeatureVALUTransUseHazard,
+     FeatureVOPDInterlockHazard,
      FeatureUserSGPRInit16Bug,
      FeatureMADIntraFwdBug,
      FeaturePrivEnabledTrap2NopBug,
@@ -2289,6 +2296,7 @@ def FeatureISAVersion11_0_Common : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [FeatureMSAALoadDstSelBug,
      FeatureVALUTransUseHazard,
+     FeatureVOPDInterlockHazard,
      FeatureMADIntraFwdBug,
      FeaturePrivEnabledTrap2NopBug,
      FeatureDot5Insts,
@@ -2314,7 +2322,8 @@ def FeatureISAVersion11_0_3 : FeatureSet<
 
 def FeatureISAVersion11_5_Common : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
-    [FeatureSALUFloatInsts,
+    [FeatureVOPDInterlockHazard,
+     FeatureSALUFloatInsts,
      FeatureDPPSrc1SGPR,
      FeatureRequiredExportPriority,
      FeatureDot5Insts,

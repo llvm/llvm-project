@@ -1786,6 +1786,10 @@ def UnretainedCallArgsChecker : Checker<"UnretainedCallArgsChecker">,
   HelpText<"Check unretained call arguments.">,
   Documentation<HasDocumentation>;
 
+def UnborrowedCallArgsChecker : Checker<"UnborrowedCallArgsChecker">,
+  HelpText<"Check call arguments holding a loan on a CanBorrow object that is not guarded by a Borrow.">,
+  Documentation<HasDocumentation>;
+
 def UncountedLocalVarsChecker : Checker<"UncountedLocalVarsChecker">,
   HelpText<"Check uncounted local variables.">,
   Documentation<HasDocumentation>;

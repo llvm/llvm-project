@@ -70,7 +70,7 @@ func.func @dynamic_buffer(%arg0: !fir.box<!fir.array<?x?xf64>>, %arg1: !fir.ref<
 // generated for the copy-out.
 
 // CHECK-LABEL:   func.func @small_constant_buffer(
-// CHECK:           %[[BUF:.*]] = fir.alloca !fir.array<8xf64> {bindc_name = ".tmp.copy_in"}
+// CHECK:           %[[BUF:.*]] = fir.alloca !fir.array<8xf64> <{bindc_name = ".tmp.copy_in"}>
 // CHECK:           %[[SECTION:.*]] = hlfir.designate %{{.*}} shape
 // CHECK:           %[[CONTIG:.*]] = fir.is_contiguous_box %[[SECTION]]
 // CHECK:           %[[RES:.*]]:2 = fir.if %[[CONTIG]] -> (!fir.box<!fir.array<8xf64>>, i1) {
@@ -94,7 +94,7 @@ func.func @dynamic_buffer(%arg0: !fir.box<!fir.array<?x?xf64>>, %arg1: !fir.ref<
 // CHECK:           %[[RES:.*]]:2 = fir.if %{{.*}} -> (!fir.box<!fir.array<100xf64>>, i1) {
 // CHECK:             fir.result %{{.*}}, %false : !fir.box<!fir.array<100xf64>>, i1
 // CHECK:           } else {
-// CHECK:             fir.allocmem !fir.array<100xf64> {bindc_name = ".tmp.copy_in"
+// CHECK:             fir.allocmem !fir.array<100xf64> <{bindc_name = ".tmp.copy_in"
 // CHECK:             fir.result %{{.*}}, %true : !fir.box<!fir.array<100xf64>>, i1
 // CHECK:           }
 // CHECK:           fir.call @callee100
@@ -108,7 +108,7 @@ func.func @dynamic_buffer(%arg0: !fir.box<!fir.array<?x?xf64>>, %arg1: !fir.ref<
 // CHECK-LABEL:   func.func @dynamic_buffer(
 // CHECK:           %[[RES:.*]]:2 = fir.if %{{.*}} -> (!fir.box<!fir.array<?xf64>>, i1) {
 // CHECK:           } else {
-// CHECK:             fir.allocmem !fir.array<?xf64>, %{{.*}} {bindc_name = ".tmp.copy_in"
+// CHECK:             fir.allocmem !fir.array<?xf64>, %{{.*}} <{bindc_name = ".tmp.copy_in"
 // CHECK:           }
 // CHECK:           fir.call @calleeDyn
 // CHECK:           fir.if %[[RES]]#1 {
@@ -118,7 +118,7 @@ func.func @dynamic_buffer(%arg0: !fir.box<!fir.array<?x?xf64>>, %arg1: !fir.ref<
 // stack, while the runtime-sized one is not.
 
 // BIGTHRESHOLD-LABEL:   func.func @big_constant_buffer(
-// BIGTHRESHOLD:           %[[BUF:.*]] = fir.alloca !fir.array<100xf64> {bindc_name = ".tmp.copy_in"}
+// BIGTHRESHOLD:           %[[BUF:.*]] = fir.alloca !fir.array<100xf64> <{bindc_name = ".tmp.copy_in"}>
 // BIGTHRESHOLD:           fir.if %{{.*}} -> (!fir.box<!fir.array<100xf64>>, i1) {
 // BIGTHRESHOLD:             hlfir.declare %[[BUF]]
 // BIGTHRESHOLD:           fir.call @callee100
@@ -126,5 +126,5 @@ func.func @dynamic_buffer(%arg0: !fir.box<!fir.array<?x?xf64>>, %arg1: !fir.ref<
 // BIGTHRESHOLD-NOT:       fir.freemem
 
 // BIGTHRESHOLD-LABEL:   func.func @dynamic_buffer(
-// BIGTHRESHOLD:           fir.allocmem !fir.array<?xf64>, %{{.*}} {bindc_name = ".tmp.copy_in"
+// BIGTHRESHOLD:           fir.allocmem !fir.array<?xf64>, %{{.*}} <{bindc_name = ".tmp.copy_in"
 // BIGTHRESHOLD:           fir.freemem

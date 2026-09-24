@@ -486,6 +486,8 @@ private:
   ComplexRendererFns selectExtractHigh(MachineOperand &Root) const;
   template <unsigned Width>
   ComplexRendererFns selectCVTFixedPoint(MachineOperand &Root) const;
+  template <unsigned Width>
+  ComplexRendererFns selectCVTFixedPosRecipOperand(MachineOperand &Root) const;
   ComplexRendererFns selectCVTFixedPointBase(const MachineOperand &Root,
                                              unsigned width,
                                              bool isReciprocal = false) const;
@@ -8208,6 +8210,13 @@ template <unsigned Width>
 InstructionSelector::ComplexRendererFns
 AArch64InstructionSelector::selectCVTFixedPoint(MachineOperand &Root) const {
   return selectCVTFixedPointBase(Root, Width, /*isReciprocal*/ false);
+}
+
+template <unsigned Width>
+InstructionSelector::ComplexRendererFns
+AArch64InstructionSelector::selectCVTFixedPosRecipOperand(
+    MachineOperand &Root) const {
+  return selectCVTFixedPointBase(Root, Width, /*isReciprocal*/ true);
 }
 
 InstructionSelector::ComplexRendererFns

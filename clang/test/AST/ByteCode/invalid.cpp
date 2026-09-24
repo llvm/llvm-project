@@ -301,3 +301,15 @@ namespace CompositeFieldInit {
 
   constexpr S2 s2{};
 }
+
+namespace UnsizedArrayAndNonEmptyPath {
+  void foo() {
+    struct S {
+      int m[];
+    } s;
+    constexpr auto p = s.m; // both-error {{must be initialized by a constant expression}} \
+                            // both-note {{array-to-pointer decay of array member without known bound is not supported}}
+  }
+
+  void bar() { foo(); }
+}

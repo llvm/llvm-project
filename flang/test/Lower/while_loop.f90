@@ -3,7 +3,7 @@
 ! Test a simple while loop.
 ! CHECK-LABEL: simple_loop
 subroutine simple_loop
-  ! CHECK: %[[I_ADDR:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFsimple_loopEi"}
+  ! CHECK: %[[I_ADDR:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFsimple_loopEi"}>
   ! CHECK: %[[I:.*]]:2 = hlfir.declare %[[I_ADDR]]
   integer :: i
 
@@ -39,9 +39,9 @@ end subroutine
 ! Test 2 nested while loops.
 ! CHECK-LABEL: while_inside_while_loop
 subroutine while_inside_while_loop
-  ! CHECK-DAG: %[[I_ADDR:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFwhile_inside_while_loopEi"}
+  ! CHECK-DAG: %[[I_ADDR:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFwhile_inside_while_loopEi"}>
   ! CHECK-DAG: %[[I:.*]]:2 = hlfir.declare %[[I_ADDR]]
-  ! CHECK-DAG: %[[J_ADDR:.*]] = fir.alloca i32 {bindc_name = "j", uniq_name = "_QFwhile_inside_while_loopEj"}
+  ! CHECK-DAG: %[[J_ADDR:.*]] = fir.alloca i32 <{bindc_name = "j", uniq_name = "_QFwhile_inside_while_loopEj"}>
   ! CHECK-DAG: %[[J:.*]]:2 = hlfir.declare %[[J_ADDR]]
   integer :: i, j
 

@@ -103,7 +103,6 @@ JumpTables("jump-tables",
       clEnumValN(JTS_AGGRESSIVE, "aggressive",
                  "aggressively split jump tables section based on usage "
                  "of the tables")),
-  cl::ZeroOrMore,
   cl::cat(BoltOptCategory));
 
 static cl::opt<bool> NoScan(
@@ -141,7 +140,7 @@ static cl::opt<bool> TrapOnAVX512(
     "trap-avx512",
     cl::desc("in relocation mode trap upon entry to any function that uses "
              "AVX-512 instructions"),
-    cl::init(false), cl::ZeroOrMore, cl::Hidden, cl::cat(BoltCategory));
+    cl::init(false), cl::Hidden, cl::cat(BoltCategory));
 
 bool shouldPrint(const BinaryFunction &Function) {
   // PLT stubs are disassembled for BTI binaries, therefore they should be
