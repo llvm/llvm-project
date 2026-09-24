@@ -34,8 +34,8 @@ void test_ternary_temporary(bool c, int x) {
 // CIR-LABEL: @_Z22test_ternary_temporarybi
 // CIR:   %[[TMP:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_S>
 // CIR:   %[[ACTIVE:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
+// CIR:   %[[COND:.*]] = cir.load {{.*}} : !cir.ptr<!cir.bool>, !cir.bool
 // CIR:   cir.cleanup.scope {
-// CIR:     %[[COND:.*]] = cir.load {{.*}} : !cir.ptr<!cir.bool>, !cir.bool
 // CIR:     %[[FALSE:.*]] = cir.const #false
 // CIR:     cir.store %[[FALSE]], %[[ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
 // CIR:     %{{.*}} = cir.ternary(%[[COND]], true {
@@ -139,8 +139,8 @@ void test_ternary_both_branches(bool c) {
 // CIR:   %[[ACTA:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
 // CIR:   %[[TMPB:.*]] = cir.alloca "ref.tmp1" {{.*}} : !cir.ptr<!rec_B>
 // CIR:   %[[ACTB:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
+// CIR:   %[[COND:.*]] = cir.load {{.*}} : !cir.ptr<!cir.bool>, !cir.bool
 // CIR:   cir.cleanup.scope {
-// CIR:     %[[COND:.*]] = cir.load {{.*}} : !cir.ptr<!cir.bool>, !cir.bool
 // CIR:     %[[FALSE_A:.*]] = cir.const #false
 // CIR:     cir.store %[[FALSE_A]], %[[ACTA]] : !cir.bool, !cir.ptr<!cir.bool>
 // CIR:     %[[FALSE_B:.*]] = cir.const #false
@@ -281,8 +281,8 @@ int test_return_ternary(bool c) {
 // CIR:   %[[ACTA:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
 // CIR:   %[[TMPB:.*]] = cir.alloca "ref.tmp1" {{.*}} : !cir.ptr<!rec_B>
 // CIR:   %[[ACTB:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
+// CIR:   %[[COND:.*]] = cir.load {{.*}} : !cir.ptr<!cir.bool>, !cir.bool
 // CIR:   cir.cleanup.scope {
-// CIR:     %[[COND:.*]] = cir.load {{.*}} : !cir.ptr<!cir.bool>, !cir.bool
 // CIR:     %[[FALSE_A:.*]] = cir.const #false
 // CIR:     cir.store %[[FALSE_A]], %[[ACTA]] : !cir.bool, !cir.ptr<!cir.bool>
 // CIR:     %[[FALSE_B:.*]] = cir.const #false
@@ -685,56 +685,60 @@ void test_flag_cleared_before_cond_cleanup() {
 // CIR-LABEL: @_Z37test_flag_cleared_before_cond_cleanupv
 // CIR:   %[[REF_TMP:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_Guard>
 // CIR:   %[[ACTIVE:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
-// CIR:   %[[AGG_TMP:.*]] = cir.alloca "agg.tmp0" {{.*}} : !cir.ptr<!rec_Payload>
+// Guard is constructed before the conditional, so its cleanup scope encloses
+// the conditional's and the Payload temporary is destroyed first.
+// CIR:   cir.call @_ZN5GuardC1Ev(%[[REF_TMP]])
 // CIR:   cir.cleanup.scope {
-// The clear precedes both the Guard constructor and the nested cleanup scope.
-// CIR:     %[[FALSE:.*]] = cir.const #false
-// CIR:     cir.store %[[FALSE]], %[[ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
-// CIR:     cir.call @_ZN5GuardC1Ev(%[[REF_TMP]])
+// CIR:     %[[AGG_TMP:.*]] = cir.alloca "agg.tmp0" {{.*}} : !cir.ptr<!rec_Payload>
+// CIR:     %[[COND:.*]] = cir.call @_ZN5GuardcvbEv(%[[REF_TMP]])
 // CIR:     cir.cleanup.scope {
-// CIR:       %[[COND:.*]] = cir.call @_ZN5GuardcvbEv(%[[REF_TMP]])
+// The clear precedes the conditional, so it runs whichever arm is taken and
+// also dominates the unwind paths out of the arms.
+// CIR:       %[[FALSE:.*]] = cir.const #false
+// CIR:       cir.store %[[FALSE]], %[[ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
 // CIR:       cir.if %[[COND]] {
 // CIR:       } else {
 // CIR:         %[[TRUE:.*]] = cir.const #true
 // CIR:         cir.store %[[TRUE]], %[[ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
 // CIR:       }
 // CIR:     } cleanup all {
-// CIR:       cir.call @_ZN5GuardD1Ev(%[[REF_TMP]])
+// CIR:       %[[IS_ACTIVE:.*]] = cir.load{{.*}} %[[ACTIVE]]
+// CIR:       cir.if %[[IS_ACTIVE]] {
+// CIR:         cir.call @_ZN7PayloadD1Ev(%[[AGG_TMP]])
+// CIR:       }
 // CIR:     }
 // CIR:   } cleanup all {
-// CIR:     %[[IS_ACTIVE:.*]] = cir.load{{.*}} %[[ACTIVE]]
-// CIR:     cir.if %[[IS_ACTIVE]] {
-// CIR:       cir.call @_ZN7PayloadD1Ev(%[[AGG_TMP]])
-// CIR:     }
+// CIR:     cir.call @_ZN5GuardD1Ev(%[[REF_TMP]])
 // CIR:   }
 
 // LLVM-LABEL: define dso_local void @_Z37test_flag_cleared_before_cond_cleanupv(
+// LLVM:   %[[AGG_TMP:.*]] = alloca %struct.Payload
 // LLVM:   %[[REF_TMP:.*]] = alloca %struct.Guard
 // LLVM:   %[[ACTIVE:.*]] = alloca i8
-// LLVM:   %[[AGG_TMP:.*]] = alloca %struct.Payload
-// The clear dominates the invokes, so both landingpads see an initialized flag.
-// LLVM:   store i8 0, ptr %[[ACTIVE]]
-// LLVM:   invoke void @_ZN5GuardC1Ev(ptr {{.*}} %[[REF_TMP]])
+// LLVM:   call void @_ZN5GuardC1Ev(ptr {{.*}} %[[REF_TMP]])
 // LLVM:   %[[COND:.*]] = invoke {{.*}} i1 @_ZN5GuardcvbEv(ptr {{.*}} %[[REF_TMP]])
+// The clear dominates the arms, so both landingpads see an initialized flag.
+// LLVM:   store i8 0, ptr %[[ACTIVE]]
 // LLVM:   br i1 %[[COND]], label %[[TRUE_BR:.*]], label %[[FALSE_BR:.*]]
 // LLVM: [[FALSE_BR]]:
 // LLVM:   store i8 1, ptr %[[ACTIVE]]
-// Normal path.
-// LLVM:   call void @_ZN5GuardD1Ev(ptr {{.*}} %[[REF_TMP]])
-// LLVM:   landingpad { ptr, i32 }
-// LLVM:   call void @_ZN5GuardD1Ev(ptr {{.*}} %[[REF_TMP]])
+// Normal path destroys the conditional Payload first.
 // LLVM:   %[[BYTE:.*]] = load i8, ptr %[[ACTIVE]]
 // LLVM:   %[[BOOL:.*]] = trunc i8 %[[BYTE]] to i1
 // LLVM:   br i1 %[[BOOL]], label %[[DTOR:.*]], label %{{.*}}
 // LLVM: [[DTOR]]:
 // LLVM:   call void @_ZN7PayloadD1Ev(ptr {{.*}} %[[AGG_TMP]])
-// Unwind path reads the same flag.
+// Unwinding out of an arm reads the same flag.
 // LLVM:   landingpad { ptr, i32 }
 // LLVM:   %[[EH_BYTE:.*]] = load i8, ptr %[[ACTIVE]]
 // LLVM:   %[[EH_BOOL:.*]] = trunc i8 %[[EH_BYTE]] to i1
 // LLVM:   br i1 %[[EH_BOOL]], label %[[EH_DTOR:.*]], label %{{.*}}
 // LLVM: [[EH_DTOR]]:
 // LLVM:   call void @_ZN7PayloadD1Ev(ptr {{.*}} %[[AGG_TMP]])
+// Then Guard, on the normal path and again from its own landingpad.
+// LLVM:   call void @_ZN5GuardD1Ev(ptr {{.*}} %[[REF_TMP]])
+// LLVM:   landingpad { ptr, i32 }
+// LLVM:   call void @_ZN5GuardD1Ev(ptr {{.*}} %[[REF_TMP]])
 // LLVM:   resume { ptr, i32 }
 
 // OGCG-LABEL: define dso_local void @_Z37test_flag_cleared_before_cond_cleanupv(
