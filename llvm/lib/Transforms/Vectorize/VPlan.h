@@ -264,16 +264,6 @@ public:
     return getEnclosingBlockWithSuccessors()->getSuccessors();
   }
 
-  /// \return the predecessors either attached directly to this VPBlockBase or,
-  /// if this VPBlockBase is the entry block of a VPRegionBlock and has no
-  /// predecessors of its own, search recursively for the first enclosing
-  /// VPRegionBlock that has predecessors and return them. If no such
-  /// VPRegionBlock exists, return the (empty) predecessors of the topmost
-  /// VPBlockBase reached.
-  const VPBlocksTy &getHierarchicalPredecessors() {
-    return getEnclosingBlockWithPredecessors()->getPredecessors();
-  }
-
   /// \return the hierarchical predecessor of this VPBlockBase if it has a
   /// single hierarchical predecessor. Otherwise return a null pointer.
   VPBlockBase *getSingleHierarchicalPredecessor() {
@@ -1013,12 +1003,6 @@ public:
   }
 
   LLVM_ABI_FOR_TEST FastMathFlags getFastMathFlagsOrNone() const;
-
-  bool isNonNeg() const {
-    assert(OpType == OperationType::NonNegOp &&
-           "recipe doesn't have a NNEG flag");
-    return NonNegFlags.NonNeg;
-  }
 
   bool hasNoUnsignedWrap() const {
     switch (OpType) {
@@ -2198,8 +2182,6 @@ public:
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override;
 
-  unsigned getOpcode() const { return Opcode; }
-
   /// Return the mask operand if one was provided, or a null pointer if all
   /// lanes should be executed unconditionally.
   VPValue *getMask() const {
@@ -2575,9 +2557,6 @@ public:
   VPValue *getStepValue() { return getOperand(1); }
   const VPValue *getStepValue() const { return getOperand(1); }
 
-  /// Update the step value of the recipe.
-  void setStepValue(VPValue *V) { setOperand(1, V); }
-
   VPValue *getVFValue() { return getOperand(2); }
   const VPValue *getVFValue() const { return getOperand(2); }
 
@@ -2937,9 +2916,6 @@ public:
     return std::holds_alternative<RdxInLoop>(Style) ||
            std::holds_alternative<RdxOrdered>(Style);
   }
-
-  /// Returns true if the reduction outputs a vector with a scaled down VF.
-  bool isPartialReduction() const { return getVFScaleFactor() > 1; }
 
   /// Returns true, if the phi is part of a multi-use reduction.
   bool hasUsesOutsideReductionChain() const {
