@@ -6,6 +6,12 @@ tablegen("MipsGenCallingConv") {
   td_file = "Mips.td"
 }
 
+tablegen("MipsGenCompressInstEmitter") {
+  visibility = [ ":LLVMMipsCodeGen" ]
+  args = [ "-gen-compress-inst-emitter" ]
+  td_file = "Mips.td"
+}
+
 tablegen("MipsGenDAGISel") {
   visibility = [ ":LLVMMipsCodeGen" ]
   args = [ "-gen-dag-isel" ]
@@ -54,6 +60,7 @@ tablegen("MipsGenSDNodeInfo") {
 static_library("LLVMMipsCodeGen") {
   deps = [
     ":MipsGenCallingConv",
+    ":MipsGenCompressInstEmitter",
     ":MipsGenDAGISel",
     ":MipsGenFastISel",
     ":MipsGenGlobalISel",

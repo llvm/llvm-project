@@ -1,0 +1,88 @@
+# RUN: llc -run-pass=micromips-reduce-size -mtriple=mipsel \
+# RUN:   -mcpu=mips32r2 -mattr=+micromips -verify-machineinstrs %s -o %t.mir
+# RUN: llc -mtriple=mipsel -mcpu=mips32r2 -mattr=+micromips \
+# RUN:   -start-after=mips-branch-expansion -asm-show-inst \
+# RUN:   -verify-machineinstrs %t.mir -o - | FileCheck %s
+
+# The compression pass leaves prefilled delay-slot bundles unchanged.
+--- |
+  declare void @callee()
+  define void @full_call_slot() { ret void }
+  define void @short_call_slot() { ret void }
+  define void @full_jump_slot() { ret void }
+  define void @short_jump_slot() { ret void }
+  define void @uncompressible_call_slot() { ret void }
+  define void @already_short_slot() { ret void }
+...
+---
+name: full_call_slot
+tracksRegLiveness: false
+body: |
+  bb.0:
+    ; CHECK-LABEL: full_call_slot:
+    ; CHECK: <MCInst #{{[0-9]+}} JAL_MM
+    ; CHECK: <MCInst #{{[0-9]+}} ADDu{{$}}
+    JAL_MM @callee, csr_o32, implicit-def $ra {
+      $v0 = ADDu $a0, $a1
+    }
+...
+---
+name: short_call_slot
+tracksRegLiveness: false
+body: |
+  bb.0:
+    ; CHECK-LABEL: short_call_slot:
+    ; CHECK: <MCInst #{{[0-9]+}} JALS_MM
+    ; CHECK: <MCInst #{{[0-9]+}} ADDU16_MM
+    JALS_MM @callee, csr_o32, implicit-def $ra {
+      $v0 = ADDU16_MM $a0, $a1
+    }
+...
+---
+name: full_jump_slot
+tracksRegLiveness: false
+body: |
+  bb.0:
+    ; CHECK-LABEL: full_jump_slot:
+    ; CHECK: <MCInst #{{[0-9]+}} JR{{$}}
+    ; CHECK: <MCInst #{{[0-9]+}} ADDiu{{$}}
+    JR $at {
+      $sp = ADDiu $sp, 8
+    }
+...
+---
+name: short_jump_slot
+tracksRegLiveness: false
+body: |
+  bb.0:
+    ; CHECK-LABEL: short_jump_slot:
+    ; CHECK: <MCInst #{{[0-9]+}} JR16_MM
+    ; CHECK: <MCInst #{{[0-9]+}} ADDiu{{$}}
+    JR16_MM $at {
+      $sp = ADDiu $sp, 8
+    }
+...
+---
+name: uncompressible_call_slot
+tracksRegLiveness: false
+body: |
+  bb.0:
+    ; CHECK-LABEL: uncompressible_call_slot:
+    ; CHECK: <MCInst #{{[0-9]+}} JAL_MM
+    ; CHECK: <MCInst #{{[0-9]+}} ADDu{{$}}
+    JAL_MM @callee, csr_o32, implicit-def $ra {
+      $t0 = ADDu $a0, $a1
+    }
+...
+---
+name: already_short_slot
+tracksRegLiveness: false
+body: |
+  bb.0:
+    ; CHECK-LABEL: already_short_slot:
+    ; CHECK: <MCInst #{{[0-9]+}} JALS_MM
+    ; CHECK: <MCInst #{{[0-9]+}} MOVE16_MM
+    JALS_MM @callee, csr_o32, implicit-def $ra {
+      $v0 = MOVE16_MM $a0
+    }
+...

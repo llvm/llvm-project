@@ -1,0 +1,48 @@
+# RUN: llc -mtriple=mipsel -mcpu=mips32r2 -mattr=+micromips \
+# RUN:   -run-pass=micromips-reduce-size -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=mipsel -mcpu=mips32r2 -mattr=+micromips \
+# RUN:   -run-pass=micromips-reduce-size,mips-delay-slot-filler \
+# RUN:   -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=SLOT
+
+--- |
+  declare void @callee()
+  define void @metadata() { ret void }
+  define void @call_slot() { ret void }
+...
+---
+name: metadata
+# CHECK-LABEL: name: metadata
+# CHECK: debugValueSubstitutions:
+# CHECK-NEXT: { srcinst: 1, srcop: 0, dstinst: 3, dstop: 1, subreg: 0 }
+# CHECK-NEXT: { srcinst: 2, srcop: 0, dstinst: 4, dstop: 0, subreg: 0 }
+tracksRegLiveness: false
+body: |
+  bb.0:
+    ; CHECK: ADDIUSP_MM -16, implicit-def $sp, implicit killed $sp, debug-instr-number 3
+    $sp = ADDiu killed $sp, -16, debug-instr-number 1
+    ; CHECK: dead $v0 = frame-setup ADDIUR1SP_MM 20, implicit killed $sp, debug-instr-number 4
+    dead $v0 = frame-setup ADDiu killed $sp, 20, debug-instr-number 2
+    ; CHECK: dead renamable $v0 = XOR16_MM killed renamable $a0, killed renamable $v0
+    dead renamable $v0 = XOR killed renamable $v0, killed renamable $a0
+    ; CHECK: dead $v0 = XOR16_MM undef $a0, killed $v0
+    dead $v0 = XOR undef $a0, killed $v0
+    ; CHECK: $v0 = ADDU16_MM $a0, $a1, csr_o32, implicit $a3
+    $v0 = ADDu $a0, $a1, csr_o32, implicit $a3
+    ; CHECK: dead $v0 = LWSP_MM killed $sp, 20, implicit $a3 :: (volatile load (s32), align 8)
+    dead $v0 = LW killed $sp, 20, implicit $a3 :: (volatile load (s32) from unknown-address, align 8)
+...
+---
+name: call_slot
+tracksRegLiveness: false
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: call_slot
+    ; CHECK: $v0 = ADDU16_MM $a0, $a1
+    ; CHECK-NEXT: JAL_MM @callee
+    ; SLOT-LABEL: name: call_slot
+    ; SLOT: JALS_MM @callee{{.*}} {
+    ; SLOT-NEXT: $v0 = ADDU16_MM $a0, $a1
+    ; SLOT-NEXT: }
+    $v0 = ADDu $a0, $a1
+    JAL_MM @callee, csr_o32, implicit-def $ra, implicit $v0
+...

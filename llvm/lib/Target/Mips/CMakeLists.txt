@@ -5,6 +5,7 @@ set(LLVM_TARGET_DEFINITIONS Mips.td)
 tablegen(LLVM MipsGenAsmMatcher.inc -gen-asm-matcher)
 tablegen(LLVM MipsGenAsmWriter.inc -gen-asm-writer)
 tablegen(LLVM MipsGenCallingConv.inc -gen-callingconv)
+tablegen(LLVM MipsGenCompressInstEmitter.inc -gen-compress-inst-emitter)
 tablegen(LLVM MipsGenDAGISel.inc -gen-dag-isel)
 tablegen(LLVM MipsGenDisassemblerTables.inc -gen-disassembler
               -ignore-non-decodable-operands)

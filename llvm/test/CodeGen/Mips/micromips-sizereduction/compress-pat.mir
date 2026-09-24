@@ -1,0 +1,273 @@
+# RUN: llc -mtriple=mipsel -mcpu=mips32r2 -mattr=+micromips \
+# RUN:   -run-pass=micromips-reduce-size -verify-machineinstrs %s -o %t.mir
+# RUN: llc -mtriple=mipsel -mcpu=mips32r2 -mattr=+micromips \
+# RUN:   -start-after=mips-branch-expansion -asm-show-inst -verify-machineinstrs %t.mir -o - | FileCheck %s
+# RUN: llc -mtriple=mipsel -mcpu=mips32r6 -mattr=+micromips \
+# RUN:   -run-pass=micromips-reduce-size -verify-machineinstrs %s -o %t-r6.mir
+# RUN: llc -mtriple=mipsel -mcpu=mips32r6 -mattr=+micromips \
+# RUN:   -start-after=mips-branch-expansion -asm-show-inst -verify-machineinstrs %t-r6.mir -o - | FileCheck %s --check-prefix=UNCHANGED
+# RUN: llc -mtriple=mipsel -mcpu=mips32r2 -mattr=-micromips \
+# RUN:   -run-pass=micromips-reduce-size -verify-machineinstrs %s -o %t-nomicro.mir
+# RUN: llc -mtriple=mipsel -mcpu=mips32r2 -mattr=-micromips \
+# RUN:   -start-after=mips-branch-expansion -asm-show-inst -verify-machineinstrs %t-nomicro.mir -o - | FileCheck %s --check-prefix=UNCHANGED
+
+# Exercise both opcode families, immediate boundaries, register restrictions,
+# commuted XOR operands, instruction flags, and the subtarget gate.
+
+---
+name: arithmetic
+tracksRegLiveness: false
+body: |
+  bb.0:
+    ; CHECK-LABEL: arithmetic:
+    ; UNCHANGED-LABEL: arithmetic:
+    ; CHECK: <MCInst #{{[0-9]+}} ADDU16_MM{{$}}
+    ; UNCHANGED: <MCInst #{{[0-9]+}} ADDu{{$}}
+    $v0 = ADDu $s0, $s1
+    ; CHECK: <MCInst #{{[0-9]+}} ADDU16_MM{{$}}
+    ; UNCHANGED: <MCInst #{{[0-9]+}} ADDu_MM{{$}}
+    $v0 = ADDu_MM $a0, $a1
+    ; CHECK: <MCInst #{{[0-9]+}} SUBU16_MM{{$}}
+    ; UNCHANGED: <MCInst #{{[0-9]+}} SUBu{{$}}
+    $v0 = SUBu $a0, $a1
+    ; CHECK: <MCInst #{{[0-9]+}} SUBU16_MM{{$}}
+    ; UNCHANGED: <MCInst #{{[0-9]+}} SUBu_MM{{$}}
+    $v0 = SUBu_MM $a0, $a1
+    ; CHECK: <MCInst #{{[0-9]+}} ADDu{{$}}
+    ; UNCHANGED: <MCInst #{{[0-9]+}} ADDu{{$}}
+    $t0 = ADDu $a0, $a1
+    ; CHECK: <MCInst #{{[0-9]+}} ADDu{{$}}
+    ; UNCHANGED: <MCInst #{{[0-9]+}} ADDu{{$}}
+    $v0 = ADDu $t0, $a1
+    ; CHECK: <MCInst #{{[0-9]+}} SUBu{{$}}
+    ; UNCHANGED: <MCInst #{{[0-9]+}} SUBu{{$}}
+    $v0 = SUBu $a0, $t0
+    ; CHECK: <MCInst #{{[0-9]+}} XOR16_MM{{$}}
+    ; CHECK-NEXT: # <MCOperand Reg:V0>
+    ; CHECK-NEXT: # <MCOperand Reg:A0>
+    ; CHECK-NEXT: # <MCOperand Reg:V0>
+    ; UNCHANGED: <MCInst #{{[0-9]+}} XOR{{$}}
+    $v0 = XOR $a0, $v0
+    ; CHECK: <MCInst #{{[0-9]+}} XOR16_MM{{$}}
+    ; CHECK-NEXT: # <MCOperand Reg:V0>
+    ; CHECK-NEXT: # <MCOperand Reg:A0>
+    ; CHECK-NEXT: # <MCOperand Reg:V0>
+    ; UNCHANGED: <MCInst #{{[0-9]+}} XOR_MM{{$}}
+    $v0 = XOR_MM $v0, $a0
+    ; CHECK: <MCInst #{{[0-9]+}} XOR16_MM{{$}}
+    ; CHECK-NEXT: # <MCOperand Reg:V0>
+    ; CHECK-NEXT: # <MCOperand Reg:A0>
+    ; CHECK-NEXT: # <MCOperand Reg:V0>
+    ; UNCHANGED: <MCInst #{{[0-9]+}} XOR{{$}}
+    dead $v0 = XOR killed $v0, killed $a0
+    ; CHECK: <MCInst #{{[0-9]+}} XOR{{$}}
+    ; UNCHANGED: <MCInst #{{[0-9]+}} XOR{{$}}
+    $v0 = XOR $a0, $a1
+    ; CHECK: <MCInst #{{[0-9]+}} XOR{{$}}
+    ; UNCHANGED: <MCInst #{{[0-9]+}} XOR{{$}}
+    $v0 = XOR $v0, $t0
+...
+
+---
+name: stack_arithmetic
+tracksRegLiveness: false
+body: |
+  bb.0:
+    ; CHECK-LABEL: stack_arithmetic:
+    ; UNCHANGED-LABEL: stack_arithmetic:
+    ; CHECK: <MCInst #{{[0-9]+}} ADDIUR1SP_MM{{$}}
+    ; CHECK-NEXT: # <MCOperand Reg:V0>
+    ; CHECK-NEXT: # <MCOperand Imm:0>
+    ; UNCHANGED: <MCInst #{{[0-9]+}} ADDiu{{$}}
+    $v0 = ADDiu $sp, 0
+    ; CHECK: <MCInst #{{[0-9]+}} ADDIUR1SP_MM{{$}}
+    ; CHECK-NEXT: # <MCOperand Reg:S0>
+    ; CHECK-NEXT: # <MCOperand Imm:252>
+    ; UNCHANGED: <MCInst #{{[0-9]+}} ADDiu_MM{{$}}
+    $s0 = ADDiu_MM $sp, 252
+    ; CHECK: <MCInst #{{[0-9]+}} ADDIUR1SP_MM{{$}}
+    ; CHECK-NEXT: # <MCOperand Reg:A0>
+    ; CHECK-NEXT: # <MCOperand Imm:4>
+    ; UNCHANGED: <MCInst #{{[0-9]+}} LEA_ADDiu{{$}}
+    $a0 = LEA_ADDiu $sp, 4
+    ; CHECK: <MCInst #{{[0-9]+}} ADDIUR1SP_MM{{$}}
+    ; CHECK-NEXT: # <MCOperand Reg:A1>
+    ; CHECK-NEXT: # <MCOperand Imm:8>
+    ; UNCHANGED: <MCInst #{{[0-9]+}} LEA_ADDiu_MM{{$}}
+    $a1 = LEA_ADDiu_MM $sp, 8
+    ; CHECK: <MCInst #{{[0-9]+}} ADDiu{{$}}
+    ; UNCHANGED: <MCInst #{{[0-9]+}} ADDiu{{$}}
+    $v0 = ADDiu $sp, -4
+    ; CHECK: <MCInst #{{[0-9]+}} ADDiu{{$}}
+    ; UNCHANGED: <MCInst #{{[0-9]+}} ADDiu{{$}}
+    $v0 = ADDiu $sp, 256
+    ; CHECK: <MCInst #{{[0-9]+}} ADDiu{{$}}
+    ; UNCHANGED: <MCInst #{{[0-9]+}} ADDiu{{$}}
+    $v0 = ADDiu $sp, 2
+    ; CHECK: <MCInst #{{[0-9]+}} ADDiu{{$}}
+    ; UNCHANGED: <MCInst #{{[0-9]+}} ADDiu{{$}}
+    $t0 = ADDiu $sp, 4
+    ; CHECK: <MCInst #{{[0-9]+}} ADDiu{{$}}
+    ; UNCHANGED: <MCInst #{{[0-9]+}} ADDiu{{$}}
+    $v0 = ADDiu $a0, 4
+    ; CHECK: <MCInst #{{[0-9]+}} ADDIUSP_MM{{$}}
+    ; CHECK-NEXT: # <MCOperand Imm:-1032>
+    ; UNCHANGED: <MCInst #{{[0-9]+}} ADDiu{{$}}
+    $sp = frame-setup ADDiu $sp, -1032
+    ; CHECK: <MCInst #{{[0-9]+}} ADDIUSP_MM{{$}}
+    ; CHECK-NEXT: # <MCOperand Imm:-12>
+    ; UNCHANGED: <MCInst #{{[0-9]+}} ADDiu_MM{{$}}
+    $sp = ADDiu_MM $sp, -12
+    ; CHECK: <MCInst #{{[0-9]+}} ADDIUSP_MM{{$}}
+    ; CHECK-NEXT: # <MCOperand Imm:8>
+    ; UNCHANGED: <MCInst #{{[0-9]+}} ADDiu{{$}}
+    $sp = ADDiu $sp, 8
+    ; CHECK: <MCInst #{{[0-9]+}} ADDIUSP_MM{{$}}
+    ; CHECK-NEXT: # <MCOperand Imm:1028>
+    ; UNCHANGED: <MCInst #{{[0-9]+}} ADDiu{{$}}
+    $sp = frame-destroy ADDiu $sp, 1028
+    ; CHECK: <MCInst #{{[0-9]+}} ADDiu{{$}}
+    ; UNCHANGED: <MCInst #{{[0-9]+}} ADDiu{{$}}
+    $sp = ADDiu $sp, -1036
+    ; CHECK: <MCInst #{{[0-9]+}} ADDiu{{$}}
+    ; UNCHANGED: <MCInst #{{[0-9]+}} ADDiu{{$}}
+    $sp = ADDiu $sp, -8
+    ; CHECK: <MCInst #{{[0-9]+}} ADDiu{{$}}
+    ; UNCHANGED: <MCInst #{{[0-9]+}} ADDiu{{$}}
+    $sp = ADDiu $sp, 4
+    ; CHECK: <MCInst #{{[0-9]+}} ADDiu{{$}}
+    ; UNCHANGED: <MCInst #{{[0-9]+}} ADDiu{{$}}
+    $sp = ADDiu $sp, 1032
+    ; CHECK: <MCInst #{{[0-9]+}} ADDiu{{$}}
+    ; UNCHANGED: <MCInst #{{[0-9]+}} ADDiu{{$}}
+    $sp = ADDiu $sp, 9
+...
+
+---
+name: loads
+tracksRegLiveness: false
+body: |
+  bb.0:
+    ; CHECK-LABEL: loads:
+    ; UNCHANGED-LABEL: loads:
+    ; CHECK: <MCInst #{{[0-9]+}} LBU16_MM{{$}}
+    ; UNCHANGED: <MCInst #{{[0-9]+}} LBu{{$}}
+    $v0 = LBu $a0, -1
+    ; CHECK: <MCInst #{{[0-9]+}} LBU16_MM{{$}}
+    ; UNCHANGED: <MCInst #{{[0-9]+}} LBu_MM{{$}}
+    $s0 = LBu_MM $s1, 14
+    ; CHECK: <MCInst #{{[0-9]+}} LBu{{$}}
+    ; UNCHANGED: <MCInst #{{[0-9]+}} LBu{{$}}
+    $v0 = LBu $a0, -2
+    ; CHECK: <MCInst #{{[0-9]+}} LBu{{$}}
+    ; UNCHANGED: <MCInst #{{[0-9]+}} LBu{{$}}
+    $v0 = LBu $a0, 15
+    ; CHECK: <MCInst #{{[0-9]+}} LBu{{$}}
+    ; UNCHANGED: <MCInst #{{[0-9]+}} LBu{{$}}
+    $t0 = LBu $a0, 0
+    ; CHECK: <MCInst #{{[0-9]+}} LBu{{$}}
+    ; UNCHANGED: <MCInst #{{[0-9]+}} LBu{{$}}
+    $v0 = LBu $t0, 0
+    ; CHECK: <MCInst #{{[0-9]+}} LHU16_MM{{$}}
+    ; UNCHANGED: <MCInst #{{[0-9]+}} LHu{{$}}
+    $v0 = LHu $a0, 0
+    ; CHECK: <MCInst #{{[0-9]+}} LHU16_MM{{$}}
+    ; UNCHANGED: <MCInst #{{[0-9]+}} LHu_MM{{$}}
+    $v0 = LHu_MM $a0, 30
+    ; CHECK: <MCInst #{{[0-9]+}} LHu{{$}}
+    ; UNCHANGED: <MCInst #{{[0-9]+}} LHu{{$}}
+    $v0 = LHu $a0, -2
+    ; CHECK: <MCInst #{{[0-9]+}} LHu{{$}}
+    ; UNCHANGED: <MCInst #{{[0-9]+}} LHu{{$}}
+    $v0 = LHu $a0, 32
+    ; CHECK: <MCInst #{{[0-9]+}} LHu{{$}}
+    ; UNCHANGED: <MCInst #{{[0-9]+}} LHu{{$}}
+    $v0 = LHu $a0, 1
+...
+
+---
+name: stores
+tracksRegLiveness: false
+body: |
+  bb.0:
+    ; CHECK-LABEL: stores:
+    ; UNCHANGED-LABEL: stores:
+    ; CHECK: <MCInst #{{[0-9]+}} SB16_MM{{$}}
+    ; UNCHANGED: <MCInst #{{[0-9]+}} SB{{$}}
+    SB $zero, $a0, 0
+    ; CHECK: <MCInst #{{[0-9]+}} SB16_MM{{$}}
+    ; UNCHANGED: <MCInst #{{[0-9]+}} SB_MM{{$}}
+    SB_MM $s1, $a0, 15
+    ; CHECK: <MCInst #{{[0-9]+}} SB{{$}}
+    ; UNCHANGED: <MCInst #{{[0-9]+}} SB{{$}}
+    SB $s0, $a0, 0
+    ; CHECK: <MCInst #{{[0-9]+}} SB{{$}}
+    ; UNCHANGED: <MCInst #{{[0-9]+}} SB{{$}}
+    SB $v0, $a0, -1
+    ; CHECK: <MCInst #{{[0-9]+}} SB{{$}}
+    ; UNCHANGED: <MCInst #{{[0-9]+}} SB{{$}}
+    SB $v0, $a0, 16
+    ; CHECK: <MCInst #{{[0-9]+}} SB{{$}}
+    ; UNCHANGED: <MCInst #{{[0-9]+}} SB{{$}}
+    SB $v0, $t0, 0
+    ; CHECK: <MCInst #{{[0-9]+}} SH16_MM{{$}}
+    ; UNCHANGED: <MCInst #{{[0-9]+}} SH{{$}}
+    SH $zero, $a0, 0
+    ; CHECK: <MCInst #{{[0-9]+}} SH16_MM{{$}}
+    ; UNCHANGED: <MCInst #{{[0-9]+}} SH_MM{{$}}
+    SH_MM $s1, $a0, 30
+    ; CHECK: <MCInst #{{[0-9]+}} SH{{$}}
+    ; UNCHANGED: <MCInst #{{[0-9]+}} SH{{$}}
+    SH $v0, $a0, 1
+    ; CHECK: <MCInst #{{[0-9]+}} SH{{$}}
+    ; UNCHANGED: <MCInst #{{[0-9]+}} SH{{$}}
+    SH $v0, $a0, 32
+    ; CHECK: <MCInst #{{[0-9]+}} SH{{$}}
+    ; UNCHANGED: <MCInst #{{[0-9]+}} SH{{$}}
+    SH $s0, $a0, 0
+...
+
+---
+name: stack_memory
+tracksRegLiveness: false
+body: |
+  bb.0:
+    ; CHECK-LABEL: stack_memory:
+    ; UNCHANGED-LABEL: stack_memory:
+    ; CHECK: <MCInst #{{[0-9]+}} LWSP_MM{{$}}
+    ; UNCHANGED: <MCInst #{{[0-9]+}} LW{{$}}
+    $t0 = LW $sp, 0 :: (load (s32))
+    ; CHECK: <MCInst #{{[0-9]+}} LWSP_MM{{$}}
+    ; UNCHANGED: <MCInst #{{[0-9]+}} LW_MM{{$}}
+    $t0 = LW_MM $sp, 124
+    ; CHECK: <MCInst #{{[0-9]+}} LW{{$}}
+    ; UNCHANGED: <MCInst #{{[0-9]+}} LW{{$}}
+    $t0 = LW $sp, -4
+    ; CHECK: <MCInst #{{[0-9]+}} LW{{$}}
+    ; UNCHANGED: <MCInst #{{[0-9]+}} LW{{$}}
+    $t0 = LW $sp, 128
+    ; CHECK: <MCInst #{{[0-9]+}} LW{{$}}
+    ; UNCHANGED: <MCInst #{{[0-9]+}} LW{{$}}
+    $t0 = LW $sp, 2
+    ; CHECK: <MCInst #{{[0-9]+}} LW{{$}}
+    ; UNCHANGED: <MCInst #{{[0-9]+}} LW{{$}}
+    $t0 = LW $a0, 0
+    ; CHECK: <MCInst #{{[0-9]+}} SWSP_MM{{$}}
+    ; UNCHANGED: <MCInst #{{[0-9]+}} SW{{$}}
+    SW $t0, $sp, 0
+    ; CHECK: <MCInst #{{[0-9]+}} SWSP_MM{{$}}
+    ; UNCHANGED: <MCInst #{{[0-9]+}} SW_MM{{$}}
+    SW_MM $t0, $sp, 124
+    ; CHECK: <MCInst #{{[0-9]+}} SW{{$}}
+    ; UNCHANGED: <MCInst #{{[0-9]+}} SW{{$}}
+    SW $t0, $sp, -4
+    ; CHECK: <MCInst #{{[0-9]+}} SW{{$}}
+    ; UNCHANGED: <MCInst #{{[0-9]+}} SW{{$}}
+    SW $t0, $sp, 128
+    ; CHECK: <MCInst #{{[0-9]+}} SW{{$}}
+    ; UNCHANGED: <MCInst #{{[0-9]+}} SW{{$}}
+    SW $t0, $sp, 2
+    ; CHECK: <MCInst #{{[0-9]+}} SW{{$}}
+    ; UNCHANGED: <MCInst #{{[0-9]+}} SW{{$}}
+    SW $t0, $a0, 0
+...
