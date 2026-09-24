@@ -32,9 +32,6 @@ def GlobalDocumentation {
 
 # Attributes in Clang
 
-```{contents}
-:local: true
-```
 
 ```{program} clang
 ```
@@ -442,23 +439,6 @@ void maybeundeffunc(int __attribute__((maybe_undef))param);
   }];
 }
 
-def CarriesDependencyDocs : Documentation {
-  let Category = DocCatFunction;
-  let Content = [{
-The `carries_dependency` attribute specifies dependency propagation into and
-out of functions.
-
-When specified on a function or Objective-C method, the `carries_dependency`
-attribute means that the return value carries a dependency out of the function,
-so that the implementation need not constrain ordering upon return from that
-function. Implementations of the function and its caller may choose to preserve
-dependencies instead of emitting memory ordering instructions such as fences.
-
-Note, this attribute does not change the meaning of the program, but may result
-in generation of more efficient code.
-  }];
-}
-
 def CPUSpecificCPUDispatchDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
@@ -860,6 +840,105 @@ restrictions described in section 5.4, "Language restrictions for device
 functions" in the SYCL 2020 specification. If the function is a non-static
 member function, `this` shall not be used in a potentially evaluated
 expression.
+  }];
+}
+
+def SYCLAddressSpaceDocs : Documentation {
+  let Category = DocCatType;
+  let Heading = "SYCL Address Spaces";
+  let Content = [{
+.. note::
+
+   These attributes are intended for use in the implementation of SYCL run-time
+   libraries and should not be used in any other context.
+   Programmers writing code intended to conform to the SYCL specification should
+   use the address space facilities specified in the following sections of the
+   SYCL 2020 specification.
+
+   * `4.7.2, "Buffers" <SYCL-2020-4.7.2_>`_
+   * `4.7.6, "Accessors" <SYCL-2020-4.7.6_>`_.
+   * `4.7.7, "Address space classes" <SYCL-2020-4.7.7_>`_.
+   * `F.7, "sycl_khr_static_addrspace_cast" <SYCL-2020-F.7_>`_.
+   * `F.8, "sycl_khr_dynamic_addrspace_cast" <SYCL-2020-F.8_>`_.
+
+The SYCL address space attributes listed below correspond to the five address
+spaces described by
+`SYCL 2020 section 3.8.2, "SYCL device memory model" <SYCL-2020-3.8.2_>`_ and
+`SYCL 2020 section 4.7.7, "Address space classes" <SYCL-2020-4.7.7_>`_.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Address space attribute
+     - SYCL address space
+     - Description
+   * - ``[[clang::sycl_global]]``
+     - global
+     - A memory region accessible by all work-items executing on a device.
+   * - ``[[clang::sycl_local]]``
+     - local
+     - A memory region accessible by all work-items of a single work-group.
+   * - ``[[clang::sycl_private]]``
+     - private
+     - A memory region that is private to a single work-item.
+   * - ``[[clang::sycl_generic]]``
+     - generic
+     - A virtual memory region from which the global, local, and private memory
+       regions may all be accessed.
+   * - ``[[clang::sycl_constant]]``
+     - constant
+     - (*deprecated*) A memory region that holds constant data for an executing
+       kernel.
+
+The SYCL address space attributes are type attributes that may be applied to
+non-function non-reference types to specify an address space qualified type.
+
+A type with a SYCL address space qualifier is a distinct type from the
+otherwise unattributed type. For example, ``int *`` and ``int [[clang::sycl_global]]*``
+designate distinct pointer types which participate in overload resolution and
+template specialization.
+
+The top-level type of a variable declaration cannot have a SYCL address space
+qualifier. For example:
+
+.. code-block:: c++
+
+  int [[clang::sycl_global]] gv;   // error: the top-level type has an address space qualifier.
+  int [[clang::sycl_global]] *pgi; // ok; the address space qualifier is on the pointee type.
+
+Conversions between SYCL address space attributed types are permitted as
+follows.
+
+* Types attributed with the global, local, or private address space attributes
+  are implicitly convertible to matching types with the generic address space
+  attribute.
+
+The mapping of SYCL address spaces to physical address spaces is target
+dependent.
+
+For OpenCL device targets, the SYCL address space attributes are aligned with
+the `OpenCL address space attributes <attr-opencl-addrspace_>`_ such that, e.g.,
+``int [[clang::sycl_global]]*`` and ``int [[clang::opencl_global]]*`` specify
+distinct types both of which map to the same underlying address space.
+Corresponding SYCL and OpenCL address space attributed types are implicitly
+convertible; other conversions are permitted as described above; e.g.,
+``int [[clang::sycl_global]]*`` is implicitly convertible to
+``int [[clang::opencl_generic]]*``.
+
+.. _attr-opencl-addrspace:
+   https://clang.llvm.org/docs/AttributeReference.html#opencl-address-spaces
+.. _SYCL-2020-3.8.2:
+   https://registry.khronos.org/SYCL/specs/sycl-2020/html/sycl-2020.html#_sycl_device_memory_model
+.. _SYCL-2020-4.7.2:
+   https://registry.khronos.org/SYCL/specs/sycl-2020/html/sycl-2020.html#subsec:buffers
+.. _SYCL-2020-4.7.6:
+   https://registry.khronos.org/SYCL/specs/sycl-2020/html/sycl-2020.html#subsec:accessors
+.. _SYCL-2020-4.7.7:
+   https://registry.khronos.org/SYCL/specs/sycl-2020/html/sycl-2020.html#_address_space_classes
+.. _SYCL-2020-F.7:
+   https://registry.khronos.org/SYCL/specs/sycl-2020/html/sycl-2020.html#sec:khr-static-addrspace-cast
+.. _SYCL-2020-F.8:
+   https://registry.khronos.org/SYCL/specs/sycl-2020/html/sycl-2020.html#sec:khr-dynamic-addrspace-cast
   }];
 }
 
@@ -1466,8 +1545,8 @@ Query for this feature with `__has_attribute(diagnose_if)`.
 def NoSpecializationsDocs : Documentation {
   let Category = DocCatDecl;
   let Content = [{
-`[[clang::no_specializations]]` can be applied to function, class, or variable
-templates which should not be explicitly specialized by users. This is primarily
+``[[clang::no_specializations]]`` can be applied to function, class, or variable
+templates for which neither an explicit specialization nor a partial specialization should be declared by users. This is primarily
 used to diagnose user specializations of standard library type traits.
   }];
 }
@@ -3439,8 +3518,12 @@ For backward compatibility with earlier Clang releases, a function alias with an
 `.ifunc` suffix is also emitted. The `.ifunc` suffixed symbol is a deprecated
 feature and support for it may be removed in the future.
 
-For PowerPC targets, `target_clones` is supported on AIX only. Only CPU
-(specified as `cpu=CPU`) and `default` options are allowed. IFUNC is supported
+For PowerPC targets, `target_clones` is supported on AIX only. The attribute
+contains comma-separated strings of one of:
+(a) `default`, (b) `cpu=CPU`, (c) `FEATURE` or `no-FEATURE`.
+The minimum CPU supported is `pwr7` (long spelling such as `power7` is accepted).
+The list of target features is a subset of what's allowed on `target`, limited
+to what is detectable at runtime using `__builtin_cpu_supports`. IFUNC is supported
 on AIX in Clang, so dispatch is implemented similar to other targets using IFUNC.
 An FMV function that is only declared in a translation unit is treated as a
 non-FMV. The resolver and the function clones are given internal linkage.
@@ -5592,6 +5675,11 @@ members, one of which is a pointer to the start of the allocated memory and
 the other one is either an integer type containing the size of the actually
 allocated memory or a pointer to the end of the allocated region. Note, static
 data members do not impact whether a type is span-like or not.
+
+In combination with the `alloc_size` attribute, if the begin pointer is
+non-null, the size of the returned span-like object has to be greater or equal
+to the number of bytes guaranteed to be dereferenceable by `alloc_size`. It also
+guarantees that the number of dereferenceable bytes is at least size.
   }];
 }
 
@@ -7922,7 +8010,7 @@ def HIPManagedAttrDocs : Documentation {
   let Content = [{
 The `__managed__` attribute can be applied to a global variable declaration in HIP.
 A managed variable is emitted as an undefined global symbol in the device binary and is
-registered by `__hipRegisterManagedVariable` in init functions. The HIP runtime allocates
+registered by `__hipRegisterManagedVar` in init functions. The HIP runtime allocates
 managed memory and uses it to define the symbol when loading the device binary.
 A managed variable can be accessed in both device and host code.
   }];

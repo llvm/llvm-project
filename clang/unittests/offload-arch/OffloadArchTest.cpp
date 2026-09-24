@@ -9,8 +9,16 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
+#include "llvm/Support/Process.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/Testing/Support/SupportHelpers.h"
 #include "gtest/gtest.h"
 #include <algorithm>
+#include <cassert>
+#include <cstdlib>
+#include <optional>
 #include <string>
 
 // Defined in AMDGPUArchByHIP.cpp (non-static, compiled into this test).
@@ -18,6 +26,12 @@
 bool compareVersions(llvm::StringRef A, llvm::StringRef B);
 llvm::SmallVector<std::string, 8> getCandidateBinPaths(llvm::StringRef ExeDir);
 #endif
+
+// Defined in AMDGPUArchByKFD.cpp (non-static, compiled into this test).
+int printGPUsByKFD(llvm::StringRef NodePath);
+
+// Defined in LevelZeroArch.cpp.
+std::string getIntelGPUArchName(uint32_t IPVersion);
 
 using namespace llvm;
 
@@ -112,3 +126,233 @@ TEST(CandidateBinPaths, NoDriveRootBin) {
 }
 
 #endif // _WIN32
+
+// --- printGPUsByKFD ---
+
+namespace {
+// Write <Dir>/<Node>/properties containing the given lines.
+void addNode(StringRef Dir, unsigned Node, StringRef Properties) {
+  SmallString<128> NodeDir(Dir);
+  sys::path::append(NodeDir, Twine(Node));
+  ASSERT_FALSE(sys::fs::create_directories(NodeDir));
+
+  SmallString<128> PropertiesPath(NodeDir);
+  sys::path::append(PropertiesPath, "properties");
+  std::error_code EC;
+  raw_fd_ostream OS(PropertiesPath, EC);
+  ASSERT_FALSE(EC);
+  OS << Properties;
+}
+
+// Write a node describing a GPU with the given gfx_target_version.
+void addGPUNode(StringRef Dir, unsigned Node, StringRef GFXVersion) {
+  addNode(Dir, Node, ("gfx_target_version " + GFXVersion + "\n").str());
+}
+
+// Write a node describing a GPU with the given gfx_target_version and
+// capabilities. Write capability2 before and after to catch accidental
+// reads of something other than "capability"
+void addGPUNodeWithCapability(StringRef Dir, unsigned Node,
+                              StringRef GFXVersion, uint64_t Capability,
+                              uint64_t Capability2) {
+  addNode(Dir, Node,
+          ("gfx_target_version " + GFXVersion + "\n" + "capability2 " +
+           Twine(Capability2) + "\n" + "capability " + Twine(Capability) +
+           "\n" + "capability2 " + Twine(Capability2) + "\n")
+              .str());
+}
+
+// Run printGPUsByKFD, collecting what it writes to stdout.
+int printGPUsByKFDCapturingStdout(StringRef NodePath, std::string &Output) {
+  testing::internal::CaptureStdout();
+  int Result = printGPUsByKFD(NodePath);
+  outs().flush();
+  Output = testing::internal::GetCapturedStdout();
+  return Result;
+}
+
+// RAII helper to set an environment variable for the duration of a test
+// Based on the class of the same name in llvm's Jobserver unit tests
+class ScopedEnvironment {
+  std::string Name;
+  std::optional<std::string> OldValue;
+
+  static void setEnv(const std::string &Name, std::optional<StringRef> Value) {
+#if defined(_WIN32)
+    // On Windows, setting an environment variable to the empty string
+    // unsets it, so getenv() returns NULL
+    _putenv_s(Name.c_str(), Value ? Value->str().c_str() : "");
+#else
+    if (Value)
+      setenv(Name.c_str(), Value->str().c_str(), 1);
+    else
+      unsetenv(Name.c_str());
+#endif
+  }
+
+public:
+  ScopedEnvironment(StringRef Name, std::optional<StringRef> Value)
+      : Name(Name.str()), OldValue(sys::Process::GetEnv(Name)) {
+    setEnv(this->Name, Value);
+  }
+
+  ~ScopedEnvironment() {
+    setEnv(Name, OldValue ? std::optional<StringRef>(*OldValue) : std::nullopt);
+  }
+
+  ScopedEnvironment(const ScopedEnvironment &) = delete;
+  ScopedEnvironment &operator=(const ScopedEnvironment &) = delete;
+};
+} // namespace
+
+// A topology directory that cannot be opened must be reported as a failure, so
+// that the caller falls back to enumerating with the HIP runtime.
+TEST(KFDTopology, MissingDirectoryFails) {
+  unittest::TempDir Dir("kfd-topology", /*Unique=*/true);
+  std::string Output;
+  EXPECT_EQ(printGPUsByKFDCapturingStdout(Dir.path("does-not-exist"), Output),
+            1);
+  EXPECT_EQ(Output, "");
+}
+
+// A readable topology describing no GPUs is not an error, and prints nothing.
+TEST(KFDTopology, CPUOnlyTopologySucceeds) {
+  unittest::TempDir Dir("kfd-topology", /*Unique=*/true);
+  addGPUNode(Dir.path(), 0, "0");
+  std::string Output;
+  EXPECT_EQ(printGPUsByKFDCapturingStdout(Dir.path(), Output), 0);
+  EXPECT_EQ(Output, "");
+}
+
+// A node whose properties do not mention gfx_target_version is a CPU too.
+TEST(KFDTopology, NodeWithoutGFXVersionSucceeds) {
+  unittest::TempDir Dir("kfd-topology", /*Unique=*/true);
+  addNode(Dir.path(), 0, "cpu_cores_count 16\n");
+  std::string Output;
+  EXPECT_EQ(printGPUsByKFDCapturingStdout(Dir.path(), Output), 0);
+  EXPECT_EQ(Output, "");
+}
+
+TEST(KFDTopology, EmptyTopologySucceeds) {
+  unittest::TempDir Dir("kfd-topology", /*Unique=*/true);
+  std::string Output;
+  EXPECT_EQ(printGPUsByKFDCapturingStdout(Dir.path(), Output), 0);
+  EXPECT_EQ(Output, "");
+}
+
+TEST(KFDTopology, GPUNodeIsPrinted) {
+  unittest::TempDir Dir("kfd-topology", /*Unique=*/true);
+  addGPUNode(Dir.path(), 0, "0");      // CPU
+  addGPUNode(Dir.path(), 1, "110001"); // gfx1101
+  std::string Output;
+  EXPECT_EQ(printGPUsByKFDCapturingStdout(Dir.path(), Output), 0);
+  EXPECT_EQ(Output, "gfx1101\n");
+}
+
+// Devices are printed in node order, and the step is printed in hex so that
+// e.g. gfx90a renders correctly.
+TEST(KFDTopology, MultipleGPUsArePrintedInNodeOrder) {
+  unittest::TempDir Dir("kfd-topology", /*Unique=*/true);
+  addGPUNode(Dir.path(), 0, "0");      // CPU
+  addGPUNode(Dir.path(), 2, "90010");  // gfx90a
+  addGPUNode(Dir.path(), 1, "110001"); // gfx1101
+  std::string Output;
+  EXPECT_EQ(printGPUsByKFDCapturingStdout(Dir.path(), Output), 0);
+  EXPECT_EQ(Output, "gfx1101\ngfx90a\n");
+}
+
+// Make sure that A0 of gfx1250 is printed as gfx1250-strict. Happens when
+// ASIC revision is 0. Also tests to make sure other properties that look like
+// capability (like capability2) are not read instead.
+TEST(KFDTopology, GFX1250A0IsPrintedAsStrict) {
+  // A temporary patch in ROCr requires this env var to be 0
+  ScopedEnvironment Env("HSA_DISABLE_GFX12_STRICT", "0");
+  unittest::TempDir Dir("kfd-topology", /*Unique=*/true);
+  addGPUNodeWithCapability(Dir.path(), 0, "120500", /*Capability=*/0xF837A280,
+                           /*Capability2=*/0xFFFFFFFF);
+  std::string Output;
+  EXPECT_EQ(printGPUsByKFDCapturingStdout(Dir.path(), Output), 0);
+  EXPECT_EQ(Output, "gfx1250-strict\n");
+}
+
+// HSA_DISABLE_GFX12_STRICT=1 suppresses the suffix on A0.
+TEST(KFDTopology, GFX1250A0StrictSuppressedByEnvVar) {
+  ScopedEnvironment Env("HSA_DISABLE_GFX12_STRICT", "1");
+  unittest::TempDir Dir("kfd-topology", /*Unique=*/true);
+  addGPUNodeWithCapability(Dir.path(), 0, "120500", /*Capability=*/0xF837A280,
+                           /*Capability2=*/0xFFFFFFFF);
+  std::string Output;
+  EXPECT_EQ(printGPUsByKFDCapturingStdout(Dir.path(), Output), 0);
+  EXPECT_EQ(Output, "gfx1250\n");
+}
+
+// Temporary test: Only the exact value "0" enables the suffix.
+TEST(KFDTopology, GFX1250A0StrictIgnoresOtherEnvValues) {
+  ScopedEnvironment Env("HSA_DISABLE_GFX12_STRICT", std::nullopt);
+  unittest::TempDir Dir("kfd-topology", /*Unique=*/true);
+  addGPUNodeWithCapability(Dir.path(), 0, "120500", /*Capability=*/0xF837A280,
+                           /*Capability2=*/0xFFFFFFFF);
+  std::string Output;
+  EXPECT_EQ(printGPUsByKFDCapturingStdout(Dir.path(), Output), 0);
+  EXPECT_EQ(Output, "gfx1250\n");
+}
+
+// Make sure any other version of gfx1250 is printed as gfx1250.
+TEST(KFDTopology, GFX1250NonA0IsPrintedPlain) {
+  ScopedEnvironment Env("HSA_DISABLE_GFX12_STRICT", "0");
+  unittest::TempDir Dir("kfd-topology", /*Unique=*/true);
+  addGPUNodeWithCapability(Dir.path(), 0, "120500", /*Capability=*/0xF877A280,
+                           /*Capability2=*/0x00000000);
+  std::string Output;
+  EXPECT_EQ(printGPUsByKFDCapturingStdout(Dir.path(), Output), 0);
+  EXPECT_EQ(Output, "gfx1250\n");
+}
+
+// --- getIntelGPUArchName ---
+
+namespace {
+// Build a GPU IP version the way the Level Zero driver reports it. A component
+// too wide for its field would corrupt the fields above it and quietly test
+// something other than what it spells out.
+constexpr uint32_t gpuIPVersion(uint32_t Major, uint32_t Minor,
+                                uint32_t Revision) {
+  assert((Major & ~0x3ffu) == 0 && "major version too wide");
+  assert((Minor & ~0xffu) == 0 && "minor version too wide");
+  assert((Revision & ~0x3fu) == 0 && "revision too wide");
+  return (Major << 22) | (Minor << 14) | Revision;
+}
+} // namespace
+
+TEST(IntelGPUArchName, KnownArchitecturesGetAFriendlyName) {
+  EXPECT_EQ(getIntelGPUArchName(gpuIPVersion(12, 60, 7)), "xe-pvc");
+  EXPECT_EQ(getIntelGPUArchName(gpuIPVersion(20, 1, 4)), "xe-bmg-g21");
+  EXPECT_EQ(getIntelGPUArchName(gpuIPVersion(35, 10, 0)), "xe-nvl-p");
+  EXPECT_EQ(getIntelGPUArchName(gpuIPVersion(12, 0, 0)), "xe-tgllp");
+}
+
+// When several devices share a major and a minor version, the first one listed
+// in IntelGPUTargetParser.def names the whole group.
+TEST(IntelGPUArchName, FirstNameOfAGroupWins) {
+  EXPECT_EQ(getIntelGPUArchName(gpuIPVersion(30, 5, 0)), "xe-nvl-u");
+  EXPECT_EQ(getIntelGPUArchName(gpuIPVersion(12, 55, 0)), "xe-acm-g10");
+}
+
+// Devices with the same major and minor versions but different revisions are
+// the same device.
+TEST(IntelGPUArchName, RevisionDoesNotAffectTheName) {
+  EXPECT_EQ(getIntelGPUArchName(gpuIPVersion(12, 60, 0)), "xe-pvc");
+  EXPECT_EQ(getIntelGPUArchName(gpuIPVersion(12, 60, 63)), "xe-pvc");
+}
+
+// An architecture that is not in the table still has to be named, so that a
+// newer device is usable with a compiler that predates it.
+TEST(IntelGPUArchName, UnknownArchitecturesGetANumericName) {
+  EXPECT_EQ(getIntelGPUArchName(gpuIPVersion(40, 11, 0)), "xe_40.11.0");
+  EXPECT_EQ(getIntelGPUArchName(gpuIPVersion(12, 99, 3)), "xe_12.99.3");
+}
+
+// Pre-Xe devices report a GPU IP version too, but they have no human-friendly
+// identifier.
+TEST(IntelGPUArchName, LegacyArchitecture) {
+  EXPECT_EQ(getIntelGPUArchName(gpuIPVersion(9, 0, 9)), "xe_9.0.9");
+}

@@ -55,7 +55,7 @@ end
 ! CHECK:         %[[DVAL:.*]] = fir.load %[[D_DECL]]#0 : !fir.ref<complex<f32>>
 ! CHECK:         omp.atomic.compare memory_order(relaxed) %[[X_DECL]]#0 : !fir.ref<complex<f32>> {
 ! CHECK:         ^bb0(%[[XVAL:.*]]: complex<f32>):
-! CHECK:           %[[CMP:.*]] = fir.cmpc "oeq", %[[XVAL]], %[[EVAL]] {fastmath = #arith.fastmath<contract>} : complex<f32>
+! CHECK:           %[[CMP:.*]] = fir.cmpc "oeq", %[[XVAL]], %[[EVAL]] <{fastmath = #arith.fastmath<contract>}> : complex<f32>
 ! CHECK:           %[[SEL:.*]] = arith.select %[[CMP]], %[[DVAL]], %[[XVAL]] : complex<f32>
 ! CHECK:           omp.yield(%[[SEL]] : complex<f32>)
 ! CHECK:         }
@@ -258,7 +258,7 @@ end
 ! CHECK:             omp.yield(%[[SEL]] : i32)
 ! CHECK:           }
 ! CHECK:           omp.atomic.read %{{.*}}#0 = %[[X_DECL]]#0 : !fir.ref<i32>, !fir.ref<i32>, i32
-! CHECK:         } {fail_only}
+! CHECK:         } fail_only
 subroutine atomic_compare_capture_min_failonly(x, e, v)
   integer :: x, e, v
   !$omp atomic compare capture
@@ -363,7 +363,7 @@ end
 ! CHECK:             omp.yield(%[[SEL]] : i32)
 ! CHECK:           }
 ! CHECK:           omp.atomic.read %[[V_DECL]]#0 = %[[X_DECL]]#0 : !fir.ref<i32>, !fir.ref<i32>, i32
-! CHECK:         } {fail_only}
+! CHECK:         } fail_only
 subroutine atomic_compare_capture_fail_only(x, e, d, v)
   integer :: x, e, d, v
   !$omp atomic compare capture

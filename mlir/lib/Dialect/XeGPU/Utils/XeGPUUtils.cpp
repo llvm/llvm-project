@@ -23,6 +23,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/ValueRange.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/Support/Casting.h"
@@ -160,19 +161,30 @@ xegpu::DistributeLayoutAttr xegpu::getDistributeLayoutAttr(const Value value) {
     }
 
     std::string layoutName = getTemporaryLayoutName(result);
-    if (defOp->hasAttr(layoutName)) {
+    if (defOp->hasDiscardableAttr(layoutName)) {
       auto layout =
-          defOp->getAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
+          defOp->getDiscardableAttrOfType<xegpu::DistributeLayoutAttr>(
+              layoutName);
       return layout;
     }
   }
 
   if (auto arg = dyn_cast<BlockArgument>(value)) {
     auto *parentOp = arg.getOwner()->getParentOp();
-    if (auto loop = dyn_cast_if_present<LoopLikeOpInterface>(parentOp)) {
-      OpOperand *tiedInit = loop.getTiedLoopInit(arg);
-      if (tiedInit)
+    auto loop = dyn_cast_if_present<LoopLikeOpInterface>(parentOp);
+    if (loop)
+      if (OpOperand *tiedInit = loop.getTiedLoopInit(arg))
         return getTemporaryLayout(*tiedInit);
+    // An scf.while "after" argument is tied to no init operand; scf.condition
+    // feeds it. Only a pass-through is supported: the forwarded value must be
+    // the matching "before" argument, whose tied init operand carries the
+    // layout.
+    if (auto whileOp = dyn_cast_if_present<scf::WhileOp>(parentOp);
+        whileOp && arg.getOwner()->getParent() == &whileOp.getAfter()) {
+      Value forwarded = whileOp.getConditionOp().getArgs()[arg.getArgNumber()];
+      if (auto beforeArg = dyn_cast<BlockArgument>(forwarded))
+        if (OpOperand *tiedInit = whileOp.getTiedLoopInit(beforeArg))
+          return getTemporaryLayout(*tiedInit);
     }
   }
 
@@ -235,27 +247,15 @@ xegpu::getDistributeLayoutAttr(const OpOperand &opr) {
     if (isa<xegpu::StoreNdOp, xegpu::StoreMatrixOp>(op) && (idx < 2))
       return layout;
 
-    if (isa<xegpu::StoreScatterOp>(op)) {
-      xegpu::StoreScatterOp store(op);
-      int chunkSize = store.getChunkSize().value_or(1);
-      if (layout && idx >= 2 && chunkSize > 1)
-        return layout.dropDims(llvm::to_vector(
-            llvm::seq<int64_t>(layout.getRank() - 1, layout.getRank())));
+    // For gather/scatter ops the mask and offsets share the value's layout.
+    if (isa<xegpu::StoreScatterOp, xegpu::LoadGatherOp>(op))
       return layout;
-    }
-    if (isa<xegpu::LoadGatherOp>(op)) {
-      xegpu::LoadGatherOp load(op);
-      int chunkSize = load.getChunkSize().value_or(1);
-      if (layout && idx >= 1 && chunkSize > 1)
-        return layout.dropDims(llvm::to_vector(
-            llvm::seq<int64_t>(layout.getRank() - 1, layout.getRank())));
-      return layout;
-    }
   }
 
   std::string layoutName = xegpu::getTemporaryLayoutName(opr);
-  if (op->hasAttr(layoutName)) {
-    auto layout = op->getAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
+  if (op->hasDiscardableAttr(layoutName)) {
+    auto layout =
+        op->getDiscardableAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
     return layout;
   }
 
@@ -312,11 +312,11 @@ void xegpu::setDistributeLayoutAttr(
   }
 
   std::string name = xegpu::getTemporaryLayoutName(result);
-  if (owner->hasAttrOfType<DistributeLayoutAttr>(name)) {
+  if (owner->hasDiscardableAttrOfType<DistributeLayoutAttr>(name)) {
     return;
   }
   if (layout) {
-    owner->setAttr(name, layout);
+    owner->setDiscardableAttr(name, layout);
   }
 }
 
@@ -360,11 +360,11 @@ void xegpu::setDistributeLayoutAttr(const OpOperand &operand,
   }
 
   std::string name = xegpu::getTemporaryLayoutName(operand);
-  if (owner->hasAttrOfType<DistributeLayoutAttr>(name)) {
+  if (owner->hasDiscardableAttrOfType<DistributeLayoutAttr>(name)) {
     return;
   }
   if (layout) {
-    owner->setAttr(name, layout);
+    owner->setDiscardableAttr(name, layout);
   }
 }
 
@@ -374,8 +374,9 @@ xegpu::getTemporaryLayout(const T &operandOrResult) {
   Operation *op = operandOrResult.getOwner();
 
   std::string layoutName = xegpu::getTemporaryLayoutName(operandOrResult);
-  if (op->hasAttr(layoutName)) {
-    auto layout = op->getAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
+  if (op->hasDiscardableAttr(layoutName)) {
+    auto layout =
+        op->getDiscardableAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
     return layout;
   }
 
@@ -392,11 +393,11 @@ void xegpu::setTemporaryLayout(const T &operandOrResult,
                                const xegpu::DistributeLayoutAttr layout) {
   Operation *owner = operandOrResult.getOwner();
   std::string name = xegpu::getTemporaryLayoutName(operandOrResult);
-  if (owner->hasAttrOfType<xegpu::DistributeLayoutAttr>(name)) {
+  if (owner->hasDiscardableAttrOfType<xegpu::DistributeLayoutAttr>(name)) {
     return;
   }
   if (layout) {
-    owner->setAttr(name, layout);
+    owner->setDiscardableAttr(name, layout);
   }
 }
 
@@ -749,18 +750,26 @@ Value xegpu::createReductionNeutralValue(OpBuilder &builder, Location loc,
           elemTy, APInt::getSignedMinValue(intTy.getWidth())));
     return nullptr;
 
-  case vector::CombiningKind::MINNUMF:
   case vector::CombiningKind::MINIMUMF:
     if (auto floatTy = dyn_cast<FloatType>(elemTy))
       return makeConst(builder.getFloatAttr(
           elemTy, APFloat::getInf(floatTy.getFloatSemantics())));
     return nullptr;
 
-  case vector::CombiningKind::MAXNUMF:
   case vector::CombiningKind::MAXIMUMF:
     if (auto floatTy = dyn_cast<FloatType>(elemTy))
       return makeConst(builder.getFloatAttr(
-          elemTy, APFloat::getInf(floatTy.getFloatSemantics(), true)));
+          elemTy,
+          APFloat::getInf(floatTy.getFloatSemantics(), /*Negative=*/true)));
+    return nullptr;
+
+  case vector::CombiningKind::MINNUMF:
+  case vector::CombiningKind::MINIMUMNUMF:
+  case vector::CombiningKind::MAXNUMF:
+  case vector::CombiningKind::MAXIMUMNUMF:
+    if (auto floatTy = dyn_cast<FloatType>(elemTy))
+      return makeConst(builder.getFloatAttr(
+          elemTy, APFloat::getQNaN(floatTy.getFloatSemantics())));
     return nullptr;
   }
   return nullptr;
@@ -773,13 +782,21 @@ template int
 xegpu::getLargestDivisor<unsigned>(unsigned dim, ArrayRef<unsigned> candidates,
                                    ArrayRef<unsigned> candidateMultiples);
 
+std::optional<SmallVector<int64_t>>
+xegpu::getInner2DIfUnitLeadingDims(ArrayRef<int64_t> vals) {
+  if (vals.size() < 2)
+    return std::nullopt;
+  if (llvm::any_of(vals.drop_back(2), [](int64_t v) { return v != 1; }))
+    return std::nullopt;
+  return SmallVector<int64_t>(vals.take_back(2));
+}
+
 bool xegpu::requirePacked(const xegpu::DistributeLayoutAttr layout) {
   if (!layout)
     return false;
-  auto laneData = layout.getEffectiveLaneDataAsInt();
-  if (laneData.size() != 2)
-    return false;
-  return laneData[0] != 1;
+  auto laneData =
+      getInner2DIfUnitLeadingDims(layout.getEffectiveLaneDataAsInt());
+  return laneData && (*laneData)[0] != 1;
 }
 
 bool xegpu::requireTranspose(const xegpu::DistributeLayoutAttr layout,
@@ -790,10 +807,19 @@ bool xegpu::requireTranspose(const xegpu::DistributeLayoutAttr layout,
     return false;
   if (!layout)
     return false;
-  auto laneLayout = layout.getEffectiveLaneLayoutAsInt();
-  if (laneLayout.size() != 2)
+  auto laneLayout =
+      getInner2DIfUnitLeadingDims(layout.getEffectiveLaneLayoutAsInt());
+  return laneLayout && (*laneLayout)[0] == uArch->getSubgroupSize() &&
+         (*laneLayout)[1] == 1;
+}
+
+bool xegpu::hasStaticShapeAndStrides(MemRefType type) {
+  if (!type.hasStaticShape())
     return false;
-  return laneLayout[0] == uArch->getSubgroupSize() && laneLayout[1] == 1;
+  SmallVector<int64_t> strides;
+  int64_t offset;
+  return succeeded(type.getStridesAndOffset(strides, offset)) &&
+         llvm::none_of(strides, ShapedType::isDynamic);
 }
 
 // Check if dst shape is an expansion of src shape by inserting unit dimensions.

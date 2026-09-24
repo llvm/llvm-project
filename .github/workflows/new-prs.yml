@@ -16,11 +16,11 @@ on:
 
 jobs:
   greeter:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       pull-requests: write
     container:
-      image: "ghcr.io/llvm/amd64/ci-ubuntu-24.04-github-automation:latest@sha256:f4193631559b3a6ccd815280f80fd9211305a3f246e75aec84c6c8caea01d2a9"
+      image: "ghcr.io/llvm/amd64/ci-ubuntu-26.04-github-automation:latest@sha256:a8499c90a5890da942693c3e6a28113c2b851037c5facbb102a271f690439472"
     # Only comment on PRs that have been opened for the first time, by someone
     # new to LLVM or to GitHub as a whole. Ideally we'd look for FIRST_TIMER
     # or FIRST_TIME_CONTRIBUTOR, but this does not appear to work. Instead check
@@ -54,7 +54,7 @@ jobs:
     environment:
       name: main-branch-only
       deployment: false
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     # Ignore PRs with more than 10 commits.  Pull requests with a lot of
     # commits tend to be accidents usually when someone made a mistake while trying
     # to rebase.  We want to ignore these pull requests to avoid excessive

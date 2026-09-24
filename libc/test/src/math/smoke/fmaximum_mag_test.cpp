@@ -10,4 +10,4 @@
 
 #include "src/math/fmaximum_mag.h"
 
-LIST_FMAXIMUM_MAG_TESTS(double, LIBC_NAMESPACE::fmaximum_mag)
+LIST_FMAXIMUM_MAG_TESTS(FmaximumMag, double, LIBC_NAMESPACE::fmaximum_mag)

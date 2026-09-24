@@ -119,7 +119,11 @@ public:
   bool hasRelaxedMMIO() const {
     return hasFeature(NVPTX::SM70) && hasFeature(NVPTX::PTX82);
   }
+  bool hasLocalVolatile() const { return hasFeature(NVPTX::PTX91); }
   bool hasDotInstructions() const { return hasFeature(NVPTX::SM61); }
+  bool hasCLMAD() const {
+    return hasFeature(NVPTX::SM80) && hasFeature(NVPTX::PTX93);
+  }
   // Cache hint SM/PTX version requirements
   bool hasL1EvictionHint() const {
     return hasFeature(NVPTX::SM70) && hasFeature(NVPTX::PTX74);
@@ -198,7 +202,7 @@ public:
   bool hasTargetName() const { return !getCPU().empty(); }
 
   // The architecture's name, which is what `.target` is emitted from.
-  StringRef getTargetName() const { return NVPTX::getArchName(Arch); }
+  StringRef getTargetName() const;
 
   bool hasNativeBF16Support(unsigned Opcode) const;
 

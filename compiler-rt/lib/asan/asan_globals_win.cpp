@@ -12,16 +12,23 @@
 
 #include "asan_interface_internal.h"
 #if SANITIZER_WINDOWS
+#  include "sanitizer_common/sanitizer_win_defs.h"
+
+#  if defined(__GNUC__) && !defined(__clang__)
+#    include <intrin.h>
+#  endif
 
 namespace __asan {
 
-#pragma section(".ASAN$GA", read, write)
-#pragma section(".ASAN$GZ", read, write)
+#  if !defined(__GNUC__) || defined(__clang__)
+#    pragma section(".ASAN$GA", read, write)
+#    pragma section(".ASAN$GZ", read, write)
+#  endif
 extern "C" alignas(sizeof(__asan_global))
-    __declspec(allocate(".ASAN$GA")) __asan_global __asan_globals_start = {};
+    IN_SECTION(".ASAN$GA") __asan_global __asan_globals_start = {};
 extern "C" alignas(sizeof(__asan_global))
-    __declspec(allocate(".ASAN$GZ")) __asan_global __asan_globals_end = {};
-#pragma comment(linker, "/merge:.ASAN=.data")
+    IN_SECTION(".ASAN$GZ") __asan_global __asan_globals_end = {};
+#  pragma comment(linker, "/merge:.ASAN=.data")
 
 static void call_on_globals(void (*hook)(__asan_global *, uptr)) {
   __asan_global *start = &__asan_globals_start + 1;
@@ -51,12 +58,14 @@ static void unregister_dso_globals() {
 }
 
 // Register globals
-#pragma section(".CRT$XCU", long, read)
-#pragma section(".CRT$XTX", long, read)
-extern "C" __declspec(allocate(".CRT$XCU"))
-void (*const __asan_dso_reg_hook)() = &register_dso_globals;
-extern "C" __declspec(allocate(".CRT$XTX"))
-void (*const __asan_dso_unreg_hook)() = &unregister_dso_globals;
+#  if !defined(__GNUC__) || defined(__clang__)
+#    pragma section(".CRT$XCU", long, read)
+#    pragma section(".CRT$XTX", long, read)
+#  endif
+extern "C" IN_SECTION(".CRT$XCU") void (*const __asan_dso_reg_hook)() =
+    &register_dso_globals;
+extern "C" IN_SECTION(".CRT$XTX") void (*const __asan_dso_unreg_hook)() =
+    &unregister_dso_globals;
 
 } // namespace __asan
 

@@ -12,7 +12,7 @@ on:
 jobs:
   validate-tag:
     name: Validate Tag
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     if: github.repository == 'llvm/llvm-project'
     outputs:
       release-version: ${{ steps.validate-tag.outputs.release-version }}
@@ -26,7 +26,7 @@ jobs:
 
   release-create:
     name: Create a New Release
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     environment:
       name: release
       deployment: false
@@ -78,27 +78,11 @@ jobs:
       LLVM_TOKEN_GENERATOR_CLIENT_ID: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
       LLVM_TOKEN_GENERATOR_PRIVATE_KEY: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
 
-  release-doxygen:
-    name: Build and Upload Release Doxygen
-    permissions:
-      contents: write
-    needs:
-      - validate-tag
-      - release-create
-    uses: ./.github/workflows/release-doxygen.yml
-    with:
-      release-version: ${{ needs.validate-tag.outputs.release-version }}
-      upload: true
-    # Called workflows don't have access to secrets by default, so we need to explicitly pass secrets that we use.
-    secrets:
-      LLVM_TOKEN_GENERATOR_CLIENT_ID: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
-      LLVM_TOKEN_GENERATOR_PRIVATE_KEY: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
-
   # The pypi trusted publishing does not support called workflows, so we
   # can't use them here.
   release-lit:
     name: Release Lit
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       id-token: write # Requred for pypi publishing
     needs:
@@ -185,7 +169,7 @@ jobs:
 
   uncomment-download-links:
     name: Uncomment download links
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: write # For updating the release message.
     if: '!cancelled()'

@@ -572,6 +572,15 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         checkTaskReductionByref(op, result);
       })
       .Case([&](omp::TaskwaitOp op) { checkNowait(op, result); })
+      .Case([&](omp::DispatchOp op) {
+        // OpenMP 5.1 dispatch creates an explicit task; nowait controls whether
+        // it is included. Diagnose unsupported asynchronous tasking before 5.2,
+        // where the nowait property has no effect on dispatch.
+        int64_t version = omp::getOpenMPVersionAttribute(
+            op->getParentOfType<ModuleOp>(), /*fallback=*/51);
+        if (version < 52)
+          checkNowait(op, result);
+      })
       .Case([&](omp::TaskloopContextOp op) {
         checkAllocate(op, result);
         checkInReduction(op, result);
@@ -870,6 +879,24 @@ static llvm::omp::ProcBindKind getProcBindKind(omp::ClauseProcBindKind kind) {
     return llvm::omp::ProcBindKind::OMP_PROC_BIND_spread;
   }
   llvm_unreachable("Unknown ClauseProcBindKind kind");
+}
+
+/// Convert 'dispatch' operation into LLVM IR.
+static LogicalResult
+convertOmpDispatch(Operation &opInst, llvm::IRBuilderBase &builder,
+                   LLVM::ModuleTranslation &moduleTranslation) {
+  auto dispatchOp = cast<omp::DispatchOp>(opInst);
+
+  if (failed(checkImplementationStatus(opInst)))
+    return failure();
+
+  auto &region = dispatchOp.getRegion();
+  auto result = convertOmpOpRegions(region, "omp.dispatch.region", builder,
+                                    moduleTranslation);
+  if (!result)
+    return handleError(result.takeError(), opInst);
+  builder.SetInsertPoint(*result);
+  return success();
 }
 
 /// Converts an OpenMP 'masked' operation into LLVM IR using OpenMPIRBuilder.
@@ -1719,6 +1746,7 @@ static LogicalResult createReductionsAndCleanup(
   // and remove it later.
   llvm::UnreachableInst *tempTerminator = builder.CreateUnreachable();
   builder.SetInsertPoint(tempTerminator);
+  llvm::DebugLoc reductionLoc = builder.getCurrentDebugLocation();
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy contInsertPoint =
       ompBuilder->createReductions(builder, allocaIP, reductionInfos, isByRef,
                                    isNowait, isTeamsReduction);
@@ -1732,7 +1760,8 @@ static LogicalResult createReductionsAndCleanup(
   llvm::OpenMPIRBuilder::InsertPointTy afterIP = *contInsertPoint;
   if (!isTeamsReduction) {
     llvm::OpenMPIRBuilder::InsertPointOrErrorTy barrierIP =
-        ompBuilder->createBarrier(*contInsertPoint, llvm::omp::OMPD_for);
+        ompBuilder->createBarrier({*contInsertPoint, reductionLoc},
+                                  llvm::omp::OMPD_for);
 
     if (failed(handleError(barrierIP, *op)))
       return failure();
@@ -2854,10 +2883,11 @@ void TaskContextStructManager::generateTaskContextStruct() {
   llvm::DataLayout dataLayout =
       builder.GetInsertBlock()->getModule()->getDataLayout();
   llvm::Type *intPtrTy = builder.getIntPtrTy(dataLayout);
-  llvm::Constant *allocSize = llvm::ConstantExpr::getSizeOf(structTy);
+  llvm::Value *allocSize =
+      builder.CreateTypeSize(intPtrTy, dataLayout.getTypeAllocSize(structTy));
 
   // Heap allocate the structure
-  structPtr = builder.CreateMalloc(intPtrTy, structTy, allocSize,
+  structPtr = builder.CreateMalloc(intPtrTy, allocSize,
                                    /*ArraySize=*/nullptr, /*MallocF=*/nullptr,
                                    "omp.task.context_ptr");
 }
@@ -3174,10 +3204,13 @@ buildDependData(OperandRange dependVars, std::optional<ArrayAttr> dependKinds,
 
   // Heap-allocate the kmp_depend_info array so we don't risk
   // dynamic-sized alloca outside the entry block (e.g. inside loops).
-  llvm::Constant *allocSize = llvm::ConstantExpr::getSizeOf(dependInfoTy);
+  llvm::DataLayout dataLayout =
+      builder.GetInsertBlock()->getModule()->getDataLayout();
+  llvm::Value *allocSize = builder.CreateTypeSize(
+      ompBuilder.SizeTy, dataLayout.getTypeAllocSize(dependInfoTy));
   llvm::Value *depArray =
-      builder.CreateMalloc(ompBuilder.SizeTy, dependInfoTy, allocSize,
-                           totalCount, /*MallocF=*/nullptr, ".dep.arr.addr");
+      builder.CreateMalloc(ompBuilder.SizeTy, allocSize, totalCount,
+                           /*MallocF=*/nullptr, ".dep.arr.addr");
 
   // Fill non-iterated entries at indices [0, numLocator).
   if (numLocator > 0) {
@@ -3519,7 +3552,8 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
           moduleTranslation.lookupValue(taskOp.getIfExpr()), dependencies, ad,
           taskOp.getMergeable(),
           moduleTranslation.lookupValue(taskOp.getEventHandle()),
-          moduleTranslation.lookupValue(taskOp.getPriority()));
+          moduleTranslation.lookupValue(taskOp.getPriority()),
+          taskOp.getThreadset() == omp::ThreadsetPolicy::omp_pool);
 
   if (failed(handleError(afterIP, *taskOp)))
     return failure();
@@ -4156,7 +4190,8 @@ convertOmpTaskloopContextOp(omp::TaskloopContextOp contextOp,
           contextOp.getMergeable(),
           moduleTranslation.lookupValue(contextOp.getPriority()),
           loopOp.getCollapseNumLoops(), taskDupOrNull,
-          taskStructMgr.getStructPtr());
+          taskStructMgr.getStructPtr(),
+          contextOp.getThreadset() == omp::ThreadsetPolicy::omp_pool);
 
   if (failed(handleError(afterIP, opInst)))
     return failure();
@@ -5715,8 +5750,7 @@ static void extractAtomicControlFlags(omp::AtomicUpdateOp atomicUpdateOp,
   isIgnoreDenormalMode = false;
   isFineGrainedMemory = false;
   isRemoteMemory = false;
-  if (atomicUpdateOp &&
-      atomicUpdateOp->hasAttr(atomicUpdateOp.getAtomicControlAttrName())) {
+  if (atomicUpdateOp && atomicUpdateOp.getAtomicControlAttr()) {
     mlir::omp::AtomicControlAttr atomicControlAttr =
         atomicUpdateOp.getAtomicControlAttr();
     isIgnoreDenormalMode = atomicControlAttr.getIgnoreDenormalMode();
@@ -6920,6 +6954,63 @@ static Value getBaseValueForTypeLookup(Value value) {
   return value;
 }
 
+// Determine the LLVM type whose storage size should be allocated for an
+// OpenMP allocate directive list item. Opaque pointers lose element type, so
+// trace through declare wrappers to the underlying global or stack allocation.
+static llvm::Type *
+getAllocatedLlvmTypeForVariable(Value var, Value baseVar,
+                                LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::Type *llvmVarTy = moduleTranslation.convertType(var.getType());
+  if (!llvmVarTy->isPointerTy())
+    return llvmVarTy;
+
+  if (Operation *globalOp = getGlobalOpFromValue(baseVar))
+    if (auto gop = dyn_cast<LLVM::GlobalOp>(globalOp))
+      return moduleTranslation.convertType(gop.getGlobalType());
+
+  if (auto allocaOp =
+          dyn_cast_if_present<LLVM::AllocaOp>(baseVar.getDefiningOp()))
+    return moduleTranslation.convertType(allocaOp.getElemType());
+
+  if (llvm::Value *baseLlvm = moduleTranslation.lookupValue(baseVar))
+    if (auto *allocaInst = dyn_cast<llvm::AllocaInst>(baseLlvm))
+      return allocaInst->getAllocatedType();
+
+  return llvmVarTy;
+}
+
+// For dynamically-sized stack allocations, compute the allocation size from
+// the alloca's element count at runtime.
+static std::optional<llvm::Value *> getDynamicAllocatedSize(
+    Value var, Value baseVar, LLVM::ModuleTranslation &moduleTranslation,
+    llvm::IRBuilderBase &builder, const llvm::DataLayout &dataLayout) {
+  if (auto allocaOp =
+          dyn_cast_if_present<LLVM::AllocaOp>(baseVar.getDefiningOp())) {
+    if (Value arraySize = allocaOp.getArraySize()) {
+      llvm::Type *elemTy =
+          moduleTranslation.convertType(allocaOp.getElemType());
+      llvm::Value *numElems = moduleTranslation.lookupValue(arraySize);
+      if (!numElems->getType()->isIntegerTy(64))
+        numElems = builder.CreateZExt(numElems, builder.getInt64Ty());
+      uint64_t elemSize = dataLayout.getTypeAllocSize(elemTy).getFixedValue();
+      return builder.CreateMul(numElems, builder.getInt64(elemSize));
+    }
+  }
+  if (llvm::Value *baseLlvm = moduleTranslation.lookupValue(baseVar)) {
+    if (auto *allocaInst = dyn_cast<llvm::AllocaInst>(baseLlvm)) {
+      if (allocaInst->isArrayAllocation() &&
+          !llvm::isa<llvm::ArrayType>(allocaInst->getAllocatedType())) {
+        uint64_t elemSize =
+            dataLayout.getTypeAllocSize(allocaInst->getAllocatedType())
+                .getFixedValue();
+        return builder.CreateMul(allocaInst->getArraySize(),
+                                 builder.getInt64(elemSize));
+      }
+    }
+  }
+  return std::nullopt;
+}
+
 static llvm::SmallString<64>
 getDeclareTargetRefPtrSuffix(LLVM::GlobalOp globalOp,
                              llvm::OpenMPIRBuilder &ompBuilder,
@@ -6945,22 +7036,28 @@ getDeclareTargetRefPtrSuffix(LLVM::GlobalOp globalOp,
 static bool isDeclareTargetLink(Value value) {
   if (auto declareTargetGlobal =
           dyn_cast_if_present<omp::DeclareTargetInterface>(
-              getGlobalOpFromValue(value)))
-    if (declareTargetGlobal.getDeclareTargetCaptureClause() ==
-        omp::DeclareTargetCaptureClause::link)
+              getGlobalOpFromValue(value))) {
+    omp::DeclareTargetAttr declareTargetAttr =
+        declareTargetGlobal.getDeclareTarget();
+    if (declareTargetAttr && declareTargetAttr.getCaptureClause() ==
+                                 omp::DeclareTargetCaptureClause::link)
       return true;
+  }
   return false;
 }
 
 static bool isDeclareTargetTo(Value value) {
   if (auto declareTargetGlobal =
           dyn_cast_if_present<omp::DeclareTargetInterface>(
-              getGlobalOpFromValue(value)))
-    if (declareTargetGlobal.getDeclareTargetCaptureClause() ==
-            omp::DeclareTargetCaptureClause::to ||
-        declareTargetGlobal.getDeclareTargetCaptureClause() ==
-            omp::DeclareTargetCaptureClause::enter)
+              getGlobalOpFromValue(value))) {
+    omp::DeclareTargetAttr declareTargetAttr =
+        declareTargetGlobal.getDeclareTarget();
+    if (declareTargetAttr && (declareTargetAttr.getCaptureClause() ==
+                                  omp::DeclareTargetCaptureClause::to ||
+                              declareTargetAttr.getCaptureClause() ==
+                                  omp::DeclareTargetCaptureClause::enter))
       return true;
+  }
   return false;
 }
 
@@ -7086,6 +7183,16 @@ static bool checkIfPointerMap(omp::MapInfoOp mapOp) {
     return true;
 
   return false;
+}
+
+// A privatizeable attach map is a pointer/descriptor that is privatized and
+// passed directly as a kernel argument (target_param) rather than undergoing
+// the standard attach/parent mapping. These are handled specially in a couple
+// of places in map lowering.
+static bool isPrivatizeableAttachMap(omp::ClauseMapFlags mapType) {
+  return bitEnumContainsAll(mapType, omp::ClauseMapFlags::priv |
+                                         omp::ClauseMapFlags::target_param |
+                                         omp::ClauseMapFlags::attach);
 }
 
 // This function calculates the size to be offloaded for a specified type, given
@@ -7240,6 +7347,9 @@ convertClauseMapFlags(omp::ClauseMapFlags mlirFlags) {
   if (bitEnumContainsAll(mlirFlags, omp::ClauseMapFlags::attach))
     mapType |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ATTACH;
 
+  if (bitEnumContainsAll(mlirFlags, omp::ClauseMapFlags::target_param))
+    mapType |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM;
+
   if (bitEnumContainsAll(mlirFlags, omp::ClauseMapFlags::is_device_ptr)) {
     mapType |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM;
     if (!hasExplicitMap)
@@ -7284,16 +7394,16 @@ static void collectMapDataFromMapOperands(
   // Process MapOperands
   for (Value mapValue : mapVars) {
     auto mapOp = cast<omp::MapInfoOp>(mapValue.getDefiningOp());
-    bool isRefPtrOrPteeMapWithAttach =
-        checkRefPtrOrPteeMapWithAttach(mapOp.getMapType());
-    Value offloadPtr = (mapOp.getVarPtrPtr() && !isRefPtrOrPteeMapWithAttach)
+    bool isAttachStyleMap =
+        checkRefPtrOrPteeMapWithAttach(mapOp.getMapType()) ||
+        isPrivatizeableAttachMap(mapOp.getMapType());
+    Value offloadPtr = (mapOp.getVarPtrPtr() && !isAttachStyleMap)
                            ? mapOp.getVarPtrPtr()
                            : mapOp.getVarPtr();
     mapData.OriginalValue.push_back(moduleTranslation.lookupValue(offloadPtr));
     mapData.Pointers.push_back(
-        isRefPtrOrPteeMapWithAttach
-            ? moduleTranslation.lookupValue(mapOp.getVarPtrPtr())
-            : mapData.OriginalValue.back());
+        isAttachStyleMap ? moduleTranslation.lookupValue(mapOp.getVarPtrPtr())
+                         : mapData.OriginalValue.back());
 
     if (llvm::Value *refPtr =
             getRefPtrIfDeclareTarget(offloadPtr, moduleTranslation)) {
@@ -7319,11 +7429,11 @@ static void collectMapDataFromMapOperands(
     // field, the pointer address for the base address field, and the pointer
     // not the data (base addresses) size. So we end up with a mix of base
     // types and sizes we wish to insert here.
-    mlir::Type sizeType = (isRefPtrOrPteeMapWithAttach || !mapOp.getVarPtrPtr())
+    mlir::Type sizeType = (isAttachStyleMap || !mapOp.getVarPtrPtr())
                               ? mapOp.getVarPtrType()
                               : mapOp.getVarPtrPtrType().value();
     mapData.Sizes.push_back(getSizeInBytes(
-        dl, sizeType, isRefPtrOrPteeMapWithAttach ? nullptr : mapOp,
+        dl, sizeType, isAttachStyleMap ? nullptr : mapOp,
         mapData.Pointers.back(), moduleTranslation.convertType(sizeType),
         builder, moduleTranslation));
     mapData.MapClause.push_back(mapOp.getOperation());
@@ -7824,8 +7934,10 @@ static void mapParentWithMembers(
     baseFlag |= (parentFlags & preserve);
   } else {
     MapFlags parentFlags = mapData.Types[mapDataIndex];
-    MapFlags preserve =
-        MapFlags::OMP_MAP_PRESENT | MapFlags::OMP_MAP_RETURN_PARAM;
+    MapFlags preserve = MapFlags::OMP_MAP_TO | MapFlags::OMP_MAP_FROM |
+                        MapFlags::OMP_MAP_PRESENT |
+                        MapFlags::OMP_MAP_RETURN_PARAM |
+                        MapFlags::OMP_MAP_IMPLICIT;
     baseFlag |= (parentFlags & preserve);
   }
 
@@ -7993,9 +8105,10 @@ static void mapParentWithMembers(
         // (e.g. if lowAddr happens to be the first member), which isn't
         // correct, even if the runtimes is sometimes fine with it so, in these
         // scenarios we select the types size instead.
+        llvm::DataLayout dataLayout = builder.GetInsertBlock()->getDataLayout();
         auto sizeSel = builder.CreateSelect(
             builder.CreateICmpNE(builder.getInt64(0), sizeCalc), sizeCalc,
-            isPtrMap ? llvm::ConstantExpr::getSizeOf(builder.getPtrTy())
+            isPtrMap ? builder.getInt64(dataLayout.getPointerSize())
                      : mapData.Sizes[mapDataOverlapIdx]);
         combinedInfo.Sizes.emplace_back(sizeSel);
         lowAddr = builder.CreateConstGEP1_32(
@@ -8073,17 +8186,30 @@ static void processMapWithMembersOf(LLVM::ModuleTranslation &moduleTranslation,
 
   llvm::omp::OpenMPOffloadMappingFlags memberOfFlag =
       ompBuilder.getMemberOfFlag(combinedInfo.Types.size());
-  for (size_t i = 0; i < mapInfoIdx.size(); i++) {
-    // Index == 0 is the parent map and if it gets here it's an unattachable
-    // type and should have OMP_MAP_TARGET_PARAM applied and no MEMBER_OF flag.
-    if (i == 0) {
+
+  // The first index is the parent map, the rest are its members. The parent
+  // normally undergoes the standard parent-with-members mapping, contributing
+  // the MEMBER_OF flag that binds each member to it. The one exception is a
+  // privatizeable attach map (a privatized pointer/descriptor passed directly
+  // as a kernel argument): here the parent is emitted as an individual map
+  // instead, for the time being, as it's used only in pointer/allocatable to
+  // array cases for the moment. This only ever applies to the parent, so it is
+  // checked once here rather than inside the loop below.
+  bool parentIsPrivatizeableAttach =
+      isPrivatizeableAttachMap(parentClause.getMapType());
+  for (auto [i, idx] : llvm::enumerate(mapInfoIdx)) {
+    bool emitParentMap = i == 0 && !parentIsPrivatizeableAttach;
+    if (emitParentMap) {
       mapParentWithMembers(moduleTranslation, builder, ompBuilder, dl,
-                           combinedInfo, mapData, mapInfoIdx[i], memberOfFlag,
+                           combinedInfo, mapData, idx, memberOfFlag,
                            targetDirective);
     } else {
-      processIndividualMap(builder, ompBuilder, mapData, mapInfoIdx[i],
-                           combinedInfo, targetDirective, memberOfFlag,
-                           /*isTargetParam=*/false, mapDataIndex);
+      processIndividualMap(
+          builder, ompBuilder, mapData, idx, combinedInfo, targetDirective,
+          parentIsPrivatizeableAttach
+              ? llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE
+              : memberOfFlag,
+          /*isTargetParam=*/false, mapDataIndex);
     }
   }
 }
@@ -8312,6 +8438,20 @@ emitUserDefinedMapper(Operation *op, llvm::IRBuilderBase &builder,
   return *newFn;
 }
 
+static llvm::Value *getSourceLocIdentFromOp(llvm::IRBuilderBase &builder,
+                                            llvm::OpenMPIRBuilder &ompBuilder,
+                                            Operation *op) {
+  auto fileLoc = op->getLoc()->findInstanceOf<FileLineColLoc>();
+  if (!fileLoc)
+    return nullptr;
+  uint32_t strSize;
+  llvm::Function *parentFn = builder.GetInsertBlock()->getParent();
+  llvm::StringRef fnName = parentFn ? parentFn->getName() : "";
+  llvm::Constant *srcStr = LLVM::createSourceLocStrFromLocation(
+      fileLoc, ompBuilder, fnName, strSize);
+  return ompBuilder.getOrCreateIdent(srcStr, strSize);
+}
+
 static LogicalResult
 convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
                      LLVM::ModuleTranslation &moduleTranslation) {
@@ -8328,8 +8468,10 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
   llvm::OpenMPIRBuilder::TargetDataInfo info(
       /*RequiresDevicePointerInfo=*/true,
       /*SeparateBeginEndCalls=*/true);
-  assert(!ompBuilder->Config.isTargetDevice() &&
-         "target data/enter/exit/update are host ops");
+
+  if (ompBuilder->Config.isTargetDevice())
+    return op->emitOpError() << "not allowed in a target device";
+
   bool isOffloadEntry = !ompBuilder->Config.TargetTriples.empty();
 
   auto getDeviceID = [&](mlir::Value dev) -> llvm::Value * {
@@ -8535,16 +8677,27 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
   llvm::SmallVector<llvm::BasicBlock *> deallocBlocks;
   llvm::OpenMPIRBuilder::InsertPointTy allocaIP =
       findAllocInsertPoints(builder, moduleTranslation, &deallocBlocks);
+
+  // Pass the region's source location to the runtime, taken from the op's own
+  // location; only offloading entries emit the mapper calls that consume it.
+  // No need to also guard on !isTargetDevice here: this function bails out
+  // earlier for the target device, so isOffloadEntry alone is sufficient.
+  llvm::Value *srcLocOverride =
+      isOffloadEntry ? getSourceLocIdentFromOp(builder, *ompBuilder, op)
+                     : nullptr;
+
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP = [&]() {
     if (isa<omp::TargetDataOp>(op))
-      return ompBuilder->createTargetData(ompLoc, allocaIP, builder.saveIP(),
-                                          deallocBlocks, deviceID, ifCond, info,
-                                          genMapInfoCB, customMapperCB,
-                                          /*MapperFunc=*/nullptr, bodyGenCB,
-                                          /*DeviceAddrCB=*/nullptr);
-    return ompBuilder->createTargetData(ompLoc, allocaIP, builder.saveIP(),
-                                        deallocBlocks, deviceID, ifCond, info,
-                                        genMapInfoCB, customMapperCB, &RTLFn);
+      return ompBuilder->createTargetData(
+          ompLoc, allocaIP, builder.saveIP(), deallocBlocks, deviceID, ifCond,
+          info, genMapInfoCB, customMapperCB,
+          /*MapperFunc=*/nullptr, bodyGenCB,
+          /*DeviceAddrCB=*/nullptr, srcLocOverride);
+    return ompBuilder->createTargetData(
+        ompLoc, allocaIP, builder.saveIP(), deallocBlocks, deviceID, ifCond,
+        info, genMapInfoCB, customMapperCB, &RTLFn,
+        /*BodyGenCB=*/nullptr,
+        /*DeviceAddrCB=*/nullptr, srcLocOverride);
   }();
 
   if (failed(handleError(afterIP, *op)))
@@ -9160,9 +9313,9 @@ initTargetDefaultAttrs(omp::TargetOp targetOp, Operation *capturedOp,
     attrs.ExecFlags = llvm::omp::OMP_TGT_EXEC_MODE_SPMD_NO_LOOP;
     break;
   }
-  attrs.MinTeams = minTeamsVal;
+  attrs.MinTeams.front() = minTeamsVal;
   attrs.MaxTeams.front() = maxTeamsVal;
-  attrs.MinThreads = 1;
+  attrs.MinThreads.front() = 1;
   attrs.MaxThreads.front() = combinedMaxThreadsVal;
   attrs.ReductionDataSize = reductionDataSize;
 }
@@ -9198,7 +9351,7 @@ initTargetRuntimeAttrs(llvm::IRBuilderBase &builder,
   // truncate or sign extend lower and upper num_teams bounds as well as
   // thread_limit to match int32 ABI requirements for the OpenMP runtime.
   if (numTeamsLower)
-    attrs.MinTeams = builder.CreateSExtOrTrunc(
+    attrs.MinTeams.front() = builder.CreateSExtOrTrunc(
         moduleTranslation.lookupValue(numTeamsLower), builder.getInt32Ty());
 
   if (numTeamsUpper)
@@ -9210,7 +9363,7 @@ initTargetRuntimeAttrs(llvm::IRBuilderBase &builder,
         moduleTranslation.lookupValue(teamsThreadLimit), builder.getInt32Ty());
 
   if (numThreads)
-    attrs.MaxThreads = moduleTranslation.lookupValue(numThreads);
+    attrs.MaxThreads.front() = moduleTranslation.lookupValue(numThreads);
 
   if (targetOp.hasHostEvalTripCount()) {
     llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
@@ -9295,6 +9448,16 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
     builder.SetCurrentDebugLocation(llvm::DILocation::get(
         parentLLVMFn->getContext(), outlinedFnLoc.getLine(),
         outlinedFnLoc.getCol(), SP, outlinedFnLoc.getInlinedAt()));
+
+  // OMPIRBuilder emits runtime calls into the outlined function before bodyCB
+  // below gets a chance to attach the subprogram to it, so it needs the
+  // outlined function's location handed to it separately. Only pass it under
+  // the same condition that decides whether the subprogram is attached at all:
+  // a location may not be attached to an instruction in a function that has no
+  // subprogram.
+  llvm::DebugLoc outlinedFnDbgLoc;
+  if (outlinedFnLoc && parentLLVMFn->getSubprogram())
+    outlinedFnDbgLoc = outlinedFnLoc;
 
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
   bool isTargetDevice = ompBuilder->Config.isTargetDevice();
@@ -9635,17 +9798,24 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
 
   for (size_t i = 0, e = mapData.OriginalValue.size(); i != e; ++i) {
     // 1) Declare target arguments are not passed to kernels as arguments.
-    // 2) Attach maps are not passed in as arguments to kernels.
+    // 2) Attach maps are not passed in as arguments to kernels, except for
+    //    private attach maps used for corresponding-pointer initialization.
     // 3) Children of record objects are not passed in as arguments.
     // TODO: We currently do not handle cases where a member is explicitly
     // passed in as an argument, this will likley need to be handled in
     // the near future, rather than using IsAMember, it may be better to
     // test if the relevant BlockArg is used within the target region and
     // then use that as a basis for exclusion in the kernel inputs.
-    bool isAttachMap = (mapData.Types[i] &
-                        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ATTACH) ==
-                       llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ATTACH;
-    if (!mapData.IsDeclareTarget[i] && !mapData.IsAMember[i] && !isAttachMap)
+    using MapFlags = llvm::omp::OpenMPOffloadMappingFlags;
+    bool isAttachMap = (mapData.Types[i] & MapFlags::OMP_MAP_ATTACH) ==
+                       MapFlags::OMP_MAP_ATTACH;
+    bool isPrivateTargetParam =
+        (mapData.Types[i] &
+         (MapFlags::OMP_MAP_PRIVATE | MapFlags::OMP_MAP_TARGET_PARAM)) ==
+        (MapFlags::OMP_MAP_PRIVATE | MapFlags::OMP_MAP_TARGET_PARAM);
+
+    if (!mapData.IsDeclareTarget[i] && !mapData.IsAMember[i] &&
+        (!isAttachMap || (isAttachMap && isPrivateTargetParam)))
       kernelInput.push_back(mapData.OriginalValue[i]);
   }
 
@@ -9690,12 +9860,21 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
   llvm::omp::OMPDynGroupprivateFallbackType fallbackType =
       getDynGroupprivateFallbackType(targetOp.getDynGroupprivateFallbackAttr());
 
+  // Pass the target region's source location to the runtime, taken from the
+  // op's own location. Restricted to the host offload path that actually emits
+  // the kernel launch, to avoid creating an unused identifier on the device.
+  llvm::Value *rtLocOverride =
+      (!isTargetDevice && isOffloadEntry)
+          ? getSourceLocIdentFromOp(builder, *ompBuilder, targetOp)
+          : nullptr;
+
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
       moduleTranslation.getOpenMPBuilder()->createTarget(
           ompLoc, isOffloadEntry, allocaIP, builder.saveIP(), deallocBlocks,
           info, entryInfo, defaultAttrs, runtimeAttrs, ifCond, kernelInput,
           genMapInfoCB, bodyCB, argAccessorCB, customMapperCB, dds,
-          targetOp.getNowait(), dynSizeVal, fallbackType);
+          targetOp.getNowait(), dynSizeVal, fallbackType, outlinedFnDbgLoc,
+          rtLocOverride);
 
   if (failed(handleError(afterIP, opInst)))
     return failure();
@@ -9725,8 +9904,7 @@ convertDeclareTargetAttr(Operation *op, mlir::omp::DeclareTargetAttr attribute,
       if (!offloadMod.getIsTargetDevice())
         return success();
 
-      omp::DeclareTargetDeviceType declareType =
-          attribute.getDeviceType().getValue();
+      omp::DeclareTargetDeviceType declareType = attribute.getDeviceType();
 
       if (declareType == omp::DeclareTargetDeviceType::host) {
         llvm::Function *llvmFunc =
@@ -9769,10 +9947,9 @@ convertDeclareTargetAttr(Operation *op, mlir::omp::DeclareTargetAttr attribute,
       auto loc = op->getLoc()->findInstanceOf<FileLineColLoc>();
       llvm::StringRef mangledName = gOp.getSymName();
       mlir::omp::DeclareTargetCaptureClause captureClause =
-          attribute.getCaptureClause().getValue();
+          attribute.getCaptureClause();
       auto captureClauseKind = convertToCaptureClauseKind(captureClause);
-      auto deviceClause =
-          convertToDeviceClauseKind(attribute.getDeviceType().getValue());
+      auto deviceClause = convertToDeviceClauseKind(attribute.getDeviceType());
       llvm::StringRef entryMangledName = mangledName;
       llvm::Constant *entryAddr = llvm::cast<llvm::Constant>(gVal);
       std::function<llvm::GlobalValue::LinkageTypes()> variableLinkage;
@@ -9781,8 +9958,8 @@ convertDeclareTargetAttr(Operation *op, mlir::omp::DeclareTargetAttr attribute,
       bool isToOrEnter =
           captureClause == omp::DeclareTargetCaptureClause::to ||
           captureClause == omp::DeclareTargetCaptureClause::enter;
-      bool isHostOnly = attribute.getDeviceType().getValue() ==
-                        omp::DeclareTargetDeviceType::host;
+      bool isHostOnly =
+          attribute.getDeviceType() == omp::DeclareTargetDeviceType::host;
 
       // A to/enter declare-target variable needs a device-resident,
       // name-resolvable copy and a host offloading entry. A local-linkage
@@ -9827,7 +10004,7 @@ convertDeclareTargetAttr(Operation *op, mlir::omp::DeclareTargetAttr attribute,
 
       std::vector<llvm::Triple> targetTriple;
       auto targetTripleAttr = dyn_cast_or_null<mlir::StringAttr>(
-          op->getParentOfType<mlir::ModuleOp>()->getAttr(
+          op->getParentOfType<mlir::ModuleOp>()->getDiscardableAttr(
               LLVM::LLVMDialect::getTargetTripleAttrName()));
       if (targetTripleAttr)
         targetTriple.emplace_back(targetTripleAttr.data());
@@ -9870,9 +10047,12 @@ convertDeclareTargetAttr(Operation *op, mlir::omp::DeclareTargetAttr attribute,
         // For indirectly-accessed global pointers, we rely on "internal"
         // linkage to optimize out the unneeded full-variable storage later,
         // since we can't prevent the LLVM dialect from generating globals
-        // without also breaking target lowering.
+        // without also breaking target lowering. However, We can only do
+        // this for definiions, as global variable declarations must have
+        // external or weak linkage.
         if (refPtr) {
-          gVar->setLinkage(llvm::GlobalValue::InternalLinkage);
+          if (!gVar->isDeclaration())
+            gVar->setLinkage(llvm::GlobalValue::InternalLinkage);
 
           // Register the (original global, reference pointer) pair so that the
           // OpenMPIRBuilder can rewrite uses of the original global during
@@ -10070,11 +10250,13 @@ static bool isHostDeviceOp(Operation *op) {
   if (auto parentFn = op->getParentOfType<LLVM::LLVMFuncOp>()) {
     if (auto declareTargetIface =
             llvm::dyn_cast<mlir::omp::DeclareTargetInterface>(
-                parentFn.getOperation()))
-      if (declareTargetIface.isDeclareTarget() &&
-          declareTargetIface.getDeclareTargetDeviceType() !=
-              mlir::omp::DeclareTargetDeviceType::host)
+                parentFn.getOperation())) {
+      omp::DeclareTargetAttr declareTargetAttr =
+          declareTargetIface.getDeclareTarget();
+      if (declareTargetAttr && declareTargetAttr.getDeviceType() !=
+                                   mlir::omp::DeclareTargetDeviceType::host)
         return false;
+    }
 
     return true;
   }
@@ -10198,34 +10380,20 @@ convertAllocateDirOp(Operation &opInst, llvm::IRBuilderBase &builder,
   }
 
   for (Value var : vars) {
-    llvm::Type *llvmVarTy = moduleTranslation.convertType(var.getType());
-
-    // Opaque pointers lose element type. Trace to GlobalOp for type
-    // Falls back to llvmVarTy when not from a global.
-    llvm::Type *typeToInspect = llvmVarTy;
-    if (llvmVarTy->isPointerTy()) {
-      Value baseVar = getBaseValueForTypeLookup(var);
-      if (Operation *globalOp = getGlobalOpFromValue(baseVar)) {
-        if (auto gop = dyn_cast<LLVM::GlobalOp>(globalOp))
-          typeToInspect = moduleTranslation.convertType(gop.getGlobalType());
-      }
-    }
+    Value baseVar = getBaseValueForTypeLookup(var);
+    llvm::Type *typeToInspect =
+        getAllocatedLlvmTypeForVariable(var, baseVar, moduleTranslation);
 
     llvm::Value *size;
-    if (auto arrTy = llvm::dyn_cast<llvm::ArrayType>(typeToInspect)) {
-      llvm::Value *elementCount = builder.getInt64(1);
-      llvm::Type *currentType = arrTy;
-      while (auto nestedArrTy = llvm::dyn_cast<llvm::ArrayType>(currentType)) {
-        elementCount = builder.CreateMul(
-            elementCount, builder.getInt64(nestedArrTy->getNumElements()));
-        currentType = nestedArrTy->getElementType();
-      }
-      uint64_t elemSizeInBits = dataLayout.getTypeSizeInBits(currentType);
-      size =
-          builder.CreateMul(elementCount, builder.getInt64(elemSizeInBits / 8));
+    if (std::optional<llvm::Value *> dynamicSize = getDynamicAllocatedSize(
+            var, baseVar, moduleTranslation, builder, dataLayout)) {
+      size = *dynamicSize;
+    } else if (typeToInspect->isArrayTy()) {
+      size = builder.getInt64(
+          dataLayout.getTypeAllocSize(typeToInspect).getFixedValue());
     } else {
       size = builder.getInt64(
-          dataLayout.getTypeStoreSize(typeToInspect).getFixedValue());
+          dataLayout.getTypeAllocSize(typeToInspect).getFixedValue());
     }
 
     uint64_t alignValue =
@@ -10250,6 +10418,16 @@ convertAllocateDirOp(Operation &opInst, llvm::IRBuilderBase &builder,
     }
     // Record the alloc pointer keyed by the MLIR variable value.
     ompIface.registerAllocatedPtr(var, allocCall);
+
+    if (llvm::Value *baseLlvm = moduleTranslation.lookupValue(baseVar)) {
+      llvm::Value *boundPtr = builder.CreatePointerBitCastOrAddrSpaceCast(
+          allocCall, baseLlvm->getType());
+      moduleTranslation.remapAllValuesWith(baseLlvm, boundPtr);
+    } else if (llvm::Value *varLlvm = moduleTranslation.lookupValue(var)) {
+      llvm::Value *boundPtr = builder.CreatePointerBitCastOrAddrSpaceCast(
+          allocCall, varLlvm->getType());
+      moduleTranslation.remapAllValuesWith(varLlvm, boundPtr);
+    }
   }
 
   return success();
@@ -10496,6 +10674,9 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
           })
           .Case([&](omp::ParallelOp op) {
             return convertOmpParallel(op, builder, moduleTranslation);
+          })
+          .Case([&](omp::DispatchOp) {
+            return convertOmpDispatch(*op, builder, moduleTranslation);
           })
           .Case([&](omp::MaskedOp) {
             return convertOmpMasked(*op, builder, moduleTranslation);

@@ -54,7 +54,7 @@ func.func @insert_size1_vector(%arg0 : vector<1xf32>, %arg1: f32) -> vector<1xf3
 //       CHECK:   %[[RET:.*]] = spirv.CompositeInsert %[[SUB]], %[[FULL]][2 : i32] : f32 into vector<3xf32>
 //       CHECK:   spirv.ReturnValue %[[RET]] : vector<3xf32>
 func.func @insert_size1_vector(%arg0 : vector<1xf32>, %arg1: vector<3xf32>) -> vector<3xf32> {
-  %1 = vector.insert_strided_slice %arg0, %arg1 {offsets = [2], strides = [1]} : vector<1xf32> into vector<3xf32>
+  %1 = vector.insert_strided_slice %arg0, %arg1 offsets = [2], strides = [1] : vector<1xf32> into vector<3xf32>
   return %1 : vector<3xf32>
 }
 

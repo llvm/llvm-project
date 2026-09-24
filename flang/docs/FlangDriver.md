@@ -8,11 +8,6 @@
 
 # Flang drivers
 
-```{contents}
----
-local:
----
-```
 
 There are two main drivers in Flang:
 * the compiler driver, `flang`
@@ -80,7 +75,7 @@ in the same files: `clang/include/clang/Options/Options.td` and
 `clang/include/clang/Options/FlangOptions.td`.
 
 The separation helps us split various tasks and allows us to implement more
-specialised tools. In particular, `flang` is not aware of various
+specialized tools. In particular, `flang` is not aware of various
 compilation phases within the frontend (e.g. scanning, parsing or semantic
 checks). It does not have to be. Conversely, the frontend driver, `flang
 -fc1`, needs not to be concerned with linkers or other external tools like
@@ -189,6 +184,8 @@ required runtime libraries needed by C++ (e.g., for STL) to the linker invocatio
 In this case, one has to explicitly provide the Fortran runtime library
 `flang_rt.runtime`.  An alternative is to use Flang to link.
 In this case, it may be required to explicitly supply C++ runtime libraries.
+Clang with the `--driver-mode=flang` option behaves like Flang for linking.
+In this case, too, C++ runtime libraries may have to be provided explicitly.
 
 On Darwin, the logical root where the system libraries are located (sysroot)
 must be specified. This can be done with the CMake build flag `DEFAULT_SYSROOT`

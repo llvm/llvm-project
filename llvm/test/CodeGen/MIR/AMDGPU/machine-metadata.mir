@@ -86,11 +86,11 @@ body:             |
     ; CHECK: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY1]], %subreg.sub1
     ; CHECK: [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY3]], %subreg.sub1
     ; CHECK: [[COPY5:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE1]]
-    ; CHECK: [[GLOBAL_LOAD_DWORDX4_:%[0-9]+]]:vreg_128 = GLOBAL_LOAD_DWORDX4 [[COPY5]], 16, 0, implicit $exec :: (load (s128) from %ir.p1, align 4, !alias.scope !5, !noalias !8, addrspace 1)
+    ; CHECK: [[GLOBAL_LOAD_DWORDX4_:%[0-9]+]]:vreg_128 = GLOBAL_LOAD_DWORDX4 [[COPY5]], 16, 0, implicit $exec :: (load (s128) from %ir.p1, align 4, !alias.scope ![[LOAD_SCOPE:[0-9]+]], !noalias ![[LOAD_NOALIAS:[0-9]+]], addrspace 1)
     ; CHECK: [[COPY6:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE1]]
-    ; CHECK: GLOBAL_STORE_DWORDX4 [[COPY6]], killed [[GLOBAL_LOAD_DWORDX4_]], 0, 0, implicit $exec :: (store (s128) into %ir.p0, align 4, !alias.scope !10, !noalias !11, addrspace 1)
+    ; CHECK: GLOBAL_STORE_DWORDX4 [[COPY6]], killed [[GLOBAL_LOAD_DWORDX4_]], 0, 0, implicit $exec :: (store (s128) into %ir.p0, align 4, !alias.scope ![[STORE_SCOPE:[0-9]+]], !noalias ![[STORE_NOALIAS:[0-9]+]], addrspace 1)
     ; CHECK: [[COPY7:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]]
-    ; CHECK: [[GLOBAL_LOAD_DWORDX2_:%[0-9]+]]:vreg_64 = GLOBAL_LOAD_DWORDX2 killed [[COPY7]], 0, 0, implicit $exec :: (load (s64) from %ir.1, align 4, !alias.scope !3, !noalias !0, addrspace 1)
+    ; CHECK: [[GLOBAL_LOAD_DWORDX2_:%[0-9]+]]:vreg_64 = GLOBAL_LOAD_DWORDX2 killed [[COPY7]], 0, 0, implicit $exec :: (load (s64) from %ir.1, align 4, !alias.scope ![[IR_SCOPE:[0-9]+]], !noalias ![[IR_NOALIAS:[0-9]+]], addrspace 1)
     ; CHECK: [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_]].sub0
     ; CHECK: [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_]].sub1
     ; CHECK: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 killed [[COPY8]], killed [[COPY9]], 0, implicit $exec
@@ -137,11 +137,11 @@ body:             |
     ; CHECK: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY1]], %subreg.sub1
     ; CHECK: [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY3]], %subreg.sub1
     ; CHECK: [[COPY5:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE1]]
-    ; CHECK: [[GLOBAL_LOAD_DWORDX4_:%[0-9]+]]:vreg_128 = GLOBAL_LOAD_DWORDX4 [[COPY5]], 16, 0, implicit $exec :: (load (s128) from %ir.p1, align 4, !alias.scope !5, !noalias !8, addrspace 1)
+    ; CHECK: [[GLOBAL_LOAD_DWORDX4_:%[0-9]+]]:vreg_128 = GLOBAL_LOAD_DWORDX4 [[COPY5]], 16, 0, implicit $exec :: (load (s128) from %ir.p1, align 4, !alias.scope ![[INLINE_LOAD_SCOPE:[0-9]+]], !noalias ![[INLINE_LOAD_NOALIAS:[0-9]+]], addrspace 1)
     ; CHECK: [[COPY6:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE1]]
-    ; CHECK: GLOBAL_STORE_DWORDX4 [[COPY6]], killed [[GLOBAL_LOAD_DWORDX4_]], 0, 0, implicit $exec :: (store (s128) into %ir.p0, align 4, !alias.scope !10, !noalias !11, addrspace 1)
+    ; CHECK: GLOBAL_STORE_DWORDX4 [[COPY6]], killed [[GLOBAL_LOAD_DWORDX4_]], 0, 0, implicit $exec :: (store (s128) into %ir.p0, align 4, !alias.scope ![[INLINE_STORE_SCOPE:[0-9]+]], !noalias ![[INLINE_STORE_NOALIAS:[0-9]+]], addrspace 1)
     ; CHECK: [[COPY7:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]]
-    ; CHECK: [[GLOBAL_LOAD_DWORDX2_:%[0-9]+]]:vreg_64 = GLOBAL_LOAD_DWORDX2 killed [[COPY7]], 0, 0, implicit $exec :: (load (s64) from %ir.1, align 4, !alias.scope !3, !noalias !0, addrspace 1)
+    ; CHECK: [[GLOBAL_LOAD_DWORDX2_:%[0-9]+]]:vreg_64 = GLOBAL_LOAD_DWORDX2 killed [[COPY7]], 0, 0, implicit $exec :: (load (s64) from %ir.1, align 4, !alias.scope ![[IR_SCOPE]], !noalias ![[IR_NOALIAS]], addrspace 1)
     ; CHECK: [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_]].sub0
     ; CHECK: [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_]].sub1
     ; CHECK: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 killed [[COPY8]], killed [[COPY9]], 0, implicit $exec
