@@ -93,8 +93,10 @@
     __unwind_ptrauth_restricted_intptr(ptrauth_key_process_dependent_data, 1, 0x03DF)
 
   // ptrauth_string_discriminator("Registers_arm64::link_reg_t") == 0x8301
+  #define __ptrauth_unwind_registers_arm64_link_reg_disc 0x8301
   #define __ptrauth_unwind_registers_arm64_link_reg \
-    __unwind_ptrauth_restricted_intptr(ptrauth_key_process_dependent_code, 1, 0x8301)
+    __unwind_ptrauth_restricted_intptr(ptrauth_key_process_dependent_code, 1, \
+                                       __ptrauth_unwind_registers_arm64_link_reg_disc)
 
   // ptrauth_string_discriminator("UnwindInfoSections::dso_base") == 0x4FF5
   #define __ptrauth_unwind_uis_dso_base \
