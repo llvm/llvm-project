@@ -12,32 +12,33 @@ define i32 @strided_gather(ptr %base, ptr %dims, i64 %n) {
 ; AVX2-LABEL: define i32 @strided_gather(
 ; AVX2-SAME: ptr [[BASE:%.*]], ptr [[DIMS:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; AVX2-NEXT:  [[ENTRY:.*]]:
-; AVX2-NEXT:    [[OFF_PTR:%.*]] = getelementptr i8, ptr [[DIMS]], i64 8
 ; AVX2-NEXT:    [[STRIDE:%.*]] = load i64, ptr [[DIMS]], align 8
+; AVX2-NEXT:    [[OFF_PTR:%.*]] = getelementptr i8, ptr [[DIMS]], i64 8
 ; AVX2-NEXT:    [[OFF:%.*]] = load i64, ptr [[OFF_PTR]], align 8
-; AVX2-NEXT:    [[TMP0:%.*]] = insertelement <4 x i64> poison, i64 [[OFF]], i64 0
-; AVX2-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i64> [[TMP0]], <4 x i64> poison, <4 x i32> zeroinitializer
-; AVX2-NEXT:    [[TMP2:%.*]] = insertelement <4 x i64> poison, i64 [[STRIDE]], i64 0
-; AVX2-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i64> [[TMP2]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; AVX2-NEXT:    br label %[[LOOP:.*]]
 ; AVX2:       [[LOOP]]:
 ; AVX2-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; AVX2-NEXT:    [[ACC:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[ACC_NEXT:%.*]], %[[LOOP]] ]
-; AVX2-NEXT:    [[TMP4:%.*]] = insertelement <4 x i64> poison, i64 [[IV]], i64 0
-; AVX2-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i64> [[TMP4]], <4 x i64> poison, <4 x i32> zeroinitializer
-; AVX2-NEXT:    [[TMP6:%.*]] = add <4 x i64> [[TMP5]], <i64 1, i64 2, i64 3, i64 4>
+; AVX2-NEXT:    [[I1:%.*]] = add i64 [[IV]], 1
+; AVX2-NEXT:    [[I2:%.*]] = add i64 [[IV]], 2
+; AVX2-NEXT:    [[I3:%.*]] = add i64 [[IV]], 3
 ; AVX2-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 4
-; AVX2-NEXT:    [[TMP7:%.*]] = mul <4 x i64> [[TMP3]], [[TMP6]]
-; AVX2-NEXT:    [[TMP8:%.*]] = add <4 x i64> [[TMP1]], [[TMP7]]
-; AVX2-NEXT:    [[TMP9:%.*]] = shl <4 x i64> [[TMP8]], splat (i64 2)
-; AVX2-NEXT:    [[TMP10:%.*]] = extractelement <4 x i64> [[TMP9]], i64 0
-; AVX2-NEXT:    [[P0:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[TMP10]]
-; AVX2-NEXT:    [[TMP11:%.*]] = extractelement <4 x i64> [[TMP9]], i64 1
-; AVX2-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[TMP11]]
-; AVX2-NEXT:    [[TMP12:%.*]] = extractelement <4 x i64> [[TMP9]], i64 2
-; AVX2-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[TMP12]]
-; AVX2-NEXT:    [[TMP13:%.*]] = extractelement <4 x i64> [[TMP9]], i64 3
-; AVX2-NEXT:    [[P3:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[TMP13]]
+; AVX2-NEXT:    [[M0:%.*]] = mul i64 [[STRIDE]], [[I1]]
+; AVX2-NEXT:    [[M1:%.*]] = mul i64 [[STRIDE]], [[I2]]
+; AVX2-NEXT:    [[M2:%.*]] = mul i64 [[STRIDE]], [[I3]]
+; AVX2-NEXT:    [[M3:%.*]] = mul i64 [[STRIDE]], [[IV_NEXT]]
+; AVX2-NEXT:    [[A0:%.*]] = add i64 [[OFF]], [[M0]]
+; AVX2-NEXT:    [[A1:%.*]] = add i64 [[OFF]], [[M1]]
+; AVX2-NEXT:    [[A2:%.*]] = add i64 [[OFF]], [[M2]]
+; AVX2-NEXT:    [[A3:%.*]] = add i64 [[OFF]], [[M3]]
+; AVX2-NEXT:    [[S0:%.*]] = shl i64 [[A0]], 2
+; AVX2-NEXT:    [[S1:%.*]] = shl i64 [[A1]], 2
+; AVX2-NEXT:    [[S2:%.*]] = shl i64 [[A2]], 2
+; AVX2-NEXT:    [[S3:%.*]] = shl i64 [[A3]], 2
+; AVX2-NEXT:    [[P0:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[S0]]
+; AVX2-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[S1]]
+; AVX2-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[S2]]
+; AVX2-NEXT:    [[P3:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[S3]]
 ; AVX2-NEXT:    [[L0:%.*]] = load i32, ptr [[P0]], align 4
 ; AVX2-NEXT:    [[L1:%.*]] = load i32, ptr [[P1]], align 4
 ; AVX2-NEXT:    [[L2:%.*]] = load i32, ptr [[P2]], align 4
@@ -139,32 +140,33 @@ define i32 @strided_gather_offset(ptr %base, ptr %dims, i64 %n) {
 ; CHECK-LABEL: define i32 @strided_gather_offset(
 ; CHECK-SAME: ptr [[BASE:%.*]], ptr [[DIMS:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[OFF_PTR:%.*]] = getelementptr i8, ptr [[DIMS]], i64 8
 ; CHECK-NEXT:    [[STRIDE:%.*]] = load i64, ptr [[DIMS]], align 8
+; CHECK-NEXT:    [[OFF_PTR:%.*]] = getelementptr i8, ptr [[DIMS]], i64 8
 ; CHECK-NEXT:    [[OFF:%.*]] = load i64, ptr [[OFF_PTR]], align 8
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i64> poison, i64 [[OFF]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i64> [[TMP0]], <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i64> poison, i64 [[STRIDE]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i64> [[TMP2]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[ACC:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[ACC_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i64> poison, i64 [[IV]], i64 0
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i64> [[TMP4]], <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = add <4 x i64> [[TMP5]], <i64 1, i64 2, i64 3, i64 4>
+; CHECK-NEXT:    [[I1:%.*]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[I2:%.*]] = add i64 [[IV]], 2
+; CHECK-NEXT:    [[I3:%.*]] = add i64 [[IV]], 3
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 4
-; CHECK-NEXT:    [[TMP7:%.*]] = mul <4 x i64> [[TMP3]], [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = add <4 x i64> [[TMP1]], [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = shl <4 x i64> [[TMP8]], splat (i64 2)
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i64> [[TMP9]], i64 0
-; CHECK-NEXT:    [[P0:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[TMP10]]
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i64> [[TMP9]], i64 1
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[TMP11]]
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i64> [[TMP9]], i64 2
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[TMP12]]
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i64> [[TMP9]], i64 3
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[TMP13]]
+; CHECK-NEXT:    [[M0:%.*]] = mul i64 [[STRIDE]], [[I1]]
+; CHECK-NEXT:    [[M1:%.*]] = mul i64 [[STRIDE]], [[I2]]
+; CHECK-NEXT:    [[M2:%.*]] = mul i64 [[STRIDE]], [[I3]]
+; CHECK-NEXT:    [[M3:%.*]] = mul i64 [[STRIDE]], [[IV_NEXT]]
+; CHECK-NEXT:    [[A0:%.*]] = add i64 [[OFF]], [[M0]]
+; CHECK-NEXT:    [[A1:%.*]] = add i64 [[OFF]], [[M1]]
+; CHECK-NEXT:    [[A2:%.*]] = add i64 [[OFF]], [[M2]]
+; CHECK-NEXT:    [[A3:%.*]] = add i64 [[OFF]], [[M3]]
+; CHECK-NEXT:    [[S0:%.*]] = shl i64 [[A0]], 2
+; CHECK-NEXT:    [[S1:%.*]] = shl i64 [[A1]], 2
+; CHECK-NEXT:    [[S2:%.*]] = shl i64 [[A2]], 2
+; CHECK-NEXT:    [[S3:%.*]] = shl i64 [[A3]], 2
+; CHECK-NEXT:    [[P0:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[S0]]
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[S1]]
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[S2]]
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[S3]]
 ; CHECK-NEXT:    [[Q0:%.*]] = getelementptr i8, ptr [[P0]], i64 -4
 ; CHECK-NEXT:    [[L0:%.*]] = load i32, ptr [[Q0]], align 4
 ; CHECK-NEXT:    [[Q1:%.*]] = getelementptr i8, ptr [[P1]], i64 -4
@@ -240,31 +242,32 @@ define void @strided_update(ptr %base, ptr %dims, i64 %n) {
 ; CHECK-LABEL: define void @strided_update(
 ; CHECK-SAME: ptr [[BASE:%.*]], ptr [[DIMS:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[OFF_PTR:%.*]] = getelementptr i8, ptr [[DIMS]], i64 8
 ; CHECK-NEXT:    [[STRIDE:%.*]] = load i64, ptr [[DIMS]], align 8
+; CHECK-NEXT:    [[OFF_PTR:%.*]] = getelementptr i8, ptr [[DIMS]], i64 8
 ; CHECK-NEXT:    [[OFF:%.*]] = load i64, ptr [[OFF_PTR]], align 8
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i64> poison, i64 [[OFF]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i64> [[TMP0]], <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i64> poison, i64 [[STRIDE]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i64> [[TMP2]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i64> poison, i64 [[IV]], i64 0
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i64> [[TMP4]], <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = add <4 x i64> [[TMP5]], <i64 1, i64 2, i64 3, i64 4>
+; CHECK-NEXT:    [[I1:%.*]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[I2:%.*]] = add i64 [[IV]], 2
+; CHECK-NEXT:    [[I3:%.*]] = add i64 [[IV]], 3
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 4
-; CHECK-NEXT:    [[TMP7:%.*]] = mul <4 x i64> [[TMP3]], [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = add <4 x i64> [[TMP1]], [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = shl <4 x i64> [[TMP8]], splat (i64 2)
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i64> [[TMP9]], i64 0
-; CHECK-NEXT:    [[P0:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[TMP10]]
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i64> [[TMP9]], i64 1
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[TMP11]]
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i64> [[TMP9]], i64 2
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[TMP12]]
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i64> [[TMP9]], i64 3
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[TMP13]]
+; CHECK-NEXT:    [[M0:%.*]] = mul i64 [[STRIDE]], [[I1]]
+; CHECK-NEXT:    [[M1:%.*]] = mul i64 [[STRIDE]], [[I2]]
+; CHECK-NEXT:    [[M2:%.*]] = mul i64 [[STRIDE]], [[I3]]
+; CHECK-NEXT:    [[M3:%.*]] = mul i64 [[STRIDE]], [[IV_NEXT]]
+; CHECK-NEXT:    [[A0:%.*]] = add i64 [[OFF]], [[M0]]
+; CHECK-NEXT:    [[A1:%.*]] = add i64 [[OFF]], [[M1]]
+; CHECK-NEXT:    [[A2:%.*]] = add i64 [[OFF]], [[M2]]
+; CHECK-NEXT:    [[A3:%.*]] = add i64 [[OFF]], [[M3]]
+; CHECK-NEXT:    [[S0:%.*]] = shl i64 [[A0]], 2
+; CHECK-NEXT:    [[S1:%.*]] = shl i64 [[A1]], 2
+; CHECK-NEXT:    [[S2:%.*]] = shl i64 [[A2]], 2
+; CHECK-NEXT:    [[S3:%.*]] = shl i64 [[A3]], 2
+; CHECK-NEXT:    [[P0:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[S0]]
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[S1]]
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[S2]]
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[S3]]
 ; CHECK-NEXT:    [[L0:%.*]] = load i32, ptr [[P0]], align 4
 ; CHECK-NEXT:    [[U0:%.*]] = add i32 [[L0]], 1
 ; CHECK-NEXT:    store i32 [[U0]], ptr [[P0]], align 4
@@ -560,37 +563,23 @@ define i32 @preheader_offsets(ptr %base, ptr %offs, i64 %n) {
 ; AVX2-LABEL: define i32 @preheader_offsets(
 ; AVX2-SAME: ptr [[BASE:%.*]], ptr [[OFFS:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; AVX2-NEXT:  [[ENTRY:.*]]:
-; AVX2-NEXT:    [[X1_PTR:%.*]] = getelementptr i8, ptr [[OFFS]], i64 8
-; AVX2-NEXT:    [[X2_PTR:%.*]] = getelementptr i8, ptr [[OFFS]], i64 16
-; AVX2-NEXT:    [[X3_PTR:%.*]] = getelementptr i8, ptr [[OFFS]], i64 24
-; AVX2-NEXT:    [[X0:%.*]] = load i64, ptr [[OFFS]], align 8
-; AVX2-NEXT:    [[X1:%.*]] = load i64, ptr [[X1_PTR]], align 8
-; AVX2-NEXT:    [[X2:%.*]] = load i64, ptr [[X2_PTR]], align 8
-; AVX2-NEXT:    [[X3:%.*]] = load i64, ptr [[X3_PTR]], align 8
 ; AVX2-NEXT:    [[Y0_PTR:%.*]] = getelementptr i8, ptr [[OFFS]], i64 32
-; AVX2-NEXT:    [[Y1_PTR:%.*]] = getelementptr i8, ptr [[OFFS]], i64 40
-; AVX2-NEXT:    [[Y2_PTR:%.*]] = getelementptr i8, ptr [[OFFS]], i64 48
-; AVX2-NEXT:    [[Y3_PTR:%.*]] = getelementptr i8, ptr [[OFFS]], i64 56
-; AVX2-NEXT:    [[Y0:%.*]] = load i64, ptr [[Y0_PTR]], align 8
-; AVX2-NEXT:    [[Y1:%.*]] = load i64, ptr [[Y1_PTR]], align 8
-; AVX2-NEXT:    [[Y2:%.*]] = load i64, ptr [[Y2_PTR]], align 8
-; AVX2-NEXT:    [[Y3:%.*]] = load i64, ptr [[Y3_PTR]], align 8
-; AVX2-NEXT:    [[T0:%.*]] = add i64 [[X0]], [[Y0]]
-; AVX2-NEXT:    [[T1:%.*]] = add i64 [[X1]], [[Y1]]
-; AVX2-NEXT:    [[T2:%.*]] = add i64 [[X2]], [[Y2]]
-; AVX2-NEXT:    [[T3:%.*]] = add i64 [[X3]], [[Y3]]
-; AVX2-NEXT:    [[O0:%.*]] = shl i64 [[T0]], 2
-; AVX2-NEXT:    [[O1:%.*]] = shl i64 [[T1]], 2
-; AVX2-NEXT:    [[O2:%.*]] = shl i64 [[T2]], 2
-; AVX2-NEXT:    [[O3:%.*]] = shl i64 [[T3]], 2
+; AVX2-NEXT:    [[TMP0:%.*]] = load <4 x i64>, ptr [[OFFS]], align 8
+; AVX2-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr [[Y0_PTR]], align 8
+; AVX2-NEXT:    [[TMP2:%.*]] = add <4 x i64> [[TMP0]], [[TMP1]]
+; AVX2-NEXT:    [[TMP3:%.*]] = shl <4 x i64> [[TMP2]], splat (i64 2)
+; AVX2-NEXT:    [[TMP4:%.*]] = extractelement <4 x i64> [[TMP3]], i64 0
+; AVX2-NEXT:    [[TMP5:%.*]] = extractelement <4 x i64> [[TMP3]], i64 1
+; AVX2-NEXT:    [[TMP6:%.*]] = extractelement <4 x i64> [[TMP3]], i64 2
+; AVX2-NEXT:    [[TMP7:%.*]] = extractelement <4 x i64> [[TMP3]], i64 3
 ; AVX2-NEXT:    br label %[[LOOP:.*]]
 ; AVX2:       [[LOOP]]:
 ; AVX2-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; AVX2-NEXT:    [[ACC:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[ACC_NEXT:%.*]], %[[LOOP]] ]
-; AVX2-NEXT:    [[A0:%.*]] = add i64 [[IV]], [[O0]]
-; AVX2-NEXT:    [[A1:%.*]] = add i64 [[IV]], [[O1]]
-; AVX2-NEXT:    [[A2:%.*]] = add i64 [[IV]], [[O2]]
-; AVX2-NEXT:    [[A3:%.*]] = add i64 [[IV]], [[O3]]
+; AVX2-NEXT:    [[A0:%.*]] = add i64 [[IV]], [[TMP4]]
+; AVX2-NEXT:    [[A1:%.*]] = add i64 [[IV]], [[TMP5]]
+; AVX2-NEXT:    [[A2:%.*]] = add i64 [[IV]], [[TMP6]]
+; AVX2-NEXT:    [[A3:%.*]] = add i64 [[IV]], [[TMP7]]
 ; AVX2-NEXT:    [[P0:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[A0]]
 ; AVX2-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[A1]]
 ; AVX2-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[A2]]
