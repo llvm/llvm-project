@@ -149,12 +149,7 @@ bool mlir::tosa::isConvertibleToLinalgElementwise(Operation *op) {
   if (!resultTy || !resultTy.hasRank())
     return false;
 
-  std::optional<linalg::ElementwiseKind> kind =
-      getElementwiseKind(op, resultTy.getElementType());
-  if (!kind)
-    return false;
-
-  return true;
+  return getElementwiseKind(op, resultTy.getElementType()).has_value();
 }
 
 static mlir::Value applyPad(Location loc, Value input, ArrayRef<int64_t> pad,
@@ -747,8 +742,7 @@ public:
   LogicalResult
   matchAndRewrite(TosaOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const final {
-    Operation *operation = op;
-    if (!isConvertibleToLinalgElementwise(operation))
+    if (!isConvertibleToLinalgElementwise(op))
       return rewriter.notifyMatchFailure(
           op, "op has no linalg.elementwise counterpart");
 
@@ -757,7 +751,7 @@ public:
     const int64_t rank = resultTy.getRank();
 
     std::optional<linalg::ElementwiseKind> kind =
-        getElementwiseKind(operation, resultTy.getElementType());
+        getElementwiseKind(op, resultTy.getElementType());
     const unsigned arity =
         llvm::to_underlying(linalg::getArityGroupAndKind(*kind).arityGroup);
 
