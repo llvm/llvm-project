@@ -1156,7 +1156,7 @@ static Instruction *foldConstantIntoDotAccumulator(IntrinsicInst &II,
   if (!match(II.getArgOperand(ClampIdx), m_Zero()) || !II.hasOneUse())
     return nullptr;
 
-  const APInt *Acc;
+  const APInt *Acc = nullptr;
   if (!match(II.getArgOperand(AccIdx), m_APInt(Acc)))
     return nullptr;
 
@@ -1164,7 +1164,7 @@ static Instruction *foldConstantIntoDotAccumulator(IntrinsicInst &II,
   if (!AccumUser)
     return nullptr;
 
-  const APInt *AccumDelta;
+  const APInt *AccumDelta = nullptr;
   if (!match(AccumUser, m_c_Add(m_Specific(&II), m_APInt(AccumDelta))))
     return nullptr;
 
