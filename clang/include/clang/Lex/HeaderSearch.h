@@ -37,6 +37,7 @@
 
 namespace llvm {
 
+class raw_ostream;
 class Triple;
 
 } // namespace llvm
@@ -1119,7 +1120,8 @@ private:
 void ApplyHeaderSearchOptions(HeaderSearch &HS,
                               const HeaderSearchOptions &HSOpts,
                               const LangOptions &Lang,
-                              const llvm::Triple &triple);
+                              const llvm::Triple &triple,
+                              llvm::raw_ostream *VerboseOutput = nullptr);
 
 void normalizeModuleCachePath(FileManager &FileMgr, StringRef Path,
                               SmallVectorImpl<char> &NormalizedPath);
