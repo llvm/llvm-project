@@ -14,7 +14,7 @@
 ; RUN: llc < %s -mtriple=mips-linux-gnu -mcpu=mips32r6 -asm-show-inst |\
 ; RUN:   FileCheck %s -check-prefixes=M32R6
 ; RUN: llc < %s -mtriple=mips64-linux-gnu -mcpu=mips3 -asm-show-inst |\
-; RUN:   FileCheck %s -check-prefixes=M64
+; RUN:   FileCheck %s -check-prefixes=M3
 ; RUN: llc < %s -mtriple=mips64-linux-gnu -mcpu=mips64 -asm-show-inst |\
 ; RUN:   FileCheck %s -check-prefixes=M64
 ; RUN: llc < %s -mtriple=mips64-linux-gnu -mcpu=mips64r2 -asm-show-inst |\
@@ -111,6 +111,25 @@ define i32 @test1(float %t) {
 ; M32R6-NEXT:    mfc1 $2, $f0 # <MCInst #[[#MCINST3:]] MFC1
 ; M32R6-NEXT:    # <MCOperand Reg:V0>
 ; M32R6-NEXT:    # <MCOperand Reg:F0>>
+;
+; M3-LABEL: test1:
+; M3:       # %bb.0: # %entry
+; M3-NEXT:    trunc.w.s $f0, $f12 # <MCInst #[[#MCINST1:]] TRUNC_W_S
+; M3-NEXT:    # <MCOperand Reg:F0>
+; M3-NEXT:    # <MCOperand Reg:F12>>
+; M3-NEXT:    mfc1 $2, $f0 # <MCInst #[[#MCINST3:]] MFC1
+; M3-NEXT:    # <MCOperand Reg:V0>
+; M3-NEXT:    # <MCOperand Reg:F0>>
+; M3-NEXT:    nop # <MCInst #[[#MCINST7:]] SLL
+; M3-NEXT:    # <MCOperand Reg:ZERO>
+; M3-NEXT:    # <MCOperand Reg:ZERO>
+; M3-NEXT:    # <MCOperand Imm:0>>
+; M3-NEXT:    jr $ra # <MCInst #[[#MCINST2:]] JR
+; M3-NEXT:    # <MCOperand Reg:RA_64>>
+; M3-NEXT:    nop # <MCInst #[[#MCINST7]] SLL
+; M3-NEXT:    # <MCOperand Reg:ZERO>
+; M3-NEXT:    # <MCOperand Reg:ZERO>
+; M3-NEXT:    # <MCOperand Imm:0>>
 ;
 ; M64-LABEL: test1:
 ; M64:       # %bb.0: # %entry
@@ -302,6 +321,25 @@ define i32 @test2(double %t) {
 ; M32R6-NEXT:    mfc1 $2, $f0 # <MCInst #[[#MCINST3]] MFC1
 ; M32R6-NEXT:    # <MCOperand Reg:V0>
 ; M32R6-NEXT:    # <MCOperand Reg:F0>>
+;
+; M3-LABEL: test2:
+; M3:       # %bb.0: # %entry
+; M3-NEXT:    trunc.w.d $f0, $f12 # <MCInst #[[#MCINST23:]] TRUNC_W_D64
+; M3-NEXT:    # <MCOperand Reg:F0>
+; M3-NEXT:    # <MCOperand Reg:D12_64>>
+; M3-NEXT:    mfc1 $2, $f0 # <MCInst #[[#MCINST3]] MFC1
+; M3-NEXT:    # <MCOperand Reg:V0>
+; M3-NEXT:    # <MCOperand Reg:F0>>
+; M3-NEXT:    nop # <MCInst #[[#MCINST7]] SLL
+; M3-NEXT:    # <MCOperand Reg:ZERO>
+; M3-NEXT:    # <MCOperand Reg:ZERO>
+; M3-NEXT:    # <MCOperand Imm:0>>
+; M3-NEXT:    jr $ra # <MCInst #[[#MCINST2]] JR
+; M3-NEXT:    # <MCOperand Reg:RA_64>>
+; M3-NEXT:    nop # <MCInst #[[#MCINST7]] SLL
+; M3-NEXT:    # <MCOperand Reg:ZERO>
+; M3-NEXT:    # <MCOperand Reg:ZERO>
+; M3-NEXT:    # <MCOperand Imm:0>>
 ;
 ; M64-LABEL: test2:
 ; M64:       # %bb.0: # %entry
