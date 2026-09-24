@@ -10,13 +10,13 @@
 // ---------------------------------------------------------------------------
 // Type definitions.
 // ---------------------------------------------------------------------------
-typedef float __attribute__((coop_mat(CLK_COOPERATIVE_MATRIX_SCOPE_SUBGROUP,
+typedef float __attribute__((coop_mat(memory_scope_sub_group,
                                       16, 16,
                                       CLK_COOPERATIVE_MATRIX_A)))           MatA_t;
-typedef float __attribute__((coop_mat(CLK_COOPERATIVE_MATRIX_SCOPE_SUBGROUP,
+typedef float __attribute__((coop_mat(memory_scope_sub_group,
                                       16, 16,
                                       CLK_COOPERATIVE_MATRIX_ACCUMULATOR))) MatC_t;
-typedef int   __attribute__((coop_mat(CLK_COOPERATIVE_MATRIX_SCOPE_SUBGROUP,
+typedef int   __attribute__((coop_mat(memory_scope_sub_group,
                                       16, 16,
                                       CLK_COOPERATIVE_MATRIX_A)))           MatA_int_t;
 
