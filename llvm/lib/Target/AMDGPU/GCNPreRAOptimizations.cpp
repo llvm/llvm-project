@@ -34,11 +34,8 @@
 #include "AMDGPU.h"
 #include "GCNPreRAAntiHints.h"
 #include "GCNSubtarget.h"
-<<<<<<< HEAD
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
-=======
->>>>>>> users/mssefat/anti-hints-pr3-amdgpu-apply
 #include "SIRegisterInfo.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
