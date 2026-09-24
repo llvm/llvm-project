@@ -27,7 +27,7 @@ target triple = "x86_64-unknown-linux-gnu"
 define i32 @scalefactor(ptr %data, i32 %n) {
 ;
 ;
-; CHECK-LABEL: define range(i32 -2147483648, 2147483647) i32 @scalefactor(
+; CHECK-LABEL: define range(i32 1, 17) i32 @scalefactor(
 ; CHECK-SAME: ptr nofree readonly captures(none) [[DATA:%.*]], i32 [[N:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[SMAX:%.*]] = tail call i32 @llvm.smax.i32(i32 [[N]], i32 1)
@@ -72,16 +72,8 @@ define i32 @scalefactor(ptr %data, i32 %n) {
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[CLZ_LOOP_PREHEADER]], label %[[RED_LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[CLZ_LOOP_PREHEADER]]:
-; CHECK-NEXT:    [[Y_PH:%.*]] = phi i32 [ [[TMP7]], %[[MIDDLE_BLOCK]] ], [ [[X_NEXT]], %[[RED_LOOP]] ]
-; CHECK-NEXT:    br label %[[CLZ_LOOP:.*]]
-; CHECK:       [[CLZ_LOOP]]:
-; CHECK-NEXT:    [[CNT:%.*]] = phi i32 [ [[CNT_NEXT:%.*]], %[[CLZ_LOOP]] ], [ 32, %[[CLZ_LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[Y:%.*]] = phi i32 [ [[Y_NEXT:%.*]], %[[CLZ_LOOP]] ], [ [[Y_PH]], %[[CLZ_LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[Y_NEXT]] = lshr i32 [[Y]], 1
-; CHECK-NEXT:    [[CNT_NEXT]] = add nsw i32 [[CNT]], -1
-; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i32 [[Y_NEXT]], 0
-; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[CLZ_LOOP]]
-; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[X_NEXT_LCSSA:%.*]] = phi i32 [ [[TMP7]], %[[MIDDLE_BLOCK]] ], [ [[X_NEXT]], %[[RED_LOOP]] ]
+; CHECK-NEXT:    [[CNT_NEXT:%.*]] = tail call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[X_NEXT_LCSSA]], i1 true)
 ; CHECK-NEXT:    ret i32 [[CNT_NEXT]]
 ;
 entry:

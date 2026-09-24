@@ -3557,9 +3557,12 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
     if (Q.IIQ.UseInstrInfo && isNonZeroRecurrence(PN))
       return true;
 
-    // Check if all incoming values are non-zero using recursion.
+    // Check if all incoming values are non-zero using recursion. A phi with a
+    // single incoming value is just a copy, so don't limit the depth for it.
     SimplifyQuery RecQ = Q.getWithoutCondContext();
-    unsigned NewDepth = std::max(Depth, MaxAnalysisRecursionDepth - 1);
+    unsigned NewDepth = PN->getNumIncomingValues() == 1
+                            ? Depth
+                            : std::max(Depth, MaxAnalysisRecursionDepth - 1);
     return llvm::all_of(PN->operands(), [&](const Use &U) {
       if (U.get() == PN)
         return true;
