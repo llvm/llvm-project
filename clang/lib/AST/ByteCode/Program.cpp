@@ -22,6 +22,17 @@ Pointer Program::getPtrGlobal(unsigned Idx) const {
   return Pointer(Globals[Idx]->block());
 }
 
+void Program::markGlobalUninitialized(unsigned Idx) {
+  Block *B = getGlobal(Idx);
+  if (B->isInitialized())
+    B->invokeDtor();
+  // Re-run the constructor so all subobjects are uninitialized again. This
+  // also zeroes the metadata, so the InitState has to be set afterwards.
+  B->invokeCtor();
+  B->getBlockDesc<GlobalInlineDescriptor>().InitState =
+      GlobalInitState::InitializerFailed;
+}
+
 UnsignedOrNone Program::getGlobal(const ValueDecl *VD) {
   if (auto It = GlobalIndices.find(VD); It != GlobalIndices.end())
     return It->second;

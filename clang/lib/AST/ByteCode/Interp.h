@@ -2165,6 +2165,9 @@ inline bool FinishInitActivatePop(InterpState &S) {
 }
 
 bool FinishInitGlobal(InterpState &S);
+/// Marks the global as uninitialized if its initializer left it pointing to a
+/// local variable, a temporary or a dynamic allocation.
+bool CheckGlobalInit(InterpState &S, uint32_t I);
 
 inline bool Dump(InterpState &S) {
   S.Stk.dump();

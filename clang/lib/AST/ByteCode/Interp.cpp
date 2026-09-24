@@ -3183,6 +3183,76 @@ bool FinishInitGlobal(InterpState &S) {
   return true;
 }
 
+static bool pointsToNonStaticBlock(const Pointer &Ptr) {
+  return Ptr.isBlockPointer() && !Ptr.isZero() && !Ptr.block()->isStatic();
+}
+
+/// Checks if the object \p Ptr points to, or any of its subobjects, holds a
+/// pointer to a block without static storage duration.
+static bool holdsPointerToNonStaticBlock(PtrView Ptr,
+                                         bool IsCompleteClass = true) {
+  const Descriptor *Desc = Ptr.getFieldDesc();
+
+  if (Desc->isPrimitive()) {
+    return Desc->getPrimType() == PT_Ptr &&
+           pointsToNonStaticBlock(Ptr.deref<Pointer>());
+  }
+
+  if (Desc->isPrimitiveArray()) {
+    if (Desc->getPrimType() != PT_Ptr)
+      return false;
+    for (unsigned I = 0, N = Desc->getNumElems(); I != N; ++I) {
+      if (pointsToNonStaticBlock(Ptr.elem<Pointer>(I)))
+        return true;
+    }
+    return false;
+  }
+
+  if (Desc->isCompositeArray()) {
+    for (unsigned I = 0, N = Desc->getNumElems(); I != N; ++I) {
+      if (holdsPointerToNonStaticBlock(Ptr.atIndex(I).narrow()))
+        return true;
+    }
+    return false;
+  }
+
+  if (!Desc->isRecord())
+    return false;
+
+  const Record *R = Desc->ElemRecord;
+  for (const Record::Base &B : R->bases()) {
+    if (holdsPointerToNonStaticBlock(Ptr.atField(B.Offset),
+                                     /*IsCompleteClass=*/false))
+      return true;
+  }
+  for (const Record::Field &F : R->fields()) {
+    if (holdsPointerToNonStaticBlock(Ptr.atField(F.Offset)))
+      return true;
+  }
+  if (!IsCompleteClass)
+    return false;
+  for (const Record::Base &B : R->virtual_bases()) {
+    if (holdsPointerToNonStaticBlock(Ptr.atField(B.Offset),
+                                     /*IsCompleteClass=*/false))
+      return true;
+  }
+  return false;
+}
+
+bool CheckGlobalInit(InterpState &S, uint32_t I) {
+  Block *B = S.P.getGlobal(I);
+  if (B->getBlockDesc<GlobalInlineDescriptor>().InitState !=
+      GlobalInitState::Initialized)
+    return true;
+
+  // Such blocks are gone once this evaluation ends, so the initializer isn't a
+  // constant expression and the pointers must not be kept around.
+  PtrView Root{B, B->getMetadataSize(), B->getMetadataSize()};
+  if (holdsPointerToNonStaticBlock(Root))
+    S.P.markGlobalUninitialized(I);
+  return true;
+}
+
 bool InvalidCast(InterpState &S, CodePtr OpPC, CastKind Kind, bool Fatal) {
   const SourceLocation &Loc = S.Current->getLocation(OpPC);
 
