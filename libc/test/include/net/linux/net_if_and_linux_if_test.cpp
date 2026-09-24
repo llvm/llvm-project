@@ -19,8 +19,8 @@
 // reordering these.
 #include <linux/if.h>
 
-#include <stddef.h>
 #include "test/UnitTest/Test.h"
+#include <stddef.h>
 
 extern const size_t LINUX_IFMAP_SIZE;
 extern const size_t LINUX_IFMAP_ALIGN;
