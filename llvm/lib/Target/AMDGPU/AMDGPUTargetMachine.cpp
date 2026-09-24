@@ -168,6 +168,13 @@ public:
   void addAsmPrinter(PassManagerWrapper &PMW) override;
   void addAsmPrinterEnd(PassManagerWrapper &PMW) override;
   Error addInstSelector(PassManagerWrapper &PMW) override;
+  Error addIRTranslator(PassManagerWrapper &PMW) override;
+  void addPreLegalizeMachineIR(PassManagerWrapper &PMW) override;
+  Error addLegalizeMachineIR(PassManagerWrapper &PMW) override;
+  void addPreRegBankSelect(PassManagerWrapper &PMW) override;
+  Error addRegBankSelect(PassManagerWrapper &PMW) override;
+  void addPreGlobalInstructionSelect(PassManagerWrapper &PMW) override;
+  Error addGlobalInstructionSelect(PassManagerWrapper &PMW) override;
   void addPreRewrite(PassManagerWrapper &PMW) override;
   void addMachineSSAOptimization(PassManagerWrapper &PMW) override;
   void addPostRegAlloc(PassManagerWrapper &PMW) override;
@@ -900,10 +907,10 @@ AMDGPUTargetMachine::AMDGPUTargetMachine(const Target &T, const Triple &TT,
                                          std::optional<Reloc::Model> RM,
                                          std::optional<CodeModel::Model> CM,
                                          CodeGenOptLevel OptLevel)
-    : CodeGenTargetMachineImpl(
-          T, TT.computeDataLayout(), TT, getGPUOrDefault(TT, CPU), FS, Options,
-          getEffectiveRelocModel(), getEffectiveCodeModel(CM, CodeModel::Small),
-          OptLevel),
+    : CodeGenTargetMachineImpl(T, TT, getGPUOrDefault(TT, CPU), FS, Options,
+                               getEffectiveRelocModel(),
+                               getEffectiveCodeModel(CM, CodeModel::Small),
+                               OptLevel),
       TLOF(createTLOF(getTargetTriple())) {
   initAsmInfo();
   if (TT.isAMDGCN()) {
@@ -2531,6 +2538,45 @@ Error AMDGPUCodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) {
   addMachineFunctionPass(AMDGPUISelDAGToDAGPass(TM), PMW);
   addMachineFunctionPass(SIFixSGPRCopiesPass(), PMW);
   addMachineFunctionPass(SILowerI1CopiesPass(), PMW);
+  return Error::success();
+}
+
+Error AMDGPUCodeGenPassBuilder::addIRTranslator(PassManagerWrapper &PMW) {
+  addMachineFunctionPass(IRTranslatorPass(getOptLevel()), PMW);
+  return Error::success();
+}
+
+void AMDGPUCodeGenPassBuilder::addPreLegalizeMachineIR(
+    PassManagerWrapper &PMW) {
+  addMachineFunctionPass(AMDGPUPreLegalizerCombinerPass(), PMW);
+  addMachineFunctionPass(LocalizerPass(), PMW);
+}
+
+Error AMDGPUCodeGenPassBuilder::addLegalizeMachineIR(PassManagerWrapper &PMW) {
+  addMachineFunctionPass(LegalizerPass(), PMW);
+  return Error::success();
+}
+
+void AMDGPUCodeGenPassBuilder::addPreRegBankSelect(PassManagerWrapper &PMW) {
+  addMachineFunctionPass(AMDGPUPostLegalizerCombinerPass(), PMW);
+  addMachineFunctionPass(AMDGPUGlobalISelDivergenceLoweringPass(), PMW);
+}
+
+Error AMDGPUCodeGenPassBuilder::addRegBankSelect(PassManagerWrapper &PMW) {
+  addMachineFunctionPass(AMDGPURegBankSelectPass(), PMW);
+  addMachineFunctionPass(AMDGPURegBankLegalizePass(), PMW);
+  return Error::success();
+}
+
+void AMDGPUCodeGenPassBuilder::addPreGlobalInstructionSelect(
+    PassManagerWrapper &PMW) {
+  bool IsOptLevelNone = getOptLevel() == CodeGenOptLevel::None;
+  addMachineFunctionPass(AMDGPURegBankCombinerPass(IsOptLevelNone), PMW);
+}
+
+Error AMDGPUCodeGenPassBuilder::addGlobalInstructionSelect(
+    PassManagerWrapper &PMW) {
+  addMachineFunctionPass(InstructionSelectPass(getOptLevel()), PMW);
   return Error::success();
 }
 

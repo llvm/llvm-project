@@ -19,6 +19,7 @@
 #include "SIDefines.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include <bitset>
 
 namespace llvm {
 
@@ -33,6 +34,11 @@ struct ImageDimIntrinsicInfo;
 class SITargetLowering final : public AMDGPUTargetLowering {
 private:
   const GCNSubtarget *Subtarget;
+
+  /// Result types made Custom for ISD::INTRINSIC_W_CHAIN only so that
+  /// unsupported s_buffer_load result types can be diagnosed. Any other
+  /// intrinsic returning one of these must keep using generic legalization.
+  std::bitset<MVT::VALUETYPE_SIZE> SBufferLoadDiagnosticVTs;
 
 public:
   MVT getRegisterTypeForCallingConv(LLVMContext &Context,

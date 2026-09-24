@@ -102,33 +102,32 @@ class VPBuilder {
 private:
   class VPInsertPoint {
     VPBasicBlock *Block = nullptr;
-    VPBasicBlock::iterator Point;
+    VPBasicBlock::iterator Iterator;
 
   public:
     /// Creates a new insertion point which doesn't point to anything.
     VPInsertPoint() = default;
 
-    /// Creates a new insertion point to insert at \p Point in \p Block.
-    VPInsertPoint(VPBasicBlock *Block, VPBasicBlock::iterator Point)
-        : Block(Block), Point(Point) {}
+    /// Creates a new insertion point to insert at \p Iterator in \p Block.
+    VPInsertPoint(VPBasicBlock *Block, VPBasicBlock::iterator Iterator)
+        : Block(Block), Iterator(Iterator) {}
 
     /// Creates a new insertion point to insert before \p R.
     VPInsertPoint(VPRecipeBase *R)
-        : Block(R->getParent()), Point(R->getIterator()) {}
+        : Block(R->getParent()), Iterator(R->getIterator()) {}
 
     /// Creates a new insertion point to insert at the end of \p Block.
-    VPInsertPoint(VPBasicBlock *Block) : Block(Block), Point(Block->end()) {}
+    VPInsertPoint(VPBasicBlock *Block) : Block(Block), Iterator(Block->end()) {}
 
     /// Returns true if this insert point is set.
     operator bool() const { return Block; }
 
     VPBasicBlock *getBlock() const { return Block; }
+    VPBasicBlock::iterator getIterator() const { return Iterator; }
 
     operator VPRecipeBase *() const {
-      return Point == Block->end() ? nullptr : &*Point;
+      return Iterator == Block->end() ? nullptr : &*Iterator;
     }
-
-    template <typename T> void insert(T &R) { return Block->insert(R, Point); }
   };
 
   VPInsertPoint InsertPt;
@@ -136,7 +135,7 @@ private:
   /// Insert \p VPI in BB at InsertPt if BB is set.
   template <typename T> T *tryInsertInstruction(T *R) {
     if (InsertPt)
-      InsertPt.insert(R);
+      InsertPt.getBlock()->insert(R, InsertPt.getIterator());
     return R;
   }
 
@@ -183,7 +182,7 @@ public:
 
   /// Insert \p R at the current insertion point. Returns \p R unchanged.
   template <typename T> [[maybe_unused]] T *insert(T *R) {
-    InsertPt.insert(R);
+    InsertPt.getBlock()->insert(R, InsertPt.getIterator());
     return R;
   }
 
@@ -464,13 +463,15 @@ public:
     return createScalarCast(CastOp, Op, ResultTy, DL);
   }
 
-  VPValue *createScalarFreeze(VPValue *Op, DebugLoc DL) {
-    return tryInsertInstruction(
-        new VPInstruction(Instruction::Freeze, Op, {}, {}, DL));
+  VPInstruction *createFreeze(VPValue *Op, DebugLoc DL = DebugLoc::getUnknown(),
+                              const Twine &Name = "") {
+    return createNaryOp(Instruction::Freeze, Op, DL, Name);
   }
 
   VPWidenCastRecipe *createWidenCast(Instruction::CastOps Opcode, VPValue *Op,
                                      Type *ResultTy) {
+    assert(Op->getScalarType() != ResultTy &&
+           "must not create a no-op cast recipe");
     return tryInsertInstruction(new VPWidenCastRecipe(
         Opcode, Op, ResultTy, nullptr, VPIRFlags::getDefaultFlags(Opcode)));
   }
@@ -632,9 +633,6 @@ struct FixedScalableVFPair {
 
   /// \return true if either fixed- or scalable VF is non-zero.
   explicit operator bool() const { return FixedVF || ScalableVF; }
-
-  /// \return true if either fixed- or scalable VF is a valid vector VF.
-  bool hasVector() const { return FixedVF.isVector() || ScalableVF.isVector(); }
 };
 
 /// Holds state needed to make cost decisions before computing costs per-VF,
@@ -698,12 +696,6 @@ class VFSelectionContext {
   /// PHINodes of the reductions that should be expanded in-loop. Set by
   /// collectInLoopReductions.
   SmallPtrSet<PHINode *, 4> InLoopReductions;
-
-  /// A Map of inloop reduction operations and their immediate chain operand.
-  /// FIXME: This can be removed once reductions can be costed correctly in
-  /// VPlan. This was added to allow quick lookup of the inloop operations.
-  /// Set by collectInLoopReductions.
-  DenseMap<Instruction *, Instruction *> InLoopReductionImmediateChains;
 
   /// Maximum safe number of elements to be processed per vector iteration,
   /// which do not prevent store-load forwarding and are safe with regard to the
@@ -810,8 +802,6 @@ public:
 
   /// Split reductions into those that happen in the loop, and those that
   /// happen outside. In-loop reductions are collected into InLoopReductions.
-  /// InLoopReductionImmediateChains is filled with each in-loop reduction
-  /// operation and its immediate chain operand for use during cost modelling.
   void collectInLoopReductions();
 
   /// Returns true if the Phi is part of an inloop reduction.
@@ -822,12 +812,6 @@ public:
   /// Returns the set of in-loop reduction PHIs.
   const SmallPtrSetImpl<PHINode *> &getInLoopReductions() const {
     return InLoopReductions;
-  }
-
-  /// Returns the immediate chain operand of in-loop reduction operation \p I,
-  /// or nullptr if \p I is not an in-loop reduction operation.
-  Instruction *getInLoopReductionImmediateChain(Instruction *I) const {
-    return InLoopReductionImmediateChains.lookup(I);
   }
 
   /// Check whether vectorization would require runtime checks. When optimizing
@@ -1052,9 +1036,7 @@ private:
   /// final reduction results. Add Select recipes to the latch block when
   /// folding tail, to feed ComputeReductionResult with the last or penultimate
   /// iteration values according to the header mask.
-  void addReductionResultComputation(VPlanPtr &Plan,
-                                     VPRecipeBuilder &RecipeBuilder,
-                                     ElementCount MinVF);
+  void addReductionResultComputation(VPlanPtr &Plan, ElementCount MinVF);
 
   /// Returns true if the per-lane cost of VectorizationFactor A is lower than
   /// that of B.

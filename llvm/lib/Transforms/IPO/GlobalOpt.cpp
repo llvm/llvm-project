@@ -814,10 +814,11 @@ static bool OptimizeAwayTrappingUsesOfValue(Instruction *V, Constant *NewV) {
           Idxs.push_back(C);
         else
           break;
-      if (Idxs.size() == GEPI->getNumOperands()-1)
-        Changed |= OptimizeAwayTrappingUsesOfValue(
-            GEPI, ConstantExpr::getGetElementPtr(GEPI->getSourceElementType(),
-                                                 NewV, Idxs));
+      if (Idxs.size() == GEPI->getNumOperands() - 1) {
+        if (Constant *NewGEP = ConstantExpr::getGetElementPtr(
+                V->getDataLayout(), GEPI->getSourceElementType(), NewV, Idxs))
+          Changed |= OptimizeAwayTrappingUsesOfValue(GEPI, NewGEP);
+      }
       if (GEPI->use_empty()) {
         Changed = true;
         GEPI->eraseFromParent();
@@ -858,15 +859,6 @@ static bool OptimizeAwayTrappingUsesOfLoads(
              "Must be storing *to* the global");
     } else {
       AllNonStoreUsesGone = false;
-
-      // If we get here we could have other crazy uses that are transitively
-      // loaded.
-      assert((isa<PHINode>(GlobalUser) || isa<SelectInst>(GlobalUser) ||
-              isa<ConstantExpr>(GlobalUser) || isa<CmpInst>(GlobalUser) ||
-              isa<BitCastInst>(GlobalUser) ||
-              isa<GetElementPtrInst>(GlobalUser) ||
-              isa<AddrSpaceCastInst>(GlobalUser)) &&
-             "Only expect load and stores!");
     }
   }
 
@@ -1852,11 +1844,7 @@ static void RemovePreallocated(Function *F) {
 
   // Cannot modify users() while iterating over it, so make a copy.
   SmallVector<User *, 4> PreallocatedCalls(F->users());
-  for (User *U : PreallocatedCalls) {
-    CallBase *CB = dyn_cast<CallBase>(U);
-    if (!CB)
-      continue;
-
+  for (CallBase *CB : make_isa_range<CallBase>(PreallocatedCalls)) {
     assert(
         !CB->isMustTailCall() &&
         "Shouldn't call RemotePreallocated() on a musttail preallocated call");

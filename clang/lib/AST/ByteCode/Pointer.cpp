@@ -26,11 +26,13 @@ using namespace clang;
 using namespace clang::interp;
 
 // Helper to check if a Type can be passed to
-// ASTContext::getRecordLayout().
+// ASTContext::getTypeSize().
 static bool validType(QualType T) {
   if (const RecordDecl *RD = T->getAsRecordDecl())
     return ASTContext::hasLayout(RD);
-  return true;
+  return !T->isDependentType() && !T->isUndeducedAutoType() &&
+         !T->isSpecificBuiltinType(BuiltinType::UnknownAny) &&
+         !T->isIncompleteType();
 }
 
 Pointer::Pointer(Block *Pointee)
@@ -210,7 +212,8 @@ bool Pointer::operator==(const Pointer &P) const {
 
   switch (StorageKind) {
   case Storage::Int:
-    return P.Int.Value == Int.Value && P.Int.Ty == Int.Ty && P.Offset == Offset;
+    return P.Int.Value == Int.Value && P.Int.getType() == Int.getType() &&
+           P.Offset == Offset;
   case Storage::Block:
     return P.view() == view();
   case Storage::Fn:
@@ -248,17 +251,16 @@ bool Pointer::operator==(const Pointer &P) const {
 }
 
 APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
-  llvm::SmallVector<APValue::LValuePathEntry, 5> Path;
 
   if (isZero())
-    return APValue(APValue::LValueBase(), CharUnits::Zero(), Path,
+    return APValue(APValue::LValueBase(), CharUnits::Zero(), {},
                    /*IsOnePastEnd=*/false, /*IsNullPtr=*/true);
 
   switch (StorageKind) {
   case Storage::Int:
     return APValue(static_cast<const Expr *>(nullptr),
                    CharUnits::fromQuantity(asIntPointer().Value + this->Offset),
-                   Path,
+                   {},
                    /*IsOnePastEnd=*/false, /*IsNullPtr=*/false);
   case Storage::Block:
     // See below.
@@ -278,15 +280,35 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
                    CharUnits::Zero(), {},
                    /*OnePastTheEnd=*/false, /*IsNull=*/false);
   } break;
-  case Storage::String:
+  case Storage::String: {
+    llvm::SmallVector<APValue::LValuePathEntry, 1> Path;
     if (Offset != 0 || Str.Decayed)
       Path.push_back(APValue::LValuePathEntry::ArrayIndex(Offset));
 
     return APValue(APValue::LValueBase(Str.Base),
                    CharUnits::fromQuantity(Offset * elemSize()), Path,
                    /*OnePastTheEnd=*/false, /*IsNull=*/false);
+  }
   case Storage::Opaque: {
-    if (!Opaque.Base->getType()->isPointerType()) {
+    bool ValidBase = Opaque.hasValidBase() || this->Offset <= 1;
+
+    size_t LayoutOffset = Opaque.computeLayoutOffset(ASTCtx).value_or(0);
+    size_t ElemSize = 0;
+    if (validType(Opaque.getFieldType()))
+      ElemSize = ASTCtx.getTypeSizeInChars(Opaque.getFieldType()).getQuantity();
+
+    auto LValueOffset =
+        CharUnits::fromQuantity(LayoutOffset + (this->Offset * ElemSize));
+    APValue::LValueBase Base;
+    if (const Expr *E = Opaque.Base.asExpr())
+      Base = E;
+    else
+      Base = Opaque.Base.asValueDecl();
+
+    // For valid bases, assemble the LValuePath.
+    APValue Result;
+    if (ValidBase) {
+      llvm::SmallVector<APValue::LValuePathEntry, 5> Path;
       for (const PointerPathEntry &Entry : Opaque.path()) {
         switch (Entry.Kind) {
         case PointerPathEntry::Field:
@@ -304,12 +326,13 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
           break;
         }
       }
+
+      Result = APValue(Base, LValueOffset, Path, Opaque.isOnePastEnd(),
+                       /*IsNullPtr=*/false);
+
+    } else {
+      Result = APValue(Base, LValueOffset, APValue::NoLValuePath{});
     }
-    size_t LayoutOffset = Opaque.computeLayoutOffset(ASTCtx).value_or(0);
-    auto Offset = CharUnits::fromQuantity(LayoutOffset + getByteOffset());
-    auto Result =
-        APValue(Opaque.Base, Offset, Path,
-                /*IsOnePastEnd=*/Opaque.isOnePastEnd(), /*IsNullPtr=*/false);
     Result.setConstexprUnknown(Opaque.isConstexprUnknown());
     return Result;
   }
@@ -347,6 +370,7 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
   // Build the path into the object.
   bool OnePastEnd = isOnePastEnd() && !isZeroSizeArray();
 
+  llvm::SmallVector<APValue::LValuePathEntry, 5> Path;
   PtrView Ptr = view();
   while (Ptr.isField() || Ptr.isArrayElement()) {
 
@@ -466,7 +490,8 @@ void Pointer::print(llvm::raw_ostream &OS) const {
     OS << "}";
   } break;
   case Storage::Int:
-    OS << "(Int) {" << Int.Value << " + " << Offset << ", " << Int.Ty << "}";
+    OS << "(Int) {" << Int.Value << " + " << Offset << ", " << Int.getType()
+       << ", " << (Int.isNull() ? "null" : "nonnull") << '}';
     break;
   case Storage::Fn:
     OS << "(Fn) { " << Fn.Func << " + " << Offset << " }";
@@ -514,9 +539,7 @@ Pointer::computeOffsetForComparison(const ASTContext &ASTCtx) const {
   case Storage::String:
     return reinterpret_cast<uintptr_t>(Str.getLiteral()) + Offset;
   case Storage::Opaque:
-    if (auto O = Opaque.computeLayoutOffset(ASTCtx))
-      return *O + Offset;
-    return std::nullopt;
+    return computeLayoutOffset(ASTCtx);
   }
 
   auto getTypeSize = [&](QualType T) -> std::optional<size_t> {
@@ -597,8 +620,12 @@ Pointer::computeLayoutOffset(const ASTContext &ASTCtx) const {
   case Storage::String:
     return Offset * Str.getLiteral()->getCharByteWidth();
   case Storage::Opaque:
-    if (auto O = Opaque.computeLayoutOffset(ASTCtx))
-      return *O + Offset;
+    if (auto O = Opaque.computeLayoutOffset(ASTCtx)) {
+      size_t TypeSize = 0;
+      if (QualType FT = Opaque.getFieldType(); validType(FT))
+        TypeSize = ASTCtx.getTypeSizeInChars(FT).getQuantity();
+      return *O + (Offset * TypeSize);
+    }
     return std::nullopt;
   }
 
@@ -951,15 +978,16 @@ bool Pointer::hasSameBase(const Pointer &A, const Pointer &B) {
   // We allow comparisons between opaque pointers and block pointers, provided
   // they have the same declaration as base.
   if (A.StorageKind != B.StorageKind) {
-    if (A.isOpaquePointer() && B.isBlockPointer()) {
+    if (A.isOpaquePointer() && A.Opaque.Base.isVarDecl() &&
+        B.isBlockPointer()) {
       if (const VarDecl *BDecl = B.block()->getDescriptor()->asVarDecl())
-        return BDecl == A.Opaque.Base->getMostRecentDecl();
-
+        return BDecl == A.Opaque.Base.asVarDecl()->getMostRecentDecl();
       return false;
     }
-    if (B.isOpaquePointer() && A.isBlockPointer()) {
+    if (B.isOpaquePointer() && B.Opaque.Base.isVarDecl() &&
+        A.isBlockPointer()) {
       if (const VarDecl *ADecl = A.block()->getDescriptor()->asVarDecl())
-        return ADecl == B.Opaque.Base->getMostRecentDecl();
+        return ADecl == B.Opaque.Base.asVarDecl()->getMostRecentDecl();
       return false;
     }
     return false;
@@ -969,8 +997,7 @@ bool Pointer::hasSameBase(const Pointer &A, const Pointer &B) {
   case Storage::Int:
     return true;
   case Storage::Block:
-    // See below.
-    break;
+    return A.BS.Pointee == B.BS.Pointee;
   case Storage::Fn:
     return true;
   case Storage::Typeid:
@@ -978,11 +1005,15 @@ bool Pointer::hasSameBase(const Pointer &A, const Pointer &B) {
   case Storage::String:
     return A.Str.ID == B.Str.ID && A.Str.getLiteral() == B.Str.getLiteral();
   case Storage::Opaque:
-    return A.asOpaquePointer().Base->getMostRecentDecl() ==
-           B.asOpaquePointer().Base->getMostRecentDecl();
+    if (A.Opaque.Base.isExpr())
+      return B.Opaque.Base.isExpr() && A.Opaque.Base == B.Opaque.Base;
+    if (A.Opaque.Base.isVarDecl())
+      return B.Opaque.Base.isVarDecl() &&
+             A.Opaque.Base.asVarDecl()->getMostRecentDecl() ==
+                 B.Opaque.Base.asVarDecl()->getMostRecentDecl();
+    return false;
   }
-
-  return A.asBlockPointer().Pointee == B.asBlockPointer().Pointee;
+  llvm_unreachable("should have been handled by the fully covered switch");
 }
 
 bool Pointer::pointToSameBlock(const Pointer &A, const Pointer &B) {
@@ -1032,23 +1063,24 @@ bool Pointer::elemsOfSameArray(const Pointer &A, const Pointer &B) {
   return true;
 }
 
+// FIXME: This should return true for string pointers.
 bool Pointer::pointsToLiteral() const {
-  if (isZero() || !isBlockPointer())
+  if (isZero())
     return false;
 
-  if (block()->isDynamic())
+  if (isDynamic())
     return false;
 
-  const Expr *E = block()->getDescriptor()->asExpr();
+  const Expr *E = getRootExpr();
   return E && !isa<MaterializeTemporaryExpr, StringLiteral>(E);
 }
 
 bool Pointer::pointsToLabel() const {
-  if (isZero() || !isBlockPointer())
+  if (isZero())
     return false;
 
-  if (const Expr *E = BS.Pointee->getDescriptor()->asExpr())
-    return isa<AddrLabelExpr>(E);
+  if (isOpaquePointer())
+    return isa_and_nonnull<AddrLabelExpr>(Opaque.Base.asExpr());
   return false;
 }
 
@@ -1106,7 +1138,7 @@ static bool toRValue(const Context &Ctx, QualType Ty, PtrView Ptr, APValue &R) {
     Ty = AT->getValueType();
 
   // Invalid pointers.
-  if (Ptr.isDummy() || !Ptr.isLive() || Ptr.isPastEnd())
+  if (!Ptr.isLive() || Ptr.isPastEnd())
     return false;
 
   // Primitives should never end up here.
@@ -1304,7 +1336,7 @@ const VarDecl *Pointer::getRootVarDecl() const {
   if (isBlockPointer())
     return getDeclDesc()->asVarDecl();
   if (isOpaquePointer())
-    return dyn_cast<VarDecl>(Opaque.Base);
+    return Opaque.getBaseDecl();
   return nullptr;
 }
 
@@ -1313,6 +1345,8 @@ const Expr *Pointer::getRootExpr() const {
     return getDeclDesc()->asExpr();
   if (isStringPointer())
     return Str.getLiteral();
+  if (isOpaquePointer())
+    return Opaque.getBaseExpr();
   return nullptr;
 }
 
@@ -1341,16 +1375,21 @@ std::optional<IntPointer> IntPointer::atOffset(const interp::Context &Ctx,
       ASTCtx.toCharUnitsFromBits(Layout.getFieldOffset(FieldIndex))
           .getQuantity();
 
-  return IntPointer{FD->getType().getTypePtr(), this->Value + FieldOffset};
+  uint64_t NewValue = this->Value + FieldOffset;
+  return IntPointer{{FD->getType().getTypePtr(), NewValue == 0}, NewValue};
 }
 
 IntPointer IntPointer::baseCast(const interp::Context &Ctx,
                                 unsigned BaseOffset) const {
-  if (!Ty)
+  if (!getType())
     return *this;
 
   QualType CurType = getPointeeType();
   if (CurType.isNull() || !CurType->isRecordType())
+    return *this;
+
+  // null pointers stay null during a cast, per conv.ptr
+  if (Value == 0)
     return *this;
 
   const Record *R = Ctx.getRecord(CurType->getAsRecordDecl());
@@ -1371,7 +1410,8 @@ IntPointer IntPointer::baseCast(const interp::Context &Ctx,
   const RecordDecl *RD = BaseDesc->ElemRecord->getDecl();
   QualType T = RD->getASTContext().getTagType(ElaboratedTypeKeyword::None,
                                               std::nullopt, RD, false);
-  return {T.getTypePtr(), Value + BaseLayoutOffset.getQuantity()};
+  uint64_t NewValue = Value + BaseLayoutOffset.getQuantity();
+  return {{T.getTypePtr(), NewValue == 0}, NewValue};
 }
 
 std::optional<size_t>
@@ -1508,7 +1548,7 @@ bool OpaquePointer::isUnknownSizeArray() const {
   // base to see if this array is a flexible array member _and_ has actually
   // been initialized by data we know the size of.
   if (isa<IncompleteArrayType>(FieldType)) {
-    const VarDecl *Base = cast<VarDecl>(this->Base);
+    const VarDecl *Base = this->Base.asVarDecl();
     if (!Base || !Base->getType()->isRecordType() || !Base->hasInit())
       Result = true;
     else
@@ -1546,4 +1586,11 @@ bool OpaquePointer::isOnePastEndOrElementPastEnd() const {
   }
 
   return false;
+}
+
+bool OpaquePointer::hasValidBase() const {
+  if (const VarDecl *VD = Base.asVarDecl())
+    return !VD->hasExternalStorage();
+
+  return !Base.getType()->isPointerType();
 }
