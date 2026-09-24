@@ -99,8 +99,8 @@ RUN <<EOF
   # Install the most recent GCC as well as the previous version to ease transitions.
   install_gcc() {
     sudo /tmp/ce-infra/bin/ce_install install compilers/c++/x86/gcc $1.1.0
-    sudo ln -s /opt/compiler-explorer/gcc-$1.1.0/bin/gcc /usr/bin/gcc-$1
-    sudo ln -s /opt/compiler-explorer/gcc-$1.1.0/bin/g++ /usr/bin/g++-$1
+    sudo ln -sf /opt/compiler-explorer/gcc-$1.1.0/bin/gcc /usr/bin/gcc-$1
+    sudo ln -sf /opt/compiler-explorer/gcc-$1.1.0/bin/g++ /usr/bin/g++-$1
   }
 
   set -e
