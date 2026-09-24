@@ -361,7 +361,7 @@ KEYWORD(__ob_wrap                   , KEYALL)
 KEYWORD(__ob_trap                   , KEYALL)
 
 // C++ 2.11p1: Keywords.
-KEYWORD(asm                         , KEYCXX|KEYGNU)
+KEYWORD(asm                         , KEYCXX|KEYGNU|KEYOPENCLC|KEYOPENCLCXX)
 KEYWORD(bool                        , BOOLSUPPORT|KEYC23)
 KEYWORD(catch                       , KEYCXX)
 KEYWORD(class                       , KEYCXX)
