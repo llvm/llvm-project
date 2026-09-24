@@ -96,16 +96,12 @@ static fir::GlobalOp createManagedPointerGlobal(fir::FirOpBuilder &builder,
   mlir::OpBuilder::InsertionGuard guard(builder);
   builder.setInsertionPointAfter(globalOp);
 
-  llvm::SmallVector<mlir::NamedAttribute> attrs;
-  attrs.push_back(
-      mlir::NamedAttribute(mlir::StringAttr::get(ctx, "section"),
-                           mlir::StringAttr::get(ctx, "__nv_managed_data__")));
-
   mlir::DenseElementsAttr initAttr = {};
   auto ptrGlobal = fir::GlobalOp::create(
       builder, globalOp.getLoc(), ptrGlobalName, /*isConstant=*/false,
       /*isTarget=*/false, ptrTy, initAttr,
-      /*linkage=*/builder.createInternalLinkage(), attrs);
+      /*linkage=*/builder.createInternalLinkage());
+  ptrGlobal.setSectionAttr(builder.getStringAttr("__nv_managed_data__"));
 
   mlir::Region &region = ptrGlobal.getRegion();
   mlir::Block *block = builder.createBlock(&region);
