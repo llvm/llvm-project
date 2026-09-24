@@ -39,10 +39,10 @@ define <16 x float> @test_buildvector_v16f32(float %a0, float %a1, float %a2, fl
 ;
 ; AVX-64-LABEL: test_buildvector_v16f32:
 ; AVX-64:       # %bb.0:
-; AVX-64-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0],xmm5[0],xmm4[2,3]
+; AVX-64-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0],xmm5[0],zero,zero
 ; AVX-64-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0,1],xmm6[0],xmm4[3]
 ; AVX-64-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0,1,2],xmm7[0]
-; AVX-64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
+; AVX-64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],zero,zero
 ; AVX-64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],xmm2[0],xmm0[3]
 ; AVX-64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm3[0]
 ; AVX-64-NEXT:    vinsertf128 $1, %xmm4, %ymm0, %ymm0

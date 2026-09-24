@@ -324,7 +324,7 @@ define <4 x float> @test9(i32 %dummy, float %a, float %b, float %c, float %d) no
 ;
 ; X64-AVX-LABEL: test9:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
+; X64-AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],zero,zero
 ; X64-AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],xmm2[0],xmm0[3]
 ; X64-AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm3[0]
 ; X64-AVX-NEXT:    retq
@@ -355,7 +355,7 @@ define <4 x float> @test10(float %a, float %b, float %c, float %d) nounwind {
 ;
 ; X64-AVX-LABEL: test10:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
+; X64-AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],zero,zero
 ; X64-AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],xmm2[0],xmm0[3]
 ; X64-AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm3[0]
 ; X64-AVX-NEXT:    retq

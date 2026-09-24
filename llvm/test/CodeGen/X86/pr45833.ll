@@ -12,10 +12,10 @@
 define void @mstore_split9(<9 x float> %value, ptr %addr, <9 x i1> %mask) {
 ; CHECK-LABEL: mstore_split9:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0],xmm5[0],xmm4[2,3]
+; CHECK-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0],xmm5[0],zero,zero
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0,1],xmm6[0],xmm4[3]
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0,1,2],xmm7[0]
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
+; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],zero,zero
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],xmm2[0],xmm0[3]
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm3[0]
 ; CHECK-NEXT:    vinsertf128 $1, %xmm4, %ymm0, %ymm0
@@ -48,15 +48,15 @@ define void @mstore_split9(<9 x float> %value, ptr %addr, <9 x i1> %mask) {
 define void @mstore_split13(<13 x float> %value, ptr %addr, <13 x i1> %mask) {
 ; CHECK-LABEL: mstore_split13:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0],xmm5[0],xmm4[2,3]
+; CHECK-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0],xmm5[0],zero,zero
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0,1],xmm6[0],xmm4[3]
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0,1,2],xmm7[0]
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
+; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],zero,zero
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],xmm2[0],xmm0[3]
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm3[0]
 ; CHECK-NEXT:    vinsertf128 $1, %xmm4, %ymm0, %ymm0
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[2,3]
+; CHECK-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],mem[0],zero,zero
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],mem[0],xmm1[3]
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],mem[0]
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
@@ -96,19 +96,19 @@ define void @mstore_split13(<13 x float> %value, ptr %addr, <13 x i1> %mask) {
 define void @mstore_split14(<14 x float> %value, ptr %addr, <14 x i1> %mask) {
 ; CHECK-LABEL: mstore_split14:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0],xmm5[0],xmm4[2,3]
+; CHECK-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0],xmm5[0],zero,zero
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0,1],xmm6[0],xmm4[3]
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0,1,2],xmm7[0]
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
+; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],zero,zero
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],xmm2[0],xmm0[3]
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm3[0]
 ; CHECK-NEXT:    vinsertf128 $1, %xmm4, %ymm0, %ymm0
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[2,3]
+; CHECK-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],mem[0],zero,zero
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],mem[0],xmm1[3]
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],mem[0]
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],mem[0],xmm2[2,3]
+; CHECK-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],mem[0],zero,zero
 ; CHECK-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
 ; CHECK-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; CHECK-NEXT:    vmovd %eax, %xmm2
@@ -146,19 +146,19 @@ define void @mstore_split14(<14 x float> %value, ptr %addr, <14 x i1> %mask) {
 define void @mstore_split17(<17 x float> %value, ptr %addr, <17 x i1> %mask) {
 ; CHECK-LABEL: mstore_split17:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0],xmm5[0],xmm4[2,3]
+; CHECK-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0],xmm5[0],zero,zero
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0,1],xmm6[0],xmm4[3]
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0,1,2],xmm7[0]
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
+; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],zero,zero
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],xmm2[0],xmm0[3]
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm3[0]
 ; CHECK-NEXT:    vinsertf128 $1, %xmm4, %ymm0, %ymm0
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[2,3]
+; CHECK-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],mem[0],zero,zero
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],mem[0],xmm1[3]
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],mem[0]
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],mem[0],xmm2[2,3]
+; CHECK-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],mem[0],zero,zero
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1],mem[0],xmm2[3]
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1,2],mem[0]
 ; CHECK-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
@@ -204,27 +204,27 @@ define void @mstore_split17(<17 x float> %value, ptr %addr, <17 x i1> %mask) {
 define void @mstore_split23(<23 x float> %value, ptr %addr, <23 x i1> %mask) {
 ; CHECK-LABEL: mstore_split23:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0],xmm5[0],xmm4[2,3]
+; CHECK-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0],xmm5[0],zero,zero
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0,1],xmm6[0],xmm4[3]
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0,1,2],xmm7[0]
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
+; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],zero,zero
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],xmm2[0],xmm0[3]
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm3[0]
 ; CHECK-NEXT:    vinsertf128 $1, %xmm4, %ymm0, %ymm1
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
+; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],mem[0],zero,zero
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],mem[0],xmm2[2,3]
+; CHECK-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],mem[0],zero,zero
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1],mem[0],xmm2[3]
 ; CHECK-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],mem[0],xmm2[2,3]
+; CHECK-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],mem[0],zero,zero
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1],mem[0],xmm2[3]
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1,2],mem[0]
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm3 = xmm3[0],mem[0],xmm3[2,3]
+; CHECK-NEXT:    vinsertps {{.*#+}} xmm3 = xmm3[0],mem[0],zero,zero
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm3 = xmm3[0,1],mem[0],xmm3[3]
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm3 = xmm3[0,1,2],mem[0]
 ; CHECK-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
