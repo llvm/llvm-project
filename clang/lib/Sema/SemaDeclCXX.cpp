@@ -640,7 +640,9 @@ bool Sema::MergeCXXFunctionDecl(FunctionDecl *New, FunctionDecl *Old,
           << (New->getTemplateSpecializationKind() ==TSK_ExplicitSpecialization)
           << New->getDeclName()
           << NewParam->getDefaultArgRange();
-      } else if (New->getDeclContext()->isDependentContext()) {
+      } else if (New->getDeclContext()
+                     ->getEnclosingNonExpansionStatementContext()
+                     ->isDependentContext()) {
         // C++ [dcl.fct.default]p6 (DR217):
         //   Default arguments for a member function of a class template shall
         //   be specified on the initial declaration of the member function
@@ -2074,9 +2076,6 @@ static bool CheckConstexprDeclStmt(Sema &SemaRef, const FunctionDecl *Dcl,
       //   - using-enum-declaration
       continue;
 
-    case Decl::CXXExpansionStmt:
-      continue;
-
     case Decl::Typedef:
     case Decl::TypeAlias: {
       //   - typedef declarations and alias-declarations that do not define
@@ -2263,15 +2262,34 @@ CheckConstexprFunctionStmt(Sema &SemaRef, const FunctionDecl *Dcl, Stmt *S,
     //   - null statements,
     return true;
 
-  case Stmt::DeclStmtClass:
+  case Stmt::DeclStmtClass: {
+    auto *DS = cast<DeclStmt>(S);
+
+    // Expansion statement 'declarations' have substatements, so we need to
+    // handle them separately.
+    if (DS->isSingleDecl()) {
+      if (auto *ESD = dyn_cast<CXXExpansionStmtDecl>(DS->getSingleDecl())) {
+        // Don't check unexpanded expansion statements.
+        if (!ESD->getInstantiations())
+          return true;
+        for (auto *BodyIt : ESD->getInstantiations()->getInstantiations()) {
+          if (!CheckConstexprFunctionStmt(SemaRef, Dcl, BodyIt, ReturnStmts,
+                                          Cxx1yLoc, Cxx2aLoc, Cxx2bLoc, Kind))
+            return false;
+        }
+        return true;
+      }
+    }
+
     //   - static_assert-declarations
     //   - using-declarations,
     //   - using-directives,
     //   - typedef declarations and alias-declarations that do not define
     //     classes or enumerations,
-    if (!CheckConstexprDeclStmt(SemaRef, Dcl, cast<DeclStmt>(S), Cxx1yLoc, Kind))
+    if (!CheckConstexprDeclStmt(SemaRef, Dcl, DS, Cxx1yLoc, Kind))
       return false;
     return true;
+  }
 
   case Stmt::ReturnStmtClass:
     //   - and exactly one return statement;
@@ -4240,6 +4258,12 @@ ExprResult Sema::ConvertMemberDefaultInitExpression(FieldDecl *FD,
                                                     SourceLocation InitLoc) {
   InitializedEntity Entity =
       InitializedEntity::InitializeMemberFromDefaultMemberInitializer(FD);
+  return ConvertMemberDefaultInitExpression(FD, Entity, InitExpr, InitLoc);
+}
+
+ExprResult Sema::ConvertMemberDefaultInitExpression(
+    FieldDecl *FD, const InitializedEntity &Entity, Expr *InitExpr,
+    SourceLocation InitLoc) {
   InitializationKind Kind =
       FD->getInClassInitStyle() == ICIS_ListInit
           ? InitializationKind::CreateDirectList(InitExpr->getBeginLoc(),
@@ -5340,7 +5364,7 @@ static bool CollectFieldInitializer(Sema &SemaRef, BaseAndFieldInfo &Info,
 
   if (Field->hasInClassInitializer() && !Info.isImplicitCopyOrMove()) {
     ExprResult DIE =
-        SemaRef.BuildCXXDefaultInitExpr(Info.Ctor->getLocation(), Field);
+        SemaRef.BuildCXXCtorDefaultInitExpr(Info.Ctor->getLocation(), Field);
     if (DIE.isInvalid())
       return true;
 
@@ -8203,6 +8227,8 @@ protected:
       //   Unnamed bit-fields are not members ...
       if (Field->isUnnamedBitField())
         continue;
+      if (Field->isInvalidDecl())
+        continue;
       // Recursively expand anonymous structs.
       if (Field->isAnonymousStructOrUnion()) {
         if (visitSubobjects(Results, Field->getType()->getAsCXXRecordDecl(),
@@ -9416,8 +9442,8 @@ ComputeDefaultedComparisonExceptionSpec(Sema &S, SourceLocation Loc,
 
   // The common case is that we just defined the comparison function. In that
   // case, just look at whether the body can throw.
-  if (FD->hasBody()) {
-    ExceptSpec.CalledStmt(FD->getBody());
+  if (Stmt *FunctionBody = FD->getBody()) {
+    ExceptSpec.CalledStmt(FunctionBody);
   } else {
     // Otherwise, build a body so we can check it. This should ideally only
     // happen when we're not actually marking the function referenced. (This is
@@ -14122,7 +14148,7 @@ bool SpecialMemberExceptionSpecInfo::visitField(FieldDecl *FD) {
       // FIXME: We should have a single context note pointing at Loc, and
       // this location should be MD->getLocation() instead, since that's
       // the location where we actually use the default init expression.
-      E = S.BuildCXXDefaultInitExpr(Loc, FD).get();
+      E = S.BuildCXXCtorDefaultInitExpr(Loc, FD).get();
     if (E)
       ExceptSpec.CalledExpr(E);
   } else if (auto *RD = S.Context.getBaseElementType(FD->getType())

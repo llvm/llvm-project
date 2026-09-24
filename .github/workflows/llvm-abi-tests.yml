@@ -27,7 +27,7 @@ concurrency:
 jobs:
   abi-dump-setup:
     if: github.repository_owner == 'llvm'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     outputs:
       BASELINE_REF: ${{ steps.vars.outputs.BASELINE_REF }}
       ABI_HEADERS: ${{ steps.vars.outputs.ABI_HEADERS }}
@@ -69,9 +69,9 @@ jobs:
   abi-dump:
     if: github.repository_owner == 'llvm'
     needs: abi-dump-setup
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     container:
-      image: "ghcr.io/llvm/ci-ubuntu-24.04-abi-tests@sha256:a948062f8abb4b2e9d0bfca80c307f1e679f292230af67eee8b2518ad7aa206f" #ghcr.io/llvm/ci-ubuntu-24.04-abi-tests:bb0bd382ab2b"
+      image: "ghcr.io/llvm/ci-ubuntu-26.04-abi-tests@sha256:9729141ba2f0452fa28c22768db9a3c7d6b4c4ac92d1024be4a84d21538f7317"
     strategy:
       matrix:
         name:
@@ -157,9 +157,9 @@ jobs:
 
   abi-compare:
     if: github.repository_owner == 'llvm'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     container:
-      image: "ghcr.io/llvm/ci-ubuntu-24.04-abi-tests@sha256:a948062f8abb4b2e9d0bfca80c307f1e679f292230af67eee8b2518ad7aa206f" #ghcr.io/llvm/ci-ubuntu-24.04-abi-tests:bb0bd382ab2b
+      image: "ghcr.io/llvm/ci-ubuntu-26.04-abi-tests@sha256:9729141ba2f0452fa28c22768db9a3c7d6b4c4ac92d1024be4a84d21538f7317"
     needs:
       - abi-dump-setup
       - abi-dump

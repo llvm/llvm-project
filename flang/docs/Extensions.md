@@ -8,11 +8,6 @@
 
 # Fortran Extensions supported by Flang
 
-```{contents}
----
-local:
----
-```
 
 As a general principle, this compiler will accept by default and
 without complaint many legacy features, extensions to the standard
@@ -276,7 +271,14 @@ end
 * Outside a character literal, a comment after a continuation marker (&)
   need not begin with a comment marker (!).
 * Classic C-style `/*comments*/` are skipped, so multi-language header
-  files are easier to write and use.
+  files are easier to write and use. In fixed source form label fields, C
+  comments are skipped only when preprocessing is enabled. Otherwise, valid
+  Fortran programs could be rejected. For example:
+```fortran
+      x = x
+     /* 2                           ! fixed-form continuation line
+      print *, x, 'tail */ text'
+```
 * $ and \ edit descriptors are supported in FORMAT to suppress newline
   output on user prompts.
 * Tabs in format strings (not `FORMAT` statements) are allowed on output.
@@ -694,6 +696,15 @@ end program
   the value of the last mask element, some treat these
   assignment statements as no-ops, and the rest crash during compilation.)
   The compiler flags this case as an error.
+
+* F2023 12.6.3 restricts enumeration types in I/O only for list-directed
+  transfers (prohibited) and formatted transfers (which must use an `I`, `B`,
+  `O`, or `Z` edit descriptor); it places no restriction on unformatted I/O.
+  Flang is currently stricter than the standard here and rejects an
+  enumeration type -- whether a bare item or reached as a component of a
+  derived type not processed by defined I/O -- in unformatted I/O with an
+  error.  This can be a temporary flang limitation while enumeration-type
+  support is incomplete, not a standard requirement.
 
 ## Standard features that might as well not be
 

@@ -587,8 +587,7 @@ void Instruction::dropUBImplyingAttrsAndMetadata(ArrayRef<unsigned> Keep) {
       LLVMContext::MD_mem_cache_hint, LLVMContext::MD_nofpclass};
   SmallVector<unsigned> KeepIDs;
   KeepIDs.reserve(Keep.size() + std::size(KnownIDs));
-  append_range(KeepIDs, (!ProfcheckDisableMetadataFixes ? KnownIDs
-                                                        : drop_end(KnownIDs)));
+  append_range(KeepIDs, KnownIDs);
   append_range(KeepIDs, Keep);
   dropUBImplyingAttrsAndUnknownMetadata(KeepIDs);
 }
@@ -1381,15 +1380,6 @@ bool Instruction::isLifetimeStartOrEnd() const {
     return false;
   Intrinsic::ID ID = II->getIntrinsicID();
   return ID == Intrinsic::lifetime_start || ID == Intrinsic::lifetime_end;
-}
-
-bool Instruction::isLaunderOrStripInvariantGroup() const {
-  auto *II = dyn_cast<IntrinsicInst>(this);
-  if (!II)
-    return false;
-  Intrinsic::ID ID = II->getIntrinsicID();
-  return ID == Intrinsic::launder_invariant_group ||
-         ID == Intrinsic::strip_invariant_group;
 }
 
 bool Instruction::isDebugOrPseudoInst() const {

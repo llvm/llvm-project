@@ -1842,11 +1842,15 @@ LLVMOpcode LLVMGetConstOpcode(LLVMValueRef ConstantVal) {
 }
 
 LLVMValueRef LLVMAlignOf(LLVMTypeRef Ty) {
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
   return wrap(ConstantExpr::getAlignOf(unwrap(Ty)));
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 }
 
 LLVMValueRef LLVMSizeOf(LLVMTypeRef Ty) {
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
   return wrap(ConstantExpr::getSizeOf(unwrap(Ty)));
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 }
 
 LLVMValueRef LLVMConstNeg(LLVMValueRef ConstantVal) {
@@ -3090,20 +3094,20 @@ LLVMValueRef LLVMIsATerminatorInst(LLVMValueRef Inst) {
 
 LLVMDbgRecordRef LLVMGetFirstDbgRecord(LLVMValueRef Inst) {
   Instruction *Instr = unwrap<Instruction>(Inst);
-  if (!Instr->DebugMarker)
+  if (!Instr->getDbgMarker())
     return nullptr;
-  auto I = Instr->DebugMarker->StoredDbgRecords.begin();
-  if (I == Instr->DebugMarker->StoredDbgRecords.end())
+  auto I = Instr->getDbgMarker()->StoredDbgRecords.begin();
+  if (I == Instr->getDbgMarker()->StoredDbgRecords.end())
     return nullptr;
   return wrap(&*I);
 }
 
 LLVMDbgRecordRef LLVMGetLastDbgRecord(LLVMValueRef Inst) {
   Instruction *Instr = unwrap<Instruction>(Inst);
-  if (!Instr->DebugMarker)
+  if (!Instr->getDbgMarker())
     return nullptr;
-  auto I = Instr->DebugMarker->StoredDbgRecords.rbegin();
-  if (I == Instr->DebugMarker->StoredDbgRecords.rend())
+  auto I = Instr->getDbgMarker()->StoredDbgRecords.rbegin();
+  if (I == Instr->getDbgMarker()->StoredDbgRecords.rend())
     return nullptr;
   return wrap(&*I);
 }
@@ -3111,7 +3115,7 @@ LLVMDbgRecordRef LLVMGetLastDbgRecord(LLVMValueRef Inst) {
 LLVMDbgRecordRef LLVMGetNextDbgRecord(LLVMDbgRecordRef Rec) {
   DbgRecord *Record = unwrap<DbgRecord>(Rec);
   simple_ilist<DbgRecord>::iterator I(Record);
-  if (++I == Record->getInstruction()->DebugMarker->StoredDbgRecords.end())
+  if (++I == Record->getInstruction()->getDbgMarker()->StoredDbgRecords.end())
     return nullptr;
   return wrap(&*I);
 }
@@ -3119,7 +3123,7 @@ LLVMDbgRecordRef LLVMGetNextDbgRecord(LLVMDbgRecordRef Rec) {
 LLVMDbgRecordRef LLVMGetPreviousDbgRecord(LLVMDbgRecordRef Rec) {
   DbgRecord *Record = unwrap<DbgRecord>(Rec);
   simple_ilist<DbgRecord>::iterator I(Record);
-  if (I == Record->getInstruction()->DebugMarker->StoredDbgRecords.begin())
+  if (I == Record->getInstruction()->getDbgMarker()->StoredDbgRecords.begin())
     return nullptr;
   return wrap(&*--I);
 }
@@ -4006,20 +4010,23 @@ void LLVMSetIsDisjoint(LLVMValueRef Inst, LLVMBool IsDisjoint) {
 
 LLVMValueRef LLVMBuildMalloc(LLVMBuilderRef B, LLVMTypeRef Ty,
                              const char *Name) {
-  Type* ITy = Type::getInt32Ty(unwrap(B)->GetInsertBlock()->getContext());
-  Constant* AllocSize = ConstantExpr::getSizeOf(unwrap(Ty));
-  AllocSize = ConstantExpr::getTruncOrBitCast(AllocSize, ITy);
-  return wrap(unwrap(B)->CreateMalloc(ITy, unwrap(Ty), AllocSize, nullptr,
-                                      nullptr, Name));
+  BasicBlock *BB = unwrap(B)->GetInsertBlock();
+  const DataLayout &DL = BB->getDataLayout();
+  Type *ITy = Type::getInt32Ty(BB->getContext());
+  Value *AllocSize =
+      unwrap(B)->CreateTypeSize(ITy, DL.getTypeAllocSize(unwrap(Ty)));
+  return wrap(unwrap(B)->CreateMalloc(ITy, AllocSize, nullptr, nullptr, Name));
 }
 
 LLVMValueRef LLVMBuildArrayMalloc(LLVMBuilderRef B, LLVMTypeRef Ty,
                                   LLVMValueRef Val, const char *Name) {
-  Type* ITy = Type::getInt32Ty(unwrap(B)->GetInsertBlock()->getContext());
-  Constant* AllocSize = ConstantExpr::getSizeOf(unwrap(Ty));
-  AllocSize = ConstantExpr::getTruncOrBitCast(AllocSize, ITy);
-  return wrap(unwrap(B)->CreateMalloc(ITy, unwrap(Ty), AllocSize, unwrap(Val),
-                                      nullptr, Name));
+  BasicBlock *BB = unwrap(B)->GetInsertBlock();
+  const DataLayout &DL = BB->getDataLayout();
+  Type *ITy = Type::getInt32Ty(BB->getContext());
+  Value *AllocSize =
+      unwrap(B)->CreateTypeSize(ITy, DL.getTypeAllocSize(unwrap(Ty)));
+  return wrap(
+      unwrap(B)->CreateMalloc(ITy, AllocSize, unwrap(Val), nullptr, Name));
 }
 
 LLVMValueRef LLVMBuildMemSet(LLVMBuilderRef B, LLVMValueRef Ptr,

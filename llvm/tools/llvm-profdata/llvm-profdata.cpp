@@ -494,6 +494,10 @@ static cl::opt<bool> ShowSectionInfoOnly(
              "The flag is only usable when the sample profile is in "
              "extbinary format"),
     cl::sub(ShowSubcommand));
+static cl::opt<bool> ShowCompositeInfoOnly(
+    "show-composite-info-only", cl::init(false),
+    cl::desc("Show type IDs and payload sizes in a composite sample profile"),
+    cl::sub(ShowSubcommand));
 static cl::opt<bool> ShowBinaryIds("binary-ids", cl::init(false),
                                    cl::desc("Show binary ids in the profile. "),
                                    cl::sub(ShowSubcommand));
@@ -1662,6 +1666,13 @@ static void mergeSampleProfile(const WeightedFileVector &Inputs,
       Readers.pop_back();
       continue;
     }
+
+    // Merging cannot preserve payloads that this reader does not understand,
+    // so make the otherwise intentional forward-compatible skip visible.
+    if (Reader->hasUnknownProfileTypes())
+      warn("unknown composite profile blocks were ignored and will not be "
+           "preserved",
+           Input.Filename);
 
     SampleProfileMap &Profiles = Reader->getProfiles();
     if (ProfileIsProbeBased &&
@@ -3280,6 +3291,10 @@ static int showHotFunctionList(const sampleprof::SampleProfileMap &Profiles,
 static int showSampleProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
   if (SFormat == ShowFormat::Yaml)
     exitWithError("YAML output is not supported for sample profiles");
+  if (ShowSectionInfoOnly && ShowCompositeInfoOnly)
+    exitWithError("-show-sec-info-only and "
+                  "-show-composite-info-only cannot be used together");
+
   using namespace sampleprof;
   LLVMContext Context;
   auto FS = vfs::getRealFileSystem();
@@ -3291,6 +3306,18 @@ static int showSampleProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
   auto Reader = std::move(ReaderOrErr.get());
   if (ShowSectionInfoOnly) {
     showSectionInfo(Reader.get(), OS);
+    return 0;
+  }
+
+  if (ShowCompositeInfoOnly) {
+    if (!Reader->hasCompositeProfileSection()) {
+      WithColor::warning() << "no composite profile section; nothing to show\n";
+      return 0;
+    }
+    if (std::error_code EC = Reader->dumpProfileTypeInfo(OS)) {
+      OS.flush();
+      exitWithErrorCode(EC, Filename);
+    }
     return 0;
   }
 

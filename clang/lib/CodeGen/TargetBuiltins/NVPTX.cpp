@@ -1028,6 +1028,56 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
     PZO_CVT(f2bf16_rz_satfinite);
     PZO_CVT(f2bf16_rz_relu_satfinite);
 
+    PZO_CVT(ff_to_e4m3x2_rn);
+    PZO_CVT(ff_to_e4m3x2_rn_relu);
+    PZO_CVT(ff_to_e4m3x2_rz);
+    PZO_CVT(ff_to_e4m3x2_rz_relu);
+    PZO_CVT(ff_to_e5m2x2_rn);
+    PZO_CVT(ff_to_e5m2x2_rn_relu);
+    PZO_CVT(ff_to_e5m2x2_rz);
+    PZO_CVT(ff_to_e5m2x2_rz_relu);
+    PZO_CVT(f16x2_to_e4m3x2_rn);
+    PZO_CVT(f16x2_to_e4m3x2_rn_relu);
+    PZO_CVT(f16x2_to_e4m3x2_rz);
+    PZO_CVT(f16x2_to_e4m3x2_rz_relu);
+    PZO_CVT(f16x2_to_e5m2x2_rn);
+    PZO_CVT(f16x2_to_e5m2x2_rn_relu);
+    PZO_CVT(f16x2_to_e5m2x2_rz);
+    PZO_CVT(f16x2_to_e5m2x2_rz_relu);
+    PZO_CVT(bf16x2_to_e4m3x2_rn_satfinite);
+    PZO_CVT(bf16x2_to_e4m3x2_rn_relu_satfinite);
+    PZO_CVT(bf16x2_to_e4m3x2_rz_satfinite);
+    PZO_CVT(bf16x2_to_e4m3x2_rz_relu_satfinite);
+    PZO_CVT(bf16x2_to_e5m2x2_rn_satfinite);
+    PZO_CVT(bf16x2_to_e5m2x2_rn_relu_satfinite);
+    PZO_CVT(bf16x2_to_e5m2x2_rz_satfinite);
+    PZO_CVT(bf16x2_to_e5m2x2_rz_relu_satfinite);
+
+    PZO_CVT(ff_to_e2m3x2_rn_satfinite);
+    PZO_CVT(ff_to_e2m3x2_rn_relu_satfinite);
+    PZO_CVT(ff_to_e2m3x2_rz_satfinite);
+    PZO_CVT(ff_to_e2m3x2_rz_relu_satfinite);
+    PZO_CVT(ff_to_e3m2x2_rn_satfinite);
+    PZO_CVT(ff_to_e3m2x2_rn_relu_satfinite);
+    PZO_CVT(ff_to_e3m2x2_rz_satfinite);
+    PZO_CVT(ff_to_e3m2x2_rz_relu_satfinite);
+    PZO_CVT(f16x2_to_e2m3x2_rn_satfinite);
+    PZO_CVT(f16x2_to_e2m3x2_rn_relu_satfinite);
+    PZO_CVT(f16x2_to_e2m3x2_rz_satfinite);
+    PZO_CVT(f16x2_to_e2m3x2_rz_relu_satfinite);
+    PZO_CVT(f16x2_to_e3m2x2_rn_satfinite);
+    PZO_CVT(f16x2_to_e3m2x2_rn_relu_satfinite);
+    PZO_CVT(f16x2_to_e3m2x2_rz_satfinite);
+    PZO_CVT(f16x2_to_e3m2x2_rz_relu_satfinite);
+    PZO_CVT(bf16x2_to_e2m3x2_rn_satfinite);
+    PZO_CVT(bf16x2_to_e2m3x2_rn_relu_satfinite);
+    PZO_CVT(bf16x2_to_e2m3x2_rz_satfinite);
+    PZO_CVT(bf16x2_to_e2m3x2_rz_relu_satfinite);
+    PZO_CVT(bf16x2_to_e3m2x2_rn_satfinite);
+    PZO_CVT(bf16x2_to_e3m2x2_rn_relu_satfinite);
+    PZO_CVT(bf16x2_to_e3m2x2_rz_satfinite);
+    PZO_CVT(bf16x2_to_e3m2x2_rz_relu_satfinite);
+
 #undef PZO_CVT
 
   case NVPTX::BI__nvvm_fma_rn_f16:
@@ -1393,6 +1443,15 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
         Intrinsic::nvvm_barrier_cta_red_popc_aligned_all, {},
         {Builder.getInt32(0), Builder.CreateICmpNE(EmitScalarExpr(E->getArg(0)),
                                                    Builder.getInt32(0))});
+  case NVPTX::BI__nvvm_mbarrier_init:
+  case NVPTX::BI__nvvm_mbarrier_init_shared: {
+    // The intrinsic is overloaded on the pointer, so the two builtins differ
+    // only in the address space of their first argument.
+    Value *Ptr = EmitScalarExpr(E->getArg(0));
+    return Builder.CreateIntrinsic(
+        Intrinsic::nvvm_mbarrier_init, {Ptr->getType()},
+        {Ptr, EmitScalarExpr(E->getArg(1)), Builder.getInt32(0)});
+  }
   default:
     return nullptr;
   }

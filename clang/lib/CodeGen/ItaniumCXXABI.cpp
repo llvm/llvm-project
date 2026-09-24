@@ -31,6 +31,7 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/PointerAuthOptions.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
+#include "clang/CodeGenUtils/ItaniumCXXABIUtils.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Instructions.h"
@@ -1554,58 +1555,6 @@ static llvm::FunctionCallee getBadCastFn(CodeGenFunction &CGF) {
   return CGF.CGM.CreateRuntimeFunction(FTy, "__cxa_bad_cast");
 }
 
-/// Compute the src2dst_offset hint as described in the
-/// Itanium C++ ABI [2.9.7]
-static CharUnits computeOffsetHint(ASTContext &Context,
-                                   const CXXRecordDecl *Src,
-                                   const CXXRecordDecl *Dst) {
-  CXXBasePaths Paths(/*FindAmbiguities=*/true, /*RecordPaths=*/true,
-                     /*DetectVirtual=*/false);
-
-  // If Dst is not derived from Src we can skip the whole computation below and
-  // return that Src is not a public base of Dst.  Record all inheritance paths.
-  if (!Dst->isDerivedFrom(Src, Paths))
-    return CharUnits::fromQuantity(-2ULL);
-
-  unsigned NumPublicPaths = 0;
-  CharUnits Offset;
-
-  // Now walk all possible inheritance paths.
-  for (const CXXBasePath &Path : Paths) {
-    if (Path.Access != AS_public)  // Ignore non-public inheritance.
-      continue;
-
-    ++NumPublicPaths;
-
-    for (const CXXBasePathElement &PathElement : Path) {
-      // If the path contains a virtual base class we can't give any hint.
-      // -1: no hint.
-      if (PathElement.Base->isVirtual())
-        return CharUnits::fromQuantity(-1ULL);
-
-      if (NumPublicPaths > 1) // Won't use offsets, skip computation.
-        continue;
-
-      // Accumulate the base class offsets.
-      const ASTRecordLayout &L = Context.getASTRecordLayout(PathElement.Class);
-      Offset += L.getBaseClassOffset(
-          PathElement.Base->getType()->getAsCXXRecordDecl());
-    }
-  }
-
-  // -2: Src is not a public base of Dst.
-  if (NumPublicPaths == 0)
-    return CharUnits::fromQuantity(-2ULL);
-
-  // -3: Src is a multiple public base type but never a virtual base type.
-  if (NumPublicPaths > 1)
-    return CharUnits::fromQuantity(-3ULL);
-
-  // Otherwise, the Src type is a unique public nonvirtual base type of Dst.
-  // Return the offset of Src from the origin of Dst.
-  return Offset;
-}
-
 static llvm::FunctionCallee getBadTypeidFn(CodeGenFunction &CGF) {
   // void __cxa_bad_typeid();
   llvm::FunctionType *FTy = llvm::FunctionType::get(CGF.VoidTy, false);
@@ -1667,7 +1616,8 @@ llvm::Value *ItaniumCXXABI::emitDynamicCastCall(
   const CXXRecordDecl *DestDecl = DestRecordTy->getAsCXXRecordDecl();
   llvm::Value *OffsetHint = llvm::ConstantInt::getSigned(
       PtrDiffLTy,
-      computeOffsetHint(CGF.getContext(), SrcDecl, DestDecl).getQuantity());
+      CodeGenUtils::computeOffsetHint(CGF.getContext(), SrcDecl, DestDecl)
+          .getQuantity());
 
   // Emit the call to __dynamic_cast.
   llvm::Value *Value = ThisAddr.emitRawPointer(CGF);
@@ -2191,10 +2141,10 @@ ItaniumCXXABI::getVTableAddressPoint(BaseSubobject Base,
       CGM.getItaniumVTableContext().getVTableLayout(VTableClass);
   VTableLayout::AddressPointLocation AddressPoint =
       Layout.getAddressPoint(Base);
-  llvm::Value *Indices[] = {
-    llvm::ConstantInt::get(CGM.Int32Ty, 0),
-    llvm::ConstantInt::get(CGM.Int32Ty, AddressPoint.VTableIndex),
-    llvm::ConstantInt::get(CGM.Int32Ty, AddressPoint.AddressPointIndex),
+  llvm::Constant *Indices[] = {
+      llvm::ConstantInt::get(CGM.Int32Ty, 0),
+      llvm::ConstantInt::get(CGM.Int32Ty, AddressPoint.VTableIndex),
+      llvm::ConstantInt::get(CGM.Int32Ty, AddressPoint.AddressPointIndex),
   };
 
   // Add inrange attribute to indicate that only the VTableIndex can be
@@ -2208,7 +2158,8 @@ ItaniumCXXABI::getVTableAddressPoint(BaseSubobject Base,
       llvm::APInt(32, (int)-Offset, true),
       llvm::APInt(32, (int)(VTableSize - Offset), true));
   return llvm::ConstantExpr::getGetElementPtr(
-      VTable->getValueType(), VTable, Indices, /*InBounds=*/true, InRange);
+      CGM.getDataLayout(), VTable->getValueType(), VTable, Indices,
+      llvm::GEPNoWrapFlags::inBounds(), InRange);
 }
 
 llvm::Value *ItaniumCXXABI::getVTableAddressPointInStructorWithVTT(
@@ -3641,12 +3592,14 @@ public:
   /// link to an existing RTTI descriptor if one already exists.
   llvm::Constant *BuildTypeInfo(QualType Ty);
 
-  /// BuildTypeInfo - Build the RTTI type info struct for the given type.
+  /// BuildTypeInfo - Build the RTTI type info struct for the given type. The
+  /// TypeInfo* properties apply to the type info, the others to the type name.
   llvm::Constant *BuildTypeInfo(
-      QualType Ty,
-      llvm::GlobalVariable::LinkageTypes Linkage,
+      QualType Ty, llvm::GlobalVariable::LinkageTypes Linkage,
       llvm::GlobalValue::VisibilityTypes Visibility,
-      llvm::GlobalValue::DLLStorageClassTypes DLLStorageClass);
+      llvm::GlobalValue::DLLStorageClassTypes DLLStorageClass,
+      llvm::GlobalValue::VisibilityTypes TypeInfoVisibility,
+      llvm::GlobalValue::DLLStorageClassTypes TypeInfoDLLStorageClass);
 };
 }
 
@@ -4119,8 +4072,9 @@ void ItaniumRTTIBuilder::BuildVTablePointer(const Type *Ty,
     VTable = llvm::ConstantExpr::getInBoundsPtrAdd(VTable, Eight);
   } else {
     llvm::Constant *Two = llvm::ConstantInt::get(PtrDiffTy, 2);
-    VTable = llvm::ConstantExpr::getInBoundsGetElementPtr(CGM.GlobalsInt8PtrTy,
-                                                          VTable, Two);
+    VTable = llvm::ConstantExpr::getGetElementPtr(
+        CGM.getDataLayout(), CGM.GlobalsInt8PtrTy, VTable, Two,
+        llvm::GEPNoWrapFlags::inBounds());
   }
 
   if (const auto &Schema =
@@ -4187,6 +4141,17 @@ static llvm::GlobalVariable::LinkageTypes getTypeInfoLinkage(CodeGenModule &CGM,
   llvm_unreachable("Invalid linkage!");
 }
 
+/// A dllexported global must not be hidden, so dllexport takes precedence over
+/// the visibility implied by -fvisibility=hidden, as elsewhere in CodeGen.
+static llvm::GlobalValue::VisibilityTypes
+getRTTIVisibility(llvm::GlobalValue::VisibilityTypes Visibility,
+                  llvm::GlobalValue::DLLStorageClassTypes DLLStorageClass) {
+  if (DLLStorageClass == llvm::GlobalValue::DLLExportStorageClass &&
+      Visibility == llvm::GlobalValue::HiddenVisibility)
+    return llvm::GlobalValue::DefaultVisibility;
+  return Visibility;
+}
+
 llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(QualType Ty) {
   // We want to operate on the canonical type.
   Ty = Ty.getCanonicalType();
@@ -4234,14 +4199,32 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(QualType Ty) {
          llvmVisibility == llvm::GlobalValue::DefaultVisibility))
       DLLStorageClass = llvm::GlobalValue::DLLExportStorageClass;
   }
-  return BuildTypeInfo(Ty, Linkage, llvmVisibility, DLLStorageClass);
+  llvmVisibility = getRTTIVisibility(llvmVisibility, DLLStorageClass);
+
+  // Export the typeinfo in the same circumstances as the vtable is exported.
+  llvm::GlobalValue::DLLStorageClassTypes TypeInfoDLLStorageClass =
+      DLLStorageClass;
+  if (CGM.getTarget().hasPS4DLLImportExport() &&
+      TypeInfoDLLStorageClass != llvm::GlobalValue::DLLExportStorageClass) {
+    if (auto RD = Ty->getAsCXXRecordDecl()) {
+      if (RD->hasAttr<DLLExportAttr>() ||
+          CXXRecordNonInlineHasAttr<DLLExportAttr>(RD))
+        TypeInfoDLLStorageClass = llvm::GlobalValue::DLLExportStorageClass;
+    }
+  }
+  llvm::GlobalValue::VisibilityTypes TypeInfoVisibility =
+      getRTTIVisibility(llvmVisibility, TypeInfoDLLStorageClass);
+
+  return BuildTypeInfo(Ty, Linkage, llvmVisibility, DLLStorageClass,
+                       TypeInfoVisibility, TypeInfoDLLStorageClass);
 }
 
 llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(
-      QualType Ty,
-      llvm::GlobalVariable::LinkageTypes Linkage,
-      llvm::GlobalValue::VisibilityTypes Visibility,
-      llvm::GlobalValue::DLLStorageClassTypes DLLStorageClass) {
+    QualType Ty, llvm::GlobalVariable::LinkageTypes Linkage,
+    llvm::GlobalValue::VisibilityTypes Visibility,
+    llvm::GlobalValue::DLLStorageClassTypes DLLStorageClass,
+    llvm::GlobalValue::VisibilityTypes TypeInfoVisibility,
+    llvm::GlobalValue::DLLStorageClassTypes TypeInfoDLLStorageClass) {
   SmallString<256> Name;
   llvm::raw_svector_ostream Out(Name);
   CGM.getCXXABI().getMangleContext().mangleCXXRTTI(Ty, Out);
@@ -4377,19 +4360,6 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(
 
   GV->replaceInitializer(llvm::ConstantStruct::getAnon(Fields));
 
-  // Export the typeinfo in the same circumstances as the vtable is exported.
-  auto GVDLLStorageClass = DLLStorageClass;
-  if (CGM.getTarget().hasPS4DLLImportExport() &&
-      GVDLLStorageClass != llvm::GlobalVariable::DLLExportStorageClass) {
-    if (const RecordType *RecordTy = dyn_cast<RecordType>(Ty)) {
-      const auto *RD =
-          cast<CXXRecordDecl>(RecordTy->getDecl())->getDefinitionOrSelf();
-      if (RD->hasAttr<DLLExportAttr>() ||
-          CXXRecordNonInlineHasAttr<DLLExportAttr>(RD))
-        GVDLLStorageClass = llvm::GlobalVariable::DLLExportStorageClass;
-    }
-  }
-
   // If there's already an old global variable, replace it with the new one.
   if (OldGV) {
     GV->takeName(OldGV);
@@ -4422,11 +4392,11 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(
   TypeName->setVisibility(Visibility);
   CGM.setDSOLocal(TypeName);
 
-  GV->setVisibility(Visibility);
+  GV->setVisibility(TypeInfoVisibility);
   CGM.setDSOLocal(GV);
 
   TypeName->setDLLStorageClass(DLLStorageClass);
-  GV->setDLLStorageClass(GVDLLStorageClass);
+  GV->setDLLStorageClass(TypeInfoDLLStorageClass);
 
   TypeName->setPartition(CGM.getCodeGenOpts().SymbolPartition);
   GV->setPartition(CGM.getCodeGenOpts().SymbolPartition);
@@ -4722,15 +4692,15 @@ void ItaniumCXXABI::EmitFundamentalRTTIDescriptors(const CXXRecordDecl *RD) {
       RD->hasAttr<DLLExportAttr>() || CGM.shouldMapVisibilityToDLLExport(RD)
           ? llvm::GlobalValue::DLLExportStorageClass
           : llvm::GlobalValue::DefaultStorageClass;
-  llvm::GlobalValue::VisibilityTypes Visibility =
-      CodeGenModule::GetLLVMVisibility(RD->getVisibility());
+  llvm::GlobalValue::VisibilityTypes Visibility = getRTTIVisibility(
+      CodeGenModule::GetLLVMVisibility(RD->getVisibility()), DLLStorageClass);
   for (const QualType &FundamentalType : FundamentalTypes) {
     QualType PointerType = getContext().getPointerType(FundamentalType);
     QualType PointerTypeConst = getContext().getPointerType(
         FundamentalType.withConst());
     for (QualType Type : {FundamentalType, PointerType, PointerTypeConst})
       ItaniumRTTIBuilder(*this).BuildTypeInfo(
-          Type, llvm::GlobalValue::ExternalLinkage,
+          Type, llvm::GlobalValue::ExternalLinkage, Visibility, DLLStorageClass,
           Visibility, DLLStorageClass);
   }
 }

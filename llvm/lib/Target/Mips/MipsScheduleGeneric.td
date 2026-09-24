@@ -871,7 +871,7 @@ def : InstRW<[GenericWriteFPUMoveGPRFPU], (instrs BuildPairF64,
                                            MFC1, MFC1_D64, MFHC1_D32,
                                            MFHC1_D64, MTC1, MTC1_D64,
                                            MTHC1_D32, MTHC1_D64,
-                                           BuildPairF64_FPR, ExtractElementF64_FPR)>;
+                                           BuildPairF64_FPR)>;
 
 // swc1, swxc1
 def : InstRW<[GenericWriteFPUStore], (instrs SDC1, SDC164, SDXC1, SDXC164,

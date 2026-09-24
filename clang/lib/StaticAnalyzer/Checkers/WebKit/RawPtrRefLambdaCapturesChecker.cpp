@@ -70,6 +70,17 @@ public:
         ShouldVisitImplicitCode = false;
       }
 
+      bool TraverseDecl(Decl *D) override {
+        // A template pattern is checked through its instantiations, which are
+        // traversed from the TemplateDecl itself. In the pattern the callee of
+        // a call may still be an unresolved overload set, so whether a lambda
+        // argument can escape isn't known, and a lambda in a pattern which is
+        // never instantiated is never used. Don't enter it at all.
+        if (D && !isa<TemplateDecl>(D) && D->isTemplated())
+          return true;
+        return DynamicRecursiveASTVisitor::TraverseDecl(D);
+      }
+
       bool TraverseCXXConstructorDecl(CXXConstructorDecl *Ctor) override {
         llvm::SaveAndRestore SavedDecl(ClsType);
         ClsType = Ctor->getThisType();
@@ -84,7 +95,11 @@ public:
 
       bool TraverseCXXMethodDecl(CXXMethodDecl *CXXMD) override {
         llvm::SaveAndRestore SavedDecl(ClsType);
-        if (CXXMD->isInstance())
+        // 'this' in the body of a lambda's call operator refers to the object
+        // of the enclosing method, so keep the class of that method. This
+        // matters for the instantiations of a generic lambda, which are
+        // traversed as declarations rather than as a body.
+        if (CXXMD->isInstance() && !CXXMD->getParent()->isLambda())
           ClsType = CXXMD->getThisType();
         return DynamicRecursiveASTVisitor::TraverseCXXMethodDecl(CXXMD);
       }
@@ -116,6 +131,30 @@ public:
         Checker->visitLambdaExpr(L, shouldCheckThis() && !hasProtectedThis(L),
                                  ClsType);
         return true;
+      }
+
+      bool TraverseLambdaExpr(LambdaExpr *L) override {
+        auto *FTD = L->getLambdaClass()->getDependentLambdaCallOperator();
+        if (!FTD)
+          return DynamicRecursiveASTVisitor::TraverseLambdaExpr(L);
+        // The body of a generic lambda is the pattern of its call operator,
+        // but it is reached from the LambdaExpr as a statement, so TraverseDecl
+        // never gets to skip it. Visit the lambda itself, traverse the capture
+        // initializers, which are evaluated in the enclosing scope, and then
+        // the call operator, of which the pattern is skipped like any other and
+        // the instantiations are traversed. The initializers are traversed as
+        // expressions because the variable of an init capture is declared in
+        // the pattern.
+        if (!VisitLambdaExpr(L))
+          return false;
+        for (unsigned I = 0, N = L->capture_size(); I != N; ++I) {
+          if (!(L->capture_begin() + I)->isExplicit())
+            continue;
+          if (auto *Init = L->capture_init_begin()[I];
+              Init && !TraverseStmt(Init))
+            return false;
+        }
+        return TraverseDecl(FTD);
       }
 
       bool VisitVarDecl(VarDecl *VD) override {

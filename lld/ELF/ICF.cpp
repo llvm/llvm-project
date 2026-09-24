@@ -510,9 +510,16 @@ template <class ELFT> void ICF<ELFT>::run() {
 
   // From now on, sections in Sections vector are ordered so that sections
   // in the same equivalence class are consecutive in the vector.
-  llvm::stable_sort(sections, [](const InputSection *a, const InputSection *b) {
-    return a->eqClass[0] < b->eqClass[0];
+  SmallVector<uint64_t, 0> keys(sections.size());
+  parallelFor(0, sections.size(), [&](size_t i) {
+    keys[i] = uint64_t(sections[i]->eqClass[0]) << 32 | i;
   });
+  parallelSort(keys.begin(), keys.end());
+  SmallVector<InputSection *, 0> sorted;
+  sorted.reserve(keys.size());
+  for (uint64_t k : keys)
+    sorted.push_back(sections[uint32_t(k)]);
+  sections = std::move(sorted);
 
   // Compare static contents and assign unique equivalence class IDs for each
   // static content. Use a base offset for these IDs to ensure no overlap with

@@ -326,7 +326,7 @@ def LegacyUnquotedBitEnumOp : TestFormat_Op<"$attr attr-dict">,
 // CHECK-LABEL: OptionalGroupA::parse
 // CHECK: if (::mlir::succeeded(parser.parseOptionalQuestion())
 // CHECK-NEXT: else
-// CHECK: parser.parseOptionalOperand
+// CHECK: ::mlir::detail::parseOptionalOperandInto(parser, aOperands)
 // CHECK-LABEL: OptionalGroupA::print
 // CHECK: if (!getA())
 // CHECK-NEXT: odsPrinter << ' ' << "?";
@@ -357,8 +357,22 @@ def OptionalGroupB : TestFormat_Op<[{
 //  CHECK-NEXT:   odsPrinter << ' ';
 //  CHECK-NEXT:   odsPrinter.printAttributeWithoutType(getAAttr());
 //  CHECK-NEXT: }
+//       CHECK: elidedAttrs.push_back("a");
+//   CHECK-NOT: elidedAttrs.push_back("a");
+//       CHECK: _odsPrinter.printOptionalAttrDict
 def OptionalGroupC : TestFormat_Op<[{
   ($a^)? attr-dict
+}]>, Arguments<(ins DefaultValuedStrAttr<StrAttr, "default">:$a)>;
+
+// CHECK-LABEL: OptionalGroupCPropDict::print
+//       CHECK: elidedProps.push_back("a");
+//   CHECK-NOT: elidedProps.push_back("a");
+//       CHECK: printProperties
+//       CHECK: elidedAttrs.push_back("a");
+//   CHECK-NOT: elidedAttrs.push_back("a");
+//       CHECK: _odsPrinter.printOptionalAttrDict
+def OptionalGroupCPropDict : TestFormat_Op<[{
+  ($a^)? prop-dict attr-dict
 }]>, Arguments<(ins DefaultValuedStrAttr<StrAttr, "default">:$a)>;
 
 // CHECK-LABEL: OptionalGroupD::parse
@@ -387,6 +401,10 @@ def OptionalGroupD : TestFormat_Op<[{
 // segment sizes can be inferred from what was actually parsed, so the
 // `operandSegmentSizes` key is left completely untouched: it isn't read,
 // validated, or marked as a used key at all.
+// CHECK-LABEL: PropDictSegmentSizesInferred::parse
+// CHECK: ::mlir::detail::OperandParserStorage<2> odsOperandVectors;
+// CHECK: auto &a1Operands = odsOperandVectors[0];
+// CHECK: auto &a2Operands = odsOperandVectors[1];
 // CHECK-LABEL: PropDictSegmentSizesInferred::setPropertiesFromParsedAttr
 // CHECK-NOT: operandSegmentSizes
 // CHECK: for (::mlir::NamedAttribute attr : dict) {

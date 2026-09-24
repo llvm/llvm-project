@@ -15,7 +15,7 @@
 #define LLVM_CODEGEN_SCHEDULEDAGINSTRS_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SparseMultiSet.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -104,15 +104,7 @@ namespace llvm {
 
   using ValueType = PointerUnion<const Value *, const PseudoSourceValue *>;
 
-  struct UnderlyingObject : PointerIntPair<ValueType, 1, bool> {
-    UnderlyingObject(ValueType V, bool MayAlias)
-        : PointerIntPair<ValueType, 1, bool>(V, MayAlias) {}
-
-    ValueType getValue() const { return getPointer(); }
-    bool mayAlias() const { return getInt(); }
-  };
-
-  using UnderlyingObjectsVector = SmallVector<UnderlyingObject, 4>;
+  using UnderlyingObjectsVector = SmallVector<ValueType, 4>;
 
   /// A ScheduleDAG for scheduling lists of MachineInstr.
   class LLVM_ABI ScheduleDAGInstrs : public ScheduleDAG {

@@ -181,12 +181,13 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   if (FlatOffsetBitWidth == 0)
     FlatOffsetBitWidth = 13;
 
-  LocalMemorySize = AMDGPU::IsaInfo::getLocalMemorySize(*this);
-  AddressableLocalMemorySize =
-      AMDGPU::IsaInfo::getAddressableLocalMemorySize(*this);
-  // LDS Allocation Granularity calculated in bytes from dwords
+  LocalMemorySize =
+      AMDGPU::getLocalMemorySize(getTargetID().getGPUKind(), isFullSIMDMode());
+  AddressableLocalMemorySize = AMDGPU::getAddressableLocalMemorySize(
+      getTargetID().getGPUKind(), isFullSIMDMode());
+  // LDS allocation granularity is in bytes.
   LDSAllocationGranularity =
-      AMDGPU::getLdsDwGranularity(*this) * sizeof(uint32_t);
+      AMDGPU::getLDSAllocGranule(getTargetID().getGPUKind());
 
   HasFminFmaxLegacy = getGeneration() < AMDGPUSubtarget::VOLCANIC_ISLANDS;
   HasSMulHi = getGeneration() >= AMDGPUSubtarget::GFX9;
@@ -249,8 +250,7 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
   LLVM_DEBUG(dbgs() << "sramecc setting for subtarget: "
                     << TargetID.getSramEccSetting() << '\n');
 
-  NumWorkGroupSIMDs =
-      AMDGPU::getNumWorkGroupSIMDs(AMDGPU::isFullSIMDMode(*this));
+  NumWorkGroupSIMDs = AMDGPU::getNumWorkGroupSIMDs(isFullSIMDMode());
 
   TSInfo = std::make_unique<AMDGPUSelectionDAGInfo>();
 

@@ -9,6 +9,7 @@
 #ifndef LLVM_SANDBOXIR_PASS_H
 #define LLVM_SANDBOXIR_PASS_H
 
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -87,6 +88,59 @@ public:
   RegionPass(StringRef Name) : Pass(Name) {}
   /// \Returns true if it modifies \p R.
   virtual bool runOnRegion(Region &R, const Analyses &A) = 0;
+};
+
+class AuxPassArgsRegistry;
+/// This represents an auxiliary pass argument. Its value defaults to false and
+/// gets set by AuxPassArgsRegistry::parse(). It's value is cheap to access.
+class AuxPassArg {
+  unsigned ArgIdx = 0;
+  AuxPassArgsRegistry *Registry = nullptr;
+
+  /// Use AuxPassArgsRegistry::createArg() to create.
+  AuxPassArg() = delete;
+  AuxPassArg(unsigned ArgIdx, AuxPassArgsRegistry *Registry)
+      : ArgIdx(ArgIdx), Registry(Registry) {}
+  friend class AuxPassArgsRegistry; // For constructor.
+  bool set(bool NewVal);
+
+public:
+  bool get() const;
+  StringRef getFlagStr() const;
+  operator bool() const { return get(); }
+  bool operator=(bool NewVal) { return set(NewVal); }
+
+#ifndef NDEBUG
+  void print(raw_ostream &OS) const;
+  LLVM_DUMP_METHOD void dump() const;
+#endif
+};
+
+/// A registry for the auxiliary pass argument arguments. This includes a
+/// builder for the pass arguments.
+class AuxPassArgsRegistry {
+  struct Entry {
+    Entry(StringRef FlagStr, bool Val) : FlagStr(FlagStr), Val(Val) {}
+    StringRef FlagStr;
+    bool Val;
+  };
+  SmallVector<Entry> Entries;
+  friend class AuxPassArg; // For Entries
+
+  /// Linear-time access to the entry for \p Flag. \returns nullptr if \p Flag
+  /// is not registered.
+  Entry *getEntry(StringRef Flag);
+
+public:
+  /// Builder for argument with \p Flag.
+  AuxPassArg createArg(StringRef Flag);
+  /// Parse the aux argument string \p ArgsStr and set the values.
+  void parse(StringRef ArgsStr);
+
+#ifndef NDEBUG
+  void print(raw_ostream &OS) const;
+  LLVM_DUMP_METHOD void dump() const;
+#endif
 };
 
 } // namespace sandboxir

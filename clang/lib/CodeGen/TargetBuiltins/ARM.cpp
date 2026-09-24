@@ -20,6 +20,7 @@
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/IntrinsicsARM.h"
 #include "llvm/IR/IntrinsicsBPF.h"
+#include "llvm/Support/AArch64MemoryHints.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
 
 #include <numeric>
@@ -2065,6 +2066,67 @@ static Value *EmitRangePrefetchBuiltin(CodeGenFunction &CGF, unsigned BuiltinID,
                             Ops);
 }
 
+static Value *EmitAtomicStoreWithHintBuiltin(CodeGenFunction &CGF,
+                                             unsigned BuiltinID,
+                                             const CallExpr *E) {
+  CodeGen::CGBuilderTy &Builder = CGF.Builder;
+  CodeGen::CodeGenModule &CGM = CGF.CGM;
+  Expr::EvalResult Result;
+  if (!E->getArg(2)->EvaluateAsInt(Result, CGM.getContext()))
+    llvm_unreachable(
+        "Expected integer policy argument to atomic store with hint.");
+
+  const Expr *Ptr = E->getArg(0);
+  Address Addr = CGF.EmitPointerWithAlignment(Ptr);
+  Addr = Addr.withElementType(
+      CGF.ConvertTypeForMem(Ptr->getType()->getPointeeType()));
+
+  const Expr *Data = E->getArg(1);
+  Value *DataVal = CGF.EmitToMemory(CGF.EmitScalarExpr(Data), Data->getType());
+
+  StoreInst *Store = Builder.CreateStore(DataVal, Addr);
+  Store->setVolatile(Ptr->getType()->getPointeeType().isVolatileQualified());
+
+  AtomicOrdering Ordering;
+  unsigned OrderingArg = Result.Val.getInt().getExtValue();
+  assert(isValidAtomicOrderingCABI(OrderingArg) && "Invalid atomic ordering");
+
+  switch (static_cast<AtomicOrderingCABI>(OrderingArg)) {
+  default:
+    llvm_unreachable("Unsupported atomic ordering found.");
+  case AtomicOrderingCABI::relaxed:
+    Ordering = AtomicOrdering::Monotonic;
+    break;
+  case AtomicOrderingCABI::release:
+    Ordering = AtomicOrdering::Release;
+    break;
+  case AtomicOrderingCABI::seq_cst:
+    Ordering = AtomicOrdering::SequentiallyConsistent;
+    break;
+  }
+  Store->setAtomic(Ordering);
+
+  if (!E->getArg(3)->EvaluateAsInt(Result, CGM.getContext()))
+    llvm_unreachable(
+        "Expected integer hint argument to atomic store with hint.");
+  unsigned HintArg = Result.Val.getInt().getExtValue();
+
+  // Attach the hint if valid
+  if (toAArch64MemoryHint(HintArg) != AArch64MemoryHint::HINT_NONE) {
+    LLVMContext &Ctx = CGM.getLLVMContext();
+    MDNode *MemHint = MDNode::get(
+        Ctx, {MDString::get(Ctx, "aarch64.mem_hint"),
+              llvm::ConstantAsMetadata::get(Builder.getInt32(HintArg))});
+    MDNode *HintNode = MDNode::get(
+        CGM.getLLVMContext(),
+        {llvm::ConstantAsMetadata::get(Builder.getInt32(1)), MemHint});
+
+    Store->setMetadata(llvm::LLVMContext::MD_mem_cache_hint, HintNode);
+  }
+
+  return Store;
+}
+
 /// Return true if BuiltinID is an overloaded Neon intrinsic with an extra
 /// argument that specifies the vector type. The additional argument is meant
 /// for Sema checking (see `CheckNeonBuiltinFunctionCall`) and this function
@@ -2170,15 +2232,10 @@ Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
   }
 
   if (BuiltinID == clang::ARM::BI__clear_cache) {
-    assert(E->getNumArgs() == 2 && "__clear_cache takes 2 arguments");
-    const FunctionDecl *FD = E->getDirectCallee();
-    Value *Ops[2];
-    for (unsigned i = 0; i < 2; i++)
-      Ops[i] = EmitScalarExpr(E->getArg(i));
-    llvm::Type *Ty = CGM.getTypes().ConvertType(FD->getType());
-    llvm::FunctionType *FTy = cast<llvm::FunctionType>(Ty);
-    StringRef Name = FD->getName();
-    return EmitNounwindRuntimeCall(CGM.CreateRuntimeFunction(FTy, Name), Ops);
+    Value *Begin = EmitScalarExpr(E->getArg(0));
+    Value *End = EmitScalarExpr(E->getArg(1));
+    Function *F = CGM.getIntrinsic(Intrinsic::clear_cache, {CGM.DefaultPtrTy});
+    return Builder.CreateCall(F, {Begin, End});
   }
 
   if (BuiltinID == clang::ARM::BI__builtin_arm_mcrr ||
@@ -4140,10 +4197,8 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
   case SVE::BI__builtin_sve_svdup_n_b16:
   case SVE::BI__builtin_sve_svdup_n_b32:
   case SVE::BI__builtin_sve_svdup_n_b64: {
-    Value *CmpNE =
-        Builder.CreateICmpNE(Ops[0], Constant::getNullValue(Ops[0]->getType()));
     llvm::ScalableVectorType *OverloadedTy = getSVEType(TypeFlags);
-    Value *Dup = EmitSVEDupX(CmpNE, OverloadedTy);
+    Value *Dup = EmitSVEDupX(Ops[0], OverloadedTy);
     return EmitSVEPredicateCast(Dup, cast<llvm::ScalableVectorType>(Ty));
   }
 
@@ -4620,15 +4675,10 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   }
 
   if (BuiltinID == clang::AArch64::BI__clear_cache) {
-    assert(E->getNumArgs() == 2 && "__clear_cache takes 2 arguments");
-    const FunctionDecl *FD = E->getDirectCallee();
-    Value *Ops[2];
-    for (unsigned i = 0; i < 2; i++)
-      Ops[i] = EmitScalarExpr(E->getArg(i));
-    llvm::Type *Ty = CGM.getTypes().ConvertType(FD->getType());
-    llvm::FunctionType *FTy = cast<llvm::FunctionType>(Ty);
-    StringRef Name = FD->getName();
-    return EmitNounwindRuntimeCall(CGM.CreateRuntimeFunction(FTy, Name), Ops);
+    Value *Begin = EmitScalarExpr(E->getArg(0));
+    Value *End = EmitScalarExpr(E->getArg(1));
+    Function *F = CGM.getIntrinsic(Intrinsic::clear_cache, {CGM.DefaultPtrTy});
+    return Builder.CreateCall(F, {Begin, End});
   }
 
   if ((BuiltinID == clang::AArch64::BI__builtin_arm_ldrex ||
@@ -4851,6 +4901,9 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   if (BuiltinID == AArch64::BI__builtin_arm_range_prefetch ||
       BuiltinID == AArch64::BI__builtin_arm_range_prefetch_x)
     return EmitRangePrefetchBuiltin(*this, BuiltinID, E);
+
+  if (BuiltinID == AArch64::BI__builtin_arm_atomic_store_with_hint)
+    return EmitAtomicStoreWithHintBuiltin(*this, BuiltinID, E);
 
   // Memory Tagging Extensions (MTE) Intrinsics
   Intrinsic::ID MTEIntrinsicID = Intrinsic::not_intrinsic;
@@ -6166,7 +6219,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   case NEON::BI__builtin_neon_vmax_v:
   case NEON::BI__builtin_neon_vmaxq_v:
     // FIXME: improve sharing scheme to cope with 3 alternative LLVM intrinsics.
-    Int = usgn ? Intrinsic::aarch64_neon_umax : Intrinsic::aarch64_neon_smax;
+    Int = usgn ? Intrinsic::umax : Intrinsic::smax;
     if (Ty->isFPOrFPVectorTy()) Int = Intrinsic::aarch64_neon_fmax;
     return EmitNeonCall(CGM.getIntrinsic(Int, Ty), Ops, "vmax");
   case NEON::BI__builtin_neon_vmaxh_f16: {
@@ -6176,7 +6229,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   case NEON::BI__builtin_neon_vmin_v:
   case NEON::BI__builtin_neon_vminq_v:
     // FIXME: improve sharing scheme to cope with 3 alternative LLVM intrinsics.
-    Int = usgn ? Intrinsic::aarch64_neon_umin : Intrinsic::aarch64_neon_smin;
+    Int = usgn ? Intrinsic::umin : Intrinsic::smin;
     if (Ty->isFPOrFPVectorTy()) Int = Intrinsic::aarch64_neon_fmin;
     return EmitNeonCall(CGM.getIntrinsic(Int, Ty), Ops, "vmin");
   case NEON::BI__builtin_neon_vminh_f16: {

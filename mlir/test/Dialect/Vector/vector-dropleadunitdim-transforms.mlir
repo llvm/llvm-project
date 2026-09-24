@@ -480,9 +480,9 @@ func.func @cast_away_elementwise_leading_one_dims(
   (vector<1x1x8xf32>, vector<1x4xi1>, vector<1x4xf32>, vector<1x4xf32>) {
   // CHECK:  vector.extract %{{.*}}[0, 0] : vector<8xf32> from vector<1x1x8xf32>
   // CHECK:  vector.extract %{{.*}}[0, 0] : vector<8xf32> from vector<1x1x8xf32>
-  // CHECK:  arith.addf %{{.*}}, %{{.*}} : vector<8xf32>
+  // CHECK:  arith.addf %{{.*}}, %{{.*}} fastmath<nnan> {test.marker} : vector<8xf32>
   // CHECK:  vector.broadcast %{{.*}} : vector<8xf32> to vector<1x1x8xf32>
-  %0 = arith.addf %arg0, %arg0 : vector<1x1x8xf32>
+  %0 = arith.addf %arg0, %arg0 fastmath<nnan> {test.marker} : vector<1x1x8xf32>
   // CHECK:  vector.extract %{{.*}}[0] : vector<4xf32> from vector<1x4xf32>
   // CHECK:  vector.extract %{{.*}}[0] : vector<4xf32> from vector<1x4xf32>
   // CHECK:  arith.cmpf ogt, %{{.*}}, %{{.*}} : vector<4xf32>

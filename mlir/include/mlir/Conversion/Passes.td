@@ -414,19 +414,13 @@ def LiftControlFlowToSCFPass : Pass<"lift-cf-to-scf"> {
     Otherwise a single ControlFlow switch branching to one block per return-like
     operation kind remains.
 
-    This pass may need to create unreachable terminators in case of infinite
-    loops, which is only supported for 'func.func' for now. If you potentially
-    have infinite loops inside CFG regions not belonging to 'func.func',
-    consider using `transformCFGToSCF` function directly with corresponding
-    `CFGToSCFInterface::createUnreachableTerminator` implementation.
+    This pass may need to create `ub.unreachable` terminators in case of
+    statically known infinite loops.
   }];
 
   let dependentDialects = ["scf::SCFDialect",
                            "arith::ArithDialect",
-                           "ub::UBDialect",
-                           // TODO: This is only necessary until we have a
-                           //       ub.unreachable op.
-                           "func::FuncDialect"];
+                           "ub::UBDialect"];
 }
 
 //===----------------------------------------------------------------------===//
@@ -901,21 +895,26 @@ def ConvertMathToSPIRVPass : Pass<"convert-math-to-spirv"> {
 
 def ConvertMathToXeVM : Pass<"convert-math-to-xevm"> {
   let summary =
-      "Convert (fast) math operations to native XeVM/SPIRV equivalents";
+      "Convert math operations to their XeVM/SPIRV OpenCL equivalents";
   let description = [{
-    This pass converts supported math ops marked with the `afn` fastmath flag
-    to function calls for OpenCL `native_` math intrinsics: These intrinsics
-    are typically mapped directly to native device instructions, often resulting
-    in better performance. However, the precision/error of these intrinsics
-    are implementation-defined, and thus math ops are only converted when they
-    have the `afn` fastmath flag enabled. However, if the `convertToOCL` flag is
-    set then all supported math ops would be lowered to OpenCL math intrinsics.
+    This pass lowers supported math ops to OpenCL math intrinsic calls. The
+    fastmath flag on each op picks which intrinsic is used:
+
+    *   Ops marked `afn` or `fast` become calls to OpenCL `native_` intrinsics.
+        Both work because `fast` is a group flag that expands to every fastmath
+        bit, `afn` included. These intrinsics are typically mapped directly to
+        native device instructions, often resulting in better performance. Their
+        precision/error is implementation-defined, so `afn` is what opts in.
+        Other flags on their own (`nnan`, `ninf`, ...) do not.
+    *   Every other op becomes a call to the precise OpenCL intrinsic from the
+        `__spirv_ocl_` extended instruction set. Set the `convertToOCL` flag to
+        `false` to leave these ops alone instead.
   }];
   let options = [
     Option<"convertArith", "convert-arith", "bool", /*default=*/"true",
       "Convert supported Arith ops (e.g. arith.divf) as well.">,
-    Option<"convertToOCL", "convert-to-ocl", "bool", /*default=*/"false",
-      "Convert supported Math ops to OCL intrinsics.">
+    Option<"convertToOCL", "convert-to-ocl", "bool", /*default=*/"true",
+      "Convert Math ops without `afn` fastmath to precise OCL intrinsics.">
   ];
   let dependentDialects = [
     "arith::ArithDialect",

@@ -12,38 +12,38 @@
 // RUN:     -disable-llvm-passes -emit-llvm -O0 -o - | FileCheck --check-prefixes=CHECK,ADDRESSTYPE %s
 
 // CHECK:      @_ZTT1D = linkonce_odr unnamed_addr constant [4 x ptr] [
-// DEFAULT-SAME: ptr ptrauth (ptr getelementptr inbounds inrange(-32, 8) ({ [5 x ptr] }, ptr @_ZTV1D, i32 0, i32 0, i32 4), i32 2),
-// DEFAULT-SAME: ptr ptrauth (ptr getelementptr inbounds inrange(-32, 8) ({ [5 x ptr] }, ptr @_ZTC1D0_1A, i32 0, i32 0, i32 4), i32 2),
-// DEFAULT-SAME: ptr ptrauth (ptr getelementptr inbounds inrange(-32, 8) ({ [5 x ptr] }, ptr @_ZTC1D0_1A, i32 0, i32 0, i32 4), i32 2),
-// DEFAULT-SAME: ptr ptrauth (ptr getelementptr inbounds inrange(-32, 8) ({ [5 x ptr] }, ptr @_ZTV1D, i32 0, i32 0, i32 4), i32 2)]
+// DEFAULT-SAME: ptr ptrauth (ptr getelementptr inbounds inrange(-32, 8) (i8, ptr @_ZTV1D, i64 32), i32 2),
+// DEFAULT-SAME: ptr ptrauth (ptr getelementptr inbounds inrange(-32, 8) (i8, ptr @_ZTC1D0_1A, i64 32), i32 2),
+// DEFAULT-SAME: ptr ptrauth (ptr getelementptr inbounds inrange(-32, 8) (i8, ptr @_ZTC1D0_1A, i64 32), i32 2),
+// DEFAULT-SAME: ptr ptrauth (ptr getelementptr inbounds inrange(-32, 8) (i8, ptr @_ZTV1D, i64 32), i32 2)]
 
-// ADDRESS-SAME: ptr ptrauth (ptr getelementptr inbounds inrange(-32, 8) ({ [5 x ptr] }, ptr @_ZTV1D, i32 0, i32 0, i32 4), i32 2, i64 0, ptr @_ZTT1D),
-// ADDRESS-SAME: ptr ptrauth (ptr getelementptr inbounds inrange(-32, 8) ({ [5 x ptr] }, ptr @_ZTC1D0_1A, i32 0, i32 0, i32 4), i32 2, i64 0, ptr getelementptr (ptr, ptr @_ZTT1D, i32 1)),
-// ADDRESS-SAME: ptr ptrauth (ptr getelementptr inbounds inrange(-32, 8) ({ [5 x ptr] }, ptr @_ZTC1D0_1A, i32 0, i32 0, i32 4), i32 2, i64 0, ptr getelementptr (ptr, ptr @_ZTT1D, i32 2)),
-// ADDRESS-SAME: ptr ptrauth (ptr getelementptr inbounds inrange(-32, 8) ({ [5 x ptr] }, ptr @_ZTV1D, i32 0, i32 0, i32 4), i32 2, i64 0, ptr getelementptr (ptr, ptr @_ZTT1D, i32 3))]
+// ADDRESS-SAME: ptr ptrauth (ptr getelementptr inbounds inrange(-32, 8) (i8, ptr @_ZTV1D, i64 32), i32 2, i64 0, ptr @_ZTT1D),
+// ADDRESS-SAME: ptr ptrauth (ptr getelementptr inbounds inrange(-32, 8) (i8, ptr @_ZTC1D0_1A, i64 32), i32 2, i64 0, ptr getelementptr (i8, ptr @_ZTT1D, i64 8)),
+// ADDRESS-SAME: ptr ptrauth (ptr getelementptr inbounds inrange(-32, 8) (i8, ptr @_ZTC1D0_1A, i64 32), i32 2, i64 0, ptr getelementptr (i8, ptr @_ZTT1D, i64 16)),
+// ADDRESS-SAME: ptr ptrauth (ptr getelementptr inbounds inrange(-32, 8) (i8, ptr @_ZTV1D, i64 32), i32 2, i64 0, ptr getelementptr (i8, ptr @_ZTT1D, i64 24))]
 
-// TYPE-SAME: ptr ptrauth (ptr getelementptr inbounds inrange(-32, 8) ({ [5 x ptr] }, ptr @_ZTV1D, i32 0, i32 0, i32 4), i32 2, i64 820),
-// TYPE-SAME: ptr ptrauth (ptr getelementptr inbounds inrange(-32, 8) ({ [5 x ptr] }, ptr @_ZTC1D0_1A, i32 0, i32 0, i32 4), i32 2, i64 49118),
-// TYPE-SAME: ptr ptrauth (ptr getelementptr inbounds inrange(-32, 8) ({ [5 x ptr] }, ptr @_ZTC1D0_1A, i32 0, i32 0, i32 4), i32 2, i64 49118),
-// TYPE-SAME: ptr ptrauth (ptr getelementptr inbounds inrange(-32, 8) ({ [5 x ptr] }, ptr @_ZTV1D, i32 0, i32 0, i32 4), i32 2, i64 820)]
+// TYPE-SAME: ptr ptrauth (ptr getelementptr inbounds inrange(-32, 8) (i8, ptr @_ZTV1D, i64 32), i32 2, i64 820),
+// TYPE-SAME: ptr ptrauth (ptr getelementptr inbounds inrange(-32, 8) (i8, ptr @_ZTC1D0_1A, i64 32), i32 2, i64 49118),
+// TYPE-SAME: ptr ptrauth (ptr getelementptr inbounds inrange(-32, 8) (i8, ptr @_ZTC1D0_1A, i64 32), i32 2, i64 49118),
+// TYPE-SAME: ptr ptrauth (ptr getelementptr inbounds inrange(-32, 8) (i8, ptr @_ZTV1D, i64 32), i32 2, i64 820)]
 
-// ADDRESSTYPE-SAME: ptr ptrauth (ptr getelementptr inbounds inrange(-32, 8) ({ [5 x ptr] }, ptr @_ZTV1D, i32 0, i32 0, i32 4), i32 2, i64 820, ptr @_ZTT1D),
-// ADDRESSTYPE-SAME: ptr ptrauth (ptr getelementptr inbounds inrange(-32, 8) ({ [5 x ptr] }, ptr @_ZTC1D0_1A, i32 0, i32 0, i32 4), i32 2, i64 49118, ptr getelementptr (ptr, ptr @_ZTT1D, i32 1)),
-// ADDRESSTYPE-SAME: ptr ptrauth (ptr getelementptr inbounds inrange(-32, 8) ({ [5 x ptr] }, ptr @_ZTC1D0_1A, i32 0, i32 0, i32 4), i32 2, i64 49118, ptr getelementptr (ptr, ptr @_ZTT1D, i32 2)),
-// ADDRESSTYPE-SAME: ptr ptrauth (ptr getelementptr inbounds inrange(-32, 8) ({ [5 x ptr] }, ptr @_ZTV1D, i32 0, i32 0, i32 4), i32 2, i64 820, ptr getelementptr (ptr, ptr @_ZTT1D, i32 3))]
+// ADDRESSTYPE-SAME: ptr ptrauth (ptr getelementptr inbounds inrange(-32, 8) (i8, ptr @_ZTV1D, i64 32), i32 2, i64 820, ptr @_ZTT1D),
+// ADDRESSTYPE-SAME: ptr ptrauth (ptr getelementptr inbounds inrange(-32, 8) (i8, ptr @_ZTC1D0_1A, i64 32), i32 2, i64 49118, ptr getelementptr (i8, ptr @_ZTT1D, i64 8)),
+// ADDRESSTYPE-SAME: ptr ptrauth (ptr getelementptr inbounds inrange(-32, 8) (i8, ptr @_ZTC1D0_1A, i64 32), i32 2, i64 49118, ptr getelementptr (i8, ptr @_ZTT1D, i64 16)),
+// ADDRESSTYPE-SAME: ptr ptrauth (ptr getelementptr inbounds inrange(-32, 8) (i8, ptr @_ZTV1D, i64 32), i32 2, i64 820, ptr getelementptr (i8, ptr @_ZTT1D, i64 24))]
 
 // CHECK:      @_ZTT1A = linkonce_odr unnamed_addr constant [2 x ptr] [
-// DEFAULT-SAME: ptr ptrauth (ptr getelementptr inbounds inrange(-32, 8) ({ [5 x ptr] }, ptr @_ZTV1A, i32 0, i32 0, i32 4), i32 2),
-// DEFAULT-SAME: ptr ptrauth (ptr getelementptr inbounds inrange(-32, 8) ({ [5 x ptr] }, ptr @_ZTV1A, i32 0, i32 0, i32 4), i32 2)]
+// DEFAULT-SAME: ptr ptrauth (ptr getelementptr inbounds inrange(-32, 8) (i8, ptr @_ZTV1A, i64 32), i32 2),
+// DEFAULT-SAME: ptr ptrauth (ptr getelementptr inbounds inrange(-32, 8) (i8, ptr @_ZTV1A, i64 32), i32 2)]
 
-// ADDRESS-SAME: ptr ptrauth (ptr getelementptr inbounds inrange(-32, 8) ({ [5 x ptr] }, ptr @_ZTV1A, i32 0, i32 0, i32 4), i32 2, i64 0, ptr @_ZTT1A),
-// ADDRESS-SAME: ptr ptrauth (ptr getelementptr inbounds inrange(-32, 8) ({ [5 x ptr] }, ptr @_ZTV1A, i32 0, i32 0, i32 4), i32 2, i64 0, ptr getelementptr (ptr, ptr @_ZTT1A, i32 1))]
+// ADDRESS-SAME: ptr ptrauth (ptr getelementptr inbounds inrange(-32, 8) (i8, ptr @_ZTV1A, i64 32), i32 2, i64 0, ptr @_ZTT1A),
+// ADDRESS-SAME: ptr ptrauth (ptr getelementptr inbounds inrange(-32, 8) (i8, ptr @_ZTV1A, i64 32), i32 2, i64 0, ptr getelementptr (i8, ptr @_ZTT1A, i64 8))]
 
-// TYPE-SAME: ptr ptrauth (ptr getelementptr inbounds inrange(-32, 8) ({ [5 x ptr] }, ptr @_ZTV1A, i32 0, i32 0, i32 4), i32 2, i64 49118),
-// TYPE-SAME: ptr ptrauth (ptr getelementptr inbounds inrange(-32, 8) ({ [5 x ptr] }, ptr @_ZTV1A, i32 0, i32 0, i32 4), i32 2, i64 49118)]
+// TYPE-SAME: ptr ptrauth (ptr getelementptr inbounds inrange(-32, 8) (i8, ptr @_ZTV1A, i64 32), i32 2, i64 49118),
+// TYPE-SAME: ptr ptrauth (ptr getelementptr inbounds inrange(-32, 8) (i8, ptr @_ZTV1A, i64 32), i32 2, i64 49118)]
 
-// ADDRESSTYPE-SAME: ptr ptrauth (ptr getelementptr inbounds inrange(-32, 8) ({ [5 x ptr] }, ptr @_ZTV1A, i32 0, i32 0, i32 4), i32 2, i64 49118, ptr @_ZTT1A),
-// ADDRESSTYPE-SAME: ptr ptrauth (ptr getelementptr inbounds inrange(-32, 8) ({ [5 x ptr] }, ptr @_ZTV1A, i32 0, i32 0, i32 4), i32 2, i64 49118, ptr getelementptr (ptr, ptr @_ZTT1A, i32 1))]
+// ADDRESSTYPE-SAME: ptr ptrauth (ptr getelementptr inbounds inrange(-32, 8) (i8, ptr @_ZTV1A, i64 32), i32 2, i64 49118, ptr @_ZTT1A),
+// ADDRESSTYPE-SAME: ptr ptrauth (ptr getelementptr inbounds inrange(-32, 8) (i8, ptr @_ZTV1A, i64 32), i32 2, i64 49118, ptr getelementptr (i8, ptr @_ZTT1A, i64 8))]
 
 // CHECK-LABEL: @_ZN1AC2Ev
 // CHECK:       %vtt.addr = alloca ptr, align 8

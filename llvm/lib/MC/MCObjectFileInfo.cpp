@@ -563,9 +563,6 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
   SFrameSection =
       Ctx->getELFSection(".sframe", ELF::SHT_GNU_SFRAME, ELF::SHF_ALLOC);
 
-  CallGraphSection =
-      Ctx->getELFSection(".llvm.callgraph", ELF::SHT_LLVM_CALL_GRAPH, 0);
-
   StackSizesSection = Ctx->getELFSection(".stack_sizes", ELF::SHT_PROGBITS, 0);
 
   PseudoProbeSection = Ctx->getELFSection(".pseudo_probe", DebugSecType, 0);
@@ -1257,7 +1254,7 @@ MCSection *MCObjectFileInfo::getDwarfComdatSection(const char *Name,
 MCSection *
 MCObjectFileInfo::getCallGraphSection(const MCSection &TextSec) const {
   if (Ctx->getObjectFileType() != MCContext::IsELF)
-    return CallGraphSection;
+    return nullptr;
 
   const MCSectionELF &ElfSec = static_cast<const MCSectionELF &>(TextSec);
   unsigned Flags = ELF::SHF_LINK_ORDER;

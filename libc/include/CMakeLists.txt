@@ -69,6 +69,7 @@ add_header_macro(
     .llvm-libc-types.struct_flock64
     .llvm-libc-types.pid_t
     .llvm-libc-types.off_t
+    .llvm-libc-types.off64_t
     .llvm_libc_common_h
 )
 
@@ -161,6 +162,17 @@ add_header_macro(
   float.h
   DEPENDS
     .llvm-libc-macros.float_macros
+)
+
+add_header_macro(
+  glob
+  ../libc/include/glob.yaml
+  glob.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.glob_macros
+    .llvm-libc-types.glob_t
+    .llvm-libc-types.size_t
 )
 
 add_header_macro(
@@ -454,6 +466,7 @@ add_header_macro(
   DEPENDS
     .llvm-libc-macros.signal_macros
     .llvm-libc-types.pid_t
+    .llvm-libc-types.pthread_t
     .llvm-libc-types.sig_atomic_t
     .llvm-libc-types.sig_t
     .llvm-libc-types.sighandler_t
@@ -571,6 +584,7 @@ add_header_macro(
     .llvm-libc-types.__pthread_once_func_t
     .llvm-libc-types.__pthread_start_t
     .llvm-libc-types.__pthread_tss_dtor_t
+    .llvm-libc-types.struct___pthread_cleanup_frame
     .llvm-libc-types.clockid_t
     .llvm-libc-types.pthread_attr_t
     .llvm-libc-types.pthread_cond_t
@@ -711,6 +725,15 @@ add_header_macro(
     .llvm-libc-types.sigset_t
     .llvm-libc-types.struct_timespec
     .llvm-libc-macros.sys_epoll_macros
+)
+
+add_header_macro(
+  sys_file
+  ../libc/include/sys/file.yaml
+  sys/file.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.sys_file_macros
 )
 
 add_header_macro(
@@ -1073,6 +1096,16 @@ add_header_macro(
     .llvm-libc-types.pid_t
     .llvm-libc-types.struct_rusage
     .llvm-libc-types.siginfo_t
+)
+
+add_header_macro(
+  sys_xattr
+  ../libc/include/sys/xattr.yaml
+  sys/xattr.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-types.size_t
+    .llvm-libc-types.ssize_t
 )
 
 file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/net)

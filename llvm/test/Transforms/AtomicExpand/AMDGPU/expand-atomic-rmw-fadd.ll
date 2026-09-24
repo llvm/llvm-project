@@ -1678,7 +1678,7 @@ define void @test_atomicrmw_fadd_f32_global_no_use_unsafe_strictfp(ptr addrspace
 ; CI-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CI:       atomicrmw.start:
 ; CI-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; CI-NEXT:    [[NEW:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float [[LOADED]], float [[VALUE:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR8:[0-9]+]]
+; CI-NEXT:    [[NEW:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float [[LOADED]], float [[VALUE:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3:[0-9]+]]
 ; CI-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
 ; CI-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
 ; CI-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("wavefront") monotonic monotonic, align 4, !amdgpu.no.fine.grained.memory [[META0]]
@@ -1694,7 +1694,7 @@ define void @test_atomicrmw_fadd_f32_global_no_use_unsafe_strictfp(ptr addrspace
 ; GFX9-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX9:       atomicrmw.start:
 ; GFX9-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX9-NEXT:    [[NEW:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float [[LOADED]], float [[VALUE:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR8:[0-9]+]]
+; GFX9-NEXT:    [[NEW:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float [[LOADED]], float [[VALUE:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3:[0-9]+]]
 ; GFX9-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
 ; GFX9-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
 ; GFX9-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("wavefront") monotonic monotonic, align 4, !amdgpu.no.fine.grained.memory [[META0]]
@@ -1731,7 +1731,7 @@ define double @test_atomicrmw_fadd_f64_global_unsafe_strictfp(ptr addrspace(1) %
 ; CI-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CI:       atomicrmw.start:
 ; CI-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; CI-NEXT:    [[NEW:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[LOADED]], double [[VALUE:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR8]]
+; CI-NEXT:    [[NEW:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[LOADED]], double [[VALUE:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
 ; CI-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; CI-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
 ; CI-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] syncscope("wavefront") monotonic monotonic, align 8, !amdgpu.no.fine.grained.memory [[META0]]
@@ -1747,7 +1747,7 @@ define double @test_atomicrmw_fadd_f64_global_unsafe_strictfp(ptr addrspace(1) %
 ; GFX9-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX9:       atomicrmw.start:
 ; GFX9-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX9-NEXT:    [[NEW:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[LOADED]], double [[VALUE:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR8]]
+; GFX9-NEXT:    [[NEW:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[LOADED]], double [[VALUE:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
 ; GFX9-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; GFX9-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
 ; GFX9-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] syncscope("wavefront") monotonic monotonic, align 8, !amdgpu.no.fine.grained.memory [[META0]]
@@ -1763,7 +1763,7 @@ define double @test_atomicrmw_fadd_f64_global_unsafe_strictfp(ptr addrspace(1) %
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX908-NEXT:    [[NEW:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[LOADED]], double [[VALUE:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR8:[0-9]+]]
+; GFX908-NEXT:    [[NEW:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[LOADED]], double [[VALUE:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3:[0-9]+]]
 ; GFX908-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; GFX908-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
 ; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] syncscope("wavefront") monotonic monotonic, align 8, !amdgpu.no.fine.grained.memory [[META0]]
@@ -1787,7 +1787,7 @@ define double @test_atomicrmw_fadd_f64_global_unsafe_strictfp(ptr addrspace(1) %
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX11-NEXT:    [[NEW:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[LOADED]], double [[VALUE:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR8:[0-9]+]]
+; GFX11-NEXT:    [[NEW:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[LOADED]], double [[VALUE:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3:[0-9]+]]
 ; GFX11-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; GFX11-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
 ; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] syncscope("wavefront") monotonic monotonic, align 8, !amdgpu.no.fine.grained.memory [[META0]]
@@ -1808,7 +1808,7 @@ define float @test_atomicrmw_fadd_f32_local_strictfp(ptr addrspace(3) %ptr, floa
 ; CI-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CI:       atomicrmw.start:
 ; CI-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; CI-NEXT:    [[NEW:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float [[LOADED]], float [[VALUE:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR8]]
+; CI-NEXT:    [[NEW:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float [[LOADED]], float [[VALUE:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
 ; CI-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
 ; CI-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
 ; CI-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(3) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4
@@ -2030,7 +2030,7 @@ define bfloat @test_atomicrmw_fadd_bf16_global_system_align4(ptr addrspace(1) %p
 
 define bfloat @test_atomicrmw_fadd_bf16_local_strictfp(ptr addrspace(3) %ptr, bfloat %value) #2 {
 ; ALL-LABEL: @test_atomicrmw_fadd_bf16_local_strictfp(
-; ALL-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i32(ptr addrspace(3) [[PTR:%.*]], i32 -4) #[[ATTR8:[0-9]+]]
+; ALL-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i32(ptr addrspace(3) [[PTR:%.*]], i32 -4) #[[ATTR3:[0-9]+]]
 ; ALL-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[PTR]] to i32
 ; ALL-NEXT:    [[PTRLSB:%.*]] = and i32 [[TMP1]], 3
 ; ALL-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
@@ -2043,7 +2043,7 @@ define bfloat @test_atomicrmw_fadd_bf16_local_strictfp(ptr addrspace(3) %ptr, bf
 ; ALL-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[LOADED]], [[TMP2]]
 ; ALL-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
 ; ALL-NEXT:    [[TMP4:%.*]] = bitcast i16 [[EXTRACTED]] to bfloat
-; ALL-NEXT:    [[NEW:%.*]] = call bfloat @llvm.experimental.constrained.fadd.bf16(bfloat [[TMP4]], bfloat [[VALUE:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR8]]
+; ALL-NEXT:    [[NEW:%.*]] = call bfloat @llvm.experimental.constrained.fadd.bf16(bfloat [[TMP4]], bfloat [[VALUE:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
 ; ALL-NEXT:    [[TMP5:%.*]] = bitcast bfloat [[NEW]] to i16
 ; ALL-NEXT:    [[EXTENDED:%.*]] = zext i16 [[TMP5]] to i32
 ; ALL-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[TMP2]]
@@ -2246,7 +2246,7 @@ define void @test_atomicrmw_fadd_f32_global_system_noret__amdgpu_ignore_denormal
 ; ALL:       atomicrmw.end:
 ; ALL-NEXT:    ret void
 ;
-  %unused = atomicrmw fadd ptr addrspace(1) %ptr, float %value monotonic, !amdgpu.ignore.denormal.mode !0
+  %unused = atomicrmw fadd ptr addrspace(1) %ptr, float %value monotonic, !atomic.ignore.denormal.mode !0
   ret void
 }
 
@@ -2267,7 +2267,7 @@ define float @test_atomicrmw_fadd_f32_global_system_ret__amdgpu_ignore_denormal_
 ; ALL:       atomicrmw.end:
 ; ALL-NEXT:    ret float [[TMP5]]
 ;
-  %ret = atomicrmw fadd ptr addrspace(1) %ptr, float %value monotonic, !amdgpu.ignore.denormal.mode !0
+  %ret = atomicrmw fadd ptr addrspace(1) %ptr, float %value monotonic, !atomic.ignore.denormal.mode !0
   ret float %ret
 }
 
@@ -2330,7 +2330,7 @@ define void @test_atomicrmw_fadd_f32_daz_global_system_noret__amdgpu_ignore_deno
 ; ALL:       atomicrmw.end:
 ; ALL-NEXT:    ret void
 ;
-  %unused = atomicrmw fadd ptr addrspace(1) %ptr, float %value monotonic, !amdgpu.ignore.denormal.mode !0
+  %unused = atomicrmw fadd ptr addrspace(1) %ptr, float %value monotonic, !atomic.ignore.denormal.mode !0
   ret void
 }
 
@@ -2351,7 +2351,7 @@ define float @test_atomicrmw_fadd_f32_daz_global_system_ret__amdgpu_ignore_denor
 ; ALL:       atomicrmw.end:
 ; ALL-NEXT:    ret float [[TMP5]]
 ;
-  %ret = atomicrmw fadd ptr addrspace(1) %ptr, float %value monotonic, !amdgpu.ignore.denormal.mode !0
+  %ret = atomicrmw fadd ptr addrspace(1) %ptr, float %value monotonic, !atomic.ignore.denormal.mode !0
   ret float %ret
 }
 
@@ -2372,7 +2372,7 @@ define void @test_atomicrmw_fadd_f32_dyndenorm_global_system_noret__amdgpu_ignor
 ; ALL:       atomicrmw.end:
 ; ALL-NEXT:    ret void
 ;
-  %unused = atomicrmw fadd ptr addrspace(1) %ptr, float %value monotonic, !amdgpu.ignore.denormal.mode !0
+  %unused = atomicrmw fadd ptr addrspace(1) %ptr, float %value monotonic, !atomic.ignore.denormal.mode !0
   ret void
 }
 
@@ -2393,7 +2393,7 @@ define float @test_atomicrmw_fadd_f32_dyndenorm_global_system_ret__amdgpu_ignore
 ; ALL:       atomicrmw.end:
 ; ALL-NEXT:    ret float [[TMP5]]
 ;
-  %ret = atomicrmw fadd ptr addrspace(1) %ptr, float %value monotonic, !amdgpu.ignore.denormal.mode !0
+  %ret = atomicrmw fadd ptr addrspace(1) %ptr, float %value monotonic, !atomic.ignore.denormal.mode !0
   ret float %ret
 }
 
@@ -2497,26 +2497,26 @@ define void @test_atomicrmw_fadd_f32_local_noret__amdgpu_ignore_denormal_mode(pt
 ; CI-NEXT:    ret void
 ;
 ; GFX9-LABEL: @test_atomicrmw_fadd_f32_local_noret__amdgpu_ignore_denormal_mode(
-; GFX9-NEXT:    [[UNUSED:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], float [[VALUE:%.*]] monotonic, align 4, !amdgpu.ignore.denormal.mode [[META0]]
+; GFX9-NEXT:    [[UNUSED:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], float [[VALUE:%.*]] monotonic, align 4, !atomic.ignore.denormal.mode [[META0]]
 ; GFX9-NEXT:    ret void
 ;
 ; GFX908-LABEL: @test_atomicrmw_fadd_f32_local_noret__amdgpu_ignore_denormal_mode(
-; GFX908-NEXT:    [[UNUSED:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], float [[VALUE:%.*]] monotonic, align 4, !amdgpu.ignore.denormal.mode [[META0]]
+; GFX908-NEXT:    [[UNUSED:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], float [[VALUE:%.*]] monotonic, align 4, !atomic.ignore.denormal.mode [[META0]]
 ; GFX908-NEXT:    ret void
 ;
 ; GFX90A-LABEL: @test_atomicrmw_fadd_f32_local_noret__amdgpu_ignore_denormal_mode(
-; GFX90A-NEXT:    [[UNUSED:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], float [[VALUE:%.*]] monotonic, align 4, !amdgpu.ignore.denormal.mode [[META0]]
+; GFX90A-NEXT:    [[UNUSED:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], float [[VALUE:%.*]] monotonic, align 4, !atomic.ignore.denormal.mode [[META0]]
 ; GFX90A-NEXT:    ret void
 ;
 ; GFX942-LABEL: @test_atomicrmw_fadd_f32_local_noret__amdgpu_ignore_denormal_mode(
-; GFX942-NEXT:    [[UNUSED:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], float [[VALUE:%.*]] monotonic, align 4, !amdgpu.ignore.denormal.mode [[META0]]
+; GFX942-NEXT:    [[UNUSED:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], float [[VALUE:%.*]] monotonic, align 4, !atomic.ignore.denormal.mode [[META0]]
 ; GFX942-NEXT:    ret void
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_f32_local_noret__amdgpu_ignore_denormal_mode(
-; GFX11-NEXT:    [[UNUSED:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], float [[VALUE:%.*]] monotonic, align 4, !amdgpu.ignore.denormal.mode [[META0]]
+; GFX11-NEXT:    [[UNUSED:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], float [[VALUE:%.*]] monotonic, align 4, !atomic.ignore.denormal.mode [[META0]]
 ; GFX11-NEXT:    ret void
 ;
-  %unused = atomicrmw fadd ptr addrspace(3) %ptr, float %value monotonic, !amdgpu.ignore.denormal.mode !0
+  %unused = atomicrmw fadd ptr addrspace(3) %ptr, float %value monotonic, !atomic.ignore.denormal.mode !0
   ret void
 }
 
@@ -2538,26 +2538,26 @@ define float @test_atomicrmw_fadd_f32_local_ret__amdgpu_ignore_denormal_mode(ptr
 ; CI-NEXT:    ret float [[TMP5]]
 ;
 ; GFX9-LABEL: @test_atomicrmw_fadd_f32_local_ret__amdgpu_ignore_denormal_mode(
-; GFX9-NEXT:    [[RET:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], float [[VALUE:%.*]] monotonic, align 4, !amdgpu.ignore.denormal.mode [[META0]]
+; GFX9-NEXT:    [[RET:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], float [[VALUE:%.*]] monotonic, align 4, !atomic.ignore.denormal.mode [[META0]]
 ; GFX9-NEXT:    ret float [[RET]]
 ;
 ; GFX908-LABEL: @test_atomicrmw_fadd_f32_local_ret__amdgpu_ignore_denormal_mode(
-; GFX908-NEXT:    [[RET:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], float [[VALUE:%.*]] monotonic, align 4, !amdgpu.ignore.denormal.mode [[META0]]
+; GFX908-NEXT:    [[RET:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], float [[VALUE:%.*]] monotonic, align 4, !atomic.ignore.denormal.mode [[META0]]
 ; GFX908-NEXT:    ret float [[RET]]
 ;
 ; GFX90A-LABEL: @test_atomicrmw_fadd_f32_local_ret__amdgpu_ignore_denormal_mode(
-; GFX90A-NEXT:    [[RET:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], float [[VALUE:%.*]] monotonic, align 4, !amdgpu.ignore.denormal.mode [[META0]]
+; GFX90A-NEXT:    [[RET:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], float [[VALUE:%.*]] monotonic, align 4, !atomic.ignore.denormal.mode [[META0]]
 ; GFX90A-NEXT:    ret float [[RET]]
 ;
 ; GFX942-LABEL: @test_atomicrmw_fadd_f32_local_ret__amdgpu_ignore_denormal_mode(
-; GFX942-NEXT:    [[RET:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], float [[VALUE:%.*]] monotonic, align 4, !amdgpu.ignore.denormal.mode [[META0]]
+; GFX942-NEXT:    [[RET:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], float [[VALUE:%.*]] monotonic, align 4, !atomic.ignore.denormal.mode [[META0]]
 ; GFX942-NEXT:    ret float [[RET]]
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_f32_local_ret__amdgpu_ignore_denormal_mode(
-; GFX11-NEXT:    [[RET:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], float [[VALUE:%.*]] monotonic, align 4, !amdgpu.ignore.denormal.mode [[META0]]
+; GFX11-NEXT:    [[RET:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], float [[VALUE:%.*]] monotonic, align 4, !atomic.ignore.denormal.mode [[META0]]
 ; GFX11-NEXT:    ret float [[RET]]
 ;
-  %ret = atomicrmw fadd ptr addrspace(3) %ptr, float %value monotonic, !amdgpu.ignore.denormal.mode !0
+  %ret = atomicrmw fadd ptr addrspace(3) %ptr, float %value monotonic, !atomic.ignore.denormal.mode !0
   ret float %ret
 }
 
@@ -2620,7 +2620,7 @@ define void @test_atomicrmw_fadd_f64_dyndenorm_global_system_noret__amdgpu_ignor
 ; ALL:       atomicrmw.end:
 ; ALL-NEXT:    ret void
 ;
-  %unused = atomicrmw fadd ptr addrspace(1) %ptr, double %value monotonic, !amdgpu.ignore.denormal.mode !0
+  %unused = atomicrmw fadd ptr addrspace(1) %ptr, double %value monotonic, !atomic.ignore.denormal.mode !0
   ret void
 }
 
@@ -2641,7 +2641,7 @@ define double @test_atomicrmw_fadd_f64_dyndenorm_global_system_ret__amdgpu_ignor
 ; ALL:       atomicrmw.end:
 ; ALL-NEXT:    ret double [[TMP5]]
 ;
-  %ret = atomicrmw fadd ptr addrspace(1) %ptr, double %value monotonic, !amdgpu.ignore.denormal.mode !0
+  %ret = atomicrmw fadd ptr addrspace(1) %ptr, double %value monotonic, !atomic.ignore.denormal.mode !0
   ret double %ret
 }
 
@@ -2849,11 +2849,11 @@ define void @test_atomicrmw_fadd_f64_dyndenorm_local_system_noret__amdgpu_ignore
 ; GFX908-NEXT:    ret void
 ;
 ; GFX90A-LABEL: @test_atomicrmw_fadd_f64_dyndenorm_local_system_noret__amdgpu_ignore_denormal_mode(
-; GFX90A-NEXT:    [[UNUSED:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], double [[VALUE:%.*]] monotonic, align 8, !amdgpu.ignore.denormal.mode [[META0]]
+; GFX90A-NEXT:    [[UNUSED:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], double [[VALUE:%.*]] monotonic, align 8, !atomic.ignore.denormal.mode [[META0]]
 ; GFX90A-NEXT:    ret void
 ;
 ; GFX942-LABEL: @test_atomicrmw_fadd_f64_dyndenorm_local_system_noret__amdgpu_ignore_denormal_mode(
-; GFX942-NEXT:    [[UNUSED:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], double [[VALUE:%.*]] monotonic, align 8, !amdgpu.ignore.denormal.mode [[META0]]
+; GFX942-NEXT:    [[UNUSED:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], double [[VALUE:%.*]] monotonic, align 8, !atomic.ignore.denormal.mode [[META0]]
 ; GFX942-NEXT:    ret void
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_f64_dyndenorm_local_system_noret__amdgpu_ignore_denormal_mode(
@@ -2872,7 +2872,7 @@ define void @test_atomicrmw_fadd_f64_dyndenorm_local_system_noret__amdgpu_ignore
 ; GFX11:       atomicrmw.end:
 ; GFX11-NEXT:    ret void
 ;
-  %unused = atomicrmw fadd ptr addrspace(3) %ptr, double %value monotonic, !amdgpu.ignore.denormal.mode !0
+  %unused = atomicrmw fadd ptr addrspace(3) %ptr, double %value monotonic, !atomic.ignore.denormal.mode !0
   ret void
 }
 
@@ -2926,11 +2926,11 @@ define double @test_atomicrmw_fadd_f64_dyndenorm_local_system_ret__amdgpu_ignore
 ; GFX908-NEXT:    ret double [[TMP5]]
 ;
 ; GFX90A-LABEL: @test_atomicrmw_fadd_f64_dyndenorm_local_system_ret__amdgpu_ignore_denormal_mode(
-; GFX90A-NEXT:    [[RET:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], double [[VALUE:%.*]] monotonic, align 8, !amdgpu.ignore.denormal.mode [[META0]]
+; GFX90A-NEXT:    [[RET:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], double [[VALUE:%.*]] monotonic, align 8, !atomic.ignore.denormal.mode [[META0]]
 ; GFX90A-NEXT:    ret double [[RET]]
 ;
 ; GFX942-LABEL: @test_atomicrmw_fadd_f64_dyndenorm_local_system_ret__amdgpu_ignore_denormal_mode(
-; GFX942-NEXT:    [[RET:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], double [[VALUE:%.*]] monotonic, align 8, !amdgpu.ignore.denormal.mode [[META0]]
+; GFX942-NEXT:    [[RET:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], double [[VALUE:%.*]] monotonic, align 8, !atomic.ignore.denormal.mode [[META0]]
 ; GFX942-NEXT:    ret double [[RET]]
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_f64_dyndenorm_local_system_ret__amdgpu_ignore_denormal_mode(
@@ -2949,7 +2949,7 @@ define double @test_atomicrmw_fadd_f64_dyndenorm_local_system_ret__amdgpu_ignore
 ; GFX11:       atomicrmw.end:
 ; GFX11-NEXT:    ret double [[TMP5]]
 ;
-  %ret = atomicrmw fadd ptr addrspace(3) %ptr, double %value monotonic, !amdgpu.ignore.denormal.mode !0
+  %ret = atomicrmw fadd ptr addrspace(3) %ptr, double %value monotonic, !atomic.ignore.denormal.mode !0
   ret double %ret
 }
 
@@ -2970,7 +2970,7 @@ define void @test_atomicrmw_fadd_f32_flat_system_noret__amdgpu_ignore_denormal_m
 ; ALL:       atomicrmw.end:
 ; ALL-NEXT:    ret void
 ;
-  %unused = atomicrmw fadd ptr %ptr, float %value monotonic, !amdgpu.ignore.denormal.mode !0
+  %unused = atomicrmw fadd ptr %ptr, float %value monotonic, !atomic.ignore.denormal.mode !0
   ret void
 }
 
@@ -2991,7 +2991,7 @@ define float @test_atomicrmw_fadd_f32_flat_system_ret__amdgpu_ignore_denormal_mo
 ; ALL:       atomicrmw.end:
 ; ALL-NEXT:    ret float [[TMP5]]
 ;
-  %ret = atomicrmw fadd ptr %ptr, float %value monotonic, !amdgpu.ignore.denormal.mode !0
+  %ret = atomicrmw fadd ptr %ptr, float %value monotonic, !atomic.ignore.denormal.mode !0
   ret float %ret
 }
 
@@ -3088,7 +3088,7 @@ define void @test_atomicrmw_fadd_f64_dyndenorm_flat_system_noret__amdgpu_ignore_
 ; GFX90A-NEXT:    br i1 [[IS_SHARED]], label [[ATOMICRMW_SHARED:%.*]], label [[ATOMICRMW_CHECK_PRIVATE:%.*]]
 ; GFX90A:       atomicrmw.shared:
 ; GFX90A-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[PTR]] to ptr addrspace(3)
-; GFX90A-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr addrspace(3) [[TMP1]], double [[VALUE:%.*]] monotonic, align 8, !amdgpu.ignore.denormal.mode [[META0]]
+; GFX90A-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr addrspace(3) [[TMP1]], double [[VALUE:%.*]] monotonic, align 8, !atomic.ignore.denormal.mode [[META0]]
 ; GFX90A-NEXT:    br label [[ATOMICRMW_PHI:%.*]]
 ; GFX90A:       atomicrmw.check.private:
 ; GFX90A-NEXT:    [[IS_PRIVATE:%.*]] = call i1 @llvm.amdgcn.is.private(ptr [[PTR]])
@@ -3125,7 +3125,7 @@ define void @test_atomicrmw_fadd_f64_dyndenorm_flat_system_noret__amdgpu_ignore_
 ; GFX942-NEXT:    br i1 [[IS_SHARED]], label [[ATOMICRMW_SHARED:%.*]], label [[ATOMICRMW_CHECK_PRIVATE:%.*]]
 ; GFX942:       atomicrmw.shared:
 ; GFX942-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[PTR]] to ptr addrspace(3)
-; GFX942-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr addrspace(3) [[TMP1]], double [[VALUE:%.*]] monotonic, align 8, !amdgpu.ignore.denormal.mode [[META0]]
+; GFX942-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr addrspace(3) [[TMP1]], double [[VALUE:%.*]] monotonic, align 8, !atomic.ignore.denormal.mode [[META0]]
 ; GFX942-NEXT:    br label [[ATOMICRMW_PHI:%.*]]
 ; GFX942:       atomicrmw.check.private:
 ; GFX942-NEXT:    [[IS_PRIVATE:%.*]] = call i1 @llvm.amdgcn.is.private(ptr [[PTR]])
@@ -3186,7 +3186,7 @@ define void @test_atomicrmw_fadd_f64_dyndenorm_flat_system_noret__amdgpu_ignore_
 ; GFX11:       atomicrmw.end:
 ; GFX11-NEXT:    ret void
 ;
-  %unused = atomicrmw fadd ptr %ptr, double %value monotonic, !amdgpu.ignore.denormal.mode !0
+  %unused = atomicrmw fadd ptr %ptr, double %value monotonic, !atomic.ignore.denormal.mode !0
   ret void
 }
 
@@ -3286,7 +3286,7 @@ define double @test_atomicrmw_fadd_f64_dyndenorm_flat_system_ret__amdgpu_ignore_
 ; GFX90A-NEXT:    br i1 [[IS_SHARED]], label [[ATOMICRMW_SHARED:%.*]], label [[ATOMICRMW_CHECK_PRIVATE:%.*]]
 ; GFX90A:       atomicrmw.shared:
 ; GFX90A-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[PTR]] to ptr addrspace(3)
-; GFX90A-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr addrspace(3) [[TMP1]], double [[VALUE:%.*]] monotonic, align 8, !amdgpu.ignore.denormal.mode [[META0]]
+; GFX90A-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr addrspace(3) [[TMP1]], double [[VALUE:%.*]] monotonic, align 8, !atomic.ignore.denormal.mode [[META0]]
 ; GFX90A-NEXT:    br label [[ATOMICRMW_PHI:%.*]]
 ; GFX90A:       atomicrmw.check.private:
 ; GFX90A-NEXT:    [[IS_PRIVATE:%.*]] = call i1 @llvm.amdgcn.is.private(ptr [[PTR]])
@@ -3324,7 +3324,7 @@ define double @test_atomicrmw_fadd_f64_dyndenorm_flat_system_ret__amdgpu_ignore_
 ; GFX942-NEXT:    br i1 [[IS_SHARED]], label [[ATOMICRMW_SHARED:%.*]], label [[ATOMICRMW_CHECK_PRIVATE:%.*]]
 ; GFX942:       atomicrmw.shared:
 ; GFX942-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[PTR]] to ptr addrspace(3)
-; GFX942-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr addrspace(3) [[TMP1]], double [[VALUE:%.*]] monotonic, align 8, !amdgpu.ignore.denormal.mode [[META0]]
+; GFX942-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr addrspace(3) [[TMP1]], double [[VALUE:%.*]] monotonic, align 8, !atomic.ignore.denormal.mode [[META0]]
 ; GFX942-NEXT:    br label [[ATOMICRMW_PHI:%.*]]
 ; GFX942:       atomicrmw.check.private:
 ; GFX942-NEXT:    [[IS_PRIVATE:%.*]] = call i1 @llvm.amdgcn.is.private(ptr [[PTR]])
@@ -3387,7 +3387,7 @@ define double @test_atomicrmw_fadd_f64_dyndenorm_flat_system_ret__amdgpu_ignore_
 ; GFX11:       atomicrmw.end:
 ; GFX11-NEXT:    ret double [[RET]]
 ;
-  %ret = atomicrmw fadd ptr %ptr, double %value monotonic, !amdgpu.ignore.denormal.mode !0
+  %ret = atomicrmw fadd ptr %ptr, double %value monotonic, !atomic.ignore.denormal.mode !0
   ret double %ret
 }
 

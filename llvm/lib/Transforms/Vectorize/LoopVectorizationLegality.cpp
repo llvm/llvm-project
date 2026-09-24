@@ -523,7 +523,7 @@ public:
     const SCEV *ScaledOffset = SE.getMulExpr(Step, SE.getConstant(Ty, Offset));
     const SCEV *NewStart =
         SE.getAddExpr(Expr->getStart(), SCEVUse(ScaledOffset));
-    return SE.getAddRecExpr(NewStart, NewStep, TheLoop, SCEV::FlagAnyWrap);
+    return SE.getAddRecExpr(NewStart, NewStep, TheLoop, SCEV::FlagNone);
   }
 
   const SCEV *visit(const SCEV *S) {

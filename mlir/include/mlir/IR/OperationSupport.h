@@ -27,6 +27,8 @@
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
 #include "llvm/Support/TrailingObjects.h"
@@ -61,6 +63,29 @@ class Value;
 class ValueRange;
 template <typename ValueRangeT>
 class ValueTypeRange;
+
+namespace detail {
+/// Append a present attribute-backed property to a dictionary's attributes.
+void appendAttributeProperty(llvm::SmallVectorImpl<NamedAttribute> &attrs,
+                             StringRef name, Attribute attr);
+
+/// Assign a generated attribute-backed property after checking its type.
+/// Keep the conversion out of each operation's generated property setter.
+template <typename AttrT>
+LLVM_ATTRIBUTE_NOINLINE LogicalResult
+setAttributeProperty(AttrT &storage, Attribute attr, StringRef name,
+                     llvm::function_ref<InFlightDiagnostic()> emitError) {
+  if (!attr)
+    return success();
+  if (auto converted = llvm::dyn_cast<AttrT>(attr)) {
+    storage = converted;
+    return success();
+  }
+  emitError() << "Invalid attribute `" << name
+              << "` in property conversion: " << attr;
+  return failure();
+}
+} // namespace detail
 
 //===----------------------------------------------------------------------===//
 // PropertyRef
@@ -711,7 +736,11 @@ public:
   /// of operations they contain.
   template <typename T>
   static void insert(Dialect &dialect) {
-    insert(std::make_unique<Model<T>>(&dialect), T::getAttributeNames());
+    static_assert(sizeof(Model<T>) == sizeof(Impl));
+    static_assert(alignof(Model<T>) == alignof(Impl));
+    std::unique_ptr<Impl> ownedModel(new (allocateModelStorage())
+                                         Model<T>(&dialect));
+    insert(std::move(ownedModel), T::getAttributeNames());
   }
   /// The use of this method is in general discouraged in favor of
   /// 'insert<CustomOp>(dialect)'.
@@ -729,6 +758,9 @@ public:
   }
 
 private:
+  /// Allocate storage for one type-erased operation model.
+  static void *allocateModelStorage();
+
   RegisteredOperationName(Impl *impl) : OperationName(impl) {}
 
   /// Allow access to the constructor.
@@ -999,12 +1031,10 @@ struct OperationState {
 
 private:
   /// The deleter and setter are non-null whenever `properties` is, and are
-  /// only called after checking it. Coverity misses this invariant and flags
-  /// the empty `function_ref`s as uninitialized.
-  // coverity[uninit_member]
+  /// only called after checking it.
   PropertyRef properties;
-  llvm::function_ref<void(PropertyRef)> propertiesDeleter;
-  llvm::function_ref<void(PropertyRef, const PropertyRef)> propertiesSetter;
+  void (*propertiesDeleter)(PropertyRef) = nullptr;
+  void (*propertiesSetter)(PropertyRef, const PropertyRef) = nullptr;
   friend class Operation;
 
 public:

@@ -34,8 +34,17 @@ public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
 };
-void initializeAMDGPUPostLegalizerCombinerPass(PassRegistry &);
-FunctionPass *createAMDGPUPostLegalizeCombiner(bool IsOptNone);
+
+void initializeAMDGPUPostLegalizerCombinerLegacyPass(PassRegistry &);
+FunctionPass *createAMDGPUPostLegalizeCombinerLegacy(bool IsOptNone);
+
+class AMDGPUPostLegalizerCombinerPass
+    : public RequiredPassInfoMixin<AMDGPUPostLegalizerCombinerPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
 FunctionPass *createAMDGPURegBankCombinerLegacy(bool IsOptLevelNone);
 void initializeAMDGPURegBankCombinerLegacyPass(PassRegistry &);
 
@@ -107,7 +116,6 @@ FunctionPass *createSIOptimizeVGPRLiveRangeLegacyPass();
 FunctionPass *createAMDGPUNextUseAnalysisLegacyPass();
 FunctionPass *createAMDGPUNextUseAnalysisPrinterLegacyPass();
 FunctionPass *createSIFixSGPRCopiesLegacyPass();
-FunctionPass *createLowerWWMCopiesPass();
 FunctionPass *createSIMemoryLegalizerPass();
 FunctionPass *createSIInsertWaitcntsPass();
 FunctionPass *createSIPreAllocateWWMRegsLegacyPass();
@@ -118,7 +126,6 @@ FunctionPass *createAMDGPUImageIntrinsicOptimizerPass(const TargetMachine *);
 ModulePass *createAMDGPURemoveIncompatibleFunctionsPass(const TargetMachine *);
 FunctionPass *createAMDGPUCodeGenPreparePass();
 FunctionPass *createAMDGPULateCodeGenPrepareLegacyPass();
-FunctionPass *createAMDGPUReserveWWMRegsPass();
 FunctionPass *createAMDGPURewriteOutArgumentsPass();
 ModulePass *
 createAMDGPULowerModuleLDSLegacyPass(const AMDGPUTargetMachine *TM = nullptr);
@@ -359,7 +366,6 @@ struct AMDGPUInsertDelayAluPass
                         MachineFunctionAnalysisManager &MFAM);
 };
 
-Pass *createAMDGPUStructurizeCFGPass();
 FunctionPass *createAMDGPUISelDag(TargetMachine &TM, CodeGenOptLevel OptLevel);
 ModulePass *createAMDGPUAlwaysInlinePass(bool GlobalOpt = true);
 
@@ -677,7 +683,7 @@ static inline bool addrspacesMayAlias(unsigned AS1, unsigned AS2) {
 
   // clang-format off
   static const bool ASAliasRules[][AMDGPUAS::MAX_AMDGPU_ADDRESS + 1] = {
-    /*                       Flat   Global Region  Local Constant Private Const32 BufFatPtr BufRsrc BufStrdPtr Reserved Reserved Reserved Reserved Reserved Barrier */
+    /*                       Flat   Global Region  Local Constant Private Const32 BufFatPtr BufRsrc BufStrdPtr Reserved Reserved Reserved VGPR Reserved Barrier */
     /* Flat     */            {true,  true,  false, true,  true,  true,  true,  true,  true,  true, false, false, false, false, false, false},
     /* Global   */            {true,  true,  false, false, true,  false, true,  true,  true,  true, false, false, false, false, false, false},
     /* Region   */            {false, false, true,  false, false, false, false, false, false, false, false, false, false, false, false, false},
@@ -691,7 +697,10 @@ static inline bool addrspacesMayAlias(unsigned AS1, unsigned AS2) {
     /* Reserved  */          {false,  false,  false, false, false,  false, false,  false,  false,  false, false, false, false, false, false, false},
     /* Reserved  */          {false,  false,  false, false, false,  false, false,  false,  false,  false, false, false, false, false, false, false},
     /* Reserved  */          {false,  false,  false, false, false,  false, false,  false,  false,  false, false, false, false, false, false, false},
-    /* Reserved  */          {false,  false,  false, false, false,  false, false,  false,  false,  false, false, false, false, false, false, false},
+    // A VGPR ("as memory") access only ever touches the wave's own registers,
+    // which no other address space can reach: a flat pointer obtained by casting
+    // one cannot be dereferenced.
+    /* VGPR     */           {false,  false,  false, false, false,  false, false,  false,  false,  false, false, false, false, true,  false, false},
     /* Reserved  */          {false,  false,  false, false, false,  false, false,  false,  false,  false, false, false, false, false, false, false},
     /* Barrier  */           {false,  false,  false, false, false,  false, false,  false,  false,  false, false, false, false, false, false, true},
   };

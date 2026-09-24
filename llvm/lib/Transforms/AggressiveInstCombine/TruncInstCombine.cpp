@@ -32,6 +32,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Support/KnownBits.h"
 
 using namespace llvm;
@@ -75,6 +76,10 @@ static bool isRelevantOperand(const Instruction *I, unsigned OpNo) {
     return true;
   case Instruction::ShuffleVector:
     return true;
+  case Instruction::Call: {
+    Intrinsic::ID IID = cast<CallInst>(I)->getIntrinsicID();
+    return IID == Intrinsic::umin || IID == Intrinsic::umax;
+  }
   default:
     llvm_unreachable("Unreachable!");
   }
@@ -164,6 +169,16 @@ bool TruncInstCombine::buildTruncExpressionGraph() {
         if (!llvm::is_contained(Stack, Op))
           Worklist.push_back(Op);
       break;
+    }
+    case Instruction::Call: {
+      Intrinsic::ID IID = cast<CallInst>(I)->getIntrinsicID();
+      if (IID == Intrinsic::umin || IID == Intrinsic::umax) {
+        SmallVector<Value *, 2> Operands;
+        getRelevantOperands(I, Operands);
+        append_range(Worklist, Operands);
+        break;
+      }
+      return false;
     }
     default:
       // TODO: Can handle more cases here:
@@ -320,8 +335,7 @@ Type *TruncInstCombine::getBestTruncatedType() {
         return nullptr;
       if (I->getOpcode() == Instruction::LShr) {
         KnownBits KnownLHS = computeKnownBits(I->getOperand(0));
-        MinBitWidth =
-            std::max(MinBitWidth, KnownLHS.getMaxValue().getActiveBits());
+        MinBitWidth = std::max(MinBitWidth, KnownLHS.countMaxActiveBits());
       }
       if (I->getOpcode() == Instruction::AShr) {
         unsigned NumSignBits = ComputeNumSignBits(I->getOperand(0));
@@ -330,18 +344,33 @@ Type *TruncInstCombine::getBestTruncatedType() {
       if (MinBitWidth >= OrigBitWidth)
         return nullptr;
       Itr.second.MinBitWidth = MinBitWidth;
-    }
-    if (I->getOpcode() == Instruction::UDiv ||
-        I->getOpcode() == Instruction::URem) {
+    } else if (I->getOpcode() == Instruction::UDiv ||
+               I->getOpcode() == Instruction::URem) {
       unsigned MinBitWidth = 0;
       for (const auto &Op : I->operands()) {
         KnownBits Known = computeKnownBits(Op);
-        MinBitWidth =
-            std::max(Known.getMaxValue().getActiveBits(), MinBitWidth);
+        MinBitWidth = std::max(Known.countMaxActiveBits(), MinBitWidth);
         if (MinBitWidth >= OrigBitWidth)
           return nullptr;
       }
       Itr.second.MinBitWidth = MinBitWidth;
+    } else if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
+      switch (II->getIntrinsicID()) {
+      case Intrinsic::umin:
+      case Intrinsic::umax: {
+        unsigned MinBitWidth = 0;
+        for (const auto &Op : II->args()) {
+          KnownBits Known = computeKnownBits(Op);
+          MinBitWidth = std::max(Known.countMaxActiveBits(), MinBitWidth);
+          if (MinBitWidth >= OrigBitWidth)
+            return nullptr;
+        }
+        Itr.second.MinBitWidth = MinBitWidth;
+        break;
+      }
+      default:
+        llvm_unreachable("Unhandled intrinsic");
+      }
     }
   }
 
@@ -480,6 +509,16 @@ void TruncInstCombine::ReduceExpressionGraph(Type *SclTy) {
           std::make_pair(cast<PHINode>(I), cast<PHINode>(Res)));
       break;
     }
+    case Instruction::Call: {
+      Intrinsic::ID IID = cast<CallInst>(I)->getIntrinsicID();
+      if (IID == Intrinsic::umin || IID == Intrinsic::umax) {
+        Value *LHS = getReducedOperand(I->getOperand(0), SclTy);
+        Value *RHS = getReducedOperand(I->getOperand(1), SclTy);
+        Res = Builder.CreateBinaryIntrinsic(IID, LHS, RHS);
+        break;
+      }
+      llvm_unreachable("Unhandled call instruction");
+    }
     default:
       llvm_unreachable("Unhandled instruction");
     }
@@ -555,7 +594,7 @@ bool TruncInstCombine::run(Function &F) {
     if (Type *NewDstSclTy = getBestTruncatedType()) {
       LLVM_DEBUG(
           dbgs() << "ICE: TruncInstCombine reducing type of expression graph "
-                    "dominated by: "
+                    "post-dominated by: "
                  << CurrentTruncInst << '\n');
       ReduceExpressionGraph(NewDstSclTy);
       ++NumExprsReduced;

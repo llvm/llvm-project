@@ -628,10 +628,11 @@ attributes #1 = { nounwind "vector-function-abi-variant"="_ZGV_LLVM_N2v_bar(bar_
 !0 = !{ float 2.5 }
 !1 = !{ i64 0, i64 2 }
 !2 = !{!"Simple C/C++ TBAA"}
-!3 = !{!"omnipotent char", !2, i64 0}
+!3 = !{!7, !7, i64 0, i64 0}
 !4 = !{!5}
 !5 = distinct !{!5, !6, !"g1"}
 !6 = distinct !{!6, !"t2"}
+!7 = !{!"omnipotent char", !2}
 
 ;.
 ; CHECK: [[CHAR_TBAA0]] = !{[[META1:![0-9]+]], [[META1]], i64 0, i64 0}

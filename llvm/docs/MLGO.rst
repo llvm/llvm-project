@@ -452,6 +452,8 @@ point vectors. These embeddings can be computed at multiple granularity levels
 (instruction, basic block, and function) and used for ML-guided compiler
 optimizations.
 
+.. _ir2vec-embeddings:
+
 IR2Vec
 ------
 

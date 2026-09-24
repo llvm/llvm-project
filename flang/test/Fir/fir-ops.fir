@@ -478,37 +478,37 @@ fir.type_info @abstract_dispatch_tbl abstract : !fir.type<abstract_dispatch_tbl{
 // CHECK-SAME: [[VAL_151:%.*]]: complex<f128>, [[VAL_152:%.*]]: complex<f128>) {
 func.func @compare_complex(%a : complex<f128>, %b : complex<f128>) {
 
-// CHECK: [[VAL_153:%.*]] = fir.cmpc "false", [[VAL_151]], [[VAL_152]] {fastmath = {{.*}}} : complex<f128>
-// CHECK: [[VAL_154:%.*]] = fir.cmpc "oeq", [[VAL_151]], [[VAL_152]] {fastmath = {{.*}}} : complex<f128>
-// CHECK: [[VAL_155:%.*]] = fir.cmpc "ogt", [[VAL_151]], [[VAL_152]] {fastmath = {{.*}}} : complex<f128>
-// CHECK: [[VAL_156:%.*]] = fir.cmpc "oge", [[VAL_151]], [[VAL_152]] {fastmath = {{.*}}} : complex<f128>
+// CHECK: [[VAL_153:%.*]] = fir.cmpc "false", [[VAL_151]], [[VAL_152]] <{fastmath = {{.*}>}} : complex<f128>
+// CHECK: [[VAL_154:%.*]] = fir.cmpc "oeq", [[VAL_151]], [[VAL_152]] <{fastmath = {{.*}>}} : complex<f128>
+// CHECK: [[VAL_155:%.*]] = fir.cmpc "ogt", [[VAL_151]], [[VAL_152]] <{fastmath = {{.*}>}} : complex<f128>
+// CHECK: [[VAL_156:%.*]] = fir.cmpc "oge", [[VAL_151]], [[VAL_152]] <{fastmath = {{.*}>}} : complex<f128>
   %d0 = fir.cmpc "false", %a, %b : complex<f128>
   %d1 = fir.cmpc "oeq", %a, %b : complex<f128>
   %d2 = fir.cmpc "ogt", %a, %b : complex<f128>
   %d3 = fir.cmpc "oge", %a, %b : complex<f128>
 
-// CHECK: [[VAL_157:%.*]] = fir.cmpc "olt", [[VAL_151]], [[VAL_152]] {fastmath = {{.*}}} : complex<f128>
-// CHECK: [[VAL_158:%.*]] = fir.cmpc "ole", [[VAL_151]], [[VAL_152]] {fastmath = {{.*}}} : complex<f128>
-// CHECK: [[VAL_159:%.*]] = fir.cmpc "one", [[VAL_151]], [[VAL_152]] {fastmath = {{.*}}} : complex<f128>
-// CHECK: [[VAL_160:%.*]] = fir.cmpc "ord", [[VAL_151]], [[VAL_152]] {fastmath = {{.*}}} : complex<f128>
+// CHECK: [[VAL_157:%.*]] = fir.cmpc "olt", [[VAL_151]], [[VAL_152]] <{fastmath = {{.*}>}} : complex<f128>
+// CHECK: [[VAL_158:%.*]] = fir.cmpc "ole", [[VAL_151]], [[VAL_152]] <{fastmath = {{.*}>}} : complex<f128>
+// CHECK: [[VAL_159:%.*]] = fir.cmpc "one", [[VAL_151]], [[VAL_152]] <{fastmath = {{.*}>}} : complex<f128>
+// CHECK: [[VAL_160:%.*]] = fir.cmpc "ord", [[VAL_151]], [[VAL_152]] <{fastmath = {{.*}>}} : complex<f128>
   %a0 = fir.cmpc "olt", %a, %b : complex<f128>
   %a1 = fir.cmpc "ole", %a, %b : complex<f128>
   %a2 = fir.cmpc "one", %a, %b : complex<f128>
   %a3 = fir.cmpc "ord", %a, %b : complex<f128>
 
-// CHECK: [[VAL_161:%.*]] = fir.cmpc "ueq", [[VAL_151]], [[VAL_152]] {fastmath = {{.*}}} : complex<f128>
-// CHECK: [[VAL_162:%.*]] = fir.cmpc "ugt", [[VAL_151]], [[VAL_152]] {fastmath = {{.*}}} : complex<f128>
-// CHECK: [[VAL_163:%.*]] = fir.cmpc "uge", [[VAL_151]], [[VAL_152]] {fastmath = {{.*}}} : complex<f128>
-// CHECK: [[VAL_164:%.*]] = fir.cmpc "ult", [[VAL_151]], [[VAL_152]] {fastmath = {{.*}}} : complex<f128>
+// CHECK: [[VAL_161:%.*]] = fir.cmpc "ueq", [[VAL_151]], [[VAL_152]] <{fastmath = {{.*}>}} : complex<f128>
+// CHECK: [[VAL_162:%.*]] = fir.cmpc "ugt", [[VAL_151]], [[VAL_152]] <{fastmath = {{.*}>}} : complex<f128>
+// CHECK: [[VAL_163:%.*]] = fir.cmpc "uge", [[VAL_151]], [[VAL_152]] <{fastmath = {{.*}>}} : complex<f128>
+// CHECK: [[VAL_164:%.*]] = fir.cmpc "ult", [[VAL_151]], [[VAL_152]] <{fastmath = {{.*}>}} : complex<f128>
   %b0 = fir.cmpc "ueq", %a, %b : complex<f128>
   %b1 = fir.cmpc "ugt", %a, %b : complex<f128>
   %b2 = fir.cmpc "uge", %a, %b : complex<f128>
   %b3 = fir.cmpc "ult", %a, %b : complex<f128>
 
-// CHECK: [[VAL_165:%.*]] = fir.cmpc "ule", [[VAL_151]], [[VAL_152]] {fastmath = {{.*}}} : complex<f128>
-// CHECK: [[VAL_166:%.*]] = fir.cmpc "une", [[VAL_151]], [[VAL_152]] {fastmath = {{.*}}} : complex<f128>
-// CHECK: [[VAL_167:%.*]] = fir.cmpc "uno", [[VAL_151]], [[VAL_152]] {fastmath = {{.*}}} : complex<f128>
-// CHECK: [[VAL_168:%.*]] = fir.cmpc "true", [[VAL_151]], [[VAL_152]] {fastmath = {{.*}}} : complex<f128>
+// CHECK: [[VAL_165:%.*]] = fir.cmpc "ule", [[VAL_151]], [[VAL_152]] <{fastmath = {{.*}>}} : complex<f128>
+// CHECK: [[VAL_166:%.*]] = fir.cmpc "une", [[VAL_151]], [[VAL_152]] <{fastmath = {{.*}>}} : complex<f128>
+// CHECK: [[VAL_167:%.*]] = fir.cmpc "uno", [[VAL_151]], [[VAL_152]] <{fastmath = {{.*}>}} : complex<f128>
+// CHECK: [[VAL_168:%.*]] = fir.cmpc "true", [[VAL_151]], [[VAL_152]] <{fastmath = {{.*}>}} : complex<f128>
   %c0 = fir.cmpc "ule", %a, %b : complex<f128>
   %c1 = fir.cmpc "une", %a, %b : complex<f128>
   %c2 = fir.cmpc "uno", %a, %b : complex<f128>
@@ -789,7 +789,7 @@ func.func @llvm_ptr_load_store_coordinate(%arg0: !fir.ref<tuple<!fir.ref<!fir.bo
 // CHECK-LABEL: func @load_invariant(
 // CHECK-SAME:  %[[ARG0:.*]]: !fir.ref<i32>)
 func.func @load_invariant(%arg0: !fir.ref<i32>) -> i32 {
-  // CHECK-NEXT: %[[VAL:.*]] = fir.load %[[ARG0]] {invariant} : !fir.ref<i32>
+  // CHECK-NEXT: %[[VAL:.*]] = fir.load %[[ARG0]] <{invariant}> : !fir.ref<i32>
   %0 = fir.load %arg0 {invariant} : !fir.ref<i32>
   return %0 : i32
 }

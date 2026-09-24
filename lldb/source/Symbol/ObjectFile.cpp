@@ -111,9 +111,9 @@ ObjectFileSP ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp,
         // ANY data in case there is data cached in the container plug-ins
         // (like BSD archives caching the contained objects within an
         // file).
-        ObjectFileSP object_file_sp = CreateObjectFromContainer(
-            module_sp, file, file_offset, file_size,
-            extractor_sp->GetSharedDataBuffer(), data_offset);
+        ObjectFileSP object_file_sp =
+            CreateObjectFromContainer(module_sp, file, file_offset, file_size,
+                                      DataBufferSP(), data_offset);
         if (object_file_sp)
           return object_file_sp;
         // We failed to find any cached object files in the container plug-
