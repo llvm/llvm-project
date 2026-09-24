@@ -26510,9 +26510,9 @@ void BoUpSLP::optimizeGatherSequence() {
     // Check if the last undefs actually change the final number of used vector
     // registers.
     return SM1.size() - LastUndefsCnt > 1 &&
-           this->getNumberOfParts(SI1->getType(),
-                                  SI1->getType()->getElementType()) ==
-               this->getNumberOfParts(
+           getNumberOfParts(SI1->getType(),
+                            SI1->getType()->getElementType()) ==
+               getNumberOfParts(
                    getWidenedType(SI1->getType()->getElementType(),
                                   SM1.size() - LastUndefsCnt),
                    SI1->getType()->getElementType());
