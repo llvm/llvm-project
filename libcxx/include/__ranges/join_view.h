@@ -49,9 +49,9 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
 template <class>
@@ -427,9 +427,9 @@ struct __segmented_iterator_traits<_JoinViewIterator> {
   }
 };
 
-#endif // #if _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // #if _LIBCPP_STD_VER >= 20
 
 _LIBCPP_POP_MACROS
 
