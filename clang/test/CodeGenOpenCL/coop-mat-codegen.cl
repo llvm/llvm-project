@@ -8,7 +8,7 @@
 // RUN:   -finclude-default-header -emit-llvm -O0 -o - %s \
 // RUN:   | FileCheck %s
 
-#define SCOPE     CLK_COOPERATIVE_MATRIX_SCOPE_SUBGROUP
+#define SCOPE     memory_scope_sub_group
 #define USE_A     CLK_COOPERATIVE_MATRIX_A
 #define USE_B     CLK_COOPERATIVE_MATRIX_B
 #define USE_C     CLK_COOPERATIVE_MATRIX_ACCUMULATOR

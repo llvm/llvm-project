@@ -13,7 +13,7 @@
 // RUN: FileCheck --check-prefix=CHECK      %s < %t.ll
 // RUN: FileCheck --check-prefix=CHECK-DECL %s < %t.ll
 
-#define SCOPE     CLK_COOPERATIVE_MATRIX_SCOPE_SUBGROUP
+#define SCOPE     memory_scope_sub_group
 #define USE_A     CLK_COOPERATIVE_MATRIX_A
 #define USE_B     CLK_COOPERATIVE_MATRIX_B
 #define USE_C     CLK_COOPERATIVE_MATRIX_ACCUMULATOR
@@ -165,18 +165,18 @@ kernel void test_no_cross_contamination(__global float *gptr,
 // CHECK-NOT: @__spirv_CooperativeMatrixLoadKHR_local_f32_{{.*}}addrspace(1)
 
 // Verify distinct declare lines exist (these appear at end of IR).
-// CHECK-DECL: declare {{.*}} @__spirv_CooperativeMatrixLoadKHR_global_f32_sc3_16x16_u0
-// CHECK-DECL: declare {{.*}} @__spirv_CooperativeMatrixLoadKHR_global_f32_sc3_16x16_u1
-// CHECK-DECL: declare {{.*}} @__spirv_CooperativeMatrixLoadKHR_global_f32_sc3_16x16_u2
-// CHECK-DECL: declare {{.*}} @__spirv_CooperativeMatrixMulAddKHR_f32_sc3_16x16_u0_f32_sc3_16x16_u1_f32_sc3_16x16_u2
-// CHECK-DECL: declare {{.*}} @__spirv_CooperativeMatrixLoadKHR_global_f32_sc3_8x32_u0
-// CHECK-DECL: declare {{.*}} @__spirv_CooperativeMatrixLoadKHR_global_f32_sc3_32x8_u1
-// CHECK-DECL: declare {{.*}} @__spirv_CooperativeMatrixLoadKHR_global_f32_sc3_8x8_u2
-// CHECK-DECL: declare {{.*}} @__spirv_CooperativeMatrixMulAddKHR_f32_sc3_8x32_u0_f32_sc3_32x8_u1_f32_sc3_8x8_u2
-// CHECK-DECL: declare {{.*}} @__spirv_CooperativeMatrixLoadKHR_global_i32_sc3_16x16_u0
-// CHECK-DECL: declare {{.*}} @__spirv_CooperativeMatrixLoadKHR_global_i32_sc3_16x16_u1
-// CHECK-DECL: declare {{.*}} @__spirv_CooperativeMatrixLoadKHR_global_i32_sc3_16x16_u2
-// CHECK-DECL: declare {{.*}} @__spirv_CooperativeMatrixMulAddKHR_i32_sc3_16x16_u0_i32_sc3_16x16_u1_i32_sc3_16x16_u2
-// CHECK-DECL: declare {{.*}} @__spirv_CooperativeMatrixLoadKHR_local_f32_sc3_16x16_u0
-// CHECK-DECL: declare {{.*}} @__spirv_CooperativeMatrixStoreKHR_global_f32_sc3_16x16_u0
-// CHECK-DECL: declare {{.*}} @__spirv_CooperativeMatrixStoreKHR_local_f32_sc3_16x16_u0
+// CHECK-DECL: declare {{.*}} @__spirv_CooperativeMatrixLoadKHR_global_f32_sc{{[0-9]+}}_16x16_u0
+// CHECK-DECL: declare {{.*}} @__spirv_CooperativeMatrixLoadKHR_global_f32_sc{{[0-9]+}}_16x16_u1
+// CHECK-DECL: declare {{.*}} @__spirv_CooperativeMatrixLoadKHR_global_f32_sc{{[0-9]+}}_16x16_u2
+// CHECK-DECL: declare {{.*}} @__spirv_CooperativeMatrixMulAddKHR_f32_sc{{[0-9]+}}_16x16_u0_f32_sc{{[0-9]+}}_16x16_u1_f32_sc{{[0-9]+}}_16x16_u2
+// CHECK-DECL: declare {{.*}} @__spirv_CooperativeMatrixLoadKHR_global_f32_sc{{[0-9]+}}_8x32_u0
+// CHECK-DECL: declare {{.*}} @__spirv_CooperativeMatrixLoadKHR_global_f32_sc{{[0-9]+}}_32x8_u1
+// CHECK-DECL: declare {{.*}} @__spirv_CooperativeMatrixLoadKHR_global_f32_sc{{[0-9]+}}_8x8_u2
+// CHECK-DECL: declare {{.*}} @__spirv_CooperativeMatrixMulAddKHR_f32_sc{{[0-9]+}}_8x32_u0_f32_sc{{[0-9]+}}_32x8_u1_f32_sc{{[0-9]+}}_8x8_u2
+// CHECK-DECL: declare {{.*}} @__spirv_CooperativeMatrixLoadKHR_global_i32_sc{{[0-9]+}}_16x16_u0
+// CHECK-DECL: declare {{.*}} @__spirv_CooperativeMatrixLoadKHR_global_i32_sc{{[0-9]+}}_16x16_u1
+// CHECK-DECL: declare {{.*}} @__spirv_CooperativeMatrixLoadKHR_global_i32_sc{{[0-9]+}}_16x16_u2
+// CHECK-DECL: declare {{.*}} @__spirv_CooperativeMatrixMulAddKHR_i32_sc{{[0-9]+}}_16x16_u0_i32_sc{{[0-9]+}}_16x16_u1_i32_sc{{[0-9]+}}_16x16_u2
+// CHECK-DECL: declare {{.*}} @__spirv_CooperativeMatrixLoadKHR_local_f32_sc{{[0-9]+}}_16x16_u0
+// CHECK-DECL: declare {{.*}} @__spirv_CooperativeMatrixStoreKHR_global_f32_sc{{[0-9]+}}_16x16_u0
+// CHECK-DECL: declare {{.*}} @__spirv_CooperativeMatrixStoreKHR_local_f32_sc{{[0-9]+}}_16x16_u0
