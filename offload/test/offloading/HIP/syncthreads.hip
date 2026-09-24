@@ -33,6 +33,7 @@ int main(int argc, char **argv) {
   int Result = 0;
   hipMalloc(&DevPtr, sizeof(int));
   reduceBlock<<<1, 64>>>(DevPtr);
+  hipDeviceSynchronize();
   hipMemcpy(&Result, DevPtr, sizeof(int), hipMemcpyDeviceToHost);
 
   printf("sum: %i\n", Result);
