@@ -999,9 +999,9 @@ getAccessIndices(Instruction *I, SmallSetVector<Instruction *, 16> &DeadInsts,
 
     Value *OffsetIdx = nullptr;
     if (HasOffset) {
-      if (Value *ConstantIdx = OffsetPhi->hasConstantValue())
+      if (Value *ConstantIdx = OffsetPhi->hasConstantValue()) {
         OffsetIdx = ConstantIdx;
-      else {
+      } else {
         OffsetIdx = OffsetPhi.release();
         Builder.Insert(OffsetIdx);
       }
