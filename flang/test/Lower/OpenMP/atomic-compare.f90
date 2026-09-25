@@ -55,7 +55,7 @@ end
 ! CHECK:         %[[DVAL:.*]] = fir.load %[[D_DECL]]#0 : !fir.ref<complex<f32>>
 ! CHECK:         omp.atomic.compare memory_order(relaxed) %[[X_DECL]]#0 : !fir.ref<complex<f32>> {
 ! CHECK:         ^bb0(%[[XVAL:.*]]: complex<f32>):
-! CHECK:           %[[CMP:.*]] = fir.cmpc "oeq", %[[XVAL]], %[[EVAL]] {fastmath = #arith.fastmath<contract>} : complex<f32>
+! CHECK:           %[[CMP:.*]] = fir.cmpc "oeq", %[[XVAL]], %[[EVAL]] <{fastmath = #arith.fastmath<contract>}> : complex<f32>
 ! CHECK:           %[[SEL:.*]] = arith.select %[[CMP]], %[[DVAL]], %[[XVAL]] : complex<f32>
 ! CHECK:           omp.yield(%[[SEL]] : complex<f32>)
 ! CHECK:         }

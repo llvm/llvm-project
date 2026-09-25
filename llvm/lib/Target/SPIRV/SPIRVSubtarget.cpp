@@ -33,7 +33,7 @@ using namespace llvm;
 static cl::opt<bool>
     SPVTranslatorCompat("translator-compatibility-mode",
                         cl::desc("SPIR-V Translator compatibility mode"),
-                        cl::Optional, cl::init(false));
+                        cl::init(false));
 
 static cl::opt<ExtensionSet, false, SPIRVExtensionsParser>
     Extensions("spirv-ext",

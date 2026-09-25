@@ -195,6 +195,11 @@ static cl::opt<std::string>
     CheckName("check-name", cl::desc("Name of checks to match against"),
               cl::init("jitlink-check"), cl::cat(JITLinkCategory));
 
+static cl::opt<bool>
+    ShowJITResult("show-jit-result",
+                  cl::desc("Print result of JIT'd main/entry to stdout"),
+                  cl::init(false), cl::cat(JITLinkCategory));
+
 static cl::opt<std::string>
     EntryPointName("entry", cl::desc("Symbol to call as main entry point"),
                    cl::init(""), cl::cat(JITLinkCategory));
@@ -280,7 +285,7 @@ static cl::opt<std::string> ShowLinkGraphs(
     "show-graphs",
     cl::desc("Takes a posix regex and prints the link graphs of all files "
              "matching that regex after fixups have been applied"),
-    cl::Optional, cl::cat(JITLinkCategory));
+    cl::cat(JITLinkCategory));
 
 static cl::opt<bool> ShowTimes("show-times",
                                cl::desc("Show times for llvm-jitlink phases"),
@@ -3166,6 +3171,8 @@ int main(int argc, char *argv[]) {
       Result = ExitOnErr(runWithRuntime(*S, EntryPoint->getAddress()));
     else
       Result = ExitOnErr(runWithoutRuntime(*S, EntryPoint->getAddress()));
+    if (ShowJITResult)
+      outs() << "JIT result: " << Result << "\n";
   }
 
   // Destroy the session.

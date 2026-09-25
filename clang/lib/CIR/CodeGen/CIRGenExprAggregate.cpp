@@ -208,8 +208,7 @@ public:
       mlir::Value sizeVal = cgf.getBuilder().getConstInt(
           loc, cgf.sizeTy,
           cgf.getContext().getTypeSizeInChars(e->getType()).getQuantity());
-      cgf.getBuilder().createMemCpy(loc, destAddress.getPointer(),
-                                    sourceAddress.getPointer(), sizeVal);
+      cgf.getBuilder().createMemCpy(loc, destAddress, sourceAddress, sizeVal);
 
       break;
     }
@@ -462,7 +461,12 @@ public:
     mlir::Location loc = cgf.getLoc(e->getSourceRange());
 
     CIRGenFunction::OpaqueValueMapping binding(cgf, e);
-    CIRGenFunction::ConditionalEvaluation eval(cgf);
+
+    // Emit the condition before opening the conditional evaluation, so that
+    // the cleanup scope of any temporary the condition creates encloses the
+    // one the evaluation opens.
+    mlir::Value condV = cgf.emitOpOnBoolExpr(loc, e->getCond());
+    CIRGenFunction::ConditionalEvaluation eval(cgf, loc);
 
     // Save whether the destination's lifetime is externally managed.
     bool isExternallyDestructed = dest.isExternallyDestructed();
@@ -471,10 +475,10 @@ public:
         e->getType().isDestructedType() == QualType::DK_nontrivial_c_struct;
     isExternallyDestructed |= destructNonTrivialCStruct;
 
-    // emitIfOnBoolExpr terminates each region; an unconditional yield here
+    // emitIfOnBoolValue terminates each region; an unconditional yield here
     // would keep alive the dead block a noreturn arm leaves behind.
-    cgf.emitIfOnBoolExpr(
-        e->getCond(),
+    cgf.emitIfOnBoolValue(
+        condV, loc,
         /*thenBuilder=*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
           eval.beginEvaluation();

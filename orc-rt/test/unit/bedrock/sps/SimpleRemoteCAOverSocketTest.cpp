@@ -44,6 +44,7 @@
 #include <vector>
 
 using namespace orc_rt;
+using namespace orc_rt::test;
 
 namespace orc_rt {
 
@@ -538,7 +539,7 @@ TEST_F(SimpleRemoteCAOverSocketTest, NothingIsQueuedBehindTheHangup) {
 
   // Queues the hang-up and latches the queue. Returns without waiting for the
   // reactor, which is still stalled.
-  S.detach([] {});
+  S.detach();
 
   // Too late: this must not reach the wire.
   DeferredReturn(Deferred.S, Deferred.ArgBytes, Deferred.CallId);
