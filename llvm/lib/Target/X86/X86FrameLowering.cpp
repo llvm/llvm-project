@@ -1589,6 +1589,32 @@ static bool isOpcodeRep(unsigned Opcode) {
   return false;
 }
 
+/// Returns the number of bytes between the end of the fixed and callee-save
+/// area and the first local object, which PEI leaves as padding when it aligns
+/// the local objects relative to the incoming stack pointer.
+static uint64_t getUnusedLocalAreaPadding(const MachineFrameInfo &MFI) {
+  int64_t FixedEnd = 0;
+  int64_t LocalsTop = std::numeric_limits<int64_t>::max();
+  for (int I : seq(MFI.getObjectIndexBegin(), MFI.getObjectIndexEnd())) {
+    if (MFI.isDeadObjectIndex(I) || MFI.isVariableSizedObjectIndex(I) ||
+        MFI.getStackID(I) != TargetStackID::Default)
+      continue;
+
+    int64_t ObjOffset = MFI.getObjectOffset(I);
+    int64_t ObjSize = MFI.getObjectSize(I);
+    // Offsets are negative, measured from the incoming stack pointer.
+    if (MFI.isFixedObjectIndex(I))
+      FixedEnd = std::max(FixedEnd, -ObjOffset);
+    else
+      LocalsTop = std::min<int64_t>(LocalsTop, -ObjOffset - ObjSize);
+  }
+  if (LocalsTop == std::numeric_limits<int64_t>::max())
+    return 0;
+
+  assert(LocalsTop >= FixedEnd && "Local object overlaps the fixed area");
+  return LocalsTop - FixedEnd;
+}
+
 /// emitPrologue - Push callee-saved registers onto the stack, which
 /// automatically adjust the stack pointer. Adjust the stack pointer to allocate
 /// space for local variables. Also emit labels used by the exception handler to
@@ -1901,9 +1927,14 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
     NumBytes =
         FrameSize - (X86FI->getCalleeSavedFrameSize() + TailCallArgReserveSize);
 
-    // Callee-saved registers are pushed on stack before the stack is realigned.
-    if (TRI->hasStackRealignment(MF) && !IsWin64Prologue)
-      NumBytes = alignTo(NumBytes, MaxAlign);
+    // Callee-saved registers are pushed on stack before the stack is realigned,
+    // and the realignment itself already provides the local objects' alignment,
+    // so leave out the padding PEI put in front of them for it.
+    if (TRI->hasStackRealignment(MF) && !IsWin64Prologue) {
+      uint64_t Padding = getUnusedLocalAreaPadding(MFI);
+      assert(Padding <= NumBytes && "Padding exceeds the local area");
+      NumBytes = alignTo(NumBytes - Padding, MaxAlign);
+    }
 
     // Save EBP/RBP into the appropriate stack slot.
     auto EmitSEHPushFramePtr = [&]() {
