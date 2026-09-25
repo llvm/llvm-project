@@ -473,7 +473,7 @@ class TestXMLRegisterUnion(GDBRemoteTestBase):
 
     @skipIfXmlSupportMissing
     @skipIfRemote
-    def test_union_cli_summary_and_member_paths(self):
+    def test_union_cli_and_member_paths(self):
         process = self.setup_register_test(
             """\
             <vector id="v4f" type="ieee_single" count="4"/>
@@ -490,18 +490,25 @@ class TestXMLRegisterUnion(GDBRemoteTestBase):
               <field name="view" type="vector_views"/>
               <field name="raw" type="uint128"/>
             </union>
+            <union id="index_view">
+              <field name="value" type="uint64"/>
+            </union>
             <reg name="u0" altname="alt_u0" regnum="0" bitsize="64" type="views"/>
             <reg name="u1" regnum="1" bitsize="128" type="vector_views"/>
             <reg name="n0" regnum="2" bitsize="128" type="nested"/>
+            <reg name="idx" regnum="3" bitsize="64" type="index_view"/>
             <reg name="pc" bitsize="64"/>""",
-            "0000c03fffffffff" + "0000c03f000020400000604000009040" * 2 + "00" * 8,
+            "0000c03fffffffff"
+            + "0000c03f000020400000604000009040" * 2
+            + "0200000000000000"
+            + "00" * 8,
         )
 
         union = process.GetThreadAtIndex(0).GetFrameAtIndex(0).FindRegister("u0")
-        self.assertEqual(
-            union.GetSummary(),
-            "(f32 = 1.5, f64 = NaN, u64 = 18446744070484131840)",
-        )
+        self.assertIsNone(union.GetSummary())
+        description = lldb.SBStream()
+        self.assertTrue(union.GetDescription(description))
+        self.assertIn("f32 = 1.5", description.GetData())
 
         self.expect(
             "register read u0",
@@ -511,6 +518,7 @@ class TestXMLRegisterUnion(GDBRemoteTestBase):
             ],
         )
         self.expect("register read u0.f32", substrs=["u0.f32 = 1.5"])
+        self.expect("register read U0.f32", substrs=["u0.f32 = 1.5"])
         self.expect(
             "register read u0.u64 --format X",
             substrs=["u0.u64 = 0xFFFFFFFF3FC00000"],
@@ -524,14 +532,59 @@ class TestXMLRegisterUnion(GDBRemoteTestBase):
         self.expect("register read $u0.f64", substrs=["u0.f64 = NaN"])
         self.expect("register read u1.floats[2]", substrs=["u1.floats[2] = 3.5"])
         self.expect(
+            "register read u1.floats[$idx.value]",
+            substrs=["u1.floats[2] = 3.5"],
+        )
+        self.expect(
+            "register read u0 u1.floats[2]",
+            substrs=["u0 = 0xffffffff3fc00000", "u1.floats[2] = 3.5"],
+        )
+        self.expect(
             "register read n0.view.floats[3]",
             substrs=["n0.view.floats[3] = 4.5"],
         )
 
+        frame = process.GetThreadAtIndex(0).GetFrameAtIndex(0)
+        lane = frame.FindRegister("u1").GetValueForExpressionPath(".floats[2]")
+        expression_path = lldb.SBStream()
+        self.assertTrue(lane.GetExpressionPath(expression_path))
+        self.assertEqual(expression_path.GetData(), "$u1.floats[2]")
+        self.assertEqual(lane.GetValueType(), lldb.eValueTypeRegister)
+
+        resolved_lane = frame.GetValueForVariablePath("$u1.floats[2]")
+        self.assertTrue(resolved_lane.IsValid())
+        self.assertEqual(resolved_lane.GetValue(), "3.5")
+        self.assertEqual(resolved_lane.GetValueType(), lldb.eValueTypeRegister)
+
+        self.expect(
+            "v $u0",
+            substrs=[
+                "u0 = (f32 = 1.5",
+                "f64 = NaN",
+                "u64 = 18446744070484131840)",
+            ],
+        )
+        self.expect("v $u0.f32", substrs=["(float) $u0.f32 = 1.5"])
+        self.expect("v $u1.floats[2]", substrs=["(float) $u1.floats[2] = 3.5"])
+        self.expect(
+            "v $u1.floats[$idx.value]",
+            substrs=["(float) $u1.floats[$idx.value] = 3.5"],
+        )
+
+        self.runCmd("settings set target.experimental.use-DIL false")
+        try:
+            self.expect("register read u1.floats[2]", substrs=["u1.floats[2] = 3.5"])
+            self.expect("v $u1.floats[2]", substrs=["(float) $u1.floats[2] = 3.5"])
+            resolved_lane = frame.GetValueForVariablePath("$u1.floats[2]")
+            self.assertTrue(resolved_lane.IsValid())
+            self.assertEqual(resolved_lane.GetValue(), "3.5")
+        finally:
+            self.runCmd("settings set target.experimental.use-DIL true")
+
     @skipIfXmlSupportMissing
     @skipIfRemote
     def test_exact_dotted_register_name_takes_precedence(self):
-        self.setup_register_test(
+        process = self.setup_register_test(
             """\
             <union id="views">
               <field name="f32" type="ieee_single"/>
@@ -546,36 +599,68 @@ class TestXMLRegisterUnion(GDBRemoteTestBase):
 
         self.expect("register read u0.f32", substrs=["u0.f32 = 0x0000002a"])
         self.expect("register read u0.view.f32", substrs=["u0.view.f32 = 1.5"])
+        self.expect("v $u0.f32", substrs=["u0.f32 = 0x0000002a"])
+        self.expect("v $u0.view.f32", substrs=["(float) $u0.view.f32 = 1.5"])
+
+        frame = process.GetThreadAtIndex(0).GetFrameAtIndex(0)
+        self.assertEqual(
+            frame.GetValueForVariablePath("$u0.f32").GetValue(), "0x0000002a"
+        )
+        self.assertEqual(
+            frame.GetValueForVariablePath("$u0.view.f32").GetValue(), "1.5"
+        )
+
+        self.runCmd("settings set target.experimental.use-DIL false")
+        try:
+            self.expect("register read u0.f32", substrs=["u0.f32 = 0x0000002a"])
+            self.expect("register read u0.view.f32", substrs=["u0.view.f32 = 1.5"])
+            self.expect("v $u0.view.f32", substrs=["(float) $u0.view.f32 = 1.5"])
+            self.assertEqual(
+                frame.GetValueForVariablePath("$u0.f32").GetValue(),
+                "0x0000002a",
+            )
+            self.assertEqual(
+                frame.GetValueForVariablePath("$u0.view.f32").GetValue(),
+                "1.5",
+            )
+        finally:
+            self.runCmd("settings set target.experimental.use-DIL true")
 
     @skipIfXmlSupportMissing
     @skipIfRemote
     def test_invalid_union_member_paths(self):
-        self.setup_register_test(
+        process = self.setup_register_test(
             """\
             <union id="views">
               <field name="f32" type="ieee_single"/>
               <field name="raw" type="uint64"/>
             </union>
             <vector id="v2views" type="views" count="2"/>
+            <vector id="v2f" type="ieee_single" count="2"/>
+            <union id="vector_view">
+              <field name="elements" type="v2views"/>
+            </union>
             <reg name="u0" regnum="0" bitsize="64" type="views"/>
             <reg name="v0" regnum="1" bitsize="128" type="v2views"/>
-            <reg name="pc" regnum="2" bitsize="64"/>""",
-            "00" * 32,
+            <reg name="n0" regnum="2" bitsize="128" type="vector_view"/>
+            <reg name="vf" regnum="3" bitsize="64" type="v2f"/>
+            <reg name="pc" regnum="4" bitsize="64"/>""",
+            "0000000001000000" + "00" * 48,
         )
 
         invalid_paths = {
-            "u0.missing": "No field path 'missing' in register 'u0'",
-            "u0.": "No field path '' in register 'u0'",
-            "u0..f32": "No field path '.f32' in register 'u0'",
-            "u0[0]": "No field path '[0]' in register 'u0'",
-            "v0[": "No field path '[' in register 'v0'",
-            "v0[0": "No field path '[0' in register 'v0'",
-            "v0[]": "No field path '[]' in register 'v0'",
-            "v0[x]": "No field path '[x]' in register 'v0'",
-            "v0[-1]": "No field path '[-1]' in register 'v0'",
-            "v0[4294967296]": "No field path '[4294967296]' in register 'v0'",
-            "v0[0]junk": "No field path '[0]junk' in register 'v0'",
-            "v0[0].missing": "No field path '[0].missing' in register 'v0'",
+            "u0.missing": '"missing" is not a member',
+            "u0.": '"" is not a member',
+            "u0..f32": '"" is not a member',
+            "u0[0]": "is not an array type",
+            "v0[": "Unexpected token",
+            "v0[0": "expected 'r_square'",
+            "v0[]": "Unexpected token",
+            "v0[x]": "use of undeclared identifier 'x'",
+            "v0[-1]": "is not allowed in DIL legacy mode",
+            "v0[4294967296]": "array index 4294967296 is not valid",
+            "v0[0]junk": "expected 'eof'",
+            "v0[0].missing": '"missing" is not a member',
         }
         for path, diagnostic in invalid_paths.items():
             self.expect(
@@ -586,13 +671,85 @@ class TestXMLRegisterUnion(GDBRemoteTestBase):
         self.expect(
             "register read v0[9].f32",
             error=True,
-            substrs=["No field path '[9].f32'"],
+            substrs=["array index 9 is not valid"],
         )
         self.expect(
             "register read pc.field",
             error=True,
-            substrs=["Register 'pc' does not have a structured type"],
+            substrs=['"field" is not a member'],
         )
+        self.expect(
+            "register read pc->field",
+            error=True,
+            substrs=["member reference type"],
+        )
+        self.expect(
+            "register read does_not_exist",
+            error=True,
+            substrs=["Invalid register name 'does_not_exist'"],
+        )
+
+        frame = process.GetThreadAtIndex(0).GetFrameAtIndex(0)
+        vector = frame.FindRegister("v0")
+        self.assertTrue(vector.GetType().IsArrayType())
+        self.assertEqual(vector.GetValueType(), lldb.eValueTypeRegister)
+        self.assertEqual(
+            vector.GetChildAtIndex(0).GetValueType(), lldb.eValueTypeRegister
+        )
+        self.assertTrue(
+            vector.GetChildAtIndex(1, lldb.eNoDynamicValues, True).IsValid()
+        )
+        self.assertFalse(
+            vector.GetChildAtIndex(9, lldb.eNoDynamicValues, True).IsValid()
+        )
+        self.assertFalse(vector.GetValueForExpressionPath("[9].f32").IsValid())
+        self.assertFalse(vector.GetValueForExpressionPath("[4294967296]").IsValid())
+
+        scalar = frame.FindRegister("u0").GetChildMemberWithName("raw")
+        self.assertTrue(scalar.GetValueForExpressionPath("[63]").IsValid())
+        self.assertFalse(scalar.GetValueForExpressionPath("[64]").IsValid())
+        self.assertFalse(scalar.GetValueForExpressionPath("[64-64]").IsValid())
+        for command in ["register read u0.raw[64]", "v $u0.raw[64]"]:
+            self.expect(command, error=True, substrs=["bitfield range 64"])
+
+        nested_vector = frame.FindRegister("n0").GetChildMemberWithName("elements")
+        self.assertEqual(nested_vector.GetValueType(), lldb.eValueTypeRegister)
+        self.assertFalse(nested_vector.GetValueForExpressionPath("[9].f32").IsValid())
+        native_vector = frame.FindRegister("vf")
+        self.assertTrue(native_vector.GetType().IsVectorType())
+        self.assertEqual(native_vector.GetValueType(), lldb.eValueTypeRegister)
+        self.assertEqual(
+            native_vector.GetChildAtIndex(0).GetValueType(),
+            lldb.eValueTypeRegister,
+        )
+        self.expect(
+            "v $v0[$u0.raw].f32",
+            error=True,
+            substrs=["array index 4294967296 is not valid"],
+        )
+        self.expect(
+            "v $vf[$u0.raw]",
+            error=True,
+            substrs=["array index 4294967296 is not valid"],
+        )
+
+        self.runCmd("settings set target.experimental.use-DIL false")
+        try:
+            for command in [
+                "register read v0[9].f32",
+                "register read v0[4294967296]",
+                "v $v0[9].f32",
+                "v $v0[4294967296]",
+            ]:
+                self.expect(command, error=True, substrs=["array index"])
+            for command in [
+                "register read u0.raw[64]",
+                "register read u0.raw[64-64]",
+                "v $u0.raw[64]",
+            ]:
+                self.expect(command, error=True, substrs=["bitfield range 64"])
+        finally:
+            self.runCmd("settings set target.experimental.use-DIL true")
 
     @skipIfXmlSupportMissing
     @skipIfRemote
@@ -624,6 +781,8 @@ class TestXMLRegisterUnion(GDBRemoteTestBase):
             "register read u0",
             substrs=[
                 "u0 = 0x3fc0000040200000",
-                "     = (scalar = 1.5, lanes = (1.5, 2.5))",
+                "     = {",
+                "scalar = 1.5",
+                "lanes = ([0] = 1.5, [1] = 2.5)",
             ],
         )
