@@ -1,10 +1,10 @@
+; RUN: llvm-dis < %s.bc | FileCheck %s
+; RUN: verify-uselistorder < %s.bc
 ; Test that old-style scalar tags used as !tbaa.struct field tags in older
 ; bitcode are auto-upgraded to the struct-path aware format on load, whatever
 ; instruction carries the !tbaa.struct. Null and already struct-path field
 ; tags are left unchanged; an immutability flag is kept.
 ;
-; RUN: llvm-dis < %s.bc | FileCheck %s
-; RUN: verify-uselistorder < %s.bc
 
 define void @copy_memcpy(ptr %a, ptr %b) {
 ; CHECK: call void @llvm.memcpy.p0.p0.i64(ptr %a, ptr %b, i64 12, i1 false), !tbaa.struct [[TS:![0-9]+]]
