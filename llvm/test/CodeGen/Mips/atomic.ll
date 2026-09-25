@@ -1322,7 +1322,7 @@ define i32 @AtomicLoadNand32(i32 signext %incr) nounwind {
 ; MIPS32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS32-NEXT:    ll $2, 0($1)
 ; MIPS32-NEXT:    and $3, $2, $4
-; MIPS32-NEXT:    nor $3, $zero, $3
+; MIPS32-NEXT:    not $3, $3
 ; MIPS32-NEXT:    sc $3, 0($1)
 ; MIPS32-NEXT:    beqz $3, $BB5_1
 ; MIPS32-NEXT:    nop
@@ -1340,7 +1340,7 @@ define i32 @AtomicLoadNand32(i32 signext %incr) nounwind {
 ; MIPS32O0-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS32O0-NEXT:    ll $2, 0($3)
 ; MIPS32O0-NEXT:    and $1, $2, $4
-; MIPS32O0-NEXT:    nor $1, $zero, $1
+; MIPS32O0-NEXT:    not $1, $1
 ; MIPS32O0-NEXT:    sc $1, 0($3)
 ; MIPS32O0-NEXT:    beqz $1, $BB5_1
 ; MIPS32O0-NEXT:    nop
@@ -1358,7 +1358,7 @@ define i32 @AtomicLoadNand32(i32 signext %incr) nounwind {
 ; MIPS32R2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS32R2-NEXT:    ll $2, 0($1)
 ; MIPS32R2-NEXT:    and $3, $2, $4
-; MIPS32R2-NEXT:    nor $3, $zero, $3
+; MIPS32R2-NEXT:    not $3, $3
 ; MIPS32R2-NEXT:    sc $3, 0($1)
 ; MIPS32R2-NEXT:    beqz $3, $BB5_1
 ; MIPS32R2-NEXT:    nop
@@ -1376,7 +1376,7 @@ define i32 @AtomicLoadNand32(i32 signext %incr) nounwind {
 ; MIPS32R6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS32R6-NEXT:    ll $2, 0($1)
 ; MIPS32R6-NEXT:    and $3, $2, $4
-; MIPS32R6-NEXT:    nor $3, $zero, $3
+; MIPS32R6-NEXT:    not $3, $3
 ; MIPS32R6-NEXT:    sc $3, 0($1)
 ; MIPS32R6-NEXT:    beqzc $3, $BB5_1
 ; MIPS32R6-NEXT:    nop
@@ -1393,7 +1393,7 @@ define i32 @AtomicLoadNand32(i32 signext %incr) nounwind {
 ; MIPS32R6O0-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS32R6O0-NEXT:    ll $2, 0($3)
 ; MIPS32R6O0-NEXT:    and $1, $2, $4
-; MIPS32R6O0-NEXT:    nor $1, $zero, $1
+; MIPS32R6O0-NEXT:    not $1, $1
 ; MIPS32R6O0-NEXT:    sc $1, 0($3)
 ; MIPS32R6O0-NEXT:    beqzc $1, $BB5_1
 ; MIPS32R6O0-NEXT:    nop
@@ -1410,7 +1410,7 @@ define i32 @AtomicLoadNand32(i32 signext %incr) nounwind {
 ; MIPS4-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS4-NEXT:    ll $2, 0($1)
 ; MIPS4-NEXT:    and $3, $2, $4
-; MIPS4-NEXT:    nor $3, $zero, $3
+; MIPS4-NEXT:    not $3, $3
 ; MIPS4-NEXT:    sc $3, 0($1)
 ; MIPS4-NEXT:    beqz $3, .LBB5_1
 ; MIPS4-NEXT:    nop
@@ -1428,7 +1428,7 @@ define i32 @AtomicLoadNand32(i32 signext %incr) nounwind {
 ; MIPS64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS64-NEXT:    ll $2, 0($1)
 ; MIPS64-NEXT:    and $3, $2, $4
-; MIPS64-NEXT:    nor $3, $zero, $3
+; MIPS64-NEXT:    not $3, $3
 ; MIPS64-NEXT:    sc $3, 0($1)
 ; MIPS64-NEXT:    beqz $3, .LBB5_1
 ; MIPS64-NEXT:    nop
@@ -1446,7 +1446,7 @@ define i32 @AtomicLoadNand32(i32 signext %incr) nounwind {
 ; MIPS64R2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS64R2-NEXT:    ll $2, 0($1)
 ; MIPS64R2-NEXT:    and $3, $2, $4
-; MIPS64R2-NEXT:    nor $3, $zero, $3
+; MIPS64R2-NEXT:    not $3, $3
 ; MIPS64R2-NEXT:    sc $3, 0($1)
 ; MIPS64R2-NEXT:    beqz $3, .LBB5_1
 ; MIPS64R2-NEXT:    nop
@@ -1464,7 +1464,7 @@ define i32 @AtomicLoadNand32(i32 signext %incr) nounwind {
 ; MIPS64R6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS64R6-NEXT:    ll $2, 0($1)
 ; MIPS64R6-NEXT:    and $3, $2, $4
-; MIPS64R6-NEXT:    nor $3, $zero, $3
+; MIPS64R6-NEXT:    not $3, $3
 ; MIPS64R6-NEXT:    sc $3, 0($1)
 ; MIPS64R6-NEXT:    beqzc $3, .LBB5_1
 ; MIPS64R6-NEXT:    nop
@@ -1482,7 +1482,7 @@ define i32 @AtomicLoadNand32(i32 signext %incr) nounwind {
 ; MIPS64R6O0-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS64R6O0-NEXT:    ll $2, 0($3)
 ; MIPS64R6O0-NEXT:    and $1, $2, $4
-; MIPS64R6O0-NEXT:    nor $1, $zero, $1
+; MIPS64R6O0-NEXT:    not $1, $1
 ; MIPS64R6O0-NEXT:    sc $1, 0($3)
 ; MIPS64R6O0-NEXT:    beqzc $1, .LBB5_1
 ; MIPS64R6O0-NEXT:    nop
@@ -1499,7 +1499,7 @@ define i32 @AtomicLoadNand32(i32 signext %incr) nounwind {
 ; MM32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MM32-NEXT:    ll $2, 0($1)
 ; MM32-NEXT:    and $3, $2, $4
-; MM32-NEXT:    nor $3, $zero, $3
+; MM32-NEXT:    not $3, $3
 ; MM32-NEXT:    sc $3, 0($1)
 ; MM32-NEXT:    beqzc $3, $BB5_1
 ; MM32-NEXT:  # %bb.2: # %entry
@@ -1515,7 +1515,7 @@ define i32 @AtomicLoadNand32(i32 signext %incr) nounwind {
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    ll $2, 0($1)
 ; O1-NEXT:    and $3, $2, $4
-; O1-NEXT:    nor $3, $zero, $3
+; O1-NEXT:    not $3, $3
 ; O1-NEXT:    sc $3, 0($1)
 ; O1-NEXT:    beqz $3, $BB5_1
 ; O1-NEXT:    nop
@@ -1533,7 +1533,7 @@ define i32 @AtomicLoadNand32(i32 signext %incr) nounwind {
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    ll $2, 0($1)
 ; O2-NEXT:    and $3, $2, $4
-; O2-NEXT:    nor $3, $zero, $3
+; O2-NEXT:    not $3, $3
 ; O2-NEXT:    sc $3, 0($1)
 ; O2-NEXT:    beqz $3, $BB5_1
 ; O2-NEXT:    nop
@@ -1551,7 +1551,7 @@ define i32 @AtomicLoadNand32(i32 signext %incr) nounwind {
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    ll $2, 0($1)
 ; O3-NEXT:    and $3, $2, $4
-; O3-NEXT:    nor $3, $zero, $3
+; O3-NEXT:    not $3, $3
 ; O3-NEXT:    sc $3, 0($1)
 ; O3-NEXT:    beqz $3, $BB5_1
 ; O3-NEXT:    nop
@@ -1569,7 +1569,7 @@ define i32 @AtomicLoadNand32(i32 signext %incr) nounwind {
 ; MIPS32EB-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS32EB-NEXT:    ll $2, 0($1)
 ; MIPS32EB-NEXT:    and $3, $2, $4
-; MIPS32EB-NEXT:    nor $3, $zero, $3
+; MIPS32EB-NEXT:    not $3, $3
 ; MIPS32EB-NEXT:    sc $3, 0($1)
 ; MIPS32EB-NEXT:    beqz $3, $BB5_1
 ; MIPS32EB-NEXT:    nop
@@ -1909,17 +1909,16 @@ define i32 @AtomicCmpSwap32(i32 signext %oldval, i32 signext %newval) nounwind {
 ; MIPS32O0-NEXT:    addiu $sp, $sp, -8
 ; MIPS32O0-NEXT:    addu $1, $2, $25
 ; MIPS32O0-NEXT:    sw $5, 4($sp)
-; MIPS32O0-NEXT:    lw $6, 4($sp)
+; MIPS32O0-NEXT:    lw $5, 4($sp)
 ; MIPS32O0-NEXT:    lw $3, %got(x)($1)
-; MIPS32O0-NEXT:    move $5, $4
 ; MIPS32O0-NEXT:  $BB7_1: # %entry
 ; MIPS32O0-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS32O0-NEXT:    ll $2, 0($3)
-; MIPS32O0-NEXT:    bne $2, $5, $BB7_3
+; MIPS32O0-NEXT:    bne $2, $4, $BB7_3
 ; MIPS32O0-NEXT:    nop
 ; MIPS32O0-NEXT:  # %bb.2: # %entry
 ; MIPS32O0-NEXT:    # in Loop: Header=BB7_1 Depth=1
-; MIPS32O0-NEXT:    move $1, $6
+; MIPS32O0-NEXT:    move $1, $5
 ; MIPS32O0-NEXT:    sc $1, 0($3)
 ; MIPS32O0-NEXT:    beqz $1, $BB7_1
 ; MIPS32O0-NEXT:    nop
@@ -2243,71 +2242,62 @@ define signext i8 @AtomicLoadAdd8(i8 signext %incr) nounwind {
 ; MIPS32-NEXT:    lui $2, %hi(_gp_disp)
 ; MIPS32-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; MIPS32-NEXT:    addu $1, $2, $25
-; MIPS32-NEXT:    lw $1, %got(y)($1)
 ; MIPS32-NEXT:    addiu $2, $zero, -4
-; MIPS32-NEXT:    and $3, $1, $2
+; MIPS32-NEXT:    lw $1, %got(y)($1)
+; MIPS32-NEXT:    and $2, $1, $2
 ; MIPS32-NEXT:    andi $1, $1, 3
 ; MIPS32-NEXT:    sll $1, $1, 3
-; MIPS32-NEXT:    ori $2, $zero, 255
-; MIPS32-NEXT:    sllv $5, $2, $1
-; MIPS32-NEXT:    nor $6, $zero, $5
+; MIPS32-NEXT:    addiu $3, $zero, 255
+; MIPS32-NEXT:    sllv $3, $3, $1
+; MIPS32-NEXT:    andi $4, $4, 255
 ; MIPS32-NEXT:    sllv $4, $4, $1
 ; MIPS32-NEXT:  $BB8_1: # %entry
 ; MIPS32-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS32-NEXT:    ll $7, 0($3)
-; MIPS32-NEXT:    addu $8, $7, $4
-; MIPS32-NEXT:    and $8, $8, $5
-; MIPS32-NEXT:    and $9, $7, $6
-; MIPS32-NEXT:    or $9, $9, $8
-; MIPS32-NEXT:    sc $9, 0($3)
-; MIPS32-NEXT:    beqz $9, $BB8_1
+; MIPS32-NEXT:    ll $5, 0($2)
+; MIPS32-NEXT:    addu $6, $5, $4
+; MIPS32-NEXT:    xor $6, $5, $6
+; MIPS32-NEXT:    and $6, $6, $3
+; MIPS32-NEXT:    xor $6, $5, $6
+; MIPS32-NEXT:    sc $6, 0($2)
+; MIPS32-NEXT:    beqz $6, $BB8_1
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  # %bb.2: # %entry
-; MIPS32-NEXT:    and $2, $7, $5
-; MIPS32-NEXT:    srlv $2, $2, $1
-; MIPS32-NEXT:    sll $2, $2, 24
-; MIPS32-NEXT:    sra $2, $2, 24
-; MIPS32-NEXT:  # %bb.3: # %entry
+; MIPS32-NEXT:    srlv $1, $5, $1
+; MIPS32-NEXT:    sll $1, $1, 24
 ; MIPS32-NEXT:    jr $ra
-; MIPS32-NEXT:    nop
+; MIPS32-NEXT:    sra $2, $1, 24
 ;
 ; MIPS32O0-LABEL: AtomicLoadAdd8:
 ; MIPS32O0:       # %bb.0: # %entry
 ; MIPS32O0-NEXT:    lui $2, %hi(_gp_disp)
 ; MIPS32O0-NEXT:    addiu $2, $2, %lo(_gp_disp)
-; MIPS32O0-NEXT:    addiu $sp, $sp, -8
-; MIPS32O0-NEXT:    addu $1, $2, $25
-; MIPS32O0-NEXT:    lw $1, %got(y)($1)
-; MIPS32O0-NEXT:    addiu $2, $zero, -4
-; MIPS32O0-NEXT:    and $5, $1, $2
-; MIPS32O0-NEXT:    andi $1, $1, 3
-; MIPS32O0-NEXT:    sll $9, $1, 3
-; MIPS32O0-NEXT:    ori $1, $zero, 255
-; MIPS32O0-NEXT:    sllv $7, $1, $9
-; MIPS32O0-NEXT:    nor $8, $zero, $7
-; MIPS32O0-NEXT:    sllv $6, $4, $9
+; MIPS32O0-NEXT:    addu $2, $2, $25
+; MIPS32O0-NEXT:    move $1, $4
+; MIPS32O0-NEXT:    lw $3, %got(y)($2)
+; MIPS32O0-NEXT:    addiu $4, $zero, -4
+; MIPS32O0-NEXT:    and $4, $3, $4
+; MIPS32O0-NEXT:    lw $2, %got(y)($2)
+; MIPS32O0-NEXT:    addiu $3, $zero, 3
+; MIPS32O0-NEXT:    and $2, $2, $3
+; MIPS32O0-NEXT:    sll $2, $2, 3
+; MIPS32O0-NEXT:    addiu $3, $zero, 255
+; MIPS32O0-NEXT:    sllv $6, $3, $2
+; MIPS32O0-NEXT:    andi $1, $1, 255
+; MIPS32O0-NEXT:    sllv $5, $1, $2
 ; MIPS32O0-NEXT:  $BB8_1: # %entry
 ; MIPS32O0-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS32O0-NEXT:    ll $2, 0($5)
-; MIPS32O0-NEXT:    addu $3, $2, $6
-; MIPS32O0-NEXT:    and $3, $3, $7
-; MIPS32O0-NEXT:    and $4, $2, $8
-; MIPS32O0-NEXT:    or $4, $4, $3
-; MIPS32O0-NEXT:    sc $4, 0($5)
-; MIPS32O0-NEXT:    beqz $4, $BB8_1
+; MIPS32O0-NEXT:    ll $1, 0($4)
+; MIPS32O0-NEXT:    addu $3, $1, $5
+; MIPS32O0-NEXT:    xor $3, $1, $3
+; MIPS32O0-NEXT:    and $3, $3, $6
+; MIPS32O0-NEXT:    xor $3, $1, $3
+; MIPS32O0-NEXT:    sc $3, 0($4)
+; MIPS32O0-NEXT:    beqz $3, $BB8_1
 ; MIPS32O0-NEXT:    nop
 ; MIPS32O0-NEXT:  # %bb.2: # %entry
-; MIPS32O0-NEXT:    and $1, $2, $7
-; MIPS32O0-NEXT:    srlv $1, $1, $9
-; MIPS32O0-NEXT:    sll $1, $1, 24
-; MIPS32O0-NEXT:    sra $1, $1, 24
-; MIPS32O0-NEXT:  # %bb.3: # %entry
-; MIPS32O0-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
-; MIPS32O0-NEXT:  # %bb.4: # %entry
-; MIPS32O0-NEXT:    lw $1, 4($sp) # 4-byte Folded Reload
+; MIPS32O0-NEXT:    srlv $1, $1, $2
 ; MIPS32O0-NEXT:    sll $1, $1, 24
 ; MIPS32O0-NEXT:    sra $2, $1, 24
-; MIPS32O0-NEXT:    addiu $sp, $sp, 8
 ; MIPS32O0-NEXT:    jr $ra
 ; MIPS32O0-NEXT:    nop
 ;
@@ -2316,96 +2306,85 @@ define signext i8 @AtomicLoadAdd8(i8 signext %incr) nounwind {
 ; MIPS32R2-NEXT:    lui $2, %hi(_gp_disp)
 ; MIPS32R2-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; MIPS32R2-NEXT:    addu $1, $2, $25
-; MIPS32R2-NEXT:    lw $1, %got(y)($1)
 ; MIPS32R2-NEXT:    addiu $2, $zero, -4
-; MIPS32R2-NEXT:    and $3, $1, $2
+; MIPS32R2-NEXT:    lw $1, %got(y)($1)
+; MIPS32R2-NEXT:    and $2, $1, $2
 ; MIPS32R2-NEXT:    andi $1, $1, 3
 ; MIPS32R2-NEXT:    sll $1, $1, 3
-; MIPS32R2-NEXT:    ori $2, $zero, 255
-; MIPS32R2-NEXT:    sllv $5, $2, $1
-; MIPS32R2-NEXT:    nor $6, $zero, $5
+; MIPS32R2-NEXT:    addiu $3, $zero, 255
+; MIPS32R2-NEXT:    sllv $3, $3, $1
+; MIPS32R2-NEXT:    andi $4, $4, 255
 ; MIPS32R2-NEXT:    sllv $4, $4, $1
 ; MIPS32R2-NEXT:  $BB8_1: # %entry
 ; MIPS32R2-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS32R2-NEXT:    ll $7, 0($3)
-; MIPS32R2-NEXT:    addu $8, $7, $4
-; MIPS32R2-NEXT:    and $8, $8, $5
-; MIPS32R2-NEXT:    and $9, $7, $6
-; MIPS32R2-NEXT:    or $9, $9, $8
-; MIPS32R2-NEXT:    sc $9, 0($3)
-; MIPS32R2-NEXT:    beqz $9, $BB8_1
+; MIPS32R2-NEXT:    ll $5, 0($2)
+; MIPS32R2-NEXT:    addu $6, $5, $4
+; MIPS32R2-NEXT:    xor $6, $5, $6
+; MIPS32R2-NEXT:    and $6, $6, $3
+; MIPS32R2-NEXT:    xor $6, $5, $6
+; MIPS32R2-NEXT:    sc $6, 0($2)
+; MIPS32R2-NEXT:    beqz $6, $BB8_1
 ; MIPS32R2-NEXT:    nop
 ; MIPS32R2-NEXT:  # %bb.2: # %entry
-; MIPS32R2-NEXT:    and $2, $7, $5
-; MIPS32R2-NEXT:    srlv $2, $2, $1
-; MIPS32R2-NEXT:    seb $2, $2
-; MIPS32R2-NEXT:  # %bb.3: # %entry
+; MIPS32R2-NEXT:    srlv $1, $5, $1
 ; MIPS32R2-NEXT:    jr $ra
-; MIPS32R2-NEXT:    nop
+; MIPS32R2-NEXT:    seb $2, $1
 ;
 ; MIPS32R6-LABEL: AtomicLoadAdd8:
 ; MIPS32R6:       # %bb.0: # %entry
 ; MIPS32R6-NEXT:    lui $2, %hi(_gp_disp)
 ; MIPS32R6-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; MIPS32R6-NEXT:    addu $1, $2, $25
-; MIPS32R6-NEXT:    lw $1, %got(y)($1)
 ; MIPS32R6-NEXT:    addiu $2, $zero, -4
-; MIPS32R6-NEXT:    and $3, $1, $2
+; MIPS32R6-NEXT:    lw $1, %got(y)($1)
+; MIPS32R6-NEXT:    and $2, $1, $2
 ; MIPS32R6-NEXT:    andi $1, $1, 3
 ; MIPS32R6-NEXT:    sll $1, $1, 3
-; MIPS32R6-NEXT:    ori $2, $zero, 255
-; MIPS32R6-NEXT:    sllv $5, $2, $1
-; MIPS32R6-NEXT:    nor $6, $zero, $5
+; MIPS32R6-NEXT:    addiu $3, $zero, 255
+; MIPS32R6-NEXT:    sllv $3, $3, $1
+; MIPS32R6-NEXT:    andi $4, $4, 255
 ; MIPS32R6-NEXT:    sllv $4, $4, $1
 ; MIPS32R6-NEXT:  $BB8_1: # %entry
 ; MIPS32R6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS32R6-NEXT:    ll $7, 0($3)
-; MIPS32R6-NEXT:    addu $8, $7, $4
-; MIPS32R6-NEXT:    and $8, $8, $5
-; MIPS32R6-NEXT:    and $9, $7, $6
-; MIPS32R6-NEXT:    or $9, $9, $8
-; MIPS32R6-NEXT:    sc $9, 0($3)
-; MIPS32R6-NEXT:    beqzc $9, $BB8_1
+; MIPS32R6-NEXT:    ll $5, 0($2)
+; MIPS32R6-NEXT:    addu $6, $5, $4
+; MIPS32R6-NEXT:    xor $6, $5, $6
+; MIPS32R6-NEXT:    and $6, $6, $3
+; MIPS32R6-NEXT:    xor $6, $5, $6
+; MIPS32R6-NEXT:    sc $6, 0($2)
+; MIPS32R6-NEXT:    beqzc $6, $BB8_1
 ; MIPS32R6-NEXT:  # %bb.2: # %entry
-; MIPS32R6-NEXT:    and $2, $7, $5
-; MIPS32R6-NEXT:    srlv $2, $2, $1
-; MIPS32R6-NEXT:    seb $2, $2
-; MIPS32R6-NEXT:  # %bb.3: # %entry
-; MIPS32R6-NEXT:    jrc $ra
+; MIPS32R6-NEXT:    srlv $1, $5, $1
+; MIPS32R6-NEXT:    jr $ra
+; MIPS32R6-NEXT:    seb $2, $1
 ;
 ; MIPS32R6O0-LABEL: AtomicLoadAdd8:
 ; MIPS32R6O0:       # %bb.0: # %entry
 ; MIPS32R6O0-NEXT:    lui $2, %hi(_gp_disp)
 ; MIPS32R6O0-NEXT:    addiu $2, $2, %lo(_gp_disp)
-; MIPS32R6O0-NEXT:    addiu $sp, $sp, -8
-; MIPS32R6O0-NEXT:    addu $1, $2, $25
-; MIPS32R6O0-NEXT:    lw $1, %got(y)($1)
-; MIPS32R6O0-NEXT:    addiu $2, $zero, -4
-; MIPS32R6O0-NEXT:    and $5, $1, $2
-; MIPS32R6O0-NEXT:    andi $1, $1, 3
-; MIPS32R6O0-NEXT:    sll $9, $1, 3
-; MIPS32R6O0-NEXT:    ori $1, $zero, 255
-; MIPS32R6O0-NEXT:    sllv $7, $1, $9
-; MIPS32R6O0-NEXT:    nor $8, $zero, $7
-; MIPS32R6O0-NEXT:    sllv $6, $4, $9
+; MIPS32R6O0-NEXT:    addu $2, $2, $25
+; MIPS32R6O0-NEXT:    move $1, $4
+; MIPS32R6O0-NEXT:    lw $2, %got(y)($2)
+; MIPS32R6O0-NEXT:    addiu $3, $zero, -4
+; MIPS32R6O0-NEXT:    and $4, $2, $3
+; MIPS32R6O0-NEXT:    andi $2, $2, 3
+; MIPS32R6O0-NEXT:    sll $2, $2, 3
+; MIPS32R6O0-NEXT:    addiu $3, $zero, 255
+; MIPS32R6O0-NEXT:    sllv $6, $3, $2
+; MIPS32R6O0-NEXT:    andi $1, $1, 255
+; MIPS32R6O0-NEXT:    sllv $5, $1, $2
 ; MIPS32R6O0-NEXT:  $BB8_1: # %entry
 ; MIPS32R6O0-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS32R6O0-NEXT:    ll $2, 0($5)
-; MIPS32R6O0-NEXT:    addu $3, $2, $6
-; MIPS32R6O0-NEXT:    and $3, $3, $7
-; MIPS32R6O0-NEXT:    and $4, $2, $8
-; MIPS32R6O0-NEXT:    or $4, $4, $3
-; MIPS32R6O0-NEXT:    sc $4, 0($5)
-; MIPS32R6O0-NEXT:    beqzc $4, $BB8_1
+; MIPS32R6O0-NEXT:    ll $1, 0($4)
+; MIPS32R6O0-NEXT:    addu $3, $1, $5
+; MIPS32R6O0-NEXT:    xor $3, $1, $3
+; MIPS32R6O0-NEXT:    and $3, $3, $6
+; MIPS32R6O0-NEXT:    xor $3, $1, $3
+; MIPS32R6O0-NEXT:    sc $3, 0($4)
+; MIPS32R6O0-NEXT:    beqzc $3, $BB8_1
 ; MIPS32R6O0-NEXT:  # %bb.2: # %entry
-; MIPS32R6O0-NEXT:    and $1, $2, $7
-; MIPS32R6O0-NEXT:    srlv $1, $1, $9
-; MIPS32R6O0-NEXT:    seb $1, $1
-; MIPS32R6O0-NEXT:  # %bb.3: # %entry
-; MIPS32R6O0-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
-; MIPS32R6O0-NEXT:  # %bb.4: # %entry
-; MIPS32R6O0-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
-; MIPS32R6O0-NEXT:    addiu $sp, $sp, 8
+; MIPS32R6O0-NEXT:    srlv $1, $1, $2
+; MIPS32R6O0-NEXT:    seb $2, $1
 ; MIPS32R6O0-NEXT:    jrc $ra
 ;
 ; MIPS4-LABEL: AtomicLoadAdd8:
@@ -2414,32 +2393,30 @@ define signext i8 @AtomicLoadAdd8(i8 signext %incr) nounwind {
 ; MIPS4-NEXT:    daddu $1, $1, $25
 ; MIPS4-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(AtomicLoadAdd8)))
 ; MIPS4-NEXT:    ld $1, %got_disp(y)($1)
-; MIPS4-NEXT:    daddiu $2, $zero, -4
-; MIPS4-NEXT:    and $3, $1, $2
-; MIPS4-NEXT:    andi $1, $1, 3
-; MIPS4-NEXT:    sll $1, $1, 3
-; MIPS4-NEXT:    ori $2, $zero, 255
-; MIPS4-NEXT:    sllv $5, $2, $1
-; MIPS4-NEXT:    nor $6, $zero, $5
-; MIPS4-NEXT:    sllv $4, $4, $1
+; MIPS4-NEXT:    sll $2, $1, 0
+; MIPS4-NEXT:    andi $2, $2, 3
+; MIPS4-NEXT:    daddiu $3, $zero, -4
+; MIPS4-NEXT:    and $1, $1, $3
+; MIPS4-NEXT:    sll $2, $2, 3
+; MIPS4-NEXT:    addiu $3, $zero, 255
+; MIPS4-NEXT:    sllv $3, $3, $2
+; MIPS4-NEXT:    andi $4, $4, 255
+; MIPS4-NEXT:    sllv $4, $4, $2
 ; MIPS4-NEXT:  .LBB8_1: # %entry
 ; MIPS4-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS4-NEXT:    ll $7, 0($3)
-; MIPS4-NEXT:    addu $8, $7, $4
-; MIPS4-NEXT:    and $8, $8, $5
-; MIPS4-NEXT:    and $9, $7, $6
-; MIPS4-NEXT:    or $9, $9, $8
-; MIPS4-NEXT:    sc $9, 0($3)
-; MIPS4-NEXT:    beqz $9, .LBB8_1
+; MIPS4-NEXT:    ll $5, 0($1)
+; MIPS4-NEXT:    addu $6, $5, $4
+; MIPS4-NEXT:    xor $6, $5, $6
+; MIPS4-NEXT:    and $6, $6, $3
+; MIPS4-NEXT:    xor $6, $5, $6
+; MIPS4-NEXT:    sc $6, 0($1)
+; MIPS4-NEXT:    beqz $6, .LBB8_1
 ; MIPS4-NEXT:    nop
 ; MIPS4-NEXT:  # %bb.2: # %entry
-; MIPS4-NEXT:    and $2, $7, $5
-; MIPS4-NEXT:    srlv $2, $2, $1
-; MIPS4-NEXT:    sll $2, $2, 24
-; MIPS4-NEXT:    sra $2, $2, 24
-; MIPS4-NEXT:  # %bb.3: # %entry
+; MIPS4-NEXT:    srlv $1, $5, $2
+; MIPS4-NEXT:    sll $1, $1, 24
 ; MIPS4-NEXT:    jr $ra
-; MIPS4-NEXT:    nop
+; MIPS4-NEXT:    sra $2, $1, 24
 ;
 ; MIPS64-LABEL: AtomicLoadAdd8:
 ; MIPS64:       # %bb.0: # %entry
@@ -2447,32 +2424,30 @@ define signext i8 @AtomicLoadAdd8(i8 signext %incr) nounwind {
 ; MIPS64-NEXT:    daddu $1, $1, $25
 ; MIPS64-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(AtomicLoadAdd8)))
 ; MIPS64-NEXT:    ld $1, %got_disp(y)($1)
-; MIPS64-NEXT:    daddiu $2, $zero, -4
-; MIPS64-NEXT:    and $3, $1, $2
-; MIPS64-NEXT:    andi $1, $1, 3
-; MIPS64-NEXT:    sll $1, $1, 3
-; MIPS64-NEXT:    ori $2, $zero, 255
-; MIPS64-NEXT:    sllv $5, $2, $1
-; MIPS64-NEXT:    nor $6, $zero, $5
-; MIPS64-NEXT:    sllv $4, $4, $1
+; MIPS64-NEXT:    sll $2, $1, 0
+; MIPS64-NEXT:    andi $2, $2, 3
+; MIPS64-NEXT:    daddiu $3, $zero, -4
+; MIPS64-NEXT:    and $1, $1, $3
+; MIPS64-NEXT:    sll $2, $2, 3
+; MIPS64-NEXT:    addiu $3, $zero, 255
+; MIPS64-NEXT:    sllv $3, $3, $2
+; MIPS64-NEXT:    andi $4, $4, 255
+; MIPS64-NEXT:    sllv $4, $4, $2
 ; MIPS64-NEXT:  .LBB8_1: # %entry
 ; MIPS64-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64-NEXT:    ll $7, 0($3)
-; MIPS64-NEXT:    addu $8, $7, $4
-; MIPS64-NEXT:    and $8, $8, $5
-; MIPS64-NEXT:    and $9, $7, $6
-; MIPS64-NEXT:    or $9, $9, $8
-; MIPS64-NEXT:    sc $9, 0($3)
-; MIPS64-NEXT:    beqz $9, .LBB8_1
+; MIPS64-NEXT:    ll $5, 0($1)
+; MIPS64-NEXT:    addu $6, $5, $4
+; MIPS64-NEXT:    xor $6, $5, $6
+; MIPS64-NEXT:    and $6, $6, $3
+; MIPS64-NEXT:    xor $6, $5, $6
+; MIPS64-NEXT:    sc $6, 0($1)
+; MIPS64-NEXT:    beqz $6, .LBB8_1
 ; MIPS64-NEXT:    nop
 ; MIPS64-NEXT:  # %bb.2: # %entry
-; MIPS64-NEXT:    and $2, $7, $5
-; MIPS64-NEXT:    srlv $2, $2, $1
-; MIPS64-NEXT:    sll $2, $2, 24
-; MIPS64-NEXT:    sra $2, $2, 24
-; MIPS64-NEXT:  # %bb.3: # %entry
+; MIPS64-NEXT:    srlv $1, $5, $2
+; MIPS64-NEXT:    sll $1, $1, 24
 ; MIPS64-NEXT:    jr $ra
-; MIPS64-NEXT:    nop
+; MIPS64-NEXT:    sra $2, $1, 24
 ;
 ; MIPS64R2-LABEL: AtomicLoadAdd8:
 ; MIPS64R2:       # %bb.0: # %entry
@@ -2480,31 +2455,29 @@ define signext i8 @AtomicLoadAdd8(i8 signext %incr) nounwind {
 ; MIPS64R2-NEXT:    daddu $1, $1, $25
 ; MIPS64R2-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(AtomicLoadAdd8)))
 ; MIPS64R2-NEXT:    ld $1, %got_disp(y)($1)
-; MIPS64R2-NEXT:    daddiu $2, $zero, -4
-; MIPS64R2-NEXT:    and $3, $1, $2
-; MIPS64R2-NEXT:    andi $1, $1, 3
-; MIPS64R2-NEXT:    sll $1, $1, 3
-; MIPS64R2-NEXT:    ori $2, $zero, 255
-; MIPS64R2-NEXT:    sllv $5, $2, $1
-; MIPS64R2-NEXT:    nor $6, $zero, $5
-; MIPS64R2-NEXT:    sllv $4, $4, $1
+; MIPS64R2-NEXT:    sll $2, $1, 0
+; MIPS64R2-NEXT:    andi $2, $2, 3
+; MIPS64R2-NEXT:    daddiu $3, $zero, -4
+; MIPS64R2-NEXT:    and $1, $1, $3
+; MIPS64R2-NEXT:    sll $2, $2, 3
+; MIPS64R2-NEXT:    addiu $3, $zero, 255
+; MIPS64R2-NEXT:    sllv $3, $3, $2
+; MIPS64R2-NEXT:    andi $4, $4, 255
+; MIPS64R2-NEXT:    sllv $4, $4, $2
 ; MIPS64R2-NEXT:  .LBB8_1: # %entry
 ; MIPS64R2-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64R2-NEXT:    ll $7, 0($3)
-; MIPS64R2-NEXT:    addu $8, $7, $4
-; MIPS64R2-NEXT:    and $8, $8, $5
-; MIPS64R2-NEXT:    and $9, $7, $6
-; MIPS64R2-NEXT:    or $9, $9, $8
-; MIPS64R2-NEXT:    sc $9, 0($3)
-; MIPS64R2-NEXT:    beqz $9, .LBB8_1
+; MIPS64R2-NEXT:    ll $5, 0($1)
+; MIPS64R2-NEXT:    addu $6, $5, $4
+; MIPS64R2-NEXT:    xor $6, $5, $6
+; MIPS64R2-NEXT:    and $6, $6, $3
+; MIPS64R2-NEXT:    xor $6, $5, $6
+; MIPS64R2-NEXT:    sc $6, 0($1)
+; MIPS64R2-NEXT:    beqz $6, .LBB8_1
 ; MIPS64R2-NEXT:    nop
 ; MIPS64R2-NEXT:  # %bb.2: # %entry
-; MIPS64R2-NEXT:    and $2, $7, $5
-; MIPS64R2-NEXT:    srlv $2, $2, $1
-; MIPS64R2-NEXT:    seb $2, $2
-; MIPS64R2-NEXT:  # %bb.3: # %entry
+; MIPS64R2-NEXT:    srlv $1, $5, $2
 ; MIPS64R2-NEXT:    jr $ra
-; MIPS64R2-NEXT:    nop
+; MIPS64R2-NEXT:    seb $2, $1
 ;
 ; MIPS64R6-LABEL: AtomicLoadAdd8:
 ; MIPS64R6:       # %bb.0: # %entry
@@ -2512,65 +2485,59 @@ define signext i8 @AtomicLoadAdd8(i8 signext %incr) nounwind {
 ; MIPS64R6-NEXT:    daddu $1, $1, $25
 ; MIPS64R6-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(AtomicLoadAdd8)))
 ; MIPS64R6-NEXT:    ld $1, %got_disp(y)($1)
-; MIPS64R6-NEXT:    daddiu $2, $zero, -4
-; MIPS64R6-NEXT:    and $3, $1, $2
-; MIPS64R6-NEXT:    andi $1, $1, 3
-; MIPS64R6-NEXT:    sll $1, $1, 3
-; MIPS64R6-NEXT:    ori $2, $zero, 255
-; MIPS64R6-NEXT:    sllv $5, $2, $1
-; MIPS64R6-NEXT:    nor $6, $zero, $5
-; MIPS64R6-NEXT:    sllv $4, $4, $1
+; MIPS64R6-NEXT:    sll $2, $1, 0
+; MIPS64R6-NEXT:    andi $2, $2, 3
+; MIPS64R6-NEXT:    daddiu $3, $zero, -4
+; MIPS64R6-NEXT:    and $1, $1, $3
+; MIPS64R6-NEXT:    sll $2, $2, 3
+; MIPS64R6-NEXT:    addiu $3, $zero, 255
+; MIPS64R6-NEXT:    sllv $3, $3, $2
+; MIPS64R6-NEXT:    andi $4, $4, 255
+; MIPS64R6-NEXT:    sllv $4, $4, $2
 ; MIPS64R6-NEXT:  .LBB8_1: # %entry
 ; MIPS64R6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64R6-NEXT:    ll $7, 0($3)
-; MIPS64R6-NEXT:    addu $8, $7, $4
-; MIPS64R6-NEXT:    and $8, $8, $5
-; MIPS64R6-NEXT:    and $9, $7, $6
-; MIPS64R6-NEXT:    or $9, $9, $8
-; MIPS64R6-NEXT:    sc $9, 0($3)
-; MIPS64R6-NEXT:    beqzc $9, .LBB8_1
+; MIPS64R6-NEXT:    ll $5, 0($1)
+; MIPS64R6-NEXT:    addu $6, $5, $4
+; MIPS64R6-NEXT:    xor $6, $5, $6
+; MIPS64R6-NEXT:    and $6, $6, $3
+; MIPS64R6-NEXT:    xor $6, $5, $6
+; MIPS64R6-NEXT:    sc $6, 0($1)
+; MIPS64R6-NEXT:    beqzc $6, .LBB8_1
 ; MIPS64R6-NEXT:  # %bb.2: # %entry
-; MIPS64R6-NEXT:    and $2, $7, $5
-; MIPS64R6-NEXT:    srlv $2, $2, $1
-; MIPS64R6-NEXT:    seb $2, $2
-; MIPS64R6-NEXT:  # %bb.3: # %entry
-; MIPS64R6-NEXT:    jrc $ra
+; MIPS64R6-NEXT:    srlv $1, $5, $2
+; MIPS64R6-NEXT:    jr $ra
+; MIPS64R6-NEXT:    seb $2, $1
 ;
 ; MIPS64R6O0-LABEL: AtomicLoadAdd8:
 ; MIPS64R6O0:       # %bb.0: # %entry
-; MIPS64R6O0-NEXT:    daddiu $sp, $sp, -16
 ; MIPS64R6O0-NEXT:    lui $1, %hi(%neg(%gp_rel(AtomicLoadAdd8)))
 ; MIPS64R6O0-NEXT:    daddu $1, $1, $25
 ; MIPS64R6O0-NEXT:    daddiu $2, $1, %lo(%neg(%gp_rel(AtomicLoadAdd8)))
 ; MIPS64R6O0-NEXT:    move $1, $4
 ; MIPS64R6O0-NEXT:    ld $2, %got_disp(y)($2)
 ; MIPS64R6O0-NEXT:    daddiu $3, $zero, -4
-; MIPS64R6O0-NEXT:    and $5, $2, $3
+; MIPS64R6O0-NEXT:    and $4, $2, $3
+; MIPS64R6O0-NEXT:    # kill: def $v0 killed $v0 killed $v0_64
+; MIPS64R6O0-NEXT:    sll $2, $2, 0
+; MIPS64R6O0-NEXT:    not $2, $2
 ; MIPS64R6O0-NEXT:    andi $2, $2, 3
-; MIPS64R6O0-NEXT:    xori $2, $2, 3
-; MIPS64R6O0-NEXT:    sll $9, $2, 3
-; MIPS64R6O0-NEXT:    ori $2, $zero, 255
-; MIPS64R6O0-NEXT:    sllv $7, $2, $9
-; MIPS64R6O0-NEXT:    nor $8, $zero, $7
-; MIPS64R6O0-NEXT:    sllv $6, $1, $9
+; MIPS64R6O0-NEXT:    sll $2, $2, 3
+; MIPS64R6O0-NEXT:    addiu $3, $zero, 255
+; MIPS64R6O0-NEXT:    sllv $6, $3, $2
+; MIPS64R6O0-NEXT:    andi $1, $1, 255
+; MIPS64R6O0-NEXT:    sllv $5, $1, $2
 ; MIPS64R6O0-NEXT:  .LBB8_1: # %entry
 ; MIPS64R6O0-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64R6O0-NEXT:    ll $2, 0($5)
-; MIPS64R6O0-NEXT:    addu $3, $2, $6
-; MIPS64R6O0-NEXT:    and $3, $3, $7
-; MIPS64R6O0-NEXT:    and $4, $2, $8
-; MIPS64R6O0-NEXT:    or $4, $4, $3
-; MIPS64R6O0-NEXT:    sc $4, 0($5)
-; MIPS64R6O0-NEXT:    beqzc $4, .LBB8_1
+; MIPS64R6O0-NEXT:    ll $1, 0($4)
+; MIPS64R6O0-NEXT:    addu $3, $1, $5
+; MIPS64R6O0-NEXT:    xor $3, $1, $3
+; MIPS64R6O0-NEXT:    and $3, $3, $6
+; MIPS64R6O0-NEXT:    xor $3, $1, $3
+; MIPS64R6O0-NEXT:    sc $3, 0($4)
+; MIPS64R6O0-NEXT:    beqzc $3, .LBB8_1
 ; MIPS64R6O0-NEXT:  # %bb.2: # %entry
-; MIPS64R6O0-NEXT:    and $1, $2, $7
-; MIPS64R6O0-NEXT:    srlv $1, $1, $9
-; MIPS64R6O0-NEXT:    seb $1, $1
-; MIPS64R6O0-NEXT:  # %bb.3: # %entry
-; MIPS64R6O0-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
-; MIPS64R6O0-NEXT:  # %bb.4: # %entry
-; MIPS64R6O0-NEXT:    lw $2, 12($sp) # 4-byte Folded Reload
-; MIPS64R6O0-NEXT:    daddiu $sp, $sp, 16
+; MIPS64R6O0-NEXT:    srlv $1, $1, $2
+; MIPS64R6O0-NEXT:    seb $2, $1
 ; MIPS64R6O0-NEXT:    jrc $ra
 ;
 ; MM32-LABEL: AtomicLoadAdd8:
@@ -2578,96 +2545,88 @@ define signext i8 @AtomicLoadAdd8(i8 signext %incr) nounwind {
 ; MM32-NEXT:    lui $2, %hi(_gp_disp)
 ; MM32-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; MM32-NEXT:    addu $2, $2, $25
-; MM32-NEXT:    lw $1, %got(y)($2)
-; MM32-NEXT:    addiu $2, $zero, -4
-; MM32-NEXT:    and $3, $1, $2
-; MM32-NEXT:    andi $1, $1, 3
-; MM32-NEXT:    sll $1, $1, 3
-; MM32-NEXT:    ori $2, $zero, 255
-; MM32-NEXT:    sllv $5, $2, $1
-; MM32-NEXT:    nor $6, $zero, $5
-; MM32-NEXT:    sllv $4, $4, $1
+; MM32-NEXT:    addiu $3, $zero, -4
+; MM32-NEXT:    lw $2, %got(y)($2)
+; MM32-NEXT:    and16 $3, $2
+; MM32-NEXT:    andi16 $2, $2, 3
+; MM32-NEXT:    sll16 $2, $2, 3
+; MM32-NEXT:    addiu $1, $zero, 255
+; MM32-NEXT:    sllv $1, $1, $2
+; MM32-NEXT:    andi16 $4, $4, 255
+; MM32-NEXT:    sllv $4, $4, $2
 ; MM32-NEXT:  $BB8_1: # %entry
 ; MM32-NEXT:    # =>This Inner Loop Header: Depth=1
-; MM32-NEXT:    ll $7, 0($3)
-; MM32-NEXT:    addu $8, $7, $4
-; MM32-NEXT:    and $8, $8, $5
-; MM32-NEXT:    and $9, $7, $6
-; MM32-NEXT:    or $9, $9, $8
-; MM32-NEXT:    sc $9, 0($3)
-; MM32-NEXT:    beqzc $9, $BB8_1
+; MM32-NEXT:    ll $5, 0($3)
+; MM32-NEXT:    addu16 $6, $5, $4
+; MM32-NEXT:    xor16 $6, $5
+; MM32-NEXT:    and $6, $6, $1
+; MM32-NEXT:    xor16 $6, $5
+; MM32-NEXT:    sc $6, 0($3)
+; MM32-NEXT:    beqzc $6, $BB8_1
 ; MM32-NEXT:  # %bb.2: # %entry
-; MM32-NEXT:    and $2, $7, $5
-; MM32-NEXT:    srlv $2, $2, $1
-; MM32-NEXT:    seb $2, $2
-; MM32-NEXT:  # %bb.3: # %entry
-; MM32-NEXT:    jrc $ra
+; MM32-NEXT:    srlv $1, $5, $2
+; MM32-NEXT:    jr $ra
+; MM32-NEXT:    seb $2, $1
 ;
 ; O1-LABEL: AtomicLoadAdd8:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    lui $2, %hi(_gp_disp)
 ; O1-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; O1-NEXT:    addu $1, $2, $25
-; O1-NEXT:    lw $1, %got(y)($1)
 ; O1-NEXT:    addiu $2, $zero, -4
-; O1-NEXT:    and $3, $1, $2
+; O1-NEXT:    lw $1, %got(y)($1)
+; O1-NEXT:    and $2, $1, $2
 ; O1-NEXT:    andi $1, $1, 3
 ; O1-NEXT:    sll $1, $1, 3
-; O1-NEXT:    ori $2, $zero, 255
-; O1-NEXT:    sllv $5, $2, $1
-; O1-NEXT:    nor $6, $zero, $5
+; O1-NEXT:    addiu $3, $zero, 255
+; O1-NEXT:    sllv $3, $3, $1
+; O1-NEXT:    andi $4, $4, 255
 ; O1-NEXT:    sllv $4, $4, $1
 ; O1-NEXT:  $BB8_1: # %entry
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
-; O1-NEXT:    ll $7, 0($3)
-; O1-NEXT:    addu $8, $7, $4
-; O1-NEXT:    and $8, $8, $5
-; O1-NEXT:    and $9, $7, $6
-; O1-NEXT:    or $9, $9, $8
-; O1-NEXT:    sc $9, 0($3)
-; O1-NEXT:    beqz $9, $BB8_1
+; O1-NEXT:    ll $5, 0($2)
+; O1-NEXT:    addu $6, $5, $4
+; O1-NEXT:    xor $6, $5, $6
+; O1-NEXT:    and $6, $6, $3
+; O1-NEXT:    xor $6, $5, $6
+; O1-NEXT:    sc $6, 0($2)
+; O1-NEXT:    beqz $6, $BB8_1
 ; O1-NEXT:    nop
 ; O1-NEXT:  # %bb.2: # %entry
-; O1-NEXT:    and $2, $7, $5
-; O1-NEXT:    srlv $2, $2, $1
-; O1-NEXT:    sll $2, $2, 24
-; O1-NEXT:    sra $2, $2, 24
-; O1-NEXT:  # %bb.3: # %entry
+; O1-NEXT:    srlv $1, $5, $1
+; O1-NEXT:    sll $1, $1, 24
 ; O1-NEXT:    jr $ra
-; O1-NEXT:    nop
+; O1-NEXT:    sra $2, $1, 24
 ;
 ; O2-LABEL: AtomicLoadAdd8:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    lui $2, %hi(_gp_disp)
 ; O2-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; O2-NEXT:    addu $1, $2, $25
-; O2-NEXT:    lw $1, %got(y)($1)
 ; O2-NEXT:    addiu $2, $zero, -4
-; O2-NEXT:    and $3, $1, $2
+; O2-NEXT:    lw $1, %got(y)($1)
+; O2-NEXT:    and $2, $1, $2
 ; O2-NEXT:    andi $1, $1, 3
 ; O2-NEXT:    sll $1, $1, 3
-; O2-NEXT:    ori $2, $zero, 255
-; O2-NEXT:    sllv $5, $2, $1
-; O2-NEXT:    nor $6, $zero, $5
+; O2-NEXT:    addiu $3, $zero, 255
+; O2-NEXT:    sllv $3, $3, $1
+; O2-NEXT:    andi $4, $4, 255
 ; O2-NEXT:    sllv $4, $4, $1
 ; O2-NEXT:  $BB8_1: # %entry
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
-; O2-NEXT:    ll $7, 0($3)
-; O2-NEXT:    addu $8, $7, $4
-; O2-NEXT:    and $8, $8, $5
-; O2-NEXT:    and $9, $7, $6
-; O2-NEXT:    or $9, $9, $8
-; O2-NEXT:    sc $9, 0($3)
-; O2-NEXT:    beqz $9, $BB8_1
+; O2-NEXT:    ll $5, 0($2)
+; O2-NEXT:    addu $6, $5, $4
+; O2-NEXT:    xor $6, $5, $6
+; O2-NEXT:    and $6, $6, $3
+; O2-NEXT:    xor $6, $5, $6
+; O2-NEXT:    sc $6, 0($2)
+; O2-NEXT:    beqz $6, $BB8_1
 ; O2-NEXT:    nop
 ; O2-NEXT:  # %bb.2: # %entry
-; O2-NEXT:    and $2, $7, $5
-; O2-NEXT:    srlv $2, $2, $1
-; O2-NEXT:    sll $2, $2, 24
-; O2-NEXT:    sra $2, $2, 24
-; O2-NEXT:  # %bb.3: # %entry
+; O2-NEXT:    srlv $1, $5, $1
+; O2-NEXT:    sll $1, $1, 24
 ; O2-NEXT:    jr $ra
-; O2-NEXT:    nop
+; O2-NEXT:    sra $2, $1, 24
 ;
 ; O3-LABEL: AtomicLoadAdd8:
 ; O3:       # %bb.0: # %entry
@@ -2675,32 +2634,29 @@ define signext i8 @AtomicLoadAdd8(i8 signext %incr) nounwind {
 ; O3-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; O3-NEXT:    addu $1, $2, $25
 ; O3-NEXT:    addiu $2, $zero, -4
+; O3-NEXT:    addiu $3, $zero, 255
+; O3-NEXT:    andi $4, $4, 255
 ; O3-NEXT:    lw $1, %got(y)($1)
-; O3-NEXT:    and $3, $1, $2
+; O3-NEXT:    and $2, $1, $2
 ; O3-NEXT:    andi $1, $1, 3
-; O3-NEXT:    ori $2, $zero, 255
 ; O3-NEXT:    sll $1, $1, 3
-; O3-NEXT:    sllv $5, $2, $1
+; O3-NEXT:    sllv $3, $3, $1
 ; O3-NEXT:    sllv $4, $4, $1
-; O3-NEXT:    nor $6, $zero, $5
 ; O3-NEXT:  $BB8_1: # %entry
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
-; O3-NEXT:    ll $7, 0($3)
-; O3-NEXT:    addu $8, $7, $4
-; O3-NEXT:    and $8, $8, $5
-; O3-NEXT:    and $9, $7, $6
-; O3-NEXT:    or $9, $9, $8
-; O3-NEXT:    sc $9, 0($3)
-; O3-NEXT:    beqz $9, $BB8_1
+; O3-NEXT:    ll $5, 0($2)
+; O3-NEXT:    addu $6, $5, $4
+; O3-NEXT:    xor $6, $5, $6
+; O3-NEXT:    and $6, $6, $3
+; O3-NEXT:    xor $6, $5, $6
+; O3-NEXT:    sc $6, 0($2)
+; O3-NEXT:    beqz $6, $BB8_1
 ; O3-NEXT:    nop
 ; O3-NEXT:  # %bb.2: # %entry
-; O3-NEXT:    and $2, $7, $5
-; O3-NEXT:    srlv $2, $2, $1
-; O3-NEXT:    sll $2, $2, 24
-; O3-NEXT:    sra $2, $2, 24
-; O3-NEXT:  # %bb.3: # %entry
+; O3-NEXT:    srlv $1, $5, $1
+; O3-NEXT:    sll $1, $1, 24
 ; O3-NEXT:    jr $ra
-; O3-NEXT:    nop
+; O3-NEXT:    sra $2, $1, 24
 ;
 ; MIPS32EB-LABEL: AtomicLoadAdd8:
 ; MIPS32EB:       # %bb.0: # %entry
@@ -2708,33 +2664,30 @@ define signext i8 @AtomicLoadAdd8(i8 signext %incr) nounwind {
 ; MIPS32EB-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; MIPS32EB-NEXT:    addu $1, $2, $25
 ; MIPS32EB-NEXT:    lw $1, %got(y)($1)
-; MIPS32EB-NEXT:    addiu $2, $zero, -4
-; MIPS32EB-NEXT:    and $3, $1, $2
-; MIPS32EB-NEXT:    andi $1, $1, 3
-; MIPS32EB-NEXT:    xori $1, $1, 3
-; MIPS32EB-NEXT:    sll $1, $1, 3
-; MIPS32EB-NEXT:    ori $2, $zero, 255
-; MIPS32EB-NEXT:    sllv $5, $2, $1
-; MIPS32EB-NEXT:    nor $6, $zero, $5
-; MIPS32EB-NEXT:    sllv $4, $4, $1
+; MIPS32EB-NEXT:    not $2, $1
+; MIPS32EB-NEXT:    addiu $3, $zero, -4
+; MIPS32EB-NEXT:    and $1, $1, $3
+; MIPS32EB-NEXT:    andi $2, $2, 3
+; MIPS32EB-NEXT:    sll $2, $2, 3
+; MIPS32EB-NEXT:    addiu $3, $zero, 255
+; MIPS32EB-NEXT:    sllv $3, $3, $2
+; MIPS32EB-NEXT:    andi $4, $4, 255
+; MIPS32EB-NEXT:    sllv $4, $4, $2
 ; MIPS32EB-NEXT:  $BB8_1: # %entry
 ; MIPS32EB-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS32EB-NEXT:    ll $7, 0($3)
-; MIPS32EB-NEXT:    addu $8, $7, $4
-; MIPS32EB-NEXT:    and $8, $8, $5
-; MIPS32EB-NEXT:    and $9, $7, $6
-; MIPS32EB-NEXT:    or $9, $9, $8
-; MIPS32EB-NEXT:    sc $9, 0($3)
-; MIPS32EB-NEXT:    beqz $9, $BB8_1
+; MIPS32EB-NEXT:    ll $5, 0($1)
+; MIPS32EB-NEXT:    addu $6, $5, $4
+; MIPS32EB-NEXT:    xor $6, $5, $6
+; MIPS32EB-NEXT:    and $6, $6, $3
+; MIPS32EB-NEXT:    xor $6, $5, $6
+; MIPS32EB-NEXT:    sc $6, 0($1)
+; MIPS32EB-NEXT:    beqz $6, $BB8_1
 ; MIPS32EB-NEXT:    nop
 ; MIPS32EB-NEXT:  # %bb.2: # %entry
-; MIPS32EB-NEXT:    and $2, $7, $5
-; MIPS32EB-NEXT:    srlv $2, $2, $1
-; MIPS32EB-NEXT:    sll $2, $2, 24
-; MIPS32EB-NEXT:    sra $2, $2, 24
-; MIPS32EB-NEXT:  # %bb.3: # %entry
+; MIPS32EB-NEXT:    srlv $1, $5, $2
+; MIPS32EB-NEXT:    sll $1, $1, 24
 ; MIPS32EB-NEXT:    jr $ra
-; MIPS32EB-NEXT:    nop
+; MIPS32EB-NEXT:    sra $2, $1, 24
 entry:
   %0 = atomicrmw add ptr @y, i8 %incr monotonic
   ret i8 %0
@@ -2746,71 +2699,62 @@ define signext i8 @AtomicLoadSub8(i8 signext %incr) nounwind {
 ; MIPS32-NEXT:    lui $2, %hi(_gp_disp)
 ; MIPS32-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; MIPS32-NEXT:    addu $1, $2, $25
-; MIPS32-NEXT:    lw $1, %got(y)($1)
 ; MIPS32-NEXT:    addiu $2, $zero, -4
-; MIPS32-NEXT:    and $3, $1, $2
+; MIPS32-NEXT:    lw $1, %got(y)($1)
+; MIPS32-NEXT:    and $2, $1, $2
 ; MIPS32-NEXT:    andi $1, $1, 3
 ; MIPS32-NEXT:    sll $1, $1, 3
-; MIPS32-NEXT:    ori $2, $zero, 255
-; MIPS32-NEXT:    sllv $5, $2, $1
-; MIPS32-NEXT:    nor $6, $zero, $5
+; MIPS32-NEXT:    addiu $3, $zero, 255
+; MIPS32-NEXT:    sllv $3, $3, $1
+; MIPS32-NEXT:    andi $4, $4, 255
 ; MIPS32-NEXT:    sllv $4, $4, $1
 ; MIPS32-NEXT:  $BB9_1: # %entry
 ; MIPS32-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS32-NEXT:    ll $7, 0($3)
-; MIPS32-NEXT:    subu $8, $7, $4
-; MIPS32-NEXT:    and $8, $8, $5
-; MIPS32-NEXT:    and $9, $7, $6
-; MIPS32-NEXT:    or $9, $9, $8
-; MIPS32-NEXT:    sc $9, 0($3)
-; MIPS32-NEXT:    beqz $9, $BB9_1
+; MIPS32-NEXT:    ll $5, 0($2)
+; MIPS32-NEXT:    subu $6, $5, $4
+; MIPS32-NEXT:    xor $6, $5, $6
+; MIPS32-NEXT:    and $6, $6, $3
+; MIPS32-NEXT:    xor $6, $5, $6
+; MIPS32-NEXT:    sc $6, 0($2)
+; MIPS32-NEXT:    beqz $6, $BB9_1
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  # %bb.2: # %entry
-; MIPS32-NEXT:    and $2, $7, $5
-; MIPS32-NEXT:    srlv $2, $2, $1
-; MIPS32-NEXT:    sll $2, $2, 24
-; MIPS32-NEXT:    sra $2, $2, 24
-; MIPS32-NEXT:  # %bb.3: # %entry
+; MIPS32-NEXT:    srlv $1, $5, $1
+; MIPS32-NEXT:    sll $1, $1, 24
 ; MIPS32-NEXT:    jr $ra
-; MIPS32-NEXT:    nop
+; MIPS32-NEXT:    sra $2, $1, 24
 ;
 ; MIPS32O0-LABEL: AtomicLoadSub8:
 ; MIPS32O0:       # %bb.0: # %entry
 ; MIPS32O0-NEXT:    lui $2, %hi(_gp_disp)
 ; MIPS32O0-NEXT:    addiu $2, $2, %lo(_gp_disp)
-; MIPS32O0-NEXT:    addiu $sp, $sp, -8
-; MIPS32O0-NEXT:    addu $1, $2, $25
-; MIPS32O0-NEXT:    lw $1, %got(y)($1)
-; MIPS32O0-NEXT:    addiu $2, $zero, -4
-; MIPS32O0-NEXT:    and $5, $1, $2
-; MIPS32O0-NEXT:    andi $1, $1, 3
-; MIPS32O0-NEXT:    sll $9, $1, 3
-; MIPS32O0-NEXT:    ori $1, $zero, 255
-; MIPS32O0-NEXT:    sllv $7, $1, $9
-; MIPS32O0-NEXT:    nor $8, $zero, $7
-; MIPS32O0-NEXT:    sllv $6, $4, $9
+; MIPS32O0-NEXT:    addu $2, $2, $25
+; MIPS32O0-NEXT:    move $1, $4
+; MIPS32O0-NEXT:    lw $3, %got(y)($2)
+; MIPS32O0-NEXT:    addiu $4, $zero, -4
+; MIPS32O0-NEXT:    and $4, $3, $4
+; MIPS32O0-NEXT:    lw $2, %got(y)($2)
+; MIPS32O0-NEXT:    addiu $3, $zero, 3
+; MIPS32O0-NEXT:    and $2, $2, $3
+; MIPS32O0-NEXT:    sll $2, $2, 3
+; MIPS32O0-NEXT:    addiu $3, $zero, 255
+; MIPS32O0-NEXT:    sllv $6, $3, $2
+; MIPS32O0-NEXT:    andi $1, $1, 255
+; MIPS32O0-NEXT:    sllv $5, $1, $2
 ; MIPS32O0-NEXT:  $BB9_1: # %entry
 ; MIPS32O0-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS32O0-NEXT:    ll $2, 0($5)
-; MIPS32O0-NEXT:    subu $3, $2, $6
-; MIPS32O0-NEXT:    and $3, $3, $7
-; MIPS32O0-NEXT:    and $4, $2, $8
-; MIPS32O0-NEXT:    or $4, $4, $3
-; MIPS32O0-NEXT:    sc $4, 0($5)
-; MIPS32O0-NEXT:    beqz $4, $BB9_1
+; MIPS32O0-NEXT:    ll $1, 0($4)
+; MIPS32O0-NEXT:    subu $3, $1, $5
+; MIPS32O0-NEXT:    xor $3, $1, $3
+; MIPS32O0-NEXT:    and $3, $3, $6
+; MIPS32O0-NEXT:    xor $3, $1, $3
+; MIPS32O0-NEXT:    sc $3, 0($4)
+; MIPS32O0-NEXT:    beqz $3, $BB9_1
 ; MIPS32O0-NEXT:    nop
 ; MIPS32O0-NEXT:  # %bb.2: # %entry
-; MIPS32O0-NEXT:    and $1, $2, $7
-; MIPS32O0-NEXT:    srlv $1, $1, $9
-; MIPS32O0-NEXT:    sll $1, $1, 24
-; MIPS32O0-NEXT:    sra $1, $1, 24
-; MIPS32O0-NEXT:  # %bb.3: # %entry
-; MIPS32O0-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
-; MIPS32O0-NEXT:  # %bb.4: # %entry
-; MIPS32O0-NEXT:    lw $1, 4($sp) # 4-byte Folded Reload
+; MIPS32O0-NEXT:    srlv $1, $1, $2
 ; MIPS32O0-NEXT:    sll $1, $1, 24
 ; MIPS32O0-NEXT:    sra $2, $1, 24
-; MIPS32O0-NEXT:    addiu $sp, $sp, 8
 ; MIPS32O0-NEXT:    jr $ra
 ; MIPS32O0-NEXT:    nop
 ;
@@ -2819,96 +2763,85 @@ define signext i8 @AtomicLoadSub8(i8 signext %incr) nounwind {
 ; MIPS32R2-NEXT:    lui $2, %hi(_gp_disp)
 ; MIPS32R2-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; MIPS32R2-NEXT:    addu $1, $2, $25
-; MIPS32R2-NEXT:    lw $1, %got(y)($1)
 ; MIPS32R2-NEXT:    addiu $2, $zero, -4
-; MIPS32R2-NEXT:    and $3, $1, $2
+; MIPS32R2-NEXT:    lw $1, %got(y)($1)
+; MIPS32R2-NEXT:    and $2, $1, $2
 ; MIPS32R2-NEXT:    andi $1, $1, 3
 ; MIPS32R2-NEXT:    sll $1, $1, 3
-; MIPS32R2-NEXT:    ori $2, $zero, 255
-; MIPS32R2-NEXT:    sllv $5, $2, $1
-; MIPS32R2-NEXT:    nor $6, $zero, $5
+; MIPS32R2-NEXT:    addiu $3, $zero, 255
+; MIPS32R2-NEXT:    sllv $3, $3, $1
+; MIPS32R2-NEXT:    andi $4, $4, 255
 ; MIPS32R2-NEXT:    sllv $4, $4, $1
 ; MIPS32R2-NEXT:  $BB9_1: # %entry
 ; MIPS32R2-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS32R2-NEXT:    ll $7, 0($3)
-; MIPS32R2-NEXT:    subu $8, $7, $4
-; MIPS32R2-NEXT:    and $8, $8, $5
-; MIPS32R2-NEXT:    and $9, $7, $6
-; MIPS32R2-NEXT:    or $9, $9, $8
-; MIPS32R2-NEXT:    sc $9, 0($3)
-; MIPS32R2-NEXT:    beqz $9, $BB9_1
+; MIPS32R2-NEXT:    ll $5, 0($2)
+; MIPS32R2-NEXT:    subu $6, $5, $4
+; MIPS32R2-NEXT:    xor $6, $5, $6
+; MIPS32R2-NEXT:    and $6, $6, $3
+; MIPS32R2-NEXT:    xor $6, $5, $6
+; MIPS32R2-NEXT:    sc $6, 0($2)
+; MIPS32R2-NEXT:    beqz $6, $BB9_1
 ; MIPS32R2-NEXT:    nop
 ; MIPS32R2-NEXT:  # %bb.2: # %entry
-; MIPS32R2-NEXT:    and $2, $7, $5
-; MIPS32R2-NEXT:    srlv $2, $2, $1
-; MIPS32R2-NEXT:    seb $2, $2
-; MIPS32R2-NEXT:  # %bb.3: # %entry
+; MIPS32R2-NEXT:    srlv $1, $5, $1
 ; MIPS32R2-NEXT:    jr $ra
-; MIPS32R2-NEXT:    nop
+; MIPS32R2-NEXT:    seb $2, $1
 ;
 ; MIPS32R6-LABEL: AtomicLoadSub8:
 ; MIPS32R6:       # %bb.0: # %entry
 ; MIPS32R6-NEXT:    lui $2, %hi(_gp_disp)
 ; MIPS32R6-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; MIPS32R6-NEXT:    addu $1, $2, $25
-; MIPS32R6-NEXT:    lw $1, %got(y)($1)
 ; MIPS32R6-NEXT:    addiu $2, $zero, -4
-; MIPS32R6-NEXT:    and $3, $1, $2
+; MIPS32R6-NEXT:    lw $1, %got(y)($1)
+; MIPS32R6-NEXT:    and $2, $1, $2
 ; MIPS32R6-NEXT:    andi $1, $1, 3
 ; MIPS32R6-NEXT:    sll $1, $1, 3
-; MIPS32R6-NEXT:    ori $2, $zero, 255
-; MIPS32R6-NEXT:    sllv $5, $2, $1
-; MIPS32R6-NEXT:    nor $6, $zero, $5
+; MIPS32R6-NEXT:    addiu $3, $zero, 255
+; MIPS32R6-NEXT:    sllv $3, $3, $1
+; MIPS32R6-NEXT:    andi $4, $4, 255
 ; MIPS32R6-NEXT:    sllv $4, $4, $1
 ; MIPS32R6-NEXT:  $BB9_1: # %entry
 ; MIPS32R6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS32R6-NEXT:    ll $7, 0($3)
-; MIPS32R6-NEXT:    subu $8, $7, $4
-; MIPS32R6-NEXT:    and $8, $8, $5
-; MIPS32R6-NEXT:    and $9, $7, $6
-; MIPS32R6-NEXT:    or $9, $9, $8
-; MIPS32R6-NEXT:    sc $9, 0($3)
-; MIPS32R6-NEXT:    beqzc $9, $BB9_1
+; MIPS32R6-NEXT:    ll $5, 0($2)
+; MIPS32R6-NEXT:    subu $6, $5, $4
+; MIPS32R6-NEXT:    xor $6, $5, $6
+; MIPS32R6-NEXT:    and $6, $6, $3
+; MIPS32R6-NEXT:    xor $6, $5, $6
+; MIPS32R6-NEXT:    sc $6, 0($2)
+; MIPS32R6-NEXT:    beqzc $6, $BB9_1
 ; MIPS32R6-NEXT:  # %bb.2: # %entry
-; MIPS32R6-NEXT:    and $2, $7, $5
-; MIPS32R6-NEXT:    srlv $2, $2, $1
-; MIPS32R6-NEXT:    seb $2, $2
-; MIPS32R6-NEXT:  # %bb.3: # %entry
-; MIPS32R6-NEXT:    jrc $ra
+; MIPS32R6-NEXT:    srlv $1, $5, $1
+; MIPS32R6-NEXT:    jr $ra
+; MIPS32R6-NEXT:    seb $2, $1
 ;
 ; MIPS32R6O0-LABEL: AtomicLoadSub8:
 ; MIPS32R6O0:       # %bb.0: # %entry
 ; MIPS32R6O0-NEXT:    lui $2, %hi(_gp_disp)
 ; MIPS32R6O0-NEXT:    addiu $2, $2, %lo(_gp_disp)
-; MIPS32R6O0-NEXT:    addiu $sp, $sp, -8
-; MIPS32R6O0-NEXT:    addu $1, $2, $25
-; MIPS32R6O0-NEXT:    lw $1, %got(y)($1)
-; MIPS32R6O0-NEXT:    addiu $2, $zero, -4
-; MIPS32R6O0-NEXT:    and $5, $1, $2
-; MIPS32R6O0-NEXT:    andi $1, $1, 3
-; MIPS32R6O0-NEXT:    sll $9, $1, 3
-; MIPS32R6O0-NEXT:    ori $1, $zero, 255
-; MIPS32R6O0-NEXT:    sllv $7, $1, $9
-; MIPS32R6O0-NEXT:    nor $8, $zero, $7
-; MIPS32R6O0-NEXT:    sllv $6, $4, $9
+; MIPS32R6O0-NEXT:    addu $2, $2, $25
+; MIPS32R6O0-NEXT:    move $1, $4
+; MIPS32R6O0-NEXT:    lw $2, %got(y)($2)
+; MIPS32R6O0-NEXT:    addiu $3, $zero, -4
+; MIPS32R6O0-NEXT:    and $4, $2, $3
+; MIPS32R6O0-NEXT:    andi $2, $2, 3
+; MIPS32R6O0-NEXT:    sll $2, $2, 3
+; MIPS32R6O0-NEXT:    addiu $3, $zero, 255
+; MIPS32R6O0-NEXT:    sllv $6, $3, $2
+; MIPS32R6O0-NEXT:    andi $1, $1, 255
+; MIPS32R6O0-NEXT:    sllv $5, $1, $2
 ; MIPS32R6O0-NEXT:  $BB9_1: # %entry
 ; MIPS32R6O0-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS32R6O0-NEXT:    ll $2, 0($5)
-; MIPS32R6O0-NEXT:    subu $3, $2, $6
-; MIPS32R6O0-NEXT:    and $3, $3, $7
-; MIPS32R6O0-NEXT:    and $4, $2, $8
-; MIPS32R6O0-NEXT:    or $4, $4, $3
-; MIPS32R6O0-NEXT:    sc $4, 0($5)
-; MIPS32R6O0-NEXT:    beqzc $4, $BB9_1
+; MIPS32R6O0-NEXT:    ll $1, 0($4)
+; MIPS32R6O0-NEXT:    subu $3, $1, $5
+; MIPS32R6O0-NEXT:    xor $3, $1, $3
+; MIPS32R6O0-NEXT:    and $3, $3, $6
+; MIPS32R6O0-NEXT:    xor $3, $1, $3
+; MIPS32R6O0-NEXT:    sc $3, 0($4)
+; MIPS32R6O0-NEXT:    beqzc $3, $BB9_1
 ; MIPS32R6O0-NEXT:  # %bb.2: # %entry
-; MIPS32R6O0-NEXT:    and $1, $2, $7
-; MIPS32R6O0-NEXT:    srlv $1, $1, $9
-; MIPS32R6O0-NEXT:    seb $1, $1
-; MIPS32R6O0-NEXT:  # %bb.3: # %entry
-; MIPS32R6O0-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
-; MIPS32R6O0-NEXT:  # %bb.4: # %entry
-; MIPS32R6O0-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
-; MIPS32R6O0-NEXT:    addiu $sp, $sp, 8
+; MIPS32R6O0-NEXT:    srlv $1, $1, $2
+; MIPS32R6O0-NEXT:    seb $2, $1
 ; MIPS32R6O0-NEXT:    jrc $ra
 ;
 ; MIPS4-LABEL: AtomicLoadSub8:
@@ -2917,32 +2850,30 @@ define signext i8 @AtomicLoadSub8(i8 signext %incr) nounwind {
 ; MIPS4-NEXT:    daddu $1, $1, $25
 ; MIPS4-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(AtomicLoadSub8)))
 ; MIPS4-NEXT:    ld $1, %got_disp(y)($1)
-; MIPS4-NEXT:    daddiu $2, $zero, -4
-; MIPS4-NEXT:    and $3, $1, $2
-; MIPS4-NEXT:    andi $1, $1, 3
-; MIPS4-NEXT:    sll $1, $1, 3
-; MIPS4-NEXT:    ori $2, $zero, 255
-; MIPS4-NEXT:    sllv $5, $2, $1
-; MIPS4-NEXT:    nor $6, $zero, $5
-; MIPS4-NEXT:    sllv $4, $4, $1
+; MIPS4-NEXT:    sll $2, $1, 0
+; MIPS4-NEXT:    andi $2, $2, 3
+; MIPS4-NEXT:    daddiu $3, $zero, -4
+; MIPS4-NEXT:    and $1, $1, $3
+; MIPS4-NEXT:    sll $2, $2, 3
+; MIPS4-NEXT:    addiu $3, $zero, 255
+; MIPS4-NEXT:    sllv $3, $3, $2
+; MIPS4-NEXT:    andi $4, $4, 255
+; MIPS4-NEXT:    sllv $4, $4, $2
 ; MIPS4-NEXT:  .LBB9_1: # %entry
 ; MIPS4-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS4-NEXT:    ll $7, 0($3)
-; MIPS4-NEXT:    subu $8, $7, $4
-; MIPS4-NEXT:    and $8, $8, $5
-; MIPS4-NEXT:    and $9, $7, $6
-; MIPS4-NEXT:    or $9, $9, $8
-; MIPS4-NEXT:    sc $9, 0($3)
-; MIPS4-NEXT:    beqz $9, .LBB9_1
+; MIPS4-NEXT:    ll $5, 0($1)
+; MIPS4-NEXT:    subu $6, $5, $4
+; MIPS4-NEXT:    xor $6, $5, $6
+; MIPS4-NEXT:    and $6, $6, $3
+; MIPS4-NEXT:    xor $6, $5, $6
+; MIPS4-NEXT:    sc $6, 0($1)
+; MIPS4-NEXT:    beqz $6, .LBB9_1
 ; MIPS4-NEXT:    nop
 ; MIPS4-NEXT:  # %bb.2: # %entry
-; MIPS4-NEXT:    and $2, $7, $5
-; MIPS4-NEXT:    srlv $2, $2, $1
-; MIPS4-NEXT:    sll $2, $2, 24
-; MIPS4-NEXT:    sra $2, $2, 24
-; MIPS4-NEXT:  # %bb.3: # %entry
+; MIPS4-NEXT:    srlv $1, $5, $2
+; MIPS4-NEXT:    sll $1, $1, 24
 ; MIPS4-NEXT:    jr $ra
-; MIPS4-NEXT:    nop
+; MIPS4-NEXT:    sra $2, $1, 24
 ;
 ; MIPS64-LABEL: AtomicLoadSub8:
 ; MIPS64:       # %bb.0: # %entry
@@ -2950,32 +2881,30 @@ define signext i8 @AtomicLoadSub8(i8 signext %incr) nounwind {
 ; MIPS64-NEXT:    daddu $1, $1, $25
 ; MIPS64-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(AtomicLoadSub8)))
 ; MIPS64-NEXT:    ld $1, %got_disp(y)($1)
-; MIPS64-NEXT:    daddiu $2, $zero, -4
-; MIPS64-NEXT:    and $3, $1, $2
-; MIPS64-NEXT:    andi $1, $1, 3
-; MIPS64-NEXT:    sll $1, $1, 3
-; MIPS64-NEXT:    ori $2, $zero, 255
-; MIPS64-NEXT:    sllv $5, $2, $1
-; MIPS64-NEXT:    nor $6, $zero, $5
-; MIPS64-NEXT:    sllv $4, $4, $1
+; MIPS64-NEXT:    sll $2, $1, 0
+; MIPS64-NEXT:    andi $2, $2, 3
+; MIPS64-NEXT:    daddiu $3, $zero, -4
+; MIPS64-NEXT:    and $1, $1, $3
+; MIPS64-NEXT:    sll $2, $2, 3
+; MIPS64-NEXT:    addiu $3, $zero, 255
+; MIPS64-NEXT:    sllv $3, $3, $2
+; MIPS64-NEXT:    andi $4, $4, 255
+; MIPS64-NEXT:    sllv $4, $4, $2
 ; MIPS64-NEXT:  .LBB9_1: # %entry
 ; MIPS64-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64-NEXT:    ll $7, 0($3)
-; MIPS64-NEXT:    subu $8, $7, $4
-; MIPS64-NEXT:    and $8, $8, $5
-; MIPS64-NEXT:    and $9, $7, $6
-; MIPS64-NEXT:    or $9, $9, $8
-; MIPS64-NEXT:    sc $9, 0($3)
-; MIPS64-NEXT:    beqz $9, .LBB9_1
+; MIPS64-NEXT:    ll $5, 0($1)
+; MIPS64-NEXT:    subu $6, $5, $4
+; MIPS64-NEXT:    xor $6, $5, $6
+; MIPS64-NEXT:    and $6, $6, $3
+; MIPS64-NEXT:    xor $6, $5, $6
+; MIPS64-NEXT:    sc $6, 0($1)
+; MIPS64-NEXT:    beqz $6, .LBB9_1
 ; MIPS64-NEXT:    nop
 ; MIPS64-NEXT:  # %bb.2: # %entry
-; MIPS64-NEXT:    and $2, $7, $5
-; MIPS64-NEXT:    srlv $2, $2, $1
-; MIPS64-NEXT:    sll $2, $2, 24
-; MIPS64-NEXT:    sra $2, $2, 24
-; MIPS64-NEXT:  # %bb.3: # %entry
+; MIPS64-NEXT:    srlv $1, $5, $2
+; MIPS64-NEXT:    sll $1, $1, 24
 ; MIPS64-NEXT:    jr $ra
-; MIPS64-NEXT:    nop
+; MIPS64-NEXT:    sra $2, $1, 24
 ;
 ; MIPS64R2-LABEL: AtomicLoadSub8:
 ; MIPS64R2:       # %bb.0: # %entry
@@ -2983,31 +2912,29 @@ define signext i8 @AtomicLoadSub8(i8 signext %incr) nounwind {
 ; MIPS64R2-NEXT:    daddu $1, $1, $25
 ; MIPS64R2-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(AtomicLoadSub8)))
 ; MIPS64R2-NEXT:    ld $1, %got_disp(y)($1)
-; MIPS64R2-NEXT:    daddiu $2, $zero, -4
-; MIPS64R2-NEXT:    and $3, $1, $2
-; MIPS64R2-NEXT:    andi $1, $1, 3
-; MIPS64R2-NEXT:    sll $1, $1, 3
-; MIPS64R2-NEXT:    ori $2, $zero, 255
-; MIPS64R2-NEXT:    sllv $5, $2, $1
-; MIPS64R2-NEXT:    nor $6, $zero, $5
-; MIPS64R2-NEXT:    sllv $4, $4, $1
+; MIPS64R2-NEXT:    sll $2, $1, 0
+; MIPS64R2-NEXT:    andi $2, $2, 3
+; MIPS64R2-NEXT:    daddiu $3, $zero, -4
+; MIPS64R2-NEXT:    and $1, $1, $3
+; MIPS64R2-NEXT:    sll $2, $2, 3
+; MIPS64R2-NEXT:    addiu $3, $zero, 255
+; MIPS64R2-NEXT:    sllv $3, $3, $2
+; MIPS64R2-NEXT:    andi $4, $4, 255
+; MIPS64R2-NEXT:    sllv $4, $4, $2
 ; MIPS64R2-NEXT:  .LBB9_1: # %entry
 ; MIPS64R2-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64R2-NEXT:    ll $7, 0($3)
-; MIPS64R2-NEXT:    subu $8, $7, $4
-; MIPS64R2-NEXT:    and $8, $8, $5
-; MIPS64R2-NEXT:    and $9, $7, $6
-; MIPS64R2-NEXT:    or $9, $9, $8
-; MIPS64R2-NEXT:    sc $9, 0($3)
-; MIPS64R2-NEXT:    beqz $9, .LBB9_1
+; MIPS64R2-NEXT:    ll $5, 0($1)
+; MIPS64R2-NEXT:    subu $6, $5, $4
+; MIPS64R2-NEXT:    xor $6, $5, $6
+; MIPS64R2-NEXT:    and $6, $6, $3
+; MIPS64R2-NEXT:    xor $6, $5, $6
+; MIPS64R2-NEXT:    sc $6, 0($1)
+; MIPS64R2-NEXT:    beqz $6, .LBB9_1
 ; MIPS64R2-NEXT:    nop
 ; MIPS64R2-NEXT:  # %bb.2: # %entry
-; MIPS64R2-NEXT:    and $2, $7, $5
-; MIPS64R2-NEXT:    srlv $2, $2, $1
-; MIPS64R2-NEXT:    seb $2, $2
-; MIPS64R2-NEXT:  # %bb.3: # %entry
+; MIPS64R2-NEXT:    srlv $1, $5, $2
 ; MIPS64R2-NEXT:    jr $ra
-; MIPS64R2-NEXT:    nop
+; MIPS64R2-NEXT:    seb $2, $1
 ;
 ; MIPS64R6-LABEL: AtomicLoadSub8:
 ; MIPS64R6:       # %bb.0: # %entry
@@ -3015,65 +2942,59 @@ define signext i8 @AtomicLoadSub8(i8 signext %incr) nounwind {
 ; MIPS64R6-NEXT:    daddu $1, $1, $25
 ; MIPS64R6-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(AtomicLoadSub8)))
 ; MIPS64R6-NEXT:    ld $1, %got_disp(y)($1)
-; MIPS64R6-NEXT:    daddiu $2, $zero, -4
-; MIPS64R6-NEXT:    and $3, $1, $2
-; MIPS64R6-NEXT:    andi $1, $1, 3
-; MIPS64R6-NEXT:    sll $1, $1, 3
-; MIPS64R6-NEXT:    ori $2, $zero, 255
-; MIPS64R6-NEXT:    sllv $5, $2, $1
-; MIPS64R6-NEXT:    nor $6, $zero, $5
-; MIPS64R6-NEXT:    sllv $4, $4, $1
+; MIPS64R6-NEXT:    sll $2, $1, 0
+; MIPS64R6-NEXT:    andi $2, $2, 3
+; MIPS64R6-NEXT:    daddiu $3, $zero, -4
+; MIPS64R6-NEXT:    and $1, $1, $3
+; MIPS64R6-NEXT:    sll $2, $2, 3
+; MIPS64R6-NEXT:    addiu $3, $zero, 255
+; MIPS64R6-NEXT:    sllv $3, $3, $2
+; MIPS64R6-NEXT:    andi $4, $4, 255
+; MIPS64R6-NEXT:    sllv $4, $4, $2
 ; MIPS64R6-NEXT:  .LBB9_1: # %entry
 ; MIPS64R6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64R6-NEXT:    ll $7, 0($3)
-; MIPS64R6-NEXT:    subu $8, $7, $4
-; MIPS64R6-NEXT:    and $8, $8, $5
-; MIPS64R6-NEXT:    and $9, $7, $6
-; MIPS64R6-NEXT:    or $9, $9, $8
-; MIPS64R6-NEXT:    sc $9, 0($3)
-; MIPS64R6-NEXT:    beqzc $9, .LBB9_1
+; MIPS64R6-NEXT:    ll $5, 0($1)
+; MIPS64R6-NEXT:    subu $6, $5, $4
+; MIPS64R6-NEXT:    xor $6, $5, $6
+; MIPS64R6-NEXT:    and $6, $6, $3
+; MIPS64R6-NEXT:    xor $6, $5, $6
+; MIPS64R6-NEXT:    sc $6, 0($1)
+; MIPS64R6-NEXT:    beqzc $6, .LBB9_1
 ; MIPS64R6-NEXT:  # %bb.2: # %entry
-; MIPS64R6-NEXT:    and $2, $7, $5
-; MIPS64R6-NEXT:    srlv $2, $2, $1
-; MIPS64R6-NEXT:    seb $2, $2
-; MIPS64R6-NEXT:  # %bb.3: # %entry
-; MIPS64R6-NEXT:    jrc $ra
+; MIPS64R6-NEXT:    srlv $1, $5, $2
+; MIPS64R6-NEXT:    jr $ra
+; MIPS64R6-NEXT:    seb $2, $1
 ;
 ; MIPS64R6O0-LABEL: AtomicLoadSub8:
 ; MIPS64R6O0:       # %bb.0: # %entry
-; MIPS64R6O0-NEXT:    daddiu $sp, $sp, -16
 ; MIPS64R6O0-NEXT:    lui $1, %hi(%neg(%gp_rel(AtomicLoadSub8)))
 ; MIPS64R6O0-NEXT:    daddu $1, $1, $25
 ; MIPS64R6O0-NEXT:    daddiu $2, $1, %lo(%neg(%gp_rel(AtomicLoadSub8)))
 ; MIPS64R6O0-NEXT:    move $1, $4
 ; MIPS64R6O0-NEXT:    ld $2, %got_disp(y)($2)
 ; MIPS64R6O0-NEXT:    daddiu $3, $zero, -4
-; MIPS64R6O0-NEXT:    and $5, $2, $3
+; MIPS64R6O0-NEXT:    and $4, $2, $3
+; MIPS64R6O0-NEXT:    # kill: def $v0 killed $v0 killed $v0_64
+; MIPS64R6O0-NEXT:    sll $2, $2, 0
+; MIPS64R6O0-NEXT:    not $2, $2
 ; MIPS64R6O0-NEXT:    andi $2, $2, 3
-; MIPS64R6O0-NEXT:    xori $2, $2, 3
-; MIPS64R6O0-NEXT:    sll $9, $2, 3
-; MIPS64R6O0-NEXT:    ori $2, $zero, 255
-; MIPS64R6O0-NEXT:    sllv $7, $2, $9
-; MIPS64R6O0-NEXT:    nor $8, $zero, $7
-; MIPS64R6O0-NEXT:    sllv $6, $1, $9
+; MIPS64R6O0-NEXT:    sll $2, $2, 3
+; MIPS64R6O0-NEXT:    addiu $3, $zero, 255
+; MIPS64R6O0-NEXT:    sllv $6, $3, $2
+; MIPS64R6O0-NEXT:    andi $1, $1, 255
+; MIPS64R6O0-NEXT:    sllv $5, $1, $2
 ; MIPS64R6O0-NEXT:  .LBB9_1: # %entry
 ; MIPS64R6O0-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64R6O0-NEXT:    ll $2, 0($5)
-; MIPS64R6O0-NEXT:    subu $3, $2, $6
-; MIPS64R6O0-NEXT:    and $3, $3, $7
-; MIPS64R6O0-NEXT:    and $4, $2, $8
-; MIPS64R6O0-NEXT:    or $4, $4, $3
-; MIPS64R6O0-NEXT:    sc $4, 0($5)
-; MIPS64R6O0-NEXT:    beqzc $4, .LBB9_1
+; MIPS64R6O0-NEXT:    ll $1, 0($4)
+; MIPS64R6O0-NEXT:    subu $3, $1, $5
+; MIPS64R6O0-NEXT:    xor $3, $1, $3
+; MIPS64R6O0-NEXT:    and $3, $3, $6
+; MIPS64R6O0-NEXT:    xor $3, $1, $3
+; MIPS64R6O0-NEXT:    sc $3, 0($4)
+; MIPS64R6O0-NEXT:    beqzc $3, .LBB9_1
 ; MIPS64R6O0-NEXT:  # %bb.2: # %entry
-; MIPS64R6O0-NEXT:    and $1, $2, $7
-; MIPS64R6O0-NEXT:    srlv $1, $1, $9
-; MIPS64R6O0-NEXT:    seb $1, $1
-; MIPS64R6O0-NEXT:  # %bb.3: # %entry
-; MIPS64R6O0-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
-; MIPS64R6O0-NEXT:  # %bb.4: # %entry
-; MIPS64R6O0-NEXT:    lw $2, 12($sp) # 4-byte Folded Reload
-; MIPS64R6O0-NEXT:    daddiu $sp, $sp, 16
+; MIPS64R6O0-NEXT:    srlv $1, $1, $2
+; MIPS64R6O0-NEXT:    seb $2, $1
 ; MIPS64R6O0-NEXT:    jrc $ra
 ;
 ; MM32-LABEL: AtomicLoadSub8:
@@ -3081,96 +3002,88 @@ define signext i8 @AtomicLoadSub8(i8 signext %incr) nounwind {
 ; MM32-NEXT:    lui $2, %hi(_gp_disp)
 ; MM32-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; MM32-NEXT:    addu $2, $2, $25
-; MM32-NEXT:    lw $1, %got(y)($2)
-; MM32-NEXT:    addiu $2, $zero, -4
-; MM32-NEXT:    and $3, $1, $2
-; MM32-NEXT:    andi $1, $1, 3
-; MM32-NEXT:    sll $1, $1, 3
-; MM32-NEXT:    ori $2, $zero, 255
-; MM32-NEXT:    sllv $5, $2, $1
-; MM32-NEXT:    nor $6, $zero, $5
-; MM32-NEXT:    sllv $4, $4, $1
+; MM32-NEXT:    addiu $3, $zero, -4
+; MM32-NEXT:    lw $2, %got(y)($2)
+; MM32-NEXT:    and16 $3, $2
+; MM32-NEXT:    andi16 $2, $2, 3
+; MM32-NEXT:    sll16 $2, $2, 3
+; MM32-NEXT:    addiu $1, $zero, 255
+; MM32-NEXT:    sllv $1, $1, $2
+; MM32-NEXT:    andi16 $4, $4, 255
+; MM32-NEXT:    sllv $4, $4, $2
 ; MM32-NEXT:  $BB9_1: # %entry
 ; MM32-NEXT:    # =>This Inner Loop Header: Depth=1
-; MM32-NEXT:    ll $7, 0($3)
-; MM32-NEXT:    subu $8, $7, $4
-; MM32-NEXT:    and $8, $8, $5
-; MM32-NEXT:    and $9, $7, $6
-; MM32-NEXT:    or $9, $9, $8
-; MM32-NEXT:    sc $9, 0($3)
-; MM32-NEXT:    beqzc $9, $BB9_1
+; MM32-NEXT:    ll $5, 0($3)
+; MM32-NEXT:    subu16 $6, $5, $4
+; MM32-NEXT:    xor16 $6, $5
+; MM32-NEXT:    and $6, $6, $1
+; MM32-NEXT:    xor16 $6, $5
+; MM32-NEXT:    sc $6, 0($3)
+; MM32-NEXT:    beqzc $6, $BB9_1
 ; MM32-NEXT:  # %bb.2: # %entry
-; MM32-NEXT:    and $2, $7, $5
-; MM32-NEXT:    srlv $2, $2, $1
-; MM32-NEXT:    seb $2, $2
-; MM32-NEXT:  # %bb.3: # %entry
-; MM32-NEXT:    jrc $ra
+; MM32-NEXT:    srlv $1, $5, $2
+; MM32-NEXT:    jr $ra
+; MM32-NEXT:    seb $2, $1
 ;
 ; O1-LABEL: AtomicLoadSub8:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    lui $2, %hi(_gp_disp)
 ; O1-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; O1-NEXT:    addu $1, $2, $25
-; O1-NEXT:    lw $1, %got(y)($1)
 ; O1-NEXT:    addiu $2, $zero, -4
-; O1-NEXT:    and $3, $1, $2
+; O1-NEXT:    lw $1, %got(y)($1)
+; O1-NEXT:    and $2, $1, $2
 ; O1-NEXT:    andi $1, $1, 3
 ; O1-NEXT:    sll $1, $1, 3
-; O1-NEXT:    ori $2, $zero, 255
-; O1-NEXT:    sllv $5, $2, $1
-; O1-NEXT:    nor $6, $zero, $5
+; O1-NEXT:    addiu $3, $zero, 255
+; O1-NEXT:    sllv $3, $3, $1
+; O1-NEXT:    andi $4, $4, 255
 ; O1-NEXT:    sllv $4, $4, $1
 ; O1-NEXT:  $BB9_1: # %entry
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
-; O1-NEXT:    ll $7, 0($3)
-; O1-NEXT:    subu $8, $7, $4
-; O1-NEXT:    and $8, $8, $5
-; O1-NEXT:    and $9, $7, $6
-; O1-NEXT:    or $9, $9, $8
-; O1-NEXT:    sc $9, 0($3)
-; O1-NEXT:    beqz $9, $BB9_1
+; O1-NEXT:    ll $5, 0($2)
+; O1-NEXT:    subu $6, $5, $4
+; O1-NEXT:    xor $6, $5, $6
+; O1-NEXT:    and $6, $6, $3
+; O1-NEXT:    xor $6, $5, $6
+; O1-NEXT:    sc $6, 0($2)
+; O1-NEXT:    beqz $6, $BB9_1
 ; O1-NEXT:    nop
 ; O1-NEXT:  # %bb.2: # %entry
-; O1-NEXT:    and $2, $7, $5
-; O1-NEXT:    srlv $2, $2, $1
-; O1-NEXT:    sll $2, $2, 24
-; O1-NEXT:    sra $2, $2, 24
-; O1-NEXT:  # %bb.3: # %entry
+; O1-NEXT:    srlv $1, $5, $1
+; O1-NEXT:    sll $1, $1, 24
 ; O1-NEXT:    jr $ra
-; O1-NEXT:    nop
+; O1-NEXT:    sra $2, $1, 24
 ;
 ; O2-LABEL: AtomicLoadSub8:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    lui $2, %hi(_gp_disp)
 ; O2-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; O2-NEXT:    addu $1, $2, $25
-; O2-NEXT:    lw $1, %got(y)($1)
 ; O2-NEXT:    addiu $2, $zero, -4
-; O2-NEXT:    and $3, $1, $2
+; O2-NEXT:    lw $1, %got(y)($1)
+; O2-NEXT:    and $2, $1, $2
 ; O2-NEXT:    andi $1, $1, 3
 ; O2-NEXT:    sll $1, $1, 3
-; O2-NEXT:    ori $2, $zero, 255
-; O2-NEXT:    sllv $5, $2, $1
-; O2-NEXT:    nor $6, $zero, $5
+; O2-NEXT:    addiu $3, $zero, 255
+; O2-NEXT:    sllv $3, $3, $1
+; O2-NEXT:    andi $4, $4, 255
 ; O2-NEXT:    sllv $4, $4, $1
 ; O2-NEXT:  $BB9_1: # %entry
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
-; O2-NEXT:    ll $7, 0($3)
-; O2-NEXT:    subu $8, $7, $4
-; O2-NEXT:    and $8, $8, $5
-; O2-NEXT:    and $9, $7, $6
-; O2-NEXT:    or $9, $9, $8
-; O2-NEXT:    sc $9, 0($3)
-; O2-NEXT:    beqz $9, $BB9_1
+; O2-NEXT:    ll $5, 0($2)
+; O2-NEXT:    subu $6, $5, $4
+; O2-NEXT:    xor $6, $5, $6
+; O2-NEXT:    and $6, $6, $3
+; O2-NEXT:    xor $6, $5, $6
+; O2-NEXT:    sc $6, 0($2)
+; O2-NEXT:    beqz $6, $BB9_1
 ; O2-NEXT:    nop
 ; O2-NEXT:  # %bb.2: # %entry
-; O2-NEXT:    and $2, $7, $5
-; O2-NEXT:    srlv $2, $2, $1
-; O2-NEXT:    sll $2, $2, 24
-; O2-NEXT:    sra $2, $2, 24
-; O2-NEXT:  # %bb.3: # %entry
+; O2-NEXT:    srlv $1, $5, $1
+; O2-NEXT:    sll $1, $1, 24
 ; O2-NEXT:    jr $ra
-; O2-NEXT:    nop
+; O2-NEXT:    sra $2, $1, 24
 ;
 ; O3-LABEL: AtomicLoadSub8:
 ; O3:       # %bb.0: # %entry
@@ -3178,32 +3091,29 @@ define signext i8 @AtomicLoadSub8(i8 signext %incr) nounwind {
 ; O3-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; O3-NEXT:    addu $1, $2, $25
 ; O3-NEXT:    addiu $2, $zero, -4
+; O3-NEXT:    addiu $3, $zero, 255
+; O3-NEXT:    andi $4, $4, 255
 ; O3-NEXT:    lw $1, %got(y)($1)
-; O3-NEXT:    and $3, $1, $2
+; O3-NEXT:    and $2, $1, $2
 ; O3-NEXT:    andi $1, $1, 3
-; O3-NEXT:    ori $2, $zero, 255
 ; O3-NEXT:    sll $1, $1, 3
-; O3-NEXT:    sllv $5, $2, $1
+; O3-NEXT:    sllv $3, $3, $1
 ; O3-NEXT:    sllv $4, $4, $1
-; O3-NEXT:    nor $6, $zero, $5
 ; O3-NEXT:  $BB9_1: # %entry
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
-; O3-NEXT:    ll $7, 0($3)
-; O3-NEXT:    subu $8, $7, $4
-; O3-NEXT:    and $8, $8, $5
-; O3-NEXT:    and $9, $7, $6
-; O3-NEXT:    or $9, $9, $8
-; O3-NEXT:    sc $9, 0($3)
-; O3-NEXT:    beqz $9, $BB9_1
+; O3-NEXT:    ll $5, 0($2)
+; O3-NEXT:    subu $6, $5, $4
+; O3-NEXT:    xor $6, $5, $6
+; O3-NEXT:    and $6, $6, $3
+; O3-NEXT:    xor $6, $5, $6
+; O3-NEXT:    sc $6, 0($2)
+; O3-NEXT:    beqz $6, $BB9_1
 ; O3-NEXT:    nop
 ; O3-NEXT:  # %bb.2: # %entry
-; O3-NEXT:    and $2, $7, $5
-; O3-NEXT:    srlv $2, $2, $1
-; O3-NEXT:    sll $2, $2, 24
-; O3-NEXT:    sra $2, $2, 24
-; O3-NEXT:  # %bb.3: # %entry
+; O3-NEXT:    srlv $1, $5, $1
+; O3-NEXT:    sll $1, $1, 24
 ; O3-NEXT:    jr $ra
-; O3-NEXT:    nop
+; O3-NEXT:    sra $2, $1, 24
 ;
 ; MIPS32EB-LABEL: AtomicLoadSub8:
 ; MIPS32EB:       # %bb.0: # %entry
@@ -3211,33 +3121,30 @@ define signext i8 @AtomicLoadSub8(i8 signext %incr) nounwind {
 ; MIPS32EB-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; MIPS32EB-NEXT:    addu $1, $2, $25
 ; MIPS32EB-NEXT:    lw $1, %got(y)($1)
-; MIPS32EB-NEXT:    addiu $2, $zero, -4
-; MIPS32EB-NEXT:    and $3, $1, $2
-; MIPS32EB-NEXT:    andi $1, $1, 3
-; MIPS32EB-NEXT:    xori $1, $1, 3
-; MIPS32EB-NEXT:    sll $1, $1, 3
-; MIPS32EB-NEXT:    ori $2, $zero, 255
-; MIPS32EB-NEXT:    sllv $5, $2, $1
-; MIPS32EB-NEXT:    nor $6, $zero, $5
-; MIPS32EB-NEXT:    sllv $4, $4, $1
+; MIPS32EB-NEXT:    not $2, $1
+; MIPS32EB-NEXT:    addiu $3, $zero, -4
+; MIPS32EB-NEXT:    and $1, $1, $3
+; MIPS32EB-NEXT:    andi $2, $2, 3
+; MIPS32EB-NEXT:    sll $2, $2, 3
+; MIPS32EB-NEXT:    addiu $3, $zero, 255
+; MIPS32EB-NEXT:    sllv $3, $3, $2
+; MIPS32EB-NEXT:    andi $4, $4, 255
+; MIPS32EB-NEXT:    sllv $4, $4, $2
 ; MIPS32EB-NEXT:  $BB9_1: # %entry
 ; MIPS32EB-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS32EB-NEXT:    ll $7, 0($3)
-; MIPS32EB-NEXT:    subu $8, $7, $4
-; MIPS32EB-NEXT:    and $8, $8, $5
-; MIPS32EB-NEXT:    and $9, $7, $6
-; MIPS32EB-NEXT:    or $9, $9, $8
-; MIPS32EB-NEXT:    sc $9, 0($3)
-; MIPS32EB-NEXT:    beqz $9, $BB9_1
+; MIPS32EB-NEXT:    ll $5, 0($1)
+; MIPS32EB-NEXT:    subu $6, $5, $4
+; MIPS32EB-NEXT:    xor $6, $5, $6
+; MIPS32EB-NEXT:    and $6, $6, $3
+; MIPS32EB-NEXT:    xor $6, $5, $6
+; MIPS32EB-NEXT:    sc $6, 0($1)
+; MIPS32EB-NEXT:    beqz $6, $BB9_1
 ; MIPS32EB-NEXT:    nop
 ; MIPS32EB-NEXT:  # %bb.2: # %entry
-; MIPS32EB-NEXT:    and $2, $7, $5
-; MIPS32EB-NEXT:    srlv $2, $2, $1
-; MIPS32EB-NEXT:    sll $2, $2, 24
-; MIPS32EB-NEXT:    sra $2, $2, 24
-; MIPS32EB-NEXT:  # %bb.3: # %entry
+; MIPS32EB-NEXT:    srlv $1, $5, $2
+; MIPS32EB-NEXT:    sll $1, $1, 24
 ; MIPS32EB-NEXT:    jr $ra
-; MIPS32EB-NEXT:    nop
+; MIPS32EB-NEXT:    sra $2, $1, 24
 entry:
   %0 = atomicrmw sub ptr @y, i8 %incr monotonic
   ret i8 %0
@@ -3250,73 +3157,64 @@ define signext i8 @AtomicLoadNand8(i8 signext %incr) nounwind {
 ; MIPS32-NEXT:    lui $2, %hi(_gp_disp)
 ; MIPS32-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; MIPS32-NEXT:    addu $1, $2, $25
-; MIPS32-NEXT:    lw $1, %got(y)($1)
 ; MIPS32-NEXT:    addiu $2, $zero, -4
-; MIPS32-NEXT:    and $3, $1, $2
+; MIPS32-NEXT:    lw $1, %got(y)($1)
+; MIPS32-NEXT:    and $2, $1, $2
 ; MIPS32-NEXT:    andi $1, $1, 3
 ; MIPS32-NEXT:    sll $1, $1, 3
-; MIPS32-NEXT:    ori $2, $zero, 255
-; MIPS32-NEXT:    sllv $5, $2, $1
-; MIPS32-NEXT:    nor $6, $zero, $5
+; MIPS32-NEXT:    addiu $3, $zero, 255
+; MIPS32-NEXT:    sllv $3, $3, $1
+; MIPS32-NEXT:    andi $4, $4, 255
 ; MIPS32-NEXT:    sllv $4, $4, $1
 ; MIPS32-NEXT:  $BB10_1: # %entry
 ; MIPS32-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS32-NEXT:    ll $7, 0($3)
-; MIPS32-NEXT:    and $8, $7, $4
-; MIPS32-NEXT:    nor $8, $zero, $8
-; MIPS32-NEXT:    and $8, $8, $5
-; MIPS32-NEXT:    and $9, $7, $6
-; MIPS32-NEXT:    or $9, $9, $8
-; MIPS32-NEXT:    sc $9, 0($3)
-; MIPS32-NEXT:    beqz $9, $BB10_1
+; MIPS32-NEXT:    ll $5, 0($2)
+; MIPS32-NEXT:    and $6, $5, $4
+; MIPS32-NEXT:    not $6, $6
+; MIPS32-NEXT:    xor $6, $5, $6
+; MIPS32-NEXT:    and $6, $6, $3
+; MIPS32-NEXT:    xor $6, $5, $6
+; MIPS32-NEXT:    sc $6, 0($2)
+; MIPS32-NEXT:    beqz $6, $BB10_1
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  # %bb.2: # %entry
-; MIPS32-NEXT:    and $2, $7, $5
-; MIPS32-NEXT:    srlv $2, $2, $1
-; MIPS32-NEXT:    sll $2, $2, 24
-; MIPS32-NEXT:    sra $2, $2, 24
-; MIPS32-NEXT:  # %bb.3: # %entry
+; MIPS32-NEXT:    srlv $1, $5, $1
+; MIPS32-NEXT:    sll $1, $1, 24
 ; MIPS32-NEXT:    jr $ra
-; MIPS32-NEXT:    nop
+; MIPS32-NEXT:    sra $2, $1, 24
 ;
 ; MIPS32O0-LABEL: AtomicLoadNand8:
 ; MIPS32O0:       # %bb.0: # %entry
 ; MIPS32O0-NEXT:    lui $2, %hi(_gp_disp)
 ; MIPS32O0-NEXT:    addiu $2, $2, %lo(_gp_disp)
-; MIPS32O0-NEXT:    addiu $sp, $sp, -8
-; MIPS32O0-NEXT:    addu $1, $2, $25
-; MIPS32O0-NEXT:    lw $1, %got(y)($1)
-; MIPS32O0-NEXT:    addiu $2, $zero, -4
-; MIPS32O0-NEXT:    and $5, $1, $2
-; MIPS32O0-NEXT:    andi $1, $1, 3
-; MIPS32O0-NEXT:    sll $9, $1, 3
-; MIPS32O0-NEXT:    ori $1, $zero, 255
-; MIPS32O0-NEXT:    sllv $7, $1, $9
-; MIPS32O0-NEXT:    nor $8, $zero, $7
-; MIPS32O0-NEXT:    sllv $6, $4, $9
+; MIPS32O0-NEXT:    addu $2, $2, $25
+; MIPS32O0-NEXT:    move $1, $4
+; MIPS32O0-NEXT:    lw $3, %got(y)($2)
+; MIPS32O0-NEXT:    addiu $4, $zero, -4
+; MIPS32O0-NEXT:    and $4, $3, $4
+; MIPS32O0-NEXT:    lw $2, %got(y)($2)
+; MIPS32O0-NEXT:    addiu $3, $zero, 3
+; MIPS32O0-NEXT:    and $2, $2, $3
+; MIPS32O0-NEXT:    sll $2, $2, 3
+; MIPS32O0-NEXT:    addiu $3, $zero, 255
+; MIPS32O0-NEXT:    sllv $6, $3, $2
+; MIPS32O0-NEXT:    andi $1, $1, 255
+; MIPS32O0-NEXT:    sllv $5, $1, $2
 ; MIPS32O0-NEXT:  $BB10_1: # %entry
 ; MIPS32O0-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS32O0-NEXT:    ll $2, 0($5)
-; MIPS32O0-NEXT:    and $3, $2, $6
-; MIPS32O0-NEXT:    nor $3, $zero, $3
-; MIPS32O0-NEXT:    and $3, $3, $7
-; MIPS32O0-NEXT:    and $4, $2, $8
-; MIPS32O0-NEXT:    or $4, $4, $3
-; MIPS32O0-NEXT:    sc $4, 0($5)
-; MIPS32O0-NEXT:    beqz $4, $BB10_1
+; MIPS32O0-NEXT:    ll $1, 0($4)
+; MIPS32O0-NEXT:    and $3, $1, $5
+; MIPS32O0-NEXT:    not $3, $3
+; MIPS32O0-NEXT:    xor $3, $1, $3
+; MIPS32O0-NEXT:    and $3, $3, $6
+; MIPS32O0-NEXT:    xor $3, $1, $3
+; MIPS32O0-NEXT:    sc $3, 0($4)
+; MIPS32O0-NEXT:    beqz $3, $BB10_1
 ; MIPS32O0-NEXT:    nop
 ; MIPS32O0-NEXT:  # %bb.2: # %entry
-; MIPS32O0-NEXT:    and $1, $2, $7
-; MIPS32O0-NEXT:    srlv $1, $1, $9
-; MIPS32O0-NEXT:    sll $1, $1, 24
-; MIPS32O0-NEXT:    sra $1, $1, 24
-; MIPS32O0-NEXT:  # %bb.3: # %entry
-; MIPS32O0-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
-; MIPS32O0-NEXT:  # %bb.4: # %entry
-; MIPS32O0-NEXT:    lw $1, 4($sp) # 4-byte Folded Reload
+; MIPS32O0-NEXT:    srlv $1, $1, $2
 ; MIPS32O0-NEXT:    sll $1, $1, 24
 ; MIPS32O0-NEXT:    sra $2, $1, 24
-; MIPS32O0-NEXT:    addiu $sp, $sp, 8
 ; MIPS32O0-NEXT:    jr $ra
 ; MIPS32O0-NEXT:    nop
 ;
@@ -3325,99 +3223,88 @@ define signext i8 @AtomicLoadNand8(i8 signext %incr) nounwind {
 ; MIPS32R2-NEXT:    lui $2, %hi(_gp_disp)
 ; MIPS32R2-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; MIPS32R2-NEXT:    addu $1, $2, $25
-; MIPS32R2-NEXT:    lw $1, %got(y)($1)
 ; MIPS32R2-NEXT:    addiu $2, $zero, -4
-; MIPS32R2-NEXT:    and $3, $1, $2
+; MIPS32R2-NEXT:    lw $1, %got(y)($1)
+; MIPS32R2-NEXT:    and $2, $1, $2
 ; MIPS32R2-NEXT:    andi $1, $1, 3
 ; MIPS32R2-NEXT:    sll $1, $1, 3
-; MIPS32R2-NEXT:    ori $2, $zero, 255
-; MIPS32R2-NEXT:    sllv $5, $2, $1
-; MIPS32R2-NEXT:    nor $6, $zero, $5
+; MIPS32R2-NEXT:    addiu $3, $zero, 255
+; MIPS32R2-NEXT:    sllv $3, $3, $1
+; MIPS32R2-NEXT:    andi $4, $4, 255
 ; MIPS32R2-NEXT:    sllv $4, $4, $1
 ; MIPS32R2-NEXT:  $BB10_1: # %entry
 ; MIPS32R2-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS32R2-NEXT:    ll $7, 0($3)
-; MIPS32R2-NEXT:    and $8, $7, $4
-; MIPS32R2-NEXT:    nor $8, $zero, $8
-; MIPS32R2-NEXT:    and $8, $8, $5
-; MIPS32R2-NEXT:    and $9, $7, $6
-; MIPS32R2-NEXT:    or $9, $9, $8
-; MIPS32R2-NEXT:    sc $9, 0($3)
-; MIPS32R2-NEXT:    beqz $9, $BB10_1
+; MIPS32R2-NEXT:    ll $5, 0($2)
+; MIPS32R2-NEXT:    and $6, $5, $4
+; MIPS32R2-NEXT:    not $6, $6
+; MIPS32R2-NEXT:    xor $6, $5, $6
+; MIPS32R2-NEXT:    and $6, $6, $3
+; MIPS32R2-NEXT:    xor $6, $5, $6
+; MIPS32R2-NEXT:    sc $6, 0($2)
+; MIPS32R2-NEXT:    beqz $6, $BB10_1
 ; MIPS32R2-NEXT:    nop
 ; MIPS32R2-NEXT:  # %bb.2: # %entry
-; MIPS32R2-NEXT:    and $2, $7, $5
-; MIPS32R2-NEXT:    srlv $2, $2, $1
-; MIPS32R2-NEXT:    seb $2, $2
-; MIPS32R2-NEXT:  # %bb.3: # %entry
+; MIPS32R2-NEXT:    srlv $1, $5, $1
 ; MIPS32R2-NEXT:    jr $ra
-; MIPS32R2-NEXT:    nop
+; MIPS32R2-NEXT:    seb $2, $1
 ;
 ; MIPS32R6-LABEL: AtomicLoadNand8:
 ; MIPS32R6:       # %bb.0: # %entry
 ; MIPS32R6-NEXT:    lui $2, %hi(_gp_disp)
 ; MIPS32R6-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; MIPS32R6-NEXT:    addu $1, $2, $25
-; MIPS32R6-NEXT:    lw $1, %got(y)($1)
 ; MIPS32R6-NEXT:    addiu $2, $zero, -4
-; MIPS32R6-NEXT:    and $3, $1, $2
+; MIPS32R6-NEXT:    lw $1, %got(y)($1)
+; MIPS32R6-NEXT:    and $2, $1, $2
 ; MIPS32R6-NEXT:    andi $1, $1, 3
 ; MIPS32R6-NEXT:    sll $1, $1, 3
-; MIPS32R6-NEXT:    ori $2, $zero, 255
-; MIPS32R6-NEXT:    sllv $5, $2, $1
-; MIPS32R6-NEXT:    nor $6, $zero, $5
+; MIPS32R6-NEXT:    addiu $3, $zero, 255
+; MIPS32R6-NEXT:    sllv $3, $3, $1
+; MIPS32R6-NEXT:    andi $4, $4, 255
 ; MIPS32R6-NEXT:    sllv $4, $4, $1
 ; MIPS32R6-NEXT:  $BB10_1: # %entry
 ; MIPS32R6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS32R6-NEXT:    ll $7, 0($3)
-; MIPS32R6-NEXT:    and $8, $7, $4
-; MIPS32R6-NEXT:    nor $8, $zero, $8
-; MIPS32R6-NEXT:    and $8, $8, $5
-; MIPS32R6-NEXT:    and $9, $7, $6
-; MIPS32R6-NEXT:    or $9, $9, $8
-; MIPS32R6-NEXT:    sc $9, 0($3)
-; MIPS32R6-NEXT:    beqzc $9, $BB10_1
+; MIPS32R6-NEXT:    ll $5, 0($2)
+; MIPS32R6-NEXT:    and $6, $5, $4
+; MIPS32R6-NEXT:    not $6, $6
+; MIPS32R6-NEXT:    xor $6, $5, $6
+; MIPS32R6-NEXT:    and $6, $6, $3
+; MIPS32R6-NEXT:    xor $6, $5, $6
+; MIPS32R6-NEXT:    sc $6, 0($2)
+; MIPS32R6-NEXT:    beqzc $6, $BB10_1
 ; MIPS32R6-NEXT:  # %bb.2: # %entry
-; MIPS32R6-NEXT:    and $2, $7, $5
-; MIPS32R6-NEXT:    srlv $2, $2, $1
-; MIPS32R6-NEXT:    seb $2, $2
-; MIPS32R6-NEXT:  # %bb.3: # %entry
-; MIPS32R6-NEXT:    jrc $ra
+; MIPS32R6-NEXT:    srlv $1, $5, $1
+; MIPS32R6-NEXT:    jr $ra
+; MIPS32R6-NEXT:    seb $2, $1
 ;
 ; MIPS32R6O0-LABEL: AtomicLoadNand8:
 ; MIPS32R6O0:       # %bb.0: # %entry
 ; MIPS32R6O0-NEXT:    lui $2, %hi(_gp_disp)
 ; MIPS32R6O0-NEXT:    addiu $2, $2, %lo(_gp_disp)
-; MIPS32R6O0-NEXT:    addiu $sp, $sp, -8
-; MIPS32R6O0-NEXT:    addu $1, $2, $25
-; MIPS32R6O0-NEXT:    lw $1, %got(y)($1)
-; MIPS32R6O0-NEXT:    addiu $2, $zero, -4
-; MIPS32R6O0-NEXT:    and $5, $1, $2
-; MIPS32R6O0-NEXT:    andi $1, $1, 3
-; MIPS32R6O0-NEXT:    sll $9, $1, 3
-; MIPS32R6O0-NEXT:    ori $1, $zero, 255
-; MIPS32R6O0-NEXT:    sllv $7, $1, $9
-; MIPS32R6O0-NEXT:    nor $8, $zero, $7
-; MIPS32R6O0-NEXT:    sllv $6, $4, $9
+; MIPS32R6O0-NEXT:    addu $2, $2, $25
+; MIPS32R6O0-NEXT:    move $1, $4
+; MIPS32R6O0-NEXT:    lw $2, %got(y)($2)
+; MIPS32R6O0-NEXT:    addiu $3, $zero, -4
+; MIPS32R6O0-NEXT:    and $4, $2, $3
+; MIPS32R6O0-NEXT:    andi $2, $2, 3
+; MIPS32R6O0-NEXT:    sll $2, $2, 3
+; MIPS32R6O0-NEXT:    addiu $3, $zero, 255
+; MIPS32R6O0-NEXT:    sllv $6, $3, $2
+; MIPS32R6O0-NEXT:    andi $1, $1, 255
+; MIPS32R6O0-NEXT:    sllv $5, $1, $2
 ; MIPS32R6O0-NEXT:  $BB10_1: # %entry
 ; MIPS32R6O0-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS32R6O0-NEXT:    ll $2, 0($5)
-; MIPS32R6O0-NEXT:    and $3, $2, $6
-; MIPS32R6O0-NEXT:    nor $3, $zero, $3
-; MIPS32R6O0-NEXT:    and $3, $3, $7
-; MIPS32R6O0-NEXT:    and $4, $2, $8
-; MIPS32R6O0-NEXT:    or $4, $4, $3
-; MIPS32R6O0-NEXT:    sc $4, 0($5)
-; MIPS32R6O0-NEXT:    beqzc $4, $BB10_1
+; MIPS32R6O0-NEXT:    ll $1, 0($4)
+; MIPS32R6O0-NEXT:    and $3, $1, $5
+; MIPS32R6O0-NEXT:    not $3, $3
+; MIPS32R6O0-NEXT:    xor $3, $1, $3
+; MIPS32R6O0-NEXT:    and $3, $3, $6
+; MIPS32R6O0-NEXT:    xor $3, $1, $3
+; MIPS32R6O0-NEXT:    sc $3, 0($4)
+; MIPS32R6O0-NEXT:    beqzc $3, $BB10_1
 ; MIPS32R6O0-NEXT:  # %bb.2: # %entry
-; MIPS32R6O0-NEXT:    and $1, $2, $7
-; MIPS32R6O0-NEXT:    srlv $1, $1, $9
-; MIPS32R6O0-NEXT:    seb $1, $1
-; MIPS32R6O0-NEXT:  # %bb.3: # %entry
-; MIPS32R6O0-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
-; MIPS32R6O0-NEXT:  # %bb.4: # %entry
-; MIPS32R6O0-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
-; MIPS32R6O0-NEXT:    addiu $sp, $sp, 8
+; MIPS32R6O0-NEXT:    srlv $1, $1, $2
+; MIPS32R6O0-NEXT:    seb $2, $1
 ; MIPS32R6O0-NEXT:    jrc $ra
 ;
 ; MIPS4-LABEL: AtomicLoadNand8:
@@ -3426,33 +3313,31 @@ define signext i8 @AtomicLoadNand8(i8 signext %incr) nounwind {
 ; MIPS4-NEXT:    daddu $1, $1, $25
 ; MIPS4-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(AtomicLoadNand8)))
 ; MIPS4-NEXT:    ld $1, %got_disp(y)($1)
-; MIPS4-NEXT:    daddiu $2, $zero, -4
-; MIPS4-NEXT:    and $3, $1, $2
-; MIPS4-NEXT:    andi $1, $1, 3
-; MIPS4-NEXT:    sll $1, $1, 3
-; MIPS4-NEXT:    ori $2, $zero, 255
-; MIPS4-NEXT:    sllv $5, $2, $1
-; MIPS4-NEXT:    nor $6, $zero, $5
-; MIPS4-NEXT:    sllv $4, $4, $1
+; MIPS4-NEXT:    sll $2, $1, 0
+; MIPS4-NEXT:    andi $2, $2, 3
+; MIPS4-NEXT:    daddiu $3, $zero, -4
+; MIPS4-NEXT:    and $1, $1, $3
+; MIPS4-NEXT:    sll $2, $2, 3
+; MIPS4-NEXT:    addiu $3, $zero, 255
+; MIPS4-NEXT:    sllv $3, $3, $2
+; MIPS4-NEXT:    andi $4, $4, 255
+; MIPS4-NEXT:    sllv $4, $4, $2
 ; MIPS4-NEXT:  .LBB10_1: # %entry
 ; MIPS4-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS4-NEXT:    ll $7, 0($3)
-; MIPS4-NEXT:    and $8, $7, $4
-; MIPS4-NEXT:    nor $8, $zero, $8
-; MIPS4-NEXT:    and $8, $8, $5
-; MIPS4-NEXT:    and $9, $7, $6
-; MIPS4-NEXT:    or $9, $9, $8
-; MIPS4-NEXT:    sc $9, 0($3)
-; MIPS4-NEXT:    beqz $9, .LBB10_1
+; MIPS4-NEXT:    ll $5, 0($1)
+; MIPS4-NEXT:    and $6, $5, $4
+; MIPS4-NEXT:    not $6, $6
+; MIPS4-NEXT:    xor $6, $5, $6
+; MIPS4-NEXT:    and $6, $6, $3
+; MIPS4-NEXT:    xor $6, $5, $6
+; MIPS4-NEXT:    sc $6, 0($1)
+; MIPS4-NEXT:    beqz $6, .LBB10_1
 ; MIPS4-NEXT:    nop
 ; MIPS4-NEXT:  # %bb.2: # %entry
-; MIPS4-NEXT:    and $2, $7, $5
-; MIPS4-NEXT:    srlv $2, $2, $1
-; MIPS4-NEXT:    sll $2, $2, 24
-; MIPS4-NEXT:    sra $2, $2, 24
-; MIPS4-NEXT:  # %bb.3: # %entry
+; MIPS4-NEXT:    srlv $1, $5, $2
+; MIPS4-NEXT:    sll $1, $1, 24
 ; MIPS4-NEXT:    jr $ra
-; MIPS4-NEXT:    nop
+; MIPS4-NEXT:    sra $2, $1, 24
 ;
 ; MIPS64-LABEL: AtomicLoadNand8:
 ; MIPS64:       # %bb.0: # %entry
@@ -3460,33 +3345,31 @@ define signext i8 @AtomicLoadNand8(i8 signext %incr) nounwind {
 ; MIPS64-NEXT:    daddu $1, $1, $25
 ; MIPS64-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(AtomicLoadNand8)))
 ; MIPS64-NEXT:    ld $1, %got_disp(y)($1)
-; MIPS64-NEXT:    daddiu $2, $zero, -4
-; MIPS64-NEXT:    and $3, $1, $2
-; MIPS64-NEXT:    andi $1, $1, 3
-; MIPS64-NEXT:    sll $1, $1, 3
-; MIPS64-NEXT:    ori $2, $zero, 255
-; MIPS64-NEXT:    sllv $5, $2, $1
-; MIPS64-NEXT:    nor $6, $zero, $5
-; MIPS64-NEXT:    sllv $4, $4, $1
+; MIPS64-NEXT:    sll $2, $1, 0
+; MIPS64-NEXT:    andi $2, $2, 3
+; MIPS64-NEXT:    daddiu $3, $zero, -4
+; MIPS64-NEXT:    and $1, $1, $3
+; MIPS64-NEXT:    sll $2, $2, 3
+; MIPS64-NEXT:    addiu $3, $zero, 255
+; MIPS64-NEXT:    sllv $3, $3, $2
+; MIPS64-NEXT:    andi $4, $4, 255
+; MIPS64-NEXT:    sllv $4, $4, $2
 ; MIPS64-NEXT:  .LBB10_1: # %entry
 ; MIPS64-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64-NEXT:    ll $7, 0($3)
-; MIPS64-NEXT:    and $8, $7, $4
-; MIPS64-NEXT:    nor $8, $zero, $8
-; MIPS64-NEXT:    and $8, $8, $5
-; MIPS64-NEXT:    and $9, $7, $6
-; MIPS64-NEXT:    or $9, $9, $8
-; MIPS64-NEXT:    sc $9, 0($3)
-; MIPS64-NEXT:    beqz $9, .LBB10_1
+; MIPS64-NEXT:    ll $5, 0($1)
+; MIPS64-NEXT:    and $6, $5, $4
+; MIPS64-NEXT:    not $6, $6
+; MIPS64-NEXT:    xor $6, $5, $6
+; MIPS64-NEXT:    and $6, $6, $3
+; MIPS64-NEXT:    xor $6, $5, $6
+; MIPS64-NEXT:    sc $6, 0($1)
+; MIPS64-NEXT:    beqz $6, .LBB10_1
 ; MIPS64-NEXT:    nop
 ; MIPS64-NEXT:  # %bb.2: # %entry
-; MIPS64-NEXT:    and $2, $7, $5
-; MIPS64-NEXT:    srlv $2, $2, $1
-; MIPS64-NEXT:    sll $2, $2, 24
-; MIPS64-NEXT:    sra $2, $2, 24
-; MIPS64-NEXT:  # %bb.3: # %entry
+; MIPS64-NEXT:    srlv $1, $5, $2
+; MIPS64-NEXT:    sll $1, $1, 24
 ; MIPS64-NEXT:    jr $ra
-; MIPS64-NEXT:    nop
+; MIPS64-NEXT:    sra $2, $1, 24
 ;
 ; MIPS64R2-LABEL: AtomicLoadNand8:
 ; MIPS64R2:       # %bb.0: # %entry
@@ -3494,32 +3377,30 @@ define signext i8 @AtomicLoadNand8(i8 signext %incr) nounwind {
 ; MIPS64R2-NEXT:    daddu $1, $1, $25
 ; MIPS64R2-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(AtomicLoadNand8)))
 ; MIPS64R2-NEXT:    ld $1, %got_disp(y)($1)
-; MIPS64R2-NEXT:    daddiu $2, $zero, -4
-; MIPS64R2-NEXT:    and $3, $1, $2
-; MIPS64R2-NEXT:    andi $1, $1, 3
-; MIPS64R2-NEXT:    sll $1, $1, 3
-; MIPS64R2-NEXT:    ori $2, $zero, 255
-; MIPS64R2-NEXT:    sllv $5, $2, $1
-; MIPS64R2-NEXT:    nor $6, $zero, $5
-; MIPS64R2-NEXT:    sllv $4, $4, $1
+; MIPS64R2-NEXT:    sll $2, $1, 0
+; MIPS64R2-NEXT:    andi $2, $2, 3
+; MIPS64R2-NEXT:    daddiu $3, $zero, -4
+; MIPS64R2-NEXT:    and $1, $1, $3
+; MIPS64R2-NEXT:    sll $2, $2, 3
+; MIPS64R2-NEXT:    addiu $3, $zero, 255
+; MIPS64R2-NEXT:    sllv $3, $3, $2
+; MIPS64R2-NEXT:    andi $4, $4, 255
+; MIPS64R2-NEXT:    sllv $4, $4, $2
 ; MIPS64R2-NEXT:  .LBB10_1: # %entry
 ; MIPS64R2-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64R2-NEXT:    ll $7, 0($3)
-; MIPS64R2-NEXT:    and $8, $7, $4
-; MIPS64R2-NEXT:    nor $8, $zero, $8
-; MIPS64R2-NEXT:    and $8, $8, $5
-; MIPS64R2-NEXT:    and $9, $7, $6
-; MIPS64R2-NEXT:    or $9, $9, $8
-; MIPS64R2-NEXT:    sc $9, 0($3)
-; MIPS64R2-NEXT:    beqz $9, .LBB10_1
+; MIPS64R2-NEXT:    ll $5, 0($1)
+; MIPS64R2-NEXT:    and $6, $5, $4
+; MIPS64R2-NEXT:    not $6, $6
+; MIPS64R2-NEXT:    xor $6, $5, $6
+; MIPS64R2-NEXT:    and $6, $6, $3
+; MIPS64R2-NEXT:    xor $6, $5, $6
+; MIPS64R2-NEXT:    sc $6, 0($1)
+; MIPS64R2-NEXT:    beqz $6, .LBB10_1
 ; MIPS64R2-NEXT:    nop
 ; MIPS64R2-NEXT:  # %bb.2: # %entry
-; MIPS64R2-NEXT:    and $2, $7, $5
-; MIPS64R2-NEXT:    srlv $2, $2, $1
-; MIPS64R2-NEXT:    seb $2, $2
-; MIPS64R2-NEXT:  # %bb.3: # %entry
+; MIPS64R2-NEXT:    srlv $1, $5, $2
 ; MIPS64R2-NEXT:    jr $ra
-; MIPS64R2-NEXT:    nop
+; MIPS64R2-NEXT:    seb $2, $1
 ;
 ; MIPS64R6-LABEL: AtomicLoadNand8:
 ; MIPS64R6:       # %bb.0: # %entry
@@ -3527,67 +3408,61 @@ define signext i8 @AtomicLoadNand8(i8 signext %incr) nounwind {
 ; MIPS64R6-NEXT:    daddu $1, $1, $25
 ; MIPS64R6-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(AtomicLoadNand8)))
 ; MIPS64R6-NEXT:    ld $1, %got_disp(y)($1)
-; MIPS64R6-NEXT:    daddiu $2, $zero, -4
-; MIPS64R6-NEXT:    and $3, $1, $2
-; MIPS64R6-NEXT:    andi $1, $1, 3
-; MIPS64R6-NEXT:    sll $1, $1, 3
-; MIPS64R6-NEXT:    ori $2, $zero, 255
-; MIPS64R6-NEXT:    sllv $5, $2, $1
-; MIPS64R6-NEXT:    nor $6, $zero, $5
-; MIPS64R6-NEXT:    sllv $4, $4, $1
+; MIPS64R6-NEXT:    sll $2, $1, 0
+; MIPS64R6-NEXT:    andi $2, $2, 3
+; MIPS64R6-NEXT:    daddiu $3, $zero, -4
+; MIPS64R6-NEXT:    and $1, $1, $3
+; MIPS64R6-NEXT:    sll $2, $2, 3
+; MIPS64R6-NEXT:    addiu $3, $zero, 255
+; MIPS64R6-NEXT:    sllv $3, $3, $2
+; MIPS64R6-NEXT:    andi $4, $4, 255
+; MIPS64R6-NEXT:    sllv $4, $4, $2
 ; MIPS64R6-NEXT:  .LBB10_1: # %entry
 ; MIPS64R6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64R6-NEXT:    ll $7, 0($3)
-; MIPS64R6-NEXT:    and $8, $7, $4
-; MIPS64R6-NEXT:    nor $8, $zero, $8
-; MIPS64R6-NEXT:    and $8, $8, $5
-; MIPS64R6-NEXT:    and $9, $7, $6
-; MIPS64R6-NEXT:    or $9, $9, $8
-; MIPS64R6-NEXT:    sc $9, 0($3)
-; MIPS64R6-NEXT:    beqzc $9, .LBB10_1
+; MIPS64R6-NEXT:    ll $5, 0($1)
+; MIPS64R6-NEXT:    and $6, $5, $4
+; MIPS64R6-NEXT:    not $6, $6
+; MIPS64R6-NEXT:    xor $6, $5, $6
+; MIPS64R6-NEXT:    and $6, $6, $3
+; MIPS64R6-NEXT:    xor $6, $5, $6
+; MIPS64R6-NEXT:    sc $6, 0($1)
+; MIPS64R6-NEXT:    beqzc $6, .LBB10_1
 ; MIPS64R6-NEXT:  # %bb.2: # %entry
-; MIPS64R6-NEXT:    and $2, $7, $5
-; MIPS64R6-NEXT:    srlv $2, $2, $1
-; MIPS64R6-NEXT:    seb $2, $2
-; MIPS64R6-NEXT:  # %bb.3: # %entry
-; MIPS64R6-NEXT:    jrc $ra
+; MIPS64R6-NEXT:    srlv $1, $5, $2
+; MIPS64R6-NEXT:    jr $ra
+; MIPS64R6-NEXT:    seb $2, $1
 ;
 ; MIPS64R6O0-LABEL: AtomicLoadNand8:
 ; MIPS64R6O0:       # %bb.0: # %entry
-; MIPS64R6O0-NEXT:    daddiu $sp, $sp, -16
 ; MIPS64R6O0-NEXT:    lui $1, %hi(%neg(%gp_rel(AtomicLoadNand8)))
 ; MIPS64R6O0-NEXT:    daddu $1, $1, $25
 ; MIPS64R6O0-NEXT:    daddiu $2, $1, %lo(%neg(%gp_rel(AtomicLoadNand8)))
 ; MIPS64R6O0-NEXT:    move $1, $4
 ; MIPS64R6O0-NEXT:    ld $2, %got_disp(y)($2)
 ; MIPS64R6O0-NEXT:    daddiu $3, $zero, -4
-; MIPS64R6O0-NEXT:    and $5, $2, $3
+; MIPS64R6O0-NEXT:    and $4, $2, $3
+; MIPS64R6O0-NEXT:    # kill: def $v0 killed $v0 killed $v0_64
+; MIPS64R6O0-NEXT:    sll $2, $2, 0
+; MIPS64R6O0-NEXT:    not $2, $2
 ; MIPS64R6O0-NEXT:    andi $2, $2, 3
-; MIPS64R6O0-NEXT:    xori $2, $2, 3
-; MIPS64R6O0-NEXT:    sll $9, $2, 3
-; MIPS64R6O0-NEXT:    ori $2, $zero, 255
-; MIPS64R6O0-NEXT:    sllv $7, $2, $9
-; MIPS64R6O0-NEXT:    nor $8, $zero, $7
-; MIPS64R6O0-NEXT:    sllv $6, $1, $9
+; MIPS64R6O0-NEXT:    sll $2, $2, 3
+; MIPS64R6O0-NEXT:    addiu $3, $zero, 255
+; MIPS64R6O0-NEXT:    sllv $6, $3, $2
+; MIPS64R6O0-NEXT:    andi $1, $1, 255
+; MIPS64R6O0-NEXT:    sllv $5, $1, $2
 ; MIPS64R6O0-NEXT:  .LBB10_1: # %entry
 ; MIPS64R6O0-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64R6O0-NEXT:    ll $2, 0($5)
-; MIPS64R6O0-NEXT:    and $3, $2, $6
-; MIPS64R6O0-NEXT:    nor $3, $zero, $3
-; MIPS64R6O0-NEXT:    and $3, $3, $7
-; MIPS64R6O0-NEXT:    and $4, $2, $8
-; MIPS64R6O0-NEXT:    or $4, $4, $3
-; MIPS64R6O0-NEXT:    sc $4, 0($5)
-; MIPS64R6O0-NEXT:    beqzc $4, .LBB10_1
+; MIPS64R6O0-NEXT:    ll $1, 0($4)
+; MIPS64R6O0-NEXT:    and $3, $1, $5
+; MIPS64R6O0-NEXT:    not $3, $3
+; MIPS64R6O0-NEXT:    xor $3, $1, $3
+; MIPS64R6O0-NEXT:    and $3, $3, $6
+; MIPS64R6O0-NEXT:    xor $3, $1, $3
+; MIPS64R6O0-NEXT:    sc $3, 0($4)
+; MIPS64R6O0-NEXT:    beqzc $3, .LBB10_1
 ; MIPS64R6O0-NEXT:  # %bb.2: # %entry
-; MIPS64R6O0-NEXT:    and $1, $2, $7
-; MIPS64R6O0-NEXT:    srlv $1, $1, $9
-; MIPS64R6O0-NEXT:    seb $1, $1
-; MIPS64R6O0-NEXT:  # %bb.3: # %entry
-; MIPS64R6O0-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
-; MIPS64R6O0-NEXT:  # %bb.4: # %entry
-; MIPS64R6O0-NEXT:    lw $2, 12($sp) # 4-byte Folded Reload
-; MIPS64R6O0-NEXT:    daddiu $sp, $sp, 16
+; MIPS64R6O0-NEXT:    srlv $1, $1, $2
+; MIPS64R6O0-NEXT:    seb $2, $1
 ; MIPS64R6O0-NEXT:    jrc $ra
 ;
 ; MM32-LABEL: AtomicLoadNand8:
@@ -3595,99 +3470,91 @@ define signext i8 @AtomicLoadNand8(i8 signext %incr) nounwind {
 ; MM32-NEXT:    lui $2, %hi(_gp_disp)
 ; MM32-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; MM32-NEXT:    addu $2, $2, $25
-; MM32-NEXT:    lw $1, %got(y)($2)
-; MM32-NEXT:    addiu $2, $zero, -4
-; MM32-NEXT:    and $3, $1, $2
-; MM32-NEXT:    andi $1, $1, 3
-; MM32-NEXT:    sll $1, $1, 3
-; MM32-NEXT:    ori $2, $zero, 255
-; MM32-NEXT:    sllv $5, $2, $1
-; MM32-NEXT:    nor $6, $zero, $5
-; MM32-NEXT:    sllv $4, $4, $1
+; MM32-NEXT:    addiu $3, $zero, -4
+; MM32-NEXT:    lw $2, %got(y)($2)
+; MM32-NEXT:    and16 $3, $2
+; MM32-NEXT:    andi16 $2, $2, 3
+; MM32-NEXT:    sll16 $2, $2, 3
+; MM32-NEXT:    addiu $1, $zero, 255
+; MM32-NEXT:    sllv $1, $1, $2
+; MM32-NEXT:    andi16 $4, $4, 255
+; MM32-NEXT:    sllv $4, $4, $2
 ; MM32-NEXT:  $BB10_1: # %entry
 ; MM32-NEXT:    # =>This Inner Loop Header: Depth=1
-; MM32-NEXT:    ll $7, 0($3)
-; MM32-NEXT:    and $8, $7, $4
-; MM32-NEXT:    nor $8, $zero, $8
-; MM32-NEXT:    and $8, $8, $5
-; MM32-NEXT:    and $9, $7, $6
-; MM32-NEXT:    or $9, $9, $8
-; MM32-NEXT:    sc $9, 0($3)
-; MM32-NEXT:    beqzc $9, $BB10_1
+; MM32-NEXT:    ll $5, 0($3)
+; MM32-NEXT:    and $6, $5, $4
+; MM32-NEXT:    not $6, $6
+; MM32-NEXT:    xor16 $6, $5
+; MM32-NEXT:    and $6, $6, $1
+; MM32-NEXT:    xor16 $6, $5
+; MM32-NEXT:    sc $6, 0($3)
+; MM32-NEXT:    beqzc $6, $BB10_1
 ; MM32-NEXT:  # %bb.2: # %entry
-; MM32-NEXT:    and $2, $7, $5
-; MM32-NEXT:    srlv $2, $2, $1
-; MM32-NEXT:    seb $2, $2
-; MM32-NEXT:  # %bb.3: # %entry
-; MM32-NEXT:    jrc $ra
+; MM32-NEXT:    srlv $1, $5, $2
+; MM32-NEXT:    jr $ra
+; MM32-NEXT:    seb $2, $1
 ;
 ; O1-LABEL: AtomicLoadNand8:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    lui $2, %hi(_gp_disp)
 ; O1-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; O1-NEXT:    addu $1, $2, $25
-; O1-NEXT:    lw $1, %got(y)($1)
 ; O1-NEXT:    addiu $2, $zero, -4
-; O1-NEXT:    and $3, $1, $2
+; O1-NEXT:    lw $1, %got(y)($1)
+; O1-NEXT:    and $2, $1, $2
 ; O1-NEXT:    andi $1, $1, 3
 ; O1-NEXT:    sll $1, $1, 3
-; O1-NEXT:    ori $2, $zero, 255
-; O1-NEXT:    sllv $5, $2, $1
-; O1-NEXT:    nor $6, $zero, $5
+; O1-NEXT:    addiu $3, $zero, 255
+; O1-NEXT:    sllv $3, $3, $1
+; O1-NEXT:    andi $4, $4, 255
 ; O1-NEXT:    sllv $4, $4, $1
 ; O1-NEXT:  $BB10_1: # %entry
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
-; O1-NEXT:    ll $7, 0($3)
-; O1-NEXT:    and $8, $7, $4
-; O1-NEXT:    nor $8, $zero, $8
-; O1-NEXT:    and $8, $8, $5
-; O1-NEXT:    and $9, $7, $6
-; O1-NEXT:    or $9, $9, $8
-; O1-NEXT:    sc $9, 0($3)
-; O1-NEXT:    beqz $9, $BB10_1
+; O1-NEXT:    ll $5, 0($2)
+; O1-NEXT:    and $6, $5, $4
+; O1-NEXT:    not $6, $6
+; O1-NEXT:    xor $6, $5, $6
+; O1-NEXT:    and $6, $6, $3
+; O1-NEXT:    xor $6, $5, $6
+; O1-NEXT:    sc $6, 0($2)
+; O1-NEXT:    beqz $6, $BB10_1
 ; O1-NEXT:    nop
 ; O1-NEXT:  # %bb.2: # %entry
-; O1-NEXT:    and $2, $7, $5
-; O1-NEXT:    srlv $2, $2, $1
-; O1-NEXT:    sll $2, $2, 24
-; O1-NEXT:    sra $2, $2, 24
-; O1-NEXT:  # %bb.3: # %entry
+; O1-NEXT:    srlv $1, $5, $1
+; O1-NEXT:    sll $1, $1, 24
 ; O1-NEXT:    jr $ra
-; O1-NEXT:    nop
+; O1-NEXT:    sra $2, $1, 24
 ;
 ; O2-LABEL: AtomicLoadNand8:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    lui $2, %hi(_gp_disp)
 ; O2-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; O2-NEXT:    addu $1, $2, $25
-; O2-NEXT:    lw $1, %got(y)($1)
 ; O2-NEXT:    addiu $2, $zero, -4
-; O2-NEXT:    and $3, $1, $2
+; O2-NEXT:    lw $1, %got(y)($1)
+; O2-NEXT:    and $2, $1, $2
 ; O2-NEXT:    andi $1, $1, 3
 ; O2-NEXT:    sll $1, $1, 3
-; O2-NEXT:    ori $2, $zero, 255
-; O2-NEXT:    sllv $5, $2, $1
-; O2-NEXT:    nor $6, $zero, $5
+; O2-NEXT:    addiu $3, $zero, 255
+; O2-NEXT:    sllv $3, $3, $1
+; O2-NEXT:    andi $4, $4, 255
 ; O2-NEXT:    sllv $4, $4, $1
 ; O2-NEXT:  $BB10_1: # %entry
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
-; O2-NEXT:    ll $7, 0($3)
-; O2-NEXT:    and $8, $7, $4
-; O2-NEXT:    nor $8, $zero, $8
-; O2-NEXT:    and $8, $8, $5
-; O2-NEXT:    and $9, $7, $6
-; O2-NEXT:    or $9, $9, $8
-; O2-NEXT:    sc $9, 0($3)
-; O2-NEXT:    beqz $9, $BB10_1
+; O2-NEXT:    ll $5, 0($2)
+; O2-NEXT:    and $6, $5, $4
+; O2-NEXT:    not $6, $6
+; O2-NEXT:    xor $6, $5, $6
+; O2-NEXT:    and $6, $6, $3
+; O2-NEXT:    xor $6, $5, $6
+; O2-NEXT:    sc $6, 0($2)
+; O2-NEXT:    beqz $6, $BB10_1
 ; O2-NEXT:    nop
 ; O2-NEXT:  # %bb.2: # %entry
-; O2-NEXT:    and $2, $7, $5
-; O2-NEXT:    srlv $2, $2, $1
-; O2-NEXT:    sll $2, $2, 24
-; O2-NEXT:    sra $2, $2, 24
-; O2-NEXT:  # %bb.3: # %entry
+; O2-NEXT:    srlv $1, $5, $1
+; O2-NEXT:    sll $1, $1, 24
 ; O2-NEXT:    jr $ra
-; O2-NEXT:    nop
+; O2-NEXT:    sra $2, $1, 24
 ;
 ; O3-LABEL: AtomicLoadNand8:
 ; O3:       # %bb.0: # %entry
@@ -3695,33 +3562,30 @@ define signext i8 @AtomicLoadNand8(i8 signext %incr) nounwind {
 ; O3-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; O3-NEXT:    addu $1, $2, $25
 ; O3-NEXT:    addiu $2, $zero, -4
+; O3-NEXT:    addiu $3, $zero, 255
+; O3-NEXT:    andi $4, $4, 255
 ; O3-NEXT:    lw $1, %got(y)($1)
-; O3-NEXT:    and $3, $1, $2
+; O3-NEXT:    and $2, $1, $2
 ; O3-NEXT:    andi $1, $1, 3
-; O3-NEXT:    ori $2, $zero, 255
 ; O3-NEXT:    sll $1, $1, 3
-; O3-NEXT:    sllv $5, $2, $1
+; O3-NEXT:    sllv $3, $3, $1
 ; O3-NEXT:    sllv $4, $4, $1
-; O3-NEXT:    nor $6, $zero, $5
 ; O3-NEXT:  $BB10_1: # %entry
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
-; O3-NEXT:    ll $7, 0($3)
-; O3-NEXT:    and $8, $7, $4
-; O3-NEXT:    nor $8, $zero, $8
-; O3-NEXT:    and $8, $8, $5
-; O3-NEXT:    and $9, $7, $6
-; O3-NEXT:    or $9, $9, $8
-; O3-NEXT:    sc $9, 0($3)
-; O3-NEXT:    beqz $9, $BB10_1
+; O3-NEXT:    ll $5, 0($2)
+; O3-NEXT:    and $6, $5, $4
+; O3-NEXT:    not $6, $6
+; O3-NEXT:    xor $6, $5, $6
+; O3-NEXT:    and $6, $6, $3
+; O3-NEXT:    xor $6, $5, $6
+; O3-NEXT:    sc $6, 0($2)
+; O3-NEXT:    beqz $6, $BB10_1
 ; O3-NEXT:    nop
 ; O3-NEXT:  # %bb.2: # %entry
-; O3-NEXT:    and $2, $7, $5
-; O3-NEXT:    srlv $2, $2, $1
-; O3-NEXT:    sll $2, $2, 24
-; O3-NEXT:    sra $2, $2, 24
-; O3-NEXT:  # %bb.3: # %entry
+; O3-NEXT:    srlv $1, $5, $1
+; O3-NEXT:    sll $1, $1, 24
 ; O3-NEXT:    jr $ra
-; O3-NEXT:    nop
+; O3-NEXT:    sra $2, $1, 24
 ;
 ; MIPS32EB-LABEL: AtomicLoadNand8:
 ; MIPS32EB:       # %bb.0: # %entry
@@ -3729,34 +3593,31 @@ define signext i8 @AtomicLoadNand8(i8 signext %incr) nounwind {
 ; MIPS32EB-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; MIPS32EB-NEXT:    addu $1, $2, $25
 ; MIPS32EB-NEXT:    lw $1, %got(y)($1)
-; MIPS32EB-NEXT:    addiu $2, $zero, -4
-; MIPS32EB-NEXT:    and $3, $1, $2
-; MIPS32EB-NEXT:    andi $1, $1, 3
-; MIPS32EB-NEXT:    xori $1, $1, 3
-; MIPS32EB-NEXT:    sll $1, $1, 3
-; MIPS32EB-NEXT:    ori $2, $zero, 255
-; MIPS32EB-NEXT:    sllv $5, $2, $1
-; MIPS32EB-NEXT:    nor $6, $zero, $5
-; MIPS32EB-NEXT:    sllv $4, $4, $1
+; MIPS32EB-NEXT:    not $2, $1
+; MIPS32EB-NEXT:    addiu $3, $zero, -4
+; MIPS32EB-NEXT:    and $1, $1, $3
+; MIPS32EB-NEXT:    andi $2, $2, 3
+; MIPS32EB-NEXT:    sll $2, $2, 3
+; MIPS32EB-NEXT:    addiu $3, $zero, 255
+; MIPS32EB-NEXT:    sllv $3, $3, $2
+; MIPS32EB-NEXT:    andi $4, $4, 255
+; MIPS32EB-NEXT:    sllv $4, $4, $2
 ; MIPS32EB-NEXT:  $BB10_1: # %entry
 ; MIPS32EB-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS32EB-NEXT:    ll $7, 0($3)
-; MIPS32EB-NEXT:    and $8, $7, $4
-; MIPS32EB-NEXT:    nor $8, $zero, $8
-; MIPS32EB-NEXT:    and $8, $8, $5
-; MIPS32EB-NEXT:    and $9, $7, $6
-; MIPS32EB-NEXT:    or $9, $9, $8
-; MIPS32EB-NEXT:    sc $9, 0($3)
-; MIPS32EB-NEXT:    beqz $9, $BB10_1
+; MIPS32EB-NEXT:    ll $5, 0($1)
+; MIPS32EB-NEXT:    and $6, $5, $4
+; MIPS32EB-NEXT:    not $6, $6
+; MIPS32EB-NEXT:    xor $6, $5, $6
+; MIPS32EB-NEXT:    and $6, $6, $3
+; MIPS32EB-NEXT:    xor $6, $5, $6
+; MIPS32EB-NEXT:    sc $6, 0($1)
+; MIPS32EB-NEXT:    beqz $6, $BB10_1
 ; MIPS32EB-NEXT:    nop
 ; MIPS32EB-NEXT:  # %bb.2: # %entry
-; MIPS32EB-NEXT:    and $2, $7, $5
-; MIPS32EB-NEXT:    srlv $2, $2, $1
-; MIPS32EB-NEXT:    sll $2, $2, 24
-; MIPS32EB-NEXT:    sra $2, $2, 24
-; MIPS32EB-NEXT:  # %bb.3: # %entry
+; MIPS32EB-NEXT:    srlv $1, $5, $2
+; MIPS32EB-NEXT:    sll $1, $1, 24
 ; MIPS32EB-NEXT:    jr $ra
-; MIPS32EB-NEXT:    nop
+; MIPS32EB-NEXT:    sra $2, $1, 24
 entry:
   %0 = atomicrmw nand ptr @y, i8 %incr monotonic
   ret i8 %0
@@ -3769,69 +3630,60 @@ define signext i8 @AtomicSwap8(i8 signext %newval) nounwind {
 ; MIPS32-NEXT:    lui $2, %hi(_gp_disp)
 ; MIPS32-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; MIPS32-NEXT:    addu $1, $2, $25
-; MIPS32-NEXT:    lw $1, %got(y)($1)
 ; MIPS32-NEXT:    addiu $2, $zero, -4
-; MIPS32-NEXT:    and $3, $1, $2
+; MIPS32-NEXT:    lw $1, %got(y)($1)
+; MIPS32-NEXT:    and $2, $1, $2
 ; MIPS32-NEXT:    andi $1, $1, 3
 ; MIPS32-NEXT:    sll $1, $1, 3
-; MIPS32-NEXT:    ori $2, $zero, 255
-; MIPS32-NEXT:    sllv $5, $2, $1
-; MIPS32-NEXT:    nor $6, $zero, $5
+; MIPS32-NEXT:    addiu $3, $zero, 255
+; MIPS32-NEXT:    sllv $3, $3, $1
+; MIPS32-NEXT:    andi $4, $4, 255
 ; MIPS32-NEXT:    sllv $4, $4, $1
 ; MIPS32-NEXT:  $BB11_1: # %entry
 ; MIPS32-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS32-NEXT:    ll $7, 0($3)
-; MIPS32-NEXT:    and $8, $4, $5
-; MIPS32-NEXT:    and $9, $7, $6
-; MIPS32-NEXT:    or $9, $9, $8
-; MIPS32-NEXT:    sc $9, 0($3)
-; MIPS32-NEXT:    beqz $9, $BB11_1
+; MIPS32-NEXT:    ll $5, 0($2)
+; MIPS32-NEXT:    xor $6, $5, $4
+; MIPS32-NEXT:    and $6, $6, $3
+; MIPS32-NEXT:    xor $6, $5, $6
+; MIPS32-NEXT:    sc $6, 0($2)
+; MIPS32-NEXT:    beqz $6, $BB11_1
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  # %bb.2: # %entry
-; MIPS32-NEXT:    and $2, $7, $5
-; MIPS32-NEXT:    srlv $2, $2, $1
-; MIPS32-NEXT:    sll $2, $2, 24
-; MIPS32-NEXT:    sra $2, $2, 24
-; MIPS32-NEXT:  # %bb.3: # %entry
+; MIPS32-NEXT:    srlv $1, $5, $1
+; MIPS32-NEXT:    sll $1, $1, 24
 ; MIPS32-NEXT:    jr $ra
-; MIPS32-NEXT:    nop
+; MIPS32-NEXT:    sra $2, $1, 24
 ;
 ; MIPS32O0-LABEL: AtomicSwap8:
 ; MIPS32O0:       # %bb.0: # %entry
 ; MIPS32O0-NEXT:    lui $2, %hi(_gp_disp)
 ; MIPS32O0-NEXT:    addiu $2, $2, %lo(_gp_disp)
-; MIPS32O0-NEXT:    addiu $sp, $sp, -8
-; MIPS32O0-NEXT:    addu $1, $2, $25
-; MIPS32O0-NEXT:    lw $1, %got(y)($1)
-; MIPS32O0-NEXT:    addiu $2, $zero, -4
-; MIPS32O0-NEXT:    and $5, $1, $2
-; MIPS32O0-NEXT:    andi $1, $1, 3
-; MIPS32O0-NEXT:    sll $9, $1, 3
-; MIPS32O0-NEXT:    ori $1, $zero, 255
-; MIPS32O0-NEXT:    sllv $7, $1, $9
-; MIPS32O0-NEXT:    nor $8, $zero, $7
-; MIPS32O0-NEXT:    sllv $6, $4, $9
+; MIPS32O0-NEXT:    addu $2, $2, $25
+; MIPS32O0-NEXT:    move $1, $4
+; MIPS32O0-NEXT:    lw $3, %got(y)($2)
+; MIPS32O0-NEXT:    addiu $4, $zero, -4
+; MIPS32O0-NEXT:    and $4, $3, $4
+; MIPS32O0-NEXT:    lw $2, %got(y)($2)
+; MIPS32O0-NEXT:    addiu $3, $zero, 3
+; MIPS32O0-NEXT:    and $2, $2, $3
+; MIPS32O0-NEXT:    sll $2, $2, 3
+; MIPS32O0-NEXT:    addiu $3, $zero, 255
+; MIPS32O0-NEXT:    sllv $6, $3, $2
+; MIPS32O0-NEXT:    andi $1, $1, 255
+; MIPS32O0-NEXT:    sllv $5, $1, $2
 ; MIPS32O0-NEXT:  $BB11_1: # %entry
 ; MIPS32O0-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS32O0-NEXT:    ll $2, 0($5)
-; MIPS32O0-NEXT:    and $3, $6, $7
-; MIPS32O0-NEXT:    and $4, $2, $8
-; MIPS32O0-NEXT:    or $4, $4, $3
-; MIPS32O0-NEXT:    sc $4, 0($5)
-; MIPS32O0-NEXT:    beqz $4, $BB11_1
+; MIPS32O0-NEXT:    ll $1, 0($4)
+; MIPS32O0-NEXT:    xor $3, $1, $5
+; MIPS32O0-NEXT:    and $3, $3, $6
+; MIPS32O0-NEXT:    xor $3, $1, $3
+; MIPS32O0-NEXT:    sc $3, 0($4)
+; MIPS32O0-NEXT:    beqz $3, $BB11_1
 ; MIPS32O0-NEXT:    nop
 ; MIPS32O0-NEXT:  # %bb.2: # %entry
-; MIPS32O0-NEXT:    and $1, $2, $7
-; MIPS32O0-NEXT:    srlv $1, $1, $9
-; MIPS32O0-NEXT:    sll $1, $1, 24
-; MIPS32O0-NEXT:    sra $1, $1, 24
-; MIPS32O0-NEXT:  # %bb.3: # %entry
-; MIPS32O0-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
-; MIPS32O0-NEXT:  # %bb.4: # %entry
-; MIPS32O0-NEXT:    lw $1, 4($sp) # 4-byte Folded Reload
+; MIPS32O0-NEXT:    srlv $1, $1, $2
 ; MIPS32O0-NEXT:    sll $1, $1, 24
 ; MIPS32O0-NEXT:    sra $2, $1, 24
-; MIPS32O0-NEXT:    addiu $sp, $sp, 8
 ; MIPS32O0-NEXT:    jr $ra
 ; MIPS32O0-NEXT:    nop
 ;
@@ -3840,93 +3692,82 @@ define signext i8 @AtomicSwap8(i8 signext %newval) nounwind {
 ; MIPS32R2-NEXT:    lui $2, %hi(_gp_disp)
 ; MIPS32R2-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; MIPS32R2-NEXT:    addu $1, $2, $25
-; MIPS32R2-NEXT:    lw $1, %got(y)($1)
 ; MIPS32R2-NEXT:    addiu $2, $zero, -4
-; MIPS32R2-NEXT:    and $3, $1, $2
+; MIPS32R2-NEXT:    lw $1, %got(y)($1)
+; MIPS32R2-NEXT:    and $2, $1, $2
 ; MIPS32R2-NEXT:    andi $1, $1, 3
 ; MIPS32R2-NEXT:    sll $1, $1, 3
-; MIPS32R2-NEXT:    ori $2, $zero, 255
-; MIPS32R2-NEXT:    sllv $5, $2, $1
-; MIPS32R2-NEXT:    nor $6, $zero, $5
+; MIPS32R2-NEXT:    addiu $3, $zero, 255
+; MIPS32R2-NEXT:    sllv $3, $3, $1
+; MIPS32R2-NEXT:    andi $4, $4, 255
 ; MIPS32R2-NEXT:    sllv $4, $4, $1
 ; MIPS32R2-NEXT:  $BB11_1: # %entry
 ; MIPS32R2-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS32R2-NEXT:    ll $7, 0($3)
-; MIPS32R2-NEXT:    and $8, $4, $5
-; MIPS32R2-NEXT:    and $9, $7, $6
-; MIPS32R2-NEXT:    or $9, $9, $8
-; MIPS32R2-NEXT:    sc $9, 0($3)
-; MIPS32R2-NEXT:    beqz $9, $BB11_1
+; MIPS32R2-NEXT:    ll $5, 0($2)
+; MIPS32R2-NEXT:    xor $6, $5, $4
+; MIPS32R2-NEXT:    and $6, $6, $3
+; MIPS32R2-NEXT:    xor $6, $5, $6
+; MIPS32R2-NEXT:    sc $6, 0($2)
+; MIPS32R2-NEXT:    beqz $6, $BB11_1
 ; MIPS32R2-NEXT:    nop
 ; MIPS32R2-NEXT:  # %bb.2: # %entry
-; MIPS32R2-NEXT:    and $2, $7, $5
-; MIPS32R2-NEXT:    srlv $2, $2, $1
-; MIPS32R2-NEXT:    seb $2, $2
-; MIPS32R2-NEXT:  # %bb.3: # %entry
+; MIPS32R2-NEXT:    srlv $1, $5, $1
 ; MIPS32R2-NEXT:    jr $ra
-; MIPS32R2-NEXT:    nop
+; MIPS32R2-NEXT:    seb $2, $1
 ;
 ; MIPS32R6-LABEL: AtomicSwap8:
 ; MIPS32R6:       # %bb.0: # %entry
 ; MIPS32R6-NEXT:    lui $2, %hi(_gp_disp)
 ; MIPS32R6-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; MIPS32R6-NEXT:    addu $1, $2, $25
-; MIPS32R6-NEXT:    lw $1, %got(y)($1)
 ; MIPS32R6-NEXT:    addiu $2, $zero, -4
-; MIPS32R6-NEXT:    and $3, $1, $2
+; MIPS32R6-NEXT:    lw $1, %got(y)($1)
+; MIPS32R6-NEXT:    and $2, $1, $2
 ; MIPS32R6-NEXT:    andi $1, $1, 3
 ; MIPS32R6-NEXT:    sll $1, $1, 3
-; MIPS32R6-NEXT:    ori $2, $zero, 255
-; MIPS32R6-NEXT:    sllv $5, $2, $1
-; MIPS32R6-NEXT:    nor $6, $zero, $5
+; MIPS32R6-NEXT:    addiu $3, $zero, 255
+; MIPS32R6-NEXT:    sllv $3, $3, $1
+; MIPS32R6-NEXT:    andi $4, $4, 255
 ; MIPS32R6-NEXT:    sllv $4, $4, $1
 ; MIPS32R6-NEXT:  $BB11_1: # %entry
 ; MIPS32R6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS32R6-NEXT:    ll $7, 0($3)
-; MIPS32R6-NEXT:    and $8, $4, $5
-; MIPS32R6-NEXT:    and $9, $7, $6
-; MIPS32R6-NEXT:    or $9, $9, $8
-; MIPS32R6-NEXT:    sc $9, 0($3)
-; MIPS32R6-NEXT:    beqzc $9, $BB11_1
+; MIPS32R6-NEXT:    ll $5, 0($2)
+; MIPS32R6-NEXT:    xor $6, $5, $4
+; MIPS32R6-NEXT:    and $6, $6, $3
+; MIPS32R6-NEXT:    xor $6, $5, $6
+; MIPS32R6-NEXT:    sc $6, 0($2)
+; MIPS32R6-NEXT:    beqzc $6, $BB11_1
 ; MIPS32R6-NEXT:  # %bb.2: # %entry
-; MIPS32R6-NEXT:    and $2, $7, $5
-; MIPS32R6-NEXT:    srlv $2, $2, $1
-; MIPS32R6-NEXT:    seb $2, $2
-; MIPS32R6-NEXT:  # %bb.3: # %entry
-; MIPS32R6-NEXT:    jrc $ra
+; MIPS32R6-NEXT:    srlv $1, $5, $1
+; MIPS32R6-NEXT:    jr $ra
+; MIPS32R6-NEXT:    seb $2, $1
 ;
 ; MIPS32R6O0-LABEL: AtomicSwap8:
 ; MIPS32R6O0:       # %bb.0: # %entry
 ; MIPS32R6O0-NEXT:    lui $2, %hi(_gp_disp)
 ; MIPS32R6O0-NEXT:    addiu $2, $2, %lo(_gp_disp)
-; MIPS32R6O0-NEXT:    addiu $sp, $sp, -8
-; MIPS32R6O0-NEXT:    addu $1, $2, $25
-; MIPS32R6O0-NEXT:    lw $1, %got(y)($1)
-; MIPS32R6O0-NEXT:    addiu $2, $zero, -4
-; MIPS32R6O0-NEXT:    and $5, $1, $2
-; MIPS32R6O0-NEXT:    andi $1, $1, 3
-; MIPS32R6O0-NEXT:    sll $9, $1, 3
-; MIPS32R6O0-NEXT:    ori $1, $zero, 255
-; MIPS32R6O0-NEXT:    sllv $7, $1, $9
-; MIPS32R6O0-NEXT:    nor $8, $zero, $7
-; MIPS32R6O0-NEXT:    sllv $6, $4, $9
+; MIPS32R6O0-NEXT:    addu $2, $2, $25
+; MIPS32R6O0-NEXT:    move $1, $4
+; MIPS32R6O0-NEXT:    lw $2, %got(y)($2)
+; MIPS32R6O0-NEXT:    addiu $3, $zero, -4
+; MIPS32R6O0-NEXT:    and $4, $2, $3
+; MIPS32R6O0-NEXT:    andi $2, $2, 3
+; MIPS32R6O0-NEXT:    sll $2, $2, 3
+; MIPS32R6O0-NEXT:    addiu $3, $zero, 255
+; MIPS32R6O0-NEXT:    sllv $6, $3, $2
+; MIPS32R6O0-NEXT:    andi $1, $1, 255
+; MIPS32R6O0-NEXT:    sllv $5, $1, $2
 ; MIPS32R6O0-NEXT:  $BB11_1: # %entry
 ; MIPS32R6O0-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS32R6O0-NEXT:    ll $2, 0($5)
-; MIPS32R6O0-NEXT:    and $3, $6, $7
-; MIPS32R6O0-NEXT:    and $4, $2, $8
-; MIPS32R6O0-NEXT:    or $4, $4, $3
-; MIPS32R6O0-NEXT:    sc $4, 0($5)
-; MIPS32R6O0-NEXT:    beqzc $4, $BB11_1
+; MIPS32R6O0-NEXT:    ll $1, 0($4)
+; MIPS32R6O0-NEXT:    xor $3, $1, $5
+; MIPS32R6O0-NEXT:    and $3, $3, $6
+; MIPS32R6O0-NEXT:    xor $3, $1, $3
+; MIPS32R6O0-NEXT:    sc $3, 0($4)
+; MIPS32R6O0-NEXT:    beqzc $3, $BB11_1
 ; MIPS32R6O0-NEXT:  # %bb.2: # %entry
-; MIPS32R6O0-NEXT:    and $1, $2, $7
-; MIPS32R6O0-NEXT:    srlv $1, $1, $9
-; MIPS32R6O0-NEXT:    seb $1, $1
-; MIPS32R6O0-NEXT:  # %bb.3: # %entry
-; MIPS32R6O0-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
-; MIPS32R6O0-NEXT:  # %bb.4: # %entry
-; MIPS32R6O0-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
-; MIPS32R6O0-NEXT:    addiu $sp, $sp, 8
+; MIPS32R6O0-NEXT:    srlv $1, $1, $2
+; MIPS32R6O0-NEXT:    seb $2, $1
 ; MIPS32R6O0-NEXT:    jrc $ra
 ;
 ; MIPS4-LABEL: AtomicSwap8:
@@ -3935,31 +3776,29 @@ define signext i8 @AtomicSwap8(i8 signext %newval) nounwind {
 ; MIPS4-NEXT:    daddu $1, $1, $25
 ; MIPS4-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(AtomicSwap8)))
 ; MIPS4-NEXT:    ld $1, %got_disp(y)($1)
-; MIPS4-NEXT:    daddiu $2, $zero, -4
-; MIPS4-NEXT:    and $3, $1, $2
-; MIPS4-NEXT:    andi $1, $1, 3
-; MIPS4-NEXT:    sll $1, $1, 3
-; MIPS4-NEXT:    ori $2, $zero, 255
-; MIPS4-NEXT:    sllv $5, $2, $1
-; MIPS4-NEXT:    nor $6, $zero, $5
-; MIPS4-NEXT:    sllv $4, $4, $1
+; MIPS4-NEXT:    sll $2, $1, 0
+; MIPS4-NEXT:    andi $2, $2, 3
+; MIPS4-NEXT:    daddiu $3, $zero, -4
+; MIPS4-NEXT:    and $1, $1, $3
+; MIPS4-NEXT:    sll $2, $2, 3
+; MIPS4-NEXT:    addiu $3, $zero, 255
+; MIPS4-NEXT:    sllv $3, $3, $2
+; MIPS4-NEXT:    andi $4, $4, 255
+; MIPS4-NEXT:    sllv $4, $4, $2
 ; MIPS4-NEXT:  .LBB11_1: # %entry
 ; MIPS4-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS4-NEXT:    ll $7, 0($3)
-; MIPS4-NEXT:    and $8, $4, $5
-; MIPS4-NEXT:    and $9, $7, $6
-; MIPS4-NEXT:    or $9, $9, $8
-; MIPS4-NEXT:    sc $9, 0($3)
-; MIPS4-NEXT:    beqz $9, .LBB11_1
+; MIPS4-NEXT:    ll $5, 0($1)
+; MIPS4-NEXT:    xor $6, $5, $4
+; MIPS4-NEXT:    and $6, $6, $3
+; MIPS4-NEXT:    xor $6, $5, $6
+; MIPS4-NEXT:    sc $6, 0($1)
+; MIPS4-NEXT:    beqz $6, .LBB11_1
 ; MIPS4-NEXT:    nop
 ; MIPS4-NEXT:  # %bb.2: # %entry
-; MIPS4-NEXT:    and $2, $7, $5
-; MIPS4-NEXT:    srlv $2, $2, $1
-; MIPS4-NEXT:    sll $2, $2, 24
-; MIPS4-NEXT:    sra $2, $2, 24
-; MIPS4-NEXT:  # %bb.3: # %entry
+; MIPS4-NEXT:    srlv $1, $5, $2
+; MIPS4-NEXT:    sll $1, $1, 24
 ; MIPS4-NEXT:    jr $ra
-; MIPS4-NEXT:    nop
+; MIPS4-NEXT:    sra $2, $1, 24
 ;
 ; MIPS64-LABEL: AtomicSwap8:
 ; MIPS64:       # %bb.0: # %entry
@@ -3967,31 +3806,29 @@ define signext i8 @AtomicSwap8(i8 signext %newval) nounwind {
 ; MIPS64-NEXT:    daddu $1, $1, $25
 ; MIPS64-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(AtomicSwap8)))
 ; MIPS64-NEXT:    ld $1, %got_disp(y)($1)
-; MIPS64-NEXT:    daddiu $2, $zero, -4
-; MIPS64-NEXT:    and $3, $1, $2
-; MIPS64-NEXT:    andi $1, $1, 3
-; MIPS64-NEXT:    sll $1, $1, 3
-; MIPS64-NEXT:    ori $2, $zero, 255
-; MIPS64-NEXT:    sllv $5, $2, $1
-; MIPS64-NEXT:    nor $6, $zero, $5
-; MIPS64-NEXT:    sllv $4, $4, $1
+; MIPS64-NEXT:    sll $2, $1, 0
+; MIPS64-NEXT:    andi $2, $2, 3
+; MIPS64-NEXT:    daddiu $3, $zero, -4
+; MIPS64-NEXT:    and $1, $1, $3
+; MIPS64-NEXT:    sll $2, $2, 3
+; MIPS64-NEXT:    addiu $3, $zero, 255
+; MIPS64-NEXT:    sllv $3, $3, $2
+; MIPS64-NEXT:    andi $4, $4, 255
+; MIPS64-NEXT:    sllv $4, $4, $2
 ; MIPS64-NEXT:  .LBB11_1: # %entry
 ; MIPS64-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64-NEXT:    ll $7, 0($3)
-; MIPS64-NEXT:    and $8, $4, $5
-; MIPS64-NEXT:    and $9, $7, $6
-; MIPS64-NEXT:    or $9, $9, $8
-; MIPS64-NEXT:    sc $9, 0($3)
-; MIPS64-NEXT:    beqz $9, .LBB11_1
+; MIPS64-NEXT:    ll $5, 0($1)
+; MIPS64-NEXT:    xor $6, $5, $4
+; MIPS64-NEXT:    and $6, $6, $3
+; MIPS64-NEXT:    xor $6, $5, $6
+; MIPS64-NEXT:    sc $6, 0($1)
+; MIPS64-NEXT:    beqz $6, .LBB11_1
 ; MIPS64-NEXT:    nop
 ; MIPS64-NEXT:  # %bb.2: # %entry
-; MIPS64-NEXT:    and $2, $7, $5
-; MIPS64-NEXT:    srlv $2, $2, $1
-; MIPS64-NEXT:    sll $2, $2, 24
-; MIPS64-NEXT:    sra $2, $2, 24
-; MIPS64-NEXT:  # %bb.3: # %entry
+; MIPS64-NEXT:    srlv $1, $5, $2
+; MIPS64-NEXT:    sll $1, $1, 24
 ; MIPS64-NEXT:    jr $ra
-; MIPS64-NEXT:    nop
+; MIPS64-NEXT:    sra $2, $1, 24
 ;
 ; MIPS64R2-LABEL: AtomicSwap8:
 ; MIPS64R2:       # %bb.0: # %entry
@@ -3999,30 +3836,28 @@ define signext i8 @AtomicSwap8(i8 signext %newval) nounwind {
 ; MIPS64R2-NEXT:    daddu $1, $1, $25
 ; MIPS64R2-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(AtomicSwap8)))
 ; MIPS64R2-NEXT:    ld $1, %got_disp(y)($1)
-; MIPS64R2-NEXT:    daddiu $2, $zero, -4
-; MIPS64R2-NEXT:    and $3, $1, $2
-; MIPS64R2-NEXT:    andi $1, $1, 3
-; MIPS64R2-NEXT:    sll $1, $1, 3
-; MIPS64R2-NEXT:    ori $2, $zero, 255
-; MIPS64R2-NEXT:    sllv $5, $2, $1
-; MIPS64R2-NEXT:    nor $6, $zero, $5
-; MIPS64R2-NEXT:    sllv $4, $4, $1
+; MIPS64R2-NEXT:    sll $2, $1, 0
+; MIPS64R2-NEXT:    andi $2, $2, 3
+; MIPS64R2-NEXT:    daddiu $3, $zero, -4
+; MIPS64R2-NEXT:    and $1, $1, $3
+; MIPS64R2-NEXT:    sll $2, $2, 3
+; MIPS64R2-NEXT:    addiu $3, $zero, 255
+; MIPS64R2-NEXT:    sllv $3, $3, $2
+; MIPS64R2-NEXT:    andi $4, $4, 255
+; MIPS64R2-NEXT:    sllv $4, $4, $2
 ; MIPS64R2-NEXT:  .LBB11_1: # %entry
 ; MIPS64R2-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64R2-NEXT:    ll $7, 0($3)
-; MIPS64R2-NEXT:    and $8, $4, $5
-; MIPS64R2-NEXT:    and $9, $7, $6
-; MIPS64R2-NEXT:    or $9, $9, $8
-; MIPS64R2-NEXT:    sc $9, 0($3)
-; MIPS64R2-NEXT:    beqz $9, .LBB11_1
+; MIPS64R2-NEXT:    ll $5, 0($1)
+; MIPS64R2-NEXT:    xor $6, $5, $4
+; MIPS64R2-NEXT:    and $6, $6, $3
+; MIPS64R2-NEXT:    xor $6, $5, $6
+; MIPS64R2-NEXT:    sc $6, 0($1)
+; MIPS64R2-NEXT:    beqz $6, .LBB11_1
 ; MIPS64R2-NEXT:    nop
 ; MIPS64R2-NEXT:  # %bb.2: # %entry
-; MIPS64R2-NEXT:    and $2, $7, $5
-; MIPS64R2-NEXT:    srlv $2, $2, $1
-; MIPS64R2-NEXT:    seb $2, $2
-; MIPS64R2-NEXT:  # %bb.3: # %entry
+; MIPS64R2-NEXT:    srlv $1, $5, $2
 ; MIPS64R2-NEXT:    jr $ra
-; MIPS64R2-NEXT:    nop
+; MIPS64R2-NEXT:    seb $2, $1
 ;
 ; MIPS64R6-LABEL: AtomicSwap8:
 ; MIPS64R6:       # %bb.0: # %entry
@@ -4030,63 +3865,57 @@ define signext i8 @AtomicSwap8(i8 signext %newval) nounwind {
 ; MIPS64R6-NEXT:    daddu $1, $1, $25
 ; MIPS64R6-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(AtomicSwap8)))
 ; MIPS64R6-NEXT:    ld $1, %got_disp(y)($1)
-; MIPS64R6-NEXT:    daddiu $2, $zero, -4
-; MIPS64R6-NEXT:    and $3, $1, $2
-; MIPS64R6-NEXT:    andi $1, $1, 3
-; MIPS64R6-NEXT:    sll $1, $1, 3
-; MIPS64R6-NEXT:    ori $2, $zero, 255
-; MIPS64R6-NEXT:    sllv $5, $2, $1
-; MIPS64R6-NEXT:    nor $6, $zero, $5
-; MIPS64R6-NEXT:    sllv $4, $4, $1
+; MIPS64R6-NEXT:    sll $2, $1, 0
+; MIPS64R6-NEXT:    andi $2, $2, 3
+; MIPS64R6-NEXT:    daddiu $3, $zero, -4
+; MIPS64R6-NEXT:    and $1, $1, $3
+; MIPS64R6-NEXT:    sll $2, $2, 3
+; MIPS64R6-NEXT:    addiu $3, $zero, 255
+; MIPS64R6-NEXT:    sllv $3, $3, $2
+; MIPS64R6-NEXT:    andi $4, $4, 255
+; MIPS64R6-NEXT:    sllv $4, $4, $2
 ; MIPS64R6-NEXT:  .LBB11_1: # %entry
 ; MIPS64R6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64R6-NEXT:    ll $7, 0($3)
-; MIPS64R6-NEXT:    and $8, $4, $5
-; MIPS64R6-NEXT:    and $9, $7, $6
-; MIPS64R6-NEXT:    or $9, $9, $8
-; MIPS64R6-NEXT:    sc $9, 0($3)
-; MIPS64R6-NEXT:    beqzc $9, .LBB11_1
+; MIPS64R6-NEXT:    ll $5, 0($1)
+; MIPS64R6-NEXT:    xor $6, $5, $4
+; MIPS64R6-NEXT:    and $6, $6, $3
+; MIPS64R6-NEXT:    xor $6, $5, $6
+; MIPS64R6-NEXT:    sc $6, 0($1)
+; MIPS64R6-NEXT:    beqzc $6, .LBB11_1
 ; MIPS64R6-NEXT:  # %bb.2: # %entry
-; MIPS64R6-NEXT:    and $2, $7, $5
-; MIPS64R6-NEXT:    srlv $2, $2, $1
-; MIPS64R6-NEXT:    seb $2, $2
-; MIPS64R6-NEXT:  # %bb.3: # %entry
-; MIPS64R6-NEXT:    jrc $ra
+; MIPS64R6-NEXT:    srlv $1, $5, $2
+; MIPS64R6-NEXT:    jr $ra
+; MIPS64R6-NEXT:    seb $2, $1
 ;
 ; MIPS64R6O0-LABEL: AtomicSwap8:
 ; MIPS64R6O0:       # %bb.0: # %entry
-; MIPS64R6O0-NEXT:    daddiu $sp, $sp, -16
 ; MIPS64R6O0-NEXT:    lui $1, %hi(%neg(%gp_rel(AtomicSwap8)))
 ; MIPS64R6O0-NEXT:    daddu $1, $1, $25
 ; MIPS64R6O0-NEXT:    daddiu $2, $1, %lo(%neg(%gp_rel(AtomicSwap8)))
 ; MIPS64R6O0-NEXT:    move $1, $4
 ; MIPS64R6O0-NEXT:    ld $2, %got_disp(y)($2)
 ; MIPS64R6O0-NEXT:    daddiu $3, $zero, -4
-; MIPS64R6O0-NEXT:    and $5, $2, $3
+; MIPS64R6O0-NEXT:    and $4, $2, $3
+; MIPS64R6O0-NEXT:    # kill: def $v0 killed $v0 killed $v0_64
+; MIPS64R6O0-NEXT:    sll $2, $2, 0
+; MIPS64R6O0-NEXT:    not $2, $2
 ; MIPS64R6O0-NEXT:    andi $2, $2, 3
-; MIPS64R6O0-NEXT:    xori $2, $2, 3
-; MIPS64R6O0-NEXT:    sll $9, $2, 3
-; MIPS64R6O0-NEXT:    ori $2, $zero, 255
-; MIPS64R6O0-NEXT:    sllv $7, $2, $9
-; MIPS64R6O0-NEXT:    nor $8, $zero, $7
-; MIPS64R6O0-NEXT:    sllv $6, $1, $9
+; MIPS64R6O0-NEXT:    sll $2, $2, 3
+; MIPS64R6O0-NEXT:    addiu $3, $zero, 255
+; MIPS64R6O0-NEXT:    sllv $6, $3, $2
+; MIPS64R6O0-NEXT:    andi $1, $1, 255
+; MIPS64R6O0-NEXT:    sllv $5, $1, $2
 ; MIPS64R6O0-NEXT:  .LBB11_1: # %entry
 ; MIPS64R6O0-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64R6O0-NEXT:    ll $2, 0($5)
-; MIPS64R6O0-NEXT:    and $3, $6, $7
-; MIPS64R6O0-NEXT:    and $4, $2, $8
-; MIPS64R6O0-NEXT:    or $4, $4, $3
-; MIPS64R6O0-NEXT:    sc $4, 0($5)
-; MIPS64R6O0-NEXT:    beqzc $4, .LBB11_1
+; MIPS64R6O0-NEXT:    ll $1, 0($4)
+; MIPS64R6O0-NEXT:    xor $3, $1, $5
+; MIPS64R6O0-NEXT:    and $3, $3, $6
+; MIPS64R6O0-NEXT:    xor $3, $1, $3
+; MIPS64R6O0-NEXT:    sc $3, 0($4)
+; MIPS64R6O0-NEXT:    beqzc $3, .LBB11_1
 ; MIPS64R6O0-NEXT:  # %bb.2: # %entry
-; MIPS64R6O0-NEXT:    and $1, $2, $7
-; MIPS64R6O0-NEXT:    srlv $1, $1, $9
-; MIPS64R6O0-NEXT:    seb $1, $1
-; MIPS64R6O0-NEXT:  # %bb.3: # %entry
-; MIPS64R6O0-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
-; MIPS64R6O0-NEXT:  # %bb.4: # %entry
-; MIPS64R6O0-NEXT:    lw $2, 12($sp) # 4-byte Folded Reload
-; MIPS64R6O0-NEXT:    daddiu $sp, $sp, 16
+; MIPS64R6O0-NEXT:    srlv $1, $1, $2
+; MIPS64R6O0-NEXT:    seb $2, $1
 ; MIPS64R6O0-NEXT:    jrc $ra
 ;
 ; MM32-LABEL: AtomicSwap8:
@@ -4094,93 +3923,85 @@ define signext i8 @AtomicSwap8(i8 signext %newval) nounwind {
 ; MM32-NEXT:    lui $2, %hi(_gp_disp)
 ; MM32-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; MM32-NEXT:    addu $2, $2, $25
-; MM32-NEXT:    lw $1, %got(y)($2)
-; MM32-NEXT:    addiu $2, $zero, -4
-; MM32-NEXT:    and $3, $1, $2
-; MM32-NEXT:    andi $1, $1, 3
-; MM32-NEXT:    sll $1, $1, 3
-; MM32-NEXT:    ori $2, $zero, 255
-; MM32-NEXT:    sllv $5, $2, $1
-; MM32-NEXT:    nor $6, $zero, $5
-; MM32-NEXT:    sllv $4, $4, $1
+; MM32-NEXT:    addiu $3, $zero, -4
+; MM32-NEXT:    lw $2, %got(y)($2)
+; MM32-NEXT:    and16 $3, $2
+; MM32-NEXT:    andi16 $2, $2, 3
+; MM32-NEXT:    sll16 $2, $2, 3
+; MM32-NEXT:    addiu $1, $zero, 255
+; MM32-NEXT:    sllv $1, $1, $2
+; MM32-NEXT:    andi16 $4, $4, 255
+; MM32-NEXT:    sllv $4, $4, $2
 ; MM32-NEXT:  $BB11_1: # %entry
 ; MM32-NEXT:    # =>This Inner Loop Header: Depth=1
-; MM32-NEXT:    ll $7, 0($3)
-; MM32-NEXT:    and $8, $4, $5
-; MM32-NEXT:    and $9, $7, $6
-; MM32-NEXT:    or $9, $9, $8
-; MM32-NEXT:    sc $9, 0($3)
-; MM32-NEXT:    beqzc $9, $BB11_1
+; MM32-NEXT:    ll $5, 0($3)
+; MM32-NEXT:    xor $6, $5, $4
+; MM32-NEXT:    and $6, $6, $1
+; MM32-NEXT:    xor16 $6, $5
+; MM32-NEXT:    sc $6, 0($3)
+; MM32-NEXT:    beqzc $6, $BB11_1
 ; MM32-NEXT:  # %bb.2: # %entry
-; MM32-NEXT:    and $2, $7, $5
-; MM32-NEXT:    srlv $2, $2, $1
-; MM32-NEXT:    seb $2, $2
-; MM32-NEXT:  # %bb.3: # %entry
-; MM32-NEXT:    jrc $ra
+; MM32-NEXT:    srlv $1, $5, $2
+; MM32-NEXT:    jr $ra
+; MM32-NEXT:    seb $2, $1
 ;
 ; O1-LABEL: AtomicSwap8:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    lui $2, %hi(_gp_disp)
 ; O1-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; O1-NEXT:    addu $1, $2, $25
-; O1-NEXT:    lw $1, %got(y)($1)
 ; O1-NEXT:    addiu $2, $zero, -4
-; O1-NEXT:    and $3, $1, $2
+; O1-NEXT:    lw $1, %got(y)($1)
+; O1-NEXT:    and $2, $1, $2
 ; O1-NEXT:    andi $1, $1, 3
 ; O1-NEXT:    sll $1, $1, 3
-; O1-NEXT:    ori $2, $zero, 255
-; O1-NEXT:    sllv $5, $2, $1
-; O1-NEXT:    nor $6, $zero, $5
+; O1-NEXT:    addiu $3, $zero, 255
+; O1-NEXT:    sllv $3, $3, $1
+; O1-NEXT:    andi $4, $4, 255
 ; O1-NEXT:    sllv $4, $4, $1
 ; O1-NEXT:  $BB11_1: # %entry
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
-; O1-NEXT:    ll $7, 0($3)
-; O1-NEXT:    and $8, $4, $5
-; O1-NEXT:    and $9, $7, $6
-; O1-NEXT:    or $9, $9, $8
-; O1-NEXT:    sc $9, 0($3)
-; O1-NEXT:    beqz $9, $BB11_1
+; O1-NEXT:    ll $5, 0($2)
+; O1-NEXT:    xor $6, $5, $4
+; O1-NEXT:    and $6, $6, $3
+; O1-NEXT:    xor $6, $5, $6
+; O1-NEXT:    sc $6, 0($2)
+; O1-NEXT:    beqz $6, $BB11_1
 ; O1-NEXT:    nop
 ; O1-NEXT:  # %bb.2: # %entry
-; O1-NEXT:    and $2, $7, $5
-; O1-NEXT:    srlv $2, $2, $1
-; O1-NEXT:    sll $2, $2, 24
-; O1-NEXT:    sra $2, $2, 24
-; O1-NEXT:  # %bb.3: # %entry
+; O1-NEXT:    srlv $1, $5, $1
+; O1-NEXT:    sll $1, $1, 24
 ; O1-NEXT:    jr $ra
-; O1-NEXT:    nop
+; O1-NEXT:    sra $2, $1, 24
 ;
 ; O2-LABEL: AtomicSwap8:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    lui $2, %hi(_gp_disp)
 ; O2-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; O2-NEXT:    addu $1, $2, $25
-; O2-NEXT:    lw $1, %got(y)($1)
 ; O2-NEXT:    addiu $2, $zero, -4
-; O2-NEXT:    and $3, $1, $2
+; O2-NEXT:    lw $1, %got(y)($1)
+; O2-NEXT:    and $2, $1, $2
 ; O2-NEXT:    andi $1, $1, 3
 ; O2-NEXT:    sll $1, $1, 3
-; O2-NEXT:    ori $2, $zero, 255
-; O2-NEXT:    sllv $5, $2, $1
-; O2-NEXT:    nor $6, $zero, $5
+; O2-NEXT:    addiu $3, $zero, 255
+; O2-NEXT:    sllv $3, $3, $1
+; O2-NEXT:    andi $4, $4, 255
 ; O2-NEXT:    sllv $4, $4, $1
 ; O2-NEXT:  $BB11_1: # %entry
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
-; O2-NEXT:    ll $7, 0($3)
-; O2-NEXT:    and $8, $4, $5
-; O2-NEXT:    and $9, $7, $6
-; O2-NEXT:    or $9, $9, $8
-; O2-NEXT:    sc $9, 0($3)
-; O2-NEXT:    beqz $9, $BB11_1
+; O2-NEXT:    ll $5, 0($2)
+; O2-NEXT:    xor $6, $5, $4
+; O2-NEXT:    and $6, $6, $3
+; O2-NEXT:    xor $6, $5, $6
+; O2-NEXT:    sc $6, 0($2)
+; O2-NEXT:    beqz $6, $BB11_1
 ; O2-NEXT:    nop
 ; O2-NEXT:  # %bb.2: # %entry
-; O2-NEXT:    and $2, $7, $5
-; O2-NEXT:    srlv $2, $2, $1
-; O2-NEXT:    sll $2, $2, 24
-; O2-NEXT:    sra $2, $2, 24
-; O2-NEXT:  # %bb.3: # %entry
+; O2-NEXT:    srlv $1, $5, $1
+; O2-NEXT:    sll $1, $1, 24
 ; O2-NEXT:    jr $ra
-; O2-NEXT:    nop
+; O2-NEXT:    sra $2, $1, 24
 ;
 ; O3-LABEL: AtomicSwap8:
 ; O3:       # %bb.0: # %entry
@@ -4188,31 +4009,28 @@ define signext i8 @AtomicSwap8(i8 signext %newval) nounwind {
 ; O3-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; O3-NEXT:    addu $1, $2, $25
 ; O3-NEXT:    addiu $2, $zero, -4
+; O3-NEXT:    addiu $3, $zero, 255
+; O3-NEXT:    andi $4, $4, 255
 ; O3-NEXT:    lw $1, %got(y)($1)
-; O3-NEXT:    and $3, $1, $2
+; O3-NEXT:    and $2, $1, $2
 ; O3-NEXT:    andi $1, $1, 3
-; O3-NEXT:    ori $2, $zero, 255
 ; O3-NEXT:    sll $1, $1, 3
-; O3-NEXT:    sllv $5, $2, $1
+; O3-NEXT:    sllv $3, $3, $1
 ; O3-NEXT:    sllv $4, $4, $1
-; O3-NEXT:    nor $6, $zero, $5
 ; O3-NEXT:  $BB11_1: # %entry
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
-; O3-NEXT:    ll $7, 0($3)
-; O3-NEXT:    and $8, $4, $5
-; O3-NEXT:    and $9, $7, $6
-; O3-NEXT:    or $9, $9, $8
-; O3-NEXT:    sc $9, 0($3)
-; O3-NEXT:    beqz $9, $BB11_1
+; O3-NEXT:    ll $5, 0($2)
+; O3-NEXT:    xor $6, $5, $4
+; O3-NEXT:    and $6, $6, $3
+; O3-NEXT:    xor $6, $5, $6
+; O3-NEXT:    sc $6, 0($2)
+; O3-NEXT:    beqz $6, $BB11_1
 ; O3-NEXT:    nop
 ; O3-NEXT:  # %bb.2: # %entry
-; O3-NEXT:    and $2, $7, $5
-; O3-NEXT:    srlv $2, $2, $1
-; O3-NEXT:    sll $2, $2, 24
-; O3-NEXT:    sra $2, $2, 24
-; O3-NEXT:  # %bb.3: # %entry
+; O3-NEXT:    srlv $1, $5, $1
+; O3-NEXT:    sll $1, $1, 24
 ; O3-NEXT:    jr $ra
-; O3-NEXT:    nop
+; O3-NEXT:    sra $2, $1, 24
 ;
 ; MIPS32EB-LABEL: AtomicSwap8:
 ; MIPS32EB:       # %bb.0: # %entry
@@ -4220,32 +4038,29 @@ define signext i8 @AtomicSwap8(i8 signext %newval) nounwind {
 ; MIPS32EB-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; MIPS32EB-NEXT:    addu $1, $2, $25
 ; MIPS32EB-NEXT:    lw $1, %got(y)($1)
-; MIPS32EB-NEXT:    addiu $2, $zero, -4
-; MIPS32EB-NEXT:    and $3, $1, $2
-; MIPS32EB-NEXT:    andi $1, $1, 3
-; MIPS32EB-NEXT:    xori $1, $1, 3
-; MIPS32EB-NEXT:    sll $1, $1, 3
-; MIPS32EB-NEXT:    ori $2, $zero, 255
-; MIPS32EB-NEXT:    sllv $5, $2, $1
-; MIPS32EB-NEXT:    nor $6, $zero, $5
-; MIPS32EB-NEXT:    sllv $4, $4, $1
+; MIPS32EB-NEXT:    not $2, $1
+; MIPS32EB-NEXT:    addiu $3, $zero, -4
+; MIPS32EB-NEXT:    and $1, $1, $3
+; MIPS32EB-NEXT:    andi $2, $2, 3
+; MIPS32EB-NEXT:    sll $2, $2, 3
+; MIPS32EB-NEXT:    addiu $3, $zero, 255
+; MIPS32EB-NEXT:    sllv $3, $3, $2
+; MIPS32EB-NEXT:    andi $4, $4, 255
+; MIPS32EB-NEXT:    sllv $4, $4, $2
 ; MIPS32EB-NEXT:  $BB11_1: # %entry
 ; MIPS32EB-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS32EB-NEXT:    ll $7, 0($3)
-; MIPS32EB-NEXT:    and $8, $4, $5
-; MIPS32EB-NEXT:    and $9, $7, $6
-; MIPS32EB-NEXT:    or $9, $9, $8
-; MIPS32EB-NEXT:    sc $9, 0($3)
-; MIPS32EB-NEXT:    beqz $9, $BB11_1
+; MIPS32EB-NEXT:    ll $5, 0($1)
+; MIPS32EB-NEXT:    xor $6, $5, $4
+; MIPS32EB-NEXT:    and $6, $6, $3
+; MIPS32EB-NEXT:    xor $6, $5, $6
+; MIPS32EB-NEXT:    sc $6, 0($1)
+; MIPS32EB-NEXT:    beqz $6, $BB11_1
 ; MIPS32EB-NEXT:    nop
 ; MIPS32EB-NEXT:  # %bb.2: # %entry
-; MIPS32EB-NEXT:    and $2, $7, $5
-; MIPS32EB-NEXT:    srlv $2, $2, $1
-; MIPS32EB-NEXT:    sll $2, $2, 24
-; MIPS32EB-NEXT:    sra $2, $2, 24
-; MIPS32EB-NEXT:  # %bb.3: # %entry
+; MIPS32EB-NEXT:    srlv $1, $5, $2
+; MIPS32EB-NEXT:    sll $1, $1, 24
 ; MIPS32EB-NEXT:    jr $ra
-; MIPS32EB-NEXT:    nop
+; MIPS32EB-NEXT:    sra $2, $1, 24
 entry:
   %0 = atomicrmw xchg ptr @y, i8 %newval monotonic
   ret i8 %0
@@ -4258,82 +4073,70 @@ define signext i8 @AtomicCmpSwap8(i8 signext %oldval, i8 signext %newval) nounwi
 ; MIPS32-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; MIPS32-NEXT:    addu $1, $2, $25
 ; MIPS32-NEXT:    lw $1, %got(y)($1)
-; MIPS32-NEXT:    addiu $2, $zero, -4
-; MIPS32-NEXT:    and $3, $1, $2
-; MIPS32-NEXT:    andi $1, $1, 3
-; MIPS32-NEXT:    sll $1, $1, 3
-; MIPS32-NEXT:    ori $2, $zero, 255
-; MIPS32-NEXT:    sllv $6, $2, $1
-; MIPS32-NEXT:    nor $7, $zero, $6
-; MIPS32-NEXT:    andi $2, $4, 255
-; MIPS32-NEXT:    sllv $4, $2, $1
-; MIPS32-NEXT:    andi $2, $5, 255
-; MIPS32-NEXT:    sllv $5, $2, $1
+; MIPS32-NEXT:    andi $2, $1, 3
+; MIPS32-NEXT:    sll $2, $2, 3
+; MIPS32-NEXT:    addiu $3, $zero, 255
+; MIPS32-NEXT:    addiu $6, $zero, -4
+; MIPS32-NEXT:    and $1, $1, $6
+; MIPS32-NEXT:    sllv $3, $3, $2
+; MIPS32-NEXT:    andi $5, $5, 255
+; MIPS32-NEXT:    sllv $5, $5, $2
+; MIPS32-NEXT:    andi $4, $4, 255
+; MIPS32-NEXT:    sllv $4, $4, $2
 ; MIPS32-NEXT:  $BB12_1: # %entry
 ; MIPS32-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS32-NEXT:    ll $8, 0($3)
-; MIPS32-NEXT:    and $9, $8, $6
-; MIPS32-NEXT:    bne $9, $4, $BB12_3
+; MIPS32-NEXT:    ll $6, 0($1)
+; MIPS32-NEXT:    and $7, $6, $3
+; MIPS32-NEXT:    bne $7, $4, $BB12_3
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  # %bb.2: # %entry
 ; MIPS32-NEXT:    # in Loop: Header=BB12_1 Depth=1
-; MIPS32-NEXT:    and $8, $8, $7
-; MIPS32-NEXT:    or $8, $8, $5
-; MIPS32-NEXT:    sc $8, 0($3)
-; MIPS32-NEXT:    beqz $8, $BB12_1
+; MIPS32-NEXT:    xor $7, $6, $7
+; MIPS32-NEXT:    or $7, $7, $5
+; MIPS32-NEXT:    sc $7, 0($1)
+; MIPS32-NEXT:    beqz $7, $BB12_1
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  $BB12_3: # %entry
-; MIPS32-NEXT:    srlv $2, $9, $1
-; MIPS32-NEXT:    sll $2, $2, 24
-; MIPS32-NEXT:    sra $2, $2, 24
-; MIPS32-NEXT:  # %bb.4: # %entry
+; MIPS32-NEXT:    srlv $1, $6, $2
+; MIPS32-NEXT:    sll $1, $1, 24
 ; MIPS32-NEXT:    jr $ra
-; MIPS32-NEXT:    nop
+; MIPS32-NEXT:    sra $2, $1, 24
 ;
 ; MIPS32O0-LABEL: AtomicCmpSwap8:
 ; MIPS32O0:       # %bb.0: # %entry
 ; MIPS32O0-NEXT:    lui $2, %hi(_gp_disp)
 ; MIPS32O0-NEXT:    addiu $2, $2, %lo(_gp_disp)
-; MIPS32O0-NEXT:    addiu $sp, $sp, -8
-; MIPS32O0-NEXT:    addu $3, $2, $25
+; MIPS32O0-NEXT:    addu $2, $2, $25
 ; MIPS32O0-NEXT:    move $1, $5
-; MIPS32O0-NEXT:    move $2, $4
-; MIPS32O0-NEXT:    lw $3, %got(y)($3)
+; MIPS32O0-NEXT:    move $3, $4
+; MIPS32O0-NEXT:    lw $2, %got(y)($2)
 ; MIPS32O0-NEXT:    addiu $4, $zero, -4
-; MIPS32O0-NEXT:    and $4, $3, $4
-; MIPS32O0-NEXT:    andi $3, $3, 3
-; MIPS32O0-NEXT:    sll $9, $3, 3
-; MIPS32O0-NEXT:    ori $3, $zero, 255
-; MIPS32O0-NEXT:    sllv $5, $3, $9
-; MIPS32O0-NEXT:    nor $7, $zero, $5
-; MIPS32O0-NEXT:    andi $2, $2, 255
-; MIPS32O0-NEXT:    sllv $6, $2, $9
+; MIPS32O0-NEXT:    and $4, $2, $4
+; MIPS32O0-NEXT:    andi $2, $2, 3
+; MIPS32O0-NEXT:    sll $2, $2, 3
+; MIPS32O0-NEXT:    addiu $5, $zero, 255
+; MIPS32O0-NEXT:    sllv $7, $5, $2
+; MIPS32O0-NEXT:    andi $3, $3, 255
+; MIPS32O0-NEXT:    sllv $5, $3, $2
 ; MIPS32O0-NEXT:    andi $1, $1, 255
-; MIPS32O0-NEXT:    sllv $8, $1, $9
+; MIPS32O0-NEXT:    sllv $6, $1, $2
 ; MIPS32O0-NEXT:  $BB12_1: # %entry
 ; MIPS32O0-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS32O0-NEXT:    ll $2, 0($4)
-; MIPS32O0-NEXT:    and $3, $2, $5
-; MIPS32O0-NEXT:    bne $3, $6, $BB12_3
+; MIPS32O0-NEXT:    ll $1, 0($4)
+; MIPS32O0-NEXT:    and $3, $1, $7
+; MIPS32O0-NEXT:    bne $3, $5, $BB12_3
 ; MIPS32O0-NEXT:    nop
 ; MIPS32O0-NEXT:  # %bb.2: # %entry
 ; MIPS32O0-NEXT:    # in Loop: Header=BB12_1 Depth=1
-; MIPS32O0-NEXT:    and $2, $2, $7
-; MIPS32O0-NEXT:    or $2, $2, $8
-; MIPS32O0-NEXT:    sc $2, 0($4)
-; MIPS32O0-NEXT:    beqz $2, $BB12_1
+; MIPS32O0-NEXT:    xor $3, $1, $3
+; MIPS32O0-NEXT:    or $3, $3, $6
+; MIPS32O0-NEXT:    sc $3, 0($4)
+; MIPS32O0-NEXT:    beqz $3, $BB12_1
 ; MIPS32O0-NEXT:    nop
 ; MIPS32O0-NEXT:  $BB12_3: # %entry
-; MIPS32O0-NEXT:    srlv $1, $3, $9
-; MIPS32O0-NEXT:    sll $1, $1, 24
-; MIPS32O0-NEXT:    sra $1, $1, 24
-; MIPS32O0-NEXT:  # %bb.4: # %entry
-; MIPS32O0-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
-; MIPS32O0-NEXT:  # %bb.5: # %entry
-; MIPS32O0-NEXT:    lw $1, 4($sp) # 4-byte Folded Reload
+; MIPS32O0-NEXT:    srlv $1, $1, $2
 ; MIPS32O0-NEXT:    sll $1, $1, 24
 ; MIPS32O0-NEXT:    sra $2, $1, 24
-; MIPS32O0-NEXT:    addiu $sp, $sp, 8
 ; MIPS32O0-NEXT:    jr $ra
 ; MIPS32O0-NEXT:    nop
 ;
@@ -4343,36 +4146,33 @@ define signext i8 @AtomicCmpSwap8(i8 signext %oldval, i8 signext %newval) nounwi
 ; MIPS32R2-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; MIPS32R2-NEXT:    addu $1, $2, $25
 ; MIPS32R2-NEXT:    lw $1, %got(y)($1)
-; MIPS32R2-NEXT:    addiu $2, $zero, -4
-; MIPS32R2-NEXT:    and $3, $1, $2
-; MIPS32R2-NEXT:    andi $1, $1, 3
-; MIPS32R2-NEXT:    sll $1, $1, 3
-; MIPS32R2-NEXT:    ori $2, $zero, 255
-; MIPS32R2-NEXT:    sllv $6, $2, $1
-; MIPS32R2-NEXT:    nor $7, $zero, $6
-; MIPS32R2-NEXT:    andi $2, $4, 255
-; MIPS32R2-NEXT:    sllv $4, $2, $1
-; MIPS32R2-NEXT:    andi $2, $5, 255
-; MIPS32R2-NEXT:    sllv $5, $2, $1
+; MIPS32R2-NEXT:    andi $2, $1, 3
+; MIPS32R2-NEXT:    sll $2, $2, 3
+; MIPS32R2-NEXT:    addiu $3, $zero, 255
+; MIPS32R2-NEXT:    addiu $6, $zero, -4
+; MIPS32R2-NEXT:    and $1, $1, $6
+; MIPS32R2-NEXT:    sllv $3, $3, $2
+; MIPS32R2-NEXT:    andi $5, $5, 255
+; MIPS32R2-NEXT:    sllv $5, $5, $2
+; MIPS32R2-NEXT:    andi $4, $4, 255
+; MIPS32R2-NEXT:    sllv $4, $4, $2
 ; MIPS32R2-NEXT:  $BB12_1: # %entry
 ; MIPS32R2-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS32R2-NEXT:    ll $8, 0($3)
-; MIPS32R2-NEXT:    and $9, $8, $6
-; MIPS32R2-NEXT:    bne $9, $4, $BB12_3
+; MIPS32R2-NEXT:    ll $6, 0($1)
+; MIPS32R2-NEXT:    and $7, $6, $3
+; MIPS32R2-NEXT:    bne $7, $4, $BB12_3
 ; MIPS32R2-NEXT:    nop
 ; MIPS32R2-NEXT:  # %bb.2: # %entry
 ; MIPS32R2-NEXT:    # in Loop: Header=BB12_1 Depth=1
-; MIPS32R2-NEXT:    and $8, $8, $7
-; MIPS32R2-NEXT:    or $8, $8, $5
-; MIPS32R2-NEXT:    sc $8, 0($3)
-; MIPS32R2-NEXT:    beqz $8, $BB12_1
+; MIPS32R2-NEXT:    xor $7, $6, $7
+; MIPS32R2-NEXT:    or $7, $7, $5
+; MIPS32R2-NEXT:    sc $7, 0($1)
+; MIPS32R2-NEXT:    beqz $7, $BB12_1
 ; MIPS32R2-NEXT:    nop
 ; MIPS32R2-NEXT:  $BB12_3: # %entry
-; MIPS32R2-NEXT:    srlv $2, $9, $1
-; MIPS32R2-NEXT:    seb $2, $2
-; MIPS32R2-NEXT:  # %bb.4: # %entry
+; MIPS32R2-NEXT:    srlv $1, $6, $2
 ; MIPS32R2-NEXT:    jr $ra
-; MIPS32R2-NEXT:    nop
+; MIPS32R2-NEXT:    seb $2, $1
 ;
 ; MIPS32R6-LABEL: AtomicCmpSwap8:
 ; MIPS32R6:       # %bb.0: # %entry
@@ -4380,73 +4180,64 @@ define signext i8 @AtomicCmpSwap8(i8 signext %oldval, i8 signext %newval) nounwi
 ; MIPS32R6-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; MIPS32R6-NEXT:    addu $1, $2, $25
 ; MIPS32R6-NEXT:    lw $1, %got(y)($1)
-; MIPS32R6-NEXT:    addiu $2, $zero, -4
-; MIPS32R6-NEXT:    and $3, $1, $2
-; MIPS32R6-NEXT:    andi $1, $1, 3
-; MIPS32R6-NEXT:    sll $1, $1, 3
-; MIPS32R6-NEXT:    ori $2, $zero, 255
-; MIPS32R6-NEXT:    sllv $6, $2, $1
-; MIPS32R6-NEXT:    nor $7, $zero, $6
-; MIPS32R6-NEXT:    andi $2, $4, 255
-; MIPS32R6-NEXT:    sllv $4, $2, $1
-; MIPS32R6-NEXT:    andi $2, $5, 255
-; MIPS32R6-NEXT:    sllv $5, $2, $1
+; MIPS32R6-NEXT:    andi $2, $1, 3
+; MIPS32R6-NEXT:    sll $2, $2, 3
+; MIPS32R6-NEXT:    addiu $3, $zero, 255
+; MIPS32R6-NEXT:    addiu $6, $zero, -4
+; MIPS32R6-NEXT:    and $1, $1, $6
+; MIPS32R6-NEXT:    sllv $3, $3, $2
+; MIPS32R6-NEXT:    andi $5, $5, 255
+; MIPS32R6-NEXT:    sllv $5, $5, $2
+; MIPS32R6-NEXT:    andi $4, $4, 255
+; MIPS32R6-NEXT:    sllv $4, $4, $2
 ; MIPS32R6-NEXT:  $BB12_1: # %entry
 ; MIPS32R6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS32R6-NEXT:    ll $8, 0($3)
-; MIPS32R6-NEXT:    and $9, $8, $6
-; MIPS32R6-NEXT:    bnec $9, $4, $BB12_3
+; MIPS32R6-NEXT:    ll $6, 0($1)
+; MIPS32R6-NEXT:    and $7, $6, $3
+; MIPS32R6-NEXT:    bnec $7, $4, $BB12_3
 ; MIPS32R6-NEXT:  # %bb.2: # %entry
 ; MIPS32R6-NEXT:    # in Loop: Header=BB12_1 Depth=1
-; MIPS32R6-NEXT:    and $8, $8, $7
-; MIPS32R6-NEXT:    or $8, $8, $5
-; MIPS32R6-NEXT:    sc $8, 0($3)
-; MIPS32R6-NEXT:    beqzc $8, $BB12_1
+; MIPS32R6-NEXT:    xor $7, $6, $7
+; MIPS32R6-NEXT:    or $7, $7, $5
+; MIPS32R6-NEXT:    sc $7, 0($1)
+; MIPS32R6-NEXT:    beqzc $7, $BB12_1
 ; MIPS32R6-NEXT:  $BB12_3: # %entry
-; MIPS32R6-NEXT:    srlv $2, $9, $1
-; MIPS32R6-NEXT:    seb $2, $2
-; MIPS32R6-NEXT:  # %bb.4: # %entry
-; MIPS32R6-NEXT:    jrc $ra
+; MIPS32R6-NEXT:    srlv $1, $6, $2
+; MIPS32R6-NEXT:    jr $ra
+; MIPS32R6-NEXT:    seb $2, $1
 ;
 ; MIPS32R6O0-LABEL: AtomicCmpSwap8:
 ; MIPS32R6O0:       # %bb.0: # %entry
 ; MIPS32R6O0-NEXT:    lui $2, %hi(_gp_disp)
 ; MIPS32R6O0-NEXT:    addiu $2, $2, %lo(_gp_disp)
-; MIPS32R6O0-NEXT:    addiu $sp, $sp, -8
-; MIPS32R6O0-NEXT:    addu $3, $2, $25
+; MIPS32R6O0-NEXT:    addu $2, $2, $25
 ; MIPS32R6O0-NEXT:    move $1, $5
-; MIPS32R6O0-NEXT:    move $2, $4
-; MIPS32R6O0-NEXT:    lw $3, %got(y)($3)
+; MIPS32R6O0-NEXT:    move $3, $4
+; MIPS32R6O0-NEXT:    lw $2, %got(y)($2)
 ; MIPS32R6O0-NEXT:    addiu $4, $zero, -4
-; MIPS32R6O0-NEXT:    and $4, $3, $4
-; MIPS32R6O0-NEXT:    andi $3, $3, 3
-; MIPS32R6O0-NEXT:    sll $9, $3, 3
-; MIPS32R6O0-NEXT:    ori $3, $zero, 255
-; MIPS32R6O0-NEXT:    sllv $5, $3, $9
-; MIPS32R6O0-NEXT:    nor $7, $zero, $5
-; MIPS32R6O0-NEXT:    andi $2, $2, 255
-; MIPS32R6O0-NEXT:    sllv $6, $2, $9
+; MIPS32R6O0-NEXT:    and $4, $2, $4
+; MIPS32R6O0-NEXT:    andi $2, $2, 3
+; MIPS32R6O0-NEXT:    sll $2, $2, 3
+; MIPS32R6O0-NEXT:    addiu $5, $zero, 255
+; MIPS32R6O0-NEXT:    sllv $7, $5, $2
+; MIPS32R6O0-NEXT:    andi $3, $3, 255
+; MIPS32R6O0-NEXT:    sllv $5, $3, $2
 ; MIPS32R6O0-NEXT:    andi $1, $1, 255
-; MIPS32R6O0-NEXT:    sllv $8, $1, $9
+; MIPS32R6O0-NEXT:    sllv $6, $1, $2
 ; MIPS32R6O0-NEXT:  $BB12_1: # %entry
 ; MIPS32R6O0-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS32R6O0-NEXT:    ll $2, 0($4)
-; MIPS32R6O0-NEXT:    and $3, $2, $5
-; MIPS32R6O0-NEXT:    bnec $3, $6, $BB12_3
+; MIPS32R6O0-NEXT:    ll $1, 0($4)
+; MIPS32R6O0-NEXT:    and $3, $1, $7
+; MIPS32R6O0-NEXT:    bnec $3, $5, $BB12_3
 ; MIPS32R6O0-NEXT:  # %bb.2: # %entry
 ; MIPS32R6O0-NEXT:    # in Loop: Header=BB12_1 Depth=1
-; MIPS32R6O0-NEXT:    and $2, $2, $7
-; MIPS32R6O0-NEXT:    or $2, $2, $8
-; MIPS32R6O0-NEXT:    sc $2, 0($4)
-; MIPS32R6O0-NEXT:    beqzc $2, $BB12_1
+; MIPS32R6O0-NEXT:    xor $3, $1, $3
+; MIPS32R6O0-NEXT:    or $3, $3, $6
+; MIPS32R6O0-NEXT:    sc $3, 0($4)
+; MIPS32R6O0-NEXT:    beqzc $3, $BB12_1
 ; MIPS32R6O0-NEXT:  $BB12_3: # %entry
-; MIPS32R6O0-NEXT:    srlv $1, $3, $9
-; MIPS32R6O0-NEXT:    seb $1, $1
-; MIPS32R6O0-NEXT:  # %bb.4: # %entry
-; MIPS32R6O0-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
-; MIPS32R6O0-NEXT:  # %bb.5: # %entry
-; MIPS32R6O0-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
-; MIPS32R6O0-NEXT:    addiu $sp, $sp, 8
+; MIPS32R6O0-NEXT:    srlv $1, $1, $2
+; MIPS32R6O0-NEXT:    seb $2, $1
 ; MIPS32R6O0-NEXT:    jrc $ra
 ;
 ; MIPS4-LABEL: AtomicCmpSwap8:
@@ -4455,37 +4246,35 @@ define signext i8 @AtomicCmpSwap8(i8 signext %oldval, i8 signext %newval) nounwi
 ; MIPS4-NEXT:    daddu $1, $1, $25
 ; MIPS4-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(AtomicCmpSwap8)))
 ; MIPS4-NEXT:    ld $1, %got_disp(y)($1)
-; MIPS4-NEXT:    daddiu $2, $zero, -4
-; MIPS4-NEXT:    and $3, $1, $2
-; MIPS4-NEXT:    andi $1, $1, 3
-; MIPS4-NEXT:    sll $1, $1, 3
-; MIPS4-NEXT:    ori $2, $zero, 255
-; MIPS4-NEXT:    sllv $6, $2, $1
-; MIPS4-NEXT:    nor $7, $zero, $6
-; MIPS4-NEXT:    andi $2, $4, 255
-; MIPS4-NEXT:    sllv $4, $2, $1
-; MIPS4-NEXT:    andi $2, $5, 255
-; MIPS4-NEXT:    sllv $5, $2, $1
+; MIPS4-NEXT:    sll $2, $1, 0
+; MIPS4-NEXT:    andi $2, $2, 3
+; MIPS4-NEXT:    sll $2, $2, 3
+; MIPS4-NEXT:    addiu $3, $zero, 255
+; MIPS4-NEXT:    daddiu $6, $zero, -4
+; MIPS4-NEXT:    and $1, $1, $6
+; MIPS4-NEXT:    sllv $3, $3, $2
+; MIPS4-NEXT:    andi $5, $5, 255
+; MIPS4-NEXT:    sllv $5, $5, $2
+; MIPS4-NEXT:    andi $4, $4, 255
+; MIPS4-NEXT:    sllv $4, $4, $2
 ; MIPS4-NEXT:  .LBB12_1: # %entry
 ; MIPS4-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS4-NEXT:    ll $8, 0($3)
-; MIPS4-NEXT:    and $9, $8, $6
-; MIPS4-NEXT:    bne $9, $4, .LBB12_3
+; MIPS4-NEXT:    ll $6, 0($1)
+; MIPS4-NEXT:    and $7, $6, $3
+; MIPS4-NEXT:    bne $7, $4, .LBB12_3
 ; MIPS4-NEXT:    nop
 ; MIPS4-NEXT:  # %bb.2: # %entry
 ; MIPS4-NEXT:    # in Loop: Header=BB12_1 Depth=1
-; MIPS4-NEXT:    and $8, $8, $7
-; MIPS4-NEXT:    or $8, $8, $5
-; MIPS4-NEXT:    sc $8, 0($3)
-; MIPS4-NEXT:    beqz $8, .LBB12_1
+; MIPS4-NEXT:    xor $7, $6, $7
+; MIPS4-NEXT:    or $7, $7, $5
+; MIPS4-NEXT:    sc $7, 0($1)
+; MIPS4-NEXT:    beqz $7, .LBB12_1
 ; MIPS4-NEXT:    nop
 ; MIPS4-NEXT:  .LBB12_3: # %entry
-; MIPS4-NEXT:    srlv $2, $9, $1
-; MIPS4-NEXT:    sll $2, $2, 24
-; MIPS4-NEXT:    sra $2, $2, 24
-; MIPS4-NEXT:  # %bb.4: # %entry
+; MIPS4-NEXT:    srlv $1, $6, $2
+; MIPS4-NEXT:    sll $1, $1, 24
 ; MIPS4-NEXT:    jr $ra
-; MIPS4-NEXT:    nop
+; MIPS4-NEXT:    sra $2, $1, 24
 ;
 ; MIPS64-LABEL: AtomicCmpSwap8:
 ; MIPS64:       # %bb.0: # %entry
@@ -4493,37 +4282,35 @@ define signext i8 @AtomicCmpSwap8(i8 signext %oldval, i8 signext %newval) nounwi
 ; MIPS64-NEXT:    daddu $1, $1, $25
 ; MIPS64-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(AtomicCmpSwap8)))
 ; MIPS64-NEXT:    ld $1, %got_disp(y)($1)
-; MIPS64-NEXT:    daddiu $2, $zero, -4
-; MIPS64-NEXT:    and $3, $1, $2
-; MIPS64-NEXT:    andi $1, $1, 3
-; MIPS64-NEXT:    sll $1, $1, 3
-; MIPS64-NEXT:    ori $2, $zero, 255
-; MIPS64-NEXT:    sllv $6, $2, $1
-; MIPS64-NEXT:    nor $7, $zero, $6
-; MIPS64-NEXT:    andi $2, $4, 255
-; MIPS64-NEXT:    sllv $4, $2, $1
-; MIPS64-NEXT:    andi $2, $5, 255
-; MIPS64-NEXT:    sllv $5, $2, $1
+; MIPS64-NEXT:    sll $2, $1, 0
+; MIPS64-NEXT:    andi $2, $2, 3
+; MIPS64-NEXT:    sll $2, $2, 3
+; MIPS64-NEXT:    addiu $3, $zero, 255
+; MIPS64-NEXT:    daddiu $6, $zero, -4
+; MIPS64-NEXT:    and $1, $1, $6
+; MIPS64-NEXT:    sllv $3, $3, $2
+; MIPS64-NEXT:    andi $5, $5, 255
+; MIPS64-NEXT:    sllv $5, $5, $2
+; MIPS64-NEXT:    andi $4, $4, 255
+; MIPS64-NEXT:    sllv $4, $4, $2
 ; MIPS64-NEXT:  .LBB12_1: # %entry
 ; MIPS64-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64-NEXT:    ll $8, 0($3)
-; MIPS64-NEXT:    and $9, $8, $6
-; MIPS64-NEXT:    bne $9, $4, .LBB12_3
+; MIPS64-NEXT:    ll $6, 0($1)
+; MIPS64-NEXT:    and $7, $6, $3
+; MIPS64-NEXT:    bne $7, $4, .LBB12_3
 ; MIPS64-NEXT:    nop
 ; MIPS64-NEXT:  # %bb.2: # %entry
 ; MIPS64-NEXT:    # in Loop: Header=BB12_1 Depth=1
-; MIPS64-NEXT:    and $8, $8, $7
-; MIPS64-NEXT:    or $8, $8, $5
-; MIPS64-NEXT:    sc $8, 0($3)
-; MIPS64-NEXT:    beqz $8, .LBB12_1
+; MIPS64-NEXT:    xor $7, $6, $7
+; MIPS64-NEXT:    or $7, $7, $5
+; MIPS64-NEXT:    sc $7, 0($1)
+; MIPS64-NEXT:    beqz $7, .LBB12_1
 ; MIPS64-NEXT:    nop
 ; MIPS64-NEXT:  .LBB12_3: # %entry
-; MIPS64-NEXT:    srlv $2, $9, $1
-; MIPS64-NEXT:    sll $2, $2, 24
-; MIPS64-NEXT:    sra $2, $2, 24
-; MIPS64-NEXT:  # %bb.4: # %entry
+; MIPS64-NEXT:    srlv $1, $6, $2
+; MIPS64-NEXT:    sll $1, $1, 24
 ; MIPS64-NEXT:    jr $ra
-; MIPS64-NEXT:    nop
+; MIPS64-NEXT:    sra $2, $1, 24
 ;
 ; MIPS64R2-LABEL: AtomicCmpSwap8:
 ; MIPS64R2:       # %bb.0: # %entry
@@ -4531,36 +4318,34 @@ define signext i8 @AtomicCmpSwap8(i8 signext %oldval, i8 signext %newval) nounwi
 ; MIPS64R2-NEXT:    daddu $1, $1, $25
 ; MIPS64R2-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(AtomicCmpSwap8)))
 ; MIPS64R2-NEXT:    ld $1, %got_disp(y)($1)
-; MIPS64R2-NEXT:    daddiu $2, $zero, -4
-; MIPS64R2-NEXT:    and $3, $1, $2
-; MIPS64R2-NEXT:    andi $1, $1, 3
-; MIPS64R2-NEXT:    sll $1, $1, 3
-; MIPS64R2-NEXT:    ori $2, $zero, 255
-; MIPS64R2-NEXT:    sllv $6, $2, $1
-; MIPS64R2-NEXT:    nor $7, $zero, $6
-; MIPS64R2-NEXT:    andi $2, $4, 255
-; MIPS64R2-NEXT:    sllv $4, $2, $1
-; MIPS64R2-NEXT:    andi $2, $5, 255
-; MIPS64R2-NEXT:    sllv $5, $2, $1
+; MIPS64R2-NEXT:    sll $2, $1, 0
+; MIPS64R2-NEXT:    andi $2, $2, 3
+; MIPS64R2-NEXT:    sll $2, $2, 3
+; MIPS64R2-NEXT:    addiu $3, $zero, 255
+; MIPS64R2-NEXT:    daddiu $6, $zero, -4
+; MIPS64R2-NEXT:    and $1, $1, $6
+; MIPS64R2-NEXT:    sllv $3, $3, $2
+; MIPS64R2-NEXT:    andi $5, $5, 255
+; MIPS64R2-NEXT:    sllv $5, $5, $2
+; MIPS64R2-NEXT:    andi $4, $4, 255
+; MIPS64R2-NEXT:    sllv $4, $4, $2
 ; MIPS64R2-NEXT:  .LBB12_1: # %entry
 ; MIPS64R2-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64R2-NEXT:    ll $8, 0($3)
-; MIPS64R2-NEXT:    and $9, $8, $6
-; MIPS64R2-NEXT:    bne $9, $4, .LBB12_3
+; MIPS64R2-NEXT:    ll $6, 0($1)
+; MIPS64R2-NEXT:    and $7, $6, $3
+; MIPS64R2-NEXT:    bne $7, $4, .LBB12_3
 ; MIPS64R2-NEXT:    nop
 ; MIPS64R2-NEXT:  # %bb.2: # %entry
 ; MIPS64R2-NEXT:    # in Loop: Header=BB12_1 Depth=1
-; MIPS64R2-NEXT:    and $8, $8, $7
-; MIPS64R2-NEXT:    or $8, $8, $5
-; MIPS64R2-NEXT:    sc $8, 0($3)
-; MIPS64R2-NEXT:    beqz $8, .LBB12_1
+; MIPS64R2-NEXT:    xor $7, $6, $7
+; MIPS64R2-NEXT:    or $7, $7, $5
+; MIPS64R2-NEXT:    sc $7, 0($1)
+; MIPS64R2-NEXT:    beqz $7, .LBB12_1
 ; MIPS64R2-NEXT:    nop
 ; MIPS64R2-NEXT:  .LBB12_3: # %entry
-; MIPS64R2-NEXT:    srlv $2, $9, $1
-; MIPS64R2-NEXT:    seb $2, $2
-; MIPS64R2-NEXT:  # %bb.4: # %entry
+; MIPS64R2-NEXT:    srlv $1, $6, $2
 ; MIPS64R2-NEXT:    jr $ra
-; MIPS64R2-NEXT:    nop
+; MIPS64R2-NEXT:    seb $2, $1
 ;
 ; MIPS64R6-LABEL: AtomicCmpSwap8:
 ; MIPS64R6:       # %bb.0: # %entry
@@ -4568,74 +4353,68 @@ define signext i8 @AtomicCmpSwap8(i8 signext %oldval, i8 signext %newval) nounwi
 ; MIPS64R6-NEXT:    daddu $1, $1, $25
 ; MIPS64R6-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(AtomicCmpSwap8)))
 ; MIPS64R6-NEXT:    ld $1, %got_disp(y)($1)
-; MIPS64R6-NEXT:    daddiu $2, $zero, -4
-; MIPS64R6-NEXT:    and $3, $1, $2
-; MIPS64R6-NEXT:    andi $1, $1, 3
-; MIPS64R6-NEXT:    sll $1, $1, 3
-; MIPS64R6-NEXT:    ori $2, $zero, 255
-; MIPS64R6-NEXT:    sllv $6, $2, $1
-; MIPS64R6-NEXT:    nor $7, $zero, $6
-; MIPS64R6-NEXT:    andi $2, $4, 255
-; MIPS64R6-NEXT:    sllv $4, $2, $1
-; MIPS64R6-NEXT:    andi $2, $5, 255
-; MIPS64R6-NEXT:    sllv $5, $2, $1
+; MIPS64R6-NEXT:    sll $2, $1, 0
+; MIPS64R6-NEXT:    andi $2, $2, 3
+; MIPS64R6-NEXT:    sll $2, $2, 3
+; MIPS64R6-NEXT:    addiu $3, $zero, 255
+; MIPS64R6-NEXT:    daddiu $6, $zero, -4
+; MIPS64R6-NEXT:    and $1, $1, $6
+; MIPS64R6-NEXT:    sllv $3, $3, $2
+; MIPS64R6-NEXT:    andi $5, $5, 255
+; MIPS64R6-NEXT:    sllv $5, $5, $2
+; MIPS64R6-NEXT:    andi $4, $4, 255
+; MIPS64R6-NEXT:    sllv $4, $4, $2
 ; MIPS64R6-NEXT:  .LBB12_1: # %entry
 ; MIPS64R6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64R6-NEXT:    ll $8, 0($3)
-; MIPS64R6-NEXT:    and $9, $8, $6
-; MIPS64R6-NEXT:    bnec $9, $4, .LBB12_3
+; MIPS64R6-NEXT:    ll $6, 0($1)
+; MIPS64R6-NEXT:    and $7, $6, $3
+; MIPS64R6-NEXT:    bnec $7, $4, .LBB12_3
 ; MIPS64R6-NEXT:  # %bb.2: # %entry
 ; MIPS64R6-NEXT:    # in Loop: Header=BB12_1 Depth=1
-; MIPS64R6-NEXT:    and $8, $8, $7
-; MIPS64R6-NEXT:    or $8, $8, $5
-; MIPS64R6-NEXT:    sc $8, 0($3)
-; MIPS64R6-NEXT:    beqzc $8, .LBB12_1
+; MIPS64R6-NEXT:    xor $7, $6, $7
+; MIPS64R6-NEXT:    or $7, $7, $5
+; MIPS64R6-NEXT:    sc $7, 0($1)
+; MIPS64R6-NEXT:    beqzc $7, .LBB12_1
 ; MIPS64R6-NEXT:  .LBB12_3: # %entry
-; MIPS64R6-NEXT:    srlv $2, $9, $1
-; MIPS64R6-NEXT:    seb $2, $2
-; MIPS64R6-NEXT:  # %bb.4: # %entry
-; MIPS64R6-NEXT:    jrc $ra
+; MIPS64R6-NEXT:    srlv $1, $6, $2
+; MIPS64R6-NEXT:    jr $ra
+; MIPS64R6-NEXT:    seb $2, $1
 ;
 ; MIPS64R6O0-LABEL: AtomicCmpSwap8:
 ; MIPS64R6O0:       # %bb.0: # %entry
-; MIPS64R6O0-NEXT:    daddiu $sp, $sp, -16
 ; MIPS64R6O0-NEXT:    lui $1, %hi(%neg(%gp_rel(AtomicCmpSwap8)))
 ; MIPS64R6O0-NEXT:    daddu $1, $1, $25
-; MIPS64R6O0-NEXT:    daddiu $3, $1, %lo(%neg(%gp_rel(AtomicCmpSwap8)))
+; MIPS64R6O0-NEXT:    daddiu $2, $1, %lo(%neg(%gp_rel(AtomicCmpSwap8)))
 ; MIPS64R6O0-NEXT:    move $1, $5
-; MIPS64R6O0-NEXT:    move $2, $4
-; MIPS64R6O0-NEXT:    ld $3, %got_disp(y)($3)
+; MIPS64R6O0-NEXT:    move $3, $4
+; MIPS64R6O0-NEXT:    ld $2, %got_disp(y)($2)
 ; MIPS64R6O0-NEXT:    daddiu $4, $zero, -4
-; MIPS64R6O0-NEXT:    and $4, $3, $4
-; MIPS64R6O0-NEXT:    andi $3, $3, 3
-; MIPS64R6O0-NEXT:    xori $3, $3, 3
-; MIPS64R6O0-NEXT:    sll $9, $3, 3
-; MIPS64R6O0-NEXT:    ori $3, $zero, 255
-; MIPS64R6O0-NEXT:    sllv $5, $3, $9
-; MIPS64R6O0-NEXT:    nor $7, $zero, $5
-; MIPS64R6O0-NEXT:    andi $2, $2, 255
-; MIPS64R6O0-NEXT:    sllv $6, $2, $9
+; MIPS64R6O0-NEXT:    and $4, $2, $4
+; MIPS64R6O0-NEXT:    # kill: def $v0 killed $v0 killed $v0_64
+; MIPS64R6O0-NEXT:    sll $2, $2, 0
+; MIPS64R6O0-NEXT:    not $2, $2
+; MIPS64R6O0-NEXT:    andi $2, $2, 3
+; MIPS64R6O0-NEXT:    sll $2, $2, 3
+; MIPS64R6O0-NEXT:    addiu $5, $zero, 255
+; MIPS64R6O0-NEXT:    sllv $7, $5, $2
+; MIPS64R6O0-NEXT:    andi $3, $3, 255
+; MIPS64R6O0-NEXT:    sllv $5, $3, $2
 ; MIPS64R6O0-NEXT:    andi $1, $1, 255
-; MIPS64R6O0-NEXT:    sllv $8, $1, $9
+; MIPS64R6O0-NEXT:    sllv $6, $1, $2
 ; MIPS64R6O0-NEXT:  .LBB12_1: # %entry
 ; MIPS64R6O0-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64R6O0-NEXT:    ll $2, 0($4)
-; MIPS64R6O0-NEXT:    and $3, $2, $5
-; MIPS64R6O0-NEXT:    bnec $3, $6, .LBB12_3
+; MIPS64R6O0-NEXT:    ll $1, 0($4)
+; MIPS64R6O0-NEXT:    and $3, $1, $7
+; MIPS64R6O0-NEXT:    bnec $3, $5, .LBB12_3
 ; MIPS64R6O0-NEXT:  # %bb.2: # %entry
 ; MIPS64R6O0-NEXT:    # in Loop: Header=BB12_1 Depth=1
-; MIPS64R6O0-NEXT:    and $2, $2, $7
-; MIPS64R6O0-NEXT:    or $2, $2, $8
-; MIPS64R6O0-NEXT:    sc $2, 0($4)
-; MIPS64R6O0-NEXT:    beqzc $2, .LBB12_1
+; MIPS64R6O0-NEXT:    xor $3, $1, $3
+; MIPS64R6O0-NEXT:    or $3, $3, $6
+; MIPS64R6O0-NEXT:    sc $3, 0($4)
+; MIPS64R6O0-NEXT:    beqzc $3, .LBB12_1
 ; MIPS64R6O0-NEXT:  .LBB12_3: # %entry
-; MIPS64R6O0-NEXT:    srlv $1, $3, $9
-; MIPS64R6O0-NEXT:    seb $1, $1
-; MIPS64R6O0-NEXT:  # %bb.4: # %entry
-; MIPS64R6O0-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
-; MIPS64R6O0-NEXT:  # %bb.5: # %entry
-; MIPS64R6O0-NEXT:    lw $2, 12($sp) # 4-byte Folded Reload
-; MIPS64R6O0-NEXT:    daddiu $sp, $sp, 16
+; MIPS64R6O0-NEXT:    srlv $1, $1, $2
+; MIPS64R6O0-NEXT:    seb $2, $1
 ; MIPS64R6O0-NEXT:    jrc $ra
 ;
 ; MM32-LABEL: AtomicCmpSwap8:
@@ -4643,35 +4422,33 @@ define signext i8 @AtomicCmpSwap8(i8 signext %oldval, i8 signext %newval) nounwi
 ; MM32-NEXT:    lui $2, %hi(_gp_disp)
 ; MM32-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; MM32-NEXT:    addu $2, $2, $25
-; MM32-NEXT:    lw $1, %got(y)($2)
-; MM32-NEXT:    addiu $2, $zero, -4
-; MM32-NEXT:    and $3, $1, $2
-; MM32-NEXT:    andi $1, $1, 3
-; MM32-NEXT:    sll $1, $1, 3
-; MM32-NEXT:    ori $2, $zero, 255
-; MM32-NEXT:    sllv $6, $2, $1
-; MM32-NEXT:    nor $7, $zero, $6
-; MM32-NEXT:    andi $2, $4, 255
-; MM32-NEXT:    sllv $4, $2, $1
-; MM32-NEXT:    andi $2, $5, 255
-; MM32-NEXT:    sllv $5, $2, $1
+; MM32-NEXT:    lw $2, %got(y)($2)
+; MM32-NEXT:    andi16 $3, $2, 3
+; MM32-NEXT:    sll16 $3, $3, 3
+; MM32-NEXT:    addiu $1, $zero, 255
+; MM32-NEXT:    addiu $6, $zero, -4
+; MM32-NEXT:    and16 $6, $2
+; MM32-NEXT:    sllv $1, $1, $3
+; MM32-NEXT:    andi16 $2, $5, 255
+; MM32-NEXT:    sllv $2, $2, $3
+; MM32-NEXT:    andi16 $4, $4, 255
+; MM32-NEXT:    sllv $4, $4, $3
 ; MM32-NEXT:  $BB12_1: # %entry
 ; MM32-NEXT:    # =>This Inner Loop Header: Depth=1
-; MM32-NEXT:    ll $8, 0($3)
-; MM32-NEXT:    and $9, $8, $6
-; MM32-NEXT:    bne $9, $4, $BB12_3
+; MM32-NEXT:    ll $5, 0($6)
+; MM32-NEXT:    and $7, $5, $1
+; MM32-NEXT:    bne $7, $4, $BB12_3
 ; MM32-NEXT:    nop
 ; MM32-NEXT:  # %bb.2: # %entry
 ; MM32-NEXT:    # in Loop: Header=BB12_1 Depth=1
-; MM32-NEXT:    and $8, $8, $7
-; MM32-NEXT:    or $8, $8, $5
-; MM32-NEXT:    sc $8, 0($3)
-; MM32-NEXT:    beqzc $8, $BB12_1
+; MM32-NEXT:    xor16 $7, $5
+; MM32-NEXT:    or $7, $7, $2
+; MM32-NEXT:    sc $7, 0($6)
+; MM32-NEXT:    beqzc $7, $BB12_1
 ; MM32-NEXT:  $BB12_3: # %entry
-; MM32-NEXT:    srlv $2, $9, $1
-; MM32-NEXT:    seb $2, $2
-; MM32-NEXT:  # %bb.4: # %entry
-; MM32-NEXT:    jrc $ra
+; MM32-NEXT:    srlv $1, $5, $3
+; MM32-NEXT:    jr $ra
+; MM32-NEXT:    seb $2, $1
 ;
 ; O1-LABEL: AtomicCmpSwap8:
 ; O1:       # %bb.0: # %entry
@@ -4679,37 +4456,34 @@ define signext i8 @AtomicCmpSwap8(i8 signext %oldval, i8 signext %newval) nounwi
 ; O1-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; O1-NEXT:    addu $1, $2, $25
 ; O1-NEXT:    lw $1, %got(y)($1)
-; O1-NEXT:    addiu $2, $zero, -4
-; O1-NEXT:    and $3, $1, $2
-; O1-NEXT:    andi $1, $1, 3
-; O1-NEXT:    sll $1, $1, 3
-; O1-NEXT:    ori $2, $zero, 255
-; O1-NEXT:    sllv $6, $2, $1
-; O1-NEXT:    nor $7, $zero, $6
-; O1-NEXT:    andi $2, $4, 255
-; O1-NEXT:    sllv $4, $2, $1
-; O1-NEXT:    andi $2, $5, 255
-; O1-NEXT:    sllv $5, $2, $1
+; O1-NEXT:    andi $2, $1, 3
+; O1-NEXT:    sll $2, $2, 3
+; O1-NEXT:    addiu $3, $zero, 255
+; O1-NEXT:    addiu $6, $zero, -4
+; O1-NEXT:    and $1, $1, $6
+; O1-NEXT:    sllv $3, $3, $2
+; O1-NEXT:    andi $5, $5, 255
+; O1-NEXT:    sllv $5, $5, $2
+; O1-NEXT:    andi $4, $4, 255
+; O1-NEXT:    sllv $4, $4, $2
 ; O1-NEXT:  $BB12_1: # %entry
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
-; O1-NEXT:    ll $8, 0($3)
-; O1-NEXT:    and $9, $8, $6
-; O1-NEXT:    bne $9, $4, $BB12_3
+; O1-NEXT:    ll $6, 0($1)
+; O1-NEXT:    and $7, $6, $3
+; O1-NEXT:    bne $7, $4, $BB12_3
 ; O1-NEXT:    nop
 ; O1-NEXT:  # %bb.2: # %entry
 ; O1-NEXT:    # in Loop: Header=BB12_1 Depth=1
-; O1-NEXT:    and $8, $8, $7
-; O1-NEXT:    or $8, $8, $5
-; O1-NEXT:    sc $8, 0($3)
-; O1-NEXT:    beqz $8, $BB12_1
+; O1-NEXT:    xor $7, $6, $7
+; O1-NEXT:    or $7, $7, $5
+; O1-NEXT:    sc $7, 0($1)
+; O1-NEXT:    beqz $7, $BB12_1
 ; O1-NEXT:    nop
 ; O1-NEXT:  $BB12_3: # %entry
-; O1-NEXT:    srlv $2, $9, $1
-; O1-NEXT:    sll $2, $2, 24
-; O1-NEXT:    sra $2, $2, 24
-; O1-NEXT:  # %bb.4: # %entry
+; O1-NEXT:    srlv $1, $6, $2
+; O1-NEXT:    sll $1, $1, 24
 ; O1-NEXT:    jr $ra
-; O1-NEXT:    nop
+; O1-NEXT:    sra $2, $1, 24
 ;
 ; O2-LABEL: AtomicCmpSwap8:
 ; O2:       # %bb.0: # %entry
@@ -4717,75 +4491,69 @@ define signext i8 @AtomicCmpSwap8(i8 signext %oldval, i8 signext %newval) nounwi
 ; O2-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; O2-NEXT:    addu $1, $2, $25
 ; O2-NEXT:    lw $1, %got(y)($1)
-; O2-NEXT:    addiu $2, $zero, -4
-; O2-NEXT:    and $3, $1, $2
-; O2-NEXT:    andi $1, $1, 3
-; O2-NEXT:    sll $1, $1, 3
-; O2-NEXT:    ori $2, $zero, 255
-; O2-NEXT:    sllv $6, $2, $1
-; O2-NEXT:    nor $7, $zero, $6
-; O2-NEXT:    andi $2, $4, 255
-; O2-NEXT:    sllv $4, $2, $1
-; O2-NEXT:    andi $2, $5, 255
-; O2-NEXT:    sllv $5, $2, $1
+; O2-NEXT:    andi $2, $1, 3
+; O2-NEXT:    sll $2, $2, 3
+; O2-NEXT:    addiu $3, $zero, 255
+; O2-NEXT:    addiu $6, $zero, -4
+; O2-NEXT:    and $1, $1, $6
+; O2-NEXT:    sllv $3, $3, $2
+; O2-NEXT:    andi $5, $5, 255
+; O2-NEXT:    sllv $5, $5, $2
+; O2-NEXT:    andi $4, $4, 255
+; O2-NEXT:    sllv $4, $4, $2
 ; O2-NEXT:  $BB12_1: # %entry
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
-; O2-NEXT:    ll $8, 0($3)
-; O2-NEXT:    and $9, $8, $6
-; O2-NEXT:    bne $9, $4, $BB12_3
+; O2-NEXT:    ll $6, 0($1)
+; O2-NEXT:    and $7, $6, $3
+; O2-NEXT:    bne $7, $4, $BB12_3
 ; O2-NEXT:    nop
 ; O2-NEXT:  # %bb.2: # %entry
 ; O2-NEXT:    # in Loop: Header=BB12_1 Depth=1
-; O2-NEXT:    and $8, $8, $7
-; O2-NEXT:    or $8, $8, $5
-; O2-NEXT:    sc $8, 0($3)
-; O2-NEXT:    beqz $8, $BB12_1
+; O2-NEXT:    xor $7, $6, $7
+; O2-NEXT:    or $7, $7, $5
+; O2-NEXT:    sc $7, 0($1)
+; O2-NEXT:    beqz $7, $BB12_1
 ; O2-NEXT:    nop
 ; O2-NEXT:  $BB12_3: # %entry
-; O2-NEXT:    srlv $2, $9, $1
-; O2-NEXT:    sll $2, $2, 24
-; O2-NEXT:    sra $2, $2, 24
-; O2-NEXT:  # %bb.4: # %entry
+; O2-NEXT:    srlv $1, $6, $2
+; O2-NEXT:    sll $1, $1, 24
 ; O2-NEXT:    jr $ra
-; O2-NEXT:    nop
+; O2-NEXT:    sra $2, $1, 24
 ;
 ; O3-LABEL: AtomicCmpSwap8:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    lui $2, %hi(_gp_disp)
 ; O3-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; O3-NEXT:    addu $1, $2, $25
-; O3-NEXT:    addiu $2, $zero, -4
+; O3-NEXT:    addiu $3, $zero, 255
+; O3-NEXT:    addiu $6, $zero, -4
+; O3-NEXT:    andi $5, $5, 255
+; O3-NEXT:    andi $4, $4, 255
 ; O3-NEXT:    lw $1, %got(y)($1)
-; O3-NEXT:    and $3, $1, $2
-; O3-NEXT:    andi $1, $1, 3
-; O3-NEXT:    ori $2, $zero, 255
-; O3-NEXT:    sll $1, $1, 3
-; O3-NEXT:    sllv $6, $2, $1
-; O3-NEXT:    andi $2, $4, 255
-; O3-NEXT:    sllv $4, $2, $1
-; O3-NEXT:    andi $2, $5, 255
-; O3-NEXT:    nor $7, $zero, $6
-; O3-NEXT:    sllv $5, $2, $1
+; O3-NEXT:    andi $2, $1, 3
+; O3-NEXT:    and $1, $1, $6
+; O3-NEXT:    sll $2, $2, 3
+; O3-NEXT:    sllv $3, $3, $2
+; O3-NEXT:    sllv $5, $5, $2
+; O3-NEXT:    sllv $4, $4, $2
 ; O3-NEXT:  $BB12_1: # %entry
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
-; O3-NEXT:    ll $8, 0($3)
-; O3-NEXT:    and $9, $8, $6
-; O3-NEXT:    bne $9, $4, $BB12_3
+; O3-NEXT:    ll $6, 0($1)
+; O3-NEXT:    and $7, $6, $3
+; O3-NEXT:    bne $7, $4, $BB12_3
 ; O3-NEXT:    nop
 ; O3-NEXT:  # %bb.2: # %entry
 ; O3-NEXT:    # in Loop: Header=BB12_1 Depth=1
-; O3-NEXT:    and $8, $8, $7
-; O3-NEXT:    or $8, $8, $5
-; O3-NEXT:    sc $8, 0($3)
-; O3-NEXT:    beqz $8, $BB12_1
+; O3-NEXT:    xor $7, $6, $7
+; O3-NEXT:    or $7, $7, $5
+; O3-NEXT:    sc $7, 0($1)
+; O3-NEXT:    beqz $7, $BB12_1
 ; O3-NEXT:    nop
 ; O3-NEXT:  $BB12_3: # %entry
-; O3-NEXT:    srlv $2, $9, $1
-; O3-NEXT:    sll $2, $2, 24
-; O3-NEXT:    sra $2, $2, 24
-; O3-NEXT:  # %bb.4: # %entry
+; O3-NEXT:    srlv $1, $6, $2
+; O3-NEXT:    sll $1, $1, 24
 ; O3-NEXT:    jr $ra
-; O3-NEXT:    nop
+; O3-NEXT:    sra $2, $1, 24
 ;
 ; MIPS32EB-LABEL: AtomicCmpSwap8:
 ; MIPS32EB:       # %bb.0: # %entry
@@ -4793,38 +4561,35 @@ define signext i8 @AtomicCmpSwap8(i8 signext %oldval, i8 signext %newval) nounwi
 ; MIPS32EB-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; MIPS32EB-NEXT:    addu $1, $2, $25
 ; MIPS32EB-NEXT:    lw $1, %got(y)($1)
-; MIPS32EB-NEXT:    addiu $2, $zero, -4
-; MIPS32EB-NEXT:    and $3, $1, $2
-; MIPS32EB-NEXT:    andi $1, $1, 3
-; MIPS32EB-NEXT:    xori $1, $1, 3
-; MIPS32EB-NEXT:    sll $1, $1, 3
-; MIPS32EB-NEXT:    ori $2, $zero, 255
-; MIPS32EB-NEXT:    sllv $6, $2, $1
-; MIPS32EB-NEXT:    nor $7, $zero, $6
-; MIPS32EB-NEXT:    andi $2, $4, 255
-; MIPS32EB-NEXT:    sllv $4, $2, $1
-; MIPS32EB-NEXT:    andi $2, $5, 255
-; MIPS32EB-NEXT:    sllv $5, $2, $1
+; MIPS32EB-NEXT:    not $2, $1
+; MIPS32EB-NEXT:    andi $2, $2, 3
+; MIPS32EB-NEXT:    sll $2, $2, 3
+; MIPS32EB-NEXT:    addiu $3, $zero, 255
+; MIPS32EB-NEXT:    addiu $6, $zero, -4
+; MIPS32EB-NEXT:    and $1, $1, $6
+; MIPS32EB-NEXT:    sllv $3, $3, $2
+; MIPS32EB-NEXT:    andi $5, $5, 255
+; MIPS32EB-NEXT:    sllv $5, $5, $2
+; MIPS32EB-NEXT:    andi $4, $4, 255
+; MIPS32EB-NEXT:    sllv $4, $4, $2
 ; MIPS32EB-NEXT:  $BB12_1: # %entry
 ; MIPS32EB-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS32EB-NEXT:    ll $8, 0($3)
-; MIPS32EB-NEXT:    and $9, $8, $6
-; MIPS32EB-NEXT:    bne $9, $4, $BB12_3
+; MIPS32EB-NEXT:    ll $6, 0($1)
+; MIPS32EB-NEXT:    and $7, $6, $3
+; MIPS32EB-NEXT:    bne $7, $4, $BB12_3
 ; MIPS32EB-NEXT:    nop
 ; MIPS32EB-NEXT:  # %bb.2: # %entry
 ; MIPS32EB-NEXT:    # in Loop: Header=BB12_1 Depth=1
-; MIPS32EB-NEXT:    and $8, $8, $7
-; MIPS32EB-NEXT:    or $8, $8, $5
-; MIPS32EB-NEXT:    sc $8, 0($3)
-; MIPS32EB-NEXT:    beqz $8, $BB12_1
+; MIPS32EB-NEXT:    xor $7, $6, $7
+; MIPS32EB-NEXT:    or $7, $7, $5
+; MIPS32EB-NEXT:    sc $7, 0($1)
+; MIPS32EB-NEXT:    beqz $7, $BB12_1
 ; MIPS32EB-NEXT:    nop
 ; MIPS32EB-NEXT:  $BB12_3: # %entry
-; MIPS32EB-NEXT:    srlv $2, $9, $1
-; MIPS32EB-NEXT:    sll $2, $2, 24
-; MIPS32EB-NEXT:    sra $2, $2, 24
-; MIPS32EB-NEXT:  # %bb.4: # %entry
+; MIPS32EB-NEXT:    srlv $1, $6, $2
+; MIPS32EB-NEXT:    sll $1, $1, 24
 ; MIPS32EB-NEXT:    jr $ra
-; MIPS32EB-NEXT:    nop
+; MIPS32EB-NEXT:    sra $2, $1, 24
 entry:
   %pair0 = cmpxchg ptr @y, i8 %oldval, i8 %newval monotonic monotonic
   %0 = extractvalue { i8, i1 } %pair0, 0
@@ -4834,545 +4599,463 @@ entry:
 define i1 @AtomicCmpSwapRes8(ptr %ptr, i8 signext %oldval, i8 signext %newval) nounwind {
 ; MIPS32-LABEL: AtomicCmpSwapRes8:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    addiu $1, $zero, -4
-; MIPS32-NEXT:    and $2, $4, $1
-; MIPS32-NEXT:    andi $1, $4, 3
-; MIPS32-NEXT:    sll $3, $1, 3
-; MIPS32-NEXT:    ori $1, $zero, 255
-; MIPS32-NEXT:    sllv $4, $1, $3
-; MIPS32-NEXT:    nor $7, $zero, $4
-; MIPS32-NEXT:    andi $1, $5, 255
-; MIPS32-NEXT:    sllv $8, $1, $3
-; MIPS32-NEXT:    andi $1, $6, 255
-; MIPS32-NEXT:    sllv $6, $1, $3
+; MIPS32-NEXT:    sll $1, $4, 3
+; MIPS32-NEXT:    addiu $2, $zero, 255
+; MIPS32-NEXT:    addiu $3, $zero, -4
+; MIPS32-NEXT:    and $3, $4, $3
+; MIPS32-NEXT:    sllv $2, $2, $1
+; MIPS32-NEXT:    andi $4, $6, 255
+; MIPS32-NEXT:    sllv $4, $4, $1
+; MIPS32-NEXT:    andi $5, $5, 255
+; MIPS32-NEXT:    sllv $1, $5, $1
 ; MIPS32-NEXT:  $BB13_1: # %entry
 ; MIPS32-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS32-NEXT:    ll $9, 0($2)
-; MIPS32-NEXT:    and $10, $9, $4
-; MIPS32-NEXT:    bne $10, $8, $BB13_3
+; MIPS32-NEXT:    ll $5, 0($3)
+; MIPS32-NEXT:    and $6, $5, $2
+; MIPS32-NEXT:    bne $6, $1, $BB13_3
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  # %bb.2: # %entry
 ; MIPS32-NEXT:    # in Loop: Header=BB13_1 Depth=1
-; MIPS32-NEXT:    and $9, $9, $7
-; MIPS32-NEXT:    or $9, $9, $6
-; MIPS32-NEXT:    sc $9, 0($2)
-; MIPS32-NEXT:    beqz $9, $BB13_1
+; MIPS32-NEXT:    xor $6, $5, $6
+; MIPS32-NEXT:    or $6, $6, $4
+; MIPS32-NEXT:    sc $6, 0($3)
+; MIPS32-NEXT:    beqz $6, $BB13_1
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  $BB13_3: # %entry
-; MIPS32-NEXT:    srlv $1, $10, $3
-; MIPS32-NEXT:    sll $1, $1, 24
-; MIPS32-NEXT:    sra $1, $1, 24
-; MIPS32-NEXT:  # %bb.4: # %entry
-; MIPS32-NEXT:    xor $1, $1, $5
+; MIPS32-NEXT:    and $2, $5, $2
+; MIPS32-NEXT:    xor $1, $1, $2
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    sltiu $2, $1, 1
 ;
 ; MIPS32O0-LABEL: AtomicCmpSwapRes8:
 ; MIPS32O0:       # %bb.0: # %entry
-; MIPS32O0-NEXT:    addiu $sp, $sp, -8
-; MIPS32O0-NEXT:    move $1, $6
-; MIPS32O0-NEXT:    move $2, $5
-; MIPS32O0-NEXT:    move $3, $4
-; MIPS32O0-NEXT:    sw $2, 0($sp) # 4-byte Folded Spill
-; MIPS32O0-NEXT:    addiu $4, $zero, -4
-; MIPS32O0-NEXT:    and $4, $3, $4
-; MIPS32O0-NEXT:    andi $3, $3, 3
-; MIPS32O0-NEXT:    sll $9, $3, 3
-; MIPS32O0-NEXT:    ori $3, $zero, 255
-; MIPS32O0-NEXT:    sllv $5, $3, $9
-; MIPS32O0-NEXT:    nor $7, $zero, $5
+; MIPS32O0-NEXT:    move $2, $6
+; MIPS32O0-NEXT:    addiu $1, $zero, -4
+; MIPS32O0-NEXT:    and $6, $4, $1
+; MIPS32O0-NEXT:    sll $4, $4, 3
+; MIPS32O0-NEXT:    addiu $1, $zero, 255
+; MIPS32O0-NEXT:    sllv $3, $1, $4
+; MIPS32O0-NEXT:    andi $1, $5, 255
+; MIPS32O0-NEXT:    sllv $1, $1, $4
 ; MIPS32O0-NEXT:    andi $2, $2, 255
-; MIPS32O0-NEXT:    sllv $6, $2, $9
-; MIPS32O0-NEXT:    andi $1, $1, 255
-; MIPS32O0-NEXT:    sllv $8, $1, $9
+; MIPS32O0-NEXT:    sllv $7, $2, $4
 ; MIPS32O0-NEXT:  $BB13_1: # %entry
 ; MIPS32O0-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS32O0-NEXT:    ll $2, 0($4)
-; MIPS32O0-NEXT:    and $3, $2, $5
-; MIPS32O0-NEXT:    bne $3, $6, $BB13_3
+; MIPS32O0-NEXT:    ll $2, 0($6)
+; MIPS32O0-NEXT:    and $5, $2, $3
+; MIPS32O0-NEXT:    bne $5, $1, $BB13_3
 ; MIPS32O0-NEXT:    nop
 ; MIPS32O0-NEXT:  # %bb.2: # %entry
 ; MIPS32O0-NEXT:    # in Loop: Header=BB13_1 Depth=1
-; MIPS32O0-NEXT:    and $2, $2, $7
-; MIPS32O0-NEXT:    or $2, $2, $8
-; MIPS32O0-NEXT:    sc $2, 0($4)
-; MIPS32O0-NEXT:    beqz $2, $BB13_1
+; MIPS32O0-NEXT:    xor $5, $2, $5
+; MIPS32O0-NEXT:    or $5, $5, $7
+; MIPS32O0-NEXT:    sc $5, 0($6)
+; MIPS32O0-NEXT:    beqz $5, $BB13_1
 ; MIPS32O0-NEXT:    nop
 ; MIPS32O0-NEXT:  $BB13_3: # %entry
-; MIPS32O0-NEXT:    srlv $1, $3, $9
-; MIPS32O0-NEXT:    sll $1, $1, 24
-; MIPS32O0-NEXT:    sra $1, $1, 24
-; MIPS32O0-NEXT:  # %bb.4: # %entry
-; MIPS32O0-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
-; MIPS32O0-NEXT:  # %bb.5: # %entry
-; MIPS32O0-NEXT:    lw $1, 4($sp) # 4-byte Folded Reload
-; MIPS32O0-NEXT:    lw $2, 0($sp) # 4-byte Folded Reload
-; MIPS32O0-NEXT:    sll $2, $2, 24
-; MIPS32O0-NEXT:    sra $2, $2, 24
+; MIPS32O0-NEXT:    srlv $4, $2, $4
+; MIPS32O0-NEXT:    and $2, $2, $3
 ; MIPS32O0-NEXT:    xor $1, $1, $2
 ; MIPS32O0-NEXT:    sltiu $2, $1, 1
-; MIPS32O0-NEXT:    addiu $sp, $sp, 8
 ; MIPS32O0-NEXT:    jr $ra
 ; MIPS32O0-NEXT:    nop
 ;
 ; MIPS32R2-LABEL: AtomicCmpSwapRes8:
 ; MIPS32R2:       # %bb.0: # %entry
-; MIPS32R2-NEXT:    addiu $1, $zero, -4
-; MIPS32R2-NEXT:    and $2, $4, $1
-; MIPS32R2-NEXT:    andi $1, $4, 3
-; MIPS32R2-NEXT:    sll $3, $1, 3
-; MIPS32R2-NEXT:    ori $1, $zero, 255
-; MIPS32R2-NEXT:    sllv $4, $1, $3
-; MIPS32R2-NEXT:    nor $7, $zero, $4
-; MIPS32R2-NEXT:    andi $1, $5, 255
-; MIPS32R2-NEXT:    sllv $8, $1, $3
-; MIPS32R2-NEXT:    andi $1, $6, 255
-; MIPS32R2-NEXT:    sllv $6, $1, $3
+; MIPS32R2-NEXT:    sll $1, $4, 3
+; MIPS32R2-NEXT:    addiu $2, $zero, 255
+; MIPS32R2-NEXT:    addiu $3, $zero, -4
+; MIPS32R2-NEXT:    and $3, $4, $3
+; MIPS32R2-NEXT:    sllv $2, $2, $1
+; MIPS32R2-NEXT:    andi $4, $6, 255
+; MIPS32R2-NEXT:    sllv $4, $4, $1
+; MIPS32R2-NEXT:    andi $5, $5, 255
+; MIPS32R2-NEXT:    sllv $1, $5, $1
 ; MIPS32R2-NEXT:  $BB13_1: # %entry
 ; MIPS32R2-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS32R2-NEXT:    ll $9, 0($2)
-; MIPS32R2-NEXT:    and $10, $9, $4
-; MIPS32R2-NEXT:    bne $10, $8, $BB13_3
+; MIPS32R2-NEXT:    ll $5, 0($3)
+; MIPS32R2-NEXT:    and $6, $5, $2
+; MIPS32R2-NEXT:    bne $6, $1, $BB13_3
 ; MIPS32R2-NEXT:    nop
 ; MIPS32R2-NEXT:  # %bb.2: # %entry
 ; MIPS32R2-NEXT:    # in Loop: Header=BB13_1 Depth=1
-; MIPS32R2-NEXT:    and $9, $9, $7
-; MIPS32R2-NEXT:    or $9, $9, $6
-; MIPS32R2-NEXT:    sc $9, 0($2)
-; MIPS32R2-NEXT:    beqz $9, $BB13_1
+; MIPS32R2-NEXT:    xor $6, $5, $6
+; MIPS32R2-NEXT:    or $6, $6, $4
+; MIPS32R2-NEXT:    sc $6, 0($3)
+; MIPS32R2-NEXT:    beqz $6, $BB13_1
 ; MIPS32R2-NEXT:    nop
 ; MIPS32R2-NEXT:  $BB13_3: # %entry
-; MIPS32R2-NEXT:    srlv $1, $10, $3
-; MIPS32R2-NEXT:    seb $1, $1
-; MIPS32R2-NEXT:  # %bb.4: # %entry
-; MIPS32R2-NEXT:    xor $1, $1, $5
+; MIPS32R2-NEXT:    and $2, $5, $2
+; MIPS32R2-NEXT:    xor $1, $1, $2
 ; MIPS32R2-NEXT:    jr $ra
 ; MIPS32R2-NEXT:    sltiu $2, $1, 1
 ;
 ; MIPS32R6-LABEL: AtomicCmpSwapRes8:
 ; MIPS32R6:       # %bb.0: # %entry
-; MIPS32R6-NEXT:    addiu $1, $zero, -4
-; MIPS32R6-NEXT:    and $2, $4, $1
-; MIPS32R6-NEXT:    andi $1, $4, 3
-; MIPS32R6-NEXT:    sll $3, $1, 3
-; MIPS32R6-NEXT:    ori $1, $zero, 255
-; MIPS32R6-NEXT:    sllv $4, $1, $3
-; MIPS32R6-NEXT:    nor $7, $zero, $4
-; MIPS32R6-NEXT:    andi $1, $5, 255
-; MIPS32R6-NEXT:    sllv $8, $1, $3
-; MIPS32R6-NEXT:    andi $1, $6, 255
-; MIPS32R6-NEXT:    sllv $6, $1, $3
+; MIPS32R6-NEXT:    sll $1, $4, 3
+; MIPS32R6-NEXT:    addiu $2, $zero, 255
+; MIPS32R6-NEXT:    addiu $3, $zero, -4
+; MIPS32R6-NEXT:    and $3, $4, $3
+; MIPS32R6-NEXT:    sllv $2, $2, $1
+; MIPS32R6-NEXT:    andi $4, $6, 255
+; MIPS32R6-NEXT:    sllv $4, $4, $1
+; MIPS32R6-NEXT:    andi $5, $5, 255
+; MIPS32R6-NEXT:    sllv $1, $5, $1
 ; MIPS32R6-NEXT:  $BB13_1: # %entry
 ; MIPS32R6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS32R6-NEXT:    ll $9, 0($2)
-; MIPS32R6-NEXT:    and $10, $9, $4
-; MIPS32R6-NEXT:    bnec $10, $8, $BB13_3
+; MIPS32R6-NEXT:    ll $5, 0($3)
+; MIPS32R6-NEXT:    and $6, $5, $2
+; MIPS32R6-NEXT:    bnec $6, $1, $BB13_3
 ; MIPS32R6-NEXT:  # %bb.2: # %entry
 ; MIPS32R6-NEXT:    # in Loop: Header=BB13_1 Depth=1
-; MIPS32R6-NEXT:    and $9, $9, $7
-; MIPS32R6-NEXT:    or $9, $9, $6
-; MIPS32R6-NEXT:    sc $9, 0($2)
-; MIPS32R6-NEXT:    beqzc $9, $BB13_1
+; MIPS32R6-NEXT:    xor $6, $5, $6
+; MIPS32R6-NEXT:    or $6, $6, $4
+; MIPS32R6-NEXT:    sc $6, 0($3)
+; MIPS32R6-NEXT:    beqzc $6, $BB13_1
 ; MIPS32R6-NEXT:  $BB13_3: # %entry
-; MIPS32R6-NEXT:    srlv $1, $10, $3
-; MIPS32R6-NEXT:    seb $1, $1
-; MIPS32R6-NEXT:  # %bb.4: # %entry
-; MIPS32R6-NEXT:    xor $1, $1, $5
+; MIPS32R6-NEXT:    and $2, $5, $2
+; MIPS32R6-NEXT:    xor $1, $1, $2
 ; MIPS32R6-NEXT:    jr $ra
 ; MIPS32R6-NEXT:    sltiu $2, $1, 1
 ;
 ; MIPS32R6O0-LABEL: AtomicCmpSwapRes8:
 ; MIPS32R6O0:       # %bb.0: # %entry
-; MIPS32R6O0-NEXT:    addiu $sp, $sp, -8
-; MIPS32R6O0-NEXT:    move $1, $6
-; MIPS32R6O0-NEXT:    move $2, $5
-; MIPS32R6O0-NEXT:    sw $2, 0($sp) # 4-byte Folded Spill
-; MIPS32R6O0-NEXT:    move $3, $4
-; MIPS32R6O0-NEXT:    addiu $4, $zero, -4
-; MIPS32R6O0-NEXT:    and $4, $3, $4
-; MIPS32R6O0-NEXT:    andi $3, $3, 3
-; MIPS32R6O0-NEXT:    sll $9, $3, 3
-; MIPS32R6O0-NEXT:    ori $3, $zero, 255
-; MIPS32R6O0-NEXT:    sllv $5, $3, $9
-; MIPS32R6O0-NEXT:    nor $7, $zero, $5
-; MIPS32R6O0-NEXT:    andi $2, $2, 255
-; MIPS32R6O0-NEXT:    sllv $6, $2, $9
+; MIPS32R6O0-NEXT:    move $1, $5
+; MIPS32R6O0-NEXT:    addiu $2, $zero, -4
+; MIPS32R6O0-NEXT:    and $5, $4, $2
+; MIPS32R6O0-NEXT:    sll $4, $4, 3
+; MIPS32R6O0-NEXT:    addiu $2, $zero, 255
+; MIPS32R6O0-NEXT:    sllv $3, $2, $4
 ; MIPS32R6O0-NEXT:    andi $1, $1, 255
-; MIPS32R6O0-NEXT:    sllv $8, $1, $9
+; MIPS32R6O0-NEXT:    sllv $1, $1, $4
+; MIPS32R6O0-NEXT:    andi $2, $6, 255
+; MIPS32R6O0-NEXT:    sllv $6, $2, $4
 ; MIPS32R6O0-NEXT:  $BB13_1: # %entry
 ; MIPS32R6O0-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS32R6O0-NEXT:    ll $2, 0($4)
-; MIPS32R6O0-NEXT:    and $3, $2, $5
-; MIPS32R6O0-NEXT:    bnec $3, $6, $BB13_3
+; MIPS32R6O0-NEXT:    ll $2, 0($5)
+; MIPS32R6O0-NEXT:    and $4, $2, $3
+; MIPS32R6O0-NEXT:    bnec $4, $1, $BB13_3
 ; MIPS32R6O0-NEXT:  # %bb.2: # %entry
 ; MIPS32R6O0-NEXT:    # in Loop: Header=BB13_1 Depth=1
-; MIPS32R6O0-NEXT:    and $2, $2, $7
-; MIPS32R6O0-NEXT:    or $2, $2, $8
-; MIPS32R6O0-NEXT:    sc $2, 0($4)
-; MIPS32R6O0-NEXT:    beqzc $2, $BB13_1
+; MIPS32R6O0-NEXT:    xor $4, $2, $4
+; MIPS32R6O0-NEXT:    or $4, $4, $6
+; MIPS32R6O0-NEXT:    sc $4, 0($5)
+; MIPS32R6O0-NEXT:    beqzc $4, $BB13_1
 ; MIPS32R6O0-NEXT:  $BB13_3: # %entry
-; MIPS32R6O0-NEXT:    srlv $1, $3, $9
-; MIPS32R6O0-NEXT:    seb $1, $1
-; MIPS32R6O0-NEXT:  # %bb.4: # %entry
-; MIPS32R6O0-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
-; MIPS32R6O0-NEXT:  # %bb.5: # %entry
-; MIPS32R6O0-NEXT:    lw $1, 4($sp) # 4-byte Folded Reload
-; MIPS32R6O0-NEXT:    lw $2, 0($sp) # 4-byte Folded Reload
+; MIPS32R6O0-NEXT:    and $2, $2, $3
 ; MIPS32R6O0-NEXT:    xor $1, $1, $2
 ; MIPS32R6O0-NEXT:    sltiu $2, $1, 1
-; MIPS32R6O0-NEXT:    addiu $sp, $sp, 8
 ; MIPS32R6O0-NEXT:    jrc $ra
 ;
 ; MIPS4-LABEL: AtomicCmpSwapRes8:
 ; MIPS4:       # %bb.0: # %entry
-; MIPS4-NEXT:    daddiu $1, $zero, -4
-; MIPS4-NEXT:    and $2, $4, $1
-; MIPS4-NEXT:    andi $1, $4, 3
-; MIPS4-NEXT:    sll $3, $1, 3
-; MIPS4-NEXT:    ori $1, $zero, 255
-; MIPS4-NEXT:    sllv $4, $1, $3
-; MIPS4-NEXT:    nor $7, $zero, $4
-; MIPS4-NEXT:    andi $1, $5, 255
-; MIPS4-NEXT:    sllv $8, $1, $3
-; MIPS4-NEXT:    andi $1, $6, 255
-; MIPS4-NEXT:    sllv $6, $1, $3
+; MIPS4-NEXT:    sll $1, $4, 0
+; MIPS4-NEXT:    andi $1, $1, 3
+; MIPS4-NEXT:    sll $1, $1, 3
+; MIPS4-NEXT:    addiu $2, $zero, 255
+; MIPS4-NEXT:    daddiu $3, $zero, -4
+; MIPS4-NEXT:    and $3, $4, $3
+; MIPS4-NEXT:    sllv $2, $2, $1
+; MIPS4-NEXT:    andi $4, $6, 255
+; MIPS4-NEXT:    sllv $4, $4, $1
+; MIPS4-NEXT:    andi $5, $5, 255
+; MIPS4-NEXT:    sllv $1, $5, $1
 ; MIPS4-NEXT:  .LBB13_1: # %entry
 ; MIPS4-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS4-NEXT:    ll $9, 0($2)
-; MIPS4-NEXT:    and $10, $9, $4
-; MIPS4-NEXT:    bne $10, $8, .LBB13_3
+; MIPS4-NEXT:    ll $5, 0($3)
+; MIPS4-NEXT:    and $6, $5, $2
+; MIPS4-NEXT:    bne $6, $1, .LBB13_3
 ; MIPS4-NEXT:    nop
 ; MIPS4-NEXT:  # %bb.2: # %entry
 ; MIPS4-NEXT:    # in Loop: Header=BB13_1 Depth=1
-; MIPS4-NEXT:    and $9, $9, $7
-; MIPS4-NEXT:    or $9, $9, $6
-; MIPS4-NEXT:    sc $9, 0($2)
-; MIPS4-NEXT:    beqz $9, .LBB13_1
+; MIPS4-NEXT:    xor $6, $5, $6
+; MIPS4-NEXT:    or $6, $6, $4
+; MIPS4-NEXT:    sc $6, 0($3)
+; MIPS4-NEXT:    beqz $6, .LBB13_1
 ; MIPS4-NEXT:    nop
 ; MIPS4-NEXT:  .LBB13_3: # %entry
-; MIPS4-NEXT:    srlv $1, $10, $3
-; MIPS4-NEXT:    sll $1, $1, 24
-; MIPS4-NEXT:    sra $1, $1, 24
-; MIPS4-NEXT:  # %bb.4: # %entry
-; MIPS4-NEXT:    xor $1, $1, $5
+; MIPS4-NEXT:    and $2, $5, $2
+; MIPS4-NEXT:    xor $1, $1, $2
 ; MIPS4-NEXT:    jr $ra
 ; MIPS4-NEXT:    sltiu $2, $1, 1
 ;
 ; MIPS64-LABEL: AtomicCmpSwapRes8:
 ; MIPS64:       # %bb.0: # %entry
-; MIPS64-NEXT:    daddiu $1, $zero, -4
-; MIPS64-NEXT:    and $2, $4, $1
-; MIPS64-NEXT:    andi $1, $4, 3
-; MIPS64-NEXT:    sll $3, $1, 3
-; MIPS64-NEXT:    ori $1, $zero, 255
-; MIPS64-NEXT:    sllv $4, $1, $3
-; MIPS64-NEXT:    nor $7, $zero, $4
-; MIPS64-NEXT:    andi $1, $5, 255
-; MIPS64-NEXT:    sllv $8, $1, $3
-; MIPS64-NEXT:    andi $1, $6, 255
-; MIPS64-NEXT:    sllv $6, $1, $3
+; MIPS64-NEXT:    sll $1, $4, 0
+; MIPS64-NEXT:    andi $1, $1, 3
+; MIPS64-NEXT:    sll $1, $1, 3
+; MIPS64-NEXT:    addiu $2, $zero, 255
+; MIPS64-NEXT:    daddiu $3, $zero, -4
+; MIPS64-NEXT:    and $3, $4, $3
+; MIPS64-NEXT:    sllv $2, $2, $1
+; MIPS64-NEXT:    andi $4, $6, 255
+; MIPS64-NEXT:    sllv $4, $4, $1
+; MIPS64-NEXT:    andi $5, $5, 255
+; MIPS64-NEXT:    sllv $1, $5, $1
 ; MIPS64-NEXT:  .LBB13_1: # %entry
 ; MIPS64-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64-NEXT:    ll $9, 0($2)
-; MIPS64-NEXT:    and $10, $9, $4
-; MIPS64-NEXT:    bne $10, $8, .LBB13_3
+; MIPS64-NEXT:    ll $5, 0($3)
+; MIPS64-NEXT:    and $6, $5, $2
+; MIPS64-NEXT:    bne $6, $1, .LBB13_3
 ; MIPS64-NEXT:    nop
 ; MIPS64-NEXT:  # %bb.2: # %entry
 ; MIPS64-NEXT:    # in Loop: Header=BB13_1 Depth=1
-; MIPS64-NEXT:    and $9, $9, $7
-; MIPS64-NEXT:    or $9, $9, $6
-; MIPS64-NEXT:    sc $9, 0($2)
-; MIPS64-NEXT:    beqz $9, .LBB13_1
+; MIPS64-NEXT:    xor $6, $5, $6
+; MIPS64-NEXT:    or $6, $6, $4
+; MIPS64-NEXT:    sc $6, 0($3)
+; MIPS64-NEXT:    beqz $6, .LBB13_1
 ; MIPS64-NEXT:    nop
 ; MIPS64-NEXT:  .LBB13_3: # %entry
-; MIPS64-NEXT:    srlv $1, $10, $3
-; MIPS64-NEXT:    sll $1, $1, 24
-; MIPS64-NEXT:    sra $1, $1, 24
-; MIPS64-NEXT:  # %bb.4: # %entry
-; MIPS64-NEXT:    xor $1, $1, $5
+; MIPS64-NEXT:    and $2, $5, $2
+; MIPS64-NEXT:    xor $1, $1, $2
 ; MIPS64-NEXT:    jr $ra
 ; MIPS64-NEXT:    sltiu $2, $1, 1
 ;
 ; MIPS64R2-LABEL: AtomicCmpSwapRes8:
 ; MIPS64R2:       # %bb.0: # %entry
-; MIPS64R2-NEXT:    daddiu $1, $zero, -4
-; MIPS64R2-NEXT:    and $2, $4, $1
-; MIPS64R2-NEXT:    andi $1, $4, 3
-; MIPS64R2-NEXT:    sll $3, $1, 3
-; MIPS64R2-NEXT:    ori $1, $zero, 255
-; MIPS64R2-NEXT:    sllv $4, $1, $3
-; MIPS64R2-NEXT:    nor $7, $zero, $4
-; MIPS64R2-NEXT:    andi $1, $5, 255
-; MIPS64R2-NEXT:    sllv $8, $1, $3
-; MIPS64R2-NEXT:    andi $1, $6, 255
-; MIPS64R2-NEXT:    sllv $6, $1, $3
+; MIPS64R2-NEXT:    sll $1, $4, 0
+; MIPS64R2-NEXT:    andi $1, $1, 3
+; MIPS64R2-NEXT:    sll $1, $1, 3
+; MIPS64R2-NEXT:    addiu $2, $zero, 255
+; MIPS64R2-NEXT:    daddiu $3, $zero, -4
+; MIPS64R2-NEXT:    and $3, $4, $3
+; MIPS64R2-NEXT:    sllv $2, $2, $1
+; MIPS64R2-NEXT:    andi $4, $6, 255
+; MIPS64R2-NEXT:    sllv $4, $4, $1
+; MIPS64R2-NEXT:    andi $5, $5, 255
+; MIPS64R2-NEXT:    sllv $1, $5, $1
 ; MIPS64R2-NEXT:  .LBB13_1: # %entry
 ; MIPS64R2-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64R2-NEXT:    ll $9, 0($2)
-; MIPS64R2-NEXT:    and $10, $9, $4
-; MIPS64R2-NEXT:    bne $10, $8, .LBB13_3
+; MIPS64R2-NEXT:    ll $5, 0($3)
+; MIPS64R2-NEXT:    and $6, $5, $2
+; MIPS64R2-NEXT:    bne $6, $1, .LBB13_3
 ; MIPS64R2-NEXT:    nop
 ; MIPS64R2-NEXT:  # %bb.2: # %entry
 ; MIPS64R2-NEXT:    # in Loop: Header=BB13_1 Depth=1
-; MIPS64R2-NEXT:    and $9, $9, $7
-; MIPS64R2-NEXT:    or $9, $9, $6
-; MIPS64R2-NEXT:    sc $9, 0($2)
-; MIPS64R2-NEXT:    beqz $9, .LBB13_1
+; MIPS64R2-NEXT:    xor $6, $5, $6
+; MIPS64R2-NEXT:    or $6, $6, $4
+; MIPS64R2-NEXT:    sc $6, 0($3)
+; MIPS64R2-NEXT:    beqz $6, .LBB13_1
 ; MIPS64R2-NEXT:    nop
 ; MIPS64R2-NEXT:  .LBB13_3: # %entry
-; MIPS64R2-NEXT:    srlv $1, $10, $3
-; MIPS64R2-NEXT:    seb $1, $1
-; MIPS64R2-NEXT:  # %bb.4: # %entry
-; MIPS64R2-NEXT:    xor $1, $1, $5
+; MIPS64R2-NEXT:    and $2, $5, $2
+; MIPS64R2-NEXT:    xor $1, $1, $2
 ; MIPS64R2-NEXT:    jr $ra
 ; MIPS64R2-NEXT:    sltiu $2, $1, 1
 ;
 ; MIPS64R6-LABEL: AtomicCmpSwapRes8:
 ; MIPS64R6:       # %bb.0: # %entry
-; MIPS64R6-NEXT:    daddiu $1, $zero, -4
-; MIPS64R6-NEXT:    and $2, $4, $1
-; MIPS64R6-NEXT:    andi $1, $4, 3
-; MIPS64R6-NEXT:    sll $3, $1, 3
-; MIPS64R6-NEXT:    ori $1, $zero, 255
-; MIPS64R6-NEXT:    sllv $4, $1, $3
-; MIPS64R6-NEXT:    nor $7, $zero, $4
-; MIPS64R6-NEXT:    andi $1, $5, 255
-; MIPS64R6-NEXT:    sllv $8, $1, $3
-; MIPS64R6-NEXT:    andi $1, $6, 255
-; MIPS64R6-NEXT:    sllv $6, $1, $3
+; MIPS64R6-NEXT:    sll $1, $4, 0
+; MIPS64R6-NEXT:    andi $1, $1, 3
+; MIPS64R6-NEXT:    sll $1, $1, 3
+; MIPS64R6-NEXT:    addiu $2, $zero, 255
+; MIPS64R6-NEXT:    daddiu $3, $zero, -4
+; MIPS64R6-NEXT:    and $3, $4, $3
+; MIPS64R6-NEXT:    sllv $2, $2, $1
+; MIPS64R6-NEXT:    andi $4, $6, 255
+; MIPS64R6-NEXT:    sllv $4, $4, $1
+; MIPS64R6-NEXT:    andi $5, $5, 255
+; MIPS64R6-NEXT:    sllv $1, $5, $1
 ; MIPS64R6-NEXT:  .LBB13_1: # %entry
 ; MIPS64R6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64R6-NEXT:    ll $9, 0($2)
-; MIPS64R6-NEXT:    and $10, $9, $4
-; MIPS64R6-NEXT:    bnec $10, $8, .LBB13_3
+; MIPS64R6-NEXT:    ll $5, 0($3)
+; MIPS64R6-NEXT:    and $6, $5, $2
+; MIPS64R6-NEXT:    bnec $6, $1, .LBB13_3
 ; MIPS64R6-NEXT:  # %bb.2: # %entry
 ; MIPS64R6-NEXT:    # in Loop: Header=BB13_1 Depth=1
-; MIPS64R6-NEXT:    and $9, $9, $7
-; MIPS64R6-NEXT:    or $9, $9, $6
-; MIPS64R6-NEXT:    sc $9, 0($2)
-; MIPS64R6-NEXT:    beqzc $9, .LBB13_1
+; MIPS64R6-NEXT:    xor $6, $5, $6
+; MIPS64R6-NEXT:    or $6, $6, $4
+; MIPS64R6-NEXT:    sc $6, 0($3)
+; MIPS64R6-NEXT:    beqzc $6, .LBB13_1
 ; MIPS64R6-NEXT:  .LBB13_3: # %entry
-; MIPS64R6-NEXT:    srlv $1, $10, $3
-; MIPS64R6-NEXT:    seb $1, $1
-; MIPS64R6-NEXT:  # %bb.4: # %entry
-; MIPS64R6-NEXT:    xor $1, $1, $5
+; MIPS64R6-NEXT:    and $2, $5, $2
+; MIPS64R6-NEXT:    xor $1, $1, $2
 ; MIPS64R6-NEXT:    jr $ra
 ; MIPS64R6-NEXT:    sltiu $2, $1, 1
 ;
 ; MIPS64R6O0-LABEL: AtomicCmpSwapRes8:
 ; MIPS64R6O0:       # %bb.0: # %entry
-; MIPS64R6O0-NEXT:    daddiu $sp, $sp, -16
+; MIPS64R6O0-NEXT:    move $2, $6
+; MIPS64R6O0-NEXT:    move $1, $5
+; MIPS64R6O0-NEXT:    daddiu $3, $zero, -4
+; MIPS64R6O0-NEXT:    and $5, $4, $3
 ; MIPS64R6O0-NEXT:    move $3, $4
-; MIPS64R6O0-NEXT:    move $1, $6
-; MIPS64R6O0-NEXT:    move $2, $5
-; MIPS64R6O0-NEXT:    sw $2, 8($sp) # 4-byte Folded Spill
-; MIPS64R6O0-NEXT:    daddiu $4, $zero, -4
-; MIPS64R6O0-NEXT:    and $4, $3, $4
+; MIPS64R6O0-NEXT:    sll $3, $3, 0
+; MIPS64R6O0-NEXT:    not $3, $3
 ; MIPS64R6O0-NEXT:    andi $3, $3, 3
-; MIPS64R6O0-NEXT:    xori $3, $3, 3
-; MIPS64R6O0-NEXT:    sll $9, $3, 3
-; MIPS64R6O0-NEXT:    ori $3, $zero, 255
-; MIPS64R6O0-NEXT:    sllv $5, $3, $9
-; MIPS64R6O0-NEXT:    nor $7, $zero, $5
-; MIPS64R6O0-NEXT:    andi $2, $2, 255
-; MIPS64R6O0-NEXT:    sllv $6, $2, $9
+; MIPS64R6O0-NEXT:    sll $4, $3, 3
+; MIPS64R6O0-NEXT:    addiu $3, $zero, 255
+; MIPS64R6O0-NEXT:    sllv $3, $3, $4
 ; MIPS64R6O0-NEXT:    andi $1, $1, 255
-; MIPS64R6O0-NEXT:    sllv $8, $1, $9
+; MIPS64R6O0-NEXT:    sllv $1, $1, $4
+; MIPS64R6O0-NEXT:    andi $2, $2, 255
+; MIPS64R6O0-NEXT:    sllv $6, $2, $4
 ; MIPS64R6O0-NEXT:  .LBB13_1: # %entry
 ; MIPS64R6O0-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64R6O0-NEXT:    ll $2, 0($4)
-; MIPS64R6O0-NEXT:    and $3, $2, $5
-; MIPS64R6O0-NEXT:    bnec $3, $6, .LBB13_3
+; MIPS64R6O0-NEXT:    ll $2, 0($5)
+; MIPS64R6O0-NEXT:    and $4, $2, $3
+; MIPS64R6O0-NEXT:    bnec $4, $1, .LBB13_3
 ; MIPS64R6O0-NEXT:  # %bb.2: # %entry
 ; MIPS64R6O0-NEXT:    # in Loop: Header=BB13_1 Depth=1
-; MIPS64R6O0-NEXT:    and $2, $2, $7
-; MIPS64R6O0-NEXT:    or $2, $2, $8
-; MIPS64R6O0-NEXT:    sc $2, 0($4)
-; MIPS64R6O0-NEXT:    beqzc $2, .LBB13_1
+; MIPS64R6O0-NEXT:    xor $4, $2, $4
+; MIPS64R6O0-NEXT:    or $4, $4, $6
+; MIPS64R6O0-NEXT:    sc $4, 0($5)
+; MIPS64R6O0-NEXT:    beqzc $4, .LBB13_1
 ; MIPS64R6O0-NEXT:  .LBB13_3: # %entry
-; MIPS64R6O0-NEXT:    srlv $1, $3, $9
-; MIPS64R6O0-NEXT:    seb $1, $1
-; MIPS64R6O0-NEXT:  # %bb.4: # %entry
-; MIPS64R6O0-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
-; MIPS64R6O0-NEXT:  # %bb.5: # %entry
-; MIPS64R6O0-NEXT:    lw $1, 12($sp) # 4-byte Folded Reload
-; MIPS64R6O0-NEXT:    lw $2, 8($sp) # 4-byte Folded Reload
+; MIPS64R6O0-NEXT:    and $2, $2, $3
 ; MIPS64R6O0-NEXT:    xor $1, $1, $2
 ; MIPS64R6O0-NEXT:    sltiu $2, $1, 1
-; MIPS64R6O0-NEXT:    daddiu $sp, $sp, 16
 ; MIPS64R6O0-NEXT:    jrc $ra
 ;
 ; MM32-LABEL: AtomicCmpSwapRes8:
 ; MM32:       # %bb.0: # %entry
-; MM32-NEXT:    addiu $1, $zero, -4
-; MM32-NEXT:    and $2, $4, $1
-; MM32-NEXT:    andi $1, $4, 3
-; MM32-NEXT:    sll $3, $1, 3
-; MM32-NEXT:    ori $1, $zero, 255
-; MM32-NEXT:    sllv $4, $1, $3
-; MM32-NEXT:    nor $7, $zero, $4
-; MM32-NEXT:    andi $1, $5, 255
-; MM32-NEXT:    sllv $8, $1, $3
-; MM32-NEXT:    andi $1, $6, 255
-; MM32-NEXT:    sllv $6, $1, $3
+; MM32-NEXT:    sll16 $2, $4, 3
+; MM32-NEXT:    andi $1, $2, 24
+; MM32-NEXT:    addiu $2, $zero, 255
+; MM32-NEXT:    addiu $3, $zero, -4
+; MM32-NEXT:    and16 $3, $4
+; MM32-NEXT:    sllv $2, $2, $1
+; MM32-NEXT:    andi16 $4, $6, 255
+; MM32-NEXT:    sllv $4, $4, $1
+; MM32-NEXT:    andi16 $5, $5, 255
+; MM32-NEXT:    sllv $1, $5, $1
 ; MM32-NEXT:  $BB13_1: # %entry
 ; MM32-NEXT:    # =>This Inner Loop Header: Depth=1
-; MM32-NEXT:    ll $9, 0($2)
-; MM32-NEXT:    and $10, $9, $4
-; MM32-NEXT:    bne $10, $8, $BB13_3
+; MM32-NEXT:    ll $6, 0($3)
+; MM32-NEXT:    and $5, $6, $2
+; MM32-NEXT:    bne $5, $1, $BB13_3
 ; MM32-NEXT:    nop
 ; MM32-NEXT:  # %bb.2: # %entry
 ; MM32-NEXT:    # in Loop: Header=BB13_1 Depth=1
-; MM32-NEXT:    and $9, $9, $7
-; MM32-NEXT:    or $9, $9, $6
-; MM32-NEXT:    sc $9, 0($2)
-; MM32-NEXT:    beqzc $9, $BB13_1
+; MM32-NEXT:    xor16 $5, $6
+; MM32-NEXT:    or $5, $5, $4
+; MM32-NEXT:    sc $5, 0($3)
+; MM32-NEXT:    beqzc $5, $BB13_1
 ; MM32-NEXT:  $BB13_3: # %entry
-; MM32-NEXT:    srlv $1, $10, $3
-; MM32-NEXT:    seb $1, $1
-; MM32-NEXT:  # %bb.4: # %entry
-; MM32-NEXT:    xor $1, $1, $5
+; MM32-NEXT:    and16 $6, $2
+; MM32-NEXT:    xor $1, $1, $6
 ; MM32-NEXT:    jr $ra
 ; MM32-NEXT:    sltiu $2, $1, 1
 ;
 ; O1-LABEL: AtomicCmpSwapRes8:
 ; O1:       # %bb.0: # %entry
-; O1-NEXT:    addiu $1, $zero, -4
-; O1-NEXT:    and $2, $4, $1
-; O1-NEXT:    andi $1, $4, 3
-; O1-NEXT:    sll $3, $1, 3
-; O1-NEXT:    ori $1, $zero, 255
-; O1-NEXT:    sllv $4, $1, $3
-; O1-NEXT:    nor $7, $zero, $4
-; O1-NEXT:    andi $1, $5, 255
-; O1-NEXT:    sllv $8, $1, $3
-; O1-NEXT:    andi $1, $6, 255
-; O1-NEXT:    sllv $6, $1, $3
+; O1-NEXT:    sll $1, $4, 3
+; O1-NEXT:    addiu $2, $zero, 255
+; O1-NEXT:    addiu $3, $zero, -4
+; O1-NEXT:    and $3, $4, $3
+; O1-NEXT:    sllv $2, $2, $1
+; O1-NEXT:    andi $4, $6, 255
+; O1-NEXT:    sllv $4, $4, $1
+; O1-NEXT:    andi $5, $5, 255
+; O1-NEXT:    sllv $1, $5, $1
 ; O1-NEXT:  $BB13_1: # %entry
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
-; O1-NEXT:    ll $9, 0($2)
-; O1-NEXT:    and $10, $9, $4
-; O1-NEXT:    bne $10, $8, $BB13_3
+; O1-NEXT:    ll $5, 0($3)
+; O1-NEXT:    and $6, $5, $2
+; O1-NEXT:    bne $6, $1, $BB13_3
 ; O1-NEXT:    nop
 ; O1-NEXT:  # %bb.2: # %entry
 ; O1-NEXT:    # in Loop: Header=BB13_1 Depth=1
-; O1-NEXT:    and $9, $9, $7
-; O1-NEXT:    or $9, $9, $6
-; O1-NEXT:    sc $9, 0($2)
-; O1-NEXT:    beqz $9, $BB13_1
+; O1-NEXT:    xor $6, $5, $6
+; O1-NEXT:    or $6, $6, $4
+; O1-NEXT:    sc $6, 0($3)
+; O1-NEXT:    beqz $6, $BB13_1
 ; O1-NEXT:    nop
 ; O1-NEXT:  $BB13_3: # %entry
-; O1-NEXT:    srlv $1, $10, $3
-; O1-NEXT:    sll $1, $1, 24
-; O1-NEXT:    sra $1, $1, 24
-; O1-NEXT:  # %bb.4: # %entry
-; O1-NEXT:    xor $1, $1, $5
+; O1-NEXT:    and $2, $5, $2
+; O1-NEXT:    xor $1, $1, $2
 ; O1-NEXT:    jr $ra
 ; O1-NEXT:    sltiu $2, $1, 1
 ;
 ; O2-LABEL: AtomicCmpSwapRes8:
 ; O2:       # %bb.0: # %entry
-; O2-NEXT:    addiu $1, $zero, -4
-; O2-NEXT:    and $2, $4, $1
-; O2-NEXT:    andi $1, $4, 3
-; O2-NEXT:    sll $3, $1, 3
-; O2-NEXT:    ori $1, $zero, 255
-; O2-NEXT:    sllv $4, $1, $3
-; O2-NEXT:    nor $7, $zero, $4
-; O2-NEXT:    andi $1, $5, 255
-; O2-NEXT:    sllv $8, $1, $3
-; O2-NEXT:    andi $1, $6, 255
-; O2-NEXT:    sllv $6, $1, $3
+; O2-NEXT:    sll $1, $4, 3
+; O2-NEXT:    addiu $2, $zero, 255
+; O2-NEXT:    addiu $3, $zero, -4
+; O2-NEXT:    and $3, $4, $3
+; O2-NEXT:    sllv $2, $2, $1
+; O2-NEXT:    andi $4, $6, 255
+; O2-NEXT:    sllv $4, $4, $1
+; O2-NEXT:    andi $5, $5, 255
+; O2-NEXT:    sllv $1, $5, $1
 ; O2-NEXT:  $BB13_1: # %entry
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
-; O2-NEXT:    ll $9, 0($2)
-; O2-NEXT:    and $10, $9, $4
-; O2-NEXT:    bne $10, $8, $BB13_3
+; O2-NEXT:    ll $5, 0($3)
+; O2-NEXT:    and $6, $5, $2
+; O2-NEXT:    bne $6, $1, $BB13_3
 ; O2-NEXT:    nop
 ; O2-NEXT:  # %bb.2: # %entry
 ; O2-NEXT:    # in Loop: Header=BB13_1 Depth=1
-; O2-NEXT:    and $9, $9, $7
-; O2-NEXT:    or $9, $9, $6
-; O2-NEXT:    sc $9, 0($2)
-; O2-NEXT:    beqz $9, $BB13_1
+; O2-NEXT:    xor $6, $5, $6
+; O2-NEXT:    or $6, $6, $4
+; O2-NEXT:    sc $6, 0($3)
+; O2-NEXT:    beqz $6, $BB13_1
 ; O2-NEXT:    nop
 ; O2-NEXT:  $BB13_3: # %entry
-; O2-NEXT:    srlv $1, $10, $3
-; O2-NEXT:    sll $1, $1, 24
-; O2-NEXT:    sra $1, $1, 24
-; O2-NEXT:  # %bb.4: # %entry
-; O2-NEXT:    xor $1, $1, $5
+; O2-NEXT:    and $2, $5, $2
+; O2-NEXT:    xor $1, $1, $2
 ; O2-NEXT:    jr $ra
 ; O2-NEXT:    sltiu $2, $1, 1
 ;
 ; O3-LABEL: AtomicCmpSwapRes8:
 ; O3:       # %bb.0: # %entry
-; O3-NEXT:    addiu $1, $zero, -4
-; O3-NEXT:    and $2, $4, $1
-; O3-NEXT:    andi $1, $4, 3
-; O3-NEXT:    sll $3, $1, 3
-; O3-NEXT:    ori $1, $zero, 255
-; O3-NEXT:    sllv $4, $1, $3
-; O3-NEXT:    andi $1, $5, 255
-; O3-NEXT:    sllv $8, $1, $3
-; O3-NEXT:    andi $1, $6, 255
-; O3-NEXT:    nor $7, $zero, $4
-; O3-NEXT:    sllv $6, $1, $3
+; O3-NEXT:    addiu $3, $zero, -4
+; O3-NEXT:    sll $1, $4, 3
+; O3-NEXT:    addiu $2, $zero, 255
+; O3-NEXT:    andi $5, $5, 255
+; O3-NEXT:    and $3, $4, $3
+; O3-NEXT:    andi $4, $6, 255
+; O3-NEXT:    sllv $2, $2, $1
+; O3-NEXT:    sllv $4, $4, $1
+; O3-NEXT:    sllv $1, $5, $1
 ; O3-NEXT:  $BB13_1: # %entry
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
-; O3-NEXT:    ll $9, 0($2)
-; O3-NEXT:    and $10, $9, $4
-; O3-NEXT:    bne $10, $8, $BB13_3
+; O3-NEXT:    ll $5, 0($3)
+; O3-NEXT:    and $6, $5, $2
+; O3-NEXT:    bne $6, $1, $BB13_3
 ; O3-NEXT:    nop
 ; O3-NEXT:  # %bb.2: # %entry
 ; O3-NEXT:    # in Loop: Header=BB13_1 Depth=1
-; O3-NEXT:    and $9, $9, $7
-; O3-NEXT:    or $9, $9, $6
-; O3-NEXT:    sc $9, 0($2)
-; O3-NEXT:    beqz $9, $BB13_1
+; O3-NEXT:    xor $6, $5, $6
+; O3-NEXT:    or $6, $6, $4
+; O3-NEXT:    sc $6, 0($3)
+; O3-NEXT:    beqz $6, $BB13_1
 ; O3-NEXT:    nop
 ; O3-NEXT:  $BB13_3: # %entry
-; O3-NEXT:    srlv $1, $10, $3
-; O3-NEXT:    sll $1, $1, 24
-; O3-NEXT:    sra $1, $1, 24
-; O3-NEXT:  # %bb.4: # %entry
-; O3-NEXT:    xor $1, $1, $5
+; O3-NEXT:    and $2, $5, $2
+; O3-NEXT:    xor $1, $1, $2
 ; O3-NEXT:    jr $ra
 ; O3-NEXT:    sltiu $2, $1, 1
 ;
 ; MIPS32EB-LABEL: AtomicCmpSwapRes8:
 ; MIPS32EB:       # %bb.0: # %entry
-; MIPS32EB-NEXT:    addiu $1, $zero, -4
-; MIPS32EB-NEXT:    and $2, $4, $1
-; MIPS32EB-NEXT:    andi $1, $4, 3
-; MIPS32EB-NEXT:    xori $1, $1, 3
-; MIPS32EB-NEXT:    sll $3, $1, 3
-; MIPS32EB-NEXT:    ori $1, $zero, 255
-; MIPS32EB-NEXT:    sllv $4, $1, $3
-; MIPS32EB-NEXT:    nor $7, $zero, $4
-; MIPS32EB-NEXT:    andi $1, $5, 255
-; MIPS32EB-NEXT:    sllv $8, $1, $3
-; MIPS32EB-NEXT:    andi $1, $6, 255
-; MIPS32EB-NEXT:    sllv $6, $1, $3
+; MIPS32EB-NEXT:    not $1, $4
+; MIPS32EB-NEXT:    andi $1, $1, 3
+; MIPS32EB-NEXT:    sll $1, $1, 3
+; MIPS32EB-NEXT:    addiu $2, $zero, 255
+; MIPS32EB-NEXT:    addiu $3, $zero, -4
+; MIPS32EB-NEXT:    and $3, $4, $3
+; MIPS32EB-NEXT:    sllv $2, $2, $1
+; MIPS32EB-NEXT:    andi $4, $6, 255
+; MIPS32EB-NEXT:    sllv $4, $4, $1
+; MIPS32EB-NEXT:    andi $5, $5, 255
+; MIPS32EB-NEXT:    sllv $1, $5, $1
 ; MIPS32EB-NEXT:  $BB13_1: # %entry
 ; MIPS32EB-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS32EB-NEXT:    ll $9, 0($2)
-; MIPS32EB-NEXT:    and $10, $9, $4
-; MIPS32EB-NEXT:    bne $10, $8, $BB13_3
+; MIPS32EB-NEXT:    ll $5, 0($3)
+; MIPS32EB-NEXT:    and $6, $5, $2
+; MIPS32EB-NEXT:    bne $6, $1, $BB13_3
 ; MIPS32EB-NEXT:    nop
 ; MIPS32EB-NEXT:  # %bb.2: # %entry
 ; MIPS32EB-NEXT:    # in Loop: Header=BB13_1 Depth=1
-; MIPS32EB-NEXT:    and $9, $9, $7
-; MIPS32EB-NEXT:    or $9, $9, $6
-; MIPS32EB-NEXT:    sc $9, 0($2)
-; MIPS32EB-NEXT:    beqz $9, $BB13_1
+; MIPS32EB-NEXT:    xor $6, $5, $6
+; MIPS32EB-NEXT:    or $6, $6, $4
+; MIPS32EB-NEXT:    sc $6, 0($3)
+; MIPS32EB-NEXT:    beqz $6, $BB13_1
 ; MIPS32EB-NEXT:    nop
 ; MIPS32EB-NEXT:  $BB13_3: # %entry
-; MIPS32EB-NEXT:    srlv $1, $10, $3
-; MIPS32EB-NEXT:    sll $1, $1, 24
-; MIPS32EB-NEXT:    sra $1, $1, 24
-; MIPS32EB-NEXT:  # %bb.4: # %entry
-; MIPS32EB-NEXT:    xor $1, $1, $5
+; MIPS32EB-NEXT:    and $2, $5, $2
+; MIPS32EB-NEXT:    xor $1, $1, $2
 ; MIPS32EB-NEXT:    jr $ra
 ; MIPS32EB-NEXT:    sltiu $2, $1, 1
 entry:
@@ -5393,71 +5076,62 @@ define signext i16 @AtomicLoadAdd16(i16 signext %incr) nounwind {
 ; MIPS32-NEXT:    lui $2, %hi(_gp_disp)
 ; MIPS32-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; MIPS32-NEXT:    addu $1, $2, $25
-; MIPS32-NEXT:    lw $1, %got(z)($1)
 ; MIPS32-NEXT:    addiu $2, $zero, -4
-; MIPS32-NEXT:    and $3, $1, $2
+; MIPS32-NEXT:    lw $1, %got(z)($1)
+; MIPS32-NEXT:    and $2, $1, $2
 ; MIPS32-NEXT:    andi $1, $1, 3
 ; MIPS32-NEXT:    sll $1, $1, 3
-; MIPS32-NEXT:    ori $2, $zero, 65535
-; MIPS32-NEXT:    sllv $5, $2, $1
-; MIPS32-NEXT:    nor $6, $zero, $5
+; MIPS32-NEXT:    ori $3, $zero, 65535
+; MIPS32-NEXT:    sllv $3, $3, $1
+; MIPS32-NEXT:    andi $4, $4, 65535
 ; MIPS32-NEXT:    sllv $4, $4, $1
 ; MIPS32-NEXT:  $BB14_1: # %entry
 ; MIPS32-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS32-NEXT:    ll $7, 0($3)
-; MIPS32-NEXT:    addu $8, $7, $4
-; MIPS32-NEXT:    and $8, $8, $5
-; MIPS32-NEXT:    and $9, $7, $6
-; MIPS32-NEXT:    or $9, $9, $8
-; MIPS32-NEXT:    sc $9, 0($3)
-; MIPS32-NEXT:    beqz $9, $BB14_1
+; MIPS32-NEXT:    ll $5, 0($2)
+; MIPS32-NEXT:    addu $6, $5, $4
+; MIPS32-NEXT:    xor $6, $5, $6
+; MIPS32-NEXT:    and $6, $6, $3
+; MIPS32-NEXT:    xor $6, $5, $6
+; MIPS32-NEXT:    sc $6, 0($2)
+; MIPS32-NEXT:    beqz $6, $BB14_1
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  # %bb.2: # %entry
-; MIPS32-NEXT:    and $2, $7, $5
-; MIPS32-NEXT:    srlv $2, $2, $1
-; MIPS32-NEXT:    sll $2, $2, 16
-; MIPS32-NEXT:    sra $2, $2, 16
-; MIPS32-NEXT:  # %bb.3: # %entry
+; MIPS32-NEXT:    srlv $1, $5, $1
+; MIPS32-NEXT:    sll $1, $1, 16
 ; MIPS32-NEXT:    jr $ra
-; MIPS32-NEXT:    nop
+; MIPS32-NEXT:    sra $2, $1, 16
 ;
 ; MIPS32O0-LABEL: AtomicLoadAdd16:
 ; MIPS32O0:       # %bb.0: # %entry
 ; MIPS32O0-NEXT:    lui $2, %hi(_gp_disp)
 ; MIPS32O0-NEXT:    addiu $2, $2, %lo(_gp_disp)
-; MIPS32O0-NEXT:    addiu $sp, $sp, -8
-; MIPS32O0-NEXT:    addu $1, $2, $25
-; MIPS32O0-NEXT:    lw $1, %got(z)($1)
-; MIPS32O0-NEXT:    addiu $2, $zero, -4
-; MIPS32O0-NEXT:    and $5, $1, $2
-; MIPS32O0-NEXT:    andi $1, $1, 3
-; MIPS32O0-NEXT:    sll $9, $1, 3
-; MIPS32O0-NEXT:    ori $1, $zero, 65535
-; MIPS32O0-NEXT:    sllv $7, $1, $9
-; MIPS32O0-NEXT:    nor $8, $zero, $7
-; MIPS32O0-NEXT:    sllv $6, $4, $9
+; MIPS32O0-NEXT:    addu $2, $2, $25
+; MIPS32O0-NEXT:    move $1, $4
+; MIPS32O0-NEXT:    lw $3, %got(z)($2)
+; MIPS32O0-NEXT:    addiu $4, $zero, -4
+; MIPS32O0-NEXT:    and $4, $3, $4
+; MIPS32O0-NEXT:    lw $2, %got(z)($2)
+; MIPS32O0-NEXT:    addiu $3, $zero, 3
+; MIPS32O0-NEXT:    and $2, $2, $3
+; MIPS32O0-NEXT:    sll $2, $2, 3
+; MIPS32O0-NEXT:    ori $3, $zero, 65535
+; MIPS32O0-NEXT:    sllv $6, $3, $2
+; MIPS32O0-NEXT:    andi $1, $1, 65535
+; MIPS32O0-NEXT:    sllv $5, $1, $2
 ; MIPS32O0-NEXT:  $BB14_1: # %entry
 ; MIPS32O0-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS32O0-NEXT:    ll $2, 0($5)
-; MIPS32O0-NEXT:    addu $3, $2, $6
-; MIPS32O0-NEXT:    and $3, $3, $7
-; MIPS32O0-NEXT:    and $4, $2, $8
-; MIPS32O0-NEXT:    or $4, $4, $3
-; MIPS32O0-NEXT:    sc $4, 0($5)
-; MIPS32O0-NEXT:    beqz $4, $BB14_1
+; MIPS32O0-NEXT:    ll $1, 0($4)
+; MIPS32O0-NEXT:    addu $3, $1, $5
+; MIPS32O0-NEXT:    xor $3, $1, $3
+; MIPS32O0-NEXT:    and $3, $3, $6
+; MIPS32O0-NEXT:    xor $3, $1, $3
+; MIPS32O0-NEXT:    sc $3, 0($4)
+; MIPS32O0-NEXT:    beqz $3, $BB14_1
 ; MIPS32O0-NEXT:    nop
 ; MIPS32O0-NEXT:  # %bb.2: # %entry
-; MIPS32O0-NEXT:    and $1, $2, $7
-; MIPS32O0-NEXT:    srlv $1, $1, $9
-; MIPS32O0-NEXT:    sll $1, $1, 16
-; MIPS32O0-NEXT:    sra $1, $1, 16
-; MIPS32O0-NEXT:  # %bb.3: # %entry
-; MIPS32O0-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
-; MIPS32O0-NEXT:  # %bb.4: # %entry
-; MIPS32O0-NEXT:    lw $1, 4($sp) # 4-byte Folded Reload
+; MIPS32O0-NEXT:    srlv $1, $1, $2
 ; MIPS32O0-NEXT:    sll $1, $1, 16
 ; MIPS32O0-NEXT:    sra $2, $1, 16
-; MIPS32O0-NEXT:    addiu $sp, $sp, 8
 ; MIPS32O0-NEXT:    jr $ra
 ; MIPS32O0-NEXT:    nop
 ;
@@ -5466,96 +5140,85 @@ define signext i16 @AtomicLoadAdd16(i16 signext %incr) nounwind {
 ; MIPS32R2-NEXT:    lui $2, %hi(_gp_disp)
 ; MIPS32R2-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; MIPS32R2-NEXT:    addu $1, $2, $25
-; MIPS32R2-NEXT:    lw $1, %got(z)($1)
 ; MIPS32R2-NEXT:    addiu $2, $zero, -4
-; MIPS32R2-NEXT:    and $3, $1, $2
+; MIPS32R2-NEXT:    lw $1, %got(z)($1)
+; MIPS32R2-NEXT:    and $2, $1, $2
 ; MIPS32R2-NEXT:    andi $1, $1, 3
 ; MIPS32R2-NEXT:    sll $1, $1, 3
-; MIPS32R2-NEXT:    ori $2, $zero, 65535
-; MIPS32R2-NEXT:    sllv $5, $2, $1
-; MIPS32R2-NEXT:    nor $6, $zero, $5
+; MIPS32R2-NEXT:    ori $3, $zero, 65535
+; MIPS32R2-NEXT:    sllv $3, $3, $1
+; MIPS32R2-NEXT:    andi $4, $4, 65535
 ; MIPS32R2-NEXT:    sllv $4, $4, $1
 ; MIPS32R2-NEXT:  $BB14_1: # %entry
 ; MIPS32R2-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS32R2-NEXT:    ll $7, 0($3)
-; MIPS32R2-NEXT:    addu $8, $7, $4
-; MIPS32R2-NEXT:    and $8, $8, $5
-; MIPS32R2-NEXT:    and $9, $7, $6
-; MIPS32R2-NEXT:    or $9, $9, $8
-; MIPS32R2-NEXT:    sc $9, 0($3)
-; MIPS32R2-NEXT:    beqz $9, $BB14_1
+; MIPS32R2-NEXT:    ll $5, 0($2)
+; MIPS32R2-NEXT:    addu $6, $5, $4
+; MIPS32R2-NEXT:    xor $6, $5, $6
+; MIPS32R2-NEXT:    and $6, $6, $3
+; MIPS32R2-NEXT:    xor $6, $5, $6
+; MIPS32R2-NEXT:    sc $6, 0($2)
+; MIPS32R2-NEXT:    beqz $6, $BB14_1
 ; MIPS32R2-NEXT:    nop
 ; MIPS32R2-NEXT:  # %bb.2: # %entry
-; MIPS32R2-NEXT:    and $2, $7, $5
-; MIPS32R2-NEXT:    srlv $2, $2, $1
-; MIPS32R2-NEXT:    seh $2, $2
-; MIPS32R2-NEXT:  # %bb.3: # %entry
+; MIPS32R2-NEXT:    srlv $1, $5, $1
 ; MIPS32R2-NEXT:    jr $ra
-; MIPS32R2-NEXT:    nop
+; MIPS32R2-NEXT:    seh $2, $1
 ;
 ; MIPS32R6-LABEL: AtomicLoadAdd16:
 ; MIPS32R6:       # %bb.0: # %entry
 ; MIPS32R6-NEXT:    lui $2, %hi(_gp_disp)
 ; MIPS32R6-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; MIPS32R6-NEXT:    addu $1, $2, $25
-; MIPS32R6-NEXT:    lw $1, %got(z)($1)
 ; MIPS32R6-NEXT:    addiu $2, $zero, -4
-; MIPS32R6-NEXT:    and $3, $1, $2
+; MIPS32R6-NEXT:    lw $1, %got(z)($1)
+; MIPS32R6-NEXT:    and $2, $1, $2
 ; MIPS32R6-NEXT:    andi $1, $1, 3
 ; MIPS32R6-NEXT:    sll $1, $1, 3
-; MIPS32R6-NEXT:    ori $2, $zero, 65535
-; MIPS32R6-NEXT:    sllv $5, $2, $1
-; MIPS32R6-NEXT:    nor $6, $zero, $5
+; MIPS32R6-NEXT:    ori $3, $zero, 65535
+; MIPS32R6-NEXT:    sllv $3, $3, $1
+; MIPS32R6-NEXT:    andi $4, $4, 65535
 ; MIPS32R6-NEXT:    sllv $4, $4, $1
 ; MIPS32R6-NEXT:  $BB14_1: # %entry
 ; MIPS32R6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS32R6-NEXT:    ll $7, 0($3)
-; MIPS32R6-NEXT:    addu $8, $7, $4
-; MIPS32R6-NEXT:    and $8, $8, $5
-; MIPS32R6-NEXT:    and $9, $7, $6
-; MIPS32R6-NEXT:    or $9, $9, $8
-; MIPS32R6-NEXT:    sc $9, 0($3)
-; MIPS32R6-NEXT:    beqzc $9, $BB14_1
+; MIPS32R6-NEXT:    ll $5, 0($2)
+; MIPS32R6-NEXT:    addu $6, $5, $4
+; MIPS32R6-NEXT:    xor $6, $5, $6
+; MIPS32R6-NEXT:    and $6, $6, $3
+; MIPS32R6-NEXT:    xor $6, $5, $6
+; MIPS32R6-NEXT:    sc $6, 0($2)
+; MIPS32R6-NEXT:    beqzc $6, $BB14_1
 ; MIPS32R6-NEXT:  # %bb.2: # %entry
-; MIPS32R6-NEXT:    and $2, $7, $5
-; MIPS32R6-NEXT:    srlv $2, $2, $1
-; MIPS32R6-NEXT:    seh $2, $2
-; MIPS32R6-NEXT:  # %bb.3: # %entry
-; MIPS32R6-NEXT:    jrc $ra
+; MIPS32R6-NEXT:    srlv $1, $5, $1
+; MIPS32R6-NEXT:    jr $ra
+; MIPS32R6-NEXT:    seh $2, $1
 ;
 ; MIPS32R6O0-LABEL: AtomicLoadAdd16:
 ; MIPS32R6O0:       # %bb.0: # %entry
 ; MIPS32R6O0-NEXT:    lui $2, %hi(_gp_disp)
 ; MIPS32R6O0-NEXT:    addiu $2, $2, %lo(_gp_disp)
-; MIPS32R6O0-NEXT:    addiu $sp, $sp, -8
-; MIPS32R6O0-NEXT:    addu $1, $2, $25
-; MIPS32R6O0-NEXT:    lw $1, %got(z)($1)
-; MIPS32R6O0-NEXT:    addiu $2, $zero, -4
-; MIPS32R6O0-NEXT:    and $5, $1, $2
-; MIPS32R6O0-NEXT:    andi $1, $1, 3
-; MIPS32R6O0-NEXT:    sll $9, $1, 3
-; MIPS32R6O0-NEXT:    ori $1, $zero, 65535
-; MIPS32R6O0-NEXT:    sllv $7, $1, $9
-; MIPS32R6O0-NEXT:    nor $8, $zero, $7
-; MIPS32R6O0-NEXT:    sllv $6, $4, $9
+; MIPS32R6O0-NEXT:    addu $2, $2, $25
+; MIPS32R6O0-NEXT:    move $1, $4
+; MIPS32R6O0-NEXT:    lw $2, %got(z)($2)
+; MIPS32R6O0-NEXT:    addiu $3, $zero, -4
+; MIPS32R6O0-NEXT:    and $4, $2, $3
+; MIPS32R6O0-NEXT:    andi $2, $2, 3
+; MIPS32R6O0-NEXT:    sll $2, $2, 3
+; MIPS32R6O0-NEXT:    ori $3, $zero, 65535
+; MIPS32R6O0-NEXT:    sllv $6, $3, $2
+; MIPS32R6O0-NEXT:    andi $1, $1, 65535
+; MIPS32R6O0-NEXT:    sllv $5, $1, $2
 ; MIPS32R6O0-NEXT:  $BB14_1: # %entry
 ; MIPS32R6O0-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS32R6O0-NEXT:    ll $2, 0($5)
-; MIPS32R6O0-NEXT:    addu $3, $2, $6
-; MIPS32R6O0-NEXT:    and $3, $3, $7
-; MIPS32R6O0-NEXT:    and $4, $2, $8
-; MIPS32R6O0-NEXT:    or $4, $4, $3
-; MIPS32R6O0-NEXT:    sc $4, 0($5)
-; MIPS32R6O0-NEXT:    beqzc $4, $BB14_1
+; MIPS32R6O0-NEXT:    ll $1, 0($4)
+; MIPS32R6O0-NEXT:    addu $3, $1, $5
+; MIPS32R6O0-NEXT:    xor $3, $1, $3
+; MIPS32R6O0-NEXT:    and $3, $3, $6
+; MIPS32R6O0-NEXT:    xor $3, $1, $3
+; MIPS32R6O0-NEXT:    sc $3, 0($4)
+; MIPS32R6O0-NEXT:    beqzc $3, $BB14_1
 ; MIPS32R6O0-NEXT:  # %bb.2: # %entry
-; MIPS32R6O0-NEXT:    and $1, $2, $7
-; MIPS32R6O0-NEXT:    srlv $1, $1, $9
-; MIPS32R6O0-NEXT:    seh $1, $1
-; MIPS32R6O0-NEXT:  # %bb.3: # %entry
-; MIPS32R6O0-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
-; MIPS32R6O0-NEXT:  # %bb.4: # %entry
-; MIPS32R6O0-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
-; MIPS32R6O0-NEXT:    addiu $sp, $sp, 8
+; MIPS32R6O0-NEXT:    srlv $1, $1, $2
+; MIPS32R6O0-NEXT:    seh $2, $1
 ; MIPS32R6O0-NEXT:    jrc $ra
 ;
 ; MIPS4-LABEL: AtomicLoadAdd16:
@@ -5564,32 +5227,30 @@ define signext i16 @AtomicLoadAdd16(i16 signext %incr) nounwind {
 ; MIPS4-NEXT:    daddu $1, $1, $25
 ; MIPS4-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(AtomicLoadAdd16)))
 ; MIPS4-NEXT:    ld $1, %got_disp(z)($1)
-; MIPS4-NEXT:    daddiu $2, $zero, -4
-; MIPS4-NEXT:    and $3, $1, $2
-; MIPS4-NEXT:    andi $1, $1, 3
-; MIPS4-NEXT:    sll $1, $1, 3
-; MIPS4-NEXT:    ori $2, $zero, 65535
-; MIPS4-NEXT:    sllv $5, $2, $1
-; MIPS4-NEXT:    nor $6, $zero, $5
-; MIPS4-NEXT:    sllv $4, $4, $1
+; MIPS4-NEXT:    sll $2, $1, 0
+; MIPS4-NEXT:    andi $2, $2, 3
+; MIPS4-NEXT:    daddiu $3, $zero, -4
+; MIPS4-NEXT:    and $1, $1, $3
+; MIPS4-NEXT:    sll $2, $2, 3
+; MIPS4-NEXT:    ori $3, $zero, 65535
+; MIPS4-NEXT:    sllv $3, $3, $2
+; MIPS4-NEXT:    andi $4, $4, 65535
+; MIPS4-NEXT:    sllv $4, $4, $2
 ; MIPS4-NEXT:  .LBB14_1: # %entry
 ; MIPS4-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS4-NEXT:    ll $7, 0($3)
-; MIPS4-NEXT:    addu $8, $7, $4
-; MIPS4-NEXT:    and $8, $8, $5
-; MIPS4-NEXT:    and $9, $7, $6
-; MIPS4-NEXT:    or $9, $9, $8
-; MIPS4-NEXT:    sc $9, 0($3)
-; MIPS4-NEXT:    beqz $9, .LBB14_1
+; MIPS4-NEXT:    ll $5, 0($1)
+; MIPS4-NEXT:    addu $6, $5, $4
+; MIPS4-NEXT:    xor $6, $5, $6
+; MIPS4-NEXT:    and $6, $6, $3
+; MIPS4-NEXT:    xor $6, $5, $6
+; MIPS4-NEXT:    sc $6, 0($1)
+; MIPS4-NEXT:    beqz $6, .LBB14_1
 ; MIPS4-NEXT:    nop
 ; MIPS4-NEXT:  # %bb.2: # %entry
-; MIPS4-NEXT:    and $2, $7, $5
-; MIPS4-NEXT:    srlv $2, $2, $1
-; MIPS4-NEXT:    sll $2, $2, 16
-; MIPS4-NEXT:    sra $2, $2, 16
-; MIPS4-NEXT:  # %bb.3: # %entry
+; MIPS4-NEXT:    srlv $1, $5, $2
+; MIPS4-NEXT:    sll $1, $1, 16
 ; MIPS4-NEXT:    jr $ra
-; MIPS4-NEXT:    nop
+; MIPS4-NEXT:    sra $2, $1, 16
 ;
 ; MIPS64-LABEL: AtomicLoadAdd16:
 ; MIPS64:       # %bb.0: # %entry
@@ -5597,32 +5258,30 @@ define signext i16 @AtomicLoadAdd16(i16 signext %incr) nounwind {
 ; MIPS64-NEXT:    daddu $1, $1, $25
 ; MIPS64-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(AtomicLoadAdd16)))
 ; MIPS64-NEXT:    ld $1, %got_disp(z)($1)
-; MIPS64-NEXT:    daddiu $2, $zero, -4
-; MIPS64-NEXT:    and $3, $1, $2
-; MIPS64-NEXT:    andi $1, $1, 3
-; MIPS64-NEXT:    sll $1, $1, 3
-; MIPS64-NEXT:    ori $2, $zero, 65535
-; MIPS64-NEXT:    sllv $5, $2, $1
-; MIPS64-NEXT:    nor $6, $zero, $5
-; MIPS64-NEXT:    sllv $4, $4, $1
+; MIPS64-NEXT:    sll $2, $1, 0
+; MIPS64-NEXT:    andi $2, $2, 3
+; MIPS64-NEXT:    daddiu $3, $zero, -4
+; MIPS64-NEXT:    and $1, $1, $3
+; MIPS64-NEXT:    sll $2, $2, 3
+; MIPS64-NEXT:    ori $3, $zero, 65535
+; MIPS64-NEXT:    sllv $3, $3, $2
+; MIPS64-NEXT:    andi $4, $4, 65535
+; MIPS64-NEXT:    sllv $4, $4, $2
 ; MIPS64-NEXT:  .LBB14_1: # %entry
 ; MIPS64-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64-NEXT:    ll $7, 0($3)
-; MIPS64-NEXT:    addu $8, $7, $4
-; MIPS64-NEXT:    and $8, $8, $5
-; MIPS64-NEXT:    and $9, $7, $6
-; MIPS64-NEXT:    or $9, $9, $8
-; MIPS64-NEXT:    sc $9, 0($3)
-; MIPS64-NEXT:    beqz $9, .LBB14_1
+; MIPS64-NEXT:    ll $5, 0($1)
+; MIPS64-NEXT:    addu $6, $5, $4
+; MIPS64-NEXT:    xor $6, $5, $6
+; MIPS64-NEXT:    and $6, $6, $3
+; MIPS64-NEXT:    xor $6, $5, $6
+; MIPS64-NEXT:    sc $6, 0($1)
+; MIPS64-NEXT:    beqz $6, .LBB14_1
 ; MIPS64-NEXT:    nop
 ; MIPS64-NEXT:  # %bb.2: # %entry
-; MIPS64-NEXT:    and $2, $7, $5
-; MIPS64-NEXT:    srlv $2, $2, $1
-; MIPS64-NEXT:    sll $2, $2, 16
-; MIPS64-NEXT:    sra $2, $2, 16
-; MIPS64-NEXT:  # %bb.3: # %entry
+; MIPS64-NEXT:    srlv $1, $5, $2
+; MIPS64-NEXT:    sll $1, $1, 16
 ; MIPS64-NEXT:    jr $ra
-; MIPS64-NEXT:    nop
+; MIPS64-NEXT:    sra $2, $1, 16
 ;
 ; MIPS64R2-LABEL: AtomicLoadAdd16:
 ; MIPS64R2:       # %bb.0: # %entry
@@ -5630,31 +5289,29 @@ define signext i16 @AtomicLoadAdd16(i16 signext %incr) nounwind {
 ; MIPS64R2-NEXT:    daddu $1, $1, $25
 ; MIPS64R2-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(AtomicLoadAdd16)))
 ; MIPS64R2-NEXT:    ld $1, %got_disp(z)($1)
-; MIPS64R2-NEXT:    daddiu $2, $zero, -4
-; MIPS64R2-NEXT:    and $3, $1, $2
-; MIPS64R2-NEXT:    andi $1, $1, 3
-; MIPS64R2-NEXT:    sll $1, $1, 3
-; MIPS64R2-NEXT:    ori $2, $zero, 65535
-; MIPS64R2-NEXT:    sllv $5, $2, $1
-; MIPS64R2-NEXT:    nor $6, $zero, $5
-; MIPS64R2-NEXT:    sllv $4, $4, $1
+; MIPS64R2-NEXT:    sll $2, $1, 0
+; MIPS64R2-NEXT:    andi $2, $2, 3
+; MIPS64R2-NEXT:    daddiu $3, $zero, -4
+; MIPS64R2-NEXT:    and $1, $1, $3
+; MIPS64R2-NEXT:    sll $2, $2, 3
+; MIPS64R2-NEXT:    ori $3, $zero, 65535
+; MIPS64R2-NEXT:    sllv $3, $3, $2
+; MIPS64R2-NEXT:    andi $4, $4, 65535
+; MIPS64R2-NEXT:    sllv $4, $4, $2
 ; MIPS64R2-NEXT:  .LBB14_1: # %entry
 ; MIPS64R2-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64R2-NEXT:    ll $7, 0($3)
-; MIPS64R2-NEXT:    addu $8, $7, $4
-; MIPS64R2-NEXT:    and $8, $8, $5
-; MIPS64R2-NEXT:    and $9, $7, $6
-; MIPS64R2-NEXT:    or $9, $9, $8
-; MIPS64R2-NEXT:    sc $9, 0($3)
-; MIPS64R2-NEXT:    beqz $9, .LBB14_1
+; MIPS64R2-NEXT:    ll $5, 0($1)
+; MIPS64R2-NEXT:    addu $6, $5, $4
+; MIPS64R2-NEXT:    xor $6, $5, $6
+; MIPS64R2-NEXT:    and $6, $6, $3
+; MIPS64R2-NEXT:    xor $6, $5, $6
+; MIPS64R2-NEXT:    sc $6, 0($1)
+; MIPS64R2-NEXT:    beqz $6, .LBB14_1
 ; MIPS64R2-NEXT:    nop
 ; MIPS64R2-NEXT:  # %bb.2: # %entry
-; MIPS64R2-NEXT:    and $2, $7, $5
-; MIPS64R2-NEXT:    srlv $2, $2, $1
-; MIPS64R2-NEXT:    seh $2, $2
-; MIPS64R2-NEXT:  # %bb.3: # %entry
+; MIPS64R2-NEXT:    srlv $1, $5, $2
 ; MIPS64R2-NEXT:    jr $ra
-; MIPS64R2-NEXT:    nop
+; MIPS64R2-NEXT:    seh $2, $1
 ;
 ; MIPS64R6-LABEL: AtomicLoadAdd16:
 ; MIPS64R6:       # %bb.0: # %entry
@@ -5662,65 +5319,59 @@ define signext i16 @AtomicLoadAdd16(i16 signext %incr) nounwind {
 ; MIPS64R6-NEXT:    daddu $1, $1, $25
 ; MIPS64R6-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(AtomicLoadAdd16)))
 ; MIPS64R6-NEXT:    ld $1, %got_disp(z)($1)
-; MIPS64R6-NEXT:    daddiu $2, $zero, -4
-; MIPS64R6-NEXT:    and $3, $1, $2
-; MIPS64R6-NEXT:    andi $1, $1, 3
-; MIPS64R6-NEXT:    sll $1, $1, 3
-; MIPS64R6-NEXT:    ori $2, $zero, 65535
-; MIPS64R6-NEXT:    sllv $5, $2, $1
-; MIPS64R6-NEXT:    nor $6, $zero, $5
-; MIPS64R6-NEXT:    sllv $4, $4, $1
+; MIPS64R6-NEXT:    sll $2, $1, 0
+; MIPS64R6-NEXT:    andi $2, $2, 3
+; MIPS64R6-NEXT:    daddiu $3, $zero, -4
+; MIPS64R6-NEXT:    and $1, $1, $3
+; MIPS64R6-NEXT:    sll $2, $2, 3
+; MIPS64R6-NEXT:    ori $3, $zero, 65535
+; MIPS64R6-NEXT:    sllv $3, $3, $2
+; MIPS64R6-NEXT:    andi $4, $4, 65535
+; MIPS64R6-NEXT:    sllv $4, $4, $2
 ; MIPS64R6-NEXT:  .LBB14_1: # %entry
 ; MIPS64R6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64R6-NEXT:    ll $7, 0($3)
-; MIPS64R6-NEXT:    addu $8, $7, $4
-; MIPS64R6-NEXT:    and $8, $8, $5
-; MIPS64R6-NEXT:    and $9, $7, $6
-; MIPS64R6-NEXT:    or $9, $9, $8
-; MIPS64R6-NEXT:    sc $9, 0($3)
-; MIPS64R6-NEXT:    beqzc $9, .LBB14_1
+; MIPS64R6-NEXT:    ll $5, 0($1)
+; MIPS64R6-NEXT:    addu $6, $5, $4
+; MIPS64R6-NEXT:    xor $6, $5, $6
+; MIPS64R6-NEXT:    and $6, $6, $3
+; MIPS64R6-NEXT:    xor $6, $5, $6
+; MIPS64R6-NEXT:    sc $6, 0($1)
+; MIPS64R6-NEXT:    beqzc $6, .LBB14_1
 ; MIPS64R6-NEXT:  # %bb.2: # %entry
-; MIPS64R6-NEXT:    and $2, $7, $5
-; MIPS64R6-NEXT:    srlv $2, $2, $1
-; MIPS64R6-NEXT:    seh $2, $2
-; MIPS64R6-NEXT:  # %bb.3: # %entry
-; MIPS64R6-NEXT:    jrc $ra
+; MIPS64R6-NEXT:    srlv $1, $5, $2
+; MIPS64R6-NEXT:    jr $ra
+; MIPS64R6-NEXT:    seh $2, $1
 ;
 ; MIPS64R6O0-LABEL: AtomicLoadAdd16:
 ; MIPS64R6O0:       # %bb.0: # %entry
-; MIPS64R6O0-NEXT:    daddiu $sp, $sp, -16
 ; MIPS64R6O0-NEXT:    lui $1, %hi(%neg(%gp_rel(AtomicLoadAdd16)))
 ; MIPS64R6O0-NEXT:    daddu $1, $1, $25
 ; MIPS64R6O0-NEXT:    daddiu $2, $1, %lo(%neg(%gp_rel(AtomicLoadAdd16)))
 ; MIPS64R6O0-NEXT:    move $1, $4
 ; MIPS64R6O0-NEXT:    ld $2, %got_disp(z)($2)
 ; MIPS64R6O0-NEXT:    daddiu $3, $zero, -4
-; MIPS64R6O0-NEXT:    and $5, $2, $3
+; MIPS64R6O0-NEXT:    and $4, $2, $3
+; MIPS64R6O0-NEXT:    # kill: def $v0 killed $v0 killed $v0_64
+; MIPS64R6O0-NEXT:    sll $2, $2, 0
 ; MIPS64R6O0-NEXT:    andi $2, $2, 3
 ; MIPS64R6O0-NEXT:    xori $2, $2, 2
-; MIPS64R6O0-NEXT:    sll $9, $2, 3
-; MIPS64R6O0-NEXT:    ori $2, $zero, 65535
-; MIPS64R6O0-NEXT:    sllv $7, $2, $9
-; MIPS64R6O0-NEXT:    nor $8, $zero, $7
-; MIPS64R6O0-NEXT:    sllv $6, $1, $9
+; MIPS64R6O0-NEXT:    sll $2, $2, 3
+; MIPS64R6O0-NEXT:    ori $3, $zero, 65535
+; MIPS64R6O0-NEXT:    sllv $6, $3, $2
+; MIPS64R6O0-NEXT:    andi $1, $1, 65535
+; MIPS64R6O0-NEXT:    sllv $5, $1, $2
 ; MIPS64R6O0-NEXT:  .LBB14_1: # %entry
 ; MIPS64R6O0-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64R6O0-NEXT:    ll $2, 0($5)
-; MIPS64R6O0-NEXT:    addu $3, $2, $6
-; MIPS64R6O0-NEXT:    and $3, $3, $7
-; MIPS64R6O0-NEXT:    and $4, $2, $8
-; MIPS64R6O0-NEXT:    or $4, $4, $3
-; MIPS64R6O0-NEXT:    sc $4, 0($5)
-; MIPS64R6O0-NEXT:    beqzc $4, .LBB14_1
+; MIPS64R6O0-NEXT:    ll $1, 0($4)
+; MIPS64R6O0-NEXT:    addu $3, $1, $5
+; MIPS64R6O0-NEXT:    xor $3, $1, $3
+; MIPS64R6O0-NEXT:    and $3, $3, $6
+; MIPS64R6O0-NEXT:    xor $3, $1, $3
+; MIPS64R6O0-NEXT:    sc $3, 0($4)
+; MIPS64R6O0-NEXT:    beqzc $3, .LBB14_1
 ; MIPS64R6O0-NEXT:  # %bb.2: # %entry
-; MIPS64R6O0-NEXT:    and $1, $2, $7
-; MIPS64R6O0-NEXT:    srlv $1, $1, $9
-; MIPS64R6O0-NEXT:    seh $1, $1
-; MIPS64R6O0-NEXT:  # %bb.3: # %entry
-; MIPS64R6O0-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
-; MIPS64R6O0-NEXT:  # %bb.4: # %entry
-; MIPS64R6O0-NEXT:    lw $2, 12($sp) # 4-byte Folded Reload
-; MIPS64R6O0-NEXT:    daddiu $sp, $sp, 16
+; MIPS64R6O0-NEXT:    srlv $1, $1, $2
+; MIPS64R6O0-NEXT:    seh $2, $1
 ; MIPS64R6O0-NEXT:    jrc $ra
 ;
 ; MM32-LABEL: AtomicLoadAdd16:
@@ -5728,96 +5379,88 @@ define signext i16 @AtomicLoadAdd16(i16 signext %incr) nounwind {
 ; MM32-NEXT:    lui $2, %hi(_gp_disp)
 ; MM32-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; MM32-NEXT:    addu $2, $2, $25
-; MM32-NEXT:    lw $1, %got(z)($2)
-; MM32-NEXT:    addiu $2, $zero, -4
-; MM32-NEXT:    and $3, $1, $2
-; MM32-NEXT:    andi $1, $1, 3
-; MM32-NEXT:    sll $1, $1, 3
-; MM32-NEXT:    ori $2, $zero, 65535
-; MM32-NEXT:    sllv $5, $2, $1
-; MM32-NEXT:    nor $6, $zero, $5
-; MM32-NEXT:    sllv $4, $4, $1
+; MM32-NEXT:    addiu $3, $zero, -4
+; MM32-NEXT:    lw $2, %got(z)($2)
+; MM32-NEXT:    and16 $3, $2
+; MM32-NEXT:    andi16 $2, $2, 3
+; MM32-NEXT:    sll16 $2, $2, 3
+; MM32-NEXT:    ori $1, $zero, 65535
+; MM32-NEXT:    sllv $1, $1, $2
+; MM32-NEXT:    andi16 $4, $4, 65535
+; MM32-NEXT:    sllv $4, $4, $2
 ; MM32-NEXT:  $BB14_1: # %entry
 ; MM32-NEXT:    # =>This Inner Loop Header: Depth=1
-; MM32-NEXT:    ll $7, 0($3)
-; MM32-NEXT:    addu $8, $7, $4
-; MM32-NEXT:    and $8, $8, $5
-; MM32-NEXT:    and $9, $7, $6
-; MM32-NEXT:    or $9, $9, $8
-; MM32-NEXT:    sc $9, 0($3)
-; MM32-NEXT:    beqzc $9, $BB14_1
+; MM32-NEXT:    ll $5, 0($3)
+; MM32-NEXT:    addu16 $6, $5, $4
+; MM32-NEXT:    xor16 $6, $5
+; MM32-NEXT:    and $6, $6, $1
+; MM32-NEXT:    xor16 $6, $5
+; MM32-NEXT:    sc $6, 0($3)
+; MM32-NEXT:    beqzc $6, $BB14_1
 ; MM32-NEXT:  # %bb.2: # %entry
-; MM32-NEXT:    and $2, $7, $5
-; MM32-NEXT:    srlv $2, $2, $1
-; MM32-NEXT:    seh $2, $2
-; MM32-NEXT:  # %bb.3: # %entry
-; MM32-NEXT:    jrc $ra
+; MM32-NEXT:    srlv $1, $5, $2
+; MM32-NEXT:    jr $ra
+; MM32-NEXT:    seh $2, $1
 ;
 ; O1-LABEL: AtomicLoadAdd16:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    lui $2, %hi(_gp_disp)
 ; O1-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; O1-NEXT:    addu $1, $2, $25
-; O1-NEXT:    lw $1, %got(z)($1)
 ; O1-NEXT:    addiu $2, $zero, -4
-; O1-NEXT:    and $3, $1, $2
+; O1-NEXT:    lw $1, %got(z)($1)
+; O1-NEXT:    and $2, $1, $2
 ; O1-NEXT:    andi $1, $1, 3
 ; O1-NEXT:    sll $1, $1, 3
-; O1-NEXT:    ori $2, $zero, 65535
-; O1-NEXT:    sllv $5, $2, $1
-; O1-NEXT:    nor $6, $zero, $5
+; O1-NEXT:    ori $3, $zero, 65535
+; O1-NEXT:    sllv $3, $3, $1
+; O1-NEXT:    andi $4, $4, 65535
 ; O1-NEXT:    sllv $4, $4, $1
 ; O1-NEXT:  $BB14_1: # %entry
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
-; O1-NEXT:    ll $7, 0($3)
-; O1-NEXT:    addu $8, $7, $4
-; O1-NEXT:    and $8, $8, $5
-; O1-NEXT:    and $9, $7, $6
-; O1-NEXT:    or $9, $9, $8
-; O1-NEXT:    sc $9, 0($3)
-; O1-NEXT:    beqz $9, $BB14_1
+; O1-NEXT:    ll $5, 0($2)
+; O1-NEXT:    addu $6, $5, $4
+; O1-NEXT:    xor $6, $5, $6
+; O1-NEXT:    and $6, $6, $3
+; O1-NEXT:    xor $6, $5, $6
+; O1-NEXT:    sc $6, 0($2)
+; O1-NEXT:    beqz $6, $BB14_1
 ; O1-NEXT:    nop
 ; O1-NEXT:  # %bb.2: # %entry
-; O1-NEXT:    and $2, $7, $5
-; O1-NEXT:    srlv $2, $2, $1
-; O1-NEXT:    sll $2, $2, 16
-; O1-NEXT:    sra $2, $2, 16
-; O1-NEXT:  # %bb.3: # %entry
+; O1-NEXT:    srlv $1, $5, $1
+; O1-NEXT:    sll $1, $1, 16
 ; O1-NEXT:    jr $ra
-; O1-NEXT:    nop
+; O1-NEXT:    sra $2, $1, 16
 ;
 ; O2-LABEL: AtomicLoadAdd16:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    lui $2, %hi(_gp_disp)
 ; O2-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; O2-NEXT:    addu $1, $2, $25
-; O2-NEXT:    lw $1, %got(z)($1)
 ; O2-NEXT:    addiu $2, $zero, -4
-; O2-NEXT:    and $3, $1, $2
+; O2-NEXT:    lw $1, %got(z)($1)
+; O2-NEXT:    and $2, $1, $2
 ; O2-NEXT:    andi $1, $1, 3
 ; O2-NEXT:    sll $1, $1, 3
-; O2-NEXT:    ori $2, $zero, 65535
-; O2-NEXT:    sllv $5, $2, $1
-; O2-NEXT:    nor $6, $zero, $5
+; O2-NEXT:    ori $3, $zero, 65535
+; O2-NEXT:    sllv $3, $3, $1
+; O2-NEXT:    andi $4, $4, 65535
 ; O2-NEXT:    sllv $4, $4, $1
 ; O2-NEXT:  $BB14_1: # %entry
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
-; O2-NEXT:    ll $7, 0($3)
-; O2-NEXT:    addu $8, $7, $4
-; O2-NEXT:    and $8, $8, $5
-; O2-NEXT:    and $9, $7, $6
-; O2-NEXT:    or $9, $9, $8
-; O2-NEXT:    sc $9, 0($3)
-; O2-NEXT:    beqz $9, $BB14_1
+; O2-NEXT:    ll $5, 0($2)
+; O2-NEXT:    addu $6, $5, $4
+; O2-NEXT:    xor $6, $5, $6
+; O2-NEXT:    and $6, $6, $3
+; O2-NEXT:    xor $6, $5, $6
+; O2-NEXT:    sc $6, 0($2)
+; O2-NEXT:    beqz $6, $BB14_1
 ; O2-NEXT:    nop
 ; O2-NEXT:  # %bb.2: # %entry
-; O2-NEXT:    and $2, $7, $5
-; O2-NEXT:    srlv $2, $2, $1
-; O2-NEXT:    sll $2, $2, 16
-; O2-NEXT:    sra $2, $2, 16
-; O2-NEXT:  # %bb.3: # %entry
+; O2-NEXT:    srlv $1, $5, $1
+; O2-NEXT:    sll $1, $1, 16
 ; O2-NEXT:    jr $ra
-; O2-NEXT:    nop
+; O2-NEXT:    sra $2, $1, 16
 ;
 ; O3-LABEL: AtomicLoadAdd16:
 ; O3:       # %bb.0: # %entry
@@ -5825,32 +5468,29 @@ define signext i16 @AtomicLoadAdd16(i16 signext %incr) nounwind {
 ; O3-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; O3-NEXT:    addu $1, $2, $25
 ; O3-NEXT:    addiu $2, $zero, -4
+; O3-NEXT:    ori $3, $zero, 65535
+; O3-NEXT:    andi $4, $4, 65535
 ; O3-NEXT:    lw $1, %got(z)($1)
-; O3-NEXT:    and $3, $1, $2
+; O3-NEXT:    and $2, $1, $2
 ; O3-NEXT:    andi $1, $1, 3
-; O3-NEXT:    ori $2, $zero, 65535
 ; O3-NEXT:    sll $1, $1, 3
-; O3-NEXT:    sllv $5, $2, $1
+; O3-NEXT:    sllv $3, $3, $1
 ; O3-NEXT:    sllv $4, $4, $1
-; O3-NEXT:    nor $6, $zero, $5
 ; O3-NEXT:  $BB14_1: # %entry
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
-; O3-NEXT:    ll $7, 0($3)
-; O3-NEXT:    addu $8, $7, $4
-; O3-NEXT:    and $8, $8, $5
-; O3-NEXT:    and $9, $7, $6
-; O3-NEXT:    or $9, $9, $8
-; O3-NEXT:    sc $9, 0($3)
-; O3-NEXT:    beqz $9, $BB14_1
+; O3-NEXT:    ll $5, 0($2)
+; O3-NEXT:    addu $6, $5, $4
+; O3-NEXT:    xor $6, $5, $6
+; O3-NEXT:    and $6, $6, $3
+; O3-NEXT:    xor $6, $5, $6
+; O3-NEXT:    sc $6, 0($2)
+; O3-NEXT:    beqz $6, $BB14_1
 ; O3-NEXT:    nop
 ; O3-NEXT:  # %bb.2: # %entry
-; O3-NEXT:    and $2, $7, $5
-; O3-NEXT:    srlv $2, $2, $1
-; O3-NEXT:    sll $2, $2, 16
-; O3-NEXT:    sra $2, $2, 16
-; O3-NEXT:  # %bb.3: # %entry
+; O3-NEXT:    srlv $1, $5, $1
+; O3-NEXT:    sll $1, $1, 16
 ; O3-NEXT:    jr $ra
-; O3-NEXT:    nop
+; O3-NEXT:    sra $2, $1, 16
 ;
 ; MIPS32EB-LABEL: AtomicLoadAdd16:
 ; MIPS32EB:       # %bb.0: # %entry
@@ -5858,33 +5498,30 @@ define signext i16 @AtomicLoadAdd16(i16 signext %incr) nounwind {
 ; MIPS32EB-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; MIPS32EB-NEXT:    addu $1, $2, $25
 ; MIPS32EB-NEXT:    lw $1, %got(z)($1)
-; MIPS32EB-NEXT:    addiu $2, $zero, -4
-; MIPS32EB-NEXT:    and $3, $1, $2
-; MIPS32EB-NEXT:    andi $1, $1, 3
-; MIPS32EB-NEXT:    xori $1, $1, 2
-; MIPS32EB-NEXT:    sll $1, $1, 3
-; MIPS32EB-NEXT:    ori $2, $zero, 65535
-; MIPS32EB-NEXT:    sllv $5, $2, $1
-; MIPS32EB-NEXT:    nor $6, $zero, $5
-; MIPS32EB-NEXT:    sllv $4, $4, $1
+; MIPS32EB-NEXT:    andi $2, $1, 3
+; MIPS32EB-NEXT:    addiu $3, $zero, -4
+; MIPS32EB-NEXT:    and $1, $1, $3
+; MIPS32EB-NEXT:    xori $2, $2, 2
+; MIPS32EB-NEXT:    sll $2, $2, 3
+; MIPS32EB-NEXT:    ori $3, $zero, 65535
+; MIPS32EB-NEXT:    sllv $3, $3, $2
+; MIPS32EB-NEXT:    andi $4, $4, 65535
+; MIPS32EB-NEXT:    sllv $4, $4, $2
 ; MIPS32EB-NEXT:  $BB14_1: # %entry
 ; MIPS32EB-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS32EB-NEXT:    ll $7, 0($3)
-; MIPS32EB-NEXT:    addu $8, $7, $4
-; MIPS32EB-NEXT:    and $8, $8, $5
-; MIPS32EB-NEXT:    and $9, $7, $6
-; MIPS32EB-NEXT:    or $9, $9, $8
-; MIPS32EB-NEXT:    sc $9, 0($3)
-; MIPS32EB-NEXT:    beqz $9, $BB14_1
+; MIPS32EB-NEXT:    ll $5, 0($1)
+; MIPS32EB-NEXT:    addu $6, $5, $4
+; MIPS32EB-NEXT:    xor $6, $5, $6
+; MIPS32EB-NEXT:    and $6, $6, $3
+; MIPS32EB-NEXT:    xor $6, $5, $6
+; MIPS32EB-NEXT:    sc $6, 0($1)
+; MIPS32EB-NEXT:    beqz $6, $BB14_1
 ; MIPS32EB-NEXT:    nop
 ; MIPS32EB-NEXT:  # %bb.2: # %entry
-; MIPS32EB-NEXT:    and $2, $7, $5
-; MIPS32EB-NEXT:    srlv $2, $2, $1
-; MIPS32EB-NEXT:    sll $2, $2, 16
-; MIPS32EB-NEXT:    sra $2, $2, 16
-; MIPS32EB-NEXT:  # %bb.3: # %entry
+; MIPS32EB-NEXT:    srlv $1, $5, $2
+; MIPS32EB-NEXT:    sll $1, $1, 16
 ; MIPS32EB-NEXT:    jr $ra
-; MIPS32EB-NEXT:    nop
+; MIPS32EB-NEXT:    sra $2, $1, 16
 entry:
   %0 = atomicrmw add ptr @z, i16 %incr monotonic
   ret i16 %0
@@ -5899,38 +5536,32 @@ entry:
 define {i16, i1} @foo(ptr %addr, i16 %l, i16 %r, i16 %new) {
 ; MIPS32-LABEL: foo:
 ; MIPS32:       # %bb.0:
-; MIPS32-NEXT:    addu $1, $5, $6
+; MIPS32-NEXT:    andi $1, $7, 65535
+; MIPS32-NEXT:    sll $2, $4, 3
+; MIPS32-NEXT:    ori $3, $zero, 65535
+; MIPS32-NEXT:    addiu $7, $zero, -4
+; MIPS32-NEXT:    and $4, $4, $7
+; MIPS32-NEXT:    sllv $3, $3, $2
+; MIPS32-NEXT:    sllv $1, $1, $2
+; MIPS32-NEXT:    addu $5, $5, $6
+; MIPS32-NEXT:    andi $5, $5, 65535
+; MIPS32-NEXT:    sllv $5, $5, $2
 ; MIPS32-NEXT:    sync
-; MIPS32-NEXT:    addiu $2, $zero, -4
-; MIPS32-NEXT:    and $3, $4, $2
-; MIPS32-NEXT:    andi $2, $4, 3
-; MIPS32-NEXT:    sll $4, $2, 3
-; MIPS32-NEXT:    ori $2, $zero, 65535
-; MIPS32-NEXT:    sllv $5, $2, $4
-; MIPS32-NEXT:    nor $6, $zero, $5
-; MIPS32-NEXT:    andi $2, $1, 65535
-; MIPS32-NEXT:    sllv $8, $2, $4
-; MIPS32-NEXT:    andi $2, $7, 65535
-; MIPS32-NEXT:    sllv $7, $2, $4
 ; MIPS32-NEXT:  $BB15_1: # =>This Inner Loop Header: Depth=1
-; MIPS32-NEXT:    ll $9, 0($3)
-; MIPS32-NEXT:    and $10, $9, $5
-; MIPS32-NEXT:    bne $10, $8, $BB15_3
+; MIPS32-NEXT:    ll $6, 0($4)
+; MIPS32-NEXT:    and $7, $6, $3
+; MIPS32-NEXT:    bne $7, $5, $BB15_3
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  # %bb.2: # in Loop: Header=BB15_1 Depth=1
-; MIPS32-NEXT:    and $9, $9, $6
-; MIPS32-NEXT:    or $9, $9, $7
-; MIPS32-NEXT:    sc $9, 0($3)
-; MIPS32-NEXT:    beqz $9, $BB15_1
+; MIPS32-NEXT:    xor $7, $6, $7
+; MIPS32-NEXT:    or $7, $7, $1
+; MIPS32-NEXT:    sc $7, 0($4)
+; MIPS32-NEXT:    beqz $7, $BB15_1
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  $BB15_3:
-; MIPS32-NEXT:    srlv $2, $10, $4
-; MIPS32-NEXT:    sll $2, $2, 16
-; MIPS32-NEXT:    sra $2, $2, 16
-; MIPS32-NEXT:  # %bb.4:
-; MIPS32-NEXT:    sll $1, $1, 16
-; MIPS32-NEXT:    sra $1, $1, 16
-; MIPS32-NEXT:    xor $1, $2, $1
+; MIPS32-NEXT:    srlv $2, $6, $2
+; MIPS32-NEXT:    and $1, $6, $3
+; MIPS32-NEXT:    xor $1, $5, $1
 ; MIPS32-NEXT:    sltiu $3, $1, 1
 ; MIPS32-NEXT:    sync
 ; MIPS32-NEXT:    jr $ra
@@ -5938,85 +5569,65 @@ define {i16, i1} @foo(ptr %addr, i16 %l, i16 %r, i16 %new) {
 ;
 ; MIPS32O0-LABEL: foo:
 ; MIPS32O0:       # %bb.0:
-; MIPS32O0-NEXT:    addiu $sp, $sp, -8
-; MIPS32O0-NEXT:    .cfi_def_cfa_offset 8
-; MIPS32O0-NEXT:    move $1, $7
-; MIPS32O0-NEXT:    move $3, $4
-; MIPS32O0-NEXT:    addu $2, $5, $6
-; MIPS32O0-NEXT:    sw $2, 0($sp) # 4-byte Folded Spill
-; MIPS32O0-NEXT:    sync
-; MIPS32O0-NEXT:    addiu $4, $zero, -4
-; MIPS32O0-NEXT:    and $4, $3, $4
-; MIPS32O0-NEXT:    andi $3, $3, 3
-; MIPS32O0-NEXT:    sll $9, $3, 3
+; MIPS32O0-NEXT:    addu $1, $5, $6
+; MIPS32O0-NEXT:    addiu $2, $zero, -4
+; MIPS32O0-NEXT:    and $6, $4, $2
+; MIPS32O0-NEXT:    sll $2, $4, 3
 ; MIPS32O0-NEXT:    ori $3, $zero, 65535
-; MIPS32O0-NEXT:    sllv $5, $3, $9
-; MIPS32O0-NEXT:    nor $7, $zero, $5
-; MIPS32O0-NEXT:    andi $2, $2, 65535
-; MIPS32O0-NEXT:    sllv $6, $2, $9
+; MIPS32O0-NEXT:    sllv $4, $3, $2
 ; MIPS32O0-NEXT:    andi $1, $1, 65535
-; MIPS32O0-NEXT:    sllv $8, $1, $9
+; MIPS32O0-NEXT:    sllv $1, $1, $2
+; MIPS32O0-NEXT:    andi $3, $7, 65535
+; MIPS32O0-NEXT:    sllv $7, $3, $2
+; MIPS32O0-NEXT:    sync
 ; MIPS32O0-NEXT:  $BB15_1: # =>This Inner Loop Header: Depth=1
-; MIPS32O0-NEXT:    ll $2, 0($4)
-; MIPS32O0-NEXT:    and $3, $2, $5
-; MIPS32O0-NEXT:    bne $3, $6, $BB15_3
+; MIPS32O0-NEXT:    ll $3, 0($6)
+; MIPS32O0-NEXT:    and $5, $3, $4
+; MIPS32O0-NEXT:    bne $5, $1, $BB15_3
 ; MIPS32O0-NEXT:    nop
 ; MIPS32O0-NEXT:  # %bb.2: # in Loop: Header=BB15_1 Depth=1
-; MIPS32O0-NEXT:    and $2, $2, $7
-; MIPS32O0-NEXT:    or $2, $2, $8
-; MIPS32O0-NEXT:    sc $2, 0($4)
-; MIPS32O0-NEXT:    beqz $2, $BB15_1
+; MIPS32O0-NEXT:    xor $5, $3, $5
+; MIPS32O0-NEXT:    or $5, $5, $7
+; MIPS32O0-NEXT:    sc $5, 0($6)
+; MIPS32O0-NEXT:    beqz $5, $BB15_1
 ; MIPS32O0-NEXT:    nop
 ; MIPS32O0-NEXT:  $BB15_3:
-; MIPS32O0-NEXT:    srlv $1, $3, $9
-; MIPS32O0-NEXT:    sll $1, $1, 16
-; MIPS32O0-NEXT:    sra $1, $1, 16
-; MIPS32O0-NEXT:  # %bb.4:
-; MIPS32O0-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
-; MIPS32O0-NEXT:  # %bb.5:
-; MIPS32O0-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
-; MIPS32O0-NEXT:    lw $1, 0($sp) # 4-byte Folded Reload
-; MIPS32O0-NEXT:    sll $1, $1, 16
-; MIPS32O0-NEXT:    sra $1, $1, 16
-; MIPS32O0-NEXT:    xor $1, $2, $1
-; MIPS32O0-NEXT:    sltiu $3, $1, 1
 ; MIPS32O0-NEXT:    sync
-; MIPS32O0-NEXT:    addiu $sp, $sp, 8
+; MIPS32O0-NEXT:    srlv $2, $3, $2
+; MIPS32O0-NEXT:    and $3, $3, $4
+; MIPS32O0-NEXT:    xor $1, $1, $3
+; MIPS32O0-NEXT:    sltiu $3, $1, 1
 ; MIPS32O0-NEXT:    jr $ra
 ; MIPS32O0-NEXT:    nop
 ;
 ; MIPS32R2-LABEL: foo:
 ; MIPS32R2:       # %bb.0:
-; MIPS32R2-NEXT:    addu $1, $5, $6
+; MIPS32R2-NEXT:    andi $1, $7, 65535
+; MIPS32R2-NEXT:    sll $2, $4, 3
+; MIPS32R2-NEXT:    ori $3, $zero, 65535
+; MIPS32R2-NEXT:    addiu $7, $zero, -4
+; MIPS32R2-NEXT:    and $4, $4, $7
+; MIPS32R2-NEXT:    sllv $3, $3, $2
+; MIPS32R2-NEXT:    sllv $1, $1, $2
+; MIPS32R2-NEXT:    addu $5, $5, $6
+; MIPS32R2-NEXT:    andi $5, $5, 65535
+; MIPS32R2-NEXT:    sllv $5, $5, $2
 ; MIPS32R2-NEXT:    sync
-; MIPS32R2-NEXT:    addiu $2, $zero, -4
-; MIPS32R2-NEXT:    and $3, $4, $2
-; MIPS32R2-NEXT:    andi $2, $4, 3
-; MIPS32R2-NEXT:    sll $4, $2, 3
-; MIPS32R2-NEXT:    ori $2, $zero, 65535
-; MIPS32R2-NEXT:    sllv $5, $2, $4
-; MIPS32R2-NEXT:    nor $6, $zero, $5
-; MIPS32R2-NEXT:    andi $2, $1, 65535
-; MIPS32R2-NEXT:    sllv $8, $2, $4
-; MIPS32R2-NEXT:    andi $2, $7, 65535
-; MIPS32R2-NEXT:    sllv $7, $2, $4
 ; MIPS32R2-NEXT:  $BB15_1: # =>This Inner Loop Header: Depth=1
-; MIPS32R2-NEXT:    ll $9, 0($3)
-; MIPS32R2-NEXT:    and $10, $9, $5
-; MIPS32R2-NEXT:    bne $10, $8, $BB15_3
+; MIPS32R2-NEXT:    ll $6, 0($4)
+; MIPS32R2-NEXT:    and $7, $6, $3
+; MIPS32R2-NEXT:    bne $7, $5, $BB15_3
 ; MIPS32R2-NEXT:    nop
 ; MIPS32R2-NEXT:  # %bb.2: # in Loop: Header=BB15_1 Depth=1
-; MIPS32R2-NEXT:    and $9, $9, $6
-; MIPS32R2-NEXT:    or $9, $9, $7
-; MIPS32R2-NEXT:    sc $9, 0($3)
-; MIPS32R2-NEXT:    beqz $9, $BB15_1
+; MIPS32R2-NEXT:    xor $7, $6, $7
+; MIPS32R2-NEXT:    or $7, $7, $1
+; MIPS32R2-NEXT:    sc $7, 0($4)
+; MIPS32R2-NEXT:    beqz $7, $BB15_1
 ; MIPS32R2-NEXT:    nop
 ; MIPS32R2-NEXT:  $BB15_3:
-; MIPS32R2-NEXT:    srlv $2, $10, $4
-; MIPS32R2-NEXT:    seh $2, $2
-; MIPS32R2-NEXT:  # %bb.4:
-; MIPS32R2-NEXT:    seh $1, $1
-; MIPS32R2-NEXT:    xor $1, $2, $1
+; MIPS32R2-NEXT:    srlv $2, $6, $2
+; MIPS32R2-NEXT:    and $1, $6, $3
+; MIPS32R2-NEXT:    xor $1, $5, $1
 ; MIPS32R2-NEXT:    sltiu $3, $1, 1
 ; MIPS32R2-NEXT:    sync
 ; MIPS32R2-NEXT:    jr $ra
@@ -6024,119 +5635,97 @@ define {i16, i1} @foo(ptr %addr, i16 %l, i16 %r, i16 %new) {
 ;
 ; MIPS32R6-LABEL: foo:
 ; MIPS32R6:       # %bb.0:
-; MIPS32R6-NEXT:    addu $1, $5, $6
+; MIPS32R6-NEXT:    andi $1, $7, 65535
+; MIPS32R6-NEXT:    sll $2, $4, 3
+; MIPS32R6-NEXT:    ori $3, $zero, 65535
+; MIPS32R6-NEXT:    addiu $7, $zero, -4
+; MIPS32R6-NEXT:    and $4, $4, $7
+; MIPS32R6-NEXT:    sllv $3, $3, $2
+; MIPS32R6-NEXT:    sllv $1, $1, $2
+; MIPS32R6-NEXT:    addu $5, $5, $6
+; MIPS32R6-NEXT:    andi $5, $5, 65535
+; MIPS32R6-NEXT:    sllv $5, $5, $2
 ; MIPS32R6-NEXT:    sync
-; MIPS32R6-NEXT:    addiu $2, $zero, -4
-; MIPS32R6-NEXT:    and $3, $4, $2
-; MIPS32R6-NEXT:    andi $2, $4, 3
-; MIPS32R6-NEXT:    sll $4, $2, 3
-; MIPS32R6-NEXT:    ori $2, $zero, 65535
-; MIPS32R6-NEXT:    sllv $5, $2, $4
-; MIPS32R6-NEXT:    nor $6, $zero, $5
-; MIPS32R6-NEXT:    andi $2, $1, 65535
-; MIPS32R6-NEXT:    sllv $8, $2, $4
-; MIPS32R6-NEXT:    andi $2, $7, 65535
-; MIPS32R6-NEXT:    sllv $7, $2, $4
 ; MIPS32R6-NEXT:  $BB15_1: # =>This Inner Loop Header: Depth=1
-; MIPS32R6-NEXT:    ll $9, 0($3)
-; MIPS32R6-NEXT:    and $10, $9, $5
-; MIPS32R6-NEXT:    bnec $10, $8, $BB15_3
+; MIPS32R6-NEXT:    ll $6, 0($4)
+; MIPS32R6-NEXT:    and $7, $6, $3
+; MIPS32R6-NEXT:    bnec $7, $5, $BB15_3
 ; MIPS32R6-NEXT:  # %bb.2: # in Loop: Header=BB15_1 Depth=1
-; MIPS32R6-NEXT:    and $9, $9, $6
-; MIPS32R6-NEXT:    or $9, $9, $7
-; MIPS32R6-NEXT:    sc $9, 0($3)
-; MIPS32R6-NEXT:    beqzc $9, $BB15_1
+; MIPS32R6-NEXT:    xor $7, $6, $7
+; MIPS32R6-NEXT:    or $7, $7, $1
+; MIPS32R6-NEXT:    sc $7, 0($4)
+; MIPS32R6-NEXT:    beqzc $7, $BB15_1
 ; MIPS32R6-NEXT:  $BB15_3:
-; MIPS32R6-NEXT:    srlv $2, $10, $4
-; MIPS32R6-NEXT:    seh $2, $2
-; MIPS32R6-NEXT:  # %bb.4:
-; MIPS32R6-NEXT:    seh $1, $1
-; MIPS32R6-NEXT:    xor $1, $2, $1
+; MIPS32R6-NEXT:    srlv $2, $6, $2
+; MIPS32R6-NEXT:    and $1, $6, $3
+; MIPS32R6-NEXT:    xor $1, $5, $1
 ; MIPS32R6-NEXT:    sltiu $3, $1, 1
 ; MIPS32R6-NEXT:    sync
 ; MIPS32R6-NEXT:    jrc $ra
 ;
 ; MIPS32R6O0-LABEL: foo:
 ; MIPS32R6O0:       # %bb.0:
-; MIPS32R6O0-NEXT:    addiu $sp, $sp, -8
-; MIPS32R6O0-NEXT:    .cfi_def_cfa_offset 8
-; MIPS32R6O0-NEXT:    move $1, $7
-; MIPS32R6O0-NEXT:    move $3, $4
-; MIPS32R6O0-NEXT:    addu $2, $5, $6
-; MIPS32R6O0-NEXT:    sw $2, 0($sp) # 4-byte Folded Spill
-; MIPS32R6O0-NEXT:    sync
-; MIPS32R6O0-NEXT:    addiu $4, $zero, -4
-; MIPS32R6O0-NEXT:    and $4, $3, $4
-; MIPS32R6O0-NEXT:    andi $3, $3, 3
-; MIPS32R6O0-NEXT:    sll $9, $3, 3
+; MIPS32R6O0-NEXT:    addu $1, $5, $6
+; MIPS32R6O0-NEXT:    addiu $2, $zero, -4
+; MIPS32R6O0-NEXT:    and $6, $4, $2
+; MIPS32R6O0-NEXT:    sll $2, $4, 3
 ; MIPS32R6O0-NEXT:    ori $3, $zero, 65535
-; MIPS32R6O0-NEXT:    sllv $5, $3, $9
-; MIPS32R6O0-NEXT:    nor $7, $zero, $5
-; MIPS32R6O0-NEXT:    andi $2, $2, 65535
-; MIPS32R6O0-NEXT:    sllv $6, $2, $9
+; MIPS32R6O0-NEXT:    sllv $4, $3, $2
 ; MIPS32R6O0-NEXT:    andi $1, $1, 65535
-; MIPS32R6O0-NEXT:    sllv $8, $1, $9
-; MIPS32R6O0-NEXT:  $BB15_1: # =>This Inner Loop Header: Depth=1
-; MIPS32R6O0-NEXT:    ll $2, 0($4)
-; MIPS32R6O0-NEXT:    and $3, $2, $5
-; MIPS32R6O0-NEXT:    bnec $3, $6, $BB15_3
-; MIPS32R6O0-NEXT:  # %bb.2: # in Loop: Header=BB15_1 Depth=1
-; MIPS32R6O0-NEXT:    and $2, $2, $7
-; MIPS32R6O0-NEXT:    or $2, $2, $8
-; MIPS32R6O0-NEXT:    sc $2, 0($4)
-; MIPS32R6O0-NEXT:    beqzc $2, $BB15_1
-; MIPS32R6O0-NEXT:  $BB15_3:
-; MIPS32R6O0-NEXT:    srlv $1, $3, $9
-; MIPS32R6O0-NEXT:    seh $1, $1
-; MIPS32R6O0-NEXT:  # %bb.4:
-; MIPS32R6O0-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
-; MIPS32R6O0-NEXT:  # %bb.5:
-; MIPS32R6O0-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
-; MIPS32R6O0-NEXT:    lw $1, 0($sp) # 4-byte Folded Reload
-; MIPS32R6O0-NEXT:    seh $1, $1
-; MIPS32R6O0-NEXT:    xor $1, $2, $1
-; MIPS32R6O0-NEXT:    sltiu $3, $1, 1
+; MIPS32R6O0-NEXT:    sllv $1, $1, $2
+; MIPS32R6O0-NEXT:    andi $3, $7, 65535
+; MIPS32R6O0-NEXT:    sllv $7, $3, $2
 ; MIPS32R6O0-NEXT:    sync
-; MIPS32R6O0-NEXT:    addiu $sp, $sp, 8
+; MIPS32R6O0-NEXT:  $BB15_1: # =>This Inner Loop Header: Depth=1
+; MIPS32R6O0-NEXT:    ll $3, 0($6)
+; MIPS32R6O0-NEXT:    and $5, $3, $4
+; MIPS32R6O0-NEXT:    bnec $5, $1, $BB15_3
+; MIPS32R6O0-NEXT:  # %bb.2: # in Loop: Header=BB15_1 Depth=1
+; MIPS32R6O0-NEXT:    xor $5, $3, $5
+; MIPS32R6O0-NEXT:    or $5, $5, $7
+; MIPS32R6O0-NEXT:    sc $5, 0($6)
+; MIPS32R6O0-NEXT:    beqzc $5, $BB15_1
+; MIPS32R6O0-NEXT:  $BB15_3:
+; MIPS32R6O0-NEXT:    sync
+; MIPS32R6O0-NEXT:    srlv $2, $3, $2
+; MIPS32R6O0-NEXT:    and $3, $3, $4
+; MIPS32R6O0-NEXT:    xor $1, $1, $3
+; MIPS32R6O0-NEXT:    sltiu $3, $1, 1
 ; MIPS32R6O0-NEXT:    jrc $ra
 ;
 ; MIPS4-LABEL: foo:
 ; MIPS4:       # %bb.0:
-; MIPS4-NEXT:    sll $1, $6, 0
-; MIPS4-NEXT:    sll $2, $5, 0
-; MIPS4-NEXT:    addu $1, $2, $1
+; MIPS4-NEXT:    sll $1, $7, 0
+; MIPS4-NEXT:    andi $1, $1, 65535
+; MIPS4-NEXT:    sll $2, $4, 0
+; MIPS4-NEXT:    andi $2, $2, 3
+; MIPS4-NEXT:    sll $2, $2, 3
+; MIPS4-NEXT:    ori $3, $zero, 65535
+; MIPS4-NEXT:    daddiu $7, $zero, -4
+; MIPS4-NEXT:    and $4, $4, $7
+; MIPS4-NEXT:    sllv $3, $3, $2
+; MIPS4-NEXT:    sllv $1, $1, $2
+; MIPS4-NEXT:    sll $6, $6, 0
+; MIPS4-NEXT:    sll $5, $5, 0
+; MIPS4-NEXT:    addu $5, $5, $6
+; MIPS4-NEXT:    andi $5, $5, 65535
+; MIPS4-NEXT:    sllv $5, $5, $2
 ; MIPS4-NEXT:    sync
-; MIPS4-NEXT:    sll $2, $7, 0
-; MIPS4-NEXT:    daddiu $3, $zero, -4
-; MIPS4-NEXT:    and $3, $4, $3
-; MIPS4-NEXT:    andi $4, $4, 3
-; MIPS4-NEXT:    sll $4, $4, 3
-; MIPS4-NEXT:    ori $5, $zero, 65535
-; MIPS4-NEXT:    sllv $5, $5, $4
-; MIPS4-NEXT:    nor $6, $zero, $5
-; MIPS4-NEXT:    andi $7, $1, 65535
-; MIPS4-NEXT:    sllv $7, $7, $4
-; MIPS4-NEXT:    andi $2, $2, 65535
-; MIPS4-NEXT:    sllv $8, $2, $4
 ; MIPS4-NEXT:  .LBB15_1: # =>This Inner Loop Header: Depth=1
-; MIPS4-NEXT:    ll $9, 0($3)
-; MIPS4-NEXT:    and $10, $9, $5
-; MIPS4-NEXT:    bne $10, $7, .LBB15_3
+; MIPS4-NEXT:    ll $6, 0($4)
+; MIPS4-NEXT:    and $7, $6, $3
+; MIPS4-NEXT:    bne $7, $5, .LBB15_3
 ; MIPS4-NEXT:    nop
 ; MIPS4-NEXT:  # %bb.2: # in Loop: Header=BB15_1 Depth=1
-; MIPS4-NEXT:    and $9, $9, $6
-; MIPS4-NEXT:    or $9, $9, $8
-; MIPS4-NEXT:    sc $9, 0($3)
-; MIPS4-NEXT:    beqz $9, .LBB15_1
+; MIPS4-NEXT:    xor $7, $6, $7
+; MIPS4-NEXT:    or $7, $7, $1
+; MIPS4-NEXT:    sc $7, 0($4)
+; MIPS4-NEXT:    beqz $7, .LBB15_1
 ; MIPS4-NEXT:    nop
 ; MIPS4-NEXT:  .LBB15_3:
-; MIPS4-NEXT:    srlv $2, $10, $4
-; MIPS4-NEXT:    sll $2, $2, 16
-; MIPS4-NEXT:    sra $2, $2, 16
-; MIPS4-NEXT:  # %bb.4:
-; MIPS4-NEXT:    sll $1, $1, 16
-; MIPS4-NEXT:    sra $1, $1, 16
-; MIPS4-NEXT:    xor $1, $2, $1
+; MIPS4-NEXT:    srlv $2, $6, $2
+; MIPS4-NEXT:    and $1, $6, $3
+; MIPS4-NEXT:    xor $1, $5, $1
 ; MIPS4-NEXT:    sltiu $3, $1, 1
 ; MIPS4-NEXT:    sync
 ; MIPS4-NEXT:    jr $ra
@@ -6144,41 +5733,37 @@ define {i16, i1} @foo(ptr %addr, i16 %l, i16 %r, i16 %new) {
 ;
 ; MIPS64-LABEL: foo:
 ; MIPS64:       # %bb.0:
-; MIPS64-NEXT:    sll $1, $6, 0
-; MIPS64-NEXT:    sll $2, $5, 0
-; MIPS64-NEXT:    addu $1, $2, $1
+; MIPS64-NEXT:    sll $1, $7, 0
+; MIPS64-NEXT:    andi $1, $1, 65535
+; MIPS64-NEXT:    sll $2, $4, 0
+; MIPS64-NEXT:    andi $2, $2, 3
+; MIPS64-NEXT:    sll $2, $2, 3
+; MIPS64-NEXT:    ori $3, $zero, 65535
+; MIPS64-NEXT:    daddiu $7, $zero, -4
+; MIPS64-NEXT:    and $4, $4, $7
+; MIPS64-NEXT:    sllv $3, $3, $2
+; MIPS64-NEXT:    sllv $1, $1, $2
+; MIPS64-NEXT:    sll $6, $6, 0
+; MIPS64-NEXT:    sll $5, $5, 0
+; MIPS64-NEXT:    addu $5, $5, $6
+; MIPS64-NEXT:    andi $5, $5, 65535
+; MIPS64-NEXT:    sllv $5, $5, $2
 ; MIPS64-NEXT:    sync
-; MIPS64-NEXT:    sll $2, $7, 0
-; MIPS64-NEXT:    daddiu $3, $zero, -4
-; MIPS64-NEXT:    and $3, $4, $3
-; MIPS64-NEXT:    andi $4, $4, 3
-; MIPS64-NEXT:    sll $4, $4, 3
-; MIPS64-NEXT:    ori $5, $zero, 65535
-; MIPS64-NEXT:    sllv $5, $5, $4
-; MIPS64-NEXT:    nor $6, $zero, $5
-; MIPS64-NEXT:    andi $7, $1, 65535
-; MIPS64-NEXT:    sllv $7, $7, $4
-; MIPS64-NEXT:    andi $2, $2, 65535
-; MIPS64-NEXT:    sllv $8, $2, $4
 ; MIPS64-NEXT:  .LBB15_1: # =>This Inner Loop Header: Depth=1
-; MIPS64-NEXT:    ll $9, 0($3)
-; MIPS64-NEXT:    and $10, $9, $5
-; MIPS64-NEXT:    bne $10, $7, .LBB15_3
+; MIPS64-NEXT:    ll $6, 0($4)
+; MIPS64-NEXT:    and $7, $6, $3
+; MIPS64-NEXT:    bne $7, $5, .LBB15_3
 ; MIPS64-NEXT:    nop
 ; MIPS64-NEXT:  # %bb.2: # in Loop: Header=BB15_1 Depth=1
-; MIPS64-NEXT:    and $9, $9, $6
-; MIPS64-NEXT:    or $9, $9, $8
-; MIPS64-NEXT:    sc $9, 0($3)
-; MIPS64-NEXT:    beqz $9, .LBB15_1
+; MIPS64-NEXT:    xor $7, $6, $7
+; MIPS64-NEXT:    or $7, $7, $1
+; MIPS64-NEXT:    sc $7, 0($4)
+; MIPS64-NEXT:    beqz $7, .LBB15_1
 ; MIPS64-NEXT:    nop
 ; MIPS64-NEXT:  .LBB15_3:
-; MIPS64-NEXT:    srlv $2, $10, $4
-; MIPS64-NEXT:    sll $2, $2, 16
-; MIPS64-NEXT:    sra $2, $2, 16
-; MIPS64-NEXT:  # %bb.4:
-; MIPS64-NEXT:    sll $1, $1, 16
-; MIPS64-NEXT:    sra $1, $1, 16
-; MIPS64-NEXT:    xor $1, $2, $1
+; MIPS64-NEXT:    srlv $2, $6, $2
+; MIPS64-NEXT:    and $1, $6, $3
+; MIPS64-NEXT:    xor $1, $5, $1
 ; MIPS64-NEXT:    sltiu $3, $1, 1
 ; MIPS64-NEXT:    sync
 ; MIPS64-NEXT:    jr $ra
@@ -6186,39 +5771,37 @@ define {i16, i1} @foo(ptr %addr, i16 %l, i16 %r, i16 %new) {
 ;
 ; MIPS64R2-LABEL: foo:
 ; MIPS64R2:       # %bb.0:
-; MIPS64R2-NEXT:    sll $1, $6, 0
-; MIPS64R2-NEXT:    sll $2, $5, 0
-; MIPS64R2-NEXT:    addu $1, $2, $1
+; MIPS64R2-NEXT:    sll $1, $7, 0
+; MIPS64R2-NEXT:    andi $1, $1, 65535
+; MIPS64R2-NEXT:    sll $2, $4, 0
+; MIPS64R2-NEXT:    andi $2, $2, 3
+; MIPS64R2-NEXT:    sll $2, $2, 3
+; MIPS64R2-NEXT:    ori $3, $zero, 65535
+; MIPS64R2-NEXT:    daddiu $7, $zero, -4
+; MIPS64R2-NEXT:    and $4, $4, $7
+; MIPS64R2-NEXT:    sllv $3, $3, $2
+; MIPS64R2-NEXT:    sllv $1, $1, $2
+; MIPS64R2-NEXT:    sll $6, $6, 0
+; MIPS64R2-NEXT:    sll $5, $5, 0
+; MIPS64R2-NEXT:    addu $5, $5, $6
+; MIPS64R2-NEXT:    andi $5, $5, 65535
+; MIPS64R2-NEXT:    sllv $5, $5, $2
 ; MIPS64R2-NEXT:    sync
-; MIPS64R2-NEXT:    sll $2, $7, 0
-; MIPS64R2-NEXT:    daddiu $3, $zero, -4
-; MIPS64R2-NEXT:    and $3, $4, $3
-; MIPS64R2-NEXT:    andi $4, $4, 3
-; MIPS64R2-NEXT:    sll $4, $4, 3
-; MIPS64R2-NEXT:    ori $5, $zero, 65535
-; MIPS64R2-NEXT:    sllv $5, $5, $4
-; MIPS64R2-NEXT:    nor $6, $zero, $5
-; MIPS64R2-NEXT:    andi $7, $1, 65535
-; MIPS64R2-NEXT:    sllv $7, $7, $4
-; MIPS64R2-NEXT:    andi $2, $2, 65535
-; MIPS64R2-NEXT:    sllv $8, $2, $4
 ; MIPS64R2-NEXT:  .LBB15_1: # =>This Inner Loop Header: Depth=1
-; MIPS64R2-NEXT:    ll $9, 0($3)
-; MIPS64R2-NEXT:    and $10, $9, $5
-; MIPS64R2-NEXT:    bne $10, $7, .LBB15_3
+; MIPS64R2-NEXT:    ll $6, 0($4)
+; MIPS64R2-NEXT:    and $7, $6, $3
+; MIPS64R2-NEXT:    bne $7, $5, .LBB15_3
 ; MIPS64R2-NEXT:    nop
 ; MIPS64R2-NEXT:  # %bb.2: # in Loop: Header=BB15_1 Depth=1
-; MIPS64R2-NEXT:    and $9, $9, $6
-; MIPS64R2-NEXT:    or $9, $9, $8
-; MIPS64R2-NEXT:    sc $9, 0($3)
-; MIPS64R2-NEXT:    beqz $9, .LBB15_1
+; MIPS64R2-NEXT:    xor $7, $6, $7
+; MIPS64R2-NEXT:    or $7, $7, $1
+; MIPS64R2-NEXT:    sc $7, 0($4)
+; MIPS64R2-NEXT:    beqz $7, .LBB15_1
 ; MIPS64R2-NEXT:    nop
 ; MIPS64R2-NEXT:  .LBB15_3:
-; MIPS64R2-NEXT:    srlv $2, $10, $4
-; MIPS64R2-NEXT:    seh $2, $2
-; MIPS64R2-NEXT:  # %bb.4:
-; MIPS64R2-NEXT:    seh $1, $1
-; MIPS64R2-NEXT:    xor $1, $2, $1
+; MIPS64R2-NEXT:    srlv $2, $6, $2
+; MIPS64R2-NEXT:    and $1, $6, $3
+; MIPS64R2-NEXT:    xor $1, $5, $1
 ; MIPS64R2-NEXT:    sltiu $3, $1, 1
 ; MIPS64R2-NEXT:    sync
 ; MIPS64R2-NEXT:    jr $ra
@@ -6226,160 +5809,139 @@ define {i16, i1} @foo(ptr %addr, i16 %l, i16 %r, i16 %new) {
 ;
 ; MIPS64R6-LABEL: foo:
 ; MIPS64R6:       # %bb.0:
-; MIPS64R6-NEXT:    sll $1, $6, 0
-; MIPS64R6-NEXT:    sll $2, $5, 0
-; MIPS64R6-NEXT:    addu $1, $2, $1
+; MIPS64R6-NEXT:    sll $1, $7, 0
+; MIPS64R6-NEXT:    andi $1, $1, 65535
+; MIPS64R6-NEXT:    sll $2, $4, 0
+; MIPS64R6-NEXT:    andi $2, $2, 3
+; MIPS64R6-NEXT:    sll $2, $2, 3
+; MIPS64R6-NEXT:    ori $3, $zero, 65535
+; MIPS64R6-NEXT:    daddiu $7, $zero, -4
+; MIPS64R6-NEXT:    and $4, $4, $7
+; MIPS64R6-NEXT:    sllv $3, $3, $2
+; MIPS64R6-NEXT:    sllv $1, $1, $2
+; MIPS64R6-NEXT:    sll $6, $6, 0
+; MIPS64R6-NEXT:    sll $5, $5, 0
+; MIPS64R6-NEXT:    addu $5, $5, $6
+; MIPS64R6-NEXT:    andi $5, $5, 65535
+; MIPS64R6-NEXT:    sllv $5, $5, $2
 ; MIPS64R6-NEXT:    sync
-; MIPS64R6-NEXT:    sll $2, $7, 0
-; MIPS64R6-NEXT:    daddiu $3, $zero, -4
-; MIPS64R6-NEXT:    and $3, $4, $3
-; MIPS64R6-NEXT:    andi $4, $4, 3
-; MIPS64R6-NEXT:    sll $4, $4, 3
-; MIPS64R6-NEXT:    ori $5, $zero, 65535
-; MIPS64R6-NEXT:    sllv $5, $5, $4
-; MIPS64R6-NEXT:    nor $6, $zero, $5
-; MIPS64R6-NEXT:    andi $7, $1, 65535
-; MIPS64R6-NEXT:    sllv $7, $7, $4
-; MIPS64R6-NEXT:    andi $2, $2, 65535
-; MIPS64R6-NEXT:    sllv $8, $2, $4
 ; MIPS64R6-NEXT:  .LBB15_1: # =>This Inner Loop Header: Depth=1
-; MIPS64R6-NEXT:    ll $9, 0($3)
-; MIPS64R6-NEXT:    and $10, $9, $5
-; MIPS64R6-NEXT:    bnec $10, $7, .LBB15_3
+; MIPS64R6-NEXT:    ll $6, 0($4)
+; MIPS64R6-NEXT:    and $7, $6, $3
+; MIPS64R6-NEXT:    bnec $7, $5, .LBB15_3
 ; MIPS64R6-NEXT:  # %bb.2: # in Loop: Header=BB15_1 Depth=1
-; MIPS64R6-NEXT:    and $9, $9, $6
-; MIPS64R6-NEXT:    or $9, $9, $8
-; MIPS64R6-NEXT:    sc $9, 0($3)
-; MIPS64R6-NEXT:    beqzc $9, .LBB15_1
+; MIPS64R6-NEXT:    xor $7, $6, $7
+; MIPS64R6-NEXT:    or $7, $7, $1
+; MIPS64R6-NEXT:    sc $7, 0($4)
+; MIPS64R6-NEXT:    beqzc $7, .LBB15_1
 ; MIPS64R6-NEXT:  .LBB15_3:
-; MIPS64R6-NEXT:    srlv $2, $10, $4
-; MIPS64R6-NEXT:    seh $2, $2
-; MIPS64R6-NEXT:  # %bb.4:
-; MIPS64R6-NEXT:    seh $1, $1
-; MIPS64R6-NEXT:    xor $1, $2, $1
+; MIPS64R6-NEXT:    srlv $2, $6, $2
+; MIPS64R6-NEXT:    and $1, $6, $3
+; MIPS64R6-NEXT:    xor $1, $5, $1
 ; MIPS64R6-NEXT:    sltiu $3, $1, 1
 ; MIPS64R6-NEXT:    sync
 ; MIPS64R6-NEXT:    jrc $ra
 ;
 ; MIPS64R6O0-LABEL: foo:
 ; MIPS64R6O0:       # %bb.0:
-; MIPS64R6O0-NEXT:    daddiu $sp, $sp, -16
-; MIPS64R6O0-NEXT:    .cfi_def_cfa_offset 16
-; MIPS64R6O0-NEXT:    move $3, $4
-; MIPS64R6O0-NEXT:    move $1, $7
+; MIPS64R6O0-NEXT:    move $1, $6
+; MIPS64R6O0-NEXT:    sll $2, $1, 0
+; MIPS64R6O0-NEXT:    move $1, $5
 ; MIPS64R6O0-NEXT:    sll $1, $1, 0
-; MIPS64R6O0-NEXT:    move $2, $6
-; MIPS64R6O0-NEXT:    sll $4, $2, 0
-; MIPS64R6O0-NEXT:    move $2, $5
+; MIPS64R6O0-NEXT:    move $3, $7
+; MIPS64R6O0-NEXT:    sll $3, $3, 0
+; MIPS64R6O0-NEXT:    addu $1, $1, $2
+; MIPS64R6O0-NEXT:    daddiu $2, $zero, -4
+; MIPS64R6O0-NEXT:    and $6, $4, $2
+; MIPS64R6O0-NEXT:    move $2, $4
 ; MIPS64R6O0-NEXT:    sll $2, $2, 0
-; MIPS64R6O0-NEXT:    addu $2, $2, $4
-; MIPS64R6O0-NEXT:    sw $2, 8($sp) # 4-byte Folded Spill
-; MIPS64R6O0-NEXT:    sync
-; MIPS64R6O0-NEXT:    daddiu $4, $zero, -4
-; MIPS64R6O0-NEXT:    and $4, $3, $4
-; MIPS64R6O0-NEXT:    andi $3, $3, 3
-; MIPS64R6O0-NEXT:    xori $3, $3, 2
-; MIPS64R6O0-NEXT:    sll $9, $3, 3
-; MIPS64R6O0-NEXT:    ori $3, $zero, 65535
-; MIPS64R6O0-NEXT:    sllv $5, $3, $9
-; MIPS64R6O0-NEXT:    nor $7, $zero, $5
-; MIPS64R6O0-NEXT:    andi $2, $2, 65535
-; MIPS64R6O0-NEXT:    sllv $6, $2, $9
+; MIPS64R6O0-NEXT:    andi $2, $2, 3
+; MIPS64R6O0-NEXT:    xori $2, $2, 2
+; MIPS64R6O0-NEXT:    sll $2, $2, 3
+; MIPS64R6O0-NEXT:    ori $4, $zero, 65535
+; MIPS64R6O0-NEXT:    sllv $4, $4, $2
 ; MIPS64R6O0-NEXT:    andi $1, $1, 65535
-; MIPS64R6O0-NEXT:    sllv $8, $1, $9
-; MIPS64R6O0-NEXT:  .LBB15_1: # =>This Inner Loop Header: Depth=1
-; MIPS64R6O0-NEXT:    ll $2, 0($4)
-; MIPS64R6O0-NEXT:    and $3, $2, $5
-; MIPS64R6O0-NEXT:    bnec $3, $6, .LBB15_3
-; MIPS64R6O0-NEXT:  # %bb.2: # in Loop: Header=BB15_1 Depth=1
-; MIPS64R6O0-NEXT:    and $2, $2, $7
-; MIPS64R6O0-NEXT:    or $2, $2, $8
-; MIPS64R6O0-NEXT:    sc $2, 0($4)
-; MIPS64R6O0-NEXT:    beqzc $2, .LBB15_1
-; MIPS64R6O0-NEXT:  .LBB15_3:
-; MIPS64R6O0-NEXT:    srlv $1, $3, $9
-; MIPS64R6O0-NEXT:    seh $1, $1
-; MIPS64R6O0-NEXT:  # %bb.4:
-; MIPS64R6O0-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
-; MIPS64R6O0-NEXT:  # %bb.5:
-; MIPS64R6O0-NEXT:    lw $2, 12($sp) # 4-byte Folded Reload
-; MIPS64R6O0-NEXT:    lw $1, 8($sp) # 4-byte Folded Reload
-; MIPS64R6O0-NEXT:    seh $1, $1
-; MIPS64R6O0-NEXT:    xor $1, $2, $1
-; MIPS64R6O0-NEXT:    sltiu $3, $1, 1
+; MIPS64R6O0-NEXT:    sllv $1, $1, $2
+; MIPS64R6O0-NEXT:    andi $3, $3, 65535
+; MIPS64R6O0-NEXT:    sllv $7, $3, $2
 ; MIPS64R6O0-NEXT:    sync
-; MIPS64R6O0-NEXT:    daddiu $sp, $sp, 16
+; MIPS64R6O0-NEXT:  .LBB15_1: # =>This Inner Loop Header: Depth=1
+; MIPS64R6O0-NEXT:    ll $3, 0($6)
+; MIPS64R6O0-NEXT:    and $5, $3, $4
+; MIPS64R6O0-NEXT:    bnec $5, $1, .LBB15_3
+; MIPS64R6O0-NEXT:  # %bb.2: # in Loop: Header=BB15_1 Depth=1
+; MIPS64R6O0-NEXT:    xor $5, $3, $5
+; MIPS64R6O0-NEXT:    or $5, $5, $7
+; MIPS64R6O0-NEXT:    sc $5, 0($6)
+; MIPS64R6O0-NEXT:    beqzc $5, .LBB15_1
+; MIPS64R6O0-NEXT:  .LBB15_3:
+; MIPS64R6O0-NEXT:    sync
+; MIPS64R6O0-NEXT:    srlv $2, $3, $2
+; MIPS64R6O0-NEXT:    and $3, $3, $4
+; MIPS64R6O0-NEXT:    xor $1, $1, $3
+; MIPS64R6O0-NEXT:    sltiu $3, $1, 1
 ; MIPS64R6O0-NEXT:    jrc $ra
 ;
 ; MM32-LABEL: foo:
 ; MM32:       # %bb.0:
-; MM32-NEXT:    addu16 $3, $5, $6
+; MM32-NEXT:    andi16 $2, $7, 65535
+; MM32-NEXT:    sll16 $3, $4, 3
+; MM32-NEXT:    andi $1, $3, 24
+; MM32-NEXT:    ori $3, $zero, 65535
+; MM32-NEXT:    addiu $7, $zero, -4
+; MM32-NEXT:    and16 $7, $4
+; MM32-NEXT:    sllv $3, $3, $1
+; MM32-NEXT:    sllv $2, $2, $1
+; MM32-NEXT:    addu16 $4, $5, $6
+; MM32-NEXT:    andi16 $4, $4, 65535
+; MM32-NEXT:    sllv $4, $4, $1
 ; MM32-NEXT:    sync
-; MM32-NEXT:    addiu $1, $zero, -4
-; MM32-NEXT:    and $1, $4, $1
-; MM32-NEXT:    andi $2, $4, 3
-; MM32-NEXT:    sll $4, $2, 3
-; MM32-NEXT:    ori $2, $zero, 65535
-; MM32-NEXT:    sllv $5, $2, $4
-; MM32-NEXT:    nor $6, $zero, $5
-; MM32-NEXT:    andi $2, $3, 65535
-; MM32-NEXT:    sllv $8, $2, $4
-; MM32-NEXT:    andi $2, $7, 65535
-; MM32-NEXT:    sllv $7, $2, $4
 ; MM32-NEXT:  $BB15_1: # =>This Inner Loop Header: Depth=1
-; MM32-NEXT:    ll $9, 0($1)
-; MM32-NEXT:    and $10, $9, $5
-; MM32-NEXT:    bne $10, $8, $BB15_3
+; MM32-NEXT:    ll $5, 0($7)
+; MM32-NEXT:    and $6, $5, $3
+; MM32-NEXT:    bne $6, $4, $BB15_3
 ; MM32-NEXT:    nop
 ; MM32-NEXT:  # %bb.2: # in Loop: Header=BB15_1 Depth=1
-; MM32-NEXT:    and $9, $9, $6
-; MM32-NEXT:    or $9, $9, $7
-; MM32-NEXT:    sc $9, 0($1)
-; MM32-NEXT:    beqzc $9, $BB15_1
+; MM32-NEXT:    xor16 $6, $5
+; MM32-NEXT:    or $6, $6, $2
+; MM32-NEXT:    sc $6, 0($7)
+; MM32-NEXT:    beqzc $6, $BB15_1
 ; MM32-NEXT:  $BB15_3:
-; MM32-NEXT:    srlv $2, $10, $4
-; MM32-NEXT:    seh $2, $2
-; MM32-NEXT:  # %bb.4:
-; MM32-NEXT:    seh $1, $3
-; MM32-NEXT:    xor $1, $2, $1
+; MM32-NEXT:    srlv $2, $5, $1
+; MM32-NEXT:    and16 $3, $5
+; MM32-NEXT:    xor $1, $4, $3
 ; MM32-NEXT:    sltiu $3, $1, 1
 ; MM32-NEXT:    sync
 ; MM32-NEXT:    jrc $ra
 ;
 ; O1-LABEL: foo:
 ; O1:       # %bb.0:
-; O1-NEXT:    addu $1, $5, $6
+; O1-NEXT:    andi $1, $7, 65535
+; O1-NEXT:    sll $2, $4, 3
+; O1-NEXT:    ori $3, $zero, 65535
+; O1-NEXT:    addiu $7, $zero, -4
+; O1-NEXT:    and $4, $4, $7
+; O1-NEXT:    sllv $3, $3, $2
+; O1-NEXT:    sllv $1, $1, $2
+; O1-NEXT:    addu $5, $5, $6
+; O1-NEXT:    andi $5, $5, 65535
+; O1-NEXT:    sllv $5, $5, $2
 ; O1-NEXT:    sync
-; O1-NEXT:    addiu $2, $zero, -4
-; O1-NEXT:    and $3, $4, $2
-; O1-NEXT:    andi $2, $4, 3
-; O1-NEXT:    sll $4, $2, 3
-; O1-NEXT:    ori $2, $zero, 65535
-; O1-NEXT:    sllv $5, $2, $4
-; O1-NEXT:    nor $6, $zero, $5
-; O1-NEXT:    andi $2, $1, 65535
-; O1-NEXT:    sllv $8, $2, $4
-; O1-NEXT:    andi $2, $7, 65535
-; O1-NEXT:    sllv $7, $2, $4
 ; O1-NEXT:  $BB15_1: # =>This Inner Loop Header: Depth=1
-; O1-NEXT:    ll $9, 0($3)
-; O1-NEXT:    and $10, $9, $5
-; O1-NEXT:    bne $10, $8, $BB15_3
+; O1-NEXT:    ll $6, 0($4)
+; O1-NEXT:    and $7, $6, $3
+; O1-NEXT:    bne $7, $5, $BB15_3
 ; O1-NEXT:    nop
 ; O1-NEXT:  # %bb.2: # in Loop: Header=BB15_1 Depth=1
-; O1-NEXT:    and $9, $9, $6
-; O1-NEXT:    or $9, $9, $7
-; O1-NEXT:    sc $9, 0($3)
-; O1-NEXT:    beqz $9, $BB15_1
+; O1-NEXT:    xor $7, $6, $7
+; O1-NEXT:    or $7, $7, $1
+; O1-NEXT:    sc $7, 0($4)
+; O1-NEXT:    beqz $7, $BB15_1
 ; O1-NEXT:    nop
 ; O1-NEXT:  $BB15_3:
-; O1-NEXT:    srlv $2, $10, $4
-; O1-NEXT:    sll $2, $2, 16
-; O1-NEXT:    sra $2, $2, 16
-; O1-NEXT:  # %bb.4:
-; O1-NEXT:    sll $1, $1, 16
-; O1-NEXT:    sra $1, $1, 16
-; O1-NEXT:    xor $1, $2, $1
+; O1-NEXT:    srlv $2, $6, $2
+; O1-NEXT:    and $1, $6, $3
+; O1-NEXT:    xor $1, $5, $1
 ; O1-NEXT:    sltiu $3, $1, 1
 ; O1-NEXT:    sync
 ; O1-NEXT:    jr $ra
@@ -6387,38 +5949,32 @@ define {i16, i1} @foo(ptr %addr, i16 %l, i16 %r, i16 %new) {
 ;
 ; O2-LABEL: foo:
 ; O2:       # %bb.0:
-; O2-NEXT:    addu $1, $5, $6
+; O2-NEXT:    andi $1, $7, 65535
+; O2-NEXT:    sll $2, $4, 3
+; O2-NEXT:    ori $3, $zero, 65535
+; O2-NEXT:    addiu $7, $zero, -4
+; O2-NEXT:    and $4, $4, $7
+; O2-NEXT:    sllv $3, $3, $2
+; O2-NEXT:    sllv $1, $1, $2
+; O2-NEXT:    addu $5, $5, $6
+; O2-NEXT:    andi $5, $5, 65535
+; O2-NEXT:    sllv $5, $5, $2
 ; O2-NEXT:    sync
-; O2-NEXT:    addiu $2, $zero, -4
-; O2-NEXT:    and $3, $4, $2
-; O2-NEXT:    andi $2, $4, 3
-; O2-NEXT:    sll $4, $2, 3
-; O2-NEXT:    ori $2, $zero, 65535
-; O2-NEXT:    sllv $5, $2, $4
-; O2-NEXT:    nor $6, $zero, $5
-; O2-NEXT:    andi $2, $1, 65535
-; O2-NEXT:    sllv $8, $2, $4
-; O2-NEXT:    andi $2, $7, 65535
-; O2-NEXT:    sllv $7, $2, $4
 ; O2-NEXT:  $BB15_1: # =>This Inner Loop Header: Depth=1
-; O2-NEXT:    ll $9, 0($3)
-; O2-NEXT:    and $10, $9, $5
-; O2-NEXT:    bne $10, $8, $BB15_3
+; O2-NEXT:    ll $6, 0($4)
+; O2-NEXT:    and $7, $6, $3
+; O2-NEXT:    bne $7, $5, $BB15_3
 ; O2-NEXT:    nop
 ; O2-NEXT:  # %bb.2: # in Loop: Header=BB15_1 Depth=1
-; O2-NEXT:    and $9, $9, $6
-; O2-NEXT:    or $9, $9, $7
-; O2-NEXT:    sc $9, 0($3)
-; O2-NEXT:    beqz $9, $BB15_1
+; O2-NEXT:    xor $7, $6, $7
+; O2-NEXT:    or $7, $7, $1
+; O2-NEXT:    sc $7, 0($4)
+; O2-NEXT:    beqz $7, $BB15_1
 ; O2-NEXT:    nop
 ; O2-NEXT:  $BB15_3:
-; O2-NEXT:    srlv $2, $10, $4
-; O2-NEXT:    sll $2, $2, 16
-; O2-NEXT:    sra $2, $2, 16
-; O2-NEXT:  # %bb.4:
-; O2-NEXT:    sll $1, $1, 16
-; O2-NEXT:    sra $1, $1, 16
-; O2-NEXT:    xor $1, $2, $1
+; O2-NEXT:    srlv $2, $6, $2
+; O2-NEXT:    and $1, $6, $3
+; O2-NEXT:    xor $1, $5, $1
 ; O2-NEXT:    sltiu $3, $1, 1
 ; O2-NEXT:    sync
 ; O2-NEXT:    jr $ra
@@ -6426,77 +5982,66 @@ define {i16, i1} @foo(ptr %addr, i16 %l, i16 %r, i16 %new) {
 ;
 ; O3-LABEL: foo:
 ; O3:       # %bb.0:
-; O3-NEXT:    addiu $2, $zero, -4
-; O3-NEXT:    addu $1, $5, $6
+; O3-NEXT:    addu $5, $5, $6
+; O3-NEXT:    andi $1, $7, 65535
+; O3-NEXT:    sll $2, $4, 3
+; O3-NEXT:    ori $3, $zero, 65535
+; O3-NEXT:    addiu $7, $zero, -4
 ; O3-NEXT:    sync
-; O3-NEXT:    and $3, $4, $2
-; O3-NEXT:    andi $2, $4, 3
-; O3-NEXT:    sll $4, $2, 3
-; O3-NEXT:    ori $2, $zero, 65535
-; O3-NEXT:    sllv $5, $2, $4
-; O3-NEXT:    andi $2, $1, 65535
-; O3-NEXT:    sll $1, $1, 16
-; O3-NEXT:    sllv $8, $2, $4
-; O3-NEXT:    andi $2, $7, 65535
-; O3-NEXT:    nor $6, $zero, $5
-; O3-NEXT:    sra $1, $1, 16
-; O3-NEXT:    sllv $7, $2, $4
+; O3-NEXT:    andi $5, $5, 65535
+; O3-NEXT:    and $4, $4, $7
+; O3-NEXT:    sllv $3, $3, $2
+; O3-NEXT:    sllv $1, $1, $2
+; O3-NEXT:    sllv $5, $5, $2
 ; O3-NEXT:  $BB15_1: # =>This Inner Loop Header: Depth=1
-; O3-NEXT:    ll $9, 0($3)
-; O3-NEXT:    and $10, $9, $5
-; O3-NEXT:    bne $10, $8, $BB15_3
+; O3-NEXT:    ll $6, 0($4)
+; O3-NEXT:    and $7, $6, $3
+; O3-NEXT:    bne $7, $5, $BB15_3
 ; O3-NEXT:    nop
 ; O3-NEXT:  # %bb.2: # in Loop: Header=BB15_1 Depth=1
-; O3-NEXT:    and $9, $9, $6
-; O3-NEXT:    or $9, $9, $7
-; O3-NEXT:    sc $9, 0($3)
-; O3-NEXT:    beqz $9, $BB15_1
+; O3-NEXT:    xor $7, $6, $7
+; O3-NEXT:    or $7, $7, $1
+; O3-NEXT:    sc $7, 0($4)
+; O3-NEXT:    beqz $7, $BB15_1
 ; O3-NEXT:    nop
 ; O3-NEXT:  $BB15_3:
-; O3-NEXT:    srlv $2, $10, $4
-; O3-NEXT:    sll $2, $2, 16
-; O3-NEXT:    sra $2, $2, 16
-; O3-NEXT:  # %bb.4:
 ; O3-NEXT:    sync
-; O3-NEXT:    xor $1, $2, $1
+; O3-NEXT:    and $1, $6, $3
+; O3-NEXT:    srlv $2, $6, $2
+; O3-NEXT:    xor $1, $5, $1
 ; O3-NEXT:    jr $ra
 ; O3-NEXT:    sltiu $3, $1, 1
 ;
 ; MIPS32EB-LABEL: foo:
 ; MIPS32EB:       # %bb.0:
-; MIPS32EB-NEXT:    addu $1, $5, $6
-; MIPS32EB-NEXT:    sync
-; MIPS32EB-NEXT:    addiu $2, $zero, -4
-; MIPS32EB-NEXT:    and $3, $4, $2
+; MIPS32EB-NEXT:    andi $1, $7, 65535
 ; MIPS32EB-NEXT:    andi $2, $4, 3
 ; MIPS32EB-NEXT:    xori $2, $2, 2
-; MIPS32EB-NEXT:    sll $4, $2, 3
-; MIPS32EB-NEXT:    ori $2, $zero, 65535
-; MIPS32EB-NEXT:    sllv $5, $2, $4
-; MIPS32EB-NEXT:    nor $6, $zero, $5
-; MIPS32EB-NEXT:    andi $2, $1, 65535
-; MIPS32EB-NEXT:    sllv $8, $2, $4
-; MIPS32EB-NEXT:    andi $2, $7, 65535
-; MIPS32EB-NEXT:    sllv $7, $2, $4
+; MIPS32EB-NEXT:    sll $2, $2, 3
+; MIPS32EB-NEXT:    ori $3, $zero, 65535
+; MIPS32EB-NEXT:    addiu $7, $zero, -4
+; MIPS32EB-NEXT:    and $4, $4, $7
+; MIPS32EB-NEXT:    sllv $3, $3, $2
+; MIPS32EB-NEXT:    sllv $1, $1, $2
+; MIPS32EB-NEXT:    addu $5, $5, $6
+; MIPS32EB-NEXT:    andi $5, $5, 65535
+; MIPS32EB-NEXT:    sllv $5, $5, $2
+; MIPS32EB-NEXT:    sync
 ; MIPS32EB-NEXT:  $BB15_1: # =>This Inner Loop Header: Depth=1
-; MIPS32EB-NEXT:    ll $9, 0($3)
-; MIPS32EB-NEXT:    and $10, $9, $5
-; MIPS32EB-NEXT:    bne $10, $8, $BB15_3
+; MIPS32EB-NEXT:    ll $6, 0($4)
+; MIPS32EB-NEXT:    and $7, $6, $3
+; MIPS32EB-NEXT:    bne $7, $5, $BB15_3
 ; MIPS32EB-NEXT:    nop
 ; MIPS32EB-NEXT:  # %bb.2: # in Loop: Header=BB15_1 Depth=1
-; MIPS32EB-NEXT:    and $9, $9, $6
-; MIPS32EB-NEXT:    or $9, $9, $7
-; MIPS32EB-NEXT:    sc $9, 0($3)
-; MIPS32EB-NEXT:    beqz $9, $BB15_1
+; MIPS32EB-NEXT:    xor $7, $6, $7
+; MIPS32EB-NEXT:    or $7, $7, $1
+; MIPS32EB-NEXT:    sc $7, 0($4)
+; MIPS32EB-NEXT:    beqz $7, $BB15_1
 ; MIPS32EB-NEXT:    nop
 ; MIPS32EB-NEXT:  $BB15_3:
-; MIPS32EB-NEXT:    srlv $2, $10, $4
-; MIPS32EB-NEXT:    sll $2, $2, 16
-; MIPS32EB-NEXT:    sra $2, $2, 16
-; MIPS32EB-NEXT:  # %bb.4:
-; MIPS32EB-NEXT:    sll $1, $1, 16
-; MIPS32EB-NEXT:    sra $1, $1, 16
-; MIPS32EB-NEXT:    xor $1, $2, $1
+; MIPS32EB-NEXT:    srlv $2, $6, $2
+; MIPS32EB-NEXT:    and $1, $6, $3
+; MIPS32EB-NEXT:    xor $1, $5, $1
 ; MIPS32EB-NEXT:    sltiu $3, $1, 1
 ; MIPS32EB-NEXT:    sync
 ; MIPS32EB-NEXT:    jr $ra
@@ -6833,17 +6378,16 @@ define i32 @zeroreg() nounwind {
 ; MIPS32O0-NEXT:    addu $1, $2, $25
 ; MIPS32O0-NEXT:    sync
 ; MIPS32O0-NEXT:    lw $4, %got(a)($1)
-; MIPS32O0-NEXT:    addiu $6, $zero, 0
+; MIPS32O0-NEXT:    addiu $5, $zero, 0
 ; MIPS32O0-NEXT:    addiu $2, $zero, 1
-; MIPS32O0-NEXT:    move $5, $2
 ; MIPS32O0-NEXT:  $BB17_1: # %entry
 ; MIPS32O0-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS32O0-NEXT:    ll $1, 0($4)
-; MIPS32O0-NEXT:    bne $1, $5, $BB17_3
+; MIPS32O0-NEXT:    bne $1, $2, $BB17_3
 ; MIPS32O0-NEXT:    nop
 ; MIPS32O0-NEXT:  # %bb.2: # %entry
 ; MIPS32O0-NEXT:    # in Loop: Header=BB17_1 Depth=1
-; MIPS32O0-NEXT:    move $3, $6
+; MIPS32O0-NEXT:    move $3, $5
 ; MIPS32O0-NEXT:    sc $3, 0($4)
 ; MIPS32O0-NEXT:    beqz $3, $BB17_1
 ; MIPS32O0-NEXT:    nop
@@ -6916,16 +6460,15 @@ define i32 @zeroreg() nounwind {
 ; MIPS32R6O0-NEXT:    addu $1, $2, $25
 ; MIPS32R6O0-NEXT:    sync
 ; MIPS32R6O0-NEXT:    lw $4, %got(a)($1)
-; MIPS32R6O0-NEXT:    addiu $6, $zero, 0
+; MIPS32R6O0-NEXT:    addiu $5, $zero, 0
 ; MIPS32R6O0-NEXT:    addiu $2, $zero, 1
-; MIPS32R6O0-NEXT:    move $5, $2
 ; MIPS32R6O0-NEXT:  $BB17_1: # %entry
 ; MIPS32R6O0-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS32R6O0-NEXT:    ll $1, 0($4)
-; MIPS32R6O0-NEXT:    bnec $1, $5, $BB17_3
+; MIPS32R6O0-NEXT:    bnec $1, $2, $BB17_3
 ; MIPS32R6O0-NEXT:  # %bb.2: # %entry
 ; MIPS32R6O0-NEXT:    # in Loop: Header=BB17_1 Depth=1
-; MIPS32R6O0-NEXT:    move $3, $6
+; MIPS32R6O0-NEXT:    move $3, $5
 ; MIPS32R6O0-NEXT:    sc $3, 0($4)
 ; MIPS32R6O0-NEXT:    beqzc $3, $BB17_1
 ; MIPS32R6O0-NEXT:  $BB17_3: # %entry
@@ -7046,16 +6589,15 @@ define i32 @zeroreg() nounwind {
 ; MIPS64R6O0-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(zeroreg)))
 ; MIPS64R6O0-NEXT:    sync
 ; MIPS64R6O0-NEXT:    ld $4, %got_disp(a)($1)
-; MIPS64R6O0-NEXT:    addiu $6, $zero, 0
+; MIPS64R6O0-NEXT:    addiu $5, $zero, 0
 ; MIPS64R6O0-NEXT:    addiu $2, $zero, 1
-; MIPS64R6O0-NEXT:    move $5, $2
 ; MIPS64R6O0-NEXT:  .LBB17_1: # %entry
 ; MIPS64R6O0-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS64R6O0-NEXT:    ll $1, 0($4)
-; MIPS64R6O0-NEXT:    bnec $1, $5, .LBB17_3
+; MIPS64R6O0-NEXT:    bnec $1, $2, .LBB17_3
 ; MIPS64R6O0-NEXT:  # %bb.2: # %entry
 ; MIPS64R6O0-NEXT:    # in Loop: Header=BB17_1 Depth=1
-; MIPS64R6O0-NEXT:    move $3, $6
+; MIPS64R6O0-NEXT:    move $3, $5
 ; MIPS64R6O0-NEXT:    sc $3, 0($4)
 ; MIPS64R6O0-NEXT:    beqzc $3, .LBB17_1
 ; MIPS64R6O0-NEXT:  .LBB17_3: # %entry

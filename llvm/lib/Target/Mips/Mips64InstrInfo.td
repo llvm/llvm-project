@@ -74,36 +74,33 @@ def assertzext_lt_i32 : PatFrag<(ops node:$src), (assertzext node:$src), [{
 //===----------------------------------------------------------------------===//
 // Instructions specific format
 //===----------------------------------------------------------------------===//
-let usesCustomInserter = 1 in {
-  def ATOMIC_LOAD_ADD_I64  : Atomic2Ops<atomic_load_add_i64, GPR64>;
-  def ATOMIC_LOAD_SUB_I64  : Atomic2Ops<atomic_load_sub_i64, GPR64>;
-  def ATOMIC_LOAD_AND_I64  : Atomic2Ops<atomic_load_and_i64, GPR64>;
-  def ATOMIC_LOAD_OR_I64   : Atomic2Ops<atomic_load_or_i64, GPR64>;
-  def ATOMIC_LOAD_XOR_I64  : Atomic2Ops<atomic_load_xor_i64, GPR64>;
-  def ATOMIC_LOAD_NAND_I64 : Atomic2Ops<atomic_load_nand_i64, GPR64>;
-  def ATOMIC_SWAP_I64      : Atomic2Ops<atomic_swap_i64, GPR64>;
-  def ATOMIC_CMP_SWAP_I64  : AtomicCmpSwap<atomic_cmp_swap_i64, GPR64>;
-  def ATOMIC_LOAD_MIN_I64  : Atomic2Ops<atomic_load_min_i64, GPR64>;
-  def ATOMIC_LOAD_MAX_I64  : Atomic2Ops<atomic_load_max_i64, GPR64>;
-  def ATOMIC_LOAD_UMIN_I64 : Atomic2Ops<atomic_load_umin_i64, GPR64>;
-  def ATOMIC_LOAD_UMAX_I64 : Atomic2Ops<atomic_load_umax_i64, GPR64>;
+def ATOMIC_LOAD_ADD_I64 : PseudoAtomicRMW<GPR64>;
+def ATOMIC_LOAD_SUB_I64 : PseudoAtomicRMW<GPR64>;
+def ATOMIC_LOAD_AND_I64 : PseudoAtomicRMW<GPR64>;
+def ATOMIC_LOAD_OR_I64 : PseudoAtomicRMW<GPR64>;
+def ATOMIC_LOAD_XOR_I64 : PseudoAtomicRMW<GPR64>;
+def ATOMIC_LOAD_NAND_I64 : PseudoAtomicRMW<GPR64>;
+def ATOMIC_LOAD_MIN_I64 : PseudoAtomicRMW<GPR64, 1>;
+def ATOMIC_LOAD_MAX_I64 : PseudoAtomicRMW<GPR64, 1>;
+def ATOMIC_LOAD_UMIN_I64 : PseudoAtomicRMW<GPR64, 1>;
+def ATOMIC_LOAD_UMAX_I64 : PseudoAtomicRMW<GPR64, 1>;
+def ATOMIC_SWAP_I64 : PseudoAtomicRMW<GPR64>;
+def ATOMIC_CMP_SWAP_I64 : PseudoAtomicCmpSwap<GPR64>;
+
+let Predicates = [NotInMips16Mode, NotR5900] in {
+def : PseudoAtomicRMWPat<atomic_load_add_i64, ATOMIC_LOAD_ADD_I64, GPR64>;
+def : PseudoAtomicRMWPat<atomic_load_sub_i64, ATOMIC_LOAD_SUB_I64, GPR64>;
+def : PseudoAtomicRMWPat<atomic_load_and_i64, ATOMIC_LOAD_AND_I64, GPR64>;
+def : PseudoAtomicRMWPat<atomic_load_or_i64, ATOMIC_LOAD_OR_I64, GPR64>;
+def : PseudoAtomicRMWPat<atomic_load_xor_i64, ATOMIC_LOAD_XOR_I64, GPR64>;
+def : PseudoAtomicRMWPat<atomic_load_nand_i64, ATOMIC_LOAD_NAND_I64, GPR64>;
+def : PseudoAtomicRMWPat<atomic_load_min_i64, ATOMIC_LOAD_MIN_I64, GPR64>;
+def : PseudoAtomicRMWPat<atomic_load_max_i64, ATOMIC_LOAD_MAX_I64, GPR64>;
+def : PseudoAtomicRMWPat<atomic_load_umin_i64, ATOMIC_LOAD_UMIN_I64, GPR64>;
+def : PseudoAtomicRMWPat<atomic_load_umax_i64, ATOMIC_LOAD_UMAX_I64, GPR64>;
+def : PseudoAtomicRMWPat<atomic_swap_i64, ATOMIC_SWAP_I64, GPR64>;
+def : PseudoAtomicCmpSwapPat<atomic_cmp_swap_i64, ATOMIC_CMP_SWAP_I64, GPR64>;
 }
-
-def ATOMIC_LOAD_ADD_I64_POSTRA  : Atomic2OpsPostRA<GPR64>;
-def ATOMIC_LOAD_SUB_I64_POSTRA  : Atomic2OpsPostRA<GPR64>;
-def ATOMIC_LOAD_AND_I64_POSTRA  : Atomic2OpsPostRA<GPR64>;
-def ATOMIC_LOAD_OR_I64_POSTRA   : Atomic2OpsPostRA<GPR64>;
-def ATOMIC_LOAD_XOR_I64_POSTRA  : Atomic2OpsPostRA<GPR64>;
-def ATOMIC_LOAD_NAND_I64_POSTRA : Atomic2OpsPostRA<GPR64>;
-
-def ATOMIC_SWAP_I64_POSTRA      : Atomic2OpsPostRA<GPR64>;
-
-def ATOMIC_CMP_SWAP_I64_POSTRA  : AtomicCmpSwapPostRA<GPR64>;
-
-def ATOMIC_LOAD_MIN_I64_POSTRA  : Atomic2OpsPostRA<GPR64>;
-def ATOMIC_LOAD_MAX_I64_POSTRA  : Atomic2OpsPostRA<GPR64>;
-def ATOMIC_LOAD_UMIN_I64_POSTRA : Atomic2OpsPostRA<GPR64>;
-def ATOMIC_LOAD_UMAX_I64_POSTRA : Atomic2OpsPostRA<GPR64>;
 
 /// Pseudo instructions for loading and storing accumulator registers.
 let isPseudo = 1, isCodeGenOnly = 1, hasNoSchedulingInfo = 1 in {

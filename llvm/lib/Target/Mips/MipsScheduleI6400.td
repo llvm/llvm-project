@@ -437,16 +437,16 @@ let SchedModel = MipsI6400Model in {
   // Atomic instructions
 
   // FIXME: Define `WriteAtomic` in the MipsSchedule.td and
-  // attach it to the Atomic2OpsPostRA, AtomicCmpSwapPostRA, ...
+  // attach it to the PseudoAtomic
   // classes. Then just define resources for the `WriteAtomic` in each
   // machine models.
   def I6400WriteAtomic : SchedWriteRes<[I6400Atomic]> { let Latency = 2; }
 
   def : InstRW<[I6400WriteAtomic],
-      (instregex "^ATOMIC_SWAP_I(8|16|32|64)_POSTRA$")>;
+      (instregex "^ATOMIC_SWAP_(I(32|64)|MASKED)$")>;
   def : InstRW<[I6400WriteAtomic],
-      (instregex "^ATOMIC_CMP_SWAP_I(8|16|32|64)_POSTRA$")>;
+      (instregex "^ATOMIC_CMP_SWAP_(I(32|64)|MASKED)$")>;
   def : InstRW<[I6400WriteAtomic],
       (instregex "^ATOMIC_LOAD_(ADD|SUB|AND|OR|XOR|NAND|MIN|MAX|UMIN|UMAX)"
-               "_I(8|16|32|64)_POSTRA$")>;
+               "_(I(32|64)|MASKED)$")>;
 }

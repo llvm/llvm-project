@@ -508,24 +508,27 @@ using TargetRegisterClass = MCRegisterClass;
       return true;
     }
 
+    void getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
+                            const CallBase &I, MachineFunction &MF,
+                            unsigned Intrinsic) const override;
+
+    AtomicExpansionKind
+    shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const override;
+    AtomicExpansionKind
+    shouldExpandAtomicCmpXchgInIR(const AtomicCmpXchgInst *CI) const override;
+    Value *emitMaskedAtomicRMWIntrinsic(IRBuilderBase &Builder,
+                                        AtomicRMWInst *AI, Value *AlignedAddr,
+                                        Value *Incr, Value *Mask,
+                                        Value *ShiftAmt,
+                                        AtomicOrdering Ord) const override;
+    Value *emitMaskedAtomicCmpXchgIntrinsic(IRBuilderBase &Builder,
+                                            AtomicCmpXchgInst *CI,
+                                            Value *AlignedAddr, Value *CmpVal,
+                                            Value *NewVal, Value *Mask,
+                                            AtomicOrdering Ord) const override;
+
     ArrayRef<MCPhysReg> getRoundingControlRegisters() const override;
 
-    /// Emit a sign-extension using sll/sra, seb, or seh appropriately.
-    MachineBasicBlock *emitSignExtendToI32InReg(MachineInstr &MI,
-                                                MachineBasicBlock *BB,
-                                                unsigned Size, unsigned DstReg,
-                                                unsigned SrcRec) const;
-
-    MachineBasicBlock *emitAtomicBinary(MachineInstr &MI,
-                                        MachineBasicBlock *BB) const;
-    MachineBasicBlock *emitAtomicBinaryPartword(MachineInstr &MI,
-                                                MachineBasicBlock *BB,
-                                                unsigned Size) const;
-    MachineBasicBlock *emitAtomicCmpSwap(MachineInstr &MI,
-                                         MachineBasicBlock *BB) const;
-    MachineBasicBlock *emitAtomicCmpSwapPartword(MachineInstr &MI,
-                                                 MachineBasicBlock *BB,
-                                                 unsigned Size) const;
     MachineBasicBlock *emitPseudoSELECT(MachineInstr &MI, MachineBasicBlock *BB,
                                         bool isFPCmp, unsigned Opc) const;
     MachineBasicBlock *emitPseudoD_SELECT(MachineInstr &MI,

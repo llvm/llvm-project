@@ -78,6 +78,7 @@ Mips16TargetLowering::Mips16TargetLowering(const MipsTargetMachine &TM,
   addRegisterClass(MVT::i32, &Mips::CPU16RegsRegClass);
 
   setOperationAction(ISD::ATOMIC_FENCE, MVT::Other, LibCall);
+  setOperationAction(ISD::ATOMIC_LOAD, MVT::i32, Expand);
   setOperationAction(ISD::ATOMIC_CMP_SWAP, MVT::i32, LibCall);
   setOperationAction(ISD::ATOMIC_SWAP, MVT::i32, LibCall);
   setOperationAction(ISD::ATOMIC_LOAD_ADD, MVT::i32, LibCall);
