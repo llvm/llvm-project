@@ -3,7 +3,7 @@
 // RUN: mlir-opt -split-input-file -convert-to-llvm="dynamic=true" %s | FileCheck %s
 
 // COM: Test MPICH ABI
-// CHECK-LABEL: module attributes {dlti.map = #dlti.map<"MPI:Implementation" = "MPICH">} {
+// CHECK-LABEL: module attributes {dlti = #dlti.map<"MPI:Implementation" = "MPICH">} {
 // CHECK-DAG: llvm.func @MPI_Finalize() -> i32
 // CHECK-DAG: llvm.func @MPI_Reduce_scatter_block(!llvm.ptr, !llvm.ptr, i32, i32, i32, i32) -> i32
 // CHECK-DAG: llvm.func @MPI_Allreduce(!llvm.ptr, !llvm.ptr, i32, i32, i32, i32) -> i32
@@ -14,7 +14,7 @@
 // CHECK-DAG: llvm.func @MPI_Send(!llvm.ptr, i32, i32, i32, i32, i32) -> i32
 // CHECK-DAG: llvm.func @MPI_Comm_rank(i32, !llvm.ptr) -> i32
 // CHECK-DAG: llvm.func @MPI_Init(!llvm.ptr, !llvm.ptr) -> i32
-module attributes {dlti.map = #dlti.map<"MPI:Implementation" = "MPICH">} {
+module attributes {dlti = #dlti.map<"MPI:Implementation" = "MPICH">} {
 
   // CHECK-LABEL: llvm.func @test_init_finalize_mpich
   func.func @test_init_finalize_mpich() {
@@ -155,7 +155,7 @@ module attributes {dlti.map = #dlti.map<"MPI:Implementation" = "MPICH">} {
 // -----
 
 // COM: Test OpenMPI ABI
-// CHECK-LABEL: module attributes {dlti.map = #dlti.map<"MPI:Implementation" = "OpenMPI">} {
+// CHECK-LABEL: module attributes {dlti = #dlti.map<"MPI:Implementation" = "OpenMPI">} {
 // CHECK-DAG: llvm.func @MPI_Finalize() -> i32
 // CHECK-DAG: llvm.func @MPI_Comm_split(!llvm.ptr, i32, i32, !llvm.ptr) -> i32
 // CHECK-DAG: llvm.func @MPI_Reduce_scatter_block(!llvm.ptr, !llvm.ptr, i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
@@ -169,7 +169,7 @@ module attributes {dlti.map = #dlti.map<"MPI:Implementation" = "MPICH">} {
 // CHECK-DAG: llvm.func @MPI_Comm_rank(!llvm.ptr, !llvm.ptr) -> i32
 // CHECK-DAG: llvm.mlir.global external @ompi_mpi_comm_world() {addr_space = 0 : i32} : !llvm.struct<"ompi_communicator_t", opaque>
 // CHECK-DAG: llvm.func @MPI_Init(!llvm.ptr, !llvm.ptr) -> i32
-module attributes { dlti.map = #dlti.map<"MPI:Implementation" = "OpenMPI"> } {
+module attributes { dlti = #dlti.map<"MPI:Implementation" = "OpenMPI"> } {
 
   // CHECK-LABEL: llvm.func @test_init_finalize_openmpi
   func.func @test_init_finalize_openmpi() {
@@ -315,7 +315,7 @@ module attributes { dlti.map = #dlti.map<"MPI:Implementation" = "OpenMPI"> } {
 
 // -----
 
-module attributes {mpi.dlti = #dlti.map<"MPI:Implementation" = "MPICH", "MPI:comm_world_size" = 4, "MPI:comm_world_rank" = 1> } {
+module attributes {dlti = #dlti.map<"MPI:Implementation" = "MPICH", "MPI:comm_world_size" = 4, "MPI:comm_world_rank" = 1> } {
   // CHECK-LABEL: llvm.func @test_fold
   func.func @test_fold(%arg0: memref<100xf32>) {
     // CHECK: [[v0:%.*]] = llvm.mlir.constant(1140850688 : i64) : i64
@@ -332,7 +332,7 @@ module attributes {mpi.dlti = #dlti.map<"MPI:Implementation" = "MPICH", "MPI:com
 
 // COM: Test that an index type that already matches the MPI element count width
 // COM: is used as is, both for the offset and for the extents.
-module attributes {dlti.map = #dlti.map<"MPI:Implementation" = "MPICH">,
+module attributes {dlti = #dlti.map<"MPI:Implementation" = "MPICH">,
                    dlti.dl_spec = #dlti.dl_spec<index = 32 : i32>} {
   // CHECK-LABEL: llvm.func @test_send_index32
   func.func @test_send_index32(%arg0: memref<100xf32>, %rank: i32) {
@@ -357,7 +357,7 @@ module attributes {dlti.map = #dlti.map<"MPI:Implementation" = "MPICH">,
 
 // COM: Test that an index type narrower than the MPI element count is zero
 // COM: extended.
-module attributes {dlti.map = #dlti.map<"MPI:Implementation" = "MPICH">,
+module attributes {dlti = #dlti.map<"MPI:Implementation" = "MPICH">,
                    dlti.dl_spec = #dlti.dl_spec<index = 16 : i32>} {
   // CHECK-LABEL: llvm.func @test_send_index16
   func.func @test_send_index16(%arg0: memref<100xf32>, %rank: i32) {
@@ -380,7 +380,7 @@ module attributes {dlti.map = #dlti.map<"MPI:Implementation" = "MPICH">,
 
 // COM: Test that a rank-zero memref, whose descriptor carries no extents, uses
 // COM: the element count of one directly.
-module attributes {dlti.map = #dlti.map<"MPI:Implementation" = "MPICH">} {
+module attributes {dlti = #dlti.map<"MPI:Implementation" = "MPICH">} {
   // CHECK-LABEL: llvm.func @test_send_rank_zero
   func.func @test_send_rank_zero(%arg0: memref<f32>, %rank: i32) {
     // CHECK: [[v0:%.*]] = llvm.insertvalue {{.*}}[2] : !llvm.struct<(ptr, ptr, i64)>

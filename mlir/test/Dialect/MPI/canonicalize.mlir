@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s -canonicalize | mlir-opt | FileCheck %s
 
-module attributes {mpi.dlti = #dlti.map<"MPI:comm_world_size" = 12, "MPI:comm_world_rank" = 5> } {
+module attributes {dlti = #dlti.map<"MPI:comm_world_size" = 12, "MPI:comm_world_rank" = 5> } {
   // CHECK-LABEL: func.func @mpi_test
   func.func @mpi_test(%ref : memref<100xf32>) -> (i32, i32) {
     %comm = mpi.comm_world : !mpi.comm

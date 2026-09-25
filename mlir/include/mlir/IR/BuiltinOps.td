@@ -52,10 +52,16 @@ def ModuleOp : Builtin_Op<"module", [
       func.func @foo()
     }
     ```
+
+    A module may have an inherent `dlti` attribute implementing
+    `DLTIQueryInterface`, for example `dlti = #dlti.map<"chip" = "sm_90">`.
+    When the DLTI dialect is loaded, the module implements
+    `DLTIQueryOpInterface` and provides values for scoped DLTI queries.
   }];
 
   let arguments = (ins OptionalAttr<SymbolNameAttr>:$sym_name,
-                       OptionalAttr<StrAttr>:$sym_visibility);
+                       OptionalAttr<StrAttr>:$sym_visibility,
+                       OptionalAttr<DLTIQueryAttr>:$dlti);
   let regions = (region SizedRegion<1>:$bodyRegion);
 
   let assemblyFormat = "($sym_name^)? attr-dict-with-keyword $bodyRegion";
@@ -90,6 +96,7 @@ def ModuleOp : Builtin_Op<"module", [
     }
   }];
   let hasVerifier = 1;
+  let useCustomPropertiesEncoding = 1;
 
   // We need to ensure the block inside the region is properly terminated;
   // the auto-generated builders do not guarantee that.

@@ -43,6 +43,12 @@ def DLTIQueryInterface : AttrInterface<"DLTIQueryInterface"> {
   ];
 }
 
+def ImplementsDLTIQueryInterface : AttrConstraint<
+    CPred<"::llvm::isa<::mlir::DLTIQueryInterface>($_self)">,
+    "implementing the `DLTIQueryInterface` attr interface">;
+
+def DLTIQueryAttr : ConfinedAttr<AnyAttr, [ImplementsDLTIQueryInterface]>;
+
 def DataLayoutEntryInterface : AttrInterface<"DataLayoutEntryInterface"> {
   let cppNamespace = "::mlir";
 

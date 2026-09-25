@@ -12,6 +12,7 @@
 
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 
+#include "mlir/Bytecode/Encoding.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Bufferization/IR/BufferDeallocationOpInterface.h"
 #include "mlir/Dialect/Math/IR/Math.h"
@@ -48,6 +49,28 @@ using namespace mlir;
 using namespace mlir::gpu;
 
 #include "mlir/Dialect/GPU/IR/GPUOpsDialect.cpp.inc"
+
+namespace {
+struct GPUDialectBytecodeInterface : BytecodeDialectInterface {
+  using BytecodeDialectInterface::BytecodeDialectInterface;
+
+  void writeVersion(DialectBytecodeWriter &writer) const override {
+    writer.writeVarInt(1);
+  }
+
+  std::unique_ptr<DialectVersion>
+  readVersion(DialectBytecodeReader &reader) const override {
+    uint64_t version;
+    if (failed(reader.readVarInt(version)))
+      return nullptr;
+    if (version != 1) {
+      reader.emitError("unsupported gpu dialect bytecode version");
+      return nullptr;
+    }
+    return std::make_unique<DialectVersion>();
+  }
+};
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // GPU Device Mapping Attributes
@@ -283,6 +306,7 @@ struct GPUInlinerInterface : public DialectInlinerInterface {
 } // namespace
 
 void GPUDialect::initialize() {
+  addInterfaces<GPUDialectBytecodeInterface>();
   addTypes<AsyncTokenType>();
   addTypes<MMAMatrixType>();
   addTypes<NamedBarrierType>();
@@ -1982,6 +2006,31 @@ LogicalResult gpu::ReturnOp::verify() {
 //===----------------------------------------------------------------------===//
 // GPUModuleOp
 //===----------------------------------------------------------------------===//
+
+LogicalResult GPUModuleOp::readProperties(DialectBytecodeReader &reader,
+                                          OperationState &state) {
+  auto &properties = state.getOrAddProperties<Properties>();
+  // Preserve the pre-DLTI field order for unversioned bytecode.
+  if (failed(reader.readOptionalAttribute(properties.offloadingHandler)) ||
+      failed(reader.readAttribute(properties.sym_name)) ||
+      failed(reader.readOptionalAttribute(properties.sym_visibility)) ||
+      failed(reader.readOptionalAttribute(properties.targets)))
+    return failure();
+
+  if (failed(reader.getDialectVersion<GPUDialect>()))
+    return success();
+  return reader.readOptionalAttribute(properties.dlti);
+}
+
+void GPUModuleOp::writeProperties(DialectBytecodeWriter &writer) {
+  Properties &properties = getProperties();
+  writer.writeOptionalAttribute(properties.offloadingHandler);
+  writer.writeAttribute(properties.sym_name);
+  writer.writeOptionalAttribute(properties.sym_visibility);
+  writer.writeOptionalAttribute(properties.targets);
+  if (writer.getBytecodeVersion() >= bytecode::kDialectVersioning)
+    writer.writeOptionalAttribute(properties.dlti);
+}
 
 void GPUModuleOp::build(OpBuilder &builder, OperationState &result,
                         StringRef name, ArrayAttr targets,

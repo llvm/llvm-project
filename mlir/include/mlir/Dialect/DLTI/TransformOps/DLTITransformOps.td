@@ -19,25 +19,25 @@ def QueryOp : Op<Transform_Dialect, "dlti.query", [
   TransformOpInterface, TransformEachOpTrait,
   DeclareOpInterfaceMethods<MemoryEffectsOpInterface>
 ]> {
-  let summary = "Return attribute (as param) associated to key via DTLI";
+  let summary = "Return attribute (as param) associated to key via DLTI";
   let description = [{
     This op queries data layout and target information associated to payload
     IR by way of the DLTI dialect.
 
-    A lookup is performed for the given `keys` at `target` op - or its closest
-    interface-implementing ancestor - by way of the `DLTIQueryInterface`, which
-    returns an attribute for a key. Each key should be either a (quoted) string
-    or a type. If more than one key is provided, the lookup continues
-    recursively, now on the returned attributes, with the condition that these
-    implement the above interface. For example if the payload IR is
+    A lookup of the first key is performed at `target` or its ancestors by way
+    of `DLTIQueryOpInterface`. Ancestors that do not implement the interface or
+    cannot answer that key are skipped. Each key should be either a (quoted)
+    string or a type. If more than one key is provided, the lookup continues
+    recursively on the returned attributes by way of `DLTIQueryInterface`.
+    Operation ancestor lookup is not restarted for these later keys. For
+    example if the payload IR is
 
     ```
-    module attributes {#dlti.map = #dlti.map<#dlti.dl_entry<"A",
-                                     #dlti.map<#dlti.dl_entry<"B", 42: int>>>} {
+    module attributes {dlti = #dlti.map<"A" = #dlti.map<"B" = 42 : i32>>} {
       func.func private @f()
     }
     ```
-    and we have that `%func` is a Tranform handle to op `@f`, then
+    and we have that `%func` is a Transform handle to op `@f`, then
     `transform.dlti.query ["A", "B"] at %func` returns 42 as a param and
     `transform.dlti.query ["A"] at %func` returns the `#dlti.map` attribute
     containing just the key "B" and its value. Using `["B"]` or `["A","C"]` as
