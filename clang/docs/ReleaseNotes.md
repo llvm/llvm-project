@@ -960,6 +960,13 @@ features cannot lower the translation-unit ABI level;
 
 #### Improvements
 
+- `unix.StdCLibraryFunctions` now diagnoses size arguments greater than
+  `SSIZE_MAX` passed to `read`, `write`, `readlink`, and `readlinkat`.
+
+- `unix.StdCLibraryFunctions` now models `pread`, `pread64`, `pwrite`, and
+  `pwrite64` with the same size constraint and return-value bounds as `read`
+  and `write`.
+
 - The lock-order-reversal check in ``alpha.unix.PthreadLock`` is now disabled by default.
   It can be re-enabled with the ``WarnOnLockOrderReversal`` option.
 
