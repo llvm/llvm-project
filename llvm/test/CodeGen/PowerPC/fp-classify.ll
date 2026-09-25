@@ -212,7 +212,7 @@ define zeroext i1 @iszerof(float %x) {
 ; P8-NEXT:    xxlxor 0, 0, 0
 ; P8-NEXT:    li 3, 0
 ; P8-NEXT:    li 4, 1
-; P8-NEXT:    fcmpu 0, 1, 0
+; P8-NEXT:    xscmpudp 0, 1, 0
 ; P8-NEXT:    iseleq 3, 4, 3
 ; P8-NEXT:    blr
 ;
@@ -221,7 +221,7 @@ define zeroext i1 @iszerof(float %x) {
 ; P9-NEXT:    xxlxor 0, 0, 0
 ; P9-NEXT:    li 3, 0
 ; P9-NEXT:    li 4, 1
-; P9-NEXT:    fcmpu 0, 1, 0
+; P9-NEXT:    xscmpudp 0, 1, 0
 ; P9-NEXT:    iseleq 3, 4, 3
 ; P9-NEXT:    blr
 entry:
@@ -235,7 +235,7 @@ define zeroext i1 @iszero(double %x) {
 ; P8-NEXT:    xxlxor 0, 0, 0
 ; P8-NEXT:    li 3, 0
 ; P8-NEXT:    li 4, 1
-; P8-NEXT:    fcmpu 0, 1, 0
+; P8-NEXT:    xscmpudp 0, 1, 0
 ; P8-NEXT:    iseleq 3, 4, 3
 ; P8-NEXT:    blr
 ;
@@ -244,7 +244,7 @@ define zeroext i1 @iszero(double %x) {
 ; P9-NEXT:    xxlxor 0, 0, 0
 ; P9-NEXT:    li 3, 0
 ; P9-NEXT:    li 4, 1
-; P9-NEXT:    fcmpu 0, 1, 0
+; P9-NEXT:    xscmpudp 0, 1, 0
 ; P9-NEXT:    iseleq 3, 4, 3
 ; P9-NEXT:    blr
 entry:
