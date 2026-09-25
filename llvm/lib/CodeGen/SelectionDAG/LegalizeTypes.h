@@ -841,6 +841,7 @@ private:
   SDValue ScalarizeVecRes_CONVERT_FROM_ARBITRARY_FP(SDNode *N);
   SDValue ScalarizeVecRes_CONVERT_TO_ARBITRARY_FP(SDNode *N);
   SDValue ScalarizeVecRes_UnaryOpWithExtraInput(SDNode *N);
+  SDValue ScalarizeVecRes_FPOp_MultiType(SDNode *N);
   SDValue ScalarizeVecRes_INSERT_VECTOR_ELT(SDNode *N);
   SDValue ScalarizeVecRes_LOAD(LoadSDNode *N);
   SDValue ScalarizeVecRes_ATOMIC_LOAD(AtomicSDNode *N);

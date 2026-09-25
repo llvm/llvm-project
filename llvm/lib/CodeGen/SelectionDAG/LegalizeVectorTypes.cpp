@@ -184,7 +184,6 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::FMAXIMUM:
   case ISD::FMINIMUMNUM:
   case ISD::FMAXIMUMNUM:
-  case ISD::FLDEXP:
   case ISD::ABDS:
   case ISD::ABDU:
   case ISD::SMIN:
@@ -231,6 +230,10 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::MASKED_UREM:
   case ISD::MASKED_SREM:
     R = ScalarizeVecRes_MaskedBinOp(N);
+    break;
+
+  case ISD::FLDEXP:
+    R = ScalarizeVecRes_FPOp_MultiType(N);
     break;
 
   case ISD::SCMP:
@@ -545,6 +548,23 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_UnaryOpWithExtraInput(SDNode *N) {
   SDValue Op = GetScalarizedVector(N->getOperand(0));
   return DAG.getNode(N->getOpcode(), SDLoc(N), Op.getValueType(), Op,
                      N->getOperand(1));
+}
+
+SDValue DAGTypeLegalizer::ScalarizeVecRes_FPOp_MultiType(SDNode *N) {
+  SDLoc DL(N);
+  SDValue LHS = GetScalarizedVector(N->getOperand(0));
+  SDValue RHS = N->getOperand(1);
+  EVT RHSVT = RHS.getValueType();
+  // The exponent has its own type action and may not have been scalarized:
+  // v1i1 is legal on AVX-512, v1i32 is widened on AArch64.
+  if (RHSVT.isVector()) {
+    if (getTypeAction(RHSVT) == TargetLowering::TypeScalarizeVector)
+      RHS = GetScalarizedVector(RHS);
+    else
+      RHS = DAG.getExtractVectorElt(DL, RHSVT.getVectorElementType(), RHS, 0);
+  }
+  return DAG.getNode(N->getOpcode(), DL, LHS.getValueType(), LHS, RHS,
+                     N->getFlags());
 }
 
 SDValue DAGTypeLegalizer::ScalarizeVecRes_INSERT_VECTOR_ELT(SDNode *N) {
