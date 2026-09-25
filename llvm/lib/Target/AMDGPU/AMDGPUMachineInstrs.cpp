@@ -18,38 +18,46 @@
 using namespace llvm;
 using namespace AMDGPUMI;
 
-unsigned VLoadStoreIdxInst::getBitWidth() const {
+static const AMDGPU::VLdStIdxOpcodeInfo &getInfo(unsigned Opcode) {
   const AMDGPU::VLdStIdxOpcodeInfo *Info =
-      AMDGPU::getVLdStIdxOpcodeInfoByOpcode(getOpcode());
+      AMDGPU::getVLdStIdxOpcodeInfoByOpcode(Opcode);
   if (!Info)
     llvm_unreachable("unsupported V_LOAD/STORE_IDX opcode");
-  return Info->BitWidth;
+  return *Info;
 }
 
-int VLoadIdxInst::tryGetOpcodeForBitWidth(unsigned Bits) {
+bool VLoadStoreIdxInst::isGPRIdx() const {
+  return getInfo(getOpcode()).IsGPRIdx;
+}
+
+unsigned VLoadStoreIdxInst::getBitWidth() const {
+  return getInfo(getOpcode()).BitWidth;
+}
+
+int VLoadIdxInst::tryGetOpcodeForBitWidth(unsigned Bits, bool IsGPRIdx) {
   const AMDGPU::VLdStIdxOpcodeInfo *Info =
-      AMDGPU::getVLdStIdxOpcodeInfoByKey(Bits, /*IsStore=*/false);
+      AMDGPU::getVLdStIdxOpcodeInfoByKey(Bits, /*IsStore=*/false, IsGPRIdx);
   if (!Info)
     return -1;
   return Info->Opcode;
 }
 
-unsigned VLoadIdxInst::getOpcodeForBitWidth(unsigned Bits) {
-  int Opcode = tryGetOpcodeForBitWidth(Bits);
+unsigned VLoadIdxInst::getOpcodeForBitWidth(unsigned Bits, bool IsGPRIdx) {
+  int Opcode = tryGetOpcodeForBitWidth(Bits, IsGPRIdx);
   assert(Opcode != -1);
   return Opcode;
 }
 
-int VStoreIdxInst::tryGetOpcodeForBitWidth(unsigned Bits) {
+int VStoreIdxInst::tryGetOpcodeForBitWidth(unsigned Bits, bool IsGPRIdx) {
   const AMDGPU::VLdStIdxOpcodeInfo *Info =
-      AMDGPU::getVLdStIdxOpcodeInfoByKey(Bits, /*IsStore=*/true);
+      AMDGPU::getVLdStIdxOpcodeInfoByKey(Bits, /*IsStore=*/true, IsGPRIdx);
   if (!Info)
     return -1;
   return Info->Opcode;
 }
 
-unsigned VStoreIdxInst::getOpcodeForBitWidth(unsigned Bits) {
-  int Opcode = tryGetOpcodeForBitWidth(Bits);
+unsigned VStoreIdxInst::getOpcodeForBitWidth(unsigned Bits, bool IsGPRIdx) {
+  int Opcode = tryGetOpcodeForBitWidth(Bits, IsGPRIdx);
   assert(Opcode != -1);
   return Opcode;
 }
