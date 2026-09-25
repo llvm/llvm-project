@@ -66,10 +66,16 @@ mlir::Value ConvertFIRToLLVMPattern::integerCast(
     mlir::Location loc, mlir::ConversionPatternRewriter &rewriter,
     mlir::Type ty, mlir::Value val, bool fold) const {
   auto valTy = val.getType();
-  // If the value was not yet lowered, lower its type so that it can
-  // be used in getPrimitiveTypeSizeInBits.
-  if (!mlir::isa<mlir::IntegerType>(valTy))
-    valTy = convertType(valTy);
+  // If the value was not yet lowered, convert it to the LLVM integer type.
+  if (!mlir::isa<mlir::IntegerType>(valTy)) {
+    mlir::Type llvmValTy = convertType(valTy);
+    if (llvmValTy && llvmValTy != valTy) {
+      val = getTypeConverter()->materializeTargetConversion(rewriter, loc,
+                                                            llvmValTy, val);
+      assert(val && "failed to materialize integer target conversion");
+      valTy = llvmValTy;
+    }
+  }
   auto toSize = mlir::LLVM::getPrimitiveTypeSizeInBits(ty);
   auto fromSize = mlir::LLVM::getPrimitiveTypeSizeInBits(valTy);
   if (fold) {
@@ -146,9 +152,10 @@ mlir::Value ConvertFIRToLLVMPattern::loadDimFieldFromBox(
          "in memory");
   mlir::LLVM::GEPOp p = genGEP(loc, boxTy.llvm, rewriter, box, 0,
                                static_cast<int>(kDimsPosInBox), dim, off);
-  auto loadOp = mlir::LLVM::LoadOp::create(rewriter, loc, ty, p);
+  mlir::Type fieldTy = getBoxEleTy(boxTy.llvm, {kDimsPosInBox, 0, off});
+  auto loadOp = mlir::LLVM::LoadOp::create(rewriter, loc, fieldTy, p);
   attachTBAATag(loadOp, boxTy.fir, nullptr, p);
-  return loadOp;
+  return integerCast(loc, rewriter, ty, loadOp);
 }
 
 mlir::Value ConvertFIRToLLVMPattern::getDimFieldFromBox(
@@ -157,13 +164,15 @@ mlir::Value ConvertFIRToLLVMPattern::getDimFieldFromBox(
   if (mlir::isa<mlir::LLVM::LLVMPointerType>(box.getType())) {
     mlir::LLVM::GEPOp p = genGEP(loc, boxTy.llvm, rewriter, box, 0,
                                  static_cast<int>(kDimsPosInBox), dim, off);
-    auto loadOp = mlir::LLVM::LoadOp::create(rewriter, loc, ty, p);
+    mlir::Type fieldTy = getBoxEleTy(boxTy.llvm, {kDimsPosInBox, 0, off});
+    auto loadOp = mlir::LLVM::LoadOp::create(rewriter, loc, fieldTy, p);
     attachTBAATag(loadOp, boxTy.fir, nullptr, p);
-    return loadOp;
+    return integerCast(loc, rewriter, ty, loadOp);
   }
-  return mlir::LLVM::ExtractValueOp::create(
+  mlir::Value value = mlir::LLVM::ExtractValueOp::create(
       rewriter, loc, box,
       llvm::ArrayRef<std::int64_t>{kDimsPosInBox, dim, off});
+  return integerCast(loc, rewriter, ty, value);
 }
 
 mlir::Value ConvertFIRToLLVMPattern::getStrideFromBox(

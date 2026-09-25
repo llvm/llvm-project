@@ -388,10 +388,11 @@ struct AllocaOpConversion : public fir::FIROpConversion<fir::AllocaOp> {
             "callee", mlir::SymbolRefAttr::get(memSizeFn));
         auto builderAttrs =
             getLLVMCallBuilderAttributes(rewriter, {attr}, lenParams.size());
+        mlir::Type memSizeTy = memSizeFn.getFunctionType().getReturnType();
         auto call = mlir::LLVM::CallOp::create(
-            rewriter, loc, mlir::TypeRange{ity}, lenParams,
+            rewriter, loc, mlir::TypeRange{memSizeTy}, lenParams,
             builderAttrs.properties, builderAttrs.discardableAttributes);
-        size = call.getResult();
+        size = integerCast(loc, rewriter, ity, call.getResult(), /*fold=*/true);
         llvmObjectType = ::getI8Type(alloc.getContext());
       } else {
         return emitError(loc, "unexpected type ")
@@ -3549,8 +3550,9 @@ private:
         for (unsigned dim = 0; dim < arrayDim && it != end; ++dim, ++it) {
           mlir::Value stride =
               getStrideFromBox(loc, boxTyPair, operands[0], dim, rewriter);
-          auto sc = mlir::LLVM::MulOp::create(rewriter, loc, idxTy,
-                                              operands[nextIndexValue + dim],
+          mlir::Value index =
+              integerCast(loc, rewriter, idxTy, operands[nextIndexValue + dim]);
+          auto sc = mlir::LLVM::MulOp::create(rewriter, loc, idxTy, index,
                                               stride, nsw);
           off = mlir::LLVM::AddOp::create(rewriter, loc, idxTy, sc, off, nsw);
         }
