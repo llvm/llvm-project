@@ -239,6 +239,10 @@ static bool isSplatWriteConsistentWithMaskedRead(vector::TransferWriteOp write,
 
 bool mlir::vector::checkSameValueRAW(vector::TransferWriteOp defWrite,
                                      vector::TransferReadOp read) {
+  // An enclosing vector.mask leaves some lanes unwritten or padded, so the
+  // read does not see the written vector as a whole.
+  if (defWrite.isMasked() || read.isMasked())
+    return false;
   return !defWrite.hasOutOfBoundsDim() &&
          defWrite.getIndices() == read.getIndices() &&
          defWrite.getVectorType() == read.getVectorType() &&
@@ -249,6 +253,10 @@ bool mlir::vector::checkSameValueRAW(vector::TransferWriteOp defWrite,
 
 bool mlir::vector::checkSameValueWAW(vector::TransferWriteOp write,
                                      vector::TransferWriteOp priorWrite) {
+  // A write under an enclosing vector.mask does not overwrite all lanes of
+  // the prior write.
+  if (write.isMasked())
+    return false;
   return priorWrite.getIndices() == write.getIndices() &&
          priorWrite.getMask() == write.getMask() &&
          priorWrite.getVectorType() == write.getVectorType() &&
@@ -5633,8 +5641,8 @@ struct TransferReadAfterWriteToBroadcast
     if (!readOp.hasPureTensorSemantics() || !defWrite.hasPureTensorSemantics())
       return failure();
     // Bail in the masked case (too complex atm and needed to properly account
-    // for padding).
-    if (readOp.getMask() || defWrite.getMask())
+    // for padding). This includes an enclosing vector.mask.
+    if (readOp.getMask() || defWrite.getMask() || readOp.isMasked())
       return failure();
     // If indices are not the same a shift may be required, bail.
     if (readOp.getIndices() != defWrite.getIndices())

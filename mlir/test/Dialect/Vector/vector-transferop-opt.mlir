@@ -607,3 +607,37 @@ func.func @forward_and_eliminate_stores_through_trivial_aliases(
   vector.transfer_write %23, %subview_of_cast[%c0, %c0] {in_bounds = [true, true]} : vector<[8]x[8]xf32>, memref<?x?xf32, strided<[?, 1]>>
   return
 }
+
+// A read under vector.mask gets the padding value in the masked-off lanes, so
+// the stored vector must not be forwarded to it.
+// CHECK-LABEL: func @negative_forward_to_region_masked_read
+//       CHECK:   vector.transfer_write
+//       CHECK:   %[[R:.*]] = vector.mask %{{.*}} { vector.transfer_read
+//       CHECK:   return %[[R]]
+func.func @negative_forward_to_region_masked_read(%arg0: memref<4xf32>,
+  %v0: vector<4xf32>, %mask: vector<4xi1>) -> vector<4xf32> {
+  %c0 = arith.constant 0 : index
+  %cf0 = arith.constant 0.0 : f32
+  vector.transfer_write %v0, %arg0[%c0] {in_bounds = [true]} :
+    vector<4xf32>, memref<4xf32>
+  %0 = vector.mask %mask { vector.transfer_read %arg0[%c0], %cf0 {in_bounds = [true]} :
+    memref<4xf32>, vector<4xf32> } : vector<4xi1> -> vector<4xf32>
+  return %0 : vector<4xf32>
+}
+
+// A region-masked write is still fully overwritten by a later unmasked write
+// to the same location, so it is dead.
+// CHECK-LABEL: func @dead_region_masked_store
+//  CHECK-SAME:   %{{.*}}: memref<4xf32>, %[[V0:.*]]: vector<4xf32>, %[[V1:.*]]: vector<4xf32>
+//   CHECK-NOT:   vector.transfer_write %[[V0]]
+//       CHECK:   vector.transfer_write %[[V1]]
+//       CHECK:   return
+func.func @dead_region_masked_store(%arg0: memref<4xf32>, %v0: vector<4xf32>,
+  %v1: vector<4xf32>, %mask: vector<4xi1>) {
+  %c0 = arith.constant 0 : index
+  vector.mask %mask { vector.transfer_write %v0, %arg0[%c0] {in_bounds = [true]} :
+    vector<4xf32>, memref<4xf32> } : vector<4xi1>
+  vector.transfer_write %v1, %arg0[%c0] {in_bounds = [true]} :
+    vector<4xf32>, memref<4xf32>
+  return
+}
