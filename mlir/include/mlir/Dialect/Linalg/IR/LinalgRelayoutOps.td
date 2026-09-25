@@ -96,28 +96,36 @@ def Linalg_PackOp : Linalg_RelayoutOp<"pack", [
     AttrSizedOperandSegments]> {
   let summary = "linalg.pack operation";
   let description = [{
-    The "pack" operation converts a source tensor of rank `n` into a result
-    tensor of rank `n + k` with a tiled and packed layout (maybe with padding)
-    and optionally transposes the tiled source tensor dimensions.
+    The "pack" operation converts a source of rank `n` into a result of rank
+    `n + k` with a tiled and packed layout (maybe with padding) and
+    optionally transposes the tiled source dimensions.
+
+    While both tensors and memrefs are supported as `source` and `dest` (the
+    types have to be consistent), the memref forms are mainly intended for
+    bufferization and scalar lowering. Most transformations for
+    `linalg.pack` assume tensor semantics and reject ops with memref
+    semantics. See #225650 for the reasoning. In the memref form there is
+    no separate result: `dest` plays the role of `result` in the rest of
+    this description.
 
     `inner_tiles` (mandatory) specifies `k` tile sizes. These tile sizes
-    correspond to the least significant ("inner") result tensor dimension sizes,
+    correspond to the least significant ("inner") result dimension sizes,
     in the same order. Tile sizes can be static or dynamic.
 
-    `inner_dims_pos` (mandatory) specifies `k` source tensor dimensions that are
+    `inner_dims_pos` (mandatory) specifies `k` source dimensions that are
     being tiled, where `0 <= k <= n`.
-     - `inner_dims_pos[i]` specifies the source tensor dimension tiled by
+     - `inner_dims_pos[i]` specifies the source dimension tiled by
     `inner_tiles[i]` where `0 <= i < k`. All the values in `inner_dims_pos` are
     within [0, n).
      - The tiled dimensions (of size `inner_tiles`) are added to the end of the
-     result tensor in the order in which they appear, i.e.
+     result in the order in which they appear, i.e.
      `shape(result)[rank(source) + i] = inner_tiles[i]` for `0 <= i < k`.
      - The following relationship for the tiled dimensions holds:
      `shape(result)[inner_dims_pos[i]] = shape(source)[inner_dims_pos[i]] / inner_tiles[i]`,
      where (⌈/⌉ indicates CeilDiv).
 
 
-    Example: If `inner_tiles = [16, 32]`, the result tensor has a shape of
+    Example: If `inner_tiles = [16, 32]`, the result has a shape of
     `...x16x32`. If `inner_dims_pos = [0, 1]`, the 0th source dimension is tiled
     by 16 and the 1st source dimension is tiled by 32. Other source dimensions
     (if any) are not tiled. If `inner_dims_pos = [1, 0]`, the 1st dimension is
@@ -161,8 +169,8 @@ def Linalg_PackOp : Linalg_RelayoutOp<"pack", [
     divisible dimensions. Padding is optional:
     - If absent, it is assumed that for all inner tiles,
       `shape(source)[inner_dims_pos[i]] % inner_tiles[i] == 0`, i.e. all inner
-      tiles divide perfectly the corresponding outer dimension in the result
-      tensor. It is UB if the tile does not perfectly divide the dimension.
+      tiles divide perfectly the corresponding outer dimension in the
+      result. It is UB if the tile does not perfectly divide the dimension.
     - If present, it will pad along high dimensions (high-padding) to make the
       tile complete. Note that it is not allowed to have artificial padding that
       is not strictly required by linalg.pack (i.e., padding past what is needed
@@ -193,14 +201,9 @@ def Linalg_PackOp : Linalg_RelayoutOp<"pack", [
     //                             \
     //            expect tensor<2x8xf32> because CeilDiv(9, 8) = 2
     ```
-
-    Memref semantics: `source` and `dest` may be memrefs, but transformations
-    on the memref form are unsupported. The memref forms are mainly for
-    bufferization and scalar lowering purposes. Other uses are not
-    recommended. See #225650 for the reasoning.
   }];
   let arguments = (ins TensorOrMemRef<[AnyType]>:$source,
-      TensorOrMemRef<[AnyType]>:$dest, 
+      TensorOrMemRef<[AnyType]>:$dest,
       Optional<AnyType>:$padding_value,
       DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$outer_dims_perm,
       DenseI64ArrayAttr:$inner_dims_pos, 
@@ -305,21 +308,29 @@ def Linalg_PackOp : Linalg_RelayoutOp<"pack", [
 def Linalg_UnPackOp : Linalg_RelayoutOp<"unpack"> {
   let summary = "linalg.unpack operation";
   let description = [{
-    The "unpack" operation converts a source tensor of rank `n` with a tiled and
-    packed layout to a result tensor of rank `n - k`.
+    The "unpack" operation converts a source of rank `n` with a tiled and
+    packed layout to a result of rank `n - k`.
+
+    While both tensors and memrefs are supported as `source` and `dest` (the
+    types have to be consistent), the memref forms are mainly intended for
+    bufferization and scalar lowering. Most transformations for
+    `linalg.unpack` assume tensor semantics and reject ops with memref
+    semantics. See #225650 for the reasoning. In the memref form there is
+    no separate result: `dest` plays the role of `result` in the rest of
+    this description.
 
     `inner_tiles` (mandatory) specifies `k` tile sizes. These tile sizes
-    correspond to the least significant ("inner") source tensor dimension sizes.
+    correspond to the least significant ("inner") source dimension sizes.
     The behavior of this op is undefined if:
-    - `inner_tiles` do not exactly match with the corresponding source tensor
+    - `inner_tiles` do not exactly match with the corresponding source
       dimension sizes.
     - Or, `inner_tiles[i]` does not divide the size of dimension
       `inner_dims_pos[i]` (assuming that `outer_dims_perm` is not specified)
       evenly.
 
-    `inner_dims_pos` (mandatory) specifies `k` result tensor (i.e. unpacked
-    tensor) dimensions that were tiled with the `inner_tiles` to create the
-    packed source tensor. The source tensor (i.e. packed tensor) dimensions can
+    `inner_dims_pos` (mandatory) specifies `k` result (i.e. unpacked)
+    dimensions that were tiled with the `inner_tiles` to create the
+    packed source. The source (i.e. packed) dimensions can
     be unpacked given `inner_dims_pos` as follows.
     - For `0 <= i < k` the following relationship holds:
     `shape(result)[inner_dims_pos[i]] <= shape(source)[n-k+i] * shape(source)[inner_dims_pos[i]]`.
@@ -362,11 +373,6 @@ def Linalg_UnPackOp : Linalg_RelayoutOp<"unpack"> {
     //                       \  /   \ /
     //          Outer Dims: 9x3x8   Inner Dims: 4x2
     ```
-
-    Memref semantics: `source` and `dest` may be memrefs, but transformations
-    on the memref form are unsupported. The memref forms are mainly for
-    bufferization and scalar lowering purposes. Other uses are not
-    recommended. See #225650 for the reasoning.
   }];
   let arguments = (ins TensorOrMemRef<[AnyType]>:$source,
       TensorOrMemRef<[AnyType]>:$dest,
