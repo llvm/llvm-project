@@ -19,6 +19,7 @@
 #include "llvm/SandboxIR/Utils.h"
 #include "llvm/Support/Compiler.h"
 #include <iterator>
+#include <numeric>
 
 namespace llvm {
 /// Traits for DenseMap.
@@ -120,26 +121,35 @@ public:
     return FixedVectorType::get(ElemTy, NumElts);
   }
   /// \Returns the combined vector type for \p Bndl, even when the element types
-  /// differ. For example: i8,i8,i16 will return <4 x i8>. \Returns null if
-  /// types are of mixed float/integer types.
+  /// differ. The element size is the GCD of the element sizes in \p Bndl, so
+  /// that each value spans a whole number of elements. For example: i8,i8,i16
+  /// will return <4 x i8>.
   static Type *getCombinedVectorTypeFor(ArrayRef<Instruction *> Bndl,
                                         const DataLayout &DL) {
     assert(!Bndl.empty() && "Expected non-empty Bndl!");
     unsigned TotalBits = 0;
+    unsigned GCDBits = 0;
     unsigned MinElmBits = std::numeric_limits<unsigned>::max();
     Type *MinElmTy = nullptr;
-    for (auto [Idx, V] : enumerate(Bndl)) {
+    for (Value *V : Bndl) {
       Type *ElmTy = getElementType(Utils::getExpectedType(V));
 
       unsigned ElmBits = Utils::getNumBits(ElmTy, DL);
       TotalBits += ElmBits * VecUtils::getNumLanes(V);
+      GCDBits = std::gcd(GCDBits, ElmBits);
       if (ElmBits < MinElmBits) {
         MinElmBits = ElmBits;
         MinElmTy = ElmTy;
       }
     }
-    unsigned NumElms = TotalBits / MinElmBits;
-    return FixedVectorType::get(MinElmTy, NumElms);
+    // The GCD is the size of the narrowest type unless it does not divide the
+    // rest, like i24 and i32, in which case no type in Bndl has that size and
+    // we fall back to an integer.
+    Type *VecElmTy = GCDBits == MinElmBits
+                         ? MinElmTy
+                         : IntegerType::get(MinElmTy->getContext(), GCDBits);
+    unsigned NumElms = TotalBits / GCDBits;
+    return FixedVectorType::get(VecElmTy, NumElms);
   }
   /// \Returns the instruction in \p Instrs that is lowest in the BB. Expects
   /// that all instructions are in the same BB.
