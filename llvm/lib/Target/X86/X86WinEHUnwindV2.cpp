@@ -418,13 +418,15 @@ bool runX86WinEHUnwindV2(MachineFunction &MF) {
       MachineBasicBlock &MBB = *Info.UnwindV2StartLocation->getParent();
       const DebugLoc &DL = Info.UnwindV2StartLocation->getDebugLoc();
       BuildMI(MBB, Info.UnwindV2StartLocation, DL,
-              TII->get(X86::SEH_UnwindV2Start));
+              TII->get(X86::SEH_UnwindV2Start))
+          .setMIFlag(MachineInstr::FrameDestroy);
 
       if ((LastUnwindInfoEndPosition - Info.ApproximateInstructionPosition >=
            InstructionCountThreshold) ||
           (UnwindCodeCount >= UnwindCodeThreshold)) {
         BuildMI(MBB, MBB.begin(), DL,
-                TII->get(X86::SEH_SplitChainedAtEndOfBlock));
+                TII->get(X86::SEH_SplitChainedAtEndOfBlock))
+            .setMIFlag(MachineInstr::FrameDestroy);
         LastUnwindInfoEndPosition = Info.ApproximateInstructionPosition;
         // Doesn't reset to 0, as the prolog unwind codes are now in this info.
         UnwindCodeCount = FI.ApproximatePrologCodeCount + 1;
@@ -438,7 +440,8 @@ bool runX86WinEHUnwindV2(MachineFunction &MF) {
   MachineBasicBlock &FirstMBB = MF.front();
   BuildMI(FirstMBB, FirstMBB.front(), findDebugLoc(FirstMBB),
           TII->get(X86::SEH_UnwindVersion))
-      .addImm(2);
+      .addImm(2)
+      .setMIFlag(MachineInstr::FrameSetup);
 
   return true;
 }

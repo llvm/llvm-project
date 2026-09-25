@@ -309,7 +309,8 @@ bool X86WinEHUnwindV3::runOnMachineFunction(MachineFunction &MF) {
     auto SplitAfter = [&](const EpilogSplitPoint &Epilog) {
       MachineBasicBlock *MBB = Epilog.BeginEpilog->getParent();
       BuildMI(*MBB, MBB->begin(), Epilog.BeginEpilog->getDebugLoc(),
-              TII->get(X86::SEH_SplitChainedAtEndOfBlock));
+              TII->get(X86::SEH_SplitChainedAtEndOfBlock))
+          .setMIFlag(MachineInstr::FrameDestroy);
       SubFragmentSplits++;
       Changed = true;
     };
