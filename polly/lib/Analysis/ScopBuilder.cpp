@@ -746,9 +746,6 @@ bool ScopBuilder::addLoopBoundsToHeaderDomain(
 
   isl::set UnionBackedgeCondition = HeaderBBDom.empty(HeaderBBDom.get_space());
 
-  // Parameter values for which a latch condition is not modeled correctly.
-  isl::set InvalidLatchCtx = isl::set::empty(HeaderBBDom.get_space().params());
-
   SmallVector<BasicBlock *, 4> LatchBlocks;
   L->getLoopLatches(LatchBlocks);
 
@@ -767,18 +764,10 @@ bool ScopBuilder::addLoopBoundsToHeaderDomain(
     else if (auto *BI = dyn_cast<CondBrInst>(TI)) {
       SmallVector<isl_set *, 8> ConditionSets;
       int idx = BI->getSuccessor(0) != HeaderBB;
-      DenseMap<BasicBlock *, isl::set> LatchInvalidDomainMap;
-      LatchInvalidDomainMap[LatchBB] = LatchBBDom.empty(LatchBBDom.get_space());
-      bool Valid = buildConditionSets(LatchBB, TI, L, LatchBBDom.get(),
-                                      LatchInvalidDomainMap, ConditionSets,
-                                      /*IsInsideDomain=*/false);
-      isl::set LatchInvalidDomain = LatchInvalidDomainMap[LatchBB];
-      InvalidDomainMap[LatchBB] =
-          InvalidDomainMap[LatchBB].unite(LatchInvalidDomain);
-      if (!Valid)
+      if (!buildConditionSets(LatchBB, TI, L, LatchBBDom.get(),
+                              InvalidDomainMap, ConditionSets,
+                              /*IsInsideDomain=*/false))
         return false;
-      InvalidLatchCtx = InvalidLatchCtx.unite(
-          LatchInvalidDomain.intersect(LatchBBDom).params());
 
       // Free the non back edge condition set as we do not need it.
       isl_set_free(ConditionSets[1 - idx]);
@@ -792,6 +781,24 @@ bool ScopBuilder::addLoopBoundsToHeaderDomain(
     BackedgeCondition = BackedgeCondition.project_out(
         isl::dim::set, LoopDepth + 1, LatchLoopDepth - LoopDepth);
     UnionBackedgeCondition = UnionBackedgeCondition.unite(BackedgeCondition);
+  }
+
+  // Parameter values for which a branch condition inside the loop is not
+  // modeled correctly. The domains of the latches are derived from all these
+  // conditions, not only from the conditions of the latches themselves: the
+  // exit condition may be in another block, e.g. the header with an
+  // unconditional latch, and any other condition may decide whether the exit
+  // condition is evaluated at all. Collect them before the header's domain is
+  // restricted to the loop bounds, since the domains of the other blocks are
+  // later derived from it.
+  isl::set InvalidLoopCtx = isl::set::empty(HeaderBBDom.get_space().params());
+  for (BasicBlock *BB : L->blocks()) {
+    isl::set InvalidDomain = InvalidDomainMap.lookup(BB);
+    if (InvalidDomain.is_null() || InvalidDomain.is_empty() ||
+        !scop->isDomainDefined(BB))
+      continue;
+    InvalidLoopCtx = InvalidLoopCtx.unite(
+        InvalidDomain.intersect(scop->getDomainConditions(BB)).params());
   }
 
   isl::map ForwardMap = ForwardMap.lex_le(HeaderBBDom.get_space());
@@ -818,14 +825,14 @@ bool ScopBuilder::addLoopBoundsToHeaderDomain(
 
   isl::set UnboundedCtx = Parts.first.params();
 
-  // An unbounded loop only implies undefined behavior if its latch conditions
-  // are modeled correctly. Otherwise, e.g. if a zero-extended loop bound is
-  // assumed to be non-negative, the loop may just appear to be unbounded and
+  // An unbounded loop only implies undefined behavior if the conditions in the
+  // loop are modeled correctly. Otherwise, e.g. if a zero-extended loop bound
+  // is assumed to be non-negative, the loop may just appear to be unbounded and
   // the parameter values must be excluded by a runtime check. Assuming them
   // to not occur would make the loop's domain empty, which also drops the
   // restrictions that would have caught the invalid model.
   if (!RequiresRTC) {
-    isl::set InvalidUnboundedCtx = UnboundedCtx.intersect(InvalidLatchCtx);
+    isl::set InvalidUnboundedCtx = UnboundedCtx.intersect(InvalidLoopCtx);
     if (!InvalidUnboundedCtx.is_empty()) {
       recordAssumption(&RecordedAssumptions, INFINITELOOP, InvalidUnboundedCtx,
                        HeaderBB->getTerminator()->getDebugLoc(), AS_RESTRICTION,
