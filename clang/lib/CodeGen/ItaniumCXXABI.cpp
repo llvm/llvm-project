@@ -4741,7 +4741,7 @@ enum class StructorCodegen { Emit, RAUW, Alias, COMDAT };
 // as a distinct symbol rather than being silently replaced in the IR (RAUW).
 static bool
 structorSymbolMustBeRetained(CodeGenModule &CGM, const CXXMethodDecl *MD,
-                              llvm::GlobalValue::LinkageTypes Linkage) {
+                             llvm::GlobalValue::LinkageTypes Linkage) {
   if (MD->hasAttr<UsedAttr>())
     return true;
   return CGM.getCodeGenOpts().KeepInlineFunctions && MD->isInlined() &&
