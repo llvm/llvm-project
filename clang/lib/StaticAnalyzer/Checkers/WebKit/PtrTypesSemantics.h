@@ -200,20 +200,41 @@ bool isTrivialBuiltinFunction(const FunctionDecl *F);
 /// \returns true if \p F is a static singleton function.
 bool isSingleton(const NamedDecl *F);
 
+/// Explains why TrivialFunctionAnalysis rejected a statement, so that a
+/// diagnostic can blame the code that is actually responsible.
+struct NonTrivialityReason {
+  /// The innermost non-trivial statement inside the analyzed function's own
+  /// body. Without this, a diagnostic would have to blame the whole enclosing
+  /// statement, which often reads as an accusation against an innocent callee
+  /// that merely happens to appear first, e.g. the std::min in
+  /// `x = std::min(a, unsafe())`.
+  const Stmt *OffendingStmt = nullptr;
+
+  /// The deepest callee that could not be proven free of destruction. Null when
+  /// the offending statement destructs an object by itself, e.g. a delete
+  /// expression or a local variable with a non-trivial destructor.
+  const FunctionDecl *RootCause = nullptr;
+};
+
 /// An inter-procedural analysis facility that detects functions with "trivial"
 /// behavior with respect to reference counting, such as simple field getters.
 class TrivialFunctionAnalysis {
 public:
   /// \returns true if \p D is a "trivial" function.
-  bool isTrivial(const Decl *D, const Stmt **OffendingStmt = nullptr) const {
-    return isTrivialImpl(D, TheCache, OffendingStmt);
+  bool isTrivial(const Decl *D) const {
+    return isTrivialImpl(D, TheCache, nullptr);
   }
-  bool isTrivial(const Stmt *S, const Stmt **OffendingStmt = nullptr) const {
-    return isTrivialImpl(S, TheCache, OffendingStmt);
+  bool isTrivial(const Stmt *S) const {
+    return isTrivialImpl(S, TheCache, nullptr);
   }
   bool hasTrivialDtor(const VarDecl *VD) const {
     return hasTrivialDtorImpl(VD, TheCache);
   }
+
+  /// \returns why \p S is not trivial. Runs on a private, empty cache because
+  /// pinpointing the root cause requires descending into callees that a shared
+  /// cache would short-circuit. Only call this when about to emit a diagnostic.
+  static NonTrivialityReason explainNonTriviality(const Stmt *S);
 
 private:
   friend class TrivialFunctionAnalysisVisitor;
@@ -222,8 +243,10 @@ private:
       llvm::DenseMap<llvm::PointerUnion<const Decl *, const Stmt *>, bool>;
   mutable CacheTy TheCache{};
 
-  static bool isTrivialImpl(const Decl *D, CacheTy &Cache, const Stmt **);
-  static bool isTrivialImpl(const Stmt *S, CacheTy &Cache, const Stmt **);
+  static bool isTrivialImpl(const Decl *D, CacheTy &Cache,
+                            NonTrivialityReason *);
+  static bool isTrivialImpl(const Stmt *S, CacheTy &Cache,
+                            NonTrivialityReason *);
   static bool hasTrivialDtorImpl(const VarDecl *VD, CacheTy &Cache);
 };
 
