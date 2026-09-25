@@ -1724,27 +1724,28 @@ void SCCPInstVisitor::visitUnaryOperator(Instruction &I) {
 }
 
 void SCCPInstVisitor::visitFreezeInst(FreezeInst &I) {
-  // If this freeze returns a struct, just mark the result overdefined.
-  // TODO: We could do a lot better than this.
-  if (I.getType()->isStructTy())
-    return (void)markOverdefined(&I);
-
-  ValueLatticeElement V0State = getValueState(I.getOperand(0));
-  ValueLatticeElement &IV = ValueState[&I];
   // resolvedUndefsIn might mark I as overdefined. Bail out, even if we would
   // discover a concrete value later.
-  if (IV.isOverdefined())
+  if (isInstFullyOverDefined(I))
     return (void)markOverdefined(&I);
 
-  // If something is unknown/undef, wait for it to resolve.
-  if (V0State.isUnknownOrUndef())
-    return;
+  forEachLatticeElement(&I, [&](auto GetValueState) {
+    ValueLatticeElement V0State = GetValueState(I.getOperand(0));
+    ValueLatticeElement &IV = GetValueState(&I);
+    // If something is unknown/undef, wait for it to resolve.
+    if (V0State.isUnknownOrUndef())
+      return;
 
-  if (SCCPSolver::isConstant(V0State) &&
-      isGuaranteedNotToBeUndefOrPoison(getConstant(V0State, I.getType())))
-    return (void)markConstant(IV, &I, getConstant(V0State, I.getType()));
+    // Freeze is a no-op on a constant that is guaranteed not to be undef or
+    // poison. Integer constants are represented as single-element ranges and
+    // can never be undef or poison.
+    if (SCCPSolver::isConstant(V0State) &&
+        (!V0State.isConstant() ||
+         isGuaranteedNotToBeUndefOrPoison(V0State.getConstant())))
+      return (void)mergeInValue(IV, &I, V0State);
 
-  markOverdefined(&I);
+    markOverdefined(IV, &I);
+  });
 }
 
 // Handle Binary Operators.
