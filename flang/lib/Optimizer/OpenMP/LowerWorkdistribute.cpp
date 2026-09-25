@@ -445,6 +445,13 @@ static bool isEnclosedTypeBoxScalar(Type type) {
   return false;
 }
 
+/// Check if the type is a fir.box that encloses an array (by value, no ref).
+static bool isEnclosedTypeBoxArray(Type type) {
+  if (auto boxType = dyn_cast<fir::BoxType>(type))
+    return isa<fir::SequenceType>(boxType.getEleTy());
+  return false;
+}
+
 /// Check if the FortranAAssign call has src as scalar and dest as array
 static bool isFortranAssignSrcScalarAndDestArray(fir::CallOp callOp) {
   if (callOp.getNumOperands() < 2)
@@ -467,6 +474,21 @@ static bool isFortranAssignSrcScalarAndDestArray(fir::CallOp callOp) {
   bool srcIsScalar = isEnclosedTypeBoxScalar(srcOrigType);
   bool destIsArray = isEnclosedTypeRefToBoxArray(destOrigType);
   return srcIsScalar && destIsArray;
+}
+
+/// Check if the FortranAAssign call has both src and dest as array descriptors.
+/// This is the array-section copy case (e.g. a(0,:,:) = b(n,:,:)) that a flat
+/// omp_target_memcpy would get wrong for strided sections. Matching the runtime
+/// signature, dest is a reference to a box and src is a box passed by value.
+static bool isFortranAssignSrcArrayAndDestArray(fir::CallOp callOp) {
+  if (callOp.getNumOperands() < 2)
+    return false;
+  auto srcConvert = callOp.getOperand(1).getDefiningOp<fir::ConvertOp>();
+  auto destConvert = callOp.getOperand(0).getDefiningOp<fir::ConvertOp>();
+  if (!srcConvert || !destConvert)
+    return false;
+  return isEnclosedTypeBoxArray(srcConvert.getValue().getType()) &&
+         isEnclosedTypeRefToBoxArray(destConvert.getValue().getType());
 }
 
 /// Convert a flat index to multi-dimensional indices for an array box
@@ -536,11 +558,11 @@ static Value CalculateTotalElements(OpBuilder &builder, Location loc,
   return totalElems;
 }
 
-/// Replace the FortranAAssign runtime call with an unordered do loop
-static void replaceWithUnorderedDoLoop(OpBuilder &builder, Location loc,
-                                       omp::TeamsOp teamsOp,
-                                       omp::WorkdistributeOp workdistribute,
-                                       fir::CallOp callOp) {
+/// Replace a scalar-to-array FortranAAssign (broadcast) runtime call with an
+/// unordered do loop that stores the scalar into every element.
+static void replaceScalarToArrayAssignWithUnorderedDoLoop(
+    OpBuilder &builder, Location loc, omp::TeamsOp teamsOp,
+    omp::WorkdistributeOp workdistribute, fir::CallOp callOp) {
   auto destConvert = callOp.getOperand(0).getDefiningOp<fir::ConvertOp>();
   auto srcConvert = callOp.getOperand(1).getDefiningOp<fir::ConvertOp>();
 
@@ -595,10 +617,70 @@ static void replaceWithUnorderedDoLoop(OpBuilder &builder, Location loc,
   fir::StoreOp::create(builder, loc, scalar, elemPtr);
 }
 
+/// Return the array descriptor (fir.box) value behind a FortranAAssign arg.
+/// The arg is the address of a descriptor temp: prefer the box value stored
+/// into it, otherwise load the reference.
+static Value getAssignArrayBox(OpBuilder &builder, Location loc, Value box) {
+  if (auto alloca = box.getDefiningOp<fir::AllocaOp>()) {
+    for (auto *user : alloca->getUsers())
+      if (auto storeOp = dyn_cast<fir::StoreOp>(user)) {
+        box = storeOp.getValue();
+        break;
+      }
+  }
+  if (isa<fir::ReferenceType>(box.getType()))
+    box = fir::LoadOp::create(builder, loc, box);
+  return box;
+}
+
+/// Replace an array-to-array FortranAAssign runtime call with an unordered do
+/// loop that copies element by element. Addressing goes through fir.array_coor
+/// on both descriptors, so each section's own strides and bounds are honored -
+/// unlike a flat memcpy, this is correct for strided sections.
+static void replaceArrayToArrayAssignWithUnorderedDoLoop(
+    OpBuilder &builder, Location loc, omp::TeamsOp teamsOp,
+    omp::WorkdistributeOp workdistribute, fir::CallOp callOp) {
+  auto destConvert = callOp.getOperand(0).getDefiningOp<fir::ConvertOp>();
+  auto srcConvert = callOp.getOperand(1).getDefiningOp<fir::ConvertOp>();
+
+  builder.setInsertionPoint(teamsOp);
+  Value destBox = getAssignArrayBox(builder, loc, destConvert.getValue());
+  Value srcBox = getAssignArrayBox(builder, loc, srcConvert.getValue());
+
+  // Element type comes from the destination sequence.
+  auto destBoxType = cast<fir::BoxType>(destBox.getType());
+  auto destSeqType = cast<fir::SequenceType>(destBoxType.getEleTy());
+  Type eleTy = destSeqType.getEleTy();
+  auto eleRefTy = fir::ReferenceType::get(eleTy);
+
+  auto c0 = arith::ConstantIndexOp::create(builder, loc, 0);
+  auto c1 = arith::ConstantIndexOp::create(builder, loc, 1);
+  Value totalElems = CalculateTotalElements(builder, loc, destBox);
+
+  auto *workdistributeBlock = &workdistribute.getRegion().front();
+  builder.setInsertionPointToStart(workdistributeBlock);
+  // Single flattened loop: dest and src conform, so one index set fits both.
+  auto doLoop = fir::DoLoopOp::create(builder, loc, c0, totalElems, c1, true);
+  builder.setInsertionPointToStart(doLoop.getBody());
+
+  auto flatIdx = doLoop.getRegion().front().getArgument(0);
+  SmallVector<Value> indices =
+      convertFlatToMultiDim(builder, loc, flatIdx, destBox);
+
+  auto srcPtr =
+      fir::ArrayCoorOp::create(builder, loc, eleRefTy, srcBox, nullptr, nullptr,
+                               ValueRange{indices}, ValueRange{});
+  Value value = fir::LoadOp::create(builder, loc, srcPtr);
+  auto destPtr =
+      fir::ArrayCoorOp::create(builder, loc, eleRefTy, destBox, nullptr,
+                               nullptr, ValueRange{indices}, ValueRange{});
+  fir::StoreOp::create(builder, loc, value, destPtr);
+}
+
 /// workdistributeRuntimeCallLower method finds the runtime calls
-/// nested in teams {workdistribute{}} and
-/// lowers FortranAAssign to unordered do loop if src is scalar and dest is
-/// array. Other runtime calls are not handled currently.
+/// nested in teams {workdistribute{}} and lowers FortranAAssign to an
+/// unordered do loop for scalar-to-array and array-to-array assigns.
+/// Unsupported assign shapes error out. Other runtime calls are left as is.
 static FailureOr<bool>
 workdistributeRuntimeCallLower(omp::WorkdistributeOp workdistribute,
                                SetVector<omp::TargetOp> &targetOpsToProcess) {
@@ -620,6 +702,9 @@ workdistributeRuntimeCallLower(omp::WorkdistributeOp workdistribute,
   bool changed = false;
   // Get the target op parent of teams
   omp::TargetOp targetOp = dyn_cast<omp::TargetOp>(teams->getParentOp());
+  // Runtime-call lowering only applies inside omp.target.
+  if (!targetOp)
+    return false;
   SmallVector<Operation *> opsToErase;
   for (auto &op : workdistribute.getOps()) {
     if (isRuntimeCall(&op)) {
@@ -627,13 +712,28 @@ workdistributeRuntimeCallLower(omp::WorkdistributeOp workdistribute,
       fir::CallOp runtimeCall = cast<fir::CallOp>(op);
       auto funcName = runtimeCall.getCallee()->getRootReference().getValue();
       if (isFortranAssignCall(funcName)) {
-        if (isFortranAssignSrcScalarAndDestArray(runtimeCall) && targetOp) {
+        if (isFortranAssignSrcScalarAndDestArray(runtimeCall)) {
           // Record the target ops to process later
           targetOpsToProcess.insert(targetOp);
-          replaceWithUnorderedDoLoop(rewriter, loc, teams, workdistribute,
-                                     runtimeCall);
+          replaceScalarToArrayAssignWithUnorderedDoLoop(
+              rewriter, loc, teams, workdistribute, runtimeCall);
           opsToErase.push_back(&op);
           changed = true;
+        } else if (isFortranAssignSrcArrayAndDestArray(runtimeCall)) {
+          // Array-section copy: element-wise loop honors strides, unlike the
+          // flat omp_target_memcpy fallback used otherwise.
+          targetOpsToProcess.insert(targetOp);
+          replaceArrayToArrayAssignWithUnorderedDoLoop(
+              rewriter, loc, teams, workdistribute, runtimeCall);
+          opsToErase.push_back(&op);
+          changed = true;
+        } else {
+          // Recognized runtime call, but its argument shape has no lowering.
+          emitError(runtimeCall->getLoc(),
+                    "Runtime call " + funcName +
+                        " with this argument shape is not supported in "
+                        "workdistribute yet.\n");
+          return failure();
         }
       }
     }
