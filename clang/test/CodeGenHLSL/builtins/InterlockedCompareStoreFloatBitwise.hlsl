@@ -16,8 +16,7 @@ groupshared float gs_f32;
 // CHECK-LABEL: define {{.*}}void @{{.*}}test_float
 // CHECK: [[CMP:%.*]] = bitcast float %{{.*}} to i32
 // CHECK-NEXT: [[VAL:%.*]] = bitcast float %{{.*}} to i32
-// DXCHECK-NEXT:  cmpxchg ptr addrspace(3) {{.*}}@gs_f32{{.*}}, i32 [[CMP]], i32 [[VAL]] syncscope("workgroup") monotonic monotonic
-// SPVCHECK-NEXT: cmpxchg ptr addrspace(3) {{.*}}@gs_f32{{.*}}, i32 [[CMP]], i32 [[VAL]] syncscope("workgroup") monotonic monotonic
+// CHECK-NEXT: cmpxchg ptr addrspace(3) {{.*}}@gs_f32{{.*}}, i32 [[CMP]], i32 [[VAL]] syncscope("workgroup") monotonic monotonic
 export void test_float(float cmp, float v) {
   InterlockedCompareStoreFloatBitwise(gs_f32, cmp, v);
 }
