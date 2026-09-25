@@ -11,7 +11,11 @@ define <1 x i1> @v1i1(<1 x i1> %m) {
 ; RV32-NEXT:  # %bb.1:
 ; RV32-NEXT:    li a0, 1
 ; RV32-NEXT:  .LBB0_2:
-; RV32-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
+; RV32-NEXT:    li a1, 255
+; RV32-NEXT:    bltu a0, a1, .LBB0_4
+; RV32-NEXT:  # %bb.3:
+; RV32-NEXT:    li a0, 255
+; RV32-NEXT:  .LBB0_4:
 ; RV32-NEXT:    vmv.s.x v8, a0
 ; RV32-NEXT:    vmsgtu.vi v0, v8, 0
 ; RV32-NEXT:    ret
@@ -24,7 +28,11 @@ define <1 x i1> @v1i1(<1 x i1> %m) {
 ; RV64-NEXT:  # %bb.1:
 ; RV64-NEXT:    li a0, 1
 ; RV64-NEXT:  .LBB0_2:
-; RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
+; RV64-NEXT:    li a1, 255
+; RV64-NEXT:    bltu a0, a1, .LBB0_4
+; RV64-NEXT:  # %bb.3:
+; RV64-NEXT:    li a0, 255
+; RV64-NEXT:  .LBB0_4:
 ; RV64-NEXT:    vmv.s.x v8, a0
 ; RV64-NEXT:    vmsgtu.vi v0, v8, 0
 ; RV64-NEXT:    ret
@@ -41,7 +49,11 @@ define <2 x i1> @v2i1(<2 x i1> %m) {
 ; RV32-NEXT:  # %bb.1:
 ; RV32-NEXT:    li a0, 2
 ; RV32-NEXT:  .LBB1_2:
-; RV32-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
+; RV32-NEXT:    li a1, 255
+; RV32-NEXT:    bltu a0, a1, .LBB1_4
+; RV32-NEXT:  # %bb.3:
+; RV32-NEXT:    li a0, 255
+; RV32-NEXT:  .LBB1_4:
 ; RV32-NEXT:    vid.v v8
 ; RV32-NEXT:    vmsltu.vx v0, v8, a0
 ; RV32-NEXT:    ret
@@ -54,7 +66,11 @@ define <2 x i1> @v2i1(<2 x i1> %m) {
 ; RV64-NEXT:  # %bb.1:
 ; RV64-NEXT:    li a0, 2
 ; RV64-NEXT:  .LBB1_2:
-; RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
+; RV64-NEXT:    li a1, 255
+; RV64-NEXT:    bltu a0, a1, .LBB1_4
+; RV64-NEXT:  # %bb.3:
+; RV64-NEXT:    li a0, 255
+; RV64-NEXT:  .LBB1_4:
 ; RV64-NEXT:    vid.v v8
 ; RV64-NEXT:    vmsltu.vx v0, v8, a0
 ; RV64-NEXT:    ret
@@ -71,7 +87,11 @@ define <4 x i1> @v4i1(<4 x i1> %m) {
 ; RV32-NEXT:  # %bb.1:
 ; RV32-NEXT:    li a0, 4
 ; RV32-NEXT:  .LBB2_2:
-; RV32-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; RV32-NEXT:    li a1, 255
+; RV32-NEXT:    bltu a0, a1, .LBB2_4
+; RV32-NEXT:  # %bb.3:
+; RV32-NEXT:    li a0, 255
+; RV32-NEXT:  .LBB2_4:
 ; RV32-NEXT:    vid.v v8
 ; RV32-NEXT:    vmsltu.vx v0, v8, a0
 ; RV32-NEXT:    ret
@@ -84,7 +104,11 @@ define <4 x i1> @v4i1(<4 x i1> %m) {
 ; RV64-NEXT:  # %bb.1:
 ; RV64-NEXT:    li a0, 4
 ; RV64-NEXT:  .LBB2_2:
-; RV64-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
+; RV64-NEXT:    li a1, 255
+; RV64-NEXT:    bltu a0, a1, .LBB2_4
+; RV64-NEXT:  # %bb.3:
+; RV64-NEXT:    li a0, 255
+; RV64-NEXT:  .LBB2_4:
 ; RV64-NEXT:    vid.v v8
 ; RV64-NEXT:    vmsltu.vx v0, v8, a0
 ; RV64-NEXT:    ret
@@ -101,7 +125,11 @@ define <8 x i1> @v8i1(<8 x i1> %m) {
 ; RV32-NEXT:  # %bb.1:
 ; RV32-NEXT:    li a0, 8
 ; RV32-NEXT:  .LBB3_2:
-; RV32-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; RV32-NEXT:    li a1, 255
+; RV32-NEXT:    bltu a0, a1, .LBB3_4
+; RV32-NEXT:  # %bb.3:
+; RV32-NEXT:    li a0, 255
+; RV32-NEXT:  .LBB3_4:
 ; RV32-NEXT:    vid.v v8
 ; RV32-NEXT:    vmsltu.vx v0, v8, a0
 ; RV32-NEXT:    ret
@@ -114,7 +142,11 @@ define <8 x i1> @v8i1(<8 x i1> %m) {
 ; RV64-NEXT:  # %bb.1:
 ; RV64-NEXT:    li a0, 8
 ; RV64-NEXT:  .LBB3_2:
-; RV64-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
+; RV64-NEXT:    li a1, 255
+; RV64-NEXT:    bltu a0, a1, .LBB3_4
+; RV64-NEXT:  # %bb.3:
+; RV64-NEXT:    li a0, 255
+; RV64-NEXT:  .LBB3_4:
 ; RV64-NEXT:    vid.v v8
 ; RV64-NEXT:    vmsltu.vx v0, v8, a0
 ; RV64-NEXT:    ret
@@ -131,7 +163,11 @@ define <16 x i1> @v16i1(<16 x i1> %m) {
 ; RV32-NEXT:  # %bb.1:
 ; RV32-NEXT:    li a0, 16
 ; RV32-NEXT:  .LBB4_2:
-; RV32-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
+; RV32-NEXT:    li a1, 255
+; RV32-NEXT:    bltu a0, a1, .LBB4_4
+; RV32-NEXT:  # %bb.3:
+; RV32-NEXT:    li a0, 255
+; RV32-NEXT:  .LBB4_4:
 ; RV32-NEXT:    vid.v v8
 ; RV32-NEXT:    vmsltu.vx v0, v8, a0
 ; RV32-NEXT:    ret
@@ -144,7 +180,11 @@ define <16 x i1> @v16i1(<16 x i1> %m) {
 ; RV64-NEXT:  # %bb.1:
 ; RV64-NEXT:    li a0, 16
 ; RV64-NEXT:  .LBB4_2:
-; RV64-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
+; RV64-NEXT:    li a1, 255
+; RV64-NEXT:    bltu a0, a1, .LBB4_4
+; RV64-NEXT:  # %bb.3:
+; RV64-NEXT:    li a0, 255
+; RV64-NEXT:  .LBB4_4:
 ; RV64-NEXT:    vid.v v8
 ; RV64-NEXT:    vmsltu.vx v0, v8, a0
 ; RV64-NEXT:    ret
@@ -154,17 +194,122 @@ define <16 x i1> @v16i1(<16 x i1> %m) {
 
 ; FIXME: The following tests currently crash because the step vector get_active_lane_mask tries to generate isn't legal (v32i64 -> LMUL16), so it bails.
 
-; define <32 x i1> @v32i1(<32 x i1> %m) {
-;   %x = call <32 x i1> @llvm.mask.beforefirst(<32 x i1> %m)
-;   ret <32 x i1> %x
-; }
+define <32 x i1> @v32i1(<32 x i1> %m) {
+; RV32-LABEL: v32i1:
+; RV32:       # %bb.0:
+; RV32-NEXT:    li a0, 32
+; RV32-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
+; RV32-NEXT:    vfirst.m a0, v0
+; RV32-NEXT:    bgez a0, .LBB5_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    li a0, 32
+; RV32-NEXT:  .LBB5_2:
+; RV32-NEXT:    li a1, 255
+; RV32-NEXT:    bltu a0, a1, .LBB5_4
+; RV32-NEXT:  # %bb.3:
+; RV32-NEXT:    li a0, 255
+; RV32-NEXT:  .LBB5_4:
+; RV32-NEXT:    vid.v v8
+; RV32-NEXT:    vmsltu.vx v0, v8, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: v32i1:
+; RV64:       # %bb.0:
+; RV64-NEXT:    li a0, 32
+; RV64-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
+; RV64-NEXT:    vfirst.m a0, v0
+; RV64-NEXT:    bgez a0, .LBB5_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    li a0, 32
+; RV64-NEXT:  .LBB5_2:
+; RV64-NEXT:    li a1, 255
+; RV64-NEXT:    bltu a0, a1, .LBB5_4
+; RV64-NEXT:  # %bb.3:
+; RV64-NEXT:    li a0, 255
+; RV64-NEXT:  .LBB5_4:
+; RV64-NEXT:    vid.v v8
+; RV64-NEXT:    vmsltu.vx v0, v8, a0
+; RV64-NEXT:    ret
+  %x = call <32 x i1> @llvm.mask.beforefirst(<32 x i1> %m)
+  ret <32 x i1> %x
+}
 
-; define <64 x i1> @v64i1(<64 x i1> %m) {
-;   %x = call <64 x i1> @llvm.mask.beforefirst(<64 x i1> %m)
-;   ret <64 x i1> %x
-; }
+define <64 x i1> @v64i1(<64 x i1> %m) {
+; RV32-LABEL: v64i1:
+; RV32:       # %bb.0:
+; RV32-NEXT:    li a0, 64
+; RV32-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
+; RV32-NEXT:    vfirst.m a0, v0
+; RV32-NEXT:    bgez a0, .LBB6_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    li a0, 64
+; RV32-NEXT:  .LBB6_2:
+; RV32-NEXT:    li a1, 255
+; RV32-NEXT:    bltu a0, a1, .LBB6_4
+; RV32-NEXT:  # %bb.3:
+; RV32-NEXT:    li a0, 255
+; RV32-NEXT:  .LBB6_4:
+; RV32-NEXT:    vid.v v8
+; RV32-NEXT:    vmsltu.vx v0, v8, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: v64i1:
+; RV64:       # %bb.0:
+; RV64-NEXT:    li a0, 64
+; RV64-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
+; RV64-NEXT:    vfirst.m a0, v0
+; RV64-NEXT:    bgez a0, .LBB6_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    li a0, 64
+; RV64-NEXT:  .LBB6_2:
+; RV64-NEXT:    li a1, 255
+; RV64-NEXT:    bltu a0, a1, .LBB6_4
+; RV64-NEXT:  # %bb.3:
+; RV64-NEXT:    li a0, 255
+; RV64-NEXT:  .LBB6_4:
+; RV64-NEXT:    vid.v v8
+; RV64-NEXT:    vmsltu.vx v0, v8, a0
+; RV64-NEXT:    ret
+  %x = call <64 x i1> @llvm.mask.beforefirst(<64 x i1> %m)
+  ret <64 x i1> %x
+}
 
-; define <128 x i1> @v128i1(<128 x i1> %m) {
-;   %x = call <128 x i1> @llvm.mask.beforefirst(<128 x i1> %m)
-;   ret <128 x i1> %x
-; }
+define <128 x i1> @v128i1(<128 x i1> %m) {
+; RV32-LABEL: v128i1:
+; RV32:       # %bb.0:
+; RV32-NEXT:    li a0, 128
+; RV32-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; RV32-NEXT:    vfirst.m a0, v0
+; RV32-NEXT:    bgez a0, .LBB7_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    li a0, 128
+; RV32-NEXT:  .LBB7_2:
+; RV32-NEXT:    li a1, 255
+; RV32-NEXT:    bltu a0, a1, .LBB7_4
+; RV32-NEXT:  # %bb.3:
+; RV32-NEXT:    li a0, 255
+; RV32-NEXT:  .LBB7_4:
+; RV32-NEXT:    vid.v v8
+; RV32-NEXT:    vmsltu.vx v0, v8, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: v128i1:
+; RV64:       # %bb.0:
+; RV64-NEXT:    li a0, 128
+; RV64-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; RV64-NEXT:    vfirst.m a0, v0
+; RV64-NEXT:    bgez a0, .LBB7_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    li a0, 128
+; RV64-NEXT:  .LBB7_2:
+; RV64-NEXT:    li a1, 255
+; RV64-NEXT:    bltu a0, a1, .LBB7_4
+; RV64-NEXT:  # %bb.3:
+; RV64-NEXT:    li a0, 255
+; RV64-NEXT:  .LBB7_4:
+; RV64-NEXT:    vid.v v8
+; RV64-NEXT:    vmsltu.vx v0, v8, a0
+; RV64-NEXT:    ret
+  %x = call <128 x i1> @llvm.mask.beforefirst(<128 x i1> %m)
+  ret <128 x i1> %x
+}
