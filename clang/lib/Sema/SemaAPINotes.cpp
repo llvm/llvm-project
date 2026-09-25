@@ -1166,6 +1166,9 @@ static void processExactAPINotes(
 void Sema::ProcessAPINotes(Decl *D) {
   if (!D)
     return;
+  // A parameter's notes come from its function's entry.
+  if (isa<ParmVarDecl>(D))
+    return;
   if (!APINotes.hasAPINotes())
     return;
   auto Readers = APINotes.findAPINotes(D->getLocation());

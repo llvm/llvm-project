@@ -4832,7 +4832,6 @@ Decl *SemaObjC::ActOnMethodDeclaration(
   for (unsigned I = 0; I < Sel.getNumArgs(); ++I) {
     ParmVarDecl *Param = ArgInfo[I];
     Param->setDeclContext(ObjCMethod);
-    SemaRef.ProcessAPINotes(Param);
     Params.push_back(Param);
   }
 
