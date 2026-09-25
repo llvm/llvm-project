@@ -84,8 +84,9 @@ void DiagnosticArgument::print(raw_ostream &os) const {
 
 /// Convert a Twine to a StringRef. Memory used for generating the StringRef is
 /// stored in 'strings'.
-static StringRef twineToStrRef(const Twine &val,
-                               std::vector<std::unique_ptr<char[]>> &strings) {
+static StringRef
+twineToStrRef(const Twine &val,
+              SmallVectorImpl<std::unique_ptr<char[]>> &strings) {
   // Allocate memory to hold this string.
   SmallString<64> data;
   auto strRef = val.toStringRef(data);
@@ -193,7 +194,7 @@ std::string Diagnostic::str() const {
 
 /// Converts each message part to a separate string.
 SmallVector<std::string> Diagnostic::strs() const {
-  SmallVector<std::string, 2> strs;
+  SmallVector<std::string> strs;
   size_t numMessageParts = messagePartEnds.size();
 
   // Include the current message part if there are no completed parts or if it

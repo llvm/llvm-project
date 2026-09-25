@@ -97,3 +97,126 @@ func.func @elementwise_access_regression(%arg0: i32, %arg2: tensor<32x1xf32>, %a
       }
       return
 }
+
+// -----
+
+#bias = affine_map<(d0, d1) -> (d0)>
+#transpose = affine_map<(d0, d1) -> (d1, d0)>
+
+// The two uses of %dst have the same permutation map. The projected map of
+// %bias does not participate in the conflict.
+// CHECK-LABEL: func @matching_permutation_maps_bufferize_inplace(
+//       CHECK:   linalg.generic
+//  CHECK-SAME:   {__inplace_operands_attr__ = ["true", "true", "true"]}
+func.func @matching_permutation_maps_bufferize_inplace(
+    %bias: tensor<16xf32>,
+    %dst: tensor<8x16xf32> {bufferization.writable = true})
+    -> tensor<8x16xf32> {
+  %0 = linalg.generic {
+      indexing_maps = [#bias, #transpose, #transpose],
+      iterator_types = ["parallel", "parallel"]}
+      ins(%bias, %dst : tensor<16xf32>, tensor<8x16xf32>)
+      outs(%dst : tensor<8x16xf32>) {
+    ^bb0(%bias_elem: f32, %old: f32, %out: f32):
+      %1 = arith.addf %old, %bias_elem : f32
+      linalg.yield %1 : f32
+    } -> tensor<8x16xf32>
+  return %0 : tensor<8x16xf32>
+}
+
+// -----
+
+#identity = affine_map<(d0, d1) -> (d0, d1)>
+#transpose = affine_map<(d0, d1) -> (d1, d0)>
+
+// CHECK-LABEL: func @mismatching_permutation_maps(
+//       CHECK:   linalg.generic
+//  CHECK-SAME:   {__inplace_operands_attr__ = ["true", "false"]}
+func.func @mismatching_permutation_maps(
+    %arg0: tensor<4x4xf32> {bufferization.writable = true})
+    -> tensor<4x4xf32> {
+  %0 = linalg.generic {
+      indexing_maps = [#transpose, #identity],
+      iterator_types = ["parallel", "parallel"]}
+      ins(%arg0 : tensor<4x4xf32>) outs(%arg0 : tensor<4x4xf32>) {
+    ^bb0(%in: f32, %out: f32):
+      %1 = arith.addf %in, %out : f32
+      linalg.yield %1 : f32
+    } -> tensor<4x4xf32>
+  return %0 : tensor<4x4xf32>
+}
+
+// -----
+
+#identity = affine_map<(d0, d1) -> (d0, d1)>
+#projected = affine_map<(d0, d1) -> (d1)>
+
+// Matching maps are insufficient when they are not permutations. Because
+// #projected drops d0, multiple iterations access the same element of %state.
+// CHECK-LABEL: func @reject_matching_projected_maps(
+//       CHECK:   linalg.generic
+//  CHECK-SAME:   {__inplace_operands_attr__ = ["true", "true", "false"]}
+func.func @reject_matching_projected_maps(
+    %source: tensor<4x4xf32>,
+    %state: tensor<4xf32> {bufferization.writable = true})
+    -> tensor<4xf32> {
+  %0 = linalg.generic {
+      indexing_maps = [#identity, #projected, #projected],
+      iterator_types = ["parallel", "parallel"]}
+      ins(%source, %state : tensor<4x4xf32>, tensor<4xf32>)
+      outs(%state : tensor<4xf32>) {
+    ^bb0(%source_elem: f32, %state_elem: f32, %out: f32):
+      %1 = arith.addf %source_elem, %state_elem : f32
+      linalg.yield %1 : f32
+    } -> tensor<4xf32>
+  return %0 : tensor<4xf32>
+}
+
+// -----
+
+#transpose = affine_map<(d0, d1) -> (d1, d0)>
+
+// This is intentionally not a semantic reduction. The reduction iterator
+// verifies that matching permutation maps are rejected unless all loops are
+// parallel.
+// CHECK-LABEL: func @reject_reduction_iterator_with_matching_permutation_maps(
+//       CHECK:   linalg.generic
+//  CHECK-SAME:   {__inplace_operands_attr__ = ["true", "false"]}
+func.func @reject_reduction_iterator_with_matching_permutation_maps(
+    %arg0: tensor<4x4xf32> {bufferization.writable = true})
+    -> tensor<4x4xf32> {
+  %0 = linalg.generic {
+      indexing_maps = [#transpose, #transpose],
+      iterator_types = ["parallel", "reduction"]}
+      ins(%arg0 : tensor<4x4xf32>) outs(%arg0 : tensor<4x4xf32>) {
+    ^bb0(%in: f32, %out: f32):
+      %1 = arith.addf %in, %out : f32
+      linalg.yield %1 : f32
+    } -> tensor<4x4xf32>
+  return %0 : tensor<4x4xf32>
+}
+
+// -----
+
+#sparse = #sparse_tensor.encoding<{
+  map = (d0, d1) -> (d0 : dense, d1 : compressed)
+}>
+#transpose = affine_map<(d0, d1) -> (d1, d0)>
+
+// CHECK-LABEL: func @matching_permutation_maps_with_sparse_operand(
+//       CHECK:   linalg.generic
+//  CHECK-SAME:   {__inplace_operands_attr__ = ["true", "false"]}
+func.func @matching_permutation_maps_with_sparse_operand(
+    %arg0: tensor<4x4xf32, #sparse> {bufferization.writable = true})
+    -> tensor<4x4xf32, #sparse> {
+  %0 = linalg.generic {
+      indexing_maps = [#transpose, #transpose],
+      iterator_types = ["parallel", "parallel"]}
+      ins(%arg0 : tensor<4x4xf32, #sparse>)
+      outs(%arg0 : tensor<4x4xf32, #sparse>) {
+    ^bb0(%in: f32, %out: f32):
+      %1 = arith.addf %in, %out : f32
+      linalg.yield %1 : f32
+    } -> tensor<4x4xf32, #sparse>
+  return %0 : tensor<4x4xf32, #sparse>
+}

@@ -1515,34 +1515,15 @@ bool SIFoldOperandsImpl::foldOperand(
       // Hack to allow 32-bit SGPRs to be folded into True16 instructions
       // Remove this if 16-bit SGPRs (i.e. SGPR_LO16) are added to the
       // VS_16RegClass
-      //
-      // Excerpt from AMDGPUGenRegisterInfoEnums.inc
-      // NoSubRegister, //0
-      // hi16, // 1
-      // lo16, // 2
-      // sub0, // 3
-      // ...
-      // sub1, // 11
-      // sub1_hi16, // 12
-      // sub1_lo16, // 13
-      static_assert(AMDGPU::sub1_hi16 == 12, "Subregister layout has changed");
       if (Size == 2 && TRI->isVGPR(*MRI, UseMI->getOperand(0).getReg()) &&
-          TRI->isSGPRReg(*MRI, UseReg)) {
-        // Produce the 32 bit subregister index to which the 16-bit subregister
-        // is aligned.
-        if (SubRegIdx > AMDGPU::sub1) {
-          LaneBitmask M = TRI->getSubRegIndexLaneMask(SubRegIdx);
-          M |= M.getLane(M.getHighestLane() - 1);
-          SmallVector<unsigned, 4> Indexes;
-          TRI->getCoveringSubRegIndexes(TRI->getRegClassForReg(*MRI, UseReg), M,
-                                        Indexes);
-          assert(Indexes.size() == 1 && "Expected one 32-bit subreg to cover");
-          SubRegIdx = Indexes[0];
-          // 32-bit registers do not have a sub0 index
-        } else if (TII->getOpSize(*UseMI, 1) == 4)
-          SubRegIdx = 0;
-        else
-          SubRegIdx = AMDGPU::sub0;
+          TRI->isSGPRReg(*MRI, UseReg) && SubRegIdx != AMDGPU::NoSubRegister) {
+        // SGPRs only have lo16 subregisters, so the value is in the low half
+        // of a 32-bit SGPR. Use that whole 32-bit SGPR instead.
+        unsigned Channel = TRI->getChannelFromSubReg(SubRegIdx);
+        const TargetRegisterClass *UseRC = TRI->getRegClassForReg(*MRI, UseReg);
+        SubRegIdx = TRI->getRegSizeInBits(*UseRC) == 32
+                        ? AMDGPU::NoSubRegister
+                        : SIRegisterInfo::getSubRegFromChannel(Channel);
       }
       UseMI->getOperand(1).setSubReg(SubRegIdx);
       UseMI->getOperand(1).setIsKill(false);

@@ -44,6 +44,7 @@ jobs:
             -DLLVM_ENABLE_PROJECTS=clang \
             -DLLVM_ENABLE_RUNTIMES="offload;openmp;libsycl" \
             -DLLVM_TARGETS_TO_BUILD="host;SPIRV" \
-            -DLLVM_INCLUDE_SPIRV_TOOLS_TESTS=ON
+            -DLLVM_INCLUDE_SPIRV_TOOLS_TESTS=ON \
+            -DLIBSYCL_ENABLE_WERROR=ON
 
           ninja -C build check-sycl

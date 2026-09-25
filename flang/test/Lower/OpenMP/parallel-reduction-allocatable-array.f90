@@ -38,7 +38,7 @@ end program
 ! CHECK:             %[[VAL_3:.*]] = arith.constant 0 : index
 ! CHECK:             %[[VAL_4:.*]]:3 = fir.box_dims %[[VAL_2]], %[[VAL_3]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
 ! CHECK:             %[[VAL_5:.*]] = fir.shape %[[VAL_4]]#1 : (index) -> !fir.shape<1>
-! CHECK:             %[[VAL_6:.*]] = fir.allocmem !fir.array<?xi32>, %[[VAL_4]]#1 {bindc_name = ".tmp", uniq_name = ""}
+! CHECK:             %[[VAL_6:.*]] = fir.allocmem !fir.array<?xi32>, %[[VAL_4]]#1 <{bindc_name = ".tmp", uniq_name = ""}>
 ! CHECK:             %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_6]](%[[VAL_5]]) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
 ! CHECK:             %[[C0:.*]] = arith.constant 0 : index
 ! CHECK:             %[[DIMS:.*]]:3 = fir.box_dims %[[VAL_2]], %[[C0]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
@@ -89,7 +89,7 @@ end program
 ! CHECK:           %[[VAL_6:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_7:.*]] = arith.cmpi sgt, %[[VAL_5]], %[[VAL_6]] : index
 ! CHECK:           %[[VAL_8:.*]] = arith.select %[[VAL_7]], %[[VAL_5]], %[[VAL_6]] : index
-! CHECK:           %[[VAL_9:.*]] = fir.allocmem !fir.array<?xi32>, %[[VAL_8]] {alignment = 64 : i64, fir.must_be_heap = true, uniq_name = "_QFEr.alloc"}
+! CHECK:           %[[VAL_9:.*]] = fir.allocmem !fir.array<?xi32>, %[[VAL_8]] <{alignment = 64 : i64, uniq_name = "_QFEr.alloc"}> {fir.must_be_heap = true}
 ! CHECK:           %[[VAL_10:.*]] = fir.shape %[[VAL_8]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_11:.*]] = fir.embox %[[VAL_9]](%[[VAL_10]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
 ! CHECK:           fir.store %[[VAL_11]] to %[[VAL_3]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>

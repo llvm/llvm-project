@@ -1,10 +1,10 @@
 [
   {
-    "lnt-machine": "macos-26.5-arm64-20260812",
-    "runner": ["self-hosted", "macOS", "26.5", "ARM64", "apple-runners"],
+    "lnt-machine": "macos-26.6.2-arm64-20260924",
+    "runner": ["self-hosted", "macOS", "26.6.2", "ARM64", "apple-runners"],
     "cxx": "clang++",
-    "xcode-version": "26.5",
-    "benchmark-suite-version": "8bb5e216937e6b541f351aa1637c67e85a43ada0",
+    "xcode-version": "26.6",
+    "benchmark-suite-version": "4ebb19efe952ded7f9d937731418baf3b28babd0",
     "cmake-cache": "libcxx/utils/ci/lnt/cmake/generic.cmake",
     "lit-params": ["std=c++26", "optimization=speed"],
     "coverage": {
@@ -16,11 +16,11 @@
     }
   },
   {
-    "lnt-machine": "macos-26.5-arm64-hardenedfast-20260821",
-    "runner": ["self-hosted", "macOS", "26.5", "ARM64", "apple-runners"],
+    "lnt-machine": "macos-26.6.2-arm64-hardenedfast-20260924",
+    "runner": ["self-hosted", "macOS", "26.6.2", "ARM64", "apple-runners"],
     "cxx": "clang++",
-    "xcode-version": "26.5",
-    "benchmark-suite-version": "8bb5e216937e6b541f351aa1637c67e85a43ada0",
+    "xcode-version": "26.6",
+    "benchmark-suite-version": "4ebb19efe952ded7f9d937731418baf3b28babd0",
     "cmake-cache": "libcxx/utils/ci/lnt/cmake/hardened-fast.cmake",
     "lit-params": ["std=c++26", "optimization=speed"],
     "coverage": {
@@ -32,10 +32,10 @@
     }
   },
   {
-    "lnt-machine": "linux-x86_64-20260812",
+    "lnt-machine": "linux-x86_64-20260924",
     "runner": "llvm-premerge-libcxx-runners",
     "cxx": "clang++-22",
-    "benchmark-suite-version": "8bb5e216937e6b541f351aa1637c67e85a43ada0",
+    "benchmark-suite-version": "4ebb19efe952ded7f9d937731418baf3b28babd0",
     "cmake-cache": "libcxx/utils/ci/lnt/cmake/generic.cmake",
     "lit-params": ["std=c++26", "optimization=speed"],
     "coverage": {

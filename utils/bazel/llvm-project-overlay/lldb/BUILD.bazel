@@ -159,7 +159,6 @@ expand_template(
             "#cmakedefine01 HAVE_PPOLL": "#define HAVE_PPOLL 0",
             "#cmakedefine01 HAVE_PROCESS_VM_READV": "#define HAVE_PROCESS_VM_READV 0",
             "#cmakedefine01 HAVE_SYS_EVENT_H": "#define HAVE_SYS_EVENT_H 1",
-            "#cmakedefine01 LLDB_ENABLE_LIBXML2": "#define LLDB_ENABLE_LIBXML2 1",
             "#cmakedefine01 LLDB_HAVE_EL_RFUNC_T": "#define LLDB_HAVE_EL_RFUNC_T 0",
         },
         "@platforms//os:linux": {
@@ -168,7 +167,6 @@ expand_template(
             "#cmakedefine01 HAVE_PPOLL": "#define HAVE_PPOLL 1",
             "#cmakedefine01 HAVE_PROCESS_VM_READV": "#define HAVE_PROCESS_VM_READV 1",
             "#cmakedefine01 HAVE_SYS_EVENT_H": "#define HAVE_SYS_EVENT_H 0",
-            "#cmakedefine01 LLDB_ENABLE_LIBXML2": "#define LLDB_ENABLE_LIBXML2 0",
             "#cmakedefine01 LLDB_HAVE_EL_RFUNC_T": "#define LLDB_HAVE_EL_RFUNC_T 1",
         },
         "@platforms//os:windows": {
@@ -183,10 +181,16 @@ expand_template(
             "#cmakedefine01 HAVE_PTSNAME_R": "#define HAVE_PTSNAME_R 0",
             "#cmakedefine01 HAVE_SYS_EVENT_H": "#define HAVE_SYS_EVENT_H 0",
             "#cmakedefine01 LLDB_EMBED_PYTHON_HOME": "#define LLDB_EMBED_PYTHON_HOME 1",
-            "#cmakedefine01 LLDB_ENABLE_LIBXML2": "#define LLDB_ENABLE_LIBXML2 0",
             "#cmakedefine01 LLDB_ENABLE_POSIX": "#define LLDB_ENABLE_POSIX 0",
             "#cmakedefine01 LLDB_ENABLE_TERMIOS": "#define LLDB_ENABLE_TERMIOS 0",
             "#cmakedefine01 LLDB_HAVE_EL_RFUNC_T": "#define LLDB_HAVE_EL_RFUNC_T 0",
+        },
+    }) | select({
+        "//third-party:llvm_libxml2_enabled": {
+            "#cmakedefine01 LLDB_ENABLE_LIBXML2": "#define LLDB_ENABLE_LIBXML2 1",
+        },
+        "//conditions:default": {
+            "#cmakedefine01 LLDB_ENABLE_LIBXML2": "#define LLDB_ENABLE_LIBXML2 0",
         },
     }) | select({
         ":curses_enabled": {
@@ -642,7 +646,6 @@ cc_library(
     linkopts = select({
         "@platforms//os:macos": [
             "-lcompression",
-            "-lxml2",
             "-Wl,-framework,CoreServices",
             "-Wl,-framework,Security",
         ],
@@ -672,6 +675,7 @@ cc_library(
         "//llvm:Support",
         "//llvm:TargetParser",
         "//llvm:config",
+        "//third-party:libxml2",
     ] + select({
         "@platforms//os:macos": [
             ":HostMacOSXObjCXX",

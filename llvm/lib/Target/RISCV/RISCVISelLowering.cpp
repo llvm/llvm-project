@@ -3392,7 +3392,7 @@ static bool useRVVForFixedLengthVectorVT(MVT VT,
 
   unsigned LMul = divideCeil(VT.getSizeInBits(), MinVLen);
   // Don't use RVV for types that don't fit.
-  if (LMul > Subtarget.getMaxLMULForFixedLengthVectors())
+  if (LMul > 8)
     return false;
 
   // TODO: Perhaps an artificial restriction, but worth having whilst getting
@@ -9557,7 +9557,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
         default:
           llvm_unreachable("Unexpected opcode");
         case ISD::SHL:
-          Opc = RISCVISD::PSHL;
+          Opc = RISCVISD::PSLL;
           break;
         case ISD::SRL:
           Opc = RISCVISD::PSRL;
@@ -12316,6 +12316,12 @@ static unsigned getRVPShiftOpcode(Intrinsic::ID IntNo) {
   default:
     llvm_unreachable(
         "Unexpected RISC-V packed saturating and rounding shift intrinsic");
+  case Intrinsic::riscv_psll:
+    return RISCVISD::PSLL;
+  case Intrinsic::riscv_psrl:
+    return RISCVISD::PSRL;
+  case Intrinsic::riscv_psra:
+    return RISCVISD::PSRA;
   case Intrinsic::riscv_pssha:
     return RISCVISD::PSSHA;
   case Intrinsic::riscv_psshar:
@@ -13149,6 +13155,9 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
 
     return DAG.getNode(Opc, DL, VT, Rs1, Rs2);
   }
+  case Intrinsic::riscv_psll:
+  case Intrinsic::riscv_psrl:
+  case Intrinsic::riscv_psra:
   case Intrinsic::riscv_pssha:
   case Intrinsic::riscv_psshar:
   case Intrinsic::riscv_psshl:
@@ -15484,7 +15493,10 @@ SDValue RISCVTargetLowering::lowerMaskedLoad(SDValue Op,
     // If index vector is an i8 vector and the element count exceeds 256, we
     // should change the element type of index vector to i16 to avoid
     // overflow.
-    if (IndexEltVT == MVT::i8 && VT.getVectorNumElements() > 256) {
+    uint64_t MaxEltCount = VT.getVectorMinNumElements();
+    if (VT.isScalableVector())
+      MaxEltCount *= Subtarget.getRealMaxVLen() / RISCV::RVVBitsPerBlock;
+    if (IndexEltVT == MVT::i8 && MaxEltCount > 256) {
       // FIXME: We need to do vector splitting manually for LMUL=8 cases.
       assert(getLMUL(IndexVT) != RISCVVType::LMUL_8);
       IndexVT = IndexVT.changeVectorElementType(MVT::i16);
@@ -17803,15 +17815,18 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       }
       return;
     }
+    case Intrinsic::riscv_psll:
+    case Intrinsic::riscv_psrl:
+    case Intrinsic::riscv_psra:
     case Intrinsic::riscv_pssha:
     case Intrinsic::riscv_psshar:
     case Intrinsic::riscv_psshl:
     case Intrinsic::riscv_psshlr: {
       MVT VT = N->getSimpleValueType(0);
-      if (!Subtarget.is64Bit() || VT != MVT::v2i16)
+      if (!Subtarget.is64Bit() || (VT != MVT::v4i8 && VT != MVT::v2i16))
         return;
 
-      MVT WideVT = MVT::v4i16;
+      EVT WideVT = VT == MVT::v4i8 ? MVT::v8i8 : MVT::v4i16;
       SDValue Op0 = DAG.getNode(ISD::CONCAT_VECTORS, DL, WideVT,
                                 N->getOperand(1), DAG.getUNDEF(VT));
       SDValue ShAmt = N->getOperand(2);
@@ -20516,9 +20531,7 @@ combineVectorSizedSetCCEquality(EVT VT, SDValue X, SDValue Y, ISD::CondCode CC,
   unsigned OpSize = OpVT.getSizeInBits();
   // The size should be larger than XLen and smaller than the maximum vector
   // size.
-  if (OpSize <= Subtarget.getXLen() ||
-      OpSize > Subtarget.getRealMinVLen() *
-                   Subtarget.getMaxLMULForFixedLengthVectors())
+  if (OpSize <= Subtarget.getXLen() || OpSize > Subtarget.getRealMinVLen() * 8)
     return SDValue();
 
   // Don't perform this combine if constructing the vector will be expensive.
@@ -27723,12 +27736,6 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
 
     if (Kind == "rnmi" && !Subtarget.hasStdExtSmrnmi())
       reportFatalUsageError("'rnmi' interrupt kind requires Srnmi extension");
-    const TargetFrameLowering *TFI = Subtarget.getFrameLowering();
-    if (Kind.starts_with("SiFive-CLIC-preemptible") && TFI->hasFP(MF))
-      Func.getContext().diagnose(DiagnosticInfoUnsupported{
-          Func,
-          "'SiFive-CLIC-preemptible' interrupt functions cannot have a frame "
-          "pointer"});
   }
 
   EVT PtrVT = getPointerTy(DAG.getDataLayout());

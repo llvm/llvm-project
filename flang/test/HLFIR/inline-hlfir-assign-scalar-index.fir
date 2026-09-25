@@ -30,7 +30,7 @@
 // CHECK:     hlfir.assign %{{.*}} to %{{.*}} : f32, !fir.ref<f32>
 // CHECK:   }
 // CHECK: } else {
-// CHECK:   %[[ALLOC:.*]] = fir.allocmem !fir.array<?xf32>, %{{.*}} {bindc_name = ".tmp", uniq_name = ""}
+// CHECK:   %[[ALLOC:.*]] = fir.allocmem !fir.array<?xf32>, %{{.*}} <{bindc_name = ".tmp", uniq_name = ""}>
 // CHECK:   %[[TEMP:.*]]:2 = hlfir.declare %[[ALLOC]](%{{.*}}) {uniq_name = ".tmp"}
 // CHECK:   fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} unordered {
 // CHECK:     hlfir.designate
