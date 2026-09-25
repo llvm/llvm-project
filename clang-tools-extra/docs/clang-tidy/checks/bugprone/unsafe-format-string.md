@@ -8,8 +8,8 @@ functions with unbounded `%s` specifiers that can cause buffer overflows.
 
 The check identifies calls to format string functions like `sprintf`, `scanf`,
 and their variants that use `%s` format specifiers without proper limits.
-This can lead to buffer overflow vulnerabilities when the input string is longer
-than the destination buffer.
+This can lead to buffer overflow vulnerabilities
+when the input string is longer than the destination buffer.
 
 ## Format Specifier Behavior
 
