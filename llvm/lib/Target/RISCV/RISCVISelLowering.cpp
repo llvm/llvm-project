@@ -9557,7 +9557,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
         default:
           llvm_unreachable("Unexpected opcode");
         case ISD::SHL:
-          Opc = RISCVISD::PSHL;
+          Opc = RISCVISD::PSLL;
           break;
         case ISD::SRL:
           Opc = RISCVISD::PSRL;
@@ -12316,6 +12316,12 @@ static unsigned getRVPShiftOpcode(Intrinsic::ID IntNo) {
   default:
     llvm_unreachable(
         "Unexpected RISC-V packed saturating and rounding shift intrinsic");
+  case Intrinsic::riscv_psll:
+    return RISCVISD::PSLL;
+  case Intrinsic::riscv_psrl:
+    return RISCVISD::PSRL;
+  case Intrinsic::riscv_psra:
+    return RISCVISD::PSRA;
   case Intrinsic::riscv_pssha:
     return RISCVISD::PSSHA;
   case Intrinsic::riscv_psshar:
@@ -13149,6 +13155,9 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
 
     return DAG.getNode(Opc, DL, VT, Rs1, Rs2);
   }
+  case Intrinsic::riscv_psll:
+  case Intrinsic::riscv_psrl:
+  case Intrinsic::riscv_psra:
   case Intrinsic::riscv_pssha:
   case Intrinsic::riscv_psshar:
   case Intrinsic::riscv_psshl:
@@ -17806,15 +17815,18 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       }
       return;
     }
+    case Intrinsic::riscv_psll:
+    case Intrinsic::riscv_psrl:
+    case Intrinsic::riscv_psra:
     case Intrinsic::riscv_pssha:
     case Intrinsic::riscv_psshar:
     case Intrinsic::riscv_psshl:
     case Intrinsic::riscv_psshlr: {
       MVT VT = N->getSimpleValueType(0);
-      if (!Subtarget.is64Bit() || VT != MVT::v2i16)
+      if (!Subtarget.is64Bit() || (VT != MVT::v4i8 && VT != MVT::v2i16))
         return;
 
-      MVT WideVT = MVT::v4i16;
+      EVT WideVT = VT == MVT::v4i8 ? MVT::v8i8 : MVT::v4i16;
       SDValue Op0 = DAG.getNode(ISD::CONCAT_VECTORS, DL, WideVT,
                                 N->getOperand(1), DAG.getUNDEF(VT));
       SDValue ShAmt = N->getOperand(2);

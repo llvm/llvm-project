@@ -2057,7 +2057,7 @@ def riscv_mulqr : RVSDNode<"MULQR", SDTIntBinOp, [SDNPCommutative]>;
 def SDT_RISCVPackedShift : SDTypeProfile<1, 2, [SDTCisVec<0>,
                                                 SDTCisSameAs<0, 1>,
                                                 SDTCisVT<2, XLenVT>]>;
-def riscv_pshl : RVSDNode<"PSHL", SDT_RISCVPackedShift>;
+def riscv_psll : RVSDNode<"PSLL", SDT_RISCVPackedShift>;
 def riscv_psrl : RVSDNode<"PSRL", SDT_RISCVPackedShift>;
 def riscv_psra : RVSDNode<"PSRA", SDT_RISCVPackedShift>;
 def riscv_pssha : RVSDNode<"PSSHA", SDT_RISCVPackedShift>;
@@ -2198,10 +2198,10 @@ class PatHorizontalMul<SDPatternOperator OpNode, RVInst Inst,
 
 // (rs1 << 1) + rs2
 class PatPSh1Add<RVInst Inst, ValueType vt>
-    : Pat<(vt (add (riscv_pshl (vt GPR:$rs1), (XLenVT 1)), (vt GPR:$rs2))),
+    : Pat<(vt (add (riscv_psll (vt GPR:$rs1), (XLenVT 1)), (vt GPR:$rs2))),
           (Inst GPR:$rs1, GPR:$rs2)>;
 class PatPSh1AddPair<RVInst Inst, ValueType vt>
-    : Pat<(vt (add (riscv_pshl (vt GPRPair:$rs1), (XLenVT 1)), (vt GPRPair:$rs2))),
+    : Pat<(vt (add (riscv_psll (vt GPRPair:$rs1), (XLenVT 1)), (vt GPRPair:$rs2))),
           (Inst GPRPair:$rs1, GPRPair:$rs2)>;
 
 // Vector sshlsat is custom-lowered to riscv_pssha before isel; saddsat(a, a)
@@ -2349,11 +2349,11 @@ let Predicates = [HasStdExtP] in {
   def : PatGprGpr<riscv_mulqr, PMULQR_H, XLenVecI16VT>;
 
   // 8-bit logical shift left/right patterns
-  def : PatGprImm<riscv_pshl, PSLLI_B, uimm3, XLenVecI8VT>;
+  def : PatGprImm<riscv_psll, PSLLI_B, uimm3, XLenVecI8VT>;
   def : PatGprImm<riscv_psrl, PSRLI_B, uimm3, XLenVecI8VT>;
 
   // 16-bit logical shift left/right patterns
-  def : PatGprImm<riscv_pshl, PSLLI_H, uimm4, XLenVecI16VT>;
+  def : PatGprImm<riscv_psll, PSLLI_H, uimm4, XLenVecI16VT>;
   def : PatGprImm<riscv_psrl, PSRLI_H, uimm4, XLenVecI16VT>;
 
   // 8-bit arithmetic shift right patterns
@@ -2377,14 +2377,14 @@ let Predicates = [HasStdExtP] in {
   def : PatGprImm<riscv_usati, PUSATI_H, usati_width4, XLenVecI16VT>;
 
   // 8-bit logical shift left/right
-  def : PatGprShiftMask<riscv_pshl, PSLL_BS, shiftMask32, XLenVecI8VT>;
+  def : PatGprShiftMask<riscv_psll, PSLL_BS, shiftMask32, XLenVecI8VT>;
   def : PatGprShiftMask<riscv_psrl, PSRL_BS, shiftMask32, XLenVecI8VT>;
 
   // 8-bit arithmetic shift left/right
   def : PatGprShiftMask<riscv_psra, PSRA_BS, shiftMask32, XLenVecI8VT>;
 
   // 16-bit logical shift left/right
-  def : PatGprShiftMask<riscv_pshl, PSLL_HS, shiftMask32, XLenVecI16VT>;
+  def : PatGprShiftMask<riscv_psll, PSLL_HS, shiftMask32, XLenVecI16VT>;
   def : PatGprShiftMask<riscv_psrl, PSRL_HS, shiftMask32, XLenVecI16VT>;
 
   // 16-bit arithmetic shift left/right
@@ -2859,15 +2859,15 @@ let append Predicates = [IsRV32] in {
   def : PatGprPairGprPair<abdu, PABDU_DH, v4i16>;
 
   // 8-bit logical shift left/right patterns
-  def : PatGprPairImm<riscv_pshl, PSLLI_DB, uimm3, v8i8>;
+  def : PatGprPairImm<riscv_psll, PSLLI_DB, uimm3, v8i8>;
   def : PatGprPairImm<riscv_psrl, PSRLI_DB, uimm3, v8i8>;
 
   // 16-bit logical shift left/right patterns
-  def : PatGprPairImm<riscv_pshl, PSLLI_DH, uimm4, v4i16>;
+  def : PatGprPairImm<riscv_psll, PSLLI_DH, uimm4, v4i16>;
   def : PatGprPairImm<riscv_psrl, PSRLI_DH, uimm4, v4i16>;
 
   // 32-bit logical shift left/right patterns
-  def : PatGprPairImm<riscv_pshl, PSLLI_DW, uimm5, v2i32>;
+  def : PatGprPairImm<riscv_psll, PSLLI_DW, uimm5, v2i32>;
   def : PatGprPairImm<riscv_psrl, PSRLI_DW, uimm5, v2i32>;
 
   // 8-bit arithmetic shift right patterns
@@ -2908,21 +2908,21 @@ let append Predicates = [IsRV32] in {
   def : PatGprPairImm<riscv_usati, PUSATI_DW, usati_width5, v2i32>;
 
   // 8-bit logical shift left/right
-  def : PatGprPairShiftMask<riscv_pshl, PSLL_DBS, shiftMask32, v8i8>;
+  def : PatGprPairShiftMask<riscv_psll, PSLL_DBS, shiftMask32, v8i8>;
   def : PatGprPairShiftMask<riscv_psrl, PSRL_DBS, shiftMask32, v8i8>;
 
   // 8-bit arithmetic shift left/right
   def : PatGprPairShiftMask<riscv_psra, PSRA_DBS, shiftMask32, v8i8>;
 
   // 16-bit logical shift left/right
-  def : PatGprPairShiftMask<riscv_pshl, PSLL_DHS, shiftMask32, v4i16>;
+  def : PatGprPairShiftMask<riscv_psll, PSLL_DHS, shiftMask32, v4i16>;
   def : PatGprPairShiftMask<riscv_psrl, PSRL_DHS, shiftMask32, v4i16>;
 
   // 16-bit arithmetic shift left/right
   def : PatGprPairShiftMask<riscv_psra, PSRA_DHS, shiftMask32, v4i16>;
 
   // 32-bit logical shift left/right
-  def : PatGprPairShiftMask<riscv_pshl, PSLL_DWS, shiftMask32, v2i32>;
+  def : PatGprPairShiftMask<riscv_psll, PSLL_DWS, shiftMask32, v2i32>;
   def : PatGprPairShiftMask<riscv_psrl, PSRL_DWS, shiftMask32, v2i32>;
 
   // 32-bit arithmetic shift left/right
@@ -3353,7 +3353,7 @@ let append Predicates = [IsRV64] in {
             (PM2SUBA_H GPR:$rd, GPR:$rs1, GPR:$rs2)>;
 
   // 32-bit logical shift left/right patterns
-  def : PatGprImm<riscv_pshl, PSLLI_W, uimm5, v2i32>;
+  def : PatGprImm<riscv_psll, PSLLI_W, uimm5, v2i32>;
   def : PatGprImm<riscv_psrl, PSRLI_W, uimm5, v2i32>;
 
   // 32-bit arithmetic shift left/right patterns
@@ -3374,7 +3374,7 @@ let append Predicates = [IsRV64] in {
   def : PatGprImm<riscv_usati, PUSATI_W, usati_width5, v2i32>;
 
   // 32-bit logical shift left/right
-  def : PatGprShiftMask<riscv_pshl, PSLL_WS, shiftMask32, v2i32>;
+  def : PatGprShiftMask<riscv_psll, PSLL_WS, shiftMask32, v2i32>;
   def : PatGprShiftMask<riscv_psrl, PSRL_WS, shiftMask32, v2i32>;
 
   // 32-bit arithmetic shift left/right
