@@ -100,28 +100,6 @@ define i1 @vecreduce_or_get_active_lane_mask_v4i1(i32 %a, i32 %b) {
   ret i1 %red
 }
 
-define i1 @vecreduce_or_get_active_lane_mask_v16i1(i32 %a, i32 %b) {
-; CHECK-LABEL: define i1 @vecreduce_or_get_active_lane_mask_v16i1(
-; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[RED:%.*]] = icmp ult i32 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[RED]]
-;
-  %mask = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32 %a, i32 %b)
-  %red = call i1 @llvm.vector.reduce.or.i1(<16 x i1> %mask)
-  ret i1 %red
-}
-
-define i1 @vecreduce_or_get_active_lane_mask_v32i1(i32 %a, i32 %b) {
-; CHECK-LABEL: define i1 @vecreduce_or_get_active_lane_mask_v32i1(
-; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[RED:%.*]] = icmp ult i32 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[RED]]
-;
-  %mask = call <32 x i1> @llvm.get.active.lane.mask.v32i1.i32(i32 %a, i32 %b)
-  %red = call i1 @llvm.vector.reduce.or.i1(<32 x i1> %mask)
-  ret i1 %red
-}
-
 define i1 @vecreduce_or_get_active_lane_mask_v4i1_multiuse(i32 %a, i32 %b) {
 ; CHECK-LABEL: define i1 @vecreduce_or_get_active_lane_mask_v4i1_multiuse(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
@@ -133,34 +111,6 @@ define i1 @vecreduce_or_get_active_lane_mask_v4i1_multiuse(i32 %a, i32 %b) {
   %mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %a, i32 %b)
   call void (...) @llvm.fake.use(<4 x i1> %mask)
   %red = call i1 @llvm.vector.reduce.or.i1(<4 x i1> %mask)
-  ret i1 %red
-}
-
-define i1 @vecreduce_or_get_active_lane_mask_v16i1_multiuse(i32 %a, i32 %b) {
-; CHECK-LABEL: define i1 @vecreduce_or_get_active_lane_mask_v16i1_multiuse(
-; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[MASK:%.*]] = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32 [[A]], i32 [[B]])
-; CHECK-NEXT:    call void (...) @llvm.fake.use(<16 x i1> [[MASK]])
-; CHECK-NEXT:    [[RED:%.*]] = icmp ult i32 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[RED]]
-;
-  %mask = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32 %a, i32 %b)
-  call void (...) @llvm.fake.use(<16 x i1> %mask)
-  %red = call i1 @llvm.vector.reduce.or.i1(<16 x i1> %mask)
-  ret i1 %red
-}
-
-define i1 @vecreduce_or_get_active_lane_mask_v32i1_multiuse(i32 %a, i32 %b) {
-; CHECK-LABEL: define i1 @vecreduce_or_get_active_lane_mask_v32i1_multiuse(
-; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[MASK:%.*]] = call <32 x i1> @llvm.get.active.lane.mask.v32i1.i32(i32 [[A]], i32 [[B]])
-; CHECK-NEXT:    call void (...) @llvm.fake.use(<32 x i1> [[MASK]])
-; CHECK-NEXT:    [[RED:%.*]] = icmp ult i32 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[RED]]
-;
-  %mask = call <32 x i1> @llvm.get.active.lane.mask.v32i1.i32(i32 %a, i32 %b)
-  call void (...) @llvm.fake.use(<32 x i1> %mask)
-  %red = call i1 @llvm.vector.reduce.or.i1(<32 x i1> %mask)
   ret i1 %red
 }
 

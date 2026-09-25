@@ -3590,7 +3590,7 @@ Instruction *InstCombinerImpl::foldICmpBitCast(ICmpInst &Cmp) {
   Value *Upper, *Lower;
   if (match(BCSrcOp, m_Intrinsic<Intrinsic::get_active_lane_mask>(
                          m_Value(Lower), m_Value(Upper))) &&
-      match(Op1, m_Zero())) {
+      match(Op1, m_Zero()) && DstType->isIntegerTy()) {
     if (Pred == ICmpInst::ICMP_NE)
       return new ICmpInst(ICmpInst::ICMP_ULT, Lower, Upper);
     if (Pred == ICmpInst::ICMP_EQ)
