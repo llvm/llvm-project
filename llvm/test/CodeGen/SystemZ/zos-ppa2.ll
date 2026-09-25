@@ -21,7 +21,7 @@
 ; CHECK:  DC XL2'0000'
 ; CHECK: L#DVS DS 0H
 ; CHECK:  DC XL14'F1F9F7F0F0F1F0F1F0F0F0F0F0F0'
-; CHECK:  DC XL6'{{((F[[:digit:]]){6})}}'
+; CHECK:  DC XL6'F0F9F0F8F0F7'
 ; CHECK:  DC XL2'0000'
 
 
@@ -41,8 +41,11 @@
 ; CHECK:  DC XL2'001E'
 ; CHECK:  DC XL30'D3D3E5D4404040404040{{([[:xdigit:]]{8})}}F1F9F7F0F0F1F0F1F0F0F0F0F0F0F0F0'
 
-!llvm.module.flags = !{!0}
+!llvm.module.flags = !{!0, !1, !2, !3}
 !0 = !{i32 1, !"zos_le_char_mode", !"MODE"}
+!1 = !{i32 2, !"zos_product_major_version", i32 9}
+!2 = !{i32 2, !"zos_product_minor_version", i32 8}
+!3 = !{i32 2, !"zos_product_patchlevel", i32 7}
 
 define void @void_test() {
 entry:
