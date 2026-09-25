@@ -69,6 +69,14 @@ namespace detail {
 void appendAttributeProperty(llvm::SmallVectorImpl<NamedAttribute> &attrs,
                              StringRef name, Attribute attr);
 
+/// Route legacy builder attributes to either the operation's properties or
+/// its discardable attribute dictionary. The callback handles conversion and
+/// diagnostics for the operation-specific properties.
+void splitPropertiesAndDiscardableAttributes(
+    OperationState &state, ArrayRef<NamedAttribute> attributes,
+    ArrayRef<StringRef> inherentNames,
+    llvm::function_ref<LogicalResult(DictionaryAttr)> setProperties);
+
 /// Assign a generated attribute-backed property after checking its type.
 /// Keep the conversion out of each operation's generated property setter.
 template <typename AttrT>

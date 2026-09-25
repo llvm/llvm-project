@@ -2729,14 +2729,49 @@ static void genPropDictPrinter(OperationFormat &fmt, Operator &op,
 /// Generate the printer for the 'attr-dict' directive.
 static void genAttrDictPrinter(OperationFormat &fmt, Operator &op,
                                MethodBody &body, bool withKeyword) {
-  body << "  ::llvm::SmallVector<::llvm::StringRef, 2> elidedAttrs;\n";
+  // TODO: Remove the non-strict path when strict properties in assembly
+  // formats are always enabled.
+  if (fmt.useStrictPropertiesInAssemblyFormat) {
+    // Inherent attributes are printed by their bindings or prop-dict.
+    body << "  _odsPrinter.printOptionalAttrDict"
+         << (withKeyword ? "WithKeyword" : "")
+         << "((*this)->getDiscardableAttrDictionary().getValue());\n";
+    return;
+  }
 
-  genVariadicSegmentElision(fmt, op, body, "elidedAttrs");
-
+  SmallVector<StringRef> fixedElidedAttrs;
+  if (!fmt.allOperands &&
+      op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments"))
+    fixedElidedAttrs.push_back("operandSegmentSizes");
+  if (!fmt.allResultTypes &&
+      op.getTrait("::mlir::OpTrait::AttrSizedResultSegments"))
+    fixedElidedAttrs.push_back("resultSegmentSizes");
   for (StringRef key : fmt.inferredAttributes.keys())
-    body << "  elidedAttrs.push_back(\"" << key << "\");\n";
+    fixedElidedAttrs.push_back(key);
   for (const NamedAttribute *attr : fmt.usedAttributes)
-    body << "  elidedAttrs.push_back(\"" << attr->name << "\");\n";
+    fixedElidedAttrs.push_back(attr->name);
+
+  bool hasConditionalElision =
+      llvm::any_of(op.getAttributes(), [&](const NamedAttribute &namedAttr) {
+        return !fmt.usedAttributes.contains(&namedAttr) &&
+               !namedAttr.attr.isDerivedAttr() &&
+               namedAttr.attr.hasDefaultValue();
+      });
+  if (hasConditionalElision) {
+    body << "  ::llvm::SmallVector<::llvm::StringRef, 2> elidedAttrs = {";
+    llvm::interleaveComma(fixedElidedAttrs, body, [&](StringRef name) {
+      body << "\"" << name << "\"";
+    });
+    body << "};\n";
+  } else if (fixedElidedAttrs.empty()) {
+    body << "  ::llvm::ArrayRef<::llvm::StringRef> elidedAttrs;\n";
+  } else {
+    body << "  static constexpr ::llvm::StringRef elidedAttrs[] = {";
+    llvm::interleaveComma(fixedElidedAttrs, body, [&](StringRef name) {
+      body << "\"" << name << "\"";
+    });
+    body << "};\n";
+  }
 
   // Add code to check attributes for equality with their default values.
   // Default-valued attributes will not be printed when their value matches the
@@ -2785,12 +2820,12 @@ static void genAttrDictPrinter(OperationFormat &fmt, Operator &op,
 /// the previous element was a punctuation literal.
 static void genLiteralPrinter(StringRef value, MethodBody &body,
                               bool &shouldEmitSpace, bool &lastWasPunctuation) {
-  body << "  _odsPrinter";
+  body << "  _odsPrinter << \"";
 
   // Don't insert a space for certain punctuation.
   if (shouldEmitSpace && shouldEmitSpaceBefore(value, lastWasPunctuation))
-    body << " << ' '";
-  body << " << \"" << value << "\";\n";
+    body << ' ';
+  body << value << "\";\n";
 
   // Insert a space after certain literals.
   shouldEmitSpace =
@@ -3349,8 +3384,10 @@ void OperationFormat::genElementPrinter(FormatElement *element,
 }
 
 void OperationFormat::genPrinter(Operator &op, OpClass &opClass) {
+  // Printing is not performance sensitive. LLVM_ATTRIBUTE_MINSIZE reduces
+  // binary size and compiler work for printers generated for every operation.
   auto *method = opClass.addMethod(
-      "void", "print",
+      "LLVM_ATTRIBUTE_MINSIZE void", "print",
       MethodParameter("::mlir::OpAsmPrinter &", "_odsPrinter"));
   auto &body = method->body();
 
