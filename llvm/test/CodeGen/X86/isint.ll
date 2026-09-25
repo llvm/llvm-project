@@ -20,10 +20,25 @@ define i32 @isint_return(double %d) nounwind {
 ;
 ; X64-SSE2-LABEL: isint_return:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    cvttpd2dq %xmm0, %xmm1
-; X64-SSE2-NEXT:    cvtdq2pd %xmm1, %xmm1
-; X64-SSE2-NEXT:    cmpeqsd %xmm0, %xmm1
-; X64-SSE2-NEXT:    movq %xmm1, %rax
+; X64-SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [NaN,NaN]
+; X64-SSE2-NEXT:    movdqa %xmm0, %xmm2
+; X64-SSE2-NEXT:    pand %xmm1, %xmm2
+; X64-SSE2-NEXT:    movq %xmm2, %rax
+; X64-SSE2-NEXT:    movabsq $4841369599423283199, %rcx # imm = 0x432FFFFFFFFFFFFF
+; X64-SSE2-NEXT:    movdqa %xmm0, %xmm3
+; X64-SSE2-NEXT:    cmpq %rcx, %rax
+; X64-SSE2-NEXT:    jg .LBB0_2
+; X64-SSE2-NEXT:  # %bb.1:
+; X64-SSE2-NEXT:    cvttsd2si %xmm2, %rax
+; X64-SSE2-NEXT:    xorps %xmm2, %xmm2
+; X64-SSE2-NEXT:    cvtsi2sd %rax, %xmm2
+; X64-SSE2-NEXT:    andpd %xmm1, %xmm2
+; X64-SSE2-NEXT:    pandn %xmm0, %xmm1
+; X64-SSE2-NEXT:    por %xmm2, %xmm1
+; X64-SSE2-NEXT:    movdqa %xmm1, %xmm3
+; X64-SSE2-NEXT:  .LBB0_2:
+; X64-SSE2-NEXT:    cmpeqsd %xmm3, %xmm0
+; X64-SSE2-NEXT:    movq %xmm0, %rax
 ; X64-SSE2-NEXT:    andl $1, %eax
 ; X64-SSE2-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-SSE2-NEXT:    retq
@@ -62,20 +77,46 @@ define i32 @isint_return(double %d) nounwind {
 define i32 @isint_float_return(float %f) nounwind {
 ; X86-LABEL: isint_float_return:
 ; X86:       # %bb.0:
-; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-NEXT:    cvttps2dq %xmm0, %xmm1
-; X86-NEXT:    cvtdq2ps %xmm1, %xmm1
-; X86-NEXT:    cmpeqss %xmm0, %xmm1
-; X86-NEXT:    movd %xmm1, %eax
+; X86-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    movdqa {{.*#+}} xmm1 = [NaN,NaN,NaN,NaN]
+; X86-NEXT:    movdqa %xmm0, %xmm2
+; X86-NEXT:    pand %xmm1, %xmm2
+; X86-NEXT:    movd %xmm2, %eax
+; X86-NEXT:    cmpl $1325400064, %eax # imm = 0x4F000000
+; X86-NEXT:    movdqa %xmm0, %xmm3
+; X86-NEXT:    jge .LBB1_2
+; X86-NEXT:  # %bb.1:
+; X86-NEXT:    cvttps2dq %xmm2, %xmm2
+; X86-NEXT:    cvtdq2ps %xmm2, %xmm2
+; X86-NEXT:    andps %xmm1, %xmm2
+; X86-NEXT:    pandn %xmm0, %xmm1
+; X86-NEXT:    por %xmm2, %xmm1
+; X86-NEXT:    movdqa %xmm1, %xmm3
+; X86-NEXT:  .LBB1_2:
+; X86-NEXT:    cmpeqss %xmm0, %xmm3
+; X86-NEXT:    movd %xmm3, %eax
 ; X86-NEXT:    andl $1, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: isint_float_return:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    cvttps2dq %xmm0, %xmm1
-; X64-SSE2-NEXT:    cvtdq2ps %xmm1, %xmm1
-; X64-SSE2-NEXT:    cmpeqss %xmm0, %xmm1
-; X64-SSE2-NEXT:    movd %xmm1, %eax
+; X64-SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [NaN,NaN,NaN,NaN]
+; X64-SSE2-NEXT:    movdqa %xmm0, %xmm2
+; X64-SSE2-NEXT:    pand %xmm1, %xmm2
+; X64-SSE2-NEXT:    movd %xmm2, %eax
+; X64-SSE2-NEXT:    movdqa %xmm0, %xmm3
+; X64-SSE2-NEXT:    cmpl $1325400064, %eax # imm = 0x4F000000
+; X64-SSE2-NEXT:    jge .LBB1_2
+; X64-SSE2-NEXT:  # %bb.1:
+; X64-SSE2-NEXT:    cvttps2dq %xmm2, %xmm2
+; X64-SSE2-NEXT:    cvtdq2ps %xmm2, %xmm2
+; X64-SSE2-NEXT:    andps %xmm1, %xmm2
+; X64-SSE2-NEXT:    pandn %xmm0, %xmm1
+; X64-SSE2-NEXT:    por %xmm2, %xmm1
+; X64-SSE2-NEXT:    movdqa %xmm1, %xmm3
+; X64-SSE2-NEXT:  .LBB1_2:
+; X64-SSE2-NEXT:    cmpeqss %xmm3, %xmm0
+; X64-SSE2-NEXT:    movd %xmm0, %eax
 ; X64-SSE2-NEXT:    andl $1, %eax
 ; X64-SSE2-NEXT:    retq
 ;
@@ -126,16 +167,31 @@ define void @isint_branch(double %d) nounwind {
 ;
 ; X64-SSE2-LABEL: isint_branch:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    cvttpd2dq %xmm0, %xmm1
-; X64-SSE2-NEXT:    cvtdq2pd %xmm1, %xmm1
-; X64-SSE2-NEXT:    ucomisd %xmm1, %xmm0
-; X64-SSE2-NEXT:    jne .LBB2_2
-; X64-SSE2-NEXT:    jp .LBB2_2
-; X64-SSE2-NEXT:  # %bb.1: # %true
+; X64-SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [NaN,NaN]
+; X64-SSE2-NEXT:    movdqa %xmm0, %xmm2
+; X64-SSE2-NEXT:    pand %xmm1, %xmm2
+; X64-SSE2-NEXT:    movq %xmm2, %rax
+; X64-SSE2-NEXT:    movabsq $4841369599423283199, %rcx # imm = 0x432FFFFFFFFFFFFF
+; X64-SSE2-NEXT:    movdqa %xmm0, %xmm3
+; X64-SSE2-NEXT:    cmpq %rcx, %rax
+; X64-SSE2-NEXT:    jg .LBB2_2
+; X64-SSE2-NEXT:  # %bb.1:
+; X64-SSE2-NEXT:    cvttsd2si %xmm2, %rax
+; X64-SSE2-NEXT:    xorps %xmm2, %xmm2
+; X64-SSE2-NEXT:    cvtsi2sd %rax, %xmm2
+; X64-SSE2-NEXT:    andpd %xmm1, %xmm2
+; X64-SSE2-NEXT:    pandn %xmm0, %xmm1
+; X64-SSE2-NEXT:    por %xmm2, %xmm1
+; X64-SSE2-NEXT:    movdqa %xmm1, %xmm3
+; X64-SSE2-NEXT:  .LBB2_2:
+; X64-SSE2-NEXT:    ucomisd %xmm3, %xmm0
+; X64-SSE2-NEXT:    jne .LBB2_4
+; X64-SSE2-NEXT:    jp .LBB2_4
+; X64-SSE2-NEXT:  # %bb.3: # %true
 ; X64-SSE2-NEXT:    pushq %rax
 ; X64-SSE2-NEXT:    callq foo@PLT
 ; X64-SSE2-NEXT:    popq %rax
-; X64-SSE2-NEXT:  .LBB2_2: # %false
+; X64-SSE2-NEXT:  .LBB2_4: # %false
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-SSE42-LABEL: isint_branch:

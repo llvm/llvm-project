@@ -632,6 +632,11 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f32, Expand);
 
     for (auto VT : { MVT::f32, MVT::f64 }) {
+      if (VT == MVT::f32 || Subtarget.is64Bit()) {
+        setOperationAction(ISD::FTRUNC, VT, Custom);
+        setOperationAction(ISD::FROUND, VT, Custom);
+      }
+
       // Use ANDPD to simulate FABS.
       setOperationAction(ISD::FABS, VT, Custom);
 
@@ -1095,6 +1100,13 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
     for (auto VT : { MVT::f64, MVT::v4f32, MVT::v2f64 })
       SetFPMinMaxAction(VT);
+
+    for (auto VT : { MVT::v4f32, MVT::v2f64 }) {
+      if (VT == MVT::v4f32 || Subtarget.is64Bit()) {
+        setOperationAction(ISD::FTRUNC, VT, Custom);
+        setOperationAction(ISD::FROUND, VT, Custom);
+      }
+    }
 
     setOperationAction(ISD::MUL,                MVT::v2i8,  Custom);
     setOperationAction(ISD::MUL,                MVT::v4i8,  Custom);
@@ -23178,6 +23190,51 @@ SDValue X86TargetLowering::lowerFaddFsub(SDValue Op, SelectionDAG &DAG) const {
   return lowerAddSubToHorizontalOp(Op, SDLoc(Op), DAG, Subtarget);
 }
 
+static SDValue lowerFTRUNC_FROUND_SSE2(SDValue Op, SelectionDAG &DAG) {
+  SDLoc DL(Op);
+  SDValue N0 = Op.getOperand(0);
+  MVT VT = Op.getSimpleValueType();
+  bool IsRound = Op.getOpcode() == ISD::FROUND;
+
+  SDValue Abs = DAG.getNode(ISD::FABS, DL, VT, N0);
+  SDValue AbsBiased = Abs;
+  if (IsRound) {
+    const fltSemantics &Sem = VT.getFltSemantics();
+    APFloat Bias = APFloat(0.5f);
+    bool Ignored;
+    Bias.convert(Sem, APFloat::rmNearestTiesToEven, &Ignored);
+    Bias.next(/*nextDown*/true);
+    AbsBiased = DAG.getNode(ISD::FADD, DL, VT, Abs, DAG.getConstantFP(Bias, DL, VT));
+  }
+
+  MVT IntVT;
+  if (VT == MVT::f32) IntVT = MVT::i32;
+  else if (VT == MVT::f64) IntVT = MVT::i64;
+  else if (VT == MVT::v4f32) IntVT = MVT::v4i32;
+  else if (VT == MVT::v2f64) IntVT = MVT::v2i64;
+  else llvm_unreachable("Unexpected type");
+
+  SDValue AbsInt = DAG.getBitcast(IntVT, Abs);
+
+  SDValue Threshold;
+  if (VT.getScalarType() == MVT::f32) {
+    Threshold = DAG.getConstant(0x4EFFFFFF, DL, IntVT);
+  } else {
+    Threshold = DAG.getConstant(0x432FFFFFFFFFFFFFULL, DL, IntVT);
+  }
+
+  EVT CCVT = DAG.getTargetLoweringInfo().getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), IntVT);
+  SDValue IsLarge = DAG.getSetCC(DL, CCVT, AbsInt, Threshold, ISD::SETGT);
+
+  SDValue TruncInt = DAG.getNode(ISD::FP_TO_SINT, DL, IntVT, AbsBiased);
+  SDValue AbsTrunc = DAG.getNode(ISD::SINT_TO_FP, DL, VT, TruncInt);
+
+  SDValue Trunc = DAG.getNode(ISD::FCOPYSIGN, DL, VT, AbsTrunc, N0);
+
+  unsigned SelOpc = VT.isVector() ? ISD::VSELECT : ISD::SELECT;
+  return DAG.getNode(SelOpc, DL, VT, IsLarge, N0, Trunc);
+}
+
 /// ISD::FROUND is defined to round to nearest with ties rounding away from 0.
 /// This mode isn't supported in hardware on X86. But as long as we aren't
 /// compiling with trapping math, we can emulate this with
@@ -34849,7 +34906,16 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::STORE:              return LowerStore(Op, Subtarget, DAG);
   case ISD::FADD:
   case ISD::FSUB:               return lowerFaddFsub(Op, DAG);
-  case ISD::FROUND:             return LowerFROUND(Op, DAG);
+  case ISD::FTRUNC:
+  case ISD::FROUND: {
+    MVT VT = Op.getSimpleValueType();
+    if (Subtarget.hasSSE2() && !Subtarget.hasSSE41() &&
+        (VT == MVT::f32 || VT == MVT::v4f32 || Subtarget.is64Bit()))
+      return lowerFTRUNC_FROUND_SSE2(Op, DAG);
+    if (Op.getOpcode() == ISD::FROUND)
+      return LowerFROUND(Op, DAG);
+    return SDValue();
+  }
   case ISD::FABS:
   case ISD::FNEG:               return LowerFABSorFNEG(Op, DAG);
   case ISD::FCOPYSIGN:          return LowerFCOPYSIGN(Op, DAG);

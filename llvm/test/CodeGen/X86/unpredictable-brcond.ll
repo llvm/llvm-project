@@ -80,15 +80,34 @@ false:
 define void @isint_branch(double %d) nounwind {
   ; CHECK-LABEL: name: isint_branch
   ; CHECK: bb.0 (%ir-block.0):
-  ; CHECK-NEXT:   successors: %bb.1(0x50000000), %bb.2(0x30000000)
+  ; CHECK-NEXT:   successors: %bb.3(0x40000000), %bb.4(0x40000000)
   ; CHECK-NEXT:   liveins: $xmm0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:fr64 = COPY $xmm0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vr128 = COPY [[COPY]]
-  ; CHECK-NEXT:   [[CVTTPD2DQrr:%[0-9]+]]:vr128 = nofpexcept CVTTPD2DQrr killed [[COPY1]], implicit $mxcsr
-  ; CHECK-NEXT:   [[CVTDQ2PDrr:%[0-9]+]]:vr128 = CVTDQ2PDrr killed [[CVTTPD2DQrr]]
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:fr64 = COPY killed [[CVTDQ2PDrr]]
-  ; CHECK-NEXT:   nofpexcept UCOMISDrr [[COPY]], killed [[COPY2]], implicit-def $eflags, implicit $mxcsr
+  ; CHECK-NEXT:   [[MOVAPDrm:%[0-9]+]]:vr128 = MOVAPDrm $rip, 1, $noreg, %const.0, $noreg :: (load (s128) from constant-pool)
+  ; CHECK-NEXT:   [[PANDNrr:%[0-9]+]]:vr128 = PANDNrr [[MOVAPDrm]], [[COPY1]]
+  ; CHECK-NEXT:   [[PANDrr:%[0-9]+]]:vr128 = PANDrr [[COPY1]], [[MOVAPDrm]]
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:fr64 = COPY killed [[PANDrr]]
+  ; CHECK-NEXT:   [[CVTTSD2SI64rr:%[0-9]+]]:gr64 = nofpexcept CVTTSD2SI64rr [[COPY2]], implicit $mxcsr
+  ; CHECK-NEXT:   [[CVTSI642SDrr:%[0-9]+]]:fr64 = nofpexcept CVTSI642SDrr killed [[CVTTSD2SI64rr]], implicit $mxcsr
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:vr128 = COPY killed [[CVTSI642SDrr]]
+  ; CHECK-NEXT:   [[PANDrr1:%[0-9]+]]:vr128 = PANDrr [[COPY3]], [[MOVAPDrm]]
+  ; CHECK-NEXT:   [[PORrr:%[0-9]+]]:vr128 = PORrr [[PANDrr1]], killed [[PANDNrr]]
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:fr64 = COPY killed [[PORrr]]
+  ; CHECK-NEXT:   [[MOVSDto64rr:%[0-9]+]]:gr64 = MOVSDto64rr [[COPY2]]
+  ; CHECK-NEXT:   [[MOV64ri:%[0-9]+]]:gr64 = MOV64ri 4841369599423283199
+  ; CHECK-NEXT:   [[SUB64rr:%[0-9]+]]:gr64 = SUB64rr [[MOVSDto64rr]], killed [[MOV64ri]], implicit-def $eflags
+  ; CHECK-NEXT:   JCC_1 %bb.4, 15, implicit $eflags
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3 (%ir-block.0):
+  ; CHECK-NEXT:   successors: %bb.4(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.4 (%ir-block.0):
+  ; CHECK-NEXT:   successors: %bb.1(0x50000000), %bb.2(0x30000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:fr64 = PHI [[COPY4]], %bb.3, [[COPY]], %bb.0
+  ; CHECK-NEXT:   nofpexcept UCOMISDrr [[COPY]], killed [[PHI]], implicit-def $eflags, implicit $mxcsr
   ; CHECK-NEXT:   unpredictable JCC_1 %bb.2, 5, implicit $eflags
   ; CHECK-NEXT:   unpredictable JCC_1 %bb.2, 10, implicit $eflags
   ; CHECK-NEXT:   JMP_1 %bb.1

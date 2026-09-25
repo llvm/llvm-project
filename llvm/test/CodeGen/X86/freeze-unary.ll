@@ -485,9 +485,24 @@ define float @ftrunc_freeze_fround(float %a0) nounwind {
 ; X86-LABEL: ftrunc_freeze_fround:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-NEXT:    movss %xmm0, (%esp)
-; X86-NEXT:    calll roundf
+; X86-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    movdqa {{.*#+}} xmm1 = [NaN,NaN,NaN,NaN]
+; X86-NEXT:    movdqa %xmm0, %xmm2
+; X86-NEXT:    pand %xmm1, %xmm2
+; X86-NEXT:    movd %xmm2, %eax
+; X86-NEXT:    cmpl $1325400064, %eax # imm = 0x4F000000
+; X86-NEXT:    jge .LBB23_2
+; X86-NEXT:  # %bb.1:
+; X86-NEXT:    addss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm2
+; X86-NEXT:    cvttps2dq %xmm2, %xmm2
+; X86-NEXT:    cvtdq2ps %xmm2, %xmm2
+; X86-NEXT:    andps %xmm1, %xmm2
+; X86-NEXT:    pandn %xmm0, %xmm1
+; X86-NEXT:    por %xmm2, %xmm1
+; X86-NEXT:    movdqa %xmm1, %xmm0
+; X86-NEXT:  .LBB23_2:
+; X86-NEXT:    movd %xmm0, (%esp)
+; X86-NEXT:    flds (%esp)
 ; X86-NEXT:    popl %eax
 ; X86-NEXT:    retl
 ;
@@ -550,9 +565,23 @@ define float @ftrunc_freeze_ftrunc(float %a0) nounwind {
 ; X86-LABEL: ftrunc_freeze_ftrunc:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-NEXT:    movss %xmm0, (%esp)
-; X86-NEXT:    calll truncf
+; X86-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    movdqa {{.*#+}} xmm1 = [NaN,NaN,NaN,NaN]
+; X86-NEXT:    movdqa %xmm0, %xmm2
+; X86-NEXT:    pand %xmm1, %xmm2
+; X86-NEXT:    movd %xmm2, %eax
+; X86-NEXT:    cmpl $1325400064, %eax # imm = 0x4F000000
+; X86-NEXT:    jge .LBB26_2
+; X86-NEXT:  # %bb.1:
+; X86-NEXT:    cvttps2dq %xmm2, %xmm2
+; X86-NEXT:    cvtdq2ps %xmm2, %xmm2
+; X86-NEXT:    andps %xmm1, %xmm2
+; X86-NEXT:    pandn %xmm0, %xmm1
+; X86-NEXT:    por %xmm2, %xmm1
+; X86-NEXT:    movdqa %xmm1, %xmm0
+; X86-NEXT:  .LBB26_2:
+; X86-NEXT:    movd %xmm0, (%esp)
+; X86-NEXT:    flds (%esp)
 ; X86-NEXT:    popl %eax
 ; X86-NEXT:    retl
 ;

@@ -33,7 +33,21 @@ define i64 @test_llround_f16(half %x) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    callq __extendhfsf2@PLT
-; X64-NEXT:    callq roundf@PLT
+; X64-NEXT:    movdqa {{.*#+}} xmm1 = [NaN,NaN,NaN,NaN]
+; X64-NEXT:    movdqa %xmm0, %xmm2
+; X64-NEXT:    pand %xmm1, %xmm2
+; X64-NEXT:    movd %xmm2, %eax
+; X64-NEXT:    cmpl $1325400064, %eax # imm = 0x4F000000
+; X64-NEXT:    jge .LBB0_2
+; X64-NEXT:  # %bb.1:
+; X64-NEXT:    addss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; X64-NEXT:    cvttps2dq %xmm2, %xmm2
+; X64-NEXT:    cvtdq2ps %xmm2, %xmm2
+; X64-NEXT:    andps %xmm1, %xmm2
+; X64-NEXT:    pandn %xmm0, %xmm1
+; X64-NEXT:    por %xmm2, %xmm1
+; X64-NEXT:    movdqa %xmm1, %xmm0
+; X64-NEXT:  .LBB0_2:
 ; X64-NEXT:    callq __truncsfhf2@PLT
 ; X64-NEXT:    callq __extendhfsf2@PLT
 ; X64-NEXT:    cvttss2si %xmm0, %rax
@@ -213,7 +227,21 @@ define i64 @test_llround_i64_f16(half %x) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    callq __extendhfsf2@PLT
-; X64-NEXT:    callq roundf@PLT
+; X64-NEXT:    movdqa {{.*#+}} xmm1 = [NaN,NaN,NaN,NaN]
+; X64-NEXT:    movdqa %xmm0, %xmm2
+; X64-NEXT:    pand %xmm1, %xmm2
+; X64-NEXT:    movd %xmm2, %eax
+; X64-NEXT:    cmpl $1325400064, %eax # imm = 0x4F000000
+; X64-NEXT:    jge .LBB4_2
+; X64-NEXT:  # %bb.1:
+; X64-NEXT:    addss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; X64-NEXT:    cvttps2dq %xmm2, %xmm2
+; X64-NEXT:    cvtdq2ps %xmm2, %xmm2
+; X64-NEXT:    andps %xmm1, %xmm2
+; X64-NEXT:    pandn %xmm0, %xmm1
+; X64-NEXT:    por %xmm2, %xmm1
+; X64-NEXT:    movdqa %xmm1, %xmm0
+; X64-NEXT:  .LBB4_2:
 ; X64-NEXT:    callq __truncsfhf2@PLT
 ; X64-NEXT:    callq __extendhfsf2@PLT
 ; X64-NEXT:    cvttss2si %xmm0, %rax
