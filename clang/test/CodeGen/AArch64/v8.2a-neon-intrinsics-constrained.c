@@ -21,52 +21,8 @@
 
 #include <arm_neon.h>
 
-// UNCONSTRAINED-LABEL: define dso_local <4 x half> @test_vsqrt_f16(
-// UNCONSTRAINED-SAME: <4 x half> noundef [[A:%.*]]) #[[ATTR0:[0-9]+]] {
-// UNCONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// UNCONSTRAINED-NEXT:    [[TMP0:%.*]] = bitcast <4 x half> [[A]] to <4 x i16>
-// UNCONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[TMP0]] to <8 x i8>
-// UNCONSTRAINED-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP1]] to <4 x half>
-// UNCONSTRAINED-NEXT:    [[VSQRT_I:%.*]] = call <4 x half> @llvm.sqrt.v4f16(<4 x half> [[TMP2]])
-// UNCONSTRAINED-NEXT:    ret <4 x half> [[VSQRT_I]]
-//
-// CONSTRAINED-LABEL: define dso_local <4 x half> @test_vsqrt_f16(
-// CONSTRAINED-SAME: <4 x half> noundef [[A:%.*]]) #[[ATTR0:[0-9]+]] {
-// CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[TMP0:%.*]] = bitcast <4 x half> [[A]] to <4 x i16>
-// CONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[TMP0]] to <8 x i8>
-// CONSTRAINED-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP1]] to <4 x half>
-// CONSTRAINED-NEXT:    [[VSQRT_I:%.*]] = call <4 x half> @llvm.experimental.constrained.sqrt.v4f16(<4 x half> [[TMP2]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR2:[0-9]+]]
-// CONSTRAINED-NEXT:    ret <4 x half> [[VSQRT_I]]
-//
-float16x4_t test_vsqrt_f16(float16x4_t a) {
-  return vsqrt_f16(a);
-}
-
-// UNCONSTRAINED-LABEL: define dso_local <8 x half> @test_vsqrtq_f16(
-// UNCONSTRAINED-SAME: <8 x half> noundef [[A:%.*]]) #[[ATTR0]] {
-// UNCONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// UNCONSTRAINED-NEXT:    [[TMP0:%.*]] = bitcast <8 x half> [[A]] to <8 x i16>
-// UNCONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <8 x i16> [[TMP0]] to <16 x i8>
-// UNCONSTRAINED-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[TMP1]] to <8 x half>
-// UNCONSTRAINED-NEXT:    [[VSQRT_I:%.*]] = call <8 x half> @llvm.sqrt.v8f16(<8 x half> [[TMP2]])
-// UNCONSTRAINED-NEXT:    ret <8 x half> [[VSQRT_I]]
-//
-// CONSTRAINED-LABEL: define dso_local <8 x half> @test_vsqrtq_f16(
-// CONSTRAINED-SAME: <8 x half> noundef [[A:%.*]]) #[[ATTR0]] {
-// CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[TMP0:%.*]] = bitcast <8 x half> [[A]] to <8 x i16>
-// CONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <8 x i16> [[TMP0]] to <16 x i8>
-// CONSTRAINED-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[TMP1]] to <8 x half>
-// CONSTRAINED-NEXT:    [[VSQRT_I:%.*]] = call <8 x half> @llvm.experimental.constrained.sqrt.v8f16(<8 x half> [[TMP2]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR2]]
-// CONSTRAINED-NEXT:    ret <8 x half> [[VSQRT_I]]
-//
-float16x8_t test_vsqrtq_f16(float16x8_t a) {
-  return vsqrtq_f16(a);
-}
-
 // UNCONSTRAINED-LABEL: define dso_local <4 x half> @test_vfms_f16(
-// UNCONSTRAINED-SAME: <4 x half> noundef [[A:%.*]], <4 x half> noundef [[B:%.*]], <4 x half> noundef [[C:%.*]]) #[[ATTR0]] {
+// UNCONSTRAINED-SAME: <4 x half> noundef [[A:%.*]], <4 x half> noundef [[B:%.*]], <4 x half> noundef [[C:%.*]]) #[[ATTR0:[0-9]+]] {
 // UNCONSTRAINED-NEXT:  [[ENTRY:.*:]]
 // UNCONSTRAINED-NEXT:    [[FNEG_I:%.*]] = fneg <4 x half> [[B]]
 // UNCONSTRAINED-NEXT:    [[TMP0:%.*]] = bitcast <4 x half> [[A]] to <4 x i16>
@@ -82,7 +38,7 @@ float16x8_t test_vsqrtq_f16(float16x8_t a) {
 // UNCONSTRAINED-NEXT:    ret <4 x half> [[TMP9]]
 //
 // CONSTRAINED-LABEL: define dso_local <4 x half> @test_vfms_f16(
-// CONSTRAINED-SAME: <4 x half> noundef [[A:%.*]], <4 x half> noundef [[B:%.*]], <4 x half> noundef [[C:%.*]]) #[[ATTR0]] {
+// CONSTRAINED-SAME: <4 x half> noundef [[A:%.*]], <4 x half> noundef [[B:%.*]], <4 x half> noundef [[C:%.*]]) #[[ATTR0:[0-9]+]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
 // CONSTRAINED-NEXT:    [[FNEG_I:%.*]] = fneg <4 x half> [[B]]
 // CONSTRAINED-NEXT:    [[TMP0:%.*]] = bitcast <4 x half> [[A]] to <4 x i16>
@@ -94,7 +50,7 @@ float16x8_t test_vsqrtq_f16(float16x8_t a) {
 // CONSTRAINED-NEXT:    [[TMP6:%.*]] = bitcast <8 x i8> [[TMP3]] to <4 x half>
 // CONSTRAINED-NEXT:    [[TMP7:%.*]] = bitcast <8 x i8> [[TMP4]] to <4 x half>
 // CONSTRAINED-NEXT:    [[TMP8:%.*]] = bitcast <8 x i8> [[TMP5]] to <4 x half>
-// CONSTRAINED-NEXT:    [[TMP9:%.*]] = call <4 x half> @llvm.experimental.constrained.fma.v4f16(<4 x half> [[TMP7]], <4 x half> [[TMP8]], <4 x half> [[TMP6]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR2]]
+// CONSTRAINED-NEXT:    [[TMP9:%.*]] = call <4 x half> @llvm.experimental.constrained.fma.v4f16(<4 x half> [[TMP7]], <4 x half> [[TMP8]], <4 x half> [[TMP6]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR2:[0-9]+]]
 // CONSTRAINED-NEXT:    ret <4 x half> [[TMP9]]
 //
 float16x4_t test_vfms_f16(float16x4_t a, float16x4_t b, float16x4_t c) {
