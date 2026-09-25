@@ -246,6 +246,26 @@ TEST(MoveOnlyFunctionTest, ShouldCopyInitialize) {
   EXPECT_FALSE(DidMove);
 }
 
+TEST(MoveOnlyFunctionTest, LValueCallableIsCopiedNotReferenced) {
+  // Constructing from an lvalue callable must store a copy of it, not a
+  // reference to it: the move_only_function's state must be independent of
+  // the original's, and must outlive it.
+  auto Counter = [N = 0]() mutable { return ++N; };
+  move_only_function<int()> F(Counter);
+
+  // Advancing the original must not affect the copy held by F.
+  EXPECT_EQ(Counter(), 1);
+  EXPECT_EQ(F(), 1);
+
+  // F must remain valid after the original goes out of scope.
+  move_only_function<int()> G;
+  {
+    auto Scoped = [N = 41]() mutable { return ++N; };
+    G = move_only_function<int()>(Scoped);
+  }
+  EXPECT_EQ(G(), 42);
+}
+
 TEST(MoveOnlyFunctionTest, NoexceptSignature) {
   move_only_function<int(int) noexcept> Inc = [](int X) noexcept {
     return X + 1;
