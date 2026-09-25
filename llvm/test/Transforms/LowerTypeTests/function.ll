@@ -33,9 +33,9 @@ target datalayout = "e-p:64:64"
 ; JT8: @f = alias [8 x i8], ptr @[[JT:.*]]
 ; JT16: @f = alias [16 x i8], ptr @[[JT:.*]]
 
-; JT4: @g = internal alias [4 x i8], getelementptr inbounds ([2 x [4 x i8]], ptr @[[JT]], i64 0, i64 1)
-; JT8: @g = internal alias [8 x i8], getelementptr inbounds ([2 x [8 x i8]], ptr @[[JT]], i64 0, i64 1)
-; JT16: @g = internal alias [16 x i8], getelementptr inbounds ([2 x [16 x i8]], ptr @[[JT]], i64 0, i64 1)
+; JT4: @g = internal alias [4 x i8], getelementptr inbounds (i8, ptr @[[JT]], i64 4)
+; JT8: @g = internal alias [8 x i8], getelementptr inbounds (i8, ptr @[[JT]], i64 8)
+; JT16: @g = internal alias [16 x i8], getelementptr inbounds (i8, ptr @[[JT]], i64 16)
 
 ; NATIVE: define hidden void @f.cfi()
 ; WASM32: define void @f() !type !{{[0-9]+}} !wasm.index ![[I0:[0-9]+]]

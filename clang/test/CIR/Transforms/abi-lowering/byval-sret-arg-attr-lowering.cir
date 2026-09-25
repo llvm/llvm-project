@@ -18,7 +18,7 @@
   args   = [ ]
 }
 
-#byref_arg = {
+#non_byval_arg = {
   return = { kind = "direct" },
   args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
 }
@@ -56,13 +56,13 @@ module attributes {
   // CHECK: cir.func{{.*}} @ret_big(%{{.*}}: !cir.ptr<!rec_Big> {{{.*}}llvm.sret = !rec_Big{{.*}}})
   // LLVM: define void @ret_big(ptr dead_on_unwind noalias writable sret(%struct.Big) align 8 %{{.+}})
 
-  // byref carries the type the same way and is converted identically.
-  cir.func @takes_byref(%arg0: !rec_Big) attributes { test_classify = #byref_arg } {
+  // The non-byval form has no typed attribute, so there is nothing to remap.
+  cir.func @takes_non_byval(%arg0: !rec_Big) attributes { test_classify = #non_byval_arg } {
     cir.return
   }
 
-  // CHECK: cir.func{{.*}} @takes_byref(%{{.*}}: !cir.ptr<!rec_Big> {{{.*}}llvm.byref = !rec_Big{{.*}}})
-  // LLVM: define void @takes_byref(ptr byref(%struct.Big) align 8 %{{.+}})
+  // CHECK: cir.func{{.*}} @takes_non_byval(%{{.*}}: !cir.ptr<!rec_Big> {{{.*}}llvm.dereferenceable = 24 : i64, llvm.nofreeobj, llvm.noundef{{.*}}})
+  // LLVM: define void @takes_non_byval(ptr nofreeobj noundef align 8 dereferenceable(24) %{{.+}})
 
   // The call site's byval operand attribute is converted too.
   cir.func @caller(%s: !rec_Big) attributes { test_classify = #passthrough } {

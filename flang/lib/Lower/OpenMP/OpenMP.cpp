@@ -1519,40 +1519,30 @@ static void getDeclareTargetInfo(
              "expected eval to have value when clauses is empty");
       Fortran::lower::pft::FunctionLikeUnit *owningProc =
           eval->get().getOwningProcedure();
-      bool owningProcNotMainProgram =
-          owningProc && !owningProc->isMainProgram();
-
-      const semantics::Symbol *owningSym =
-          owningProcNotMainProgram
-              ? &owningProc->getSubprogramSymbol()
-              : (owningProc ? owningProc->getMainProgramSymbol() : nullptr);
 
       // A bare '!$omp declare target' may appear in the specification part of
       // an interface body. In that case, the PFT records the directive as an
-      // evaluation of the enclosing program unit rather than of the interface
-      // body's subprogram, so eval.getOwningProcedure() points at the main
-      // program.
+      // evaluation of its enclosing procedure rather than the interface
+      // procedure itself, so owningProc points at the wrong program.
       //
-      // Detect this by comparing the program unit lexically containing
-      // the directive with the procedure currently being lowered; when they
-      // differ, it might be this case or it might be one of the entries of a
-      // multiple-entry subprogram. In the first case, the directive belongs to
-      // the interface-body subprogram; otherwise, the owning subprogram is the
-      // correct one.
+      // Detect this by looking at the program unit lexically containing the
+      // directive with the procedure currently being lowered. If it is an
+      // interface, then use its symbol instead.
       const semantics::Scope &progUnitScope =
           semantics::GetProgramUnitContaining(
               semaCtx.FindScope(construct.v.source));
-      const semantics::Symbol *lexicalSym = progUnitScope.symbol();
-
-      if (lexicalSym && lexicalSym != owningSym) {
-        // Interface subprogram capture or non-default subprogram entry.
+      const semantics::Symbol *progUnitSym = progUnitScope.symbol();
+      const auto *subpDetails =
+          progUnitSym ? progUnitSym->detailsIf<semantics::SubprogramDetails>()
+                      : nullptr;
+      if (progUnitSym && subpDetails && subpDetails->isInterface()) {
         symbolAndClause.emplace_back(mlir::omp::DeclareTargetCaptureClause::to,
-                                     owningProcNotMainProgram ? *owningSym
-                                                              : *lexicalSym);
-      } else if (owningProcNotMainProgram) {
-        // Main programs are never device routines, so skip those here.
+                                     *progUnitSym);
+      } else {
+        assert(owningProc && !owningProc->isMainProgram() &&
+               "unexpected missing owning procedure or main program");
         symbolAndClause.emplace_back(mlir::omp::DeclareTargetCaptureClause::to,
-                                     *owningSym);
+                                     owningProc->getSubprogramSymbol());
       }
     }
 
@@ -1764,10 +1754,12 @@ getImplicitMapTypeAndKind(fir::FirOpBuilder &firOpBuilder,
       }
     }
 
-    if (declareTargetOp && declareTargetOp.isDeclareTarget()) {
-      if (declareTargetOp.getDeclareTargetCaptureClause() ==
+    mlir::omp::DeclareTargetAttr declareTargetAttr =
+        declareTargetOp ? declareTargetOp.getDeclareTarget() : nullptr;
+    if (declareTargetAttr) {
+      if (declareTargetAttr.getCaptureClause() ==
               mlir::omp::DeclareTargetCaptureClause::link &&
-          declareTargetOp.getDeclareTargetDeviceType() !=
+          declareTargetAttr.getDeviceType() !=
               mlir::omp::DeclareTargetDeviceType::nohost) {
         mapFlag |= mlir::omp::ClauseMapFlags::to;
         mapFlag |= mlir::omp::ClauseMapFlags::from;
@@ -1847,8 +1839,9 @@ markDeclareTarget(mlir::Operation *op, lower::AbstractConverter &converter,
   // likely through implicit capture (usage in another declare target
   // function/subroutine). It should be marked as any if it has been assigned
   // both host and nohost, else we skip, as there is no change
-  if (declareTargetOp.isDeclareTarget()) {
-    if (declareTargetOp.getDeclareTargetDeviceType() != deviceType)
+  if (mlir::omp::DeclareTargetAttr declareTargetAttr =
+          declareTargetOp.getDeclareTarget()) {
+    if (declareTargetAttr.getDeviceType() != deviceType)
       declareTargetOp.setDeclareTarget(mlir::omp::DeclareTargetDeviceType::any,
                                        captureClause, automap,
                                        /*implicit=*/false);
@@ -2413,6 +2406,18 @@ static void genDistributeClauses(lower::AbstractConverter &converter,
   cp.processAllocate(clauseOps);
   cp.processDistSchedule(stmtCtx, clauseOps);
   cp.processOrder(clauseOps);
+}
+
+static void genDispatchClauses(lower::AbstractConverter &converter,
+                               semantics::SemanticsContext &semaCtx,
+                               lower::StatementContext &stmtCtx,
+                               const List<Clause> &clauses, mlir::Location loc,
+                               mlir::omp::DispatchOperands &clauseOps) {
+  ClauseProcessor cp(converter, semaCtx, clauses);
+  cp.processNowait(clauseOps);
+  cp.processTODO<clause::Depend, clause::Device, clause::IsDevicePtr,
+                 clause::Novariants, clause::Nocontext>(
+      loc, llvm::omp::Directive::OMPD_dispatch);
 }
 
 static void genFlushClauses(lower::AbstractConverter &converter,
@@ -2986,6 +2991,21 @@ genCriticalOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
                         llvm::omp::Directive::OMPD_critical),
       queue, item, nameAttr);
+}
+
+static mlir::omp::DispatchOp genDispatchOp(
+    lower::AbstractConverter &converter, lower::SymMap &symTable,
+    lower::StatementContext &stmtCtx, semantics::SemanticsContext &semaCtx,
+    lower::pft::Evaluation &eval, mlir::Location loc,
+    const ConstructQueue &queue, ConstructQueue::const_iterator item) {
+  mlir::omp::DispatchOperands clauseOps;
+  genDispatchClauses(converter, semaCtx, stmtCtx, item->clauses, loc,
+                     clauseOps);
+
+  return genOpWithBody<mlir::omp::DispatchOp>(
+      OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
+                        llvm::omp::Directive::OMPD_dispatch),
+      queue, item, clauseOps);
 }
 
 static mlir::omp::FlushOp
@@ -5738,6 +5758,10 @@ genOMPDispatch(lower::AbstractConverter &converter, lower::SymMap &symTable,
   case llvm::omp::Directive::OMPD_barrier:
     newOp = genBarrierOp(converter, symTable, semaCtx, eval, loc, queue, item);
     break;
+  case llvm::omp::Directive::OMPD_dispatch:
+    newOp = genDispatchOp(converter, symTable, stmtCtx, semaCtx, eval, loc,
+                          queue, item);
+    break;
   case llvm::omp::Directive::OMPD_distribute:
     newOp = genStandaloneDistribute(converter, symTable, stmtCtx, semaCtx, eval,
                                     loc, queue, item);
@@ -8392,9 +8416,21 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
-                   const parser::OpenMPDispatchConstruct &) {
-  if (!semaCtx.langOptions().OpenMPSimd)
-    TODO(converter.getCurrentLocation(), "OpenMPDispatchConstruct");
+                   const parser::OpenMPDispatchConstruct &dispatchConstruct) {
+  const parser::OmpDirectiveSpecification &beginSpec =
+      dispatchConstruct.BeginDir();
+  List<Clause> clauses = makeClauses(beginSpec.Clauses(), semaCtx);
+  if (auto &endSpec = dispatchConstruct.EndDir())
+    clauses.append(makeClauses(endSpec->Clauses(), semaCtx));
+
+  llvm::omp::Directive directive = beginSpec.DirId();
+  mlir::Location currentLocation = converter.genLocation(beginSpec.source);
+
+  ConstructQueue queue{
+      buildConstructQueue(converter.getFirOpBuilder().getModule(), semaCtx,
+                          eval, beginSpec.source, directive, clauses)};
+  genOMPDispatch(converter, symTable, semaCtx, eval, currentLocation, queue,
+                 queue.begin());
 }
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,

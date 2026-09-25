@@ -7,6 +7,8 @@
 ; RUN: llc < %t.ll -filetype=asm -o - | FileCheck %s --check-prefix=CHECK-ASM
 
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-profile-mismatch-nested.prof --salvage-unused-profile=false -report-profile-staleness -persist-profile-staleness -S 2>&1 | FileCheck %s --check-prefix=CHECK-NESTED
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-profile-mismatch-zero-callee.prof --salvage-unused-profile=false -report-profile-staleness -S 2>&1 | FileCheck %s --check-prefix=CHECK-ZERO-CALLEE
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-profile-mismatch-multiple-sampled-callees.prof --salvage-unused-profile=false -report-profile-staleness -S 2>&1 | FileCheck %s --check-prefix=CHECK-MULTIPLE-SAMPLED
 
 
 ; CHECK: (2/3) of functions' profile are invalid and (40/50) of samples are discarded due to function hash mismatch.
@@ -58,6 +60,13 @@
 
 
 ; CHECK-NESTED: (1/2) of functions' profile are invalid and (211/311) of samples are discarded due to function hash mismatch.
+
+; A zero-sample inline frame at the same probe does not turn the uniquely
+; sampled direct callee into an indirect-call anchor.
+; CHECK-ZERO-CALLEE: (2/3) of callsites' profile are invalid and (20/50) of samples are discarded due to callsite location mismatch.
+
+; Multiple sampled inline callees at one probe remain an indirect-call anchor.
+; CHECK-MULTIPLE-SAMPLED: (3/3) of callsites' profile are invalid and (31/51) of samples are discarded due to callsite location mismatch.
 
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"

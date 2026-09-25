@@ -159,7 +159,7 @@ end subroutine
 ! CHECK:  %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]]  {{.*}}Ec
 ! CHECK:  %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_2:[a-z0-9]*]]  {{.*}}Ei
 ! CHECK:  %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_3:[a-z0-9]*]]  {{.*}}Ej
-! CHECK:  %[[VAL_7:.*]] = fir.alloca i64 {bindc_name = "step", uniq_name = "_QFsubstringEstep"}
+! CHECK:  %[[VAL_7:.*]] = fir.alloca i64 <{bindc_name = "step", uniq_name = "_QFsubstringEstep"}>
 ! CHECK:  %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_7:[a-z0-9]*]]  {{.*}}Estep
 ! CHECK:  %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_1:[a-z0-9]*]]  {{.*}}Evector
 ! CHECK:  %[[VAL_10:.*]] = arith.constant 0 : index

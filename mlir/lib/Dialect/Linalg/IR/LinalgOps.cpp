@@ -5081,24 +5081,12 @@ Speculation::Speculatability BatchMatmulOp::getSpeculatability() {
 //===----------------------------------------------------------------------===//
 //
 namespace {
-struct ArityGroupAndKind {
-  // The enum class {Unary, Binary, Ternary, ..}
-  ElementwiseArityGroup arityGroup;
-
-  // The kind (e.g. `exp` or `add`) belonging to the arity group.
-  union Kind {
-    UnaryFn unaryFn;
-    BinaryFn binaryFn;
-    TernaryFn ternaryFn;
-  } kind;
-};
-
 unsigned getArityGroupAsUInt(ElementwiseArityGroup arityGroup) {
   return static_cast<unsigned>(arityGroup);
 }
 } // namespace
 
-static ArityGroupAndKind getArityGroupAndKind(ElementwiseKind kind) {
+ArityGroupAndKind getArityGroupAndKind(ElementwiseKind kind) {
   constexpr int lastUnary = static_cast<int>(ElementwiseCaseLimits::LastUnary);
   constexpr int lastBinary =
       static_cast<int>(ElementwiseCaseLimits::LastBinary);

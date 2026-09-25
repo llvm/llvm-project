@@ -8,11 +8,6 @@
 
 # Fortran I/O Runtime Library Internal Design
 
-```{contents}
----
-local:
----
-```
 
 This note is meant to be an overview of the design of the *implementation*
 of Flang's runtime support library for I/O statements.

@@ -161,6 +161,11 @@ public:
   llvm::APFloat getValue() const;
 };
 
+/// Module attribute set when -fcheck-integer-mod-zero-divisor is enabled.
+static constexpr llvm::StringRef getCheckIntegerModZeroDivisorAttrName() {
+  return "fir.check_integer_mod_zero_divisor";
+}
+
 mlir::Attribute parseFirAttribute(FIROpsDialect *dialect,
                                   mlir::DialectAsmParser &parser,
                                   mlir::Type type);

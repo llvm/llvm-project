@@ -53,8 +53,6 @@ define double @test(ptr %obj, ptr %arr, i32 %n) {
 ; CHECK-NEXT:    [[V42:%.*]] = icmp slt i32 [[V40]], 0
 ; CHECK-NEXT:    [[SPEC_SELECT_I13:%.*]] = select i1 [[V42]], i32 [[V41]], i32 [[V40]]
 ; CHECK-NEXT:    store i32 [[SPEC_SELECT_I13]], ptr [[V38]], align 4
-; CHECK-NEXT:    [[V43:%.*]] = sitofp i32 [[SPEC_SELECT_I13]] to double
-; CHECK-NEXT:    [[V44:%.*]] = fmul nnan double [[V43]], f0x3E00000000200000
 ; CHECK-NEXT:    [[V45:%.*]] = zext nneg i32 [[TMP10]] to i64
 ; CHECK-NEXT:    [[V46:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[ARR]], i64 [[V45]]
 ; CHECK-NEXT:    [[V47:%.*]] = load i32, ptr [[V46]], align 4
@@ -74,11 +72,13 @@ define double @test(ptr %obj, ptr %arr, i32 %n) {
 ; CHECK-NEXT:    [[V55:%.*]] = add nsw i32 [[TMP11]], -1
 ; CHECK-NEXT:    [[DOTSINK6_I]] = select i1 [[DOTNOT4_I]], i32 16, i32 [[V55]]
 ; CHECK-NEXT:    store i32 [[DOTSINK6_I]], ptr [[POS2]], align 8
+; CHECK-NEXT:    [[V43:%.*]] = sitofp i32 [[SPEC_SELECT_I13]] to double
 ; CHECK-NEXT:    [[V56:%.*]] = sitofp i32 [[SPEC_SELECT_I]] to double
-; CHECK-NEXT:    [[V57:%.*]] = fmul nnan double [[V56]], f0x3E00000000200000
-; CHECK-NEXT:    [[V58:%.*]] = fmul nnan double [[V44]], [[V44]]
-; CHECK-NEXT:    [[V59:%.*]] = fmul nnan double [[V57]], [[V57]]
-; CHECK-NEXT:    [[V60:%.*]] = fadd double [[V58]], [[V59]]
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[V43]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[V56]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul nnan <2 x double> [[TMP1]], splat (double f0x3E00000000200000)
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul nnan <2 x double> [[TMP2]], [[TMP2]]
+; CHECK-NEXT:    [[V60:%.*]] = call reassoc double @llvm.vector.reduce.fadd.v2f64(double -0.000000e+00, <2 x double> [[TMP3]])
 ; CHECK-NEXT:    [[V61:%.*]] = fcmp ole double [[V60]], 1.000000e+00
 ; CHECK-NEXT:    [[V62:%.*]] = zext i1 [[V61]] to i32
 ; CHECK-NEXT:    [[LOCAL_3_16]] = add i32 [[V62]], [[LOCAL_3_127421]]
@@ -284,8 +284,6 @@ define double @test_inloop_first(ptr %obj, ptr %arr, i32 %n) {
 ; CHECK-NEXT:    [[V42:%.*]] = icmp slt i32 [[V40]], 0
 ; CHECK-NEXT:    [[SPEC_SELECT_I13:%.*]] = select i1 [[V42]], i32 [[V41]], i32 [[V40]]
 ; CHECK-NEXT:    store i32 [[SPEC_SELECT_I13]], ptr [[V38]], align 4
-; CHECK-NEXT:    [[V43:%.*]] = sitofp i32 [[SPEC_SELECT_I13]] to double
-; CHECK-NEXT:    [[V44:%.*]] = fmul nnan double [[V43]], f0x3E00000000200000
 ; CHECK-NEXT:    [[V45:%.*]] = zext nneg i32 [[TMP11]] to i64
 ; CHECK-NEXT:    [[V46:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[ARR]], i64 [[V45]]
 ; CHECK-NEXT:    [[V47:%.*]] = load i32, ptr [[V46]], align 4
@@ -305,11 +303,13 @@ define double @test_inloop_first(ptr %obj, ptr %arr, i32 %n) {
 ; CHECK-NEXT:    [[V55:%.*]] = add nsw i32 [[TMP12]], -1
 ; CHECK-NEXT:    [[DOTSINK6_I]] = select i1 [[DOTNOT4_I]], i32 16, i32 [[V55]]
 ; CHECK-NEXT:    store i32 [[DOTSINK6_I]], ptr [[POS2]], align 8
+; CHECK-NEXT:    [[V43:%.*]] = sitofp i32 [[SPEC_SELECT_I13]] to double
 ; CHECK-NEXT:    [[V56:%.*]] = sitofp i32 [[SPEC_SELECT_I]] to double
-; CHECK-NEXT:    [[V57:%.*]] = fmul nnan double [[V56]], f0x3E00000000200000
-; CHECK-NEXT:    [[V58:%.*]] = fmul nnan double [[V44]], [[V44]]
-; CHECK-NEXT:    [[V59:%.*]] = fmul nnan double [[V57]], [[V57]]
-; CHECK-NEXT:    [[V60:%.*]] = fadd double [[V58]], [[V59]]
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[V43]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[V56]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul nnan <2 x double> [[TMP1]], splat (double f0x3E00000000200000)
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul nnan <2 x double> [[TMP2]], [[TMP2]]
+; CHECK-NEXT:    [[V60:%.*]] = call reassoc double @llvm.vector.reduce.fadd.v2f64(double -0.000000e+00, <2 x double> [[TMP3]])
 ; CHECK-NEXT:    [[V61:%.*]] = fcmp ole double [[V60]], 1.000000e+00
 ; CHECK-NEXT:    [[V62:%.*]] = zext i1 [[V61]] to i32
 ; CHECK-NEXT:    [[LOCAL_3_16]] = add i32 [[V62]], [[LOCAL_3_127421]]

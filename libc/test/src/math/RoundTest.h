@@ -42,8 +42,8 @@ public:
   }
 };
 
-#define LIST_ROUND_TESTS(T, func)                                              \
-  using LlvmLibcRoundTest = RoundTest<T>;                                      \
-  TEST_F(LlvmLibcRoundTest, Range) { testRange(&func); }
+#define LIST_ROUND_TESTS(Name, T, func)                                        \
+  using LlvmLibc##Name##Test = RoundTest<T>;                                   \
+  TEST_F(LlvmLibc##Name##Test, Range) { testRange(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_ROUNDTEST_H

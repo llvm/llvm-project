@@ -20,6 +20,7 @@
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/CycleInfo.h"
@@ -104,10 +105,11 @@ protected:
           /*AllowReordering=*/false);
     }
 
-    if (Style)
-      VPlanTransforms::handleUncountableEarlyExits(*Plan, L, PSE, *DT, AC.get(),
-                                                   *Style);
-    else
+    if (Style) {
+      OptimizationRemarkEmitter ORE(&F);
+      VPlanTransforms::handleUncountableEarlyExits(*Plan, &ORE, L, PSE, *DT,
+                                                   AC.get(), *Style);
+    } else
       VPlanTransforms::handleCountableEarlyExits(*Plan);
     VPlanTransforms::addMiddleCheck(*Plan);
 

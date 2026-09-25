@@ -10,4 +10,4 @@
 
 #include "src/math/issignalingl.h"
 
-LIST_ISSIGNALING_TESTS(long double, LIBC_NAMESPACE::issignalingl)
+LIST_ISSIGNALING_TESTS(Issignalingl, long double, LIBC_NAMESPACE::issignalingl)

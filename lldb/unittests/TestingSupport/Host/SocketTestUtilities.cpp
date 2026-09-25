@@ -71,7 +71,7 @@ bool lldb_private::CreateTCPConnectedSockets(
   return true;
 }
 
-#if LLDB_ENABLE_POSIX
+#if LLDB_ENABLE_POSIX || defined(_WIN32)
 void lldb_private::CreateDomainConnectedSockets(
     llvm::StringRef path, std::unique_ptr<DomainSocket> *socket_a_up,
     std::unique_ptr<DomainSocket> *socket_b_up) {
@@ -148,16 +148,17 @@ llvm::Expected<std::string> lldb_private::GetLocalhostIP() {
       "Neither IPv4 nor IPv6 appear to be supported");
 }
 
-#if LLDB_ENABLE_POSIX
+#if LLDB_ENABLE_POSIX || defined(_WIN32)
 bool lldb_private::HostSupportsDomainSockets() {
   llvm::SmallString<64> Path;
   if (llvm::sys::fs::createUniqueDirectory("SocketTestCanary", Path))
     return false;
+  auto cleanup_dir = Path;
   llvm::sys::path::append(Path, "test");
   DomainSocket sock(true);
   Status status = sock.Listen(Path, 1);
   llvm::sys::fs::remove(Path);
-  llvm::sys::fs::remove(Path.str().rsplit('/').first);
+  llvm::sys::fs::remove(cleanup_dir);
   return status.Success();
 }
 #endif

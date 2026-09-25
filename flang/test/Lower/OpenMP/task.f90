@@ -184,9 +184,9 @@ subroutine task_private
   integer :: x
   end type mytype
 
-!CHECK: %[[INT_ALLOCA:.*]] = fir.alloca i32 {bindc_name = "int_var", uniq_name = "_QFtask_privateEint_var"}
+!CHECK: %[[INT_ALLOCA:.*]] = fir.alloca i32 <{bindc_name = "int_var", uniq_name = "_QFtask_privateEint_var"}>
 !CHECK: %[[INT_VAR:.+]]:2 = hlfir.declare %[[INT_ALLOCA]] {uniq_name = "_QFtask_privateEint_var"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK: %[[MYTYPE_ALLOCA:.*]] = fir.alloca !fir.type<_QFtask_privateTmytype{x:i32}> {bindc_name = "mytype_var", uniq_name = "_QFtask_privateEmytype_var"}
+!CHECK: %[[MYTYPE_ALLOCA:.*]] = fir.alloca !fir.type<_QFtask_privateTmytype{x:i32}> <{bindc_name = "mytype_var", uniq_name = "_QFtask_privateEmytype_var"}>
 !CHECK: %[[MYTYPE_VAR:.+]]:2 = hlfir.declare %[[MYTYPE_ALLOCA]] {uniq_name = "_QFtask_privateEmytype_var"} : (!fir.ref<!fir.type<_QFtask_privateTmytype{x:i32}>>) -> (!fir.ref<!fir.type<_QFtask_privateTmytype{x:i32}>>, !fir.ref<!fir.type<_QFtask_privateTmytype{x:i32}>>)
   integer :: int_var
   type(mytype) :: mytype_var
@@ -213,9 +213,9 @@ subroutine task_firstprivate
   integer :: x
   end type mytype
 
-  !CHECK: %[[INT_ALLOCA:.+]] = fir.alloca i32 {bindc_name = "int_var", uniq_name = "_QFtask_firstprivateEint_var"}
+  !CHECK: %[[INT_ALLOCA:.+]] = fir.alloca i32 <{bindc_name = "int_var", uniq_name = "_QFtask_firstprivateEint_var"}>
   !CHECK: %[[INT_VAR:.+]]:2 = hlfir.declare %[[INT_ALLOCA]] {uniq_name = "_QFtask_firstprivateEint_var"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-  !CHECK: %[[MYTYPE_ALLOCA:.+]] = fir.alloca !fir.type<_QFtask_firstprivateTmytype{x:i32}> {bindc_name = "mytype_var", uniq_name = "_QFtask_firstprivateEmytype_var"}
+  !CHECK: %[[MYTYPE_ALLOCA:.+]] = fir.alloca !fir.type<_QFtask_firstprivateTmytype{x:i32}> <{bindc_name = "mytype_var", uniq_name = "_QFtask_firstprivateEmytype_var"}>
   !CHECK: %[[MYTYPE_VAR:.+]]:2 = hlfir.declare %[[MYTYPE_ALLOCA]] {uniq_name = "_QFtask_firstprivateEmytype_var"} : (!fir.ref<!fir.type<_QFtask_firstprivateTmytype{x:i32}>>) -> (!fir.ref<!fir.type<_QFtask_firstprivateTmytype{x:i32}>>, !fir.ref<!fir.type<_QFtask_firstprivateTmytype{x:i32}>>)
   integer :: int_var
   type(mytype) :: mytype_var
@@ -240,11 +240,11 @@ end subroutine task_firstprivate
 subroutine task_multiple_clauses()
   use omp_lib
 
-!CHECK: %[[X_ALLOCA:.+]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFtask_multiple_clausesEx"}
+!CHECK: %[[X_ALLOCA:.+]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFtask_multiple_clausesEx"}>
 !CHECK: %[[X:.+]]:2 = hlfir.declare %[[X_ALLOCA]] {uniq_name = "_QFtask_multiple_clausesEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK: %[[Y_ALLOCA:.+]] = fir.alloca i32 {bindc_name = "y", uniq_name = "_QFtask_multiple_clausesEy"}
+!CHECK: %[[Y_ALLOCA:.+]] = fir.alloca i32 <{bindc_name = "y", uniq_name = "_QFtask_multiple_clausesEy"}>
 !CHECK: %[[Y:.+]]:2 = hlfir.declare %[[Y_ALLOCA]] {uniq_name = "_QFtask_multiple_clausesEy"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK: %[[Z_ALLOCA:.+]] = fir.alloca i32 {bindc_name = "z", uniq_name = "_QFtask_multiple_clausesEz"}
+!CHECK: %[[Z_ALLOCA:.+]] = fir.alloca i32 <{bindc_name = "z", uniq_name = "_QFtask_multiple_clausesEz"}>
 !CHECK: %[[Z:.+]]:2 = hlfir.declare %[[Z_ALLOCA]] {uniq_name = "_QFtask_multiple_clausesEz"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   integer :: x, y, z
   logical :: buzz

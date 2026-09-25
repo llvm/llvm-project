@@ -11,4 +11,5 @@
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/math/iscanonicalbf16.h"
 
-LIST_ISCANONICAL_TESTS(bfloat16, LIBC_NAMESPACE::iscanonicalbf16)
+LIST_ISCANONICAL_TESTS(Iscanonicalbf16, bfloat16,
+                       LIBC_NAMESPACE::iscanonicalbf16)

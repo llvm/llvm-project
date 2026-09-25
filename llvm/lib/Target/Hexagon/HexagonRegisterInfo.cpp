@@ -496,8 +496,3 @@ bool HexagonRegisterInfo::useFPForScavengingIndex(const MachineFunction &MF)
       const {
   return MF.getSubtarget<HexagonSubtarget>().getFrameLowering()->hasFP(MF);
 }
-
-const TargetRegisterClass *
-HexagonRegisterInfo::getPointerRegClass(unsigned Kind) const {
-  return &Hexagon::IntRegsRegClass;
-}

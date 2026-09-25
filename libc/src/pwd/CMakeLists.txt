@@ -128,6 +128,7 @@ add_object_library(
     libc.src.__support.File.platform_file
     libc.src.__support.ctype_utils
     libc.src.__support.error_or
+    libc.src.__support.pwd.dynamic_buffer
     libc.src.__support.pwd.field_tokenizer
     libc.src.__support.pwd.flat_file_db
     libc.src.__support.str_to_integer

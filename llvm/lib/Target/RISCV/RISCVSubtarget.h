@@ -203,10 +203,6 @@ public:
 
   bool hasBEXTILike() const { return HasStdExtZbs || HasVendorXTHeadBs; }
 
-  bool hasCZEROLike() const {
-    return HasStdExtZicond || HasVendorXVentanaCondOps;
-  }
-
   bool hasConditionalMoveFusion() const {
     // Do we support fusing a branch+mv or branch+c.mv as a conditional move.
     return (hasConditionalCompressedMoveFusion() && hasStdExtZca()) ||
@@ -394,7 +390,6 @@ public:
   unsigned getMispredictionPenalty() const override;
   unsigned getLoadLatency() const override;
 
-  unsigned getMaxLMULForFixedLengthVectors() const;
   bool useRVVForFixedLengthVectors() const;
 
   bool enableSubRegLiveness() const override;

@@ -386,7 +386,7 @@ struct InMember {
 void InMember::mem_func(int one, int two, int, int three) {
   int some_local = mem_get_int();
   static int magic_static = three + mem_get_int() + one + some_local;
-// CIR-BOTH-LABEL:  cir.func no_inline dso_local @_ZN8InMember8mem_funcEiiii(
+// CIR-BOTH-LABEL:  cir.func no_inline alignment(2) dso_local @_ZN8InMember8mem_funcEiiii(
 // CIR-BOTH:    %[[THIS_ALLOCA:.*]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<!rec_InMember>>
 // CIR-BOTH:    %[[ONE_ALLOCA:.*]] = cir.alloca "one" {{.*}} init : !cir.ptr<!s32i>
 // CIR-BOTH:    %[[THREE_ALLOCA:.*]] = cir.alloca "three" {{.*}} init : !cir.ptr<!s32i>
@@ -662,7 +662,7 @@ int referenced_inside() {
 // CIR-BOTH:   cir.return %[[RET_LOAD]] : !s32i
 // CIR-BOTH: }
 //
-// CIR-BOTH-LABEL: cir.func no_inline lambda internal private dso_local @_ZZ17referenced_insidevENK3$_0clEv(
+// CIR-BOTH-LABEL: cir.func no_inline lambda alignment(2) internal private dso_local @_ZZ17referenced_insidevENK3$_0clEv(
 // CIR-BOTH:   %[[THIS_ALLOCA:.*]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<!{{.*}}>>
 // CIR-BOTH:   %[[RET_ALLOCA:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
 // CIR-BOTH:   %[[LOAD_THIS:.*]] = cir.load %[[THIS_ALLOCA]] : !cir.ptr<!cir.ptr<!{{.*}}>>, !cir.ptr<!{{.*}}>
@@ -723,7 +723,7 @@ int referenced_inside_const() {
 // CIR-BOTH:   cir.return %[[RET_LOAD]] : !s32i
 // CIR-BOTH: }
 //
-// CIR-BOTH-LABEL: cir.func no_inline lambda internal private dso_local @_ZZ23referenced_inside_constvENK3$_0clEv(
+// CIR-BOTH-LABEL: cir.func no_inline lambda alignment(2) internal private dso_local @_ZZ23referenced_inside_constvENK3$_0clEv(
 // CIR-BOTH:   %[[THIS_ALLOCA:.*]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<!{{.*}}>>
 // CIR-BOTH:   %[[RET_ALLOCA:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
 // CIR-BOTH:   %[[LOAD_THIS:.*]] = cir.load %[[THIS_ALLOCA]] : !cir.ptr<!cir.ptr<!{{.*}}>>, !cir.ptr<!{{.*}}>

@@ -14,12 +14,12 @@
 #include "CIRGenFunction.h"
 #include "CIRGenValue.h"
 
-#include "clang/AST/EvaluatedExprVisitor.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/Type.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "clang/CodeGenUtils/ClassUtils.h"
 #include "clang/CodeGenUtils/CodeGenUtils.h"
 
 using namespace clang;
@@ -173,8 +173,8 @@ struct CallBaseDtor final : EHScopeStack::Cleanup {
     QualType thisTy = d->getFunctionObjectParameterType();
     assert(cgf.currSrcLoc && "expected source location");
     Address addr = cgf.getAddressOfDirectBaseInCompleteClass(
-        *cgf.currSrcLoc, cgf.loadCXXThisAddress(), derivedClass, baseClass,
-        baseIsVirtual);
+        cgf.getLoc(*cgf.currSrcLoc), cgf.loadCXXThisAddress(), derivedClass,
+        baseClass, baseIsVirtual);
     cgf.emitCXXDestructorCall(d, Dtor_Base, baseIsVirtual,
                               /*delegating=*/false, addr, thisTy);
   }
@@ -199,30 +199,7 @@ struct CallDelegatingCtorDtor final : EHScopeStack::Cleanup {
   }
 };
 
-/// A visitor which checks whether an initializer uses 'this' in a
-/// way which requires the vtable to be properly set.
-struct DynamicThisUseChecker
-    : ConstEvaluatedExprVisitor<DynamicThisUseChecker> {
-  using super = ConstEvaluatedExprVisitor<DynamicThisUseChecker>;
-
-  bool usesThis = false;
-
-  DynamicThisUseChecker(const ASTContext &c) : super(c) {}
-
-  // Black-list all explicit and implicit references to 'this'.
-  //
-  // Do we need to worry about external references to 'this' derived
-  // from arbitrary code? If so, then anything which runs arbitrary
-  // external code might potentially access the vtable.
-  void VisitCXXThisExpr(const CXXThisExpr *e) { usesThis = true; }
-};
 } // end anonymous namespace
-
-static bool baseInitializerUsesThis(ASTContext &c, const Expr *init) {
-  DynamicThisUseChecker checker(c);
-  checker.Visit(init);
-  return checker.usesThis;
-}
 
 /// Gets the address of a direct base class within a complete object.
 /// This should only be used for (1) non-virtual bases or (2) virtual bases
@@ -266,7 +243,7 @@ void CIRGenFunction::emitBaseInitializer(mlir::Location loc,
   // If the initializer for the base (other than the constructor
   // itself) accesses 'this' in any way, we need to initialize the
   // vtables.
-  if (baseInitializerUsesThis(getContext(), baseInit->getInit()))
+  if (CodeGenUtils::baseInitializerUsesThis(getContext(), baseInit->getInit()))
     initializeVTablePointers(loc, classDecl);
 
   // We can pretend to be a complete class because it only matters for
@@ -774,7 +751,7 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
   CharUnits eltAlignment = arrayBase.getAlignment().alignmentOfArrayElement(
       getContext().getTypeSizeInChars(type));
 
-  mlir::Location loc = *currSrcLoc;
+  mlir::Location loc = getLoc(*currSrcLoc);
 
   mlir::Value dynamicElPtr;
   if (useDynamicArrayCtor)
@@ -947,9 +924,9 @@ void CIRGenFunction::emitForwardingCallToLambda(
         resultType->isObjCRetainableType())
       cgm.errorNYI(callOperator->getSourceRange(),
                    "emitForwardingCallToLambda: ObjCAutoRefCount");
-    emitReturnOfRValue(*currSrcLoc, rv, resultType);
+    emitReturnOfRValue(getLoc(*currSrcLoc), rv, resultType);
   } else {
-    cir::ReturnOp::create(builder, *currSrcLoc);
+    cir::ReturnOp::create(builder, getLoc(*currSrcLoc));
   }
 }
 
@@ -1290,17 +1267,49 @@ Address CIRGenFunction::getAddressOfBaseClass(
 
   assert(!cir::MissingFeatures::sanitizers());
 
+  mlir::Location mlirLoc = getLoc(loc);
+
+  // Computing the virtual offset requires reading the vtable, which is only
+  // safe to do once we know the pointer isn't null. Guard the whole
+  // computation, mirroring classic CodeGen's cast.notnull/cast.end split.
+  if (vBase && nullCheckValue) {
+    CharUnits alignment =
+        cgm.getVBaseAlignment(value.getAlignment(), derived, vBase)
+            .alignmentAtOffset(nonVirtualOffset);
+    mlir::Type basePtrTy = builder.getPointerTo(baseValueTy);
+    mlir::Value ptrIsNull = builder.createPtrIsNull(value.getPointer());
+    mlir::Value result =
+        cir::TernaryOp::create(
+            builder, mlirLoc, ptrIsNull,
+            [&](mlir::OpBuilder &, mlir::Location) {
+              builder.createYield(
+                  mlirLoc, builder.getNullPtr(basePtrTy, mlirLoc).getResult());
+            },
+            [&](mlir::OpBuilder &, mlir::Location) {
+              mlir::Value virtualOffset =
+                  cgm.getCXXABI().getVirtualBaseClassOffset(
+                      mlirLoc, *this, value, derived, vBase);
+              Address adjusted = applyNonVirtualAndVirtualOffset(
+                  mlirLoc, *this, value, nonVirtualOffset, virtualOffset,
+                  derived, vBase, baseValueTy, /*assumeNotNull=*/true);
+              adjusted = adjusted.withElementType(builder, baseValueTy);
+              builder.createYield(mlirLoc, adjusted.getPointer());
+            })
+            .getResult();
+    return Address(result, baseValueTy, alignment);
+  }
+
   // Compute the virtual offset.
   mlir::Value virtualOffset = nullptr;
   if (vBase) {
     virtualOffset = cgm.getCXXABI().getVirtualBaseClassOffset(
-        getLoc(loc), *this, value, derived, vBase);
+        mlirLoc, *this, value, derived, vBase);
   }
 
   // Apply both offsets.
   value = applyNonVirtualAndVirtualOffset(
-      getLoc(loc), *this, value, nonVirtualOffset, virtualOffset, derived,
-      vBase, baseValueTy, not nullCheckValue);
+      mlirLoc, *this, value, nonVirtualOffset, virtualOffset, derived, vBase,
+      baseValueTy, not nullCheckValue);
 
   // Cast to the destination type.
   value = value.withElementType(builder, baseValueTy);
@@ -1537,7 +1546,7 @@ void CIRGenFunction::emitCXXConstructorCall(
   CIRGenCallee callee = CIRGenCallee::forDirect(calleePtr, GlobalDecl(d, type));
   cir::CIRCallOpInterface c;
   emitCall(info, callee, ReturnValueSlot(), args, &c, /*isMustTail=*/false,
-           getLoc(loc));
+           loc);
 
   if (cgm.getCodeGenOpts().OptimizationLevel != 0 && !crd->isDynamicClass() &&
       type != Ctor_Base && cgm.getCodeGenOpts().StrictVTablePointers)

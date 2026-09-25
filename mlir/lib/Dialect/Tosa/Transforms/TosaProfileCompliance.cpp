@@ -14,7 +14,17 @@
 using namespace mlir;
 using namespace mlir::tosa;
 
-LLVM_ATTRIBUTE_MINSIZE TosaProfileCompliance::TosaProfileCompliance() {
+// Building this ~5,000-line generated initializer map under HWAddressSanitizer
+// or MemorySanitizer leads to extreme compile times (>3.5 minutes) during
+// InstCombine and greedy register allocation due to instrumentation
+// overhead. Disable optimization under MSan/HWAsan to keep build times
+// manageable.
+#if LLVM_MEMORY_SANITIZER_BUILD || LLVM_HWADDRESS_SANITIZER_BUILD
+__attribute__((optnone))
+#else
+LLVM_ATTRIBUTE_MINSIZE
+#endif
+TosaProfileCompliance::TosaProfileCompliance() {
   const TypeInfo boolT = {mlir::IntegerType::getTypeID(), 1};
   const TypeInfo i4T = {mlir::IntegerType::getTypeID(), 4};
   const TypeInfo i8T = {mlir::IntegerType::getTypeID(), 8};

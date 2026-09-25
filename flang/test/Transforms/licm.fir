@@ -22,7 +22,7 @@
 // CHECK-SAME:      %[[ARG2:.*]]: !fir.ref<i32> {fir.bindc_name = "n"}) {
 // CHECK:           %[[CONSTANT_0:.*]] = arith.constant 1 : index
 // CHECK:           %[[DUMMY_SCOPE_0:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_dummy_scalarEi"}
+// CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFtest_dummy_scalarEi"}>
 // CHECK:           %[[DECLARE_0:.*]] = fir.declare %[[ALLOCA_0]] {uniq_name = "_QFtest_dummy_scalarEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           %[[DECLARE_1:.*]] = fir.declare %[[ARG2]] dummy_scope %[[DUMMY_SCOPE_0]] arg 3 {uniq_name = "_QFtest_dummy_scalarEn"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
 // CHECK:           %[[ASSUMED_SIZE_EXTENT_0:.*]] = fir.assumed_size_extent : index
@@ -92,7 +92,7 @@ func.func @_QPtest_dummy_scalar(%arg0: !fir.ref<!fir.array<?xi32>> {fir.bindc_na
 // CHECK-SAME:      %[[ARG2:.*]]: !fir.ref<i32> {fir.bindc_name = "n"}) {
 // CHECK:           %[[CONSTANT_0:.*]] = arith.constant 1 : index
 // CHECK:           %[[DUMMY_SCOPE_0:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_dummy_scalar_allocatableEi"}
+// CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFtest_dummy_scalar_allocatableEi"}>
 // CHECK:           %[[DECLARE_0:.*]] = fir.declare %[[ALLOCA_0]] {uniq_name = "_QFtest_dummy_scalar_allocatableEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           %[[DECLARE_1:.*]] = fir.declare %[[ARG2]] dummy_scope %[[DUMMY_SCOPE_0]] arg 3 {uniq_name = "_QFtest_dummy_scalar_allocatableEn"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
 // CHECK:           %[[ASSUMED_SIZE_EXTENT_0:.*]] = fir.assumed_size_extent : index
@@ -166,7 +166,7 @@ func.func @_QPtest_dummy_scalar_allocatable(%arg0: !fir.ref<!fir.array<?xi32>> {
 // CHECK-SAME:      %[[ARG2:.*]]: !fir.ref<i32> {fir.bindc_name = "n"}) {
 // CHECK:           %[[CONSTANT_0:.*]] = arith.constant 1 : index
 // CHECK:           %[[DUMMY_SCOPE_0:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_dummy_scalar_pointerEi"}
+// CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFtest_dummy_scalar_pointerEi"}>
 // CHECK:           %[[DECLARE_0:.*]] = fir.declare %[[ALLOCA_0]] {uniq_name = "_QFtest_dummy_scalar_pointerEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           %[[DECLARE_1:.*]] = fir.declare %[[ARG2]] dummy_scope %[[DUMMY_SCOPE_0]] arg 3 {uniq_name = "_QFtest_dummy_scalar_pointerEn"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
 // CHECK:           %[[ASSUMED_SIZE_EXTENT_0:.*]] = fir.assumed_size_extent : index
@@ -239,7 +239,7 @@ func.func @_QPtest_dummy_scalar_pointer(%arg0: !fir.ref<!fir.array<?xi32>> {fir.
 // CHECK:           %[[DUMMY_SCOPE_0:.*]] = fir.dummy_scope : !fir.dscope
 // CHECK:           %[[ADDRESS_OF_0:.*]] = fir.address_of(@_QMdataEglob_var) : !fir.ref<f32>
 // CHECK:           %[[DECLARE_0:.*]] = fir.declare %[[ADDRESS_OF_0]] {uniq_name = "_QMdataEglob_var"} : (!fir.ref<f32>) -> !fir.ref<f32>
-// CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_global_scalarEi"}
+// CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFtest_global_scalarEi"}>
 // CHECK:           %[[DECLARE_1:.*]] = fir.declare %[[ALLOCA_0]] {uniq_name = "_QFtest_global_scalarEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           %[[DECLARE_2:.*]] = fir.declare %[[ARG1]] dummy_scope %[[DUMMY_SCOPE_0]] arg 2 {uniq_name = "_QFtest_global_scalarEn"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
 // CHECK:           %[[ASSUMED_SIZE_EXTENT_0:.*]] = fir.assumed_size_extent : index
@@ -308,7 +308,7 @@ func.func @_QPtest_global_scalar(%arg0: !fir.ref<!fir.array<?xi32>> {fir.bindc_n
 // CHECK:           %[[DUMMY_SCOPE_0:.*]] = fir.dummy_scope : !fir.dscope
 // CHECK:           %[[ADDRESS_OF_0:.*]] = fir.address_of(@_QMdataEglob_alloc) : !fir.ref<!fir.box<!fir.heap<f32>>>
 // CHECK:           %[[DECLARE_0:.*]] = fir.declare %[[ADDRESS_OF_0]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMdataEglob_alloc"} : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> !fir.ref<!fir.box<!fir.heap<f32>>>
-// CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_global_scalar_allocatableEi"}
+// CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFtest_global_scalar_allocatableEi"}>
 // CHECK:           %[[DECLARE_1:.*]] = fir.declare %[[ALLOCA_0]] {uniq_name = "_QFtest_global_scalar_allocatableEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           %[[DECLARE_2:.*]] = fir.declare %[[ARG1]] dummy_scope %[[DUMMY_SCOPE_0]] arg 2 {uniq_name = "_QFtest_global_scalar_allocatableEn"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
 // CHECK:           %[[ASSUMED_SIZE_EXTENT_0:.*]] = fir.assumed_size_extent : index
@@ -381,7 +381,7 @@ func.func @_QPtest_global_scalar_allocatable(%arg0: !fir.ref<!fir.array<?xi32>> 
 // CHECK:           %[[DUMMY_SCOPE_0:.*]] = fir.dummy_scope : !fir.dscope
 // CHECK:           %[[ADDRESS_OF_0:.*]] = fir.address_of(@_QMdataEglob_ptr) : !fir.ref<!fir.box<!fir.ptr<f32>>>
 // CHECK:           %[[DECLARE_0:.*]] = fir.declare %[[ADDRESS_OF_0]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMdataEglob_ptr"} : (!fir.ref<!fir.box<!fir.ptr<f32>>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
-// CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_global_scalar_pointerEi"}
+// CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFtest_global_scalar_pointerEi"}>
 // CHECK:           %[[DECLARE_1:.*]] = fir.declare %[[ALLOCA_0]] {uniq_name = "_QFtest_global_scalar_pointerEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           %[[DECLARE_2:.*]] = fir.declare %[[ARG1]] dummy_scope %[[DUMMY_SCOPE_0]] arg 2 {uniq_name = "_QFtest_global_scalar_pointerEn"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
 // CHECK:           %[[ASSUMED_SIZE_EXTENT_0:.*]] = fir.assumed_size_extent : index
@@ -455,7 +455,7 @@ func.func @_QPtest_global_scalar_pointer(%arg0: !fir.ref<!fir.array<?xi32>> {fir
 // CHECK:           %[[DUMMY_SCOPE_0:.*]] = fir.dummy_scope : !fir.dscope
 // CHECK:           %[[ADDRESS_OF_0:.*]] = fir.address_of(@_QMdataEglob_var) : !fir.ref<f32>
 // CHECK:           %[[DECLARE_0:.*]] = fir.declare %[[ADDRESS_OF_0]] {uniq_name = "_QMdataEglob_var"} : (!fir.ref<f32>) -> !fir.ref<f32>
-// CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_global_scalar_negativeEi"}
+// CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFtest_global_scalar_negativeEi"}>
 // CHECK:           %[[DECLARE_1:.*]] = fir.declare %[[ALLOCA_0]] {uniq_name = "_QFtest_global_scalar_negativeEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           %[[DECLARE_2:.*]] = fir.declare %[[ARG1]] dummy_scope %[[DUMMY_SCOPE_0]] arg 2 {uniq_name = "_QFtest_global_scalar_negativeEn"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
 // CHECK:           %[[ASSUMED_SIZE_EXTENT_0:.*]] = fir.assumed_size_extent : index
@@ -527,7 +527,7 @@ func.func @_QPtest_global_scalar_negative(%arg0: !fir.ref<!fir.array<?xi32>> {fi
 // CHECK:           %[[DUMMY_SCOPE_0:.*]] = fir.dummy_scope : !fir.dscope
 // CHECK:           %[[ADDRESS_OF_0:.*]] = fir.address_of(@_QMdataEglob_alloc) : !fir.ref<!fir.box<!fir.heap<f32>>>
 // CHECK:           %[[DECLARE_0:.*]] = fir.declare %[[ADDRESS_OF_0]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMdataEglob_alloc"} : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> !fir.ref<!fir.box<!fir.heap<f32>>>
-// CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_global_scalar_allocatable_negativeEi"}
+// CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFtest_global_scalar_allocatable_negativeEi"}>
 // CHECK:           %[[DECLARE_1:.*]] = fir.declare %[[ALLOCA_0]] {uniq_name = "_QFtest_global_scalar_allocatable_negativeEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           %[[DECLARE_2:.*]] = fir.declare %[[ARG1]] dummy_scope %[[DUMMY_SCOPE_0]] arg 2 {uniq_name = "_QFtest_global_scalar_allocatable_negativeEn"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
 // CHECK:           %[[ASSUMED_SIZE_EXTENT_0:.*]] = fir.assumed_size_extent : index
@@ -603,7 +603,7 @@ func.func @_QPtest_global_scalar_allocatable_negative(%arg0: !fir.ref<!fir.array
 // CHECK:           %[[DUMMY_SCOPE_0:.*]] = fir.dummy_scope : !fir.dscope
 // CHECK:           %[[ADDRESS_OF_0:.*]] = fir.address_of(@_QMdataEglob_ptr) : !fir.ref<!fir.box<!fir.ptr<f32>>>
 // CHECK:           %[[DECLARE_0:.*]] = fir.declare %[[ADDRESS_OF_0]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMdataEglob_ptr"} : (!fir.ref<!fir.box<!fir.ptr<f32>>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
-// CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_global_scalar_pointer_negativeEi"}
+// CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFtest_global_scalar_pointer_negativeEi"}>
 // CHECK:           %[[DECLARE_1:.*]] = fir.declare %[[ALLOCA_0]] {uniq_name = "_QFtest_global_scalar_pointer_negativeEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           %[[DECLARE_2:.*]] = fir.declare %[[ARG1]] dummy_scope %[[DUMMY_SCOPE_0]] arg 2 {uniq_name = "_QFtest_global_scalar_pointer_negativeEn"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
 // CHECK:           %[[ASSUMED_SIZE_EXTENT_0:.*]] = fir.assumed_size_extent : index
@@ -676,7 +676,7 @@ func.func @_QPtest_global_scalar_pointer_negative(%arg0: !fir.ref<!fir.array<?xi
 // CHECK-SAME:      %[[ARG2:.*]]: !fir.ref<i32> {fir.bindc_name = "n"}) {
 // CHECK:           %[[CONSTANT_0:.*]] = arith.constant 1 : index
 // CHECK:           %[[DUMMY_SCOPE_0:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_dummy_arrayEi"}
+// CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFtest_dummy_arrayEi"}>
 // CHECK:           %[[DECLARE_0:.*]] = fir.declare %[[ALLOCA_0]] {uniq_name = "_QFtest_dummy_arrayEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           %[[DECLARE_1:.*]] = fir.declare %[[ARG2]] dummy_scope %[[DUMMY_SCOPE_0]] arg 3 {uniq_name = "_QFtest_dummy_arrayEn"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
 // CHECK:           %[[ASSUMED_SIZE_EXTENT_0:.*]] = fir.assumed_size_extent : index
@@ -745,7 +745,7 @@ func.func @_QPtest_dummy_array(%arg0: !fir.ref<!fir.array<?xi32>> {fir.bindc_nam
 // CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0 : index
 // CHECK:           %[[CONSTANT_1:.*]] = arith.constant 1 : index
 // CHECK:           %[[DUMMY_SCOPE_0:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_dummy_array_allocatableEi"}
+// CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFtest_dummy_array_allocatableEi"}>
 // CHECK:           %[[DECLARE_0:.*]] = fir.declare %[[ALLOCA_0]] {uniq_name = "_QFtest_dummy_array_allocatableEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           %[[DECLARE_1:.*]] = fir.declare %[[ARG2]] dummy_scope %[[DUMMY_SCOPE_0]] arg 3 {uniq_name = "_QFtest_dummy_array_allocatableEn"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
 // CHECK:           %[[ASSUMED_SIZE_EXTENT_0:.*]] = fir.assumed_size_extent : index
@@ -823,7 +823,7 @@ func.func @_QPtest_dummy_array_allocatable(%arg0: !fir.ref<!fir.array<?xi32>> {f
 // CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0 : index
 // CHECK:           %[[CONSTANT_1:.*]] = arith.constant 1 : index
 // CHECK:           %[[DUMMY_SCOPE_0:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_dummy_array_pointerEi"}
+// CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFtest_dummy_array_pointerEi"}>
 // CHECK:           %[[DECLARE_0:.*]] = fir.declare %[[ALLOCA_0]] {uniq_name = "_QFtest_dummy_array_pointerEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           %[[DECLARE_1:.*]] = fir.declare %[[ARG2]] dummy_scope %[[DUMMY_SCOPE_0]] arg 3 {uniq_name = "_QFtest_dummy_array_pointerEn"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
 // CHECK:           %[[ASSUMED_SIZE_EXTENT_0:.*]] = fir.assumed_size_extent : index
@@ -901,7 +901,7 @@ func.func @_QPtest_dummy_array_pointer(%arg0: !fir.ref<!fir.array<?xi32>> {fir.b
 // CHECK:           %[[ADDRESS_OF_0:.*]] = fir.address_of(@_QMdataEglob_arr_var) : !fir.ref<!fir.array<10xf32>>
 // CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[CONSTANT_1]] : (index) -> !fir.shape<1>
 // CHECK:           %[[DECLARE_0:.*]] = fir.declare %[[ADDRESS_OF_0]](%[[SHAPE_0]]) {uniq_name = "_QMdataEglob_arr_var"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<10xf32>>
-// CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_global_arrayEi"}
+// CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFtest_global_arrayEi"}>
 // CHECK:           %[[DECLARE_1:.*]] = fir.declare %[[ALLOCA_0]] {uniq_name = "_QFtest_global_arrayEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           %[[DECLARE_2:.*]] = fir.declare %[[ARG1]] dummy_scope %[[DUMMY_SCOPE_0]] arg 2 {uniq_name = "_QFtest_global_arrayEn"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
 // CHECK:           %[[ASSUMED_SIZE_EXTENT_0:.*]] = fir.assumed_size_extent : index
@@ -975,7 +975,7 @@ func.func @_QPtest_global_array(%arg0: !fir.ref<!fir.array<?xi32>> {fir.bindc_na
 // CHECK:           %[[DUMMY_SCOPE_0:.*]] = fir.dummy_scope : !fir.dscope
 // CHECK:           %[[ADDRESS_OF_0:.*]] = fir.address_of(@_QMdataEglob_arr_alloc) : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 // CHECK:           %[[DECLARE_0:.*]] = fir.declare %[[ADDRESS_OF_0]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMdataEglob_arr_alloc"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
-// CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_global_array_allocatableEi"}
+// CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFtest_global_array_allocatableEi"}>
 // CHECK:           %[[DECLARE_1:.*]] = fir.declare %[[ALLOCA_0]] {uniq_name = "_QFtest_global_array_allocatableEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           %[[DECLARE_2:.*]] = fir.declare %[[ARG1]] dummy_scope %[[DUMMY_SCOPE_0]] arg 2 {uniq_name = "_QFtest_global_array_allocatableEn"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
 // CHECK:           %[[ASSUMED_SIZE_EXTENT_0:.*]] = fir.assumed_size_extent : index
@@ -1056,7 +1056,7 @@ func.func @_QPtest_global_array_allocatable(%arg0: !fir.ref<!fir.array<?xi32>> {
 // CHECK:           %[[DUMMY_SCOPE_0:.*]] = fir.dummy_scope : !fir.dscope
 // CHECK:           %[[ADDRESS_OF_0:.*]] = fir.address_of(@_QMdataEglob_arr_ptr) : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
 // CHECK:           %[[DECLARE_0:.*]] = fir.declare %[[ADDRESS_OF_0]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMdataEglob_arr_ptr"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
-// CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_global_array_pointerEi"}
+// CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFtest_global_array_pointerEi"}>
 // CHECK:           %[[DECLARE_1:.*]] = fir.declare %[[ALLOCA_0]] {uniq_name = "_QFtest_global_array_pointerEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           %[[DECLARE_2:.*]] = fir.declare %[[ARG1]] dummy_scope %[[DUMMY_SCOPE_0]] arg 2 {uniq_name = "_QFtest_global_array_pointerEn"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
 // CHECK:           %[[ASSUMED_SIZE_EXTENT_0:.*]] = fir.assumed_size_extent : index
@@ -1133,7 +1133,7 @@ func.func @_QPtest_global_array_pointer(%arg0: !fir.ref<!fir.array<?xi32>> {fir.
 // CHECK-SAME:      %[[ARG2:.*]]: !fir.ref<i32> {fir.bindc_name = "n"}) {
 // CHECK:           %[[CONSTANT_0:.*]] = arith.constant 1 : index
 // CHECK:           %[[DUMMY_SCOPE_0:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_dummy_scalar_optionalEi"}
+// CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFtest_dummy_scalar_optionalEi"}>
 // CHECK:           %[[DECLARE_0:.*]] = fir.declare %[[ALLOCA_0]] {uniq_name = "_QFtest_dummy_scalar_optionalEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           %[[DECLARE_1:.*]] = fir.declare %[[ARG2]] dummy_scope %[[DUMMY_SCOPE_0]] arg 3 {uniq_name = "_QFtest_dummy_scalar_optionalEn"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
 // CHECK:           %[[ASSUMED_SIZE_EXTENT_0:.*]] = fir.assumed_size_extent : index
@@ -1199,7 +1199,7 @@ func.func @_QPtest_dummy_scalar_optional(%arg0: !fir.ref<!fir.array<?xi32>> {fir
 // CHECK-SAME:      %[[ARG2:.*]]: !fir.ref<i32> {fir.bindc_name = "n"}) {
 // CHECK:           %[[CONSTANT_0:.*]] = arith.constant 1 : index
 // CHECK:           %[[DUMMY_SCOPE_0:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_dummy_scalar_allocatable_optionalEi"}
+// CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFtest_dummy_scalar_allocatable_optionalEi"}>
 // CHECK:           %[[DECLARE_0:.*]] = fir.declare %[[ALLOCA_0]] {uniq_name = "_QFtest_dummy_scalar_allocatable_optionalEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           %[[DECLARE_1:.*]] = fir.declare %[[ARG2]] dummy_scope %[[DUMMY_SCOPE_0]] arg 3 {uniq_name = "_QFtest_dummy_scalar_allocatable_optionalEn"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
 // CHECK:           %[[ASSUMED_SIZE_EXTENT_0:.*]] = fir.assumed_size_extent : index
@@ -1269,7 +1269,7 @@ func.func @_QPtest_dummy_scalar_allocatable_optional(%arg0: !fir.ref<!fir.array<
 // CHECK-SAME:      %[[ARG2:.*]]: !fir.ref<i32> {fir.bindc_name = "n"}) {
 // CHECK:           %[[CONSTANT_0:.*]] = arith.constant 1 : index
 // CHECK:           %[[DUMMY_SCOPE_0:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_dummy_scalar_pointer_optionalEi"}
+// CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFtest_dummy_scalar_pointer_optionalEi"}>
 // CHECK:           %[[DECLARE_0:.*]] = fir.declare %[[ALLOCA_0]] {uniq_name = "_QFtest_dummy_scalar_pointer_optionalEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           %[[DECLARE_1:.*]] = fir.declare %[[ARG2]] dummy_scope %[[DUMMY_SCOPE_0]] arg 3 {uniq_name = "_QFtest_dummy_scalar_pointer_optionalEn"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
 // CHECK:           %[[ASSUMED_SIZE_EXTENT_0:.*]] = fir.assumed_size_extent : index
@@ -1591,7 +1591,7 @@ func.func @_QPtest_common_array(%arg0: !fir.ref<!fir.array<?xi32>> {fir.bindc_na
 // CHECK-SAME:      %[[ARG3:.*]]: i1) {
 // CHECK:           %[[CONSTANT_0:.*]] = arith.constant 1 : index
 // CHECK:           %[[DUMMY_SCOPE_0:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_dummy_scalarEi"}
+// CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFtest_dummy_scalarEi"}>
 // CHECK:           %[[DECLARE_0:.*]] = fir.declare %[[ALLOCA_0]] {uniq_name = "_QFtest_dummy_scalarEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           %[[DECLARE_1:.*]] = fir.declare %[[ARG2]] dummy_scope %[[DUMMY_SCOPE_0]] arg 3 {uniq_name = "_QFtest_dummy_scalarEn"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
 // CHECK:           %[[ASSUMED_SIZE_EXTENT_0:.*]] = fir.assumed_size_extent : index
@@ -1737,7 +1737,7 @@ func.func @_QPtest_acc_loop_with_private(%arg0: !fir.ref<f32> {fir.bindc_name = 
 // CHECK:           %[[CONSTANT_1:.*]] = arith.constant 10 : index
 // CHECK:           %[[CONSTANT_2:.*]] = arith.constant 1 : index
 // CHECK:           %[[DUMMY_SCOPE_0:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_slice_rebox_licmEi"}
+// CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFtest_slice_rebox_licmEi"}>
 // CHECK:           %[[DECLARE_0:.*]] = fir.declare %[[ALLOCA_0]] {uniq_name = "_QFtest_slice_rebox_licmEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           %[[DECLARE_1:.*]] = fir.declare %[[ARG0]] dummy_scope %[[DUMMY_SCOPE_0]] arg 1 {uniq_name = "_QFtest_slice_rebox_licmEx"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?xf32>>
 // CHECK:           %[[REBOX_0:.*]] = fir.rebox %[[DECLARE_1]] : (!fir.box<!fir.array<?xf32>>) -> !fir.box<!fir.array<?xf32>>
@@ -1785,7 +1785,7 @@ func.func private @takes_assumed_shape(!fir.box<!fir.array<?xf32>>)
 // CHECK:           %[[CONSTANT_1:.*]] = arith.constant 10 : index
 // CHECK:           %[[CONSTANT_2:.*]] = arith.constant 1 : index
 // CHECK:           %[[DUMMY_SCOPE_0:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_shape_embox_licmEi"}
+// CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFtest_shape_embox_licmEi"}>
 // CHECK:           %[[DECLARE_0:.*]] = fir.declare %[[ALLOCA_0]] {uniq_name = "_QFtest_shape_embox_licmEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           %[[ASSUMED_SIZE_EXTENT_0:.*]] = fir.assumed_size_extent : index
 // CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[ASSUMED_SIZE_EXTENT_0]] : (index) -> !fir.shape<1>
@@ -2015,13 +2015,20 @@ func.func @test_acc_loop_private2_hoisting() {
 }
 
 // -----
-// Test hoisting of fir.field_index and fir.coordinate_of.
+// Test hoisting of fir.coordinate_of.
+// fir.field_index is deliberately NOT hoisted: lowering a consumer of a field
+// value inspects its defining operation (for a record whose layout is known at
+// compile time the field becomes a constant LLVM GEP struct index). Hoisting it
+// out of the arms of a construct leaves otherwise-identical blocks differing
+// only in that operand, which lets block merging thread it through a block
+// argument and destroy the defining operation codegen needs. Its consumers are
+// unaffected and still hoist -- fir.coordinate_of below uses the attribute form
+// of the field, so it does not depend on the fir.field_index value.
 // CHECK-LABEL:   func.func @_QMmPtest(
 // CHECK-SAME:      %[[ARG0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i32> {fir.bindc_name = "n"}) {
 // CHECK:           %[[DUMMY_SCOPE_0:.*]] = fir.dummy_scope : !fir.dscope
 // CHECK:           %[[ADDRESS_OF_0:.*]] = fir.address_of(@_QMmEglob) : !fir.ref<!fir.type<_QMmTt{a:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>
 // CHECK:           %[[DECLARE_0:.*]] = fir.declare %[[ADDRESS_OF_0]] {uniq_name = "_QMmEglob"} : (!fir.ref<!fir.type<_QMmTt{a:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>) -> !fir.ref<!fir.type<_QMmTt{a:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>
-// CHECK:           %[[FIELD_INDEX_0:.*]] = fir.field_index a, !fir.type<_QMmTt{a:!fir.box<!fir.heap<!fir.array<?xf32>>>}>
 // CHECK:           %[[COORDINATE_OF_0:.*]] = fir.coordinate_of %[[DECLARE_0]], a : (!fir.ref<!fir.type<_QMmTt{a:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 // CHECK:           %[[LOAD_1:.*]] = fir.load %[[COORDINATE_OF_0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 // CHECK:           %[[BOX_ADDR_0:.*]] = fir.box_addr %[[LOAD_1]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.heap<!fir.array<?xf32>>
@@ -2029,6 +2036,7 @@ func.func @test_acc_loop_private2_hoisting() {
 // CHECK:           %[[BOX_DIMS_0:.*]]:3 = fir.box_dims %[[LOAD_1]], %[[CONSTANT_2]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> (index, index, index)
 // CHECK:           %[[SHAPE_SHIFT_0:.*]] = fir.shape_shift %[[BOX_DIMS_0]]#0, %[[BOX_DIMS_0]]#1 : (index, index) -> !fir.shapeshift<1>
 // CHECK:           %[[DO_LOOP_0:.*]] = fir.do_loop
+// CHECK:             %[[FIELD_INDEX_0:.*]] = fir.field_index a, !fir.type<_QMmTt{a:!fir.box<!fir.heap<!fir.array<?xf32>>>}>
 func.func @_QMmPtest(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}) {
   %cst = arith.constant 1.000000e+00 : f32
   %c1 = arith.constant 1 : index

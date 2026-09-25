@@ -1049,6 +1049,19 @@ void split_range_for() {
 // CHECK1-NEXT:    store i64 [[INC14]], ptr [[DOTSPLIT_IV_1___BEGIN1]], align 8
 // CHECK1-NEXT:    br label [[FOR_COND7]], !llvm.loop [[LOOP30:![0-9]+]]
 // CHECK1:       for.end15:
+// CHECK1-NEXT:    [[TMP23:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_]], align 8
+// CHECK1-NEXT:    [[TMP24:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_3]], align 8
+// CHECK1-NEXT:    [[TMP25:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_]], align 8
+// CHECK1-NEXT:    [[SUB_PTR_LHS_CAST16:%.*]] = ptrtoaddr ptr [[TMP24]] to i64
+// CHECK1-NEXT:    [[SUB_PTR_RHS_CAST17:%.*]] = ptrtoaddr ptr [[TMP25]] to i64
+// CHECK1-NEXT:    [[SUB_PTR_SUB18:%.*]] = sub i64 [[SUB_PTR_LHS_CAST16]], [[SUB_PTR_RHS_CAST17]]
+// CHECK1-NEXT:    [[SUB_PTR_DIV19:%.*]] = sdiv exact i64 [[SUB_PTR_SUB18]], 4
+// CHECK1-NEXT:    [[SUB20:%.*]] = sub nsw i64 [[SUB_PTR_DIV19]], 1
+// CHECK1-NEXT:    [[ADD21:%.*]] = add nsw i64 [[SUB20]], 1
+// CHECK1-NEXT:    [[DIV22:%.*]] = sdiv i64 [[ADD21]], 1
+// CHECK1-NEXT:    [[MUL23:%.*]] = mul nsw i64 [[DIV22]], 1
+// CHECK1-NEXT:    [[ADD_PTR24:%.*]] = getelementptr inbounds i32, ptr [[TMP23]], i64 [[MUL23]]
+// CHECK1-NEXT:    store ptr [[ADD_PTR24]], ptr [[__BEGIN1]], align 8
 // CHECK1-NEXT:    ret void
 //
 //
@@ -1242,6 +1255,19 @@ void split_range_for() {
 // CHECK2-NEXT:    store i64 [[INC14]], ptr [[DOTSPLIT_IV_1___BEGIN1]], align 8
 // CHECK2-NEXT:    br label [[FOR_COND7]], !llvm.loop [[LOOP8:![0-9]+]]
 // CHECK2:       for.end15:
+// CHECK2-NEXT:    [[TMP23:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_]], align 8
+// CHECK2-NEXT:    [[TMP24:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_3]], align 8
+// CHECK2-NEXT:    [[TMP25:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_]], align 8
+// CHECK2-NEXT:    [[SUB_PTR_LHS_CAST16:%.*]] = ptrtoaddr ptr [[TMP24]] to i64
+// CHECK2-NEXT:    [[SUB_PTR_RHS_CAST17:%.*]] = ptrtoaddr ptr [[TMP25]] to i64
+// CHECK2-NEXT:    [[SUB_PTR_SUB18:%.*]] = sub i64 [[SUB_PTR_LHS_CAST16]], [[SUB_PTR_RHS_CAST17]]
+// CHECK2-NEXT:    [[SUB_PTR_DIV19:%.*]] = sdiv exact i64 [[SUB_PTR_SUB18]], 4
+// CHECK2-NEXT:    [[SUB20:%.*]] = sub nsw i64 [[SUB_PTR_DIV19]], 1
+// CHECK2-NEXT:    [[ADD21:%.*]] = add nsw i64 [[SUB20]], 1
+// CHECK2-NEXT:    [[DIV22:%.*]] = sdiv i64 [[ADD21]], 1
+// CHECK2-NEXT:    [[MUL23:%.*]] = mul nsw i64 [[DIV22]], 1
+// CHECK2-NEXT:    [[ADD_PTR24:%.*]] = getelementptr inbounds i32, ptr [[TMP23]], i64 [[MUL23]]
+// CHECK2-NEXT:    store ptr [[ADD_PTR24]], ptr [[__BEGIN1]], align 8
 // CHECK2-NEXT:    ret void
 //
 //

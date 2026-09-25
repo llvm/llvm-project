@@ -47,12 +47,6 @@
 using namespace clang;
 using namespace ssaf;
 
-namespace clang::ssaf {
-extern PointerFlowEntitySummary buildPointerFlowEntitySummary(EdgeSet Edges);
-extern UnsafeBufferUsageEntitySummary
-    buildUnsafeBufferUsageEntitySummary(EntityPointerLevelSet);
-} // namespace clang::ssaf
-
 namespace {
 
 class UnsafeBufferReachableAnalysisTest : public TestFixture {

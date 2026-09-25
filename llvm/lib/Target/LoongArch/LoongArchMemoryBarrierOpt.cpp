@@ -41,11 +41,6 @@ static cl::opt<bool> MergeAMOWithMB(
     cl::desc("Merge AMOs with DBARs into AMO_DB during optimization"),
     cl::init(true), cl::Hidden);
 
-static cl::opt<bool> DisableInlineAsm(
-    "loongarch-disable-inline-asm-barrier-opt",
-    cl::desc("Disable optimization of memory barriers in InlineAsm"),
-    cl::init(false), cl::Hidden);
-
 static cl::opt<bool> ReplaceEliminatedMBToNop(
     "loongarch-replace-eliminated-dbar-to-nop",
     cl::desc("Replace eliminated DBARs with NOPs to preserve code layout"),
@@ -80,70 +75,6 @@ namespace {
   CASE(AMCAS, H)                                                               \
   CASE(AMCAS, W)                                                               \
   CASE(AMCAS, D)
-
-static std::optional<std::pair<StringRef, StringRef>> parseMB(StringRef Asm) {
-  auto T1 = llvm::getToken(Asm);
-  if (!T1.first.equals_insensitive("dbar"))
-    return std::nullopt;
-  auto T2 = llvm::getToken(T1.second);
-  if (T2.first.empty())
-    return std::nullopt;
-  auto T3 = llvm::getToken(T2.second);
-  if (T3.first.trim().empty() || T3.first.starts_with('#'))
-    return std::pair(T1.first, T2.first);
-  return std::nullopt;
-}
-
-static std::optional<std::pair<StringRef, StringRef>>
-isAsmMB(const MachineInstr &MI) {
-  if (DisableInlineAsm)
-    return std::nullopt;
-  if (!MI.isInlineAsm())
-    return std::nullopt;
-  auto Asm = MI.getOperand(InlineAsm::MIOp_AsmString).getSymbolName();
-  return parseMB(Asm);
-}
-
-static StringRef getAMDB(StringRef Name) {
-#define CASE(Name, Suffix)                                                     \
-  .Case(#Name "." #Suffix, MergeAMOWithMB ? #Name "_DB." #Suffix : "")         \
-      .Case(#Name "_DB." #Suffix, #Name "_DB." #Suffix)
-  return StringSwitch<StringRef>(Name.upper()) AMO_CASES.Default({});
-#undef CASE
-}
-
-static std::optional<std::pair<StringRef, StringRef>> parseAM(StringRef Asm) {
-  auto T1 = llvm::getToken(Asm);
-  auto OpName = getAMDB(T1.first);
-  if (OpName.empty())
-    return std::nullopt;
-  auto T2 = llvm::getToken(T1.second, ",");
-  if (T2.first.empty())
-    return std::nullopt;
-  auto T3 = llvm::getToken(T2.second, ",");
-  if (T3.first.empty())
-    return std::nullopt;
-  auto T4 = llvm::getToken(T3.second, ",");
-  if (T4.first.empty())
-    return std::nullopt;
-  auto T5 = llvm::getToken(T4.second);
-  if (T5.first.trim().empty() || T5.first.starts_with('#')) {
-    StringRef Operands(T2.first.data(),
-                       T4.first.data() + T4.first.size() - T2.first.data());
-    return std::pair(OpName, Operands);
-  }
-  return std::nullopt;
-}
-
-static std::optional<std::pair<StringRef, StringRef>>
-isAsmAM(const MachineInstr &MI) {
-  if (DisableInlineAsm)
-    return std::nullopt;
-  if (!MI.isInlineAsm())
-    return std::nullopt;
-  auto Asm = MI.getOperand(InlineAsm::MIOp_AsmString).getSymbolName();
-  return parseAM(Asm);
-}
 
 static bool isMB(const MachineInstr &MI) {
   return MI.getOpcode() == LoongArch::DBAR;
@@ -192,7 +123,7 @@ static bool isSafeToSkip(const MachineInstr &MI) {
   if (MI.isCall() || MI.isReturn())
     return false;
   if (MI.isInlineAsm())
-    return isAsmMB(MI) != std::nullopt;
+    return false;
   if (MI.hasUnmodeledSideEffects())
     return isMB(MI);
   return true;
@@ -214,8 +145,7 @@ struct BarrierHint {
 
 struct InstBarrier {
   InstBarrier(MachineInstr &MI)
-      : MI(&MI), Pre(0), Post(0), Data(0), IsMB(false), IsAM(false),
-        IsAsm(false) {
+      : MI(&MI), Pre(0), Post(0), OpcAMDB(0), IsMB(false), IsAM(false) {
     if (isMB(MI)) {
       unsigned Hint = MI.getOperand(0).getImm();
       if (!BarrierHint::isValid(Hint))
@@ -234,54 +164,7 @@ struct InstBarrier {
       IsAM = true;
       OpcAMDB = *R;
       Pre = Post = BarrierHint(0b10000);
-    } else if (auto R = isAsmMB(MI)) {
-      OpName = (*R).first;
-      Operands = (*R).second;
-      auto B = parseAsmMB(Operands, MI);
-      if (!B || !BarrierHint::isValid((*B).first))
-        return;
-      IsMB = true;
-      IsAsm = true;
-      HintOff = (*B).second;
-      Pre = Post = BarrierHint((*B).first);
-    } else if (auto R = isAsmAM(MI)) {
-      OpName = (*R).first;
-      Operands = (*R).second;
-      IsAM = true;
-      IsAsm = true;
-      Pre = Post = BarrierHint(0b10000);
     }
-  }
-
-  static std::optional<std::pair<unsigned, unsigned>>
-  parseAsmMB(StringRef Operand, MachineInstr &MI) {
-    unsigned Hint, HintOff = 0;
-    // DBAR N | 0xN
-    if (!Operand.starts_with('$')) {
-      if (Operand.getAsInteger(0, Hint))
-        return std::nullopt;
-      return std::pair(Hint, HintOff);
-    }
-    // DBAR $N
-    unsigned N = 0, Off, AsmDescOp;
-    if (Operand.drop_front().getAsInteger(0, Off))
-      return std::nullopt;
-    AsmDescOp = InlineAsm::MIOp_FirstOperand;
-    while (AsmDescOp != MI.getNumOperands()) {
-      const MachineOperand &MO = MI.getOperand(AsmDescOp);
-      assert(MO.isImm() && "Unexpected operand type!");
-      const InlineAsm::Flag F(MO.getImm());
-      if (N == Off) {
-        if (!F.isImmKind())
-          return std::nullopt;
-        HintOff = AsmDescOp + 1;
-        Hint = MI.getOperand(HintOff).getImm();
-        return std::pair(Hint, HintOff);
-      }
-      AsmDescOp += 1 + F.getNumOperandRegisters();
-      ++N;
-    }
-    return std::nullopt;
   }
 
   MachineInstr *MI;
@@ -289,14 +172,9 @@ struct InstBarrier {
   BarrierHint Post;
   StringRef OpName;
   StringRef Operands;
-  union {
-    unsigned OpcAMDB;
-    unsigned HintOff;
-    unsigned Data;
-  };
+  unsigned OpcAMDB;
   bool IsMB;
   bool IsAM;
-  bool IsAsm;
 };
 
 class LoongArchMemoryBarrierOpt : public MachineFunctionPass {
@@ -424,17 +302,7 @@ unsigned LoongArchMemoryBarrierOpt::resolveBarrierRedundancy(
 static void updateMB(InstBarrier &I, BarrierHint Hint, MachineFunction *MF) {
   assert(I.IsMB && "Unexpected!");
   I.Pre = I.Post = Hint;
-  if (!I.IsAsm) {
-    I.MI->getOperand(0).setImm(Hint.Hint);
-    return;
-  }
-  if (I.HintOff) {
-    I.MI->getOperand(I.HintOff).setImm(Hint.Hint);
-    return;
-  }
-  MachineOperand &MO = I.MI->getOperand(InlineAsm::MIOp_AsmString);
-  auto New = I.OpName.str() + " " + llvm::utostr(Hint.Hint);
-  MO.ChangeToES(MF->createExternalSymbolName(New), MO.getTargetFlags());
+  I.MI->getOperand(0).setImm(Hint.Hint);
 }
 
 // Replace AMO to AMO_DB
@@ -444,13 +312,7 @@ static void replaceAM(InstBarrier &I, MachineFunction *MF) {
   if (I.OpcAMDB) {
     auto &ST = MF->getSubtarget<LoongArchSubtarget>();
     I.MI->setDesc(ST.getInstrInfo()->get(I.OpcAMDB));
-    return;
   }
-  if (!I.IsAsm)
-    return;
-  MachineOperand &MO = I.MI->getOperand(InlineAsm::MIOp_AsmString);
-  auto New = I.OpName.str() + " " + I.Operands.str();
-  MO.ChangeToES(MF->createExternalSymbolName(New), MO.getTargetFlags());
 }
 
 bool LoongArchMemoryBarrierOpt::eliminateRedundantBarrier(

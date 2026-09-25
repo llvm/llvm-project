@@ -1439,10 +1439,10 @@ void NumericLiteralParser::ParseNumberStartingWithZero(SourceLocation TokLoc) {
 
       if (!LangOpts.HexFloats)
         Diags.Report(TokLoc, LangOpts.CPlusPlus
-                                 ? diag::ext_hex_literal_invalid
+                                 ? diag::compat_pre_cxx17_hex_literal
                                  : diag::ext_hex_constant_invalid);
       else if (LangOpts.CPlusPlus17)
-        Diags.Report(TokLoc, diag::warn_cxx17_hex_literal);
+        Diags.Report(TokLoc, diag::compat_cxx17_hex_literal);
     } else if (saw_period) {
       Diags.Report(Lexer::AdvanceToTokenCharacter(TokLoc, s - ThisTokBegin, SM,
                                                   LangOpts),

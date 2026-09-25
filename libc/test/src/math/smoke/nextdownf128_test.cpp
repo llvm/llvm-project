@@ -10,4 +10,4 @@
 
 #include "src/math/nextdownf128.h"
 
-LIST_NEXTDOWN_TESTS(float128, LIBC_NAMESPACE::nextdownf128)
+LIST_NEXTDOWN_TESTS(Nextdownf128, float128, LIBC_NAMESPACE::nextdownf128)

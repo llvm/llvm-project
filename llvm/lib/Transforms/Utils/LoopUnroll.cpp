@@ -1772,11 +1772,8 @@ MDNode *llvm::GetUnrollMetadata(MDNode *LoopID, StringRef Name) {
   assert(LoopID->getNumOperands() > 0 && "requires at least one operand");
   assert(LoopID->getOperand(0) == LoopID && "invalid loop id");
 
-  for (const MDOperand &MDO : llvm::drop_begin(LoopID->operands())) {
-    MDNode *MD = dyn_cast<MDNode>(MDO);
-    if (!MD)
-      continue;
-
+  for (MDNode *MD :
+       make_isa_range<MDNode>(llvm::drop_begin(LoopID->operands()))) {
     MDString *S = dyn_cast<MDString>(MD->getOperand(0));
     if (!S)
       continue;

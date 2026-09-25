@@ -1361,9 +1361,9 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     // Use sext.h/zext.h for i16 with Zbb.
     if (SrcSize == 16 &&
         (STI.hasStdExtZbb() || (!IsSigned && STI.hasStdExtZbkb()))) {
-      MI.setDesc(TII.get(IsSigned       ? RISCV::SEXT_H
-                         : STI.isRV64() ? RISCV::ZEXT_H_RV64
-                                        : RISCV::ZEXT_H_RV32));
+      MI.setDesc(TII.get(IsSigned        ? RISCV::SEXT_H
+                         : STI.is64Bit() ? RISCV::ZEXT_H_RV64
+                                         : RISCV::ZEXT_H_RV32));
       constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
       return true;
     }

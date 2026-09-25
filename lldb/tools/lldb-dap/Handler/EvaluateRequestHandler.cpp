@@ -155,8 +155,7 @@ EvaluateRequestHandler::Run(const EvaluateArguments &arguments) const {
 
   if (ValuePointsToCode(value) &&
       body.variablesReference.Kind() != eReferenceKindInvalid)
-    body.valueLocationReference =
-        PackLocation(body.variablesReference.AsUInt32(), true);
+    body.valueLocationReference = PackLocation(body.variablesReference, true);
 
   return body;
 }

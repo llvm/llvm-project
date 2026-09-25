@@ -30,6 +30,7 @@ _LIBCPP_PUSH_MACROS
 #  include <__type_traits/remove_cvref.h>
 #  include <__utility/forward.h>
 #  include <__utility/move.h>
+#  include <__utility/pair.h>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -80,6 +81,36 @@ uninitialized_default_construct_n(_ExecutionPolicy&& __policy, _ForwardIterator 
   using _Implementation =
       __pstl::__dispatch<__pstl::__uninitialized_default_construct_n, __pstl::__current_configuration, _RawPolicy>;
   __pstl::__handle_exception<_Implementation>(std::forward<_ExecutionPolicy>(__policy), std::move(__first), __n);
+}
+
+template <class _ExecutionPolicy,
+          class _InputIterator,
+          class _ForwardIterator,
+          class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
+          enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
+_LIBCPP_HIDE_FROM_ABI _ForwardIterator uninitialized_copy(
+    _ExecutionPolicy&& __policy, _InputIterator __first, _InputIterator __last, _ForwardIterator __result) {
+  _LIBCPP_REQUIRE_CPP17_INPUT_ITERATOR(_InputIterator, "uninitialized_copy requires InputIterators");
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator, "uninitialized_copy requires ForwardIterators");
+  using _Implementation = __pstl::__dispatch<__pstl::__uninitialized_copy, __pstl::__current_configuration, _RawPolicy>;
+  return __pstl::__handle_exception<_Implementation>(
+      std::forward<_ExecutionPolicy>(__policy), std::move(__first), std::move(__last), std::move(__result));
+}
+
+template <class _ExecutionPolicy,
+          class _InputIterator,
+          class _Size,
+          class _ForwardIterator,
+          class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
+          enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
+_LIBCPP_HIDE_FROM_ABI _ForwardIterator
+uninitialized_copy_n(_ExecutionPolicy&& __policy, _InputIterator __first, _Size __n, _ForwardIterator __result) {
+  _LIBCPP_REQUIRE_CPP17_INPUT_ITERATOR(_InputIterator, "uninitialized_copy_n requires InputIterators");
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator, "uninitialized_copy_n requires ForwardIterators");
+  using _Implementation =
+      __pstl::__dispatch<__pstl::__uninitialized_copy_n, __pstl::__current_configuration, _RawPolicy>;
+  return __pstl::__handle_exception<_Implementation>(
+      std::forward<_ExecutionPolicy>(__policy), std::move(__first), __n, std::move(__result));
 }
 
 template <class _ExecutionPolicy,
@@ -134,6 +165,36 @@ uninitialized_fill_n(_ExecutionPolicy&& __policy, _ForwardIterator __first, _Siz
       __pstl::__dispatch<__pstl::__uninitialized_fill_n, __pstl::__current_configuration, _RawPolicy>;
   __pstl::__handle_exception<_Implementation>(
       std::forward<_ExecutionPolicy>(__policy), std::move(__first), __n, __value);
+}
+
+template <class _ExecutionPolicy,
+          class _InputIterator,
+          class _ForwardIterator,
+          class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
+          enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
+_LIBCPP_HIDE_FROM_ABI _ForwardIterator uninitialized_move(
+    _ExecutionPolicy&& __policy, _InputIterator __first, _InputIterator __last, _ForwardIterator __result) {
+  _LIBCPP_REQUIRE_CPP17_INPUT_ITERATOR(_InputIterator, "uninitialized_move requires InputIterators");
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator, "uninitialized_move requires ForwardIterators");
+  using _Implementation = __pstl::__dispatch<__pstl::__uninitialized_move, __pstl::__current_configuration, _RawPolicy>;
+  return __pstl::__handle_exception<_Implementation>(
+      std::forward<_ExecutionPolicy>(__policy), std::move(__first), std::move(__last), std::move(__result));
+}
+
+template <class _ExecutionPolicy,
+          class _InputIterator,
+          class _Size,
+          class _ForwardIterator,
+          class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
+          enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
+_LIBCPP_HIDE_FROM_ABI pair<_InputIterator, _ForwardIterator>
+uninitialized_move_n(_ExecutionPolicy&& __policy, _InputIterator __first, _Size __n, _ForwardIterator __result) {
+  _LIBCPP_REQUIRE_CPP17_INPUT_ITERATOR(_InputIterator, "uninitialized_move_n requires InputIterators");
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator, "uninitialized_move_n requires ForwardIterators");
+  using _Implementation =
+      __pstl::__dispatch<__pstl::__uninitialized_move_n, __pstl::__current_configuration, _RawPolicy>;
+  return __pstl::__handle_exception<_Implementation>(
+      std::forward<_ExecutionPolicy>(__policy), std::move(__first), __n, std::move(__result));
 }
 
 _LIBCPP_END_NAMESPACE_STD

@@ -473,14 +473,13 @@ public:
 
 class CompileUnitsRequestHandler
     : public RequestHandler<
-          std::optional<protocol::CompileUnitsArguments>,
+          protocol::CompileUnitsArguments,
           llvm::Expected<protocol::CompileUnitsResponseBody>> {
 public:
   using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "compileUnits"; }
   llvm::Expected<protocol::CompileUnitsResponseBody>
-  Run(const std::optional<protocol::CompileUnitsArguments> &args)
-      const override;
+  Run(const protocol::CompileUnitsArguments &args) const override;
 };
 
 class ModulesRequestHandler final

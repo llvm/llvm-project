@@ -2813,7 +2813,7 @@ void *MachProcess::STDIOThread(void *arg) {
     } else if (num_set_fds == 0) {
     } else {
       char s[1024];
-      s[sizeof(s) - 1] = '\0'; // Ensure we have NULL termination
+      s[sizeof(s) - 1] = '\0'; // Ensure we have null termination
       ssize_t bytes_read = 0;
       if (stdout_fd >= 0 && FD_ISSET(stdout_fd, &read_fds)) {
         do {

@@ -1250,15 +1250,10 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
   case RISCV::BI__builtin_riscv_pabdu_u16x4:
   // Packed Merge
   case RISCV::BI__builtin_riscv_pmerge_u8x4:
-  case RISCV::BI__builtin_riscv_pmerge_i8x4:
   case RISCV::BI__builtin_riscv_pmerge_u16x2:
-  case RISCV::BI__builtin_riscv_pmerge_i16x2:
   case RISCV::BI__builtin_riscv_pmerge_u8x8:
-  case RISCV::BI__builtin_riscv_pmerge_i8x8:
   case RISCV::BI__builtin_riscv_pmerge_u16x4:
-  case RISCV::BI__builtin_riscv_pmerge_i16x4:
   case RISCV::BI__builtin_riscv_pmerge_u32x2:
-  case RISCV::BI__builtin_riscv_pmerge_i32x2:
   // Packed Multiply High
   case RISCV::BI__builtin_riscv_pmulh_i16x2:
   case RISCV::BI__builtin_riscv_pmulh_i16x4:
@@ -1328,7 +1323,14 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
   case RISCV::BI__builtin_riscv_psshl_s_u16x4:
   case RISCV::BI__builtin_riscv_psshl_s_u32x2:
   case RISCV::BI__builtin_riscv_psshlr_s_u16x4:
-  case RISCV::BI__builtin_riscv_psshlr_s_u32x2: {
+  case RISCV::BI__builtin_riscv_psshlr_s_u32x2:
+  // Packed Saturation
+  case RISCV::BI__builtin_riscv_pusati_u16x2:
+  case RISCV::BI__builtin_riscv_psati_i16x2:
+  case RISCV::BI__builtin_riscv_pusati_u16x4:
+  case RISCV::BI__builtin_riscv_pusati_u32x2:
+  case RISCV::BI__builtin_riscv_psati_i16x4:
+  case RISCV::BI__builtin_riscv_psati_i32x2: {
     switch (BuiltinID) {
     default:
       llvm_unreachable("unexpected builtin ID");
@@ -1403,15 +1405,10 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
       ID = Intrinsic::riscv_pabdu;
       break;
     case RISCV::BI__builtin_riscv_pmerge_u8x4:
-    case RISCV::BI__builtin_riscv_pmerge_i8x4:
     case RISCV::BI__builtin_riscv_pmerge_u16x2:
-    case RISCV::BI__builtin_riscv_pmerge_i16x2:
     case RISCV::BI__builtin_riscv_pmerge_u8x8:
-    case RISCV::BI__builtin_riscv_pmerge_i8x8:
     case RISCV::BI__builtin_riscv_pmerge_u16x4:
-    case RISCV::BI__builtin_riscv_pmerge_i16x4:
     case RISCV::BI__builtin_riscv_pmerge_u32x2:
-    case RISCV::BI__builtin_riscv_pmerge_i32x2:
       ID = Intrinsic::riscv_pmerge;
       break;
     case RISCV::BI__builtin_riscv_pmulh_i16x2:
@@ -1524,6 +1521,16 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     case RISCV::BI__builtin_riscv_psshlr_s_u16x4:
     case RISCV::BI__builtin_riscv_psshlr_s_u32x2:
       ID = Intrinsic::riscv_psshlr;
+      break;
+    case RISCV::BI__builtin_riscv_psati_i16x2:
+    case RISCV::BI__builtin_riscv_psati_i16x4:
+    case RISCV::BI__builtin_riscv_psati_i32x2:
+      ID = Intrinsic::riscv_psati;
+      break;
+    case RISCV::BI__builtin_riscv_pusati_u16x2:
+    case RISCV::BI__builtin_riscv_pusati_u16x4:
+    case RISCV::BI__builtin_riscv_pusati_u32x2:
+      ID = Intrinsic::riscv_pusati;
       break;
     }
 
@@ -1759,7 +1766,19 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
   case RISCV::BI__builtin_riscv_pmulu_h01_u32x2:
   case RISCV::BI__builtin_riscv_pmulu_h11_u32x2:
   case RISCV::BI__builtin_riscv_pmulsu_h00_i32x2:
-  case RISCV::BI__builtin_riscv_pmulsu_h11_i32x2: {
+  case RISCV::BI__builtin_riscv_pmulsu_h11_i32x2:
+  case RISCV::BI__builtin_riscv_pmulh_b0_i16x2:
+  case RISCV::BI__builtin_riscv_pmulh_b1_i16x2:
+  case RISCV::BI__builtin_riscv_pmulhsu_b0_i16x2:
+  case RISCV::BI__builtin_riscv_pmulhsu_b1_i16x2:
+  case RISCV::BI__builtin_riscv_pmulh_b0_i16x4:
+  case RISCV::BI__builtin_riscv_pmulh_b1_i16x4:
+  case RISCV::BI__builtin_riscv_pmulhsu_b0_i16x4:
+  case RISCV::BI__builtin_riscv_pmulhsu_b1_i16x4:
+  case RISCV::BI__builtin_riscv_pmulh_h0_i32x2:
+  case RISCV::BI__builtin_riscv_pmulh_h1_i32x2:
+  case RISCV::BI__builtin_riscv_pmulhsu_h0_i32x2:
+  case RISCV::BI__builtin_riscv_pmulhsu_h1_i32x2: {
     switch (BuiltinID) {
     default:
       llvm_unreachable("unexpected builtin ID");
@@ -1802,6 +1821,34 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     case RISCV::BI__builtin_riscv_pmulsu_b11_i16x4:
     case RISCV::BI__builtin_riscv_pmulsu_h11_i32x2:
       ID = Intrinsic::riscv_pmulsu_11;
+      break;
+    case RISCV::BI__builtin_riscv_pmulh_b0_i16x2:
+    case RISCV::BI__builtin_riscv_pmulh_b0_i16x4:
+      ID = Intrinsic::riscv_pmulh_b0;
+      break;
+    case RISCV::BI__builtin_riscv_pmulh_b1_i16x2:
+    case RISCV::BI__builtin_riscv_pmulh_b1_i16x4:
+      ID = Intrinsic::riscv_pmulh_b1;
+      break;
+    case RISCV::BI__builtin_riscv_pmulhsu_b0_i16x2:
+    case RISCV::BI__builtin_riscv_pmulhsu_b0_i16x4:
+      ID = Intrinsic::riscv_pmulhsu_b0;
+      break;
+    case RISCV::BI__builtin_riscv_pmulhsu_b1_i16x2:
+    case RISCV::BI__builtin_riscv_pmulhsu_b1_i16x4:
+      ID = Intrinsic::riscv_pmulhsu_b1;
+      break;
+    case RISCV::BI__builtin_riscv_pmulh_h0_i32x2:
+      ID = Intrinsic::riscv_pmulh_h0;
+      break;
+    case RISCV::BI__builtin_riscv_pmulh_h1_i32x2:
+      ID = Intrinsic::riscv_pmulh_h1;
+      break;
+    case RISCV::BI__builtin_riscv_pmulhsu_h0_i32x2:
+      ID = Intrinsic::riscv_pmulhsu_h0;
+      break;
+    case RISCV::BI__builtin_riscv_pmulhsu_h1_i32x2:
+      ID = Intrinsic::riscv_pmulhsu_h1;
       break;
     }
 
@@ -1864,6 +1911,32 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     }
 
     IntrinsicTypes = {ResultType, Ops[0]->getType()};
+    break;
+  }
+
+  // Scalar Multiply High Parts
+  case RISCV::BI__builtin_riscv_mulh_h0_i32:
+  case RISCV::BI__builtin_riscv_mulh_h1_i32:
+  case RISCV::BI__builtin_riscv_mulhsu_h0_i32:
+  case RISCV::BI__builtin_riscv_mulhsu_h1_i32: {
+    switch (BuiltinID) {
+    default:
+      llvm_unreachable("unexpected builtin ID");
+    case RISCV::BI__builtin_riscv_mulh_h0_i32:
+      ID = Intrinsic::riscv_mulh_h0;
+      break;
+    case RISCV::BI__builtin_riscv_mulh_h1_i32:
+      ID = Intrinsic::riscv_mulh_h1;
+      break;
+    case RISCV::BI__builtin_riscv_mulhsu_h0_i32:
+      ID = Intrinsic::riscv_mulhsu_h0;
+      break;
+    case RISCV::BI__builtin_riscv_mulhsu_h1_i32:
+      ID = Intrinsic::riscv_mulhsu_h1;
+      break;
+    }
+
+    IntrinsicTypes = {ResultType, Ops[1]->getType()};
     break;
   }
 

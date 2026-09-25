@@ -44,7 +44,7 @@ subroutine only_once(x)
   real :: x(:, :)
   ! Test subscripts are only evaluated once.
   read(*,*) x(get_substcript(), get_vector())
-! CHECK:   %[[VAL_RES:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> {bindc_name = ".result"}
+! CHECK:   %[[VAL_RES:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> <{bindc_name = ".result"}>
 ! CHECK:   %[[VAL_X:.*]]:2 = hlfir.declare %[[VAL_X_ARG]]{{.*}}{uniq_name = "_QFonly_onceEx"}
 ! CHECK:   %[[VAL_BEGIN:.*]] = fir.call @_FortranAioBeginExternalListInput({{.*}}) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
 ! CHECK:   %[[VAL_SUB:.*]] = fir.call @_QPget_substcript() {{.*}}: () -> i32
@@ -372,7 +372,7 @@ subroutine iostat_in_io_loop(k, j, stat)
   integer :: j(3)
   integer  :: stat
   read(*, *, iostat=stat) (k(i, j), i=1,3,1)
-! CHECK:   %[[VAL_I_ALLOC:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFiostat_in_io_loopEi"}
+! CHECK:   %[[VAL_I_ALLOC:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFiostat_in_io_loopEi"}>
 ! CHECK:   %[[VAL_I:.*]]:2 = hlfir.declare %[[VAL_I_ALLOC]] {uniq_name = "_QFiostat_in_io_loopEi"}
 ! CHECK:   %[[VAL_J:.*]]:2 = hlfir.declare %[[VAL_J_ARG]](%{{.*}}){{.*}}{uniq_name = "_QFiostat_in_io_loopEj"}
 ! CHECK:   %[[VAL_K:.*]]:2 = hlfir.declare %[[VAL_K_ARG]](%{{.*}}){{.*}}{uniq_name = "_QFiostat_in_io_loopEk"}

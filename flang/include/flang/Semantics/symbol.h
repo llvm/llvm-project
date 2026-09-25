@@ -467,6 +467,10 @@ public:
   void set_cudaDataAttr(std::optional<common::CUDADataAttr> attr) {
     cudaDataAttr_ = attr;
   }
+  bool cudaDataAttrIsImplicit() const { return cudaDataAttrIsImplicit_; }
+  void set_cudaDataAttrIsImplicit(bool yes = true) {
+    cudaDataAttrIsImplicit_ = yes;
+  }
   // Specification expressions from the bounds of a zero-size explicit-shape
   // bounds array (F2023).  The entity is scalar, so these bounds are not
   // part of shape(), but they are still specification expressions that must be
@@ -487,6 +491,8 @@ private:
   common::IgnoreTKRSet ignoreTKR_;
   const Symbol *commonBlock_{nullptr}; // common block this object is in
   std::optional<common::CUDADataAttr> cudaDataAttr_;
+  bool cudaDataAttrIsImplicit_{false}; // Tracks whether cudaDataAttr_ was
+                                       // applied implicitly by the compiler
   friend llvm::raw_ostream &operator<<(
       llvm::raw_ostream &, const ObjectEntityDetails &);
 };

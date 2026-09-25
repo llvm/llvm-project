@@ -3693,6 +3693,10 @@ void RegisterCoalescer::mergeSubRangeInto(LiveInterval &LI,
         }
       },
       *LIS->getSlotIndexes(), *TRI, ComposeSubRegIdx);
+
+  // Merging may leave subranges empty; drop them so the interval is left in a
+  // valid state.
+  LI.removeEmptySubRanges();
 }
 
 bool RegisterCoalescer::isHighCostLiveInterval(LiveInterval &LI) {

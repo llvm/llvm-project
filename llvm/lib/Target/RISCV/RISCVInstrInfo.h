@@ -86,6 +86,11 @@ public:
 
   const RISCVRegisterInfo &getRegisterInfo() const { return RegInfo; }
 
+  const TargetRegisterClass *getInlineAsmMemoryOperandRegClass(
+      InlineAsm::ConstraintCode C) const override {
+    return &RISCV::GPRRegClass;
+  }
+
   MCInst getNop() const override;
 
   Register isLoadFromStackSlot(const MachineInstr &MI,
@@ -175,6 +180,8 @@ public:
 
   bool isBranchOffsetInRange(unsigned BranchOpc,
                              int64_t BrOffset) const override;
+
+  int getJumpTableIndex(const MachineInstr &MI) const override;
 
   MachineInstr *optimizeSelect(MachineInstr &MI,
                                SmallPtrSetImpl<MachineInstr *> &SeenMIs,

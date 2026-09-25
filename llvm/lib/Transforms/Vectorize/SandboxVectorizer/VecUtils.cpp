@@ -8,6 +8,7 @@
 
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/VecUtils.h"
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/SandboxIR/Instruction.h"
@@ -104,22 +105,25 @@ unsigned VecUtils::getFloorPowerOf2(unsigned Num) {
   return Num & ~Mask;
 }
 
+template <typename T>
 void VecUtils::DeadInstructionMorgue::collectPotentiallyDeadInstrs(
-    ArrayRef<Value *> Bndl) {
-  for (Value *V : Bndl)
+    ArrayRef<T *> Bndl) {
+  for (T *V : Bndl) {
+    assert(isa<Instruction>(V) && "Only works with instructions");
     DeadInstrCandidates.insert(cast<Instruction>(V));
+  }
   // Also collect the GEPs of vectorized loads and stores.
   auto Opcode = cast<Instruction>(Bndl[0])->getOpcode();
   switch (Opcode) {
   case Instruction::Opcode::Load: {
-    for (Value *V : drop_begin(Bndl))
+    for (T *V : drop_begin(Bndl))
       if (auto *Ptr =
               dyn_cast<Instruction>(cast<LoadInst>(V)->getPointerOperand()))
         DeadInstrCandidates.insert(Ptr);
     break;
   }
   case Instruction::Opcode::Store: {
-    for (Value *V : drop_begin(Bndl))
+    for (T *V : drop_begin(Bndl))
       if (auto *Ptr =
               dyn_cast<Instruction>(cast<StoreInst>(V)->getPointerOperand()))
         DeadInstrCandidates.insert(Ptr);
@@ -129,6 +133,13 @@ void VecUtils::DeadInstructionMorgue::collectPotentiallyDeadInstrs(
     break;
   }
 }
+
+template void
+    VecUtils::DeadInstructionMorgue::collectPotentiallyDeadInstrs<Value>(
+        ArrayRef<Value *>);
+template void
+    VecUtils::DeadInstructionMorgue::collectPotentiallyDeadInstrs<Instruction>(
+        ArrayRef<Instruction *>);
 
 void VecUtils::DeadInstructionMorgue::tryEraseDeadInstrs() {
   DenseMap<BasicBlock *, SmallVector<Instruction *>> SortedDeadInstrCandidates;
@@ -159,6 +170,15 @@ template <typename T> static void dumpImpl(ArrayRef<T *> Bndl) {
 }
 void VecUtils::dump(ArrayRef<Value *> Bndl) { dumpImpl(Bndl); }
 void VecUtils::dump(ArrayRef<Instruction *> Bndl) { dumpImpl(Bndl); }
+
+template <typename T> void BndlRef<T>::dump() const {
+  print(dbgs());
+  dbgs() << "\n";
+}
+// Explicit instantiation for commonly used types.
+template class BndlRef<Instruction *>;
+template class BndlRef<Value *>;
+
 #endif // NDEBUG
 
 } // namespace llvm::sandboxir

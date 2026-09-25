@@ -10,4 +10,5 @@
 
 #include "src/math/setpayloadsigl.h"
 
-LIST_SETPAYLOADSIG_TESTS(long double, LIBC_NAMESPACE::setpayloadsigl)
+LIST_SETPAYLOADSIG_TESTS(Setpayloadsigl, long double,
+                         LIBC_NAMESPACE::setpayloadsigl)

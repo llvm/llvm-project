@@ -183,8 +183,7 @@ define i32 @predicated_store_with_scatter_legal(ptr %dst, i64 %n) #0 {
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <8 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_STORE_CONTINUE14]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr { i32, i32, [4 x i32], i32, i32, i32 }, ptr [[DST]], <8 x i64> [[VEC_IND]]
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> align 4 [[TMP4]], <8 x i1> splat (i1 true), <8 x i32> poison)
-; CHECK-NEXT:    [[TMP5:%.*]] = shl <8 x i32> [[WIDE_MASKED_GATHER]], zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = sext <8 x i32> [[TMP5]] to <8 x i64>
+; CHECK-NEXT:    [[TMP6:%.*]] = sext <8 x i32> [[WIDE_MASKED_GATHER]] to <8 x i64>
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp sgt <8 x i64> zeroinitializer, [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <8 x i1> [[TMP7]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP8]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]

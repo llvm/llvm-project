@@ -1,4 +1,26 @@
 %extend lldb::SBStringList {
+    std::string __repr__() {
+        const uint32_t size = $self->GetSize(); 
+        if (size == 0) {
+            return {"[]"};
+        }
+
+        std::string result;
+        std::string_view separator;
+
+        result += '[';
+        for (uint32_t i = 0; i < size ; ++i) {
+            result += std::exchange(separator, ", ");
+            auto item = std::string_view($self->GetStringAtIndex(i));
+            result += '\'';
+            result += item;
+            result += '\'';
+        }
+        result += ']';
+
+        return result;
+    }
+
 #ifdef SWIGPYTHON
     %pythoncode%{
     def __iter__(self):
@@ -10,15 +32,23 @@
         '''Return the number of strings in a lldb.SBStringList object.'''
         return self.GetSize()
 
-    def __getitem__(self, idx):
-        '''Get the string at a given index in an lldb.SBStringList object.'''
-        if not isinstance(idx, int):
-            raise TypeError("unsupported index type: %s" % type(idx))
-        count = len(self)
-        if not (-count <= idx < count):
-            raise IndexError("list index out of range")
-        idx %= count
-        return self.GetStringAtIndex(idx)
+    def __getitem__(self, subscript: 'int | slice[int | None]', /):
+        if isinstance(subscript, int):
+            size = self.GetSize()
+            idx = subscript
+
+            if idx < 0:
+                idx += size
+            if idx >= size:
+                raise IndexError("SBStringList index out of range")
+            return self.GetStringAtIndex(idx)
+
+        if isinstance(subscript, slice):
+            indices = subscript.indices(self.GetSize())
+            return [self.GetStringAtIndex(i) for i in range(*indices)]
+
+        raise TypeError(f"SBStringList indices must be integers or slices, not {type(subscript).__name__}") 
+
     %}
 #endif
 }

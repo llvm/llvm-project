@@ -38,6 +38,10 @@ LIBC_INLINE ThreadControlBlock *get_tcb() {
   return tcb;
 }
 
+LIBC_INLINE ThreadControlBlock *get_tcb(uintptr_t tp) {
+  return reinterpret_cast<ThreadControlBlock *>(tp);
+}
+
 LIBC_INLINE ThreadAttributes *get_current_thread_attrib() {
   ThreadAttributes *attrib;
   asm("mov %%fs:%c1, %0"

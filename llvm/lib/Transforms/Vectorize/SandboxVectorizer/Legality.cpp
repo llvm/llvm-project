@@ -30,8 +30,7 @@ void LegalityResult::dump() const {
 #endif // NDEBUG
 
 std::optional<ResultReason>
-LegalityAnalysis::notVectorizableBasedOnOpcodesAndTypes(
-    ArrayRef<Value *> Bndl) {
+LegalityAnalysis::notVectorizableBasedOnOpcodesAndTypes(BndlRef<Value *> Bndl) {
   auto *I0 = cast<Instruction>(Bndl[0]);
   auto Opcode = I0->getOpcode();
   // If they have different opcodes, then we cannot form a vector (for now).
@@ -196,7 +195,7 @@ LegalityAnalysis::notVectorizableBasedOnOpcodesAndTypes(
 }
 
 CollectDescr
-LegalityAnalysis::getHowToCollectValues(ArrayRef<Value *> Bndl) const {
+LegalityAnalysis::getHowToCollectValues(BndlRef<Value *> Bndl) const {
   SmallVector<CollectDescr::ExtractElementDescr, 4> Vec;
   Vec.reserve(Bndl.size());
   for (auto [Elm, V] : enumerate(Bndl)) {
@@ -214,7 +213,7 @@ LegalityAnalysis::getHowToCollectValues(ArrayRef<Value *> Bndl) const {
   return CollectDescr(std::move(Vec));
 }
 
-const LegalityResult &LegalityAnalysis::canVectorize(ArrayRef<Value *> Bndl,
+const LegalityResult &LegalityAnalysis::canVectorize(BndlRef<Value *> Bndl,
                                                      bool SkipScheduling) {
   // If Bndl contains values other than instructions, we need to Pack.
   if (any_of(Bndl, [](auto *V) { return !isa<Instruction>(V); }))

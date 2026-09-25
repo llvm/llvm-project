@@ -16,7 +16,7 @@ permissions:
 jobs:
   permission-check:
     if: github.event.issue.pull_request && startswith(github.event.comment.body, '/test-suite')
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     environment:
       name: main-branch-only
       deployment: false
@@ -37,7 +37,7 @@ jobs:
   react-to-comment:
     needs:
       - permission-check
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       pull-requests: write
     steps:
@@ -54,9 +54,9 @@ jobs:
 
   test-suite:
     name: Build test-suite and diff
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     container:
-      image: ghcr.io/llvm/ci-ubuntu-24.04:35e958d7f0b7
+      image: ghcr.io/llvm/ci-ubuntu-26.04:latest@sha256:7ac659feb90ac48dd8676e4eb305b9aa5b31fc8b329b7e39379c38af06efc6e1
     needs:
       - permission-check
     env:
@@ -107,15 +107,8 @@ jobs:
         working-directory: llvm-project
       - name: Install system dependencies
         run: |
-          # Install newer version of CMake (llvm/ci-ubuntu-24.04 image has CMake 3.28)
-          # TODO(boomanaiden154): Remove once upgraded to Ubuntu 26.04
           sudo apt-get update
-          sudo apt-get install -y wget
-          wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | sudo tee /usr/share/keyrings/kitware-archive-keyring.gpg >/dev/null
-          echo 'deb [signed-by=/usr/share/keyrings/kitware-archive-keyring.gpg] https://apt.kitware.com/ubuntu/ noble main' | sudo tee /etc/apt/sources.list.d/kitware.list >/dev/null
-
-          sudo apt-get update
-          sudo apt-get install -y cmake tcl libc6-dev-arm64-cross libc6-dev-riscv64-cross libgcc-14-dev-arm64-cross libgcc-14-dev-riscv64-cross libstdc++-14-dev-arm64-cross libstdc++-14-dev-riscv64-cross python3-pandas python3-tabulate
+          sudo apt-get install -y tcl libc6-dev-arm64-cross libc6-dev-riscv64-cross libgcc-14-dev-arm64-cross libgcc-14-dev-riscv64-cross libstdc++-14-dev-arm64-cross libstdc++-14-dev-riscv64-cross python3-pandas python3-tabulate
       - name: Configure Clang
         run: cmake -B build -C $SCRIPTS_DIR/llvm.cmake llvm -GNinja
         working-directory: llvm-project

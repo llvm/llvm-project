@@ -292,7 +292,7 @@ int main(int argc, char **argv) {
       // expectations.
       strncpy(g_message, arg.c_str(), sizeof(g_message));
 
-      // Ensure we're null terminated.
+      // Ensure we're null-terminated.
       g_message[sizeof(g_message) - 1] = '\0';
 
     } else if (consume_front(arg, "print-message:")) {

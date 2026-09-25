@@ -103,6 +103,28 @@ inline StringRef getTMAValidateDataPatternName(TMAValidateDataPattern Pattern) {
   llvm_unreachable("invalid TMA validate data pattern");
 }
 
+// Scope of the memory ordering semantics.
+enum class MemScope : uint8_t {
+  CTA = 0,
+  CLUSTER = 1,
+  GPU = 2,
+  SYS = 3,
+};
+
+inline StringRef getMemScopeName(MemScope Scope) {
+  switch (Scope) {
+  case MemScope::CTA:
+    return "cta";
+  case MemScope::CLUSTER:
+    return "cluster";
+  case MemScope::GPU:
+    return "gpu";
+  case MemScope::SYS:
+    return "sys";
+  }
+  llvm_unreachable("invalid memory scope");
+}
+
 // Eviction priorities applicable for prefetch and applypriority intrinsics.
 enum class EvictPolicyType : uint8_t {
   EVICT_NORMAL = 0, // default
@@ -203,6 +225,8 @@ LLVM_ABI void printTMAReductionOp(raw_ostream &OS, const Constant *ImmArgVal);
 
 LLVM_ABI void printTMAValidateDataPattern(raw_ostream &OS,
                                           const Constant *ImmArgVal);
+
+LLVM_ABI void printMemScope(raw_ostream &OS, const Constant *ImmArgVal);
 
 LLVM_ABI void printTcgen05CollectorUsageOp(raw_ostream &OS,
                                            const Constant *ImmArgVal);

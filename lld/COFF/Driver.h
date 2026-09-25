@@ -33,7 +33,7 @@ using llvm::COFF::MachineTypes;
 using llvm::COFF::WindowsSubsystem;
 using std::optional;
 
-class COFFOptTable : public llvm::opt::GenericOptTable {
+class COFFOptTable : public llvm::opt::OptTable {
 public:
   COFFOptTable();
 };

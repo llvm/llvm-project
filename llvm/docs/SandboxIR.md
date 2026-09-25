@@ -112,4 +112,4 @@ A call to `accept()` pops the last checkpoint from the stack.
 Reverting or accepting all can be done with `revert(/*RevertAll=*/true)` and `accept(/*AcceptAll=*/true)`.
 
 ## Users of Sandbox IR
-- [The Sandbox Vectorizer](project:SandboxVectorizer.md)
+- [The Sandbox Vectorizer](SandboxVectorizer.md)

@@ -3,8 +3,9 @@
 ;; The module flag asks for lp64d, but without -mcpu we default to no D extension,
 ;; so we print a warning and ignore the module flag.
 ; RUN: llvm-as %s -o %t.bc
-; RUN: ld.lld -shared %t.bc -o %t.so 2>&1 | FileCheck %s --check-prefix=WARN --implicit-check-not="ignoring target-abi"
-; WARN: Hard-float 'd' ABI can't be used for a target that doesn't support the D instruction set extension (ignoring target-abi)
+; RUN: ld.lld -shared %t.bc -o %t.so 2>&1 | FileCheck %s --check-prefix=WARN \
+; RUN:   --implicit-check-not="ignoring target-abi" --implicit-check-not="error:" --implicit-check-not="warning:"
+; WARN: note: hard-float 'd' ABI can't be used for a target that doesn't support the D instruction set extension (ignoring target-abi)
 
 ;; TODO: This is inconsistent: RISCVAsmPrinter::emitStartOfAsmFile sets e_flags
 ;; based on the raw module flag not the ABI actually used for codegen.
@@ -15,9 +16,11 @@
 ; FLAGS-ABI-IGNORED-NEXT: ]
 
 ;; Passing -mcpu that has D makes the ABI valid again, so no warning.
-; RUN: ld.lld -mllvm -mcpu=sifive-u74 -shared %t.bc -o %t.so 2>&1 | FileCheck %s --check-prefix=NOWARN --allow-empty
+; RUN: ld.lld -mllvm -mcpu=sifive-u74 -shared %t.bc -o %t.so 2>&1 | FileCheck %s --check-prefix=NOWARN --allow-empty \
+; RUN:   --implicit-check-not="error:" --implicit-check-not="warning:"
 ; RUN: llvm-readobj --file-headers %t.so | FileCheck %s --check-prefix=FLAGS-MCPU
-; RUN: ld.lld -plugin-opt=mcpu=sifive-u74 -shared %t.bc -o %t.so 2>&1 | FileCheck %s --check-prefix=NOWARN --allow-empty
+; RUN: ld.lld -plugin-opt=mcpu=sifive-u74 -shared %t.bc -o %t.so 2>&1 | FileCheck %s --check-prefix=NOWARN --allow-empty \
+; RUN:   --implicit-check-not="error:" --implicit-check-not="warning:"
 ; RUN: llvm-readobj --file-headers %t.so | FileCheck %s --check-prefix=FLAGS-MCPU
 ; NOWARN-NOT: ignoring target-abi
 ; FLAGS-MCPU: Flags [ (0x5)
@@ -28,7 +31,14 @@
 target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n64-S128"
 target triple = "riscv64"
 
+module asm "nop"
+;; Module asm with target features not including 'd' (would fail before fix)
+module asm(target_features: "+c") "c.nop"
+;; Module asm with target features enabling 'd'
+module asm(target_features: "+d") "fld f0, 0(sp)"
+
 define void @_start() {
+  call void asm sideeffect "nop", ""()
   ret void
 }
 

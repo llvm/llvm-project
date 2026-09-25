@@ -24,6 +24,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/Uniformity.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/InterestingMemoryOperand.h"
@@ -190,7 +191,8 @@ enum class VectorInstrContext : uint8_t {
   None,  ///< The instruction is not folded.
   Load,  ///< The value being inserted comes from a load (InsertElement only).
   Store, ///< The extracted value is stored (ExtractElement only).
-  BinaryOp, ///< One of the operands is a binary op.
+  BinaryOp,      ///< One of the operands is a binary op.
+  SplatOpFolded, ///< All of the value's users support splatting the value.
 };
 
 class IntrinsicCostAttributes {
@@ -565,6 +567,14 @@ public:
   /// optimize away.
   LLVM_ABI unsigned getFlatAddressSpace() const;
 
+  /// Return the most specific common address space containing AS1 and AS2.
+  /// AS1 and AS2 must be distinct, and pointers from both spaces must be
+  /// convertible to the target's flat address space with addrspacecast.
+  /// Pointers from either input space must be convertible to the result with
+  /// addrspacecast. Return getFlatAddressSpace() if no more specific common
+  /// address space is available.
+  LLVM_ABI unsigned getAddressSpaceJoin(unsigned AS1, unsigned AS2) const;
+
   /// Return any intrinsic address operand indexes which may be rewritten if
   /// they use a flat address space pointer.
   ///
@@ -613,8 +623,6 @@ public:
   canHaveNonUndefGlobalInitializerInAddressSpace(unsigned AS) const;
 
   LLVM_ABI unsigned getAssumedAddrSpace(const Value *V) const;
-
-  LLVM_ABI bool isSingleThreaded() const;
 
   LLVM_ABI std::pair<const Value *, unsigned>
   getPredicatedAddrSpace(const Value *V) const;
@@ -1074,9 +1082,33 @@ public:
 
   using VectorInstrContext = llvm::VectorInstrContext;
 
+  /// Combines 2 context hints into a single value. If both are equal, keep the
+  /// shared context, otherwise fall back to no specific context.
+  LLVM_ABI static TargetTransformInfo::VectorInstrContext
+  combineVectorInstrContexts(TargetTransformInfo::VectorInstrContext Ctx1,
+                             TargetTransformInfo::VectorInstrContext Ctx2);
+
+  /// Stores information about the uses of a build vector
+  struct BuildVectorUseOp {
+    unsigned Opcode;
+    int OperandIndex;
+    BuildVectorUseOp(unsigned Opcode, int OperandIndex)
+        : Opcode(Opcode), OperandIndex(OperandIndex) {}
+  };
+
   /// Calculates a VectorInstrContext from \p I.
   LLVM_ABI static VectorInstrContext
   getVectorInstrContextHint(const Instruction *I);
+
+  /// Calculates a VectorInstrContext for buildvector-like gather sequences.
+  ///
+  /// \p GatherUserOps must collect all users of \p Scalars relevant for
+  /// determining whether a splat can be folded as a scalar operand. It returns
+  /// false if those users cannot be gathered in the required form.
+  LLVM_ABI VectorInstrContext getBuildVectorContextHint(
+      ArrayRef<int> Mask, ArrayRef<Value *> Scalars,
+      function_ref<bool(SmallVectorImpl<BuildVectorUseOp> &)> GatherUseOps)
+      const;
 
   /// Estimate the overhead of scalarizing an instruction. Insert and Extract
   /// are set if the demanded result elements need to be inserted and/or
@@ -1530,7 +1562,7 @@ public:
   /// \p Args is an optional argument which holds the instruction operands
   /// values so the TTI can analyze those values searching for special
   /// cases or optimizations based on those values.
-  /// \p CxtI is the optional original context instruction, if one exists, to
+  /// \p CtxI is the optional original context instruction, if one exists, to
   /// provide even more information.
   /// \p TLibInfo is used to search for platform specific vector library
   /// functions for instructions that might be converted to calls (e.g. frem).
@@ -1538,7 +1570,7 @@ public:
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Opd1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Opd2Info = {TTI::OK_AnyValue, TTI::OP_None},
-      ArrayRef<const Value *> Args = {}, const Instruction *CxtI = nullptr,
+      ArrayRef<const Value *> Args = {}, const Instruction *CtxI = nullptr,
       const TargetLibraryInfo *TLibInfo = nullptr) const;
 
   /// Returns the cost estimation for alternating opcode pattern that can be
@@ -1564,7 +1596,8 @@ public:
       ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
       TTI::TargetCostKind CostKind, ArrayRef<int> Mask = {}, int Index = 0,
       VectorType *SubTp = nullptr, ArrayRef<const Value *> Args = {},
-      const Instruction *CxtI = nullptr) const;
+      const Instruction *CtxI = nullptr,
+      TTI::VectorInstrContext VIC = TTI::VectorInstrContext::None) const;
 
   /// Represents a hint about the context in which a cast is used.
   ///

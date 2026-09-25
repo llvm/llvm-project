@@ -19,7 +19,7 @@ S agg_invoker() {
   return fn(3);
 }
 
-// CIR-LABEL: cir.func no_inline internal private dso_local @_ZZ11agg_invokervEN3$_08__invokeEi
+// CIR-LABEL: cir.func no_inline alignment(2) internal private dso_local @_ZZ11agg_invokervEN3$_08__invokeEi
 // CIR-SAME:    (%[[AGG_RESULT:.*]]: !cir.ptr<!rec_S> {{.*}}llvm.sret = !rec_S{{.*}}, %[[I_ARG:.*]]: !s32i {{.*}})
 // CIR:         %[[I_ALLOCA:.*]] = cir.alloca "i" {{.*}} init : !cir.ptr<!s32i>
 // CIR:         %[[UNUSED:.*]] = cir.alloca "unused.capture" {{.*}} : !cir.ptr<!rec_anon{{.*}}>

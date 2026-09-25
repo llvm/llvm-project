@@ -39,6 +39,14 @@ WebAssemblyInstrInfo::WebAssemblyInstrInfo(const WebAssemblySubtarget &STI)
                               WebAssembly::CATCHRET),
       RI(STI.getTargetTriple()) {}
 
+const TargetRegisterClass *
+WebAssemblyInstrInfo::getInlineAsmMemoryOperandRegClass(
+    InlineAsm::ConstraintCode C) const {
+  return RI.getTargetTriple().getArch() == Triple::wasm64
+             ? &WebAssembly::I64RegClass
+             : &WebAssembly::I32RegClass;
+}
+
 bool WebAssemblyInstrInfo::isReMaterializableImpl(
     const MachineInstr &MI) const {
   switch (MI.getOpcode()) {

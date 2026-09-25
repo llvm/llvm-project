@@ -43,3 +43,68 @@ TEST(ProtocolEventsTest, StoppedEventBody) {
   ASSERT_THAT_EXPECTED(expected_body, llvm::Succeeded());
   EXPECT_EQ(PrettyPrint(*expected_body), PrettyPrint(body));
 }
+
+TEST(ProtocolEventsTest, ProgressStartEventBody) {
+  ProgressStartEventBody body;
+  body.progressId = "1";
+  body.title = "Parsing symbols";
+  Expected<Value> expected_body = parse(R"({
+    "progressId": "1",
+    "title": "Parsing symbols"
+  })");
+  ASSERT_THAT_EXPECTED(expected_body, llvm::Succeeded());
+  EXPECT_EQ(PrettyPrint(*expected_body), PrettyPrint(body));
+
+  body.message = "foo.cpp";
+  body.requestId = 30;
+  body.percentage = 25;
+  body.cancellable = true;
+  expected_body = parse(R"({
+    "progressId": "1",
+    "title": "Parsing symbols",
+    "message": "foo.cpp",
+    "requestId": 30,
+    "percentage": 25,
+    "cancellable": true
+  })");
+  ASSERT_THAT_EXPECTED(expected_body, llvm::Succeeded());
+  EXPECT_EQ(PrettyPrint(*expected_body), PrettyPrint(body));
+}
+
+TEST(ProtocolEventsTest, ProgressUpdateEventBody) {
+  ProgressUpdateEventBody body;
+  body.progressId = "1";
+  Expected<Value> expected_body = parse(R"({
+    "progressId": "1"
+  })");
+  ASSERT_THAT_EXPECTED(expected_body, llvm::Succeeded());
+  EXPECT_EQ(PrettyPrint(*expected_body), PrettyPrint(body));
+
+  body.message = "bar.cpp";
+  body.percentage = 75;
+  expected_body = parse(R"({
+    "progressId": "1",
+    "message": "bar.cpp",
+    "percentage": 75
+  })");
+  ASSERT_THAT_EXPECTED(expected_body, llvm::Succeeded());
+  EXPECT_EQ(PrettyPrint(*expected_body), PrettyPrint(body));
+}
+
+TEST(ProtocolEventsTest, ProgressEndEventBody) {
+  ProgressEndEventBody body;
+  body.progressId = "1";
+  Expected<Value> expected_body = parse(R"({
+    "progressId": "1"
+  })");
+  ASSERT_THAT_EXPECTED(expected_body, llvm::Succeeded());
+  EXPECT_EQ(PrettyPrint(*expected_body), PrettyPrint(body));
+
+  body.message = "done.";
+  expected_body = parse(R"({
+    "progressId": "1",
+    "message": "done."
+  })");
+  ASSERT_THAT_EXPECTED(expected_body, llvm::Succeeded());
+  EXPECT_EQ(PrettyPrint(*expected_body), PrettyPrint(body));
+}

@@ -72,25 +72,11 @@ define ptr @launder_invariant_group(ptr %p) {
   ret ptr %q
 }
 
-define ptr @strip_invariant_group(ptr %p) {
-  ; CHECK-LABEL: name: strip_invariant_group
-  ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $x0
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY [[COPY]](p0)
-  ; CHECK-NEXT:   $x0 = COPY [[COPY1]](p0)
-  ; CHECK-NEXT:   RET_ReallyLR implicit $x0
-  %q = call ptr @llvm.strip.invariant.group.p0(ptr %p)
-  ret ptr %q
-}
-
 declare i64 @llvm.expect.i64(i64, i64) #0
 declare i64 @llvm.expect.with.probability.i64(i64, i64, double) #0
 declare ptr @llvm.ptr.annotation.p0(ptr, ptr, ptr, i32, ptr) #1
 declare i32 @llvm.annotation.i32(i32, ptr, ptr, i32) #1
 declare ptr @llvm.launder.invariant.group.p0(ptr) #2
-declare ptr @llvm.strip.invariant.group.p0(ptr) #3
 
 attributes #0 = { nounwind readnone willreturn }
 attributes #1 = { nounwind willreturn }

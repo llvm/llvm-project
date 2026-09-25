@@ -24,7 +24,6 @@ namespace lldb_private {
 /// An abstraction for Xcode-style SDKs that works like \ref ArchSpec.
 class XcodeSDK {
   std::string m_name;
-  FileSpec m_sysroot;
 
 public:
   /// Different types of Xcode SDKs.
@@ -64,10 +63,6 @@ public:
   /// directory component of a path one would pass to clang's -isysroot
   /// parameter. For example, "MacOSX.10.14.sdk".
   XcodeSDK(std::string &&name) : m_name(std::move(name)) {}
-  XcodeSDK(std::string name, FileSpec sysroot)
-      : m_name(std::move(name)), m_sysroot(std::move(sysroot)) {
-    assert(!m_sysroot || m_name == m_sysroot.GetFilename());
-  }
   static XcodeSDK GetAnyMacOS() { return XcodeSDK("MacOSX.sdk"); }
 
   /// The merge function follows a strict order to maintain monotonicity:
@@ -85,7 +80,6 @@ public:
   llvm::VersionTuple GetVersion() const;
   Type GetType() const;
   llvm::StringRef GetString() const;
-  const FileSpec &GetSysroot() const;
 
   /// Whether LLDB feels confident importing Clang modules from this SDK.
   static bool SDKSupportsModules(Type type, llvm::VersionTuple version);
@@ -97,6 +91,35 @@ public:
   static XcodeSDK::Type GetSDKTypeForTriple(const llvm::Triple &triple);
 
   static std::string FindXcodeContentsDirectoryInPath(llvm::StringRef path);
+};
+
+/// An abstraction which groups an XcodeSDK with the sysroot it was used from.
+///
+/// The sysroot is not necessarily a path to the SDK named by the XcodeSDK: a
+/// compiler may record a sysroot that was remapped, for example with
+/// -fdebug-prefix-map, in which case it is only meaningful verbatim.
+class XcodeSDKAndSysroot {
+  XcodeSDK m_sdk;
+  FileSpec m_sysroot;
+
+public:
+  /// Constructs an empty SDK with no sysroot.
+  XcodeSDKAndSysroot() = default;
+  XcodeSDKAndSysroot(XcodeSDK sdk, FileSpec sysroot)
+      : m_sdk(std::move(sdk)), m_sysroot(std::move(sysroot)) {}
+  XcodeSDKAndSysroot(std::string name, FileSpec sysroot)
+      : m_sdk(XcodeSDK(std::move(name))), m_sysroot(std::move(sysroot)) {}
+
+  bool operator==(const XcodeSDKAndSysroot &other) const;
+  bool operator!=(const XcodeSDKAndSysroot &other) const;
+
+  const XcodeSDK &GetSDK() const { return m_sdk; }
+  const FileSpec &GetSysroot() const { return m_sysroot; }
+  llvm::StringRef GetString() const { return m_sdk.GetString(); }
+  XcodeSDK::Type GetType() const { return m_sdk.GetType(); }
+
+  void Merge(const XcodeSDKAndSysroot &other);
+  bool IsAppleInternalSDK() const { return m_sdk.IsAppleInternalSDK(); }
 };
 
 } // namespace lldb_private

@@ -1,0 +1,8 @@
+---
+triple:          'x86_64-apple-darwin'
+objects:
+  - filename: 2.o
+    symbols:
+      - { sym: __ZN1S3fooEv, objAddr: 0x0, binAddr: 0x1000, size: 0xf }
+      - { sym: __Z3foov, objAddr: 0x10, binAddr: 0x1010, size: 0x1a }
+...
