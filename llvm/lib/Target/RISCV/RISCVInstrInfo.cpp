@@ -1046,27 +1046,27 @@ void RISCVInstrInfo::movImm(MachineBasicBlock &MBB,
     switch (Inst.getOpndKind()) {
     case RISCVMatInt::Imm:
       BuildMI(MBB, MBBI, DL, get(Inst.getOpcode()))
-          .addReg(DstReg, RegState::Define | DstRegState)
+          .addDef(DstReg, DstRegState)
           .addImm(Inst.getImm())
           .setMIFlag(Flag);
       break;
     case RISCVMatInt::RegX0:
       BuildMI(MBB, MBBI, DL, get(Inst.getOpcode()))
-          .addReg(DstReg, RegState::Define | DstRegState)
+          .addDef(DstReg, DstRegState)
           .addReg(SrcReg, SrcRegState)
           .addReg(RISCV::X0)
           .setMIFlag(Flag);
       break;
     case RISCVMatInt::RegReg:
       BuildMI(MBB, MBBI, DL, get(Inst.getOpcode()))
-          .addReg(DstReg, RegState::Define | DstRegState)
+          .addDef(DstReg, DstRegState)
           .addReg(SrcReg, SrcRegState)
           .addReg(SrcReg, SrcRegState)
           .setMIFlag(Flag);
       break;
     case RISCVMatInt::RegImm:
       BuildMI(MBB, MBBI, DL, get(Inst.getOpcode()))
-          .addReg(DstReg, RegState::Define | DstRegState)
+          .addDef(DstReg, DstRegState)
           .addReg(SrcReg, SrcRegState)
           .addImm(Inst.getImm())
           .setMIFlag(Flag);
@@ -1545,7 +1545,7 @@ void RISCVInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
   auto II = MBB.end();
   // We may also update the jump target to RestoreBB later.
   MachineInstr &MI = *BuildMI(MBB, II, DL, get(RISCV::PseudoJump))
-                          .addReg(ScratchReg, RegState::Define | RegState::Dead)
+                          .addDef(ScratchReg, RegState::Dead)
                           .addMBB(&DestBB, RISCVII::MO_CALL);
 
   RS->enterBasicBlockEnd(MBB);
@@ -4042,10 +4042,9 @@ void RISCVInstrInfo::buildOutlinedFrame(
   MBB.addLiveIn(RISCV::X5);
 
   // Add in a return instruction to the end of the outlined frame.
-  MBB.insert(MBB.end(), BuildMI(MF, DebugLoc(), get(RISCV::JALR))
-      .addReg(RISCV::X0, RegState::Define)
-      .addReg(RISCV::X5)
-      .addImm(0));
+  MBB.insert(MBB.end(), BuildMI(MF, DebugLoc(), get(RISCV::JALR), RISCV::X0)
+                            .addReg(RISCV::X5)
+                            .addImm(0));
 }
 
 MachineBasicBlock::iterator RISCVInstrInfo::insertOutlinedCall(
