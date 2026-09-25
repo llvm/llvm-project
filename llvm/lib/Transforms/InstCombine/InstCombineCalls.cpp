@@ -3835,6 +3835,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return nullptr;
     break;
   case Intrinsic::assume: {
+    bool ShouldMoveAssume = false;
+    bool ShouldMoveAllAssumes = true;
     for (auto [Idx, OBU] : llvm::enumerate(II->operand_bundles())) {
       auto RemoveBundle = [&, Idx = Idx]() -> Instruction * {
         if (II->getNumOperandBundles() == 1)
@@ -3846,6 +3848,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       case BundleAttr::None:
         llvm_unreachable("Unexpected Attribute");
       case BundleAttr::Align: {
+        ShouldMoveAssume = true;
         // Try to remove redundant alignment assumptions.
         auto [Ptr, _, OffsetPtr, Alignment, Offset] = getAssumeAlignInfo(OBU);
 
@@ -3901,6 +3904,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       }
 
       case BundleAttr::Dereferenceable: {
+        ShouldMoveAllAssumes = false;
         auto [Ptr, _, Count] = getAssumeDereferenceableInfo(OBU);
 
         if (!Count)
@@ -3918,6 +3922,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         return RemoveBundle();
 
       case BundleAttr::NonNull: {
+        ShouldMoveAssume = true;
         auto [Ptr] = llvm::getAssumeNonNullInfo(OBU);
 
         // Drop assume if we can prove nonnull without it
@@ -3947,6 +3952,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       }
 
       case BundleAttr::NoUndef: {
+        ShouldMoveAssume = true;
         auto [Val] = getAssumeNoUndefInfo(OBU);
 
         if (isGuaranteedNotToBeUndefOrPoison(Val, &AC, II, &DT))
@@ -3963,6 +3969,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       } break;
 
       case BundleAttr::SeparateStorage: {
+        ShouldMoveAllAssumes = false;
         auto [Ptr1, Ptr2] = getAssumeSeparateStorageInfo(OBU);
         // Separate storage assumptions apply to the underlying allocations, not
         // any particular pointer within them. When evaluating the hints for AA
@@ -3982,18 +3989,70 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
       // TODO: Drop these assumes when they are redundant
       case BundleAttr::DereferenceableOrNull:
+        ShouldMoveAllAssumes = false;
         break;
 
       // This cannot be simplified
       case BundleAttr::Cold:
+        ShouldMoveAllAssumes = false;
         break;
       }
     }
 
-    // If the assume has operand bundles, the folds below will never work, so
-    // don't bother trying.
-    if (II->hasOperandBundles())
+    if (II->hasOperandBundles()) {
+      // Merge consecutive assumes to save some resources
+      if (auto *PrevAI = dyn_cast_or_null<AssumeInst>(II->getPrevNode());
+          PrevAI && PrevAI->hasOperandBundles()) {
+        SmallVector<OperandBundleDef, 4> Bundles;
+        Bundles.reserve(II->getNumOperandBundles() +
+                        PrevAI->getNumOperandBundles());
+        for (auto Bundle : PrevAI->operand_bundles())
+          Bundles.emplace_back(Bundle);
+        for (auto Bundle : II->operand_bundles())
+          Bundles.emplace_back(Bundle);
+        Builder.CreateAssumption(Bundles);
+        eraseInstFromFunction(*PrevAI);
+        return eraseInstFromFunction(*II);
+      }
+
+      if (ShouldMoveAssume && ShouldMoveAllAssumes) {
+        Instruction *NewSucc = II;
+        while (true) {
+          Instruction *Prev = NewSucc->getPrevNode();
+
+          // We've reached the start of the basic block - there is nowhere else
+          // to go.
+          if (!Prev || isa<AllocaInst, PHINode>(Prev))
+            break;
+
+          // If the previous instruction is a bundle assume, merge the two
+          // instead of stepping past.
+          if (auto *AI = dyn_cast<AssumeInst>(Prev);
+              AI && AI->hasOperandBundles())
+            break;
+
+          // If the previous instruction isn't guaranteed to transfer the assume
+          // may not hold before it.
+          if (!isGuaranteedToTransferExecutionToSuccessor(Prev))
+            break;
+
+          // We assert on the previous instruction, so we can't move past it.
+          if (any_of(II->operands(), equal_to(Prev)))
+            break;
+
+          NewSucc = Prev;
+        }
+
+        if (NewSucc != II) {
+          II->moveBefore(NewSucc->getIterator());
+          return II;
+        }
+      }
+
+      // If the assume has operand bundles, the folds below will never work, so
+      // don't bother trying.
       break;
+    }
 
     Value *IIOperand = II->getArgOperand(0);
 
