@@ -4323,6 +4323,9 @@ bool SIInstrInfo::areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
   if (MIa.hasOrderedMemoryRef() || MIb.hasOrderedMemoryRef())
     return false;
 
+  if (isLDSDMA(MIa) || isLDSDMA(MIb))
+    return false;
+
   if (MIa.isBundle() || MIb.isBundle())
     return false;
 
@@ -4334,9 +4337,6 @@ bool SIInstrInfo::areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
       return checkInstOffsetsDoNotOverlap(MIa, MIb);
     return true;
   }
-
-  if (isLDSDMA(MIa) || isLDSDMA(MIb))
-    return false;
 
   // TODO: Should we check the address space from the MachineMemOperand? That
   // would allow us to distinguish objects we know don't alias based on the
@@ -5920,6 +5920,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
       Desc.getOpcode() == AMDGPU::V_MOVRELD_B32_e64) {
     const bool IsDst = Desc.getOpcode() == AMDGPU::V_MOVRELD_B32_e32 ||
                        Desc.getOpcode() == AMDGPU::V_MOVRELD_B32_e64;
+
     const unsigned StaticNumOps =
         Desc.getNumOperands() + Desc.implicit_uses().size();
     const unsigned NumImplicitOps = IsDst ? 2 : 1;
@@ -5949,8 +5950,8 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     }
 
     const MachineOperand &Src0 = MI.getOperand(Src0Idx);
-    const MachineOperand &ImpUse =
-        MI.getOperand(StaticNumOps + NumImplicitOps - 1);
+    const MachineOperand &ImpUse
+      = MI.getOperand(StaticNumOps + NumImplicitOps - 1);
     if (!ImpUse.isReg() || !ImpUse.isUse() ||
         !isSubRegOf(RI, ImpUse, IsDst ? *Dst : Src0)) {
       ErrInfo = "src0 should be subreg of implicit vector use";
