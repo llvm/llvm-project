@@ -121,9 +121,6 @@ public:
   //===----------------------------------------------------------------------===//
   // Start of reserved area for HLSL intrinsic getters.
   //===----------------------------------------------------------------------===//
-
-  GENERATE_HLSL_INTRINSIC_FUNCTION(All, all)
-  GENERATE_HLSL_INTRINSIC_FUNCTION(Any, any)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Frac, frac)
   GENERATE_HLSL_INTRINSIC_FUNCTION(FlattenedThreadIdInGroup,
                                    flattened_thread_id_in_group)

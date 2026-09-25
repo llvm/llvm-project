@@ -12,6 +12,16 @@
 namespace hlsl {
 namespace __detail {
 
+template <typename T, int N> constexpr bool all_impl(vector<T, N> V) {
+  return __builtin_reduce_and(
+      __builtin_convertvector(V != static_cast<T>(0), vector<bool, N>));
+}
+
+template <typename T, int N> constexpr bool any_impl(vector<T, N> V) {
+  return __builtin_reduce_or(
+      __builtin_convertvector(V != static_cast<T>(0), vector<bool, N>));
+}
+
 template <typename T>
 constexpr enable_if_t<is_same<float, T>::value || is_same<half, T>::value, T>
 length_impl(T X) {
