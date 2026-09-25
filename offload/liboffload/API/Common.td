@@ -154,13 +154,14 @@ def ol_init_args_t : Struct {
   let members = [
     StructMember<"size_t", "Size", "Size of this struct, used for ABI compatibility. Must be set to sizeof(ol_init_args_t) by the caller.">,
     StructMember<"uint32_t", "NumPlatforms", "Number of entries in the Platforms array.">,
-    StructMember<"const ol_platform_backend_t*", "Platforms", "Pointer to an array of platform backends to initialize.">
+    StructMember<"const ol_platform_backend_t*", "Platforms", "Pointer to an array of platform backends to initialize.">,
+    StructMember<"bool", "InitPlatforms", "Whether platforms should be initialized as part of olInit. Defaults to true.">
   ];
 }
 
 def OL_INIT_ARGS_INIT : Macro {
   let desc = "Default initializer for ol_init_args_t. Sets Size to the correct value and all other fields to zero/NULL.";
-  let value = "{ sizeof(ol_init_args_t), 0, NULL }";
+  let value = "{ sizeof(ol_init_args_t), 0, NULL, true }";
 }
 
 def olInit : Function {
@@ -172,6 +173,19 @@ def olInit : Function {
   ];
   let params = [
     Param<"const ol_init_args_t*", "InitArgs", "Optional pointer to initialization configuration. NULL uses defaults.", PARAM_IN_OPTIONAL>
+  ];
+  let returns = [];
+}
+
+def olInitPlatforms : Function {
+  let desc = "Perform initialization of the available platforms";
+  let details = [
+    "This can be used to initialize platforms if `InitPlatforms` was set to `false` in the `ol_init_args_t` passed to `olInit`",
+    "If NumPlatforms is 0, default configuration is used which initializes all available platforms"
+  ];
+  let params = [
+    Param<"uint32_t", "NumPlatforms", "Number of entries in the Platforms array.">,
+    Param<"const ol_platform_backend_t*", "Platforms", "Pointer to an array of platform backends to initialize.", PARAM_IN_OPTIONAL>
   ];
   let returns = [];
 }
