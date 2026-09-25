@@ -1623,7 +1623,7 @@ void StmtProfiler::VisitMemberExpr(const MemberExpr *S) {
 
 void StmtProfiler::VisitCompoundLiteralExpr(const CompoundLiteralExpr *S) {
   VisitExpr(S);
-  ID.AddInteger(llvm::to_underlying(S->getScopeKind()));
+  ID.AddBoolean(S->isFileScope());
   ID.AddInteger(S->getStorageClass());
   ID.AddInteger(S->getTSCSpec());
   ID.AddBoolean(S->isConstexpr());

@@ -7958,7 +7958,7 @@ ExpectedStmt ASTNodeImporter::VisitCompoundLiteralExpr(CompoundLiteralExpr *E) {
 
   return new (Importer.getToContext()) CompoundLiteralExpr(
       ToLParenLoc, ToTypeSourceInfo, ToType, E->getValueKind(), ToInitializer,
-      E->getScopeKind(), E->getStorageClass(), E->getTSCSpec(),
+      E->isFileScope(), E->getStorageClass(), E->getTSCSpec(),
       E->isConstexpr() ? ConstexprSpecKind::Constexpr
                        : ConstexprSpecKind::Unspecified);
 }
