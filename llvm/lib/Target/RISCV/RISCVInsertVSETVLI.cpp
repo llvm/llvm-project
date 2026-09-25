@@ -168,7 +168,7 @@ void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB,
       auto MI = BuildMI(MBB, InsertPt, DL,
                         TII->get(Info.getTWiden() ? RISCV::PseudoSF_VSETTNTX0X0
                                                   : RISCV::PseudoVSETVLIX0X0))
-                    .addReg(RISCV::X0, RegState::Define | RegState::Dead)
+                    .addDef(RISCV::X0, RegState::Dead)
                     .addReg(RISCV::X0, RegState::Kill)
                     .addImm(Info.encodeVTYPE())
                     .addReg(RISCV::VL, RegState::Implicit);
@@ -189,7 +189,7 @@ void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB,
               BuildMI(MBB, InsertPt, DL,
                       TII->get(Info.getTWiden() ? RISCV::PseudoSF_VSETTNTX0X0
                                                 : RISCV::PseudoVSETVLIX0X0))
-                  .addReg(RISCV::X0, RegState::Define | RegState::Dead)
+                  .addDef(RISCV::X0, RegState::Dead)
                   .addReg(RISCV::X0, RegState::Kill)
                   .addImm(Info.encodeVTYPE())
                   .addReg(RISCV::VL, RegState::Implicit);
@@ -203,7 +203,7 @@ void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB,
 
   if (Info.hasAVLImm()) {
     auto MI = BuildMI(MBB, InsertPt, DL, TII->get(RISCV::PseudoVSETIVLI))
-                  .addReg(RISCV::X0, RegState::Define | RegState::Dead)
+                  .addDef(RISCV::X0, RegState::Dead)
                   .addImm(Info.getAVLImm())
                   .addImm(Info.encodeVTYPE());
     if (LIS)
@@ -216,7 +216,7 @@ void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB,
     auto MI = BuildMI(MBB, InsertPt, DL,
                       TII->get(Info.getTWiden() ? RISCV::PseudoSF_VSETTNTX0
                                                 : RISCV::PseudoVSETVLIX0))
-                  .addReg(DestReg, RegState::Define | RegState::Dead)
+                  .addDef(DestReg, RegState::Dead)
                   .addReg(RISCV::X0, RegState::Kill)
                   .addImm(Info.encodeVTYPE());
     if (LIS) {
@@ -231,7 +231,7 @@ void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB,
   auto MI = BuildMI(MBB, InsertPt, DL,
                     TII->get(Info.getTWiden() ? RISCV::PseudoSF_VSETTNT
                                               : RISCV::PseudoVSETVLI))
-                .addReg(RISCV::X0, RegState::Define | RegState::Dead)
+                .addDef(RISCV::X0, RegState::Dead)
                 .addReg(AVLReg)
                 .addImm(Info.encodeVTYPE());
   if (LIS) {
@@ -1109,7 +1109,7 @@ bool RISCVInsertVSETVLI::insertVSETMTK(MachineBasicBlock &MBB,
     MachineOperand &Op = MI.getOperand(OpNum);
 
     auto TmpMI = BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(Opcode))
-                     .addReg(RISCV::X0, RegState::Define | RegState::Dead)
+                     .addDef(RISCV::X0, RegState::Dead)
                      .addReg(Op.getReg())
                      .addImm(Log2_32(CurrInfo.getSEW()))
                      .addImm(CurrInfo.getTWiden());
