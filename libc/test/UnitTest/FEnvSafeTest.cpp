@@ -45,8 +45,9 @@ void FEnvSafeTest::expect_fenv_eq([[maybe_unused]] const fenv_t &before_fenv,
                                   [[maybe_unused]] const fenv_t &after_fenv) {
 #ifndef LIBC_MATH_USE_SYSTEM_FENV
 
-#if defined(LIBC_TARGET_ARCH_IS_AARCH64) && !defined(LIBC_COMPILER_IS_MSVC) && \
-    defined(__ARM_FP)
+#if (defined(LIBC_TARGET_ARCH_IS_AARCH64) ||                                   \
+     defined(LIBC_TARGET_ARCH_IS_ARM64EC)) &&                                  \
+    !defined(LIBC_COMPILER_IS_MSVC) && defined(__ARM_FP)
   using FPState = LIBC_NAMESPACE::fputil::FEnv::FPState;
   const FPState &before_state = reinterpret_cast<const FPState &>(before_fenv);
   const FPState &after_state = reinterpret_cast<const FPState &>(after_fenv);
