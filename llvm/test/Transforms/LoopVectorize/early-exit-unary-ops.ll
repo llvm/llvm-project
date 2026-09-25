@@ -24,7 +24,7 @@ define i64 @early_exit_with_fneg(ptr dereferenceable(1024) align 8 %src, i1 %con
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
 ; CHECK:       [[VECTOR_EARLY_EXIT]]:
-; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP2]], i1 false)
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP3]], i1 false)
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[IV]], [[TMP6]]
 ; CHECK-NEXT:    br label %[[EARLY_EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:

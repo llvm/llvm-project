@@ -3441,6 +3441,7 @@ bool VPlanTransforms::handleUncountableEarlyExits(
   VPValue *Combined = Exits[0].CondToExit;
   for (const EarlyExitInfo &Info : drop_begin(Exits))
     Combined = LatchBuilder.createLogicalOr(Combined, Info.CondToExit);
+  Combined = LatchBuilder.createFreeze(Combined);
 
   // Even though the logical or prevents posion propagation, we need to freeze
   // Combined to prevent poisoning the entire AnyOf result:
@@ -3448,9 +3449,10 @@ bool VPlanTransforms::handleUncountableEarlyExits(
   // Exits[0].CondToExit = [0,1,0,0]
   // Exits[1].CondToExit = [0,0,p,p]
   //            Combined = [0,1,p,p]
+  //    freeze(Combined) = [0,1,?,?]
   //               AnyOf = 1
-  VPValue *IsAnyExitTaken = LatchBuilder.createNaryOp(
-      VPInstruction::AnyOf, LatchBuilder.createFreeze(Combined));
+  VPValue *IsAnyExitTaken =
+      LatchBuilder.createNaryOp(VPInstruction::AnyOf, Combined);
 
   // Create a comparison for the latch exit condition and replace the
   // BranchOnCond with a BranchOnTwoConds. The original BranchOnCond's condition
@@ -3567,10 +3569,11 @@ bool VPlanTransforms::handleUncountableEarlyExits(
   // latch:
   //   ...
   //   EMIT vp<%combined> = logical-or vp<%cond.0>, vp<%cond.1>, vp<%cond.2>
+  //   EMIT vp<%combined.freeze> = freeze vp<%combined>
   //   ...
   //
   // vector.early.exit.check:
-  //   EMIT vp<%first.lane> = first-active-lane vp<%combined>
+  //   EMIT vp<%first.lane> = first-active-lane vp<%combined.freeze>
   //   EMIT vp<%at.cond.0> = extract-lane vp<%first.lane>, vp<%cond.0>
   //   EMIT branch-on-cond vp<%at.cond.0>
   // Successor(s): vector.early.exit.0, vector.early.exit.check.0
