@@ -18,6 +18,7 @@
 	.align 2
 
 	.globl __mulxi3
+	.hidden __mulxi3
 	.type  __mulxi3, @function
 __mulxi3:
 	mv     a2, a0
