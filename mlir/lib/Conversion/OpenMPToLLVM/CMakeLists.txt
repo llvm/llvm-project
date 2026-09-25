@@ -5,7 +5,6 @@ add_mlir_conversion_library(MLIROpenMPToLLVM
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Conversion/OpenMPToLLVM
 
   DEPENDS
-  MLIRConversionPassIncGen
   intrinsics_gen
 
   LINK_COMPONENTS

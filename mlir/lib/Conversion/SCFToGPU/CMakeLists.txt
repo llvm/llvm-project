@@ -5,9 +5,6 @@ add_mlir_conversion_library(MLIRSCFToGPU
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Conversion/SCFToGPU
 
-  DEPENDS
-  MLIRConversionPassIncGen
-
   LINK_LIBS PUBLIC
   MLIRAffineDialect
   MLIRAffineToStandard

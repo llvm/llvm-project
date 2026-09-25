@@ -4,9 +4,6 @@ add_mlir_conversion_library(MLIRMathToNVVM
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Conversion/MathToNVVM
 
-  DEPENDS
-  MLIRConversionPassIncGen
-
   LINK_COMPONENTS
   Core
 
