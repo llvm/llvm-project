@@ -1,0 +1,228 @@
+## Garbage collection is decided by --garbage-collection and nothing else, but
+## the parallel linker got it wrong in both directions at once. The option was
+## never consulted by the walk that marks DIEs, so --no-garbage-collection
+## collected anyway; and the walk treated a DW_TAG_partial_unit root as an
+## entity whose children are all needed rather than as a scope, so a partial
+## unit was never collected at all. The two errors cancelled on the one
+## combination where both applied, which is why either alone looked correct.
+##
+## U02:  void foo2();                             // the only live code
+##       namespace ns { struct S { int m1; }; }   // nothing refers to it
+##       struct Outer { int m2; };                // nor to this one
+##
+## Outer is the guard against a fix that stops the recursive marking outright
+## instead of exempting unit roots from it. The "int" DW_TAG_base_type is
+## written as a child of Outer rather than at unit scope, and a base type is
+## kept unconditionally whatever the option says, so keeping it obliges the
+## linker to keep the rest of Outer - a structure is not a scope, and half of
+## one is not a type. That obligation must survive, while the
+## identical-looking one a unit root would impose must not.
+
+# RUN: yaml2obj %s -DROOT=DW_TAG_compile_unit -DUNITTYPE=DW_UT_compile -o %t.cu.o
+# RUN: yaml2obj %s -DROOT=DW_TAG_partial_unit -DUNITTYPE=DW_UT_partial -o %t.pu.o
+
+## Collection enabled, which is the default. ns, S and m1 go, Outer stays.
+# RUN: llvm-dwarfutil %t.cu.o %t.cu.gc.classic
+# RUN: llvm-dwarfdump --debug-info %t.cu.gc.classic | FileCheck %s --check-prefixes=CHECK,CU --implicit-check-not='DW_AT_name ("{{(ns|S|m1)}}")'
+# RUN: llvm-dwarfutil %t.pu.o %t.pu.gc.classic
+# RUN: llvm-dwarfdump --debug-info %t.pu.gc.classic | FileCheck %s --check-prefixes=CHECK,PU --implicit-check-not='DW_AT_name ("{{(ns|S|m1)}}")'
+# RUN: llvm-dwarfutil --linker parallel %t.cu.o %t.cu.gc.parallel
+# RUN: llvm-dwarfdump --debug-info %t.cu.gc.parallel | FileCheck %s --check-prefixes=CHECK,CU --implicit-check-not='DW_AT_name ("{{(ns|S|m1)}}")'
+# RUN: llvm-dwarfutil --linker parallel %t.pu.o %t.pu.gc.parallel
+# RUN: llvm-dwarfdump --debug-info %t.pu.gc.parallel | FileCheck %s --check-prefixes=CHECK,PU --implicit-check-not='DW_AT_name ("{{(ns|S|m1)}}")'
+
+## Collection disabled, so every DIE the input carries reaches the output.
+## --build-accelerator=DWARF is what makes these runs test anything:
+## --no-garbage-collection on its own copies the file without running the
+## linker, and a copy keeps the input's DIEs trivially.
+# RUN: llvm-dwarfutil --no-garbage-collection --build-accelerator=DWARF %t.cu.o %t.cu.nogc.classic
+# RUN: llvm-dwarfdump --debug-info %t.cu.nogc.classic | FileCheck %s --check-prefixes=CHECK,NOGC,CU
+# RUN: llvm-dwarfutil --no-garbage-collection --build-accelerator=DWARF %t.pu.o %t.pu.nogc.classic
+# RUN: llvm-dwarfdump --debug-info %t.pu.nogc.classic | FileCheck %s --check-prefixes=CHECK,NOGC,PU
+# RUN: llvm-dwarfutil --linker parallel --no-garbage-collection --build-accelerator=DWARF %t.cu.o %t.cu.nogc.parallel
+# RUN: llvm-dwarfdump --debug-info %t.cu.nogc.parallel | FileCheck %s --check-prefixes=CHECK,NOGC,CU
+# RUN: llvm-dwarfutil --linker parallel --no-garbage-collection --build-accelerator=DWARF %t.pu.o %t.pu.nogc.parallel
+# RUN: llvm-dwarfdump --debug-info %t.pu.nogc.parallel | FileCheck %s --check-prefixes=CHECK,NOGC,PU
+
+## One expectation set for all eight runs: CHECK is what every run must show,
+## NOGC adds the three DIEs that only survive with collection disabled, and
+## CU/PU pin U02's root tag, which also proves the two objects really differ.
+## The output with collection disabled is the collected output plus ns, S and
+## m1, and writing it that way is the claim rather than a coincidence.
+# CHECK:           DW_AT_name ("U01")
+# CHECK:           DW_TAG_subprogram
+# CHECK-NEXT:        DW_AT_name ("foo1")
+# CU:              DW_TAG_compile_unit
+# PU:              DW_TAG_partial_unit
+# CHECK:           DW_AT_name ("U02")
+# CHECK:           DW_TAG_subprogram
+# CHECK-NEXT:        DW_AT_name ("foo2")
+# NOGC:            DW_TAG_namespace
+# NOGC-NEXT:         DW_AT_name ("ns")
+# NOGC:            DW_TAG_structure_type
+# NOGC-NEXT:         DW_AT_name ("S")
+# NOGC:            DW_TAG_member
+# NOGC-NEXT:         DW_AT_name ("m1")
+# CHECK:           DW_TAG_structure_type
+# CHECK-NEXT:        DW_AT_name ("Outer")
+# CHECK:           DW_TAG_member
+# CHECK-NEXT:        DW_AT_name ("m2")
+# CHECK:           DW_TAG_base_type
+# CHECK-NEXT:        DW_AT_name ("int")
+
+## Two DWARFv5 units, each with a function of its own in .text so that neither
+## is dropped for having no live code. Only U02's root tag is parameterized;
+## U01 stays a compile unit throughout and shows that a sibling unit is not
+## disturbed. Each root carries its own DW_AT_str_offsets_base, so the strings
+## the linker rewrites into DW_FORM_strx stay resolvable on output; the linker
+## does not synthesize that attribute for a partial unit root by itself.
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_REL
+  Machine:  EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1130
+    Size:            0x20
+  - Name:            .debug_str_offsets
+    Type:            SHT_PROGBITS
+    Flags:           [  ]
+    Content:        "0400000005000000"
+DWARF:
+  debug_abbrev:
+    - ID: 0
+      Table:
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_producer
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+          - Attribute: DW_AT_str_offsets_base
+            Form:      DW_FORM_sec_offset
+      - Tag:      DW_TAG_subprogram
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+      - Tag:      DW_TAG_namespace
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_structure_type
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_byte_size
+            Form:      DW_FORM_data1
+      - Tag:      DW_TAG_member
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+          - Attribute: DW_AT_data_member_location
+            Form:      DW_FORM_data1
+      - Tag:      DW_TAG_base_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      [[ROOT]]
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_producer
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+          - Attribute: DW_AT_str_offsets_base
+            Form:      DW_FORM_sec_offset
+  debug_info:
+    - Version:  5
+      AbbrevTableID: 0
+      UnitType: DW_UT_compile
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: by_hand
+            - CStr: U01
+            - Value: 0x04
+            - Value: 0x1130
+            - Value: 0x10
+            - Value: 0x8
+        - AbbrCode: 2
+          Values:
+            - CStr: foo1
+            - Value: 0x1130
+            - Value: 0x10
+        - AbbrCode: 0
+    - Version:  5
+      AbbrevTableID: 0
+      UnitType: [[UNITTYPE]]
+      Entries:
+        - AbbrCode: 7
+          Values:
+            - CStr: by_hand
+            - CStr: U02
+            - Value: 0x04
+            - Value: 0x1140
+            - Value: 0x10
+            - Value: 0x8
+        - AbbrCode: 2
+          Values:
+            - CStr: foo2
+            - Value: 0x1140
+            - Value: 0x10
+        - AbbrCode: 3
+          Values:
+            - CStr: ns
+        - AbbrCode: 4
+          Values:
+            - CStr: S
+            - Value: 0x4
+        - AbbrCode: 5
+          Values:
+            - CStr: m1
+            - Value: 0x69
+            - Value: 0x0
+        - AbbrCode: 0
+        - AbbrCode: 0
+        - AbbrCode: 4
+          Values:
+            - CStr: Outer
+            - Value: 0x4
+        - AbbrCode: 5
+          Values:
+            - CStr: m2
+            - Value: 0x69
+            - Value: 0x0
+        - AbbrCode: 6
+          Values:
+            - CStr: int
+        - AbbrCode: 0
+        - AbbrCode: 0
+...

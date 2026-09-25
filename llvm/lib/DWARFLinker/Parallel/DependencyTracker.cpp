@@ -108,13 +108,14 @@ void DependencyTracker::verifyKeepChain() {
 
 static bool isNamespaceLikeEntry(const DWARFDebugInfoEntry *Entry) {
   switch (Entry->getTag()) {
-  case dwarf::DW_TAG_compile_unit:
   case dwarf::DW_TAG_module:
   case dwarf::DW_TAG_namespace:
     return true;
 
   default:
-    return false;
+    // A unit root is a scope that its children merely sit in, whatever tag it
+    // carries, and never an entity that needs all of them.
+    return dwarf::isUnitType(Entry->getTag());
   }
 }
 
@@ -132,10 +133,20 @@ bool DependencyTracker::resolveDependenciesAndMarkLiveness(
   InterCUProcessingWasStarted = InterCUProcessingStarted;
 
   // Search for live root DIEs.
-  CompileUnit::DIEInfo &CUInfo = CU.getDIEInfo(CU.getDebugInfoEntry(0));
+  UnitEntryPairTy UnitRootEntry{&CU, CU.getDebugInfoEntry(0)};
+  CompileUnit::DIEInfo &CUInfo = CU.getDIEInfo(UnitRootEntry.DieEntry);
   CUInfo.setPlacement(CompileUnit::PlainDwarf);
-  collectRootsToKeep(UnitEntryPairTy{&CU, CU.getDebugInfoEntry(0)},
-                     std::nullopt, false);
+  collectRootsToKeep(UnitRootEntry, std::nullopt, false);
+
+  // Updating the index tables reproduces the input's debug info rather than
+  // selecting from it, so the unit root is itself the live root and nothing
+  // below it is collected. This is the counterpart of analyzeDWARFStructureRec
+  // withholding TrackLiveness for the same option. The search above still has
+  // to run, and to run first: it is what sets HasAnAddress on the subprograms,
+  // variables and labels, which is what makes the walk below skip them.
+  if (CU.getGlobalData().getOptions().UpdateIndexTablesOnly)
+    addActionToRootEntriesWorkList(LiveRootWorklistActionTy::MarkLiveEntryRec,
+                                   UnitRootEntry, std::nullopt);
 
   // Mark live DIEs as kept.
   return markCollectedLiveRootsAsKept(InterCUProcessingStarted,
