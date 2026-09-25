@@ -137,6 +137,7 @@ struct Configuration {
   bool emitEncryptionInfo = false;
   bool emitInitOffsets = false;
   bool emitChainedFixups = false;
+  bool bindAtLoad = false;
   bool emitRelativeMethodLists = false;
   bool thinLTOEmitImportsFiles;
   bool thinLTOEmitIndexFiles;

@@ -721,11 +721,12 @@ void StubsSection::finalize() { isFinal = true; }
 static void addBindingsForStub(Symbol *sym) {
   assert(!config->emitChainedFixups);
   if (auto *dysym = dyn_cast<DylibSymbol>(sym)) {
-    if (sym->isWeakDef()) {
+    if (sym->isWeakDef() || config->bindAtLoad) {
       in.binding->addEntry(dysym, in.lazyPointers->isec,
                            sym->stubsIndex * target->wordSize);
-      in.weakBinding->addEntry(sym, in.lazyPointers->isec,
-                               sym->stubsIndex * target->wordSize);
+      if (sym->isWeakDef())
+        in.weakBinding->addEntry(sym, in.lazyPointers->isec,
+                                 sym->stubsIndex * target->wordSize);
     } else {
       in.lazyBinding->addEntry(dysym);
     }
@@ -736,7 +737,11 @@ static void addBindingsForStub(Symbol *sym) {
       in.weakBinding->addEntry(sym, in.lazyPointers->isec,
                                sym->stubsIndex * target->wordSize);
     } else if (defined->interposable) {
-      in.lazyBinding->addEntry(sym);
+      if (config->bindAtLoad)
+        in.binding->addEntry(sym, in.lazyPointers->isec,
+                             sym->stubsIndex * target->wordSize);
+      else
+        in.lazyBinding->addEntry(sym);
     } else {
       llvm_unreachable("invalid stub target");
     }
