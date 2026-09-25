@@ -469,6 +469,11 @@ public:
 
   virtual bool isTypeLegal(Type *Ty) const { return false; }
 
+  virtual bool isLegalToCallVectorFunction(FunctionType *FTy,
+                                           StringRef Name) const {
+    return true;
+  }
+
   virtual unsigned getRegUsageForType(Type *Ty) const { return 1; }
 
   virtual bool shouldBuildLookupTables() const { return true; }

@@ -9125,7 +9125,7 @@ getVectorCallCosts(CallInst *CI, Type *VecTy, const TargetTransformInfo *TTI,
   auto Shape = VFShape::get(CI->getFunctionType(),
                             ElementCount::getFixed(getNumElements(VecTy)),
                             false /*HasGlobalPred*/);
-  Function *VecFunc = VFDatabase(*CI).getVectorizedFunction(Shape);
+  Function *VecFunc = VFDatabase(*CI, TTI).getVectorizedFunction(Shape);
   auto LibCost = InstructionCost::getInvalid();
   if (!CI->isNoBuiltin() && VecFunc) {
     // Calculate the cost of the vector library call.
@@ -9790,7 +9790,7 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
         CI->getFunctionType(),
         ElementCount::getFixed(static_cast<unsigned int>(VL.size())),
         false /*HasGlobalPred*/);
-    Function *VecFunc = VFDatabase(*CI).getVectorizedFunction(Shape);
+    Function *VecFunc = VFDatabase(*CI, TTI).getVectorizedFunction(Shape);
 
     if (!VecFunc && !isTriviallyVectorizable(ID)) {
       LLVM_DEBUG(dbgs() << "SLP: Non-vectorizable call.\n");
@@ -9822,7 +9822,7 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
                Intrinsic::not_intrinsic) ||
           (ID != ID2 && Equivalent == Intrinsic::not_intrinsic) ||
           (VecFunc &&
-           VecFunc != VFDatabase(*CI2).getVectorizedFunction(Shape)) ||
+           VecFunc != VFDatabase(*CI2, TTI).getVectorizedFunction(Shape)) ||
           !CI->hasIdenticalOperandBundleSchema(*CI2)) {
         LLVM_DEBUG(dbgs() << "SLP: mismatched calls:" << *CI << "!=" << *V
                           << "\n");
@@ -24850,7 +24850,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
             VFShape::get(CI->getFunctionType(),
                          ElementCount::getFixed(getNumElements(VecTy)),
                          false /*HasGlobalPred*/);
-        CF = VFDatabase(*CI).getVectorizedFunction(Shape);
+        CF = VFDatabase(*CI, TTI).getVectorizedFunction(Shape);
       } else {
         CF = Intrinsic::getOrInsertDeclaration(F->getParent(), ID, TysForDecl);
       }

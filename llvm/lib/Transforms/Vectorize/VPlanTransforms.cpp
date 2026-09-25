@@ -5791,10 +5791,11 @@ static bool areVFParamsOk(const VFInfo &Info, ArrayRef<VPValue *> Args,
 static Function *findVectorVariant(CallInst *CI, ArrayRef<VPValue *> Args,
                                    ElementCount VF, bool MaskRequired,
                                    PredicatedScalarEvolution &PSE,
-                                   const Loop *L) {
+                                   const Loop *L,
+                                   const TargetTransformInfo &TTI) {
   if (CI->isNoBuiltin())
     return nullptr;
-  auto Mappings = VFDatabase::getMappings(*CI);
+  auto Mappings = VFDatabase::getMappings(*CI, &TTI);
   const auto *It = find_if(Mappings, [&](const VFInfo &Info) {
     return Info.Shape.VF == VF && (!MaskRequired || Info.isMasked()) &&
            areVFParamsOk(Info, Args, PSE, L);
@@ -5847,8 +5848,8 @@ static CallWideningDecision decideCallWidening(VPInstruction &VPI,
       VPReplicateRecipe::computeCallCost(CalledFn, ResultTy, Ops,
                                          /*IsSingleScalar=*/false, VF, CostCtx);
 
-  Function *VecFunc =
-      findVectorVariant(CI, Ops, VF, MaskRequired, CostCtx.PSE, CostCtx.L);
+  Function *VecFunc = findVectorVariant(CI, Ops, VF, MaskRequired, CostCtx.PSE,
+                                        CostCtx.L, CostCtx.TTI);
   InstructionCost VecCallCost = InstructionCost::getInvalid();
   if (VecFunc)
     VecCallCost = VPWidenCallRecipe::computeCallCost(VecFunc, CostCtx);

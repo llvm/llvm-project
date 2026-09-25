@@ -1038,6 +1038,13 @@ public:
   /// Return true if this type is legal.
   LLVM_ABI bool isTypeLegal(Type *Ty) const;
 
+  /// Whether a vector function can be called directly from this function.
+  /// Unlike an intrinsic, an external vector call cannot be legalized by
+  /// splitting its operands without changing the callee's ABI. Targets may
+  /// also impose ISA requirements encoded in the vector function's name.
+  LLVM_ABI bool isLegalToCallVectorFunction(FunctionType *FTy,
+                                            StringRef Name) const;
+
   /// Returns the estimated number of registers required to represent \p Ty.
   LLVM_ABI unsigned getRegUsageForType(Type *Ty) const;
 

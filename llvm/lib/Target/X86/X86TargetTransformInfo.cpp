@@ -207,6 +207,42 @@ bool X86TTIImpl::hasConditionalLoadStoreForType(Type *Ty, bool IsStore) const {
   }
 }
 
+static bool hasSupportedVectorTypes(Type *Ty, const DataLayout &DL,
+                                    TypeSize MaxWidth) {
+  if (auto *VT = dyn_cast<VectorType>(Ty))
+    return !VT->getElementCount().isScalable() &&
+           TypeSize::isKnownLE(DL.getTypeSizeInBits(VT), MaxWidth);
+  if (auto *ST = dyn_cast<StructType>(Ty))
+    return all_of(ST->elements(), [&](Type *Elt) {
+      return hasSupportedVectorTypes(Elt, DL, MaxWidth);
+    });
+  if (auto *AT = dyn_cast<ArrayType>(Ty))
+    return hasSupportedVectorTypes(AT->getElementType(), DL, MaxWidth);
+  return true;
+}
+
+bool X86TTIImpl::isLegalToCallVectorFunction(FunctionType *FTy,
+                                             StringRef Name) const {
+  // The x86 Vector Function ABI encodes the required ISA in the symbol.
+  // In particular, a 256-bit AVX caller cannot use the AVX2 ('d') variant,
+  // even though its vector arguments fit in a YMM register.
+  if ((Name.starts_with("_ZGVb") && !ST->hasSSE2()) ||
+      (Name.starts_with("_ZGVc") && !ST->hasAVX()) ||
+      (Name.starts_with("_ZGVd") && !ST->hasAVX2()) ||
+      (Name.starts_with("_ZGVe") && !ST->hasAVX512()))
+    return false;
+
+  // Check the actual call signature, not the vectorized loop's element type.
+  // A float loop can contain a double-precision call with twice its width.
+  // Conservatively avoid calls wider than the target's preferred vector width:
+  // codegen must not split the operands of an already selected external call.
+  TypeSize MaxWidth = getRegisterBitWidth(TTI::RGK_FixedWidthVector);
+  return hasSupportedVectorTypes(FTy->getReturnType(), DL, MaxWidth) &&
+         all_of(FTy->params(), [&](Type *Ty) {
+           return hasSupportedVectorTypes(Ty, DL, MaxWidth);
+         });
+}
+
 TypeSize
 X86TTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
   unsigned PreferVectorWidth = ST->getPreferVectorWidth();

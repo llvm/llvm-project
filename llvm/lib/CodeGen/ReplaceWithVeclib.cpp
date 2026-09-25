@@ -19,6 +19,7 @@
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -105,6 +106,7 @@ static void replaceWithTLIFunction(IntrinsicInst *II, VFInfo &Info,
 /// vectorized intrinsic, with a suitable function taking vector arguments,
 /// based on available mappings in the \p TLI.
 static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
+                                    const TargetTransformInfo &TTI,
                                     IntrinsicInst *II) {
   assert(II != nullptr && "Intrinsic cannot be null");
   Intrinsic::ID IID = II->getIntrinsicID();
@@ -197,7 +199,8 @@ static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
   }
 
   FunctionType *VectorFTy = VFABI::createFunctionType(*OptInfo, ScalarFTy);
-  if (!VectorFTy)
+  if (!VectorFTy ||
+      !TTI.isLegalToCallVectorFunction(VectorFTy, VD->getVectorFnName()))
     return false;
 
   Function *TLIFunc =
@@ -232,6 +235,7 @@ static bool hasIntrinsicVectorMapping(const TargetLibraryInfo &TLI,
 /// same element count, replace it with separate llvm.sin and llvm.cos calls
 /// and run the standard veclib replacement on each.
 static bool trySplitVectorSinCos(const TargetLibraryInfo &TLI,
+                                 const TargetTransformInfo &TTI,
                                  IntrinsicInst *II,
                                  SmallVectorImpl<Instruction *> &Replaced) {
   if (II->getIntrinsicID() != Intrinsic::sincos)
@@ -288,15 +292,16 @@ static bool trySplitVectorSinCos(const TargetLibraryInfo &TLI,
   }
 
   // Replace each new call with the vector library function.
-  if (replaceWithCallToVeclib(TLI, cast<IntrinsicInst>(SinCall)))
+  if (replaceWithCallToVeclib(TLI, TTI, cast<IntrinsicInst>(SinCall)))
     Replaced.push_back(SinCall);
-  if (replaceWithCallToVeclib(TLI, cast<IntrinsicInst>(CosCall)))
+  if (replaceWithCallToVeclib(TLI, TTI, cast<IntrinsicInst>(CosCall)))
     Replaced.push_back(CosCall);
 
   return true;
 }
 
-static bool runImpl(const TargetLibraryInfo &TLI, Function &F) {
+static bool runImpl(const TargetLibraryInfo &TLI,
+                    const TargetTransformInfo &TTI, Function &F) {
   SmallVector<Instruction *> ReplacedCalls;
   for (auto &I : instructions(F)) {
     auto *II = dyn_cast<IntrinsicInst>(&I);
@@ -306,7 +311,7 @@ static bool runImpl(const TargetLibraryInfo &TLI, Function &F) {
     // Vector llvm.sincos returns a struct so it does not fit the generic
     // path below; try to split it into separate sin and cos calls when the
     // target has vector mappings for them.
-    if (trySplitVectorSinCos(TLI, II, ReplacedCalls)) {
+    if (trySplitVectorSinCos(TLI, TTI, II, ReplacedCalls)) {
       ReplacedCalls.push_back(&I);
       continue;
     }
@@ -315,7 +320,7 @@ static bool runImpl(const TargetLibraryInfo &TLI, Function &F) {
     if (!II->getType()->isVectorTy() && !II->getType()->isVoidTy())
       continue;
 
-    if (replaceWithCallToVeclib(TLI, II))
+    if (replaceWithCallToVeclib(TLI, TTI, II))
       ReplacedCalls.push_back(&I);
   }
   // Erase any intrinsic calls that were replaced with vector library calls.
@@ -330,7 +335,8 @@ static bool runImpl(const TargetLibraryInfo &TLI, Function &F) {
 PreservedAnalyses ReplaceWithVeclib::run(Function &F,
                                          FunctionAnalysisManager &AM) {
   const TargetLibraryInfo &TLI = AM.getResult<TargetLibraryAnalysis>(F);
-  auto Changed = runImpl(TLI, F);
+  const TargetTransformInfo &TTI = AM.getResult<TargetIRAnalysis>(F);
+  auto Changed = runImpl(TLI, TTI, F);
   if (Changed) {
     LLVM_DEBUG(dbgs() << "Intrinsic calls replaced with vector libraries: "
                       << NumCallsReplaced << "\n");
@@ -355,12 +361,15 @@ PreservedAnalyses ReplaceWithVeclib::run(Function &F,
 bool ReplaceWithVeclibLegacy::runOnFunction(Function &F) {
   const TargetLibraryInfo &TLI =
       getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
-  return runImpl(TLI, F);
+  const TargetTransformInfo &TTI =
+      getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
+  return runImpl(TLI, TTI, F);
 }
 
 void ReplaceWithVeclibLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
   AU.addRequired<TargetLibraryInfoWrapperPass>();
+  AU.addRequired<TargetTransformInfoWrapperPass>();
   AU.addPreserved<TargetLibraryInfoWrapperPass>();
   AU.addPreserved<ScalarEvolutionWrapperPass>();
   AU.addPreserved<AAResultsWrapperPass>();
@@ -377,6 +386,7 @@ INITIALIZE_PASS_BEGIN(ReplaceWithVeclibLegacy, DEBUG_TYPE,
                       "Replace intrinsics with calls to vector library", false,
                       false)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_END(ReplaceWithVeclibLegacy, DEBUG_TYPE,
                     "Replace intrinsics with calls to vector library", false,
                     false)

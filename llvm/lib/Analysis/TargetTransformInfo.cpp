@@ -601,6 +601,11 @@ bool TargetTransformInfo::isProfitableToHoist(Instruction *I) const {
 
 bool TargetTransformInfo::useAA() const { return TTIImpl->useAA(); }
 
+bool TargetTransformInfo::isLegalToCallVectorFunction(FunctionType *FTy,
+                                                      StringRef Name) const {
+  return TTIImpl->isLegalToCallVectorFunction(FTy, Name);
+}
+
 bool TargetTransformInfo::isTypeLegal(Type *Ty) const {
   return TTIImpl->isTypeLegal(Ty);
 }

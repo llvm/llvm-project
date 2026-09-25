@@ -58,6 +58,8 @@ public:
   /// \name Vector TTI Implementations
   /// @{
 
+  bool isLegalToCallVectorFunction(FunctionType *FTy,
+                                   StringRef Name) const override;
   unsigned getNumberOfRegisters(unsigned ClassID) const override;
   unsigned getRegisterClassForType(bool Vector, Type *Ty) const override;
   bool hasConditionalLoadStoreForType(Type *Ty, bool IsStore) const override;
