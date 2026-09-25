@@ -35,6 +35,9 @@ Value *llvm::getDefaultValue(Type *T) {
     return PoisonValue::get(TET);
   }
 
+  if (T->isX86_AMXTy())
+    return PoisonValue::get(T);
+
   return Constant::getNullValue(T);
 }
 
