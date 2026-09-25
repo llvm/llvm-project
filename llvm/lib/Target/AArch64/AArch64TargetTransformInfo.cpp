@@ -5533,11 +5533,6 @@ AArch64TTIImpl::getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
   case Intrinsic::masked_expandload:
   case Intrinsic::masked_compressstore:
     return getMaskedMemoryOpCost(MICA, CostKind);
-  case Intrinsic::speculative_load:
-    // Scalable speculative loads are not supported yet.
-    if (isa<ScalableVectorType>(MICA.getDataType()))
-      return InstructionCost::getInvalid();
-    break;
   }
   return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
 }
@@ -5966,13 +5961,13 @@ bool AArch64TTIImpl::isLegalMaskedExpandLoad(Type *DataTy,
 bool AArch64TTIImpl::isLegalSpeculativeLoad(Type *DataType,
                                             unsigned AddressSpace) const {
   // Matches AArch64TargetLowering::emitCanLoadSpeculatively: only address
-  // space 0 and sizes up to the 16-byte MTE tag granule are supported.
-  // Scalable types are not supported yet.
+  // space 0 and power-of-2 sizes up to the 16-byte MTE tag granule.
+  // TODO: Support scalable vectors.
   if (AddressSpace != 0)
     return false;
-  // TODO: Support scalable vectors.
   TypeSize Size = DL.getTypeStoreSize(DataType);
-  return !Size.isScalable() && Size.getFixedValue() <= 16;
+  return !Size.isScalable() && isPowerOf2_64(Size.getFixedValue()) &&
+         Size.getFixedValue() <= 16;
 }
 
 unsigned
