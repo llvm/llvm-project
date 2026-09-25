@@ -2047,27 +2047,54 @@ static bool isPotentiallyPromotable(const Instruction *I, const Loop *L) {
   return false;
 }
 
-/// Returns whether \p N has any operand from the set \p Operands.
-static bool
-hasAnyMDOperandsFrom(const MDNode *N,
-                     const SmallPtrSetImpl<const MDNode *> &Operands) {
-  return N && llvm::any_of(N->operands(), [&](const MDOperand &Op) {
-           return Operands.contains(cast<MDNode>(Op.get()));
-         });
+/// Drop alias scopes from \p AATags which can be found in the set of \p Scopes.
+static void
+dropAliasScopesFromSet(AAMDNodes &AATags,
+                       const SmallPtrSetImpl<const MDNode *> &Scopes) {
+  auto IsLoopLocal = [&](const MDOperand &Op) {
+    return Scopes.contains(cast<MDNode>(Op.get()));
+  };
+
+  if (AATags.Scope && llvm::any_of(AATags.Scope->operands(), IsLoopLocal))
+    AATags.Scope = nullptr;
+
+  if (AATags.NoAlias) {
+    bool HasLocalScopes = false;
+    SmallVector<Metadata *, 4> NonLocalScopes;
+    for (const MDOperand &Op : AATags.NoAlias->operands()) {
+      if (IsLoopLocal(Op))
+        HasLocalScopes = true;
+      else
+        NonLocalScopes.push_back(Op.get());
+    }
+    if (HasLocalScopes)
+      AATags.NoAlias =
+          NonLocalScopes.empty()
+              ? nullptr
+              : MDNode::get(AATags.NoAlias->getContext(), NonLocalScopes);
+  }
 }
 
 /// Returns the potentially promotable stores with AA tags that are valid along
 /// all non-unwinding execution paths of the loop \p L, which allows for the AA
 /// tags to be used when deciding promotions.
-static SmallPtrSet<const StoreInst *, 8> collectStoresWithInvariantAATags(
+static SmallDenseMap<const StoreInst *, AAMDNodes, 4>
+collectStoresWithInvariantAATags(
     MemorySSA *MSSA, DominatorTree *DT,
     const SmallPtrSetImpl<const MDNode *> &LoopLocalAliasScopes, Loop *L) {
   SmallDenseMap<MemoryLocation, SmallVector<const StoreInst *, 1>, 4>
       StoresByLoc;
   foreachMemoryAccess(MSSA, L, [&](Instruction *I) {
     const auto *SI = dyn_cast<StoreInst>(I);
-    if (SI && SI->getAAMetadata() && isPotentiallyPromotable(SI, L))
-      StoresByLoc[MemoryLocation::get(SI)].push_back(SI);
+    if (!SI || !SI->getAAMetadata() || !isPotentiallyPromotable(SI, L))
+      return;
+
+    // A scope declared inside the loop denotes a different scope on each
+    // iteration, and are thus not invariant.
+    MemoryLocation Loc = MemoryLocation::get(SI);
+    dropAliasScopesFromSet(Loc.AATags, LoopLocalAliasScopes);
+    if (Loc.AATags)
+      StoresByLoc[Loc].push_back(SI);
   });
 
   // This only looks at explicit exiting blocks. If we ever start sinking
@@ -2075,16 +2102,10 @@ static SmallPtrSet<const StoreInst *, 8> collectStoresWithInvariantAATags(
   SmallVector<BasicBlock *, 4> ExitingBlocks;
   L->getExitingBlocks(ExitingBlocks);
 
-  SmallPtrSet<const StoreInst *, 8> StoresWithInvariantAATags;
+  SmallDenseMap<const StoreInst *, AAMDNodes, 4> InvariantAATags;
   for (const auto &Pair : StoresByLoc) {
     const MemoryLocation &Loc = Pair.first;
     const SmallVector<const StoreInst *, 1> &Stores = Pair.second;
-
-    // A scope declared inside the loop denotes a different scope on each
-    // iteration, and thus should not be preserved.
-    if (hasAnyMDOperandsFrom(Loc.AATags.Scope, LoopLocalAliasScopes) ||
-        hasAnyMDOperandsFrom(Loc.AATags.NoAlias, LoopLocalAliasScopes))
-      continue;
 
     // Without exiting blocks the loop is never left, and promotion has no
     // exit block to insert a store into either.
@@ -2093,9 +2114,10 @@ static SmallPtrSet<const StoreInst *, 8> collectStoresWithInvariantAATags(
             return DT->dominates(SI->getParent(), ExitingBB);
           });
         }))
-      StoresWithInvariantAATags.insert_range(Stores);
+      for (const StoreInst *SI : Stores)
+        InvariantAATags[SI] = Loc.AATags;
   }
-  return StoresWithInvariantAATags;
+  return InvariantAATags;
 }
 
 // The bool indicates whether there might be reads outside the set, in which
@@ -2109,12 +2131,12 @@ static SmallVector<PointersAndHasReadsOutsideSet, 0> collectPromotionCandidates(
 
   // Only conditionally executed stores need this, so compute it on demand to
   // keep the common case free.
-  std::optional<SmallPtrSet<const StoreInst *, 8>> StoresWithInvariantAATags;
-  auto HasInvariantAATags = [&](const StoreInst *SI) {
-    if (!StoresWithInvariantAATags)
-      StoresWithInvariantAATags =
+  std::optional<SmallDenseMap<const StoreInst *, AAMDNodes, 4>> InvariantAATags;
+  auto GetInvariantAATags = [&](const StoreInst *SI) {
+    if (!InvariantAATags)
+      InvariantAATags =
           collectStoresWithInvariantAATags(MSSA, DT, LoopLocalAliasScopes, L);
-    return StoresWithInvariantAATags->contains(SI);
+    return InvariantAATags->lookup(SI);
   };
 
   // Populate AST with potentially promotable accesses.
@@ -2124,14 +2146,13 @@ static SmallVector<PointersAndHasReadsOutsideSet, 0> collectPromotionCandidates(
       AttemptingPromotion.insert(I);
       if (StoreInst *SI = dyn_cast<StoreInst>(I);
           SI && SI->getAAMetadata() &&
-          !SafetyInfo->isGuaranteedToExecute(*SI, DT) &&
-          !HasInvariantAATags(SI)) {
+          !SafetyInfo->isGuaranteedToExecute(*SI, DT)) {
         // Promotion requires inserting a new store at the loop exits; we need
         // to prove that store doesn't alias anything, in addition to proving
         // aliasing for the stores we're removing. The new store is executed
         // unconditionally, so when we're proving aliasing for that store, we
         // can only rely on AA tags that likewise hold unconditionally.
-        AST.addWithoutAATags(SI);
+        AST.addWithAATags(SI, GetInvariantAATags(SI));
       } else {
         AST.add(I);
       }
