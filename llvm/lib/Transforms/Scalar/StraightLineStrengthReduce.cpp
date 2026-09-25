@@ -421,6 +421,11 @@ private:
   // instructions are sorted in depth-first order.
   DenseMap<const SCEV *, SmallSetVector<Instruction *, 2>> SCEVToInsts;
 
+  // Map from reusable delta instruction to instructions whose poison-generating
+  // annotations must be dropped if the instruction is used as a delta in an
+  // executed rewrite.
+  DenseMap<Instruction *, SmallVector<Instruction *>> InstDropLists;
+
   using SCEVUnknownSet = SmallPtrSet<const SCEVUnknown *, 4>;
   DenseMap<const SCEV *, SCEVUnknownSet> SCEVUnknownsCache;
 
@@ -505,9 +510,20 @@ private:
 
   const SCEV *getAndRecordSCEV(Value *V) {
     auto *S = SE->getSCEV(V);
-    if (isa<Instruction>(V) && !(isa<SCEVCouldNotCompute>(S) ||
-                                 isa<SCEVUnknown>(S) || isa<SCEVConstant>(S)))
-      SCEVToInsts[S].insert(cast<Instruction>(V));
+    if (auto *I = dyn_cast<Instruction>(V);
+        I && !(isa<SCEVCouldNotCompute>(S) || isa<SCEVUnknown>(S) ||
+               isa<SCEVConstant>(S))) {
+      auto &Insts = SCEVToInsts[S];
+      if (!Insts.contains(I)) {
+        SmallVector<Instruction *> DropList;
+        if (!EnablePoisonReuseGuard ||
+            SE->canReuseInstruction(S, I, DropList)) {
+          Insts.insert(I);
+          if (!DropList.empty())
+            InstDropLists[I] = std::move(DropList);
+        }
+      }
+    }
 
     return S;
   }
@@ -1352,6 +1368,11 @@ void StraightLineStrengthReduce::rewriteCandidate(const Candidate &C) {
 
   for (Instruction *I : Basis.DropList)
     I->dropPoisonGeneratingAnnotations();
+  if (auto *DeltaInst = dyn_cast<Instruction>(C.Delta)) {
+    if (auto It = InstDropLists.find(DeltaInst); It != InstDropLists.end())
+      for (Instruction *I : It->second)
+        I->dropPoisonGeneratingAnnotations();
+  }
 
   IRBuilder<> Builder(C.Ins);
   Value *Bump = emitBump(Basis, C, Builder, DL);
