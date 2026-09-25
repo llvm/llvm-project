@@ -120,7 +120,7 @@ define ptr @vgpr_to_flat_nonnull(ptr addrspace(13) %ptr) {
 ; GFX1250-NEXT:    s_or_b32 s0, s1, 3
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
-  %flat = call ptr @llvm.amdgcn.addrspacecast.nonnull.p0.p13(ptr addrspace(13) %ptr)
+  %flat = addrspacecast nonnull ptr addrspace(13) %ptr to ptr
   ret ptr %flat
 }
 
@@ -139,7 +139,7 @@ define ptr addrspace(13) @flat_to_vgpr_nonnull(ptr %flat) {
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
-  %v = call ptr addrspace(13) @llvm.amdgcn.addrspacecast.nonnull.p13.p0(ptr %flat)
+  %v = addrspacecast nonnull ptr %flat to ptr addrspace(13)
   ret ptr addrspace(13) %v
 }
 
@@ -161,4 +161,179 @@ define ptr addrspace(13) @vgpr_roundtrip(ptr addrspace(13) %ptr) {
   %flat = addrspacecast ptr addrspace(13) %ptr to ptr
   %v = addrspacecast ptr %flat to ptr addrspace(13)
   ret ptr addrspace(13) %v
+}
+
+; Vectors of pointers are cast lane by lane, each with its own null check.
+
+define <2 x ptr> @vgpr_to_flat_v2(<2 x ptr addrspace(13)> %ptr) {
+; GFX12-SDAG-LABEL: vgpr_to_flat_v2:
+; GFX12-SDAG:       ; %bb.0:
+; GFX12-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_expcnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX12-SDAG-NEXT:    v_cmp_ne_u32_e32 vcc_lo, -1, v0
+; GFX12-SDAG-NEXT:    s_mov_b64 s[0:1], src_shared_base
+; GFX12-SDAG-NEXT:    v_cmp_ne_u32_e64 s0, -1, v1
+; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-SDAG-NEXT:    s_or_b32 s1, s1, 3
+; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0) depctr_va_vcc(0)
+; GFX12-SDAG-NEXT:    v_cndmask_b32_e64 v4, 0, s1, vcc_lo
+; GFX12-SDAG-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc_lo
+; GFX12-SDAG-NEXT:    v_cndmask_b32_e64 v3, 0, s1, s0
+; GFX12-SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, v1, s0
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX12-SDAG-NEXT:    v_mov_b32_e32 v1, v4
+; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-GISEL-LABEL: vgpr_to_flat_v2:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_expcnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX12-GISEL-NEXT:    s_mov_b64 s[0:1], src_shared_base
+; GFX12-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc_lo, -1, v0
+; GFX12-GISEL-NEXT:    v_cmp_ne_u32_e64 s0, -1, v1
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-GISEL-NEXT:    s_or_b32 s1, s1, 3
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_vcc(0)
+; GFX12-GISEL-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc_lo
+; GFX12-GISEL-NEXT:    v_cndmask_b32_e64 v2, 0, v1, s0
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, s1, vcc_lo
+; GFX12-GISEL-NEXT:    v_cndmask_b32_e64 v3, 0, s1, s0
+; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-SDAG-LABEL: vgpr_to_flat_v2:
+; GFX1250-SDAG:       ; %bb.0:
+; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-SDAG-NEXT:    v_cmp_ne_u32_e32 vcc_lo, -1, v0
+; GFX1250-SDAG-NEXT:    s_mov_b64 s[0:1], src_shared_base
+; GFX1250-SDAG-NEXT:    v_cmp_ne_u32_e64 s0, -1, v1
+; GFX1250-SDAG-NEXT:    s_or_b32 s1, s1, 3
+; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(VALU_DEP_3)
+; GFX1250-SDAG-NEXT:    v_cndmask_b32_e64 v4, 0, s1, vcc_lo
+; GFX1250-SDAG-NEXT:    v_dual_cndmask_b32 v0, 0, v0, vcc_lo :: v_dual_cndmask_b32 v2, 0, v1, s0
+; GFX1250-SDAG-NEXT:    v_cndmask_b32_e64 v3, 0, s1, s0
+; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v1, v4
+; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-GISEL-LABEL: vgpr_to_flat_v2:
+; GFX1250-GISEL:       ; %bb.0:
+; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-GISEL-NEXT:    s_mov_b64 s[0:1], src_shared_base
+; GFX1250-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc_lo, -1, v0
+; GFX1250-GISEL-NEXT:    v_cmp_ne_u32_e64 s0, -1, v1
+; GFX1250-GISEL-NEXT:    s_or_b32 s1, s1, 3
+; GFX1250-GISEL-NEXT:    v_dual_cndmask_b32 v0, 0, v0, vcc_lo :: v_dual_cndmask_b32 v2, 0, v1, s0
+; GFX1250-GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, s1, vcc_lo
+; GFX1250-GISEL-NEXT:    v_cndmask_b32_e64 v3, 0, s1, s0
+; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
+  %flat = addrspacecast <2 x ptr addrspace(13)> %ptr to <2 x ptr>
+  ret <2 x ptr> %flat
+}
+
+define <2 x ptr addrspace(13)> @flat_to_vgpr_v2(<2 x ptr> %flat) {
+; GFX12-LABEL: flat_to_vgpr_v2:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[0:1]
+; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
+; GFX12-NEXT:    v_cndmask_b32_e32 v0, -1, v0, vcc_lo
+; GFX12-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[2:3]
+; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
+; GFX12-NEXT:    v_cndmask_b32_e32 v1, -1, v2, vcc_lo
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-LABEL: flat_to_vgpr_v2:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[0:1]
+; GFX1250-NEXT:    v_cndmask_b32_e32 v0, -1, v0, vcc_lo
+; GFX1250-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[2:3]
+; GFX1250-NEXT:    v_cndmask_b32_e32 v1, -1, v2, vcc_lo
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+  %v = addrspacecast <2 x ptr> %flat to <2 x ptr addrspace(13)>
+  ret <2 x ptr addrspace(13)> %v
+}
+
+define <2 x ptr> @vgpr_to_flat_nonnull_v2(<2 x ptr addrspace(13)> %ptr) {
+; GFX12-LABEL: vgpr_to_flat_nonnull_v2:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_mov_b64 s[0:1], src_shared_base
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_or_b32 s0, s1, 3
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    v_dual_mov_b32 v2, v1 :: v_dual_mov_b32 v1, s0
+; GFX12-NEXT:    v_mov_b32_e32 v3, s0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-LABEL: vgpr_to_flat_nonnull_v2:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_mov_b64 s[0:1], src_shared_base
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX1250-NEXT:    s_or_b32 s0, s1, 3
+; GFX1250-NEXT:    v_dual_mov_b32 v2, v1 :: v_dual_mov_b32 v1, s0
+; GFX1250-NEXT:    v_mov_b32_e32 v3, s0
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+  %flat = addrspacecast nonnull <2 x ptr addrspace(13)> %ptr to <2 x ptr>
+  ret <2 x ptr> %flat
+}
+
+define <2 x ptr addrspace(13)> @flat_to_vgpr_nonnull_v2(<2 x ptr> %flat) {
+; GFX12-LABEL: flat_to_vgpr_nonnull_v2:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v1, v2
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-LABEL: flat_to_vgpr_nonnull_v2:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+  %v = addrspacecast nonnull <2 x ptr> %flat to <2 x ptr addrspace(13)>
+  ret <2 x ptr addrspace(13)> %v
+}
+
+define <2 x ptr addrspace(13)> @vgpr_roundtrip_v2(<2 x ptr addrspace(13)> %ptr) {
+; GFX12-LABEL: vgpr_roundtrip_v2:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-LABEL: vgpr_roundtrip_v2:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+  %flat = addrspacecast <2 x ptr addrspace(13)> %ptr to <2 x ptr>
+  %v = addrspacecast <2 x ptr> %flat to <2 x ptr addrspace(13)>
+  ret <2 x ptr addrspace(13)> %v
 }
