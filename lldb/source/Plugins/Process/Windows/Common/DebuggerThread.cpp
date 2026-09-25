@@ -29,12 +29,14 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <optional>
 #include <pathcch.h>
 #include <psapi.h>
+#include <winternl.h>
 
 #ifndef STATUS_WX86_BREAKPOINT
 #define STATUS_WX86_BREAKPOINT 0x4000001FL // For WOW64
@@ -453,6 +455,53 @@ DebuggerThread::HandleCreateThreadEvent(const CREATE_THREAD_DEBUG_INFO &info,
   return DBG_CONTINUE;
 }
 
+/// Read the path the process was created with from its process parameters
+/// (PEB::ProcessParameters->ImagePathName).
+///
+/// This keeps the subst drive, junction or symbolic link the process was
+/// launched through.
+static std::optional<std::string> GetImagePathFromPEB(HANDLE process) {
+  // winternl.h declares NtQueryInformationProcess, but there is no import
+  // library for it.
+  static LazyImport<decltype(&::NtQueryInformationProcess)>
+      s_query_information_process{L"ntdll.dll", "NtQueryInformationProcess"};
+  if (!s_query_information_process)
+    return std::nullopt;
+
+  PROCESS_BASIC_INFORMATION pbi = {};
+  if ((*s_query_information_process)(process, ProcessBasicInformation, &pbi,
+                                     sizeof(pbi), nullptr) < 0 ||
+      !pbi.PebBaseAddress)
+    return std::nullopt;
+
+  PEB peb = {};
+  if (!::ReadProcessMemory(process, pbi.PebBaseAddress, &peb, sizeof(peb),
+                           nullptr) ||
+      !peb.ProcessParameters)
+    return std::nullopt;
+
+  RTL_USER_PROCESS_PARAMETERS params = {};
+  if (!::ReadProcessMemory(process, peb.ProcessParameters, &params,
+                           sizeof(params), nullptr) ||
+      !params.ImagePathName.Buffer || params.ImagePathName.Length == 0)
+    return std::nullopt;
+
+  std::wstring wpath(params.ImagePathName.Length / sizeof(wchar_t), L'\0');
+  if (!::ReadProcessMemory(process, params.ImagePathName.Buffer, wpath.data(),
+                           params.ImagePathName.Length, nullptr))
+    return std::nullopt;
+
+  std::string path;
+  if (!llvm::convertWideToUTF8(wpath, path))
+    return std::nullopt;
+  // A process launched through an extended-length path has the "\\?\" prefix.
+  llvm::StringRef path_ref = path;
+  if (path_ref.consume_front("\\\\?\\UNC\\"))
+    return "\\\\" + path_ref.str();
+  path_ref.consume_front("\\\\?\\");
+  return path_ref.str();
+}
+
 DWORD
 DebuggerThread::HandleCreateProcessEvent(const CREATE_PROCESS_DEBUG_INFO &info,
                                          DWORD thread_id) {
@@ -476,6 +525,7 @@ DebuggerThread::HandleCreateProcessEvent(const CREATE_PROCESS_DEBUG_INFO &info,
   m_image_file = info.hFile;
 
   lldb::addr_t load_addr = reinterpret_cast<lldb::addr_t>(info.lpBaseOfImage);
+  m_image_path = GetImagePathFromPEB(info.hProcess).value_or("");
   m_debug_delegate->OnDebuggerConnected(load_addr);
 
   return DBG_CONTINUE;
@@ -617,15 +667,17 @@ static std::optional<std::string> GetFileNameFromHandleFallback(HANDLE hFile) {
   return GetMappedFileDosPath(::GetCurrentProcess(), pMem.get());
 }
 
-static std::optional<std::string> GetFileNameByLoadAddress(HANDLE process,
-                                                           LPVOID base_addr) {
+/// The path the loader recorded for the module at \p base_addr, or nullopt if
+/// the loader's module list has no entry for it yet.
+static std::optional<std::string> GetLoaderModuleName(HANDLE process,
+                                                      LPVOID base_addr) {
   std::vector<wchar_t> module_filename(MAX_PATH + 1);
   while (module_filename.size() <= PATHCCH_MAX_CCH) {
     DWORD len =
         ::GetModuleFileNameExW(process, reinterpret_cast<HMODULE>(base_addr),
                                module_filename.data(), module_filename.size());
     if (len == 0)
-      break; // Not loaded as a module; fall back to the mapped-file query.
+      return std::nullopt;
     if (len < module_filename.size()) {
       std::string path_utf8;
       llvm::convertWideToUTF8(std::wstring_view(module_filename.data(), len),
@@ -634,9 +686,7 @@ static std::optional<std::string> GetFileNameByLoadAddress(HANDLE process,
     }
     module_filename.resize(module_filename.size() * 2);
   }
-
-  // Fallback: ask the kernel for the file backing the mapping at this address.
-  return GetMappedFileDosPath(process, base_addr);
+  return std::nullopt;
 }
 
 // Determine how many bytes can be read at `addr` in `process` before crossing
@@ -747,7 +797,25 @@ DebuggerThread::HandleLoadDllEvent(const LOAD_DLL_DEBUG_INFO &info,
     action = m_debug_delegate->OnLoadDll(module_spec, load_addr, thread_id);
   };
 
-  std::optional<std::string> resolved_path;
+  HANDLE process = m_process.GetNativeProcess().GetSystemHandle();
+
+  // Prefer the path the loader used for the DLL, which keeps the subst drive,
+  // junction or symbolic link it was reached through.
+  std::optional<std::string> loader_path =
+      GetFileNameFromImageNameField(process, info);
+  if (loader_path && !llvm::sys::path::is_absolute(
+                         *loader_path, llvm::sys::path::Style::windows))
+    loader_path.reset();
+  if (!loader_path)
+    loader_path = GetLoaderModuleName(process, info.lpBaseOfDll);
+  if (loader_path) {
+    llvm::StringRef path_ref = *loader_path;
+    path_ref.consume_front("\\\\?\\");
+    loader_path = path_ref.str();
+  }
+
+  // The file handle gives the resolved path, with the on-disk case.
+  std::optional<std::string> file_path;
   if (info.hFile != nullptr) {
     std::vector<wchar_t> buffer(1);
     DWORD required_size =
@@ -760,17 +828,24 @@ DebuggerThread::HandleLoadDllEvent(const LOAD_DLL_DEBUG_INFO &info,
       llvm::convertWideToUTF8(buffer.data(), path_str_utf8);
       llvm::StringRef path_str = path_str_utf8;
       path_str.consume_front("\\\\?\\");
-      resolved_path = path_str.str();
+      file_path = path_str.str();
     } else {
-      resolved_path = GetFileNameFromHandleFallback(info.hFile);
+      file_path = GetFileNameFromHandleFallback(info.hFile);
     }
   }
 
-  HANDLE process = m_process.GetNativeProcess().GetSystemHandle();
+  // The loader's path often differs from the on-disk one only in case (e.g.
+  // C:\windows\System32\KERNEL32.DLL). If that's the case, keep the on disk
+  // spelling.
+  std::optional<std::string> resolved_path = loader_path;
+  if (!resolved_path ||
+      (file_path &&
+       llvm::StringRef(*file_path).equals_insensitive(*resolved_path)))
+    resolved_path = file_path;
   if (!resolved_path)
     resolved_path = GetFileNameFromImageNameField(process, info);
   if (!resolved_path)
-    resolved_path = GetFileNameByLoadAddress(process, info.lpBaseOfDll);
+    resolved_path = GetMappedFileDosPath(process, info.lpBaseOfDll);
 
   if (resolved_path)
     on_load_dll(*resolved_path);
