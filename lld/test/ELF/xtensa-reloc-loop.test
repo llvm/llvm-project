@@ -1,0 +1,46 @@
+# REQUIRES: xtensa
+## loop/loopgtz/loopnez. The assembler rejects an unresolved loop fixup, so the
+## R_XTENSA_SLOT0_OP relocations are written directly.
+## Bytes: loop a2, loopgtz a3, loopnez a4, padding, nop at offset 0x10.
+# RUN: yaml2obj %s -o %t.o
+# RUN: ld.lld %t.o --image-base=0 --section-start=.text=0x2000 -o %t
+# RUN: llvm-objdump -d --mcpu=esp32 --print-imm-hex %t | FileCheck %s
+
+# CHECK-LABEL: section .text:
+# CHECK:      loop a2, 0x2010
+# CHECK-NEXT: loopgtz a3, 0x2010
+# CHECK-NEXT: loopnez a4, 0x2010
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_XTENSA
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Content: '76820076a30076940000000000000000f02000'
+  - Name:    .rela.text
+    Type:    SHT_RELA
+    Link:    .symtab
+    Info:    .text
+    Relocations:
+      - Offset: 0
+        Symbol: ltgt
+        Type:   R_XTENSA_SLOT0_OP
+      - Offset: 3
+        Symbol: ltgt
+        Type:   R_XTENSA_SLOT0_OP
+      - Offset: 6
+        Symbol: ltgt
+        Type:   R_XTENSA_SLOT0_OP
+Symbols:
+  - Name:    ltgt
+    Section: .text
+    Value:   0x10
+  - Name:    _start
+    Type:    STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL

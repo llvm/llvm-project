@@ -1,0 +1,71 @@
+# REQUIRES: xtensa
+## R_XTENSA_32_ABS is the LLVM-style absolute 32-bit reloc (S + A).
+## GNU-style R_XTENSA_32 (partial_inplace) is rejected.
+# RUN: yaml2obj --docnum=1 %s -o %t.ok.o
+# RUN: ld.lld %t.ok.o --section-start=.text=0x1000 --image-base=0x0 -o %t
+# RUN: llvm-objdump -s -j .data %t | FileCheck %s --check-prefix=OK
+
+# RUN: yaml2obj --docnum=2 %s -o %t.gnu.o
+# RUN: not ld.lld %t.gnu.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR
+
+# OK:      Contents of section .data:
+# OK-NEXT: {{.*}}00100000
+
+# ERR: error: {{.*}}: GNU-style R_XTENSA_32 relocation found which cannot be handled properly
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_XTENSA
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Content: '00000000'
+  - Name:    .data
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_WRITE ]
+    Content: '00000000'
+  - Name:    .rela.data
+    Type:    SHT_RELA
+    Link:    .symtab
+    Info:    .data
+    Relocations:
+      - Offset: 0
+        Symbol: _start
+        Type:   R_XTENSA_32_ABS
+Symbols:
+  - Name:    _start
+    Type:    STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_XTENSA
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Content: '00000000'
+  - Name:    .data
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_WRITE ]
+    Content: '78563412'
+  - Name:    .rela.data
+    Type:    SHT_RELA
+    Link:    .symtab
+    Info:    .data
+    Relocations:
+      - Offset: 0
+        Symbol: _start
+        Type:   R_XTENSA_32
+Symbols:
+  - Name:    _start
+    Type:    STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
