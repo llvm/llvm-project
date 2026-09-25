@@ -12,8 +12,13 @@
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
+class PassInstrumentationCallbacks;
+
 struct InstructionNamerPass : OptionalPassInfoMixin<InstructionNamerPass> {
   LLVM_ABI PreservedAnalyses run(Function &, FunctionAnalysisManager &);
+
+  /// Name unnamed values before and after each new-PM pass when requested.
+  LLVM_ABI static void registerCallbacks(PassInstrumentationCallbacks &PIC);
 };
 } // namespace llvm
 
