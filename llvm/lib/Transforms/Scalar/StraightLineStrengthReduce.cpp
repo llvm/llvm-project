@@ -1472,8 +1472,13 @@ public:
         continue;
 
       const BlockLiveness &BL = getLiveness(&BB);
-      auto [MaxLiveness, MaxLivenessWithSLSR] =
-          maxLivenessInBlockBackward(BB, BL.LiveIn, BL.LiveOut);
+      auto Liveness = maxLivenessInBlockBackward(BB, BL.LiveIn, BL.LiveOut);
+      // A block holding a value with no fixed register footprint cannot be
+      // weighed against the budget, so leave its rewrites alone.
+      if (!Liveness)
+        continue;
+
+      auto [MaxLiveness, MaxLivenessWithSLSR] = *Liveness;
       DEBUG_SLSR_REWRITE_FILTER(dbgs() << "MaxLiveness:" << BB.getName()
                                        << ": (" << MaxLiveness << ", "
                                        << MaxLivenessWithSLSR << ")" << "\n");
@@ -1516,7 +1521,7 @@ private:
   DenseMap<const BasicBlock *, BlockLiveness> BBToLiveness;
   // The liveness scan asks for the weight of every live value at every
   // instruction, so memoize on the type, which is all the weight depends on.
-  mutable DenseMap<Type *, unsigned> WeightCache;
+  mutable DenseMap<Type *, std::optional<unsigned>> WeightCache;
 
   const BlockLiveness &getLiveness(const BasicBlock *BB) const {
     static const BlockLiveness Empty;
@@ -1590,15 +1595,23 @@ private:
     return isa<Instruction>(V) || isa<Argument>(V);
   }
 
-  unsigned computeWeight(Type *Ty) const {
+  // Returns std::nullopt for a type with no fixed register footprint, which is
+  // the signal to stop weighing the block.
+  std::optional<unsigned> computeWeight(Type *Ty) const {
     const DataLayout &DL = F->getDataLayout();
+
+    // A scalable type occupies vscale times its minimum size, which is a
+    // runtime quantity, so it cannot be compared against a fixed budget.
+    TypeSize Size = DL.getTypeSizeInBits(Ty);
+    if (Size.isScalable())
+      return std::nullopt;
 
     // TTI's getRegUsageForType is less accurate than
     // default logic to compute pressure for targets like AMDGPU
-    return divideCeil(DL.getTypeSizeInBits(Ty).getFixedValue(), 32);
+    return divideCeil(Size.getFixedValue(), 32);
   }
 
-  unsigned weight(const Value *V) const {
+  std::optional<unsigned> weight(const Value *V) const {
     Type *Ty = V->getType();
     if (Ty->isVoidTy() || Ty->isTokenTy())
       return 0;
@@ -1713,14 +1726,27 @@ private:
     return false;
   }
 
-  std::pair<unsigned, unsigned>
+  // Returns std::nullopt when a live value has no fixed register footprint, so
+  // the block's pressure cannot be compared against the budget.
+  std::optional<std::pair<unsigned, unsigned>>
   maxLivenessInBlockBackward(const BasicBlock &BB, const ValueSet &LiveIn,
                              const ValueSet &LiveOut) const {
+    auto SumWeights = [this](const ValueSet &Live) -> std::optional<unsigned> {
+      unsigned W = 0;
+      for (const Value *V : Live) {
+        std::optional<unsigned> RW = weight(V);
+        if (!RW)
+          return std::nullopt;
+        W += *RW;
+      }
+      return W;
+    };
 
     ValueSet LiveSet = LiveOut;
-    unsigned MaxW = 0;
-    for (const Value *V : LiveSet)
-      MaxW += weight(V);
+    std::optional<unsigned> InitialW = SumWeights(LiveSet);
+    if (!InitialW)
+      return std::nullopt;
+    unsigned MaxW = *InitialW;
 
     // Initial LiveSetWithSLSR is the same as LiveOut.
     // SLSR changes
@@ -1768,18 +1794,15 @@ private:
         }
 
       // Compute weight reaching for this instruction.
-      unsigned W = 0;
-      for (const Value *V : LiveSet) {
-        auto RW = weight(V);
-        W += RW;
-      }
-      MaxW = std::max(MaxW, W);
-      W = 0;
-      for (const Value *V : LiveSetWithSLSR) {
-        auto RW = weight(V);
-        W += RW;
-      }
-      MaxWWithSLSR = std::max(MaxWWithSLSR, W);
+      std::optional<unsigned> W = SumWeights(LiveSet);
+      if (!W)
+        return std::nullopt;
+      std::optional<unsigned> WWithSLSR = SumWeights(LiveSetWithSLSR);
+      if (!WWithSLSR)
+        return std::nullopt;
+
+      MaxW = std::max(MaxW, *W);
+      MaxWWithSLSR = std::max(MaxWWithSLSR, *WWithSLSR);
 
       // Remove the def (Instruction) from LiveSet for the next upward
       // instruction.
@@ -1789,7 +1812,7 @@ private:
       }
     }
 
-    return {MaxW, MaxWWithSLSR};
+    return {{MaxW, MaxWWithSLSR}};
   }
 };
 } // end of anonymous namespace

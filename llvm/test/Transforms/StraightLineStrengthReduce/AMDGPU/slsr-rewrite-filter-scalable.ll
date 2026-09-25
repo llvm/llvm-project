@@ -1,28 +1,16 @@
 ; NOTE: Do not auto-generate
 ; REQUIRES: asserts
-; RUN: opt -passes=slsr -stats -disable-output <%s 2>&1 | FileCheck %s
+; RUN: opt < %s -mtriple=amdgpu-amdhsa-amd -passes=slsr -stats -disable-output 2>&1 | FileCheck %s
 
+; The body is @peak_above_budget from slsr-rewrite-filter.ll, which is filtered
+; under this triple, plus one scalable value live across the block. All 17
+; candidates being rewritten. SLSR's RewriteFilter bails out on scalable types. 
 ; CHECK: {{^ *}}17 slsr{{ +}}- Number of SLSR candidates rewritten
 
-; The SLSR rewrite filter needs a register budget to compare against, and
-; the generic TargetTransformInfo has none: getRegisterBudget() returns
-; std::nullopt unless a target implements it. There is no target triple here, so
-; RewriteFilter::run() returns early, before it even computes liveness or pressure,
-; and every rewrite stands.
-;
-; @many_bases_overlapping is the same body used by
-; @peak_above_budget in AMDGPU/slsr-rewrite-filter.ll: 17 distinct bases whose
-; rewrites take the block's peak pressure from 80 registers to 144. Under an
-; AMDGPU triple that exceeds the budget and the rewrites are dropped.
-;
-; All 17 candidates being rewritten is what shows the filter never skipped a
-; block.
-
-target datalayout = "e-i64:64-v16:16-v32:32-n16:32:64"
-
 declare void @bar(i128)
+declare void @vec_use(<vscale x 4 x i32>)
 
-define void @many_bases_overlapping(i128 %s, i128 %b1, i128 %b2, i128 %b3, i128 %b4, i128 %b5, i128 %b6, i128 %b7, i128 %b8, i128 %b9, i128 %b10, i128 %b11, i128 %b12, i128 %b13, i128 %b14, i128 %b15, i128 %b16, i128 %b17) {
+define void @scalable_live_value(<vscale x 4 x i32> %v, i128 %s, i128 %b1, i128 %b2, i128 %b3, i128 %b4, i128 %b5, i128 %b6, i128 %b7, i128 %b8, i128 %b9, i128 %b10, i128 %b11, i128 %b12, i128 %b13, i128 %b14, i128 %b15, i128 %b16, i128 %b17) {
 entry:
   %s2 = shl i128 %s, 1
   %t1 = add i128 %b1, %s
@@ -110,5 +98,6 @@ entry:
   call void @bar(i128 %b15)
   call void @bar(i128 %b16)
   call void @bar(i128 %b17)
+  call void @vec_use(<vscale x 4 x i32> %v)
   ret void
 }
