@@ -1,23 +1,31 @@
 ; Modified from: https://github.com/KhronosGroup/SPIRV-LLVM-Translator/test/extensions/INTEL/SPV_INTEL_variable_length_array/vla_spec_const.ll
 
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_INTEL_variable_length_array %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_INTEL_variable_length_array %s -o - | FileCheck %s --check-prefixes=CHECK-COMMON,CHECK-SPIRV
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_INTEL_variable_length_array %s -o - -filetype=obj | spirv-val %}
 
-; CHECK-SPIRV: Capability VariableLengthArrayINTEL
-; CHECK-SPIRV: Extension "SPV_INTEL_variable_length_array"
-; CHECK-SPIRV: OpDecorate %[[SpecConst:.*]] SpecId 0
-; CHECK-SPIRV-DAG: %[[Long:.*]] = OpTypeInt 64 0
-; CHECK-SPIRV-DAG: %[[Int:.*]] = OpTypeInt 32 0
-; CHECK-SPIRV-DAG: %[[IntPtr:.*]] = OpTypePointer {{[a-zA-Z]+}} %[[Int]]
-; CHECK-SPIRV: %[[SpecConst]] = OpSpecConstant %[[Long]]
-; CHECK-SPIRV-LABEL: FunctionEnd
-; CHECK-SPIRV: %[[SpecConstVal:.*]] = OpFunctionCall %[[Long]]
-; CHECK-SPIRV: OpSaveMemoryINTEL
-; CHECK-SPIRV: OpVariableLengthArrayINTEL %[[IntPtr]] %[[SpecConstVal]]
-; CHECK-SPIRV: OpRestoreMemoryINTEL
+; TODO: currently spirv-val mistakenly rejects Element Type as operand of OpUntypedVariableLengthArrayINTEL. Re-enable spirv-val once it's fixed.
+; RUNx: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_INTEL_variable_length_array,+SPV_KHR_untyped_pointers %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_INTEL_variable_length_array,+SPV_KHR_untyped_pointers %s -o - | FileCheck %s --check-prefixes=CHECK-COMMON,CHECK-SPIRV-UNTYPED
 
-; CHECK-SPIRV: OpFunction %[[Long]]
-; CHECK-SPIRV: ReturnValue %[[SpecConst]]
+; CHECK-COMMON: Capability VariableLengthArrayINTEL
+; CHECK-SPIRV-UNTYPED: Capability UntypedVariableLengthArrayINTEL
+; CHECK-COMMON-DAG: Extension "SPV_INTEL_variable_length_array"
+; CHECK-SPIRV-UNTYPED-DAG: Extension "SPV_KHR_untyped_pointers"
+; CHECK-COMMON: OpDecorate %[[SpecConst:.*]] SpecId 0
+; CHECK-COMMON-DAG: %[[Long:.*]] = OpTypeInt 64 0
+; CHECK-COMMON-DAG: %[[Int:.*]] = OpTypeInt 32 0
+; CHECK-SPIRV-DAG: %[[IntPtr:.*]] = OpTypePointer {{[a-zA-Z]+}} %[[Int]]
+; CHECK-SPIRV-UNTYPED-DAG: %[[UPtr:.*]] = OpTypeUntypedPointerKHR Function
+; CHECK-COMMON: %[[SpecConst]] = OpSpecConstant %[[Long]]
+; CHECK-COMMON-LABEL: FunctionEnd
+; CHECK-COMMON: %[[SpecConstVal:.*]] = OpFunctionCall %[[Long]]
+; CHECK-COMMON: OpSaveMemoryINTEL
+; CHECK-SPIRV: OpVariableLengthArrayINTEL %[[IntPtr]] %[[SpecConstVal]]
+; CHECK-SPIRV-UNTYPED: OpUntypedVariableLengthArrayINTEL %[[UPtr]] %[[Int]] %[[SpecConstVal]]
+; CHECK-COMMON: OpRestoreMemoryINTEL
+
+; CHECK-COMMON: OpFunction %[[Long]]
+; CHECK-COMMON: ReturnValue %[[SpecConst]]
 
 target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-n8:16:32:64"
 target triple = "spir64-unknown-linux"

@@ -2138,6 +2138,12 @@ void addInstrRequirements(const MachineInstr &MI,
       Reqs.addCapability(SPIRV::Capability::VariableLengthArrayINTEL);
     }
     break;
+  case SPIRV::OpUntypedVariableLengthArrayINTEL:
+    if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_variable_length_array)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_variable_length_array);
+      Reqs.addCapability(SPIRV::Capability::UntypedVariableLengthArrayINTEL);
+    }
+    break;
   case SPIRV::OpAsmTargetINTEL:
   case SPIRV::OpAsmINTEL:
   case SPIRV::OpAsmCallINTEL:

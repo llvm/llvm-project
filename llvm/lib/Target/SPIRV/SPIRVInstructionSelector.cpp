@@ -7051,11 +7051,30 @@ bool SPIRVInstructionSelector::selectAllocaArray(Register ResVReg,
   // there was an allocation size parameter to the allocation instruction
   // that is not 1
   MachineBasicBlock &BB = *I.getParent();
-  BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpVariableLengthArrayINTEL))
-      .addDef(ResVReg)
-      .addUse(GR.getSPIRVTypeID(ResType))
-      .addUse(I.getOperand(2).getReg())
-      .constrainAllUses(TII, TRI, RBI);
+
+  bool UseUntypedPointers =
+      ResType->getOpcode() == SPIRV::OpTypeUntypedPointerKHR;
+  unsigned Opcode = UseUntypedPointers
+                        ? SPIRV::OpUntypedVariableLengthArrayINTEL
+                        : SPIRV::OpVariableLengthArrayINTEL;
+
+  auto MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(Opcode))
+                 .addDef(ResVReg)
+                 .addUse(GR.getSPIRVTypeID(ResType));
+
+  // OpUntypedVariableLengthArrayINTEL takes an explicit Element Type <id>
+  // right after the result type
+  if (UseUntypedPointers) {
+    SPIRVTypeInst ElementType = GR.getUntypedPtrElementType(ResVReg);
+    assert(ElementType &&
+           "untyped variable length array result must have a recorded element "
+           "type");
+    MIB.addUse(GR.getSPIRVTypeID(ElementType));
+  }
+
+  MIB.addUse(I.getOperand(2).getReg());
+  MIB.constrainAllUses(TII, TRI, RBI);
+
   if (!STI.isShader()) {
     unsigned Alignment = I.getOperand(3).getImm();
     buildOpDecorate(ResVReg, I, TII, SPIRV::Decoration::Alignment, {Alignment});
