@@ -1,5 +1,4 @@
-//===-- Implementation header for log1pf16 -----------------------*- C++
-//-*-===//
+//===-- Implementation header for log1pf16 ----------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,7 +13,6 @@
 
 #ifdef LIBC_TYPES_HAS_FLOAT16
 
-#include "expxf16_utils.h"
 #include "hdr/errno_macros.h"
 #include "hdr/fenv_macros.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
@@ -27,6 +25,7 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
 #include "src/__support/macros/properties/cpu_features.h"
+#include "src/__support/math/expxf16_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -40,6 +39,7 @@ LIBC_INLINE float16 log1pf16(float16 x) {
   uint16_t x_u = x_bits.uintval();
   uint16_t x_abs = x_u & 0x7fffU;
 
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   constexpr size_t N_LOG1PF16_EXCEPTS = 11;
   constexpr fputil::ExceptValues<float16, N_LOG1PF16_EXCEPTS> LOG1PF16_EXCEPTS =
       {{
@@ -70,6 +70,7 @@ LIBC_INLINE float16 log1pf16(float16 x) {
 
   if (auto r = LOG1PF16_EXCEPTS.lookup(x_u); LIBC_UNLIKELY(r.has_value()))
     return r.value();
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
   // If x is NaN, +/-inf, or |x| <= 2^-3.
   if (LIBC_UNLIKELY(x_abs <= 0x3000U || x_abs >= 0x7c00U)) {
