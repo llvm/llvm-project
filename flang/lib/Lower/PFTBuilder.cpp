@@ -2800,6 +2800,26 @@ static bool isInLoopBody(const Fortran::lower::pft::Evaluation *eval,
 /// A CYCLE is not an escape: its target is the EndDoStmt, which is where the
 /// wrap's yield sits, so it lands on the boundary. An EXIT targets the
 /// construct exit, beyond the loop entirely, and does escape.
+/// Follow the chain of unconditional GO TOs starting at \p start and return
+/// true if it closes on itself.
+///
+/// Such a cycle has no exit edge, which makes it a statically known infinite
+/// loop. Only unconditional transfers are followed, so the answer is a
+/// certainty rather than a guess -- the same bound the cf.br canonicalization
+/// applies when it declines to collapse cyclic branches.
+static bool
+startsExitFreeGotoCycle(const Fortran::lower::pft::Evaluation &start) {
+  auto gotoTarget = [](const Fortran::lower::pft::Evaluation &e) {
+    return e.getIf<parser::GotoStmt>() ? e.controlSuccessor : nullptr;
+  };
+
+  llvm::SmallPtrSet<const Fortran::lower::pft::Evaluation *, 4> visited;
+  for (const Fortran::lower::pft::Evaluation *e = &start; e; e = gotoTarget(*e))
+    if (!visited.insert(e).second)
+      return true;
+  return false;
+}
+
 static bool isStructurableWithUnstructuredInternals(
     const Fortran::lower::pft::Evaluation &loop,
     const Fortran::lower::pft::FunctionLikeUnit &unit) {
@@ -2850,8 +2870,17 @@ static bool isStructurableWithUnstructuredInternals(
 
   std::function<bool(const Fortran::lower::pft::Evaluation &)> check =
       [&](const Fortran::lower::pft::Evaluation &e) -> bool {
+    // A body that cannot run to completion must stay unstructured. Its
+    // structured form puts the body in an scf.execute_region carrying no
+    // memory effects, and DCE deletes such a region outright -- discarding the
+    // non-termination and letting execution fall past the loop. Branches
+    // survive that, being terminators, so leave the loop unstructured.
+    //
+    // An infinite DO says so in its own syntax; a GO TO cycle has to be
+    // followed to be recognized.
     if (e.isA<parser::ReturnStmt>() ||
-        isInfiniteDo(e.getIf<parser::DoConstruct>()))
+        isInfiniteDo(e.getIf<parser::DoConstruct>()) ||
+        startsExitFreeGotoCycle(e))
       return false;
 
     // An assigned GO TO reaches any label ASSIGNed to its variable, and a label
