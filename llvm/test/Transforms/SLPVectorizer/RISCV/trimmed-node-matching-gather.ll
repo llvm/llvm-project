@@ -13,17 +13,12 @@ define void @test(i64 %x, ptr %pa, ptr %pb, ptr %pc, ptr %pd, ptr %dst) {
 ; CHECK-NEXT:    [[V1:%.*]] = lshr i64 [[X]], [[B]]
 ; CHECK-NEXT:    [[V2:%.*]] = shl i64 [[X]], [[C]]
 ; CHECK-NEXT:    [[V3:%.*]] = lshr i64 [[X]], [[D]]
-; CHECK-NEXT:    [[M0:%.*]] = mul i64 [[V0]], [[V0]]
-; CHECK-NEXT:    [[M1:%.*]] = mul i64 [[V1]], [[V1]]
-; CHECK-NEXT:    [[M2:%.*]] = mul i64 [[V2]], [[V2]]
-; CHECK-NEXT:    [[M3:%.*]] = mul i64 [[V3]], [[V3]]
-; CHECK-NEXT:    [[DST1:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 1
-; CHECK-NEXT:    [[DST2:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 2
-; CHECK-NEXT:    [[DST3:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 3
-; CHECK-NEXT:    store i64 [[M0]], ptr [[DST]], align 8
-; CHECK-NEXT:    store i64 [[M1]], ptr [[DST1]], align 8
-; CHECK-NEXT:    store i64 [[M2]], ptr [[DST2]], align 8
-; CHECK-NEXT:    store i64 [[M3]], ptr [[DST3]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i64> poison, i64 [[V0]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i64> [[TMP0]], i64 [[V1]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i64> [[TMP1]], i64 [[V2]], i64 2
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i64> [[TMP2]], i64 [[V3]], i64 3
+; CHECK-NEXT:    [[TMP4:%.*]] = mul <4 x i64> [[TMP3]], [[TMP3]]
+; CHECK-NEXT:    store <4 x i64> [[TMP4]], ptr [[DST]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
