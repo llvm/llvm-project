@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=amdgcn -mcpu=tahiti -debug
-; RUN: llc < %s -mtriple=amdgcn -mcpu=tonga -debug
+; RUN: llc < %s -mtriple=amdgpu6.00 -debug
+; RUN: llc < %s -mtriple=amdgpu8.02 -debug
 ; REQUIRES: asserts
 
 ; Check that SelectionDAGDumper does not crash on int_SI_if.

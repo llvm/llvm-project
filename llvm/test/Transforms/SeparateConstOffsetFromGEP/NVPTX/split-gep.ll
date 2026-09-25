@@ -19,7 +19,7 @@ define ptr @struct(i32 %i) {
 ; CHECK-SAME: i32 [[I:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[I]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [1024 x %struct.S], ptr @struct_array, i64 0, i64 [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [1024 x [[STRUCT_S:%.*]]], ptr @struct_array, i64 0, i64 [[TMP0]], i32 1
 ; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[TMP1]], i64 80
 ; CHECK-NEXT:    ret ptr [[P2]]
 ;
@@ -80,11 +80,11 @@ entry:
 ; known base ptr even if one of a or b is non-negative.
 define ptr @sext_add_nonbase(i32 %i, ptr %unknown_arr) {
 ; CHECK-LABEL: define ptr @sext_add_nonbase(
-; CHECK-SAME: i32 [[I:%.*]], ptr [[ARR:%.*]]) {
+; CHECK-SAME: i32 [[I:%.*]], ptr [[UNKNOWN_ARR:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[I]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[TMP0]] to i64
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds [32 x [32 x float]], ptr [[ARR]], i64 0, i64 [[TMP1]], i64 0
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds [32 x [32 x float]], ptr [[UNKNOWN_ARR]], i64 0, i64 [[TMP1]], i64 0
 ; CHECK-NEXT:    ret ptr [[P1]]
 ;
 entry:
@@ -102,7 +102,7 @@ define ptr @sext_add_nonzerooffset_inrange(i8 %i, i64 %size) {
 ; CHECK-LABEL: define ptr @sext_add_nonzerooffset_inrange(
 ; CHECK-SAME: i8 [[I:%.*]], i64 [[SIZE:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ARR:%.*]] = alloca float, i64 %size, align 4
+; CHECK-NEXT:    [[ARR:%.*]] = alloca float, i64 [[SIZE]], align 4
 ; CHECK-NEXT:    [[OFFSETARR:%.*]] = getelementptr float, ptr [[ARR]], i64 127
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i8 [[I]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr float, ptr [[OFFSETARR]], i64 [[TMP0]]
@@ -205,10 +205,10 @@ entry:
 ; a or b is non-negative, even if the gep is not inbounds
 define ptr @sext_add_nsw(i32 %i, ptr %unknown_arr) {
 ; CHECK-LABEL: define ptr @sext_add_nsw(
-; CHECK-SAME: i32 [[I:%.*]], ptr [[ARR:%.*]]) {
+; CHECK-SAME: i32 [[I:%.*]], ptr [[UNKNOWN_ARR:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[I]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [32 x [32 x float]], ptr [[ARR]], i64 0, i64 [[TMP0]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [32 x [32 x float]], ptr [[UNKNOWN_ARR]], i64 0, i64 [[TMP0]], i64 0
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[TMP1]], i64 128
 ; CHECK-NEXT:    ret ptr [[P1]]
 ;
@@ -253,19 +253,19 @@ define void @sext_zext(i32 %a, i32 %b, ptr %out1, ptr %out2) {
 ; CHECK-LABEL: define void @sext_zext(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], ptr [[OUT1:%.*]], ptr [[OUT2:%.*]]) {
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP3:%.*]] = sext i32 [[A]] to i48
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i48 [[TMP3]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[B]], 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[TMP0]] to i48
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i48 [[TMP1]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = sext i32 [[A]] to i48
-; CHECK-NEXT:    [[TMP4:%.*]] = zext i48 [[TMP3]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr [32 x [32 x float]], ptr @float_2d_array, i64 0, i64 [[TMP4]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[P11:%.*]] = getelementptr i8, ptr [[TMP5]], i64 128
 ; CHECK-NEXT:    store ptr [[P11]], ptr [[OUT1]], align 8
+; CHECK-NEXT:    [[TMP9:%.*]] = zext i32 [[A]] to i48
+; CHECK-NEXT:    [[TMP10:%.*]] = sext i48 [[TMP9]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = add nsw i32 [[B]], 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = zext i32 [[TMP6]] to i48
 ; CHECK-NEXT:    [[TMP8:%.*]] = sext i48 [[TMP7]] to i64
-; CHECK-NEXT:    [[TMP9:%.*]] = zext i32 [[A]] to i48
-; CHECK-NEXT:    [[TMP10:%.*]] = sext i48 [[TMP9]] to i64
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr [32 x [32 x float]], ptr @float_2d_array, i64 0, i64 [[TMP10]], i64 [[TMP8]]
 ; CHECK-NEXT:    [[P22:%.*]] = getelementptr i8, ptr [[TMP11]], i64 384
 ; CHECK-NEXT:    store ptr [[P22]], ptr [[OUT2]], align 8
@@ -300,9 +300,9 @@ define ptr @sext_or(i64 %a, i32 %b) {
 ; CHECK-NEXT:    [[B1:%.*]] = shl i32 [[B]], 2
 ; CHECK-NEXT:    [[B3:%.*]] = or i32 [[B1]], 4
 ; CHECK-NEXT:    [[B3_EXT:%.*]] = sext i32 [[B3]] to i64
-; CHECK-NEXT:    [[J:%.*]] = add i64 [[A]], [[B3_EXT]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[B1]] to i64
 ; CHECK-NEXT:    [[I2:%.*]] = add i64 [[A]], [[TMP0]]
+; CHECK-NEXT:    [[J:%.*]] = add i64 [[A]], [[B3_EXT]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [32 x [32 x float]], ptr @float_2d_array, i64 0, i64 [[I2]], i64 [[J]]
 ; CHECK-NEXT:    [[P3:%.*]] = getelementptr i8, ptr [[TMP1]], i64 128
 ; CHECK-NEXT:    ret ptr [[P3]]
@@ -388,10 +388,10 @@ define ptr @packed_struct(i32 %i, i32 %j) {
 ; CHECK-LABEL: define ptr @packed_struct(
 ; CHECK-SAME: i32 [[I:%.*]], i32 [[J:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[S:%.*]] = alloca [1024 x %struct.Packed], align 16
-; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[I]] to i64
+; CHECK-NEXT:    [[S:%.*]] = alloca [1024 x [[STRUCT_PACKED:%.*]]], align 16
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[J]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr [1024 x %struct.Packed], ptr [[S]], i64 0, i64 [[TMP0]], i32 1, i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = sext i32 [[I]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr [1024 x [[STRUCT_PACKED]]], ptr [[S]], i64 0, i64 [[TMP3]], i32 1, i64 [[TMP1]]
 ; CHECK-NEXT:    [[ARRAYIDX33:%.*]] = getelementptr i8, ptr [[TMP2]], i64 100
 ; CHECK-NEXT:    ret ptr [[ARRAYIDX33]]
 ;

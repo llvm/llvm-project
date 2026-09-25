@@ -9,17 +9,14 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_RINTTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_RINTTEST_H
 
-#undef LIBC_MATH_USE_SYSTEM_FENV
-
+#include "hdr/fenv_macros.h"
+#include "hdr/math_macros.h"
 #include "src/__support/CPP/algorithm.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-
-#include "hdr/fenv_macros.h"
-#include "hdr/math_macros.h"
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 using LIBC_NAMESPACE::Sign;
@@ -125,12 +122,12 @@ public:
   }
 };
 
-#define LIST_RINT_TESTS(F, func)                                               \
-  using LlvmLibcRIntTest = RIntTestTemplate<F>;                                \
-  TEST_F(LlvmLibcRIntTest, specialNumbers) { testSpecialNumbers(&func); }      \
-  TEST_F(LlvmLibcRIntTest, RoundNumbers) { testRoundNumbers(&func); }          \
-  TEST_F(LlvmLibcRIntTest, Fractions) { testFractions(&func); }                \
-  TEST_F(LlvmLibcRIntTest, SubnormalRange) { testSubnormalRange(&func); }      \
-  TEST_F(LlvmLibcRIntTest, NormalRange) { testNormalRange(&func); }
+#define LIST_RINT_TESTS(Name, F, func)                                         \
+  using LlvmLibc##Name##Test = RIntTestTemplate<F>;                            \
+  TEST_F(LlvmLibc##Name##Test, specialNumbers) { testSpecialNumbers(&func); }  \
+  TEST_F(LlvmLibc##Name##Test, RoundNumbers) { testRoundNumbers(&func); }      \
+  TEST_F(LlvmLibc##Name##Test, Fractions) { testFractions(&func); }            \
+  TEST_F(LlvmLibc##Name##Test, SubnormalRange) { testSubnormalRange(&func); }  \
+  TEST_F(LlvmLibc##Name##Test, NormalRange) { testNormalRange(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_RINTTEST_H

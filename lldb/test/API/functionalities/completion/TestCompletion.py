@@ -2,7 +2,6 @@
 Test the lldb command line completion mechanism.
 """
 
-
 import os
 from multiprocessing import Process
 import lldb
@@ -12,6 +11,7 @@ from lldbsuite.test import lldbplatform
 from lldbsuite.test import lldbutil
 
 
+@requireNotWasm("driver cannot launch a Wasm inferior")
 class CommandLineCompletionTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
@@ -374,6 +374,18 @@ class CommandLineCompletionTestCase(TestBase):
     def test_settings_set_th(self):
         """Test that 'settings set thread-f' completes to 'settings set thread-format'."""
         self.complete_from_to("settings set thread-f", "settings set thread-format")
+
+    def test_settings_set_shows_description(self):
+        """Test that 'settings set' completions also offer the setting description."""
+        self.check_completion_with_desc(
+            "settings set term-w",
+            [
+                [
+                    "term-width",
+                    "The maximum number of columns to use for displaying text.",
+                ]
+            ],
+        )
 
     def test_settings_s_dash(self):
         """Test that 'settings set --g' completes to 'settings set --global'."""
@@ -930,7 +942,9 @@ class CommandLineCompletionTestCase(TestBase):
         self.build()
         error = lldb.SBError()
         # Create a target, but don't load dependent modules
-        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"), None, None, False, error)
+        target = self.dbg.CreateTarget(
+            self.getBuildArtifact("a.out"), None, None, False, error
+        )
         self.assertSuccess(error)
         self.registerSharedLibrariesWithTarget(target, ["shared"])
 

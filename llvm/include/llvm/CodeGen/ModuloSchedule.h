@@ -197,9 +197,9 @@ private:
                       MBBVectorTy &PrologBBs);
   void generateExistingPhis(MachineBasicBlock *NewBB, MachineBasicBlock *BB1,
                             MachineBasicBlock *BB2, MachineBasicBlock *KernelBB,
-                            ValueMapTy *VRMap, InstrMapTy &InstrMap,
-                            unsigned LastStageNum, unsigned CurStageNum,
-                            bool IsLast);
+                            ValueMapTy *VRMap, ValueMapTy *VRMapPhi,
+                            InstrMapTy &InstrMap, unsigned LastStageNum,
+                            unsigned CurStageNum, bool IsLast);
   void generatePhis(MachineBasicBlock *NewBB, MachineBasicBlock *BB1,
                     MachineBasicBlock *BB2, MachineBasicBlock *KernelBB,
                     ValueMapTy *VRMap, ValueMapTy *VRMapPhi,
@@ -232,6 +232,16 @@ private:
                              MachineInstr *Phi, Register OldReg,
                              Register NewReg, Register PrevReg = Register());
   bool isLoopCarried(MachineInstr &Phi);
+
+  // Check if register at StageNum is defined by a new phi instruction generated
+  // in kernel or epilog. If found, return register from VRMapPhi. Else return
+  // register from VRMap.
+  Register getMapPhiReg(ValueMapTy *VRMap, ValueMapTy *VRMapPhi,
+                        unsigned StageNum, Register OldReg) {
+    if (Register R = VRMapPhi[StageNum].lookup(OldReg))
+      return R;
+    return VRMap[StageNum].lookup(OldReg);
+  }
 
   /// Return the max. number of stages/iterations that can occur between a
   /// register definition and its uses.
@@ -422,10 +432,6 @@ private:
 
   void updateInstrDef(MachineInstr *NewMI, ValueMapTy &VRMap, bool LastDef);
 
-  void generateKernelPhi(Register OrigLoopVal, Register NewLoopVal,
-                         unsigned UnrollNum,
-                         SmallVectorImpl<ValueMapTy> &VRMapProlog,
-                         SmallVectorImpl<ValueMapTy> &VRMapPhi);
   void updateInstrUse(MachineInstr *MI, int StageNum, int PhaseNum,
                       SmallVectorImpl<ValueMapTy> &CurVRMap,
                       SmallVectorImpl<ValueMapTy> *PrevVRMap);

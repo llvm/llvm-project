@@ -81,6 +81,7 @@
 #include "llvm/Support/COM.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
@@ -430,7 +431,7 @@ cl::opt<uint32_t> ModuleIndex(
     "mod",
     cl::desc(
         "Limit options in the Modules category to the specified module index"),
-    cl::Optional, cl::sub(BytesSubcommand), cl::cat(ModuleCategory));
+    cl::sub(BytesSubcommand), cl::cat(ModuleCategory));
 cl::opt<bool> ModuleSyms("syms", cl::desc("Dump symbol record substream"),
                          cl::sub(BytesSubcommand), cl::cat(ModuleCategory));
 cl::opt<bool> ModuleC11("c11-chunks", cl::Hidden,
@@ -568,14 +569,14 @@ cl::opt<bool> DumpFpo("fpo", cl::desc("dump FPO records"),
                       cl::cat(SymbolOptions), cl::sub(DumpSubcommand));
 
 cl::opt<uint32_t> DumpSymbolOffset(
-    "symbol-offset", cl::Optional,
+    "symbol-offset",
     cl::desc("only dump symbol record with the specified symbol offset"),
     cl::cat(SymbolOptions), cl::sub(DumpSubcommand));
 cl::opt<bool> DumpParents("show-parents",
                           cl::desc("dump the symbols record's all parents."),
                           cl::cat(SymbolOptions), cl::sub(DumpSubcommand));
 cl::opt<uint32_t>
-    DumpParentDepth("parent-recurse-depth", cl::Optional, cl::init(-1U),
+    DumpParentDepth("parent-recurse-depth", cl::init(-1U),
                     cl::desc("only recurse to a depth of N when displaying "
                              "parents of a symbol record."),
                     cl::cat(SymbolOptions), cl::sub(DumpSubcommand));
@@ -583,7 +584,7 @@ cl::opt<bool> DumpChildren("show-children",
                            cl::desc("dump the symbols record's all children."),
                            cl::cat(SymbolOptions), cl::sub(DumpSubcommand));
 cl::opt<uint32_t>
-    DumpChildrenDepth("children-recurse-depth", cl::Optional, cl::init(-1U),
+    DumpChildrenDepth("children-recurse-depth", cl::init(-1U),
                       cl::desc("only recurse to a depth of N when displaying "
                                "children of a symbol record."),
                       cl::cat(SymbolOptions), cl::sub(DumpSubcommand));
@@ -613,11 +614,11 @@ cl::opt<bool> DumpXme(
     cl::desc(
         "dump cross module exports (DEBUG_S_CROSSSCOPEEXPORTS subsection)"),
     cl::cat(FileOptions), cl::sub(DumpSubcommand));
-cl::opt<uint32_t> DumpModi("modi", cl::Optional,
+cl::opt<uint32_t> DumpModi("modi",
                            cl::desc("For all options that iterate over "
                                     "modules, limit to the specified module"),
                            cl::cat(FileOptions), cl::sub(DumpSubcommand));
-cl::opt<bool> JustMyCode("jmc", cl::Optional,
+cl::opt<bool> JustMyCode("jmc",
                          cl::desc("For all options that iterate over modules, "
                                   "ignore modules from system libraries"),
                          cl::cat(FileOptions), cl::sub(DumpSubcommand));
@@ -663,7 +664,12 @@ cl::opt<std::string>
 cl::opt<std::string> InputFilename(cl::Positional,
                                    cl::desc("<input YAML file>"), cl::Required,
                                    cl::sub(YamlToPdbSubcommand));
-}
+
+cl::opt<unsigned>
+    DocNum("docnum", cl::init(1),
+           cl::desc("Read specified document from input (default = 1)"),
+           cl::sub(YamlToPdbSubcommand));
+} // namespace yaml2pdb
 
 namespace pdb2yaml {
 cl::opt<bool> All("all",
@@ -728,6 +734,10 @@ cl::opt<bool> DumpSectionHeaders("section-headers",
                                  cl::desc("Dump section headers."),
                                  cl::cat(FileOptions),
                                  cl::sub(PdbToYamlSubcommand));
+cl::opt<bool> DumpSectionContribs("section-contribs",
+                                  cl::desc("dump section contributions"),
+                                  cl::cat(FileOptions),
+                                  cl::sub(PdbToYamlSubcommand));
 
 cl::list<std::string> InputFilename(cl::Positional,
                                     cl::desc("<input PDB file>"), cl::Required,
@@ -754,7 +764,7 @@ cl::list<uint64_t> Offsets("offset", cl::desc("The file offset to explain"),
 
 cl::opt<InputFileType> InputType(
     "input-type", cl::desc("Specify how to interpret the input file"),
-    cl::init(InputFileType::PDBFile), cl::Optional, cl::sub(ExplainSubcommand),
+    cl::init(InputFileType::PDBFile), cl::sub(ExplainSubcommand),
     cl::values(clEnumValN(InputFileType::PDBFile, "pdb-file",
                           "Treat input as a PDB file (default)"),
                clEnumValN(InputFileType::PDBStream, "pdb-stream",
@@ -776,24 +786,22 @@ cl::opt<std::string> OutputFile("out",
                                 cl::desc("The file to write the stream to"),
                                 cl::Required, cl::sub(ExportSubcommand));
 cl::opt<std::string>
-    Stream("stream", cl::Optional,
+    Stream("stream",
            cl::desc("The index or name of the stream whose contents to export"),
            cl::sub(ExportSubcommand));
 cl::opt<bool> ForceName("name",
                         cl::desc("Force the interpretation of -stream as a "
                                  "string, even if it is a valid integer"),
-                        cl::sub(ExportSubcommand), cl::Optional,
-                        cl::init(false));
+                        cl::sub(ExportSubcommand), cl::init(false));
 cl::opt<bool> DXContainer("dxcontainer",
                           cl::desc("Export DirectX Container, if present"),
-                          cl::sub(ExportSubcommand), cl::Optional,
-                          cl::init(false));
+                          cl::sub(ExportSubcommand), cl::init(false));
 } // namespace exportstream
 }
 
 static ExitOnError ExitOnErr;
 
-static void yamlToPdb(StringRef Path) {
+static void yamlToPdb(StringRef Path, unsigned DocNum) {
   BumpPtrAllocator Allocator;
   ErrorOr<std::unique_ptr<MemoryBuffer>> ErrorOrBuffer =
       MemoryBuffer::getFileOrSTDIN(Path, /*IsText=*/false,
@@ -803,11 +811,29 @@ static void yamlToPdb(StringRef Path) {
     ExitOnErr(createFileError(Path, errorCodeToError(ErrorOrBuffer.getError())));
   }
 
+  if (DocNum == 0)
+    ExitOnErr(createStringError(
+        "document numbers are 1-based, there is no 0th document"));
+
   std::unique_ptr<MemoryBuffer> &Buffer = ErrorOrBuffer.get();
 
-  llvm::yaml::Input In(Buffer->getBuffer());
+  llvm::yaml::Input In(
+      Buffer->getMemBufferRef(), nullptr,
+      [](const SMDiagnostic &Diag, void *) { Diag.print(nullptr, errs()); });
+
+  for (unsigned CurrentDoc = 1; CurrentDoc < DocNum; ++CurrentDoc) {
+    if (!In.nextDocument())
+      ExitOnErr(createFileError(
+          Path, createStringErrorV("cannot find the {0}{1} document", DocNum,
+                                   getOrdinalSuffix(DocNum))));
+  }
+
   pdb::yaml::PdbObject YamlObj(Allocator);
   In >> YamlObj;
+
+  if (std::error_code EC = In.error())
+    ExitOnErr(
+        createStringErrorV("failed to parse YAML input: {0}", EC.message()));
 
   PDBFileBuilder Builder(Allocator);
 
@@ -902,6 +928,30 @@ static void yamlToPdb(StringRef Path) {
         Allocator, MI.Subsections, Strings));
     for (auto &SS : CodeViewSubsections) {
       ModiBuilder.addDebugSubsection(SS);
+    }
+  }
+
+  if (Dbi.SectionContribs) {
+    // DbiStreamBuilder only supports writing Ver60 section contribs.
+    if (Dbi.SectionContribs->Version !=
+        PdbRaw_DbiSecContribVer::DbiSecContribVer60)
+      ExitOnErr(createStringError(
+          "Only DBI section contrib Version Ver60 is supported"));
+
+    for (const auto &Contrib : Dbi.SectionContribs->Items) {
+      SectionContrib SC;
+      SC.ISect = Contrib.ISect;
+      SC.Padding[0] = 0;
+      SC.Padding[1] = 0;
+      SC.Off = Contrib.Off;
+      SC.Size = Contrib.Size;
+      SC.Characteristics = Contrib.Characteristics;
+      SC.Imod = Contrib.Imod;
+      SC.Padding2[0] = 0;
+      SC.Padding2[1] = 0;
+      SC.DataCrc = Contrib.DataCrc;
+      SC.RelocCrc = Contrib.RelocCrc;
+      DbiBuilder.addSectionContrib(SC);
     }
   }
 
@@ -1624,6 +1674,7 @@ int main(int Argc, const char **Argv) {
       opts::pdb2yaml::DumpModuleFiles = true;
       opts::pdb2yaml::DumpModuleSyms = true;
       opts::pdb2yaml::DumpSectionHeaders = true;
+      opts::pdb2yaml::DumpSectionContribs = true;
       opts::pdb2yaml::DumpModuleSubsections.push_back(
           opts::ModuleSubsection::All);
     }
@@ -1632,10 +1683,8 @@ int main(int Argc, const char **Argv) {
     if (opts::pdb2yaml::DumpModuleSyms || opts::pdb2yaml::DumpModuleFiles)
       opts::pdb2yaml::DumpModules = true;
 
-    if (opts::pdb2yaml::DumpModules)
-      opts::pdb2yaml::DbiStream = true;
-
-    if (opts::pdb2yaml::DumpSectionHeaders)
+    if (opts::pdb2yaml::DumpModules || opts::pdb2yaml::DumpSectionHeaders ||
+        opts::pdb2yaml::DumpSectionContribs)
       opts::pdb2yaml::DbiStream = true;
   }
 
@@ -1686,7 +1735,7 @@ int main(int Argc, const char **Argv) {
       sys::path::replace_extension(OutputFilename, ".pdb");
       opts::yaml2pdb::YamlPdbOutputFile = std::string(OutputFilename);
     }
-    yamlToPdb(opts::yaml2pdb::InputFilename);
+    yamlToPdb(opts::yaml2pdb::InputFilename, opts::yaml2pdb::DocNum);
   } else if (opts::DiaDumpSubcommand) {
     llvm::for_each(opts::diadump::InputFilenames, dumpDia);
   } else if (opts::PrettySubcommand) {

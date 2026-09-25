@@ -177,12 +177,11 @@ static LogicalResult verifyMemoryAccessAttribute(MemoryOpTy memoryOp) {
   // ODS checks for attributes values. Just need to verify that if the
   // memory-access attribute is Aligned, then the alignment attribute must be
   // present.
-  auto *op = memoryOp.getOperation();
-  auto memAccessAttr = op->getAttr(memoryOp.getMemoryAccessAttrName());
+  spirv::MemoryAccessAttr memAccessAttr = memoryOp.getMemoryAccessAttr();
   if (!memAccessAttr) {
     // Alignment attribute shouldn't be present if memory access attribute is
     // not present.
-    if (op->getAttr(memoryOp.getAlignmentAttrName())) {
+    if (memoryOp.getAlignmentAttr()) {
       return memoryOp.emitOpError(
           "invalid alignment specification without aligned memory access "
           "specification");
@@ -190,20 +189,52 @@ static LogicalResult verifyMemoryAccessAttribute(MemoryOpTy memoryOp) {
     return success();
   }
 
-  auto memAccess = cast<spirv::MemoryAccessAttr>(memAccessAttr);
+  spirv::MemoryAccessAttr memAccess = memAccessAttr;
 
   if (!memAccess) {
     return memoryOp.emitOpError("invalid memory access specifier: ")
            << memAccessAttr;
   }
 
+  // MakePointerAvailable applies to writes through the pointer, so it is
+  // invalid for Load (which only reads through it).
+  if constexpr (std::is_same_v<MemoryOpTy, LoadOp>) {
+    if (spirv::bitEnumContainsAll(memAccess.getValue(),
+                                  spirv::MemoryAccess::MakePointerAvailable)) {
+      return memoryOp.emitOpError(
+          "not compatible with memory operand 'MakePointerAvailable'");
+    }
+  }
+
+  // MakePointerVisible applies to reads through the pointer, so it is invalid
+  // for Store and for the Target operand of CopyMemory, both of which only
+  // write through it.
+  if constexpr (std::is_same_v<MemoryOpTy, StoreOp> ||
+                std::is_same_v<MemoryOpTy, CopyMemoryOp>) {
+    if (spirv::bitEnumContainsAll(memAccess.getValue(),
+                                  spirv::MemoryAccess::MakePointerVisible)) {
+      return memoryOp.emitOpError(
+          "not compatible with memory operand 'MakePointerVisible'");
+    }
+  }
+
+  if (spirv::bitEnumContainsAny(memAccess.getValue(),
+                                spirv::MemoryAccess::MakePointerAvailable |
+                                    spirv::MemoryAccess::MakePointerVisible) &&
+      !spirv::bitEnumContainsAll(memAccess.getValue(),
+                                 spirv::MemoryAccess::NonPrivatePointer)) {
+    return memoryOp.emitOpError(
+        "memory operand 'MakePointerAvailable' or 'MakePointerVisible' "
+        "requires 'NonPrivatePointer' to also be specified");
+  }
+
   if (spirv::bitEnumContainsAll(memAccess.getValue(),
                                 spirv::MemoryAccess::Aligned)) {
-    if (!op->getAttr(memoryOp.getAlignmentAttrName())) {
+    if (!memoryOp.getAlignmentAttr()) {
       return memoryOp.emitOpError("missing alignment value");
     }
   } else {
-    if (op->getAttr(memoryOp.getAlignmentAttrName())) {
+    if (memoryOp.getAlignmentAttr()) {
       return memoryOp.emitOpError(
           "invalid alignment specification with non-aligned memory access "
           "specification");
@@ -221,12 +252,11 @@ static LogicalResult verifySourceMemoryAccessAttribute(MemoryOpTy memoryOp) {
   // ODS checks for attributes values. Just need to verify that if the
   // memory-access attribute is Aligned, then the alignment attribute must be
   // present.
-  auto *op = memoryOp.getOperation();
-  auto memAccessAttr = op->getAttr(memoryOp.getSourceMemoryAccessAttrName());
+  spirv::MemoryAccessAttr memAccessAttr = memoryOp.getSourceMemoryAccessAttr();
   if (!memAccessAttr) {
     // Alignment attribute shouldn't be present if memory access attribute is
     // not present.
-    if (op->getAttr(memoryOp.getSourceAlignmentAttrName())) {
+    if (memoryOp.getSourceAlignmentAttr()) {
       return memoryOp.emitOpError(
           "invalid alignment specification without aligned memory access "
           "specification");
@@ -234,20 +264,37 @@ static LogicalResult verifySourceMemoryAccessAttribute(MemoryOpTy memoryOp) {
     return success();
   }
 
-  auto memAccess = cast<spirv::MemoryAccessAttr>(memAccessAttr);
+  spirv::MemoryAccessAttr memAccess = memAccessAttr;
 
   if (!memAccess) {
     return memoryOp.emitOpError("invalid memory access specifier: ")
            << memAccess;
   }
 
+  // The source mask applies to the read through the source pointer, so it
+  // cannot include MakePointerAvailable, which applies to writes.
+  if (spirv::bitEnumContainsAll(memAccess.getValue(),
+                                spirv::MemoryAccess::MakePointerAvailable)) {
+    return memoryOp.emitOpError(
+        "not compatible with memory operand 'MakePointerAvailable'");
+  }
+
+  if (spirv::bitEnumContainsAll(memAccess.getValue(),
+                                spirv::MemoryAccess::MakePointerVisible) &&
+      !spirv::bitEnumContainsAll(memAccess.getValue(),
+                                 spirv::MemoryAccess::NonPrivatePointer)) {
+    return memoryOp.emitOpError(
+        "memory operand 'MakePointerAvailable' or 'MakePointerVisible' "
+        "requires 'NonPrivatePointer' to also be specified");
+  }
+
   if (spirv::bitEnumContainsAll(memAccess.getValue(),
                                 spirv::MemoryAccess::Aligned)) {
-    if (!op->getAttr(memoryOp.getSourceAlignmentAttrName())) {
+    if (!memoryOp.getSourceAlignmentAttr()) {
       return memoryOp.emitOpError("missing alignment value");
     }
   } else {
-    if (op->getAttr(memoryOp.getSourceAlignmentAttrName())) {
+    if (memoryOp.getSourceAlignmentAttr()) {
       return memoryOp.emitOpError(
           "invalid alignment specification with non-aligned memory access "
           "specification");
@@ -321,12 +368,6 @@ void AccessChainOp::build(OpBuilder &builder, OperationState &state,
 }
 
 template <typename Op>
-static void printAccessChain(Op op, ValueRange indices, OpAsmPrinter &printer) {
-  printer << ' ' << op.getBasePtr() << '[' << indices
-          << "] : " << op.getBasePtr().getType() << ", " << indices.getTypes();
-}
-
-template <typename Op>
 static LogicalResult verifyAccessChain(Op accessChainOp, ValueRange indices) {
   auto resultType = getElementPtrType(accessChainOp.getBasePtr().getType(),
                                       indices, accessChainOp.getLoc());
@@ -348,6 +389,21 @@ static LogicalResult verifyAccessChain(Op accessChainOp, ValueRange indices) {
 }
 
 LogicalResult AccessChainOp::verify() {
+  return verifyAccessChain(*this, getIndices());
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.InBoundsAccessChainOp
+//===----------------------------------------------------------------------===//
+
+void InBoundsAccessChainOp::build(OpBuilder &builder, OperationState &state,
+                                  Value basePtr, ValueRange indices) {
+  Type type = getElementPtrType(basePtr.getType(), indices, state.location);
+  assert(type && "Unable to deduce return type based on basePtr and indices");
+  build(builder, state, type, basePtr, indices);
+}
+
+LogicalResult InBoundsAccessChainOp::verify() {
   return verifyAccessChain(*this, getIndices());
 }
 
@@ -391,7 +447,8 @@ void LoadOp::print(OpAsmPrinter &printer) {
 
   printMemoryAccessAttribute(*this, printer, elidedAttrs);
 
-  printer.printOptionalAttrDict((*this)->getAttrs(), elidedAttrs);
+  printer.printOptionalAttrDict(
+      (*this)->getDiscardableAttrDictionary().getValue(), elidedAttrs);
   printer << " : " << getType();
 }
 
@@ -439,7 +496,8 @@ void StoreOp::print(OpAsmPrinter &printer) {
   printMemoryAccessAttribute(*this, printer, elidedAttrs);
 
   printer << " : " << getValue().getType();
-  printer.printOptionalAttrDict((*this)->getAttrs(), elidedAttrs);
+  printer.printOptionalAttrDict(
+      (*this)->getDiscardableAttrDictionary().getValue(), elidedAttrs);
 }
 
 LogicalResult StoreOp::verify() {
@@ -471,7 +529,8 @@ void CopyMemoryOp::print(OpAsmPrinter &printer) {
                                    getSourceMemoryAccess(),
                                    getSourceAlignment());
 
-  printer.printOptionalAttrDict((*this)->getAttrs(), elidedAttrs);
+  printer.printOptionalAttrDict(
+      (*this)->getDiscardableAttrDictionary().getValue(), elidedAttrs);
 
   Type pointeeType =
       cast<spirv::PointerType>(getTarget().getType()).getPointeeType();
@@ -531,14 +590,6 @@ LogicalResult CopyMemoryOp::verify() {
 
   if (failed(verifyMemoryAccessAttribute(*this)))
     return failure();
-
-  // TODO - According to the spec:
-  //
-  // If two masks are present, the first applies to Target and cannot include
-  // MakePointerVisible, and the second applies to Source and cannot include
-  // MakePointerAvailable.
-  //
-  // Add such verification here.
 
   return verifySourceMemoryAccessAttribute(*this);
 }
@@ -657,7 +708,7 @@ LogicalResult VariableOp::verify() {
   }
 
   auto getDecorationAttr = [op = getOperation()](spirv::Decoration decoration) {
-    return op->getAttr(spirv::getDecorationString(decoration));
+    return op->getDiscardableAttr(spirv::getDecorationString(decoration));
   };
 
   // TODO: generate these strings using ODS.

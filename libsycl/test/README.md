@@ -11,7 +11,7 @@ for more information about LIT.
 * Target runtime(s) to execute tests on devices.
   TODO: add link to liboffload instruction once they add it.
 * Compiler & libsycl. Can be built following these
-  [instructions](/libsycl/docs/index.rst).
+  [instructions](/libsycl/docs/index.md).
 
 ## Run the tests
 

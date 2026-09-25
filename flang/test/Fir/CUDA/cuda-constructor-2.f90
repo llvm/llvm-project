@@ -1,5 +1,6 @@
-// RUN: fir-opt --split-input-file --cuf-add-constructor %s | FileCheck %s
-// RUN: fir-opt --split-input-file --cuf-add-constructor="cuda-unified=true" %s | FileCheck %s --check-prefixes=CHECK,UNIFIED
+// RUN: fir-opt --split-input-file --cuf-add-constructor %s | FileCheck --check-prefixes=CHECK,NOUNIFIED,NOMARKER %s
+// RUN: fir-opt --split-input-file --cuf-add-constructor="cuda-unified=true" %s | FileCheck %s --check-prefixes=CHECK,UNIFIED,NOMARKER
+// RUN: fir-opt --split-input-file --cuf-add-constructor="emit-cuda-compiled=true" %s | FileCheck --check-prefixes=CHECK,NOUNIFIED,MARKER %s
 
 module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<271>, dense<32> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<270>, dense<32> : vector<4xi64>>, #dlti.dl_entry<f128, dense<128> : vector<2xi64>>, #dlti.dl_entry<f64, dense<64> : vector<2xi64>>, #dlti.dl_entry<f80, dense<128> : vector<2xi64>>, #dlti.dl_entry<f16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i32, dense<32> : vector<2xi64>>, #dlti.dl_entry<i16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i128, dense<128> : vector<2xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr<272>, dense<64> : vector<4xi64>>, #dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<i1, dense<8> : vector<2xi64>>, #dlti.dl_entry<"dlti.endianness", "little">, #dlti.dl_entry<"dlti.stack_alignment", 128 : i64>>, fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", gpu.container_module, llvm.data_layout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128", llvm.ident = "flang version 20.0.0 (https://github.com/llvm/llvm-project.git cae351f3453a0a26ec8eb2ddaf773c24a29d929e)", llvm.target_triple = "x86_64-unknown-linux-gnu"} {
 
@@ -30,26 +31,29 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
 
 // CHECK: gpu.module @cuda_device_mod
 
+// NOMARKER-NOT: Mcuda_compiled
+// MARKER-NOT: Mcuda_compiled
 // CHECK: llvm.func internal @__cudaFortranConstructor() {
-// CHECK-DAG: %[[MODULE:.*]] = cuf.register_module @cuda_device_mod -> !llvm.ptr
-// CHECK-DAG: %[[VAR_NAME:.*]] = fir.address_of(@_QQ{{.*}}) : !fir.ref<!fir.char<1,12>>
-// CHECK-DAG: %[[VAR_ADDR:.*]] = fir.address_of(@_QMmtestsEn) : !fir.ref<!fir.array<5xi32>>
-// CHECK-DAG: %[[MODULE2:.*]] = fir.convert %[[MODULE]] : (!llvm.ptr) -> !fir.ref<!fir.llvm_ptr<i8>>
-// CHECK-DAG: %[[VAR_ADDR2:.*]] = fir.convert %[[VAR_ADDR]] : (!fir.ref<!fir.array<5xi32>>) -> !fir.ref<i8>
-// CHECK-DAG: %[[VAR_NAME2:.*]] = fir.convert %[[VAR_NAME]] : (!fir.ref<!fir.char<1,12>>) -> !fir.ref<i8>
-// CHECK-DAG: %[[CST:.*]] = arith.constant 20 : index
-// CHECK-DAG: %[[CST2:.*]] = fir.convert %[[CST]] : (index) -> i64
-// CHECK-DAG: fir.call @_FortranACUFRegisterVariable(%[[MODULE2]], %[[VAR_ADDR2]], %[[VAR_NAME2]], %[[CST2]]) : (!fir.ref<!fir.llvm_ptr<i8>>, !fir.ref<i8>, !fir.ref<i8>, i64) -> ()
-// CHECK-DAG: %[[BOX:.*]] = fir.address_of(@_QMmtestsEndev) : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-// CHECK-DAG: %[[BOXREF:.*]] = fir.convert %[[BOX]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<i8>
-// CHECK-DAG: fir.call @_FortranACUFRegisterVariable(%[[MODULE:.*]], %[[BOXREF]], %{{.*}}, %{{.*}})
+// NOUNIFIED-DAG: %[[MODULE:.*]] = cuf.register_module @cuda_device_mod -> !llvm.ptr
+// NOUNIFIED-DAG: %[[VAR_NAME:.*]] = fir.address_of(@_QQ{{.*}}) : !fir.ref<!fir.char<1,12>>
+// NOUNIFIED-DAG: %[[VAR_ADDR:.*]] = fir.address_of(@_QMmtestsEn) : !fir.ref<!fir.array<5xi32>>
+// NOUNIFIED-DAG: %[[MODULE2:.*]] = fir.convert %[[MODULE]] : (!llvm.ptr) -> !fir.ref<!fir.llvm_ptr<i8>>
+// NOUNIFIED-DAG: %[[VAR_ADDR2:.*]] = fir.convert %[[VAR_ADDR]] : (!fir.ref<!fir.array<5xi32>>) -> !fir.ref<i8>
+// NOUNIFIED-DAG: %[[VAR_NAME2:.*]] = fir.convert %[[VAR_NAME]] : (!fir.ref<!fir.char<1,12>>) -> !fir.ref<i8>
+// NOUNIFIED-DAG: %[[CST:.*]] = arith.constant 20 : index
+// NOUNIFIED-DAG: %[[CST2:.*]] = fir.convert %[[CST]] : (index) -> i64
+// NOUNIFIED-DAG: fir.call @_FortranACUFRegisterVariable(%[[MODULE2]], %[[VAR_ADDR2]], %[[VAR_NAME2]], %[[CST2]]) : (!fir.ref<!fir.llvm_ptr<i8>>, !fir.ref<i8>, !fir.ref<i8>, i64) -> ()
+// NOUNIFIED-DAG: %[[BOX:.*]] = fir.address_of(@_QMmtestsEndev) : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+// NOUNIFIED-DAG: %[[BOXREF:.*]] = fir.convert %[[BOX]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<i8>
+// NOUNIFIED-DAG: fir.call @_FortranACUFRegisterVariable(%[[MODULE:.*]], %[[BOXREF]], %{{.*}}, %{{.*}})
+// UNIFIED: cuf.register_variable_static @_QMmtestsEn("_QMmtestsEn", 20) {deviceResident}
 // CHECK-NOT: fir.call @_FortranACUFInitModule
 
 // -----
 
 // Checking that constant global variables are not registered
 
-// CHECK: @_FortranACUFRegisterAllocator
+// CHECK: @__cudaFortranConstructor()
 // CHECK-NOT: fir.call @_FortranACUFRegisterVariable
 
 module attributes {dlti.dl_spec = #dlti.dl_spec<i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i1 = dense<8> : vector<2xi64>, !llvm.ptr = dense<64> : vector<4xi64>, f80 = dense<128> : vector<2xi64>, i128 = dense<128> : vector<2xi64>, i64 = dense<64> : vector<2xi64>, !llvm.ptr<271> = dense<32> : vector<4xi64>, !llvm.ptr<272> = dense<64> : vector<4xi64>, f128 = dense<128> : vector<2xi64>, !llvm.ptr<270> = dense<32> : vector<4xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, "dlti.stack_alignment" = 128 : i64, "dlti.endianness" = "little">, fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", gpu.container_module, llvm.data_layout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128", llvm.ident = "flang version 20.0.0 (https://github.com/llvm/llvm-project.git 3372303188df0f7f8ac26e7ab610cf8b0f716d42)", llvm.target_triple = "x86_64-unknown-linux-gnu"} {
@@ -102,9 +106,12 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<i8 = dense<8> : vector<2xi64>, i
 }
 
 // CHECK: llvm.func internal @__cudaFortranConstructor()
-// CHECK: fir.address_of(@_QMmEa00)
-// CHECK: fir.call @_FortranACUFRegisterVariable
+// NOUNIFIED: fir.address_of(@_QMmEa00)
+// NOUNIFIED: fir.call @_FortranACUFRegisterVariable
 // CHECK-NOT: fir.call @_FortranACUFInitModule
+// The device side is a definition, so it must not also be mapped as host
+// memory: that would override the device symbol and break symbol lookups.
+// UNIFIED: cuf.register_variable_static @_QMmEa00("_QMmEa00", 144) {deviceResident}
 
 // -----
 
@@ -139,8 +146,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
   }
 }
 
-// Pointer global should be created with section attribute.
-// CHECK: fir.global internal @_QMtestEmanx.managed.ptr {section = "__nv_managed_data__"} : !fir.llvm_ptr<i8>
+// The defining unit emits the pointer as an external definition with the
+// section attribute, so the whole program shares a single pointer.
+// CHECK: fir.global external @_QMtestEmanx.managed.ptr <{section = "__nv_managed_data__"}> : !fir.llvm_ptr<i8>
 // CHECK:   fir.zero_bits !fir.llvm_ptr<i8>
 
 // Constructor should register with CUFRegisterManagedVariable then init module.
@@ -170,7 +178,6 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
 }
 
 // CHECK: llvm.func internal @__cudaFortranConstructor()
-// CHECK-NEXT: llvm.call @_FortranACUFRegisterAllocator()
 // CHECK-NEXT: llvm.return
 // CHECK: llvm.mlir.global_ctors ctors = [@__cudaFortranConstructor]
 
@@ -198,17 +205,17 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
 }
 
 // CHECK: llvm.func internal @__cudaFortranConstructor()
-// CHECK: llvm.call @_FortranACUFRegisterAllocator()
+// CHECK-NOT: llvm.call @_FortranACUFRegisterAllocator()
 // CHECK: cuf.register_module @cuda_device_mod -> !llvm.ptr 
-// CHECK: fir.address_of(@_QMkernels_mEdev_var) : !fir.ref<f32> 
-// CHECK: fir.call @_FortranACUFRegisterVariable(%3, %4, %5, %6) : (!fir.ref<!fir.llvm_ptr<i8>>, !fir.ref<i8>, !fir.ref<i8>, i64) -> () 
+// NOUNIFIED: fir.address_of(@_QMkernels_mEdev_var) : !fir.ref<f32> 
+// NOUNIFIED: fir.call @_FortranACUFRegisterVariable(%3, %4, %5, %6) : (!fir.ref<!fir.llvm_ptr<i8>>, !fir.ref<i8>, !fir.ref<i8>, i64) -> () 
 
 // -----
 
 // Under -gpu=mem:unified, a non-allocatable host module global referenced from
 // device code (mirrored as an external-linkage clone in the GPU module by the
 // CUFDeviceGlobal pass) must be registered with
-// _FortranACUFRegisterExternalVariable so the device-side `.extern` symbol
+// cuf.register_variable_static so the device-side `.extern` symbol
 // resolves to the host pointer at module-load time.
 
 module attributes {dlti.dl_spec = #dlti.dl_spec<i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i1 = dense<8> : vector<2xi64>, !llvm.ptr = dense<64> : vector<4xi64>, f80 = dense<128> : vector<2xi64>, i128 = dense<128> : vector<2xi64>, i64 = dense<64> : vector<2xi64>, !llvm.ptr<271> = dense<32> : vector<4xi64>, !llvm.ptr<272> = dense<64> : vector<4xi64>, f128 = dense<128> : vector<2xi64>, !llvm.ptr<270> = dense<32> : vector<4xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, "dlti.stack_alignment" = 128 : i64, "dlti.endianness" = "little">, fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", gpu.container_module, llvm.data_layout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128", llvm.target_triple = "x86_64-unknown-linux-gnu"} {
@@ -226,14 +233,13 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<i8 = dense<8> : vector<2xi64>, i
 
 // UNIFIED: llvm.func internal @__cudaFortranConstructor()
 // UNIFIED: cuf.register_module @cuda_device_mod -> !llvm.ptr
-// UNIFIED: fir.address_of(@_QMmtestsEm) : !fir.ref<!fir.array<5xi32>>
-// UNIFIED: fir.call @_FortranACUFRegisterExternalVariable
+// UNIFIED: cuf.register_variable_static @_QMmtestsEm
 // UNIFIED-NOT: fir.call @_FortranACUFInitModule
 
 // -----
 
 // Under -gpu=mem:unified, an allocatable host module global also gets
-// registered via _FortranACUFRegisterExternalVariable; the registered symbol
+// registered via cuf.register_variable_static; the registered symbol
 // is the descriptor (fir.box<fir.heap<...>>). The host runtime allocates the
 // data buffer in HMM/ATS-accessible memory.
 
@@ -254,6 +260,225 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<i8 = dense<8> : vector<2xi64>, i
 
 // UNIFIED: llvm.func internal @__cudaFortranConstructor()
 // UNIFIED: cuf.register_module @cuda_device_mod -> !llvm.ptr
-// UNIFIED: fir.address_of(@_QMmtestsEma) : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-// UNIFIED: fir.call @_FortranACUFRegisterExternalVariable
+// UNIFIED: cuf.register_variable_static @_QMmtestsEma
 // UNIFIED-NOT: fir.call @_FortranACUFInitModule
+
+// -----
+
+module attributes {dlti.dl_spec = #dlti.dl_spec<i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i1 = dense<8> : vector<2xi64>, !llvm.ptr = dense<64> : vector<4xi64>, f80 = dense<128> : vector<2xi64>, i128 = dense<128> : vector<2xi64>, i64 = dense<64> : vector<2xi64>, !llvm.ptr<271> = dense<32> : vector<4xi64>, !llvm.ptr<272> = dense<64> : vector<4xi64>, f128 = dense<128> : vector<2xi64>, !llvm.ptr<270> = dense<32> : vector<4xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, "dlti.stack_alignment" = 128 : i64, "dlti.endianness" = "little">, fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", gpu.container_module, llvm.data_layout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128", llvm.target_triple = "x86_64-unknown-linux-gnu"} {
+func.func @_QPsub1() {
+  %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "a", data_attr = #cuf.cuda<device>, uniq_name = "_QFsub1Ea"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %4:2 = hlfir.declare %0 {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFsub1Ea"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
+  %c1 = arith.constant 1 : index
+  %c10_i32 = arith.constant 10 : i32
+  %c0_i32 = arith.constant 0 : i32
+  %9 = cuf.allocate %4#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>} -> i32
+  %10 = cuf.deallocate %4#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>} -> i32
+  cuf.free %4#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>}
+  return
+}
+}
+
+// CHECK: llvm.func internal @__cudaFortranConstructor()
+// CHECK: llvm.call @_FortranACUFRegisterAllocator()
+
+// -----
+
+module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vector<4xi64>, !llvm.ptr<271> = dense<32> : vector<4xi64>, !llvm.ptr<272> = dense<64> : vector<4xi64>, i64 = dense<64> : vector<2xi64>, i128 = dense<128> : vector<2xi64>, f80 = dense<128> : vector<2xi64>, !llvm.ptr = dense<64> : vector<4xi64>, i1 = dense<8> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, "dlti.endianness" = "little", "dlti.mangling_mode" = "e", "dlti.legal_int_widths" = array<i32: 8, 16, 32, 64>, "dlti.stack_alignment" = 128 : i64>, fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", fir.relocation_model = 1 : i32, gpu.container_module, llvm.data_layout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128", llvm.ident = "flang version 24.0.0 (https://github.com/llvm/llvm-project.git 6534ceefd231771466abc9c388b93bb8b0913316)", llvm.target_triple = "x86_64-unknown-linux-gnu"} {
+  fir.global @_QMallocmodEac {alignment = 64 : i64, data_attr = #cuf.cuda<constant>} : !fir.array<10xf32> {
+    %0 = fir.zero_bits !fir.array<10xf32>
+    fir.has_value %0 : !fir.array<10xf32>
+  }
+  fir.global @_QMallocmodEad {data_attr = #cuf.cuda<device>} : !fir.box<!fir.heap<!fir.array<?xf32>>> {
+    %c0 = arith.constant 0 : index
+    %0 = fir.zero_bits !fir.heap<!fir.array<?xf32>>
+    %1 = fir.shape %c0 : (index) -> !fir.shape<1>
+    %2 = fir.embox %0(%1) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
+    fir.has_value %2 : !fir.box<!fir.heap<!fir.array<?xf32>>>
+  }
+  gpu.module @cuda_device_mod {
+    fir.global @_QMallocmodEad {data_attr = #cuf.cuda<device>} : !fir.box<!fir.heap<!fir.array<?xf32>>> {
+      %c0 = arith.constant 0 : index
+      %0 = fir.zero_bits !fir.heap<!fir.array<?xf32>>
+      %1 = fir.shape %c0 : (index) -> !fir.shape<1>
+      %2 = fir.embox %0(%1) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
+      fir.has_value %2 : !fir.box<!fir.heap<!fir.array<?xf32>>>
+    }
+    fir.global @_QMallocmodEac {alignment = 64 : i64, data_attr = #cuf.cuda<constant>} : !fir.array<10xf32> {
+      %0 = fir.zero_bits !fir.array<10xf32>
+      fir.has_value %0 : !fir.array<10xf32>
+    }
+  }
+}
+
+// CHECK: llvm.func internal @__cudaFortranConstructor()
+// NOUNIFIED: fir.call @_FortranACUFRegisterVariable
+// UNIFIED: cuf.register_variable_static @_QMallocmodEac("_QMallocmodEac", 40) {deviceResident}
+// UNIFIED: cuf.register_variable_static @_QMallocmodEad("_QMallocmodEad", 48) {deviceResident}
+
+// -----
+
+// A translation unit that only USEs the module sees its variables as
+// declarations (no body). Registering them here would bind the host address
+// to a device module that does not contain the symbol.
+
+module attributes {dlti.dl_spec = #dlti.dl_spec<i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i1 = dense<8> : vector<2xi64>, !llvm.ptr = dense<64> : vector<4xi64>, f80 = dense<128> : vector<2xi64>, i128 = dense<128> : vector<2xi64>, i64 = dense<64> : vector<2xi64>, !llvm.ptr<271> = dense<32> : vector<4xi64>, !llvm.ptr<272> = dense<64> : vector<4xi64>, f128 = dense<128> : vector<2xi64>, !llvm.ptr<270> = dense<32> : vector<4xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, "dlti.stack_alignment" = 128 : i64, "dlti.endianness" = "little">, fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", gpu.container_module, llvm.data_layout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128", llvm.target_triple = "x86_64-unknown-linux-gnu"} {
+  fir.global @_QMotherEdev_var {data_attr = #cuf.cuda<device>} : !fir.array<5xi32>
+  fir.global @_QMotherEman_var {data_attr = #cuf.cuda<managed>} : !fir.box<!fir.heap<!fir.array<?xi32>>>
+  gpu.module @cuda_device_mod {
+    gpu.func @_QMotherPkernel() kernel {
+      gpu.return
+    }
+    fir.global @_QMotherEdev_var {data_attr = #cuf.cuda<device>} : !fir.array<5xi32>
+    fir.global @_QMotherEman_var {data_attr = #cuf.cuda<managed>} : !fir.box<!fir.heap<!fir.array<?xi32>>>
+  }
+}
+
+// CHECK: llvm.func internal @__cudaFortranConstructor()
+// CHECK: cuf.register_module @cuda_device_mod
+// CHECK-NOT: fir.call @_FortranACUFRegisterVariable
+// CHECK-NOT: fir.call @_FortranACUFRegisterManagedVariable
+// CHECK: llvm.mlir.global_ctors ctors = [@__cudaFortranConstructor]
+
+// -----
+
+// Same without a kernel: module registration is skipped as well.
+
+module attributes {dlti.dl_spec = #dlti.dl_spec<i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i1 = dense<8> : vector<2xi64>, !llvm.ptr = dense<64> : vector<4xi64>, f80 = dense<128> : vector<2xi64>, i128 = dense<128> : vector<2xi64>, i64 = dense<64> : vector<2xi64>, !llvm.ptr<271> = dense<32> : vector<4xi64>, !llvm.ptr<272> = dense<64> : vector<4xi64>, f128 = dense<128> : vector<2xi64>, !llvm.ptr<270> = dense<32> : vector<4xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, "dlti.stack_alignment" = 128 : i64, "dlti.endianness" = "little">, fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", gpu.container_module, llvm.data_layout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128", llvm.target_triple = "x86_64-unknown-linux-gnu"} {
+  fir.global @_QMotherEdev_var {data_attr = #cuf.cuda<device>} : !fir.array<5xi32>
+  gpu.module @cuda_device_mod {
+    fir.global @_QMotherEdev_var {data_attr = #cuf.cuda<device>} : !fir.array<5xi32>
+  }
+}
+
+// CHECK: llvm.func internal @__cudaFortranConstructor()
+// CHECK-NOT: cuf.register_module
+// CHECK-NOT: fir.call @_FortranACUFRegisterVariable
+// CHECK: llvm.mlir.global_ctors ctors = [@__cudaFortranConstructor]
+
+// -----
+
+// Tail-padded device global: a record type {i32, i8} has 5 typed bytes but
+// 8 allocation bytes (3 bytes of tail padding for i32 alignment).
+// CUFAddConstructor must register the full allocation size (8), not the raw
+// typed size (5), so the CUDA runtime maps the correct number of bytes.
+
+module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<271>, dense<32> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<270>, dense<32> : vector<4xi64>>, #dlti.dl_entry<f128, dense<128> : vector<2xi64>>, #dlti.dl_entry<f64, dense<64> : vector<2xi64>>, #dlti.dl_entry<f80, dense<128> : vector<2xi64>>, #dlti.dl_entry<f16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i32, dense<32> : vector<2xi64>>, #dlti.dl_entry<i16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i128, dense<128> : vector<2xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr<272>, dense<64> : vector<4xi64>>, #dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<i1, dense<8> : vector<2xi64>>, #dlti.dl_entry<"dlti.endianness", "little">, #dlti.dl_entry<"dlti.stack_alignment", 128 : i64>>, fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", gpu.container_module, llvm.data_layout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128", llvm.target_triple = "x86_64-unknown-linux-gnu"} {
+
+  fir.global @_QMtestEtp_dev {data_attr = #cuf.cuda<device>} : !fir.type<tp{a:i32,b:i8}> {
+    %0 = fir.zero_bits !fir.type<tp{a:i32,b:i8}>
+    fir.has_value %0 : !fir.type<tp{a:i32,b:i8}>
+  }
+
+  gpu.module @cuda_device_mod {
+    gpu.func @_QMtestPkernel() kernel {
+      gpu.return
+    }
+    fir.global @_QMtestEtp_dev {data_attr = #cuf.cuda<device>} : !fir.type<tp{a:i32,b:i8}> {
+      %0 = fir.zero_bits !fir.type<tp{a:i32,b:i8}>
+      fir.has_value %0 : !fir.type<tp{a:i32,b:i8}>
+    }
+  }
+}
+
+// Registered size must be 8 (allocation size including tail padding), not 5
+// (raw typed size).  A wrong value of 5 would cause the CUDA runtime to map
+// too few bytes and leave the 3 tail-padding bytes unmapped.
+// NOUNIFIED-LABEL: fir.global @_QMtestEtp_dev
+// NOUNIFIED: llvm.func internal @__cudaFortranConstructor() {
+// NOUNIFIED-DAG: %[[TPDEV:.*]] = fir.address_of(@_QMtestEtp_dev) : !fir.ref<!fir.type<tp{a:i32,b:i8}>>
+// NOUNIFIED-DAG: %[[TPDEV2:.*]] = fir.convert %[[TPDEV]] : (!fir.ref<!fir.type<tp{a:i32,b:i8}>>) -> !fir.ref<i8>
+// NOUNIFIED-DAG: %[[SZ8:.*]] = arith.constant 8 : index
+// NOUNIFIED-DAG: %[[SZ8I64:.*]] = fir.convert %[[SZ8]] : (index) -> i64
+// NOUNIFIED-DAG: fir.call @_FortranACUFRegisterVariable(%{{.*}}, %[[TPDEV2]], %{{.*}}, %[[SZ8I64]])
+// UNIFIED: cuf.register_variable_static @_QMtestEtp_dev("_QMtestEtp_dev", 8) {deviceResident}
+
+// -----
+
+// Packed device global: a packed record type <{i32, f64}> has no alignment
+// gaps and no tail padding; its size is 4+8=12 bytes (not 16, which would be
+// the aligned size of an unpacked {i32, f64}).
+// CUFAddConstructor must register size 12, not 16.
+
+module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<271>, dense<32> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<270>, dense<32> : vector<4xi64>>, #dlti.dl_entry<f128, dense<128> : vector<2xi64>>, #dlti.dl_entry<f64, dense<64> : vector<2xi64>>, #dlti.dl_entry<f80, dense<128> : vector<2xi64>>, #dlti.dl_entry<f16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i32, dense<32> : vector<2xi64>>, #dlti.dl_entry<i16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i128, dense<128> : vector<2xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr<272>, dense<64> : vector<4xi64>>, #dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<i1, dense<8> : vector<2xi64>>, #dlti.dl_entry<"dlti.endianness", "little">, #dlti.dl_entry<"dlti.stack_alignment", 128 : i64>>, fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", gpu.container_module, llvm.data_layout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128", llvm.target_triple = "x86_64-unknown-linux-gnu"} {
+
+  fir.global @_QMtestEtp_packed_dev {data_attr = #cuf.cuda<device>} : !fir.type<tp<{i:i32,d:f64}>> {
+    %0 = fir.zero_bits !fir.type<tp<{i:i32,d:f64}>>
+    fir.has_value %0 : !fir.type<tp<{i:i32,d:f64}>>
+  }
+
+  gpu.module @cuda_device_mod {
+    gpu.func @_QMtestPkernel() kernel {
+      gpu.return
+    }
+    fir.global @_QMtestEtp_packed_dev {data_attr = #cuf.cuda<device>} : !fir.type<tp<{i:i32,d:f64}>> {
+      %0 = fir.zero_bits !fir.type<tp<{i:i32,d:f64}>>
+      fir.has_value %0 : !fir.type<tp<{i:i32,d:f64}>>
+    }
+  }
+}
+
+// Registered size must be 12 (packed: 4+8), not 16 (aligned unpacked size).
+// NOUNIFIED-LABEL: fir.global @_QMtestEtp_packed_dev
+// NOUNIFIED: llvm.func internal @__cudaFortranConstructor() {
+// NOUNIFIED-DAG: %[[TPPKDEV:.*]] = fir.address_of(@_QMtestEtp_packed_dev) : !fir.ref<!fir.type<tp<{i:i32,d:f64}>>>
+// NOUNIFIED-DAG: %[[TPPKDEV2:.*]] = fir.convert %[[TPPKDEV]] : (!fir.ref<!fir.type<tp<{i:i32,d:f64}>>>) -> !fir.ref<i8>
+// NOUNIFIED-DAG: %[[SZ12:.*]] = arith.constant 12 : index
+// NOUNIFIED-DAG: %[[SZ12I64:.*]] = fir.convert %[[SZ12]] : (index) -> i64
+// NOUNIFIED-DAG: fir.call @_FortranACUFRegisterVariable(%{{.*}}, %[[TPPKDEV2]], %{{.*}}, %[[SZ12I64]])
+// UNIFIED: cuf.register_variable_static @_QMtestEtp_packed_dev("_QMtestEtp_packed_dev", 12) {deviceResident}
+
+// -----
+
+// Mcuda_compiled is emitted only for the program unit (_QQmain).
+
+module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<"dlti.endianness", "little">>, fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.data_layout = "e-m:e-i64:64-i128:128-n8:16:32:64-S128"} {
+  func.func @_QQmain() {
+    return
+  }
+}
+
+// MARKER: llvm.mlir.global external @Mcuda_compiled
+// NOMARKER-NOT: Mcuda_compiled
+// CHECK: llvm.func internal @__cudaFortranConstructor() {
+// MARKER: llvm.mlir.addressof @Mcuda_compiled
+// MARKER: llvm.load volatile
+// CHECK: llvm.return
+
+
+// -----
+
+// A unit that only USEs a non-allocatable managed variable declares the
+// companion pointer and does not register it. The runtime populates only the
+// first registration made for a given variable name, so a pointer per unit
+// would leave every unit but one loading through null.
+//
+// Fortran source:
+//   subroutine sub
+//     use test   ! test declares integer*4, managed :: manx(100)
+//     manx(1) = 1
+//   end subroutine
+
+module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<i32, dense<32> : vector<2xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<i1, dense<8> : vector<2xi64>>, #dlti.dl_entry<f64, dense<64> : vector<2xi64>>, #dlti.dl_entry<f32, dense<32> : vector<2xi64>>, #dlti.dl_entry<"dlti.endianness", "little">, #dlti.dl_entry<"dlti.stack_alignment", 128 : i64>>, fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", gpu.container_module, llvm.data_layout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128", llvm.target_triple = "x86_64-unknown-linux-gnu"} {
+
+  // No body: the variable is defined by another translation unit.
+  fir.global @_QMuseronlyEmanx {data_attr = #cuf.cuda<managed>} : !fir.array<100xi32>
+
+  gpu.module @cuda_device_mod {
+    gpu.func @_QMuseronlyPkernel() kernel {
+      gpu.return
+    }
+    fir.global @_QMuseronlyEmanx {data_attr = #cuf.cuda<managed>} : !fir.array<100xi32>
+  }
+}
+
+// The companion pointer is a declaration: external linkage, no section, and no
+// initializer body.
+// CHECK: fir.global external @_QMuseronlyEmanx.managed.ptr : !fir.llvm_ptr<i8>
+// CHECK-NOT: __nv_managed_data__
+// CHECK-NOT: fir.zero_bits !fir.llvm_ptr<i8>
+
+// Neither the registration nor the module init is emitted here.
+// CHECK: llvm.func internal @__cudaFortranConstructor()
+// CHECK-NOT: fir.call @_FortranACUFRegisterManagedVariable
+// CHECK-NOT: fir.call @_FortranACUFInitModule

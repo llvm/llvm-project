@@ -166,8 +166,7 @@ define i32 @loop_requires_scev_predicate(ptr %dest, i32 %end) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[UMAX1]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; CHECK:       vector.scevcheck:
-; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[END_CLAMPED]], i32 1)
-; CHECK-NEXT:    [[TMP2:%.*]] = add nsw i32 [[UMAX]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[END_CLAMPED]], i32 1)
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i8
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i8 1, [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i8 [[TMP4]], 1
@@ -175,7 +174,7 @@ define i32 @loop_requires_scev_predicate(ptr %dest, i32 %end) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = or i1 [[TMP5]], [[TMP6]]
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[UMAX1]], 2
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[UMAX1]], 1
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[UMAX1]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[IND_END:%.*]] = trunc i64 [[N_VEC]] to i8
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -198,7 +197,7 @@ define i32 @loop_requires_scev_predicate(ptr %dest, i32 %end) {
 ; CHECK:       pred.store.continue:
 ; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <2 x i1> [[TMP11]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP19]], label [[PRED_STORE_IF3:%.*]], label [[PRED_STORE_CONTINUE4]]
-; CHECK:       pred.store.if3:
+; CHECK:       pred.store.if2:
 ; CHECK-NEXT:    [[TMP20:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i32, ptr [[DEST]], i64 [[TMP20]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <2 x i32> [[WIDE_LOAD]], i64 1
@@ -206,7 +205,7 @@ define i32 @loop_requires_scev_predicate(ptr %dest, i32 %end) {
 ; CHECK-NEXT:    [[TMP24:%.*]] = add i32 [[TMP22]], [[TMP23]]
 ; CHECK-NEXT:    store i32 [[TMP24]], ptr [[TMP21]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE4]]
-; CHECK:       pred.store.continue4:
+; CHECK:       pred.store.continue3:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP25]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
@@ -475,8 +474,8 @@ define i16 @test_strided_access(i64 %len, ptr %test_base) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i16, ptr [[ALLOCA]], i64 [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i16, ptr [[TMP6]], align 2
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i16, ptr [[TMP8]], align 2
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <2 x i16> poison, i16 [[TMP9]], i32 0
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <2 x i16> [[TMP11]], i16 [[TMP10]], i32 1
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <2 x i16> poison, i16 [[TMP9]], i64 0
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <2 x i16> [[TMP11]], i16 [[TMP10]], i64 1
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP3]], <2 x i16> [[TMP12]], <2 x i16> zeroinitializer
 ; CHECK-NEXT:    [[TMP13]] = add <2 x i16> [[VEC_PHI]], [[PREDPHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
@@ -621,7 +620,7 @@ define void @adding_offset_overflows(i32 %n, ptr %A) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 2
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 1, [[N_VEC]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]

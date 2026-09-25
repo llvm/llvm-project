@@ -104,6 +104,9 @@
 //  int     __asprintf(char**, __locale_t, const char*, ...);        // required by the headers
 //
 //  const char* __get_locale_encoding(__locale_t);
+//
+// #define _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE /* 0 or 1 depending on whether a rune table has to be provided */
+//
 // }
 
 #if _LIBCPP_HAS_LOCALIZATION
@@ -116,7 +119,7 @@
 #    include <__locale_dir/support/netbsd.h>
 #  elif defined(__OpenBSD__)
 #    include <__locale_dir/support/openbsd.h>
-#  elif defined(_LIBCPP_MSVCRT_LIKE)
+#  elif defined(_WIN32)
 #    include <__locale_dir/support/windows.h>
 #  elif defined(__Fuchsia__)
 #    include <__locale_dir/support/fuchsia.h>

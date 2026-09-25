@@ -12,6 +12,7 @@ set(
     "builtin_roundeven"
     "float16"
     "float16_conversion"
+    "float80"
     "float128"
     "fixed_point"
     "cfloat16"
@@ -26,6 +27,7 @@ list(SORT ALL_COMPILER_FEATURES)
 # Compiler features that are unavailable on GPU targets with the in-tree Clang.
 set(
   CPU_ONLY_COMPILER_FEATURES
+    "float80"
     "float128"
 )
 
@@ -68,13 +70,13 @@ foreach(feature IN LISTS ALL_COMPILER_FEATURES)
   if(${feature} STREQUAL "fixed_point")
     list(APPEND compile_options "-ffixed-point")
   elseif(${feature} STREQUAL "stdc_fenv_access")
-    if (MSVC)
+    if(MSVC)
       list(APPEND compile_options "/WX")
     else()
       list(APPEND compile_options "-Wall -Werror")
     endif()
   elseif(${feature} MATCHES "^builtin_" OR
-         ${feature} STREQUAL "float16_conversion")
+      ${feature} STREQUAL "float16_conversion")
     set(compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT})
     set(link_options -nostdlib)
     # The compiler might handle calls to math builtins by generating calls to
@@ -117,8 +119,10 @@ foreach(feature IN LISTS ALL_COMPILER_FEATURES)
       set(LIBC_TYPES_HAS_FLOAT16 TRUE)
     elseif(${feature} STREQUAL "float16_conversion")
       add_compile_definitions(__LIBC_USE_FLOAT16_CONVERSION)
+    elseif(${feature} STREQUAL "float80")
+      set(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80 TRUE)
     elseif(${feature} STREQUAL "float128")
-      set(LIBC_TYPES_HAS_FLOAT128 TRUE)
+      set(LIBC_TYPES_HAS_NATIVE_FLOAT128 TRUE)
     elseif(${feature} STREQUAL "fixed_point")
       set(LIBC_COMPILER_HAS_FIXED_POINT TRUE)
     elseif(${feature} STREQUAL "cfloat16")
@@ -164,4 +168,3 @@ check_cxx_compiler_flag("-nostdlibinc" LIBC_CC_SUPPORTS_NOSTDLIBINC)
 
 # clang-all, gcc-8+
 check_cxx_compiler_flag("-Wextra-semi" LIBC_CC_SUPPORTS_EXTRA_SEMI)
-

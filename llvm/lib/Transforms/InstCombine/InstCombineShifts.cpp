@@ -1382,6 +1382,17 @@ Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
     }
   }
 
+  // LHS << (cttz RHS) --> (RHS & -RHS) * LHS
+  if (match(Op1, m_OneUse(m_Cttz(m_Value(X), m_Value())))) {
+    Value *NegX = Builder.CreateNeg(X, "neg");
+    Value *LowBit = Builder.CreateAnd(NegX, X);
+    auto *Mul = BinaryOperator::CreateMul(LowBit, Op0);
+    // Propagate nuw from shl if present
+    if (I.hasNoUnsignedWrap())
+      Mul->setHasNoUnsignedWrap();
+    return Mul;
+  }
+
   return nullptr;
 }
 
@@ -1760,10 +1771,8 @@ InstCombinerImpl::foldVariableSignZeroExtensionOfVariableHighBitExtract(
 
   // Check that constant C is a splat of the element-wise bitwidth of V.
   auto BitWidthSplat = [](Constant *C, Value *V) {
-    return match(
-        C, m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_EQ,
-                              APInt(C->getType()->getScalarSizeInBits(),
-                                    V->getType()->getScalarSizeInBits())));
+    return match(C,
+                 m_SpecificIntAllowPoison(V->getType()->getScalarSizeInBits()));
   };
 
   // It should look like variable-length sign-extension on the outside:

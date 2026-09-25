@@ -40,6 +40,9 @@ public:
         View(const MyObj&);
         View();
       };
+
+      // `(void)v` is not a use in C++: no lvalue-to-rvalue conversion.
+      template <typename... Ts> void use(const Ts &...vs);
     )";
     FullCode += Code.str();
 
@@ -66,6 +69,11 @@ public:
     // Run the main analysis.
     LifetimeSafetyOpts LSOpts;
     LSOpts.MaxCFGBlocks = 0;
+    LSOpts.SuggestAnnotations = true;
+    LSOpts.CheckNoescapeViolations = true;
+    LSOpts.CheckLifetimeboundViolations = true;
+    LSOpts.CheckMisplacedLifetimebound = true;
+    LSOpts.CheckInapplicableLifetimebound = true;
     Analysis =
         std::make_unique<LifetimeSafetyAnalysis>(*AnalysisCtx, nullptr, LSOpts);
     Analysis->run();
@@ -150,15 +158,17 @@ public:
     const auto &LiveOriginsAnalysis = Runner.getAnalysis().getLiveOrigins();
     const auto &LoanPropagation = Runner.getAnalysis().getLoanPropagation();
 
-    LivenessMap LiveOriginsMap = LiveOriginsAnalysis.getLiveOriginsAt(P);
+    LiveOriginSet LiveOrigins = LiveOriginsAnalysis.getLiveOriginsAt(P);
 
     LoanSet::Factory F;
     LoanSet Result = F.getEmptySet();
 
-    for (const auto &[OID, LI] : LiveOriginsMap) {
-      LoanSet Loans = LoanPropagation.getLoans(OID, P);
-      Result = clang::lifetimes::internal::utils::join(Result, Loans, F);
-    }
+    for (const LivenessMap &Live :
+         {LiveOrigins.Persistent, LiveOrigins.BlockLocal})
+      for (const auto &[OID, LI] : Live) {
+        LoanSet Loans = LoanPropagation.getLoans(OID, P);
+        Result = clang::lifetimes::internal::utils::join(Result, Loans, F);
+      }
 
     if (Result.isEmpty())
       return std::nullopt;
@@ -192,8 +202,11 @@ public:
     if (!PP)
       return std::nullopt;
     std::vector<std::pair<OriginID, LivenessKind>> Result;
-    for (auto &[OID, Info] : Analysis.getLiveOrigins().getLiveOriginsAt(PP))
-      Result.push_back({OID, Info.Kind});
+    LiveOriginSet LiveOrigins = Analysis.getLiveOrigins().getLiveOriginsAt(PP);
+    for (const LivenessMap &Live :
+         {LiveOrigins.Persistent, LiveOrigins.BlockLocal})
+      for (auto &[OID, Info] : Live)
+        Result.push_back({OID, Info.Kind});
     return Result;
   }
 
@@ -206,16 +219,16 @@ public:
   }
 
   llvm::SmallVector<OriginID>
-  buildOriginFlowChainInOneBlock(llvm::StringRef StartOriginVar,
-                                 llvm::StringRef EndLoanVar,
-                                 llvm::StringRef Annotation) {
+  buildOriginFlowChain(llvm::StringRef StartOriginVar,
+                       llvm::StringRef EndLoanVar, llvm::StringRef Annotation) {
     std::optional<OriginID> StartOriginID = getOriginForDecl(StartOriginVar);
     std::vector<LoanID> EndLoanIDs = getLoansForVar(EndLoanVar);
 
     for (LoanID LID : EndLoanIDs) {
       llvm::SmallVector<OriginID> OriginFlowChain =
           Runner.getAnalysis().getLoanPropagation().buildOriginFlowChain(
-              getProgramPoint(Annotation), *StartOriginID, LID);
+              getProgramPoint(Annotation), *StartOriginID, LID,
+              Runner.getAnalysisContext().getCFG());
       if (!OriginFlowChain.empty())
         return OriginFlowChain;
     }
@@ -1298,8 +1311,11 @@ TEST_F(LifetimeAnalysisTest, LivenessInLoop) {
 
   EXPECT_THAT(Origins({"p", "q"}), MaybeLiveAt("p3"));
 
-  EXPECT_THAT(Origins({"q"}), MustBeLiveAt("p2"));
-  EXPECT_THAT(NoOrigins(), MaybeLiveAt("p2"));
+  // `p = q` is a copy, not a use of `q`, so `q` is live at "p2" only because
+  // its loans flow into `p`. It inherits `p`'s confidence, and `p` is merely
+  // maybe-live at "p3": the backedge overwrites it before reading it.
+  EXPECT_THAT(Origins({"q"}), MaybeLiveAt("p2"));
+  EXPECT_THAT(NoOrigins(), MustBeLiveAt("p2"));
 
   EXPECT_THAT(Origins({"p", "q"}), MaybeLiveAt("p1"));
 }
@@ -1322,7 +1338,7 @@ TEST_F(LifetimeAnalysisTest, LivenessInLoopAndIf) {
           p = a;
         }
         POINT(p4);
-        (void)p;
+        use(p);
         POINT(p5);
       }
     }
@@ -1354,8 +1370,8 @@ TEST_F(LifetimeAnalysisTest, LivenessInLoopAndIf2) {
         }
         
         POINT(p5);
-        (void)*p;
-        (void)*q;
+        use(*p);
+        use(*q);
         POINT(p6);
       }
     }
@@ -1387,11 +1403,97 @@ TEST_F(LifetimeAnalysisTest, LivenessOutsideLoop) {
         POINT(p1);
       }
       POINT(p2);
-      (void)*p;
+      use(*p);
     }
   )");
   EXPECT_THAT(Origins({"p"}), MustBeLiveAt("p2"));
   EXPECT_THAT(Origins({"p"}), MaybeLiveAt("p1"));
+}
+
+// A use is an access through an lvalue: an lvalue-to-rvalue conversion or a
+// write through it. Taking an address or copying a pointer out of a variable
+// is neither.
+TEST_F(LifetimeAnalysisTest, AddressOfIsNotAUse) {
+  SetupTest(R"(
+    void target() {
+      MyObj s;
+      MyObj* p = &s;
+      POINT(p1);
+      MyObj** pp = &p;
+      (void)pp;
+    }
+  )");
+  EXPECT_THAT(NoOrigins(), AreLiveAt("p1"));
+}
+
+TEST_F(LifetimeAnalysisTest, LoadIsAUse) {
+  SetupTest(R"(
+    void target() {
+      MyObj s;
+      MyObj* p = &s;
+      POINT(p1);
+      MyObj* q = p;
+      use(q);
+    }
+  )");
+  EXPECT_THAT(Origins({"p"}), MustBeLiveAt("p1"));
+}
+
+// Reading `pp` and then `*pp` accesses exactly those two levels. Nothing reads
+// `q`, so no deeper level stays live.
+TEST_F(LifetimeAnalysisTest, DereferenceAccessesOneLevel) {
+  SetupTest(R"(
+    void target(MyObj** pp) {
+      POINT(p1);
+      MyObj* q = *pp;
+      POINT(p2);
+    }
+  )");
+  EXPECT_THAT(Origins({"pp"}), MustBeLiveAt("p1"));
+  EXPECT_THAT(NoOrigins(), AreLiveAt("p2"));
+}
+
+TEST_F(LifetimeAnalysisTest, WriteThroughDereferenceIsAUse) {
+  SetupTest(R"(
+    void target(MyObj** pp) {
+      POINT(p1);
+      *pp = nullptr;
+      POINT(p2);
+    }
+  )");
+  EXPECT_THAT(Origins({"pp"}), MustBeLiveAt("p1"));
+  EXPECT_THAT(NoOrigins(), AreLiveAt("p2"));
+}
+
+// Assigning to a variable is an access to that variable's own storage, which is
+// never a loan that can expire, so it leaves nothing live.
+TEST_F(LifetimeAnalysisTest, WriteToVariableIsNotAUseOfItsValue) {
+  SetupTest(R"(
+    void target(MyObj* q) {
+      MyObj* p;
+      POINT(p1);
+      p = q;
+      POINT(p2);
+      use(*p);
+    }
+  )");
+  EXPECT_THAT(Origins({"q"}), MustBeLiveAt("p1"));
+  EXPECT_THAT(Origins({"p"}), MustBeLiveAt("p2"));
+}
+
+// A reference decl has no storage of its own, so its outer origin is the
+// binding; reading or writing through it accesses whatever it was bound to.
+TEST_F(LifetimeAnalysisTest, AccessThroughReference) {
+  SetupTest(R"(
+    void target(MyObj* p) {
+      MyObj& r = *p;
+      POINT(p1);
+      r.i = 1;
+      POINT(p2);
+    }
+  )");
+  EXPECT_THAT(Origins({"r"}), MustBeLiveAt("p1"));
+  EXPECT_THAT(NoOrigins(), AreLiveAt("p2"));
 }
 
 TEST_F(LifetimeAnalysisTest, TrivialDestructorsUAF) {
@@ -1403,7 +1505,7 @@ TEST_F(LifetimeAnalysisTest, TrivialDestructorsUAF) {
           ptr = &s;
       }
       POINT(p1);    
-      (void)*ptr;
+      use(*ptr);
     }
   )");
   EXPECT_THAT(Origin("ptr"), HasLoansTo({"s"}, "p1"));
@@ -1423,7 +1525,7 @@ TEST_F(LifetimeAnalysisTest, TrivialClassDestructorsUAF) {
           ptr = &s;
       }
       POINT(p1);
-      (void)ptr;
+      use(ptr);
     }
   )");
   EXPECT_THAT(Origin("ptr"), HasLoansTo({"s"}, "p1"));
@@ -1975,6 +2077,52 @@ TEST_F(LifetimeAnalysisTest, LambdaInitCaptureViewByValue) {
 //                    Tests for buildOriginFlowChain
 // ========================================================================= //
 
+TEST_F(LifetimeAnalysisTest, BuildOriginFlowChain) {
+  SetupTest(R"(
+    void target(bool c1, bool c2) {
+      int *s;
+      int *a, *b, *c;
+
+      {
+        int tgta, tgtb, tgtc;
+        a = &tgta;
+        b = &tgtb;
+        c = &tgtc;
+      }
+
+      if (c1) {
+        s = c2 ? a : b;
+      } else {
+        s = c;
+      }
+
+      POINT(after_nested_merge);
+      use(*s);
+      int reset;
+      s = &reset;
+    }
+  )");
+
+  llvm::SmallVector<OriginID> ChainForTgtA =
+      Helper->buildOriginFlowChain("s", "tgta", "after_nested_merge");
+  llvm::SmallVector<OriginID> ChainForTgtB =
+      Helper->buildOriginFlowChain("s", "tgtb", "after_nested_merge");
+  llvm::SmallVector<OriginID> ChainForTgtC =
+      Helper->buildOriginFlowChain("s", "tgtc", "after_nested_merge");
+
+  EXPECT_THAT(ChainForTgtA, Contains(*Helper->getOriginForDecl("a")));
+  EXPECT_THAT(ChainForTgtA, Not(Contains(*Helper->getOriginForDecl("b"))));
+  EXPECT_THAT(ChainForTgtA, Not(Contains(*Helper->getOriginForDecl("c"))));
+
+  EXPECT_THAT(ChainForTgtB, Not(Contains(*Helper->getOriginForDecl("a"))));
+  EXPECT_THAT(ChainForTgtB, Contains(*Helper->getOriginForDecl("b")));
+  EXPECT_THAT(ChainForTgtB, Not(Contains(*Helper->getOriginForDecl("c"))));
+
+  EXPECT_THAT(ChainForTgtC, Not(Contains(*Helper->getOriginForDecl("a"))));
+  EXPECT_THAT(ChainForTgtC, Not(Contains(*Helper->getOriginForDecl("b"))));
+  EXPECT_THAT(ChainForTgtC, Contains(*Helper->getOriginForDecl("c")));
+}
+
 TEST_F(LifetimeAnalysisTest, BuildOriginFlowChainWithErrorTargetLoan) {
   SetupTest(R"(
     void target() {
@@ -1986,7 +2134,7 @@ TEST_F(LifetimeAnalysisTest, BuildOriginFlowChainWithErrorTargetLoan) {
   )");
 
 #if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
-  EXPECT_DEATH(Helper->buildOriginFlowChainInOneBlock("s", "a", "after_use"),
+  EXPECT_DEATH(Helper->buildOriginFlowChain("s", "a", "after_use"),
                "TargetLoan must be present in the StartOID at the StartPoint");
 #endif
 }
@@ -2005,7 +2153,7 @@ TEST_F(LifetimeAnalysisTest, BuildOriginFlowChainWithSelfAssignment) {
   )");
 
   const llvm::SmallVector<OriginID> OriginFlowChain =
-      Helper->buildOriginFlowChainInOneBlock("s", "tgt", "after_use");
+      Helper->buildOriginFlowChain("s", "tgt", "after_use");
 
   EXPECT_THAT(OriginFlowChain, Contains(*Helper->getOriginForDecl("a")));
 }
@@ -2022,7 +2170,7 @@ TEST_F(LifetimeAnalysisTest, BuildOriginFlowChainWithMultiAssignInSameStmt) {
   )");
 
   const llvm::SmallVector<OriginID> OriginFlowChain =
-      Helper->buildOriginFlowChainInOneBlock("s", "tgt", "after_use");
+      Helper->buildOriginFlowChain("s", "tgt", "after_use");
 
   EXPECT_THAT(OriginFlowChain, Contains(*Helper->getOriginForDecl("a")));
   EXPECT_THAT(OriginFlowChain, Contains(*Helper->getOriginForDecl("b")));
@@ -2043,7 +2191,7 @@ TEST_F(LifetimeAnalysisTest, BuildOriginFlowChainWithOverwritingAssignments) {
   )");
 
   const llvm::SmallVector<OriginID> OriginFlowChain =
-      Helper->buildOriginFlowChainInOneBlock("s", "tgt1", "after_use");
+      Helper->buildOriginFlowChain("s", "tgt1", "after_use");
 
   EXPECT_THAT(OriginFlowChain, Contains(*Helper->getOriginForDecl("a")));
   EXPECT_THAT(OriginFlowChain, Contains(*Helper->getOriginForDecl("b")));
@@ -2065,9 +2213,9 @@ TEST_F(LifetimeAnalysisTest, BuildOriginFlowChainWithLifetimeBound) {
   )");
 
   llvm::SmallVector<OriginID> ChainForTgtA =
-      Helper->buildOriginFlowChainInOneBlock("s", "tgta", "after_use");
+      Helper->buildOriginFlowChain("s", "tgta", "after_use");
   llvm::SmallVector<OriginID> ChainForTgtB =
-      Helper->buildOriginFlowChainInOneBlock("s", "tgtb", "after_use");
+      Helper->buildOriginFlowChain("s", "tgtb", "after_use");
 
   EXPECT_THAT(ChainForTgtA, Contains(*Helper->getOriginForDecl("a")));
   EXPECT_THAT(ChainForTgtA, Contains(*Helper->getOriginForDecl("result")));

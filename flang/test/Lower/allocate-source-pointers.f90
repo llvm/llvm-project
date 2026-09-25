@@ -30,11 +30,11 @@ end
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<i32>
 ! CHECK-SAME: %[[ARG1:.*]]: !fir.ref<!fir.array<?x?xi32>>
 ! CHECK: %[[DECL_N:.*]]:2 = hlfir.declare %[[ARG0]]
-! CHECK: %[[X1:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?x?xi32>>> {{{.*}}uniq_name = "_QFtest_pointer_2d_arrayEx1"}
+! CHECK: %[[X1:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?x?xi32>>> <{{{.*}}uniq_name = "_QFtest_pointer_2d_arrayEx1"}>
 ! CHECK: %[[DECL_X1:.*]]:2 = hlfir.declare %[[X1]]
-! CHECK: %[[X2:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?x?xi32>>> {{{.*}}uniq_name = "_QFtest_pointer_2d_arrayEx2"}
+! CHECK: %[[X2:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?x?xi32>>> <{{{.*}}uniq_name = "_QFtest_pointer_2d_arrayEx2"}>
 ! CHECK: %[[DECL_X2:.*]]:2 = hlfir.declare %[[X2]]
-! CHECK: %[[X3:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?x?xi32>>> {{{.*}}uniq_name = "_QFtest_pointer_2d_arrayEx3"}
+! CHECK: %[[X3:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?x?xi32>>> <{{{.*}}uniq_name = "_QFtest_pointer_2d_arrayEx3"}>
 ! CHECK: %[[DECL_X3:.*]]:2 = hlfir.declare %[[X3]]
 ! CHECK: %[[DECL_A:.*]]:2 = hlfir.declare %[[ARG1]]
 ! CHECK: %[[BOX_A:.*]] = fir.embox %[[DECL_A]]#1

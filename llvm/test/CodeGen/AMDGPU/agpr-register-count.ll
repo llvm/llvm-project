@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx908 < %s | FileCheck -check-prefixes=GCN,GFX908 %s
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx90a < %s | FileCheck -check-prefixes=GCN,GFX90A %s
+; RUN: llc -mtriple=amdgpu9.08--amdhsa < %s | FileCheck -check-prefixes=GCN,GFX908 %s
+; RUN: llc -mtriple=amdgpu9.0a--amdhsa < %s | FileCheck -check-prefixes=GCN,GFX90A %s
 
 ; GCN-LABEL: {{^}}kernel_32_agprs:
 ; GFX908: .amdhsa_next_free_vgpr 32

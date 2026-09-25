@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -run-pass=print-machine-uniformity -o - %s 2>&1 | FileCheck %s
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -passes='print<machine-uniformity>' -filetype=null %s 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgpu9.08-amd-amdhsa -run-pass=print-machine-uniformity -o - %s 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgpu9.08-amd-amdhsa -passes='print<machine-uniformity>' -filetype=null %s 2>&1 | FileCheck %s
 
 # CHECK-LABEL: MachineUniformityInfo for function:  @inlineasm_s
 # CHECK-LABEL: BLOCK bb.0

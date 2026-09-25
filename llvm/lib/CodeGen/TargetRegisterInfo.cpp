@@ -50,9 +50,8 @@ static cl::opt<unsigned>
                      cl::init(5000));
 
 TargetRegisterInfo::TargetRegisterInfo(
-    const TargetRegisterInfoDesc *ID,
-    ArrayRef<const TargetRegisterClass *> RegisterClasses,
-    const char *SubRegIndexStrings, ArrayRef<uint32_t> SubRegIndexNameOffsets,
+    const TargetRegisterInfoDesc *ID, const char *SubRegIndexStrings,
+    ArrayRef<uint32_t> SubRegIndexNameOffsets,
     const SubRegCoveredBits *SubRegIdxRanges,
     const LaneBitmask *SubRegIndexLaneMasks, LaneBitmask CoveringLanes,
     const RegClassInfo *const RCInfos,
@@ -60,9 +59,7 @@ TargetRegisterInfo::TargetRegisterInfo(
     : InfoDesc(ID), SubRegIndexStrings(SubRegIndexStrings),
       SubRegIndexNameOffsets(SubRegIndexNameOffsets),
       SubRegIdxRanges(SubRegIdxRanges),
-      SubRegIndexLaneMasks(SubRegIndexLaneMasks),
-      RegClassBegin(RegisterClasses.begin()),
-      RegClassEnd(RegisterClasses.end()), CoveringLanes(CoveringLanes),
+      SubRegIndexLaneMasks(SubRegIndexLaneMasks), CoveringLanes(CoveringLanes),
       RCInfos(RCInfos), RCVTLists(RCVTLists), HwMode(Mode) {}
 
 TargetRegisterInfo::~TargetRegisterInfo() = default;
@@ -212,9 +209,9 @@ getCommonMinimalPhysRegClass(const TargetRegisterInfo *TRI, MCRegister Reg1,
 
   // Pick the most specific register class that contains both physregs.
   const TargetRegisterClass *BestRC = nullptr;
-  for (const TargetRegisterClass *RC : TRI->regclasses()) {
-    if (RC->contains(Reg1, Reg2) && (!BestRC || BestRC->hasSubClass(RC)))
-      BestRC = RC;
+  for (const TargetRegisterClass &RC : TRI->regclasses()) {
+    if (RC.contains(Reg1, Reg2) && (!BestRC || BestRC->hasSubClass(&RC)))
+      BestRC = &RC;
   }
 
   assert(BestRC && "Couldn't find the register class");
@@ -232,7 +229,8 @@ TargetRegisterInfo::getCommonMinimalPhysRegClass(MCRegister Reg1,
 static void getAllocatableSetForRC(const MachineFunction &MF,
                                    const TargetRegisterClass *RC, BitVector &R){
   assert(RC->isAllocatable() && "invalid for nonallocatable sets");
-  ArrayRef<MCPhysReg> Order = RC->getRawAllocationOrder(MF);
+  const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
+  ArrayRef<MCPhysReg> Order = TRI.getRawAllocationOrder(*RC, MF);
   for (MCPhysReg PR : Order)
     R.set(PR);
 }
@@ -246,9 +244,9 @@ BitVector TargetRegisterInfo::getAllocatableSet(const MachineFunction &MF,
     if (SubClass)
       getAllocatableSetForRC(MF, SubClass, Allocatable);
   } else {
-    for (const TargetRegisterClass *C : regclasses())
-      if (C->isAllocatable())
-        getAllocatableSetForRC(MF, C, Allocatable);
+    for (const TargetRegisterClass &C : regclasses())
+      if (C.isAllocatable())
+        getAllocatableSetForRC(MF, &C, Allocatable);
   }
 
   // Mask out the reserved registers
@@ -445,6 +443,54 @@ bool TargetRegisterInfo::getRegAllocationHints(
   return false;
 }
 
+bool TargetRegisterInfo::isAntiHintedReg(
+    MCPhysReg Reg, const BitVector &AntiHintedRegUnits) const {
+  return llvm::any_of(regunits(Reg), [&](MCRegUnit Unit) {
+    return AntiHintedRegUnits.test(static_cast<unsigned>(Unit));
+  });
+}
+
+void TargetRegisterInfo::applyRegAllocationAntiHints(
+    Register VirtReg, ArrayRef<MCPhysReg> Order,
+    SmallVectorImpl<MCPhysReg> &HintsAndCustomOrder, unsigned NumHints,
+    const BitVector &AntiHintedRegUnits, const MachineFunction &MF,
+    const LiveRegMatrix *Matrix, const RegisterClassInfo *RegClassInfo) const {
+
+  if (AntiHintedRegUnits.none())
+    return;
+
+  assert(HintsAndCustomOrder.size() == NumHints &&
+         "HintsAndCustomOrder should only contain the hints here.");
+  HintsAndCustomOrder.append(Order.begin(), Order.end());
+
+  // Custom reordering of the allocation order.
+  filterAndSortForAntiHintedRegs(
+      VirtReg,
+      MutableArrayRef<MCPhysReg>(HintsAndCustomOrder).drop_front(NumHints),
+      AntiHintedRegUnits, MF, Matrix, RegClassInfo);
+}
+
+void TargetRegisterInfo::filterAndSortForAntiHintedRegs(
+    Register VirtReg, MutableArrayRef<MCPhysReg> CustomOrder,
+    const BitVector &AntiHintedRegUnits, const MachineFunction &MF,
+    const LiveRegMatrix *Matrix, const RegisterClassInfo *RegClassInfo) const {
+
+  // Partition non-anti-hinted register go first.
+  [[maybe_unused]] auto *PartitionPoint = std::stable_partition(
+      CustomOrder.begin(), CustomOrder.end(),
+      [&](MCPhysReg Reg) { return !isAntiHintedReg(Reg, AntiHintedRegUnits); });
+
+  LLVM_DEBUG({
+    size_t NonAntiHintedCount =
+        std::distance(CustomOrder.begin(), PartitionPoint);
+    size_t AntiHintedCount = std::distance(PartitionPoint, CustomOrder.end());
+    dbgs() << "Added " << NonAntiHintedCount
+           << " non-anti-hinted registers first\n"
+           << "Added " << AntiHintedCount
+           << " anti-hinted registers at the end\n";
+  });
+}
+
 bool TargetRegisterInfo::isCalleeSavedPhysReg(
     MCRegister PhysReg, const MachineFunction &MF) const {
   if (!PhysReg)
@@ -610,7 +656,7 @@ TargetRegisterInfo::lookThruCopyLike(Register SrcReg,
                                      const MachineRegisterInfo *MRI) const {
   while (true) {
     const MachineInstr *MI = MRI->getVRegDef(SrcReg);
-    if (!MI->isCopyLike())
+    if (!MI || !MI->isCopyLike())
       return SrcReg;
 
     Register CopySrcReg;
@@ -633,7 +679,7 @@ Register TargetRegisterInfo::lookThruSingleUseCopyChain(
   while (true) {
     const MachineInstr *MI = MRI->getVRegDef(SrcReg);
     // Found the real definition, return it if it has a single use.
-    if (!MI->isCopyLike())
+    if (!MI || !MI->isCopyLike())
       return MRI->hasOneNonDBGUse(SrcReg) ? SrcReg : Register();
 
     Register CopySrcReg;

@@ -12,9 +12,7 @@
 
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/Todo.h"
-#include "mlir/IR/BuiltinTypes.h"
 #include "llvm/Support/Debug.h"
-#include <optional>
 
 #define DEBUG_TYPE "flang-lower-symbol-map"
 
@@ -37,6 +35,19 @@ Fortran::lower::SymbolBox
 Fortran::lower::SymMap::lookupSymbol(Fortran::semantics::SymbolRef symRef) {
   auto *sym = symRef->HasLocalLocality() ? &*symRef : &symRef->GetUltimate();
   for (auto jmap = symbolMapStack.rbegin(), jend = symbolMapStack.rend();
+       jmap != jend; ++jmap) {
+    auto iter = jmap->find(sym);
+    if (iter != jmap->end())
+      return iter->second;
+  }
+  return SymbolBox::None{};
+}
+
+Fortran::lower::SymbolBox Fortran::lower::SymMap::lookupDeviceSymbol(
+    Fortran::semantics::SymbolRef symRef) {
+  auto *sym = symRef->HasLocalLocality() ? &*symRef : &symRef->GetUltimate();
+  for (auto jmap = deviceSymbolMapStack.rbegin(),
+            jend = deviceSymbolMapStack.rend();
        jmap != jend; ++jmap) {
     auto iter = jmap->find(sym);
     if (iter != jmap->end())

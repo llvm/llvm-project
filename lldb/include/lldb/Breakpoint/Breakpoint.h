@@ -560,8 +560,8 @@ public:
 private:
   void AddName(llvm::StringRef new_name);
 
-  void RemoveName(const char *name_to_remove) {
-    if (name_to_remove)
+  void RemoveName(llvm::StringRef name_to_remove) {
+    if (!name_to_remove.empty())
       m_name_list.erase(name_to_remove);
   }
 

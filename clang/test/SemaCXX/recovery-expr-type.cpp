@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple=x86_64-unknown-unknown -o - %s -std=gnu++17 -fsyntax-only -verify -fexperimental-new-constant-interpreter
 // RUN: %clang_cc1 -triple=x86_64-unknown-unknown -o - %s -std=gnu++20 -fsyntax-only -verify -fexperimental-new-constant-interpreter
-// RUN: %clang_cc1 -triple=x86_64-unknown-unknown -o - %s -std=gnu++17 -fsyntax-only -verify
-// RUN: %clang_cc1 -triple=x86_64-unknown-unknown -o - %s -std=gnu++20 -fsyntax-only -verify
+// RUN: %clang_cc1 -triple=x86_64-unknown-unknown -o - %s -std=gnu++17 -fsyntax-only -verify=expected,ref
+// RUN: %clang_cc1 -triple=x86_64-unknown-unknown -o - %s -std=gnu++20 -fsyntax-only -verify=expected,ref
 
 
 namespace test0 {
@@ -185,3 +185,40 @@ A<int, int> foo() { // expected-error {{implicit instantiation of undefined temp
   return A<int, int>(1); // expected-error 2{{implicit instantiation of undefined template}}
 }
 }
+
+namespace GH186656 {
+template <template <int> typename> struct S;
+template <int, int = (foo<void, void>())> struct T; // expected-error {{use of undeclared identifier 'foo'}}
+template <typename...> struct U;
+using V = U<S<T>>;
+} // namespace GH186656
+
+namespace GH202117 {
+template<template<decltype(foo())> typename T> struct S {}; // expected-error {{use of undeclared identifier 'foo'}}
+template<int*> struct P;
+S<P> s;
+} // namespace GH202117
+
+namespace test17 {
+struct A { int arr[1]; };
+struct B {
+  static constexpr A &a = A{{0}}; // expected-error {{non-const lvalue reference to type 'A' cannot bind to a temporary of type 'A'}}
+};
+
+B x;
+
+int v = x.a.arr[0]; // Do not crash when evaluating a static reference with an invalid initializer.
+} // namespace test17
+
+namespace test18 {
+struct B {
+  static constexpr int &a = 0; // expected-error {{non-const lvalue reference to type 'int' cannot bind to a temporary of type 'int'}} \
+                                 ref-note {{declared here}}
+};
+
+B x;
+// Diagnose why constant evaluation fails when reading a reference with an
+// invalid initializer.
+static_assert(x.a == 0); // expected-error {{static assertion expression is not an integral constant expression}} \
+                           ref-note {{read of non-constexpr variable 'a' is not allowed in a constant expression}}
+} // namespace test18

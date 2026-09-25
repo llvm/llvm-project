@@ -221,7 +221,7 @@ following ``main`` function:
   }
 
   int main(int, char**) {
-    test()
+    test();
     static_assert(test());
 
     return 0;
@@ -268,8 +268,8 @@ This macro requires its ``CONDITION`` to evaluate to ``true``. If that fails it
 will fail the test with a log message ``ARG``.
 
 
-TEST_LIBCPP_REQUIRE((CONDITION, ARG)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TEST_LIBCPP_REQUIRE(CONDITION, ARG)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 If the library under test is libc++ it behaves like ``TEST_REQUIRE``, else it
 is a no-op. This makes it possible to test libc++ specific behaviour. For
@@ -338,7 +338,7 @@ written to ``stderr``.
 This macro is in a different header as ``assert_macros.h`` since it pulls in
 additional headers.
 
- .. note: This macro can only be used in test using C++20 or newer. The macro
+.. note:: This macro can only be used in test using C++20 or newer. The macro
           was added at a time where most of libc++'s C++17 support was complete.
           Since it is not expected to add this to existing tests no effort was
           taken to make it work in earlier language versions.
@@ -411,7 +411,7 @@ libc++-Specific Lit Features
 Custom Directives
 ~~~~~~~~~~~~~~~~~
 
-Lit has many directives built in (e.g., ``DEFINE``, ``UNSUPPORTED``). In addition to those directives, libc++ adds two additional libc++-specific directives that makes
+Lit has many directives built in (e.g., ``DEFINE``, ``UNSUPPORTED``). In addition to those directives, libc++ adds three additional libc++-specific directives that makes
 writing tests easier. See `libc++-specific Lit Directives`_ for more information about the ``FILE_DEPENDENCIES``, ``ADDITIONAL_COMPILE_FLAGS``, and ``MODULE_DEPENDENCIES`` libc++-specific directives.
 
 .. _libc++-specific Lit Directives:
@@ -556,39 +556,36 @@ Testing hardening assertions
 ============================
 
 Each hardening assertion should be tested using death tests (via the
-``TEST_LIBCPP_ASSERT_FAILURE`` macro). Use the ``libcpp-hardening-mode`` Lit
-feature to make sure the assertion is enabled in (and only in) the intended
-modes. The convention is to use `assert.` in the name of the test file to make
-it easier to identify as a hardening test, e.g. ``assert.my_func.pass.cpp``.
+``TEST_LIBCPP_ASSERT_FAILURE`` macro). The convention is to use ``assert.`` in
+the name of the test file to make it easier to identify as a hardening test, e.g.
+``assert.my_func.pass.cpp``.
+
+These tests only make sense in configurations where the death test machinery in
+``check_assertion.h`` is usable, where a failing assertion is observable, and
+where the assertion being tested is enabled in the first place. Use the various
+``can-test-hardening-assertions-<mode>`` Lit features to guard the tests accordingly.
+The bare ``can-test-hardening-assertions`` Lit feature only encodes whether the death
+test machinery is usable; it is meant for tests that select a hardening mode or an
+assertion semantic themselves (see the tests under ``libcxx/test/libcxx/assertions/``).
+
 A toy example:
 
 .. code-block:: cpp
 
-  // Note: the following three annotations are currently needed to use the
-  // `TEST_LIBCPP_ASSERT_FAILURE`.
-  // REQUIRES: has-unix-headers
-  // UNSUPPORTED: c++03
-  // XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
+  // Example: `std::foo(...)` uses `_LIBCPP_ASSERT_NON_NULL`, which is
+  // enabled in the `extensive` and `debug` modes.
+  // REQUIRES: can-test-hardening-assertions-extensive
 
-  // Example: only run this test in `fast`/`extensive`/`debug` modes.
-  // UNSUPPORTED: libcpp-hardening-mode=none
-  // Example: only run this test in the `debug` mode.
-  // REQUIRES: libcpp-hardening-mode=debug
-  // Example: only run this test in `extensive`/`debug` modes.
-  // REQUIRES: libcpp-hardening-mode={{extensive|debug}}
-
-  #include <header_being_tested>
+  #include <stdfoo>
 
   #include "check_assertion.h" // Contains the `TEST_LIBCPP_ASSERT_FAILURE` macro
 
   int main(int, char**) {
-    std::type_being_tested foo;
     int bad_input = -1;
-    TEST_LIBCPP_ASSERT_FAILURE(foo.some_function_that_asserts(bad_input),
-        "The expected assertion message");
+    TEST_LIBCPP_ASSERT_FAILURE(std::foo(bad_input), "The expected assertion message");
 
     return 0;
   }
 
-Note that error messages are only tested (matched) if the ``debug``
-hardening mode is used.
+Note that error messages are only tested (matched) when the assertion semantic in
+effect logs one, i.e. ``enforce`` or ``observe``.

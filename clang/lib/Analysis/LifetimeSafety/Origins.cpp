@@ -57,13 +57,16 @@ public:
   bool VisitCallExpr(const CallExpr *CE) {
     // Indirect calls (e.g., function pointers) are skipped because lifetime
     // annotations currently apply to declarations, not types.
-    if (const auto *FD = CE->getDirectCallee())
+    if (const auto *FD = CE->getDirectCallee()) {
       collect(FD, FD->getReturnType());
+      collectCaptureBy(FD);
+    }
     return true;
   }
 
   bool VisitCXXConstructExpr(const CXXConstructExpr *CCE) {
     collect(CCE->getConstructor(), CCE->getType());
+    collectCaptureBy(CCE->getConstructor());
     return true;
   }
 
@@ -93,6 +96,34 @@ private:
       if (Param->hasAttr<LifetimeBoundAttr>()) {
         CollectedTypes.push_back(RetType);
         return;
+      }
+    }
+  }
+
+  void collectCaptureBy(const FunctionDecl *FD) {
+    if (!FD)
+      return;
+    FD = getDeclWithMergedLifetimeBoundAttrs(FD);
+    const auto *MD = dyn_cast<CXXMethodDecl>(FD);
+    bool IsInstance = MD && MD->isInstance();
+    int Offset = (MD && MD->isImplicitObjectMemberFunction()) ? 1 : 0;
+    for (const auto *Param : FD->parameters()) {
+      if (auto *Attr = Param->getAttr<LifetimeCaptureByAttr>()) {
+        for (int Idx : Attr->params()) {
+          if (Idx == LifetimeCaptureByAttr::Global ||
+              Idx == LifetimeCaptureByAttr::Unknown ||
+              Idx == LifetimeCaptureByAttr::Invalid)
+            continue;
+          if (Idx == LifetimeCaptureByAttr::This) {
+            if (IsInstance)
+              CollectedTypes.push_back(MD->getFunctionObjectParameterType());
+          } else if (int LogicalIdx = Idx - Offset;
+                     LogicalIdx >= 0 &&
+                     (unsigned)LogicalIdx < FD->getNumParams()) {
+            CollectedTypes.push_back(
+                FD->getParamDecl(LogicalIdx)->getType().getNonReferenceType());
+          }
+        }
       }
     }
   }
@@ -179,15 +210,17 @@ void OriginManager::initializeThisOrigins(const Decl *D) {
   ThisOrigins = buildListForType(MD->getThisType(), MD);
 }
 
-OriginList *OriginManager::createNode(const ValueDecl *D, QualType QT) {
+OriginList *OriginManager::createNode(const ValueDecl *D, QualType QT,
+                                      bool NamesDeclStorage) {
   OriginID NewID = getNextOriginID();
-  AllOrigins.emplace_back(NewID, D, QT.getTypePtrOrNull());
+  AllOrigins.emplace_back(NewID, D, QT.getTypePtrOrNull(), NamesDeclStorage);
   return new (ListAllocator.Allocate<OriginList>()) OriginList(NewID);
 }
 
-OriginList *OriginManager::createNode(const Expr *E, QualType QT) {
+OriginList *OriginManager::createNode(const Expr *E, QualType QT,
+                                      bool NamesDeclStorage) {
   OriginID NewID = getNextOriginID();
-  AllOrigins.emplace_back(NewID, E, QT.getTypePtrOrNull());
+  AllOrigins.emplace_back(NewID, E, QT.getTypePtrOrNull(), NamesDeclStorage);
   return new (ListAllocator.Allocate<OriginList>()) OriginList(NewID);
 }
 
@@ -196,12 +229,13 @@ OriginList *OriginManager::createSingleOriginList(OriginID OID) {
 }
 
 template <typename T>
-OriginList *OriginManager::buildListForType(QualType QT, const T *Node) {
+OriginList *OriginManager::buildListForType(QualType QT, const T *Node,
+                                            bool NamesDeclStorage) {
   assert(hasOrigins(QT) && "buildListForType called for non-pointer type");
   // `_Atomic(T)` is transparent for lifetime purposes: build the node for T.
   if (const auto *AT = QT->getAs<AtomicType>())
-    return buildListForType(AT->getValueType(), Node);
-  OriginList *Head = createNode(Node, QT);
+    return buildListForType(AT->getValueType(), Node, NamesDeclStorage);
+  OriginList *Head = createNode(Node, QT, NamesDeclStorage);
 
   if (QT->isPointerOrReferenceType()) {
     QualType PointeeTy = QT->getPointeeType();
@@ -266,7 +300,9 @@ OriginList *OriginManager::getOrCreateList(const Expr *E) {
     // This models taking the address: `&p` borrows the storage of `p`, not what
     // `p` points to.
     if (doesDeclHaveStorage(ReferencedDecl)) {
-      Head = createNode(E, QualType{});
+      // `this->f` reaches its field through `this` instead of naming it.
+      Head = createNode(E, QualType{},
+                        /*NamesDeclStorage=*/isa<DeclRefExpr>(E));
       // This ensures origin sharing: multiple expressions to the same
       // declaration share the same underlying origins.
       Head->setInnerOriginList(getOrCreateList(ReferencedDecl));
@@ -285,7 +321,14 @@ OriginList *OriginManager::getOrCreateList(const Expr *E) {
   // addressable.
   if (E->isGLValue() && !Type->isReferenceType())
     Type = AST.getLValueReferenceType(Type);
-  return ExprToList[E] = buildListForType(Type, E);
+  // A qualification conversion of a glvalue names what its operand names. It is
+  // not transparent: for class types it is the node alias notes report.
+  bool NamesDeclStorage = false;
+  if (const auto *CE = dyn_cast<CastExpr>(E);
+      CE && CE->getCastKind() == CK_NoOp && E->isGLValue())
+    if (const OriginList *Sub = getOrCreateList(CE->getSubExpr()))
+      NamesDeclStorage = getOrigin(Sub->getOuterOriginID()).NamesDeclStorage;
+  return ExprToList[E] = buildListForType(Type, E, NamesDeclStorage);
 }
 
 void OriginManager::dump(OriginID OID, llvm::raw_ostream &OS) const {

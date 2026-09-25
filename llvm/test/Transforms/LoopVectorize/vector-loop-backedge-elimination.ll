@@ -15,7 +15,7 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; VF8UF1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[AND]], 8
 ; VF8UF1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VF8UF1:       [[VECTOR_PH]]:
-; VF8UF1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[AND]], 8
+; VF8UF1-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[AND]], 7
 ; VF8UF1-NEXT:    [[N_VEC:%.*]] = sub i64 [[AND]], [[N_MOD_VF]]
 ; VF8UF1-NEXT:    [[TMP0:%.*]] = sub i64 [[AND]], [[N_VEC]]
 ; VF8UF1-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[A]], i64 [[N_VEC]]
@@ -466,7 +466,7 @@ define void @remove_loop_region_outer_loop(i64 range(i64 8, 17) %N, ptr noalias 
 ; VF8UF1-NEXT:    [[OUTER_IV:%.*]] = phi ptr [ [[SRC]], %[[ENTRY]] ], [ [[OUTER_IV_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
 ; VF8UF1-NEXT:    br label %[[VECTOR_PH:.*]]
 ; VF8UF1:       [[VECTOR_PH]]:
-; VF8UF1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 8
+; VF8UF1-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 7
 ; VF8UF1-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; VF8UF1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF8UF1:       [[VECTOR_BODY]]:
@@ -508,7 +508,7 @@ define void @remove_loop_region_outer_loop(i64 range(i64 8, 17) %N, ptr noalias 
 ; VF8UF2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 16
 ; VF8UF2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VF8UF2:       [[VECTOR_PH]]:
-; VF8UF2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 16
+; VF8UF2-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 15
 ; VF8UF2-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; VF8UF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF8UF2:       [[VECTOR_BODY]]:
@@ -550,7 +550,7 @@ define void @remove_loop_region_outer_loop(i64 range(i64 8, 17) %N, ptr noalias 
 ; VF16UF1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 16
 ; VF16UF1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VF16UF1:       [[VECTOR_PH]]:
-; VF16UF1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 16
+; VF16UF1-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 15
 ; VF16UF1-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; VF16UF1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF16UF1:       [[VECTOR_BODY]]:

@@ -21,6 +21,7 @@ namespace llvm {
 class GCNSubtarget;
 class MachineInstr;
 class raw_ostream;
+class SIInstrInfo;
 
 namespace AMDGPU {
 
@@ -52,7 +53,7 @@ public:
 
   enum : value_type {
     NONE = 0,
-#define AMDGPU_HW_EVENT(X, V) X = (1 << V),
+#define AMDGPU_HW_EVENT(X, V) X = (1u << V),
 #define AMDGPU_LAST_HW_EVENT(X) HWEVENT_LAST_EVENT = X,
 #include "AMDGPUHWEvents.def"
 
@@ -164,9 +165,19 @@ private:
   value_type Data = NONE;
 };
 
+/// \param Inst A VMEM instruction (as per `SIInstrInfo::isVMEM`).
+/// \returns the simplified set of events triggered by the VMEM instruction \p
+/// Inst. The returned mask is not exhaustive, but is guaranteed to be a subset
+/// of the mask that'd be returned by \ref getEventsFor.
+///
+/// Useful to quickly categorize VMEM instructions without having to fetch all
+/// events.
+HWEvents getSimplifiedVMEMEventsFor(const MachineInstr &Inst,
+                                    const SIInstrInfo &TII);
+
 /// \returns A bitmask of HWEvent triggered by \p Inst
 HWEvents getEventsFor(const MachineInstr &Inst, const GCNSubtarget &ST,
-                      bool IsExpertMode);
+                      bool IsExpertMode, bool TgSplit);
 
 } // namespace AMDGPU
 

@@ -58,14 +58,7 @@ class Type;
 /// for example 'force', means a decision has been made. So, we need to be
 /// careful NOT to add them if the user hasn't specifically asked so.
 class LoopVectorizeHints {
-  enum HintKind {
-    HK_WIDTH,
-    HK_INTERLEAVE,
-    HK_FORCE,
-    HK_ISVECTORIZED,
-    HK_PREDICATE,
-    HK_SCALABLE
-  };
+  enum HintKind { HK_WIDTH, HK_INTERLEAVE, HK_ISVECTORIZED };
 
   /// Hint - associates name and validation with the hint value.
   struct Hint {
@@ -85,17 +78,19 @@ class LoopVectorizeHints {
   /// Vectorization interleave factor.
   Hint Interleave;
 
-  /// Vectorization forced
-  Hint Force;
+  /// Vectorization forced; one of ForceKind. Carried as a plain value because
+  /// the enable/disable pair is a standalone tag with no operand to validate.
+  unsigned Force;
 
   /// Already Vectorized
   Hint IsVectorized;
 
-  /// Vector Predicate
-  Hint Predicate;
+  /// Vector Predicate; one of ForceKind, carried as a plain value like Force.
+  unsigned Predicate;
 
-  /// Says whether we should use fixed width or scalable vectorization.
-  Hint Scalable;
+  /// Scalable vs fixed-width preference; one of ScalableForceKind. Carried as
+  /// a plain value because the enable/disable pair has no operand to validate.
+  unsigned Scalable;
 
   /// Return the loop metadata prefix.
   static StringRef Prefix() { return "llvm.loop."; }
@@ -140,9 +135,8 @@ public:
 
   ElementCount getWidth() const {
     return ElementCount::get(
-        Width.Value,
-        (ScalableForceKind)Scalable.Value == SK_PreferScalable ||
-            (ScalableForceKind)Scalable.Value == SK_AlwaysScalable);
+        Width.Value, (ScalableForceKind)Scalable == SK_PreferScalable ||
+                         (ScalableForceKind)Scalable == SK_AlwaysScalable);
   }
 
   unsigned getInterleave() const {
@@ -155,23 +149,23 @@ public:
     return 0;
   }
   unsigned getIsVectorized() const { return IsVectorized.Value; }
-  unsigned getPredicate() const { return Predicate.Value; }
+  unsigned getPredicate() const { return Predicate; }
   enum ForceKind getForce() const {
-    if ((ForceKind)Force.Value == FK_Undefined &&
+    if ((ForceKind)Force == FK_Undefined &&
         hasDisableAllTransformsHint(TheLoop))
       return FK_Disabled;
-    return (ForceKind)Force.Value;
+    return (ForceKind)Force;
   }
 
   /// \return true if scalable vectorization has been explicitly disabled.
   bool isScalableVectorizationDisabled() const {
-    return (ScalableForceKind)Scalable.Value == SK_FixedWidthOnly;
+    return (ScalableForceKind)Scalable == SK_FixedWidthOnly;
   }
 
   /// \return true if scalable vectorization is always preferred over
   /// fixed-length when feasible, regardless of cost.
   bool isScalableVectorizationAlwaysPreferred() const {
-    return (ScalableForceKind)Scalable.Value == SK_AlwaysScalable;
+    return (ScalableForceKind)Scalable == SK_AlwaysScalable;
   }
 
   /// When enabling loop hints are provided we allow the vectorizer to change
@@ -353,16 +347,6 @@ public:
   /// Returns True if V is a Phi node of an induction variable in this loop.
   LLVM_ABI bool isInductionPhi(const Value *V) const;
 
-  /// Returns True if V is a cast that is part of an induction def-use chain,
-  /// and had been proven to be redundant under a runtime guard (in other
-  /// words, the cast has the same SCEV expression as the induction phi).
-  LLVM_ABI bool isCastedInductionVariable(const Value *V) const;
-
-  /// Returns True if V can be considered as an induction variable in this
-  /// loop. V can be the induction phi, or some redundant cast in the def-use
-  /// chain of the inducion phi.
-  LLVM_ABI bool isInductionVariable(const Value *V) const;
-
   /// Returns True if PN is a reduction variable in this loop.
   bool isReductionVariable(PHINode *PN) const { return Reductions.count(PN); }
 
@@ -463,9 +447,6 @@ public:
   /// Returns true if there is at least one function call in the loop which
   /// has a vectorized variant available.
   bool hasVectorCallVariants() const { return VecCallVariantsFound; }
-
-  unsigned getNumStores() const { return LAI->getNumStores(); }
-  unsigned getNumLoads() const { return LAI->getNumLoads(); }
 
   /// Returns a HistogramInfo* for the given instruction if it was determined
   /// to be part of a load -> update -> store sequence where multiple lanes
@@ -694,12 +675,6 @@ private:
   /// Notice that inductions don't need to start at zero and that induction
   /// variables can be pointers.
   InductionList Inductions;
-
-  /// Holds all the casts that participate in the update chain of the induction
-  /// variables, and that have been proven to be redundant (possibly under a
-  /// runtime guard). These casts can be ignored when creating the vectorized
-  /// loop body.
-  SmallPtrSet<Instruction *, 4> InductionCastsToIgnore;
 
   /// Holds the phi nodes that are fixed-order recurrences.
   RecurrenceSet FixedOrderRecurrences;

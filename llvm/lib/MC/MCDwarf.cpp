@@ -1330,6 +1330,9 @@ void MCCFIInstruction::replaceRegister(unsigned FromReg, unsigned ToReg) {
         ReplaceReg(F.Register);
         ReplaceReg(F.SpillRegister);
         ReplaceReg(F.MaskRegister);
+      },
+      [](LLVMSetRAStateFields &) {
+        llvm_unreachable(".cfi_set_ra_state does not have registers");
       });
   std::visit(Visitor, ExtraFields);
 }
@@ -1456,6 +1459,24 @@ void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
     Streamer.emitInt8(dwarf::DW_CFA_AARCH64_negate_ra_state_with_pc);
     return;
 
+  case MCCFIInstruction::OpLLVMSetRAState: {
+    Streamer.emitInt8(dwarf::DW_CFA_AARCH64_set_ra_state);
+    Streamer.emitULEB128IntValue(Instr.getRASignState());
+    if (MCSymbol *PACSym = Instr.getRASignSymbol()) {
+      MCContext &Ctx = Streamer.getContext();
+      const MCExpr *Diff = MCBinaryExpr::createSub(
+          MCSymbolRefExpr::create(PACSym, Ctx),
+          MCSymbolRefExpr::create(Instr.getLabel(), Ctx), Ctx);
+      const MCExpr *Factored = MCBinaryExpr::createDiv(
+          Diff,
+          MCConstantExpr::create(Ctx.getAsmInfo().getMinInstAlignment(), Ctx),
+          Ctx);
+      Streamer.emitSLEB128Value(Factored);
+    } else {
+      Streamer.emitSLEB128IntValue(Instr.getRASignOffset());
+    }
+    return;
+  }
   case MCCFIInstruction::OpUndefined: {
     unsigned Reg = Instr.getRegister();
     Streamer.emitInt8(dwarf::DW_CFA_undefined);
@@ -1676,7 +1697,8 @@ void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
       encodeDwarfRegisterLocation(VRs[0].Register, OSBlock);
       OSBlock << uint8_t(dwarf::DW_OP_LLVM_user)
               << uint8_t(dwarf::DW_OP_LLVM_offset_uconst);
-      encodeULEB128((VRs[0].SizeInBits / 8) * VRs[0].Lane, OSBlock);
+      encodeULEB128(static_cast<uint64_t>(VRs[0].SizeInBits / 8) * VRs[0].Lane,
+                    OSBlock);
     } else {
       for (const auto &VR : VRs) {
         // TODO: Detect when we can merge multiple adjacent pieces, or even
@@ -1685,7 +1707,7 @@ void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
         encodeDwarfRegisterLocation(VR.Register, OSBlock);
         OSBlock << uint8_t(dwarf::DW_OP_bit_piece);
         encodeULEB128(VR.SizeInBits, OSBlock);
-        encodeULEB128(VR.SizeInBits * VR.Lane, OSBlock);
+        encodeULEB128(static_cast<uint64_t>(VR.SizeInBits) * VR.Lane, OSBlock);
       }
     }
 

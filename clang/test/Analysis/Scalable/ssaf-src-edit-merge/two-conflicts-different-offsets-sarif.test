@@ -1,0 +1,43 @@
+# Four inputs producing two distinct conflict clusters in the same file:
+# cluster {X, Y} at offset 10 and cluster {P, Q} at offset 30. Drop-all
+# removes all four; SARIF has two results, ordered by (file, min-offset)
+# ascending so the offset-10 cluster precedes the offset-30 cluster.
+
+# RUN: rm -rf %t.dir
+# RUN: mkdir -p %t.dir
+# RUN: printf '%%80s' '' > %t.dir/foo.cpp
+
+# RUN: cp %S/Inputs/single-replacement.tpl.yaml %t.dir/a.yaml
+# RUN: cp %S/Inputs/conflict-text-y.tpl.yaml %t.dir/b.yaml
+# RUN: cp %S/Inputs/single-replacement-offset-30.tpl.yaml %t.dir/c.yaml
+# RUN: cp %S/Inputs/conflict-text-q-offset-30.tpl.yaml %t.dir/d.yaml
+# RUN: sed -i'' -e "s|@FOO@|%/t.dir/foo.cpp|g" \
+# RUN:           %t.dir/a.yaml %t.dir/b.yaml %t.dir/c.yaml %t.dir/d.yaml
+
+# RUN: clang-ssaf-src-edit-merge \
+# RUN:     -o %t.dir/merged.yaml \
+# RUN:     --sarif-conflicts-out=%t.dir/conflicts.sarif \
+# RUN:     %t.dir/a.yaml %t.dir/b.yaml %t.dir/c.yaml %t.dir/d.yaml \
+# RUN:   2> %t.dir/stderr.txt
+
+# Drop-all: zero replacements survive at either conflict offset.
+# RUN: FileCheck --input-file=%t.dir/merged.yaml --check-prefix=MERGED %s
+# MERGED-NOT: ReplacementText:
+
+# Two SARIF results in spec-pinned (file, min-offset) order — byteOffset 10
+# first, byteOffset 30 second. Each has two relatedLocations entries
+# (sorted by (byteLength, text) — id 1 then id 2 within each result).
+# RUN: FileCheck --input-file=%t.dir/conflicts.sarif --check-prefix=SARIF %s
+# SARIF: "results":
+# SARIF: "level": "error"
+# SARIF: "byteOffset": 10
+# SARIF: "relatedLocations":
+# SARIF: "id": 1
+# SARIF: "id": 2
+# SARIF: "ruleId": "clang-reforge-replacement-conflict"
+# SARIF: "level": "error"
+# SARIF: "byteOffset": 30
+# SARIF: "relatedLocations":
+# SARIF: "id": 1
+# SARIF: "id": 2
+# SARIF: "ruleId": "clang-reforge-replacement-conflict"

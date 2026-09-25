@@ -12,6 +12,7 @@
 #include "lldb/Utility/Stream.h"
 #include "lldb/lldb-enumerations.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/FormatProviders.h"
 
 #include <string>
 
@@ -47,12 +48,19 @@ public:
   void FillLastLineToColumn(uint32_t column, char fill_char);
 
 protected:
-  friend class ScriptInterpreter;
+  friend class ScriptInterpreterBridge;
 
   std::string m_packet;
   size_t WriteImpl(const void *s, size_t length) override;
 };
 
 } // namespace lldb_private
+
+namespace llvm {
+template <> struct format_provider<lldb_private::StreamString> {
+  static void format(const lldb_private::StreamString &label, raw_ostream &OS,
+                     StringRef Style);
+};
+} // end namespace llvm
 
 #endif // LLDB_UTILITY_STREAMSTRING_H

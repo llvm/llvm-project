@@ -10,7 +10,9 @@
 #include "bolt/Utils/CommandLineOpts.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -44,17 +46,21 @@ protected:
     ELF64LE::Ehdr *EHdr = reinterpret_cast<typename ELF64LE::Ehdr *>(ElfBuf);
     EHdr->e_ident[llvm::ELF::EI_CLASS] = llvm::ELF::ELFCLASS64;
     EHdr->e_ident[llvm::ELF::EI_DATA] = llvm::ELF::ELFDATA2LSB;
-    EHdr->e_machine = GetParam() == Triple::aarch64 ? EM_AARCH64 : EM_X86_64;
+    EHdr->e_machine = convertTripleArchTypeToEMachine(GetParam());
     MemoryBufferRef Source(StringRef(ElfBuf, sizeof(ElfBuf)), "ELF");
     ObjFile = cantFail(ObjectFile::createObjectFile(Source));
   }
 
   void initializeBOLT() {
-    Relocation::Arch = ObjFile->makeTriple().getArch();
+    const Triple TheTriple = GetParam();
+    Relocation::Arch = TheTriple.getArch();
+    // Minimal test ELFs have no RISC-V attributes. RISC-V needs an empty
+    // feature set for +relax, while other targets reject a non-null one.
+    SubtargetFeatures Features;
     BC = cantFail(BinaryContext::createBinaryContext(
-        ObjFile->makeTriple(), std::make_shared<orc::SymbolStringPool>(),
-        ObjFile->getFileName(), nullptr, true, DWARFContext::create(*ObjFile),
-        {llvm::outs(), llvm::errs()}));
+        TheTriple, std::make_shared<orc::SymbolStringPool>(),
+        ObjFile->getFileName(), TheTriple.isRISCV() ? &Features : nullptr, true,
+        DWARFContext::create(*ObjFile), {llvm::outs(), llvm::errs()}));
     ASSERT_FALSE(!BC);
   }
 
@@ -68,6 +74,13 @@ protected:
 
 INSTANTIATE_TEST_SUITE_P(X86, BinaryContextTester,
                          ::testing::Values(Triple::x86_64));
+
+#endif
+
+#ifdef RISCV_AVAILABLE
+
+INSTANTIATE_TEST_SUITE_P(RISCV, BinaryContextTester,
+                         ::testing::Values(Triple::riscv64));
 
 #endif
 
@@ -104,18 +117,23 @@ TEST_P(BinaryContextTester, FlushPendingRelocCALL26) {
   BS.addPendingRelocation(
       Relocation{12, RelSymbol2, ELF::R_AARCH64_CALL26, 0, 0});
 
-  SmallVector<char> Vect(DataSize);
-  raw_svector_ostream OS(Vect);
-
+  SmallString<64> TempPath;
+  int FD;
+  sys::fs::createTemporaryFile("bolt-test-call26", "bin", FD, TempPath);
+  raw_fd_ostream OS(FD, true);
   BS.flushPendingRelocations(OS, [&](const MCSymbol *S) {
     return S == RelSymbol1 ? 4 : S == RelSymbol2 ? 16 : 0;
   });
+  auto MBOrErr = MemoryBuffer::getFile(TempPath);
+  ASSERT_TRUE(MBOrErr);
+  const char *Vect = MBOrErr.get()->getBufferStart();
 
   const uint8_t Func1Call[4] = {255, 255, 255, 151};
   const uint8_t Func2Call[4] = {1, 0, 0, 148};
 
   EXPECT_FALSE(memcmp(Func1Call, &Vect[8], 4)) << "Wrong backward call value\n";
   EXPECT_FALSE(memcmp(Func2Call, &Vect[12], 4)) << "Wrong forward call value\n";
+  sys::fs::remove(TempPath);
 }
 
 TEST_P(BinaryContextTester, FlushPendingRelocJUMP26) {
@@ -146,12 +164,16 @@ TEST_P(BinaryContextTester, FlushPendingRelocJUMP26) {
   BS.addPendingRelocation(
       Relocation{12, RelSymbol2, ELF::R_AARCH64_JUMP26, 0, 0});
 
-  SmallVector<char> Vect(Size);
-  raw_svector_ostream OS(Vect);
-
+  SmallString<64> TempPath;
+  int FD;
+  sys::fs::createTemporaryFile("bolt-test-jump26", "bin", FD, TempPath);
+  raw_fd_ostream OS(FD, true);
   BS.flushPendingRelocations(OS, [&](const MCSymbol *S) {
     return S == RelSymbol1 ? 4 : S == RelSymbol2 ? 16 : 0;
   });
+  auto MBOrErr = MemoryBuffer::getFile(TempPath);
+  ASSERT_TRUE(MBOrErr);
+  const char *Vect = MBOrErr.get()->getBufferStart();
 
   const uint8_t Func1Call[4] = {255, 255, 255, 23};
   const uint8_t Func2Call[4] = {1, 0, 0, 20};
@@ -160,6 +182,7 @@ TEST_P(BinaryContextTester, FlushPendingRelocJUMP26) {
       << "Wrong backward branch value\n";
   EXPECT_FALSE(memcmp(Func2Call, &Vect[12], 4))
       << "Wrong forward branch value\n";
+  sys::fs::remove(TempPath);
 }
 
 TEST_P(BinaryContextTester,
@@ -182,15 +205,17 @@ TEST_P(BinaryContextTester,
   Reloc.setOptional();
   BS.addPendingRelocation(Reloc);
 
-  SmallVector<char> Vect;
-  raw_svector_ostream OS(Vect);
-
+  SmallString<64> TempPath;
+  int FD;
+  sys::fs::createTemporaryFile("bolt-test-outofrange", "bin", FD, TempPath);
+  raw_fd_ostream OS(FD, true);
   // Resolve relocation symbol to a high value so encoding will be out of range.
   BS.flushPendingRelocations(OS, [&](const MCSymbol *S) { return 0x800000F; });
   outs().flush();
   std::string CapturedStdOut = testing::internal::GetCapturedStdout();
   EXPECT_EQ(CapturedStdOut,
             "BOLT-INFO: skipped 1 out-of-range optional relocations\n");
+  sys::fs::remove(TempPath);
 }
 
 #endif

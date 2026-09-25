@@ -118,6 +118,15 @@ public:
 
   void SetObjectSize(uint64_t object_size) { m_object_size = object_size; }
 
+  /// Get the load address of a module in process memory. If the optional
+  /// has no value, there is no load address for this module spec.
+  std::optional<lldb::addr_t> GetLoadAddress() const { return m_load_addr; }
+
+  /// Set the load address of a module in process memory.
+  void SetLoadAddress(lldb::addr_t addr) { m_load_addr = addr; }
+
+  void ClearLoadAddress() { m_load_addr.reset(); }
+
   llvm::sys::TimePoint<> &GetObjectModificationTime() {
     return m_object_mod_time;
   }
@@ -159,9 +168,11 @@ public:
     m_object_offset = 0;
     m_object_size = 0;
     m_source_mappings.Clear(false);
+    m_extractor_sp.reset();
     m_object_mod_time = llvm::sys::TimePoint<>();
     m_target_wp.reset();
     m_platform_wp.reset();
+    m_load_addr.reset();
   }
 
   explicit operator bool() const {
@@ -180,6 +191,8 @@ public:
     if (m_object_size)
       return true;
     if (m_object_mod_time != llvm::sys::TimePoint<>())
+      return true;
+    if (m_load_addr.has_value())
       return true;
     return false;
   }
@@ -211,7 +224,7 @@ public:
     if (m_arch.IsValid()) {
       if (dumped_something)
         strm.PutCString(", ");
-      strm.Printf("arch = ");
+      strm.PutCString("arch = ");
       m_arch.DumpTriple(strm.AsRawOstream());
       dumped_something = true;
     }
@@ -245,6 +258,13 @@ public:
         strm.PutCString(", ");
       strm.Format("object_mod_time = {0:x+}",
                   uint64_t(llvm::sys::toTimeT(m_object_mod_time)));
+      dumped_something = true;
+    }
+    if (m_load_addr.has_value()) {
+      if (dumped_something)
+        strm.PutCString(", ");
+      strm.Printf("load_addr = 0x%" PRIx64, m_load_addr.value());
+      dumped_something = true;
     }
   }
 
@@ -280,6 +300,10 @@ public:
           return false;
       }
     }
+    // Only match on load address if they both have a valid value.
+    if (m_load_addr.has_value() && match_module_spec.m_load_addr.has_value() &&
+        match_module_spec.GetLoadAddress() != GetLoadAddress())
+      return false;
     return true;
   }
 
@@ -303,6 +327,12 @@ protected:
   llvm::sys::TimePoint<> m_object_mod_time;
   mutable PathMappingList m_source_mappings;
   lldb::DataExtractorSP m_extractor_sp = {};
+  /// The load address of the module in a process. This allows for modules
+  /// to be uniquely identified and created by reading an object file from
+  /// memory when we can't locate the correct file on disk. Useful for post
+  /// mortem debugging when we might not be able to locate symbols for the
+  /// core file, but we can read the object file from memory.
+  std::optional<lldb::addr_t> m_load_addr = std::nullopt;
 };
 
 class ModuleSpecList {

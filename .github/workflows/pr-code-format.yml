@@ -11,9 +11,9 @@ on:
 
 jobs:
   code_formatter:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     container:
-      image: 'ghcr.io/llvm/ci-ubuntu-24.04-format'
+      image: 'ghcr.io/llvm/ci-ubuntu-26.04-format:latest@sha256:cd764119dc7ee7afc445de4580c03d803511195d40e28fe8a583dad76f8a2b1c'
     timeout-minutes: 30
     concurrency:
       group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
@@ -21,7 +21,7 @@ jobs:
     if: github.repository == 'llvm/llvm-project'
     steps:
       - name: Fetch LLVM sources
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
           fetch-depth: 2

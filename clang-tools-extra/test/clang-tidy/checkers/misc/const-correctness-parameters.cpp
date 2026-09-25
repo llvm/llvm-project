@@ -215,6 +215,8 @@ void use_requires_const_method() {
 
 void lambda_params() {
   auto lambda = [](Bar& b) {
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'lambda' of type '(lambda at {{.*}})' can be declared 'const'
+  // CHECK-FIXES: auto const lambda = [](Bar& b) {
     b.const_method();
   };
 }

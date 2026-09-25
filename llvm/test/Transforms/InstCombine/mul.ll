@@ -323,7 +323,7 @@ define <2 x i8> @shl1_decrement_vec(<2 x i8> %x) {
 
 define i32 @mul_bool(i32 %x, i1 %y) !prof !0 {
 ; CHECK-LABEL: @mul_bool(
-; CHECK-NEXT:    [[M:%.*]] = select i1 [[Y:%.*]], i32 [[X:%.*]], i32 0
+; CHECK-NEXT:    [[M:%.*]] = select i1 [[Y:%.*]], i32 [[X:%.*]], i32 0, !prof [[PROF1]]
 ; CHECK-NEXT:    ret i32 [[M]]
 ;
   %z = zext i1 %y to i32
@@ -357,7 +357,7 @@ define <2 x i32> @mul_bool_vec_commute(<2 x i32> %px, <2 x i1> %y) {
 
 define i32 @mul_sext_bool(i1 %x) !prof !0 {
 ; CHECK-LABEL: @mul_sext_bool(
-; CHECK-NEXT:    [[M:%.*]] = select i1 [[X:%.*]], i32 -42, i32 0
+; CHECK-NEXT:    [[M:%.*]] = select i1 [[X:%.*]], i32 -42, i32 0, !prof [[PROF1]]
 ; CHECK-NEXT:    ret i32 [[M]]
 ;
   %s = sext i1 %x to i32
@@ -369,7 +369,7 @@ define i32 @mul_sext_bool_use(i1 %x) !prof !0 {
 ; CHECK-LABEL: @mul_sext_bool_use(
 ; CHECK-NEXT:    [[S:%.*]] = sext i1 [[X:%.*]] to i32
 ; CHECK-NEXT:    call void @use32(i32 [[S]])
-; CHECK-NEXT:    [[M:%.*]] = select i1 [[X]], i32 -42, i32 0
+; CHECK-NEXT:    [[M:%.*]] = select i1 [[X]], i32 -42, i32 0, !prof [[PROF1]]
 ; CHECK-NEXT:    ret i32 [[M]]
 ;
   %s = sext i1 %x to i32
@@ -436,7 +436,7 @@ define i32 @mul_bools_use3(i1 %x, i1 %y) !prof !0 {
 ; CHECK-NEXT:    call void @use32(i32 [[ZX]])
 ; CHECK-NEXT:    [[ZY:%.*]] = zext i1 [[Y:%.*]] to i32
 ; CHECK-NEXT:    call void @use32(i32 [[ZY]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[X]], i32 [[ZY]], i32 0
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[X]], i32 [[ZY]], i32 0, !prof [[PROF1]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %zx = zext i1 %x to i32
@@ -745,7 +745,7 @@ define i32 @not_lowbit_mul(i32 %a, i32 %b) {
 define i32 @signsplat_mul(i32 %x) !prof !0 {
 ; CHECK-LABEL: @signsplat_mul(
 ; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[MUL:%.*]] = select i1 [[ISNEG]], i32 -42, i32 0
+; CHECK-NEXT:    [[MUL:%.*]] = select i1 [[ISNEG]], i32 -42, i32 0, !prof [[PROF1]]
 ; CHECK-NEXT:    ret i32 [[MUL]]
 ;
   %ash = ashr i32 %x, 31
@@ -2451,6 +2451,72 @@ define i16 @mul_select_extra_use_mul(i16 %x, i1 %cond) {
   %sel  = select i1 %cond, i16 9, i16 5
   %mul  = mul nuw nsw i16 %mul1, %sel
   ret i16 %mul
+}
+
+define i16 @mul_add_one(i16 range(i16 0, 2) %x, i16 %y) {
+; CHECK-LABEL: @mul_add_one(
+; CHECK-NEXT:    [[RET:%.*]] = shl i16 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    ret i16 [[RET]]
+;
+  %add = add i16 %x, 1
+  %ret = mul i16 %add, %y
+  ret i16 %ret
+}
+
+define i16 @mul_add_one_extra_use(i16 range(i16 0, 2) %x, i16 %y) {
+; CHECK-LABEL: @mul_add_one_extra_use(
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i16 [[X:%.*]], 1
+; CHECK-NEXT:    call void @use16(i16 [[ADD]])
+; CHECK-NEXT:    [[RET:%.*]] = shl i16 [[Y:%.*]], [[X]]
+; CHECK-NEXT:    ret i16 [[RET]]
+;
+  %add = add i16 %x, 1
+  call void @use16(i16 %add)
+  %ret = mul i16 %add, %y
+  ret i16 %ret
+}
+
+define <4 x i16> @mul_add_one_vec(<4 x i16> range(i16 0, 2) %x, <4 x i16> %y) {
+; CHECK-LABEL: @mul_add_one_vec(
+; CHECK-NEXT:    [[MUL:%.*]] = shl <4 x i16> [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    ret <4 x i16> [[MUL]]
+;
+  %add = add <4 x i16> %x, splat (i16 1)
+  %mul  = mul <4 x i16> %y, %add
+  ret <4 x i16> %mul
+}
+
+define i16 @neg_mul_add_one_no_range(i16 %x, i16 %y) {
+; CHECK-LABEL: @neg_mul_add_one_no_range(
+; CHECK-NEXT:    [[ADD:%.*]] = add i16 [[X:%.*]], 1
+; CHECK-NEXT:    [[RET:%.*]] = mul i16 [[ADD]], [[Y:%.*]]
+; CHECK-NEXT:    ret i16 [[RET]]
+;
+  %add = add i16 %x, 1
+  %ret = mul i16 %add, %y
+  ret i16 %ret
+}
+
+define i16 @neg_mul_add_two(i16 range(i16 0, 2) %x, i16 %y) {
+; CHECK-LABEL: @neg_mul_add_two(
+; CHECK-NEXT:    [[ADD:%.*]] = or disjoint i16 [[X:%.*]], 2
+; CHECK-NEXT:    [[RET:%.*]] = mul i16 [[ADD]], [[Y:%.*]]
+; CHECK-NEXT:    ret i16 [[RET]]
+;
+  %add = add i16 %x, 2
+  %ret = mul i16 %add, %y
+  ret i16 %ret
+}
+
+define i1 @neg_mul_add_one_i1(i1 %x, i1 %y) {
+; CHECK-LABEL: @neg_mul_add_one_i1(
+; CHECK-NEXT:    [[ADD:%.*]] = xor i1 [[X:%.*]], true
+; CHECK-NEXT:    [[RET:%.*]] = and i1 [[Y:%.*]], [[ADD]]
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %add = add i1 %x, 1
+  %ret = mul i1 %add, %y
+  ret i1 %ret
 }
 
 !0 = !{!"function_entry_count", i64 1000}

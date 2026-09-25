@@ -2135,6 +2135,16 @@ static Value *simplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
   if (Value *V = simplifyAndOrOfCmps(Q, Op0, Op1, true))
     return V;
 
+  // zext(X) & sext(X) --> zext(X)
+  // sext(X) & zext(X) --> zext(X)
+  {
+    Value *X = nullptr;
+    if (match(Op0, m_ZExt(m_Value(X))) && match(Op1, m_SExt(m_Specific(X))))
+      return Op0;
+    if (match(Op1, m_ZExt(m_Value(X))) && match(Op0, m_SExt(m_Specific(X))))
+      return Op1;
+  }
+
   // Try some generic simplifications for associative operations.
   if (Value *V =
           simplifyAssociativeBinOp(Instruction::And, Op0, Op1, Q, MaxRecurse))
@@ -2386,6 +2396,16 @@ static Value *simplifyOrInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
         C->ule(X->getType()->getScalarSizeInBits())) {
       return ConstantInt::getAllOnesValue(X->getType());
     }
+  }
+
+  // zext(X) | sext(X) --> sext(X)
+  // sext(X) | zext(X) --> sext(X)
+  {
+    Value *X = nullptr;
+    if (match(Op0, m_ZExt(m_Value(X))) && match(Op1, m_SExt(m_Specific(X))))
+      return Op1;
+    if (match(Op1, m_ZExt(m_Value(X))) && match(Op0, m_SExt(m_Specific(X))))
+      return Op0;
   }
 
   // A funnel shift (rotate) can be decomposed into simpler shifts. See if we
@@ -4067,7 +4087,7 @@ static Value *simplifyICmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
         // Otherwise the upper bits of LHS are all equal, while RHS has varying
         // bits there.  Use this to work out the result of the comparison.
         if (AnyEq->isNullValue()) {
-          switch (Pred) {
+          switch (Pred.getPreferredSignedPredicate()) {
           default:
             llvm_unreachable("Unknown ICmp predicate!");
           case ICmpInst::ICMP_EQ:
@@ -4183,8 +4203,8 @@ static Value *simplifyFCmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
   if (Constant *CLHS = dyn_cast<Constant>(LHS)) {
     if (Constant *CRHS = dyn_cast<Constant>(RHS)) {
       // if the folding isn't successfull, fall back to the rest of the logic
-      if (auto *Result = ConstantFoldCompareInstOperands(Pred, CLHS, CRHS, Q.DL,
-                                                         Q.TLI, Q.CxtI))
+      if (auto *Result = ConstantFoldCompareInstOperands(
+              Pred, CLHS, CRHS, Q.DL, Q.TLI, Q.getFunction()))
         return Result;
     } else {
       // If we have a constant, make sure it is on the RHS.
@@ -4254,19 +4274,15 @@ static Value *simplifyFCmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
     return computeKnownFPClass(LHS, FMF, InterestedFlags, Q);
   };
 
-  if (C && Q.CxtI) {
+  if (C && Q.getFunction()) {
     // Fold out compares that express a class test.
-    //
-    // FIXME: Should be able to perform folds without context
-    // instruction. Always pass in the context function?
-
-    const Function *ParentF = Q.CxtI->getFunction();
-    auto [ClassVal, ClassTest] = fcmpToClassTest(Pred, *ParentF, LHS, C);
+    auto [ClassVal, ClassTest] =
+        fcmpToClassTest(Pred, *Q.getFunction(), LHS, C);
     if (ClassVal) {
       FullKnownClassLHS = computeLHSClass();
-      if ((FullKnownClassLHS->KnownFPClasses & ClassTest) == fcNone)
+      if ((FullKnownClassLHS->getKnownFPClasses() & ClassTest) == fcNone)
         return getFalse(RetTy);
-      if ((FullKnownClassLHS->KnownFPClasses & ~ClassTest) == fcNone)
+      if ((FullKnownClassLHS->getKnownFPClasses() & ~ClassTest) == fcNone)
         return getTrue(RetTy);
     }
   }
@@ -4883,11 +4899,27 @@ static Value *simplifySelectWithICmpCond(Value *CondVal, Value *TrueVal,
     auto isRotate =
         m_CombineOr(m_FShl(m_Value(X), m_Deferred(X), m_Value(ShAmt)),
                     m_FShr(m_Value(X), m_Deferred(X), m_Value(ShAmt)));
-    // (ShAmt == 0) ? X : fshl(X, X, ShAmt) --> fshl(X, X, ShAmt)
-    // (ShAmt == 0) ? X : fshr(X, X, ShAmt) --> fshr(X, X, ShAmt)
-    if (match(FalseVal, isRotate) && TrueVal == X && CmpLHS == ShAmt &&
-        Pred == ICmpInst::ICMP_EQ)
-      return FalseVal;
+    if (match(FalseVal, isRotate) && TrueVal == X) {
+      // (ShAmt == 0) ? X : fshl(X, X, ShAmt) --> fshl(X, X, ShAmt)
+      // (ShAmt == 0) ? X : fshr(X, X, ShAmt) --> fshr(X, X, ShAmt)
+      if (CmpLHS == ShAmt)
+        return FalseVal;
+      // Compute the bitwidth of the value being rotated.
+      unsigned BW = X->getType()->getScalarSizeInBits();
+      // Handle the cases where the expression to be checked for zero is not the
+      // shift amount but the `shAmt % bitwidth` which is equivalent to `shAmt &
+      // (bitwidth - 1)` provided the bitwidth is a power of 2.
+      //
+      // ((ShAmt & (BW-1)) == 0) ? X : fshl(X, X, ShAmt) --> fshl(X, X, ShAmt)
+      // ((ShAmt & (BW-1)) == 0) ? X : fshr(X, X, ShAmt) --> fshr(X, X, ShAmt)
+      if (isPowerOf2_32(BW) &&
+          match(CmpLHS, m_c_And(m_Specific(ShAmt), m_SpecificInt(BW - 1))))
+        return FalseVal;
+      // (ShAmt % BW == 0) ? X : fshl(X, X, ShAmt) --> fshl(X, X, ShAmt)
+      // (ShAmt % BW == 0) ? X : fshr(X, X, ShAmt) --> fshr(X, X, ShAmt)
+      if (match(CmpLHS, m_URem(m_Specific(ShAmt), m_SpecificInt(BW))))
+        return FalseVal;
+    }
 
     // X == 0 ? abs(X) : -abs(X) --> -abs(X)
     // X == 0 ? -abs(X) : abs(X) --> abs(X)
@@ -5389,13 +5421,15 @@ static Value *simplifyGEPInst(Type *SrcTy, Value *Ptr,
   if (!isa<Constant>(Ptr) || !all_of(Indices, IsaPred<Constant>))
     return nullptr;
 
-  if (!ConstantExpr::isSupportedGetElementPtr(SrcTy))
+  ArrayRef<Constant *> ConstIdxs =
+      ArrayRef((Constant *const *)Indices.data(), Indices.size());
+  auto *ConstGEP = ConstantExpr::getGetElementPtr(
+      Q.DL, SrcTy, cast<Constant>(Ptr), ConstIdxs, NW);
+  if (!ConstGEP)
     return ConstantFoldGetElementPtr(SrcTy, cast<Constant>(Ptr), std::nullopt,
                                      Indices);
 
-  auto *CE =
-      ConstantExpr::getGetElementPtr(SrcTy, cast<Constant>(Ptr), Indices, NW);
-  return ConstantFoldConstant(CE, Q.DL);
+  return ConstantFoldConstant(ConstGEP, Q.DL);
 }
 
 Value *llvm::simplifyGEPInst(Type *SrcTy, Value *Ptr, ArrayRef<Value *> Indices,
@@ -5659,14 +5693,29 @@ static Value *simplifyCastInst(unsigned CastOpc, Value *Op, Type *Ty,
     if (Op->getType() == Ty)
       return Op;
 
-  // ptrtoint (ptradd (Ptr, X - ptrtoint(Ptr))) -> X
+  // ptrtoaddr (ptradd (Ptr, X - ptrtoint/ptrtoaddr(Ptr))) -> X
+  // This is also valid for ptrtoint, but only if the (now unused) ptrtoint
+  // instruction is preserved for its provenance exposure side effect. As this
+  // is currently not the case, only fold ptrtoaddr, which does not expose
+  // provenance.
   Value *Ptr, *X;
-  if ((CastOpc == Instruction::PtrToInt || CastOpc == Instruction::PtrToAddr) &&
+  if (CastOpc == Instruction::PtrToAddr &&
       match(Op,
             m_PtrAdd(m_Value(Ptr),
                      m_Sub(m_Value(X), m_PtrToIntOrAddr(m_Deferred(Ptr))))) &&
       X->getType() == Ty && Ty == Q.DL.getIndexType(Ptr->getType()))
     return X;
+
+  // Fold a value-preserving zext/sext of a trunc back to the original value.
+  if (CastOpc == Instruction::ZExt || CastOpc == Instruction::SExt) {
+    if (auto *Trunc = dyn_cast<TruncInst>(Op)) {
+      Value *Src = Trunc->getOperand(0);
+      bool NoWrap = CastOpc == Instruction::ZExt ? Trunc->hasNoUnsignedWrap()
+                                                 : Trunc->hasNoSignedWrap();
+      if (Src->getType() == Ty && NoWrap)
+        return Src;
+    }
+  }
 
   return nullptr;
 }
@@ -5674,6 +5723,22 @@ static Value *simplifyCastInst(unsigned CastOpc, Value *Op, Type *Ty,
 Value *llvm::simplifyCastInst(unsigned CastOpc, Value *Op, Type *Ty,
                               const SimplifyQuery &Q) {
   return ::simplifyCastInst(CastOpc, Op, Ty, Q, RecursionLimit);
+}
+
+static Value *simplifyAddrSpaceCastInst(Value *Op, Type *Ty, bool IsNonNull,
+                                        const SimplifyQuery &Q,
+                                        unsigned MaxRecurse) {
+  if (IsNonNull && isa<ConstantPointerNull>(Op) && Q.getFunction() &&
+      !NullPointerIsDefined(Q.getFunction(),
+                            Op->getType()->getPointerAddressSpace()))
+    return PoisonValue::get(Ty);
+
+  return ::simplifyCastInst(Instruction::AddrSpaceCast, Op, Ty, Q, MaxRecurse);
+}
+
+Value *llvm::simplifyAddrSpaceCastInst(Value *Op, Type *Ty, bool IsNonNull,
+                                       const SimplifyQuery &Q) {
+  return ::simplifyAddrSpaceCastInst(Op, Ty, IsNonNull, Q, RecursionLimit);
 }
 
 /// For the given destination element of a shuffle, peek through shuffles to
@@ -6120,10 +6185,10 @@ static Value *simplifyFMAFMul(Value *Op0, Value *Op1, FastMathFlags FMF,
       if (FMF.noSignedZeros())
         return ConstantFP::getZero(Op0->getType());
       // +normal number * (-)0.0 --> (-)0.0
-      if (Known.SignBit == false)
+      if (Known.getSignBit() == false)
         return Op1;
       // -normal number * (-)0.0 --> -(-)0.0
-      if (Known.SignBit == true)
+      if (Known.getSignBit() == true)
         return foldConstant(Instruction::FNeg, Op1, Q);
     }
   }
@@ -6385,6 +6450,8 @@ static Value *simplifyBinOp(unsigned Opcode, Value *LHS, Value *RHS,
     return simplifyFMulInst(LHS, RHS, FMF, Q, MaxRecurse);
   case Instruction::FDiv:
     return simplifyFDivInst(LHS, RHS, FMF, Q, MaxRecurse);
+  case Instruction::FRem:
+    return simplifyFRemInst(LHS, RHS, FMF, Q, MaxRecurse);
   default:
     return simplifyBinOp(Opcode, LHS, RHS, Q, MaxRecurse);
   }
@@ -6578,7 +6645,7 @@ static Value *simplifyUnaryIntrinsic(Intrinsic::ID IID, Value *Op0,
   switch (IID) {
   case Intrinsic::fabs: {
     KnownFPClass KnownClass = computeKnownFPClass(Op0, fcAllFlags, Q);
-    if (KnownClass.SignBit == false)
+    if (KnownClass.getSignBit() == false)
       return Op0;
 
     if (KnownClass.cannotBeOrderedLessThanZero() &&
@@ -6889,10 +6956,10 @@ static Value *simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
     if (match(Op1, m_Zero()))
       return ConstantInt::getFalse(ReturnType);
 
-    if (!Q.CxtI)
+    const Function *F = Q.getFunction();
+    if (!F)
       break;
 
-    const Function *F = Q.CxtI->getFunction();
     auto *ScalableTy = dyn_cast<ScalableVectorType>(ReturnType);
     Attribute Attr = F->getFnAttribute(Attribute::VScaleRange);
     if (ScalableTy && Attr.isValid()) {
@@ -7279,9 +7346,37 @@ static Value *simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
   return nullptr;
 }
 
+/// interleaveN(extractvalue(deinterleaveN(x), 0), ...,
+///             extractvalue(deinterleaveN(x), N-1)) --> x
+static Value *simplifyIdentityInterleave(Intrinsic::ID IID,
+                                         ArrayRef<Value *> Args) {
+  unsigned Factor = getInterleaveIntrinsicFactor(IID);
+  if (!Factor || Factor != Args.size())
+    return nullptr;
+
+  Intrinsic::ID DeinterleaveID = Intrinsic::getDeinterleaveIntrinsicID(Factor);
+  IntrinsicInst *DI = nullptr;
+  for (unsigned Idx = 0; Idx != Factor; ++Idx) {
+    auto *EV = dyn_cast<ExtractValueInst>(Args[Idx]);
+    if (!EV || EV->getNumIndices() != 1 || *EV->idx_begin() != Idx)
+      return nullptr;
+
+    auto *CurDI = dyn_cast<IntrinsicInst>(EV->getAggregateOperand());
+    if (!CurDI || CurDI->getIntrinsicID() != DeinterleaveID)
+      return nullptr;
+
+    if (!DI)
+      DI = CurDI;
+    else if (DI != CurDI)
+      return nullptr;
+  }
+
+  return DI->getArgOperand(0);
+}
+
 Value *llvm::simplifyIntrinsic(Intrinsic::ID IID, Type *ReturnType,
                                ArrayRef<Value *> Args, FastMathFlags FMF,
-                               const SimplifyQuery &Q, Function *CxtF,
+                               const SimplifyQuery &Q,
                                fp::ExceptionBehavior ExBehavior,
                                RoundingMode Rounding) {
   unsigned NumOperands = Args.size();
@@ -7289,14 +7384,21 @@ Value *llvm::simplifyIntrinsic(Intrinsic::ID IID, Type *ReturnType,
       any_of(Args, IsaPred<PoisonValue>))
     return PoisonValue::get(ReturnType);
 
+  // Defer to ConstantFolding if all args are constants.
+  if (all_of(Args, IsaPred<Constant>))
+    if (Constant *C = ConstantFoldIntrinsic(
+            IID, ArrayRef((Constant *const *)Args.data(), Args.size()),
+            ReturnType, Q.DL, Q.getFunction()))
+      return C;
+
   // Most of the intrinsics with no operands have some kind of side effect.
   // Don't simplify.
   if (!NumOperands) {
     switch (IID) {
     case Intrinsic::vscale: {
-      if (!CxtF)
+      if (!Q.getFunction())
         return nullptr;
-      ConstantRange CR = getVScaleRange(CxtF, 64);
+      ConstantRange CR = getVScaleRange(Q.getFunction(), 64);
       if (const APInt *C = CR.getSingleElement())
         return ConstantInt::get(ReturnType, C->getZExtValue());
       return nullptr;
@@ -7305,6 +7407,9 @@ Value *llvm::simplifyIntrinsic(Intrinsic::ID IID, Type *ReturnType,
       return nullptr;
     }
   }
+
+  if (Value *V = simplifyIdentityInterleave(IID, Args))
+    return V;
 
   if (NumOperands == 1)
     return simplifyUnaryIntrinsic(IID, Args[0], FMF, Q);
@@ -7416,8 +7521,16 @@ Value *llvm::simplifyIntrinsic(Intrinsic::ID IID, Type *ReturnType,
 
     return nullptr;
   }
-  case Intrinsic::vector_splice_left:
   case Intrinsic::vector_splice_right: {
+    // splice.right(splice.left(poison, x, offset), poison, offset) -> x
+    Value *X, *Offset = Args[2];
+    if (match(Args[0], m_Intrinsic<Intrinsic::vector_splice_left>(
+                           m_Poison(), m_Value(X), m_Specific(Offset))) &&
+        isa<PoisonValue>(Args[1]))
+      return X;
+    [[fallthrough]];
+  }
+  case Intrinsic::vector_splice_left: {
     Value *Offset = Args[2];
     auto *Ty = cast<VectorType>(ReturnType);
     if (Q.isUndefValue(Offset))
@@ -7427,8 +7540,9 @@ Value *llvm::simplifyIntrinsic(Intrinsic::ID IID, Type *ReturnType,
     ConstantRange NumElts(
         APInt(BitWidth, Ty->getElementCount().getKnownMinValue()));
     if (Ty->isScalableTy())
-      NumElts = NumElts.multiply(CxtF ? getVScaleRange(CxtF, BitWidth)
-                                      : ConstantRange::getFull(BitWidth));
+      NumElts = NumElts.multiply(Q.getFunction()
+                                     ? getVScaleRange(Q.getFunction(), BitWidth)
+                                     : ConstantRange::getFull(BitWidth));
 
     // If we know Offset > NumElts, simplify to poison.
     ConstantRange CR = computeConstantRangeIncludingKnownBits(Offset, false, Q);
@@ -7510,9 +7624,9 @@ static Value *simplifyIntrinsic(CallBase *Call, ArrayRef<Value *> Args,
       ExBehavior = Constrained->getExceptionBehavior().value_or(ExBehavior);
       Rounding = Constrained->getRoundingMode().value_or(Rounding);
     }
-    return simplifyIntrinsic(IID, ReturnType, Args,
-                             Call->getFastMathFlagsOrNone(), Q,
-                             Call->getFunction(), ExBehavior, Rounding);
+    return simplifyIntrinsic(
+        IID, ReturnType, Args, Call->getFastMathFlagsOrNone(),
+        Q.getWithFunction(Call->getFunction()), ExBehavior, Rounding);
   }
   }
 }
@@ -7520,7 +7634,7 @@ static Value *simplifyIntrinsic(CallBase *Call, ArrayRef<Value *> Args,
 static Value *tryConstantFoldCall(CallBase *Call, ArrayRef<Value *> Args,
                                   const SimplifyQuery &Q) {
   auto *F = Call->getCalledFunction();
-  if (!F || !canConstantFoldCallTo(Call, F))
+  if (!F || !canConstantFoldCallTo(Call, F, Q.TLI))
     return nullptr;
 
   SmallVector<Constant *, 4> ConstantArgs;
@@ -7631,7 +7745,7 @@ static Value *simplifyInstructionWithOperands(Instruction *I,
                                               const SimplifyQuery &SQ,
                                               unsigned MaxRecurse) {
   assert(I->getFunction() && "instruction should be inserted in a function");
-  assert((!SQ.CxtI || SQ.CxtI->getFunction() == I->getFunction()) &&
+  assert((!SQ.getFunction() || SQ.getFunction() == I->getFunction()) &&
          "context instruction should be in the same function");
 
   const SimplifyQuery Q = SQ.CxtI ? SQ : SQ.getWithInstruction(I);
@@ -7754,6 +7868,13 @@ static Value *simplifyInstructionWithOperands(Instruction *I,
 #define HANDLE_CAST_INST(num, opc, clas) case Instruction::opc:
 #include "llvm/IR/Instruction.def"
 #undef HANDLE_CAST_INST
+    if (I->getOpcode() == Instruction::AddrSpaceCast) {
+      return simplifyAddrSpaceCastInst(
+          NewOps[0], I->getType(),
+          Q.IIQ.UseInstrInfo && cast<AddrSpaceCastInst>(I)->hasNonNull(), Q,
+          MaxRecurse);
+    }
+
     return simplifyCastInst(I->getOpcode(), NewOps[0], I->getType(), Q,
                             MaxRecurse);
   case Instruction::Alloca:

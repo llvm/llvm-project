@@ -22,10 +22,14 @@
 
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/GlobalDecl.h"
+#include "clang/AST/Mangle.h"
 #include "clang/AST/TypeBase.h"
 #include "clang/AST/VTableBuilder.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "clang/CodeGenUtils/ItaniumCXXABIUtils.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -357,6 +361,7 @@ void CIRGenItaniumCXXABI::emitCXXStructor(GlobalDecl gd) {
   auto *md = cast<CXXMethodDecl>(gd.getDecl());
   StructorCIRGen cirGenType = getCIRGenToUse(cgm, md);
   const auto *cd = dyn_cast<CXXConstructorDecl>(md);
+  const CXXDestructorDecl *dd = cd ? nullptr : cast<CXXDestructorDecl>(md);
 
   if (cd ? gd.getCtorType() == Ctor_Complete
          : gd.getDtorType() == Dtor_Complete) {
@@ -380,7 +385,19 @@ void CIRGenItaniumCXXABI::emitCXXStructor(GlobalDecl gd) {
 
   auto fn = cgm.codegenCXXStructor(gd);
 
-  cgm.maybeSetTrivialComdat(*md, fn);
+  if (cirGenType == StructorCIRGen::COMDAT) {
+    llvm::SmallString<256> comdatKey;
+    llvm::raw_svector_ostream out(comdatKey);
+    ItaniumMangleContext &mangler =
+        cast<ItaniumMangleContext>(cgm.getCXXABI().getMangleContext());
+    if (dd)
+      mangler.mangleCXXDtorComdat(dd, out);
+    else
+      mangler.mangleCXXCtorComdat(cd, out);
+    fn.setComdat(llvm::StringRef(comdatKey));
+  } else {
+    cgm.maybeSetTrivialComdat(*md, fn);
+  }
 }
 
 void CIRGenItaniumCXXABI::addImplicitStructorParams(CIRGenFunction &cgf,
@@ -738,6 +755,8 @@ static bool typeInfoIsInStandardLibrary(const BuiltinType *ty) {
 #include "clang/Basic/RISCVVTypes.def"
 #define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align) case BuiltinType::Id:
 #include "clang/Basic/AMDGPUTypes.def"
+#define SPIRV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/SPIRVTypes.def"
   case BuiltinType::ShortAccum:
   case BuiltinType::Accum:
   case BuiltinType::LongAccum:
@@ -1233,6 +1252,11 @@ void CIRGenItaniumRTTIBuilder::buildVTablePointer(mlir::Location loc,
   cir::GlobalOp vTable = cgm.createOrReplaceCXXRuntimeVariable(
       loc, vTableName, vtableGlobalTy, cir::GlobalLinkageKind::ExternalLinkage,
       CharUnits::fromQuantity(align));
+  // Note: createOrReplaceCXXRuntimeVariable isn't exactly what classic-codegen
+  // does here: it just does a getOrInsertGlobal at the module level. However,
+  // the above function does MOST of what we want, except it sets the global as
+  // constant, when we don't want that.  So set it here instead.
+  vTable.setConstant(false);
 
   // The vtable address point is 2.
   mlir::Attribute field{};
@@ -1805,7 +1829,7 @@ void CIRGenItaniumCXXABI::emitRethrow(CIRGenFunction &cgf, bool isNoReturn) {
   if (isNoReturn) {
     CIRGenBuilderTy &builder = cgf.getBuilder();
     assert(cgf.currSrcLoc && "expected source location");
-    mlir::Location loc = *cgf.currSrcLoc;
+    mlir::Location loc = cgf.getLoc(*cgf.currSrcLoc);
     insertThrowAndSplit(builder, loc);
   } else {
     cgm.errorNYI("emitRethrow with isNoReturn false");
@@ -2098,58 +2122,6 @@ void CIRGenItaniumCXXABI::emitBadCastCall(CIRGenFunction &cgf,
   emitCallToBadCast(cgf, loc);
 }
 
-// TODO(cir): This could be shared with classic codegen.
-static CharUnits computeOffsetHint(ASTContext &astContext,
-                                   const CXXRecordDecl *src,
-                                   const CXXRecordDecl *dst) {
-  CXXBasePaths paths(/*FindAmbiguities=*/true, /*RecordPaths=*/true,
-                     /*DetectVirtual=*/false);
-
-  // If Dst is not derived from Src we can skip the whole computation below and
-  // return that Src is not a public base of Dst.  Record all inheritance paths.
-  if (!dst->isDerivedFrom(src, paths))
-    return CharUnits::fromQuantity(-2);
-
-  unsigned numPublicPaths = 0;
-  CharUnits offset;
-
-  // Now walk all possible inheritance paths.
-  for (const CXXBasePath &path : paths) {
-    if (path.Access != AS_public) // Ignore non-public inheritance.
-      continue;
-
-    ++numPublicPaths;
-
-    for (const CXXBasePathElement &pathElement : path) {
-      // If the path contains a virtual base class we can't give any hint.
-      // -1: no hint.
-      if (pathElement.Base->isVirtual())
-        return CharUnits::fromQuantity(-1);
-
-      if (numPublicPaths > 1) // Won't use offsets, skip computation.
-        continue;
-
-      // Accumulate the base class offsets.
-      const ASTRecordLayout &L =
-          astContext.getASTRecordLayout(pathElement.Class);
-      offset += L.getBaseClassOffset(
-          pathElement.Base->getType()->getAsCXXRecordDecl());
-    }
-  }
-
-  // -2: Src is not a public base of Dst.
-  if (numPublicPaths == 0)
-    return CharUnits::fromQuantity(-2);
-
-  // -3: Src is a multiple public base type but never a virtual base type.
-  if (numPublicPaths > 1)
-    return CharUnits::fromQuantity(-3);
-
-  // Otherwise, the Src type is a unique public nonvirtual base type of Dst.
-  // Return the offset of Src from the origin of Dst.
-  return offset;
-}
-
 static cir::FuncOp getItaniumDynamicCastFn(CIRGenFunction &cgf) {
   // Prototype:
   // void *__dynamic_cast(const void *sub,
@@ -2330,7 +2302,8 @@ static cir::DynamicCastInfoAttr emitDynamicCastInfo(CIRGenFunction &cgf,
 
   const CXXRecordDecl *srcDecl = srcRecordTy->getAsCXXRecordDecl();
   const CXXRecordDecl *destDecl = destRecordTy->getAsCXXRecordDecl();
-  CharUnits offsetHint = computeOffsetHint(cgf.getContext(), srcDecl, destDecl);
+  CharUnits offsetHint =
+      CodeGenUtils::computeOffsetHint(cgf.getContext(), srcDecl, destDecl);
 
   mlir::Type ptrdiffTy = cgf.convertType(cgf.getContext().getPointerDiffType());
   auto offsetHintAttr = cir::IntAttr::get(ptrdiffTy, offsetHint.getQuantity());

@@ -37,6 +37,7 @@ class ThreadStateTestCase(TestBase):
 
     @skipIfDarwin  # rdar://28557237
     @skipIfLinux  # llvm.org/pr15824 process interrupt stop reason is trace instead of signal sometimes
+    @skipIfWasm  # llvm.org/pr15824 the interrupting single-step's trap is reported as trace, not signal
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24668: Breakpoints not resolved correctly",

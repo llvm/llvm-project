@@ -26,6 +26,8 @@
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/xxhash.h"
 
+#include <limits>
+
 #if defined(__APPLE__)
 #include <sys/mman.h>
 
@@ -298,10 +300,10 @@ void RebaseSection::writeTo(uint8_t *buf) const {
   memcpy(buf, contents.data(), contents.size());
 }
 
-NonLazyPointerSectionBase::NonLazyPointerSectionBase(const char *segname,
-                                                     const char *name)
-    : SyntheticSection(segname, name) {
+GotSection::GotSection()
+    : SyntheticSection(segment_names::data, section_names::got) {
   align = target->wordSize;
+  flags = S_NON_LAZY_SYMBOL_POINTERS;
 }
 
 void macho::addNonLazyBindingEntries(const Symbol *sym,
@@ -334,8 +336,9 @@ void macho::addNonLazyBindingEntries(const Symbol *sym,
   }
 }
 
-void NonLazyPointerSectionBase::addEntry(Symbol *sym) {
+void GotSection::addEntry(Symbol *sym) {
   if (entries.insert(sym)) {
+    // Every symbol has at most one non-lazy pointer slot.
     assert(!sym->isInGot());
     sym->gotIndex = entries.size() - 1;
 
@@ -380,7 +383,7 @@ void macho::writeChainedFixup(uint8_t *buf, const Symbol *sym, int64_t addend) {
     writeChainedRebase(buf, sym->getVA() + addend);
 }
 
-void NonLazyPointerSectionBase::writeTo(uint8_t *buf) const {
+void GotSection::writeTo(uint8_t *buf) const {
   if (config->emitChainedFixups) {
     for (const auto &[i, entry] : llvm::enumerate(entries))
       writeChainedFixup(&buf[i * target->wordSize], entry, 0);
@@ -389,17 +392,6 @@ void NonLazyPointerSectionBase::writeTo(uint8_t *buf) const {
       if (auto *defined = dyn_cast<Defined>(entry))
         write64le(&buf[i * target->wordSize], defined->getVA());
   }
-}
-
-GotSection::GotSection()
-    : NonLazyPointerSectionBase(segment_names::data, section_names::got) {
-  flags = S_NON_LAZY_SYMBOL_POINTERS;
-}
-
-TlvPointerSection::TlvPointerSection()
-    : NonLazyPointerSectionBase(segment_names::data,
-                                section_names::threadPtrs) {
-  flags = S_THREAD_LOCAL_VARIABLE_POINTERS;
 }
 
 BindingSection::BindingSection()
@@ -897,15 +889,19 @@ StringRef ObjCStubsSection::getMethname(Symbol *sym) {
   return methname;
 }
 
+size_t ObjCStubsSection::getStubSize() const {
+  return config->objcStubsMode == ObjCStubsMode::fast
+             ? target->objcStubsFastSize
+             : target->objcStubsSmallSize;
+}
+
 void ObjCStubsSection::addEntry(Symbol *sym) {
   StringRef methname = getMethname(sym);
   // We create a selref entry for each unique methname.
   if (!ObjCSelRefsHelper::getSelRef(methname))
     ObjCSelRefsHelper::makeSelRef(methname);
 
-  auto stubSize = config->objcStubsMode == ObjCStubsMode::fast
-                      ? target->objcStubsFastSize
-                      : target->objcStubsSmallSize;
+  size_t stubSize = getStubSize();
   Defined *newSym = replaceSymbol<Defined>(
       sym, sym->getName(), nullptr, isec,
       /*value=*/symbols.size() * stubSize,
@@ -938,10 +934,22 @@ void ObjCStubsSection::setUp() {
 }
 
 uint64_t ObjCStubsSection::getSize() const {
-  auto stubSize = config->objcStubsMode == ObjCStubsMode::fast
-                      ? target->objcStubsFastSize
-                      : target->objcStubsSmallSize;
-  return stubSize * symbols.size();
+  return getStubSize() * symbols.size();
+}
+
+void ObjCStubsSection::sortSymbols(
+    const llvm::DenseMap<const Symbol *, int> &priorities) {
+  llvm::stable_sort(symbols, [&](const Defined *a, const Defined *b) {
+    auto priority = [&](const Defined *sym) {
+      auto it = priorities.find(sym);
+      return it == priorities.end() ? std::numeric_limits<int>::max()
+                                    : it->second;
+    };
+    return priority(a) < priority(b);
+  });
+  size_t stubSize = getStubSize();
+  for (auto [idx, sym] : llvm::enumerate(symbols))
+    sym->value = idx * stubSize;
 }
 
 void ObjCStubsSection::writeTo(uint8_t *buf) const {
@@ -1221,7 +1229,6 @@ void SymtabSection::emitStabs() {
     if (auto *defined = dyn_cast<Defined>(sym)) {
       // Excluded symbols should have been filtered out in finalizeContents().
       assert(defined->includeInSymtab);
-
       if (defined->isAbsolute())
         continue;
 
@@ -1245,6 +1252,14 @@ void SymtabSection::emitStabs() {
 
   llvm::stable_sort(symbolsNeedingStabs, llvm::less_second());
 
+  llvm::MapVector<ObjFile *, std::string> stabFiles;
+  for (const auto &[defined, fileId] : symbolsNeedingStabs) {
+    ObjFile *file = cast<ObjFile>(defined->originalIsec->getFile());
+    stabFiles[file] = "";
+  }
+  parallelForEach(stabFiles,
+                  [&](auto &it) { it.second = it.first->sourceFile(); });
+
   // Emit STABS symbols so that dsymutil and/or the debugger can map address
   // regions in the final binary to the source and object files from which they
   // originated.
@@ -1264,7 +1279,7 @@ void SymtabSection::emitStabs() {
         emitEndSourceStab();
       lastFile = file;
 
-      emitBeginSourceStab(file->sourceFile());
+      emitBeginSourceStab(stabFiles[file]);
       emitObjectFileStab(file);
     }
 
@@ -1479,25 +1494,20 @@ IndirectSymtabSection::IndirectSymtabSection()
                       section_names::indirectSymbolTable) {}
 
 uint32_t IndirectSymtabSection::getNumSymbols() const {
-  uint32_t size = in.got->getEntries().size() +
-                  in.tlvPointers->getEntries().size() +
-                  in.stubs->getEntries().size();
+  uint32_t size = in.got->getEntries().size() + in.stubs->getEntries().size();
   if (!config->emitChainedFixups)
     size += in.stubs->getEntries().size();
   return size;
 }
 
 bool IndirectSymtabSection::isNeeded() const {
-  return in.got->isNeeded() || in.tlvPointers->isNeeded() ||
-         in.stubs->isNeeded();
+  return in.got->isNeeded() || in.stubs->isNeeded();
 }
 
 void IndirectSymtabSection::finalizeContents() {
   uint32_t off = 0;
   in.got->reserved1 = off;
   off += in.got->getEntries().size();
-  in.tlvPointers->reserved1 = off;
-  off += in.tlvPointers->getEntries().size();
   in.stubs->reserved1 = off;
   if (in.lazyPointers) {
     off += in.stubs->getEntries().size();
@@ -1514,10 +1524,6 @@ static uint32_t indirectValue(const Symbol *sym) {
 void IndirectSymtabSection::writeTo(uint8_t *buf) const {
   uint32_t off = 0;
   for (const Symbol *sym : in.got->getEntries()) {
-    write32le(buf + off * sizeof(uint32_t), indirectValue(sym));
-    ++off;
-  }
-  for (const Symbol *sym : in.tlvPointers->getEntries()) {
     write32le(buf + off * sizeof(uint32_t), indirectValue(sym));
     ++off;
   }

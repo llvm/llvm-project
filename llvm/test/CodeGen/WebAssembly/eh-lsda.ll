@@ -1,9 +1,9 @@
-; RUN: llc < %s --mtriple=wasm32-unknown-unknown -wasm-disable-explicit-locals -wasm-keep-registers -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling | FileCheck %s -check-prefixes=CHECK,NOPIC -DPTR=32
-; RUN: llc < %s --mtriple=wasm64-unknown-unknown -wasm-disable-explicit-locals -wasm-keep-registers -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling | FileCheck %s -check-prefixes=CHECK,NOPIC -DPTR=64
-; RUN: llc < %s --mtriple=wasm32-unknown-emscripten -wasm-disable-explicit-locals -wasm-keep-registers -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling | FileCheck %s -check-prefixes=CHECK,NOPIC -DPTR=32
-; RUN: llc < %s --mtriple=wasm64-unknown-emscripten -wasm-disable-explicit-locals -wasm-keep-registers -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling | FileCheck %s -check-prefixes=CHECK,NOPIC -DPTR=64
-; RUN: llc < %s --mtriple=wasm32-unknown-emscripten -wasm-disable-explicit-locals -wasm-keep-registers -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling -relocation-model=pic | FileCheck %s -check-prefixes=CHECK,PIC -DPTR=32
-; RUN: llc < %s --mtriple=wasm64-unknown-emscripten -wasm-disable-explicit-locals -wasm-keep-registers -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling -relocation-model=pic | FileCheck %s -check-prefixes=CHECK,PIC -DPTR=64
+; RUN: llc < %s --mtriple=wasm32-unknown-unknown -wasm-disable-explicit-locals -wasm-keep-registers -exception-model=wasm -mattr=+exception-handling | FileCheck %s -check-prefixes=CHECK,NOPIC -DPTR=32
+; RUN: llc < %s --mtriple=wasm64-unknown-unknown -wasm-disable-explicit-locals -wasm-keep-registers -exception-model=wasm -mattr=+exception-handling | FileCheck %s -check-prefixes=CHECK,NOPIC -DPTR=64
+; RUN: llc < %s --mtriple=wasm32-unknown-emscripten -wasm-disable-explicit-locals -wasm-keep-registers -exception-model=wasm -mattr=+exception-handling | FileCheck %s -check-prefixes=CHECK,NOPIC -DPTR=32
+; RUN: llc < %s --mtriple=wasm64-unknown-emscripten -wasm-disable-explicit-locals -wasm-keep-registers -exception-model=wasm -mattr=+exception-handling | FileCheck %s -check-prefixes=CHECK,NOPIC -DPTR=64
+; RUN: llc < %s --mtriple=wasm32-unknown-emscripten -wasm-disable-explicit-locals -wasm-keep-registers -exception-model=wasm -mattr=+exception-handling -relocation-model=pic | FileCheck %s -check-prefixes=CHECK,PIC -DPTR=32
+; RUN: llc < %s --mtriple=wasm64-unknown-emscripten -wasm-disable-explicit-locals -wasm-keep-registers -exception-model=wasm -mattr=+exception-handling -relocation-model=pic | FileCheck %s -check-prefixes=CHECK,PIC -DPTR=64
 
 @_ZTIi = external constant ptr
 @_ZTIf = external constant ptr
@@ -251,6 +251,6 @@ declare i32 @llvm.wasm.get.ehselector(token) #0
 declare void @__cxa_rethrow()
 declare ptr @__cxa_begin_catch(ptr)
 declare void @__cxa_end_catch()
-declare i32 @__gxx_wasm_personality_v0(...)
+declare i32 @__gxx_wasm_personality_v0(ptr)
 
 attributes #0 = { nounwind }

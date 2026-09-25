@@ -30,7 +30,7 @@ end program
 ! CHECK:           %[[VAL_7:.*]] = fir.shape %[[VAL_5]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_8:.*]] = fir.volatile_cast %[[VAL_6]] : (!fir.ref<!fir.array<10xi32>>) -> !fir.ref<!fir.array<10xi32>, volatile>
 ! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_8]](%[[VAL_7]]) {{.+}} : (!fir.ref<!fir.array<10xi32>, volatile>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>, volatile>, !fir.ref<!fir.array<10xi32>, volatile>)
-! CHECK:           %[[VAL_10:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFEi"}
+! CHECK:           %[[VAL_10:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFEi"}>
 ! CHECK:           %[[VAL_11:.*]] = fir.volatile_cast %[[VAL_10]] : (!fir.ref<i32>) -> !fir.ref<i32, volatile>
 ! CHECK:           %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_11]] {{.+}} : (!fir.ref<i32, volatile>) -> (!fir.ref<i32, volatile>, !fir.ref<i32, volatile>)
 ! CHECK:           %[[VAL_13:.*]] = fir.volatile_cast %[[VAL_12]]#0 : (!fir.ref<i32, volatile>) -> !fir.ref<i32>
@@ -76,7 +76,7 @@ end program
 
 ! CHECK-LABEL:   func.func private @_QFPdeclared_volatile_in_this_scope(
 ! CHECK-SAME:                                                           %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<!fir.array<?xi32>> {fir.bindc_name = "v"},
-! CHECK-SAME:                                                           %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i32> {fir.bindc_name = "n"}) attributes {{.+}} {
+! CHECK-SAME:                                                           %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i32> {fir.bindc_name = "n", fir.read_only}) attributes {{.+}} {
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 1 : i32
 ! CHECK:           %[[VAL_3:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_4:.*]] = fir.dummy_scope : !fir.dscope

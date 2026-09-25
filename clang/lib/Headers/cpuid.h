@@ -222,6 +222,9 @@
 #define bit_AVX10         0x00080000
 #define bit_APXF          0x00200000
 
+/* Features in %ecx for leaf 0x24 sub-leaf 1 */
+#define bit_AVX10_V2_AUX 0x00000008
+
 /* Features in %eax for leaf 13 sub-leaf 1 */
 #define bit_XSAVEOPT    0x00000001
 #define bit_XSAVEC      0x00000002
@@ -286,16 +289,16 @@
 /// This intrinsic corresponds to the <c> CPUID </c> instruction.
 ///
 /// \param __leaf
-///    \a __leaf can be either 0x0 or 0x8000000. If \a __leaf == 0x0, the
+///    \a __leaf can be either 0x0 or 0x80000000. If \a __leaf == 0x0, the
 ///    highest supported value for basic \c CPUID information is returned.
-///    If \a __leaf == 0x8000000, the highest supported value for extended
+///    If \a __leaf == 0x80000000, the highest supported value for extended
 ///    \c CPUID information is returned.
 /// \param __sig
 ///    If the \a __sig pointer is non-null, the first four bytes of the
 ///    signature (as found in the \c EBX register) are returned in the
 ///    location pointed to by \a __sig.
-/// \returns Returns 0 if \c CPUID is supported; otherwise returns the value
-///    that \c CPUID returns in the \c EAX register.
+/// \returns Returns 0 if \c CPUID is not supported; otherwise returns the
+///    value that \c CPUID returns in the \c EAX register.
 static __inline unsigned int __get_cpuid_max (unsigned int __leaf,
                                               unsigned int *__sig)
 {

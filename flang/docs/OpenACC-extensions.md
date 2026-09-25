@@ -8,11 +8,6 @@
 
 # OpenACC Extensions in Flang
 
-```{contents}
----
-local:
----
-```
 
 Flang is more lenient than the OpenACC specification requires for purposes of
 compatibility. This document describes extensions to the OpenACC specification.
@@ -34,6 +29,13 @@ These extensions require no flag.
 * The `if` clause accepts scalar integer expressions in addition to scalar
   logical expressions.
 * `!$acc routine` directives can be placed at the top level.
+* `!$acc routine` directives can be placed directly within an interface block
+  (i.e. as an interface-specification, such as preceding the interface body they
+  name). The OpenACC specification only permits the named `routine` directive in
+  the specification part of a subroutine, function, or module, and the unnamed
+  form within an interface body; Flang additionally accepts a `routine`
+  directive between the `INTERFACE` statement and the interface bodies, applying
+  a named directive to the interface body it names.
 * `!$acc cache` directives accept scalar variables.
 * `!$acc cache` directives are accepted outside of a loop construct.
 * The `!$acc declare` directive accepts assumed-size array arguments for
@@ -51,6 +53,23 @@ These extensions require no flag.
   `-Wno-portability`).
 
 ## Extensions enabled by default
+
+### `-fopenacc-combined-loop-firstprivate` — combined loop firstprivate
+
+`firstprivate` is a compute-construct clause, not a `loop` clause.  On a
+combined `parallel loop` or `serial loop`, Flang keeps the explicit clause on
+the compute construct and also attaches an implicit `firstprivate` on the
+associated `acc.loop` so each thread gets its own initialized copy.
+
+This applies to all types (scalars, arrays, derived types, etc.) and all
+parallelism modes (`independent`, `seq`, `auto`), consistent with how `private`
+and `reduction` are handled on combined constructs.  `kernels loop` is not
+affected because `kernels` cannot take `firstprivate`.  Standalone `acc loop`
+and non-combined `parallel` / `serial` with separate inner `acc loop` are not
+affected.
+
+Disable with `-fno-openacc-combined-loop-firstprivate` to keep firstprivate
+only on the compute construct (spec behavior).
 
 ### `-fopenacc-multiple-names-in-routine` — `!$acc routine(<name>[, <name>]*) <clause-list>`
 

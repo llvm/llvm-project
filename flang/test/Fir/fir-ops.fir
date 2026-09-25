@@ -478,37 +478,37 @@ fir.type_info @abstract_dispatch_tbl abstract : !fir.type<abstract_dispatch_tbl{
 // CHECK-SAME: [[VAL_151:%.*]]: complex<f128>, [[VAL_152:%.*]]: complex<f128>) {
 func.func @compare_complex(%a : complex<f128>, %b : complex<f128>) {
 
-// CHECK: [[VAL_153:%.*]] = fir.cmpc "false", [[VAL_151]], [[VAL_152]] {fastmath = {{.*}}} : complex<f128>
-// CHECK: [[VAL_154:%.*]] = fir.cmpc "oeq", [[VAL_151]], [[VAL_152]] {fastmath = {{.*}}} : complex<f128>
-// CHECK: [[VAL_155:%.*]] = fir.cmpc "ogt", [[VAL_151]], [[VAL_152]] {fastmath = {{.*}}} : complex<f128>
-// CHECK: [[VAL_156:%.*]] = fir.cmpc "oge", [[VAL_151]], [[VAL_152]] {fastmath = {{.*}}} : complex<f128>
+// CHECK: [[VAL_153:%.*]] = fir.cmpc "false", [[VAL_151]], [[VAL_152]] <{fastmath = {{.*}>}} : complex<f128>
+// CHECK: [[VAL_154:%.*]] = fir.cmpc "oeq", [[VAL_151]], [[VAL_152]] <{fastmath = {{.*}>}} : complex<f128>
+// CHECK: [[VAL_155:%.*]] = fir.cmpc "ogt", [[VAL_151]], [[VAL_152]] <{fastmath = {{.*}>}} : complex<f128>
+// CHECK: [[VAL_156:%.*]] = fir.cmpc "oge", [[VAL_151]], [[VAL_152]] <{fastmath = {{.*}>}} : complex<f128>
   %d0 = fir.cmpc "false", %a, %b : complex<f128>
   %d1 = fir.cmpc "oeq", %a, %b : complex<f128>
   %d2 = fir.cmpc "ogt", %a, %b : complex<f128>
   %d3 = fir.cmpc "oge", %a, %b : complex<f128>
 
-// CHECK: [[VAL_157:%.*]] = fir.cmpc "olt", [[VAL_151]], [[VAL_152]] {fastmath = {{.*}}} : complex<f128>
-// CHECK: [[VAL_158:%.*]] = fir.cmpc "ole", [[VAL_151]], [[VAL_152]] {fastmath = {{.*}}} : complex<f128>
-// CHECK: [[VAL_159:%.*]] = fir.cmpc "one", [[VAL_151]], [[VAL_152]] {fastmath = {{.*}}} : complex<f128>
-// CHECK: [[VAL_160:%.*]] = fir.cmpc "ord", [[VAL_151]], [[VAL_152]] {fastmath = {{.*}}} : complex<f128>
+// CHECK: [[VAL_157:%.*]] = fir.cmpc "olt", [[VAL_151]], [[VAL_152]] <{fastmath = {{.*}>}} : complex<f128>
+// CHECK: [[VAL_158:%.*]] = fir.cmpc "ole", [[VAL_151]], [[VAL_152]] <{fastmath = {{.*}>}} : complex<f128>
+// CHECK: [[VAL_159:%.*]] = fir.cmpc "one", [[VAL_151]], [[VAL_152]] <{fastmath = {{.*}>}} : complex<f128>
+// CHECK: [[VAL_160:%.*]] = fir.cmpc "ord", [[VAL_151]], [[VAL_152]] <{fastmath = {{.*}>}} : complex<f128>
   %a0 = fir.cmpc "olt", %a, %b : complex<f128>
   %a1 = fir.cmpc "ole", %a, %b : complex<f128>
   %a2 = fir.cmpc "one", %a, %b : complex<f128>
   %a3 = fir.cmpc "ord", %a, %b : complex<f128>
 
-// CHECK: [[VAL_161:%.*]] = fir.cmpc "ueq", [[VAL_151]], [[VAL_152]] {fastmath = {{.*}}} : complex<f128>
-// CHECK: [[VAL_162:%.*]] = fir.cmpc "ugt", [[VAL_151]], [[VAL_152]] {fastmath = {{.*}}} : complex<f128>
-// CHECK: [[VAL_163:%.*]] = fir.cmpc "uge", [[VAL_151]], [[VAL_152]] {fastmath = {{.*}}} : complex<f128>
-// CHECK: [[VAL_164:%.*]] = fir.cmpc "ult", [[VAL_151]], [[VAL_152]] {fastmath = {{.*}}} : complex<f128>
+// CHECK: [[VAL_161:%.*]] = fir.cmpc "ueq", [[VAL_151]], [[VAL_152]] <{fastmath = {{.*}>}} : complex<f128>
+// CHECK: [[VAL_162:%.*]] = fir.cmpc "ugt", [[VAL_151]], [[VAL_152]] <{fastmath = {{.*}>}} : complex<f128>
+// CHECK: [[VAL_163:%.*]] = fir.cmpc "uge", [[VAL_151]], [[VAL_152]] <{fastmath = {{.*}>}} : complex<f128>
+// CHECK: [[VAL_164:%.*]] = fir.cmpc "ult", [[VAL_151]], [[VAL_152]] <{fastmath = {{.*}>}} : complex<f128>
   %b0 = fir.cmpc "ueq", %a, %b : complex<f128>
   %b1 = fir.cmpc "ugt", %a, %b : complex<f128>
   %b2 = fir.cmpc "uge", %a, %b : complex<f128>
   %b3 = fir.cmpc "ult", %a, %b : complex<f128>
 
-// CHECK: [[VAL_165:%.*]] = fir.cmpc "ule", [[VAL_151]], [[VAL_152]] {fastmath = {{.*}}} : complex<f128>
-// CHECK: [[VAL_166:%.*]] = fir.cmpc "une", [[VAL_151]], [[VAL_152]] {fastmath = {{.*}}} : complex<f128>
-// CHECK: [[VAL_167:%.*]] = fir.cmpc "uno", [[VAL_151]], [[VAL_152]] {fastmath = {{.*}}} : complex<f128>
-// CHECK: [[VAL_168:%.*]] = fir.cmpc "true", [[VAL_151]], [[VAL_152]] {fastmath = {{.*}}} : complex<f128>
+// CHECK: [[VAL_165:%.*]] = fir.cmpc "ule", [[VAL_151]], [[VAL_152]] <{fastmath = {{.*}>}} : complex<f128>
+// CHECK: [[VAL_166:%.*]] = fir.cmpc "une", [[VAL_151]], [[VAL_152]] <{fastmath = {{.*}>}} : complex<f128>
+// CHECK: [[VAL_167:%.*]] = fir.cmpc "uno", [[VAL_151]], [[VAL_152]] <{fastmath = {{.*}>}} : complex<f128>
+// CHECK: [[VAL_168:%.*]] = fir.cmpc "true", [[VAL_151]], [[VAL_152]] <{fastmath = {{.*}>}} : complex<f128>
   %c0 = fir.cmpc "ule", %a, %b : complex<f128>
   %c1 = fir.cmpc "une", %a, %b : complex<f128>
   %c2 = fir.cmpc "uno", %a, %b : complex<f128>
@@ -658,27 +658,8 @@ func.func @test_misc_ops(%arr1 : !fir.ref<!fir.array<?x?xf32>>, %m : index, %n :
   %arr3 = fir.insert_on_range %arr2, %c1_i32 from (2) to (9) : (!fir.array<10xi32>, i32) -> !fir.array<10xi32>
   fir.call @noret1(%arr3) : (!fir.array<10xi32>) -> ()
 
-  // CHECK: [[SHAPE:%.*]] = fir.shape_shift [[INDXM:%.*]], [[INDXN:%.*]], [[INDXO:%.*]], [[INDXP:%.*]] : (index, index, index, index) -> !fir.shapeshift<2>
-  // CHECK: [[AV1:%.*]] = fir.array_load [[ARR1]]([[SHAPE]]) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shapeshift<2>) -> !fir.array<?x?xf32>
-  // CHECK: [[FVAL:%.*]] = fir.array_fetch [[AV1]], [[I10]], [[J20]] : (!fir.array<?x?xf32>, index, index) -> f32
-  // CHECK: [[AV2:%.*]] = fir.array_update [[AV1]], [[FVAL]], [[I10]], [[J20]] : (!fir.array<?x?xf32>, f32, index, index) -> !fir.array<?x?xf32>
-  // CHECK: fir.array_merge_store [[AV1]], [[AV2]] to [[ARR1]] : !fir.array<?x?xf32>, !fir.array<?x?xf32>, !fir.ref<!fir.array<?x?xf32>>
+  // CHECK: fir.shape_shift [[INDXM]], [[INDXN]], [[INDXO]], [[INDXP]] : (index, index, index, index) -> !fir.shapeshift<2>
   %s = fir.shape_shift %m, %n, %o, %p : (index, index, index, index) -> !fir.shapeshift<2>
-  %av1 = fir.array_load %arr1(%s) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shapeshift<2>) -> !fir.array<?x?xf32>
-  %f = fir.array_fetch %av1, %i10, %j20 : (!fir.array<?x?xf32>, index, index) -> f32
-  %av2 = fir.array_update %av1, %f, %i10, %j20 : (!fir.array<?x?xf32>, f32, index, index) -> !fir.array<?x?xf32>
-  fir.array_merge_store %av1, %av2 to %arr1 : !fir.array<?x?xf32>, !fir.array<?x?xf32>, !fir.ref<!fir.array<?x?xf32>>
-
-  // CHECK: [[AV3:%.*]] = fir.array_load [[ARR1]]([[SHAPE]]) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shapeshift<2>) -> !fir.array<?x?xf32>
-  // CHECK: [[FVAL2:%.*]] = fir.array_fetch [[AV3]], [[I10]], [[J20]] : (!fir.array<?x?xf32>, index, index) -> f32
-  // CHECK: [[AV4:%.*]]:2 = fir.array_modify [[AV3]], [[I10]], [[J20]] : (!fir.array<?x?xf32>, index, index) -> (!fir.ref<f32>, !fir.array<?x?xf32>)
-  // CHECK: fir.store [[FVAL2]] to [[AV4]]#0 : !fir.ref<f32>
-  // CHECK: fir.array_merge_store [[AV3]], [[AV4]]#1 to [[ARR1]] : !fir.array<?x?xf32>, !fir.array<?x?xf32>, !fir.ref<!fir.array<?x?xf32>>
-  %av3 = fir.array_load %arr1(%s) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shapeshift<2>) -> !fir.array<?x?xf32>
-  %f2 = fir.array_fetch %av3, %i10, %j20 : (!fir.array<?x?xf32>, index, index) -> f32
-  %addr, %av4 = fir.array_modify %av3, %i10, %j20 : (!fir.array<?x?xf32>, index, index) -> (!fir.ref<f32>, !fir.array<?x?xf32>)
-  fir.store %f2 to %addr : !fir.ref<f32>
-  fir.array_merge_store %av3, %av4 to %arr1 : !fir.array<?x?xf32>, !fir.array<?x?xf32>, !fir.ref<!fir.array<?x?xf32>>
   return
 }
 
@@ -805,27 +786,12 @@ func.func @llvm_ptr_load_store_coordinate(%arg0: !fir.ref<tuple<!fir.ref<!fir.bo
   return %1 : !fir.ref<!fir.box<!fir.ptr<f32>>>
 }
 
-func.func @array_access_ops(%a : !fir.ref<!fir.array<?x?xf32>>) {
-  %c1 = arith.constant 1 : index
-  %n = arith.constant 0 : index
-  %m = arith.constant 50 : index
-  %s = fir.shape %n, %m : (index, index) -> !fir.shape<2>
-  %v = fir.array_load %a(%s) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>) -> !fir.array<?x?xf32>
-  %p = fir.array_access %v, %c1, %c1 : (!fir.array<?x?xf32>, index, index) -> !fir.ref<f32>
-  // CHECK: %{{.*}} = fir.array_access %{{.*}}, %{{.*}}, %{{.*}} : (!fir.array<?x?xf32>, index, index) -> !fir.ref<f32>
-  return
-}
-
-func.func @array_amend_ops(%a : !fir.ref<!fir.array<?x?xf32>>) {
-  %c1 = arith.constant 1 : index
-  %n = arith.constant 0 : index
-  %m = arith.constant 50 : index
-  %s = fir.shape %n, %m : (index, index) -> !fir.shape<2>
-  %v = fir.array_load %a(%s) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>) -> !fir.array<?x?xf32>
-  %p = fir.array_access %v, %c1, %c1 : (!fir.array<?x?xf32>, index, index) -> !fir.ref<f32>
-  %res = fir.array_amend %v, %p : (!fir.array<?x?xf32>, !fir.ref<f32>) -> !fir.array<?x?xf32>
-  // CHECK: %{{.*}} = fir.array_amend %{{.*}}, %{{.*}} : (!fir.array<?x?xf32>, !fir.ref<f32>) -> !fir.array<?x?xf32>
-  return
+// CHECK-LABEL: func @load_invariant(
+// CHECK-SAME:  %[[ARG0:.*]]: !fir.ref<i32>)
+func.func @load_invariant(%arg0: !fir.ref<i32>) -> i32 {
+  // CHECK-NEXT: %[[VAL:.*]] = fir.load %[[ARG0]] <{invariant}> : !fir.ref<i32>
+  %0 = fir.load %arg0 {invariant} : !fir.ref<i32>
+  return %0 : i32
 }
 
 func.func private @dispatch(%arg0: !fir.class<!fir.type<dispatch_derived1{a:i32,b:i32}>>, %arg1: i32) -> () {
@@ -1128,6 +1094,27 @@ func.func @test_logical_ops(%l1: !fir.logical<4>, %l2: !fir.logical<4>, %i1: i32
   %6 = fir.eqv %i1, %i2 : i32
 // CHECK: %{{.*}} = fir.neqv %[[I1]], %[[I2]] : i32
   %7 = fir.neqv %i1, %i2 : i32
+  return
+}
+
+// CHECK-LABEL: @test_create_box(
+func.func @test_create_box(%arg0: !fir.heap<!fir.array<?xcomplex<f32>>>, %lb: index, %ext: index, %sm: index) {
+  // CHECK: fir.create_box %{{.*}} lbs(%{{.*}}) extents(%{{.*}}) strides(%{{.*}}) : (!fir.heap<!fir.array<?xcomplex<f32>>>, index, index, index) -> !fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>
+  %0 = fir.create_box %arg0 lbs(%lb) extents(%ext) strides(%sm) : (!fir.heap<!fir.array<?xcomplex<f32>>>, index, index, index) -> !fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>
+  return
+}
+
+// CHECK-LABEL: @test_create_box_pointer(
+func.func @test_create_box_pointer(%arg0: !fir.ptr<!fir.array<?xf32>>, %lb: index, %ext: index, %sm: index) {
+  // CHECK: fir.create_box %{{.*}} lbs(%{{.*}}) extents(%{{.*}}) strides(%{{.*}}) : (!fir.ptr<!fir.array<?xf32>>, index, index, index) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
+  %0 = fir.create_box %arg0 lbs(%lb) extents(%ext) strides(%sm) : (!fir.ptr<!fir.array<?xf32>>, index, index, index) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
+  return
+}
+
+// CHECK-LABEL: @test_create_box_2d(
+func.func @test_create_box_2d(%arg0: !fir.ref<!fir.array<?x?xf32>>, %lb0: index, %ext0: index, %sm0: index, %lb1: index, %ext1: index, %sm1: index) {
+  // CHECK: fir.create_box %{{.*}} lbs(%{{.*}}, %{{.*}}) extents(%{{.*}}, %{{.*}}) strides(%{{.*}}, %{{.*}}) : (!fir.ref<!fir.array<?x?xf32>>, index, index, index, index, index, index) -> !fir.box<!fir.array<?x?xf32>>
+  %0 = fir.create_box %arg0 lbs(%lb0, %lb1) extents(%ext0, %ext1) strides(%sm0, %sm1) : (!fir.ref<!fir.array<?x?xf32>>, index, index, index, index, index, index) -> !fir.box<!fir.array<?x?xf32>>
   return
 }
 

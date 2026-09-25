@@ -2,7 +2,7 @@
 
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fsyntax-only -verify %s
 // RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -fsyntax-only -fcuda-is-device -verify %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fsyntax-only -fcuda-is-device -verify %s
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fsyntax-only -fcuda-is-device -verify %s
 // RUN: %clang_cc1 -triple spirv64-amd-amdhsa -fsyntax-only -fcuda-is-device -verify %s
 
 // Tests that no ambiguities are diagnosed when resolving addresses of

@@ -1,5 +1,5 @@
-; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=bonaire -filetype=null %s 2>&1 | FileCheck -implicit-check-not=error %s
-; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -filetype=null %s 2>&1 | FileCheck -implicit-check-not=error %s
+; RUN: not llc -mtriple=amdgpu7.04-amd-amdhsa -filetype=null %s 2>&1 | FileCheck -implicit-check-not=error %s
+; RUN: not llc -mtriple=amdgpu12.50-amd-amdhsa -filetype=null %s 2>&1 | FileCheck -implicit-check-not=error %s
 
 ; CHECK: error: could not allocate output register for constraint '{v256}'
 define void @out_of_bounds_vgpr32_def() {
@@ -94,6 +94,18 @@ define void @overflow_bitwidth_0() {
 ; CHECK: error: could not allocate input reg for constraint '{v[2147483635:2147483651]}'
 define void @overflow_bitwidth_1() {
   tail call void asm sideeffect "; use %0", "{v[2147483635:2147483651]}"(i64 123)
+  ret void
+}
+
+; CHECK: error: could not allocate input reg for constraint '{}'
+define void @empty_reg_name() {
+  tail call void asm sideeffect "; use %0", "{}"(i64 123)
+  ret void
+}
+
+; CHECK: error: could not allocate output register for constraint '{}'
+define void @empty_reg_name_def() {
+  %v = tail call i32 asm sideeffect "v_mov_b32 $0, -1", "={}"()
   ret void
 }
 

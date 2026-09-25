@@ -13,6 +13,8 @@ exe_name = "deep-bundle"  # must match Makefile
 
 
 class DeepBundleTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def setUp(self):
         TestBase.setUp(self)
         self.source = "main.c"
@@ -25,7 +27,7 @@ class DeepBundleTestCase(TestBase):
         TestBase.tearDown(self)
 
     @skipIfRemote
-    @skipUnlessDarwin
+    @requireDarwin
     # This test is explicitly a dSYM test, it doesn't need to run for any other config.
     @skipIf(debug_info=no_match(["dsym"]))
     def test_attach_and_check_dsyms(self):

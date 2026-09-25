@@ -154,6 +154,8 @@
 
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -march=rva23s64 \
 // RUN:   | FileCheck -check-prefix=RVA23S64 %s
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -march=rva23p1s64 -menable-experimental-extensions \
+// RUN:   | FileCheck -check-prefix=RVA23S64 %s
 // RVA23S64: "-target-feature" "+m"
 // RVA23S64: "-target-feature" "+a"
 // RVA23S64: "-target-feature" "+f"
@@ -249,6 +251,8 @@
 
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -march=rvb23s64 \
 // RUN:   | FileCheck -check-prefix=RVB23S64 %s
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -march=rvb23p1s64 -menable-experimental-extensions \
+// RUN:   | FileCheck -check-prefix=RVB23S64 %s
 // RVB23S64: "-target-feature" "+m"
 // RVB23S64: "-target-feature" "+a"
 // RVB23S64: "-target-feature" "+f"
@@ -293,6 +297,23 @@
 // RVB23S64: "-target-feature" "+svnapot"
 // RVB23S64: "-target-feature" "+svpbmt"
 
+// RUN: %clang --target=riscv64 -### -c %s \
+// RUN:   -march=rva23p1s64_ssccfg_ssctr_ssdbltrp_ssqosid_svrsw60t59b -menable-experimental-extensions \
+// RUN:   > %t-rva23p1s64-options 2>&1
+// RUN: FileCheck -check-prefix=RVA23S64 %s < %t-rva23p1s64-options
+// RUN: FileCheck -check-prefix=PROFILE-P1-OPTIONS %s < %t-rva23p1s64-options
+// RUN: %clang --target=riscv64 -### -c %s \
+// RUN:   -march=rvb23p1s64_ssccfg_ssctr_ssdbltrp_ssqosid_svrsw60t59b -menable-experimental-extensions \
+// RUN:   > %t-rvb23p1s64-options 2>&1
+// RUN: FileCheck -check-prefix=RVB23S64 %s < %t-rvb23p1s64-options
+// RUN: FileCheck -check-prefix=PROFILE-P1-OPTIONS %s < %t-rvb23p1s64-options
+// PROFILE-P1-OPTIONS: "-target-feature" "+ssccfg"
+// PROFILE-P1-OPTIONS: "-target-feature" "+sscsrind"
+// PROFILE-P1-OPTIONS: "-target-feature" "+ssctr"
+// PROFILE-P1-OPTIONS: "-target-feature" "+ssdbltrp"
+// PROFILE-P1-OPTIONS: "-target-feature" "+ssqosid"
+// PROFILE-P1-OPTIONS: "-target-feature" "+svrsw60t59b"
+
 // RUN: %clang --target=riscv32 -### -c %s 2>&1 -march=rvm23u32 -menable-experimental-extensions \
 // RUN:   | FileCheck -check-prefix=RVM23U32 %s
 // RVM23U32: "-target-feature" "+m"
@@ -329,10 +350,18 @@
 // PROFILE-WITH-ADDITIONAL: "-target-feature" "+zkt"
 
 // RUN: not %clang --target=riscv64 -### -c %s 2>&1 -march=rva19u64_zfa | FileCheck -check-prefix=INVALID-PROFILE %s
-// INVALID-PROFILE: error: invalid arch name 'rva19u64_zfa', string must begin with rv32{i,e,g}, rv64{i,e,g}, or a supported profile name
+// INVALID-PROFILE: error: invalid arch name 'rva19u64_zfa', string must begin with rv32{i,e,g,y}, rv64{i,e,g,y}, or a supported profile name
 
 // RUN: not %clang --target=riscv64 -### -c %s 2>&1 -march=rva22u64zfa | FileCheck -check-prefix=INVALID-ADDITIONAL %s
 // INVALID-ADDITIONAL: error: invalid arch name 'rva22u64zfa', additional extensions must be after separator '_'
+
+// RUN: not %clang --target=riscv64 -### -c %s 2>&1 -march=rva23p1s64 | FileCheck -check-prefix=RVA23P1-EXPERIMENTAL-NOFLAG %s
+// RVA23P1-EXPERIMENTAL-NOFLAG: error: invalid arch name 'rva23p1s64'
+// RVA23P1-EXPERIMENTAL-NOFLAG: requires '-menable-experimental-extensions' for profile 'rva23p1s64'
+
+// RUN: not %clang --target=riscv64 -### -c %s 2>&1 -march=rvb23p1s64 | FileCheck -check-prefix=RVB23P1-EXPERIMENTAL-NOFLAG %s
+// RVB23P1-EXPERIMENTAL-NOFLAG: error: invalid arch name 'rvb23p1s64'
+// RVB23P1-EXPERIMENTAL-NOFLAG: requires '-menable-experimental-extensions' for profile 'rvb23p1s64'
 
 // RUN: not %clang --target=riscv32 -### -c %s 2>&1 -march=rvm23u32 | FileCheck -check-prefix=EXPERIMENTAL-NOFLAG %s
 // EXPERIMENTAL-NOFLAG: error: invalid arch name 'rvm23u32'

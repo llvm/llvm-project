@@ -366,6 +366,10 @@ void unknownVal() {
   (void)std::get<int>(*(std::variant<int, float>*)(int)3.14f); // no crash
 }
 
+void concreteAddress() {
+  (void)std::get<int>(*(std::variant<int, char>*)11); // no crash
+}
+
 template <typename T>
 using MyVariant = std::variant<int, float>;
 

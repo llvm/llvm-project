@@ -17,14 +17,15 @@ using namespace lldb_private;
 
 TypeCategoryMap::TypeCategoryMap(IFormatChangeListener *lst)
     : m_map_mutex(), listener(lst), m_map(), m_active_categories() {
-  ConstString default_cs("default");
-  lldb::TypeCategoryImplSP default_sp =
-      std::make_shared<TypeCategoryImpl>(listener, default_cs);
-  Add(default_cs, default_sp);
-  Enable(default_cs, First);
+  constexpr llvm::StringRef default_category_name("default");
+  lldb::TypeCategoryImplSP default_sp = std::make_shared<TypeCategoryImpl>(
+      listener, ConstString(default_category_name));
+  Add(default_category_name, default_sp);
+  Enable(default_category_name, First);
 }
 
-void TypeCategoryMap::Add(KeyType name, const TypeCategoryImplSP &entry) {
+void TypeCategoryMap::Add(llvm::StringRef name,
+                          const TypeCategoryImplSP &entry) {
   {
     std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
     m_map[name] = entry;
@@ -37,7 +38,7 @@ void TypeCategoryMap::Add(KeyType name, const TypeCategoryImplSP &entry) {
     listener->Changed();
 }
 
-bool TypeCategoryMap::Delete(KeyType name) {
+bool TypeCategoryMap::Delete(llvm::StringRef name) {
   {
     std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
     MapIterator iter = m_map.find(name);
@@ -55,7 +56,7 @@ bool TypeCategoryMap::Delete(KeyType name) {
   return true;
 }
 
-bool TypeCategoryMap::Enable(KeyType category_name, Position pos) {
+bool TypeCategoryMap::Enable(llvm::StringRef category_name, Position pos) {
   std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
   TypeCategoryImplSP category;
   if (!Get(category_name, category))
@@ -63,7 +64,7 @@ bool TypeCategoryMap::Enable(KeyType category_name, Position pos) {
   return Enable(category, pos);
 }
 
-bool TypeCategoryMap::Disable(KeyType category_name) {
+bool TypeCategoryMap::Disable(llvm::StringRef category_name) {
   std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
   TypeCategoryImplSP category;
   if (!Get(category_name, category))
@@ -149,29 +150,13 @@ void TypeCategoryMap::Clear() {
     listener->Changed();
 }
 
-bool TypeCategoryMap::Get(KeyType name, TypeCategoryImplSP &entry) {
+bool TypeCategoryMap::Get(llvm::StringRef name, TypeCategoryImplSP &entry) {
   std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
   MapIterator iter = m_map.find(name);
   if (iter == m_map.end())
     return false;
   entry = iter->second;
   return true;
-}
-
-bool TypeCategoryMap::AnyMatches(
-    const FormattersMatchCandidate &candidate_type,
-    TypeCategoryImpl::FormatCategoryItems items, bool only_enabled,
-    const char **matching_category,
-    TypeCategoryImpl::FormatCategoryItems *matching_type) {
-  std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
-
-  MapIterator pos, end = m_map.end();
-  for (pos = m_map.begin(); pos != end; pos++) {
-    if (pos->second->AnyMatches(candidate_type, items, only_enabled,
-                                matching_category, matching_type))
-      return true;
-  }
-  return false;
 }
 
 template <typename ImplSP>

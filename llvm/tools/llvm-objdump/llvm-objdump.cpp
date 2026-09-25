@@ -64,10 +64,10 @@
 #include "llvm/Option/Option.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Driver.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/StringSaver.h"
@@ -92,21 +92,17 @@ using namespace llvm::opt;
 
 namespace {
 
-class CommonOptTable : public opt::GenericOptTable {
+class CommonOptTable : public opt::OptTable {
 public:
-  CommonOptTable(const StringTable &StrTable,
-                 ArrayRef<StringTable::Offset> PrefixesTable,
-                 ArrayRef<Info> OptionInfos, const char *Usage,
-                 const char *Description)
-      : opt::GenericOptTable(StrTable, PrefixesTable, OptionInfos),
-        Usage(Usage), Description(Description) {
+  CommonOptTable(const Tables &T, const char *Usage, const char *Description)
+      : opt::OptTable(T), Usage(Usage), Description(Description) {
     setGroupedShortOptions(true);
   }
 
   void printHelp(StringRef Argv0, bool ShowHidden = false) const {
     Argv0 = sys::path::filename(Argv0);
-    opt::GenericOptTable::printHelp(outs(), (Argv0 + Usage).str().c_str(),
-                                    Description, ShowHidden, ShowHidden);
+    opt::OptTable::printHelp(outs(), (Argv0 + Usage).str().c_str(), Description,
+                             ShowHidden, ShowHidden);
     // TODO Replace this with OptTable API once it adds extrahelp support.
     outs() << "\nPass @FILE as argument to read options from FILE.\n";
   }
@@ -118,29 +114,16 @@ private:
 
 // ObjdumpOptID is in ObjdumpOptID.h
 namespace objdump_opt {
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_CODE
 #include "ObjdumpOpts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
-
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "ObjdumpOpts.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-static constexpr opt::OptTable::Info ObjdumpInfoTable[] = {
-#define OPTION(...)                                                            \
-  LLVM_CONSTRUCT_OPT_INFO_WITH_ID_PREFIX(OBJDUMP_, __VA_ARGS__),
-#include "ObjdumpOpts.inc"
-#undef OPTION
-};
 } // namespace objdump_opt
 
 class ObjdumpOptTable : public CommonOptTable {
 public:
   ObjdumpOptTable()
-      : CommonOptTable(
-            objdump_opt::OptionStrTable, objdump_opt::OptionPrefixesTable,
-            objdump_opt::ObjdumpInfoTable, " [options] <input object files>",
-            "llvm object file dumper") {}
+      : CommonOptTable(objdump_opt::optionTables(),
+                       " [options] <input object files>",
+                       "llvm object file dumper") {}
 };
 
 enum OtoolOptID {
@@ -151,26 +134,14 @@ enum OtoolOptID {
 };
 
 namespace otool {
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_CODE
 #include "OtoolOpts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
-
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "OtoolOpts.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-static constexpr opt::OptTable::Info OtoolInfoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO_WITH_ID_PREFIX(OTOOL_, __VA_ARGS__),
-#include "OtoolOpts.inc"
-#undef OPTION
-};
 } // namespace otool
 
 class OtoolOptTable : public CommonOptTable {
 public:
   OtoolOptTable()
-      : CommonOptTable(otool::OptionStrTable, otool::OptionPrefixesTable,
-                       otool::OtoolInfoTable, " [option...] [file...]",
+      : CommonOptTable(otool::optionTables(), " [option...] [file...]",
                        "Mach-O object file displaying tool") {}
 };
 
@@ -1122,7 +1093,7 @@ PrettyPrinter &selectPrettyPrinter(Triple const &Triple) {
     return PrettyPrinterInst;
   case Triple::hexagon:
     return HexagonPrettyPrinterInst;
-  case Triple::amdgcn:
+  case Triple::amdgpu:
     return AMDGCNPrettyPrinterInst;
   case Triple::bpfel:
   case Triple::bpfeb:
@@ -1838,9 +1809,13 @@ fetchBinaryByBuildID(const ObjectFile &Obj) {
   object::BuildIDRef BuildID = getBuildID(&Obj);
   if (BuildID.empty())
     return std::nullopt;
-  std::optional<std::string> Path = BIDFetcher->fetch(BuildID);
-  if (!Path)
+  Expected<std::string> Path = BIDFetcher->fetch(BuildID);
+  if (!Path) {
+    // Failure to fetch debuginfod is rarely an error and most users will not
+    // care why this failed.
+    consumeError(Path.takeError());
     return std::nullopt;
+  }
   Expected<OwningBinary<Binary>> DebugBinary = createBinary(*Path);
   if (!DebugBinary) {
     reportWarning(toString(DebugBinary.takeError()), *Path);
@@ -2137,7 +2112,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
         unwrapOrError(Section.getContents(), Obj.getFileName()));
 
     std::vector<std::unique_ptr<std::string>> SynthesizedLabelNames;
-    if (Obj.isELF() && Obj.getArch() == Triple::amdgcn) {
+    if (Obj.isELF() && Obj.getArch() == Triple::amdgpu) {
       // AMDGPU disassembler uses symbolizer for printing labels
       addSymbolizer(*DT->Context, DT->TheTarget, DT->TheTriple,
                     DT->DisAsm.get(), SectionAddr, Bytes, Symbols,
@@ -3991,8 +3966,10 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
   // Look up any provided build IDs, then append them to the input filenames.
   for (const opt::Arg *A : InputArgs.filtered(OBJDUMP_build_id)) {
     object::BuildID BuildID = parseBuildIDArg(A);
-    std::optional<std::string> Path = BIDFetcher->fetch(BuildID);
+    Expected<std::string> Path = BIDFetcher->fetch(BuildID);
     if (!Path) {
+      // Most users will not care why this failed.
+      consumeError(Path.takeError());
       reportCmdLineError(A->getSpelling() + ": could not find build ID '" +
                          A->getValue() + "'");
     }

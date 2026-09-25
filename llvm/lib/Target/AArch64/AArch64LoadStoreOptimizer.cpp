@@ -868,8 +868,9 @@ static bool isMergeableIndexLdSt(MachineInstr &MI, int &Scale) {
   }
 }
 
-static bool isRewritableImplicitDef(const MachineOperand &MO) {
-  switch (MO.getParent()->getOpcode()) {
+static bool isRewritableImplicitDef(const MachineInstr &MI,
+                                    const MachineOperand &MO) {
+  switch (MI.getOpcode()) {
   default:
     return MO.isRenamable();
   case AArch64::ORRWrs:
@@ -1082,7 +1083,7 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
                         MI.getRegClassConstraint(OpIdx, TII, TRI))
                   MatchingReg = GetMatchingSubReg(RC);
                 else {
-                  if (!isRewritableImplicitDef(MOP))
+                  if (!isRewritableImplicitDef(MI, MOP))
                     continue;
                   MatchingReg = GetMatchingSubReg(
                       TRI->getMinimalPhysRegClass(MOP.getReg()));
@@ -1106,7 +1107,7 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
                 else
                   MatchingReg = GetMatchingSubReg(
                       TRI->getMinimalPhysRegClass(MOP.getReg()));
-                assert(MatchingReg != AArch64::NoRegister &&
+                assert(MatchingReg.isValid() &&
                        "Cannot find matching regs for renaming");
                 MOP.setReg(MatchingReg);
               }
@@ -1749,7 +1750,7 @@ static bool areCandidatesToMergeOrPair(MachineInstr &FirstMI, MachineInstr &MI,
   // FIXME: Can we also match a mixed sext/zext unscaled/scaled pair?
 }
 
-static bool canRenameMOP(const MachineOperand &MOP,
+static bool canRenameMOP(const MachineInstr &MI, const MachineOperand &MOP,
                          const TargetRegisterInfo *TRI) {
   if (MOP.isReg()) {
     auto *RegClass = TRI->getMinimalPhysRegClass(MOP.getReg());
@@ -1774,10 +1775,10 @@ static bool canRenameMOP(const MachineOperand &MOP,
     // them must be known. For example, in ORRWrs the implicit-def
     // corresponds to the result register.
     if (MOP.isImplicit() && MOP.isDef()) {
-      if (!isRewritableImplicitDef(MOP))
+      if (!isRewritableImplicitDef(MI, MOP))
         return false;
-      return TRI->isSuperOrSubRegisterEq(
-          MOP.getParent()->getOperand(0).getReg(), MOP.getReg());
+      return TRI->isSuperOrSubRegisterEq(MI.getOperand(0).getReg(),
+                                         MOP.getReg());
     }
   }
   return MOP.isImplicit() ||
@@ -1847,7 +1848,7 @@ canRenameUpToDef(MachineInstr &FirstMI, LiveRegUnits &UsedInBetween,
         if (!MOP.isReg() || !MOP.isDef() || MOP.isDebug() || !MOP.getReg() ||
             !TRI->regsOverlap(MOP.getReg(), RegToRename))
           continue;
-        if (!canRenameMOP(MOP, TRI)) {
+        if (!canRenameMOP(MI, MOP, TRI)) {
           LLVM_DEBUG(dbgs() << "  Cannot rename " << MOP << " in " << MI);
           return false;
         }
@@ -1860,7 +1861,7 @@ canRenameUpToDef(MachineInstr &FirstMI, LiveRegUnits &UsedInBetween,
             !TRI->regsOverlap(MOP.getReg(), RegToRename))
           continue;
 
-        if (!canRenameMOP(MOP, TRI)) {
+        if (!canRenameMOP(MI, MOP, TRI)) {
           LLVM_DEBUG(dbgs() << "  Cannot rename " << MOP << " in " << MI);
           return false;
         }
@@ -1914,7 +1915,7 @@ static bool canRenameUntilSecondLoad(
           if (!MOP.isReg() || MOP.isDebug() || !MOP.getReg() ||
               !TRI->regsOverlap(MOP.getReg(), RegToRename))
             continue;
-          if (!canRenameMOP(MOP, TRI)) {
+          if (!canRenameMOP(MI, MOP, TRI)) {
             LLVM_DEBUG(dbgs() << "  Cannot rename " << MOP << " in " << MI);
             return false;
           }
@@ -2017,7 +2018,6 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
                                       bool FindNarrowMerge) {
   MachineBasicBlock::iterator E = I->getParent()->end();
   MachineBasicBlock::iterator MBBI = I;
-  MachineBasicBlock::iterator MBBIWithRenameReg;
   MachineInstr &FirstMI = *I;
   MBBI = next_nodbg(MBBI, E);
 
@@ -2247,16 +2247,13 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
           if (RenameReg) {
             Flags.setMergeForward(true);
             Flags.setRenameReg(*RenameReg);
-            MBBIWithRenameReg = MBBI;
+            return MBBI;
           }
         }
         LLVM_DEBUG(dbgs() << "Unable to combine these instructions due to "
                           << "interference in between, keep looking.\n");
       }
     }
-
-    if (Flags.getRenameReg())
-      return MBBIWithRenameReg;
 
     // If the instruction wasn't a matching load or store.  Stop searching if we
     // encounter a call instruction that might modify memory.
@@ -2657,7 +2654,7 @@ MachineBasicBlock::iterator AArch64LoadStoreOpt::findMatchingUpdateInsnBackward(
   bool IsPairedInsn = AArch64InstrInfo::isPairedLdSt(MemMI);
   Register DestReg[] = {getLdStRegOp(MemMI, 0).getReg(),
                         IsPairedInsn ? getLdStRegOp(MemMI, 1).getReg()
-                                     : AArch64::NoRegister};
+                                     : Register()};
 
   // If the load/store is the first instruction in the block, there's obviously
   // not any matching update. Ditto if the memory offset isn't zero.
@@ -2722,12 +2719,10 @@ MachineBasicBlock::iterator AArch64LoadStoreOpt::findMatchingUpdateInsnBackward(
     // i.e. the combined instruction is put in the place of the memory
     // instruction. Same applies if we see a memory access or side effects.
     if (MI.mayLoadOrStore() || MI.hasUnmodeledSideEffects() ||
-        (DestReg[0] != AArch64::NoRegister &&
-         !(ModifiedRegUnits.available(DestReg[0]) &&
-           UsedRegUnits.available(DestReg[0]))) ||
-        (DestReg[1] != AArch64::NoRegister &&
-         !(ModifiedRegUnits.available(DestReg[1]) &&
-           UsedRegUnits.available(DestReg[1]))))
+        (DestReg[0].isValid() && !(ModifiedRegUnits.available(DestReg[0]) &&
+                                   UsedRegUnits.available(DestReg[0]))) ||
+        (DestReg[1].isValid() && !(ModifiedRegUnits.available(DestReg[1]) &&
+                                   UsedRegUnits.available(DestReg[1]))))
       MergeEither = false;
 
     // Keep track if we have a memory access before an SP pre-increment, in this

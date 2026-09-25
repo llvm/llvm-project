@@ -410,6 +410,62 @@ static ConstantInt *getPreferredVectorIndex(ConstantInt *IndexC) {
                           IndexC->getValue().zextOrTrunc(64));
 }
 
+/// Fold a variable extract from a vector of pointers that all point into the
+/// same object at a constant stride
+static Value *
+foldExtractOfStridedPointerVector(ExtractElementInst &EI,
+                                  InstCombiner::BuilderTy &Builder,
+                                  const DataLayout &DL) {
+  auto *VecTy = dyn_cast<FixedVectorType>(EI.getVectorOperandType());
+  if (!VecTy || !VecTy->getElementType()->isPointerTy())
+    return nullptr;
+
+  unsigned NumElts = VecTy->getNumElements();
+  if (NumElts < 2)
+    return nullptr;
+
+  // Every lane must resolve to the same base pointer plus a constant byte
+  // offset. findScalarElement returns poison for a lane the vector never
+  // defines; that poison is its own base, so a vector mixing defined and
+  // undefined lanes fails the base comparison below.
+  unsigned IdxWidth = DL.getIndexTypeSizeInBits(VecTy->getElementType());
+  Value *Base = nullptr;
+  SmallVector<APInt> Offsets;
+  for (unsigned I = 0; I != NumElts; ++I) {
+    Value *Elt = findScalarElement(EI.getVectorOperand(), I);
+    if (!Elt)
+      return nullptr;
+    Value *EltBase;
+    const APInt *C;
+    APInt Offset(IdxWidth, 0);
+    // m_Value may bind even when the offset is not constant, so reset it.
+    if (match(Elt, m_PtrAdd(m_Value(EltBase), m_APInt(C))))
+      Offset = C->sextOrTrunc(IdxWidth);
+    else
+      EltBase = Elt;
+    if (I == 0)
+      Base = EltBase;
+    else if (Base != EltBase)
+      return nullptr;
+    Offsets.push_back(Offset);
+  }
+
+  // The offsets must form an arithmetic sequence.
+  APInt Stride = Offsets[1] - Offsets[0];
+  for (unsigned I = 1; I != NumElts; ++I)
+    if (Offsets[I] - Offsets[0] != Stride * I)
+      return nullptr;
+
+  // Index off the common base, not off element 0: an element may be poison in
+  // a lane the extract never selects. The base is an operand of every element
+  // and the new GEPs have no flags, so the result is never more poisonous.
+  Type *IdxTy = DL.getIndexType(VecTy->getElementType());
+  Value *Idx = Builder.CreateZExtOrTrunc(EI.getIndexOperand(), IdxTy);
+  Value *Ptr = Builder.CreatePtrAdd(
+      Base, Builder.CreateMul(Idx, ConstantInt::get(IdxTy, Stride)));
+  return Builder.CreatePtrAdd(Ptr, ConstantInt::get(IdxTy, Offsets[0]));
+}
+
 Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
   Value *SrcVec = EI.getVectorOperand();
   Value *Index = EI.getIndexOperand();
@@ -430,6 +486,12 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
         isa<Constant>(EI.getIndexOperand()))
       if (Instruction *R = FoldOpIntoSelect(EI, SI))
         return R;
+
+  // Fold a variable index into a table of pointers into one object into
+  // address arithmetic
+  if (!isa<ConstantInt>(Index))
+    if (Value *V = foldExtractOfStridedPointerVector(EI, Builder, DL))
+      return replaceInstUsesWith(EI, V);
 
   // If extracting a specified index from the vector, see if we can recursively
   // find a previously computed scalar that was inserted into the vector.
@@ -797,6 +859,15 @@ static bool replaceExtractElements(InsertElementInst *InsElt,
     WideVec->insertAfter(ExtVecOpInst->getIterator());
   else
     IC.InsertNewInstWith(WideVec, ExtElt->getParent()->getFirstInsertionPt());
+
+  // WideVec is an extension of ExtVecOp to produce a more useful value for
+  // ExtractElement instructions. If ExtVecOp is an instruction, adopt its
+  // DebugLoc; if it is not, then this is materializing a constant value, so set
+  // a CompilerGenerated location.
+  if (ExtVecOpInst)
+    WideVec->setDebugLoc(ExtVecOpInst->getDebugLoc());
+  else
+    WideVec->setDebugLoc(DebugLoc::getCompilerGenerated());
 
   // Replace extracts from the original narrow vector with extracts from the new
   // wide vector.
@@ -1998,14 +2069,18 @@ static Value *buildNew(Instruction *I, ArrayRef<Value*> NewOps,
       }
       return New;
     }
-    case Instruction::ICmp:
+    case Instruction::ICmp: {
       assert(NewOps.size() == 2 && "icmp with #ops != 2");
-      return Builder.CreateICmp(cast<ICmpInst>(I)->getPredicate(), NewOps[0],
-                                NewOps[1]);
+      Value *New = Builder.CreateICmp(cast<ICmpInst>(I)->getPredicate(),
+                                      NewOps[0], NewOps[1]);
+      if (auto *NewI = dyn_cast<Instruction>(New))
+        NewI->copyIRFlags(I);
+      return New;
+    }
     case Instruction::FCmp:
       assert(NewOps.size() == 2 && "fcmp with #ops != 2");
-      return Builder.CreateFCmp(cast<FCmpInst>(I)->getPredicate(), NewOps[0],
-                                NewOps[1]);
+      return Builder.CreateFCmpFMF(cast<FCmpInst>(I)->getPredicate(), NewOps[0],
+                                   NewOps[1], I);
     case Instruction::Trunc:
     case Instruction::ZExt:
     case Instruction::SExt:
@@ -2021,8 +2096,11 @@ static Value *buildNew(Instruction *I, ArrayRef<Value*> NewOps,
           I->getType()->getScalarType(),
           cast<VectorType>(NewOps[0]->getType())->getElementCount());
       assert(NewOps.size() == 1 && "cast with #ops != 1");
-      return Builder.CreateCast(cast<CastInst>(I)->getOpcode(), NewOps[0],
-                                DestTy);
+      Value *New =
+          Builder.CreateCast(cast<CastInst>(I)->getOpcode(), NewOps[0], DestTy);
+      if (auto *NewI = dyn_cast<Instruction>(New))
+        NewI->copyIRFlags(I);
+      return New;
     }
     case Instruction::GetElementPtr: {
       Value *Ptr = NewOps[0];

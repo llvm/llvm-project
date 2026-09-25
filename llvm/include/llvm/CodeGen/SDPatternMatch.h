@@ -32,6 +32,8 @@ namespace SDPatternMatch {
 /// a certain context. For instance, `m_SpecificOpc(ISD::ADD)` matches plain ADD
 /// nodes in normal circumstances, but matches VP_ADD nodes under a custom
 /// VPMatchContext. This design is meant to facilitate code / pattern reusing.
+/// TODO: Remove now that we don't need to match over VP nodes.
+
 class BasicMatchContext {
   const SelectionDAG *DAG;
   const TargetLowering *TLI;
@@ -264,29 +266,23 @@ template <unsigned N> inline NUses_match<N, Value_match> m_NUses() {
   return NUses_match<N, Value_match>(m_Value());
 }
 
-template <typename PredPattern> struct Value_bind {
+struct Value_bind {
   SDValue &BindVal;
-  PredPattern Pred;
 
-  Value_bind(SDValue &N, const PredPattern &P) : BindVal(N), Pred(P) {}
+  Value_bind(SDValue &N) : BindVal(N) {}
 
   template <typename MatchContext>
   bool match(const MatchContext &Ctx, SDValue N) {
-    if (!Pred.match(Ctx, N))
-      return false;
-
     BindVal = N;
     return true;
   }
 };
 
-inline auto m_Value(SDValue &N) {
-  return Value_bind<Value_match>(N, m_Value());
-}
+inline auto m_Value(SDValue &N) { return Value_bind(N); }
 /// Conditionally bind an SDValue based on the predicate.
 template <typename PredPattern>
 inline auto m_Value(SDValue &N, const PredPattern &P) {
-  return Value_bind<PredPattern>(N, P);
+  return m_AllOf(P, Value_bind(N));
 }
 
 template <typename Pattern, typename PredFuncT> struct TLI_pred_match {
@@ -828,6 +824,18 @@ inline BinaryOpc_match<LHS, RHS, true> m_Add(const LHS &L, const RHS &R) {
 }
 
 template <typename LHS, typename RHS>
+inline auto m_NUWAdd(const LHS &L, const RHS &R) {
+  return BinaryOpc_match<LHS, RHS, true>(ISD::ADD, L, R,
+                                         SDNodeFlags::NoUnsignedWrap);
+}
+
+template <typename LHS, typename RHS>
+inline auto m_NSWAdd(const LHS &L, const RHS &R) {
+  return BinaryOpc_match<LHS, RHS, true>(ISD::ADD, L, R,
+                                         SDNodeFlags::NoSignedWrap);
+}
+
+template <typename LHS, typename RHS>
 inline BinaryOpc_match<LHS, RHS> m_Sub(const LHS &L, const RHS &R) {
   return BinaryOpc_match<LHS, RHS>(ISD::SUB, L, R);
 }
@@ -859,6 +867,16 @@ inline auto m_AddLike(const LHS &L, const RHS &R) {
 }
 
 template <typename LHS, typename RHS>
+inline auto m_NSWAddLike(const LHS &L, const RHS &R) {
+  return m_AnyOf(m_NSWAdd(L, R), m_DisjointOr(L, R));
+}
+
+template <typename LHS, typename RHS>
+inline auto m_NUWAddLike(const LHS &L, const RHS &R) {
+  return m_AnyOf(m_NUWAdd(L, R), m_DisjointOr(L, R));
+}
+
+template <typename LHS, typename RHS>
 inline BinaryOpc_match<LHS, RHS, true> m_Xor(const LHS &L, const RHS &R) {
   return BinaryOpc_match<LHS, RHS, true>(ISD::XOR, L, R);
 }
@@ -881,10 +899,7 @@ inline BinaryOpc_match<LHS, RHS, true> m_SMin(const LHS &L, const RHS &R) {
 
 template <typename LHS, typename RHS>
 inline auto m_SMinLike(const LHS &L, const RHS &R) {
-  return m_AnyOf(
-      m_MaxMinLike<ISD::SMIN, smin_pred_ty>(L, R),
-      m_MaxMinLike<ISD::UMIN, umin_pred_ty>(m_NonNegative(L), m_NonNegative(R)),
-      m_MaxMinLike<ISD::UMIN, umin_pred_ty>(m_Negative(L), m_Negative(R)));
+  return m_MaxMinLike<ISD::SMIN, smin_pred_ty>(L, R);
 }
 
 template <typename LHS, typename RHS>
@@ -894,10 +909,7 @@ inline BinaryOpc_match<LHS, RHS, true> m_SMax(const LHS &L, const RHS &R) {
 
 template <typename LHS, typename RHS>
 inline auto m_SMaxLike(const LHS &L, const RHS &R) {
-  return m_AnyOf(
-      m_MaxMinLike<ISD::SMAX, smax_pred_ty>(L, R),
-      m_MaxMinLike<ISD::UMAX, umax_pred_ty>(m_NonNegative(L), m_NonNegative(R)),
-      m_MaxMinLike<ISD::UMAX, umax_pred_ty>(m_Negative(L), m_Negative(R)));
+  return m_MaxMinLike<ISD::SMAX, smax_pred_ty>(L, R);
 }
 
 template <typename LHS, typename RHS>
@@ -907,10 +919,7 @@ inline BinaryOpc_match<LHS, RHS, true> m_UMin(const LHS &L, const RHS &R) {
 
 template <typename LHS, typename RHS>
 inline auto m_UMinLike(const LHS &L, const RHS &R) {
-  return m_AnyOf(
-      m_MaxMinLike<ISD::UMIN, umin_pred_ty>(L, R),
-      m_MaxMinLike<ISD::SMIN, smin_pred_ty>(m_NonNegative(L), m_NonNegative(R)),
-      m_MaxMinLike<ISD::SMIN, smin_pred_ty>(m_Negative(L), m_Negative(R)));
+  return m_MaxMinLike<ISD::UMIN, umin_pred_ty>(L, R);
 }
 
 template <typename LHS, typename RHS>
@@ -920,10 +929,7 @@ inline BinaryOpc_match<LHS, RHS, true> m_UMax(const LHS &L, const RHS &R) {
 
 template <typename LHS, typename RHS>
 inline auto m_UMaxLike(const LHS &L, const RHS &R) {
-  return m_AnyOf(
-      m_MaxMinLike<ISD::UMAX, umax_pred_ty>(L, R),
-      m_MaxMinLike<ISD::SMAX, smax_pred_ty>(m_NonNegative(L), m_NonNegative(R)),
-      m_MaxMinLike<ISD::SMAX, smax_pred_ty>(m_Negative(L), m_Negative(R)));
+  return m_MaxMinLike<ISD::UMAX, umax_pred_ty>(L, R);
 }
 
 template <typename LHS, typename RHS>
@@ -1366,6 +1372,17 @@ inline SpecificFP_match m_SpecificFP(APFloat V) { return SpecificFP_match(V); }
 inline SpecificFP_match m_SpecificFP(double V) {
   return SpecificFP_match(APFloat(V));
 }
+
+struct AnyZeroFP_match {
+  template <typename MatchContext> bool match(const MatchContext &, SDValue N) {
+    if (ConstantFPSDNode *C = isConstOrConstSplatFP(N))
+      return C->isZero();
+    return false;
+  }
+};
+
+/// Match a floating-point +0.0 or -0.0 constant or splat.
+inline AnyZeroFP_match m_AnyZeroFP() { return AnyZeroFP_match(); }
 
 struct Negative_match {
   template <typename MatchContext>

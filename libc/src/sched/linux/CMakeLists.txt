@@ -1,4 +1,22 @@
 add_entrypoint_object(
+  clone
+  SRCS
+    clone.cpp
+  HDRS
+    ../clone.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.sched_macros
+    libc.hdr.types.pid_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.clone
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.threads.identifier
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   getcpu
   SRCS
     getcpu.cpp
@@ -20,7 +38,8 @@ add_entrypoint_object(
     libc.hdr.types.cpu_set_t
     libc.hdr.types.pid_t
     libc.hdr.types.size_t
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.CPP.span
+    libc.src.__support.OSUtil.linux.syscall_wrappers.sched_getaffinity
     libc.src.errno.errno
 )
 
@@ -169,6 +188,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  __sched_andcpuset
+  SRCS
+    sched_andcpuset.cpp
+  HDRS
+    ../sched_andcpuset.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.hdr.types.cpu_set_t
+    libc.hdr.types.size_t
+)
+
+add_entrypoint_object(
   __sched_clrcpuset
   SRCS
     sched_clrcpuset.cpp
@@ -202,6 +235,21 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  __sched_cpuequal
+  SRCS
+    sched_cpuequal.cpp
+  HDRS
+    ../sched_cpuequal.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.src.string.memory_utils.inline_memcmp
+    libc.hdr.types.cpu_set_t
+    libc.hdr.types.size_t
+)
+
+add_entrypoint_object(
   __sched_cpufree
   SRCS
     sched_cpufree.cpp
@@ -213,6 +261,20 @@ add_entrypoint_object(
     libc.src.__support.common
     libc.src.__support.CPP.new
     libc.src.__support.macros.config
+)
+
+add_entrypoint_object(
+  __sched_orcpuset
+  SRCS
+    sched_orcpuset.cpp
+  HDRS
+    ../sched_orcpuset.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.hdr.types.cpu_set_t
+    libc.hdr.types.size_t
 )
 
 add_entrypoint_object(
@@ -255,6 +317,20 @@ add_entrypoint_object(
     libc.src.__support.macros.config
     libc.src.__support.macros.null_check
     libc.hdr.sched_macros
+    libc.hdr.types.cpu_set_t
+    libc.hdr.types.size_t
+)
+
+add_entrypoint_object(
+  __sched_xorcpuset
+  SRCS
+    sched_xorcpuset.cpp
+  HDRS
+    ../sched_xorcpuset.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
     libc.hdr.types.cpu_set_t
     libc.hdr.types.size_t
 )

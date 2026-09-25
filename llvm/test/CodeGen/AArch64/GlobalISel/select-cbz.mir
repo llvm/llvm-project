@@ -21,9 +21,9 @@ body:             |
     liveins: $w0
     successors: %bb.0, %bb.1
 
-    %0:gpr(s32) = COPY $w0
-    %1:gpr(s32) = G_CONSTANT i32 0
-    %2:gpr(s32) = G_ICMP intpred(eq), %0, %1
+    %0:gpr(i32) = COPY $w0
+    %1:gpr(i32) = G_CONSTANT i32 0
+    %2:gpr(i32) = G_ICMP intpred(eq), %0, %1
     G_BRCOND %2, %bb.1
     G_BR %bb.0
 
@@ -50,9 +50,9 @@ body:             |
     liveins: $x0
     successors: %bb.0, %bb.1
 
-    %0:gpr(s64) = COPY $x0
-    %1:gpr(s64) = G_CONSTANT i64 0
-    %2:gpr(s32) = G_ICMP intpred(eq), %0, %1
+    %0:gpr(i64) = COPY $x0
+    %1:gpr(i64) = G_CONSTANT i64 0
+    %2:gpr(i32) = G_ICMP intpred(eq), %0, %1
     G_BRCOND %2, %bb.1
     G_BR %bb.0
 
@@ -79,9 +79,9 @@ body:             |
     liveins: $w0
     successors: %bb.0, %bb.1
 
-    %0:gpr(s32) = COPY $w0
-    %1:gpr(s32) = G_CONSTANT i32 0
-    %2:gpr(s32) = G_ICMP intpred(ne), %0, %1
+    %0:gpr(i32) = COPY $w0
+    %1:gpr(i32) = G_CONSTANT i32 0
+    %2:gpr(i32) = G_ICMP intpred(ne), %0, %1
     G_BRCOND %2, %bb.1
     G_BR %bb.0
 
@@ -108,9 +108,9 @@ body:             |
     liveins: $x0
     successors: %bb.0, %bb.1
 
-    %0:gpr(s64) = COPY $x0
-    %1:gpr(s64) = G_CONSTANT i64 0
-    %2:gpr(s32) = G_ICMP intpred(ne), %0, %1
+    %0:gpr(i64) = COPY $x0
+    %1:gpr(i64) = G_CONSTANT i64 0
+    %2:gpr(i32) = G_ICMP intpred(ne), %0, %1
     G_BRCOND %2, %bb.1
     G_BR %bb.0
 
@@ -134,7 +134,7 @@ body:             |
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   STRXui $xzr, [[COPY]], 0 :: (store (s64))
+  ; CHECK-NEXT:   STRXui $xzr, [[COPY]], 0 :: (store (i64))
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   RET_ReallyLR
@@ -143,14 +143,14 @@ body:             |
     liveins: $x0
 
     %0:gpr(p0) = COPY $x0
-    %2:gpr(s64) = G_CONSTANT i64 0
-    %1:gpr(p0) = G_INTTOPTR %2(s64)
-    %4:gpr(s32) = G_ICMP intpred(eq), %0(p0), %1
+    %2:gpr(i64) = G_CONSTANT i64 0
+    %1:gpr(p0) = G_INTTOPTR %2(i64)
+    %4:gpr(i32) = G_ICMP intpred(eq), %0(p0), %1
     G_BRCOND %4, %bb.3
 
   bb.2:
-    %5:gpr(s64) = G_CONSTANT i64 0
-    G_STORE %5(s64), %0(p0) :: (store (s64))
+    %5:gpr(i64) = G_CONSTANT i64 0
+    G_STORE %5(i64), %0(p0) :: (store (i64))
 
   bb.3:
     RET_ReallyLR
@@ -169,14 +169,14 @@ body:             |
   ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-  ; CHECK-NEXT:   [[LDRXui:%[0-9]+]]:gpr64common = LDRXui [[COPY]], 0 :: (load (s64))
+  ; CHECK-NEXT:   [[LDRXui:%[0-9]+]]:gpr64common = LDRXui [[COPY]], 0 :: (load (i64))
   ; CHECK-NEXT:   [[SUBSXri:%[0-9]+]]:gpr64 = SUBSXri [[LDRXui]], 42, 0, implicit-def $nzcv
   ; CHECK-NEXT:   Bcc 0, %bb.2, implicit $nzcv
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   STRXui $xzr, [[COPY]], 0 :: (store (s64))
+  ; CHECK-NEXT:   STRXui $xzr, [[COPY]], 0 :: (store (i64))
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   RET_ReallyLR
@@ -185,15 +185,15 @@ body:             |
     liveins: $x0
 
     %0:gpr(p0) = COPY $x0
-    %2:gpr(s64) = G_CONSTANT i64 42
-    %4:gpr(s64) = G_CONSTANT i64 0
-    %1:gpr(s64) = G_LOAD %0(p0) :: (load (s64))
-    %5:gpr(s32) = G_ICMP intpred(eq), %1(s64), %2
+    %2:gpr(i64) = G_CONSTANT i64 42
+    %4:gpr(i64) = G_CONSTANT i64 0
+    %1:gpr(i64) = G_LOAD %0(p0) :: (load (i64))
+    %5:gpr(i32) = G_ICMP intpred(eq), %1(i64), %2
     G_BRCOND %5, %bb.3
 
   bb.2:
-    %6:gpr(s64) = G_CONSTANT i64 0
-    G_STORE %6(s64), %0(p0) :: (store (s64))
+    %6:gpr(i64) = G_CONSTANT i64 0
+    G_STORE %6(i64), %0(p0) :: (store (i64))
 
   bb.3:
     RET_ReallyLR

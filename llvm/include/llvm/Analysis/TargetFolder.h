@@ -125,7 +125,11 @@ public:
       // Every index must be constant.
       if (any_of(IdxList, [](Value *V) { return !isa<Constant>(V); }))
         return nullptr;
-      return Fold(ConstantExpr::getGetElementPtr(Ty, PC, IdxList, NW));
+      ArrayRef<Constant *> ConstIdxList =
+          ArrayRef((Constant *const *)IdxList.data(), IdxList.size());
+      if (Constant *GEP =
+              ConstantExpr::getGetElementPtr(DL, Ty, PC, ConstIdxList, NW))
+        return Fold(GEP);
     }
     return nullptr;
   }
@@ -193,10 +197,11 @@ public:
 
   Value *FoldIntrinsic(Intrinsic::ID ID, ArrayRef<Value *> Ops, Type *Ty,
                        FastMathFlags FMF = {},
-                       Function *CtxF = nullptr) const override {
+                       Function *CxtF = nullptr) const override {
     if (all_of(Ops, IsaPred<Constant>))
       return ConstantFoldIntrinsic(
-          ID, ArrayRef((Constant *const *)Ops.data(), Ops.size()), Ty);
+          ID, ArrayRef((Constant *const *)Ops.data(), Ops.size()), Ty, DL,
+          CxtF);
     return nullptr;
   }
 

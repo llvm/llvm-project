@@ -39,6 +39,8 @@
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/CodeGenUtils/CodeGenUtils.h"
+#include "clang/CodeGenUtils/ExprUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
@@ -67,7 +69,7 @@ namespace clang {
 // TODO: consider deprecating ClSanitizeGuardChecks; functionality is subsumed
 //       by -fsanitize-skip-hot-cutoff
 llvm::cl::opt<bool> ClSanitizeGuardChecks(
-    "ubsan-guard-checks", llvm::cl::Optional,
+    "ubsan-guard-checks",
     llvm::cl::desc("Guard UBSAN checks with `llvm.allow.ubsan.check()`."));
 
 } // namespace clang
@@ -512,11 +514,6 @@ static RawAddress createReferenceTemporary(CodeGenFunction &CGF,
     llvm_unreachable("temporary can't have dynamic storage duration");
   }
   llvm_unreachable("unknown storage duration");
-}
-
-/// Helper method to check if the underlying ABI is AAPCS
-static bool isAAPCS(const TargetInfo &TargetInfo) {
-  return TargetInfo.getABI().starts_with("aapcs");
 }
 
 LValue CodeGenFunction::
@@ -1058,6 +1055,22 @@ static llvm::Value *getArrayIndexingBound(CodeGenFunction &CGF,
   return nullptr;
 }
 
+/// Returns true if \p Field is reachable from \p RD either as a direct field or
+/// through a chain of nested record fields (including anonymous
+/// structs/unions). This mirrors the GEP path that getGEPIndicesToField builds,
+/// and is used to identify the right anchor expression in Base.
+static bool RecordContainsField(const RecordDecl *RD, const FieldDecl *Field) {
+  for (const FieldDecl *FD : RD->fields()) {
+    if (FD == Field)
+      return true;
+    QualType Ty = FD->getType();
+    if (Ty->isRecordType())
+      if (RecordContainsField(Ty->getAsRecordDecl(), Field))
+        return true;
+  }
+  return false;
+}
+
 namespace {
 
 /// \p StructAccessBase returns the base \p Expr of a field access. It returns
@@ -1078,17 +1091,24 @@ namespace {
 /// \p MemberExpr for \p p->ptr instead of \p p.
 class StructAccessBase
     : public ConstStmtVisitor<StructAccessBase, const Expr *> {
-  const RecordDecl *ExpectedRD;
+  /// The count field we're navigating to. We stop at the innermost expression
+  /// whose struct type transitively contains this field, so that
+  /// getGEPIndicesToField can navigate from that struct down to it.
+  const FieldDecl *CountDecl;
 
+  /// Returns true if E's record type (or pointee record type) transitively
+  /// contains CountDecl. Handles both direct containment and nested structs,
+  /// so we don't need a pre-computed RD from the caller.
   bool IsExpectedRecordDecl(const Expr *E) const {
     QualType Ty = E->getType();
     if (Ty->isPointerType())
       Ty = Ty->getPointeeType();
-    return ExpectedRD == Ty->getAsRecordDecl();
+    const RecordDecl *RD = Ty->getAsRecordDecl();
+    return RD && RecordContainsField(RD, CountDecl);
   }
 
 public:
-  StructAccessBase(const RecordDecl *ExpectedRD) : ExpectedRD(ExpectedRD) {}
+  StructAccessBase(const FieldDecl *CountDecl) : CountDecl(CountDecl) {}
 
   //===--------------------------------------------------------------------===//
   //                            Visitor Methods
@@ -1200,22 +1220,21 @@ static bool getGEPIndicesToField(CodeGenFunction &CGF, const RecordDecl *RD,
 
 llvm::Value *CodeGenFunction::GetCountedByFieldExprGEP(
     const Expr *Base, const FieldDecl *FAMDecl, const FieldDecl *CountDecl) {
-  // Find the record containing the count field. Walk up through anonymous
-  // structs/unions (which are transparent in C) but stop at named records.
-  // Using getOuterLexicalRecordContext() here would be wrong because it walks
-  // past named nested structs to the outermost record, causing a crash when a
-  // struct with a counted_by FAM is defined nested inside another struct.
-  const RecordDecl *RD = CountDecl->getParent();
-  while (RD->isAnonymousStructOrUnion()) {
-    const auto *Parent = dyn_cast<RecordDecl>(RD->getLexicalParent());
-    if (!Parent)
-      break;
-    RD = Parent;
-  }
-
-  // Find the base struct expr (i.e. p in p->a.b.c.d).
-  const Expr *StructBase = StructAccessBase(RD).Visit(Base);
+  // Walk Base to find the deepest sub-expression whose struct type transitively
+  // contains CountDecl. This is our GEP anchor — getGEPIndicesToField then
+  // builds the field indices from that struct down to CountDecl, handling any
+  // intermediate nesting without requiring us to pre-compute a RecordDecl from
+  // Base's type or from CountDecl's parent chain.
+  const Expr *StructBase = StructAccessBase(CountDecl).Visit(Base);
   if (!StructBase || StructBase->HasSideEffects(getContext()))
+    return nullptr;
+
+  // Derive the record type from the anchor expression itself.
+  QualType StructTy = StructBase->getType();
+  if (StructTy->isPointerType())
+    StructTy = StructTy->getPointeeType();
+  const RecordDecl *RD = StructTy->getAsRecordDecl();
+  if (!RD)
     return nullptr;
 
   llvm::Value *Res = nullptr;
@@ -2643,7 +2662,8 @@ RValue CodeGenFunction::EmitLoadOfBitfieldLValue(LValue LV,
       Builder.CreateLoad(Ptr, LV.isVolatileQualified(), "bf.load");
 
   bool UseVolatile = LV.isVolatileQualified() &&
-                     Info.VolatileStorageSize != 0 && isAAPCS(CGM.getTarget());
+                     Info.VolatileStorageSize != 0 &&
+                     CodeGenUtils::isAAPCS(CGM.getTarget());
   const unsigned Offset = UseVolatile ? Info.VolatileOffset : Info.Offset;
   const unsigned StorageSize =
       UseVolatile ? Info.VolatileStorageSize : Info.StorageSize;
@@ -3045,7 +3065,7 @@ void CodeGenFunction::EmitStoreThroughBitfieldLValue(RValue Src, LValue Dst,
 
   const bool UseVolatile =
       CGM.getCodeGenOpts().AAPCSBitfieldWidth && Dst.isVolatileQualified() &&
-      Info.VolatileStorageSize != 0 && isAAPCS(CGM.getTarget());
+      Info.VolatileStorageSize != 0 && CodeGenUtils::isAAPCS(CGM.getTarget());
   const unsigned StorageSize =
       UseVolatile ? Info.VolatileStorageSize : Info.StorageSize;
   const unsigned Offset = UseVolatile ? Info.VolatileOffset : Info.Offset;
@@ -3079,7 +3099,7 @@ void CodeGenFunction::EmitStoreThroughBitfieldLValue(RValue Src, LValue Dst,
     // with any non-bit-field member, its container must be read exactly once
     // and written exactly once using the access width appropriate to the type
     // of the container. The two accesses are not atomic.
-    if (Dst.isVolatileQualified() && isAAPCS(CGM.getTarget()) &&
+    if (Dst.isVolatileQualified() && CodeGenUtils::isAAPCS(CGM.getTarget()) &&
         CGM.getCodeGenOpts().ForceAAPCSBitfieldLoad)
       Builder.CreateLoad(Ptr, true, "bf.load");
   }
@@ -3595,6 +3615,69 @@ static bool canEmitSpuriousReferenceToVariable(CodeGenFunction &CGF,
   }
 }
 
+/// Emit an LValue for a structured binding captured in an OpenMP region.
+/// Handles extracting individual bindings from the captured decomposed
+/// declaration (struct fields, array elements, etc.).
+LValue CodeGenFunction::EmitOMPCapturedBindingLValue(const BindingDecl *BD) {
+  assert(CapturedStmtInfo && "Expected to be inside a captured region");
+  assert(CapturedStmtInfo->getKind() == CapturedRegionKind::CR_OpenMP &&
+         "Expected OpenMP captured region");
+  assert(CGM.getLangOpts().OpenMP && "Expected OpenMP to be enabled");
+
+  if (auto It = LocalDeclMap.find(BD->getCanonicalDecl());
+      It != LocalDeclMap.end())
+    return MakeAddrLValue(It->second, BD->getType());
+
+  const auto *DD = cast<VarDecl>(BD->getDecomposedDecl());
+
+  // Use getNonReferenceType() because we need the actual object type, not the
+  // reference type. DeclRefExpr with VK_LValue requires a non-reference type
+  // (AST invariant). EmitDeclRefLValue will load any reference for us.
+  QualType DREType = DD->getType().getNonReferenceType();
+  DeclRefExpr DRE(getContext(), const_cast<VarDecl *>(DD),
+                  /*RefersToEnclosingVariableOrCapture=*/true, DREType,
+                  VK_LValue, SourceLocation());
+  LValue BaseLVal = EmitDeclRefLValue(&DRE);
+
+  // Ensure the Address has the correct element type for DD's type.
+  // EmitDeclRefLValue might return an address with a different element type
+  // if reference unwrapping occurred.
+  Address BaseAddr = BaseLVal.getAddress();
+  QualType DDType = DD->getType();
+  llvm::Type *ExpectedTy = CGM.getTypes().ConvertTypeForMem(DDType);
+  if (BaseAddr.getElementType() != ExpectedTy)
+    BaseAddr = BaseAddr.withElementType(ExpectedTy);
+
+  // Now emit the binding expression (array subscript, member access, etc.)
+  // by temporarily installing the decomposed storage address, then routing
+  // through EmitLValue for the binding expression.
+  Expr *BindingExpr = BD->getBinding();
+  auto It = LocalDeclMap.find(DD);
+  bool WasMapped = It != LocalDeclMap.end();
+  Address SavedAddr = WasMapped ? It->second : Address::invalid();
+  Address MapAddr = BaseAddr;
+  if (DD->getType()->isReferenceType()) {
+    RawAddress RefSlot = CreateMemTemp(DD->getType(), "omp.binding.ref");
+    Builder.CreateStore(BaseAddr.emitRawPointer(*this), RefSlot);
+    MapAddr = RefSlot;
+  }
+  if (WasMapped)
+    It->second = MapAddr;
+  else
+    LocalDeclMap.insert({DD, MapAddr});
+  llvm::scope_exit Guard([&] {
+    if (WasMapped) {
+      auto RestoreIt = LocalDeclMap.find(DD);
+      assert(RestoreIt != LocalDeclMap.end() && "DD should still be in map");
+      RestoreIt->second = SavedAddr;
+    } else {
+      LocalDeclMap.erase(DD);
+    }
+  });
+
+  return EmitLValue(BindingExpr);
+}
+
 LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
   const NamedDecl *ND = E->getDecl();
   QualType T = E->getType();
@@ -3777,6 +3860,33 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
   // an enclosing scope.
   if (const auto *BD = dyn_cast<BindingDecl>(ND)) {
     if (E->refersToEnclosingVariableOrCapture()) {
+      auto ApplyNontemporal = [&](LValue LV) {
+        if (getLangOpts().OpenMP &&
+            CGM.getOpenMPRuntime().isNontemporalDecl(BD))
+          LV.setNontemporal(/*Value=*/true);
+        return LV;
+      };
+
+      // Try direct lookup first.
+      auto It = LocalDeclMap.find(BD->getCanonicalDecl());
+      if (It != LocalDeclMap.end()) {
+        return ApplyNontemporal(
+            MakeAddrLValue(It->second, E->getType(), AlignmentSource::Decl));
+      }
+
+      // OpenMP case: binding was captured via its decomposed decl.
+      if (CapturedStmtInfo &&
+          CapturedStmtInfo->getKind() == CapturedRegionKind::CR_OpenMP &&
+          CGM.getLangOpts().OpenMP) {
+        auto NameIt = OMPPrivatizedBindings.find(
+            cast<BindingDecl>(BD->getCanonicalDecl()));
+        if (NameIt != OMPPrivatizedBindings.end()) {
+          return ApplyNontemporal(MakeAddrLValue(NameIt->second, E->getType(),
+                                                 AlignmentSource::Decl));
+        }
+        return ApplyNontemporal(EmitOMPCapturedBindingLValue(BD));
+      }
+      // Non-OpenMP case: lambda capture.
       auto *FD = LambdaCaptureFields.lookup(BD);
       return EmitCapturedFieldLValue(*this, FD, CXXABIThisValue);
     }
@@ -4285,8 +4395,8 @@ void CodeGenFunction::EmitCheck(
         CGM.getDataLayout().getDefaultGlobalsAddressSpace());
     InfoPtr->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
     CGM.getSanitizerMetadata()->disableSanitizerForGlobal(InfoPtr);
-    Args.push_back(InfoPtr);
-    ArgTypes.push_back(Args.back()->getType());
+    Args.push_back(Builder.CreateAddrSpaceCast(InfoPtr, CGM.VoidPtrTy));
+    ArgTypes.push_back(CGM.VoidPtrTy);
   }
 
   for (llvm::Value *DynamicArg : DynamicArgs) {
@@ -4603,9 +4713,10 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
   EmitBlock(Cont);
 }
 
-llvm::CallInst *CodeGenFunction::EmitTrapCall(llvm::Intrinsic::ID IntrID) {
-  llvm::CallInst *TrapCall =
-      Builder.CreateCall(CGM.getIntrinsic(IntrID));
+llvm::CallInst *CodeGenFunction::EmitTrapCall(llvm::Intrinsic::ID IntrID,
+                                              bool EnsureInsertPoint) {
+  llvm::Function *TrapIntrinsic = CGM.getIntrinsic(IntrID);
+  llvm::CallInst *TrapCall = Builder.CreateCall(TrapIntrinsic);
 
   if (!CGM.getCodeGenOpts().TrapFuncName.empty()) {
     auto A = llvm::Attribute::get(getLLVMContext(), "trap-func-name",
@@ -4615,7 +4726,28 @@ llvm::CallInst *CodeGenFunction::EmitTrapCall(llvm::Intrinsic::ID IntrID) {
 
   if (InNoMergeAttributedStmt)
     TrapCall->addFnAttr(llvm::Attribute::NoMerge);
+  if (TrapIntrinsic->doesNotThrow())
+    TrapCall->setDoesNotThrow();
+  if (TrapIntrinsic->doesNotReturn()) {
+    TrapCall->setDoesNotReturn();
+    Builder.CreateUnreachable();
+    if (EnsureInsertPoint)
+      EmitBlock(createBasicBlock());
+    else
+      Builder.ClearInsertionPoint();
+  }
   return TrapCall;
+}
+
+void CodeGenFunction::EmitTrapCallAndMakeUnreachable() {
+  llvm::CallInst *TrapCall =
+      EmitTrapCall(llvm::Intrinsic::trap, /*EnsureInsertPoint=*/false);
+  TrapCall->setDoesNotReturn();
+  TrapCall->setDoesNotThrow();
+  if (HaveInsertPoint()) {
+    Builder.CreateUnreachable();
+    Builder.ClearInsertionPoint();
+  }
 }
 
 Address CodeGenFunction::EmitArrayToPointerDecay(const Expr *E,
@@ -4720,15 +4852,6 @@ static Address emitArraySubscriptGEP(CodeGenFunction &CGF, Address addr,
   }
 }
 
-static QualType getFixedSizeElementType(const ASTContext &ctx,
-                                        const VariableArrayType *vla) {
-  QualType eltType;
-  do {
-    eltType = vla->getElementType();
-  } while ((vla = ctx.getAsVariableArrayType(eltType)));
-  return eltType;
-}
-
 static bool hasBPFPreserveStaticOffset(const RecordDecl *D) {
   return D && D->hasAttr<BPFPreserveStaticOffsetAttr>();
 }
@@ -4811,7 +4934,7 @@ static Address emitArraySubscriptGEP(CodeGenFunction &CGF, Address addr,
   // Determine the element size of the statically-sized base.  This is
   // the thing that the indices are expressed in terms of.
   if (auto vla = CGF.getContext().getAsVariableArrayType(eltType)) {
-    eltType = getFixedSizeElementType(CGF.getContext(), vla);
+    eltType = CodeGenUtils::getFixedSizeElementType(CGF.getContext(), vla);
   }
 
   // We can use that to compute the best alignment of the element.
@@ -4919,6 +5042,54 @@ static std::optional<int64_t> getOffsetDifferenceInBits(CodeGenFunction &CGF,
   return std::make_optional<int64_t>(FD1Offset - FD2Offset);
 }
 
+/// Convert a '__sized_by' byte-count bound to an element-count bound so it can
+/// be compared against an element index. \p BoundsVal is the loaded byte count
+/// and \p PointeeTy is the pointer's pointee type. Returns \p BoundsVal
+/// unchanged when no scaling is needed, otherwise returns a new `llvm::Value*`
+/// that is element count.
+static llvm::Value *convertSizedByBoundToElementCount(CodeGenFunction &CGF,
+                                                      llvm::Value *BoundsVal,
+                                                      QualType PointeeTy,
+                                                      bool CountSigned) {
+  assert(BoundsVal->getType()->isIntegerTy());
+  assert(!PointeeTy.isNull() && "pointee type is never null");
+  assert(!PointeeTy->isFunctionType() &&
+         "Sema guarantees a '__sized_by' pointee is a non-function type");
+
+  if (PointeeTy->isIncompleteType()) {
+    // Sema enforces that only 'void' can be subscripted here (GNU extension,
+    // 1-byte stride), so the byte count already equals the element count.
+    assert(PointeeTy->isVoidType() && "expected a 'void' incomplete pointee");
+    return BoundsVal;
+  }
+
+  CharUnits ElemSize = CGF.getContext().getTypeSizeInChars(PointeeTy);
+  if (ElemSize <= CharUnits::One())
+    return BoundsVal;
+
+  int64_t ElemSizeQ = ElemSize.getQuantity();
+  unsigned CountWidth = BoundsVal->getType()->getIntegerBitWidth();
+
+  // The divisor must be representable in the count field's type.
+  bool ElemSizeFits =
+      CountSigned ? llvm::isIntN(CountWidth, ElemSizeQ)
+                  : llvm::isUIntN(CountWidth, static_cast<uint64_t>(ElemSizeQ));
+  if (!ElemSizeFits)
+    // No whole element fits in any representable byte count. Use a bound of 0
+    // to always trap.
+    // FIXME: Sema should just reject this (#223525).
+    return llvm::ConstantInt::get(BoundsVal->getType(), 0);
+
+  llvm::Value *ElemSizeV =
+      llvm::ConstantInt::get(BoundsVal->getType(), ElemSizeQ);
+  // Use signed division for a signed count field so a negative byte count stays
+  // non-positive and is still rejected by the negative-bounds guard in
+  // EmitBoundsCheckImpl (unsigned division would turn it into a large positive
+  // count).
+  return CountSigned ? CGF.Builder.CreateSDiv(BoundsVal, ElemSizeV)
+                     : CGF.Builder.CreateUDiv(BoundsVal, ElemSizeV);
+}
+
 /// EmitCountedByBoundsChecking - If the array being accessed has a "counted_by"
 /// attribute, generate bounds checking code. The "count" field is at the top
 /// level of the struct or in an anonymous struct, that's also at the top level.
@@ -4960,15 +5131,39 @@ void CodeGenFunction::EmitCountedByBoundsChecking(
 
     // Create a GEP with the byte offset between the counted object and the
     // count and use that to load the count value.
-    ArrayInst = Builder.CreatePointerBitCastOrAddrSpaceCast(ArrayInst,
-                                                            Int8PtrTy, Int8Ty);
+    Address CountAddr = Builder.CreatePointerBitCastOrAddrSpaceCast(
+        ArrayInst, Int8PtrTy, Int8Ty);
 
     llvm::Type *BoundsType = ConvertType(CountFD->getType());
     llvm::Value *BoundsVal =
-        Builder.CreateInBoundsGEP(Int8Ty, ArrayInst.emitRawPointer(*this),
+        Builder.CreateInBoundsGEP(Int8Ty, CountAddr.emitRawPointer(*this),
                                   Builder.getInt32(*Diff), ".counted_by.gep");
     BoundsVal = Builder.CreateAlignedLoad(BoundsType, BoundsVal, getIntAlign(),
                                           ".counted_by.load");
+
+    const auto *CountAttributedTy = FD->getType()->getAs<CountAttributedType>();
+    assert(CountAttributedTy && "expected FD to have a CountAttributedType");
+
+    // For the '_or_null' variants a null pointer describes no accessible
+    // memory, so treat the bound as 0 when the pointer is null; any access then
+    // traps.
+    if (CountAttributedTy->isOrNull()) {
+      // Load the pointer from its address rather than re-emitting the
+      // member expression, which would re-evaluate a side-effecting base.
+      llvm::Value *Ptr = Builder.CreateLoad(ArrayInst);
+      llvm::Value *IsNull = Builder.CreateIsNull(Ptr);
+      BoundsVal = Builder.CreateSelect(
+          IsNull, llvm::ConstantInt::get(BoundsType, 0), BoundsVal);
+    }
+
+    // For '__sized_by' the loaded bound is a byte count. Convert it to an
+    // element count by dividing by the element size so the check can compare
+    // the (element) index directly. '__counted_by' already counts elements so
+    // needs no special handling.
+    if (CountAttributedTy->isCountInBytes())
+      BoundsVal = convertSizedByBoundToElementCount(
+          *this, BoundsVal, ArrayType->getPointeeType(),
+          CountFD->getType()->isSignedIntegerOrEnumerationType());
 
     // Now emit the bounds checking.
     EmitBoundsCheckImpl(ArrayExpr, ArrayType, IndexVal, IndexType, BoundsVal,
@@ -5772,7 +5967,7 @@ LValue CodeGenFunction::EmitLValueForField(LValue base, const FieldDecl *field,
     const CGRecordLayout &RL =
         CGM.getTypes().getCGRecordLayout(field->getParent());
     const CGBitFieldInfo &Info = RL.getBitFieldInfo(field);
-    const bool UseVolatile = isAAPCS(CGM.getTarget()) &&
+    const bool UseVolatile = CodeGenUtils::isAAPCS(CGM.getTarget()) &&
                              CGM.getCodeGenOpts().AAPCSBitfieldWidth &&
                              Info.VolatileStorageSize != 0 &&
                              field->getType()
@@ -5861,18 +6056,6 @@ LValue CodeGenFunction::EmitLValueForField(LValue base, const FieldDecl *field,
   Address addr = base.getAddress();
   if (hasBPFPreserveStaticOffset(rec))
     addr = wrapWithBPFPreserveStaticOffset(*this, addr);
-  if (auto *ClassDef = dyn_cast<CXXRecordDecl>(rec)) {
-    if (CGM.getCodeGenOpts().StrictVTablePointers &&
-        ClassDef->isDynamicClass()) {
-      // Getting to any field of dynamic object requires stripping dynamic
-      // information provided by invariant.group.  This is because accessing
-      // fields may leak the real address of dynamic object, which could result
-      // in miscompilation when leaked pointer would be compared.
-      auto *stripped =
-          Builder.CreateStripInvariantGroup(addr.emitRawPointer(*this));
-      addr = Address(stripped, addr.getElementType(), addr.getAlignment());
-    }
-  }
 
   unsigned RecordCVR = base.getVRQualifiers();
   if (rec->isUnion()) {
@@ -5975,6 +6158,13 @@ LValue CodeGenFunction::EmitCompoundLiteralLValue(const CompoundLiteralExpr *E){
   Address DeclPtr = CreateMemTempWithoutCast(E->getType(), ".compoundliteral");
   const Expr *InitExpr = E->getInitializer();
   LValue Result = MakeAddrLValue(DeclPtr, E->getType(), AlignmentSource::Decl);
+
+  if (!getLangOpts().CPlusPlus) {
+    if (HaveInsertPoint() && !hasLabelBeenSeenInCurrentScope() &&
+        EmitLifetimeStart(DeclPtr.getBasePointer()))
+      pushCleanupAfterFullExpr<CallLifetimeEnd>(NormalEHLifetimeMarker,
+                                                DeclPtr);
+  }
 
   EmitAnyExprToMem(InitExpr, DeclPtr, E->getType().getQualifiers(),
                    /*Init*/ true);
@@ -6508,16 +6698,6 @@ RValue CodeGenFunction::EmitSimpleCallExpr(const CallExpr *E,
                   /*Chain=*/nullptr, CallOrInvoke);
 }
 
-// Detect the unusual situation where an inline version is shadowed by a
-// non-inline version. In that case we should pick the external one
-// everywhere. That's GCC behavior too.
-static bool OnlyHasInlineBuiltinDeclaration(const FunctionDecl *FD) {
-  for (const FunctionDecl *PD = FD; PD; PD = PD->getPreviousDecl())
-    if (!PD->isInlineBuiltinDeclaration())
-      return false;
-  return true;
-}
-
 static CGCallee EmitDirectCallee(CodeGenFunction &CGF, GlobalDecl GD) {
   const FunctionDecl *FD = cast<FunctionDecl>(GD.getDecl());
 
@@ -6537,7 +6717,7 @@ static CGCallee EmitDirectCallee(CodeGenFunction &CGF, GlobalDecl GD) {
     // When directing calling an inline builtin, call it through it's mangled
     // name to make it clear it's not the actual builtin.
     if (CGF.CurFn->getName() != FDInlineName &&
-        OnlyHasInlineBuiltinDeclaration(FD)) {
+        CodeGenUtils::onlyHasInlineBuiltinDeclaration(FD)) {
       llvm::Constant *CalleePtr = CGF.CGM.getRawFunctionPointer(GD);
       llvm::Function *Fn = llvm::cast<llvm::Function>(CalleePtr);
       llvm::Module *M = Fn->getParent();
@@ -6617,7 +6797,8 @@ CGCallee CodeGenFunction::EmitCallee(const Expr *E) {
                 dyn_cast_or_null<VarDecl>(E->getReferencedDeclOfCallee())) {
           GD = GlobalDecl(VD);
         }
-        CGCalleeInfo CalleeInfo(FunctionType->getAs<FunctionProtoType>(), GD);
+        CGCalleeInfo CalleeInfo(FunctionType->castAs<clang::FunctionType>(),
+                                GD);
         CGCallee Callee(CalleeInfo, ConvertFuncrefToPtr(Result.first),
                         Result.second);
         return Callee;
@@ -6661,7 +6842,7 @@ CGCallee CodeGenFunction::EmitCallee(const Expr *E) {
           dyn_cast_or_null<VarDecl>(E->getReferencedDeclOfCallee()))
     GD = GlobalDecl(VD);
 
-  CGCalleeInfo calleeInfo(functionType->getAs<FunctionProtoType>(), GD);
+  CGCalleeInfo calleeInfo(functionType->castAs<clang::FunctionType>(), GD);
   CGPointerAuthInfo pointerAuth = CGM.getFunctionPointerAuthInfo(functionType);
   CGCallee callee(calleeInfo, ConvertFuncrefToPtr(calleePtr), pointerAuth);
   return callee;
@@ -7112,7 +7293,7 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
                E->getDirectCallee(), /*ParamsToSkip=*/0, Order);
 
   const CGFunctionInfo &FnInfo = CGM.getTypes().arrangeFreeFunctionCall(
-      Args, FnType, /*ChainCall=*/Chain);
+      Args, FnType, /*ChainCall=*/Chain, getCurrentFunctionDecl());
 
   if (ResolvedFnInfo)
     *ResolvedFnInfo = &FnInfo;
