@@ -70,6 +70,9 @@ public:
   void PreprocessISelDAG() override;
   void Select(SDNode *N) override;
   void PostprocessISelDAG() override;
+  bool SelectInlineAsmMemoryOperand(const SDValue &Op,
+                                    InlineAsm::ConstraintCode ConstraintID,
+                                    std::vector<SDValue> &OutOps) override;
 
 protected:
   void SelectBuildVector(SDNode *N, unsigned RegClassID);
