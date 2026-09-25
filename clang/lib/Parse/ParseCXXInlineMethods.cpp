@@ -774,13 +774,14 @@ bool Parser::checkLateAttributeParamRefs(
   if (Actions.CurContext->isDependentContext() ||
       getCurScope()->getTemplateParamParent() ||
       Actions.getCurGenericLambda()) {
-    const SourceManager &SM = PP.getSourceManager();
+    const auto *DParam = dyn_cast_or_null<ParmVarDecl>(D);
     for (const DeclRefExpr *DRE : ParamRefs) {
       const auto *PVD = cast<ParmVarDecl>(DRE->getDecl());
       bool Pointee = IsPointeeParam(PVD);
       if (!Pointee &&
-          !(isa<ParmVarDecl>(D) &&
-            SM.isBeforeInTranslationUnit(D->getLocation(), PVD->getLocation())))
+          !(DParam &&
+            DParam->getFunctionScopeDepth() == PVD->getFunctionScopeDepth() &&
+            DParam->getFunctionScopeIndex() < PVD->getFunctionScopeIndex()))
         continue;
       Diag(DRE->getLocation(), diag::err_late_attribute_param_in_template)
           << &LPA.AttrName << !Pointee << PVD;
