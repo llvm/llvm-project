@@ -399,6 +399,7 @@ struct Config {
   bool rejectMismatch;
   bool relax;
   bool relaxGP;
+  bool relaxZcmt;
   bool relocatable;
   bool resolveGroups;
   bool relrGlibc = false;
