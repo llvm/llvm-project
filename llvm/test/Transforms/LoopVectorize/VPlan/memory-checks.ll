@@ -9,31 +9,30 @@ define void @three_groups_shared_bounds(ptr %a, ptr %b, ptr %c, i64 %n) {
 ; CHECK-NEXT:    EMIT-SCALAR vp<[[VP2:%[0-9]+]]> = call i64 @llvm.umax(ir<%n>, ir<1>)
 ; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult vp<[[VP2]]>, ir<4>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
-; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, ir-bb<vector.memcheck>
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.memcheck
 ; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<vector.memcheck>:
-; CHECK-NEXT:    IR   %umax = call i64 @llvm.umax.i64(i64 %n, i64 1)
-; CHECK-NEXT:    IR   %0 = shl i64 %umax, 2
-; CHECK-NEXT:    IR   %scevgep = getelementptr i8, ptr %c, i64 %0
-; CHECK-NEXT:    IR   %scevgep1 = getelementptr i8, ptr %a, i64 %0
-; CHECK-NEXT:    IR   %scevgep2 = getelementptr i8, ptr %b, i64 %0
-; CHECK-NEXT:    IR   %bound0 = icmp ult ptr %c, %scevgep1
-; CHECK-NEXT:    IR   %bound1 = icmp ult ptr %a, %scevgep
-; CHECK-NEXT:    IR   %found.conflict = and i1 %bound0, %bound1
-; CHECK-NEXT:    IR   %bound03 = icmp ult ptr %c, %scevgep2
-; CHECK-NEXT:    IR   %bound14 = icmp ult ptr %b, %scevgep
-; CHECK-NEXT:    IR   %found.conflict5 = and i1 %bound03, %bound14
-; CHECK-NEXT:    IR   %conflict.rdx = or i1 %found.conflict, %found.conflict5
-; CHECK-NEXT:    IR   %bound06 = icmp ult ptr %a, %scevgep2
-; CHECK-NEXT:    IR   %bound17 = icmp ult ptr %b, %scevgep1
-; CHECK-NEXT:    IR   %found.conflict8 = and i1 %bound06, %bound17
-; CHECK-NEXT:    IR   %conflict.rdx9 = or i1 %conflict.rdx, %found.conflict8
-; CHECK-NEXT:    EMIT branch-on-cond ir<%conflict.rdx9>
+; CHECK-NEXT:  vector.memcheck:
+; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = shl vp<[[VP2]]>, ir<2>
+; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = ptradd ir<%c>, vp<[[VP4]]>
+; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = ptradd ir<%a>, vp<[[VP4]]>
+; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = ptradd ir<%b>, vp<[[VP4]]>
+; CHECK-NEXT:    EMIT vp<%bound0> = icmp ult ir<%c>, vp<[[VP6]]>
+; CHECK-NEXT:    EMIT vp<%bound1> = icmp ult ir<%a>, vp<[[VP5]]>
+; CHECK-NEXT:    EMIT vp<%found.conflict> = and vp<%bound0>, vp<%bound1>
+; CHECK-NEXT:    EMIT vp<%bound0>.1 = icmp ult ir<%c>, vp<[[VP7]]>
+; CHECK-NEXT:    EMIT vp<%bound1>.1 = icmp ult ir<%b>, vp<[[VP5]]>
+; CHECK-NEXT:    EMIT vp<%found.conflict>.1 = and vp<%bound0>.1, vp<%bound1>.1
+; CHECK-NEXT:    EMIT vp<%conflict.rdx> = or vp<%found.conflict>, vp<%found.conflict>.1
+; CHECK-NEXT:    EMIT vp<%bound0>.2 = icmp ult ir<%a>, vp<[[VP7]]>
+; CHECK-NEXT:    EMIT vp<%bound1>.2 = icmp ult ir<%b>, vp<[[VP6]]>
+; CHECK-NEXT:    EMIT vp<%found.conflict>.2 = and vp<%bound0>.2, vp<%bound1>.2
+; CHECK-NEXT:    EMIT vp<%conflict.rdx>.1 = or vp<%conflict.rdx>, vp<%found.conflict>.2
+; CHECK-NEXT:    EMIT branch-on-cond vp<%conflict.rdx>.1
 ; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
-; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = and vp<[[VP2]]>, ir<3>
-; CHECK-NEXT:    EMIT vp<%n.vec> = sub vp<[[VP2]]>, vp<[[VP5]]>
+; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = and vp<[[VP2]]>, ir<3>
+; CHECK-NEXT:    EMIT vp<%n.vec> = sub vp<[[VP2]]>, vp<[[VP9]]>
 ; CHECK-NEXT:  Successor(s): vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.body:

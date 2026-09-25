@@ -236,6 +236,13 @@ struct VPlanTransforms {
   static void attachCheckBlock(VPlan &Plan, Value *Cond, BasicBlock *CheckBlock,
                                bool AddBranchWeights);
 
+  /// Generate recipes for the memory runtime checks \p Checks in a new block
+  /// added to \p Plan.
+  static void addMemoryRuntimeChecks(VPlan &Plan,
+                                     ArrayRef<RuntimePointerCheck> Checks,
+                                     ScalarEvolution &SE, DebugLoc DL,
+                                     bool AddBranchWeights);
+
   /// Model the blocks the executed \p MainPlan generated for the main vector
   /// loop in \p EpiPlan during epilogue vectorization, wrapping each in a
   /// VPIRBasicBlock, with \p EnteredFrom the block \p EpiPlan is entered from.
