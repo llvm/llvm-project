@@ -30727,18 +30727,6 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
         continue;
       }
 
-      auto IsCollectedGEP = [&](GetElementPtrInst *GEP) {
-        auto It = GEPs.find(GEP->getPointerOperand());
-        return It != GEPs.end() && It->second.size() >= 2 &&
-               is_contained(It->second, GEP);
-      };
-      if (StandaloneSeeds &&
-          isGEPCandidateIndexBundle(Ops, *LI, SLPReVec, IsCollectedGEP)) {
-        LLVM_DEBUG(dbgs() << "SLP: Leaving collected GEP index computations "
-                             "to vectorizeGEPIndices.\n");
-        continue;
-      }
-
       LLVM_DEBUG(dbgs() << "SLP: Analyzing " << ActualVF << " operations "
                         << "\n");
 
@@ -36591,6 +36579,13 @@ bool SLPVectorizerPass::vectorizeOnceUsedSeeds(BasicBlock *BB, BoUpSLP &R) {
                 isOnceUsedSeed(&I) && !isNonVectorizableInst(&I, TLI) &&
                 !R.hasResolvedUser(&I);
        })) {
+    // Index chains of collected GEPs are handled by vectorizeGEPIndices.
+    if (isGEPCandidateIndexBundle({&I}, *SE, *LI, SLPReVec, [&](auto *GEP) {
+          auto It = GEPs.find(GEP->getPointerOperand());
+          return It != GEPs.end() && It->second.size() >= 2 &&
+                 is_contained(It->second, GEP);
+        }))
+      continue;
     // The poor-throughput ops are seeded on their own, with the different
     // grouping.
     if (VectorizePoorThroughput &&
