@@ -7447,6 +7447,18 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     if (N1.getValueType().getScalarType() == MVT::i1)
       return getNode(ISD::VECREDUCE_AND, DL, VT, N1);
     break;
+  case ISD::VECTOR_REPEAT:
+    assert(N1.getValueType().isFixedLengthVector() &&
+           "VECTOR_REPEAT requires a fixed-length vector operand");
+    assert(VT.isScalableVector() &&
+           "VECTOR_REPEAT requires a scalable vector result");
+    assert(N1.getValueType().getVectorNumElements() ==
+               VT.getVectorMinNumElements() &&
+           "VECTOR_REPEAT operand and result element counts must match");
+    if (VT.getVectorMinNumElements() == 1)
+      return getSplatVector(
+          VT, DL, getExtractVectorElt(DL, VT.getVectorElementType(), N1, 0));
+    break;
   case ISD::SPLAT_VECTOR:
     assert(VT.isVector() && "Wrong return type!");
     // FIXME: Hexagon uses i32 scalar for a floating point zero vector so allow
