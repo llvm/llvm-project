@@ -15,13 +15,13 @@
 
 #include "hdr/types/struct_dirent.h"
 #include "src/__support/common.h"
-#include "src/string/strcoll.h"
+#include "src/string/string_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, alphasort,
                    (const struct dirent **a, const struct dirent **b)) {
-  return LIBC_NAMESPACE::strcoll((*a)->d_name, (*b)->d_name);
+  return internal::strcoll((*a)->d_name, (*b)->d_name);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

@@ -10,18 +10,14 @@
 
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/macros/null_check.h"
+#include "src/string/string_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 // TODO: Add support for locales.
 LLVM_LIBC_FUNCTION(int, strcoll_l,
                    (const char *left, const char *right, locale_t)) {
-  LIBC_CRASH_ON_NULLPTR(left);
-  LIBC_CRASH_ON_NULLPTR(right);
-  for (; *left && *left == *right; ++left, ++right)
-    ;
-  return static_cast<int>(*left) - static_cast<int>(*right);
+  return internal::strcoll(left, right);
 }
 
 } // namespace LIBC_NAMESPACE_DECL
