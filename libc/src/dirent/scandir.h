@@ -20,8 +20,8 @@
 namespace LIBC_NAMESPACE_DECL {
 
 int scandir(const char *dir, struct dirent ***namelist,
-            int (*sel)(const struct dirent *),
-            int (*compar)(const struct dirent **, const struct dirent **));
+            int (*filter)(const struct dirent *),
+            int (*compare)(const struct dirent **, const struct dirent **));
 
 } // namespace LIBC_NAMESPACE_DECL
 

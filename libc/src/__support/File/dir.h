@@ -14,15 +14,12 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FILE_DIR_H
 #define LLVM_LIBC_SRC___SUPPORT_FILE_DIR_H
 
-#include "include/llvm-libc-types/__scandir_compare_t.h"
-#include "include/llvm-libc-types/__scandir_filter_t.h"
 #include "src/__support/CPP/span.h"
 #include "src/__support/error_or.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/threads/mutex.h"
 
 #include "hdr/types/struct_dirent.h"
-#include <dirent.h>
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -83,8 +80,9 @@ public:
   static ErrorOr<Dir *> fdopen(int fd);
   ErrorOr<struct dirent *> read();
   static ErrorOr<int> scan(const char *name, struct dirent ***namelist,
-                           __scandir_filter_t filter,
-                           __scandir_compare_t compare);
+                           int (*filter)(const struct dirent *),
+                           int (*compare)(const struct dirent **,
+                                          const struct dirent **));
 
   LIBC_INLINE static size_t reclen(struct dirent *d) {
     return platform_dir_reclen(d);

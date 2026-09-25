@@ -24,8 +24,7 @@ struct MockDir {
 
   static struct dirent dummy_entry;
 
-  static LIBC_NAMESPACE::ErrorOr<MockDir *> open(const char *path) {
-    (void)path;
+  static LIBC_NAMESPACE::ErrorOr<MockDir *> open(const char *) {
     return new MockDir();
   }
 

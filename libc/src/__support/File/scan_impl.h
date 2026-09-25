@@ -19,8 +19,6 @@
 #include "hdr/func/malloc.h"
 #include "hdr/func/realloc.h"
 #include "hdr/types/struct_dirent.h"
-#include "include/llvm-libc-types/__scandir_compare_t.h"
-#include "include/llvm-libc-types/__scandir_filter_t.h"
 #include "src/__support/CPP/limits.h"
 #include "src/__support/error_or.h"
 #include "src/stdlib/qsort_util.h"
@@ -31,7 +29,9 @@ namespace internal {
 
 template <typename DirType>
 ErrorOr<int> scan_impl(const char *name, struct dirent ***namelist,
-                       __scandir_filter_t filter, __scandir_compare_t compare) {
+                       int (*filter)(const struct dirent *),
+                       int (*compare)(const struct dirent **,
+                                      const struct dirent **)) {
   auto res_open = DirType::open(name);
   if (!res_open) {
     return LIBC_NAMESPACE::Error(res_open.error());
