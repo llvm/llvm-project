@@ -99,6 +99,30 @@ define i64 @no_bfe_on_64bit_overflow(i64 %a) {
   ret i64 %val1
 }
 
+define i64 @bfe_i64_shift_amount_width(i64 %x) {
+; CHECK-O3-LABEL: bfe_i64_shift_amount_width(
+; CHECK-O3:       {
+; CHECK-O3-NEXT:    .reg .b64 %rd<2>;
+; CHECK-O3-EMPTY:
+; CHECK-O3-NEXT:  // %bb.0:
+; CHECK-O3-NEXT:    ld.param.b8 %rd1, [bfe_i64_shift_amount_width_param_0+5];
+; CHECK-O3-NEXT:    st.param.b64 [func_retval0], %rd1;
+; CHECK-O3-NEXT:    ret;
+;
+; CHECK-O0-LABEL: bfe_i64_shift_amount_width(
+; CHECK-O0:       {
+; CHECK-O0-NEXT:    .reg .b64 %rd<3>;
+; CHECK-O0-EMPTY:
+; CHECK-O0-NEXT:  // %bb.0:
+; CHECK-O0-NEXT:    ld.param.b64 %rd1, [bfe_i64_shift_amount_width_param_0];
+; CHECK-O0-NEXT:    bfe.u64 %rd2, %rd1, 40, 8;
+; CHECK-O0-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-O0-NEXT:    ret;
+  %shr = lshr i64 %x, 40
+  %and = and i64 %shr, 255
+  ret i64 %and
+}
+
 define i64 @no_bfe_on_64bit_overflow_shr_and_pair(i64 %a) {
 ; CHECK-LABEL: no_bfe_on_64bit_overflow_shr_and_pair(
 ; CHECK:       {
