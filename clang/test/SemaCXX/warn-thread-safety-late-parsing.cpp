@@ -49,6 +49,16 @@ struct Scoping {
   int x __attribute__((guarded_by(p->lock))); // both-error{{use of undeclared identifier 'p'}}
 };
 
+// guarded_by and pt_guarded_by describe the pointer itself rather than a call
+// through it, so a pointee's parameters are not in scope for them and a member
+// of the same name is not ambiguous.
+struct Guarded {
+  void (*cb)(Mutex *own) __attribute__((guarded_by(own)));
+  int *(*get)(Mutex *own) __attribute__((pt_guarded_by(own)));
+  Mutex own;
+  void (*pointee)(Mutex *p) __attribute__((guarded_by(p))); // both-error{{use of undeclared identifier 'p'}}
+};
+
 // A nested class's attribute may name a pointee parameter and a member of the
 // enclosing class.
 struct Outer {
@@ -87,3 +97,24 @@ auto generic_lambda = [](auto x, void (*release)(int) RELEASE(mu), // early-erro
 template <typename T>
 void put_earlier_template(Mutex *mu, void (*release)(T) RELEASE(mu)) {}
 void use_put_earlier_template(Mutex *mu) { put_earlier_template<int>(mu, nullptr); }
+
+// Whether a parameter is declared later depends on its position in the
+// prototype, not on how macros spell it.
+#define SWAP(a, b) b, a
+template <typename T>
+void swapped_later(SWAP(Mutex *mu, // early-error{{use of undeclared identifier 'mu'}} \
+                                   // late-error{{'release_capability' attribute in a template cannot name later parameter 'mu'}}
+                        void (*release)(T) RELEASE(mu)));
+template <typename T>
+void swapped_earlier(SWAP(void (*release)(T) RELEASE(mu), Mutex *mu)) {}
+void use_swapped_earlier(Mutex *mu) { swapped_earlier<int>(mu, nullptr); }
+
+// Nor on how deeply its prototype is nested: a later parameter of a nested
+// prototype is rejected, and an earlier parameter of an enclosing one works.
+template <typename T>
+void nested_later(void (*cb)(void (*release)(T) RELEASE(mu), // early-error{{use of undeclared identifier 'mu'}} \
+                                                             // late-error{{'release_capability' attribute in a template cannot name later parameter 'mu'}}
+                             Mutex *mu));
+template <typename T>
+void nested_earlier(Mutex *mu, void (*cb)(void (*release)(T) RELEASE(mu))) {}
+void use_nested_earlier(Mutex *mu) { nested_earlier<int>(mu, nullptr); }

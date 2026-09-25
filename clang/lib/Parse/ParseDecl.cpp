@@ -196,11 +196,13 @@ bool Parser::ParseSingleGNUAttribute(ParsedAttributes &Attrs,
   LateParsedAttribute *LA =
       new LateParsedAttribute(this, *AttrName, AttrNameLoc);
 
-  // Keep the innermost prototype's parameters available in case they are needed
-  // by late-parsing attributes. A function keeps its own parameters in scope,
-  // so skip it; a parameter of function type is adjusted to a pointer, so keep
-  // it.
-  if (D && (!D->isFunctionDeclarator() || D->isPrototypeContext())) {
+  // Keep the innermost prototype's parameters available for a late-parsed
+  // attribute that is parsed in that prototype's scope, such as one describing
+  // a call through a function pointer (unlike guarded_by, which describes the
+  // pointer itself). A function keeps its own parameters in scope, so skip it;
+  // a parameter of function type is adjusted to a pointer, so keep it.
+  if (D && IsAttributeArgsParsedInFunctionScope(*AttrName) &&
+      (!D->isFunctionDeclarator() || D->isPrototypeContext())) {
     for (unsigned I = 0, E = D->getNumTypeObjects(); I != E; ++I) {
       const DeclaratorChunk &Chunk = D->getTypeObject(I);
       if (Chunk.Kind != DeclaratorChunk::Function)

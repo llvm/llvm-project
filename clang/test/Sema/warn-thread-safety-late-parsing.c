@@ -14,6 +14,7 @@
 #define EXCLUDES(...)     __attribute__((locks_excluded(__VA_ARGS__)))
 #define RETURN_CAP(x)     __attribute__((lock_returned(x)))
 #define GUARDED_BY(x)     __attribute__((guarded_by(x)))
+#define PT_GUARDED_BY(x)  __attribute__((pt_guarded_by(x)))
 
 struct __attribute__((capability("mutex"))) Mutex {
   int dummy;
@@ -119,6 +120,24 @@ void leak(void (*r)(struct Mutex *p) RELEASE(p),
 struct Multi {
   void (*a)(struct Mutex *p) REQUIRES(p),
        (*b)(struct Mutex *q) REQUIRES(q, p); // both-error{{use of undeclared identifier 'p'}}
+};
+
+// guarded_by and pt_guarded_by describe the pointer itself rather than a call
+// through it, so a pointee's parameters are not in scope for them.
+struct GuardedPointee {
+  void (*cb)(struct Mutex *p) GUARDED_BY(p); // both-error{{use of undeclared identifier 'p'}}
+  int *(*get)(struct Mutex *p) PT_GUARDED_BY(p); // both-error{{use of undeclared identifier 'p'}}
+};
+// A member of the same name is found instead, whether declared before or after.
+struct GuardedMember {
+  struct Mutex mu;
+  void (*cb)(int mu) GUARDED_BY(mu);
+  int *(*get)(int mu) PT_GUARDED_BY(mu);
+};
+struct GuardedLaterMember {
+  void (*cb)(int mu) GUARDED_BY(mu); // early-error{{use of undeclared identifier 'mu'}}
+  int *(*get)(int mu) PT_GUARDED_BY(mu); // early-error{{use of undeclared identifier 'mu'}}
+  struct Mutex mu;
 };
 
 // Outside a struct, and with unnamed parameters alongside.
