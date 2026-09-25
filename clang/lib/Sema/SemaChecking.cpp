@@ -17413,8 +17413,8 @@ bool Sema::CheckCoopMatrixLoadElementType(QualType MatrixType,
   IdentifierInfo *Fname = MemberName.getAsIdentifierInfo();
   assert(Fname);
   if (Fname->isStr("coop_mat_load"))
-    return CheckCoopMatrixLoadStoreElementType(MatrixType, Call->getArg(0)->getType(),
-                                               MatrixLoc);
+    return CheckCoopMatrixLoadStoreElementType(
+        MatrixType, Call->getArg(0)->getType(), MatrixLoc);
   return false;
 }
 
@@ -17660,8 +17660,7 @@ ExprResult Sema::BuiltinCoopMatrixScalarOp(CallExpr *TheCall,
     return ExprError();
   }
 
-  if (M0Ty->getElementType().getUnqualifiedType() !=
-      Ty.getUnqualifiedType())
+  if (M0Ty->getElementType().getUnqualifiedType() != Ty.getUnqualifiedType())
     return ExprError(Diag(Loc0, diag::err_mismatched_coop_matrix_element_type));
   TheCall->setType(Arg0->getType());
 
