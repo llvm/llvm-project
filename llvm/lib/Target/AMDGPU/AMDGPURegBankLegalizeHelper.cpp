@@ -714,11 +714,27 @@ static bool isSignedBFE(MachineInstr &MI) {
   return MI.getOpcode() == AMDGPU::G_SBFX;
 }
 
+// Width >= TySize is unencodable in a BFE size field (taken modulo TySize).
+static bool tryLowerFullWidthBFX(MachineIRBuilder &B, MachineInstr &MI,
+                                 unsigned SHROpc, Register Dst, Register Src,
+                                 Register LSBit,
+                                 std::optional<uint64_t> WidthImm,
+                                 unsigned TySize) {
+  if (!WidthImm || *WidthImm < TySize)
+    return false;
+
+  B.buildInstr(SHROpc, {Dst}, {Src, LSBit});
+  MI.eraseFromParent();
+  return true;
+}
+
 bool RegBankLegalizeHelper::lowerV_BFE(MachineInstr &MI) {
   Register Dst = MI.getOperand(0).getReg();
   assert(MRI.getType(Dst) == LLT::scalar(64));
+
   bool Signed = isSignedBFE(MI);
-  unsigned FirstOpnd = isa<GIntrinsic>(MI) ? 2 : 1;
+  bool IsIntrinsic = isa<GIntrinsic>(MI);
+  unsigned FirstOpnd = IsIntrinsic ? 2 : 1;
   // Extract bitfield from Src, LSBit is the least-significant bit for the
   // extraction (field offset) and Width is size of bitfield.
   Register Src = MI.getOperand(FirstOpnd).getReg();
@@ -727,35 +743,56 @@ bool RegBankLegalizeHelper::lowerV_BFE(MachineInstr &MI) {
   // Comments are for signed bitfield extract, similar for unsigned. x is sign
   // bit. s is sign, l is LSB and y are remaining bits of bitfield to extract.
 
-  // Src >> LSBit Hi|Lo: x?????syyyyyyl??? -> xxxx?????syyyyyyl
-  unsigned SHROpc = Signed ? AMDGPU::G_ASHR : AMDGPU::G_LSHR;
-  auto SHRSrc = B.buildInstr(SHROpc, {VgprRB_I64}, {Src, LSBit});
+  // llvm.amdgcn.{s,u}bfe take Width modulo 64.
+  std::optional<uint64_t> WidthImm;
+  if (auto ConstWidth = getIConstantVRegValWithLookThrough(Width, MRI)) {
+    WidthImm = ConstWidth->Value.getZExtValue();
+    if (IsIntrinsic && *WidthImm > 63) {
+      WidthImm = *WidthImm & 63;
+      Width = B.buildConstant(VgprRB_I32, *WidthImm).getReg(0);
+    }
+  }
 
-  auto ConstWidth = getIConstantVRegValWithLookThrough(Width, MRI);
+  unsigned SHROpc = Signed ? AMDGPU::G_ASHR : AMDGPU::G_LSHR;
+  if (!IsIntrinsic &&
+      tryLowerFullWidthBFX(B, MI, SHROpc, Dst, Src, LSBit, WidthImm, 64))
+    return true;
+
+  // Src >> LSBit Hi|Lo: x?????syyyyyyl??? -> xxxx?????syyyyyyl
+  auto SHRSrc = B.buildInstr(SHROpc, {VgprRB_I64}, {Src, LSBit});
 
   // Expand to Src >> LSBit << (64 - Width) >> (64 - Width)
   // << (64 - Width): Hi|Lo: xxxx?????syyyyyyl -> syyyyyyl000000000
   // >> (64 - Width): Hi|Lo: syyyyyyl000000000 -> ssssssssssyyyyyyl
-  if (!ConstWidth) {
+  // For G_UBFX/G_SBFX Width is in [1, 64], so 64 - Width is in [0, 63].
+  if (!WidthImm) {
     auto Amt = B.buildSub(VgprRB_I32, B.buildConstant(SgprRB_I32, 64), Width);
-    auto SignBit = B.buildShl(VgprRB_I64, SHRSrc, Amt);
+    Register ShlSrc = SHRSrc.getReg(0);
+    Register ShlAmt = Amt.getReg(0);
+    if (IsIntrinsic) {
+      // Shifts are modulo 64, so Width 0 needs 1 + (63 - Width) to clear.
+      ShlSrc = B.buildShl(VgprRB_I64, SHRSrc, B.buildConstant(VgprRB_I32, 1))
+                   .getReg(0);
+      ShlAmt = B.buildAdd(VgprRB_I32, Amt, B.buildConstant(SgprRB_I32, -1))
+                   .getReg(0);
+    }
+    auto SignBit = B.buildShl(VgprRB_I64, ShlSrc, ShlAmt);
     B.buildInstr(SHROpc, {Dst}, {SignBit, Amt});
     MI.eraseFromParent();
     return true;
   }
 
-  uint64_t WidthImm = ConstWidth->Value.getZExtValue();
   auto UnmergeSHRSrc = B.buildUnmerge(VgprRB_I32, SHRSrc);
   Register SHRSrcLo = UnmergeSHRSrc.getReg(0);
   Register SHRSrcHi = UnmergeSHRSrc.getReg(1);
   auto Zero = B.buildConstant(VgprRB_I32, 0);
   unsigned BFXOpc = Signed ? AMDGPU::G_SBFX : AMDGPU::G_UBFX;
 
-  if (WidthImm <= 32) {
+  if (*WidthImm <= 32) {
     // SHRSrc Hi|Lo: ????????|???syyyl -> ????????|ssssyyyl
     Register Lo = SHRSrcLo;
     // V_BFE masks its width to 5 bits, so 32 would extract zero bits.
-    if (WidthImm < 32) {
+    if (*WidthImm < 32) {
       Lo =
           B.buildInstr(BFXOpc, {VgprRB_I32}, {SHRSrcLo, Zero, Width}).getReg(0);
     }
@@ -769,7 +806,7 @@ bool RegBankLegalizeHelper::lowerV_BFE(MachineInstr &MI) {
     }
     B.buildMergeLikeInstr(Dst, {Lo, Hi});
   } else {
-    auto Amt = B.buildConstant(VgprRB_I32, WidthImm - 32);
+    auto Amt = B.buildConstant(VgprRB_I32, *WidthImm - 32);
     // SHRSrc Hi|Lo: ??????sy|yyyyyyyl -> sssssssy|yyyyyyyl
     auto Hi = B.buildInstr(BFXOpc, {VgprRB_I32}, {SHRSrcHi, Zero, Amt});
     B.buildMergeLikeInstr(Dst, {SHRSrcLo, Hi});
@@ -782,20 +819,49 @@ bool RegBankLegalizeHelper::lowerV_BFE(MachineInstr &MI) {
 bool RegBankLegalizeHelper::lowerS_BFE(MachineInstr &MI) {
   Register DstReg = MI.getOperand(0).getReg();
   LLT Ty = MRI.getType(DstReg);
+  assert(Ty == S32 || Ty == S64);
+
   bool Signed = isSignedBFE(MI);
-  unsigned FirstOpnd = isa<GIntrinsic>(MI) ? 2 : 1;
+  bool IsIntrinsic = isa<GIntrinsic>(MI);
+  unsigned FirstOpnd = IsIntrinsic ? 2 : 1;
   Register Src = MI.getOperand(FirstOpnd).getReg();
   Register LSBit = MI.getOperand(FirstOpnd + 1).getReg();
   Register Width = MI.getOperand(FirstOpnd + 2).getReg();
+  unsigned TySize = Ty.getSizeInBits();
+
+  std::optional<uint64_t> WidthImm;
+  if (auto ConstWidth = getIConstantVRegValWithLookThrough(Width, MRI))
+    WidthImm = ConstWidth->Value.getZExtValue();
+
+  unsigned SHROpc = Signed ? AMDGPU::G_ASHR : AMDGPU::G_LSHR;
+  if (!IsIntrinsic &&
+      tryLowerFullWidthBFX(B, MI, SHROpc, DstReg, Src, LSBit, WidthImm, TySize))
+    return true;
+
+  // A non-constant Width may still be TySize, which S_BFE cannot encode.
+  if (!IsIntrinsic && !WidthImm) {
+    auto Amt =
+        B.buildSub(SgprRB_I32, B.buildConstant(SgprRB_I32, TySize), Width);
+    auto SHRSrc = B.buildInstr(SHROpc, {{SgprRB, Ty}}, {Src, LSBit});
+    auto SignBit = B.buildShl({SgprRB, Ty}, SHRSrc, Amt);
+    B.buildInstr(SHROpc, {DstReg}, {SignBit, Amt});
+    MI.eraseFromParent();
+    return true;
+  }
+
   // For uniform bit field extract there are 4 available instructions, but
   // LSBit(field offset) and Width(size of bitfield) need to be packed in S32,
   // field offset in low and size in high 16 bits.
 
   // Src1 Hi16|Lo16 = Size|FieldOffset
-  auto Mask = B.buildConstant(SgprRB_I32, maskTrailingOnes<unsigned>(6));
-  auto FieldOffset = B.buildAnd(SgprRB_I32, LSBit, Mask);
+  // llvm.amdgcn.{s,u}bfe take LSBit and Width modulo TySize.
+  if (IsIntrinsic) {
+    auto Mask = B.buildConstant(SgprRB_I32, TySize - 1);
+    LSBit = B.buildAnd(SgprRB_I32, LSBit, Mask).getReg(0);
+    Width = B.buildAnd(SgprRB_I32, Width, Mask).getReg(0);
+  }
   auto Size = B.buildShl(SgprRB_I32, Width, B.buildConstant(SgprRB_I32, 16));
-  auto Src1 = B.buildOr(SgprRB_I32, FieldOffset, Size);
+  auto Src1 = B.buildOr(SgprRB_I32, LSBit, Size);
   unsigned Opc32 = Signed ? AMDGPU::S_BFE_I32 : AMDGPU::S_BFE_U32;
   unsigned Opc64 = Signed ? AMDGPU::S_BFE_I64 : AMDGPU::S_BFE_U64;
   unsigned Opc = Ty == S32 ? Opc32 : Opc64;
