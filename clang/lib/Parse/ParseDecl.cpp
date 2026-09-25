@@ -3533,7 +3533,6 @@ void Parser::ParseDeclarationSpecifiers(
   PrintingPolicy Policy = Actions.getPrintingPolicy();
   while (true) {
     bool isInvalid = false;
-    bool isStorageClass = false;
     const char *PrevSpec = nullptr;
     unsigned DiagID = 0;
 
@@ -4755,7 +4754,7 @@ void Parser::ParseDeclarationSpecifiers(
                                  SourceRange(Loc, DS.getEndLoc()));
       else if (DiagID == diag::err_opencl_unknown_type_specifier) {
         Diag(Loc, DiagID) << getLangOpts().getOpenCLVersionString() << PrevSpec
-                          << isStorageClass;
+                          << /*IsStorageClass=*/false;
       } else
         Diag(Loc, DiagID) << PrevSpec;
     }
