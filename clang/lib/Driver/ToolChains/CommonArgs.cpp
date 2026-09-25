@@ -2543,6 +2543,7 @@ static void AddUnwindLibrary(const ToolChain &TC, const Driver &D,
 
   switch (UNW) {
   case ToolChain::UNW_None:
+  case ToolChain::UNW_VCRuntime:
     return;
   case ToolChain::UNW_Libgcc: {
     if (LGT == LibGccType::StaticLibGcc)
@@ -2617,6 +2618,8 @@ void tools::AddRunTimeLibs(const ToolChain &TC, const Driver &D,
       }
     } else
       AddLibgcc(TC, D, CmdArgs, Args);
+    break;
+  case ToolChain::RLT_VCRuntime:
     break;
   }
 
