@@ -1166,6 +1166,11 @@ static void processExactAPINotes(
 void Sema::ProcessAPINotes(Decl *D) {
   if (!D)
     return;
+  // A parameter's notes come from its function's entry. Its DeclContext is
+  // not yet the function when its own attributes are processed, so it would
+  // otherwise be looked up as a global variable of the same name.
+  if (isa<ParmVarDecl>(D))
+    return;
   if (!APINotes.hasAPINotes())
     return;
   auto Readers = APINotes.findAPINotes(D->getLocation());
