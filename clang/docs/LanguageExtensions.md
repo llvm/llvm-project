@@ -1888,6 +1888,35 @@ using MyTypeList = TypeList<__builtin_dedup_pack<int, double, int, char, double,
 - The resulting pack is currently only supported for expansion in template argument lists and base specifiers.
 - This builtin cannot be assigned to a template template parameter.
 
+### \_\_builtin_sort_pack
+
+```c++
+template <class... Ts>
+using __builtin_sort_pack = ...;
+```
+
+This alias takes a template parameter pack `Ts` and produces a new unexpanded pack containing the same types
+sorted by [`__builtin_type_order`](#builtin-type-order).
+
+The resulting pack can be expanded in contexts like template argument lists or base specifiers.
+
+**Example of Use**:
+
+```c++
+template <typename...> struct TypeList;
+
+// Combined with `__builtin_dedup_pack` to canonicalize a type list.
+template <typename ...ExtraTypes>
+using MyTypeList = TypeList<
+    __builtin_sort_pack<__builtin_dedup_pack<int, double, ExtraTypes...>...>...>;
+```
+
+**Limitations**:
+
+- This builtin can only be used inside a template.
+- The resulting pack is currently only supported for expansion in template argument lists and base specifiers.
+- This builtin cannot be assigned to a template template parameter.
+
 ## Type Trait Primitives
 
 Type trait primitives are special builtin constant expressions that can be used
@@ -2056,7 +2085,7 @@ The following type trait primitives are supported by Clang. Those traits marked
 - `__builtin_lt_synthesizes_from_spaceship`, `__builtin_gt_synthesizes_from_spaceship`,
   `__builtin_le_synthesizes_from_spaceship`, `__builtin_ge_synthesizes_from_spaceship` (Clang):
   These builtins can be used to determine whether the corresponding operator is synthesized from a spaceship operator.
-- `__builtin_type_order` (C++): Returns `std::strong_ordering::less` if `T` precedes `U` in an
+- <span id="builtin-type-order"></span>`__builtin_type_order` (C++): Returns `std::strong_ordering::less` if `T` precedes `U` in an
   implementation-defined total ordering of all types, `std::strong_ordering::greater` if `U` precedes `T`, 
   and `std::strong_ordering::equal` if they are the same type.
 
