@@ -3542,7 +3542,7 @@ public:
 
     /// True if the variable is of aggregate type and has a constant
     /// initializer.
-    bool IsConstantAggregate;
+    llvm::Constant *ConstantAggregateInitializer;
 
     /// True if lifetime markers should be used.
     bool UseLifetimeMarkers;
@@ -3558,7 +3558,7 @@ public:
 
     AutoVarEmission(const VarDecl &variable)
         : Variable(&variable), Addr(Address::invalid()), NRVOFlag(nullptr),
-          IsEscapingByRef(false), IsConstantAggregate(false),
+          IsEscapingByRef(false), ConstantAggregateInitializer(nullptr),
           UseLifetimeMarkers(false), AllocaAddr(RawAddress::invalid()) {}
 
     bool wasEmittedAsGlobal() const { return !Addr.isValid(); }
