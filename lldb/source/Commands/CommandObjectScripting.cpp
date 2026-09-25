@@ -143,9 +143,11 @@ public:
   CommandObjectScriptingExtensionList(CommandInterpreter &interpreter)
       : CommandObjectParsed(
             interpreter, "scripting extension list",
-            "List all the available scripting extension templates. ",
+            "List the available scripting extension templates, or with "
+            "--instances, the instantiated scripting extensions grouped by "
+            "class.",
             "scripting extension list [--language <scripting-language> --] "
-            "[--json --] [<extension-name> ...]") {
+            "[--json --] [--instances --] [<extension-name> ...]") {
     AddSimpleArgumentList(eArgTypeScriptedExtension, eArgRepeatStar);
   }
 
@@ -182,6 +184,9 @@ public:
       case 'j':
         m_json_format = true;
         break;
+      case 'i':
+        m_instances = true;
+        break;
       default:
         llvm_unreachable("Unimplemented option");
       }
@@ -192,6 +197,7 @@ public:
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_language = lldb::eScriptLanguageDefault;
       m_json_format = false;
+      m_instances = false;
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
@@ -200,10 +206,16 @@ public:
 
     lldb::ScriptLanguage m_language = lldb::eScriptLanguageDefault;
     bool m_json_format = false;
+    bool m_instances = false;
   };
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
+    if (m_options.m_instances) {
+      ListInstances(command, result);
+      return;
+    }
+
     llvm::StringMap<std::vector<size_t>> grouped_by_extension;
     for (size_t i = 0; i < PluginManager::GetNumScriptedInterfaces(); i++) {
       lldb::ScriptedExtension extension =
@@ -253,6 +265,51 @@ private:
                        '-') +
            ansi::FormatAnsiTerminalCodes(debugger.GetDividerAnsiSuffix(),
                                          use_color);
+  }
+
+  void ListInstances(Args &command, CommandReturnObject &result) {
+    std::vector<lldb::ScriptedExtension> extensions;
+    for (const Args::ArgEntry &arg : command.entries()) {
+      lldb::ScriptedExtension extension =
+          ScriptInterpreter::StringToExtension(arg.ref());
+      if (extension == eScriptedExtensionInvalid) {
+        result.AppendErrorWithFormat("no scripted extension named '%s'",
+                                     arg.c_str());
+        return;
+      }
+      extensions.push_back(extension);
+    }
+
+    std::vector<ScriptedInstanceGroup> groups;
+    if (ScriptInterpreter *script_interpreter =
+            GetDebugger().GetScriptInterpreter(/*can_create=*/false))
+      groups =
+          script_interpreter->GetScriptedInstanceRegistry()->GetInstanceGroups(
+              extensions);
+
+    if (m_options.m_json_format) {
+      StructuredData::Array groups_array;
+      for (const ScriptedInstanceGroup &group : groups)
+        groups_array.AddItem(group.ToStructuredData());
+      groups_array.Dump(result.GetOutputStream());
+      result.GetOutputStream().EOL();
+      result.SetStatus(eReturnStatusSuccessFinishResult);
+      return;
+    }
+
+    Stream &s = result.GetOutputStream();
+    const bool use_color = s.AsRawOstream().colors_enabled();
+    const std::string separator = GetSeparator(use_color);
+
+    s.PutCString("Instantiated scripted extensions:");
+    if (groups.empty())
+      s << " None";
+    s.EOL();
+    for (const ScriptedInstanceGroup &group : groups) {
+      s << separator << '\n';
+      group.Dump(s, GetDebugger(), use_color);
+    }
+    result.SetStatus(eReturnStatusSuccessFinishResult);
   }
 
   std::vector<std::string>
