@@ -441,6 +441,44 @@ static SmallVector<bool> computeInBoundsFromPermutationMap(
   return inBounds;
 }
 
+/// Computes the mask type and sizes for a transfer of `vecType` at `indices`.
+///
+/// Mask dimensions follow the transfer's mask layout (see
+/// `inferTransferOpMaskType`): one per source dimension read by the permutation
+/// map, in increasing dimension order, broadcasts dropped. Each size is
+/// `dim - index`. Returns a null type for a pure broadcast: nothing to mask.
+static VectorType
+computeTransferMask(OpBuilder &builder, Location loc,
+                    ArrayRef<OpFoldResult> sourceSizes, ArrayRef<Value> indices,
+                    AffineMap permutationMap, VectorType vecType,
+                    SmallVectorImpl<OpFoldResult> &maskSizes) {
+  SmallVector<int64_t> sourceDims;
+  if (permutationMap) {
+    for (AffineExpr expr : permutationMap.getResults())
+      if (auto dimExpr = dyn_cast<AffineDimExpr>(expr))
+        sourceDims.push_back(dimExpr.getPosition());
+    llvm::sort(sourceDims);
+    if (sourceDims.empty())
+      return VectorType();
+  } else {
+    // No map implies a minor identity: the trailing source dimensions.
+    int64_t rankDiff = sourceSizes.size() - vecType.getRank();
+    for (int64_t i = 0, e = vecType.getRank(); i < e; ++i)
+      sourceDims.push_back(rankDiff + i);
+  }
+
+  for (int64_t sourceDim : sourceDims) {
+    Value dim =
+        getValueOrCreateConstantIndexOp(builder, loc, sourceSizes[sourceDim]);
+    maskSizes.push_back(
+        builder.createOrFold<arith::SubIOp>(loc, dim, indices[sourceDim]));
+  }
+
+  if (permutationMap)
+    return vector::inferTransferOpMaskType(vecType, permutationMap);
+  return vecType.cloneWith(/*shape=*/{}, builder.getI1Type());
+}
+
 Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
                                      Value source,
                                      const VectorType &vecToReadTy,
@@ -514,13 +552,19 @@ Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
           ? memref::getMixedSizes(builder, loc, source)
           : tensor::getMixedSizes(builder, loc, source);
 
-  if (isMaskTriviallyFoldable(mixedSourceDims, indices, sourceShape,
-                              vecToReadShape))
+  // isMaskTriviallyFoldable pairs indices with dimensions assuming a minor
+  // identity, so it does not apply when a permutation map is present.
+  if (!permutationMap && isMaskTriviallyFoldable(mixedSourceDims, indices,
+                                                 sourceShape, vecToReadShape))
     return transferReadOp;
 
-  auto maskType = vecToReadTy.cloneWith(/*shape=*/{}, builder.getI1Type());
-  Value mask =
-      vector::CreateMaskOp::create(builder, loc, maskType, mixedSourceDims);
+  SmallVector<OpFoldResult> maskSizes;
+  VectorType maskType =
+      computeTransferMask(builder, loc, mixedSourceDims, indices,
+                          permutationMap, vecToReadTy, maskSizes);
+  if (!maskType)
+    return transferReadOp;
+  Value mask = vector::CreateMaskOp::create(builder, loc, maskType, maskSizes);
   return mlir::vector::maskOperation(builder, transferReadOp, mask)
       ->getResult(0);
 }
@@ -586,8 +630,8 @@ Operation *vector::createWriteOrMaskedWrite(OpBuilder &builder, Location loc,
     return write;
 
   // Compute the mask and mask the write Op.
-  auto writeMaskType = VectorType::get(vecToStoreShape, builder.getI1Type(),
-                                       vecToStoreType.getScalableDims());
+  VectorType writeMaskType = VectorType::get(
+      vecToStoreShape, builder.getI1Type(), vecToStoreType.getScalableDims());
 
   SmallVector<OpFoldResult> destSizes =
       isa<MemRefType>(dest.getType())
@@ -600,18 +644,16 @@ Operation *vector::createWriteOrMaskedWrite(OpBuilder &builder, Location loc,
     maskSizes = SmallVector<OpFoldResult>(destSizes.end() - vecToStoreRank,
                                           destSizes.end());
   } else {
-    size_t diff = destShape.size() - vecToStoreRank;
-    for (int64_t idx = 0; idx < vecToStoreRank; idx++) {
-      auto value =
-          getValueOrCreateConstantIndexOp(builder, loc, destSizes[diff + idx]);
-      auto neg =
-          builder.createOrFold<arith::SubIOp>(loc, value, writeIndices[idx]);
-      maskSizes.push_back(OpFoldResult(neg));
-    }
+    writeMaskType =
+        computeTransferMask(builder, loc, destSizes, writeIndices,
+                            permutationMap, vecToStoreType, maskSizes);
+    if (!writeMaskType)
+      return write;
   }
 
-  if (isMaskTriviallyFoldable(maskSizes, writeIndices, destShape,
-                              vecToStoreShape))
+  // See the note in createReadOrMaskedRead.
+  if (!permutationMap && isMaskTriviallyFoldable(maskSizes, writeIndices,
+                                                 destShape, vecToStoreShape))
     return write;
 
   Value maskForWrite =

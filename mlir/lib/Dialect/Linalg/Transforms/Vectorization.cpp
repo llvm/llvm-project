@@ -3067,9 +3067,20 @@ vectorizeAsInsertSliceOp(RewriterBase &rewriter, tensor::InsertSliceOp sliceOp,
   // Create write
   auto writeIndices =
       getValueOrCreateConstantIndexOp(rewriter, loc, sliceOp.getMixedOffsets());
-  Operation *write =
-      vector::createWriteOrMaskedWrite(rewriter, loc, read, sliceOp.getDest(),
-                                       writeIndices, inputVectorSizes.empty());
+  // For a rank-reducing slice the vector does not cover the trailing result
+  // dims, so state which result dim each vector dim writes to.
+  AffineMap writeMap;
+  if (sourceType.getRank() != resultType.getRank()) {
+    SmallVector<AffineExpr> exprs;
+    for (int64_t resultDim : resultDimsForSourceDims)
+      exprs.push_back(rewriter.getAffineDimExpr(resultDim));
+    writeMap = AffineMap::get(resultType.getRank(), /*symbolCount=*/0, exprs,
+                              rewriter.getContext());
+  }
+
+  Operation *write = vector::createWriteOrMaskedWrite(
+      rewriter, loc, read, sliceOp.getDest(), writeIndices,
+      inputVectorSizes.empty(), writeMap);
 
   // 4. Finalize
   newResults.push_back(write->getResult(0));

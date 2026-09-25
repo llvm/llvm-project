@@ -97,13 +97,16 @@ func.func private @insert_slice_dynamic_src_dim_non_leading_unit_dim_dropped(
   return %res : tensor<8x1x4xi32>
 }
 
+// CHECK-DAG: #[[$MAP_0_2:.*]] = affine_map<(d0, d1, d2) -> (d0, d2)>
+
 // CHECK-LABEL:   func.func private @insert_slice_dynamic_src_dim_non_leading_unit_dim_dropped(
 // CHECK-SAME:      %[[SRC:.*]]: tensor<?x4xi32>,
 // CHECK-SAME:      %[[SIZE:.*]]: index) -> tensor<8x1x4xi32> {
 // CHECK-DAG:       %[[PAD:.*]] = arith.constant 0 : i32
 // CHECK:           %[[INIT:.*]] = linalg.fill ins(%[[PAD]] : i32) outs({{.*}} : tensor<8x1x4xi32>) -> tensor<8x1x4xi32>
 // CHECK:           %[[READ:.*]] = vector.transfer_read %[[SRC]][%{{.*}}, %{{.*}}], %[[PAD]] {{.*}} : tensor<?x4xi32>, vector<8x4xi32>
-// CHECK:           %[[RES:.*]] = vector.transfer_write %[[READ]], %[[INIT]][%{{.*}}, %{{.*}}, %{{.*}}] {{.*}} : vector<8x4xi32>, tensor<8x1x4xi32>
+// Dim 1 is dropped, so the source dims map to result dims 0 and 2.
+// CHECK:           %[[RES:.*]] = vector.transfer_write %[[READ]], %[[INIT]][%{{.*}}, %{{.*}}, %{{.*}}] {{.*}}permutation_map = #[[$MAP_0_2]]{{.*}} : vector<8x4xi32>, tensor<8x1x4xi32>
 // CHECK:           return %[[RES]] : tensor<8x1x4xi32>
 
  module attributes {transform.with_named_sequence} {
@@ -131,6 +134,8 @@ func.func private @insert_slice_dynamic_src_dim_leading_unit_dim_dropped(
 // CHECK-DAG:       %[[PAD:.*]] = arith.constant 0 : i32
 // CHECK:           %[[INIT:.*]] = linalg.fill ins(%[[PAD]] : i32) outs({{.*}} : tensor<1x8x4xi32>) -> tensor<1x8x4xi32>
 // CHECK:           %[[READ:.*]] = vector.transfer_read %[[SRC]][%{{.*}}, %{{.*}}], %[[PAD]] {{.*}} : tensor<?x4xi32>, vector<8x4xi32>
+// Dim 0 is dropped, so the source dims are already the trailing result dims.
+// CHECK-NOT:       permutation_map
 // CHECK:           %[[RES:.*]] = vector.transfer_write %[[READ]], %[[INIT]][%{{.*}}, %{{.*}}, %{{.*}}] {{.*}} : vector<8x4xi32>, tensor<1x8x4xi32>
 // CHECK:           return %[[RES]] : tensor<1x8x4xi32>
 
@@ -153,13 +158,16 @@ func.func private @insert_slice_dynamic_src_dim_trailing_unit_dim_dropped(
   return %res : tensor<8x4x1xi32>
 }
 
+// CHECK-DAG: #[[$MAP_0_1:.*]] = affine_map<(d0, d1, d2) -> (d0, d1)>
+
 // CHECK-LABEL:   func.func private @insert_slice_dynamic_src_dim_trailing_unit_dim_dropped(
 // CHECK-SAME:      %[[SRC:.*]]: tensor<?x4xi32>,
 // CHECK-SAME:      %[[SIZE:.*]]: index) -> tensor<8x4x1xi32> {
 // CHECK-DAG:       %[[PAD:.*]] = arith.constant 0 : i32
 // CHECK:           %[[INIT:.*]] = linalg.fill ins(%[[PAD]] : i32) outs({{.*}} : tensor<8x4x1xi32>) -> tensor<8x4x1xi32>
 // CHECK:           %[[READ:.*]] = vector.transfer_read %[[SRC]][%{{.*}}, %{{.*}}], %[[PAD]] {{.*}} : tensor<?x4xi32>, vector<8x4xi32>
-// CHECK:           %[[RES:.*]] = vector.transfer_write %[[READ]], %[[INIT]][%{{.*}}, %{{.*}}, %{{.*}}] : vector<8x4xi32>, tensor<8x4x1xi32>
+// Dim 2 is dropped, so the source dims map to result dims 0 and 1.
+// CHECK:           %[[RES:.*]] = vector.transfer_write %[[READ]], %[[INIT]][%{{.*}}, %{{.*}}, %{{.*}}] {{.*}}permutation_map = #[[$MAP_0_1]]{{.*}} : vector<8x4xi32>, tensor<8x4x1xi32>
 // CHECK:           return %[[RES]] : tensor<8x4x1xi32>
 
  module attributes {transform.with_named_sequence} {
@@ -181,13 +189,16 @@ func.func private @insert_slice_dynamic_src_dim_leading_and_trailing_unit_dims_d
   return %res : tensor<1x8x4x1xi32>
 }
 
+// CHECK-DAG: #[[$MAP_1_2:.*]] = affine_map<(d0, d1, d2, d3) -> (d1, d2)>
+
 // CHECK-LABEL:   func.func private @insert_slice_dynamic_src_dim_leading_and_trailing_unit_dims_dropped(
 // CHECK-SAME:      %[[SRC:.*]]: tensor<?x4xi32>,
 // CHECK-SAME:      %[[SIZE:.*]]: index) -> tensor<1x8x4x1xi32> {
 // CHECK-DAG:       %[[PAD:.*]] = arith.constant 0 : i32
 // CHECK:           %[[INIT:.*]] = linalg.fill ins(%[[PAD]] : i32) outs({{.*}} : tensor<1x8x4x1xi32>) -> tensor<1x8x4x1xi32>
 // CHECK:           %[[READ:.*]] = vector.transfer_read %[[SRC]][%{{.*}}, %{{.*}}], %[[PAD]] {{.*}} : tensor<?x4xi32>, vector<8x4xi32>
-// CHECK:           %[[RES:.*]] = vector.transfer_write %[[READ]], %[[INIT]][%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}] : vector<8x4xi32>, tensor<1x8x4x1xi32>
+// Dims 0 and 3 are dropped, so the source dims map to result dims 1 and 2.
+// CHECK:           %[[RES:.*]] = vector.transfer_write %[[READ]], %[[INIT]][%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}] {{.*}}permutation_map = #[[$MAP_1_2]]{{.*}} : vector<8x4xi32>, tensor<1x8x4x1xi32>
 // CHECK:           return %[[RES]] : tensor<1x8x4x1xi32>
 
  module attributes {transform.with_named_sequence} {
@@ -331,6 +342,39 @@ func.func private @insert_slice_non_zero_offset_for_dyn_dim(%source: tensor<?x3x
   transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["tensor.insert_slice"]} in %arg0 : (!transform.any_op) -> !transform.any_op
     transform.structured.vectorize %0 vector_sizes [8, 1] : !transform.any_op
+    transform.yield
+  }
+ }
+
+// -----
+
+/// A 1-D source inserted down a column: the dropped dim is the trailing one,
+/// so the source's only dim corresponds to result dim 0.
+
+func.func private @insert_slice_1d_source_into_column(
+    %source: tensor<5xi32>) -> tensor<5x3xi32> {
+  %pad = arith.constant 0 : i32
+  %empty = tensor.empty() : tensor<5x3xi32>
+  %init = linalg.fill ins(%pad : i32) outs(%empty : tensor<5x3xi32>) -> tensor<5x3xi32>
+  %res = tensor.insert_slice %source into %init[0, 2] [5, 1] [1, 1] : tensor<5xi32> into tensor<5x3xi32>
+  return %res : tensor<5x3xi32>
+}
+
+// CHECK-DAG: #[[$MAP_D0:.*]] = affine_map<(d0, d1) -> (d0)>
+
+// CHECK-LABEL:   func.func private @insert_slice_1d_source_into_column(
+// CHECK-SAME:      %[[SRC:.*]]: tensor<5xi32>) -> tensor<5x3xi32> {
+// CHECK-DAG:       %[[PAD:.*]] = arith.constant 0 : i32
+// CHECK:           %[[INIT:.*]] = linalg.fill ins(%[[PAD]] : i32) outs({{.*}} : tensor<5x3xi32>) -> tensor<5x3xi32>
+// CHECK:           %[[READ:.*]] = vector.transfer_read %[[SRC]][%{{.*}}], %[[PAD]] {{.*}} : tensor<5xi32>, vector<5xi32>
+// CHECK:           %[[C_2:.*]] = arith.constant 2 : index
+// CHECK:           %[[RES:.*]] = vector.transfer_write %[[READ]], %[[INIT]][%{{.*}}, %[[C_2]]] {{.*}}permutation_map = #[[$MAP_D0]]{{.*}} : vector<5xi32>, tensor<5x3xi32>
+// CHECK:           return %[[RES]] : tensor<5x3xi32>
+
+ module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["tensor.insert_slice"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 : !transform.any_op
     transform.yield
   }
  }
