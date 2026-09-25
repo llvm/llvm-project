@@ -2543,11 +2543,7 @@ FloatABI::ABIType Triple::getDefaultFloatABI() const {
   return FloatABI::Hard;
 }
 
-ThreadModel Triple::getDefaultThreadModel() const {
-  if (isWasm())
-    return ThreadModel::Single;
-  return ThreadModel::POSIX;
-}
+ThreadModel Triple::getDefaultThreadModel() const { return ThreadModel::POSIX; }
 
 LongDoubleFormat Triple::getDefaultLongDoubleFormat() const {
   switch (getArch()) {

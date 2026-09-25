@@ -5969,6 +5969,16 @@ public:
 };
 } // namespace
 
+/// Like ASTContext::getIntTypeForBitwidth, but falls back to a _BitInt type
+/// when no standard integer type has the requested width.
+static QualType getIntTypeForBitwidthOrBitInt(ASTContext &C, unsigned Bits,
+                                              bool Signed) {
+  QualType Ty = C.getIntTypeForBitwidth(Bits, Signed);
+  if (Ty.isNull())
+    Ty = C.getBitIntType(/*IsUnsigned=*/!Signed, Bits);
+  return Ty;
+}
+
 static VarDecl *precomputeExpr(Sema &Actions,
                                SmallVectorImpl<Stmt *> &BodyStmts, Expr *E,
                                StringRef Name) {
@@ -6289,7 +6299,7 @@ StmtResult SemaOpenMP::ActOnOpenMPCanonicalLoop(Stmt *AStmt) {
   QualType LogicalTy = Ctx.getUnsignedPointerDiffType();
   if (CounterTy->isIntegerType()) {
     unsigned BitWidth = Ctx.getIntWidth(CounterTy);
-    LogicalTy = Ctx.getIntTypeForBitwidth(BitWidth, false);
+    LogicalTy = getIntTypeForBitwidthOrBitInt(Ctx, BitWidth, /*Signed=*/false);
   }
 
   // Analyze the loop increment.
@@ -9348,8 +9358,9 @@ calculateNumIters(Sema &SemaRef, Scope *S, SourceLocation DefaultLoc,
     uint64_t UpperSize = SemaRef.Context.getTypeSize(UpperTy);
     if ((LowerSize <= UpperSize && UpperTy->hasSignedIntegerRepresentation()) ||
         (LowerSize > UpperSize && LowerTy->hasSignedIntegerRepresentation())) {
-      QualType CastType = SemaRef.Context.getIntTypeForBitwidth(
-          LowerSize > UpperSize ? LowerSize : UpperSize, /*Signed=*/0);
+      QualType CastType = getIntTypeForBitwidthOrBitInt(
+          SemaRef.Context, LowerSize > UpperSize ? LowerSize : UpperSize,
+          /*Signed=*/false);
       Upper =
           SemaRef
               .PerformImplicitConversion(
@@ -9656,7 +9667,7 @@ Expr *OpenMPIterationSpaceChecker::buildNumIterations(
         UseVarType ? C.getTypeSize(VarType) : C.getTypeSize(Type);
     bool IsSigned = UseVarType ? VarType->hasSignedIntegerRepresentation()
                                : Type->hasSignedIntegerRepresentation();
-    Type = C.getIntTypeForBitwidth(NewSize, IsSigned);
+    Type = getIntTypeForBitwidthOrBitInt(C, NewSize, IsSigned);
     if (!SemaRef.Context.hasSameType(Diff.get()->getType(), Type)) {
       Diff = SemaRef.PerformImplicitConversion(Diff.get(), Type,
                                                AssignmentAction::Converting,

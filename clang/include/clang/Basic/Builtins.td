@@ -5450,6 +5450,18 @@ def HLSLResourceCounterHandleFromImplicitBinding : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "__hlsl_resource_t(__hlsl_resource_t, uint32_t, uint32_t)";
 }
 
+def HLSLResourceHandleFromHeap : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_handlefromheap"];
+  let Attributes = [NoThrow];
+  let Prototype = "__hlsl_resource_t(__hlsl_resource_t, uint32_t)";
+}
+
+def HLSLResourceCounterHandleFromHeap : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_counterhandlefromheap"];
+  let Attributes = [NoThrow];
+  let Prototype = "__hlsl_resource_t(__hlsl_resource_t)";
+}
+
 def HLSLResourceNonUniformIndex : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_resource_nonuniformindex"];
   let Attributes = [NoThrow];
@@ -5578,7 +5590,7 @@ def HLSLInterlockedAnd : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLInterlockedExchange : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_interlocked_exchange"];
-  let Attributes = [NoThrow];
+  let Attributes = [NoThrow, CustomTypeChecking];
   let Prototype = "void (...)";
 }
 
