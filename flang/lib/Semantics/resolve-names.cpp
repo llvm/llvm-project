@@ -3882,6 +3882,7 @@ void ScopeHandler::ApplyImplicitCUDADataAttr(Symbol &symbol) {
     object->set_cudaDataAttrIsImplicit();
   } else {
     object->set_cudaDataAttr(common::CUDADataAttr::Pinned);
+    object->set_cudaDataAttrIsImplicit();
   }
 }
 
