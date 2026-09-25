@@ -60,6 +60,7 @@ public:
     target.addIllegalOp<tosa::MaxPool2dOp>();
     target.addIllegalOp<tosa::AvgPool2dOp>();
     target.addIllegalOp<tosa::MatMulOp>();
+    target.addIllegalOp<tosa::MatMulTOp>();
     target.addIllegalOp<tosa::TransposeOp>();
 
     target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
