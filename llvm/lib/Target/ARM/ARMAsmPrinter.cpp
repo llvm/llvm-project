@@ -1629,14 +1629,13 @@ void ARMAsmPrinter::EmitKCFI_CHECK_ARM32(Register AddrReg, int64_t Type,
            "Cannot encode immediate as ARM modified immediate");
 
     // eor[s] scratch, scratch, #imm (last one sets flags with CPSR)
-    EmitToStreamer(*OutStreamer,
-                   MCInstBuilder(ARM::EORri)
-                       .addReg(ScratchReg)
-                       .addReg(ScratchReg)
-                       .addImm(SOImmVal)
-                       .addImm(ARMCC::AL)
-                       .addReg(0)
-                       .addReg(isLast ? ARM::CPSR : ARM::NoRegister));
+    EmitToStreamer(*OutStreamer, MCInstBuilder(ARM::EORri)
+                                     .addReg(ScratchReg)
+                                     .addReg(ScratchReg)
+                                     .addImm(SOImmVal)
+                                     .addImm(ARMCC::AL)
+                                     .addReg(0)
+                                     .addReg(isLast ? ARM::CPSR : Register()));
   }
 
   // If we spilled r3, restore it immediately after the comparison.
@@ -1727,14 +1726,13 @@ void ARMAsmPrinter::EmitKCFI_CHECK_Thumb2(Register AddrReg, int64_t Type,
            "Cannot encode immediate as Thumb2 modified immediate");
 
     // eor[s] scratch, scratch, #imm (last one sets flags with CPSR)
-    EmitToStreamer(*OutStreamer,
-                   MCInstBuilder(ARM::t2EORri)
-                       .addReg(ScratchReg)
-                       .addReg(ScratchReg)
-                       .addImm(imm)
-                       .addImm(ARMCC::AL)
-                       .addReg(0)
-                       .addReg(isLast ? ARM::CPSR : ARM::NoRegister));
+    EmitToStreamer(*OutStreamer, MCInstBuilder(ARM::t2EORri)
+                                     .addReg(ScratchReg)
+                                     .addReg(ScratchReg)
+                                     .addImm(imm)
+                                     .addImm(ARMCC::AL)
+                                     .addReg(0)
+                                     .addReg(isLast ? ARM::CPSR : Register()));
   }
 
   // If we spilled r3, restore it immediately after the comparison.
