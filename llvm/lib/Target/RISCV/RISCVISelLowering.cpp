@@ -14757,6 +14757,16 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
     }
   }
 
+  if (Factor == 2 && IsFixedVector) {
+    unsigned NumElts = VecVT.getVectorNumElements();
+    SmallVector<SDValue, 2> Results;
+    for (unsigned I = 0; I != Factor; ++I)
+      Results.push_back(
+          DAG.getVectorShuffle(VecVT, DL, Op.getOperand(0), Op.getOperand(1),
+                               createStrideMask(I, Factor, NumElts)));
+    return DAG.getMergeValues(Results, DL);
+  }
+
   SmallVector<SDValue, 8> Ops(Op->op_values());
 
   // Concatenate the vectors as one vector to deinterleave
@@ -15044,6 +15054,15 @@ SDValue RISCVTargetLowering::lowerVECTOR_INTERLEAVE(SDValue Op,
   if (VecVT.getScalarSizeInBits() < Subtarget.getELen()) {
     Interleaved = getWideningInterleave(Op.getOperand(0), Op.getOperand(1), DL,
                                         DAG, Subtarget);
+  } else if (Factor == 2 && VecVT.isFixedLengthVector()) {
+    unsigned NumElts = VecVT.getVectorNumElements();
+    SmallVector<int, 8> ShuffleMask = createInterleaveMask(NumElts, Factor);
+    SmallVector<SDValue, 2> Results;
+    for (unsigned I = 0; I != Factor; ++I)
+      Results.push_back(DAG.getVectorShuffle(
+          VecVT, DL, Op.getOperand(0), Op.getOperand(1),
+          ArrayRef<int>(ShuffleMask).slice(I * NumElts, NumElts)));
+    return DAG.getMergeValues(Results, DL);
   } else {
     // Otherwise, fallback to using vrgathere16.vv
     MVT ConcatVT = MVT::getVectorVT(VecVT.getVectorElementType(),

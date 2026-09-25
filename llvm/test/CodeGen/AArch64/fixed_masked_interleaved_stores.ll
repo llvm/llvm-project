@@ -345,10 +345,11 @@ define void @foo_st2_v8i16(<8 x i1> %mask, <8 x i16> %val1, <8 x i16> %val2, ptr
 define void @foo_st2_v4i32(<4 x i1> %mask, <4 x i32> %val1, <4 x i32> %val2, ptr %p) {
 ; CHECK-LABEL: foo_st2_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    adrp x8, .LCPI2_0
+; CHECK-NEXT:    zip1 v0.8h, v0.8h, v0.8h
 ; CHECK-NEXT:    ldr d3, [x8, :lo12:.LCPI2_0]
-; CHECK-NEXT:    zip1 v0.8b, v0.8b, v0.8b
+; CHECK-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-NEXT:    shl v0.8b, v0.8b, #7
 ; CHECK-NEXT:    cmlt v0.8b, v0.8b, #0
 ; CHECK-NEXT:    and v0.8b, v0.8b, v3.8b
@@ -413,10 +414,11 @@ define void @foo_st2_v4i32(<4 x i1> %mask, <4 x i32> %val1, <4 x i32> %val2, ptr
 define void @foo_st2_v2i64(<2 x i1> %mask, <2 x i64> %val1, <2 x i64> %val2, ptr %p) {
 ; CHECK-LABEL: foo_st2_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    adrp x8, .LCPI3_0
+; CHECK-NEXT:    zip1 v0.4s, v0.4s, v0.4s
 ; CHECK-NEXT:    ldr d3, [x8, :lo12:.LCPI3_0]
-; CHECK-NEXT:    zip1 v0.4h, v0.4h, v0.4h
+; CHECK-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-NEXT:    shl v0.4h, v0.4h, #15
 ; CHECK-NEXT:    cmlt v0.4h, v0.4h, #0
 ; CHECK-NEXT:    and v0.8b, v0.8b, v3.8b
