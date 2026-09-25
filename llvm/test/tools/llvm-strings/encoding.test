@@ -3,7 +3,10 @@ RUN: echo a > %t
 RUN: echo ab >> %t
 RUN: echo abc >> %t
 RUN: echo abcd >> %t
-RUN: echo abcd€ >> %t
+# UTF-8 encoding of U+200A HAIR SPACE (printable)
+RUN: printf 'abcd\342\200\212\n' >> %t
+# UTF-8 encoding of U+200B ZERO WIDTH SPACE (non-printable)
+RUN: printf 'abcd\342\200\212\342\200\213\n' >> %t
 
 # Check that long form options work.
 RUN: llvm-strings --encoding s %t | FileCheck --check-prefixes CHECK,CHECK-ASCII --strict-whitespace --match-full-lines %s
@@ -22,13 +25,18 @@ RUN: cmp %t.1 %t.2
 
 # The first line containing just abcd should always be matched.
 CHECK:abcd
-# In -e s, the bytes of € should not be included.
+# In -e s, the bytes of U+200A and U+200B should not be included.
 CHECK-ASCII:abcd
-# In -e S, any bytes of € may or may not be included depending on the locale
-# in effect. The locale in effect may also be altered by llvm-lit.
-CHECK-LOCALE:abcd{{.*}}
-# In -e utf8, all bytes of € should be included.
-CHECK-UTF8:abcd€
+CHECK-ASCII:abcd
+# In -e S, any bytes of U+200A and U+200B may or may not be included depending
+# on the locale in effect. The locale in effect may also be altered by llvm-lit.
+# Make sure if changing the test that the byte representations should not allow
+# this to be split into multiple strings in non-UTF-8 locales.
+CHECK-LOCALE:abcd{{(\xe2(\x80\x8a?)?)?}}
+CHECK-LOCALE:abcd{{(\xe2(\x80(\x8a(\xe2(\x80\x8b?)?)?)?)?)?}}
+# In -e utf8, all bytes of U+200A should be included, but none of U+200B.
+CHECK-UTF8:abcd{{\xe2\x80\x8a}}
+CHECK-UTF8:abcd{{\xe2\x80\x8a}}
 
 # Check that invalid --encoding values are rejected.
 RUN: not llvm-strings --encoding x 2>&1 %t | FileCheck --check-prefix CHECK-ERROR %s
