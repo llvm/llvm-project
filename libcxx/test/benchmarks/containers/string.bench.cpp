@@ -291,6 +291,67 @@ int main(int argc, char** argv) {
     });
   }
 
+  {
+    static auto bench_impl =
+        []<bool opaque, class CharT>(std::bool_constant<opaque>, std::type_identity<CharT>, benchmark::State& state) {
+          using str = std::basic_string<CharT>;
+          str src(state.range(), 'a');
+
+          str strings[4096];
+          while (state.KeepRunningBatch(std::size(strings))) {
+            state.PauseTiming();
+            for (auto& string : strings)
+              str().swap(string); // Make sure the strings are in the default constructed state
+            state.ResumeTiming();
+            benchmark::DoNotOptimize(strings);
+
+            for (auto& string : strings) {
+              if constexpr (opaque)
+                benchmark::DoNotOptimize(src);
+              string.append(src);
+            }
+          }
+        };
+
+    bench("std::basic_string::append(const std::basic_string&) (opaque)",
+          std::bind_front(bench_impl, std::true_type{}),
+          [](auto bm) { bm->Arg(small_size)->Arg(large_size); });
+    bench("std::basic_string::append(const std::basic_string&) (transparent)",
+          std::bind_front(bench_impl, std::false_type{}),
+          [](auto bm) { bm->Arg(small_size)->Arg(large_size); });
+  }
+
+  {
+    static auto bench_impl =
+        []<bool opaque, class CharT>(std::bool_constant<opaque>, std::type_identity<CharT>, benchmark::State& state) {
+          using str = std::basic_string<CharT>;
+          str src_str(state.range(), 'a');
+          const CharT* src = src_str.data();
+
+          str strings[4096];
+          while (state.KeepRunningBatch(std::size(strings))) {
+            state.PauseTiming();
+            for (auto& string : strings)
+              str().swap(string); // Make sure the strings are in the default constructed state
+            state.ResumeTiming();
+            benchmark::DoNotOptimize(strings);
+
+            for (auto& string : strings) {
+              if constexpr (opaque)
+                benchmark::DoNotOptimize(src);
+              string.append(src);
+            }
+          }
+        };
+
+    bench("std::basic_string::append(const value_type*) (opaque)",
+          std::bind_front(bench_impl, std::true_type{}),
+          [](auto bm) { bm->Arg(small_size)->Arg(large_size); });
+    bench("std::basic_string::append(const value_type*) (transparent)",
+          std::bind_front(bench_impl, std::false_type{}),
+          [](auto bm) { bm->Arg(small_size)->Arg(large_size); });
+  }
+
   // [string.ops]
   bench("std::basic_string::data()", []<class CharT>(std::type_identity<CharT>, benchmark::State& state) {
     std::basic_string<CharT> str;
