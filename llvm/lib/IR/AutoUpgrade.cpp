@@ -7890,6 +7890,15 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
     Res.insert(Pos, "-f64:32:64");
   }
 
+  // ARM data layout upgrades.
+  // Add -Fi8 if a -F has not already been specified.
+  if (T.isARM() && !DL.empty() && !DL.contains("Fi") && !DL.contains("Fn")) {
+    const std::string p3232 = "p:32:32";
+    size_t Pos = Res.find(p3232);
+    if (Pos != StringRef::npos)
+      Res.insert(Pos + p3232.size(), "-Fi8");
+  }
+
   if (!T.isX86())
     return Res;
 
