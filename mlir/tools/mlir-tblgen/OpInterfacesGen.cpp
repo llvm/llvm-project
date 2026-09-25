@@ -289,11 +289,16 @@ void InterfaceGenerator::emitModelDecl(const Interface &interface) {
     os << "  class " << modelClass << " : public Concept {\n  public:\n";
     os << "    using Interface = " << interface.getFullyQualifiedName()
        << ";\n";
+    if (StringRef(modelClass) == "Model")
+      os << "    using GeneratedModel = Model;\n";
     // The Concept's function-pointer members and these wrapper signatures are
     // named by the unique name so that overloaded interface methods stay
     // distinct here; only the forward target (the concrete model call) uses the
     // shared source name. Do not collapse these to getName().
-    os << "    " << modelClass << "() : Concept{";
+    os << "    ";
+    if (StringRef(modelClass) == "Model")
+      os << "constexpr ";
+    os << modelClass << "() : Concept{";
     llvm::interleaveComma(
         interface.getMethods(), os,
         [&](const InterfaceMethod &method) { os << method.getUniqueName(); });

@@ -163,6 +163,12 @@ def DeclareMethodsWithDefaultOp : Op<TestDialect, "declare_methods_op",
       [DeclareOpInterfaceMethods<TestOpInterface, ["default_foo"]>]>;
 
 // DECL-LABEL: TestOpInterfaceInterfaceTraits
+// DECL: class Model : public Concept
+// DECL: using GeneratedModel = Model;
+// DECL: constexpr Model() : Concept{foo, body_foo, default_foo}
+// DECL: class FallbackModel : public Concept
+// DECL-NOT: using GeneratedModel = Model;
+// DECL: FallbackModel() : Concept{foo, body_foo, default_foo}
 // DECL: class TestOpInterface : public ::mlir::OpInterface<TestOpInterface, detail::TestOpInterfaceInterfaceTraits>
 
 // DECL: /// some function comment

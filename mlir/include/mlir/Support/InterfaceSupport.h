@@ -18,6 +18,8 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/TypeName.h"
 
+#include <type_traits>
+
 namespace mlir {
 namespace detail {
 //===----------------------------------------------------------------------===//
@@ -157,6 +159,15 @@ class InterfaceMap {
   template <typename T>
   using detect_initialize_method = llvm::is_detected<has_initialize_method, T>;
 
+  // Only exact generated models with trivial copy construction can be copied
+  // from a constant prototype. Derived models may carry additional state.
+  template <typename T, typename = void>
+  struct IsConstexprGeneratedModel : std::false_type {};
+  template <typename T>
+  struct IsConstexprGeneratedModel<T, std::void_t<typename T::GeneratedModel>>
+      : std::bool_constant<std::is_same_v<T, typename T::GeneratedModel> &&
+                           std::is_trivially_copy_constructible_v<T>> {};
+
 public:
   InterfaceMap() = default;
   InterfaceMap(InterfaceMap &&) = default;
@@ -228,9 +239,19 @@ private:
     // static_assert(std::is_trivially_destructible_v<InterfaceModel>,
     //               "interface models must be trivially destructible");
 
-    // Build the interface model, optionally initializing if necessary.
-    InterfaceModel *model =
-        new (malloc(sizeof(InterfaceModel))) InterfaceModel();
+    // Generated models contain a fixed table of callbacks. Copy a constant
+    // prototype so the callbacks need not be set up for each model.
+    InterfaceModel *model;
+    if constexpr (IsConstexprGeneratedModel<InterfaceModel>::value) {
+      static constexpr InterfaceModel prototype;
+      model = new (malloc(sizeof(InterfaceModel))) InterfaceModel(prototype);
+    } else {
+      // Construct fallback, external, and custom models normally; they may
+      // need more than a copy of the generated callback table.
+      model = new (malloc(sizeof(InterfaceModel))) InterfaceModel();
+    }
+    // Run model-specific initialization after either path, including links to
+    // registered base interfaces.
     if constexpr (detect_initialize_method<InterfaceModel>::value)
       model->initializeInterfaceConcept(*this);
 
