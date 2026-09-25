@@ -899,8 +899,8 @@ entry:
 define <16 x i8> @or_rshrn_v16i16_7(<16 x i16> %a) {
 ; CHECK-LABEL: or_rshrn_v16i16_7:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    shrn v0.8b, v0.8h, #7
-; CHECK-NEXT:    shrn2 v0.16b, v1.8h, #7
+; CHECK-NEXT:    addhn v0.8b, v0.8h, v0.8h
+; CHECK-NEXT:    addhn2 v0.16b, v1.8h, v1.8h
 ; CHECK-NEXT:    ret
 entry:
   %b = or disjoint <16 x i16> %a, <i16 64, i16 64, i16 64, i16 64, i16 64, i16 64, i16 64, i16 64, i16 64, i16 64, i16 64, i16 64, i16 64, i16 64, i16 64, i16 64>
@@ -924,8 +924,8 @@ entry:
 define <8 x i16> @or_rshrn_v8i32_15(<8 x i32> %a) {
 ; CHECK-LABEL: or_rshrn_v8i32_15:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    shrn v0.4h, v0.4s, #15
-; CHECK-NEXT:    shrn2 v0.8h, v1.4s, #15
+; CHECK-NEXT:    addhn v0.4h, v0.4s, v0.4s
+; CHECK-NEXT:    addhn2 v0.8h, v1.4s, v1.4s
 ; CHECK-NEXT:    ret
 entry:
   %b = or disjoint <8 x i32> %a, <i32 16384, i32 16384, i32 16384, i32 16384, i32 16384, i32 16384, i32 16384, i32 16384>
@@ -949,8 +949,8 @@ entry:
 define <4 x i32> @or_rshrn_v4i64_31(<4 x i64> %a) {
 ; CHECK-LABEL: or_rshrn_v4i64_31:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    shrn v0.2s, v0.2d, #31
-; CHECK-NEXT:    shrn2 v0.4s, v1.2d, #31
+; CHECK-NEXT:    addhn v0.2s, v0.2d, v0.2d
+; CHECK-NEXT:    addhn2 v0.4s, v1.2d, v1.2d
 ; CHECK-NEXT:    ret
 entry:
   %b = or disjoint <4 x i64> %a, <i64 1073741824, i64 1073741824, i64 1073741824, i64 1073741824>
