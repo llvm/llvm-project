@@ -78,10 +78,6 @@ define amdgpu_kernel void @test_mfma_f32_32x32x4bf16_1k(ptr addrspace(1) %arg) #
 ; GFX90A-GISEL-LABEL: test_mfma_f32_32x32x4bf16_1k:
 ; GFX90A-GISEL:       ; %bb.0: ; %bb
 ; GFX90A-GISEL-NEXT:    s_load_dwordx2 s[34:35], s[4:5], 0x24
-; GFX90A-GISEL-NEXT:    s_mov_b64 s[36:37], 1
-; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[32:33], s[36:37], s[36:37] op_sel:[0,1]
-; GFX90A-GISEL-NEXT:    s_mov_b32 s36, 2
-; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[34:35], s[36:37], s[36:37] op_sel:[0,1]
 ; GFX90A-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-GISEL-NEXT:    s_load_dwordx16 s[0:15], s[34:35], 0x0
 ; GFX90A-GISEL-NEXT:    s_load_dwordx16 s[16:31], s[34:35], 0x40
@@ -102,6 +98,10 @@ define amdgpu_kernel void @test_mfma_f32_32x32x4bf16_1k(ptr addrspace(1) %arg) #
 ; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[26:27], s[26:27], s[26:27] op_sel:[0,1]
 ; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[28:29], s[28:29], s[28:29] op_sel:[0,1]
 ; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[30:31], s[30:31], s[30:31] op_sel:[0,1]
+; GFX90A-GISEL-NEXT:    s_mov_b64 s[0:1], 1
+; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[32:33], s[0:1], s[0:1] op_sel:[0,1]
+; GFX90A-GISEL-NEXT:    s_mov_b32 s0, 2
+; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[34:35], s[0:1], s[0:1] op_sel:[0,1]
 ; GFX90A-GISEL-NEXT:    s_nop 1
 ; GFX90A-GISEL-NEXT:    v_mfma_f32_32x32x4bf16_1k v[0:31], v[32:33], v[34:35], v[0:31] cbsz:1 abid:2 blgp:3
 ; GFX90A-GISEL-NEXT:    v_mov_b32_e32 v32, 0
@@ -177,10 +177,6 @@ define amdgpu_kernel void @test_mfma_f32_32x32x4bf16_1k(ptr addrspace(1) %arg) #
 ; GFX942-GISEL-LABEL: test_mfma_f32_32x32x4bf16_1k:
 ; GFX942-GISEL:       ; %bb.0: ; %bb
 ; GFX942-GISEL-NEXT:    s_load_dwordx2 s[34:35], s[4:5], 0x24
-; GFX942-GISEL-NEXT:    s_mov_b64 s[36:37], 1
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[32:33], s[36:37]
-; GFX942-GISEL-NEXT:    s_mov_b32 s36, 2
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[34:35], s[36:37]
 ; GFX942-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-GISEL-NEXT:    s_load_dwordx16 s[0:15], s[34:35], 0x0
 ; GFX942-GISEL-NEXT:    s_load_dwordx16 s[16:31], s[34:35], 0x40
@@ -201,6 +197,10 @@ define amdgpu_kernel void @test_mfma_f32_32x32x4bf16_1k(ptr addrspace(1) %arg) #
 ; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[26:27], s[26:27]
 ; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[28:29], s[28:29]
 ; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[30:31], s[30:31]
+; GFX942-GISEL-NEXT:    s_mov_b64 s[0:1], 1
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[32:33], s[0:1]
+; GFX942-GISEL-NEXT:    s_mov_b32 s0, 2
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[34:35], s[0:1]
 ; GFX942-GISEL-NEXT:    s_nop 1
 ; GFX942-GISEL-NEXT:    v_mfma_f32_32x32x4_2b_bf16 v[0:31], v[32:33], v[34:35], v[0:31] cbsz:1 abid:2 blgp:3
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v32, 0
@@ -276,10 +276,6 @@ define amdgpu_kernel void @test_mfma_f32_32x32x4bf16_1k(ptr addrspace(1) %arg) #
 ; GFX90A-VGPR-GISEL-LABEL: test_mfma_f32_32x32x4bf16_1k:
 ; GFX90A-VGPR-GISEL:       ; %bb.0: ; %bb
 ; GFX90A-VGPR-GISEL-NEXT:    s_load_dwordx2 s[34:35], s[4:5], 0x24
-; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[36:37], 1
-; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[32:33], s[36:37], s[36:37] op_sel:[0,1]
-; GFX90A-VGPR-GISEL-NEXT:    s_mov_b32 s36, 2
-; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[34:35], s[36:37], s[36:37] op_sel:[0,1]
 ; GFX90A-VGPR-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-VGPR-GISEL-NEXT:    s_load_dwordx16 s[0:15], s[34:35], 0x0
 ; GFX90A-VGPR-GISEL-NEXT:    s_load_dwordx16 s[16:31], s[34:35], 0x40
@@ -300,6 +296,10 @@ define amdgpu_kernel void @test_mfma_f32_32x32x4bf16_1k(ptr addrspace(1) %arg) #
 ; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[26:27], s[26:27], s[26:27] op_sel:[0,1]
 ; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[28:29], s[28:29], s[28:29] op_sel:[0,1]
 ; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[30:31], s[30:31], s[30:31] op_sel:[0,1]
+; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[0:1], 1
+; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[32:33], s[0:1], s[0:1] op_sel:[0,1]
+; GFX90A-VGPR-GISEL-NEXT:    s_mov_b32 s0, 2
+; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[34:35], s[0:1], s[0:1] op_sel:[0,1]
 ; GFX90A-VGPR-GISEL-NEXT:    s_nop 1
 ; GFX90A-VGPR-GISEL-NEXT:    v_mfma_f32_32x32x4bf16_1k v[0:31], v[32:33], v[34:35], v[0:31] cbsz:1 abid:2 blgp:3
 ; GFX90A-VGPR-GISEL-NEXT:    v_mov_b32_e32 v32, 0
@@ -375,10 +375,6 @@ define amdgpu_kernel void @test_mfma_f32_32x32x4bf16_1k(ptr addrspace(1) %arg) #
 ; GFX942-VGPR-GISEL-LABEL: test_mfma_f32_32x32x4bf16_1k:
 ; GFX942-VGPR-GISEL:       ; %bb.0: ; %bb
 ; GFX942-VGPR-GISEL-NEXT:    s_load_dwordx2 s[34:35], s[4:5], 0x24
-; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[36:37], 1
-; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[32:33], s[36:37]
-; GFX942-VGPR-GISEL-NEXT:    s_mov_b32 s36, 2
-; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[34:35], s[36:37]
 ; GFX942-VGPR-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-VGPR-GISEL-NEXT:    s_load_dwordx16 s[0:15], s[34:35], 0x0
 ; GFX942-VGPR-GISEL-NEXT:    s_load_dwordx16 s[16:31], s[34:35], 0x40
@@ -399,6 +395,10 @@ define amdgpu_kernel void @test_mfma_f32_32x32x4bf16_1k(ptr addrspace(1) %arg) #
 ; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[26:27], s[26:27]
 ; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[28:29], s[28:29]
 ; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[30:31], s[30:31]
+; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[0:1], 1
+; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[32:33], s[0:1]
+; GFX942-VGPR-GISEL-NEXT:    s_mov_b32 s0, 2
+; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[34:35], s[0:1]
 ; GFX942-VGPR-GISEL-NEXT:    s_nop 1
 ; GFX942-VGPR-GISEL-NEXT:    v_mfma_f32_32x32x4_2b_bf16 v[0:31], v[32:33], v[34:35], v[0:31] cbsz:1 abid:2 blgp:3
 ; GFX942-VGPR-GISEL-NEXT:    v_mov_b32_e32 v32, 0
@@ -453,10 +453,6 @@ define amdgpu_kernel void @test_mfma_f32_16x16x4bf16_1k(ptr addrspace(1) %arg) #
 ; GFX90A-GISEL-LABEL: test_mfma_f32_16x16x4bf16_1k:
 ; GFX90A-GISEL:       ; %bb.0: ; %bb
 ; GFX90A-GISEL-NEXT:    s_load_dwordx2 s[16:17], s[4:5], 0x24
-; GFX90A-GISEL-NEXT:    s_mov_b64 s[18:19], 1
-; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[16:17], s[18:19], s[18:19] op_sel:[0,1]
-; GFX90A-GISEL-NEXT:    s_mov_b32 s18, 2
-; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[18:19], s[18:19], s[18:19] op_sel:[0,1]
 ; GFX90A-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-GISEL-NEXT:    s_load_dwordx16 s[0:15], s[16:17], 0x0
 ; GFX90A-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
@@ -468,6 +464,10 @@ define amdgpu_kernel void @test_mfma_f32_16x16x4bf16_1k(ptr addrspace(1) %arg) #
 ; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[10:11], s[10:11], s[10:11] op_sel:[0,1]
 ; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[12:13], s[12:13], s[12:13] op_sel:[0,1]
 ; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[14:15], s[14:15], s[14:15] op_sel:[0,1]
+; GFX90A-GISEL-NEXT:    s_mov_b64 s[0:1], 1
+; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[16:17], s[0:1], s[0:1] op_sel:[0,1]
+; GFX90A-GISEL-NEXT:    s_mov_b32 s0, 2
+; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[18:19], s[0:1], s[0:1] op_sel:[0,1]
 ; GFX90A-GISEL-NEXT:    s_nop 1
 ; GFX90A-GISEL-NEXT:    v_mfma_f32_16x16x4bf16_1k v[0:15], v[16:17], v[18:19], v[0:15] cbsz:1 abid:2 blgp:3
 ; GFX90A-GISEL-NEXT:    v_mov_b32_e32 v16, 0
@@ -508,10 +508,6 @@ define amdgpu_kernel void @test_mfma_f32_16x16x4bf16_1k(ptr addrspace(1) %arg) #
 ; GFX942-GISEL-LABEL: test_mfma_f32_16x16x4bf16_1k:
 ; GFX942-GISEL:       ; %bb.0: ; %bb
 ; GFX942-GISEL-NEXT:    s_load_dwordx2 s[16:17], s[4:5], 0x24
-; GFX942-GISEL-NEXT:    s_mov_b64 s[18:19], 1
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[16:17], s[18:19]
-; GFX942-GISEL-NEXT:    s_mov_b32 s18, 2
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[18:19], s[18:19]
 ; GFX942-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-GISEL-NEXT:    s_load_dwordx16 s[0:15], s[16:17], 0x0
 ; GFX942-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
@@ -523,6 +519,10 @@ define amdgpu_kernel void @test_mfma_f32_16x16x4bf16_1k(ptr addrspace(1) %arg) #
 ; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[10:11], s[10:11]
 ; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[12:13], s[12:13]
 ; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[14:15], s[14:15]
+; GFX942-GISEL-NEXT:    s_mov_b64 s[0:1], 1
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[16:17], s[0:1]
+; GFX942-GISEL-NEXT:    s_mov_b32 s0, 2
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[18:19], s[0:1]
 ; GFX942-GISEL-NEXT:    s_nop 1
 ; GFX942-GISEL-NEXT:    v_mfma_f32_16x16x4_4b_bf16 v[0:15], v[16:17], v[18:19], v[0:15] cbsz:1 abid:2 blgp:3
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v16, 0
@@ -563,10 +563,6 @@ define amdgpu_kernel void @test_mfma_f32_16x16x4bf16_1k(ptr addrspace(1) %arg) #
 ; GFX90A-VGPR-GISEL-LABEL: test_mfma_f32_16x16x4bf16_1k:
 ; GFX90A-VGPR-GISEL:       ; %bb.0: ; %bb
 ; GFX90A-VGPR-GISEL-NEXT:    s_load_dwordx2 s[16:17], s[4:5], 0x24
-; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[18:19], 1
-; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[16:17], s[18:19], s[18:19] op_sel:[0,1]
-; GFX90A-VGPR-GISEL-NEXT:    s_mov_b32 s18, 2
-; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[18:19], s[18:19], s[18:19] op_sel:[0,1]
 ; GFX90A-VGPR-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-VGPR-GISEL-NEXT:    s_load_dwordx16 s[0:15], s[16:17], 0x0
 ; GFX90A-VGPR-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
@@ -578,6 +574,10 @@ define amdgpu_kernel void @test_mfma_f32_16x16x4bf16_1k(ptr addrspace(1) %arg) #
 ; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[10:11], s[10:11], s[10:11] op_sel:[0,1]
 ; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[12:13], s[12:13], s[12:13] op_sel:[0,1]
 ; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[14:15], s[14:15], s[14:15] op_sel:[0,1]
+; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[0:1], 1
+; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[16:17], s[0:1], s[0:1] op_sel:[0,1]
+; GFX90A-VGPR-GISEL-NEXT:    s_mov_b32 s0, 2
+; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[18:19], s[0:1], s[0:1] op_sel:[0,1]
 ; GFX90A-VGPR-GISEL-NEXT:    s_nop 1
 ; GFX90A-VGPR-GISEL-NEXT:    v_mfma_f32_16x16x4bf16_1k v[0:15], v[16:17], v[18:19], v[0:15] cbsz:1 abid:2 blgp:3
 ; GFX90A-VGPR-GISEL-NEXT:    v_mov_b32_e32 v16, 0
@@ -618,10 +618,6 @@ define amdgpu_kernel void @test_mfma_f32_16x16x4bf16_1k(ptr addrspace(1) %arg) #
 ; GFX942-VGPR-GISEL-LABEL: test_mfma_f32_16x16x4bf16_1k:
 ; GFX942-VGPR-GISEL:       ; %bb.0: ; %bb
 ; GFX942-VGPR-GISEL-NEXT:    s_load_dwordx2 s[16:17], s[4:5], 0x24
-; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[18:19], 1
-; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[16:17], s[18:19]
-; GFX942-VGPR-GISEL-NEXT:    s_mov_b32 s18, 2
-; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[18:19], s[18:19]
 ; GFX942-VGPR-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-VGPR-GISEL-NEXT:    s_load_dwordx16 s[0:15], s[16:17], 0x0
 ; GFX942-VGPR-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
@@ -633,6 +629,10 @@ define amdgpu_kernel void @test_mfma_f32_16x16x4bf16_1k(ptr addrspace(1) %arg) #
 ; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[10:11], s[10:11]
 ; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[12:13], s[12:13]
 ; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[14:15], s[14:15]
+; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[0:1], 1
+; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[16:17], s[0:1]
+; GFX942-VGPR-GISEL-NEXT:    s_mov_b32 s0, 2
+; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[18:19], s[0:1]
 ; GFX942-VGPR-GISEL-NEXT:    s_nop 1
 ; GFX942-VGPR-GISEL-NEXT:    v_mfma_f32_16x16x4_4b_bf16 v[0:15], v[16:17], v[18:19], v[0:15] cbsz:1 abid:2 blgp:3
 ; GFX942-VGPR-GISEL-NEXT:    v_mov_b32_e32 v16, 0
@@ -675,10 +675,11 @@ define amdgpu_kernel void @test_mfma_f32_4x4x4bf16_1k(ptr addrspace(1) %arg) #0 
 ; GFX90A-GISEL-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x24
 ; GFX90A-GISEL-NEXT:    s_mov_b64 s[4:5], 1
 ; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[4:5], s[4:5], s[4:5] op_sel:[0,1]
-; GFX90A-GISEL-NEXT:    s_mov_b32 s4, 2
-; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[6:7], s[4:5], s[4:5] op_sel:[0,1]
+; GFX90A-GISEL-NEXT:    s_mov_b32 s8, 2
+; GFX90A-GISEL-NEXT:    s_mov_b32 s9, s5
 ; GFX90A-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[6:7], s[8:9], s[8:9] op_sel:[0,1]
 ; GFX90A-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[0:1], s[0:1], s[0:1] op_sel:[0,1]
 ; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[2:3], s[2:3], s[2:3] op_sel:[0,1]
@@ -712,10 +713,11 @@ define amdgpu_kernel void @test_mfma_f32_4x4x4bf16_1k(ptr addrspace(1) %arg) #0 
 ; GFX942-GISEL-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x24
 ; GFX942-GISEL-NEXT:    s_mov_b64 s[4:5], 1
 ; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[4:5]
-; GFX942-GISEL-NEXT:    s_mov_b32 s4, 2
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[4:5]
+; GFX942-GISEL-NEXT:    s_mov_b32 s8, 2
+; GFX942-GISEL-NEXT:    s_mov_b32 s9, s5
 ; GFX942-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[8:9]
 ; GFX942-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
@@ -749,10 +751,11 @@ define amdgpu_kernel void @test_mfma_f32_4x4x4bf16_1k(ptr addrspace(1) %arg) #0 
 ; GFX90A-VGPR-GISEL-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x24
 ; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[4:5], 1
 ; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[4:5], s[4:5], s[4:5] op_sel:[0,1]
-; GFX90A-VGPR-GISEL-NEXT:    s_mov_b32 s4, 2
-; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[6:7], s[4:5], s[4:5] op_sel:[0,1]
+; GFX90A-VGPR-GISEL-NEXT:    s_mov_b32 s8, 2
+; GFX90A-VGPR-GISEL-NEXT:    s_mov_b32 s9, s5
 ; GFX90A-VGPR-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-VGPR-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[6:7], s[8:9], s[8:9] op_sel:[0,1]
 ; GFX90A-VGPR-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[0:1], s[0:1], s[0:1] op_sel:[0,1]
 ; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[2:3], s[2:3], s[2:3] op_sel:[0,1]
@@ -786,10 +789,11 @@ define amdgpu_kernel void @test_mfma_f32_4x4x4bf16_1k(ptr addrspace(1) %arg) #0 
 ; GFX942-VGPR-GISEL-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x24
 ; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[4:5], 1
 ; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[4:5]
-; GFX942-VGPR-GISEL-NEXT:    s_mov_b32 s4, 2
-; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[4:5]
+; GFX942-VGPR-GISEL-NEXT:    s_mov_b32 s8, 2
+; GFX942-VGPR-GISEL-NEXT:    s_mov_b32 s9, s5
 ; GFX942-VGPR-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-VGPR-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[8:9]
 ; GFX942-VGPR-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
@@ -840,10 +844,6 @@ define amdgpu_kernel void @test_mfma_f32_32x32x8bf16_1k(ptr addrspace(1) %arg) #
 ; GFX90A-GISEL-LABEL: test_mfma_f32_32x32x8bf16_1k:
 ; GFX90A-GISEL:       ; %bb.0: ; %bb
 ; GFX90A-GISEL-NEXT:    s_load_dwordx2 s[16:17], s[4:5], 0x24
-; GFX90A-GISEL-NEXT:    s_mov_b64 s[18:19], 1
-; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[16:17], s[18:19], s[18:19] op_sel:[0,1]
-; GFX90A-GISEL-NEXT:    s_mov_b32 s18, 2
-; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[18:19], s[18:19], s[18:19] op_sel:[0,1]
 ; GFX90A-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-GISEL-NEXT:    s_load_dwordx16 s[0:15], s[16:17], 0x0
 ; GFX90A-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
@@ -855,6 +855,10 @@ define amdgpu_kernel void @test_mfma_f32_32x32x8bf16_1k(ptr addrspace(1) %arg) #
 ; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[10:11], s[10:11], s[10:11] op_sel:[0,1]
 ; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[12:13], s[12:13], s[12:13] op_sel:[0,1]
 ; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[14:15], s[14:15], s[14:15] op_sel:[0,1]
+; GFX90A-GISEL-NEXT:    s_mov_b64 s[0:1], 1
+; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[16:17], s[0:1], s[0:1] op_sel:[0,1]
+; GFX90A-GISEL-NEXT:    s_mov_b32 s0, 2
+; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[18:19], s[0:1], s[0:1] op_sel:[0,1]
 ; GFX90A-GISEL-NEXT:    s_nop 1
 ; GFX90A-GISEL-NEXT:    v_mfma_f32_32x32x8bf16_1k v[0:15], v[16:17], v[18:19], v[0:15] cbsz:1 abid:2 blgp:3
 ; GFX90A-GISEL-NEXT:    v_mov_b32_e32 v16, 0
@@ -896,10 +900,6 @@ define amdgpu_kernel void @test_mfma_f32_32x32x8bf16_1k(ptr addrspace(1) %arg) #
 ; GFX942-GISEL-LABEL: test_mfma_f32_32x32x8bf16_1k:
 ; GFX942-GISEL:       ; %bb.0: ; %bb
 ; GFX942-GISEL-NEXT:    s_load_dwordx2 s[16:17], s[4:5], 0x24
-; GFX942-GISEL-NEXT:    s_mov_b64 s[18:19], 1
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[16:17], s[18:19]
-; GFX942-GISEL-NEXT:    s_mov_b32 s18, 2
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[18:19], s[18:19]
 ; GFX942-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-GISEL-NEXT:    s_load_dwordx16 s[0:15], s[16:17], 0x0
 ; GFX942-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
@@ -911,6 +911,10 @@ define amdgpu_kernel void @test_mfma_f32_32x32x8bf16_1k(ptr addrspace(1) %arg) #
 ; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[10:11], s[10:11]
 ; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[12:13], s[12:13]
 ; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[14:15], s[14:15]
+; GFX942-GISEL-NEXT:    s_mov_b64 s[0:1], 1
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[16:17], s[0:1]
+; GFX942-GISEL-NEXT:    s_mov_b32 s0, 2
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[18:19], s[0:1]
 ; GFX942-GISEL-NEXT:    s_nop 1
 ; GFX942-GISEL-NEXT:    v_mfma_f32_32x32x8_bf16 v[0:15], v[16:17], v[18:19], v[0:15] cbsz:1 abid:2 blgp:3
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v16, 0
@@ -952,10 +956,6 @@ define amdgpu_kernel void @test_mfma_f32_32x32x8bf16_1k(ptr addrspace(1) %arg) #
 ; GFX90A-VGPR-GISEL-LABEL: test_mfma_f32_32x32x8bf16_1k:
 ; GFX90A-VGPR-GISEL:       ; %bb.0: ; %bb
 ; GFX90A-VGPR-GISEL-NEXT:    s_load_dwordx2 s[16:17], s[4:5], 0x24
-; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[18:19], 1
-; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[16:17], s[18:19], s[18:19] op_sel:[0,1]
-; GFX90A-VGPR-GISEL-NEXT:    s_mov_b32 s18, 2
-; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[18:19], s[18:19], s[18:19] op_sel:[0,1]
 ; GFX90A-VGPR-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-VGPR-GISEL-NEXT:    s_load_dwordx16 s[0:15], s[16:17], 0x0
 ; GFX90A-VGPR-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
@@ -967,6 +967,10 @@ define amdgpu_kernel void @test_mfma_f32_32x32x8bf16_1k(ptr addrspace(1) %arg) #
 ; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[10:11], s[10:11], s[10:11] op_sel:[0,1]
 ; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[12:13], s[12:13], s[12:13] op_sel:[0,1]
 ; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[14:15], s[14:15], s[14:15] op_sel:[0,1]
+; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[0:1], 1
+; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[16:17], s[0:1], s[0:1] op_sel:[0,1]
+; GFX90A-VGPR-GISEL-NEXT:    s_mov_b32 s0, 2
+; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[18:19], s[0:1], s[0:1] op_sel:[0,1]
 ; GFX90A-VGPR-GISEL-NEXT:    s_nop 1
 ; GFX90A-VGPR-GISEL-NEXT:    v_mfma_f32_32x32x8bf16_1k v[0:15], v[16:17], v[18:19], v[0:15] cbsz:1 abid:2 blgp:3
 ; GFX90A-VGPR-GISEL-NEXT:    v_mov_b32_e32 v16, 0
@@ -1008,10 +1012,6 @@ define amdgpu_kernel void @test_mfma_f32_32x32x8bf16_1k(ptr addrspace(1) %arg) #
 ; GFX942-VGPR-GISEL-LABEL: test_mfma_f32_32x32x8bf16_1k:
 ; GFX942-VGPR-GISEL:       ; %bb.0: ; %bb
 ; GFX942-VGPR-GISEL-NEXT:    s_load_dwordx2 s[16:17], s[4:5], 0x24
-; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[18:19], 1
-; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[16:17], s[18:19]
-; GFX942-VGPR-GISEL-NEXT:    s_mov_b32 s18, 2
-; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[18:19], s[18:19]
 ; GFX942-VGPR-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-VGPR-GISEL-NEXT:    s_load_dwordx16 s[0:15], s[16:17], 0x0
 ; GFX942-VGPR-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1023,6 +1023,10 @@ define amdgpu_kernel void @test_mfma_f32_32x32x8bf16_1k(ptr addrspace(1) %arg) #
 ; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[10:11], s[10:11]
 ; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[12:13], s[12:13]
 ; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[14:15], s[14:15]
+; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[0:1], 1
+; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[16:17], s[0:1]
+; GFX942-VGPR-GISEL-NEXT:    s_mov_b32 s0, 2
+; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[18:19], s[0:1]
 ; GFX942-VGPR-GISEL-NEXT:    s_nop 1
 ; GFX942-VGPR-GISEL-NEXT:    v_mfma_f32_32x32x8_bf16 v[0:15], v[16:17], v[18:19], v[0:15] cbsz:1 abid:2 blgp:3
 ; GFX942-VGPR-GISEL-NEXT:    v_mov_b32_e32 v16, 0
@@ -1065,10 +1069,11 @@ define amdgpu_kernel void @test_mfma_f32_16x16x16bf16_1k(ptr addrspace(1) %arg) 
 ; GFX90A-GISEL-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x24
 ; GFX90A-GISEL-NEXT:    s_mov_b64 s[4:5], 1
 ; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[4:5], s[4:5], s[4:5] op_sel:[0,1]
-; GFX90A-GISEL-NEXT:    s_mov_b32 s4, 2
-; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[6:7], s[4:5], s[4:5] op_sel:[0,1]
+; GFX90A-GISEL-NEXT:    s_mov_b32 s8, 2
+; GFX90A-GISEL-NEXT:    s_mov_b32 s9, s5
 ; GFX90A-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[6:7], s[8:9], s[8:9] op_sel:[0,1]
 ; GFX90A-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[0:1], s[0:1], s[0:1] op_sel:[0,1]
 ; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[2:3], s[2:3], s[2:3] op_sel:[0,1]
@@ -1102,10 +1107,11 @@ define amdgpu_kernel void @test_mfma_f32_16x16x16bf16_1k(ptr addrspace(1) %arg) 
 ; GFX942-GISEL-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x24
 ; GFX942-GISEL-NEXT:    s_mov_b64 s[4:5], 1
 ; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[4:5]
-; GFX942-GISEL-NEXT:    s_mov_b32 s4, 2
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[4:5]
+; GFX942-GISEL-NEXT:    s_mov_b32 s8, 2
+; GFX942-GISEL-NEXT:    s_mov_b32 s9, s5
 ; GFX942-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[8:9]
 ; GFX942-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
@@ -1139,10 +1145,11 @@ define amdgpu_kernel void @test_mfma_f32_16x16x16bf16_1k(ptr addrspace(1) %arg) 
 ; GFX90A-VGPR-GISEL-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x24
 ; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[4:5], 1
 ; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[4:5], s[4:5], s[4:5] op_sel:[0,1]
-; GFX90A-VGPR-GISEL-NEXT:    s_mov_b32 s4, 2
-; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[6:7], s[4:5], s[4:5] op_sel:[0,1]
+; GFX90A-VGPR-GISEL-NEXT:    s_mov_b32 s8, 2
+; GFX90A-VGPR-GISEL-NEXT:    s_mov_b32 s9, s5
 ; GFX90A-VGPR-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-VGPR-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[6:7], s[8:9], s[8:9] op_sel:[0,1]
 ; GFX90A-VGPR-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[0:1], s[0:1], s[0:1] op_sel:[0,1]
 ; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[2:3], s[2:3], s[2:3] op_sel:[0,1]
@@ -1176,10 +1183,11 @@ define amdgpu_kernel void @test_mfma_f32_16x16x16bf16_1k(ptr addrspace(1) %arg) 
 ; GFX942-VGPR-GISEL-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x24
 ; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[4:5], 1
 ; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[4:5]
-; GFX942-VGPR-GISEL-NEXT:    s_mov_b32 s4, 2
-; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[4:5]
+; GFX942-VGPR-GISEL-NEXT:    s_mov_b32 s8, 2
+; GFX942-VGPR-GISEL-NEXT:    s_mov_b32 s9, s5
 ; GFX942-VGPR-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-VGPR-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[8:9]
 ; GFX942-VGPR-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
@@ -1826,27 +1834,27 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_imm_1(ptr addrspace(1)
 ;
 ; GFX90A-GISEL-LABEL: test_mfma_f64_16x16x4f64_splat_imm_1:
 ; GFX90A-GISEL:       ; %bb.0: ; %bb
-; GFX90A-GISEL-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x24
-; GFX90A-GISEL-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x34
-; GFX90A-GISEL-NEXT:    s_mov_b64 s[0:1], 1.0
-; GFX90A-GISEL-NEXT:    s_mov_b64 s[2:3], s[0:1]
-; GFX90A-GISEL-NEXT:    s_mov_b64 s[4:5], s[0:1]
+; GFX90A-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX90A-GISEL-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GFX90A-GISEL-NEXT:    s_mov_b64 s[8:9], 1.0
+; GFX90A-GISEL-NEXT:    s_mov_b64 s[10:11], s[8:9]
+; GFX90A-GISEL-NEXT:    s_mov_b64 s[12:13], s[8:9]
 ; GFX90A-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[8:9], s[10:11], s[10:11] op_sel:[0,1]
-; GFX90A-GISEL-NEXT:    s_mov_b64 s[6:7], s[0:1]
-; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[0:1], s[0:1], s[0:1] op_sel:[0,1]
-; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[2:3], s[2:3], s[2:3] op_sel:[0,1]
-; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[4:5], s[4:5], s[4:5] op_sel:[0,1]
-; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[6:7], s[6:7], s[6:7] op_sel:[0,1]
-; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[10:11], s[12:13], s[12:13] op_sel:[0,1]
+; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[8:9], s[2:3], s[2:3] op_sel:[0,1]
+; GFX90A-GISEL-NEXT:    s_mov_b64 s[14:15], s[8:9]
+; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[0:1], s[8:9], s[8:9] op_sel:[0,1]
+; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[2:3], s[10:11], s[10:11] op_sel:[0,1]
+; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[4:5], s[12:13], s[12:13] op_sel:[0,1]
+; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[6:7], s[14:15], s[14:15] op_sel:[0,1]
+; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[10:11], s[6:7], s[6:7] op_sel:[0,1]
 ; GFX90A-GISEL-NEXT:    s_nop 1
 ; GFX90A-GISEL-NEXT:    v_mfma_f64_16x16x4f64 v[0:7], v[8:9], v[10:11], v[0:7]
 ; GFX90A-GISEL-NEXT:    v_mfma_f64_16x16x4f64 v[0:7], v[8:9], v[10:11], v[0:7] cbsz:1 abid:2 blgp:3
 ; GFX90A-GISEL-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX90A-GISEL-NEXT:    s_nop 15
 ; GFX90A-GISEL-NEXT:    s_nop 0
-; GFX90A-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[8:9]
-; GFX90A-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[8:9] offset:16
+; GFX90A-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[0:1]
+; GFX90A-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[0:1] offset:16
 ; GFX90A-GISEL-NEXT:    s_endpgm
 ;
 ; GFX942-LABEL: test_mfma_f64_16x16x4f64_splat_imm_1:
@@ -1868,27 +1876,27 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_imm_1(ptr addrspace(1)
 ;
 ; GFX942-GISEL-LABEL: test_mfma_f64_16x16x4f64_splat_imm_1:
 ; GFX942-GISEL:       ; %bb.0: ; %bb
-; GFX942-GISEL-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x24
-; GFX942-GISEL-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x34
-; GFX942-GISEL-NEXT:    s_mov_b64 s[0:1], 1.0
-; GFX942-GISEL-NEXT:    s_mov_b64 s[2:3], s[0:1]
-; GFX942-GISEL-NEXT:    s_mov_b64 s[4:5], s[0:1]
+; GFX942-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX942-GISEL-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GFX942-GISEL-NEXT:    s_mov_b64 s[8:9], 1.0
+; GFX942-GISEL-NEXT:    s_mov_b64 s[10:11], s[8:9]
+; GFX942-GISEL-NEXT:    s_mov_b64 s[12:13], s[8:9]
 ; GFX942-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[10:11]
-; GFX942-GISEL-NEXT:    s_mov_b64 s[6:7], s[0:1]
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[4:5]
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[6:7]
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[10:11], s[12:13]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[2:3]
+; GFX942-GISEL-NEXT:    s_mov_b64 s[14:15], s[8:9]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[8:9]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[10:11]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[12:13]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[14:15]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[10:11], s[6:7]
 ; GFX942-GISEL-NEXT:    s_nop 1
 ; GFX942-GISEL-NEXT:    v_mfma_f64_16x16x4_f64 v[0:7], v[8:9], v[10:11], v[0:7]
 ; GFX942-GISEL-NEXT:    v_mfma_f64_16x16x4_f64 v[0:7], v[8:9], v[10:11], v[0:7] cbsz:1 abid:2 neg:[1,1,0]
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX942-GISEL-NEXT:    s_nop 15
 ; GFX942-GISEL-NEXT:    s_nop 0
-; GFX942-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[8:9]
-; GFX942-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[8:9] offset:16
+; GFX942-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[0:1]
+; GFX942-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[0:1] offset:16
 ; GFX942-GISEL-NEXT:    s_endpgm
 ;
 ; GFX90A-VGPR-LABEL: test_mfma_f64_16x16x4f64_splat_imm_1:
@@ -1910,27 +1918,27 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_imm_1(ptr addrspace(1)
 ;
 ; GFX90A-VGPR-GISEL-LABEL: test_mfma_f64_16x16x4f64_splat_imm_1:
 ; GFX90A-VGPR-GISEL:       ; %bb.0: ; %bb
-; GFX90A-VGPR-GISEL-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x24
-; GFX90A-VGPR-GISEL-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x34
-; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[0:1], 1.0
-; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[2:3], s[0:1]
-; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[4:5], s[0:1]
+; GFX90A-VGPR-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX90A-VGPR-GISEL-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[8:9], 1.0
+; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[10:11], s[8:9]
+; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[12:13], s[8:9]
 ; GFX90A-VGPR-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[8:9], s[10:11], s[10:11] op_sel:[0,1]
-; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[6:7], s[0:1]
-; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[0:1], s[0:1], s[0:1] op_sel:[0,1]
-; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[2:3], s[2:3], s[2:3] op_sel:[0,1]
-; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[4:5], s[4:5], s[4:5] op_sel:[0,1]
-; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[6:7], s[6:7], s[6:7] op_sel:[0,1]
-; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[10:11], s[12:13], s[12:13] op_sel:[0,1]
+; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[8:9], s[2:3], s[2:3] op_sel:[0,1]
+; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[14:15], s[8:9]
+; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[0:1], s[8:9], s[8:9] op_sel:[0,1]
+; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[2:3], s[10:11], s[10:11] op_sel:[0,1]
+; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[4:5], s[12:13], s[12:13] op_sel:[0,1]
+; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[6:7], s[14:15], s[14:15] op_sel:[0,1]
+; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[10:11], s[6:7], s[6:7] op_sel:[0,1]
 ; GFX90A-VGPR-GISEL-NEXT:    s_nop 1
 ; GFX90A-VGPR-GISEL-NEXT:    v_mfma_f64_16x16x4f64 v[0:7], v[8:9], v[10:11], v[0:7]
 ; GFX90A-VGPR-GISEL-NEXT:    v_mfma_f64_16x16x4f64 v[0:7], v[8:9], v[10:11], v[0:7] cbsz:1 abid:2 blgp:3
 ; GFX90A-VGPR-GISEL-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX90A-VGPR-GISEL-NEXT:    s_nop 15
 ; GFX90A-VGPR-GISEL-NEXT:    s_nop 0
-; GFX90A-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[8:9]
-; GFX90A-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[8:9] offset:16
+; GFX90A-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[0:1]
+; GFX90A-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[0:1] offset:16
 ; GFX90A-VGPR-GISEL-NEXT:    s_endpgm
 ;
 ; GFX942-VGPR-LABEL: test_mfma_f64_16x16x4f64_splat_imm_1:
@@ -1952,27 +1960,27 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_imm_1(ptr addrspace(1)
 ;
 ; GFX942-VGPR-GISEL-LABEL: test_mfma_f64_16x16x4f64_splat_imm_1:
 ; GFX942-VGPR-GISEL:       ; %bb.0: ; %bb
-; GFX942-VGPR-GISEL-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x24
-; GFX942-VGPR-GISEL-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x34
-; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[0:1], 1.0
-; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[2:3], s[0:1]
-; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[4:5], s[0:1]
+; GFX942-VGPR-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX942-VGPR-GISEL-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[8:9], 1.0
+; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[10:11], s[8:9]
+; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[12:13], s[8:9]
 ; GFX942-VGPR-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[10:11]
-; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[6:7], s[0:1]
-; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
-; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[4:5]
-; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[6:7]
-; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[10:11], s[12:13]
+; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[2:3]
+; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[14:15], s[8:9]
+; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[8:9]
+; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[10:11]
+; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[12:13]
+; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[14:15]
+; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[10:11], s[6:7]
 ; GFX942-VGPR-GISEL-NEXT:    s_nop 1
 ; GFX942-VGPR-GISEL-NEXT:    v_mfma_f64_16x16x4_f64 v[0:7], v[8:9], v[10:11], v[0:7]
 ; GFX942-VGPR-GISEL-NEXT:    v_mfma_f64_16x16x4_f64 v[0:7], v[8:9], v[10:11], v[0:7] cbsz:1 abid:2 neg:[1,1,0]
 ; GFX942-VGPR-GISEL-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX942-VGPR-GISEL-NEXT:    s_nop 15
 ; GFX942-VGPR-GISEL-NEXT:    s_nop 0
-; GFX942-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[8:9]
-; GFX942-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[8:9] offset:16
+; GFX942-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[0:1]
+; GFX942-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[0:1] offset:16
 ; GFX942-VGPR-GISEL-NEXT:    s_endpgm
 bb:
   %mai.1 = tail call <4 x double> @llvm.amdgcn.mfma.f64.16x16x4f64(double %a, double %b, <4 x double> splat (double 1.0), i32 0, i32 0, i32 0)
@@ -2001,27 +2009,27 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_imm_neg1(ptr addrspace
 ;
 ; GFX90A-GISEL-LABEL: test_mfma_f64_16x16x4f64_splat_imm_neg1:
 ; GFX90A-GISEL:       ; %bb.0: ; %bb
-; GFX90A-GISEL-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x24
-; GFX90A-GISEL-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x34
-; GFX90A-GISEL-NEXT:    s_mov_b64 s[0:1], -1.0
-; GFX90A-GISEL-NEXT:    s_mov_b64 s[2:3], s[0:1]
-; GFX90A-GISEL-NEXT:    s_mov_b64 s[4:5], s[0:1]
+; GFX90A-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX90A-GISEL-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GFX90A-GISEL-NEXT:    s_mov_b64 s[8:9], -1.0
+; GFX90A-GISEL-NEXT:    s_mov_b64 s[10:11], s[8:9]
+; GFX90A-GISEL-NEXT:    s_mov_b64 s[12:13], s[8:9]
 ; GFX90A-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[8:9], s[10:11], s[10:11] op_sel:[0,1]
-; GFX90A-GISEL-NEXT:    s_mov_b64 s[6:7], s[0:1]
-; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[0:1], s[0:1], s[0:1] op_sel:[0,1]
-; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[2:3], s[2:3], s[2:3] op_sel:[0,1]
-; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[4:5], s[4:5], s[4:5] op_sel:[0,1]
-; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[6:7], s[6:7], s[6:7] op_sel:[0,1]
-; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[10:11], s[12:13], s[12:13] op_sel:[0,1]
+; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[8:9], s[2:3], s[2:3] op_sel:[0,1]
+; GFX90A-GISEL-NEXT:    s_mov_b64 s[14:15], s[8:9]
+; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[0:1], s[8:9], s[8:9] op_sel:[0,1]
+; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[2:3], s[10:11], s[10:11] op_sel:[0,1]
+; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[4:5], s[12:13], s[12:13] op_sel:[0,1]
+; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[6:7], s[14:15], s[14:15] op_sel:[0,1]
+; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[10:11], s[6:7], s[6:7] op_sel:[0,1]
 ; GFX90A-GISEL-NEXT:    s_nop 1
 ; GFX90A-GISEL-NEXT:    v_mfma_f64_16x16x4f64 v[0:7], v[8:9], v[10:11], v[0:7]
 ; GFX90A-GISEL-NEXT:    v_mfma_f64_16x16x4f64 v[0:7], v[8:9], v[10:11], v[0:7] cbsz:1 abid:2 blgp:3
 ; GFX90A-GISEL-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX90A-GISEL-NEXT:    s_nop 15
 ; GFX90A-GISEL-NEXT:    s_nop 0
-; GFX90A-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[8:9]
-; GFX90A-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[8:9] offset:16
+; GFX90A-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[0:1]
+; GFX90A-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[0:1] offset:16
 ; GFX90A-GISEL-NEXT:    s_endpgm
 ;
 ; GFX942-LABEL: test_mfma_f64_16x16x4f64_splat_imm_neg1:
@@ -2043,27 +2051,27 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_imm_neg1(ptr addrspace
 ;
 ; GFX942-GISEL-LABEL: test_mfma_f64_16x16x4f64_splat_imm_neg1:
 ; GFX942-GISEL:       ; %bb.0: ; %bb
-; GFX942-GISEL-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x24
-; GFX942-GISEL-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x34
-; GFX942-GISEL-NEXT:    s_mov_b64 s[0:1], -1.0
-; GFX942-GISEL-NEXT:    s_mov_b64 s[2:3], s[0:1]
-; GFX942-GISEL-NEXT:    s_mov_b64 s[4:5], s[0:1]
+; GFX942-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX942-GISEL-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GFX942-GISEL-NEXT:    s_mov_b64 s[8:9], -1.0
+; GFX942-GISEL-NEXT:    s_mov_b64 s[10:11], s[8:9]
+; GFX942-GISEL-NEXT:    s_mov_b64 s[12:13], s[8:9]
 ; GFX942-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[10:11]
-; GFX942-GISEL-NEXT:    s_mov_b64 s[6:7], s[0:1]
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[4:5]
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[6:7]
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[10:11], s[12:13]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[2:3]
+; GFX942-GISEL-NEXT:    s_mov_b64 s[14:15], s[8:9]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[8:9]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[10:11]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[12:13]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[14:15]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[10:11], s[6:7]
 ; GFX942-GISEL-NEXT:    s_nop 1
 ; GFX942-GISEL-NEXT:    v_mfma_f64_16x16x4_f64 v[0:7], v[8:9], v[10:11], v[0:7]
 ; GFX942-GISEL-NEXT:    v_mfma_f64_16x16x4_f64 v[0:7], v[8:9], v[10:11], v[0:7] cbsz:1 abid:2 neg:[1,1,0]
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX942-GISEL-NEXT:    s_nop 15
 ; GFX942-GISEL-NEXT:    s_nop 0
-; GFX942-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[8:9]
-; GFX942-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[8:9] offset:16
+; GFX942-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[0:1]
+; GFX942-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[0:1] offset:16
 ; GFX942-GISEL-NEXT:    s_endpgm
 ;
 ; GFX90A-VGPR-LABEL: test_mfma_f64_16x16x4f64_splat_imm_neg1:
@@ -2085,27 +2093,27 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_imm_neg1(ptr addrspace
 ;
 ; GFX90A-VGPR-GISEL-LABEL: test_mfma_f64_16x16x4f64_splat_imm_neg1:
 ; GFX90A-VGPR-GISEL:       ; %bb.0: ; %bb
-; GFX90A-VGPR-GISEL-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x24
-; GFX90A-VGPR-GISEL-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x34
-; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[0:1], -1.0
-; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[2:3], s[0:1]
-; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[4:5], s[0:1]
+; GFX90A-VGPR-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX90A-VGPR-GISEL-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[8:9], -1.0
+; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[10:11], s[8:9]
+; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[12:13], s[8:9]
 ; GFX90A-VGPR-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[8:9], s[10:11], s[10:11] op_sel:[0,1]
-; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[6:7], s[0:1]
-; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[0:1], s[0:1], s[0:1] op_sel:[0,1]
-; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[2:3], s[2:3], s[2:3] op_sel:[0,1]
-; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[4:5], s[4:5], s[4:5] op_sel:[0,1]
-; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[6:7], s[6:7], s[6:7] op_sel:[0,1]
-; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[10:11], s[12:13], s[12:13] op_sel:[0,1]
+; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[8:9], s[2:3], s[2:3] op_sel:[0,1]
+; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[14:15], s[8:9]
+; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[0:1], s[8:9], s[8:9] op_sel:[0,1]
+; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[2:3], s[10:11], s[10:11] op_sel:[0,1]
+; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[4:5], s[12:13], s[12:13] op_sel:[0,1]
+; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[6:7], s[14:15], s[14:15] op_sel:[0,1]
+; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[10:11], s[6:7], s[6:7] op_sel:[0,1]
 ; GFX90A-VGPR-GISEL-NEXT:    s_nop 1
 ; GFX90A-VGPR-GISEL-NEXT:    v_mfma_f64_16x16x4f64 v[0:7], v[8:9], v[10:11], v[0:7]
 ; GFX90A-VGPR-GISEL-NEXT:    v_mfma_f64_16x16x4f64 v[0:7], v[8:9], v[10:11], v[0:7] cbsz:1 abid:2 blgp:3
 ; GFX90A-VGPR-GISEL-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX90A-VGPR-GISEL-NEXT:    s_nop 15
 ; GFX90A-VGPR-GISEL-NEXT:    s_nop 0
-; GFX90A-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[8:9]
-; GFX90A-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[8:9] offset:16
+; GFX90A-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[0:1]
+; GFX90A-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[0:1] offset:16
 ; GFX90A-VGPR-GISEL-NEXT:    s_endpgm
 ;
 ; GFX942-VGPR-LABEL: test_mfma_f64_16x16x4f64_splat_imm_neg1:
@@ -2127,27 +2135,27 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_imm_neg1(ptr addrspace
 ;
 ; GFX942-VGPR-GISEL-LABEL: test_mfma_f64_16x16x4f64_splat_imm_neg1:
 ; GFX942-VGPR-GISEL:       ; %bb.0: ; %bb
-; GFX942-VGPR-GISEL-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x24
-; GFX942-VGPR-GISEL-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x34
-; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[0:1], -1.0
-; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[2:3], s[0:1]
-; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[4:5], s[0:1]
+; GFX942-VGPR-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX942-VGPR-GISEL-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[8:9], -1.0
+; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[10:11], s[8:9]
+; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[12:13], s[8:9]
 ; GFX942-VGPR-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[10:11]
-; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[6:7], s[0:1]
-; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
-; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[4:5]
-; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[6:7]
-; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[10:11], s[12:13]
+; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[2:3]
+; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[14:15], s[8:9]
+; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[8:9]
+; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[10:11]
+; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[12:13]
+; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[14:15]
+; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[10:11], s[6:7]
 ; GFX942-VGPR-GISEL-NEXT:    s_nop 1
 ; GFX942-VGPR-GISEL-NEXT:    v_mfma_f64_16x16x4_f64 v[0:7], v[8:9], v[10:11], v[0:7]
 ; GFX942-VGPR-GISEL-NEXT:    v_mfma_f64_16x16x4_f64 v[0:7], v[8:9], v[10:11], v[0:7] cbsz:1 abid:2 neg:[1,1,0]
 ; GFX942-VGPR-GISEL-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX942-VGPR-GISEL-NEXT:    s_nop 15
 ; GFX942-VGPR-GISEL-NEXT:    s_nop 0
-; GFX942-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[8:9]
-; GFX942-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[8:9] offset:16
+; GFX942-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[0:1]
+; GFX942-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[0:1] offset:16
 ; GFX942-VGPR-GISEL-NEXT:    s_endpgm
 bb:
   %mai.1 = tail call <4 x double> @llvm.amdgcn.mfma.f64.16x16x4f64(double %a, double %b, <4 x double> splat (double -1.0), i32 0, i32 0, i32 0)
@@ -2176,27 +2184,27 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_imm_int_64(ptr addrspa
 ;
 ; GFX90A-GISEL-LABEL: test_mfma_f64_16x16x4f64_splat_imm_int_64:
 ; GFX90A-GISEL:       ; %bb.0: ; %bb
-; GFX90A-GISEL-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x24
-; GFX90A-GISEL-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x34
-; GFX90A-GISEL-NEXT:    s_mov_b64 s[0:1], 64
-; GFX90A-GISEL-NEXT:    s_mov_b64 s[2:3], s[0:1]
-; GFX90A-GISEL-NEXT:    s_mov_b64 s[4:5], s[0:1]
+; GFX90A-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX90A-GISEL-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GFX90A-GISEL-NEXT:    s_mov_b64 s[8:9], 64
+; GFX90A-GISEL-NEXT:    s_mov_b64 s[10:11], s[8:9]
+; GFX90A-GISEL-NEXT:    s_mov_b64 s[12:13], s[8:9]
 ; GFX90A-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[8:9], s[10:11], s[10:11] op_sel:[0,1]
-; GFX90A-GISEL-NEXT:    s_mov_b64 s[6:7], s[0:1]
-; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[0:1], s[0:1], s[0:1] op_sel:[0,1]
-; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[2:3], s[2:3], s[2:3] op_sel:[0,1]
-; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[4:5], s[4:5], s[4:5] op_sel:[0,1]
-; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[6:7], s[6:7], s[6:7] op_sel:[0,1]
-; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[10:11], s[12:13], s[12:13] op_sel:[0,1]
+; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[8:9], s[2:3], s[2:3] op_sel:[0,1]
+; GFX90A-GISEL-NEXT:    s_mov_b64 s[14:15], s[8:9]
+; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[0:1], s[8:9], s[8:9] op_sel:[0,1]
+; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[2:3], s[10:11], s[10:11] op_sel:[0,1]
+; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[4:5], s[12:13], s[12:13] op_sel:[0,1]
+; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[6:7], s[14:15], s[14:15] op_sel:[0,1]
+; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[10:11], s[6:7], s[6:7] op_sel:[0,1]
 ; GFX90A-GISEL-NEXT:    s_nop 1
 ; GFX90A-GISEL-NEXT:    v_mfma_f64_16x16x4f64 v[0:7], v[8:9], v[10:11], v[0:7]
 ; GFX90A-GISEL-NEXT:    v_mfma_f64_16x16x4f64 v[0:7], v[8:9], v[10:11], v[0:7] cbsz:1 abid:2 blgp:3
 ; GFX90A-GISEL-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX90A-GISEL-NEXT:    s_nop 15
 ; GFX90A-GISEL-NEXT:    s_nop 0
-; GFX90A-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[8:9]
-; GFX90A-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[8:9] offset:16
+; GFX90A-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[0:1]
+; GFX90A-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[0:1] offset:16
 ; GFX90A-GISEL-NEXT:    s_endpgm
 ;
 ; GFX942-LABEL: test_mfma_f64_16x16x4f64_splat_imm_int_64:
@@ -2218,27 +2226,27 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_imm_int_64(ptr addrspa
 ;
 ; GFX942-GISEL-LABEL: test_mfma_f64_16x16x4f64_splat_imm_int_64:
 ; GFX942-GISEL:       ; %bb.0: ; %bb
-; GFX942-GISEL-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x24
-; GFX942-GISEL-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x34
-; GFX942-GISEL-NEXT:    s_mov_b64 s[0:1], 64
-; GFX942-GISEL-NEXT:    s_mov_b64 s[2:3], s[0:1]
-; GFX942-GISEL-NEXT:    s_mov_b64 s[4:5], s[0:1]
+; GFX942-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX942-GISEL-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GFX942-GISEL-NEXT:    s_mov_b64 s[8:9], 64
+; GFX942-GISEL-NEXT:    s_mov_b64 s[10:11], s[8:9]
+; GFX942-GISEL-NEXT:    s_mov_b64 s[12:13], s[8:9]
 ; GFX942-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[10:11]
-; GFX942-GISEL-NEXT:    s_mov_b64 s[6:7], s[0:1]
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[4:5]
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[6:7]
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[10:11], s[12:13]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[2:3]
+; GFX942-GISEL-NEXT:    s_mov_b64 s[14:15], s[8:9]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[8:9]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[10:11]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[12:13]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[14:15]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[10:11], s[6:7]
 ; GFX942-GISEL-NEXT:    s_nop 1
 ; GFX942-GISEL-NEXT:    v_mfma_f64_16x16x4_f64 v[0:7], v[8:9], v[10:11], v[0:7]
 ; GFX942-GISEL-NEXT:    v_mfma_f64_16x16x4_f64 v[0:7], v[8:9], v[10:11], v[0:7] cbsz:1 abid:2 neg:[1,1,0]
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX942-GISEL-NEXT:    s_nop 15
 ; GFX942-GISEL-NEXT:    s_nop 0
-; GFX942-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[8:9]
-; GFX942-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[8:9] offset:16
+; GFX942-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[0:1]
+; GFX942-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[0:1] offset:16
 ; GFX942-GISEL-NEXT:    s_endpgm
 ;
 ; GFX90A-VGPR-LABEL: test_mfma_f64_16x16x4f64_splat_imm_int_64:
@@ -2260,27 +2268,27 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_imm_int_64(ptr addrspa
 ;
 ; GFX90A-VGPR-GISEL-LABEL: test_mfma_f64_16x16x4f64_splat_imm_int_64:
 ; GFX90A-VGPR-GISEL:       ; %bb.0: ; %bb
-; GFX90A-VGPR-GISEL-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x24
-; GFX90A-VGPR-GISEL-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x34
-; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[0:1], 64
-; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[2:3], s[0:1]
-; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[4:5], s[0:1]
+; GFX90A-VGPR-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX90A-VGPR-GISEL-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[8:9], 64
+; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[10:11], s[8:9]
+; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[12:13], s[8:9]
 ; GFX90A-VGPR-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[8:9], s[10:11], s[10:11] op_sel:[0,1]
-; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[6:7], s[0:1]
-; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[0:1], s[0:1], s[0:1] op_sel:[0,1]
-; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[2:3], s[2:3], s[2:3] op_sel:[0,1]
-; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[4:5], s[4:5], s[4:5] op_sel:[0,1]
-; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[6:7], s[6:7], s[6:7] op_sel:[0,1]
-; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[10:11], s[12:13], s[12:13] op_sel:[0,1]
+; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[8:9], s[2:3], s[2:3] op_sel:[0,1]
+; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[14:15], s[8:9]
+; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[0:1], s[8:9], s[8:9] op_sel:[0,1]
+; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[2:3], s[10:11], s[10:11] op_sel:[0,1]
+; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[4:5], s[12:13], s[12:13] op_sel:[0,1]
+; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[6:7], s[14:15], s[14:15] op_sel:[0,1]
+; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[10:11], s[6:7], s[6:7] op_sel:[0,1]
 ; GFX90A-VGPR-GISEL-NEXT:    s_nop 1
 ; GFX90A-VGPR-GISEL-NEXT:    v_mfma_f64_16x16x4f64 v[0:7], v[8:9], v[10:11], v[0:7]
 ; GFX90A-VGPR-GISEL-NEXT:    v_mfma_f64_16x16x4f64 v[0:7], v[8:9], v[10:11], v[0:7] cbsz:1 abid:2 blgp:3
 ; GFX90A-VGPR-GISEL-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX90A-VGPR-GISEL-NEXT:    s_nop 15
 ; GFX90A-VGPR-GISEL-NEXT:    s_nop 0
-; GFX90A-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[8:9]
-; GFX90A-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[8:9] offset:16
+; GFX90A-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[0:1]
+; GFX90A-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[0:1] offset:16
 ; GFX90A-VGPR-GISEL-NEXT:    s_endpgm
 ;
 ; GFX942-VGPR-LABEL: test_mfma_f64_16x16x4f64_splat_imm_int_64:
@@ -2302,27 +2310,27 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_imm_int_64(ptr addrspa
 ;
 ; GFX942-VGPR-GISEL-LABEL: test_mfma_f64_16x16x4f64_splat_imm_int_64:
 ; GFX942-VGPR-GISEL:       ; %bb.0: ; %bb
-; GFX942-VGPR-GISEL-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x24
-; GFX942-VGPR-GISEL-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x34
-; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[0:1], 64
-; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[2:3], s[0:1]
-; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[4:5], s[0:1]
+; GFX942-VGPR-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX942-VGPR-GISEL-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[8:9], 64
+; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[10:11], s[8:9]
+; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[12:13], s[8:9]
 ; GFX942-VGPR-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[10:11]
-; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[6:7], s[0:1]
-; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
-; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[4:5]
-; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[6:7]
-; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[10:11], s[12:13]
+; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[2:3]
+; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[14:15], s[8:9]
+; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[8:9]
+; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[10:11]
+; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[12:13]
+; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[14:15]
+; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[10:11], s[6:7]
 ; GFX942-VGPR-GISEL-NEXT:    s_nop 1
 ; GFX942-VGPR-GISEL-NEXT:    v_mfma_f64_16x16x4_f64 v[0:7], v[8:9], v[10:11], v[0:7]
 ; GFX942-VGPR-GISEL-NEXT:    v_mfma_f64_16x16x4_f64 v[0:7], v[8:9], v[10:11], v[0:7] cbsz:1 abid:2 neg:[1,1,0]
 ; GFX942-VGPR-GISEL-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX942-VGPR-GISEL-NEXT:    s_nop 15
 ; GFX942-VGPR-GISEL-NEXT:    s_nop 0
-; GFX942-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[8:9]
-; GFX942-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[8:9] offset:16
+; GFX942-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[0:1]
+; GFX942-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[0:1] offset:16
 ; GFX942-VGPR-GISEL-NEXT:    s_endpgm
 bb:
   %mai.1 = tail call <4 x double> @llvm.amdgcn.mfma.f64.16x16x4f64(double %a, double %b, <4 x double> splat (double bitcast (i64 64 to double)), i32 0, i32 0, i32 0)
@@ -2346,11 +2354,11 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_imm_int_64_in_high_bit
 ; GFX90A-NEXT:    v_mov_b32_e32 v5, v1
 ; GFX90A-NEXT:    v_mov_b32_e32 v6, v0
 ; GFX90A-NEXT:    v_mov_b32_e32 v7, v1
-; GFX90A-NEXT:    v_pk_mov_b32 v[12:13], s[6:7], s[6:7] op_sel:[0,1]
 ; GFX90A-NEXT:    v_pk_mov_b32 v[8:9], v[6:7], v[6:7] op_sel:[0,1]
 ; GFX90A-NEXT:    v_pk_mov_b32 v[6:7], v[4:5], v[4:5] op_sel:[0,1]
 ; GFX90A-NEXT:    v_pk_mov_b32 v[4:5], v[2:3], v[2:3] op_sel:[0,1]
 ; GFX90A-NEXT:    v_pk_mov_b32 v[2:3], v[0:1], v[0:1] op_sel:[0,1]
+; GFX90A-NEXT:    v_pk_mov_b32 v[12:13], s[6:7], s[6:7] op_sel:[0,1]
 ; GFX90A-NEXT:    s_nop 1
 ; GFX90A-NEXT:    v_mfma_f64_16x16x4f64 v[2:9], v[10:11], v[12:13], v[2:9]
 ; GFX90A-NEXT:    v_mfma_f64_16x16x4f64 v[2:9], v[10:11], v[12:13], v[2:9] cbsz:1 abid:2 blgp:3
@@ -2362,28 +2370,28 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_imm_int_64_in_high_bit
 ;
 ; GFX90A-GISEL-LABEL: test_mfma_f64_16x16x4f64_splat_imm_int_64_in_high_bits:
 ; GFX90A-GISEL:       ; %bb.0: ; %bb
-; GFX90A-GISEL-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x24
-; GFX90A-GISEL-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x34
-; GFX90A-GISEL-NEXT:    s_mov_b32 s0, 0
-; GFX90A-GISEL-NEXT:    s_mov_b32 s1, 64
-; GFX90A-GISEL-NEXT:    s_mov_b64 s[2:3], s[0:1]
+; GFX90A-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX90A-GISEL-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GFX90A-GISEL-NEXT:    s_mov_b32 s8, 0
+; GFX90A-GISEL-NEXT:    s_mov_b32 s9, 64
+; GFX90A-GISEL-NEXT:    s_mov_b64 s[10:11], s[8:9]
 ; GFX90A-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[8:9], s[10:11], s[10:11] op_sel:[0,1]
-; GFX90A-GISEL-NEXT:    s_mov_b64 s[4:5], s[0:1]
-; GFX90A-GISEL-NEXT:    s_mov_b64 s[6:7], s[0:1]
-; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[0:1], s[0:1], s[0:1] op_sel:[0,1]
-; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[2:3], s[2:3], s[2:3] op_sel:[0,1]
-; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[4:5], s[4:5], s[4:5] op_sel:[0,1]
-; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[6:7], s[6:7], s[6:7] op_sel:[0,1]
-; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[10:11], s[12:13], s[12:13] op_sel:[0,1]
+; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[8:9], s[2:3], s[2:3] op_sel:[0,1]
+; GFX90A-GISEL-NEXT:    s_mov_b64 s[12:13], s[8:9]
+; GFX90A-GISEL-NEXT:    s_mov_b64 s[14:15], s[8:9]
+; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[0:1], s[8:9], s[8:9] op_sel:[0,1]
+; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[2:3], s[10:11], s[10:11] op_sel:[0,1]
+; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[4:5], s[12:13], s[12:13] op_sel:[0,1]
+; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[6:7], s[14:15], s[14:15] op_sel:[0,1]
+; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[10:11], s[6:7], s[6:7] op_sel:[0,1]
 ; GFX90A-GISEL-NEXT:    s_nop 1
 ; GFX90A-GISEL-NEXT:    v_mfma_f64_16x16x4f64 v[0:7], v[8:9], v[10:11], v[0:7]
 ; GFX90A-GISEL-NEXT:    v_mfma_f64_16x16x4f64 v[0:7], v[8:9], v[10:11], v[0:7] cbsz:1 abid:2 blgp:3
 ; GFX90A-GISEL-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX90A-GISEL-NEXT:    s_nop 15
 ; GFX90A-GISEL-NEXT:    s_nop 0
-; GFX90A-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[8:9]
-; GFX90A-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[8:9] offset:16
+; GFX90A-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[0:1]
+; GFX90A-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[0:1] offset:16
 ; GFX90A-GISEL-NEXT:    s_endpgm
 ;
 ; GFX942-LABEL: test_mfma_f64_16x16x4f64_splat_imm_int_64_in_high_bits:
@@ -2400,11 +2408,11 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_imm_int_64_in_high_bit
 ; GFX942-NEXT:    v_mov_b32_e32 v5, v1
 ; GFX942-NEXT:    v_mov_b32_e32 v6, v0
 ; GFX942-NEXT:    v_mov_b32_e32 v7, v1
-; GFX942-NEXT:    v_mov_b64_e32 v[12:13], s[6:7]
 ; GFX942-NEXT:    v_mov_b64_e32 v[8:9], v[6:7]
 ; GFX942-NEXT:    v_mov_b64_e32 v[6:7], v[4:5]
 ; GFX942-NEXT:    v_mov_b64_e32 v[4:5], v[2:3]
 ; GFX942-NEXT:    v_mov_b64_e32 v[2:3], v[0:1]
+; GFX942-NEXT:    v_mov_b64_e32 v[12:13], s[6:7]
 ; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_mfma_f64_16x16x4_f64 v[2:9], v[10:11], v[12:13], v[2:9]
 ; GFX942-NEXT:    v_mfma_f64_16x16x4_f64 v[2:9], v[10:11], v[12:13], v[2:9] cbsz:1 abid:2 neg:[1,1,0]
@@ -2416,28 +2424,28 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_imm_int_64_in_high_bit
 ;
 ; GFX942-GISEL-LABEL: test_mfma_f64_16x16x4f64_splat_imm_int_64_in_high_bits:
 ; GFX942-GISEL:       ; %bb.0: ; %bb
-; GFX942-GISEL-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x24
-; GFX942-GISEL-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x34
-; GFX942-GISEL-NEXT:    s_mov_b32 s0, 0
-; GFX942-GISEL-NEXT:    s_mov_b32 s1, 64
-; GFX942-GISEL-NEXT:    s_mov_b64 s[2:3], s[0:1]
+; GFX942-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX942-GISEL-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GFX942-GISEL-NEXT:    s_mov_b32 s8, 0
+; GFX942-GISEL-NEXT:    s_mov_b32 s9, 64
+; GFX942-GISEL-NEXT:    s_mov_b64 s[10:11], s[8:9]
 ; GFX942-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[10:11]
-; GFX942-GISEL-NEXT:    s_mov_b64 s[4:5], s[0:1]
-; GFX942-GISEL-NEXT:    s_mov_b64 s[6:7], s[0:1]
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[4:5]
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[6:7]
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[10:11], s[12:13]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[2:3]
+; GFX942-GISEL-NEXT:    s_mov_b64 s[12:13], s[8:9]
+; GFX942-GISEL-NEXT:    s_mov_b64 s[14:15], s[8:9]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[8:9]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[10:11]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[12:13]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[14:15]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[10:11], s[6:7]
 ; GFX942-GISEL-NEXT:    s_nop 1
 ; GFX942-GISEL-NEXT:    v_mfma_f64_16x16x4_f64 v[0:7], v[8:9], v[10:11], v[0:7]
 ; GFX942-GISEL-NEXT:    v_mfma_f64_16x16x4_f64 v[0:7], v[8:9], v[10:11], v[0:7] cbsz:1 abid:2 neg:[1,1,0]
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX942-GISEL-NEXT:    s_nop 15
 ; GFX942-GISEL-NEXT:    s_nop 0
-; GFX942-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[8:9]
-; GFX942-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[8:9] offset:16
+; GFX942-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[0:1]
+; GFX942-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[0:1] offset:16
 ; GFX942-GISEL-NEXT:    s_endpgm
 ;
 ; GFX90A-VGPR-LABEL: test_mfma_f64_16x16x4f64_splat_imm_int_64_in_high_bits:
@@ -2454,11 +2462,11 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_imm_int_64_in_high_bit
 ; GFX90A-VGPR-NEXT:    v_mov_b32_e32 v5, v1
 ; GFX90A-VGPR-NEXT:    v_mov_b32_e32 v6, v0
 ; GFX90A-VGPR-NEXT:    v_mov_b32_e32 v7, v1
-; GFX90A-VGPR-NEXT:    v_pk_mov_b32 v[12:13], s[6:7], s[6:7] op_sel:[0,1]
 ; GFX90A-VGPR-NEXT:    v_pk_mov_b32 v[8:9], v[6:7], v[6:7] op_sel:[0,1]
 ; GFX90A-VGPR-NEXT:    v_pk_mov_b32 v[6:7], v[4:5], v[4:5] op_sel:[0,1]
 ; GFX90A-VGPR-NEXT:    v_pk_mov_b32 v[4:5], v[2:3], v[2:3] op_sel:[0,1]
 ; GFX90A-VGPR-NEXT:    v_pk_mov_b32 v[2:3], v[0:1], v[0:1] op_sel:[0,1]
+; GFX90A-VGPR-NEXT:    v_pk_mov_b32 v[12:13], s[6:7], s[6:7] op_sel:[0,1]
 ; GFX90A-VGPR-NEXT:    s_nop 1
 ; GFX90A-VGPR-NEXT:    v_mfma_f64_16x16x4f64 v[2:9], v[10:11], v[12:13], v[2:9]
 ; GFX90A-VGPR-NEXT:    v_mfma_f64_16x16x4f64 v[2:9], v[10:11], v[12:13], v[2:9] cbsz:1 abid:2 blgp:3
@@ -2470,28 +2478,28 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_imm_int_64_in_high_bit
 ;
 ; GFX90A-VGPR-GISEL-LABEL: test_mfma_f64_16x16x4f64_splat_imm_int_64_in_high_bits:
 ; GFX90A-VGPR-GISEL:       ; %bb.0: ; %bb
-; GFX90A-VGPR-GISEL-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x24
-; GFX90A-VGPR-GISEL-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x34
-; GFX90A-VGPR-GISEL-NEXT:    s_mov_b32 s0, 0
-; GFX90A-VGPR-GISEL-NEXT:    s_mov_b32 s1, 64
-; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[2:3], s[0:1]
+; GFX90A-VGPR-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX90A-VGPR-GISEL-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GFX90A-VGPR-GISEL-NEXT:    s_mov_b32 s8, 0
+; GFX90A-VGPR-GISEL-NEXT:    s_mov_b32 s9, 64
+; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[10:11], s[8:9]
 ; GFX90A-VGPR-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[8:9], s[10:11], s[10:11] op_sel:[0,1]
-; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[4:5], s[0:1]
-; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[6:7], s[0:1]
-; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[0:1], s[0:1], s[0:1] op_sel:[0,1]
-; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[2:3], s[2:3], s[2:3] op_sel:[0,1]
-; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[4:5], s[4:5], s[4:5] op_sel:[0,1]
-; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[6:7], s[6:7], s[6:7] op_sel:[0,1]
-; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[10:11], s[12:13], s[12:13] op_sel:[0,1]
+; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[8:9], s[2:3], s[2:3] op_sel:[0,1]
+; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[12:13], s[8:9]
+; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[14:15], s[8:9]
+; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[0:1], s[8:9], s[8:9] op_sel:[0,1]
+; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[2:3], s[10:11], s[10:11] op_sel:[0,1]
+; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[4:5], s[12:13], s[12:13] op_sel:[0,1]
+; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[6:7], s[14:15], s[14:15] op_sel:[0,1]
+; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[10:11], s[6:7], s[6:7] op_sel:[0,1]
 ; GFX90A-VGPR-GISEL-NEXT:    s_nop 1
 ; GFX90A-VGPR-GISEL-NEXT:    v_mfma_f64_16x16x4f64 v[0:7], v[8:9], v[10:11], v[0:7]
 ; GFX90A-VGPR-GISEL-NEXT:    v_mfma_f64_16x16x4f64 v[0:7], v[8:9], v[10:11], v[0:7] cbsz:1 abid:2 blgp:3
 ; GFX90A-VGPR-GISEL-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX90A-VGPR-GISEL-NEXT:    s_nop 15
 ; GFX90A-VGPR-GISEL-NEXT:    s_nop 0
-; GFX90A-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[8:9]
-; GFX90A-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[8:9] offset:16
+; GFX90A-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[0:1]
+; GFX90A-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[0:1] offset:16
 ; GFX90A-VGPR-GISEL-NEXT:    s_endpgm
 ;
 ; GFX942-VGPR-LABEL: test_mfma_f64_16x16x4f64_splat_imm_int_64_in_high_bits:
@@ -2508,11 +2516,11 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_imm_int_64_in_high_bit
 ; GFX942-VGPR-NEXT:    v_mov_b32_e32 v5, v1
 ; GFX942-VGPR-NEXT:    v_mov_b32_e32 v6, v0
 ; GFX942-VGPR-NEXT:    v_mov_b32_e32 v7, v1
-; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[12:13], s[6:7]
 ; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[8:9], v[6:7]
 ; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[6:7], v[4:5]
 ; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[4:5], v[2:3]
 ; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[2:3], v[0:1]
+; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[12:13], s[6:7]
 ; GFX942-VGPR-NEXT:    s_nop 1
 ; GFX942-VGPR-NEXT:    v_mfma_f64_16x16x4_f64 v[2:9], v[10:11], v[12:13], v[2:9]
 ; GFX942-VGPR-NEXT:    v_mfma_f64_16x16x4_f64 v[2:9], v[10:11], v[12:13], v[2:9] cbsz:1 abid:2 neg:[1,1,0]
@@ -2524,28 +2532,28 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_imm_int_64_in_high_bit
 ;
 ; GFX942-VGPR-GISEL-LABEL: test_mfma_f64_16x16x4f64_splat_imm_int_64_in_high_bits:
 ; GFX942-VGPR-GISEL:       ; %bb.0: ; %bb
-; GFX942-VGPR-GISEL-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x24
-; GFX942-VGPR-GISEL-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x34
-; GFX942-VGPR-GISEL-NEXT:    s_mov_b32 s0, 0
-; GFX942-VGPR-GISEL-NEXT:    s_mov_b32 s1, 64
-; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[2:3], s[0:1]
+; GFX942-VGPR-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX942-VGPR-GISEL-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GFX942-VGPR-GISEL-NEXT:    s_mov_b32 s8, 0
+; GFX942-VGPR-GISEL-NEXT:    s_mov_b32 s9, 64
+; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[10:11], s[8:9]
 ; GFX942-VGPR-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[10:11]
-; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[4:5], s[0:1]
-; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[6:7], s[0:1]
-; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
-; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[4:5]
-; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[6:7]
-; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[10:11], s[12:13]
+; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[2:3]
+; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[12:13], s[8:9]
+; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[14:15], s[8:9]
+; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[8:9]
+; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[10:11]
+; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[12:13]
+; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[14:15]
+; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[10:11], s[6:7]
 ; GFX942-VGPR-GISEL-NEXT:    s_nop 1
 ; GFX942-VGPR-GISEL-NEXT:    v_mfma_f64_16x16x4_f64 v[0:7], v[8:9], v[10:11], v[0:7]
 ; GFX942-VGPR-GISEL-NEXT:    v_mfma_f64_16x16x4_f64 v[0:7], v[8:9], v[10:11], v[0:7] cbsz:1 abid:2 neg:[1,1,0]
 ; GFX942-VGPR-GISEL-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX942-VGPR-GISEL-NEXT:    s_nop 15
 ; GFX942-VGPR-GISEL-NEXT:    s_nop 0
-; GFX942-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[8:9]
-; GFX942-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[8:9] offset:16
+; GFX942-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[0:1]
+; GFX942-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[0:1] offset:16
 ; GFX942-VGPR-GISEL-NEXT:    s_endpgm
 bb:
   %mai.1 = tail call <4 x double> @llvm.amdgcn.mfma.f64.16x16x4f64(double %a, double %b, <4 x double> splat (double bitcast (i64 274877906944 to double)), i32 0, i32 0, i32 0)
@@ -2582,28 +2590,28 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_imm_int_64_in_high_and
 ;
 ; GFX90A-GISEL-LABEL: test_mfma_f64_16x16x4f64_splat_imm_int_64_in_high_and_low:
 ; GFX90A-GISEL:       ; %bb.0: ; %bb
-; GFX90A-GISEL-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x24
-; GFX90A-GISEL-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x34
-; GFX90A-GISEL-NEXT:    s_mov_b32 s0, 64
-; GFX90A-GISEL-NEXT:    s_mov_b32 s1, 64
-; GFX90A-GISEL-NEXT:    s_mov_b64 s[2:3], s[0:1]
+; GFX90A-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX90A-GISEL-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GFX90A-GISEL-NEXT:    s_mov_b32 s8, 64
+; GFX90A-GISEL-NEXT:    s_mov_b32 s9, 64
+; GFX90A-GISEL-NEXT:    s_mov_b64 s[10:11], s[8:9]
 ; GFX90A-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[8:9], s[10:11], s[10:11] op_sel:[0,1]
-; GFX90A-GISEL-NEXT:    s_mov_b64 s[4:5], s[0:1]
-; GFX90A-GISEL-NEXT:    s_mov_b64 s[6:7], s[0:1]
-; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[0:1], s[0:1], s[0:1] op_sel:[0,1]
-; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[2:3], s[2:3], s[2:3] op_sel:[0,1]
-; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[4:5], s[4:5], s[4:5] op_sel:[0,1]
-; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[6:7], s[6:7], s[6:7] op_sel:[0,1]
-; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[10:11], s[12:13], s[12:13] op_sel:[0,1]
+; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[8:9], s[2:3], s[2:3] op_sel:[0,1]
+; GFX90A-GISEL-NEXT:    s_mov_b64 s[12:13], s[8:9]
+; GFX90A-GISEL-NEXT:    s_mov_b64 s[14:15], s[8:9]
+; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[0:1], s[8:9], s[8:9] op_sel:[0,1]
+; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[2:3], s[10:11], s[10:11] op_sel:[0,1]
+; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[4:5], s[12:13], s[12:13] op_sel:[0,1]
+; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[6:7], s[14:15], s[14:15] op_sel:[0,1]
+; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[10:11], s[6:7], s[6:7] op_sel:[0,1]
 ; GFX90A-GISEL-NEXT:    s_nop 1
 ; GFX90A-GISEL-NEXT:    v_mfma_f64_16x16x4f64 v[0:7], v[8:9], v[10:11], v[0:7]
 ; GFX90A-GISEL-NEXT:    v_mfma_f64_16x16x4f64 v[0:7], v[8:9], v[10:11], v[0:7] cbsz:1 abid:2 blgp:3
 ; GFX90A-GISEL-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX90A-GISEL-NEXT:    s_nop 15
 ; GFX90A-GISEL-NEXT:    s_nop 0
-; GFX90A-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[8:9]
-; GFX90A-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[8:9] offset:16
+; GFX90A-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[0:1]
+; GFX90A-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[0:1] offset:16
 ; GFX90A-GISEL-NEXT:    s_endpgm
 ;
 ; GFX942-LABEL: test_mfma_f64_16x16x4f64_splat_imm_int_64_in_high_and_low:
@@ -2633,28 +2641,28 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_imm_int_64_in_high_and
 ;
 ; GFX942-GISEL-LABEL: test_mfma_f64_16x16x4f64_splat_imm_int_64_in_high_and_low:
 ; GFX942-GISEL:       ; %bb.0: ; %bb
-; GFX942-GISEL-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x24
-; GFX942-GISEL-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x34
-; GFX942-GISEL-NEXT:    s_mov_b32 s0, 64
-; GFX942-GISEL-NEXT:    s_mov_b32 s1, 64
-; GFX942-GISEL-NEXT:    s_mov_b64 s[2:3], s[0:1]
+; GFX942-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX942-GISEL-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GFX942-GISEL-NEXT:    s_mov_b32 s8, 64
+; GFX942-GISEL-NEXT:    s_mov_b32 s9, 64
+; GFX942-GISEL-NEXT:    s_mov_b64 s[10:11], s[8:9]
 ; GFX942-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[10:11]
-; GFX942-GISEL-NEXT:    s_mov_b64 s[4:5], s[0:1]
-; GFX942-GISEL-NEXT:    s_mov_b64 s[6:7], s[0:1]
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[4:5]
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[6:7]
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[10:11], s[12:13]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[2:3]
+; GFX942-GISEL-NEXT:    s_mov_b64 s[12:13], s[8:9]
+; GFX942-GISEL-NEXT:    s_mov_b64 s[14:15], s[8:9]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[8:9]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[10:11]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[12:13]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[14:15]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[10:11], s[6:7]
 ; GFX942-GISEL-NEXT:    s_nop 1
 ; GFX942-GISEL-NEXT:    v_mfma_f64_16x16x4_f64 v[0:7], v[8:9], v[10:11], v[0:7]
 ; GFX942-GISEL-NEXT:    v_mfma_f64_16x16x4_f64 v[0:7], v[8:9], v[10:11], v[0:7] cbsz:1 abid:2 neg:[1,1,0]
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX942-GISEL-NEXT:    s_nop 15
 ; GFX942-GISEL-NEXT:    s_nop 0
-; GFX942-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[8:9]
-; GFX942-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[8:9] offset:16
+; GFX942-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[0:1]
+; GFX942-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[0:1] offset:16
 ; GFX942-GISEL-NEXT:    s_endpgm
 ;
 ; GFX90A-VGPR-LABEL: test_mfma_f64_16x16x4f64_splat_imm_int_64_in_high_and_low:
@@ -2684,28 +2692,28 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_imm_int_64_in_high_and
 ;
 ; GFX90A-VGPR-GISEL-LABEL: test_mfma_f64_16x16x4f64_splat_imm_int_64_in_high_and_low:
 ; GFX90A-VGPR-GISEL:       ; %bb.0: ; %bb
-; GFX90A-VGPR-GISEL-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x24
-; GFX90A-VGPR-GISEL-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x34
-; GFX90A-VGPR-GISEL-NEXT:    s_mov_b32 s0, 64
-; GFX90A-VGPR-GISEL-NEXT:    s_mov_b32 s1, 64
-; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[2:3], s[0:1]
+; GFX90A-VGPR-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX90A-VGPR-GISEL-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GFX90A-VGPR-GISEL-NEXT:    s_mov_b32 s8, 64
+; GFX90A-VGPR-GISEL-NEXT:    s_mov_b32 s9, 64
+; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[10:11], s[8:9]
 ; GFX90A-VGPR-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[8:9], s[10:11], s[10:11] op_sel:[0,1]
-; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[4:5], s[0:1]
-; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[6:7], s[0:1]
-; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[0:1], s[0:1], s[0:1] op_sel:[0,1]
-; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[2:3], s[2:3], s[2:3] op_sel:[0,1]
-; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[4:5], s[4:5], s[4:5] op_sel:[0,1]
-; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[6:7], s[6:7], s[6:7] op_sel:[0,1]
-; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[10:11], s[12:13], s[12:13] op_sel:[0,1]
+; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[8:9], s[2:3], s[2:3] op_sel:[0,1]
+; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[12:13], s[8:9]
+; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[14:15], s[8:9]
+; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[0:1], s[8:9], s[8:9] op_sel:[0,1]
+; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[2:3], s[10:11], s[10:11] op_sel:[0,1]
+; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[4:5], s[12:13], s[12:13] op_sel:[0,1]
+; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[6:7], s[14:15], s[14:15] op_sel:[0,1]
+; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[10:11], s[6:7], s[6:7] op_sel:[0,1]
 ; GFX90A-VGPR-GISEL-NEXT:    s_nop 1
 ; GFX90A-VGPR-GISEL-NEXT:    v_mfma_f64_16x16x4f64 v[0:7], v[8:9], v[10:11], v[0:7]
 ; GFX90A-VGPR-GISEL-NEXT:    v_mfma_f64_16x16x4f64 v[0:7], v[8:9], v[10:11], v[0:7] cbsz:1 abid:2 blgp:3
 ; GFX90A-VGPR-GISEL-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX90A-VGPR-GISEL-NEXT:    s_nop 15
 ; GFX90A-VGPR-GISEL-NEXT:    s_nop 0
-; GFX90A-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[8:9]
-; GFX90A-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[8:9] offset:16
+; GFX90A-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[0:1]
+; GFX90A-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[0:1] offset:16
 ; GFX90A-VGPR-GISEL-NEXT:    s_endpgm
 ;
 ; GFX942-VGPR-LABEL: test_mfma_f64_16x16x4f64_splat_imm_int_64_in_high_and_low:
@@ -2735,28 +2743,28 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_imm_int_64_in_high_and
 ;
 ; GFX942-VGPR-GISEL-LABEL: test_mfma_f64_16x16x4f64_splat_imm_int_64_in_high_and_low:
 ; GFX942-VGPR-GISEL:       ; %bb.0: ; %bb
-; GFX942-VGPR-GISEL-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x24
-; GFX942-VGPR-GISEL-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x34
-; GFX942-VGPR-GISEL-NEXT:    s_mov_b32 s0, 64
-; GFX942-VGPR-GISEL-NEXT:    s_mov_b32 s1, 64
-; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[2:3], s[0:1]
+; GFX942-VGPR-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX942-VGPR-GISEL-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GFX942-VGPR-GISEL-NEXT:    s_mov_b32 s8, 64
+; GFX942-VGPR-GISEL-NEXT:    s_mov_b32 s9, 64
+; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[10:11], s[8:9]
 ; GFX942-VGPR-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[10:11]
-; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[4:5], s[0:1]
-; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[6:7], s[0:1]
-; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
-; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[4:5]
-; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[6:7]
-; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[10:11], s[12:13]
+; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[2:3]
+; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[12:13], s[8:9]
+; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[14:15], s[8:9]
+; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[8:9]
+; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[10:11]
+; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[12:13]
+; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[14:15]
+; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[10:11], s[6:7]
 ; GFX942-VGPR-GISEL-NEXT:    s_nop 1
 ; GFX942-VGPR-GISEL-NEXT:    v_mfma_f64_16x16x4_f64 v[0:7], v[8:9], v[10:11], v[0:7]
 ; GFX942-VGPR-GISEL-NEXT:    v_mfma_f64_16x16x4_f64 v[0:7], v[8:9], v[10:11], v[0:7] cbsz:1 abid:2 neg:[1,1,0]
 ; GFX942-VGPR-GISEL-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX942-VGPR-GISEL-NEXT:    s_nop 15
 ; GFX942-VGPR-GISEL-NEXT:    s_nop 0
-; GFX942-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[8:9]
-; GFX942-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[8:9] offset:16
+; GFX942-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[0:1]
+; GFX942-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[0:1] offset:16
 ; GFX942-VGPR-GISEL-NEXT:    s_endpgm
 bb:
   %mai.1 = tail call <4 x double> @llvm.amdgcn.mfma.f64.16x16x4f64(double %a, double %b, <4 x double> splat (double bitcast (i64 274877907008 to double)), i32 0, i32 0, i32 0)
@@ -2793,28 +2801,28 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_imm_f32_1_in_high_and_
 ;
 ; GFX90A-GISEL-LABEL: test_mfma_f64_16x16x4f64_splat_imm_f32_1_in_high_and_low:
 ; GFX90A-GISEL:       ; %bb.0: ; %bb
-; GFX90A-GISEL-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x24
-; GFX90A-GISEL-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x34
-; GFX90A-GISEL-NEXT:    s_mov_b32 s0, 1.0
-; GFX90A-GISEL-NEXT:    s_mov_b32 s1, s0
-; GFX90A-GISEL-NEXT:    s_mov_b64 s[2:3], s[0:1]
+; GFX90A-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX90A-GISEL-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GFX90A-GISEL-NEXT:    s_mov_b32 s8, 1.0
+; GFX90A-GISEL-NEXT:    s_mov_b32 s9, s8
+; GFX90A-GISEL-NEXT:    s_mov_b64 s[10:11], s[8:9]
 ; GFX90A-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[8:9], s[10:11], s[10:11] op_sel:[0,1]
-; GFX90A-GISEL-NEXT:    s_mov_b64 s[4:5], s[0:1]
-; GFX90A-GISEL-NEXT:    s_mov_b64 s[6:7], s[0:1]
-; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[0:1], s[0:1], s[0:1] op_sel:[0,1]
-; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[2:3], s[2:3], s[2:3] op_sel:[0,1]
-; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[4:5], s[4:5], s[4:5] op_sel:[0,1]
-; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[6:7], s[6:7], s[6:7] op_sel:[0,1]
-; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[10:11], s[12:13], s[12:13] op_sel:[0,1]
+; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[8:9], s[2:3], s[2:3] op_sel:[0,1]
+; GFX90A-GISEL-NEXT:    s_mov_b64 s[12:13], s[8:9]
+; GFX90A-GISEL-NEXT:    s_mov_b64 s[14:15], s[8:9]
+; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[0:1], s[8:9], s[8:9] op_sel:[0,1]
+; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[2:3], s[10:11], s[10:11] op_sel:[0,1]
+; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[4:5], s[12:13], s[12:13] op_sel:[0,1]
+; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[6:7], s[14:15], s[14:15] op_sel:[0,1]
+; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[10:11], s[6:7], s[6:7] op_sel:[0,1]
 ; GFX90A-GISEL-NEXT:    s_nop 1
 ; GFX90A-GISEL-NEXT:    v_mfma_f64_16x16x4f64 v[0:7], v[8:9], v[10:11], v[0:7]
 ; GFX90A-GISEL-NEXT:    v_mfma_f64_16x16x4f64 v[0:7], v[8:9], v[10:11], v[0:7] cbsz:1 abid:2 blgp:3
 ; GFX90A-GISEL-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX90A-GISEL-NEXT:    s_nop 15
 ; GFX90A-GISEL-NEXT:    s_nop 0
-; GFX90A-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[8:9]
-; GFX90A-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[8:9] offset:16
+; GFX90A-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[0:1]
+; GFX90A-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[0:1] offset:16
 ; GFX90A-GISEL-NEXT:    s_endpgm
 ;
 ; GFX942-LABEL: test_mfma_f64_16x16x4f64_splat_imm_f32_1_in_high_and_low:
@@ -2844,28 +2852,28 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_imm_f32_1_in_high_and_
 ;
 ; GFX942-GISEL-LABEL: test_mfma_f64_16x16x4f64_splat_imm_f32_1_in_high_and_low:
 ; GFX942-GISEL:       ; %bb.0: ; %bb
-; GFX942-GISEL-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x24
-; GFX942-GISEL-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x34
-; GFX942-GISEL-NEXT:    s_mov_b32 s0, 1.0
-; GFX942-GISEL-NEXT:    s_mov_b32 s1, s0
-; GFX942-GISEL-NEXT:    s_mov_b64 s[2:3], s[0:1]
+; GFX942-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX942-GISEL-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GFX942-GISEL-NEXT:    s_mov_b32 s8, 1.0
+; GFX942-GISEL-NEXT:    s_mov_b32 s9, s8
+; GFX942-GISEL-NEXT:    s_mov_b64 s[10:11], s[8:9]
 ; GFX942-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[10:11]
-; GFX942-GISEL-NEXT:    s_mov_b64 s[4:5], s[0:1]
-; GFX942-GISEL-NEXT:    s_mov_b64 s[6:7], s[0:1]
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[4:5]
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[6:7]
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[10:11], s[12:13]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[2:3]
+; GFX942-GISEL-NEXT:    s_mov_b64 s[12:13], s[8:9]
+; GFX942-GISEL-NEXT:    s_mov_b64 s[14:15], s[8:9]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[8:9]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[10:11]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[12:13]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[14:15]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[10:11], s[6:7]
 ; GFX942-GISEL-NEXT:    s_nop 1
 ; GFX942-GISEL-NEXT:    v_mfma_f64_16x16x4_f64 v[0:7], v[8:9], v[10:11], v[0:7]
 ; GFX942-GISEL-NEXT:    v_mfma_f64_16x16x4_f64 v[0:7], v[8:9], v[10:11], v[0:7] cbsz:1 abid:2 neg:[1,1,0]
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX942-GISEL-NEXT:    s_nop 15
 ; GFX942-GISEL-NEXT:    s_nop 0
-; GFX942-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[8:9]
-; GFX942-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[8:9] offset:16
+; GFX942-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[0:1]
+; GFX942-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[0:1] offset:16
 ; GFX942-GISEL-NEXT:    s_endpgm
 ;
 ; GFX90A-VGPR-LABEL: test_mfma_f64_16x16x4f64_splat_imm_f32_1_in_high_and_low:
@@ -2895,28 +2903,28 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_imm_f32_1_in_high_and_
 ;
 ; GFX90A-VGPR-GISEL-LABEL: test_mfma_f64_16x16x4f64_splat_imm_f32_1_in_high_and_low:
 ; GFX90A-VGPR-GISEL:       ; %bb.0: ; %bb
-; GFX90A-VGPR-GISEL-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x24
-; GFX90A-VGPR-GISEL-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x34
-; GFX90A-VGPR-GISEL-NEXT:    s_mov_b32 s0, 1.0
-; GFX90A-VGPR-GISEL-NEXT:    s_mov_b32 s1, s0
-; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[2:3], s[0:1]
+; GFX90A-VGPR-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX90A-VGPR-GISEL-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GFX90A-VGPR-GISEL-NEXT:    s_mov_b32 s8, 1.0
+; GFX90A-VGPR-GISEL-NEXT:    s_mov_b32 s9, s8
+; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[10:11], s[8:9]
 ; GFX90A-VGPR-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[8:9], s[10:11], s[10:11] op_sel:[0,1]
-; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[4:5], s[0:1]
-; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[6:7], s[0:1]
-; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[0:1], s[0:1], s[0:1] op_sel:[0,1]
-; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[2:3], s[2:3], s[2:3] op_sel:[0,1]
-; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[4:5], s[4:5], s[4:5] op_sel:[0,1]
-; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[6:7], s[6:7], s[6:7] op_sel:[0,1]
-; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[10:11], s[12:13], s[12:13] op_sel:[0,1]
+; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[8:9], s[2:3], s[2:3] op_sel:[0,1]
+; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[12:13], s[8:9]
+; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[14:15], s[8:9]
+; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[0:1], s[8:9], s[8:9] op_sel:[0,1]
+; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[2:3], s[10:11], s[10:11] op_sel:[0,1]
+; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[4:5], s[12:13], s[12:13] op_sel:[0,1]
+; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[6:7], s[14:15], s[14:15] op_sel:[0,1]
+; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[10:11], s[6:7], s[6:7] op_sel:[0,1]
 ; GFX90A-VGPR-GISEL-NEXT:    s_nop 1
 ; GFX90A-VGPR-GISEL-NEXT:    v_mfma_f64_16x16x4f64 v[0:7], v[8:9], v[10:11], v[0:7]
 ; GFX90A-VGPR-GISEL-NEXT:    v_mfma_f64_16x16x4f64 v[0:7], v[8:9], v[10:11], v[0:7] cbsz:1 abid:2 blgp:3
 ; GFX90A-VGPR-GISEL-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX90A-VGPR-GISEL-NEXT:    s_nop 15
 ; GFX90A-VGPR-GISEL-NEXT:    s_nop 0
-; GFX90A-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[8:9]
-; GFX90A-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[8:9] offset:16
+; GFX90A-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[0:1]
+; GFX90A-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[0:1] offset:16
 ; GFX90A-VGPR-GISEL-NEXT:    s_endpgm
 ;
 ; GFX942-VGPR-LABEL: test_mfma_f64_16x16x4f64_splat_imm_f32_1_in_high_and_low:
@@ -2946,28 +2954,28 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_imm_f32_1_in_high_and_
 ;
 ; GFX942-VGPR-GISEL-LABEL: test_mfma_f64_16x16x4f64_splat_imm_f32_1_in_high_and_low:
 ; GFX942-VGPR-GISEL:       ; %bb.0: ; %bb
-; GFX942-VGPR-GISEL-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x24
-; GFX942-VGPR-GISEL-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x34
-; GFX942-VGPR-GISEL-NEXT:    s_mov_b32 s0, 1.0
-; GFX942-VGPR-GISEL-NEXT:    s_mov_b32 s1, s0
-; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[2:3], s[0:1]
+; GFX942-VGPR-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX942-VGPR-GISEL-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GFX942-VGPR-GISEL-NEXT:    s_mov_b32 s8, 1.0
+; GFX942-VGPR-GISEL-NEXT:    s_mov_b32 s9, s8
+; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[10:11], s[8:9]
 ; GFX942-VGPR-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[10:11]
-; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[4:5], s[0:1]
-; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[6:7], s[0:1]
-; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
-; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[4:5]
-; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[6:7]
-; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[10:11], s[12:13]
+; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[2:3]
+; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[12:13], s[8:9]
+; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[14:15], s[8:9]
+; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[8:9]
+; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[10:11]
+; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[12:13]
+; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[14:15]
+; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[10:11], s[6:7]
 ; GFX942-VGPR-GISEL-NEXT:    s_nop 1
 ; GFX942-VGPR-GISEL-NEXT:    v_mfma_f64_16x16x4_f64 v[0:7], v[8:9], v[10:11], v[0:7]
 ; GFX942-VGPR-GISEL-NEXT:    v_mfma_f64_16x16x4_f64 v[0:7], v[8:9], v[10:11], v[0:7] cbsz:1 abid:2 neg:[1,1,0]
 ; GFX942-VGPR-GISEL-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX942-VGPR-GISEL-NEXT:    s_nop 15
 ; GFX942-VGPR-GISEL-NEXT:    s_nop 0
-; GFX942-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[8:9]
-; GFX942-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[8:9] offset:16
+; GFX942-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[0:1]
+; GFX942-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[0:1] offset:16
 ; GFX942-VGPR-GISEL-NEXT:    s_endpgm
 bb:
   %mai.1 = tail call <4 x double> @llvm.amdgcn.mfma.f64.16x16x4f64(double %a, double %b, <4 x double> splat (double bitcast (<2 x float> splat (float 1.0) to double)), i32 0, i32 0, i32 0)
@@ -2992,11 +3000,11 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64_imm(ptr addrspace(1) %arg, d
 ; GFX90A-NEXT:    v_mov_b32_e32 v4, v0
 ; GFX90A-NEXT:    v_mov_b32_e32 v5, v0
 ; GFX90A-NEXT:    v_mov_b32_e32 v6, v0
-; GFX90A-NEXT:    v_pk_mov_b32 v[12:13], s[6:7], s[6:7] op_sel:[0,1]
 ; GFX90A-NEXT:    v_pk_mov_b32 v[8:9], v[6:7], v[6:7] op_sel:[0,1]
 ; GFX90A-NEXT:    v_pk_mov_b32 v[6:7], v[4:5], v[4:5] op_sel:[0,1]
 ; GFX90A-NEXT:    v_pk_mov_b32 v[4:5], v[2:3], v[2:3] op_sel:[0,1]
 ; GFX90A-NEXT:    v_pk_mov_b32 v[2:3], v[0:1], v[0:1] op_sel:[0,1]
+; GFX90A-NEXT:    v_pk_mov_b32 v[12:13], s[6:7], s[6:7] op_sel:[0,1]
 ; GFX90A-NEXT:    s_nop 1
 ; GFX90A-NEXT:    v_mfma_f64_16x16x4f64 v[2:9], v[10:11], v[12:13], v[2:9]
 ; GFX90A-NEXT:    s_nop 15
@@ -3007,26 +3015,26 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64_imm(ptr addrspace(1) %arg, d
 ;
 ; GFX90A-GISEL-LABEL: test_mfma_f64_16x16x4f64_imm:
 ; GFX90A-GISEL:       ; %bb.0: ; %bb
-; GFX90A-GISEL-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x24
-; GFX90A-GISEL-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x34
-; GFX90A-GISEL-NEXT:    s_mov_b64 s[0:1], 0
-; GFX90A-GISEL-NEXT:    s_mov_b64 s[6:7], 1.0
-; GFX90A-GISEL-NEXT:    s_mov_b64 s[2:3], s[0:1]
+; GFX90A-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX90A-GISEL-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GFX90A-GISEL-NEXT:    s_mov_b64 s[8:9], 0
+; GFX90A-GISEL-NEXT:    s_mov_b64 s[14:15], 1.0
+; GFX90A-GISEL-NEXT:    s_mov_b64 s[10:11], s[8:9]
 ; GFX90A-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[8:9], s[10:11], s[10:11] op_sel:[0,1]
-; GFX90A-GISEL-NEXT:    s_mov_b64 s[4:5], s[0:1]
-; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[0:1], s[0:1], s[0:1] op_sel:[0,1]
-; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[2:3], s[2:3], s[2:3] op_sel:[0,1]
-; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[4:5], s[4:5], s[4:5] op_sel:[0,1]
-; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[6:7], s[6:7], s[6:7] op_sel:[0,1]
-; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[10:11], s[12:13], s[12:13] op_sel:[0,1]
+; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[8:9], s[2:3], s[2:3] op_sel:[0,1]
+; GFX90A-GISEL-NEXT:    s_mov_b64 s[12:13], s[8:9]
+; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[0:1], s[8:9], s[8:9] op_sel:[0,1]
+; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[2:3], s[10:11], s[10:11] op_sel:[0,1]
+; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[4:5], s[12:13], s[12:13] op_sel:[0,1]
+; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[6:7], s[14:15], s[14:15] op_sel:[0,1]
+; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[10:11], s[6:7], s[6:7] op_sel:[0,1]
 ; GFX90A-GISEL-NEXT:    s_nop 1
 ; GFX90A-GISEL-NEXT:    v_mfma_f64_16x16x4f64 v[0:7], v[8:9], v[10:11], v[0:7]
 ; GFX90A-GISEL-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX90A-GISEL-NEXT:    s_nop 15
 ; GFX90A-GISEL-NEXT:    s_nop 0
-; GFX90A-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[8:9]
-; GFX90A-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[8:9] offset:16
+; GFX90A-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[0:1]
+; GFX90A-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[0:1] offset:16
 ; GFX90A-GISEL-NEXT:    s_endpgm
 ;
 ; GFX942-LABEL: test_mfma_f64_16x16x4f64_imm:
@@ -3044,11 +3052,11 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64_imm(ptr addrspace(1) %arg, d
 ; GFX942-NEXT:    v_mov_b32_e32 v4, v0
 ; GFX942-NEXT:    v_mov_b32_e32 v5, v0
 ; GFX942-NEXT:    v_mov_b32_e32 v6, v0
-; GFX942-NEXT:    v_mov_b64_e32 v[12:13], s[6:7]
 ; GFX942-NEXT:    v_mov_b64_e32 v[8:9], v[6:7]
 ; GFX942-NEXT:    v_mov_b64_e32 v[6:7], v[4:5]
 ; GFX942-NEXT:    v_mov_b64_e32 v[4:5], v[2:3]
 ; GFX942-NEXT:    v_mov_b64_e32 v[2:3], v[0:1]
+; GFX942-NEXT:    v_mov_b64_e32 v[12:13], s[6:7]
 ; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_mfma_f64_16x16x4_f64 v[2:9], v[10:11], v[12:13], v[2:9]
 ; GFX942-NEXT:    s_nop 15
@@ -3059,26 +3067,26 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64_imm(ptr addrspace(1) %arg, d
 ;
 ; GFX942-GISEL-LABEL: test_mfma_f64_16x16x4f64_imm:
 ; GFX942-GISEL:       ; %bb.0: ; %bb
-; GFX942-GISEL-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x24
-; GFX942-GISEL-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x34
-; GFX942-GISEL-NEXT:    s_mov_b64 s[0:1], 0
-; GFX942-GISEL-NEXT:    s_mov_b64 s[6:7], 1.0
-; GFX942-GISEL-NEXT:    s_mov_b64 s[2:3], s[0:1]
+; GFX942-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX942-GISEL-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GFX942-GISEL-NEXT:    s_mov_b64 s[8:9], 0
+; GFX942-GISEL-NEXT:    s_mov_b64 s[14:15], 1.0
+; GFX942-GISEL-NEXT:    s_mov_b64 s[10:11], s[8:9]
 ; GFX942-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[10:11]
-; GFX942-GISEL-NEXT:    s_mov_b64 s[4:5], s[0:1]
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[4:5]
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[6:7]
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[10:11], s[12:13]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[2:3]
+; GFX942-GISEL-NEXT:    s_mov_b64 s[12:13], s[8:9]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[8:9]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[10:11]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[12:13]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[14:15]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[10:11], s[6:7]
 ; GFX942-GISEL-NEXT:    s_nop 1
 ; GFX942-GISEL-NEXT:    v_mfma_f64_16x16x4_f64 v[0:7], v[8:9], v[10:11], v[0:7]
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX942-GISEL-NEXT:    s_nop 15
 ; GFX942-GISEL-NEXT:    s_nop 0
-; GFX942-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[8:9]
-; GFX942-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[8:9] offset:16
+; GFX942-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[0:1]
+; GFX942-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[0:1] offset:16
 ; GFX942-GISEL-NEXT:    s_endpgm
 ;
 ; GFX90A-VGPR-LABEL: test_mfma_f64_16x16x4f64_imm:
@@ -3096,11 +3104,11 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64_imm(ptr addrspace(1) %arg, d
 ; GFX90A-VGPR-NEXT:    v_mov_b32_e32 v4, v0
 ; GFX90A-VGPR-NEXT:    v_mov_b32_e32 v5, v0
 ; GFX90A-VGPR-NEXT:    v_mov_b32_e32 v6, v0
-; GFX90A-VGPR-NEXT:    v_pk_mov_b32 v[12:13], s[6:7], s[6:7] op_sel:[0,1]
 ; GFX90A-VGPR-NEXT:    v_pk_mov_b32 v[8:9], v[6:7], v[6:7] op_sel:[0,1]
 ; GFX90A-VGPR-NEXT:    v_pk_mov_b32 v[6:7], v[4:5], v[4:5] op_sel:[0,1]
 ; GFX90A-VGPR-NEXT:    v_pk_mov_b32 v[4:5], v[2:3], v[2:3] op_sel:[0,1]
 ; GFX90A-VGPR-NEXT:    v_pk_mov_b32 v[2:3], v[0:1], v[0:1] op_sel:[0,1]
+; GFX90A-VGPR-NEXT:    v_pk_mov_b32 v[12:13], s[6:7], s[6:7] op_sel:[0,1]
 ; GFX90A-VGPR-NEXT:    s_nop 1
 ; GFX90A-VGPR-NEXT:    v_mfma_f64_16x16x4f64 v[2:9], v[10:11], v[12:13], v[2:9]
 ; GFX90A-VGPR-NEXT:    s_nop 15
@@ -3111,26 +3119,26 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64_imm(ptr addrspace(1) %arg, d
 ;
 ; GFX90A-VGPR-GISEL-LABEL: test_mfma_f64_16x16x4f64_imm:
 ; GFX90A-VGPR-GISEL:       ; %bb.0: ; %bb
-; GFX90A-VGPR-GISEL-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x24
-; GFX90A-VGPR-GISEL-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x34
-; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[0:1], 0
-; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[6:7], 1.0
-; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[2:3], s[0:1]
+; GFX90A-VGPR-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX90A-VGPR-GISEL-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[8:9], 0
+; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[14:15], 1.0
+; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[10:11], s[8:9]
 ; GFX90A-VGPR-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[8:9], s[10:11], s[10:11] op_sel:[0,1]
-; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[4:5], s[0:1]
-; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[0:1], s[0:1], s[0:1] op_sel:[0,1]
-; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[2:3], s[2:3], s[2:3] op_sel:[0,1]
-; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[4:5], s[4:5], s[4:5] op_sel:[0,1]
-; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[6:7], s[6:7], s[6:7] op_sel:[0,1]
-; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[10:11], s[12:13], s[12:13] op_sel:[0,1]
+; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[8:9], s[2:3], s[2:3] op_sel:[0,1]
+; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[12:13], s[8:9]
+; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[0:1], s[8:9], s[8:9] op_sel:[0,1]
+; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[2:3], s[10:11], s[10:11] op_sel:[0,1]
+; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[4:5], s[12:13], s[12:13] op_sel:[0,1]
+; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[6:7], s[14:15], s[14:15] op_sel:[0,1]
+; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[10:11], s[6:7], s[6:7] op_sel:[0,1]
 ; GFX90A-VGPR-GISEL-NEXT:    s_nop 1
 ; GFX90A-VGPR-GISEL-NEXT:    v_mfma_f64_16x16x4f64 v[0:7], v[8:9], v[10:11], v[0:7]
 ; GFX90A-VGPR-GISEL-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX90A-VGPR-GISEL-NEXT:    s_nop 15
 ; GFX90A-VGPR-GISEL-NEXT:    s_nop 0
-; GFX90A-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[8:9]
-; GFX90A-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[8:9] offset:16
+; GFX90A-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[0:1]
+; GFX90A-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[0:1] offset:16
 ; GFX90A-VGPR-GISEL-NEXT:    s_endpgm
 ;
 ; GFX942-VGPR-LABEL: test_mfma_f64_16x16x4f64_imm:
@@ -3148,11 +3156,11 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64_imm(ptr addrspace(1) %arg, d
 ; GFX942-VGPR-NEXT:    v_mov_b32_e32 v4, v0
 ; GFX942-VGPR-NEXT:    v_mov_b32_e32 v5, v0
 ; GFX942-VGPR-NEXT:    v_mov_b32_e32 v6, v0
-; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[12:13], s[6:7]
 ; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[8:9], v[6:7]
 ; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[6:7], v[4:5]
 ; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[4:5], v[2:3]
 ; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[2:3], v[0:1]
+; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[12:13], s[6:7]
 ; GFX942-VGPR-NEXT:    s_nop 1
 ; GFX942-VGPR-NEXT:    v_mfma_f64_16x16x4_f64 v[2:9], v[10:11], v[12:13], v[2:9]
 ; GFX942-VGPR-NEXT:    s_nop 15
@@ -3163,26 +3171,26 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64_imm(ptr addrspace(1) %arg, d
 ;
 ; GFX942-VGPR-GISEL-LABEL: test_mfma_f64_16x16x4f64_imm:
 ; GFX942-VGPR-GISEL:       ; %bb.0: ; %bb
-; GFX942-VGPR-GISEL-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x24
-; GFX942-VGPR-GISEL-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x34
-; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[0:1], 0
-; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[6:7], 1.0
-; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[2:3], s[0:1]
+; GFX942-VGPR-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX942-VGPR-GISEL-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[8:9], 0
+; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[14:15], 1.0
+; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[10:11], s[8:9]
 ; GFX942-VGPR-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[10:11]
-; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[4:5], s[0:1]
-; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
-; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[4:5]
-; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[6:7]
-; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[10:11], s[12:13]
+; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[2:3]
+; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[12:13], s[8:9]
+; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[8:9]
+; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[10:11]
+; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[12:13]
+; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[14:15]
+; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[10:11], s[6:7]
 ; GFX942-VGPR-GISEL-NEXT:    s_nop 1
 ; GFX942-VGPR-GISEL-NEXT:    v_mfma_f64_16x16x4_f64 v[0:7], v[8:9], v[10:11], v[0:7]
 ; GFX942-VGPR-GISEL-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX942-VGPR-GISEL-NEXT:    s_nop 15
 ; GFX942-VGPR-GISEL-NEXT:    s_nop 0
-; GFX942-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[8:9]
-; GFX942-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[8:9] offset:16
+; GFX942-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[0:1]
+; GFX942-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[0:1] offset:16
 ; GFX942-VGPR-GISEL-NEXT:    s_endpgm
 bb:
   %mai.1 = tail call <4 x double> @llvm.amdgcn.mfma.f64.16x16x4f64(double %a, double %b, <4 x double> <double 0.0, double 0.0, double 0.0, double 1.0>, i32 0, i32 0, i32 0)
@@ -3206,11 +3214,11 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_lit(ptr addrspace(1) %
 ; GFX90A-NEXT:    v_mov_b32_e32 v5, v1
 ; GFX90A-NEXT:    v_mov_b32_e32 v6, v0
 ; GFX90A-NEXT:    v_mov_b32_e32 v7, v1
-; GFX90A-NEXT:    v_pk_mov_b32 v[12:13], s[6:7], s[6:7] op_sel:[0,1]
 ; GFX90A-NEXT:    v_pk_mov_b32 v[8:9], v[6:7], v[6:7] op_sel:[0,1]
 ; GFX90A-NEXT:    v_pk_mov_b32 v[6:7], v[4:5], v[4:5] op_sel:[0,1]
 ; GFX90A-NEXT:    v_pk_mov_b32 v[4:5], v[2:3], v[2:3] op_sel:[0,1]
 ; GFX90A-NEXT:    v_pk_mov_b32 v[2:3], v[0:1], v[0:1] op_sel:[0,1]
+; GFX90A-NEXT:    v_pk_mov_b32 v[12:13], s[6:7], s[6:7] op_sel:[0,1]
 ; GFX90A-NEXT:    s_nop 1
 ; GFX90A-NEXT:    v_mfma_f64_16x16x4f64 v[2:9], v[10:11], v[12:13], v[2:9]
 ; GFX90A-NEXT:    s_nop 15
@@ -3221,27 +3229,27 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_lit(ptr addrspace(1) %
 ;
 ; GFX90A-GISEL-LABEL: test_mfma_f64_16x16x4f64_splat_lit:
 ; GFX90A-GISEL:       ; %bb.0: ; %bb
-; GFX90A-GISEL-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x24
-; GFX90A-GISEL-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x34
-; GFX90A-GISEL-NEXT:    s_mov_b32 s0, 0
-; GFX90A-GISEL-NEXT:    s_mov_b32 s1, 0x405ec000
-; GFX90A-GISEL-NEXT:    s_mov_b64 s[2:3], s[0:1]
+; GFX90A-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX90A-GISEL-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GFX90A-GISEL-NEXT:    s_mov_b32 s8, 0
+; GFX90A-GISEL-NEXT:    s_mov_b32 s9, 0x405ec000
+; GFX90A-GISEL-NEXT:    s_mov_b64 s[10:11], s[8:9]
 ; GFX90A-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[8:9], s[10:11], s[10:11] op_sel:[0,1]
-; GFX90A-GISEL-NEXT:    s_mov_b64 s[4:5], s[0:1]
-; GFX90A-GISEL-NEXT:    s_mov_b64 s[6:7], s[0:1]
-; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[0:1], s[0:1], s[0:1] op_sel:[0,1]
-; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[2:3], s[2:3], s[2:3] op_sel:[0,1]
-; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[4:5], s[4:5], s[4:5] op_sel:[0,1]
-; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[6:7], s[6:7], s[6:7] op_sel:[0,1]
-; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[10:11], s[12:13], s[12:13] op_sel:[0,1]
+; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[8:9], s[2:3], s[2:3] op_sel:[0,1]
+; GFX90A-GISEL-NEXT:    s_mov_b64 s[12:13], s[8:9]
+; GFX90A-GISEL-NEXT:    s_mov_b64 s[14:15], s[8:9]
+; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[0:1], s[8:9], s[8:9] op_sel:[0,1]
+; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[2:3], s[10:11], s[10:11] op_sel:[0,1]
+; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[4:5], s[12:13], s[12:13] op_sel:[0,1]
+; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[6:7], s[14:15], s[14:15] op_sel:[0,1]
+; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[10:11], s[6:7], s[6:7] op_sel:[0,1]
 ; GFX90A-GISEL-NEXT:    s_nop 1
 ; GFX90A-GISEL-NEXT:    v_mfma_f64_16x16x4f64 v[0:7], v[8:9], v[10:11], v[0:7]
 ; GFX90A-GISEL-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX90A-GISEL-NEXT:    s_nop 15
 ; GFX90A-GISEL-NEXT:    s_nop 0
-; GFX90A-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[8:9]
-; GFX90A-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[8:9] offset:16
+; GFX90A-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[0:1]
+; GFX90A-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[0:1] offset:16
 ; GFX90A-GISEL-NEXT:    s_endpgm
 ;
 ; GFX942-LABEL: test_mfma_f64_16x16x4f64_splat_lit:
@@ -3259,11 +3267,11 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_lit(ptr addrspace(1) %
 ; GFX942-NEXT:    v_mov_b32_e32 v5, v1
 ; GFX942-NEXT:    v_mov_b32_e32 v6, v0
 ; GFX942-NEXT:    v_mov_b32_e32 v7, v1
-; GFX942-NEXT:    v_mov_b64_e32 v[12:13], s[6:7]
 ; GFX942-NEXT:    v_mov_b64_e32 v[8:9], v[6:7]
 ; GFX942-NEXT:    v_mov_b64_e32 v[6:7], v[4:5]
 ; GFX942-NEXT:    v_mov_b64_e32 v[4:5], v[2:3]
 ; GFX942-NEXT:    v_mov_b64_e32 v[2:3], v[0:1]
+; GFX942-NEXT:    v_mov_b64_e32 v[12:13], s[6:7]
 ; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_mfma_f64_16x16x4_f64 v[2:9], v[10:11], v[12:13], v[2:9]
 ; GFX942-NEXT:    s_nop 15
@@ -3274,27 +3282,27 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_lit(ptr addrspace(1) %
 ;
 ; GFX942-GISEL-LABEL: test_mfma_f64_16x16x4f64_splat_lit:
 ; GFX942-GISEL:       ; %bb.0: ; %bb
-; GFX942-GISEL-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x24
-; GFX942-GISEL-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x34
-; GFX942-GISEL-NEXT:    s_mov_b32 s0, 0
-; GFX942-GISEL-NEXT:    s_mov_b32 s1, 0x405ec000
-; GFX942-GISEL-NEXT:    s_mov_b64 s[2:3], s[0:1]
+; GFX942-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX942-GISEL-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GFX942-GISEL-NEXT:    s_mov_b32 s8, 0
+; GFX942-GISEL-NEXT:    s_mov_b32 s9, 0x405ec000
+; GFX942-GISEL-NEXT:    s_mov_b64 s[10:11], s[8:9]
 ; GFX942-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[10:11]
-; GFX942-GISEL-NEXT:    s_mov_b64 s[4:5], s[0:1]
-; GFX942-GISEL-NEXT:    s_mov_b64 s[6:7], s[0:1]
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[4:5]
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[6:7]
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[10:11], s[12:13]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[2:3]
+; GFX942-GISEL-NEXT:    s_mov_b64 s[12:13], s[8:9]
+; GFX942-GISEL-NEXT:    s_mov_b64 s[14:15], s[8:9]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[8:9]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[10:11]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[12:13]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[14:15]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[10:11], s[6:7]
 ; GFX942-GISEL-NEXT:    s_nop 1
 ; GFX942-GISEL-NEXT:    v_mfma_f64_16x16x4_f64 v[0:7], v[8:9], v[10:11], v[0:7]
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX942-GISEL-NEXT:    s_nop 15
 ; GFX942-GISEL-NEXT:    s_nop 0
-; GFX942-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[8:9]
-; GFX942-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[8:9] offset:16
+; GFX942-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[0:1]
+; GFX942-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[0:1] offset:16
 ; GFX942-GISEL-NEXT:    s_endpgm
 ;
 ; GFX90A-VGPR-LABEL: test_mfma_f64_16x16x4f64_splat_lit:
@@ -3312,11 +3320,11 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_lit(ptr addrspace(1) %
 ; GFX90A-VGPR-NEXT:    v_mov_b32_e32 v5, v1
 ; GFX90A-VGPR-NEXT:    v_mov_b32_e32 v6, v0
 ; GFX90A-VGPR-NEXT:    v_mov_b32_e32 v7, v1
-; GFX90A-VGPR-NEXT:    v_pk_mov_b32 v[12:13], s[6:7], s[6:7] op_sel:[0,1]
 ; GFX90A-VGPR-NEXT:    v_pk_mov_b32 v[8:9], v[6:7], v[6:7] op_sel:[0,1]
 ; GFX90A-VGPR-NEXT:    v_pk_mov_b32 v[6:7], v[4:5], v[4:5] op_sel:[0,1]
 ; GFX90A-VGPR-NEXT:    v_pk_mov_b32 v[4:5], v[2:3], v[2:3] op_sel:[0,1]
 ; GFX90A-VGPR-NEXT:    v_pk_mov_b32 v[2:3], v[0:1], v[0:1] op_sel:[0,1]
+; GFX90A-VGPR-NEXT:    v_pk_mov_b32 v[12:13], s[6:7], s[6:7] op_sel:[0,1]
 ; GFX90A-VGPR-NEXT:    s_nop 1
 ; GFX90A-VGPR-NEXT:    v_mfma_f64_16x16x4f64 v[2:9], v[10:11], v[12:13], v[2:9]
 ; GFX90A-VGPR-NEXT:    s_nop 15
@@ -3327,27 +3335,27 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_lit(ptr addrspace(1) %
 ;
 ; GFX90A-VGPR-GISEL-LABEL: test_mfma_f64_16x16x4f64_splat_lit:
 ; GFX90A-VGPR-GISEL:       ; %bb.0: ; %bb
-; GFX90A-VGPR-GISEL-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x24
-; GFX90A-VGPR-GISEL-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x34
-; GFX90A-VGPR-GISEL-NEXT:    s_mov_b32 s0, 0
-; GFX90A-VGPR-GISEL-NEXT:    s_mov_b32 s1, 0x405ec000
-; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[2:3], s[0:1]
+; GFX90A-VGPR-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX90A-VGPR-GISEL-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GFX90A-VGPR-GISEL-NEXT:    s_mov_b32 s8, 0
+; GFX90A-VGPR-GISEL-NEXT:    s_mov_b32 s9, 0x405ec000
+; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[10:11], s[8:9]
 ; GFX90A-VGPR-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[8:9], s[10:11], s[10:11] op_sel:[0,1]
-; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[4:5], s[0:1]
-; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[6:7], s[0:1]
-; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[0:1], s[0:1], s[0:1] op_sel:[0,1]
-; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[2:3], s[2:3], s[2:3] op_sel:[0,1]
-; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[4:5], s[4:5], s[4:5] op_sel:[0,1]
-; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[6:7], s[6:7], s[6:7] op_sel:[0,1]
-; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[10:11], s[12:13], s[12:13] op_sel:[0,1]
+; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[8:9], s[2:3], s[2:3] op_sel:[0,1]
+; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[12:13], s[8:9]
+; GFX90A-VGPR-GISEL-NEXT:    s_mov_b64 s[14:15], s[8:9]
+; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[0:1], s[8:9], s[8:9] op_sel:[0,1]
+; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[2:3], s[10:11], s[10:11] op_sel:[0,1]
+; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[4:5], s[12:13], s[12:13] op_sel:[0,1]
+; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[6:7], s[14:15], s[14:15] op_sel:[0,1]
+; GFX90A-VGPR-GISEL-NEXT:    v_pk_mov_b32 v[10:11], s[6:7], s[6:7] op_sel:[0,1]
 ; GFX90A-VGPR-GISEL-NEXT:    s_nop 1
 ; GFX90A-VGPR-GISEL-NEXT:    v_mfma_f64_16x16x4f64 v[0:7], v[8:9], v[10:11], v[0:7]
 ; GFX90A-VGPR-GISEL-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX90A-VGPR-GISEL-NEXT:    s_nop 15
 ; GFX90A-VGPR-GISEL-NEXT:    s_nop 0
-; GFX90A-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[8:9]
-; GFX90A-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[8:9] offset:16
+; GFX90A-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[0:1]
+; GFX90A-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[0:1] offset:16
 ; GFX90A-VGPR-GISEL-NEXT:    s_endpgm
 ;
 ; GFX942-VGPR-LABEL: test_mfma_f64_16x16x4f64_splat_lit:
@@ -3365,11 +3373,11 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_lit(ptr addrspace(1) %
 ; GFX942-VGPR-NEXT:    v_mov_b32_e32 v5, v1
 ; GFX942-VGPR-NEXT:    v_mov_b32_e32 v6, v0
 ; GFX942-VGPR-NEXT:    v_mov_b32_e32 v7, v1
-; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[12:13], s[6:7]
 ; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[8:9], v[6:7]
 ; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[6:7], v[4:5]
 ; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[4:5], v[2:3]
 ; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[2:3], v[0:1]
+; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[12:13], s[6:7]
 ; GFX942-VGPR-NEXT:    s_nop 1
 ; GFX942-VGPR-NEXT:    v_mfma_f64_16x16x4_f64 v[2:9], v[10:11], v[12:13], v[2:9]
 ; GFX942-VGPR-NEXT:    s_nop 15
@@ -3380,27 +3388,27 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_lit(ptr addrspace(1) %
 ;
 ; GFX942-VGPR-GISEL-LABEL: test_mfma_f64_16x16x4f64_splat_lit:
 ; GFX942-VGPR-GISEL:       ; %bb.0: ; %bb
-; GFX942-VGPR-GISEL-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x24
-; GFX942-VGPR-GISEL-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x34
-; GFX942-VGPR-GISEL-NEXT:    s_mov_b32 s0, 0
-; GFX942-VGPR-GISEL-NEXT:    s_mov_b32 s1, 0x405ec000
-; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[2:3], s[0:1]
+; GFX942-VGPR-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX942-VGPR-GISEL-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GFX942-VGPR-GISEL-NEXT:    s_mov_b32 s8, 0
+; GFX942-VGPR-GISEL-NEXT:    s_mov_b32 s9, 0x405ec000
+; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[10:11], s[8:9]
 ; GFX942-VGPR-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[10:11]
-; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[4:5], s[0:1]
-; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[6:7], s[0:1]
-; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
-; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[4:5]
-; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[6:7]
-; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[10:11], s[12:13]
+; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[2:3]
+; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[12:13], s[8:9]
+; GFX942-VGPR-GISEL-NEXT:    s_mov_b64 s[14:15], s[8:9]
+; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[8:9]
+; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[10:11]
+; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[12:13]
+; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[14:15]
+; GFX942-VGPR-GISEL-NEXT:    v_mov_b64_e32 v[10:11], s[6:7]
 ; GFX942-VGPR-GISEL-NEXT:    s_nop 1
 ; GFX942-VGPR-GISEL-NEXT:    v_mfma_f64_16x16x4_f64 v[0:7], v[8:9], v[10:11], v[0:7]
 ; GFX942-VGPR-GISEL-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX942-VGPR-GISEL-NEXT:    s_nop 15
 ; GFX942-VGPR-GISEL-NEXT:    s_nop 0
-; GFX942-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[8:9]
-; GFX942-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[8:9] offset:16
+; GFX942-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[0:3], s[0:1]
+; GFX942-VGPR-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[0:1] offset:16
 ; GFX942-VGPR-GISEL-NEXT:    s_endpgm
 bb:
   %mai.1 = tail call <4 x double> @llvm.amdgcn.mfma.f64.16x16x4f64(double %a, double %b, <4 x double> <double 123.0, double 123.0, double 123.0, double 123.0>, i32 0, i32 0, i32 0)

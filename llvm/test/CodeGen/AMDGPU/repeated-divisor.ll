@@ -689,12 +689,13 @@ define <4 x float> @v_repeat_divisor_v2f32_x2(<2 x float> %x, <2 x float> %y, <2
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_div_fixup_f32 v4, v6, v4, 1.0
 ; GFX11-NEXT:    v_dual_fmac_f32 v13, v15, v9 :: v_dual_mul_f32 v0, v0, v4
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_fma_f32 v7, -v7, v13, v10
+; GFX11-NEXT:    v_mul_f32_e32 v2, v2, v4
 ; GFX11-NEXT:    v_div_fmas_f32 v7, v7, v9, v13
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_div_fixup_f32 v5, v7, v5, 1.0
-; GFX11-NEXT:    v_dual_mul_f32 v2, v2, v4 :: v_dual_mul_f32 v1, v1, v5
+; GFX11-NEXT:    v_mul_f32_e32 v1, v1, v5
 ; GFX11-NEXT:    v_mul_f32_e32 v3, v3, v5
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %div0 = fdiv arcp <2 x float> %x, %D

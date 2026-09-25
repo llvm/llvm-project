@@ -790,18 +790,19 @@ define <16 x float> @test_smfmac_f32_32x32x32_f16__sgpr(<8 x half> inreg %arg0, 
 ; GISEL-VGPR:       ; %bb.0:
 ; GISEL-VGPR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-VGPR-NEXT:    s_xor_saveexec_b64 s[4:5], -1
-; GISEL-VGPR-NEXT:    scratch_store_dword off, v29, s32 ; 4-byte Folded Spill
+; GISEL-VGPR-NEXT:    scratch_store_dword off, v17, s32 ; 4-byte Folded Spill
 ; GISEL-VGPR-NEXT:    s_mov_b64 exec, s[4:5]
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s36, 0
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s37, 1
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s38, 2
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s39, 3
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s48, 4
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s49, 5
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s50, 6
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s51, 7
-; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[26:27], s[2:3]
-; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[24:25], s[0:1]
+; GISEL-VGPR-NEXT:    v_writelane_b32 v17, s36, 0
+; GISEL-VGPR-NEXT:    v_writelane_b32 v17, s37, 1
+; GISEL-VGPR-NEXT:    v_writelane_b32 v17, s38, 2
+; GISEL-VGPR-NEXT:    v_writelane_b32 v17, s39, 3
+; GISEL-VGPR-NEXT:    v_writelane_b32 v17, s48, 4
+; GISEL-VGPR-NEXT:    v_writelane_b32 v17, s49, 5
+; GISEL-VGPR-NEXT:    v_writelane_b32 v17, s50, 6
+; GISEL-VGPR-NEXT:    v_writelane_b32 v17, s51, 7
+; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[28:29], s[2:3]
+; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[26:27], s[0:1]
+; GISEL-VGPR-NEXT:    v_mov_b32_e32 v16, v10
 ; GISEL-VGPR-NEXT:    s_mov_b32 s36, s24
 ; GISEL-VGPR-NEXT:    s_mov_b32 s37, s25
 ; GISEL-VGPR-NEXT:    s_mov_b32 s38, s26
@@ -818,11 +819,7 @@ define <16 x float> @test_smfmac_f32_32x32x32_f16__sgpr(<8 x half> inreg %arg0, 
 ; GISEL-VGPR-NEXT:    v_readfirstlane_b32 s49, v7
 ; GISEL-VGPR-NEXT:    v_readfirstlane_b32 s50, v8
 ; GISEL-VGPR-NEXT:    v_readfirstlane_b32 s51, v9
-; GISEL-VGPR-NEXT:    v_readfirstlane_b32 s0, v10
-; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[16:17], s[16:17]
-; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[18:19], s[18:19]
-; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[20:21], s[20:21]
-; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[22:23], s[22:23]
+; GISEL-VGPR-NEXT:    v_readfirstlane_b32 s0, v16
 ; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[0:1], s[36:37]
 ; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[2:3], s[38:39]
 ; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[4:5], s[40:41]
@@ -831,18 +828,22 @@ define <16 x float> @test_smfmac_f32_32x32x32_f16__sgpr(<8 x half> inreg %arg0, 
 ; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[10:11], s[46:47]
 ; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[12:13], s[48:49]
 ; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[14:15], s[50:51]
-; GISEL-VGPR-NEXT:    v_mov_b32_e32 v28, s0
-; GISEL-VGPR-NEXT:    v_readlane_b32 s51, v29, 7
-; GISEL-VGPR-NEXT:    v_readlane_b32 s50, v29, 6
-; GISEL-VGPR-NEXT:    v_smfmac_f32_32x32x32_f16 v[0:15], v[24:27], v[16:23], v28
-; GISEL-VGPR-NEXT:    v_readlane_b32 s49, v29, 5
-; GISEL-VGPR-NEXT:    v_readlane_b32 s48, v29, 4
-; GISEL-VGPR-NEXT:    v_readlane_b32 s39, v29, 3
-; GISEL-VGPR-NEXT:    v_readlane_b32 s38, v29, 2
-; GISEL-VGPR-NEXT:    v_readlane_b32 s37, v29, 1
-; GISEL-VGPR-NEXT:    v_readlane_b32 s36, v29, 0
+; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[24:25], s[22:23]
+; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[22:23], s[20:21]
+; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[20:21], s[18:19]
+; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[18:19], s[16:17]
+; GISEL-VGPR-NEXT:    v_mov_b32_e32 v16, s0
+; GISEL-VGPR-NEXT:    v_readlane_b32 s51, v17, 7
+; GISEL-VGPR-NEXT:    v_readlane_b32 s50, v17, 6
+; GISEL-VGPR-NEXT:    v_smfmac_f32_32x32x32_f16 v[0:15], v[26:29], v[18:25], v16
+; GISEL-VGPR-NEXT:    v_readlane_b32 s49, v17, 5
+; GISEL-VGPR-NEXT:    v_readlane_b32 s48, v17, 4
+; GISEL-VGPR-NEXT:    v_readlane_b32 s39, v17, 3
+; GISEL-VGPR-NEXT:    v_readlane_b32 s38, v17, 2
+; GISEL-VGPR-NEXT:    v_readlane_b32 s37, v17, 1
+; GISEL-VGPR-NEXT:    v_readlane_b32 s36, v17, 0
 ; GISEL-VGPR-NEXT:    s_xor_saveexec_b64 s[0:1], -1
-; GISEL-VGPR-NEXT:    scratch_load_dword v29, off, s32 ; 4-byte Folded Reload
+; GISEL-VGPR-NEXT:    scratch_load_dword v17, off, s32 ; 4-byte Folded Reload
 ; GISEL-VGPR-NEXT:    s_mov_b64 exec, s[0:1]
 ; GISEL-VGPR-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-VGPR-NEXT:    s_setpc_b64 s[30:31]
@@ -1633,18 +1634,19 @@ define <16 x float> @test_smfmac_f32_32x32x32_bf16__sgpr(<8 x bfloat> inreg %arg
 ; GISEL-VGPR:       ; %bb.0:
 ; GISEL-VGPR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-VGPR-NEXT:    s_xor_saveexec_b64 s[4:5], -1
-; GISEL-VGPR-NEXT:    scratch_store_dword off, v29, s32 ; 4-byte Folded Spill
+; GISEL-VGPR-NEXT:    scratch_store_dword off, v17, s32 ; 4-byte Folded Spill
 ; GISEL-VGPR-NEXT:    s_mov_b64 exec, s[4:5]
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s36, 0
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s37, 1
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s38, 2
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s39, 3
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s48, 4
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s49, 5
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s50, 6
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s51, 7
-; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[26:27], s[2:3]
-; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[24:25], s[0:1]
+; GISEL-VGPR-NEXT:    v_writelane_b32 v17, s36, 0
+; GISEL-VGPR-NEXT:    v_writelane_b32 v17, s37, 1
+; GISEL-VGPR-NEXT:    v_writelane_b32 v17, s38, 2
+; GISEL-VGPR-NEXT:    v_writelane_b32 v17, s39, 3
+; GISEL-VGPR-NEXT:    v_writelane_b32 v17, s48, 4
+; GISEL-VGPR-NEXT:    v_writelane_b32 v17, s49, 5
+; GISEL-VGPR-NEXT:    v_writelane_b32 v17, s50, 6
+; GISEL-VGPR-NEXT:    v_writelane_b32 v17, s51, 7
+; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[28:29], s[2:3]
+; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[26:27], s[0:1]
+; GISEL-VGPR-NEXT:    v_mov_b32_e32 v16, v10
 ; GISEL-VGPR-NEXT:    s_mov_b32 s36, s24
 ; GISEL-VGPR-NEXT:    s_mov_b32 s37, s25
 ; GISEL-VGPR-NEXT:    s_mov_b32 s38, s26
@@ -1661,11 +1663,7 @@ define <16 x float> @test_smfmac_f32_32x32x32_bf16__sgpr(<8 x bfloat> inreg %arg
 ; GISEL-VGPR-NEXT:    v_readfirstlane_b32 s49, v7
 ; GISEL-VGPR-NEXT:    v_readfirstlane_b32 s50, v8
 ; GISEL-VGPR-NEXT:    v_readfirstlane_b32 s51, v9
-; GISEL-VGPR-NEXT:    v_readfirstlane_b32 s0, v10
-; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[16:17], s[16:17]
-; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[18:19], s[18:19]
-; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[20:21], s[20:21]
-; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[22:23], s[22:23]
+; GISEL-VGPR-NEXT:    v_readfirstlane_b32 s0, v16
 ; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[0:1], s[36:37]
 ; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[2:3], s[38:39]
 ; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[4:5], s[40:41]
@@ -1674,18 +1672,22 @@ define <16 x float> @test_smfmac_f32_32x32x32_bf16__sgpr(<8 x bfloat> inreg %arg
 ; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[10:11], s[46:47]
 ; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[12:13], s[48:49]
 ; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[14:15], s[50:51]
-; GISEL-VGPR-NEXT:    v_mov_b32_e32 v28, s0
-; GISEL-VGPR-NEXT:    v_readlane_b32 s51, v29, 7
-; GISEL-VGPR-NEXT:    v_readlane_b32 s50, v29, 6
-; GISEL-VGPR-NEXT:    v_smfmac_f32_32x32x32_bf16 v[0:15], v[24:27], v[16:23], v28
-; GISEL-VGPR-NEXT:    v_readlane_b32 s49, v29, 5
-; GISEL-VGPR-NEXT:    v_readlane_b32 s48, v29, 4
-; GISEL-VGPR-NEXT:    v_readlane_b32 s39, v29, 3
-; GISEL-VGPR-NEXT:    v_readlane_b32 s38, v29, 2
-; GISEL-VGPR-NEXT:    v_readlane_b32 s37, v29, 1
-; GISEL-VGPR-NEXT:    v_readlane_b32 s36, v29, 0
+; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[24:25], s[22:23]
+; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[22:23], s[20:21]
+; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[20:21], s[18:19]
+; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[18:19], s[16:17]
+; GISEL-VGPR-NEXT:    v_mov_b32_e32 v16, s0
+; GISEL-VGPR-NEXT:    v_readlane_b32 s51, v17, 7
+; GISEL-VGPR-NEXT:    v_readlane_b32 s50, v17, 6
+; GISEL-VGPR-NEXT:    v_smfmac_f32_32x32x32_bf16 v[0:15], v[26:29], v[18:25], v16
+; GISEL-VGPR-NEXT:    v_readlane_b32 s49, v17, 5
+; GISEL-VGPR-NEXT:    v_readlane_b32 s48, v17, 4
+; GISEL-VGPR-NEXT:    v_readlane_b32 s39, v17, 3
+; GISEL-VGPR-NEXT:    v_readlane_b32 s38, v17, 2
+; GISEL-VGPR-NEXT:    v_readlane_b32 s37, v17, 1
+; GISEL-VGPR-NEXT:    v_readlane_b32 s36, v17, 0
 ; GISEL-VGPR-NEXT:    s_xor_saveexec_b64 s[0:1], -1
-; GISEL-VGPR-NEXT:    scratch_load_dword v29, off, s32 ; 4-byte Folded Reload
+; GISEL-VGPR-NEXT:    scratch_load_dword v17, off, s32 ; 4-byte Folded Reload
 ; GISEL-VGPR-NEXT:    s_mov_b64 exec, s[0:1]
 ; GISEL-VGPR-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-VGPR-NEXT:    s_setpc_b64 s[30:31]
@@ -2502,18 +2504,19 @@ define <16 x i32> @test_smfmac_i32_32x32x64_i8__sgpr(<4 x i32> inreg %arg0, <8 x
 ; GISEL-VGPR:       ; %bb.0:
 ; GISEL-VGPR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-VGPR-NEXT:    s_xor_saveexec_b64 s[4:5], -1
-; GISEL-VGPR-NEXT:    scratch_store_dword off, v29, s32 ; 4-byte Folded Spill
+; GISEL-VGPR-NEXT:    scratch_store_dword off, v17, s32 ; 4-byte Folded Spill
 ; GISEL-VGPR-NEXT:    s_mov_b64 exec, s[4:5]
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s36, 0
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s37, 1
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s38, 2
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s39, 3
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s48, 4
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s49, 5
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s50, 6
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s51, 7
-; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[26:27], s[2:3]
-; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[24:25], s[0:1]
+; GISEL-VGPR-NEXT:    v_writelane_b32 v17, s36, 0
+; GISEL-VGPR-NEXT:    v_writelane_b32 v17, s37, 1
+; GISEL-VGPR-NEXT:    v_writelane_b32 v17, s38, 2
+; GISEL-VGPR-NEXT:    v_writelane_b32 v17, s39, 3
+; GISEL-VGPR-NEXT:    v_writelane_b32 v17, s48, 4
+; GISEL-VGPR-NEXT:    v_writelane_b32 v17, s49, 5
+; GISEL-VGPR-NEXT:    v_writelane_b32 v17, s50, 6
+; GISEL-VGPR-NEXT:    v_writelane_b32 v17, s51, 7
+; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[28:29], s[2:3]
+; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[26:27], s[0:1]
+; GISEL-VGPR-NEXT:    v_mov_b32_e32 v16, v10
 ; GISEL-VGPR-NEXT:    s_mov_b32 s36, s24
 ; GISEL-VGPR-NEXT:    s_mov_b32 s37, s25
 ; GISEL-VGPR-NEXT:    s_mov_b32 s38, s26
@@ -2530,11 +2533,7 @@ define <16 x i32> @test_smfmac_i32_32x32x64_i8__sgpr(<4 x i32> inreg %arg0, <8 x
 ; GISEL-VGPR-NEXT:    v_readfirstlane_b32 s49, v7
 ; GISEL-VGPR-NEXT:    v_readfirstlane_b32 s50, v8
 ; GISEL-VGPR-NEXT:    v_readfirstlane_b32 s51, v9
-; GISEL-VGPR-NEXT:    v_readfirstlane_b32 s0, v10
-; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[16:17], s[16:17]
-; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[18:19], s[18:19]
-; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[20:21], s[20:21]
-; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[22:23], s[22:23]
+; GISEL-VGPR-NEXT:    v_readfirstlane_b32 s0, v16
 ; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[0:1], s[36:37]
 ; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[2:3], s[38:39]
 ; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[4:5], s[40:41]
@@ -2543,18 +2542,22 @@ define <16 x i32> @test_smfmac_i32_32x32x64_i8__sgpr(<4 x i32> inreg %arg0, <8 x
 ; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[10:11], s[46:47]
 ; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[12:13], s[48:49]
 ; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[14:15], s[50:51]
-; GISEL-VGPR-NEXT:    v_mov_b32_e32 v28, s0
-; GISEL-VGPR-NEXT:    v_readlane_b32 s51, v29, 7
-; GISEL-VGPR-NEXT:    v_readlane_b32 s50, v29, 6
-; GISEL-VGPR-NEXT:    v_smfmac_i32_32x32x64_i8 v[0:15], v[24:27], v[16:23], v28
-; GISEL-VGPR-NEXT:    v_readlane_b32 s49, v29, 5
-; GISEL-VGPR-NEXT:    v_readlane_b32 s48, v29, 4
-; GISEL-VGPR-NEXT:    v_readlane_b32 s39, v29, 3
-; GISEL-VGPR-NEXT:    v_readlane_b32 s38, v29, 2
-; GISEL-VGPR-NEXT:    v_readlane_b32 s37, v29, 1
-; GISEL-VGPR-NEXT:    v_readlane_b32 s36, v29, 0
+; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[24:25], s[22:23]
+; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[22:23], s[20:21]
+; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[20:21], s[18:19]
+; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[18:19], s[16:17]
+; GISEL-VGPR-NEXT:    v_mov_b32_e32 v16, s0
+; GISEL-VGPR-NEXT:    v_readlane_b32 s51, v17, 7
+; GISEL-VGPR-NEXT:    v_readlane_b32 s50, v17, 6
+; GISEL-VGPR-NEXT:    v_smfmac_i32_32x32x64_i8 v[0:15], v[26:29], v[18:25], v16
+; GISEL-VGPR-NEXT:    v_readlane_b32 s49, v17, 5
+; GISEL-VGPR-NEXT:    v_readlane_b32 s48, v17, 4
+; GISEL-VGPR-NEXT:    v_readlane_b32 s39, v17, 3
+; GISEL-VGPR-NEXT:    v_readlane_b32 s38, v17, 2
+; GISEL-VGPR-NEXT:    v_readlane_b32 s37, v17, 1
+; GISEL-VGPR-NEXT:    v_readlane_b32 s36, v17, 0
 ; GISEL-VGPR-NEXT:    s_xor_saveexec_b64 s[0:1], -1
-; GISEL-VGPR-NEXT:    scratch_load_dword v29, off, s32 ; 4-byte Folded Reload
+; GISEL-VGPR-NEXT:    scratch_load_dword v17, off, s32 ; 4-byte Folded Reload
 ; GISEL-VGPR-NEXT:    s_mov_b64 exec, s[0:1]
 ; GISEL-VGPR-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-VGPR-NEXT:    s_setpc_b64 s[30:31]
@@ -4334,18 +4337,19 @@ define <16 x float> @test_smfmac_f32_32x32x64_bf8_bf8__sgpr(<4 x i32> inreg %arg
 ; GISEL-VGPR:       ; %bb.0:
 ; GISEL-VGPR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-VGPR-NEXT:    s_xor_saveexec_b64 s[4:5], -1
-; GISEL-VGPR-NEXT:    scratch_store_dword off, v29, s32 ; 4-byte Folded Spill
+; GISEL-VGPR-NEXT:    scratch_store_dword off, v17, s32 ; 4-byte Folded Spill
 ; GISEL-VGPR-NEXT:    s_mov_b64 exec, s[4:5]
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s36, 0
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s37, 1
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s38, 2
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s39, 3
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s48, 4
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s49, 5
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s50, 6
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s51, 7
-; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[26:27], s[2:3]
-; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[24:25], s[0:1]
+; GISEL-VGPR-NEXT:    v_writelane_b32 v17, s36, 0
+; GISEL-VGPR-NEXT:    v_writelane_b32 v17, s37, 1
+; GISEL-VGPR-NEXT:    v_writelane_b32 v17, s38, 2
+; GISEL-VGPR-NEXT:    v_writelane_b32 v17, s39, 3
+; GISEL-VGPR-NEXT:    v_writelane_b32 v17, s48, 4
+; GISEL-VGPR-NEXT:    v_writelane_b32 v17, s49, 5
+; GISEL-VGPR-NEXT:    v_writelane_b32 v17, s50, 6
+; GISEL-VGPR-NEXT:    v_writelane_b32 v17, s51, 7
+; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[28:29], s[2:3]
+; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[26:27], s[0:1]
+; GISEL-VGPR-NEXT:    v_mov_b32_e32 v16, v10
 ; GISEL-VGPR-NEXT:    s_mov_b32 s36, s24
 ; GISEL-VGPR-NEXT:    s_mov_b32 s37, s25
 ; GISEL-VGPR-NEXT:    s_mov_b32 s38, s26
@@ -4362,11 +4366,7 @@ define <16 x float> @test_smfmac_f32_32x32x64_bf8_bf8__sgpr(<4 x i32> inreg %arg
 ; GISEL-VGPR-NEXT:    v_readfirstlane_b32 s49, v7
 ; GISEL-VGPR-NEXT:    v_readfirstlane_b32 s50, v8
 ; GISEL-VGPR-NEXT:    v_readfirstlane_b32 s51, v9
-; GISEL-VGPR-NEXT:    v_readfirstlane_b32 s0, v10
-; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[16:17], s[16:17]
-; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[18:19], s[18:19]
-; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[20:21], s[20:21]
-; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[22:23], s[22:23]
+; GISEL-VGPR-NEXT:    v_readfirstlane_b32 s0, v16
 ; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[0:1], s[36:37]
 ; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[2:3], s[38:39]
 ; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[4:5], s[40:41]
@@ -4375,18 +4375,22 @@ define <16 x float> @test_smfmac_f32_32x32x64_bf8_bf8__sgpr(<4 x i32> inreg %arg
 ; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[10:11], s[46:47]
 ; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[12:13], s[48:49]
 ; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[14:15], s[50:51]
-; GISEL-VGPR-NEXT:    v_mov_b32_e32 v28, s0
-; GISEL-VGPR-NEXT:    v_readlane_b32 s51, v29, 7
-; GISEL-VGPR-NEXT:    v_readlane_b32 s50, v29, 6
-; GISEL-VGPR-NEXT:    v_smfmac_f32_32x32x64_bf8_bf8 v[0:15], v[24:27], v[16:23], v28
-; GISEL-VGPR-NEXT:    v_readlane_b32 s49, v29, 5
-; GISEL-VGPR-NEXT:    v_readlane_b32 s48, v29, 4
-; GISEL-VGPR-NEXT:    v_readlane_b32 s39, v29, 3
-; GISEL-VGPR-NEXT:    v_readlane_b32 s38, v29, 2
-; GISEL-VGPR-NEXT:    v_readlane_b32 s37, v29, 1
-; GISEL-VGPR-NEXT:    v_readlane_b32 s36, v29, 0
+; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[24:25], s[22:23]
+; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[22:23], s[20:21]
+; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[20:21], s[18:19]
+; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[18:19], s[16:17]
+; GISEL-VGPR-NEXT:    v_mov_b32_e32 v16, s0
+; GISEL-VGPR-NEXT:    v_readlane_b32 s51, v17, 7
+; GISEL-VGPR-NEXT:    v_readlane_b32 s50, v17, 6
+; GISEL-VGPR-NEXT:    v_smfmac_f32_32x32x64_bf8_bf8 v[0:15], v[26:29], v[18:25], v16
+; GISEL-VGPR-NEXT:    v_readlane_b32 s49, v17, 5
+; GISEL-VGPR-NEXT:    v_readlane_b32 s48, v17, 4
+; GISEL-VGPR-NEXT:    v_readlane_b32 s39, v17, 3
+; GISEL-VGPR-NEXT:    v_readlane_b32 s38, v17, 2
+; GISEL-VGPR-NEXT:    v_readlane_b32 s37, v17, 1
+; GISEL-VGPR-NEXT:    v_readlane_b32 s36, v17, 0
 ; GISEL-VGPR-NEXT:    s_xor_saveexec_b64 s[0:1], -1
-; GISEL-VGPR-NEXT:    scratch_load_dword v29, off, s32 ; 4-byte Folded Reload
+; GISEL-VGPR-NEXT:    scratch_load_dword v17, off, s32 ; 4-byte Folded Reload
 ; GISEL-VGPR-NEXT:    s_mov_b64 exec, s[0:1]
 ; GISEL-VGPR-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-VGPR-NEXT:    s_setpc_b64 s[30:31]
@@ -4882,18 +4886,19 @@ define <16 x float> @test_smfmac_f32_32x32x64_bf8_fp8__sgpr(<4 x i32> inreg %arg
 ; GISEL-VGPR:       ; %bb.0:
 ; GISEL-VGPR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-VGPR-NEXT:    s_xor_saveexec_b64 s[4:5], -1
-; GISEL-VGPR-NEXT:    scratch_store_dword off, v29, s32 ; 4-byte Folded Spill
+; GISEL-VGPR-NEXT:    scratch_store_dword off, v17, s32 ; 4-byte Folded Spill
 ; GISEL-VGPR-NEXT:    s_mov_b64 exec, s[4:5]
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s36, 0
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s37, 1
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s38, 2
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s39, 3
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s48, 4
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s49, 5
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s50, 6
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s51, 7
-; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[26:27], s[2:3]
-; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[24:25], s[0:1]
+; GISEL-VGPR-NEXT:    v_writelane_b32 v17, s36, 0
+; GISEL-VGPR-NEXT:    v_writelane_b32 v17, s37, 1
+; GISEL-VGPR-NEXT:    v_writelane_b32 v17, s38, 2
+; GISEL-VGPR-NEXT:    v_writelane_b32 v17, s39, 3
+; GISEL-VGPR-NEXT:    v_writelane_b32 v17, s48, 4
+; GISEL-VGPR-NEXT:    v_writelane_b32 v17, s49, 5
+; GISEL-VGPR-NEXT:    v_writelane_b32 v17, s50, 6
+; GISEL-VGPR-NEXT:    v_writelane_b32 v17, s51, 7
+; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[28:29], s[2:3]
+; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[26:27], s[0:1]
+; GISEL-VGPR-NEXT:    v_mov_b32_e32 v16, v10
 ; GISEL-VGPR-NEXT:    s_mov_b32 s36, s24
 ; GISEL-VGPR-NEXT:    s_mov_b32 s37, s25
 ; GISEL-VGPR-NEXT:    s_mov_b32 s38, s26
@@ -4910,11 +4915,7 @@ define <16 x float> @test_smfmac_f32_32x32x64_bf8_fp8__sgpr(<4 x i32> inreg %arg
 ; GISEL-VGPR-NEXT:    v_readfirstlane_b32 s49, v7
 ; GISEL-VGPR-NEXT:    v_readfirstlane_b32 s50, v8
 ; GISEL-VGPR-NEXT:    v_readfirstlane_b32 s51, v9
-; GISEL-VGPR-NEXT:    v_readfirstlane_b32 s0, v10
-; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[16:17], s[16:17]
-; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[18:19], s[18:19]
-; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[20:21], s[20:21]
-; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[22:23], s[22:23]
+; GISEL-VGPR-NEXT:    v_readfirstlane_b32 s0, v16
 ; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[0:1], s[36:37]
 ; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[2:3], s[38:39]
 ; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[4:5], s[40:41]
@@ -4923,18 +4924,22 @@ define <16 x float> @test_smfmac_f32_32x32x64_bf8_fp8__sgpr(<4 x i32> inreg %arg
 ; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[10:11], s[46:47]
 ; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[12:13], s[48:49]
 ; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[14:15], s[50:51]
-; GISEL-VGPR-NEXT:    v_mov_b32_e32 v28, s0
-; GISEL-VGPR-NEXT:    v_readlane_b32 s51, v29, 7
-; GISEL-VGPR-NEXT:    v_readlane_b32 s50, v29, 6
-; GISEL-VGPR-NEXT:    v_smfmac_f32_32x32x64_bf8_fp8 v[0:15], v[24:27], v[16:23], v28
-; GISEL-VGPR-NEXT:    v_readlane_b32 s49, v29, 5
-; GISEL-VGPR-NEXT:    v_readlane_b32 s48, v29, 4
-; GISEL-VGPR-NEXT:    v_readlane_b32 s39, v29, 3
-; GISEL-VGPR-NEXT:    v_readlane_b32 s38, v29, 2
-; GISEL-VGPR-NEXT:    v_readlane_b32 s37, v29, 1
-; GISEL-VGPR-NEXT:    v_readlane_b32 s36, v29, 0
+; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[24:25], s[22:23]
+; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[22:23], s[20:21]
+; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[20:21], s[18:19]
+; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[18:19], s[16:17]
+; GISEL-VGPR-NEXT:    v_mov_b32_e32 v16, s0
+; GISEL-VGPR-NEXT:    v_readlane_b32 s51, v17, 7
+; GISEL-VGPR-NEXT:    v_readlane_b32 s50, v17, 6
+; GISEL-VGPR-NEXT:    v_smfmac_f32_32x32x64_bf8_fp8 v[0:15], v[26:29], v[18:25], v16
+; GISEL-VGPR-NEXT:    v_readlane_b32 s49, v17, 5
+; GISEL-VGPR-NEXT:    v_readlane_b32 s48, v17, 4
+; GISEL-VGPR-NEXT:    v_readlane_b32 s39, v17, 3
+; GISEL-VGPR-NEXT:    v_readlane_b32 s38, v17, 2
+; GISEL-VGPR-NEXT:    v_readlane_b32 s37, v17, 1
+; GISEL-VGPR-NEXT:    v_readlane_b32 s36, v17, 0
 ; GISEL-VGPR-NEXT:    s_xor_saveexec_b64 s[0:1], -1
-; GISEL-VGPR-NEXT:    scratch_load_dword v29, off, s32 ; 4-byte Folded Reload
+; GISEL-VGPR-NEXT:    scratch_load_dword v17, off, s32 ; 4-byte Folded Reload
 ; GISEL-VGPR-NEXT:    s_mov_b64 exec, s[0:1]
 ; GISEL-VGPR-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-VGPR-NEXT:    s_setpc_b64 s[30:31]
@@ -5430,18 +5435,19 @@ define <16 x float> @test_smfmac_f32_32x32x64_fp8_bf8__sgpr(<4 x i32> inreg %arg
 ; GISEL-VGPR:       ; %bb.0:
 ; GISEL-VGPR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-VGPR-NEXT:    s_xor_saveexec_b64 s[4:5], -1
-; GISEL-VGPR-NEXT:    scratch_store_dword off, v29, s32 ; 4-byte Folded Spill
+; GISEL-VGPR-NEXT:    scratch_store_dword off, v17, s32 ; 4-byte Folded Spill
 ; GISEL-VGPR-NEXT:    s_mov_b64 exec, s[4:5]
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s36, 0
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s37, 1
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s38, 2
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s39, 3
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s48, 4
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s49, 5
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s50, 6
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s51, 7
-; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[26:27], s[2:3]
-; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[24:25], s[0:1]
+; GISEL-VGPR-NEXT:    v_writelane_b32 v17, s36, 0
+; GISEL-VGPR-NEXT:    v_writelane_b32 v17, s37, 1
+; GISEL-VGPR-NEXT:    v_writelane_b32 v17, s38, 2
+; GISEL-VGPR-NEXT:    v_writelane_b32 v17, s39, 3
+; GISEL-VGPR-NEXT:    v_writelane_b32 v17, s48, 4
+; GISEL-VGPR-NEXT:    v_writelane_b32 v17, s49, 5
+; GISEL-VGPR-NEXT:    v_writelane_b32 v17, s50, 6
+; GISEL-VGPR-NEXT:    v_writelane_b32 v17, s51, 7
+; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[28:29], s[2:3]
+; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[26:27], s[0:1]
+; GISEL-VGPR-NEXT:    v_mov_b32_e32 v16, v10
 ; GISEL-VGPR-NEXT:    s_mov_b32 s36, s24
 ; GISEL-VGPR-NEXT:    s_mov_b32 s37, s25
 ; GISEL-VGPR-NEXT:    s_mov_b32 s38, s26
@@ -5458,11 +5464,7 @@ define <16 x float> @test_smfmac_f32_32x32x64_fp8_bf8__sgpr(<4 x i32> inreg %arg
 ; GISEL-VGPR-NEXT:    v_readfirstlane_b32 s49, v7
 ; GISEL-VGPR-NEXT:    v_readfirstlane_b32 s50, v8
 ; GISEL-VGPR-NEXT:    v_readfirstlane_b32 s51, v9
-; GISEL-VGPR-NEXT:    v_readfirstlane_b32 s0, v10
-; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[16:17], s[16:17]
-; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[18:19], s[18:19]
-; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[20:21], s[20:21]
-; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[22:23], s[22:23]
+; GISEL-VGPR-NEXT:    v_readfirstlane_b32 s0, v16
 ; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[0:1], s[36:37]
 ; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[2:3], s[38:39]
 ; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[4:5], s[40:41]
@@ -5471,18 +5473,22 @@ define <16 x float> @test_smfmac_f32_32x32x64_fp8_bf8__sgpr(<4 x i32> inreg %arg
 ; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[10:11], s[46:47]
 ; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[12:13], s[48:49]
 ; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[14:15], s[50:51]
-; GISEL-VGPR-NEXT:    v_mov_b32_e32 v28, s0
-; GISEL-VGPR-NEXT:    v_readlane_b32 s51, v29, 7
-; GISEL-VGPR-NEXT:    v_readlane_b32 s50, v29, 6
-; GISEL-VGPR-NEXT:    v_smfmac_f32_32x32x64_fp8_bf8 v[0:15], v[24:27], v[16:23], v28
-; GISEL-VGPR-NEXT:    v_readlane_b32 s49, v29, 5
-; GISEL-VGPR-NEXT:    v_readlane_b32 s48, v29, 4
-; GISEL-VGPR-NEXT:    v_readlane_b32 s39, v29, 3
-; GISEL-VGPR-NEXT:    v_readlane_b32 s38, v29, 2
-; GISEL-VGPR-NEXT:    v_readlane_b32 s37, v29, 1
-; GISEL-VGPR-NEXT:    v_readlane_b32 s36, v29, 0
+; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[24:25], s[22:23]
+; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[22:23], s[20:21]
+; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[20:21], s[18:19]
+; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[18:19], s[16:17]
+; GISEL-VGPR-NEXT:    v_mov_b32_e32 v16, s0
+; GISEL-VGPR-NEXT:    v_readlane_b32 s51, v17, 7
+; GISEL-VGPR-NEXT:    v_readlane_b32 s50, v17, 6
+; GISEL-VGPR-NEXT:    v_smfmac_f32_32x32x64_fp8_bf8 v[0:15], v[26:29], v[18:25], v16
+; GISEL-VGPR-NEXT:    v_readlane_b32 s49, v17, 5
+; GISEL-VGPR-NEXT:    v_readlane_b32 s48, v17, 4
+; GISEL-VGPR-NEXT:    v_readlane_b32 s39, v17, 3
+; GISEL-VGPR-NEXT:    v_readlane_b32 s38, v17, 2
+; GISEL-VGPR-NEXT:    v_readlane_b32 s37, v17, 1
+; GISEL-VGPR-NEXT:    v_readlane_b32 s36, v17, 0
 ; GISEL-VGPR-NEXT:    s_xor_saveexec_b64 s[0:1], -1
-; GISEL-VGPR-NEXT:    scratch_load_dword v29, off, s32 ; 4-byte Folded Reload
+; GISEL-VGPR-NEXT:    scratch_load_dword v17, off, s32 ; 4-byte Folded Reload
 ; GISEL-VGPR-NEXT:    s_mov_b64 exec, s[0:1]
 ; GISEL-VGPR-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-VGPR-NEXT:    s_setpc_b64 s[30:31]
@@ -5978,18 +5984,19 @@ define <16 x float> @test_smfmac_f32_32x32x64_fp8_fp8__sgpr(<4 x i32> inreg %arg
 ; GISEL-VGPR:       ; %bb.0:
 ; GISEL-VGPR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-VGPR-NEXT:    s_xor_saveexec_b64 s[4:5], -1
-; GISEL-VGPR-NEXT:    scratch_store_dword off, v29, s32 ; 4-byte Folded Spill
+; GISEL-VGPR-NEXT:    scratch_store_dword off, v17, s32 ; 4-byte Folded Spill
 ; GISEL-VGPR-NEXT:    s_mov_b64 exec, s[4:5]
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s36, 0
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s37, 1
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s38, 2
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s39, 3
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s48, 4
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s49, 5
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s50, 6
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s51, 7
-; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[26:27], s[2:3]
-; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[24:25], s[0:1]
+; GISEL-VGPR-NEXT:    v_writelane_b32 v17, s36, 0
+; GISEL-VGPR-NEXT:    v_writelane_b32 v17, s37, 1
+; GISEL-VGPR-NEXT:    v_writelane_b32 v17, s38, 2
+; GISEL-VGPR-NEXT:    v_writelane_b32 v17, s39, 3
+; GISEL-VGPR-NEXT:    v_writelane_b32 v17, s48, 4
+; GISEL-VGPR-NEXT:    v_writelane_b32 v17, s49, 5
+; GISEL-VGPR-NEXT:    v_writelane_b32 v17, s50, 6
+; GISEL-VGPR-NEXT:    v_writelane_b32 v17, s51, 7
+; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[28:29], s[2:3]
+; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[26:27], s[0:1]
+; GISEL-VGPR-NEXT:    v_mov_b32_e32 v16, v10
 ; GISEL-VGPR-NEXT:    s_mov_b32 s36, s24
 ; GISEL-VGPR-NEXT:    s_mov_b32 s37, s25
 ; GISEL-VGPR-NEXT:    s_mov_b32 s38, s26
@@ -6006,11 +6013,7 @@ define <16 x float> @test_smfmac_f32_32x32x64_fp8_fp8__sgpr(<4 x i32> inreg %arg
 ; GISEL-VGPR-NEXT:    v_readfirstlane_b32 s49, v7
 ; GISEL-VGPR-NEXT:    v_readfirstlane_b32 s50, v8
 ; GISEL-VGPR-NEXT:    v_readfirstlane_b32 s51, v9
-; GISEL-VGPR-NEXT:    v_readfirstlane_b32 s0, v10
-; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[16:17], s[16:17]
-; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[18:19], s[18:19]
-; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[20:21], s[20:21]
-; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[22:23], s[22:23]
+; GISEL-VGPR-NEXT:    v_readfirstlane_b32 s0, v16
 ; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[0:1], s[36:37]
 ; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[2:3], s[38:39]
 ; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[4:5], s[40:41]
@@ -6019,18 +6022,22 @@ define <16 x float> @test_smfmac_f32_32x32x64_fp8_fp8__sgpr(<4 x i32> inreg %arg
 ; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[10:11], s[46:47]
 ; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[12:13], s[48:49]
 ; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[14:15], s[50:51]
-; GISEL-VGPR-NEXT:    v_mov_b32_e32 v28, s0
-; GISEL-VGPR-NEXT:    v_readlane_b32 s51, v29, 7
-; GISEL-VGPR-NEXT:    v_readlane_b32 s50, v29, 6
-; GISEL-VGPR-NEXT:    v_smfmac_f32_32x32x64_fp8_fp8 v[0:15], v[24:27], v[16:23], v28
-; GISEL-VGPR-NEXT:    v_readlane_b32 s49, v29, 5
-; GISEL-VGPR-NEXT:    v_readlane_b32 s48, v29, 4
-; GISEL-VGPR-NEXT:    v_readlane_b32 s39, v29, 3
-; GISEL-VGPR-NEXT:    v_readlane_b32 s38, v29, 2
-; GISEL-VGPR-NEXT:    v_readlane_b32 s37, v29, 1
-; GISEL-VGPR-NEXT:    v_readlane_b32 s36, v29, 0
+; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[24:25], s[22:23]
+; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[22:23], s[20:21]
+; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[20:21], s[18:19]
+; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[18:19], s[16:17]
+; GISEL-VGPR-NEXT:    v_mov_b32_e32 v16, s0
+; GISEL-VGPR-NEXT:    v_readlane_b32 s51, v17, 7
+; GISEL-VGPR-NEXT:    v_readlane_b32 s50, v17, 6
+; GISEL-VGPR-NEXT:    v_smfmac_f32_32x32x64_fp8_fp8 v[0:15], v[26:29], v[18:25], v16
+; GISEL-VGPR-NEXT:    v_readlane_b32 s49, v17, 5
+; GISEL-VGPR-NEXT:    v_readlane_b32 s48, v17, 4
+; GISEL-VGPR-NEXT:    v_readlane_b32 s39, v17, 3
+; GISEL-VGPR-NEXT:    v_readlane_b32 s38, v17, 2
+; GISEL-VGPR-NEXT:    v_readlane_b32 s37, v17, 1
+; GISEL-VGPR-NEXT:    v_readlane_b32 s36, v17, 0
 ; GISEL-VGPR-NEXT:    s_xor_saveexec_b64 s[0:1], -1
-; GISEL-VGPR-NEXT:    scratch_load_dword v29, off, s32 ; 4-byte Folded Reload
+; GISEL-VGPR-NEXT:    scratch_load_dword v17, off, s32 ; 4-byte Folded Reload
 ; GISEL-VGPR-NEXT:    s_mov_b64 exec, s[0:1]
 ; GISEL-VGPR-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-VGPR-NEXT:    s_setpc_b64 s[30:31]

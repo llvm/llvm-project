@@ -82,11 +82,11 @@ define amdgpu_kernel void @blender_no_live_segment_at_def_error(<4 x float> %ext
 ; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; CHECK-NEXT:  .LBB0_9: ; %kernel_direct_lighting.exit
 ; CHECK-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x20
-; CHECK-NEXT:    v_mov_b32_e32 v4, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s48
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s49
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s50
 ; CHECK-NEXT:    v_mov_b32_e32 v3, s51
+; CHECK-NEXT:    v_mov_b32_e32 v4, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5]
 ; CHECK-NEXT:    s_endpgm

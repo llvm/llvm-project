@@ -135,12 +135,12 @@ define amdgpu_ps <4 x float> @image_bvh_intersect_ray_ssssss(i32 inreg %node_ptr
 ; GFX11-GISEL-NEXT:    s_mov_b32 s20, s5
 ; GFX11-GISEL-NEXT:    s_mov_b32 s21, s6
 ; GFX11-GISEL-NEXT:    s_mov_b32 s22, s7
-; GFX11-GISEL-NEXT:    v_dual_mov_b32 v9, s0 :: v_dual_mov_b32 v10, s1
-; GFX11-GISEL-NEXT:    v_dual_mov_b32 v0, s16 :: v_dual_mov_b32 v1, s17
-; GFX11-GISEL-NEXT:    v_dual_mov_b32 v2, s18 :: v_dual_mov_b32 v3, s20
-; GFX11-GISEL-NEXT:    v_dual_mov_b32 v4, s21 :: v_dual_mov_b32 v5, s22
-; GFX11-GISEL-NEXT:    v_dual_mov_b32 v6, s8 :: v_dual_mov_b32 v7, s9
-; GFX11-GISEL-NEXT:    v_mov_b32_e32 v8, s10
+; GFX11-GISEL-NEXT:    v_dual_mov_b32 v9, s0 :: v_dual_mov_b32 v0, s16
+; GFX11-GISEL-NEXT:    v_dual_mov_b32 v1, s17 :: v_dual_mov_b32 v2, s18
+; GFX11-GISEL-NEXT:    v_dual_mov_b32 v3, s20 :: v_dual_mov_b32 v4, s21
+; GFX11-GISEL-NEXT:    v_dual_mov_b32 v5, s22 :: v_dual_mov_b32 v6, s8
+; GFX11-GISEL-NEXT:    v_dual_mov_b32 v7, s9 :: v_dual_mov_b32 v8, s10
+; GFX11-GISEL-NEXT:    v_mov_b32_e32 v10, s1
 ; GFX11-GISEL-NEXT:    s_mov_b32 s4, s11
 ; GFX11-GISEL-NEXT:    s_mov_b32 s5, s12
 ; GFX11-GISEL-NEXT:    s_mov_b32 s6, s13
@@ -180,12 +180,12 @@ define amdgpu_ps <4 x float> @image_bvh_intersect_ray_ssssss(i32 inreg %node_ptr
 ; GFX12-GISEL-NEXT:    s_mov_b32 s20, s5
 ; GFX12-GISEL-NEXT:    s_mov_b32 s21, s6
 ; GFX12-GISEL-NEXT:    s_mov_b32 s22, s7
-; GFX12-GISEL-NEXT:    v_dual_mov_b32 v9, s0 :: v_dual_mov_b32 v10, s1
-; GFX12-GISEL-NEXT:    v_dual_mov_b32 v0, s16 :: v_dual_mov_b32 v1, s17
-; GFX12-GISEL-NEXT:    v_dual_mov_b32 v2, s18 :: v_dual_mov_b32 v3, s20
-; GFX12-GISEL-NEXT:    v_dual_mov_b32 v4, s21 :: v_dual_mov_b32 v5, s22
-; GFX12-GISEL-NEXT:    v_dual_mov_b32 v6, s8 :: v_dual_mov_b32 v7, s9
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v8, s10
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v9, s0 :: v_dual_mov_b32 v0, s16
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v1, s17 :: v_dual_mov_b32 v2, s18
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v3, s20 :: v_dual_mov_b32 v4, s21
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v5, s22 :: v_dual_mov_b32 v6, s8
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v7, s9 :: v_dual_mov_b32 v8, s10
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v10, s1
 ; GFX12-GISEL-NEXT:    s_mov_b32 s4, s11
 ; GFX12-GISEL-NEXT:    s_mov_b32 s5, s12
 ; GFX12-GISEL-NEXT:    s_mov_b32 s6, s13
@@ -412,11 +412,11 @@ define amdgpu_ps <4 x float> @image_bvh64_intersect_ray_ssssss(i64 inreg %node_p
 ; GFX11-GISEL-NEXT:    s_mov_b32 s9, s10
 ; GFX11-GISEL-NEXT:    s_mov_b32 s10, s11
 ; GFX11-GISEL-NEXT:    v_dual_mov_b32 v10, s1 :: v_dual_mov_b32 v9, s0
-; GFX11-GISEL-NEXT:    v_dual_mov_b32 v11, s2 :: v_dual_mov_b32 v0, s16
-; GFX11-GISEL-NEXT:    v_dual_mov_b32 v1, s17 :: v_dual_mov_b32 v2, s18
-; GFX11-GISEL-NEXT:    v_dual_mov_b32 v3, s4 :: v_dual_mov_b32 v4, s5
-; GFX11-GISEL-NEXT:    v_dual_mov_b32 v5, s6 :: v_dual_mov_b32 v6, s8
-; GFX11-GISEL-NEXT:    v_dual_mov_b32 v7, s9 :: v_dual_mov_b32 v8, s10
+; GFX11-GISEL-NEXT:    v_dual_mov_b32 v0, s16 :: v_dual_mov_b32 v1, s17
+; GFX11-GISEL-NEXT:    v_dual_mov_b32 v2, s18 :: v_dual_mov_b32 v3, s4
+; GFX11-GISEL-NEXT:    v_dual_mov_b32 v4, s5 :: v_dual_mov_b32 v5, s6
+; GFX11-GISEL-NEXT:    v_dual_mov_b32 v6, s8 :: v_dual_mov_b32 v7, s9
+; GFX11-GISEL-NEXT:    v_dual_mov_b32 v8, s10 :: v_dual_mov_b32 v11, s2
 ; GFX11-GISEL-NEXT:    image_bvh64_intersect_ray v[0:3], [v[9:10], v11, v[0:2], v[3:5], v[6:8]], s[12:15]
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
@@ -452,11 +452,11 @@ define amdgpu_ps <4 x float> @image_bvh64_intersect_ray_ssssss(i64 inreg %node_p
 ; GFX12-GISEL-NEXT:    s_mov_b32 s9, s10
 ; GFX12-GISEL-NEXT:    s_mov_b32 s10, s11
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v10, s1 :: v_dual_mov_b32 v9, s0
-; GFX12-GISEL-NEXT:    v_dual_mov_b32 v11, s2 :: v_dual_mov_b32 v0, s16
-; GFX12-GISEL-NEXT:    v_dual_mov_b32 v1, s17 :: v_dual_mov_b32 v2, s18
-; GFX12-GISEL-NEXT:    v_dual_mov_b32 v3, s4 :: v_dual_mov_b32 v4, s5
-; GFX12-GISEL-NEXT:    v_dual_mov_b32 v5, s6 :: v_dual_mov_b32 v6, s8
-; GFX12-GISEL-NEXT:    v_dual_mov_b32 v7, s9 :: v_dual_mov_b32 v8, s10
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v0, s16 :: v_dual_mov_b32 v1, s17
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v2, s18 :: v_dual_mov_b32 v3, s4
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v4, s5 :: v_dual_mov_b32 v5, s6
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v6, s8 :: v_dual_mov_b32 v7, s9
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v8, s10 :: v_dual_mov_b32 v11, s2
 ; GFX12-GISEL-NEXT:    image_bvh64_intersect_ray v[0:3], [v[9:10], v11, v[0:2], v[3:5], v[6:8]], s[12:15]
 ; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v0

@@ -849,6 +849,13 @@ void GCNSubtarget::adjustSchedDependency(
     return; // This is not a data dependency anymore.
   }
 
+  if (DefI->isCopy()) {
+    unsigned Latency = Dep.getLatency();
+    Latency += InstrInfo.getIssueCyclesForCopy(*DefI) - 1;
+    Dep.setLatency(Latency);
+    return;
+  }
+
   if (DefI->isBundle()) {
     const SIRegisterInfo *TRI = getRegisterInfo();
     auto Reg = Dep.getReg();

@@ -2378,16 +2378,16 @@ define <2 x bfloat> @v_max3_v2bf16_maximumnum_maximumnum__v_v_v_0(<2 x bfloat> %
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_and_b32_e32 v3, 0xffff0000, v0
-; GFX10-NEXT:    v_lshlrev_b32_e32 v5, 16, v0
-; GFX10-NEXT:    v_and_b32_e32 v4, 0xffff0000, v1
+; GFX10-NEXT:    v_lshlrev_b32_e32 v4, 16, v0
+; GFX10-NEXT:    v_and_b32_e32 v5, 0xffff0000, v1
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v6, 16, v1
 ; GFX10-NEXT:    v_cmp_u_f32_e32 vcc_lo, v3, v3
 ; GFX10-NEXT:    v_lshrrev_b32_e32 v3, 16, v1
 ; GFX10-NEXT:    v_cndmask_b32_sdwa v7, v0, v3, vcc_lo dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; GFX10-NEXT:    v_cmp_u_f32_e32 vcc_lo, v5, v5
-; GFX10-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc_lo
 ; GFX10-NEXT:    v_cmp_u_f32_e32 vcc_lo, v4, v4
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v4, 16, v7
+; GFX10-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc_lo
+; GFX10-NEXT:    v_cmp_u_f32_e32 vcc_lo, v5, v5
 ; GFX10-NEXT:    v_cmp_eq_u16_e64 s5, 0, v0
 ; GFX10-NEXT:    v_cndmask_b32_e32 v3, v3, v7, vcc_lo
 ; GFX10-NEXT:    v_cmp_u_f32_e32 vcc_lo, v6, v6
