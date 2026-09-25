@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstBuilder.h"
@@ -45,6 +46,15 @@ cl::opt<bool> LArchAnnotateTableJump(
 LoongArchTargetStreamer &LoongArchAsmPrinter::getTargetStreamer() const {
   return static_cast<LoongArchTargetStreamer &>(
       *OutStreamer->getTargetStreamer());
+}
+
+void LoongArchAsmPrinter::emitStartOfAsmFile(Module &M) {
+  StringRef ABIName = M.getTargetABIFromMD();
+  if (!ABIName.empty()) {
+    getTargetStreamer().setTargetABI(LoongArchABI::computeTargetABI(
+        TM.getTargetTriple(), TM.getMCSubtargetInfo().getFeatureBits(),
+        ABIName));
+  }
 }
 
 void LoongArchAsmPrinter::emitInstruction(const MachineInstr *MI) {
