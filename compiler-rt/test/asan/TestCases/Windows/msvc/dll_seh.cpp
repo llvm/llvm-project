@@ -47,8 +47,9 @@ int test_function() {
           __asan_address_is_poisoned(x + 32));
   // Exception handling currently clears real-stack redzones (issue 258).
   // A live fake-stack allocation must retain its redzones.
-  bool on_fake_stack = __asan_addr_is_in_fake_stack(
-      __asan_get_current_fake_stack(), x, nullptr, nullptr) != nullptr;
+  bool on_fake_stack =
+      __asan_addr_is_in_fake_stack(__asan_get_current_fake_stack(), x, nullptr,
+                                   nullptr) != nullptr;
   assert(__asan_address_is_poisoned(x + 32) == on_fake_stack);
   return 0;
 }
