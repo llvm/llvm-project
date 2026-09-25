@@ -47,7 +47,7 @@ View mixed_noescape_lifetimebound(
 View mixed_only_noescape_escapes(
     const MyObj& a [[clang::noescape]],
     const MyObj& b [[clang::lifetimebound]]) {
-  (void)a;
+  use(a);
   return b;
 }
 

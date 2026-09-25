@@ -1,0 +1,73 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+// expected-error @below {{OpenCL major version must be positive}}
+#attr = #cir.cl.version<-1, 2>
+
+// -----
+
+// expected-error @below {{OpenCL minor version must be non-negative}}
+#attr = #cir.cl.version<3, -1>
+
+// -----
+
+// expected-error @below {{OpenCL major version must be positive}}
+#attr = #cir.cl.version<0, 0>
+
+// -----
+
+// expected-error @below {{expected cir.cl.version to be #cir.cl.version}}
+module attributes {cir.cl.version = "bad"} {
+}
+
+// -----
+
+// expected-error @below {{expected cir.cl.cxx.version to be #cir.cl.version}}
+module attributes {cir.cl.cxx.version = "bad"} {
+}
+
+// -----
+
+// expected-error @below {{module attribute 'cir.cl.cxx.version' requires the companion attribute 'cir.cl.version'}}
+module attributes {cir.cl.cxx.version = #cir.cl.version<2021, 0>} {
+}
+
+// -----
+
+// expected-error @below {{incompatible OpenCL and C++ for OpenCL versions}}
+module attributes {
+  cir.cl.cxx.version = #cir.cl.version<2021, 0>,
+  cir.cl.version = #cir.cl.version<2, 0>
+} {
+}
+
+// -----
+
+module {
+  // expected-error @below {{cir.cl.version attribute must be attached to a module}}
+  cir.func @not_module_attr() attributes {cir.cl.version = #cir.cl.version<1, 2>} {
+    cir.return
+  }
+}
+
+// -----
+
+module {
+  // expected-error @below {{cir.cl.cxx.version attribute must be attached to a module}}
+  cir.func @not_module_attr() attributes {cir.cl.cxx.version = #cir.cl.version<2021, 0>} {
+    cir.return
+  }
+}
+
+// -----
+
+module {
+  // expected-error @below {{cir.cl.version attribute must be attached to a module}}
+  cir.func private @not_module_arg(!cir.int<s, 32> {cir.cl.version = #cir.cl.version<1, 2>})
+}
+
+// -----
+
+module {
+  // expected-error @below {{cir.cl.cxx.version attribute must be attached to a module}}
+  cir.func private @not_module_cxx_result() -> (!cir.int<s, 32> {cir.cl.cxx.version = #cir.cl.version<2021, 0>})
+}

@@ -293,44 +293,50 @@ define <8 x i64> @test_divv_8i64_strictfp(<8 x i64> %a, <8 x i64> %b) nounwind s
 ; NODQ-NEXT:    vpextrq $1, %xmm3, %rcx
 ; NODQ-NEXT:    xorl %edx, %edx
 ; NODQ-NEXT:    divq %rcx
-; NODQ-NEXT:    vmovq %rax, %xmm4
+; NODQ-NEXT:    movq %rax, %rcx
 ; NODQ-NEXT:    vmovq %xmm2, %rax
-; NODQ-NEXT:    vmovq %xmm3, %rcx
+; NODQ-NEXT:    vmovq %xmm3, %rsi
 ; NODQ-NEXT:    xorl %edx, %edx
-; NODQ-NEXT:    divq %rcx
-; NODQ-NEXT:    vmovq %rax, %xmm2
-; NODQ-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm4[0]
-; NODQ-NEXT:    vextracti32x4 $2, %zmm0, %xmm3
-; NODQ-NEXT:    vpextrq $1, %xmm3, %rax
-; NODQ-NEXT:    vextracti32x4 $2, %zmm1, %xmm4
-; NODQ-NEXT:    vpextrq $1, %xmm4, %rcx
+; NODQ-NEXT:    divq %rsi
+; NODQ-NEXT:    movq %rax, %rsi
+; NODQ-NEXT:    vextracti32x4 $2, %zmm0, %xmm2
+; NODQ-NEXT:    vpextrq $1, %xmm2, %rax
+; NODQ-NEXT:    vextracti32x4 $2, %zmm1, %xmm3
+; NODQ-NEXT:    vpextrq $1, %xmm3, %rdi
 ; NODQ-NEXT:    xorl %edx, %edx
-; NODQ-NEXT:    divq %rcx
-; NODQ-NEXT:    vmovq %rax, %xmm5
-; NODQ-NEXT:    vmovq %xmm3, %rax
-; NODQ-NEXT:    vmovq %xmm4, %rcx
+; NODQ-NEXT:    divq %rdi
+; NODQ-NEXT:    movq %rax, %rdi
+; NODQ-NEXT:    vmovq %xmm2, %rax
+; NODQ-NEXT:    vmovq %xmm3, %r8
 ; NODQ-NEXT:    xorl %edx, %edx
-; NODQ-NEXT:    divq %rcx
-; NODQ-NEXT:    vmovq %rax, %xmm3
-; NODQ-NEXT:    vpunpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm5[0]
-; NODQ-NEXT:    vinserti128 $1, %xmm2, %ymm3, %ymm2
-; NODQ-NEXT:    vextracti128 $1, %ymm0, %xmm3
-; NODQ-NEXT:    vpextrq $1, %xmm3, %rax
-; NODQ-NEXT:    vextracti128 $1, %ymm1, %xmm4
-; NODQ-NEXT:    vpextrq $1, %xmm4, %rcx
+; NODQ-NEXT:    divq %r8
+; NODQ-NEXT:    movq %rax, %r8
+; NODQ-NEXT:    vextracti128 $1, %ymm0, %xmm2
+; NODQ-NEXT:    vpextrq $1, %xmm2, %rax
+; NODQ-NEXT:    vextracti128 $1, %ymm1, %xmm3
+; NODQ-NEXT:    vpextrq $1, %xmm3, %r9
 ; NODQ-NEXT:    xorl %edx, %edx
-; NODQ-NEXT:    divq %rcx
-; NODQ-NEXT:    vmovq %rax, %xmm5
-; NODQ-NEXT:    vmovq %xmm3, %rax
-; NODQ-NEXT:    vmovq %xmm4, %rcx
+; NODQ-NEXT:    divq %r9
+; NODQ-NEXT:    movq %rax, %r9
+; NODQ-NEXT:    vmovq %xmm2, %rax
+; NODQ-NEXT:    vmovq %xmm3, %r10
 ; NODQ-NEXT:    xorl %edx, %edx
-; NODQ-NEXT:    divq %rcx
-; NODQ-NEXT:    vmovq %rax, %xmm3
-; NODQ-NEXT:    vpunpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm5[0]
+; NODQ-NEXT:    divq %r10
+; NODQ-NEXT:    movq %rax, %r10
 ; NODQ-NEXT:    vpextrq $1, %xmm0, %rax
-; NODQ-NEXT:    vpextrq $1, %xmm1, %rcx
+; NODQ-NEXT:    vpextrq $1, %xmm1, %r11
 ; NODQ-NEXT:    xorl %edx, %edx
-; NODQ-NEXT:    divq %rcx
+; NODQ-NEXT:    divq %r11
+; NODQ-NEXT:    vmovq %rcx, %xmm2
+; NODQ-NEXT:    vmovq %rsi, %xmm3
+; NODQ-NEXT:    vmovq %rdi, %xmm4
+; NODQ-NEXT:    vmovq %r8, %xmm5
+; NODQ-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm3[0],xmm2[0]
+; NODQ-NEXT:    vmovq %r9, %xmm3
+; NODQ-NEXT:    vpunpcklqdq {{.*#+}} xmm4 = xmm5[0],xmm4[0]
+; NODQ-NEXT:    vinserti128 $1, %xmm2, %ymm4, %ymm2
+; NODQ-NEXT:    vmovq %r10, %xmm4
+; NODQ-NEXT:    vpunpcklqdq {{.*#+}} xmm3 = xmm4[0],xmm3[0]
 ; NODQ-NEXT:    vmovq %rax, %xmm4
 ; NODQ-NEXT:    vmovq %xmm0, %rax
 ; NODQ-NEXT:    vmovq %xmm1, %rcx
@@ -376,44 +382,50 @@ define <8 x i64> @test_divv_8i64_narrow_strictfp(<8 x i64> %a, <8 x i64> %b) nou
 ; NODQ-NEXT:    vpextrq $1, %xmm3, %rcx
 ; NODQ-NEXT:    xorl %edx, %edx
 ; NODQ-NEXT:    divq %rcx
-; NODQ-NEXT:    vmovq %rax, %xmm4
+; NODQ-NEXT:    movq %rax, %rcx
 ; NODQ-NEXT:    vmovq %xmm2, %rax
-; NODQ-NEXT:    vmovq %xmm3, %rcx
+; NODQ-NEXT:    vmovq %xmm3, %rsi
 ; NODQ-NEXT:    xorl %edx, %edx
-; NODQ-NEXT:    divq %rcx
-; NODQ-NEXT:    vmovq %rax, %xmm2
-; NODQ-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm4[0]
-; NODQ-NEXT:    vextracti32x4 $2, %zmm0, %xmm3
-; NODQ-NEXT:    vpextrq $1, %xmm3, %rax
-; NODQ-NEXT:    vextracti32x4 $2, %zmm1, %xmm4
-; NODQ-NEXT:    vpextrq $1, %xmm4, %rcx
+; NODQ-NEXT:    divq %rsi
+; NODQ-NEXT:    movq %rax, %rsi
+; NODQ-NEXT:    vextracti32x4 $2, %zmm0, %xmm2
+; NODQ-NEXT:    vpextrq $1, %xmm2, %rax
+; NODQ-NEXT:    vextracti32x4 $2, %zmm1, %xmm3
+; NODQ-NEXT:    vpextrq $1, %xmm3, %rdi
 ; NODQ-NEXT:    xorl %edx, %edx
-; NODQ-NEXT:    divq %rcx
-; NODQ-NEXT:    vmovq %rax, %xmm5
-; NODQ-NEXT:    vmovq %xmm3, %rax
-; NODQ-NEXT:    vmovq %xmm4, %rcx
+; NODQ-NEXT:    divq %rdi
+; NODQ-NEXT:    movq %rax, %rdi
+; NODQ-NEXT:    vmovq %xmm2, %rax
+; NODQ-NEXT:    vmovq %xmm3, %r8
 ; NODQ-NEXT:    xorl %edx, %edx
-; NODQ-NEXT:    divq %rcx
-; NODQ-NEXT:    vmovq %rax, %xmm3
-; NODQ-NEXT:    vpunpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm5[0]
-; NODQ-NEXT:    vinserti128 $1, %xmm2, %ymm3, %ymm2
-; NODQ-NEXT:    vextracti128 $1, %ymm0, %xmm3
-; NODQ-NEXT:    vpextrq $1, %xmm3, %rax
-; NODQ-NEXT:    vextracti128 $1, %ymm1, %xmm4
-; NODQ-NEXT:    vpextrq $1, %xmm4, %rcx
+; NODQ-NEXT:    divq %r8
+; NODQ-NEXT:    movq %rax, %r8
+; NODQ-NEXT:    vextracti128 $1, %ymm0, %xmm2
+; NODQ-NEXT:    vpextrq $1, %xmm2, %rax
+; NODQ-NEXT:    vextracti128 $1, %ymm1, %xmm3
+; NODQ-NEXT:    vpextrq $1, %xmm3, %r9
 ; NODQ-NEXT:    xorl %edx, %edx
-; NODQ-NEXT:    divq %rcx
-; NODQ-NEXT:    vmovq %rax, %xmm5
-; NODQ-NEXT:    vmovq %xmm3, %rax
-; NODQ-NEXT:    vmovq %xmm4, %rcx
+; NODQ-NEXT:    divq %r9
+; NODQ-NEXT:    movq %rax, %r9
+; NODQ-NEXT:    vmovq %xmm2, %rax
+; NODQ-NEXT:    vmovq %xmm3, %r10
 ; NODQ-NEXT:    xorl %edx, %edx
-; NODQ-NEXT:    divq %rcx
-; NODQ-NEXT:    vmovq %rax, %xmm3
-; NODQ-NEXT:    vpunpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm5[0]
+; NODQ-NEXT:    divq %r10
+; NODQ-NEXT:    movq %rax, %r10
 ; NODQ-NEXT:    vpextrq $1, %xmm0, %rax
-; NODQ-NEXT:    vpextrq $1, %xmm1, %rcx
+; NODQ-NEXT:    vpextrq $1, %xmm1, %r11
 ; NODQ-NEXT:    xorl %edx, %edx
-; NODQ-NEXT:    divq %rcx
+; NODQ-NEXT:    divq %r11
+; NODQ-NEXT:    vmovq %rcx, %xmm2
+; NODQ-NEXT:    vmovq %rsi, %xmm3
+; NODQ-NEXT:    vmovq %rdi, %xmm4
+; NODQ-NEXT:    vmovq %r8, %xmm5
+; NODQ-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm3[0],xmm2[0]
+; NODQ-NEXT:    vmovq %r9, %xmm3
+; NODQ-NEXT:    vpunpcklqdq {{.*#+}} xmm4 = xmm5[0],xmm4[0]
+; NODQ-NEXT:    vinserti128 $1, %xmm2, %ymm4, %ymm2
+; NODQ-NEXT:    vmovq %r10, %xmm4
+; NODQ-NEXT:    vpunpcklqdq {{.*#+}} xmm3 = xmm4[0],xmm3[0]
 ; NODQ-NEXT:    vmovq %rax, %xmm4
 ; NODQ-NEXT:    vmovq %xmm0, %rax
 ; NODQ-NEXT:    vmovq %xmm1, %rcx
@@ -449,39 +461,44 @@ define void @test_divv_7i64_narrow_strictfp(<7 x i64> %a, <7 x i64> %b, ptr %p) 
 ; NODQ-NEXT:    vpextrq $1, %xmm0, %rcx
 ; NODQ-NEXT:    xorl %edx, %edx
 ; NODQ-NEXT:    divq %rcx
-; NODQ-NEXT:    vmovq %rax, %xmm1
+; NODQ-NEXT:    movq %rax, %rcx
 ; NODQ-NEXT:    vmovq %xmm2, %rax
-; NODQ-NEXT:    vmovq %xmm0, %rcx
+; NODQ-NEXT:    vmovq %xmm0, %rsi
 ; NODQ-NEXT:    xorl %edx, %edx
-; NODQ-NEXT:    divq %rcx
-; NODQ-NEXT:    vmovq %rax, %xmm3
+; NODQ-NEXT:    divq %rsi
+; NODQ-NEXT:    movq %rax, %rsi
+; NODQ-NEXT:    vextracti128 $1, %ymm2, %xmm1
+; NODQ-NEXT:    vpextrq $1, %xmm1, %rax
+; NODQ-NEXT:    vextracti128 $1, %ymm0, %xmm3
+; NODQ-NEXT:    vpextrq $1, %xmm3, %r8
+; NODQ-NEXT:    xorl %edx, %edx
+; NODQ-NEXT:    divq %r8
+; NODQ-NEXT:    movq %rax, %r8
+; NODQ-NEXT:    vmovq %xmm1, %rax
+; NODQ-NEXT:    vmovq %xmm3, %r9
+; NODQ-NEXT:    xorl %edx, %edx
+; NODQ-NEXT:    divq %r9
+; NODQ-NEXT:    movq %rax, %r9
+; NODQ-NEXT:    vextracti32x4 $2, %zmm2, %xmm1
+; NODQ-NEXT:    vpextrq $1, %xmm1, %rax
+; NODQ-NEXT:    vextracti32x4 $2, %zmm0, %xmm3
+; NODQ-NEXT:    vpextrq $1, %xmm3, %r10
+; NODQ-NEXT:    xorl %edx, %edx
+; NODQ-NEXT:    divq %r10
+; NODQ-NEXT:    movq %rax, %r10
+; NODQ-NEXT:    vmovq %xmm1, %rax
+; NODQ-NEXT:    vmovq %xmm3, %r11
+; NODQ-NEXT:    xorl %edx, %edx
+; NODQ-NEXT:    divq %r11
+; NODQ-NEXT:    vmovq %rcx, %xmm1
+; NODQ-NEXT:    vmovq %rsi, %xmm3
+; NODQ-NEXT:    vmovq %r8, %xmm4
+; NODQ-NEXT:    vmovq %r9, %xmm5
 ; NODQ-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm3[0],xmm1[0]
-; NODQ-NEXT:    vextracti128 $1, %ymm2, %xmm3
-; NODQ-NEXT:    vpextrq $1, %xmm3, %rax
-; NODQ-NEXT:    vextracti128 $1, %ymm0, %xmm4
-; NODQ-NEXT:    vpextrq $1, %xmm4, %rcx
-; NODQ-NEXT:    xorl %edx, %edx
-; NODQ-NEXT:    divq %rcx
+; NODQ-NEXT:    vpunpcklqdq {{.*#+}} xmm3 = xmm5[0],xmm4[0]
+; NODQ-NEXT:    vmovq %r10, %xmm4
 ; NODQ-NEXT:    vmovq %rax, %xmm5
-; NODQ-NEXT:    vmovq %xmm3, %rax
-; NODQ-NEXT:    vmovq %xmm4, %rcx
-; NODQ-NEXT:    xorl %edx, %edx
-; NODQ-NEXT:    divq %rcx
-; NODQ-NEXT:    vmovq %rax, %xmm3
-; NODQ-NEXT:    vpunpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm5[0]
-; NODQ-NEXT:    vextracti32x4 $2, %zmm2, %xmm4
-; NODQ-NEXT:    vpextrq $1, %xmm4, %rax
-; NODQ-NEXT:    vextracti32x4 $2, %zmm0, %xmm5
-; NODQ-NEXT:    vpextrq $1, %xmm5, %rcx
-; NODQ-NEXT:    xorl %edx, %edx
-; NODQ-NEXT:    divq %rcx
-; NODQ-NEXT:    vmovq %rax, %xmm6
-; NODQ-NEXT:    vmovq %xmm4, %rax
-; NODQ-NEXT:    vmovq %xmm5, %rcx
-; NODQ-NEXT:    xorl %edx, %edx
-; NODQ-NEXT:    divq %rcx
-; NODQ-NEXT:    vmovq %rax, %xmm4
-; NODQ-NEXT:    vpunpcklqdq {{.*#+}} xmm4 = xmm4[0],xmm6[0]
+; NODQ-NEXT:    vpunpcklqdq {{.*#+}} xmm4 = xmm5[0],xmm4[0]
 ; NODQ-NEXT:    vextracti32x4 $3, %zmm2, %xmm2
 ; NODQ-NEXT:    vmovq %xmm2, %rax
 ; NODQ-NEXT:    vextracti32x4 $3, %zmm0, %xmm0

@@ -39,7 +39,7 @@ define amdgpu_kernel void @atomic_xchg_kernel(ptr addrspace(1) %out, [8 x i32], 
 ; CHECK-NEXT:    [[XYZCOND:%.*]] = phi i1 [ false, [[WID:%.*]] ], [ true, [[MALLOC]] ]
 ; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier()
 ; CHECK-NEXT:    [[TMP21:%.*]] = load ptr addrspace(1), ptr addrspace(3) @llvm.amdgcn.sw.lds.atomic_xchg_kernel, align 8
-; CHECK-NEXT:    [[TMP22:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds ([[LLVM_AMDGCN_SW_LDS_ATOMIC_XCHG_KERNEL_MD_TYPE]], ptr addrspace(1) @llvm.amdgcn.sw.lds.atomic_xchg_kernel.md, i32 0, i32 1, i32 0), align 4
+; CHECK-NEXT:    [[TMP22:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @llvm.amdgcn.sw.lds.atomic_xchg_kernel.md, i64 12), align 4
 ; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i8, ptr addrspace(3) @llvm.amdgcn.sw.lds.atomic_xchg_kernel, i32 [[TMP22]]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr addrspace(3) [[TMP23]], i32 4
 ; CHECK-NEXT:    [[TMP24:%.*]] = ptrtoint ptr addrspace(3) [[GEP]] to i32

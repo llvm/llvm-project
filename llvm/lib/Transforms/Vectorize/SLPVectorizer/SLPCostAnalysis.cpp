@@ -14,9 +14,14 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/IVDescriptors.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/VectorTypeUtils.h"
@@ -26,6 +31,7 @@
 #include <utility>
 
 using namespace llvm;
+using namespace llvm::PatternMatch;
 
 namespace llvm::slpvectorizer {
 
@@ -33,14 +39,15 @@ InstructionCost getShuffleCost(const TargetTransformInfo &TTI,
                                TTI::ShuffleKind Kind, VectorType *Tp,
                                const TTI::TargetCostKind CostKind,
                                ArrayRef<int> Mask, int Index, VectorType *SubTp,
-                               ArrayRef<const Value *> Args) {
+                               ArrayRef<const Value *> Args,
+                               TTI::VectorInstrContext VIC) {
   VectorType *DstTy = Tp;
   if (!Mask.empty())
     DstTy = FixedVectorType::get(Tp->getScalarType(), Mask.size());
 
   if (Kind != TTI::SK_PermuteTwoSrc)
     return TTI.getShuffleCost(Kind, DstTy, Tp, CostKind, Mask, Index, SubTp,
-                              Args);
+                              Args, /*CxtI=*/nullptr, VIC);
   int NumSrcElts = Tp->getElementCount().getKnownMinValue();
   int NumSubElts;
   if (Mask.size() > 2 && ShuffleVectorInst::isInsertSubvectorMask(
@@ -50,8 +57,8 @@ InstructionCost getShuffleCost(const TargetTransformInfo &TTI,
       return TTI.getShuffleCost(TTI::SK_InsertSubvector, DstTy, Tp, CostKind,
                                 Mask, Index, Tp);
   }
-  return TTI.getShuffleCost(Kind, DstTy, Tp, CostKind, Mask, Index, SubTp,
-                            Args);
+  return TTI.getShuffleCost(Kind, DstTy, Tp, CostKind, Mask, Index, SubTp, Args,
+                            /*CxtI=*/nullptr, VIC);
 }
 
 std::pair<InstructionCost, InstructionCost>
@@ -209,8 +216,8 @@ getScalarizationOverhead(const TargetTransformInfo &TTI, bool ReVec,
 InstructionCost getVectorInstrCost(
     const TargetTransformInfo &TTI, bool ReVec, Type *ScalarTy, unsigned Opcode,
     Type *Val, const TTI::TargetCostKind CostKind, unsigned Index,
-    Value *Scalar,
-    ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx) {
+    Value *Scalar, ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx,
+    TTI::VectorInstrContext VIC) {
   if (Opcode == Instruction::ExtractElement) {
     if (auto *VecTy = dyn_cast<FixedVectorType>(ScalarTy)) {
       assert(ReVec && "Only supported by REVEC.");
@@ -221,7 +228,7 @@ InstructionCost getVectorInstrCost(
     }
   }
   return TTI.getVectorInstrCost(Opcode, Val, CostKind, Index, Scalar,
-                                ScalarUserAndIdx);
+                                ScalarUserAndIdx, VIC);
 }
 
 InstructionCost getExtractWithExtendCost(const TargetTransformInfo &TTI,
@@ -240,4 +247,249 @@ InstructionCost getExtractWithExtendCost(const TargetTransformInfo &TTI,
   return TTI.getExtractWithExtendCost(Opcode, Dst, VecTy, Index, CostKind);
 }
 
+/// Returns the cast context hint for the trunc of the booleanized reduction
+/// result, which inherits the uses of the reduction root \p Root.
+static TTI::CastContextHint getBoolReduxResultCCH(const Value *Root) {
+  if (!Root->hasOneUse())
+    return TTI::CastContextHint::None;
+  const Value *U = *Root->user_begin();
+  if (isa<StoreInst>(U))
+    return TTI::CastContextHint::Normal;
+  if (match(U, m_Intrinsic<Intrinsic::masked_store>()))
+    return TTI::CastContextHint::Masked;
+  if (match(U, m_Intrinsic<Intrinsic::masked_scatter>()))
+    return TTI::CastContextHint::GatherScatter;
+  return TTI::CastContextHint::None;
+}
+
+InstructionCost getBoolReduxWideRdxCost(const TargetTransformInfo &TTI,
+                                        RecurKind RdxKind,
+                                        FixedVectorType *VecTy,
+                                        const Value *Root, FastMathFlags FMF,
+                                        const TTI::TargetCostKind CostKind) {
+  Type *I1Ty = Type::getInt1Ty(VecTy->getContext());
+  return TTI.getArithmeticReductionCost(
+             RecurrenceDescriptor::getOpcode(RdxKind), VecTy, FMF, CostKind) +
+         TTI.getCastInstrCost(Instruction::Trunc, I1Ty, VecTy->getScalarType(),
+                              getBoolReduxResultCCH(Root), CostKind);
+}
+
+InstructionCost getBoolReduxBitcastCmpCost(const TargetTransformInfo &TTI,
+                                           RecurKind RdxKind,
+                                           FixedVectorType *VecTy,
+                                           const Value *Root,
+                                           ArrayRef<Instruction *> ChainInsts,
+                                           const TTI::TargetCostKind CostKind) {
+  // The new instructions are costed in the context of the replaced cast chain
+  // instructions.
+  auto TruncIt =
+      find_if(ChainInsts, [](Instruction *I) { return isa<TruncInst>(I); });
+  const Instruction *TruncI = TruncIt == ChainInsts.end() ? nullptr : *TruncIt;
+  auto CmpIt =
+      find_if(ChainInsts, [](Instruction *I) { return isa<ICmpInst>(I); });
+  const Instruction *CmpI = CmpIt == ChainInsts.end() ? nullptr : *CmpIt;
+  unsigned VF = VecTy->getNumElements();
+  auto *I1VecTy =
+      FixedVectorType::get(Type::getInt1Ty(VecTy->getContext()), VF);
+  Type *IntTy = IntegerType::get(VecTy->getContext(), VF);
+  Constant *CmpRHS = RdxKind == RecurKind::And
+                         ? Constant::getAllOnesValue(IntTy)
+                         : Constant::getNullValue(IntTy);
+  return TTI.getCastInstrCost(Instruction::Trunc, I1VecTy, VecTy,
+                              TTI.getCastContextHint(TruncI), CostKind,
+                              TruncI) +
+         TTI.getCastInstrCost(Instruction::BitCast, IntTy, I1VecTy,
+                              TTI.getCastContextHint(TruncI), CostKind) +
+         TTI.getCmpSelInstrCost(
+             Instruction::ICmp, IntTy, CmpInst::makeCmpResultType(IntTy),
+             RdxKind == RecurKind::And ? CmpInst::ICMP_EQ : CmpInst::ICMP_NE,
+             CostKind, TTI.getOperandInfo(Root), TTI.getOperandInfo(CmpRHS),
+             CmpI);
+}
+
+static InstructionCost
+getBoolLogicRdxBitcastCost(RecurKind Kind, const TargetTransformInfo &TTI,
+                           FixedVectorType *VectorTy, TTI::CastContextHint Ctx,
+                           TTI::TargetCostKind CostKind) {
+  assert((Kind == RecurKind::And || Kind == RecurKind::Or) &&
+         VectorTy->getElementType()->isIntegerTy(1) &&
+         "Expected and/or reduction of i1");
+  auto *IntTy =
+      IntegerType::get(VectorTy->getContext(), getNumElements(VectorTy));
+  CmpInst::Predicate Pred =
+      Kind == RecurKind::And ? CmpInst::ICMP_EQ : CmpInst::ICMP_NE;
+  // The compare is against the all-ones (and) or zero (or) constant.
+  return TTI.getCastInstrCost(Instruction::BitCast, IntTy, VectorTy, Ctx,
+                              CostKind) +
+         TTI.getCmpSelInstrCost(Instruction::ICmp, IntTy,
+                                CmpInst::makeCmpResultType(IntTy), Pred,
+                                CostKind, /*Op1Info=*/{},
+                                {TTI::OK_UniformConstantValue, TTI::OP_None});
+}
+
+std::pair<InstructionCost, bool>
+getI1ReductionCost(RecurKind Kind, const TargetTransformInfo &TTI,
+                   FixedVectorType *VectorTy, Type *ScalarTy,
+                   TTI::CastContextHint Ctx, TTI::TargetCostKind CostKind) {
+  unsigned RdxOpcode = RecurrenceDescriptor::getOpcode(Kind);
+  if (Kind == RecurKind::And || Kind == RecurKind::Or) {
+    InstructionCost RdxCost = TTI.getArithmeticReductionCost(
+        RdxOpcode, VectorTy, std::nullopt, CostKind);
+    InstructionCost BitcastCost =
+        getBoolLogicRdxBitcastCost(Kind, TTI, VectorTy, Ctx, CostKind);
+    return {std::min(RdxCost, BitcastCost), BitcastCost < RdxCost};
+  }
+  assert(Kind == RecurKind::Add && !ScalarTy->isIntegerTy(1) &&
+         "Expected add reduction of zexted i1 values");
+  // The bitcast+ctpop form is estimated as the cheaper of the extended
+  // reduction cost, which models it for the zexted i1 add reduction, and the
+  // explicitly priced components, including the cast of the ctpop result to
+  // the destination type.
+  auto *IntTy =
+      IntegerType::get(VectorTy->getContext(), getNumElements(VectorTy));
+  InstructionCost ExplicitCost =
+      TTI.getCastInstrCost(Instruction::BitCast, IntTy, VectorTy, Ctx,
+                           CostKind) +
+      TTI.getIntrinsicInstrCost(
+          IntrinsicCostAttributes(Intrinsic::ctpop, IntTy, {IntTy}), CostKind);
+  if (IntTy != ScalarTy)
+    ExplicitCost += TTI.getCastInstrCost(IntTy->getBitWidth() <
+                                                 ScalarTy->getIntegerBitWidth()
+                                             ? Instruction::ZExt
+                                             : Instruction::Trunc,
+                                         ScalarTy, IntTy, Ctx, CostKind);
+  InstructionCost CtpopCost = std::min(
+      TTI.getExtendedReductionCost(RdxOpcode, /*IsUnsigned=*/true, ScalarTy,
+                                   VectorTy, std::nullopt, CostKind),
+      ExplicitCost);
+  // The plain form is the zext to the wide vector type plus the reduction.
+  auto *ExtTy = VectorType::get(ScalarTy, VectorTy);
+  InstructionCost ExtRdxCost =
+      TTI.getCastInstrCost(Instruction::ZExt, ExtTy, VectorTy, Ctx, CostKind) +
+      TTI.getArithmeticReductionCost(RdxOpcode, ExtTy, std::nullopt, CostKind);
+  return {std::min(ExtRdxCost, CtpopCost), CtpopCost <= ExtRdxCost};
+}
+
+InstructionCost getBitPackCost(const TargetTransformInfo &TTI,
+                               FixedVectorType *SrcTy, Type *ResultTy,
+                               const BitPackInfo &Info, unsigned ZExtSrcWidth,
+                               TTI::CastContextHint CCH,
+                               TTI::TargetCostKind CostKind,
+                               const TargetLibraryInfo *TLI,
+                               const Instruction *CxtI, unsigned &ShiftWidth) {
+  unsigned BitWidth = SrcTy->getScalarSizeInBits();
+  unsigned NumElts = SrcTy->getNumElements();
+  uint64_t MaxAmt = *max_element(Info.LShrAmts);
+  // The shift amounts form a constant vector.
+  TTI::OperandValueInfo ShiftAmtInfo = {
+      all_equal(Info.LShrAmts) ? TTI::OK_UniformConstantValue
+                               : TTI::OK_NonUniformConstantValue,
+      all_of(Info.LShrAmts,
+             [](uint64_t A) { return A == 0 || isPowerOf2_64(A); })
+          ? TTI::OP_PowerOf2
+          : TTI::OP_None};
+  // After the shift the field content of each lane sits in the low bits of
+  // the lane, so the packing is a single byte shuffle of the shifted lanes.
+  // Pick the cheapest shift width: the narrowest type still holding the field
+  // content is not always the cheapest (e.g. missing narrow variable shifts).
+  Type *Int8Ty = Type::getInt8Ty(SrcTy->getContext());
+  assert(BitWidth % 8 == 0 &&
+         "The byte-multiple field width divides the result bit width.");
+  unsigned OutBytes = BitWidth / 8;
+  auto *PackTy = FixedVectorType::get(Int8Ty, OutBytes);
+  unsigned MinShiftWidth = 8;
+  while (MinShiftWidth < MaxAmt + Info.FieldWidth)
+    MinShiftWidth *= 2;
+  InstructionCost NewCost = InstructionCost::getInvalid();
+  ShiftWidth = 0;
+  for (unsigned W2 = MinShiftWidth; W2 <= BitWidth; W2 *= 2) {
+    auto *ShiftTy = FixedVectorType::get(
+        IntegerType::get(SrcTy->getContext(), W2), NumElts);
+    unsigned BytesPerLane = W2 / 8;
+    unsigned InBytes = NumElts * BytesPerLane;
+    SmallVector<int> Mask =
+        getBitPackMask(Info, OutBytes, NumElts, BytesPerLane);
+    InstructionCost C = TTI.getCastInstrCost(Instruction::BitCast, ResultTy,
+                                             PackTy, CCH, CostKind);
+    // A plain byte reversal of the shifted lanes is a bswap, no shuffle.
+    if (ShuffleVectorInst::isReverseMask(Mask, InBytes)) {
+      IntrinsicCostAttributes CostAttrs(Intrinsic::bswap, ResultTy, {ResultTy});
+      C += TTI.getIntrinsicInstrCost(CostAttrs, CostKind);
+    } else if (!ShuffleVectorInst::isIdentityMask(Mask, InBytes)) {
+      C += TTI.getShuffleCost(
+          is_contained(Info.LaneOfField, BitPackInfo::NoLane)
+              ? TargetTransformInfo::SK_PermuteTwoSrc
+              : TargetTransformInfo::SK_PermuteSingleSrc,
+          PackTy, FixedVectorType::get(Int8Ty, InBytes), CostKind, Mask,
+          /*Index=*/0, /*SubTp=*/nullptr, /*Args=*/{}, CxtI);
+    }
+    if (W2 != BitWidth && W2 != ZExtSrcWidth)
+      C += TTI.getCastInstrCost(Instruction::Trunc, ShiftTy, SrcTy, CCH,
+                                CostKind);
+    if (Info.needsShift())
+      C += TTI.getArithmeticInstrCost(Instruction::LShr, ShiftTy, CostKind,
+                                      /*Opd1Info=*/{}, ShiftAmtInfo,
+                                      /*Args=*/{}, CxtI, TLI);
+    if (C.isValid() && (!NewCost.isValid() || C < NewCost)) {
+      NewCost = C;
+      ShiftWidth = W2;
+    }
+  }
+  return NewCost;
+}
+
+InstructionCost getBoolBitmaskCost(const TargetTransformInfo &TTI,
+                                   bool NeedMask, Type *NarrowScalarTy,
+                                   Type *WideTy, unsigned VF,
+                                   ArrayRef<int> PermMask, const Value *Root,
+                                   const TTI::TargetCostKind CostKind) {
+  auto *NarrowVecTy = cast<VectorType>(getWidenedType(NarrowScalarTy, VF));
+  Type *CmpTy = CmpInst::makeCmpResultType(NarrowVecTy);
+  auto *MaskTy = IntegerType::get(WideTy->getContext(), VF);
+  // The result cast inherits the uses of the reduction root.
+  TTI::CastContextHint CCH = getBoolReduxResultCCH(Root);
+  const auto *CxtI = cast<Instruction>(Root);
+  InstructionCost Cost = 0;
+  if (NeedMask)
+    Cost += TTI.getArithmeticInstrCost(
+        Instruction::And, NarrowVecTy, CostKind,
+        {TTI::OK_AnyValue, TTI::OP_None},
+        {TTI::OK_NonUniformConstantValue, TTI::OP_None}, {}, CxtI);
+  if (!ShuffleVectorInst::isIdentityMask(PermMask, VF))
+    Cost += getShuffleCost(TTI, TTI::SK_PermuteSingleSrc, NarrowVecTy, CostKind,
+                           PermMask);
+  if (!NarrowScalarTy->isIntegerTy(1))
+    Cost += TTI.getCmpSelInstrCost(
+        Instruction::ICmp, NarrowVecTy, CmpTy, CmpInst::ICMP_NE, CostKind,
+        {TTI::OK_AnyValue, TTI::OP_None},
+        {TTI::OK_UniformConstantValue, TTI::OP_None});
+  // Only the final cast inherits the uses of the reduction root.
+  Cost += TTI.getCastInstrCost(
+      Instruction::BitCast, MaskTy, CmpTy,
+      MaskTy == WideTy ? CCH : TTI::CastContextHint::None, CostKind);
+  if (MaskTy != WideTy)
+    Cost +=
+        TTI.getCastInstrCost(Instruction::ZExt, WideTy, MaskTy, CCH, CostKind);
+  return Cost;
+}
+
+InstructionCost getNarrowedLeafOpsCost(
+    const TargetTransformInfo &TTI,
+    const SmallDenseMap<Value *, NarrowedLeafInfo> &NarrowedLeafShifts,
+    VectorType *NarrowVecTy, VectorType *WideVecTy, const Instruction *CxtI,
+    const TTI::TargetCostKind CostKind) {
+  InstructionCost Cost = 0;
+  if (any_of(NarrowedLeafShifts,
+             [](const auto &P) { return P.second.Shift != 0; }))
+    Cost += TTI.getArithmeticInstrCost(
+        Instruction::Shl, WideVecTy, CostKind, {TTI::OK_AnyValue, TTI::OP_None},
+        {TTI::OK_NonUniformConstantValue, TTI::OP_None}, {}, CxtI);
+  if (any_of(NarrowedLeafShifts,
+             [](const auto &P) { return !P.second.Mask.isAllOnes(); }))
+    Cost += TTI.getArithmeticInstrCost(
+        Instruction::And, NarrowVecTy, CostKind,
+        {TTI::OK_AnyValue, TTI::OP_None},
+        {TTI::OK_NonUniformConstantValue, TTI::OP_None}, {}, CxtI);
+  return Cost;
+}
 } // namespace llvm::slpvectorizer

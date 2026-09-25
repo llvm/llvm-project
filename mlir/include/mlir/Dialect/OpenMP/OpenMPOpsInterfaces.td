@@ -399,74 +399,28 @@ def DeclareTargetInterface : OpInterface<"DeclareTargetInterface"> {
            "bool":$automap, "bool":$implicit), [{}], [{
         $_op->setDiscardableAttr("omp.declare_target",
                   mlir::omp::DeclareTargetAttr::get(
-                      $_op->getContext(),
-                      mlir::omp::DeclareTargetDeviceTypeAttr::get(
-                          $_op->getContext(), deviceType),
-                      mlir::omp::DeclareTargetCaptureClauseAttr::get(
-                          $_op->getContext(), captureClause),
-                      automap, implicit));
+                      $_op->getContext(), deviceType, captureClause, automap,
+                      implicit));
       }]>,
-      InterfaceMethod<
+    InterfaceMethod<
       /*description=*/[{
-        Checks if the declare target attribute has been applied and exists on the
-        current operation. Returns true if it exists on it, otherwise returns
-        false.
+        Set the declare target attribute on the current operation.
       }],
-      /*retTy=*/"bool",
-      /*methodName=*/"isDeclareTarget",
-      (ins), [{}], [{
-        return $_op->hasDiscardableAttr("omp.declare_target");
+      /*retTy=*/"void",
+      /*methodName=*/"setDeclareTarget",
+      (ins "mlir::omp::DeclareTargetAttr":$attr), [{}], [{
+        $_op->setDiscardableAttr("omp.declare_target", attr);
       }]>,
-      InterfaceMethod<
+    InterfaceMethod<
       /*description=*/[{
-        Returns the DeclareTargetDeviceType segment of the DeclareTarget attribute if it
-        exists on the current operation. Otherwise it returns null.
+        Returns the declare target attribute if has been applied to the current
+        operation. Otherwise, it returns null.
       }],
-      /*retTy=*/"mlir::omp::DeclareTargetDeviceType",
-      /*methodName=*/"getDeclareTargetDeviceType",
+      /*retTy=*/"mlir::omp::DeclareTargetAttr",
+      /*methodName=*/"getDeclareTarget",
       (ins), [{}], [{
-        if (mlir::Attribute dTar = $_op->getDiscardableAttr("omp.declare_target"))
-          if (auto dAttr = llvm::dyn_cast_or_null<mlir::omp::DeclareTargetAttr>(dTar))
-            return dAttr.getDeviceType().getValue();
-        return {};
-      }]>,
-      InterfaceMethod<
-      /*description=*/[{
-        Returns the DeclareTargetCaptureClause segment of the DeclareTarget attribute if it
-        exists on the current operation. Otherwise it returns null.
-      }],
-      /*retTy=*/"mlir::omp::DeclareTargetCaptureClause",
-      /*methodName=*/"getDeclareTargetCaptureClause",
-      (ins), [{}], [{
-        if (mlir::Attribute dTar = $_op->getDiscardableAttr("omp.declare_target"))
-          if (auto dAttr = llvm::dyn_cast_or_null<mlir::omp::DeclareTargetAttr>(dTar))
-            return dAttr.getCaptureClause().getValue();
-        return {};
-      }]>,
-      InterfaceMethod<
-      /*description=*/[{
-        Return true if the DeclareTarget attribute has the AUTOMAP modifier.
-      }],
-      /*retTy=*/"bool",
-      /*methodName=*/"getDeclareTargetAutomap",
-      (ins), [{}], [{
-        if (mlir::Attribute dTar = $_op->getDiscardableAttr("omp.declare_target"))
-          if (auto dAttr = llvm::dyn_cast_or_null<mlir::omp::DeclareTargetAttr>(dTar))
-            return dAttr.getAutomap();
-         return false;
-      }]>,
-      InterfaceMethod<
-      /*description=*/[{
-        Return true if the DeclareTarget attribute has been implicitly added.
-      }],
-      /*retTy=*/"bool",
-      /*methodName=*/"isImplicitDeclareTarget",
-      (ins), [{}], [{
-        if (mlir::Attribute dTar =
-                $_op->getDiscardableAttr("omp.declare_target"))
-          if (auto dAttr = llvm::dyn_cast_or_null<mlir::omp::DeclareTargetAttr>(dTar))
-            return dAttr.getImplicit();
-         return false;
+        return llvm::cast_if_present<mlir::omp::DeclareTargetAttr>(
+            $_op->getDiscardableAttr("omp.declare_target"));
       }]>
   ];
 }

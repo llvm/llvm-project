@@ -29,8 +29,8 @@ template <class Container>
 struct adapt_operations {
   // using ValueType = ...;
   // using KeyType   = ...;
-  // static ValueType value_from_key(KeyType const& k);
-  // static KeyType key_from_value(ValueType const& value);
+  // static ValueType make_value_from_key(KeyType const& k);
+  // static KeyType const& key_from_value(ValueType const& value);
 
   // using InsertionResult = ...;
   // static Container::iterator get_iterator(InsertionResult const&);
@@ -56,11 +56,11 @@ void associative_container_benchmarks(std::string container) {
   auto make_value_types = [](std::vector<Key> const& keys) {
     std::vector<Value> kv;
     for (Key const& k : keys)
-      kv.push_back(adapt_operations<Container>::value_from_key(k));
+      kv.push_back(adapt_operations<Container>::make_value_from_key(k));
     return kv;
   };
 
-  auto get_key = [](Value const& v) { return adapt_operations<Container>::key_from_value(v); };
+  auto get_key = [](Value const& v) -> Key const& { return adapt_operations<Container>::key_from_value(v); };
 
   auto bench = [&](std::string operation, auto f) {
     benchmark::RegisterBenchmark(container + "::" + operation, f)->Arg(0)->Arg(32)->Arg(8192);
@@ -706,12 +706,26 @@ void associative_container_benchmarks(std::string container) {
   /////////////////////////
   auto query_bench = [=](auto func) {
     return [=](auto& st) TEST_ALIGN_BENCHMARK {
-      const std::size_t size = st.range(0);
-      std::vector<Value> in  = make_value_types(generate_unique_keys(size));
-      Container c(in.begin(), in.end());
+      const std::size_t size    = st.range(0);
+      std::vector<Key> keys     = generate_unique_keys(size);
+      std::vector<Value> values = make_value_types(keys);
+      Container c(values.begin(), values.end());
 
+      // Create a pool of key indices to draw in the benchmark below. Make the
+      // pool large enough to defeat a branch predictor even when benchmarking
+      // small sizes.
+      const std::size_t N_DRAWS = std::max<std::size_t>(4096, keys.size());
+      std::vector<std::size_t> draws;
+      draws.reserve(N_DRAWS);
+      for (std::size_t i = 0; i != N_DRAWS; ++i) {
+        draws.push_back(getRandomEngine()() % keys.size());
+      }
+
+      std::size_t i = 0;
       for (auto _ : st) {
-        auto result = func(c, get_key(in[getRandomEngine()() % in.size()]));
+        Key const& key = keys[draws[i]];
+        auto result    = func(c, key);
+        i              = (i == N_DRAWS ? 0 : i + 1);
         benchmark::DoNotOptimize(c);
         benchmark::DoNotOptimize(result);
         benchmark::ClobberMemory();

@@ -7,6 +7,9 @@ let Definition = "target_experimental", Path = "target.experimental" in {
   def UseDIL : Property<"use-DIL", "Boolean">,
     Global, DefaultTrue,
     Desc<"If true, use the DIL implementation for frame variable evaluation.">;
+  def UseDILForCreatingValues: Property<"use-DIL-for-creating-values", "Boolean">,
+    Global, DefaultTrue,
+    Desc<"If true, use the DIL implementation in API SBValue::CreateValueFromExpression.">;
 }
 
 let Definition = "target", Path = "target" in {
@@ -343,6 +346,10 @@ let Definition = "platform", Path = "platform" in {
     Global,
     DefaultStringValue<"">,
     Desc<"Root directory for cached modules.">;
+  def ShellExpandTimeout: Property<"shell-expand-timeout", "UInt64">,
+    Global,
+    DefaultUnsignedValue<180>,
+    Desc<"The time in seconds to wait for the shell expansion of launch arguments to complete. A value of 0 disables the timeout.">;
 }
 
 let Definition = "thread", Path = "target.process.thread" in {

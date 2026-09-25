@@ -924,8 +924,9 @@ redo_gep:
       uint64_t S = GTI.getSequentialElementStride(DL);
       for (;;) {
         if (const ConstantInt *CI = dyn_cast<ConstantInt>(Op)) {
-          // Constant-offset addressing.
-          Disp += CI->getSExtValue() * S;
+          // Constant-offset addressing. The index may be wider than 64 bits;
+          // it is truncated to the pointer width like any other GEP index.
+          Disp += CI->getValue().sextOrTrunc(64).getSExtValue() * S;
           break;
         }
         if (canFoldAddIntoGEP(U, Op)) {
@@ -3356,7 +3357,10 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
   // Issue CALLSEQ_START
   unsigned AdjStackDown = TII.getCallFrameSetupOpcode();
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(AdjStackDown))
-    .addImm(NumBytes).addImm(0).addImm(0);
+      .addImm(NumBytes)
+      .addImm(0)
+      .addImm(0)
+      .setOperandDead(4); // eflags
 
   // Walk the register/memloc assignments, inserting copies/loads.
   const X86RegisterInfo *RegInfo = Subtarget->getRegisterInfo();
@@ -3586,7 +3590,9 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
           : computeBytesPoppedByCalleeForSRet(Subtarget, CC, CLI.CB);
   unsigned AdjStackUp = TII.getCallFrameDestroyOpcode();
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(AdjStackUp))
-    .addImm(NumBytes).addImm(NumBytesForCalleeToPop);
+      .addImm(NumBytes)
+      .addImm(NumBytesForCalleeToPop)
+      .setOperandDead(3); // eflags
 
   // Now handle call return values.
   SmallVector<CCValAssign, 16> RVLocs;

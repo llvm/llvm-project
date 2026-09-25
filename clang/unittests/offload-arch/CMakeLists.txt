@@ -1,6 +1,7 @@
 set(OffloadArchTestSources
   OffloadArchTest.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/../../tools/offload-arch/AMDGPUArchByKFD.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/../../tools/offload-arch/LevelZeroArch.cpp
   )
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
@@ -16,4 +17,5 @@ add_distinct_clang_unittest(OffloadArchTests
     LLVMTestingSupport
   LLVM_COMPONENTS
     Support
+    TargetParser
   )

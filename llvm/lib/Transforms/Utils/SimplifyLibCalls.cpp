@@ -30,6 +30,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
@@ -44,6 +45,8 @@
 
 using namespace llvm;
 using namespace PatternMatch;
+
+#define DEBUG_TYPE "simplify-lib-calls"
 
 static cl::opt<bool>
     EnableUnsafeFPShrink("enable-double-float-shrink", cl::Hidden,
@@ -505,6 +508,10 @@ static Value* memChrToCharCompare(CallInst *CI, Value *NBytes,
     Value *Zero = ConstantInt::get(NBytes->getType(), 0);
     Value *And = B.CreateICmpNE(NBytes, Zero);
     Cmp = B.CreateLogicalAnd(And, Cmp);
+    // The and above is based on the byte count and the query, neither of which
+    // we know without value profiling, so mark the profile as unknown.
+    if (auto *SI = dyn_cast<SelectInst>(Cmp))
+      setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE);
   }
 
   Value *NullPtr = Constant::getNullValue(CI->getType());
@@ -1362,7 +1369,11 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
       // Slice off the character's high end bits.
       CharVal = B.CreateTrunc(CharVal, B.getInt8Ty());
       Value *Cmp = B.CreateICmpEQ(Val, CharVal, "memchr.char0cmp");
-      return B.CreateSelect(Cmp, SrcStr, NullPtr, "memchr.sel");
+      // The condition depends on the value of the string being equal to the
+      // query, neither of which we know without value profiling, so mark the
+      // profile unknown.
+      return B.CreateSelectWithUnknownProfile(Cmp, SrcStr, NullPtr, DEBUG_TYPE,
+                                              "memchr.sel");
     }
   }
 
@@ -1384,7 +1395,9 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
                                  "memchr.cmp");
     Value *SrcPlus = B.CreateInBoundsGEP(B.getInt8Ty(), SrcStr, B.getInt64(Pos),
                                          "memchr.ptr");
-    return B.CreateSelect(Cmp, NullPtr, SrcPlus);
+    // The condition is dependent upon the value of n, which we cannot infer
+    // without value profiling, so mark the profile unknown.
+    return B.CreateSelectWithUnknownProfile(Cmp, NullPtr, SrcPlus, DEBUG_TYPE);
   }
 
   if (Str.size() == 0)
@@ -1423,14 +1436,20 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
       Value *NGtPos = B.CreateICmp(ICmpInst::ICMP_UGT, Size, PosVal);
       Value *And = B.CreateAnd(CEqSPos, NGtPos);
       Value *SrcPlus = B.CreateInBoundsGEP(B.getInt8Ty(), SrcStr, PosVal);
-      Sel1 = B.CreateSelect(And, SrcPlus, NullPtr, "memchr.sel1");
+      // The condition depends on the value of the query and size, neither of
+      // which we know without value profiling, so mark the profile unknown.
+      Sel1 = B.CreateSelectWithUnknownProfile(And, SrcPlus, NullPtr, DEBUG_TYPE,
+                                              "memchr.sel1");
     }
 
     Value *Str0 = ConstantInt::get(Int8Ty, Str[0]);
     Value *CEqS0 = B.CreateICmpEQ(Str0, CharVal);
     Value *NNeZ = B.CreateICmpNE(Size, ConstantInt::get(SizeTy, 0));
     Value *And = B.CreateAnd(NNeZ, CEqS0);
-    return B.CreateSelect(And, SrcStr, Sel1, "memchr.sel2");
+    // The condition depends on the value of the query and size, neither of
+    // which we know without value profiling, so mark the profile unknown.
+    return B.CreateSelectWithUnknownProfile(And, SrcStr, Sel1, DEBUG_TYPE,
+                                            "memchr.sel2");
   }
 
   if (!LenC) {
@@ -1524,8 +1543,13 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
 
   // Finally merge both checks and cast to pointer type. The inttoptr
   // implicitly zexts the i1 to intptr type.
-  return B.CreateIntToPtr(B.CreateLogicalAnd(Bounds, Bits, "memchr"),
-                          CI->getType());
+  Value *Memchr = B.CreateLogicalAnd(Bounds, Bits, "memchr");
+  // We construct an and between the value of the memory and the bytes to search
+  // for. We cannot infer how often this would be true without value profiling
+  // for the query, so mark the profile unknown.
+  if (auto *SI = dyn_cast<SelectInst>(Memchr))
+    setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE);
+  return B.CreateIntToPtr(Memchr, CI->getType());
 }
 
 // Optimize a memcmp or, when StrNCmp is true, strncmp call CI with constant

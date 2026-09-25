@@ -60,9 +60,8 @@ define i32 @count_smaller(ptr addrspace(3) %tab, i32 %key) {
 ; FORCED-NEXT:    [[TMP1:%.*]] = insertelement <8 x i32> poison, i32 [[KEY]], i64 0
 ; FORCED-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; FORCED-NEXT:    [[TMP3:%.*]] = icmp slt <8 x i32> [[TMP0]], [[TMP2]]
-; FORCED-NEXT:    [[TMP4:%.*]] = bitcast <8 x i1> [[TMP3]] to i8
-; FORCED-NEXT:    [[TMP5:%.*]] = call i8 @llvm.ctpop.i8(i8 [[TMP4]])
-; FORCED-NEXT:    [[TMP6:%.*]] = zext i8 [[TMP5]] to i32
+; FORCED-NEXT:    [[TMP4:%.*]] = zext <8 x i1> [[TMP3]] to <8 x i32>
+; FORCED-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP4]])
 ; FORCED-NEXT:    ret i32 [[TMP6]]
 ;
 entry:

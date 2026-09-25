@@ -75,10 +75,6 @@ const MachineFunction &CombinerHelper::getMachineFunction() const {
   return Builder.getMF();
 }
 
-const DataLayout &CombinerHelper::getDataLayout() const {
-  return getMachineFunction().getDataLayout();
-}
-
 LLVMContext &CombinerHelper::getContext() const { return Builder.getContext(); }
 
 /// \returns The little endian in-memory byte position of byte \p I in a
@@ -228,13 +224,6 @@ void CombinerHelper::setRegBank(Register Reg,
     MRI.setRegBank(Reg, *RegBank);
 }
 
-bool CombinerHelper::tryCombineCopy(MachineInstr &MI) const {
-  if (matchCombineCopy(MI)) {
-    applyCombineCopy(MI);
-    return true;
-  }
-  return false;
-}
 bool CombinerHelper::matchCombineCopy(MachineInstr &MI) const {
   if (MI.getOpcode() != TargetOpcode::COPY)
     return false;
@@ -2297,25 +2286,6 @@ void CombinerHelper::applyCombineShlOfExtend(
   MI.eraseFromParent();
 }
 
-bool CombinerHelper::matchCombineMergeUnmerge(MachineInstr &MI,
-                                              Register &MatchInfo) const {
-  GMerge &Merge = cast<GMerge>(MI);
-  SmallVector<Register, 16> MergedValues;
-  for (unsigned I = 0; I < Merge.getNumSources(); ++I)
-    MergedValues.emplace_back(Merge.getSourceReg(I));
-
-  auto *Unmerge = getOpcodeDef<GUnmerge>(MergedValues[0], MRI);
-  if (!Unmerge || Unmerge->getNumDefs() != Merge.getNumSources())
-    return false;
-
-  for (unsigned I = 0; I < MergedValues.size(); ++I)
-    if (MergedValues[I] != Unmerge->getReg(I))
-      return false;
-
-  MatchInfo = Unmerge->getSourceReg();
-  return true;
-}
-
 static Register peekThroughBitcast(Register Reg,
                                    const MachineRegisterInfo &MRI) {
   while (mi_match(Reg, MRI, m_GBitcast(m_Reg(Reg))))
@@ -2623,79 +2593,6 @@ void CombinerHelper::applyCombineP2IToI2P(MachineInstr &MI,
   MI.eraseFromParent();
 }
 
-bool CombinerHelper::matchCombineAddP2IToPtrAdd(
-    MachineInstr &MI, std::pair<Register, bool> &PtrReg) const {
-  assert(MI.getOpcode() == TargetOpcode::G_ADD);
-  Register LHS = MI.getOperand(1).getReg();
-  Register RHS = MI.getOperand(2).getReg();
-  LLT IntTy = MRI.getType(LHS);
-
-  // G_PTR_ADD always has the pointer in the LHS, so we may need to commute the
-  // instruction.
-  PtrReg.second = false;
-  for (Register SrcReg : {LHS, RHS}) {
-    if (mi_match(SrcReg, MRI, m_GPtrToInt(m_Reg(PtrReg.first)))) {
-      // Don't handle cases where the integer is implicitly converted to the
-      // pointer width.
-      LLT PtrTy = MRI.getType(PtrReg.first);
-      if (PtrTy.getScalarSizeInBits() == IntTy.getScalarSizeInBits())
-        return true;
-    }
-
-    PtrReg.second = true;
-  }
-
-  return false;
-}
-
-void CombinerHelper::applyCombineAddP2IToPtrAdd(
-    MachineInstr &MI, std::pair<Register, bool> &PtrReg) const {
-  Register Dst = MI.getOperand(0).getReg();
-  Register LHS = MI.getOperand(1).getReg();
-  Register RHS = MI.getOperand(2).getReg();
-
-  const bool DoCommute = PtrReg.second;
-  if (DoCommute)
-    std::swap(LHS, RHS);
-  LHS = PtrReg.first;
-
-  LLT PtrTy = MRI.getType(LHS);
-
-  auto PtrAdd = Builder.buildPtrAdd(PtrTy, LHS, RHS);
-  Builder.buildPtrToInt(Dst, PtrAdd);
-  MI.eraseFromParent();
-}
-
-bool CombinerHelper::matchCombineConstPtrAddToI2P(MachineInstr &MI,
-                                                  APInt &NewCst) const {
-  auto &PtrAdd = cast<GPtrAdd>(MI);
-  Register LHS = PtrAdd.getBaseReg();
-  Register RHS = PtrAdd.getOffsetReg();
-  MachineRegisterInfo &MRI = Builder.getMF().getRegInfo();
-
-  if (auto RHSCst = getIConstantVRegVal(RHS, MRI)) {
-    APInt Cst;
-    if (mi_match(LHS, MRI, m_GIntToPtr(m_ICst(Cst)))) {
-      auto DstTy = MRI.getType(PtrAdd.getReg(0));
-      // G_INTTOPTR uses zero-extension
-      NewCst = Cst.zextOrTrunc(DstTy.getSizeInBits());
-      NewCst += RHSCst->sextOrTrunc(DstTy.getSizeInBits());
-      return true;
-    }
-  }
-
-  return false;
-}
-
-void CombinerHelper::applyCombineConstPtrAddToI2P(MachineInstr &MI,
-                                                  APInt &NewCst) const {
-  auto &PtrAdd = cast<GPtrAdd>(MI);
-  Register Dst = PtrAdd.getReg(0);
-
-  Builder.buildConstant(Dst, NewCst);
-  PtrAdd.eraseFromParent();
-}
-
 bool CombinerHelper::matchCombineAnyExtTrunc(MachineInstr &MI,
                                              Register &Reg) const {
   assert(MI.getOpcode() == TargetOpcode::G_ANYEXT && "Expected a G_ANYEXT");
@@ -2853,12 +2750,6 @@ bool CombinerHelper::matchUndefStore(MachineInstr &MI) const {
                       MRI);
 }
 
-bool CombinerHelper::matchUndefSelectCmp(MachineInstr &MI) const {
-  assert(MI.getOpcode() == TargetOpcode::G_SELECT);
-  return getOpcodeDef(TargetOpcode::G_IMPLICIT_DEF, MI.getOperand(1).getReg(),
-                      MRI);
-}
-
 bool CombinerHelper::matchInsertExtractVecEltOutOfBounds(
     MachineInstr &MI) const {
   assert((MI.getOpcode() == TargetOpcode::G_INSERT_VECTOR_ELT ||
@@ -2985,15 +2876,6 @@ bool CombinerHelper::matchEqualDefs(const MachineOperand &MOP1,
   return false;
 }
 
-bool CombinerHelper::matchConstantOp(const MachineOperand &MOP,
-                                     int64_t C) const {
-  if (!MOP.isReg())
-    return false;
-  auto MaybeCst = isConstantOrConstantSplatVector(MOP.getReg(), MRI);
-  return MaybeCst && MaybeCst->getBitWidth() <= 64 &&
-         MaybeCst->getSExtValue() == C;
-}
-
 bool CombinerHelper::matchConstantFPOp(const MachineOperand &MOP,
                                        double C) const {
   if (!MOP.isReg())
@@ -3108,26 +2990,6 @@ void CombinerHelper::replaceInstWithUndef(MachineInstr &MI) const {
   MI.eraseFromParent();
 }
 
-bool CombinerHelper::matchSimplifyAddToSub(
-    MachineInstr &MI, std::tuple<Register, Register> &MatchInfo) const {
-  Register LHS = MI.getOperand(1).getReg();
-  Register RHS = MI.getOperand(2).getReg();
-  Register &NewLHS = std::get<0>(MatchInfo);
-  Register &NewRHS = std::get<1>(MatchInfo);
-
-  // Helper lambda to check for opportunities for
-  // ((0-A) + B) -> B - A
-  // (A + (0-B)) -> A - B
-  auto CheckFold = [&](Register &MaybeSub, Register &MaybeNewLHS) {
-    if (!mi_match(MaybeSub, MRI, m_Neg(m_Reg(NewRHS))))
-      return false;
-    NewLHS = MaybeNewLHS;
-    return true;
-  };
-
-  return CheckFold(LHS, RHS) || CheckFold(RHS, LHS);
-}
-
 bool CombinerHelper::matchCombineInsertVecElts(
     MachineInstr &MI, SmallVectorImpl<Register> &MatchInfo) const {
   assert(MI.getOpcode() == TargetOpcode::G_INSERT_VECTOR_ELT &&
@@ -3190,14 +3052,6 @@ void CombinerHelper::applyCombineInsertVecElts(
       Reg = GetUndef();
   }
   Builder.buildBuildVector(MI.getOperand(0).getReg(), MatchInfo);
-  MI.eraseFromParent();
-}
-
-void CombinerHelper::applySimplifyAddToSub(
-    MachineInstr &MI, std::tuple<Register, Register> &MatchInfo) const {
-  Register SubLHS, SubRHS;
-  std::tie(SubLHS, SubRHS) = MatchInfo;
-  Builder.buildSub(MI.getOperand(0).getReg(), SubLHS, SubRHS);
   MI.eraseFromParent();
 }
 
@@ -7077,22 +6931,6 @@ void CombinerHelper::applyRepeatedFPDivisor(
                       Div->getOperand(0).getReg(), MI->getFlags());
     MI->eraseFromParent();
   }
-}
-
-bool CombinerHelper::matchAddSubSameReg(MachineInstr &MI, Register &Src) const {
-  assert(MI.getOpcode() == TargetOpcode::G_ADD && "Expected a G_ADD");
-  Register LHS = MI.getOperand(1).getReg();
-  Register RHS = MI.getOperand(2).getReg();
-
-  // Helper lambda to check for opportunities for
-  // A + (B - A) -> B
-  // (B - A) + A -> B
-  auto CheckFold = [&](Register MaybeSub, Register MaybeSameReg) {
-    Register Reg;
-    return mi_match(MaybeSub, MRI, m_GSub(m_Reg(Src), m_Reg(Reg))) &&
-           Reg == MaybeSameReg;
-  };
-  return CheckFold(LHS, RHS) || CheckFold(RHS, LHS);
 }
 
 bool CombinerHelper::matchBuildVectorIdentityFold(MachineInstr &MI,

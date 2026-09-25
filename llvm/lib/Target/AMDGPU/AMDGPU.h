@@ -34,8 +34,17 @@ public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
 };
-void initializeAMDGPUPostLegalizerCombinerPass(PassRegistry &);
-FunctionPass *createAMDGPUPostLegalizeCombiner(bool IsOptNone);
+
+void initializeAMDGPUPostLegalizerCombinerLegacyPass(PassRegistry &);
+FunctionPass *createAMDGPUPostLegalizeCombinerLegacy(bool IsOptNone);
+
+class AMDGPUPostLegalizerCombinerPass
+    : public RequiredPassInfoMixin<AMDGPUPostLegalizerCombinerPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
 FunctionPass *createAMDGPURegBankCombinerLegacy(bool IsOptLevelNone);
 void initializeAMDGPURegBankCombinerLegacyPass(PassRegistry &);
 
@@ -107,7 +116,6 @@ FunctionPass *createSIOptimizeVGPRLiveRangeLegacyPass();
 FunctionPass *createAMDGPUNextUseAnalysisLegacyPass();
 FunctionPass *createAMDGPUNextUseAnalysisPrinterLegacyPass();
 FunctionPass *createSIFixSGPRCopiesLegacyPass();
-FunctionPass *createLowerWWMCopiesPass();
 FunctionPass *createSIMemoryLegalizerPass();
 FunctionPass *createSIInsertWaitcntsPass();
 FunctionPass *createSIPreAllocateWWMRegsLegacyPass();
@@ -118,7 +126,6 @@ FunctionPass *createAMDGPUImageIntrinsicOptimizerPass(const TargetMachine *);
 ModulePass *createAMDGPURemoveIncompatibleFunctionsPass(const TargetMachine *);
 FunctionPass *createAMDGPUCodeGenPreparePass();
 FunctionPass *createAMDGPULateCodeGenPrepareLegacyPass();
-FunctionPass *createAMDGPUReserveWWMRegsPass();
 FunctionPass *createAMDGPURewriteOutArgumentsPass();
 ModulePass *
 createAMDGPULowerModuleLDSLegacyPass(const AMDGPUTargetMachine *TM = nullptr);
@@ -359,7 +366,6 @@ struct AMDGPUInsertDelayAluPass
                         MachineFunctionAnalysisManager &MFAM);
 };
 
-Pass *createAMDGPUStructurizeCFGPass();
 FunctionPass *createAMDGPUISelDag(TargetMachine &TM, CodeGenOptLevel OptLevel);
 ModulePass *createAMDGPUAlwaysInlinePass(bool GlobalOpt = true);
 

@@ -56,8 +56,12 @@ def ACCRecipeBufferization
     yielded fir.box<T> into it so the region yields a reference to a box.
 
     For acc.private, acc.firstprivate, and acc.reduction operations that use a
-    bufferized recipe, the pass allocates a host-side fir.ref<fir.box<T>> before
-    the data op and rewires the data op to use the new memory. Other users of
+    bufferized recipe, the pass allocates a fir.ref<fir.box<T>> and rewires the
+    data op to use the new memory. Device code reads the descriptor through
+    that memory, so it is placed on the same side of the host/device boundary
+    as the descriptor value it holds: next to the variable in general, or in
+    the enclosing compute construct region when the variable is already
+    produced by a data entry operation outside the construct. Other users of
     the original data operation result (outside the paired compute op) are
     updated to load through the reference.
   }];

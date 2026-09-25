@@ -274,32 +274,18 @@ GCC, and CMake.
 Updating the CI testing container images
 ----------------------------------------
 
-The libcxx linux premerge testing can run on one of three sets of runner
-groups. The three runner group names are ``llvm-premerge-libcxx-runners``,
-``llvm-premerge-libcxx-release-runners`` and ``llvm-premerge-libcxx-next-runners``.
-The runner set currently in use is controlled by the contents of
-https://github.com/llvm/llvm-project/blob/main/.github/workflows/libcxx-pr-conformance-tests.yaml.
-By default, it uses ``llvm-premerge-libcxx-runners``. To switch to one of the
-other runner sets, just replace all uses of ``llvm-premerge-libcxx-runners`` in
-the yaml file with the desired runner set.
+On pushing changes to the container image definition to ``main``, a new version
+of both the ``libcxx-linux-builder`` and the ``libcxx-android-builder`` images
+will be built and pushed to https://github.com/llvm/llvm-project/packages.
 
-The container image used by these three runner sets is controlled by the contents
-of the corresponding text files in ``libcxx/utils/ci/images``. The content of these
-files is read by the `Terraform configuration in llvm-zorg
-<https://github.com/llvm/llvm-zorg/blob/main/premerge/premerge_resources/main.tf>`__.
+You can then update the image used by the actual runners by changing the image
+inside of the libc++ workflow definitions:
 
-When updating the container image, you can either update just the runner binary (the part
-that connects to Github), or you can update everything (tools, etc.). To update the runner
-binary, bump the value of ``GITHUB_RUNNER_VERSION`` in ``libcxx/utils/ci/docker/docker-compose.yml``.
-To update all of the tools, bump ``BASE_IMAGE_VERSION`` to a newer version of the ``libcxx-linux-builder-base``
-image. You can see all versions of that image at https://github.com/llvm/llvm-project/pkgs/container/libcxx-linux-builder-base.
+* ``libcxx-pr-conformance-tests.yaml``
+* ``libcxx-pr-test-tools.yml``
 
-On push to ``main``, a new version of both the ``libcxx-linux-builder`` and the ``libcxx-android-builder``
-images will be built and pushed to https://github.com/llvm/llvm-project/packages.
-
-You can then update the image used by the actual runners by changing the image encoded in
-``libcxx/utils/ci/images`` and asking an LLVM premerge maintainer (a Google employee) to
-actually deploy the changes to the GKE cluster via Terraform.
+When creating a PR with changes modifying the container image, the CI results
+for that PR will be from the newly specified image.
 
 Monitoring premerge testing performance
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

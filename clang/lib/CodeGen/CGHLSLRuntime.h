@@ -186,6 +186,8 @@ public:
                                    resource_handlefrombinding)
   GENERATE_HLSL_INTRINSIC_FUNCTION(CreateHandleFromImplicitBinding,
                                    resource_handlefromimplicitbinding)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(CreateHandleFromHeap,
+                                   resource_handlefromheap)
   GENERATE_HLSL_INTRINSIC_FUNCTION(NonUniformResourceIndex,
                                    resource_nonuniformindex)
   GENERATE_HLSL_INTRINSIC_FUNCTION(BufferUpdateCounter, resource_updatecounter)
@@ -222,16 +224,18 @@ protected:
 
   CodeGenModule &CGM;
 
-  llvm::Value *emitSystemSemanticLoad(llvm::IRBuilder<> &B,
-                                      const FunctionDecl *FD, llvm::Type *Type,
-                                      const clang::DeclaratorDecl *Decl,
-                                      HLSLAppliedSemanticAttr *Semantic,
-                                      std::optional<unsigned> Index,
-                                      SemanticSignatures &Signature);
+  llvm::Value *emitSystemSemanticLoad(
+      llvm::IRBuilder<> &B, llvm::Type *Type, const clang::DeclaratorDecl *Decl,
+      HLSLAppliedSemanticAttr *Semantic,
+      llvm::dxbc::PSV::SemanticKind SemanticKind,
+      llvm::Triple::EnvironmentType Stage, std::optional<unsigned> Index,
+      SemanticSignatures &Signature);
 
   void emitSystemSemanticStore(llvm::IRBuilder<> &B, llvm::Value *Source,
                                const clang::DeclaratorDecl *Decl,
                                HLSLAppliedSemanticAttr *Semantic,
+                               llvm::dxbc::PSV::SemanticKind SemanticKind,
+                               llvm::Triple::EnvironmentType Stage,
                                std::optional<unsigned> Index,
                                SemanticSignatures &Signature);
 

@@ -349,6 +349,13 @@ static opt<std::string>
                      "calculating variable definedness in coverage statistics "
                      "(implies --show-variable-coverage)"),
                 value_desc("filename"), cat(DwarfDumpCategory));
+static opt<bool> MaybeUndefined(
+    "variable-coverage-maybe-undefined",
+    desc("Use with --show-variable-coverage and "
+         "--variable-coverage-bitcode-file to consider variables live if they "
+         "are defined on at least one path (default behaviour is to require a "
+         "variable to be defined on all paths to be counted)"),
+    cat(DwarfDumpCategory));
 static opt<bool> CombineInstances(
     "combine-inline-variable-instances",
     desc(
@@ -995,7 +1002,8 @@ int main(int argc, char **argv) {
       auto showCoverage = [&](ObjectFile &Obj, DWARFContext &DICtx,
                               const Twine &Filename, raw_ostream &OS) {
         return showVariableCoverage(Obj, DICtx, &BaselineObj, &BaselineCtx,
-                                    BitcodeFile, CombineInstances, OS);
+                                    BitcodeFile, MaybeUndefined,
+                                    CombineInstances, OS);
       };
       for (StringRef Object : Objects)
         Success &= handleFile(Object, showCoverage, OutputFile.os());
@@ -1006,7 +1014,7 @@ int main(int argc, char **argv) {
     auto showCoverage = [&](ObjectFile &Obj, DWARFContext &DICtx,
                             const Twine &Filename, raw_ostream &OS) {
       return showVariableCoverage(Obj, DICtx, nullptr, nullptr, BitcodeFile,
-                                  CombineInstances, OS);
+                                  MaybeUndefined, CombineInstances, OS);
     };
     for (StringRef Object : Objects)
       Success &= handleFile(Object, showCoverage, OutputFile.os());
