@@ -559,8 +559,7 @@ static bool isLoadStoreLegal(const GCNSubtarget &ST, const LegalityQuery &Query)
          !hasBufferRsrcWorkaround(Ty) && !loadStoreBitcastWorkaround(Ty);
 }
 
-// Whether the VGPR ("as memory") lowering handles a MemSize-bit access
-// producing a ValSize-bit value. Whole-dword only for now.
+// Whole-dword accesses only, for now.
 static bool isVGPRLoadStoreSizeSupported(unsigned MemSize, unsigned ValSize) {
   return MemSize == ValSize &&
          AMDGPUMI::VLoadIdxInst::tryGetOpcodeForBitWidth(MemSize) != -1;
@@ -1692,8 +1691,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     // Constant 32-bit is handled by addrspacecasting the 32-bit pointer to
     // 64-bits.
     //
-    // Always take the custom path, so an unsupported access is diagnosed
-    // cleanly rather than failing to legalize.
+    // VGPR accesses are always custom, to be lowered or diagnosed.
     //
     // TODO: Should generalize bitcast action into coerce, which will also cover
     // inserting addrspacecasts.
@@ -2460,9 +2458,6 @@ bool AMDGPULegalizerInfo::legalizeCustom(
 Register AMDGPULegalizerInfo::getSegmentAperture(unsigned AS,
                                                  MachineRegisterInfo &MRI,
                                                  MachineIRBuilder &B) const {
-  // See SITargetLowering::getSegmentAperture: an address space with no aperture
-  // of its own round-trips through the shared one, tagged with its synthetic
-  // aperture number.
   unsigned BaseAS = AS;
   unsigned SANum = AMDGPU::getSyntheticApertureNumber(AS);
   if (SANum != AMDGPU::SyntheticAperture::None)
@@ -3515,13 +3510,11 @@ static bool lowerLoadStoreVGPR(LegalizerHelper &Helper, MachineInstr &MI) {
 
   const LLT ValTy = MRI.getType(ValReg);
   const unsigned ValSize = ValTy.getSizeInBits();
-  // The selection patterns match the extended integer LLT, so build the index
-  // and the normalized value with integer types rather than plain scalars.
+  // The selection patterns match integer LLTs rather than plain scalars.
   const LLT I32 = LLT::integer(32);
 
-  // Alignment is checked here rather than in the size predicate: the index is
-  // the pointer >> 2, so an under-aligned access would silently reach the
-  // containing dword. That is a property of the address, not of the size.
+  // The index is the pointer >> 2, so an under-aligned access would silently
+  // reach the containing dword.
   if (!isVGPRLoadStoreSizeSupported(MMO.getMemoryType().getSizeInBits(),
                                     ValSize) ||
       MMO.getAlign() < Align(4)) {

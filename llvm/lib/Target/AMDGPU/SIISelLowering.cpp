@@ -9437,9 +9437,6 @@ SDValue SITargetLowering::LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const {
 
 SDValue SITargetLowering::getSegmentAperture(unsigned AS, const SDLoc &DL,
                                              SelectionDAG &DAG) const {
-  // An address space with no aperture of its own round-trips through generic
-  // using the shared aperture tagged with its aperture number. Dereferencing
-  // such a pointer is UB; the round-trip only has to preserve the value.
   unsigned BaseAS = AS;
   unsigned SANum = AMDGPU::getSyntheticApertureNumber(AS);
   if (SANum != AMDGPU::SyntheticAperture::None)
@@ -13596,9 +13593,7 @@ static bool addressMayBeAccessedAsPrivate(const MachineMemOperand *MMO,
 }
 
 // Lower a VGPR ("as memory") load or store to a REG_LOAD / REG_STORE node
-// carrying the dword index (pointer >> 2).
-//
-// TODO: sub-dword (8/16-bit) accesses are diagnosed as unsupported below.
+// carrying the dword index. TODO: sub-dword accesses.
 SDValue SITargetLowering::LowerLoadStoreVGPR(SDValue Op,
                                              SelectionDAG &DAG) const {
   SDLoc DL(Op);
@@ -13606,8 +13601,7 @@ SDValue SITargetLowering::LowerLoadStoreVGPR(SDValue Op,
   EVT MemVT = MemOp->getMemoryVT();
   unsigned BitWidth = MemVT.getSizeInBits();
 
-  // Both callers replace the node with this result, so the diagnostic is
-  // emitted exactly once.
+  // Each caller replaces the node, so this is diagnosed once.
   auto reportUnsupported = [&]() -> SDValue {
     const Function &F = DAG.getMachineFunction().getFunction();
     DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
@@ -13626,9 +13620,7 @@ SDValue SITargetLowering::LowerLoadStoreVGPR(SDValue Op,
   // reach the containing dword rather than the bytes asked for.
   if (MemOp->getAlign() < Align(4))
     return reportUnsupported();
-  if (auto *Load = dyn_cast<LoadSDNode>(MemOp)) {
-    if (Load->getExtensionType() != ISD::NON_EXTLOAD)
-      return reportUnsupported();
+  if (isa<LoadSDNode>(MemOp)) {
     if (AMDGPUMI::VLoadIdxInst::tryGetOpcodeForBitWidth(BitWidth) == -1)
       return reportUnsupported();
   } else {
@@ -13665,9 +13657,17 @@ SDValue SITargetLowering::LowerLoadStoreVGPR(SDValue Op,
   SDValue NewLoad = DAG.getMemIntrinsicNode(
       AMDGPUISD::REG_LOAD, DL, DAG.getVTList(RegVT, MVT::Other), {Chain, Index},
       MemVT, LoadOp->getMemOperand());
-  if (RegVT == MemVT)
+  SDValue Value = NewLoad;
+  if (RegVT != MemVT)
+    Value = DAG.getNode(ISD::BITCAST, DL, MemVT, Value);
+  // The combiner folds an extension of a whole-dword load into the load.
+  EVT VT = LoadOp->getValueType(0);
+  if (VT != MemVT)
+    Value = DAG.getNode(ISD::getExtForLoadExtType(VT.isFloatingPoint(),
+                                                  LoadOp->getExtensionType()),
+                        DL, VT, Value);
+  if (Value == NewLoad)
     return NewLoad;
-  SDValue Value = DAG.getNode(ISD::BITCAST, DL, MemVT, NewLoad);
   return DAG.getMergeValues({Value, NewLoad.getValue(1)}, DL);
 }
 
@@ -20832,13 +20832,12 @@ bool SITargetLowering::isSDNodeSourceOfDivergence(const SDNode *N,
   case ISD::LOAD: {
     const LoadSDNode *L = cast<LoadSDNode>(N);
     unsigned AS = L->getAddressSpace();
-    // A VGPR "as memory" load reads this lane's own registers, so it is
-    // divergent however uniform the index is.
+    // A flat load may access private memory, and a VGPR load reads each lane's
+    // own registers.
     return AS == AMDGPUAS::PRIVATE_ADDRESS || AS == AMDGPUAS::FLAT_ADDRESS ||
            AS == AMDGPUAS::VGPR;
   }
-  // As above, after the pre-ISel combine. Without this a uniform index would
-  // make the loaded value look uniform and consumers would v_readfirstlane it.
+  // As above, after the pre-ISel combine.
   case AMDGPUISD::REG_LOAD:
     return true;
   case ISD::CALLSEQ_END:

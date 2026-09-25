@@ -3090,8 +3090,6 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
   }
   case AMDGPU::G_AMDGPU_REG_LOAD:
   case AMDGPU::G_AMDGPU_REG_STORE: {
-    // The dword index (operand 1) must be uniform; a divergent index needs a
-    // waterfall loop.
     applyDefaultMapping(OpdMapper);
     executeInWaterfallLoop(B, MI, {1});
     return;

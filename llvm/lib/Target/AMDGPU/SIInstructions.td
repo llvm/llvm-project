@@ -1064,9 +1064,7 @@ def SI_INDIRECT_DST_V32 : SI_INDIRECT_DST<VReg_1024>;
 // VGPR "as memory" indexed load/store pseudos (address space 13)
 //===----------------------------------------------------------------------===//
 
-// Populates the VLdStIdxOpcodeInfo searchable table, mapping each pseudo to its
-// bit width, load/store direction and indexing mechanism (see
-// AMDGPUMachineInstrs.h).
+// An entry in the VLdStIdxOpcodeInfo searchable table.
 class VLdStIdxOpcodeInfo<int size, bit isStore, bit isGPRIdx> {
   Instruction Opcode = !cast<Instruction>(NAME);
   bits<12> BitWidth = size;
@@ -1078,13 +1076,9 @@ foreach rc = [VGPR_32, VReg_64, VReg_96, VReg_128, VReg_160, VReg_192,
               VReg_224, VReg_256, VReg_288, VReg_320, VReg_352, VReg_384,
               VReg_512, VReg_1024] in {
   // $offset and the index are in dwords. As with V_INDIRECT_REG_*_MOVREL and
-  // V_INDIRECT_REG_*_GPR_IDX, the movrel form reads the index from M0, which
-  // the selection patterns write, and the VGPR indexing mode form takes it in
-  // an SGPR and clobbers M0 through the s_set_gpr_idx_on it expands to.
-  //
-  // Unlike those pseudos, the storage indexed here is the whole register file
-  // rather than a tuple an operand can name, so these are memory accesses
-  // carrying an MMO.
+  // _GPR_IDX, the movrel form reads the index from M0 and the GPR_IDX form
+  // takes it in an SGPR and clobbers M0. The storage is the whole register
+  // file, which no operand can name, so these are memory accesses with an MMO.
   def V_LOAD_IDX_B#rc.Size : VPseudoInstSI <
     (outs rc:$data),
     (ins i32imm:$offset)>,
@@ -1125,14 +1119,10 @@ foreach rc = [VGPR_32, VReg_64, VReg_96, VReg_128, VReg_160, VReg_192,
   }
 }
 
-// Copies of v_movrel[sd]_b32 for the moves the pseudos above expand into.
-//
-// The verifier requires a movrel to implicitly use the tuple it indexes. Here
-// the storage is the whole register file, which no operand can name, so these
-// carry their own opcodes; AMDGPUMCInstLower maps them back for encoding.
-// AMDGPULowerVGPREncoding reaches $vdst and $src0 by name, so these must be in
-// the named operand table. Without it no S_SET_VGPR_MSB is emitted and a base
-// register at or above 256 is silently encoded as its low eight bits.
+// v_movrel[sd]_b32 for the moves the pseudos above expand into. The verifier
+// requires a movrel to use the tuple it indexes, and no operand can name the
+// register file, so these have their own opcodes, mapped back by
+// AMDGPUMCInstLower. AMDGPULowerVGPREncoding needs their named operand table.
 let VOP1 = 1, Uses = [M0, EXEC], hasSideEffects = 0,
     UseNamedOperandTable = 1, Size = V_MOV_B32_e32.Size in {
   def V_MOVRELS_B32_as_mem
@@ -1141,9 +1131,8 @@ let VOP1 = 1, Uses = [M0, EXEC], hasSideEffects = 0,
       : VPseudoInstSI<(outs), (ins VGPR_32:$vdst, VSrc_b32:$src0)>;
 }
 
-// An (add idx, imm) shape folds a constant dword offset into $offset. In the
-// movrel form the index is an M0 input, so the copy into M0 is emitted by
-// selection itself; a divergent one is waterfalled by SIFixSGPRCopies.
+// An (add idx, imm) index folds the constant into $offset. The movrel patterns
+// take the index as an M0 input, so selection itself writes M0.
 multiclass VRegIdxLoadStorePat<ValueType vt> {
   defvar load_inst = !cast<Instruction>("V_LOAD_IDX_B"#vt.Size);
   defvar store_inst = !cast<Instruction>("V_STORE_IDX_B"#vt.Size);

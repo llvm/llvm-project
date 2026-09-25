@@ -2,11 +2,8 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgpu12.00-- < %s | FileCheck %s --check-prefixes=GFX12
 ; RUN: llc -global-isel=1 -mtriple=amdgpu12.00-- < %s | FileCheck %s --check-prefixes=GFX12
 
-; AMDGPUAssignIdxToM0 is required lowering rather than an optimization: the
-; v_movrel that AMDGPULowerVGPREncoding emits reads the dword index from M0, so
-; without the copy to M0 it reads a stale value. The pass must therefore run
-; even for optnone functions - clang marks every function optnone at -O0 - so
-; the index below has to end up in M0 and not in a plain SGPR.
+; clang marks every function optnone at -O0; accesses there must still be
+; lowered, with the index in M0.
 
 define i32 @load_i32_optnone(ptr addrspace(13) inreg %p) noinline optnone {
 ; GFX12-LABEL: load_i32_optnone:
