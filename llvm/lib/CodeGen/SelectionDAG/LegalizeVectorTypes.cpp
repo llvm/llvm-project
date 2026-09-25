@@ -5234,13 +5234,23 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
     // elements. If the wide vector op is eventually going to be expanded to
     // scalar libcalls, then unroll into scalar ops now to avoid unnecessary
     // libcalls on the undef elements.
+    //
+    // The element count to widen to is determined by the result being widened.
+    // For multi-result nodes such as FFREXP this need not be result 0, whose
+    // type may differ (and may already be legal). Operation legality, however,
+    // is always keyed on the (widened) result 0 type.
     EVT VT = N->getValueType(0);
-    EVT WideVecVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
+    ElementCount WideEC =
+        TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(ResNo))
+            .getVectorElementCount();
+    EVT WideVecVT = VT.changeVectorElementCount(*DAG.getContext(), WideEC);
     if (!TLI.isOperationLegalOrCustomOrPromote(N->getOpcode(), WideVecVT) &&
         TLI.isOperationExpandOrLibCall(N->getOpcode(), VT.getScalarType())) {
-      Res = DAG.UnrollVectorOp(N, WideVecVT.getVectorNumElements());
+      SDValue Unrolled =
+          DAG.UnrollVectorOp(N, WideVecVT.getVectorNumElements());
+      Res = Unrolled.getValue(ResNo);
       if (N->getNumValues() > 1)
-        ReplaceOtherWidenResults(N, Res.getNode(), ResNo);
+        ReplaceOtherWidenResults(N, Unrolled.getNode(), ResNo);
       return true;
     }
     return false;
