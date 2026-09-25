@@ -23,48 +23,70 @@ KnownFPClass::KnownFPClass(const APFloat &C)
   setSignBit(C.isNegative());
 }
 
-/// Return true if it's possible to assume IEEE treatment of input denormals in
-/// \p F for \p Val.
-static bool inputDenormalIsIEEE(DenormalMode Mode) {
-  return Mode.Input == DenormalMode::IEEE;
-}
-
-static bool inputDenormalIsIEEEOrPosZero(DenormalMode Mode) {
-  return Mode.Input == DenormalMode::IEEE ||
-         Mode.Input == DenormalMode::PositiveZero;
-}
-
-bool KnownFPClass::isKnownNeverLogicalZero(DenormalMode Mode) const {
-  return isKnownNeverZero() &&
-         (isKnownNeverSubnormal() || inputDenormalIsIEEE(Mode));
-}
-
-bool KnownFPClass::isKnownNeverLogicalNegZero(DenormalMode Mode) const {
-  return isKnownNeverNegZero() &&
-         (isKnownNeverNegSubnormal() || inputDenormalIsIEEEOrPosZero(Mode));
-}
-
-bool KnownFPClass::isKnownNeverLogicalPosZero(DenormalMode Mode) const {
-  if (!isKnownNeverPosZero())
-    return false;
-
-  // If we know there are no denormals, nothing can be flushed to zero.
-  if (isKnownNeverSubnormal())
-    return true;
-
+KnownFPClass KnownFPClass::applyInputDenormalMode(const KnownFPClass &KnownSrc,
+                                                  DenormalMode Mode) {
+  KnownFPClass Known = KnownSrc;
   switch (Mode.Input) {
   case DenormalMode::IEEE:
-    return true;
+    return Known;
   case DenormalMode::PreserveSign:
-    // Negative subnormal won't flush to +0
-    return isKnownNeverPosSubnormal();
+    if (KnownSrc.getKnownFPClasses() & fcPosSubnormal)
+      Known.setKnownFPClasses(Known.getKnownFPClasses() | fcPosZero);
+    if (KnownSrc.getKnownFPClasses() & fcNegSubnormal)
+      Known.setKnownFPClasses(Known.getKnownFPClasses() | fcNegZero);
+    return Known;
   case DenormalMode::PositiveZero:
+    if (KnownSrc.getKnownFPClasses() & fcSubnormal)
+      Known.setKnownFPClasses(Known.getKnownFPClasses() | fcPosZero);
+    return Known;
   default:
-    // Both positive and negative subnormal could flush to +0
-    return false;
+    if (KnownSrc.getKnownFPClasses() & fcSubnormal)
+      Known.setKnownFPClasses(Known.getKnownFPClasses() | fcPosZero);
+    if (KnownSrc.getKnownFPClasses() & fcNegSubnormal)
+      Known.setKnownFPClasses(Known.getKnownFPClasses() | fcNegZero);
+    return Known;
   }
 
   llvm_unreachable("covered switch over denormal mode");
+}
+
+KnownFPClass KnownFPClass::applyOutputDenormalMode(const KnownFPClass &KnownSrc,
+                                                   DenormalMode Mode) {
+  KnownFPClass Known = KnownSrc;
+  switch (Mode.Output) {
+  case DenormalMode::IEEE:
+    return Known;
+  case DenormalMode::PreserveSign:
+    if (KnownSrc.getKnownFPClasses() & fcPosSubnormal)
+      Known.setKnownFPClasses(Known.getKnownFPClasses() | fcPosZero);
+    if (KnownSrc.getKnownFPClasses() & fcNegSubnormal)
+      Known.setKnownFPClasses(Known.getKnownFPClasses() | fcNegZero);
+    return Known;
+  case DenormalMode::PositiveZero:
+    if (KnownSrc.getKnownFPClasses() & fcSubnormal)
+      Known.setKnownFPClasses(Known.getKnownFPClasses() | fcPosZero);
+    return Known;
+  default:
+    if (KnownSrc.getKnownFPClasses() & fcSubnormal)
+      Known.setKnownFPClasses(Known.getKnownFPClasses() | fcPosZero);
+    if (KnownSrc.getKnownFPClasses() & fcNegSubnormal)
+      Known.setKnownFPClasses(Known.getKnownFPClasses() | fcNegZero);
+    return Known;
+  }
+
+  llvm_unreachable("covered switch over denormal mode");
+}
+
+bool KnownFPClass::isKnownNeverLogicalZero(DenormalMode Mode) const {
+  return applyInputDenormalMode(*this, Mode).isKnownNeverZero();
+}
+
+bool KnownFPClass::isKnownNeverLogicalNegZero(DenormalMode Mode) const {
+  return applyInputDenormalMode(*this, Mode).isKnownNeverNegZero();
+}
+
+bool KnownFPClass::isKnownNeverLogicalPosZero(DenormalMode Mode) const {
+  return applyInputDenormalMode(*this, Mode).isKnownNeverPosZero();
 }
 
 void KnownFPClass::propagateDenormal(const KnownFPClass &Src,
@@ -363,9 +385,9 @@ KnownBits KnownFPClass::toKnownBits(const fltSemantics &FltSemantics) const {
   return Known;
 }
 
-// Handle known sign bit and nan cases for fadd.
-static KnownFPClass fadd_impl(const KnownFPClass &KnownLHS,
-                              const KnownFPClass &KnownRHS, DenormalMode Mode) {
+// Handle known sign bit and nan cases for fadd, fsub, and fma.
+static KnownFPClass fadd_fsub_fma_common(const KnownFPClass &KnownLHS,
+                                         const KnownFPClass &KnownRHS) {
   KnownFPClass Known;
 
   // Adding positive and negative infinity produces NaN, but only if both
@@ -398,17 +420,13 @@ static KnownFPClass fadd_impl(const KnownFPClass &KnownLHS,
   return Known;
 }
 
-KnownFPClass KnownFPClass::fadd(const KnownFPClass &KnownLHS,
-                                const KnownFPClass &KnownRHS,
-                                DenormalMode Mode) {
-  KnownFPClass Known = fadd_impl(KnownLHS, KnownRHS, Mode);
+static KnownFPClass fadd_fsub_common(const KnownFPClass &KnownLHS,
+                                     const KnownFPClass &KnownRHS) {
+  KnownFPClass Known = fadd_fsub_fma_common(KnownLHS, KnownRHS);
 
-  // (fadd x, 0.0) is guaranteed to return +0.0, not -0.0.
-  if ((KnownLHS.isKnownNeverLogicalNegZero(Mode) ||
-       KnownRHS.isKnownNeverLogicalNegZero(Mode)) &&
-      // Make sure output negative denormal can't flush to -0
-      (Mode.Output == DenormalMode::IEEE ||
-       Mode.Output == DenormalMode::PositiveZero))
+  // fadd(x, +0.0) is guaranteed to return +0.0, not -0.0.
+  // TODO: fadd(+0.0, -0.0) returns -0.0 if rounding towards negative infinity.
+  if (KnownLHS.isKnownNeverNegZero() || KnownRHS.isKnownNeverNegZero())
     Known.knownNot(fcNegZero);
 
   Known.propagateNonSNaN(KnownLHS, KnownRHS);
@@ -416,26 +434,57 @@ KnownFPClass KnownFPClass::fadd(const KnownFPClass &KnownLHS,
   return Known;
 }
 
-KnownFPClass KnownFPClass::fadd_self(const KnownFPClass &KnownSrc,
-                                     DenormalMode Mode) {
-  KnownFPClass Known = fadd(KnownSrc, KnownSrc, Mode);
+KnownFPClass KnownFPClass::fadd(const KnownFPClass &KnownLHS_,
+                                const KnownFPClass &KnownRHS_,
+                                DenormalMode Mode) {
+  KnownFPClass KnownLHS = applyInputDenormalMode(KnownLHS_, Mode);
+  KnownFPClass KnownRHS = applyInputDenormalMode(KnownRHS_, Mode);
 
-  // Doubling 0 will give the same 0.
-  if (KnownSrc.isKnownNeverLogicalPosZero(Mode) &&
-      (Mode.Output == DenormalMode::IEEE ||
-       (Mode.Output == DenormalMode::PreserveSign &&
-        KnownSrc.isKnownNeverPosSubnormal()) ||
-       (Mode.Output == DenormalMode::PositiveZero &&
-        KnownSrc.isKnownNeverSubnormal())))
-    Known.knownNot(fcPosZero);
+  KnownFPClass Known = fadd_fsub_common(KnownLHS, KnownRHS);
 
-  return Known;
+  return applyOutputDenormalMode(Known, Mode);
 }
 
-KnownFPClass KnownFPClass::fsub(const KnownFPClass &KnownLHS,
-                                const KnownFPClass &KnownRHS,
+KnownFPClass KnownFPClass::fadd_self(const KnownFPClass &KnownSrc_,
+                                     DenormalMode Mode) {
+  KnownFPClass KnownSrc = applyInputDenormalMode(KnownSrc_, Mode);
+
+  KnownFPClass Known;
+
+  Known.propagateNonNaN(KnownSrc);
+
+  if (KnownSrc.isKnownNever(fcPosNormal | fcPosInf))
+    Known.knownNot(fcPosInf);
+  if (KnownSrc.isKnownNever(fcNegNormal | fcNegInf))
+    Known.knownNot(fcNegInf);
+
+  if (KnownSrc.isKnownNever(fcPosSubnormal | fcPosNormal))
+    Known.knownNot(fcPosNormal);
+  if (KnownSrc.isKnownNever(fcNegSubnormal | fcNegNormal))
+    Known.knownNot(fcNegNormal);
+
+  if (KnownSrc.isKnownNever(fcPosSubnormal))
+    Known.knownNot(fcPosSubnormal);
+  if (KnownSrc.isKnownNever(fcNegSubnormal))
+    Known.knownNot(fcNegSubnormal);
+
+  if (KnownSrc.isKnownNever(fcPosZero))
+    Known.knownNot(fcPosZero);
+  if (KnownSrc.isKnownNever(fcNegZero))
+    Known.knownNot(fcNegZero);
+
+  return applyOutputDenormalMode(Known, Mode);
+}
+
+KnownFPClass KnownFPClass::fsub(const KnownFPClass &KnownLHS_,
+                                const KnownFPClass &KnownRHS_,
                                 DenormalMode Mode) {
-  return fadd(KnownLHS, fneg(KnownRHS), Mode);
+  KnownFPClass KnownLHS = applyInputDenormalMode(KnownLHS_, Mode);
+  KnownFPClass KnownRHS = applyInputDenormalMode(KnownRHS_, Mode);
+
+  KnownFPClass Known = fadd_fsub_common(KnownLHS, fneg(KnownRHS));
+
+  return applyOutputDenormalMode(Known, Mode);
 }
 
 KnownFPClass KnownFPClass::fmul(const KnownFPClass &KnownLHS,
@@ -610,7 +659,7 @@ KnownFPClass KnownFPClass::fma(const KnownFPClass &KnownLHS,
   //
   // If the multiply is a -0 due to rounding, the final -0 + 0 will be -0,
   // unlike for a separate fadd.
-  KnownFPClass Known = fadd_impl(Mul, KnownAddend, Mode);
+  KnownFPClass Known = fadd_fsub_fma_common(Mul, KnownAddend);
 
   // propagateNonSNaN for 3 arguments.
   if (KnownLHS.isKnownNever(fcSNan) && KnownRHS.isKnownNever(fcSNan) &&
@@ -624,7 +673,7 @@ KnownFPClass KnownFPClass::fma_square(const KnownFPClass &KnownSquared,
                                       const KnownFPClass &KnownAddend,
                                       DenormalMode Mode) {
   KnownFPClass Squared = square(KnownSquared, Mode);
-  KnownFPClass Known = fadd_impl(Squared, KnownAddend, Mode);
+  KnownFPClass Known = fadd_fsub_fma_common(Squared, KnownAddend);
 
   // Since we know the squared input must be positive, the add of opposite sign
   // infinities nan hazard only applies for negative inf.
@@ -835,9 +884,11 @@ KnownFPClass KnownFPClass::atan(const KnownFPClass &KnownSrc) {
   return Known;
 }
 
-KnownFPClass KnownFPClass::atan2(const KnownFPClass &KnownY,
-                                 const KnownFPClass &KnownX,
+KnownFPClass KnownFPClass::atan2(const KnownFPClass &KnownY_,
+                                 const KnownFPClass &KnownX_,
                                  DenormalMode Mode) {
+  KnownFPClass KnownY = applyInputDenormalMode(KnownY_, Mode);
+  KnownFPClass KnownX = applyInputDenormalMode(KnownX_, Mode);
   KnownFPClass Known;
 
   // Even though these deductions are correct, we are ignoring the following
@@ -850,14 +901,8 @@ KnownFPClass KnownFPClass::atan2(const KnownFPClass &KnownY,
 
   Known.propagateNonNaN(KnownY, KnownX);
 
-  // Negative subnormals could be treated like positive zero.
-  const bool XCannotHavePositiveInput = KnownX.isKnownNever(fcPositive) &&
-                                        KnownX.isKnownNeverLogicalPosZero(Mode);
-  const bool YCannotHavePositiveInput = KnownY.isKnownNever(fcPositive) &&
-                                        KnownY.isKnownNeverLogicalPosZero(Mode);
-
   // If x <= -0.0, then |atan2(y, x)| >= pi/2
-  if (XCannotHavePositiveInput)
+  if (KnownX.isKnownNever(fcPositive))
     Known.knownNot(fcZero | fcSubnormal);
 
   // If y >= +0.0, then atan2(y, x) >= +0.0
@@ -865,16 +910,10 @@ KnownFPClass KnownFPClass::atan2(const KnownFPClass &KnownY,
     Known.knownNot(fcNegative);
 
   // If y <= -0.0, then atan2(y, x) <= -0.0
-  // We do this deduction last in case we were able to rule out a negative
-  // subnormal result earlier.
-  if (YCannotHavePositiveInput) {
-    Known.knownNot(fcPosSubnormal | fcPosNormal | fcPosInf);
-    // Negative subnormal results can flush to +0.0.
-    if (Known.isKnownNever(fcNegSubnormal) || !Mode.outputsMayBePositiveZero())
-      Known.knownNot(fcPosZero);
-  }
+  if (KnownY.isKnownNever(fcPositive))
+    Known.knownNot(fcPositive);
 
-  return Known;
+  return applyOutputDenormalMode(Known, Mode);
 }
 
 KnownFPClass KnownFPClass::fpext(const KnownFPClass &KnownSrc,

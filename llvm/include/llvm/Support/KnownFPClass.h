@@ -160,6 +160,16 @@ struct KnownFPClass {
     return isKnownNever(fcPositive) && isKnownNeverLogicalNegZero(Mode);
   }
 
+  /// Return the known classes of \p Src after passing through an input that
+  /// may flush subnormals to zero according to \p Mode.
+  LLVM_ABI static KnownFPClass applyInputDenormalMode(const KnownFPClass &Src,
+                                                      DenormalMode Mode);
+
+  /// Return the known classes of \p Src after producing an output that may
+  /// flush subnormals to zero according to \p Mode.
+  LLVM_ABI static KnownFPClass applyOutputDenormalMode(const KnownFPClass &Src,
+                                                       DenormalMode Mode);
+
   KnownFPClass intersectWith(const KnownFPClass &RHS) const {
     return KnownFPClass(getKnownFPClasses() | RHS.getKnownFPClasses(),
                         getSignBit() == RHS.getSignBit() ? getSignBit()
