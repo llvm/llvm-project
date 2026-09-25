@@ -2921,6 +2921,13 @@ static bool isStructurableWithUnstructuredInternals(
 /// so leaving the parent Unstructured is conservative but correct.
 static void detectStructuredWithUnstructuredInternals(
     Fortran::lower::pft::FunctionLikeUnit &unit) {
+  // Such a loop is lowered with its body in an scf.execute_region: its
+  // branching needs more than the one block fir.do_loop's region admits. With
+  // the wrap disabled there is nowhere to put that CFG, so leave the loop
+  // Unstructured and lower its branches as they are.
+  if (!wrapUnstructuredConstructsInExecuteRegion)
+    return;
+
   std::function<void(Fortran::lower::pft::EvaluationList &)> visit =
       [&](Fortran::lower::pft::EvaluationList &list) {
         for (Fortran::lower::pft::Evaluation &e : list) {
