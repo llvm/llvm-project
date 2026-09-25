@@ -90,6 +90,13 @@ public:
   /// Emit the module-level metadata that the platform cares about.
   virtual void emitModuleMetadata(MCStreamer &Streamer, Module &M) const {}
 
+  /// Get a section with the given name and kind, using format-appropriate
+  /// defaults for section flags.
+  /// Returns nullptr if not supported by this object file format.
+  virtual MCSection *getNamedSection(StringRef Name, SectionKind Kind) const {
+    return nullptr;
+  }
+
   /// Emit Call Graph Profile metadata.
   void emitCGProfileMetadata(MCStreamer &Streamer, Module &M) const;
 
