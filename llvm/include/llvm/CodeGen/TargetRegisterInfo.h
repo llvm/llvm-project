@@ -1150,19 +1150,22 @@ public:
 // also satisfies the above requirement, assuming Reg:0 == Reg.
 //
 class SuperRegClassIterator {
-  const unsigned RCMaskWords;
+  const TargetRegisterClass *RC;
   unsigned SubReg = 0;
   const uint16_t *Idx;
+  /// Offset of the mask of the entry Idx points at. Walked in step with Idx,
+  /// so that advancing costs one load rather than re-locating the offsets.
+  const uint32_t *MaskOff;
   const uint32_t *Mask;
 
 public:
   /// Create a SuperRegClassIterator that visits all the super-register classes
   /// of RC. When IncludeSelf is set, also include the (0, sub-classes) entry.
   SuperRegClassIterator(const TargetRegisterClass *RC,
-                        const TargetRegisterInfo *TRI,
-                        bool IncludeSelf = false)
-    : RCMaskWords((TRI->getNumRegClasses() + 31) / 32),
-      Idx(RC->getSuperRegIndices()), Mask(RC->getSubClassMask()) {
+                        const TargetRegisterInfo *TRI, bool IncludeSelf = false)
+      : RC(RC), Idx(RC->getSuperRegIndices()),
+        MaskOff(RC->getSuperRegClassMaskOffsets()),
+        Mask(RC->getSubClassMask()) {
     if (!IncludeSelf)
       ++*this;
   }
@@ -1181,10 +1184,12 @@ public:
   /// Advance iterator to the next entry.
   void operator++() {
     assert(isValid() && "Cannot move iterator past end.");
-    Mask += RCMaskWords;
     SubReg = *Idx++;
-    if (!SubReg)
+    if (!SubReg) {
       Idx = nullptr;
+      return;
+    }
+    Mask = RC->getSuperRegClassMaskAt(*MaskOff++);
   }
 };
 
