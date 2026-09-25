@@ -7350,6 +7350,13 @@ static void __kmp_do_serial_initialize(void) {
   /* we have finished the serial initialization */
   __kmp_init_counter++;
 
+  // After the library is initialized, possibly after a hard pause,
+  // the pause status must be reset to not paused.
+  if (__kmp_pause_status == kmp_hard_paused ||
+      __kmp_pause_status == kmp_stop_tool_paused) {
+    __kmp_pause_status = kmp_not_paused;
+  }
+
   __kmp_init_serial = TRUE;
 
   if (__kmp_version) {
