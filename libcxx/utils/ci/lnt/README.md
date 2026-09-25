@@ -67,6 +67,17 @@ single source of truth for all workflows that run benchmarks (PR benchmarking, r
 historical benchmarks, etc). Each entry contains variables used by the various workflows
 and the LNT machine name that the results will be reported under.
 
+The `test-config` key selects the Lit testing configuration to benchmark. This is used to e.g.
+select which Standard Library is being measured. The `lit-params` key provides additional lit
+parameters to pass when running the benchmarks.
+
+The `build` key allows providing the CMake cache to use when building the library before running
+the benchmarks. If `build` is not present, building libc++ is skipped for that configuration.
+
+The `coverage` key establishes how far back and at which frequency performance should be measured
+for that configuration. A machine without a `coverage` entry can be defined, but it won't result
+in historical data.
+
 ## Running benchmarks locally
 
 On GitHub, the `libcxx-benchmark-commit.yml` workflow is used to run benchmarks and report
@@ -74,16 +85,21 @@ results to a LNT instance. This workflow wraps the `libcxx/utils/ci/lnt/run-benc
 which can be used to benchmark locally:
 
 ```
-run-benchmarks --test-suite-commit <SHA1> --machine <MACHINE>    \
-               --compiler clang++ --benchmark-commit <SHA2>      \
-               --libcxx-installation <PATH>                      \
-               --output result.json                              \
-               -- --param std=c++26 --param optimization=speed
+run-benchmarks --test-suite-commit <SHA1> --machine <MACHINE>                 \
+               --compiler clang++ --benchmark-commit <SHA2>                   \
+               --test-config installed-libc++.cfg.in                          \
+               --output result.json                                           \
+               -- --param std=c++26 --param optimization=speed                \
+                  --param libcxx_installation=<PATH>
 ```
 
 This will run the benchmarks (using the test suite at the specified `SHA1`) against the installation
 of libc++ at `PATH` (which is assumed to be libc++ as-of `SHA2`), and produce a LNT-ready JSON report.
 The results can then be submitted to a LNT instance if desired.
+
+Note that `run-benchmarks` does not build anything: the library being benchmarked must have been built
+or installed beforehand. How to pick up that library is determined by `--test-config` and any Lit parameters
+passed.
 
 ## Setting up a local LNT instance
 

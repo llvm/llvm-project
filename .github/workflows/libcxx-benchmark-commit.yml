@@ -107,8 +107,8 @@ jobs:
     runs-on: ${{ matrix.runner }}
     env:
       COMPILER: ${{ matrix.cxx }}
-      # Where we install the library. This lives inside the workspace so that actions/checkout
-      # cleans it up between runs on self-hosted runners.
+      # Where the library is installed when we build it. This lives inside the workspace
+      # so that actions/checkout cleans it up between runs on self-hosted runners.
       INSTALL_DIR: ${{ github.workspace }}/install
     steps:
       - name: Checkout the LLVM monorepo
@@ -131,9 +131,13 @@ jobs:
 
       - name: Install dependencies via Homebrew
         if: runner.os == 'macOS'
+        env:
+          # Extra packages needed by the test configuration
+          EXTRA_BREW_PACKAGES: ${{ join(matrix.brew-packages, ' ') }}
         run: |
+          read -ra extra_packages <<< "${EXTRA_BREW_PACKAGES}"
           brew update
-          brew install ninja cmake python@3.14
+          brew install ninja cmake python@3.14 "${extra_packages[@]}"
           echo "$(brew --prefix python@3.14)/bin" >> "$GITHUB_PATH"
 
       - name: Diagnose tools in use
@@ -149,11 +153,14 @@ jobs:
           source .venv/bin/activate
           pip install -r libcxx/utils/ci/lnt/requirements.txt
 
-      # Build the library.
+      # Build the library. This is only done when the machine configuration provides a 'build' key,
+      # otherwise we assume that the configuration does not require building anything (e.g. a system
+      # standard library).
       #
       # A build failure is tolerated on purpose, since the library doesn't build at every historical commit.
       # We still submit an empty run for such commits.
       - name: Build libc++ at ${{ inputs.commit }}
+        if: ${{ matrix.build != '' }}
         continue-on-error: true
         uses: ./.github/workflows/libcxx/build-at-commit
         with:
@@ -161,15 +168,17 @@ jobs:
           commit: ${{ inputs.commit }}
           install-dir: ${{ env.INSTALL_DIR }}
           compiler: ${{ matrix.cxx }}
-          cmake-cache: ${{ matrix.cmake-cache }}
+          cmake-cache: ${{ matrix.build.cmake-cache }}
 
       - name: Run the benchmarks
         env:
           BENCHMARK_SUITE_VERSION: ${{ matrix.benchmark-suite-version }}
+          BUILT_LIBCXX: ${{ matrix.build != '' }}
           COMMIT: ${{ inputs.commit }}
           FILTER: ${{ inputs.filter }}
           LIT_PARAMS: ${{ join(matrix.lit-params, ' ') }}
           LNT_MACHINE: ${{ matrix.lnt-machine }}
+          TEST_CONFIG: ${{ matrix.test-config }}
         run: |
           source .venv/bin/activate
           filter_arg=()
@@ -183,17 +192,22 @@ jobs:
             lit_params+=(--param "${param}")
           done
 
-          # If the library build failed, still create an install directory so we
-          # run the benchmarks. The benchmarks will fail, and we'll submit an empty
-          # LNT report.
-          mkdir -p "${INSTALL_DIR}"
+          # When the library is built in this workflow, point the testing configuration at the installation.
+          # Everything else needed by the configuration comes from machines.json.
+          if [ "${BUILT_LIBCXX}" = "true" ]; then
+            # If the library build failed, still create an install directory so we
+            # run the benchmarks. The benchmarks will fail, and we'll submit an empty
+            # LNT report.
+            mkdir -p "${INSTALL_DIR}"
+            lit_params+=(--param "libcxx_installation=${INSTALL_DIR}")
+          fi
 
           libcxx/utils/ci/lnt/run-benchmarks                            \
             --test-suite-commit "${BENCHMARK_SUITE_VERSION}"            \
             --machine "${LNT_MACHINE}"                                  \
             --compiler "${COMPILER}"                                    \
             --benchmark-commit "${COMMIT}"                              \
-            --libcxx-installation "${INSTALL_DIR}"                      \
+            --test-config "${TEST_CONFIG}"                              \
             "${filter_arg[@]}"                                          \
             --output "${COMMIT}.json"                                   \
             -- "${lit_params[@]}"

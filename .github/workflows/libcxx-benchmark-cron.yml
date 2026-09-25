@@ -58,7 +58,10 @@ jobs:
         with:
           script: |
             const config = JSON.parse(require('fs').readFileSync('libcxx/utils/ci/lnt/machines.json', 'utf8'));
-            core.setOutput('matrix', JSON.stringify(config.map(cfg => ({
+            // Only machines with a `coverage` key are tracked by this workflow. Other machines may exist but we
+            // don't generate historical data for them.
+            const tracked = config.filter(cfg => cfg.coverage);
+            core.setOutput('matrix', JSON.stringify(tracked.map(cfg => ({
               machine: cfg['lnt-machine'],
               ...cfg.coverage,
             }))));
