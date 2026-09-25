@@ -197,9 +197,9 @@ getScalarizationOverhead(const TargetTransformInfo &TTI, bool ReVec,
     // of CreateInsertElement.
     unsigned ScalarTyNumElements = VecTy->getNumElements();
     InstructionCost Cost = 0;
-    for (unsigned I : seq(DemandedElts.getBitWidth())) {
-      if (!DemandedElts[I])
-        continue;
+    for (unsigned I :
+         make_filter_range(seq(DemandedElts.getBitWidth()),
+                           [&](unsigned I) { return DemandedElts[I]; })) {
       if (Insert)
         Cost += getShuffleCost(TTI, TTI::SK_InsertSubvector, Ty, CostKind, {},
                                I * ScalarTyNumElements, VecTy);
