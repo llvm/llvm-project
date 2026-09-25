@@ -2515,6 +2515,7 @@ def int_amdgcn_cvt_pk_u8_f32 :
 
 // Returns a bitfield(i32 or i64) containing the result of its i1 argument
 // in all active lanes, and zero in all inactive lanes.
+let TargetFeatures = "wavefrontsize32|$custom" in
 def int_amdgcn_ballot :
   Intrinsic<[llvm_anyint_ty], [llvm_i1_ty],
             [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree, IntrNoCreateUndefOrPoison]>;

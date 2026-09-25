@@ -32,6 +32,7 @@ namespace llvm {
 
 class APInt;
 class BitVector;
+class CallBase;
 class MachineFunction;
 class ScheduleDAGMutation;
 class CallLowering;
@@ -94,9 +95,9 @@ public:
 
   virtual bool isXRaySupported() const { return false; }
 
-  /// \returns true if the target intrinsic \p IntrinsicID is supported by this
-  /// subtarget.
-  bool isIntrinsicSupported(unsigned IntrinsicID) const;
+  /// \returns true if the target intrinsic \p IntrinsicID called by \p CB is
+  /// supported by this subtarget.
+  bool isIntrinsicSupported(unsigned IntrinsicID, const CallBase &CB) const;
 
   // Interfaces to the major aspects of target machine information:
   //
@@ -398,9 +399,24 @@ public:
   /// Target features where all mismatches prevent inlining.
   virtual const FeatureBitset &getInlineMustMatchFeatures() const = 0;
 
+protected:
+  /// Evaluates the \c $custom term of the target feature expression of
+  /// \p IntrinsicID for the call \p CB. Only called when the rest of the
+  /// expression does not already decide whether the intrinsic is supported.
+  virtual bool isCustomIntrinsicSupported(unsigned IntrinsicID,
+                                          const CallBase &CB) const;
+
 private:
-  /// Lazy, incrementally-populated cache for isIntrinsicSupported().
-  mutable DenseMap<unsigned, bool> IntrinsicSupportCache;
+  enum class IntrinsicSupport : uint8_t {
+    Supported,
+    Unsupported,
+    NeedsCustomCheck
+  };
+
+  IntrinsicSupport getIntrinsicSupport(unsigned IntrinsicID) const;
+
+  /// Lazy, incrementally-populated cache for getIntrinsicSupport().
+  mutable DenseMap<unsigned, IntrinsicSupport> IntrinsicSupportCache;
 };
 } // end namespace llvm
 

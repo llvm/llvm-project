@@ -3661,10 +3661,10 @@ bool IRTranslatorImpl::translateCall(const User &U,
 
   assert(ID != Intrinsic::not_intrinsic && "unknown intrinsic");
 
-  if (!MF->getSubtarget().isIntrinsicSupported(ID)) {
-    const Function &Fn = MF->getFunction();
-    Fn.getContext().diagnose(
-        DiagnosticInfoUnsupportedTargetIntrinsic(Fn, ID, CI.getDebugLoc()));
+  if (!MF->getSubtarget().isIntrinsicSupported(ID, CI)) {
+    const Function &F = MF->getFunction();
+    F.getContext().diagnose(DiagnosticInfoUnsupportedTargetIntrinsic(
+        F, ID, CI.getFunctionType(), CI.getDebugLoc()));
   }
 
   if (translateKnownIntrinsic(CI, ID, MIRBuilder))
@@ -3680,10 +3680,10 @@ bool IRTranslatorImpl::translateCall(const User &U,
 bool IRTranslatorImpl::translateIntrinsic(
     const CallBase &CB, Intrinsic::ID ID, MachineIRBuilder &MIRBuilder,
     ArrayRef<TargetLowering::IntrinsicInfo> TgtMemIntrinsicInfos) {
-  if (!MF->getSubtarget().isIntrinsicSupported(ID)) {
+  if (!MF->getSubtarget().isIntrinsicSupported(ID, CB)) {
     const Function &F = MF->getFunction();
-    F.getContext().diagnose(
-        DiagnosticInfoUnsupportedTargetIntrinsic(F, ID, CB.getDebugLoc()));
+    F.getContext().diagnose(DiagnosticInfoUnsupportedTargetIntrinsic(
+        F, ID, CB.getFunctionType(), CB.getDebugLoc()));
   }
 
   ArrayRef<Register> ResultRegs;
