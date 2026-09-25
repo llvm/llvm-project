@@ -12524,6 +12524,19 @@ static unsigned getRVPHorizontalMulOpcode(unsigned IntNo) {
   }
 }
 
+static unsigned getRVPWideningMulAccPairOpcode(unsigned IntNo) {
+  switch (IntNo) {
+  default:
+    llvm_unreachable("Unexpected RISC-V packed pwmacc intrinsic");
+  case Intrinsic::riscv_pwmacc_i32x2:
+    return RISCVISD::PWMACC_H;
+  case Intrinsic::riscv_pwmaccu_u32x2:
+    return RISCVISD::PWMACCU_H;
+  case Intrinsic::riscv_pwmaccsu_i32x2:
+    return RISCVISD::PWMACCSU_H;
+  }
+}
+
 static SDValue lowerRV32HorizontalMul64(unsigned IntNo, SDValue Rs1,
                                         SDValue Rs2, const SDLoc &DL,
                                         SelectionDAG &DAG) {
@@ -13385,6 +13398,51 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     }
 
     return DAG.getNode(Opc, DL, VT, Rs1, Rs2);
+  }
+  case Intrinsic::riscv_pwmacc_i32x2:
+  case Intrinsic::riscv_pwmaccu_u32x2:
+  case Intrinsic::riscv_pwmaccsu_i32x2: {
+    EVT VT = Op.getValueType();
+    SDValue Acc = Op.getOperand(1);
+    SDValue Rs1 = Op.getOperand(2);
+    SDValue Rs2 = Op.getOperand(3);
+    MVT XLenVT = Subtarget.getXLenVT();
+
+    if (Subtarget.is64Bit()) {
+      // Per the spec decomposition table: zip16p duplicates each halfword
+      // into both positions of its 32-bit lane (the su form uses the
+      // pwcvtu.wh spelling, zip16p with x0), then pmacc.w.h01 or
+      // pmaccsu.w.h00 multiplies the lane-local halfwords into rd. The
+      // upper halfwords of the operands are not read. RV32 selects the
+      // pwmacc.h family on the register pair instead.
+      Rs1 = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v4i16, Rs1,
+                        DAG.getUNDEF(MVT::v2i16));
+      Rs2 = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v4i16, Rs2,
+                        DAG.getUNDEF(MVT::v2i16));
+      if (IntNo == Intrinsic::riscv_pwmaccsu_i32x2) {
+        SDValue Zero = DAG.getNode(ISD::SPLAT_VECTOR, DL, MVT::v4i16,
+                                   DAG.getConstant(0, DL, XLenVT));
+        Rs1 = DAG.getNode(RISCVISD::ZIP16P, DL, MVT::v4i16, Rs1, Zero);
+        Rs2 = DAG.getNode(RISCVISD::ZIP16P, DL, MVT::v4i16, Rs2, Zero);
+        return DAG.getNode(RISCVISD::PMACCSU_HALVES_00, DL, VT, Acc, Rs1, Rs2);
+      }
+      Rs1 = DAG.getNode(RISCVISD::ZIP16P, DL, MVT::v4i16, Rs1, Rs1);
+      Rs2 = DAG.getNode(RISCVISD::ZIP16P, DL, MVT::v4i16, Rs2, Rs2);
+      unsigned Opc = IntNo == Intrinsic::riscv_pwmaccu_u32x2
+                         ? RISCVISD::PMACCU_HALVES_01
+                         : RISCVISD::PMACC_HALVES_01;
+      return DAG.getNode(Opc, DL, VT, Acc, Rs1, Rs2);
+    }
+
+    // RV32 uses pwmacc.h/pwmaccsu.h on the 64-bit accumulator register
+    // pair, exposed as a two-result node over the accumulator words.
+    SDValue RdLo = DAG.getExtractVectorElt(DL, XLenVT, Acc, 0);
+    SDValue RdHi = DAG.getExtractVectorElt(DL, XLenVT, Acc, 1);
+    SDVTList VTs = DAG.getVTList(XLenVT, XLenVT);
+    SDValue Res = DAG.getNode(getRVPWideningMulAccPairOpcode(IntNo), DL, VTs,
+                              {RdLo, RdHi, Rs1, Rs2});
+    return DAG.getNode(ISD::BUILD_VECTOR, DL, VT, Res.getValue(0),
+                       Res.getValue(1));
   }
   case Intrinsic::riscv_pmerge: {
     EVT VT = Op.getValueType();

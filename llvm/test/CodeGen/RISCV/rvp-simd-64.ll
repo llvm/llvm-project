@@ -8004,6 +8004,55 @@ define <2 x i32> @test_pmaccsu_h11_v2i32(<2 x i32> %rd, <4 x i16> %a, <4 x i16> 
   ret <2 x i32> %r
 }
 
+; Packed Widening Multiply Accumulate
+define <2 x i32> @test_pwmacc_i32x2(<2 x i32> %rd, <2 x i16> %rs1, <2 x i16> %rs2) {
+; RV32-LABEL: test_pwmacc_i32x2:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pwmacc.h a0, a2, a3
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pwmacc_i32x2:
+; RV64:       # %bb.0:
+; RV64-NEXT:    zip16p a2, a2, a2
+; RV64-NEXT:    zip16p a1, a1, a1
+; RV64-NEXT:    pmacc.w.h01 a0, a1, a2
+; RV64-NEXT:    ret
+  %res = call <2 x i32> @llvm.riscv.pwmacc.i32x2.v2i32.v2i16(<2 x i32> %rd, <2 x i16> %rs1, <2 x i16> %rs2)
+  ret <2 x i32> %res
+}
+
+define <2 x i32> @test_pwmaccu_u32x2(<2 x i32> %rd, <2 x i16> %rs1, <2 x i16> %rs2) {
+; RV32-LABEL: test_pwmaccu_u32x2:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pwmaccu.h a0, a2, a3
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pwmaccu_u32x2:
+; RV64:       # %bb.0:
+; RV64-NEXT:    zip16p a2, a2, a2
+; RV64-NEXT:    zip16p a1, a1, a1
+; RV64-NEXT:    pmaccu.w.h01 a0, a1, a2
+; RV64-NEXT:    ret
+  %res = call <2 x i32> @llvm.riscv.pwmaccu.u32x2.v2i32.v2i16(<2 x i32> %rd, <2 x i16> %rs1, <2 x i16> %rs2)
+  ret <2 x i32> %res
+}
+
+define <2 x i32> @test_pwmaccsu_i32x2(<2 x i32> %rd, <2 x i16> %rs1, <2 x i16> %rs2) {
+; RV32-LABEL: test_pwmaccsu_i32x2:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pwmaccsu.h a0, a2, a3
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pwmaccsu_i32x2:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pwcvtu.wh a2, a2
+; RV64-NEXT:    pwcvtu.wh a1, a1
+; RV64-NEXT:    pmaccsu.w.h00 a0, a1, a2
+; RV64-NEXT:    ret
+  %res = call <2 x i32> @llvm.riscv.pwmaccsu.i32x2.v2i32.v2i16(<2 x i32> %rd, <2 x i16> %rs1, <2 x i16> %rs2)
+  ret <2 x i32> %res
+}
+
 define i64 @test_macc_w00_i64(i64 %rd, <2 x i32> %a, <2 x i32> %b) {
 ; RV32-LABEL: test_macc_w00_i64:
 ; RV32:       # %bb.0:

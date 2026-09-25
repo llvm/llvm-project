@@ -1648,6 +1648,27 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     break;
   }
 
+  // Packed Widening Multiply Accumulate
+  case RISCV::BI__builtin_riscv_pwmacc_i32x2:
+  case RISCV::BI__builtin_riscv_pwmaccu_u32x2:
+  case RISCV::BI__builtin_riscv_pwmaccsu_i32x2: {
+    switch (BuiltinID) {
+    default:
+      llvm_unreachable("unexpected builtin ID");
+    case RISCV::BI__builtin_riscv_pwmacc_i32x2:
+      ID = Intrinsic::riscv_pwmacc_i32x2;
+      break;
+    case RISCV::BI__builtin_riscv_pwmaccu_u32x2:
+      ID = Intrinsic::riscv_pwmaccu_u32x2;
+      break;
+    case RISCV::BI__builtin_riscv_pwmaccsu_i32x2:
+      ID = Intrinsic::riscv_pwmaccsu_i32x2;
+      break;
+    }
+    IntrinsicTypes = {ResultType, Ops[1]->getType()};
+    break;
+  }
+
   // Packed Reduction Sum
   case RISCV::BI__builtin_riscv_predsum_i8x4_i32:
   case RISCV::BI__builtin_riscv_predsum_i16x2_i32:

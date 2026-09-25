@@ -2228,6 +2228,19 @@ class RVPBinaryIntrinsic
   def int_riscv_pmaccsu_00 : RVPPackedMulPartsAccIntrinsic;
   def int_riscv_pmaccsu_11 : RVPPackedMulPartsAccIntrinsic;
 
+  // Packed Widening Multiply Accumulate.
+  // The pwmacc*/pwmaccsu* instructions are available on RV32.
+  // On RV64, these operations are synthesized using the instruction
+  // sequences specified by the P extension.
+  class RVPWideningMulAccIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                              [LLVMMatchType<0>, llvm_anyvector_ty,
+                               LLVMMatchType<1>],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_pwmacc_i32x2   : RVPWideningMulAccIntrinsic;
+  def int_riscv_pwmaccu_u32x2  : RVPWideningMulAccIntrinsic;
+  def int_riscv_pwmaccsu_i32x2 : RVPWideningMulAccIntrinsic;
+
   class RVPScalarMulPartsAccIntrinsic
       : DefaultAttrsIntrinsic<[llvm_anyint_ty],
                               [LLVMMatchType<0>, llvm_anyvector_ty,

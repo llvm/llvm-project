@@ -1021,6 +1021,11 @@ __packed_binary_builtin_mixed(pm4add_i16x4, int64_t, int16x4_t, int16x4_t, __bui
 __packed_binary_builtin_mixed(pm4addu_u16x4, uint64_t, uint16x4_t, uint16x4_t, __builtin_riscv_pm4addu_u16x4)
 __packed_binary_builtin_mixed(pm4addsu_i16x4, int64_t, int16x4_t, uint16x4_t, __builtin_riscv_pm4addsu_i16x4)
 
+/* Packed Widening Multiply Accumulate */
+__packed_ternary_builtin_mixed(pwmacc_i32x2, int32x2_t, int16x2_t, int16x2_t, __builtin_riscv_pwmacc_i32x2)
+__packed_ternary_builtin_mixed(pwmaccu_u32x2, uint32x2_t, uint16x2_t, uint16x2_t, __builtin_riscv_pwmaccu_u32x2)
+__packed_ternary_builtin_mixed(pwmaccsu_i32x2, int32x2_t, int16x2_t, uint16x2_t, __builtin_riscv_pwmaccsu_i32x2)
+
 /* Packed Absolute Difference Sum (32-bit) */
 __packed_abdsum(pabdsumu_u8x4_u32, uint32_t, uint8x4_t, __builtin_riscv_pabdsumu_u8x4_u32)
 __packed_ternary_builtin_cast(pabdsumau_u8x4_u32, uint32_t, uint8x4_t, __builtin_riscv_pabdsumau_u8x4_u32)
