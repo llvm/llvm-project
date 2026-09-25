@@ -109,6 +109,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Statepoint.h"
+#include "llvm/IR/TBAAMetadata.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
@@ -8273,15 +8274,6 @@ MDNode *TBAAVerifier::getFieldNodeFromTBAABaseNode(const Instruction *I,
   return cast<MDNode>(BaseNode->getOperand(LastIdx));
 }
 
-static bool isNewFormatTBAATypeNode(llvm::MDNode *Type) {
-  if (!Type || Type->getNumOperands() < 3)
-    return false;
-
-  // In the new format type nodes shall have a reference to the parent type as
-  // its first operand.
-  return isa_and_nonnull<MDNode>(Type->getOperand(0));
-}
-
 bool TBAAVerifier::visitTBAAMetadata(const Instruction *I, const MDNode *MD) {
   CheckTBAA(MD->getNumOperands() > 0, "TBAA metadata cannot have 0 operands", I,
             MD);
@@ -8302,7 +8294,7 @@ bool TBAAVerifier::visitTBAAMetadata(const Instruction *I, const MDNode *MD) {
   auto *BaseNode = dyn_cast_or_null<MDNode>(MD->getOperand(0));
   auto *AccessType = dyn_cast_or_null<MDNode>(MD->getOperand(1));
 
-  bool IsNewFormat = isNewFormatTBAATypeNode(AccessType);
+  bool IsNewFormat = isNewFormatTypeNode(AccessType);
 
   if (IsNewFormat) {
     CheckTBAA(MD->getNumOperands() == 4 || MD->getNumOperands() == 5,

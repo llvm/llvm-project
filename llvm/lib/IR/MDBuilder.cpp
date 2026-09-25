@@ -16,6 +16,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/ProfDataUtils.h"
+#include "llvm/IR/TBAAMetadata.h"
 using namespace llvm;
 
 MDString *MDBuilder::createString(StringRef Str) {
@@ -314,30 +315,21 @@ MDNode *MDBuilder::createTBAAAccessTag(MDNode *BaseType, MDNode *AccessType,
 }
 
 MDNode *MDBuilder::createMutableTBAAAccessTag(MDNode *Tag) {
-  MDNode *BaseType = cast<MDNode>(Tag->getOperand(0));
-  MDNode *AccessType = cast<MDNode>(Tag->getOperand(1));
-  Metadata *OffsetNode = Tag->getOperand(2);
-  uint64_t Offset = mdconst::extract<ConstantInt>(OffsetNode)->getZExtValue();
+  MutableTBAAStructTagNode TagNode(Tag);
+  MDNode *BaseType = TagNode.getBaseType();
+  MDNode *AccessType = TagNode.getAccessType();
+  uint64_t Offset = TagNode.getOffset();
+  bool NewFormat = isNewFormatTypeNode(AccessType);
 
-  bool NewFormat = isa<MDNode>(AccessType->getOperand(0));
-
-  // See if the tag is already mutable.
-  unsigned ImmutabilityFlagOp = NewFormat ? 4 : 3;
-  if (Tag->getNumOperands() <= ImmutabilityFlagOp)
-    return Tag;
-
-  // If Tag is already mutable then return it.
-  Metadata *ImmutabilityFlagNode = Tag->getOperand(ImmutabilityFlagOp);
-  if (!mdconst::extract<ConstantInt>(ImmutabilityFlagNode)->getValue())
+  // If the tag has no immutability flag, or is already mutable, return it.
+  if (!TagNode.isTypeImmutable())
     return Tag;
 
   // Otherwise, create another node.
   if (!NewFormat)
     return createTBAAStructTagNode(BaseType, AccessType, Offset);
 
-  Metadata *SizeNode = Tag->getOperand(3);
-  uint64_t Size = mdconst::extract<ConstantInt>(SizeNode)->getZExtValue();
-  return createTBAAAccessTag(BaseType, AccessType, Offset, Size);
+  return createTBAAAccessTag(BaseType, AccessType, Offset, TagNode.getSize());
 }
 
 MDNode *MDBuilder::createIrrLoopHeaderWeight(uint64_t Weight) {
