@@ -423,8 +423,8 @@ bool AMDGPUPostLegalizerCombinerImpl::shouldFoldCarryIntoAdd(
   // When both operands are a carry only the right hand one is folded, so that
   // the two carries never have to be live at the same time.
   Register Carry;
-  return !(mi_match(Src, MRI, m_GZExt(m_Reg(Carry))) &&
-           MRI.hasOneNonDBGUse(Src) && isCarryOut(Carry));
+  return !mi_match(Src, MRI, m_GZExt(m_Reg(Carry))) ||
+         !MRI.hasOneNonDBGUse(Src) || !isCarryOut(Carry);
 }
 
 // Pass boilerplate

@@ -224,3 +224,33 @@ define amdgpu_ps void @v_uaddo_carry_multi_use(i32 %a, i32 %b, ptr addrspace(1) 
   store i32 %r2, ptr addrspace(1) %out
   ret void
 }
+
+define amdgpu_ps void @v_uaddo_carry_commuted_rhs_zext_icmp(i32 %a, i32 %b, i32 %x, ptr addrspace(1) %out) {
+; GFX9-LABEL: v_uaddo_carry_commuted_rhs_zext_icmp:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v0
+; GFX9-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v1
+; GFX9-NEXT:    v_addc_co_u32_e32 v0, vcc, 0, v2, vcc
+; GFX9-NEXT:    global_store_dword v[3:4], v0, off
+; GFX9-NEXT:    s_endpgm
+;
+; GFX12-LABEL: v_uaddo_carry_commuted_rhs_zext_icmp:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v2, v0
+; GFX12-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
+; GFX12-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v1
+; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v0, null, 0, v2, vcc_lo
+; GFX12-NEXT:    global_store_b32 v[3:4], v0, off
+; GFX12-NEXT:    s_endpgm
+  %o = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 %a, i32 %b)
+  %c = extractvalue { i32, i1 } %o, 1
+  %ce = zext i1 %c to i32
+  %cmp = icmp eq i32 %x, %a
+  %cmpe = zext i1 %cmp to i32
+  %r = add i32 %ce, %cmpe
+  store i32 %r, ptr addrspace(1) %out
+  ret void
+}
