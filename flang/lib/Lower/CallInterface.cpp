@@ -1271,6 +1271,15 @@ private:
             fir::CharacterType::getSingleton(&mlirContext, dynamicType.kind());
         addFirOperand(charTy, nextPassedArgPosition(), Property::Value, attrs);
         addPassedArg(PassEntityBy::Value, entity, characteristics);
+      } else if (isBindC && dynamicType.knownLength().value_or(0) == 1) {
+        // Pass as fir.ref: a BIND(C) procedure uses the C calling convention,
+        // which has no hidden length argument. Semantics requires a BIND(C)
+        // character dummy to have a length of 1, so the length is already
+        // known to both sides and carries no information.
+        mlir::Type refTy = fir::ReferenceType::get(type);
+        addFirOperand(refTy, nextPassedArgPosition(), Property::BaseAddress,
+                      attrs);
+        addPassedArg(PassEntityBy::BaseAddress, entity, characteristics);
       } else {
         // Pass as fir.box_char
         mlir::Type boxCharTy =
