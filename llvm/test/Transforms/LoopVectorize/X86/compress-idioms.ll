@@ -175,7 +175,7 @@ define void @expand_load(ptr noalias %dst, ptr readonly %src, i32 %c, i64 %n) {
 ; CHECK-ZNVER4-LABEL: define void @expand_load(
 ; CHECK-ZNVER4-SAME: ptr noalias [[DST:%.*]], ptr readonly [[SRC:%.*]], i32 [[C:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-ZNVER4-NEXT:  [[ITER_CHECK:.*]]:
-; CHECK-ZNVER4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 8
+; CHECK-ZNVER4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
 ; CHECK-ZNVER4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; CHECK-ZNVER4:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
 ; CHECK-ZNVER4-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[N]], 16
@@ -205,29 +205,29 @@ define void @expand_load(ptr noalias %dst, ptr readonly %src, i32 %c, i64 %n) {
 ; CHECK-ZNVER4-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-ZNVER4-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; CHECK-ZNVER4:       [[VEC_EPILOG_ITER_CHECK]]:
-; CHECK-ZNVER4-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 8
+; CHECK-ZNVER4-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
 ; CHECK-ZNVER4-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF5:![0-9]+]]
 ; CHECK-ZNVER4:       [[VEC_EPILOG_PH]]:
 ; CHECK-ZNVER4-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-ZNVER4-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[CONDITIONAL_STEP]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-ZNVER4-NEXT:    [[TMP8:%.*]] = and i64 [[N]], 7
+; CHECK-ZNVER4-NEXT:    [[TMP8:%.*]] = and i64 [[N]], 3
 ; CHECK-ZNVER4-NEXT:    [[N_VEC2:%.*]] = sub i64 [[N]], [[TMP8]]
-; CHECK-ZNVER4-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <8 x i32> poison, i32 [[C]], i64 0
-; CHECK-ZNVER4-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT3]], <8 x i32> poison, <8 x i32> zeroinitializer
+; CHECK-ZNVER4-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <4 x i32> poison, i32 [[C]], i64 0
+; CHECK-ZNVER4-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT3]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-ZNVER4-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK-ZNVER4:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; CHECK-ZNVER4-NEXT:    [[INDEX5:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT9:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-ZNVER4-NEXT:    [[CONDITIONAL_IV6:%.*]] = phi i64 [ [[BC_MERGE_RDX]], %[[VEC_EPILOG_PH]] ], [ [[CONDITIONAL_STEP8:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-ZNVER4-NEXT:    [[TMP9:%.*]] = getelementptr i32, ptr [[DST]], i64 [[INDEX5]]
-; CHECK-ZNVER4-NEXT:    [[WIDE_LOAD7:%.*]] = load <8 x i32>, ptr [[TMP9]], align 4
-; CHECK-ZNVER4-NEXT:    [[TMP10:%.*]] = icmp slt <8 x i32> [[WIDE_LOAD7]], [[BROADCAST_SPLAT4]]
+; CHECK-ZNVER4-NEXT:    [[WIDE_LOAD7:%.*]] = load <4 x i32>, ptr [[TMP9]], align 4
+; CHECK-ZNVER4-NEXT:    [[TMP10:%.*]] = icmp slt <4 x i32> [[WIDE_LOAD7]], [[BROADCAST_SPLAT4]]
 ; CHECK-ZNVER4-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[CONDITIONAL_IV6]]
-; CHECK-ZNVER4-NEXT:    [[TMP12:%.*]] = call <8 x i32> @llvm.masked.expandload.v8i32.p0(ptr align 4 [[TMP11]], <8 x i1> [[TMP10]], <8 x i32> poison)
-; CHECK-ZNVER4-NEXT:    call void @llvm.masked.store.v8i32.p0(<8 x i32> [[TMP12]], ptr align 4 [[TMP9]], <8 x i1> [[TMP10]])
-; CHECK-ZNVER4-NEXT:    [[TMP13:%.*]] = zext <8 x i1> [[TMP10]] to <8 x i64>
-; CHECK-ZNVER4-NEXT:    [[TMP14:%.*]] = call i64 @llvm.vector.reduce.add.v8i64(<8 x i64> [[TMP13]])
+; CHECK-ZNVER4-NEXT:    [[TMP12:%.*]] = call <4 x i32> @llvm.masked.expandload.v4i32.p0(ptr align 4 [[TMP11]], <4 x i1> [[TMP10]], <4 x i32> poison)
+; CHECK-ZNVER4-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[TMP12]], ptr align 4 [[TMP9]], <4 x i1> [[TMP10]])
+; CHECK-ZNVER4-NEXT:    [[TMP13:%.*]] = zext <4 x i1> [[TMP10]] to <4 x i64>
+; CHECK-ZNVER4-NEXT:    [[TMP14:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP13]])
 ; CHECK-ZNVER4-NEXT:    [[CONDITIONAL_STEP8]] = add i64 [[CONDITIONAL_IV6]], [[TMP14]]
-; CHECK-ZNVER4-NEXT:    [[INDEX_NEXT9]] = add nuw i64 [[INDEX5]], 8
+; CHECK-ZNVER4-NEXT:    [[INDEX_NEXT9]] = add nuw i64 [[INDEX5]], 4
 ; CHECK-ZNVER4-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT9]], [[N_VEC2]]
 ; CHECK-ZNVER4-NEXT:    br i1 [[TMP15]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK-ZNVER4:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
