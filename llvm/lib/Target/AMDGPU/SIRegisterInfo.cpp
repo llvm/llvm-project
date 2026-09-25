@@ -4293,8 +4293,175 @@ bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
     return false;
   }
   default:
-    return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF,
-                                                     VRM);
+    break;
+  }
+
+  bool BaseImplRetVal =
+      TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF, VRM);
+
+  // Append v_wmma_* bank-conflict avoidance candidates (gfx11/gfx12). This only
+  // augments the candidate order for VirtReg and never changes BaseImplRetVal.
+  if (ST.hasVGPRBankConflict())
+    addWMMABankConflictHints(VirtReg, Order, Hints, MF, VRM);
+
+  return BaseImplRetVal;
+}
+
+static void recordWMMABankSiblings(Register VirtReg, const MachineInstr &MI,
+                                   SmallVector<Register, 3> &Siblings,
+                                   const SIInstrInfo *TII,
+                                   const SIRegisterInfo *TRI,
+                                   const MachineRegisterInfo &MRI) {
+  // The consecutive-allocation VGPR bank collision only happens when each
+  // matrix operand is a multiple of 4 VGPRs (128 bits) wide; with narrower
+  // operands the start registers already fall on different banks. Restrict the
+  // hint to WMMAs whose matrix source operands are a multiple of 128 bits.
+  Register Src0 = TII->getNamedOperand(MI, AMDGPU::OpName::src0)->getReg();
+  Register Src1 = TII->getNamedOperand(MI, AMDGPU::OpName::src1)->getReg();
+  Register Vdst = TII->getNamedOperand(MI, AMDGPU::OpName::vdst)->getReg();
+  if (!TRI->isVGPR(MRI, Src0) || !TRI->isVGPR(MRI, Src1))
+    return;
+
+  auto SaveSiblings = [&](SmallVector<Register, 3> Regs) {
+    if (!is_contained(Regs, VirtReg))
+      return;
+    for (Register Reg : Regs) {
+      if (Reg != VirtReg && !is_contained(Siblings, Reg))
+        Siblings.push_back(Reg);
+    }
+  };
+
+  // Src2 == Dst => 2-cycle penalty for bank conflicts among src0, src1, src2.
+  // Src2 != Dst => 1-cycle penalty for a bank conflict between src0 and src1.
+  const MachineOperand *MOSrc2 = TII->getNamedOperand(MI, AMDGPU::OpName::src2);
+  if (MOSrc2 && MOSrc2->isReg() && MOSrc2->getReg().isVirtual() &&
+      MOSrc2->getReg() == Vdst) {
+    SaveSiblings({Src0, Src1, Vdst});
+    return;
+  }
+
+  SaveSiblings({Src0, Src1});
+}
+
+// Avoid VGPR bank conflicts in v_wmma_* on gfx11/gfx12.
+//
+// For example: v_wmma_f32_16x16x16_f16 v[1:8], v[9:16], v[17:24], v[1:8]
+// The source operands all start in bank 1:
+// 1 % 4 = 9 % 4 = 17 % 4 = 1.
+//
+// This function adds hints from non-conflicting banks to help avoid
+// VGPR bank conflicts.
+//
+// Bank conflicts may still occur due to pre-allocation and register pressure.
+void SIRegisterInfo::addWMMABankConflictHints(Register VirtReg,
+                                              ArrayRef<MCPhysReg> Order,
+                                              SmallVectorImpl<MCPhysReg> &Hints,
+                                              const MachineFunction &MF,
+                                              const VirtRegMap *VRM) const {
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  const SIInstrInfo *TII = ST.getInstrInfo();
+  if (!VRM || !isVGPR(MRI, VirtReg))
+    return;
+
+  // Collect the other registers in WMMA instructions that may have bank
+  // conflicts with VirtReg.
+  const SIMachineFunctionInfo &FuncInfo = *MF.getInfo<SIMachineFunctionInfo>();
+  SmallVector<Register, 3> Siblings;
+  for (MachineInstr &MI : MRI.reg_nodbg_instructions(VirtReg)) {
+    if (!SIInstrInfo::isWMMA(MI))
+      continue;
+    recordWMMABankSiblings(VirtReg, MI, Siblings, TII, this, MRI);
+  }
+
+  if (Siblings.empty())
+    return;
+
+  // Banks already taken by allocated siblings.
+  unsigned UsedBankMask = 0;
+  for (Register Sibling : Siblings) {
+    if (Sibling.isVirtual()) {
+      if (!VRM->hasPhys(Sibling))
+        continue;
+      Sibling = VRM->getPhys(Sibling);
+    }
+    if (Sibling.isPhysical() && isVGPR(MRI, Sibling))
+      UsedBankMask |= 1u << (getHWRegIndex(Sibling) % 4);
+  }
+
+  unsigned W = getRegSizeInBits(VirtReg, MRI) / 32;
+  if (W && (W % 4) != 0)
+    return;
+
+  // Build a hardware-index -> physreg map and record the highest start index.
+  // Order is not guaranteed to be sorted (non-kernel functions reorder their
+  // callee-saved VGPRs), so we look candidates up by index instead of trusting
+  // Order's sequence or its last element.
+  DenseMap<unsigned, MCPhysReg> IdxToReg;
+  unsigned MaxIdx = 0;
+  for (MCPhysReg PhysReg : Order) {
+    unsigned Idx = getHWRegIndex(PhysReg);
+    IdxToReg[Idx] = PhysReg;
+    MaxIdx = std::max(MaxIdx, Idx);
+  }
+
+  // Precompute once per function:
+  BitVector CalleeSavedUnits(getNumRegUnits());
+  for (const MCPhysReg *CSR = MRI.getCalleeSavedRegs(); CSR && *CSR; ++CSR)
+    for (MCRegUnit U : regunits(*CSR))
+      CalleeSavedUnits.set(static_cast<unsigned>(U));
+  // Then for a candidate physreg P (the tuple at Start):
+  auto isCalleeSaved = [&](MCRegister P) {
+    return any_of(regunits(P), [&](MCRegUnit U) {
+      return CalleeSavedUnits.test(static_cast<unsigned>(U));
+    });
+  };
+
+  // Calculate MaxVGPR.
+  unsigned MaxVGPR = MaxIdx + W;
+  if (unsigned Peak = FuncInfo.getPeakVGPRPressure()) {
+    unsigned Gran = AMDGPU::IsaInfo::getVGPRAllocGranule(
+        ST, FuncInfo.getDynamicVGPRBlockSize());
+    unsigned Want = alignTo(Peak, std::max(Gran, 1u));
+    if (unsigned Budget = ST.getMaxNumVGPRs(MF))
+      Want = std::min(Want, Budget);
+    if (Want && Want < MaxVGPR)
+      MaxVGPR = Want;
+  }
+  if (MaxVGPR < 4 * W + 3)
+    return;
+
+  // Separate registers into blocks, each containing N allocatable register
+  // tuples. Assume VirtReg spans 4 VGPRs and N = 2:
+  //
+  // Block_1: v[0:3], v[4:7];
+  // Block_2: v[9:12], v[13:16];
+  // Block_3: v[18:21], v[22:25];
+  // Block_4: v[27:30], v[31:34];
+  //
+  // All register tuples in Block_i start in bank (i - 1).
+  // This leaves only three unused VGPRs ("holes"): v8, v17, and v26.
+  // In contrast, adding candidates in register-number order can result in:
+  //
+  // 1. src0 = v[0:3], src1 = v[5:8], src2 = v[10:13] for the first WMMA
+  // 2. src0 = v[14:17], src1 = v[19:22], src2 = v[24:27] for the second WMMA
+  //
+  // This leaves holes at v4, v9, v18, and v23 and can increase VGPR usage.
+  //
+  // Add candidates from non-conflicting blocks in round-robin order to avoid
+  // exhausting a single block first.
+  // If the non-conflicting blocks are 2, 3, and 4, the hint order is:
+  // {v[9:12], v[18:21], v[27:30], v[13:16], v[22:25], v[31:34]}.
+  unsigned N = (MaxVGPR - 3) / (4 * W);
+  unsigned BankSize = N * W;
+  for (unsigned n = 0; n < N; n++) {
+    for (unsigned Bank = 0; Bank < 4; Bank++) {
+      unsigned Start = n * W + Bank * (BankSize + 1);
+      if (((UsedBankMask >> (Start % 4)) & 1) != 0)
+        continue;
+      auto RIt = IdxToReg.find(Start);
+      if (RIt != IdxToReg.end() && !isCalleeSaved(RIt->second))
+        Hints.push_back(RIt->second);
+    }
   }
 }
 

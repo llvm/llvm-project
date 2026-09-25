@@ -1639,6 +1639,10 @@ defm VOP3PX2IncrementsVaVdstTwice : AMDGPUSubtargetFeature<"vop3px2-increments-v
   "VOP3PX2 encoded instructions increment the VaVdst counter twice", GenPredicate=false
 >;
 
+defm VGPRBankConflict: AMDGPUSubtargetFeature<"vgpr-bank-conflict",
+  "WMMA instruction will penalty for VGPR bank conflict"
+>;
+
 defm NeedsTDMDrain : AMDGPUSubtargetFeature<"needs-tdm-drain",
   "Needs to keep tensor count low",
   /*GenPredicate=*/0
@@ -1827,6 +1831,7 @@ def FeatureGFX11 : GCNSubtargetFeatureGeneration<"GFX11",
    FeatureMqsadInsts, FeatureCvtNormInsts,
    FeatureCvtPkNormVOP2Insts, FeatureCvtPkNormVOP3Insts,
    FeatureInstCacheLineSize128, FeatureMTBUFInsts, FeatureFormattedMUBUFInsts,
+   FeatureVGPRBankConflict,
    Feature32BitNumRecordsBufferResource,
    FeatureMaxWavesPerEU16
   ]
@@ -1857,6 +1862,7 @@ def FeatureGFX12 : GCNSubtargetFeatureGeneration<"GFX12",
    FeatureMinimum3Maximum3F32, FeatureMinimum3Maximum3F16,
    FeatureAgentScopeFineGrainedRemoteMemoryAtomics, FeatureFlatOffsetBits24,
    FeatureFlatSignedOffset, FeatureInstCacheLineSize128,
+   FeatureVGPRBankConflict,
    FeatureMaxWavesPerEU16
   ]
 >;
