@@ -45,8 +45,10 @@ column_major float4x4 Col2Row(row_major float4x4 M) {
 void bar(row_major float4x4 M, column_major float4x4 M2) {}
 
 // Layout metadata does not create distinct overloads.
-void same_overload(row_major float2x2 M);
-void same_overload(column_major float2x2 M);
+// expected-note@+1 {{previous definition is here}}
+void same_overload(row_major float2x2 M) {}
+// expected-error@+1 {{redefinition of 'same_overload'}}
+void same_overload(column_major float2x2 M) {}
 
 template <typename T>
 T preserve_layout(T M) {
