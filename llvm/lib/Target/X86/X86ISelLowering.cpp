@@ -1101,7 +1101,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     for (auto VT : { MVT::f64, MVT::v4f32, MVT::v2f64 })
       SetFPMinMaxAction(VT);
 
-    for (auto VT : { MVT::v4f32, MVT::v2f64 }) {
+    for (auto VT : {MVT::v4f32, MVT::v2f64}) {
       if (VT == MVT::v4f32 || Subtarget.is64Bit()) {
         setOperationAction(ISD::FTRUNC, VT, Custom);
         setOperationAction(ISD::FROUND, VT, Custom);
@@ -23203,16 +23203,22 @@ static SDValue lowerFTRUNC_FROUND_SSE2(SDValue Op, SelectionDAG &DAG) {
     APFloat Bias = APFloat(0.5f);
     bool Ignored;
     Bias.convert(Sem, APFloat::rmNearestTiesToEven, &Ignored);
-    Bias.next(/*nextDown*/true);
-    AbsBiased = DAG.getNode(ISD::FADD, DL, VT, Abs, DAG.getConstantFP(Bias, DL, VT));
+    Bias.next(/*nextDown*/ true);
+    AbsBiased =
+        DAG.getNode(ISD::FADD, DL, VT, Abs, DAG.getConstantFP(Bias, DL, VT));
   }
 
   MVT IntVT;
-  if (VT == MVT::f32) IntVT = MVT::i32;
-  else if (VT == MVT::f64) IntVT = MVT::i64;
-  else if (VT == MVT::v4f32) IntVT = MVT::v4i32;
-  else if (VT == MVT::v2f64) IntVT = MVT::v2i64;
-  else llvm_unreachable("Unexpected type");
+  if (VT == MVT::f32)
+    IntVT = MVT::i32;
+  else if (VT == MVT::f64)
+    IntVT = MVT::i64;
+  else if (VT == MVT::v4f32)
+    IntVT = MVT::v4i32;
+  else if (VT == MVT::v2f64)
+    IntVT = MVT::v2i64;
+  else
+    llvm_unreachable("Unexpected type");
 
   SDValue AbsInt = DAG.getBitcast(IntVT, Abs);
 
@@ -23223,7 +23229,8 @@ static SDValue lowerFTRUNC_FROUND_SSE2(SDValue Op, SelectionDAG &DAG) {
     Threshold = DAG.getConstant(0x432FFFFFFFFFFFFFULL, DL, IntVT);
   }
 
-  EVT CCVT = DAG.getTargetLoweringInfo().getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), IntVT);
+  EVT CCVT = DAG.getTargetLoweringInfo().getSetCCResultType(
+      DAG.getDataLayout(), *DAG.getContext(), IntVT);
   SDValue IsLarge = DAG.getSetCC(DL, CCVT, AbsInt, Threshold, ISD::SETGT);
 
   SDValue TruncInt = DAG.getNode(ISD::FP_TO_SINT, DL, IntVT, AbsBiased);
