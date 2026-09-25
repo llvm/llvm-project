@@ -60,15 +60,13 @@ struct InstrumentorIRBuilderTy {
   }
 
   /// Get a temporary alloca to communicate (large) values with the runtime.
-  AllocaInst *getAlloca(Function *Fn, Type *Ty, bool MatchType = false) {
+  AllocaInst *getAlloca(Function *Fn, Type *Ty) {
     const DataLayout &DL = Fn->getDataLayout();
     auto *&AllocaList = AllocaMap[{Fn, DL.getTypeAllocSize(Ty)}];
     if (!AllocaList)
       AllocaList = new AllocaListTy;
     AllocaInst *AI = nullptr;
     for (auto *&ListAI : *AllocaList) {
-      if (MatchType && ListAI->getAllocatedType() != Ty)
-        continue;
       AI = ListAI;
       ListAI = *AllocaList->rbegin();
       break;
