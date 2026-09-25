@@ -2626,6 +2626,75 @@ public:
   }
 };
 
+class RowGatherConverter : public OpConversionPattern<tosa::RowGatherOp> {
+public:
+  using OpConversionPattern<tosa::RowGatherOp>::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(tosa::RowGatherOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const final {
+    auto valuesTy = dyn_cast<RankedTensorType>(adaptor.getValues().getType());
+    auto indicesTy = dyn_cast<RankedTensorType>(adaptor.getIndices().getType());
+    auto rowCountTy =
+        dyn_cast<RankedTensorType>(adaptor.getRowCount().getType());
+    auto resultTy = dyn_cast<RankedTensorType>(op.getType());
+    if (!valuesTy || !indicesTy || !rowCountTy || !resultTy)
+      return rewriter.notifyMatchFailure(op, "unranked tensors not supported");
+
+    Location loc = op.getLoc();
+    Value zero = arith::ConstantIndexOp::create(rewriter, loc, 0);
+    Value rowCount = tensor::ExtractOp::create(
+        rewriter, loc, adaptor.getRowCount(), ValueRange{zero});
+    Value rowCountIndex = arith::IndexCastOp::create(
+        rewriter, loc, rewriter.getIndexType(), rowCount);
+
+    SmallVector<Value> dynamicDims;
+    if (resultTy.isDynamicDim(0))
+      dynamicDims.push_back(
+          tensor::DimOp::create(rewriter, loc, adaptor.getValues(), 0));
+    if (resultTy.isDynamicDim(1)) {
+      Value indicesWidth =
+          tensor::DimOp::create(rewriter, loc, adaptor.getIndices(), 1);
+      dynamicDims.push_back(
+          arith::MulIOp::create(rewriter, loc, indicesWidth, rowCountIndex));
+    }
+    if (resultTy.isDynamicDim(2))
+      dynamicDims.push_back(
+          tensor::DimOp::create(rewriter, loc, adaptor.getValues(), 2));
+
+    Value emptyTensor =
+        tensor::EmptyOp::create(rewriter, loc, resultTy.getShape(),
+                                resultTy.getElementType(), dynamicDims);
+    SmallVector<AffineMap> affineMaps = {
+        rewriter.getMultiDimIdentityMap(resultTy.getRank())};
+
+    auto genericOp = linalg::GenericOp::create(
+        rewriter, loc, ArrayRef<Type>{resultTy}, ValueRange{},
+        ValueRange{emptyTensor}, affineMaps,
+        getNParallelLoopsAttrs(resultTy.getRank()),
+        [&](OpBuilder &builder, Location nestedLoc, ValueRange) {
+          Value batch = linalg::IndexOp::create(builder, nestedLoc, 0);
+          Value outputRow = linalg::IndexOp::create(builder, nestedLoc, 1);
+          Value channel = linalg::IndexOp::create(builder, nestedLoc, 2);
+          Value indexSlot = arith::DivUIOp::create(builder, nestedLoc,
+                                                   outputRow, rowCountIndex);
+          Value rowOffset = arith::RemUIOp::create(builder, nestedLoc,
+                                                   outputRow, rowCountIndex);
+          Value index = tensor::ExtractOp::create(builder, nestedLoc,
+                                                  adaptor.getIndices(),
+                                                  ValueRange{batch, indexSlot});
+          Value row = arith::IndexCastOp::create(builder, nestedLoc,
+                                                 builder.getIndexType(), index);
+          row = arith::AddIOp::create(builder, nestedLoc, row, rowOffset);
+          Value result =
+              tensor::ExtractOp::create(builder, nestedLoc, adaptor.getValues(),
+                                        ValueRange{batch, row, channel});
+          linalg::YieldOp::create(builder, nestedLoc, result);
+        });
+    rewriter.replaceOp(op, genericOp.getResult(0));
+    return success();
+  }
+};
+
 // Lowerings the TableOp to a series of gathers and numerica operations. This
 // includes interpolation between the high/low values. For the I8 varient, this
 // simplifies to a single gather operation.
@@ -3160,6 +3229,7 @@ void mlir::tosa::populateTosaToLinalgConversionPatterns(
       ReduceConverter<tosa::ReduceProductOp>,
       ArgMaxConverter,
       GatherConverter,
+      RowGatherConverter,
       RescaleConverter,
       ReverseConverter,
       RFFT2dConverter,
