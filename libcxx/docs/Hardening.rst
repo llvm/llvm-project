@@ -460,14 +460,15 @@ a binary and determine whether it was built with hardening enabled.
   design -- new releases increase the version number. The following describes
   the state of the latest release and is for informational purposes only.
 
-The first character of an ABI tag encodes the hardening mode:
+The first part of the ABI tag is the libc++ version. Then, the first character
+that follows encodes the hardening mode:
 
 - ``f`` -- [f]ast mode;
 - ``s`` -- extensive ("[s]afe") mode;
 - ``d`` -- [d]ebug mode;
 - ``n`` -- [n]one mode.
 
-The second character of an ABI tag encodes the assertion semantic:
+The second character that follows encodes the assertion semantic:
 
 - ``i`` -- [i]gnore semantic;
 - ``o`` -- [o]bserve semantic;
