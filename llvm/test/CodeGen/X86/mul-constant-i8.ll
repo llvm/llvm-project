@@ -249,9 +249,9 @@ define i8 @test_mul_by_22(i8 %x) {
 ; X64-LABEL: test_mul_by_22:
 ; X64:       # %bb.0:
 ; X64-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-NEXT:    leal (%rdi,%rdi,4), %eax
-; X64-NEXT:    leal (%rdi,%rax,4), %eax
-; X64-NEXT:    addl %edi, %eax
+; X64-NEXT:    leal (%rdi,%rdi), %eax
+; X64-NEXT:    leal (%rdi,%rdi,4), %ecx
+; X64-NEXT:    leal (%rax,%rcx,4), %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
   %m = mul i8 %x, 22

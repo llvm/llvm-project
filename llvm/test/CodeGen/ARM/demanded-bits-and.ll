@@ -10,10 +10,11 @@ define dso_local void @f(ptr %p) {
 ; CHECK-NEXT:  .LBB0_1: @ %bb
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldrh r1, [r0]
-; CHECK-NEXT:    and r2, r1, #255
-; CHECK-NEXT:    add r3, r2, r1, lsr #8
-; CHECK-NEXT:    add r2, r3, r2
-; CHECK-NEXT:    add r1, r2, r1, lsr #8
+; CHECK-NEXT:    lsr r2, r1, #8
+; CHECK-NEXT:    add r2, r2, r1, lsr #8
+; CHECK-NEXT:    and r1, r1, #255
+; CHECK-NEXT:    add r1, r1, r1
+; CHECK-NEXT:    add r1, r1, r2
 ; CHECK-NEXT:    add r1, r1, #2
 ; CHECK-NEXT:    lsr r1, r1, #2
 ; CHECK-NEXT:    strh r1, [r0]

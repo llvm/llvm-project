@@ -176,9 +176,9 @@ define i64 @mla_i64_uses(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e) {
 define i64 @mla_i64_mul(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e) {
 ; CHECK-SD-LABEL: mla_i64_mul:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mul x8, x4, x3
-; CHECK-SD-NEXT:    mul x9, x2, x1
-; CHECK-SD-NEXT:    add x0, x8, x9, lsl #1
+; CHECK-SD-NEXT:    mul x8, x2, x1
+; CHECK-SD-NEXT:    add x8, x8, x8
+; CHECK-SD-NEXT:    madd x0, x4, x3, x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: mla_i64_mul:
