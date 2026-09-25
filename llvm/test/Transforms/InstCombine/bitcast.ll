@@ -903,3 +903,219 @@ end:                                        ; preds = %unreachable, %entry
   %3 = extractelement <2 x i16> %2, i64 0
   ret i16 %3
 }
+
+; Issue #221943: X - 1 should be nonnegative when X > 0.
+; TODO: Requires isKnownNonZero to query assume. Currently not optimized.
+define float @copysign_idiom_sub1_positive_assume(float %x, i32 %magx) {
+; CHECK-LABEL: @copysign_idiom_sub1_positive_assume(
+; CHECK-NEXT:    [[MAG:%.*]] = add nsw i32 [[MAGX:%.*]], -1
+; CHECK-NEXT:    [[POSITIVE:%.*]] = icmp sgt i32 [[MAGX]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[POSITIVE]])
+; CHECK-NEXT:    [[BITS:%.*]] = bitcast float [[X:%.*]] to i32
+; CHECK-NEXT:    [[SIGN:%.*]] = and i32 [[BITS]], -2147483648
+; CHECK-NEXT:    [[RES:%.*]] = or i32 [[MAG]], [[SIGN]]
+; CHECK-NEXT:    [[Y:%.*]] = bitcast i32 [[RES]] to float
+; CHECK-NEXT:    ret float [[Y]]
+;
+  %mag = add i32 %magx, -1
+  %positive = icmp sgt i32 %magx, 0
+  call void @llvm.assume(i1 %positive)
+  %bits = bitcast float %x to i32
+  %sign = and i32 %bits, -2147483648
+  %res = or i32 %mag, %sign
+  %y = bitcast i32 %res to float
+  ret float %y
+}
+
+; TODO: Requires isKnownNonZero to query assume.
+define float @copysign_idiom_sub1_positive_sub_assume(float %x, i32 %magx) {
+; CHECK-LABEL: @copysign_idiom_sub1_positive_sub_assume(
+; CHECK-NEXT:    [[MAG:%.*]] = add nsw i32 [[MAGX:%.*]], -1
+; CHECK-NEXT:    [[POSITIVE:%.*]] = icmp sgt i32 [[MAGX]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[POSITIVE]])
+; CHECK-NEXT:    [[BITS:%.*]] = bitcast float [[X:%.*]] to i32
+; CHECK-NEXT:    [[SIGN:%.*]] = and i32 [[BITS]], -2147483648
+; CHECK-NEXT:    [[RES:%.*]] = or i32 [[MAG]], [[SIGN]]
+; CHECK-NEXT:    [[Y:%.*]] = bitcast i32 [[RES]] to float
+; CHECK-NEXT:    ret float [[Y]]
+;
+  %mag = sub i32 %magx, 1
+  %positive = icmp sgt i32 %magx, 0
+  call void @llvm.assume(i1 %positive)
+  %bits = bitcast float %x to i32
+  %sign = and i32 %bits, -2147483648
+  %res = or i32 %mag, %sign
+  %y = bitcast i32 %res to float
+  ret float %y
+}
+
+; TODO: Requires isKnownNonZero to query assume.
+define double @copysign_idiom_sub1_positive_f64_assume(double %x, i64 %magx) {
+; CHECK-LABEL: @copysign_idiom_sub1_positive_f64_assume(
+; CHECK-NEXT:    [[MAG:%.*]] = add nsw i64 [[MAGX:%.*]], -1
+; CHECK-NEXT:    [[POSITIVE:%.*]] = icmp sgt i64 [[MAGX]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[POSITIVE]])
+; CHECK-NEXT:    [[BITS:%.*]] = bitcast double [[X:%.*]] to i64
+; CHECK-NEXT:    [[SIGN:%.*]] = and i64 [[BITS]], -9223372036854775808
+; CHECK-NEXT:    [[RES:%.*]] = or i64 [[MAG]], [[SIGN]]
+; CHECK-NEXT:    [[Y:%.*]] = bitcast i64 [[RES]] to double
+; CHECK-NEXT:    ret double [[Y]]
+;
+  %mag = add i64 %magx, -1
+  %positive = icmp sgt i64 %magx, 0
+  call void @llvm.assume(i1 %positive)
+  %bits = bitcast double %x to i64
+  %sign = and i64 %bits, -9223372036854775808
+  %res = or i64 %mag, %sign
+  %y = bitcast i64 %res to double
+  ret double %y
+}
+
+; Negative test: %magx >= 0 (nonnegative) is not enough, need %magx > 0 (positive).
+; %magx could be 0, so %mag = %magx - 1 could be -1.
+define float @copysign_idiom_sub1_nonnegative_not_positive(float %x, i32 %magx) {
+; CHECK-LABEL: @copysign_idiom_sub1_nonnegative_not_positive(
+; CHECK-NEXT:    [[MAG:%.*]] = add nsw i32 [[MAGX:%.*]], -1
+; CHECK-NEXT:    [[NONNEG:%.*]] = icmp sgt i32 [[MAGX]], -1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NONNEG]])
+; CHECK-NEXT:    [[BITS:%.*]] = bitcast float [[X:%.*]] to i32
+; CHECK-NEXT:    [[SIGN:%.*]] = and i32 [[BITS]], -2147483648
+; CHECK-NEXT:    [[RES:%.*]] = or i32 [[MAG]], [[SIGN]]
+; CHECK-NEXT:    [[Y:%.*]] = bitcast i32 [[RES]] to float
+; CHECK-NEXT:    ret float [[Y]]
+;
+  %mag = add i32 %magx, -1
+  %nonneg = icmp sgt i32 %magx, -1
+  call void @llvm.assume(i1 %nonneg)
+  %bits = bitcast float %x to i32
+  %sign = and i32 %bits, -2147483648
+  %res = or i32 %mag, %sign
+  %y = bitcast i32 %res to float
+  ret float %y
+}
+
+; Negative test: no assume, so we don't know if %magx is positive.
+define float @copysign_idiom_sub1_no_assume(float %x, i32 %magx) {
+; CHECK-LABEL: @copysign_idiom_sub1_no_assume(
+; CHECK-NEXT:    [[MAG:%.*]] = add i32 [[MAGX:%.*]], -1
+; CHECK-NEXT:    [[BITS:%.*]] = bitcast float [[X:%.*]] to i32
+; CHECK-NEXT:    [[SIGN:%.*]] = and i32 [[BITS]], -2147483648
+; CHECK-NEXT:    [[RES:%.*]] = or i32 [[MAG]], [[SIGN]]
+; CHECK-NEXT:    [[Y:%.*]] = bitcast i32 [[RES]] to float
+; CHECK-NEXT:    ret float [[Y]]
+;
+  %mag = add i32 %magx, -1
+  %bits = bitcast float %x to i32
+  %sign = and i32 %bits, -2147483648
+  %res = or i32 %mag, %sign
+  %y = bitcast i32 %res to float
+  ret float %y
+}
+
+; TODO: Vector test requires isKnownNonZero to query range metadata.
+define <4 x float> @copysign_idiom_sub1_positive_vec(<4 x float> %x, <4 x i32> range(i32 1, 2147483647) %magx) {
+; CHECK-LABEL: @copysign_idiom_sub1_positive_vec(
+; CHECK-NEXT:    [[MAG:%.*]] = add nsw <4 x i32> [[MAGX:%.*]], splat (i32 -1)
+; CHECK-NEXT:    [[BITS:%.*]] = bitcast <4 x float> [[X:%.*]] to <4 x i32>
+; CHECK-NEXT:    [[SIGN:%.*]] = and <4 x i32> [[BITS]], splat (i32 -2147483648)
+; CHECK-NEXT:    [[RES:%.*]] = or <4 x i32> [[MAG]], [[SIGN]]
+; CHECK-NEXT:    [[Y:%.*]] = bitcast <4 x i32> [[RES]] to <4 x float>
+; CHECK-NEXT:    ret <4 x float> [[Y]]
+;
+  %mag = add <4 x i32> %magx, splat (i32 -1)
+  %bits = bitcast <4 x float> %x to <4 x i32>
+  %sign = and <4 x i32> %bits, splat (i32 -2147483648)
+  %res = or <4 x i32> %mag, %sign
+  %y = bitcast <4 x i32> %res to <4 x float>
+  ret <4 x float> %y
+}
+
+; TODO: Requires isKnownNonZero to query range metadata.
+define <2 x float> @copysign_idiom_sub1_positive_vec_sub(<2 x float> %x, <2 x i32> range(i32 1, 2147483647) %magx) {
+; CHECK-LABEL: @copysign_idiom_sub1_positive_vec_sub(
+; CHECK-NEXT:    [[MAG:%.*]] = add nsw <2 x i32> [[MAGX:%.*]], splat (i32 -1)
+; CHECK-NEXT:    [[BITS:%.*]] = bitcast <2 x float> [[X:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[SIGN:%.*]] = and <2 x i32> [[BITS]], splat (i32 -2147483648)
+; CHECK-NEXT:    [[RES:%.*]] = or <2 x i32> [[MAG]], [[SIGN]]
+; CHECK-NEXT:    [[Y:%.*]] = bitcast <2 x i32> [[RES]] to <2 x float>
+; CHECK-NEXT:    ret <2 x float> [[Y]]
+;
+  %mag = sub <2 x i32> %magx, splat (i32 1)
+  %bits = bitcast <2 x float> %x to <2 x i32>
+  %sign = and <2 x i32> %bits, splat (i32 -2147483648)
+  %res = or <2 x i32> %mag, %sign
+  %y = bitcast <2 x i32> %res to <2 x float>
+  ret <2 x float> %y
+}
+
+; TODO: Requires isKnownNonZero to query range metadata.
+define <2 x double> @copysign_idiom_sub1_positive_vec_f64(<2 x double> %x, <2 x i64> range(i64 1, 9223372036854775807) %magx) {
+; CHECK-LABEL: @copysign_idiom_sub1_positive_vec_f64(
+; CHECK-NEXT:    [[MAG:%.*]] = add nsw <2 x i64> [[MAGX:%.*]], splat (i64 -1)
+; CHECK-NEXT:    [[BITS:%.*]] = bitcast <2 x double> [[X:%.*]] to <2 x i64>
+; CHECK-NEXT:    [[SIGN:%.*]] = and <2 x i64> [[BITS]], splat (i64 -9223372036854775808)
+; CHECK-NEXT:    [[RES:%.*]] = or <2 x i64> [[MAG]], [[SIGN]]
+; CHECK-NEXT:    [[Y:%.*]] = bitcast <2 x i64> [[RES]] to <2 x double>
+; CHECK-NEXT:    ret <2 x double> [[Y]]
+;
+  %mag = add <2 x i64> %magx, splat (i64 -1)
+  %bits = bitcast <2 x double> %x to <2 x i64>
+  %sign = and <2 x i64> %bits, splat (i64 -9223372036854775808)
+  %res = or <2 x i64> %mag, %sign
+  %y = bitcast <2 x i64> %res to <2 x double>
+  ret <2 x double> %y
+}
+
+; TODO: Requires isKnownNonZero to query range metadata.
+define <8 x float> @copysign_idiom_sub1_positive_vec8(<8 x float> %x, <8 x i32> range(i32 1, 2147483647) %magx) {
+; CHECK-LABEL: @copysign_idiom_sub1_positive_vec8(
+; CHECK-NEXT:    [[MAG:%.*]] = add nsw <8 x i32> [[MAGX:%.*]], splat (i32 -1)
+; CHECK-NEXT:    [[BITS:%.*]] = bitcast <8 x float> [[X:%.*]] to <8 x i32>
+; CHECK-NEXT:    [[SIGN:%.*]] = and <8 x i32> [[BITS]], splat (i32 -2147483648)
+; CHECK-NEXT:    [[RES:%.*]] = or <8 x i32> [[MAG]], [[SIGN]]
+; CHECK-NEXT:    [[Y:%.*]] = bitcast <8 x i32> [[RES]] to <8 x float>
+; CHECK-NEXT:    ret <8 x float> [[Y]]
+;
+  %mag = add <8 x i32> %magx, splat (i32 -1)
+  %bits = bitcast <8 x float> %x to <8 x i32>
+  %sign = and <8 x i32> %bits, splat (i32 -2147483648)
+  %res = or <8 x i32> %mag, %sign
+  %y = bitcast <8 x i32> %res to <8 x float>
+  ret <8 x float> %y
+}
+
+; Negative vector test: nonnegative but not positive (range starts at 0).
+define <4 x float> @copysign_idiom_sub1_nonneg_not_pos_vec(<4 x float> %x, <4 x i32> range(i32 0, 2147483647) %magx) {
+; CHECK-LABEL: @copysign_idiom_sub1_nonneg_not_pos_vec(
+; CHECK-NEXT:    [[MAG:%.*]] = add nsw <4 x i32> [[MAGX:%.*]], splat (i32 -1)
+; CHECK-NEXT:    [[BITS:%.*]] = bitcast <4 x float> [[X:%.*]] to <4 x i32>
+; CHECK-NEXT:    [[SIGN:%.*]] = and <4 x i32> [[BITS]], splat (i32 -2147483648)
+; CHECK-NEXT:    [[RES:%.*]] = or <4 x i32> [[MAG]], [[SIGN]]
+; CHECK-NEXT:    [[Y:%.*]] = bitcast <4 x i32> [[RES]] to <4 x float>
+; CHECK-NEXT:    ret <4 x float> [[Y]]
+;
+  %mag = add <4 x i32> %magx, splat (i32 -1)
+  %bits = bitcast <4 x float> %x to <4 x i32>
+  %sign = and <4 x i32> %bits, splat (i32 -2147483648)
+  %res = or <4 x i32> %mag, %sign
+  %y = bitcast <4 x i32> %res to <4 x float>
+  ret <4 x float> %y
+}
+
+; Negative vector test: no range metadata.
+define <4 x float> @copysign_idiom_sub1_no_range_vec(<4 x float> %x, <4 x i32> %magx) {
+; CHECK-LABEL: @copysign_idiom_sub1_no_range_vec(
+; CHECK-NEXT:    [[MAG:%.*]] = add <4 x i32> [[MAGX:%.*]], splat (i32 -1)
+; CHECK-NEXT:    [[BITS:%.*]] = bitcast <4 x float> [[X:%.*]] to <4 x i32>
+; CHECK-NEXT:    [[SIGN:%.*]] = and <4 x i32> [[BITS]], splat (i32 -2147483648)
+; CHECK-NEXT:    [[RES:%.*]] = or <4 x i32> [[MAG]], [[SIGN]]
+; CHECK-NEXT:    [[Y:%.*]] = bitcast <4 x i32> [[RES]] to <4 x float>
+; CHECK-NEXT:    ret <4 x float> [[Y]]
+;
+  %mag = add <4 x i32> %magx, splat (i32 -1)
+  %bits = bitcast <4 x float> %x to <4 x i32>
+  %sign = and <4 x i32> %bits, splat (i32 -2147483648)
+  %res = or <4 x i32> %mag, %sign
+  %y = bitcast <4 x i32> %res to <4 x float>
+  ret <4 x float> %y
+}
