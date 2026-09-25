@@ -6625,8 +6625,10 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::applyWorkshareLoopTarget(
     Builder.restoreIP(AllocaIP);
     AllocaInst *PLastIter =
         Builder.CreateAlloca(I32Type, nullptr, "p.lastiter");
-    Builder.CreateStore(ConstantInt::get(I32Type, 0), PLastIter);
     CLI->setLastIter(PLastIter);
+
+    Builder.SetInsertPoint(CLI->getPreheader()->getTerminator());
+    Builder.CreateStore(ConstantInt::get(I32Type, 0), PLastIter);
 
     Builder.SetInsertPoint(CLI->getBody(),
                            CLI->getBody()->getFirstInsertionPt());
