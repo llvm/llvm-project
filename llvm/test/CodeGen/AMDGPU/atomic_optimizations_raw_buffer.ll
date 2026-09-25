@@ -1253,28 +1253,26 @@ define amdgpu_kernel void @add_i32_varying_offset(ptr addrspace(1) %out, ptr add
 ; GFX13W64-NEXT:    s_load_b128 s[0:3], s[4:5], 0x34 nv
 ; GFX13W64-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX13W64-NEXT:    v_mov_b32_e32 v1, 1
+; GFX13W64-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX13W64-NEXT:    s_wait_kmcnt 0x0
 ; GFX13W64-NEXT:    buffer_atomic_add_u32 v1, v0, s[0:3], null offen th:TH_ATOMIC_RETURN
 ; GFX13W64-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
-; GFX13W64-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX13W64-NEXT:    s_wait_loadcnt 0x0
 ; GFX13W64-NEXT:    s_wait_kmcnt 0x0
-; GFX13W64-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX13W64-NEXT:    global_store_b32 v2, v1, s[0:1]
 ; GFX13W64-NEXT:    s_endpgm
 ;
 ; GFX13W32-LABEL: add_i32_varying_offset:
 ; GFX13W32:       ; %bb.0: ; %entry
 ; GFX13W32-NEXT:    s_load_b128 s[0:3], s[4:5], 0x34 nv
-; GFX13W32-NEXT:    s_mov_b32 s6, 0x3ff
-; GFX13W32-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX13W32-NEXT:    v_dual_mov_b32 v1, 1 :: v_dual_bitop2_b32 v0, s6, v0 bitop3:0x40
+; GFX13W32-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX13W32-NEXT:    v_dual_mov_b32 v1, 1 :: v_dual_mov_b32 v2, 0
 ; GFX13W32-NEXT:    s_wait_kmcnt 0x0
 ; GFX13W32-NEXT:    buffer_atomic_add_u32 v1, v0, s[0:3], null offen th:TH_ATOMIC_RETURN
 ; GFX13W32-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
-; GFX13W32-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX13W32-NEXT:    s_wait_loadcnt 0x0
 ; GFX13W32-NEXT:    s_wait_kmcnt 0x0
-; GFX13W32-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX13W32-NEXT:    global_store_b32 v2, v1, s[0:1]
 ; GFX13W32-NEXT:    s_endpgm
 entry:
   %lane = call i32 @llvm.amdgcn.workitem.id.x()
@@ -2538,28 +2536,26 @@ define amdgpu_kernel void @sub_i32_varying_offset(ptr addrspace(1) %out, ptr add
 ; GFX13W64-NEXT:    s_load_b128 s[0:3], s[4:5], 0x34 nv
 ; GFX13W64-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX13W64-NEXT:    v_mov_b32_e32 v1, 1
+; GFX13W64-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX13W64-NEXT:    s_wait_kmcnt 0x0
 ; GFX13W64-NEXT:    buffer_atomic_sub_u32 v1, v0, s[0:3], null offen th:TH_ATOMIC_RETURN
 ; GFX13W64-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
-; GFX13W64-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX13W64-NEXT:    s_wait_loadcnt 0x0
 ; GFX13W64-NEXT:    s_wait_kmcnt 0x0
-; GFX13W64-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX13W64-NEXT:    global_store_b32 v2, v1, s[0:1]
 ; GFX13W64-NEXT:    s_endpgm
 ;
 ; GFX13W32-LABEL: sub_i32_varying_offset:
 ; GFX13W32:       ; %bb.0: ; %entry
 ; GFX13W32-NEXT:    s_load_b128 s[0:3], s[4:5], 0x34 nv
-; GFX13W32-NEXT:    s_mov_b32 s6, 0x3ff
-; GFX13W32-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX13W32-NEXT:    v_dual_mov_b32 v1, 1 :: v_dual_bitop2_b32 v0, s6, v0 bitop3:0x40
+; GFX13W32-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX13W32-NEXT:    v_dual_mov_b32 v1, 1 :: v_dual_mov_b32 v2, 0
 ; GFX13W32-NEXT:    s_wait_kmcnt 0x0
 ; GFX13W32-NEXT:    buffer_atomic_sub_u32 v1, v0, s[0:3], null offen th:TH_ATOMIC_RETURN
 ; GFX13W32-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
-; GFX13W32-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX13W32-NEXT:    s_wait_loadcnt 0x0
 ; GFX13W32-NEXT:    s_wait_kmcnt 0x0
-; GFX13W32-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX13W32-NEXT:    global_store_b32 v2, v1, s[0:1]
 ; GFX13W32-NEXT:    s_endpgm
 entry:
   %lane = call i32 @llvm.amdgcn.workitem.id.x()

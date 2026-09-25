@@ -3912,9 +3912,9 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(TRANS32_DEP_1)
 ; GFX1250-NEXT:    v_rcp_iflag_f32_e32 v0, v0
 ; GFX1250-NEXT:    v_nop
-; GFX1250-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
+; GFX1250-NEXT:    v_mul_f32_e32 v1, 0x4f7ffffe, v0
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-NEXT:    v_cvt_u32_f32_e32 v0, v0
+; GFX1250-NEXT:    v_cvt_u32_f32_e32 v0, v1
 ; GFX1250-NEXT:    v_readfirstlane_b32 s3, v0
 ; GFX1250-NEXT:    s_mul_i32 s4, s4, s3
 ; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)

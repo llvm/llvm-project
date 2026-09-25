@@ -352,12 +352,12 @@ define amdgpu_kernel void @simple_write2_two_val_subreg2_f32(ptr addrspace(1) %C
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8 nv
 ; GFX1250-NEXT:    v_and_b32_e32 v2, 0x3ff, v0
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    v_lshlrev_b32_e32 v3, 2, v2
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    global_load_b64 v[0:1], v2, s[0:1] scale_offset
-; GFX1250-NEXT:    s_wait_xcnt 0x0
-; GFX1250-NEXT:    v_lshlrev_b32_e32 v2, 2, v2
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    ds_store_2addr_b32 v2, v0, v1 offset1:8
+; GFX1250-NEXT:    ds_store_2addr_b32 v3, v0, v1 offset1:8
 ; GFX1250-NEXT:    s_endpgm
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %in.gep = getelementptr <2 x float>, ptr addrspace(1) %in, i32 %x.i
@@ -755,12 +755,11 @@ define amdgpu_kernel void @write2_ptr_subreg_arg_two_val_f32(ptr addrspace(1) %C
 ; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    global_load_b32 v1, v0, s[0:1] scale_offset
 ; GFX1250-NEXT:    global_load_b32 v2, v0, s[2:3] scale_offset
-; GFX1250-NEXT:    s_wait_xcnt 0x0
-; GFX1250-NEXT:    v_dual_mov_b32 v0, s4 :: v_dual_mov_b32 v3, s5
+; GFX1250-NEXT:    v_dual_mov_b32 v3, s4 :: v_dual_mov_b32 v4, s5
 ; GFX1250-NEXT:    s_wait_loadcnt 0x1
-; GFX1250-NEXT:    ds_store_b32 v0, v1 offset:32
+; GFX1250-NEXT:    ds_store_b32 v3, v1 offset:32
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    ds_store_b32 v3, v2 offset:32
+; GFX1250-NEXT:    ds_store_b32 v4, v2 offset:32
 ; GFX1250-NEXT:    s_endpgm
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %in0.gep = getelementptr float, ptr addrspace(1) %in0, i32 %x.i
@@ -877,11 +876,10 @@ define amdgpu_kernel void @misaligned_simple_write2_one_val_f64(ptr addrspace(1)
 ; GFX1250-UNALIGNED-NEXT:    v_and_b32_e32 v2, 0x1ff8, v0
 ; GFX1250-UNALIGNED-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-UNALIGNED-NEXT:    global_load_b64 v[0:1], v2, s[0:1]
-; GFX1250-UNALIGNED-NEXT:    s_wait_xcnt 0x0
-; GFX1250-UNALIGNED-NEXT:    v_add_nc_u32_e32 v2, s2, v2
+; GFX1250-UNALIGNED-NEXT:    v_add_nc_u32_e32 v3, s2, v2
 ; GFX1250-UNALIGNED-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-UNALIGNED-NEXT:    ds_store_2addr_b32 v2, v0, v1 offset1:1
-; GFX1250-UNALIGNED-NEXT:    ds_store_2addr_b32 v2, v0, v1 offset0:14 offset1:15
+; GFX1250-UNALIGNED-NEXT:    ds_store_2addr_b32 v3, v0, v1 offset1:1
+; GFX1250-UNALIGNED-NEXT:    ds_store_2addr_b32 v3, v0, v1 offset0:14 offset1:15
 ; GFX1250-UNALIGNED-NEXT:    s_endpgm
 ;
 ; GFX1250S-UNALIGNED-LABEL: misaligned_simple_write2_one_val_f64:
@@ -896,11 +894,10 @@ define amdgpu_kernel void @misaligned_simple_write2_one_val_f64(ptr addrspace(1)
 ; GFX1250S-UNALIGNED-NEXT:    v_and_b32_e32 v2, 0x1ff8, v0
 ; GFX1250S-UNALIGNED-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250S-UNALIGNED-NEXT:    global_load_b64 v[0:1], v2, s[0:1]
-; GFX1250S-UNALIGNED-NEXT:    s_wait_xcnt 0x0
-; GFX1250S-UNALIGNED-NEXT:    v_add_nc_u32_e32 v2, s2, v2
+; GFX1250S-UNALIGNED-NEXT:    v_add_nc_u32_e32 v3, s2, v2
 ; GFX1250S-UNALIGNED-NEXT:    s_wait_loadcnt 0x0
-; GFX1250S-UNALIGNED-NEXT:    ds_store_b64 v2, v[0:1]
-; GFX1250S-UNALIGNED-NEXT:    ds_store_b64 v2, v[0:1] offset:56
+; GFX1250S-UNALIGNED-NEXT:    ds_store_b64 v3, v[0:1]
+; GFX1250S-UNALIGNED-NEXT:    ds_store_b64 v3, v[0:1] offset:56
 ; GFX1250S-UNALIGNED-NEXT:    s_endpgm
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %in.gep = getelementptr double, ptr addrspace(1) %in, i32 %x.i
@@ -999,11 +996,10 @@ define amdgpu_kernel void @unaligned_offset_simple_write2_one_val_f64(ptr addrsp
 ; GFX1250-NEXT:    v_and_b32_e32 v2, 0x1ff8, v0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    global_load_b64 v[0:1], v2, s[0:1]
-; GFX1250-NEXT:    s_wait_xcnt 0x0
-; GFX1250-NEXT:    v_add_nc_u32_e32 v2, s2, v2
+; GFX1250-NEXT:    v_add_nc_u32_e32 v3, s2, v2
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    ds_store_b64 v2, v[0:1] offset:5
-; GFX1250-NEXT:    ds_store_b64 v2, v[0:1] offset:9
+; GFX1250-NEXT:    ds_store_b64 v3, v[0:1] offset:5
+; GFX1250-NEXT:    ds_store_b64 v3, v[0:1] offset:9
 ; GFX1250-NEXT:    s_endpgm
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %in.gep = getelementptr double, ptr addrspace(1) %in, i32 %x.i

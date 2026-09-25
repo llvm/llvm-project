@@ -12,12 +12,11 @@ define amdgpu_ps void @test_swmmac_f32_16x16x128_fp8_fp8_i16_index(<8 x i32> %a,
 ; SDAG-FAKE16-NEXT:    s_mov_b64 s[64:65], 0
 ; SDAG-FAKE16-NEXT:    v_nop
 ; SDAG-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; SDAG-FAKE16-NEXT:    global_load_u16 v32, v[32:33], off
-; SDAG-FAKE16-NEXT:    s_wait_xcnt 0x0
-; SDAG-FAKE16-NEXT:    v_mov_b32_e32 v33, 0
+; SDAG-FAKE16-NEXT:    global_load_u16 v36, v[32:33], off
+; SDAG-FAKE16-NEXT:    v_mov_b32_e32 v37, 0
 ; SDAG-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; SDAG-FAKE16-NEXT:    v_swmmac_f32_16x16x128_fp8_fp8 v[24:31], v[0:7], v[8:23], v[32:33]
+; SDAG-FAKE16-NEXT:    v_swmmac_f32_16x16x128_fp8_fp8 v[24:31], v[0:7], v[8:23], v[36:37]
 ; SDAG-FAKE16-NEXT:    s_clause 0x1
 ; SDAG-FAKE16-NEXT:    global_store_b128 v[34:35], v[28:31], off offset:16
 ; SDAG-FAKE16-NEXT:    global_store_b128 v[34:35], v[24:27], off
