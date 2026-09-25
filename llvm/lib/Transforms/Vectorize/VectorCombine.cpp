@@ -1337,19 +1337,45 @@ bool VectorCombine::scalarizeOpOrCmp(Instruction &I) {
           cast<Constant>(VecC), Builder.getInt64(*Index));
 
   Value *Scalar;
-  if (CI)
-    Scalar = Builder.CreateCmp(CI->getPredicate(), ScalarOps[0], ScalarOps[1]);
-  else if (UO || BO)
-    Scalar = Builder.CreateNAryOp(Opcode, ScalarOps);
-  else
+  // We need to pass the flags during the creation of instrucitons. Constant
+  // folding might remove the instructions, so post setting the flags might
+  // pollute the later instructions.
+  if (CI) {
+    if (FPMathOperator *FPMO = dyn_cast<FPMathOperator>(&I))
+      Scalar = Builder.CreateFCmpFMF(CI->getPredicate(), ScalarOps[0],
+                                     ScalarOps[1], FPMO->getFastMathFlags(),
+                                     CI->getName() + ".scalar");
+    else
+      Scalar = Builder.CreateICmp(CI->getPredicate(), ScalarOps[0],
+                                  ScalarOps[1], CI->getName() + ".scalar");
+  } else if (UO) {
+    // FNeg is the only unary operator.
+    Scalar = Builder.CreateFNegFMF(ScalarOps[0], UO, UO->getName() + ".scalar");
+  } else if (BO) {
+    if (OverflowingBinaryOperator *OBO =
+            dyn_cast<OverflowingBinaryOperator>(&I)) {
+      Scalar = Builder.CreateNoWrapBinOp(
+          BO->getOpcode(), ScalarOps[0], ScalarOps[1], OBO->hasNoUnsignedWrap(),
+          OBO->hasNoSignedWrap(), BO->getName() + ".scalar");
+    } else if (PossiblyDisjointInst *PDI = dyn_cast<PossiblyDisjointInst>(&I)) {
+      Scalar = Builder.CreateOr(ScalarOps[0], ScalarOps[1],
+                                BO->getName() + ".scalar", PDI->isDisjoint());
+    } else if (PossiblyExactOperator *PEO =
+                   dyn_cast<PossiblyExactOperator>(&I)) {
+      Scalar =
+          Builder.CreateExactBinOp(BO->getOpcode(), ScalarOps[0], ScalarOps[1],
+                                   PEO->isExact(), BO->getName() + ".scalar");
+    } else if (FPMathOperator *FPMO = dyn_cast<FPMathOperator>(&I)) {
+      Scalar = Builder.CreateBinOpFMF(BO->getOpcode(), ScalarOps[0],
+                                      ScalarOps[1], FPMO->getFastMathFlags(),
+                                      BO->getName() + ".scalar");
+    } else {
+      Scalar = Builder.CreateBinOp(BO->getOpcode(), ScalarOps[0], ScalarOps[1],
+                                   BO->getName() + ".scalar");
+    }
+  } else {
     Scalar = Builder.CreateIntrinsic(ScalarTy, II->getIntrinsicID(), ScalarOps);
-
-  Scalar->setName(I.getName() + ".scalar");
-
-  // All IR flags are safe to back-propagate. There is no potential for extra
-  // poison to be created by the scalar instruction.
-  if (auto *ScalarInst = dyn_cast<Instruction>(Scalar))
-    ScalarInst->copyIRFlags(&I);
+  }
 
   Value *Insert = Builder.CreateInsertElement(NewVecC, Scalar, *Index);
   replaceValue(I, *Insert);
