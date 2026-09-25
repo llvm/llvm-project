@@ -1512,7 +1512,7 @@ mlir::LogicalResult CIRToLLVMAtomicFetchOpLowering::matchAndRewrite(
   // The AMDGPU raw hardware atomic builtins need metadata for the backend to
   // select the native instruction. LDS atomics are always native, so the
   // metadata is only needed for the global and flat address spaces.
-  if (op->hasAttr("cir.amdgpu_raw_atomic")) {
+  if (op->hasAttr(cir::CIRDialect::getAMDGPURawAtomicAttrName())) {
     auto ptrTy =
         mlir::cast<mlir::LLVM::LLVMPointerType>(adaptor.getPtr().getType());
     if (ptrTy.getAddressSpace() != llvm::AMDGPUAS::LOCAL_ADDRESS) {
