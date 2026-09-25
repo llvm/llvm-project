@@ -357,7 +357,7 @@ body:             |
 ---
 # The load reads a frame object that is not a spill slot, and the store names
 # that object through its IR value. Reusing the load would return the value
-# from before the store, so isSingleSpillSlotAccess() must refuse to track it.
+# from before the store, so isSpillSlotReload() must refuse to track it.
 name:            non_spill_slot_reload_is_not_reused_across_ir_store
 tracksRegLiveness: true
 frameInfo:
