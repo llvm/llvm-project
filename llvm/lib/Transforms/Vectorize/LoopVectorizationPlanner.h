@@ -833,6 +833,52 @@ public:
   }
 };
 
+/// The plans and profitability results produced by a completed planning run.
+class VPlanPlanningResult {
+  friend class LoopVectorizationPlanner;
+
+  SmallVector<VPlanPtr, 4> VPlans;
+  SmallVector<VectorizationFactor, 8> ProfitableVFs;
+
+public:
+  VPlanPlanningResult() = default;
+  VPlanPlanningResult(VPlanPlanningResult &&) = default;
+  VPlanPlanningResult &operator=(VPlanPlanningResult &&) = default;
+  VPlanPlanningResult(const VPlanPlanningResult &) = delete;
+  VPlanPlanningResult &operator=(const VPlanPlanningResult &) = delete;
+
+  /// Return the VPlan for \p VF. At the moment, there is always a single VPlan
+  /// for each VF.
+  VPlan &getPlanFor(ElementCount VF) const;
+
+  /// Return true if there is a plan for \p VF.
+  bool hasPlanWithVF(ElementCount VF) const;
+};
+
+/// State shared by VPlan construction and cost-modeling for one planning run.
+///
+/// Keeping the cost model and the plans whose decisions it produced in the
+/// same context makes the dependency explicit when multiple cost models are
+/// used for the same loop. Finalizing the context destroys the cost model and
+/// returns the plans and profitability results needed by code generation.
+class VPlanPlanningContext {
+  friend class LoopVectorizationPlanner;
+
+  std::unique_ptr<LoopVectorizationCostModel> CM;
+  VPlanPlanningResult Result;
+
+public:
+  explicit VPlanPlanningContext(std::unique_ptr<LoopVectorizationCostModel> CM);
+  ~VPlanPlanningContext();
+
+  LoopVectorizationCostModel &getCostModel();
+
+  const VPlanPlanningResult &getResult() const { return Result; }
+
+  /// End planning, destroy the cost model, and return the completed result.
+  VPlanPlanningResult finalize() &&;
+};
+
 /// Planner drives the vectorization process after having passed
 /// Legality checks.
 class LoopVectorizationPlanner {
@@ -854,14 +900,9 @@ class LoopVectorizationPlanner {
   /// The legality analysis.
   LoopVectorizationLegality *Legal;
 
-  /// The profitability analysis. Cleared after making cost based decisions.
-  std::unique_ptr<LoopVectorizationCostModel> CM;
-
-  /// VF selection state independent of cost-modeling decisions.
+  /// Loop-scoped VF selection state shared by planning contexts for this loop.
+  /// Context-specific values are recomputed by plan() before use.
   VFSelectionContext &Config;
-
-  /// The interleaved access analysis.
-  InterleavedAccessInfo &IAI;
 
   PredicatedScalarEvolution &PSE;
 
@@ -870,15 +911,10 @@ class LoopVectorizationPlanner {
   /// Lazily fetch BranchProbabilityInfo, independent of BlockFrequencyInfo.
   std::function<const BranchProbabilityInfo &()> GetBPI;
 
-  SmallVector<VPlanPtr, 4> VPlans;
-
-  /// Profitable vector factors.
-  SmallVector<VectorizationFactor, 8> ProfitableVFs;
-
   /// A builder used to construct the current plan.
   VPBuilder Builder;
 
-  /// Computes the cost of \p Plan for vectorization factor \p VF.
+  /// Computes the cost of the VPlan associated with \p VF.
   ///
   /// The current implementation requires access to the
   /// LoopVectorizationLegality to handle inductions and reductions, which is
@@ -886,7 +922,8 @@ class LoopVectorizationPlanner {
   ///
   /// TODO: Move to VPlan::cost once the use of LoopVectorizationLegality has
   /// been retired.
-  InstructionCost cost(VPlan &Plan, ElementCount VF, VPRegisterUsage *RU) const;
+  InstructionCost cost(VPlanPlanningContext &Ctx, ElementCount VF,
+                       VPRegisterUsage *RU) const;
 
   /// Precompute costs for certain instructions using the legacy cost model. The
   /// function is used to bring up the VPlan-based cost model to initially avoid
@@ -898,41 +935,26 @@ public:
   LoopVectorizationPlanner(
       Loop *L, LoopInfo *LI, DominatorTree *DT, const TargetLibraryInfo *TLI,
       const TargetTransformInfo &TTI, LoopVectorizationLegality *Legal,
-      std::unique_ptr<LoopVectorizationCostModel> CM,
-      VFSelectionContext &Config, InterleavedAccessInfo &IAI,
-      PredicatedScalarEvolution &PSE, OptimizationRemarkEmitter *ORE,
+      VFSelectionContext &Config, PredicatedScalarEvolution &PSE,
+      OptimizationRemarkEmitter *ORE,
       std::function<const BranchProbabilityInfo &()> GetBPI);
-
-  ~LoopVectorizationPlanner();
-
-  /// Return the cost model. Must not be called after clearCostModel().
-  LoopVectorizationCostModel &getCostModel() {
-    assert(CM && "Cost model has already been cleared");
-    return *CM;
-  }
-
-  /// Destroy the cost model.
-  void clearCostModel();
 
   /// Build VPlans for the specified \p UserVF and \p UserIC if they are
   /// non-zero or all applicable candidate VFs otherwise. If vectorization and
   /// interleaving should be avoided up-front, no plans are generated.
-  void plan(ElementCount UserVF, unsigned UserIC);
-
-  /// Return the VPlan for \p VF. At the moment, there is always a single VPlan
-  /// for each VF.
-  VPlan &getPlanFor(ElementCount VF) const;
+  void plan(VPlanPlanningContext &Ctx, ElementCount UserVF, unsigned UserIC);
 
   /// Compute and return the most profitable vectorization factor and the
   /// corresponding best VPlan. Also collect all profitable VFs in
   /// ProfitableVFs.
-  std::pair<VectorizationFactor, VPlan *> computeBestVF();
+  std::pair<VectorizationFactor, VPlan *>
+  computeBestVF(VPlanPlanningContext &Ctx);
 
   /// \return The desired interleave count.
   /// If interleave count has been specified by metadata it will be returned.
   /// Otherwise, the interleave count is computed and returned. VF and LoopCost
   /// are the selected vectorization factor and the cost of the selected VF.
-  unsigned selectInterleaveCount(VPlan &Plan, ElementCount VF,
+  unsigned selectInterleaveCount(VPlanPlanningContext &Ctx, ElementCount VF,
                                  InstructionCost LoopCost);
 
   /// Generate the IR code for the vectorized loop captured in VPlan \p BestPlan
@@ -956,15 +978,8 @@ public:
                   EpilogueVectorizationKind::None);
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  void printPlans(raw_ostream &O);
+  void printPlans(const VPlanPlanningContext &Ctx, raw_ostream &O);
 #endif
-
-  /// Look through the existing plans and return true if we have one with
-  /// vectorization factor \p VF.
-  bool hasPlanWithVF(ElementCount VF) const {
-    return any_of(VPlans,
-                  [&](const VPlanPtr &Plan) { return Plan->hasVF(VF); });
-  }
 
   /// Test a \p Predicate on a \p Range of VF's. Return the value of applying
   /// \p Predicate on Range.Start, possibly decreasing Range.End such that the
@@ -978,13 +993,14 @@ public:
   /// Returns nullptr if epilogue vectorization is not supported or not
   /// profitable for the loop. \p ScalarEpilogueAllowed indicates whether the
   /// epilogue lowering policy permits creating a scalar epilogue at all.
-  std::unique_ptr<VPlan> selectBestEpiloguePlan(VPlan &MainPlan,
-                                                ElementCount MainLoopVF,
-                                                unsigned IC,
-                                                bool ScalarEpilogueAllowed);
+  std::unique_ptr<VPlan>
+  selectBestEpiloguePlan(const VPlanPlanningResult &EpilogueCandidates,
+                         VPlan &MainPlan, ElementCount MainLoopVF, unsigned IC,
+                         bool ScalarEpilogueAllowed);
 
   /// Emit remarks for recipes with invalid costs in the available VPlans.
-  void emitInvalidCostRemarks(OptimizationRemarkEmitter *ORE);
+  void emitInvalidCostRemarks(VPlanPlanningContext &Ctx,
+                              OptimizationRemarkEmitter *ORE);
 
   /// Create a check to \p Plan to see if the vector loop should be executed
   /// based on its trip count.
@@ -1015,7 +1031,7 @@ private:
   /// Build an initial VPlan, with HCFG wrapping the original scalar loop and
   /// scalar transformations applied. Returns null if an initial VPlan cannot
   /// be built.
-  VPlanPtr tryToBuildVPlan1();
+  VPlanPtr tryToBuildVPlan1(VPlanPlanningContext &Ctx);
 
   /// Build a VPlan using VPRecipes according to the information gathered by
   /// Legal and VPlan-based analysis. For outer loops, performs basic recipe
@@ -1025,18 +1041,21 @@ private:
   /// maximum VF for which no plan could be built. Each VPlan is built starting
   /// from a copy of \p InitialPlan, which is a plain CFG VPlan wrapping the
   /// original scalar loop.
-  VPlanPtr tryToBuildVPlan(VPlanPtr InitialPlan, VFRange &Range);
+  VPlanPtr tryToBuildVPlan(VPlanPlanningContext &Ctx, VPlanPtr InitialPlan,
+                           VFRange &Range);
 
   /// Build VPlans for power-of-2 VF's between \p MinVF and \p MaxVF inclusive,
   /// based on \p VPlan1 and according to the information gathered by Legal
   /// when it checked if it is legal to vectorize the loop.
-  void buildVPlans(VPlan &VPlan1, ElementCount MinVF, ElementCount MaxVF);
+  void buildVPlans(VPlanPlanningContext &Ctx, VPlan &VPlan1, ElementCount MinVF,
+                   ElementCount MaxVF);
 
   /// Add ComputeReductionResult recipes to the middle block to compute the
   /// final reduction results. Add Select recipes to the latch block when
   /// folding tail, to feed ComputeReductionResult with the last or penultimate
   /// iteration values according to the header mask.
-  void addReductionResultComputation(VPlanPtr &Plan, ElementCount MinVF);
+  void addReductionResultComputation(VPlanPlanningContext &Ctx, VPlanPtr &Plan,
+                                     ElementCount MinVF);
 
   /// Returns true if the per-lane cost of VectorizationFactor A is lower than
   /// that of B.

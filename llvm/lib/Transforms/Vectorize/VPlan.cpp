@@ -1679,7 +1679,7 @@ VPBuilder::createConsecutiveVectorPointer(VPValue *Ptr, Type *SourceElementTy,
   return createVectorPointer(Ptr, SourceElementTy, StrideOne, Flags, DL);
 }
 
-VPlan &LoopVectorizationPlanner::getPlanFor(ElementCount VF) const {
+VPlan &VPlanPlanningResult::getPlanFor(ElementCount VF) const {
   assert(count_if(VPlans,
                   [VF](const VPlanPtr &Plan) { return Plan->hasVF(VF); }) ==
              1 &&
@@ -1690,6 +1690,10 @@ VPlan &LoopVectorizationPlanner::getPlanFor(ElementCount VF) const {
       return *Plan.get();
   }
   llvm_unreachable("No plan found!");
+}
+
+bool VPlanPlanningResult::hasPlanWithVF(ElementCount VF) const {
+  return any_of(VPlans, [VF](const VPlanPtr &Plan) { return Plan->hasVF(VF); });
 }
 
 static void addRuntimeUnrollDisableMetaData(Loop *L) {
@@ -1834,7 +1838,9 @@ void LoopVectorizationPlanner::updateLoopMetadataAndProfileInfo(
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void LoopVectorizationPlanner::printPlans(raw_ostream &O) {
+void LoopVectorizationPlanner::printPlans(const VPlanPlanningContext &Ctx,
+                                          raw_ostream &O) {
+  const auto &VPlans = Ctx.Result.VPlans;
   if (VPlans.empty()) {
     O << "LV: No VPlans built.\n";
     return;
