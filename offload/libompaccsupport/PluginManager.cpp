@@ -106,8 +106,9 @@ bool PluginManager::initializeDevice(ol_device_handle_t DeviceHandle) {
   int32_t DeviceId =
       llvm::offload::tmp::__ol_tgt_GetPluginDeviceId(DeviceHandle);
 
-  auto ExclusiveDevicesAccessor = getExclusiveDevicesAccessor();
   // Initialize the device information for the RTL we are about to use.
+  auto ExclusiveDevicesAccessor = getExclusiveDevicesAccessor();
+
   int32_t UserId = ExclusiveDevicesAccessor->size();
 
   auto Device =
@@ -120,8 +121,8 @@ bool PluginManager::initializeDevice(ol_device_handle_t DeviceHandle) {
 
   ExclusiveDevicesAccessor->push_back(std::move(Device));
 
-  // We need to map between the plugin's device identifier and the one
-  // that OpenMP will use.
+  // We need to map between the liboffload device handle and the OpenMP device
+  // id.
   PM->DeviceIds[DeviceHandle] = UserId;
 
   return true;

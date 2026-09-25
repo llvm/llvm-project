@@ -84,12 +84,6 @@ DeviceTy::~DeviceTy() {
 }
 
 llvm::Error DeviceTy::init() {
-  // TODO: Remove this once all device operations go through liboffload
-  // This just ensures the device is initialized for cases where we go through
-  // the plugin interface.
-  size_t Size = 0;
-  olGetDeviceInfoSize(DeviceHandle, OL_DEVICE_INFO_GLOBAL_MEM_SIZE, &Size);
-
   OMPT_IF_BUILT_AND_INITIALIZED({
     GenericDeviceTy &GenericDevice = RTL->getDevice(RTLDeviceID);
     std::string ComputeUnitKind = GenericDevice.getComputeUnitKind();
