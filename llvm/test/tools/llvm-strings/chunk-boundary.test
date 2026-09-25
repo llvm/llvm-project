@@ -5,6 +5,9 @@
 ## Case 1: at least min string size appears before the boundary, unprintable
 ## byte as first byte of the next chunk. The string is printed on its own,
 ## with the offset of its start (16376 = 16384 - 8).
+## Some older versions of printf on Windows produced \r\n instead of \n,
+## which would cause the subsequent diff to fail. Make sure you are using an
+## up-to-date version.
 # RUN: printf "%16376sENDCHUNK%4s" | tr " " "\0" > %t.1
 # RUN: llvm-strings --radix=d %t.1 | FileCheck %s --check-prefix=CASE1 --match-full-lines --strict-whitespace --implicit-check-not={{.}}
 
