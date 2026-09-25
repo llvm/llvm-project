@@ -62,3 +62,17 @@ add_entrypoint_object(
     libc.src.__support.File.dir
     libc.src.errno.errno
 )
+
+add_entrypoint_object(
+  alphasort
+  SRCS
+    alphasort.cpp
+  HDRS
+    alphasort.h
+  DEPENDS
+    libc.hdr.types.struct_dirent
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.string.strcoll
+)
+
