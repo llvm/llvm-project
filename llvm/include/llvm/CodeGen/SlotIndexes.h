@@ -47,9 +47,13 @@ class raw_ostream;
   class IndexListEntry : public ilist_node<IndexListEntry> {
     MachineInstr *mi;
     unsigned index;
+    bool erased = false;
 
   public:
     IndexListEntry(MachineInstr *mi, unsigned index) : mi(mi), index(index) {}
+
+    bool isErased() const { return erased; }
+    void setErased() { erased = true; }
 
     MachineInstr* getInstr() const { return mi; }
     void setInstr(MachineInstr *mi) {
@@ -97,6 +101,15 @@ class raw_ostream;
     IndexListEntry* listEntry() const {
       assert(isValid() && "Attempt to compare reserved index.");
       return lie.getPointer();
+    }
+
+    /// For operations that need the entry still linked. Comparison stays
+    /// unchecked: an erased entry orders correctly, just not distinctly.
+    IndexListEntry *linkedEntry() const {
+      assert(!listEntry()->isErased() &&
+             "SlotIndex outlived the instruction it pointed at; the analysis "
+             "holding it must report it to SlotIndexes::compactIndexes");
+      return listEntry();
     }
 
     unsigned getIndex() const {
@@ -250,7 +263,7 @@ class raw_ostream;
     SlotIndex getNextSlot() const {
       Slot s = getSlot();
       if (s == Slot_Dead) {
-        return SlotIndex(&*++listEntry()->getIterator(), Slot_Block);
+        return SlotIndex(&*++linkedEntry()->getIterator(), Slot_Block);
       }
       return SlotIndex(listEntry(), s + 1);
     }
@@ -258,7 +271,7 @@ class raw_ostream;
     /// Returns the next index. This is the index corresponding to the this
     /// index's slot, but for the next instruction.
     SlotIndex getNextIndex() const {
-      return SlotIndex(&*++listEntry()->getIterator(), getSlot());
+      return SlotIndex(&*++linkedEntry()->getIterator(), getSlot());
     }
 
     /// Returns the previous slot in the index list. This could be either the
@@ -270,7 +283,7 @@ class raw_ostream;
     SlotIndex getPrevSlot() const {
       Slot s = getSlot();
       if (s == Slot_Block) {
-        return SlotIndex(&*--listEntry()->getIterator(), Slot_Dead);
+        return SlotIndex(&*--linkedEntry()->getIterator(), Slot_Dead);
       }
       return SlotIndex(listEntry(), s - 1);
     }
@@ -278,7 +291,7 @@ class raw_ostream;
     /// Returns the previous index. This is the index corresponding to this
     /// index's slot, but for the previous instruction.
     SlotIndex getPrevIndex() const {
-      return SlotIndex(&*--listEntry()->getIterator(), getSlot());
+      return SlotIndex(&*--linkedEntry()->getIterator(), getSlot());
     }
   };
 
@@ -393,13 +406,13 @@ class raw_ostream;
     /// Returns the instruction for the given index, or null if the given
     /// index has no instruction associated with it.
     MachineInstr* getInstructionFromIndex(SlotIndex index) const {
-      return index.listEntry()->getInstr();
+      return index.linkedEntry()->getInstr();
     }
 
     /// Returns the next non-null index, if one exists.
     /// Otherwise returns getLastIndex().
     SlotIndex getNextNonNullIndex(SlotIndex Index) {
-      IndexList::iterator I = Index.listEntry()->getIterator();
+      IndexList::iterator I = Index.linkedEntry()->getIterator();
       IndexList::iterator E = indexList.end();
       while (++I != E)
         if (I->getInstr())
@@ -636,6 +649,16 @@ class raw_ostream;
 
     /// Renumber all indexes using the default instruction distance.
     LLVM_ABI void packIndexes();
+
+    /// Erase index list entries that no longer refer to an instruction, then
+    /// renumber. Such entries are not spread evenly, so they overstate some
+    /// live range sizes more than others and reorder register allocation.
+    ///
+    /// \p Referenced must name every index held anywhere, not just the
+    /// caller's, since erased entries are unlinked; analyses report their own
+    /// via appendReferencedIndexes(). Block boundaries and the getZeroIndex()
+    /// and getLastIndex() anchors are always kept. Returns the number erased.
+    LLVM_ABI unsigned compactIndexes(ArrayRef<SlotIndex> Referenced);
   };
 
   // Specialize IntervalMapInfo for half-open slot index intervals.
