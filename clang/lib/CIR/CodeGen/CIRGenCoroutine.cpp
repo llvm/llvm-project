@@ -558,6 +558,8 @@ CIRGenFunction::emitCoroutineBody(const CoroutineBodyStmt &s) {
         // Set the return value back. The code generator, as the AST
         // **Consumer**, shouldn't change the AST.
         ret->setRetValue(previousRetValue);
+      } else {
+        cir::ReturnOp::create(builder, openCurlyLoc);
       }
 
       return mlir::success();
@@ -570,25 +572,15 @@ CIRGenFunction::emitCoroutineBody(const CoroutineBodyStmt &s) {
           res = initialSuspendBuilder();
         },
         /*bodyBuilder=*/
-        [&](mlir::OpBuilder &b, mlir::Location loc) {
-          if (res.succeeded())
-            res = bodyBuilder();
-        },
+        [&](mlir::OpBuilder &b, mlir::Location loc) { res = bodyBuilder(); },
         /*finalSuspendBuilder=*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
-          if (res.succeeded())
-            res = finalSuspendBuilder();
+          res = finalSuspendBuilder();
         },
         /*destroyBuilder=*/
-        [&](mlir::OpBuilder &b, mlir::Location loc) {
-          if (res.succeeded())
-            res = destroyBuilder();
-        },
+        [&](mlir::OpBuilder &b, mlir::Location loc) { res = destroyBuilder(); },
         /*exitBuilder=*/
-        [&](mlir::OpBuilder &b, mlir::Location loc) {
-          if (res.succeeded())
-            res = exitBuilder();
-        });
+        [&](mlir::OpBuilder &b, mlir::Location loc) { res = exitBuilder(); });
 
     if (coro && !coro.getBody().empty() &&
         !coro.getBody().back().mightHaveTerminator()) {
