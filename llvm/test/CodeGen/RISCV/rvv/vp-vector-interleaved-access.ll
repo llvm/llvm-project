@@ -370,12 +370,15 @@ define i32 @masked_load_store_factor2_v2_shared_mask_extract(<vscale x 2 x i1> %
 ; RV32-NEXT:    vsetvli a2, zero, e8, mf2, ta, ma
 ; RV32-NEXT:    vmv.v.i v10, 0
 ; RV32-NEXT:    csrr a2, vlenb
-; RV32-NEXT:    srli a2, a2, 2
-; RV32-NEXT:    vslidedown.vx v11, v11, a2
+; RV32-NEXT:    srli a3, a2, 3
+; RV32-NEXT:    vsetvli a4, zero, e16, mf2, ta, ma
+; RV32-NEXT:    vslidedown.vx v11, v11, a3
+; RV32-NEXT:    vsetvli a3, zero, e8, mf2, ta, ma
 ; RV32-NEXT:    vmerge.vim v10, v10, 1, v0
 ; RV32-NEXT:    vsetvli a3, zero, e8, mf4, ta, ma
 ; RV32-NEXT:    vmsne.vi v0, v11, 0
 ; RV32-NEXT:    vmerge.vim v9, v9, 1, v0
+; RV32-NEXT:    srli a2, a2, 2
 ; RV32-NEXT:    vsetvli a3, zero, e8, mf2, ta, ma
 ; RV32-NEXT:    vslideup.vx v10, v9, a2
 ; RV32-NEXT:    slli a2, a1, 1
@@ -405,12 +408,15 @@ define i32 @masked_load_store_factor2_v2_shared_mask_extract(<vscale x 2 x i1> %
 ; RV64-NEXT:    vsetvli a2, zero, e8, mf2, ta, ma
 ; RV64-NEXT:    vmv.v.i v10, 0
 ; RV64-NEXT:    csrr a2, vlenb
-; RV64-NEXT:    srli a2, a2, 2
-; RV64-NEXT:    vslidedown.vx v11, v11, a2
+; RV64-NEXT:    srli a3, a2, 3
+; RV64-NEXT:    vsetvli a4, zero, e16, mf2, ta, ma
+; RV64-NEXT:    vslidedown.vx v11, v11, a3
+; RV64-NEXT:    vsetvli a3, zero, e8, mf2, ta, ma
 ; RV64-NEXT:    vmerge.vim v10, v10, 1, v0
 ; RV64-NEXT:    vsetvli a3, zero, e8, mf4, ta, ma
 ; RV64-NEXT:    vmsne.vi v0, v11, 0
 ; RV64-NEXT:    vmerge.vim v9, v9, 1, v0
+; RV64-NEXT:    srli a2, a2, 2
 ; RV64-NEXT:    vsetvli a3, zero, e8, mf2, ta, ma
 ; RV64-NEXT:    vslideup.vx v10, v9, a2
 ; RV64-NEXT:    slli a2, a1, 33
@@ -591,12 +597,15 @@ define {<vscale x 2 x i32>, <vscale x 2 x i32>} @not_same_mask(<vscale x 2 x i1>
 ; RV32-NEXT:    vsetvli a2, zero, e8, mf2, ta, ma
 ; RV32-NEXT:    vmv.v.i v8, 0
 ; RV32-NEXT:    csrr a2, vlenb
-; RV32-NEXT:    srli a2, a2, 2
-; RV32-NEXT:    vslidedown.vx v9, v11, a2
+; RV32-NEXT:    srli a3, a2, 3
+; RV32-NEXT:    vsetvli a4, zero, e16, mf2, ta, ma
+; RV32-NEXT:    vslidedown.vx v9, v11, a3
+; RV32-NEXT:    vsetvli a3, zero, e8, mf2, ta, ma
 ; RV32-NEXT:    vmerge.vim v8, v8, 1, v0
 ; RV32-NEXT:    vsetvli a3, zero, e8, mf4, ta, ma
 ; RV32-NEXT:    vmsne.vi v0, v9, 0
 ; RV32-NEXT:    vmerge.vim v9, v10, 1, v0
+; RV32-NEXT:    srli a2, a2, 2
 ; RV32-NEXT:    vsetvli a3, zero, e8, mf2, ta, ma
 ; RV32-NEXT:    vslideup.vx v8, v9, a2
 ; RV32-NEXT:    slli a1, a1, 1
@@ -625,12 +634,15 @@ define {<vscale x 2 x i32>, <vscale x 2 x i32>} @not_same_mask(<vscale x 2 x i1>
 ; RV64-NEXT:    vsetvli a2, zero, e8, mf2, ta, ma
 ; RV64-NEXT:    vmv.v.i v8, 0
 ; RV64-NEXT:    csrr a2, vlenb
-; RV64-NEXT:    srli a2, a2, 2
-; RV64-NEXT:    vslidedown.vx v9, v11, a2
+; RV64-NEXT:    srli a3, a2, 3
+; RV64-NEXT:    vsetvli a4, zero, e16, mf2, ta, ma
+; RV64-NEXT:    vslidedown.vx v9, v11, a3
+; RV64-NEXT:    vsetvli a3, zero, e8, mf2, ta, ma
 ; RV64-NEXT:    vmerge.vim v8, v8, 1, v0
 ; RV64-NEXT:    vsetvli a3, zero, e8, mf4, ta, ma
 ; RV64-NEXT:    vmsne.vi v0, v9, 0
 ; RV64-NEXT:    vmerge.vim v9, v10, 1, v0
+; RV64-NEXT:    srli a2, a2, 2
 ; RV64-NEXT:    vsetvli a3, zero, e8, mf2, ta, ma
 ; RV64-NEXT:    vslideup.vx v8, v9, a2
 ; RV64-NEXT:    slli a1, a1, 33

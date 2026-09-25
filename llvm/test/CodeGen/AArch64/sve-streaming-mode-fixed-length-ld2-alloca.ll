@@ -266,11 +266,9 @@ define void @alloc_v4i8_intrinsic(ptr %st_ptr) nounwind {
 ; CHECK-NEXT:    ptrue p0.h, vl4
 ; CHECK-NEXT:    ld1b { z0.h }, p0/z, [x20]
 ; CHECK-NEXT:    ptrue p0.s, vl2
-; CHECK-NEXT:    mov z1.h, z0.h[2]
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z0.s, w8
-; CHECK-NEXT:    mov z1.s, w9
+; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    movprfx z1, z0
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #8
 ; CHECK-NEXT:    zip1 z0.s, z0.s, z1.s
 ; CHECK-NEXT:    st1b { z0.s }, p0, [x19]
 ; CHECK-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload

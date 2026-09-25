@@ -898,14 +898,14 @@ define {<vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 
 ; SVE-NEXT:    .cfi_escape 0x0f, 0x09, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x11, 0x30, 0x1e, 0x22 // sp + 16 + 48 * VG
 ; SVE-NEXT:    .cfi_offset w29, -16
 ; SVE-NEXT:    ptrue p0.d
-; SVE-NEXT:    str z5, [sp, #5, mul vl]
-; SVE-NEXT:    str z4, [sp, #4, mul vl]
-; SVE-NEXT:    str z3, [sp, #3, mul vl]
-; SVE-NEXT:    str z2, [sp, #2, mul vl]
-; SVE-NEXT:    str z1, [sp, #1, mul vl]
-; SVE-NEXT:    str z0, [sp]
-; SVE-NEXT:    ld3d { z5.d - z7.d }, p0/z, [sp, #3, mul vl]
-; SVE-NEXT:    ld3d { z24.d - z26.d }, p0/z, [sp]
+; SVE-NEXT:    str z5, [sp, #2, mul vl]
+; SVE-NEXT:    str z4, [sp, #1, mul vl]
+; SVE-NEXT:    str z3, [sp]
+; SVE-NEXT:    str z2, [sp, #5, mul vl]
+; SVE-NEXT:    str z1, [sp, #4, mul vl]
+; SVE-NEXT:    str z0, [sp, #3, mul vl]
+; SVE-NEXT:    ld3d { z5.d - z7.d }, p0/z, [sp]
+; SVE-NEXT:    ld3d { z24.d - z26.d }, p0/z, [sp, #3, mul vl]
 ; SVE-NEXT:    uzp1 z0.d, z24.d, z5.d
 ; SVE-NEXT:    uzp1 z1.d, z25.d, z6.d
 ; SVE-NEXT:    uzp1 z2.d, z26.d, z7.d
@@ -923,14 +923,14 @@ define {<vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 
 ; SME2-NEXT:    .cfi_escape 0x0f, 0x09, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x11, 0x30, 0x1e, 0x22 // sp + 16 + 48 * VG
 ; SME2-NEXT:    .cfi_offset w29, -16
 ; SME2-NEXT:    ptrue p0.d
-; SME2-NEXT:    str z5, [sp, #5, mul vl]
-; SME2-NEXT:    str z4, [sp, #4, mul vl]
-; SME2-NEXT:    str z3, [sp, #3, mul vl]
-; SME2-NEXT:    str z2, [sp, #2, mul vl]
-; SME2-NEXT:    str z1, [sp, #1, mul vl]
-; SME2-NEXT:    str z0, [sp]
-; SME2-NEXT:    ld3d { z3.d - z5.d }, p0/z, [sp, #3, mul vl]
-; SME2-NEXT:    ld3d { z24.d - z26.d }, p0/z, [sp]
+; SME2-NEXT:    str z5, [sp, #2, mul vl]
+; SME2-NEXT:    str z4, [sp, #1, mul vl]
+; SME2-NEXT:    str z3, [sp]
+; SME2-NEXT:    str z2, [sp, #5, mul vl]
+; SME2-NEXT:    str z1, [sp, #4, mul vl]
+; SME2-NEXT:    str z0, [sp, #3, mul vl]
+; SME2-NEXT:    ld3d { z3.d - z5.d }, p0/z, [sp]
+; SME2-NEXT:    ld3d { z24.d - z26.d }, p0/z, [sp, #3, mul vl]
 ; SME2-NEXT:    uzp { z2.d, z3.d }, z24.d, z3.d
 ; SME2-NEXT:    uzp { z6.d, z7.d }, z25.d, z4.d
 ; SME2-NEXT:    uzp { z4.d, z5.d }, z26.d, z5.d
