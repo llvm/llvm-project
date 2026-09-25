@@ -2112,7 +2112,7 @@ static Value *EmitAtomicStoreWithHintBuiltin(CodeGenFunction &CGF,
   unsigned HintArg = Result.Val.getInt().getExtValue();
 
   // Attach the hint if valid
-  if (toAArch64MemoryHint(HintArg) != AArch64MemoryHint::HINT_NONE) {
+  if (toAArch64MemoryHint(HintArg) != AArch64MemoryHint::NONE) {
     LLVMContext &Ctx = CGM.getLLVMContext();
     MDNode *MemHint = MDNode::get(
         Ctx, {MDString::get(Ctx, "aarch64.mem_hint"),
