@@ -14100,17 +14100,13 @@ void Sema::DiagnoseUniqueObjectDuplication(const VarDecl *VD) {
   }
 }
 
-// Return true if cooperative matrix builtin call returns cooperative matrix.
+// Return true if builtin call returns cooperative matrix.
 bool Sema::BuiltinReturnsCoopMatrix(Expr *RHSExpr) {
-  auto call = dyn_cast<CallExpr>(RHSExpr);
-  if (!call)
+  auto Call = dyn_cast<CallExpr>(RHSExpr);
+  if (!Call)
     return false;
-  FunctionDecl *F = call->getDirectCallee();
+  FunctionDecl *F = Call->getDirectCallee();
   if (!F)
-    return false;
-  DeclarationName MemberName = F->getDeclName();
-  IdentifierInfo *Fname = MemberName.getAsIdentifierInfo();
-  if (!Fname)
     return false;
   switch (F->getBuiltinID()) {
   case Builtin::BIcoop_mat_load:
@@ -14126,8 +14122,6 @@ bool Sema::BuiltinReturnsCoopMatrix(Expr *RHSExpr) {
   default:
     return false;
   }
-
-  return false;
 }
 
 void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
