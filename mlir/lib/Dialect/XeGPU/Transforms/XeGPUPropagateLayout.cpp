@@ -1652,6 +1652,36 @@ LogicalResult ResolveLayoutConflicts::assignResultLayout(OpResult &result) {
   return success();
 }
 
+// Recursively rematerialize a trivially-rematerializable producer subtree so
+// that the clone yields `layout`. Cloning only the producer would leave its
+// operands pointing at values that carry the original (conflicting) layout,
+// making the clone's operand and result layouts disagree. Stamp `layout` on the
+// clone and rematerialize each vector operand with the layout back-derived from
+// it.
+static Value rematerializeWithLayout(OpBuilder &builder, Value value,
+                                     xegpu::DistributeLayoutAttr layout) {
+  Operation *producerOp = value.getDefiningOp();
+  builder.setInsertionPointAfter(producerOp);
+  Operation *clone = builder.clone(*producerOp);
+  OpResult cloneResult = clone->getResult(0);
+  // Drop the inherited producer layout so the new layout takes effect.
+  xegpu::removeLayoutAttr(cloneResult);
+  xegpu::setDistributeLayoutAttr(cloneResult, layout);
+  for (OpOperand &cloneOperand : clone->getOpOperands()) {
+    Value operandValue = cloneOperand.get();
+    if (!isa<VectorType>(operandValue.getType()) ||
+        !operandValue.getDefiningOp())
+      continue;
+    xegpu::DistributeLayoutAttr operandLayout =
+        xegpu::inferSourceLayoutFromResultForNonAnchorOp(cloneOperand, layout);
+    if (!operandLayout)
+      continue;
+    cloneOperand.set(
+        rematerializeWithLayout(builder, operandValue, operandLayout));
+  }
+  return cloneResult;
+}
+
 LogicalResult
 ResolveLayoutConflicts::resolveVectorConsumer(OpOperand &operand) {
   Value vectorValue = operand.get();
@@ -1711,13 +1741,7 @@ ResolveLayoutConflicts::resolveVectorConsumer(OpOperand &operand) {
       producerOp && producerOp->getNumResults() == 1 &&
       isa<OpResult>(vectorValue) &&
       xegpu::isTriviallyRematerializable(producerOp)) {
-    builder.setInsertionPointAfter(producerOp);
-    Operation *clone = builder.clone(*producerOp);
-    OpResult cloneResult = clone->getResult(0);
-    // Drop the inherited producer layout so the new layout takes effect
-    xegpu::removeLayoutAttr(cloneResult);
-    xegpu::setDistributeLayoutAttr(cloneResult, consumerLayout);
-    operand.set(cloneResult);
+    operand.set(rematerializeWithLayout(builder, vectorValue, consumerLayout));
     return success();
   }
 
