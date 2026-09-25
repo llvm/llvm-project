@@ -82,8 +82,8 @@ define i32 @bare_fi_high_frame() nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    qc.e.addi sp, sp, -8208
 ; CHECK-NEXT:    c.li a0, 1
-; CHECK-NEXT:    c.swsp a0, 12(sp)
-; CHECK-NEXT:    qc.e.lw a0, 8204(sp)
+; CHECK-NEXT:    c.swsp a0, 16(sp)
+; CHECK-NEXT:    c.lwsp a0, 12(sp)
 ; CHECK-NEXT:    qc.e.addi sp, sp, 8208
 ; CHECK-NEXT:    c.jr ra
   %small = alloca i32
@@ -100,8 +100,8 @@ define void @bare_fi_high_frame_store(i32 %x) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    qc.e.addi sp, sp, -8208
 ; CHECK-NEXT:    c.li a1, 1
-; CHECK-NEXT:    c.swsp a1, 12(sp)
-; CHECK-NEXT:    qc.e.sw a0, 8204(sp)
+; CHECK-NEXT:    c.swsp a1, 16(sp)
+; CHECK-NEXT:    c.swsp a0, 12(sp)
 ; CHECK-NEXT:    qc.e.addi sp, sp, 8208
 ; CHECK-NEXT:    c.jr ra
   %small = alloca i32
