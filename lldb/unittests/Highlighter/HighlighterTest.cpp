@@ -338,6 +338,20 @@ TEST_F(HighlighterTest, ClangCursorPosInOtherToken) {
             highlightC(" foo c = bar(); return 1;", s, 3));
 }
 
+TEST_F(HighlighterTest, ClangDigitSeparator) {
+  HighlightStyle s;
+  s.scalar_literal.Set("<scalar>", "</scalar>");
+
+  EXPECT_EQ(" int i = <scalar>0b00'00</scalar>;",
+            highlightC(" int i = 0b00'00;", s));
+  
+  EXPECT_EQ(" x = <scalar>1'000'000</scalar>;",
+            highlightC(" x = 1'000'000;", s));
+  
+  EXPECT_EQ("<scalar>0b00'00</scalar> == <scalar>0b00'00</scalar>",
+            highlightC("0b00'00 == 0b00'00", s));
+}
+
 #if LLDB_ENABLE_TREESITTER
 static std::string
 highlightSwift(llvm::StringRef code, HighlightStyle style,
