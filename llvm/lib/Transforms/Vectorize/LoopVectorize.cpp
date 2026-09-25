@@ -3057,8 +3057,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
       ExpectedTC->getFixedValue() <=
           TTI.getMinTripCountTailFoldingThreshold()) {
     // If we have a low-trip-count, and the fixed-width VF is known to divide
-    // the trip count but the scalable factor does not (or its maximum runtime
-    // VF is unknown), use the fixed-width factor in preference to allow the
+    // the trip count the fixed-width factor in preference to allow the
     // generation of a non-predicated loop.
     if (EpilogueLoweringStatus == CM_EpilogueNotAllowedLowTripLoop &&
         NoScalarEpilogueNeeded(MaxFactors.FixedVF.getFixedValue())) {
