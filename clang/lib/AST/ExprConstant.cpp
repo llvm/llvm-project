@@ -22791,7 +22791,7 @@ EvaluateCPlusPlus11IntegralConstantExpr(const ASTContext &Ctx, const Expr *E,
     return false;
 
   APValue Result;
-  if (!E->isCXX11ConstantExpr(Ctx, &Result, AllowRelaxedEval))
+  if (!E->isCXX11ConstantExpr(Ctx, Result, AllowRelaxedEval))
     return false;
 
   if (!Result.isInt())
@@ -22857,7 +22857,7 @@ bool Expr::isCXX98IntegralConstantExpr(const ASTContext &Ctx) const {
   return CheckICE(this, Ctx).Kind == IK_ICE;
 }
 
-bool Expr::isCXX11ConstantExpr(const ASTContext &Ctx, APValue *Result,
+bool Expr::isCXX11ConstantExpr(const ASTContext &Ctx, APValue &Result,
                                bool AllowRelaxedEval) const {
   assert(!isValueDependent() &&
          "Expression evaluator can't be called on a dependent expression.");
@@ -22867,12 +22867,8 @@ bool Expr::isCXX11ConstantExpr(const ASTContext &Ctx, APValue *Result,
   assert(Ctx.getLangOpts().CPlusPlus);
 
   bool IsConst;
-  APValue Scratch;
-  if (FastEvaluateAsRValue(this, Scratch, Ctx, IsConst) && Scratch.hasValue()) {
-    if (Result)
-      *Result = std::move(Scratch);
+  if (FastEvaluateAsRValue(this, Result, Ctx, IsConst) && Result.hasValue())
     return true;
-  }
 
   // Build evaluation settings.
   Expr::EvalStatus Status;
@@ -22881,7 +22877,7 @@ bool Expr::isCXX11ConstantExpr(const ASTContext &Ctx, APValue *Result,
   Status.ExtendedDiag = AllowRelaxedEval ? &MSRelaxedDiag : nullptr;
 
   bool IsConstExpr =
-      ::EvaluateAsRValue(Info, this, Result ? *Result : Scratch) &&
+      ::EvaluateAsRValue(Info, this, Result) &&
       // NOTE: We don't produce a diagnostic for this, but the callers that
       // call us on arbitrary full-expressions should generally not care.
       Info.discardCleanups() && !Status.HasSideEffects;
