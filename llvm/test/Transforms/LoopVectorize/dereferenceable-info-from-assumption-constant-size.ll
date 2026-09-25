@@ -1650,7 +1650,7 @@ define i32 @deref_assumption_size_wider_than_index_type(ptr addrspace(1) noalias
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[LOOP_END:.*]]
 ; CHECK:       [[VECTOR_EARLY_EXIT]]:
-; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> [[TMP2]], i1 false)
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> [[TMP3]], i1 false)
 ; CHECK-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i32
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[INDEX1]], [[TMP7]]
 ; CHECK-NEXT:    br label %[[LOOP_END]]

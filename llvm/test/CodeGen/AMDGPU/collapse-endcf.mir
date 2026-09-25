@@ -30,7 +30,7 @@ body:             |
   ; GCN-NEXT:   successors: %bb.4(0x80000000)
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.4:
-  ; GCN-NEXT:   $exec = S_OR_B64 $exec, [[COPY]], implicit-def $scc
+  ; GCN-NEXT:   $exec = S_OR_B64 $exec, [[COPY]], implicit-def dead $scc
   ; GCN-NEXT:   DBG_VALUE
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
@@ -87,7 +87,7 @@ body:             |
   ; GCN-NEXT:   successors: %bb.5(0x80000000)
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.5:
-  ; GCN-NEXT:   $exec = S_OR_B64 $exec, [[COPY]], implicit-def $scc
+  ; GCN-NEXT:   $exec = S_OR_B64 $exec, [[COPY]], implicit-def dead $scc
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
     %0:sreg_64 = SI_IF undef %1:sreg_64, %bb.4, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
@@ -143,7 +143,7 @@ body:             |
   ; GCN-NEXT:   DBG_VALUE
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.5:
-  ; GCN-NEXT:   $exec = S_OR_B64 $exec, [[COPY]], implicit-def $scc
+  ; GCN-NEXT:   $exec = S_OR_B64 $exec, [[COPY]], implicit-def dead $scc
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
     successors: %bb.1, %bb.4
@@ -204,7 +204,7 @@ body:             |
   ; GCN-NEXT:   KILL [[DEF]]
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.4:
-  ; GCN-NEXT:   $exec = S_OR_B64 $exec, [[COPY]], implicit-def $scc
+  ; GCN-NEXT:   $exec = S_OR_B64 $exec, [[COPY]], implicit-def dead $scc
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
     successors: %bb.1, %bb.4
@@ -268,7 +268,7 @@ body:             |
   ; GCN-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY [[S_BREV_B32_]]
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.4:
-  ; GCN-NEXT:   $exec = S_OR_B64 $exec, [[COPY]], implicit-def $scc
+  ; GCN-NEXT:   $exec = S_OR_B64 $exec, [[COPY]], implicit-def dead $scc
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
     successors: %bb.1, %bb.4
@@ -325,11 +325,11 @@ body:             |
   ; GCN-NEXT: bb.3:
   ; GCN-NEXT:   successors: %bb.4(0x80000000)
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   $exec = S_OR_B64 $exec, [[COPY1]], implicit-def $scc
+  ; GCN-NEXT:   $exec = S_OR_B64 $exec, [[COPY1]], implicit-def dead $scc
   ; GCN-NEXT:   [[S_BREV_B64_:%[0-9]+]]:sreg_64 = S_BREV_B64 $exec
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.4:
-  ; GCN-NEXT:   $exec = S_OR_B64 $exec, [[COPY]], implicit-def $scc
+  ; GCN-NEXT:   $exec = S_OR_B64 $exec, [[COPY]], implicit-def dead $scc
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
     successors: %bb.1, %bb.4
@@ -384,11 +384,11 @@ body:             |
   ; GCN-NEXT: bb.3:
   ; GCN-NEXT:   successors: %bb.4(0x80000000)
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   $exec = S_OR_B64 $exec, [[COPY1]], implicit-def $scc
+  ; GCN-NEXT:   $exec = S_OR_B64 $exec, [[COPY1]], implicit-def dead $scc
   ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[DEF]].sub2
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.4:
-  ; GCN-NEXT:   $exec = S_OR_B64 $exec, [[COPY]], implicit-def $scc
+  ; GCN-NEXT:   $exec = S_OR_B64 $exec, [[COPY]], implicit-def dead $scc
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
     successors: %bb.1, %bb.4
@@ -442,7 +442,7 @@ body:             |
   ; GCN-NEXT:   S_BRANCH %bb.5
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.4:
-  ; GCN-NEXT:   $exec = S_OR_B64 $exec, [[COPY]], implicit-def $scc
+  ; GCN-NEXT:   $exec = S_OR_B64 $exec, [[COPY]], implicit-def dead $scc
   ; GCN-NEXT:   S_ENDPGM 0
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.5:
@@ -495,7 +495,7 @@ body:             |
   ; GCN-NEXT: bb.1:
   ; GCN-NEXT:   successors: %bb.1(0x80000000)
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   $exec = S_OR_B64 $exec, [[V_CMP_LT_U32_e64_]], implicit-def $scc
+  ; GCN-NEXT:   $exec = S_OR_B64 $exec, [[V_CMP_LT_U32_e64_]], implicit-def dead $scc
   ; GCN-NEXT:   S_BRANCH %bb.1
   bb.0:
     successors: %bb.1
@@ -538,9 +538,9 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   successors: %bb.3(0x40000000), %bb.6(0x40000000)
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[S_OR_SAVEEXEC_B64_:%[0-9]+]]:sreg_64 = S_OR_SAVEEXEC_B64 [[S_XOR_B64_]], implicit-def $exec, implicit-def $scc, implicit $exec
-  ; GCN-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64 = S_AND_B64 $exec, [[S_OR_SAVEEXEC_B64_]], implicit-def $scc
-  ; GCN-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_B64_1]], implicit-def $scc
+  ; GCN-NEXT:   [[S_OR_SAVEEXEC_B64_:%[0-9]+]]:sreg_64 = S_OR_SAVEEXEC_B64 [[S_XOR_B64_]], implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GCN-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64 = S_AND_B64 $exec, [[S_OR_SAVEEXEC_B64_]], implicit-def dead $scc
+  ; GCN-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_B64_1]], implicit-def dead $scc
   ; GCN-NEXT:   S_CBRANCH_EXECZ %bb.6, implicit $exec
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.3:
@@ -557,10 +557,10 @@ body:             |
   ; GCN-NEXT: bb.5:
   ; GCN-NEXT:   successors: %bb.6(0x80000000)
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   $exec = S_OR_B64 $exec, [[COPY1]], implicit-def $scc
+  ; GCN-NEXT:   $exec = S_OR_B64 $exec, [[COPY1]], implicit-def dead $scc
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.6:
-  ; GCN-NEXT:   $exec = S_OR_B64 $exec, [[S_AND_B64_1]], implicit-def $scc
+  ; GCN-NEXT:   $exec = S_OR_B64 $exec, [[S_AND_B64_1]], implicit-def dead $scc
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
     successors: %bb.1, %bb.2
@@ -622,12 +622,12 @@ body:             |
   ; GCN-NEXT: bb.3:
   ; GCN-NEXT:   successors: %bb.4(0x80000000)
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   $exec = S_OR_B64 $exec, [[COPY]], implicit-def $scc
+  ; GCN-NEXT:   $exec = S_OR_B64 $exec, [[COPY]], implicit-def dead $scc
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.4:
   ; GCN-NEXT:   successors: %bb.5(0x80000000)
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   $exec = S_OR_B64 $exec, %2, implicit-def $scc
+  ; GCN-NEXT:   $exec = S_OR_B64 $exec, %2, implicit-def dead $scc
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.5:
   ; GCN-NEXT:   successors: %bb.6(0x80000000)
@@ -698,7 +698,7 @@ body:             |
   ; GCN-NEXT: bb.4:
   ; GCN-NEXT:   successors: %bb.5(0x80000000)
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   $exec = S_OR_B64 $exec, [[COPY]], implicit-def $scc
+  ; GCN-NEXT:   $exec = S_OR_B64 $exec, [[COPY]], implicit-def dead $scc
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.5:
   ; GCN-NEXT:   S_ENDPGM 0
@@ -765,7 +765,7 @@ body:             |
   ; GCN-NEXT: bb.5:
   ; GCN-NEXT:   successors: %bb.6(0x80000000)
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   $exec = S_OR_B64 $exec, [[COPY]], implicit-def $scc
+  ; GCN-NEXT:   $exec = S_OR_B64 $exec, [[COPY]], implicit-def dead $scc
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.6:
   ; GCN-NEXT:   successors: %bb.4(0x80000000)
@@ -863,7 +863,7 @@ body: |
   ; GCN-NEXT: bb.7:
   ; GCN-NEXT:   successors: %bb.8(0x80000000)
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   $exec = S_OR_B64 $exec, [[COPY2]], implicit-def $scc
+  ; GCN-NEXT:   $exec = S_OR_B64 $exec, [[COPY2]], implicit-def dead $scc
   ; GCN-NEXT:   S_BRANCH %bb.8
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.8:
@@ -896,14 +896,14 @@ body: |
   ; GCN-NEXT: bb.12:
   ; GCN-NEXT:   successors: %bb.10(0x40000000), %bb.14(0x40000000)
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[S_OR_SAVEEXEC_B64_:%[0-9]+]]:sreg_64 = S_OR_SAVEEXEC_B64 [[S_XOR_B64_]], implicit-def $exec, implicit-def $scc, implicit $exec
-  ; GCN-NEXT:   [[S_AND_B64_5:%[0-9]+]]:sreg_64 = S_AND_B64 $exec, [[S_OR_SAVEEXEC_B64_]], implicit-def $scc
-  ; GCN-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_B64_5]], implicit-def $scc
+  ; GCN-NEXT:   [[S_OR_SAVEEXEC_B64_:%[0-9]+]]:sreg_64 = S_OR_SAVEEXEC_B64 [[S_XOR_B64_]], implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GCN-NEXT:   [[S_AND_B64_5:%[0-9]+]]:sreg_64 = S_AND_B64 $exec, [[S_OR_SAVEEXEC_B64_]], implicit-def dead $scc
+  ; GCN-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_B64_5]], implicit-def dead $scc
   ; GCN-NEXT:   S_CBRANCH_EXECZ %bb.14, implicit $exec
   ; GCN-NEXT:   S_BRANCH %bb.10
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.14:
-  ; GCN-NEXT:   $exec = S_OR_B64 $exec, [[COPY]], implicit-def $scc
+  ; GCN-NEXT:   $exec = S_OR_B64 $exec, [[COPY]], implicit-def dead $scc
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
     successors: %bb.1, %bb.14
