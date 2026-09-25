@@ -90,26 +90,27 @@
       ompt_callback_##CallbackName##_fn(__VA_ARGS__);                          \
   } while (0)
 
-typedef ompt_set_result_t (*libomptarget_ompt_set_trace_ompt_t)(
-    int Device, unsigned int Enable, unsigned int EventTy);
-typedef int (*libomptarget_ompt_start_trace_t)(int,
-                                               ompt_callback_buffer_request_t,
-                                               ompt_callback_buffer_complete_t);
-typedef int (*libomptarget_ompt_flush_trace_t)(int);
-typedef int (*libomptarget_ompt_stop_trace_t)(int);
-typedef int (*libomptarget_ompt_advance_buffer_cursor_t)(
-    ompt_device_t *, ompt_buffer_t *, size_t, ompt_buffer_cursor_t,
-    ompt_buffer_cursor_t *);
-typedef ompt_get_record_ompt_t libomptarget_ompt_get_record_ompt_t;
-typedef ompt_device_time_t (*libomptarget_ompt_get_device_time_t)(
-    ompt_device_t *);
-typedef ompt_translate_time_t libomptarget_ompt_translate_time_t;
-typedef ompt_device_time_t (*libomptarget_ompt_get_device_time_t)(
-    ompt_device_t *);
-typedef ompt_record_t (*libomptarget_ompt_get_record_type_t)(
-    ompt_buffer_t *, ompt_buffer_cursor_t);
-typedef void (*libomptarget_ompt_set_timestamp_t)(uint64_t start, uint64_t end);
-typedef void (*libomptarget_ompt_set_granted_teams_t)(uint32_t);
+/// Device-independent OMPT tracing entry points, implemented by libomptarget
+/// and linked into the same library as their plugin-side callers.
+extern "C" {
+ompt_set_result_t libomptarget_ompt_set_trace_ompt(int DeviceId,
+                                                   unsigned int Enable,
+                                                   unsigned int EventTy);
+int libomptarget_ompt_start_trace(int DeviceId,
+                                  ompt_callback_buffer_request_t Request,
+                                  ompt_callback_buffer_complete_t Complete);
+int libomptarget_ompt_flush_trace(int DeviceId);
+int libomptarget_ompt_stop_trace(int DeviceId);
+int libomptarget_ompt_advance_buffer_cursor(ompt_device_t *Device,
+                                            ompt_buffer_t *Buffer, size_t Size,
+                                            ompt_buffer_cursor_t CurrentPos,
+                                            ompt_buffer_cursor_t *NextPos);
+ompt_record_t
+libomptarget_ompt_get_record_type(ompt_buffer_t *Buffer,
+                                  ompt_buffer_cursor_t CurrentPos);
+void libomptarget_ompt_set_granted_teams(uint32_t NumTeams);
+void libomptarget_ompt_set_timestamp(uint64_t Start, uint64_t Stop);
+} // extern "C"
 
 /// Function type def used for maintaining unique target region, target
 /// operations ids

@@ -18,10 +18,7 @@
 
 #include "OpenMP/OMPT/OmptCommonDefs.h"
 
-#include "llvm/Support/DynamicLibrary.h"
-
 #include <map>
-#include <memory>
 #include <mutex>
 
 #pragma push_macro("DEBUG_PREFIX")
@@ -36,11 +33,6 @@ namespace llvm {
 namespace omp {
 namespace target {
 namespace ompt {
-
-// Declare OMPT device tracing function entry points
-#define declareOmptTracingFn(Name) extern libomptarget_##Name##_t Name##_fn;
-FOREACH_OMPT_DEVICE_TRACING_FN_IMPLEMENTAIONS(declareOmptTracingFn)
-#undef declareOmptTracingFn
 
 // Declare OMPT device tracing function mutexes
 #define declareOmptTracingFnMutex(Name) extern std::mutex Name##_mutex;
@@ -95,32 +87,6 @@ extern std::map<int32_t, uint64_t> TracedDevices;
 
 /// OMPT global tracing status. Indicates if at least one device is traced.
 extern bool TracingActive;
-
-/// Parent library pointer
-extern std::shared_ptr<llvm::sys::DynamicLibrary> ParentLibrary;
-
-/// Get the parent library by pointer. If it is not already set, it will set the
-/// parent library pointer.
-std::shared_ptr<llvm::sys::DynamicLibrary> getParentLibrary();
-
-/// Set the parent library by filename
-void setParentLibrary(const char *Filename);
-
-/// Search for FuncName inside the parent library and assign to FuncPtr.
-/// IMPORTANT: This function assumes that the *caller* holds the respective lock
-/// for FuncPtr.
-template <typename FT>
-void ensureFuncPtrLoaded(const std::string &FuncName, FT *FuncPtr) {
-  if (*FuncPtr == nullptr) {
-    if ((ParentLibrary == nullptr && getParentLibrary() == nullptr) ||
-        !ParentLibrary->isValid())
-      return;
-    void *SymbolPtr = ParentLibrary->getAddressOfSymbol(FuncName.c_str());
-    if (SymbolPtr == nullptr)
-      return;
-    *FuncPtr = reinterpret_cast<FT>(SymbolPtr);
-  }
-}
 
 } // namespace ompt
 } // namespace target
