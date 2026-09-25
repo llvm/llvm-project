@@ -624,11 +624,7 @@ bool SIPreEmitPeephole::hasUnsupportedVPKMovModifiers(
       TII->getNamedOperand(MI, AMDGPU::OpName::src0_modifiers)->getImm();
   unsigned Src1Mods =
       TII->getNamedOperand(MI, AMDGPU::OpName::src1_modifiers)->getImm();
-  unsigned NegMask0 =
-      (Src0Mods & SISrcMods::OP_SEL_0) ? SISrcMods::NEG_HI : SISrcMods::NEG;
-  unsigned NegMask1 =
-      (Src1Mods & SISrcMods::OP_SEL_1) ? SISrcMods::NEG_HI : SISrcMods::NEG;
-  return (Src0Mods & NegMask0) || (Src1Mods & NegMask1);
+  return (Src0Mods | Src1Mods) & SISrcMods::NEG;
 }
 
 bool SIPreEmitPeephole::canUnpackingClobberRegister(const MachineInstr &MI) {
@@ -803,16 +799,8 @@ void SIPreEmitPeephole::collectUnpackingCandidates(
     if (!IsUnpackable)
       continue;
 
-    // V_MOV_B32 does not support source modifiers. Without source modifiers, we
-    // cannot be faithful to the packed instruction semantics in few cases. This
-    // is true when the packed instruction has NEG and NEG_HI modifiers. We
-    // should abort unpacking if:
-    // 1. hi/lo bits selected by OPSEL for src0 are also marked by NEG or
-    // NEG_HI.
-    // 2. hi/lo bits selected by OPSEL_HI for src1 are also marked by NEG or
-    // NEG_HI.
-    // Packed instructions do not specify ABS modifiers, so we can safely ignore
-    // those.
+    // V_PK_MOV_B32 applies NEG to the selected source regardless of OP_SEL,
+    // while NEG_HI has no effect. V_MOV_B32_e32 cannot preserve NEG.
     if (!AMDGPU::hasNamedOperand(UnpackedOpCode,
                                  AMDGPU::OpName::src0_modifiers) &&
         hasUnsupportedVPKMovModifiers(Instr))

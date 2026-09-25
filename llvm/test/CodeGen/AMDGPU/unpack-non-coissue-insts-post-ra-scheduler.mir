@@ -1273,7 +1273,7 @@ body:             |
     ; GFX950-NEXT: $vgpr10 = V_MOV_B32_e32 killed $sgpr6, implicit $exec, implicit $exec
     ; GFX950-NEXT: $vgpr11 = V_MOV_B32_e32 killed $sgpr7, implicit $exec, implicit $exec
     ; GFX950-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, 0, 0, implicit $mode, implicit $exec
-    ; GFX950-NEXT: $vgpr4_vgpr5 = V_PK_MOV_B32 9, killed $vgpr0_vgpr1, 8, killed $vgpr2_vgpr3, 0, 0, 0, 0, 0, implicit $exec
+    ; GFX950-NEXT: $vgpr4_vgpr5 = V_PK_MOV_B32 13, killed $vgpr0_vgpr1, 8, killed $vgpr2_vgpr3, 0, 0, 0, 0, 0, implicit $exec
     ; GFX950-NEXT: S_ENDPGM 0
     ;
     ; GFX942-LABEL: name: test_v_pk_mov_with_neg_modifiers_not_unpacked_0
@@ -1292,7 +1292,7 @@ body:             |
     ; GFX942-NEXT: $vgpr10 = V_MOV_B32_e32 killed $sgpr6, implicit $exec, implicit $exec
     ; GFX942-NEXT: $vgpr11 = V_MOV_B32_e32 killed $sgpr7, implicit $exec, implicit $exec
     ; GFX942-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, 0, 0, implicit $mode, implicit $exec
-    ; GFX942-NEXT: $vgpr4_vgpr5 = V_PK_MOV_B32 9, killed $vgpr0_vgpr1, 8, killed $vgpr2_vgpr3, 0, 0, 0, 0, 0, implicit $exec
+    ; GFX942-NEXT: $vgpr4_vgpr5 = V_PK_MOV_B32 13, killed $vgpr0_vgpr1, 8, killed $vgpr2_vgpr3, 0, 0, 0, 0, 0, implicit $exec
     ; GFX942-NEXT: S_ENDPGM 0
     ;
     ; GFX90A-LABEL: name: test_v_pk_mov_with_neg_modifiers_not_unpacked_0
@@ -1311,7 +1311,7 @@ body:             |
     ; GFX90A-NEXT: $vgpr10 = V_MOV_B32_e32 killed $sgpr6, implicit $exec, implicit $exec
     ; GFX90A-NEXT: $vgpr11 = V_MOV_B32_e32 killed $sgpr7, implicit $exec, implicit $exec
     ; GFX90A-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, 0, 0, implicit $mode, implicit $exec
-    ; GFX90A-NEXT: $vgpr4_vgpr5 = V_PK_MOV_B32 9, killed $vgpr0_vgpr1, 8, killed $vgpr2_vgpr3, 0, 0, 0, 0, 0, implicit $exec
+    ; GFX90A-NEXT: $vgpr4_vgpr5 = V_PK_MOV_B32 13, killed $vgpr0_vgpr1, 8, killed $vgpr2_vgpr3, 0, 0, 0, 0, 0, implicit $exec
     ; GFX90A-NEXT: S_ENDPGM 0
   early-clobber renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43 = S_LOAD_DWORDX8_IMM_ec killed renamable $sgpr4_sgpr5, 0, 0
   renamable $vgpr18 = V_MOV_B32_e32 0, implicit $exec
@@ -1326,18 +1326,18 @@ body:             |
   $vgpr10 = V_MOV_B32_e32 killed $sgpr6, implicit $exec, implicit $exec
   $vgpr11 = V_MOV_B32_e32 killed $sgpr7, implicit $exec, implicit $exec
   renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, 0, 0, implicit $mode, implicit $exec
-  $vgpr4_vgpr5 = V_PK_MOV_B32 9, killed $vgpr0_vgpr1, 8, killed $vgpr2_vgpr3, 0, 0, 0, 0, 0, implicit $exec
+  $vgpr4_vgpr5 = V_PK_MOV_B32 13, killed $vgpr0_vgpr1, 8, killed $vgpr2_vgpr3, 0, 0, 0, 0, 0, implicit $exec
   S_ENDPGM 0
 
 ...
 ---
-name:            test_v_pk_mov_with_neg_modifiers_not_unpacked_1
+name:            test_v_pk_mov_with_neg_modifiers_correctly_unpacked_1
 tracksRegLiveness: true
 
 body:             |
   bb.0.entry:
   liveins: $sgpr4_sgpr5
-    ; GFX950-LABEL: name: test_v_pk_mov_with_neg_modifiers_not_unpacked_1
+    ; GFX950-LABEL: name: test_v_pk_mov_with_neg_modifiers_correctly_unpacked_1
     ; GFX950: liveins: $sgpr4_sgpr5
     ; GFX950-NEXT: {{  $}}
     ; GFX950-NEXT: early-clobber renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43 = S_LOAD_DWORDX8_IMM_ec killed renamable $sgpr4_sgpr5, 0, 0
@@ -1353,10 +1353,11 @@ body:             |
     ; GFX950-NEXT: $vgpr10 = V_MOV_B32_e32 killed $sgpr6, implicit $exec, implicit $exec
     ; GFX950-NEXT: $vgpr11 = V_MOV_B32_e32 killed $sgpr7, implicit $exec, implicit $exec
     ; GFX950-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, 0, 0, implicit $mode, implicit $exec
-    ; GFX950-NEXT: $vgpr4_vgpr5 = V_PK_MOV_B32 8, killed $vgpr0_vgpr1, 10, killed $vgpr2_vgpr3, 0, 0, 0, 0, 0, implicit $exec
+    ; GFX950-NEXT: $vgpr4 = V_MOV_B32_e32 killed $vgpr0, implicit $exec
+    ; GFX950-NEXT: $vgpr5 = V_MOV_B32_e32 killed $vgpr3, implicit $exec
     ; GFX950-NEXT: S_ENDPGM 0
     ;
-    ; GFX942-LABEL: name: test_v_pk_mov_with_neg_modifiers_not_unpacked_1
+    ; GFX942-LABEL: name: test_v_pk_mov_with_neg_modifiers_correctly_unpacked_1
     ; GFX942: liveins: $sgpr4_sgpr5
     ; GFX942-NEXT: {{  $}}
     ; GFX942-NEXT: early-clobber renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43 = S_LOAD_DWORDX8_IMM_ec killed renamable $sgpr4_sgpr5, 0, 0
@@ -1372,10 +1373,11 @@ body:             |
     ; GFX942-NEXT: $vgpr10 = V_MOV_B32_e32 killed $sgpr6, implicit $exec, implicit $exec
     ; GFX942-NEXT: $vgpr11 = V_MOV_B32_e32 killed $sgpr7, implicit $exec, implicit $exec
     ; GFX942-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, 0, 0, implicit $mode, implicit $exec
-    ; GFX942-NEXT: $vgpr4_vgpr5 = V_PK_MOV_B32 8, killed $vgpr0_vgpr1, 10, killed $vgpr2_vgpr3, 0, 0, 0, 0, 0, implicit $exec
+    ; GFX942-NEXT: $vgpr4 = V_MOV_B32_e32 killed $vgpr0, implicit $exec
+    ; GFX942-NEXT: $vgpr5 = V_MOV_B32_e32 killed $vgpr3, implicit $exec
     ; GFX942-NEXT: S_ENDPGM 0
     ;
-    ; GFX90A-LABEL: name: test_v_pk_mov_with_neg_modifiers_not_unpacked_1
+    ; GFX90A-LABEL: name: test_v_pk_mov_with_neg_modifiers_correctly_unpacked_1
     ; GFX90A: liveins: $sgpr4_sgpr5
     ; GFX90A-NEXT: {{  $}}
     ; GFX90A-NEXT: early-clobber renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43 = S_LOAD_DWORDX8_IMM_ec killed renamable $sgpr4_sgpr5, 0, 0
@@ -1411,13 +1413,13 @@ body:             |
 
 ...
 ---
-name:            test_v_pk_mov_with_neg_modifiers_correctly_unpacked_2
+name:            test_v_pk_mov_with_neg_modifiers_not_unpacked_2
 tracksRegLiveness: true
 
 body:             |
   bb.0.entry:
   liveins: $sgpr4_sgpr5
-    ; GFX950-LABEL: name: test_v_pk_mov_with_neg_modifiers_correctly_unpacked_2
+    ; GFX950-LABEL: name: test_v_pk_mov_with_neg_modifiers_not_unpacked_2
     ; GFX950: liveins: $sgpr4_sgpr5
     ; GFX950-NEXT: {{  $}}
     ; GFX950-NEXT: early-clobber renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43 = S_LOAD_DWORDX8_IMM_ec killed renamable $sgpr4_sgpr5, 0, 0
@@ -1433,11 +1435,10 @@ body:             |
     ; GFX950-NEXT: $vgpr10 = V_MOV_B32_e32 killed $sgpr6, implicit $exec, implicit $exec
     ; GFX950-NEXT: $vgpr11 = V_MOV_B32_e32 killed $sgpr7, implicit $exec, implicit $exec
     ; GFX950-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, 0, 0, implicit $mode, implicit $exec
-    ; GFX950-NEXT: $vgpr4 = V_MOV_B32_e32 killed $vgpr0, implicit $exec
-    ; GFX950-NEXT: $vgpr5 = V_MOV_B32_e32 killed $vgpr3, implicit $exec
+    ; GFX950-NEXT: $vgpr4_vgpr5 = V_PK_MOV_B32 8, killed $vgpr0_vgpr1, 9, killed $vgpr2_vgpr3, 0, 0, 0, 0, 0, implicit $exec
     ; GFX950-NEXT: S_ENDPGM 0
     ;
-    ; GFX942-LABEL: name: test_v_pk_mov_with_neg_modifiers_correctly_unpacked_2
+    ; GFX942-LABEL: name: test_v_pk_mov_with_neg_modifiers_not_unpacked_2
     ; GFX942: liveins: $sgpr4_sgpr5
     ; GFX942-NEXT: {{  $}}
     ; GFX942-NEXT: early-clobber renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43 = S_LOAD_DWORDX8_IMM_ec killed renamable $sgpr4_sgpr5, 0, 0
@@ -1453,11 +1454,10 @@ body:             |
     ; GFX942-NEXT: $vgpr10 = V_MOV_B32_e32 killed $sgpr6, implicit $exec, implicit $exec
     ; GFX942-NEXT: $vgpr11 = V_MOV_B32_e32 killed $sgpr7, implicit $exec, implicit $exec
     ; GFX942-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, 0, 0, implicit $mode, implicit $exec
-    ; GFX942-NEXT: $vgpr4 = V_MOV_B32_e32 killed $vgpr0, implicit $exec
-    ; GFX942-NEXT: $vgpr5 = V_MOV_B32_e32 killed $vgpr3, implicit $exec
+    ; GFX942-NEXT: $vgpr4_vgpr5 = V_PK_MOV_B32 8, killed $vgpr0_vgpr1, 9, killed $vgpr2_vgpr3, 0, 0, 0, 0, 0, implicit $exec
     ; GFX942-NEXT: S_ENDPGM 0
     ;
-    ; GFX90A-LABEL: name: test_v_pk_mov_with_neg_modifiers_correctly_unpacked_2
+    ; GFX90A-LABEL: name: test_v_pk_mov_with_neg_modifiers_not_unpacked_2
     ; GFX90A: liveins: $sgpr4_sgpr5
     ; GFX90A-NEXT: {{  $}}
     ; GFX90A-NEXT: early-clobber renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43 = S_LOAD_DWORDX8_IMM_ec killed renamable $sgpr4_sgpr5, 0, 0
@@ -1597,7 +1597,8 @@ body:             |
     ; GFX950-NEXT: $vgpr10 = V_MOV_B32_e32 killed $sgpr6, implicit $exec, implicit $exec
     ; GFX950-NEXT: $vgpr11 = V_MOV_B32_e32 killed $sgpr7, implicit $exec, implicit $exec
     ; GFX950-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, 0, 0, implicit $mode, implicit $exec
-    ; GFX950-NEXT: $vgpr4_vgpr5 = V_PK_MOV_B32 14, killed $vgpr0_vgpr1, 8, killed $vgpr2_vgpr3, 0, 0, 0, 0, 0, implicit $exec
+    ; GFX950-NEXT: $vgpr4 = V_MOV_B32_e32 killed $vgpr1, implicit $exec
+    ; GFX950-NEXT: $vgpr5 = V_MOV_B32_e32 killed $vgpr3, implicit $exec
     ; GFX950-NEXT: S_ENDPGM 0
     ;
     ; GFX942-LABEL: name: test_v_pk_mov_with_neg_modifiers_correctly_unpacked_4
@@ -1616,7 +1617,8 @@ body:             |
     ; GFX942-NEXT: $vgpr10 = V_MOV_B32_e32 killed $sgpr6, implicit $exec, implicit $exec
     ; GFX942-NEXT: $vgpr11 = V_MOV_B32_e32 killed $sgpr7, implicit $exec, implicit $exec
     ; GFX942-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, 0, 0, implicit $mode, implicit $exec
-    ; GFX942-NEXT: $vgpr4_vgpr5 = V_PK_MOV_B32 14, killed $vgpr0_vgpr1, 8, killed $vgpr2_vgpr3, 0, 0, 0, 0, 0, implicit $exec
+    ; GFX942-NEXT: $vgpr4 = V_MOV_B32_e32 killed $vgpr1, implicit $exec
+    ; GFX942-NEXT: $vgpr5 = V_MOV_B32_e32 killed $vgpr3, implicit $exec
     ; GFX942-NEXT: S_ENDPGM 0
     ;
     ; GFX90A-LABEL: name: test_v_pk_mov_with_neg_modifiers_correctly_unpacked_4
