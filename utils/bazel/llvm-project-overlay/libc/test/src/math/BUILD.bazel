@@ -307,7 +307,7 @@ math_mpfr_test(
     deps = ["//libc:__support_fputil_bfloat16"],
 )
 
-# NOTE: fmal is not yet implemented in libc/src/math; omitted until it lands.
+# TODO: Add fmal tests. Missing stdlib/rand dependency.
 math_mpfr_test(
     name = "fma",
     hdrs = ["FmaTest.h"],
