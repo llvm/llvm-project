@@ -5800,3 +5800,124 @@ entry:
   call void @use_v2i64(<2 x i64> %neg)
   ret <2 x i64> %r
 }
+
+define i1 @select_chain_reduce_bitcast_icmp(<2 x i4> %x, <2 x i4> %y) {
+; CHECK-LABEL: define i1 @select_chain_reduce_bitcast_icmp(
+; CHECK-SAME: <2 x i4> [[X:%.*]], <2 x i4> [[Y:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i4> [[X]], [[Y]]
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze <2 x i1> [[CMP]]
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i1> [[TMP1]] to i2
+; CHECK-NEXT:    [[B:%.*]] = icmp eq i2 [[TMP2]], -1
+; CHECK-NEXT:    ret i1 [[B]]
+;
+  %cmp = icmp sgt <2 x i4> %x, %y
+  %b0 = extractelement <2 x i1> %cmp, i64 0
+  %b1 = extractelement <2 x i1> %cmp, i64 1
+  %b = select i1 %b0, i1 %b1, i1 0
+  ret i1 %b
+}
+
+define i1 @select_chain_missing_lane(<4 x i4> %x, <4 x i4> %y) {
+; CHECK-LABEL: define i1 @select_chain_missing_lane(
+; CHECK-SAME: <4 x i4> [[X:%.*]], <4 x i4> [[Y:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <4 x i4> [[X]], [[Y]]
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze <4 x i1> [[CMP]]
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i1> [[TMP1]] to i4
+; CHECK-NEXT:    [[TMP3:%.*]] = and i4 [[TMP2]], 5
+; CHECK-NEXT:    [[B:%.*]] = icmp eq i4 [[TMP3]], 5
+; CHECK-NEXT:    ret i1 [[B]]
+;
+  %cmp = icmp sgt <4 x i4> %x, %y
+  %b0 = extractelement <4 x i1> %cmp, i64 0
+  %b2 = extractelement <4 x i1> %cmp, i64 2
+  %b = select i1 %b0, i1 %b2, i1 false   ; only 2 of 4 lanes covered
+  ret i1 %b
+}
+
+; Negative test
+define i1 @select_chain_wrong_false_val(<2 x i4> %x, <2 x i4> %y, i1 %z) {
+; CHECK-LABEL: define i1 @select_chain_wrong_false_val(
+; CHECK-SAME: <2 x i4> [[X:%.*]], <2 x i4> [[Y:%.*]], i1 [[Z:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i4> [[X]], [[Y]]
+; CHECK-NEXT:    [[B0:%.*]] = extractelement <2 x i1> [[CMP]], i64 0
+; CHECK-NEXT:    [[B1:%.*]] = extractelement <2 x i1> [[CMP]], i64 1
+; CHECK-NEXT:    [[B:%.*]] = select i1 [[B0]], i1 [[B1]], i1 [[Z]]
+; CHECK-NEXT:    ret i1 [[B]]
+;
+  %cmp = icmp sgt <2 x i4> %x, %y
+  %b0 = extractelement <2 x i1> %cmp, i64 0
+  %b1 = extractelement <2 x i1> %cmp, i64 1
+  %b = select i1 %b0, i1 %b1, i1 %z
+  ret i1 %b
+}
+; Negative test
+define i1 @select_chain_different_vectors(<2 x i4> %x, <2 x i4> %y, <2 x i4> %z, <2 x i4> %w) {
+; CHECK-LABEL: define i1 @select_chain_different_vectors(
+; CHECK-SAME: <2 x i4> [[X:%.*]], <2 x i4> [[Y:%.*]], <2 x i4> [[Z:%.*]], <2 x i4> [[W:%.*]]) {
+; CHECK-NEXT:    [[CMP0:%.*]] = icmp sgt <2 x i4> [[X]], [[Y]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt <2 x i4> [[Z]], [[W]]
+; CHECK-NEXT:    [[B0:%.*]] = extractelement <2 x i1> [[CMP0]], i64 0
+; CHECK-NEXT:    [[B1:%.*]] = extractelement <2 x i1> [[CMP1]], i64 1
+; CHECK-NEXT:    [[B:%.*]] = select i1 [[B0]], i1 [[B1]], i1 false
+; CHECK-NEXT:    ret i1 [[B]]
+;
+  %cmp0 = icmp sgt <2 x i4> %x, %y
+  %cmp1 = icmp sgt <2 x i4> %z, %w
+  %b0 = extractelement <2 x i1> %cmp0, i64 0
+  %b1 = extractelement <2 x i1> %cmp1, i64 1
+  %b = select i1 %b0, i1 %b1, i1 false
+  ret i1 %b
+}
+
+; Negative test
+define i1 @select_chain_duplicate_lane(<2 x i4> %x, <2 x i4> %y) {
+; CHECK-LABEL: define i1 @select_chain_duplicate_lane(
+; CHECK-SAME: <2 x i4> [[X:%.*]], <2 x i4> [[Y:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i4> [[X]], [[Y]]
+; CHECK-NEXT:    [[B0A:%.*]] = extractelement <2 x i1> [[CMP]], i64 0
+; CHECK-NEXT:    [[B0B:%.*]] = extractelement <2 x i1> [[CMP]], i64 0
+; CHECK-NEXT:    [[B:%.*]] = select i1 [[B0A]], i1 [[B0B]], i1 false
+; CHECK-NEXT:    ret i1 [[B]]
+;
+  %cmp = icmp sgt <2 x i4> %x, %y
+  %b0a = extractelement <2 x i1> %cmp, i64 0
+  %b0b = extractelement <2 x i1> %cmp, i64 0
+  %b = select i1 %b0a, i1 %b0b, i1 false   ; index 0 used twice
+  ret i1 %b
+}
+
+; Negative test
+define i1 @select_chain_scalable_vector(<vscale x 2 x i4> %x, <vscale x 2 x i4> %y) {
+; CHECK-LABEL: define i1 @select_chain_scalable_vector(
+; CHECK-SAME: <vscale x 2 x i4> [[X:%.*]], <vscale x 2 x i4> [[Y:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <vscale x 2 x i4> [[X]], [[Y]]
+; CHECK-NEXT:    [[B0:%.*]] = extractelement <vscale x 2 x i1> [[CMP]], i64 0
+; CHECK-NEXT:    [[B1:%.*]] = extractelement <vscale x 2 x i1> [[CMP]], i64 1
+; CHECK-NEXT:    [[B:%.*]] = select i1 [[B0]], i1 [[B1]], i1 false
+; CHECK-NEXT:    ret i1 [[B]]
+;
+  %cmp = icmp sgt <vscale x 2 x i4> %x, %y
+  %b0 = extractelement <vscale x 2 x i1> %cmp, i64 0
+  %b1 = extractelement <vscale x 2 x i1> %cmp, i64 1
+  %b = select i1 %b0, i1 %b1, i1 false
+  ret i1 %b
+}
+
+; Negative test
+define i1 @select_chain_large_vec(<8388609 x i4> %x, <8388609 x i4> %y) {
+; CHECK-LABEL: define i1 @select_chain_large_vec(
+; CHECK-SAME: <8388609 x i4> [[X:%.*]], <8388609 x i4> [[Y:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <8388609 x i4> [[X]], [[Y]]
+; CHECK-NEXT:    [[B0:%.*]] = extractelement <8388609 x i1> [[CMP]], i64 0
+; CHECK-NEXT:    [[B1:%.*]] = extractelement <8388609 x i1> [[CMP]], i64 1
+; CHECK-NEXT:    [[B:%.*]] = select i1 [[B0]], i1 [[B1]], i1 false
+; CHECK-NEXT:    ret i1 [[B]]
+;
+entry:
+  %cmp = icmp sgt <8388609 x i4> %x, %y
+  %b0 = extractelement <8388609 x i1> %cmp, i64 0
+  %b1 = extractelement <8388609 x i1> %cmp, i64 1
+  %b = select i1 %b0, i1 %b1, i1 false
+  ret i1 %b
+}
