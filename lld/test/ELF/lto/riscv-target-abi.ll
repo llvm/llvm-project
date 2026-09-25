@@ -34,7 +34,7 @@
 ; RUN:   --implicit-check-not="error:" --implicit-check-not="warning:" --implicit-check-not="note:"
 ; RUN: llvm-readobj --file-headers %t/no-ext.so | FileCheck %s --check-prefix=FLAGS-MCPU
 
-target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n64-S128"
+target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
 target triple = "riscv64"
 
 module asm "nop"
@@ -56,7 +56,7 @@ define void @_start() {
 ; RUN: ld.lld -shared %t/fn-inline-asm-no-ext.bc -o %t/fn-inline-asm-no-ext.so 2>&1 | FileCheck %s --check-prefix=WARN \
 ; RUN:   --implicit-check-not="ignoring target-abi" --implicit-check-not="error:" --implicit-check-not="warning:"
 
-target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n64-S128"
+target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
 target triple = "riscv64"
 
 define void @_start() {
@@ -78,7 +78,7 @@ define void @_start() {
 ; RUN:   | FileCheck %s --check-prefix=NOWARN --allow-empty \
 ; RUN:       --implicit-check-not="error:" --implicit-check-not="warning:" --implicit-check-not="note:"
 
-target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n64-S128"
+target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
 target triple = "riscv64"
 
 module asm "nop"
@@ -101,7 +101,7 @@ attributes #0 = { "target-features"="+f,+d" }
 ; RUN:       --implicit-check-not="error:" --implicit-check-not="warning:" --implicit-check-not="note:"
 ; RUN: llvm-readobj --file-headers %t/module-asm-abi.so | FileCheck %s --check-prefix=FLAGS-MCPU
 
-target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n64-S128"
+target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
 target triple = "riscv64"
 
 module asm(target_features: "+c,+d")
