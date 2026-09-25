@@ -884,3 +884,129 @@ func.func @high_trip_count(%arg0: memref<1024x4096xf32>, %arg1: memref<8192x4096
   }
   return %alloc : memref<1024x8192xf32>
 }
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/212039.
+// Do not privatize a producer buffer when its exact, strided write set does
+// not cover the consumer read set. Fusion itself remains legal.
+// PRODUCER-CONSUMER-MAXIMAL-LABEL: func.func @private_buffer_strided_holes(
+// PRODUCER-CONSUMER-MAXIMAL-NOT: memref.alloc
+// PRODUCER-CONSUMER-MAXIMAL: affine.for
+// PRODUCER-CONSUMER-MAXIMAL: affine.for
+// PRODUCER-CONSUMER-MAXIMAL:   affine.load
+// PRODUCER-CONSUMER-MAXIMAL:   affine.store {{.*}} : memref<32xf64>
+// PRODUCER-CONSUMER-MAXIMAL:   affine.load {{.*}} : memref<32xf64>
+// PRODUCER-CONSUMER-MAXIMAL-NOT: memref.alloc
+// PRODUCER-CONSUMER-MAXIMAL: return
+func.func @private_buffer_strided_holes(
+    %in: memref<32xf64>, %comm: memref<32xf64>,
+    %out: memref<32xf64>) {
+  affine.for %i = 0 to 8 {
+    %a = affine.load %in[%i] : memref<32xf64>
+    affine.store %a, %comm[2 * %i] : memref<32xf64>
+  }
+  affine.for %j = 0 to 16 {
+    %b = affine.load %comm[%j] : memref<32xf64>
+    affine.store %b, %out[%j] : memref<32xf64>
+  }
+  return
+}
+
+// -----
+
+// Preserve privatization when the strided producer covers every read.
+// PRODUCER-CONSUMER-MAXIMAL-LABEL: func.func @private_buffer_strided_coverage(
+// PRODUCER-CONSUMER-MAXIMAL: memref.alloc() : memref<1xf64>
+// PRODUCER-CONSUMER-MAXIMAL: affine.for
+// PRODUCER-CONSUMER-MAXIMAL-NOT: affine.for
+// PRODUCER-CONSUMER-MAXIMAL:   affine.store {{.*}}[0] : memref<1xf64>
+// PRODUCER-CONSUMER-MAXIMAL:   affine.load {{.*}}[0] : memref<1xf64>
+func.func @private_buffer_strided_coverage(
+    %in: memref<16xf64>, %out: memref<16xf64>) {
+  %comm = memref.alloc() : memref<32xf64>
+  affine.for %i = 0 to 16 {
+    %a = affine.load %in[%i] : memref<16xf64>
+    affine.store %a, %comm[2 * %i] : memref<32xf64>
+  }
+  affine.for %j = 0 to 16 {
+    %b = affine.load %comm[2 * %j] : memref<32xf64>
+    affine.store %b, %out[%j] : memref<16xf64>
+  }
+  return
+}
+
+// -----
+
+// Although the second read's union across all outer iterations equals the
+// producer write union, it is not covered in the same private-buffer instance.
+// PRODUCER-CONSUMER-MAXIMAL-LABEL: func.func @private_buffer_outer_iv_mismatch(
+// PRODUCER-CONSUMER-MAXIMAL-NOT: memref<1xf64>
+// PRODUCER-CONSUMER-MAXIMAL: affine.for
+// PRODUCER-CONSUMER-MAXIMAL:   affine.for
+// PRODUCER-CONSUMER-MAXIMAL:     memref.alloc() : memref<64xf64>
+// PRODUCER-CONSUMER-MAXIMAL-NOT: memref<1xf64>
+// PRODUCER-CONSUMER-MAXIMAL:     affine.for %[[J:.*]] = 0 to 16 {
+// PRODUCER-CONSUMER-MAXIMAL-NEXT: affine.for %[[I:.*]] = 0 to 16 {
+// PRODUCER-CONSUMER-MAXIMAL:       affine.store {{.*}} : memref<64xf64>
+// PRODUCER-CONSUMER-MAXIMAL:       affine.load {{.*}} : memref<64xf64>
+// PRODUCER-CONSUMER-MAXIMAL:       affine.load {{.*}} : memref<64xf64>
+// PRODUCER-CONSUMER-MAXIMAL-NOT: memref<1xf64>
+// PRODUCER-CONSUMER-MAXIMAL: return
+func.func @private_buffer_outer_iv_mismatch(
+    %in: memref<2x4x16xf64>, %out: memref<2x4x16xf64>) {
+  affine.for %instance = 0 to 2 {
+    affine.for %batch = 0 to 4 {
+      %comm = memref.alloc() : memref<64xf64>
+      affine.for %i = 0 to 16 {
+        %a = affine.load %in[%instance, %batch, %i] : memref<2x4x16xf64>
+        affine.store %a, %comm[16 * %batch + %i] : memref<64xf64>
+      }
+      affine.for %j = 0 to 16 {
+        %a = affine.load %comm[16 * %batch + %j] : memref<64xf64>
+        %b = affine.load %comm[-16 * %batch + %j + 48] : memref<64xf64>
+        %sum = arith.addf %a, %b : f64
+        affine.store %sum, %out[%instance, %batch, %j]
+            : memref<2x4x16xf64>
+      }
+    }
+  }
+  return
+}
+
+// -----
+
+// Access relations conservatively approximate a non-unit affine.for with a
+// dynamic lower bound. Do not use that approximation to prove coverage.
+// PRODUCER-CONSUMER-MAXIMAL-LABEL: func.func @private_buffer_dynamic_lb_stride(
+// PRODUCER-CONSUMER-MAXIMAL-NOT: memref.alloc
+// PRODUCER-CONSUMER-MAXIMAL: affine.for
+// PRODUCER-CONSUMER-MAXIMAL:   affine.for {{.*}} step 2
+// PRODUCER-CONSUMER-MAXIMAL:     affine.store {{.*}} : memref<4x?xf64>
+// PRODUCER-CONSUMER-MAXIMAL: affine.for
+// PRODUCER-CONSUMER-MAXIMAL:   affine.for {{.*}} step 2
+// PRODUCER-CONSUMER-MAXIMAL:     affine.store {{.*}} : memref<4x?xf64>
+// PRODUCER-CONSUMER-MAXIMAL:   affine.load {{.*}} : memref<4x?xf64>
+// PRODUCER-CONSUMER-MAXIMAL-NOT: memref.alloc
+// PRODUCER-CONSUMER-MAXIMAL: return
+func.func @private_buffer_dynamic_lb_stride(
+    %lb: index, %in: memref<4xf64>, %comm: memref<4x?xf64>,
+    %out: memref<4xf64>) {
+  affine.for %batch = 0 to 4 {
+    affine.for %k = %lb to affine_map<(d0) -> (d0 + 8)>(%lb) step 2 {
+      %a = affine.load %in[%batch] : memref<4xf64>
+      affine.store %a, %comm[%batch, %k] : memref<4x?xf64>
+    }
+  }
+  affine.for %batch = 0 to 4 {
+    %a = affine.load %comm[%batch, %lb] : memref<4x?xf64>
+    %b = affine.load %comm[%batch, %lb + 1] : memref<4x?xf64>
+    %c = affine.load %comm[%batch, %lb + 2] : memref<4x?xf64>
+    %d = affine.load %comm[%batch, %lb + 3] : memref<4x?xf64>
+    %ab = arith.addf %a, %b : f64
+    %cd = arith.addf %c, %d : f64
+    %sum = arith.addf %ab, %cd : f64
+    affine.store %sum, %out[%batch] : memref<4xf64>
+  }
+  return
+}
