@@ -1,0 +1,62 @@
+# REQUIRES: x86
+
+# Ordinary .drectve sections are read before COMDAT sections are selected, but
+# their contents must still be presented to the driver in object section order.
+
+# RUN: yaml2obj %s -o %t.obj
+# RUN: lld-link /dll /noentry /nodefaultlib /verbose %t.obj /out:%t.dll 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=ORDER
+# RUN: llvm-readobj --coff-exports %t.dll | FileCheck %s
+
+# ORDER: Directives: {{.*}}: /export:first /export:second
+# CHECK-DAG: Name: first
+# CHECK-DAG: Name: second
+
+--- !COFF
+header:
+  Machine: IMAGE_FILE_MACHINE_AMD64
+sections:
+  - Name: .drectve
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_LNK_COMDAT,
+                       IMAGE_SCN_MEM_READ ]
+    SectionData: 202F6578706F72743A6669727374
+  - Name: .drectve
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    SectionData: 202F6578706F72743A7365636F6E64
+  - Name: .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE,
+                       IMAGE_SCN_MEM_READ ]
+    SectionData: C3C3
+symbols:
+  - Name: .drectve
+    Value: 0
+    SectionNumber: 1
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length: 14
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum: 1
+      Number: 1
+      Selection: IMAGE_COMDAT_SELECT_ANY
+  - Name: directive_group
+    Value: 0
+    SectionNumber: 1
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL
+  - Name: first
+    Value: 0
+    SectionNumber: 3
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL
+  - Name: second
+    Value: 1
+    SectionNumber: 3
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL
+...

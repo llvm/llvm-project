@@ -14,6 +14,14 @@
 
 ; RUN: env LLD_IN_TEST=1 not lld-link /entry:entry %t.main.obj %t.other.obj %t.personality.lib /out:%t.exe /subsystem:console /opt:lldlto=0 /debug:symtab 2>&1 | FileCheck %s
 
+;; Do not preserve late references from arbitrary unassociated COMDATs in LTO
+;; output. The section is discarded, so its archive provider must not be loaded
+;; after LTO.
+; RUN: llvm-as %t.dir/nonunwind.ll -o %t.nonunwind.obj
+; RUN: llvm-as %t.dir/late.ll -o %t.late.obj
+; RUN: llvm-ar rcs %t.late.lib %t.late.obj
+; RUN: lld-link /entry:entry %t.nonunwind.obj %t.late.lib /out:%t.nonunwind.exe /subsystem:console /opt:lldlto=0 /debug:symtab
+
 ; CHECK: error: LTO object file lto-late-personality.ll.tmp.personality.lib(lto-late-personality.ll.tmp.personality.obj) linked in after doing LTO compilation.
 
 ;--- main.ll
@@ -46,3 +54,19 @@ define void @__C_specific_handler() {
 entry:
   ret void
 }
+
+;--- nonunwind.ll
+target datalayout = "e-m:w-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-w64-windows-gnu"
+
+define i32 @entry() {
+entry:
+  tail call void asm sideeffect ".section .rdata$$late, \22dr\22\0A.linkonce discard\0A.long late_provider\0A.text\0A", "~{dirflag},~{fpsr},~{flags}"()
+  ret i32 0
+}
+
+;--- late.ll
+target datalayout = "e-m:w-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-w64-windows-gnu"
+
+@late_provider = global i32 42
