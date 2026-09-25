@@ -1443,6 +1443,10 @@ def err_omp_unknown_adjust_args_op
     : Error<
           "incorrect 'adjust_args' type, expected 'need_device_ptr'%select{|, "
           "'need_device_addr',}0 or 'nothing'">;
+def err_omp_num_args_invalid_form
+    : Error<"'omp_num_args' %select{is only allowed as a bound of a parameter "
+            "range|may only be followed by '+' or '-' and a constant logical "
+            "offset}0">;
 def err_omp_declare_variant_wrong_clause : Error<
   "expected %select{'match'|'match', 'adjust_args', or 'append_args'}0 clause "
   "on 'omp declare variant' directive">;

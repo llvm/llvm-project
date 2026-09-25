@@ -1823,6 +1823,24 @@ void StmtPrinter::VisitOMPIteratorExpr(OMPIteratorExpr *Node) {
   OS << ")";
 }
 
+void StmtPrinter::VisitOMPNumArgsExpr(OMPNumArgsExpr *Node) {
+  OS << "omp_num_args";
+  if (Expr *Offset = Node->getOffset()) {
+    OS << (Node->isSubtraction() ? "-" : "+");
+    PrintExpr(Offset);
+  }
+}
+
+void StmtPrinter::VisitOMPArgumentRangeExpr(OMPArgumentRangeExpr *Node) {
+  // An omitted bound is simply not printed: `lb:`, `:ub` and `:` are all
+  // spellings the parser accepts.
+  if (Expr *LowerBound = Node->getLowerBound())
+    PrintExpr(LowerBound);
+  OS << ":";
+  if (Expr *UpperBound = Node->getUpperBound())
+    PrintExpr(UpperBound);
+}
+
 void StmtPrinter::PrintCallArgs(CallExpr *Call) {
   for (unsigned i = 0, e = Call->getNumArgs(); i != e; ++i) {
     if (isa<CXXDefaultArgExpr>(Call->getArg(i))) {

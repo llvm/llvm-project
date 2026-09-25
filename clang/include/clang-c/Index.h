@@ -1691,7 +1691,19 @@ enum CXCursorKind {
    */
   CXCursor_PackIndexingExpr = 156,
 
-  CXCursor_LastExpr = CXCursor_PackIndexingExpr,
+  /**
+   * OpenMP 6.0 [5.2.1, Parameter List Items]
+   * The 'omp_num_args' identifier with an optional logical offset.
+   */
+  CXCursor_OMPNumArgsExpr = 157,
+
+  /**
+   * OpenMP 6.0 [5.2.1, Parameter List Items]
+   * A parameter range 'lb:ub', either bound of which may be omitted.
+   */
+  CXCursor_OMPArgumentRangeExpr = 158,
+
+  CXCursor_LastExpr = CXCursor_OMPArgumentRangeExpr,
 
   /* Statements */
   CXCursor_FirstStmt = 200,

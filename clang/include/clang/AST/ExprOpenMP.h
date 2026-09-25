@@ -296,6 +296,146 @@ public:
   }
 };
 
+/// OpenMP 6.0 [5.2.1, Parameter List Items]
+/// Represents the 'omp_num_args' identifier used as a bound of a parameter
+/// range, together with an optional logical offset:
+/// \code
+/// omp_num_args [ ('+' | '-') logical_offset ]
+/// \endcode
+class OMPNumArgsExpr final : public Expr {
+  friend class ASTStmtReader;
+  friend class ASTStmtWriter;
+
+  /// The logical offset, or null if none was written.
+  Stmt *Offset = nullptr;
+  /// Location of the 'omp_num_args' identifier.
+  SourceLocation NumArgsLoc;
+  /// Location of the '+' or '-'; invalid if there is no offset.
+  SourceLocation OpLoc;
+  /// True if the offset was written with '-'.
+  bool IsSubtraction = false;
+
+public:
+  OMPNumArgsExpr(QualType Type, SourceLocation NumArgsLoc, SourceLocation OpLoc,
+                 bool IsSubtraction, Expr *Offset)
+      : Expr(OMPNumArgsExprClass, Type, VK_PRValue, OK_Ordinary),
+        Offset(Offset), NumArgsLoc(NumArgsLoc), OpLoc(OpLoc),
+        IsSubtraction(IsSubtraction) {
+    setDependence(computeDependence(this));
+  }
+
+  /// Create an empty 'omp_num_args' expression.
+  explicit OMPNumArgsExpr(EmptyShell Shell)
+      : Expr(OMPNumArgsExprClass, Shell) {}
+
+  /// Gets the logical offset, or null if none was written.
+  Expr *getOffset() { return cast_or_null<Expr>(Offset); }
+  const Expr *getOffset() const { return cast_or_null<Expr>(Offset); }
+  void setOffset(Expr *E) { Offset = E; }
+
+  /// True if the offset was written with '-' rather than '+'.
+  bool isSubtraction() const { return IsSubtraction; }
+  void setIsSubtraction(bool IS) { IsSubtraction = IS; }
+
+  SourceLocation getNumArgsLoc() const { return NumArgsLoc; }
+  void setNumArgsLoc(SourceLocation L) { NumArgsLoc = L; }
+
+  SourceLocation getOperatorLoc() const { return OpLoc; }
+  void setOperatorLoc(SourceLocation L) { OpLoc = L; }
+
+  SourceLocation getBeginLoc() const LLVM_READONLY { return NumArgsLoc; }
+  SourceLocation getEndLoc() const LLVM_READONLY {
+    return Offset ? Offset->getEndLoc() : NumArgsLoc;
+  }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == OMPNumArgsExprClass;
+  }
+
+  // Iterators
+  child_range children() { return child_range(&Offset, &Offset + 1); }
+  const_child_range children() const {
+    return const_child_range(&Offset, &Offset + 1);
+  }
+};
+
+/// OpenMP 6.0 [5.2.1, Parameter List Items]
+/// Represents a parameter range, one list item that stands for every parameter
+/// position from a lower to an upper bound:
+/// \code
+/// [ lb ] ':' [ ub ]
+/// \endcode
+/// Either bound may be omitted: an omitted \c lb defaults to 1 and an omitted
+/// \c ub defaults to 'omp_num_args'. A bound may be an 'omp_num_args'
+/// expression, which is why this node's children are general expressions rather
+/// than integer literals.
+///
+/// The type is 'void': a range is never a value, it only ever appears as an
+/// item of an 'adjust_args' parameter list in \c OMPDeclareVariantAttr.
+class OMPArgumentRangeExpr final : public Expr {
+  friend class ASTStmtReader;
+  friend class ASTStmtWriter;
+
+  enum { LOWER_BOUND, UPPER_BOUND, NUM_SUBEXPRS };
+
+  /// The two bounds; either may be null when the bound was omitted.
+  Stmt *SubExprs[NUM_SUBEXPRS] = {nullptr, nullptr};
+  /// Location of the ':' separating the bounds.
+  SourceLocation ColonLoc;
+
+public:
+  OMPArgumentRangeExpr(QualType Type, Expr *LowerBound, SourceLocation ColonLoc,
+                       Expr *UpperBound)
+      : Expr(OMPArgumentRangeExprClass, Type, VK_PRValue, OK_Ordinary),
+        ColonLoc(ColonLoc) {
+    SubExprs[LOWER_BOUND] = LowerBound;
+    SubExprs[UPPER_BOUND] = UpperBound;
+    setDependence(computeDependence(this));
+  }
+
+  /// Create an empty parameter range expression.
+  explicit OMPArgumentRangeExpr(EmptyShell Shell)
+      : Expr(OMPArgumentRangeExprClass, Shell) {}
+
+  /// Gets the lower bound, or null if it was omitted (meaning 1).
+  Expr *getLowerBound() { return cast_or_null<Expr>(SubExprs[LOWER_BOUND]); }
+  const Expr *getLowerBound() const {
+    return cast_or_null<Expr>(SubExprs[LOWER_BOUND]);
+  }
+  void setLowerBound(Expr *E) { SubExprs[LOWER_BOUND] = E; }
+
+  /// Gets the upper bound, or null if it was omitted (meaning 'omp_num_args').
+  Expr *getUpperBound() { return cast_or_null<Expr>(SubExprs[UPPER_BOUND]); }
+  const Expr *getUpperBound() const {
+    return cast_or_null<Expr>(SubExprs[UPPER_BOUND]);
+  }
+  void setUpperBound(Expr *E) { SubExprs[UPPER_BOUND] = E; }
+
+  SourceLocation getColonLoc() const { return ColonLoc; }
+  void setColonLoc(SourceLocation L) { ColonLoc = L; }
+
+  SourceLocation getBeginLoc() const LLVM_READONLY {
+    return SubExprs[LOWER_BOUND] ? SubExprs[LOWER_BOUND]->getBeginLoc()
+                                 : ColonLoc;
+  }
+  SourceLocation getEndLoc() const LLVM_READONLY {
+    return SubExprs[UPPER_BOUND] ? SubExprs[UPPER_BOUND]->getEndLoc()
+                                 : ColonLoc;
+  }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == OMPArgumentRangeExprClass;
+  }
+
+  // Iterators
+  child_range children() {
+    return child_range(&SubExprs[LOWER_BOUND], &SubExprs[NUM_SUBEXPRS]);
+  }
+  const_child_range children() const {
+    return const_child_range(&SubExprs[LOWER_BOUND], &SubExprs[NUM_SUBEXPRS]);
+  }
+};
+
 } // end namespace clang
 
 #endif

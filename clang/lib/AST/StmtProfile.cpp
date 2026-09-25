@@ -1609,6 +1609,19 @@ void StmtProfiler::VisitOMPIteratorExpr(const OMPIteratorExpr *S) {
     VisitDecl(S->getIteratorDecl(I));
 }
 
+void StmtProfiler::VisitOMPNumArgsExpr(const OMPNumArgsExpr *S) {
+  VisitExpr(S);
+  // The sign is not recoverable from the children: 'omp_num_args+1' and
+  // 'omp_num_args-1' have the same offset expression.
+  ID.AddBoolean(S->isSubtraction());
+}
+
+void StmtProfiler::VisitOMPArgumentRangeExpr(const OMPArgumentRangeExpr *S) {
+  // Both bounds are children, and an omitted bound is a null child, so 'lb:'
+  // and ':ub' profile differently.
+  VisitExpr(S);
+}
+
 void StmtProfiler::VisitCallExpr(const CallExpr *S) {
   VisitExpr(S);
 }

@@ -1323,6 +1323,8 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Expr::ArraySectionExprClass:
   case Expr::OMPArrayShapingExprClass:
   case Expr::OMPIteratorExprClass:
+  case Expr::OMPNumArgsExprClass:
+  case Expr::OMPArgumentRangeExprClass:
   case Expr::BinaryOperatorClass:
   case Expr::DependentCoawaitExprClass:
   case Expr::CompoundAssignOperatorClass:

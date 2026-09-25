@@ -500,6 +500,26 @@ ExprDependence clang::computeDependence(OMPIteratorExpr *E) {
   return D;
 }
 
+ExprDependence clang::computeDependence(OMPNumArgsExpr *E) {
+  // The type is always 'int', so the expression is never type-dependent; only
+  // the logical offset can make it value- or instantiation-dependent.
+  if (Expr *Offset = E->getOffset())
+    return Offset->getDependence() & ~ExprDependence::Type;
+  return ExprDependence::None;
+}
+
+ExprDependence clang::computeDependence(OMPArgumentRangeExpr *E) {
+  // The type is always 'void', so the expression is never type-dependent.
+  // Either bound may be omitted, meaning 1 for the lower bound and
+  // 'omp_num_args' for the upper bound.
+  auto D = ExprDependence::None;
+  if (Expr *LB = E->getLowerBound())
+    D |= LB->getDependence();
+  if (Expr *UB = E->getUpperBound())
+    D |= UB->getDependence();
+  return D & ~ExprDependence::Type;
+}
+
 /// Compute the type-, value-, and instantiation-dependence of a
 /// declaration reference
 /// based on the declaration being referenced.

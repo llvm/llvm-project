@@ -100,6 +100,8 @@ class AtomicExpr;
 class ArraySectionExpr;
 class OMPArrayShapingExpr;
 class OMPIteratorExpr;
+class OMPNumArgsExpr;
+class OMPArgumentRangeExpr;
 class ObjCArrayLiteral;
 class ObjCDictionaryLiteral;
 class ObjCBoxedExpr;
@@ -200,6 +202,8 @@ ExprDependence computeDependence(AtomicExpr *E);
 ExprDependence computeDependence(ArraySectionExpr *E);
 ExprDependence computeDependence(OMPArrayShapingExpr *E);
 ExprDependence computeDependence(OMPIteratorExpr *E);
+ExprDependence computeDependence(OMPNumArgsExpr *E);
+ExprDependence computeDependence(OMPArgumentRangeExpr *E);
 
 ExprDependence computeDependence(ObjCArrayLiteral *E);
 ExprDependence computeDependence(ObjCDictionaryLiteral *E);

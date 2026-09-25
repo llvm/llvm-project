@@ -2972,6 +2972,28 @@ public:
         /*Scope=*/nullptr, IteratorKwLoc, LLoc, RLoc, Data);
   }
 
+  /// Build a new 'omp_num_args' expression.
+  ///
+  /// By default, performs semantic analysis to build the new expression.
+  /// Subclasses may override this routine to provide different behavior.
+  ExprResult RebuildOMPNumArgsExpr(SourceLocation NumArgsLoc,
+                                   SourceLocation OpLoc, bool IsSubtraction,
+                                   Expr *Offset) {
+    return getSema().OpenMP().ActOnOMPNumArgsExpr(NumArgsLoc, OpLoc,
+                                                  IsSubtraction, Offset);
+  }
+
+  /// Build a new parameter range expression.
+  ///
+  /// By default, performs semantic analysis to build the new expression.
+  /// Subclasses may override this routine to provide different behavior.
+  ExprResult RebuildOMPArgumentRangeExpr(Expr *LowerBound,
+                                         SourceLocation ColonLoc,
+                                         Expr *UpperBound) {
+    return getSema().OpenMP().ActOnOMPArgumentRangeExpr(LowerBound, ColonLoc,
+                                                        UpperBound);
+  }
+
   /// Build a new call expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
@@ -14194,6 +14216,48 @@ TreeTransform<Derived>::TransformOMPIteratorExpr(OMPIteratorExpr *E) {
     getDerived().transformedLocalDecl(E->getIteratorDecl(I),
                                       IE->getIteratorDecl(I));
   return Res;
+}
+
+template <typename Derived>
+ExprResult TreeTransform<Derived>::TransformOMPNumArgsExpr(OMPNumArgsExpr *E) {
+  ExprResult Offset;
+  if (E->getOffset()) {
+    Offset = getDerived().TransformExpr(E->getOffset());
+    if (Offset.isInvalid())
+      return ExprError();
+  }
+
+  if (!getDerived().AlwaysRebuild() && Offset.get() == E->getOffset())
+    return E;
+
+  return getDerived().RebuildOMPNumArgsExpr(E->getNumArgsLoc(),
+                                            E->getOperatorLoc(),
+                                            E->isSubtraction(), Offset.get());
+}
+
+template <typename Derived>
+ExprResult
+TreeTransform<Derived>::TransformOMPArgumentRangeExpr(OMPArgumentRangeExpr *E) {
+  ExprResult LowerBound;
+  if (E->getLowerBound()) {
+    LowerBound = getDerived().TransformExpr(E->getLowerBound());
+    if (LowerBound.isInvalid())
+      return ExprError();
+  }
+
+  ExprResult UpperBound;
+  if (E->getUpperBound()) {
+    UpperBound = getDerived().TransformExpr(E->getUpperBound());
+    if (UpperBound.isInvalid())
+      return ExprError();
+  }
+
+  if (!getDerived().AlwaysRebuild() && LowerBound.get() == E->getLowerBound() &&
+      UpperBound.get() == E->getUpperBound())
+    return E;
+
+  return getDerived().RebuildOMPArgumentRangeExpr(
+      LowerBound.get(), E->getColonLoc(), UpperBound.get());
 }
 
 template<typename Derived>
