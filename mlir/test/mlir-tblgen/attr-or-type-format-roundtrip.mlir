@@ -37,6 +37,13 @@ attributes {
   attr_14 = #test.simple_enum<"+">,
   // CHECK: #test.simple_enum<"dash-separated-sentence">
   attr_15 = #test.simple_enum<"dash-separated-sentence">,
+  // CHECK: #test.attr_with_int8_params<200, -100>
+  attr_16 = #test.attr_with_int8_params<200, -100>,
+  // Test that chars use the correct overload and print as supposed to.
+  // CHECK: #test.attr_with_char_param<A>
+  attr_17 = #test.attr_with_char_param<A>,
+  // CHECK: #test.attr_with_char_param<"\0A">
+  attr_18 = #test.attr_with_char_param<"\0A">,
   // Test that ArrayRefParameter in non-last struct position is wrapped in
   // brackets to avoid ambiguity with the struct-level comma (issue #156623).
   // CHECK: #test.arr_struct<elements = [1, 2, 3], count = 42>
