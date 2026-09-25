@@ -536,10 +536,6 @@ public:
     }
   }
 
-  SCEVTypes getEquivalentNonSequentialSCEVType() const {
-    return getEquivalentNonSequentialSCEVType(getSCEVType());
-  }
-
   static bool classof(const SCEV *S) {
     return isSequentialMinMaxType(S->getSCEVType());
   }
@@ -968,39 +964,6 @@ public:
 
 private:
   ValueToSCEVMapTy &Map;
-};
-
-using LoopToScevMapT = DenseMap<const Loop *, const SCEV *>;
-
-/// The SCEVLoopAddRecRewriter takes a scalar evolution expression and applies
-/// the Map (Loop -> SCEV) to all AddRecExprs.
-class SCEVLoopAddRecRewriter
-    : public SCEVRewriteVisitor<SCEVLoopAddRecRewriter> {
-public:
-  SCEVLoopAddRecRewriter(ScalarEvolution &SE, LoopToScevMapT &M)
-      : SCEVRewriteVisitor(SE), Map(M) {}
-
-  static const SCEV *rewrite(const SCEV *Scev, LoopToScevMapT &Map,
-                             ScalarEvolution &SE) {
-    SCEVLoopAddRecRewriter Rewriter(SE, Map);
-    return Rewriter.visit(Scev);
-  }
-
-  const SCEV *visitAddRecExpr(const SCEVAddRecExpr *Expr) {
-    SmallVector<SCEVUse, 2> Operands;
-    for (SCEVUse Op : Expr->operands())
-      Operands.push_back(visit(Op));
-
-    const Loop *L = Expr->getLoop();
-    auto It = Map.find(L);
-    if (It == Map.end())
-      return SE.getAddRecExpr(Operands, L, Expr->getNoWrapFlags());
-
-    return SCEVAddRecExpr::evaluateAtIteration(Operands, It->second, SE);
-  }
-
-private:
-  LoopToScevMapT &Map;
 };
 
 template <typename SCEVPtrT>
