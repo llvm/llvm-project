@@ -44,7 +44,8 @@ static bool functionMightHaveBypass(const Stmt *s) {
   return false;
 }
 
-static cir::FastMathFlags fastMathFlagsFromFPOptions(clang::FPOptions fpFeatures) {
+static cir::FastMathFlags
+fastMathFlagsFromFPOptions(clang::FPOptions fpFeatures) {
   // Other fast-math bits (nnan, ninf, reassoc, ...) are not modeled yet.
   // `contract` is the bit `-ffp-contract=fast` needs so a later backend in
   // Standard fusion mode can still form an FMA.
