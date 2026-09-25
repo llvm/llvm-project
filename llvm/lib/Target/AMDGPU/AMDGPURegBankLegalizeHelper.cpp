@@ -769,9 +769,13 @@ bool RegBankLegalizeHelper::lowerV_BFE(MachineInstr &MI) {
     }
     B.buildMergeLikeInstr(Dst, {Lo, Hi});
   } else {
-    auto Amt = B.buildConstant(VgprRB_I32, WidthImm - 32);
     // SHRSrc Hi|Lo: ??????sy|yyyyyyyl -> sssssssy|yyyyyyyl
-    auto Hi = B.buildInstr(BFXOpc, {VgprRB_I32}, {SHRSrcHi, Zero, Amt});
+    Register Hi = SHRSrcHi;
+    // V_BFE masks its width to 5 bits, so 64 would extract zero bits.
+    if (WidthImm < 64) {
+      auto Amt = B.buildConstant(VgprRB_I32, WidthImm - 32);
+      Hi = B.buildInstr(BFXOpc, {VgprRB_I32}, {SHRSrcHi, Zero, Amt}).getReg(0);
+    }
     B.buildMergeLikeInstr(Dst, {SHRSrcLo, Hi});
   }
 
