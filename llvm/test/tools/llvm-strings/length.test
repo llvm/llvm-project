@@ -55,11 +55,11 @@ RUN: llvm-strings --encoding utf8 -n 2 %t | FileCheck --check-prefix UTF-8-2 %s 
 RUN: llvm-strings --encoding utf8 -n 3 %t | FileCheck --check-prefix UTF-8-3 %s --implicit-check-not={{.}}
 RUN: llvm-strings --encoding utf8 -n 4 %t | FileCheck %s --implicit-check-not={{.}} --allow-empty
 
-UTF-8-1:      ¡
-UTF-8-1-NEXT: ¡¢
-UTF-8-1-NEXT: ¡¢£
+UTF-8-1:      {{\xc2\xa1}}
+UTF-8-1-NEXT: {{\xc2\xa1\xc2\xa2}}
+UTF-8-1-NEXT: {{\xc2\xa1\xc2\xa2\xc2\xa3}}
 
-UTF-8-2:      ¡¢
-UTF-8-2-NEXT: ¡¢£
+UTF-8-2:      {{\xc2\xa1\xc2\xa2}}
+UTF-8-2-NEXT: {{\xc2\xa1\xc2\xa2\xc2\xa3}}
 
-UTF-8-3:      ¡¢£
+UTF-8-3:      {{\xc2\xa1\xc2\xa2\xc2\xa3}}
