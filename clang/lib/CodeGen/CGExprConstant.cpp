@@ -2774,8 +2774,7 @@ void CodeGenModule::setAddrOfConstantCompoundLiteral(
 
 ConstantAddress
 CodeGenModule::GetAddrOfConstantCompoundLiteral(const CompoundLiteralExpr *E) {
-  assert((E->isFileScope() || E->hasGlobalStorage()) &&
-         "not a global compound literal expression");
+  assert(E->hasGlobalStorage() && "not a global compound literal expression");
   ConstantEmitter emitter(*this);
   return tryEmitGlobalCompoundLiteral(emitter, E);
 }
