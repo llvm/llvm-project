@@ -71,14 +71,28 @@ def int_dx_resource_store_rawbuffer
 // Atomic read-modify-write on a UAV resource element. Emitted by
 // DXILResourceAccess from an `atomicrmw` on a `dx.resource.getpointer` result,
 // and lowered by DXILOpLowering to the DXIL `AtomicBinOp` op (78).
-// Args: handle, AtomicBinOpCode, coord0 (index), coord1 (offset or poison),
-//       new value. Returns the original value.
+// Args: handle, AtomicBinOpCode, coord0, coord1, coord2, new value. Returns
+//       the original value. Buffer accesses use coord0 as the element index and
+//       coord1 as the byte offset into a struct, while texture accesses use one
+//       coordinate per texture dimension. Unused coordinates are poison.
 def int_dx_resource_atomic_binop
     : DefaultAttrsIntrinsic<
           [llvm_any_ty],
+          [llvm_any_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+           LLVMMatchType<0>]>;
+
+// Atomic compare-exchange on a UAV resource element. Emitted by
+// DXILResourceAccess from a `cmpxchg` on a `dx.resource.getpointer` result,
+// and lowered by DXILOpLowering to the DXIL `AtomicCompareExchange` op (79).
+// Args: handle, coord0, coord1, coord2, compare value, new value. Returns
+//       the original value. Buffer accesses use coord0 as the element index and
+//       coord1 as the byte offset into a struct, while texture accesses use one
+//       coordinate per texture dimension. Unused coordinates are poison.
+def int_dx_resource_atomic_compare_exchange
+    : DefaultAttrsIntrinsic<
+          [llvm_any_ty],
           [llvm_any_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
-           LLVMMatchType<0>],
-          [IntrArgMemOnly]>;
+           LLVMMatchType<0>, LLVMMatchType<0>]>;
 // dx.resource.load.cbufferrow encodes the number of elements returned in the
 // function name. The total size of the return should always be 128 bits.
 def int_dx_resource_load_cbufferrow_8

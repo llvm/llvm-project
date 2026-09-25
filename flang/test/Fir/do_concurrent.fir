@@ -133,17 +133,17 @@ func.func @do_concurrent_with_locality_specs() {
 }
 
 // CHECK-LABEL:   func.func @do_concurrent_with_locality_specs() {
-// CHECK:           %[[LOC_INIT_ALLOC:.*]] = fir.alloca i32 {bindc_name = "local_init_var"}
+// CHECK:           %[[LOC_INIT_ALLOC:.*]] = fir.alloca i32 <{bindc_name = "local_init_var"}>
 // CHECK:           %[[LOC_INIT_DECL:.*]]:2 = hlfir.declare %[[LOC_INIT_ALLOC]]
 
-// CHECK:           %[[LOC_ALLOC:.*]] = fir.alloca i32 {bindc_name = "local_var"}
+// CHECK:           %[[LOC_ALLOC:.*]] = fir.alloca i32 <{bindc_name = "local_var"}>
 // CHECK:           %[[LOC_DECL:.*]]:2 = hlfir.declare %[[LOC_ALLOC]]
 
 // CHECK:           %[[C1:.*]] = arith.constant 1 : index
 // CHECK:           %[[C10:.*]] = arith.constant 10 : index
 
 // CHECK:           fir.do_concurrent {
-// CHECK:             %[[DC_I_ALLOC:.*]] = fir.alloca i32 {bindc_name = "i"}
+// CHECK:             %[[DC_I_ALLOC:.*]] = fir.alloca i32 <{bindc_name = "i"}>
 // CHECK:             %[[DC_I_DECL:.*]]:2 = hlfir.declare %[[DC_I_ALLOC]]
 
 // CHECK:             fir.do_concurrent.loop (%[[IV:.*]]) = (%[[C1]]) to 
@@ -174,7 +174,7 @@ func.func @dc_reduce() {
 }
 
 // CHECK-LABEL:  func.func @dc_reduce() {
-// CHECK:          %[[S_ALLOC:.*]] = fir.alloca i32 {bindc_name = "s", uniq_name = "dc_reduce"}
+// CHECK:          %[[S_ALLOC:.*]] = fir.alloca i32 <{bindc_name = "s", uniq_name = "dc_reduce"}>
 // CHECK:          %[[S_DECL:.*]]:2 = hlfir.declare %[[S_ALLOC]] {uniq_name = "dc_reduce"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 // CHECK:          fir.do_concurrent {
 // CHECK:            fir.do_concurrent.loop (%{{.*}}) = (%{{.*}}) to (%{{.*}}) step (%{{.*}}) reduce(byref @add_reduction_i32 #fir.reduce_attr<add> %[[S_DECL]]#0 -> %[[S_ARG:.*]] : !fir.ref<i32>) {
@@ -204,10 +204,10 @@ func.func @dc_reduce_2() {
 }
 
 // CHECK-LABEL:  func.func @dc_reduce_2() {
-// CHECK:          %[[S_ALLOC:.*]] = fir.alloca i32 {bindc_name = "s", uniq_name = "dc_reduce"}
+// CHECK:          %[[S_ALLOC:.*]] = fir.alloca i32 <{bindc_name = "s", uniq_name = "dc_reduce"}>
 // CHECK:          %[[S_DECL:.*]]:2 = hlfir.declare %[[S_ALLOC]] {uniq_name = "dc_reduce"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
-// CHECK:          %[[M_ALLOC:.*]] = fir.alloca i32 {bindc_name = "m", uniq_name = "dc_reduce"}
+// CHECK:          %[[M_ALLOC:.*]] = fir.alloca i32 <{bindc_name = "m", uniq_name = "dc_reduce"}>
 // CHECK:          %[[M_DECL:.*]]:2 = hlfir.declare %[[M_ALLOC]] {uniq_name = "dc_reduce"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 // CHECK:          fir.do_concurrent {
 // CHECK:            fir.do_concurrent.loop (%{{.*}}) = (%{{.*}}) to (%{{.*}}) step (%{{[^[:space:]]+}}) 

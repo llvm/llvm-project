@@ -2,7 +2,7 @@
 ! UNSUPPORTED: system-windows
 
 ! CHECK-LABEL: func @_QPido1
-! CHECK: %[[IPTR_BOX_ADDR:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> {bindc_name = "iptr", uniq_name = "_QFido1Eiptr"}
+! CHECK: %[[IPTR_BOX_ADDR:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> <{bindc_name = "iptr", uniq_name = "_QFido1Eiptr"}>
 ! CHECK: %[[IPTR_DECL:.*]]:2 = hlfir.declare %[[IPTR_BOX_ADDR]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFido1Eiptr"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
 ! CHECK: %[[IPTR_BOX:.*]] = fir.load %[[IPTR_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
 ! CHECK: %[[IPTR_ADDR:.*]] = fir.box_addr %[[IPTR_BOX]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
@@ -21,7 +21,7 @@ subroutine ido1
 end subroutine
 
 ! CHECK-LABEL: func @_QPido2
-! CHECK: %[[IPTR_BOX_ADDR:.*]] = fir.alloca !fir.box<!fir.heap<i32>> {bindc_name = "iptr", uniq_name = "_QFido2Eiptr"}
+! CHECK: %[[IPTR_BOX_ADDR:.*]] = fir.alloca !fir.box<!fir.heap<i32>> <{bindc_name = "iptr", uniq_name = "_QFido2Eiptr"}>
 ! CHECK: %[[IPTR_DECL:.*]]:2 = hlfir.declare %[[IPTR_BOX_ADDR]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFido2Eiptr"} : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
 ! CHECK: %[[IPTR_BOX:.*]] = fir.load %[[IPTR_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK: %[[IPTR_ADDR:.*]] = fir.box_addr %[[IPTR_BOX]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
@@ -39,7 +39,7 @@ subroutine ido2
 end subroutine
 
 ! CHECK-LABEL: func @_QPido3
-! CHECK: %[[J_BOX_ADDR:.*]] = fir.alloca !fir.box<!fir.heap<i32>> {bindc_name = "j", uniq_name = "_QFido3Ej"}
+! CHECK: %[[J_BOX_ADDR:.*]] = fir.alloca !fir.box<!fir.heap<i32>> <{bindc_name = "j", uniq_name = "_QFido3Ej"}>
 ! CHECK: %[[J_DECL:.*]]:2 = hlfir.declare %[[J_BOX_ADDR]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFido3Ej"} : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
 ! CHECK: %[[J_BOX:.*]] = fir.load %[[J_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK: %[[J_ADDR:.*]] = fir.box_addr %[[J_BOX]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>

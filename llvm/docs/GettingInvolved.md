@@ -169,7 +169,7 @@ what to add to your calendar invite.
      - Monthly
      -
      - [Minutes/docs](https://docs.google.com/document/d/1JecbplF09l3swTjze-UVeLh4L48svJxGVy4mz_e9Rhs/edit?usp=gmail#heading=h.ts9cmcjbir1j)
-   * - [LLVM security group](https://llvm.org/docs/Security.html)
+   * - [LLVM security group](Security.md)
      - Monthly, every 3rd Tuesday
      - [ics](https://calendar.google.com/calendar/ical/eoh3m9k1l6vqbd1fkp94fv5q74%40group.calendar.google.com/public/basic.ics)
        [gcal](https://calendar.google.com/calendar/embed?src=eoh3m9k1l6vqbd1fkp94fv5q74%40group.calendar.google.com)
@@ -219,7 +219,7 @@ what to add to your calendar invite.
      - 3rd Tuesday of the month
      - [ics](https://www.icloud.com/iclouddrive/032PeZzdN6U4uRMwJRJPrS2Lw#Vectorizer_Improvements)
      - [Meeting details/agenda:](https://docs.google.com/document/d/1Glzy2JiWuysbD-HBWGUOkZqT09GJ4_Ljodr0lXD5XfQ/edit)
-   * - [LLVM Qualification Working Group](https://llvm.org/docs/QualGroup.html)
+   * - [LLVM Qualification Working Group](QualGroup.md)
      - Monthly: 2nd Tuesday (EU/Asia) and 2nd Friday JST / Thursday (Americas)
      - [ics](https://calendar.google.com/calendar/ical/f731f5b57956a132f6c553ed30f496b16e1018f831be13eb6c4b896c108a6626%40group.calendar.google.com/public/basic.ics)
        [gcal](https://calendar.google.com/calendar/embed?src=f731f5b57956a132f6c553ed30f496b16e1018f831be13eb6c4b896c108a6626%40group.calendar.google.com&ctz=Asia%2FTokyo)
@@ -341,8 +341,10 @@ The {doc}`CodeOfConduct` applies to all office hours.
       [gcal](https://calendar.google.com/calendar/embed?src=c_pm6e7160iq7n5fcm1s6m3rjhh4%40group.calendar.google.com)
     - [GoogleMeet](https://meet.google.com/hhk-xpdj-gvx)
     - English, Romanian
-  * - Aaron Ballman (he/him)
-    - Clang internals; frontend attributes; clang-tidy; clang-query; AST matchers
+  * - Clang Maintainers (chaired by Aaron Ballman)
+    - Maintainers with various backgrounds attend, so anything related to Clang
+      internals. If you have a specific topic, reach out to Aaron in advance and
+      he can try to have the correct experts attend.
     - Monthly, 2nd Monday and 3rd Friday of the month at 10:00am Eastern and again at 2:00pm Eastern, for 60 minutes.
       [ics](https://calendar.google.com/calendar/ical/npgke5dug0uliud0qapptmps58%40group.calendar.google.com/public/basic.ics)
       [gcal](https://calendar.google.com/calendar/embed?src=npgke5dug0uliud0qapptmps58%40group.calendar.google.com)
@@ -590,7 +592,7 @@ This event is a meetup for all developers of LLDB. Meeting agendas are posted
 on Discourse before the event.
 
 Attendees must adhere to the LLVM Code of Conduct
-(https://llvm.org/docs/CodeOfConduct.html). For any Code of Conduct reports,
+([Code of Conduct](CodeOfConduct.md)). For any Code of Conduct reports,
 please contact the organizers and also email conduct@llvm.org.
 
 Agenda/Meeting Minutes: Link to minutes

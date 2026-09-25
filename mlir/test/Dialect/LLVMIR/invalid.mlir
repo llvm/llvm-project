@@ -2064,6 +2064,42 @@ llvm.func @gep_inbounds_flag_usage(%ptr: !llvm.ptr, %idx: i64) {
 
 // -----
 
+llvm.func @gep_inrange_reversed(%ptr: !llvm.ptr) {
+  // expected-error@+1 {{expected 'inrange' end to be larger than start}}
+  llvm.getelementptr inrange <i64, 4, -4> %ptr[0] : (!llvm.ptr) -> !llvm.ptr, i8
+  llvm.return
+}
+
+// -----
+
+llvm.func @gep_inrange_empty(%ptr: !llvm.ptr) {
+  // expected-error@+1 {{expected 'inrange' end to be larger than start}}
+  llvm.getelementptr inrange <i64, 1, 1> %ptr[0] : (!llvm.ptr) -> !llvm.ptr, i8
+  llvm.return
+}
+
+// -----
+
+llvm.func @gep_inrange_wrong_width(%ptr: !llvm.ptr) {
+  // expected-error@+1 {{'inrange' bitwidth 32 must match the pointer index bitwidth (64) specified in the datalayout}}
+  llvm.getelementptr inrange <i32, -4, 4> %ptr[0] : (!llvm.ptr) -> !llvm.ptr, i8
+  llvm.return
+}
+
+// -----
+
+module attributes {dlti.dl_spec = #dlti.dl_spec<
+  #dlti.dl_entry<!llvm.ptr, dense<[32, 32, 64]> : vector<3xi64>>
+>} {
+  llvm.func @gep_inrange_wrong_width_32(%ptr: !llvm.ptr) {
+    // expected-error@+1 {{'inrange' bitwidth 64 must match the pointer index bitwidth (32) specified in the datalayout}}
+    llvm.getelementptr inrange <i64, -4, 4> %ptr[0] : (!llvm.ptr) -> !llvm.ptr, i8
+    llvm.return
+  }
+}
+
+// -----
+
 llvm.mlir.global @bad_struct_array_init_size() : !llvm.array<2x!llvm.struct<(i32, f32)>> {
   // expected-error@below {{'llvm.mlir.constant' op array attribute size does not match array type size in dimension 0: 1 vs. 2}}
   %0 = llvm.mlir.constant([[42 : i32, 1.000000e+00 : f32]]) : !llvm.array<2x!llvm.struct<(i32, f32)>>
@@ -2299,22 +2335,43 @@ llvm.mlir.ifunc external @foo : !llvm.func<void (ptr, i32)>, !llvm.ptr @alias_re
 // -----
 
 llvm.func @invalid_sincos_nonhomogeneous_return_type(%f: f32) -> () {
-  // expected-error@+1 {{op expected result type to be an homogeneous struct with two elements matching the operand type}}
+  // expected-error@+1 {{op expected result type to be a homogeneous struct with two elements matching the operand type}}
   llvm.intr.sincos(%f) : (f32) -> !llvm.struct<(f32, f64)>
 }
 
 // -----
 
 llvm.func @invalid_sincos_non_struct_return_type(%f: f32) -> () {
-  // expected-error@+1 {{op expected result type to be an homogeneous struct with two elements matching the operand type}}
+  // expected-error@+1 {{op expected result type to be a homogeneous struct with two elements matching the operand type}}
   llvm.intr.sincos(%f) : (f32) -> f32
 }
 
 // -----
 
 llvm.func @invalid_sincos_gt_2_element_struct_return_type(%f: f32) -> () {
-  // expected-error@+1 {{op expected result type to be an homogeneous struct with two elements matching the operand type}}
+  // expected-error@+1 {{op expected result type to be a homogeneous struct with two elements matching the operand type}}
   llvm.intr.sincos(%f) : (f32) -> !llvm.struct<(f32, f32, f32)>
+}
+
+// -----
+
+llvm.func @invalid_modf_nonhomogeneous_return_type(%f: f32) -> () {
+  // expected-error@+1 {{op expected result type to be a homogeneous struct with two elements matching the operand type}}
+  llvm.intr.modf(%f) : (f32) -> !llvm.struct<(f32, f64)>
+}
+
+// -----
+
+llvm.func @invalid_modf_non_struct_return_type(%f: f32) -> () {
+  // expected-error@+1 {{op expected result type to be a homogeneous struct with two elements matching the operand type}}
+  llvm.intr.modf(%f) : (f32) -> f32
+}
+
+// -----
+
+llvm.func @invalid_modf_gt_2_element_struct_return_type(%f: f32) -> () {
+  // expected-error@+1 {{op expected result type to be a homogeneous struct with two elements matching the operand type}}
+  llvm.intr.modf(%f) : (f32) -> !llvm.struct<(f32, f32, f32)>
 }
 
 // -----

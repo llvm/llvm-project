@@ -11,6 +11,7 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/lldb-enumerations.h"
@@ -41,45 +42,48 @@ ScriptedFramePythonInterface::CreatePluginObject(
 }
 
 lldb::user_id_t ScriptedFramePythonInterface::GetID() {
-  Status error;
-  StructuredData::ObjectSP obj = Dispatch("get_id", error);
-
-  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
-                                                    error))
+  StructuredData::ObjectSP obj =
+      LogAndDefault(Dispatch("get_id"), LLVM_PRETTY_FUNCTION);
+  if (!obj)
     return LLDB_INVALID_FRAME_ID;
 
   return obj->GetUnsignedIntegerValue(LLDB_INVALID_FRAME_ID);
 }
 
 lldb::addr_t ScriptedFramePythonInterface::GetPC() {
-  Status error;
-  StructuredData::ObjectSP obj = Dispatch("get_pc", error);
+  StructuredData::ObjectSP obj =
+      LogAndDefault(Dispatch("get_pc"), LLVM_PRETTY_FUNCTION);
+  if (!obj)
+    return LLDB_INVALID_ADDRESS;
 
-  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
-                                                    error))
+  return obj->GetUnsignedIntegerValue(LLDB_INVALID_ADDRESS);
+}
+
+lldb::addr_t ScriptedFramePythonInterface::GetCFA() {
+  StructuredData::ObjectSP obj =
+      LogAndDefault(Dispatch("get_cfa"), LLVM_PRETTY_FUNCTION);
+  if (!obj)
     return LLDB_INVALID_ADDRESS;
 
   return obj->GetUnsignedIntegerValue(LLDB_INVALID_ADDRESS);
 }
 
 std::optional<SymbolContext> ScriptedFramePythonInterface::GetSymbolContext() {
-  Status error;
-  auto sym_ctx = Dispatch<SymbolContext>("get_symbol_context", error);
-
-  if (error.Fail()) {
-    return ErrorWithMessage<SymbolContext>(LLVM_PRETTY_FUNCTION,
-                                           error.AsCString(), error);
+  llvm::Expected<SymbolContext> sym_ctx_or_err =
+      Dispatch<SymbolContext>("get_symbol_context");
+  if (!sym_ctx_or_err) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Script), sym_ctx_or_err.takeError(),
+                   "get_symbol_context failed: {0}");
+    return {};
   }
 
-  return sym_ctx;
+  return *sym_ctx_or_err;
 }
 
 std::optional<std::string> ScriptedFramePythonInterface::GetFunctionName() {
-  Status error;
-  StructuredData::ObjectSP obj = Dispatch("get_function_name", error);
-
-  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
-                                                    error))
+  StructuredData::ObjectSP obj =
+      LogAndDefault(Dispatch("get_function_name"), LLVM_PRETTY_FUNCTION);
+  if (!obj)
     return {};
 
   return obj->GetStringValue().str();
@@ -87,113 +91,137 @@ std::optional<std::string> ScriptedFramePythonInterface::GetFunctionName() {
 
 std::optional<std::string>
 ScriptedFramePythonInterface::GetDisplayFunctionName() {
-  Status error;
-  StructuredData::ObjectSP obj = Dispatch("get_display_function_name", error);
-
-  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
-                                                    error))
+  StructuredData::ObjectSP obj = LogAndDefault(
+      Dispatch("get_display_function_name"), LLVM_PRETTY_FUNCTION);
+  if (!obj)
     return {};
 
   return obj->GetStringValue().str();
 }
 
 bool ScriptedFramePythonInterface::IsInlined() {
-  Status error;
-  StructuredData::ObjectSP obj = Dispatch("is_inlined", error);
-
-  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
-                                                    error))
+  StructuredData::ObjectSP obj =
+      LogAndDefault(Dispatch("is_inlined"), LLVM_PRETTY_FUNCTION);
+  if (!obj)
     return false;
 
   return obj->GetBooleanValue();
 }
 
 bool ScriptedFramePythonInterface::IsArtificial() {
-  Status error;
-  StructuredData::ObjectSP obj = Dispatch("is_artificial", error);
-
-  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
-                                                    error))
+  StructuredData::ObjectSP obj =
+      LogAndDefault(Dispatch("is_artificial"), LLVM_PRETTY_FUNCTION);
+  if (!obj)
     return false;
 
   return obj->GetBooleanValue();
 }
 
 bool ScriptedFramePythonInterface::IsHidden() {
-  Status error;
-  StructuredData::ObjectSP obj = Dispatch("is_hidden", error);
-
-  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
-                                                    error))
+  StructuredData::ObjectSP obj =
+      LogAndDefault(Dispatch("is_hidden"), LLVM_PRETTY_FUNCTION);
+  if (!obj)
     return false;
 
   return obj->GetBooleanValue();
 }
 
 StructuredData::DictionarySP ScriptedFramePythonInterface::GetRegisterInfo() {
-  Status error;
   StructuredData::DictionarySP dict =
-      Dispatch<StructuredData::DictionarySP>("get_register_info", error);
-
-  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, dict,
-                                                    error))
+      LogAndDefault(Dispatch<StructuredData::DictionarySP>("get_register_info"),
+                    LLVM_PRETTY_FUNCTION);
+  if (!dict)
     return {};
 
   return dict;
 }
 
 std::optional<std::string> ScriptedFramePythonInterface::GetRegisterContext() {
-  Status error;
-  StructuredData::ObjectSP obj = Dispatch("get_register_context", error);
-
-  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
-                                                    error))
+  StructuredData::ObjectSP obj =
+      LogAndDefault(Dispatch("get_register_context"), LLVM_PRETTY_FUNCTION);
+  if (!obj)
     return {};
 
-  return obj->GetAsString()->GetValue().str();
+  return obj->GetStringValue().str();
 }
 
 lldb::ValueObjectListSP ScriptedFramePythonInterface::GetVariables() {
-  Status error;
-  auto vals = Dispatch<lldb::ValueObjectListSP>("get_variables", error);
-
-  if (error.Fail()) {
-    return ErrorWithMessage<lldb::ValueObjectListSP>(LLVM_PRETTY_FUNCTION,
-                                                     error.AsCString(), error);
-  }
-
-  return vals;
+  return LogAndDefault(Dispatch<lldb::ValueObjectListSP>("get_variables"),
+                       LLVM_PRETTY_FUNCTION);
 }
 
 std::optional<lldb::ValueType>
 ScriptedFramePythonInterface::GetValueTypeForVariable(
     lldb::ValueObjectSP value) {
-  Status error;
-  auto val = Dispatch<std::optional<lldb::ValueType>>(
-      "get_value_type_for_variable", error, std::move(value));
-
-  if (error.Fail()) {
-    return ErrorWithMessage<std::optional<lldb::ValueType>>(
-        LLVM_PRETTY_FUNCTION, error.AsCString(), error);
-  }
-
-  return val;
+  return LogAndDefault(Dispatch<std::optional<lldb::ValueType>>(
+                           "get_value_type_for_variable", std::move(value)),
+                       LLVM_PRETTY_FUNCTION);
 }
 
 lldb::ValueObjectSP
 ScriptedFramePythonInterface::GetValueObjectForVariableExpression(
     llvm::StringRef expr, uint32_t options, Status &status) {
-  Status dispatch_error;
-  auto val = Dispatch<lldb::ValueObjectSP>("get_value_for_variable_expression",
-                                           dispatch_error, expr.data(), options,
-                                           status);
-
-  if (dispatch_error.Fail()) {
-    return ErrorWithMessage<lldb::ValueObjectSP>(
-        LLVM_PRETTY_FUNCTION, dispatch_error.AsCString(), dispatch_error);
+  llvm::Expected<lldb::ValueObjectSP> val_or_err =
+      Dispatch<lldb::ValueObjectSP>("get_value_for_variable_expression",
+                                    expr.data(), options, status);
+  if (!val_or_err) {
+    status = Status::FromError(val_or_err.takeError());
+    return {};
   }
 
-  return val;
+  return *val_or_err;
+}
+
+llvm::Expected<ScriptedMetadata>
+ScriptedFramePythonInterface::GetThreadPlanMetadataForStepType(
+    lldb::StepType step_type) {
+  ScriptedMetadata no_plan_return("", StructuredData::DictionarySP());
+
+  // A frame that doesn't implement `get_plan_spec_for_step_type` simply has no
+  // plan to offer, which Dispatch reports as an UnimplementedError. Any other
+  // failure - notably an exception raised inside the method - propagates.
+  llvm::Expected<std::optional<StructuredData::DictionarySP>> dict_or_err =
+      DispatchToOptional<StructuredData::DictionarySP>(
+          "get_plan_spec_for_step_type", step_type);
+  if (!dict_or_err)
+    return llvm::joinErrors(
+        llvm::createStringError(
+            "error dispatching get_plan_spec_for_step_type"),
+        dict_or_err.takeError());
+
+  // The return value is an StructuredData::Dictionary with the class name and
+  // the extra args for the call:
+  StructuredData::DictionarySP dict_sp = dict_or_err->value_or(nullptr);
+  if (!dict_sp || !dict_sp->IsValid())
+    return no_plan_return;
+
+  StructuredData::ObjectSP obj = dict_sp->GetValueForKey("class_name");
+  if (!obj)
+    return llvm::createStringError("Required 'class_name' field not provided.");
+
+  std::string class_string = obj->GetStringValue().str();
+  // Passing out an empty class name is they way to say the frame provider
+  // doesn't know how to step from here, and the regular method should be tried
+  // instead. So we only need to make sure the class exists if we were given a
+  // string:
+  if (!class_string.empty()) {
+    const char *class_str = class_string.c_str();
+    if (!m_interpreter.CheckObjectExists(class_str))
+      return llvm::createStringError(
+          "class_name specified a class: '%s' that does not exist.", class_str);
+  }
+
+  // Look for extra args, this is optional:
+  StructuredData::Dictionary *extra_args_ptr = nullptr;
+  StructuredData::DictionarySP extra_args_sp;
+  if (dict_sp->GetValueForKeyAsDictionary("extra_args", extra_args_ptr))
+    extra_args_sp = std::static_pointer_cast<StructuredData::Dictionary>(
+        extra_args_ptr->shared_from_this());
+
+  // Now make a new thread plan for stepping using the provided class name and
+  // extra args.
+  ScriptedMetadata plan_metadata(class_string, extra_args_sp);
+  return plan_metadata;
 }
 
 void ScriptedFramePythonInterface::Initialize() {

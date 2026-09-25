@@ -127,6 +127,9 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::VECTOR_SPLICE_RIGHT:
     Res = PromoteIntRes_VECTOR_SPLICE(N);
     break;
+  case ISD::VECTOR_REPEAT:
+    Res = PromoteIntRes_VECTOR_REPEAT(N);
+    break;
   case ISD::VECTOR_INTERLEAVE:
   case ISD::VECTOR_DEINTERLEAVE:
     Res = PromoteIntRes_VECTOR_INTERLEAVE_DEINTERLEAVE(N);
@@ -345,6 +348,11 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
 
   case ISD::PDEP:
     Res = PromoteIntRes_PDEP(N);
+    break;
+
+  case ISD::MULHS:
+  case ISD::MULHU:
+    Res = PromoteIntRes_MULH(N);
     break;
 
   case ISD::IS_FPCLASS:
@@ -1694,6 +1702,35 @@ SDValue DAGTypeLegalizer::PromoteIntRes_PDEP(SDNode *N) {
   return DAG.getNode(ISD::PDEP, DL, VT, X, Y);
 }
 
+SDValue DAGTypeLegalizer::PromoteIntRes_MULH(SDNode *N) {
+  SDLoc dl(N);
+  EVT VT = N->getValueType(0);
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
+  bool IsSigned = N->getOpcode() == ISD::MULHS;
+  unsigned BW = VT.getScalarSizeInBits();
+  unsigned NBW = NVT.getScalarSizeInBits();
+
+  SDValue LHS, RHS;
+  if (IsSigned) {
+    LHS = SExtPromotedInteger(N->getOperand(0));
+    RHS = SExtPromotedInteger(N->getOperand(1));
+  } else {
+    LHS = ZExtPromotedInteger(N->getOperand(0));
+    RHS = ZExtPromotedInteger(N->getOperand(1));
+  }
+
+  // If the promoted type is already wide enough, emit a MUL.
+  if (NBW >= 2 * BW)
+    return DAG.getNode(IsSigned ? ISD::SRA : ISD::SRL, dl, NVT,
+                       DAG.getNode(ISD::MUL, dl, NVT, LHS, RHS),
+                       DAG.getShiftAmountConstant(BW, NVT, dl));
+
+  // Otherwise, align an operand with a left-shift and emit a MULH.
+  LHS = DAG.getNode(ISD::SHL, dl, NVT, LHS,
+                    DAG.getShiftAmountConstant(NBW - BW, NVT, dl));
+  return DAG.getNode(N->getOpcode(), dl, NVT, LHS, RHS);
+}
+
 SDValue DAGTypeLegalizer::PromoteIntRes_TRUNCATE(SDNode *N) {
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
   SDValue Res;
@@ -2122,6 +2159,9 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::PARTIAL_REDUCE_SMLA:
   case ISD::PARTIAL_REDUCE_SUMLA:
     Res = PromoteIntOp_PARTIAL_REDUCE_MLA(N);
+    break;
+  case ISD::VECTOR_REPEAT:
+    Res = PromoteIntOp_VECTOR_REPEAT(N);
     break;
   case ISD::LOOP_DEPENDENCE_RAW_MASK:
   case ISD::LOOP_DEPENDENCE_WAR_MASK:
@@ -2984,6 +3024,17 @@ SDValue DAGTypeLegalizer::PromoteIntOp_LOOP_DEPENDENCE_MASK(SDNode *N) {
   return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
 }
 
+SDValue DAGTypeLegalizer::PromoteIntOp_VECTOR_REPEAT(SDNode *N) {
+  SDLoc DL(N);
+  SDValue Src = GetPromotedInteger(N->getOperand(0));
+  EVT SrcVT = Src.getValueType();
+  EVT OrigVT = N->getValueType(0);
+  EVT NewVT = OrigVT.changeVectorElementType(*DAG.getContext(),
+                                             SrcVT.getVectorElementType());
+  SDValue Res = DAG.getNode(ISD::VECTOR_REPEAT, DL, NewVT, Src);
+  return DAG.getNode(ISD::TRUNCATE, DL, OrigVT, Res);
+}
+
 //===----------------------------------------------------------------------===//
 //  Integer Result Expansion
 //===----------------------------------------------------------------------===//
@@ -3204,6 +3255,11 @@ void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
 
   case ISD::PDEP:
     ExpandIntRes_PDEP(N, Lo, Hi);
+    break;
+
+  case ISD::MULHS:
+  case ISD::MULHU:
+    ExpandIntRes_MULH(N, Lo, Hi);
     break;
 
   case ISD::VSCALE:
@@ -5535,6 +5591,11 @@ void DAGTypeLegalizer::ExpandIntRes_PDEP(SDNode *N, SDValue &Lo, SDValue &Hi) {
   SplitInteger(Res, Lo, Hi);
 }
 
+void DAGTypeLegalizer::ExpandIntRes_MULH(SDNode *N, SDValue &Lo, SDValue &Hi) {
+  SDValue Res = TLI.expandMULH(N, DAG);
+  SplitInteger(Res, Lo, Hi);
+}
+
 void DAGTypeLegalizer::ExpandIntRes_VSCALE(SDNode *N, SDValue &Lo,
                                            SDValue &Hi) {
   EVT VT = N->getValueType(0);
@@ -6062,6 +6123,18 @@ SDValue DAGTypeLegalizer::PromoteIntRes_VECTOR_SPLICE(SDNode *N) {
   return DAG.getNode(N->getOpcode(), dl, OutVT, V0, V1, N->getOperand(2));
 }
 
+SDValue DAGTypeLegalizer::PromoteIntRes_VECTOR_REPEAT(SDNode *N) {
+  SDLoc DL(N);
+
+  EVT OutVT = N->getValueType(0);
+  EVT NOutVT = TLI.getTypeToTransformTo(*DAG.getContext(), OutVT);
+  EVT NInVT = N->getOperand(0).getValueType().changeVectorElementType(
+      *DAG.getContext(), NOutVT.getVectorElementType());
+
+  SDValue Op = DAG.getNode(ISD::ANY_EXTEND, DL, NInVT, N->getOperand(0));
+  return DAG.getNode(N->getOpcode(), DL, NOutVT, Op);
+}
+
 SDValue DAGTypeLegalizer::PromoteIntRes_VECTOR_INTERLEAVE_DEINTERLEAVE(SDNode *N) {
   SDLoc DL(N);
   unsigned Factor = N->getNumOperands();
@@ -6278,42 +6351,32 @@ SDValue DAGTypeLegalizer::PromoteIntRes_CONCAT_VECTORS(SDNode *N) {
   unsigned NumOutElem = NOutVT.getVectorMinNumElements();
   EVT OutElemTy = NOutVT.getVectorElementType();
   if (OutVT.isScalableVector()) {
-    // Find the largest promoted element type for each of the operands.
-    SDUse *MaxSizedValue = std::max_element(
-        N->op_begin(), N->op_end(), [](const SDValue &A, const SDValue &B) {
-          EVT AVT = A.getValueType().getVectorElementType();
-          EVT BVT = B.getValueType().getVectorElementType();
-          return AVT.getScalarSizeInBits() < BVT.getScalarSizeInBits();
-        });
-    EVT MaxElementVT = MaxSizedValue->getValueType().getVectorElementType();
+    EVT OpVT = N->getOperand(0).getValueType();
+    TargetLowering::LegalizeTypeAction OpAction = getTypeAction(OpVT);
+    assert((OpAction == TargetLowering::TypeLegal ||
+            OpAction == TargetLowering::TypePromoteInteger ||
+            OpAction == TargetLowering::TypeWidenVector) &&
+           "Unhandled legalization type");
 
-    // Then promote all vectors to the largest element type.
+    EVT ExtendedOpVT =
+        OpVT.changeVectorElementType(*DAG.getContext(), OutElemTy);
+
     SmallVector<SDValue, 8> Ops;
     for (unsigned I = 0; I < NumOperands; ++I) {
       SDValue Op = N->getOperand(I);
-      EVT OpVT = Op.getValueType();
-      if (getTypeAction(OpVT) == TargetLowering::TypePromoteInteger)
+      if (OpAction == TargetLowering::TypePromoteInteger)
         Op = GetPromotedInteger(Op);
-      else
-        assert(getTypeAction(OpVT) == TargetLowering::TypeLegal &&
-               "Unhandled legalization type");
-
-      if (OpVT.getVectorElementType().getScalarSizeInBits() <
-          MaxElementVT.getScalarSizeInBits())
-        Op = DAG.getAnyExtOrTrunc(
-            Op, dl,
-            OpVT.changeVectorElementType(*DAG.getContext(), MaxElementVT));
+      else if (OpAction == TargetLowering::TypeWidenVector)
+        Op = DAG.getNode(ISD::ANY_EXTEND, dl, ExtendedOpVT, Op);
       Ops.push_back(Op);
     }
 
-    // Do the CONCAT on the promoted type and finally truncate to (the promoted)
-    // NOutVT.
+    // Do the CONCAT on the legalized operands' element type, then extend
+    // or truncate to the promoted result type.
+    EVT ConcatVT = OutVT.changeVectorElementType(
+        *DAG.getContext(), Ops[0].getValueType().getVectorElementType());
     return DAG.getAnyExtOrTrunc(
-        DAG.getNode(
-            ISD::CONCAT_VECTORS, dl,
-            OutVT.changeVectorElementType(*DAG.getContext(), MaxElementVT),
-            Ops),
-        dl, NOutVT);
+        DAG.getNode(ISD::CONCAT_VECTORS, dl, ConcatVT, Ops), dl, NOutVT);
   }
 
   unsigned NumElem = N->getOperand(0).getValueType().getVectorNumElements();
@@ -6534,7 +6597,7 @@ SDValue DAGTypeLegalizer::PromoteIntOp_CONCAT_VECTORS(SDNode *N) {
   unsigned NumElems = N->getNumOperands();
 
   if (ResVT.isScalableVector()) {
-    SDValue ResVec = DAG.getUNDEF(ResVT);
+    SDValue ResVec = DAG.getPOISON(ResVT);
 
     for (unsigned OpIdx = 0; OpIdx < NumElems; ++OpIdx) {
       SDValue Op = N->getOperand(OpIdx);

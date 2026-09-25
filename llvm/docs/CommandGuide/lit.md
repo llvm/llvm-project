@@ -606,7 +606,7 @@ executed, two important global variables are predefined:
 
   **available_features**
   : A set of features that can be used in `XFAIL`, `REQUIRES`, and `UNSUPPORTED`
-    directives.
+    directives and `%if` substitutions.
 
 ### TEST DISCOVERY
 
@@ -679,6 +679,7 @@ TestRunner.py:
 | %:p                     | On Windows, %/p but a `:` is removed if its the second character. Otherwise, %p but with a single leading `/` removed. |
 | %:t                     | On Windows, %/t but a `:` is removed if its the second character. Otherwise, %t but with a single leading `/` removed. |
 | %{readfile:\<filename>} | Reads the file specified.                                                                                              |
+| %if \<cond> %{...%}     | Conditional substitution (`%if <cond> %{<if-branch>%} [%else %{<else-branch>%}]`); `<cond>` uses `available_features`. |
 
 Other substitutions are provided that are variations on this base set and
 further substitution patterns can be defined by each test module. See the

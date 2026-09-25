@@ -55,6 +55,9 @@ class SjLjEHPrepareImpl {
   AllocaInst *FuncCtx = nullptr;
   const TargetMachine *TM = nullptr;
 
+  // The module's "exception-model" flag.
+  ExceptionHandling ExceptionModel = ExceptionHandling::Default;
+
 public:
   explicit SjLjEHPrepareImpl(const TargetMachine *TM = nullptr) : TM(TM) {}
   bool doInitialization(Module &M);
@@ -106,6 +109,8 @@ FunctionPass *llvm::createSjLjEHPreparePass(const TargetMachine *TM) {
 // doInitialization - Set up decalarations and types needed to process
 // exceptions.
 bool SjLjEHPrepareImpl::doInitialization(Module &M) {
+  ExceptionModel = M.getExceptionModel();
+
   // Build the function context structure.
   // builtin_setjmp uses a five word jbuf
   Type *VoidPtrTy = PointerType::getUnqual(M.getContext());
@@ -496,6 +501,10 @@ bool SjLjEHPrepareImpl::setupEntryBlockAndCallSites(Function &F) {
 }
 
 bool SjLjEHPrepareImpl::runOnFunction(Function &F) {
+  if (ExceptionModel != ExceptionHandling::SjLj &&
+      ExceptionModel != ExceptionHandling::Default)
+    return false;
+
   Module &M = *F.getParent();
   RegisterFn = M.getOrInsertFunction(
       "_Unwind_SjLj_Register", Type::getVoidTy(M.getContext()),

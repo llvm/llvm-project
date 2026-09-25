@@ -45,14 +45,28 @@ define <vscale x 16 x i8> @add_i8_zero(<vscale x 16 x i8> %a) {
   ret <vscale x 16 x i8> %res
 }
 
-define <vscale x 1 x i32> @add_nxv1i32(<vscale x 1 x i32> %a, <vscale x 1 x i32> %b) {
+define <vscale x 4 x i32> @add_nxv1i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: add_nxv1i32:
-; CHECK:       // %bb.0: // %entry
+; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add z0.s, z0.s, z1.s
 ; CHECK-NEXT:    ret
-entry:
-  %c = add <vscale x 1 x i32> %a, %b
-  ret <vscale x 1 x i32> %c
+  %a.nxv1 = call <vscale x 1 x i32> @llvm.vector.extract.nxv1i32.nxv4i32(<vscale x 4 x i32> %a, i64 0)
+  %b.nxv1 = call <vscale x 1 x i32> @llvm.vector.extract.nxv1i32.nxv4i32(<vscale x 4 x i32> %b, i64 0)
+  %res.nxv1 = add <vscale x 1 x i32> %a.nxv1, %b.nxv1
+  %res = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.nxv1i32(<vscale x 4 x i32> poison, <vscale x 1 x i32> %res.nxv1, i64 0)
+  ret <vscale x 4 x i32> %res
+}
+
+define <vscale x 2 x i64> @add_nxv1i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
+; CHECK-LABEL: add_nxv1i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    add z0.d, z0.d, z1.d
+; CHECK-NEXT:    ret
+  %a.nxv1 = call <vscale x 1 x i64> @llvm.vector.extract.nxv1i64.nxv2i64(<vscale x 2 x i64> %a, i64 0)
+  %b.nxv1 = call <vscale x 1 x i64> @llvm.vector.extract.nxv1i64.nxv2i64(<vscale x 2 x i64> %b, i64 0)
+  %res.nxv1 = add <vscale x 1 x i64> %a.nxv1, %b.nxv1
+  %res = call <vscale x 2 x i64> @llvm.vector.insert.nxv2i64.nxv1i64(<vscale x 2 x i64> poison, <vscale x 1 x i64> %res.nxv1, i64 0)
+  ret <vscale x 2 x i64> %res
 }
 
 define <vscale x 2 x i64> @sub_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
@@ -97,6 +111,31 @@ define <vscale x 16 x i8> @sub_i8_zero(<vscale x 16 x i8> %a) {
 ; CHECK-NEXT:    ret
   %res = sub <vscale x 16 x i8> %a, zeroinitializer
   ret <vscale x 16 x i8> %res
+}
+
+define <vscale x 2 x i64> @sub_nxv1i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
+; CHECK-LABEL: sub_nxv1i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub z0.d, z0.d, z1.d
+; CHECK-NEXT:    ret
+  %a.nxv1 = call <vscale x 1 x i64> @llvm.vector.extract.nxv1i64.nxv2i64(<vscale x 2 x i64> %a, i64 0)
+  %b.nxv1 = call <vscale x 1 x i64> @llvm.vector.extract.nxv1i64.nxv2i64(<vscale x 2 x i64> %b, i64 0)
+  %res.nxv1 = sub <vscale x 1 x i64> %a.nxv1, %b.nxv1
+  %res = call <vscale x 2 x i64> @llvm.vector.insert.nxv2i64.nxv1i64(<vscale x 2 x i64> poison, <vscale x 1 x i64> %res.nxv1, i64 0)
+  ret <vscale x 2 x i64> %res
+}
+
+define <vscale x 2 x i64> @mul_nxv1i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
+; CHECK-LABEL: mul_nxv1i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    mul z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    ret
+  %a.nxv1 = call <vscale x 1 x i64> @llvm.vector.extract.nxv1i64.nxv2i64(<vscale x 2 x i64> %a, i64 0)
+  %b.nxv1 = call <vscale x 1 x i64> @llvm.vector.extract.nxv1i64.nxv2i64(<vscale x 2 x i64> %b, i64 0)
+  %res.nxv1 = mul <vscale x 1 x i64> %a.nxv1, %b.nxv1
+  %res = call <vscale x 2 x i64> @llvm.vector.insert.nxv2i64.nxv1i64(<vscale x 2 x i64> poison, <vscale x 1 x i64> %res.nxv1, i64 0)
+  ret <vscale x 2 x i64> %res
 }
 
 define <vscale x 16 x i8> @abs_nxv16i8(<vscale x 16 x i8> %a) {
@@ -767,7 +806,7 @@ define void @mad_in_loop(ptr %dst, ptr %src1, ptr %src2, i32 %n) {
 ; CHECK-LABEL: mad_in_loop:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w3, #1
-; CHECK-NEXT:    b.lt .LBB70_3
+; CHECK-NEXT:    b.lt .LBB73_3
 ; CHECK-NEXT:  // %bb.1: // %for.body.preheader
 ; CHECK-NEXT:    mov w9, w3
 ; CHECK-NEXT:    mov z0.s, #1 // =0x1
@@ -775,7 +814,7 @@ define void @mad_in_loop(ptr %dst, ptr %src1, ptr %src2, i32 %n) {
 ; CHECK-NEXT:    whilelo p1.s, xzr, x9
 ; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:    cntw x10
-; CHECK-NEXT:  .LBB70_2: // %vector.body
+; CHECK-NEXT:  .LBB73_2: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ld1w { z1.s }, p1/z, [x1, x8, lsl #2]
 ; CHECK-NEXT:    ld1w { z2.s }, p1/z, [x2, x8, lsl #2]
@@ -783,8 +822,8 @@ define void @mad_in_loop(ptr %dst, ptr %src1, ptr %src2, i32 %n) {
 ; CHECK-NEXT:    st1w { z1.s }, p1, [x0, x8, lsl #2]
 ; CHECK-NEXT:    add x8, x8, x10
 ; CHECK-NEXT:    whilelo p1.s, x8, x9
-; CHECK-NEXT:    b.mi .LBB70_2
-; CHECK-NEXT:  .LBB70_3: // %for.cond.cleanup
+; CHECK-NEXT:    b.mi .LBB73_2
+; CHECK-NEXT:  .LBB73_3: // %for.cond.cleanup
 ; CHECK-NEXT:    ret
 entry:
   %cmp9 = icmp sgt i32 %n, 0

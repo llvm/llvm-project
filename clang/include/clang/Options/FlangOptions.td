@@ -58,7 +58,6 @@ defm dump_parse_tree : BooleanFFlag<"dump-parse-tree">, Group<gfortran_Group>;
 defm external_blas : BooleanFFlag<"external-blas">, Group<gfortran_Group>;
 defm f2c : BooleanFFlag<"f2c">, Group<gfortran_Group>;
 defm frontend_optimize : BooleanFFlag<"frontend-optimize">, Group<gfortran_Group>;
-defm init_local_zero : BooleanFFlag<"init-local-zero">, Group<gfortran_Group>;
 defm integer_4_integer_8 : BooleanFFlag<"integer-4-integer-8">, Group<gfortran_Group>;
 defm max_identifier_length : BooleanFFlag<"max-identifier-length">, Group<gfortran_Group>;
 defm module_private : BooleanFFlag<"module-private">, Group<gfortran_Group>;
@@ -199,6 +198,9 @@ defm openacc_default_none_scalars_strict : OptOutFC1FFlag<"openacc-default-none-
 defm openacc_multiple_names_in_routine : OptOutFC1FFlag<"openacc-multiple-names-in-routine",
   "Accept multiple names in OpenACC ROUTINE directive (extension)",
   "Do not accept multiple names in OpenACC ROUTINE directive">;
+defm openacc_combined_loop_firstprivate : OptOutFC1FFlag<"openacc-combined-loop-firstprivate",
+  "Attach firstprivate on combined loop in addition to compute construct (extension)",
+  "Keep firstprivate only on the compute construct for combined loop">;
 defm prefer_intrinsic_module_use_association : OptOutFC1FFlag<"prefer-intrinsic-module-use-association",
   "Resolve a USE association conflict in favor of an intrinsic module generic (extension)",
   "Diagnose a USE association conflict with an intrinsic module generic">;
@@ -315,6 +317,10 @@ def ffast_real_mod : Flag<["-"], "ffast-real-mod">, Group<f_Group>,
 def fno_fast_real_mod : Flag<["-"], "fno-fast-real-mod">, Group<f_Group>,
   HelpText<"Disable optimization of MOD for REAL types in presence of -ffast-math">;
 
+def fcheck_integer_mod_zero_divisor
+    : Flag<["-"], "fcheck-integer-mod-zero-divisor">, Group<f_Group>,
+      HelpText<"Check for a zero divisor in integer MOD and MODULO">;
+
 defm fp_sum_reassociation
     : BoolOptionWithoutMarshalling<
           "f", "fp-sum-reassociation",
@@ -391,6 +397,17 @@ Notes:
 defm init_global_zero : BoolOptionWithoutMarshalling<"f", "init-global-zero",
   PosFlag<SetTrue, [], [], "Zero initialize globals without default initialization (default)">,
   NegFlag<SetFalse, [], [], "Do not zero initialize globals without default initialization">>;
+
+def finit_local_EQ : Joined<["-"], "finit-local=">,
+  Group<f_Group>,
+  HelpText<"Initialize local variables without explicit or default initialization. "
+           "Accepts: zero or 0x<hex-byte>.">;
+
+def finit_local_zero : Flag<["-"], "finit-local-zero">,
+  Group<f_Group>,
+  HelpText<"Zero-initialize local variables without explicit or default initialization "
+           "(alias for -finit-local=zero, GFortran compatibility)">,
+  Alias<finit_local_EQ>, AliasArgs<["zero"]>;
 
 def fno_realloc_lhs : Flag<["-"], "fno-realloc-lhs">, Group<f_Group>,
   HelpText<"An allocatable left-hand side of an intrinsic assignment is assumed to be allocated and match the shape/type of the right-hand side">;
