@@ -57,12 +57,7 @@ static cl::alias BasicAggregationAlias("ba",
 
 static cl::opt<bool> DeprecatedBasicAggregationNl(
     "nl", cl::desc("Alias for --basic-events (deprecated. Use --ba)"),
-    cl::cat(AggregatorCategory), cl::ReallyHidden,
-    cl::callback([](const bool &Enabled) {
-      errs()
-          << "BOLT-WARNING: '-nl' is deprecated, please use '--ba' instead.\n";
-      BasicAggregation = Enabled;
-    }));
+    cl::cat(AggregatorCategory), cl::ReallyHidden);
 
 cl::opt<bool> ArmSPE("spe", cl::desc("Enable Arm SPE mode."),
                      cl::cat(AggregatorCategory));
@@ -922,6 +917,11 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
   // Turn on heatmap building if requested by --heatmap flag.
   if (!opts::HeatmapMode && opts::HeatmapOutput.getNumOccurrences())
     opts::HeatmapMode = opts::HeatmapModeKind::HM_Optional;
+
+  if (opts::DeprecatedBasicAggregationNl.getNumOccurrences()) {
+    errs() << "BOLT-WARNING: '-nl' is deprecated, please use '--ba' instead.\n";
+    opts::BasicAggregation = opts::DeprecatedBasicAggregationNl;
+  }
 
   this->BC = &BC;
 
