@@ -7623,6 +7623,10 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
   // Register type to use for each loaded component. Will be I32 or V2I16.
   LLT RegTy;
 
+  const bool HasGather4D16Bug = BaseOpcode->Gather4 && IsD16 &&
+                                !ST.hasUnpackedD16VMem() &&
+                                ST.hasImageGather4D16Bug();
+
   if (IsD16 && ST.hasUnpackedD16VMem()) {
     RoundedTy =
         LLT::scalarOrVector(ElementCount::getFixed(AdjustedNumElts), I32);
@@ -7630,7 +7634,9 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
     RegTy = I32;
   } else {
     unsigned EltSize = EltTy.getSizeInBits();
-    unsigned RoundedElts = (AdjustedTy.getSizeInBits() + 31) / 32;
+    unsigned RoundedElts = HasGather4D16Bug
+                               ? AdjustedNumElts
+                               : divideCeil(AdjustedTy.getSizeInBits(), 32);
     unsigned RoundedSize = 32 * RoundedElts;
     RoundedTy = LLT::scalarOrVector(
         ElementCount::getFixed(RoundedSize / EltSize), EltTy);
@@ -7681,23 +7687,26 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
 
   // Now figure out how to copy the new result register back into the old
   // result.
-  SmallVector<Register, 5> ResultRegs(ResultNumRegs, Dst1Reg);
+  SmallVector<Register, 5> ResultRegs(ResultNumRegs);
 
-  const int NumDataRegs = IsTFE ? ResultNumRegs - 1  : ResultNumRegs;
+  const int NumDataRegs = IsD16 && !ST.hasUnpackedD16VMem()
+                              ? divideCeil(AdjustedNumElts, 2)
+                              : (IsTFE ? ResultNumRegs - 1 : ResultNumRegs);
 
   if (ResultNumRegs == 1) {
     assert(!IsTFE);
     ResultRegs[0] = NewResultReg;
   } else {
     // We have to repack into a new vector of some kind.
-    for (int I = 0; I != NumDataRegs; ++I)
-      ResultRegs[I] = MRI->createGenericVirtualRegister(RegTy);
+    for (int I = 0; I != ResultNumRegs; ++I)
+      ResultRegs[I] = IsTFE && I == NumDataRegs
+                          ? Dst1Reg
+                          : MRI->createGenericVirtualRegister(RegTy);
     B.buildUnmerge(ResultRegs, NewResultReg);
 
-    // Drop the final TFE element to get the data part. The TFE result is
-    // directly written to the right place already.
-    if (IsTFE)
-      ResultRegs.resize(NumDataRegs);
+    // Drop the TFE element and any padding to get the data part. The TFE
+    // result is directly written to the right place already.
+    ResultRegs.resize(NumDataRegs);
   }
 
   // For an f16 scalar result, we form an i32 result with a truncate regardless
