@@ -15,6 +15,8 @@
 #include <utility>
 #include <vector>
 
+#include "test_macros.h"
+
 // begin()
 
 struct NonMemberBegin {};
@@ -108,6 +110,7 @@ inline constexpr bool std::ranges::disable_sized_range<DisableSizedRange> = true
 
 struct BorrowedRange {
   int* begin() const { return nullptr; }
+  int* end() const { return nullptr; }
 };
 template <>
 inline constexpr bool std::ranges::enable_borrowed_range<BorrowedRange> = true;
@@ -163,7 +166,11 @@ void test() {
   // [range.access.cbegin]
 
   {
+#if TEST_STD_VER >= 23
+    MemberConstBeginConstEnd obj;
+#else
     MemberConstBegin obj;
+#endif
 
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     std::ranges::cbegin(std::as_const(obj));
@@ -211,7 +218,11 @@ void test() {
   // [range.access.crbegin]
 
   {
+#if TEST_STD_VER >= 23
+    MemberConstBeginConstEnd obj;
+#else
     MemberConstRBegin obj;
+#endif
 
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     std::ranges::crbegin(std::as_const(obj));
@@ -222,7 +233,11 @@ void test() {
 
   // [range.access.crend]
   {
+#if TEST_STD_VER >= 23
+    MemberConstBeginConstEnd obj;
+#else
     MemberConstREnd obj;
+#endif
 
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     std::ranges::crend(std::as_const(obj));
@@ -325,6 +340,9 @@ void test() {
   {
     struct MemberConstBeginRange {
       int* begin() const { return nullptr; }
+#if TEST_STD_VER >= 23
+      int* end() const { return nullptr; }
+#endif
     } range;
 
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}

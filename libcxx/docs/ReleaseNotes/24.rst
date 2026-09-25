@@ -55,6 +55,9 @@ Implemented Papers
 - P3450R1: Extend ``std::is_within_lifetime`` (`Github <https://llvm.org/PR189610>`__)
 - P3793R2: Better shifting (`Github <https://llvm.org/PR219389>`__) (no ``std::simd`` overloads)
 - P0040R3: Extending memory management tools (`Github <https://github.com/llvm/llvm-project/issues/103640>`__)
+- P2278R4: ``cbegin`` should always return a constant iterator (`Github <https://llvm.org/PR105201>`__)
+- P2836R1: ``std::basic_const_iterator`` should follow its underlying type's convertibility
+  (`Github <https://llvm.org/PR105406>`__)
 
 Improvements and New Features
 -----------------------------

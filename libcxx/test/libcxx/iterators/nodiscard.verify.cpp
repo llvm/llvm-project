@@ -182,6 +182,46 @@ void test() {
   }
 #endif
 
+#if TEST_STD_VER >= 23
+  {
+    std::basic_const_iterator<random_access_iterator<int*>> it{};
+    sized_sentinel<random_access_iterator<int*>> st{};
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    it.base();
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::move(it).base();
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    *it;
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    it[0];
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    it + 0;
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    0 + it;
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    it - 0;
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    it - it;
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    it - st;
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    st - it;
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    iter_move(it);
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::make_const_iterator(static_cast<int*>(nullptr));
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::make_const_sentinel(static_cast<int*>(nullptr));
+  }
+#endif
+
 #if TEST_STD_VER >= 11
   {
     std::move_iterator<random_access_iterator<int*>> it;
