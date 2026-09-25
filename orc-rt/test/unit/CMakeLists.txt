@@ -38,6 +38,8 @@ endif()
 # support-to-bedrock dependency shows up here as a link error rather than going
 # unnoticed. BedrockTests links both, Bedrock being a Support client.
 add_orc_rt_unittest(SupportTests
+  ErrorMatchersTest.cpp
+
   support/AllocActionTest.cpp
   support/BitmaskEnumTest.cpp
   support/CAPICompileTest.c
@@ -86,6 +88,7 @@ add_orc_rt_unittest(SupportTests
 # implementations; see the note in lib/bedrock/CMakeLists.txt. Tests of portable
 # APIs stay in the shared list and reach the system through these.
 set(ORC_RT_BEDROCK_TEST_POSIX_SOURCES
+  bedrock/SocketConnectorTest.cpp
   bedrock/SocketHandleTest.cpp
   bedrock/sys/posix/SocketTestUtils.cpp
   )
@@ -99,7 +102,7 @@ endif()
 
 if (APPLE)
   set(ORC_RT_BEDROCK_TEST_APPLE_SOURCES
-    bedrock/StandaloneMachOUnwindInfoRegistrarTest.cpp
+    bedrock/sys/darwin/StandaloneMachOUnwindInfoRegistrarTest.cpp
     )
 else()
   set(ORC_RT_BEDROCK_TEST_APPLE_SOURCES)
@@ -107,6 +110,7 @@ endif()
 
 add_orc_rt_unittest(BedrockTests
   bedrock/BootstrapInfoTest.cpp
+  bedrock/ConnectionSpecTest.cpp
   bedrock/ExecutorProcessInfoTest.cpp
   bedrock/InProcessControllerAccessTest.cpp
   bedrock/NativeDylibManagerTest.cpp
@@ -122,6 +126,7 @@ add_orc_rt_unittest(BedrockTests
   bedrock/sps/NativeDylibManagerSPSCITest.cpp
   bedrock/sps/SimpleNativeMemoryMapSPSCITest.cpp
   bedrock/sps/SimpleRemoteCATest.cpp
+  bedrock/sps/SimpleRemoteCAOverSocketTest.cpp
 
   bedrock/sys/CPUFeaturesTest.cpp
   bedrock/sys/TargetTripleTest.cpp
@@ -137,6 +142,7 @@ add_library(NativeDylibManagerTestLib SHARED
   Inputs/NativeDylibManagerTestLib.cpp)
 set_target_properties(NativeDylibManagerTestLib PROPERTIES
   PREFIX ""
+  DEFINE_SYMBOL ORC_RT_TEST_DLL_EXPORTS
   FOLDER "orc-rt/Tests")
 target_compile_options(NativeDylibManagerTestLib PRIVATE
   ${ORC_RT_COMPILE_FLAGS})
@@ -156,10 +162,8 @@ set_target_properties(RTTICrossDylibTestLib PROPERTIES
   PREFIX ""
   CXX_VISIBILITY_PRESET hidden
   VISIBILITY_INLINES_HIDDEN ON
+  DEFINE_SYMBOL ORC_RT_TEST_DLL_EXPORTS
   FOLDER "orc-rt/Tests")
-
-target_compile_definitions(RTTICrossDylibTestLib PRIVATE
-  RTTI_CROSS_DYLIB_TEST_LIB_EXPORTS)
 
 target_compile_options(RTTICrossDylibTestLib PRIVATE ${ORC_RT_COMPILE_FLAGS})
 

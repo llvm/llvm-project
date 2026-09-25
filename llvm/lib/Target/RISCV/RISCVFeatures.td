@@ -771,7 +771,7 @@ def HasStdExtZfhOrZvfh
                          "'Zvfh' (Vector Half-Precision Floating-Point)">;
 
 def FeatureStdExtZvfofp8min
-    : RISCVExperimentalExtension<0, 2,
+    : RISCVExperimentalExtension<0, 9,
                                  "Vector OFP8 Converts", [FeatureStdExtZve32f]>;
 def HasStdExtZvfofp8min
     : Predicate<"Subtarget->hasStdExtZvfofp8min()">,
@@ -1703,6 +1703,15 @@ def HasVendorXqccmp
     : Predicate<"Subtarget->hasVendorXqccmp()">,
       AssemblerPredicate<(all_of FeatureVendorXqccmp),
                          "'Xqccmp' (Qualcomm 16-bit Push/Pop and Double Moves)">;
+
+def FeatureVendorXqccmi
+    : RISCVExperimentalExtension<0, 2,
+                     "Qualcomm 16-bit Instruction Lookup Table",
+                     [FeatureStdExtZca, FeatureStdExtZicsr]>;
+def HasVendorXqccmi
+    : Predicate<"Subtarget->hasVendorXqccmi()">,
+      AssemblerPredicate<(all_of FeatureVendorXqccmi),
+                         "'Xqccmi' (Qualcomm 16-bit Instruction Lookup Table)">;
 
 def FeatureVendorXqccmt
     : RISCVExperimentalExtension<0, 1, "Qualcomm 16-bit Table Jump",

@@ -232,16 +232,16 @@ LLVM_ABI Align tryEnforceAlignment(Value *V, Align PrefAlign,
 /// alignment from the beginning.
 LLVM_ABI Align getOrEnforceKnownAlignment(Value *V, MaybeAlign PrefAlign,
                                           const DataLayout &DL,
-                                          const Instruction *CxtI = nullptr,
+                                          const Instruction *CtxI = nullptr,
                                           AssumptionCache *AC = nullptr,
                                           const DominatorTree *DT = nullptr);
 
 /// Try to infer an alignment for the specified pointer.
 inline Align getKnownAlignment(Value *V, const DataLayout &DL,
-                               const Instruction *CxtI = nullptr,
+                               const Instruction *CtxI = nullptr,
                                AssumptionCache *AC = nullptr,
                                const DominatorTree *DT = nullptr) {
-  return getOrEnforceKnownAlignment(V, MaybeAlign(), DL, CxtI, AC, DT);
+  return getOrEnforceKnownAlignment(V, MaybeAlign(), DL, CtxI, AC, DT);
 }
 
 /// Create a call that matches the invoke \p II in terms of arguments,

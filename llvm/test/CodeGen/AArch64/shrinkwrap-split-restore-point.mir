@@ -160,6 +160,17 @@
     ret void
   }
 
+
+  @nonstack_memory = global i8 0
+
+  define void @shrink_test_ldarb() {
+    ret void
+  }
+
+  define void @shrink_test_stlrb() {
+    ret void
+  }
+
   declare i32 @fun()
   declare i32 @fun2()
   declare void @abort()
@@ -756,6 +767,137 @@ body:             |
     ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
 
   bb.3.exit (machine-block-address-taken, inlineasm-br-indirect-target):
+    RET_ReallyLR
+
+...
+---
+name:            shrink_test_ldarb
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: shrink_test_ldarb
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x50000000), %bb.3(0x30000000)
+  ; CHECK-NEXT:   liveins: $w0, $x1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   dead $wzr = LDARB killed renamable $x1 :: (load acquire (s8) from @nonstack_memory)
+  ; CHECK-NEXT:   dead $wzr = SUBSWri killed renamable $w0, 1, 0, implicit-def $nzcv
+  ; CHECK-NEXT:   Bcc 11, %bb.3, implicit killed $nzcv
+  ; CHECK-NEXT:   B %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x30000000), %bb.4(0x50000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+  ; CHECK-NEXT:   BL @fun, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $w0
+  ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+  ; CHECK-NEXT:   CBNZW killed renamable $w0, %bb.4
+  ; CHECK-NEXT:   B %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   successors: %bb.4(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+  ; CHECK-NEXT:   BL @fun, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $w0
+  ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+  ; CHECK-NEXT:   B %bb.4
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3:
+  ; CHECK-NEXT:   RET_ReallyLR
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.4:
+  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   B %bb.3
+  bb.0:
+    successors: %bb.1(0x50000000), %bb.3(0x30000000)
+    liveins: $w0, $x1
+
+    dead $wzr = LDARB killed renamable $x1 :: (load acquire (s8) from @nonstack_memory)
+    dead $wzr = SUBSWri killed renamable $w0, 1, 0, implicit-def $nzcv
+    Bcc 11, %bb.3, implicit killed $nzcv
+    B %bb.1
+
+  bb.1:
+    successors: %bb.2(0x30000000), %bb.3(0x50000000)
+
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+    BL @fun, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $w0
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+    CBNZW killed renamable $w0, %bb.3
+    B %bb.2
+
+  bb.2:
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+    BL @fun, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $w0
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+
+  bb.3:
+    RET_ReallyLR
+
+
+...
+---
+name:            shrink_test_stlrb
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: shrink_test_stlrb
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x50000000), %bb.3(0x30000000)
+  ; CHECK-NEXT:   liveins: $w0, $w2, $x1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   dead $wzr = SUBSWri killed renamable $w0, 1, 0, implicit-def $nzcv
+  ; CHECK-NEXT:   STLRB killed renamable $w2, killed renamable $x1 :: (store release (s8) into @nonstack_memory)
+  ; CHECK-NEXT:   Bcc 11, %bb.3, implicit killed $nzcv
+  ; CHECK-NEXT:   B %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x30000000), %bb.4(0x50000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+  ; CHECK-NEXT:   BL @fun, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $w0
+  ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+  ; CHECK-NEXT:   CBNZW killed renamable $w0, %bb.4
+  ; CHECK-NEXT:   B %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   successors: %bb.4(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+  ; CHECK-NEXT:   BL @fun, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $w0
+  ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+  ; CHECK-NEXT:   B %bb.4
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3:
+  ; CHECK-NEXT:   RET_ReallyLR
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.4:
+  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   B %bb.3
+  bb.0:
+    successors: %bb.1(0x50000000), %bb.3(0x30000000)
+    liveins: $w0, $w2, $x1
+
+    dead $wzr = SUBSWri killed renamable $w0, 1, 0, implicit-def $nzcv
+    STLRB killed renamable $w2, killed renamable $x1 :: (store release (s8) into @nonstack_memory)
+    Bcc 11, %bb.3, implicit killed $nzcv
+    B %bb.1
+
+  bb.1:
+    successors: %bb.2(0x30000000), %bb.3(0x50000000)
+
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+    BL @fun, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $w0
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+    CBNZW killed renamable $w0, %bb.3
+    B %bb.2
+
+  bb.2:
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+    BL @fun, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $w0
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+
+  bb.3:
     RET_ReallyLR
 
 ...

@@ -71,10 +71,10 @@ private:
   };
 
 public:
-  using ErrorReporterFn = move_only_function<void(Error)>;
-  using OnDisconnectFn = move_only_function<void(Error)>;
-  using OnDetachFn = move_only_function<void()>;
-  using OnShutdownFn = move_only_function<void()>;
+  using ErrorReporterFn = move_only_function<void(Error) noexcept>;
+  using OnDisconnectFn = move_only_function<void(Error) noexcept>;
+  using OnDetachFn = move_only_function<void() noexcept>;
+  using OnShutdownFn = move_only_function<void() noexcept>;
 
   /// Return value callback used to return results from callController.
   using OnControllerCallReturnFn =
@@ -190,7 +190,7 @@ public:
     virtual void disconnect() = 0;
 
     /// Report an error to the session.
-    void reportError(Error Err) { S.reportError(std::move(Err)); }
+    void reportError(Error Err) noexcept { S.reportError(std::move(Err)); }
 
     /// Call the handler in the controller associated with the given tag.
     ///
@@ -339,7 +339,7 @@ public:
   const ExecutorProcessInfo &processInfo() const noexcept { return EPI; }
 
   /// Report an error via the ErrorReporter function.
-  void reportError(Error Err) { ReportError(std::move(Err)); }
+  void reportError(Error Err) noexcept { ReportError(std::move(Err)); }
 
   /// Set a handler to be called when the Session's controller connection ends.
   ///

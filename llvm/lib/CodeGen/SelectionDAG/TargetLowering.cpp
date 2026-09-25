@@ -822,6 +822,11 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
 
     break;
   }
+  case ISD::SCALAR_TO_VECTOR: {
+    if (!VT.isScalableVector() && !DemandedElts[0])
+      return DAG.getPOISON(VT);
+    break;
+  }
   case ISD::AND: {
     LHSKnown = DAG.computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     RHSKnown = DAG.computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
@@ -9879,9 +9884,10 @@ TargetLowering::expandCONVERT_FROM_ARBITRARY_FP(SDNode *Node,
                   DAG.getNode(ISD::OR, dl, IntVT, SignShifted, NormExpShifted),
                   NormDstMant);
 
-  // Denormal value conversion.
-  SDValue DenormResult;
-  {
+  // With identical exponent biases, denormal values remain denormal and the
+  // normal conversion's mantissa shift is sufficient.
+  SDValue DenormResult = NormResult;
+  if (BiasAdjust != 0) {
     const unsigned IntVTBits = IntVT.getScalarSizeInBits();
     SDValue LeadingZeros =
         DAG.getNode(ISD::CTLZ_ZERO_POISON, dl, IntVT, MantField);
@@ -9924,6 +9930,18 @@ TargetLowering::expandCONVERT_FROM_ARBITRARY_FP(SDNode *Node,
   SDValue InfResult =
       DAG.getNode(ISD::OR, dl, IntVT, SignShifted,
                   DAG.getConstant(DstExpAllOnes << DstMant, dl, IntVT));
+
+  // A source format may have a larger finite exponent range despite having
+  // fewer bits, as with Float8E5M3FNU converted to half. Its overflowing finite
+  // values become infinity. The NaN selection below still takes precedence.
+  if (APFloat::semanticsMaxExponent(SrcSem) >
+      APFloat::semanticsMaxExponent(DstSem)) {
+    SDValue IsOverflow =
+        DAG.getSetCC(dl, SetCCVT, NormDstExp,
+                     DAG.getConstant(DstExpAllOnes, dl, IntVT), ISD::SETUGE);
+    FiniteResult =
+        DAG.getSelect(dl, IntVT, IsOverflow, InfResult, FiniteResult);
+  }
 
   SDValue ZeroResult = SignShifted;
 

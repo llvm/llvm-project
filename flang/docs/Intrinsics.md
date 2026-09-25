@@ -8,11 +8,6 @@
 
 # A categorization of standard (2018) and extended Fortran intrinsic procedures
 
-```{contents}
----
-local:
----
-```
 
 This note attempts to group the intrinsic procedures of Fortran into categories
 of functions or subroutines with similar interfaces as an aid to

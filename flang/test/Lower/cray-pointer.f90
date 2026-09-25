@@ -388,7 +388,7 @@ subroutine test_ptr()
   ptr = loc(x)
 ! CHECK: %[[ptr_addr:.*]] = fir.address_of(@_QMmod_cray_ptrEptr) : !fir.ref<i64>
 ! CHECK: %[[ptr:.*]]:2 = hlfir.declare %[[ptr_addr]] {fortran_attrs = #fir.var_attrs<cray_pointer>, uniq_name = "_QMmod_cray_ptrEptr"}
-! CHECK: %[[x_alloc:.*]] = fir.alloca i32 {bindc_name = "x", fir.target, uniq_name = "_QFtest_ptrEx"}
+! CHECK: %[[x_alloc:.*]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFtest_ptrEx"}> {fir.target}
 ! CHECK: %[[x:.*]]:2 = hlfir.declare %[[x_alloc]] {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFtest_ptrEx"}
 ! CHECK: %[[xbox:.*]] = fir.embox %[[x]]#0 : (!fir.ref<i32>) -> !fir.box<i32>
 ! CHECK: %[[xboxAddr:.*]] = fir.box_addr %[[xbox]] : (!fir.box<i32>) -> !fir.ref<i32>
@@ -404,7 +404,7 @@ subroutine test_pte()
 ! CHECK-LABEL: func.func @_QPtest_pte()
 ! CHECK: %[[ptr_addr:.*]] = fir.address_of(@_QMmod_cray_ptrEptr) : !fir.ref<i64>
 ! CHECK: %[[ptr:.*]]:2 = hlfir.declare %[[ptr_addr]] {fortran_attrs = #fir.var_attrs<cray_pointer>, uniq_name = "_QMmod_cray_ptrEptr"}
-! CHECK: %[[x_alloc:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFtest_pteEx"}
+! CHECK: %[[x_alloc:.*]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFtest_pteEx"}>
 ! CHECK: %[[x:.*]]:2 = hlfir.declare %[[x_alloc]]
 ! CHECK: %[[pte:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<pointer, cray_pointee>, uniq_name = "_QMmod_cray_ptrEpte"}
 ! CHECK: %[[xval:.*]] = fir.load %[[x]]#0 : !fir.ref<i32>

@@ -572,6 +572,15 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         checkTaskReductionByref(op, result);
       })
       .Case([&](omp::TaskwaitOp op) { checkNowait(op, result); })
+      .Case([&](omp::DispatchOp op) {
+        // OpenMP 5.1 dispatch creates an explicit task; nowait controls whether
+        // it is included. Diagnose unsupported asynchronous tasking before 5.2,
+        // where the nowait property has no effect on dispatch.
+        int64_t version = omp::getOpenMPVersionAttribute(
+            op->getParentOfType<ModuleOp>(), /*fallback=*/51);
+        if (version < 52)
+          checkNowait(op, result);
+      })
       .Case([&](omp::TaskloopContextOp op) {
         checkAllocate(op, result);
         checkInReduction(op, result);
@@ -870,6 +879,24 @@ static llvm::omp::ProcBindKind getProcBindKind(omp::ClauseProcBindKind kind) {
     return llvm::omp::ProcBindKind::OMP_PROC_BIND_spread;
   }
   llvm_unreachable("Unknown ClauseProcBindKind kind");
+}
+
+/// Convert 'dispatch' operation into LLVM IR.
+static LogicalResult
+convertOmpDispatch(Operation &opInst, llvm::IRBuilderBase &builder,
+                   LLVM::ModuleTranslation &moduleTranslation) {
+  auto dispatchOp = cast<omp::DispatchOp>(opInst);
+
+  if (failed(checkImplementationStatus(opInst)))
+    return failure();
+
+  auto &region = dispatchOp.getRegion();
+  auto result = convertOmpOpRegions(region, "omp.dispatch.region", builder,
+                                    moduleTranslation);
+  if (!result)
+    return handleError(result.takeError(), opInst);
+  builder.SetInsertPoint(*result);
+  return success();
 }
 
 /// Converts an OpenMP 'masked' operation into LLVM IR using OpenMPIRBuilder.
@@ -8411,6 +8438,20 @@ emitUserDefinedMapper(Operation *op, llvm::IRBuilderBase &builder,
   return *newFn;
 }
 
+static llvm::Value *getSourceLocIdentFromOp(llvm::IRBuilderBase &builder,
+                                            llvm::OpenMPIRBuilder &ompBuilder,
+                                            Operation *op) {
+  auto fileLoc = op->getLoc()->findInstanceOf<FileLineColLoc>();
+  if (!fileLoc)
+    return nullptr;
+  uint32_t strSize;
+  llvm::Function *parentFn = builder.GetInsertBlock()->getParent();
+  llvm::StringRef fnName = parentFn ? parentFn->getName() : "";
+  llvm::Constant *srcStr = LLVM::createSourceLocStrFromLocation(
+      fileLoc, ompBuilder, fnName, strSize);
+  return ompBuilder.getOrCreateIdent(srcStr, strSize);
+}
+
 static LogicalResult
 convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
                      LLVM::ModuleTranslation &moduleTranslation) {
@@ -8636,16 +8677,27 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
   llvm::SmallVector<llvm::BasicBlock *> deallocBlocks;
   llvm::OpenMPIRBuilder::InsertPointTy allocaIP =
       findAllocInsertPoints(builder, moduleTranslation, &deallocBlocks);
+
+  // Pass the region's source location to the runtime, taken from the op's own
+  // location; only offloading entries emit the mapper calls that consume it.
+  // No need to also guard on !isTargetDevice here: this function bails out
+  // earlier for the target device, so isOffloadEntry alone is sufficient.
+  llvm::Value *srcLocOverride =
+      isOffloadEntry ? getSourceLocIdentFromOp(builder, *ompBuilder, op)
+                     : nullptr;
+
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP = [&]() {
     if (isa<omp::TargetDataOp>(op))
-      return ompBuilder->createTargetData(ompLoc, allocaIP, builder.saveIP(),
-                                          deallocBlocks, deviceID, ifCond, info,
-                                          genMapInfoCB, customMapperCB,
-                                          /*MapperFunc=*/nullptr, bodyGenCB,
-                                          /*DeviceAddrCB=*/nullptr);
-    return ompBuilder->createTargetData(ompLoc, allocaIP, builder.saveIP(),
-                                        deallocBlocks, deviceID, ifCond, info,
-                                        genMapInfoCB, customMapperCB, &RTLFn);
+      return ompBuilder->createTargetData(
+          ompLoc, allocaIP, builder.saveIP(), deallocBlocks, deviceID, ifCond,
+          info, genMapInfoCB, customMapperCB,
+          /*MapperFunc=*/nullptr, bodyGenCB,
+          /*DeviceAddrCB=*/nullptr, srcLocOverride);
+    return ompBuilder->createTargetData(
+        ompLoc, allocaIP, builder.saveIP(), deallocBlocks, deviceID, ifCond,
+        info, genMapInfoCB, customMapperCB, &RTLFn,
+        /*BodyGenCB=*/nullptr,
+        /*DeviceAddrCB=*/nullptr, srcLocOverride);
   }();
 
   if (failed(handleError(afterIP, *op)))
@@ -9808,12 +9860,21 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
   llvm::omp::OMPDynGroupprivateFallbackType fallbackType =
       getDynGroupprivateFallbackType(targetOp.getDynGroupprivateFallbackAttr());
 
+  // Pass the target region's source location to the runtime, taken from the
+  // op's own location. Restricted to the host offload path that actually emits
+  // the kernel launch, to avoid creating an unused identifier on the device.
+  llvm::Value *rtLocOverride =
+      (!isTargetDevice && isOffloadEntry)
+          ? getSourceLocIdentFromOp(builder, *ompBuilder, targetOp)
+          : nullptr;
+
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
       moduleTranslation.getOpenMPBuilder()->createTarget(
           ompLoc, isOffloadEntry, allocaIP, builder.saveIP(), deallocBlocks,
           info, entryInfo, defaultAttrs, runtimeAttrs, ifCond, kernelInput,
           genMapInfoCB, bodyCB, argAccessorCB, customMapperCB, dds,
-          targetOp.getNowait(), dynSizeVal, fallbackType, outlinedFnDbgLoc);
+          targetOp.getNowait(), dynSizeVal, fallbackType, outlinedFnDbgLoc,
+          rtLocOverride);
 
   if (failed(handleError(afterIP, opInst)))
     return failure();
@@ -10613,6 +10674,9 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
           })
           .Case([&](omp::ParallelOp op) {
             return convertOmpParallel(op, builder, moduleTranslation);
+          })
+          .Case([&](omp::DispatchOp) {
+            return convertOmpDispatch(*op, builder, moduleTranslation);
           })
           .Case([&](omp::MaskedOp) {
             return convertOmpMasked(*op, builder, moduleTranslation);
