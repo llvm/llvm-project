@@ -529,6 +529,8 @@ private:
             SmallVector<mlir::acc::GPUParallelDimAttr>>
   computeActiveAndInactiveParDims(Operation *op, Block *block);
 
+  bool touchesWorkerSharedPrivate(Operation *op);
+
   /// Build a predicate that is true only on inactive parallel dimensions.
   Value
   emitPredicate(Location loc,
@@ -1373,6 +1375,96 @@ static bool isThreadYPrivate(acc::PrivateLocalOp privateLocal, bool allowBlock,
          });
 }
 
+/// True when \p v has the same value in every thread of a workgroup. Only an
+/// allowlist is accepted; anything unrecognized is treated as varying.
+static bool isWorkgroupUniform(Value v, Operation *computeRegion,
+                               llvm::SmallPtrSetImpl<Value> &visited) {
+  if (!visited.insert(v).second)
+    return true;
+  if (auto arg = dyn_cast<BlockArgument>(v)) {
+    Operation *owner = arg.getOwner()->getParentOp();
+    if (owner == computeRegion || !computeRegion->isAncestor(owner))
+      return true;
+    // The induction variable of a loop that is itself uniform.
+    if (auto forOp = dyn_cast<scf::ForOp>(owner))
+      return arg == forOp.getInductionVar() &&
+             isWorkgroupUniform(forOp.getLowerBound(), computeRegion,
+                                visited) &&
+             isWorkgroupUniform(forOp.getStep(), computeRegion, visited);
+    return false;
+  }
+  Operation *def = v.getDefiningOp();
+  if (!computeRegion->isAncestor(def) || matchPattern(v, m_Constant()))
+    return true;
+  if (isa<gpu::BlockIdOp, gpu::BlockDimOp, gpu::GridDimOp>(def))
+    return true;
+  if (!isPure(def) || def->getNumRegions() || def->getNumOperands() == 0)
+    return false;
+  return llvm::all_of(def->getOperands(), [&](Value operand) {
+    return isWorkgroupUniform(operand, computeRegion, visited);
+  });
+}
+
+/// True when every thread of the workgroup reaches \p op, i.e. each enclosing
+/// loop and branch inside the compute region is controlled by uniform values.
+static bool isReachedByWholeWorkgroup(Operation *op, Operation *computeRegion) {
+  llvm::SmallPtrSet<Value, 16> visited;
+  auto uniform = [&](ValueRange values) {
+    return llvm::all_of(values, [&](Value v) {
+      return isWorkgroupUniform(v, computeRegion, visited);
+    });
+  };
+  for (Operation *parent = op->getParentOp(); parent != computeRegion;
+       parent = parent->getParentOp()) {
+    if (!parent)
+      return false;
+    if (auto forOp = dyn_cast<scf::ForOp>(parent)) {
+      if (!uniform(
+              {forOp.getLowerBound(), forOp.getUpperBound(), forOp.getStep()}))
+        return false;
+    } else if (auto ifOp = dyn_cast<scf::IfOp>(parent)) {
+      if (!uniform(ifOp.getCondition()))
+        return false;
+    } else if (!isa<scf::ExecuteRegionOp>(parent)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool ACCCGToGPULowering::touchesWorkerSharedPrivate(Operation *op) {
+  if (!isReachedByWholeWorkgroup(op, computeRegion.getOperation()))
+    return false;
+
+  auto isThreadY = [](GPUParallelDimAttr dim) { return dim.isThreadY(); };
+  SmallVector<Value, 8> worklist;
+  op->walk([&](Operation *inner) {
+    worklist.append(inner->operand_begin(), inner->operand_end());
+  });
+  llvm::SmallPtrSet<Value, 8> seen;
+  while (!worklist.empty()) {
+    Value value = worklist.pop_back_val();
+    // Scalar dependencies do not imply access to their source storage here.
+    if (!acc::isPointerLikeType(value.getType()) || !seen.insert(value).second)
+      continue;
+    Operation *def = value.getDefiningOp();
+    if (!def)
+      continue;
+    if (auto privateLocal = dyn_cast<acc::PrivateLocalOp>(def)) {
+      GPUParallelDimsAttr parDims =
+          getPrivateParDims(privateLocal, computeRegion);
+      if (!parDims || llvm::none_of(parDims.getArray(), isThreadY))
+        continue;
+      auto parDimsPair = computeActiveAndInactiveParDims(privateLocal, nullptr);
+      if (llvm::none_of(parDimsPair.first, isThreadY))
+        return true;
+      continue;
+    }
+    worklist.append(def->operand_begin(), def->operand_end());
+  }
+  return false;
+}
+
 struct ThreadYBroadeningInfo {
   bool hasActiveWorkerCombine = false;
   bool hasExplicitInactiveCombine = false;
@@ -1874,10 +1966,12 @@ void ACCCGToGPULowering::createPerRowBarrier(Location loc) {
   Value numberOfThreads32 =
       arith::IndexCastOp::create(rewriter, loc, i32Ty, blockDimX);
 
-  // GPU dialect named barriers do not have a means to create a custom barrier
-  // id. Thus use nvvm directly.
+  // GPU dialect named barriers cannot carry a custom barrier id, so use nvvm
+  // directly. Non-aligned: each row waits on its own id, and the rows need not
+  // reach this point together.
   assert(options.deviceType == mlir::acc::DeviceType::Nvidia);
-  NVVM::BarrierOp::create(rewriter, loc, barrierId32, numberOfThreads32);
+  NVVM::BarrierOp::create(rewriter, loc, barrierId32, numberOfThreads32,
+                          /*aligned=*/false);
 
   rewriter.setInsertionPointAfter(outerIf);
 }
@@ -2461,8 +2555,14 @@ void ACCCGToGPULowering::processPredicateRegion(
           bool predicatesThreadX = llvm::any_of(
               parDimsPair.second,
               [](mlir::acc::GPUParallelDimAttr pd) { return pd.isThreadX(); });
-          if (predicatesThreadX)
-            createPerRowBarrier(loc);
+          if (predicatesThreadX) {
+            // Storage shared by every row is read back by the other rows, so
+            // the whole workgroup has to reconverge.
+            if (touchesWorkerSharedPrivate(interOp))
+              emitGPUBarrierWorkgroup(rewriter, loc);
+            else
+              createPerRowBarrier(loc);
+          }
         }
         // For acc routine ThreadY routines, skip barrier
       } else if (!parDimsPair.first.empty()) {
