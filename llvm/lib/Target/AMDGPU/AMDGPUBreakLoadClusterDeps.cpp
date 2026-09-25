@@ -181,7 +181,7 @@ std::pair<BitVector, BitVector>
 AMDGPUBreakLoadClusterDepsImpl::getUsesAndDefsFor(MachineInstr &MI) const {
   std::pair<BitVector, BitVector> ToReturn{BitVector(NumVGPR32),
                                            BitVector(NumVGPR32)};
-  for (unsigned I = 0; I < MI.getNumExplicitOperands(); I++)
+  for (unsigned I = 0; I < MI.getNumOperands(); I++)
     if (MI.getOperand(I).isReg())
       (*(MI.getOperand(I).isDef() ? &ToReturn.first : &ToReturn.second)) |=
           getVGPR32Components(MI.getOperand(I).getReg());
@@ -192,7 +192,7 @@ Register AMDGPUBreakLoadClusterDepsImpl::promoteToSuperRegister(MachineInstr &MI
                                                              Register SubReg,
                                                              bool Defs,
                                                              bool Uses) {
-  for (MachineOperand &Operand : MI.explicit_operands())
+  for (MachineOperand &Operand : MI.operands())
     if (Operand.isReg() && (Defs || Operand.isUse()) &&
         (Uses || Operand.isDef()) &&
         TRI->isSuperRegister(SubReg, Operand.getReg()))
@@ -236,6 +236,9 @@ bool AMDGPUBreakLoadClusterDepsImpl::findReplaceRegisterOperand(
       for (MachineBasicBlock::iterator It = DefToRename->getIterator();
            anyLanesOutside(OldRegClobbers, ClobberedSubregs) && It != MBB.end();
            ++It) {
+        if (It->isDebugInstr())
+          continue;
+        
         auto Subregs = getUsesAndDefsFor(*It);
         if (Subregs.second.anyCommon(OldRegClobbers))
           NewKiller = &*It;
@@ -359,7 +362,8 @@ bool AMDGPUBreakLoadClusterDepsImpl::findReplaceRegisterOperand(
     if (TRI->getHWRegIndex(DefinedRegClass.getRegisters()[I]) + CandLanes >
         OccupancyBudget)
       continue;
-    if (LRU.available(DefinedRegClass.getRegisters()[I]) &&
+    if (!MRI->isReserved(DefinedRegClass.getRegisters()[I]) &&
+        LRU.available(DefinedRegClass.getRegisters()[I]) &&
         !getVGPR32Components(DefinedRegClass.getRegisters()[I])
              .anyCommon(BannedRegs))
       break;
@@ -372,7 +376,7 @@ bool AMDGPUBreakLoadClusterDepsImpl::findReplaceRegisterOperand(
   auto renameRegisters = [&](bool DryRun) {
     BitVector RedefinedRegs(NumVGPR32);
     // Actually rename the register
-    for (unsigned Op = 0; Op < DefToRename->getNumExplicitOperands(); Op++)
+    for (unsigned Op = 0; Op < DefToRename->getNumOperands(); Op++)
       if (DefToRename->getOperand(Op).isReg() &&
           DefToRename->getOperand(Op).isDef() &&
           TRI->regsOverlap(DefToRename->getOperand(Op).getReg(), OldReg)) {
@@ -388,7 +392,7 @@ bool AMDGPUBreakLoadClusterDepsImpl::findReplaceRegisterOperand(
     for (MachineBasicBlock::iterator RenameIt =
              std::next(MachineBasicBlock::iterator(DefToRename->getIterator()));
          RenameIt != KillerIns; ++RenameIt)
-      for (int Op = RenameIt->getNumExplicitOperands() - 1; Op >= 0; Op--)
+      for (int Op = RenameIt->getNumOperands() - 1; Op >= 0; Op--)
         if (RenameIt->getOperand(Op).isReg() &&
             TRI->regsOverlap(RenameIt->getOperand(Op).getReg(), OldReg) &&
             (RenameIt->getOperand(Op).isDef() ||
@@ -406,7 +410,7 @@ bool AMDGPUBreakLoadClusterDepsImpl::findReplaceRegisterOperand(
           if (RenameIt->getOperand(Op).isDef())
             RedefinedRegs |= getVGPR32Components(NewReg);
         }
-    for (unsigned Op = 0; Op < KillerIns->getNumExplicitOperands(); Op++)
+    for (unsigned Op = 0; Op < KillerIns->getNumOperands(); Op++)
       if (KillerIns->getOperand(Op).isReg() &&
           KillerIns->getOperand(Op).isUse() &&
           TRI->regsOverlap(KillerIns->getOperand(Op).getReg(), OldReg)) {
@@ -506,11 +510,11 @@ bool AMDGPUBreakLoadClusterDepsImpl::runOnMachineBasicBlock(
     while (WarConflicts.any()) {
       Register OldReg = AMDGPU::VGPR0 + WarConflicts.find_first();
       unsigned OpNum;
-      for (OpNum = 0; OpNum < VecLoadIns.getNumExplicitOperands(); OpNum++)
+      for (OpNum = 0; OpNum < VecLoadIns.getNumOperands(); OpNum++)
         if (VecLoadIns.getOperand(OpNum).isReg() &&
             TRI->regsOverlap(OldReg, VecLoadIns.getOperand(OpNum).getReg()))
           break;
-      assert(OpNum != VecLoadIns.getNumExplicitOperands() &&
+      assert(OpNum != VecLoadIns.getNumOperands() &&
              "There should be a conflicting register operand.  Where is it?");
       if (!findReplaceRegisterOperand(VecLoadIns, OpNum, BannedRegs))
         break;
@@ -528,12 +532,12 @@ bool AMDGPUBreakLoadClusterDepsImpl::runOnMachineBasicBlock(
     while (SelfConflicts.any()) {
       Register OldReg = AMDGPU::VGPR0 + SelfConflicts.find_first();
       unsigned OpNum;
-      for (OpNum = 0; OpNum < VecLoadIns.getNumExplicitOperands(); OpNum++)
+      for (OpNum = 0; OpNum < VecLoadIns.getNumOperands(); OpNum++)
         if (VecLoadIns.getOperand(OpNum).isReg() &&
             VecLoadIns.getOperand(OpNum).isUse() &&
             TRI->regsOverlap(OldReg, VecLoadIns.getOperand(OpNum).getReg()))
           break;
-      assert(OpNum != VecLoadIns.getNumExplicitOperands() &&
+      assert(OpNum != VecLoadIns.getNumOperands() &&
              "There should be a conflicting register operand.  Where is it?");
       BitVector SelfBannedRegs = BannedRegs;
       SelfBannedRegs |= InsDefs;
@@ -572,11 +576,18 @@ bool AMDGPUBreakLoadClusterDepsImpl::run(MachineFunction &MF) {
   // disabled, so no need to guard on isDynamicVGPREnabled().
   unsigned DynamicBlockSize =
       MF.getInfo<SIMachineFunctionInfo>()->getDynamicVGPRBlockSize();
-  OccupancyBudget = ST->getMaxNumVGPRs(
-      ST->getOccupancyWithNumVGPRs(
-          TRI->getNumUsedPhysRegs(*MRI, AMDGPU::VGPR_32RegClass, false),
-          DynamicBlockSize),
-      DynamicBlockSize);
+  unsigned VGPRs =
+      TRI->getNumUsedPhysRegs(*MRI, AMDGPU::VGPR_32RegClass, false);
+  unsigned AGPRs =
+      TRI->getNumUsedPhysRegs(*MRI, AMDGPU::AGPR_32RegClass, false);
+  OccupancyBudget =
+      ST->getMaxNumVGPRs(
+          ST->getOccupancyWithNumVGPRs(
+              AMDGPU::getTotalNumVGPRs(ST->hasGFX90AInsts(), AGPRs, VGPRs),
+              DynamicBlockSize),
+          DynamicBlockSize) -
+      AGPRs;
+  
   // The occupancy-derived budget above can exceed the function's own VGPR
   // limit (e.g. an "amdgpu-num-vgpr" attribute).  Cap it so a rename never
   // introduces a register beyond what the function is allowed to use.
