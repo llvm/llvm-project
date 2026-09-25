@@ -613,3 +613,9 @@ TEST_F(TypeIndexIteratorTest, RegRelativeIndir) {
   writeSymbolRecords(RR);
   checkTypeReferences(0, RR.Type);
 }
+
+TEST_F(TypeIndexIteratorTest, AliasRecord) {
+  AliasRecord AR(TypeIndex::Int32(), "SomeName");
+  writeTypeRecords(AR);
+  checkTypeReferences(0, AR.UnderlyingType);
+}
