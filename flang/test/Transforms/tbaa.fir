@@ -33,9 +33,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 // CHECK:           %[[VAL_3:.*]] = fir.declare %[[VAL_0]] dummy_scope %[[DSCOPE]] {uniq_name = "_QFoneargEa"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?xi32>>
 // CHECK:           %[[VAL_4:.*]] = fir.rebox %[[VAL_3]] : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
 // CHECK:           %[[VAL_5:.*]] = fir.array_coor %[[VAL_4]] %[[VAL_2]] : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
-// CHECK:           %[[VAL_6:.*]] = fir.load %[[VAL_5]] {tbaa = [#[[ONE_ARG_A_TAG]]]} : !fir.ref<i32>
+// CHECK:           %[[VAL_6:.*]] = fir.load %[[VAL_5]] <{tbaa = [#[[ONE_ARG_A_TAG]]]}> : !fir.ref<i32>
 // CHECK:           %[[VAL_7:.*]] = fir.array_coor %[[VAL_4]] %[[VAL_1]] : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
-// CHECK:           fir.store %[[VAL_6]] to %[[VAL_7]] {tbaa = [#[[ONE_ARG_A_TAG]]]} : !fir.ref<i32>
+// CHECK:           fir.store %[[VAL_6]] to %[[VAL_7]] <{tbaa = [#[[ONE_ARG_A_TAG]]]}> : !fir.ref<i32>
 // CHECK:           return
 // CHECK:         }
 }
@@ -80,9 +80,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 // CHECK:           %[[VAL_5:.*]] = fir.declare %[[VAL_1]] dummy_scope %[[DSCOPE]] {uniq_name = "_QFtwoargEb"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?xi32>>
 // CHECK:           %[[VAL_6:.*]] = fir.rebox %[[VAL_5]] : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
 // CHECK:           %[[VAL_7:.*]] = fir.array_coor %[[VAL_6]] %[[VAL_2]] : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
-// CHECK:           %[[VAL_8:.*]] = fir.load %[[VAL_7]] {tbaa = [#[[TWO_ARG_B_TAG]]]} : !fir.ref<i32>
+// CHECK:           %[[VAL_8:.*]] = fir.load %[[VAL_7]] <{tbaa = [#[[TWO_ARG_B_TAG]]]}> : !fir.ref<i32>
 // CHECK:           %[[VAL_9:.*]] = fir.array_coor %[[VAL_4]] %[[VAL_2]] : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
-// CHECK:           fir.store %[[VAL_8]] to %[[VAL_9]] {tbaa = [#[[TWO_ARG_A_TAG]]]} : !fir.ref<i32>
+// CHECK:           fir.store %[[VAL_8]] to %[[VAL_9]] <{tbaa = [#[[TWO_ARG_A_TAG]]]}> : !fir.ref<i32>
 // CHECK:           return
 // CHECK:         }
 }
@@ -128,9 +128,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 // CHECK:           %[[VAL_5:.*]] = fir.declare %[[VAL_1]] dummy_scope %[[DSCOPE]] {uniq_name = "_QFtargetargEb"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?xi32>>
 // CHECK:           %[[VAL_6:.*]] = fir.rebox %[[VAL_5]] : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
 // CHECK:           %[[VAL_7:.*]] = fir.array_coor %[[VAL_6]] %[[VAL_2]] : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
-// CHECK:           %[[VAL_8:.*]] = fir.load %[[VAL_7]] {tbaa = [#[[TARGET_B_TAG]]]} : !fir.ref<i32>
+// CHECK:           %[[VAL_8:.*]] = fir.load %[[VAL_7]] <{tbaa = [#[[TARGET_B_TAG]]]}> : !fir.ref<i32>
 // CHECK:           %[[VAL_9:.*]] = fir.array_coor %[[VAL_4]] %[[VAL_2]] : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
-// CHECK:           fir.store %[[VAL_8]] to %[[VAL_9]] {tbaa = [#[[TARGET_A_TAG]]]} : !fir.ref<i32>
+// CHECK:           fir.store %[[VAL_8]] to %[[VAL_9]] <{tbaa = [#[[TARGET_A_TAG]]]}> : !fir.ref<i32>
 // CHECK:           return
 // CHECK:         }
 }
@@ -179,13 +179,13 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 // CHECK:           %[[VAL_5:.*]] = fir.declare %[[VAL_1]] dummy_scope %[[DSCOPE]] {uniq_name = "_QFpointerargEb"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?xi32>>
 // CHECK:           %[[VAL_6:.*]] = fir.rebox %[[VAL_5]] : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
 // CHECK:           %[[VAL_7:.*]] = fir.array_coor %[[VAL_6]] %[[VAL_3]] : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
-// CHECK:           %[[VAL_8:.*]] = fir.load %[[VAL_7]] {tbaa = [#[[POINTER_B_TAG]]]} : !fir.ref<i32>
+// CHECK:           %[[VAL_8:.*]] = fir.load %[[VAL_7]] <{tbaa = [#[[POINTER_B_TAG]]]}> : !fir.ref<i32>
 // "any descriptor access" tag is added by TBAABuilder during CodeGen
 // CHECK:           %[[VAL_9:.*]] = fir.load %[[VAL_4]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 // CHECK:           %[[VAL_10:.*]]:3 = fir.box_dims %[[VAL_9]], %[[VAL_2]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>, index) -> (index, index, index)
 // CHECK:           %[[VAL_11:.*]] = fir.shift %[[VAL_10]]#0 : (index) -> !fir.shift<1>
 // CHECK:           %[[VAL_12:.*]] = fir.array_coor %[[VAL_9]](%[[VAL_11]]) %[[VAL_3]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>, !fir.shift<1>, index) -> !fir.ref<i32>
-// CHECK:           fir.store %[[VAL_8]] to %[[VAL_12]] {tbaa = [#[[POINTER_A_TAG]]]} : !fir.ref<i32>
+// CHECK:           fir.store %[[VAL_8]] to %[[VAL_12]] <{tbaa = [#[[POINTER_A_TAG]]]}> : !fir.ref<i32>
 // CHECK:           return
 // CHECK:         }
 }
@@ -217,7 +217,7 @@ func.func @_QQmain() attributes {fir.bindc_name = "reduce"} {
     %8 = fir.declare %arg0 {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK-NEXT: %[[DECL:.*]] = fir.declare
     fir.store %c-1_i32 to %8 : !fir.ref<i32>
-// CHECK-NOT: fir.store %{{.*}} to %[[DECL]] {tbaa = %{{.*}}} : !fir.ref<i32>
+// CHECK-NOT: fir.store %{{.*}} to %[[DECL]] <{tbaa = %{{.*}>}} : !fir.ref<i32>
 // CHECK:     fir.store %{{.*}} to %[[DECL]] : !fir.ref<i32>
     omp.terminator
   }
@@ -247,8 +247,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 // CHECK-NOT: #llvm.tbaa_root<id = "Flang function root renamed_">
 // CHECK: #[[RENAMED_TAG:.+]] = #llvm.tbaa_tag
 // CHECK-LABEL: func.func @renamed_
-// CHECK: fir.load {{.*}} {tbaa = [#[[RENAMED_TAG]]]}
-// CHECK: fir.store {{.*}} {tbaa = [#[[RENAMED_TAG]]]}
+// CHECK: fir.load {{.*}} <{tbaa = [#[[RENAMED_TAG]]]}>
+// CHECK: fir.store {{.*}} <{tbaa = [#[[RENAMED_TAG]]]}>
 }
 
 // -----
@@ -269,8 +269,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 // CHECK: #[[ALLOC_DATA:.+]] = #llvm.tbaa_type_desc<id = "allocated data/_QFnonfirallocEi", members = {{{.*}}}>
 // CHECK: #[[ALLOC_TAG:.+]] = #llvm.tbaa_tag<base_type = #[[ALLOC_DATA]], access_type = #[[ALLOC_DATA]], offset = 0>
 // CHECK-LABEL: func.func @_QPnonfiralloc(
-// CHECK: fir.load {{.*}} {tbaa = [#[[ALLOC_TAG]]]}
-// CHECK: fir.store {{.*}} {tbaa = [#[[ALLOC_TAG]]]}
+// CHECK: fir.load {{.*}} <{tbaa = [#[[ALLOC_TAG]]]}>
+// CHECK: fir.store {{.*}} <{tbaa = [#[[ALLOC_TAG]]]}>
 }
 
 // -----
@@ -288,8 +288,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 // CHECK: #[[MEMREF_ALLOC_DATA:.+]] = #llvm.tbaa_type_desc<id = "allocated data/_QFmemrefallocEi", members = {{{.*}}}>
 // CHECK: #[[MEMREF_ALLOC_TAG:.+]] = #llvm.tbaa_tag<base_type = #[[MEMREF_ALLOC_DATA]], access_type = #[[MEMREF_ALLOC_DATA]], offset = 0>
 // CHECK-LABEL: func.func @_QPmemrefalloc(
-// CHECK: fir.load {{.*}} {tbaa = [#[[MEMREF_ALLOC_TAG]]]}
-// CHECK: fir.store {{.*}} {tbaa = [#[[MEMREF_ALLOC_TAG]]]}
+// CHECK: fir.load {{.*}} <{tbaa = [#[[MEMREF_ALLOC_TAG]]]}>
+// CHECK: fir.store {{.*}} <{tbaa = [#[[MEMREF_ALLOC_TAG]]]}>
 }
 
 // -----
@@ -309,8 +309,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 // CHECK: #[[EMPTY_ALLOC_DATA:.+]] = #llvm.tbaa_type_desc<id = "allocated data/", members = {<#[[EMPTY_ALLOC_PARENT]], 0>}>
 // CHECK: #[[EMPTY_ALLOC_TAG:.+]] = #llvm.tbaa_tag<base_type = #[[EMPTY_ALLOC_DATA]], access_type = #[[EMPTY_ALLOC_DATA]], offset = 0>
 // CHECK-LABEL: func.func @_QPemptyname(
-// CHECK: fir.load {{.*}} {tbaa = [#[[EMPTY_ALLOC_TAG]]]}
-// CHECK: fir.store {{.*}} {tbaa = [#[[EMPTY_ALLOC_TAG]]]}
+// CHECK: fir.load {{.*}} <{tbaa = [#[[EMPTY_ALLOC_TAG]]]}>
+// CHECK: fir.store {{.*}} <{tbaa = [#[[EMPTY_ALLOC_TAG]]]}>
 }
 
 // -----
@@ -332,6 +332,6 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 // CHECK-NOT: #llvm.tbaa_type_desc<id = "allocated data/
 // CHECK: #[[ANON_ALLOC_TAG:.+]] = #llvm.tbaa_tag<base_type = #[[ANON_ALLOC_DATA]], access_type = #[[ANON_ALLOC_DATA]], offset = 0>
 // CHECK-LABEL: func.func @_QPanonalloc(
-// CHECK: fir.load {{.*}} {tbaa = [#[[ANON_ALLOC_TAG]]]}
-// CHECK: fir.store {{.*}} {tbaa = [#[[ANON_ALLOC_TAG]]]}
+// CHECK: fir.load {{.*}} <{tbaa = [#[[ANON_ALLOC_TAG]]]}>
+// CHECK: fir.store {{.*}} <{tbaa = [#[[ANON_ALLOC_TAG]]]}>
 }

@@ -387,6 +387,15 @@ struct MemrefAddressOfGlobalModel
   }
 };
 
+struct LLVMAddressOfGlobalModel
+    : public AddressOfGlobalOpInterface::ExternalModel<LLVMAddressOfGlobalModel,
+                                                       LLVM::AddressOfOp> {
+  SymbolRefAttr getSymbol(Operation *op) const {
+    auto addressOfOp = cast<LLVM::AddressOfOp>(op);
+    return addressOfOp.getGlobalNameAttr();
+  }
+};
+
 struct MemrefGlobalVariableModel
     : public GlobalVariableOpInterface::ExternalModel<MemrefGlobalVariableModel,
                                                       memref::GlobalOp> {
@@ -525,6 +534,7 @@ void OpenACCDialect::initialize() {
   // Attach operation interfaces
   memref::GetGlobalOp::attachInterface<MemrefAddressOfGlobalModel>(
       *getContext());
+  LLVM::AddressOfOp::attachInterface<LLVMAddressOfGlobalModel>(*getContext());
   memref::GlobalOp::attachInterface<MemrefGlobalVariableModel>(*getContext());
   gpu::LaunchOp::attachInterface<GPULaunchOffloadRegionModel>(*getContext());
 }
@@ -5498,6 +5508,13 @@ bool mlir::acc::getImplicitFlag(mlir::Operation *accDataEntryOp) {
         return bitEnumContainsAny(mapInfo.getMapFlags(),
                                   mlir::acc::MapFlags::implicit);
       })
+      .Default([&](mlir::Operation *) { return false; });
+}
+
+bool mlir::acc::getSyntheticFlag(mlir::Operation *accDataClauseOp) {
+  return llvm::TypeSwitch<mlir::Operation *, bool>(accDataClauseOp)
+      .Case<ACC_DATA_CLAUSE_OPS>(
+          [&](auto dataClause) { return dataClause.getSynthetic(); })
       .Default([&](mlir::Operation *) { return false; });
 }
 

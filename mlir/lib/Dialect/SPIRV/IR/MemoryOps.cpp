@@ -198,21 +198,24 @@ static LogicalResult verifyMemoryAccessAttribute(MemoryOpTy memoryOp) {
 
   // MakePointerAvailable applies to writes through the pointer, so it is
   // invalid for Load (which only reads through it).
-  if (isa<LoadOp>(op) &&
-      spirv::bitEnumContainsAll(memAccess.getValue(),
-                                spirv::MemoryAccess::MakePointerAvailable)) {
-    return memoryOp.emitOpError(
-        "not compatible with memory operand 'MakePointerAvailable'");
+  if constexpr (std::is_same_v<MemoryOpTy, LoadOp>) {
+    if (spirv::bitEnumContainsAll(memAccess.getValue(),
+                                  spirv::MemoryAccess::MakePointerAvailable)) {
+      return memoryOp.emitOpError(
+          "not compatible with memory operand 'MakePointerAvailable'");
+    }
   }
 
   // MakePointerVisible applies to reads through the pointer, so it is invalid
   // for Store and for the Target operand of CopyMemory, both of which only
   // write through it.
-  if (isa<StoreOp, CopyMemoryOp>(op) &&
-      spirv::bitEnumContainsAll(memAccess.getValue(),
-                                spirv::MemoryAccess::MakePointerVisible)) {
-    return memoryOp.emitOpError(
-        "not compatible with memory operand 'MakePointerVisible'");
+  if constexpr (std::is_same_v<MemoryOpTy, StoreOp> ||
+                std::is_same_v<MemoryOpTy, CopyMemoryOp>) {
+    if (spirv::bitEnumContainsAll(memAccess.getValue(),
+                                  spirv::MemoryAccess::MakePointerVisible)) {
+      return memoryOp.emitOpError(
+          "not compatible with memory operand 'MakePointerVisible'");
+    }
   }
 
   if (spirv::bitEnumContainsAny(memAccess.getValue(),

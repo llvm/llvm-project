@@ -378,8 +378,7 @@ static cl::opt<bool>
     DebugSkeletonCu("debug-skeleton-cu",
                     cl::desc("prints out offsets for abbrev and debug_info of "
                              "Skeleton CUs that get patched."),
-                    cl::ZeroOrMore, cl::Hidden, cl::init(false),
-                    cl::cat(BoltCategory));
+                    cl::Hidden, cl::init(false), cl::cat(BoltCategory));
 
 static cl::opt<unsigned> BatchSize(
     "cu-processing-batch-size",

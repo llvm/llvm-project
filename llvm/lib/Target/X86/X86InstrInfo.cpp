@@ -10971,7 +10971,7 @@ void X86InstrInfo::buildClearRegister(Register Reg, MachineBasicBlock &MBB,
   } else if (X86::VK1RegClass.contains(Reg) || X86::VK2RegClass.contains(Reg) ||
              X86::VK4RegClass.contains(Reg) || X86::VK8RegClass.contains(Reg) ||
              X86::VK16RegClass.contains(Reg)) {
-    if (!ST.hasVLX())
+    if (!ST.hasAVX512())
       return;
 
     unsigned Op = ST.hasBWI() ? X86::KSET0Q : X86::KSET0W;
