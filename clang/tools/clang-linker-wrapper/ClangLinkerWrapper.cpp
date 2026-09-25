@@ -590,6 +590,9 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args,
   for (StringRef Arg : Args.getAllArgValues(OPT_compiler_arg_EQ))
     CmdArgs.push_back(Args.MakeArgString(Arg));
 
+  if (Verbose)
+    CmdArgs.push_back("-v");
+
   if (Error Err = executeCommands(*ClangPath, CmdArgs))
     return std::move(Err);
 
