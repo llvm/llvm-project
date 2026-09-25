@@ -354,9 +354,16 @@ static RecurrenceDescriptor getMinMaxRecurrence(PHINode *Phi, Loop *TheLoop,
     return !Chain.contains(U) && TheLoop->contains(U) &&
            GetMinMaxRK(U, A, B) == RecurKind::None;
   });
+
+  // If the backedge value has more than one use we should consider whether
+  // these are actually uses inside the loop.
+  bool BackedgeNumUsesInLoop = count_if(BackedgeValue->users(), [&](User *U) {
+    return TheLoop->contains(dyn_cast<Instruction>(U));
+  });
+
   if (PhiHasInvalidUses) {
     if (!RecurrenceDescriptor::isMinMaxRecurrenceKind(RK) ||
-        !BackedgeValue->hasOneUse())
+        BackedgeNumUsesInLoop != 1)
       return {};
     return RecurrenceDescriptor(
         Phi->getIncomingValueForBlock(TheLoop->getLoopPreheader()),
