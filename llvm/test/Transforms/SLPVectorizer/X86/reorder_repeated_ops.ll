@@ -6,7 +6,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 define void @hoge(i1 %arg) {
 ; CHECK-LABEL: @hoge(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb2:
