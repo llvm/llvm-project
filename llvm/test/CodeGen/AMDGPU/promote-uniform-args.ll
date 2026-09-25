@@ -639,6 +639,52 @@ bb:
   ret void
 }
 
+; An SGPR-constrained inline asm result is always uniform.
+
+define internal fastcc void @callee_asm(ptr %p) {
+; CHECK-LABEL: define internal fastcc void @callee_asm(
+; CHECK-SAME: ptr inreg [[P:%.*]]) {
+; CHECK-NEXT:    store float 0.000000e+00, ptr [[P]], align 4
+; CHECK-NEXT:    ret void
+;
+  store float 0.000000e+00, ptr %p
+  ret void
+}
+
+define amdgpu_kernel void @k_asm() {
+; CHECK-LABEL: define amdgpu_kernel void @k_asm() {
+; CHECK-NEXT:    [[PUNI:%.*]] = call ptr asm "s_mov_b64 $0, 0", "=s"()
+; CHECK-NEXT:    call fastcc void @callee_asm(ptr inreg [[PUNI]])
+; CHECK-NEXT:    ret void
+;
+  %puni = call ptr asm "s_mov_b64 $0, 0", "=s"()
+  call fastcc void @callee_asm(ptr %puni)
+  ret void
+}
+
+; A VGPR-constrained inline asm result is a source of divergence.
+
+define internal fastcc void @callee_asm_divergent(ptr %p) {
+; CHECK-LABEL: define internal fastcc void @callee_asm_divergent(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    store float 0.000000e+00, ptr [[P]], align 4
+; CHECK-NEXT:    ret void
+;
+  store float 0.000000e+00, ptr %p
+  ret void
+}
+
+define amdgpu_kernel void @k_asm_divergent() {
+; CHECK-LABEL: define amdgpu_kernel void @k_asm_divergent() {
+; CHECK-NEXT:    [[PDIV:%.*]] = call ptr asm "v_mov_b32 $0, 0", "=v"()
+; CHECK-NEXT:    call fastcc void @callee_asm_divergent(ptr [[PDIV]])
+; CHECK-NEXT:    ret void
+;
+  %pdiv = call ptr asm "v_mov_b32 $0, 0", "=v"()
+  call fastcc void @callee_asm_divergent(ptr %pdiv)
+  ret void
+}
+
 ; Vectors are not promoted.
 
 define internal fastcc void @callee_vecptr(<2 x ptr> %p) {

@@ -8,20 +8,23 @@
 //
 // Promote scalar and pointer arguments of internal callees to \c inreg when
 // every visible call-site operand is trivially uniform: a constant, an
-// argument passed in an SGPR, or an always-uniform intrinsic in the same
-// block as the call. Vectors are not promoted.
+// argument passed in an SGPR, or an always-uniform value in the same block as
+// the call. Vectors are not promoted.
 //
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
 #include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/Uniformity.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
 
 using namespace llvm;
@@ -64,23 +67,24 @@ static bool collectDirectCallSites(Function &F,
   return !Calls.empty();
 }
 
-static bool isTriviallyUniform(const Use &U) {
+static bool isTriviallyUniform(const Use &U, const TargetTransformInfo &TTI) {
   Value *V = U.get();
   if (isa<Constant>(V))
     return true;
   if (const auto *A = dyn_cast<Argument>(V))
     return AMDGPU::isArgPassedInSGPR(A);
-  if (const auto *II = dyn_cast<IntrinsicInst>(V)) {
-    if (!AMDGPU::isIntrinsicAlwaysUniform(II->getIntrinsicID()))
+  if (const auto *I = dyn_cast<Instruction>(V)) {
+    if (TTI.getValueUniformity(I) != ValueUniformity::AlwaysUniform)
       return false;
-    // If II and U are in different blocks then there is a possibility of
+    // If I and U are in different blocks then there is a possibility of
     // temporal divergence.
-    return II->getParent() == cast<Instruction>(U.getUser())->getParent();
+    return I->getParent() == cast<Instruction>(U.getUser())->getParent();
   }
   return false;
 }
 
-static bool promoteUniformArgsToInReg(Module &M) {
+static bool promoteUniformArgsToInReg(
+    Module &M, function_ref<const TargetTransformInfo &(Function &)> GetTTI) {
   bool Changed = false;
 
   for (Function &F : M) {
@@ -95,7 +99,8 @@ static bool promoteUniformArgsToInReg(Module &M) {
 
       bool AllUniform = true;
       for (CallBase *CB : Calls) {
-        if (!isTriviallyUniform(CB->getArgOperandUse(A.getArgNo()))) {
+        if (!isTriviallyUniform(CB->getArgOperandUse(A.getArgNo()),
+                                GetTTI(*CB->getFunction()))) {
           AllUniform = false;
           break;
         }
@@ -121,7 +126,13 @@ static bool promoteUniformArgsToInReg(Module &M) {
 
 PreservedAnalyses AMDGPUPromoteUniformArgsPass::run(Module &M,
                                                     ModuleAnalysisManager &AM) {
-  if (!promoteUniformArgsToInReg(M))
+  FunctionAnalysisManager &FAM =
+      AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  auto GetTTI = [&FAM](Function &F) -> const TargetTransformInfo & {
+    return FAM.getResult<TargetIRAnalysis>(F);
+  };
+
+  if (!promoteUniformArgsToInReg(M, GetTTI))
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
   PA.preserveSet<CFGAnalyses>();
