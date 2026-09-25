@@ -1104,6 +1104,7 @@ add_header_macro(
   sys/xattr.h
   DEPENDS
     .llvm_libc_common_h
+    .llvm-libc-macros.sys_xattr_macros
     .llvm-libc-types.size_t
     .llvm-libc-types.ssize_t
 )
@@ -1257,6 +1258,8 @@ add_header_macro(
   DEPENDS
     .llvm-libc-types.struct_pollfd
     .llvm-libc-types.nfds_t
+    .llvm-libc-types.struct_timespec
+    .llvm-libc-types.sigset_t
     .llvm-libc-macros.poll-macros
 )
 

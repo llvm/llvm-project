@@ -1,11 +1,87 @@
 # This file is licensed under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
+load("@bazel_skylib//lib:selects.bzl", "selects")
+load("@bazel_skylib//rules:common_settings.bzl", "bool_flag", "string_flag")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load(":cc_library_wrapper.bzl", "cc_library_wrapper")
 
 package(default_visibility = ["//visibility:public"])
+
+string_flag(
+    name = "llvm_enable_libxml2",
+    build_setting_default = "auto",
+    values = [
+        "auto",  # Use system libxml2 on macOS, otherwise build from source
+        "disable",  # Don't include libxml2 at all
+        "external",  # Build libxml2 from source
+        "system",  # Use system libxml2 (non hermetic)
+    ],
+)
+
+config_setting(
+    name = "llvm_libxml2_auto",
+    flag_values = {":llvm_enable_libxml2": "auto"},
+    visibility = ["//visibility:private"],
+)
+
+# This specializes llvm_libxml2_auto so select() prefers it for macOS targets.
+config_setting(
+    name = "llvm_libxml2_auto_macos",
+    constraint_values = ["@platforms//os:macos"],
+    flag_values = {":llvm_enable_libxml2": "auto"},
+    visibility = ["//visibility:private"],
+)
+
+config_setting(
+    name = "llvm_libxml2_external",
+    flag_values = {":llvm_enable_libxml2": "external"},
+    visibility = ["//visibility:private"],
+)
+
+config_setting(
+    name = "llvm_libxml2_system",
+    flag_values = {":llvm_enable_libxml2": "system"},
+    visibility = ["//visibility:private"],
+)
+
+selects.config_setting_group(
+    name = "llvm_libxml2_enabled",
+    match_any = [
+        ":llvm_libxml2_auto",
+        ":llvm_libxml2_external",
+        ":llvm_libxml2_system",
+    ],
+    visibility = [
+        "//clang:__pkg__",
+        "//lld/test:__pkg__",
+        "//lldb:__pkg__",
+    ],
+)
+
+cc_library_wrapper(
+    name = "libxml2",
+    defines = select({
+        ":llvm_libxml2_enabled": ["LLVM_ENABLE_LIBXML2=1"],
+        "//conditions:default": ["LLVM_ENABLE_LIBXML2=0"],
+    }),
+    linkopts = select({
+        ":llvm_libxml2_auto_macos": ["-lxml2"],
+        ":llvm_libxml2_system": ["-lxml2"],
+        "//conditions:default": [],
+    }),
+    visibility = [
+        "//clang:__pkg__",
+        "//lldb:__pkg__",
+        "//llvm:__pkg__",
+    ],
+    deps = select({
+        ":llvm_libxml2_auto": ["@libxml2"],
+        ":llvm_libxml2_auto_macos": [],
+        ":llvm_libxml2_external": ["@libxml2"],
+        "//conditions:default": [],
+    }),
+)
 
 bool_flag(
     name = "llvm_enable_zstd",

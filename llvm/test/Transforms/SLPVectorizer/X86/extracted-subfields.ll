@@ -10,34 +10,9 @@ define i16 @sum8_i64(ptr %x) {
 ; CHECK-SAME: ptr [[X:%.*]]) {
 ; CHECK-NEXT:  [[START:.*:]]
 ; CHECK-NEXT:    [[L:%.*]] = load i64, ptr [[X]], align 8
-; CHECK-NEXT:    [[T0:%.*]] = trunc i64 [[L]] to i16
-; CHECK-NEXT:    [[B0:%.*]] = and i16 [[T0]], 255
-; CHECK-NEXT:    [[T1:%.*]] = trunc i64 [[L]] to i16
-; CHECK-NEXT:    [[B1:%.*]] = lshr i16 [[T1]], 8
-; CHECK-NEXT:    [[A1:%.*]] = add nuw nsw i16 [[B0]], [[B1]]
-; CHECK-NEXT:    [[S2:%.*]] = lshr i64 [[L]], 16
-; CHECK-NEXT:    [[T2:%.*]] = trunc i64 [[S2]] to i16
-; CHECK-NEXT:    [[B2:%.*]] = and i16 [[T2]], 255
-; CHECK-NEXT:    [[A2:%.*]] = add nuw nsw i16 [[A1]], [[B2]]
-; CHECK-NEXT:    [[S3:%.*]] = lshr i64 [[L]], 24
-; CHECK-NEXT:    [[T3:%.*]] = trunc i64 [[S3]] to i16
-; CHECK-NEXT:    [[B3:%.*]] = and i16 [[T3]], 255
-; CHECK-NEXT:    [[A3:%.*]] = add nuw nsw i16 [[A2]], [[B3]]
-; CHECK-NEXT:    [[S4:%.*]] = lshr i64 [[L]], 32
-; CHECK-NEXT:    [[T4:%.*]] = trunc i64 [[S4]] to i16
-; CHECK-NEXT:    [[B4:%.*]] = and i16 [[T4]], 255
-; CHECK-NEXT:    [[A4:%.*]] = add nuw nsw i16 [[A3]], [[B4]]
-; CHECK-NEXT:    [[S5:%.*]] = lshr i64 [[L]], 40
-; CHECK-NEXT:    [[T5:%.*]] = trunc i64 [[S5]] to i16
-; CHECK-NEXT:    [[B5:%.*]] = and i16 [[T5]], 255
-; CHECK-NEXT:    [[A5:%.*]] = add nuw nsw i16 [[A4]], [[B5]]
-; CHECK-NEXT:    [[S6:%.*]] = lshr i64 [[L]], 48
-; CHECK-NEXT:    [[T6:%.*]] = trunc i64 [[S6]] to i16
-; CHECK-NEXT:    [[B6:%.*]] = and i16 [[T6]], 255
-; CHECK-NEXT:    [[A6:%.*]] = add nuw nsw i16 [[A5]], [[B6]]
-; CHECK-NEXT:    [[S7:%.*]] = lshr i64 [[L]], 56
-; CHECK-NEXT:    [[B7:%.*]] = trunc i64 [[S7]] to i16
-; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i16 [[A6]], [[B7]]
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[L]] to <8 x i8>
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <8 x i8> [[TMP0]] to <8 x i16>
+; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> [[TMP1]])
 ; CHECK-NEXT:    ret i16 [[TMP2]]
 ;
 start:
@@ -81,30 +56,8 @@ define i16 @sum8_i64_ashr(ptr %x) {
 ; CHECK-SAME: ptr [[X:%.*]]) {
 ; CHECK-NEXT:  [[START:.*:]]
 ; CHECK-NEXT:    [[L:%.*]] = load i64, ptr [[X]], align 8
-; CHECK-NEXT:    [[S7:%.*]] = ashr i64 [[L]], 56
-; CHECK-NEXT:    [[S6:%.*]] = ashr i64 [[L]], 48
-; CHECK-NEXT:    [[S5:%.*]] = ashr i64 [[L]], 40
-; CHECK-NEXT:    [[S4:%.*]] = ashr i64 [[L]], 32
-; CHECK-NEXT:    [[S3:%.*]] = ashr i64 [[L]], 24
-; CHECK-NEXT:    [[S2:%.*]] = ashr i64 [[L]], 16
-; CHECK-NEXT:    [[S1:%.*]] = ashr i64 [[L]], 8
-; CHECK-NEXT:    [[T7:%.*]] = trunc i64 [[S7]] to i16
-; CHECK-NEXT:    [[T6:%.*]] = trunc i64 [[S6]] to i16
-; CHECK-NEXT:    [[T5:%.*]] = trunc i64 [[S5]] to i16
-; CHECK-NEXT:    [[T4:%.*]] = trunc i64 [[S4]] to i16
-; CHECK-NEXT:    [[T3:%.*]] = trunc i64 [[S3]] to i16
-; CHECK-NEXT:    [[T2:%.*]] = trunc i64 [[S2]] to i16
-; CHECK-NEXT:    [[T1:%.*]] = trunc i64 [[S1]] to i16
-; CHECK-NEXT:    [[T0:%.*]] = trunc i64 [[L]] to i16
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x i16> poison, i16 [[T0]], i64 0
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <8 x i16> [[TMP0]], i16 [[T1]], i64 1
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <8 x i16> [[TMP8]], i16 [[T2]], i64 2
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i16> [[TMP9]], i16 [[T3]], i64 3
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i16> [[TMP3]], i16 [[T4]], i64 4
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i16> [[TMP4]], i16 [[T5]], i64 5
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x i16> [[TMP5]], i16 [[T6]], i64 6
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x i16> [[TMP6]], i16 [[T7]], i64 7
-; CHECK-NEXT:    [[TMP1:%.*]] = and <8 x i16> [[TMP7]], splat (i16 255)
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[L]] to <8 x i8>
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <8 x i8> [[TMP0]] to <8 x i16>
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> [[TMP1]])
 ; CHECK-NEXT:    ret i16 [[TMP2]]
 ;
@@ -151,19 +104,9 @@ define i32 @sum4_halves_i64(ptr %p) {
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:  [[START:.*:]]
 ; CHECK-NEXT:    [[L:%.*]] = load i64, ptr [[P]], align 8
-; CHECK-NEXT:    [[T0:%.*]] = trunc i64 [[L]] to i32
-; CHECK-NEXT:    [[B0:%.*]] = and i32 [[T0]], 65535
-; CHECK-NEXT:    [[S1:%.*]] = lshr i64 [[L]], 16
-; CHECK-NEXT:    [[T1:%.*]] = trunc i64 [[S1]] to i32
-; CHECK-NEXT:    [[B1:%.*]] = and i32 [[T1]], 65535
-; CHECK-NEXT:    [[S2:%.*]] = lshr i64 [[L]], 32
-; CHECK-NEXT:    [[T2:%.*]] = trunc i64 [[S2]] to i32
-; CHECK-NEXT:    [[B2:%.*]] = and i32 [[T2]], 65535
-; CHECK-NEXT:    [[S3:%.*]] = lshr i64 [[L]], 48
-; CHECK-NEXT:    [[B3:%.*]] = trunc i64 [[S3]] to i32
-; CHECK-NEXT:    [[A1:%.*]] = add nuw nsw i32 [[B0]], [[B1]]
-; CHECK-NEXT:    [[A2:%.*]] = add nuw nsw i32 [[A1]], [[B2]]
-; CHECK-NEXT:    [[A3:%.*]] = add nuw nsw i32 [[A2]], [[B3]]
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[L]] to <4 x i16>
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <4 x i16> [[TMP0]] to <4 x i32>
+; CHECK-NEXT:    [[A3:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP1]])
 ; CHECK-NEXT:    ret i32 [[A3]]
 ;
 start:
@@ -192,19 +135,9 @@ define i16 @sum4_i32(ptr %p) {
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:  [[START:.*:]]
 ; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[P]], align 4
-; CHECK-NEXT:    [[T0:%.*]] = trunc i32 [[L]] to i16
-; CHECK-NEXT:    [[B0:%.*]] = and i16 [[T0]], 255
-; CHECK-NEXT:    [[S1:%.*]] = lshr i32 [[L]], 8
-; CHECK-NEXT:    [[T1:%.*]] = trunc i32 [[S1]] to i16
-; CHECK-NEXT:    [[B1:%.*]] = and i16 [[T1]], 255
-; CHECK-NEXT:    [[S2:%.*]] = lshr i32 [[L]], 16
-; CHECK-NEXT:    [[T2:%.*]] = trunc i32 [[S2]] to i16
-; CHECK-NEXT:    [[B2:%.*]] = and i16 [[T2]], 255
-; CHECK-NEXT:    [[S3:%.*]] = lshr i32 [[L]], 24
-; CHECK-NEXT:    [[B3:%.*]] = trunc i32 [[S3]] to i16
-; CHECK-NEXT:    [[A1:%.*]] = add nuw nsw i16 [[B0]], [[B1]]
-; CHECK-NEXT:    [[A2:%.*]] = add nuw nsw i16 [[A1]], [[B2]]
-; CHECK-NEXT:    [[A3:%.*]] = add nuw nsw i16 [[A2]], [[B3]]
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32 [[L]] to <4 x i8>
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <4 x i8> [[TMP0]] to <4 x i16>
+; CHECK-NEXT:    [[A3:%.*]] = call i16 @llvm.vector.reduce.add.v4i16(<4 x i16> [[TMP1]])
 ; CHECK-NEXT:    ret i16 [[A3]]
 ;
 start:
@@ -272,23 +205,10 @@ define void @store_bytes_i64(ptr %p, ptr %out) {
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[OUT:%.*]]) {
 ; CHECK-NEXT:  [[START:.*:]]
 ; CHECK-NEXT:    [[L:%.*]] = load i64, ptr [[P]], align 8
-; CHECK-NEXT:    [[T0:%.*]] = trunc i64 [[L]] to i16
-; CHECK-NEXT:    [[B0:%.*]] = and i16 [[T0]], 255
-; CHECK-NEXT:    [[T1:%.*]] = trunc i64 [[L]] to i16
-; CHECK-NEXT:    [[B1:%.*]] = lshr i16 [[T1]], 8
-; CHECK-NEXT:    [[S2:%.*]] = lshr i64 [[L]], 16
-; CHECK-NEXT:    [[T2:%.*]] = trunc i64 [[S2]] to i16
-; CHECK-NEXT:    [[B2:%.*]] = and i16 [[T2]], 255
-; CHECK-NEXT:    [[S3:%.*]] = lshr i64 [[L]], 24
-; CHECK-NEXT:    [[T3:%.*]] = trunc i64 [[S3]] to i16
-; CHECK-NEXT:    [[B3:%.*]] = and i16 [[T3]], 255
-; CHECK-NEXT:    store i16 [[B0]], ptr [[OUT]], align 2
-; CHECK-NEXT:    [[O1:%.*]] = getelementptr i16, ptr [[OUT]], i64 1
-; CHECK-NEXT:    store i16 [[B1]], ptr [[O1]], align 2
-; CHECK-NEXT:    [[O2:%.*]] = getelementptr i16, ptr [[OUT]], i64 2
-; CHECK-NEXT:    store i16 [[B2]], ptr [[O2]], align 2
-; CHECK-NEXT:    [[O3:%.*]] = getelementptr i16, ptr [[OUT]], i64 3
-; CHECK-NEXT:    store i16 [[B3]], ptr [[O3]], align 2
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[L]] to <8 x i8>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i8> [[TMP0]], <8 x i8> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i8> [[TMP1]] to <4 x i16>
+; CHECK-NEXT:    store <4 x i16> [[TMP2]], ptr [[OUT]], align 2
 ; CHECK-NEXT:    ret void
 ;
 start:
@@ -320,23 +240,9 @@ define void @store_halves_i64(ptr %p, ptr %out) {
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[OUT:%.*]]) {
 ; CHECK-NEXT:  [[START:.*:]]
 ; CHECK-NEXT:    [[L:%.*]] = load i64, ptr [[P]], align 8
-; CHECK-NEXT:    [[T0:%.*]] = trunc i64 [[L]] to i32
-; CHECK-NEXT:    [[B0:%.*]] = and i32 [[T0]], 65535
-; CHECK-NEXT:    [[S1:%.*]] = lshr i64 [[L]], 16
-; CHECK-NEXT:    [[T1:%.*]] = trunc i64 [[S1]] to i32
-; CHECK-NEXT:    [[B1:%.*]] = and i32 [[T1]], 65535
-; CHECK-NEXT:    [[S2:%.*]] = lshr i64 [[L]], 32
-; CHECK-NEXT:    [[T2:%.*]] = trunc i64 [[S2]] to i32
-; CHECK-NEXT:    [[B2:%.*]] = and i32 [[T2]], 65535
-; CHECK-NEXT:    [[S3:%.*]] = lshr i64 [[L]], 48
-; CHECK-NEXT:    [[B3:%.*]] = trunc i64 [[S3]] to i32
-; CHECK-NEXT:    store i32 [[B0]], ptr [[OUT]], align 4
-; CHECK-NEXT:    [[O1:%.*]] = getelementptr i32, ptr [[OUT]], i64 1
-; CHECK-NEXT:    store i32 [[B1]], ptr [[O1]], align 4
-; CHECK-NEXT:    [[O2:%.*]] = getelementptr i32, ptr [[OUT]], i64 2
-; CHECK-NEXT:    store i32 [[B2]], ptr [[O2]], align 4
-; CHECK-NEXT:    [[O3:%.*]] = getelementptr i32, ptr [[OUT]], i64 3
-; CHECK-NEXT:    store i32 [[B3]], ptr [[O3]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[L]] to <4 x i16>
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <4 x i16> [[TMP0]] to <4 x i32>
+; CHECK-NEXT:    store <4 x i32> [[TMP1]], ptr [[OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
 start:
@@ -392,30 +298,8 @@ define i16 @sum8_i64_scrambled(ptr %x) {
 ; CHECK-SAME: ptr [[X:%.*]]) {
 ; CHECK-NEXT:  [[START:.*:]]
 ; CHECK-NEXT:    [[L:%.*]] = load i64, ptr [[X]], align 8
-; CHECK-NEXT:    [[S7:%.*]] = lshr i64 [[L]], 56
-; CHECK-NEXT:    [[S4:%.*]] = lshr i64 [[L]], 32
-; CHECK-NEXT:    [[S6:%.*]] = lshr i64 [[L]], 48
-; CHECK-NEXT:    [[S2:%.*]] = lshr i64 [[L]], 16
-; CHECK-NEXT:    [[S1:%.*]] = lshr i64 [[L]], 8
-; CHECK-NEXT:    [[S5:%.*]] = lshr i64 [[L]], 40
-; CHECK-NEXT:    [[S3:%.*]] = lshr i64 [[L]], 24
-; CHECK-NEXT:    [[B7:%.*]] = trunc i64 [[S7]] to i16
-; CHECK-NEXT:    [[T4:%.*]] = trunc i64 [[S4]] to i16
-; CHECK-NEXT:    [[T6:%.*]] = trunc i64 [[S6]] to i16
-; CHECK-NEXT:    [[T2:%.*]] = trunc i64 [[S2]] to i16
-; CHECK-NEXT:    [[T1:%.*]] = trunc i64 [[S1]] to i16
-; CHECK-NEXT:    [[T5:%.*]] = trunc i64 [[S5]] to i16
-; CHECK-NEXT:    [[T0:%.*]] = trunc i64 [[L]] to i16
-; CHECK-NEXT:    [[T3:%.*]] = trunc i64 [[S3]] to i16
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x i16> poison, i16 [[T3]], i64 0
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <8 x i16> [[TMP0]], i16 [[T0]], i64 1
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <8 x i16> [[TMP8]], i16 [[T5]], i64 2
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i16> [[TMP9]], i16 [[T1]], i64 3
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i16> [[TMP3]], i16 [[T2]], i64 4
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i16> [[TMP4]], i16 [[T6]], i64 5
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x i16> [[TMP5]], i16 [[T4]], i64 6
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x i16> [[TMP6]], i16 [[B7]], i64 7
-; CHECK-NEXT:    [[TMP1:%.*]] = and <8 x i16> [[TMP7]], <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 -1>
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[L]] to <8 x i8>
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <8 x i8> [[TMP0]] to <8 x i16>
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> [[TMP1]])
 ; CHECK-NEXT:    ret i16 [[TMP2]]
 ;
@@ -462,35 +346,13 @@ define i16 @sum8_i64_ext_use(ptr %p, ptr %out) {
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[OUT:%.*]]) {
 ; CHECK-NEXT:  [[START:.*:]]
 ; CHECK-NEXT:    [[L:%.*]] = load i64, ptr [[P]], align 8
-; CHECK-NEXT:    [[T0:%.*]] = trunc i64 [[L]] to i16
-; CHECK-NEXT:    [[B0:%.*]] = and i16 [[T0]], 255
-; CHECK-NEXT:    [[T1:%.*]] = trunc i64 [[L]] to i16
-; CHECK-NEXT:    [[B1:%.*]] = lshr i16 [[T1]], 8
-; CHECK-NEXT:    [[S2:%.*]] = lshr i64 [[L]], 16
-; CHECK-NEXT:    [[T2:%.*]] = trunc i64 [[S2]] to i16
-; CHECK-NEXT:    [[B2:%.*]] = and i16 [[T2]], 255
 ; CHECK-NEXT:    [[S3:%.*]] = lshr i64 [[L]], 24
-; CHECK-NEXT:    [[T3:%.*]] = trunc i64 [[S3]] to i16
-; CHECK-NEXT:    [[B3:%.*]] = and i16 [[T3]], 255
-; CHECK-NEXT:    [[S4:%.*]] = lshr i64 [[L]], 32
-; CHECK-NEXT:    [[T4:%.*]] = trunc i64 [[S4]] to i16
-; CHECK-NEXT:    [[B4:%.*]] = and i16 [[T4]], 255
-; CHECK-NEXT:    [[S5:%.*]] = lshr i64 [[L]], 40
-; CHECK-NEXT:    [[T5:%.*]] = trunc i64 [[S5]] to i16
-; CHECK-NEXT:    [[B5:%.*]] = and i16 [[T5]], 255
-; CHECK-NEXT:    [[S6:%.*]] = lshr i64 [[L]], 48
-; CHECK-NEXT:    [[T6:%.*]] = trunc i64 [[S6]] to i16
+; CHECK-NEXT:    [[T6:%.*]] = trunc i64 [[S3]] to i16
 ; CHECK-NEXT:    [[B6:%.*]] = and i16 [[T6]], 255
-; CHECK-NEXT:    [[S7:%.*]] = lshr i64 [[L]], 56
-; CHECK-NEXT:    [[B7:%.*]] = trunc i64 [[S7]] to i16
-; CHECK-NEXT:    [[A1:%.*]] = add nuw nsw i16 [[B0]], [[B1]]
-; CHECK-NEXT:    [[A2:%.*]] = add nuw nsw i16 [[A1]], [[B2]]
-; CHECK-NEXT:    [[A3:%.*]] = add nuw nsw i16 [[A2]], [[B3]]
-; CHECK-NEXT:    [[A4:%.*]] = add nuw nsw i16 [[A3]], [[B4]]
-; CHECK-NEXT:    [[A5:%.*]] = add nuw nsw i16 [[A4]], [[B5]]
-; CHECK-NEXT:    [[A6:%.*]] = add nuw nsw i16 [[A5]], [[B6]]
-; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i16 [[A6]], [[B7]]
-; CHECK-NEXT:    store i16 [[B3]], ptr [[OUT]], align 2
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[L]] to <8 x i8>
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <8 x i8> [[TMP0]] to <8 x i16>
+; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> [[TMP1]])
+; CHECK-NEXT:    store i16 [[B6]], ptr [[OUT]], align 2
 ; CHECK-NEXT:    ret i16 [[TMP2]]
 ;
 start:

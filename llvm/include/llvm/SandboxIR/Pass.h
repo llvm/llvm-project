@@ -102,11 +102,11 @@ class AuxPassArg {
   AuxPassArg(unsigned ArgIdx, AuxPassArgsRegistry *Registry)
       : ArgIdx(ArgIdx), Registry(Registry) {}
   friend class AuxPassArgsRegistry; // For constructor.
-  bool set(bool NewVal);
+  LLVM_ABI bool set(bool NewVal);
 
 public:
-  bool get() const;
-  StringRef getFlagStr() const;
+  LLVM_ABI bool get() const;
+  LLVM_ABI StringRef getFlagStr() const;
   operator bool() const { return get(); }
   bool operator=(bool NewVal) { return set(NewVal); }
 
@@ -133,9 +133,9 @@ class AuxPassArgsRegistry {
 
 public:
   /// Builder for argument with \p Flag.
-  AuxPassArg createArg(StringRef Flag);
+  LLVM_ABI AuxPassArg createArg(StringRef Flag);
   /// Parse the aux argument string \p ArgsStr and set the values.
-  void parse(StringRef ArgsStr);
+  LLVM_ABI void parse(StringRef ArgsStr);
 
 #ifndef NDEBUG
   void print(raw_ostream &OS) const;
