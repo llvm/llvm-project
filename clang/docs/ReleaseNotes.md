@@ -760,6 +760,11 @@ features cannot lower the translation-unit ABI level;
   lookup before asserting that the name is not dependent, avoiding an assertion 
   after an earlier diagnostic has caused the declaration to be unavailable. (#GH220525)
 
+- Fixed an assertion when looking up a name in a dependent type whose canonical
+  type is a class that does not depend on any template parameter, such as
+  ``__typeof(e)`` where ``e`` merely involves a template parameter (e.g.
+  ``__typeof(f(sizeof(T))) a = f(0); a.member;``). (#GH207483)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
