@@ -44,17 +44,6 @@ static bool functionMightHaveBypass(const Stmt *s) {
   return false;
 }
 
-static cir::FastMathFlags
-fastMathFlagsFromFPOptions(clang::FPOptions fpFeatures) {
-  // Other fast-math bits (nnan, ninf, reassoc, ...) are not modeled yet.
-  // `contract` is the bit `-ffp-contract=fast` needs so a later backend in
-  // Standard fusion mode can still form an FMA.
-  cir::FastMathFlags flags = cir::FastMathFlags::none;
-  if (fpFeatures.allowFPContractAcrossStatement())
-    flags = flags | cir::FastMathFlags::contract;
-  return flags;
-}
-
 CIRGenFunction::CIRGenFunction(CIRGenModule &cgm, CIRGenBuilderTy &builder,
                                bool suppressNewContext)
     : CIRGenTypeCache(cgm), cgm{cgm}, builder(builder),
@@ -62,10 +51,19 @@ CIRGenFunction::CIRGenFunction(CIRGenModule &cgm, CIRGenBuilderTy &builder,
   ehStack.setCGF(this);
   shouldEmitLifetimeMarkers = CodeGenUtils::shouldEmitLifetimeMarkers(
       cgm.getCodeGenOpts(), getContext().getLangOpts());
-  builder.setFastMathFlags(fastMathFlagsFromFPOptions(curFPFeatures));
+  setFastMathFlags(curFPFeatures);
 }
 
 CIRGenFunction::~CIRGenFunction() {}
+
+void CIRGenFunction::setFastMathFlags(FPOptions fpFeatures) {
+  // TODO(cir): set the remaining fast-math flags.
+  assert(!cir::MissingFeatures::fastMathFlags());
+  cir::FastMathFlags flags = cir::FastMathFlags::none;
+  if (fpFeatures.allowFPContractAcrossStatement())
+    flags = flags | cir::FastMathFlags::contract;
+  builder.setFastMathFlags(flags);
+}
 
 // This is copied from clang/lib/CodeGen/CodeGenFunction.cpp
 cir::TypeEvaluationKind CIRGenFunction::getEvaluationKind(QualType type) {
@@ -1448,13 +1446,11 @@ void CIRGenFunction::CIRGenFPOptionsRAII::ConstructorHelper(
 
   oldExcept = cgf.builder.getDefaultConstrainedExcept();
   oldRounding = cgf.builder.getDefaultConstrainedRounding();
-  oldFastMathFlags = cgf.builder.getFastMathFlags();
 
   if (oldFPFeatures == fpFeatures)
     return;
 
-  // TODO(cir): create guard to restore fast math configurations.
-  assert(!cir::MissingFeatures::fastMathGuard());
+  oldFastMathFlags = cgf.builder.getFastMathFlags();
 
   llvm::RoundingMode newRoundingMode = fpFeatures.getRoundingMode();
   LangOptions::FPExceptionModeKind newExceptionBehavior =
@@ -1462,11 +1458,8 @@ void CIRGenFunction::CIRGenFPOptionsRAII::ConstructorHelper(
 
   cgf.builder.setDefaultConstrainedRounding(newRoundingMode);
   cgf.builder.setDefaultConstrainedExcept(newExceptionBehavior);
-  cgf.builder.setFastMathFlags(fastMathFlagsFromFPOptions(fpFeatures));
-  restoredFastMathFlags = true;
 
-  // nnan/ninf/reassoc/arcp/afn are still missing. `contract` is applied above.
-  assert(!cir::MissingFeatures::fastMathFlags());
+  cgf.setFastMathFlags(fpFeatures);
 
   assert((cgf.curFuncDecl == nullptr || cgf.builder.getIsFPConstrained() ||
           isa<CXXConstructorDecl>(cgf.curFuncDecl) ||
@@ -1483,8 +1476,8 @@ CIRGenFunction::CIRGenFPOptionsRAII::~CIRGenFPOptionsRAII() {
   cgf.curFPFeatures = oldFPFeatures;
   cgf.builder.setDefaultConstrainedExcept(oldExcept);
   cgf.builder.setDefaultConstrainedRounding(oldRounding);
-  if (restoredFastMathFlags)
-    cgf.builder.setFastMathFlags(oldFastMathFlags);
+  if (oldFastMathFlags)
+    cgf.builder.setFastMathFlags(*oldFastMathFlags);
 }
 
 // TODO(cir): should be shared with LLVM codegen.

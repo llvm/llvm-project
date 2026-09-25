@@ -29,62 +29,13 @@
 #include "clang/CIR/Dialect/IR/CIROpsDialect.cpp.inc"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.cpp.inc"
 #include "clang/CIR/MissingFeatures.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/LogicalResult.h"
-#include "llvm/Support/Mutex.h"
 
 using namespace mlir;
 using namespace cir;
-
-namespace {
-struct CIRBuilderFPDefaults {
-  FenvAttr (*fenv)(void *);
-  FastMathFlagsAttr (*fastMath)(void *);
-  void *self;
-};
-
-llvm::sys::SmartMutex<true> &cirBuilderFPMutex() {
-  static llvm::sys::SmartMutex<true> mutex;
-  return mutex;
-}
-
-llvm::DenseMap<mlir::OpBuilder *, CIRBuilderFPDefaults> &cirBuilderFPMap() {
-  static llvm::DenseMap<mlir::OpBuilder *, CIRBuilderFPDefaults> map;
-  return map;
-}
-} // namespace
-
-void cir::registerCIRBuilderFPDefaults(mlir::OpBuilder *builder,
-                                       FenvAttr (*fenv)(void *),
-                                       FastMathFlagsAttr (*fastMath)(void *),
-                                       void *self) {
-  llvm::sys::SmartScopedLock<true> lock(cirBuilderFPMutex());
-  cirBuilderFPMap()[builder] = {fenv, fastMath, self};
-}
-
-void cir::unregisterCIRBuilderFPDefaults(mlir::OpBuilder *builder) {
-  llvm::sys::SmartScopedLock<true> lock(cirBuilderFPMutex());
-  cirBuilderFPMap().erase(builder);
-}
-
-FenvAttr cir::fenvForBuilder(mlir::OpBuilder &builder) {
-  llvm::sys::SmartScopedLock<true> lock(cirBuilderFPMutex());
-  auto it = cirBuilderFPMap().find(&builder);
-  if (it == cirBuilderFPMap().end())
-    return {};
-  return it->second.fenv(it->second.self);
-}
-
-FastMathFlagsAttr cir::fastMathForBuilder(mlir::OpBuilder &builder) {
-  llvm::sys::SmartScopedLock<true> lock(cirBuilderFPMutex());
-  auto it = cirBuilderFPMap().find(&builder);
-  if (it == cirBuilderFPMap().end())
-    return {};
-  return it->second.fastMath(it->second.self);
-}
 
 //===----------------------------------------------------------------------===//
 // CIR Dialect
@@ -3906,9 +3857,6 @@ LogicalResult cir::CmpOp::verify() {
   if (getFenvAttr() && !cir::isAnyFloatingPointType(getLhs().getType()))
     return emitOpError()
            << "'fenv' is only valid for floating-point comparisons";
-  if (getFastmathAttr() && !cir::isAnyFloatingPointType(getLhs().getType()))
-    return emitOpError()
-           << "'fastmath' is only valid for floating-point comparisons";
   return success();
 }
 
@@ -3920,9 +3868,6 @@ LogicalResult cir::VecCmpOp::verify() {
   if (getFenvAttr() && !cir::isFPOrVectorOfFPType(getLhs().getType()))
     return emitOpError()
            << "'fenv' is only valid for floating-point comparisons";
-  if (getFastmathAttr() && !cir::isFPOrVectorOfFPType(getLhs().getType()))
-    return emitOpError()
-           << "'fastmath' is only valid for floating-point comparisons";
   return success();
 }
 

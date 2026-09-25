@@ -242,7 +242,6 @@ struct MissingFeatures {
   static bool isPPC_FP128Ty() { return false; }
 
   // Fast math.
-  static bool fastMathGuard() { return false; }
   // Should be implemented with a moduleOp level attribute and directly
   // mapped to LLVM - those can be set directly for every relevant LLVM IR
   // dialect operation (log10, ...).

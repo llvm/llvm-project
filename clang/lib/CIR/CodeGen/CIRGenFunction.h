@@ -84,15 +84,18 @@ private:
     bool savedIsFPConstrained;
     LangOptions::FPExceptionModeKind savedExcept;
     llvm::RoundingMode savedRounding;
+    cir::FastMathFlags savedFastMathFlags;
 
     explicit ConstrainedFPRAII(CIRGenBuilderTy &builder)
         : builder(builder), savedIsFPConstrained(builder.getIsFPConstrained()),
           savedExcept(builder.getDefaultConstrainedExcept()),
-          savedRounding(builder.getDefaultConstrainedRounding()) {}
+          savedRounding(builder.getDefaultConstrainedRounding()),
+          savedFastMathFlags(builder.getFastMathFlags()) {}
     ~ConstrainedFPRAII() {
       builder.setIsFPConstrained(savedIsFPConstrained);
       builder.setDefaultConstrainedExcept(savedExcept);
       builder.setDefaultConstrainedRounding(savedRounding);
+      builder.setFastMathFlags(savedFastMathFlags);
     }
   } constrainedFPState{builder};
 
@@ -337,10 +340,11 @@ public:
     clang::FPOptions oldFPFeatures;
     LangOptions::FPExceptionModeKind oldExcept;
     llvm::RoundingMode oldRounding;
-    cir::FastMathFlags oldFastMathFlags = cir::FastMathFlags::none;
-    bool restoredFastMathFlags = false;
+    std::optional<cir::FastMathFlags> oldFastMathFlags;
   };
   clang::FPOptions curFPFeatures;
+
+  void setFastMathFlags(FPOptions fpFeatures);
 
   /// The symbol table maps a variable name to a value in the current scope.
   /// Entering a function creates a new scope, and the function arguments are

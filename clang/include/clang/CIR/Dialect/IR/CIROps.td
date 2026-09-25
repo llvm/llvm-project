@@ -87,32 +87,10 @@ class LLVMLoweringInfo {
   string llvmOp = "";
   string constrainedLLVMIntrinsic = "";
   bit constrainedLLVMIntrinsicHasRoundingMode = true;
-  // Copy an optional `fastmath` attribute onto the lowered LLVM operation.
-  // Floating-point ops that go through `lowerConstrainableFPOp` propagate the
-  // attribute there and do not need this bit.
-  bit propagateFastMathFlags = false;
 }
 
 class LoweringBuilders<dag p> {
   dag dagParams = p;
-}
-
-// Shorter builder for floating-point ops. Omitted `fenv` and `fastmath`
-// attributes come from the active CIR builder (null for any other builder).
-class CIR_DefaultFPAttrsBuilder<dag params, string forwarded>
-    : OpBuilder<params> {
-  let body = !strconcat(
-      "build($_builder, $_state, ", forwarded,
-      ", ::cir::fenvForBuilder($_builder), ::cir::fastMathForBuilder($_builder));");
-}
-
-// Same as CIR_DefaultFPAttrsBuilder for ops that carry fast-math flags but
-// not an fenv attribute.
-class CIR_DefaultFastMathBuilder<dag params, string forwarded>
-    : OpBuilder<params> {
-  let body = !strconcat(
-      "build($_builder, $_state, ", forwarded,
-      ", ::cir::fastMathForBuilder($_builder));");
 }
 
 class CIR_Op<string mnemonic, list<Trait> traits = []> :
@@ -2182,29 +2160,18 @@ def CIR_FNegOp : CIR_UnaryOp<"fneg", CIR_AnyFloatOrVecOfFloatType> {
     The `cir.fneg` operation negates the operand. The operand and result must
     have the same type.
 
-    The optional `fastmath` attribute carries LLVM fast-math flags for this
-    operation. `-ffp-contract=fast` sets `contract`.
-
     Example:
 
     ```
     %1 = cir.fneg %0 : !cir.float
-    %3 = cir.fneg %2 : !cir.double {fastmath = #cir.fastmath<contract>}
+    %3 = cir.fneg %2 : !cir.double
     %5 = cir.fneg %4 : !cir.vector<4 x !cir.float>
     ```
   }];
 
-  let arguments = !con(commonArgs,
-                       (ins OptionalAttr<CIR_FastMathFlagsAttr>:$fastmath));
-
-  let builders = [
-    CIR_DefaultFastMathBuilder<(ins "mlir::Value":$input), "input">
-  ];
-
   let hasFolder = 1;
 
   let llvmOp = "FNegOp";
-  let propagateFastMathFlags = true;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2659,8 +2626,7 @@ def CIR_CmpOp : CIR_Op<"cmp",
     CIR_CmpOpKindAttr:$kind,
     CIR_ComparableType:$lhs,
     CIR_ComparableType:$rhs,
-    OptionalAttr<CIR_FenvAttr>:$fenv,
-    OptionalAttr<CIR_FastMathFlagsAttr>:$fastmath
+    OptionalAttr<CIR_FenvAttr>:$fenv
   );
 
   let results = (outs CIR_BoolType:$result);
@@ -2672,13 +2638,11 @@ def CIR_CmpOp : CIR_Op<"cmp",
   let builders = [
     OpBuilder<(ins "cir::CmpOpKind":$kind, "mlir::Value":$lhs,
                    "mlir::Value":$rhs), [{
-      build($_builder, $_state, kind, lhs, rhs, cir::FenvAttr{},
-            cir::FastMathFlagsAttr{});
+      build($_builder, $_state, kind, lhs, rhs, cir::FenvAttr{});
     }]>,
     OpBuilder<(ins "mlir::Type":$result, "cir::CmpOpKind":$kind,
                    "mlir::Value":$lhs, "mlir::Value":$rhs), [{
-      build($_builder, $_state, result, kind, lhs, rhs, cir::FenvAttr{},
-            cir::FastMathFlagsAttr{});
+      build($_builder, $_state, result, kind, lhs, rhs, cir::FenvAttr{});
     }]>
   ];
 
@@ -2977,22 +2941,23 @@ def CIR_RemOp : CIR_BinaryOp<"rem", CIR_AnyIntOrVecOfIntType> {
 // and result must all be the same floating-point scalar or vector type.
 //
 // The optional `fenv` attribute describes constraints on the floating-point
-// handling of the operation. The optional `fastmath` attribute carries LLVM
-// fast-math flags; `-ffp-contract=fast` sets `contract` here rather than
-// forming `cir.fmuladd`.
+// handling of the operation. The optional `fastmath_flags` attribute holds the
+// fast-math flags of the operation.
 class CIR_FPBinaryOp<string mnemonic, list<Trait> traits = []>
     : CIR_BinaryOp<mnemonic, CIR_AnyFloatOrVecOfFloatType,
                    !listconcat(CIR_FenvOpTraits, traits),
                    CIR_DynamicMemoryEffects> {
   let arguments = !con(commonArgs, (ins
       OptionalAttr<CIR_FenvAttr>:$fenv,
-      OptionalAttr<CIR_FastMathFlagsAttr>:$fastmath));
+      OptionalAttr<CIR_FastMathFlagsAttr>:$fastmath_flags));
 
   let constrainedLLVMIntrinsic = mnemonic;
 
   let builders = [
-    CIR_DefaultFPAttrsBuilder<(ins "mlir::Value":$lhs, "mlir::Value":$rhs),
-                              "lhs, rhs">
+    OpBuilder<(ins "mlir::Value":$lhs, "mlir::Value":$rhs), [{
+      build($_builder, $_state, lhs, rhs, cir::FenvAttr{},
+            cir::FastMathFlagsAttr{});
+    }]>
   ];
 }
 
@@ -6133,8 +6098,7 @@ def CIR_VecCmpOp : CIR_Op<"vec.cmp",
     CIR_CmpOpKindAttr:$kind,
     CIR_VectorType:$lhs,
     CIR_VectorType:$rhs,
-    OptionalAttr<CIR_FenvAttr>:$fenv,
-    OptionalAttr<CIR_FastMathFlagsAttr>:$fastmath
+    OptionalAttr<CIR_FenvAttr>:$fenv
   );
 
   let results = (outs CIR_VectorType:$result);
@@ -6147,8 +6111,7 @@ def CIR_VecCmpOp : CIR_Op<"vec.cmp",
   let builders = [
     OpBuilder<(ins "mlir::Type":$result, "cir::CmpOpKind":$kind,
                    "mlir::Value":$lhs, "mlir::Value":$rhs), [{
-      build($_builder, $_state, result, kind, lhs, rhs, cir::FenvAttr{},
-            cir::FastMathFlagsAttr{});
+      build($_builder, $_state, result, kind, lhs, rhs, cir::FenvAttr{});
     }]>
   ];
 
@@ -7489,14 +7452,15 @@ class CIR_UnaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
              !listconcat([SameOperandsAndResultType], CIR_FenvOpTraits)>
 {
   let arguments = (ins CIR_AnyFloatOrVecOfFloatType:$src,
-                       OptionalAttr<CIR_FenvAttr>:$fenv,
-                       OptionalAttr<CIR_FastMathFlagsAttr>:$fastmath);
+                       OptionalAttr<CIR_FenvAttr>:$fenv);
   let results = (outs CIR_AnyFloatOrVecOfFloatType:$result);
 
   let assemblyFormat = "$src `:` type($src) attr-dict";
 
   let builders = [
-    CIR_DefaultFPAttrsBuilder<(ins "mlir::Value":$src), "src">
+    OpBuilder<(ins "mlir::Value":$src), [{
+      build($_builder, $_state, src, cir::FenvAttr{});
+    }]>
   ];
 
   let llvmOp = llvmOpName;
@@ -7756,7 +7720,6 @@ def CIR_FAbsOp : CIR_UnaryFPToFPBuiltinOp<"fabs", "FAbsOp"> {
   // fabs is exact and does not raise exceptions, so it is always lowered to
   // the plain llvm.fabs intrinsic.
   let constrainedLLVMIntrinsic = "";
-  let propagateFastMathFlags = true;
 }
 
 def CIR_AbsOp : CIR_Op<"abs", [Pure, SameOperandsAndResultType]> {
@@ -7811,8 +7774,7 @@ class CIR_UnaryFPToIntBuiltinOp<string mnemonic, string llvmOpName>
     : CIR_Op<mnemonic, CIR_FenvOpTraits>
 {
   let arguments = (ins CIR_AnyFloatType:$src,
-                       OptionalAttr<CIR_FenvAttr>:$fenv,
-                       OptionalAttr<CIR_FastMathFlagsAttr>:$fastmath);
+                       OptionalAttr<CIR_FenvAttr>:$fenv);
   let results = (outs CIR_IntType:$result);
 
   let summary = [{
@@ -7825,8 +7787,9 @@ class CIR_UnaryFPToIntBuiltinOp<string mnemonic, string llvmOpName>
   }];
 
   let builders = [
-    CIR_DefaultFPAttrsBuilder<(ins "mlir::Type":$result, "mlir::Value":$src),
-                              "result, src">
+    OpBuilder<(ins "mlir::Type":$result, "mlir::Value":$src), [{
+      build($_builder, $_state, result, src, cir::FenvAttr{});
+    }]>
   ];
 
   let llvmOp = llvmOpName;
@@ -7880,8 +7843,7 @@ class CIR_BinaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
   let arguments = (ins
     CIR_AnyFloatOrVecOfFloatType:$lhs,
     CIR_AnyFloatOrVecOfFloatType:$rhs,
-    OptionalAttr<CIR_FenvAttr>:$fenv,
-    OptionalAttr<CIR_FastMathFlagsAttr>:$fastmath
+    OptionalAttr<CIR_FenvAttr>:$fenv
   );
 
   let results = (outs  CIR_AnyFloatOrVecOfFloatType:$result);
@@ -7891,9 +7853,10 @@ class CIR_BinaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
   }];
 
   let builders = [
-    CIR_DefaultFPAttrsBuilder<(ins "mlir::Type":$result, "mlir::Value":$lhs,
-                                   "mlir::Value":$rhs),
-                              "result, lhs, rhs">
+    OpBuilder<(ins "mlir::Type":$result, "mlir::Value":$lhs,
+                   "mlir::Value":$rhs), [{
+      build($_builder, $_state, result, lhs, rhs, cir::FenvAttr{});
+    }]>
   ];
 
   let llvmOp = llvmOpName;
@@ -7908,7 +7871,6 @@ def CIR_CopysignOp : CIR_BinaryFPToFPBuiltinOp<"copysign", "CopySignOp"> {
 
   // copysign is exact and does not raise exceptions, so it is always lowered
   // to the plain llvm.copysign intrinsic.
-  let propagateFastMathFlags = true;
 }
 
 def CIR_FMaxNumOp : CIR_BinaryFPToFPBuiltinOp<"fmaxnum", "MaxNumOp"> {
@@ -8033,8 +7995,7 @@ class CIR_TernaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
     CIR_AnyFloatOrVecOfFloatType:$a,
     CIR_AnyFloatOrVecOfFloatType:$b,
     CIR_AnyFloatOrVecOfFloatType:$c,
-    OptionalAttr<CIR_FenvAttr>:$fenv,
-    OptionalAttr<CIR_FastMathFlagsAttr>:$fastmath
+    OptionalAttr<CIR_FenvAttr>:$fenv
   );
 
   let results = (outs CIR_AnyFloatOrVecOfFloatType:$result);
@@ -8042,9 +8003,10 @@ class CIR_TernaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
   let assemblyFormat = "$a `,` $b `,` $c `:` type($a) attr-dict";
 
   let builders = [
-    CIR_DefaultFPAttrsBuilder<(ins "mlir::Type":$result, "mlir::Value":$a,
-                                   "mlir::Value":$b, "mlir::Value":$c),
-                              "result, a, b, c">
+    OpBuilder<(ins "mlir::Type":$result, "mlir::Value":$a, "mlir::Value":$b,
+                   "mlir::Value":$c), [{
+      build($_builder, $_state, result, a, b, c, cir::FenvAttr{});
+    }]>
   ];
 
   let llvmOp = llvmOpName;

@@ -973,10 +973,6 @@ def CIR_FastMathFlags : CIR_I32BitEnum<
     Describes fast-math flags for CIR operations. This attribute is shared by
     operations with floating-point semantics and is not specific to LLVM intrinsic
     calls.
-
-    `contract` allows a backend in Standard fusion mode to form an FMA across
-    statements. It is what `-ffp-contract=fast` records. `-ffp-contract=on` is
-    represented separately by `cir.fmuladd`.
   }];
 
   let separator = ", ";

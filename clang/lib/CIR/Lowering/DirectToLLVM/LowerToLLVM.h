@@ -77,10 +77,6 @@ private:
   int32_t blockTagOpIndex;
 };
 
-/// Copy a CIR `fastmath` attribute onto an LLVM dialect operation that
-/// implements `FastmathFlagsInterface`. No-op when the CIR op has no flags.
-void propagateFastMathFlags(mlir::Operation *cirOp, mlir::Operation *llvmOp);
-
 mlir::LogicalResult lowerToConstrainedFPIntrinsic(
     mlir::Operation *op, mlir::ValueRange operands, cir::FenvAttr fenv,
     mlir::Type llvmResTy, mlir::ConversionPatternRewriter &rewriter,
@@ -90,7 +86,7 @@ mlir::LogicalResult lowerToConstrainedFPIntrinsic(
 template <typename LLVMOp>
 mlir::LogicalResult lowerConstrainableFPOp(
     mlir::Operation *op, mlir::ValueRange operands, cir::FenvAttr fenv,
-    const mlir::TypeConverter &typeConverter,
+    cir::FastMathFlagsAttr fastmath, const mlir::TypeConverter &typeConverter,
     mlir::ConversionPatternRewriter &rewriter,
     llvm::StringRef constrainedMnemonic, bool hasRoundingMode);
 
