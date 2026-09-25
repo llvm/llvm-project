@@ -4735,7 +4735,19 @@ ItaniumCXXABI::RTTIUniquenessKind ItaniumCXXABI::classifyRTTIUniqueness(
 // Find out how to codegen the complete destructor and constructor
 namespace {
 enum class StructorCodegen { Emit, RAUW, Alias, COMDAT };
+} // namespace
+
+// Returns true if the complete constructor/destructor variant must be retained
+// as a distinct symbol rather than being silently replaced in the IR (RAUW).
+static bool
+structorSymbolMustBeRetained(CodeGenModule &CGM, const CXXMethodDecl *MD,
+                              llvm::GlobalValue::LinkageTypes Linkage) {
+  if (MD->hasAttr<UsedAttr>())
+    return true;
+  return CGM.getCodeGenOpts().KeepInlineFunctions && MD->isInlined() &&
+         Linkage != llvm::GlobalValue::AvailableExternallyLinkage;
 }
+
 static StructorCodegen getCodegenToUse(CodeGenModule &CGM,
                                        const CXXMethodDecl *MD) {
   if (!CGM.getCodeGenOpts().CXXCtorDtorAliases)
@@ -4755,7 +4767,8 @@ static StructorCodegen getCodegenToUse(CodeGenModule &CGM,
   }
   llvm::GlobalValue::LinkageTypes Linkage = CGM.getFunctionLinkage(AliasDecl);
 
-  if (llvm::GlobalValue::isDiscardableIfUnused(Linkage))
+  if (llvm::GlobalValue::isDiscardableIfUnused(Linkage) &&
+      !structorSymbolMustBeRetained(CGM, MD, Linkage))
     return StructorCodegen::RAUW;
 
   // FIXME: Should we allow available_externally aliases?
