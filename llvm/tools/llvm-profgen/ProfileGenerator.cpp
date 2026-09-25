@@ -279,10 +279,10 @@ void ProfileGeneratorBase::findDisjointRanges(RangeSample &DisjointRanges,
     uint64_t BeginCount = UINT64_MAX;
     // Sum of sample counts ending at this point
     uint64_t EndCount = UINT64_MAX;
-    // Is the begin point of a zero range.
-    bool IsZeroRangeBegin = false;
-    // Is the end point of a zero range.
-    bool IsZeroRangeEnd = false;
+    // Number of zero ranges beginning at this point.
+    uint64_t ZeroRangeBeginCount = 0;
+    // Number of zero ranges ending at this point.
+    uint64_t ZeroRangeEndCount = 0;
 
     void addBeginCount(uint64_t Count) {
       if (BeginCount == UINT64_MAX)
@@ -349,15 +349,15 @@ void ProfileGeneratorBase::findDisjointRanges(RangeSample &DisjointRanges,
     BeginPoint.addBeginCount(Count);
     EndPoint.addEndCount(Count);
     if (Count == 0) {
-      BeginPoint.IsZeroRangeBegin = true;
-      EndPoint.IsZeroRangeEnd = true;
+      ++BeginPoint.ZeroRangeBeginCount;
+      ++EndPoint.ZeroRangeEndCount;
     }
   }
 
   // Use UINT64_MAX to indicate there is no existing range between BeginAddress
   // and the next valid address
   uint64_t BeginAddress = UINT64_MAX;
-  int ZeroRangeDepth = 0;
+  uint64_t ZeroRangeDepth = 0;
   uint64_t Count = 0;
   for (const auto &Item : Boundaries) {
     uint64_t Address = Item.first;
@@ -367,7 +367,7 @@ void ProfileGeneratorBase::findDisjointRanges(RangeSample &DisjointRanges,
         DisjointRanges[{BeginAddress, Address - 1}] = Count;
       Count += Point.BeginCount;
       BeginAddress = Address;
-      ZeroRangeDepth += Point.IsZeroRangeBegin;
+      ZeroRangeDepth += Point.ZeroRangeBeginCount;
     }
     if (Point.EndCount != UINT64_MAX) {
       assert((BeginAddress != UINT64_MAX) &&
@@ -376,7 +376,9 @@ void ProfileGeneratorBase::findDisjointRanges(RangeSample &DisjointRanges,
       assert(Count >= Point.EndCount && "Mismatched live ranges");
       Count -= Point.EndCount;
       BeginAddress = Address + 1;
-      ZeroRangeDepth -= Point.IsZeroRangeEnd;
+      assert(ZeroRangeDepth >= Point.ZeroRangeEndCount &&
+             "Mismatched zero ranges");
+      ZeroRangeDepth -= Point.ZeroRangeEndCount;
       // If the remaining count is zero and it's no longer in a zero range, this
       // means we consume all the ranges before, thus mark BeginAddress as
       // UINT64_MAX. e.g. supposing we have two non-overlapping ranges:
@@ -506,14 +508,22 @@ void ProfileGenerator::generateProfile() {
                      TimeProfGen);
   collectProfiledFunctions();
 
-  if (Binary->usePseudoProbes()) {
+  UsePseudoProbeProfile = Binary->usePseudoProbes();
+  if (SampleCounters)
+    for (const auto &CI : *SampleCounters)
+      if (CI.second.BasicSampleCounter) {
+        UsePseudoProbeProfile = false;
+        break;
+      }
+
+  if (UsePseudoProbeProfile) {
     Binary->decodePseudoProbe();
     if (LoadFunctionFromSymbol)
       Binary->loadSymbolsFromPseudoProbe();
   }
 
   if (SampleCounters) {
-    if (Binary->usePseudoProbes()) {
+    if (UsePseudoProbeProfile) {
       generateProbeBasedProfile();
     } else {
       generateLineNumBasedProfile();
@@ -559,8 +569,7 @@ void ProfileGenerator::generateLineNumBasedProfile() {
   assert(SampleCounters->size() == 1 &&
          "Must have one entry for profile generation.");
   const SampleCounter &SC = SampleCounters->begin()->second;
-  // Fill in function body samples
-  populateBodySamplesForAllFunctions(SC.RangeCounter);
+  populateBodySamplesForAllFunctions(SC);
   // Fill in boundary sample counts as well as call site samples for calls
   populateBoundarySamplesForAllFunctions(SC.BranchCounter);
   populateTypeSamplesForAllFunctions(SC.DataAccessCounter);
@@ -642,7 +651,7 @@ FunctionSamples &ProfileGenerator::getLeafProfileAndAddTotalSamples(
   FunctionSamples *FunctionProfile =
       &getTopLevelFunctionProfile(FrameVec[0].Func);
   FunctionProfile->addTotalSamples(Count);
-  if (Binary->usePseudoProbes()) {
+  if (UsePseudoProbeProfile) {
     const auto *FuncDesc = Binary->getFuncDescForGUID(
         FunctionProfile->getFunction().getHashCode());
     FunctionProfile->setFunctionHash(FuncDesc->FuncHash);
@@ -661,7 +670,7 @@ FunctionSamples &ProfileGenerator::getLeafProfileAndAddTotalSamples(
     }
     FunctionProfile = &Ret.first->second;
     FunctionProfile->addTotalSamples(Count);
-    if (Binary->usePseudoProbes()) {
+    if (UsePseudoProbeProfile) {
       const auto *FuncDesc = Binary->getFuncDescForGUID(
           FunctionProfile->getFunction().getHashCode());
       FunctionProfile->setFunctionHash(FuncDesc->FuncHash);
@@ -672,7 +681,8 @@ FunctionSamples &ProfileGenerator::getLeafProfileAndAddTotalSamples(
 }
 
 RangeSample
-ProfileGenerator::preprocessRangeCounter(const RangeSample &RangeCounter) {
+ProfileGenerator::preprocessRangeCounter(const RangeSample &RangeCounter,
+                                         const BasicSample *BasicSamples) {
   RangeSample Ranges(RangeCounter.begin(), RangeCounter.end());
   if (FillZeroForAllFuncs) {
     for (auto &FuncI : Binary->getAllBinaryFunctions()) {
@@ -690,6 +700,10 @@ ProfileGenerator::preprocessRangeCounter(const RangeSample &RangeCounter) {
       for (const auto &Range : Binary->getRanges(StartAddress))
         Ranges[{Range.first, Range.second - 1}] += 0;
     }
+    if (BasicSamples)
+      for (const auto &[Address, Count] : *BasicSamples)
+        for (const auto &Range : Binary->getRanges(Address))
+          Ranges[{Range.first, Range.second - 1}] += 0;
   }
   RangeSample DisjointRanges;
   findDisjointRanges(DisjointRanges, Ranges);
@@ -697,8 +711,29 @@ ProfileGenerator::preprocessRangeCounter(const RangeSample &RangeCounter) {
 }
 
 void ProfileGenerator::populateBodySamplesForAllFunctions(
-    const RangeSample &RangeCounter) {
-  for (const auto &Range : preprocessRangeCounter(RangeCounter)) {
+    const SampleCounter &SC) {
+  auto AddInstructionSample = [&](uint64_t Address, uint64_t Count) {
+    const SampleContextFrameVector FrameVec =
+        Binary->getFrameLocationStack(Address);
+    if (FrameVec.empty())
+      return;
+    // FIXME: As accumulating total count per instruction caused some
+    // regression, we changed to accumulate total count per byte as a
+    // workaround. Tuning hotness threshold on the compiler side might be
+    // necessary in the future.
+    FunctionSamples &FunctionProfile = getLeafProfileAndAddTotalSamples(
+        FrameVec, Count * Binary->getInstSize(Address));
+    updateBodySamplesforFunctionProfile(FunctionProfile, FrameVec.back(),
+                                        Count);
+  };
+
+  if (SC.BasicSampleCounter)
+    for (const auto &[Address, Count] : *SC.BasicSampleCounter)
+      AddInstructionSample(Address, Count);
+
+  for (const auto &Range : preprocessRangeCounter(
+           SC.RangeCounter,
+           SC.BasicSampleCounter ? &*SC.BasicSampleCounter : nullptr)) {
     uint64_t RangeBegin = Range.first.first;
     uint64_t RangeEnd = Range.first.second;
     uint64_t Count = Range.second;
@@ -711,18 +746,7 @@ void ProfileGenerator::populateBodySamplesForAllFunctions(
       continue;
 
     do {
-      const SampleContextFrameVector FrameVec =
-          Binary->getFrameLocationStack(IP.Address);
-      if (!FrameVec.empty()) {
-        // FIXME: As accumulating total count per instruction caused some
-        // regression, we changed to accumulate total count per byte as a
-        // workaround. Tuning hotness threshold on the compiler side might be
-        // necessary in the future.
-        FunctionSamples &FunctionProfile = getLeafProfileAndAddTotalSamples(
-            FrameVec, Count * Binary->getInstSize(IP.Address));
-        updateBodySamplesforFunctionProfile(FunctionProfile, FrameVec.back(),
-                                            Count);
-      }
+      AddInstructionSample(IP.Address, Count);
     } while (IP.advance() && IP.Address <= RangeEnd);
   }
 }

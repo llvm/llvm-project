@@ -1,0 +1,189 @@
+## Only probed_anchor has a pseudo-probe descriptor and a block probe.
+## unprobed_sampled has source offsets 0 and 1; main has offset 0 with base
+## discriminators 0 and 1.
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data: ELFDATA2LSB
+  Type: ET_EXEC
+  Machine: EM_AARCH64
+  Entry: 0x21014c
+ProgramHeaders:
+  - Type: PT_LOAD
+    Flags: [ PF_R, PF_X ]
+    Offset: 0
+    VAddr: 0x210000
+    FileSize: 0x164
+    MemSize: 0x164
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x210120
+    Offset: 0x120
+    AddressAlign: 4
+    ## probed_anchor: stp; mov; add w0, w0, #7; ldp; ret.
+    ## unprobed_sampled: stp; mov; add w8, w0, w0, lsl #1;
+    ##                   add w0, w8, #1; ldp; ret.
+    ## main: stp; mov; mov w0, #4; bl probed_anchor; ldp; b unprobed_sampled.
+    Content: 'FD7BBFA9FD030091001C0011FD7BC1A8C0035FD6FD7BBFA9FD0300910804000B00050011FD7BC1A8C0035FD6FD7BBFA9FD03009180008052F2FFFF97FD7BC1A8F5FFFF17'
+  - Name: .pseudo_probe_desc
+    Type: SHT_PROGBITS
+    ## GUID 0x659ca2661d55e251, CFG hash 0xffffffff, name "probed_anchor".
+    Content: '51E2551D66A29C65FFFFFFFF000000000D70726F6265645F616E63686F72'
+  - Name: .pseudo_probe
+    Type: SHT_PROGBITS
+    Flags: [ SHF_LINK_ORDER ]
+    Link: .text
+    ## The same GUID, one probe, zero inlinees, block probe 1 at function + 8.
+    Content: '51E2551D66A29C650100018008'
+Symbols:
+  - Name: probed_anchor
+    Type: STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
+    Value: 0x210120
+    Size: 0x14
+  - Name: unprobed_sampled
+    Type: STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
+    Value: 0x210134
+    Size: 0x18
+  - Name: main
+    Type: STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
+    Value: 0x21014c
+    Size: 0x18
+DWARF:
+  debug_abbrev:
+    - Table:
+        - Code: 1
+          Tag: DW_TAG_compile_unit
+          Children: DW_CHILDREN_yes
+          Attributes:
+            - Attribute: DW_AT_name
+              Form: DW_FORM_string
+            - Attribute: DW_AT_stmt_list
+              Form: DW_FORM_sec_offset
+            - Attribute: DW_AT_low_pc
+              Form: DW_FORM_addr
+            - Attribute: DW_AT_high_pc
+              Form: DW_FORM_data4
+        - Code: 2
+          Tag: DW_TAG_subprogram
+          Children: DW_CHILDREN_no
+          Attributes:
+            - Attribute: DW_AT_name
+              Form: DW_FORM_string
+            - Attribute: DW_AT_low_pc
+              Form: DW_FORM_addr
+            - Attribute: DW_AT_high_pc
+              Form: DW_FORM_data4
+            - Attribute: DW_AT_decl_file
+              Form: DW_FORM_data1
+            - Attribute: DW_AT_decl_line
+              Form: DW_FORM_data1
+  debug_info:
+    - Version: 4
+      AddrSize: 8
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: probed.c
+            - Value: 0
+            - Value: 0x210120
+            - Value: 0x14
+        - AbbrCode: 2
+          Values:
+            - CStr: probed_anchor
+            - Value: 0x210120
+            - Value: 0x14
+            - Value: 1
+            - Value: 1
+        - AbbrCode: 0
+    - Version: 4
+      AbbrevTableID: 0
+      AddrSize: 8
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: unprobed.c
+            - Value: 0x3b
+            - Value: 0x210134
+            - Value: 0x30
+        - AbbrCode: 2
+          Values:
+            - CStr: unprobed_sampled
+            - Value: 0x210134
+            - Value: 0x18
+            - Value: 1
+            - Value: 3
+        - AbbrCode: 2
+          Values:
+            - CStr: main
+            - Value: 0x21014c
+            - Value: 0x18
+            - Value: 1
+            - Value: 7
+        - AbbrCode: 0
+  debug_line:
+    - Version: 4
+      MinInstLength: 1
+      MaxOpsPerInst: 1
+      DefaultIsStmt: 1
+      LineBase: 251
+      LineRange: 14
+      Files:
+        - Name: probed.c
+          DirIdx: 0
+          ModTime: 0
+          Length: 0
+      Opcodes:
+        - Opcode: DW_LNS_extended_op
+          SubOpcode: DW_LNE_set_address
+          Data: 0x210120
+        - Opcode: DW_LNS_copy
+        - Opcode: DW_LNS_advance_pc
+          Data: 0x14
+        - Opcode: DW_LNS_extended_op
+          SubOpcode: DW_LNE_end_sequence
+    - Version: 4
+      MinInstLength: 1
+      MaxOpsPerInst: 1
+      DefaultIsStmt: 1
+      LineBase: 251
+      LineRange: 14
+      Files:
+        - Name: unprobed.c
+          DirIdx: 0
+          ModTime: 0
+          Length: 0
+      Opcodes:
+        - Opcode: DW_LNS_extended_op
+          SubOpcode: DW_LNE_set_address
+          Data: 0x210134
+        - Opcode: DW_LNS_advance_line
+          SData: 2
+        - Opcode: DW_LNS_copy
+        - Opcode: DW_LNS_advance_pc
+          Data: 8
+        - Opcode: DW_LNS_advance_line
+          SData: 1
+        - Opcode: DW_LNS_copy
+        - Opcode: DW_LNS_advance_pc
+          Data: 0x10
+        - Opcode: DW_LNS_advance_line
+          SData: 3
+        - Opcode: DW_LNS_copy
+        - Opcode: DW_LNS_advance_pc
+          Data: 0x10
+        - Opcode: DW_LNS_extended_op
+          SubOpcode: DW_LNE_set_discriminator
+          Data: 2
+        - Opcode: DW_LNS_copy
+        - Opcode: DW_LNS_advance_pc
+          Data: 8
+        - Opcode: DW_LNS_extended_op
+          SubOpcode: DW_LNE_end_sequence

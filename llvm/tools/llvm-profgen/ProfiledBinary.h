@@ -195,6 +195,7 @@ using AddressRange = std::pair<uint64_t, uint64_t>;
 // The parsed MMap event
 struct MMapEvent {
   int64_t PID = 0;
+  int32_t TID = 0;
   uint64_t Address = 0;
   uint64_t Size = 0;
   uint64_t Offset = 0;
@@ -225,6 +226,8 @@ class ProfiledBinary {
   std::vector<uint64_t> PreferredTextSegmentAddresses;
   // The file offset of each executable segment.
   std::vector<uint64_t> TextSegmentOffsets;
+  // The file-backed size of each executable ELF segment.
+  std::vector<uint64_t> TextSegmentFileSizes;
 
   // Mutiple MC component info
   std::unique_ptr<const MCRegisterInfo> MRI;
@@ -476,6 +479,9 @@ public:
   }
   const std::vector<uint64_t> &getTextSegmentOffsets() const {
     return TextSegmentOffsets;
+  }
+  const std::vector<uint64_t> &getTextSegmentFileSizes() const {
+    return TextSegmentFileSizes;
   }
 
   uint64_t getInstSize(uint64_t Address) const {

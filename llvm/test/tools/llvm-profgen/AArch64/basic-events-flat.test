@@ -1,0 +1,320 @@
+; REQUIRES: aarch64-registered-target
+; UNSUPPORTED: system-windows
+
+; RUN: rm -rf %t && split-file %s %t
+; RUN: yaml2obj %S/Inputs/basic-events.yaml -o %t/binary
+; RUN: llvm-dwarfdump --verify %t/binary
+
+; Two processes map the same binary at different runtime addresses. Basic
+; samples must be relocated to binary addresses before they are aggregated.
+; RUN: llvm-profgen --format=text --basic-events \
+; RUN:   --perfscript=%t/flat.perfscript \
+; RUN:   --binary=%t/binary \
+; RUN:   --output=%t/flat.raw --skip-symbolization
+; RUN: FileCheck %s --match-full-lines --check-prefix=BASIC-RAW \
+; RUN:   --input-file=%t/flat.raw
+; RUN: llvm-profgen --format=text --basic-events \
+; RUN:   --perfscript=%t/flat.perfscript \
+; RUN:   --binary=%t/binary \
+; RUN:   --profile-summary-cold-count=0 --output=%t/flat.direct
+; RUN: llvm-profgen --format=text --unsymbolized-profile=%t/flat.raw \
+; RUN:   --binary=%t/binary \
+; RUN:   --profile-summary-cold-count=0 --output=%t/flat.roundtrip
+; RUN: cmp %t/flat.direct %t/flat.roundtrip
+; RUN: FileCheck %s --match-full-lines --check-prefix=BASIC-PROFILE \
+; RUN:   --input-file=%t/flat.direct
+
+; An explicit PID filter must select the mapping and samples owned by that PID.
+; RUN: llvm-profgen --format=text --basic-events --pid=200 \
+; RUN:   --perfscript=%t/flat.perfscript \
+; RUN:   --binary=%t/binary \
+; RUN:   --output=%t/pid.raw --skip-symbolization
+; RUN: FileCheck %s --match-full-lines --check-prefix=PID-RAW \
+; RUN:   --input-file=%t/pid.raw
+
+; PID 200 maps another executable at the same address as PID 100's target.
+; Each sample uses the mapping owned by its PID.
+; RUN: llvm-profgen --format=text --basic-events \
+; RUN:   --perfscript=%t/colliding-pids.perfscript \
+; RUN:   --binary=%t/binary \
+; RUN:   --output=%t/colliding-pids.raw --skip-symbolization
+; RUN: FileCheck %s --match-full-lines --check-prefix=SINGLE-RAW \
+; RUN:   --input-file=%t/colliding-pids.raw
+
+; A mapping may end exactly at the top of the address space, but it must not
+; extend beyond it.
+; RUN: not llvm-profgen --format=text --basic-events \
+; RUN:   --perfscript=%t/wrapping-mmap.perfscript \
+; RUN:   --binary=%t/binary \
+; RUN:   --output=%t/invalid 2>&1 | FileCheck %s --check-prefix=MMAP-OVERFLOW
+
+; Basic samples use DWARF line mapping in binaries with pseudo-probes.
+; RUN: yaml2obj %S/Inputs/basic-events-mixed-pseudoprobe.yaml \
+; RUN:   -o %t/basic-events-mixed-pseudoprobe.perfbin
+; RUN: llvm-profgen --format=text --basic-events \
+; RUN:   --perfscript=%t/pseudo.perfscript \
+; RUN:   --binary=%t/basic-events-mixed-pseudoprobe.perfbin \
+; RUN:   --profile-summary-cold-count=0 --output=%t/pseudo.prof
+; RUN: FileCheck %s --match-full-lines --check-prefix=PSEUDO \
+; RUN:   --implicit-check-not='!CFGChecksum' --input-file=%t/pseudo.prof
+
+; Samples populate both an out-of-line function and its inline copy. Zero-fill
+; retains the inline copy's unsampled DWARF line-zero location as a wrapped offset.
+; RUN: llvm-profgen --format=text \
+; RUN:   --unsymbolized-profile=%t/invalid-dwarf.raw \
+; RUN:   --binary=%t/binary \
+; RUN:   --profile-summary-cold-count=0 --output=%t/invalid-dwarf.prof
+; RUN: FileCheck %s --match-full-lines --check-prefix=DWARF \
+; RUN:   --input-file=%t/invalid-dwarf.prof
+
+; Duplicate entries add up to five samples at 0x5dc and seven at 0x5e0.
+; Both instructions are four bytes long and map to bar's line offset 4:
+; total samples are 48 and the line count is the maximum address count, seven.
+; RUN: llvm-profgen --format=text --unsymbolized-profile=%t/duplicates.raw \
+; RUN:   --binary=%t/binary \
+; RUN:   --profile-summary-cold-count=0 --output=%t/duplicates.prof
+; RUN: FileCheck %s --match-full-lines --check-prefix=DUPLICATES \
+; RUN:   --input-file=%t/duplicates.prof
+
+; At 0x6b4, the fixture's discriminator 514 encodes base discriminator one
+; and duplication factor two. Three samples of this four-byte instruction
+; give total twelve and body count six at line offset 3, discriminator one.
+; RUN: llvm-profgen --format=text --unsymbolized-profile=%t/duplication.raw \
+; RUN:   --binary=%t/binary \
+; RUN:   --profile-summary-cold-count=0 --output=%t/duplication.prof
+; RUN: FileCheck %s --match-full-lines --check-prefix=DUPLICATION \
+; RUN:   --input-file=%t/duplication.prof
+
+; A single-instruction LBR range uses the same total and body weighting.
+; RUN: llvm-profgen --format=text --unsymbolized-profile=%t/duplication-lbr.raw \
+; RUN:   --binary=%t/binary \
+; RUN:   --profile-summary-cold-count=0 --output=%t/duplication-lbr.prof
+; RUN: FileCheck %s --match-full-lines --check-prefix=DUPLICATION \
+; RUN:   --input-file=%t/duplication-lbr.prof
+
+; Duplicate raw records are merged. Their count must not wrap on overflow.
+; RUN: not llvm-profgen --format=text \
+; RUN:   --unsymbolized-profile=%t/overflow.raw \
+; RUN:   --binary=%t/binary --output=%t/invalid \
+; RUN:   2>&1 | FileCheck %s --check-prefix=OVERFLOW
+
+; After rebasing, a raw address must identify a decoded instruction.
+; RUN: not llvm-profgen --unsymbolized-profile=%t/rebase-overflow.raw \
+; RUN:   --binary=%t/binary --output=%t/invalid \
+; RUN:   2>&1 | FileCheck %s --check-prefix=REBASE-OVERFLOW
+
+; Validate data-access option combinations for both Basic input routes.
+; RUN: not llvm-profgen --basic-events --perfscript=%t/flat.perfscript \
+; RUN:   --data-access-perftrace=%s --binary=%t/binary \
+; RUN:   --output=%t/invalid 2>&1 | FileCheck %s --check-prefix=DATA-ACCESS-PERF
+; RUN: not llvm-profgen --unsymbolized-profile=%t/flat.raw \
+; RUN:   --data-access-perftrace=%s --binary=%t/binary \
+; RUN:   --output=%t/invalid 2>&1 | FileCheck %s --check-prefix=DATA-ACCESS-RAW
+
+; The fake perf program checks the documented two-pass perf.data invocation.
+; Discovery uses pid,time with a command name that resembles an event marker.
+; Other-file mappings first identify workers 601, 602 and 603. Worker 601's
+; executable MMAP2 precedes the target mmap; workers 602 and 603 use read-only
+; MMAP2 and MMAP records. Each worker outlives the previous thread, and samples
+; must keep using the original target mapping. Children 650 and 700 inherit it.
+; The exact discovery list excludes unrelated PIDs 900 and 950. Samples after
+; final thread exit and exec check mapping cleanup. The synthetic PID-reuse
+; suffix models partial process history and checks discovery cleanup.
+; RUN: chmod +x %t/perfdir/perf
+; RUN: %t/perfdir/perf script --show-mmap-events --show-task-events \
+; RUN:   -F pid,ip,time -G -i %s --pid 600,650,700 > %t/lifetime.perfscript
+; RUN: llvm-profgen --basic-events --perfscript=%t/lifetime.perfscript \
+; RUN:   --binary=%t/binary \
+; RUN:   --output=%t/lifetime.raw --skip-symbolization
+; RUN: FileCheck %s --match-full-lines --check-prefix=PERFDATA-RAW \
+; RUN:   --input-file=%t/lifetime.raw
+; RUN: env PATH=%t/perfdir llvm-profgen --format=text --basic-events \
+; RUN:   --perfdata=%s --binary=%t/binary \
+; RUN:   --output=%t/perfdata.raw --skip-symbolization
+; RUN: FileCheck %s --match-full-lines --check-prefix=PERFDATA-RAW \
+; RUN:   --input-file=%t/perfdata.raw
+; RUN: env PATH=%t/perfdir llvm-profgen --format=text --basic-events --pid=700 \
+; RUN:   --perfdata=%s --binary=%t/binary \
+; RUN:   --output=%t/child.raw --skip-symbolization
+; RUN: FileCheck %s --match-full-lines --check-prefix=SINGLE-RAW \
+; RUN:   --input-file=%t/child.raw
+
+; Both mapping formats require a TID representable in the thread-tracking set.
+; RUN: sed 's/MMAP2 600\/602/MMAP2 600\/2147483648/' %t/lifetime.perfscript > %t/mmap2-tid.perfscript
+; RUN: not llvm-profgen --basic-events --perfscript=%t/mmap2-tid.perfscript \
+; RUN:   --binary=%t/binary --output=%t/invalid \
+; RUN:   2>&1 | FileCheck %s --check-prefix=INVALID-MMAP
+; RUN: sed 's/MMAP 600\/603/MMAP 600\/2147483648/' %t/lifetime.perfscript > %t/mmap-tid.perfscript
+; RUN: not llvm-profgen --basic-events --perfscript=%t/mmap-tid.perfscript \
+; RUN:   --binary=%t/binary --output=%t/invalid \
+; RUN:   2>&1 | FileCheck %s --check-prefix=INVALID-MMAP
+
+; BASIC-RAW:      # llvm-profgen-content: basic-event
+; BASIC-RAW-NEXT: 2
+; BASIC-RAW-NEXT: 5b0:2
+; BASIC-RAW-NEXT: 5dc:3
+; BASIC-RAW-NOT:  {{.}}
+
+; BASIC-PROFILE:      bar:20:0
+; BASIC-PROFILE-NEXT:  0: 2
+; BASIC-PROFILE-NEXT:  1: 0
+; BASIC-PROFILE-NEXT:  2: 0
+; BASIC-PROFILE-NEXT:  4: 3
+; BASIC-PROFILE-NEXT:  5: 0
+; BASIC-PROFILE-NOT:  {{.}}
+
+; PID-RAW:      # llvm-profgen-content: basic-event
+; PID-RAW-NEXT: 1
+; PID-RAW-NEXT: 5dc:3
+; PID-RAW-NOT:  {{.}}
+
+; PSEUDO:      probed_anchor:4:0
+; PSEUDO-NEXT:  0: 1
+; PSEUDO-NOT:  {{.}}
+
+; DUPLICATES:      bar:48:0
+; DUPLICATES-NEXT:  0: 0
+; DUPLICATES-NEXT:  1: 0
+; DUPLICATES-NEXT:  2: 0
+; DUPLICATES-NEXT:  4: 7
+; DUPLICATES-NEXT:  5: 0
+; DUPLICATES-NOT:  {{.}}
+
+; DUPLICATION: partition_pivot_last:12:0
+; DUPLICATION:  3.1: 6
+
+; DWARF: foo:140:0
+; DWARF:  4: 30
+; DWARF:  3.1: bar:20
+; DWARF-NEXT:   1: 5
+; DWARF-NEXT:   65535: 0
+; DWARF: bar:80:0
+; DWARF:  1: 20
+
+; OVERFLOW: Invalid {{(basic event )?}}raw profile at line 4
+; REBASE-OVERFLOW: Invalid raw profile at line 3
+
+; MMAP-OVERFLOW: Invalid perf script mmap event
+; INVALID-MMAP: Invalid perf script mmap event
+
+; DATA-ACCESS-PERF: --data-access-perftrace cannot be used with --basic-events
+; DATA-ACCESS-RAW: --data-access-perftrace cannot be used with Basic samples
+
+; PERFDATA-RAW:      # llvm-profgen-content: basic-event
+; PERFDATA-RAW-NEXT: 1
+; PERFDATA-RAW-NEXT: 5b0:4
+; PERFDATA-RAW-NOT:  {{.}}
+
+; SINGLE-RAW:      # llvm-profgen-content: basic-event
+; SINGLE-RAW-NEXT: 1
+; SINGLE-RAW-NEXT: 5b0:1
+; SINGLE-RAW-NOT:  {{.}}
+
+;--- flat.perfscript
+PERF_RECORD_MMAP2 100/100: [0x500000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/binary
+100 5005b0
+100 5005b0
+PERF_RECORD_MMAP2 200/200: [0x600000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/binary
+200 6005dc
+200 6005dc
+200 6005dc
+
+;--- colliding-pids.perfscript
+PERF_RECORD_MMAP2 100/100: [0x500000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/binary
+PERF_RECORD_MMAP2 200/200: [0x500000(0x1000) @ 0 00:1d 2 1]: r-xp /tmp/other.perfbin
+100 5005b0
+200 5005b0
+
+;--- wrapping-mmap.perfscript
+PERF_RECORD_MMAP2 100/100: [0xfffffffffffffa40(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/binary
+100 fffffffffffffff0
+
+;--- pseudo.perfscript
+PERF_RECORD_MMAP2 595196/595196: [0x210120(0x44) @ 0x120 00:1d 1 1]: r-xp /tmp/basic-events-mixed-pseudoprobe.perfbin
+595196 210128
+
+;--- overflow.raw
+# llvm-profgen-content: basic-event
+2
+5b0:18446744073709551615
+5b0:1
+
+;--- rebase-overflow.raw
+# llvm-profgen-content: basic-event
+1
+ffffffffffffffff:1
+
+;--- duplicates.raw
+# llvm-profgen-content: basic-event
+3
+5dc:2
+5dc:3
+5e0:7
+;--- duplication.raw
+# llvm-profgen-content: basic-event
+1
+6b4:3
+;--- duplication-lbr.raw
+1
+6b4-6b4:3
+0
+;--- invalid-dwarf.raw
+# llvm-profgen-content: basic-event
+3
+5b4:20
+624:5
+628:30
+;--- perfdir/perf
+#!/bin/sh
+if [ "$1" != "script" ] || [ "$2" != "--show-mmap-events" ] || \
+   [ "$3" != "--show-task-events" ] || [ "$4" != "-F" ]; then
+  exit 1
+fi
+case "$5" in
+pid,time)
+  if [ "$#" -ne 7 ] || [ "$6" != "-i" ] || [ ! -f "$7" ]; then
+    exit 1
+  fi
+  ;;
+pid,ip,time)
+  if [ "$#" -ne 10 ] || [ "$6" != "-G" ] || [ "$7" != "-i" ] || \
+     [ ! -f "$8" ] || [ "$9" != "--pid" ] || [ "${10}" != "600,650,700" ]; then
+    exit 1
+  fi
+  ;;
+*) exit 1 ;;
+esac
+echo "0 0.000000: PERF_RECORD_COMM: PERF_RECORD_XYZ:600/600"
+echo "PERF_RECORD_MMAP2 900/900: [0x800000(0x1000) @ 0 00:1d 2 1]: r-xp /tmp/other.perfbin"
+echo "900 0.100000: PERF_RECORD_FORK(950:950):(900:900)"
+echo "PERF_RECORD_MMAP2 600/601: [0x400000(0x1000) @ 0 00:1d 2 1]: r-xp /tmp/other.perfbin"
+echo "PERF_RECORD_MMAP2 600/600: [0x500000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/binary"
+echo "600 1.000000: PERF_RECORD_EXIT(600:600):(1:1)"
+if [ "$5" = "pid,ip,time" ]; then
+  echo "600 1.010000: 5005b0"
+fi
+echo "600 1.020000: PERF_RECORD_MMAP2 600/602: [0x600000(0x1000) @ 0 00:1d 2 1]: r--p /tmp/other.perfbin"
+echo "600 1.030000: PERF_RECORD_EXIT(600:601):(1:1)"
+if [ "$5" = "pid,ip,time" ]; then
+  echo "600 1.040000: 5005b0"
+fi
+echo "600 1.045000: PERF_RECORD_FORK(650:650):(600:602)"
+echo "600 1.050000: PERF_RECORD_MMAP 600/603: [0x700000(0x1000) @ 0]: r /tmp/other.perfbin"
+echo "600 1.060000: PERF_RECORD_EXIT(600:602):(1:1)"
+if [ "$5" = "pid,ip,time" ]; then
+  echo "600 1.070000: 5005b0"
+fi
+echo "600 1.100000: PERF_RECORD_FORK(700:700):(600:603)"
+if [ "$5" = "pid,ip,time" ]; then
+  echo "700 1.300000: 5005b0"
+fi
+echo "600 1.400000: PERF_RECORD_EXIT(600:603):(1:1)"
+if [ "$5" = "pid,ip,time" ]; then
+  echo "600 1.410000: 5005dc"
+fi
+echo "600 1.500000: PERF_RECORD_COMM: replacement:600/600"
+echo "600 1.550000: PERF_RECORD_FORK(800:800):(600:600)"
+echo "700 1.600000: PERF_RECORD_COMM exec: replacement:700/700"
+if [ "$5" = "pid,ip,time" ]; then
+  echo "700 1.800000: 5005e0"
+fi
