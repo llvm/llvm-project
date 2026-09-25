@@ -108,6 +108,11 @@ inline specific_intval<0> m_SpecificInt(uint64_t V) {
   return specific_intval<0>(is_specific_int(APInt(64, V)));
 }
 
+inline specific_intval<0> m_SpecificSInt(int64_t V) {
+  return specific_intval<0>(
+      is_specific_int(APInt(64, V, /*isSigned=*/true), /*IsSigned=*/true));
+}
+
 struct is_all_ones {
   bool isValue(const APInt &C) const { return C.isAllOnes(); }
 };
@@ -201,6 +206,11 @@ inline match_bind<VPIRValue> m_VPIRValue(VPIRValue *&V) { return V; }
 /// Match a VPSingleDefRecipe, capturing if we match.
 inline match_bind<VPSingleDefRecipe>
 m_VPSingleDefRecipe(VPSingleDefRecipe *&V) {
+  return V;
+}
+
+/// Match a VPInstruction, capturing if we match.
+inline match_bind<VPInstruction> m_VPInstruction(VPInstruction *&V) {
   return V;
 }
 
@@ -658,6 +668,12 @@ m_FMul(const Op0_t &Op0, const Op1_t &Op1) {
 }
 
 template <typename Op0_t, typename Op1_t>
+inline AllRecipe_match<Instruction::FAdd, Op0_t, Op1_t>
+m_FAdd(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_Binary<Instruction::FAdd, Op0_t, Op1_t>(Op0, Op1);
+}
+
+template <typename Op0_t, typename Op1_t>
 inline AllRecipe_commutative_match<Instruction::FAdd, Op0_t, Op1_t>
 m_c_FAdd(const Op0_t &Op0, const Op1_t &Op1) {
   return m_c_Binary<Instruction::FAdd, Op0_t, Op1_t>(Op0, Op1);
@@ -900,6 +916,13 @@ inline auto m_c_LogicalAnd(const Op0_t &Op0, const Op1_t &Op1) {
   return m_CombineOr(
       m_c_VPInstruction<VPInstruction::LogicalAnd, Op0_t, Op1_t>(Op0, Op1),
       m_c_Select(Op0, Op1, m_False()));
+}
+
+template <typename Op0_t, typename Op1_t>
+inline auto m_LogicalOr(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_CombineOr(
+      m_c_VPInstruction<VPInstruction::LogicalOr, Op0_t, Op1_t>(Op0, Op1),
+      m_Select(Op0, m_True(), Op1));
 }
 
 template <typename Op0_t, typename Op1_t>
@@ -1165,6 +1188,11 @@ template <typename SubPattern_t> struct OneUse_match {
 
 template <typename T> inline OneUse_match<T> m_OneUse(const T &SubPattern) {
   return SubPattern;
+}
+
+inline match_bind<VPReductionPHIRecipe>
+m_ReductionPhi(VPReductionPHIRecipe *&V) {
+  return V;
 }
 
 template <typename Op0_t, typename Op1_t>
