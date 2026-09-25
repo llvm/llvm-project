@@ -965,6 +965,8 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 - The `holds` clause on the `assume` directive now lowers side-effect-free
   conditions to `llvm.assume`, enabling downstream optimizations. Previously
   the clause was parsed but its condition was discarded without effect.
+- Fixed a crash when the loop variable or a loop bound of an OpenMP loop has a
+  `_BitInt` type wider than any standard integer type. (#GH140074)
 
 ### SYCL Support
 
