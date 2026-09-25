@@ -5682,6 +5682,13 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
     return InstructionCost::getInvalid();
 
   if (auto *VTy = dyn_cast<ScalableVectorType>(Ty)) {
+
+    // We only support full register predicate loads and stores.
+    if (VTy->getElementType()->isIntegerTy(1) &&
+        !VTy->getElementCount().isKnownMultipleOf(
+            ElementCount::getScalable(16)))
+      return InstructionCost::getInvalid();
+
     // <vscale x 1 x eltty> operations require crafting a new mask.
     if (VTy->getElementCount() == ElementCount::getScalable(1)) {
       Intrinsic::ID IID = Opcode == Instruction::Load ? Intrinsic::masked_load
@@ -5691,12 +5698,6 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
                  CostKind) +
              1;
     }
-
-    // We only support full register predicate loads and stores.
-    if (VTy->getElementType()->isIntegerTy(1) &&
-        !VTy->getElementCount().isKnownMultipleOf(
-            ElementCount::getScalable(16)))
-      return InstructionCost::getInvalid();
   }
 
   // TODO: consider latency as well for TCK_SizeAndLatency.
