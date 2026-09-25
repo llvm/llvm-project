@@ -852,3 +852,34 @@ func.func @expression_tree(%arg0: !emitc.array<2000xi32>, %arg1: i32, %arg2: i32
   }
   return %e2 : i1
 }
+
+// CPP-DEFAULT: int32_t expression_with_member_call_opaque(MyClass* [[VAL_1:v[0-9]+]], int32_t [[VAL_2:v[0-9]+]]) {
+// CPP-DEFAULT-NEXT:   MyClass [[VAL_3:v[0-9]+]];
+// CPP-DEFAULT-NEXT:   int32_t [[VAL_4:v[0-9]+]] = ([[VAL_3]].at([[VAL_2]]) + [[VAL_1]]->at([[VAL_2]])) + (*[[VAL_1]]).at([[VAL_2]]);
+// CPP-DEFAULT-NEXT:   return [[VAL_4]];
+// CPP-DEFAULT-NEXT: }
+
+// CPP-DECLTOP: int32_t expression_with_member_call_opaque(MyClass* [[VAL_1:v[0-9]+]], int32_t [[VAL_2:v[0-9]+]]) {
+// CPP-DECLTOP-NEXT:   MyClass [[VAL_3:v[0-9]+]];
+// CPP-DECLTOP-NEXT:   int32_t [[VAL_4:v[0-9]+]];
+// CPP-DECLTOP-NEXT:   ;
+// CPP-DECLTOP-NEXT:   [[VAL_4]] = ([[VAL_3]].at([[VAL_2]]) + [[VAL_1]]->at([[VAL_2]])) + (*[[VAL_1]]).at([[VAL_2]]);
+// CPP-DECLTOP-NEXT:   return [[VAL_4]];
+// CPP-DECLTOP-NEXT: }
+
+func.func @expression_with_member_call_opaque(%arg0: !emitc.ptr<!emitc.opaque<"MyClass">>, %arg1: i32) -> i32 {
+  %v = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<!emitc.opaque<"MyClass">>
+  %e = emitc.expression %v, %arg0, %arg1 : (!emitc.lvalue<!emitc.opaque<"MyClass">>, !emitc.ptr<!emitc.opaque<"MyClass">>, i32) -> i32 {
+    %loaded = emitc.load %v : !emitc.lvalue<!emitc.opaque<"MyClass">>
+    %c0 = emitc.member_call_opaque %loaded "at"(%arg1) : !emitc.opaque<"MyClass">, (i32) -> i32
+    %c1 = emitc.member_call_opaque %arg0 "at"(%arg1) : !emitc.ptr<!emitc.opaque<"MyClass">>, (i32) -> i32
+    %deref = emitc.dereference %arg0 : !emitc.ptr<!emitc.opaque<"MyClass">>
+    %loaded_deref = emitc.load %deref : !emitc.lvalue<!emitc.opaque<"MyClass">>
+    %c2 = emitc.member_call_opaque %loaded_deref "at"(%arg1) : !emitc.opaque<"MyClass">, (i32) -> i32
+    %add0 = emitc.add %c0, %c1 : (i32, i32) -> i32
+    %add1 = emitc.add %add0, %c2 : (i32, i32) -> i32
+    emitc.yield %add1 : i32
+  }
+  return %e : i32
+}
+

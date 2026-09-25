@@ -102,6 +102,7 @@ static FailureOr<int> getOperatorPrecedence(Operation *operation) {
       .Case([&](emitc::LogicalAndOp op) { return 4; })
       .Case([&](emitc::LogicalNotOp op) { return 15; })
       .Case([&](emitc::LogicalOrOp op) { return 3; })
+      .Case([&](emitc::MemberCallOpaqueOp op) { return 16; })
       .Case([&](emitc::MemberOfPtrOp op) { return 17; })
       .Case([&](emitc::MemberOp op) { return 17; })
       .Case([&](emitc::MulOp op) { return 13; })
@@ -1777,6 +1778,8 @@ LogicalResult CppEmitter::emitOperand(Value value, bool isInBrackets) {
     assert(def && "Expected operand to be defined by an operation");
     if (auto expressionOp = dyn_cast<ExpressionOp>(def))
       def = expressionOp.getRootOp();
+    if (auto loadOp = dyn_cast<emitc::LoadOp>(def))
+      return emitOperand(loadOp.getOperand(), isInBrackets);
     FailureOr<int> precedence = getOperatorPrecedence(def);
     if (failed(precedence))
       return failure();
