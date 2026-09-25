@@ -16,6 +16,7 @@
 #include "flang/Common/template.h"
 #include "flang/Common/unwrap.h"
 #include "flang/Evaluate/characteristics.h"
+#include "flang/Evaluate/check-expression.h"
 #include "flang/Evaluate/common.h"
 #include "flang/Evaluate/constant.h"
 #include "flang/Evaluate/expression.h"
@@ -1377,6 +1378,16 @@ Expr<T> FoldOperation(FoldingContext &context, FunctionRef<T> &&funcRef) {
       if (arg && arg->GetConditionalArg()) {
         FoldConditionalArg(context, arg);
       } else if (auto *expr{UnwrapExpr<Expr<SomeType>>(arg)}) {
+        if (!intrinsic && IsNamedConstantDesignator(*expr)) {
+          // A designator of a named constant retained as the actual argument
+          // of a nonintrinsic function reference stays in designator form so
+          // that lowering can associate the dummy argument with the named
+          // constant's storage (in particular for element sequence
+          // association); folding it here would replace it with its scalar
+          // value.  Intrinsic references still fold, since intrinsic folding
+          // inspects constant values.
+          continue;
+        }
         *expr = Fold(context, std::move(*expr));
       }
     }
