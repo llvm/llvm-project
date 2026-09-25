@@ -3354,7 +3354,9 @@ bool TargetLowering::SimplifyDemandedVectorElts(
   case ISD::SCALAR_TO_VECTOR: {
     if (!DemandedElts[0])
       return TLO.CombineTo(Op, TLO.DAG.getPOISON(VT));
-    // Upper elements are poison, not undef - don't mark them as KnownUndef.
+    // Upper elements are poison; do not mark them as KnownUndef. Undef-driven
+    // folds that pick a concrete value for undef bits (e.g. zext(undef) -> 0,
+    // AND(0, undef) -> 0) are invalid for poison, which must propagate.
     break;
   }
   case ISD::BITCAST: {
