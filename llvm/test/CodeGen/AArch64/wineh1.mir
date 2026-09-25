@@ -136,7 +136,7 @@ body:             |
     frame-destroy SEH_SaveReg 21, 48
     $x0 = COPY $x28
     frame-destroy SEH_Nop
-    $x21 = frame-destroy LDRXui $sp, 6 :: (load (s64) from %stack.2)
+    $x22 = frame-destroy LDRXui $sp, 7 :: (load (s64) from %stack.3)
     frame-destroy SEH_SaveReg 22, 56
     $x23, $x24 = frame-destroy LDPXi $sp, 4 :: (load (s64) from %stack.4), (load (s64) from %stack.5)
     frame-destroy SEH_SaveRegP 23, 24, 32
