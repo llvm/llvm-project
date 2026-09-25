@@ -112,6 +112,9 @@ runX86SpeculativeExecutionSideEffectSuppression(MachineFunction &MF) {
     bool PrevInstIsLFENCE = false;
     for (auto &MI : MBB) {
 
+      if (MI.isMetaInstruction())
+        continue;
+
       if (MI.getOpcode() == X86::LFENCE) {
         PrevInstIsLFENCE = true;
         continue;
