@@ -166,7 +166,7 @@ static bool isStoreToShared(Operation *op, Value v) {
     return false;
 
   auto storeType = dyn_cast<MemRefType>(store.getBase().getType());
-  return storeType || hasSharedMemorySpace(storeType);
+  return storeType && hasSharedMemorySpace(storeType);
 }
 
 /// Returns true if the operation is a load from the default memory space the
