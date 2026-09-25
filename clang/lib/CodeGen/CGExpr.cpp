@@ -6148,10 +6148,11 @@ CodeGenFunction::EmitLValueForFieldInitialization(LValue Base,
 
 LValue
 CodeGenFunction::EmitCompoundLiteralLValue(const CompoundLiteralExpr *E) {
-  if (E->hasGlobalStorage()) {
-    if (E->getType()->isVariablyModifiedType())
-      EmitVariablyModifiedType(E->getType());
+  if (E->getType()->isVariablyModifiedType())
+    // make sure to emit the VLA size.
+    EmitVariablyModifiedType(E->getType());
 
+  if (E->hasGlobalStorage()) {
     ConstantAddress GlobalPtr = CGM.GetAddrOfConstantCompoundLiteral(E);
     if (E->hasThreadStorage()) {
       llvm::Value *V = Builder.CreateThreadLocalAddress(GlobalPtr.getPointer());
@@ -6161,10 +6162,6 @@ CodeGenFunction::EmitCompoundLiteralLValue(const CompoundLiteralExpr *E) {
     }
     return MakeAddrLValue(GlobalPtr, E->getType(), AlignmentSource::Decl);
   }
-  if (E->getType()->isVariablyModifiedType())
-    // make sure to emit the VLA size.
-    EmitVariablyModifiedType(E->getType());
-
   Address DeclPtr = CreateMemTempWithoutCast(E->getType(), ".compoundliteral");
   const Expr *InitExpr = E->getInitializer();
   LValue Result = MakeAddrLValue(DeclPtr, E->getType(), AlignmentSource::Decl);
