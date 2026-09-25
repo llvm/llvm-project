@@ -46,7 +46,7 @@ def Linalg_YieldOp : Linalg_Op<"yield", [Pure, ReturnLike, Terminator]>,
   let hasVerifier = 1;
 }
 
-def Linalg_IndexOp : Linalg_Op<"index", [Pure]>,
+def Linalg_IndexOp : Linalg_Op<"index", []>,
     Arguments<(ins ConfinedAttr<I64Attr, [IntMinValue<0>]>:$dim)>,
     Results<(outs Index:$result)> {
   let summary = "linalg index operation";
