@@ -177,11 +177,12 @@ void MachineLateInstrsCleanup::removeRedundantDef(MachineInstr *MI) {
   ++NumRemoved;
 }
 
-// Return true if MI accesses a register-allocation spill slot through a single
-// memory operand, and if so also the frame index of that slot in FI.
-static bool isSingleSpillSlotAccess(const MachineInstr &MI,
-                                    const MachineFrameInfo &MFI, int &FI) {
-  if (!MI.hasOneMemOperand())
+// Return true if MI is a spill-slot reload with a single memory operand. If
+// that operand names a frame index, FI is set to it, and the function returns
+// true if that index is a spill slot.
+static bool isSpillSlotReload(const MachineInstr &MI,
+                              const MachineFrameInfo &MFI, int &FI) {
+  if (!MI.mayLoad() || !MI.hasOneMemOperand())
     return false;
   const MachineMemOperand *MMO = *MI.memoperands_begin();
   const auto *PSV =
@@ -231,7 +232,7 @@ static bool isCandidate(const MachineInstr *MI, Register &DefedReg,
   // is left to isSafeToMove(), which admits the invariant ones and rejects the
   // volatile and atomic accesses whatever SawStore says.
   int FI;
-  bool SawStore = !(MI->mayLoad() && isSingleSpillSlotAccess(*MI, MFI, FI));
+  bool SawStore = !isSpillSlotReload(*MI, MFI, FI);
   if (!MI->isSafeToMove(SawStore) || MI->isImplicitDef() || MI->isInlineAsm())
     return false;
   for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
@@ -294,7 +295,7 @@ bool MachineLateInstrsCleanup::processBlock(MachineBasicBlock *MBB) {
       LLVM_DEBUG(dbgs() << "Removing redundant instruction in "
                         << printMBBReference(*MBB) << ":  " << MI);
       int FI;
-      if (isSingleSpillSlotAccess(MI, MFI, FI))
+      if (isSpillSlotReload(MI, MFI, FI))
         ++NumSpillSlotReloadsRemoved;
       removeRedundantDef(&MI);
       Changed = true;
@@ -310,7 +311,7 @@ bool MachineLateInstrsCleanup::processBlock(MachineBasicBlock *MBB) {
       Register Reg = Entry.first;
       int FI;
       if (MI.modifiesRegister(Reg, TRI) ||
-          (isSingleSpillSlotAccess(*Entry.second, MFI, FI) &&
+          (isSpillSlotReload(*Entry.second, MFI, FI) &&
            instructionStoresToFI(&MI, FI))) {
         MBBKills.erase(Reg);
         return true;
