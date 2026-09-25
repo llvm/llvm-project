@@ -195,7 +195,14 @@ private:
   };
 
   class InfixCalculator {
-    typedef std::pair< InfixCalculatorTok, int64_t > ICToken;
+  public:
+    struct ICToken {
+      InfixCalculatorTok Kind;
+      int64_t Val = 0;
+      const MCExpr *Sym = nullptr;
+    };
+
+  private:
     SmallVector<InfixCalculatorTok, 4> InfixOperatorStack;
     SmallVector<ICToken, 4> PostfixStack;
 
@@ -207,14 +214,15 @@ private:
     int64_t popOperand() {
       assert (!PostfixStack.empty() && "Poped an empty stack!");
       ICToken Op = PostfixStack.pop_back_val();
-      if (!(Op.first == IC_IMM || Op.first == IC_REGISTER))
+      if (!(Op.Kind == IC_IMM || Op.Kind == IC_REGISTER))
         return -1; // The invalid Scale value will be caught later by checkScale
-      return Op.second;
+      return Op.Val;
     }
-    void pushOperand(InfixCalculatorTok Op, int64_t Val = 0) {
+    void pushOperand(InfixCalculatorTok Op, int64_t Val = 0,
+                     const MCExpr *Sym = nullptr) {
       assert ((Op == IC_IMM || Op == IC_REGISTER) &&
               "Unexpected operand!");
-      PostfixStack.push_back(std::make_pair(Op, Val));
+      PostfixStack.push_back({Op, Val, Sym});
     }
 
     void popOperator() { InfixOperatorStack.pop_back(); }
@@ -261,42 +269,114 @@ private:
           InfixOperatorStack.pop_back();
         } else {
           InfixOperatorStack.pop_back();
-          PostfixStack.push_back(std::make_pair(StackOp, 0));
+          PostfixStack.push_back({StackOp});
         }
       }
       // Push the new operator.
       InfixOperatorStack.push_back(Op);
     }
 
-    int64_t execute() {
+    static const MCExpr *toExpr(const ICToken &T, MCContext &Ctx) {
+      const MCExpr *C = MCConstantExpr::create(T.Val, Ctx);
+      if (!T.Sym)
+        return C;
+      if (!T.Val)
+        return T.Sym;
+      return MCBinaryExpr::createAdd(T.Sym, C, Ctx);
+    }
+
+    static MCBinaryExpr::Opcode toBinaryOpcode(InfixCalculatorTok Op) {
+      switch (Op) {
+      default:
+        llvm_unreachable("Unexpected operator!");
+      case IC_OR:
+        return MCBinaryExpr::Or;
+      case IC_XOR:
+        return MCBinaryExpr::Xor;
+      case IC_AND:
+        return MCBinaryExpr::And;
+      case IC_LSHIFT:
+        return MCBinaryExpr::Shl;
+      case IC_RSHIFT:
+        return MCBinaryExpr::AShr;
+      case IC_MULTIPLY:
+        return MCBinaryExpr::Mul;
+      case IC_DIVIDE:
+        return MCBinaryExpr::Div;
+      case IC_MOD:
+        return MCBinaryExpr::Mod;
+      case IC_EQ:
+        return MCBinaryExpr::EQ;
+      case IC_NE:
+        return MCBinaryExpr::NE;
+      case IC_LT:
+        return MCBinaryExpr::LT;
+      case IC_LE:
+        return MCBinaryExpr::LTE;
+      case IC_GT:
+        return MCBinaryExpr::GT;
+      case IC_GE:
+        return MCBinaryExpr::GTE;
+      }
+    }
+
+    static ICToken applySymbolic(InfixCalculatorTok Op, const ICToken &Op1,
+                                 const ICToken &Op2, MCContext &Ctx) {
+      if (Op == IC_PLUS || Op == IC_MINUS) {
+        const MCExpr *Sym = Op1.Sym;
+        if (Op2.Sym && Op == IC_PLUS)
+          Sym = Sym ? MCBinaryExpr::createAdd(Sym, Op2.Sym, Ctx) : Op2.Sym;
+        else if (Op2.Sym && Sym)
+          Sym = MCBinaryExpr::createSub(Sym, Op2.Sym, Ctx);
+        else if (Op2.Sym)
+          Sym = MCUnaryExpr::createMinus(Op2.Sym, Ctx);
+        int64_t Val = Op == IC_PLUS ? Op1.Val + Op2.Val : Op1.Val - Op2.Val;
+        return {IC_IMM, Val, Sym};
+      }
+      return {IC_IMM, 0,
+              MCBinaryExpr::create(toBinaryOpcode(Op), toExpr(Op1, Ctx),
+                                   toExpr(Op2, Ctx), Ctx)};
+    }
+
+    ICToken execute(MCContext &Ctx) {
       // Push any remaining operators onto the postfix stack.
       while (!InfixOperatorStack.empty()) {
         InfixCalculatorTok StackOp = InfixOperatorStack.pop_back_val();
         if (StackOp != IC_LPAREN && StackOp != IC_RPAREN)
-          PostfixStack.push_back(std::make_pair(StackOp, 0));
+          PostfixStack.push_back({StackOp});
       }
 
       if (PostfixStack.empty())
-        return 0;
+        return {IC_IMM};
 
       SmallVector<ICToken, 16> OperandStack;
       for (const ICToken &Op : PostfixStack) {
-        if (Op.first == IC_IMM || Op.first == IC_REGISTER) {
+        if (Op.Kind == IC_IMM || Op.Kind == IC_REGISTER) {
           OperandStack.push_back(Op);
-        } else if (isUnaryOperator(Op.first)) {
+        } else if (isUnaryOperator(Op.Kind)) {
           assert (OperandStack.size() > 0 && "Too few operands.");
           ICToken Operand = OperandStack.pop_back_val();
-          assert (Operand.first == IC_IMM &&
-                  "Unary operation with a register!");
-          switch (Op.first) {
+          assert(Operand.Kind == IC_IMM && "Unary operation with a register!");
+          if (Operand.Sym && Op.Kind == IC_NEG) {
+            OperandStack.push_back(
+                {IC_IMM, -Operand.Val,
+                 MCUnaryExpr::createMinus(Operand.Sym, Ctx)});
+            continue;
+          }
+          if (Operand.Sym) {
+            OperandStack.push_back(
+                {IC_IMM, 0, MCUnaryExpr::createNot(toExpr(Operand, Ctx), Ctx)});
+            continue;
+          }
+          switch (Op.Kind) {
           default:
             report_fatal_error("Unexpected operator!");
             break;
           case IC_NEG:
-            OperandStack.push_back(std::make_pair(IC_IMM, -Operand.second));
+            OperandStack.push_back({IC_IMM, -Operand.Val});
             break;
           case IC_NOT:
-            OperandStack.push_back(std::make_pair(IC_IMM, ~Operand.second));
+            OperandStack.push_back({IC_IMM, ~Operand.Val});
             break;
           }
         } else {
@@ -304,110 +384,114 @@ private:
           int64_t Val;
           ICToken Op2 = OperandStack.pop_back_val();
           ICToken Op1 = OperandStack.pop_back_val();
-          switch (Op.first) {
+          if (Op1.Sym || Op2.Sym) {
+            OperandStack.push_back(applySymbolic(Op.Kind, Op1, Op2, Ctx));
+            continue;
+          }
+          switch (Op.Kind) {
           default:
             report_fatal_error("Unexpected operator!");
             break;
           case IC_PLUS:
-            Val = Op1.second + Op2.second;
-            OperandStack.push_back(std::make_pair(IC_IMM, Val));
+            Val = Op1.Val + Op2.Val;
+            OperandStack.push_back({IC_IMM, Val});
             break;
           case IC_MINUS:
-            Val = Op1.second - Op2.second;
-            OperandStack.push_back(std::make_pair(IC_IMM, Val));
+            Val = Op1.Val - Op2.Val;
+            OperandStack.push_back({IC_IMM, Val});
             break;
           case IC_MULTIPLY:
-            assert (Op1.first == IC_IMM && Op2.first == IC_IMM &&
-                    "Multiply operation with an immediate and a register!");
-            Val = Op1.second * Op2.second;
-            OperandStack.push_back(std::make_pair(IC_IMM, Val));
+            assert(Op1.Kind == IC_IMM && Op2.Kind == IC_IMM &&
+                   "Multiply operation with an immediate and a register!");
+            Val = Op1.Val * Op2.Val;
+            OperandStack.push_back({IC_IMM, Val});
             break;
           case IC_DIVIDE:
-            assert (Op1.first == IC_IMM && Op2.first == IC_IMM &&
-                    "Divide operation with an immediate and a register!");
-            assert (Op2.second != 0 && "Division by zero!");
-            Val = Op1.second / Op2.second;
-            OperandStack.push_back(std::make_pair(IC_IMM, Val));
+            assert(Op1.Kind == IC_IMM && Op2.Kind == IC_IMM &&
+                   "Divide operation with an immediate and a register!");
+            assert(Op2.Val != 0 && "Division by zero!");
+            Val = Op1.Val / Op2.Val;
+            OperandStack.push_back({IC_IMM, Val});
             break;
           case IC_MOD:
-            assert (Op1.first == IC_IMM && Op2.first == IC_IMM &&
-                    "Modulo operation with an immediate and a register!");
-            Val = Op1.second % Op2.second;
-            OperandStack.push_back(std::make_pair(IC_IMM, Val));
+            assert(Op1.Kind == IC_IMM && Op2.Kind == IC_IMM &&
+                   "Modulo operation with an immediate and a register!");
+            Val = Op1.Val % Op2.Val;
+            OperandStack.push_back({IC_IMM, Val});
             break;
           case IC_OR:
-            assert (Op1.first == IC_IMM && Op2.first == IC_IMM &&
-                    "Or operation with an immediate and a register!");
-            Val = Op1.second | Op2.second;
-            OperandStack.push_back(std::make_pair(IC_IMM, Val));
+            assert(Op1.Kind == IC_IMM && Op2.Kind == IC_IMM &&
+                   "Or operation with an immediate and a register!");
+            Val = Op1.Val | Op2.Val;
+            OperandStack.push_back({IC_IMM, Val});
             break;
           case IC_XOR:
-            assert(Op1.first == IC_IMM && Op2.first == IC_IMM &&
-              "Xor operation with an immediate and a register!");
-            Val = Op1.second ^ Op2.second;
-            OperandStack.push_back(std::make_pair(IC_IMM, Val));
+            assert(Op1.Kind == IC_IMM && Op2.Kind == IC_IMM &&
+                   "Xor operation with an immediate and a register!");
+            Val = Op1.Val ^ Op2.Val;
+            OperandStack.push_back({IC_IMM, Val});
             break;
           case IC_AND:
-            assert (Op1.first == IC_IMM && Op2.first == IC_IMM &&
-                    "And operation with an immediate and a register!");
-            Val = Op1.second & Op2.second;
-            OperandStack.push_back(std::make_pair(IC_IMM, Val));
+            assert(Op1.Kind == IC_IMM && Op2.Kind == IC_IMM &&
+                   "And operation with an immediate and a register!");
+            Val = Op1.Val & Op2.Val;
+            OperandStack.push_back({IC_IMM, Val});
             break;
           case IC_LSHIFT:
-            assert (Op1.first == IC_IMM && Op2.first == IC_IMM &&
-                    "Left shift operation with an immediate and a register!");
-            Val = Op1.second << Op2.second;
-            OperandStack.push_back(std::make_pair(IC_IMM, Val));
+            assert(Op1.Kind == IC_IMM && Op2.Kind == IC_IMM &&
+                   "Left shift operation with an immediate and a register!");
+            Val = Op1.Val << Op2.Val;
+            OperandStack.push_back({IC_IMM, Val});
             break;
           case IC_RSHIFT:
-            assert (Op1.first == IC_IMM && Op2.first == IC_IMM &&
-                    "Right shift operation with an immediate and a register!");
-            Val = Op1.second >> Op2.second;
-            OperandStack.push_back(std::make_pair(IC_IMM, Val));
+            assert(Op1.Kind == IC_IMM && Op2.Kind == IC_IMM &&
+                   "Right shift operation with an immediate and a register!");
+            Val = Op1.Val >> Op2.Val;
+            OperandStack.push_back({IC_IMM, Val});
             break;
           case IC_EQ:
-            assert(Op1.first == IC_IMM && Op2.first == IC_IMM &&
+            assert(Op1.Kind == IC_IMM && Op2.Kind == IC_IMM &&
                    "Equals operation with an immediate and a register!");
-            Val = (Op1.second == Op2.second) ? -1 : 0;
-            OperandStack.push_back(std::make_pair(IC_IMM, Val));
+            Val = (Op1.Val == Op2.Val) ? -1 : 0;
+            OperandStack.push_back({IC_IMM, Val});
             break;
           case IC_NE:
-            assert(Op1.first == IC_IMM && Op2.first == IC_IMM &&
+            assert(Op1.Kind == IC_IMM && Op2.Kind == IC_IMM &&
                    "Not-equals operation with an immediate and a register!");
-            Val = (Op1.second != Op2.second) ? -1 : 0;
-            OperandStack.push_back(std::make_pair(IC_IMM, Val));
+            Val = (Op1.Val != Op2.Val) ? -1 : 0;
+            OperandStack.push_back({IC_IMM, Val});
             break;
           case IC_LT:
-            assert(Op1.first == IC_IMM && Op2.first == IC_IMM &&
+            assert(Op1.Kind == IC_IMM && Op2.Kind == IC_IMM &&
                    "Less-than operation with an immediate and a register!");
-            Val = (Op1.second < Op2.second) ? -1 : 0;
-            OperandStack.push_back(std::make_pair(IC_IMM, Val));
+            Val = (Op1.Val < Op2.Val) ? -1 : 0;
+            OperandStack.push_back({IC_IMM, Val});
             break;
           case IC_LE:
-            assert(Op1.first == IC_IMM && Op2.first == IC_IMM &&
+            assert(Op1.Kind == IC_IMM && Op2.Kind == IC_IMM &&
                    "Less-than-or-equal operation with an immediate and a "
                    "register!");
-            Val = (Op1.second <= Op2.second) ? -1 : 0;
-            OperandStack.push_back(std::make_pair(IC_IMM, Val));
+            Val = (Op1.Val <= Op2.Val) ? -1 : 0;
+            OperandStack.push_back({IC_IMM, Val});
             break;
           case IC_GT:
-            assert(Op1.first == IC_IMM && Op2.first == IC_IMM &&
+            assert(Op1.Kind == IC_IMM && Op2.Kind == IC_IMM &&
                    "Greater-than operation with an immediate and a register!");
-            Val = (Op1.second > Op2.second) ? -1 : 0;
-            OperandStack.push_back(std::make_pair(IC_IMM, Val));
+            Val = (Op1.Val > Op2.Val) ? -1 : 0;
+            OperandStack.push_back({IC_IMM, Val});
             break;
           case IC_GE:
-            assert(Op1.first == IC_IMM && Op2.first == IC_IMM &&
+            assert(Op1.Kind == IC_IMM && Op2.Kind == IC_IMM &&
                    "Greater-than-or-equal operation with an immediate and a "
                    "register!");
-            Val = (Op1.second >= Op2.second) ? -1 : 0;
-            OperandStack.push_back(std::make_pair(IC_IMM, Val));
+            Val = (Op1.Val >= Op2.Val) ? -1 : 0;
+            OperandStack.push_back({IC_IMM, Val});
             break;
           }
         }
       }
       assert (OperandStack.size() == 1 && "Expected a single result.");
-      return OperandStack.pop_back_val().second;
+      return OperandStack.pop_back_val();
     }
   };
 
@@ -463,8 +547,13 @@ private:
     bool IsPIC = false;
     AsmTypeInfo CurType;
 
-    bool setSymRef(const MCExpr *Val, StringRef ID, StringRef &ErrMsg) {
+    // MS inline asm rewrites the operand around a single symbol, so only it
+    // still refuses a second one.
+    bool setSymRef(const MCExpr *Val, StringRef ID, bool ParsingMSInlineAsm,
+                   StringRef &ErrMsg) {
       if (Sym) {
+        if (!ParsingMSInlineAsm)
+          return false;
         ErrMsg = "cannot use more than one symbol in memory operand";
         return true;
       }
@@ -490,7 +579,8 @@ private:
     unsigned getSize() const { return CurType.Size; }
     unsigned getElementSize() const { return CurType.ElementSize; }
     unsigned getLength() const { return CurType.Length; }
-    int64_t getImm() { return Imm + IC.execute(); }
+    int64_t getImm(MCContext &Ctx) { return Imm + IC.execute(Ctx).Val; }
+    const MCExpr *getSymExpr(MCContext &Ctx) { return IC.execute(Ctx).Sym; }
     bool isValidEndState() const {
       return State == IES_RBRAC || State == IES_RPAREN ||
              State == IES_INTEGER || State == IES_REGISTER ||
@@ -902,13 +992,14 @@ private:
       case IES_INIT:
       case IES_LBRAC:
       case IES_LPAREN:
-        if (setSymRef(SymRef, SymRefName, ErrMsg))
+        if (setSymRef(SymRef, SymRefName, ParsingMSInlineAsm, ErrMsg))
           return true;
         // Mark TmpScale as invalid, in case of multiplying by register
         TmpScale = 0;
-        MemExpr = true;
+        if (!OffsetOperator)
+          MemExpr = true;
         State = IES_INTEGER;
-        IC.pushOperand(IC_IMM);
+        IC.pushOperand(IC_IMM, 0, SymRef);
         if (ParsingMSInlineAsm)
           Info = IDInfo;
         setTypeInfo(Type);
@@ -1169,13 +1260,11 @@ private:
       case IES_PLUS:
       case IES_INIT:
       case IES_LBRAC:
-        if (setSymRef(Val, ID, ErrMsg))
+        if (setSymRef(Val, ID, ParsingMSInlineAsm, ErrMsg))
           return true;
         OffsetOperator = true;
         State = IES_OFFSET;
-        // As we cannot yet resolve the actual value (offset), we retain
-        // the requested semantics by pushing a '0' to the operands stack
-        IC.pushOperand(IC_IMM);
+        IC.pushOperand(IC_IMM, 0, Val);
         if (ParsingMSInlineAsm) {
           Info = IDInfo;
         }
@@ -1192,10 +1281,10 @@ private:
       case IES_PLUS:
       case IES_INIT:
       case IES_LBRAC:
-        if (setSymRef(Val, ID, ErrMsg))
+        if (setSymRef(Val, ID, false, ErrMsg))
           return true;
         State = IES_OFFSET;
-        IC.pushOperand(IC_IMM);
+        IC.pushOperand(IC_IMM, 0, Val);
         return false;
       default:
         ErrMsg = "unexpected imagerel operator expression";
@@ -2346,7 +2435,7 @@ void X86AsmParser::RewriteIntelExpression(IntelExprStateMachine &SM,
     ExprLen = End.getPointer() - (SymName.data() + SymName.size());
     // If we have only a symbol than there's no need for complex rewrite,
     // simply skip everything after it
-    if (!(SM.getBaseReg() || SM.getIndexReg() || SM.getImm())) {
+    if (!(SM.getBaseReg() || SM.getIndexReg() || SM.getImm(getContext()))) {
       if (ExprLen)
         InstInfo->AsmRewrites->emplace_back(AOK_Skip, Loc, ExprLen);
       return;
@@ -2364,7 +2453,7 @@ void X86AsmParser::RewriteIntelExpression(IntelExprStateMachine &SM,
     OffsetNameStr = SM.getSymName();
   // Emit it
   IntelExpr Expr(BaseRegStr, IndexRegStr, SM.getScale(), OffsetNameStr,
-                 SM.getImm(), SM.isMemExpr());
+                 SM.getImm(getContext()), SM.isMemExpr());
   InstInfo->AsmRewrites->emplace_back(Loc, ExprLen, Expr);
 }
 
@@ -2835,8 +2924,8 @@ bool X86AsmParser::parseIntelOperand(OperandVector &Operands, StringRef Name) {
   if (isParsingMSInlineAsm())
     RewriteIntelExpression(SM, Start, Tok.getLoc());
 
-  int64_t Imm = SM.getImm();
-  const MCExpr *Disp = SM.getSym();
+  int64_t Imm = SM.getImm(getContext());
+  const MCExpr *Disp = SM.getSymExpr(getContext());
   const MCExpr *ImmDisp = MCConstantExpr::create(Imm, getContext());
   if (Disp && Imm)
     Disp = MCBinaryExpr::createAdd(Disp, ImmDisp, getContext());
