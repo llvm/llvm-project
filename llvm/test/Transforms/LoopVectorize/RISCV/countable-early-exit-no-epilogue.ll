@@ -74,3 +74,90 @@ exit1:
 exit2:
   ret i32 2
 }
+
+; The trip count (5) is VF + 1. The final iteration, which takes the early exit,
+; must execute in the scalar loop.
+define i32 @countable_early_exit_tc_vf_plus_one(ptr noalias %b) {
+; NO-EPILOGUE-LABEL: define i32 @countable_early_exit_tc_vf_plus_one(
+; NO-EPILOGUE-SAME: ptr noalias [[B:%.*]]) #[[ATTR0]] {
+; NO-EPILOGUE-NEXT:  [[ENTRY:.*:]]
+; NO-EPILOGUE-NEXT:    br label %[[VECTOR_PH:.*]]
+; NO-EPILOGUE:       [[VECTOR_PH]]:
+; NO-EPILOGUE-NEXT:    br label %[[VECTOR_BODY:.*]]
+; NO-EPILOGUE:       [[VECTOR_BODY]]:
+; NO-EPILOGUE-NEXT:    store <4 x i32> splat (i32 1), ptr [[B]], align 4
+; NO-EPILOGUE-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
+; NO-EPILOGUE:       [[MIDDLE_BLOCK]]:
+; NO-EPILOGUE-NEXT:    br label %[[SCALAR_PH:.*]]
+; NO-EPILOGUE:       [[SCALAR_PH]]:
+; NO-EPILOGUE-NEXT:    br label %[[LOOP:.*]]
+; NO-EPILOGUE:       [[LOOP]]:
+; NO-EPILOGUE-NEXT:    [[IV:%.*]] = phi i64 [ 4, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
+; NO-EPILOGUE-NEXT:    [[C:%.*]] = icmp eq i64 [[IV]], 4
+; NO-EPILOGUE-NEXT:    br i1 [[C]], label %[[EXIT1:.*]], label %[[LATCH]]
+; NO-EPILOGUE:       [[LATCH]]:
+; NO-EPILOGUE-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[IV]]
+; NO-EPILOGUE-NEXT:    store i32 1, ptr [[GEP]], align 4
+; NO-EPILOGUE-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; NO-EPILOGUE-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 100
+; NO-EPILOGUE-NEXT:    br i1 [[EC]], label %[[EXIT2:.*]], label %[[LOOP]], !llvm.loop [[LOOP0:![0-9]+]]
+; NO-EPILOGUE:       [[EXIT1]]:
+; NO-EPILOGUE-NEXT:    ret i32 1
+; NO-EPILOGUE:       [[EXIT2]]:
+; NO-EPILOGUE-NEXT:    ret i32 2
+;
+; EPILOGUE-LABEL: define i32 @countable_early_exit_tc_vf_plus_one(
+; EPILOGUE-SAME: ptr noalias [[B:%.*]]) #[[ATTR0]] {
+; EPILOGUE-NEXT:  [[ENTRY:.*:]]
+; EPILOGUE-NEXT:    br label %[[VECTOR_PH:.*]]
+; EPILOGUE:       [[VECTOR_PH]]:
+; EPILOGUE-NEXT:    br label %[[VECTOR_BODY:.*]]
+; EPILOGUE:       [[VECTOR_BODY]]:
+; EPILOGUE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; EPILOGUE-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDEX]]
+; EPILOGUE-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i64 2
+; EPILOGUE-NEXT:    store <2 x i32> splat (i32 1), ptr [[TMP0]], align 4
+; EPILOGUE-NEXT:    store <2 x i32> splat (i32 1), ptr [[TMP1]], align 4
+; EPILOGUE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; EPILOGUE-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], 4
+; EPILOGUE-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; EPILOGUE:       [[MIDDLE_BLOCK]]:
+; EPILOGUE-NEXT:    br label %[[SCALAR_PH:.*]]
+; EPILOGUE:       [[SCALAR_PH]]:
+; EPILOGUE-NEXT:    br label %[[LOOP:.*]]
+; EPILOGUE:       [[LOOP]]:
+; EPILOGUE-NEXT:    [[IV:%.*]] = phi i64 [ 4, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
+; EPILOGUE-NEXT:    [[C:%.*]] = icmp eq i64 [[IV]], 4
+; EPILOGUE-NEXT:    br i1 [[C]], label %[[EXIT1:.*]], label %[[LATCH]]
+; EPILOGUE:       [[LATCH]]:
+; EPILOGUE-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[IV]]
+; EPILOGUE-NEXT:    store i32 1, ptr [[GEP]], align 4
+; EPILOGUE-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; EPILOGUE-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 100
+; EPILOGUE-NEXT:    br i1 [[EC]], label %[[EXIT2:.*]], label %[[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
+; EPILOGUE:       [[EXIT1]]:
+; EPILOGUE-NEXT:    ret i32 1
+; EPILOGUE:       [[EXIT2]]:
+; EPILOGUE-NEXT:    ret i32 2
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %latch ]
+  %c = icmp eq i64 %iv, 4
+  br i1 %c, label %exit1, label %latch
+
+latch:
+  %gep = getelementptr inbounds i32, ptr %b, i64 %iv
+  store i32 1, ptr %gep, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 100
+  br i1 %ec, label %exit2, label %loop
+
+exit1:
+  ret i32 1
+
+exit2:
+  ret i32 2
+}

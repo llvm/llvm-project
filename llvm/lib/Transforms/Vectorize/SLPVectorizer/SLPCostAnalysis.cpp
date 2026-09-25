@@ -47,7 +47,7 @@ InstructionCost getShuffleCost(const TargetTransformInfo &TTI,
 
   if (Kind != TTI::SK_PermuteTwoSrc)
     return TTI.getShuffleCost(Kind, DstTy, Tp, CostKind, Mask, Index, SubTp,
-                              Args, /*CxtI=*/nullptr, VIC);
+                              Args, /*CtxI=*/nullptr, VIC);
   int NumSrcElts = Tp->getElementCount().getKnownMinValue();
   int NumSubElts;
   if (Mask.size() > 2 && ShuffleVectorInst::isInsertSubvectorMask(
@@ -58,7 +58,7 @@ InstructionCost getShuffleCost(const TargetTransformInfo &TTI,
                                 Mask, Index, Tp);
   }
   return TTI.getShuffleCost(Kind, DstTy, Tp, CostKind, Mask, Index, SubTp, Args,
-                            /*CxtI=*/nullptr, VIC);
+                            /*CtxI=*/nullptr, VIC);
 }
 
 std::pair<InstructionCost, InstructionCost>
@@ -376,7 +376,7 @@ InstructionCost getBitPackCost(const TargetTransformInfo &TTI,
                                TTI::CastContextHint CCH,
                                TTI::TargetCostKind CostKind,
                                const TargetLibraryInfo *TLI,
-                               const Instruction *CxtI, unsigned &ShiftWidth) {
+                               const Instruction *CtxI, unsigned &ShiftWidth) {
   unsigned BitWidth = SrcTy->getScalarSizeInBits();
   unsigned NumElts = SrcTy->getNumElements();
   uint64_t MaxAmt = *max_element(Info.LShrAmts);
@@ -421,7 +421,7 @@ InstructionCost getBitPackCost(const TargetTransformInfo &TTI,
               ? TargetTransformInfo::SK_PermuteTwoSrc
               : TargetTransformInfo::SK_PermuteSingleSrc,
           PackTy, FixedVectorType::get(Int8Ty, InBytes), CostKind, Mask,
-          /*Index=*/0, /*SubTp=*/nullptr, /*Args=*/{}, CxtI);
+          /*Index=*/0, /*SubTp=*/nullptr, /*Args=*/{}, CtxI);
     }
     if (W2 != BitWidth && W2 != ZExtSrcWidth)
       C += TTI.getCastInstrCost(Instruction::Trunc, ShiftTy, SrcTy, CCH,
@@ -429,7 +429,7 @@ InstructionCost getBitPackCost(const TargetTransformInfo &TTI,
     if (Info.needsShift())
       C += TTI.getArithmeticInstrCost(Instruction::LShr, ShiftTy, CostKind,
                                       /*Opd1Info=*/{}, ShiftAmtInfo,
-                                      /*Args=*/{}, CxtI, TLI);
+                                      /*Args=*/{}, CtxI, TLI);
     if (C.isValid() && (!NewCost.isValid() || C < NewCost)) {
       NewCost = C;
       ShiftWidth = W2;
@@ -448,13 +448,13 @@ InstructionCost getBoolBitmaskCost(const TargetTransformInfo &TTI,
   auto *MaskTy = IntegerType::get(WideTy->getContext(), VF);
   // The result cast inherits the uses of the reduction root.
   TTI::CastContextHint CCH = getBoolReduxResultCCH(Root);
-  const auto *CxtI = cast<Instruction>(Root);
+  const auto *CtxI = cast<Instruction>(Root);
   InstructionCost Cost = 0;
   if (NeedMask)
     Cost += TTI.getArithmeticInstrCost(
         Instruction::And, NarrowVecTy, CostKind,
         {TTI::OK_AnyValue, TTI::OP_None},
-        {TTI::OK_NonUniformConstantValue, TTI::OP_None}, {}, CxtI);
+        {TTI::OK_NonUniformConstantValue, TTI::OP_None}, {}, CtxI);
   if (!ShuffleVectorInst::isIdentityMask(PermMask, VF))
     Cost += getShuffleCost(TTI, TTI::SK_PermuteSingleSrc, NarrowVecTy, CostKind,
                            PermMask);
@@ -476,20 +476,20 @@ InstructionCost getBoolBitmaskCost(const TargetTransformInfo &TTI,
 InstructionCost getNarrowedLeafOpsCost(
     const TargetTransformInfo &TTI,
     const SmallDenseMap<Value *, NarrowedLeafInfo> &NarrowedLeafShifts,
-    VectorType *NarrowVecTy, VectorType *WideVecTy, const Instruction *CxtI,
+    VectorType *NarrowVecTy, VectorType *WideVecTy, const Instruction *CtxI,
     const TTI::TargetCostKind CostKind) {
   InstructionCost Cost = 0;
   if (any_of(NarrowedLeafShifts,
              [](const auto &P) { return P.second.Shift != 0; }))
     Cost += TTI.getArithmeticInstrCost(
         Instruction::Shl, WideVecTy, CostKind, {TTI::OK_AnyValue, TTI::OP_None},
-        {TTI::OK_NonUniformConstantValue, TTI::OP_None}, {}, CxtI);
+        {TTI::OK_NonUniformConstantValue, TTI::OP_None}, {}, CtxI);
   if (any_of(NarrowedLeafShifts,
              [](const auto &P) { return !P.second.Mask.isAllOnes(); }))
     Cost += TTI.getArithmeticInstrCost(
         Instruction::And, NarrowVecTy, CostKind,
         {TTI::OK_AnyValue, TTI::OP_None},
-        {TTI::OK_NonUniformConstantValue, TTI::OP_None}, {}, CxtI);
+        {TTI::OK_NonUniformConstantValue, TTI::OP_None}, {}, CtxI);
   return Cost;
 }
 } // namespace llvm::slpvectorizer

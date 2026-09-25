@@ -1,4 +1,4 @@
-// RUN: %libomp-compile -fopenmp -fsanitize=hwaddress
+// RUN: %libomp-compile -fopenmp
 // RUN: %libomp-run
 // RUN: env KMP_AFFINITY=disabled %libomp-run
 

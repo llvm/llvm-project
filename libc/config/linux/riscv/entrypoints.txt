@@ -1633,6 +1633,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.unistd.sysconf
 
     # sys/select.h entrypoints
+    libc.src.sys.select.pselect
     libc.src.sys.select.select
 
     # wchar.h entrypoints
@@ -1669,6 +1670,9 @@ endif()
 if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
   if(LLVM_LIBC_FULL_BUILD)
     list(APPEND TARGET_LIBC_ENTRYPOINTS
+      # arpa/inet.h entrypoints
+      libc.src.arpa.inet.inet_pton
+
       # fnmatch.h entrypoints
       libc.src.fnmatch.fnmatch
 

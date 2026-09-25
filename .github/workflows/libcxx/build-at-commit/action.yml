@@ -1,9 +1,10 @@
 # This composite action builds libc++ as of an arbitrary commit and installs it into the
-# specified directory.
+# specified directory. This allows other workflows to reuse this job for various purposes.
 #
-# This allows other workflows to reuse this job for various purposes.
+# The tools used to perform the build are taken from the monorepo checkout this action lives
+# in, while the commit being built is taken from `git-repo`.
 #
-# This action assumes that the monorepo has been checked out with its full history (arbitrary
+# This action assumes that `git-repo` has been checked out with its full history (arbitrary
 # historical commits must be reachable) and that CMake, Ninja and the compiler are available.
 
 name: 'Build libc++ at a commit'
@@ -24,6 +25,9 @@ inputs:
       CMake cache describing how to build the library, as a path relative to the root of the
       monorepo (e.g. libcxx/utils/ci/lnt/cmake/generic.cmake).
     required: true
+  git-repo:
+    description: 'The Git repository containing the commit to build.'
+    required: true
 
 runs:
   using: composite
@@ -34,16 +38,22 @@ runs:
         CMAKE_CACHE: ${{ inputs.cmake-cache }}
         COMMIT: ${{ inputs.commit }}
         COMPILER: ${{ inputs.compiler }}
+        GIT_REPO: ${{ inputs.git-repo }}
         INSTALL_DIR: ${{ inputs.install-dir }}
       run: |
+        # Execute from the root of the monorepo that contains this action. This can be different from the
+        # default working directory if this action is invoked in a subdirectory of the calling workflow.
+        cd "${GITHUB_ACTION_PATH}/../../../.."
+
         # Clean up any stale install directory
         rm -rf "${INSTALL_DIR}"
 
         # Let build-at-commit use (and clean up) its own temporary source and build directories:
         # only the installation is of interest to the caller.
         libcxx/utils/build-at-commit                       \
+          --git-repo "${GIT_REPO}"                         \
           --commit "${COMMIT}"                             \
           --install-dir "${INSTALL_DIR}"                   \
           --                                               \
           -DCMAKE_CXX_COMPILER="${COMPILER}"               \
-          -C "${GITHUB_WORKSPACE}/${CMAKE_CACHE}"
+          -C "${CMAKE_CACHE}"
