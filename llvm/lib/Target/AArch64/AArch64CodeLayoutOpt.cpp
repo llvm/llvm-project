@@ -44,7 +44,7 @@ enum CodeLayoutOpt {
   LLVM_MARK_AS_BITMASK_ENUM(FcmpFcsel)
 };
 
-static cl::bits<CodeLayoutOpt> EnableCodeAlignment(
+static cl::list<CodeLayoutOpt> EnableCodeAlignment(
     "aarch64-code-layout-opt-enable", cl::Hidden, cl::CommaSeparated,
     cl::desc("Enable code alignment optimization for instruction pairs"),
     cl::values(
@@ -180,9 +180,9 @@ bool AArch64CodeLayoutOpt::runOnMachineFunction(MachineFunction &MF) {
 
   CodeLayoutOpt CLO = None;
   if (EnableCodeAlignment.getNumOccurrences()) {
-    if (EnableCodeAlignment.isSet(CodeLayoutOpt::CmpCsel))
+    if (is_contained(EnableCodeAlignment, CodeLayoutOpt::CmpCsel))
       CLO |= CodeLayoutOpt::CmpCsel;
-    if (EnableCodeAlignment.isSet(CodeLayoutOpt::FcmpFcsel))
+    if (is_contained(EnableCodeAlignment, CodeLayoutOpt::FcmpFcsel))
       CLO |= CodeLayoutOpt::FcmpFcsel;
   } else {
     // Default: enable when the subtarget opts in via FeatureAlignCmpCSelPairs.
