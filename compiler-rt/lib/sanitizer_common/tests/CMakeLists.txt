@@ -34,6 +34,7 @@ set(SANITIZER_UNITTESTS
   sanitizer_mac_test.cpp
   sanitizer_module_uuid_size.cpp
   sanitizer_mutex_test.cpp
+  sanitizer_new_handler_test.cpp
   sanitizer_nolibc_test.cpp
   sanitizer_posix_test.cpp
   sanitizer_printf_test.cpp
