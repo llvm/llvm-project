@@ -4,14 +4,8 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgpu9.0a-- -filetype=null < %s
 ; RUN: llc -global-isel=1 -mtriple=amdgpu9.0a-- -filetype=null < %s
 
-; The VGPR "as memory" address space (13) on a subtarget that has no movrel.
-; gfx9 indexes with the VGPR indexing mode instead, so AMDGPULowerVGPREncoding
-; wraps the move in s_set_gpr_idx_on / s_set_gpr_idx_off, which takes the dword
-; index straight from the SGPR holding it. Nothing needs to copy the index into
-; M0, so AMDGPUAssignIdxToM0 does nothing on these subtargets.
-;
-; The mode switch and the moves it applies to are bundled, so nothing can be
-; scheduled or spilled between them while indexing is enabled.
+; gfx9 has no movrel, so the moves are wrapped in s_set_gpr_idx_on / _off, which
+; take the dword index from its SGPR, and bundled with them.
 
 define i32 @load_i32(ptr addrspace(13) inreg %p) {
 ; GFX9-LABEL: load_i32:

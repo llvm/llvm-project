@@ -20,10 +20,8 @@
 namespace llvm {
 namespace AMDGPUMI {
 
-// Wrapper for the whole-dword VGPR "as memory" (address space 13) indexed
-// load/store pseudos. The movrel form (V_LOAD_IDX_B<N> / V_STORE_IDX_B<N>)
-// reads its index from M0; the VGPR indexing mode form
-// (V_LOAD_IDX_GPR_IDX_B<N> / V_STORE_IDX_GPR_IDX_B<N>) takes it in an SGPR:
+// Wrapper for the whole-dword VGPR "as memory" (address space 13) load/store
+// pseudos. The movrel form reads its index from M0, the GPR_IDX form from $idx:
 //   movrel:   load (outs data), (ins offset)      store (ins data, offset)
 //   gpr_idx:  load (outs data), (ins idx, offset) store (ins data, idx, offset)
 class VLoadStoreIdxInst : public MachineInstr {

@@ -391,7 +391,6 @@ void AMDGPULowerVGPREncoding::lowerLoadStoreIdx(MachineInstr &MI) {
   const DebugLoc &DL = MI.getDebugLoc();
   const bool IsStore = LdSt.mayStore();
 
-  // $data is operand 0 of both the load (def) and store (use) pseudos.
   Register Data = LdSt.getDataOp().getReg();
   unsigned Offset = LdSt.getOffsetOp().getImm();
   unsigned NumDwords = LdSt.getBitWidth() / 32;
@@ -406,8 +405,6 @@ void AMDGPULowerVGPREncoding::lowerLoadStoreIdx(MachineInstr &MI) {
          "out of bounds VGPR 'as memory' (address space 13) access");
 #endif
 
-  // The movrel form reads its index from M0; the VGPR indexing mode form from
-  // its SGPR operand.
   const bool UseGPRIdxMode = LdSt.isGPRIdx();
 
   MachineInstr *SetOn = nullptr;
@@ -428,10 +425,8 @@ void AMDGPULowerVGPREncoding::lowerLoadStoreIdx(MachineInstr &MI) {
     Opcode =
         IsStore ? AMDGPU::V_MOVRELD_B32_as_mem : AMDGPU::V_MOVRELS_B32_as_mem;
 
-  // A move touches VGPR($offset + i) *plus M0*, known only at run time, so no
-  // operand can name it and such operands are undef. Liveness is therefore not
-  // expressed here; correctness relies on nothing else being allocated to these
-  // registers, which is why frontend use of this address space is discouraged.
+  // A move touches its base plus the run-time index, which no operand can name,
+  // so the base is undef and the liveness of those registers is not expressed.
   const RegState DataFlags = IsStore
                                  ? getUndefRegState(LdSt.getDataOp().isUndef())
                                  : RegState::NoFlags;
@@ -663,8 +658,6 @@ bool AMDGPULowerVGPREncoding::run(MachineFunction &MF) {
   TII = ST->getInstrInfo();
   TRI = ST->getRegisterInfo();
 
-  // S_SET_VGPR_MSB is only needed above 256 addressable VGPRs, but the pass
-  // still runs elsewhere to lower the indexed load/store pseudos.
   const bool LowerVGPRMSBs = ST->has1024AddressableVGPRs();
 
   LLVM_DEBUG(dbgs() << "*** AMDGPULowerVGPREncoding on " << MF.getName()

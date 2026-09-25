@@ -2,11 +2,9 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgpu12.00-- < %s | FileCheck %s --check-prefixes=GFX12,GFX12-SDAG
 ; RUN: llc -global-isel=1 -mtriple=amdgpu12.00-- < %s | FileCheck %s --check-prefixes=GFX12,GFX12-GISEL
 
-; The VGPR "as memory" (address space 13) dword index only needs enough bits to
-; address all addressable VGPRs, so a redundant high-bit mask feeding the index
-; folds away via the AMDGPUISD::REG_LOAD / REG_STORE SimplifyDemandedBits combine.
-; The incoming index is masked with 0xffff (wider than necessary); on the SDAG
-; path the mask must not survive into the M0 index computation.
+; The dword index only needs enough bits to address every VGPR, so a wider mask
+; on it folds away (SimplifyDemandedBits on REG_LOAD / REG_STORE): on
+; SelectionDAG the 0xffff mask must not reach the M0 computation.
 
 define amdgpu_ps i32 @load_masked_index(i32 inreg %arg) {
 ; GFX12-SDAG-LABEL: load_masked_index:
