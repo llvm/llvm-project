@@ -7773,7 +7773,7 @@ ExprResult Sema::BuildCompoundLiteralExpr(
   //  "If the compound literal occurs outside the body of a function, the
   //  initializer list shall consist of constant expressions."
   if (HasGlobalStorage || HasConstexpr)
-    if (auto ILE = dyn_cast<InitListExpr>(LiteralExpr))
+    if (auto *ILE = dyn_cast<InitListExpr>(LiteralExpr))
       for (unsigned i = 0, j = ILE->getNumInits(); i != j; i++) {
         Expr *Init = ILE->getInit(i);
         if (!HasConstexpr && !Init->isTypeDependent() &&
