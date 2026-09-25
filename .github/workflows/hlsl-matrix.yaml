@@ -27,4 +27,3 @@ jobs:
     with:
       SKU: ${{ matrix.runs-on }}
       TestTarget: check-hlsl-clang-warp-d3d12
-      LLVM-ref: ${{ github.ref }}

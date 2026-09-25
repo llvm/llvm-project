@@ -11,11 +11,6 @@ on:
         required: false
         default: 'main'
         type: string
-      LLVM-ref:
-        description: 'LLVM Branch'
-        required: false
-        default: 'main'
-        type: string
       SKU:
         required: true
         type: string
@@ -45,7 +40,6 @@ jobs:
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
-          ref: ${{ inputs.LLVM-ref }}
           path: llvm-project
       - name: Checkout OffloadTest
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -79,7 +73,7 @@ jobs:
             cd llvm-project
             mkdir build
             cd build
-            cmake -G Ninja -DDXIL_DIS=${{ github.workspace }}/DXC/build/bin/llvm-dis -DLLVM_INCLUDE_DXIL_TESTS=On -DCMAKE_BUILD_TYPE=Release -C ${{ github.workspace }}/llvm-project/clang/cmake/caches/HLSL.cmake -C ${{ github.workspace }}/OffloadTest/cmake/caches/sccache.cmake -DDXC_DIR=${{ github.workspace }}/DXC/build/bin -DLLVM_EXTERNAL_OFFLOADTEST_SOURCE_DIR=${{ github.workspace }}/OffloadTest -DLLVM_EXTERNAL_PROJECTS="OffloadTest" -DLLVM_LIT_ARGS="--xunit-xml-output=testresults.xunit.xml -v" -DOFFLOADTEST_WARP_ONLY=On -DGOLDENIMAGE_DIR=${{ github.workspace }}/golden-images ${{ github.workspace }}/llvm-project/llvm/
+            cmake -G Ninja -DDXIL_DIS=${{ github.workspace }}/DXC/build/bin/llvm-dis.exe -DLLVM_INCLUDE_DXIL_TESTS=On -DCMAKE_BUILD_TYPE=Release -C ${{ github.workspace }}/llvm-project/clang/cmake/caches/HLSL.cmake -C ${{ github.workspace }}/OffloadTest/cmake/caches/sccache.cmake -DDXC_DIR=${{ github.workspace }}/DXC/build/bin -DLLVM_EXTERNAL_OFFLOADTEST_SOURCE_DIR=${{ github.workspace }}/OffloadTest -DLLVM_EXTERNAL_PROJECTS="OffloadTest" -DLLVM_LIT_ARGS="--xunit-xml-output=testresults.xunit.xml -v" -DOFFLOADTEST_WARP_ONLY=On -DGOLDENIMAGE_DIR=${{ github.workspace }}/golden-images ${{ github.workspace }}/llvm-project/llvm/
             ninja hlsl-test-depends llvm-test-depends clang-test-depends
       - name: Run HLSL Tests
         run: |
