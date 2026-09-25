@@ -247,8 +247,8 @@ public:
 /// lookup in the extern "C" context.
 class ExternCContextDecl : public Decl, public DeclContext {
   explicit ExternCContextDecl(TranslationUnitDecl *TU)
-    : Decl(ExternCContext, TU, SourceLocation()),
-      DeclContext(ExternCContext) {}
+      : Decl(ExternCContext, TU, SourceLocation()),
+        DeclContext(ExternCContext, this) {}
 
   virtual void anchor();
 
@@ -4777,7 +4777,8 @@ class TopLevelStmtDecl : public Decl, public DeclContext {
   unsigned Ordinal = 0;
 
   TopLevelStmtDecl(DeclContext *DC, SourceLocation L, Stmt *S)
-      : Decl(TopLevelStmt, DC, L), DeclContext(TopLevelStmt), Statement(S) {}
+      : Decl(TopLevelStmt, DC, L), DeclContext(TopLevelStmt, this),
+        Statement(S) {}
 
   virtual void anchor();
 
@@ -5277,7 +5278,7 @@ private:
   SourceLocation RBraceLoc;
 
   ExportDecl(DeclContext *DC, SourceLocation ExportLoc)
-      : Decl(Export, DC, ExportLoc), DeclContext(Export),
+      : Decl(Export, DC, ExportLoc), DeclContext(Export, this),
         RBraceLoc(SourceLocation()) {}
 
 public:
