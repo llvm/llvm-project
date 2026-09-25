@@ -210,9 +210,10 @@ struct VPTransformState {
     DenseMap<const VPValue *, SmallVector<Value *, 4>> VPV2Scalars;
   } Data;
 
-  /// Get the generated vector Value for a given VPValue \p Def if \p IsScalar
-  /// is false, otherwise return the generated scalar. \See set.
-  Value *get(const VPValue *Def, bool IsScalar = false);
+  /// Get the generated vector Value for a given VPValue \p Def if
+  /// \p NeedsSingleScalar is false, otherwise return the generated scalar.
+  /// \See set.
+  Value *get(const VPValue *Def, bool NeedsSingleScalar = false);
 
   /// Get the generated Value for a given VPValue and given Part and Lane.
   Value *get(const VPValue *Def, const VPLane &Lane);
