@@ -19,8 +19,8 @@ void builtin_address_of() {
 // CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.ptr<!rec_Container>>
 // CIR: cir.store {{.*}} %[[A_ADDR]], %[[B_ADDR]] : !cir.ptr<!rec_Container>, !cir.ptr<!cir.ptr<!rec_Container>>
 
-// LLVM: %[[A_ADDR:.*]] = alloca %struct.Container, i64 1, align 4
-// LLVM: %[[B_ADDR:.*]] = alloca ptr, i64 1, align 8
+// LLVM: %[[A_ADDR:.*]] = alloca %struct.Container, align 4
+// LLVM: %[[B_ADDR:.*]] = alloca ptr, align 8
 // LLVM: store ptr %[[A_ADDR]], ptr %[[B_ADDR]], align 8
 
 // OGCG: %[[A_ADDR:.*]] = alloca %struct.Container, align 4

@@ -293,7 +293,7 @@ void WebAssemblyFrameLowering::emitPrologue(MachineFunction &MF,
   DebugLoc DL;
 
   const TargetRegisterClass *PtrRC =
-      MRI.getTargetRegisterInfo()->getPointerRegClass();
+      TII->getRegClass(TII->get(getOpcConst(MF)), 0);
   unsigned SPReg = getSPReg(MF);
   if (StackSize)
     SPReg = MRI.createVirtualRegister(PtrRC);
@@ -371,7 +371,7 @@ void WebAssemblyFrameLowering::emitEpilogue(MachineFunction &MF,
     SPReg = FI->getBasePointerVreg();
   } else if (StackSize) {
     const TargetRegisterClass *PtrRC =
-        MRI.getTargetRegisterInfo()->getPointerRegClass();
+        TII->getRegClass(TII->get(getOpcConst(MF)), 0);
     Register OffsetReg = MRI.createVirtualRegister(PtrRC);
     BuildMI(MBB, InsertPt, DL, TII->get(getOpcConst(MF)), OffsetReg)
         .addImm(StackSize);
@@ -413,8 +413,9 @@ WebAssemblyFrameLowering::getDwarfFrameBase(const MachineFunction &MF) const {
     // that this code is not reached in that case, but assert here to be sure.
     assert(!MF.getSubtarget<WebAssemblySubtarget>().hasLibcallThreadContext());
 
-    // TODO: This should work on a breakpoint at a function with no frame,
-    // but probably won't work for traversing up the stack.
+    // The __stack_pointer global holds only the innermost frame's stack
+    // pointer, so this frame base is correct only for the innermost frame.
+    // TODO: Describe outer frames, which need a per-frame stack pointer value.
     Loc.Location.WasmLoc = {WebAssembly::TI_GLOBAL_RELOC, 0};
   }
   return Loc;

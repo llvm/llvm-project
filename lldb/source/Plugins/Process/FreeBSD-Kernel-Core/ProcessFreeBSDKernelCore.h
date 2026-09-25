@@ -10,6 +10,7 @@
 #define LLDB_SOURCE_PLUGINS_PROCESS_FREEBSDKERNEL_PROCESSFREEBSDKERNELCORE_H
 
 #include "lldb/Core/Debugger.h"
+#include "lldb/Core/Module.h"
 #include "lldb/Target/PostMortemProcess.h"
 
 #include <kvm.h>
@@ -62,12 +63,21 @@ protected:
   bool DoUpdateThreadList(lldb_private::ThreadList &old_thread_list,
                           lldb_private::ThreadList &new_thread_list) override;
 
-  size_t DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
-                      lldb_private::Status &error) override;
+  size_t DoReadMemory(const lldb_private::ProcessAddress &addr, void *buf,
+                      size_t size, lldb_private::Status &error) override;
 
   lldb::addr_t FindSymbol(const char *name);
 
 private:
+  static inline thread_local lldb_private::Module *g_kvm_kernel_module =
+      nullptr;
+
+  static int ResolveKVMSymbol(const char *name, kvaddr_t *value);
+
+  static kvm_t *OpenKVM(const lldb::ModuleSP &kernel_module,
+                        const lldb_private::FileSpec &core_file, int flags,
+                        char *errbuf);
+
   void SetKernelDisplacement();
 
   void PrintUnreadMessage();

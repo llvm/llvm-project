@@ -24,8 +24,8 @@ template <typename T> void summable(T a) {
 // CIR:   }
 // CIR: }
 
-// LLVM:   %[[B_ADDR:.*]] = alloca i32, i64 1, align 4
-// LLVM:   %[[A_ADDR:.*]] = alloca i32, i64 1, align 4
+// LLVM:   %[[B_ADDR:.*]] = alloca i32, align 4
+// LLVM:   %[[A_ADDR:.*]] = alloca i32, align 4
 // LLVM:   store i32 %[[ARG_A:.*]], ptr %[[A_ADDR]], align 4
 // LLVM:   br label %[[IF_COND:.*]]
 // LLVM: [[IF_COND]]:

@@ -1292,6 +1292,17 @@ define i1 @eq_smin_nofold(i32 %x) {
   ret i1 %ret
 }
 
+define i32 @select_signed_max_smin(i32 %pos, i32 %len) {
+; CHECK-LABEL: @select_signed_max_smin(
+; CHECK-NEXT:    [[CLAMPED:%.*]] = call i32 @llvm.smin.i32(i32 [[POS:%.*]], i32 [[LEN:%.*]])
+; CHECK-NEXT:    ret i32 [[CLAMPED]]
+;
+  %is_smax = icmp eq i32 %pos, 2147483647
+  %clamped = call i32 @llvm.smin.i32(i32 %pos, i32 %len)
+  %out = select i1 %is_smax, i32 %len, i32 %clamped
+  ret i32 %out
+}
+
 declare void @llvm.assume(i1)
 declare i32 @llvm.smin.i32(i32, i32)
 declare <2 x i32> @llvm.smin.v2i32(<2 x i32>, <2 x i32>)

@@ -246,9 +246,8 @@ void strlen_symbolic_offset(unsigned x) {
   const char *str = "abcd";
   if (x < 1 || x > 3)
     return;
-  // FIXME: these should be TRUE
-  clang_analyzer_eval(strlen(str + x) >= 1); // expected-warning{{UNKNOWN}}
-  clang_analyzer_eval(strlen(str + x) <= 3); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(strlen(str + x) >= 1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strlen(str + x) <= 3); // expected-warning{{TRUE}}
   if (x != 1)
     return;
   clang_analyzer_eval(strlen(str + x) == 3); // expected-warning{{TRUE}}

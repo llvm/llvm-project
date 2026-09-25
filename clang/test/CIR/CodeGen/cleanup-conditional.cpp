@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s --check-prefix=CIR
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --input-file=%t-cir.ll %s --check-prefix=LLVM
+// RUN: FileCheck --input-file=%t-cir.ll %s --check-prefixes=LLVM,LLVMCIR
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
-// RUN: FileCheck --input-file=%t.ll %s --check-prefix=OGCG
+// RUN: FileCheck --input-file=%t.ll %s --check-prefixes=LLVM,OGCG
 
 struct S {
   S();
@@ -17,10 +17,11 @@ void test_ternary_temporary(bool c, int x) {
 // CIR-LABEL: @_Z22test_ternary_temporarybi
 // CIR:   %[[TMP:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_S>
 // CIR:   %[[ACTIVE:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
-// The cleanup scope wraps the full expression so cleanups run on all exits.
+// CIR:   %[[COND:.*]] = cir.load {{.*}} : !cir.ptr<!cir.bool>, !cir.bool
+// The cleanup scope opens at the conditional and stays open to the end of the
+// full expression, so cleanups run on all exits.
 // CIR:   cir.cleanup.scope {
-// Load condition, then active flag false before the ternary (destructor guard).
-// CIR:     %[[COND:.*]] = cir.load {{.*}} : !cir.ptr<!cir.bool>, !cir.bool
+// Active flag false before the ternary (destructor guard).
 // CIR:     %[[FALSE:.*]] = cir.const #false
 // CIR:     cir.store %[[FALSE]], %[[ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
 // CIR:     %{{.*}} = cir.ternary(%[[COND]], true {
@@ -41,42 +42,42 @@ void test_ternary_temporary(bool c, int x) {
 // CIR:     cir.yield
 // CIR:   }
 
-// LLVM-LABEL: define dso_local void @_Z22test_ternary_temporarybi(
-// LLVM:         %[[TMP:.*]] = alloca %struct.S
-// LLVM:         %[[ACTIVE:.*]] = alloca i8
-// LLVM:         %[[RESULT_TMP:.*]] = alloca i32
-// LLVM:         br label %[[INIT:.*]]
-// LLVM:       [[INIT]]:
-// LLVM:         %[[COND_BYTE:.*]] = load i8, ptr %{{.*}}
-// LLVM:         %[[COND_BOOL:.*]] = trunc i8 %[[COND_BYTE]] to i1
-// LLVM:         store i8 0, ptr %[[ACTIVE]]
-// LLVM:         br i1 %[[COND_BOOL]], label %[[TRUE_BR:.*]], label %[[FALSE_BR:.*]]
-// LLVM:       [[TRUE_BR]]:
-// LLVM:         call void @_ZN1SC1Ev(ptr {{.*}} %[[TMP]])
-// LLVM:         store i8 1, ptr %[[ACTIVE]]
-// LLVM:         %[[GET_RESULT:.*]] = call {{.*}} i32 @_ZN1S3getEv(ptr {{.*}} %[[TMP]])
-// LLVM:         br label %[[MERGE:.*]]
-// LLVM:       [[FALSE_BR]]:
-// LLVM:         %[[XVAL:.*]] = load i32, ptr %{{.*}}
-// LLVM:         br label %[[MERGE]]
-// LLVM:       [[MERGE]]:
-// LLVM:         %[[PHI:.*]] = phi i32 [ %[[XVAL]], %[[FALSE_BR]] ], [ %[[GET_RESULT]], %[[TRUE_BR]] ]
-// LLVM:         br label %[[STORE:.*]]
-// LLVM:       [[STORE]]:
-// LLVM:         store i32 %[[PHI]], ptr %[[RESULT_TMP]]
-// LLVM:         br label %[[CLEANUP:.*]]
-// LLVM:       [[CLEANUP]]:
-// LLVM:         %[[ACTIVE_BYTE:.*]] = load i8, ptr %[[ACTIVE]]
-// LLVM:         %[[ACTIVE_BOOL:.*]] = trunc i8 %[[ACTIVE_BYTE]] to i1
-// LLVM:         br i1 %[[ACTIVE_BOOL]], label %[[DTOR:.*]], label %[[SKIP_DTOR:.*]]
-// LLVM:       [[DTOR]]:
-// LLVM:         call void @_ZN1SD1Ev(ptr {{.*}} %[[TMP]])
-// LLVM:         br label %[[SKIP_DTOR]]
-// LLVM:       [[SKIP_DTOR]]:
-// LLVM:         br label %[[EXIT:.*]]
-// LLVM:       [[EXIT]]:
-// LLVM:         %[[RESULT:.*]] = load i32, ptr %[[RESULT_TMP]]
-// LLVM:         store i32 %[[RESULT]], ptr %{{.*}}
+// LLVMCIR-LABEL: define dso_local void @_Z22test_ternary_temporarybi(
+// LLVMCIR:         %[[TMP:.*]] = alloca %struct.S
+// LLVMCIR:         %[[ACTIVE:.*]] = alloca i8
+// LLVMCIR:         %[[RESULT_TMP:.*]] = alloca i32
+// LLVMCIR:         %[[COND_BYTE:.*]] = load i8, ptr %{{.*}}
+// LLVMCIR:         %[[COND_BOOL:.*]] = trunc i8 %[[COND_BYTE]] to i1
+// LLVMCIR:         br label %[[INIT:.*]]
+// LLVMCIR:       [[INIT]]:
+// LLVMCIR:         store i8 0, ptr %[[ACTIVE]]
+// LLVMCIR:         br i1 %[[COND_BOOL]], label %[[TRUE_BR:.*]], label %[[FALSE_BR:.*]]
+// LLVMCIR:       [[TRUE_BR]]:
+// LLVMCIR:         call void @_ZN1SC1Ev(ptr {{.*}} %[[TMP]])
+// LLVMCIR:         store i8 1, ptr %[[ACTIVE]]
+// LLVMCIR:         %[[GET_RESULT:.*]] = call {{.*}} i32 @_ZN1S3getEv(ptr {{.*}} %[[TMP]])
+// LLVMCIR:         br label %[[MERGE:.*]]
+// LLVMCIR:       [[FALSE_BR]]:
+// LLVMCIR:         %[[XVAL:.*]] = load i32, ptr %{{.*}}
+// LLVMCIR:         br label %[[MERGE]]
+// LLVMCIR:       [[MERGE]]:
+// LLVMCIR:         %[[PHI:.*]] = phi i32 [ %[[XVAL]], %[[FALSE_BR]] ], [ %[[GET_RESULT]], %[[TRUE_BR]] ]
+// LLVMCIR:         br label %[[STORE:.*]]
+// LLVMCIR:       [[STORE]]:
+// LLVMCIR:         store i32 %[[PHI]], ptr %[[RESULT_TMP]]
+// LLVMCIR:         br label %[[CLEANUP:.*]]
+// LLVMCIR:       [[CLEANUP]]:
+// LLVMCIR:         %[[ACTIVE_BYTE:.*]] = load i8, ptr %[[ACTIVE]]
+// LLVMCIR:         %[[ACTIVE_BOOL:.*]] = trunc i8 %[[ACTIVE_BYTE]] to i1
+// LLVMCIR:         br i1 %[[ACTIVE_BOOL]], label %[[DTOR:.*]], label %[[SKIP_DTOR:.*]]
+// LLVMCIR:       [[DTOR]]:
+// LLVMCIR:         call void @_ZN1SD1Ev(ptr {{.*}} %[[TMP]])
+// LLVMCIR:         br label %[[SKIP_DTOR]]
+// LLVMCIR:       [[SKIP_DTOR]]:
+// LLVMCIR:         br label %[[EXIT:.*]]
+// LLVMCIR:       [[EXIT]]:
+// LLVMCIR:         %[[RESULT:.*]] = load i32, ptr %[[RESULT_TMP]]
+// LLVMCIR:         store i32 %[[RESULT]], ptr %{{.*}}
 
 // OGCG-LABEL: define dso_local void @_Z22test_ternary_temporarybi(
 // OGCG:       entry:
@@ -121,9 +122,9 @@ void test_ternary_both_branches(bool c) {
 // CIR:   %[[ACTA:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
 // CIR:   %[[TMPB:.*]] = cir.alloca "ref.tmp1" {{.*}} : !cir.ptr<!rec_B>
 // CIR:   %[[ACTB:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
+// CIR:   %[[COND:.*]] = cir.load {{.*}} : !cir.ptr<!cir.bool>, !cir.bool
 // CIR:   cir.cleanup.scope {
 // Both active flags start false; each branch sets its own to true when it runs.
-// CIR:     %[[COND:.*]] = cir.load {{.*}} : !cir.ptr<!cir.bool>, !cir.bool
 // CIR:     %[[FALSE_A:.*]] = cir.const #false
 // CIR:     cir.store %[[FALSE_A]], %[[ACTA]] : !cir.bool, !cir.ptr<!cir.bool>
 // CIR:     %[[FALSE_B:.*]] = cir.const #false
@@ -153,53 +154,53 @@ void test_ternary_both_branches(bool c) {
 // CIR:     cir.yield
 // CIR:   }
 
-// LLVM-LABEL: define dso_local void @_Z26test_ternary_both_branchesb(
-// LLVM:         %{{.*}} = alloca i8
-// LLVM:         %{{.*}} = alloca i32
-// LLVM:         %[[TMPA:.*]] = alloca %struct.A
-// LLVM:         %[[ACTA:.*]] = alloca i8
-// LLVM:         %[[TMPB:.*]] = alloca %struct.B
-// LLVM:         %[[ACTB:.*]] = alloca i8
-// LLVM:         %[[RESULT_TMP:.*]] = alloca i32
-// LLVM:         br label %[[INIT:.*]]
-// LLVM:       [[INIT]]:
-// LLVM:         %[[COND_BYTE:.*]] = load i8, ptr %{{.*}}
-// LLVM:         %[[COND_BOOL:.*]] = trunc i8 %[[COND_BYTE]] to i1
-// LLVM:         store i8 0, ptr %[[ACTA]]
-// LLVM:         store i8 0, ptr %[[ACTB]]
-// LLVM:         br i1 %[[COND_BOOL]], label %[[CONSTRUCT_A:.*]], label %[[CONSTRUCT_B:.*]]
-// LLVM:       [[CONSTRUCT_A]]:
-// LLVM:         call void @_ZN1AC1Ev({{.*}} %[[TMPA]])
-// LLVM:         store i8 1, ptr %[[ACTA]]
-// LLVM:         %[[CALLA:.*]] = call noundef i32 @_ZN1A3getEv({{.*}} %[[TMPA]])
-// LLVM:         br label %[[MERGE:.*]]
-// LLVM:       [[CONSTRUCT_B]]:
-// LLVM:         call void @_ZN1BC1Ev({{.*}} %[[TMPB]])
-// LLVM:         store i8 1, ptr %[[ACTB]]
-// LLVM:         %[[CALLB:.*]] = call {{.*}} i32 @_ZN1B3getEv({{.*}} %[[TMPB]])
-// LLVM:         br label %[[MERGE]]
-// LLVM:       [[MERGE]]:
-// LLVM:         %[[PHI:.*]] = phi i32 [ %[[CALLB]], %[[CONSTRUCT_B]] ], [ %[[CALLA]], %[[CONSTRUCT_A]] ]
-// LLVM:         br label %[[STORE:.*]]
-// LLVM:       [[STORE]]:
-// LLVM:         store i32 %[[PHI]], ptr %[[RESULT_TMP]]
-// LLVM:         br label %[[CLEANUP_B:.*]]
-// LLVM:       [[CLEANUP_B]]:
-// LLVM:         %[[ACTIVE_BYTE_B:.*]] = load i8, ptr %[[ACTB]]
-// LLVM:         %[[ACTIVE_BOOL_B:.*]] = trunc i8 %[[ACTIVE_BYTE_B]] to i1
-// LLVM:         br i1 %[[ACTIVE_BOOL_B]], label %[[DTOR_B:.*]], label %[[SKIP_DTOR_B:.*]]
-// LLVM:       [[DTOR_B]]:
-// LLVM:         call void @_ZN1BD1Ev({{.*}} %[[TMPB]])
-// LLVM:         br label %[[SKIP_DTOR_B]]
-// LLVM:       [[SKIP_DTOR_B]]:
-// LLVM:         %[[ACTIVE_BYTE_A:.*]] = load i8, ptr %[[ACTA]]
-// LLVM:         %[[ACTIVE_BOOL_A:.*]] = trunc i8 %[[ACTIVE_BYTE_A]] to i1
-// LLVM:         br i1 %[[ACTIVE_BOOL_A]], label %[[DTOR_A:.*]], label %[[SKIP_DTOR_A:.*]]
-// LLVM:       [[DTOR_A]]:
-// LLVM:         call void @_ZN1AD1Ev({{.*}} %[[TMPA]])
-// LLVM:         br label %[[SKIP_DTOR_A]]
-// LLVM:       [[SKIP_DTOR_A]]:
-// LLVM:         br label %{{.*}}
+// LLVMCIR-LABEL: define dso_local void @_Z26test_ternary_both_branchesb(
+// LLVMCIR:         %{{.*}} = alloca i8
+// LLVMCIR:         %{{.*}} = alloca i32
+// LLVMCIR:         %[[TMPA:.*]] = alloca %struct.A
+// LLVMCIR:         %[[ACTA:.*]] = alloca i8
+// LLVMCIR:         %[[TMPB:.*]] = alloca %struct.B
+// LLVMCIR:         %[[ACTB:.*]] = alloca i8
+// LLVMCIR:         %[[RESULT_TMP:.*]] = alloca i32
+// LLVMCIR:         %[[COND_BYTE:.*]] = load i8, ptr %{{.*}}
+// LLVMCIR:         %[[COND_BOOL:.*]] = trunc i8 %[[COND_BYTE]] to i1
+// LLVMCIR:         br label %[[INIT:.*]]
+// LLVMCIR:       [[INIT]]:
+// LLVMCIR:         store i8 0, ptr %[[ACTA]]
+// LLVMCIR:         store i8 0, ptr %[[ACTB]]
+// LLVMCIR:         br i1 %[[COND_BOOL]], label %[[CONSTRUCT_A:.*]], label %[[CONSTRUCT_B:.*]]
+// LLVMCIR:       [[CONSTRUCT_A]]:
+// LLVMCIR:         call void @_ZN1AC1Ev({{.*}} %[[TMPA]])
+// LLVMCIR:         store i8 1, ptr %[[ACTA]]
+// LLVMCIR:         %[[CALLA:.*]] = call noundef i32 @_ZN1A3getEv({{.*}} %[[TMPA]])
+// LLVMCIR:         br label %[[MERGE:.*]]
+// LLVMCIR:       [[CONSTRUCT_B]]:
+// LLVMCIR:         call void @_ZN1BC1Ev({{.*}} %[[TMPB]])
+// LLVMCIR:         store i8 1, ptr %[[ACTB]]
+// LLVMCIR:         %[[CALLB:.*]] = call {{.*}} i32 @_ZN1B3getEv({{.*}} %[[TMPB]])
+// LLVMCIR:         br label %[[MERGE]]
+// LLVMCIR:       [[MERGE]]:
+// LLVMCIR:         %[[PHI:.*]] = phi i32 [ %[[CALLB]], %[[CONSTRUCT_B]] ], [ %[[CALLA]], %[[CONSTRUCT_A]] ]
+// LLVMCIR:         br label %[[STORE:.*]]
+// LLVMCIR:       [[STORE]]:
+// LLVMCIR:         store i32 %[[PHI]], ptr %[[RESULT_TMP]]
+// LLVMCIR:         br label %[[CLEANUP_B:.*]]
+// LLVMCIR:       [[CLEANUP_B]]:
+// LLVMCIR:         %[[ACTIVE_BYTE_B:.*]] = load i8, ptr %[[ACTB]]
+// LLVMCIR:         %[[ACTIVE_BOOL_B:.*]] = trunc i8 %[[ACTIVE_BYTE_B]] to i1
+// LLVMCIR:         br i1 %[[ACTIVE_BOOL_B]], label %[[DTOR_B:.*]], label %[[SKIP_DTOR_B:.*]]
+// LLVMCIR:       [[DTOR_B]]:
+// LLVMCIR:         call void @_ZN1BD1Ev({{.*}} %[[TMPB]])
+// LLVMCIR:         br label %[[SKIP_DTOR_B]]
+// LLVMCIR:       [[SKIP_DTOR_B]]:
+// LLVMCIR:         %[[ACTIVE_BYTE_A:.*]] = load i8, ptr %[[ACTA]]
+// LLVMCIR:         %[[ACTIVE_BOOL_A:.*]] = trunc i8 %[[ACTIVE_BYTE_A]] to i1
+// LLVMCIR:         br i1 %[[ACTIVE_BOOL_A]], label %[[DTOR_A:.*]], label %[[SKIP_DTOR_A:.*]]
+// LLVMCIR:       [[DTOR_A]]:
+// LLVMCIR:         call void @_ZN1AD1Ev({{.*}} %[[TMPA]])
+// LLVMCIR:         br label %[[SKIP_DTOR_A]]
+// LLVMCIR:       [[SKIP_DTOR_A]]:
+// LLVMCIR:         br label %{{.*}}
 
 // OGCG-LABEL: define dso_local void @_Z26test_ternary_both_branchesb(
 // OGCG:       entry:
@@ -238,8 +239,8 @@ int test_return_ternary(bool c) {
 // CIR:   %[[ACTA:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
 // CIR:   %[[TMPB:.*]] = cir.alloca "ref.tmp1" {{.*}} : !cir.ptr<!rec_B>
 // CIR:   %[[ACTB:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
+// CIR:   %[[COND:.*]] = cir.load {{.*}} : !cir.ptr<!cir.bool>, !cir.bool
 // CIR:   cir.cleanup.scope {
-// CIR:     %[[COND:.*]] = cir.load {{.*}} : !cir.ptr<!cir.bool>, !cir.bool
 // CIR:     %[[FALSE_A:.*]] = cir.const #false
 // CIR:     cir.store %[[FALSE_A]], %[[ACTA]] : !cir.bool, !cir.ptr<!cir.bool>
 // CIR:     %[[FALSE_B:.*]] = cir.const #false
@@ -275,55 +276,55 @@ int test_return_ternary(bool c) {
 // CIR:   %[[RET:.*]] = cir.load %{{.*}} : !cir.ptr<!s32i>, !s32i
 // CIR:   cir.return %[[RET]] : !s32i
 
-// LLVM-LABEL: define dso_local noundef i32 @_Z19test_return_ternaryb(
-// LLVM:         %{{.*}} = alloca i8
-// LLVM:         %[[RETVAL:.*]] = alloca i32
-// LLVM:         %[[TMPA:.*]] = alloca %struct.A
-// LLVM:         %[[ACTA:.*]] = alloca i8
-// LLVM:         %[[TMPB:.*]] = alloca %struct.B
-// LLVM:         %[[ACTB:.*]] = alloca i8
-// LLVM:         br label %[[INIT:.*]]
-// LLVM:       [[INIT]]:
-// LLVM:         %[[COND_BYTE:.*]] = load i8, ptr %{{.*}}
-// LLVM:         %[[COND_BOOL:.*]] = trunc i8 %[[COND_BYTE]] to i1
-// LLVM:         store i8 0, ptr %[[ACTA]]
-// LLVM:         store i8 0, ptr %[[ACTB]]
-// LLVM:         br i1 %[[COND_BOOL]], label %[[CONSTRUCT_A:.*]], label %[[CONSTRUCT_B:.*]]
-// LLVM:       [[CONSTRUCT_A]]:
-// LLVM:         call void @_ZN1AC1Ev({{.*}} %[[TMPA]])
-// LLVM:         store i8 1, ptr %[[ACTA]]
-// LLVM:         %[[CALLA:.*]] = call noundef i32 @_ZN1A3getEv({{.*}} %[[TMPA]])
-// LLVM:         br label %[[MERGE:.*]]
-// LLVM:       [[CONSTRUCT_B]]:
-// LLVM:         call void @_ZN1BC1Ev({{.*}} %[[TMPB]])
-// LLVM:         store i8 1, ptr %[[ACTB]]
-// LLVM:         %[[CALLB:.*]] = call noundef i32 @_ZN1B3getEv({{.*}} %[[TMPB]])
-// LLVM:         br label %[[MERGE]]
-// LLVM:       [[MERGE]]:
-// LLVM:         %[[PHI:.*]] = phi i32 [ %[[CALLB]], %[[CONSTRUCT_B]] ], [ %[[CALLA]], %[[CONSTRUCT_A]] ]
-// LLVM:         br label %[[STORE_RET:.*]]
-// LLVM:       [[STORE_RET]]:
-// LLVM:         store i32 %[[PHI]], ptr %[[RETVAL]]
-// LLVM:         br label %[[CLEANUP_B:.*]]
-// LLVM:       [[CLEANUP_B]]:
-// LLVM:         %[[ACTIVE_BYTE_B:.*]] = load i8, ptr %[[ACTB]]
-// LLVM:         %[[ACTIVE_BOOL_B:.*]] = trunc i8 %[[ACTIVE_BYTE_B]] to i1
-// LLVM:         br i1 %[[ACTIVE_BOOL_B]], label %[[DTOR_B:.*]], label %[[SKIP_DTOR_B:.*]]
-// LLVM:       [[DTOR_B]]:
-// LLVM:         call void @_ZN1BD1Ev({{.*}} %[[TMPB]])
-// LLVM:         br label %[[SKIP_DTOR_B]]
-// LLVM:       [[SKIP_DTOR_B]]:
-// LLVM:         %[[ACTIVE_BYTE_A:.*]] = load i8, ptr %[[ACTA]]
-// LLVM:         %[[ACTIVE_BOOL_A:.*]] = trunc i8 %[[ACTIVE_BYTE_A]] to i1
-// LLVM:         br i1 %[[ACTIVE_BOOL_A]], label %[[DTOR_A:.*]], label %[[SKIP_DTOR_A:.*]]
-// LLVM:       [[DTOR_A]]:
-// LLVM:         call void @_ZN1AD1Ev({{.*}} %[[TMPA]])
-// LLVM:         br label %[[SKIP_DTOR_A]]
-// LLVM:       [[SKIP_DTOR_A]]:
-// LLVM:         br label %[[EXIT:.*]]
-// LLVM:       [[EXIT]]:
-// LLVM:         %[[RET:.*]] = load i32, ptr %[[RETVAL]]
-// LLVM:         ret i32 %[[RET]]
+// LLVMCIR-LABEL: define dso_local noundef i32 @_Z19test_return_ternaryb(
+// LLVMCIR:         %{{.*}} = alloca i8
+// LLVMCIR:         %[[RETVAL:.*]] = alloca i32
+// LLVMCIR:         %[[TMPA:.*]] = alloca %struct.A
+// LLVMCIR:         %[[ACTA:.*]] = alloca i8
+// LLVMCIR:         %[[TMPB:.*]] = alloca %struct.B
+// LLVMCIR:         %[[ACTB:.*]] = alloca i8
+// LLVMCIR:         %[[COND_BYTE:.*]] = load i8, ptr %{{.*}}
+// LLVMCIR:         %[[COND_BOOL:.*]] = trunc i8 %[[COND_BYTE]] to i1
+// LLVMCIR:         br label %[[INIT:.*]]
+// LLVMCIR:       [[INIT]]:
+// LLVMCIR:         store i8 0, ptr %[[ACTA]]
+// LLVMCIR:         store i8 0, ptr %[[ACTB]]
+// LLVMCIR:         br i1 %[[COND_BOOL]], label %[[CONSTRUCT_A:.*]], label %[[CONSTRUCT_B:.*]]
+// LLVMCIR:       [[CONSTRUCT_A]]:
+// LLVMCIR:         call void @_ZN1AC1Ev({{.*}} %[[TMPA]])
+// LLVMCIR:         store i8 1, ptr %[[ACTA]]
+// LLVMCIR:         %[[CALLA:.*]] = call noundef i32 @_ZN1A3getEv({{.*}} %[[TMPA]])
+// LLVMCIR:         br label %[[MERGE:.*]]
+// LLVMCIR:       [[CONSTRUCT_B]]:
+// LLVMCIR:         call void @_ZN1BC1Ev({{.*}} %[[TMPB]])
+// LLVMCIR:         store i8 1, ptr %[[ACTB]]
+// LLVMCIR:         %[[CALLB:.*]] = call noundef i32 @_ZN1B3getEv({{.*}} %[[TMPB]])
+// LLVMCIR:         br label %[[MERGE]]
+// LLVMCIR:       [[MERGE]]:
+// LLVMCIR:         %[[PHI:.*]] = phi i32 [ %[[CALLB]], %[[CONSTRUCT_B]] ], [ %[[CALLA]], %[[CONSTRUCT_A]] ]
+// LLVMCIR:         br label %[[STORE_RET:.*]]
+// LLVMCIR:       [[STORE_RET]]:
+// LLVMCIR:         store i32 %[[PHI]], ptr %[[RETVAL]]
+// LLVMCIR:         br label %[[CLEANUP_B:.*]]
+// LLVMCIR:       [[CLEANUP_B]]:
+// LLVMCIR:         %[[ACTIVE_BYTE_B:.*]] = load i8, ptr %[[ACTB]]
+// LLVMCIR:         %[[ACTIVE_BOOL_B:.*]] = trunc i8 %[[ACTIVE_BYTE_B]] to i1
+// LLVMCIR:         br i1 %[[ACTIVE_BOOL_B]], label %[[DTOR_B:.*]], label %[[SKIP_DTOR_B:.*]]
+// LLVMCIR:       [[DTOR_B]]:
+// LLVMCIR:         call void @_ZN1BD1Ev({{.*}} %[[TMPB]])
+// LLVMCIR:         br label %[[SKIP_DTOR_B]]
+// LLVMCIR:       [[SKIP_DTOR_B]]:
+// LLVMCIR:         %[[ACTIVE_BYTE_A:.*]] = load i8, ptr %[[ACTA]]
+// LLVMCIR:         %[[ACTIVE_BOOL_A:.*]] = trunc i8 %[[ACTIVE_BYTE_A]] to i1
+// LLVMCIR:         br i1 %[[ACTIVE_BOOL_A]], label %[[DTOR_A:.*]], label %[[SKIP_DTOR_A:.*]]
+// LLVMCIR:       [[DTOR_A]]:
+// LLVMCIR:         call void @_ZN1AD1Ev({{.*}} %[[TMPA]])
+// LLVMCIR:         br label %[[SKIP_DTOR_A]]
+// LLVMCIR:       [[SKIP_DTOR_A]]:
+// LLVMCIR:         br label %[[EXIT:.*]]
+// LLVMCIR:       [[EXIT]]:
+// LLVMCIR:         %[[RET:.*]] = load i32, ptr %[[RETVAL]]
+// LLVMCIR:         ret i32 %[[RET]]
 
 // OGCG-LABEL: define dso_local noundef i32 @_Z19test_return_ternaryb(
 // OGCG:       entry:
@@ -384,23 +385,23 @@ int test_false_positive_conditional(bool c) {
 // CIR:     cir.yield
 // CIR:   }
 
-// LLVM-LABEL: define dso_local noundef i32 @_Z31test_false_positive_conditionalb(
-// LLVM:         %[[RETVAL:.*]] = alloca i32
-// LLVM:         %[[TMP:.*]] = alloca %struct.S
-// LLVM:         call void @_ZN1SC1Ev({{.*}} %[[TMP]])
-// LLVM:         br label %[[BODY:.*]]
-// LLVM:       [[BODY]]:
-// LLVM:         %[[VAL:.*]] = call {{.*}} i32 @_ZN1S3getEv({{.*}} %[[TMP]])
-// LLVM:         %[[CMP:.*]] = icmp ne i32 %[[VAL]], 0
-// LLVM:         %[[SEL:.*]] = select i1 %[[CMP]], i32 1, i32 2
-// LLVM:         store i32 %[[SEL]], ptr %[[RETVAL]]
-// LLVM:         br label %[[DTOR:.*]]
-// LLVM:       [[DTOR]]:
-// LLVM:         call void @_ZN1SD1Ev({{.*}} %[[TMP]])
-// LLVM:         br label %[[EXIT:.*]]
-// LLVM:       [[EXIT]]:
-// LLVM:         %[[RET:.*]] = load i32, ptr %[[RETVAL]]
-// LLVM:         ret i32 %[[RET]]
+// LLVMCIR-LABEL: define dso_local noundef i32 @_Z31test_false_positive_conditionalb(
+// LLVMCIR:         %[[RETVAL:.*]] = alloca i32
+// LLVMCIR:         %[[TMP:.*]] = alloca %struct.S
+// LLVMCIR:         call void @_ZN1SC1Ev({{.*}} %[[TMP]])
+// LLVMCIR:         br label %[[BODY:.*]]
+// LLVMCIR:       [[BODY]]:
+// LLVMCIR:         %[[VAL:.*]] = call {{.*}} i32 @_ZN1S3getEv({{.*}} %[[TMP]])
+// LLVMCIR:         %[[CMP:.*]] = icmp ne i32 %[[VAL]], 0
+// LLVMCIR:         %[[SEL:.*]] = select i1 %[[CMP]], i32 1, i32 2
+// LLVMCIR:         store i32 %[[SEL]], ptr %[[RETVAL]]
+// LLVMCIR:         br label %[[DTOR:.*]]
+// LLVMCIR:       [[DTOR]]:
+// LLVMCIR:         call void @_ZN1SD1Ev({{.*}} %[[TMP]])
+// LLVMCIR:         br label %[[EXIT:.*]]
+// LLVMCIR:       [[EXIT]]:
+// LLVMCIR:         %[[RET:.*]] = load i32, ptr %[[RETVAL]]
+// LLVMCIR:         ret i32 %[[RET]]
 
 // OGCG-LABEL: define dso_local noundef i32 @_Z31test_false_positive_conditionalb(
 // OGCG:         call void @_ZN1SC1Ev({{.*}} %[[TMP:.*]])
@@ -521,40 +522,6 @@ void test_nested_ewc(bool c1, bool c2) {
 // LLVM:         call void @_ZN1TD1Ev({{.*}} %[[REF_TMP]])
 // LLVM:         call void @_ZN1TD1Ev({{.*}} %[[RESULT]])
 
-// OGCG-LABEL: define dso_local void @_Z15test_nested_ewcbb(
-// Inner ternary: c1 ? T(1) : T(2).
-// OGCG:         br i1 %{{.*}}, label %[[T1:.*]], label %[[T2:.*]]
-// OGCG:       [[T1]]:
-// OGCG:         call void @_ZN1TC1Ei({{.*}} %[[S:.*]], i32 {{.*}} 1)
-// OGCG:         br label %[[INNER_MERGE:.*]]
-// OGCG:       [[T2]]:
-// OGCG:         call void @_ZN1TC1Ei({{.*}} %[[S]], i32 {{.*}} 2)
-// OGCG:         br label %[[INNER_MERGE]]
-// Copy construct ref.tmp from s, then destroy s.
-// OGCG:       [[INNER_MERGE]]:
-// OGCG:         call void @_ZN1TC1ERKS_({{.*}} %[[REF_TMP:.*]], {{.*}} %[[S]])
-// OGCG:         call void @_ZN1TD1Ev({{.*}} %[[S]])
-// Outer ternary: operator bool() + conditional construction of result.
-// OGCG:         %[[BOOL:.*]] = call {{.*}} i1 @_ZN1TcvbEv({{.*}} %[[REF_TMP]])
-// OGCG:         br i1 %[[BOOL]], label %[[TRUE:.*]], label %[[FALSE:.*]]
-// OGCG:       [[TRUE]]:
-// OGCG:         br i1 %{{.*}}, label %[[T3:.*]], label %[[T4:.*]]
-// OGCG:       [[T3]]:
-// OGCG:         call void @_ZN1TC1Ei({{.*}} %[[RESULT:.*]], i32 {{.*}} 3)
-// OGCG:         br label %[[OUTER_MERGE1:.*]]
-// OGCG:       [[T4]]:
-// OGCG:         call void @_ZN1TC1Ei({{.*}} %[[RESULT]], i32 {{.*}} 4)
-// OGCG:         br label %[[OUTER_MERGE1]]
-// OGCG:       [[OUTER_MERGE1]]:
-// OGCG:         br label %[[OUTER_MERGE2:.*]]
-// OGCG:       [[FALSE]]:
-// OGCG:         call void @_ZN1TC1Ei({{.*}} %[[RESULT]], i32 {{.*}} 5)
-// OGCG:         br label %[[OUTER_MERGE2]]
-// Cleanup: destroy ref.tmp, then result.
-// OGCG:       [[OUTER_MERGE2]]:
-// OGCG:         call void @_ZN1TD1Ev({{.*}} %[[REF_TMP]])
-// OGCG:         call void @_ZN1TD1Ev({{.*}} %[[RESULT]])
-
 // The result of the ternary is bound to an lvalue (the parameter of
 // operator=), so the enclosing ExprWithCleanups is lowered through the
 // LValue emission path.  The lvalue path must still open a
@@ -618,41 +585,41 @@ void test_lvalue_ternary_cleanup(bool c, V &y) {
 // CIR:     cir.yield
 // CIR:   }
 
-// LLVM-LABEL: define dso_local void @_Z27test_lvalue_ternary_cleanupbR1V(
-// LLVM:         %[[REFTMP:.*]] = alloca %struct.V
-// LLVM:         %[[UTRUE:.*]] = alloca %struct.U
-// LLVM:         %[[ACTTRUE:.*]] = alloca i8
-// LLVM:         %[[UFALSE:.*]] = alloca %struct.U
-// LLVM:         %[[ACTFALSE:.*]] = alloca i8
-// LLVM:         store i8 0, ptr %[[ACTTRUE]]
-// LLVM:         store i8 0, ptr %[[ACTFALSE]]
-// LLVM:         br i1 %{{.*}}, label %[[CONS_TRUE:.*]], label %[[CONS_FALSE:.*]]
-// LLVM:       [[CONS_TRUE]]:
-// LLVM:         call void @_ZN1UC1Ev({{.*}} %[[UTRUE]])
-// LLVM:         store i8 1, ptr %[[ACTTRUE]]
-// LLVM:         call void @_ZN1VC1EiRK1U({{.*}} %[[REFTMP]], i32 {{.*}} 1, {{.*}} %[[UTRUE]])
-// LLVM:         br label %[[MERGE:.*]]
-// LLVM:       [[CONS_FALSE]]:
-// LLVM:         call void @_ZN1UC1Ev({{.*}} %[[UFALSE]])
-// LLVM:         store i8 1, ptr %[[ACTFALSE]]
-// LLVM:         call void @_ZN1VC1EiRK1U({{.*}} %[[REFTMP]], i32 {{.*}} 2, {{.*}} %[[UFALSE]])
-// LLVM:         br label %[[MERGE]]
-// LLVM:       [[MERGE]]:
-// LLVM:         call {{.*}} ptr @_ZN1VaSERKS_({{.*}}, {{.*}} %[[REFTMP]])
-// LLVM:         call void @_ZN1VD1Ev({{.*}} %[[REFTMP]])
-// LLVM:         %[[F2_BYTE:.*]] = load i8, ptr %[[ACTFALSE]]
-// LLVM:         %[[F2:.*]] = trunc i8 %[[F2_BYTE]] to i1
-// LLVM:         br i1 %[[F2]], label %[[DTOR_F:.*]], label %[[SKIP_F:.*]]
-// LLVM:       [[DTOR_F]]:
-// LLVM:         call void @_ZN1UD1Ev({{.*}} %[[UFALSE]])
-// LLVM:         br label %[[SKIP_F]]
-// LLVM:       [[SKIP_F]]:
-// LLVM:         %[[F1_BYTE:.*]] = load i8, ptr %[[ACTTRUE]]
-// LLVM:         %[[F1:.*]] = trunc i8 %[[F1_BYTE]] to i1
-// LLVM:         br i1 %[[F1]], label %[[DTOR_T:.*]], label %[[SKIP_T:.*]]
-// LLVM:       [[DTOR_T]]:
-// LLVM:         call void @_ZN1UD1Ev({{.*}} %[[UTRUE]])
-// LLVM:         br label %[[SKIP_T]]
+// LLVMCIR-LABEL: define dso_local void @_Z27test_lvalue_ternary_cleanupbR1V(
+// LLVMCIR:         %[[REFTMP:.*]] = alloca %struct.V
+// LLVMCIR:         %[[UTRUE:.*]] = alloca %struct.U
+// LLVMCIR:         %[[ACTTRUE:.*]] = alloca i8
+// LLVMCIR:         %[[UFALSE:.*]] = alloca %struct.U
+// LLVMCIR:         %[[ACTFALSE:.*]] = alloca i8
+// LLVMCIR:         store i8 0, ptr %[[ACTTRUE]]
+// LLVMCIR:         store i8 0, ptr %[[ACTFALSE]]
+// LLVMCIR:         br i1 %{{.*}}, label %[[CONS_TRUE:.*]], label %[[CONS_FALSE:.*]]
+// LLVMCIR:       [[CONS_TRUE]]:
+// LLVMCIR:         call void @_ZN1UC1Ev({{.*}} %[[UTRUE]])
+// LLVMCIR:         store i8 1, ptr %[[ACTTRUE]]
+// LLVMCIR:         call void @_ZN1VC1EiRK1U({{.*}} %[[REFTMP]], i32 {{.*}} 1, {{.*}} %[[UTRUE]])
+// LLVMCIR:         br label %[[MERGE:.*]]
+// LLVMCIR:       [[CONS_FALSE]]:
+// LLVMCIR:         call void @_ZN1UC1Ev({{.*}} %[[UFALSE]])
+// LLVMCIR:         store i8 1, ptr %[[ACTFALSE]]
+// LLVMCIR:         call void @_ZN1VC1EiRK1U({{.*}} %[[REFTMP]], i32 {{.*}} 2, {{.*}} %[[UFALSE]])
+// LLVMCIR:         br label %[[MERGE]]
+// LLVMCIR:       [[MERGE]]:
+// LLVMCIR:         call {{.*}} ptr @_ZN1VaSERKS_({{.*}}, {{.*}} %[[REFTMP]])
+// LLVMCIR:         call void @_ZN1VD1Ev({{.*}} %[[REFTMP]])
+// LLVMCIR:         %[[F2_BYTE:.*]] = load i8, ptr %[[ACTFALSE]]
+// LLVMCIR:         %[[F2:.*]] = trunc i8 %[[F2_BYTE]] to i1
+// LLVMCIR:         br i1 %[[F2]], label %[[DTOR_F:.*]], label %[[SKIP_F:.*]]
+// LLVMCIR:       [[DTOR_F]]:
+// LLVMCIR:         call void @_ZN1UD1Ev({{.*}} %[[UFALSE]])
+// LLVMCIR:         br label %[[SKIP_F]]
+// LLVMCIR:       [[SKIP_F]]:
+// LLVMCIR:         %[[F1_BYTE:.*]] = load i8, ptr %[[ACTTRUE]]
+// LLVMCIR:         %[[F1:.*]] = trunc i8 %[[F1_BYTE]] to i1
+// LLVMCIR:         br i1 %[[F1]], label %[[DTOR_T:.*]], label %[[SKIP_T:.*]]
+// LLVMCIR:       [[DTOR_T]]:
+// LLVMCIR:         call void @_ZN1UD1Ev({{.*}} %[[UTRUE]])
+// LLVMCIR:         br label %[[SKIP_T]]
 
 // OGCG-LABEL: define dso_local void @_Z27test_lvalue_ternary_cleanupbR1V(
 // OGCG:         store i1 false, ptr %[[ACTTRUE:.*]]
@@ -743,33 +710,33 @@ void test_lvalue_reload(bool c) {
 // CIR:   %[[RELOAD:.*]] = cir.load {{.*}} %[[SPILL]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
 // CIR:   cir.store {{.*}} %[[RELOAD]], %[[R_REF]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
 
-// LLVM-LABEL: define dso_local void @_Z18test_lvalue_reloadb(
-// LLVM:         %[[R_REF:.*]] = alloca ptr
-// LLVM:         %[[TMP0:.*]] = alloca %struct.R
-// LLVM:         %[[ACT0:.*]] = alloca i8
-// LLVM:         %[[TMP1:.*]] = alloca %struct.R
-// LLVM:         %[[ACT1:.*]] = alloca i8
-// LLVM:         %[[SPILL:.*]] = alloca ptr
-// LLVM:         br i1 %{{.*}}, label %[[BR_T:.*]], label %[[BR_F:.*]]
-// LLVM:       [[BR_T]]:
-// LLVM:         call void @_ZN1RC1Ei({{.*}} %[[TMP0]], i32 {{.*}} 1)
-// LLVM:         store i8 1, ptr %[[ACT0]]
-// LLVM:         %[[CALL_T:.*]] = call {{.*}} ptr @_Z5pickRRK1R({{.*}} %[[TMP0]])
-// LLVM:         br label %[[MERGE:.*]]
-// LLVM:       [[BR_F]]:
-// LLVM:         call void @_ZN1RC1Ei({{.*}} %[[TMP1]], i32 {{.*}} 2)
-// LLVM:         store i8 1, ptr %[[ACT1]]
-// LLVM:         %[[CALL_F:.*]] = call {{.*}} ptr @_Z5pickRRK1R({{.*}} %[[TMP1]])
-// LLVM:         br label %[[MERGE]]
-// LLVM:       [[MERGE]]:
-// LLVM:         %[[PHI:.*]] = phi ptr [ %[[CALL_F]], %[[BR_F]] ], [ %[[CALL_T]], %[[BR_T]] ]
-// LLVM:         %[[GEP:.*]] = getelementptr {{.*}} %struct.R, ptr %[[PHI]]
-// LLVM:         store ptr %[[GEP]], ptr %[[SPILL]]
+// LLVMCIR-LABEL: define dso_local void @_Z18test_lvalue_reloadb(
+// LLVMCIR:         %[[R_REF:.*]] = alloca ptr
+// LLVMCIR:         %[[TMP0:.*]] = alloca %struct.R
+// LLVMCIR:         %[[ACT0:.*]] = alloca i8
+// LLVMCIR:         %[[TMP1:.*]] = alloca %struct.R
+// LLVMCIR:         %[[ACT1:.*]] = alloca i8
+// LLVMCIR:         %[[SPILL:.*]] = alloca ptr
+// LLVMCIR:         br i1 %{{.*}}, label %[[BR_T:.*]], label %[[BR_F:.*]]
+// LLVMCIR:       [[BR_T]]:
+// LLVMCIR:         call void @_ZN1RC1Ei({{.*}} %[[TMP0]], i32 {{.*}} 1)
+// LLVMCIR:         store i8 1, ptr %[[ACT0]]
+// LLVMCIR:         %[[CALL_T:.*]] = call {{.*}} ptr @_Z5pickRRK1R({{.*}} %[[TMP0]])
+// LLVMCIR:         br label %[[MERGE:.*]]
+// LLVMCIR:       [[BR_F]]:
+// LLVMCIR:         call void @_ZN1RC1Ei({{.*}} %[[TMP1]], i32 {{.*}} 2)
+// LLVMCIR:         store i8 1, ptr %[[ACT1]]
+// LLVMCIR:         %[[CALL_F:.*]] = call {{.*}} ptr @_Z5pickRRK1R({{.*}} %[[TMP1]])
+// LLVMCIR:         br label %[[MERGE]]
+// LLVMCIR:       [[MERGE]]:
+// LLVMCIR:         %[[PHI:.*]] = phi ptr [ %[[CALL_F]], %[[BR_F]] ], [ %[[CALL_T]], %[[BR_T]] ]
+// LLVMCIR:         %[[GEP:.*]] = getelementptr {{.*}} %struct.R, ptr %[[PHI]]
+// LLVMCIR:         store ptr %[[GEP]], ptr %[[SPILL]]
 // Cleanup checks happen between the spill and the reload.
-// LLVM:         load i8, ptr %[[ACT1]]
-// LLVM:         load i8, ptr %[[ACT0]]
-// LLVM:         %[[RELOAD:.*]] = load ptr, ptr %[[SPILL]]
-// LLVM:         store ptr %[[RELOAD]], ptr %[[R_REF]]
+// LLVMCIR:         load i8, ptr %[[ACT1]]
+// LLVMCIR:         load i8, ptr %[[ACT0]]
+// LLVMCIR:         %[[RELOAD:.*]] = load ptr, ptr %[[SPILL]]
+// LLVMCIR:         store ptr %[[RELOAD]], ptr %[[R_REF]]
 
 // OGCG-LABEL: define dso_local void @_Z18test_lvalue_reloadb(
 // OGCG:         %[[R_REF:.*]] = alloca ptr
@@ -809,9 +776,10 @@ _Complex float test_complex_cond_cleanup(bool b, _Complex float x) {
 // CIR-LABEL: @_Z25test_complex_cond_cleanupbCf
 // CIR:   %[[TMP:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_CplxD>
 // CIR:   %[[ACTIVE:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
-// The full expression is wrapped in a single cleanup scope.
+// CIR:   %[[COND:.*]] = cir.load {{.*}} : !cir.ptr<!cir.bool>, !cir.bool
+// The conditional's cleanup scope stays open to the end of the full
+// expression.
 // CIR:   cir.cleanup.scope {
-// CIR:     %[[COND:.*]] = cir.load {{.*}} : !cir.ptr<!cir.bool>, !cir.bool
 // Active flag is initialized to false before the ternary so the dtor only runs
 // when the true branch was actually taken.
 // CIR:     %[[FALSE:.*]] = cir.const #false
@@ -820,8 +788,11 @@ _Complex float test_complex_cond_cleanup(bool b, _Complex float x) {
 // CIR:       cir.call @_ZN5CplxDC1Ev(%[[TMP]])
 // CIR:       %[[SET_TRUE:.*]] = cir.const #true
 // CIR:       cir.store %[[SET_TRUE]], %[[ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
-// CIR:       %[[CALL:.*]] = cir.call @_ZN5CplxD3getEv(%[[TMP]])
-// CIR:       cir.yield %[[CALL]] : !cir.complex<!cir.float>
+// CIR:       %[[CALL:.*]] = cir.call @_ZN5CplxD3getEv(%[[TMP]]) : (!cir.ptr<!rec_CplxD> {{.*}}) -> (!cir.vector<2 x !cir.float> {{.*}})
+// CIR:       cir.store %[[CALL]], %[[SLOT:.*]] : !cir.vector<2 x !cir.float>, !cir.ptr<!cir.vector<2 x !cir.float>>
+// CIR:       %[[SLOT_PTR:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!cir.vector<2 x !cir.float>> -> !cir.ptr<!cir.complex<!cir.float>>
+// CIR:       %[[CPLX:.*]] = cir.load %[[SLOT_PTR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
+// CIR:       cir.yield %[[CPLX]] : !cir.complex<!cir.float>
 // CIR:     }, false {
 // CIR:       %[[XV:.*]] = cir.load {{.*}} : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
 // CIR:       cir.yield %[[XV]] : !cir.complex<!cir.float>
@@ -835,26 +806,28 @@ _Complex float test_complex_cond_cleanup(bool b, _Complex float x) {
 // CIR:     cir.yield
 // CIR:   }
 
-// LLVM-LABEL: define dso_local {{.*}} { float, float } @_Z25test_complex_cond_cleanupbCf(
-// LLVM:         %[[TMP:.*]] = alloca %struct.CplxD
-// LLVM:         %[[ACTIVE:.*]] = alloca i8
-// LLVM:         br i1 %{{.*}}, label %[[TRUE_BR:.*]], label %[[FALSE_BR:.*]]
-// LLVM:       [[TRUE_BR]]:
-// LLVM:         call void @_ZN5CplxDC1Ev(ptr {{.*}} %[[TMP]])
-// LLVM:         store i8 1, ptr %[[ACTIVE]]
-// LLVM:         %[[CALL:.*]] = call {{.*}} { float, float } @_ZN5CplxD3getEv(ptr {{.*}} %[[TMP]])
-// LLVM:         br label %[[MERGE:.*]]
-// LLVM:       [[FALSE_BR]]:
-// LLVM:         %[[XV:.*]] = load { float, float }, ptr %{{.*}}
-// LLVM:         br label %[[MERGE]]
-// LLVM:       [[MERGE]]:
-// LLVM:         %{{.*}} = phi { float, float } [ %[[XV]], %[[FALSE_BR]] ], [ %[[CALL]], %[[TRUE_BR]] ]
-// LLVM:         %[[ACT:.*]] = load i8, ptr %[[ACTIVE]]
-// LLVM:         %[[ACT_B:.*]] = trunc i8 %[[ACT]] to i1
-// LLVM:         br i1 %[[ACT_B]], label %[[DTOR:.*]], label %[[SKIP:.*]]
-// LLVM:       [[DTOR]]:
-// LLVM:         call void @_ZN5CplxDD1Ev(ptr {{.*}} %[[TMP]])
-// LLVM:         br label %[[SKIP]]
+// LLVMCIR-LABEL: define dso_local {{.*}} <2 x float> @_Z25test_complex_cond_cleanupbCf(i1 noundef zeroext %{{.*}}, <2 x float> noundef %{{.*}})
+// LLVMCIR:         %[[TMP:.*]] = alloca %struct.CplxD
+// LLVMCIR:         %[[ACTIVE:.*]] = alloca i8
+// LLVMCIR:         br i1 %{{.*}}, label %[[TRUE_BR:.*]], label %[[FALSE_BR:.*]]
+// LLVMCIR:       [[TRUE_BR]]:
+// LLVMCIR:         call void @_ZN5CplxDC1Ev(ptr {{.*}} %[[TMP]])
+// LLVMCIR:         store i8 1, ptr %[[ACTIVE]]
+// LLVMCIR:         %[[CALL:.*]] = call {{.*}} <2 x float> @_ZN5CplxD3getEv(ptr {{.*}} %[[TMP]])
+// LLVMCIR:         store <2 x float> %[[CALL]], ptr %[[CSLOT:.*]], align 8
+// LLVMCIR:         %[[CCPLX:.*]] = load { float, float }, ptr %[[CSLOT]], align 4
+// LLVMCIR:         br label %[[MERGE:.*]]
+// LLVMCIR:       [[FALSE_BR]]:
+// LLVMCIR:         %[[XV:.*]] = load { float, float }, ptr %{{.*}}
+// LLVMCIR:         br label %[[MERGE]]
+// LLVMCIR:       [[MERGE]]:
+// LLVMCIR:         %{{.*}} = phi { float, float } [ %[[XV]], %[[FALSE_BR]] ], [ %[[CCPLX]], %[[TRUE_BR]] ]
+// LLVMCIR:         %[[ACT:.*]] = load i8, ptr %[[ACTIVE]]
+// LLVMCIR:         %[[ACT_B:.*]] = trunc i8 %[[ACT]] to i1
+// LLVMCIR:         br i1 %[[ACT_B]], label %[[DTOR:.*]], label %[[SKIP:.*]]
+// LLVMCIR:       [[DTOR]]:
+// LLVMCIR:         call void @_ZN5CplxDD1Ev(ptr {{.*}} %[[TMP]])
+// LLVMCIR:         br label %[[SKIP]]
 
 // OGCG-LABEL: define dso_local {{.*}} <2 x float> @_Z25test_complex_cond_cleanupbCf(
 // OGCG:         %[[TMP:.*]] = alloca %struct.CplxD
@@ -903,20 +876,20 @@ void test_lifetime_ext_cond_ref(bool c) {
 // CIR:   }
 // CIR:   cir.return
 
-// LLVM-LABEL: define dso_local void @_Z26test_lifetime_ext_cond_refb(
-// LLVM:   %[[TMP:.*]] = alloca %struct.LE
-// LLVM:   %[[R:.*]] = alloca ptr
-// LLVM:   %[[SPILL:.*]] = alloca ptr
-// LLVM:   br i1 %{{.*}}, label %[[TRUE:.*]], label %[[FALSE:.*]]
-// LLVM: [[TRUE]]:
-// LLVM:   call void @_ZN2LEC1Ei(ptr {{.*}} %[[TMP]], i32 {{.*}} 1)
-// LLVM: [[FALSE]]:
-// LLVM:   call void @_ZN2LEC1Ei(ptr {{.*}} %[[TMP]], i32 {{.*}} 2)
-// LLVM:   store ptr %[[TMP]], ptr %[[SPILL]]
-// LLVM:   %[[RELOAD:.*]] = load ptr, ptr %[[SPILL]]
-// LLVM:   store ptr %[[RELOAD]], ptr %[[R]]
-// LLVM:   call void @_ZN2LED1Ev(ptr {{.*}} %[[TMP]])
-// LLVM:   ret void
+// LLVMCIR-LABEL: define dso_local void @_Z26test_lifetime_ext_cond_refb(
+// LLVMCIR:   %[[TMP:.*]] = alloca %struct.LE
+// LLVMCIR:   %[[R:.*]] = alloca ptr
+// LLVMCIR:   %[[SPILL:.*]] = alloca ptr
+// LLVMCIR:   br i1 %{{.*}}, label %[[TRUE:.*]], label %[[FALSE:.*]]
+// LLVMCIR: [[TRUE]]:
+// LLVMCIR:   call void @_ZN2LEC1Ei(ptr {{.*}} %[[TMP]], i32 {{.*}} 1)
+// LLVMCIR: [[FALSE]]:
+// LLVMCIR:   call void @_ZN2LEC1Ei(ptr {{.*}} %[[TMP]], i32 {{.*}} 2)
+// LLVMCIR:   store ptr %[[TMP]], ptr %[[SPILL]]
+// LLVMCIR:   %[[RELOAD:.*]] = load ptr, ptr %[[SPILL]]
+// LLVMCIR:   store ptr %[[RELOAD]], ptr %[[R]]
+// LLVMCIR:   call void @_ZN2LED1Ev(ptr {{.*}} %[[TMP]])
+// LLVMCIR:   ret void
 
 // OGCG-LABEL: define dso_local void @_Z26test_lifetime_ext_cond_refb(
 // OGCG:   %[[R:.*]] = alloca ptr
@@ -940,10 +913,10 @@ void test_combined_cleanups(bool c) {
 // CIR:   %[[TMP_B:.*]] = cir.alloca "ref.tmp2" {{.*}} : !cir.ptr<!rec_B>
 // CIR:   %[[ACT_B:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
 // CIR:   %[[SPILL:.*]] = cir.alloca "tmp.exprcleanup" {{.*}} : !cir.ptr<!cir.ptr<!rec_LE>>
+// CIR:   cir.call @_ZN1SC1Ev(%[[TMP_S]])
 // CIR:   cir.cleanup.scope {
-// CIR:     cir.call @_ZN1SC1Ev(%[[TMP_S]])
+// CIR:     cir.call @_ZN1S3getEv(%[[TMP_S]])
 // CIR:     cir.cleanup.scope {
-// CIR:       cir.call @_ZN1S3getEv(%[[TMP_S]])
 // CIR:       cir.store {{.*}}, %[[ACT_B]]
 // CIR:       %{{.*}} = cir.ternary({{.*}}, true {
 // CIR:         cir.call @_ZN1BC1Ev(%[[TMP_B]])
@@ -954,16 +927,17 @@ void test_combined_cleanups(bool c) {
 // CIR:       cir.call @_ZN2LEC1Ei(%[[TMP_LE]], %{{.*}})
 // CIR:       cir.store {{.*}} %[[TMP_LE]], %[[SPILL]]
 // CIR:       cir.yield
+// B is constructed after S, so the conditional ~B runs before ~S.
 // CIR:     } cleanup normal {
-// CIR:       cir.call @_ZN1SD1Ev(%[[TMP_S]]) nothrow
+// CIR:       %[[FLAG:.*]] = cir.load {{.*}} %[[ACT_B]]
+// CIR:       cir.if %[[FLAG]] {
+// CIR:         cir.call @_ZN1BD1Ev(%[[TMP_B]]) nothrow
+// CIR:       }
 // CIR:       cir.yield
 // CIR:     }
 // CIR:     cir.yield
 // CIR:   } cleanup normal {
-// CIR:     %[[FLAG:.*]] = cir.load {{.*}} %[[ACT_B]]
-// CIR:     cir.if %[[FLAG]] {
-// CIR:       cir.call @_ZN1BD1Ev(%[[TMP_B]]) nothrow
-// CIR:     }
+// CIR:     cir.call @_ZN1SD1Ev(%[[TMP_S]]) nothrow
 // CIR:     cir.yield
 // CIR:   }
 // CIR:   cir.cleanup.scope {
@@ -976,36 +950,37 @@ void test_combined_cleanups(bool c) {
 // CIR:   }
 // CIR:   cir.return
 
-// LLVM-LABEL: define dso_local void @_Z22test_combined_cleanupsb(
-// LLVM:   %[[TMP_LE:.*]] = alloca %struct.LE
-// LLVM:   %[[R:.*]] = alloca ptr
-// LLVM:   %[[TMP_S:.*]] = alloca %struct.S
-// LLVM:   %[[TMP_B:.*]] = alloca %struct.B
-// LLVM:   %[[ACT_B:.*]] = alloca i8
-// LLVM:   %[[SPILL:.*]] = alloca ptr
-// LLVM:   call void @_ZN1SC1Ev(ptr {{.*}} %[[TMP_S]])
-// LLVM:   call {{.*}} i32 @_ZN1S3getEv(ptr {{.*}} %[[TMP_S]])
-// LLVM:   store i8 0, ptr %[[ACT_B]]
-// LLVM:   br i1 %{{.*}}, label %[[T:.*]], label %[[F:.*]]
-// LLVM: [[T]]:
-// LLVM:   call void @_ZN1BC1Ev(ptr {{.*}} %[[TMP_B]])
-// LLVM:   store i8 1, ptr %[[ACT_B]]
-// LLVM:   call {{.*}} i32 @_ZN1B3getEv(ptr {{.*}} %[[TMP_B]])
-// LLVM: [[F]]:
-// LLVM:   phi i32 [ 0, %[[F]] ], [ %{{.*}}, %[[T]] ]
-// LLVM:   call void @_ZN2LEC1Ei(ptr {{.*}} %[[TMP_LE]], i32 {{.*}})
-// LLVM:   store ptr %[[TMP_LE]], ptr %[[SPILL]]
-// LLVM:   call void @_ZN1SD1Ev(ptr {{.*}} %[[TMP_S]])
-// LLVM:   %[[FLAG_BYTE:.*]] = load i8, ptr %[[ACT_B]]
-// LLVM:   %[[FLAG:.*]] = trunc i8 %[[FLAG_BYTE]] to i1
-// LLVM:   br i1 %[[FLAG]], label %[[B_DTOR:.*]], label %[[B_DONE:.*]]
-// LLVM: [[B_DTOR]]:
-// LLVM:   call void @_ZN1BD1Ev(ptr {{.*}} %[[TMP_B]])
-// LLVM: [[B_DONE]]:
-// LLVM:   %[[RELOAD:.*]] = load ptr, ptr %[[SPILL]]
-// LLVM:   store ptr %[[RELOAD]], ptr %[[R]]
-// LLVM:   call void @_ZN2LED1Ev(ptr {{.*}} %[[TMP_LE]])
-// LLVM:   ret void
+// LLVMCIR-LABEL: define dso_local void @_Z22test_combined_cleanupsb(
+// LLVMCIR:   %[[TMP_LE:.*]] = alloca %struct.LE
+// LLVMCIR:   %[[R:.*]] = alloca ptr
+// LLVMCIR:   %[[TMP_S:.*]] = alloca %struct.S
+// LLVMCIR:   %[[TMP_B:.*]] = alloca %struct.B
+// LLVMCIR:   %[[ACT_B:.*]] = alloca i8
+// LLVMCIR:   %[[SPILL:.*]] = alloca ptr
+// LLVMCIR:   call void @_ZN1SC1Ev(ptr {{.*}} %[[TMP_S]])
+// LLVMCIR:   call {{.*}} i32 @_ZN1S3getEv(ptr {{.*}} %[[TMP_S]])
+// LLVMCIR:   store i8 0, ptr %[[ACT_B]]
+// LLVMCIR:   br i1 %{{.*}}, label %[[T:.*]], label %[[F:.*]]
+// LLVMCIR: [[T]]:
+// LLVMCIR:   call void @_ZN1BC1Ev(ptr {{.*}} %[[TMP_B]])
+// LLVMCIR:   store i8 1, ptr %[[ACT_B]]
+// LLVMCIR:   call {{.*}} i32 @_ZN1B3getEv(ptr {{.*}} %[[TMP_B]])
+// LLVMCIR: [[F]]:
+// LLVMCIR:   phi i32 [ 0, %[[F]] ], [ %{{.*}}, %[[T]] ]
+// LLVMCIR:   call void @_ZN2LEC1Ei(ptr {{.*}} %[[TMP_LE]], i32 {{.*}})
+// LLVMCIR:   store ptr %[[TMP_LE]], ptr %[[SPILL]]
+// B is constructed after S, so the conditional ~B runs before ~S.
+// LLVMCIR:   %[[FLAG_BYTE:.*]] = load i8, ptr %[[ACT_B]]
+// LLVMCIR:   %[[FLAG:.*]] = trunc i8 %[[FLAG_BYTE]] to i1
+// LLVMCIR:   br i1 %[[FLAG]], label %[[B_DTOR:.*]], label %[[B_DONE:.*]]
+// LLVMCIR: [[B_DTOR]]:
+// LLVMCIR:   call void @_ZN1BD1Ev(ptr {{.*}} %[[TMP_B]])
+// LLVMCIR: [[B_DONE]]:
+// LLVMCIR:   call void @_ZN1SD1Ev(ptr {{.*}} %[[TMP_S]])
+// LLVMCIR:   %[[RELOAD:.*]] = load ptr, ptr %[[SPILL]]
+// LLVMCIR:   store ptr %[[RELOAD]], ptr %[[R]]
+// LLVMCIR:   call void @_ZN2LED1Ev(ptr {{.*}} %[[TMP_LE]])
+// LLVMCIR:   ret void
 
 // OGCG-LABEL: define dso_local void @_Z22test_combined_cleanupsb(
 // OGCG:   %[[R:.*]] = alloca ptr
@@ -1032,3 +1007,164 @@ void test_combined_cleanups(bool c) {
 // OGCG:   store ptr %[[TMP_LE]], ptr %[[R]]
 // OGCG:   call void @_ZN2LED1Ev(ptr {{.*}} %[[TMP_LE]])
 // OGCG:   ret void
+
+struct Payload { ~Payload(); };
+Payload globalPayload;
+struct Holder { Holder(); Holder(Payload); };
+struct Guard { Guard(); ~Guard(); operator bool(); };
+
+// The condition of this conditional materializes its own temporary (Guard),
+// whose destructor is emitted as a cir.cleanup.scope nested inside the
+// full-expression scope. That scope is created after the conditional
+// evaluation begins, so it is appended to the block that the Payload
+// temporary's active flag must be cleared in.
+//
+// The clear must be anchored ahead of that nested scope. If it is instead
+// appended to the end of the block, it lands after the conditional and
+// overwrites the "true" store in the taken arm, leaving ~Payload unreachable
+// and the temporary leaked.
+void test_flag_cleared_before_cond_cleanup() {
+  Guard() ? Holder() : globalPayload;
+}
+// CIR-LABEL: @_Z37test_flag_cleared_before_cond_cleanupv
+// CIR:   %[[REF_TMP:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_Guard>
+// CIR:   %[[ACTIVE:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
+// Guard is constructed before the conditional, so its cleanup scope encloses
+// the conditional's and the Payload temporary is destroyed first.
+// CIR:   cir.call @_ZN5GuardC1Ev(%[[REF_TMP]])
+// CIR:   cir.cleanup.scope {
+// CIR:     %[[AGG_TMP:.*]] = cir.alloca "agg.tmp0" {{.*}} : !cir.ptr<!rec_Payload>
+// CIR:     %[[COND:.*]] = cir.call @_ZN5GuardcvbEv(%[[REF_TMP]])
+// CIR:     cir.cleanup.scope {
+// The clear precedes the conditional, so it runs whichever arm is taken.
+// CIR:       %[[FALSE:.*]] = cir.const #false
+// CIR:       cir.store %[[FALSE]], %[[ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
+// CIR:       cir.if %[[COND]] {
+// CIR:         cir.call @_ZN6HolderC1Ev(%{{.*}})
+// CIR:       } else {
+// CIR:         %[[TRUE:.*]] = cir.const #true
+// CIR:         cir.store %[[TRUE]], %[[ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
+// CIR:         cir.call @_ZN6HolderC1E7Payload(%{{.*}}, %[[AGG_TMP]])
+// CIR:       }
+// CIR:     } cleanup normal {
+// CIR:       %[[IS_ACTIVE:.*]] = cir.load{{.*}} %[[ACTIVE]]
+// CIR:       cir.if %[[IS_ACTIVE]] {
+// CIR:         cir.call @_ZN7PayloadD1Ev(%[[AGG_TMP]])
+// CIR:       }
+// CIR:     }
+// CIR:   } cleanup normal {
+// CIR:     cir.call @_ZN5GuardD1Ev(%[[REF_TMP]])
+// CIR:   }
+
+// LLVM-LABEL: define dso_local void @_Z37test_flag_cleared_before_cond_cleanupv(
+// LLVMCIR:      %[[AGG_TMP:.*]] = alloca %struct.Payload
+// LLVMCIR:      %[[REF_TMP:.*]] = alloca %struct.Guard
+// LLVMCIR:      %[[ACTIVE:.*]] = alloca i8
+// OGCG:         %[[REF_TMP:.*]] = alloca %struct.Guard
+// OGCG:         %[[AGG_TMP:.*]] = alloca %struct.Payload
+// OGCG:         %[[ACTIVE:.*]] = alloca i1
+// LLVM:         call void @_ZN5GuardC1Ev(ptr {{.*}} %[[REF_TMP]])
+// LLVM:         %[[COND:.*]] = call {{.*}} i1 @_ZN5GuardcvbEv(ptr {{.*}} %[[REF_TMP]])
+// The clear dominates the branch, so the flag is initialized on both arms.
+// LLVMCIR:      store i8 0, ptr %[[ACTIVE]]
+// OGCG:         store i1 false, ptr %[[ACTIVE]]
+// LLVM:         br i1 %[[COND]], label %[[TRUE_BR:.*]], label %[[FALSE_BR:.*]]
+// LLVM:       [[FALSE_BR]]:
+// LLVMCIR:      store i8 1, ptr %[[ACTIVE]]
+// OGCG:         store i1 true, ptr %[[ACTIVE]]
+// Guard is constructed first, so the conditional ~Payload runs before ~Guard.
+// LLVMCIR:      %[[ACTIVE_BYTE:.*]] = load i8, ptr %[[ACTIVE]]
+// LLVMCIR:      %[[ACTIVE_BOOL:.*]] = trunc i8 %[[ACTIVE_BYTE]] to i1
+// LLVMCIR:      br i1 %[[ACTIVE_BOOL]], label %[[DTOR:.*]], label %[[DONE:.*]]
+// OGCG:         %[[IS_ACTIVE:.*]] = load i1, ptr %[[ACTIVE]]
+// OGCG:         br i1 %[[IS_ACTIVE]], label %[[DTOR:.*]], label %[[DONE:.*]]
+// LLVM:       [[DTOR]]:
+// LLVM:         call void @_ZN7PayloadD1Ev(ptr {{.*}} %[[AGG_TMP]])
+// LLVM:       [[DONE]]:
+// LLVM:         call void @_ZN5GuardD1Ev(ptr {{.*}} %[[REF_TMP]])
+
+struct Q { Q(); ~Q(); int get() const; };
+bool pred(int);
+
+// The right-hand side of a short-circuiting || is conditionally evaluated, so
+// the temporaries created by the nested conditional inside it get active
+// flags. Those flags are read by the full-expression cleanup scope, which
+// sits outside the ||, so they must be cleared outside the || as well. If the
+// clears were emitted inside the right-hand side, short-circuiting on a true
+// left-hand side would skip them and the cleanup would read uninitialized
+// stack, destroying objects that were never constructed.
+void test_short_circuit_cond_temp(bool always, bool c, int n) {
+  if (always || (n != (c ? Q().get() : Q().get())))
+    pred(n);
+}
+// CIR-LABEL: @_Z28test_short_circuit_cond_tempbbi
+// CIR:   %[[REF_TMP0:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_Q>
+// CIR:   %[[ACTIVE0:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
+// CIR:   %[[REF_TMP1:.*]] = cir.alloca "ref.tmp1" {{.*}} : !cir.ptr<!rec_Q>
+// CIR:   %[[ACTIVE1:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
+// CIR:   %[[ALWAYS:.*]] = cir.load{{.*}} %{{.*}}
+// CIR:   cir.cleanup.scope {
+// Both clears are emitted before the || ternary, not inside its false region.
+// CIR:     %[[FALSE0:.*]] = cir.const #false
+// CIR:     cir.store %[[FALSE0]], %[[ACTIVE0]] : !cir.bool, !cir.ptr<!cir.bool>
+// CIR:     %[[FALSE1:.*]] = cir.const #false
+// CIR:     cir.store %[[FALSE1]], %[[ACTIVE1]] : !cir.bool, !cir.ptr<!cir.bool>
+// CIR:     %{{.*}} = cir.ternary(%[[ALWAYS]], true {
+// CIR:       %[[TRUE:.*]] = cir.const #true
+// CIR:       cir.yield %[[TRUE]] : !cir.bool
+// CIR:     }, false {
+// CIR:       %{{.*}} = cir.ternary(%{{.*}}, true {
+// CIR:         cir.call @_ZN1QC1Ev(%[[REF_TMP0]])
+// CIR:         %[[SET0:.*]] = cir.const #true
+// CIR:         cir.store %[[SET0]], %[[ACTIVE0]] : !cir.bool, !cir.ptr<!cir.bool>
+// CIR:       }, false {
+// CIR:         cir.call @_ZN1QC1Ev(%[[REF_TMP1]])
+// CIR:         %[[SET1:.*]] = cir.const #true
+// CIR:         cir.store %[[SET1]], %[[ACTIVE1]] : !cir.bool, !cir.ptr<!cir.bool>
+// CIR:       })
+// CIR:     })
+// CIR:   } cleanup normal {
+// CIR:     %[[IS_ACTIVE1:.*]] = cir.load{{.*}} %[[ACTIVE1]]
+// CIR:     cir.if %[[IS_ACTIVE1]] {
+// CIR:       cir.call @_ZN1QD1Ev(%[[REF_TMP1]])
+// CIR:     }
+// CIR:     %[[IS_ACTIVE0:.*]] = cir.load{{.*}} %[[ACTIVE0]]
+// CIR:     cir.if %[[IS_ACTIVE0]] {
+// CIR:       cir.call @_ZN1QD1Ev(%[[REF_TMP0]])
+// CIR:     }
+// CIR:   }
+
+// LLVMCIR-LABEL: define dso_local void @_Z28test_short_circuit_cond_tempbbi(
+// LLVMCIR:         %[[REF_TMP0:.*]] = alloca %struct.Q
+// LLVMCIR:         %[[ACTIVE0:.*]] = alloca i8
+// LLVMCIR:         %[[REF_TMP1:.*]] = alloca %struct.Q
+// LLVMCIR:         %[[ACTIVE1:.*]] = alloca i8
+// The clears dominate the short-circuit branch.
+// LLVMCIR:         store i8 0, ptr %[[ACTIVE0]]
+// LLVMCIR:         store i8 0, ptr %[[ACTIVE1]]
+// LLVMCIR:         br i1 %{{.*}}, label %[[LOR_SKIP:.*]], label %[[LOR_RHS:.*]]
+// LLVMCIR:       [[LOR_RHS]]:
+// LLVMCIR:         br i1 %{{.*}}, label %[[COND_TRUE:.*]], label %[[COND_FALSE:.*]]
+// LLVMCIR:       [[COND_TRUE]]:
+// LLVMCIR:         call void @_ZN1QC1Ev(ptr {{.*}} %[[REF_TMP0]])
+// LLVMCIR:         store i8 1, ptr %[[ACTIVE0]]
+// LLVMCIR:       [[COND_FALSE]]:
+// LLVMCIR:         call void @_ZN1QC1Ev(ptr {{.*}} %[[REF_TMP1]])
+// LLVMCIR:         store i8 1, ptr %[[ACTIVE1]]
+
+// OGCG-LABEL: define dso_local void @_Z28test_short_circuit_cond_tempbbi(
+// OGCG:         %[[REF_TMP0:.*]] = alloca %struct.Q
+// OGCG:         %[[ACTIVE0:.*]] = alloca i1
+// OGCG:         %[[REF_TMP1:.*]] = alloca %struct.Q
+// OGCG:         %[[ACTIVE1:.*]] = alloca i1
+// OGCG:         store i1 false, ptr %[[ACTIVE0]]
+// OGCG:         store i1 false, ptr %[[ACTIVE1]]
+// OGCG:         br i1 %{{.*}}, label %[[LOR_END:.*]], label %[[LOR_RHS:.*]]
+// OGCG:       [[LOR_RHS]]:
+// OGCG:         br i1 %{{.*}}, label %[[COND_TRUE:.*]], label %[[COND_FALSE:.*]]
+// OGCG:       [[COND_TRUE]]:
+// OGCG:         call void @_ZN1QC1Ev(ptr {{.*}} %[[REF_TMP0]])
+// OGCG:         store i1 true, ptr %[[ACTIVE0]]
+// OGCG:       [[COND_FALSE]]:
+// OGCG:         call void @_ZN1QC1Ev(ptr {{.*}} %[[REF_TMP1]])
+// OGCG:         store i1 true, ptr %[[ACTIVE1]]

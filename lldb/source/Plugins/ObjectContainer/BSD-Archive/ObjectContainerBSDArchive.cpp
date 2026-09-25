@@ -389,7 +389,7 @@ FileSpec GetChildFileSpecificationsFromThin(llvm::StringRef childPath,
   if (llvm::sys::path::is_absolute(childPath)) {
     FullPath = childPath;
   } else {
-    FullPath = parentFileSpec.GetDirectory().GetStringRef();
+    FullPath = parentFileSpec.GetDirectory();
     llvm::sys::path::append(FullPath, childPath);
   }
   FileSpec child = FileSpec(FullPath.str(), llvm::sys::path::Style::posix);

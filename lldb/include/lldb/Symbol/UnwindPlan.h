@@ -15,6 +15,7 @@
 
 #include "lldb/Core/AddressRange.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/RegisterInfo.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/lldb-private.h"
 
@@ -409,7 +410,7 @@ public:
       m_unspecified_registers_are_undefined = unspec_is_undef;
     }
 
-    bool GetUnspecifiedRegistersAreUndefined() {
+    bool GetUnspecifiedRegistersAreUndefined() const {
       return m_unspecified_registers_are_undefined;
     }
 

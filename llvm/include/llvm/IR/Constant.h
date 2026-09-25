@@ -130,6 +130,11 @@ public:
   /// any constant expressions.
   LLVM_ABI bool containsConstantExpression() const;
 
+  /// Return true if this is a vector constant where at least one element
+  /// satisfies the given predicate. Scalable vectors are not checked.
+  LLVM_ABI bool
+  containsMatchingVectorElement(function_ref<bool(Constant *)> PredFn) const;
+
   /// Return true if the value can vary between threads.
   LLVM_ABI bool isThreadDependent() const;
 

@@ -16,11 +16,15 @@ struct LlvmLibcEndian : testing::Test {
   template <typename T> void check(const T original, const T swapped) {
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
     EXPECT_EQ(Endian::to_little_endian(original), original);
+    EXPECT_EQ(Endian::from_little_endian(original), original);
     EXPECT_EQ(Endian::to_big_endian(original), swapped);
+    EXPECT_EQ(Endian::from_big_endian(swapped), original);
 #endif
 #if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
     EXPECT_EQ(Endian::to_big_endian(original), original);
+    EXPECT_EQ(Endian::from_big_endian(original), original);
     EXPECT_EQ(Endian::to_little_endian(original), swapped);
+    EXPECT_EQ(Endian::from_little_endian(swapped), original);
 #endif
   }
 };

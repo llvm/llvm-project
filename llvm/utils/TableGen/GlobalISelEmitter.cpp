@@ -954,6 +954,25 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
       }
     }
 
+    // The SDAG fp_to_[su]int_sat nodes carry a trailing ValueType operand
+    // encoding the saturation width. G_FPTOSI_SAT/G_FPTOUI_SAT instead saturate
+    // to their result type and have no such operand, so drop the trailing child
+    // before matching the operands.
+    if (SrcGIOrNull->getName() == "G_FPTOSI_SAT" ||
+        SrcGIOrNull->getName() == "G_FPTOUI_SAT") {
+      const TreePatternNode &SatChild = Src.getChild(NumChildren - 1);
+      const DefInit *DI = SatChild.isLeaf()
+                              ? dyn_cast<DefInit>(SatChild.getLeafValue())
+                              : nullptr;
+      if (!DI || !DI->getDef()->isSubClassOf("ValueType"))
+        return failedImport("Expected ValueType saturation-width operand");
+      MVT SatVT = llvm::getValueType(DI->getDef());
+      if (SatVT.getScalarSizeInBits() !=
+          Src.getSimpleType(0).getScalarSizeInBits())
+        return failedImport("Saturation width must match the result width");
+      --NumChildren;
+    }
+
     // Match the used operands (i.e. the children of the operator).
     bool IsIntrinsic =
         SrcGIOrNull->getName() == "G_INTRINSIC" ||

@@ -1340,6 +1340,8 @@ struct CrdTranslateRewriter : public OpRewritePattern<CrdTranslateOp> {
     AffineMap map = op.getDirection() == CrdTransDirectionKind::dim2lvl
                         ? op.getEncoder().getDimToLvl()
                         : op.getEncoder().getLvlToDim();
+    if (!map || map.getNumSymbols() != 0)
+      return failure();
 
     SmallVector<Value> outCrds;
     for (AffineExpr result : map.getResults()) {

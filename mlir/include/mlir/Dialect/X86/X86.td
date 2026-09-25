@@ -25,6 +25,7 @@ include "mlir/IR/BuiltinTypes.td"
 
 def X86_Dialect : Dialect {
   let name = "x86";
+  let useStrictPropertiesInAssemblyFormat = 1;
   let cppNamespace = "::mlir::x86";
 
   let useDefaultTypePrinterParser = 1;
@@ -77,7 +78,8 @@ def MaskCompressOp : AVX512_Op<"mask.compress", [Pure,
                    OptionalAttr<ElementsAttr>:$constant_src);
   let results = (outs VectorOfLengthAndType<[16, 8],
                                             [F32, I32, F64, I64]>:$dst);
-  let assemblyFormat = "$k `,` $a (`,` $src^)? attr-dict"
+  let assemblyFormat = "$k `,` $a (`,` $src^)? "
+                       "(`constant_src` `=` $constant_src^)? attr-dict"
                        " `:` type($dst) (`,` type($src)^)?";
   let hasVerifier = 1;
 
@@ -1005,9 +1007,9 @@ def TileMulFOp : AMX_Op<"tile_mulf", [Pure,
       } else if (elementType.isBF16()) {
         intr += "bf16";
       } else if (elementType.isF8E4M3FN() || elementType.isF8E5M2()) {
-        intr += elementType.isF8E4M3FN() ? "b" : "h";
+        intr += elementType.isF8E4M3FN() ? "h" : "b";
         if (elementType != elementTypeRhs)
-          intr += elementTypeRhs.isF8E4M3FN() ? "b" : "h";
+          intr += elementTypeRhs.isF8E4M3FN() ? "h" : "b";
         intr += "f8";
       }
 

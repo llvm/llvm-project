@@ -3,11 +3,10 @@ set(LLVM_LINK_COMPONENTS
   Support
   )
 
-get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
-
 add_clang_library(clangCIRLoweringDirectToLLVM
   LowerToLLVM.cpp
   LowerToLLVMIR.cpp
+  LowerToLLVMOpenCLMetadata.cpp
 
   DEPENDS
   CIRLowering
@@ -17,12 +16,16 @@ add_clang_library(clangCIRLoweringDirectToLLVM
 
   LINK_LIBS
   clangCIRLoweringCommon
-  ${dialect_libs}
   MLIRCIR
   MLIRCIRTargetLowering
   MLIRCIRTransforms
   MLIRBuiltinToLLVMIRTranslation
+  MLIRDLTIDialect
+  MLIRFuncDialect
+  MLIRLLVMCommonConversion
+  MLIRLLVMDialect
   MLIRLLVMToLLVMIRTranslation
+  MLIROpenMPDialect
   MLIROpenMPToLLVM
   MLIROpenMPToLLVMIRTranslation
   MLIROpenMPTransforms

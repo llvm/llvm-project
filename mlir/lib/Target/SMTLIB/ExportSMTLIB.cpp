@@ -13,7 +13,7 @@
 #include "mlir/Target/SMTLIB/ExportSMTLIB.h"
 
 #include "mlir/Dialect/Arith/Utils/Utils.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/Func/IR/FuncDialect.h"
 #include "mlir/Dialect/SMT/IR/SMTOps.h"
 #include "mlir/Dialect/SMT/IR/SMTVisitors.h"
 #include "mlir/Support/IndentedOstream.h"
@@ -636,11 +636,7 @@ static LogicalResult emit(SolverOp solver, const SMTEmissionOptions &options,
       return op->emitError()
              << "solver must not contain any non-SMT operations";
 
-    for (Type resTy : op->getResultTypes()) {
-      auto sortTy = dyn_cast<SortType>(resTy);
-      if (!sortTy)
-        continue;
-
+    for (auto sortTy : llvm::make_isa_range<SortType>(op->getResultTypes())) {
       unsigned arity = sortTy.getSortParams().size();
       if (declaredSorts.contains(sortTy.getIdentifier())) {
         if (declaredSorts[sortTy.getIdentifier()] != arity)

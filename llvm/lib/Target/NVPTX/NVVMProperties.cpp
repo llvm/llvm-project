@@ -32,7 +32,7 @@
 #include <string>
 #include <vector>
 
-namespace llvm {
+using namespace llvm;
 
 namespace {
 using AnnotationValues = std::map<std::string, std::vector<unsigned>>;
@@ -43,11 +43,12 @@ struct AnnotationCache {
   std::map<const Module *, AnnotationMap> Cache;
 };
 
-AnnotationCache &getAnnotationCache() {
+} // namespace
+
+static AnnotationCache &getAnnotationCache() {
   static AnnotationCache AC;
   return AC;
 }
-} // namespace
 
 // TODO: Replace these legacy nvvm.annotations metadata names with proper
 // function/parameter attributes (like the NVVMAttr:: constants).
@@ -61,7 +62,7 @@ constexpr StringLiteral ReadWriteImage("rdwrimage");
 constexpr StringLiteral Managed("managed");
 } // namespace NVVMMetadata
 
-void clearAnnotationCache(const Module *Mod) {
+void llvm::clearAnnotationCache(const Module *Mod) {
   auto &AC = getAnnotationCache();
   std::lock_guard<sys::Mutex> Guard(AC.Lock);
   AC.Cache.erase(Mod);
@@ -209,7 +210,7 @@ static std::optional<uint64_t> getVectorProduct(ArrayRef<unsigned> V) {
                          std::multiplies<uint64_t>{});
 }
 
-PTXOpaqueType getPTXOpaqueType(const GlobalVariable &GV) {
+PTXOpaqueType llvm::getPTXOpaqueType(const GlobalVariable &GV) {
   if (findOneNVVMAnnotation(&GV, NVVMMetadata::Texture))
     return PTXOpaqueType::Texture;
   if (findOneNVVMAnnotation(&GV, NVVMMetadata::Surface))
@@ -219,7 +220,7 @@ PTXOpaqueType getPTXOpaqueType(const GlobalVariable &GV) {
   return PTXOpaqueType::None;
 }
 
-PTXOpaqueType getPTXOpaqueType(const Argument &Arg) {
+PTXOpaqueType llvm::getPTXOpaqueType(const Argument &Arg) {
   if (argHasNVVMAnnotation(Arg, NVVMMetadata::Sampler))
     return PTXOpaqueType::Sampler;
   if (argHasNVVMAnnotation(Arg, NVVMMetadata::ReadOnlyImage))
@@ -230,7 +231,7 @@ PTXOpaqueType getPTXOpaqueType(const Argument &Arg) {
   return PTXOpaqueType::None;
 }
 
-PTXOpaqueType getPTXOpaqueType(const Value &V) {
+PTXOpaqueType llvm::getPTXOpaqueType(const Value &V) {
   if (const auto *GV = dyn_cast<GlobalVariable>(&V))
     return getPTXOpaqueType(*GV);
   if (const auto *Arg = dyn_cast<Argument>(&V))
@@ -238,23 +239,23 @@ PTXOpaqueType getPTXOpaqueType(const Value &V) {
   return PTXOpaqueType::None;
 }
 
-bool isManaged(const Value &V) {
+bool llvm::isManaged(const Value &V) {
   return globalHasNVVMAnnotation(V, NVVMMetadata::Managed);
 }
 
-SmallVector<unsigned, 3> getMaxNTID(const Function &F) {
+SmallVector<unsigned, 3> llvm::getMaxNTID(const Function &F) {
   return getFnAttrParsedVector(F, NVVMAttr::MaxNTID);
 }
 
-SmallVector<unsigned, 3> getReqNTID(const Function &F) {
+SmallVector<unsigned, 3> llvm::getReqNTID(const Function &F) {
   return getFnAttrParsedVector(F, NVVMAttr::ReqNTID);
 }
 
-SmallVector<unsigned, 3> getClusterDim(const Function &F) {
+SmallVector<unsigned, 3> llvm::getClusterDim(const Function &F) {
   return getFnAttrParsedVector(F, NVVMAttr::ClusterDim);
 }
 
-std::optional<uint64_t> getOverallMaxNTID(const Function &F) {
+std::optional<uint64_t> llvm::getOverallMaxNTID(const Function &F) {
   // Note: The semantics here are a bit strange. The PTX ISA states the
   // following (11.4.2. Performance-Tuning Directives: .maxntid):
   //
@@ -264,12 +265,12 @@ std::optional<uint64_t> getOverallMaxNTID(const Function &F) {
   return getVectorProduct(getMaxNTID(F));
 }
 
-std::optional<uint64_t> getOverallReqNTID(const Function &F) {
+std::optional<uint64_t> llvm::getOverallReqNTID(const Function &F) {
   // Note: The semantics here are a bit strange. See getOverallMaxNTID.
   return getVectorProduct(getReqNTID(F));
 }
 
-std::optional<uint64_t> getOverallClusterRank(const Function &F) {
+std::optional<uint64_t> llvm::getOverallClusterRank(const Function &F) {
   // maxclusterrank and cluster_dim are mutually exclusive.
   if (const auto ClusterRank = getMaxClusterRank(F))
     return ClusterRank;
@@ -278,23 +279,23 @@ std::optional<uint64_t> getOverallClusterRank(const Function &F) {
   return getVectorProduct(getClusterDim(F));
 }
 
-std::optional<unsigned> getMaxClusterRank(const Function &F) {
+std::optional<unsigned> llvm::getMaxClusterRank(const Function &F) {
   return getFnAttrParsedInt(F, NVVMAttr::MaxClusterRank);
 }
 
-std::optional<unsigned> getMinCTASm(const Function &F) {
+std::optional<unsigned> llvm::getMinCTASm(const Function &F) {
   return getFnAttrParsedInt(F, NVVMAttr::MinCTASm);
 }
 
-std::optional<unsigned> getMaxNReg(const Function &F) {
+std::optional<unsigned> llvm::getMaxNReg(const Function &F) {
   return getFnAttrParsedInt(F, NVVMAttr::MaxNReg);
 }
 
-bool hasBlocksAreClusters(const Function &F) {
+bool llvm::hasBlocksAreClusters(const Function &F) {
   return F.hasFnAttribute(NVVMAttr::BlocksAreClusters);
 }
 
-bool isParamGridConstant(const Argument &Arg) {
+bool llvm::isParamGridConstant(const Argument &Arg) {
   assert(isKernelFunction(*Arg.getParent()) &&
          "only kernel arguments can be grid_constant");
 
@@ -317,7 +318,7 @@ bool isParamGridConstant(const Argument &Arg) {
   return Arg.hasAttribute(NVVMAttr::GridConstant);
 }
 
-MaybeAlign getStackAlign(const CallBase &I, unsigned Index) {
+MaybeAlign llvm::getStackAlign(const CallBase &I, unsigned Index) {
   // First check the alignstack metadata.
   if (MaybeAlign StackAlign =
           I.getAttributes().getAttributes(Index).getStackAlignment())
@@ -338,5 +339,3 @@ MaybeAlign getStackAlign(const CallBase &I, unsigned Index) {
   }
   return std::nullopt;
 }
-
-} // namespace llvm

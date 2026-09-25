@@ -33,7 +33,7 @@ using namespace llvm;
 static cl::opt<bool>
     SPVTranslatorCompat("translator-compatibility-mode",
                         cl::desc("SPIR-V Translator compatibility mode"),
-                        cl::Optional, cl::init(false));
+                        cl::init(false));
 
 static cl::opt<ExtensionSet, false, SPIRVExtensionsParser>
     Extensions("spirv-ext",
@@ -91,7 +91,8 @@ SPIRVSubtarget::SPIRVSubtarget(const Triple &TT, const std::string &CPU,
   if (TargetTriple.getOS() == Triple::Vulkan)
     Env = Shader;
   else if (TargetTriple.getOS() == Triple::OpenCL ||
-           TargetTriple.getVendor() == Triple::AMD)
+           TargetTriple.getVendor() == Triple::AMD ||
+           TargetTriple.getOS() == Triple::ChipStar)
     Env = Kernel;
   else
     Env = Unknown;
@@ -109,7 +110,12 @@ SPIRVSubtarget::SPIRVSubtarget(const Triple &TT, const std::string &CPU,
   initAvailableExtensions(Extensions);
   initAvailableExtInstSets();
 
-  GR = std::make_unique<SPIRVGlobalRegistry>(TM.createDataLayout());
+  // FIXME: The GlobalRegistry does not belong in the subtarget, see issue
+  // #223774. The DataLayout is a property of the module and in principle
+  // depends on program state. It just happens SPIRV currently doesn't use
+  // target-abi names.
+  GR = std::make_unique<SPIRVGlobalRegistry>(
+      DataLayout(TargetTriple.computeDataLayout()));
   CallLoweringInfo = std::make_unique<SPIRVCallLowering>(TLInfo, GR.get());
   InlineAsmInfo = std::make_unique<SPIRVInlineAsmLowering>(TLInfo);
   Legalizer = std::make_unique<SPIRVLegalizerInfo>(*this);
@@ -204,13 +210,8 @@ void SPIRVSubtarget::resolveEnvFromModule(const Module &M) {
     return;
   }
 
-  bool HasShaderAttr = false;
-  for (const Function &F : M) {
-    if (F.hasFnAttribute("hlsl.shader")) {
-      HasShaderAttr = true;
-      break;
-    }
-  }
+  bool HasShaderAttr = any_of(
+      M, [](const Function &F) { return F.hasFnAttribute("hlsl.shader"); });
 
   if (!HasShaderAttr) {
     if (auto *MemModel = M.getNamedMetadata("spirv.MemoryModel")) {

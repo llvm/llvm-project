@@ -20,6 +20,7 @@
 
 #include "benchmark/benchmark.h"
 #include "make_test_thread.h"
+#include "test_macros.h"
 
 using namespace std::chrono_literals;
 
@@ -102,10 +103,12 @@ void test_multi_thread_lock_unlock(benchmark::State& state) {
   }
 }
 
-void BM_atomic_wait(benchmark::State& state) { test_multi_thread_lock_unlock<std::atomic<bool>, AtomicLock>(state); }
+TEST_ALIGN_BENCHMARK void BM_atomic_wait(benchmark::State& state) {
+  test_multi_thread_lock_unlock<std::atomic<bool>, AtomicLock>(state);
+}
 BENCHMARK(BM_atomic_wait)->RangeMultiplier(2)->Range(1 << 10, 1 << 20);
 
-void BM_mutex(benchmark::State& state) {
+TEST_ALIGN_BENCHMARK void BM_mutex(benchmark::State& state) {
   test_multi_thread_lock_unlock<std::mutex, std::unique_lock<std::mutex>>(state);
 }
 BENCHMARK(BM_mutex)->RangeMultiplier(2)->Range(1 << 10, 1 << 20);

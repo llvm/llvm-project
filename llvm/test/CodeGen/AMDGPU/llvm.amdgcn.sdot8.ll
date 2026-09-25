@@ -1,10 +1,10 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx906 < %s | FileCheck %s --check-prefixes=GCN,GFX906
-; RUN: llc -mtriple=amdgcn -mcpu=gfx908 < %s | FileCheck %s --check-prefixes=GCN,GFX908
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1011 < %s | FileCheck %s --check-prefixes=GCN,GFX10
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1012 < %s | FileCheck %s --check-prefixes=GCN,GFX10
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1030 < %s | FileCheck %s --check-prefixes=GCN,GFX10
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1031 < %s | FileCheck %s --check-prefixes=GCN,GFX10
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck %s --check-prefixes=GFX11
+; RUN: llc -mtriple=amdgpu9.06 < %s | FileCheck %s --check-prefixes=GCN,GFX906
+; RUN: llc -mtriple=amdgpu9.08 < %s | FileCheck %s --check-prefixes=GCN,GFX908
+; RUN: llc -mtriple=amdgpu10.11 < %s | FileCheck %s --check-prefixes=GCN,GFX10
+; RUN: llc -mtriple=amdgpu10.12 < %s | FileCheck %s --check-prefixes=GCN,GFX10
+; RUN: llc -mtriple=amdgpu10.30 < %s | FileCheck %s --check-prefixes=GCN,GFX10
+; RUN: llc -mtriple=amdgpu10.31 < %s | FileCheck %s --check-prefixes=GCN,GFX10
+; RUN: llc -mtriple=amdgpu11.00 < %s | FileCheck %s --check-prefixes=GFX11
 
 declare i32 @llvm.amdgcn.sdot8(i32 %a, i32 %b, i32 %c, i1 %clamp)
 

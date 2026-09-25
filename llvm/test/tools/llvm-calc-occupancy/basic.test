@@ -1,0 +1,58 @@
+## Basic checks for the AMDGPU occupancy calculator.
+REQUIRES: amdgpu-registered-target
+
+## VGPR-limited kernel on gfx1030 (wave32, 16 waves/EU HW limit).
+RUN: llvm-calc-occupancy -mcpu=gfx1030 --vgprs=128 | FileCheck %s --check-prefix=VGPR
+VGPR: GPU (-mcpu):         gfx1030
+VGPR: Max waves/EU:        16
+VGPR: VGPRs:               8
+VGPR: Occupancy:           8 waves/EU (32 waves/CU)
+VGPR: Limited by:          VGPRs
+
+## VGPR-limited kernel reports how far VGPRs must drop for the next level.
+RUN: llvm-calc-occupancy -mcpu=gfx950 --vgprs=250 --wg-size=64 | FileCheck %s --check-prefix=NEXT
+NEXT: Limited by:          VGPRs
+NEXT: Next step:           reach 3 waves/EU:
+NEXT: VGPRs <= 168 (currently 250)
+
+## When several factors tie, all of them must be relaxed.
+RUN: llvm-calc-occupancy -mcpu=gfx90a --vgprs=80 --sgprs=102 | FileCheck %s --check-prefix=BOTH
+BOTH: Limited by:          VGPRs, SGPRs
+BOTH: Next step:           reach 7 waves/EU (requires all of):
+BOTH: VGPRs <= 72 (currently 80)
+BOTH: SGPRs <= 96 (currently 102)
+
+## An LDS-limited kernel is told how much LDS to shed.
+RUN: llvm-calc-occupancy -mcpu=gfx90a --wg-size=256 --lds=40k | FileCheck %s --check-prefix=NEXTLDS
+NEXTLDS: Limited by:          workgroup size / LDS
+NEXTLDS: Next step:           reach 2 waves/EU:
+NEXTLDS: LDS <= 32768 bytes (currently 40960)
+
+## No hint when already at the hardware maximum.
+RUN: llvm-calc-occupancy -mcpu=gfx90a --vgprs=40 --sgprs=20 --wg-size=64 | FileCheck %s --check-prefix=MAXED
+MAXED: Occupancy:           8 waves/EU
+MAXED: Next step:           already at the hardware maximum
+
+## No workgroup size given: the workgroup dimension is reported as a range.
+RUN: llvm-calc-occupancy -mcpu=gfx90a | FileCheck %s --check-prefix=FUZZY
+FUZZY: Workgroup size:      1 .. 1024 (unspecified -> full range)
+FUZZY: Occupancy:           8 waves/EU (32 waves/CU)
+
+## Requesting more LDS than the GPU has warns and pins occupancy to 1.
+RUN: llvm-calc-occupancy -mcpu=gfx90a --lds=103kb 2>&1 | FileCheck %s --check-prefix=BIGLDS
+BIGLDS: warning:{{.*}}LDS request (105472 bytes) exceeds addressable LDS
+BIGLDS: Occupancy:           1 waves/EU
+
+## The register-limit table can be dumped for a GPU.
+RUN: llvm-calc-occupancy -mcpu=gfx90a --limits | FileCheck %s --check-prefix=LIMITS
+LIMITS: Occupancy      Max VGPRs      Max SGPRs
+LIMITS: 8              64             80
+LIMITS: 1              512            102
+
+## Missing -mcpu is an error.
+RUN: not llvm-calc-occupancy 2>&1 | FileCheck %s --check-prefix=NOCPU
+NOCPU: error:{{.*}}no GPU specified
+
+## A non-AMDGPU triple is rejected.
+RUN: not llvm-calc-occupancy -mtriple=x86_64-- -mcpu=gfx90a 2>&1 | FileCheck %s --check-prefix=BADTRIPLE
+BADTRIPLE: error:{{.*}}only supports the AMDGPU target

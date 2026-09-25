@@ -25,7 +25,7 @@ declare nonnull ptr @llvm.threadlocal.address.p0(ptr nonnull)
 !1 = distinct !DIGlobalVariable(name: "TGlobal", scope: !2, file: !3, line: 1, type: !7, isLocal: false, isDefinition: true)
 !2 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !3, emissionKind: FullDebug, globals: !4)
 !3 = !DIFile(filename: "ThreadLocalStorage.cpp", directory: "")
-!4 = !{!0, !5, !8}
+!4 = !{!0, !5}
 !5 = !DIGlobalVariableExpression(var: !6, expr: !DIExpression())
 !6 = distinct !DIGlobalVariable(name: "NGlobal", scope: !2, file: !3, line: 2, type: !7, isLocal: false, isDefinition: true)
 !7 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
@@ -34,7 +34,7 @@ declare nonnull ptr @llvm.threadlocal.address.p0(ptr nonnull)
 !10 = distinct !DISubprogram(name: "test", scope: !3, file: !3, line: 3, type: !11, scopeLine: 3, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !2, retainedNodes: !13)
 !11 = !DISubroutineType(types: !12)
 !12 = !{null}
-!13 = !{}
+!13 = !{!8}
 !14 = !{i32 7, !"Dwarf Version", i32 5}
 !15 = !{i32 2, !"Debug Info Version", i32 3}
 !22 = !DILocation(line: 5, scope: !10)

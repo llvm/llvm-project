@@ -188,7 +188,7 @@ static bool insertIntrinsicCalls(CallBrInst *CBR, DominatorTree &DT) {
       continue;
 
     Builder.SetInsertPoint(&*IndDest->begin());
-    CallInst *Intrinsic = Builder.CreateIntrinsic(
+    CallInst *Intrinsic = Builder.CreateIntrinsicWithoutFolding(
         CBR->getType(), Intrinsic::callbr_landingpad, {CBR});
     SSAUpdate.AddAvailableValue(IndDest, Intrinsic);
     updateSSA(DT, CBR, Intrinsic, SSAUpdate);

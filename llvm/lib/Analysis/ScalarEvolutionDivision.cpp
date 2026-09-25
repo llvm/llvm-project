@@ -19,7 +19,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/Support/Casting.h"
 #include <cassert>
-#include <cstdint>
 
 #define DEBUG_TYPE "scev-division"
 
@@ -56,6 +55,8 @@ void SCEVDivision::divide(ScalarEvolution &SE, const SCEV *Numerator,
                           const SCEV *Denominator, const SCEV **Quotient,
                           const SCEV **Remainder) {
   assert(Numerator && Denominator && "Uninitialized SCEV");
+  assert(Numerator->getType() == Denominator->getType() &&
+         "Numerator and Denominator must have the same type");
 
   SCEVDivision D(SE, Numerator, Denominator);
 
@@ -109,13 +110,8 @@ void SCEVDivision::visitConstant(const SCEVConstant *Numerator) {
   if (const SCEVConstant *D = dyn_cast<SCEVConstant>(Denominator)) {
     APInt NumeratorVal = Numerator->getAPInt();
     APInt DenominatorVal = D->getAPInt();
-    uint32_t NumeratorBW = NumeratorVal.getBitWidth();
-    uint32_t DenominatorBW = DenominatorVal.getBitWidth();
-
-    if (NumeratorBW > DenominatorBW)
-      DenominatorVal = DenominatorVal.sext(NumeratorBW);
-    else if (NumeratorBW < DenominatorBW)
-      NumeratorVal = NumeratorVal.sext(DenominatorBW);
+    assert(NumeratorVal.getBitWidth() == DenominatorVal.getBitWidth() &&
+           "Numerator and Denominator must have the same bit width");
 
     APInt QuotientVal(NumeratorVal.getBitWidth(), 0);
     APInt RemainderVal(NumeratorVal.getBitWidth(), 0);
@@ -143,9 +139,9 @@ void SCEVDivision::visitAddRecExpr(const SCEVAddRecExpr *Numerator) {
     return cannotDivide(Numerator);
 
   Quotient = SE.getAddRecExpr(StartQ, StepQ, Numerator->getLoop(),
-                              SCEV::NoWrapFlags::FlagAnyWrap);
+                              SCEV::NoWrapFlags::FlagNone);
   Remainder = SE.getAddRecExpr(StartR, StepR, Numerator->getLoop(),
-                               SCEV::NoWrapFlags::FlagAnyWrap);
+                               SCEV::NoWrapFlags::FlagNone);
 }
 
 void SCEVDivision::visitAddExpr(const SCEVAddExpr *Numerator) {

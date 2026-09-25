@@ -109,7 +109,92 @@ define void @test_zero_first_arg(ptr %ap) {
   ret void
 }
 
+;; The first argument index is 0, and the format string is constant and doesn't
+;; contain a float specifier. The "float" aspect is optimized away, and it is
+;; transformed to call the modular implementation.
+define void @test_zero_first_arg_optimized(ptr %ap) {
+; CHECK-LABEL: @test_zero_first_arg_optimized(
+; CHECK-NEXT:    call void @zero_first_arg_mod(ptr nonnull @.str.int, ptr [[AP:%.*]])
+; CHECK-NEXT:    ret void
+;
+  call void @zero_first_arg(ptr @.str.int, ptr %ap)
+  ret void
+}
+
 declare void @zero_first_arg(ptr, ptr) #5
+
+@.str.fixed = constant [3 x i8] c"%r\00"
+@.str.complex_float = constant [16 x i8] c"%% %1$+#0*.*hlf\00"
+@.str.dynamic = global ptr null
+
+;; Both "float" and "fixed" aspects are present. The format string is "%r" (fixed-point),
+;; so the "float" aspect is optimized away, and a reference to the needed "fixed" aspect is emitted.
+define void @test_fixed_needed(i32 %arg) {
+; CHECK-LABEL: @test_fixed_needed(
+; CHECK-NEXT:    call void (ptr, ...) @multiple_aspects_mod(ptr nonnull @.str.fixed, i32 [[ARG:%.*]])
+; CHECK-NEXT:    call void @llvm.reloc.none(metadata !"basic_impl_fixed")
+; CHECK-NEXT:    ret void
+;
+  call void (ptr, ...) @fixed_needed(ptr @.str.fixed, i32 %arg)
+  ret void
+}
+
+declare void @fixed_needed(ptr, ...) #6
+
+;; Both "float" and "fixed" aspects are present. The format string is "%f" (floating-point),
+;; so the "fixed" aspect is optimized away, and a reference to the needed "float" aspect is emitted.
+define void @test_float_needed(double %arg) {
+; CHECK-LABEL: @test_float_needed(
+; CHECK-NEXT:    call void (ptr, ...) @multiple_aspects_mod(ptr nonnull @.str.float, double [[ARG:%.*]])
+; CHECK-NEXT:    call void @llvm.reloc.none(metadata !"basic_impl_float")
+; CHECK-NEXT:    ret void
+;
+  call void (ptr, ...) @float_needed(ptr @.str.float, double %arg)
+  ret void
+}
+
+declare void @float_needed(ptr, ...) #6
+
+;; Both "float" and "fixed" aspects are present. The format string is dynamic (not constant),
+;; so both aspects are conservatively assumed to be needed, and no transformation occurs.
+define void @test_dynamic_format(double %arg) {
+; CHECK-LABEL: @test_dynamic_format(
+; CHECK-NEXT:    [[FMT:%.*]] = load ptr, ptr @.str.dynamic, align 4
+; CHECK-NEXT:    call void (ptr, ...) @fixed_needed(ptr [[FMT]], double [[ARG:%.*]])
+; CHECK-NEXT:    ret void
+;
+  %fmt = load ptr, ptr @.str.dynamic, align 4
+  call void (ptr, ...) @fixed_needed(ptr %fmt, double %arg)
+  ret void
+}
+
+;; Both "float" and "fixed" aspects are present. The format string is dynamic (not constant),
+;; but there are no floating-point arguments passed (only an integer). The "float" aspect is
+;; optimized away, and only a reference to the needed "fixed" aspect is emitted.
+define void @test_dynamic_format_no_float(i32 %arg) {
+; CHECK-LABEL: @test_dynamic_format_no_float(
+; CHECK-NEXT:    [[FMT:%.*]] = load ptr, ptr @.str.dynamic, align 4
+; CHECK-NEXT:    call void (ptr, ...) @multiple_aspects_mod(ptr [[FMT]], i32 [[ARG:%.*]])
+; CHECK-NEXT:    call void @llvm.reloc.none(metadata !"basic_impl_fixed")
+; CHECK-NEXT:    ret void
+;
+  %fmt = load ptr, ptr @.str.dynamic, align 4
+  call void (ptr, ...) @fixed_needed(ptr %fmt, i32 %arg)
+  ret void
+}
+
+;; The format string contains a complex float specifier (testing escaped %, positional args,
+;; flags, width, precision, length modifiers) but no fixed specifier.
+;; The "fixed" aspect is optimized away, and only a reference to the needed "float" aspect is emitted.
+define void @test_complex_format(i32 %width, i32 %prec, double %val) {
+; CHECK-LABEL: @test_complex_format(
+; CHECK-NEXT:    call void (ptr, ...) @multiple_aspects_mod(ptr nonnull @.str.complex_float, i32 [[WIDTH:%.*]], i32 [[PREC:%.*]], double [[VAL:%.*]])
+; CHECK-NEXT:    call void @llvm.reloc.none(metadata !"basic_impl_float")
+; CHECK-NEXT:    ret void
+;
+  call void (ptr, ...) @fixed_needed(ptr @.str.complex_float, i32 %width, i32 %prec, double %val)
+  ret void
+}
 
 attributes #0 = { "modular-format"="printf,1,2,basic_mod,basic_impl" }
 attributes #1 = { "modular-format"="printf,1,2,float_present_mod,basic_impl,float" }
@@ -117,3 +202,4 @@ attributes #2 = { "modular-format"="printf,1,2,unknown_aspects_mod,basic_impl,un
 attributes #3 = { "modular-format"="printf,2,3,first_arg_idx_mod,basic_impl,float" }
 attributes #4 = { "modular-format"="printf,1,2,multiple_aspects_mod,basic_impl,float,unknown" }
 attributes #5 = { "modular-format"="printf,1,0,zero_first_arg_mod,basic_impl,float" }
+attributes #6 = { "modular-format"="printf,1,2,multiple_aspects_mod,basic_impl,float,fixed" }

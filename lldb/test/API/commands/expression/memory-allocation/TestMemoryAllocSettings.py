@@ -27,10 +27,17 @@ class TestMemoryAllocSettings(TestBase):
         with open(self.log_file, "r") as f:
             log = f.read()
 
+        # The materialized struct is allocated first, so it lands at
+        # expr-alloc-address.
         alloc0 = re.search("^.*IRMemoryMap::Malloc.+?0xdead0000.*$", log, re.MULTILINE)
-        # Malloc adds additional bytes to allocation size, hence 10007
+        # The interpreter's stack frame is allocated last. Materializing the
+        # struct allocates the persistent result variable in between, so the
+        # stack frame lands two expr-alloc-align boundaries along, at 0xdead2000.
+        # Its size comes from expr-alloc-size: Malloc rounds the request up to the
+        # requested alignment (8 here) and then adds alignment - 1 bytes, so
+        # 10000 becomes 10007.
         alloc1 = re.search(
-            r"^.*IRMemoryMap::Malloc\s*?\(10007.+?0xdead1000.*$", log, re.MULTILINE
+            r"^.*IRMemoryMap::Malloc\s*?\(10007.+?0xdead2000.*$", log, re.MULTILINE
         )
         self.assertTrue(alloc0, "Couldn't find an allocation at a given address.")
         self.assertTrue(

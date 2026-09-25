@@ -50,8 +50,8 @@ enum class CuSparseFormat {
 
 /// Marks the given top module as a GPU container module.
 static void markAsGPUContainer(ModuleOp topModule) {
-  topModule->setAttr(gpu::GPUDialect::getContainerModuleAttrName(),
-                     UnitAttr::get(topModule->getContext()));
+  topModule->setDiscardableAttr(gpu::GPUDialect::getContainerModuleAttrName(),
+                                UnitAttr::get(topModule->getContext()));
 }
 
 /// Constructs a new GPU module (for GPU kernels) inside the given top module,
@@ -1189,7 +1189,8 @@ struct ForallRewriter : public OpRewritePattern<scf::ParallelOp> {
     // of the form
     //   forall (i = 0; i < N; i++)
     // so that cyclic scheduling over the threads is easy.
-    if (!forallOp->hasAttr(LoopEmitter::getLoopEmitterLoopAttrName()) ||
+    if (!forallOp->hasDiscardableAttr(
+            LoopEmitter::getLoopEmitterLoopAttrName()) ||
         forallOp.getNumReductions() != 0 || forallOp.getNumLoops() != 1 ||
         !matchPattern(forallOp.getLowerBound()[0], m_Zero()) ||
         !matchPattern(forallOp.getStep()[0], m_One()))
@@ -1298,6 +1299,11 @@ struct LinalgOpRewriter : public OpRewritePattern<linalg::GenericOp> {
                                 PatternRewriter &rewriter) const override {
     if (op.getNumDpsInits() != 1)
       return failure(); // reject multi-output
+    // The rewrites below query the sparse tensor encoding of the operands,
+    // which is only defined for ranked tensor types. Reject buffer semantics
+    // rather than casting a memref operand to a tensor type.
+    if (!op.hasPureTensorSemantics())
+      return failure();
 
     const unsigned numLoops = op.getNumLoops();
     const unsigned numTensors = op->getNumOperands();

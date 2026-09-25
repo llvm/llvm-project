@@ -66,6 +66,51 @@ public:
     return UnwindV2Start->getFragment();
   }
 };
+
+/// MCExpr representing a V3 epilog's tail-relative EpilogOffset field. The
+/// first epilog descriptor is encoded relative to the fragment end, and each
+/// subsequent descriptor relative to the previous epilog's start. Measuring
+/// from the tail keeps the magnitude small (epilogs sit near the end of the
+/// function), avoiding overflow of the signed 16-bit field for large
+/// functions. The fragment end may not have a symbol yet when the unwind info
+/// is emitted (e.g. via .seh_handlerdata), so the value is resolved lazily
+/// through the FrameInfo reference.
+class MCUnwindV3EpilogOffsetTargetExpr final : public MCTargetExpr {
+  const WinEH::FrameInfo &FrameInfo;
+  const MCSymbol *EpilogStart;
+  const MCSymbol *PrevEpilogStart;
+  SMLoc Loc;
+
+  MCUnwindV3EpilogOffsetTargetExpr(const WinEH::FrameInfo &FrameInfo,
+                                   const MCSymbol *EpilogStart,
+                                   const MCSymbol *PrevEpilogStart, SMLoc Loc)
+      : FrameInfo(FrameInfo), EpilogStart(EpilogStart),
+        PrevEpilogStart(PrevEpilogStart), Loc(Loc) {}
+
+public:
+  static MCUnwindV3EpilogOffsetTargetExpr *
+  create(const WinEH::FrameInfo &FrameInfo, const MCSymbol *EpilogStart,
+         const MCSymbol *PrevEpilogStart, SMLoc Loc, MCContext &Ctx) {
+    return new (Ctx) MCUnwindV3EpilogOffsetTargetExpr(FrameInfo, EpilogStart,
+                                                      PrevEpilogStart, Loc);
+  }
+
+  void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override {
+    OS << ":epilogoffset:";
+    EpilogStart->print(OS, MAI);
+  }
+
+  bool evaluateAsRelocatableImpl(MCValue &Res,
+                                 const MCAssembler *Asm) const override;
+
+  void visitUsedExpr(MCStreamer &Streamer) const override {
+    // Contains no sub-expressions.
+  }
+
+  MCFragment *findAssociatedFragment() const override {
+    return EpilogStart->getFragment();
+  }
+};
 } // namespace
 
 // NOTE: All relocations generated here are 4-byte image-relative.
@@ -578,17 +623,38 @@ static void EmitUnwindInfoV3(MCStreamer &Streamer, WinEH::FrameInfo *Info) {
                           " This function has " +
                           Twine(EpilogInfos.size()));
 
+  // V3 epilog offsets are always encoded tail-relative: the first descriptor
+  // holds a negative byte offset from the fragment end, and each subsequent
+  // descriptor a (negative) delta from the previous epilog's start. The spec
+  // requires every descriptor in a fragment to use the same sign, so the
+  // descriptors must be listed in descending address order ("descending from
+  // tail"). EpilogMap is in ascending address order, so reverse it here before
+  // computing inheritance and emitting descriptors.
+  std::reverse(EpilogInfos.begin(), EpilogInfos.end());
+
   // --- Inheritance decisions ---
-  // An epilog can use the inherited (3-byte) descriptor when FirstOp,
-  // NumberOfOps, NeedsLarge, and relative IP offsets all match the previous
-  // epilog.
-  for (unsigned I = 1; I < EpilogInfos.size(); ++I) {
-    auto &Prev = EpilogInfos[I - 1];
+  // Per the V3 spec, an epilog descriptor with NumberOfOps == 0 inherits its
+  // effective NumberOfOps, FirstOp, IpOffsetOfLastInstruction, and IP offset
+  // array from the first preceding descriptor with NumberOfOps != 0 (the
+  // "base"), not necessarily the immediately preceding descriptor. An epilog
+  // can therefore use the inherited (3-byte) descriptor when FirstOp,
+  // NumberOfOps, and relative IP offsets all match that base. NeedsLarge is a
+  // deterministic function of those fields (it is set when an IP offset exceeds
+  // the 1-byte range), so a matching FirstOp/NumberOfOps and IP offsets imply a
+  // matching NeedsLarge; we assert that invariant rather than test it.
+  for (unsigned I = 1, Base = 0; I < EpilogInfos.size(); ++I) {
+    auto &BaseEI = EpilogInfos[Base];
     auto &Curr = EpilogInfos[I];
-    if (Curr.FirstOp == Prev.FirstOp && Curr.NumberOfOps == Prev.NumberOfOps &&
-        Curr.NeedsLarge == Prev.NeedsLarge &&
-        EpilogIpOffsetsMatch(*Curr.Epilog, *Prev.Epilog, OS->getAssembler()))
+    if (Curr.FirstOp == BaseEI.FirstOp &&
+        Curr.NumberOfOps == BaseEI.NumberOfOps &&
+        EpilogIpOffsetsMatch(*Curr.Epilog, *BaseEI.Epilog,
+                             OS->getAssembler())) {
+      assert(Curr.NeedsLarge == BaseEI.NeedsLarge &&
+             "NeedsLarge must follow from matching FirstOp, NumberOfOps, and "
+             "IP offsets");
       Curr.Inherited = true;
+    } else
+      Base = I; // Curr is a full descriptor; it becomes the new base.
   }
 
   // --- Compute payload sizes ---
@@ -702,35 +768,39 @@ static void EmitUnwindInfoV3(MCStreamer &Streamer, WinEH::FrameInfo *Info) {
 
   // --- Emit epilog descriptors ---
   const MCSymbol *PrevEpilogStart = nullptr;
+  [[maybe_unused]] uint8_t BaseEpiFlags = 0;
   for (const auto &EI : EpilogInfos) {
     const auto &Epilog = *EI.Epilog;
 
     // FlagsAndNumOps: bits [2:0] = flags, bits [7:3] = NumberOfOps.
     // For inherited descriptors, NumberOfOps = 0.
+    //
+    // Per the V3 spec, Flags bits 0 and 1 are NOT inherited by a descriptor
+    // with NumberOfOps == 0; the producer must replicate them so they have the
+    // same value as the base descriptor's. Since inheritance requires a
+    // matching NeedsLarge value, EI.NeedsLarge already equals the base's, so we
+    // emit EPILOG_INFO_LARGE for inherited descriptors too.
     uint8_t EpiFlags = 0;
-    if (EI.NeedsLarge && !EI.Inherited)
+    if (EI.NeedsLarge)
       EpiFlags |= Win64EH::EPILOG_INFO_LARGE;
+    // An inherited descriptor must replicate the base descriptor's flags bits
+    // 0 and 1; verify we are about to emit a byte consistent with the base.
+    assert((!EI.Inherited || (EpiFlags & 0x03) == (BaseEpiFlags & 0x03)) &&
+           "inherited epilog must replicate base descriptor's flags bits 0-1");
+    if (!EI.Inherited)
+      BaseEpiFlags = EpiFlags;
     uint8_t EpiNumOps = EI.Inherited ? 0 : EI.NumberOfOps;
     Streamer.emitInt8((EpiNumOps << 3) | EpiFlags);
 
-    // EpilogOffset: signed 16-bit.
-    // For the first epilog: byte offset from fragment start to epilog start.
-    // For subsequent epilogs: delta from the previous epilog's start position.
-    // Emit as a fixup since we may not know the exact distance yet.
+    // EpilogOffset: signed 16-bit, always tail-relative (see
+    // MCUnwindV3EpilogOffsetTargetExpr). The first descriptor holds the
+    // negative byte offset from the fragment end; each subsequent descriptor
+    // holds the delta from the previous epilog's start. Emitted in descending
+    // address order, every offset is non-positive, satisfying the V3
+    // "all epilogs use the same sign" rule.
     {
-      const MCSymbol *Base = PrevEpilogStart ? PrevEpilogStart : Info->Begin;
-      const MCExpr *EpilogOffsetExpr = MCBinaryExpr::createSub(
-          MCSymbolRefExpr::create(Epilog.Start, Context),
-          MCSymbolRefExpr::create(Base, Context), Context);
-      // Validate the epilog offset fits in a signed 16-bit field if we can
-      // evaluate it now.
-      int64_t OffsetValue;
-      if (EpilogOffsetExpr->evaluateAsAbsolute(OffsetValue,
-                                               OS->getAssembler())) {
-        if (OffsetValue < INT16_MIN || OffsetValue > INT16_MAX)
-          reportFatalUsageError(
-              "Epilog offset out of signed 16-bit range for V3 encoding");
-      }
+      const MCExpr *EpilogOffsetExpr = MCUnwindV3EpilogOffsetTargetExpr::create(
+          *Info, Epilog.Start, PrevEpilogStart, Epilog.Loc, Context);
       OS->ensureHeadroom(2);
       OS->addFixup(EpilogOffsetExpr, FK_Data_2);
       OS->appendContents(2, 0);
@@ -1019,6 +1089,39 @@ bool MCUnwindV2EpilogTargetExpr::evaluateAsRelocatableImpl(
   auto HighBits = *Offset >> 8;
   Res = MCValue::get((HighBits << 12) | (Win64EH::UOP_Epilog << 8) |
                      (*Offset & 0xFF));
+  return true;
+}
+
+bool MCUnwindV3EpilogOffsetTargetExpr::evaluateAsRelocatableImpl(
+    MCValue &Res, const MCAssembler *Asm) const {
+  // The first epilog descriptor is encoded relative to the fragment tail (the
+  // first byte past the end of the fragment); subsequent descriptors are
+  // encoded relative to the previous epilog's start. Both bases yield a
+  // non-positive offset, as required by the V3 "same sign" rule.
+  const MCSymbol *Base = PrevEpilogStart ? PrevEpilogStart : FrameInfo.End;
+  if (!Base) {
+    Asm->getContext().reportError(
+        Loc, "Missing fragment end for V3 epilog offset in " +
+                 FrameInfo.Function->getName());
+    return false;
+  }
+
+  auto Offset = GetOptionalAbsDifference(*Asm, EpilogStart, Base);
+  if (!Offset) {
+    Asm->getContext().reportError(
+        Loc, "Failed to evaluate epilog offset for V3 unwind info in " +
+                 FrameInfo.Function->getName());
+    return false;
+  }
+  if (*Offset < INT16_MIN || *Offset > INT16_MAX) {
+    Asm->getContext().reportError(
+        Loc, "Epilog offset " + Twine(*Offset) +
+                 " out of signed 16-bit range for V3 encoding in " +
+                 FrameInfo.Function->getName());
+    return false;
+  }
+
+  Res = MCValue::get(*Offset);
   return true;
 }
 

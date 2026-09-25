@@ -339,11 +339,10 @@ class FunctionDifferenceEngine {
   void runBlockDiff(BasicBlock::const_iterator LI,
                     BasicBlock::const_iterator RI);
 
-  bool diffCallSites(const CallBase &L, const CallBase &R, bool Complain) {
+  bool diffCallSites(const CallBase &L, const CallBase &R, bool Complain,
+                     const AssumptionContext *AC) {
     // FIXME: call attributes
-    AssumptionContext AC = {L.getParent(), R.getParent()};
-    if (!equivalentAsOperands(L.getCalledOperand(), R.getCalledOperand(),
-                              &AC)) {
+    if (!equivalentAsOperands(L.getCalledOperand(), R.getCalledOperand(), AC)) {
       if (Complain) Engine.log("called functions differ");
       return true;
     }
@@ -352,7 +351,7 @@ class FunctionDifferenceEngine {
       return true;
     }
     for (unsigned I = 0, E = L.arg_size(); I != E; ++I)
-      if (!equivalentAsOperands(L.getArgOperand(I), R.getArgOperand(I), &AC)) {
+      if (!equivalentAsOperands(L.getArgOperand(I), R.getArgOperand(I), AC)) {
         if (Complain)
           Engine.logf("arguments %l and %r differ")
               << L.getArgOperand(I) << R.getArgOperand(I);
@@ -384,7 +383,8 @@ class FunctionDifferenceEngine {
         return true;
       }
     } else if (isa<CallInst>(L)) {
-      return diffCallSites(cast<CallInst>(*L), cast<CallInst>(*R), Complain);
+      return diffCallSites(cast<CallInst>(*L), cast<CallInst>(*R), Complain,
+                           AC);
     } else if (isa<PHINode>(L)) {
       const PHINode &LI = cast<PHINode>(*L);
       const PHINode &RI = cast<PHINode>(*R);
@@ -421,7 +421,7 @@ class FunctionDifferenceEngine {
     } else if (isa<InvokeInst>(L)) {
       const InvokeInst &LI = cast<InvokeInst>(*L);
       const InvokeInst &RI = cast<InvokeInst>(*R);
-      if (diffCallSites(LI, RI, Complain))
+      if (diffCallSites(LI, RI, Complain, AC))
         return true;
 
       if (TryUnify) {
@@ -444,7 +444,7 @@ class FunctionDifferenceEngine {
       for (unsigned I = 0; I < LI.getNumIndirectDests(); I++)
         tryUnify(LI.getIndirectDest(I), RI.getIndirectDest(I));
 
-      if (diffCallSites(LI, RI, Complain))
+      if (diffCallSites(LI, RI, Complain, AC))
         return true;
 
       if (TryUnify)

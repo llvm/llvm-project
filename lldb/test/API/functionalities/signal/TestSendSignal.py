@@ -7,7 +7,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@skipIfNoSignals
+@requireSignals
 class SendSignalTestCase(TestBase):
     def setUp(self):
         # Call super's setUp().
@@ -16,7 +16,7 @@ class SendSignalTestCase(TestBase):
         self.line = line_number("main.c", "Put breakpoint here")
 
     @expectedFailureNetBSD(bugnumber="llvm.org/pr43959")
-    @skipIfWindows  # Windows does not support signals
+    @requirePOSIX  # Windows does not support signals
     def test_with_run_command(self):
         """Test that lldb command 'process signal SIGUSR1' sends a signal to the inferior process."""
         self.build()

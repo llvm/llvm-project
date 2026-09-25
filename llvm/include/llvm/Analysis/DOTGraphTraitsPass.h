@@ -13,12 +13,12 @@
 #ifndef LLVM_ANALYSIS_DOTGRAPHTRAITSPASS_H
 #define LLVM_ANALYSIS_DOTGRAPHTRAITSPASS_H
 
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Analysis/CFGPrinter.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/GraphWriter.h"
-#include <unordered_set>
 
-static std::unordered_set<std::string> nameObj;
+static llvm::StringSet<> nameObj;
 
 namespace llvm {
 
@@ -315,27 +315,6 @@ public:
 private:
   std::string Name;
 };
-
-template <typename GraphT>
-void WriteDOTGraphToFile(Function &F, GraphT &&Graph,
-                         std::string FileNamePrefix, bool IsSimple) {
-  std::string Filename = FileNamePrefix + "." + F.getName().str();
-  shortenFileName(Filename);
-  Filename = Filename + ".dot";
-  std::error_code EC;
-
-  errs() << "Writing '" << Filename << "'...";
-
-  raw_fd_ostream File(Filename, EC, sys::fs::OF_TextWithCRLF);
-  std::string GraphName = DOTGraphTraits<GraphT>::getGraphName(Graph);
-  std::string Title = GraphName + " for '" + F.getName().str() + "' function";
-
-  if (!EC)
-    WriteGraph(File, Graph, IsSimple, Title);
-  else
-    errs() << "  error opening file for writing!";
-  errs() << "\n";
-}
 
 } // end namespace llvm
 

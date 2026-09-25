@@ -11,8 +11,7 @@ define ptr @translate_element_size1(i64 %arg) {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i64) = COPY $x0
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(p0) = G_CONSTANT i64 0
   ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[C]], [[COPY]](i64)
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY [[PTR_ADD]](p0)
-  ; CHECK-NEXT:   $x0 = COPY [[COPY1]](p0)
+  ; CHECK-NEXT:   $x0 = COPY [[PTR_ADD]](p0)
   ; CHECK-NEXT:   RET_ReallyLR implicit $x0
   %tmp = getelementptr i8, ptr null, i64 %arg
   ret ptr %tmp
@@ -40,8 +39,7 @@ define ptr @first_offset_trivial(ptr %addr) {
   ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY [[COPY]](p0)
-  ; CHECK-NEXT:   $x0 = COPY [[COPY1]](p0)
+  ; CHECK-NEXT:   $x0 = COPY [[COPY]](p0)
   ; CHECK-NEXT:   RET_ReallyLR implicit $x0
   %res = getelementptr %type, ptr %addr, i32 0
   ret ptr %res
@@ -58,8 +56,7 @@ define ptr @first_offset_variable(ptr %addr, i64 %idx) {
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 32
   ; CHECK-NEXT:   [[MUL:%[0-9]+]]:_(i64) = G_MUL [[COPY1]], [[C]]
   ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[MUL]](i64)
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(p0) = COPY [[PTR_ADD]](p0)
-  ; CHECK-NEXT:   $x0 = COPY [[COPY2]](p0)
+  ; CHECK-NEXT:   $x0 = COPY [[PTR_ADD]](p0)
   ; CHECK-NEXT:   RET_ReallyLR implicit $x0
   %res = getelementptr %type, ptr %addr, i64 %idx
   ret ptr %res
@@ -77,8 +74,7 @@ define ptr @first_offset_ext(ptr %addr, i32 %idx) {
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 32
   ; CHECK-NEXT:   [[MUL:%[0-9]+]]:_(i64) = G_MUL [[SEXT]], [[C]]
   ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[MUL]](i64)
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(p0) = COPY [[PTR_ADD]](p0)
-  ; CHECK-NEXT:   $x0 = COPY [[COPY2]](p0)
+  ; CHECK-NEXT:   $x0 = COPY [[PTR_ADD]](p0)
   ; CHECK-NEXT:   RET_ReallyLR implicit $x0
   %res = getelementptr %type, ptr %addr, i32 %idx
   ret ptr %res
@@ -98,8 +94,7 @@ define ptr @const_then_var(ptr %addr, i64 %idx) {
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 4
   ; CHECK-NEXT:   [[MUL:%[0-9]+]]:_(i64) = G_MUL [[COPY1]], [[C1]]
   ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[MUL]](i64)
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(p0) = COPY [[PTR_ADD1]](p0)
-  ; CHECK-NEXT:   $x0 = COPY [[COPY2]](p0)
+  ; CHECK-NEXT:   $x0 = COPY [[PTR_ADD1]](p0)
   ; CHECK-NEXT:   RET_ReallyLR implicit $x0
   %res = getelementptr %type1, ptr %addr, i32 4, i32 1, i64 %idx
   ret ptr %res
@@ -138,8 +133,7 @@ define <2 x ptr> @vec_gep_scalar_base(<2 x i64> %offs) {
   ; CHECK-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x i64>) = G_BUILD_VECTOR [[C]](i64), [[C]](i64)
   ; CHECK-NEXT:   [[MUL:%[0-9]+]]:_(<2 x i64>) = nsw G_MUL [[COPY]], [[BUILD_VECTOR1]]
   ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(<2 x p0>) = nusw inbounds G_PTR_ADD [[BUILD_VECTOR]], [[MUL]](<2 x i64>)
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<2 x p0>) = COPY [[PTR_ADD]](<2 x p0>)
-  ; CHECK-NEXT:   $q0 = COPY [[COPY1]](<2 x p0>)
+  ; CHECK-NEXT:   $q0 = COPY [[PTR_ADD]](<2 x p0>)
   ; CHECK-NEXT:   RET_ReallyLR implicit $q0
 entry:
   %0 = getelementptr inbounds [8 x i32], ptr @arr, i64 0, <2 x i64> %offs
@@ -159,8 +153,7 @@ define <4 x ptr> @vector_gep_v4i32(<4 x ptr> %b, <4 x i32> %off) {
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<4 x i32>) = COPY $q2
   ; CHECK-NEXT:   [[SEXT:%[0-9]+]]:_(<4 x i64>) = G_SEXT [[COPY2]](<4 x i32>)
   ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(<4 x p0>) = G_PTR_ADD [[CONCAT_VECTORS]], [[SEXT]](<4 x i64>)
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<4 x p0>) = COPY [[PTR_ADD]](<4 x p0>)
-  ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(<2 x i64>), [[UV1:%[0-9]+]]:_(<2 x i64>) = G_UNMERGE_VALUES [[COPY3]](<4 x p0>)
+  ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(<2 x i64>), [[UV1:%[0-9]+]]:_(<2 x i64>) = G_UNMERGE_VALUES [[PTR_ADD]](<4 x p0>)
   ; CHECK-NEXT:   $q0 = COPY [[UV]](<2 x i64>)
   ; CHECK-NEXT:   $q1 = COPY [[UV1]](<2 x i64>)
   ; CHECK-NEXT:   RET_ReallyLR implicit $q0, implicit $q1

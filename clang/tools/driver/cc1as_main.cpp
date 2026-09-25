@@ -389,6 +389,7 @@ bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
         llvm::StringSwitch<EmitDwarfUnwindType>(A->getValue())
             .Case("always", EmitDwarfUnwindType::Always)
             .Case("no-compact-unwind", EmitDwarfUnwindType::NoCompactUnwind)
+            .Case("dwarf-only", EmitDwarfUnwindType::DwarfOnly)
             .Case("default", EmitDwarfUnwindType::Default);
   }
 

@@ -31,7 +31,7 @@ using namespace llvm;
 static cl::opt<float>
     PropellerInferThreshold("propeller-infer-threshold",
                             cl::desc("Threshold for infer stale profile"),
-                            cl::init(0.6), cl::Optional);
+                            cl::init(0.6));
 
 /// The object is used to identify and match basic blocks given their hashes.
 class StaleMatcher {

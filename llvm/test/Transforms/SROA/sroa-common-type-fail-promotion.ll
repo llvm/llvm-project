@@ -18,11 +18,11 @@ define amdgpu_kernel void @test_zeroinit() #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[DATA]] to <8 x i16>
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i32 0
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16 [[B_BLOCKWISE_COPY_SROA_0_0_VEC_EXTRACT]] to half
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_2_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i32 1
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_2_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16 [[B_BLOCKWISE_COPY_SROA_0_2_VEC_EXTRACT]] to half
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_4_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i32 2
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_4_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i64 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i16 [[B_BLOCKWISE_COPY_SROA_0_4_VEC_EXTRACT]] to half
 ; CHECK-NEXT:    ret void
 ;
@@ -49,11 +49,11 @@ define amdgpu_kernel void @test_memset() #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[DATA]] to <8 x i16>
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i32 0
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16 [[B_BLOCKWISE_COPY_SROA_0_0_VEC_EXTRACT]] to half
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_2_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i32 1
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_2_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16 [[B_BLOCKWISE_COPY_SROA_0_2_VEC_EXTRACT]] to half
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_4_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i32 2
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_4_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i64 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i16 [[B_BLOCKWISE_COPY_SROA_0_4_VEC_EXTRACT]] to half
 ; CHECK-NEXT:    ret void
 ;
@@ -80,11 +80,11 @@ define amdgpu_kernel void @vector_type_alloca() #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[DATA]] to <8 x i16>
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i32 0
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16 [[B_BLOCKWISE_COPY_SROA_0_0_VEC_EXTRACT]] to half
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_2_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i32 1
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_2_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16 [[B_BLOCKWISE_COPY_SROA_0_2_VEC_EXTRACT]] to half
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_4_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i32 2
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_4_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i64 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i16 [[B_BLOCKWISE_COPY_SROA_0_4_VEC_EXTRACT]] to half
 ; CHECK-NEXT:    ret void
 ;
@@ -111,11 +111,11 @@ define amdgpu_kernel void @test_struct_contain_multiple_types1() #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[DATA]] to <8 x i16>
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i32 0
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16 [[B_BLOCKWISE_COPY_SROA_0_0_VEC_EXTRACT]] to half
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_2_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i32 1
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_2_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16 [[B_BLOCKWISE_COPY_SROA_0_2_VEC_EXTRACT]] to half
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_4_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i32 2
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_4_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i64 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i16 [[B_BLOCKWISE_COPY_SROA_0_4_VEC_EXTRACT]] to half
 ; CHECK-NEXT:    ret void
 ;
@@ -147,11 +147,11 @@ define amdgpu_kernel void @test_struct_contain_multiple_types2() #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[DATA2]] to <8 x i16>
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_5_16_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i32 0
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_5_16_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16 [[B_BLOCKWISE_COPY_SROA_5_16_VEC_EXTRACT]] to half
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_5_18_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i32 1
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_5_18_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16 [[B_BLOCKWISE_COPY_SROA_5_18_VEC_EXTRACT]] to half
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_5_20_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i32 2
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_5_20_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i64 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i16 [[B_BLOCKWISE_COPY_SROA_5_20_VEC_EXTRACT]] to half
 ; CHECK-NEXT:    ret void
 ;
@@ -185,9 +185,9 @@ define amdgpu_kernel void @test_struct_array_vector() #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x float> [[DATA1]] to <8 x i16>
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i32 0
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16 [[B_BLOCKWISE_COPY_SROA_0_0_VEC_EXTRACT]] to half
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_3_16_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP1]], i32 0
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_3_16_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP1]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i16 [[B_BLOCKWISE_COPY_SROA_3_16_VEC_EXTRACT]] to half
 ; CHECK-NEXT:    ret void
 ;
@@ -218,9 +218,9 @@ define amdgpu_kernel void @test_struct_array_vector_i16() #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[DATA2]] to <8 x i16>
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i32 0
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_2_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i32 1
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_4_16_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP1]], i32 0
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i64 0
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_2_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i64 1
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_4_16_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP1]], i64 0
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -289,11 +289,11 @@ define amdgpu_kernel void @test_array_vector() #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[DATA]] to <8 x i16>
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i32 0
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16 [[B_BLOCKWISE_COPY_SROA_0_0_VEC_EXTRACT]] to half
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_2_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i32 1
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_2_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16 [[B_BLOCKWISE_COPY_SROA_0_2_VEC_EXTRACT]] to half
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_4_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i32 2
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_4_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i64 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i16 [[B_BLOCKWISE_COPY_SROA_0_4_VEC_EXTRACT]] to half
 ; CHECK-NEXT:    ret void
 ;
@@ -322,11 +322,11 @@ define amdgpu_kernel void @test_array_vector2() #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[DATA]] to <8 x i16>
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i32 0
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16 [[B_BLOCKWISE_COPY_SROA_0_0_VEC_EXTRACT]] to half
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_2_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i32 1
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_2_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16 [[B_BLOCKWISE_COPY_SROA_0_2_VEC_EXTRACT]] to half
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_4_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i32 2
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_4_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i64 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i16 [[B_BLOCKWISE_COPY_SROA_0_4_VEC_EXTRACT]] to half
 ; CHECK-NEXT:    ret void
 ;

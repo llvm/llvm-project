@@ -17,11 +17,13 @@
 #define LLVM_OBJECTYAML_BBADDRMAPYAML_H
 
 #include "llvm/Support/YAMLTraits.h"
-#include <cstdint>
-#include <optional>
-#include <vector>
 
 namespace llvm {
+
+namespace yaml {
+class ContiguousBlobAccumulator;
+}
+
 namespace BBAddrMapYAML {
 
 struct BBAddrMapEntry {
@@ -81,6 +83,13 @@ struct PGOAnalysisMapEntry {
   std::optional<std::vector<PGOBBEntry>> PGOBBEntries;
 };
 
+/// Encodes the BBAddrMap payload into \p CBA. \p AddressSize must be 4 or 8.
+/// If non-null, \p PGOAnalyses must have the same length as \p Entries.
+LLVM_ABI void encodePayload(ArrayRef<BBAddrMapEntry> Entries,
+                            const std::vector<PGOAnalysisMapEntry> *PGOAnalyses,
+                            yaml::ContiguousBlobAccumulator &CBA,
+                            llvm::endianness Endian, unsigned AddressSize);
+
 } // end namespace BBAddrMapYAML
 } // end namespace llvm
 
@@ -97,31 +106,33 @@ namespace llvm {
 namespace yaml {
 
 template <> struct MappingTraits<BBAddrMapYAML::BBAddrMapEntry> {
-  static void mapping(IO &IO, BBAddrMapYAML::BBAddrMapEntry &E);
+  LLVM_ABI static void mapping(IO &IO, BBAddrMapYAML::BBAddrMapEntry &E);
 };
 
 template <> struct MappingTraits<BBAddrMapYAML::BBAddrMapEntry::BBRangeEntry> {
-  static void mapping(IO &IO, BBAddrMapYAML::BBAddrMapEntry::BBRangeEntry &E);
+  LLVM_ABI static void mapping(IO &IO,
+                               BBAddrMapYAML::BBAddrMapEntry::BBRangeEntry &E);
 };
 
 template <> struct MappingTraits<BBAddrMapYAML::BBAddrMapEntry::BBEntry> {
-  static void mapping(IO &IO, BBAddrMapYAML::BBAddrMapEntry::BBEntry &E);
+  LLVM_ABI static void mapping(IO &IO,
+                               BBAddrMapYAML::BBAddrMapEntry::BBEntry &E);
 };
 
 template <> struct MappingTraits<BBAddrMapYAML::PGOAnalysisMapEntry> {
-  static void mapping(IO &IO, BBAddrMapYAML::PGOAnalysisMapEntry &E);
+  LLVM_ABI static void mapping(IO &IO, BBAddrMapYAML::PGOAnalysisMapEntry &E);
 };
 
 template <>
 struct MappingTraits<BBAddrMapYAML::PGOAnalysisMapEntry::PGOBBEntry> {
-  static void mapping(IO &IO,
-                      BBAddrMapYAML::PGOAnalysisMapEntry::PGOBBEntry &E);
+  LLVM_ABI static void
+  mapping(IO &IO, BBAddrMapYAML::PGOAnalysisMapEntry::PGOBBEntry &E);
 };
 
 template <>
 struct MappingTraits<
     BBAddrMapYAML::PGOAnalysisMapEntry::PGOBBEntry::SuccessorEntry> {
-  static void
+  LLVM_ABI static void
   mapping(IO &IO,
           BBAddrMapYAML::PGOAnalysisMapEntry::PGOBBEntry::SuccessorEntry &E);
 };

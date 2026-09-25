@@ -19,6 +19,7 @@
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_convertible.h>
 #include <__type_traits/is_floating_point.h>
+#include <__type_traits/is_unqualified.h>
 #include <limits>
 #include <ratio>
 
@@ -164,6 +165,7 @@ template <class _ToDuration, class _Rep, class _Period, enable_if_t<__is_duratio
 
 template <class _Rep, class _Period>
 class duration {
+  static_assert(__is_unqualified_v<_Rep>, "A duration representation cannot be qualified");
   static_assert(!__is_duration_v<_Rep>, "A duration representation can not be a duration");
   static_assert(__is_ratio_v<_Period>, "Second template parameter of duration must be a std::ratio");
   static_assert(_Period::num > 0, "duration period must be positive");

@@ -12,6 +12,7 @@
 
 #include <__algorithm/for_each.h>
 #include <__algorithm/for_each_n_segment.h>
+#include <__assert>
 #include <__config>
 #include <__functional/identity.h>
 #include <__iterator/iterator_traits.h>
@@ -32,15 +33,12 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _InputIterator, class _Size, class _Func, class _Proj>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _InputIterator
-__for_each_n(_InputIterator __first, _Size __orig_n, _Func&& __f, _Proj& __proj) {
-  typedef decltype(std::__convert_to_integral(__orig_n)) _IntegralSize;
-  _IntegralSize __n = __orig_n;
-
+__for_each_n(_InputIterator __first, _Size __n, _Func&& __f, _Proj& __proj) {
 #ifndef _LIBCPP_CXX03_LANG
   if constexpr (__is_segmented_iterator_v<_InputIterator>) {
     using __local_iterator = typename __segmented_iterator_traits<_InputIterator>::__local_iterator;
     if constexpr (__has_random_access_iterator_category<__local_iterator>::value) {
-      return std::__for_each_n_segment(__first, __orig_n, [&](__local_iterator __lfirst, __local_iterator __llast) {
+      return std::__for_each_n_segment(__first, __n, [&](__local_iterator __lfirst, __local_iterator __llast) {
         std::__for_each(__lfirst, __llast, __f, __proj);
       });
     } else {
@@ -61,10 +59,12 @@ __for_each_n(_InputIterator __first, _Size __orig_n, _Func&& __f, _Proj& __proj)
 #if _LIBCPP_STD_VER >= 17
 
 template <class _InputIterator, class _Size, class _Func>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _InputIterator
-for_each_n(_InputIterator __first, _Size __orig_n, _Func __f) {
+inline _LIBCPP_HIDE_FROM_ABI
+_LIBCPP_CONSTEXPR_SINCE_CXX20 _InputIterator for_each_n(_InputIterator __first, _Size __orig_n, _Func __f) {
+  auto __n = std::__convert_to_integral(__orig_n);
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__n >= 0, "for_each_n requires a non-negative count");
   __identity __proj;
-  return std::__for_each_n(__first, __orig_n, __f, __proj);
+  return std::__for_each_n(__first, __n, __f, __proj);
 }
 
 #endif // _LIBCPP_STD_VER >= 17

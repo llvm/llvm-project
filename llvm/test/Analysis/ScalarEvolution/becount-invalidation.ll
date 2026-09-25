@@ -13,11 +13,11 @@ define void @test(ptr %arg) {
 ; CHECK-NEXT:    %ptr2 = phi ptr [ %ptr2.next, %loop.latch ], [ null, %entry ]
 ; CHECK-NEXT:    --> %ptr2 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop.header: Variant, %loop2.header: Invariant }
 ; CHECK-NEXT:    %ptr1.next = phi ptr [ %ptr2, %loop.header ], [ %ptr1.next.next, %loop2.latch ]
-; CHECK-NEXT:    --> {%ptr2,+,8}<nuw><%loop2.header> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop2.header: Computable, %loop.header: Variant }
+; CHECK-NEXT:    --> {%ptr2,+,8}<nuw><nsw><%loop2.header> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop2.header: Computable, %loop.header: Variant }
 ; CHECK-NEXT:    %iv = phi i64 [ 0, %loop.header ], [ %iv.next, %loop2.latch ]
 ; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop2.header> U: [0,1) S: [0,1) Exits: <<Unknown>> LoopDispositions: { %loop2.header: Computable, %loop.header: Uniform }
 ; CHECK-NEXT:    %ptr1.dummy = getelementptr inbounds i64, ptr %ptr1.next, i64 0
-; CHECK-NEXT:    --> {%ptr2,+,8}<nuw><%loop2.header> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop2.header: Computable, %loop.header: Variant }
+; CHECK-NEXT:    --> {%ptr2,+,8}<nuw><nsw><%loop2.header> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop2.header: Computable, %loop.header: Variant }
 ; CHECK-NEXT:    %val = load i64, ptr %ptr1.dummy, align 8
 ; CHECK-NEXT:    --> %val U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop2.header: Variant, %loop.header: Variant }
 ; CHECK-NEXT:    %ptr1.next.next = getelementptr inbounds i64, ptr %ptr1.next, i64 1

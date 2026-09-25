@@ -25,34 +25,20 @@
 using namespace llvm;
 
 namespace {
-class NVPTXImageOptimizer : public FunctionPass {
-private:
-  static char ID;
-  SmallVector<Instruction*, 4> InstrToDelete;
+class NVPTXImageOptimizer {
+  SmallVector<Instruction *, 4> InstrToDelete;
 
 public:
-  NVPTXImageOptimizer();
-
-  bool runOnFunction(Function &F) override;
-
-  StringRef getPassName() const override { return "NVPTX Image Optimizer"; }
+  bool run(Function &F);
 
 private:
   bool replaceIsTypeP(Instruction &I, PTXOpaqueType Expected);
   Value *cleanupValue(Value *V);
   void replaceWith(Instruction *From, ConstantInt *To);
 };
-}
+} // namespace
 
-char NVPTXImageOptimizer::ID = 0;
-
-NVPTXImageOptimizer::NVPTXImageOptimizer()
-  : FunctionPass(ID) {}
-
-bool NVPTXImageOptimizer::runOnFunction(Function &F) {
-  if (skipFunction(F))
-    return false;
-
+bool NVPTXImageOptimizer::run(Function &F) {
   bool Changed = false;
   InstrToDelete.clear();
 
@@ -118,6 +104,32 @@ Value *NVPTXImageOptimizer::cleanupValue(Value *V) {
   return V;
 }
 
-FunctionPass *llvm::createNVPTXImageOptimizerPass() {
-  return new NVPTXImageOptimizer();
+namespace {
+class NVPTXImageOptimizerLegacyPass : public FunctionPass {
+public:
+  static char ID;
+  NVPTXImageOptimizerLegacyPass() : FunctionPass(ID) {}
+
+  bool runOnFunction(Function &F) override {
+    if (skipFunction(F))
+      return false;
+    return NVPTXImageOptimizer().run(F);
+  }
+
+  StringRef getPassName() const override { return "NVPTX Image Optimizer"; }
+};
+} // namespace
+
+char NVPTXImageOptimizerLegacyPass::ID = 0;
+
+FunctionPass *llvm::createNVPTXImageOptimizerLegacyPass() {
+  return new NVPTXImageOptimizerLegacyPass();
+}
+
+PreservedAnalyses NVPTXImageOptimizerPass::run(Function &F,
+                                               FunctionAnalysisManager &FAM) {
+  // The transform replaces conditional branches with unconditional ones, so
+  // the CFG is not preserved.
+  return NVPTXImageOptimizer().run(F) ? PreservedAnalyses::none()
+                                      : PreservedAnalyses::all();
 }

@@ -5,7 +5,7 @@ from sphinx import addnodes
 from sphinx.application import Sphinx
 from sphinx.directives import ObjectDescription
 from sphinx.util.docfields import Field, GroupedField
-import llvm_slug
+from llvm_sphinx import make_slug
 
 
 # Example:
@@ -37,7 +37,7 @@ class LLDBSetting(ObjectDescription):
             typ,
             classes=[
                 "lldb-setting-type",
-                f"lldb-setting-type-{llvm_slug.make_slug(typ)}",
+                f"lldb-setting-type-{make_slug(typ)}",
             ],
         )
         signode["ids"].append(sig)

@@ -52,7 +52,7 @@ X *castBtoX(B *b) {
 // CIR:   %[[X:.*]] = cir.derived_class_addr %[[B]] : !cir.ptr<!rec_B> [4] -> !cir.ptr<!rec_X>
 
 // LLVM: define {{.*}} ptr @_Z8castBtoXP1B(ptr {{.*}} %[[ARG0:.*]])
-// LLVM:   %[[B_ADDR:.*]] = alloca ptr, i64 1, align 8
+// LLVM:   %[[B_ADDR:.*]] = alloca ptr, align 8
 // LLVM:   store ptr %[[ARG0]], ptr %[[B_ADDR]], align 8
 // LLVM:   %[[B:.*]] = load ptr, ptr %[[B_ADDR]], align 8
 // LLVM:   %[[IS_NULL:.*]] = icmp eq ptr %[[B]], null

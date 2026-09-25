@@ -14,7 +14,7 @@
 
 #include "WebAssemblyCallLowering.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
-#include "Utils/WasmAddressSpaces.h"
+#include "Utils/WebAssemblyTypeUtilities.h"
 #include "WebAssemblyISelLowering.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblyRegisterInfo.h"
@@ -58,22 +58,18 @@ static unsigned extendOpFromFlags(ISD::ArgFlagsTy Flags) {
   return TargetOpcode::G_ANYEXT;
 }
 
-static LLT getLLTForWasmMVT(MVT Ty, const DataLayout &DL) {
-  if (Ty == MVT::externref) {
-    return LLT::pointer(
-        WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_EXTERNREF,
-        DL.getPointerSizeInBits(
-            WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_EXTERNREF));
-  }
-
-  if (Ty == MVT::funcref) {
-    return LLT::pointer(
-        WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_FUNCREF,
-        DL.getPointerSizeInBits(
-            WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_FUNCREF));
-  }
-
-  return llvm::getLLTForMVT(Ty);
+// GlobalISel doesn't handle reference types. We bail out of GlobalISel for
+// functions passing/returning references and fall back to SDAG.
+static bool typeContainsReference(const Type *Ty) {
+  if (WebAssembly::isWebAssemblyReferenceType(Ty))
+    return true;
+  if (const auto *ArrTy = dyn_cast<ArrayType>(Ty))
+    return typeContainsReference(ArrTy->getElementType());
+  if (const auto *StructTy = dyn_cast<StructType>(Ty))
+    return any_of(StructTy->elements(), [](const Type *ElemTy) {
+      return typeContainsReference(ElemTy);
+    });
+  return false;
 }
 
 WebAssemblyCallLowering::WebAssemblyCallLowering(
@@ -98,6 +94,9 @@ bool WebAssemblyCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const WebAssemblyTargetLowering &TLI = *getTLI<WebAssemblyTargetLowering>();
   const DataLayout &DL = F.getDataLayout();
+
+  if (Val && typeContainsReference(Val->getType()))
+    return false;
 
   MachineInstrBuilder MIB = MIRBuilder.buildInstrNoInsert(WebAssembly::RETURN);
 
@@ -134,7 +133,7 @@ bool WebAssemblyCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
             TLI.getRegisterTypeForCallingConv(Ctx, CallConv, OrigVT);
         const LLT OrigLLT =
             getLLTForType(*OrigVT.getTypeForEVT(F.getContext()), DL);
-        const LLT NewLLT = getLLTForWasmMVT(NewVT, DL);
+        const LLT NewLLT = getLLTForMVT(NewVT);
 
         const TargetRegisterClass &NewRegClass = *TLI.getRegClassFor(NewVT);
 
@@ -276,6 +275,12 @@ bool WebAssemblyCallLowering::lowerFormalArguments(
   if (!callingConvSupported(CallConv))
     return false;
 
+  if (typeContainsReference(F.getReturnType()))
+    return false;
+  for (const Argument &Arg : F.args())
+    if (typeContainsReference(Arg.getType()))
+      return false;
+
   MF.getRegInfo().addLiveIn(WebAssembly::ARGUMENTS);
   MF.front().addLiveIn(WebAssembly::ARGUMENTS);
 
@@ -308,7 +313,7 @@ bool WebAssemblyCallLowering::lowerFormalArguments(
     const MVT NewVT = TLI.getRegisterTypeForCallingConv(Ctx, CallConv, OrigVT);
     const LLT OrigLLT =
         getLLTForType(*OrigVT.getTypeForEVT(F.getContext()), DL);
-    const LLT NewLLT = getLLTForWasmMVT(NewVT, DL);
+    const LLT NewLLT = getLLTForMVT(NewVT);
 
     // If we need to split the type over multiple regs, check it's a scenario
     // we currently support.
@@ -410,6 +415,12 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   if (!callingConvSupported(CallConv))
     return false;
 
+  if (typeContainsReference(Info.OrigRet.Ty))
+    return false;
+  for (const ArgInfo &Arg : Info.OrigArgs)
+    if (typeContainsReference(Arg.Ty))
+      return false;
+
   // TODO: tail calls
   if (Info.IsMustTailCall)
     return false;
@@ -456,7 +467,7 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     const MVT NewVT = TLI.getRegisterTypeForCallingConv(Ctx, CallConv, OrigVT);
     const LLT OrigLLT =
         getLLTForType(*OrigVT.getTypeForEVT(F.getContext()), DL);
-    const LLT NewLLT = getLLTForWasmMVT(NewVT, DL);
+    const LLT NewLLT = getLLTForMVT(NewVT);
 
     const TargetRegisterClass &NewRegClass = *TLI.getRegClassFor(NewVT);
 
@@ -552,7 +563,7 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
           TLI.getRegisterTypeForCallingConv(Ctx, CallConv, OrigVT);
       const LLT OrigLLT =
           getLLTForType(*OrigVT.getTypeForEVT(F.getContext()), DL);
-      const LLT NewLLT = getLLTForWasmMVT(NewVT, DL);
+      const LLT NewLLT = getLLTForMVT(NewVT);
 
       const TargetRegisterClass &NewRegClass = *TLI.getRegClassFor(NewVT);
 

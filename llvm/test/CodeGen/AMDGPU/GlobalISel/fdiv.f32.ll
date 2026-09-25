@@ -2,23 +2,23 @@
 ; RUN: sed 's/DEFAULT_MODE/ieee/g' %s > %t.ieee
 ; RUN: sed 's/DEFAULT_MODE/preservesign/g' %s > %t.preservesign
 
-; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=tahiti < %t.ieee | FileCheck -check-prefixes=GCN,GCN-IEEE,GFX6-IEEE,GFX6-IEEE-FASTFMA %s
-; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=tahiti < %t.preservesign | FileCheck -check-prefixes=GCN,GCN-FLUSH,GFX6-FLUSH,GFX6-FLUSH-FASTFMA %s
+; RUN: llc -global-isel -mtriple=amdgpu6.00 < %t.ieee | FileCheck -check-prefixes=GCN,GCN-IEEE,GFX6-IEEE,GFX6-IEEE-FASTFMA %s
+; RUN: llc -global-isel -mtriple=amdgpu6.00 < %t.preservesign | FileCheck -check-prefixes=GCN,GCN-FLUSH,GFX6-FLUSH,GFX6-FLUSH-FASTFMA %s
 
-; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=pitcairn < %t.ieee | FileCheck -check-prefixes=GCN,GCN-IEEE,GFX6-IEEE,GFX6-IEEE-SLOWFMA %s
-; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=pitcairn < %t.preservesign | FileCheck -check-prefixes=GCN,GCN-FLUSH,GFX6-FLUSH,GFX6-FLUSH-SLOWFMA %s
+; RUN: llc -global-isel -mtriple=amdgpu6.01 < %t.ieee | FileCheck -check-prefixes=GCN,GCN-IEEE,GFX6-IEEE,GFX6-IEEE-SLOWFMA %s
+; RUN: llc -global-isel -mtriple=amdgpu6.01 < %t.preservesign | FileCheck -check-prefixes=GCN,GCN-FLUSH,GFX6-FLUSH,GFX6-FLUSH-SLOWFMA %s
 
-; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=fiji < %t.ieee | FileCheck -check-prefixes=GCN,GCN-IEEE,GFX89-IEEE %s
-; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=fiji < %t.preservesign | FileCheck -check-prefixes=GCN,GCN-FLUSH,GFX89-FLUSH %s
+; RUN: llc -global-isel -mtriple=amdgpu8.03 < %t.ieee | FileCheck -check-prefixes=GCN,GCN-IEEE,GFX89-IEEE %s
+; RUN: llc -global-isel -mtriple=amdgpu8.03 < %t.preservesign | FileCheck -check-prefixes=GCN,GCN-FLUSH,GFX89-FLUSH %s
 
-; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx900 < %t.ieee | FileCheck -check-prefixes=GCN,GCN-IEEE,GFX89-IEEE %s
-; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx900 < %t.preservesign | FileCheck -check-prefixes=GCN,GCN-FLUSH,GFX89-FLUSH %s
+; RUN: llc -global-isel -mtriple=amdgpu9.00 < %t.ieee | FileCheck -check-prefixes=GCN,GCN-IEEE,GFX89-IEEE %s
+; RUN: llc -global-isel -mtriple=amdgpu9.00 < %t.preservesign | FileCheck -check-prefixes=GCN,GCN-FLUSH,GFX89-FLUSH %s
 
-; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1010 < %t.ieee | FileCheck -check-prefixes=GFX10,GFX10-IEEE %s
-; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1010 < %t.preservesign | FileCheck -check-prefixes=GFX10,GFX10-FLUSH %s
+; RUN: llc -global-isel -mtriple=amdgpu10.10 < %t.ieee | FileCheck -check-prefixes=GFX10,GFX10-IEEE %s
+; RUN: llc -global-isel -mtriple=amdgpu10.10 < %t.preservesign | FileCheck -check-prefixes=GFX10,GFX10-FLUSH %s
 
-; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1100 < %t.ieee | FileCheck -check-prefixes=GFX11,GFX11-IEEE %s
-; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1100 < %t.preservesign | FileCheck -check-prefixes=GFX11,GFX11-FLUSH %s
+; RUN: llc -global-isel -mtriple=amdgpu11.00 < %t.ieee | FileCheck -check-prefixes=GFX11,GFX11-IEEE %s
+; RUN: llc -global-isel -mtriple=amdgpu11.00 < %t.preservesign | FileCheck -check-prefixes=GFX11,GFX11-FLUSH %s
 
 define float @v_fdiv_f32(float %a, float %b) #1 {
 ; GFX6-IEEE-FASTFMA-LABEL: v_fdiv_f32:

@@ -18,6 +18,19 @@ func.func @singleton_batch_matmul_tensor(%arg0 : tensor<1x128x512xf32>, %arg1 : 
 
 // -----
 
+func.func @singleton_batch_matmul_unsigned_cast(
+    %arg0: tensor<1x128x512xi16>, %arg1: tensor<1x512x256xi64>,
+    %arg2: tensor<1x128x256xi32>) -> tensor<1x128x256xi32> {
+  // CHECK-LABEL: @singleton_batch_matmul_unsigned_cast
+  // CHECK: linalg.matmul {cast = #linalg.type_fn<cast_unsigned>}
+  %0 = linalg.batch_matmul {cast = #linalg.type_fn<cast_unsigned>}
+      ins(%arg0, %arg1 : tensor<1x128x512xi16>, tensor<1x512x256xi64>)
+      outs(%arg2 : tensor<1x128x256xi32>) -> tensor<1x128x256xi32>
+  return %0 : tensor<1x128x256xi32>
+}
+
+// -----
+
 func.func @singleton_batch_matmul_memref(%arg0 : memref<1x?x?xf32>, %arg1 : memref<1x?x?xf32>, %arg2: memref<1x?x?xf32>) {
   // CHECK-LABEL: @singleton_batch_matmul_memref
   //  CHECK-SAME:     %[[LHS:[a-zA-Z0-9]+]]: memref<1x?x?xf32>

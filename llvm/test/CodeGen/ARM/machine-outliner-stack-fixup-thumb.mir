@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=thumbv7-- -run-pass=prologepilog \
+# RUN: llc -mtriple=thumbv7-- -run-pass=prolog-epilog \
 # RUN: -run-pass=machine-outliner %s -o - | FileCheck %s
 
 --- |

@@ -906,8 +906,13 @@ AffineExpr AffineExpr::operator-() const {
 }
 
 // Delegate to operator+.
-AffineExpr AffineExpr::operator-(int64_t v) const { return *this + (-v); }
+AffineExpr AffineExpr::operator-(int64_t v) const {
+  // Use unsigned negation to avoid signed integer overflow for INT64_MIN.
+  return *this + static_cast<int64_t>(-static_cast<uint64_t>(v));
+}
 AffineExpr AffineExpr::operator-(AffineExpr other) const {
+  if (auto constOther = dyn_cast<AffineConstantExpr>(other))
+    return *this - constOther.getValue();
   return *this + (-other);
 }
 

@@ -34,8 +34,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 // CHECK: #[[GLOB1COMMON:.+]] = #llvm.tbaa_type_desc<id = "global data/_QMdata1Eglob1", members = {<#[[GLOBALDATA1]], 0>}>
 // CHECK: #[[GLOB1:.+]] = #llvm.tbaa_type_desc<id = "global data/_QMdata1Eglob1/bytes_0_to_3", members = {<#[[GLOB1COMMON]], 0>}>
 // CHECK: #[[TAG:.+]] = #llvm.tbaa_tag<base_type = #[[GLOB1]], access_type = #[[GLOB1]], offset = 0>
-// CHECK:           %[[VAL_7:.*]] = fir.load{{.*}}{tbaa = [#[[TAG]]]} : !fir.ptr<f32>
-// CHECK:           fir.store{{.*}}{tbaa = [#[[TAG]]]} : !fir.ptr<f32>
+// CHECK:           %[[VAL_7:.*]] = fir.load{{.*}}<{tbaa = [#[[TAG]]]}> : !fir.ptr<f32>
+// CHECK:           fir.store{{.*}}<{tbaa = [#[[TAG]]]}> : !fir.ptr<f32>
 
 // -----
 
@@ -79,6 +79,6 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 // CHECK: #[[GLOB3:.+]] = #llvm.tbaa_type_desc<id = "global data/glob1_/bytes_4_to_7", members = {<#[[GLOB1COMMON]], 0>}>
 // CHECK: #[[GLOB1GLOB2TAG:.+]] = #llvm.tbaa_tag<base_type = #[[GLOB1GLOB2]], access_type = #[[GLOB1GLOB2]], offset = 0>
 // CHECK: #[[GLOB3TAG:.+]] = #llvm.tbaa_tag<base_type = #[[GLOB3]], access_type = #[[GLOB3]], offset = 0>
-// CHECK:           fir.load{{.*}}{tbaa = [#[[GLOB1GLOB2TAG]]]} : !fir.ptr<f32>
-// CHECK:           fir.load{{.*}}{tbaa = [#[[GLOB3TAG]]]} : !fir.ref<f32>
-// CHECK:           fir.store{{.*}}{tbaa = [#[[GLOB1GLOB2TAG]]]} : !fir.ptr<f32>
+// CHECK:           fir.load{{.*}}<{tbaa = [#[[GLOB1GLOB2TAG]]]}> : !fir.ptr<f32>
+// CHECK:           fir.load{{.*}}<{tbaa = [#[[GLOB3TAG]]]}> : !fir.ref<f32>
+// CHECK:           fir.store{{.*}}<{tbaa = [#[[GLOB1GLOB2TAG]]]}> : !fir.ptr<f32>

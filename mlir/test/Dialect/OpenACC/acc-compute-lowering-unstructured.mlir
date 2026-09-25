@@ -26,7 +26,7 @@ func.func @parallel_unstructured_loop(%buf: memref<10xi32>) {
       cf.br ^header(%iv_next : index)
     ^exit:
       acc.yield
-    } attributes {independent = [#acc.device_type<none>], unstructured}
+    } independent unstructured
     acc.yield
   }
   acc.copyout accPtr(%dev : memref<10xi32>) to varPtr(%buf : memref<10xi32>)

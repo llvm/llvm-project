@@ -5,11 +5,6 @@ include "GlobalISelEmitterCommon.td"
 
 def ADDI : I<(outs GPR32:$dst), (ins GPR32:$src1, i32imm:$src2), []>;
 
-def to_tframeindex : SDNodeXForm<frameindex, [{}]>;
-
-def : GICustomOperandRenderer<"renderFrameIndex">,
-      GISDNodeXFormEquiv<to_tframeindex>;
-
 def : Pat<(frameindex:$fi), (ADDI (to_tframeindex $fi), 0)>;
 
 def : Pat<(ptradd frameindex:$fi, (i32 imm:$offset)),

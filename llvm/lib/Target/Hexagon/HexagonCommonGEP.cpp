@@ -357,7 +357,8 @@ void HexagonCommonGEP::processGepInst(GetElementPtrInst *GepI,
   // Collect the list of users of this GEP instruction. Will add it to the
   // last node created for it.
   UseSet Us;
-  for (Value::user_iterator UI = GepI->user_begin(), UE = GepI->user_end();
+  for (Instruction::user_iterator UI = GepI->user_begin(),
+                                  UE = GepI->user_end();
        UI != UE; ++UI) {
     // Check if this gep is used by anything other than other geps that
     // we will process.
@@ -481,7 +482,7 @@ static unsigned node_hash(GepNode *N) {
     FoldingSetNodeID ID;
     ID.AddPointer(N->Idx);
     ID.AddPointer(N->PTy);
-    return ID.ComputeHash();
+    return ID.computeHash();
 }
 
 static bool node_eq(GepNode *N1, GepNode *N2, NodePairSet &Eq,

@@ -388,3 +388,18 @@ void ternary_void(bool b) {
 // OGCG: [[FALSE]]:
 // OGCG-NEXT: call void @_Z3barv()
 // OGCG-NEXT: br
+
+void ternary_cleanup(int *p, int n, int m) {
+  p+= ((n > 0) ? n : m) - m;
+}
+// CIR-LABEL: cir.func{{.*}}@_Z15ternary_cleanupPiii
+// CIR: %[[TERNARY:.*]] = cir.ternary(%{{.*}}, true {
+// CIR: cir.sub nsw %[[TERNARY]], %{{.*}} : !s32i loc(#loc166)
+
+// LLVM-LABEL: define {{.*}}@_Z15ternary_cleanupPiii
+// LLVM: %[[TERNARY:.*]] = phi i32
+// LLVM: sub nsw i32 %[[TERNARY]], %{{.*}}
+
+// OGCG-LABEL: define {{.*}}@_Z15ternary_cleanupPiii
+// OGCG: %[[TERNARY:.*]] = phi i32
+// OGCG: sub nsw i32 %[[TERNARY]], %{{.*}}

@@ -551,7 +551,6 @@ void ClangDocBitcodeWriter::emitBlock(const MemberTypeInfo &T) {
   emitRecord(T.IsStatic, MEMBER_TYPE_IS_STATIC);
   emitRecord(T.IsBuiltIn, MEMBER_TYPE_IS_BUILTIN);
   emitRecord(T.IsTemplate, MEMBER_TYPE_IS_TEMPLATE);
-  // emitRecord(T.IsTemplate, MEMBER_TYPE_IS_TEMPLATE);
   for (const auto &CI : T.Description)
     emitBlock(*CI.Ptr);
 }

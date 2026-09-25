@@ -72,7 +72,10 @@ void StringToOffsetTable::EmitStringTableDef(raw_ostream &OS,
     ListSeparator CharSep(", ");
     for (char C : Str) {
       OS << CharSep << "'";
-      OS.write_escaped(StringRef(&C, 1));
+      if (C == '\'')
+        OS << "\\'";
+      else
+        OS.write_escaped(StringRef(&C, 1));
       OS << "'";
     }
     OS << CharSep << "'\\0'";
@@ -118,6 +121,12 @@ void StringToOffsetTable::EmitString(raw_ostream &O) const {
       O << EscapedStr[++i];
       O << EscapedStr[++i];
       CharsPrinted += 3;
+      if (i + 1 < EscapedStr.size() && isDigit(EscapedStr[i + 1])) {
+        // If a digit follows after an octal literal, separate the string
+        // literals to silence MSVC warning C4125.
+        O << "\" \"";
+        CharsPrinted += 3;
+      }
     } else {
       O << EscapedStr[++i];
       ++CharsPrinted;

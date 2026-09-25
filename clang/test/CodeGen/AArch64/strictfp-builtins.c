@@ -29,7 +29,7 @@ void p(char *str, int x) {
 // CHECK-NEXT:    [[LD_ADDR:%.*]] = alloca fp128, align 16
 // CHECK-NEXT:    store fp128 [[D:%.*]], ptr [[LD_ADDR]], align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = load fp128, ptr [[LD_ADDR]], align 16
-// CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f128(fp128 [[TMP0]], i32 516)
+// CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f128(fp128 [[TMP0]], /* (inf) */ i32 516)
 // CHECK-NEXT:    [[RES:%.*]] = zext i1 [[TMP1]] to i32
 // CHECK-NEXT:    call void @p(ptr noundef @.str.[[#STRID:1]], i32 noundef [[RES]]) [[ATTR4]]
 // CHECK-NEXT:    ret void
@@ -45,7 +45,7 @@ void test_long_double_isinf(long double ld) {
 // CHECK-NEXT:    [[LD_ADDR:%.*]] = alloca fp128, align 16
 // CHECK-NEXT:    store fp128 [[D:%.*]], ptr [[LD_ADDR]], align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = load fp128, ptr [[LD_ADDR]], align 16
-// CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f128(fp128 [[TMP0]], i32 504)
+// CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f128(fp128 [[TMP0]], /* (zero sub norm) */ i32 504)
 // CHECK-NEXT:    [[RES:%.*]] = zext i1 [[TMP1]] to i32
 // CHECK-NEXT:    call void @p(ptr noundef @.str.[[#STRID:STRID+1]], i32 noundef [[RES]]) [[ATTR4]]
 // CHECK-NEXT:    ret void
@@ -61,7 +61,7 @@ void test_long_double_isfinite(long double ld) {
 // CHECK-NEXT:    [[LD_ADDR:%.*]] = alloca fp128, align 16
 // CHECK-NEXT:    store fp128 [[D:%.*]], ptr [[LD_ADDR]], align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = load fp128, ptr [[LD_ADDR]], align 16
-// CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f128(fp128 [[TMP0]], i32 3)
+// CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f128(fp128 [[TMP0]], /* (nan) */ i32 3)
 // CHECK-NEXT:    [[RES:%.*]] = zext i1 [[TMP1]] to i32
 // CHECK-NEXT:    call void @p(ptr noundef @.str.[[#STRID:STRID+1]], i32 noundef [[RES]])
 // CHECK-NEXT:    ret void

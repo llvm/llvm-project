@@ -150,7 +150,7 @@ define <4 x float> @load_float4_float3_as_float2_float_0122(ptr nocapture readon
   ret <4 x float> %10
 }
 
-define <4 x float> @load_float4_float3_trunc(ptr nocapture readonly dereferenceable(16)) {
+define <4 x float> @load_float4_float3_trunc(ptr nocapture readonly dereferenceable(16)) nofree {
 ; SSE-LABEL: load_float4_float3_trunc:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movaps (%rdi), %xmm0

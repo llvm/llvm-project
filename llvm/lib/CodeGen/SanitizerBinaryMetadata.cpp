@@ -20,7 +20,6 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Transforms/Instrumentation/SanitizerBinaryMetadata.h"
 #include <algorithm>
 

@@ -7,12 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/nearbyintf128.h"
+#include "src/__support/CPP/bit.h"
 #include "src/__support/math/nearbyintf128.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
+using LIBC_NAMESPACE::fputil::Float128;
+
 LLVM_LIBC_FUNCTION(float128, nearbyintf128, (float128 x)) {
-  return math::nearbyintf128(x);
+  return cpp::bit_cast<float128>(
+      math::nearbyintf128(cpp::bit_cast<Float128>(x)));
 }
 
 } // namespace LIBC_NAMESPACE_DECL

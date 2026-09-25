@@ -320,7 +320,7 @@ declare i32 @foo(...)
 !12 = !DILocation(line: 3, column: 8, scope: !13)
 !13 = distinct !DILexicalBlock(line: 3, column: 3, file: !1, scope: !4)
 !14 = !{!14, !15, !15}
-!15 = !{!"llvm.loop.vectorize.enable", i1 true}
+!15 = !{!"llvm.loop.vectorize.enable"}
 !16 = !DILocation(line: 4, column: 5, scope: !17)
 !17 = distinct !DILexicalBlock(line: 3, column: 36, file: !1, scope: !13)
 !22 = !DILocation(line: 5, column: 9, scope: !23)

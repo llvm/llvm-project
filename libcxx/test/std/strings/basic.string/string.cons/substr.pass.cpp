@@ -47,6 +47,7 @@ TEST_CONSTEXPR_CXX20 void test(S str, unsigned pos) {
   else if (!TEST_IS_CONSTANT_EVALUATED) {
     try {
       S s2(str, pos);
+      (void)s2;
       assert(false);
     } catch (std::out_of_range&) {
       assert(pos > str.size());
@@ -73,6 +74,7 @@ TEST_CONSTEXPR_CXX20 void test(S str, unsigned pos, unsigned n) {
   else if (!TEST_IS_CONSTANT_EVALUATED) {
     try {
       S s2(str, pos, n);
+      (void)s2;
       assert(false);
     } catch (std::out_of_range&) {
       assert(pos > str.size());
@@ -99,6 +101,7 @@ TEST_CONSTEXPR_CXX20 void test(S str, unsigned pos, unsigned n, const typename S
   else if (!TEST_IS_CONSTANT_EVALUATED) {
     try {
       S s2(str, pos, n, a);
+      (void)s2;
       assert(false);
     } catch (std::out_of_range&) {
       assert(pos > str.size());

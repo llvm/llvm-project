@@ -9,9 +9,10 @@ __asm__ ("foo1");
 __asm__ ("foo2");
 __asm__ ("foo3");
 // CIR: module{{.*}} cir.module_asm = ["foo1", "foo2", "foo3"]
-// LLVM: module asm "foo1"
-// LLVM-NEXT: module asm "foo2"
-// LLVM-NEXT: module asm "foo3"
+// LLVM: module asm
+// LLVM-NEXT: "foo1"
+// LLVM-NEXT: "foo2"
+// LLVM-NEXT: "foo3"
 
 //      CIR: cir.func{{.*}}@empty1
 //      CIR: cir.asm(x86_att, 
@@ -906,9 +907,9 @@ void t34(void) {
 
 // Register input (null element type) before a memory input: keep elementtype.
 //      CIR: cir.func{{.*}}@t35
-//      CIR: %[[I:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init]
-//      CIR: %[[G:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["g"]
-//      CIR: %[[I_LOAD:.*]] = cir.load align(4) %[[I]] : !cir.ptr<!s32i>, !s32i
+//      CIR: %[[I:.*]] = cir.alloca "i" {{.*}} init : !cir.ptr<!s32i>
+//      CIR: %[[G:.*]] = cir.alloca "g" {{.*}} : !cir.ptr<!s32i>
+//      CIR: %[[I_LOAD:.*]] = cir.load {{.*}} %[[I]] : !cir.ptr<!s32i>, !s32i
 //      CIR: cir.asm(x86_att,
 // CIR-NEXT:   out = [],
 // CIR-NEXT:   in = [%[[I_LOAD]] : !s32i, %[[G]] : !cir.ptr<!s32i> (maybe_memory)],

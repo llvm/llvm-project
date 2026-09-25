@@ -154,32 +154,11 @@ class TestInlineStepping(TestBase):
 
     def inline_stepping(self):
         """Use Python APIs to test stepping over and hitting breakpoints."""
-        exe = self.getBuildArtifact("a.out")
-
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        break_1_in_main = target.BreakpointCreateBySourceRegex(
-            "// Stop here and step over to set up stepping over.", self.main_source_spec
+        target, self.process, self.thread, _ = lldbutil.run_to_source_breakpoint(
+            self,
+            "// Stop here and step over to set up stepping over.",
+            self.main_source_spec,
         )
-        self.assertTrue(break_1_in_main, VALID_BREAKPOINT)
-
-        # Now launch the process, and do not stop at entry point.
-        self.process = target.LaunchSimple(
-            None, None, self.get_process_working_directory()
-        )
-
-        self.assertTrue(self.process, PROCESS_IS_VALID)
-
-        # The stop reason of the thread should be breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            self.process, break_1_in_main
-        )
-
-        if len(threads) != 1:
-            self.fail("Failed to stop at first breakpoint in main.")
-
-        self.thread = threads[0]
 
         # Step over the inline_value = 0 line to get us to inline_trivial_1 called from main.  Doing it this way works
         # around a bug in lldb where the breakpoint on the containing line of an inlined function with no return value
@@ -283,32 +262,9 @@ class TestInlineStepping(TestBase):
 
     def inline_stepping_step_over(self):
         """Use Python APIs to test stepping over and hitting breakpoints."""
-        exe = self.getBuildArtifact("a.out")
-
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        break_1_in_main = target.BreakpointCreateBySourceRegex(
-            "// At second call of caller_ref_1 in main.", self.main_source_spec
+        target, self.process, self.thread, _ = lldbutil.run_to_source_breakpoint(
+            self, "// At second call of caller_ref_1 in main.", self.main_source_spec
         )
-        self.assertGreater(break_1_in_main.GetNumLocations(), 0, VALID_BREAKPOINT)
-
-        # Now launch the process, and do not stop at entry point.
-        self.process = target.LaunchSimple(
-            None, None, self.get_process_working_directory()
-        )
-
-        self.assertTrue(self.process, PROCESS_IS_VALID)
-
-        # The stop reason of the thread should be breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            self.process, break_1_in_main
-        )
-
-        if len(threads) != 1:
-            self.fail("Failed to stop at first breakpoint in main.")
-
-        self.thread = threads[0]
 
         step_sequence = [
             ["// In caller_ref_1.", "into"],
@@ -337,36 +293,14 @@ class TestInlineStepping(TestBase):
 
     def step_in_template(self):
         """Use Python APIs to test stepping in to templated functions."""
-        exe = self.getBuildArtifact("a.out")
-
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        break_1_in_main = target.BreakpointCreateBySourceRegex(
-            "// Call max_value template", self.main_source_spec
+        target, self.process, self.thread, _ = lldbutil.run_to_source_breakpoint(
+            self, "// Call max_value template", self.main_source_spec
         )
-        self.assertTrue(break_1_in_main, VALID_BREAKPOINT)
 
         break_2_in_main = target.BreakpointCreateBySourceRegex(
             "// Call max_value specialized", self.main_source_spec
         )
         self.assertTrue(break_2_in_main, VALID_BREAKPOINT)
-
-        # Now launch the process, and do not stop at entry point.
-        self.process = target.LaunchSimple(
-            None, None, self.get_process_working_directory()
-        )
-        self.assertTrue(self.process, PROCESS_IS_VALID)
-
-        # The stop reason of the thread should be breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            self.process, break_1_in_main
-        )
-
-        if len(threads) != 1:
-            self.fail("Failed to stop at first breakpoint in main.")
-
-        self.thread = threads[0]
 
         step_sequence = [["// In max_value template", "into"]]
         self.run_step_sequence(step_sequence)

@@ -364,6 +364,7 @@ char ScalarizerLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(ScalarizerLegacyPass, "scalarizer",
                       "Scalarize vector operations", false, false)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_END(ScalarizerLegacyPass, "scalarizer",
                     "Scalarize vector operations", false, false)
 
@@ -943,6 +944,46 @@ bool ScalarizerVisitor::visitCastInst(CastInst &CI) {
 bool ScalarizerVisitor::visitBitCastInst(BitCastInst &BCI) {
   std::optional<VectorSplit> DstVS = getVectorSplit(BCI.getDestTy());
   std::optional<VectorSplit> SrcVS = getVectorSplit(BCI.getSrcTy());
+
+  if (DstVS && !SrcVS && BCI.getSrcTy()->isIntegerTy() && !DstVS->RemainderTy &&
+      DstVS->NumPacked == 1 && DstVS->SplitTy->isIntegerTy()) {
+    IRBuilder<> Builder(&BCI);
+    Builder.SetCurrentDebugLocation(BCI.getDebugLoc());
+    ValueVector Res(DstVS->NumFragments);
+    unsigned FragmentBits = DstVS->SplitTy->getPrimitiveSizeInBits();
+    bool IsBigEndian = BCI.getDataLayout().isBigEndian();
+    for (unsigned I = 0; I < DstVS->NumFragments; ++I) {
+      unsigned FragmentIndex = IsBigEndian ? DstVS->NumFragments - I - 1 : I;
+      Value *Fragment = BCI.getOperand(0);
+      if (FragmentIndex)
+        Fragment = Builder.CreateLShr(Fragment, FragmentIndex * FragmentBits);
+      Res[I] = Builder.CreateTruncOrBitCast(Fragment, DstVS->getFragmentType(I),
+                                            BCI.getName() + ".i" + Twine(I));
+    }
+    gather(&BCI, Res, *DstVS);
+    return true;
+  }
+
+  if (!DstVS && SrcVS && BCI.getDestTy()->isIntegerTy() &&
+      !SrcVS->RemainderTy && SrcVS->NumPacked == 1 &&
+      SrcVS->SplitTy->isIntegerTy()) {
+    IRBuilder<> Builder(&BCI);
+    Builder.SetCurrentDebugLocation(BCI.getDebugLoc());
+    Scatterer Op0 = scatter(&BCI, BCI.getOperand(0), *SrcVS);
+    Value *Result = nullptr;
+    unsigned FragmentBits = SrcVS->SplitTy->getPrimitiveSizeInBits();
+    bool IsBigEndian = BCI.getDataLayout().isBigEndian();
+    for (unsigned I = 0; I < SrcVS->NumFragments; ++I) {
+      unsigned FragmentIndex = IsBigEndian ? SrcVS->NumFragments - I - 1 : I;
+      Value *Fragment = Builder.CreateZExtOrTrunc(Op0[I], BCI.getDestTy());
+      if (FragmentIndex)
+        Fragment = Builder.CreateShl(Fragment, FragmentIndex * FragmentBits);
+      Result = Result ? Builder.CreateOr(Result, Fragment) : Fragment;
+    }
+    replaceUses(&BCI, Result);
+    return true;
+  }
+
   if (!DstVS || !SrcVS || DstVS->RemainderTy || SrcVS->RemainderTy)
     return false;
 

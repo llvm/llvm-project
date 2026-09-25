@@ -124,30 +124,6 @@ define double @test_ret_f64() {
   ret double 0.0
 }
 
-%externref = type ptr addrspace(10)
-define %externref @test_ret_externref() {
-  ; CHECK-LABEL: name: test_ret_externref
-  ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $arguments
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.ref_ptr
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p10) = G_LOAD [[FRAME_INDEX]](p0) :: (load (p10) from %ir.ref_ptr)
-  ; CHECK-NEXT:   RETURN [[LOAD]](p10), implicit-def $arguments
-  %ref_ptr = alloca %externref
-  %ref = load %externref, ptr %ref_ptr
-  ret %externref %ref
-}
-
-%funcref = type ptr addrspace(20)
-define %funcref @test_ret_funcref() {
-  ; CHECK-LABEL: name: test_ret_funcref
-  ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $arguments
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.ref_ptr
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p20) = G_LOAD [[FRAME_INDEX]](p0) :: (load (p20) from %ir.ref_ptr)
-  ; CHECK-NEXT:   RETURN [[LOAD]](p20), implicit-def $arguments
-  %ref_ptr = alloca %funcref
-  %ref = load %funcref, ptr %ref_ptr
-  ret %funcref %ref
-}
+; NOTE: Reference types (externref/funcref) are intentionally not tested here.
+; GlobalISel currently falls back to SelectionDAG for them; see
+; reference-types-fallback.ll.

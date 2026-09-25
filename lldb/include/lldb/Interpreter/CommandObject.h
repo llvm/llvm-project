@@ -410,7 +410,8 @@ protected:
 
   CommandInterpreter &m_interpreter;
   ExecutionContext m_exe_ctx;
-  std::unique_lock<std::recursive_mutex> m_api_locker;
+  TargetAPIMutex m_api_mutex;
+  std::unique_lock<TargetAPIMutex> m_api_locker;
   std::string m_cmd_name;
   std::string m_cmd_help_short;
   std::string m_cmd_help_long;

@@ -146,7 +146,7 @@ protected:
   NamedDecl *FoundDecl;
 
   /// \brief The concept named.
-  TemplateDecl *NamedConcept;
+  TemplateName NamedConcept;
 
   /// \brief The template argument list source info used to specialize the
   /// concept.
@@ -154,7 +154,7 @@ protected:
 
   ConceptReference(NestedNameSpecifierLoc NNS, SourceLocation TemplateKWLoc,
                    DeclarationNameInfo ConceptNameInfo, NamedDecl *FoundDecl,
-                   TemplateDecl *NamedConcept,
+                   TemplateName NamedConcept,
                    const ASTTemplateArgumentListInfo *ArgsAsWritten)
       : NestedNameSpec(NNS), TemplateKWLoc(TemplateKWLoc),
         ConceptName(ConceptNameInfo), FoundDecl(FoundDecl),
@@ -164,7 +164,7 @@ public:
   static ConceptReference *
   Create(const ASTContext &C, NestedNameSpecifierLoc NNS,
          SourceLocation TemplateKWLoc, DeclarationNameInfo ConceptNameInfo,
-         NamedDecl *FoundDecl, TemplateDecl *NamedConcept,
+         NamedDecl *FoundDecl, TemplateName NamedConcept,
          const ASTTemplateArgumentListInfo *ArgsAsWritten);
 
   const NestedNameSpecifierLoc &getNestedNameSpecifierLoc() const {
@@ -198,7 +198,7 @@ public:
     return FoundDecl;
   }
 
-  TemplateDecl *getNamedConcept() const { return NamedConcept; }
+  TemplateName getNamedConcept() const { return NamedConcept; }
 
   const ASTTemplateArgumentListInfo *getTemplateArgsAsWritten() const {
     return ArgsAsWritten;
@@ -212,7 +212,7 @@ public:
 
   void print(llvm::raw_ostream &OS, const PrintingPolicy &Policy) const;
   void dump() const;
-  void dump(llvm::raw_ostream &) const;
+  void dump(llvm::raw_ostream &OS, const ASTContext &Context) const;
 };
 
 /// Models the abbreviated syntax to constrain a template type parameter:
@@ -251,9 +251,7 @@ public:
 
   // FIXME: Instead of using these concept related functions the callers should
   // directly work with the corresponding ConceptReference.
-  TemplateDecl *getNamedConcept() const {
-    return ConceptRef->getNamedConcept();
-  }
+  TemplateName getNamedConcept() const { return ConceptRef->getNamedConcept(); }
 
   SourceLocation getConceptNameLoc() const {
     return ConceptRef->getConceptNameLoc();

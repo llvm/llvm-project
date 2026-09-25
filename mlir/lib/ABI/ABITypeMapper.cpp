@@ -70,12 +70,19 @@ const llvm::abi::Type *ABITypeMapper::mapVectorType(mlir::VectorType type) {
   if (!elementTy)
     return nullptr;
 
+  // ElementCount supports at most one scalable dimension, hence
+  // vectors with more than one scalable dimension (e.g. vector<[2]x[4]xf32>)
+  // cannot be represented and mapVectorType must return nullptr in this case.
+  if (llvm::count(type.getScalableDims(), true) > 1)
+    return nullptr;
+
   auto shape = type.getShape();
   uint64_t totalElements = 1;
   for (int64_t dim : shape)
     totalElements *= dim;
 
-  llvm::ElementCount ec = llvm::ElementCount::getFixed(totalElements);
+  llvm::ElementCount ec =
+      llvm::ElementCount::get(totalElements, type.isScalable());
   uint64_t abiAlign = dl.getTypeABIAlignment(type);
   return builder.getVectorType(elementTy, ec, llvm::Align(abiAlign));
 }

@@ -79,6 +79,7 @@ struct MIToken {
     kw_disjoint,
     kw_samesign,
     kw_inbounds,
+    kw_nonnull,
     kw_debug_location,
     kw_debug_instr_number,
     kw_dbg_instr_ref,
@@ -99,6 +100,7 @@ struct MIToken {
     kw_cfi_window_save,
     kw_cfi_aarch64_negate_ra_sign_state,
     kw_cfi_aarch64_negate_ra_sign_state_with_pc,
+    kw_cfi_set_ra_state,
     kw_cfi_llvm_register_pair,
     kw_cfi_llvm_vector_registers,
     kw_cfi_llvm_vector_offset,
@@ -152,6 +154,7 @@ struct MIToken {
     kw_call_frame_size,
     kw_noconvergent,
     kw_mmra,
+    kw_lr_split,
 
     // Metadata types.
     kw_distinct,
@@ -162,6 +165,7 @@ struct MIToken {
     md_noalias,
     md_noalias_addrspace,
     md_range,
+    md_mem_cache_hint,
     md_diexpr,
     md_dilocation,
 

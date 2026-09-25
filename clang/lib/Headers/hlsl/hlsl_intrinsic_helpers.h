@@ -52,6 +52,14 @@ enable_if_t<is_same<double, T>::value, T> mul_vec_impl(vector<T, N> x,
 }
 
 template <typename T>
+constexpr enable_if_t<is_same<float, T>::value || is_same<half, T>::value,
+                      vector<T, 3>>
+cross_impl(vector<T, 3> x, vector<T, 3> y) {
+  return vector<T, 3>(x[1] * y[2] - y[1] * x[2], x[2] * y[0] - y[2] * x[0],
+                      x[0] * y[1] - y[0] * x[1]);
+}
+
+template <typename T>
 constexpr enable_if_t<is_same<float, T>::value || is_same<half, T>::value, T>
 reflect_impl(T I, T N) {
   return I - 2 * N * I * N;
@@ -77,25 +85,12 @@ template <typename T, typename U> constexpr T refract_impl(T I, T N, U Eta) {
 }
 
 template <typename T> constexpr T fmod_impl(T X, T Y) {
-#if !defined(__DIRECTX__)
-  return __builtin_elementwise_fmod(X, Y);
+#if defined(__DIRECTX__)
+  T Div = X / Y;
+  T Frc = frac(abs(Div));
+  return select(Div >= 0, Frc, (T)-Frc) * Y;
 #else
-  T div = X / Y;
-  bool ge = div >= 0;
-  T frc = frac(abs(div));
-  return select<T>(ge, frc, -frc) * Y;
-#endif
-}
-
-template <typename T, int N>
-constexpr vector<T, N> fmod_vec_impl(vector<T, N> X, vector<T, N> Y) {
-#if !defined(__DIRECTX__)
   return __builtin_elementwise_fmod(X, Y);
-#else
-  vector<T, N> div = X / Y;
-  vector<bool, N> ge = div >= 0;
-  vector<T, N> frc = frac(abs(div));
-  return select<T>(ge, frc, -frc) * Y;
 #endif
 }
 
@@ -106,6 +101,14 @@ template <typename T> constexpr T smoothstep_impl(T Min, T Max, T X) {
   T S = saturate((X - Min) / (Max - Min));
   return (3 - 2 * S) * S * S;
 #endif
+}
+
+template <typename T> constexpr T step_impl(T Y, T X) {
+  return select(X < Y, (T)0, (T)1);
+}
+
+template <typename T> constexpr T lerp_impl(T X, T Y, T S) {
+  return X + S * (Y - X);
 }
 
 template <typename T> constexpr vector<T, 4> lit_impl(T NDotL, T NDotH, T M) {

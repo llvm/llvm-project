@@ -81,7 +81,22 @@ static cl::opt<bool>
                  cl::desc("Generate the profile for Linux kernel binary."),
                  cl::cat(ProfGenCategory));
 
+static cl::opt<bool>
+    WarnNotSymbolized("warn-not-symbolized", cl::init(false),
+                      cl::desc("Generate warnings for unsymbolized addresses"),
+                      cl::cat(ProfGenCategory));
+
 namespace sampleprof {
+
+// Internal suffixes which are not reflected in the source code.
+static constexpr StringRef CanonicalSuffixes[] = {
+    // Internal suffixes from CoroSplit pass
+    ".cleanup", ".destroy", ".resume",
+    // Internal suffixes from Bolt
+    ".cold", ".warm",
+    // Compiler/LTO internal
+    ".llvm.", ".part.", ".isra.", ".constprop.", ".lto_priv."};
+static const StringRef CoroSuffixes[] = {".cleanup", ".destroy", ".resume"};
 
 static const Target *getTarget(const ObjectFile *Obj) {
   Triple TheTriple = Obj->makeTriple();
@@ -218,7 +233,7 @@ void ProfiledBinary::warnNoFuncEntry() {
       NoFuncEntryNum++;
       if (ShowDetailedWarning)
         WithColor::warning()
-            << "Failed to determine function entry for " << F.first
+            << "Failed to determine function entry for " << F.first()
             << " due to inconsistent name from symbol table and dwarf info.\n";
     }
   }
@@ -362,22 +377,20 @@ template <class ELFT>
 void ProfiledBinary::setPreferredTextSegmentAddresses(const ELFFile<ELFT> &Obj,
                                                       StringRef FileName) {
   const auto &PhdrRange = unwrapOrError(Obj.program_headers(), FileName);
-  // FIXME: This should be the page size of the system running profiling.
-  // However such info isn't available at post-processing time, assuming
-  // 4K page now. Note that we don't use EXEC_PAGESIZE from <linux/param.h>
-  // because we may build the tools on non-linux.
-  uint64_t PageSize = 0x1000;
+  bool SeenFirstLoadableSegment = false;
   for (const typename ELFT::Phdr &Phdr : PhdrRange) {
     if (Phdr.p_type == ELF::PT_INTERP)
       HasInterp = true;
     if (Phdr.p_type == ELF::PT_LOAD) {
-      if (!FirstLoadableAddress)
-        FirstLoadableAddress = Phdr.p_vaddr & ~(PageSize - 1U);
+      if (!SeenFirstLoadableSegment) {
+        // Derive the preferred address corresponding to file offset zero
+        // without assuming a page size.
+        FirstLoadableAddress = Phdr.p_vaddr - Phdr.p_offset;
+        SeenFirstLoadableSegment = true;
+      }
       if (Phdr.p_flags & ELF::PF_X) {
-        // Segments will always be loaded at a page boundary.
-        PreferredTextSegmentAddresses.push_back(Phdr.p_vaddr &
-                                                ~(PageSize - 1U));
-        TextSegmentOffsets.push_back(Phdr.p_offset & ~(PageSize - 1U));
+        PreferredTextSegmentAddresses.push_back(Phdr.p_vaddr);
+        TextSegmentOffsets.push_back(Phdr.p_offset);
       } else {
         PhdrInfo Info;
         Info.FileOffset = Phdr.p_offset;
@@ -745,6 +758,16 @@ void ProfiledBinary::setUpDisassembler(const ObjectFile *Obj) {
   Expected<SubtargetFeatures> Features = Obj->getFeatures();
   if (!Features)
     exitWithError(Features.takeError(), FileName);
+  // AArch64 object files do not generally carry complete ISA feature metadata,
+  // so the subtarget would default to the baseline (Armv8.0-A) feature set.
+  // That disassembler cannot decode feature-gated instructions (LSE atomics,
+  // RCPC loads, SVE, ...) that are pervasive in modern AArch64 binaries; they
+  // would be miscounted as "invalid instructions" and, worse, their addresses
+  // would be absent from the code/branch maps used for sample attribution.
+  // Enable all instructions so the disassembler recognizes whatever the
+  // compiler emitted, matching llvm-objdump's default for AArch64.
+  if (TheTriple.isAArch64())
+    Features->AddFeature("+all");
   STI.reset(
       TheTarget->createMCSubtargetInfo(TheTriple, "", Features->getString()));
   if (!STI)
@@ -891,14 +914,6 @@ void ProfiledBinary::populateSymbolAddressList(const ObjectFile *Obj) {
 
 void ProfiledBinary::loadSymbolsFromSymtab(const ObjectFile *Obj) {
   // Load binary functions from symbol table when Debug info is incomplete.
-  // Strip the internal suffixes which are not reflected in the DWARF info.
-  const SmallVector<StringRef, 10> Suffixes(
-      {// Internal suffixes from CoroSplit pass
-       ".cleanup", ".destroy", ".resume",
-       // Internal suffixes from Bolt
-       ".cold", ".warm",
-       // Compiler/LTO internal
-       ".llvm.", ".part.", ".isra.", ".constprop.", ".lto_priv."});
   StringRef FileName = Obj->getFileName();
 
   // COFF symtab does not have size field. Try to load size from PDB instead.
@@ -944,7 +959,7 @@ void ProfiledBinary::loadSymbolsFromSymtab(const ObjectFile *Obj) {
 
     const uint64_t EndAddr = StartAddr + Size;
     const StringRef SymName =
-        FunctionSamples::getCanonicalFnName(Name, Suffixes);
+        FunctionSamples::getCanonicalFnName(Name, CanonicalSuffixes);
     assert(StartAddr < EndAddr && StartAddr >= getPreferredBaseAddress() &&
            "Function range is invalid.");
 
@@ -953,10 +968,10 @@ void ProfiledBinary::loadSymbolsFromSymtab(const ObjectFile *Obj) {
       assert(findFuncRange(EndAddr - 1) == nullptr &&
              "Function range overlaps with existing functions.");
       // Function from symbol table not found previously in DWARF, store ranges.
-      auto Ret = BinaryFunctions.emplace(SymName, BinaryFunction());
+      auto Ret = BinaryFunctions.try_emplace(SymName);
       auto &Func = Ret.first->second;
       if (Ret.second) {
-        Func.FuncName = Ret.first->first;
+        Func.FuncName = Ret.first->first();
         HashBinaryFunctions[Function::getGUIDAssumingExternalLinkage(SymName)] =
             &Func;
       }
@@ -1020,6 +1035,7 @@ void ProfiledBinary::loadSymbolsFromDWARFUnit(DWARFUnit &CompilationUnit) {
     if (!Name)
       continue;
 
+    auto CanonName = FunctionSamples::getCanonicalCoroFnName(Name);
     auto RangesOrError = Die.getAddressRanges();
     if (!RangesOrError)
       continue;
@@ -1030,10 +1046,10 @@ void ProfiledBinary::loadSymbolsFromDWARFUnit(DWARFUnit &CompilationUnit) {
 
     // Different DWARF symbols can have same function name, search or create
     // BinaryFunction indexed by the name.
-    auto Ret = BinaryFunctions.emplace(Name, BinaryFunction());
+    auto Ret = BinaryFunctions.try_emplace(CanonName);
     auto &Func = Ret.first->second;
     if (Ret.second)
-      Func.FuncName = Ret.first->first;
+      Func.FuncName = Ret.first->first();
 
     for (const auto &Range : Ranges) {
       uint64_t StartAddress = Range.LowPC;
@@ -1106,7 +1122,7 @@ void ProfiledBinary::loadSymbolsFromDWARF(ObjectFile &Obj) {
   // Populate the hash binary function map for MD5 function name lookup. This
   // is done after BinaryFunctions are finalized.
   for (auto &BinaryFunction : BinaryFunctions) {
-    HashBinaryFunctions[MD5Hash(StringRef(BinaryFunction.first))] =
+    HashBinaryFunctions[MD5Hash(BinaryFunction.first())] =
         &BinaryFunction.second;
   }
 
@@ -1154,7 +1170,11 @@ SampleContextFrameVector ProfiledBinary::symbolize(const InstructionPointer &IP,
 
     StringRef FunctionName(CallerFrame.FunctionName);
     if (UseCanonicalFnName)
-      FunctionName = FunctionSamples::getCanonicalFnName(FunctionName);
+      FunctionName =
+          FunctionSamples::getCanonicalFnName(FunctionName, CanonicalSuffixes);
+    else
+      FunctionName =
+          FunctionSamples::getCanonicalFnName(FunctionName, CoroSuffixes);
 
     uint32_t Discriminator = CallerFrame.Discriminator;
     uint32_t LineOffset = (CallerFrame.Line - CallerFrame.StartLine) & 0xffff;
@@ -1165,8 +1185,16 @@ SampleContextFrameVector ProfiledBinary::symbolize(const InstructionPointer &IP,
     }
 
     LineLocation Line(LineOffset, Discriminator);
-    auto It = NameStrings.insert(FunctionName.str());
-    CallStack.emplace_back(FunctionId(StringRef(*It.first)), Line);
+    auto It = NameStrings.insert(FunctionName);
+    CallStack.emplace_back(FunctionId(It.first->getKey()), Line);
+  }
+
+  if (WarnNotSymbolized && CallStack.empty()) {
+    uint64_t VAddr = IP.Address + BaseAddress - getPreferredBaseAddress();
+    if (isVaddrMMapped(VAddr))
+      WithColor::warning() << "Failed to symbolize address "
+                           << format("%8" PRIx64, IP.Address)
+                           << " (vaddr=" << format("%8" PRIx64, VAddr) << ")\n";
   }
 
   return CallStack;
@@ -1177,9 +1205,7 @@ StringRef ProfiledBinary::symbolizeDataAddress(uint64_t Address) {
       unwrapOrError(Symbolizer->symbolizeData(SymbolizerPath.str(),
                                               getSectionedAddress(Address)),
                     SymbolizerPath);
-  decltype(NameStrings)::iterator Iter;
-  std::tie(Iter, std::ignore) = NameStrings.insert(DataDIGlobal.Name);
-  return StringRef(*Iter);
+  return NameStrings.insert(DataDIGlobal.Name).first->getKey();
 }
 
 void ProfiledBinary::computeInlinedContextSizeForRange(uint64_t RangeBegin,
@@ -1250,7 +1276,7 @@ void ProfiledBinary::loadSymbolsFromPseudoProbe() {
                "Top level pseudo probe does not match function range");
 
         const auto *ProbeDesc = getFuncDescForGUID(InlineTreeNode->Guid);
-        auto Ret = PseudoProbeNames.emplace(Func, ProbeDesc->FuncName);
+        auto Ret = PseudoProbeNames.try_emplace(Func, ProbeDesc->FuncName);
         if (!Ret.second && Ret.first->second != ProbeDesc->FuncName &&
             ShowDetailedWarning)
           WithColor::warning()

@@ -93,7 +93,7 @@ for.end:
 ; CHECK: Found scalar instruction:   %addr = phi ptr [ %a, %entry ], [ %addr.next, %for.inc ]
 ; CHECK: Found scalar instruction:   %addr.next = getelementptr inbounds i32, ptr %addr, i64 1
 ; CHECK: Scalarizing and predicating: store i32 %tmp2, ptr %addr, align 4
-; CHECK: Cost of 0 for VF 2: induction instruction   %addr = phi ptr [ %a, %entry ], [ %addr.next, %for.inc ]
+; CHECK: Cost of 0 for VF 2: forced scalar   %addr = phi ptr [ %a, %entry ], [ %addr.next, %for.inc ]
 ; CHECK: Cost of 4 for VF 2: profitable to scalarize   store i32 %tmp2, ptr %addr, align 4
 ;
 define void @predicated_store_phi(ptr %a, i1 %c, i32 %x, i64 %n) {

@@ -277,15 +277,6 @@ public:
 
   CompilerDeclContext GetDeclContext();
 
-  /// Get the memory cost of this object.
-  ///
-  /// Returns the cost of this object plus any owned objects from the ranges,
-  /// variables, and inline function information.
-  ///
-  /// \return
-  ///     The number of bytes that this object occupies in memory.
-  size_t MemorySize() const;
-
   /// Set accessor for any inlined function information.
   ///
   /// \param[in] name

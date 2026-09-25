@@ -804,8 +804,7 @@ define void @test_sret(ptr sret(%struct.all) align 8 %result) #0 {
   ; X86-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
   ; X86-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load (p0) from %fixed-stack.0, align 16)
   ; X86-NEXT:   [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 104
-  ; X86-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY [[LOAD]](p0)
-  ; X86-NEXT:   G_STORE [[C]](s8), [[COPY]](p0) :: (store (s8) into %ir.c, align 8)
+  ; X86-NEXT:   G_STORE [[C]](s8), [[LOAD]](p0) :: (store (s8) into %ir.c, align 8)
   ; X86-NEXT:   $eax = COPY [[LOAD]](p0)
   ; X86-NEXT:   RET 0, $eax
   ;
@@ -815,8 +814,7 @@ define void @test_sret(ptr sret(%struct.all) align 8 %result) #0 {
   ; X64-NEXT: {{  $}}
   ; X64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $rdi
   ; X64-NEXT:   [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 104
-  ; X64-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY [[COPY]](p0)
-  ; X64-NEXT:   G_STORE [[C]](s8), [[COPY1]](p0) :: (store (s8) into %ir.c, align 8)
+  ; X64-NEXT:   G_STORE [[C]](s8), [[COPY]](p0) :: (store (s8) into %ir.c, align 8)
   ; X64-NEXT:   $rax = COPY [[COPY]](p0)
   ; X64-NEXT:   RET 0, $rax
 entry:

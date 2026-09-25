@@ -27,7 +27,6 @@
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/CallGraph.h"
-#include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/MemoryLocation.h"
@@ -952,7 +951,8 @@ determinePointerAccessAttrs(Argument *A,
       if (isModSet(ArgMR) && !CB->onlyReadsMemory(UseIndex)) {
         Props.IsWrite = true;
         if (CB->isArgOperand(U) && !CB->hasFnAttr(Attribute::NoFree) &&
-            !CB->paramHasAttr(UseIndex, Attribute::NoFree))
+            !CB->paramHasAttr(UseIndex, Attribute::NoFree) &&
+            !CB->paramHasAttr(UseIndex, Attribute::NoFreeObj))
           Props.IsFree = true;
       }
     } else {
@@ -1075,7 +1075,8 @@ static bool addAccessAttrs(Argument *A, ArgAccessProperties Props) {
   assert(A && "Argument must not be null.");
 
   bool Changed = false;
-  if (!Props.IsFree && !A->hasAttribute(Attribute::NoFree)) {
+  if (!Props.IsFree && !A->hasAttribute(Attribute::NoFree) &&
+      !A->hasAttribute(Attribute::NoFreeObj)) {
     ++NumNoFreeArg;
     A->addAttr(Attribute::NoFree);
     Changed = true;

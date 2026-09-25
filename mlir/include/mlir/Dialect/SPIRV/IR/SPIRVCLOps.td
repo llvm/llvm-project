@@ -319,6 +319,27 @@ def SPIRV_CLCeilOp : SPIRV_CLUnaryArithmeticOp<"ceil", 12, SPIRV_Float> {
 
 // -----
 
+def SPIRV_CLCopysignOp : SPIRV_CLBinaryArithmeticOp<"copysign", 13, SPIRV_Float> {
+  let summary = "Computes the value with the magnitude of x and the sign of y.";
+
+  let description = [{
+    Result Type, x and y must be floating-point or vector(2,3,4,8,16) of
+    floating-point values.
+
+    All of the operands, including the Result Type operand, must be of the
+    same type.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.CL.copysign %0, %1 : f32
+    %3 = spirv.CL.copysign %0, %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
 def SPIRV_CLCosOp : SPIRV_CLUnaryArithmeticOp<"cos", 14, SPIRV_Float> {
   let summary = "Compute the cosine of x radians.";
 
@@ -472,6 +493,27 @@ def SPIRV_CLExp10Op : SPIRV_CLUnaryArithmeticOp<"exp10", 21, SPIRV_Float> {
 
 // -----
 
+def SPIRV_CLExpm1Op : SPIRV_CLUnaryArithmeticOp<"expm1", 22, SPIRV_Float> {
+  let summary = "Compute the base-e exponential of x minus 1.0.";
+
+  let description = [{
+    Result Type and x must be floating-point or vector(2,3,4,8,16) of
+    floating-point values.
+
+    All of the operands, including the Result Type operand,
+    must be of the same type.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.CL.expm1 %0 : f32
+    %3 = spirv.CL.expm1 %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
 def SPIRV_CLFAbsOp : SPIRV_CLUnaryArithmeticOp<"fabs", 23, SPIRV_Float> {
   let summary = "Absolute value of operand";
 
@@ -535,6 +577,73 @@ def SPIRV_CLFMinOp : SPIRV_CLBinaryArithmeticOp<"fmin", 28, SPIRV_Float> {
     ```mlir
     %2 = spirv.CL.fmin %0, %1 : f32
     %3 = spirv.CL.fmin %0, %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_CLFdimOp : SPIRV_CLBinaryArithmeticOp<"fdim", 24, SPIRV_Float> {
+  let summary = "Compute the positive difference between x and y.";
+
+  let description = [{
+    Returns x - y if x > y, otherwise it returns +0.0.
+
+    Result Type, x and y must be floating-point or vector(2,3,4,8,16) of
+    floating-point values.
+
+    All of the operands, including the Result Type operand, must be of the
+    same type.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.CL.fdim %0, %1 : f32
+    %3 = spirv.CL.fdim %0, %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_CLFmodOp : SPIRV_CLBinaryArithmeticOp<"fmod", 29, SPIRV_Float> {
+  let summary = [{
+    Modulus. Returns x - y * trunc(x / y), with the same sign as x.
+  }];
+
+  let description = [{
+    Result Type, x and y must be floating-point or vector(2,3,4,8,16) of
+    floating-point values.
+
+    All of the operands, including the Result Type operand, must be of the
+    same type.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.CL.fmod %0, %1 : f32
+    %3 = spirv.CL.fmod %0, %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_CLHypotOp : SPIRV_CLBinaryArithmeticOp<"hypot", 32, SPIRV_Float> {
+  let summary = "Compute the square root of x^2 + y^2.";
+
+  let description = [{
+    Result Type, x and y must be floating-point or vector(2,3,4,8,16) of
+    floating-point values.
+
+    All of the operands, including the Result Type operand, must be of the
+    same type.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.CL.hypot %0, %1 : f32
+    %3 = spirv.CL.hypot %0, %1 : vector<3xf16>
     ```
   }];
 }
@@ -690,6 +799,27 @@ def SPIRV_CLLog10Op : SPIRV_CLUnaryArithmeticOp<"log10", 39, SPIRV_Float> {
     ```mlir
     %2 = spirv.CL.log10 %0 : f32
     %3 = spirv.CL.log10 %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_CLLog1pOp : SPIRV_CLUnaryArithmeticOp<"log1p", 40, SPIRV_Float> {
+  let summary = "Compute the natural logarithm of x + 1.0.";
+
+  let description = [{
+    Result Type and x must be floating-point or vector(2,3,4,8,16) of
+    floating-point values.
+
+    All of the operands, including the Result Type operand, must be of the
+    same type.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.CL.log1p %0 : f32
+    %3 = spirv.CL.log1p %1 : vector<3xf16>
     ```
   }];
 }

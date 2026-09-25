@@ -63,9 +63,7 @@ declare signext i32 @do_something(i32 signext)
 ; 64BIT-NEXT:   ld 0, 16(1)
 ; 64BIT-NEXT:   lwz 12, 8(1)
 ; 64BIT-NEXT:   mtlr 0
-; 64BIT-NEXT:   mtocrf 32, 12
-; 64BIT-NEXT:   mtocrf 16, 12
-; 64BIT-NEXT:   mtocrf 8, 12
+; 64BIT-NEXT:   mtcrf 56, 12
 ; 64BIT-NEXT:   blr
 
 
@@ -75,7 +73,5 @@ declare signext i32 @do_something(i32 signext)
 ; 32BIT-NEXT:   lwz 0, 8(1)
 ; 32BIT-NEXT:   lwz 12, 4(1)
 ; 32BIT-NEXT:   mtlr 0
-; 32BIT-NEXT:   mtocrf 32, 12
-; 32BIT-NEXT:   mtocrf 16, 12
-; 32BIT-NEXT:   mtocrf 8, 12
+; 32BIT-NEXT:   mtcrf 56, 12
 ; 32BIT-NEXT:   blr

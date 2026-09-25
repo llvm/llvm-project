@@ -141,7 +141,7 @@ D::~D() = default;
 // CIR: cir.return
 
 // LLVM: define {{.*}} @_ZN1DD2Ev
-// LLVM: %[[THIS_ADDR:.*]] = alloca ptr, i64 1, align 8
+// LLVM: %[[THIS_ADDR:.*]] = alloca ptr, align 8
 // LLVM: store ptr %[[THIS:.*]], ptr %[[THIS_ADDR]], align 8
 // LLVM: %[[THIS1:.*]] = load ptr, ptr %[[THIS_ADDR]], align 8
 // LLVM: ret void
@@ -161,7 +161,7 @@ D::~D() = default;
 // CIR: cir.trap
 
 // LLVM: define {{.*}} @_ZN1DD0Ev
-// LLVM:  %[[THIS_ADDR:.*]] = alloca ptr, i64 1, align 8
+// LLVM:  %[[THIS_ADDR:.*]] = alloca ptr, align 8
 // LLVM:  store ptr %[[THIS:.*]], ptr %[[THIS_ADDR]], align 8
 // LLVM:  %[[THIS1:.*]] = load ptr, ptr %[[THIS_ADDR]], align 8
 // LLVM:  call void @llvm.trap()

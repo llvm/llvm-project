@@ -81,8 +81,8 @@ static cl::opt<bool>
 // output quality. Setting HugeRegion so large that it will never be
 // reached means best-effort, but may be slow.
 
-// When Stores and Loads maps (or NonAliasStores and NonAliasLoads)
-// together hold this many SUs, a reduction of maps will be done.
+// When Stores and Loads maps together hold this many SUs, a reduction of maps
+// will be done.
 static cl::opt<unsigned>
     HugeRegion("dag-maps-huge-region", cl::Hidden, cl::init(500),
                cl::desc("The limit to use while constructing the DAG "
@@ -120,58 +120,54 @@ ScheduleDAGInstrs::ScheduleDAGInstrs(MachineFunction &mf,
   SchedModel.init(&ST, EnableSchedModel, EnableSchedItins);
 }
 
-/// If this machine instr has memory reference information and it can be
-/// tracked to a normal reference to a known object, return the Value
-/// for that object. This function returns false the memory location is
-/// unknown or may alias anything.
+/// If this machine instruction has memory reference information, collect the
+/// list of underlying objects in \p Objects. If any of these objects are
+/// unknown or may alias anything, return false. Atomic and volatile memory
+/// operands are skipped.
 static bool getUnderlyingObjectsForInstr(const MachineInstr *MI,
                                          const MachineFrameInfo &MFI,
                                          UnderlyingObjectsVector &Objects,
                                          const DataLayout &DL) {
-  auto AllMMOsOkay = [&]() {
-    for (const MachineMemOperand *MMO : MI->memoperands()) {
-      // TODO: Figure out whether isAtomic is really necessary (see D57601).
-      if (MMO->isVolatile() || MMO->isAtomic())
-        return false;
+  bool AllObjectsIdentified = true;
 
-      if (const PseudoSourceValue *PSV = MMO->getPseudoValue()) {
+  for (const MachineMemOperand *MMO : MI->memoperands()) {
+    // TODO: Figure out whether isAtomic is really necessary (see D57601).
+    if (MMO->isVolatile() || MMO->isAtomic()) {
+      AllObjectsIdentified = false;
+      continue;
+    }
+
+    if (const PseudoSourceValue *PSV = MMO->getPseudoValue()) {
+      if (MFI.hasTailCall()) {
         // Function that contain tail calls don't have unique PseudoSourceValue
         // objects. Two PseudoSourceValues might refer to the same or
         // overlapping locations. The client code calling this function assumes
         // this is not the case. So return a conservative answer of no known
         // object.
-        if (MFI.hasTailCall())
-          return false;
-
+        AllObjectsIdentified = false;
+      } else if (PSV->isAliased(&MFI)) {
         // For now, ignore PseudoSourceValues which may alias LLVM IR values
-        // because the code that uses this function has no way to cope with
-        // such aliases.
-        if (PSV->isAliased(&MFI))
-          return false;
+        // because the code that uses this function has no way to cope with such
+        // aliases.
+        AllObjectsIdentified = false;
+      }
 
-        bool MayAlias = PSV->mayAlias(&MFI);
-        Objects.emplace_back(PSV, MayAlias);
-      } else if (const Value *V = MMO->getValue()) {
-        SmallVector<Value *, 4> Objs;
-        if (!getUnderlyingObjectsForCodeGen(V, Objs))
-          return false;
+      Objects.push_back(PSV);
+    } else if (const Value *V = MMO->getValue()) {
+      SmallVector<Value *, 4> Objs;
+      bool ObjectsIdentified = getUnderlyingObjectsForCodeGen(V, Objs);
+      AllObjectsIdentified &= ObjectsIdentified;
 
-        for (Value *V : Objs) {
-          assert(isIdentifiedObject(V));
-          Objects.emplace_back(V, true);
-        }
-      } else
-        return false;
+      for (Value *V : Objs) {
+        assert(!ObjectsIdentified || isIdentifiedObject(V));
+        Objects.push_back(V);
+      }
+    } else {
+      AllObjectsIdentified = false;
     }
-    return true;
-  };
-
-  if (!AllMMOsOkay()) {
-    Objects.clear();
-    return false;
   }
 
-  return true;
+  return AllObjectsIdentified;
 }
 
 void ScheduleDAGInstrs::startBlock(MachineBasicBlock *bb) {
@@ -742,15 +738,6 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
   // not share any common Value.
   Value2SUsMap Stores, Loads(1 /*TrueMemOrderLatency*/);
 
-  // Certain memory accesses are known to not alias any SU in Stores
-  // or Loads, and have therefore their own 'NonAlias'
-  // domain. E.g. spill / reload instructions never alias LLVM I/R
-  // Values. It would be nice to assume that this type of memory
-  // accesses always have a proper memory operand modelling, and are
-  // therefore never unanalyzable, but this is conservatively not
-  // done.
-  Value2SUsMap NonAliasStores, NonAliasLoads(1 /*TrueMemOrderLatency*/);
-
   // Track all instructions that may raise floating-point exceptions.
   // These do not depend on one other (or normal loads or stores), but
   // must not be rescheduled across global barriers.  Note that we don't
@@ -886,8 +873,6 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
       // Add dependencies against everything below it and clear maps.
       addBarrierChain(Stores);
       addBarrierChain(Loads);
-      addBarrierChain(NonAliasStores);
-      addBarrierChain(NonAliasLoads);
       addBarrierChain(FPExceptions);
 
       continue;
@@ -929,8 +914,6 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
 
       addBarrierChain(Stores);
       addBarrierChain(Loads);
-      addBarrierChain(NonAliasStores);
-      addBarrierChain(NonAliasLoads);
 
       MemOpsProcessed = 0;
       continue;
@@ -940,62 +923,50 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
     // empty, or filled with the Values of memory locations which this
     // SU depends on.
     UnderlyingObjectsVector Objs;
-    bool ObjsFound = getUnderlyingObjectsForInstr(&MI, MFI, Objs,
-                                                  MF.getDataLayout());
+    bool ObjsIdentified =
+        getUnderlyingObjectsForInstr(&MI, MFI, Objs, MF.getDataLayout());
 
     if (MI.mayStore()) {
-      if (!ObjsFound) {
+      if (!ObjsIdentified) {
         // An unknown store depends on all stores and loads.
         addChainDependencies(SU, Stores);
-        addChainDependencies(SU, NonAliasStores);
         addChainDependencies(SU, Loads);
-        addChainDependencies(SU, NonAliasLoads);
 
         // Map this store to 'UnknownValue'.
         Stores.insert(SU, UnknownValue);
       } else {
         // Add precise dependencies against all previously seen memory
         // accesses mapped to the same Value(s).
-        for (const UnderlyingObject &UnderlObj : Objs) {
-          ValueType V = UnderlObj.getValue();
-          bool ThisMayAlias = UnderlObj.mayAlias();
-
+        for (const ValueType V : Objs) {
           // Add dependencies to previous stores and loads mapped to V.
-          addChainDependencies(SU, (ThisMayAlias ? Stores : NonAliasStores), V);
-          addChainDependencies(SU, (ThisMayAlias ? Loads : NonAliasLoads), V);
+          addChainDependencies(SU, Stores, V);
+          addChainDependencies(SU, Loads, V);
         }
         // Update the store map after all chains have been added to avoid adding
         // self-loop edge if multiple underlying objects are present.
-        for (const UnderlyingObject &UnderlObj : Objs) {
-          ValueType V = UnderlObj.getValue();
-          bool ThisMayAlias = UnderlObj.mayAlias();
+        for (const ValueType V : Objs)
+          Stores.insert(SU, V);
 
-          // Map this store to V.
-          (ThisMayAlias ? Stores : NonAliasStores).insert(SU, V);
-        }
         // The store may have dependencies to unanalyzable loads and
         // stores.
         addChainDependencies(SU, Loads, UnknownValue);
         addChainDependencies(SU, Stores, UnknownValue);
       }
     } else { // SU is a load.
-      if (!ObjsFound) {
+      if (!ObjsIdentified) {
         // An unknown load depends on all stores.
         addChainDependencies(SU, Stores);
-        addChainDependencies(SU, NonAliasStores);
 
+        // Map this load to 'UnknownValue'.
         Loads.insert(SU, UnknownValue);
       } else {
-        for (const UnderlyingObject &UnderlObj : Objs) {
-          ValueType V = UnderlObj.getValue();
-          bool ThisMayAlias = UnderlObj.mayAlias();
-
+        for (const ValueType V : Objs) {
           // Add precise dependencies against all previously seen stores
           // mapping to the same Value(s).
-          addChainDependencies(SU, (ThisMayAlias ? Stores : NonAliasStores), V);
+          addChainDependencies(SU, Stores, V);
 
           // Map this load to V.
-          (ThisMayAlias ? Loads : NonAliasLoads).insert(SU, V);
+          Loads.insert(SU, V);
         }
         // The load may have dependencies to unanalyzable stores.
         addChainDependencies(SU, Stores, UnknownValue);

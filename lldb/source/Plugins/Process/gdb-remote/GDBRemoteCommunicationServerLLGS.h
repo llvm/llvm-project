@@ -16,6 +16,7 @@
 #include "lldb/Core/Communication.h"
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Host/common/NativeProcessProtocol.h"
+#include "lldb/Utility/Locked.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/lldb-private-forward.h"
 
@@ -133,10 +134,15 @@ protected:
   std::mutex m_pending_output_mutex;
 
   llvm::StringMap<std::unique_ptr<llvm::MemoryBuffer>> m_xfer_buffer_map;
-  std::mutex m_saved_registers_mutex;
-  std::unordered_map<uint32_t, lldb::DataBufferSP> m_saved_registers_map;
-  uint32_t m_next_saved_registers_id = 1;
+
+  struct SavedRegisters {
+    std::unordered_map<uint32_t, lldb::DataBufferSP> map;
+    uint32_t next_id = 1;
+  };
+  Guarded<SavedRegisters, std::mutex> m_saved_registers;
+
   bool m_thread_suffix_supported = false;
+  bool m_address_space_suffix_supported = false;
   bool m_list_threads_in_stop_reply = false;
   bool m_non_stop = false;
   bool m_disabling_non_stop = false;
@@ -268,6 +274,8 @@ protected:
 
   PacketResult Handle_jThreadsInfo(StringExtractorGDBRemote &packet);
 
+  PacketResult Handle_jAddressSpacesInfo(StringExtractorGDBRemote &packet);
+
   PacketResult Handle_qWatchpointSupportInfo(StringExtractorGDBRemote &packet);
 
   PacketResult Handle_qFileLoadAddress(StringExtractorGDBRemote &packet);
@@ -301,6 +309,9 @@ protected:
 
   PacketResult
   Handle_jAcceleratorPluginBreakpointHit(StringExtractorGDBRemote &packet);
+
+  PacketResult Handle_jAcceleratorPluginGetDynamicLoaderLibraryInfo(
+      StringExtractorGDBRemote &packet);
 
   void SetCurrentThreadID(lldb::tid_t tid);
 

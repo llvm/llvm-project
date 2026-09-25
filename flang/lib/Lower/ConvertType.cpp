@@ -290,14 +290,16 @@ struct TypeBuilderImpl {
       ty = fir::SequenceType::get(fir::SequenceType::Shape{}, ty);
     }
 
+    bool isAssumedType = Fortran::semantics::IsAssumedType(symbol);
     bool isPolymorphic = (Fortran::semantics::IsPolymorphic(symbol) ||
                           Fortran::semantics::IsUnlimitedPolymorphic(symbol)) &&
-                         !Fortran::semantics::IsAssumedType(symbol);
+                         !isAssumedType;
     if (Fortran::semantics::IsPointer(symbol))
-      return fir::wrapInClassOrBoxType(fir::PointerType::get(ty),
-                                       isPolymorphic);
+      return fir::wrapInClassOrBoxType(fir::PointerType::get(ty), isPolymorphic,
+                                       isAssumedType, symbol.Corank());
     if (Fortran::semantics::IsAllocatable(symbol))
-      return fir::wrapInClassOrBoxType(fir::HeapType::get(ty), isPolymorphic);
+      return fir::wrapInClassOrBoxType(fir::HeapType::get(ty), isPolymorphic,
+                                       isAssumedType, symbol.Corank());
     // isPtr and isAlloc are variable that were promoted to be on the
     // heap or to be pointers, but they do not have Fortran allocatable
     // or pointer semantics, so do not use box for them.
@@ -306,7 +308,7 @@ struct TypeBuilderImpl {
     if (isAlloc)
       return fir::HeapType::get(ty);
     if (isPolymorphic)
-      return fir::ClassType::get(ty);
+      return fir::ClassType::get(ty, false, symbol.Corank());
     return ty;
   }
 

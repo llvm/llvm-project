@@ -17,9 +17,9 @@ entry:
 
 declare !type !2 i32 @_Z3fooc(i8 signext)
 
-!0 = !{i64 0, !"_ZTSFivE.generalized"}
+!0 = !{!"_ZTSFivE.generalized"}
 !1 = !{!2}
-!2 = !{i64 0, !"_ZTSFicE.generalized"}
+!2 = !{!"_ZTSFicE.generalized"}
 ;.
-; CHECK: [[META0]] = !{i64 0, !"_ZTSFivE.generalized"}
+; CHECK: [[META0]] = !{!"_ZTSFivE.generalized"}
 ;.

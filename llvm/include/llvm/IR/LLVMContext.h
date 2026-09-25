@@ -87,18 +87,19 @@ public:
   /// operand bundle tags without comparing strings. Keep this in sync with
   /// LLVMContext::LLVMContext().
   enum : unsigned {
-    OB_deopt = 0,                  // "deopt"
-    OB_funclet = 1,                // "funclet"
-    OB_gc_transition = 2,          // "gc-transition"
-    OB_cfguardtarget = 3,          // "cfguardtarget"
-    OB_preallocated = 4,           // "preallocated"
-    OB_gc_live = 5,                // "gc-live"
-    OB_clang_arc_attachedcall = 6, // "clang.arc.attachedcall"
-    OB_ptrauth = 7,                // "ptrauth"
-    OB_kcfi = 8,                   // "kcfi"
-    OB_convergencectrl = 9,        // "convergencectrl"
-    OB_align = 10,                 // "align"
-    OB_deactivation_symbol = 11,   // "deactivation-symbol"
+#define ATTR(Name, Str) OB_##Name,
+#include "llvm/IR/BundleAttributes.def"
+    OB_deopt,                  // "deopt"
+    OB_funclet,                // "funclet"
+    OB_gc_transition,          // "gc-transition"
+    OB_cfguardtarget,          // "cfguardtarget"
+    OB_preallocated,           // "preallocated"
+    OB_gc_live,                // "gc-live"
+    OB_clang_arc_attachedcall, // "clang.arc.attachedcall"
+    OB_ptrauth,                // "ptrauth"
+    OB_kcfi,                   // "kcfi"
+    OB_convergencectrl,        // "convergencectrl"
+    OB_deactivation_symbol,    // "deactivation-symbol"
     OB_LastBundleID = OB_deactivation_symbol
   };
 

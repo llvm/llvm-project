@@ -8,6 +8,7 @@ static_library("Utility") {
   ]
   sources = [
     "AcceleratorGDBRemotePackets.cpp",
+    "AddressSpace.cpp",
     "AddressableBits.cpp",
     "ArchSpec.cpp",
     "Args.cpp",
@@ -21,7 +22,6 @@ static_library("Utility") {
     "DataBufferLLVM.cpp",
     "DataEncoder.cpp",
     "DataExtractor.cpp",
-    "Diagnostics.cpp",
     "Environment.cpp",
     "ErrorMessages.cpp",
     "Event.cpp",
@@ -38,6 +38,8 @@ static_library("Utility") {
     "Policy.cpp",
     "ProcessInfo.cpp",
     "RealpathPrefixes.cpp",
+    "RegisterType.cpp",
+    "RegisterTypeFlags.cpp",
     "RegisterValue.cpp",
     "RegularExpression.cpp",
     "Scalar.cpp",

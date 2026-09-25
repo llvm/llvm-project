@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -pass-pipeline="builtin.module(func.func(convert-vector-to-scf))" -split-input-file -allow-unregistered-dialect | FileCheck %s
+// RUN: mlir-opt %s -convert-vector-to-scf -split-input-file -allow-unregistered-dialect | FileCheck %s
 // RUN: mlir-opt %s -pass-pipeline="builtin.module(func.func(convert-vector-to-scf{full-unroll=true lower-scalable=true}))" -split-input-file -allow-unregistered-dialect | FileCheck %s --check-prefix=FULL-UNROLL
 // RUN: mlir-opt %s "-convert-vector-to-scf=full-unroll target-rank=0" -split-input-file -allow-unregistered-dialect | FileCheck %s --check-prefix=TARGET-RANK-ZERO
 
@@ -908,3 +908,18 @@ func.func @negative_scalable_transpose_store_3(%vec: vector<[4]x4xf32>, %dest: m
 }
 // FULL-UNROLL-LABEL: @negative_scalable_transpose_store_3
 // FULL-UNROLL-NOT:   scf.for
+
+// -----
+
+// Negative test: lowering a transfer op whose rank exceeds the target rank
+// allocates a temporary buffer, which requires an enclosing automatic
+// allocation scope.
+
+// CHECK-LABEL: @transfer_write_no_alloc_scope
+func.func private @transfer_write_no_alloc_scope()
+// CHECK-NOT: memref.alloca
+// CHECK: vector.transfer_write
+%c0 = arith.constant 0 : index
+%cst = arith.constant dense<0.0> : vector<2x3xf32>
+%m = memref.alloc() : memref<2x3xf32>
+vector.transfer_write %cst, %m[%c0, %c0] : vector<2x3xf32>, memref<2x3xf32>

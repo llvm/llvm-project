@@ -9,7 +9,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@skipIfWasm  # no expression evaluation
+@requireExpressionEvaluation
 class NamespaceBreakpointTestCase(TestBase):
     @expectedFailureAll(bugnumber="llvm.org/pr28548", compiler="gcc")
     @expectedFailureAll(oslist=["windows"])
@@ -133,6 +133,7 @@ class NamespaceTestCase(TestBase):
 
     # rdar://problem/8668674
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24764")
+    @requireExpressionEvaluation
     def test_with_run_command(self):
         """Test that anonymous and named namespace variables display correctly."""
         self.build()

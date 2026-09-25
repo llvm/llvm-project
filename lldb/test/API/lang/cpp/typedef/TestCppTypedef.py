@@ -8,7 +8,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
 
 
-@skipIfWasm  # no expression evaluation
+@requireExpressionEvaluation
 class TestCppTypedef(TestBase):
     def test_typedef(self):
         """

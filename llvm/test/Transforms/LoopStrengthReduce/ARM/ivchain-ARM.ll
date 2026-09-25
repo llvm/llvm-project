@@ -317,12 +317,12 @@ define hidden void @testNeon(ptr %ref_data, i32 %ref_stride, i32 %limit, ptr noc
 ; A9-NEXT:    vadd.i8 q9, q9, q10
 ; A9-NEXT:    vld1.64 {d23}, [r0], r1
 ; A9-NEXT:    vst1.8 {d22, d23}, [r5]!
-; A9-NEXT:    vld1.64 {d20}, [r0], r1
+; A9-NEXT:    vld1.64 {d24}, [r0], r1
 ; A9-NEXT:    vadd.i8 q9, q9, q11
-; A9-NEXT:    vld1.64 {d21}, [r0], lr
-; A9-NEXT:    vadd.i8 q9, q9, q10
+; A9-NEXT:    vld1.64 {d25}, [r0], lr
+; A9-NEXT:    vadd.i8 q9, q9, q12
 ; A9-NEXT:    vadd.i8 q8, q8, q9
-; A9-NEXT:    vst1.8 {d20, d21}, [r5], r4
+; A9-NEXT:    vst1.8 {d24, d25}, [r5], r4
 ; A9-NEXT:    bne .LBB4_2
 ; A9-NEXT:  @ %bb.3: @ %._crit_edge
 ; A9-NEXT:    add.w r3, r3, r12, lsl #4

@@ -8,12 +8,12 @@ define i1 @test(float %0, double %1) {
 ; X86-NEXT:    [[TMP3:%.*]] = fpext float [[TMP0]] to double
 ; X86-NEXT:    [[TMP4:%.*]] = fpext float 0.000000e+00 to double
 ; X86-NEXT:    [[TMP5:%.*]] = fmul double 0.000000e+00, 0.000000e+00
-; X86-NEXT:    [[TMP6:%.*]] = insertelement <8 x double> <double 0.000000e+00, double undef, double 0.000000e+00, double undef, double undef, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, double [[TMP1]], i32 4
-; X86-NEXT:    [[TMP7:%.*]] = insertelement <8 x double> [[TMP6]], double [[TMP4]], i32 1
-; X86-NEXT:    [[TMP8:%.*]] = insertelement <8 x double> [[TMP7]], double [[TMP3]], i32 3
+; X86-NEXT:    [[TMP6:%.*]] = insertelement <8 x double> <double 0.000000e+00, double undef, double 0.000000e+00, double undef, double undef, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, double [[TMP1]], i64 4
+; X86-NEXT:    [[TMP7:%.*]] = insertelement <8 x double> [[TMP6]], double [[TMP4]], i64 1
+; X86-NEXT:    [[TMP8:%.*]] = insertelement <8 x double> [[TMP7]], double [[TMP3]], i64 3
 ; X86-NEXT:    [[TMP9:%.*]] = fmul <8 x double> zeroinitializer, [[TMP8]]
 ; X86-NEXT:    [[TMP10:%.*]] = shufflevector <8 x double> [[TMP8]], <8 x double> <double 0.000000e+00, double poison, double poison, double poison, double 0.000000e+00, double 0.000000e+00, double 0.000000e+00, double 0.000000e+00>, <8 x i32> <i32 8, i32 4, i32 poison, i32 poison, i32 12, i32 13, i32 14, i32 15>
-; X86-NEXT:    [[TMP11:%.*]] = insertelement <8 x double> poison, double [[TMP5]], i32 0
+; X86-NEXT:    [[TMP11:%.*]] = insertelement <8 x double> poison, double [[TMP5]], i64 0
 ; X86-NEXT:    [[TMP12:%.*]] = shufflevector <8 x double> [[TMP11]], <8 x double> poison, <8 x i32> <i32 poison, i32 poison, i32 0, i32 0, i32 poison, i32 poison, i32 poison, i32 poison>
 ; X86-NEXT:    [[TMP13:%.*]] = shufflevector <8 x double> [[TMP10]], <8 x double> [[TMP12]], <8 x i32> <i32 0, i32 1, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7>
 ; X86-NEXT:    [[TMP14:%.*]] = shufflevector <8 x double> [[TMP8]], <8 x double> [[TMP13]], <8 x i32> <i32 poison, i32 poison, i32 1, i32 poison, i32 poison, i32 10, i32 poison, i32 poison>
@@ -30,16 +30,16 @@ define i1 @test(float %0, double %1) {
 ;
 ; AARCH64-LABEL: define i1 @test
 ; AARCH64-SAME: (float [[TMP0:%.*]], double [[TMP1:%.*]]) {
-; AARCH64-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> <float 0.000000e+00, float poison>, float [[TMP0]], i32 1
+; AARCH64-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> <float 0.000000e+00, float poison>, float [[TMP0]], i64 1
 ; AARCH64-NEXT:    [[TMP4:%.*]] = fpext <2 x float> [[TMP3]] to <2 x double>
 ; AARCH64-NEXT:    [[TMP5:%.*]] = fmul double 0.000000e+00, 0.000000e+00
-; AARCH64-NEXT:    [[TMP6:%.*]] = insertelement <8 x double> <double undef, double undef, double 0.000000e+00, double undef, double undef, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, double [[TMP1]], i32 4
-; AARCH64-NEXT:    [[TMP7:%.*]] = insertelement <8 x double> [[TMP6]], double 0.000000e+00, i32 0
+; AARCH64-NEXT:    [[TMP6:%.*]] = insertelement <8 x double> <double undef, double undef, double 0.000000e+00, double undef, double undef, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, double [[TMP1]], i64 4
+; AARCH64-NEXT:    [[TMP7:%.*]] = insertelement <8 x double> [[TMP6]], double 0.000000e+00, i64 0
 ; AARCH64-NEXT:    [[TMP8:%.*]] = shufflevector <2 x double> [[TMP4]], <2 x double> poison, <8 x i32> <i32 0, i32 poison, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; AARCH64-NEXT:    [[TMP9:%.*]] = shufflevector <8 x double> [[TMP7]], <8 x double> [[TMP8]], <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 5, i32 6, i32 7>
 ; AARCH64-NEXT:    [[TMP10:%.*]] = fmul <8 x double> zeroinitializer, [[TMP9]]
 ; AARCH64-NEXT:    [[TMP11:%.*]] = shufflevector <8 x double> [[TMP9]], <8 x double> <double 0.000000e+00, double poison, double poison, double poison, double 0.000000e+00, double 0.000000e+00, double 0.000000e+00, double 0.000000e+00>, <8 x i32> <i32 8, i32 4, i32 poison, i32 poison, i32 12, i32 13, i32 14, i32 15>
-; AARCH64-NEXT:    [[TMP12:%.*]] = insertelement <8 x double> poison, double [[TMP5]], i32 0
+; AARCH64-NEXT:    [[TMP12:%.*]] = insertelement <8 x double> poison, double [[TMP5]], i64 0
 ; AARCH64-NEXT:    [[TMP13:%.*]] = shufflevector <8 x double> [[TMP12]], <8 x double> poison, <8 x i32> <i32 poison, i32 poison, i32 0, i32 0, i32 poison, i32 poison, i32 poison, i32 poison>
 ; AARCH64-NEXT:    [[TMP14:%.*]] = shufflevector <8 x double> [[TMP11]], <8 x double> [[TMP13]], <8 x i32> <i32 0, i32 1, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7>
 ; AARCH64-NEXT:    [[TMP15:%.*]] = shufflevector <8 x double> [[TMP14]], <8 x double> <double poison, double poison, double poison, double 0.000000e+00, double 1.000000e+00, double poison, double 0.000000e+00, double 0.000000e+00>, <8 x i32> <i32 poison, i32 poison, i32 poison, i32 11, i32 12, i32 2, i32 14, i32 15>

@@ -34,7 +34,7 @@ llvm.func @_QPtest() {
       }
     }
     omp.terminator
-  }
+  } {omp.combined}
   llvm.return
 }
 

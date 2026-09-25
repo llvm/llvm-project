@@ -162,4 +162,411 @@ loop:                                             ; preds = %loop, %entry
   br label %loop
 }
 
+declare i32 @get_step()
+
+define i1 @test_loop_variant_step_with_condition() {
+; CHECK-LABEL: @test_loop_variant_step_with_condition(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ]
+; CHECK-NEXT:    [[STEP:%.*]] = call i32 @get_step()
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i32 [[STEP]], -1
+; CHECK-NEXT:    br i1 [[C]], label [[EXIT:%.*]], label [[LATCH]]
+; CHECK:       latch:
+; CHECK-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], [[STEP]]
+; CHECK-NEXT:    br label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[RESULT:%.*]] = icmp sgt i32 [[IV]], -1
+; CHECK-NEXT:    ret i1 [[RESULT]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %latch ]
+  %step = call i32 @get_step()
+  %iv.next = add nsw i32 %iv, %step
+  %c = icmp sge i32 %step, 0
+  br i1 %c, label %exit, label %latch
+
+latch:
+  br label %loop
+
+exit:
+  %result = icmp sge i32 %iv, 0
+  ret i1 %result
+}
+
+define i64 @test_umin_leading_zeros(ptr %src, ptr %dst, i32 %start) {
+; CHECK-LABEL: @test_umin_leading_zeros(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[S:%.*]] = zext i32 [[START:%.*]] to i64
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[S]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[IDX_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[V:%.*]] = load i64, ptr [[P:%.*]], align 8
+; CHECK-NEXT:    [[IV_NEXT]] = call i64 @llvm.umin.i64(i64 [[IV]], i64 [[V]])
+; CHECK-NEXT:    store i64 [[IV_NEXT]], ptr [[DST:%.*]], align 4
+; CHECK-NEXT:    [[IDX_NEXT]] = add nuw nsw i64 [[IDX]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i64 [[IDX]], 9
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i64 [[IV_NEXT]]
+;
+entry:
+  %s = zext i32 %start to i64
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %s, %entry ], [ %iv.next, %loop ]
+  %idx = phi i64 [ 0, %entry ], [ %idx.next, %loop ]
+  %v = load i64, ptr %src, align 8
+  %iv.next = call i64 @llvm.umin.i64(i64 %iv, i64 %v)
+  %masked = and i64 %iv.next, u0xFFFFFFFF
+  store i64 %masked, ptr %dst
+  %idx.next = add i64 %idx, 1
+  %cmp = icmp ult i64 %idx.next, 10
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret i64 %iv.next
+}
+
+; With Start unknown we can't eliminate the mask.
+define i64 @test_umin_leading_zeros_unknown_start(ptr %src, ptr %dst, i64 %start) {
+; CHECK-LABEL: @test_umin_leading_zeros_unknown_start(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[IDX_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[V:%.*]] = load i64, ptr [[SRC:%.*]], align 8
+; CHECK-NEXT:    [[IV_NEXT]] = call i64 @llvm.umin.i64(i64 [[IV]], i64 [[V]])
+; CHECK-NEXT:    [[MASKED:%.*]] = and i64 [[IV_NEXT]], 4294967295
+; CHECK-NEXT:    store i64 [[MASKED]], ptr [[DST:%.*]], align 4
+; CHECK-NEXT:    [[IDX_NEXT]] = add nuw nsw i64 [[IDX]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i64 [[IDX]], 9
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i64 [[IV_NEXT]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %start, %entry ], [ %iv.next, %loop ]
+  %idx = phi i64 [ 0, %entry ], [ %idx.next, %loop ]
+  %v = load i64, ptr %src, align 8
+  %iv.next = call i64 @llvm.umin.i64(i64 %iv, i64 %v)
+  %masked = and i64 %iv.next, u0xFFFFFFFF
+  store i64 %masked, ptr %dst
+  %idx.next = add i64 %idx, 1
+  %cmp = icmp ult i64 %idx.next, 10
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret i64 %iv.next
+}
+
+define i64 @test_umin_leading_ones(ptr %src, ptr %dst, i64 %start) {
+; CHECK-LABEL: @test_umin_leading_ones(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[S1:%.*]] = or i64 [[START:%.*]], -4294967296
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[S1]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[IDX_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[VLOAD:%.*]] = load i64, ptr [[SRC:%.*]], align 8
+; CHECK-NEXT:    [[V:%.*]] = or i64 [[VLOAD]], -4294967296
+; CHECK-NEXT:    [[IV_NEXT]] = call i64 @llvm.umin.i64(i64 [[IV]], i64 [[V]])
+; CHECK-NEXT:    store i64 -4294967296, ptr [[DST:%.*]], align 4
+; CHECK-NEXT:    [[IDX_NEXT]] = add nuw nsw i64 [[IDX]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i64 [[IDX]], 9
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i64 [[IV_NEXT]]
+;
+entry:
+  %s = or i64 %start, u0xFFFFFFFF00000000
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %s, %entry ], [ %iv.next, %loop ]
+  %idx = phi i64 [ 0, %entry ], [ %idx.next, %loop ]
+  %vload = load i64, ptr %src, align 8
+  %v = or i64 %vload, u0xFFFFFFFF00000000
+  %iv.next = call i64 @llvm.umin.i64(i64 %iv, i64 %v)
+  %masked = and i64 %iv.next, u0xFFFFFFFF00000000
+  store i64 %masked, ptr %dst
+  %idx.next = add i64 %idx, 1
+  %cmp = icmp ult i64 %idx.next, 10
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret i64 %iv.next
+}
+
+define i64 @test_umin_leading_ones_unknown_start(ptr %src, ptr %dst, i64 %start) {
+; CHECK-LABEL: @test_umin_leading_ones_unknown_start(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[IDX_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[V:%.*]] = load i64, ptr [[SRC:%.*]], align 8
+; CHECK-NEXT:    [[IV_NEXT]] = call i64 @llvm.umin.i64(i64 [[IV]], i64 [[V]])
+; CHECK-NEXT:    [[MASKED:%.*]] = and i64 [[IV_NEXT]], -4294967296
+; CHECK-NEXT:    store i64 [[MASKED]], ptr [[DST:%.*]], align 4
+; CHECK-NEXT:    [[IDX_NEXT]] = add nuw nsw i64 [[IDX]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i64 [[IDX]], 9
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i64 [[IV_NEXT]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %start, %entry ], [ %iv.next, %loop ]
+  %idx = phi i64 [ 0, %entry ], [ %idx.next, %loop ]
+  %v = load i64, ptr %src, align 8
+  %iv.next = call i64 @llvm.umin.i64(i64 %iv, i64 %v)
+  %masked = and i64 %iv.next, u0xFFFFFFFF00000000
+  store i64 %masked, ptr %dst
+  %idx.next = add i64 %idx, 1
+  %cmp = icmp ult i64 %idx.next, 10
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret i64 %iv.next
+}
+
+define i64 @test_umin_leading_ones_unknown_step(ptr %src, ptr %dst, i64 %start) {
+; CHECK-LABEL: @test_umin_leading_ones_unknown_step(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[S1:%.*]] = or i64 [[START:%.*]], -4294967296
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[S1]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[IDX_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[V:%.*]] = load i64, ptr [[SRC:%.*]], align 8
+; CHECK-NEXT:    [[IV_NEXT]] = call i64 @llvm.umin.i64(i64 [[IV]], i64 [[V]])
+; CHECK-NEXT:    [[MASKED:%.*]] = and i64 [[IV_NEXT]], -4294967296
+; CHECK-NEXT:    store i64 [[MASKED]], ptr [[DST:%.*]], align 4
+; CHECK-NEXT:    [[IDX_NEXT]] = add nuw nsw i64 [[IDX]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i64 [[IDX]], 9
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i64 [[IV_NEXT]]
+;
+entry:
+  %s = or i64 %start, u0xFFFFFFFF00000000
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %s, %entry ], [ %iv.next, %loop ]
+  %idx = phi i64 [ 0, %entry ], [ %idx.next, %loop ]
+  %v = load i64, ptr %src, align 8
+  %iv.next = call i64 @llvm.umin.i64(i64 %iv, i64 %v)
+  %masked = and i64 %iv.next, u0xFFFFFFFF00000000
+  store i64 %masked, ptr %dst
+  %idx.next = add i64 %idx, 1
+  %cmp = icmp ult i64 %idx.next, 10
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret i64 %iv.next
+}
+
+define i64 @test_umax_leading_zeros(ptr %src, ptr %dst, i32 %start) {
+; CHECK-LABEL: @test_umax_leading_zeros(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[S:%.*]] = zext i32 [[START:%.*]] to i64
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[S]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[IDX_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[SRC:%.*]], align 4
+; CHECK-NEXT:    [[Z:%.*]] = zext i32 [[V]] to i64
+; CHECK-NEXT:    [[IV_NEXT]] = call i64 @llvm.umax.i64(i64 [[IV]], i64 [[Z]])
+; CHECK-NEXT:    store i64 0, ptr [[DST:%.*]], align 4
+; CHECK-NEXT:    [[IDX_NEXT]] = add nuw nsw i64 [[IDX]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i64 [[IDX]], 9
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i64 [[IV_NEXT]]
+;
+entry:
+  %s = zext i32 %start to i64
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %s, %entry ], [ %iv.next, %loop ]
+  %idx = phi i64 [ 0, %entry ], [ %idx.next, %loop ]
+  %v = load i32, ptr %src, align 4
+  %z = zext i32 %v to i64 ; 32-bit load to 64-bit, generates known high bits
+  %iv.next = call i64 @llvm.umax.i64(i64 %iv, i64 %z)
+  %masked = and i64 %iv.next, u0xFFFFFFFF00000000
+  store i64 %masked, ptr %dst
+  %idx.next = add i64 %idx, 1
+  %cmp = icmp ult i64 %idx.next, 10
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret i64 %iv.next
+}
+
+; With Start unknown we can't eliminate the mask.
+define i64 @test_umax_leading_zeros_unknown_start(ptr %src, ptr %dst, i64 %start) {
+; CHECK-LABEL: @test_umax_leading_zeros_unknown_start(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[IDX_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[SRC:%.*]], align 4
+; CHECK-NEXT:    [[Z:%.*]] = zext i32 [[V]] to i64
+; CHECK-NEXT:    [[IV_NEXT]] = call i64 @llvm.umax.i64(i64 [[IV]], i64 [[Z]])
+; CHECK-NEXT:    [[MASKED:%.*]] = and i64 [[IV_NEXT]], -4294967296
+; CHECK-NEXT:    store i64 [[MASKED]], ptr [[DST:%.*]], align 4
+; CHECK-NEXT:    [[IDX_NEXT]] = add nuw nsw i64 [[IDX]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i64 [[IDX]], 9
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i64 [[IV_NEXT]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %start, %entry ], [ %iv.next, %loop ]
+  %idx = phi i64 [ 0, %entry ], [ %idx.next, %loop ]
+  %v = load i32, ptr %src, align 4
+  %z = zext i32 %v to i64 ; 32-bit load to 64-bit, generates known high bits
+  %iv.next = call i64 @llvm.umax.i64(i64 %iv, i64 %z)
+  %masked = and i64 %iv.next, u0xFFFFFFFF00000000
+  store i64 %masked, ptr %dst
+  %idx.next = add i64 %idx, 1
+  %cmp = icmp ult i64 %idx.next, 10
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret i64 %iv.next
+}
+
+; With Step unknown we can't eliminate the mask.
+define i64 @test_umax_leading_zeros_unknown_step(ptr %src, ptr %dst, i32 %start) {
+; CHECK-LABEL: @test_umax_leading_zeros_unknown_step(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[S:%.*]] = zext i32 [[START:%.*]] to i64
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[S]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[IDX_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[V:%.*]] = load i64, ptr [[SRC:%.*]], align 8
+; CHECK-NEXT:    [[MASKED:%.*]] = and i64 [[IV]], -4294967296
+; CHECK-NEXT:    store i64 [[MASKED]], ptr [[DST:%.*]], align 4
+; CHECK-NEXT:    [[IDX_NEXT]] = add nuw nsw i64 [[IDX]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = call i64 @llvm.umax.i64(i64 [[IV]], i64 [[V]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i64 [[IDX]], 9
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i64 [[IV_NEXT]]
+;
+entry:
+  %s = zext i32 %start to i64
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %s, %entry ], [ %iv.next, %loop ]
+  %idx = phi i64 [ 0, %entry ], [ %idx.next, %loop ]
+  %v = load i64, ptr %src, align 8 ; 64-bit load instead of 32-bit, high bits unknown
+  %masked = and i64 %iv, u0xFFFFFFFF00000000
+  store i64 %masked, ptr %dst
+  %idx.next = add i64 %idx, 1
+  %iv.next = call i64 @llvm.umax.i64(i64 %iv, i64 %v)
+  %cmp = icmp ult i64 %idx.next, 10
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret i64 %iv.next
+}
+
+define i64 @test_umax_leading_ones(ptr %src, ptr %dst, i64 %start) {
+; CHECK-LABEL: @test_umax_leading_ones(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[S:%.*]] = or i64 [[START:%.*]], -4294967296
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[S]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[IDX_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[V:%.*]] = load i64, ptr [[SRC:%.*]], align 8
+; CHECK-NEXT:    store i64 [[IV]], ptr [[DST:%.*]], align 4
+; CHECK-NEXT:    [[IDX_NEXT]] = add nuw nsw i64 [[IDX]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = call i64 @llvm.umax.i64(i64 [[IV]], i64 [[V]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i64 [[IDX]], 9
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i64 [[IV_NEXT]]
+;
+entry:
+  %s = or i64 %start, u0xFFFFFFFF00000000
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %s, %entry ], [ %iv.next, %loop ]
+  %idx = phi i64 [ 0, %entry ], [ %idx.next, %loop ]
+  %v = load i64, ptr %src, align 8
+  %masked = or i64 %iv, u0xFFFFFFFF00000000
+  store i64 %masked, ptr %dst
+  %idx.next = add i64 %idx, 1
+  %iv.next = call i64 @llvm.umax.i64(i64 %iv, i64 %v)
+  %cmp = icmp ult i64 %idx.next, 10
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret i64 %iv.next
+}
+
+; Similar to `test_umax_leading_zeros_unknown_start` above, but for leading
+; ones.
+define i64 @test_umax_leading_ones_unknown_start(ptr %src, ptr %dst, i64 %start) {
+; CHECK-LABEL: @test_umax_leading_ones_unknown_start(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[IDX_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[V:%.*]] = load i64, ptr [[SRC:%.*]], align 8
+; CHECK-NEXT:    [[MASKED:%.*]] = or i64 [[IV]], -4294967296
+; CHECK-NEXT:    store i64 [[MASKED]], ptr [[DST:%.*]], align 4
+; CHECK-NEXT:    [[O:%.*]] = or i64 [[V]], -4294967296
+; CHECK-NEXT:    [[IDX_NEXT]] = add nuw nsw i64 [[IDX]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = call i64 @llvm.umax.i64(i64 [[IV]], i64 [[O]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i64 [[IDX]], 9
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i64 [[IV_NEXT]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %start, %entry ], [ %iv.next, %loop ]
+  %idx = phi i64 [ 0, %entry ], [ %idx.next, %loop ]
+  %v = load i64, ptr %src, align 8
+  %masked = or i64 %iv, u0xFFFFFFFF00000000
+  store i64 %masked, ptr %dst
+  %o = or i64 %v, u0xFFFFFFFF00000000
+  %idx.next = add i64 %idx, 1
+  %iv.next = call i64 @llvm.umax.i64(i64 %iv, i64 %o)
+  %cmp = icmp ult i64 %idx.next, 10
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret i64 %iv.next
+}
+
 declare void @use(i64)

@@ -171,17 +171,25 @@ public:
   }
 };
 
-#define LIST_ADD_TESTS(OutType, InType, func)                                  \
-  using LlvmLibcAddTest = AddTest<OutType, InType>;                            \
-  TEST_F(LlvmLibcAddTest, SpecialNumbers) { test_special_numbers(&func); }     \
-  TEST_F(LlvmLibcAddTest, InvalidOperations) {                                 \
+#define LIST_ADD_TESTS(Name, OutType, InType, func)                            \
+  using LlvmLibc##Name##Test = AddTest<OutType, InType>;                       \
+  TEST_F(LlvmLibc##Name##Test, SpecialNumbers) {                               \
+    test_special_numbers(&func);                                               \
+  }                                                                            \
+  TEST_F(LlvmLibc##Name##Test, InvalidOperations) {                            \
     test_invalid_operations(&func);                                            \
   }                                                                            \
-  TEST_F(LlvmLibcAddTest, RangeErrors) { test_range_errors(&func); }           \
-  TEST_F(LlvmLibcAddTest, InexactResults) { test_inexact_results(&func); }     \
-  TEST_F(LlvmLibcAddTest, MixedNormality) { test_mixed_normality(&func); }     \
-  TEST_F(LlvmLibcAddTest, MixedSigns) { test_mixed_signs(&func); }             \
-  TEST_F(LlvmLibcAddTest, SignedZeroResult) { test_signed_zero_result(&func); }
+  TEST_F(LlvmLibc##Name##Test, RangeErrors) { test_range_errors(&func); }      \
+  TEST_F(LlvmLibc##Name##Test, InexactResults) {                               \
+    test_inexact_results(&func);                                               \
+  }                                                                            \
+  TEST_F(LlvmLibc##Name##Test, MixedNormality) {                               \
+    test_mixed_normality(&func);                                               \
+  }                                                                            \
+  TEST_F(LlvmLibc##Name##Test, MixedSigns) { test_mixed_signs(&func); }        \
+  TEST_F(LlvmLibc##Name##Test, SignedZeroResult) {                             \
+    test_signed_zero_result(&func);                                            \
+  }
 
 #define LIST_ADD_SAME_TYPE_TESTS(suffix, OutType, InType, func)                \
   using LlvmLibcAddTest##suffix = AddTest<OutType, InType>;                    \

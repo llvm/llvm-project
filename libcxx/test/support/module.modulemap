@@ -7,5 +7,6 @@ module test {
   module double_move_tracker    { header "double_move_tracker.h" }
   module test_allocator         { header "test_allocator.h" }
   module test_iterators         { header "test_iterators.h" }
+  module test_text_encoding     { header "test_text_encoding.h" }
   module type_algorithms        { header "type_algorithms.h" }
 }

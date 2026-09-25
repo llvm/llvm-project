@@ -1,11 +1,11 @@
-; RUN: llc -mtriple=amdgcn -mcpu=verde < %s | FileCheck -check-prefixes=GCN,GFX6789 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,GFX6789 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx90a < %s | FileCheck -check-prefixes=GCN,GFX90A %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -early-live-intervals < %s | FileCheck -check-prefixes=GCN,GFX90A %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -show-mc-encoding < %s | FileCheck -check-prefixes=GCN,GFX10 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -show-mc-encoding < %s | FileCheck -check-prefixes=GCN,GFX10 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -show-mc-encoding < %s | FileCheck -check-prefixes=GCN,GFX12PLUS %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1310 -show-mc-encoding < %s | FileCheck -check-prefixes=GCN,GFX12PLUS %s
+; RUN: llc -mtriple=amdgpu6.01 < %s | FileCheck -check-prefixes=GCN,GFX6789 %s
+; RUN: llc -mtriple=amdgpu9.00 < %s | FileCheck -check-prefixes=GCN,GFX6789 %s
+; RUN: llc -mtriple=amdgpu9.0a < %s | FileCheck -check-prefixes=GCN,GFX90A %s
+; RUN: llc -mtriple=amdgpu9.0a -early-live-intervals < %s | FileCheck -check-prefixes=GCN,GFX90A %s
+; RUN: llc -mtriple=amdgpu10.10 -show-mc-encoding < %s | FileCheck -check-prefixes=GCN,GFX10 %s
+; RUN: llc -mtriple=amdgpu11.00 -show-mc-encoding < %s | FileCheck -check-prefixes=GCN,GFX10 %s
+; RUN: llc -mtriple=amdgpu12.00 -show-mc-encoding < %s | FileCheck -check-prefixes=GCN,GFX12PLUS %s
+; RUN: llc -mtriple=amdgpu13.10 -show-mc-encoding < %s | FileCheck -check-prefixes=GCN,GFX12PLUS %s
 
 ; GCN-LABEL: {{^}}atomic_swap_1d:
 ; GFX6789: image_atomic_swap v0, v1, s[0:7] dmask:0x1 unorm glc{{$}}

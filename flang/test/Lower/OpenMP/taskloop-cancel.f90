@@ -6,7 +6,7 @@
 
 ! CHECK-LABEL: func.func @_QPomp_taskloop() {
 ! CHECK:         %[[VAL_0:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:         %[[ALLOCA_I:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFomp_taskloopEi"}
+! CHECK:         %[[ALLOCA_I:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFomp_taskloopEi"}>
 ! CHECK:         %[[DECL_I:.*]]:2 = hlfir.declare %1 {uniq_name = "_QFomp_taskloopEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:         omp.parallel {
 ! CHECK:           %[[C1_I32:.*]] = arith.constant 1 : i32

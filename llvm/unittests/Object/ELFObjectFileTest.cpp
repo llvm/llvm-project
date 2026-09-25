@@ -287,7 +287,7 @@ TEST(ELFObjectFileTest, MachineTestForXtensa) {
 
 TEST(ELFObjectFileTest, CheckOSAndTriple) {
   std::tuple<uint16_t, uint8_t, StringRef> Formats[] = {
-      {ELF::EM_AMDGPU, ELF::ELFOSABI_AMDGPU_HSA, "amdgcn-amd-amdhsa"},
+      {ELF::EM_AMDGPU, ELF::ELFOSABI_AMDGPU_HSA, "amdgpu-amd-amdhsa"},
       {ELF::EM_X86_64, ELF::ELFOSABI_LINUX, "x86_64--linux"},
       {ELF::EM_X86_64, ELF::ELFOSABI_NETBSD, "x86_64--netbsd"},
       {ELF::EM_X86_64, ELF::ELFOSABI_HURD, "x86_64--hurd"},

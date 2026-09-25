@@ -7,7 +7,7 @@
 ! CHECK-SAME:        @[[I_PRIVATE:.*]] : i32
 ! CHECK-LABEL:    func.func @_QPtest_parallel_master_taskloop() {
 ! CHECK:          %[[VAL0:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:          %[[ALLOCA_I:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_parallel_master_taskloopEi"}
+! CHECK:          %[[ALLOCA_I:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFtest_parallel_master_taskloopEi"}>
 ! CHECK:          %[[DECL_I:.*]]:2 = hlfir.declare %[[ALLOCA_I]] {uniq_name = "_QFtest_parallel_master_taskloopEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:          %[[ADDR_J:.*]] = fir.address_of(@_QFtest_parallel_master_taskloopEj) : !fir.ref<i32>
 ! CHECK:          %[[DECL_J:.*]]:2 = hlfir.declare %[[ADDR_J]] {uniq_name = "_QFtest_parallel_master_taskloopEj"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)

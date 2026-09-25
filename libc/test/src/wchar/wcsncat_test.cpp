@@ -80,3 +80,15 @@ TEST(LlvmLibcWCSNCatTest, NonEmptyDest) {
   ASSERT_TRUE(dest[3] == L'\0');
   ASSERT_TRUE(dest[4] == L'Z');
 }
+
+TEST(LlvmLibcWCSNCatTest, OOBAccess) {
+  wchar_t dest[4] = {L'\0'};
+  wchar_t src[3] = {L'a', L'b', L'c'};
+
+  // Checking the bound
+  LIBC_NAMESPACE::wcsncat(dest, src, 3);
+  ASSERT_TRUE(dest[0] == L'a');
+  ASSERT_TRUE(dest[1] == L'b');
+  ASSERT_TRUE(dest[2] == L'c');
+  ASSERT_TRUE(dest[3] == L'\0');
+}

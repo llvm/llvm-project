@@ -27,8 +27,6 @@ class R600TargetLowering final : public AMDGPUTargetLowering {
 public:
   R600TargetLowering(const TargetMachine &TM, const R600Subtarget &STI);
 
-  const R600Subtarget *getSubtarget() const;
-
   MachineBasicBlock *
   EmitInstrWithCustomInserter(MachineInstr &MI,
                               MachineBasicBlock *BB) const override;
@@ -73,8 +71,6 @@ private:
   SDValue LowerImplicitParameter(SelectionDAG &DAG, EVT VT, const SDLoc &DL,
                                  unsigned DwordOffset) const;
 
-  void lowerImplicitParameter(MachineInstr *MI, MachineBasicBlock &BB,
-      MachineRegisterInfo & MRI, unsigned dword_offset) const;
   SDValue OptimizeSwizzle(SDValue BuildVector, SDValue Swz[],
                           SelectionDAG &DAG, const SDLoc &DL) const;
   SDValue vectorToVerticalVector(SelectionDAG &DAG, SDValue Vector) const;

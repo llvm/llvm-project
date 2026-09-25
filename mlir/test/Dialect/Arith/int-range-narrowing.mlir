@@ -322,6 +322,33 @@ func.func @unsigned_ops_out_of_narrowed_signed_range() -> (i64, i64, i64, i64, i
 }
 
 //===----------------------------------------------------------------------===//
+// Shift ops must not be narrowed when the shift amount can reach the target
+// bitwidth, since a shift >= the bitwidth is poison. Here the value fits in
+// i32 but the amount [0, 63] does not, so narrowing must be skipped.
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: func.func @shrsi_amount_out_of_narrowed_range
+// CHECK: arith.shrsi {{.*}} : i64
+// CHECK-NOT: arith.shrsi {{.*}} : i32
+func.func @shrsi_amount_out_of_narrowed_range() -> i64 {
+  %0 = test.with_bounds { umin = 0 : i64, umax = 4 : i64, smin = 0 : i64, smax = 4 : i64 } : i64
+  %1 = test.with_bounds { umin = 0 : i64, umax = 63 : i64, smin = 0 : i64, smax = 63 : i64 } : i64
+  %2 = arith.shrsi %0, %1 : i64
+  return %2 : i64
+}
+
+// When the amount is provably below the target bitwidth, narrowing is safe.
+//
+// CHECK-LABEL: func.func @shrui_amount_in_narrowed_range
+// CHECK: arith.shrui {{.*}} : i32
+func.func @shrui_amount_in_narrowed_range() -> i64 {
+  %0 = test.with_bounds { umin = 0 : i64, umax = 4 : i64, smin = 0 : i64, smax = 4 : i64 } : i64
+  %1 = test.with_bounds { umin = 0 : i64, umax = 31 : i64, smin = 0 : i64, smax = 31 : i64 } : i64
+  %2 = arith.shrui %0, %1 : i64
+  return %2 : i64
+}
+
+//===----------------------------------------------------------------------===//
 // arith.muli
 //===----------------------------------------------------------------------===//
 
@@ -527,4 +554,12 @@ func.func @affine_for_dynamic_bound(%n: index) {
     func.call @use_index(%i) : (index) -> ()
   }
   return
+}
+
+// Ensure a zero-element constant tensor doesn't crash range inference.
+// CHECK-LABEL: func @zero_element_tensor_constant
+func.func @zero_element_tensor_constant() -> tensor<2x0xi32> {
+  // CHECK: arith.constant dense<> : tensor<2x0xi32>
+  %0 = arith.constant dense<> : tensor<2x0xi32>
+  return %0 : tensor<2x0xi32>
 }

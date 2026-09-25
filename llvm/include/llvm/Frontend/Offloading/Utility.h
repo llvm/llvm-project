@@ -91,10 +91,10 @@ LLVM_ABI StructType *getEntryTy(Module &M);
 LLVM_ABI StringRef getOffloadEntrySection(Module &M);
 
 /// \return The emitted global variable containing the offloading entry.
-LLVM_ABI GlobalVariable *emitOffloadingEntry(
-    Module &M, object::OffloadKind Kind, Constant *Addr, StringRef Name,
-    uint64_t Size, uint32_t Flags, uint64_t Data, Constant *AuxAddr = nullptr,
-    GlobalValue::LinkageTypes Linkage = GlobalValue::WeakAnyLinkage);
+LLVM_ABI GlobalVariable *
+emitOffloadingEntry(Module &M, object::OffloadKind Kind, Constant *Addr,
+                    StringRef Name, uint64_t Size, uint32_t Flags,
+                    uint64_t Data, Constant *AuxAddr = nullptr);
 
 /// Create a constant struct initializer used to register this global at
 /// runtime.
@@ -104,10 +104,9 @@ getOffloadingEntryInitializer(Module &M, object::OffloadKind Kind,
                               Constant *Addr, StringRef Name, uint64_t Size,
                               uint32_t Flags, uint64_t Data, Constant *AuxAddr);
 
-/// Creates a pair of globals used to iterate the array of offloading entries by
-/// accessing the section variables provided by the linker.
-LLVM_ABI std::pair<GlobalVariable *, GlobalVariable *>
-getOffloadEntryArray(Module &M);
+/// Creates a pair of constants used to iterate the array of offloading entries
+/// by accessing the section variables provided by the linker.
+LLVM_ABI std::pair<Constant *, Constant *> getOffloadEntryArray(Module &M);
 
 namespace amdgpu {
 /// Check if an image is compatible with current system's environment. The

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++2c -verify %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++2c -verify %s
 
 struct NotAPack;
 template <typename T, auto V, template<typename> typename Tp>
@@ -46,12 +46,14 @@ void test() {
     params<1>(0);  // expected-note{{here}} \
                    // expected-error@#error-param-size {{invalid index 1 for pack 'p' of size 1}}
     params<-1>(0); // expected-note{{here}} \
-                   // expected-error@#error-param-size {{invalid index -1 for pack 'p' of size 1}}
+                   // expected-error@#error-param-size {{evaluates to -1, which cannot be narrowed to type '__size_t' (aka 'unsigned long')}}
 
     test_types<-1>(); //expected-note {{in instantiation}} \
-                      // expected-error@#error-type-size {{invalid index -1 for pack 'T' of size 0}}
-    test_types<-1, int>(); //expected-note {{in instantiation}} \
-                      // expected-error@#error-type-size {{invalid index -1 for pack 'T' of size 1}}
+                      // expected-error@#error-type-size {{evaluates to -1, which cannot be narrowed to type '__size_t' (aka 'unsigned long')}}
+
+    test_types<-1, int>(); // expected-note {{in instantiation}} \
+                           // expected-error@#error-type-size {{evaluates to -1, which cannot be narrowed to type '__size_t' (aka 'unsigned long')}}
+
     test_types<0>(); //expected-note {{in instantiation}} \
                     // expected-error@#error-type-size {{invalid index 0 for pack 'T' of size 0}}
     test_types<1, int>(); //expected-note {{in instantiation}}  \
@@ -59,7 +61,7 @@ void test() {
 }
 
 void invalid_indexes(auto... p) {
-    p...[non_constant_index()]; // expected-error {{array size is not a constant expression}}\
+    p...[non_constant_index()]; // expected-error {{pack index is not a constant expression}}\
                                 // expected-note {{cannot be used in a constant expression}}
 
     const char* no_index = "";
@@ -68,9 +70,10 @@ void invalid_indexes(auto... p) {
 
 void invalid_index_types() {
     []<typename... T> {
-        T...[non_constant_index()] a;  // expected-error {{array size is not a constant expression}}\
-                                       // expected-note {{cannot be used in a constant expression}}
-    }(); //expected-note {{in instantiation}}
+        T...[non_constant_index()] a;  // expected-error {{pack index is not a constant expression}}\
+                                       // expected-note {{cannot be used in a constant expression}} \
+                                       // expected-error {{use of undeclared identifier 'a'}}
+    }();
 }
 
 }
@@ -354,3 +357,24 @@ namespace PackIndexExprEquivalency1 {
     requires (Us...[0] != 0)
     void f() {}
 } // namespace PackIndexExprEquivalency1
+
+
+namespace GH205650 {
+template <typename...T>
+void foo(auto...x){
+    (void)x...[(__int128)18446744073709551615U+1];
+    // expected-warning@-1 3{{implicit conversion from '__int128' to '__size_t'}}
+    // expected-error@-2 2{{evaluates to 18446744073709551616, which cannot be narrowed to type '__size_t' (aka 'unsigned long')}}
+
+    (void)x...[4294967296];
+    //expected-error@-1 {{invalid index 4294967296 for pack 'x' of size 1}}
+
+    using T1 = T...[(__int128)18446744073709551615U+1];
+    // expected-warning@-1 3{{implicit conversion from '__int128' to '__size_t'}}
+    // expected-error@-2   2{{evaluates to 18446744073709551616, which cannot be narrowed to type '__size_t' (aka 'unsigned long')}}
+}
+int test(){
+    (void)foo<int>(0); // expected-note {{in instantiation of function template specialization 'GH205650::foo<int, int>' requested here}}
+
+}
+}

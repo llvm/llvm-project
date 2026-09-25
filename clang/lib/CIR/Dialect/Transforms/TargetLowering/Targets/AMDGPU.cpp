@@ -25,6 +25,8 @@ constexpr unsigned AMDGPUAddrSpaceMap[] = {
     llvm::AMDGPUAS::GLOBAL_ADDRESS,   // OffloadGlobal
     llvm::AMDGPUAS::CONSTANT_ADDRESS, // OffloadConstant
     llvm::AMDGPUAS::FLAT_ADDRESS,     // OffloadGeneric
+    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // OffloadGlobalDevice
+    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // OffloadGlobalHost
 };
 
 class AMDGPUTargetLoweringInfo : public TargetLoweringInfo {

@@ -171,15 +171,15 @@ define <2 x bfloat> @test_vcvt_bf16_f64(<2 x double> %v) nounwind readnone ssp {
 ; CHECK-GI-NEXT:    fcvtxn v0.2s, v0.2d
 ; CHECK-GI-NEXT:    movi.4s v1, #1
 ; CHECK-GI-NEXT:    movi.4s v2, #127, msl #8
-; CHECK-GI-NEXT:    movi.4s v5, #64, lsl #16
+; CHECK-GI-NEXT:    movi.4s v4, #64, lsl #16
 ; CHECK-GI-NEXT:    ushr.4s v3, v0, #16
-; CHECK-GI-NEXT:    fcmeq.4s v4, v0, v0
+; CHECK-GI-NEXT:    fcmeq.4s v5, v0, v0
 ; CHECK-GI-NEXT:    add.4s v2, v0, v2
-; CHECK-GI-NEXT:    orr.16b v0, v0, v5
+; CHECK-GI-NEXT:    orr.16b v0, v0, v4
 ; CHECK-GI-NEXT:    and.16b v1, v3, v1
-; CHECK-GI-NEXT:    mvn.16b v3, v4
 ; CHECK-GI-NEXT:    add.4s v1, v2, v1
-; CHECK-GI-NEXT:    bif.16b v0, v1, v3
+; CHECK-GI-NEXT:    mvn.16b v2, v5
+; CHECK-GI-NEXT:    bif.16b v0, v1, v2
 ; CHECK-GI-NEXT:    shrn.4h v0, v0, #16
 ; CHECK-GI-NEXT:    ret
   %vcvt1.i = fptrunc <2 x double> %v to <2 x bfloat>

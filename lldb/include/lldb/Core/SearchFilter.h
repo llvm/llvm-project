@@ -197,10 +197,10 @@ public:
   /// Standard "Dump" method.  At present it does nothing.
   virtual void Dump(Stream *s) const;
 
-  lldb::SearchFilterSP CreateCopy(lldb::TargetSP& target_sp);
+  std::unique_ptr<SearchFilter> CreateCopy(lldb::TargetSP &target_sp);
 
-  static lldb::SearchFilterSP
-  CreateFromStructuredData(const lldb::TargetSP& target_sp,
+  static std::unique_ptr<SearchFilter>
+  CreateFromStructuredData(const lldb::TargetSP &target_sp,
                            const StructuredData::Dictionary &data_dict,
                            Status &error);
 
@@ -271,7 +271,7 @@ protected:
                                                const SymbolContext &context,
                                                Searcher &searcher);
 
-  virtual lldb::SearchFilterSP DoCreateCopy() = 0;
+  virtual std::unique_ptr<SearchFilter> DoCreateCopy() = 0;
 
   void SetTarget(lldb::TargetSP &target_sp) { m_target_sp = target_sp; }
 
@@ -297,15 +297,15 @@ public:
 
   bool ModulePasses(const lldb::ModuleSP &module_sp) override;
 
-  static lldb::SearchFilterSP
-  CreateFromStructuredData(const lldb::TargetSP& target_sp,
+  static std::unique_ptr<SearchFilter>
+  CreateFromStructuredData(const lldb::TargetSP &target_sp,
                            const StructuredData::Dictionary &data_dict,
                            Status &error);
 
   StructuredData::ObjectSP SerializeToStructuredData() override;
 
 protected:
-  lldb::SearchFilterSP DoCreateCopy() override;
+  std::unique_ptr<SearchFilter> DoCreateCopy() override;
 };
 
 /// \class SearchFilterByModule SearchFilter.h "lldb/Core/SearchFilter.h" This
@@ -339,15 +339,15 @@ public:
 
   void Search(Searcher &searcher) override;
 
-  static lldb::SearchFilterSP
-  CreateFromStructuredData(const lldb::TargetSP& target_sp,
+  static std::unique_ptr<SearchFilter>
+  CreateFromStructuredData(const lldb::TargetSP &target_sp,
                            const StructuredData::Dictionary &data_dict,
                            Status &error);
 
   StructuredData::ObjectSP SerializeToStructuredData() override;
 
 protected:
-  lldb::SearchFilterSP DoCreateCopy() override;
+  std::unique_ptr<SearchFilter> DoCreateCopy() override;
 
 private:
   FileSpec m_module_spec;
@@ -386,8 +386,8 @@ public:
 
   void Search(Searcher &searcher) override;
 
-  static lldb::SearchFilterSP
-  CreateFromStructuredData(const lldb::TargetSP& target_sp,
+  static std::unique_ptr<SearchFilter>
+  CreateFromStructuredData(const lldb::TargetSP &target_sp,
                            const StructuredData::Dictionary &data_dict,
                            Status &error);
 
@@ -396,7 +396,7 @@ public:
   void SerializeUnwrapped(StructuredData::DictionarySP &options_dict_sp);
 
 protected:
-  lldb::SearchFilterSP DoCreateCopy() override;
+  std::unique_ptr<SearchFilter> DoCreateCopy() override;
 
   FileSpecList m_module_spec_list;
 };
@@ -425,15 +425,15 @@ public:
 
   void Search(Searcher &searcher) override;
 
-  static lldb::SearchFilterSP
-  CreateFromStructuredData(const lldb::TargetSP& target_sp,
+  static std::unique_ptr<SearchFilter>
+  CreateFromStructuredData(const lldb::TargetSP &target_sp,
                            const StructuredData::Dictionary &data_dict,
                            Status &error);
 
   StructuredData::ObjectSP SerializeToStructuredData() override;
 
 protected:
-  lldb::SearchFilterSP DoCreateCopy() override;
+  std::unique_ptr<SearchFilter> DoCreateCopy() override;
 
 private:
   FileSpecList m_cu_spec_list;

@@ -209,11 +209,10 @@ class StringMapPrinter:
         end = it + self.val["NumBuckets"]
         value_ty = self.val.type.template_argument(0)
         entry_base_ty = gdb.lookup_type("llvm::StringMapEntryBase")
-        tombstone = gdb.parse_and_eval("llvm::StringMapImpl::TombstoneIntVal")
 
         while it != end:
             it_deref = it.dereference()
-            if it_deref == 0 or it_deref == tombstone:
+            if it_deref == 0:
                 it = it + 1
                 continue
 

@@ -29,7 +29,7 @@ define { ptr, i32 } @bar() personality ptr @__gxx_personality_v0 {
   ; CHECK-NEXT:   liveins: $x0, $x1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   EH_LABEL <mcsymbol >
-  ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:_(s128) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:_(i128) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x0
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(p0) = COPY $x1
   ; CHECK-NEXT:   [[PTRTOINT:%[0-9]+]]:_(i32) = G_PTRTOINT [[COPY2]](p0)
@@ -74,7 +74,7 @@ define void @test_invoke_indirect(ptr %callee) personality ptr @__gxx_personalit
   ; CHECK-NEXT:   liveins: $x0, $x1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   EH_LABEL <mcsymbol >
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s128) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(i128) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x0
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(p0) = COPY $x1
   ; CHECK-NEXT:   [[PTRTOINT:%[0-9]+]]:_(i32) = G_PTRTOINT [[COPY2]](p0)
@@ -122,7 +122,7 @@ define void @test_invoke_varargs() personality ptr @__gxx_personality_v0 {
   ; CHECK-NEXT:   liveins: $x0, $x1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   EH_LABEL <mcsymbol >
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s128) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(i128) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x0
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(p0) = COPY $x1
   ; CHECK-NEXT:   [[PTRTOINT:%[0-9]+]]:_(i32) = G_PTRTOINT [[COPY2]](p0)
@@ -168,7 +168,7 @@ define i32 @test_lpad_phi() personality ptr @__gxx_personality_v0 {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(i32) = G_PHI [[C1]](i32), %bb.1
   ; CHECK-NEXT:   EH_LABEL <mcsymbol >
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s128) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(i128) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
   ; CHECK-NEXT:   [[PTRTOINT:%[0-9]+]]:_(i32) = G_PTRTOINT [[COPY1]](p0)

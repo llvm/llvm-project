@@ -13,9 +13,9 @@ define i32 @test() {
 ; CHECK-NEXT:    [[TMP5:%.*]] = lshr <2 x i1> [[TMP4]], zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = and <2 x i1> [[TMP4]], zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i1> [[TMP5]], <2 x i1> [[TMP6]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i1> [[TMP7]], i32 0
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i1> [[TMP7]], i64 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = zext i1 [[TMP8]] to i32
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i1> [[TMP7]], i32 1
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i1> [[TMP7]], i64 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = zext i1 [[TMP10]] to i32
 ; CHECK-NEXT:    [[TMP12:%.*]] = or i32 [[TMP9]], [[TMP11]]
 ; CHECK-NEXT:    ret i32 [[TMP12]]

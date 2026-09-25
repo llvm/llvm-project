@@ -1414,7 +1414,7 @@ SelectOptimizeImpl::computeInstCost(const Instruction *I) {
 ScaledNumber<uint64_t>
 SelectOptimizeImpl::getMispredictionCost(const SelectLike SI,
                                          const Scaled64 CondCost) {
-  uint64_t MispredictPenalty = TSchedModel.getMCSchedModel()->MispredictPenalty;
+  uint64_t MispredictPenalty = TSI->getMispredictionPenalty();
 
   // Account for the default misprediction rate when using a branch
   // (conservatively set to 25% by default).

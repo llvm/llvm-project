@@ -83,7 +83,7 @@ def R15B : X86Reg<"r15b", 15>;
 // To achieve this, we do the following things:
 //   1. Set CostPerUse=1 for registers that need prefix
 //   2. Consider callee-save register is never cheaper than a register w/ cost 1
-//   3. List caller-save register before callee-save regsiter in RegisterClass
+//   3. List caller-save register before callee-save register in RegisterClass
 //      or AllocationOrder
 //
 // NOTE:

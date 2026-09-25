@@ -24,7 +24,7 @@ func.func @blocks_3d(%x: !type, %y: !type, %t: !type1d, %alpha : f32, %stream : 
         %5 = memref.load %y[%i, %j] : !type
         %6 = math.fma %alpha, %4, %5 : f32
         memref.store %6, %y[%i, %j] : !type
-     }  { mapping = [#gpu.block<x>, #gpu.block<y>]}
+     }  {mapping = [#gpu.block<x>, #gpu.block<y>]}
     gpu.terminator
   }
   return %y : !type
@@ -76,7 +76,7 @@ func.func @warpgroup_3d(%x: !type, %y: !type, %t: !type1d, %alpha : f32, %stream
         %5 = memref.load %y[%i, %j] : !type
         %6 = math.fma %alpha, %4, %5 : f32
         memref.store %6, %y[%i, %j] : !type
-     }  { mapping = [#gpu.warpgroup<x>, #gpu.warpgroup<y>]}
+     }  {mapping = [#gpu.warpgroup<x>, #gpu.warpgroup<y>]}
     gpu.terminator
   }
   return %y : !type
@@ -129,7 +129,7 @@ func.func @warp_3d(%x: !type, %y: !type, %t: !type1d, %alpha : f32, %stream : !g
         %5 = memref.load %y[%i, %j] : !type
         %6 = math.fma %alpha, %4, %5 : f32
         memref.store %6, %y[%i, %j] : !type
-     }  { mapping = [#gpu.warp<x>, #gpu.warp<y>, #gpu.warp<z>]}
+     }  {mapping = [#gpu.warp<x>, #gpu.warp<y>, #gpu.warp<z>]}
     gpu.terminator
   }
   return %y : !type
@@ -180,12 +180,12 @@ func.func @threads_3d(%x: !type, %y: !type, %t: !type1d, %alpha : f32, %stream :
         %5 = memref.load %y[%i, %j] : !type
         %6 = math.fma %alpha, %4, %5 : f32
         memref.store %6, %y[%i, %j] : !type
-     }  { mapping = [#gpu.thread<y>, #gpu.thread<x>]}
+     }  {mapping = [#gpu.thread<y>, #gpu.thread<x>]}
      scf.forall (%i) in (%c12) {
         %7 = memref.load %t[%i] : !type1d
         %8 = arith.addf %alpha, %7 : f32
         memref.store %8, %t[%i] : !type1d
-     }  {mapping = [#gpu.thread<x>] }
+     }  {mapping = [#gpu.thread<x>]}
     gpu.terminator
   }
   return %y : !type
@@ -227,15 +227,15 @@ func.func @saxpy4d(%x: !type4d, %y: !type4d, %alpha : f32) -> !type4d {
       %5 = memref.load %y[%i, %j, %k, %l] : !type4d
       %6 = math.fma %alpha, %4, %5 : f32
       memref.store %6, %y[%i, %j, %k, %l] : !type4d
-    }  { mapping = [#gpu.thread<y>, #gpu.thread<x>] }
-  }  { mapping = [#gpu.block<x>, #gpu.block<y>] }
+    }  {mapping = [#gpu.thread<y>, #gpu.thread<x>]}
+  }  {mapping = [#gpu.block<x>, #gpu.block<y>]}
   return %y : !type4d
 }
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
     %funcop = transform.structured.match ops{["func.func"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-    %gpuLaunch = transform.gpu.map_forall_to_blocks %funcop { generate_gpu_launch } : (!transform.any_op) -> !transform.any_op
+    %gpuLaunch = transform.gpu.map_forall_to_blocks %funcop generate_gpu_launch : (!transform.any_op) -> !transform.any_op
     transform.gpu.map_nested_forall_to_threads %gpuLaunch block_dims = [32, 4, 1] : (!transform.any_op) -> !transform.any_op
     transform.yield
   }
@@ -262,7 +262,7 @@ func.func @saxpy2d_no_barrier(%x: !type, %y: !type, %t: !type1d, %alpha : f32, %
         %5 = memref.load %y[%i, %j] : !type
         %6 = math.fma %alpha, %4, %5 : f32
         memref.store %6, %y[%i, %j] : !type
-     }  { mapping = [#gpu.thread<y>, #gpu.thread<x>] }
+     }  {mapping = [#gpu.thread<y>, #gpu.thread<x>]}
     gpu.terminator
   }
   return %y : !type
@@ -296,7 +296,7 @@ func.func @saxpy2d_singleloop(%x: !type, %y: !type, %stream : !gpu.async.token) 
         %5 = memref.load %y[%i, %i] : !type
         %6 = arith.mulf %4, %5 : f32
         memref.store %6, %y[%i, %i] : !type
-     }  { mapping = [#gpu.thread<x>] }
+     }  {mapping = [#gpu.thread<x>]}
     gpu.terminator
   }
   return %y : !type
@@ -334,7 +334,7 @@ func.func @saxpy3d_fold_id_z(%x: !type, %y: !type, %t: !type1d, %alpha : f32, %s
         %6 = math.fma %alpha, %4, %5 : f32
 //      CHECK:   memref.store %{{.*}}, %{{.*}}[%[[C0]]
         memref.store %6, %y[%i, %j, %k] : !type
-     }  { mapping = [#gpu.thread<z>, #gpu.thread<y>, #gpu.thread<x>] }
+     }  {mapping = [#gpu.thread<z>, #gpu.thread<y>, #gpu.thread<x>]}
     gpu.terminator
   }
   return %y : !type
@@ -391,7 +391,7 @@ func.func @warpgroup_linear(%x: !type, %y: !type, %t: !type1d, %alpha : f32, %st
         %5 = memref.load %y[%i, %j] : !type
         %6 = math.fma %alpha, %4, %5 : f32
         memref.store %6, %y[%i, %j] : !type
-     }  { mapping = [#gpu.warpgroup<linear_dim_0>, #gpu.warpgroup<linear_dim_1>]}
+     }  {mapping = [#gpu.warpgroup<linear_dim_0>, #gpu.warpgroup<linear_dim_1>]}
     gpu.terminator
   }
   return %y : !type
@@ -447,7 +447,7 @@ func.func @warp_linear(%x: !type, %y: !type, %t: !type1d, %alpha : f32, %stream 
         %5 = memref.load %y[%i, %j] : !type
         %6 = math.fma %alpha, %4, %5 : f32
         memref.store %6, %y[%i, %j] : !type
-     }  { mapping = [#gpu.warp<linear_dim_0>, #gpu.warp<linear_dim_1>]}
+     }  {mapping = [#gpu.warp<linear_dim_0>, #gpu.warp<linear_dim_1>]}
     gpu.terminator
   }
   return %y : !type
@@ -502,7 +502,7 @@ func.func @map_multi_level_linear(%x: !type, %y: !type, %t: !type1d, %alpha : f3
       %5 = memref.load %y[%i, %j] : !type
       %6 = math.fma %alpha, %4, %5 : f32
       memref.store %6, %y[%i, %j] : !type
-    }  { mapping = [#gpu.thread<y>, #gpu.thread<x>]}
+    }  {mapping = [#gpu.thread<y>, #gpu.thread<x>]}
 
     // CHECK-DAG: %[[LIN:.*]] = affine.apply #[[$MAPLIN]]()[%[[TIDX]], %[[TIDY]]]
     // CHECK-DAG: %[[WIDX:.*]] = affine.apply #[[$MAPWX]]()[%[[TIDX]], %[[TIDY]]]
@@ -513,7 +513,7 @@ func.func @map_multi_level_linear(%x: !type, %y: !type, %t: !type1d, %alpha : f3
         %7 = memref.load %x[%i, %j] : !type
         %8 = arith.addf %alpha, %7 : f32
         memref.store %8, %y[%i, %j] : !type
-     }  {mapping = [#gpu.warp<linear_dim_0>, #gpu.warp<linear_dim_1>, #gpu.warp<linear_dim_2>] }
+     }  {mapping = [#gpu.warp<linear_dim_0>, #gpu.warp<linear_dim_1>, #gpu.warp<linear_dim_2>]}
 
     // CHECK-DAG: %[[LIDX:.*]] = affine.apply #[[$MAPLX]]()[%[[TIDX]], %[[TIDY]]]
     // CHECK-DAG: %[[LIDY:.*]] = affine.apply #[[$MAPLY]]()[%[[TIDX]], %[[TIDY]]]
@@ -525,7 +525,7 @@ func.func @map_multi_level_linear(%x: !type, %y: !type, %t: !type1d, %alpha : f3
         %7 = memref.load %t[%i] : !type1d
         %8 = arith.addf %alpha, %7 : f32
         memref.store %8, %t[%j] : !type1d
-     }  {mapping = [#gpu.thread<linear_dim_0>, #gpu.thread<linear_dim_1>] }
+     }  {mapping = [#gpu.thread<linear_dim_0>, #gpu.thread<linear_dim_1>]}
     gpu.terminator
   }
   return %y : !type
@@ -581,7 +581,7 @@ func.func @block_linear_existing_launch(
         %5 = memref.load %y[%i, %j] : !type
         %6 = math.fma %alpha, %4, %5 : f32
         memref.store %6, %y[%i, %j] : !type
-     }  { mapping = [#gpu.block<linear_dim_0>, #gpu.block<linear_dim_1>]}
+     }  {mapping = [#gpu.block<linear_dim_0>, #gpu.block<linear_dim_1>]}
     gpu.terminator
   }
   return %y : !type
@@ -629,7 +629,7 @@ func.func @block_linear_generate_launch(
     %5 = memref.load %y[%i, %j] : !type
     %6 = math.fma %alpha, %4, %5 : f32
     memref.store %6, %y[%i, %j] : !type
-  }  { mapping = [#gpu.block<linear_dim_0>, #gpu.block<linear_dim_1>]}
+  }  {mapping = [#gpu.block<linear_dim_0>, #gpu.block<linear_dim_1>]}
 
   return %y : !type
 }

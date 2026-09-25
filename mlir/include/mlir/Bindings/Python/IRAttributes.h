@@ -100,14 +100,15 @@ template <typename T>
 static T pyTryCast(nanobind::handle object) {
   try {
     return nanobind::cast<T>(object);
-  } catch (nanobind::cast_error &err) {
+  } catch (std::exception &err) {
+    if (object.is_none()) {
+      std::string msg = std::string("Invalid attribute (None?) when attempting "
+                                    "to create an ArrayAttribute (") +
+                        err.what() + ")";
+      throw std::runtime_error(msg.c_str());
+    }
     std::string msg = std::string("Invalid attribute when attempting to "
                                   "create an ArrayAttribute (") +
-                      err.what() + ")";
-    throw std::runtime_error(msg.c_str());
-  } catch (std::runtime_error &err) {
-    std::string msg = std::string("Invalid attribute (None?) when attempting "
-                                  "to create an ArrayAttribute (") +
                       err.what() + ")";
     throw std::runtime_error(msg.c_str());
   }
@@ -130,11 +131,16 @@ public:
     PyDenseArrayIterator dunderIter() { return *this; }
 
     /// Return the next element.
-    EltTy dunderNext() {
-      // Throw if the index has reached the end.
-      if (nextIndex >= mlirDenseArrayGetNumElements(attr.get()))
-        throw nanobind::stop_iteration();
-      return DerivedT::getElement(attr.get(), nextIndex++);
+    nanobind::typed<nanobind::object, EltTy> dunderNext() {
+      // Set StopIteration if the index has reached the end. Signaling
+      // exhaustion via the Python error indicator rather than a C++ exception
+      // avoids the cost of stack unwinding on every iteration.
+      if (nextIndex >= mlirDenseArrayGetNumElements(attr.get())) {
+        PyErr_SetNone(PyExc_StopIteration);
+        // python functions should return NULL after setting any exception
+        return nanobind::object();
+      }
+      return nanobind::cast(DerivedT::getElement(attr.get(), nextIndex++));
     }
 
     /// Bind the iterator class.

@@ -1,4 +1,4 @@
-; RUN: opt -mtriple amdgcn-- -passes='print<uniformity>' -disable-output %s 2>&1 | FileCheck %s
+; RUN: opt -mtriple amdgpu7.00-- -passes='print<uniformity>' -disable-output %s 2>&1 | FileCheck %s
 
 ; CHECK: DIVERGENT: %swizzle = call i32 @llvm.amdgcn.ds.swizzle(i32 %src, i32 100) #0
 define amdgpu_kernel void @ds_swizzle(ptr addrspace(1) %out, i32 %src) #0 {
@@ -201,6 +201,13 @@ define amdgpu_kernel void @swmmac_f32_16x16x32_bf8.bf8.v8f32.v2i32.v4i32.i16(<2 
 bb:
   %tmp0 = call <8 x float> @llvm.amdgcn.swmmac.f32.16x16x32.bf8.bf8(<2 x i32> %A, <4 x i32> %B, <8 x float> %C, i16 %Index)
   store <8 x float> %tmp0, ptr addrspace(1) %out, align 32
+  ret void
+}
+
+; CHECK: DIVERGENT: %tmp0 = call <8 x double> @llvm.amdgcn.wmma.f64.16x16x4.f64.v8f64.v2f64(i1 false, <2 x double> %A, i1 false, <2 x double> %B, i16 0, <8 x double> %C, i1 false, i1 false)
+define amdgpu_kernel void @wmma_f64_16x16x4_f64(<2 x double> %A, <2 x double> %B, <8 x double> %C, ptr addrspace(1) %out) {
+  %tmp0 = call <8 x double> @llvm.amdgcn.wmma.f64.16x16x4.f64.v8f64.v2f64(i1 0, <2 x double> %A, i1 0, <2 x double> %B, i16 0, <8 x double> %C, i1 false, i1 false)
+  store <8 x double> %tmp0, ptr addrspace(1) %out
   ret void
 }
 

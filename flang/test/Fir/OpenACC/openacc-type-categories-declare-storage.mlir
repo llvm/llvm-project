@@ -11,12 +11,12 @@ module {
     %view = fir.declare %elem_f32 storage(%arr[0]) {uniq_name = "_QFpi"}
       : (!fir.ref<f32>, !fir.ref<!fir.array<4xi8>>) -> !fir.ref<f32>
     // Force interface query through an acc op that prints type category
-    %cp = acc.copyin varPtr(%view : !fir.ref<f32>) -> !fir.ref<f32> {name = "pi", structured = false}
+    %cp = acc.copyin varPtr(%view : !fir.ref<f32>) structured(false) name("pi") -> !fir.ref<f32>
     acc.enter_data dataOperands(%cp : !fir.ref<f32>)
     return
   }
 
-  // CHECK: Visiting: %{{.*}} = acc.copyin varPtr(%{{.*}} : !fir.ref<f32>) -> !fir.ref<f32> {name = "pi", structured = false}
+  // CHECK: Visiting: %{{.*}} = acc.copyin varPtr(%{{.*}} : !fir.ref<f32>) structured(false) name("pi") -> !fir.ref<f32>
   // CHECK: Pointer-like and Mappable: !fir.ref<f32>
   // CHECK: Type category: array
 }

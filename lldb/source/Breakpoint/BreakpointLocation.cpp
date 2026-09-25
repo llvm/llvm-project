@@ -608,7 +608,7 @@ void BreakpointLocation::GetDescription(Stream *s,
       if (sc.comp_unit != nullptr) {
         s->EOL();
         s->Indent("compile unit = ");
-        sc.comp_unit->GetPrimaryFile().GetFilename().Dump(s);
+        s->PutCString(sc.comp_unit->GetPrimaryFile().GetFilename());
 
         if (sc.function != nullptr) {
           s->EOL();
@@ -653,8 +653,8 @@ void BreakpointLocation::GetDescription(Stream *s,
   if (!is_scripted_desc) {
     if (m_address.IsSectionOffset() &&
         (level == eDescriptionLevelFull || level == eDescriptionLevelInitial))
-      s->Printf(", ");
-    s->Printf("address = ");
+      s->PutCString(", ");
+    s->PutCString("address = ");
 
     ExecutionContextScope *exe_scope = nullptr;
     Target *target = &m_owner.GetTarget();
@@ -677,7 +677,7 @@ void BreakpointLocation::GetDescription(Stream *s,
           resolved_address.CalculateSymbolContextSymbol();
       if (resolved_symbol) {
         if (level == eDescriptionLevelFull || level == eDescriptionLevelInitial)
-          s->Printf(", ");
+          s->PutCString(", ");
         else if (level == lldb::eDescriptionLevelVerbose) {
           s->EOL();
           s->Indent();

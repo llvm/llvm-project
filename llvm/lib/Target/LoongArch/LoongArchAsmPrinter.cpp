@@ -250,7 +250,7 @@ void LoongArchAsmPrinter::emitSled(const MachineInstr &MI, SledKind Kind) {
   // The count here should be adjusted accordingly if the implementation
   // changes.
   const int8_t NoopsInSledCount = 11;
-  OutStreamer->emitCodeAlignment(Align(4), &getSubtargetInfo());
+  OutStreamer->emitCodeAlignment(Align(4), getSubtargetInfo());
   MCSymbol *BeginOfSled = OutContext.createTempSymbol("xray_sled_begin");
   MCSymbol *EndOfSled = OutContext.createTempSymbol("xray_sled_end");
   OutStreamer->emitLabel(BeginOfSled);

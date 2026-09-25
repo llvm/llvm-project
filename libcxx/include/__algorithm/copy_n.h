@@ -33,6 +33,8 @@ template <class _AlgPolicy,
           __enable_if_t<__has_random_access_iterator_category<_InIter>::value, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __in_out_result<_InIter, _OutIter>
 __copy_n(_InIter __first, typename _IterOps<_AlgPolicy>::template __difference_type<_InIter> __n, _OutIter __result) {
+  if (__n <= 0)
+    return {std::move(__first), std::move(__result)};
   return std::__copy(__first, __first + __n, std::move(__result));
 }
 
@@ -42,7 +44,7 @@ template <class _AlgPolicy,
           __enable_if_t<!__has_random_access_iterator_category<_InIter>::value, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __in_out_result<_InIter, _OutIter>
 __copy_n(_InIter __first, typename _IterOps<_AlgPolicy>::template __difference_type<_InIter> __n, _OutIter __result) {
-  while (__n != 0) {
+  while (__n > 0) {
     *__result = *__first;
     ++__first;
     ++__result;

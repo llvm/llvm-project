@@ -19,6 +19,8 @@
 #include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/AffineMap.h"
 
+#include <type_traits>
+
 using namespace mlir;
 using namespace mlir::sparse_tensor;
 
@@ -37,6 +39,12 @@ struct DemapInsRewriter : public OpRewritePattern<SourceOp> {
   LogicalResult matchAndRewrite(SourceOp op,
                                 PatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
+
+    for (Value in : op->getOperands())
+      if (auto stt = tryGetSparseTensorType(in);
+          stt && !stt->isIdentity() &&
+          stt->getEncoding().getDimToLvl().getNumSymbols() != 0)
+        return failure();
 
     // Demaps non-trivial inputs.
     bool changed = false;
@@ -420,7 +428,7 @@ struct GenericOpScheduler : public OpRewritePattern<linalg::GenericOp> {
     }
 
     const StringRef sorted = "sorted";
-    if (linalgOp->hasAttr(sorted))
+    if (linalgOp->hasDiscardableAttr(sorted))
       return failure();
 
     // Pass strategy to IterationGraphSorter.
@@ -462,7 +470,7 @@ struct GenericOpScheduler : public OpRewritePattern<linalg::GenericOp> {
 
     // Marks the GenericOp to avoid recursive matching.
     rewriter.modifyOpInPlace(linalgOp, [&]() {
-      linalgOp->setAttr(sorted, rewriter.getBoolAttr(true));
+      linalgOp->setDiscardableAttr(sorted, rewriter.getBoolAttr(true));
     });
 
     // Already sorted.
@@ -605,6 +613,24 @@ struct TensorAllocDemapper : public OpRewritePattern<AllocOp> {
 
     Location loc = op.getLoc();
     auto stt = getSparseTensorType(op.getResult());
+    if (stt.getEncoding().getDimToLvl().getNumSymbols() != 0)
+      return failure();
+
+    if constexpr (std::is_same_v<AllocOp, bufferization::AllocTensorOp>) {
+      // `bufferization.alloc_tensor` does not carry any dynamic size
+      // operands when it has a `copy` operand -- the shape (and the
+      // contents) are inherited from `copy` instead. Simply demap the
+      // `copy` operand and forward it to a newly created (demapped)
+      // `alloc_tensor` op.
+      if (Value copy = op.getCopy()) {
+        Value demappedCopy = genDemap(rewriter, stt.getEncoding(), copy);
+        auto allocOp = AllocOp::create(rewriter, loc, stt.getDemappedType(),
+                                       ValueRange{}, demappedCopy);
+        Value t = genRemap(rewriter, stt.getEncoding(), allocOp.getResult());
+        rewriter.replaceOp(op, t);
+        return success();
+      }
+    }
 
     SmallVector<Value> maxDimCrds;
     maxDimCrds.reserve(stt.getDimRank());
@@ -674,6 +700,8 @@ struct SparseAssembleDemapper : public OpRewritePattern<AssembleOp> {
 
     assert(hasAnySparseResult(op));
     auto stt = getSparseTensorType(op.getResult());
+    if (stt.getEncoding().getDimToLvl().getNumSymbols() != 0)
+      return failure();
     rewriter.modifyOpInPlace(
         op, [&op, &stt]() { op.getResult().setType(stt.getDemappedType()); });
     rewriter.setInsertionPointAfter(op);

@@ -1,12 +1,19 @@
 // REQUIRES: arm
-// RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=thumbv7a-none-linux-gnueabi %s -o %t
-// RUN: echo "SECTIONS { \
-// RUN:       .text_low 0x100000 : { *(.text_low) } \
-// RUN:       .text_high 0x2000000 : { *(.text_high) } \
-// RUN:       .data : { *(.data) } \
-// RUN:       }" > %t.script
-// RUN: ld.lld --script %t.script %t -o %t2
-// RUN: llvm-objdump --no-print-imm-hex -d %t2 | FileCheck %s
+// RUN: rm -rf %t && split-file %s %t && cd %t
+// RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=thumbv7a-none-linux-gnueabi a.s -o a.o
+// RUN: ld.lld --script a.lds a.o -o exe
+// RUN: llvm-objdump --no-print-imm-hex -d exe | FileCheck %s
+
+//--- a.lds
+
+SECTIONS {
+  .text_low 0x100000 : AT(0x100000) { *(.text_low) }
+  .text_high 0x2000000 : AT(0x2000000) { *(.text_high) }
+  .data : { *(.data) }
+}
+
+//--- a.s
+
  .syntax unified
  .section .text_low, "ax", %progbits
  .thumb
@@ -22,14 +29,14 @@ low_target:
 // CHECK-NEXT: <_start>:
 // CHECK-NEXT:   100000:        4770    bx      lr
 // CHECK: <low_target>:
-// CHECK-NEXT:   100002:        f000 f803       bl      0x10000c <__Thumbv7ABSLongThunk_high_target>
-// CHECK-NEXT:   100006:        f000 f806       bl      0x100016 <__Thumbv7ABSLongThunk_orphan_target>
-// CHECK: <__Thumbv7ABSLongThunk_high_target>:
-// CHECK-NEXT:   10000c:        f240 0c01       movw    r12, #1
+// CHECK-NEXT:   100002:        f000 f808       bl      0x100016 <__Thumbv7ABSLongThunk_high_target>
+// CHECK-NEXT:   100006:        f000 f801       bl      0x10000c <__Thumbv7ABSLongThunk_orphan_target>
+// CHECK: <__Thumbv7ABSLongThunk_orphan_target>:
+// CHECK-NEXT:   10000c:        f240 0c15       movw    r12, #21
 // CHECK-NEXT:   100010:        f2c0 2c00       movt    r12, #512
 // CHECK-NEXT:   100014:        4760    bx      r12
-// CHECK: <__Thumbv7ABSLongThunk_orphan_target>:
-// CHECK-NEXT:   100016:        f240 0c15       movw    r12, #21
+// CHECK: <__Thumbv7ABSLongThunk_high_target>:
+// CHECK-NEXT:   100016:        f240 0c01       movw    r12, #1
 // CHECK-NEXT:   10001a:        f2c0 2c00       movt    r12, #512
 // CHECK-NEXT:   10001e:        4760    bx      r12
   .section .text_high, "ax", %progbits

@@ -14,6 +14,9 @@ def OpA : NS_Op<"one_normal_result_op", []> {
   let results = (outs I32:$result);
 }
 
+// DECL-LABEL: class OpA : {{.*}} {
+// DECL: static constexpr int odsIndex_result = 0;
+
 // CHECK-LABEL: void OpA::build
 // CHECK:         ::mlir::TypeRange resultTypes, ::mlir::ValueRange operands
 // CHECK:         assert(resultTypes.size() == 1u && "mismatched number of return types");
@@ -23,6 +26,10 @@ def OpB : NS_Op<"same_input_output_type_op", [SameOperandsAndResultType]> {
   let arguments = (ins I32:$x);
   let results = (outs I32:$y);
 }
+
+// DECL-LABEL: class OpB : {{.*}} {
+// DECL: static constexpr int odsIndex_x = 0;
+// DECL: static constexpr int odsIndex_y = 0;
 
 // CHECK-LABEL: OpB definitions
 // CHECK: void OpB::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::Type y, ::mlir::Value x)
@@ -38,6 +45,10 @@ def OpB : NS_Op<"same_input_output_type_op", [SameOperandsAndResultType]> {
 def OpC : NS_Op<"three_normal_result_op", []> {
   let results = (outs I32:$x, /*unnamed*/I32, I32:$z);
 }
+
+// DECL-LABEL: class OpC : {{.*}} {
+// DECL: static constexpr int odsIndex_x = 0;
+// DECL: static constexpr int odsIndex_z = 2;
 
 // CHECK-LABEL: OpC definitions
 // CHECK:       void OpC::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::Type x, ::mlir::Type resultType1, ::mlir::Type z)

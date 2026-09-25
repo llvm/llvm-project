@@ -16,7 +16,6 @@ define signext i8 @test_atomic_fetch_add_1() {
 ; CHECK-NEXT:    lea %s0, c@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s0, c@hi(, %s0)
-; CHECK-NEXT:    and %s0, -4, %s0
 ; CHECK-NEXT:    ldl.zx %s2, (, %s0)
 ; CHECK-NEXT:    lea %s1, -256
 ; CHECK-NEXT:    and %s1, %s1, (32)0
@@ -47,7 +46,6 @@ define signext i16 @test_atomic_fetch_sub_2() {
 ; CHECK-NEXT:    lea %s0, s@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s0, s@hi(, %s0)
-; CHECK-NEXT:    and %s0, -4, %s0
 ; CHECK-NEXT:    ldl.zx %s2, (, %s0)
 ; CHECK-NEXT:    lea %s1, -65536
 ; CHECK-NEXT:    and %s1, %s1, (32)0
@@ -123,8 +121,7 @@ define signext i8 @test_atomic_fetch_xor_1() {
 ; CHECK-NEXT:    fencem 3
 ; CHECK-NEXT:    lea %s0, c@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
-; CHECK-NEXT:    lea.sl %s0, c@hi(, %s0)
-; CHECK-NEXT:    and %s1, -4, %s0
+; CHECK-NEXT:    lea.sl %s1, c@hi(, %s0)
 ; CHECK-NEXT:    ldl.zx %s0, (, %s1)
 ; CHECK-NEXT:  .LBB4_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -150,7 +147,6 @@ define signext i16 @test_atomic_fetch_nand_2() {
 ; CHECK-NEXT:    lea %s0, s@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s0, s@hi(, %s0)
-; CHECK-NEXT:    and %s0, -4, %s0
 ; CHECK-NEXT:    ldl.zx %s2, (, %s0)
 ; CHECK-NEXT:    lea %s1, 65534
 ; CHECK-NEXT:    lea %s3, -65536

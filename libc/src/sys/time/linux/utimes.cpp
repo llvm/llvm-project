@@ -13,17 +13,12 @@
 #include "hdr/types/struct_timeval.h"
 
 #include "src/__support/OSUtil/linux/syscall_wrappers/utimensat.h"
-#include "src/__support/OSUtil/syscall.h"
 #include "src/__support/libc_errno.h"
-
-#include <sys/syscall.h>
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, utimes,
                    (const char *path, const struct timeval times[2])) {
-#if defined(SYS_utimensat) || defined(SYS_utimensat_time64)
-
   // the utimensat syscall requires a timespec struct, not timeval.
   struct timespec ts[2];
   struct timespec *ts_ptr = nullptr; // default value if times is nullptr
@@ -64,8 +59,5 @@ LLVM_LIBC_FUNCTION(int, utimes,
   }
 
   return 0;
-#else
-#error "utimensat or utimensat_time64 syscalls not available."
-#endif // SYS_utimensat || SYS_utimensat_time64
 }
 } // namespace LIBC_NAMESPACE_DECL

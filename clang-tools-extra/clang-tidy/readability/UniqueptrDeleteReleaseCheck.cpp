@@ -28,7 +28,7 @@ UniqueptrDeleteReleaseCheck::UniqueptrDeleteReleaseCheck(
       PreferResetCall(Options.get("PreferResetCall", false)) {}
 
 void UniqueptrDeleteReleaseCheck::registerMatchers(MatchFinder *Finder) {
-  auto UniquePtrWithDefaultDelete = classTemplateSpecializationDecl(
+  const auto UniquePtrWithDefaultDelete = classTemplateSpecializationDecl(
       hasName("::std::unique_ptr"),
       hasTemplateArgument(1, refersToType(hasDeclaration(cxxRecordDecl(
                                  hasName("::std::default_delete"))))));
@@ -58,7 +58,7 @@ void UniqueptrDeleteReleaseCheck::check(
   if (ReleaseExpr->getBeginLoc().isMacroID())
     return;
 
-  auto D =
+  const auto D =
       diag(DeleteExpr->getBeginLoc(), "prefer '%select{= nullptr|reset()}0' "
                                       "to reset 'unique_ptr<>' objects");
   D << PreferResetCall << DeleteExpr->getSourceRange()

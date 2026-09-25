@@ -8,6 +8,11 @@
 
 #include "FDimTest.h"
 
+#include "src/__support/FPUtil/float128.h"
 #include "src/math/fdimf128.h"
 
-LIST_FDIM_TESTS(float128, LIBC_NAMESPACE::fdimf128);
+#ifndef LIBC_TYPES_HAS_NATIVE_FLOAT128
+using float128 = LIBC_NAMESPACE::fputil::Float128;
+#endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
+
+LIST_FDIM_TESTS(Fdimf128, float128, LIBC_NAMESPACE::fdimf128);

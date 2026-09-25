@@ -1,10 +1,19 @@
+; RUN: rm -f %t.pdb
 ; RUN: opt %s -dxil-embed -dxil-globals -S -o - | FileCheck %s
-; RUN: llc %s --filetype=obj -o %t.bc
+; RUN: llc %s --filetype=obj --dx-embed-debug -o %t.bc --dx-pdb-path=%t.pdb
 ; RUN: obj2yaml %t.bc | FileCheck %s --check-prefix=YAML
 ; RUN: llvm-objcopy --dump-section=ILDB=%t.ildb %t.bc
 ; RUN: llvm-objcopy --dump-section=DXIL=%t.dxil %t.bc
 ; RUN: llvm-dis %t.ildb -o - | FileCheck %s --check-prefix=ILDB-DIS
 ; RUN: llvm-dis %t.dxil -o - | FileCheck %s --check-prefix=DXIL-DIS
+
+; Check that a companion PDB file is emitted and that it keeps ILDB but not DXIL.
+; RUN: llvm-pdbutil pdb2yaml --dxcontainer %t.pdb | FileCheck %s --check-prefix=PDB
+
+; Check that ILDB is written to PDB.
+; RUN: llvm-pdbutil export --stream=5 --out=%t.pdb.dxbc %t.pdb
+; RUN: llvm-objcopy --dump-section=ILDB=%t.pdb.ildb %t.pdb.dxbc
+; RUN: diff %t.ildb %t.pdb.ildb
 
 target triple = "dxil-unknown-shadermodel6.5-library"
 ; CHECK: target triple = "dxil-unknown-shadermodel6.5-library"
@@ -31,7 +40,8 @@ define i32 @add(i32 %a, i32 %b) {
 !7 = !{!"hlsl.hlsl"}
 !8 = !{!"-T", !"lib_6_5", !"-g", !"hlsl.hlsl"}
 
-; Check that both parts are emitted as a GV and used by the compiler.
+
+; Check that DXIL and ILDB parts are emitted as a GV and used by the compiler.
 
 ; CHECK: @dx.ildb = private constant [[BC_TYPE:\[[0-9]+ x i8\]]] c"BC\C0\DE{{[^"]+}}", section "ILDB", align 4
 ; CHECK: @dx.dxil = private constant [[BC_TYPE:\[[0-9]+ x i8\]]] c"BC\C0\DE{{[^"]+}}", section "DXIL", align 4
@@ -83,6 +93,10 @@ define i32 @add(i32 %a, i32 %b) {
 
 ; ILDB-DIS: define i32 @add(i32 %a, i32 %b)
 ; ILDB-DIS: !llvm.dbg.cu
+; ILDB-DIS: !dx.source.contents
+; ILDB-DIS: !dx.source.defines
+; ILDB-DIS: !dx.source.mainFileName
+; ILDB-DIS: !dx.source.args
 ; ILDB-DIS: !DICompileUnit
 ; ILDB-DIS: !DIFile
 ; ILDB-DIS: !"Dwarf Version"
@@ -96,3 +110,7 @@ define i32 @add(i32 %a, i32 %b) {
 ; DXIL-DIS-NOT: !"Dwarf Version"
 ; DXIL-DIS-NOT: !"Debug Info Version"
 ; DXIL-DIS-NOT: "hlsl.hlsl"
+
+; PDB:     Parts:
+; PDB:       - Name:            ILDB
+; PDB-NOT:   - Name:            DXIL

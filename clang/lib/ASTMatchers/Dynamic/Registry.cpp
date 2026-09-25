@@ -99,7 +99,6 @@ RegistryMaps::RegistryMaps() {
   //
   // Other:
   // equalsNode
-  // declaresSameEntityAsNode
 
   registerMatcher("mapAnyOf",
                   std::make_unique<internal::MapAnyOfBuilderDescriptor>());

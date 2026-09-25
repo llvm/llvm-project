@@ -4,6 +4,7 @@ group("dummy") {
     "SPIRVAPITest.cpp",
     "SPIRVConvergenceRegionAnalysisTests.cpp",
     "SPIRVGlobalRegistryTests.cpp",
+    "SPIRVModuleAnalysisTests.cpp",
     "SPIRVPartialOrderingVisitorTests.cpp",
     "SPIRVSortBlocksTests.cpp",
   ]

@@ -284,7 +284,7 @@ func.func @extract_column(%arg0: !fir.ref<!fir.array<100x5xf32>> {fir.bindc_name
 // CHECK:       %[[C7:.*]] = arith.constant 7 : index
 // CHECK:       %[[C_NEG1:.*]] = arith.constant -1 : index
 // CHECK:       %[[C0:.*]] = arith.constant 0 : index
-// CHECK:       [[ALLOCA:%.*]] = fir.alloca !fir.box<!fir.heap<!fir.type<_QMcodaTcodaK6{samples:!fir.array<7xf32>}>>> {bindc_name = "c", uniq_name = "_QMcodaFtrythisEc"}
+// CHECK:       [[ALLOCA:%.*]] = fir.alloca !fir.box<!fir.heap<!fir.type<_QMcodaTcodaK6{samples:!fir.array<7xf32>}>>> <{bindc_name = "c", uniq_name = "_QMcodaFtrythisEc"}>
 // CHECK:       [[DECLARE:%.*]] = fir.declare [[ALLOCA]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMcodaFtrythisEc"} : (!fir.ref<!fir.box<!fir.heap<!fir.type<_QMcodaTcodaK6{samples:!fir.array<7xf32>}>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.type<_QMcodaTcodaK6{samples:!fir.array<7xf32>}>>>>
 // CHECK:       [[LOADBOX:%.*]] = fir.load [[DECLARE]] : !fir.ref<!fir.box<!fir.heap<!fir.type<_QMcodaTcodaK6{samples:!fir.array<7xf32>}>>>>
 // CHECK:       [[BOXADDR:%.*]] = fir.box_addr [[LOADBOX]] : (!fir.box<!fir.heap<!fir.type<_QMcodaTcodaK6{samples:!fir.array<7xf32>}>>>) -> !fir.heap<!fir.type<_QMcodaTcodaK6{samples:!fir.array<7xf32>}>>
@@ -297,8 +297,7 @@ func.func @extract_column(%arg0: !fir.ref<!fir.array<100x5xf32>> {fir.bindc_name
 // CHECK:         [[BOXADDR2:%.*]] = fir.box_addr [[EMBOX]] : (!fir.box<!fir.array<7xf32>>) -> !fir.ref<!fir.array<7xf32>>
 // CHECK:         [[CONVERT:%.*]] = fir.convert [[BOXADDR2]] : (!fir.ref<!fir.array<7xf32>>) -> memref<7xf32>
 // CHECK:         %[[C1_0:.*]] = arith.constant 1 : index
-// CHECK:         [[ADD2:%.*]] = arith.addi %[[ARG0]], %[[C_NEG1]] : index
-// CHECK:         [[SUB1:%.*]] = arith.subi [[ADD2]], %[[C0]] : index
+// CHECK:         [[SUB1:%.*]] = arith.subi [[ADD1]], %[[C0]] : index
 // CHECK:         [[MUL1:%.*]] = arith.muli [[SUB1]], %[[C1_0]] : index
 // CHECK:         [[SUB2:%[0-9]+]] = arith.subi %[[C0]], %[[C0]] : index
 // CHECK:         [[ADD3:%.*]] = arith.addi [[MUL1]], [[SUB2]] : index
@@ -388,4 +387,3 @@ func.func @array_coor_slice() attributes {fir.bindc_name = "tf4a", noinline} {
   }
   return
 }
-

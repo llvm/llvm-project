@@ -76,14 +76,15 @@ define dso_local void @test_store1(ptr nocapture noundef writeonly %dst, ptr noc
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    blez a3, .LBB0_6
 ; RV64-NEXT:  # %bb.1: # %for.body.preheader
-; RV64-NEXT:    li a5, 8
+; RV64-NEXT:    sub a4, a0, a1
+; RV64-NEXT:    sltiu a5, a3, 8
+; RV64-NEXT:    sltiu a4, a4, 32
+; RV64-NEXT:    or a4, a5, a4
+; RV64-NEXT:    beqz a4, .LBB0_3
+; RV64-NEXT:  # %bb.2:
 ; RV64-NEXT:    li a4, 0
-; RV64-NEXT:    bltu a3, a5, .LBB0_7
-; RV64-NEXT:  # %bb.2: # %for.body.preheader
-; RV64-NEXT:    sub a5, a0, a1
-; RV64-NEXT:    li a6, 31
-; RV64-NEXT:    bgeu a6, a5, .LBB0_7
-; RV64-NEXT:  # %bb.3: # %vector.ph
+; RV64-NEXT:    j .LBB0_7
+; RV64-NEXT:  .LBB0_3: # %vector.ph
 ; RV64-NEXT:    lui a4, 524288
 ; RV64-NEXT:    addiw a4, a4, -8
 ; RV64-NEXT:    and a4, a3, a4

@@ -1,7 +1,9 @@
 set(LLVM_LINK_COMPONENTS
+  BinaryFormat
   DebugInfoDWARF
   Object
   MC
+  TargetParser
   ${BOLT_TARGETS_TO_BUILD}
   )
 

@@ -10,6 +10,7 @@
 include "mlir/IR/OpBase.td"
 def Math_Dialect : Dialect {
   let name = "math";
+  let useStrictPropertiesInAssemblyFormat = 1;
   let cppNamespace = "::mlir::math";
   let description = [{
     The math dialect is intended to hold mathematical operations on integer and

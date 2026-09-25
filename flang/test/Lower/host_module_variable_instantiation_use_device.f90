@@ -38,7 +38,7 @@ end module
 !  CHECK:           %[[CONSTANT_0:.*]] = arith.constant 100 : index
 !  CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[CONSTANT_0]] : (index) -> !fir.shape<1>
 !  CHECK:           %[[DECLARE_0:.*]]:2 = hlfir.declare %[[ADDRESS_OF_0]](%[[SHAPE_0]]) {uniq_name = "_QMtest_use_deviceEa"} : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
-!  CHECK:           %[[USE_DEVICE_0:.*]] = acc.use_device varPtr(%[[DECLARE_0]]#0 : !fir.ref<!fir.array<100xf32>>) -> !fir.ref<!fir.array<100xf32>> {name = "a"}
+!  CHECK:           %[[USE_DEVICE_0:.*]] = acc.use_device varPtr(%[[DECLARE_0]]#0 : !fir.ref<!fir.array<100xf32>>) name("a") -> !fir.ref<!fir.array<100xf32>>
 !  CHECK:           acc.host_data dataOperands(%[[USE_DEVICE_0]] : !fir.ref<!fir.array<100xf32>>) {
 !  CHECK:             %[[DECLARE_1:.*]]:2 = hlfir.declare %[[USE_DEVICE_0]](%[[SHAPE_0]]) {uniq_name = "_QMtest_use_deviceEa"} : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
 !  CHECK:             fir.call @_QPsomething(%[[DECLARE_1]]#0)
@@ -55,7 +55,7 @@ end module
 
 !  CHECK-LABEL:   func.func @_QMtest_use_devicePtest_shadowed() {
 !  CHECK-NOT:      fir.address_of(@_QMtest_use_deviceEa)
-!  CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.array<100xf32> {bindc_name = "a", uniq_name = "_QMtest_use_deviceFtest_shadowedEa"}
+!  CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.array<100xf32> <{bindc_name = "a", uniq_name = "_QMtest_use_deviceFtest_shadowedEa"}>
 !  CHECK:           %[[DECLARE_0:.*]]:2 = hlfir.declare %[[ALLOCA_0]](
 !  CHECK-NOT:      fir.address_of(@_QMtest_use_deviceEa)
 !  CHECK:           %[[USE_DEVICE_0:.*]] = acc.use_device varPtr(%[[DECLARE_0]]#0

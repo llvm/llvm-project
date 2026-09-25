@@ -1,5 +1,6 @@
 # -*- Python -*-
 
+import glob
 import os
 import platform
 import re
@@ -21,22 +22,11 @@ if lit.util.pythonize_bool(lit_config.params.get("use_normalized_slashes")):
 # name: The name of this test suite.
 config.name = "Clang"
 
-# TODO: Consolidate the logic for turning on the internal shell by default for all LLVM test suites.
-# See https://github.com/llvm/llvm-project/issues/106636 for more details.
-#
-# We prefer the lit internal shell which provides a better user experience on failures
-# and is faster unless the user explicitly disables it with LIT_USE_INTERNAL_SHELL=0
-# env var.
-use_lit_shell = True
-lit_shell_env = os.environ.get("LIT_USE_INTERNAL_SHELL")
-if lit_shell_env:
-    use_lit_shell = lit.util.pythonize_bool(lit_shell_env)
-
 # testFormat: The test format to use to interpret tests.
 #
 # For now we require '&&' between commands, until they get globally killed and
 # the test runner updated.
-config.test_format = lit.formats.ShTest(execute_external=not use_lit_shell)
+config.test_format = lit.formats.ShTest()
 
 # suffixes: A list of file extensions to treat as test files.
 config.suffixes = [
@@ -171,8 +161,9 @@ def have_host_out_of_process_jit_feature_support():
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             input=testcode,
+            timeout=5,
         )
-    except OSError:
+    except (OSError, subprocess.TimeoutExpired):
         return False
 
     if clang_repl_cmd.returncode == 0:
@@ -232,6 +223,54 @@ def have_host_clang_repl_cuda():
     return False
 
 
+def _hip_lib_directory():
+    explicit = lit_config.params.get("hip_lib_path")
+    if explicit:
+        candidates = [explicit]
+    else:
+        candidates = []
+        for var in ("ROCM_PATH", "HIP_PATH"):
+            if os.environ.get(var):
+                candidates.append(os.path.join(os.environ[var], "lib"))
+        candidates.append("/opt/rocm/lib")
+    for directory in candidates:
+        if directory and glob.glob(os.path.join(directory, "libamdhip64.so*")):
+            return directory
+    return None
+
+
+def _clang_can_compile_hip(clang, rocm_lib_dir):
+    rocm_root = os.path.dirname(rocm_lib_dir)
+    offload_arch = lit_config.params.get("amdgpu_arch", "gfx906")
+    test_src = b"#include <hip/hip_runtime.h>\n__global__ void k() {}\n"
+    try:
+        proc = subprocess.run(
+            [
+                clang,
+                "-x",
+                "hip",
+                "-fsyntax-only",
+                "-nogpulib",
+                "--offload-arch=" + offload_arch,
+                "--rocm-path=" + rocm_root,
+                "-",
+            ],
+            input=test_src,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+    except OSError:
+        return False
+    return proc.returncode == 0
+
+
+def have_host_hip_environment():
+    hip_lib_dir = _hip_lib_directory()
+    if not hip_lib_dir or not config.clang:
+        return False
+    return _clang_can_compile_hip(config.clang, hip_lib_dir)
+
+
 skip_clang_repl_checks = lit.util.pythonize_bool(
     lit_config.params.get(
         "clang_skip_clang_repl_checks",
@@ -244,7 +283,11 @@ if not skip_clang_repl_checks and have_host_jit_feature_support("jit"):
 
     if have_host_clang_repl_cuda():
         config.available_features.add('host-supports-cuda')
+
+    if have_host_hip_environment():
+        config.available_features.add("host-supports-hip")
     hosttriple = run_clang_repl("--host-jit-triple")
+    config.available_features.add("host-jit-triple=" + hosttriple.strip())
     config.substitutions.append(("%host-jit-triple", hosttriple.strip()))
 
     if have_host_out_of_process_jit_feature_support():
@@ -285,6 +328,10 @@ if config.clang_enable_cir:
 if lit.util.which("spirv-val", config.llvm_tools_dir):
     config.available_features.add("spirv-val")
 
+# SPIRV-Tools availability (e.g. built with -DLLVM_INCLUDE_SPIRV_TOOLS_TESTS)
+if config.spirv_tools_tests:
+    config.available_features.add("spirv-tools")
+
 llvm_config.add_tool_substitutions(tools, tool_dirs)
 
 config.substitutions.append(
@@ -305,6 +352,17 @@ config.substitutions.append(
         % (
             config.python_executable,
             os.path.join(config.clang_src_dir, "utils", "module-deps-to-rsp.py"),
+        ),
+    )
+)
+
+config.substitutions.append(
+    (
+        "%scan-deps-filter",
+        '"%s" %s'
+        % (
+            config.python_executable,
+            os.path.join(config.clang_src_dir, "utils", "scan-deps-filter.py"),
         ),
     )
 )
@@ -332,9 +390,7 @@ if config.clang_default_cxx_stdlib != "":
         "default-cxx-stdlib={}".format(config.clang_default_cxx_stdlib)
     )
 
-# As of 2011.08, crash-recovery tests still do not pass on FreeBSD.
-if platform.system() not in ["FreeBSD"]:
-    config.available_features.add("crash-recovery")
+config.available_features.add("crash-recovery")
 
 # ANSI escape sequences in non-dumb terminal
 if platform.system() not in ["Windows"]:
@@ -391,7 +447,7 @@ if platform.system() not in ["Windows"]:
     config.available_features.add("can-remove-opened-file")
 
 # Features
-known_arches = ["x86_64", "mips64", "ppc64", "aarch64"]
+known_arches = ["x86_64", "mips64", "ppc64", "aarch64", "s390x"]
 if any(config.target_triple.startswith(x) for x in known_arches):
     config.available_features.add("clang-target-64-bits")
 
@@ -489,11 +545,8 @@ elif platform.system() == "AIX":
 # objects only. In order to not affect most test cases, which expect to support
 # 32-bit and 64-bit objects by default, set the environment variable
 # "OBJECT_MODE" to "any" by default on AIX OS.
-
 if "system-aix" in config.available_features:
-   config.substitutions.append(("llvm-nm", "env OBJECT_MODE=any llvm-nm"))
-   config.substitutions.append(("llvm-ar", "env OBJECT_MODE=any llvm-ar"))
-   config.substitutions.append(("llvm-ranlib", "env OBJECT_MODE=any llvm-ranlib"))
+    config.environment["OBJECT_MODE"] = "any"
 
 # It is not realistically possible to account for all options that could
 # possibly be present in system and user configuration files, so disable

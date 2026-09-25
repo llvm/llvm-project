@@ -25,12 +25,10 @@ namespace llvm {
 ///
 class PPCTargetMachine final : public CodeGenTargetMachineImpl {
 public:
-  enum PPCABI { PPC_ABI_UNKNOWN, PPC_ABI_ELFv1, PPC_ABI_ELFv2 };
   enum Endian { NOT_DETECTED, LITTLE, BIG };
 
 private:
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
-  PPCABI TargetABI;
   Endian Endianness = Endian::NOT_DETECTED;
   mutable bool HasGlibcHWCAPAccess = false;
 
@@ -68,7 +66,10 @@ public:
   ScheduleDAGInstrs *
   createPostMachineScheduler(MachineSchedContext *C) const override;
 
-  bool isELFv2ABI() const { return TargetABI == PPC_ABI_ELFv2; }
+  /// Compute the ABI variant for \p TT and \p ABIName (the "target-abi" module
+  /// flag), falling back to the triple default.
+  static PPCABI computeABI(const Triple &TT, StringRef ABIName);
+
   bool hasGlibcHWCAPAccess() const { return HasGlibcHWCAPAccess; }
   void setGlibcHWCAPAccess(bool Val = true) const { HasGlibcHWCAPAccess = Val; }
   bool isPPC64() const {

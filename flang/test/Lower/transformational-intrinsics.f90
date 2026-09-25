@@ -107,15 +107,15 @@ end subroutine
 ! CSHIFT
 
   ! CHECK-LABEL: func @_QMtest2Pcshift_test() {
-  ! CHECK:         %[[VAL_5:.*]] = fir.alloca !fir.array<3x3xi32> {bindc_name = "array", uniq_name = "_QMtest2Fcshift_testEarray"}
+  ! CHECK:         %[[VAL_5:.*]] = fir.alloca !fir.array<3x3xi32> <{bindc_name = "array", uniq_name = "_QMtest2Fcshift_testEarray"}>
   ! CHECK:         %[[ARRAY_DECL:.*]]:2 = hlfir.declare %[[VAL_5]](%{{.*}}) {uniq_name = "_QMtest2Fcshift_testEarray"}
-  ! CHECK:         %[[VAL_8:.*]] = fir.alloca !fir.array<3x3xi32> {bindc_name = "result", uniq_name = "_QMtest2Fcshift_testEresult"}
+  ! CHECK:         %[[VAL_8:.*]] = fir.alloca !fir.array<3x3xi32> <{bindc_name = "result", uniq_name = "_QMtest2Fcshift_testEresult"}>
   ! CHECK:         %[[RESULT_DECL:.*]]:2 = hlfir.declare %[[VAL_8]](%{{.*}}) {uniq_name = "_QMtest2Fcshift_testEresult"}
-  ! CHECK:         %[[VAL_10:.*]] = fir.alloca !fir.array<3xi32> {bindc_name = "shift", uniq_name = "_QMtest2Fcshift_testEshift"}
+  ! CHECK:         %[[VAL_10:.*]] = fir.alloca !fir.array<3xi32> <{bindc_name = "shift", uniq_name = "_QMtest2Fcshift_testEshift"}>
   ! CHECK:         %[[SHIFT_DECL:.*]]:2 = hlfir.declare %[[VAL_10]](%{{.*}}) {uniq_name = "_QMtest2Fcshift_testEshift"}
-  ! CHECK:         %[[VAL_12:.*]] = fir.alloca !fir.array<6xi32> {bindc_name = "vector", uniq_name = "_QMtest2Fcshift_testEvector"}
+  ! CHECK:         %[[VAL_12:.*]] = fir.alloca !fir.array<6xi32> <{bindc_name = "vector", uniq_name = "_QMtest2Fcshift_testEvector"}>
   ! CHECK:         %[[VECTOR_DECL:.*]]:2 = hlfir.declare %[[VAL_12]](%{{.*}}) {uniq_name = "_QMtest2Fcshift_testEvector"}
-  ! CHECK:         %[[VAL_14:.*]] = fir.alloca !fir.array<6xi32> {bindc_name = "vectorresult", uniq_name = "_QMtest2Fcshift_testEvectorresult"}
+  ! CHECK:         %[[VAL_14:.*]] = fir.alloca !fir.array<6xi32> <{bindc_name = "vectorresult", uniq_name = "_QMtest2Fcshift_testEvectorresult"}>
   ! CHECK:         %[[VECTORRESULT_DECL:.*]]:2 = hlfir.declare %[[VAL_14]](%{{.*}}) {uniq_name = "_QMtest2Fcshift_testEvectorresult"}
   ! CHECK:         %[[C2:.*]] = arith.constant 2 : i32
   ! CHECK:         %[[CSHIFT1:.*]] = hlfir.cshift %[[ARRAY_DECL]]#0 %[[SHIFT_DECL]]#0 dim %[[C2]] : (!fir.ref<!fir.array<3x3xi32>>, !fir.ref<!fir.array<3xi32>>, i32) -> !hlfir.expr<3x3xi32>
@@ -150,13 +150,13 @@ subroutine unpack_test()
   ! CHECK-DAG: %[[a0:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x?xi32>>>
   ! CHECK-DAG: %[[a1:.*]] = fir.alloca i32
   ! CHECK-DAG: %[[a2:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x?xi32>>>
-  ! CHECK-DAG: %[[a3:.*]] = fir.alloca !fir.array<3x3xi32> {bindc_name = "field", uniq_name = "_QMtest2Funpack_testEfield"}
+  ! CHECK-DAG: %[[a3:.*]] = fir.alloca !fir.array<3x3xi32> <{bindc_name = "field", uniq_name = "_QMtest2Funpack_testEfield"}>
   ! CHECK-DAG: %[[FIELD_DECL:.*]]:2 = hlfir.declare %[[a3]]{{.*}}{uniq_name = "_QMtest2Funpack_testEfield"}
-  ! CHECK-DAG: %[[a4:.*]] = fir.alloca !fir.array<3x3x!fir.logical<4>> {bindc_name = "mask", uniq_name = "_QMtest2Funpack_testEmask"}
+  ! CHECK-DAG: %[[a4:.*]] = fir.alloca !fir.array<3x3x!fir.logical<4>> <{bindc_name = "mask", uniq_name = "_QMtest2Funpack_testEmask"}>
   ! CHECK-DAG: %[[MASK_DECL:.*]]:2 = hlfir.declare %[[a4]]{{.*}}{uniq_name = "_QMtest2Funpack_testEmask"}
-  ! CHECK-DAG: %[[a5:.*]] = fir.alloca !fir.array<3x3xi32> {bindc_name = "result", uniq_name = "_QMtest2Funpack_testEresult"}
+  ! CHECK-DAG: %[[a5:.*]] = fir.alloca !fir.array<3x3xi32> <{bindc_name = "result", uniq_name = "_QMtest2Funpack_testEresult"}>
   ! CHECK-DAG: %[[RESULT_DECL:.*]]:2 = hlfir.declare %[[a5]]{{.*}}{uniq_name = "_QMtest2Funpack_testEresult"}
-  ! CHECK-DAG: %[[a6:.*]] = fir.alloca !fir.array<3xi32> {bindc_name = "vector", uniq_name = "_QMtest2Funpack_testEvector"}
+  ! CHECK-DAG: %[[a6:.*]] = fir.alloca !fir.array<3xi32> <{bindc_name = "vector", uniq_name = "_QMtest2Funpack_testEvector"}>
   ! CHECK-DAG: %[[VECTOR_DECL:.*]]:2 = hlfir.declare %[[a6]]{{.*}}{uniq_name = "_QMtest2Funpack_testEvector"}
   ! CHECK: %[[v_embox:.*]] = fir.embox %[[VECTOR_DECL]]#0(%{{.*}}) : (!fir.ref<!fir.array<3xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<3xi32>>
   ! CHECK: %[[m_embox:.*]] = fir.embox %[[MASK_DECL]]#0(%{{.*}}) : (!fir.ref<!fir.array<3x3x!fir.logical<4>>>, !fir.shape<2>) -> !fir.box<!fir.array<3x3x!fir.logical<4>>>

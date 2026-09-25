@@ -20,15 +20,32 @@ macros:
     macro_header: signal-macros.h
   - macro_name: SIG_IGN
     macro_header: signal-macros.h
+  - macro_name: SIGEV_SIGNAL
+    macro_header: signal-macros.h
+  - macro_name: SIGEV_NONE
+    macro_header: signal-macros.h
+  - macro_name: SIGEV_THREAD
+    macro_header: signal-macros.h
+  - macro_name: SIGEV_THREAD_ID
+    macro_header: signal-macros.h
 types:
   - type_name: pid_t
   - type_name: sig_atomic_t
+  - type_name: sig_t
+    standards:
+      - bsd
   - type_name: sighandler_t
+    standards:
+      - gnu
   - type_name: siginfo_t
   - type_name: sigset_t
   - type_name: stack_t
   - type_name: struct_sigaction
+  - type_name: struct_sigevent
   - type_name: union_sigval
+  - type_name: pthread_t
+    standards:
+      - posix
 enums: []
 objects: []
 functions:
@@ -114,3 +131,10 @@ functions:
       - type: int
       - type: const sigset_t *__restrict
       - type: sigset_t *__restrict
+  - name: pthread_kill
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: pthread_t
+      - type: int

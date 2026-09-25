@@ -1,6 +1,6 @@
-# RUN: not --crash llc -mtriple=riscv32 -mattr=+experimental-y -run-pass machineverifier %s -o - 2>&1 \
+# RUN: not --crash llc -mtriple=riscv32 -mattr=+experimental-y -target-abi ilp32 -run-pass machineverifier %s -o - 2>&1 \
 # RUN:    | FileCheck %s --check-prefixes=CHECK,CHECK-32 --implicit-check-not="Bad machine code"
-# RUN: not --crash llc -mtriple=riscv64 -mattr=+experimental-y -run-pass machineverifier %s -o - 2>&1 \
+# RUN: not --crash llc -mtriple=riscv64 -mattr=+experimental-y -target-abi lp64 -run-pass machineverifier %s -o - 2>&1 \
 # RUN:    | FileCheck %s --check-prefixes=CHECK,CHECK-64  --implicit-check-not="Bad machine code"
 
 # CHECK:      *** Bad machine code: Invalid immediate ***

@@ -243,6 +243,96 @@ set(GENERIC_TF_SOURCES
   trunctfsf2.c
 )
 
+# Implement extended-precision builtins, assuming long double is 80 bits.
+# long double is not 80 bits on Android or MSVC.
+set(x86_80_BIT_SOURCES
+  divxc3.c
+  extendhfxf2.c
+  extendxftf2.c
+  fixxfdi.c
+  fixxfti.c
+  fixunsxfdi.c
+  fixunsxfsi.c
+  fixunsxfti.c
+  floatdixf.c
+  floattixf.c
+  floatundixf.c
+  floatuntixf.c
+  mulxc3.c
+  powixf2.c
+  trunctfxf2.c
+  truncxfhf2.c
+)
+
+option(COMPILER_RT_USE_LIBC_MATH
+      "Use LLVM libc math routines for floating-point builtins" OFF)
+
+# Swap the legacy soft-float <name>.c builtin in <list> for the libc-backed
+# <name>.cpp implementation (which delegates to LIBC_NAMESPACE::shared::*).
+macro(use_libc_builtin list_var name)
+  list(REMOVE_ITEM ${list_var} ${name}.c)
+  list(APPEND ${list_var} ${name}.cpp)
+endmacro()
+
+if(COMPILER_RT_USE_LIBC_MATH)
+  include(FindLibcCommonUtils)
+  if(NOT TARGET llvm-libc-common-utilities)
+    message(FATAL_ERROR "LLVM libc is not found at ${libc_path}.")
+  endif()
+
+  get_target_property(_libc_include_dirs llvm-libc-common-utilities
+                      INTERFACE_INCLUDE_DIRECTORIES)
+  include_directories(SYSTEM ${_libc_include_dirs})
+  add_definitions(-DCOMPILER_RT_USE_LIBC_MATH)
+
+  use_libc_builtin(GENERIC_SOURCES    adddf3)
+  use_libc_builtin(GENERIC_SOURCES    addsf3)
+  use_libc_builtin(GENERIC_TF_SOURCES addtf3)
+  use_libc_builtin(GENERIC_SOURCES    divdf3)
+  use_libc_builtin(GENERIC_SOURCES    divsf3)
+  use_libc_builtin(GENERIC_TF_SOURCES divtf3)
+  use_libc_builtin(GENERIC_TF_SOURCES extenddftf2)
+  use_libc_builtin(GENERIC_SOURCES    extendsfdf2)
+  use_libc_builtin(GENERIC_TF_SOURCES extendsftf2)
+  use_libc_builtin(x86_80_BIT_SOURCES extendxftf2)
+  use_libc_builtin(GENERIC_SOURCES    fixdfsi)
+  use_libc_builtin(GENERIC_SOURCES    fixdfdi)
+  use_libc_builtin(GENERIC_SOURCES    fixdfti)
+  use_libc_builtin(GENERIC_SOURCES    fixsfsi)
+  use_libc_builtin(GENERIC_SOURCES    fixsfdi)
+  use_libc_builtin(GENERIC_SOURCES    fixsfti)
+  use_libc_builtin(GENERIC_SOURCES    fixunsdfsi)
+  use_libc_builtin(GENERIC_SOURCES    fixunsdfdi)
+  use_libc_builtin(GENERIC_SOURCES    fixunsdfti)
+  use_libc_builtin(GENERIC_SOURCES    fixunssfsi)
+  use_libc_builtin(GENERIC_SOURCES    fixunssfdi)
+  use_libc_builtin(GENERIC_SOURCES    fixunssfti)
+  use_libc_builtin(GENERIC_SOURCES    floatsidf)
+  use_libc_builtin(GENERIC_SOURCES    floatdidf)
+  use_libc_builtin(GENERIC_SOURCES    floattidf)
+  use_libc_builtin(GENERIC_SOURCES    floatsisf)
+  use_libc_builtin(GENERIC_SOURCES    floatdisf)
+  use_libc_builtin(GENERIC_SOURCES    floattisf)
+  use_libc_builtin(GENERIC_SOURCES    floatunsidf)
+  use_libc_builtin(GENERIC_SOURCES    floatundidf)
+  use_libc_builtin(GENERIC_SOURCES    floatuntidf)
+  use_libc_builtin(GENERIC_SOURCES    floatunsisf)
+  use_libc_builtin(GENERIC_SOURCES    floatundisf)
+  use_libc_builtin(GENERIC_SOURCES    floatuntisf)
+  use_libc_builtin(GENERIC_SOURCES    muldf3)
+  use_libc_builtin(GENERIC_SOURCES    mulsf3)
+  use_libc_builtin(GENERIC_TF_SOURCES multf3)
+  use_libc_builtin(GENERIC_SOURCES    negdf2)
+  use_libc_builtin(GENERIC_SOURCES    negsf2)
+  use_libc_builtin(GENERIC_SOURCES    subdf3)
+  use_libc_builtin(GENERIC_SOURCES    subsf3)
+  use_libc_builtin(GENERIC_TF_SOURCES subtf3)
+  use_libc_builtin(GENERIC_SOURCES    truncdfsf2)  
+  use_libc_builtin(GENERIC_TF_SOURCES trunctfdf2)
+  use_libc_builtin(GENERIC_TF_SOURCES trunctfsf2)
+  use_libc_builtin(x86_80_BIT_SOURCES trunctfxf2)
+endif()
+
 option(COMPILER_RT_EXCLUDE_ATOMIC_BUILTIN
   "Skip the atomic builtin (these should normally be provided by a shared library)"
   On)
@@ -311,27 +401,6 @@ if (NOT MSVC)
     i386/fp_mode.c
   )
 endif ()
-
-# Implement extended-precision builtins, assuming long double is 80 bits.
-# long double is not 80 bits on Android or MSVC.
-set(x86_80_BIT_SOURCES
-  divxc3.c
-  extendhfxf2.c
-  extendxftf2.c
-  fixxfdi.c
-  fixxfti.c
-  fixunsxfdi.c
-  fixunsxfsi.c
-  fixunsxfti.c
-  floatdixf.c
-  floattixf.c
-  floatundixf.c
-  floatuntixf.c
-  mulxc3.c
-  powixf2.c
-  trunctfxf2.c
-  truncxfhf2.c
-)
 
 if (NOT MSVC)
   set(x86_64_SOURCES
@@ -466,6 +535,7 @@ if(COMPILER_RT_ARM_OPTIMIZED_FP AND BUILTIN_SUPPORTED_ARCH MATCHES "arm")
 
   if(implicit_it_flag)
     set(assembly_files
+      arm/addsf3.S
       arm/mulsf3.S
       arm/divsf3.S
       arm/adddf3.S
@@ -537,9 +607,9 @@ set(arm_sync_SOURCES
 set(thumb1_base_SOURCES
   arm/divsi3.S
   arm/udivsi3.S
-  arm/addsf3.S
   ${GENERIC_SOURCES}
 )
+set_special_properties(arm/addsf3.S SUPERSEDES subsf3.c PROVIDES subsf3)
 set_special_properties(arm/adddf3.S SUPERSEDES subdf3.c PROVIDES subdf3)
 set_special_properties(arm/cmpdf2.S SUPERSEDES comparedf2.c PROVIDES comparedf2)
 set_special_properties(arm/cmpsf2.S SUPERSEDES arm/comparesf2.S PROVIDES comparesf2)
@@ -548,6 +618,7 @@ set_special_properties(arm/floatdisf.S SUPERSEDES floatundisf.c PROVIDES floatun
 if(COMPILER_RT_ARM_OPTIMIZED_FP)
   set(thumb1_base_SOURCES
     arm/thumb1/mulsf3.S
+    arm/thumb1/addsf3fast.S
     arm/thumb1/cmpdf2.S
     arm/thumb1/cmpsf2.S
     arm/thumb1/gedf2.S
@@ -559,6 +630,8 @@ if(COMPILER_RT_ARM_OPTIMIZED_FP)
     arm/funder.c
     ${thumb1_base_SOURCES}
   )
+  set_special_properties(arm/thumb1/addsf3fast.S
+    SUPERSEDES addsf3.c subsf3.c PROVIDES addsf3 subsf3)
   set_special_properties(arm/thumb1/cmpdf2.S
     SUPERSEDES comparedf2.c PROVIDES comparedf2)
   set_special_properties(arm/thumb1/cmpsf2.S
@@ -567,6 +640,7 @@ else()
   # Other Thumb1 assembly implementations which do not fall under the
   # COMPILER_RT_ARM_OPTIMIZED_FP umbrella
   set(thumb1_base_SOURCES
+    arm/thumb1/addsf3.S
     arm/comparesf2.S
     ${thumb1_base_SOURCES}
   )
@@ -803,6 +877,7 @@ if (APPLE)
 endif()
 
 set(amdgcn_SOURCES ${GENERIC_SOURCES})
+set(amdgpu_SOURCES ${GENERIC_SOURCES})
 
 set(armv4t_SOURCES ${arm_min_SOURCES})
 set(armv5te_SOURCES ${arm_min_SOURCES})
@@ -969,7 +1044,7 @@ set(ve_SOURCES
 set(m68k_SOURCES ${GENERIC_SOURCES})
 
 add_custom_target(builtins)
-set_target_properties(builtins PROPERTIES FOLDER "Compiler-RT/Metatargets")
+set_target_properties(builtins PROPERTIES FOLDER "compiler-rt/Metatargets")
 
 option(COMPILER_RT_ENABLE_SOFTWARE_INT128
   "Enable the int128 builtin routines for all targets."
@@ -1117,6 +1192,38 @@ else ()
       get_compiler_rt_output_dir(${arch} BUILTIN_LIB_OUTPUT_DIR)
       set_output_name(BUILTIN_LIB_OUTPUT_NAME clang_rt.builtins ${arch})
       file(WRITE "${BUILTIN_LIB_OUTPUT_DIR}/${BUILTIN_LIB_OUTPUT_NAME}.sources.txt" "${${arch}_SOURCES}")
+
+      # For spirv64, produce a combined bitcode file alongside the static archive.
+      # -mlink-builtin-bitcode expects raw LLVM IR and cannot unpack a static archive,
+      # so we use llvm-link to merge the archive members into a single .bc file.
+      if("${arch}" MATCHES "^spirv64")
+        find_program(LLVM_LINK llvm-link
+          PATHS ${LLVM_TOOLS_BINARY_DIR}
+          NO_DEFAULT_PATH)
+        if(LLVM_LINK)
+          set(SPIRV64_BC_OUTPUT "${BUILTIN_LIB_OUTPUT_DIR}/lib${BUILTIN_LIB_OUTPUT_NAME}.bc")
+          add_custom_command(
+            OUTPUT "${SPIRV64_BC_OUTPUT}"
+            COMMAND "${LLVM_LINK}"
+                    "$<TARGET_FILE:clang_rt.builtins-spirv64>"
+                    -o "${SPIRV64_BC_OUTPUT}"
+            DEPENDS clang_rt.builtins-${arch}
+            COMMENT "Linking lib${BUILTIN_LIB_OUTPUT_NAME}.bc"
+            VERBATIM)
+          add_custom_target(clang_rt.builtins-spirv64-bc ALL
+            DEPENDS "${SPIRV64_BC_OUTPUT}")
+          add_dependencies(builtins clang_rt.builtins-spirv64-bc)
+          get_compiler_rt_install_dir(${arch} BUILTIN_INSTALL_DIR)
+          install(FILES "${SPIRV64_BC_OUTPUT}"
+                  DESTINATION "${BUILTIN_INSTALL_DIR}"
+                  COMPONENT clang_rt.builtins-${arch})
+        else()
+          message(WARNING
+            "llvm-link not found (LLVM_TOOLS_BINARY_DIR='${LLVM_TOOLS_BINARY_DIR}'); "
+            "skipping libclang_rt.builtins.bc for spirv64")
+        endif()
+      endif()
+
       cmake_pop_check_state()
     endif ()
   endforeach ()

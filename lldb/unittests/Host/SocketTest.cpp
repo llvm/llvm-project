@@ -93,6 +93,11 @@ TEST_F(SocketTest, CreatePair) {
     functional_protocols.push_back(Socket::ProtocolUnixDomain);
     functional_protocols.push_back(Socket::ProtocolUnixAbstract);
   }
+#elif defined(_WIN32)
+  // Windows supports AF_UNIX domain sockets (Windows 10 1803+) but not the
+  // Linux abstract-namespace variant.
+  if (HostSupportsDomainSockets())
+    functional_protocols.push_back(Socket::ProtocolUnixDomain);
 #endif
 
   for (auto p : functional_protocols) {
@@ -110,8 +115,8 @@ TEST_F(SocketTest, CreatePair) {
   }
 
   std::vector<Socket::SocketProtocol> erroring_protocols = {
-#if !LLDB_ENABLE_POSIX
-      Socket::ProtocolUnixDomain,
+#ifdef _WIN32
+      // Windows has AF_UNIX domain sockets but no abstract-namespace sockets.
       Socket::ProtocolUnixAbstract,
 #endif
   };
@@ -121,7 +126,7 @@ TEST_F(SocketTest, CreatePair) {
   }
 }
 
-#if LLDB_ENABLE_POSIX
+#if LLDB_ENABLE_POSIX || defined(_WIN32)
 TEST_F(SocketTest, DomainListenConnectAccept) {
   if (!HostSupportsDomainSockets())
     GTEST_SKIP() << "Domain sockets unavailable";
@@ -161,9 +166,12 @@ TEST_F(SocketTest, DomainListenGetListeningConnectionURI) {
   ASSERT_THAT_ERROR(error.ToError(), llvm::Succeeded());
   ASSERT_TRUE(listen_socket_up->IsValid());
 
-  ASSERT_THAT(
-      listen_socket_up->GetListeningConnectionURI(),
-      testing::ElementsAre(llvm::formatv("unix-connect://{0}", Path).str()));
+  std::string expected_uri =
+      llvm::formatv("unix-connect://{0}",
+                    DomainSocket::NativePathToURIPath(Path))
+          .str();
+  ASSERT_THAT(listen_socket_up->GetListeningConnectionURI(),
+              testing::ElementsAre(expected_uri));
 }
 
 TEST_F(SocketTest, DomainMainLoopAccept) {
@@ -392,12 +400,38 @@ TEST_F(SocketTest, DomainGetConnectURI) {
   CreateDomainConnectedSockets(domain_path, &socket_a_up, &socket_b_up);
 
   std::string uri(socket_a_up->GetRemoteConnectionURI());
-  EXPECT_EQ((URI{"unix-connect", "", std::nullopt, domain_path}),
+  std::string expected_path = DomainSocket::NativePathToURIPath(domain_path);
+  EXPECT_EQ((URI{"unix-connect", "", std::nullopt, expected_path}),
             URI::Parse(uri));
 
   EXPECT_EQ(socket_b_up->GetRemoteConnectionURI(), "");
 }
+#endif
 
+TEST_F(SocketTest, DomainSocketPathURIConversion) {
+  // Paths that are already valid URI paths (no drive letter) are unchanged.
+  EXPECT_EQ(DomainSocket::NativePathToURIPath("/tmp/foo"), "/tmp/foo");
+  EXPECT_EQ(DomainSocket::URIPathToNativePath("/tmp/foo"), "/tmp/foo");
+
+  // A Windows drive-letter path round-trips through the RFC 8089 "/C:/..."
+  // URI form.
+  EXPECT_EQ(DomainSocket::NativePathToURIPath("C:\\dir\\sock"), "/C:/dir/sock");
+  EXPECT_EQ(DomainSocket::URIPathToNativePath("/C:/dir/sock"), "C:\\dir\\sock");
+  EXPECT_EQ(DomainSocket::URIPathToNativePath(
+                DomainSocket::NativePathToURIPath("C:\\dir\\sock")),
+            "C:\\dir\\sock");
+
+  // A Windows UNC path round-trips by swapping backslashes for forward slashes.
+  EXPECT_EQ(DomainSocket::NativePathToURIPath("\\\\server\\share\\sock"),
+            "//server/share/sock");
+  EXPECT_EQ(DomainSocket::URIPathToNativePath("//server/share/sock"),
+            "\\\\server\\share\\sock");
+  EXPECT_EQ(DomainSocket::URIPathToNativePath(
+                DomainSocket::NativePathToURIPath("\\\\server\\share\\sock")),
+            "\\\\server\\share\\sock");
+}
+
+#if LLDB_ENABLE_POSIX || defined(_WIN32)
 TEST_F(SocketTest, DomainSocketFromBoundNativeSocket) {
   if (!HostSupportsDomainSockets())
     GTEST_SKIP() << "Domain sockets unavailable";

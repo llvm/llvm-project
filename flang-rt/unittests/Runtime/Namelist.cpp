@@ -334,6 +334,137 @@ TEST(NamelistTests, RealValueForInt) {
   EXPECT_EQ(got, expect);
 }
 
+TEST(NamelistTests, EmptyValueForScalar) {
+  // logical :: l = .true. ; integer :: k = 42
+  //   &nml l= k=7/
+  // Exercises Flang's NAMELIST extension that accepts an empty scalar
+  // assignment (F2023 13.11.2 p1 requires one or more values; nvfortran
+  // / gfortran treat the empty form as "keep current value").  Here
+  // `l=` leaves l at .true. and parsing continues with k=7.  Using
+  // .true. as the retained value strengthens the test: it distinguishes
+  // "kept" from an accidental default-initialized .false. on error.
+  // Before the extension was implemented, scalar namelist items disabled
+  // the IsNamelistNameOrSlash guard in Edit*Input, so l's parse would
+  // consume the `k` token and signal "Bad character 'k' in LOGICAL
+  // input field".
+  OwningPtr<Descriptor> lDesc{
+      MakeArray<TypeCategory::Logical, sizeof(std::uint8_t)>(
+          std::vector<int>{}, std::vector<std::uint8_t>{true})};
+  OwningPtr<Descriptor> kDesc{
+      MakeArray<TypeCategory::Integer, static_cast<int>(sizeof(int))>(
+          std::vector<int>{}, std::vector<int>{42})};
+  const NamelistGroup::Item items[]{{"l", *lDesc}, {"k", *kDesc}};
+  const NamelistGroup group{"nml", 2, items};
+  static char t1[]{"&nml l= k=7/"};
+  StaticDescriptor<1, true> statDesc;
+  Descriptor &internalDesc{statDesc.descriptor()};
+  internalDesc.Establish(TypeCode{CFI_type_char},
+      /*elementBytes=*/std::strlen(t1), t1, 0, nullptr, CFI_attribute_pointer);
+  auto inCookie{IONAME(BeginInternalArrayListInput)(
+      internalDesc, nullptr, 0, __FILE__, __LINE__)};
+  ASSERT_TRUE(IONAME(InputNamelist)(inCookie, group));
+  ASSERT_EQ(IONAME(EndIoStatement)(inCookie), IostatOk)
+      << "namelist empty scalar assignment";
+  char out[24];
+  internalDesc.Establish(TypeCode{CFI_type_char}, /*elementBytes=*/sizeof out,
+      out, 0, nullptr, CFI_attribute_pointer);
+  auto outCookie{IONAME(BeginInternalArrayListOutput)(
+      internalDesc, nullptr, 0, __FILE__, __LINE__)};
+  ASSERT_TRUE(IONAME(OutputNamelist)(outCookie, group));
+  ASSERT_EQ(IONAME(EndIoStatement)(outCookie), IostatOk) << "namelist output";
+  std::string got{out, sizeof out};
+  static const std::string expect{" &NML L= T,K= 7/        "};
+  EXPECT_EQ(got, expect);
+}
+
+TEST(NamelistTests, EmptyValueForArray) {
+  // integer :: k=1 ; integer :: arr(3)=[10,20,30] ; integer :: m=2
+  //   &nml k=100 arr= m=200/
+  // The empty assignment `arr=` should leave the array at its default and
+  // parsing should continue with m=200.  This case worked before the
+  // `rank() > 0 ? &group : nullptr` filter was widened, but is guarded
+  // here to make sure widening the pointer for scalars didn't regress the
+  // short-array end-of-values detection.
+  OwningPtr<Descriptor> kDesc{
+      MakeArray<TypeCategory::Integer, static_cast<int>(sizeof(int))>(
+          std::vector<int>{}, std::vector<int>{1})};
+  OwningPtr<Descriptor> arrDesc{
+      MakeArray<TypeCategory::Integer, static_cast<int>(sizeof(int))>(
+          std::vector<int>{3}, std::vector<int>{10, 20, 30})};
+  OwningPtr<Descriptor> mDesc{
+      MakeArray<TypeCategory::Integer, static_cast<int>(sizeof(int))>(
+          std::vector<int>{}, std::vector<int>{2})};
+  const NamelistGroup::Item items[]{
+      {"k", *kDesc}, {"arr", *arrDesc}, {"m", *mDesc}};
+  const NamelistGroup group{"nml", 3, items};
+  static char t1[]{"&nml k=100 arr= m=200/"};
+  StaticDescriptor<1, true> statDesc;
+  Descriptor &internalDesc{statDesc.descriptor()};
+  internalDesc.Establish(TypeCode{CFI_type_char},
+      /*elementBytes=*/std::strlen(t1), t1, 0, nullptr, CFI_attribute_pointer);
+  auto inCookie{IONAME(BeginInternalArrayListInput)(
+      internalDesc, nullptr, 0, __FILE__, __LINE__)};
+  ASSERT_TRUE(IONAME(InputNamelist)(inCookie, group));
+  ASSERT_EQ(IONAME(EndIoStatement)(inCookie), IostatOk)
+      << "namelist empty array assignment";
+  char out[48];
+  internalDesc.Establish(TypeCode{CFI_type_char}, /*elementBytes=*/sizeof out,
+      out, 0, nullptr, CFI_attribute_pointer);
+  auto outCookie{IONAME(BeginInternalArrayListOutput)(
+      internalDesc, nullptr, 0, __FILE__, __LINE__)};
+  ASSERT_TRUE(IONAME(OutputNamelist)(outCookie, group));
+  ASSERT_EQ(IONAME(EndIoStatement)(outCookie), IostatOk) << "namelist output";
+  std::string got{out, sizeof out};
+  static const std::string expect{
+      " &NML K= 100,ARR= 10 20 30,M= 200/              "};
+  EXPECT_EQ(got, expect);
+}
+
+TEST(NamelistTests, EmptyScalarBetweenArrays) {
+  // integer :: arr1(3)=[10,20,30] ; logical :: l=.true. ;
+  // integer :: arr2(3)=[40,50,60]
+  //   &nml arr1=100 200 300 l= arr2=400 500 600/
+  // The empty scalar assignment `l=` sits between two full array
+  // assignments.  arr1 must be fully read (three values), then l
+  // retains its .true. value under the empty-scalar extension, then arr2
+  // must be fully read.  Exercises the interaction between the scalar
+  // extension and the pre-existing array short-value / end-of-values
+  // detection.
+  OwningPtr<Descriptor> arr1Desc{
+      MakeArray<TypeCategory::Integer, static_cast<int>(sizeof(int))>(
+          std::vector<int>{3}, std::vector<int>{10, 20, 30})};
+  OwningPtr<Descriptor> lDesc{
+      MakeArray<TypeCategory::Logical, sizeof(std::uint8_t)>(
+          std::vector<int>{}, std::vector<std::uint8_t>{true})};
+  OwningPtr<Descriptor> arr2Desc{
+      MakeArray<TypeCategory::Integer, static_cast<int>(sizeof(int))>(
+          std::vector<int>{3}, std::vector<int>{40, 50, 60})};
+  const NamelistGroup::Item items[]{
+      {"arr1", *arr1Desc}, {"l", *lDesc}, {"arr2", *arr2Desc}};
+  const NamelistGroup group{"nml", 3, items};
+  static char t1[]{"&nml arr1=100 200 300 l= arr2=400 500 600/"};
+  StaticDescriptor<1, true> statDesc;
+  Descriptor &internalDesc{statDesc.descriptor()};
+  internalDesc.Establish(TypeCode{CFI_type_char},
+      /*elementBytes=*/std::strlen(t1), t1, 0, nullptr, CFI_attribute_pointer);
+  auto inCookie{IONAME(BeginInternalArrayListInput)(
+      internalDesc, nullptr, 0, __FILE__, __LINE__)};
+  ASSERT_TRUE(IONAME(InputNamelist)(inCookie, group));
+  ASSERT_EQ(IONAME(EndIoStatement)(inCookie), IostatOk)
+      << "namelist empty scalar between arrays";
+  char out[64];
+  internalDesc.Establish(TypeCode{CFI_type_char}, /*elementBytes=*/sizeof out,
+      out, 0, nullptr, CFI_attribute_pointer);
+  auto outCookie{IONAME(BeginInternalArrayListOutput)(
+      internalDesc, nullptr, 0, __FILE__, __LINE__)};
+  ASSERT_TRUE(IONAME(OutputNamelist)(outCookie, group));
+  ASSERT_EQ(IONAME(EndIoStatement)(outCookie), IostatOk) << "namelist output";
+  std::string got{out, sizeof out};
+  static const std::string expect{
+      " &NML ARR1= 100 200 300,L= T,ARR2= 400 500 600/                 "};
+  EXPECT_EQ(got, expect);
+}
+
 TEST(NamelistTests, NanInputAmbiguity) {
   OwningPtr<Descriptor> xDesc{// real :: x(5) = 0.
       MakeArray<TypeCategory::Real, static_cast<int>(sizeof(float))>(

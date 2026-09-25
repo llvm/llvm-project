@@ -53,18 +53,10 @@ static cl::opt<bool> DisableCleanups(
     cl::desc("Do not remove implausible terminators or other similar cleanups"),
     cl::init(false));
 
-// TODO: Remove this option when we fully migrate to new pass manager
-static cl::opt<bool> DemoteCatchSwitchPHIOnlyOpt(
-    "demote-catchswitch-only", cl::Hidden,
-    cl::desc("Demote catchswitch BBs only (for wasm EH)"), cl::init(false));
-
 namespace {
 
 class WinEHPrepareImpl {
 public:
-  WinEHPrepareImpl(bool DemoteCatchSwitchPHIOnly)
-      : DemoteCatchSwitchPHIOnly(DemoteCatchSwitchPHIOnly) {}
-
   bool runOnFunction(Function &Fn);
 
 private:
@@ -84,7 +76,8 @@ private:
   bool cleanupPreparedFunclets(Function &F);
   void verifyPreparedFunclets(Function &F);
 
-  bool DemoteCatchSwitchPHIOnly;
+  // True for Wasm C++ personalities.
+  bool DemoteCatchSwitchPHIOnly = false;
 
   // All fields are reset by runOnFunction.
   EHPersonality Personality = EHPersonality::Unknown;
@@ -95,20 +88,17 @@ private:
 };
 
 class WinEHPrepare : public FunctionPass {
-  bool DemoteCatchSwitchPHIOnly;
-
 public:
   static char ID; // Pass identification, replacement for typeid.
 
-  WinEHPrepare(bool DemoteCatchSwitchPHIOnly = false)
-      : FunctionPass(ID), DemoteCatchSwitchPHIOnly(DemoteCatchSwitchPHIOnly) {}
+  WinEHPrepare() : FunctionPass(ID) {}
 
   StringRef getPassName() const override {
     return "Windows exception handling preparation";
   }
 
   bool runOnFunction(Function &Fn) override {
-    return WinEHPrepareImpl(DemoteCatchSwitchPHIOnly).runOnFunction(Fn);
+    return WinEHPrepareImpl().runOnFunction(Fn);
   }
 };
 
@@ -116,7 +106,7 @@ public:
 
 PreservedAnalyses WinEHPreparePass::run(Function &F,
                                         FunctionAnalysisManager &) {
-  bool Changed = WinEHPrepareImpl(DemoteCatchSwitchPHIOnly).runOnFunction(F);
+  bool Changed = WinEHPrepareImpl().runOnFunction(F);
   return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }
 
@@ -124,9 +114,7 @@ char WinEHPrepare::ID = 0;
 INITIALIZE_PASS(WinEHPrepare, DEBUG_TYPE, "Prepare Windows exceptions", false,
                 false)
 
-FunctionPass *llvm::createWinEHPass(bool DemoteCatchSwitchPHIOnly) {
-  return new WinEHPrepare(DemoteCatchSwitchPHIOnly);
-}
+FunctionPass *llvm::createWinEHPass() { return new WinEHPrepare(); }
 
 bool WinEHPrepareImpl::runOnFunction(Function &Fn) {
   if (!Fn.hasPersonalityFn())
@@ -138,6 +126,11 @@ bool WinEHPrepareImpl::runOnFunction(Function &Fn) {
   // Do nothing if this is not a scope-based personality.
   if (!isScopedEHPersonality(Personality))
     return false;
+
+  // Funclet personalities outline catch/cleanup bodies, so every funclet PHI
+  // must be demoted. A scoped-but-non-funclet personality (Wasm) keeps its pads
+  // inline and only needs the catchswitch dispatch PHIs demoted.
+  DemoteCatchSwitchPHIOnly = !isFuncletEHPersonality(Personality);
 
   DL = &Fn.getDataLayout();
   return prepareExplicitEH(Fn);
@@ -1245,8 +1238,7 @@ bool WinEHPrepareImpl::prepareExplicitEH(Function &F) {
   Changed |= cloneCommonBlocks(F);
 
   if (!DisableDemotion)
-    Changed |= demotePHIsOnFunclets(F, DemoteCatchSwitchPHIOnly ||
-                                           DemoteCatchSwitchPHIOnlyOpt);
+    Changed |= demotePHIsOnFunclets(F, DemoteCatchSwitchPHIOnly);
 
   if (!DisableCleanups) {
     assert(!verifyFunction(F, &dbgs()));

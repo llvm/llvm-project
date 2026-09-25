@@ -912,6 +912,26 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
     log("argv[{0}]: {1}", I, argv[I]);
   if (auto EnvFlags = llvm::sys::Process::GetEnv(FlagsEnvVar))
     log("{0}: {1}", FlagsEnvVar, *EnvFlags);
+  // Log environment variables that influence how clangd finds system headers.
+  // This helps diagnose missing-include issues, especially on Windows.
+  for (const char *EnvVar : {
+           // MSVC environment variables (set by vcvarsall.bat)
+           "INCLUDE",
+           "LIB",
+           "LIBPATH",
+           "CL",
+           "_CL_",
+           // GCC/Clang environment variables
+           "CPATH",
+           "C_INCLUDE_PATH",
+           "CPLUS_INCLUDE_PATH",
+           "OBJC_INCLUDE_PATH",
+           "LIBRARY_PATH",
+           "GCC_EXEC_PREFIX",
+       }) {
+    if (auto Val = llvm::sys::Process::GetEnv(EnvVar))
+      log("Env {0}: {1}", EnvVar, *Val);
+  }
 
   ClangdLSPServer::Options Opts;
   Opts.UseDirBasedCDB = (CompileArgsFrom == FilesystemCompileArgs);

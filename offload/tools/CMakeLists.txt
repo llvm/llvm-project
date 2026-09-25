@@ -11,4 +11,8 @@ macro(add_offload_tool_symlink name)
 endmacro()
 
 add_subdirectory(deviceinfo)
-add_subdirectory(kernelreplay)
+
+# kernelreplay requires libomptarget which is not available on Windows
+if(BUILD_LIBOMPTARGET)
+  add_subdirectory(kernelreplay)
+endif()

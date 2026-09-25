@@ -90,6 +90,8 @@ define void @main() {
   %gep_nuw_valid4 = getelementptr nuw i32, ptr %alloc, i64 1073741821
   %gep_nuw_invalid4 = getelementptr nuw i32, ptr %alloc, i64 1073741822
 
+  %gep_splat_zero = getelementptr i8, ptr %alloc, <2 x i64> zeroinitializer
+
   ret void
 }
 ; CHECK: Entering function: main
@@ -117,11 +119,11 @@ define void @main() {
 ; CHECK-NEXT:   %gep_inbounds_invalid2 = getelementptr inbounds i8, ptr %alloc, i64 5 => poison
 ; CHECK-NEXT:   %gep_inbounds_invalid3 = getelementptr inbounds %struct, ptr %alloc_struct, i64 1, i32 1, i32 -2 => poison
 ; CHECK-NEXT: Entering function: dead_stack_object
-; CHECK-NEXT:   %alloc = alloca i32, align 4 => ptr 0x28 [alloc]
+; CHECK-NEXT:   %alloc = alloca i32, align 4 => ptr 0x2C [alloc]
 ; CHECK-NEXT:   ret ptr %alloc
 ; CHECK-NEXT: Exiting function: dead_stack_object
-; CHECK-NEXT:   %dead_stack_ptr = call ptr @dead_stack_object() => ptr 0x28 [alloc (dangling)]
-; CHECK-NEXT:   %gep_inbounds_valid4 = getelementptr inbounds i8, ptr %dead_stack_ptr, i64 4 => ptr 0x2C [alloc + 4 (dangling)]
+; CHECK-NEXT:   %dead_stack_ptr = call ptr @dead_stack_object() => ptr 0x2C [alloc (dangling)]
+; CHECK-NEXT:   %gep_inbounds_valid4 = getelementptr inbounds i8, ptr %dead_stack_ptr, i64 4 => ptr 0x30 [alloc + 4 (dangling)]
 ; CHECK-NEXT:   %gep_inbounds_invalid4 = getelementptr inbounds i8, ptr %dead_stack_ptr, i64 5 => poison
 ; CHECK-NEXT:   %gep_nusw_valid1 = getelementptr nusw i8, ptr %alloc, i64 -1 => ptr 0x7 [alloc + -1]
 ; CHECK-NEXT:   %gep_nusw_invalid1 = getelementptr nusw i8, ptr %large_address, i64 -2147483649 => poison
@@ -142,5 +144,6 @@ define void @main() {
 ; CHECK-NEXT:   %gep_nuw_invalid3 = getelementptr nuw [2 x i16], ptr null, i32 1073741823, i32 2 => poison
 ; CHECK-NEXT:   %gep_nuw_valid4 = getelementptr nuw i32, ptr %alloc, i64 1073741821 => ptr 0xFFFFFFFC [alloc + 4294967284]
 ; CHECK-NEXT:   %gep_nuw_invalid4 = getelementptr nuw i32, ptr %alloc, i64 1073741822 => poison
+; CHECK-NEXT:   %gep_splat_zero = getelementptr i8, ptr %alloc, <2 x i64> zeroinitializer => { ptr 0x8 [alloc], ptr 0x8 [alloc] }
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main

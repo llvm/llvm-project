@@ -319,9 +319,8 @@ void BackendConsumer::HandleTranslationUnit(ASTContext &C) {
 
   EmbedBitcode(getModule(), CodeGenOpts, llvm::MemoryBufferRef());
 
-  emitBackendOutput(CI, CI.getCodeGenOpts(),
-                    C.getTargetInfo().getDataLayoutString(), getModule(),
-                    Action, FS, std::move(AsmOutStream), this);
+  emitBackendOutput(CI, CI.getCodeGenOpts(), getModule(), Action, FS,
+                    std::move(AsmOutStream), this);
 
   if (OptRecordFile)
     OptRecordFile->keep();
@@ -631,6 +630,40 @@ void BackendConsumer::UnsupportedDiagHandler(
         << Filename << Line << Column;
 }
 
+void BackendConsumer::UnsupportedTargetIntrinsicDiagHandler(
+    const llvm::DiagnosticInfoUnsupportedTargetIntrinsic &D) {
+  assert(D.getSeverity() == llvm::DS_Error &&
+         "unsupported target intrinsic diagnostic should be an error");
+
+  StringRef Filename;
+  unsigned Line, Column;
+  bool BadDebugInfo = false;
+  FullSourceLoc Loc;
+  std::string Msg;
+  raw_string_ostream MsgStream(Msg);
+
+  // Context will be nullptr for IR input files, so construct the diagnostic
+  // message from llvm::DiagnosticInfoUnsupportedTargetIntrinsic.
+  if (Context != nullptr) {
+    Loc = getBestLocationFromDebugLoc(D, BadDebugInfo, Filename, Line, Column);
+    MsgStream << D.getMessage();
+  } else {
+    DiagnosticPrinterRawOStream DP(MsgStream);
+    D.print(DP);
+  }
+
+  Diags.Report(Loc, diag::err_fe_backend_unsupported) << Msg;
+
+  if (BadDebugInfo) {
+    // If we were not able to translate the file:line:col information
+    // back to a SourceLocation, at least emit a note stating that
+    // we could not translate this location. This can happen in the
+    // case of #line directives.
+    Diags.Report(Loc, diag::note_fe_backend_invalid_loc)
+        << Filename << Line << Column;
+  }
+}
+
 void BackendConsumer::EmitOptimizationMessage(
     const llvm::DiagnosticInfoOptimizationBase &D, unsigned DiagID) {
   // We only support warnings and remarks.
@@ -879,6 +912,10 @@ void BackendConsumer::DiagnosticHandlerImpl(const DiagnosticInfo &DI) {
     return;
   case llvm::DK_Unsupported:
     UnsupportedDiagHandler(cast<DiagnosticInfoUnsupported>(DI));
+    return;
+  case llvm::DK_UnsupportedTargetIntrinsic:
+    UnsupportedTargetIntrinsicDiagHandler(
+        cast<DiagnosticInfoUnsupportedTargetIntrinsic>(DI));
     return;
   case llvm::DK_DontCall:
     DontCallDiagHandler(cast<DiagnosticInfoDontCall>(DI));
@@ -1201,8 +1238,7 @@ void CodeGenAction::ExecuteAction() {
   }
   LLVMRemarkFileHandle OptRecordFile = std::move(*OptRecordFileOrErr);
 
-  emitBackendOutput(CI, CI.getCodeGenOpts(),
-                    CI.getTarget().getDataLayoutString(), TheModule.get(), BA,
+  emitBackendOutput(CI, CI.getCodeGenOpts(), TheModule.get(), BA,
                     CI.getFileManager().getVirtualFileSystemPtr(),
                     std::move(OS));
   if (OptRecordFile)

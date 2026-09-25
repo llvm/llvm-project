@@ -1461,6 +1461,26 @@ define i32 @test_fshr_intrinsic(i32 %a, i32 %b, i32 %c) {
   ret i32 %res
 }
 
+define i32 @test_smulh_intrinsic(i32 %a, i32 %b) {
+; CHECK-LABEL: name: test_smulh_intrinsic
+; CHECK: [[A:%[0-9]+]]:_(i32) = COPY $w0
+; CHECK: [[B:%[0-9]+]]:_(i32) = COPY $w1
+; CHECK: [[RES:%[0-9]+]]:_(i32) = G_SMULH [[A]], [[B]]
+; CHECK: $w0 = COPY [[RES]]
+  %res = call i32 @llvm.smulh.i32(i32 %a, i32 %b)
+  ret i32 %res
+}
+
+define i32 @test_umulh_intrinsic(i32 %a, i32 %b) {
+; CHECK-LABEL: name: test_umulh_intrinsic
+; CHECK: [[A:%[0-9]+]]:_(i32) = COPY $w0
+; CHECK: [[B:%[0-9]+]]:_(i32) = COPY $w1
+; CHECK: [[RES:%[0-9]+]]:_(i32) = G_UMULH [[A]], [[B]]
+; CHECK: $w0 = COPY [[RES]]
+  %res = call i32 @llvm.umulh.i32(i32 %a, i32 %b)
+  ret i32 %res
+}
+
 declare void @llvm.lifetime.start.p0(i64, ptr)
 declare void @llvm.lifetime.end.p0(i64, ptr)
 define void @test_lifetime_intrin() {

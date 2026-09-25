@@ -90,7 +90,7 @@ for.body:
 !24 = !DILocation(line: 17, column: 19, scope: !20)
 !25 = !DILocation(line: 17, column: 11, scope: !20)
 !26 = distinct !{!26, !27}
-!27 = !{!"llvm.loop.vectorize.enable", i1 true}
+!27 = !{!"llvm.loop.vectorize.enable"}
 !28 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang",
                              file: !5,
                              isOptimized: true, flags: "-O2",

@@ -236,8 +236,10 @@ struct FuncBasicSampleData {
 ///
 class DataReader : public ProfileReaderBase {
 public:
-  explicit DataReader(StringRef Filename)
-      : ProfileReaderBase(Filename), Diag(errs()) {}
+  explicit DataReader(StringRef Filename) : DataReader(Filename, errs()) {}
+
+  DataReader(StringRef Filename, raw_ostream &Diag)
+      : ProfileReaderBase(Filename), Diag(Diag) {}
 
   StringRef getReaderName() const override { return "branch profile reader"; }
 
@@ -348,6 +350,15 @@ protected:
   ///
   std::error_code parseInNoLBRMode();
 
+  /// When "symbols" is the first line of the file, activate Symbols mode. Each
+  /// subsequent line contains a single symbol name (no counts or offsets).
+  ///
+  /// symbols                          # First line of fdata file
+  /// main
+  /// BZ2_compressBlock
+  ///
+  std::error_code parseInSymbolsMode();
+
   /// Return branch data matching one of the names in \p FuncNames.
   FuncBranchData *
   getBranchDataForNames(const std::vector<StringRef> &FuncNames);
@@ -455,7 +466,7 @@ protected:
   ErrorOr<BasicSampleInfo> parseSampleInfo();
   ErrorOr<MemInfo> parseMemInfo();
   ErrorOr<bool> maybeParseNoLBRFlag();
-  ErrorOr<bool> maybeParseBATFlag();
+  ErrorOr<bool> maybeParseFlag(StringRef Flag);
   bool hasBranchData();
   bool hasMemData();
 
@@ -472,6 +483,7 @@ protected:
   FuncsToMemDataMapTy FuncsToMemData;
   bool NoLBRMode{false};
   bool BATMode{false};
+  bool SymbolsMode{false};
   StringSet<> EventNames;
   static const char FieldSeparator = ' ';
 

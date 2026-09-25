@@ -24,8 +24,6 @@
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
-#include "flang/Optimizer/HLFIR/Passes.h"
-#include "flang/Optimizer/OpenMP/Utils.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
@@ -34,7 +32,6 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/RegionUtils.h"
-#include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include <mlir/Dialect/Arith/IR/Arith.h>
 #include <mlir/Dialect/LLVMIR/LLVMTypes.h>
 #include <mlir/Dialect/Utils/IndexingUtils.h>
@@ -46,7 +43,6 @@
 #include <mlir/Interfaces/SideEffectInterfaces.h>
 #include <mlir/Support/LLVM.h>
 #include <optional>
-#include <variant>
 
 namespace flangomp {
 #define GEN_PASS_DEF_LOWERWORKDISTRIBUTE
@@ -61,6 +57,14 @@ namespace {
 
 /// This string is used to identify the Fortran-specific runtime FortranAAssign.
 static constexpr llvm::StringRef FortranAssignStr = "_FortranAAssign";
+static constexpr llvm::StringRef FortranAssignSimpleStr =
+    "_FortranAAssignSimple";
+
+/// Check if the function name is any variant of Fortran assignment runtime
+/// call.
+static bool isFortranAssignCall(llvm::StringRef funcName) {
+  return funcName == FortranAssignStr || funcName == FortranAssignSimpleStr;
+}
 
 /// The isRuntimeCall function is a utility designed to determine
 /// if a given operation is a call to a Fortran-specific runtime function.
@@ -80,11 +84,11 @@ static bool isRuntimeCall(Operation *op) {
 /// operation nested in an omp.workdistribute region.
 /// Parallelize here refers to dividing into units of work.
 static bool shouldParallelize(Operation *op) {
-  // True if the op is a runtime call to Assign
+  // True if the op is a runtime call to Assign (any variant)
   if (isRuntimeCall(op)) {
     fir::CallOp runtimeCall = cast<fir::CallOp>(op);
     auto funcName = runtimeCall.getCallee()->getRootReference().getValue();
-    if (funcName == FortranAssignStr) {
+    if (isFortranAssignCall(funcName)) {
       return true;
     }
   }
@@ -171,15 +175,13 @@ verifyTargetTeamsWorkdistribute(omp::WorkdistributeOp workdistribute) {
     if (auto callOp = dyn_cast<fir::CallOp>(op)) {
       if (isRuntimeCall(&op)) {
         auto funcName = (*callOp.getCallee()).getRootReference().getValue();
-        // _FortranAAssign is handled. Other runtime calls are not supported
-        // in omp.workdistribute yet.
-        if (funcName == FortranAssignStr)
+        // _FortranAAssign and _FortranAAssignSimple are handled.
+        // Other runtime calls are not supported in omp.workdistribute yet.
+        if (isFortranAssignCall(funcName))
           continue;
-        else {
-          emitError(loc, "Runtime call " + funcName +
-                             " lowering not supported for workdistribute yet.");
-          return failure();
-        }
+        emitError(loc, "Runtime call " + funcName +
+                           " lowering not supported for workdistribute yet.");
+        return failure();
       }
     }
   }
@@ -274,8 +276,10 @@ fissionWorkdistribute(omp::WorkdistributeOp workdistribute) {
     }
 
     if (parallelize && hoisted.empty() &&
-        parallelize->getNextNode() == terminator)
+        parallelize->getNextNode() == terminator) {
+      teams.setCombined(true);
       break;
+    }
     if (parallelize) {
       auto newTeams = rewriter.cloneWithoutRegions(teams);
       auto *newTeamsBlock = rewriter.createBlock(
@@ -290,6 +294,7 @@ fissionWorkdistribute(omp::WorkdistributeOp workdistribute) {
       parallelize->replaceAllUsesWith(cloned);
       parallelize->erase();
       omp::TerminatorOp::create(rewriter, loc);
+      newTeams.setCombined(true);
       changed = true;
     }
   }
@@ -621,7 +626,7 @@ workdistributeRuntimeCallLower(omp::WorkdistributeOp workdistribute,
       rewriter.setInsertionPoint(&op);
       fir::CallOp runtimeCall = cast<fir::CallOp>(op);
       auto funcName = runtimeCall.getCallee()->getRootReference().getValue();
-      if (funcName == FortranAssignStr) {
+      if (isFortranAssignCall(funcName)) {
         if (isFortranAssignSrcScalarAndDestArray(runtimeCall) && targetOp) {
           // Record the target ops to process later
           targetOpsToProcess.insert(targetOp);
@@ -758,10 +763,11 @@ FailureOr<omp::TargetOp> splitTargetData(omp::TargetOp targetOp,
   // Create the inner target op
   auto newTargetOp = omp::TargetOp::create(
       rewriter, targetOp.getLoc(), targetOp.getAllocateVars(),
-      targetOp.getAllocatorVars(), targetOp.getBareAttr(),
-      targetOp.getDependKindsAttr(), targetOp.getDependVars(),
-      targetOp.getDependIteratedKindsAttr(), targetOp.getDependIterated(),
-      targetOp.getDevice(), targetOp.getDynGroupprivateAccessGroupAttr(),
+      targetOp.getAllocatorVars(), targetOp.getAllocateAlignmentsAttr(),
+      targetOp.getAllocatePrivateIndicesAttr(), targetOp.getDependKindsAttr(),
+      targetOp.getDependVars(), targetOp.getDependIteratedKindsAttr(),
+      targetOp.getDependIterated(), targetOp.getDevice(),
+      targetOp.getDynGroupprivateAccessGroupAttr(),
       targetOp.getDynGroupprivateFallbackAttr(),
       targetOp.getDynGroupprivateSize(), targetOp.getHasDeviceAddrVars(),
       targetOp.getHostEvalVars(), targetOp.getIfExpr(),
@@ -770,7 +776,7 @@ FailureOr<omp::TargetOp> splitTargetData(omp::TargetOp targetOp,
       innerMapInfos, targetOp.getMapIterated(), targetOp.getNowaitAttr(),
       targetOp.getPrivateVars(), targetOp.getPrivateSymsAttr(),
       targetOp.getPrivateNeedsBarrierAttr(), targetOp.getThreadLimitVars(),
-      targetOp.getPrivateMapsAttr());
+      targetOp.getPrivateMapsAttr(), targetOp.getKernelTypeAttr());
   rewriter.inlineRegionBefore(targetOp.getRegion(), newTargetOp.getRegion(),
                               newTargetOp.getRegion().begin());
   rewriter.replaceOp(targetOp, targetDataOp);
@@ -1342,7 +1348,7 @@ static LogicalResult moveToHost(omp::TargetOp targetOp, RewriterBase &rewriter,
     if (isRuntimeCall(clonedOp)) {
       fir::CallOp runtimeCall = cast<fir::CallOp>(op);
       auto funcName = runtimeCall.getCallee()->getRootReference().getValue();
-      if (funcName == FortranAssignStr) {
+      if (isFortranAssignCall(funcName)) {
         opsToReplace.push_back(clonedOp);
       } else {
         emitError(runtimeCall->getLoc(), "Unhandled runtime call hoisting.");
@@ -1392,7 +1398,7 @@ static LogicalResult moveToHost(omp::TargetOp targetOp, RewriterBase &rewriter,
     else if (isRuntimeCall(op)) {
       fir::CallOp runtimeCall = cast<fir::CallOp>(op);
       auto funcName = runtimeCall.getCallee()->getRootReference().getValue();
-      if (funcName == FortranAssignStr) {
+      if (isFortranAssignCall(funcName)) {
         rewriter.setInsertionPoint(op);
         fir::FirOpBuilder builder{rewriter, op};
 
@@ -1483,10 +1489,11 @@ genPreTargetOp(omp::TargetOp targetOp, SmallVector<Value> &preMapOperands,
   // update the hostEvalVars of preTargetOp
   omp::TargetOp preTargetOp = omp::TargetOp::create(
       rewriter, targetOp.getLoc(), targetOp.getAllocateVars(),
-      targetOp.getAllocatorVars(), targetOp.getBareAttr(),
-      targetOp.getDependKindsAttr(), targetOp.getDependVars(),
-      targetOp.getDependIteratedKindsAttr(), targetOp.getDependIterated(),
-      targetOp.getDevice(), targetOp.getDynGroupprivateAccessGroupAttr(),
+      targetOp.getAllocatorVars(), targetOp.getAllocateAlignmentsAttr(),
+      targetOp.getAllocatePrivateIndicesAttr(), targetOp.getDependKindsAttr(),
+      targetOp.getDependVars(), targetOp.getDependIteratedKindsAttr(),
+      targetOp.getDependIterated(), targetOp.getDevice(),
+      targetOp.getDynGroupprivateAccessGroupAttr(),
       targetOp.getDynGroupprivateFallbackAttr(),
       targetOp.getDynGroupprivateSize(), targetOp.getHasDeviceAddrVars(),
       preHostEvalVars, targetOp.getIfExpr(), targetOp.getInReductionVars(),
@@ -1494,7 +1501,8 @@ genPreTargetOp(omp::TargetOp targetOp, SmallVector<Value> &preMapOperands,
       targetOp.getIsDevicePtrVars(), preMapOperands, targetOp.getMapIterated(),
       targetOp.getNowaitAttr(), targetOp.getPrivateVars(),
       targetOp.getPrivateSymsAttr(), targetOp.getPrivateNeedsBarrierAttr(),
-      targetOp.getThreadLimitVars(), targetOp.getPrivateMapsAttr());
+      targetOp.getThreadLimitVars(), targetOp.getPrivateMapsAttr(),
+      targetOp.getKernelTypeAttr());
   auto *preTargetBlock = rewriter.createBlock(
       &preTargetOp.getRegion(), preTargetOp.getRegion().begin(), {}, {});
   IRMapping preMapping;
@@ -1576,10 +1584,11 @@ genIsolatedTargetOp(omp::TargetOp targetOp, SmallVector<Value> &postMapOperands,
   // Create the isolated target op
   omp::TargetOp isolatedTargetOp = omp::TargetOp::create(
       rewriter, targetOp.getLoc(), targetOp.getAllocateVars(),
-      targetOp.getAllocatorVars(), targetOp.getBareAttr(),
-      targetOp.getDependKindsAttr(), targetOp.getDependVars(),
-      targetOp.getDependIteratedKindsAttr(), targetOp.getDependIterated(),
-      targetOp.getDevice(), targetOp.getDynGroupprivateAccessGroupAttr(),
+      targetOp.getAllocatorVars(), targetOp.getAllocateAlignmentsAttr(),
+      targetOp.getAllocatePrivateIndicesAttr(), targetOp.getDependKindsAttr(),
+      targetOp.getDependVars(), targetOp.getDependIteratedKindsAttr(),
+      targetOp.getDependIterated(), targetOp.getDevice(),
+      targetOp.getDynGroupprivateAccessGroupAttr(),
       targetOp.getDynGroupprivateFallbackAttr(),
       targetOp.getDynGroupprivateSize(), targetOp.getHasDeviceAddrVars(),
       isolatedHostEvalVars, targetOp.getIfExpr(), targetOp.getInReductionVars(),
@@ -1587,7 +1596,10 @@ genIsolatedTargetOp(omp::TargetOp targetOp, SmallVector<Value> &postMapOperands,
       targetOp.getIsDevicePtrVars(), postMapOperands, targetOp.getMapIterated(),
       targetOp.getNowaitAttr(), targetOp.getPrivateVars(),
       targetOp.getPrivateSymsAttr(), targetOp.getPrivateNeedsBarrierAttr(),
-      targetOp.getThreadLimitVars(), targetOp.getPrivateMapsAttr());
+      targetOp.getThreadLimitVars(), targetOp.getPrivateMapsAttr(),
+      omp::TargetExecModeAttr::get(targetOp->getContext(),
+                                   omp::TargetExecMode::spmd));
+  isolatedTargetOp.setCombined(true);
   auto *isolatedTargetBlock =
       rewriter.createBlock(&isolatedTargetOp.getRegion(),
                            isolatedTargetOp.getRegion().begin(), {}, {});
@@ -1659,10 +1671,11 @@ static omp::TargetOp genPostTargetOp(omp::TargetOp targetOp,
   // Create the post target op
   omp::TargetOp postTargetOp = omp::TargetOp::create(
       rewriter, targetOp.getLoc(), targetOp.getAllocateVars(),
-      targetOp.getAllocatorVars(), targetOp.getBareAttr(),
-      targetOp.getDependKindsAttr(), targetOp.getDependVars(),
-      targetOp.getDependIteratedKindsAttr(), targetOp.getDependIterated(),
-      targetOp.getDevice(), targetOp.getDynGroupprivateAccessGroupAttr(),
+      targetOp.getAllocatorVars(), targetOp.getAllocateAlignmentsAttr(),
+      targetOp.getAllocatePrivateIndicesAttr(), targetOp.getDependKindsAttr(),
+      targetOp.getDependVars(), targetOp.getDependIteratedKindsAttr(),
+      targetOp.getDependIterated(), targetOp.getDevice(),
+      targetOp.getDynGroupprivateAccessGroupAttr(),
       targetOp.getDynGroupprivateFallbackAttr(),
       targetOp.getDynGroupprivateSize(), targetOp.getHasDeviceAddrVars(),
       postHostEvalVars, targetOp.getIfExpr(), targetOp.getInReductionVars(),
@@ -1670,7 +1683,8 @@ static omp::TargetOp genPostTargetOp(omp::TargetOp targetOp,
       targetOp.getIsDevicePtrVars(), postMapOperands, targetOp.getMapIterated(),
       targetOp.getNowaitAttr(), targetOp.getPrivateVars(),
       targetOp.getPrivateSymsAttr(), targetOp.getPrivateNeedsBarrierAttr(),
-      targetOp.getThreadLimitVars(), targetOp.getPrivateMapsAttr());
+      targetOp.getThreadLimitVars(), targetOp.getPrivateMapsAttr(),
+      targetOp.getKernelTypeAttr());
   // Create the block for postTargetOp
   auto *postTargetBlock = rewriter.createBlock(
       &postTargetOp.getRegion(), postTargetOp.getRegion().begin(), {}, {});

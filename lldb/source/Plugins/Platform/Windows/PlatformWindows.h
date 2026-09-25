@@ -31,6 +31,8 @@ public:
 
   static llvm::StringRef GetPluginDescriptionStatic(bool is_host);
 
+  static void DebuggerInitialize(Debugger &debugger);
+
   llvm::StringRef GetPluginName() override {
     return GetPluginNameStatic(IsHost());
   }
@@ -75,7 +77,7 @@ public:
   // FIXME not sure what the _sigtramp equivalent would be on this platform
   void CalculateTrapHandlerSymbolNames() override {}
 
-  ConstString GetFullNameForDylib(ConstString basename) override;
+  std::string GetFullNameForDylib(llvm::StringRef basename) override;
 
   size_t GetSoftwareBreakpointTrapOpcode(Target &target,
                                          BreakpointSite *bp_site) override;

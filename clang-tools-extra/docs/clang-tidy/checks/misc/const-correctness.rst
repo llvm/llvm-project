@@ -106,6 +106,18 @@ Options
   :option:`WarnPointersAsValues` and :option:`WarnPointersAsPointers`.
   Default is `true`.
 
+.. option:: AnalyzeAutoVariables
+
+  Enable or disable the analysis of variables declared with ``auto``,
+  such as ``auto i = 10;`` or ``auto *ptr = &i``. Default is `true`.
+
+.. option:: AnalyzeLambdas
+
+  Enable or disable the analysis of lambda variables, like
+  ``auto f = [] { return 10; };``. For this option to have any
+  effect, `AnalyzeAutoVariables` must be `true` as well.
+  Default is `true`.
+
 .. option:: AnalyzeParameters
 
   Enable or disable the analysis of function parameters, like

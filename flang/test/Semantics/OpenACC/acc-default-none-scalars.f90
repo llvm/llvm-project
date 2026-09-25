@@ -1,14 +1,14 @@
-! RUN: %python %S/../test_errors.py %s %flang -fopenacc -fno-openacc-default-none-scalars-strict -Wopenacc-default-none-scalars-strict
+! RUN: %python %S/../test_errors.py %s %flang -fopenacc
 
-! With -fno-openacc-default-none-scalars-strict, scalar variables without explicit
-! data clauses under DEFAULT(NONE) are allowed and get a warning
-! (-Wopenacc-default-none-scalars-strict) instead of an error.  Arrays continue to error.
+! By default, scalar variables without explicit data clauses under DEFAULT(NONE)
+! are allowed and get a warning (-Wopenacc-default-none-scalars-strict) instead
+! of an error.  Arrays continue to error.
 
 subroutine default_none_scalars()
   integer :: a
   integer :: b(10)
   !$acc parallel default(none)
-  !WARNING: Implicit attribute inferred for DEFAULT(NONE) scalar 'a' [-Wopenacc-default-none-scalars-strict]
+  !WARNING: OpenACC DEFAULT(NONE) ignored for scalar 'a' (-fno-openacc-default-none-scalars-strict) [-Wopenacc-default-none-scalars-strict]
   a = 1
   !ERROR: The DEFAULT(NONE) clause requires that 'b' must be listed in a data-mapping clause
   b(1) = 2
@@ -22,9 +22,9 @@ subroutine default_none_scalar_precomputed(x, n, p, q)
   integer :: n, i
   factor = p / q
   !$acc parallel loop default(none) present(x)
-  !WARNING: Implicit attribute inferred for DEFAULT(NONE) scalar 'n' [-Wopenacc-default-none-scalars-strict]
+  !WARNING: OpenACC DEFAULT(NONE) ignored for scalar 'n' (-fno-openacc-default-none-scalars-strict) [-Wopenacc-default-none-scalars-strict]
   do i = 1, n
-    !WARNING: Implicit attribute inferred for DEFAULT(NONE) scalar 'factor' [-Wopenacc-default-none-scalars-strict]
+    !WARNING: OpenACC DEFAULT(NONE) ignored for scalar 'factor' (-fno-openacc-default-none-scalars-strict) [-Wopenacc-default-none-scalars-strict]
     x(i) = x(i) * factor
   end do
   !$acc end parallel loop
@@ -64,12 +64,12 @@ subroutine default_none_outer_loop_scalars(x, n, m)
     thresh = real(k) - real(k) / real(m)
     val    = real(k) * 4.0
     !$acc parallel loop default(none) present(x)
-    !WARNING: Implicit attribute inferred for DEFAULT(NONE) scalar 'n' [-Wopenacc-default-none-scalars-strict]
+    !WARNING: OpenACC DEFAULT(NONE) ignored for scalar 'n' (-fno-openacc-default-none-scalars-strict) [-Wopenacc-default-none-scalars-strict]
     do i = 1, n
-      !WARNING: Implicit attribute inferred for DEFAULT(NONE) scalar 'thresh' [-Wopenacc-default-none-scalars-strict]
-      !WARNING: Implicit attribute inferred for DEFAULT(NONE) scalar 'coef' [-Wopenacc-default-none-scalars-strict]
-      !WARNING: Implicit attribute inferred for DEFAULT(NONE) scalar 'val' [-Wopenacc-default-none-scalars-strict]
-      !WARNING: Implicit attribute inferred for DEFAULT(NONE) scalar 'k' [-Wopenacc-default-none-scalars-strict]
+      !WARNING: OpenACC DEFAULT(NONE) ignored for scalar 'thresh' (-fno-openacc-default-none-scalars-strict) [-Wopenacc-default-none-scalars-strict]
+      !WARNING: OpenACC DEFAULT(NONE) ignored for scalar 'coef' (-fno-openacc-default-none-scalars-strict) [-Wopenacc-default-none-scalars-strict]
+      !WARNING: OpenACC DEFAULT(NONE) ignored for scalar 'val' (-fno-openacc-default-none-scalars-strict) [-Wopenacc-default-none-scalars-strict]
+      !WARNING: OpenACC DEFAULT(NONE) ignored for scalar 'k' (-fno-openacc-default-none-scalars-strict) [-Wopenacc-default-none-scalars-strict]
       if (x(i) < thresh) x(i) = x(i) + coef * val * real(k)
     end do
     !$acc end parallel loop

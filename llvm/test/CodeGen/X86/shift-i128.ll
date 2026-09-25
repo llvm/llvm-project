@@ -538,7 +538,7 @@ define void @test_shl_v2i128(<2 x i128> %x, <2 x i128> %a, ptr nocapture %r) nou
 ; i686-NEXT:    pushl %edi
 ; i686-NEXT:    pushl %esi
 ; i686-NEXT:    andl $-16, %esp
-; i686-NEXT:    subl $128, %esp
+; i686-NEXT:    addl $-128, %esp
 ; i686-NEXT:    movl 40(%ebp), %edi
 ; i686-NEXT:    movl 24(%ebp), %eax
 ; i686-NEXT:    movl 28(%ebp), %ecx

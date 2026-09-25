@@ -35,9 +35,7 @@ def cuf_DataAttribute : I32EnumAttr<
 }
 
 def cuf_DataAttributeAttr :
-    EnumAttr<CUFDialect, cuf_DataAttribute, "cuda"> {
-  let assemblyFormat = [{ ```<` $value `>` }];
-}
+    EnumAttr<CUFDialect, cuf_DataAttribute, "cuda">;
 
 def cuf_ProcAttribute : I32EnumAttr<
     "ProcAttribute", "CUDA Fortran procedure attributes",
@@ -53,16 +51,14 @@ def cuf_ProcAttribute : I32EnumAttr<
 }
 
 def cuf_ProcAttributeAttr :
-    EnumAttr<CUFDialect, cuf_ProcAttribute, "cuda_proc"> {
-  let assemblyFormat = [{ ```<` $value `>` }];
-}
+    EnumAttr<CUFDialect, cuf_ProcAttribute, "cuda_proc">;
 
 def cuf_LaunchBoundsAttr : cuf_Attr<"LaunchBounds"> {
   let mnemonic = "launch_bounds";
 
   let parameters = (ins
     "mlir::IntegerAttr":$maxTPB,
-    "mlir::IntegerAttr":$minBPM,
+    OptionalParameter<"mlir::IntegerAttr">:$minBPM,
     OptionalParameter<"mlir::IntegerAttr">:$upperBoundClusterSize
   );
 
@@ -93,8 +89,6 @@ def cuf_DataTransferKind : I32EnumAttr<
 }
 
 def cuf_DataTransferKindAttr :
-    EnumAttr<CUFDialect, cuf_DataTransferKind, "cuda_transfer"> {
-  let assemblyFormat = [{ ```<` $value `>` }];
-}
+    EnumAttr<CUFDialect, cuf_DataTransferKind, "cuda_transfer">;
 
 #endif // FORTRAN_DIALECT_CUF_CUFATTRS

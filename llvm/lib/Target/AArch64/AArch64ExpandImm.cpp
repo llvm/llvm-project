@@ -232,9 +232,9 @@ static bool trySequenceOfOnes(uint64_t UImm,
     return true;
 
   // Create the second MOVK instruction.
-  Insn.push_back({ AArch64::MOVKXi, getChunk(UImm, SecondMovkIdx),
-	           AArch64_AM::getShifterImm(AArch64_AM::LSL,
-                                             SecondMovkIdx * 16) });
+  Insn.push_back(
+      {AArch64::MOVKXi, getChunk(UImm, SecondMovkIdx),
+       AArch64_AM::getShifterImm(AArch64_AM::LSL, SecondMovkIdx * 16)});
 
   return true;
 }
@@ -285,7 +285,7 @@ static bool tryCopyWithNegation(uint64_t Imm, bool AllowThreeSequence,
       Insn.push_back({AArch64::MOVNXi, Imm16 ^ Mask, 16});
     }
 
-    Insn.push_back({Opc, 0, N});
+    Insn.push_back({Opc, std::nullopt, N});
     return true;
   };
 

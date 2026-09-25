@@ -370,8 +370,10 @@ block-arg-list ::= `(` value-id-and-type-list? `)`
 A *Block* is a list of operations. In
 [SSACFG regions](#control-flow-and-ssacfg-regions), each block represents a
 compiler [basic block](https://en.wikipedia.org/wiki/Basic_block) where
-instructions inside the block are executed in order and terminator operations
-implement control flow branches between basic blocks.
+instructions inside the block are executed in order. Terminator operations mark
+the end of a block and describe the block's possible continuations, such as
+branches to other blocks in the same region, returns/yields to the containing
+operation, or no continuation at all (e.g. `ub.unreachable`).
 
 The last operation in a block must be a
 [terminator operation](#control-flow-and-ssacfg-regions). A region with a single
@@ -502,26 +504,28 @@ in a region can never be used outside of the region.
 In MLIR, control flow semantics of a region is indicated by
 [RegionKind::SSACFG](Interfaces.md/#regionkindinterfaces). Informally, these
 regions support semantics where operations in a region 'execute sequentially'.
-Before an operation executes, its operands have well-defined values. After an
-operation executes, the operands have the same values and results also have
-well-defined values. After an operation executes, the next operation in the
-block executes until the operation is the terminator operation at the end of a
-block, in which case some other operation will execute. The determination of the
+Before an operation executes, its operands have well-defined values. If the
+operation produces results and the operation returns, those results also have
+well-defined values. Execution then proceeds to the next operation in the block
+until the terminator operation at the end of the block is reached; the
+terminator determines the next continuation, if any. The determination of the
 next instruction to execute is the 'passing of control flow'.
 
 In general, when control flow is passed to an operation, MLIR does not restrict
 when control flow enters or exits the regions contained in that operation.
 However, when control flow enters a region, it always begins in the first block
 of the region, called the *entry* block. Terminator operations ending each block
-represent control flow by explicitly specifying the successor blocks of the
-block. Control flow can only pass to one of the specified successor blocks as in
-a `branch` operation, or back to the containing operation as in a `return`
-operation. Terminator operations without successors can only pass control back
-to the containing operation. Within these restrictions, the particular semantics
-of terminator operations is determined by the specific dialect operations
-involved. Blocks (other than the entry block) that are not listed as a successor
-of a terminator operation are defined to be unreachable and can be removed
-without affecting the semantics of the containing operation.
+represent possible continuations. Successors explicitly specify destination
+blocks, so control flow within the region can only pass to one of the specified
+successor blocks, as in a `branch` operation. When a terminator has no
+successors, it may pass 1) control back to the containing operation, as in a
+`return` operation, or 2) define that control flow does not continue, as in
+`ub.unreachable`. Terminators without successors therefore do not necessarily
+imply a return to the containing operation, the specific dialect operation
+determines the terminator's semantics. Blocks (other than the entry block) that
+are not listed as a successor of any terminator operation are defined to be
+unreachable and can be removed without affecting the semantics of the
+containing operation.
 
 Although control flow always enters a region through the entry block, control
 flow may exit a region through any block with an appropriate terminator. The
@@ -530,7 +534,10 @@ Single-Entry-Multiple-Exit (SEME) regions, possibly flowing through different
 blocks in the region and exiting through any block with a `return` operation.
 This behavior is similar to that of a function body in most programming
 languages. In addition, control flow may also not reach the end of a block or
-region, for example if a function call does not return.
+region, for example if a function call does not return. Such an operation
+prevents control flow from reaching later operations, but does not remove the
+structural requirement that the block must end with a terminator unless the
+enclosing operation opts out with `NoTerminator`.
 
 Example:
 

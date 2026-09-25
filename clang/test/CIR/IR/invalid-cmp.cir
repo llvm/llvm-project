@@ -1,0 +1,39 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func @fenv_on_int_cmp(%a: !s32i, %b: !s32i) {
+    // expected-error@+1 {{'fenv' is only valid for floating-point comparisons}}
+    %0 = cir.cmp eq %a, %b : !s32i {fenv = #cir.fenv<>}
+    cir.return
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func @fenv_on_ptr_cmp(%a: !cir.ptr<!s32i>, %b: !cir.ptr<!s32i>) {
+    // expected-error@+1 {{'fenv' is only valid for floating-point comparisons}}
+    %0 = cir.cmp ne %a, %b : !cir.ptr<!s32i> {fenv = #cir.fenv<>}
+    cir.return
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func @fenv_on_int_vec_cmp(%a: !cir.vector<4 x !s32i>,
+                                %b: !cir.vector<4 x !s32i>) {
+    // expected-error@+1 {{'fenv' is only valid for floating-point comparisons}}
+    %0 = cir.vec.cmp(eq, %a, %b) : !cir.vector<4 x !s32i>,
+                                   !cir.vector<4 x !s32i> {
+      fenv = #cir.fenv<>
+    }
+    cir.return
+  }
+}

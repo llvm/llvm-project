@@ -481,6 +481,12 @@ public:
   /// Return true if the value is a NaN.
   bool isNaN() const { return Val.isNaN(); }
 
+  /// Returns true if this value is exactly +1.0.
+  bool isOne() const { return Val.isOne(); }
+
+  /// Returns true if this value is exactly -1.0.
+  bool isMinusOne() const { return Val.isMinusOne(); }
+
   /// We don't rely on operator== working on double values, as it returns true
   /// for things that are clearly not equal, like -0.0 and 0.0.
   /// As such, this method can be used to do an exact bit-for-bit comparison of
@@ -1331,12 +1337,16 @@ public:
 
   /// getAlignOf constant expr - computes the alignment of a type in a target
   /// independent way (Note: the return type is an i64).
+  [[deprecated(
+      "Create a constant based on DataLayout::getABITypeAlign() instead")]]
   LLVM_ABI static Constant *getAlignOf(Type *Ty);
 
   /// getSizeOf constant expr - computes the (alloc) size of a type (in
   /// address-units, not bits) in a target independent way (Note: the return
   /// type is an i64).
   ///
+  [[deprecated(
+      "Create a constant based on DataLayout::getTypeAllocSize() instead")]]
   LLVM_ABI static Constant *getSizeOf(Type *Ty);
 
   LLVM_ABI static Constant *getNeg(Constant *C, bool HasNSW = false);
@@ -1482,6 +1492,18 @@ public:
   }
   LLVM_ABI static Constant *
   getGetElementPtr(Type *Ty, Constant *C, ArrayRef<Value *> IdxList,
+                   GEPNoWrapFlags NW = GEPNoWrapFlags::none(),
+                   std::optional<ConstantRange> InRange = std::nullopt,
+                   Type *OnlyIfReducedTy = nullptr);
+
+  /// Create a getelementptr constant expression in canonical ptradd form
+  /// (getelementptr i8) by converting GEP indices to offsets using the
+  /// provided data layout.
+  ///
+  /// Returns nullptr if the indices cannot be converted to ptradd form.
+  LLVM_ABI static Constant *
+  getGetElementPtr(const DataLayout &DL, Type *Ty, Constant *C,
+                   ArrayRef<Constant *> IdxList,
                    GEPNoWrapFlags NW = GEPNoWrapFlags::none(),
                    std::optional<ConstantRange> InRange = std::nullopt,
                    Type *OnlyIfReducedTy = nullptr);

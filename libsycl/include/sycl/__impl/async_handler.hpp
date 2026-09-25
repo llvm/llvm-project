@@ -19,6 +19,8 @@
 #ifndef _LIBSYCL___IMPL_ASYNC_HANDLER_HPP
 #define _LIBSYCL___IMPL_ASYNC_HANDLER_HPP
 
+#include <sycl/__impl/detail/config.hpp>
+
 #include <functional>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL

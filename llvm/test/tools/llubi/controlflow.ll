@@ -71,7 +71,7 @@ exit:
   ret i32 %fib2
 }
 
-define i32 @main() {
+define i32 @main() personality ptr null {
   ; params & retval
   %n = call i32 @get_n(i32 4)
   ; loops

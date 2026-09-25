@@ -309,6 +309,11 @@ public:
   // Return the SystemZRegisterInfo, which this class owns.
   const SystemZRegisterInfo &getRegisterInfo() const { return RI; }
 
+  const TargetRegisterClass *getInlineAsmMemoryOperandRegClass(
+      InlineAsm::ConstraintCode C) const override {
+    return &SystemZ::ADDR64BitRegClass;
+  }
+
   // Return the size in bytes of MI.
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
 
@@ -404,6 +409,9 @@ public:
   getSerializableDirectMachineOperandTargetFlags() const override;
 
   MCInst getNop() const override;
+  bool isSchedulingBoundary(const MachineInstr &MI,
+                            const MachineBasicBlock *MBB,
+                            const MachineFunction &MF) const override;
 };
 
 } // end namespace llvm

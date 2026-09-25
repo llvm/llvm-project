@@ -7,11 +7,6 @@
 -->
 # Design Guideline
 
-```{contents}
----
-local:
----
-```
 ## Documenting the design
 
 ### Designing support for a new feature

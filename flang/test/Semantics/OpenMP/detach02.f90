@@ -9,7 +9,7 @@ program detach02
     use omp_lib, only: omp_event_handle_kind
     integer(omp_event_handle_kind)          :: event_01, event_02
 
-    !ERROR: At most one DETACH clause can appear on the TASK directive
+    !ERROR: At most one DETACH clause can appear on TASK directive
     !$omp task detach(event_01) detach(event_02)
        x = x + 1
     !$omp end task

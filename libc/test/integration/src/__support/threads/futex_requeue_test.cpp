@@ -29,7 +29,7 @@ struct SharedState {
 void wait_until_zero(LIBC_NAMESPACE::Futex &futex) {
   while (futex.load() != 0) {
     auto wait_result = futex.wait(1, LIBC_NAMESPACE::cpp::nullopt, false);
-    ASSERT_TRUE(wait_result.has_value() || wait_result.error() == EAGAIN);
+    ASSERT_TRUE(wait_result.has_value());
   }
 }
 

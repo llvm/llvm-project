@@ -22,6 +22,7 @@
 #include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include <cstdint>
 #include <optional>
 
 using namespace mlir;
@@ -441,15 +442,17 @@ Value CodeGen::genExprImpl(const ast::MemberAccessExpr *expr) {
       if (isa<pdl::ValueType>(mlirType))
         return pdl::ResultOp::create(builder, loc, mlirType, parentExprs[0],
                                      builder.getI32IntegerAttr(0));
-      return pdl::ResultsOp::create(builder, loc, mlirType, parentExprs[0]);
+      return pdl::ResultsOp::create(builder, loc, mlirType, parentExprs[0],
+                                    /*index=*/nullptr);
     }
 
     const ods::Operation *odsOp = opType.getODSOperation();
     if (!odsOp) {
       assert(llvm::isDigit(name[0]) &&
              "unregistered op only allows numeric indexing");
-      unsigned resultIndex;
-      name.getAsInteger(/*Radix=*/10, resultIndex);
+      int32_t resultIndex = 0;
+      if (name.getAsInteger(/*Radix=*/10, resultIndex))
+        llvm_unreachable("result index should have been validated");
       IntegerAttr index = builder.getI32IntegerAttr(resultIndex);
       return pdl::ResultOp::create(builder, loc, genType(expr->getType()),
                                    parentExprs[0], index);

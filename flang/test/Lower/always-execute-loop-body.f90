@@ -8,7 +8,7 @@ subroutine some()
   integer :: i
 
   ! CHECK: %[[TRIP:.*]] = fir.alloca i32
-  ! CHECK: %[[I_RAW:.*]] = fir.alloca i32 {bindc_name = "i"
+  ! CHECK: %[[I_RAW:.*]] = fir.alloca i32 <{bindc_name = "i"
   ! CHECK: %[[I:.*]]:2 = hlfir.declare %[[I_RAW]]
   ! CHECK: %[[C1:.*]] = arith.constant 1 : i32
   ! CHECK: %[[TRIP_COUNT:.*]] = arith.select {{.*}}, %c1{{.*}}, {{.*}} : i32

@@ -1,8 +1,8 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu gfx701 -S -o - %s | FileCheck %s -check-prefix=NOF16
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu gfx803 -S -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu gfx900 -S -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu gfx906 -S -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple amdgpu7.01-amd-amdhsa -S -o - %s | FileCheck %s -check-prefix=NOF16
+// RUN: %clang_cc1 -triple amdgpu8.03-amd-amdhsa -S -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple amdgpu9.00-amd-amdhsa -S -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple amdgpu9.06-amd-amdhsa -S -o - %s | FileCheck %s
 void f() {
   _Float16 x, y, z;
   // CHECK: v_add_f16_e64

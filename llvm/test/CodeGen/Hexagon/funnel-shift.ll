@@ -11,7 +11,8 @@ b0:
 
 ; CHECK-LABEL: f1:
 ; CHECK: r[[R10:[0-9]+]]:[[R11:[0-9]+]] = combine(r0,r1)
-; CHECK: r[[R12:[0-9]+]]:[[R13:[0-9]+]] = asl(r[[R10]]:[[R11]],r2)
+; CHECK: r[[R1A:[0-9]+]] = and(r2,#31)
+; CHECK: r[[R12:[0-9]+]]:[[R13:[0-9]+]] = asl(r[[R10]]:[[R11]],r[[R1A]])
 define i32 @f1(i32 %a0, i32 %a1, i32 %a2) #1 {
 b0:
   %v0 = tail call i32 @llvm.fshl.i32(i32 %a0, i32 %a1, i32 %a2)
@@ -49,7 +50,8 @@ b0:
 
 ; CHECK-LABEL: f5:
 ; CHECK: r[[R50:[0-9]+]]:[[R51:[0-9]+]] = combine(r0,r1)
-; CHECK: r[[R52:[0-9]+]]:[[R53:[0-9]+]] = lsr(r[[R50]]:[[R51]],r2)
+; CHECK: r[[R5A:[0-9]+]] = and(r2,#31)
+; CHECK: r[[R52:[0-9]+]]:[[R53:[0-9]+]] = lsr(r[[R50]]:[[R51]],r[[R5A]])
 define i32 @f5(i32 %a0, i32 %a1, i32 %a2) #1 {
 b0:
   %v0 = tail call i32 @llvm.fshr.i32(i32 %a0, i32 %a1, i32 %a2)
@@ -85,8 +87,8 @@ b0:
 }
 
 ; CHECK-LABEL: f9:
-; CHECK: r[[R90:[0-9]+]]:[[R91:[0-9]+]] = combine(r0,r0)
-; CHECK: r[[R92:[0-9]+]]:[[R93:[0-9]+]] = asl(r[[R90]]:[[R91]],r1)
+; CHECK: r[[R9A:[0-9]+]] = and(r1,#31)
+; CHECK: = asl(r{{[0-9]+}}:{{[0-9]+}},r[[R9A]])
 define i32 @f9(i32 %a0, i32 %a1) #1 {
 b0:
   %v0 = tail call i32 @llvm.fshl.i32(i32 %a0, i32 %a0, i32 %a1)
@@ -121,8 +123,8 @@ b0:
 }
 
 ; CHECK-LABEL: f13:
-; CHECK: r[[RD0:[0-9]+]]:[[RD1:[0-9]+]] = combine(r0,r0)
-; CHECK: r[[RD2:[0-9]+]]:[[RD3:[0-9]+]] = lsr(r[[RD0]]:[[RD1]],r1)
+; CHECK: r[[RDA:[0-9]+]] = and(r1,#31)
+; CHECK: = lsr(r{{[0-9]+}}:{{[0-9]+}},r[[RDA]])
 define i32 @f13(i32 %a0, i32 %a1) #1 {
 b0:
   %v0 = tail call i32 @llvm.fshr.i32(i32 %a0, i32 %a0, i32 %a1)

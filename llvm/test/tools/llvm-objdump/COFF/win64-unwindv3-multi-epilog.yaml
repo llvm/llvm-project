@@ -51,7 +51,7 @@
 # CHECK-NEXT:         [1] IP +0x0004: WOD_PUSH Reg=RSI
 # CHECK-NEXT:         [2] IP +0x0005: WOD_PUSH Reg=RDI
 # CHECK-NEXT:       Epilog [1] (Flags=0x00, Offset=+0x1E) [inherited]:
-# CHECK-NEXT:         (inherits from previous epilog: FirstOp=0x0, IpOfLast=+0x6, 3 ops)
+# CHECK-NEXT:         (inherits from base epilog: FirstOp=0x0, IpOfLast=+0x6, 3 ops)
 # CHECK-NEXT:       Epilog [2] (Flags=0x00, Offset=+0x23, IpOfLast=+0x3) [2 ops, FirstOp=0x1]:
 # CHECK-NEXT:         [0] IP +0x0000: WOD_PUSH Reg=RSI
 # CHECK-NEXT:         [1] IP +0x0001: WOD_PUSH Reg=RDI

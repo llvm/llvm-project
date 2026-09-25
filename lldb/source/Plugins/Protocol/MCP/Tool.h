@@ -37,6 +37,26 @@ public:
   Call(const lldb_protocol::mcp::ToolArguments &args) override;
 };
 
+class DebuggerCreateTool : public lldb_protocol::mcp::Tool {
+public:
+  using lldb_protocol::mcp::Tool::Tool;
+  ~DebuggerCreateTool() = default;
+
+  llvm::Expected<lldb_protocol::mcp::CallToolResult>
+  Call(const lldb_protocol::mcp::ToolArguments &args) override;
+};
+
+class DebuggerDeleteTool : public lldb_protocol::mcp::Tool {
+public:
+  using lldb_protocol::mcp::Tool::Tool;
+  ~DebuggerDeleteTool() = default;
+
+  llvm::Expected<lldb_protocol::mcp::CallToolResult>
+  Call(const lldb_protocol::mcp::ToolArguments &args) override;
+
+  std::optional<llvm::json::Value> GetSchema() const override;
+};
+
 } // namespace lldb_private::mcp
 
 #endif

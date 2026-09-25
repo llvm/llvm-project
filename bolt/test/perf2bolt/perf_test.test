@@ -21,6 +21,10 @@ RUN: cmp %t3.x2 %t3.multi.x2
 RUN: perf2bolt %t -p=%t2 -o %t2.pa -ba -ignore-build-id --profile-format=preagg
 RUN: perf2bolt %t -p=%t2.pa -o %t2.pa.fdata -ba -pa
 RUN: cmp %t2.pa.fdata %t3
+# PerfScript output: compare perf->perfscript->fdata vs perf->fdata
+RUN: perf2bolt %t -p=%t2 -o %t2.ps -ba -ignore-build-id --profile-format=perfscript
+RUN: perf2bolt %t -p=%t2.ps -o %t2.ps.fdata -ba -ps
+RUN: cmp %t2.ps.fdata %t3
 
 CHECK-NOT: PERF2BOLT-ERROR
 CHECK-NOT: !! WARNING !! This high mismatch ratio indicates the input binary is probably not the same binary used during profiling collection.
@@ -36,3 +40,7 @@ RUN:   --heatmap %t.hm2 2>&1 | FileCheck %s
 RUN: FileCheck %s --input-file %t.hm2-section-hotness.csv --check-prefix=CHECK-HM
 
 CHECK-HM: .text
+
+# Expect an error if the process did not match any PID in perf data
+RUN: not perf2bolt %t -p=%t2 -o %t.null --pid=99999 2>&1 | FileCheck %s --check-prefix=CHECK-PID
+CHECK-PID: PERF2BOLT-ERROR: could not find a profile matching PID "99999" for binary

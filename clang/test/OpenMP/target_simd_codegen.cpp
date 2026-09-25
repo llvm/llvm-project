@@ -101,14 +101,14 @@
 // CHECK-DAG: @{{.*}} = weak constant i8 0
 // CHECK-DAG: @{{.*}} = weak constant i8 0
 
-// TCHECK: @{{.+}} = constant [[ENTTY]]
-// TCHECK: @{{.+}} = constant [[ENTTY]]
-// TCHECK: @{{.+}} = constant [[ENTTY]]
-// TCHECK: @{{.+}} = constant [[ENTTY]]
-// TCHECK: @{{.+}} = constant [[ENTTY]]
-// TCHECK: @{{.+}} = constant [[ENTTY]]
-// TCHECK: @{{.+}} = constant [[ENTTY]]
-// TCHECK-NOT: @{{.+}} = constant [[ENTTY]]
+// TCHECK: @{{.+}} = weak constant [[ENTTY]]
+// TCHECK: @{{.+}} = weak constant [[ENTTY]]
+// TCHECK: @{{.+}} = weak constant [[ENTTY]]
+// TCHECK: @{{.+}} = weak constant [[ENTTY]]
+// TCHECK: @{{.+}} = weak constant [[ENTTY]]
+// TCHECK: @{{.+}} = weak constant [[ENTTY]]
+// TCHECK: @{{.+}} = weak constant [[ENTTY]]
+// TCHECK-NOT: @{{.+}} = weak constant [[ENTTY]]
 
 template<typename tx, typename ty>
 struct TT{
@@ -702,9 +702,9 @@ int bar(int n){
 // Store captures in the context.
 // CHECK-DAG:   [[REF_B:%.+]] = load ptr, ptr [[LOCAL_B]],
 
-// OMP45-NOT: !{!"llvm.loop.vectorize.enable", i1 false}
-// TOMP45-NOT: !{!"llvm.loop.vectorize.enable", i1 false}
-// OMP51: !{!"llvm.loop.vectorize.enable", i1 false}
-// TOMP51: !{!"llvm.loop.vectorize.enable", i1 false}
+// OMP45-NOT: !{!"llvm.loop.vectorize.disable"}
+// TOMP45-NOT: !{!"llvm.loop.vectorize.disable"}
+// OMP51: !{!"llvm.loop.vectorize.disable"}
+// TOMP51: !{!"llvm.loop.vectorize.disable"}
 
 #endif

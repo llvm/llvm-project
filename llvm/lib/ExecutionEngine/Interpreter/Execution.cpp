@@ -979,13 +979,11 @@ void Interpreter::SwitchToNewBasicBlock(BasicBlock *Dest, ExecutionContext &SF){
 void Interpreter::visitAllocaInst(AllocaInst &I) {
   ExecutionContext &SF = ECStack.back();
 
-  Type *Ty = I.getAllocatedType(); // Type to be allocated
-
   // Get the number of elements being allocated by the array...
   unsigned NumElements =
     getOperandValue(I.getOperand(0), SF).IntVal.getZExtValue();
 
-  unsigned TypeSize = (size_t)getDataLayout().getTypeAllocSize(Ty);
+  unsigned TypeSize = (size_t)I.getAllocationBaseSize(getDataLayout());
 
   // Avoid malloc-ing zero bytes, use max()...
   unsigned MemToAlloc = std::max(1U, NumElements * TypeSize);
@@ -993,9 +991,9 @@ void Interpreter::visitAllocaInst(AllocaInst &I) {
   // Allocate enough memory to hold the type...
   void *Memory = safe_malloc(MemToAlloc);
 
-  LLVM_DEBUG(dbgs() << "Allocated Type: " << *Ty << " (" << TypeSize
-                    << " bytes) x " << NumElements << " (Total: " << MemToAlloc
-                    << ") at " << uintptr_t(Memory) << '\n');
+  LLVM_DEBUG(dbgs() << "Allocation: (" << TypeSize << " bytes) x "
+                    << NumElements << " (Total: " << MemToAlloc << ") at "
+                    << uintptr_t(Memory) << '\n');
 
   GenericValue Result = PTOGV(Memory);
   assert(Result.PointerVal && "Null pointer returned by malloc!");

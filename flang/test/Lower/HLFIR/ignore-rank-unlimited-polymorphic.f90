@@ -17,7 +17,7 @@ subroutine test_integer_scalar
   call callee(x)
 end subroutine test_integer_scalar
 ! CHECK-LABEL:   func.func @_QPtest_integer_scalar() {
-! CHECK:           %[[VAL_0:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFtest_integer_scalarEx"}
+! CHECK:           %[[VAL_0:.*]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFtest_integer_scalarEx"}>
 ! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFtest_integer_scalarEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_2:.*]] = fir.embox %[[VAL_1]]#0 : (!fir.ref<i32>) -> !fir.box<i32>
 ! CHECK:           %[[VAL_3:.*]] = fir.rebox %[[VAL_2]] : (!fir.box<i32>) -> !fir.class<none>
@@ -32,7 +32,7 @@ subroutine test_real_explicit_shape_array
 end subroutine test_real_explicit_shape_array
 ! CHECK-LABEL:   func.func @_QPtest_real_explicit_shape_array() {
 ! CHECK:           %[[VAL_0:.*]] = arith.constant 10 : index
-! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.array<10xf32> {bindc_name = "x", uniq_name = "_QFtest_real_explicit_shape_arrayEx"}
+! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.array<10xf32> <{bindc_name = "x", uniq_name = "_QFtest_real_explicit_shape_arrayEx"}>
 ! CHECK:           %[[VAL_2:.*]] = fir.shape %[[VAL_0]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_2]]) {uniq_name = "_QFtest_real_explicit_shape_arrayEx"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
 ! CHECK:           %[[VAL_4:.*]] = fir.embox %[[VAL_3]]#0(%[[VAL_2]]) : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<10xf32>>
@@ -94,7 +94,7 @@ subroutine test_derived_explicit_shape_array
 end subroutine test_derived_explicit_shape_array
 ! CHECK-LABEL:   func.func @_QPtest_derived_explicit_shape_array() {
 ! CHECK:           %[[VAL_0:.*]] = arith.constant 10 : index
-! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.array<10x!fir.type<_QFtest_derived_explicit_shape_arrayTt1{a:!fir.box<!fir.heap<f32>>}>> {bindc_name = "x", uniq_name = "_QFtest_derived_explicit_shape_arrayEx"}
+! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.array<10x!fir.type<_QFtest_derived_explicit_shape_arrayTt1{a:!fir.box<!fir.heap<f32>>}>> <{bindc_name = "x", uniq_name = "_QFtest_derived_explicit_shape_arrayEx"}>
 ! CHECK:           %[[VAL_2:.*]] = fir.shape %[[VAL_0]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_2]]) {uniq_name = "_QFtest_derived_explicit_shape_arrayEx"} : (!fir.ref<!fir.array<10x!fir.type<_QFtest_derived_explicit_shape_arrayTt1{a:!fir.box<!fir.heap<f32>>}>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10x!fir.type<_QFtest_derived_explicit_shape_arrayTt1{a:!fir.box<!fir.heap<f32>>}>>>, !fir.ref<!fir.array<10x!fir.type<_QFtest_derived_explicit_shape_arrayTt1{a:!fir.box<!fir.heap<f32>>}>>>)
 ! CHECK:           %[[VAL_4:.*]] = fir.shape %[[VAL_0]] : (index) -> !fir.shape<1>

@@ -19,6 +19,24 @@ class XeGPUAttr<string name, string attrMnemonic, list<Trait> traits = [],
   let mnemonic = attrMnemonic;
 }
 
+//===----------------------------------------------------------------------===//
+// XeGPU Memory Scope Enums.
+//===----------------------------------------------------------------------===//
+def XeGPU_MemorySpaceGlobal: I32EnumAttrCase<"Global", 0, "global">;
+def XeGPU_MemorySpaceShared: I32EnumAttrCase<"SLM", 3, "slm">;
+def XeGPU_MemorySpace: I32EnumAttr<"MemorySpace",
+      "The address space of the memory the tensor descriptor is created for",
+      [XeGPU_MemorySpaceGlobal, XeGPU_MemorySpaceShared]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::xegpu";
+}
+
+def XeGPU_MemorySpaceAttr:
+  EnumAttr<XeGPU_Dialect, XeGPU_MemorySpace, "memory_space"> {
+    let summary = [{Describe the location of data described by a `TensorDesc`:
+                 Global device memory (`Global`) or Shared local memory (`SLM`).}];
+}
+
 class XeGPU_TensorDescAttr<string name, string attrMnemonic, list<Trait> traits = [],
                          string baseCppClass = "::mlir::Attribute">
     : XeGPUAttr<name, attrMnemonic, traits, baseCppClass> {
@@ -42,8 +60,8 @@ def XeGPU_BlockTensorDescAttr: XeGPU_TensorDescAttr<"BlockTensorDesc", "block_td
   }];
 
   let parameters = (ins
-    DefaultValuedParameter<
-      "MemorySpaceAttr",
+    DefaultValuedEnumAttrParameter<
+      XeGPU_MemorySpaceAttr,
       "MemorySpaceAttr::get($_ctxt, xegpu::MemorySpace::Global)",
       "Data memory location">: $memory_space,
     DefaultValuedParameter<
@@ -71,26 +89,6 @@ def XeGPU_BlockTensorDescAttr: XeGPU_TensorDescAttr<"BlockTensorDesc", "block_td
   }];
 
 }
-
-//===----------------------------------------------------------------------===//
-// XeGPU Memory Scope Enums.
-//===----------------------------------------------------------------------===//
-def XeGPU_MemorySpaceGlobal: I32EnumAttrCase<"Global", 0, "global">;
-def XeGPU_MemorySpaceShared: I32EnumAttrCase<"SLM", 3, "slm">;
-def XeGPU_MemorySpace: I32EnumAttr<"MemorySpace",
-      "The address space of the memory the tensor descritor is created for",
-      [XeGPU_MemorySpaceGlobal, XeGPU_MemorySpaceShared]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::xegpu";
-}
-
-def XeGPU_MemorySpaceAttr:
-  EnumAttr<XeGPU_Dialect, XeGPU_MemorySpace, "memory_space"> {
-    let summary = [{Describe the location of data described by a `TensorDesc`:
-                 Global device memory (`Global`) or Shared local memory (`SLM`).}];
-    let assemblyFormat = "$value";
-}
-
 //===----------------------------------------------------------------------===//
 // XeGPU Cache Enums.
 //===----------------------------------------------------------------------===//
@@ -112,7 +110,6 @@ def XeGPU_CachePolicyEnums : I32EnumAttr<"CachePolicy", "Cache policy",
 def XeGPU_CacheHintAttr
   : EnumAttr<XeGPU_Dialect, XeGPU_CachePolicyEnums, "cache_hint"> {
     let summary = [{Describe the cache settings for prefetch/load/store operators}];
-    let assemblyFormat = "`<` $value `>`";
 }
 
 def XeGPU_FenceScopeWorkgroup: I32EnumAttrCase<"Workgroup", 0, "workgroup">;
@@ -129,7 +126,26 @@ def XeGPU_FenceScopeAttr:
     let summary = [{Describes the scope of fence.
                     "workgroup" means that the scope is within each work group.
                     "gpu" means the scope is across work groups within the gpu.}];
-    let assemblyFormat = "$value";
+}
+
+//===----------------------------------------------------------------------===//
+// XeGPU Lane Shuffle Enums.
+//===----------------------------------------------------------------------===//
+def XeGPU_LaneShufflePack: I32EnumAttrCase<"Pack", 0, "pack">;
+def XeGPU_LaneShuffleUnpack: I32EnumAttrCase<"Unpack", 1, "unpack">;
+def XeGPU_LaneShuffleMode: I32EnumAttr<"LaneShuffleMode",
+      "The direction of the lane shuffle performed by xegpu.lane_shuffle.",
+      [XeGPU_LaneShufflePack, XeGPU_LaneShuffleUnpack]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::xegpu";
+}
+
+def XeGPU_LaneShuffleModeAttr:
+  EnumAttr<XeGPU_Dialect, XeGPU_LaneShuffleMode, "lane_shuffle_mode"> {
+    let summary = [{Describes the direction of a lane shuffle.
+                    "pack" gathers a lane's elements into consecutive logical
+                    positions. "unpack" scatters them back out, strided by the
+                    subgroup size.}];
 }
 
 def DistributeLayoutAttr: AttrInterface<"DistributeLayoutAttr"> {
@@ -214,6 +230,23 @@ def DistributeLayoutAttr: AttrInterface<"DistributeLayoutAttr"> {
                     "xegpu::DistributeLayoutAttr",
                     "collapseDims",
                     (ins "SmallVector<int64_t>": $dimGroup)>,
+    InterfaceMethod<[{Derive a new layout by expanding a single dimension into
+                      multiple adjacent dimensions whose extents are given by `targetShape`
+                      (`product(targetShape) == originalSize` on `dim`). The original layout's
+                      per-dim values on `dim` are distributed across the new dims:
+                      `sg_layout` and `lane_layout` spread outer-to-inner (capped per dim by
+                      `targetShape[i]`); `sg_data`, `lane_data`, and `inst_data` fill innermost-
+                      first; `inst_data` is seeded from `lane_layout * lane_data` per new dim.
+                      `order`, when present, is rewritten so the expanded dims appear
+                      innermost-fastest in the original dim's slot; if the input has no
+                      `order`, the result has no `order` either (the default FCD-first
+                      order `[rank-1, ..., 0]` is assumed).
+                      Example: layout<sg_layout=[2, 16], sg_data=[1, 1]> with
+                      expandDim(1, [2, 8]) -> layout<sg_layout=[2, 2, 8], sg_data=[1, 1, 1]>
+                      (no order in, no order out).}],
+                    "xegpu::DistributeLayoutAttr",
+                    "expandDim",
+                    (ins "int64_t": $dim, "ArrayRef<int64_t>": $targetShape)>,
     InterfaceMethod<[{Derive a new layout by trasnposing it using `permutation`.}],
                     "xegpu::DistributeLayoutAttr",
                     "transposeDims",
@@ -582,6 +615,12 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [DistributeLayoutAttr]> {
     // that are collapsed into a single dimension in the derived layout.
     DistributeLayoutAttr collapseDims(SmallVector<int64_t> dimGroup);
 
+    // Derive a new layout by expanding a single dimension `dim` into
+    // multiple adjacent dimensions whose shape is given by `targetShape`.
+    // See the interface method documentation for the per-field distribution
+    // policy.
+    DistributeLayoutAttr expandDim(int64_t dim, ArrayRef<int64_t> targetShape);
+
     // Derive a new layout by transposing the layout using `permutation`.
     DistributeLayoutAttr transposeDims(ArrayRef<int64_t> permutation);
 
@@ -813,6 +852,12 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [DistributeLayoutAttr]> {
     // `dimGroup` specifies a group of adjacent dimensions
     // that are collapsed into a single dimension in the derived layout.
     DistributeLayoutAttr collapseDims(SmallVector<int64_t> dimGroup);
+
+    // Derive a new layout by expanding a single dimension `dim` into
+    // multiple adjacent dimensions whose shape is given by `targetShape`.
+    // See the interface method documentation for the per-field distribution
+    // policy.
+    DistributeLayoutAttr expandDim(int64_t dim, ArrayRef<int64_t> targetShape);
 
     // Derive a new layout by transposing the layout using `permutation`.
     DistributeLayoutAttr transposeDims(ArrayRef<int64_t> permutation);

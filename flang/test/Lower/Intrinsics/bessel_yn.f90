@@ -10,7 +10,7 @@ function test_real4(x, n)
 
   ! ALL: %[[scope:.*]] = fir.dummy_scope : !fir.dscope
   ! ALL: %[[n_decl:.*]]:2 = hlfir.declare %[[argn]] dummy_scope %[[scope]] arg 2 {uniq_name = "_QFtest_real4En"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-  ! ALL: %[[res_alloc:.*]] = fir.alloca f32 {bindc_name = "test_real4", uniq_name = "_QFtest_real4Etest_real4"}
+  ! ALL: %[[res_alloc:.*]] = fir.alloca f32 <{bindc_name = "test_real4", uniq_name = "_QFtest_real4Etest_real4"}>
   ! ALL: %[[res_decl:.*]]:2 = hlfir.declare %[[res_alloc]] {uniq_name = "_QFtest_real4Etest_real4"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   ! ALL: %[[x_decl:.*]]:2 = hlfir.declare %[[argx]] dummy_scope %[[scope]] arg 1 {uniq_name = "_QFtest_real4Ex"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
   ! ALL-DAG: %[[n:.*]] = fir.load %[[n_decl]]#0 : !fir.ref<i32>
@@ -27,7 +27,7 @@ function test_real8(x, n)
 
   ! ALL: %[[scope:.*]] = fir.dummy_scope : !fir.dscope
   ! ALL: %[[n_decl:.*]]:2 = hlfir.declare %[[argn]] dummy_scope %[[scope]] arg 2 {uniq_name = "_QFtest_real8En"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-  ! ALL: %[[res_alloc:.*]] = fir.alloca f64 {bindc_name = "test_real8", uniq_name = "_QFtest_real8Etest_real8"}
+  ! ALL: %[[res_alloc:.*]] = fir.alloca f64 <{bindc_name = "test_real8", uniq_name = "_QFtest_real8Etest_real8"}>
   ! ALL: %[[res_decl:.*]]:2 = hlfir.declare %[[res_alloc]] {uniq_name = "_QFtest_real8Etest_real8"} : (!fir.ref<f64>) -> (!fir.ref<f64>, !fir.ref<f64>)
   ! ALL: %[[x_decl:.*]]:2 = hlfir.declare %[[argx]] dummy_scope %[[scope]] arg 1 {uniq_name = "_QFtest_real8Ex"} : (!fir.ref<f64>, !fir.dscope) -> (!fir.ref<f64>, !fir.ref<f64>)
   ! ALL-DAG: %[[n:.*]] = fir.load %[[n_decl]]#0 : !fir.ref<i32>

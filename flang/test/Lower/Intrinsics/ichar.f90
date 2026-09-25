@@ -8,9 +8,9 @@ subroutine ichar_test(c)
   ! CHECK-DAG: %[[UNBOX:.*]]:2 = fir.unboxchar %[[ARG0]]
   ! CHECK-DAG: %[[CONV:.*]] = fir.convert %[[UNBOX]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1>>
   ! CHECK-DAG: %[[C_DECL:.*]]:2 = hlfir.declare %[[CONV]] typeparams {{.*}} dummy_scope %{{.*}} arg 1 {uniq_name = "_QFichar_testEc"}
-  ! CHECK-DAG: %[[J_ALLOC:.*]] = fir.alloca i32 {bindc_name = "j", uniq_name = "_QFichar_testEj"}
+  ! CHECK-DAG: %[[J_ALLOC:.*]] = fir.alloca i32 <{bindc_name = "j", uniq_name = "_QFichar_testEj"}>
   ! CHECK-DAG: %[[J_DECL:.*]]:2 = hlfir.declare %[[J_ALLOC]] {uniq_name = "_QFichar_testEj"}
-  ! CHECK-DAG: %[[STR_ALLOC:.*]] = fir.alloca !fir.array<10x!fir.char<1>> {bindc_name = "str", uniq_name = "_QFichar_testEstr"}
+  ! CHECK-DAG: %[[STR_ALLOC:.*]] = fir.alloca !fir.array<10x!fir.char<1>> <{bindc_name = "str", uniq_name = "_QFichar_testEstr"}>
   ! CHECK-DAG: %[[STR_DECL:.*]]:2 = hlfir.declare %[[STR_ALLOC]]({{.*}}) typeparams {{.*}} {uniq_name = "_QFichar_testEstr"}
 
   ! CHECK: %[[C_VAL:.*]] = fir.load %[[C_DECL]]#0 : !fir.ref<!fir.char<1>>

@@ -16,6 +16,7 @@
 #include "lldb/DataFormatters/FormatterBytecode.h"
 #include "lldb/DataFormatters/TypeSynthetic.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Interpreter/Interfaces/ScriptedSyntheticChildrenInterface.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Target/Target.h"
@@ -84,7 +85,7 @@ std::string TypeFilterImpl::GetDescription() {
     sstr.Printf("    %s\n", GetExpressionPathAtIndex(i));
   }
 
-  sstr.Printf("}");
+  sstr.PutCString("}");
   return std::string(sstr.GetString());
 }
 
@@ -164,8 +165,7 @@ lldb::ValueObjectSP SyntheticChildrenFrontEnd::CreateChildValueObjectFromData(
 
 ScriptedSyntheticChildren::FrontEnd::FrontEnd(std::string pclass,
                                               ValueObject &backend)
-    : SyntheticChildrenFrontEnd(backend), m_python_class(pclass),
-      m_wrapper_sp(), m_interpreter(nullptr) {
+    : SyntheticChildrenFrontEnd(backend), m_python_class(pclass) {
   if (backend.GetID() == LLDB_INVALID_UID)
     return;
 
@@ -174,77 +174,95 @@ ScriptedSyntheticChildren::FrontEnd::FrontEnd(std::string pclass,
   if (!target_sp)
     return;
 
-  m_interpreter = target_sp->GetDebugger().GetScriptInterpreter();
+  ScriptInterpreter *interpreter =
+      target_sp->GetDebugger().GetScriptInterpreter();
 
-  if (m_interpreter != nullptr)
-    m_wrapper_sp = m_interpreter->CreateSyntheticScriptedProvider(
-        m_python_class.c_str(), backend.GetSP());
+  if (!interpreter)
+    return;
+
+  m_interface_sp = interpreter->CreateScriptedSyntheticChildrenInterface();
+  if (!m_interface_sp)
+    return;
+
+  auto obj_or_err = m_interface_sp->CreatePluginObject(m_python_class, backend);
+  if (!obj_or_err) {
+    llvm::consumeError(obj_or_err.takeError());
+    m_interface_sp.reset();
+  }
 }
 
 ScriptedSyntheticChildren::FrontEnd::~FrontEnd() = default;
 
 lldb::ValueObjectSP
 ScriptedSyntheticChildren::FrontEnd::GetChildAtIndex(uint32_t idx) {
-  if (!m_wrapper_sp || !m_interpreter)
+  if (!m_interface_sp)
     return lldb::ValueObjectSP();
 
-  return m_interpreter->GetChildAtIndex(m_wrapper_sp, idx);
+  return m_interface_sp->GetChildAtIndex(idx);
 }
 
 bool ScriptedSyntheticChildren::FrontEnd::IsValid() {
-  return (m_wrapper_sp && m_wrapper_sp->IsValid() && m_interpreter);
+  return m_interface_sp != nullptr;
 }
 
 llvm::Expected<uint32_t>
 ScriptedSyntheticChildren::FrontEnd::CalculateNumChildren() {
-  if (!m_wrapper_sp || m_interpreter == nullptr)
+  if (!m_interface_sp)
     return 0;
-  return m_interpreter->CalculateNumChildren(m_wrapper_sp, UINT32_MAX);
+  return m_interface_sp->CalculateNumChildren(UINT32_MAX);
 }
 
 llvm::Expected<uint32_t>
 ScriptedSyntheticChildren::FrontEnd::CalculateNumChildren(uint32_t max) {
-  if (!m_wrapper_sp || m_interpreter == nullptr)
+  if (!m_interface_sp)
     return 0;
-  return m_interpreter->CalculateNumChildren(m_wrapper_sp, max);
+  return m_interface_sp->CalculateNumChildren(max);
 }
 
 lldb::ChildCacheState ScriptedSyntheticChildren::FrontEnd::Update() {
-  if (!m_wrapper_sp || m_interpreter == nullptr)
+  if (!m_interface_sp)
     return lldb::ChildCacheState::eRefetch;
 
-  return m_interpreter->UpdateSynthProviderInstance(m_wrapper_sp)
-             ? lldb::ChildCacheState::eReuse
-             : lldb::ChildCacheState::eRefetch;
+  return m_interface_sp->Update();
 }
 
 bool ScriptedSyntheticChildren::FrontEnd::MightHaveChildren() {
-  if (!m_wrapper_sp || m_interpreter == nullptr)
+  if (!m_interface_sp)
     return false;
 
-  return m_interpreter->MightHaveChildrenSynthProviderInstance(m_wrapper_sp);
+  return m_interface_sp->MightHaveChildren();
 }
 
 llvm::Expected<size_t>
 ScriptedSyntheticChildren::FrontEnd::GetIndexOfChildWithName(ConstString name) {
-  if (!m_wrapper_sp || m_interpreter == nullptr)
+  if (!m_interface_sp)
     return llvm::createStringErrorV("type has no child named '{0}'", name);
-  return m_interpreter->GetIndexOfChildWithName(m_wrapper_sp,
-                                                name.GetCString());
+  return m_interface_sp->GetIndexOfChildWithName(name);
 }
 
 lldb::ValueObjectSP ScriptedSyntheticChildren::FrontEnd::GetSyntheticValue() {
-  if (!m_wrapper_sp || m_interpreter == nullptr)
+  if (!m_interface_sp)
     return nullptr;
 
-  return m_interpreter->GetSyntheticValue(m_wrapper_sp);
+  return m_interface_sp->GetSyntheticValue();
 }
 
 ConstString ScriptedSyntheticChildren::FrontEnd::GetSyntheticTypeName() {
-  if (!m_wrapper_sp || m_interpreter == nullptr)
+  if (!m_interface_sp)
     return ConstString();
 
-  return m_interpreter->GetSyntheticTypeName(m_wrapper_sp);
+  return m_interface_sp->GetSyntheticTypeName();
+}
+
+void *ScriptedSyntheticChildren::FrontEnd::GetImplementation() {
+  if (!m_interface_sp)
+    return nullptr;
+
+  StructuredData::GenericSP obj = m_interface_sp->GetScriptObjectInstance();
+  if (!obj)
+    return nullptr;
+
+  return obj->GetValue();
 }
 
 std::string ScriptedSyntheticChildren::GetDescription() {
@@ -303,6 +321,9 @@ lldb::ChildCacheState BytecodeSyntheticChildren::FrontEnd::Update() {
   if (auto *i = std::get_if<int64_t>(&top))
     if (*i == 0 || *i == 1)
       can_reuse = static_cast<ChildCacheState>(*i);
+  if (auto *ap = std::get_if<llvm::APSInt>(&top))
+    if (*ap == 0 || *ap == 1)
+      can_reuse = static_cast<ChildCacheState>(ap->getExtValue());
 
   if (can_reuse) {
     data.pop_back();
@@ -338,7 +359,7 @@ BytecodeSyntheticChildren::FrontEnd::CalculateNumChildren() {
 
   if (data.size() == 0) {
     char message[] = "@get_num_children returned empty data stack";
-    LLDB_LOG(GetLog(LLDBLog::DataFormatters), message);
+    LLDB_LOG(GetLog(LLDBLog::DataFormatters), "{0}", message);
     return llvm::createStringError(message);
   }
 
@@ -349,6 +370,14 @@ BytecodeSyntheticChildren::FrontEnd::CalculateNumChildren() {
   if (auto *i = std::get_if<int64_t>(&top)) {
     if (*i > 0 && *i <= UINT32_MAX)
       return *i;
+    return UINT32_MAX;
+  }
+  if (auto *ap = std::get_if<llvm::APSInt>(&top)) {
+    if (ap->isRepresentableByInt64()) {
+      int64_t v = ap->getExtValue();
+      if (v > 0 && v <= UINT32_MAX)
+        return static_cast<uint32_t>(v);
+    }
     return UINT32_MAX;
   }
 
@@ -401,7 +430,7 @@ BytecodeSyntheticChildren::FrontEnd::GetIndexOfChildWithName(ConstString name) {
 
   if (data.size() == 0) {
     char message[] = "@get_child_index returned empty data stack";
-    LLDB_LOG(GetLog(LLDBLog::DataFormatters), message);
+    LLDB_LOG(GetLog(LLDBLog::DataFormatters), "{0}", message);
     return llvm::createStringError(message);
   }
 
@@ -412,6 +441,14 @@ BytecodeSyntheticChildren::FrontEnd::GetIndexOfChildWithName(ConstString name) {
   if (auto *i = std::get_if<int64_t>(&top)) {
     if (*i > 0 && static_cast<uint64_t>(*i) <= SIZE_MAX)
       return *i;
+    return SIZE_MAX;
+  }
+  if (auto *ap = std::get_if<llvm::APSInt>(&top)) {
+    if (ap->isRepresentableByInt64()) {
+      int64_t v = ap->getExtValue();
+      if (v > 0 && static_cast<uint64_t>(v) <= SIZE_MAX)
+        return static_cast<size_t>(v);
+    }
     return SIZE_MAX;
   }
 

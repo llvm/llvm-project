@@ -25,12 +25,11 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include <fstream>
 
 using namespace llvm;
 using clang::tooling::Replacements;
-
-static cl::opt<bool> Help("h", cl::desc("Alias for -help"), cl::Hidden);
 
 // Mark all our options with this category, everything else (except for -version
 // and -help) will be hidden.
@@ -680,11 +679,6 @@ int main(int argc, const char **argv) {
       "If <file>s are given, it reformats the files. If -i is specified\n"
       "together with <file>s, the files are edited in-place. Otherwise, the\n"
       "result is written to the standard output.\n");
-
-  if (Help) {
-    cl::PrintHelpMessage();
-    return 0;
-  }
 
   if (DumpConfig)
     return dumpConfig();

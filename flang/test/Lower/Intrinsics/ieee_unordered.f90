@@ -3,11 +3,11 @@
 
 ! CHECK-LABEL: func @_QQmain
 use ieee_arithmetic
-! CHECK-DAG: %[[V_X:[0-9]+]] = fir.alloca f128 {bindc_name = "x", uniq_name = "_QFEx"}
+! CHECK-DAG: %[[V_X:[0-9]+]] = fir.alloca f128 <{bindc_name = "x", uniq_name = "_QFEx"}>
 ! CHECK-DAG: %[[X_DECL:[0-9]+]]:2 = hlfir.declare %[[V_X]] {uniq_name = "_QFEx"}
-! CHECK-DAG: %[[V_Y:[0-9]+]] = fir.alloca f128 {bindc_name = "y", uniq_name = "_QFEy"}
+! CHECK-DAG: %[[V_Y:[0-9]+]] = fir.alloca f128 <{bindc_name = "y", uniq_name = "_QFEy"}>
 ! CHECK-DAG: %[[Y_DECL:[0-9]+]]:2 = hlfir.declare %[[V_Y]] {uniq_name = "_QFEy"}
-! CHECK-DAG: %[[V_Z:[0-9]+]] = fir.alloca f128 {bindc_name = "z", uniq_name = "_QFEz"}
+! CHECK-DAG: %[[V_Z:[0-9]+]] = fir.alloca f128 <{bindc_name = "z", uniq_name = "_QFEz"}>
 ! CHECK-DAG: %[[Z_DECL:[0-9]+]]:2 = hlfir.declare %[[V_Z]] {uniq_name = "_QFEz"}
 real(16) :: x, y, z
 

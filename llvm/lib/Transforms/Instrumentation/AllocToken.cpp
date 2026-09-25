@@ -13,7 +13,6 @@
 
 #include "llvm/Transforms/Instrumentation/AllocToken.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
@@ -43,11 +42,8 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/RandomNumberGenerator.h"
 #include "llvm/Support/SipHash.h"
-#include "llvm/Support/raw_ostream.h"
 #include <cassert>
-#include <cstddef>
 #include <cstdint>
-#include <limits>
 #include <memory>
 #include <optional>
 #include <string>
@@ -399,8 +395,8 @@ AllocToken::shouldInstrumentCall(const CallBase &CB,
   // Ignore nobuiltin of the CallBase, so that we can cover nobuiltin libcalls
   // if requested via isInstrumentableLibFunc(). Note that isAllocationFn() is
   // returning false for nobuiltin calls.
-  LibFunc Func;
-  if (TLI.getLibFunc(*Callee, Func)) {
+  LibFunc Func = TLI.getLibFunc(*Callee);
+  if (Func != NotLibFunc) {
     if (isInstrumentableLibFunc(Func, CB, TLI))
       return Func;
   } else if (Options.Extended && CB.getMetadata(LLVMContext::MD_alloc_token)) {

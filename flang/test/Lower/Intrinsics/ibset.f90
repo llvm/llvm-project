@@ -5,7 +5,7 @@
 function ibset_test(i, j)
   ! CHECK-DAG: %[[I:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{.*}} arg 1 {uniq_name = "_QFibset_testEi"}
   ! CHECK-DAG: %[[J:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %{{.*}} arg 2 {uniq_name = "_QFibset_testEj"}
-  ! CHECK-DAG: %[[RESULT_ALLOC:.*]] = fir.alloca i32 {bindc_name = "ibset_test", uniq_name = "_QFibset_testEibset_test"}
+  ! CHECK-DAG: %[[RESULT_ALLOC:.*]] = fir.alloca i32 <{bindc_name = "ibset_test", uniq_name = "_QFibset_testEibset_test"}>
   ! CHECK-DAG: %[[RESULT:.*]]:2 = hlfir.declare %[[RESULT_ALLOC]] {uniq_name = "_QFibset_testEibset_test"}
   ! CHECK-DAG: %[[I_VAL:.*]] = fir.load %[[I]]#0 : !fir.ref<i32>
   ! CHECK-DAG: %[[J_VAL:.*]] = fir.load %[[J]]#0 : !fir.ref<i32>

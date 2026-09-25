@@ -169,6 +169,7 @@ typedef enum _ze_structure_type_t {
   ZE_STRUCTURE_TYPE_DEVICE_IP_VERSION_EXT = 0x1000f,
   ZE_STRUCTURE_TYPE_COMMAND_LIST_APPEND_PARAM_COOPERATIVE_DESC = 0x00020036,
   ZE_STRUCTURE_TYPE_RELAXED_ALLOCATION_LIMITS_EXP_DESC = 0x00020001,
+  ZE_STRUCTURE_TYPE_COUNTER_BASED_EVENT_POOL_EXP_DESC = 0x00020014,
   ZE_STRUCTURE_TYPE_FORCE_UINT32 = 0x7fffffff
 } ze_structure_type_t;
 
@@ -286,6 +287,14 @@ typedef enum _ze_event_pool_flag_t {
   ZE_EVENT_POOL_FLAG_FORCE_UINT32 = 0x7fffffff
 } ze_event_pool_flag_t;
 
+/* Counter-based event pool flags */
+typedef uint32_t ze_event_pool_counter_based_exp_flags_t;
+typedef enum _ze_event_pool_counter_based_exp_flag_t {
+  ZE_EVENT_POOL_COUNTER_BASED_EXP_FLAG_IMMEDIATE = ZE_BIT(0),
+  ZE_EVENT_POOL_COUNTER_BASED_EXP_FLAG_NON_IMMEDIATE = ZE_BIT(1),
+  ZE_EVENT_POOL_COUNTER_BASED_EXP_FLAG_FORCE_UINT32 = 0x7fffffff
+} ze_event_pool_counter_based_exp_flag_t;
+
 /* Event scope flags */
 typedef uint32_t ze_event_scope_flags_t;
 typedef enum _ze_event_scope_flag_t {
@@ -325,10 +334,23 @@ typedef struct _ze_uuid_t {
   uint8_t id[16];
 } ze_uuid_t;
 
+/* Driver UUID size */
+#ifndef ZE_MAX_DRIVER_UUID_SIZE
+#define ZE_MAX_DRIVER_UUID_SIZE 16
+#endif
+
 /* Driver UUID */
 typedef struct _ze_driver_uuid_t {
-  ze_uuid_t id;
+  uint8_t id[ZE_MAX_DRIVER_UUID_SIZE];
 } ze_driver_uuid_t;
+
+/* Driver properties */
+typedef struct _ze_driver_properties_t {
+  ze_structure_type_t stype;
+  void *pNext;
+  ze_driver_uuid_t uuid;
+  uint32_t driverVersion;
+} ze_driver_properties_t;
 
 /* Device UUID */
 typedef struct _ze_device_uuid_t {
@@ -600,6 +622,13 @@ typedef struct _ze_event_pool_desc_t {
   uint32_t count;
 } ze_event_pool_desc_t;
 
+/* Counter-based event pool descriptor */
+typedef struct _ze_event_pool_counter_based_exp_desc_t {
+  ze_structure_type_t stype;
+  const void *pNext;
+  ze_event_pool_counter_based_exp_flags_t flags;
+} ze_event_pool_counter_based_exp_desc_t;
+
 /* Event descriptor */
 typedef struct _ze_event_desc_t {
   ze_structure_type_t stype;
@@ -650,10 +679,14 @@ ZE_APIEXPORT ze_result_t ZE_APICALL zeDriverGet(uint32_t *pCount,
                                                 ze_driver_handle_t *phDrivers);
 ZE_APIEXPORT ze_result_t ZE_APICALL
 zeDriverGetApiVersion(ze_driver_handle_t hDriver, ze_api_version_t *version);
+ZE_APIEXPORT ze_result_t ZE_APICALL zeDriverGetProperties(
+    ze_driver_handle_t hDriver, ze_driver_properties_t *pDriverProperties);
 ZE_APIEXPORT ze_result_t ZE_APICALL zeDriverGetExtensionFunctionAddress(
     ze_driver_handle_t hDriver, const char *name, void **ppFunctionAddress);
 ZE_APIEXPORT ze_result_t ZE_APICALL zeDriverGetExtensionProperties(
     ze_driver_handle_t hDriver, uint32_t *pCount, void *pExtensionProperties);
+ZE_APIEXPORT ze_context_handle_t ZE_APICALL
+zeDriverGetDefaultContext(ze_driver_handle_t hDriver);
 
 /* Device functions */
 ZE_APIEXPORT ze_result_t ZE_APICALL zeDeviceGet(ze_driver_handle_t hDriver,

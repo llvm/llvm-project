@@ -15,6 +15,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cwchar>
+#include <langinfo.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -24,7 +25,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __locale {
 
 struct __locale_guard {
-  _LIBCPP_HIDE_FROM_ABI __locale_guard(locale_t& __loc) : __old_loc_(::uselocale(__loc)) {}
+  _LIBCPP_HIDE_FROM_ABI __locale_guard(locale_t __loc) : __old_loc_(::uselocale(__loc)) {}
 
   _LIBCPP_HIDE_FROM_ABI ~__locale_guard() {
     if (__old_loc_)
@@ -67,6 +68,10 @@ inline _LIBCPP_HIDE_FROM_ABI char* __setlocale(int __category, char const* __loc
 inline _LIBCPP_HIDE_FROM_ABI __lconv_t* __localeconv(__locale_t& __loc) {
   __locale_guard __current(__loc);
   return std::localeconv();
+}
+
+inline _LIBCPP_HIDE_FROM_ABI const char* __get_locale_encoding(__locale_t __loc) {
+  return ::nl_langinfo_l(CODESET, __loc);
 }
 
 //
@@ -147,7 +152,10 @@ _LIBCPP_DIAGNOSTIC_POP
 } // namespace __locale
 _LIBCPP_END_NAMESPACE_STD
 
+#include <__locale_dir/support/default/get_c_locale.h>
 #include <__locale_dir/support/no_locale/characters.h>
 #include <__locale_dir/support/no_locale/strtonum.h>
+
+#define _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE 1
 
 #endif // _LIBCPP___LOCALE_DIR_SUPPORT_FUCHSIA_H

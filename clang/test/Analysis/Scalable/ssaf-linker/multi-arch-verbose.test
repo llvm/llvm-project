@@ -1,0 +1,55 @@
+// Test the --verbose flag on the `multi-arch create` subcommand.
+
+// RUN: rm -rf %t
+// RUN: mkdir -p %t
+
+// RUN: clang-ssaf-linker multi-arch create --verbose \
+// RUN:     %S/Inputs/lib-arm64.json %S/Inputs/lib-x86_64.json -o %t/libv.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines
+
+// CHECK:      note: - Bundling started.
+// CHECK-NEXT: note:   - Validating input.
+// CHECK-NEXT: note:     - Validated output path '{{.*}}libv.json'.
+// CHECK-NEXT: note:     - Validated 2 input artifact path(s).
+// CHECK-NEXT: note:   - Creating bundle.
+// CHECK-NEXT: note:     - Bundling members.
+// CHECK-NEXT: note:       - [1/2] Reading '{{.*}}lib-arm64.json'.
+// CHECK-NEXT: note:       - [1/2] Bundling '{{.*}}lib-arm64.json'.
+// CHECK-NEXT: note:       - [2/2] Reading '{{.*}}lib-x86_64.json'.
+// CHECK-NEXT: note:       - [2/2] Bundling '{{.*}}lib-x86_64.json'.
+// CHECK-NEXT: note:     - Bundled 2 member(s).
+// CHECK-NEXT: note:     - Target namespace: 'BuildNamespace(MultiArchStaticLibrary, libmulti)'.
+// CHECK-NEXT: note:   - Writing bundle to '{{.*}}libv.json'.
+// CHECK-NEXT: note: - Bundling finished.
+
+// The shared family reports a NestedBuildNamespace target, and flattening a
+// multi-arch input contributes more slices than there are inputs.
+
+// RUN: clang-ssaf-linker multi-arch create --verbose \
+// RUN:     %S/Inputs/libfoo-2arch.json %S/Inputs/lu-ios-libfoo.json -o %t/libfoov.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=SHARED
+
+// SHARED:      note: - Bundling started.
+// SHARED-NEXT: note:   - Validating input.
+// SHARED-NEXT: note:     - Validated output path '{{.*}}libfoov.json'.
+// SHARED-NEXT: note:     - Validated 2 input artifact path(s).
+// SHARED-NEXT: note:   - Creating bundle.
+// SHARED-NEXT: note:     - Bundling members.
+// SHARED-NEXT: note:       - [1/2] Reading '{{.*}}libfoo-2arch.json'.
+// SHARED-NEXT: note:       - [1/2] Bundling '{{.*}}libfoo-2arch.json'.
+// SHARED-NEXT: note:       - [2/2] Reading '{{.*}}lu-ios-libfoo.json'.
+// SHARED-NEXT: note:       - [2/2] Bundling '{{.*}}lu-ios-libfoo.json'.
+// SHARED-NEXT: note:     - Bundled 3 member(s).
+// SHARED-NEXT: note:     - Target namespace: 'NestedBuildNamespace([BuildNamespace(LinkUnit, libfoo)])'.
+// SHARED-NEXT: note:   - Writing bundle to '{{.*}}libfoov.json'.
+// SHARED-NEXT: note: - Bundling finished.
+
+// A run that fails before assembling reports neither a target namespace nor a
+// slice count.
+
+// RUN: not clang-ssaf-linker multi-arch create --verbose \
+// RUN:     %S/Inputs/libmulti-empty-wrapper.json -o %t/libnone.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=NO-TARGET --implicit-check-not="Target namespace"
+
+// NO-TARGET:      note:       - [1/1] Bundling '{{.*}}libmulti-empty-wrapper.json'.
+// NO-TARGET-NEXT: error: no candidate members could be derived from the given inputs: at least one member is required

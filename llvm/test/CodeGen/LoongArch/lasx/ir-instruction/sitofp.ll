@@ -32,9 +32,8 @@ define void @sitofp_v4i64_v4f32(ptr %res, ptr %in){
 ; CHECK-LABEL: sitofp_v4i64_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
-; CHECK-NEXT:    xvffint.d.l $xr0, $xr0
-; CHECK-NEXT:    xvpermi.d $xr1, $xr0, 238
-; CHECK-NEXT:    xvfcvt.s.d $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvffint.s.l $xr0, $xr0, $xr0
+; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 8
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <4 x i64>, ptr %in
@@ -55,4 +54,139 @@ define void @sitofp_v4i32_v4f64(ptr %res, ptr %in){
   %v1 = sitofp <4 x i32> %v0 to <4 x double>
   store <4 x double> %v1, ptr %res
   ret void
+}
+
+define <2 x float> @sitofp_v2i32_v2f32(<2 x i32> %a) {
+; CHECK-LABEL: sitofp_v2i32_v2f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vffint.s.w $vr0, $vr0
+; CHECK-NEXT:    ret
+  %cvt = sitofp <2 x i32> %a to <2 x float>
+  ret <2 x float> %cvt
+}
+
+define <2 x double> @sitofp_v4i32_v2f64(<4 x i32> %a) {
+; CHECK-LABEL: sitofp_v4i32_v2f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $vr0 killed $vr0 def $xr0
+; CHECK-NEXT:    vext2xv.d.w $xr0, $xr0
+; CHECK-NEXT:    xvffint.d.l $xr0, $xr0
+; CHECK-NEXT:    # kill: def $vr0 killed $vr0 killed $xr0
+; CHECK-NEXT:    ret
+  %cvt = sitofp <4 x i32> %a to <4 x double>
+  %shuf = shufflevector <4 x double> %cvt, <4 x double> poison, <2 x i32> <i32 0, i32 1>
+  ret <2 x double> %shuf
+}
+
+define <2 x double> @sitofp_v2i16_v2f64(<8 x i16> %a) {
+; CHECK-LABEL: sitofp_v2i16_v2f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $vr0 killed $vr0 def $xr0
+; CHECK-NEXT:    vext2xv.d.h $xr0, $xr0
+; CHECK-NEXT:    vffint.d.l $vr0, $vr0
+; CHECK-NEXT:    ret
+  %shuf = shufflevector <8 x i16> %a, <8 x i16> poison, <2 x i32> <i32 0, i32 1>
+  %cvt = sitofp <2 x i16> %shuf to <2 x double>
+  ret <2 x double> %cvt
+}
+
+define <2 x double> @sitofp_v8i16_v2f64(<8 x i16> %a) {
+; CHECK-LABEL: sitofp_v8i16_v2f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $vr0 killed $vr0 def $xr0
+; CHECK-NEXT:    vext2xv.w.h $xr0, $xr0
+; CHECK-NEXT:    vext2xv.d.w $xr0, $xr0
+; CHECK-NEXT:    xvffint.d.l $xr0, $xr0
+; CHECK-NEXT:    # kill: def $vr0 killed $vr0 killed $xr0
+; CHECK-NEXT:    ret
+  %cvt = sitofp <8 x i16> %a to <8 x double>
+  %shuf = shufflevector <8 x double> %cvt, <8 x double> poison, <2 x i32> <i32 0, i32 1>
+  ret <2 x double> %shuf
+}
+
+define <2 x double> @sitofp_v2i8_v2f64(<16 x i8> %a) {
+; CHECK-LABEL: sitofp_v2i8_v2f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $vr0 killed $vr0 def $xr0
+; CHECK-NEXT:    vext2xv.d.b $xr0, $xr0
+; CHECK-NEXT:    vffint.d.l $vr0, $vr0
+; CHECK-NEXT:    ret
+  %shuf = shufflevector <16 x i8> %a, <16 x i8> poison, <2 x i32> <i32 0, i32 1>
+  %cvt = sitofp <2 x i8> %shuf to <2 x double>
+  ret <2 x double> %cvt
+}
+
+define <2 x double> @sitofp_v16i8_v2f64(<16 x i8> %a) {
+; CHECK-LABEL: sitofp_v16i8_v2f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $vr0 killed $vr0 def $xr0
+; CHECK-NEXT:    vext2xv.h.b $xr0, $xr0
+; CHECK-NEXT:    vext2xv.w.h $xr0, $xr0
+; CHECK-NEXT:    vext2xv.d.w $xr0, $xr0
+; CHECK-NEXT:    xvffint.d.l $xr0, $xr0
+; CHECK-NEXT:    # kill: def $vr0 killed $vr0 killed $xr0
+; CHECK-NEXT:    ret
+  %cvt = sitofp <16 x i8> %a to <16 x double>
+  %shuf = shufflevector <16 x double> %cvt, <16 x double> poison, <2 x i32> <i32 0, i32 1>
+  ret <2 x double> %shuf
+}
+
+define <4 x double> @sitofp_v4i64_v4f64(<4 x i64> %a) {
+; CHECK-LABEL: sitofp_v4i64_v4f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xvffint.d.l $xr0, $xr0
+; CHECK-NEXT:    ret
+  %cvt = sitofp <4 x i64> %a to <4 x double>
+  ret <4 x double> %cvt
+}
+
+define <4 x double> @sitofp_v4i16_v4f64(<8 x i16> %a) {
+; CHECK-LABEL: sitofp_v4i16_v4f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $vr0 killed $vr0 def $xr0
+; CHECK-NEXT:    vext2xv.d.h $xr0, $xr0
+; CHECK-NEXT:    xvffint.d.l $xr0, $xr0
+; CHECK-NEXT:    ret
+  %shuf = shufflevector <8 x i16> %a, <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %cvt = sitofp <4 x i16> %shuf to <4 x double>
+  ret <4 x double> %cvt
+}
+
+define <4 x double> @sitofp_v8i16_v4f64(<8 x i16> %a) {
+; CHECK-LABEL: sitofp_v8i16_v4f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $vr0 killed $vr0 def $xr0
+; CHECK-NEXT:    vext2xv.w.h $xr0, $xr0
+; CHECK-NEXT:    vext2xv.d.w $xr0, $xr0
+; CHECK-NEXT:    xvffint.d.l $xr0, $xr0
+; CHECK-NEXT:    ret
+  %cvt = sitofp <8 x i16> %a to <8 x double>
+  %shuf = shufflevector <8 x double> %cvt, <8 x double> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x double> %shuf
+}
+
+define <4 x double> @sitofp_v4i8_v4f64(<16 x i8> %a) {
+; CHECK-LABEL: sitofp_v4i8_v4f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $vr0 killed $vr0 def $xr0
+; CHECK-NEXT:    vext2xv.d.b $xr0, $xr0
+; CHECK-NEXT:    xvffint.d.l $xr0, $xr0
+; CHECK-NEXT:    ret
+  %shuf = shufflevector <16 x i8> %a, <16 x i8> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %cvt = sitofp <4 x i8> %shuf to <4 x double>
+  ret <4 x double> %cvt
+}
+
+define <4 x double> @sitofp_v16i8_v4f64(<16 x i8> %a) {
+; CHECK-LABEL: sitofp_v16i8_v4f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $vr0 killed $vr0 def $xr0
+; CHECK-NEXT:    vext2xv.h.b $xr0, $xr0
+; CHECK-NEXT:    vext2xv.w.h $xr0, $xr0
+; CHECK-NEXT:    vext2xv.d.w $xr0, $xr0
+; CHECK-NEXT:    xvffint.d.l $xr0, $xr0
+; CHECK-NEXT:    ret
+  %cvt = sitofp <16 x i8> %a to <16 x double>
+  %shuf = shufflevector <16 x double> %cvt, <16 x double> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x double> %shuf
 }

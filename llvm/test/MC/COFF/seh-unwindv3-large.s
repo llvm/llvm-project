@@ -45,7 +45,7 @@ large_prolog_known:
 // CHECK-NEXT:       [0] IP +0x0105: ALLOC_SMALL Size=0x20
 // CHECK-NEXT:       [1] IP +0x0000: PUSH Reg=RBX
 // CHECK:          Epilog [0] {
-// CHECK:            EpilogOffset: +0x10A
+// CHECK:            EpilogOffset: -0x6
 // CHECK-NEXT:       NumberOfOps: 2
 // CHECK-NEXT:       FirstOp: 0x0
 // CHECK-NEXT:       IpOffsetOfLastInstruction: 0x5
@@ -93,7 +93,7 @@ large_prolog_unevaluatable:
 // CHECK-NEXT:       [0] IP +0x00F0: ALLOC_SMALL Size=0x20
 // CHECK-NEXT:       [1] IP +0x0000: PUSH Reg=RBX
 // CHECK:          Epilog [0] {
-// CHECK:            EpilogOffset: +0xF5
+// CHECK:            EpilogOffset: -0x6
 // CHECK-NEXT:       NumberOfOps: 2
 // CHECK-NEXT:       FirstOp: 0x0
 // CHECK-NEXT:       IpOffsetOfLastInstruction: 0x5
@@ -143,7 +143,7 @@ large_epilog_known:
 // CHECK-NEXT:       Flags [ (0x2)
 // CHECK-NEXT:         Large (0x2)
 // CHECK-NEXT:       ]
-// CHECK-NEXT:       EpilogOffset: +0x6
+// CHECK-NEXT:       EpilogOffset: -0x10A
 // CHECK-NEXT:       NumberOfOps: 2
 // CHECK-NEXT:       FirstOp: 0x0
 // CHECK-NEXT:       IpOffsetOfLastInstruction: 0x109
@@ -189,7 +189,7 @@ large_epilog_unevaluatable:
 // CHECK-NEXT:       Flags [ (0x2)
 // CHECK-NEXT:         Large (0x2)
 // CHECK-NEXT:       ]
-// CHECK-NEXT:       EpilogOffset: +0x6
+// CHECK-NEXT:       EpilogOffset: -0xE1
 // CHECK-NEXT:       NumberOfOps: 2
 // CHECK-NEXT:       FirstOp: 0x0
 // CHECK-NEXT:       IpOffsetOfLastInstruction: 0xE0

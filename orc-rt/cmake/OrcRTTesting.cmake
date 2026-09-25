@@ -34,3 +34,11 @@ if (NOT ORC_RT_NOT_EXECUTABLE)
   message(STATUS "Cannot find 'not'. Please put it in your PATH, set ORC_RT_NOT_EXECUTABLE to its full path, or point ORC_RT_LLVM_TOOLS_DIR to its directory.")
   set(ORC_RT_LLVM_TOOLS_AVAILABLE FALSE)
 endif()
+
+# Add dependencies on optional tools, if they're being built alongside us.
+# Tests that need these tools are gated on lit features, so they're not required.
+foreach(tool clang llvm-jitlink llvm-mc)
+  if (TARGET ${tool})
+    list(APPEND ORC_RT_TEST_DEPS ${tool})
+  endif()
+endforeach()

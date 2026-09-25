@@ -410,17 +410,16 @@ TEST(MachOTrieTest, MixedExportsAndReexports) {
   EXPECT_EQ(result.reexports[0].entry.import_name.GetStringRef(), "baz");
 }
 
-TEST(MachOTrieTest, ChildOffsetZeroSkipped) {
-  // A child whose node offset is zero is not followed (zero is the root).
+TEST(MachOTrieTest, MalformedChildOffsetZero) {
+  // A child offset of 0 points back at the root, which is a cycle.
   std::vector<uint8_t> t;
   AppendULEB128(t, 0); // terminalSize
   t.push_back(1);      // childrenCount
   AppendCStr(t, "_foo");
-  AppendOffset(t, 0); // childNodeOffset 0 -> not recursed
+  AppendOffset(t, 0); // childNodeOffset 0 -> points back at the root
 
   ParseResult result = Parse(t);
-  EXPECT_TRUE(result.ok);
-  EXPECT_TRUE(result.ext_symbols.empty());
+  EXPECT_FALSE(result.ok);
 }
 
 TEST(MachOTrieTest, MalformedSelfCycle) {
@@ -512,7 +511,7 @@ TEST(MachOTrieTest, MalformedExcessChildrenCount) {
   AppendULEB128(t, 0); // terminalSize
   t.push_back(5);      // claims five children
   AppendCStr(t, "a");
-  AppendOffset(t, 0); // childNodeOffset 0 -> not recursed
+  AppendOffset(t, 1000); // first child offset, out of range and tolerated
   // ...but no data for the remaining four claimed children.
 
   ParseResult result = Parse(t);
@@ -538,5 +537,20 @@ TEST(MachOTrieTest, ChildOffsetOutOfRange) {
 
   ParseResult result = Parse(t);
   EXPECT_TRUE(result.ok);
+  EXPECT_TRUE(result.ext_symbols.empty());
+}
+
+TEST(MachOTrieTest, OversizedEdgeLabelIsRejected) {
+  // A corrupt export trie can encode an edge label far longer than any real
+  // symbol name.  ParseTrieEntries appends every edge label onto the running
+  // symbol name without a length bound, so such a label drives an unbounded
+  // allocation.  The parser must treat an implausibly long name as corrupt data
+  // and bail instead of accepting it.
+  constexpr size_t kOversizedLabelLen = 8 * 1024 * 1024;
+  TrieBuilder b;
+  b.AddExport(b.Root(), std::string(kOversizedLabelLen, 'A'), 0x1000);
+
+  ParseResult result = Parse(b.Build());
+  EXPECT_FALSE(result.ok);
   EXPECT_TRUE(result.ext_symbols.empty());
 }

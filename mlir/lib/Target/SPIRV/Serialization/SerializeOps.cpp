@@ -109,7 +109,7 @@ LogicalResult Serializer::processSpecConstantOp(spirv::SpecConstantOp op) {
   if (auto resultID = prepareConstantScalar(op.getLoc(), op.getDefaultValue(),
                                             /*isSpec=*/true)) {
     // Emit the OpDecorate instruction for SpecId.
-    if (auto specID = op->getAttrOfType<IntegerAttr>("spec_id")) {
+    if (auto specID = op->getDiscardableAttrOfType<IntegerAttr>("spec_id")) {
       auto val = static_cast<uint32_t>(specID.getInt());
       if (failed(emitDecoration(resultID, spirv::Decoration::SpecId, {val})))
         return failure();
@@ -393,7 +393,9 @@ LogicalResult Serializer::processFuncOp(spirv::FuncOp op) {
   // Only attributes we should be considering for decoration are the
   // ::mlir::spirv::Decoration attributes.
 
-  for (auto attr : op->getAttrs()) {
+  NamedAttrList attrs(op->getDiscardableAttrDictionary().getValue());
+  op->getName().populateInherentAttrs(op, attrs);
+  for (auto attr : attrs) {
     // Only generate OpDecorate op for spirv::Decoration attributes.
     auto isValidDecoration = mlir::spirv::symbolizeEnum<spirv::Decoration>(
         llvm::convertToCamelFromSnakeCase(attr.getName().strref(),
@@ -669,11 +671,7 @@ LogicalResult Serializer::processVariableOp(spirv::VariableOp op) {
   resultID = getNextID();
   valueIDMap[op.getResult()] = resultID;
   operands.push_back(resultID);
-  auto attr = op->getAttr(spirv::attributeName<spirv::StorageClass>());
-  if (attr) {
-    operands.push_back(
-        static_cast<uint32_t>(cast<spirv::StorageClassAttr>(attr).getValue()));
-  }
+  operands.push_back(static_cast<uint32_t>(op.getStorageClass()));
   elidedAttrs.push_back(spirv::attributeName<spirv::StorageClass>());
   for (auto arg : op.getODSOperands(0)) {
     auto argID = getValueID(arg);
@@ -685,7 +683,7 @@ LogicalResult Serializer::processVariableOp(spirv::VariableOp op) {
   if (failed(emitDebugLine(functionHeader, op.getLoc())))
     return failure();
   encodeInstructionInto(functionHeader, spirv::Opcode::OpVariable, operands);
-  for (auto attr : op->getAttrs()) {
+  for (auto attr : op->getDiscardableAttrDictionary().getValue()) {
     if (llvm::any_of(elidedAttrs, [&](StringRef elided) {
           return attr.getName() == elided;
         })) {
@@ -714,7 +712,7 @@ Serializer::processGlobalVariableOp(spirv::GlobalVariableOp varOp) {
 
   // Encode the name.
   auto varName = varOp.getSymName();
-  elidedAttrs.push_back(SymbolTable::getSymbolAttrName());
+  elidedAttrs.push_back(varOp.getSymNameAttrName());
   if (failed(processName(resultID, varName))) {
     return failure();
   }
@@ -728,7 +726,7 @@ Serializer::processGlobalVariableOp(spirv::GlobalVariableOp varOp) {
   StringRef initAttrName = varOp.getInitializerAttrName().getValue();
   if (std::optional<StringRef> initSymbolName = varOp.getInitializer()) {
     uint32_t initializerID = 0;
-    auto initRef = varOp->getAttrOfType<FlatSymbolRefAttr>(initAttrName);
+    FlatSymbolRefAttr initRef = varOp.getInitializerAttr();
     Operation *initOp = SymbolTable::lookupNearestSymbolFrom(
         varOp->getParentOp(), initRef.getAttr());
 
@@ -752,7 +750,9 @@ Serializer::processGlobalVariableOp(spirv::GlobalVariableOp varOp) {
   elidedAttrs.push_back(initAttrName);
 
   // Encode decorations.
-  for (auto attr : varOp->getAttrs()) {
+  NamedAttrList attrs(varOp->getDiscardableAttrDictionary().getValue());
+  varOp->getName().populateInherentAttrs(varOp, attrs);
+  for (auto attr : attrs) {
     if (llvm::any_of(elidedAttrs, [&](StringRef elided) {
           return attr.getName() == elided;
         })) {
@@ -1111,34 +1111,26 @@ Serializer::processOp<spirv::CopyMemoryOp>(spirv::CopyMemoryOp op) {
   }
 
   StringAttr memoryAccess = op.getMemoryAccessAttrName();
-  if (auto attr = op->getAttr(memoryAccess)) {
-    operands.push_back(
-        static_cast<uint32_t>(cast<spirv::MemoryAccessAttr>(attr).getValue()));
-  }
+  if (std::optional<spirv::MemoryAccess> value = op.getMemoryAccess())
+    operands.push_back(static_cast<uint32_t>(*value));
 
   elidedAttrs.push_back(memoryAccess.strref());
 
   StringAttr alignment = op.getAlignmentAttrName();
-  if (auto attr = op->getAttr(alignment)) {
-    operands.push_back(static_cast<uint32_t>(
-        cast<IntegerAttr>(attr).getValue().getZExtValue()));
-  }
+  if (std::optional<uint32_t> value = op.getAlignment())
+    operands.push_back(*value);
 
   elidedAttrs.push_back(alignment.strref());
 
   StringAttr sourceMemoryAccess = op.getSourceMemoryAccessAttrName();
-  if (auto attr = op->getAttr(sourceMemoryAccess)) {
-    operands.push_back(
-        static_cast<uint32_t>(cast<spirv::MemoryAccessAttr>(attr).getValue()));
-  }
+  if (std::optional<spirv::MemoryAccess> value = op.getSourceMemoryAccess())
+    operands.push_back(static_cast<uint32_t>(*value));
 
   elidedAttrs.push_back(sourceMemoryAccess.strref());
 
   StringAttr sourceAlignment = op.getSourceAlignmentAttrName();
-  if (auto attr = op->getAttr(sourceAlignment)) {
-    operands.push_back(static_cast<uint32_t>(
-        cast<IntegerAttr>(attr).getValue().getZExtValue()));
-  }
+  if (std::optional<uint32_t> value = op.getSourceAlignment())
+    operands.push_back(*value);
 
   elidedAttrs.push_back(sourceAlignment.strref());
   if (failed(emitDebugLine(functionBody, op.getLoc())))

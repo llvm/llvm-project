@@ -43,6 +43,10 @@ public:
     return Error::success();
   }
 
+  virtual Error commit(std::unique_ptr<MemoryBuffer> MemBuf) {
+    return commit();
+  }
+
   bool Committed = false;
   std::unique_ptr<raw_pwrite_stream> OS;
   std::string ObjectPathName;
@@ -113,11 +117,14 @@ using AddBufferFn = std::function<void(unsigned Task, const Twine &ModuleName,
 /// done lazily the first time a file is added.  The cache name appears in error
 /// messages for errors during caching. The temporary file prefix is used in the
 /// temporary file naming scheme used when writing files atomically.
+/// If \p CacheFileRename is true, move or rename an existing file into the
+/// cache instead of writing via a temporary stream.
 LLVM_ABI Expected<FileCache> localCache(
     const Twine &CacheNameRef, const Twine &TempFilePrefixRef,
     const Twine &CacheDirectoryPathRef,
     AddBufferFn AddBuffer = [](size_t Task, const Twine &ModuleName,
-                               std::unique_ptr<MemoryBuffer> MB) {});
+                               std::unique_ptr<MemoryBuffer> MB) {},
+    bool CacheFileRename = false);
 } // namespace llvm
 
 #endif

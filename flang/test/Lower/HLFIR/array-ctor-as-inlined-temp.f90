@@ -9,7 +9,7 @@ end subroutine
 ! CHECK:  %[[VAL_2:.*]] = arith.constant 2 : index
 ! CHECK:  %[[VAL_3:.*]] = arith.constant 1 : index
 ! CHECK:  %[[VAL_3B:.*]] = arith.constant 1 : index
-! CHECK:  %[[VAL_4:.*]] = fir.allocmem !fir.array<2xi32> {bindc_name = ".tmp.arrayctor", uniq_name = ""}
+! CHECK:  %[[VAL_4:.*]] = fir.allocmem !fir.array<2xi32> <{bindc_name = ".tmp.arrayctor", uniq_name = ""}>
 ! CHECK:  %[[VAL_5:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
 ! CHECK:  %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_4]](%[[VAL_5]]) {uniq_name = ".tmp.arrayctor"} : (!fir.heap<!fir.array<2xi32>>, !fir.shape<1>) -> (!fir.heap<!fir.array<2xi32>>, !fir.heap<!fir.array<2xi32>>)
 ! CHECK:  %[[VAL_7:.*]] = arith.constant 42 : i32
@@ -33,7 +33,7 @@ end subroutine
 ! CHECK:  %[[VAL_2:.*]] = arith.constant 2 : index
 ! CHECK:  %[[VAL_3:.*]] = arith.constant 1 : index
 ! CHECK:  %[[VAL_3B:.*]] = arith.constant 1 : index
-! CHECK:  %[[VAL_4:.*]] = fir.allocmem !fir.array<2xf16> {bindc_name = ".tmp.arrayctor", uniq_name = ""}
+! CHECK:  %[[VAL_4:.*]] = fir.allocmem !fir.array<2xf16> <{bindc_name = ".tmp.arrayctor", uniq_name = ""}>
 ! CHECK:  %[[VAL_5:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
 ! CHECK:  %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_4]](%[[VAL_5]]) {uniq_name = ".tmp.arrayctor"} : (!fir.heap<!fir.array<2xf16>>, !fir.shape<1>) -> (!fir.heap<!fir.array<2xf16>>, !fir.heap<!fir.array<2xf16>>)
 ! CHECK:  %[[VAL_7:.*]] = fir.load %[[VAL_1]]#0 : !fir.ref<f16>
@@ -57,7 +57,7 @@ end subroutine
 ! CHECK:  %[[VAL_2:.*]] = arith.constant 2 : index
 ! CHECK:  %[[VAL_3:.*]] = arith.constant 1 : index
 ! CHECK:  %[[VAL_3B:.*]] = arith.constant 1 : index
-! CHECK:  %[[VAL_4:.*]] = fir.allocmem !fir.array<2xcomplex<f64>> {bindc_name = ".tmp.arrayctor", uniq_name = ""}
+! CHECK:  %[[VAL_4:.*]] = fir.allocmem !fir.array<2xcomplex<f64>> <{bindc_name = ".tmp.arrayctor", uniq_name = ""}>
 ! CHECK:  %[[VAL_5:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
 ! CHECK:  %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_4]](%[[VAL_5]]) {uniq_name = ".tmp.arrayctor"} : (!fir.heap<!fir.array<2xcomplex<f64>>>, !fir.shape<1>) -> (!fir.heap<!fir.array<2xcomplex<f64>>>, !fir.heap<!fir.array<2xcomplex<f64>>>)
 ! CHECK:  %[[VAL_7:.*]] = arith.constant 42 : i32
@@ -88,7 +88,7 @@ end subroutine
 ! CHECK:  %[[VAL_4:.*]] = arith.constant 2 : index
 ! CHECK:  %[[VAL_5:.*]] = arith.constant 1 : index
 ! CHECK:  %[[VAL_5B:.*]] = arith.constant 1 : index
-! CHECK:  %[[VAL_6:.*]] = fir.allocmem !fir.array<2x!fir.logical<4>> {bindc_name = ".tmp.arrayctor", uniq_name = ""}
+! CHECK:  %[[VAL_6:.*]] = fir.allocmem !fir.array<2x!fir.logical<4>> <{bindc_name = ".tmp.arrayctor", uniq_name = ""}>
 ! CHECK:  %[[VAL_7:.*]] = fir.shape %[[VAL_4]] : (index) -> !fir.shape<1>
 ! CHECK:  %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_6]](%[[VAL_7]]) {uniq_name = ".tmp.arrayctor"} : (!fir.heap<!fir.array<2x!fir.logical<4>>>, !fir.shape<1>) -> (!fir.heap<!fir.array<2x!fir.logical<4>>>, !fir.heap<!fir.array<2x!fir.logical<4>>>)
 ! CHECK:  %[[VAL_9:.*]] = fir.load %[[VAL_2]]#0 : !fir.ref<!fir.logical<4>>
@@ -130,7 +130,7 @@ end subroutine
 ! CHECK:           %[[VAL_18:.*]] = arith.constant 1 : index
 ! CHECK:           %[[VAL_18B:.*]] = arith.constant 1 : index
 ! CHECK:           fir.store %[[VAL_18]] to %[[VAL_1]] : !fir.ref<index>
-! CHECK:           %[[VAL_19:.*]] = fir.allocmem !fir.array<?xi32>, %[[VAL_17]] {bindc_name = ".tmp.arrayctor", uniq_name = ""}
+! CHECK:           %[[VAL_19:.*]] = fir.allocmem !fir.array<?xi32>, %[[VAL_17]] <{bindc_name = ".tmp.arrayctor", uniq_name = ""}>
 ! CHECK:           %[[VAL_20:.*]] = fir.shape %[[VAL_17]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_21:.*]]:2 = hlfir.declare %[[VAL_19]](%[[VAL_20]]) {uniq_name = ".tmp.arrayctor"} : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
 ! CHECK:           %[[VAL_22:.*]] = arith.constant 1 : i64
@@ -191,7 +191,7 @@ end subroutine
 ! CHECK:           %[[VAL_22:.*]] = arith.constant 1 : index
 ! CHECK:           %[[VAL_22B:.*]] = arith.constant 1 : index
 ! CHECK:           fir.store %[[VAL_22]] to %[[VAL_3]] : !fir.ref<index>
-! CHECK:           %[[VAL_23:.*]] = fir.allocmem !fir.array<?xi32>, %[[VAL_21]] {bindc_name = ".tmp.arrayctor", uniq_name = ""}
+! CHECK:           %[[VAL_23:.*]] = fir.allocmem !fir.array<?xi32>, %[[VAL_21]] <{bindc_name = ".tmp.arrayctor", uniq_name = ""}>
 ! CHECK:           %[[VAL_24:.*]] = fir.shape %[[VAL_21]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_25:.*]]:2 = hlfir.declare %[[VAL_23]](%[[VAL_24]]) {uniq_name = ".tmp.arrayctor"} : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
 ! CHECK:           %[[VAL_26:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<i64>
@@ -258,7 +258,7 @@ end subroutine
 ! CHECK:           %[[VAL_31:.*]] = arith.constant 1 : index
 ! CHECK:           %[[VAL_31B:.*]] = arith.constant 1 : index
 ! CHECK:           fir.store %[[VAL_31]] to %[[VAL_2]] : !fir.ref<index>
-! CHECK:           %[[VAL_32:.*]] = fir.allocmem !fir.array<?xi32>, %[[VAL_30]] {bindc_name = ".tmp.arrayctor", uniq_name = ""}
+! CHECK:           %[[VAL_32:.*]] = fir.allocmem !fir.array<?xi32>, %[[VAL_30]] <{bindc_name = ".tmp.arrayctor", uniq_name = ""}>
 ! CHECK:           %[[VAL_33:.*]] = fir.shape %[[VAL_30]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_34:.*]]:2 = hlfir.declare %[[VAL_32]](%[[VAL_33]]) {uniq_name = ".tmp.arrayctor"} : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
 ! CHECK:           %[[VAL_35:.*]] = arith.constant 1 : i64

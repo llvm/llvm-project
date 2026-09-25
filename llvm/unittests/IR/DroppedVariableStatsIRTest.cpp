@@ -74,7 +74,7 @@ TEST(DroppedVariableStatsIR, BothDeleted) {
   ASSERT_TRUE(M);
 
   DroppedVariableStatsIR Stats(true);
-  Stats.runBeforePass("", llvm::Any(const_cast<const llvm::Module *>(M.get())));
+  Stats.runBeforePass("", *M);
 
   // This loop simulates an IR pass that drops debug information.
   for (auto &F : *M) {
@@ -85,8 +85,7 @@ TEST(DroppedVariableStatsIR, BothDeleted) {
     }
     break;
   }
-  Stats.runAfterPass("Test",
-                     llvm::Any(const_cast<const llvm::Module *>(M.get())));
+  Stats.runAfterPass("Test", *M);
   ASSERT_EQ(Stats.getPassDroppedVariables(), false);
 }
 
@@ -129,7 +128,7 @@ TEST(DroppedVariableStatsIR, DbgValLost) {
   ASSERT_TRUE(M);
 
   DroppedVariableStatsIR Stats(true);
-  Stats.runBeforePass("", llvm::Any(const_cast<const llvm::Module *>(M.get())));
+  Stats.runBeforePass("", *M);
 
   // This loop simulates an IR pass that drops debug information.
   for (auto &F : *M) {
@@ -139,8 +138,7 @@ TEST(DroppedVariableStatsIR, DbgValLost) {
     }
     break;
   }
-  Stats.runAfterPass("Test",
-                     llvm::Any(const_cast<const llvm::Module *>(M.get())));
+  Stats.runAfterPass("Test", *M);
   ASSERT_EQ(Stats.getPassDroppedVariables(), true);
 }
 
@@ -184,7 +182,7 @@ TEST(DroppedVariableStatsIR, UnrelatedScopes) {
   ASSERT_TRUE(M);
 
   DroppedVariableStatsIR Stats(true);
-  Stats.runBeforePass("", llvm::Any(const_cast<const llvm::Module *>(M.get())));
+  Stats.runBeforePass("", *M);
 
   // This loop simulates an IR pass that drops debug information.
   for (auto &F : *M) {
@@ -194,8 +192,7 @@ TEST(DroppedVariableStatsIR, UnrelatedScopes) {
     }
     break;
   }
-  Stats.runAfterPass("Test",
-                     llvm::Any(const_cast<const llvm::Module *>(M.get())));
+  Stats.runAfterPass("Test", *M);
   ASSERT_EQ(Stats.getPassDroppedVariables(), false);
 }
 
@@ -239,7 +236,7 @@ TEST(DroppedVariableStatsIR, ChildScopes) {
   ASSERT_TRUE(M);
 
   DroppedVariableStatsIR Stats(true);
-  Stats.runBeforePass("", llvm::Any(const_cast<const llvm::Module *>(M.get())));
+  Stats.runBeforePass("", *M);
 
   // This loop simulates an IR pass that drops debug information.
   for (auto &F : *M) {
@@ -249,8 +246,7 @@ TEST(DroppedVariableStatsIR, ChildScopes) {
     }
     break;
   }
-  Stats.runAfterPass("Test",
-                     llvm::Any(const_cast<const llvm::Module *>(M.get())));
+  Stats.runAfterPass("Test", *M);
   ASSERT_EQ(Stats.getPassDroppedVariables(), true);
 }
 
@@ -295,7 +291,7 @@ TEST(DroppedVariableStatsIR, InlinedAt) {
   ASSERT_TRUE(M);
 
   DroppedVariableStatsIR Stats(true);
-  Stats.runBeforePass("", llvm::Any(const_cast<const llvm::Module *>(M.get())));
+  Stats.runBeforePass("", *M);
 
   // This loop simulates an IR pass that drops debug information.
   for (auto &F : *M) {
@@ -305,8 +301,7 @@ TEST(DroppedVariableStatsIR, InlinedAt) {
     }
     break;
   }
-  Stats.runAfterPass("Test",
-                     llvm::Any(const_cast<const llvm::Module *>(M.get())));
+  Stats.runAfterPass("Test", *M);
   ASSERT_EQ(Stats.getPassDroppedVariables(), false);
 }
 
@@ -351,7 +346,7 @@ TEST(DroppedVariableStatsIR, InlinedAtShared) {
   ASSERT_TRUE(M);
 
   DroppedVariableStatsIR Stats(true);
-  Stats.runBeforePass("", llvm::Any(const_cast<const llvm::Module *>(M.get())));
+  Stats.runBeforePass("", *M);
 
   // This loop simulates an IR pass that drops debug information.
   for (auto &F : *M) {
@@ -361,8 +356,7 @@ TEST(DroppedVariableStatsIR, InlinedAtShared) {
     }
     break;
   }
-  Stats.runAfterPass("Test",
-                     llvm::Any(const_cast<const llvm::Module *>(M.get())));
+  Stats.runAfterPass("Test", *M);
   ASSERT_EQ(Stats.getPassDroppedVariables(), true);
 }
 
@@ -408,7 +402,7 @@ TEST(DroppedVariableStatsIR, InlinedAtChild) {
   ASSERT_TRUE(M);
 
   DroppedVariableStatsIR Stats(true);
-  Stats.runBeforePass("", llvm::Any(const_cast<const llvm::Module *>(M.get())));
+  Stats.runBeforePass("", *M);
 
   // This loop simulates an IR pass that drops debug information.
   for (auto &F : *M) {
@@ -418,8 +412,7 @@ TEST(DroppedVariableStatsIR, InlinedAtChild) {
     }
     break;
   }
-  Stats.runAfterPass("Test",
-                     llvm::Any(const_cast<const llvm::Module *>(M.get())));
+  Stats.runAfterPass("Test", *M);
   ASSERT_EQ(Stats.getPassDroppedVariables(), true);
 }
 

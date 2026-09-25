@@ -372,7 +372,7 @@ AliasResult TypeBasedAAResult::alias(const MemoryLocation &LocA,
 }
 
 AliasResult TypeBasedAAResult::aliasErrno(const MemoryLocation &Loc,
-                                          const Module *M) {
+                                          const Instruction *CtxI) {
   if (!shouldUseTBAA())
     return AliasResult::MayAlias;
 
@@ -382,7 +382,8 @@ AliasResult TypeBasedAAResult::aliasErrno(const MemoryLocation &Loc,
 
   // There cannot be any alias with errno if TBAA proves the given memory
   // location does not alias errno.
-  const auto *ErrnoTBAAMD = M->getNamedMetadata("llvm.errno.tbaa");
+  const auto *ErrnoTBAAMD =
+      CtxI->getModule()->getNamedMetadata("llvm.errno.tbaa");
   if (!ErrnoTBAAMD || any_of(ErrnoTBAAMD->operands(), [&](const auto *Node) {
         return Aliases(N, Node);
       }))
@@ -614,8 +615,19 @@ static bool mayBeAccessToSubobjectOf(TBAAStructTagNode BaseTag,
                  BaseType.getNode() == BaseTag.getAccessType() ||
                  SubobjectTag.getBaseType() == SubobjectTag.getAccessType();
       if (GenericTag) {
-        *GenericTag =
-            MayAlias ? SubobjectTag.getNode() : createAccessTag(CommonType);
+        if (!MayAlias) {
+          *GenericTag = createAccessTag(CommonType);
+        } else if (SubobjectTag.isTypeImmutable() &&
+                   !BaseTag.isTypeImmutable()) {
+          // The generic tag can only be immutable if both accesses are, so
+          // drop the flag and keep the rest of the tag.
+          const MDNode *Tag = SubobjectTag.getNode();
+          unsigned FlagOpNo = SubobjectTag.isNewFormat() ? 4 : 3;
+          SmallVector<Metadata *, 4> Ops(Tag->operands().take_front(FlagOpNo));
+          *GenericTag = MDNode::get(Tag->getContext(), Ops);
+        } else {
+          *GenericTag = SubobjectTag.getNode();
+        }
       }
       return true;
     }

@@ -284,7 +284,7 @@ static bool generateCode(Scop &S, IslAstInfo &AI, LoopInfo &LI,
     if (!(CI && CI->isZero())) {
       for (Loop *L : LI.getLoopsInPreorder()) {
         if (S.contains(L))
-          addStringMetadataToLoop(L, "llvm.loop.vectorize.enable", 0);
+          addStringMetadataToLoop(L, StringRef("llvm.loop.vectorize.disable"));
       }
     }
 

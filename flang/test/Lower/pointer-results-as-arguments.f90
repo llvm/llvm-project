@@ -43,7 +43,7 @@ end subroutine
 
 ! CHECK-LABEL: test_scalar_result
 subroutine test_scalar_result()
-! CHECK: %[[VAL_6:.*]] = fir.alloca !fir.box<!fir.ptr<f32>> {bindc_name = ".result"}
+! CHECK: %[[VAL_6:.*]] = fir.alloca !fir.box<!fir.ptr<f32>> <{bindc_name = ".result"}>
 ! CHECK: %[[VAL_7:.*]] = fir.call @_QPget_scalar_pointer() {{.*}}: () -> !fir.box<!fir.ptr<f32>>
 ! CHECK: fir.save_result %[[VAL_7]] to %[[VAL_6]] : !fir.box<!fir.ptr<f32>>, !fir.ref<!fir.box<!fir.ptr<f32>>>
 ! CHECK: %[[VAL_RES:.*]]:2 = hlfir.declare %[[VAL_6]] {uniq_name = ".tmp.func_result"}
@@ -78,7 +78,7 @@ end subroutine
 
 ! CHECK-LABEL: test_result
 subroutine test_result()
-! CHECK: %[[VAL_18:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?x?xf32>>> {bindc_name = ".result"}
+! CHECK: %[[VAL_18:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?x?xf32>>> <{bindc_name = ".result"}>
 ! CHECK: %[[VAL_19:.*]] = fir.call @_QPget_pointer() {{.*}}: () -> !fir.box<!fir.ptr<!fir.array<?x?xf32>>>
 ! CHECK: fir.save_result %[[VAL_19]] to %[[VAL_18]] : !fir.box<!fir.ptr<!fir.array<?x?xf32>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>>
 ! CHECK: %[[VAL_RES2:.*]]:2 = hlfir.declare %[[VAL_18]] {uniq_name = ".tmp.func_result"}
