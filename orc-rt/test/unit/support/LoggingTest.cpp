@@ -97,7 +97,24 @@ TEST(LoggingTest, OutOfRangeCategoryNamesAreNull) {
   EXPECT_EQ(nullptr, orc_rt_log_Category_getName((orc_rt_log_Category)-1));
 }
 
-#if ORC_RT_LOG_BACKEND == ORC_RT_LOG_BACKEND_NONE
+// ORC_RT_LOG_ENABLED must be usable in preprocessor conditionals, and must
+// follow the level ordering: if a level is compiled in, so is every level
+// above it.
+#if ORC_RT_LOG_ENABLED(Debug) && !ORC_RT_LOG_ENABLED(Info)
+#error "ORC_RT_LOG_ENABLED(Debug) implies ORC_RT_LOG_ENABLED(Info)"
+#endif
+#if ORC_RT_LOG_ENABLED(Info) && !ORC_RT_LOG_ENABLED(Warning)
+#error "ORC_RT_LOG_ENABLED(Info) implies ORC_RT_LOG_ENABLED(Warning)"
+#endif
+#if ORC_RT_LOG_ENABLED(Warning) && !ORC_RT_LOG_ENABLED(Error)
+#error "ORC_RT_LOG_ENABLED(Warning) implies ORC_RT_LOG_ENABLED(Error)"
+#endif
+#if ORC_RT_LOG_BACKEND == ORC_RT_LOG_BACKEND_NONE && ORC_RT_LOG_ENABLED(Error)
+#error "The none backend compiles every level out"
+#endif
+
+#if ORC_RT_LOG_BACKEND == ORC_RT_LOG_BACKEND_NONE ||                           \
+    ORC_RT_LOG_BACKEND == ORC_RT_LOG_BACKEND_PRINTF
 
 // Increments Count and returns a printable value, so a test can observe whether
 // a log macro evaluated it.
@@ -105,6 +122,32 @@ static const char *bumpAndReturn(int &Count) {
   ++Count;
   return "arg";
 }
+
+// ORC_RT_LOG_ENABLED must agree with what ORC_RT_LOG actually does: a
+// compiled-in log site evaluates its arguments, a compiled-out one doesn't.
+// (Not checked for os_log: os_log_with_type only evaluates its arguments if
+// the type is enabled at runtime, which depends on system configuration.)
+TEST(LoggingTest, EnabledMatchesCompiledInLevels) {
+  int NumEvals = 0;
+  ORC_RT_LOG(Error, General, "%s", bumpAndReturn(NumEvals));
+  EXPECT_EQ(NumEvals, ORC_RT_LOG_ENABLED(Error));
+
+  NumEvals = 0;
+  ORC_RT_LOG(Warning, General, "%s", bumpAndReturn(NumEvals));
+  EXPECT_EQ(NumEvals, ORC_RT_LOG_ENABLED(Warning));
+
+  NumEvals = 0;
+  ORC_RT_LOG(Info, General, "%s", bumpAndReturn(NumEvals));
+  EXPECT_EQ(NumEvals, ORC_RT_LOG_ENABLED(Info));
+
+  NumEvals = 0;
+  ORC_RT_LOG(Debug, General, "%s", bumpAndReturn(NumEvals));
+  EXPECT_EQ(NumEvals, ORC_RT_LOG_ENABLED(Debug));
+}
+
+#endif
+
+#if ORC_RT_LOG_BACKEND == ORC_RT_LOG_BACKEND_NONE
 
 // The none backend compiles log sites out entirely, so their arguments must
 // never be evaluated.
