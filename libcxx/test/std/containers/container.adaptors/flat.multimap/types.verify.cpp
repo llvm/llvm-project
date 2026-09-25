@@ -18,6 +18,8 @@
 #include <functional>
 #include <vector>
 
+#include "min_allocator.h"
+
 void test() {
   // expected-error-re@*:* {{static assertion failed{{.*}}The stored elements' key type must match the underlying key container's value_type.}}
   std::flat_multimap<double, int, std::less<double>, std::vector<char>> fmm1;
@@ -25,9 +27,15 @@ void test() {
   // expected-error-re@*:* {{static assertion failed{{.*}}The stored elements' mapped type must match the underlying mapped container's value_type.}}
   std::flat_multimap<int, double, std::less<int>, std::vector<int>, std::vector<char>> fmm2;
 
-  // expected-error-re@*:* {{static assertion failed{{.*}}vector<bool> is not a sequence container}}
+  // expected-error-re@*:* {{static assertion failed{{.*}}The underlying key container must not be std::vector<bool>, which is not a sequence container.}}
   std::flat_multimap<bool, int, std::less<bool>, std::vector<bool>> fmm3;
 
-  // expected-error-re@*:* {{static assertion failed{{.*}}vector<bool> is not a sequence container}}
-  std::flat_multimap<int, bool, std::less<int>, std::vector<int>, std::vector<bool>> fmm4;
+  // expected-error-re@*:* {{static assertion failed{{.*}}The underlying key container must not be std::vector<bool>, which is not a sequence container.}}
+  std::flat_multimap<bool, int, std::less<bool>, std::vector<bool, min_allocator<bool>>> fmm4;
+
+  // expected-error-re@*:* {{static assertion failed{{.*}}The underlying mapped container must not be std::vector<bool>, which is not a sequence container.}}
+  std::flat_multimap<int, bool, std::less<int>, std::vector<int>, std::vector<bool>> fmm5;
+
+  // expected-error-re@*:* {{static assertion failed{{.*}}The underlying mapped container must not be std::vector<bool>, which is not a sequence container.}}
+  std::flat_multimap<int, bool, std::less<int>, std::vector<int>, std::vector<bool, min_allocator<bool>>> fmm6;
 }
