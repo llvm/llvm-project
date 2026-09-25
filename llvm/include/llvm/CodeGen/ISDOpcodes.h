@@ -1085,53 +1085,25 @@ enum NodeType {
   LRINT,
   LLRINT,
 
-  /// FMINNUM/FMAXNUM - NaN-discarding minimum/maximum: if one operand is a
-  /// quiet NaN and the other is a number, returns the number.
-  ///
-  /// If an operand is a signaling NaN, this will non-deterministically either:
-  /// - Return a NaN.
-  /// - Or treat the signaling NaN as a quiet NaN.
-  ///
-  /// These treat -0 as ordered less than +0, matching the behavior of IEEE-754
-  /// 2019's minimumNumber/maximumNumber. With the nsz flag, one +0.0 and one
-  /// -0.0 operand may non-deterministically return either operand; contrary to
-  /// normal nsz semantics, if both operands have the same sign, so must the
-  /// result. Note that not all backends respect this ordering yet.
+  /// FMINNUM/FMAXNUM - Same semantics as the llvm.minnum/maxnum intrinsics.
   FMINNUM,
   FMAXNUM,
 
   /// FMINNUM_IEEE/FMAXNUM_IEEE - Same as FMINNUM/FMAXNUM, except that a
-  /// signaling NaN operand deterministically returns a quiet NaN, matching/for
-  /// IEEE-754 2008's minNum/maxNum. Signed zeros are ordered identically to
-  /// FMINNUM/FMAXNUM: -0 is less than +0, relaxed by the nsz flag.
+  /// signaling NaN operand deterministically returns a quiet NaN, like IEEE-754
+  /// 2008's minNum/maxNum. -0 is ordered less than +0, relaxed by the nsz flag.
   ///
   /// Deprecated, and will be removed soon: this is a legal implementation of
   /// FMINNUM/FMAXNUM, so targets should select those instead.
   FMINNUM_IEEE,
   FMAXNUM_IEEE,
 
-  /// FMINIMUM/FMAXIMUM - NaN-propagating minimum/maximum: if either operand is
-  /// a NaN, returns a NaN. Follows C23's fminimum/fmaximum and IEEE-754 2019's
-  /// minimum/maximum, except that a signaling NaN operand is not guaranteed to
-  /// be quieted.
-  ///
-  /// These treat -0 as ordered less than +0. With the nsz flag, one +0.0 and
-  /// one -0.0 operand may non-deterministically return either operand;
-  /// contrary to normal nsz semantics, if both operands have the same sign, so
-  /// must the result.
+  /// FMINIMUM/FMAXIMUM - Same semantics as the llvm.minimum/maximum intrinsics.
   FMINIMUM,
   FMAXIMUM,
 
-  /// FMINIMUMNUM/FMAXIMUMNUM - NaN-discarding minimum/maximum: if one operand
-  /// is a NaN and the other is a number, returns the number. Follows C23's
-  /// fminimum_num/fmaximum_num and IEEE-754 2019's minimumNumber/maximumNumber,
-  /// except that a signaling NaN operand is not guaranteed to be quieted.
-  /// Same as FMINNUM/FMAXNUM, but treats signaling NaNs as quiet NaNs.
-  ///
-  /// These treat -0 as ordered less than +0. With the nsz flag, one +0.0 and
-  /// one -0.0 operand may non-deterministically return either operand;
-  /// contrary to normal nsz semantics, if both operands have the same sign, so
-  /// must the result.
+  /// FMINIMUMNUM/FMAXIMUMNUM - Same semantics as the llvm.minimumnum/maximumnum
+  /// intrinsics.
   FMINIMUMNUM,
   FMAXIMUMNUM,
 
