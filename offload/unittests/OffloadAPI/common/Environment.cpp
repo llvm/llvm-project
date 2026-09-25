@@ -22,7 +22,9 @@ using namespace llvm;
 #ifndef DISABLE_WRAPPER
 struct OffloadInitWrapper {
   OffloadInitWrapper() {
-    if (ol_result_t Res = olInit(nullptr)) {
+    ol_init_args_t Args = OL_INIT_ARGS_INIT;
+    Args.NumPlatforms = OL_ALL_PLATFORMS;
+    if (ol_result_t Res = olInit(&Args)) {
       errs() << "olInit failed: "
              << (Res->Details ? Res->Details : "(no details)") << " (code "
              << Res->Code << ")\n";

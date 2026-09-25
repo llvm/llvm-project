@@ -149,12 +149,17 @@ def ol_dimensions_t : Struct {
   ];
 }
 
+def OL_ALL_PLATFORMS : Macro {
+  let desc = "Value for ol_init_args_t::NumPlatforms that requests all available platforms to be initialized eagerly.";
+  let value = "UINT32_MAX";
+}
+
 def ol_init_args_t : Struct {
   let desc = "Configuration arguments for olInit.";
   let members = [
     StructMember<"size_t", "Size", "Size of this struct, used for ABI compatibility. Must be set to sizeof(ol_init_args_t) by the caller.">,
-    StructMember<"uint32_t", "NumPlatforms", "Number of entries in the Platforms array.">,
-    StructMember<"const ol_platform_backend_t*", "Platforms", "Pointer to an array of platform backends to initialize.">
+    StructMember<"uint32_t", "NumPlatforms", "Number of entries in the Platforms array, or OL_ALL_PLATFORMS to eagerly initialize all available platforms.">,
+    StructMember<"const ol_platform_backend_t*", "Platforms", "Pointer to an array of platform backends to make available and initialize eagerly.">
   ];
 }
 
@@ -168,7 +173,9 @@ def olInit : Function {
   let details = [
     "This must be the first API call made by a user of the Offload library",
     "Each call will increment an internal reference count that is decremented by `olShutDown`",
-    "If InitArgs is NULL, default configuration is used which initializes all available platforms"
+    "If InitArgs is NULL or NumPlatforms is 0, all available platforms are made available and are lazily initialized on their first use",
+    "If NumPlatforms is OL_ALL_PLATFORMS, all available platforms are made available and are initialized eagerly by this call",
+    "Otherwise only the platforms listed in InitArgs (plus the host platform) are made available and are initialized eagerly by this call"
   ];
   let params = [
     Param<"const ol_init_args_t*", "InitArgs", "Optional pointer to initialization configuration. NULL uses defaults.", PARAM_IN_OPTIONAL>
