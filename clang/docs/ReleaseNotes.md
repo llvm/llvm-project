@@ -231,6 +231,11 @@ features cannot lower the translation-unit ABI level;
 
 #### C23 Feature Support
 
+- An incomplete enumeration is no longer treated as compatible with a complete
+  enumeration declared with the same tag in a different scope, as C23 6.2.7p1
+  only applies to complete types. This fixes a crash when generating code for a
+  function redeclared with such enumeration types as parameters. (#GH173477)
+
 ### Objective-C Language Changes
 
 ### Non-comprehensive list of changes in this release
