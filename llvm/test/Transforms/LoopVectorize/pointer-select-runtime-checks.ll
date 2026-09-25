@@ -102,10 +102,10 @@ define void @test_loop_dependent_select1(ptr %src.1, ptr %src.2, ptr %dst, i1 %c
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP8:%.*]] = trunc i32 [[INDEX]] to i8
 ; CHECK-NEXT:    [[TMP9:%.*]] = add i8 [[TMP8]], 1
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[SRC_1]], i8 [[TMP8]]
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[SRC_1]], i8 [[TMP9]]
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[SRC_2]], i8 [[TMP8]]
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[SRC_2]], i8 [[TMP9]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[SRC_2]], i8 [[TMP8]]
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[SRC_2]], i8 [[TMP9]]
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[SRC_1]], i8 [[TMP8]]
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[SRC_1]], i8 [[TMP9]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = select i1 [[C:%.*]], ptr [[TMP10]], ptr [[TMP12]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = select i1 [[C]], ptr [[TMP11]], ptr [[TMP13]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = load i8, ptr [[TMP14]], align 8
@@ -125,8 +125,8 @@ define void @test_loop_dependent_select1(ptr %src.1, ptr %src.2, ptr %dst, i1 %c
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[GEP_SRC_1:%.*]] = getelementptr i8, ptr [[SRC_1]], i8 [[IV]]
-; CHECK-NEXT:    [[GEP_SRC_2:%.*]] = getelementptr i8, ptr [[SRC_2]], i8 [[IV]]
+; CHECK-NEXT:    [[GEP_SRC_1:%.*]] = getelementptr i8, ptr [[SRC_2]], i8 [[IV]]
+; CHECK-NEXT:    [[GEP_SRC_2:%.*]] = getelementptr i8, ptr [[SRC_1]], i8 [[IV]]
 ; CHECK-NEXT:    [[PTR_SEL:%.*]] = select i1 [[C]], ptr [[GEP_SRC_1]], ptr [[GEP_SRC_2]]
 ; CHECK-NEXT:    [[L_1:%.*]] = load i8, ptr [[PTR_SEL]], align 8
 ; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr i8, ptr [[DST]], i8 [[IV]]
@@ -195,17 +195,17 @@ define void @test_loop_dependent_select2(ptr %src.1, ptr %src.2, ptr %dst, i8 %n
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i8 [[TMP7]], 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp ult i8 [[TMP7]], [[X:%.*]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp ult i8 [[TMP8]], [[X]]
-; CHECK-NEXT:    [[TMP11:%.*]] = select i1 [[TMP9]], ptr [[SRC_1]], ptr [[SRC_2]]
-; CHECK-NEXT:    [[TMP12:%.*]] = select i1 [[TMP10]], ptr [[SRC_1]], ptr [[SRC_2]]
-; CHECK-NEXT:    [[TMP14:%.*]] = load i8, ptr [[TMP11]], align 8, !alias.scope [[META11:![0-9]+]]
-; CHECK-NEXT:    [[TMP18:%.*]] = load i8, ptr [[TMP12]], align 8, !alias.scope [[META11]]
+; CHECK-NEXT:    [[TMP12:%.*]] = select i1 [[TMP9]], ptr [[SRC_2]], ptr [[SRC_1]]
+; CHECK-NEXT:    [[TMP13:%.*]] = select i1 [[TMP10]], ptr [[SRC_2]], ptr [[SRC_1]]
+; CHECK-NEXT:    [[TMP14:%.*]] = load i8, ptr [[TMP12]], align 8
+; CHECK-NEXT:    [[TMP18:%.*]] = load i8, ptr [[TMP13]], align 8
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[DST]], i8 [[TMP7]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[DST]], i8 [[TMP8]]
-; CHECK-NEXT:    store i8 [[TMP14]], ptr [[TMP15]], align 2, !alias.scope [[META14:![0-9]+]], !noalias [[META16:![0-9]+]]
-; CHECK-NEXT:    store i8 [[TMP18]], ptr [[TMP16]], align 2, !alias.scope [[META14]], !noalias [[META16]]
+; CHECK-NEXT:    store i8 [[TMP14]], ptr [[TMP15]], align 2, !alias.scope [[META11:![0-9]+]], !noalias [[META14:![0-9]+]]
+; CHECK-NEXT:    store i8 [[TMP18]], ptr [[TMP16]], align 2, !alias.scope [[META11]], !noalias [[META14]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP17:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP2]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
@@ -215,13 +215,13 @@ define void @test_loop_dependent_select2(ptr %src.1, ptr %src.2, ptr %dst, i8 %n
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[IV]], [[X]]
-; CHECK-NEXT:    [[PTR_SEL:%.*]] = select i1 [[C]], ptr [[SRC_1]], ptr [[SRC_2]]
+; CHECK-NEXT:    [[PTR_SEL:%.*]] = select i1 [[C]], ptr [[SRC_2]], ptr [[SRC_1]]
 ; CHECK-NEXT:    [[L_1:%.*]] = load i8, ptr [[PTR_SEL]], align 8
 ; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr i8, ptr [[DST]], i8 [[IV]]
 ; CHECK-NEXT:    store i8 [[L_1]], ptr [[GEP_DST]], align 2
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i8 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP19:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP18:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -256,15 +256,15 @@ define void @test_loop_dependent_select_first_ptr_noundef(ptr noundef %src.1, pt
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext i8 [[TMP3]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = add nuw nsw i64 [[TMP4]], 1
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST:%.*]], i64 [[TMP5]]
-; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[SRC_1:%.*]], i64 1
 ; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[SRC_2:%.*]], i64 1
 ; CHECK-NEXT:    [[SRC_2_FR:%.*]] = freeze ptr [[SRC_2]]
 ; CHECK-NEXT:    [[SCEVGEP2_FR:%.*]] = freeze ptr [[SCEVGEP2]]
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[DST]], [[SCEVGEP1]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[SRC_1]], [[SCEVGEP]]
+; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[SRC_1:%.*]], i64 1
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[DST]], [[SCEVGEP2_FR]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[SRC_2_FR]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-NEXT:    [[BOUND03:%.*]] = icmp ult ptr [[DST]], [[SCEVGEP2_FR]]
-; CHECK-NEXT:    [[BOUND14:%.*]] = icmp ult ptr [[SRC_2_FR]], [[SCEVGEP]]
+; CHECK-NEXT:    [[BOUND03:%.*]] = icmp ult ptr [[DST]], [[SCEVGEP3]]
+; CHECK-NEXT:    [[BOUND14:%.*]] = icmp ult ptr [[SRC_1]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT5:%.*]] = and i1 [[BOUND03]], [[BOUND14]]
 ; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT5]]
 ; CHECK-NEXT:    br i1 [[CONFLICT_RDX]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
@@ -281,15 +281,15 @@ define void @test_loop_dependent_select_first_ptr_noundef(ptr noundef %src.1, pt
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp ult i8 [[TMP8]], [[X]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = select i1 [[TMP9]], ptr [[SRC_1]], ptr [[SRC_2]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = select i1 [[TMP10]], ptr [[SRC_1]], ptr [[SRC_2]]
-; CHECK-NEXT:    [[TMP14:%.*]] = load i8, ptr [[TMP11]], align 8, !alias.scope [[META20:![0-9]+]]
-; CHECK-NEXT:    [[TMP18:%.*]] = load i8, ptr [[TMP12]], align 8, !alias.scope [[META20]]
+; CHECK-NEXT:    [[TMP14:%.*]] = load i8, ptr [[TMP11]], align 8
+; CHECK-NEXT:    [[TMP18:%.*]] = load i8, ptr [[TMP12]], align 8
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[DST]], i8 [[TMP7]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[DST]], i8 [[TMP8]]
-; CHECK-NEXT:    store i8 [[TMP14]], ptr [[TMP15]], align 2, !alias.scope [[META23:![0-9]+]], !noalias [[META25:![0-9]+]]
-; CHECK-NEXT:    store i8 [[TMP18]], ptr [[TMP16]], align 2, !alias.scope [[META23]], !noalias [[META25]]
+; CHECK-NEXT:    store i8 [[TMP14]], ptr [[TMP15]], align 2, !alias.scope [[META19:![0-9]+]], !noalias [[META22:![0-9]+]]
+; CHECK-NEXT:    store i8 [[TMP18]], ptr [[TMP16]], align 2, !alias.scope [[META19]], !noalias [[META22]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP27:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP25:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP2]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
@@ -305,7 +305,7 @@ define void @test_loop_dependent_select_first_ptr_noundef(ptr noundef %src.1, pt
 ; CHECK-NEXT:    store i8 [[L_1]], ptr [[GEP_DST]], align 2
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i8 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP28:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP26:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -341,11 +341,11 @@ define void @test_loop_dependent_select_second_ptr_noundef(ptr %src.1, ptr nound
 ; CHECK-NEXT:    [[TMP5:%.*]] = add nuw nsw i64 [[TMP4]], 1
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST:%.*]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[SRC_1:%.*]], i64 1
-; CHECK-NEXT:    [[SRC_1_FR:%.*]] = freeze ptr [[SRC_1]]
-; CHECK-NEXT:    [[SCEVGEP1_FR:%.*]] = freeze ptr [[SCEVGEP1]]
-; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[SRC_2:%.*]], i64 1
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[DST]], [[SCEVGEP1_FR]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[SRC_1_FR]], [[SCEVGEP]]
+; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[SRC_3:%.*]], i64 1
+; CHECK-NEXT:    [[SRC_2:%.*]] = freeze ptr [[SRC_3]]
+; CHECK-NEXT:    [[SCEVGEP2:%.*]] = freeze ptr [[SCEVGEP3]]
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[DST]], [[SCEVGEP1]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[SRC_1]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    [[BOUND03:%.*]] = icmp ult ptr [[DST]], [[SCEVGEP2]]
 ; CHECK-NEXT:    [[BOUND14:%.*]] = icmp ult ptr [[SRC_2]], [[SCEVGEP]]
@@ -363,17 +363,17 @@ define void @test_loop_dependent_select_second_ptr_noundef(ptr %src.1, ptr nound
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i8 [[TMP7]], 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp ult i8 [[TMP7]], [[X:%.*]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp ult i8 [[TMP8]], [[X]]
-; CHECK-NEXT:    [[TMP11:%.*]] = select i1 [[TMP9]], ptr [[SRC_1]], ptr [[SRC_2]]
-; CHECK-NEXT:    [[TMP12:%.*]] = select i1 [[TMP10]], ptr [[SRC_1]], ptr [[SRC_2]]
-; CHECK-NEXT:    [[TMP14:%.*]] = load i8, ptr [[TMP11]], align 8, !alias.scope [[META29:![0-9]+]]
-; CHECK-NEXT:    [[TMP18:%.*]] = load i8, ptr [[TMP12]], align 8, !alias.scope [[META29]]
+; CHECK-NEXT:    [[TMP12:%.*]] = select i1 [[TMP9]], ptr [[SRC_3]], ptr [[SRC_1]]
+; CHECK-NEXT:    [[TMP13:%.*]] = select i1 [[TMP10]], ptr [[SRC_3]], ptr [[SRC_1]]
+; CHECK-NEXT:    [[TMP14:%.*]] = load i8, ptr [[TMP12]], align 8
+; CHECK-NEXT:    [[TMP18:%.*]] = load i8, ptr [[TMP13]], align 8
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[DST]], i8 [[TMP7]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[DST]], i8 [[TMP8]]
-; CHECK-NEXT:    store i8 [[TMP14]], ptr [[TMP15]], align 2, !alias.scope [[META32:![0-9]+]], !noalias [[META34:![0-9]+]]
-; CHECK-NEXT:    store i8 [[TMP18]], ptr [[TMP16]], align 2, !alias.scope [[META32]], !noalias [[META34]]
+; CHECK-NEXT:    store i8 [[TMP14]], ptr [[TMP15]], align 2, !alias.scope [[META27:![0-9]+]], !noalias [[META30:![0-9]+]]
+; CHECK-NEXT:    store i8 [[TMP18]], ptr [[TMP16]], align 2, !alias.scope [[META27]], !noalias [[META30]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP36:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP33:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP2]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
@@ -383,13 +383,13 @@ define void @test_loop_dependent_select_second_ptr_noundef(ptr %src.1, ptr nound
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[IV]], [[X]]
-; CHECK-NEXT:    [[PTR_SEL:%.*]] = select i1 [[C]], ptr [[SRC_1]], ptr [[SRC_2]]
+; CHECK-NEXT:    [[PTR_SEL:%.*]] = select i1 [[C]], ptr [[SRC_3]], ptr [[SRC_1]]
 ; CHECK-NEXT:    [[L_1:%.*]] = load i8, ptr [[PTR_SEL]], align 8
 ; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr i8, ptr [[DST]], i8 [[IV]]
 ; CHECK-NEXT:    store i8 [[L_1]], ptr [[GEP_DST]], align 2
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i8 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP37:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP34:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
