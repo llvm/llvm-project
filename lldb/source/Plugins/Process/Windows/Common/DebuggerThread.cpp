@@ -449,7 +449,8 @@ DebuggerThread::HandleCreateThreadEvent(const CREATE_THREAD_DEBUG_INFO &info,
            m_process.GetProcessId());
   HostThread thread(info.hThread);
   thread.GetNativeThread().SetOwnsHandle(false);
-  m_debug_delegate->OnCreateThread(thread);
+  m_debug_delegate->OnCreateThread(
+      thread, reinterpret_cast<lldb::addr_t>(info.lpStartAddress));
   return DBG_CONTINUE;
 }
 
