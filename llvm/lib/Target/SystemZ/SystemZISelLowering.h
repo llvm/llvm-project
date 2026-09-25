@@ -496,8 +496,6 @@ private:
 
 private:
   bool enableNarrowIntArgsVerification() const;
-  bool isInternal(const Function *Fn) const;
-  mutable std::map<const Function *, bool> IsInternalCache;
   void verifyNarrowIntegerArgs_Call(const SmallVectorImpl<ISD::OutputArg> &Outs,
                                     const Function *F, SDValue Callee) const;
   void verifyNarrowIntegerArgs_Ret(const SmallVectorImpl<ISD::OutputArg> &Outs,

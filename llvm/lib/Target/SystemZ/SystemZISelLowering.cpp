@@ -11451,16 +11451,6 @@ static void printFunctionArgExts(const Function *F, raw_ostream &OS) {
   OS << ")\n";
 }
 
-bool SystemZTargetLowering::isInternal(const Function *Fn) const {
-  std::map<const Function *, bool>::iterator Itr = IsInternalCache.find(Fn);
-  if (Itr == IsInternalCache.end())
-    Itr = IsInternalCache
-              .insert(std::pair<const Function *, bool>(
-                  Fn, (Fn->hasLocalLinkage() && !Fn->hasAddressTaken())))
-              .first;
-  return Itr->second;
-}
-
 bool SystemZTargetLowering::enableNarrowIntArgsVerification() const {
   if (!Subtarget.isTargetELF())
     return false;
@@ -11480,12 +11470,12 @@ verifyNarrowIntegerArgs_Call(const SmallVectorImpl<ISD::OutputArg> &Outs,
                              const Function *F, SDValue Callee) const {
   if (!enableNarrowIntArgsVerification())
     return;
-  bool IsInternal = false;
   const Function *CalleeFn = nullptr;
   if (auto *G = dyn_cast<GlobalAddressSDNode>(Callee))
-    if ((CalleeFn = dyn_cast<Function>(G->getGlobal())))
-      IsInternal = isInternal(CalleeFn);
-  if (!IsInternal && !verifyNarrowIntegerArgs(Outs)) {
+    CalleeFn = dyn_cast<Function>(G->getGlobal());
+  if (CalleeFn && CalleeFn->getCallingConv() != CallingConv::C)
+    return;
+  if (!verifyNarrowIntegerArgs(Outs)) {
     errs() << "ERROR: Missing extension attribute of passed "
            << "value in call to function:\n" << "Callee:  ";
     if (CalleeFn != nullptr)
@@ -11504,9 +11494,10 @@ verifyNarrowIntegerArgs_Call(const SmallVectorImpl<ISD::OutputArg> &Outs,
 void SystemZTargetLowering::
 verifyNarrowIntegerArgs_Ret(const SmallVectorImpl<ISD::OutputArg> &Outs,
                             const Function *F) const {
-  if (!enableNarrowIntArgsVerification())
+  if (!enableNarrowIntArgsVerification() ||
+      F->getCallingConv() != CallingConv::C)
     return;
-  if (!isInternal(F) && !verifyNarrowIntegerArgs(Outs)) {
+  if (!verifyNarrowIntegerArgs(Outs)) {
     errs() << "ERROR: Missing extension attribute of returned "
            << "value from function:\n";
     printFunctionArgExts(F, errs());

@@ -27,13 +27,12 @@ define noext i32 @callee_NoExtRet_i32() {
   ret i32 -1
 }
 
-; An internal function is not checked for an extension attribute.
-define internal i32 @callee_NoExtRet_internal(i32 %Arg) {
+; Only the C CallingConv strictly requires extension attributes.
+define internal fastcc i32 @callee_NoExtRet_fastcc(i32 %Arg) {
   ret i32 %Arg
 }
 
-; A call to an internal function is ok without argument extension.
 define void @caller_internal() {
-  call i32 @callee_NoExtRet_internal(i32 0)
+  call fastcc i32 @callee_NoExtRet_fastcc(i32 0)
   ret void
 }
