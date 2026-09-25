@@ -98,7 +98,7 @@ void UnsafeFormatStringCheck::registerMatchers(MatchFinder *Finder) {
     for (const CheckedFunction &Entry : CustomPrintfFunctions)
       FunctionNames.emplace_back(Entry.Name);
 
-    auto CustomFunctionsMatcher =
+    const auto CustomFunctionsMatcher =
         matchers::matchesAnyListedRegexName(FunctionNames);
 
     Finder->addMatcher(callExpr(callee(functionDecl(CustomFunctionsMatcher)))
@@ -113,7 +113,7 @@ void UnsafeFormatStringCheck::registerMatchers(MatchFinder *Finder) {
     for (const CheckedFunction &Entry : CustomScanfFunctions)
       FunctionNames.emplace_back(Entry.Name);
 
-    auto CustomFunctionsMatcher =
+    const auto CustomFunctionsMatcher =
         matchers::matchesAnyListedRegexName(FunctionNames);
 
     Finder->addMatcher(callExpr(callee(functionDecl(CustomFunctionsMatcher)))
