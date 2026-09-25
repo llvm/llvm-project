@@ -363,7 +363,7 @@ bool TypeSanitizer::generateBaseTypeDescriptor(
       Offset =
           mdconst::extract<ConstantInt>(MD->getOperand(i + 1))->getZExtValue();
     } else {
-      assert(i == 1 && MD->getNumOperands() == 2  && "Malformed TBAA MD.");
+      assert(i == 1 && MD->getNumOperands() == 2 && "Malformed TBAA MD.");
       // The third operand for a scalar tag is actually optional, its absence
       // indicating an offset of zero.
       Offset = 0;
