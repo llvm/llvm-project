@@ -83,20 +83,11 @@ struct MachineFunctionInfo;
 ///
 class LLVM_ABI TargetMachine {
 protected: // Can only create subclasses.
-  TargetMachine(const Target &T, StringRef DataLayoutString,
-                const Triple &TargetTriple, StringRef CPU, StringRef FS,
-                const TargetOptions &Options);
+  TargetMachine(const Target &T, const Triple &TargetTriple, StringRef CPU,
+                StringRef FS, const TargetOptions &Options);
 
   /// The Target that this machine was created for.
   const Target &TheTarget;
-
-  /// DataLayout for the target: keep ABI type size and alignment.
-  ///
-  /// The DataLayout is created based on the string representation provided
-  /// during construction. It is kept here only to avoid reparsing the string
-  /// but should not really be used during compilation, because it has an
-  /// internal cache that is context specific.
-  const DataLayout DL;
 
   /// Triple string, CPU name, and target feature strings the TargetMachine
   /// instance is created with.
@@ -215,35 +206,10 @@ public:
   }
 
   /// Create a DataLayout.
-  const DataLayout createDataLayout() const { return DL; }
-
-  /// Test if a DataLayout if compatible with the CodeGen for this target.
-  ///
-  /// The LLVM Module owns a DataLayout that is used for the target independent
-  /// optimizations and code generation. This hook provides a target specific
-  /// check on the validity of this DataLayout.
-  bool isCompatibleDataLayout(const DataLayout &Candidate) const {
-    return DL == Candidate;
-  }
-
-  /// Get the pointer size for this target.
-  ///
-  /// This is the only time the DataLayout in the TargetMachine is used.
-  unsigned getPointerSize(unsigned AS) const {
-    return DL.getPointerSize(AS);
-  }
-
-  unsigned getPointerSizeInBits(unsigned AS) const {
-    return DL.getPointerSizeInBits(AS);
-  }
-
-  unsigned getProgramPointerSize() const {
-    return DL.getPointerSize(DL.getProgramAddressSpace());
-  }
-
-  unsigned getAllocaPointerSize() const {
-    return DL.getPointerSize(DL.getAllocaAddrSpace());
-  }
+  LLVM_DEPRECATED("Use the Module's DataLayout, or compute one with "
+                  "Triple::computeDataLayout",
+                  "")
+  DataLayout createDataLayout() const;
 
   /// Return target specific asm information.
   const MCAsmInfo &getMCAsmInfo() const { return *AsmInfo; }
