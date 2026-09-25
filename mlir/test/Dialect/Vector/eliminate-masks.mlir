@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s -split-input-file -test-eliminate-vector-masks | FileCheck %s --check-prefixes=ALL,WITH-RANGE
-// RUN: mlir-opt %s -split-input-file -test-eliminate-vector-masks=fixed-size | FileCheck %s --check-prefixes=ALL,NO-RANGE
+// RUN: mlir-opt %s -split-input-file -eliminate-vector-masks="vscale-min=1 vscale-max=16" | FileCheck %s --check-prefixes=ALL,WITH-RANGE
+// RUN: mlir-opt %s -split-input-file -eliminate-vector-masks | FileCheck %s --check-prefixes=ALL,NO-RANGE
 
 // Each scalable test below is paired with a fixed-size equivalent, so that both
 // widths get the same coverage. Only the one case that needs a vscale range to

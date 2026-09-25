@@ -8,8 +8,18 @@
 
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/Vector/IR/ScalableValueBoundsConstraintSet.h"
+#include "mlir/Dialect/Vector/Transforms/Passes.h"
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
+
+namespace mlir {
+namespace vector {
+
+#define GEN_PASS_DEF_ELIMINATEVECTORMASKS
+#include "mlir/Dialect/Vector/Transforms/Passes.h.inc"
+
+} // namespace vector
+} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::vector;
@@ -135,5 +145,28 @@ void eliminateVectorMasks(IRRewriter &rewriter, FunctionOpInterface function,
   for (auto mask : worklist)
     (void)resolveAllTrueCreateMaskOp(rewriter, mask, vscaleRange);
 }
+
+namespace {
+struct EliminateVectorMasksPass
+    : public impl::EliminateVectorMasksBase<EliminateVectorMasksPass> {
+  using Base::Base;
+
+  void runOnOperation() override {
+    std::optional<VscaleRange> vscaleRange;
+    if (vscaleMin || vscaleMax) {
+      if (!vscaleMin || !vscaleMax || vscaleMin > vscaleMax) {
+        getOperation()->emitError()
+            << "expected 'vscale-min' and 'vscale-max' to both be set, with "
+               "'vscale-min' <= 'vscale-max'";
+        return signalPassFailure();
+      }
+      vscaleRange = VscaleRange{vscaleMin, vscaleMax};
+    }
+
+    IRRewriter rewriter(&getContext());
+    eliminateVectorMasks(rewriter, getOperation(), vscaleRange);
+  }
+};
+} // namespace
 
 } // namespace mlir::vector
