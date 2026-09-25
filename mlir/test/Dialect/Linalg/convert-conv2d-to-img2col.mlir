@@ -124,17 +124,17 @@ module attributes {transform.with_named_sequence} {
 // CHECK-DAG: #[[MAP5:.+]] = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d2, d3, d4, d5)>
 // CHECK-DAG: #[[MAP6:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d3, d1, d2)>
 // CHECK: @depthwise_conv_hwc_114x16x3
-// CHECK-SAME: %[[INPUT:.+]]: tensor<1x114x114x16xf32>
+// CHECK-SAME: %[[INPUT:.+]]: tensor<2x114x114x16xf32>
 // CHECK-SAME: %[[FILTER:.+]]: tensor<3x3x16xf32>
-// CHECK-SAME: %[[OUTPUT:.+]]: tensor<1x112x112x16xf32>
-//      CHECK: %[[INPUT_T_INIT:.+]] = tensor.empty() : tensor<1x16x114x114xf32>
+// CHECK-SAME: %[[OUTPUT:.+]]: tensor<2x112x112x16xf32>
+//      CHECK: %[[INPUT_T_INIT:.+]] = tensor.empty() : tensor<2x16x114x114xf32>
 //      CHECK: %[[INPUT_T:.+]] = linalg.generic
 // CHECK-SAME: indexing_maps = [#[[MAP0]], #[[MAP1]]]
 // CHECK-SAME: iterator_types = ["parallel", "parallel", "parallel", "parallel"]
-// CHECK-SAME: ins(%[[INPUT]] : tensor<1x114x114x16xf32>) outs(%[[INPUT_T_INIT]] : tensor<1x16x114x114xf32>) {
+// CHECK-SAME: ins(%[[INPUT]] : tensor<2x114x114x16xf32>) outs(%[[INPUT_T_INIT]] : tensor<2x16x114x114xf32>) {
 // CHECK-NEXT: ^bb0(%[[ARG3:.+]]: f32, %[[ARG4:.+]]: f32):
 // CHECK-NEXT:     linalg.yield %[[ARG3]] : f32
-// CHECK-NEXT:  } -> tensor<1x16x114x114xf32>
+// CHECK-NEXT:  } -> tensor<2x16x114x114xf32>
 //      CHECK: %[[FILTER_T_INIT:.+]] = tensor.empty() : tensor<16x3x3xf32>
 //      CHECK: %[[FILTER_T:.+]] = linalg.generic
 // CHECK-SAME: indexing_maps = [#[[MAP2]], #[[MAP3]]
@@ -143,46 +143,48 @@ module attributes {transform.with_named_sequence} {
 // CHECK-NEXT:      ^bb0(%{{.*}}: f32, %{{.*}}: f32):
 //      CHECK:      linalg.yield
 //      CHECK:    } -> tensor<16x3x3xf32>
-//      CHECK: %[[INIT_OUTPUT_TENSOR:.+]] = tensor.empty() : tensor<1x16x112x112xf32>
+//      CHECK: %[[FILTER_BROADCAST_INIT:.+]] = tensor.empty() : tensor<2x16x3x3xf32>
+//      CHECK: %[[FILTER_BROADCAST:.+]] = linalg.broadcast ins(%[[FILTER_T]] : tensor<16x3x3xf32>) outs(%[[FILTER_BROADCAST_INIT]] : tensor<2x16x3x3xf32>) dimensions = [0]
+//      CHECK: %[[INIT_OUTPUT_TENSOR:.+]] = tensor.empty() : tensor<2x16x112x112xf32>
 //      CHECK: %[[OUTPUT_T:.+]] = linalg.generic
 // CHECK-SAME: indexing_maps = [#[[MAP0]], #[[MAP1]]]
 // CHECK-SAME: iterator_types = ["parallel", "parallel", "parallel", "parallel"]
-// CHECK-SAME: ins(%[[OUTPUT]] : tensor<1x112x112x16xf32>) outs(%[[INIT_OUTPUT_TENSOR]] : tensor<1x16x112x112xf32>) {
+// CHECK-SAME: ins(%[[OUTPUT]] : tensor<2x112x112x16xf32>) outs(%[[INIT_OUTPUT_TENSOR]] : tensor<2x16x112x112xf32>) {
 // CHECK-NEXT:  ^bb0(%{{.*}}: f32, %{{.*}}: f32):
 // CHECK-NEXT:     linalg.yield
-// CHECK-NEXT:  } -> tensor<1x16x112x112xf32>
-//      CHECK:  %[[INIT_COL_TENSOR:.+]] = tensor.empty() : tensor<1x16x112x112x3x3xf32>
+// CHECK-NEXT:  } -> tensor<2x16x112x112xf32>
+//      CHECK:  %[[INIT_COL_TENSOR:.+]] = tensor.empty() : tensor<2x16x112x112x3x3xf32>
 //      CHECK: %[[COL_TENSOR:.+]] = linalg.generic
 // CHECK-SAME: indexing_maps = [#[[MAP4]], #[[MAP5]]]
 // CHECK-SAME: iterator_types = ["parallel", "parallel", "parallel", "parallel", "parallel", "parallel"]
-// CHECK-SAME:   ins(%[[INPUT_T]] : tensor<1x16x114x114xf32>) outs(%[[INIT_COL_TENSOR]] : tensor<1x16x112x112x3x3xf32>) {
+// CHECK-SAME:   ins(%[[INPUT_T]] : tensor<2x16x114x114xf32>) outs(%[[INIT_COL_TENSOR]] : tensor<2x16x112x112x3x3xf32>) {
 // CHECK-NEXT:      ^bb0(%{{.*}}: f32, %{{.*}}: f32):
 // CHECK-NEXT:         linalg.yield
-// CHECK-NEXT:    } -> tensor<1x16x112x112x3x3xf32>
+// CHECK-NEXT:    } -> tensor<2x16x112x112x3x3xf32>
 //      CHECK: %[[COL_TENSOR_R:.+]] = tensor.collapse_shape %[[COL_TENSOR]]
-// CHECK-SAME:    tensor<1x16x112x112x3x3xf32> into tensor<16x12544x9xf32>
-//      CHECK: %[[FILTER_T_R:.+]] = tensor.collapse_shape %[[FILTER_T]]
-// CHECK-SAME:    tensor<16x3x3xf32> into tensor<16x9xf32>
+// CHECK-SAME:    tensor<2x16x112x112x3x3xf32> into tensor<32x12544x9xf32>
+//      CHECK: %[[FILTER_T_R:.+]] = tensor.collapse_shape %[[FILTER_BROADCAST]]
+// CHECK-SAME:    tensor<2x16x3x3xf32> into tensor<32x9xf32>
 //      CHECK: %[[OUTPUT_T_R:.+]] = tensor.collapse_shape %[[OUTPUT_T]]
-// CHECK-SAME:    tensor<1x16x112x112xf32> into tensor<16x12544xf32>
-//      CHECK: %[[BMV_RESULT:.+]] = linalg.batch_matvec ins(%[[COL_TENSOR_R]], %[[FILTER_T_R]] : tensor<16x12544x9xf32>, tensor<16x9xf32>) outs(%[[OUTPUT_T_R]] : tensor<16x12544xf32>) -> tensor<16x12544xf32>
+// CHECK-SAME:    tensor<2x16x112x112xf32> into tensor<32x12544xf32>
+//      CHECK: %[[BMV_RESULT:.+]] = linalg.batch_matvec ins(%[[COL_TENSOR_R]], %[[FILTER_T_R]] : tensor<32x12544x9xf32>, tensor<32x9xf32>) outs(%[[OUTPUT_T_R]] : tensor<32x12544xf32>) -> tensor<32x12544xf32>
 //      CHECK: %[[RESULT_R:.+]] = tensor.expand_shape %[[BMV_RESULT]]
-// CHECK-SAME:    tensor<16x12544xf32> into tensor<1x16x112x112xf32>
-//      CHECK: %[[RESULT_INIT:.+]] = tensor.empty() : tensor<1x112x112x16xf32>
+// CHECK-SAME:    tensor<32x12544xf32> into tensor<2x16x112x112xf32>
+//      CHECK: %[[RESULT_INIT:.+]] = tensor.empty() : tensor<2x112x112x16xf32>
 //      CHECK: %[[RESULT:.+]] = linalg.generic
 // CHECK-SAME: indexing_maps = [#[[MAP6]], #[[MAP1]]]
 // CHECK-SAME: iterator_types = ["parallel", "parallel", "parallel", "parallel"]
-// CHECK-SAME: ins(%[[RESULT_R]] : tensor<1x16x112x112xf32>) outs(%[[RESULT_INIT]] : tensor<1x112x112x16xf32>) {
+// CHECK-SAME: ins(%[[RESULT_R]] : tensor<2x16x112x112xf32>) outs(%[[RESULT_INIT]] : tensor<2x112x112x16xf32>) {
 // CHECK-NEXT:      ^bb0(%{{.*}}: f32, %{{.*}}: f32):
 // CHECK-NEXT:      linalg.yield
-// CHECK-NEXT:    } -> tensor<1x112x112x16xf32>
-//      CHECK: return %[[RESULT]] : tensor<1x112x112x16xf32>
-func.func @depthwise_conv_hwc_114x16x3(%input: tensor<1x114x114x16xf32>, %filter: tensor<3x3x16xf32>, %output: tensor<1x112x112x16xf32>) -> tensor<1x112x112x16xf32> {
+// CHECK-NEXT:    } -> tensor<2x112x112x16xf32>
+//      CHECK: return %[[RESULT]] : tensor<2x112x112x16xf32>
+func.func @depthwise_conv_hwc_114x16x3(%input: tensor<2x114x114x16xf32>, %filter: tensor<3x3x16xf32>, %output: tensor<2x112x112x16xf32>) -> tensor<2x112x112x16xf32> {
     %0 = linalg.depthwise_conv_2d_nhwc_hwc {
       dilations = dense<1> : tensor<2xi64>,
       strides = dense<1> : tensor<2xi64>
-    } ins(%input, %filter : tensor<1x114x114x16xf32>, tensor<3x3x16xf32>) outs(%output : tensor<1x112x112x16xf32>) -> tensor<1x112x112x16xf32>
-    return %0 : tensor<1x112x112x16xf32>
+    } ins(%input, %filter : tensor<2x114x114x16xf32>, tensor<3x3x16xf32>) outs(%output : tensor<2x112x112x16xf32>) -> tensor<2x112x112x16xf32>
+    return %0 : tensor<2x112x112x16xf32>
 }
 
 module attributes {transform.with_named_sequence} {
