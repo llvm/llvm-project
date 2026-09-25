@@ -126,12 +126,11 @@ define <vscale x 8 x i1> @fptosi_nxv8bf16_to_nxv8i1(<vscale x 8 x bfloat> %a) {
 ; SVE-LABEL: fptosi_nxv8bf16_to_nxv8i1:
 ; SVE:       // %bb.0:
 ; SVE-NEXT:    movi v1.2d, #0000000000000000
-; SVE-NEXT:    ptrue p0.s
+; SVE-NEXT:    ptrue p0.h
 ; SVE-NEXT:    zip2 z2.h, z1.h, z0.h
 ; SVE-NEXT:    zip1 z0.h, z1.h, z0.h
 ; SVE-NEXT:    fcvtzs z2.s, p0/m, z2.s
 ; SVE-NEXT:    fcvtzs z0.s, p0/m, z0.s
-; SVE-NEXT:    ptrue p0.h
 ; SVE-NEXT:    uzp1 z0.h, z0.h, z2.h
 ; SVE-NEXT:    cmpne p0.h, p0/z, z0.h, #0
 ; SVE-NEXT:    ret
@@ -139,12 +138,11 @@ define <vscale x 8 x i1> @fptosi_nxv8bf16_to_nxv8i1(<vscale x 8 x bfloat> %a) {
 ; STREAMING-SVE-LABEL: fptosi_nxv8bf16_to_nxv8i1:
 ; STREAMING-SVE:       // %bb.0:
 ; STREAMING-SVE-NEXT:    mov z1.h, #0 // =0x0
-; STREAMING-SVE-NEXT:    ptrue p0.s
+; STREAMING-SVE-NEXT:    ptrue p0.h
 ; STREAMING-SVE-NEXT:    zip2 z2.h, z1.h, z0.h
 ; STREAMING-SVE-NEXT:    zip1 z0.h, z1.h, z0.h
 ; STREAMING-SVE-NEXT:    fcvtzs z2.s, p0/m, z2.s
 ; STREAMING-SVE-NEXT:    fcvtzs z0.s, p0/m, z0.s
-; STREAMING-SVE-NEXT:    ptrue p0.h
 ; STREAMING-SVE-NEXT:    uzp1 z0.h, z0.h, z2.h
 ; STREAMING-SVE-NEXT:    cmpne p0.h, p0/z, z0.h, #0
 ; STREAMING-SVE-NEXT:    ret
@@ -380,12 +378,11 @@ define <vscale x 8 x i1> @fptoui_nxv8bf16_to_nxv8i1(<vscale x 8 x bfloat> %a) {
 ; SVE-LABEL: fptoui_nxv8bf16_to_nxv8i1:
 ; SVE:       // %bb.0:
 ; SVE-NEXT:    movi v1.2d, #0000000000000000
-; SVE-NEXT:    ptrue p0.s
+; SVE-NEXT:    ptrue p0.h
 ; SVE-NEXT:    zip2 z2.h, z1.h, z0.h
 ; SVE-NEXT:    zip1 z0.h, z1.h, z0.h
 ; SVE-NEXT:    fcvtzs z2.s, p0/m, z2.s
 ; SVE-NEXT:    fcvtzs z0.s, p0/m, z0.s
-; SVE-NEXT:    ptrue p0.h
 ; SVE-NEXT:    uzp1 z0.h, z0.h, z2.h
 ; SVE-NEXT:    cmpne p0.h, p0/z, z0.h, #0
 ; SVE-NEXT:    ret
@@ -393,12 +390,11 @@ define <vscale x 8 x i1> @fptoui_nxv8bf16_to_nxv8i1(<vscale x 8 x bfloat> %a) {
 ; STREAMING-SVE-LABEL: fptoui_nxv8bf16_to_nxv8i1:
 ; STREAMING-SVE:       // %bb.0:
 ; STREAMING-SVE-NEXT:    mov z1.h, #0 // =0x0
-; STREAMING-SVE-NEXT:    ptrue p0.s
+; STREAMING-SVE-NEXT:    ptrue p0.h
 ; STREAMING-SVE-NEXT:    zip2 z2.h, z1.h, z0.h
 ; STREAMING-SVE-NEXT:    zip1 z0.h, z1.h, z0.h
 ; STREAMING-SVE-NEXT:    fcvtzs z2.s, p0/m, z2.s
 ; STREAMING-SVE-NEXT:    fcvtzs z0.s, p0/m, z0.s
-; STREAMING-SVE-NEXT:    ptrue p0.h
 ; STREAMING-SVE-NEXT:    uzp1 z0.h, z0.h, z2.h
 ; STREAMING-SVE-NEXT:    cmpne p0.h, p0/z, z0.h, #0
 ; STREAMING-SVE-NEXT:    ret
@@ -659,7 +655,6 @@ define <vscale x 8 x bfloat> @sitofp_nxv8i8_to_nxv8bf16(<vscale x 8 x i8> %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    sxtb z0.h, p0/m, z0.h
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    sunpkhi z1.s, z0.h
 ; CHECK-NEXT:    sunpklo z0.s, z0.h
 ; CHECK-NEXT:    scvtf z1.s, p0/m, z1.s

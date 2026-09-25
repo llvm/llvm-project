@@ -513,5 +513,6 @@ define void @store_nonconst_b8(b8 %v, ptr %p) {
 !0 = !{!4, !4, i64 0}
 !1 = !{!"omnipotent char", !2}
 !2 = !{!"Simple C/C++ TBAA"}
-!3 = !{!"float", !1}
+!3 = !{!5, !5, i64 0}
 !4 = !{!"int", !1}
+!5 = !{!"float", !1}

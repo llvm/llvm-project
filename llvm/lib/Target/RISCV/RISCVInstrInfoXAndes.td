@@ -736,10 +736,14 @@ let Predicates = [HasVendorXAndesVBFHCvt],
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasVendorXAndesVSIntH] in {
+
+  let append Predicates = [HasVInstructionsAnyF] in {
   def NDS_VFWCVT_F_N  : NDSRVInstVSINTCvt<0b00100, "nds.vfwcvt.f.n.v">;
   def NDS_VFWCVT_F_NU : NDSRVInstVSINTCvt<0b00101, "nds.vfwcvt.f.nu.v">;
   def NDS_VFWCVT_F_B  : NDSRVInstVSINTCvt<0b00110, "nds.vfwcvt.f.b.v">;
   def NDS_VFWCVT_F_BU : NDSRVInstVSINTCvt<0b00111, "nds.vfwcvt.f.bu.v">;
+  } // append Predicates = [HasVInstructionsAnyF]
+
   def NDS_VLE4_V : NDSRVInstVSINTLN<0b00000, "nds.vle4.v">;
 } // Predicates = [HasVendorXAndesVSIntH]
 

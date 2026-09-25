@@ -7,18 +7,18 @@
 @B = external addrspace(3) global [0 x i32]
 
 ;.
-; @llvm.amdgcn.sw.lds.kernel_2 = internal addrspace(3) global ptr poison, no_sanitize_address, align 8, !absolute_symbol [[META0:![0-9]+]]
-; @llvm.amdgcn.sw.lds.kernel_2.md = internal addrspace(1) global %llvm.amdgcn.sw.lds.kernel_2.md.type { %llvm.amdgcn.sw.lds.kernel_2.md.item { i32 0, i32 8, i32 32 }, %llvm.amdgcn.sw.lds.kernel_2.md.item { i32 32, i32 64, i32 96 } }, no_sanitize_address
-; @llvm.amdgcn.sw.lds.kernel_1 = internal addrspace(3) global ptr poison, no_sanitize_address, align 4, !absolute_symbol [[META0]]
-; @llvm.amdgcn.kernel_1.dynlds = external addrspace(3) global [0 x i8], no_sanitize_address, align 4, !absolute_symbol [[META1:![0-9]+]]
-; @llvm.amdgcn.sw.lds.kernel_1.md = internal addrspace(1) global %llvm.amdgcn.sw.lds.kernel_1.md.type { %llvm.amdgcn.sw.lds.kernel_1.md.item { i32 0, i32 8, i32 32 }, %llvm.amdgcn.sw.lds.kernel_1.md.item { i32 32, i32 0, i32 32 } }, no_sanitize_address
-; @llvm.amdgcn.sw.lds.kernel_3 = internal addrspace(3) global ptr poison, no_sanitize_address, align 4, !absolute_symbol [[META0]]
-; @llvm.amdgcn.kernel_3.dynlds = external addrspace(3) global [0 x i8], no_sanitize_address, align 4, !absolute_symbol [[META1]]
-; @llvm.amdgcn.sw.lds.kernel_3.md = internal addrspace(1) global %llvm.amdgcn.sw.lds.kernel_3.md.type { %llvm.amdgcn.sw.lds.kernel_3.md.item { i32 0, i32 8, i32 32 }, %llvm.amdgcn.sw.lds.kernel_3.md.item { i32 32, i32 0, i32 32 } }, no_sanitize_address
-; @llvm.amdgcn.sw.lds.kernel_0 = internal addrspace(3) global ptr poison, no_sanitize_address, align 8, !absolute_symbol [[META0]]
-; @llvm.amdgcn.sw.lds.kernel_0.md = internal addrspace(1) global %llvm.amdgcn.sw.lds.kernel_0.md.type { %llvm.amdgcn.sw.lds.kernel_0.md.item { i32 0, i32 8, i32 32 }, %llvm.amdgcn.sw.lds.kernel_0.md.item { i32 32, i32 64, i32 96 } }, no_sanitize_address
-; @llvm.amdgcn.sw.lds.base.table = internal addrspace(1) constant [4 x ptr addrspace(3)] [ptr addrspace(3) @llvm.amdgcn.sw.lds.kernel_0, ptr addrspace(3) @llvm.amdgcn.sw.lds.kernel_1, ptr addrspace(3) @llvm.amdgcn.sw.lds.kernel_2, ptr addrspace(3) @llvm.amdgcn.sw.lds.kernel_3], no_sanitize_address
-; @llvm.amdgcn.sw.lds.offset.table = internal addrspace(1) constant [4 x [2 x ptr addrspace(1)]] [[2 x ptr addrspace(1)] [ptr addrspace(1) getelementptr inbounds (%llvm.amdgcn.sw.lds.kernel_0.md.type, ptr addrspace(1) @llvm.amdgcn.sw.lds.kernel_0.md, i32 0, i32 1, i32 0), ptr addrspace(1) poison], [2 x ptr addrspace(1)] [ptr addrspace(1) poison, ptr addrspace(1) getelementptr inbounds (%llvm.amdgcn.sw.lds.kernel_1.md.type, ptr addrspace(1) @llvm.amdgcn.sw.lds.kernel_1.md, i32 0, i32 1, i32 0)], [2 x ptr addrspace(1)] [ptr addrspace(1) getelementptr inbounds (%llvm.amdgcn.sw.lds.kernel_2.md.type, ptr addrspace(1) @llvm.amdgcn.sw.lds.kernel_2.md, i32 0, i32 1, i32 0), ptr addrspace(1) poison], [2 x ptr addrspace(1)] [ptr addrspace(1) poison, ptr addrspace(1) getelementptr inbounds (%llvm.amdgcn.sw.lds.kernel_3.md.type, ptr addrspace(1) @llvm.amdgcn.sw.lds.kernel_3.md, i32 0, i32 1, i32 0)]], no_sanitize_address
+; CHECK: @llvm.amdgcn.sw.lds.kernel_0 = internal addrspace(3) global ptr poison, no_sanitize_address, align 8, !absolute_symbol [[META0:![0-9]+]]
+; CHECK: @llvm.amdgcn.sw.lds.kernel_0.md = internal addrspace(1) global %llvm.amdgcn.sw.lds.kernel_0.md.type { %llvm.amdgcn.sw.lds.kernel_0.md.item { i32 0, i32 8, i32 32 }, %llvm.amdgcn.sw.lds.kernel_0.md.item { i32 32, i32 64, i32 96 } }, no_sanitize_address
+; CHECK: @llvm.amdgcn.sw.lds.kernel_1 = internal addrspace(3) global ptr poison, no_sanitize_address, align 4, !absolute_symbol [[META0]]
+; CHECK: @llvm.amdgcn.kernel_1.dynlds = external addrspace(3) global [0 x i8], no_sanitize_address, align 4, !absolute_symbol [[META1:![0-9]+]]
+; CHECK: @llvm.amdgcn.sw.lds.kernel_1.md = internal addrspace(1) global %llvm.amdgcn.sw.lds.kernel_1.md.type { %llvm.amdgcn.sw.lds.kernel_1.md.item { i32 0, i32 8, i32 32 }, %llvm.amdgcn.sw.lds.kernel_1.md.item { i32 32, i32 0, i32 32 } }, no_sanitize_address
+; CHECK: @llvm.amdgcn.sw.lds.kernel_2 = internal addrspace(3) global ptr poison, no_sanitize_address, align 8, !absolute_symbol [[META0]]
+; CHECK: @llvm.amdgcn.sw.lds.kernel_2.md = internal addrspace(1) global %llvm.amdgcn.sw.lds.kernel_2.md.type { %llvm.amdgcn.sw.lds.kernel_2.md.item { i32 0, i32 8, i32 32 }, %llvm.amdgcn.sw.lds.kernel_2.md.item { i32 32, i32 64, i32 96 } }, no_sanitize_address
+; CHECK: @llvm.amdgcn.sw.lds.kernel_3 = internal addrspace(3) global ptr poison, no_sanitize_address, align 4, !absolute_symbol [[META0]]
+; CHECK: @llvm.amdgcn.kernel_3.dynlds = external addrspace(3) global [0 x i8], no_sanitize_address, align 4, !absolute_symbol [[META1]]
+; CHECK: @llvm.amdgcn.sw.lds.kernel_3.md = internal addrspace(1) global %llvm.amdgcn.sw.lds.kernel_3.md.type { %llvm.amdgcn.sw.lds.kernel_3.md.item { i32 0, i32 8, i32 32 }, %llvm.amdgcn.sw.lds.kernel_3.md.item { i32 32, i32 0, i32 32 } }, no_sanitize_address
+; CHECK: @llvm.amdgcn.sw.lds.base.table = internal addrspace(1) constant [4 x ptr addrspace(3)] [ptr addrspace(3) @llvm.amdgcn.sw.lds.kernel_0, ptr addrspace(3) @llvm.amdgcn.sw.lds.kernel_1, ptr addrspace(3) @llvm.amdgcn.sw.lds.kernel_2, ptr addrspace(3) @llvm.amdgcn.sw.lds.kernel_3], no_sanitize_address
+; CHECK: @llvm.amdgcn.sw.lds.offset.table = internal addrspace(1) constant [4 x [2 x ptr addrspace(1)]] {{\[\[}}2 x ptr addrspace(1)] [ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @llvm.amdgcn.sw.lds.kernel_0.md, i64 12), ptr addrspace(1) poison], [2 x ptr addrspace(1)] [ptr addrspace(1) poison, ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @llvm.amdgcn.sw.lds.kernel_1.md, i64 12)], [2 x ptr addrspace(1)] [ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @llvm.amdgcn.sw.lds.kernel_2.md, i64 12), ptr addrspace(1) poison], [2 x ptr addrspace(1)] [ptr addrspace(1) poison, ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @llvm.amdgcn.sw.lds.kernel_3.md, i64 12)]], no_sanitize_address
 ;.
 define amdgpu_kernel void @kernel_0() sanitize_address {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_0(
@@ -292,4 +292,16 @@ define private ptr @get_B_ptr() sanitize_address {
 ;.
 ; CHECK: attributes #[[ATTR0]] = { sanitize_address "amdgpu-lds-size"="8" }
 ; CHECK: attributes #[[ATTR1]] = { sanitize_address "amdgpu-lds-size"="8,8" }
+; CHECK: attributes #[[ATTR2]] = { sanitize_address }
+; CHECK: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+; CHECK: attributes #[[ATTR4:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(none) }
+; CHECK: attributes #[[ATTR5:[0-9]+]] = { convergent nocallback nofree nounwind willreturn }
+;.
+; CHECK: [[META0]] = !{i32 0, i32 1}
+; CHECK: [[META1]] = !{i32 8, i32 9}
+; CHECK: [[META2:![0-9]+]] = !{i32 4, !"nosanitize_address", i32 1}
+; CHECK: [[META3]] = !{i32 0}
+; CHECK: [[META4]] = !{i32 1}
+; CHECK: [[META5]] = !{i32 2}
+; CHECK: [[META6]] = !{i32 3}
 ;.

@@ -425,3 +425,55 @@ void test() {
 }
 
 }
+
+namespace GH176161 {
+struct Inner {
+  constexpr Inner(int a, int b) : x(a), y(b) {}
+  int x, y;
+};
+struct Agg {
+  Inner i;
+  int k = 7;
+};
+
+template <class T> struct S {
+  Agg a;
+  constexpr S() : a({1, 2}) {} // beforecxx20-warning 2{{C++20 extension}}
+};
+
+constexpr S<int> s; // beforecxx20-note {{requested here}}
+static_assert(s.a.i.x == 1);
+static_assert(s.a.i.y == 2);
+static_assert(s.a.k == 7);
+
+struct X {
+  constexpr X() : v(5) {}
+  constexpr X(int v) : v(v) {}
+  int v;
+};
+template <class T> struct Arr {
+  X arr[3];
+  constexpr Arr() : arr(1, 2) {} // beforecxx20-warning 2{{C++20 extension}}
+};
+constexpr Arr<int> arr; // beforecxx20-note {{requested here}}
+static_assert(arr.arr[0].v == 1 && arr.arr[1].v == 2 && arr.arr[2].v == 5);
+
+union U { int a; float b; };
+template <class T> struct Un {
+  U u;
+  constexpr Un() : u('a') {} // beforecxx20-warning 2{{C++20 extension}}
+};
+constexpr Un<int> un; // beforecxx20-note {{requested here}}
+static_assert(un.u.a == 'a');
+}
+
+namespace GH189005 {
+struct Elem { int x; };
+struct Outer { Elem arr[2]; };
+template <class T> struct Nested {
+  Outer m;
+  constexpr Nested() : m({{1}, {2}}) {} // beforecxx20-warning 2{{C++20 extension}}
+};
+constexpr Nested<int> n; // beforecxx20-note {{requested here}}
+static_assert(n.m.arr[0].x == 1 && n.m.arr[1].x == 2);
+}
