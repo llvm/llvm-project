@@ -13,6 +13,7 @@
 #include "lldb/Core/IOHandler.h"
 #include "lldb/Interpreter/CommandAlias.h"
 #include "lldb/Interpreter/CommandHistory.h"
+#include "lldb/Interpreter/CommandHistoryWithContext.h"
 #include "lldb/Interpreter/CommandObject.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Utility/Args.h"
@@ -727,6 +728,10 @@ private:
 
   void RestoreExecutionContext();
 
+  /// Capture the current execution context (target, stop location, function,
+  /// and working directory) for recording alongside a command in the history.
+  CommandExecutionContext GetCurrentCommandContext();
+
   void SourceInitFile(FileSpec file, CommandReturnObject &result);
 
   // Completely resolves aliases and abbreviations, returning a pointer to the
@@ -784,6 +789,9 @@ private:
   CommandObject::CommandMap
       m_user_mw_dict; // Stores user-defined multiword commands
   CommandHistory m_command_history;
+  /// Command history annotated with the execution context of each command,
+  /// persisted to a JSON file and used to rank autosuggestions.
+  CommandHistoryWithContext m_command_history_with_context;
   std::string m_repeat_command; // Stores the command that will be executed for
                                 // an empty command string.
   lldb::IOHandlerSP m_command_io_handler_sp;
