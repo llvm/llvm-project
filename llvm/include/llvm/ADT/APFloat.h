@@ -1623,6 +1623,21 @@ public:
         toString(Str, FormatPrecision, FormatMaxPadding, TruncateZero));
   }
 
+  /// Format the value as toString does and return true if the string parses
+  /// back bitwise equal. Non-finite spellings ("+Inf", "NaN") parse back
+  /// here but may not fit a caller's grammar.
+  LLVM_ABI bool toStringRoundTrip(SmallVectorImpl<char> &Str,
+                                  unsigned FormatPrecision = 0,
+                                  unsigned FormatMaxPadding = 3,
+                                  bool TruncateZero = true) const;
+
+  /// Like toString, but picks the smallest FormatPrecision whose output
+  /// parses back bitwise equal: "3.14", not "3.1400000000000001". An integer
+  /// in fixed notation keeps its digits: "100", not "1.0E+2".
+  LLVM_ABI void toStringShortest(SmallVectorImpl<char> &Str,
+                                 unsigned FormatMaxPadding = 3,
+                                 bool TruncateZero = true) const;
+
   LLVM_ABI void print(raw_ostream &) const;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
