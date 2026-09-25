@@ -19,13 +19,13 @@
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 
-#include <dirent.h>
-
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, scandir,
                    (const char *dir, struct dirent ***namelist,
-                    __scandir_filter_t filter, __scandir_compare_t compare)) {
+                    int (*filter)(const struct dirent *),
+                    int (*compare)(const struct dirent **,
+                                   const struct dirent **))) {
 
   auto res = Dir::scan(dir, namelist, filter, compare);
   if (!res) {

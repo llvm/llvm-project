@@ -76,5 +76,4 @@ add_entrypoint_object(
     libc.src.__support.File.platform_dir
     libc.src.__support.macros.config
     libc.src.errno.errno
-    libc.include.dirent
 )

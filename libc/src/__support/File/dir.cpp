@@ -14,8 +14,6 @@
 #include "src/__support/File/dir.h"
 
 #include "hdr/errno_macros.h"
-#include "include/llvm-libc-types/__scandir_compare_t.h"
-#include "include/llvm-libc-types/__scandir_filter_t.h"
 #include "src/__support/CPP/mutex.h" // lock_guard
 #include "src/__support/CPP/new.h"
 #include "src/__support/File/scan_impl.h"
@@ -82,7 +80,9 @@ int Dir::close() {
 }
 
 ErrorOr<int> Dir::scan(const char *name, struct dirent ***namelist,
-                       __scandir_filter_t filter, __scandir_compare_t compare) {
+                       int (*filter)(const struct dirent *),
+                       int (*compare)(const struct dirent **,
+                                      const struct dirent **)) {
   return internal::scan_impl<Dir>(name, namelist, filter, compare);
 }
 
