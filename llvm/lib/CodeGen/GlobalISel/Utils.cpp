@@ -1709,6 +1709,9 @@ bool llvm::isPreISelGenericFloatingPointOpcode(unsigned Opc) {
   case TargetOpcode::G_FLOG:
   case TargetOpcode::G_FMA:
   case TargetOpcode::G_FMAD:
+  case TargetOpcode::G_STRICT_FADD:
+  case TargetOpcode::G_STRICT_FMUL:
+  case TargetOpcode::G_STRICT_FMA:
   case TargetOpcode::G_FMAXIMUM:
   case TargetOpcode::G_FMAXIMUMNUM:
   case TargetOpcode::G_FMAXNUM:
