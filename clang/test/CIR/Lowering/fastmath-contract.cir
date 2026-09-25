@@ -4,7 +4,7 @@
 
 !f32 = !cir.float
 
-module {
+module attributes {cir.triple = "nvptx64-nvidia-cuda"} {
   cir.func @contract(%a: !f32, %b: !f32, %c: !f32) -> !f32 {
     %m = cir.fmul %a, %b : !f32 {fastmath = #cir.fastmath<contract>}
     %n = cir.fneg %c : !f32 {fastmath = #cir.fastmath<contract>}
@@ -29,12 +29,12 @@ module {
 // CIR: cir.fadd {{.*}} : !cir.float
 
 // MLIR-LABEL: llvm.func @contract
-// MLIR: llvm.fmul {{.*}} {fastmathFlags = #llvm.fastmath<contract>}
-// MLIR: llvm.fneg {{.*}} {fastmathFlags = #llvm.fastmath<contract>}
-// MLIR: llvm.fadd {{.*}} {fastmathFlags = #llvm.fastmath<contract>}
+// MLIR: llvm.fmul {{.*}} fastmath<contract> : f32
+// MLIR: llvm.fneg {{.*}} fastmath<contract> : f32
+// MLIR: llvm.fadd {{.*}} fastmath<contract> : f32
 // MLIR-LABEL: llvm.func @plain
 // MLIR: llvm.fmul {{.*}} : f32
-// MLIR-NOT: fastmathFlags
+// MLIR-NOT: fastmath<
 // MLIR: llvm.fadd {{.*}} : f32
 
 // LLVM-LABEL: @contract
