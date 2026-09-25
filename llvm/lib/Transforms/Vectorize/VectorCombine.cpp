@@ -1812,7 +1812,7 @@ static ScalarizationResult canScalarizeAccess(VectorType *VecTy, Value *Idx,
   ConstantRange ValidIndices(Zero, MaxElts);
   ConstantRange IdxRange(IntWidth, true);
 
-  if (isGuaranteedNotToBePoison(Idx, SQ.AC, SQ.CxtI, SQ.DT)) {
+  if (isGuaranteedNotToBePoison(Idx, SQ.AC, SQ.CtxI, SQ.DT)) {
     if (ValidIndices.contains(
             computeConstantRange(Idx, /*ForSigned=*/false, SQ)))
       return ScalarizationResult::safe();
@@ -5302,7 +5302,7 @@ static bool isKnownNonPositive(const Value *V, const SimplifyQuery &SQ,
     return false;
 
   auto NumSignBits = [&](const Value *X) {
-    return ComputeNumSignBits(X, SQ.DL, SQ.AC, SQ.CxtI, SQ.DT);
+    return ComputeNumSignBits(X, SQ.DL, SQ.AC, SQ.CtxI, SQ.DT);
   };
   if (NumSignBits(V) == V->getType()->getScalarSizeInBits())
     return true;
@@ -5930,8 +5930,10 @@ bool VectorCombine::shrinkType(Instruction &I) {
     std::swap(Op0, Op1);
   Value *NewBinOp =
       Builder.CreateBinOp((Instruction::BinaryOps)I.getOpcode(), Op0, Op1);
-  cast<Instruction>(NewBinOp)->copyIRFlags(&I);
-  cast<Instruction>(NewBinOp)->copyMetadata(I);
+  if (auto *NewBinOpI = dyn_cast<Instruction>(NewBinOp)) {
+    NewBinOpI->copyIRFlags(&I);
+    NewBinOpI->copyMetadata(I);
+  }
   Value *NewZExtr = Builder.CreateZExt(NewBinOp, BigTy);
   replaceValue(I, *NewZExtr);
   return true;

@@ -2,7 +2,7 @@
 
 ! CHECK-LABEL: func.func @_QQmain
 use ieee_arithmetic
-! CHECK:     %[[X:.*]] = fir.alloca f32 {bindc_name = "x", uniq_name = "_QFEx"}
+! CHECK:     %[[X:.*]] = fir.alloca f32 <{bindc_name = "x", uniq_name = "_QFEx"}>
 ! CHECK:     %[[XDECL:.*]]:2 = hlfir.declare %[[X]] {uniq_name = "_QFEx"}
 ! CHECK:     %cst = arith.constant -2.000000e+00 : f32
 ! CHECK:     hlfir.assign %cst to %[[XDECL]]#0 : f32, !fir.ref<f32>

@@ -865,15 +865,20 @@ llvm.func @nvvm_match_sync(%mask: i32, %val32: i32, %val64: i64) {
 
 // -----
 // CHECK-LABEL: @nvvm_st_bulk
-llvm.func @nvvm_st_bulk(%addr_gen: !llvm.ptr, %addr_shared: !llvm.ptr<3>, %size: i64) {
-  // CHECK: call void @llvm.nvvm.st.bulk(ptr %{{.*}}, i64 %{{.*}}, i64 0)
-  nvvm.st.bulk %addr_gen, size = %size : !llvm.ptr
-  // CHECK: call void @llvm.nvvm.st.bulk.shared.cta(ptr addrspace(3) %{{.*}}, i64 %{{.*}}, i64 0)
-  nvvm.st.bulk %addr_shared, size = %size: !llvm.ptr<3>
-  // CHECK: call void @llvm.nvvm.st.bulk(ptr %{{.*}}, i64 %{{.*}}, i64 0)
-  nvvm.st.bulk %addr_gen, size = %size, init = 0 : !llvm.ptr
-  // CHECK: call void @llvm.nvvm.st.bulk.shared.cta(ptr addrspace(3) %{{.*}}, i64 %{{.*}}, i64 0)
-  nvvm.st.bulk %addr_shared, size = %size, init = 0: !llvm.ptr<3>
+llvm.func @nvvm_st_bulk(%addr_gen: !llvm.ptr, %addr_shared: !llvm.ptr<3>, %size32: i32, %size: i64) {
+  // CHECK: call void @llvm.nvvm.st.bulk.p0.i32(ptr %{{.*}}, i32 %{{.*}}, i64 0)
+  nvvm.st.bulk %addr_gen, size = %size32 : !llvm.ptr, i32
+  // CHECK: call void @llvm.nvvm.st.bulk.p3.i32(ptr addrspace(3) %{{.*}}, i32 %{{.*}}, i64 0)
+  nvvm.st.bulk %addr_shared, size = %size32 : !llvm.ptr<3>, i32
+
+  // CHECK: call void @llvm.nvvm.st.bulk.p0.i64(ptr %{{.*}}, i64 %{{.*}}, i64 0)
+  nvvm.st.bulk %addr_gen, size = %size : !llvm.ptr, i64
+  // CHECK: call void @llvm.nvvm.st.bulk.p3.i64(ptr addrspace(3) %{{.*}}, i64 %{{.*}}, i64 0)
+  nvvm.st.bulk %addr_shared, size = %size: !llvm.ptr<3>, i64
+  // CHECK: call void @llvm.nvvm.st.bulk.p0.i64(ptr %{{.*}}, i64 %{{.*}}, i64 0)
+  nvvm.st.bulk %addr_gen, size = %size, init = 0 : !llvm.ptr, i64
+  // CHECK: call void @llvm.nvvm.st.bulk.p3.i64(ptr addrspace(3) %{{.*}}, i64 %{{.*}}, i64 0)
+  nvvm.st.bulk %addr_shared, size = %size, init = 0 : !llvm.ptr<3>, i64
   llvm.return
 }
 

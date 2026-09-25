@@ -16,7 +16,7 @@ on:
 
 jobs:
   greeter:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       pull-requests: write
     container:
@@ -54,7 +54,7 @@ jobs:
     environment:
       name: main-branch-only
       deployment: false
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     # Ignore PRs with more than 10 commits.  Pull requests with a lot of
     # commits tend to be accidents usually when someone made a mistake while trying
     # to rebase.  We want to ignore these pull requests to avoid excessive

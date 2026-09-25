@@ -3406,7 +3406,7 @@ PreparePackForExpansion(Sema &S, const CXXBaseSpecifier &Base,
       // that required a substituion first.
       bool SawPackTypes =
           llvm::any_of(Unexpanded, [](UnexpandedParameterPack P) {
-            return P.first.dyn_cast<const SubstBuiltinTemplatePackType *>();
+            return isa<const SubstBuiltinTemplatePackType *>(P.first);
           });
       if (!SawPackTypes) {
         Info.Expand = false;

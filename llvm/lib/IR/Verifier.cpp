@@ -428,6 +428,8 @@ private:
   void visitExtractElementInst(ExtractElementInst &EI);
   void visitInsertElementInst(InsertElementInst &EI);
   void visitShuffleVectorInst(ShuffleVectorInst &EI);
+  void visitBitInsertInst(BitInsertInst &BII);
+  void visitBitExtractInst(BitExtractInst &BEI);
   void visitVAArgInst(VAArgInst &VAA) { visitInstruction(VAA); }
   void visitCallInst(CallInst &CI);
   void visitInvokeInst(InvokeInst &II);
@@ -2351,6 +2353,10 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
       // used on the stack.
       Check(!ByValTy->containsNonLocalTargetExtType(),
             "'byval' argument has illegal target extension type", V);
+      // The copy is placed in the caller's frame, which needs its size at
+      // compile time.
+      Check(!ByValTy->isScalableTy(),
+            "scalable 'byval' arguments are unsupported", V);
       Check(DL.getTypeAllocSize(ByValTy).getKnownMinValue() < (1ULL << 32),
             "huge 'byval' arguments are unsupported", V);
     }
@@ -4580,6 +4586,26 @@ void Verifier::visitShuffleVectorInst(ShuffleVectorInst &SV) {
                                            SV.getShuffleMask()),
         "Invalid shufflevector operands!", &SV);
   visitInstruction(SV);
+}
+
+void Verifier::visitBitInsertInst(BitInsertInst &BII) {
+  if (const char *Reason = BitInsertInst::areInvalidOperands(
+          BII.getOperand(0), BII.getOperand(1), BII.getOperand(2)))
+    Check(false, Reason, &BII);
+  Check(DL.getTypeSizeInBits(BII.getOperand(0)->getType()) >=
+            DL.getTypeSizeInBits(BII.getOperand(1)->getType()),
+        "bitinsert val type cannot be wider than base type!", &BII);
+  visitInstruction(BII);
+}
+
+void Verifier::visitBitExtractInst(BitExtractInst &BEI) {
+  if (const char *Reason = BitExtractInst::areInvalidOperands(
+          BEI.getType(), BEI.getOperand(0), BEI.getOperand(1)))
+    Check(false, Reason, &BEI);
+  Check(DL.getTypeSizeInBits(BEI.getType()) <=
+            DL.getTypeSizeInBits(BEI.getOperand(0)->getType()),
+        "bitextract result type cannot be wider than source type!", &BEI);
+  visitInstruction(BEI);
 }
 
 void Verifier::visitGetElementPtrInst(GetElementPtrInst &GEP) {
@@ -7055,6 +7081,23 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
               "llvm.speculative.load oracle function argument type mismatch",
               &Call);
     }
+    break;
+  }
+  case Intrinsic::vector_repeat: {
+    auto *ResultTy = dyn_cast<ScalableVectorType>(Call.getType());
+    auto *ArgTy = dyn_cast<FixedVectorType>(Call.getArgOperand(0)->getType());
+
+    Check(ArgTy, "vector_repeat argument must be a fixed-length vector.",
+          &Call);
+    Check(ResultTy, "vector_repeat result must be a scalable vector.", &Call);
+    Check(ResultTy->getElementType() == ArgTy->getElementType(),
+          "vector_repeat argument and result must have the same element "
+          "type.",
+          &Call);
+    Check(ArgTy->getNumElements() == ResultTy->getMinNumElements(),
+          "vector_repeat argument and result must have the same minimum "
+          "element count.",
+          &Call);
     break;
   }
   case Intrinsic::vector_insert: {

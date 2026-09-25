@@ -1535,6 +1535,18 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
       return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index,
                                       Signature);
     break;
+  case llvm::dxbc::PSV::SemanticKind::InstanceID:
+    assert(Stage == llvm::Triple::Vertex &&
+           "SV_InstanceID is in an unavailable stage and should have been "
+           "diagnosed by Sema");
+    if (CGM.getTarget().getTriple().isSPIRV())
+      return createSPIRVBuiltinLoad(B, CGM.getModule(), Type,
+                                    Semantic->getAttrName()->getName(),
+                                    /* BuiltIn::InstanceIndex */ 43);
+    if (CGM.getTarget().getTriple().isDXIL())
+      return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index,
+                                      Signature);
+    break;
   default:
     break;
   }

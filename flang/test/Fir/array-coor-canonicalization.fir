@@ -98,7 +98,7 @@ func.func @_QPtest3(%arg0: !fir.box<!fir.array<?x?xi32>> {fir.bindc_name = "u"})
 // CHECK-LABEL:   func.func @_QPtest4() {
 // CHECK:           %[[VAL_1:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_3:.*]] = arith.constant 100 : index
-// CHECK:           %[[VAL_4:.*]] = fir.alloca !fir.array<100x100x100xi32> {bindc_name = "u", uniq_name = "_QFtest4Eu"}
+// CHECK:           %[[VAL_4:.*]] = fir.alloca !fir.array<100x100x100xi32> <{bindc_name = "u", uniq_name = "_QFtest4Eu"}>
 // CHECK:           %[[VAL_5:.*]] = fir.shape %[[VAL_3]], %[[VAL_3]], %[[VAL_3]] : (index, index, index) -> !fir.shape<3>
 // CHECK:           %[[VAL_6:.*]] = fir.declare %[[VAL_4]](%[[VAL_5]]) {uniq_name = "_QFtest4Eu"} : (!fir.ref<!fir.array<100x100x100xi32>>, !fir.shape<3>) -> !fir.ref<!fir.array<100x100x100xi32>>
 // CHECK:           %[[VAL_8:.*]] = fir.slice

@@ -1105,7 +1105,7 @@ isNoWrap(PredicatedScalarEvolution &PSE, const SCEVAddRecExpr *AR, Value *Ptr,
          std::optional<int64_t> Stride = std::nullopt,
          SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr) {
   // FIXME: This should probably only return true for NUW.
-  if (any(AR->getNoWrapFlags(SCEV::NoWrapMask)))
+  if (any(AR->getNoWrapFlags(SCEV::FlagsMask)))
     return true;
 
   // An nusw getelementptr that is an AddRec cannot wrap. If it would wrap,

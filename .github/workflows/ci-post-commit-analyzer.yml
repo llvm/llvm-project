@@ -34,7 +34,7 @@ jobs:
     if: >-
       github.repository_owner == 'llvm' &&
       github.event.action != 'closed'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     container:
       image: ghcr.io/llvm/ci-ubuntu-26.04:latest@sha256:7ac659feb90ac48dd8676e4eb305b9aa5b31fc8b329b7e39379c38af06efc6e1
     env:

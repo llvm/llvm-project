@@ -12,9 +12,9 @@
 // CHECK:           %[[VAL_2:.*]] = arith.constant true
 // CHECK:           %[[VAL_3:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_4:.*]] = arith.constant 0 : index
-// CHECK:           %[[VAL_5:.*]] = fir.alloca !fir.array<10xi64> {bindc_name = ".rt.arrayctor.vector"}
-// CHECK:           %[[VAL_6:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<1x!fir.char<1,?>>>> {bindc_name = ".tmp.arrayctor"}
-// CHECK:           %[[VAL_7:.*]] = fir.alloca !fir.box<!fir.heap<!fir.char<1,?>>> {bindc_name = "w", uniq_name = "_QFtest1Ew"}
+// CHECK:           %[[VAL_5:.*]] = fir.alloca !fir.array<10xi64> <{bindc_name = ".rt.arrayctor.vector"}>
+// CHECK:           %[[VAL_6:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<1x!fir.char<1,?>>>> <{bindc_name = ".tmp.arrayctor"}>
+// CHECK:           %[[VAL_7:.*]] = fir.alloca !fir.box<!fir.heap<!fir.char<1,?>>> <{bindc_name = "w", uniq_name = "_QFtest1Ew"}>
 // CHECK:           %[[VAL_8:.*]] = fir.zero_bits !fir.heap<!fir.char<1,?>>
 // CHECK:           %[[VAL_9:.*]] = fir.embox %[[VAL_8]] typeparams %[[VAL_4]] : (!fir.heap<!fir.char<1,?>>, index) -> !fir.box<!fir.heap<!fir.char<1,?>>>
 // CHECK:           fir.store %[[VAL_9]] to %[[VAL_7]] : !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
@@ -51,7 +51,7 @@
 // CHECK:           %[[VAL_38:.*]] = fir.insert_value %[[VAL_37]], %[[REBOX]], [0 : index] : (tuple<!fir.box<!fir.heap<!fir.array<1x!fir.char<1,?>>>>, i1>, !fir.box<!fir.heap<!fir.array<1x!fir.char<1,?>>>>) -> tuple<!fir.box<!fir.heap<!fir.array<1x!fir.char<1,?>>>>, i1>
 // CHECK:           %[[VAL_39:.*]] = fir.box_elesize %[[VAL_35]] : (!fir.box<!fir.heap<!fir.array<1x!fir.char<1,?>>>>) -> index
 // CHECK:           %[[VAL_40:.*]] = fir.shape %[[VAL_3]] : (index) -> !fir.shape<1>
-// CHECK:           %[[VAL_41:.*]] = fir.allocmem !fir.array<1x!fir.char<1,?>>(%[[VAL_39]] : index) {bindc_name = ".tmp.array", uniq_name = ""}
+// CHECK:           %[[VAL_41:.*]] = fir.allocmem !fir.array<1x!fir.char<1,?>>(%[[VAL_39]] : index) <{bindc_name = ".tmp.array", uniq_name = ""}>
 // CHECK:           %[[VAL_42:.*]]:2 = hlfir.declare %[[VAL_41]](%[[VAL_40]]) typeparams %[[VAL_39]] {uniq_name = ".tmp.array"} : (!fir.heap<!fir.array<1x!fir.char<1,?>>>, !fir.shape<1>, index) -> (!fir.box<!fir.array<1x!fir.char<1,?>>>, !fir.heap<!fir.array<1x!fir.char<1,?>>>)
 // CHECK:           %[[VAL_43:.*]] = arith.constant true
 // CHECK:           %[[VAL_44:.*]] = arith.constant 1 : index

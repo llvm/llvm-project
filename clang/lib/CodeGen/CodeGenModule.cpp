@@ -1534,7 +1534,7 @@ void CodeGenModule::Release() {
   // non-empty value.
   if (StringRef ABIStr = Target.getABI();
       !ABIStr.empty() && (T.isARM() || T.isThumb() || T.isRISCV() ||
-                          T.isPPC() || T.isLoongArch())) {
+                          T.isPPC() || T.isLoongArch() || T.isWasm())) {
     getModule().addModuleFlag(llvm::Module::Error, "target-abi",
                               llvm::MDString::get(VMContext, ABIStr));
   }
