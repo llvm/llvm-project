@@ -111,27 +111,54 @@ struct TestInt {
   }
 };
 
-template <class Iter1, class Iter2>
-struct TestArrayInt3 {
-  template <class ExecutionPolicy>
-  void operator()(ExecutionPolicy&& policy) {
-    std::array<std::array<int, 3>, 3> a = {{{0, 1, 2}, {3, 4, 5}, {6, 7, 8}}}, a0 = a;
-    std::array<std::array<int, 3>, 3> b = {{{9, 8, 7}, {6, 5, 4}, {3, 2, 1}}}, b0 = b;
-    std::swap_ranges(policy, Iter1(a.data()), Iter1(a.data() + a.size()), Iter2(b.data()));
-    assert(a == b0);
-    assert(b == a0);
-  }
+struct SwappableNotMovable {
+  SwappableNotMovable(int value) : value_(value) {}
+  SwappableNotMovable(const SwappableNotMovable&)            = delete;
+  SwappableNotMovable& operator=(const SwappableNotMovable&) = delete;
+  int value() const { return value_; }
+  friend void swap(SwappableNotMovable& lhs, SwappableNotMovable& rhs) noexcept { std::swap(lhs.value_, rhs.value_); }
+
+private:
+  int value_;
 };
 
 template <class Iter1, class Iter2>
-struct TestUniquePtr {
+struct TestSwappableNotMovable {
   template <class ExecutionPolicy>
   void operator()(ExecutionPolicy&& policy) {
-    std::unique_ptr<int> a[] = {std::make_unique<int>(1), std::make_unique<int>(2), std::make_unique<int>(3)};
-    std::unique_ptr<int> b[] = {std::make_unique<int>(4), std::make_unique<int>(5), std::make_unique<int>(6)};
+    SwappableNotMovable a[] = {1, 2, 3};
+    SwappableNotMovable b[] = {4, 5, 6};
     std::swap_ranges(policy, Iter1(std::begin(a)), Iter1(std::end(a)), Iter2(std::begin(b)));
-    assert(*a[0] == 4 && *a[1] == 5 && *a[2] == 6);
-    assert(*b[0] == 1 && *b[1] == 2 && *b[2] == 3);
+    assert(a[0].value() == 4 && a[1].value() == 5 && a[2].value() == 6);
+    assert(b[0].value() == 1 && b[1].value() == 2 && b[2].value() == 3);
+  }
+};
+
+struct MovableNotCopiable {
+  MovableNotCopiable(int value) : value_(value) {}
+  MovableNotCopiable(const MovableNotCopiable&)            = delete;
+  MovableNotCopiable& operator=(const MovableNotCopiable&) = delete;
+  MovableNotCopiable(MovableNotCopiable&& other) : value_(other.value_) { other.value_ = -1; }
+  MovableNotCopiable& operator=(MovableNotCopiable&& other) {
+    value_       = other.value_;
+    other.value_ = -1;
+    return *this;
+  }
+  int value() const { return value_; }
+
+private:
+  int value_;
+};
+
+template <class Iter1, class Iter2>
+struct TestMovableNotCopiable {
+  template <class ExecutionPolicy>
+  void operator()(ExecutionPolicy&& policy) {
+    MovableNotCopiable a[] = {1, 2, 3};
+    MovableNotCopiable b[] = {4, 5, 6};
+    std::swap_ranges(policy, Iter1(std::begin(a)), Iter1(std::end(a)), Iter2(std::begin(b)));
+    assert(a[0].value() == 4 && a[1].value() == 5 && a[2].value() == 6);
+    assert(b[0].value() == 1 && b[1].value() == 2 && b[2].value() == 3);
   }
 };
 
@@ -142,17 +169,19 @@ int main(int, char**) {
                         types::forward_iterator_list<int*>{},
                         TestIteratorWithPolicies<types::partial_instantiation<TestInt, Iter>::template apply>{});
                   }});
-  types::for_each(types::forward_iterator_list<std::array<int, 3>*>{}, types::apply_type_identity{[](auto v) {
-                    using Iter = typename decltype(v)::type;
-                    types::for_each(
-                        types::forward_iterator_list<std::array<int, 3>*>{},
-                        TestIteratorWithPolicies<types::partial_instantiation<TestArrayInt3, Iter>::template apply>{});
-                  }});
-  types::for_each(types::forward_iterator_list<std::unique_ptr<int>*>{}, types::apply_type_identity{[](auto v) {
-                    using Iter = typename decltype(v)::type;
-                    types::for_each(
-                        types::forward_iterator_list<std::unique_ptr<int>*>{},
-                        TestIteratorWithPolicies<types::partial_instantiation<TestUniquePtr, Iter>::template apply>{});
-                  }});
+  types::for_each(
+      types::forward_iterator_list<SwappableNotMovable*>{}, types::apply_type_identity{[](auto v) {
+        using Iter = typename decltype(v)::type;
+        types::for_each(
+            types::forward_iterator_list<SwappableNotMovable*>{},
+            TestIteratorWithPolicies<types::partial_instantiation<TestSwappableNotMovable, Iter>::template apply>{});
+      }});
+  types::for_each(
+      types::forward_iterator_list<MovableNotCopiable*>{}, types::apply_type_identity{[](auto v) {
+        using Iter = typename decltype(v)::type;
+        types::for_each(
+            types::forward_iterator_list<MovableNotCopiable*>{},
+            TestIteratorWithPolicies<types::partial_instantiation<TestMovableNotCopiable, Iter>::template apply>{});
+      }});
   return 0;
 }
