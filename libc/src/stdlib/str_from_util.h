@@ -35,15 +35,13 @@ using storage_type = typename fputil::FPBits<T>::StorageType;
 template <typename T, printf_core::OverflowMode overflow_mode>
 LIBC_INLINE int strfromfloat_convert(printf_core::Writer<overflow_mode> *writer,
                                      const char *__restrict format, T fp) {
-  printf_core::FormatSection section;
+  printf_core::FormatSection section = {};
   size_t cur_pos = 0;
 
   if (format[cur_pos] == '%') {
-    section.has_conv = true;
     ++cur_pos;
 
     // handle precision
-    section.precision = -1;
     if (format[cur_pos] == '.') {
       ++cur_pos;
       section.precision = 0;
@@ -57,23 +55,10 @@ LIBC_INLINE int strfromfloat_convert(printf_core::Writer<overflow_mode> *writer,
       }
     }
 
-    section.conv_name = format[cur_pos];
-    switch (format[cur_pos]) {
-    case 'a':
-    case 'A':
-    case 'e':
-    case 'E':
-    case 'f':
-    case 'F':
-    case 'g':
-    case 'G':
-      break;
-    default:
-      section.has_conv = false;
-      break;
-    }
-  } else {
-    section.has_conv = false;
+    char n = format[cur_pos];
+    section.conv_name = n;
+    section.has_conv = n == 'f' || n == 'F' || n == 'e' || n == 'E' ||
+                       n == 'a' || n == 'A' || n == 'g' || n == 'G';
   }
 
   if (!section.has_conv)
