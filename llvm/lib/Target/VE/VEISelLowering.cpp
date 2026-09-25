@@ -42,6 +42,7 @@ using namespace llvm;
 // Calling Convention Implementation
 //===----------------------------------------------------------------------===//
 
+#define GET_CALLING_CONV_IMPL
 #include "VEGenCallingConv.inc"
 
 CCAssignFn *getReturnCC(CallingConv::ID CallConv) {
@@ -194,7 +195,7 @@ void VETargetLowering::initSPUActions() {
     LegalizeAction Act = (IntVT == MVT::i32) ? Promote : Legal;
     setOperationAction(ISD::BITREVERSE, IntVT, Act);
     setOperationAction(ISD::CTLZ, IntVT, Act);
-    setOperationAction(ISD::CTLZ_ZERO_UNDEF, IntVT, Act);
+    setOperationAction(ISD::CTLZ_ZERO_POISON, IntVT, Act);
     setOperationAction(ISD::CTPOP, IntVT, Act);
 
     // VE has only 64 bits instructions which work as i64 AND/OR/XOR operations.
@@ -1170,11 +1171,12 @@ SDValue VETargetLowering::lowerATOMIC_SWAP(SDValue Op,
     SDValue Aligned =
         DAG.getNode(ISD::AND, DL, Ptr.getValueType(),
                     {Ptr, DAG.getSignedConstant(-4, DL, MVT::i64)});
-    SDValue TS1AM = DAG.getAtomic(VEISD::TS1AM, DL, N->getMemoryVT(),
-                                  DAG.getVTList(Op.getNode()->getValueType(0),
-                                                Op.getNode()->getValueType(1)),
-                                  {N->getChain(), Aligned, Flag, NewVal},
-                                  N->getMemOperand());
+    SDValue TS1AM =
+        DAG.getMemIntrinsicNode(VEISD::TS1AM, DL,
+                                DAG.getVTList(Op.getNode()->getValueType(0),
+                                              Op.getNode()->getValueType(1)),
+                                {N->getChain(), Aligned, Flag, NewVal},
+                                N->getMemoryVT(), N->getMemOperand());
 
     SDValue Result = finalizeTS1AM(Op, DAG, TS1AM, Bits);
     SDValue Chain = TS1AM.getValue(1);
@@ -1190,11 +1192,12 @@ SDValue VETargetLowering::lowerATOMIC_SWAP(SDValue Op,
     SDValue Aligned =
         DAG.getNode(ISD::AND, DL, Ptr.getValueType(),
                     {Ptr, DAG.getSignedConstant(-4, DL, MVT::i64)});
-    SDValue TS1AM = DAG.getAtomic(VEISD::TS1AM, DL, N->getMemoryVT(),
-                                  DAG.getVTList(Op.getNode()->getValueType(0),
-                                                Op.getNode()->getValueType(1)),
-                                  {N->getChain(), Aligned, Flag, NewVal},
-                                  N->getMemOperand());
+    SDValue TS1AM =
+        DAG.getMemIntrinsicNode(VEISD::TS1AM, DL,
+                                DAG.getVTList(Op.getNode()->getValueType(0),
+                                              Op.getNode()->getValueType(1)),
+                                {N->getChain(), Aligned, Flag, NewVal},
+                                N->getMemoryVT(), N->getMemOperand());
 
     SDValue Result = finalizeTS1AM(Op, DAG, TS1AM, Bits);
     SDValue Chain = TS1AM.getValue(1);

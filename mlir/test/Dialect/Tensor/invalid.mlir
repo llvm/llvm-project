@@ -404,7 +404,7 @@ func.func @illegal_collapsing_reshape_mixed_tensor_2(%arg0 : tensor<?x4x5xf32>)
 // -----
 
 func.func @rank(%0: f32) {
-  // expected-error@+1 {{'tensor.rank' op operand #0 must be tensor of any type values}}
+  // expected-error@+1 {{'tensor.rank' op operand #0 must be tensor of any non-token type values}}
   "tensor.rank"(%0): (f32)->index
   return
 }
@@ -695,6 +695,14 @@ func.func @test_empty_reassociation(%arg0: tensor<1x?xf32>) -> tensor<?x10xf32> 
   // expected-error@below {{'tensor.collapse_shape' op reassociation indices must not be empty}}
   %0 = tensor.collapse_shape %arg0 [[0, 1], []] : tensor<1x?xf32> into tensor<?x10xf32>
   return %0 : tensor<?x10xf32>
+}
+
+// -----
+
+func.func @expand_shape_empty_reassociation(%arg0: tensor<4xf32>) -> tensor<4xf32> {
+  // expected-error@below {{'tensor.expand_shape' op reassociation indices must not be empty}}
+  %0 = tensor.expand_shape %arg0 [[]] output_shape [4] : tensor<4xf32> into tensor<4xf32>
+  return %0 : tensor<4xf32>
 }
 
 // -----

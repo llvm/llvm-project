@@ -121,8 +121,8 @@ enum LiveRegs : uint8_t {
 /// Holds the virtual registers live physical registers have been saved to.
 struct PhysRegSave {
   LiveRegs PhysLiveRegs;
-  Register StatusFlags = AArch64::NoRegister;
-  Register X0Save = AArch64::NoRegister;
+  Register StatusFlags = Register();
+  Register X0Save = Register();
 };
 
 /// Contains the needed ZA state (and live registers) at an instruction. That is
@@ -168,12 +168,12 @@ public:
 
   /// Get or create agnostic ZA buffer pointer in \p MF.
   Register getAgnosticZABufferPtr(MachineFunction &MF) {
-    if (AgnosticZABufferPtr != AArch64::NoRegister)
+    if (AgnosticZABufferPtr.isValid())
       return AgnosticZABufferPtr;
     Register BufferPtr =
         MF.getInfo<AArch64FunctionInfo>()->getEarlyAllocSMESaveBuffer();
     AgnosticZABufferPtr =
-        BufferPtr != AArch64::NoRegister
+        BufferPtr.isValid()
             ? BufferPtr
             : MF.getRegInfo().createVirtualRegister(&AArch64::GPR64RegClass);
     return AgnosticZABufferPtr;
@@ -192,13 +192,13 @@ public:
   bool needsSaveBuffer() const {
     assert(!(TPIDR2BlockFI && AgnosticZABufferPtr) &&
            "Cannot have both a TPIDR2 block and agnostic ZA buffer");
-    return TPIDR2BlockFI || AgnosticZABufferPtr != AArch64::NoRegister;
+    return TPIDR2BlockFI || AgnosticZABufferPtr.isValid();
   }
 
 private:
   std::optional<int> ZT0SaveFI;
   std::optional<int> TPIDR2BlockFI;
-  Register AgnosticZABufferPtr = AArch64::NoRegister;
+  Register AgnosticZABufferPtr = Register();
 };
 
 StringRef getZAStateString(ZAState State) {
@@ -439,6 +439,8 @@ static void setPhysLiveRegs(LiveRegUnits &LiveUnits, LiveRegs PhysLiveRegs) {
 
 [[maybe_unused]] bool isCallStartOpcode(unsigned Opc) {
   switch (Opc) {
+  case AArch64::BLR:
+  case AArch64::BLRA:
   case AArch64::TLSDESC_CALLSEQ:
   case AArch64::TLSDESC_AUTH_CALLSEQ:
   case AArch64::ADJCALLSTACKDOWN:
@@ -475,6 +477,9 @@ FunctionInfo MachineSMEABI::collectNeededZAStates(SMEAttrs SMEFnAttrs) {
     auto FirstTerminatorInsertPt = MBB.getFirstTerminator();
     auto FirstNonPhiInsertPt = MBB.getFirstNonPHI();
     for (MachineInstr &MI : reverse(MBB)) {
+      if (MI.isDebugInstr())
+        continue;
+
       MachineBasicBlock::iterator MBBI(MI);
       LiveUnits.stepBackward(MI);
       LiveRegs PhysLiveRegs = getPhysLiveRegs(LiveUnits);
@@ -490,7 +495,6 @@ FunctionInfo MachineSMEABI::collectNeededZAStates(SMEAttrs SMEFnAttrs) {
       auto [NeededState, InsertPt] = getInstNeededZAState(*TRI, MI, SMEFnAttrs);
       assert((InsertPt == MBBI || isCallStartOpcode(InsertPt->getOpcode())) &&
              "Unexpected state change insertion point!");
-      // TODO: Do something to avoid state changes where NZCV is live.
       if (MBBI == FirstTerminatorInsertPt)
         Block.PhysLiveRegsAtExit = PhysLiveRegs;
       if (MBBI == FirstNonPhiInsertPt)
@@ -583,6 +587,9 @@ MachineSMEABI::findStateChangeInsertionPoint(
   setPhysLiveRegs(LiveUnits, PhysLiveRegs);
   auto BestCandidate = std::make_pair(InsertPt, PhysLiveRegs);
   for (MachineBasicBlock::iterator I = InsertPt; I != PrevStateChangeI; --I) {
+    if (I->isDebugInstr())
+      continue;
+
     // Don't move before/into a call (which may have a state change before it).
     if (I->getOpcode() == TII->getCallFrameDestroyOpcode() || I->isCall())
       break;
@@ -778,13 +785,13 @@ void MachineSMEABI::restorePhyRegSave(const PhysRegSave &RegSave,
                                       MachineBasicBlock &MBB,
                                       MachineBasicBlock::iterator MBBI,
                                       DebugLoc DL) {
-  if (RegSave.StatusFlags != AArch64::NoRegister)
+  if (RegSave.StatusFlags.isValid())
     BuildMI(MBB, MBBI, DL, TII->get(AArch64::MSR))
         .addImm(AArch64SysReg::NZCV)
         .addReg(RegSave.StatusFlags)
         .addReg(AArch64::NZCV, RegState::ImplicitDefine);
 
-  if (RegSave.X0Save != AArch64::NoRegister)
+  if (RegSave.X0Save.isValid())
     BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::COPY),
             RegSave.PhysLiveRegs & LiveRegs::W0_HI ? AArch64::X0 : AArch64::W0)
         .addReg(RegSave.X0Save);
@@ -871,9 +878,9 @@ void MachineSMEABI::emitAllocateLazySaveBuffer(
   BuildMI(MBB, MBBI, DL, TII->get(AArch64::RDSVLI_XI), SVL).addImm(1);
 
   // 1. Allocate the lazy save buffer.
-  if (Buffer == AArch64::NoRegister) {
+  if (!Buffer.isValid()) {
     // TODO: On Windows, we allocate the lazy save buffer in SelectionDAG (so
-    // Buffer != AArch64::NoRegister). This is done to reuse the existing
+    // Buffer is valid). This is done to reuse the existing
     // expansions (which can insert stack checks). This works, but it means we
     // will always allocate the lazy save buffer (even if the function contains
     // no lazy saves). If we want to handle Windows here, we'll need to
@@ -1162,6 +1169,19 @@ void MachineSMEABI::emitStateChange(EmitContext &Context,
   }
 }
 
+/// Returns true if private ZA setup can be elided. This occurs when there is
+/// no instruction within the function that requires ZA to be active.
+static bool canElidePrivateZASetup(const FunctionInfo &FnInfo) {
+  for (const BlockInfo &BlockInfo : FnInfo.Blocks) {
+    for (const InstInfo &InstInfo : BlockInfo.Insts) {
+      if (InstInfo.NeededState == ZAState::ACTIVE ||
+          InstInfo.NeededState == ZAState::ACTIVE_ZT0_SAVED)
+        return false;
+    }
+  }
+  return true;
+}
+
 } // end anonymous namespace
 
 INITIALIZE_PASS(MachineSMEABI, "aarch64-machine-sme-abi", "Machine SME ABI",
@@ -1192,6 +1212,9 @@ bool MachineSMEABI::runOnMachineFunction(MachineFunction &MF) {
       getAnalysis<EdgeBundlesWrapperLegacy>().getEdgeBundles();
 
   FunctionInfo FnInfo = collectNeededZAStates(SMEFnAttrs);
+
+  if (SMEFnAttrs.hasPrivateZAInterface() && canElidePrivateZASetup(FnInfo))
+    return false;
 
   SmallVector<ZAState> BundleStates = assignBundleZAStates(Bundles, FnInfo);
 

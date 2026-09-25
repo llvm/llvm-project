@@ -53,7 +53,16 @@ struct OpenACCPointerLikeModel
                 mlir::Location loc, mlir::Value valueToStore,
                 mlir::TypedValue<mlir::acc::PointerLikeType> destPtr) const;
 
-  bool isDeviceData(mlir::Type pointer, mlir::Value var) const;
+  mlir::Value genCast(mlir::Type pointer, mlir::OpBuilder &builder,
+                      mlir::Location loc, mlir::Value value,
+                      mlir::Type resultType) const;
+
+  mlir::MemRefType getAsMemRefType(mlir::Type pointer,
+                                   mlir::ModuleOp module) const;
+
+  bool isDeviceAccessible(mlir::Type pointer, mlir::Value var) const;
+
+  bool isInDeviceMemory(mlir::Type pointer, mlir::Value var) const;
 };
 
 template <typename T>
@@ -84,16 +93,16 @@ struct OpenACCMappableModel
   genPrivateVariableInfo(mlir::Type type,
                          mlir::TypedValue<mlir::acc::MappableType> var) const;
 
-  mlir::Value generatePrivateInit(mlir::Type type, mlir::OpBuilder &builder,
-                                  mlir::Location loc,
-                                  mlir::TypedValue<mlir::acc::MappableType> var,
-                                  llvm::StringRef varName,
-                                  mlir::ValueRange extents, mlir::Value initVal,
-                                  mlir::acc::VariableInfoAttr varInfo,
-                                  bool &needsDestroy) const;
+  mlir::Value generatePrivateInit(
+      mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
+      mlir::TypedValue<mlir::acc::MappableType> var, llvm::StringRef varName,
+      mlir::ValueRange extents, mlir::Value initVal,
+      mlir::acc::VariableInfoAttr varInfo, bool &needsDestroy,
+      llvm::SmallVectorImpl<mlir::Value> &destroyValues) const;
 
   bool generatePrivateDestroy(mlir::Type type, mlir::OpBuilder &builder,
                               mlir::Location loc, mlir::Value privatized,
+                              mlir::ValueRange destroyValues,
                               mlir::ValueRange bounds,
                               mlir::acc::VariableInfoAttr varInfo) const;
 
@@ -112,7 +121,9 @@ struct OpenACCMappableModel
                         mlir::acc::ReductionOperator op,
                         mlir::Attribute fastmathFlags) const;
 
-  bool isDeviceData(mlir::Type type, mlir::Value var) const;
+  bool isDeviceAccessible(mlir::Type type, mlir::Value var) const;
+
+  bool isInDeviceMemory(mlir::Type type, mlir::Value var) const;
 };
 
 struct OpenACCReducibleLogicalModel

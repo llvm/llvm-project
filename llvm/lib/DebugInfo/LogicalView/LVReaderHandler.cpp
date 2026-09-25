@@ -14,8 +14,10 @@
 #include "llvm/DebugInfo/LogicalView/Core/LVCompare.h"
 #include "llvm/DebugInfo/LogicalView/Readers/LVCodeViewReader.h"
 #include "llvm/DebugInfo/LogicalView/Readers/LVDWARFReader.h"
+#include "llvm/DebugInfo/LogicalView/Readers/LVIRReader.h"
 #include "llvm/DebugInfo/PDB/Native/NativeSession.h"
 #include "llvm/DebugInfo/PDB/PDB.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/Object/COFF.h"
 
 using namespace llvm;
@@ -24,6 +26,8 @@ using namespace llvm::pdb;
 using namespace llvm::logicalview;
 
 #define DEBUG_TYPE "ReaderHandler"
+
+static constexpr StringRef IRFileFormatName = "LLVM IR";
 
 Error LVReaderHandler::process() {
   if (Error Err = createReaders())
@@ -37,11 +41,12 @@ Error LVReaderHandler::process() {
 }
 
 Error LVReaderHandler::createReader(StringRef Filename, LVReaders &Readers,
-                                    PdbOrObj &Input, StringRef FileFormatName,
+                                    InputHandle &Input,
+                                    StringRef FileFormatName,
                                     StringRef ExePath) {
   auto CreateOneReader = [&]() -> std::unique_ptr<LVReader> {
-    if (isa<ObjectFile *>(Input)) {
-      ObjectFile &Obj = *cast<ObjectFile *>(Input);
+    if (auto ObjPtrPtr = std::get_if<ObjectFile *>(&Input)) {
+      ObjectFile &Obj = **ObjPtrPtr;
       if (Obj.isCOFF()) {
         COFFObjectFile *COFF = cast<COFFObjectFile>(&Obj);
         return std::make_unique<LVCodeViewReader>(Filename, FileFormatName,
@@ -51,10 +56,19 @@ Error LVReaderHandler::createReader(StringRef Filename, LVReaders &Readers,
         return std::make_unique<LVDWARFReader>(Filename, FileFormatName, Obj,
                                                W);
     }
-    if (isa<PDBFile *>(Input)) {
-      PDBFile &Pdb = *cast<PDBFile *>(Input);
+    if (auto PdbPtrPtr = std::get_if<PDBFile *>(&Input)) {
+      PDBFile &Pdb = **PdbPtrPtr;
       return std::make_unique<LVCodeViewReader>(Filename, FileFormatName, Pdb,
                                                 W, ExePath);
+    }
+    if (auto Ir = std::get_if<IRObjectFile *>(&Input))
+      return std::make_unique<LVIRReader>(Filename, FileFormatName, *Ir, W);
+    if (auto MemBuf = std::get_if<MemoryBufferRef *>(&Input)) {
+      // If the filename extension is '.ll' create an IR reader.
+      constexpr StringRef IRFileExt = ".ll";
+      if (llvm::sys::path::extension(Filename) == IRFileExt)
+        return std::make_unique<LVIRReader>(Filename, IRFileFormatName, *MemBuf,
+                                            W);
     }
     return nullptr;
   };
@@ -190,11 +204,11 @@ Error LVReaderHandler::handleBuffer(LVReaders &Readers, StringRef Filename,
     return handleFile(Readers, PdbPath.get(), Filename);
   }
 
-  Expected<std::unique_ptr<Binary>> BinOrErr = createBinary(Buffer);
+  LLVMContext Context;
+  Expected<std::unique_ptr<Binary>> BinOrErr = createBinary(Buffer, &Context);
   if (errorToErrorCode(BinOrErr.takeError())) {
-    return createStringError(errc::not_supported,
-                             "Binary object format in '%s' is not supported.",
-                             Filename.str().c_str());
+    // Assume it is LLVM IR.
+    return handleObject(Readers, Filename, Buffer);
   }
   return handleObject(Readers, Filename, *BinOrErr.get());
 }
@@ -224,7 +238,7 @@ Error LVReaderHandler::handleMach(LVReaders &Readers, StringRef Filename,
     if (Expected<std::unique_ptr<MachOObjectFile>> MachOOrErr =
             ObjForArch.getAsObjectFile()) {
       MachOObjectFile &Obj = **MachOOrErr;
-      PdbOrObj Input = &Obj;
+      InputHandle Input = &Obj;
       if (Error Err =
               createReader(Filename, Readers, Input, Obj.getFileFormatName()))
         return Err;
@@ -244,15 +258,21 @@ Error LVReaderHandler::handleMach(LVReaders &Readers, StringRef Filename,
 
 Error LVReaderHandler::handleObject(LVReaders &Readers, StringRef Filename,
                                     Binary &Binary) {
-  if (PdbOrObj Input = dyn_cast<ObjectFile>(&Binary))
-    return createReader(Filename, Readers, Input,
-                        cast<ObjectFile *>(Input)->getFileFormatName());
+  if (ObjectFile *ObjFile = dyn_cast<ObjectFile>(&Binary)) {
+    InputHandle Input = ObjFile;
+    return createReader(Filename, Readers, Input, ObjFile->getFileFormatName());
+  }
 
   if (MachOUniversalBinary *Fat = dyn_cast<MachOUniversalBinary>(&Binary))
     return handleMach(Readers, Filename, *Fat);
 
   if (Archive *Arch = dyn_cast<Archive>(&Binary))
     return handleArchive(Readers, Filename, *Arch);
+
+  if (IRObjectFile *IRObjFile = dyn_cast<IRObjectFile>(&Binary)) {
+    InputHandle Input = IRObjFile;
+    return createReader(Filename, Readers, Input, "Bitcode IR");
+  }
 
   return createStringError(errc::not_supported,
                            "Binary object format in '%s' is not supported.",
@@ -268,12 +288,18 @@ Error LVReaderHandler::handleObject(LVReaders &Readers, StringRef Filename,
 
   std::unique_ptr<NativeSession> PdbSession;
   PdbSession.reset(static_cast<NativeSession *>(Session.release()));
-  PdbOrObj Input = &PdbSession->getPDBFile();
+  InputHandle Input = &PdbSession->getPDBFile();
   StringRef FileFormatName;
   size_t Pos = Buffer.find_first_of("\r\n");
   if (Pos)
     FileFormatName = Buffer.substr(0, Pos - 1);
   return createReader(Filename, Readers, Input, FileFormatName, ExePath);
+}
+
+Error LVReaderHandler::handleObject(LVReaders &Readers, StringRef Filename,
+                                    MemoryBufferRef Buffer) {
+  InputHandle Input = cast<MemoryBufferRef>(&Buffer);
+  return createReader(Filename, Readers, Input, IRFileFormatName);
 }
 
 Error LVReaderHandler::createReaders() {

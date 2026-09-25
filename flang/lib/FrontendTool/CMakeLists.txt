@@ -8,6 +8,7 @@ add_flang_library(flangFrontendTool
 
   LINK_LIBS
   flangFrontend
+  flangPasses
 
   LINK_COMPONENTS
   Option

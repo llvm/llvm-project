@@ -1,26 +1,28 @@
-ARG LLVM_VERSION=22.1.0
-# FIXME: Use "${LLVM_VERSION%%.*}" instead of "LLVM_VERSION_MAJOR" once we update runners to Ubuntu-26.04 with Buildah >= 1.37
-ARG LLVM_VERSION_MAJOR=22
+ARG LLVM_VERSION=23.1.0
 
-FROM docker.io/library/ubuntu:24.04 AS llvm-downloader
+FROM docker.io/library/ubuntu:26.04@sha256:61ebaa5cc23ca45450db85eac015435199ec569e28ec222ea13f2aed2110b8a6 AS llvm-downloader
 ARG LLVM_VERSION
-ARG LLVM_VERSION_MAJOR
 
 RUN apt-get update && \
     apt-get install -y wget xz-utils && \
-    wget -O llvm.tar.xz https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_VERSION}/LLVM-${LLVM_VERSION}-Linux-X64.tar.xz && \
+    wget --progress=dot:giga -O llvm.tar.xz https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_VERSION}/LLVM-${LLVM_VERSION}-Linux-X64.tar.xz && \
     mkdir -p /llvm-extract && \
     tar -xvJf llvm.tar.xz -C /llvm-extract \
         # Only unpack these tools to save space on Github runner.
-        LLVM-${LLVM_VERSION}-Linux-X64/bin/clang-${LLVM_VERSION_MAJOR} \
-        LLVM-${LLVM_VERSION}-Linux-X64/lib/clang/${LLVM_VERSION_MAJOR}/include \
+        LLVM-${LLVM_VERSION}-Linux-X64/bin/clang-${LLVM_VERSION%%.*} \
+        LLVM-${LLVM_VERSION}-Linux-X64/lib/clang/${LLVM_VERSION%%.*}/include \
         LLVM-${LLVM_VERSION}-Linux-X64/bin/clang-tidy \
         LLVM-${LLVM_VERSION}-Linux-X64/bin/clang-format \
         LLVM-${LLVM_VERSION}-Linux-X64/bin/git-clang-format && \
     rm llvm.tar.xz
 
+FROM docker.io/library/ubuntu:26.04@sha256:61ebaa5cc23ca45450db85eac015435199ec569e28ec222ea13f2aed2110b8a6 AS minimal
+# Create a new user with id 1001 as that is the user id that
+# Github Actions uses to perform the checkout action.
+RUN useradd gha -u 1001 -m -s /bin/bash
 
-FROM docker.io/library/ubuntu:24.04 AS base
+
+FROM minimal AS base
 ENV LLVM_SYSROOT=/opt/llvm
 ENV PATH=${LLVM_SYSROOT}/bin:${PATH}
 
@@ -38,9 +40,6 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# Create a new user with id 1001 as that is the user id that
-# Github Actions uses to perform the checkout action.
-RUN useradd gha -u 1001 -m -s /bin/bash
 RUN adduser gha sudo
 RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 # Don't set USER gha right away because we still need to install packages
@@ -49,13 +48,12 @@ RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
 FROM base AS ci-container-build-tools
 ARG LLVM_VERSION
-ARG LLVM_VERSION_MAJOR
 
-COPY --from=llvm-downloader /llvm-extract/LLVM-${LLVM_VERSION}-Linux-X64/bin/clang-${LLVM_VERSION_MAJOR} \
+COPY --from=llvm-downloader /llvm-extract/LLVM-${LLVM_VERSION}-Linux-X64/bin/clang-${LLVM_VERSION%%.*} \
                             ${LLVM_SYSROOT}/bin/
-COPY --from=llvm-downloader /llvm-extract/LLVM-${LLVM_VERSION}-Linux-X64/lib/clang/${LLVM_VERSION_MAJOR}/include \
-                            ${LLVM_SYSROOT}/lib/clang/${LLVM_VERSION_MAJOR}/include
-RUN ln -s ${LLVM_SYSROOT}/bin/clang-${LLVM_VERSION_MAJOR} ${LLVM_SYSROOT}/bin/clang && \
+COPY --from=llvm-downloader /llvm-extract/LLVM-${LLVM_VERSION}-Linux-X64/lib/clang/${LLVM_VERSION%%.*}/include \
+                            ${LLVM_SYSROOT}/lib/clang/${LLVM_VERSION%%.*}/include
+RUN ln -s ${LLVM_SYSROOT}/bin/clang-${LLVM_VERSION%%.*} ${LLVM_SYSROOT}/bin/clang && \
     ln -s ${LLVM_SYSROOT}/bin/clang ${LLVM_SYSROOT}/bin/clang++
 
 RUN apt-get update && \
@@ -79,7 +77,7 @@ COPY --from=llvm-downloader /llvm-extract/LLVM-${LLVM_VERSION}-Linux-X64/bin/cla
 
 # Install dependencies for 'pr-code-format.yml' job
 COPY llvm/utils/git/requirements_formatting.txt requirements_formatting.txt
-RUN pip install -r requirements_formatting.txt --break-system-packages && \
+RUN pip install --ignore-installed --require-hashes -r requirements_formatting.txt --break-system-packages && \
     rm requirements_formatting.txt
 USER gha
 WORKDIR /home/gha
@@ -87,7 +85,6 @@ WORKDIR /home/gha
 
 FROM ci-container-build-tools AS ci-container-code-lint
 ARG LLVM_VERSION
-ARG LLVM_VERSION_MAJOR
 
 COPY --from=llvm-downloader /llvm-extract/LLVM-${LLVM_VERSION}-Linux-X64/bin/clang-tidy \
                             ${LLVM_SYSROOT}/bin/
@@ -95,7 +92,7 @@ COPY clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py ${LLVM_SYSROOT}/bin/cl
 
 # Install dependencies for 'pr-code-lint.yml' job
 COPY llvm/utils/git/requirements_linting.txt requirements_linting.txt
-RUN pip install -r requirements_linting.txt --break-system-packages && \
+RUN pip install --require-hashes -r requirements_linting.txt --break-system-packages && \
     rm requirements_linting.txt
 USER gha
 WORKDIR /home/gha
@@ -113,3 +110,67 @@ RUN apt-get update && \
     universal-ctags && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
+
+FROM minimal AS ci-container-github-automation
+
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    python3-git \
+    python3-github && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+USER gha
+
+ADD github-automation.py /usr/local/bin/
+
+FROM docker.io/library/ubuntu:26.04@sha256:61ebaa5cc23ca45450db85eac015435199ec569e28ec222ea13f2aed2110b8a6 AS ids-builder
+ARG LLVM_VERSION
+
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y wget gpg python3 python3-pip git cmake
+
+RUN wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | gpg --dearmor -o /etc/apt/keyrings/llvm.gpg && \
+    echo "deb [signed-by=/etc/apt/keyrings/llvm.gpg] http://apt.llvm.org/resolute/ llvm-toolchain-resolute-${LLVM_VERSION%%.*} main" | tee /etc/apt/sources.list.d/llvm.list && \
+    apt-get update && \
+    apt-get install -y clang-${LLVM_VERSION%%.*} lld-${LLVM_VERSION%%.*} ninja-build libclang-${LLVM_VERSION%%.*}-dev
+
+COPY llvm/utils/git/requirements_formatting.txt requirements_formatting.txt
+RUN pip install --ignore-installed --require-hashes -r requirements_formatting.txt --break-system-packages && \
+    rm requirements_formatting.txt
+
+RUN git clone https://github.com/compnerd/ids && cd ids && \
+    git checkout 6d9b77c89107743159fccaea109e8feb81959844
+
+RUN cd ids && \
+    cmake -B ./build \
+      -S .\
+      -D CMAKE_BUILD_TYPE=Release \
+      -D CMAKE_C_COMPILER=clang-${LLVM_VERSION%%.*} \
+      -D CMAKE_CXX_COMPILER=clang++-${LLVM_VERSION%%.*} \
+      -D CMAKE_EXE_LINKER_FLAGS=-fuse-ld=lld \
+      -D LLVM_DIR=/usr/lib/llvm-${LLVM_VERSION%%.*}/lib/cmake/llvm/ \
+      -D Clang_DIR=/usr/lib/llvm-${LLVM_VERSION%%.*}/lib/cmake/clang/ \
+      -D FILECHECK_EXECUTABLE=$(which FileCheck-${LLVM_VERSION%%.*}) \
+      -D LIT_EXECUTABLE=$(which lit) \
+      -G Ninja && \
+    ninja -C ./build
+
+FROM ci-container-build-tools AS ci-container-ids-checks
+ARG LLVM_VERSION
+
+COPY llvm/utils/git/requirements.txt requirements.txt
+RUN pip install --require-hashes -r requirements.txt --break-system-packages && \
+    rm requirements.txt
+
+RUN apt-get update && \
+    apt-get install -y libz3-4 && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+COPY --from=ids-builder /ids/build/bin/idt \
+                        /usr/bin/idt
+# Copy over the LLVM SO since getting ids to statically link against the distro
+# provided libLLVM is difficult for now.
+# TODO(boomanaiden154): Get static linking working and remove this.
+COPY --from=ids-builder /usr/lib/llvm-${LLVM_VERSION%%.*}/lib/libLLVM.so.${LLVM_VERSION%%.*}.1 \
+                        /usr/lib/libLLVM.so.${LLVM_VERSION%%.*}.1

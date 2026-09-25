@@ -79,7 +79,9 @@ LIBC_INLINE float16 sinf16(float16 x) {
     return r.value();
 #endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
+#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
   int rounding = fputil::quick_get_round();
+#endif
 
   // Exhaustive tests show that for |x| <= 0x1.f4p-11, 1ULP rounding errors
   // occur. To fix this, the following apply:
@@ -88,6 +90,7 @@ LIBC_INLINE float16 sinf16(float16 x) {
     if (LIBC_UNLIKELY(x_abs == 0U))
       return x;
 
+#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
     // When x > 0, and rounding upward, sin(x) == x.
     // When x < 0, and rounding downward, sin(x) == x.
     if ((rounding == FE_UPWARD && xbits.is_pos()) ||
@@ -99,6 +102,10 @@ LIBC_INLINE float16 sinf16(float16 x) {
       x_u--;
       return FPBits(x_u).get_val();
     }
+#endif // !LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+
+    // TODO: what about the case with rounding nearest and we're in here?
+    // Previously, it's an UB
   }
 
   if (xbits.is_inf_or_nan()) {

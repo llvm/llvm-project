@@ -159,6 +159,8 @@ void *EHScopeStack::pushCleanup(CleanupKind Kind, size_t Size) {
   bool IsEHCleanup = Kind & EHCleanup;
   bool IsLifetimeMarker = Kind & LifetimeMarker;
   bool IsFakeUse = Kind & FakeUse;
+  bool IsSEHFinallyCleanup = Kind & SEHFinallyCleanup;
+  bool IsStackRestore = Kind & StackRestore;
 
   // Per C++ [except.terminate], it is implementation-defined whether none,
   // some, or all cleanups are called before std::terminate. Thus, when
@@ -183,6 +185,10 @@ void *EHScopeStack::pushCleanup(CleanupKind Kind, size_t Size) {
     Scope->setLifetimeMarker();
   if (IsFakeUse)
     Scope->setFakeUse();
+  if (IsSEHFinallyCleanup)
+    Scope->setSEHFinallyCleanup();
+  if (IsStackRestore)
+    Scope->setStackRestore();
 
   // With Windows -EHa, Invoke llvm.seh.scope.begin() for EHCleanup
   // If exceptions are disabled/ignored and SEH is not in use, then there is no
@@ -191,7 +197,8 @@ void *EHScopeStack::pushCleanup(CleanupKind Kind, size_t Size) {
   // consistent with MSVC's behavior, except in the presence of -EHa.
   // Check getInvokeDest() to generate llvm.seh.scope.begin() as needed.
   if (CGF->getLangOpts().EHAsynch && IsEHCleanup && !IsLifetimeMarker &&
-      CGF->getTarget().getCXXABI().isMicrosoft() && CGF->getInvokeDest())
+      !IsSEHFinallyCleanup && CGF->getTarget().getCXXABI().isMicrosoft() &&
+      CGF->getInvokeDest())
     CGF->EmitSehCppScopeBegin();
 
   return Scope->getCleanupBuffer();
@@ -784,7 +791,7 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough,
 
   // Under -EHa, invoke seh.scope.end() to mark scope end before dtor
   bool IsEHa = getLangOpts().EHAsynch && !Scope.isLifetimeMarker();
-  const EHPersonality &Personality = EHPersonality::get(*this);
+  bool IsSEHFinallyCleanup = Scope.isSEHFinallyCleanup();
   if (!RequiresNormalCleanup) {
     // Mark CPP scope end for passed-by-value Arg temp
     //   per Windows ABI which is "normally" Cleanup in callee
@@ -794,7 +801,7 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough,
       // block.
       if (NormalDeactivateOrigIP.isSet())
         Builder.restoreIP(NormalDeactivateOrigIP);
-      if (Personality.isMSVCXXPersonality() && Builder.GetInsertBlock())
+      if (Builder.GetInsertBlock() && !IsSEHFinallyCleanup)
         EmitSehCppScopeEnd();
       if (NormalDeactivateOrigIP.isSet())
         NormalDeactivateOrigIP = Builder.saveAndClearIP();
@@ -810,10 +817,10 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough,
 
       // mark SEH scope end for fall-through flow
       if (IsEHa && getInvokeDest()) {
-        if (Personality.isMSVCXXPersonality())
-          EmitSehCppScopeEnd();
-        else
+        if (Scope.isSEHFinallyCleanup())
           EmitSehTryScopeEnd();
+        else
+          EmitSehCppScopeEnd();
       }
 
       destroyOptimisticNormalEntry(*this, Scope);
@@ -852,10 +859,10 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough,
 
       // intercept normal cleanup to mark SEH scope end
       if (IsEHa && getInvokeDest()) {
-        if (Personality.isMSVCXXPersonality())
-          EmitSehCppScopeEnd();
-        else
+        if (Scope.isSEHFinallyCleanup())
           EmitSehTryScopeEnd();
+        else
+          EmitSehCppScopeEnd();
       }
 
       // III.  Figure out where we're going and build the cleanup
@@ -1055,7 +1062,8 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough,
       EHStack.pushTerminate();
       PushedTerminate = true;
     } else if (IsEHa && getInvokeDest()) {
-      EmitSehCppScopeEnd();
+      if (!IsSEHFinallyCleanup)
+        EmitSehCppScopeEnd();
     }
 
     // We only actually emit the cleanup code if the cleanup is either
@@ -1253,8 +1261,8 @@ static void SetupCleanupBlockActivation(CodeGenFunction &CGF,
   Address var = Scope.getActiveFlag();
   if (!var.isValid()) {
     CodeGenFunction::AllocaTrackerRAII AllocaTracker(CGF);
-    var = CGF.CreateTempAlloca(CGF.Builder.getInt1Ty(), CharUnits::One(),
-                               "cleanup.isactive");
+    var = CGF.CreateTempAlloca(CGF.Builder.getInt1Ty(), LangAS::Default,
+                               CharUnits::One(), "cleanup.isactive");
     Scope.setActiveFlag(var);
     Scope.AddAuxAllocas(AllocaTracker.Take());
 
@@ -1343,10 +1351,8 @@ static void EmitSehScope(CodeGenFunction &CGF,
 // Invoke a llvm.seh.scope.begin at the beginning of a CPP scope for -EHa
 void CodeGenFunction::EmitSehCppScopeBegin() {
   assert(getLangOpts().EHAsynch);
-  llvm::FunctionType *FTy =
-      llvm::FunctionType::get(CGM.VoidTy, /*isVarArg=*/false);
   llvm::FunctionCallee SehCppScope =
-      CGM.CreateRuntimeFunction(FTy, "llvm.seh.scope.begin");
+      CGM.getIntrinsic(llvm::Intrinsic::seh_scope_begin);
   EmitSehScope(*this, SehCppScope);
 }
 
@@ -1354,29 +1360,23 @@ void CodeGenFunction::EmitSehCppScopeBegin() {
 //   llvm.seh.scope.end is emitted before popCleanup, so it's "invoked"
 void CodeGenFunction::EmitSehCppScopeEnd() {
   assert(getLangOpts().EHAsynch);
-  llvm::FunctionType *FTy =
-      llvm::FunctionType::get(CGM.VoidTy, /*isVarArg=*/false);
   llvm::FunctionCallee SehCppScope =
-      CGM.CreateRuntimeFunction(FTy, "llvm.seh.scope.end");
+      CGM.getIntrinsic(llvm::Intrinsic::seh_scope_end);
   EmitSehScope(*this, SehCppScope);
 }
 
 // Invoke a llvm.seh.try.begin at the beginning of a SEH scope for -EHa
 void CodeGenFunction::EmitSehTryScopeBegin() {
   assert(getLangOpts().EHAsynch);
-  llvm::FunctionType *FTy =
-      llvm::FunctionType::get(CGM.VoidTy, /*isVarArg=*/false);
   llvm::FunctionCallee SehCppScope =
-      CGM.CreateRuntimeFunction(FTy, "llvm.seh.try.begin");
+      CGM.getIntrinsic(llvm::Intrinsic::seh_try_begin);
   EmitSehScope(*this, SehCppScope);
 }
 
 // Invoke a llvm.seh.try.end at the end of a SEH scope for -EHa
 void CodeGenFunction::EmitSehTryScopeEnd() {
   assert(getLangOpts().EHAsynch);
-  llvm::FunctionType *FTy =
-      llvm::FunctionType::get(CGM.VoidTy, /*isVarArg=*/false);
   llvm::FunctionCallee SehCppScope =
-      CGM.CreateRuntimeFunction(FTy, "llvm.seh.try.end");
+      CGM.getIntrinsic(llvm::Intrinsic::seh_try_end);
   EmitSehScope(*this, SehCppScope);
 }

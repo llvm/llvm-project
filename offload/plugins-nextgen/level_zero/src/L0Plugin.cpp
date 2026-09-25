@@ -26,9 +26,21 @@ using namespace llvm::omp::target;
 using namespace error;
 
 Expected<int32_t> LevelZeroPluginTy::findDevices() {
-  CALL_ZE_RET_ERROR(zeInit, ZE_INIT_FLAG_GPU_ONLY);
+  ze_result_t RC;
+  CALL_ZE(RC, zeInit, ZE_INIT_FLAG_GPU_ONLY);
+  if (RC != ZE_RESULT_SUCCESS) {
+    ODBG(OLDT_Init) << "Cannot initialize Level Zero library. Error: "
+                    << getZeErrorName(RC);
+    return 0;
+  }
+
   uint32_t NumDrivers = 0;
-  CALL_ZE_RET_ERROR(zeDriverGet, &NumDrivers, nullptr);
+  CALL_ZE(RC, zeDriverGet, &NumDrivers, nullptr);
+  if (RC != ZE_RESULT_SUCCESS) {
+    ODBG(OLDT_Init) << "Error getting number of drivers. Error: "
+                    << getZeErrorName(RC);
+    return 0;
+  }
   if (NumDrivers == 0) {
     ODBG(OLDT_Init) << "Cannot find any drivers.";
     return 0;
@@ -58,6 +70,7 @@ Expected<int32_t> LevelZeroPluginTy::findDevices() {
                       << ".";
       continue;
     }
+
     // We have a driver that supports at least one device.
     ContextList.emplace_back(*this, Driver, DriverId);
     auto &DrvInfo = ContextList.back();
@@ -122,8 +135,6 @@ Expected<int32_t> LevelZeroPluginTy::initImpl() {
 Error LevelZeroPluginTy::deinitImpl() {
   ODBG(OLDT_Deinit) << "Deinit Level0 plugin!";
   if (auto Err = ContextTLSTable.deinit())
-    return Err;
-  if (auto Err = DeviceTLSTable.deinit())
     return Err;
   for (auto &Context : ContextList)
     if (auto Err = Context.deinit())
@@ -212,23 +223,12 @@ Error LevelZeroPluginTy::syncBarrierImpl(omp_interop_val_t *Interop) {
     return Plugin::success();
 
   const auto L0 = static_cast<L0Interop::Property *>(Interop->rtl_property);
-  const auto device_id = Interop->device_id;
-  auto &l0Device = getDeviceFromId(device_id);
 
-  // We can synchronize both L0 & SYCL objects with the same ze command.
-  if (l0Device.useImmForInterop()) {
-    ODBG(OLDT_Sync) << "LevelZeroPluginTy::sync_barrier: Synchronizing "
-                    << Interop << " with ImmCmdList barrier";
-    auto ImmCmdList = L0->ImmCmdList;
+  ODBG(OLDT_Sync) << "LevelZeroPluginTy::sync_barrier: Synchronizing "
+                  << Interop << " with ImmCmdList barrier";
+  auto ImmCmdList = L0->ImmCmdList;
 
-    CALL_ZE_RET_ERROR(zeCommandListHostSynchronize, ImmCmdList,
-                      L0DefaultTimeout);
-  } else {
-    ODBG(OLDT_Sync) << "LevelZeroPluginTy::sync_barrier: Synchronizing "
-                    << Interop << " with queue synchronize";
-    auto CmdQueue = L0->CommandQueue;
-    CALL_ZE_RET_ERROR(zeCommandQueueSynchronize, CmdQueue, L0DefaultTimeout);
-  }
+  CALL_ZE_RET_ERROR(zeCommandListHostSynchronize, ImmCmdList, L0DefaultTimeout);
 
   return Plugin::success();
 }
@@ -243,35 +243,177 @@ Error LevelZeroPluginTy::asyncBarrierImpl(omp_interop_val_t *Interop) {
     return Plugin::success();
 
   const auto L0 = static_cast<L0Interop::Property *>(Interop->rtl_property);
-  const auto device_id = Interop->device_id;
   if (Interop->attrs.inorder)
     return Plugin::success();
 
-  auto &l0Device = getDeviceFromId(device_id);
-  if (l0Device.useImmForInterop()) {
-    ODBG(OLDT_Sync) << "LevelZeroPluginTy::async_barrier: Appending ImmCmdList "
-                    << "barrier to " << Interop;
-    auto ImmCmdList = L0->ImmCmdList;
-    CALL_ZE_RET_ERROR(zeCommandListAppendBarrier, ImmCmdList, nullptr, 0,
-                      nullptr);
-  } else {
-#if 0
-    // TODO: re-enable once we have a way to delay the CmdList reset .
-    ODBG(OLDT_Sync) << "LevelZeroPluginTy::async_barrier: Appending CmdList "
-                   << "barrier to " << Interop;
-    auto CmdQueue = L0->CommandQueue;
-    ze_command_list_handle_t CmdList = l0Device.getCmdList();
-    CALL_ZE_RET_ERROR(zeCommandListAppendBarrier, CmdList, nullptr, 0, nullptr);
-    CALL_ZE_RET_ERROR(zeCommandListClose, CmdList);
-    CALL_ZE_RET_ERROR(zeCommandQueueExecuteCommandLists, CmdQueue, 1, &CmdList,
-                      nullptr);
-    CALL_ZE_RET_ERROR(zeCommandListReset, CmdList);
-#else
-    return syncBarrierImpl(Interop);
-#endif
-  }
+  ODBG(OLDT_Sync) << "LevelZeroPluginTy::async_barrier: Appending ImmCmdList "
+                  << "barrier to " << Interop;
+  auto ImmCmdList = L0->ImmCmdList;
+  CALL_ZE_RET_ERROR(zeCommandListAppendBarrier, ImmCmdList, nullptr, 0,
+                    nullptr);
 
   return Plugin::success();
+}
+
+Error LevelZeroPluginContextTy::initAsyncInfoImpl(
+    GenericDeviceTy &Device, AsyncInfoWrapperTy &AsyncInfoWrapper) {
+  auto &L0Device = static_cast<L0DeviceTy &>(Device);
+  auto QueueOrErr = L0Device.getOrCreateQueue(AsyncInfoWrapper, this);
+  return QueueOrErr ? Plugin::success() : QueueOrErr.takeError();
+}
+
+Error LevelZeroPluginContextTy::deinit() {
+  if (auto Err = QueueCache.deinit())
+    return Err;
+  // Tear down allocators before their ze_context.
+  for (auto &KV : DeviceAllocators)
+    if (auto Err = KV.second->deinit())
+      return Err;
+  DeviceAllocators.clear();
+  if (HostAllocator) {
+    if (auto Err = HostAllocator->deinit())
+      return Err;
+    HostAllocator.reset();
+  }
+  if (OwnsZeContext && ZeContext) {
+    CALL_ZE_RET_ERROR(zeContextDestroy, ZeContext);
+    ZeContext = nullptr;
+    OwnsZeContext = false;
+  }
+  return Plugin::success();
+}
+
+Error LevelZeroPluginContextTy::initAllocators() {
+  const auto &Options = static_cast<LevelZeroPluginTy &>(Plugin).getOptions();
+  for (auto *D : Devices) {
+    auto &L0Device = static_cast<L0DeviceTy &>(*D);
+    auto Alloc = std::make_unique<MemAllocatorTy>();
+    if (auto Err = Alloc->initDevicePools(L0Device, Options, ZeContext))
+      return Err;
+    DeviceAllocators.try_emplace(&L0Device, std::move(Alloc));
+  }
+  if (Devices.empty())
+    return Plugin::success();
+  auto &First = static_cast<L0DeviceTy &>(*Devices.front());
+  HostAllocator = std::make_unique<MemAllocatorTy>();
+  if (auto Err =
+          HostAllocator->initHostPool(First.getL0Context(), Options, ZeContext))
+    return Err;
+  // Host MaxAllocSize = min over devices, matching L0ContextTy's driver pool.
+  for (auto *D : Devices)
+    HostAllocator->updateMaxAllocSize(static_cast<L0DeviceTy &>(*D));
+  return Plugin::success();
+}
+
+Expected<void *> LevelZeroPluginContextTy::allocate(GenericDeviceTy &Device,
+                                                    int64_t Size,
+                                                    void * /*HostPtr*/,
+                                                    TargetAllocTy Kind,
+                                                    size_t Alignment) {
+  MemAllocatorTy *Allocator = nullptr;
+  int32_t ResolvedKind = Kind;
+  if (Kind == TARGET_ALLOC_HOST) {
+    if (!HostAllocator)
+      return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                           "host allocator not initialized");
+    Allocator = HostAllocator.get();
+  } else {
+    if (ResolvedKind == TARGET_ALLOC_DEFAULT)
+      ResolvedKind = TARGET_ALLOC_DEVICE;
+    auto &L0Device = static_cast<L0DeviceTy &>(Device);
+    auto It = DeviceAllocators.find(&L0Device);
+    if (It == DeviceAllocators.end())
+      return Plugin::error(ErrorCode::INVALID_DEVICE,
+                           "device is not part of this context");
+    Allocator = It->second.get();
+  }
+  return Allocator->alloc(Size, Alignment, ResolvedKind, /*Offset=*/0,
+                          /*UserAlloc=*/true, /*DevMalloc=*/false,
+                          /*MemAdvice=*/
+                          std::numeric_limits<uint32_t>::max(),
+                          AllocOptionTy::ALLOC_OPT_NONE);
+}
+
+Error LevelZeroPluginContextTy::deallocate(GenericDeviceTy &Device, void *Ptr,
+                                           TargetAllocTy Kind) {
+  if (Kind == TARGET_ALLOC_HOST) {
+    if (!HostAllocator)
+      return Plugin::error(ErrorCode::NOT_FOUND,
+                           "no host allocation tracked in this context");
+    return HostAllocator->dealloc(Ptr);
+  }
+  auto &L0Device = static_cast<L0DeviceTy &>(Device);
+  auto It = DeviceAllocators.find(&L0Device);
+  if (It == DeviceAllocators.end())
+    return Plugin::error(ErrorCode::INVALID_DEVICE,
+                         "device is not part of this context");
+  return It->second->dealloc(Ptr);
+}
+
+Expected<PluginAllocInfoTy>
+LevelZeroPluginContextTy::getAllocInfo(const void *Ptr) {
+  void *Raw = const_cast<void *>(Ptr);
+  for (const auto &[Device, Allocator] : DeviceAllocators) {
+    if (auto *Info = Allocator->getAllocInfo(Raw))
+      return PluginAllocInfoTy{Device, static_cast<TargetAllocTy>(Info->Kind),
+                               Info->Base, Info->ReqSize};
+  }
+  if (HostAllocator) {
+    if (auto *Info = HostAllocator->getAllocInfo(Raw))
+      return PluginAllocInfoTy{nullptr, static_cast<TargetAllocTy>(Info->Kind),
+                               Info->Base, Info->ReqSize};
+  }
+
+  return Plugin::error(error::ErrorCode::NOT_FOUND,
+                       "pointer is not a known allocation in this context");
+}
+
+Expected<std::unique_ptr<PluginContextTy>>
+LevelZeroPluginTy::createPluginContext(
+    llvm::ArrayRef<GenericDeviceTy *> Devices) {
+  if (Devices.empty())
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "createPluginContext called with no devices");
+
+  // All devices must share the same L0 driver context, since a ze_context is
+  // scoped to a single driver.
+  auto &First = static_cast<L0DeviceTy &>(*Devices[0]);
+  L0ContextTy &DriverCtx = First.getL0Context();
+  ze_driver_handle_t Driver = DriverCtx.getZeDriver();
+  for (auto *D : Devices.drop_front()) {
+    auto &L0D = static_cast<L0DeviceTy &>(*D);
+    if (&L0D.getL0Context() != &DriverCtx)
+      return Plugin::error(
+          ErrorCode::INVALID_DEVICE,
+          "all devices in an L0 context must share the same driver");
+  }
+
+  // When the user requests every device on the driver, share the driver's
+  // default ze_context so we interop cleanly with other L0 clients on the
+  // same driver. Partial device sets get their own fresh context.
+  size_t DriverDeviceCount = 0;
+  for (int32_t I = 0, N = getNumDevices(); I != N; ++I) {
+    auto &L0D = static_cast<const L0DeviceTy &>(getDevice(I));
+    if (&L0D.getL0Context() == &DriverCtx)
+      ++DriverDeviceCount;
+  }
+  const bool IsFullDriver = (Devices.size() == DriverDeviceCount);
+
+  ze_context_handle_t ZeContext = nullptr;
+  bool OwnsZeContext = false;
+  if (IsFullDriver && DriverCtx.DriverGetDefaultContext.available())
+    ZeContext = DriverCtx.DriverGetDefaultContext(Driver);
+  if (!ZeContext) {
+    ze_context_desc_t Desc{ZE_STRUCTURE_TYPE_CONTEXT_DESC, nullptr, 0};
+    CALL_ZE_RET_ERROR(zeContextCreate, Driver, &Desc, &ZeContext);
+    OwnsZeContext = true;
+  }
+
+  auto Ctx = std::make_unique<LevelZeroPluginContextTy>(
+      *this, Devices, Driver, ZeContext, OwnsZeContext);
+  if (auto Err = Ctx->initAllocators())
+    return std::move(Err);
+  return Ctx;
 }
 
 } // namespace llvm::omp::target::plugin

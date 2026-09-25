@@ -12,7 +12,7 @@
 !CHECK:     omp.parallel {
 !CHECK:       %[[A_TP:.*]] = omp.threadprivate %[[A_DECL]]#0 : !fir.ref<i32> -> !fir.ref<i32>
 !CHECK:       %[[A_TP_DECL:.*]]:2 = hlfir.declare %[[A_TP]] {uniq_name = "_QFsub1Ea"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK:       %[[TID:.*]] = fir.call @omp_get_thread_num() proc_attrs<bind_c> fastmath<contract> : () -> i32
+!CHECK:       %[[TID:.*]] = fir.call @omp_get_thread_num() proc_attrs<bind_c, intrinsic> fastmath<contract> : () -> i32
 !CHECK:       hlfir.assign %[[TID]] to %[[A_TP_DECL]]#0 : i32, !fir.ref<i32>
 !CHECK:       omp.terminator
 !CHECK:     }
@@ -43,7 +43,7 @@ end subroutine
 !CHECK:       %[[A_TP_ADDR:.*]] = fir.coordinate_of %[[BLK_TP]], %c0_1 : (!fir.ref<!fir.array<4xi8>>, index) -> !fir.ref<i8>
 !CHECK:       %[[A_TP_ADDR_CVT:.*]] = fir.convert %[[A_TP_ADDR]] : (!fir.ref<i8>) -> !fir.ref<i32>
 !CHECK:       %[[A_TP_DECL:.*]]:2 = hlfir.declare %[[A_TP_ADDR_CVT]] storage(%[[BLK_TP]][0]) {uniq_name = "_QFsub2Ea"} : (!fir.ref<i32>, !fir.ref<!fir.array<4xi8>>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK:       %[[TID:.*]] = fir.call @omp_get_thread_num() proc_attrs<bind_c> fastmath<contract> : () -> i32
+!CHECK:       %[[TID:.*]] = fir.call @omp_get_thread_num() proc_attrs<bind_c, intrinsic> fastmath<contract> : () -> i32
 !CHECK:       hlfir.assign %[[TID]] to %[[A_TP_DECL]]#0 : i32, !fir.ref<i32>
 !CHECK:       omp.terminator
 !CHECK:     }

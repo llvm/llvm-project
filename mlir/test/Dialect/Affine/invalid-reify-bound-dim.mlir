@@ -28,7 +28,7 @@ func.func @test_invalid_reify_int_value(%size: index) -> (index) {
     %zero = arith.constant 0 : index
     %int_val = arith.constant 1 : index
 
-    // expected-error@+1 {{'test.reify_bound' op unexpected 'dim' attribute for index variable}}
+    // expected-error@+1 {{'test.reify_bound' op unexpected 'dim' attribute for index/integer variable}}
     %dim = "test.reify_bound"(%int_val) {dim = 1 : i64} : (index) -> index
 
     return %dim: index

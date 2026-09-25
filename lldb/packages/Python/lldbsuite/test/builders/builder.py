@@ -24,8 +24,7 @@ class Builder:
         compiler = lldbutil.which(compiler)
         return os.path.abspath(compiler)
 
-    def getTriple(self, arch):
-        """Returns the triple for the given architecture or None."""
+    def getTriple(self):
         return configuration.triple
 
     def getExtraMakeArgs(self):
@@ -35,11 +34,15 @@ class Builder:
         """
         return []
 
-    def getArchCFlags(self, architecture):
-        """Returns the ARCH_CFLAGS for the make system."""
-        triple = self.getTriple(architecture)
+    def getTripleSpec(self):
+        """Returns the TRIPLE for the make system."""
+        triple = self.getTriple()
         if triple:
-            return ["ARCH_CFLAGS=-target {}".format(triple)]
+            return ["TRIPLE=" + triple]
+        return []
+
+    def getArchCFlags(self):
+        """Returns the ARCH_CFLAGS for the make system."""
         return []
 
     def getMake(self, test_subdir, test_name):
@@ -95,13 +98,6 @@ class Builder:
 
         return cmdline
 
-    def getArchSpec(self, architecture):
-        """
-        Helper function to return the key-value string to specify the architecture
-        used for the make system.
-        """
-        return ["ARCH=" + architecture] if architecture else []
-
     def getToolchainSpec(self, compiler):
         """
         Helper function to return the key-value strings to specify the toolchain
@@ -153,10 +149,18 @@ class Builder:
             "xcrun clang": "xcrun clang++",
         }
         # Determine the C++ compiler based on the given compiler path/command.
-        cxx_type = cxx_types.get(compiler)
-        if cxx_type is None:
+        try:
+            cxx_type = cxx_types[compiler]
+        except KeyError:
             # If that did not work, then use the inferred cc_type.
-            cxx_type = cxx_types.get(cc_type, cxx_type)
+            try:
+                cxx_type = cxx_types[cc_type]
+            except KeyError:
+                err = "Could not infer C++ compiler name from "
+                if compiler is not None:
+                    err += f'compiler name "{compiler}" or '
+                err += f'compiler type "{cc_type}"'
+                raise RuntimeError(err)
 
         cc_dir = cc_path.parent
 
@@ -213,15 +217,6 @@ class Builder:
             "CXX=%s" % cxx,
         ] + utils
 
-    def getSDKRootSpec(self):
-        """
-        Helper function to return the key-value string to specify the SDK root
-        used for the make system.
-        """
-        if configuration.sdkroot:
-            return ["SDKROOT={}".format(configuration.sdkroot)]
-        return []
-
     def getModuleCacheSpec(self):
         """
         Helper function to return the key-value string to specify the clang
@@ -249,7 +244,14 @@ class Builder:
         return []
 
     def getLLDBObjRoot(self):
-        return ["LLDB_OBJ_ROOT={}".format(configuration.lldb_obj_root)]
+        if configuration.lldb_obj_root:
+            return [f"LLDB_OBJ_ROOT={configuration.lldb_obj_root}"]
+        return []
+
+    def getResourceDirArgs(self):
+        if configuration.resource_dir:
+            return [f"RESOURCE_DIR={configuration.resource_dir}"]
+        return []
 
     def _getDebugInfoArgs(self, debug_info):
         if debug_info is None:
@@ -263,6 +265,7 @@ class Builder:
             "debug_names": {"MAKE_DEBUG_NAMES": "YES"},
             "dwp": {"MAKE_DSYM": "NO", "MAKE_DWP": "YES"},
             "pdb": {"MAKE_PDB": "YES"},
+            "none": {"MAKE_DSYM": "NO", "MAKE_NO_DEBUG_INFO": "YES"},
         }
 
         # Collect all flags, with later options overriding earlier ones
@@ -294,14 +297,14 @@ class Builder:
             self.getMake(testdir, testname),
             debug_info_args,
             make_targets,
-            self.getArchCFlags(architecture),
-            self.getArchSpec(architecture),
+            self.getArchCFlags(),
+            self.getTripleSpec(),
             self.getToolchainSpec(compiler),
             self.getExtraMakeArgs(),
-            self.getSDKRootSpec(),
             self.getModuleCacheSpec(),
             self.getLibCxxArgs(),
             self.getLLDBObjRoot(),
+            self.getResourceDirArgs(),
             self.getCmdLine(dictionary),
         ]
         command = list(itertools.chain(*command_parts))

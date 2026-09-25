@@ -189,7 +189,7 @@ body:             |
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $lr, -4
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $r7, -8
-  ; CHECK-NEXT:   DBG_VALUE float 0x3810000000000000, $noreg, !27, !DIExpression(), debug-location !29
+  ; CHECK-NEXT:   DBG_VALUE float f0x00800000, $noreg, !27, !DIExpression(), debug-location !29
   ; CHECK-NEXT:   DBG_VALUE $r0, $noreg, !24, !DIExpression(), debug-location !29
   ; CHECK-NEXT:   tCBZ renamable $r1, %bb.4, debug-location !31
   ; CHECK-NEXT: {{  $}}
@@ -197,7 +197,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT:   liveins: $r0, $r1, $r2
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   DBG_VALUE float 0x3810000000000000, $noreg, !27, !DIExpression(), debug-location !29
+  ; CHECK-NEXT:   DBG_VALUE float f0x00800000, $noreg, !27, !DIExpression(), debug-location !29
   ; CHECK-NEXT:   DBG_VALUE $r2, $noreg, !26, !DIExpression(), debug-location !29
   ; CHECK-NEXT:   DBG_VALUE $r1, $noreg, !25, !DIExpression(), debug-location !29
   ; CHECK-NEXT:   DBG_VALUE $r0, $noreg, !24, !DIExpression(), debug-location !29
@@ -208,7 +208,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.2(0x7c000000), %bb.3(0x04000000)
   ; CHECK-NEXT:   liveins: $lr, $q0, $r0, $r2
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   DBG_VALUE float 0x3810000000000000, $noreg, !27, !DIExpression(), debug-location !29
+  ; CHECK-NEXT:   DBG_VALUE float f0x00800000, $noreg, !27, !DIExpression(), debug-location !29
   ; CHECK-NEXT:   DBG_VALUE $r2, $noreg, !26, !DIExpression(), debug-location !29
   ; CHECK-NEXT:   renamable $r0, renamable $q1 = MVE_VLDRWU32_post killed renamable $r0, 16, 0, $noreg, $noreg, debug-location !32 :: (load (s128) from %ir.lsr.iv12, align 4, !tbaa !34)
   ; CHECK-NEXT:   DBG_VALUE $r0, $noreg, !24, !DIExpression(DW_OP_LLVM_entry_value, 1), debug-location !29
@@ -221,7 +221,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.5(0x80000000)
   ; CHECK-NEXT:   liveins: $q0, $r2
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   DBG_VALUE float 0x3810000000000000, $noreg, !27, !DIExpression(), debug-location !29
+  ; CHECK-NEXT:   DBG_VALUE float f0x00800000, $noreg, !27, !DIExpression(), debug-location !29
   ; CHECK-NEXT:   DBG_VALUE $r2, $noreg, !26, !DIExpression(), debug-location !29
   ; CHECK-NEXT:   renamable $s4 = nnan ninf nsz VFP_VMAXNMS renamable $s2, renamable $s3, debug-location !31
   ; CHECK-NEXT:   renamable $s0 = nnan ninf nsz VFP_VMAXNMS killed renamable $s0, killed renamable $s1, implicit killed $q0, debug-location !31
@@ -232,7 +232,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.5(0x80000000)
   ; CHECK-NEXT:   liveins: $r2
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   DBG_VALUE float 0x3810000000000000, $noreg, !27, !DIExpression(), debug-location !29
+  ; CHECK-NEXT:   DBG_VALUE float f0x00800000, $noreg, !27, !DIExpression(), debug-location !29
   ; CHECK-NEXT:   DBG_VALUE $r2, $noreg, !26, !DIExpression(), debug-location !29
   ; CHECK-NEXT:   DBG_VALUE $r1, $noreg, !25, !DIExpression(), debug-location !29
   ; CHECK-NEXT:   DBG_VALUE $r0, $noreg, !24, !DIExpression(), debug-location !29
@@ -241,7 +241,7 @@ body:             |
   ; CHECK-NEXT: bb.5.while.end:
   ; CHECK-NEXT:   liveins: $r2, $s0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   DBG_VALUE float 0x3810000000000000, $noreg, !27, !DIExpression(), debug-location !29
+  ; CHECK-NEXT:   DBG_VALUE float f0x00800000, $noreg, !27, !DIExpression(), debug-location !29
   ; CHECK-NEXT:   DBG_VALUE $r2, $noreg, !26, !DIExpression(), debug-location !29
   ; CHECK-NEXT:   VSTRS killed renamable $s0, killed renamable $r2, 0, 14 /* CC::al */, $noreg, debug-location !45 :: (store (s32) into %ir.pResult, !tbaa !34)
   ; CHECK-NEXT:   frame-destroy tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc, debug-location !46

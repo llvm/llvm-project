@@ -10,4 +10,4 @@
 
 #include "src/math/f16mulf128.h"
 
-LIST_MUL_TESTS(float16, float128, LIBC_NAMESPACE::f16mulf128)
+LIST_MUL_TESTS(F16mulf128, float16, float128, LIBC_NAMESPACE::f16mulf128)

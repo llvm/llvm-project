@@ -51,7 +51,7 @@
 # CHECK-NEXT: (lldb) disassemble --address 0xdeadb
 # CHECK-NEXT: error: Could not find function bounds for address 0xdeadb
 # CHECK-NEXT: (lldb) disassemble --address 0x100
-# CHECK-NEXT: error: Not disassembling the function because it is very large [0x0000000000000040-0x0000000000002040). To disassemble specify an instruction count limit, start/stop addresses or use the --force option.
+# CHECK-NEXT: error: not disassembling the function because it is very large [0x0000000000000040-0x0000000000002040). To disassemble specify an instruction count limit, start/stop addresses or use the --force option
 # CHECK-NEXT: (lldb) disassemble --address 0x100 --count 3
 # CHECK-NEXT: command-disassemble.s.tmp`very_long:
 # CHECK-NEXT: command-disassemble.s.tmp[0x40] <+0>: int    $0x2a
@@ -82,10 +82,10 @@
 # CHECK-NEXT: (lldb) disassemble --name case2
 # CHECK-NEXT: command-disassemble.s.tmp`n1::case2:
 # CHECK-NEXT: command-disassemble.s.tmp[0x2044] <+0>: int    $0x32
-# CHECK-NEXT: warning: Not disassembling a function because it is very large [0x0000000000002046-0x0000000000004046). To disassemble specify an instruction count limit, start/stop addresses or use the --force option.
+# CHECK-NEXT: warning: not disassembling a function because it is very large [0x0000000000002046-0x0000000000004046). To disassemble specify an instruction count limit, start/stop addresses or use the --force option
 # CHECK-NEXT: (lldb) disassemble --name case3
-# CHECK-NEXT: error: Not disassembling a function because it is very large [0x0000000000006046-0x0000000000007046)[0x0000000000009046-0x000000000000a050). To disassemble specify an instruction count limit, start/stop addresses or use the --force option.
-# CHECK-NEXT: Not disassembling a function because it is very large [0x0000000000004046-0x0000000000006046). To disassemble specify an instruction count limit, start/stop addresses or use the --force option.
+# CHECK-NEXT: error: not disassembling a function because it is very large [0x0000000000006046-0x0000000000007046)[0x0000000000009046-0x000000000000a050). To disassemble specify an instruction count limit, start/stop addresses or use the --force option
+# CHECK-NEXT: not disassembling a function because it is very large [0x0000000000004046-0x0000000000006046). To disassemble specify an instruction count limit, start/stop addresses or use the --force option
 # CHECK-NEXT: (lldb) disassemble --name case3 --count 3
 # CHECK-NEXT: command-disassemble.s.tmp`n2::case3:
 # CHECK-NEXT: command-disassemble.s.tmp[0x6046] <-12288>: int    $0x2a

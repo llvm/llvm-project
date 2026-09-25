@@ -148,9 +148,9 @@ using CGSCCPassManager =
 template <typename AnalysisT>
 struct RequireAnalysisPass<AnalysisT, LazyCallGraph::SCC, CGSCCAnalysisManager,
                            LazyCallGraph &, CGSCCUpdateResult &>
-    : PassInfoMixin<RequireAnalysisPass<AnalysisT, LazyCallGraph::SCC,
-                                        CGSCCAnalysisManager, LazyCallGraph &,
-                                        CGSCCUpdateResult &>> {
+    : RequiredPassInfoMixin<RequireAnalysisPass<
+          AnalysisT, LazyCallGraph::SCC, CGSCCAnalysisManager, LazyCallGraph &,
+          CGSCCUpdateResult &>> {
   PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
                         LazyCallGraph &CG, CGSCCUpdateResult &) {
     (void)AM.template getResult<AnalysisT>(C, CG);
@@ -313,13 +313,13 @@ struct CGSCCUpdateResult {
 /// pass over the module to enable a \c FunctionAnalysisManager to be used
 /// within this run safely.
 class ModuleToPostOrderCGSCCPassAdaptor
-    : public PassInfoMixin<ModuleToPostOrderCGSCCPassAdaptor> {
+    : public RequiredPassInfoMixin<ModuleToPostOrderCGSCCPassAdaptor> {
 public:
   using PassConceptT =
       detail::PassConcept<LazyCallGraph::SCC, CGSCCAnalysisManager,
                           LazyCallGraph &, CGSCCUpdateResult &>;
 
-  explicit ModuleToPostOrderCGSCCPassAdaptor(std::unique_ptr<PassConceptT> Pass)
+  explicit ModuleToPostOrderCGSCCPassAdaptor(PassConceptT::unique_ptr Pass)
       : Pass(std::move(Pass)) {}
 
   ModuleToPostOrderCGSCCPassAdaptor(ModuleToPostOrderCGSCCPassAdaptor &&Arg)
@@ -346,10 +346,8 @@ public:
     OS << ')';
   }
 
-  static bool isRequired() { return true; }
-
 private:
-  std::unique_ptr<PassConceptT> Pass;
+  PassConceptT::unique_ptr Pass;
 };
 
 /// A function to deduce a function pass type and wrap it in the
@@ -360,11 +358,7 @@ createModuleToPostOrderCGSCCPassAdaptor(CGSCCPassT &&Pass) {
   using PassModelT =
       detail::PassModel<LazyCallGraph::SCC, CGSCCPassT, CGSCCAnalysisManager,
                         LazyCallGraph &, CGSCCUpdateResult &>;
-  // Do not use make_unique, it causes too many template instantiations,
-  // causing terrible compile times.
-  return ModuleToPostOrderCGSCCPassAdaptor(
-      std::unique_ptr<ModuleToPostOrderCGSCCPassAdaptor::PassConceptT>(
-          new PassModelT(std::forward<CGSCCPassT>(Pass))));
+  return ModuleToPostOrderCGSCCPassAdaptor(PassModelT::create(std::move(Pass)));
 }
 
 /// A proxy from a \c FunctionAnalysisManager to an \c SCC.
@@ -445,11 +439,11 @@ LLVM_ABI LazyCallGraph::SCC &updateCGAndAnalysisManagerForCGSCCPass(
 /// pass over the SCC to enable a \c FunctionAnalysisManager to be used
 /// within this run safely.
 class CGSCCToFunctionPassAdaptor
-    : public PassInfoMixin<CGSCCToFunctionPassAdaptor> {
+    : public RequiredPassInfoMixin<CGSCCToFunctionPassAdaptor> {
 public:
   using PassConceptT = detail::PassConcept<Function, FunctionAnalysisManager>;
 
-  explicit CGSCCToFunctionPassAdaptor(std::unique_ptr<PassConceptT> Pass,
+  explicit CGSCCToFunctionPassAdaptor(typename PassConceptT::unique_ptr Pass,
                                       bool EagerlyInvalidate, bool NoRerun)
       : Pass(std::move(Pass)), EagerlyInvalidate(EagerlyInvalidate),
         NoRerun(NoRerun) {}
@@ -491,10 +485,8 @@ public:
     OS << ')';
   }
 
-  static bool isRequired() { return true; }
-
 private:
-  std::unique_ptr<PassConceptT> Pass;
+  PassConceptT::unique_ptr Pass;
   bool EagerlyInvalidate;
   bool NoRerun;
 };
@@ -508,12 +500,8 @@ createCGSCCToFunctionPassAdaptor(FunctionPassT &&Pass,
                                  bool NoRerun = false) {
   using PassModelT =
       detail::PassModel<Function, FunctionPassT, FunctionAnalysisManager>;
-  // Do not use make_unique, it causes too many template instantiations,
-  // causing terrible compile times.
-  return CGSCCToFunctionPassAdaptor(
-      std::unique_ptr<CGSCCToFunctionPassAdaptor::PassConceptT>(
-          new PassModelT(std::forward<FunctionPassT>(Pass))),
-      EagerlyInvalidate, NoRerun);
+  return CGSCCToFunctionPassAdaptor(PassModelT::create(std::move(Pass)),
+                                    EagerlyInvalidate, NoRerun);
 }
 
 // A marker to determine if function passes should be run on a function within a
@@ -544,13 +532,14 @@ public:
 /// This repetition has the potential to be very large however, as each one
 /// might refine a single call site. As a consequence, in practice we use an
 /// upper bound on the number of repetitions to limit things.
-class DevirtSCCRepeatedPass : public PassInfoMixin<DevirtSCCRepeatedPass> {
+class DevirtSCCRepeatedPass
+    : public OptionalPassInfoMixin<DevirtSCCRepeatedPass> {
 public:
   using PassConceptT =
       detail::PassConcept<LazyCallGraph::SCC, CGSCCAnalysisManager,
                           LazyCallGraph &, CGSCCUpdateResult &>;
 
-  explicit DevirtSCCRepeatedPass(std::unique_ptr<PassConceptT> Pass,
+  explicit DevirtSCCRepeatedPass(PassConceptT::unique_ptr Pass,
                                  int MaxIterations)
       : Pass(std::move(Pass)), MaxIterations(MaxIterations) {}
 
@@ -568,7 +557,7 @@ public:
   }
 
 private:
-  std::unique_ptr<PassConceptT> Pass;
+  PassConceptT::unique_ptr Pass;
   int MaxIterations;
 };
 
@@ -580,12 +569,8 @@ DevirtSCCRepeatedPass createDevirtSCCRepeatedPass(CGSCCPassT &&Pass,
   using PassModelT =
       detail::PassModel<LazyCallGraph::SCC, CGSCCPassT, CGSCCAnalysisManager,
                         LazyCallGraph &, CGSCCUpdateResult &>;
-  // Do not use make_unique, it causes too many template instantiations,
-  // causing terrible compile times.
-  return DevirtSCCRepeatedPass(
-      std::unique_ptr<DevirtSCCRepeatedPass::PassConceptT>(
-          new PassModelT(std::forward<CGSCCPassT>(Pass))),
-      MaxIterations);
+  return DevirtSCCRepeatedPass(PassModelT::create(std::move(Pass)),
+                               MaxIterations);
 }
 
 // Clear out the debug logging macro.

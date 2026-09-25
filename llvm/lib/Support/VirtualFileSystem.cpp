@@ -54,10 +54,9 @@
 using namespace llvm;
 using namespace llvm::vfs;
 
-using llvm::sys::fs::file_t;
 using llvm::sys::fs::file_status;
+using llvm::sys::fs::file_t;
 using llvm::sys::fs::file_type;
-using llvm::sys::fs::kInvalidFile;
 using llvm::sys::fs::perms;
 using llvm::sys::fs::UniqueID;
 
@@ -199,7 +198,7 @@ class RealFile : public File {
       : FD(RawFD), S(NewName, {}, {}, {}, {}, {},
                      llvm::sys::fs::file_type::status_error, {}),
         RealName(NewRealPathName.str()) {
-    assert(FD != kInvalidFile && "Invalid or inactive file descriptor");
+    assert(FD.isValid() && "Invalid or inactive file descriptor");
   }
 
 public:
@@ -222,7 +221,7 @@ RealFile::~RealFile() { close(); }
 ErrorOr<Status> RealFile::status() {
   auto BypassSandbox = sys::sandbox::scopedDisable();
 
-  assert(FD != kInvalidFile && "cannot stat closed file");
+  assert(FD.isValid() && "cannot stat closed file");
   if (!S.isStatusKnown()) {
     file_status RealStatus;
     if (std::error_code EC = sys::fs::status(FD, RealStatus))
@@ -241,7 +240,7 @@ RealFile::getBuffer(const Twine &Name, int64_t FileSize,
                     bool RequiresNullTerminator, bool IsVolatile) {
   auto BypassSandbox = sys::sandbox::scopedDisable();
 
-  assert(FD != kInvalidFile && "cannot get buffer for closed file");
+  assert(FD.isValid() && "cannot get buffer for closed file");
   return MemoryBuffer::getOpenFile(FD, Name, FileSize, RequiresNullTerminator,
                                    IsVolatile);
 }
@@ -250,7 +249,7 @@ std::error_code RealFile::close() {
   auto BypassSandbox = sys::sandbox::scopedDisable();
 
   std::error_code EC = sys::fs::closeFile(FD);
-  FD = kInvalidFile;
+  FD = file_t::Invalid;
   return EC;
 }
 
@@ -1291,11 +1290,9 @@ static bool isFileNotFound(std::error_code EC,
 
 RedirectingFileSystem::RedirectingFileSystem(IntrusiveRefCntPtr<FileSystem> FS)
     : ExternalFS(std::move(FS)) {
-  if (ExternalFS)
-    if (auto ExternalWorkingDirectory =
-            ExternalFS->getCurrentWorkingDirectory()) {
-      WorkingDirectory = *ExternalWorkingDirectory;
-    }
+  assert(ExternalFS && "RedirectingFileSystem requires an external FS");
+  if (auto ExternalWorkingDirectory = ExternalFS->getCurrentWorkingDirectory())
+    WorkingDirectory = *ExternalWorkingDirectory;
 }
 
 /// Directory iterator implementation for \c RedirectingFileSystem's
@@ -2991,34 +2988,21 @@ recursive_directory_iterator::increment(std::error_code &EC) {
   return *this;
 }
 
-void TracingFileSystem::printImpl(raw_ostream &OS, PrintType Type,
-                                  unsigned IndentLevel) const {
-  printIndent(OS, IndentLevel);
-  OS << "TracingFileSystem\n";
-  if (Type == PrintType::Summary)
-    return;
-
-  printIndent(OS, IndentLevel);
-  OS << "NumStatusCalls=" << NumStatusCalls << "\n";
-  printIndent(OS, IndentLevel);
-  OS << "NumOpenFileForReadCalls=" << NumOpenFileForReadCalls << "\n";
-  printIndent(OS, IndentLevel);
-  OS << "NumDirBeginCalls=" << NumDirBeginCalls << "\n";
-  printIndent(OS, IndentLevel);
-  OS << "NumGetRealPathCalls=" << NumGetRealPathCalls << "\n";
-  printIndent(OS, IndentLevel);
-  OS << "NumExistsCalls=" << NumExistsCalls << "\n";
-  printIndent(OS, IndentLevel);
-  OS << "NumIsLocalCalls=" << NumIsLocalCalls << "\n";
-
-  if (Type == PrintType::Contents)
-    Type = PrintType::Summary;
-  getUnderlyingFS().print(OS, Type, IndentLevel + 1);
-}
-
 const char FileSystem::ID = 0;
 const char OverlayFileSystem::ID = 0;
 const char ProxyFileSystem::ID = 0;
 const char InMemoryFileSystem::ID = 0;
 const char RedirectingFileSystem::ID = 0;
-const char TracingFileSystem::ID = 0;
+
+unsigned ::llvm::IntrusiveRefCntPtrInfo<FileSystem>::useCount(
+    const FileSystem *FS) {
+  return FS->UseCount();
+}
+
+void ::llvm::IntrusiveRefCntPtrInfo<FileSystem>::retain(FileSystem *FS) {
+  FS->Retain();
+}
+
+void ::llvm::IntrusiveRefCntPtrInfo<FileSystem>::release(FileSystem *FS) {
+  FS->Release();
+}

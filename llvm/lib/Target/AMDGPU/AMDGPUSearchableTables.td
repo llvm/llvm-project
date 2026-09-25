@@ -317,6 +317,7 @@ def : SourceOfDivergence<int_amdgcn_ds_ordered_add>;
 def : SourceOfDivergence<int_amdgcn_ds_ordered_swap>;
 def : SourceOfDivergence<int_amdgcn_ds_add_gs_reg_rtn>;
 def : SourceOfDivergence<int_amdgcn_ds_sub_gs_reg_rtn>;
+def : SourceOfDivergence<int_amdgcn_ds_atomic_barrier_arrive_rtn_b64>;
 def : SourceOfDivergence<int_amdgcn_permlane16>;
 def : SourceOfDivergence<int_amdgcn_permlanex16>;
 def : SourceOfDivergence<int_amdgcn_permlane16_var>;
@@ -397,8 +398,6 @@ def UniformIntrinsics : GenericTable {
 
 def : AlwaysUniform<int_amdgcn_readfirstlane>;
 def : AlwaysUniform<int_amdgcn_readlane>;
-def : AlwaysUniform<int_amdgcn_icmp>;
-def : AlwaysUniform<int_amdgcn_fcmp>;
 def : AlwaysUniform<int_amdgcn_ballot>;
 def : AlwaysUniform<int_amdgcn_if_break>;
 def : AlwaysUniform<int_amdgcn_cluster_workgroup_id_x>;
@@ -419,6 +418,8 @@ def : AlwaysUniform<int_amdgcn_s_getpc>;
 def : AlwaysUniform<int_amdgcn_s_getreg>;
 def : AlwaysUniform<int_amdgcn_s_memrealtime>;
 def : AlwaysUniform<int_amdgcn_s_memtime>;
+def : AlwaysUniform<int_amdgcn_s_quadmask>;
+def : AlwaysUniform<int_amdgcn_s_wqm>;
 
 def AMDGPUImageDMaskIntrinsicTable : GenericTable {
   let FilterClass = "AMDGPUImageDMaskIntrinsic";

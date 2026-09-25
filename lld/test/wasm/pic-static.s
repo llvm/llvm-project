@@ -124,7 +124,7 @@ ret32_ptr:
 # CHECK-NEXT:         Mutable:         false
 # CHECK-NEXT:         InitExpr:
 # CHECK-NEXT:           Opcode:          I32_CONST
-# CHECK-NEXT:           Value:           0
+# CHECK-NEXT:           Value:           65536
 
 # GOT.func.internal.ret32
 # CHECK-NEXT:       - Index:           4

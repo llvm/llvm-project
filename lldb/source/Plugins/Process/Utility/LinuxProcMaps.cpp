@@ -114,8 +114,17 @@ ParseMemoryRegionInfoFromProcMapsLine(llvm::StringRef maps_line,
 
   line_extractor.SkipSpaces();
   const char *name = line_extractor.Peek();
-  if (name)
+  if (name) {
     region.SetName(name);
+    // /proc/maps labels only the main thread's stack; thread stacks are
+    // anonymous and the default MemoryRegionInfo::eDontKnow is kept.
+    if (llvm::StringRef(name) == "[stack]")
+      region.SetIsStackMemory(eLazyBoolYes);
+    else if (llvm::StringRef(name) == "[heap]")
+      region.SetIsStackMemory(eLazyBoolNo);
+    else
+      region.SetIsStackMemory(eLazyBoolDontKnow);
+  }
 
   return region;
 }
@@ -174,6 +183,10 @@ void lldb_private::ParseLinuxSMapRegions(llvm::StringRef linux_smap,
               region->SetMemoryTagged(eLazyBoolYes);
             else if (flag == "ss")
               region->SetIsShadowStack(eLazyBoolYes);
+        } else if (name == "ProtectionKey") {
+          unsigned key = 0;
+          if (!value.ltrim().getAsInteger(10, key))
+            region->SetProtectionKey(key);
         }
       } else {
         // Orphaned settings line

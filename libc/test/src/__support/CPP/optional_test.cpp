@@ -80,3 +80,22 @@ TEST(LlvmLibcOptionalTest, Tests) {
   ASSERT_EQ(arrow_num, 11);
   arrow_test.reset();
 }
+
+TEST(LlvmLibcOptionalTest, ValueOr) {
+  optional<int> opt_empty;
+  EXPECT_EQ(opt_empty.value_or(42), 42);
+  optional<int> opt_full(10);
+  EXPECT_EQ(opt_full.value_or(42), 10);
+  EXPECT_EQ(optional<int>(100).value_or(42), 100);
+  EXPECT_EQ(optional<int>().value_or(42), 42);
+
+  const optional<int> opt_const_empty;
+  EXPECT_EQ(opt_const_empty.value_or(42), 42);
+  const optional<int> opt_const_full(10);
+  EXPECT_EQ(opt_const_full.value_or(42), 10);
+
+  optional<long> opt_long_empty;
+  EXPECT_EQ(opt_long_empty.value_or(42), 42L);
+  optional<long> opt_long_full(100L);
+  EXPECT_EQ(opt_long_full.value_or(42), 100L);
+}

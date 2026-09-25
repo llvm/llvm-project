@@ -136,18 +136,18 @@ void RedundantStringInitCheck::check(const MatchFinder::MatchResult &Result) {
   }
   if (const auto *CtorInit =
           Result.Nodes.getNodeAs<CXXCtorInitializer>("ctorInit")) {
-    if (const FieldDecl *Member = CtorInit->getMember()) {
-      if (!Member->hasInClassInitializer() ||
-          Result.Nodes.getNodeAs<Expr>("empty_init")) {
-        // The String isn't declared in the class with an initializer or its
-        // declared with a redundant initializer, which will be removed. Either
-        // way the string will be default initialized, therefore we can remove
-        // the constructor initializer entirely.
-        diag(CtorInit->getMemberLocation(), "redundant string initialization")
-            << FixItHint::CreateRemoval(CtorInit->getSourceRange());
-        return;
-      }
+    if (const FieldDecl *Member = CtorInit->getMember();
+        Member && (!Member->hasInClassInitializer() ||
+                   Result.Nodes.getNodeAs<Expr>("empty_init"))) {
+      // The String isn't declared in the class with an initializer or its
+      // declared with a redundant initializer, which will be removed. Either
+      // way the string will be default initialized, therefore we can remove
+      // the constructor initializer entirely.
+      diag(CtorInit->getMemberLocation(), "redundant string initialization")
+          << FixItHint::CreateRemoval(CtorInit->getSourceRange());
+      return;
     }
+
     const CXXConstructExpr *Construct = getConstructExpr(*CtorInit);
     if (!Construct)
       return;

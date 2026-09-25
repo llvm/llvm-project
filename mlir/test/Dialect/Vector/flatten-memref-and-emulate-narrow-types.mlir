@@ -2,10 +2,10 @@
 
 // This test verifies that narrow-type-emulation works correctly for
 // rank > 1 memrefs by combining memref flattening with vector narrow type
-// emulation patterns. 
+// emulation patterns.
 //
 // The patterns tested here demonstrate the composition of two transformations,
-// memref flattening for vector ops and vector op narrow type emulation.
+// memref flattening and vector op narrow type emulation.
 //
 // TODO: Support `vector.transfer_write` operation.
 
@@ -45,7 +45,8 @@ func.func @vector_maskedstore_2d_i4(%arg0: index, %value: vector<8xi4>) {
 
 func.func @vector_store_2d_i4(%arg0: index, %value: vector<8xi4>) {
     %0 = memref.alloc() : memref<4x8xi4>
-    vector.store %value, %0[%arg0, %arg0] : memref<4x8xi4>, vector<8xi4>
+    %c0 = arith.constant 0 : index
+    vector.store %value, %0[%arg0, %c0] : memref<4x8xi4>, vector<8xi4>
     return
 }
 //  CHECK-LABEL: func @vector_store_2d_i4(

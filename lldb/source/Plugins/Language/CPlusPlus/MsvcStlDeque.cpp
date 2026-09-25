@@ -10,6 +10,7 @@
 
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/TypeSynthetic.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "llvm/Support/ErrorExtras.h"
 
 using namespace lldb;
@@ -75,20 +76,21 @@ lldb_private::formatters::MsvcStlDequeSyntheticFrontEnd::GetChildAtIndex(
   lldb::addr_t first_address = m_map->GetValueAsUnsigned(0) +
                                first_idx * process_sp->GetAddressByteSize();
 
-  Status err;
-  lldb::addr_t second_base =
-      process_sp->ReadPointerFromMemory(first_address, err);
-  if (err.Fail())
+  llvm::Expected<lldb::addr_t> second_base =
+      process_sp->ReadPointerFromMemory(first_address);
+  if (!second_base) {
+    llvm::consumeError(second_base.takeError());
     return nullptr;
+  }
 
   size_t second_idx = (idx + m_offset) % m_block_size;
-  size_t second_address = second_base + second_idx * m_element_size;
+  size_t second_address = *second_base + second_idx * m_element_size;
 
   StreamString name;
   name.Printf("[%" PRIu64 "]", (uint64_t)idx);
-  return CreateValueObjectFromAddress(name.GetString(), second_address,
-                                      m_backend.GetExecutionContextRef(),
-                                      m_element_type);
+  return CreateChildValueObjectFromAddress(name.GetString(), second_address,
+                                           m_backend.GetExecutionContextRef(),
+                                           m_element_type);
 }
 
 lldb::ChildCacheState
@@ -141,16 +143,20 @@ lldb_private::formatters::MsvcStlDequeSyntheticFrontEnd::Update() {
     if (!element_type)
       return lldb::eRefetch;
   }
-  auto element_size = element_type.GetByteSize(nullptr);
-  if (!element_size)
+  auto element_size_or_err = element_type.GetByteSize(nullptr);
+  if (!element_size_or_err) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::DataFormatters),
+                   element_size_or_err.takeError(),
+                   "failed to get deque element byte size: {0}");
     return lldb::eRefetch;
+  }
 
   m_map = map_sp.get();
   m_exe_ctx_ref = m_backend.GetExecutionContextRef();
   m_block_size = block_size.ULongLong();
   m_offset = offset;
   m_map_size = map_size;
-  m_element_size = *element_size;
+  m_element_size = *element_size_or_err;
   m_element_type = element_type;
   m_size = size;
   return lldb::eRefetch;

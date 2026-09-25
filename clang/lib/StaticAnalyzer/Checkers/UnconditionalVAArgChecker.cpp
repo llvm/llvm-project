@@ -60,7 +60,7 @@ public:
 
 const FunctionDecl *
 UnconditionalVAArgChecker::getCurrentFunction(CheckerContext &C) {
-  const Decl *FD = C.getLocationContext()->getDecl();
+  const Decl *FD = C.getStackFrame()->getDecl();
   return dyn_cast_if_present<FunctionDecl>(FD);
 }
 

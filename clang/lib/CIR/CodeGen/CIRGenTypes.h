@@ -22,6 +22,7 @@
 #include "clang/Basic/ABI.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallPtrSet.h"
 
 namespace clang {
@@ -43,6 +44,7 @@ class CallArgList;
 class CIRGenBuilderTy;
 class CIRGenCXXABI;
 class CIRGenModule;
+class FunctionArgList;
 
 /// This class organizes the cross-module state that is used while lowering
 /// AST types to CIR types.
@@ -71,6 +73,12 @@ class CIRGenTypes {
   llvm::SmallPtrSet<const clang::Type *, 4> recordsBeingLaidOut;
 
   llvm::SmallVector<const clang::RecordDecl *, 8> deferredRecords;
+
+  /// Cache of record type keys known to be safe to convert (i.e.,
+  /// isSafeToConvert returned true). Cleared whenever recordsBeingLaidOut
+  /// changes, since the safety result depends on which records are currently
+  /// being laid out.
+  llvm::DenseSet<const clang::Type *> safeToConvertCache;
 
   /// Heper for convertType.
   mlir::Type convertFunctionTypeInternal(clang::QualType ft);
@@ -104,6 +112,16 @@ public:
   bool noRecordsBeingLaidOut() const { return recordsBeingLaidOut.empty(); }
   bool isRecordBeingLaidOut(const clang::Type *ty) const {
     return recordsBeingLaidOut.count(ty);
+  }
+
+  /// Check if a record type key is in the safe-to-convert cache.
+  bool isCachedSafeToConvert(const clang::Type *key) const {
+    return safeToConvertCache.count(key);
+  }
+
+  /// Add a record type key to the safe-to-convert cache.
+  void cacheSafeToConvert(const clang::Type *key) {
+    safeToConvertCache.insert(key);
   }
 
   const ABIInfo &getABIInfo() const { return theABIInfo; }
@@ -169,6 +187,17 @@ public:
   const CIRGenFunctionInfo &
   arrangeFunctionDeclaration(const clang::FunctionDecl *fd);
 
+  /// Arrange the function info for a device kernel caller entry point (e.g. a
+  /// SYCL kernel caller).
+  const CIRGenFunctionInfo &
+  arrangeDeviceKernelCallerDeclaration(clang::QualType resultType,
+                                       const FunctionArgList &args);
+
+  /// A builtin function is a freestanding function using the default
+  /// C conventions.
+  const CIRGenFunctionInfo &arrangeBuiltinFunctionCall(QualType resultType,
+                                                       const CallArgList &args);
+
   /// Return whether a type can be zero-initialized (in the C++ sense) with an
   /// LLVM zeroinitializer.
   bool isZeroInitializable(clang::QualType ty);
@@ -197,6 +226,9 @@ public:
   const CIRGenFunctionInfo &arrangeFreeFunctionCall(const CallArgList &args,
                                                     const FunctionType *fnType);
 
+  /// Convert a clang calling convention to a CIR calling convention.
+  cir::CallingConv clangCallConvToCIRCallConv(clang::CallingConv cc);
+
   const CIRGenFunctionInfo &
   arrangeCIRFunctionInfo(CanQualType returnType, bool isInstanceMethod,
                          llvm::ArrayRef<CanQualType> argTypes,
@@ -208,6 +240,14 @@ public:
   arrangeFreeFunctionType(CanQual<FunctionNoProtoType> fnpt);
 
   unsigned getTargetAddressSpace(QualType ty) const;
+
+  /// Returns the CIR address space for a pointer/reference to \p pointeeTy, or
+  /// a null attribute for the default address space. A default-address-space
+  /// pointee is resolved through getTargetAddressSpace (e.g. generic for SYCL
+  /// device data, program address space for functions), matching classic
+  /// CodeGen.
+  mlir::ptr::MemorySpaceAttrInterface
+  getPointerAddressSpace(clang::QualType pointeeTy) const;
 };
 
 } // namespace clang::CIRGen

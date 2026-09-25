@@ -25,6 +25,7 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/KnownBits.h"
 #include <cassert>
@@ -46,6 +47,20 @@ class TargetTransformInfo;
 /// This class provides both the logic to recursively visit instructions and
 /// combine them.
 class LLVM_LIBRARY_VISIBILITY InstCombiner {
+  /// IRBuilder inserter that adds new instructions to the worklist and new
+  /// assumptions to the AssumptionCache.
+  class LLVM_ABI IRBuilderInstCombineInserter final
+      : public IRBuilderDefaultInserter {
+    InstCombiner &IC;
+
+  public:
+    ~IRBuilderInstCombineInserter() override;
+    IRBuilderInstCombineInserter(InstCombiner &IC) : IC(IC) {}
+
+    void InsertHelper(Instruction *I, const Twine &Name,
+                      BasicBlock::iterator InsertPt) const override;
+  };
+
   /// Only used to call target specific intrinsic combining.
   /// It must **NOT** be used for any other purpose, as InstCombine is a
   /// target-independent canonicalization transform.
@@ -57,8 +72,8 @@ public:
 
   /// An IRBuilder that automatically inserts new instructions into the
   /// worklist.
-  using BuilderTy = IRBuilder<TargetFolder, IRBuilderCallbackInserter>;
-  BuilderTy &Builder;
+  using BuilderTy = IRBuilder<TargetFolder, IRBuilderInstCombineInserter>;
+  BuilderTy Builder;
 
 protected:
   /// A worklist of the instructions that need to be simplified.
@@ -99,18 +114,24 @@ protected:
   SmallDenseSet<std::pair<const BasicBlock *, const BasicBlock *>, 8> BackEdges;
   bool ComputedBackEdges = false;
 
+  /// Source for annotation metadata, used by the IRBuilder inserter.
+  Instruction *AnnotationMetadataSource = nullptr;
+
 public:
-  InstCombiner(InstructionWorklist &Worklist, BuilderTy &Builder, Function &F,
-               AAResults *AA, AssumptionCache &AC, TargetLibraryInfo &TLI,
+  InstCombiner(InstructionWorklist &Worklist, Function &F, AAResults *AA,
+               AssumptionCache &AC, TargetLibraryInfo &TLI,
                TargetTransformInfo &TTI, DominatorTree &DT,
                OptimizationRemarkEmitter &ORE, BlockFrequencyInfo *BFI,
                BranchProbabilityInfo *BPI, ProfileSummaryInfo *PSI,
                const DataLayout &DL,
                ReversePostOrderTraversal<BasicBlock *> &RPOT)
-      : TTIForTargetIntrinsicsOnly(TTI), Builder(Builder), Worklist(Worklist),
-        F(F), MinimizeSize(F.hasMinSize()), AA(AA), AC(AC), TLI(TLI), DT(DT),
-        DL(DL), SQ(DL, &TLI, &DT, &AC, nullptr, /*UseInstrInfo*/ true,
-                   /*CanUseUndef*/ true, &DC),
+      : TTIForTargetIntrinsicsOnly(TTI),
+        Builder(F.getContext(), TargetFolder(DL),
+                IRBuilderInstCombineInserter(*this)),
+        Worklist(Worklist), F(F), MinimizeSize(F.hasMinSize()), AA(AA), AC(AC),
+        TLI(TLI), DT(DT), DL(DL),
+        SQ(DL, &TLI, &DT, &AC, nullptr, /*UseInstrInfo*/ true,
+           /*CanUseUndef*/ true, &DC),
         ORE(ORE), BFI(BFI), BPI(BPI), PSI(PSI), RPOT(RPOT) {}
 
   virtual ~InstCombiner() = default;
@@ -204,9 +225,9 @@ public:
   /// dereferenceable).
   /// If the inversion will consume instructions, `DoesConsume` will be set to
   /// true. Otherwise it will be false.
-  Value *getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
-                                      BuilderTy *Builder, bool &DoesConsume,
-                                      unsigned Depth);
+  LLVM_ABI Value *getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
+                                        BuilderTy *Builder, bool &DoesConsume,
+                                        unsigned Depth);
 
   Value *getFreelyInverted(Value *V, bool WillInvertAllUses,
                                   BuilderTy *Builder, bool &DoesConsume) {
@@ -356,18 +377,19 @@ public:
   ProfileSummaryInfo *getProfileSummaryInfo() const { return PSI; }
 
   // Call target specific combiners
-  std::optional<Instruction *> targetInstCombineIntrinsic(IntrinsicInst &II);
-  std::optional<Value *>
+  LLVM_ABI std::optional<Instruction *>
+  targetInstCombineIntrinsic(IntrinsicInst &II);
+  LLVM_ABI std::optional<Value *>
   targetSimplifyDemandedUseBitsIntrinsic(IntrinsicInst &II, APInt DemandedMask,
                                          KnownBits &Known,
                                          bool &KnownBitsComputed);
-  std::optional<Value *> targetSimplifyDemandedVectorEltsIntrinsic(
+  LLVM_ABI std::optional<Value *> targetSimplifyDemandedVectorEltsIntrinsic(
       IntrinsicInst &II, APInt DemandedElts, APInt &UndefElts,
       APInt &UndefElts2, APInt &UndefElts3,
       std::function<void(Instruction *, unsigned, APInt, APInt &)>
           SimplifyAndSetOp);
 
-  void computeBackEdges();
+  LLVM_ABI void computeBackEdges();
   bool isBackEdge(const BasicBlock *From, const BasicBlock *To) {
     if (!ComputedBackEdges)
       computeBackEdges();
@@ -444,87 +466,88 @@ public:
   virtual Instruction *eraseInstFromFunction(Instruction &I) = 0;
 
   void computeKnownBits(const Value *V, KnownBits &Known,
-                        const Instruction *CxtI, unsigned Depth = 0) const {
-    llvm::computeKnownBits(V, Known, SQ.getWithInstruction(CxtI), Depth);
+                        const Instruction *CtxI, unsigned Depth = 0) const {
+    llvm::computeKnownBits(V, Known, SQ.getWithInstruction(CtxI), Depth);
   }
 
-  KnownBits computeKnownBits(const Value *V, const Instruction *CxtI,
+  KnownBits computeKnownBits(const Value *V, const Instruction *CtxI,
                              unsigned Depth = 0) const {
-    return llvm::computeKnownBits(V, SQ.getWithInstruction(CxtI), Depth);
+    return llvm::computeKnownBits(V, SQ.getWithInstruction(CtxI), Depth);
   }
 
   bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero = false,
-                              const Instruction *CxtI = nullptr,
+                              const Instruction *CtxI = nullptr,
                               unsigned Depth = 0) {
-    return llvm::isKnownToBeAPowerOfTwo(V, OrZero, SQ.getWithInstruction(CxtI),
+    return llvm::isKnownToBeAPowerOfTwo(V, OrZero, SQ.getWithInstruction(CtxI),
                                         Depth);
   }
 
   bool MaskedValueIsZero(const Value *V, const APInt &Mask,
-                         const Instruction *CxtI = nullptr,
+                         const Instruction *CtxI = nullptr,
                          unsigned Depth = 0) const {
-    return llvm::MaskedValueIsZero(V, Mask, SQ.getWithInstruction(CxtI), Depth);
+    return llvm::MaskedValueIsZero(V, Mask, SQ.getWithInstruction(CtxI), Depth);
   }
 
   unsigned ComputeNumSignBits(const Value *Op,
-                              const Instruction *CxtI = nullptr,
+                              const Instruction *CtxI = nullptr,
                               unsigned Depth = 0) const {
-    return llvm::ComputeNumSignBits(Op, DL, &AC, CxtI, &DT, Depth);
+    return llvm::ComputeNumSignBits(Op, DL, &AC, CtxI, &DT, Depth);
   }
 
   unsigned ComputeMaxSignificantBits(const Value *Op,
-                                     const Instruction *CxtI = nullptr,
+                                     const Instruction *CtxI = nullptr,
                                      unsigned Depth = 0) const {
-    return llvm::ComputeMaxSignificantBits(Op, DL, &AC, CxtI, &DT, Depth);
+    return llvm::ComputeMaxSignificantBits(Op, DL, &AC, CtxI, &DT, Depth);
   }
 
   /// Return true if the cast from integer to FP can be proven to be exact
   /// for all possible inputs (the conversion does not lose any precision).
-  bool isKnownExactCastIntToFP(CastInst &I) const;
-  bool canBeCastedExactlyIntToFP(Value *V, Type *FPTy, bool IsSigned,
-                                 const Instruction *CxtI = nullptr) const;
+  LLVM_ABI bool isKnownExactCastIntToFP(CastInst &I) const;
+  LLVM_ABI bool
+  canBeCastedExactlyIntToFP(Value *V, Type *FPTy, bool IsSigned,
+                            const Instruction *CtxI = nullptr) const;
 
   OverflowResult computeOverflowForUnsignedMul(const Value *LHS,
                                                const Value *RHS,
-                                               const Instruction *CxtI,
+                                               const Instruction *CtxI,
                                                bool IsNSW = false) const {
     return llvm::computeOverflowForUnsignedMul(
-        LHS, RHS, SQ.getWithInstruction(CxtI), IsNSW);
+        LHS, RHS, SQ.getWithInstruction(CtxI), IsNSW);
   }
 
   OverflowResult computeOverflowForSignedMul(const Value *LHS, const Value *RHS,
-                                             const Instruction *CxtI) const {
+                                             const Instruction *CtxI) const {
     return llvm::computeOverflowForSignedMul(LHS, RHS,
-                                             SQ.getWithInstruction(CxtI));
+                                             SQ.getWithInstruction(CtxI));
   }
 
   OverflowResult
   computeOverflowForUnsignedAdd(const WithCache<const Value *> &LHS,
                                 const WithCache<const Value *> &RHS,
-                                const Instruction *CxtI) const {
+                                const Instruction *CtxI) const {
     return llvm::computeOverflowForUnsignedAdd(LHS, RHS,
-                                               SQ.getWithInstruction(CxtI));
+                                               SQ.getWithInstruction(CtxI));
   }
 
   OverflowResult
   computeOverflowForSignedAdd(const WithCache<const Value *> &LHS,
                               const WithCache<const Value *> &RHS,
-                              const Instruction *CxtI) const {
+                              const Instruction *CtxI) const {
     return llvm::computeOverflowForSignedAdd(LHS, RHS,
-                                             SQ.getWithInstruction(CxtI));
+                                             SQ.getWithInstruction(CtxI));
   }
 
   OverflowResult computeOverflowForUnsignedSub(const Value *LHS,
                                                const Value *RHS,
-                                               const Instruction *CxtI) const {
+                                               const Instruction *CtxI) const {
     return llvm::computeOverflowForUnsignedSub(LHS, RHS,
-                                               SQ.getWithInstruction(CxtI));
+                                               SQ.getWithInstruction(CtxI));
   }
 
   OverflowResult computeOverflowForSignedSub(const Value *LHS, const Value *RHS,
-                                             const Instruction *CxtI) const {
+                                             const Instruction *CtxI) const {
     return llvm::computeOverflowForSignedSub(LHS, RHS,
-                                             SQ.getWithInstruction(CxtI));
+                                             SQ.getWithInstruction(CtxI));
   }
 
   virtual bool SimplifyDemandedBits(Instruction *I, unsigned OpNo,
@@ -543,7 +566,7 @@ public:
                              unsigned Depth = 0,
                              bool AllowMultipleUsers = false) = 0;
 
-  bool isValidAddrSpaceCast(unsigned FromAS, unsigned ToAS) const;
+  LLVM_ABI bool isValidAddrSpaceCast(unsigned FromAS, unsigned ToAS) const;
 };
 
 } // namespace llvm

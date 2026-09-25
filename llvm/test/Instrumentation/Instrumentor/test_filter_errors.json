@@ -1,0 +1,25 @@
+{
+  "configuration": {
+    "runtime_prefix": "__test_error_",
+    "runtime_prefix.description": "The runtime API prefix."
+  },
+  "instruction_post": {
+    "load": {
+      "enabled": true,
+      "filter": "atomicity_ordering==5 && sync_scope_id",
+      "pointer": true,
+      "value": true,
+      "atomicity_ordering": true,
+      "sync_scope_id": true,
+      "id": true
+    }
+  },
+  "function_pre": {
+    "function": {
+      "enabled": true,
+      "filter": "name==\"unterminated",
+      "name": true,
+      "id": true
+    }
+  }
+}

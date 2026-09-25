@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -verify -triple x86_64-pc-linux-gnu -fopenmp-targets=amdgcn-amd-amdhsa -fopenmp -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -verify -triple x86_64-pc-linux-gnu -fopenmp-targets=amdgpu-amd-amdhsa -fopenmp -emit-llvm %s -o - | FileCheck %s
 // expected-no-diagnostics
 
 template<typename C>

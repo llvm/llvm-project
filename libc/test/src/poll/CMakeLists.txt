@@ -1,6 +1,6 @@
 add_custom_target(libc_poll_unittests)
 
-add_libc_unittest(
+add_libc_test(
   poll_test
   SUITE
     libc_poll_unittests
@@ -10,5 +10,37 @@ add_libc_unittest(
     libc.hdr.limits_macros
     libc.src.errno.errno
     libc.src.poll.poll
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_test(
+  ppoll_test
+  SUITE
+    libc_poll_unittests
+  SRCS
+    ppoll_test.cpp
+  DEPENDS
+    libc.hdr.limits_macros
+    libc.hdr.poll_macros
+    libc.hdr.signal_macros
+    libc.hdr.sys_time_macros
+    libc.hdr.types.sigset_t
+    libc.hdr.types.struct_itimerval
+    libc.hdr.types.struct_pollfd
+    libc.hdr.types.struct_sigaction
+    libc.hdr.types.struct_timespec
+    libc.src.__support.CPP.scope
+    libc.src.errno.errno
+    libc.src.poll.ppoll
+    libc.src.signal.raise
+    libc.src.signal.sigaction
+    libc.src.signal.sigaddset
+    libc.src.signal.sigemptyset
+    libc.src.signal.sigprocmask
+    libc.src.sys.time.setitimer
+    libc.src.unistd.close
+    libc.src.unistd.pipe
+    libc.src.unistd.read
+    libc.src.unistd.write
     libc.test.UnitTest.ErrnoCheckingTest
 )

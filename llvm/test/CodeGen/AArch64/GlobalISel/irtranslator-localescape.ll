@@ -6,12 +6,12 @@ define void @local_escape() {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   LOCAL_ESCAPE <mcsymbol .Llocal_escape$frame_escape_1>, %stack.1.b
   ; CHECK-NEXT:   LOCAL_ESCAPE <mcsymbol .Llocal_escape$frame_escape_0>, %stack.0.a
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 42
-  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 13
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 42
+  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 13
   ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.a
   ; CHECK-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1.b
-  ; CHECK-NEXT:   G_STORE [[C]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %ir.a)
-  ; CHECK-NEXT:   G_STORE [[C1]](s32), [[FRAME_INDEX1]](p0) :: (store (s32) into %ir.b)
+  ; CHECK-NEXT:   G_STORE [[C]](i32), [[FRAME_INDEX]](p0) :: (store (i32) into %ir.a)
+  ; CHECK-NEXT:   G_STORE [[C1]](i32), [[FRAME_INDEX1]](p0) :: (store (i32) into %ir.b)
   ; CHECK-NEXT:   RET_ReallyLR
   %a = alloca i32
   %b = alloca i32, i32 2
@@ -27,12 +27,12 @@ define void @local_escape_insert_point() {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   LOCAL_ESCAPE <mcsymbol .Llocal_escape_insert_point$frame_escape_2>, %stack.1.b
   ; CHECK-NEXT:   LOCAL_ESCAPE <mcsymbol .Llocal_escape_insert_point$frame_escape_0>, %stack.0.a
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 42
-  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 13
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 42
+  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 13
   ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.a
   ; CHECK-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1.b
-  ; CHECK-NEXT:   G_STORE [[C]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %ir.a)
-  ; CHECK-NEXT:   G_STORE [[C1]](s32), [[FRAME_INDEX1]](p0) :: (store (s32) into %ir.b)
+  ; CHECK-NEXT:   G_STORE [[C]](i32), [[FRAME_INDEX]](p0) :: (store (i32) into %ir.a)
+  ; CHECK-NEXT:   G_STORE [[C1]](i32), [[FRAME_INDEX1]](p0) :: (store (i32) into %ir.b)
   ; CHECK-NEXT:   RET_ReallyLR
   %a = alloca i32
   %b = alloca i32, i32 2
@@ -49,9 +49,9 @@ define void @local_escape_strip_ptr_cast() {
   ; CHECK-LABEL: name: local_escape_strip_ptr_cast
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   LOCAL_ESCAPE <mcsymbol .Llocal_escape_strip_ptr_cast$frame_escape_0>, %stack.0.a
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 42
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 42
   ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.a
-  ; CHECK-NEXT:   G_STORE [[C]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %ir.a)
+  ; CHECK-NEXT:   G_STORE [[C]](i32), [[FRAME_INDEX]](p0) :: (store (i32) into %ir.a)
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   $x0 = COPY [[FRAME_INDEX]](p0)
   ; CHECK-NEXT:   BL @foo, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0

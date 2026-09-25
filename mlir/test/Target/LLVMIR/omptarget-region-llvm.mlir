@@ -12,10 +12,10 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
     %7 = llvm.alloca %6 x i32 {bindc_name = "c", in_type = i32, operandSegmentSizes = array<i32: 0, 0>, uniq_name = "_QFomp_target_regionEc"} : (i64) -> !llvm.ptr
     llvm.store %1, %3 : i32, !llvm.ptr
     llvm.store %0, %5 : i32, !llvm.ptr
-    %map1 = omp.map.info var_ptr(%3 : !llvm.ptr, i32)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
-    %map2 = omp.map.info var_ptr(%5 : !llvm.ptr, i32)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
-    %map3 = omp.map.info var_ptr(%7 : !llvm.ptr, i32)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
-    omp.target map_entries(%map1 -> %arg0, %map2 -> %arg1, %map3 -> %arg2 : !llvm.ptr, !llvm.ptr, !llvm.ptr) {
+    %map1 = omp.map.info var_ptr(%3 : !llvm.ptr, i32)   map_clauses(tofrom) capture(ByRef) name("") -> !llvm.ptr
+    %map2 = omp.map.info var_ptr(%5 : !llvm.ptr, i32)   map_clauses(tofrom) capture(ByRef) name("") -> !llvm.ptr
+    %map3 = omp.map.info var_ptr(%7 : !llvm.ptr, i32)   map_clauses(tofrom) capture(ByRef) name("") -> !llvm.ptr
+    omp.target kernel_type(generic) map_entries(%map1 -> %arg0, %map2 -> %arg1, %map3 -> %arg2 : !llvm.ptr, !llvm.ptr, !llvm.ptr) {
       %8 = llvm.load %arg0 : !llvm.ptr -> i32
       %9 = llvm.load %arg1 : !llvm.ptr -> i32
       %10 = llvm.add %8, %9  : i32
@@ -26,7 +26,7 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
   }
 
   llvm.func @omp_target_no_map() {
-    omp.target {
+    omp.target kernel_type(generic) {
       omp.terminator
     }
     llvm.return
@@ -42,7 +42,7 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
 // CHECK: omp_offload.cont:
 
 // CHECK: define void @omp_target_no_map()
-// CHECK: call i32 @__tgt_target_kernel(ptr @4, i64 -1, i32 -1, i32 0, ptr @.__omp_offloading_[[DEV:.*]]_[[FIL:.*]]_omp_target_no_map_l[[LINE2:.*]].region_id, ptr %kernel_args)
+// CHECK: call i32 @__tgt_target_kernel(ptr @8, i64 -1, i32 -1, i32 0, ptr @.__omp_offloading_[[DEV:.*]]_[[FIL:.*]]_omp_target_no_map_l[[LINE2:.*]].region_id, ptr %kernel_args)
 
 // CHECK: br i1 %{{.*}}, label %omp_offload.failed, label %omp_offload.cont
 // CHECK: omp_offload.failed:

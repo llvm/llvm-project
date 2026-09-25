@@ -13,12 +13,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/DebugInfo/GSYM/GsymReaderV1.h"
 #include "llvm/DebugInfo/GSYM/GsymReaderV2.h"
 #include "llvm/DebugInfo/GSYM/Header.h"
 #include "llvm/DebugInfo/GSYM/HeaderV2.h"
 #include "llvm/DebugInfo/GSYM/InlineInfo.h"
 #include "llvm/DebugInfo/GSYM/LineTable.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/MemoryBuffer.h"
 
 using namespace llvm;
@@ -71,7 +73,9 @@ GsymReader::openFile(StringRef Filename) {
   auto Err = BuffOrErr.getError();
   if (Err)
     return llvm::errorCodeToError(Err);
-  return create(BuffOrErr.get());
+  auto &Buf = BuffOrErr.get();
+  Buf->randomAccessIfMmap();
+  return create(Buf);
 }
 
 llvm::Expected<std::unique_ptr<GsymReader>>
@@ -492,6 +496,208 @@ GsymReader::lookupAll(uint64_t Addr) const {
   }
 
   return Results;
+}
+
+/// Format raw UUID bytes as a hex string, using the canonical 8-4-4-4-12
+/// dashed layout for the common 16-byte UUID and plain hex otherwise.
+static std::string formatGsymUUID(StringRef Bytes) {
+  std::string Hex = toHex(Bytes, /*LowerCase=*/false);
+  if (Bytes.size() == 16) {
+    Hex.insert(20, "-");
+    Hex.insert(16, "-");
+    Hex.insert(12, "-");
+    Hex.insert(8, "-");
+  }
+  return Hex;
+}
+
+void GsymReader::dumpStatistics(raw_ostream &OS, StatisticsFormat Format,
+                                StringRef GSYMPath) {
+  // The total file size is the size of the in-memory buffer this reader was
+  // created from, so no filesystem access is required and in-memory GSYM data
+  // can be analyzed too.
+  const uint64_t FileSize = MemBuffer->getBufferSize();
+
+  // Section sizes come from the GlobalData directory, which is populated for
+  // both GSYM v1 and v2 readers, so the same logic works for both versions.
+  auto SectionSize = [&](GlobalInfoType Type) -> uint64_t {
+    if (std::optional<GlobalData> GD = getGlobalData(Type))
+      return GD->FileSize;
+    return 0;
+  };
+  const uint64_t AddrTableSize = SectionSize(GlobalInfoType::AddrOffsets);
+  const uint64_t AddrInfoOffsetsSize =
+      SectionSize(GlobalInfoType::AddrInfoOffsets);
+  const uint64_t FileTableSize = SectionSize(GlobalInfoType::FileTable);
+  const uint64_t StrtabSize = SectionSize(GlobalInfoType::StringTable);
+  const uint64_t FuncInfoSize = SectionSize(GlobalInfoType::FunctionInfo);
+  // The V2 GlobalData directory is an on-disk array of 20-byte entries (Type
+  // u32
+  // + FileOffset u64 + FileSize u64) terminated by an EndOfList entry. V1
+  // synthesizes its GlobalData entries and has no on-disk directory.
+  const uint64_t GlobalDataDirSize =
+      getVersion() >= 2 ? (GlobalDataSections.size() + 1) * 20 : 0;
+  // In V2 the UUID is its own data section; report its payload separately. In
+  // V1 the UUID lives inline in the fixed header, so it is already counted
+  // there.
+  const uint64_t UUIDSize =
+      getVersion() >= 2 ? SectionSize(GlobalInfoType::UUID) : 0;
+  // The fixed file header precedes the GlobalData directory (V2) and the data
+  // sections. Its V2 size is a constant; in V1 (no on-disk directory) the
+  // header ends where the earliest data section begins.
+  uint64_t HeaderSize = HeaderV2::getEncodedSize();
+  if (getVersion() < 2) {
+    uint64_t MinSectionOffset = FileSize;
+    for (const auto &KV : GlobalDataSections)
+      MinSectionOffset = std::min(MinSectionOffset, KV.second.FileOffset);
+    HeaderSize = MinSectionOffset;
+  }
+  // Anything left over (alignment padding between sections) is reported as
+  // padding so that the byte-sizes sum exactly to the file size.
+  const uint64_t KnownSize = HeaderSize + GlobalDataDirSize + UUIDSize +
+                             AddrTableSize + AddrInfoOffsetsSize +
+                             FileTableSize + StrtabSize + FuncInfoSize;
+  const uint64_t PaddingSize = FileSize > KnownSize ? FileSize - KnownSize : 0;
+  const uint64_t NumAddresses = getNumAddresses();
+
+  // Walk every FunctionInfo to accumulate the per-field byte sizes.
+  FunctionInfoStats FI;
+  FunctionInfoStats Merged;
+  for (uint64_t I = 0; I < NumAddresses; ++I) {
+    uint64_t FuncStartAddr = 0;
+    if (auto ExpData = getFunctionInfoDataAtIndex(I, FuncStartAddr)) {
+      GsymDataExtractor Data = std::move(*ExpData);
+      FunctionInfo::parseStatistics(Data, FI, &Merged);
+    } else {
+      consumeError(ExpData.takeError());
+    }
+  }
+  // Alignment padding between top-level FunctionInfos (each is 4-byte aligned)
+  // is not attributed to any per-function field; report it as the remainder so
+  // that the sum of the type sizes equals function_info_data.
+  const uint64_t FIAttributed = FI.SizeAndName + FI.LineTableInfo +
+                                FI.InlineInfo + FI.CallSiteInfo +
+                                FI.MergedFuncInfo + FI.EndOfList;
+  const uint64_t Padding =
+      FuncInfoSize > FIAttributed ? FuncInfoSize - FIAttributed : 0;
+
+  const std::string UUIDStr = formatGsymUUID(getUUID());
+
+  if (Format == StatisticsFormat::JSON ||
+      Format == StatisticsFormat::PrettyJSON) {
+    json::Object MergedTypes{
+        {"infotype_infolength_count_and_fnsize",
+         static_cast<int64_t>(Merged.InfoTypeInfoLengthCountAndFnSize)},
+        {"size_and_name", static_cast<int64_t>(Merged.SizeAndName)},
+        {"line_table_info", static_cast<int64_t>(Merged.LineTableInfo)},
+        {"inline_info", static_cast<int64_t>(Merged.InlineInfo)},
+        {"call_site_info", static_cast<int64_t>(Merged.CallSiteInfo)},
+        {"merged_func_info", static_cast<int64_t>(Merged.MergedFuncInfo)},
+        {"end_of_list", static_cast<int64_t>(Merged.EndOfList)}};
+
+    json::Object FuncTypes{
+        {"size_and_name", static_cast<int64_t>(FI.SizeAndName)},
+        {"line_table_info", static_cast<int64_t>(FI.LineTableInfo)},
+        {"inline_info", static_cast<int64_t>(FI.InlineInfo)},
+        {"call_site_info", static_cast<int64_t>(FI.CallSiteInfo)},
+        {"merged_func_info", static_cast<int64_t>(FI.MergedFuncInfo)},
+        {"end_of_list", static_cast<int64_t>(FI.EndOfList)},
+        {"padding", static_cast<int64_t>(Padding)},
+        {"merged_func_info_type_sizes", std::move(MergedTypes)}};
+
+    json::Object ByteSizes{
+        {"file_size", static_cast<int64_t>(FileSize)},
+        {"header", static_cast<int64_t>(HeaderSize)},
+        {"global_data_directory", static_cast<int64_t>(GlobalDataDirSize)},
+        {"uuid_section", static_cast<int64_t>(UUIDSize)},
+        {"padding", static_cast<int64_t>(PaddingSize)},
+        {"address_table", static_cast<int64_t>(AddrTableSize)},
+        {"addr_info_offsets", static_cast<int64_t>(AddrInfoOffsetsSize)},
+        {"file_table", static_cast<int64_t>(FileTableSize)},
+        {"string_table", static_cast<int64_t>(StrtabSize)},
+        {"function_info_data", static_cast<int64_t>(FuncInfoSize)},
+        {"function_info_type_sizes", std::move(FuncTypes)}};
+
+    json::Object Root{{"path", GSYMPath.str()},
+                      {"uuid", UUIDStr},
+                      {"num_addresses", static_cast<int64_t>(NumAddresses)},
+                      {"byte-sizes", std::move(ByteSizes)}};
+
+    json::Value V(std::move(Root));
+    if (Format == StatisticsFormat::PrettyJSON)
+      OS << formatv("{0:2}", V) << "\n";
+    else
+      OS << V << "\n";
+    return;
+  }
+
+  // Text format output.
+  auto Fmt = [](uint64_t Value) {
+    std::string Num = std::to_string(Value);
+    int InsertPosition = Num.length() - 3;
+    while (InsertPosition > 0) {
+      Num.insert(InsertPosition, ",");
+      InsertPosition -= 3;
+    }
+    return std::string(std::max((size_t)0, 14 - Num.length()), ' ') + Num;
+  };
+  auto Pct = [&](uint64_t Value) -> std::string {
+    char Buf[16];
+    snprintf(Buf, sizeof(Buf), "(%5.2f%%)", 100.0 * Value / FileSize);
+    return Buf;
+  };
+
+  OS << "GSYM statistics for \"" << GSYMPath << "\":\n";
+  OS << "  UUID:                " << UUIDStr << "\n";
+  OS << "  Number of addresses: " << Fmt(NumAddresses) << "\n";
+  OS << "  File size:           " << Fmt(FileSize) << " bytes\n";
+  OS << "  Header:              " << Fmt(HeaderSize) << " bytes "
+     << Pct(HeaderSize) << "\n";
+  OS << "  Global data dir:     " << Fmt(GlobalDataDirSize) << " bytes "
+     << Pct(GlobalDataDirSize) << "\n";
+  OS << "  UUID section:        " << Fmt(UUIDSize) << " bytes " << Pct(UUIDSize)
+     << "\n";
+  OS << "  Address table:       " << Fmt(AddrTableSize) << " bytes "
+     << Pct(AddrTableSize) << "\n";
+  OS << "  Addr info offsets:   " << Fmt(AddrInfoOffsetsSize) << " bytes "
+     << Pct(AddrInfoOffsetsSize) << "\n";
+  OS << "  File table:          " << Fmt(FileTableSize) << " bytes "
+     << Pct(FileTableSize) << "\n";
+  OS << "  String table:        " << Fmt(StrtabSize) << " bytes "
+     << Pct(StrtabSize) << "\n";
+  OS << "  Function info data:  " << Fmt(FuncInfoSize) << " bytes "
+     << Pct(FuncInfoSize) << "\n";
+  OS << "    Size and name:     " << Fmt(FI.SizeAndName) << " bytes "
+     << Pct(FI.SizeAndName) << "\n";
+  OS << "    Line table info:   " << Fmt(FI.LineTableInfo) << " bytes "
+     << Pct(FI.LineTableInfo) << "\n";
+  OS << "    Inline info:       " << Fmt(FI.InlineInfo) << " bytes "
+     << Pct(FI.InlineInfo) << "\n";
+  OS << "    Call site info:    " << Fmt(FI.CallSiteInfo) << " bytes "
+     << Pct(FI.CallSiteInfo) << "\n";
+  OS << "    End of list:       " << Fmt(FI.EndOfList) << " bytes "
+     << Pct(FI.EndOfList) << "\n";
+  OS << "    Padding:           " << Fmt(Padding) << " bytes " << Pct(Padding)
+     << "\n";
+  OS << "    Merged func info:  " << Fmt(FI.MergedFuncInfo) << " bytes "
+     << Pct(FI.MergedFuncInfo) << "\n";
+  OS << "      InfoType/InfoLength/Count/FnSize: "
+     << Fmt(Merged.InfoTypeInfoLengthCountAndFnSize) << " bytes "
+     << Pct(Merged.InfoTypeInfoLengthCountAndFnSize) << "\n";
+  OS << "      Size and name:   " << Fmt(Merged.SizeAndName) << " bytes "
+     << Pct(Merged.SizeAndName) << "\n";
+  OS << "      Line table info: " << Fmt(Merged.LineTableInfo) << " bytes "
+     << Pct(Merged.LineTableInfo) << "\n";
+  OS << "      Inline info:     " << Fmt(Merged.InlineInfo) << " bytes "
+     << Pct(Merged.InlineInfo) << "\n";
+  OS << "      Call site info:  " << Fmt(Merged.CallSiteInfo) << " bytes "
+     << Pct(Merged.CallSiteInfo) << "\n";
+  OS << "      Merged func info:" << Fmt(Merged.MergedFuncInfo) << " bytes "
+     << Pct(Merged.MergedFuncInfo) << "\n";
+  OS << "      End of list:     " << Fmt(Merged.EndOfList) << " bytes "
+     << Pct(Merged.EndOfList) << "\n";
+  OS << "  Padding:             " << Fmt(PaddingSize) << " bytes "
+     << Pct(PaddingSize) << "\n";
 }
 
 void GsymReader::dump(raw_ostream &OS, const FunctionInfo &FI,

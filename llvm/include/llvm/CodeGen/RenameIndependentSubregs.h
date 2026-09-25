@@ -14,10 +14,10 @@
 namespace llvm {
 
 class RenameIndependentSubregsPass
-    : public PassInfoMixin<RenameIndependentSubregsPass> {
+    : public RequiredPassInfoMixin<RenameIndependentSubregsPass> {
 public:
-  PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
 };
 
 } // namespace llvm

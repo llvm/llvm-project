@@ -188,3 +188,128 @@ namespace InvalidCallExpr {
     return true;
   }
 }
+
+namespace InvalidUnaryOperator {
+  typedef struct {} S;
+  void foo() {
+    S *s = (S *)malloc(sizeof(*s)); // both-error {{use of undeclared identifier 'malloc'}}
+    S *&sref = s;
+    for (int i = 0; i < 2; sref++)
+      ;
+  }
+}
+
+namespace IncNonDereferencable {
+  struct S {};
+
+  void foo() {
+    S *s = (foo *)malloc(sizeof(*s)); // both-error {{expected expression}}
+    S *&sref = s;
+    for (int i = 0; i < 2; sref++)
+      ;
+  }
+}
+
+namespace InvalidVirtualCast {
+  struct X {};
+  struct Y : virtual X {};
+  struct Z {
+  } z;
+  static_assert((X *)(Y *)&z, ""); // both-error {{not an integral constant expression}} \
+                                   // both-note {{cast that performs the conversions of a reinterpret_cast is not allowed in a constant expression}}
+}
+
+namespace DefinitionInBody {
+  int foo(); // both-note {{declared here}}
+  int foo() {
+    static_assert(foo() == 1); // both-error {{not an integral constant expression}} \
+                               // both-note {{non-constexpr function 'foo' cannot be used in a constant expression}}
+    return 5;
+  }
+}
+
+namespace InheritedCtor {
+  struct S {
+    constexpr S(int = ; // both-note {{to match this}} \
+                        // both-error {{expected ';' at end of declaration list}} \
+                        // both-error {{expected expression}}
+  }; // both-error {{expected ')'}}
+
+  struct SS : S {
+    using S::S;
+  };
+
+  SS ss{42};
+}
+
+namespace InvalidStaticInvoker {
+  auto foo = [](bar) { int j; return j; }; // both-error {{unknown type name 'bar'}}
+  constexpr int (*baz)(int) = foo;
+  int i = baz(42);
+}
+
+namespace UnknownSizeArrayInEvaluateString {
+  void foo() {
+    constexpr char K[] = {'\0'; // both-error {{expected '}'}} \
+                                // both-note {{to match this}}
+    __builtin_verbose_trap("bar", K); // both-error {{argument to __builtin_verbose_trap must be a pointer to a constant string}}
+  }
+  }
+} // both-error {{extraneous closing brace}}
+
+namespace SubPtrResultIs1 {
+  struct A {
+    char x;
+  };
+  struct B {
+    char y;
+  };
+  struct C : A, B {};
+  unsigned char x = ((char **)(B *)(C *)0x1000) - (char *)0x1000; // both-error {{not pointers to compatible types}}
+}
+
+namespace NonRecordNonArrayDesc {
+
+  struct S { // both-note {{definition of 'NonRecordNonArrayDesc::S' is not complete until the closing '}'}}
+    const S(foo[42]) : bar{}; // both-error {{use of undeclared identifier 'bar'}} \
+                              // both-error {{field has incomplete type 'const S'}}
+  };
+
+  struct F {
+    _Atomic(S) a;
+    constexpr F(int i) {};
+  };
+
+  F foo(42);
+}
+
+namespace CompositeFieldInit {
+  struct S {
+    static consteval int decrement(int &x) {
+      return --x;
+    }
+
+    int a = 10;
+    int b = decrement(a); // both-error {{is not a constant expression}} \
+                          // both-note {{declared here}} \
+                          // both-note {{implicit use of 'this'}}
+  };
+
+  struct S2 {
+     const S s{10}; // both-note {{in the default initializer of 'b'}}
+  };
+
+  constexpr S2 s2{};
+}
+
+namespace UnsizedArrayAndNonEmptyPath {
+  void foo() {
+    struct S {
+      int m[];
+    } s;
+    constexpr auto p = s.m; // both-error {{must be initialized by a constant expression}} \
+                            // both-note {{array-to-pointer decay of array member without known bound is not supported}}
+  }
+
+  void bar() { foo(); }
+}

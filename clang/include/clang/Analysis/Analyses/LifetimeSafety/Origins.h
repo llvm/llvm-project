@@ -53,10 +53,20 @@ struct Origin {
   /// Null for synthetic lvalue origins (e.g., outer origin of DeclRefExpr).
   const Type *Ty;
 
-  Origin(OriginID ID, const clang::ValueDecl *D, const Type *QT)
-      : ID(ID), Ptr(D), Ty(QT) {}
-  Origin(OriginID ID, const clang::Expr *E, const Type *QT)
-      : ID(ID), Ptr(E), Ty(QT) {}
+  /// True if this origin only holds a loan to a declaration named in scope, so
+  /// it can never hold an expired loan. For example, in
+  ///   int s = 42;
+  ///   int t = s;
+  /// the outer origin of the expression `s` holds a loan to `s`, which is alive
+  /// wherever `s` can be named.
+  bool NamesDeclStorage;
+
+  Origin(OriginID ID, const clang::ValueDecl *D, const Type *QT,
+         bool NamesDeclStorage)
+      : ID(ID), Ptr(D), Ty(QT), NamesDeclStorage(NamesDeclStorage) {}
+  Origin(OriginID ID, const clang::Expr *E, const Type *QT,
+         bool NamesDeclStorage)
+      : ID(ID), Ptr(E), Ty(QT), NamesDeclStorage(NamesDeclStorage) {}
 
   const clang::ValueDecl *getDecl() const {
     return Ptr.dyn_cast<const clang::ValueDecl *>();
@@ -158,7 +168,29 @@ public:
 
   unsigned getNumOrigins() const { return NextOriginID.Value; }
 
-  bool hasOrigins(QualType QT) const;
+  /// Determines whether a type can carry lifetime origins.
+  ///
+  /// \param QT The type to check.
+  /// \param IntrinsicOnly If true, only consider types that can intrinsically
+  ///        carry origins. If false, also include types that are tracked due to
+  ///        context-sensitive annotations (e.g., return types of
+  ///        [[clang::lifetimebound]] functions).
+  ///
+  /// Intrinsic origin types:
+  ///   - Pointer types (int*, void*)
+  ///   - Reference types (int&, const T&)
+  ///   - gsl::Pointer annotated types (std::string_view)
+  ///   - Lambdas capturing pointer-like objects
+  ///   - Standard callable wrappers (std::function)
+  ///
+  /// TODO: Expand this list with other origin types such as: user-defined
+  /// structs with pointer-like fields.
+  ///
+  /// Contextual origin types (excluded when IntrinsicOnly=true):
+  ///   - Types appearing as return values of functions with
+  ///     [[clang::lifetimebound]] parameters, stored in
+  ///     LifetimeAnnotatedOriginTypes during function body analysis.
+  bool hasOrigins(QualType QT, bool IntrinsicOnly = false) const;
   bool hasOrigins(const Expr *E) const;
 
   void dump(OriginID OID, llvm::raw_ostream &OS) const;
@@ -169,11 +201,14 @@ public:
 private:
   OriginID getNextOriginID() { return NextOriginID++; }
 
-  OriginList *createNode(const ValueDecl *D, QualType QT);
-  OriginList *createNode(const Expr *E, QualType QT);
+  OriginList *createNode(const ValueDecl *D, QualType QT,
+                         bool NamesDeclStorage = false);
+  OriginList *createNode(const Expr *E, QualType QT,
+                         bool NamesDeclStorage = false);
 
   template <typename T>
-  OriginList *buildListForType(QualType QT, const T *Node);
+  OriginList *buildListForType(QualType QT, const T *Node,
+                               bool NamesDeclStorage = false);
 
   void initializeThisOrigins(const Decl *D);
 

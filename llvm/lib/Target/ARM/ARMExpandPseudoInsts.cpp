@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/Support/Debug.h"
 
@@ -58,6 +59,11 @@ namespace {
 
     StringRef getPassName() const override {
       return ARM_EXPAND_PSEUDO_NAME;
+    }
+
+    void getAnalysisUsage(AnalysisUsage &AU) const override {
+      AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
+      MachineFunctionPass::getAnalysisUsage(AU);
     }
 
   private:
@@ -985,6 +991,8 @@ static MachineOperand getMovOperand(const MachineOperand &MO,
   }
   case MachineOperand::MO_ExternalSymbol:
     return MachineOperand::CreateES(MO.getSymbolName(), TF);
+  case MachineOperand::MO_MCSymbol:
+    return MachineOperand::CreateMCSymbol(MO.getMCSymbol(), TF);
   case MachineOperand::MO_JumpTableIndex:
     return MachineOperand::CreateJTI(MO.getIndex(), TF);
   default:
@@ -1839,6 +1847,15 @@ void ARMExpandPseudo::CMSERestoreFPRegsV81(
   }
 }
 
+static unsigned getCmpOpcode(bool IsThumb, Register LHS, Register RHS) {
+  if (!IsThumb)
+    return ARM::CMPrr;
+  if (ARM::tGPRRegClass.contains(LHS) &&
+      ARM::tGPRRegClass.contains(RHS))
+    return ARM::tCMPr;
+  return ARM::tCMPhir;
+}
+
 /// Expand a CMP_SWAP pseudo-inst to an ldrex/strex loop as simply as
 /// possible. This only gets used at -O0 so we don't care about efficiency of
 /// the generated code.
@@ -1899,7 +1916,7 @@ bool ARMExpandPseudo::ExpandCMP_SWAP(MachineBasicBlock &MBB,
     MIB.addImm(0); // a 32-bit Thumb ldrex (only) allows an offset.
   MIB.add(predOps(ARMCC::AL));
 
-  unsigned CMPrr = IsThumb ? ARM::tCMPhir : ARM::CMPrr;
+  unsigned CMPrr = getCmpOpcode(IsThumb, Dest.getReg(), DesiredReg);
   BuildMI(LoadCmpBB, DL, TII->get(CMPrr))
       .addReg(Dest.getReg(), getKillRegState(Dest.isDead()))
       .addReg(DesiredReg)
@@ -2019,16 +2036,18 @@ bool ARMExpandPseudo::ExpandCMP_SWAP_64(MachineBasicBlock &MBB,
   addExclusiveRegPair(MIB, Dest, RegState::Define, IsThumb, TRI);
   MIB.addReg(AddrReg).add(predOps(ARMCC::AL));
 
-  unsigned CMPrr = IsThumb ? ARM::tCMPhir : ARM::CMPrr;
-  BuildMI(LoadCmpBB, DL, TII->get(CMPrr))
+  unsigned CMPrrLo = getCmpOpcode(IsThumb, DestLo, DesiredLo);
+  BuildMI(LoadCmpBB, DL, TII->get(CMPrrLo))
       .addReg(DestLo, getKillRegState(Dest.isDead()))
       .addReg(DesiredLo)
       .add(predOps(ARMCC::AL));
 
-  BuildMI(LoadCmpBB, DL, TII->get(CMPrr))
+  unsigned CMPrrHi = getCmpOpcode(IsThumb, DestHi, DesiredHi);
+  BuildMI(LoadCmpBB, DL, TII->get(CMPrrHi))
       .addReg(DestHi, getKillRegState(Dest.isDead()))
       .addReg(DesiredHi)
-      .addImm(ARMCC::EQ).addReg(ARM::CPSR, RegState::Kill);
+      .addImm(ARMCC::EQ)
+      .addReg(ARM::CPSR, RegState::Kill);
 
   unsigned Bcc = IsThumb ? ARM::tBcc : ARM::Bcc;
   BuildMI(LoadCmpBB, DL, TII->get(Bcc))
@@ -2242,6 +2261,14 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
       return true;
     }
 
+    case ARM::CLEANUPRET:
+    case ARM::CATCHRET: {
+      unsigned RetOpcode = STI->isThumb() ? ARM::tBX_RET : ARM::BX_RET;
+      BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(RetOpcode))
+          .add(predOps(ARMCC::AL));
+      MI.eraseFromParent();
+      return true;
+    }
     case ARM::TCRETURNdi:
     case ARM::TCRETURNri:
     case ARM::TCRETURNrinotr12: {
@@ -2268,7 +2295,7 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
       // Jump to label or value in register.
       if (RetOpcode == ARM::TCRETURNdi) {
         MachineFunction *MF = MBB.getParent();
-        bool NeedsWinCFI = MF->getTarget().getMCAsmInfo()->usesWindowsCFI() &&
+        bool NeedsWinCFI = MF->getTarget().getMCAsmInfo().usesWindowsCFI() &&
                            MF->getFunction().needsUnwindTableEntry();
         unsigned TCOpcode =
             STI->isThumb()
@@ -2410,15 +2437,20 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
                           ClearRegs); // save+clear FP regs with ClearRegs
       CMSEClearGPRegs(MBB, MBBI, DL, ClearRegs, JumpReg);
 
-      const MachineInstrBuilder NewCall =
-          BuildMI(MBB, MBBI, DL, TII->get(ARM::tBLXNSr))
-              .add(predOps(ARMCC::AL))
-              .addReg(JumpReg, RegState::Kill);
+      // Be careful not to duplicate the LR def that already exists on the
+      // pseudoinstruction.
+      MachineFunction &MF = *MBB.getParent();
+      MachineInstr *NewCall = MF.CreateMachineInstr(TII->get(ARM::tBLXNSr), DL,
+                                                    /*NoImplicit=*/true);
+      MBB.insert(MBBI, NewCall);
+      MachineInstrBuilder(MF, NewCall)
+          .add(predOps(ARMCC::AL))
+          .addReg(JumpReg, RegState::Kill);
 
       for (const MachineOperand &MO : llvm::drop_begin(MI.operands()))
         NewCall->addOperand(MO);
       if (MI.isCandidateForAdditionalCallInfo())
-        MI.getMF()->moveAdditionalCallInfo(&MI, NewCall.getInstr());
+        MI.getMF()->moveAdditionalCallInfo(&MI, NewCall);
 
       CMSERestoreFPRegs(MBB, MBBI, DL, OriginalClearRegs); // restore FP registers
 
@@ -2637,22 +2669,30 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
           MIB.addImm(0);
         MIB.add(predOps(ARMCC::AL));
 
-        MIB =
-            BuildMI(MBB, MBBI, MI.getDebugLoc(),
-                    TII->get(Thumb ? gettBLXrOpcode(*MF) : getBLXOpcode(*MF)));
+        // The pesudo already has an LR def, avoid introducing a duplicated copy
+        // from the original operand list.
+        unsigned CallOpc = Thumb ? gettBLXrOpcode(*MF) : getBLXOpcode(*MF);
+        MachineInstr *Call = MF->CreateMachineInstr(
+            TII->get(CallOpc), MI.getDebugLoc(), /*NoImplicit=*/true);
+        MBB.insert(MBBI, Call);
+        MIB = MachineInstrBuilder(*MF, Call);
         if (Thumb)
           MIB.add(predOps(ARMCC::AL));
         MIB.addReg(Reg, RegState::Kill);
       } else {
-        MIB = BuildMI(MBB, MBBI, MI.getDebugLoc(),
-                      TII->get(Thumb ? ARM::tBL : ARM::BL));
+        unsigned CallOpc = Thumb ? ARM::tBL : ARM::BL;
+        MachineInstr *Call = MF->CreateMachineInstr(
+            TII->get(CallOpc), MI.getDebugLoc(), /*NoImplicit=*/true);
+        MBB.insert(MBBI, Call);
+        MIB = MachineInstrBuilder(*MF, Call);
         if (Thumb)
           MIB.add(predOps(ARMCC::AL));
         MIB.addExternalSymbol("__aeabi_read_tp", 0);
       }
 
       MIB.cloneMemRefs(MI);
-      MIB.copyImplicitOps(MI);
+      for (const MachineOperand &MO : MI.operands())
+        MIB.add(MO);
       // Update the call info.
       if (MI.isCandidateForAdditionalCallInfo())
         MF->moveAdditionalCallInfo(&MI, &*MIB);
@@ -3222,15 +3262,13 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
       const bool Thumb = Opcode == ARM::tBL_PUSHLR;
       Register Reg = MI.getOperand(0).getReg();
       assert(Reg == ARM::LR && "expect LR register!");
-      MachineInstrBuilder MIB;
+      MachineFunction &MF = *MBB.getParent();
+      unsigned CallOpc = Thumb ? ARM::tBL : ARM::BL;
       if (Thumb) {
         // push {lr}
         BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(ARM::tPUSH))
             .add(predOps(ARMCC::AL))
             .addReg(Reg);
-
-        // bl __gnu_mcount_nc
-        MIB = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(ARM::tBL));
       } else {
         // stmdb   sp!, {lr}
         BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(ARM::STMDB_UPD))
@@ -3238,10 +3276,15 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
             .addReg(ARM::SP)
             .add(predOps(ARMCC::AL))
             .addReg(Reg);
-
-        // bl __gnu_mcount_nc
-        MIB = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(ARM::BL));
       }
+
+      // bl __gnu_mcount_nc. Be careful not to duplicate the LR-def the original
+      // instruction already has.
+      MachineInstr *Call =
+          MF.CreateMachineInstr(TII->get(CallOpc), MI.getDebugLoc(),
+                                /*NoImplicit=*/true);
+      MBB.insert(MBBI, Call);
+      MachineInstrBuilder MIB(MF, Call);
       MIB.cloneMemRefs(MI);
       for (const MachineOperand &MO : llvm::drop_begin(MI.operands()))
         MIB.add(MO);

@@ -24,7 +24,7 @@ define i16 @test(ptr %p1) {
 ; CHECK-LE-NORMAL-LABEL: test:
 ; CHECK-LE-NORMAL:       @ %bb.0: @ %entry
 ; CHECK-LE-NORMAL-NEXT:    ldrh r1, [r0, #8]
-; CHECK-LE-NORMAL-NEXT:    movw r2, #65534
+; CHECK-LE-NORMAL-NEXT:    mvn r2, #1
 ; CHECK-LE-NORMAL-NEXT:    orr r1, r1, r2
 ; CHECK-LE-NORMAL-NEXT:    strh r1, [r0, #8]
 ; CHECK-LE-NORMAL-NEXT:    mov r0, #0
@@ -42,7 +42,7 @@ define i16 @test(ptr %p1) {
 ; CHECK-BE-NORMAL-LABEL: test:
 ; CHECK-BE-NORMAL:       @ %bb.0: @ %entry
 ; CHECK-BE-NORMAL-NEXT:    ldrh r1, [r0]
-; CHECK-BE-NORMAL-NEXT:    movw r2, #65534
+; CHECK-BE-NORMAL-NEXT:    mvn r2, #1
 ; CHECK-BE-NORMAL-NEXT:    orr r1, r1, r2
 ; CHECK-BE-NORMAL-NEXT:    strh r1, [r0]
 ; CHECK-BE-NORMAL-NEXT:    mov r0, #0

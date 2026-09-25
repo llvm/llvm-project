@@ -232,9 +232,9 @@ static bool trySequenceOfOnes(uint64_t UImm,
     return true;
 
   // Create the second MOVK instruction.
-  Insn.push_back({ AArch64::MOVKXi, getChunk(UImm, SecondMovkIdx),
-	           AArch64_AM::getShifterImm(AArch64_AM::LSL,
-                                             SecondMovkIdx * 16) });
+  Insn.push_back(
+      {AArch64::MOVKXi, getChunk(UImm, SecondMovkIdx),
+       AArch64_AM::getShifterImm(AArch64_AM::LSL, SecondMovkIdx * 16)});
 
   return true;
 }
@@ -285,7 +285,7 @@ static bool tryCopyWithNegation(uint64_t Imm, bool AllowThreeSequence,
       Insn.push_back({AArch64::MOVNXi, Imm16 ^ Mask, 16});
     }
 
-    Insn.push_back({Opc, 0, N});
+    Insn.push_back({Opc, std::nullopt, N});
     return true;
   };
 
@@ -719,4 +719,19 @@ void AArch64_IMM::expandMOVImm(uint64_t Imm, unsigned BitSize,
   // We found no possible two or three instruction sequence; use the general
   // four-instruction sequence.
   expandMOVImmSimple(Imm, BitSize, OneChunks, ZeroChunks, Insn);
+}
+
+void AArch64_IMM::expandMOVAddr(unsigned Opcode, unsigned TargetFlags,
+                                bool IsTargetMachO,
+                                SmallVectorImpl<AddrInsnModel> &Insn) {
+  if (Opcode == AArch64::MOVaddrBA && IsTargetMachO) {
+    // Block address on Mach-O goes through a constant pool.
+    Insn.push_back({AArch64::ADRP});
+    Insn.push_back({AArch64::LDRXui});
+    return;
+  }
+  Insn.push_back({AArch64::ADRP});
+  if (TargetFlags & AArch64II::MO_TAGGED)
+    Insn.push_back({AArch64::MOVKXi});
+  Insn.push_back({AArch64::ADDXri});
 }

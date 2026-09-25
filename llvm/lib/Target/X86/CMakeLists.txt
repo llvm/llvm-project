@@ -61,6 +61,7 @@ set(sources
   X86ISelLoweringCall.cpp
   X86IndirectBranchTracking.cpp
   X86IndirectThunks.cpp
+  X86InsertVZeroUpper.cpp
   X86InsertX87Wait.cpp
   X86InterleavedAccess.cpp
   X86InstCombineIntrinsic.cpp
@@ -68,6 +69,7 @@ set(sources
   X86InstrFoldTables.cpp
   X86InstrInfo.cpp
   X86CompressEVEX.cpp
+  X86LFIRewritePass.cpp
   X86LoadValueInjectionLoadHardening.cpp
   X86LoadValueInjectionRetHardening.cpp
   X86MCInstLower.cpp
@@ -87,9 +89,9 @@ set(sources
   X86TargetMachine.cpp
   X86TargetObjectFile.cpp
   X86TargetTransformInfo.cpp
-  X86VZeroUpper.cpp
   X86WinEHState.cpp
   X86WinEHUnwindV2.cpp
+  X86WinEHUnwindV3.cpp
   GISel/X86CallLowering.cpp
   GISel/X86InstructionSelector.cpp
   GISel/X86LegalizerInfo.cpp
@@ -107,12 +109,11 @@ add_llvm_target(X86CodeGen ${sources}
   CodeGenTypes
   Core
   GlobalISel
-  IRPrinter
   Instrumentation
   MC
   ObjCARC
+  Passes
   ProfileData
-  Scalar
   SelectionDAG
   Support
   Target

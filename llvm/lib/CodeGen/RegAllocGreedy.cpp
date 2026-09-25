@@ -258,7 +258,6 @@ PreservedAnalyses RAGreedyPass::run(MachineFunction &MF,
     return PreservedAnalyses::all();
   auto PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserveSet<CFGAnalyses>();
-  PA.preserve<MachineBlockFrequencyAnalysis>();
   PA.preserve<LiveIntervalsAnalysis>();
   PA.preserve<SlotIndexesAnalysis>();
   PA.preserve<LiveDebugVariablesAnalysis>();
@@ -342,7 +341,6 @@ FunctionPass *llvm::createGreedyRegisterAllocator(RegAllocFilterFunc Ftor) {
 void RAGreedyLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
   AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
-  AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
   AU.addRequired<LiveIntervalsWrapperPass>();
   AU.addPreserved<LiveIntervalsWrapperPass>();
   AU.addRequired<SlotIndexesWrapperPass>();
@@ -352,9 +350,7 @@ void RAGreedyLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<LiveStacksWrapperLegacy>();
   AU.addPreserved<LiveStacksWrapperLegacy>();
   AU.addRequired<MachineDominatorTreeWrapperPass>();
-  AU.addPreserved<MachineDominatorTreeWrapperPass>();
   AU.addRequired<MachineLoopInfoWrapperPass>();
-  AU.addPreserved<MachineLoopInfoWrapperPass>();
   AU.addRequired<VirtRegMapWrapperLegacy>();
   AU.addPreserved<VirtRegMapWrapperLegacy>();
   AU.addRequired<LiveRegMatrixWrapperLegacy>();
@@ -649,6 +645,8 @@ void RAGreedy::evictInterference(const LiveInterval &VirtReg,
 
     Matrix->unassign(*Intf);
     assert((ExtraInfo->getCascade(Intf->reg()) < Cascade ||
+            (Cascade < ExtraInfo->getCascade(Intf->reg()) &&
+             EvictAdvisor->isUrgentEviction(VirtReg, *Intf)) ||
             VirtReg.isSpillable() < Intf->isSpillable()) &&
            "Cannot decrease cascade number, illegal eviction");
     ExtraInfo->setCascade(Intf->reg(), Cascade);
@@ -685,7 +683,10 @@ RegAllocEvictionAdvisor::getOrderLimit(const LiveInterval &VirtReg,
 
     // It is normal for register classes to have a long tail of registers with
     // the same cost. We don't need to look at them if they're too expensive.
-    if (RegCosts[Order.getOrder().back()] >= CostPerUseLimit) {
+    // LastCostChange is an index into the original RegisterClassInfo order, so
+    // it cannot be used to shorten a custom order.
+    if (!Order.hasCustomOrder() &&
+        RegCosts[Order.getOrder().back()] >= CostPerUseLimit) {
       OrderLimit = RegClassInfo.getLastCostChange(RC);
       LLVM_DEBUG(dbgs() << "Only trying the first " << OrderLimit
                         << " regs.\n");
@@ -766,7 +767,7 @@ bool RAGreedy::addSplitConstraints(InterferenceCache::Cursor Intf,
 
     // Interference for the live-in value.
     if (BI.LiveIn) {
-      if (Intf.first() <= Indexes->getMBBStartIdx(BC.Number)) {
+      if (Intf.first() <= Indexes->getMBBStartIdx(BI.MBB)) {
         BC.Entry = SpillPlacement::MustSpill;
         ++Ins;
       } else if (Intf.first() < BI.FirstInstr) {
@@ -841,8 +842,15 @@ bool RAGreedy::addThroughConstraints(InterferenceCache::Cursor Intf,
         SlotIndex::isEarlierInstr(LIS->getInstructionIndex(*FirstNonDebugInstr),
                                   SA->getFirstSplitPoint(Number)))
       return false;
+
     // Interference for the live-in value.
-    if (Intf.first() <= Indexes->getMBBStartIdx(Number))
+    Register Reg = SA->getParent().reg();
+    auto InsertPt = MBB->SkipPHIsLabelsAndDebug(MBB->begin(), Reg);
+    SlotIndex InsertIdx = InsertPt == MBB->end()
+                              ? Indexes->getMBBEndIdx(MBB)
+                              : LIS->getInstructionIndex(*InsertPt);
+    if (Intf.first() <= Indexes->getMBBStartIdx(MBB) ||
+        SlotIndex::isEarlierInstr(Intf.first(), InsertIdx))
       BCS[B].Entry = SpillPlacement::MustSpill;
     else
       BCS[B].Entry = SpillPlacement::PrefSpill;
@@ -2447,11 +2455,16 @@ void RAGreedy::initializeCSRCost() {
     }
   } else {
     uint64_t EntryFreq = MBFI->getEntryFreq().getFrequency();
-    CSRCost = BlockFrequency(TRI->getCSRFirstUseCost() * EntryFreq);
-    if (CSRCostScale < 100)
-      CSRCost *= BranchProbability(CSRCostScale, 100);
+    CSRCost = BlockFrequency(TRI->getCSRFirstUseCost(*MF) * EntryFreq);
+    unsigned Scale = TRI->getCSRCostScale(*MF);
+    // Command line specified CSRCostScale can override target's default value.
+    if (CSRCostScale.getNumOccurrences())
+      Scale = CSRCostScale;
+
+    if (Scale < 100)
+      CSRCost *= BranchProbability(Scale, 100);
     else
-      CSRCost /= BranchProbability(100, CSRCostScale);
+      CSRCost /= BranchProbability(100, Scale);
   }
 }
 

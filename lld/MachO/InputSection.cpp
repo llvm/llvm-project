@@ -100,10 +100,11 @@ uint64_t macho::resolveSymbolOffsetVA(const Symbol *sym, uint8_t type,
     // function's layout, which an interposed replacement wouldn't preserve.
     // There's no meaningful way to "interpose" an interior offset.
     symVA = (offset != 0) ? sym->getVA() : sym->resolveBranchVA();
-  } else if (relocAttrs.hasAttr(RelocAttrBits::GOT)) {
-    symVA = sym->resolveGotVA();
-  } else if (relocAttrs.hasAttr(RelocAttrBits::TLV)) {
-    symVA = sym->resolveTlvVA();
+  } else if (relocAttrs.hasAttr(RelocAttrBits::GOT) ||
+             relocAttrs.hasAttr(RelocAttrBits::TLV)) {
+    // Both kinds read the symbol's single non-lazy pointer slot; for a
+    // thread-local that slot holds the address of its TLV descriptor.
+    symVA = sym->resolveNonLazyPtrVA();
   } else {
     symVA = sym->getVA();
   }
@@ -204,16 +205,20 @@ void ConcatInputSection::foldIdentical(ConcatInputSection *copy,
   for (auto &copySym : copy->symbols)
     copySym->identicalCodeFoldingKind = foldKind;
 
-  symbols.insert(symbols.end(), copy->symbols.begin(), copy->symbols.end());
-  copy->symbols.clear();
-
-  // Remove duplicate compact unwind info for symbols at the same address.
-  if (symbols.empty())
+  if (copy->symbols.empty())
     return;
-  for (auto it = symbols.begin() + 1; it != symbols.end(); ++it) {
+  auto *it = copy->symbols.begin();
+  // The first symbol in the merged section (symbols.front()) must keep its
+  // unwind entry. If this section is empty, the copy's first symbol becomes the
+  // new front, so we skip clearing it.
+  if (symbols.empty())
+    ++it;
+  for (; it != copy->symbols.end(); ++it) {
     assert((*it)->value == 0);
     (*it)->originalUnwindEntry = nullptr;
   }
+  symbols.insert(symbols.end(), copy->symbols.begin(), copy->symbols.end());
+  copy->symbols.clear();
 }
 
 void ConcatInputSection::writeTo(uint8_t *buf) {

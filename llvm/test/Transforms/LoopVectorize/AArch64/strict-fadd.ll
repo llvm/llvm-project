@@ -273,8 +273,8 @@ define void @fadd_strict_interleave(ptr noalias nocapture readonly %a, ptr noali
 ; CHECK-UNORDERED: %[[LOADA1:.*]] = load float, ptr %a
 ; CHECK-UNORDERED: %[[LOADA2:.*]] = load float, ptr %[[ARRAYIDX]]
 ; CHECK-UNORDERED: vector.ph
-; CHECK-UNORDERED: %[[INS2:.*]] = insertelement <4 x float> splat (float -0.000000e+00), float %[[LOADA2]], i32 0
-; CHECK-UNORDERED: %[[INS1:.*]] = insertelement <4 x float> splat (float -0.000000e+00), float %[[LOADA1]], i32 0
+; CHECK-UNORDERED: %[[INS2:.*]] = insertelement <4 x float> splat (float -0.000000e+00), float %[[LOADA2]], i64 0
+; CHECK-UNORDERED: %[[INS1:.*]] = insertelement <4 x float> splat (float -0.000000e+00), float %[[LOADA1]], i64 0
 ; CHECK-UNORDERED: vector.body
 ; CHECK-UNORDERED: %[[VEC_PHI2:.*]] = phi <4 x float> [ %[[INS2]], %vector.ph ], [ %[[VEC_FADD2:.*]], %vector.body ]
 ; CHECK-UNORDERED: %[[VEC_PHI1:.*]] = phi <4 x float> [ %[[INS1]], %vector.ph ], [ %[[VEC_FADD1:.*]], %vector.body ]
@@ -397,7 +397,7 @@ define float @fadd_conditional(ptr noalias nocapture readonly %a, ptr noalias no
 ; CHECK-ORDERED: %[[PHI:.*]] = phi float [ 1.000000e+00, %vector.ph ], [ %[[RDX:.*]], %pred.load.continue6 ]
 ; CHECK-ORDERED: %[[LOAD1:.*]] = load <4 x float>, ptr
 ; CHECK-ORDERED: %[[FCMP1:.*]] = fcmp une <4 x float> %[[LOAD1]], zeroinitializer
-; CHECK-ORDERED: %[[EXTRACT:.*]] = extractelement <4 x i1> %[[FCMP1]], i32 0
+; CHECK-ORDERED: %[[EXTRACT:.*]] = extractelement <4 x i1> %[[FCMP1]], i64 0
 ; CHECK-ORDERED: br i1 %[[EXTRACT]], label %pred.load.if, label %pred.load.continue
 ; CHECK-ORDERED: pred.load.continue6
 ; CHECK-ORDERED: %[[PHI1:.*]] = phi <4 x float> [ %[[PHI0:.*]], %pred.load.continue4 ], [ %[[INS_ELT:.*]], %pred.load.if5 ]
@@ -423,7 +423,7 @@ define float @fadd_conditional(ptr noalias nocapture readonly %a, ptr noalias no
 ; CHECK-UNORDERED: %[[PHI:.*]] = phi <4 x float> [ <float 1.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %vector.ph ], [ %[[VEC_FADD:.*]], %pred.load.continue6 ]
 ; CHECK-UNORDERED: %[[LOAD1:.*]] = load <4 x float>, ptr
 ; CHECK-UNORDERED: %[[FCMP1:.*]] = fcmp une <4 x float> %[[LOAD1]], zeroinitializer
-; CHECK-UNORDERED: %[[EXTRACT:.*]] = extractelement <4 x i1> %[[FCMP1]], i32 0
+; CHECK-UNORDERED: %[[EXTRACT:.*]] = extractelement <4 x i1> %[[FCMP1]], i64 0
 ; CHECK-UNORDERED: br i1 %[[EXTRACT]], label %pred.load.if, label %pred.load.continue
 ; CHECK-UNORDERED: pred.load.continue6
 ; CHECK-UNORDERED: %[[PRED:.*]] = select <4 x i1> %[[FCMP1]], <4 x float> %[[PRED_PHI:.*]], <4 x float> splat (float 3.000000e+00)
@@ -487,7 +487,7 @@ define float @fadd_predicated(ptr noalias nocapture %a, i64 %n) {
 ; CHECK-ORDERED: %[[RDX_PHI:.*]] =  phi float [ 0.000000e+00, %vector.ph ], [ %[[RDX:.*]], %pred.load.continue2 ]
 ; CHECK-ORDERED: pred.load.continue2
 ; CHECK-ORDERED: %[[PHI:.*]] = phi <2 x float> [ %[[PHI0:.*]], %pred.load.continue ], [ %[[INS_ELT:.*]], %pred.load.if1 ]
-; CHECK-ORDERED: %[[MASK:.*]] = select <2 x i1> %0, <2 x float> %[[PHI]], <2 x float> splat (float -0.000000e+00)
+; CHECK-ORDERED: %[[MASK:.*]] = select <2 x i1> {{.*}}, <2 x float> %[[PHI]], <2 x float> splat (float -0.000000e+00)
 ; CHECK-ORDERED: %[[RDX]] = call float @llvm.vector.reduce.fadd.v2f32(float %[[RDX_PHI]], <2 x float> %[[MASK]])
 ; CHECK-ORDERED: for.end:
 ; CHECK-ORDERED: ret float %[[RDX]]
@@ -1416,6 +1416,6 @@ for.cond.cleanup:
 !8 = !{!"llvm.loop.vectorize.width", i32 1}
 !9 = !{!"llvm.loop.interleave.count", i32 1}
 !10 = !{!"llvm.loop.interleave.count", i32 4}
-!11 = !{!"llvm.loop.vectorize.enable", i1 true}
-!12 = !{!"llvm.loop.vectorize.predicate.enable", i1 true}
+!11 = !{!"llvm.loop.vectorize.enable"}
+!12 = !{!"llvm.loop.vectorize.predicate.enable"}
 !13 = distinct !{!13, !6, !9, !11}

@@ -18,7 +18,9 @@
 #include "mlir/IR/OpAsmSupport.h"
 #include "mlir/IR/OpDefinition.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/SMLoc.h"
+#include <cstddef>
 #include <optional>
 
 namespace {
@@ -68,7 +70,7 @@ private:
   /// The type of the resource referenced.
   TypeID opaqueID;
   /// The dialect owning the given resource.
-  Dialect *dialect;
+  Dialect *dialect = nullptr;
 };
 
 /// This class represents a CRTP base class for dialect resource handles. It
@@ -475,6 +477,13 @@ public:
   virtual void printOperand(Value value) = 0;
   virtual void printOperand(Value value, raw_ostream &os) = 0;
 
+  /// Print a comma separated range of operation operands out of line to avoid
+  /// instantiating the range iteration in every generated operation printer.
+  void printOperands(OperandRange operands);
+
+  /// Print the types of a comma separated range of operation operands.
+  void printOperandTypes(ValueTypeRange<OperandRange> types);
+
   /// Print a comma separated list of operands.
   template <typename ContainerType>
   void printOperands(const ContainerType &container) {
@@ -501,6 +510,11 @@ public:
   /// printed some other way (like as a fixed operand).
   virtual void printOptionalAttrDict(ArrayRef<NamedAttribute> attrs,
                                      ArrayRef<StringRef> elidedAttrs = {}) = 0;
+
+  void printOptionalAttrDict(DictionaryAttr attrs,
+                             ArrayRef<StringRef> elidedAttrs = {}) {
+    printOptionalAttrDict(attrs.getValue(), elidedAttrs);
+  }
 
   /// If the specified operation has attributes, print out an attribute
   /// dictionary prefixed with 'attributes'.
@@ -554,6 +568,17 @@ public:
 // Make the implementations convenient to use.
 inline OpAsmPrinter &operator<<(OpAsmPrinter &p, Value value) {
   p.printOperand(value);
+  return p;
+}
+
+inline OpAsmPrinter &operator<<(OpAsmPrinter &p, OperandRange values) {
+  p.printOperands(values);
+  return p;
+}
+
+inline OpAsmPrinter &operator<<(OpAsmPrinter &p,
+                                ValueTypeRange<OperandRange> types) {
+  p.printOperandTypes(types);
   return p;
 }
 
@@ -1171,9 +1196,13 @@ public:
     if (!parseResult.has_value() || failed(*parseResult))
       return parseResult;
     result = dyn_cast<AttrType>(attr);
-    if (!result)
-      return emitError(loc) << "expected attribute of type '" << AttrType::name
-                            << "', but found attribute '" << attr << "'";
+    if (!result) {
+      InFlightDiagnostic diag =
+          emitError(loc, "invalid kind of attribute specified");
+      if constexpr (HasStaticName<AttrType>::value)
+        diag << ": expected " << AttrType::name << ", but found " << attr;
+      return diag;
+    }
     return success();
   }
 
@@ -1815,6 +1844,33 @@ public:
                               SmallVectorImpl<UnresolvedOperand> &rhs) = 0;
 };
 
+namespace detail {
+/// Parse an optional operand or type into a generated parser's storage.
+ParseResult parseOptionalOperandInto(
+    OpAsmParser &parser,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &operands);
+ParseResult parseOptionalTypeInto(AsmParser &parser,
+                                  SmallVectorImpl<Type> &types);
+
+/// Keep the cleanup of multiple generated parser operand groups out of each
+/// parser's early-return paths. The storage is shared across operations with
+/// the same number of groups.
+template <size_t N>
+class OperandParserStorage {
+public:
+  using Group = llvm::SmallVector<OpAsmParser::UnresolvedOperand, 4>;
+
+  LLVM_ATTRIBUTE_NOINLINE OperandParserStorage() {}
+  LLVM_ATTRIBUTE_NOINLINE ~OperandParserStorage() {}
+
+  Group &operator[](size_t index) { return groups[index]; }
+
+private:
+  Group groups[N];
+};
+
+} // namespace detail
+
 //===--------------------------------------------------------------------===//
 // Custom printers and parsers.
 //===--------------------------------------------------------------------===//
@@ -1844,14 +1900,6 @@ ParseResult parseDimensionList(OpAsmParser &parser,
 namespace llvm {
 template <>
 struct DenseMapInfo<mlir::AsmDialectResourceHandle> {
-  static inline mlir::AsmDialectResourceHandle getEmptyKey() {
-    return {DenseMapInfo<void *>::getEmptyKey(),
-            DenseMapInfo<mlir::TypeID>::getEmptyKey(), nullptr};
-  }
-  static inline mlir::AsmDialectResourceHandle getTombstoneKey() {
-    return {DenseMapInfo<void *>::getTombstoneKey(),
-            DenseMapInfo<mlir::TypeID>::getTombstoneKey(), nullptr};
-  }
   static unsigned getHashValue(const mlir::AsmDialectResourceHandle &handle) {
     return DenseMapInfo<void *>::getHashValue(handle.getResource());
   }

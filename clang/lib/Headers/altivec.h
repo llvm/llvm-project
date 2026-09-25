@@ -6080,6 +6080,15 @@ vec_msum(vector unsigned short __a, vector unsigned short __b,
   return __builtin_altivec_vmsumuhm(__a, __b, __c);
 }
 
+#if defined(__POWER9_VECTOR__) && defined(__SIZEOF_INT128__)
+static __inline__ vector unsigned __int128
+    __ATTRS_o_ai vec_msum(vector unsigned long long __a,
+                          vector unsigned long long __b,
+                          vector unsigned __int128 __c) {
+  return __builtin_altivec_vmsumudm(__a, __b, __c);
+}
+#endif
+
 /* vec_msumc */
 
 #if defined(__POWER10_VECTOR__) && defined(__SIZEOF_INT128__)
@@ -6148,6 +6157,16 @@ vec_vmsumuhs(vector unsigned short __a, vector unsigned short __b,
              vector unsigned int __c) {
   return __builtin_altivec_vmsumuhs(__a, __b, __c);
 }
+
+#if defined(__POWER9_VECTOR__) && defined(__SIZEOF_INT128__)
+/* vec_vmsumudm */
+
+static __inline__ vector unsigned __int128 __attribute__((__always_inline__))
+vec_vmsumudm(vector unsigned long long __a, vector unsigned long long __b,
+             vector unsigned __int128 __c) {
+  return __builtin_altivec_vmsumudm(__a, __b, __c);
+}
+#endif
 
 /* vec_mtvscr */
 
@@ -6401,6 +6420,18 @@ vec_mulh(vector signed long long __a, vector signed long long __b) {
 static __inline__ vector unsigned long long __ATTRS_o_ai
 vec_mulh(vector unsigned long long __a, vector unsigned long long __b) {
   return __builtin_altivec_vmulhud(__a, __b);
+}
+#endif
+
+#ifdef __FUTURE_VECTOR__
+static __inline__ vector signed short
+    __ATTRS_o_ai vec_mulh(vector signed short __a, vector signed short __b) {
+  return __builtin_altivec_vmulhsh(__a, __b);
+}
+
+static __inline__ vector unsigned short __ATTRS_o_ai
+vec_mulh(vector unsigned short __a, vector unsigned short __b) {
+  return __builtin_altivec_vmulhuh(__a, __b);
 }
 #endif
 

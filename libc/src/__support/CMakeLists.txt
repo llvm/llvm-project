@@ -17,6 +17,7 @@ add_header_library(
   DEPENDS
     libc.hdr.stdint_proxy
     libc.src.__support.CPP.algorithm
+    libc.src.__support.CPP.bit
     libc.src.__support.CPP.limits
     libc.src.__support.CPP.new
     libc.src.__support.CPP.optional
@@ -52,11 +53,27 @@ add_object_library(
 )
 
 add_header_library(
+  tlsf_table
+  HDRS
+    tlsf_table.h
+  DEPENDS
+    .block
+    .freelist
+    libc.src.__support.CPP.array
+    libc.src.__support.CPP.bit
+    libc.src.__support.CPP.limits
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+    libc.src.__support.math_extras
+)
+
+add_header_library(
   freestore
   HDRS
     freestore.h
   DEPENDS
     .freetrie
+    .tlsf_table
 )
 
 libc_set_definition(libc_freelist_malloc_size "LIBC_FREELIST_MALLOC_SIZE=${LIBC_CONF_FREELIST_MALLOC_BUFFER_SIZE}")
@@ -101,17 +118,11 @@ add_header_library(
     macros/properties/compiler.h
     macros/attributes.h
     macros/config.h
+    macros/hardening.h
   DEPENDS
     libc.hdr.stdint_proxy
-)
-
-add_header_library(
-  bit
-  HDRS
-    bit.h
-  DEPENDS
-    libc.src.__support.macros.attributes
-    libc.src.__support.CPP.type_traits
+    libc.src.__support.CPP.bit
+    libc.src.__support.macros.hardening
 )
 
 add_header_library(
@@ -149,6 +160,15 @@ add_header_library(
   DEPENDS
     libc.src.__support.common
     libc.src.__support.CPP.string
+    libc.src.__support.CPP.string_view
+)
+
+add_header_library(
+  alloc_checker
+  HDRS
+    alloc-checker.h
+  DEPENDS
+    libc.src.__support.macros.config
 )
 
 add_header_library(
@@ -161,9 +181,10 @@ list(APPEND wctype_utils_deps
   libc.hdr.types.wchar_t
 )
 
-if ("${LIBC_CONF_WCTYPE_MODE}" STREQUAL "LIBC_WCTYPE_MODE_UTF8")
+if("${LIBC_CONF_WCTYPE_MODE}" STREQUAL "LIBC_WCTYPE_MODE_UTF8")
   list(APPEND wctype_utils_deps
-      libc.src.__support.wctype.wctype_classification_utils
+    libc.src.__support.wctype.wctype_classification_utils
+    libc.src.__support.wctype.wctype_conversion_utils
   )
 endif()
 
@@ -173,6 +194,19 @@ add_header_library(
     wctype_utils.h
   DEPENDS
     ${wctype_utils_deps}
+)
+
+add_header_library(
+  wctype_impl
+  HDRS
+    wctype_impl.h
+  DEPENDS
+    .wctype_utils
+    libc.hdr.types.wctype_t
+    libc.src.__support.CPP.array
+    libc.src.__support.CPP.string_view
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
 )
 
 add_header_library(
@@ -314,6 +348,8 @@ add_header_library(
   DEPENDS
     .libc_assert
     libc.src.__support.CPP.array
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.macros.config
     libc.src.string.memory_utils.inline_memset
 )
 
@@ -357,6 +393,26 @@ add_header_library(
     frac128.h
   DEPENDS
     .big_int
+    .frac64
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  frac256
+  HDRS
+    frac256.h
+  DEPENDS
+    .big_int
+    .frac128
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  frac64
+  HDRS
+    frac64.h
+  DEPENDS
+    .big_int
     libc.src.__support.macros.config
 )
 
@@ -374,6 +430,8 @@ if(LIBC_COPT_USE_C_ASSERT OR NOT LLVM_LIBC_FULL_BUILD)
     libc_assert
     HDRS
       libc_assert.h
+    DEPENDS
+      libc.src.__support.macros.hardening
   )
 else()
   add_header_library(
@@ -384,6 +442,7 @@ else()
       .integer_to_string
       libc.src.__support.OSUtil.osutil
       libc.src.__support.macros.optimization
+      libc.src.__support.macros.hardening
   )
 endif()
 
@@ -439,12 +498,16 @@ add_subdirectory(OSUtil)
 add_subdirectory(StringUtil)
 add_subdirectory(GPU)
 add_subdirectory(RPC)
+add_subdirectory(net)
 
 # Thread support is used by other "File". So, we add the "threads"
 # before "File".
 add_subdirectory(threads)
 
 add_subdirectory(File)
+add_subdirectory(pwd)
+
+add_subdirectory(printf_core)
 
 add_subdirectory(HashTable)
 
@@ -456,6 +519,10 @@ add_subdirectory(wchar)
 add_subdirectory(wctype)
 
 add_subdirectory(math)
+add_subdirectory(builtins)
 if(LIBC_COMPILER_HAS_EXT_VECTOR_TYPE)
   add_subdirectory(mathvec)
+endif()
+if(LLVM_LIBC_FULL_BUILD)
+  add_subdirectory(regex)
 endif()

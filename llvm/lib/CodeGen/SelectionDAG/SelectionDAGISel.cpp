@@ -384,12 +384,6 @@ bool SelectionDAGISelLegacy::runOnMachineFunction(MachineFunction &MF) {
   // we change the optimisation level.
   MF.setUseDebugInstrRef(MF.shouldUseDebugInstrRef());
 
-  // Reset the target options before resetting the optimization
-  // level below.
-  // FIXME: This is a horrible hack and should be processed via
-  // codegen looking at the optimization level explicitly when
-  // it wants to look at it.
-  Selector->TM.resetTargetOptions(MF.getFunction());
   // Reset OptLevel to None for optnone functions.
   CodeGenOptLevel NewOptLevel = skipFunction(MF.getFunction())
                                     ? CodeGenOptLevel::None
@@ -457,19 +451,14 @@ SelectionDAGISelPass::run(MachineFunction &MF,
   // we change the optimisation level.
   MF.setUseDebugInstrRef(MF.shouldUseDebugInstrRef());
 
-  // Reset the target options before resetting the optimization
-  // level below.
-  // FIXME: This is a horrible hack and should be processed via
-  // codegen looking at the optimization level explicitly when
-  // it wants to look at it.
-  Selector->TM.resetTargetOptions(MF.getFunction());
-  // Reset OptLevel to None for optnone functions.
+  // Reset OptLevel to None for optnone functions or when opt-bisect skips.
   // TODO: Add a function analysis to handle this.
   Selector->MF = &MF;
-  // Reset OptLevel to None for optnone functions.
-  CodeGenOptLevel NewOptLevel = MF.getFunction().hasOptNone()
-                                    ? CodeGenOptLevel::None
-                                    : Selector->OptLevel;
+  CodeGenOptLevel NewOptLevel =
+      (MF.getFunction().hasOptNone() ||
+       shouldSkipOptimizationForOptBisect(MF.getFunction()))
+          ? CodeGenOptLevel::None
+          : Selector->OptLevel;
 
   OptLevelChanger OLC(*Selector, NewOptLevel);
   Selector->initializeAnalysisResults(MFAM);
@@ -503,7 +492,6 @@ void SelectionDAGISel::initializeAnalysisResults(
   AC = &FAM.getResult<AssumptionAnalysis>(Fn);
   auto *PSI = MAMP.getCachedResult<ProfileSummaryAnalysis>(*Fn.getParent());
   BlockFrequencyInfo *BFI = nullptr;
-  FAM.getResult<BlockFrequencyAnalysis>(Fn);
   if (PSI && PSI->hasProfileSummary() && RegisterPGOPasses)
     BFI = &FAM.getResult<BlockFrequencyAnalysis>(Fn);
 
@@ -512,19 +500,16 @@ void SelectionDAGISel::initializeAnalysisResults(
     FnVarLocs = &FAM.getResult<DebugAssignmentTrackingAnalysis>(Fn);
 
   auto *UA = FAM.getCachedResult<UniformityInfoAnalysis>(Fn);
-  MachineModuleInfo &MMI =
-      MAMP.getCachedResult<MachineModuleAnalysis>(*Fn.getParent())->getMMI();
 
-  const LibcallLoweringModuleAnalysisResult *LibcallResult =
+  const ModuleLibcallLoweringInfo *LibcallResult =
       MAMP.getCachedResult<LibcallLoweringModuleAnalysis>(*Fn.getParent());
   if (!LibcallResult) {
     reportFatalUsageError("'" + LibcallLoweringModuleAnalysis::name() +
                           "' analysis required");
   }
 
-  LibcallLowering = &LibcallResult->getLibcallLowering(Subtarget);
-  CurDAG->init(*MF, *ORE, MFAM, LibInfo, LibcallLowering, UA, PSI, BFI, MMI,
-               FnVarLocs);
+  LibcallLowering = &getLibcallLowering(*LibcallResult, Subtarget);
+  CurDAG->init(*MF, MFAM, LibInfo, LibcallLowering, UA, PSI, BFI, FnVarLocs);
 
   // Now get the optional analyzes if we want to.
   // This is based on the possibly changed OptLevel (after optnone is taken
@@ -582,15 +567,11 @@ void SelectionDAGISel::initializeAnalysisResults(MachineFunctionPass &MFP) {
   if (auto *UAPass = MFP.getAnalysisIfAvailable<UniformityInfoWrapperPass>())
     UA = &UAPass->getUniformityInfo();
 
-  MachineModuleInfo &MMI =
-      MFP.getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
-
   LibcallLowering =
       &MFP.getAnalysis<LibcallLoweringInfoWrapper>().getLibcallLowering(
           *Fn.getParent(), Subtarget);
 
-  CurDAG->init(*MF, *ORE, &MFP, LibInfo, LibcallLowering, UA, PSI, BFI, MMI,
-               FnVarLocs);
+  CurDAG->init(*MF, LibInfo, LibcallLowering, UA, PSI, BFI, FnVarLocs);
 
   // Now get the optional analyzes if we want to.
   // This is based on the possibly changed OptLevel (after optnone is taken
@@ -669,15 +650,14 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
   // registers. If we don't apply the reg fixups before, some registers may
   // appear as unused and will be skipped, resulting in bad MI.
   MachineRegisterInfo &MRI = MF->getRegInfo();
-  for (DenseMap<Register, Register>::iterator I = FuncInfo->RegFixups.begin(),
-                                              E = FuncInfo->RegFixups.end();
+  for (auto I = FuncInfo->RegFixups.begin(), E = FuncInfo->RegFixups.end();
        I != E; ++I) {
     Register From = I->first;
     Register To = I->second;
     // If To is also scheduled to be replaced, find what its ultimate
     // replacement is.
     while (true) {
-      DenseMap<Register, Register>::iterator J = FuncInfo->RegFixups.find(To);
+      auto J = FuncInfo->RegFixups.find(To);
       if (J == E)
         break;
       To = J->second;
@@ -752,7 +732,7 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
     // If Reg is live-in then update debug info to track its copy in a vreg.
     if (!Reg.isPhysical())
       continue;
-    DenseMap<MCRegister, Register>::iterator LDI = LiveInMap.find(Reg);
+    auto LDI = LiveInMap.find(Reg);
     if (LDI != LiveInMap.end()) {
       assert(!hasFI && "There's no handling of frame pointer updating here yet "
                        "- add if needed");
@@ -1469,7 +1449,8 @@ bool SelectionDAGISel::PrepareEHLandingPad() {
       if (hasExceptionPointerOrCodeUser(CPI)) {
         // Get or create the virtual register to hold the pointer or code.  Mark
         // the live in physreg and copy into the vreg.
-        MCRegister EHPhysReg = TLI->getExceptionPointerRegister(PersonalityFn);
+        MCRegister EHPhysReg = TLI->getExceptionPointerRegister(
+            FuncInfo->ExceptionModel, PersonalityFn);
         assert(EHPhysReg && "target lacks exception pointer register");
         MBB->addLiveIn(EHPhysReg);
         Register VReg = FuncInfo->getCatchPadExceptionPointerVReg(CPI, PtrRC);
@@ -1502,10 +1483,12 @@ bool SelectionDAGISel::PrepareEHLandingPad() {
     // Assign the call site to the landing pad's begin label.
     MF->setCallSiteLandingPad(Label, SDB->LPadToCallSiteMap[MBB]);
     // Mark exception register as live in.
-    if (MCRegister Reg = TLI->getExceptionPointerRegister(PersonalityFn))
+    if (MCRegister Reg = TLI->getExceptionPointerRegister(
+            FuncInfo->ExceptionModel, PersonalityFn))
       FuncInfo->ExceptionPointerVirtReg = MBB->addLiveIn(Reg, PtrRC);
     // Mark exception selector register as live in.
-    if (MCRegister Reg = TLI->getExceptionSelectorRegister(PersonalityFn))
+    if (MCRegister Reg = TLI->getExceptionSelectorRegister(
+            FuncInfo->ExceptionModel, PersonalityFn))
       FuncInfo->ExceptionSelectorVirtReg = MBB->addLiveIn(Reg, PtrRC);
   }
 
@@ -3978,6 +3961,10 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       continue;
     case OPC_CheckImmAllZerosV:
       if (!ISD::isConstantSplatVectorAllZeros(N.getNode()))
+        break;
+      continue;
+    case OPC_CheckUndef:
+      if (!N.isUndef())
         break;
       continue;
 

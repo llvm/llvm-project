@@ -18,7 +18,9 @@
 #include "RISCVFrameLowering.h"
 #include "RISCVISelLowering.h"
 #include "RISCVInstrInfo.h"
+#include "llvm/ADT/StringTable.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
+#include "llvm/CodeGen/GlobalISel/InlineAsmLowering.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/MachineScheduler.h"
@@ -27,6 +29,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetMachine.h"
 #include <bitset>
+#include <memory>
 
 #define GET_RISCV_MACRO_FUSION_PRED_DECL
 #include "RISCVGenMacroFusion.inc"
@@ -40,7 +43,7 @@ class StringRef;
 namespace RISCVTuneInfoTable {
 
 struct RISCVTuneInfo {
-  const char *Name;
+  StringTable::Offset Name;
   uint8_t PrefFunctionAlignment;
   uint8_t PrefLoopAlignment;
 
@@ -70,6 +73,8 @@ struct RISCVTuneInfo {
 
   // The direction of PostRA scheduling.
   MISched::Direction PostRASchedDirection;
+
+  bool IsJumpExpensive;
 };
 
 #define GET_RISCVTuneInfoTable_DECL
@@ -82,7 +87,6 @@ public:
   enum RISCVProcFamilyEnum : uint8_t {
     Others,
     SiFive7,
-    VentanaVeyron,
     MIPSP8700,
     Andes45,
   };
@@ -172,10 +176,6 @@ public:
   bool GETTER() const { return ATTRIBUTE; }
 #include "RISCVGenSubtargetInfo.inc"
 
-  LLVM_DEPRECATED("Now Equivalent to hasStdExtZcd", "hasStdExtZcd")
-  bool hasStdExtCOrZcd() const { return HasStdExtZcd; }
-  LLVM_DEPRECATED("Now Equivalent to hasStdExtZcf", "hasStdExtZcf")
-  bool hasStdExtCOrZcfOrZce() const { return HasStdExtZcf; }
   bool hasStdExtZvl() const { return ZvlLen != 0; }
   bool hasStdExtFOrZfinx() const { return HasStdExtF || HasStdExtZfinx; }
   bool hasStdExtDOrZdinx() const { return HasStdExtD || HasStdExtZdinx; }
@@ -187,10 +187,7 @@ public:
     return HasStdExtZfhmin || HasStdExtZfbfmin;
   }
 
-  bool hasCLZLike() const {
-    return HasStdExtZbb || HasVendorXTHeadBb ||
-           (HasVendorXCVbitmanip && !IsRV64);
-  }
+  bool hasCLZLike() const { return HasStdExtZbb || HasVendorXTHeadBb; }
   bool hasCTZLike() const {
     return HasStdExtZbb || (HasVendorXCVbitmanip && !IsRV64);
   }
@@ -205,10 +202,6 @@ public:
   }
 
   bool hasBEXTILike() const { return HasStdExtZbs || HasVendorXTHeadBs; }
-
-  bool hasCZEROLike() const {
-    return HasStdExtZicond || HasVendorXVentanaCondOps;
-  }
 
   bool hasConditionalMoveFusion() const {
     // Do we support fusing a branch+mv or branch+c.mv as a conditional move.
@@ -245,9 +238,13 @@ public:
   }
 
   Align getZilsdAlign() const {
-    return Align(enableUnalignedScalarMem() ? 1
-                 : allowZilsd4ByteAlign()   ? 4
-                                            : 8);
+    if (enableUnalignedScalarMem())
+      return Align(1);
+
+    if (allowZilsdWordAlign())
+      return Align(4);
+
+    return Align(8);
   }
 
   unsigned getELen() const {
@@ -292,6 +289,16 @@ public:
     return UserReservedRegister[i.id()];
   }
 
+  TargetRegisterClass const *getLargestFPRegClass() const {
+    if (HasStdExtQ)
+      return &RISCV::FPR128RegClass;
+    if (HasStdExtD)
+      return &RISCV::FPR64RegClass;
+    if (HasStdExtF)
+      return &RISCV::FPR32RegClass;
+    return nullptr;
+  };
+
   // XRay support - require D and C extensions.
   bool isXRaySupported() const override { return hasStdExtD() && hasStdExtC(); }
 
@@ -335,6 +342,7 @@ public:
   }
 
   bool isPExtPackedType(MVT VT) const;
+  bool isPExtPackedDoubleType(MVT VT) const;
 
   // Returns VLEN divided by DLEN. Where DLEN is the datapath width of the
   // vector hardware implementation which may be less than VLEN.
@@ -353,6 +361,7 @@ protected:
   mutable std::unique_ptr<InstructionSelector> InstSelector;
   mutable std::unique_ptr<LegalizerInfo> Legalizer;
   mutable std::unique_ptr<RISCVRegisterBankInfo> RegBankInfo;
+  mutable std::unique_ptr<InlineAsmLowering> InlineAsmLoweringInfo;
 
   // Return the known range for the bit length of RVV data registers as set
   // at the command line. A value of 0 means nothing is known about that particular
@@ -367,6 +376,7 @@ public:
   InstructionSelector *getInstructionSelector() const override;
   const LegalizerInfo *getLegalizerInfo() const override;
   const RISCVRegisterBankInfo *getRegBankInfo() const override;
+  const InlineAsmLowering *getInlineAsmLowering() const override;
 
   bool isTargetAndroid() const { return getTargetTriple().isAndroid(); }
   bool isTargetFuchsia() const { return getTargetTriple().isOSFuchsia(); }
@@ -377,7 +387,9 @@ public:
   // pool if exceeded.
   unsigned getMaxBuildIntsCost() const;
 
-  unsigned getMaxLMULForFixedLengthVectors() const;
+  unsigned getMispredictionPenalty() const override;
+  unsigned getLoadLatency() const override;
+
   bool useRVVForFixedLengthVectors() const;
 
   bool enableSubRegLiveness() const override;
@@ -438,6 +450,8 @@ public:
   MISched::Direction getPostRASchedDirection() const {
     return TuneInfo->PostRASchedDirection;
   }
+
+  bool isJumpExpensive() const { return TuneInfo->IsJumpExpensive; }
 
   void overrideSchedPolicy(MachineSchedPolicy &Policy,
                            const SchedRegion &Region) const override;

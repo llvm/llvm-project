@@ -13,7 +13,7 @@
 #include "llvm/ExecutionEngine/Orc/Debugging/PerfSupportPlugin.h"
 
 #include "llvm/ExecutionEngine/Orc/Debugging/DebugInfoSupport.h"
-#include "llvm/ExecutionEngine/Orc/LookupAndRecordAddrs.h"
+#include "llvm/ExecutionEngine/Orc/LookupAndApply.h"
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
 
 #define DEBUG_TYPE "orc"
@@ -76,12 +76,12 @@ Expected<std::string> createX64EHFrameHeader(Section &EHFrame,
   return HeaderContent;
 }
 
-constexpr StringRef RegisterPerfStartSymbolName =
-    "llvm_orc_registerJITLoaderPerfStart";
-constexpr StringRef RegisterPerfEndSymbolName =
-    "llvm_orc_registerJITLoaderPerfEnd";
-constexpr StringRef RegisterPerfImplSymbolName =
-    "llvm_orc_registerJITLoaderPerfImpl";
+constexpr SymbolNameSpec RegisterPerfStartSymbolName =
+    SymbolNameSpec::c("llvm_orc_registerJITLoaderPerfStart");
+constexpr SymbolNameSpec RegisterPerfEndSymbolName =
+    SymbolNameSpec::c("llvm_orc_registerJITLoaderPerfEnd");
+constexpr SymbolNameSpec RegisterPerfImplSymbolName =
+    SymbolNameSpec::c("llvm_orc_registerJITLoaderPerfImpl");
 
 static PerfJITCodeLoadRecord
 getCodeLoadRecord(const Symbol &Sym, std::atomic<uint64_t> &CodeIndex) {
@@ -289,13 +289,11 @@ PerfSupportPlugin::Create(ExecutorProcessControl &EPC, JITDylib &JD,
         "Perf support only available for ELF LinkGraphs!",
         inconvertibleErrorCode());
   }
-  auto &ES = EPC.getExecutionSession();
   ExecutorAddr StartAddr, EndAddr, ImplAddr;
-  if (auto Err = lookupAndRecordAddrs(
-          ES, LookupKind::Static, makeJITDylibSearchOrder({&JD}),
-          {{ES.intern(RegisterPerfStartSymbolName), &StartAddr},
-           {ES.intern(RegisterPerfEndSymbolName), &EndAddr},
-           {ES.intern(RegisterPerfImplSymbolName), &ImplAddr}}))
+  if (auto Err = lookupAndApply(
+          JD, {recordAddr(RegisterPerfStartSymbolName, &StartAddr),
+               recordAddr(RegisterPerfEndSymbolName, &EndAddr),
+               recordAddr(RegisterPerfImplSymbolName, &ImplAddr)}))
     return std::move(Err);
   return std::make_unique<PerfSupportPlugin>(EPC, StartAddr, EndAddr, ImplAddr,
                                              EmitDebugInfo, EmitUnwindInfo);

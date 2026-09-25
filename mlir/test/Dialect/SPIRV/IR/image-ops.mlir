@@ -365,6 +365,22 @@ func.func @bias_with_rect(%arg0 : !spirv.sampled_image<!spirv.image<f32, Rect, N
   spirv.Return
 }
 
+// -----
+
+func.func @bias_bfloat16(%arg0 : !spirv.sampled_image<!spirv.image<f32, Dim1D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, %arg1 : f32, %arg2 : bf16) -> () {
+  // expected-error @+1 {{Bias must be a floating-point type scalar}}
+  %0 = spirv.ImageSampleImplicitLod %arg0, %arg1 ["Bias"], %arg2 : !spirv.sampled_image<!spirv.image<f32, Dim1D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, f32, bf16 -> vector<4xf32>
+  spirv.Return
+}
+
+// -----
+
+func.func @bias_float8(%arg0 : !spirv.sampled_image<!spirv.image<f32, Dim1D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, %arg1 : f32, %arg2 : f8E4M3FN) -> () {
+  // expected-error @+1 {{Bias must be a floating-point type scalar}}
+  %0 = spirv.ImageSampleImplicitLod %arg0, %arg1 ["Bias"], %arg2 : !spirv.sampled_image<!spirv.image<f32, Dim1D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, f32, f8E4M3FN -> vector<4xf32>
+  spirv.Return
+}
+
 // TODO: We cannot currently test Bias with MS != 0 as all implemented implicit operations already check for that.
 
 // -----
@@ -403,9 +419,35 @@ func.func @lod_with_rect(%arg0 : !spirv.sampled_image<!spirv.image<f32, Rect, No
   spirv.Return
 }
 
+// -----
+
+func.func @lod_bfloat16(%arg0 : !spirv.sampled_image<!spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, %arg1 : vector<2xf32>, %arg2 : bf16) -> () {
+  // expected-error @+1 {{for sampling operations, Lod must be a floating-point type scalar}}
+  %0 = spirv.ImageSampleExplicitLod %arg0, %arg1 ["Lod"], %arg2 : !spirv.sampled_image<!spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, vector<2xf32>, bf16 -> vector<4xf32>
+  spirv.Return
+}
+
+// -----
+
+func.func @lod_float8(%arg0 : !spirv.sampled_image<!spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, %arg1 : vector<2xf32>, %arg2 : f8E4M3FN) -> () {
+  // expected-error @+1 {{for sampling operations, Lod must be a floating-point type scalar}}
+  %0 = spirv.ImageSampleExplicitLod %arg0, %arg1 ["Lod"], %arg2 : !spirv.sampled_image<!spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, vector<2xf32>, f8E4M3FN -> vector<4xf32>
+  spirv.Return
+}
+
 // TODO: We cannot currently test Lod with MS != 0 as all implemented explicit operations already check for that.
 
-// TODO: Add Lod tests for fetch operations once available.
+// -----
+
+// Lod is valid for spirv.ImageFetch (fetch instruction).
+func.func @lod_with_image_fetch(%arg0: !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>,
+                                %arg1: vector<2xsi32>, %arg2: si32) -> () {
+  // CHECK: {{%.*}} = spirv.ImageFetch {{%.*}}, {{%.*}} ["Lod"], {{%.*}} : !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>, vector<2xsi32>, si32 -> vector<4xf32>
+  %0 = spirv.ImageFetch %arg0, %arg1 ["Lod"], %arg2 :
+      !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>,
+      vector<2xsi32>, si32 -> vector<4xf32>
+  spirv.Return
+}
 
 // -----
 
@@ -442,6 +484,22 @@ func.func @grad_arg_size_mismatch(%arg0 : !spirv.sampled_image<!spirv.image<f32,
 func.func @gard_arg_wrong_type(%arg0 : !spirv.sampled_image<!spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, %arg1 : vector<2xf32>, %arg2 : vector<2xsi32>) -> () {
   // expected-error @+1 {{Grad arguments must be a vector of floating-point type}}
   %0 = spirv.ImageSampleExplicitLod %arg0, %arg1 ["Grad"], %arg2, %arg2 : !spirv.sampled_image<!spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, vector<2xf32>, vector<2xsi32>, vector<2xsi32> -> vector<4xf32>
+  spirv.Return
+}
+
+// -----
+
+func.func @gard_arg_bfloat16(%arg0 : !spirv.sampled_image<!spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, %arg1 : vector<2xf32>, %arg2 : vector<2xbf16>) -> () {
+  // expected-error @+1 {{Grad arguments must be a vector of floating-point type}}
+  %0 = spirv.ImageSampleExplicitLod %arg0, %arg1 ["Grad"], %arg2, %arg2 : !spirv.sampled_image<!spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, vector<2xf32>, vector<2xbf16>, vector<2xbf16> -> vector<4xf32>
+  spirv.Return
+}
+
+// -----
+
+func.func @gard_arg_float8(%arg0 : !spirv.sampled_image<!spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, %arg1 : vector<2xf32>, %arg2 : vector<2xf8E4M3FN>) -> () {
+  // expected-error @+1 {{Grad arguments must be a vector of floating-point type}}
+  %0 = spirv.ImageSampleExplicitLod %arg0, %arg1 ["Grad"], %arg2, %arg2 : !spirv.sampled_image<!spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, vector<2xf32>, vector<2xf8E4M3FN>, vector<2xf8E4M3FN> -> vector<4xf32>
   spirv.Return
 }
 

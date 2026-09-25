@@ -265,6 +265,22 @@ MlirStringRef mlirFloat8E8M0FNUTypeGetName(void) {
   return wrap(Float8E8M0FNUType::name);
 }
 
+MlirTypeID mlirFloat8E5M3FNUTypeGetTypeID() {
+  return wrap(Float8E5M3FNUType::getTypeID());
+}
+
+bool mlirTypeIsAFloat8E5M3FNU(MlirType type) {
+  return llvm::isa<Float8E5M3FNUType>(unwrap(type));
+}
+
+MlirType mlirFloat8E5M3FNUTypeGet(MlirContext ctx) {
+  return wrap(Float8E5M3FNUType::get(unwrap(ctx)));
+}
+
+MlirStringRef mlirFloat8E5M3FNUTypeGetName(void) {
+  return wrap(Float8E5M3FNUType::name);
+}
+
 MlirTypeID mlirBFloat16TypeGetTypeID() {
   return wrap(BFloat16Type::getTypeID());
 }

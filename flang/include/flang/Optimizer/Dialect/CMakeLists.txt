@@ -40,6 +40,11 @@ mlir_tablegen(FIROperationMoveOpInterface.h.inc -gen-op-interface-decls)
 mlir_tablegen(FIROperationMoveOpInterface.cpp.inc -gen-op-interface-defs)
 add_public_tablegen_target(FIROperationMoveOpInterfaceIncGen)
 
+set(LLVM_TARGET_DEFINITIONS CUDAKernelOpInterface.td)
+mlir_tablegen(CUDAKernelOpInterface.h.inc -gen-op-interface-decls)
+mlir_tablegen(CUDAKernelOpInterface.cpp.inc -gen-op-interface-defs)
+add_public_tablegen_target(CUDAKernelOpInterfaceIncGen)
+
 set(LLVM_TARGET_DEFINITIONS CanonicalizationPatterns.td)
 mlir_tablegen(CanonicalizationPatterns.inc -gen-rewriters)
 add_public_tablegen_target(CanonicalizationPatternsIncGen)

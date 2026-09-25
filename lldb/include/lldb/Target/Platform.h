@@ -59,6 +59,10 @@ public:
   FileSpec GetModuleCacheDirectory() const;
   bool SetModuleCacheDirectory(const FileSpec &dir_spec);
 
+  /// The timeout to use when expanding launch arguments via the shell.
+  /// A value of std::nullopt means no timeout should be enforced.
+  Timeout<std::micro> GetShellExpandTimeout() const;
+
 private:
   void SetDefaultModuleCacheDirectory(const FileSpec &dir_spec);
 };
@@ -204,7 +208,7 @@ public:
 
   virtual const char *GetHostname();
 
-  virtual ConstString GetFullNameForDylib(ConstString basename);
+  virtual std::string GetFullNameForDylib(llvm::StringRef basename);
 
   virtual llvm::StringRef GetDescription() = 0;
 
@@ -304,17 +308,15 @@ public:
   /// \param[in] module_spec
   ///     The ModuleSpec of a binary to find.
   ///
-  /// \param[in] process
-  ///     A Process.
+  /// \param[in] target
+  ///     The Target the binary is being located for. Its settings guide the
+  ///     search, and it may not have a Process yet.
   ///
   /// \param[out] module_sp
   ///     A Module that matches the ModuleSpec, if one is found.
   ///
-  /// \param[in] module_search_paths_ptr
-  ///     Locations to possibly look for a binary that matches the ModuleSpec.
-  ///
   /// \param[out] old_modules
-  ///     Existing Modules in the Process' Target image list which match
+  ///     Existing Modules in the Target's image list which match
   ///     the FileSpec.
   ///
   /// \param[out] did_create_ptr
@@ -327,11 +329,27 @@ public:
   /// \return
   ///     The Status object for any errors found while searching for
   ///     the binary.
-  virtual Status
-  GetSharedModule(const ModuleSpec &module_spec, Process *process,
-                  lldb::ModuleSP &module_sp,
-                  llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
-                  bool *did_create_ptr);
+  virtual Status GetSharedModule(
+      const ModuleSpec &module_spec, Target &target, lldb::ModuleSP &module_sp,
+      llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules, bool *did_create_ptr);
+
+  /// Find a module's files on this host.
+  ///
+  /// The symbol locator plugins have no Platform to consult, so a platform
+  /// that knows where its binaries live answers here instead.
+  ///
+  /// An answer ends the search, so an override owns what the plugins would
+  /// otherwise have been asked for: the files it names have to exist, and have
+  /// to be the ones \a module_spec describes.
+  ///
+  /// \return
+  ///     Where the files are, or std::nullopt if this platform has nothing to
+  ///     say about this module.
+  virtual std::optional<ModuleSpec>
+  FindModuleFiles(const ModuleSpec &module_spec,
+                  const FileSpecList &search_paths, StatisticsMap &statistics) {
+    return std::nullopt;
+  }
 
   void CallLocateModuleCallbackIfSet(const ModuleSpec &module_spec,
                                      lldb::ModuleSP &module_sp,
@@ -353,6 +371,35 @@ public:
   ///     represents that the process host architecture is unknown.
   virtual std::vector<ArchSpec>
   GetSupportedArchitectures(const ArchSpec &process_host_arch) = 0;
+
+  /// Get the bytes of the platform's software interrupt instruction. If there
+  /// are multiple possible encodings, for example where there are immediate
+  /// values encoded in the instruction, this will return the instruction with
+  /// those bits set as 0.
+  ///
+  /// \param[in] arch
+  ///     The architecture of the inferior.
+  /// \param size_hint
+  ///     A hint to disambiguate which instruction is used on platforms where
+  ///     there are multiple interrupts with different sizes in the ISA (e.g
+  ///     ARM Thumb, RISC-V).
+  ///
+  /// \return
+  ///     The bytes of the interrupt instruction, with any immediate value
+  ///     bits set to 0.
+  llvm::ArrayRef<uint8_t> SoftwareTrapOpcodeBytes(const ArchSpec &arch,
+                                                  size_t size_hint = 0);
+
+  /// Get the suggested size hint for a trap instruction on the given target.
+  /// Some platforms have a compressed instruction set which can be used
+  /// instead of the "normal" encoding. This function attempts to determine
+  /// a size hint for the size of the instruction at address \a addr, and
+  /// return 0, 2 or 4, with 2 and 4 corresponding to the estimated size
+  /// and zero meaning no applicable hint. Returns the estimated size in bytes
+  /// of the instruction for this target at the given address, or 0 if no
+  /// estimate is available.
+  size_t GetTrapOpcodeSizeHint(Target &target, Address addr,
+                               llvm::ArrayRef<uint8_t> bytes);
 
   virtual size_t GetSoftwareBreakpointTrapOpcode(Target &target,
                                                  BreakpointSite *bp_site);
@@ -466,16 +513,16 @@ public:
   /// Search each CU associated with the specified 'module' for
   /// the SDK paths the CUs were compiled against. In the presence
   /// of different SDKs, we try to pick the most appropriate one
-  /// using \ref XcodeSDK::Merge.
+  /// using \ref XcodeSDKAndSysroot::Merge.
   ///
   /// \param[in] module Module whose debug-info CUs to parse for
   ///                   which SDK they were compiled against.
   ///
-  /// \returns If successful, returns a pair of a parsed XcodeSDK
+  /// \returns If successful, returns a pair of a parsed XcodeSDKAndSysroot
   ///          object and a boolean that is 'true' if we encountered
   ///          a conflicting combination of SDKs when parsing the CUs
   ///          (e.g., a public and internal SDK).
-  virtual llvm::Expected<std::pair<XcodeSDK, bool>>
+  virtual llvm::Expected<std::pair<XcodeSDKAndSysroot, bool>>
   GetSDKPathFromDebugInfo(Module &module) {
     return llvm::make_error<UnimplementedError>(
         llvm::formatv("{0} not implemented for '{1}' platform.",
@@ -503,7 +550,7 @@ public:
   /// \param[in] unit The CU
   ///
   /// \returns A parsed XcodeSDK object if successful, an Error otherwise.
-  virtual llvm::Expected<XcodeSDK>
+  virtual llvm::Expected<XcodeSDKAndSysroot>
   GetSDKPathFromDebugInfo(CompileUnit & /*unit*/) {
     return llvm::make_error<UnimplementedError>(
         llvm::formatv("{0} not implemented for '{1}' platform.",
@@ -1009,6 +1056,13 @@ public:
 
   LocateModuleCallback GetLocateModuleCallback() const;
 
+  /// Returns a \c FileSpecList of safe paths to auto-load scripting resources
+  /// from for a particular platform.
+  virtual llvm::Expected<FileSpecList>
+  GetSafeAutoLoadPaths(const Target &target) const {
+    return FileSpecList();
+  }
+
 protected:
   /// Create a list of ArchSpecs with the given OS and a architectures. The
   /// vendor field is left as an "unspecified unknown".
@@ -1101,7 +1155,10 @@ protected:
 private:
   typedef std::function<Status(const ModuleSpec &)> ModuleResolver;
 
-  Status GetRemoteSharedModule(const ModuleSpec &module_spec, Process *process,
+  /// \param[in] target
+  ///     The Target the binary is being located for, or nullptr when the
+  ///     lookup is not on behalf of one.
+  Status GetRemoteSharedModule(const ModuleSpec &module_spec, Target *target,
                                lldb::ModuleSP &module_sp,
                                const ModuleResolver &module_resolver,
                                bool *did_create_ptr);

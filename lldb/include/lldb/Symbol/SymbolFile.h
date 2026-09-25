@@ -149,7 +149,9 @@ public:
 
   virtual lldb::LanguageType ParseLanguage(CompileUnit &comp_unit) = 0;
   /// Return the Xcode SDK comp_unit was compiled against.
-  virtual XcodeSDK ParseXcodeSDK(CompileUnit &comp_unit) { return {}; }
+  virtual XcodeSDKAndSysroot ParseXcodeSDK(CompileUnit &comp_unit) {
+    return {};
+  }
 
   /// This function exists because SymbolFileDWARFDebugMap may extra compile
   /// units which aren't exposed as "real" compile units. In every other
@@ -504,6 +506,18 @@ public:
   ///   A DWOStats struct with loaded, total, and error counts for DWO files.
   virtual DWOStats GetDwoStats() { return {}; }
 
+  /// Return a map of separate debug info files that are loaded.
+  ///
+  /// Unlike GetSeparateDebugInfo(), this function will only return the list of
+  /// files, if there are errors they are simply ignored. This function will
+  /// always return a valid list, even if it is empty.
+  ///
+  /// \return
+  ///     A unique list of all the filespecs, or an empty list.
+  virtual lldb_private::ModuleSpecList GetSeparateDebugInfoFiles() {
+    return {};
+  }
+
   virtual lldb::TypeSP
   MakeType(lldb::user_id_t uid, ConstString name,
            std::optional<uint64_t> byte_size, SymbolContextScope *context,
@@ -524,6 +538,12 @@ public:
   }
 
   std::string GetObjectName() const;
+
+  /// Get the semantically innermost non-function type that encloses the
+  /// provided variable
+  virtual lldb::TypeSP GetTypeEnclosingVariableUID(lldb::user_id_t uid) {
+    return {};
+  }
 
 protected:
   void AssertModuleLock();

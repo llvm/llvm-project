@@ -15,13 +15,13 @@
 
 #include <cassert>
 #include <level_zero/ze_api.h>
-#include <list>
 #include <map>
 #include <memory>
 #include <mutex>
 
 #include "L0Defs.h"
 #include "L0Trace.h"
+#include "PluginInterface.h"
 
 namespace llvm::omp::target::plugin {
 
@@ -250,13 +250,20 @@ class MemAllocatorTy {
     /// Remove allocation information for the given memory location.
     bool remove(void *Ptr, MemAllocInfoTy *Removed = nullptr);
 
-    /// Finds allocation information for the given memory location.
+    /// Finds allocation information for the given memory location. Ptr may
+    /// point anywhere inside the allocation.
     const MemAllocInfoTy *find(void *Ptr) const {
-      auto AllocInfo = Map.find(Ptr);
-      if (AllocInfo == Map.end())
+      if (Map.empty())
         return nullptr;
-      else
-        return &AllocInfo->second;
+      auto I = Map.upper_bound(Ptr);
+      if (I == Map.begin())
+        return nullptr;
+      --I;
+      uintptr_t PtrAsInt = reinterpret_cast<uintptr_t>(Ptr);
+      uintptr_t Base = reinterpret_cast<uintptr_t>(I->first);
+      if (PtrAsInt >= Base + I->second.ReqSize)
+        return nullptr;
+      return &I->second;
     }
 
     /// Check if the map contains the given pointer and offset.
@@ -287,6 +294,11 @@ class MemAllocatorTy {
 
   /// L0 context to use.
   const L0ContextTy *L0Context = nullptr;
+  /// ze_context used for allocations. Normally matches
+  /// L0Context->getZeContext(), but for pools owned by a user-created
+  /// plugin context this holds that context's ze_context so memory ends
+  /// up in the ze_context the caller's queues use.
+  ze_context_handle_t ZeContext = nullptr;
   /// L0 device to use.
   L0DeviceTy *Device = nullptr;
   /// Whether the device supports large memory allocation.
@@ -377,8 +389,11 @@ public:
   MemAllocatorTy &operator=(const MemAllocatorTy &&) = delete;
   ~MemAllocatorTy() = default;
 
-  Error initDevicePools(L0DeviceTy &L0Device, const L0OptionsTy &Option);
-  Error initHostPool(L0ContextTy &Driver, const L0OptionsTy &Option);
+  Error initDevicePools(L0DeviceTy &L0Device, const L0OptionsTy &Option,
+                        ze_context_handle_t ZeCtx);
+  Error initHostPool(L0ContextTy &Driver, const L0OptionsTy &Option,
+                     ze_context_handle_t ZeCtx);
+  ze_context_handle_t getZeContext() const { return ZeContext; }
   void updateMaxAllocSize(L0DeviceTy &L0Device);
 
   /// Release resources and report statistics if requested.
@@ -422,97 +437,6 @@ public:
   }
 }; /// MemAllocatorTy
 
-// Simple generic wrapper to reuse objects
-// objects must have zero argument accessible constructor.
-template <class ObjTy> class ObjPool {
-  // Protection.
-  std::unique_ptr<std::mutex> Mtx;
-  // List of Objects.
-  std::list<ObjTy *> Objects;
-
-public:
-  ObjPool() { Mtx.reset(new std::mutex); }
-
-  ObjPool(const ObjPool &) = delete;
-  ObjPool(ObjPool &) = delete;
-  ObjPool &operator=(const ObjPool &) = delete;
-  ObjPool &operator=(const ObjPool &&) = delete;
-
-  ObjTy *get() {
-    if (!Objects.empty()) {
-      std::lock_guard<std::mutex> Lock(*Mtx);
-      if (!Objects.empty()) {
-        const auto Ret = Objects.back();
-        Objects.pop_back();
-        return Ret;
-      }
-    }
-    return new ObjTy();
-  }
-
-  void release(ObjTy *obj) {
-    std::lock_guard<std::mutex> Lock(*Mtx);
-    Objects.push_back(obj);
-  }
-
-  ~ObjPool() {
-    for (auto Object : Objects)
-      delete Object;
-  }
-};
-
-/// Common event pool used in the plugin. This event pool assumes all events
-/// from the pool are host-visible and use the same event pool flag.
-class EventPoolTy {
-  /// Size of L0 event pool created on demand.
-  size_t PoolSize = 64;
-
-  /// Context of the events.
-  ze_context_handle_t Context = nullptr;
-
-  /// Additional event pool flags common to this pull.
-  uint32_t Flags = 0;
-
-  /// Protection.
-  std::unique_ptr<std::mutex> Mtx;
-
-  /// List of created L0 event pools.
-  std::list<ze_event_pool_handle_t> Pools;
-
-  /// List of free L0 events.
-  std::list<ze_event_handle_t> Events;
-
-#ifdef OMPT_SUPPORT
-  /// Event to OMPT record map. The timestamp information is recorded to the
-  /// OMPT record before the event is recycled.
-  std::unordered_map<ze_event_handle_t, ompt_record_ompt_t *> EventToRecord;
-#endif // OMPT_SUPPORT
-
-public:
-  /// Initialize context, flags, and mutex.
-  Error init(ze_context_handle_t ContextIn, uint32_t FlagsIn) {
-    Context = ContextIn;
-    Flags = FlagsIn;
-    Mtx.reset(new std::mutex);
-    return Plugin::success();
-  }
-
-  /// Destroys L0 resources.
-  Error deinit() {
-    for (auto E : Events)
-      CALL_ZE_RET_ERROR(zeEventDestroy, E);
-    for (auto P : Pools)
-      CALL_ZE_RET_ERROR(zeEventPoolDestroy, P);
-    return Plugin::success();
-  }
-
-  /// Get a free event from the pool.
-  Expected<ze_event_handle_t> getEvent();
-
-  /// Return an event to the pool.
-  Error releaseEvent(ze_event_handle_t Event, L0DeviceTy &Device);
-};
-
 /// Staging buffer.
 /// A single staging buffer is not enough when batching is enabled since there
 /// can be multiple pending copy operations.
@@ -548,7 +472,7 @@ public:
   ~StagingBufferTy() = default;
 
   Error clear() {
-    for (auto Ptr : Buffers)
+    for (auto *Ptr : Buffers)
       CALL_ZE_RET_ERROR(zeMemFree, Context, Ptr);
     Context = nullptr;
     return Plugin::success();

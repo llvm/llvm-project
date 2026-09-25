@@ -151,6 +151,35 @@ def NormalFormAttrInterface : AttrInterface<"NormalFormAttrInterface"> {
   ];
 }
 
+def NormalFormCheckedOpInterface : OpInterface<"NormalFormCheckedOpInterface"> {
+  let description = [{
+    Interface for operations that satisfy normal forms. Such an operation
+    declares a list of normal forms it satisfies and the interface-level
+    verifier ensures this is the case by calling the corresponding checkers from
+    the normal form interfaces.
+  }];
+  let cppNamespace = "::mlir::transform";
+  let methods = [InterfaceMethod<
+      /*desc=*/[{Returns the list of normal forms the operation satisfies.}],
+      /*returnType=*/"void",
+      /*name=*/"getCheckedNormalForms",
+      /*arguments=*/
+      (ins "::llvm::SmallVectorImpl<::mlir::transform::NormalFormAttrInterface>"
+           " &":$normalForms)>];
+
+  let verify = [{
+    ::llvm::SmallVector<::mlir::transform::NormalFormAttrInterface> normalForms;
+    cast<::mlir::transform::NormalFormCheckedOpInterface>($_op)
+        .getCheckedNormalForms(normalForms);
+    if (::llvm::failed(::mlir::transform::detail::verifyNormalFormList(
+        [&] { return $_op->emitError(); }, normalForms)))
+      return ::llvm::failure();
+    return ::mlir::transform::detail::checkNormalForms(normalForms, $_op)
+        .checkAndReport();
+  }];
+  let verifyWithRegions = 1;
+}
+
 class TransformTypeInterfaceBase<string cppClass, string cppObjectType>
     : TypeInterface<cppClass> {
   let cppNamespace = "::mlir::transform";

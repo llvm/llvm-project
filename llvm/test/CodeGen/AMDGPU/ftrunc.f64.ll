@@ -1,6 +1,6 @@
-; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=bonaire < %s | FileCheck -check-prefix=CI -check-prefix=FUNC %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=CI -check-prefix=FUNC %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgpu6.00 < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgpu7.04 < %s | FileCheck -check-prefix=CI -check-prefix=FUNC %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgpu8.02 < %s | FileCheck -check-prefix=CI -check-prefix=FUNC %s
 
 declare double @llvm.trunc.f64(double) nounwind readnone
 declare <2 x double> @llvm.trunc.v2f64(<2 x double>) nounwind readnone

@@ -380,9 +380,9 @@ func.func @alloc_const_fold() -> memref<?xf32> {
 
 // CHECK-LABEL: func @alloc_alignment_const_fold
 func.func @alloc_alignment_const_fold() -> memref<?xf32> {
-  // CHECK-NEXT: memref.alloc() {alignment = 4096 : i64} : memref<4xf32>
+  // CHECK-NEXT: memref.alloc() alignment = 4096 : memref<4xf32>
   %c4 = arith.constant 4 : index
-  %a = memref.alloc(%c4) {alignment = 4096 : i64} : memref<?xf32>
+  %a = memref.alloc(%c4) alignment = 4096 : memref<?xf32>
 
   // CHECK-NEXT: memref.cast %{{.*}} : memref<4xf32> to memref<?xf32>
   // CHECK-NEXT: return %{{.*}} : memref<?xf32>
@@ -1514,10 +1514,10 @@ func.func @fold_trivial_subviews(%m: memref<?xf32, strided<[?], offset: ?>>,
 // CHECK-LABEL: func @load_store_nontemporal(
 func.func @load_store_nontemporal(%input : memref<32xf32, affine_map<(d0) -> (d0)>>, %output : memref<32xf32, affine_map<(d0) -> (d0)>>) {
   %1 = arith.constant 7 : index
-  // CHECK: memref.load %{{.*}}[%{{.*}}] {nontemporal = true} : memref<32xf32>
-  %2 = memref.load %input[%1] {nontemporal = true} : memref<32xf32, affine_map<(d0) -> (d0)>>
-  // CHECK: memref.store %{{.*}}, %{{.*}}[%{{.*}}] {nontemporal = true} : memref<32xf32>
-  memref.store %2, %output[%1] {nontemporal = true} : memref<32xf32, affine_map<(d0) -> (d0)>>
+  // CHECK: memref.load %{{.*}}[%{{.*}}] nontemporal(true) : memref<32xf32>
+  %2 = memref.load %input[%1] nontemporal(true) : memref<32xf32, affine_map<(d0) -> (d0)>>
+  // CHECK: memref.store %{{.*}}, %{{.*}}[%{{.*}}] nontemporal(true) : memref<32xf32>
+  memref.store %2, %output[%1] nontemporal(true) : memref<32xf32, affine_map<(d0) -> (d0)>>
   func.return
 }
 
@@ -1587,6 +1587,25 @@ func.func @subview_rank_reduction(%arg0: memref<1x384x384xf32>, %idx: index)
       : memref<1x384x384xf32> to memref<?x?xf32, strided<[384, 1], offset: ?>>
   // CHECK: return %[[cast]]
   return %0 : memref<?x?xf32, strided<[384, 1], offset: ?>>
+}
+
+// -----
+
+// Ensure memref.subview doesn't crash when an offset/size/stride value
+// overflows to ShapedType::kDynamic (INT64_MIN). The static representation
+// uses that value as the "dynamic" marker, so such a value must remain a
+// dynamic operand instead of being folded into a static entry.
+// CHECK-LABEL: func @subview_wrapped_stride(
+//  CHECK-SAME:     %[[ARG0:.*]]: memref<8xf32, strided<[1]>>
+func.func @subview_wrapped_stride(%mem: memref<8xf32, strided<[1]>>) -> memref<?xf32, strided<[?], offset: ?>> {
+  // CHECK: %[[MIN:.*]] = arith.constant -9223372036854775808 : index
+  // CHECK: memref.subview %[[ARG0]][%[[MIN]]] [1] [%[[MIN]]]
+  %i64max = arith.constant 9223372036854775807 : i64
+  %maxIdx = arith.index_cast %i64max : i64 to index
+  %c1 = arith.constant 1 : index
+  %wrapped = arith.addi %maxIdx, %c1 : index
+  %sub = memref.subview %mem[%wrapped] [%c1] [%wrapped] : memref<8xf32, strided<[1]>> to memref<?xf32, strided<[?], offset: ?>>
+  return %sub : memref<?xf32, strided<[?], offset: ?>>
 }
 
 // -----

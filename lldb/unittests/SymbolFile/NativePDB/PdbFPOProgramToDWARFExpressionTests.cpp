@@ -36,7 +36,7 @@ CheckValidProgramTranslation(llvm::StringRef fpo_program,
 
   // print dwarf expression to comparable textual representation
   llvm::DataExtractor extractor({stream.GetData(), stream.GetSize()},
-                                /*IsLittleEndian=*/true, /*AddressSize=*/4);
+                                /*IsLittleEndian=*/true);
 
   std::string result;
   llvm::raw_string_ostream os(result);

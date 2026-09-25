@@ -4,15 +4,14 @@
 import os
 import sys
 
-
 docs_src_dir = sys.argv[1]
 docs_bin_dir = sys.argv[2]
 
 DIALECT_DOC_PATH = os.path.join(docs_bin_dir, "CIR", "_raw", "CIRDialect.md")
 DIALECT_DOC_OUTPUT_PATH = os.path.join(docs_bin_dir, "CIR", "CIRDialect.md")
 
-INDEX_PATH = os.path.join(docs_src_dir, "CIR", "index.rst")
-INDEX_OUTPUT_PATH = os.path.join(docs_bin_dir, "CIR", "index.rst")
+INDEX_PATH = os.path.join(docs_src_dir, "CIR", "index.md")
+INDEX_OUTPUT_PATH = os.path.join(docs_bin_dir, "CIR", "index.md")
 
 cir_docs_toctree = []
 
@@ -37,21 +36,17 @@ depth: 2
         fp.write(dialect_doc)
 
 # ===============================================
-# Add toctree to index.rst if CIR docs are generated
+# Add toctree to index.md if CIR docs are generated
 # ===============================================
 if len(cir_docs_toctree) > 0:
     with open(INDEX_PATH, encoding="utf-8") as fp:
         index_content = fp.read()
-    index_content += f"""
-
-CIR Dialect Reference
-==========================
-
-.. toctree::
-    :numbered:
-    :maxdepth: 1
-
-    {"\n    ".join(cir_docs_toctree)}
-"""
+    index_content += (
+        "\n\n"
+        "## CIR Dialect Reference\n\n"
+        "```{toctree}\n"
+        ":numbered: true\n"
+        ":maxdepth: 1\n\n" + "\n".join(cir_docs_toctree) + "\n```\n"
+    )
     with open(INDEX_OUTPUT_PATH, "w", encoding="utf-8") as fp:
         fp.write(index_content)

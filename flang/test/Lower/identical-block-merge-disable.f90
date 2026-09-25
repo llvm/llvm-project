@@ -1,5 +1,4 @@
 ! Test disable identical block merge in the canonicalizer pass in bbc.
-! Temporary fix for issue #1021.
 ! RUN: %flang_fc1 -emit-hlfir %s -o - | FileCheck %s
 
 MODULE DMUMPS_SOL_LR

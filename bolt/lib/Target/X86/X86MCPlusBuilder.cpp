@@ -21,6 +21,7 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCRegister.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/CommandLine.h"
@@ -44,6 +45,11 @@ static cl::opt<bool> X86StripRedundantAddressSize(
     "x86-strip-redundant-address-size",
     cl::desc("Remove redundant Address-Size override prefix"), cl::init(true),
     cl::cat(BoltOptCategory));
+
+cl::opt<bool>
+    X86ICPPIC("x86-icp-pic",
+              cl::desc("force x86 ICP to use PC-relative LEA target checks"),
+              cl::cat(BoltOptCategory));
 
 } // namespace opts
 
@@ -379,7 +385,7 @@ public:
     return MCII.mayStore();
   }
 
-  bool isCleanRegXOR(const MCInst &Inst) const override {
+  bool isCleanReg(const MCInst &Inst) const override {
     switch (Inst.getOpcode()) {
     case X86::XOR16rr:
     case X86::XOR32rr:
@@ -1483,6 +1489,20 @@ public:
     return true;
   }
 
+  InstructionListType materializeConstant(BinaryContext &BC, const MCInst &Inst,
+                                          StringRef ConstantData,
+                                          uint64_t Offset) const override {
+    InstructionListType Instrs;
+    MCInst InstCopy = Inst;
+
+    if (!replaceMemOperandWithImm(InstCopy, ConstantData, Offset))
+      return Instrs;
+
+    Instrs.push_back(std::move(InstCopy));
+
+    return Instrs;
+  }
+
   /// TODO: this implementation currently works for the most common opcodes that
   /// load from memory. It can be extended to work with memory store opcodes as
   /// well as more memory load opcodes.
@@ -2286,6 +2306,7 @@ public:
     default:
       llvm_unreachable("Invalid operand size");
       return;
+    case 1:      NewOpcode = X86::MOV8mr; break;
     case 2:      NewOpcode = X86::MOV16mr; break;
     case 4:      NewOpcode = X86::MOV32mr; break;
     case 8:      NewOpcode = X86::MOV64mr; break;
@@ -2317,6 +2338,7 @@ public:
     default:
       llvm_unreachable("Invalid operand size");
       return;
+    case 1:      NewOpcode = X86::MOV8rm; break;
     case 2:      NewOpcode = X86::MOV16rm; break;
     case 4:      NewOpcode = X86::MOV32rm; break;
     case 8:      NewOpcode = X86::MOV64rm; break;
@@ -2788,6 +2810,11 @@ public:
     Inst.setOpcode(X86::TRAP);
   }
 
+  void createBreakpoint(MCInst &Inst) const override {
+    Inst.clear();
+    Inst.setOpcode(X86::INT3);
+  }
+
   void createCondBranch(MCInst &Inst, const MCSymbol *Target, unsigned CC,
                         MCContext *Ctx) const override {
     Inst.setOpcode(X86::JCC_1);
@@ -2806,13 +2833,15 @@ public:
     Inst.addOperand(MCOperand::createImm(CC));
   }
 
-  void reverseBranchCondition(MCInst &Inst, const MCSymbol *TBB,
-                              MCContext *Ctx) const override {
+  InstructionListType
+  reverseBranchCondition(MCInst Inst, const MCSymbol *TBB, MCContext *Ctx,
+                         bool MustPreserveFlags = true) const override {
     unsigned InvCC = getInvertedCondCode(getCondCode(Inst));
     assert(InvCC != X86::COND_INVALID && "invalid branch instruction");
     Inst.getOperand(Info->get(Inst.getOpcode()).NumOperands - 1).setImm(InvCC);
     Inst.getOperand(0) =
         MCOperand::createExpr(MCSymbolRefExpr::create(TBB, *Ctx));
+    return {Inst};
   }
 
   bool replaceBranchCondition(MCInst &Inst, const MCSymbol *TBB, MCContext *Ctx,
@@ -3284,13 +3313,16 @@ public:
   }
 
   BlocksVectorTy indirectCallPromotion(
-      const MCInst &CallInst,
+      const MCInst &CallInst, MCPhysReg Reg,
       const std::vector<std::pair<MCSymbol *, uint64_t>> &Targets,
       const std::vector<std::pair<MCSymbol *, uint64_t>> &VtableSyms,
       const std::vector<MCInst *> &MethodFetchInsns,
       const bool MinimizeCodeSize, MCContext *Ctx) override {
     const bool IsTailCall = isTailCall(CallInst);
     const bool IsJumpTable = getJumpTable(CallInst) != 0;
+    const bool UsePIC =
+        !IsJumpTable &&
+        (Ctx->getObjectFileInfo()->isPositionIndependent() || opts::X86ICPPIC);
     BlocksVectorTy Results;
 
     // Label for the current code block.
@@ -3307,7 +3339,8 @@ public:
            "There must be a vtable entry for every method "
            "in the targets vector.");
 
-    if (MinimizeCodeSize && !LoadElim) {
+    // PIC mode uses an extra lea instruction and a register.
+    if (UsePIC || (MinimizeCodeSize && !LoadElim)) {
       std::set<unsigned> UsedRegs;
 
       for (unsigned int I = 0; I < MCPlus::getNumPrimeOperands(CallInst); ++I) {
@@ -3315,11 +3348,22 @@ public:
         if (Op.isReg())
           UsedRegs.insert(Op.getReg());
       }
-
-      if (UsedRegs.count(X86::R10) == 0)
-        FuncAddrReg = X86::R10;
-      else if (UsedRegs.count(X86::R11) == 0)
-        FuncAddrReg = X86::R11;
+      if (UsePIC) {
+        for (const MCInst *Inst : MethodFetchInsns)
+          for (const MCOperand &Op : *Inst)
+            if (Op.isReg())
+              UsedRegs.insert(Op.getReg());
+      }
+      // R10 and R11 are caller-saved under the x86-64 ABI, so the promoted
+      // sequence does not need to restore the selected scratch register after
+      // the call. Prefer R11 in PIC mode because R10 may carry the nest
+      // argument.
+      const MCPhysReg FirstReg = UsePIC ? X86::R11 : X86::R10;
+      const MCPhysReg SecondReg = UsePIC ? X86::R10 : X86::R11;
+      if (UsedRegs.count(FirstReg) == 0)
+        FuncAddrReg = FirstReg;
+      else if (UsedRegs.count(SecondReg) == 0)
+        FuncAddrReg = SecondReg;
       else
         return Results;
     }
@@ -3336,7 +3380,41 @@ public:
       Results.emplace_back(NextTarget, InstructionListType());
       InstructionListType *NewCall = &Results.back().second;
 
-      if (MinimizeCodeSize && !LoadElim) {
+      if (UsePIC) {
+        assert(Targets[i].first && "PIC ICP target must have a symbol");
+        const MCSymbol *Sym = LoadElim ? VtableSyms[i].first : Targets[i].first;
+        const uint64_t Addend = LoadElim ? VtableSyms[i].second : 0;
+
+        NewCall->push_back(CallInst);
+        MCInst &Target = NewCall->back();
+        Target.clear();
+        createLea(Target, Sym, FuncAddrReg, Ctx);
+        if (Addend) {
+          const MCExpr *Expr = MCBinaryExpr::createAdd(
+              MCSymbolRefExpr::create(Sym, *Ctx),
+              MCConstantExpr::create(Addend, *Ctx), *Ctx);
+          Target.getOperand(4) = MCOperand::createExpr(Expr);
+        }
+
+        NewCall->push_back(CallInst);
+        MCInst &Compare = NewCall->back();
+        Compare.clear();
+        if (isBranchOnReg(CallInst)) {
+          Compare.setOpcode(X86::CMP64rr);
+          for (unsigned I = 0;
+               I < Info->get(CallInst.getOpcode()).getNumOperands(); ++I)
+            if (!CallInst.getOperand(I).isInst())
+              Compare.addOperand(CallInst.getOperand(I));
+          Compare.addOperand(MCOperand::createReg(FuncAddrReg));
+        } else {
+          Compare.setOpcode(X86::CMP64mr);
+          for (unsigned I = 0;
+               I < Info->get(CallInst.getOpcode()).getNumOperands(); ++I)
+            if (!CallInst.getOperand(I).isInst())
+              Compare.addOperand(CallInst.getOperand(I));
+          Compare.addOperand(MCOperand::createReg(FuncAddrReg));
+        }
+      } else if (MinimizeCodeSize && !LoadElim) {
         // Load the call target into FuncAddrReg.
         NewCall->push_back(CallInst); // Copy CallInst in order to get SMLoc
         MCInst &Target = NewCall->back();

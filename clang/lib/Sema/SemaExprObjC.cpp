@@ -434,24 +434,6 @@ ExprResult SemaObjC::BuildObjCNumericLiteral(SourceLocation AtLoc,
   return SemaRef.MaybeBindToTemporary(NumberLiteral);
 }
 
-ExprResult SemaObjC::ActOnObjCBoolLiteral(SourceLocation AtLoc,
-                                          SourceLocation ValueLoc, bool Value) {
-  ASTContext &Context = getASTContext();
-  ExprResult Inner;
-  if (getLangOpts().CPlusPlus) {
-    Inner = SemaRef.ActOnCXXBoolLiteral(ValueLoc,
-                                        Value ? tok::kw_true : tok::kw_false);
-  } else {
-    // C doesn't actually have a way to represent literal values of type
-    // _Bool. So, we'll use 0/1 and implicit cast to _Bool.
-    Inner = SemaRef.ActOnIntegerConstant(ValueLoc, Value ? 1 : 0);
-    Inner = SemaRef.ImpCastExprToType(Inner.get(), Context.BoolTy,
-                                      CK_IntegralToBoolean);
-  }
-
-  return BuildObjCNumericLiteral(AtLoc, Inner.get());
-}
-
 /// Check that the given expression is a valid element of an Objective-C
 /// collection literal.
 static ExprResult CheckObjCCollectionLiteralElement(Sema &S, Expr *Element,
@@ -1434,12 +1416,10 @@ static ObjCMethodDecl *findMethodInCurrentClass(Sema &S, Selector Sel) {
   return nullptr;
 }
 
-ExprResult SemaObjC::ParseObjCSelectorExpression(Selector Sel,
-                                                 SourceLocation AtLoc,
-                                                 SourceLocation SelLoc,
-                                                 SourceLocation LParenLoc,
-                                                 SourceLocation RParenLoc,
-                                                 bool WarnMultipleSelectors) {
+ExprResult SemaObjC::ParseObjCSelectorExpression(
+    Selector Sel, SourceLocation AtLoc, SourceLocation SelKWLoc,
+    SourceLocation SelNameLoc, SourceLocation LParenLoc,
+    SourceLocation RParenLoc, bool WarnMultipleSelectors) {
   ASTContext &Context = getASTContext();
   ObjCMethodDecl *Method = LookupInstanceMethodInGlobalPool(Sel,
                              SourceRange(LParenLoc, RParenLoc));
@@ -1451,12 +1431,13 @@ ExprResult SemaObjC::ParseObjCSelectorExpression(Selector Sel,
       Selector MatchedSel = OM->getSelector();
       SourceRange SelectorRange(LParenLoc.getLocWithOffset(1),
                                 RParenLoc.getLocWithOffset(-1));
-      Diag(SelLoc, diag::warn_undeclared_selector_with_typo)
-        << Sel << MatchedSel
-        << FixItHint::CreateReplacement(SelectorRange, MatchedSel.getAsString());
+      Diag(SelKWLoc, diag::warn_undeclared_selector_with_typo)
+          << Sel << MatchedSel
+          << FixItHint::CreateReplacement(SelectorRange,
+                                          MatchedSel.getAsString());
 
     } else
-        Diag(SelLoc, diag::warn_undeclared_selector) << Sel;
+      Diag(SelKWLoc, diag::warn_undeclared_selector) << Sel;
   } else {
     DiagnoseMismatchedSelectors(SemaRef, AtLoc, Method, LParenLoc, RParenLoc,
                                 WarnMultipleSelectors);
@@ -1527,7 +1508,7 @@ ExprResult SemaObjC::ParseObjCSelectorExpression(Selector Sel,
     }
   }
   QualType Ty = Context.getObjCSelType();
-  return new (Context) ObjCSelectorExpr(Ty, Sel, AtLoc, RParenLoc);
+  return new (Context) ObjCSelectorExpr(Ty, Sel, AtLoc, SelNameLoc, RParenLoc);
 }
 
 ExprResult SemaObjC::ParseObjCProtocolExpression(IdentifierInfo *ProtocolId,

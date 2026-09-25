@@ -19,8 +19,43 @@ add_header_library(
     libc.src.__support.CPP.atomic
 )
 
+add_header_library(
+  cleanup_stack
+  HDRS
+    cleanup_stack.h
+  DEPENDS
+    libc.hdr.types.struct___pthread_cleanup_frame
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  thread_attributes
+  HDRS
+    thread_attributes.h
+  DEPENDS
+    .cleanup_stack
+    libc.hdr.stdint_proxy
+    libc.hdr.types.size_t
+    libc.src.__support.CPP.atomic
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.architectures
+)
+
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
   add_subdirectory(${LIBC_TARGET_OS})
+endif()
+
+if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.tcb)
+  add_header_library(
+    tcb
+    HDRS
+      tcb.h
+    DEPENDS
+      .${LIBC_TARGET_OS}.tcb
+      libc.src.__support.macros.properties.os
+  )
 endif()
 
 if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.futex_utils)
@@ -38,8 +73,6 @@ if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.futex_utils)
     raw_mutex
     HDRS
       raw_mutex.h
-    COMPILE_OPTIONS
-      ${monotonicity_flags}
     DEPENDS
       .futex_utils
       libc.src.__support.threads.sleep
@@ -55,7 +88,6 @@ if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.futex_utils)
       raw_rwlock.h
     COMPILE_OPTIONS
       ${rwlock_default_spin_count}
-      ${monotonicity_flags}
     DEPENDS
       .raw_mutex
       libc.src.__support.common
@@ -78,6 +110,7 @@ if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.futex_utils)
       unix_mutex.h
     DEPENDS
       .raw_mutex
+      libc.src.__support.CPP.atomic
   )
 
   add_header_library(
@@ -113,8 +146,12 @@ add_header_library(
   HDRS
     thread.h
   DEPENDS
+    .tcb
+    .thread_attributes
     libc.hdr.stdint_proxy
+    libc.hdr.types.struct_sched_param
     libc.src.__support.common
+    libc.src.__support.error_or
     libc.src.__support.CPP.atomic
     libc.src.__support.CPP.optional
     libc.src.__support.CPP.string_view
@@ -127,14 +164,16 @@ if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.thread)
     SRCS
       thread.cpp
     DEPENDS
+      .cleanup_stack
       .mutex
       .${LIBC_TARGET_OS}.thread
-      libc.hdr.stdint_proxy
-      libc.src.__support.common
+      libc.hdr.types.struct___pthread_cleanup_frame
       libc.src.__support.fixedvector
       libc.src.__support.CPP.array
       libc.src.__support.CPP.mutex
       libc.src.__support.CPP.optional
+      libc.src.__support.macros.attributes
+      libc.src.__support.macros.config
   )
 endif()
 
@@ -147,16 +186,29 @@ if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.callonce)
   )
 endif()
 
-if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.CndVar)
-  add_object_library(
+if(TARGET libc.src.__support.threads.futex_utils)
+  add_header_library(
     CndVar
-    ALIAS
+    HDRS
+      CndVar.h
     DEPENDS
-    .${LIBC_TARGET_OS}.CndVar
+      .futex_utils
+      .mutex
+      .mutex_common
+      .raw_mutex
+      libc.hdr.stdint_proxy
+      libc.src.__support.CPP.expected
+      libc.src.__support.CPP.limits
+      libc.src.__support.CPP.mutex
+      libc.src.__support.CPP.new
+      libc.src.__support.threads.sleep
+      libc.src.__support.time.monotonicity
+      libc.src.__support.time.abs_timeout
+      libc.src.__support.threads.identifier
   )
 endif()
 
-if (LLVM_LIBC_FULL_BUILD)
+if(LLVM_LIBC_FULL_BUILD)
   set(identifier_dependency_on_thread libc.src.__support.threads.thread)
 endif()
 

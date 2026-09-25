@@ -50,35 +50,35 @@ multiclass BinOpTypedGen<string name, bits<16> opCode, SDNode node, bit genF = 0
     if genF then
       def V: BinOpTyped<name, opCode, vfID, node>;
     else
-      def V: BinOpTyped<name, opCode, vID, node>;
+      def V: BinOpTyped<name, opCode, viID, node>;
   }
 }
 
 multiclass TernOpTypedGen<string name, bits<16> opCode, SDNode node, bit genP = 1, bit genI = 1, bit genF = 0, bit genV = 0> {
   if genP then {
     def SPSCond: TernOpTyped<name, opCode, iID, pID, node>;
-    def SPVCond: TernOpTyped<name, opCode, vID, pID, node>;
+    def SPVCond: TernOpTyped<name, opCode, viID, pID, node>;
   }
   if genI then {
     def SISCond: TernOpTyped<name, opCode, iID, iID, node>;
-    def SIVCond: TernOpTyped<name, opCode, vID, iID, node>;
+    def SIVCond: TernOpTyped<name, opCode, viID, iID, node>;
   }
   if genF then {
     def SFSCond: TernOpTyped<name, opCode, iID, fID, node>;
-    def SFVCond: TernOpTyped<name, opCode, vID, fID, node>;
+    def SFVCond: TernOpTyped<name, opCode, viID, fID, node>;
   }
   if genV then {
     if genP then {
       def VPSCond: TernOpTyped<name, opCode, iID, vpID, node>;
-      def VPVCond: TernOpTyped<name, opCode, vID, vpID, node>;
+      def VPVCond: TernOpTyped<name, opCode, viID, vpID, node>;
     }
     if genI then {
-      def VISCond: TernOpTyped<name, opCode, iID, vID, node>;
-      def VIVCond: TernOpTyped<name, opCode, vID, vID, node>;
+      def VISCond: TernOpTyped<name, opCode, iID, viID, node>;
+      def VIVCond: TernOpTyped<name, opCode, viID, viID, node>;
     }
     if genF then {
       def VFSCond: TernOpTyped<name, opCode, iID, vfID, node>;
-      def VFVCond: TernOpTyped<name, opCode, vID, vfID, node>;
+      def VFVCond: TernOpTyped<name, opCode, viID, vfID, node>;
     }
   }
 }
@@ -97,6 +97,10 @@ class SimpleOp<string name, bits<16> opCode>: Op<opCode, (outs), (ins), name>;
 def OpNop: SimpleOp<"OpNop", 0>;
 def OpUndef: Op<1, (outs ID:$res), (ins TYPE:$type), "$res = OpUndef $type">;
 def OpSizeOf: Op<321, (outs ID:$res), (ins TYPE:$ty, ID:$ptr), "$res = OpSizeOf $ty $ptr">;
+
+//  - SPV_KHR_poison_freeze : Poison values and freeze
+def OpPoisonKHR: Op<5158, (outs ID:$res), (ins TYPE:$type), "$res = OpPoisonKHR $type">;
+def OpFreezeKHR: Op<5159, (outs ID:$res), (ins TYPE:$type, ID:$val), "$res = OpFreezeKHR $type $val">;
 
 //  - SPV_KHR_expect_assume : Expect assume instructions
 def OpAssumeTrueKHR: Op<5630, (outs), (ins ID:$cond), "OpAssumeTrueKHR $cond">;
@@ -209,6 +213,8 @@ def OpTypeCooperativeMatrixNV: Op<5358, (outs TYPE:$res),
 def OpTypeCooperativeMatrixKHR: Op<4456, (outs TYPE:$res),
                   (ins TYPE:$compType, ID:$scope, ID:$rows, ID:$cols, ID:$use),
                   "$res = OpTypeCooperativeMatrixKHR $compType $scope $rows $cols $use">;
+def OpTypeVectorIdEXT: Op<5288, (outs TYPE:$type), (ins TYPE:$compType, ID:$compCount),
+                  "$type = OpTypeVectorIdEXT $compType $compCount">;
 
 // 3.42.7 Constant-Creation Instructions
 
@@ -245,7 +251,9 @@ def OpSpecConstantComposite: Op<51, (outs ID:$res), (ins TYPE:$type, variable_op
                   "$res = OpSpecConstantComposite $type">;
 def OpSpecConstantCompositeContinuedINTEL: Op<6092, (outs), (ins variable_ops),
                   "OpSpecConstantCompositeContinuedINTEL">;
-def OpSpecConstantOp: Op<52, (outs ID:$res), (ins TYPE:$t, SpecConstantOpOperands:$c, ID:$o, variable_ops),
+// The first operand of the wrapped opcode is a type id when that opcode is one
+// of the untyped access chains, so it accepts both type and non-type ids.
+def OpSpecConstantOp: Op<52, (outs ID:$res), (ins TYPE:$t, SpecConstantOpOperands:$c, ANY:$o, variable_ops),
                   "$res = OpSpecConstantOp $t $c $o">;
 
 // 3.42.8 Memory Instructions
@@ -284,6 +292,33 @@ def OpPtrNotEqual: Op<402, (outs ID:$res), (ins TYPE:$resType, ID:$a, ID:$b),
                   "$res = OpPtrNotEqual $resType $a $b">;
 def OpPtrDiff: Op<403, (outs ID:$res), (ins TYPE:$resType, ID:$a, ID:$b),
                   "$res = OpPtrDiff $resType $a $b">;
+
+// - SPV_KHR_untyped_pointers
+
+def OpTypeUntypedPointerKHR: Op<4417, (outs TYPE:$res), (ins StorageClass:$storage),
+                  "$res = OpTypeUntypedPointerKHR $storage">;
+def OpUntypedVariableKHR: Op<4418, (outs ID:$res),
+                  (ins TYPE:$type, StorageClass:$sc, TYPE:$dataType, variable_ops),
+                  "$res = OpUntypedVariableKHR $type $sc $dataType">;
+def OpUntypedAccessChainKHR: Op<4419, (outs ID:$res),
+                  (ins TYPE:$type, TYPE:$baseType, ID:$base, variable_ops),
+                  "$res = OpUntypedAccessChainKHR $type $baseType $base">;
+def OpUntypedInBoundsAccessChainKHR: Op<4420, (outs ID:$res),
+                  (ins TYPE:$type, TYPE:$baseType, ID:$base, variable_ops),
+                  "$res = OpUntypedInBoundsAccessChainKHR $type $baseType $base">;
+def OpUntypedPtrAccessChainKHR: Op<4423, (outs ID:$res),
+                  (ins TYPE:$type, TYPE:$baseType, ID:$base, ID:$element, variable_ops),
+                  "$res = OpUntypedPtrAccessChainKHR $type $baseType $base $element">;
+def OpUntypedInBoundsPtrAccessChainKHR: Op<4424, (outs ID:$res),
+                  (ins TYPE:$type, TYPE:$baseType, ID:$base, ID:$element, variable_ops),
+                  "$res = OpUntypedInBoundsPtrAccessChainKHR $type $baseType $base $element">;
+def OpUntypedPrefetchKHR: Op<4426, (outs),
+                  (ins ID:$pointer, ID:$numBytes, variable_ops),
+                  "OpUntypedPrefetchKHR $pointer $numBytes">;
+def OpUntypedGroupAsyncCopyKHR: Op<4434, (outs ID:$res),
+                  (ins TYPE:$ty, ID:$scope, ID:$dst, ID:$src, ID:$elemNumBytes,
+                   ID:$nelts, ID:$stride, ID:$event, variable_ops),
+                  "$res = OpUntypedGroupAsyncCopyKHR $ty $scope $dst $src $elemNumBytes $nelts $stride $event">;
 
 // - SPV_INTEL_variable_length_array
 
@@ -641,6 +676,8 @@ let isReturn = 1, hasDelaySlot = 0, isBarrier = 0, isTerminator = 1, isNotDuplic
   def OpReturn: SimpleOp<"OpReturn", 253>;
   def OpReturnValue: Op<254, (outs), (ins ID:$ret), "OpReturnValue $ret">;
   def OpUnreachable: SimpleOp<"OpUnreachable", 255>;
+  def OpAbortKHR: Op<5121, (outs), (ins TYPE:$msg_type, ID:$msg),
+                  "OpAbortKHR $msg_type $msg">;
 }
 def OpLifetimeStart: Op<256, (outs), (ins ID:$ptr, i32imm:$sz), "OpLifetimeStart $ptr $sz">;
 def OpLifetimeStop: Op<257, (outs), (ins ID:$ptr, i32imm:$sz), "OpLifetimeStop $ptr $sz">;
@@ -898,22 +935,14 @@ def OpSubgroupImageMediaBlockWriteINTEL: Op<5581, (outs), (ins ID:$image, ID:$co
                   "OpSubgroupImageMediaBlockWriteINTEL $image $coordinate $width $height $data">;
 
 // - SPV_KHR_uniform_group_instructions
-def OpGroupIMulKHR: Op<6401, (outs ID:$res), (ins TYPE:$type, ID:$scope, i32imm:$groupOp, ID:$value),
-                  "$res = OpGroupIMulKHR $type $scope $groupOp $value">;
-def OpGroupFMulKHR: Op<6402, (outs ID:$res), (ins TYPE:$type, ID:$scope, i32imm:$groupOp, ID:$value),
-                  "$res = OpGroupFMulKHR $type $scope $groupOp $value">;
-def OpGroupBitwiseAndKHR: Op<6403, (outs ID:$res), (ins TYPE:$type, ID:$scope, i32imm:$groupOp, ID:$value),
-                  "$res = OpGroupBitwiseAndKHR $type $scope $groupOp $value">;
-def OpGroupBitwiseOrKHR: Op<6404, (outs ID:$res), (ins TYPE:$type, ID:$scope, i32imm:$groupOp, ID:$value),
-                  "$res = OpGroupBitwiseOrKHR $type $scope $groupOp $value">;
-def OpGroupBitwiseXorKHR: Op<6405, (outs ID:$res), (ins TYPE:$type, ID:$scope, i32imm:$groupOp, ID:$value),
-                  "$res = OpGroupBitwiseXorKHR $type $scope $groupOp $value">;
-def OpGroupLogicalAndKHR: Op<6406, (outs ID:$res), (ins TYPE:$type, ID:$scope, i32imm:$groupOp, ID:$value),
-                  "$res = OpGroupLogicalAndKHR $type $scope $groupOp $value">;
-def OpGroupLogicalOrKHR: Op<6407, (outs ID:$res), (ins TYPE:$type, ID:$scope, i32imm:$groupOp, ID:$value),
-                  "$res = OpGroupLogicalOrKHR $type $scope $groupOp $value">;
-def OpGroupLogicalXorKHR: Op<6408, (outs ID:$res), (ins TYPE:$type, ID:$scope, i32imm:$groupOp, ID:$value),
-                  "$res = OpGroupLogicalXorKHR $type $scope $groupOp $value">;
+def OpGroupIMulKHR: OpGroup<"IMulKHR", 6401>;
+def OpGroupFMulKHR: OpGroup<"FMulKHR", 6402>;
+def OpGroupBitwiseAndKHR: OpGroup<"BitwiseAndKHR", 6403>;
+def OpGroupBitwiseOrKHR: OpGroup<"BitwiseOrKHR", 6404>;
+def OpGroupBitwiseXorKHR: OpGroup<"BitwiseXorKHR", 6405>;
+def OpGroupLogicalAndKHR: OpGroup<"LogicalAndKHR", 6406>;
+def OpGroupLogicalOrKHR: OpGroup<"LogicalOrKHR", 6407>;
+def OpGroupLogicalXorKHR: OpGroup<"LogicalXorKHR", 6408>;
 
 // Inline Assembly Instructions
 def OpAsmTargetINTEL: Op<5609, (outs ID:$res), (ins StringImm:$str, variable_ops), "$res = OpAsmTargetINTEL $str">;
@@ -1098,9 +1127,9 @@ def OpSubgroup2DBlockStoreINTEL: Op<6235, (outs), (ins ID:$element_size, ID:$blo
                   "OpSubgroup2DBlockStoreINTEL $element_size $block_width $block_height $block_count $src_ptr $dst_base_ptr $memory_width $memory_height $memory_pitch $coord">;
 
 // SPV_INTEL_predicated_io
-def OpPredicatedLoadINTEL: Op<6528, (outs ID:$res), (ins TYPE:$resType, ID:$ptr, ID:$predicate, ID:$default_value, variable_ops),
+def OpPredicatedLoadINTEL: Op<6258, (outs ID:$res), (ins TYPE:$resType, ID:$ptr, ID:$predicate, ID:$default_value, variable_ops),
                   "$res = OpPredicatedLoadINTEL $resType $ptr $predicate $default_value">;
-def OpPredicatedStoreINTEL: Op<6529, (outs), (ins ID:$ptr, ID:$object, ID:$predicate, variable_ops),
+def OpPredicatedStoreINTEL: Op<6259, (outs), (ins ID:$ptr, ID:$object, ID:$predicate, variable_ops),
                   "OpPredicatedStoreINTEL $ptr $object $predicate">;
 
 //SPV_ALTERA_blocking_pipes

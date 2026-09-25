@@ -256,6 +256,11 @@ static Value createExtractAndCast(OpBuilder &builder, Location loc,
                                  /*narrowingConversion=*/true) &&
          "expected that the compatibility was checked before");
 
+  // Nothing has to be done if the types are already the same. This also
+  // avoids querying the bit size of scalable vector types below.
+  if (srcType == targetType)
+    return srcValue;
+
   uint64_t srcTypeSize = dataLayout.getTypeSizeInBits(srcType);
   uint64_t targetTypeSize = dataLayout.getTypeSizeInBits(targetType);
   if (srcTypeSize == targetTypeSize)
@@ -291,6 +296,12 @@ static Value createInsertAndCast(OpBuilder &builder, Location loc,
                                  srcValue.getType(),
                                  /*narrowingConversion=*/false) &&
          "expected that the compatibility was checked before");
+
+  // Nothing has to be done if the types are already the same. This also
+  // avoids querying the bit size of scalable vector types below.
+  if (srcValue.getType() == reachingDef.getType())
+    return srcValue;
+
   uint64_t valueTypeSize = dataLayout.getTypeSizeInBits(srcValue.getType());
   uint64_t slotTypeSize = dataLayout.getTypeSizeInBits(reachingDef.getType());
   if (slotTypeSize == valueTypeSize)
@@ -608,18 +619,6 @@ DeletionKind LLVM::LaunderInvariantGroupOp::removeBlockingUses(
   return DeletionKind::Delete;
 }
 
-bool LLVM::StripInvariantGroupOp::canUsesBeRemoved(
-    const SmallPtrSetImpl<OpOperand *> &blockingUses,
-    SmallVectorImpl<OpOperand *> &newBlockingUses,
-    const DataLayout &dataLayout) {
-  return forwardToUsers(*this, newBlockingUses);
-}
-
-DeletionKind LLVM::StripInvariantGroupOp::removeBlockingUses(
-    const SmallPtrSetImpl<OpOperand *> &blockingUses, OpBuilder &builder) {
-  return DeletionKind::Delete;
-}
-
 bool LLVM::DbgDeclareOp::canUsesBeRemoved(
     const SmallPtrSetImpl<OpOperand *> &blockingUses,
     SmallVectorImpl<OpOperand *> &newBlockingUses,
@@ -684,7 +683,9 @@ bool LLVM::GEPOp::canUsesBeRemoved(
     SmallVectorImpl<OpOperand *> &newBlockingUses,
     const DataLayout &dataLayout) {
   // GEP can be removed as long as it is a no-op and its users can be removed.
-  if (!hasAllZeroIndices(*this))
+  // `inrange` is only valid on constant GEP expressions, so an inrange GEP on
+  // an alloca is illegal and we bail out.
+  if (getInrangeAttr() || !hasAllZeroIndices(*this))
     return false;
   return forwardToUsers(*this, newBlockingUses);
 }
@@ -863,6 +864,10 @@ bool LLVM::GEPOp::canRewire(const DestructurableMemorySlot &slot,
     return false;
 
   if (getBase() != slot.ptr)
+    return false;
+  // `inrange` is only valid on constant GEP expressions, so an inrange GEP on
+  // an alloca is illegal and SROA bails out.
+  if (getInrangeAttr())
     return false;
   std::optional<SubslotAccessInfo> accessInfo =
       getSubslotAccessInfo(slot, dataLayout, *this);

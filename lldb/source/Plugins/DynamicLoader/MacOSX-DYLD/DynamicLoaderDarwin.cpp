@@ -26,6 +26,7 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlanCallFunction.h"
 #include "lldb/Target/ThreadPlanRunToAddress.h"
+#include "lldb/Target/ThreadPlanRunToBreakpoint.h"
 #include "lldb/Target/ThreadPlanStepInstruction.h"
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -152,13 +153,15 @@ ModuleSP DynamicLoaderDarwin::FindTargetModuleForImageInfo(
         image_info = HostInfo::GetSharedCacheImageInfo(module_spec.GetUUID(),
                                                        sc_uuid, sc_mode);
 
-      else
-        image_info = HostInfo::GetSharedCacheImageInfo(
-            module_spec.GetFileSpec().GetPathAsConstString(), sc_uuid, sc_mode);
+      else {
+        std::string filepath = module_spec.GetFileSpec().GetPath();
+        image_info =
+            HostInfo::GetSharedCacheImageInfo(filepath, sc_uuid, sc_mode);
+      }
     } else {
       // Fall back to looking lldb's own shared cache by filename
-      image_info = HostInfo::GetSharedCacheImageInfo(
-          module_spec.GetFileSpec().GetPathAsConstString(), sc_mode);
+      std::string filepath = module_spec.GetFileSpec().GetPath();
+      image_info = HostInfo::GetSharedCacheImageInfo(filepath, sc_mode);
     }
 
     // If we found it and it has the correct UUID, let's proceed with
@@ -177,7 +180,8 @@ ModuleSP DynamicLoaderDarwin::FindTargetModuleForImageInfo(
   // added to the target, don't let it be called for every one.
   if (!module_sp || module_sp->GetObjectFile() == nullptr) {
     llvm::Expected<ModuleSP> module_sp_or_err = m_process->ReadModuleFromMemory(
-        image_info.file_spec, image_info.address);
+        image_info.file_spec, image_info.address,
+        image_info.mh_and_load_cmd_size);
     if (auto err = module_sp_or_err.takeError()) {
       LLDB_LOG_ERROR(GetLog(LLDBLog::DynamicLoader), std::move(err),
                      "Failed to load module from memory: {0}");
@@ -275,6 +279,7 @@ void DynamicLoaderDarwin::UnloadAllImages() {
 bool DynamicLoaderDarwin::UpdateImageLoadAddress(Module *module,
                                                  ImageInfo &info) {
   bool changed = false;
+  Log *log = GetLog(LLDBLog::DynamicLoader);
   if (module) {
     ObjectFile *image_object_file = module->GetObjectFile();
     if (image_object_file) {
@@ -304,6 +309,21 @@ bool DynamicLoaderDarwin::UpdateImageLoadAddress(Module *module,
               // all other sections.
               const bool warn_multiple =
                   section_sp->GetName() != g_section_name_LINKEDIT;
+
+              // If a segment was eliminated for the in-memory image,
+              // don't map it into lldb's target section load list.
+              if (info.segments[i].vmsize == 0) {
+                LLDB_LOG(log, "{0}: Omitting zero-size segment {1}",
+                         info.file_spec.GetFilename(), info.segments[i].name);
+                continue;
+              }
+
+              if (info.segments[i].vmsize != section_sp->GetByteSize())
+                LLDB_LOG(log,
+                         "{0}: In-memory segment size for {1} is {2:x}"
+                         " but file segment size is {3:x}",
+                         info.file_spec.GetFilename(), info.segments[i].name,
+                         info.segments[i].vmsize, section_sp->GetByteSize());
 
               changed = m_process->GetTarget().SetSectionLoadAddress(
                   section_sp, new_section_load_addr, warn_multiple);
@@ -368,11 +388,11 @@ bool DynamicLoaderDarwin::UnloadModuleSections(Module *module,
                     section_sp, old_section_load_addr))
               changed = true;
           } else {
-            Debugger::ReportWarning(
-                llvm::formatv("unable to find and unload segment named "
-                              "'{0}' in '{1}' in macosx dynamic loader plug-in",
-                              info.segments[i].name.AsCString("<invalid>"),
-                              image_object_file->GetFileSpec().GetPath()));
+            Debugger::ReportWarning(llvm::formatv(
+                "unable to find and unload segment named "
+                "'{0}' in '{1}' in macosx dynamic loader plug-in",
+                info.segments[i].name[0] ? info.segments[i].name : "<invalid>",
+                image_object_file->GetFileSpec().GetPath()));
           }
         }
       }
@@ -427,6 +447,10 @@ bool DynamicLoaderDarwin::JSONImageInformationIntoImageInfo(
         mh->GetValueForKey("cpusubtype")->GetUnsignedIntegerValue();
     image_infos[i].header.filetype =
         mh->GetValueForKey("filetype")->GetUnsignedIntegerValue();
+    if (mh->HasKey("sizeof_mh_and_loadcmds"))
+      image_infos[i].mh_and_load_cmd_size =
+          mh->GetValueForKey("sizeof_mh_and_loadcmds")
+              ->GetUnsignedIntegerValue();
 
     if (image->HasKey("min_version_os_name")) {
       std::string os_name =
@@ -499,8 +523,11 @@ bool DynamicLoaderDarwin::JSONImageInformationIntoImageInfo(
       Segment segment;
       StructuredData::Dictionary *seg =
           segments->GetItemAtIndex(j)->GetAsDictionary();
-      segment.name =
-          ConstString(seg->GetValueForKey("name")->GetAsString()->GetValue());
+      llvm::StringRef seg_name =
+          seg->GetValueForKey("name")->GetAsString()->GetValue();
+      strncpy(segment.name, seg_name.data(),
+              std::min(seg_name.size(), size_t(16)));
+      segment.name[16] = '\0';
       segment.vmaddr = seg->GetValueForKey("vmaddr")->GetUnsignedIntegerValue();
       segment.vmsize = seg->GetValueForKey("vmsize")->GetUnsignedIntegerValue();
       segment.fileoff =
@@ -549,7 +576,7 @@ bool DynamicLoaderDarwin::JSONImageInformationIntoImageInfo(
       // that starts of file offset zero and that has bytes in the file...
       if ((image_infos[i].segments[k].fileoff == 0 &&
            image_infos[i].segments[k].filesize > 0) ||
-          (image_infos[i].segments[k].name == "__TEXT")) {
+          (llvm::StringRef(image_infos[i].segments[k].name) == "__TEXT")) {
         image_infos[i].slide =
             image_infos[i].address - image_infos[i].segments[k].vmaddr;
         // We have found the slide amount, so we can exit this for loop.
@@ -740,13 +767,13 @@ bool DynamicLoaderDarwin::AddModulesUsingPreloadedModules(
       if (objfile) {
         SectionList *sections = objfile->GetSectionList();
         if (sections) {
-          ConstString commpage_dbstr("__commpage");
+          llvm::StringRef commpage_sect_name("__commpage");
           Section *commpage_section =
-              sections->FindSectionByName(commpage_dbstr).get();
+              sections->FindSectionByName(commpage_sect_name).get();
           if (commpage_section) {
             ModuleSpec module_spec(objfile->GetFileSpec(),
                                    image_info.GetArchitecture());
-            module_spec.GetObjectName() = commpage_dbstr;
+            module_spec.GetObjectName() = ConstString(commpage_sect_name);
             ModuleSP commpage_image_module_sp(
                 target_images.FindFirstModule(module_spec));
             if (!commpage_image_module_sp) {
@@ -848,13 +875,13 @@ bool DynamicLoaderDarwin::AlwaysRelyOnEHUnwindInfo(SymbolContext &sym_ctx) {
 void DynamicLoaderDarwin::Segment::PutToLog(Log *log,
                                             lldb::addr_t slide) const {
   if (slide == 0)
-    LLDB_LOGF(log, "\t\t%16s [0x%16.16" PRIx64 " - 0x%16.16" PRIx64 ")",
-              name.AsCString(""), vmaddr + slide, vmaddr + slide + vmsize);
+    LLDB_LOGF(log, "\t\t%16s [0x%16.16" PRIx64 " - 0x%16.16" PRIx64 ")", name,
+              vmaddr + slide, vmaddr + slide + vmsize);
   else
-    LLDB_LOGF(
-        log,
-        "\t\t%16s [0x%16.16" PRIx64 " - 0x%16.16" PRIx64 ") slide = 0x%" PRIx64,
-        name.AsCString(""), vmaddr + slide, vmaddr + slide + vmsize, slide);
+    LLDB_LOGF(log,
+              "\t\t%16s [0x%16.16" PRIx64 " - 0x%16.16" PRIx64
+              ") slide = 0x%" PRIx64,
+              name, vmaddr + slide, vmaddr + slide + vmsize, slide);
 }
 
 lldb_private::ArchSpec DynamicLoaderDarwin::ImageInfo::GetArchitecture() const {
@@ -881,22 +908,12 @@ lldb_private::ArchSpec DynamicLoaderDarwin::ImageInfo::GetArchitecture() const {
   return arch_spec;
 }
 
-const DynamicLoaderDarwin::Segment *
-DynamicLoaderDarwin::ImageInfo::FindSegment(ConstString name) const {
-  const size_t num_segments = segments.size();
-  for (size_t i = 0; i < num_segments; ++i) {
-    if (segments[i].name == name)
-      return &segments[i];
-  }
-  return nullptr;
-}
-
 // Dump an image info structure to the file handle provided.
 void DynamicLoaderDarwin::ImageInfo::PutToLog(Log *log) const {
   if (!log)
     return;
   if (address == LLDB_INVALID_ADDRESS) {
-    LLDB_LOG(log, "uuid={1} path='{2}' (UNLOADED)", uuid.GetAsString(),
+    LLDB_LOG(log, "uuid={} path='{}' (UNLOADED)", uuid.GetAsString(),
              file_spec.GetPath());
   } else {
     LLDB_LOG(log, "address={0:x+16} uuid={1} path='{2}'", address,
@@ -964,8 +981,23 @@ DynamicLoaderDarwin::GetStepThroughTrampolinePlan(Thread &thread,
 
     ConstString current_name =
         current_symbol->GetMangled().GetName(Mangled::ePreferMangled);
-    if (current_symbol->IsTrampoline()) {
+    llvm::StringRef target_symbol_name = current_name;
+    static const llvm::StringRef g_lazy_stub_name = "$lazyLoadStub";
+    // If this is a "lazy library" stub, we don't have a guarantee that the
+    // target library is loaded at the point where we hit the stub.  So we
+    // have to use a symbol name breakpoint rather than an address one.
+    if (current_name && target_symbol_name.consume_back(g_lazy_stub_name)) {
+      auto bkpt_sp = target_sp->CreateBreakpoint(
+          nullptr, nullptr, target_symbol_name.str().c_str(),
+          eFunctionNameTypeFull, eLanguageTypeUnknown, /*offset=*/0,
+          /*is_insn_count=*/false,
+          /*skip_prologue=*/eLazyBoolNo, /*internal=*/true,
+          /* hardware=*/false);
+      return std::make_shared<ThreadPlanRunToBreakpoint>(thread, bkpt_sp,
+                                                         stop_others);
+    }
 
+    if (current_symbol->IsTrampoline()) {
       if (current_name) {
         const ModuleList &images = target_sp->GetImages();
 
@@ -982,7 +1014,6 @@ DynamicLoaderDarwin::GetStepThroughTrampolinePlan(Thread &thread,
                       load_addr);
           }
         }
-
         SymbolContextList reexported_symbols;
         images.FindSymbolsWithNameAndType(current_name, eSymbolTypeReExported,
                                           reexported_symbols);

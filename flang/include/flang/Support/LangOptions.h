@@ -18,6 +18,7 @@
 #include <string>
 #include <vector>
 
+#include "llvm/Frontend/OpenMP/OMPVersion.h"
 #include "llvm/TargetParser/Triple.h"
 
 namespace Fortran::common {
@@ -41,6 +42,18 @@ public:
 
     // Aggressively fuse FP ops (E.g. FMA).
     FPM_Fast,
+  };
+
+  /// Floating-point exception trap kinds for -ffpe-trap=.
+  /// Bit values match the Fortran IEEE_FLAG_TYPE encoding used by
+  /// the runtime's MapException().
+  enum FPExceptionTrapKind : unsigned {
+    FPE_Invalid = 1,
+    FPE_Denormal = 2,
+    FPE_DivByZero = 4,
+    FPE_Overflow = 8,
+    FPE_Underflow = 16,
+    FPE_Inexact = 32,
   };
 
 #define LANGOPT(Name, Bits, Default) unsigned Name : Bits;
@@ -74,6 +87,10 @@ public:
 
   /// List of triples passed in using -fopenmp-targets.
   std::vector<llvm::Triple> OMPTargetTriples;
+
+  llvm::omp::Version getOpenMPVersion() const {
+    return llvm::omp::Version(OpenMPVersion);
+  }
 
   LangOptions();
 };

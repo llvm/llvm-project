@@ -16,9 +16,6 @@
 #include "Shared/Debug.h"
 #include "Shared/Profile.h"
 
-#ifdef OMPT_SUPPORT
-extern void llvm::omp::target::ompt::connectLibrary();
-#endif
 using namespace llvm::omp::target::debug;
 
 static std::mutex PluginMtx;

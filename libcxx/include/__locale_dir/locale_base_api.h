@@ -54,9 +54,8 @@
 // ------------------
 // namespace __locale {
 //  // required by the headers
-//  float               __strtof(const char*, char**, __locale_t);
-//  double              __strtod(const char*, char**, __locale_t);
-//  long double         __strtold(const char*, char**, __locale_t);
+//  template <class FloatT>
+//  FloatT __str_to_float_c_locale(const char*, char**);
 // }
 //
 // Character manipulation functions
@@ -102,6 +101,11 @@
 //
 //  int     __snprintf(char*, size_t, __locale_t, const char*, ...); // required by the headers
 //  int     __asprintf(char**, __locale_t, const char*, ...);        // required by the headers
+//
+//  const char* __get_locale_encoding(__locale_t);
+//
+// #define _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE /* 0 or 1 depending on whether a rune table has to be provided */
+//
 // }
 
 #if _LIBCPP_HAS_LOCALIZATION
@@ -112,10 +116,14 @@
 #    include <__locale_dir/support/freebsd.h>
 #  elif defined(__NetBSD__)
 #    include <__locale_dir/support/netbsd.h>
-#  elif defined(_LIBCPP_MSVCRT_LIKE)
+#  elif defined(__OpenBSD__)
+#    include <__locale_dir/support/openbsd.h>
+#  elif defined(_WIN32)
 #    include <__locale_dir/support/windows.h>
 #  elif defined(__Fuchsia__)
 #    include <__locale_dir/support/fuchsia.h>
+#  elif _LIBCPP_LIBC_LLVM_LIBC
+#    include <__locale_dir/support/llvm_libc.h>
 #  elif defined(__linux__)
 #    include <__locale_dir/support/linux.h>
 #  elif _LIBCPP_LIBC_NEWLIB
@@ -128,17 +136,14 @@
 //       (by providing global non-reserved names) and the new API. As we move individual platforms
 //       towards the new way of defining the locale base API, this should disappear since each platform
 //       will define those directly.
-#    if defined(__MVS__)
-#      include <__locale_dir/locale_base_api/ibm.h>
-#    elif defined(__OpenBSD__)
-#      include <__locale_dir/locale_base_api/openbsd.h>
-#    endif
+#    include <__locale_dir/locale_base_api/ibm.h>
 
 #    include <__locale_dir/locale_base_api/bsd_locale_fallbacks.h>
 
 #    include <__cstddef/size_t.h>
 #    include <__utility/forward.h>
 #    include <ctype.h>
+#    include <langinfo.h>
 #    include <string.h>
 #    include <time.h>
 #    if _LIBCPP_HAS_WIDE_CHARACTERS
@@ -160,6 +165,9 @@ namespace __locale {
 
 using __locale_t _LIBCPP_NODEBUG = locale_t;
 
+// Forward declared for use below.
+inline __locale_t __get_c_locale();
+
 #    if defined(_LIBCPP_BUILDING_LIBRARY)
 using __lconv_t _LIBCPP_NODEBUG = lconv;
 
@@ -179,16 +187,22 @@ inline _LIBCPP_HIDE_FROM_ABI __lconv_t* __localeconv(__locale_t& __loc) { return
 //
 // Strtonum functions
 //
-inline _LIBCPP_HIDE_FROM_ABI float __strtof(const char* __nptr, char** __endptr, __locale_t __loc) {
-  return strtof_l(__nptr, __endptr, __loc);
+template <class _FloatT>
+_LIBCPP_HIDE_FROM_ABI _FloatT __str_to_float_c_locale(const char* __nptr, char** __endptr);
+
+template <>
+inline _LIBCPP_HIDE_FROM_ABI float __str_to_float_c_locale<float>(const char* __nptr, char** __endptr) {
+  return strtof_l(__nptr, __endptr, __get_c_locale());
 }
 
-inline _LIBCPP_HIDE_FROM_ABI double __strtod(const char* __nptr, char** __endptr, __locale_t __loc) {
-  return strtod_l(__nptr, __endptr, __loc);
+template <>
+inline _LIBCPP_HIDE_FROM_ABI double __str_to_float_c_locale<double>(const char* __nptr, char** __endptr) {
+  return strtod_l(__nptr, __endptr, __get_c_locale());
 }
 
-inline _LIBCPP_HIDE_FROM_ABI long double __strtold(const char* __nptr, char** __endptr, __locale_t __loc) {
-  return strtold_l(__nptr, __endptr, __loc);
+template <>
+inline _LIBCPP_HIDE_FROM_ABI long double __str_to_float_c_locale<long double>(const char* __nptr, char** __endptr) {
+  return strtold_l(__nptr, __endptr, __get_c_locale());
 }
 
 //
@@ -268,7 +282,12 @@ __mbsrtowcs(wchar_t* __dest, const char** __src, size_t __len, mbstate_t* __ps, 
   return __libcpp_mbsrtowcs_l(__dest, __src, __len, __ps, __loc);
 }
 #      endif // _LIBCPP_HAS_WIDE_CHARACTERS
-#    endif   // _LIBCPP_BUILDING_LIBRARY
+
+inline _LIBCPP_HIDE_FROM_ABI const char* __get_locale_encoding(__locale_t __loc) {
+  return ::nl_langinfo_l(CODESET, __loc);
+}
+
+#    endif // _LIBCPP_BUILDING_LIBRARY
 
 _LIBCPP_DIAGNOSTIC_PUSH
 _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wgcc-compat")
@@ -294,6 +313,8 @@ _LIBCPP_DIAGNOSTIC_POP
 
 } // namespace __locale
 _LIBCPP_END_NAMESPACE_STD
+
+#    include <__locale_dir/support/default/get_c_locale.h>
 
 #  endif // Compatibility definition of locale base APIs
 

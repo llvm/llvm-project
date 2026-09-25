@@ -43,37 +43,6 @@ static bool readsLaneId(const IntrinsicInst *II) {
   return II->getIntrinsicID() == Intrinsic::nvvm_read_ptx_sreg_laneid;
 }
 
-// Whether the given intrinsic is an atomic instruction in PTX.
-static bool isNVVMAtomic(const IntrinsicInst *II) {
-  switch (II->getIntrinsicID()) {
-  default:
-    return false;
-  case Intrinsic::nvvm_atomic_add_gen_f_cta:
-  case Intrinsic::nvvm_atomic_add_gen_f_sys:
-  case Intrinsic::nvvm_atomic_add_gen_i_cta:
-  case Intrinsic::nvvm_atomic_add_gen_i_sys:
-  case Intrinsic::nvvm_atomic_and_gen_i_cta:
-  case Intrinsic::nvvm_atomic_and_gen_i_sys:
-  case Intrinsic::nvvm_atomic_cas_gen_i_cta:
-  case Intrinsic::nvvm_atomic_cas_gen_i_sys:
-  case Intrinsic::nvvm_atomic_dec_gen_i_cta:
-  case Intrinsic::nvvm_atomic_dec_gen_i_sys:
-  case Intrinsic::nvvm_atomic_inc_gen_i_cta:
-  case Intrinsic::nvvm_atomic_inc_gen_i_sys:
-  case Intrinsic::nvvm_atomic_max_gen_i_cta:
-  case Intrinsic::nvvm_atomic_max_gen_i_sys:
-  case Intrinsic::nvvm_atomic_min_gen_i_cta:
-  case Intrinsic::nvvm_atomic_min_gen_i_sys:
-  case Intrinsic::nvvm_atomic_or_gen_i_cta:
-  case Intrinsic::nvvm_atomic_or_gen_i_sys:
-  case Intrinsic::nvvm_atomic_exch_gen_i_cta:
-  case Intrinsic::nvvm_atomic_exch_gen_i_sys:
-  case Intrinsic::nvvm_atomic_xor_gen_i_cta:
-  case Intrinsic::nvvm_atomic_xor_gen_i_sys:
-    return true;
-  }
-}
-
 bool NVPTXTTIImpl::isSourceOfDivergence(const Value *V) const {
   // Without inter-procedural analysis, we conservatively assume that arguments
   // to __device__ functions are divergent.
@@ -101,10 +70,6 @@ bool NVPTXTTIImpl::isSourceOfDivergence(const Value *V) const {
     if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
       // Instructions that read threadIdx are obviously divergent.
       if (readsThreadIndex(II) || readsLaneId(II))
-        return true;
-      // Handle the NVPTX atomic intrinsics that cannot be represented as an
-      // atomic IR instruction.
-      if (isNVVMAtomic(II))
         return true;
     }
     // Conservatively consider the return value of function calls as divergent.
@@ -458,13 +423,49 @@ handleSpaceCheckIntrinsics(InstCombiner &IC, IntrinsicInst &II) {
   }
 }
 
+static Instruction *foldAbsIntoRedux(InstCombiner &IC, IntrinsicInst &II) {
+  Intrinsic::ID AbsIID;
+  switch (II.getIntrinsicID()) {
+  case Intrinsic::nvvm_redux_sync_fmin:
+  case Intrinsic::nvvm_redux_sync_fmin_abs:
+    AbsIID = Intrinsic::nvvm_redux_sync_fmin_abs;
+    break;
+  case Intrinsic::nvvm_redux_sync_fmax:
+  case Intrinsic::nvvm_redux_sync_fmax_abs:
+    AbsIID = Intrinsic::nvvm_redux_sync_fmax_abs;
+    break;
+  case Intrinsic::nvvm_redux_sync_fmin_NaN:
+  case Intrinsic::nvvm_redux_sync_fmin_abs_NaN:
+    AbsIID = Intrinsic::nvvm_redux_sync_fmin_abs_NaN;
+    break;
+  case Intrinsic::nvvm_redux_sync_fmax_NaN:
+  case Intrinsic::nvvm_redux_sync_fmax_abs_NaN:
+    AbsIID = Intrinsic::nvvm_redux_sync_fmax_abs_NaN;
+    break;
+  default:
+    return nullptr;
+  }
+
+  auto *Abs = dyn_cast<IntrinsicInst>(II.getArgOperand(0));
+  if (!Abs || Abs->getIntrinsicID() != Intrinsic::fabs)
+    return nullptr;
+
+  II.setCalledFunction(
+      Intrinsic::getOrInsertDeclaration(II.getModule(), AbsIID));
+  // These attributes described the absolute value, not its source.
+  II.removeParamAttr(0, Attribute::NoFPClass);
+  II.removeParamAttr(0, Attribute::Returned);
+  return IC.replaceOperand(II, 0, Abs->getArgOperand(0));
+}
+
 std::optional<Instruction *>
 NVPTXTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   if (std::optional<Instruction *> I = handleSpaceCheckIntrinsics(IC, II))
     return *I;
   if (Instruction *I = convertNvvmIntrinsicToLlvm(IC, &II))
     return I;
-
+  if (Instruction *I = foldAbsIntoRedux(IC, II))
+    return I;
   return std::nullopt;
 }
 
@@ -500,7 +501,7 @@ NVPTXTTIImpl::getInstructionCost(const User *U,
 InstructionCost NVPTXTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
-    ArrayRef<const Value *> Args, const Instruction *CxtI) const {
+    ArrayRef<const Value *> Args, const Instruction *CtxI) const {
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
 

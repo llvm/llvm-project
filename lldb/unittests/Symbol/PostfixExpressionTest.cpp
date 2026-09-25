@@ -155,8 +155,7 @@ static std::string ParseAndGenerateDWARF(llvm::StringRef expr) {
   ToDWARF(*ast, dwarf);
 
   // print dwarf expression to comparable textual representation
-  llvm::DataExtractor extractor(dwarf.GetString(), /*IsLittleEndian=*/true,
-                                addr_size);
+  llvm::DataExtractor extractor(dwarf.GetString(), /*IsLittleEndian=*/true);
 
   std::string result;
   llvm::raw_string_ostream os(result);

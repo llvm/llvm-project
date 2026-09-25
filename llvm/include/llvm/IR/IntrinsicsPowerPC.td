@@ -1362,6 +1362,7 @@ def int_ppc_altivec_vmulhsw : PowerPC_Vec_WWW_Intrinsic<"vmulhsw">;
 def int_ppc_altivec_vmulhuw : PowerPC_Vec_WWW_Intrinsic<"vmulhuw">;
 def int_ppc_altivec_vmulhsd : PowerPC_Vec_DDD_Intrinsic<"vmulhsd">;
 def int_ppc_altivec_vmulhud : PowerPC_Vec_DDD_Intrinsic<"vmulhud">;
+
 // Deeply Compressed Weights Intrinsics.
 def int_ppc_altivec_vucmprhn : PowerPC_Vec_BBB_Intrinsic<"vucmprhn">;
 def int_ppc_altivec_vucmprln : PowerPC_Vec_BBB_Intrinsic<"vucmprln">;
@@ -1392,6 +1393,9 @@ def int_ppc_altivec_vupkint8tofp32 :
                           [llvm_v16i8_ty, llvm_i32_ty],
                           [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
+// Post Quantum Cryptography Acceleration.
+def int_ppc_altivec_vmulhsh : PowerPC_Vec_HHH_Intrinsic<"vmulhsh">;
+def int_ppc_altivec_vmulhuh : PowerPC_Vec_HHH_Intrinsic<"vmulhuh">;
 
 //===----------------------------------------------------------------------===//
 // PowerPC VSX Intrinsic Definitions.
@@ -1751,6 +1755,27 @@ let TargetPrefix = "ppc" in {
       DefaultAttrsIntrinsic<[llvm_v16i8_ty, llvm_v16i8_ty],
                             [llvm_v256i1_ty], [IntrNoMem]>;
 
+  // AES Encrypt Paired Instructions.
+  def int_ppc_aes_encrypt_paired :
+      DefaultAttrsIntrinsic<[llvm_v256i1_ty],
+                            [llvm_v256i1_ty, llvm_v256i1_ty, llvm_i32_ty],
+                            [IntrNoMem, ImmArg<ArgIndex<2>>]>;
+  // AES Decrypt Paired Instructions.
+  def int_ppc_aes_decrypt_paired :
+      DefaultAttrsIntrinsic<[llvm_v256i1_ty],
+                            [llvm_v256i1_ty, llvm_v256i1_ty, llvm_i32_ty],
+                            [IntrNoMem, ImmArg<ArgIndex<2>>]>;
+  // AES Generate Last Key Paired Instructions.
+  def int_ppc_aes_genlastkey_paired :
+      DefaultAttrsIntrinsic<[llvm_v256i1_ty],
+                            [llvm_v256i1_ty, llvm_i32_ty],
+                            [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+  // Galois Field Multiplication Instructions.
+  def int_ppc_galois_field_mult :
+      DefaultAttrsIntrinsic<[llvm_v16i8_ty],
+                            [llvm_v16i8_ty, llvm_v16i8_ty, llvm_i32_ty],
+                            [IntrNoMem, ImmArg<ArgIndex<2>>]>;
+
   def int_ppc_mma_assemble_acc :
       DefaultAttrsIntrinsic<[llvm_v512i1_ty],
                             [llvm_v16i8_ty, llvm_v16i8_ty, llvm_v16i8_ty,
@@ -1890,16 +1915,16 @@ let TargetPrefix = "ppc" in {
   defm int_ppc_mma_pmdmxvf16gerx2 :
        PowerPC_MMA_DMR_Intrinsic<[llvm_v256i1_ty, llvm_v16i8_ty, llvm_i32_ty,
                                      llvm_i32_ty, llvm_i32_ty]>;
-  def int_ppc_mma_dmsha2hash :
+  def int_ppc_dmsha2hash :
       DefaultAttrsIntrinsic<[llvm_v1024i1_ty], [llvm_v1024i1_ty,
                              llvm_v1024i1_ty, llvm_i32_ty],
                             [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
-  def int_ppc_mma_dmsha3hash :
+  def int_ppc_dmsha3hash :
       DefaultAttrsIntrinsic<[llvm_v2048i1_ty], [llvm_v2048i1_ty,
                              llvm_i32_ty], [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
-  def int_ppc_mma_dmxxshapad :
+  def int_ppc_dmxxshapad :
       DefaultAttrsIntrinsic<[llvm_v1024i1_ty], [llvm_v1024i1_ty,
                              llvm_v16i8_ty, llvm_i32_ty, llvm_i32_ty,
                              llvm_i32_ty], [IntrNoMem, ImmArg<ArgIndex<2>>,

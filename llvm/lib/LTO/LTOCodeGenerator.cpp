@@ -111,13 +111,15 @@ static cl::opt<std::string> AIXSystemAssemblerPath(
     cl::desc("Path to a system assembler, picked up on AIX only"),
     cl::value_desc("path"));
 
-static cl::opt<bool>
+cl::opt<bool>
     LTORunCSIRInstr("cs-profile-generate",
                     cl::desc("Perform context sensitive PGO instrumentation"));
 
-static cl::opt<std::string>
+cl::opt<std::string>
     LTOCSIRProfile("cs-profile-path",
                    cl::desc("Context sensitive profile file path"));
+
+extern cl::opt<std::string> SampleProfileFile;
 } // namespace llvm
 
 LTOCodeGenerator::LTOCodeGenerator(LLVMContext &Context)
@@ -230,7 +232,7 @@ bool LTOCodeGenerator::writeMergedModules(StringRef Path) {
 
 bool LTOCodeGenerator::useAIXSystemAssembler() {
   const auto &Triple = TargetMach->getTargetTriple();
-  return Triple.isOSAIX() && Config.Options.DisableIntegratedAS;
+  return Triple.isOSAIX() && Config.Options.MCOptions.DisableIntegratedAS;
 }
 
 bool LTOCodeGenerator::runAIXSystemAssembler(SmallString<128> &AssemblyFile) {
@@ -557,6 +559,10 @@ bool LTOCodeGenerator::optimize() {
 
   // libLTO parses options late, so re-set them here.
   Context.setDiscardValueNames(LTODiscardValueNames);
+  Config.StatsFile = LTOStatsFile;
+  Config.RunCSIRInstr = LTORunCSIRInstr;
+  Config.CSIRProfile = LTOCSIRProfile;
+  Config.SampleProfile = SampleProfileFile;
 
   auto DiagFileOrErr = lto::setupLLVMOptimizationRemarks(
       Context, RemarksFilename, RemarksPasses, RemarksFormat,
@@ -597,8 +603,14 @@ bool LTOCodeGenerator::optimize() {
   // Mark which symbols can not be internalized
   this->applyScopeRestrictions();
 
-  // Add an appropriate DataLayout instance for this module...
-  MergedModule->setDataLayout(TargetMach->createDataLayout());
+  // Seed a DataLayout only if the merged module does not already carry one, so
+  // an input module's own DataLayout is preserved. Compute it from the module's
+  // ABI so the target-abi module flag is respected.
+  if (MergedModule->getDataLayout().isDefault()) {
+    MergedModule->setDataLayout(
+        MergedModule->getTargetTriple().computeDataLayout(
+            TargetMach->getTargetABIName(*MergedModule)));
+  }
 
   if (!SaveIRBeforeOptPath.empty()) {
     std::error_code EC;

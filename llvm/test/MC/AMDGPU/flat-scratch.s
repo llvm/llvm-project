@@ -1,8 +1,8 @@
-// RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti %s -filetype=null 2>&1 | FileCheck -check-prefix=NOSI --implicit-check-not=error: %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=hawaii %s -filetype=null 2>&1 | FileCheck -check-prefix=NOCI --implicit-check-not=error: %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=tonga %s -filetype=null 2>&1 | FileCheck -check-prefix=NOVI --implicit-check-not=error: %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=hawaii -show-encoding %s | FileCheck -check-prefix=CI %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=tonga -show-encoding %s  | FileCheck -check-prefix=VI %s
+// RUN: not llvm-mc -triple=amdgpu6.00 %s -filetype=null 2>&1 | FileCheck -check-prefix=NOSI --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgpu7.01 %s -filetype=null 2>&1 | FileCheck -check-prefix=NOCI --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgpu8.02 %s -filetype=null 2>&1 | FileCheck -check-prefix=NOVI --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgpu7.01 -show-encoding %s | FileCheck -check-prefix=CI %s
+// RUN: not llvm-mc -triple=amdgpu8.02 -show-encoding %s  | FileCheck -check-prefix=VI %s
 
 s_mov_b64 flat_scratch, -1
 // NOSI: :[[@LINE-1]]:{{[0-9]+}}: error: flat_scratch register not available on this GPU

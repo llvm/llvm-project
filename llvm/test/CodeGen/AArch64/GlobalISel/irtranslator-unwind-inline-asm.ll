@@ -32,10 +32,10 @@ define dso_local void @test() personality ptr @__gxx_personality_v0 {
   ; CHECK-NEXT:   liveins: $x0, $x1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   EH_LABEL <mcsymbol >
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s128) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(i128) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-  ; CHECK-NEXT:   [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[COPY1]](p0)
+  ; CHECK-NEXT:   [[PTRTOINT:%[0-9]+]]:_(i32) = G_PTRTOINT [[COPY1]](p0)
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   $x0 = COPY [[GV]](p0)
   ; CHECK-NEXT:   BL @printf, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0
@@ -82,10 +82,10 @@ define void @test2() #0 personality ptr @__gcc_personality_v0 {
   ; CHECK-NEXT:   liveins: $x0, $x1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   EH_LABEL <mcsymbol >
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s128) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(i128) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x0
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(p0) = COPY $x1
-  ; CHECK-NEXT:   [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[COPY2]](p0)
+  ; CHECK-NEXT:   [[PTRTOINT:%[0-9]+]]:_(i32) = G_PTRTOINT [[COPY2]](p0)
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   $x0 = COPY [[COPY1]](p0)
   ; CHECK-NEXT:   BL @_Unwind_Resume, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0

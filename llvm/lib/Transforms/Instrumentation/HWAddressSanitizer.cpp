@@ -139,14 +139,12 @@ static cl::opt<bool> ClInstrumentStack("hwasan-instrument-stack",
 
 static cl::opt<bool>
     ClUseStackSafety("hwasan-use-stack-safety", cl::Hidden, cl::init(true),
-                     cl::Hidden, cl::desc("Use Stack Safety analysis results"),
-                     cl::Optional);
+                     cl::Hidden, cl::desc("Use Stack Safety analysis results"));
 
 static cl::opt<size_t> ClMaxLifetimes(
     "hwasan-max-lifetimes-for-alloca", cl::Hidden, cl::init(3),
     cl::ReallyHidden,
-    cl::desc("How many lifetime ends to handle for a single alloca."),
-    cl::Optional);
+    cl::desc("How many lifetime ends to handle for a single alloca."));
 
 static cl::opt<bool>
     ClUseAfterScope("hwasan-use-after-scope",
@@ -687,7 +685,7 @@ void HWAddressSanitizer::initializeModule() {
     if (TagMaskByte < 4)
       reportFatalUsageError(
           "need more than 4 bits of tag to have non-short-granule tags");
-    TagMaskByte &= (1 << ClTagBits) - 1;
+    TagMaskByte &= (1ULL << ClTagBits) - 1;
   }
 
   Mapping.init(TargetTriple, InstrumentWithCalls, CompileKernel);

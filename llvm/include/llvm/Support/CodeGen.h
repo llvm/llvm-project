@@ -14,6 +14,7 @@
 #ifndef LLVM_SUPPORT_CODEGEN_H
 #define LLVM_SUPPORT_CODEGEN_H
 
+#include "llvm/ADT/StringRef.h"
 #include <cstdint>
 #include <optional>
 
@@ -50,17 +51,109 @@ namespace llvm {
     };
   }
 
-  enum class ExceptionHandling {
-    None,     ///< No exception support
-    DwarfCFI, ///< DWARF-like instruction based exceptions
-    SjLj,     ///< setjmp/longjmp based exceptions
-    ARM,      ///< ARM EHABI
-    WinEH,    ///< Windows Exception Handling
-    Wasm,     ///< WebAssembly Exception Handling
-    AIX,      ///< AIX Exception Handling
+  enum class ExceptionHandling : int {
+    Default,    ///< Not specified; resolve to the target's default model
+    None,       ///< No exception support
+    DwarfCFI,   ///< DWARF-like instruction based exceptions
+    SjLj,       ///< setjmp/longjmp based exceptions
+    ARM,        ///< ARM EHABI
+    WinEH,      ///< Windows Exception Handling
+    Wasm,       ///< WebAssembly Exception Handling
+    Emscripten, ///< Emscripten JavaScript-based exception handling
+    AIX,        ///< AIX Exception Handling
     ZOS, ///< z/OS MVS Exception Handling. Very similar to DwarfCFI, but the
          ///< PPA1 is used instead of an .eh_frame section.
   };
+
+  /// Returns the "exception-model" module flag spelling for an
+  /// ExceptionHandling value. Default, AIX, and ZOS have no spelling and return
+  /// "".
+  inline StringRef getExceptionModelName(ExceptionHandling EH) {
+    switch (EH) {
+    case ExceptionHandling::None:
+      return "none";
+    case ExceptionHandling::DwarfCFI:
+      return "dwarf";
+    case ExceptionHandling::SjLj:
+      return "sjlj";
+    case ExceptionHandling::ARM:
+      return "arm";
+    case ExceptionHandling::WinEH:
+      return "wineh";
+    case ExceptionHandling::Wasm:
+      return "wasm";
+    case ExceptionHandling::Emscripten:
+      return "emscripten";
+    case ExceptionHandling::Default:
+    case ExceptionHandling::AIX:
+    case ExceptionHandling::ZOS:
+      break;
+    }
+    return "";
+  }
+
+  /// Parses the string spelling used by the "exception-model" IR module flag
+  /// into an ExceptionHandling value, returning std::nullopt if it does not
+  /// name a supported exception model.
+  inline std::optional<ExceptionHandling> parseExceptionModel(StringRef Name) {
+    if (Name == "none")
+      return ExceptionHandling::None;
+    if (Name == "dwarf")
+      return ExceptionHandling::DwarfCFI;
+    if (Name == "sjlj")
+      return ExceptionHandling::SjLj;
+    if (Name == "arm")
+      return ExceptionHandling::ARM;
+    if (Name == "wineh")
+      return ExceptionHandling::WinEH;
+    if (Name == "wasm")
+      return ExceptionHandling::Wasm;
+    if (Name == "emscripten")
+      return ExceptionHandling::Emscripten;
+    return std::nullopt;
+  }
+
+  /// The floating-point format used for the target's "long double" type.
+  enum class LongDoubleFormat {
+    IEEEsingle,
+    IEEEdouble,
+    X87DoubleExtended,
+    IEEEquad,
+    PPCDoubleDouble,
+  };
+
+  /// Returns the IR floating-point type name for a LongDoubleFormat.
+  inline StringRef getLongDoubleFormatName(LongDoubleFormat Format) {
+    switch (Format) {
+    case LongDoubleFormat::IEEEsingle:
+      return "float";
+    case LongDoubleFormat::IEEEdouble:
+      return "double";
+    case LongDoubleFormat::X87DoubleExtended:
+      return "x86_fp80";
+    case LongDoubleFormat::IEEEquad:
+      return "fp128";
+    case LongDoubleFormat::PPCDoubleDouble:
+      return "ppc_fp128";
+    }
+    return "";
+  }
+
+  /// Parses an IR floating-point type name into a LongDoubleFormat, returning
+  /// std::nullopt if it does not name a supported long double format.
+  inline std::optional<LongDoubleFormat> parseLongDoubleFormat(StringRef Name) {
+    if (Name == "float")
+      return LongDoubleFormat::IEEEsingle;
+    if (Name == "double")
+      return LongDoubleFormat::IEEEdouble;
+    if (Name == "x86_fp80")
+      return LongDoubleFormat::X87DoubleExtended;
+    if (Name == "fp128")
+      return LongDoubleFormat::IEEEquad;
+    if (Name == "ppc_fp128")
+      return LongDoubleFormat::PPCDoubleDouble;
+    return std::nullopt;
+  }
 
   namespace FloatABI {
   enum ABIType {
@@ -68,6 +161,58 @@ namespace llvm {
     Soft,    // Soft float.
     Hard     // Hard float.
   };
+
+  /// Parse the string spelling used by the "float-abi" IR module flag into an
+  /// ABIType.
+  inline std::optional<ABIType> parseABIType(StringRef S) {
+    if (S == "soft")
+      return Soft;
+    if (S == "hard")
+      return Hard;
+    return std::nullopt;
+  }
+
+  /// Returns the string spelling used by the "float-abi" IR module flag for a
+  /// Soft or Hard ABIType. Default has no spelling.
+  inline StringRef getABITypeName(ABIType ABI) {
+    switch (ABI) {
+    case Soft:
+      return "soft";
+    case Hard:
+      return "hard";
+    case Default:
+      break;
+    }
+    return "";
+  }
+  } // namespace FloatABI
+
+  /// The threading model to assume for lowering, e.g. of atomics.
+  enum class ThreadModel {
+    POSIX,  // POSIX Threads
+    Single, // Single Threaded Environment
+  };
+
+  /// Parse the string spelling used by the "thread-model" IR module flag into a
+  /// ThreadModel.
+  inline std::optional<ThreadModel> parseThreadModel(StringRef S) {
+    if (S == "posix")
+      return ThreadModel::POSIX;
+    if (S == "single")
+      return ThreadModel::Single;
+    return std::nullopt;
+  }
+
+  /// Returns the string spelling used by the "thread-model" IR module flag for
+  /// a ThreadModel.
+  inline StringRef getThreadModelName(ThreadModel TM) {
+    switch (TM) {
+    case ThreadModel::POSIX:
+      return "posix";
+    case ThreadModel::Single:
+      return "single";
+    }
+    return "";
   }
 
   enum class EABI {
@@ -164,13 +309,14 @@ namespace llvm {
     Invalid = 2, ///< Not used.
   };
 
-  enum class WinX64EHUnwindV2Mode {
-    // Don't use unwind v2 (i.e., use v1).
-    Disabled = 0,
-    // Use unwind v2 here possible, otherwise fallback to v1.
-    BestEffort = 1,
-    // Use unwind v2 everywhere, otherwise raise an error.
-    Required = 2,
+  enum class WinX64EHUnwindMode {
+    Default = 4, // Toolchain default/auto.
+                 // Using '4' to avoid renumbering the existing values.
+
+    V1 = 0,           // V1 unwind info.
+    V2BestEffort = 1, // V2 where possible, fall back to V1.
+    V2Required = 2,   // V2 required — error if a function cannot use V2.
+    V3 = 3,           // V3 unwind info.
   };
 
   enum class ControlFlowGuardMode {

@@ -40,11 +40,11 @@ def SPIRV_BitcastOp : SPIRV_Op<"Bitcast", [Pure]> {
   let summary = "Bit pattern-preserving type conversion.";
 
   let description = [{
-    Result Type must be an OpTypePointer, or a scalar or vector of
-    numerical-type.
+    Result Type must be an OpTypePointer, cooperative matrix, or a scalar or
+    vector of numerical-type.
 
-    Operand must have a type of OpTypePointer, or a scalar or vector of
-    numerical-type. It must be a different type than Result Type.
+    Operand must have a type of OpTypePointer, cooperative matrix, or a scalar
+    or vector of numerical-type. It must be a different type than Result Type.
 
     If either Result Type or Operand is a pointer, the other must be a
     pointer (diverges from the SPIR-V spec).
@@ -71,11 +71,11 @@ def SPIRV_BitcastOp : SPIRV_Op<"Bitcast", [Pure]> {
   }];
 
   let arguments = (ins
-    SPIRV_ScalarOrVectorOrPtr:$operand
+    SPIRV_ScalarOrVectorOrPtrOrCoopMatrix:$operand
   );
 
   let results = (outs
-    SPIRV_ScalarOrVectorOrPtr:$result
+    SPIRV_ScalarOrVectorOrPtrOrCoopMatrix:$result
   );
 
   let assemblyFormat = [{
@@ -204,8 +204,8 @@ def SPIRV_FConvertOp : SPIRV_CastOp<"FConvert",
     Result Type must be a scalar or vector of floating-point type.
 
     Float Value must be a scalar or vector of floating-point type.  It must
-    have the same number of components as Result Type.  The component width
-    cannot equal the component width in Result Type.
+    have the same number of components as Result Type.  The component type
+    must not equal the component type in Result Type.
 
     Results are computed per component.
 

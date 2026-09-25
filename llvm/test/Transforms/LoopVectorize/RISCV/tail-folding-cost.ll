@@ -1,8 +1,8 @@
 ; REQUIRES: asserts
-; RUN: opt < %s -passes=loop-vectorize -prefer-predicate-over-epilogue=predicate-else-scalar-epilogue -force-tail-folding-style=data \
+; RUN: opt < %s -passes=loop-vectorize -tail-folding-policy=prefer-fold-tail -force-tail-folding-style=data \
 ; RUN:   -mtriple riscv64-linux-gnu -mattr=+v,+f -S -disable-output -debug-only=loop-vectorize 2>&1 | FileCheck %s --check-prefix=DATA
 
-; RUN: opt < %s -passes=loop-vectorize -prefer-predicate-over-epilogue=predicate-else-scalar-epilogue \
+; RUN: opt < %s -passes=loop-vectorize -tail-folding-policy=prefer-fold-tail \
 ; RUN:   -mtriple riscv64-linux-gnu -mattr=+v,+f -S \
 ; RUN:   -disable-output -debug-only=loop-vectorize 2>&1 | FileCheck %s --check-prefix=EVL
 
@@ -14,8 +14,11 @@
 ; DATA: Cost of 8 for VF vscale x 4: EMIT{{.*}} = active lane mask
 
 ; EVL: Cost of 1 for VF vscale x 1: EMIT{{.*}} = EXPLICIT-VECTOR-LENGTH
+; EVL: Cost of 0 for VF vscale x 1: EMIT-SCALAR vp<{{.*}}> = zext vp<%evl> to i64
 ; EVL: Cost of 1 for VF vscale x 2: EMIT{{.*}} = EXPLICIT-VECTOR-LENGTH
+; EVL: Cost of 0 for VF vscale x 2: EMIT-SCALAR vp<{{.*}}> = zext vp<%evl> to i64
 ; EVL: Cost of 1 for VF vscale x 4: EMIT{{.*}} = EXPLICIT-VECTOR-LENGTH
+; EVL: Cost of 0 for VF vscale x 4: EMIT-SCALAR vp<{{.*}}> = zext vp<%evl> to i64
 
 define void @simple_memset(i32 %val, ptr %ptr, i64 %n) #0 {
 entry:

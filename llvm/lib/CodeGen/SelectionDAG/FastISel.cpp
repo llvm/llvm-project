@@ -148,7 +148,7 @@ bool FastISel::lowerArguments() {
   for (Function::const_arg_iterator I = FuncInfo.Fn->arg_begin(),
                                     E = FuncInfo.Fn->arg_end();
        I != E; ++I) {
-    DenseMap<const Value *, Register>::iterator VI = LocalValueMap.find(&*I);
+    auto VI = LocalValueMap.find(&*I);
     assert(VI != LocalValueMap.end() && "Missed an argument?");
     FuncInfo.ValueMap[&*I] = VI->second;
   }
@@ -212,21 +212,26 @@ void FastISel::flushLocalValueMap() {
       }
     }
 
-    if (FirstNonValue != FuncInfo.MBB->end()) {
-      // See if there are any local value instructions left.  If so, we want to
-      // make sure the first one has a debug location; if it doesn't, use the
-      // first non-value instruction's debug location.
+    // See if there are any local value instructions left.  If so, we want to
+    // make sure the first one has a debug location; if it doesn't, use the
+    // first non-value instruction's debug location.
 
-      // If EmitStartPt is non-null, this block had copies at the top before
-      // FastISel started doing anything; it points to the last one, so the
-      // first local value instruction is the one after EmitStartPt.
-      // If EmitStartPt is null, the first local value instruction is at the
-      // top of the block.
-      MachineBasicBlock::iterator FirstLocalValue =
-          EmitStartPt ? ++MachineBasicBlock::iterator(EmitStartPt)
-                      : FuncInfo.MBB->begin();
-      if (FirstLocalValue != FirstNonValue && !FirstLocalValue->getDebugLoc())
+    // If EmitStartPt is non-null, this block had copies at the top before
+    // FastISel started doing anything; it points to the last one, so the
+    // first local value instruction is the one after EmitStartPt.
+    // If EmitStartPt is null, the first local value instruction is at the
+    // top of the block.
+    MachineBasicBlock::iterator FirstLocalValue =
+        EmitStartPt ? ++MachineBasicBlock::iterator(EmitStartPt)
+                    : FuncInfo.MBB->begin();
+    if (FirstLocalValue != FirstNonValue && !FirstLocalValue->getDebugLoc()) {
+      if (FirstNonValue != FuncInfo.MBB->end()) {
         FirstLocalValue->setDebugLoc(FirstNonValue->getDebugLoc());
+      } else if (const BasicBlock *BB = FuncInfo.MBB->getBasicBlock()) {
+        // Nothing follows them, e.g. a block only setting up a successor's PHI
+        // nodes before falling through. Use the terminator's location.
+        FirstLocalValue->setDebugLoc(BB->getTerminator()->getDebugLoc());
+      }
     }
   }
 
@@ -354,7 +359,7 @@ Register FastISel::lookUpRegForValue(const Value *V) {
   // cache values defined by Instructions across blocks, and other values
   // only locally. This is because Instructions already have the SSA
   // def-dominates-use requirement enforced.
-  DenseMap<const Value *, Register>::iterator I = FuncInfo.ValueMap.find(V);
+  auto I = FuncInfo.ValueMap.find(V);
   if (I != FuncInfo.ValueMap.end())
     return I->second;
   return LocalValueMap[V];
@@ -1408,7 +1413,6 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
   }
 
   case Intrinsic::launder_invariant_group:
-  case Intrinsic::strip_invariant_group:
   case Intrinsic::expect:
   case Intrinsic::expect_with_probability: {
     Register ResultReg = getRegForValue(II->getArgOperand(0));
@@ -1717,7 +1721,7 @@ bool FastISel::selectExtractValue(const User *U) {
 
   // Get the base result register.
   Register ResultReg;
-  DenseMap<const Value *, Register>::iterator I = FuncInfo.ValueMap.find(Op0);
+  auto I = FuncInfo.ValueMap.find(Op0);
   if (I != FuncInfo.ValueMap.end())
     ResultReg = I->second;
   else if (isa<Instruction>(Op0))
@@ -2278,9 +2282,9 @@ bool FastISel::tryToFoldLoad(const LoadInst *LI, const Instruction *FoldInst) {
   if (TheUser != FoldInst)
     return false;
 
-  // Don't try to fold volatile loads.  Target has to deal with alignment
-  // constraints.
-  if (LI->isVolatile())
+  // Don't try to fold ordered loads.  Target has to deal with alignment
+  // constraints and synchronization.
+  if (!LI->isUnordered())
     return false;
 
   // Figure out which vreg this is going into.  If there is no assigned vreg yet
@@ -2355,7 +2359,6 @@ FastISel::createMachineMemOperandFor(const Instruction *I) const {
 
   bool IsNonTemporal = I->hasMetadata(LLVMContext::MD_nontemporal);
   bool IsInvariant = I->hasMetadata(LLVMContext::MD_invariant_load);
-  bool IsDereferenceable = I->hasMetadata(LLVMContext::MD_dereferenceable);
   const MDNode *Ranges = I->getMetadata(LLVMContext::MD_range);
 
   AAMDNodes AAInfo = I->getAAMetadata();
@@ -2369,13 +2372,12 @@ FastISel::createMachineMemOperandFor(const Instruction *I) const {
     Flags |= MachineMemOperand::MOVolatile;
   if (IsNonTemporal)
     Flags |= MachineMemOperand::MONonTemporal;
-  if (IsDereferenceable)
-    Flags |= MachineMemOperand::MODereferenceable;
   if (IsInvariant)
     Flags |= MachineMemOperand::MOInvariant;
 
   return FuncInfo.MF->getMachineMemOperand(MachinePointerInfo(Ptr), Flags, Size,
-                                           *Alignment, AAInfo, Ranges);
+                                           *Alignment,
+                                           MMOMetadata(AAInfo, Ranges));
 }
 
 CmpInst::Predicate FastISel::optimizeCmpPredicate(const CmpInst *CI) const {

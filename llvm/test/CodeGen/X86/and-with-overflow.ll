@@ -21,8 +21,8 @@ define i8 @and_i8_ri(i8 zeroext %0, i8 zeroext %1) {
 ; X64-LABEL: and_i8_ri:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    andb $-17, %al
-; X64-NEXT:    movzbl %al, %eax
+; X64-NEXT:    andl $-17, %eax
+; X64-NEXT:    testb $-17, %dil
 ; X64-NEXT:    cmovel %edi, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq

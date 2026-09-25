@@ -581,5 +581,78 @@ _Static_assert(__builtin_stdc_has_single_bit((unsigned char)0x8000000080008080UL
 _Static_assert(__builtin_stdc_bit_width((unsigned char)0xFFFFFFFFFFFFFFFFULL) == 8, "");
 _Static_assert(__builtin_stdc_bit_floor((unsigned char)0x8000000080008080ULL) == 0x80, "");
 _Static_assert(__builtin_stdc_bit_ceil((unsigned char)0x800000008000807FULL) == 0x80, "");
+
+// Typed variants: verify correct values and return types.
+_Static_assert(stdc_leading_zeros_uc(0) == 8, "");
+_Static_assert(stdc_leading_zeros_uc((unsigned char)0xFF) == 0, "");
+_Static_assert(stdc_leading_zeros_us(0) == 16, "");
+_Static_assert(stdc_leading_zeros_ui(0) == 32, "");
+_Static_assert(stdc_leading_zeros_ull(0) == 64, "");
+
+_Static_assert(stdc_leading_ones_uc((unsigned char)0xFF) == 8, "");
+_Static_assert(stdc_leading_ones_us((unsigned short)0xFFFF) == 16, "");
+_Static_assert(stdc_leading_ones_ui(0xFFFFFFFFU) == 32, "");
+_Static_assert(stdc_leading_ones_ull(0xFFFFFFFFFFFFFFFFULL) == 64, "");
+
+_Static_assert(stdc_trailing_zeros_uc(0) == 8, "");
+_Static_assert(stdc_trailing_zeros_us(0) == 16, "");
+_Static_assert(stdc_trailing_zeros_ui(0) == 32, "");
+_Static_assert(stdc_trailing_zeros_ull(0) == 64, "");
+
+_Static_assert(stdc_trailing_ones_uc((unsigned char)0xFF) == 8, "");
+_Static_assert(stdc_trailing_ones_us((unsigned short)0xFFFF) == 16, "");
+_Static_assert(stdc_trailing_ones_ui(0xFFFFFFFFU) == 32, "");
+_Static_assert(stdc_trailing_ones_ull(0xFFFFFFFFFFFFFFFFULL) == 64, "");
+
+_Static_assert(stdc_first_leading_zero_uc(0) == 1, "");
+_Static_assert(stdc_first_leading_zero_uc((unsigned char)0xFF) == 0, "");
+_Static_assert(stdc_first_leading_zero_ui(0xFFFFFFFFU) == 0, "");
+_Static_assert(stdc_first_leading_zero_ull(0) == 1, "");
+
+_Static_assert(stdc_first_leading_one_uc(0) == 0, "");
+_Static_assert(stdc_first_leading_one_uc((unsigned char)0x80) == 1, "");
+_Static_assert(stdc_first_leading_one_ui(0x80000000U) == 1, "");
+_Static_assert(stdc_first_leading_one_ull(1ULL) == 64, "");
+
+_Static_assert(stdc_first_trailing_zero_uc(0) == 1, "");
+_Static_assert(stdc_first_trailing_zero_uc((unsigned char)0xFF) == 0, "");
+_Static_assert(stdc_first_trailing_zero_ui(0xFFFFFFFFU) == 0, "");
+_Static_assert(stdc_first_trailing_zero_ull(0) == 1, "");
+
+_Static_assert(stdc_first_trailing_one_uc(0) == 0, "");
+_Static_assert(stdc_first_trailing_one_uc(1) == 1, "");
+_Static_assert(stdc_first_trailing_one_ui(0x80000000U) == 32, "");
+_Static_assert(stdc_first_trailing_one_ull(1ULL) == 1, "");
+
+_Static_assert(stdc_count_zeros_uc(0) == 8, "");
+_Static_assert(stdc_count_zeros_uc((unsigned char)0xFF) == 0, "");
+_Static_assert(stdc_count_zeros_ui(0) == 32, "");
+_Static_assert(stdc_count_zeros_ull(0) == 64, "");
+
+_Static_assert(stdc_count_ones_uc((unsigned char)0xFF) == 8, "");
+_Static_assert(stdc_count_ones_uc(0) == 0, "");
+_Static_assert(stdc_count_ones_ui(0xFFFFFFFFU) == 32, "");
+_Static_assert(stdc_count_ones_ull(0xFFFFFFFFFFFFFFFFULL) == 64, "");
+
+_Static_assert(stdc_has_single_bit_uc(1) == 1, "");
+_Static_assert(stdc_has_single_bit_uc(3) == 0, "");
+_Static_assert(stdc_has_single_bit_ui(0x80000000U) == 1, "");
+_Static_assert(stdc_has_single_bit_ull(0xFFFFFFFFFFFFFFFFULL) == 0, "");
+
+_Static_assert(stdc_bit_width_uc((unsigned char)0xFF) == 8, "");
+_Static_assert(stdc_bit_width_uc(0) == 0, "");
+_Static_assert(stdc_bit_width_ui(0x80000000U) == 32, "");
+_Static_assert(stdc_bit_width_ull(1ULL) == 1, "");
+
+// bit_floor and bit_ceil return T, not unsigned int.
+_Static_assert(stdc_bit_floor_uc((unsigned char)0xFF) == 0x80, "");
+_Static_assert(stdc_bit_floor_uc(0) == 0, "");
+_Static_assert(stdc_bit_floor_ui(0xFFFFFFFFU) == 0x80000000U, "");
+_Static_assert(stdc_bit_floor_ull(1ULL) == 1ULL, "");
+
+_Static_assert(stdc_bit_ceil_uc(0) == 1, "");
+_Static_assert(stdc_bit_ceil_uc((unsigned char)0x7F) == 0x80, "");
+_Static_assert(stdc_bit_ceil_ui(0x7FFFFFFFU) == 0x80000000U, "");
+_Static_assert(stdc_bit_ceil_ull(1ULL) == 1ULL, "");
 #endif
 #endif

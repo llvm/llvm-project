@@ -1,6 +1,5 @@
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../runtimes/cmake/Modules")
 include(WarningFlags)
-
 function(add_sycl_rt_library LIB_TARGET_NAME LIB_OBJ_NAME LIB_OUTPUT_NAME)
   cmake_parse_arguments(ARG "" "" "COMPILE_OPTIONS;SOURCES" ${ARGN})
 
@@ -31,7 +30,9 @@ function(add_sycl_rt_library LIB_TARGET_NAME LIB_OBJ_NAME LIB_OUTPUT_NAME)
   set_target_properties(${LIB_TARGET_NAME}
       PROPERTIES
         LINKER_LANGUAGE CXX
-        POSITION_INDEPENDENT_CODE TRUE)
+        POSITION_INDEPENDENT_CODE TRUE
+        BUILD_RPATH "$ORIGIN"
+        INSTALL_RPATH "$ORIGIN")
 
   if (CMAKE_SYSTEM_NAME STREQUAL Windows)
     # Install stripped PDB
@@ -71,6 +72,7 @@ function(add_sycl_rt_library LIB_TARGET_NAME LIB_OBJ_NAME LIB_OUTPUT_NAME)
       ${CMAKE_THREAD_LIBS_INIT}
       LLVMOffload
       LLVMObject
+      LLVMSupport
   )
 
   set_target_properties(${LIB_TARGET_NAME}
@@ -90,6 +92,7 @@ set(LIBSYCL_SOURCES
     "exception_list.cpp"
     "device.cpp"
     "device_selector.cpp"
+    "handler.cpp"
     "platform.cpp"
     "queue.cpp"
     "usm_functions.cpp"
@@ -106,12 +109,12 @@ set(LIBSYCL_SOURCES
 )
 
 add_sycl_rt_library(${LIBSYCL_LIB_NAME}
-  sycl_object
+  ${LIBSYCL_OBJ_TARGET}
   ${LIBSYCL_SHARED_OUTPUT_NAME}
   SOURCES
     ${LIBSYCL_SOURCES})
 
 install(TARGETS ${LIBSYCL_RT_LIBS}
-  ARCHIVE DESTINATION "lib${LLVM_LIBDIR_SUFFIX}" COMPONENT libsycl
-  LIBRARY DESTINATION "lib${LLVM_LIBDIR_SUFFIX}" COMPONENT libsycl
+  ARCHIVE DESTINATION ${LIBSYCL_INSTALL_LIBRARY_DIR} COMPONENT libsycl
+  LIBRARY DESTINATION ${LIBSYCL_INSTALL_LIBRARY_DIR} COMPONENT libsycl
   RUNTIME DESTINATION "bin" COMPONENT libsycl)

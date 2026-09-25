@@ -496,6 +496,7 @@ void DWARFUnit::extractDIEsToVector(
 
     // Stop when compile unit die is removed from the parents stack.
   } while (Parents.size() > 1);
+  Dies.shrink_to_fit();
 }
 
 void DWARFUnit::extractDIEsIfNeeded(bool CUDieOnly) {
@@ -506,6 +507,12 @@ void DWARFUnit::extractDIEsIfNeeded(bool CUDieOnly) {
 Error DWARFUnit::tryExtractDIEsIfNeeded(bool CUDieOnly) {
   if ((CUDieOnly && !DieArray.empty()) || DieArray.size() > 1)
     return Error::success(); // Already parsed.
+
+  // A childless unit DIE is a complete DieArray on its own, so the size check
+  // above misses it. Re-extracting reallocates the vector and dangles every
+  // outstanding DWARFDie.
+  if (DieArray.size() == 1 && !DieArray.front().hasChildren())
+    return Error::success();
 
   bool HasCUDie = !DieArray.empty();
   extractDIEsToVector(!HasCUDie, !CUDieOnly, DieArray);
@@ -803,7 +810,7 @@ void DWARFUnit::updateVariableDieMap(DWARFDie Die) {
 
   for (const DWARFLocationExpression &Location : *Locations) {
     uint8_t AddressSize = getAddressByteSize();
-    DataExtractor Data(Location.Expr, isLittleEndian(), AddressSize);
+    DataExtractor Data(Location.Expr, isLittleEndian());
     DWARFExpression Expr(Data, AddressSize);
     auto It = Expr.begin();
     if (It == Expr.end())
@@ -1219,8 +1226,7 @@ DWARFUnit::determineStringOffsetsTableContributionDWO(DWARFDataExtractor &DA) {
 }
 
 std::optional<uint64_t> DWARFUnit::getRnglistOffset(uint32_t Index) {
-  DataExtractor RangesData(RangeSection->Data, IsLittleEndian,
-                           getAddressByteSize());
+  DataExtractor RangesData(RangeSection->Data, IsLittleEndian);
   DWARFDataExtractor RangesDA(Context.getDWARFObj(), *RangeSection,
                               IsLittleEndian, 0);
   if (std::optional<uint64_t> Off = llvm::DWARFListTableHeader::getOffsetEntry(

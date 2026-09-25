@@ -1,10 +1,5 @@
 # ClangIR Cleanup and Exception Handling Design
 
-```{contents}
----
-local:
----
-```
 
 ## Overview
 
@@ -38,7 +33,7 @@ given target.
 Scopes that require normal or EH cleanup will be represented using a new
 operation, `cir.cleanup.scope`.
 
-```
+```text
 cir.cleanup.scope {
   // body region
 } cleanup [normal|eh|all] {
@@ -104,7 +99,7 @@ it will pop cleanup blocks, which is good.
 
 **C++**
 
-``` c++
+```c++
 void someFunc() {
   SomeClass c;
   c.doSomething();
@@ -113,7 +108,7 @@ void someFunc() {
 
 **CIR**
 
-```
+```mlir
 cir.func @someFunc() {
   %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init]
   cir.call @_ZN9SomeClassC1Ev(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
@@ -146,7 +141,7 @@ operation.
 
 **C++**
 
-``` c++
+```c++
 void someFunc() {
   SomeClass c;
   SomeClass c2;
@@ -158,7 +153,7 @@ void someFunc() {
 
 **CIR**
 
-```
+```mlir
 cir.func @someFunc() {
   %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init]
   %1 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c2", init]
@@ -213,7 +208,7 @@ region before continuing to their currently defined destination.
 
 **C++**
 
-``` c++
+```c++
 int someFunc() {
   int i = 0;
   while (true) {
@@ -230,7 +225,7 @@ int someFunc() {
 
 **CIR**
 
-```
+```mlir
 cir.func @someFunc() -> !s32i {
   %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
   %1 = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init]
@@ -307,7 +302,7 @@ for cleanup block sharing.
 
 **C++**
 
-``` c++
+```c++
 class Base {
 public:
   Base();
@@ -323,7 +318,7 @@ public:
 
 **CIR**
 
-```
+```mlir
 cir.func @_ZN7DerivedC2Ev(%arg0: !cir.ptr<!rec_Derived>) {
   %0 = cir.alloca !cir.ptr<!rec_Derived>, !cir.ptr<!cir.ptr<!rec_Derived>>, ["this", init]
   cir.store %arg0, %0 : !cir.ptr<!rec_Derived>, !cir.ptr<!cir.ptr<!rec_Derived>>
@@ -373,7 +368,7 @@ The first operation in a catch handler region must be a `cir.begin_catch`
 operation. This must be followed by a `cir.cleanup.scope` operation,
 with the `cir.end_catch` operation in its cleanup region.
 
-```
+```mlir
 cir.try {
   cir.call exception @function() : () -> ()
   cir.yield
@@ -401,7 +396,7 @@ exceptions.
 
 **C++**
 
-``` c++
+```c++
 void someFunc() {
   try {
     f();
@@ -413,7 +408,7 @@ void someFunc() {
 
 **CIR**
 
-```
+```mlir
 cir.func @someFunc(){
   %0 = cir.alloca !cir.ptr<!rec_std3A3Aexception>, !cir.ptr<!cir.ptr<!rec_std3A3Aexception>>, ["e"]
   cir.scope {
@@ -453,7 +448,7 @@ function that called `someFunc()`.
 
 **C++**
 
-``` c++
+```c++
 void someFunc() {
   try {
     f();
@@ -467,7 +462,7 @@ void someFunc() {
 
 **CIR**
 
-```
+```mlir
 cir.func @someFunc(){
   %0 = cir.alloca !cir.ptr<!rec_std3A3Aexception>, !cir.ptr<!cir.ptr<!rec_std3A3Aexception>>, ["e"]
   cir.scope {
@@ -514,7 +509,7 @@ execution immediately after the try operation.
 
 **C++**
 
-``` c++
+```c++
 void someFunc() {
   try {
     SomeClass c;
@@ -527,7 +522,7 @@ void someFunc() {
 
 **CIR**
 
-```
+```mlir
 cir.func @someFunc(){
   cir.scope {
     %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init]
@@ -564,7 +559,7 @@ catch handler.
 
 **C++**
 
-``` c++
+```c++
 void someFunc() {
   SomeClass c;
   try {
@@ -577,7 +572,7 @@ void someFunc() {
 
 **CIR**
 
-```
+```mlir
 cir.func @someFunc(){
   %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init]
   %1 = cir.alloca !cir.ptr<!rec_std3A3Aexception>, !cir.ptr<!cir.ptr<!rec_std3A3Aexception>>, ["e"]
@@ -640,7 +635,7 @@ high-level CIR representation, we have a single operation,
 cleanup needed is entirely within the scope of this operation, we can
 represent the cleanup by adding a cleanup region to this operation.
 
-```
+```mlir
 cir.array.ctor(%0 : !cir.ptr<!cir.array<!rec_SomeClass x 16>>) {
 ^bb0(%arg0: !cir.ptr<!rec_SomeClass>):
   cir.call @_ZN9SomeClassC1Ev(%arg0) : (!cir.ptr<!rec_SomeClass>) -> ()
@@ -659,7 +654,7 @@ be expanded to a loop within a `cir.cleanup.scope` for the
 initialization, and a loop within the cleanup scope's cleanup region to
 perform the partial array cleanup, as follows
 
-```
+```mlir
 cir.scope {
   %1 = cir.const #cir.int<16> : !u64i
   %2 = cir.cast array_to_ptrdecay %0 : !cir.ptr<!cir.array<!rec_SomeClass x 16>> -> !cir.ptr<!rec_SomeClass>
@@ -743,7 +738,9 @@ cleanup, the call will be converted to a `cir.try_call` operation, with
 normal and unwind destinations. The first operation in the unwind
 destination block must be a `cir.eh.initiate` operation.
 
- `%eh_token = cir.eh.initiate [cleanup]`
+```mlir
+%eh_token = cir.eh.initiate [cleanup]
+```
 
 If this destination includes cleanup code, the cleanup keyword will be
 present, and the cleanup code will be executed before the exception is
@@ -754,7 +751,7 @@ exception that was thrown and is passed as the argument to the
 `cir.begin_cleanup`, `cir.begin_catch`, and `cir.eh.dispatch`
 operations.
 
-```
+```mlir
 cir.eh.dispatch %eh_token : !cir.eh_token [
   catch (#cir.global_view<@_ZTIi> : !u32i) : ^bb6
   catch_all : ^bb7
@@ -782,15 +779,17 @@ by a branch to the cleanup block, passing the EH token as an operand to
 the block. The cleanup block will begin with a call to
 `cir.begin_cleanup` which returns a cleanup token.
 
-```
-^bb4 (%eh_token : !cir.eh_token): 
+```mlir
+^bb4 (%eh_token : !cir.eh_token):
   %cleanup_token = cir.begin_cleanup %eh_token : !cir.eh_token -> !cir.cleanup_token
 ```
 
 This is followed by the operations to perform the cleanup and then a
 cir.end_cleanup operation.
 
-  `cir.end_cleanup(%cleanup_token : !cir.cleanup_token)`
+```mlir
+cir.end_cleanup(%cleanup_token : !cir.cleanup_token)
+```
 
 Finally, the cleanup block either branches to a catch dispatch block or
 executes a `cir.resume` operation to continue unwinding the exception.
@@ -808,7 +807,7 @@ than within a `cir.cleanup.scope` cleanup region.
 
 **C++**
 
-``` c++
+```c++
 void someFunc() {
   try {
     SomeClass c;
@@ -821,7 +820,7 @@ void someFunc() {
 
 **High-level CIR**
 
-```
+```mlir
 cir.func @someFunc(){
   cir.scope {
     %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init]
@@ -851,7 +850,7 @@ cir.func @someFunc(){
 
 **Flattened CIR**
 
-```
+```mlir
 cir.func @someFunc(){
   %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init]
   cir.try_call @_ZN9SomeClassC1Ev(%0) ^bb1, ^bb3 : (!cir.ptr<!rec_SomeClass>) -> ()
@@ -901,7 +900,7 @@ dispatch block (`^bb5`).
 
 **C++**
 
-``` c++
+```c++
 void someFunc() {
   SomeClass c;
   c.doSomething();
@@ -910,7 +909,7 @@ void someFunc() {
 
 **High-level CIR**
 
-```
+```mlir
 cir.func @someFunc(){
   %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init]
   cir.call @_ZN9SomeClassC1Ev(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
@@ -927,7 +926,7 @@ cir.func @someFunc(){
 
 **Flattened CIR**
 
-```
+```mlir
 cir.func @someFunc(){
   %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init]
   cir.call @_ZN9SomeClassC1Ev(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
@@ -973,7 +972,7 @@ termination code.
 
 **C++**
 
-``` c++
+```c++
 struct ThrowingDtor {
   ~ThrowingDtor() noexcept(false);
 };
@@ -986,7 +985,7 @@ void someFunc() {
 
 **CIR**
 
-```
+```mlir
 cir.func @someFunc(){
   %0 = cir.alloca !rec_ThrowingDtor, !cir.ptr<!rec_ThrowingDtor>, ["c", init]
   cir.call @_ZN12ThrowingDtorC1Ev(%0) : (!cir.ptr<!rec_ThrowingDtor>) -> ()
@@ -1003,7 +1002,7 @@ cir.func @someFunc(){
 
 **Flattened CIR**
 
-```
+```mlir
 cir.func @someFunc(){
   %0 = cir.alloca !rec_ThrowingDtor, !cir.ptr<!rec_ThrowingDtor>, ["c", init]
   cir.call @_ZN12ThrowingDtorC1Ev(%0) : (!cir.ptr<!rec_ThrowingDtor>) -> ()
@@ -1042,7 +1041,7 @@ terminates.
 
 **C++**
 
-``` c++
+```c++
 int someFunc() {
   int i = 0;
   while (true) {
@@ -1059,7 +1058,7 @@ int someFunc() {
 
 **CIR**
 
-```
+```mlir
 cir.func @someFunc() -> !s32i {
   %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
   %1 = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init]
@@ -1110,7 +1109,7 @@ cir.func @someFunc() -> !s32i {
 
 **Flattened CIR**
 
-```
+```mlir
 cir.func @someFunc() -> !s32i {
   %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init]
   %1 = cir.alloca !s32i, !cir.ptr<!s32i>, ["__cleanup_dest_slot "]
@@ -1234,18 +1233,20 @@ followed by `std::terminate()`) and then an unreachable operation.
 The only operation that is specific to Itanium exception handling is
 `cir.eh.landingpad`.
 
-  `%exn_ptr_0, %type_id = cir.eh.landingpad [@_ZTISt9exception] : !cir.ptr<!void>, !u32i`
+```mlir
+%exn_ptr_0, %type_id = cir.eh.landingpad [@_ZTISt9exception] : !cir.ptr<!void>, !u32i
+```
 
 This operation corresponds directly to the LLVM IR landingpad
 instruction. It may have a list of type IDs that the handler can catch
-(or null for \"catch all\") or it may have the cleanup attribute if the
+(or null for "catch all") or it may have the cleanup attribute if the
 handler performs cleanup but does not catch any exceptions.
 
 #### Example: Try-catch with cleanup
 
 **Flattened CIR**
 
-```
+```mlir
 cir.func @someFunc(){
   %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init]
   cir.try_call @_ZN9SomeClassC1Ev(%0) ^bb1, ^bb3 : (!cir.ptr<!rec_SomeClass>) -> ()
@@ -1280,7 +1281,7 @@ cir.func @someFunc(){
 
 **ABI-lowered CIR**
 
-```
+```text
 cir.func @someFunc() #personality_fn = @__gxx_personality_v0 {
   %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init]
   cir.try_call @_ZN9SomeClassC1Ev(%0) ^bb1, ^bb3 : (!cir.ptr<!rec_SomeClass>) -> ()
@@ -1320,7 +1321,7 @@ normal continuation block (`^bb8`).
 
 **Flattened CIR**
 
-```
+```mlir
 cir.func @someFunc(){
   cir.try_call @f() ^bb1, ^bb2
 ^bb1
@@ -1353,7 +1354,7 @@ cir.func @someFunc(){
 
 **ABI-lowered CIR**
 
-```
+```text
 cir.func @someFunc() #personality_fn = @__gxx_personality_v0 {
   cir.try_call @f() ^bb1, ^bb2
 ^bb1
@@ -1409,7 +1410,9 @@ instruction in LLVM IR and have the same semantics. The first operation
 in the unwind destination of a `cir.try_call` must be either
 `cir.eh.catchswitch` or `cir.cleanuppad`.
 
-  `%4 = cir.eh.catchswitch within none [^bb2, ^bb3] unwind to caller`
+```mlir
+%4 = cir.eh.catchswitch within none [^bb2, ^bb3] unwind to caller
+```
 
 The `cir.eh.catchswitch` operation takes an operand which specifies the
 parent token, which may either be none or the token returned by a
@@ -1422,7 +1425,9 @@ handled further in the current function. This operation returns a token
 that is used as the operand for `cir.catchpad` operations associated
 with this switch.
 
-  `%5 = cir.cleanuppad within none []`
+```mlir
+%5 = cir.cleanuppad within none []
+```
 
 The `cir.cleanuppad` operation takes an operand which specifies the
 parent token, which may either be none or the token returned by a
@@ -1432,14 +1437,18 @@ handlers, the personality function will be `__CxxFrameHandler3` and the
 argument list will be empty. This operation returns a token that is used
 as the operand for the associated `cir.cleanupret` operation.
 
-  `cir.cleanupret from %5 unwind to ^bb7`
+```mlir
+cir.cleanupret from %5 unwind to ^bb7
+```
 
 The `cir.cleanupret` operation takes an operand which specifies the
 `cir.cleanuppad` operation which is completed by this operation and a
 block at which unwinding of the current exception continues (or unwind
 to caller if there is no catch handling in the current function).
 
-  `%8 = cir.catchpad within %4 [ptr @"??_R0H@8", i32 0, ptr %e]`
+```text
+%8 = cir.catchpad within %4 [ptr @"??_R0H@8", i32 0, ptr %e]
+```
 
 The `cir.catchpad` operation takes an operand which specifies the parent
 token, which must have been return by a previous `cir.catchswitch`
@@ -1451,7 +1460,9 @@ operand for the associated `cir.catchret` operation or as the parent for
 any `cir.catchswitch` or `cir.cleanuppad` operations that are nested
 within this catch handler.
 
-  `cir.catchret from %8 to ^bb8`
+```mlir
+cir.catchret from %8 to ^bb8
+```
 
 The `cir.catchret` operation takes an operand which specifies the
 `cir.catchpad` operation which is completed by this operation and a
@@ -1461,7 +1472,7 @@ block at which excution should be resumed.
 
 **Flattened CIR**
 
-```
+```mlir
 cir.func @someFunc() {
   %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init]
   cir.try_call @_ZN9SomeClassC1Ev(%0) ^bb1, ^bb3 : (!cir.ptr<!rec_SomeClass>) -> ()
@@ -1496,7 +1507,7 @@ cir.func @someFunc() {
 
 **ABI-lowered CIR**
 
-```
+```text
 cir.func @someFunc() #personality_fn = @ __CxxFrameHandler3 {
   %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init]
   cir.try_call @_ZN9SomeClassC1Ev(%0) ^bb1, ^bb4 : (!cir.ptr<!rec_SomeClass>) -> ()
@@ -1523,7 +1534,7 @@ cir.func @someFunc() #personality_fn = @ __CxxFrameHandler3 {
 
 **Flattened CIR**
 
-```
+```mlir
 cir.func @someFunc(){
   cir.try_call @f() ^bb1, ^bb2
 ^bb1
@@ -1556,7 +1567,7 @@ cir.func @someFunc(){
 
 **ABI-lowered CIR**
 
-```
+```text
 cir.func @someFunc() #personality_fn = @__CxxFrameHandler3 {
   cir.try_call @f() ^bb1, ^bb2
 ^bb1
@@ -1585,3 +1596,454 @@ case will be handled by the personality function, using tables that are
 generated from the `cir.catchpad` operations. Each catch handler simply
 continues to the normal continuation block (`^bb6`) using the
 `cir.catchret` operation.
+
+## Dynamic Exception Specifications
+
+A dynamic exception specification (`throw(T...)`, and `throw()` before
+C++17) constrains the set of exception types that a function is allowed
+to propagate to its caller. If an exception of any other type would
+escape the function, `std::unexpected()` must be called instead
+([except.spec]). Dynamic exception specifications were removed in C++17,
+so this representation is only produced for earlier language modes.
+Functions declared `noexcept`, and `throw()` in C++17 and later, are handled
+differently.
+
+Because the constraint applies to every exception that could escape the
+function, it is represented as an exception handler that encloses the
+entire function body. This section describes that representation used by the
+high-level CIR produced by CIR generation, the flattened form produced by `cir::FlattenCFG`, and the ABI-specific form produced by EH ABI lowering.
+
+### High-level CIR representation
+
+A function with a dynamic exception specification has its entire body
+wrapped in a `cir.try` operation with two handlers, a `filter` handler that
+holds the path taken when the in-flight exception is permitted, and an
+`unexpected` handler, identified that holds the path taken when the
+specification is violated.
+
+```mlir
+cir.try {
+  // function body
+  cir.yield
+} filter [@_ZTIi] (%eh_token : !cir.eh_token) {
+  cir.resume %eh_token : !cir.eh_token
+} unexpected (%eh_token.1 : !cir.eh_token) {
+  cir.eh.unexpected %eh_token.1 : !cir.eh_token
+}
+```
+
+Both attributes occupy a slot in the try operation's handler type list,
+in the same way that a `#cir.global_view` catch type, `catch all`, or
+`unwind` does. Like `unwind`, and unlike a catch handler, neither region
+begins with `cir.begin_catch`. Neither handler catches the exception.
+Together they only decide whether the exception is permitted to continue
+unwinding.
+
+The test that decides whether the in-flight exception matches the filter
+is implicit in the handler type, in the same way that the type test for
+a catch handler is implicit in its `#cir.global_view` handler type.
+Neither test is expressed in a handler region. Both are materialized
+during ABI lowering. The two regions therefore describe only the
+outcomes of that test. The filter region contains a single `cir.resume`
+operation to continue unwinding to the caller, and the unexpected region
+contains a single `cir.eh.unexpected` operation.
+
+The `cir.eh.unexpected` operation is a terminator that signals that the
+in-flight exception violated the exception specification of the
+enclosing function and that `std::unexpected()` must be called. Like
+`cir.eh.terminate`, it takes an `!cir.eh_token`, it is ABI-agnostic, and
+it is replaced with target-specific code during EH ABI lowering.
+
+A filter handler and an unexpected handler must appear together, with
+the filter first, and the two must be the only handlers on the try
+operation. The filter try operation wraps the entire function body and
+exists only to check the exception specification, while each try
+statement written in the source becomes a separate `cir.try` operation
+nested inside it. A function-try-block on a function that also has an
+exception specification is nested the same way.
+
+An empty type list represents `throw()` before C++17. No exception is
+permitted by such a specification, so there is no permitted path to
+describe and the filter region is terminated with `cir.unreachable`
+instead of `cir.resume`. This matches Clang's LLVM IR codegen, which
+generates no resume path at all for a function whose exception
+specification permits nothing. The unexpected region is the same in
+both cases.
+
+#### Example: Simple dynamic exception specification
+
+**C++**
+
+```c++
+void external();
+
+void target() throw(int) {
+  external();
+}
+
+void target2() throw() {
+  external();
+}
+```
+
+**CIR**
+
+```mlir
+cir.func @_Z6targetv() personality(@__gxx_personality_v0) {
+  cir.try {
+    cir.call @_Z8externalv() : () -> ()
+    cir.yield
+  } filter [@_ZTIi] (%eh_token : !cir.eh_token) {
+    cir.resume %eh_token : !cir.eh_token
+  } unexpected (%eh_token.1 : !cir.eh_token) {
+    cir.eh.unexpected %eh_token.1 : !cir.eh_token
+  }
+  cir.return
+}
+
+cir.func @_Z7target2v() personality(@__gxx_personality_v0)
+    attributes {nothrow} {
+  cir.try {
+    cir.call @_Z8externalv() : () -> ()
+    cir.yield
+  } filter [] (%eh_token : !cir.eh_token) {
+    cir.unreachable
+  } unexpected (%eh_token.1 : !cir.eh_token) {
+    cir.eh.unexpected %eh_token.1 : !cir.eh_token
+  }
+  cir.return
+}
+```
+
+In `target()`, if `external()` throws an `int`, the exception is
+permitted by the specification and unwinding continues to the caller
+through the filter handler's `cir.resume` operation. If it throws any
+other type, the specification is violated and the unexpected handler
+calls `std::unexpected()`.
+
+In `target2()`, the specification permits nothing, so any exception
+thrown by `external()` violates it and the unexpected handler is always
+the one reached. There is no permitted path, which is why the filter
+region holds a `cir.unreachable` rather than a `cir.resume`. The
+function itself is marked `nothrow`, because no exception can escape it.
+
+#### Example: Try-catch within an exception specification
+
+**C++**
+
+```c++
+void external();
+
+void inner() throw(int) {
+  external();
+}
+
+void outer() throw() {
+  try {
+    inner();
+  } catch (int) {
+  }
+}
+```
+
+**CIR**
+
+```mlir
+cir.func @_Z5innerv() personality(@__gxx_personality_v0) {
+  cir.try {
+    cir.call @_Z8externalv() : () -> ()
+    cir.yield
+  } filter [@_ZTIi] (%eh_token : !cir.eh_token) {
+    cir.resume %eh_token : !cir.eh_token
+  } unexpected (%eh_token.1 : !cir.eh_token) {
+    cir.eh.unexpected %eh_token.1 : !cir.eh_token
+  }
+  cir.return
+}
+
+cir.func @_Z5outerv() personality(@__gxx_personality_v0)
+    attributes {nothrow} {
+  cir.try {
+    cir.scope {
+      %0 = cir.alloca "" align(4) : !cir.ptr<!s32i>
+      cir.try {
+        cir.call @_Z5innerv() : () -> ()
+        cir.yield
+      } catch [type #cir.global_view<@_ZTIi> : !cir.ptr<!u8i>]
+            (%eh_token : !cir.eh_token) {
+        %catch_token, %exn_ptr = cir.begin_catch %eh_token
+            : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+        cir.cleanup.scope {
+          cir.init_catch_param scalar %exn_ptr to %0
+              : !cir.ptr<!void>, !cir.ptr<!s32i>
+          cir.yield
+        } cleanup all {
+          cir.end_catch %catch_token : !cir.catch_token
+          cir.yield
+        }
+        cir.yield
+      } unwind (%eh_token.1 : !cir.eh_token) {
+        cir.resume %eh_token.1 : !cir.eh_token
+      }
+    }
+    cir.yield
+  } filter [] (%eh_token.2 : !cir.eh_token) {
+    cir.unreachable
+  } unexpected (%eh_token.3 : !cir.eh_token) {
+    cir.eh.unexpected %eh_token.3 : !cir.eh_token
+  }
+  cir.return
+}
+```
+
+In this example the exception specification try operation encloses the
+try-catch statement written in the source.
+
+If `inner()` throws an `int`, the inner try operation's catch handler
+runs and execution continues after the try statement. The exception
+specification of `outer()` is never consulted, because the exception
+does not escape the function.
+
+If `inner()` throws any other type, the inner try operation's `unwind`
+handler is reached. Its `cir.resume` operation exits the region of the
+enclosing filter try operation, so, following the rules described above
+for `cir.resume` within an enclosing scope, unwinding continues into
+that operation's specification check rather than leaving the function.
+The exception is checked against the specification of `outer()`, which
+permits nothing, so the unexpected handler is reached and
+`std::unexpected()` is called.
+
+### CFG Flattening
+
+Flattening a filter try operation introduces a `filter` clause on the
+`cir.eh.dispatch` operation. Both handler regions become ordinary
+blocks, so flattening only has to inline them and wire up the dispatch
+operation's successors. It does not synthesize any new operation.
+
+```mlir
+cir.eh.dispatch %eh_token : !cir.eh_token [
+  // Taken when the exception is *not* one of the permitted types.
+  filter(@_ZTIi) : ^bb4,
+  // Taken when it is.
+  unwind : ^bb5
+]
+```
+
+A `filter` clause names the permitted types, but its destination is
+taken on the types it does *not* name. This is the opposite polarity
+from a `catch` clause, whose destination is taken when the exception
+does match the named type, so the two clause kinds cannot be read the
+same way. The polarity comes from the Itanium personality routine,
+which reports a filter *failure* by selecting the filter clause of the
+landing pad, and it is preserved in the flattened form so that the
+dispatch operation maps directly onto the landing pad it lowers to.
+
+Unlike `catch_all` and `unwind`, a `filter` clause also does not take
+the place of the dispatch operation's default destination. A filter has
+two outgoing edges rather than one. Either the exception violates the
+specification, in which case control transfers to the filter clause's
+destination, or it does not, in which case control continues along the
+dispatch operation's normal `unwind` edge. A `cir.eh.dispatch` operation
+carrying a `filter` clause therefore always carries an `unwind` clause
+as well.
+
+The two clauses correspond directly to the two handler regions, with the
+polarity inversion visible in the pairing. The unexpected region becomes
+the destination of the `filter` clause, and the filter region, which
+describes the permitted path, becomes the `unwind` destination.
+
+```mlir
+^bb4(%eh_token : !cir.eh_token): // Flattened unexpected region
+  cir.eh.unexpected %eh_token : !cir.eh_token
+^bb5(%eh_token.1 : !cir.eh_token): // Flattened filter region
+  cir.resume %eh_token.1 : !cir.eh_token
+```
+
+Because the filter and unexpected handlers are the only handlers on the
+try operation, such a dispatch never carries catch clauses of its own.
+The catch clauses of a try statement nested inside the specification
+belong to that statement's own dispatch operation, which is chained
+ahead of this one.
+
+The shape is the same when the filter type list is empty. The filter
+region's `cir.unreachable` becomes the `unwind` destination
+and the dispatch operation still carries both clauses. ABI lowering then
+makes the branch to the filter destination unconditional, which leaves
+that `unwind` destination unreachable and dead.
+
+#### Example: Simple dynamic exception specification
+
+**High-level CIR**
+
+```mlir
+cir.func @_Z6targetv() personality(@__gxx_personality_v0) {
+  cir.try {
+    cir.call @_Z8externalv() : () -> ()
+    cir.yield
+  } filter [@_ZTIi] (%eh_token : !cir.eh_token) {
+    cir.resume %eh_token : !cir.eh_token
+  } unexpected (%eh_token.1 : !cir.eh_token) {
+    cir.eh.unexpected %eh_token.1 : !cir.eh_token
+  }
+  cir.return
+}
+```
+
+**Flattened CIR**
+
+```mlir
+cir.func @_Z6targetv() personality(@__gxx_personality_v0) {
+  cir.try_call @_Z8externalv() ^bb1, ^bb2 : () -> ()
+^bb1: // Normal continue (from entry block)
+  cir.br ^bb6
+^bb2: // EH (from entry block)
+  %0 = cir.eh.initiate : !cir.eh_token
+  cir.br ^bb3(%0 : !cir.eh_token)
+^bb3(%eh_token : !cir.eh_token): // Exception specification dispatch
+  cir.eh.dispatch %eh_token : !cir.eh_token [
+    filter(@_ZTIi) : ^bb4, // Not an int: specification violated
+    unwind : ^bb5          // An int: permitted, keep unwinding
+  ]
+^bb4(%eh_token.1 : !cir.eh_token): // Specification violated
+  cir.eh.unexpected %eh_token.1 : !cir.eh_token
+^bb5(%eh_token.2 : !cir.eh_token): // Exception is permitted
+  cir.resume %eh_token.2 : !cir.eh_token
+^bb6: // Normal continue (from ^bb1)
+  cir.return
+}
+```
+
+If `external()` throws, control transfers to `^bb2`, which initiates
+exception handling and branches to the dispatch block (`^bb3`). If the
+exception is not one of the permitted types, control transfers to `^bb4`
+and `cir.eh.unexpected` terminates the block. Otherwise control
+transfers to `^bb5` and unwinding continues to the caller.
+
+### Itanium ABI Lowering
+
+The Itanium representation of an exception specification is a `filter`
+clause on the landing pad. Accordingly, the `cir.eh.inflight_exception`
+operation gains a `filter` clause carrying the permitted type info
+symbols.
+
+```mlir
+%exception_ptr, %type_id = cir.eh.inflight_exception filter [@_ZTIi]
+```
+
+This corresponds directly to the `filter` clause of the LLVM IR
+landingpad instruction. An empty list lowers to a zero-length filter
+clause, which the personality routine treats as permitting nothing.
+
+The clause list of a landing pad is built from the handlers that the
+exception reaching that landing pad can arrive at, listed innermost
+first. Since the try operation for an exception specification encloses
+the entire function body, its filter clause is always last, after any
+catch clauses contributed by try operations written in the source. A
+filter clause terminates the clause list in the same way that a
+catch-all clause does, because no handler outside the function can be
+reached. A filter clause and the `cleanup` attribute may both appear on
+the same landing pad, since cleanups within the function still have to
+run before the specification is checked.
+
+The `filter` clause of a `cir.eh.dispatch` operation is lowered to a
+signed comparison of the type id against zero. The personality routine
+reports that an exception failed a filter by returning a *negative*
+selector value, which is why the type id produced by
+`cir.eh.inflight_exception` is a signed integer. Catch matching only
+compares the type id for equality and is therefore indifferent to its
+signedness, but filter checking is not. When the filter type list is
+empty, no comparison is generated and the filter destination is branched
+to unconditionally.
+
+The `cir.eh.unexpected` operation is lowered to a call to
+`__cxa_call_unexpected`, marked `noreturn`, followed by a
+`cir.unreachable` operation.
+
+#### Example: Simple dynamic exception specification
+
+**Flattened CIR**
+
+```mlir
+cir.func @_Z6targetv() personality(@__gxx_personality_v0) {
+  cir.try_call @_Z8externalv() ^bb1, ^bb2 : () -> ()
+^bb1: // Normal continue (from entry block)
+  cir.br ^bb6
+^bb2: // EH (from entry block)
+  %0 = cir.eh.initiate : !cir.eh_token
+  cir.br ^bb3(%0 : !cir.eh_token)
+^bb3(%eh_token : !cir.eh_token): // Exception specification dispatch
+  cir.eh.dispatch %eh_token : !cir.eh_token [
+    filter(@_ZTIi) : ^bb4, // Not an int: specification violated
+    unwind : ^bb5          // An int: permitted, keep unwinding
+  ]
+^bb4(%eh_token.1 : !cir.eh_token): // Specification violated
+  cir.eh.unexpected %eh_token.1 : !cir.eh_token
+^bb5(%eh_token.2 : !cir.eh_token): // Exception is permitted
+  cir.resume %eh_token.2 : !cir.eh_token
+^bb6: // Normal continue (from ^bb1)
+  cir.return
+}
+```
+
+**ABI-lowered CIR**
+
+```mlir
+cir.func @_Z6targetv() personality(@__gxx_personality_v0) {
+  cir.try_call @_Z8externalv() ^bb1, ^bb2 : () -> ()
+^bb1: // Normal continue (from entry block)
+  cir.br ^bb6
+^bb2: // Landing pad (from entry block)
+  %exception_ptr, %type_id = cir.eh.inflight_exception filter [@_ZTIi]
+  cir.br ^bb3(%exception_ptr, %type_id : !cir.ptr<!void>, !s32i)
+^bb3(%0: !cir.ptr<!void>, %1: !s32i): // Exception specification dispatch
+  %2 = cir.const #cir.int<0> : !s32i
+  %3 = cir.cmp lt %1, %2 : !s32i
+  cir.brcond %3 ^bb4(%0 : !cir.ptr<!void>),
+                ^bb5(%0, %1 : !cir.ptr<!void>, !s32i)
+^bb4(%4: !cir.ptr<!void>): // Specification violated
+  cir.call @__cxa_call_unexpected(%4) {noreturn} : (!cir.ptr<!void>) -> ()
+  cir.unreachable
+^bb5(%5: !cir.ptr<!void>, %6: !s32i): // Exception is permitted
+  cir.resume.flat %5, %6
+^bb6: // Normal continue (from ^bb1)
+  cir.return
+}
+```
+
+In this example the landing pad (`^bb2`) carries a filter clause listing
+the single permitted type. The personality routine selects that clause
+only when the in-flight exception is *not* an `int`, and signals this by
+returning a negative selector value. The dispatch block (`^bb3`)
+therefore tests the selector for a negative value and transfers control
+to `^bb4` to call `__cxa_call_unexpected` when the test succeeds, or to
+`^bb5` to continue unwinding when it fails.
+
+For `target2()`, whose specification permits nothing, the landing pad
+carries an empty filter clause and no comparison is needed.
+
+```mlir
+^bb2: // Landing pad (from entry block)
+  %exception_ptr, %type_id = cir.eh.inflight_exception filter []
+  cir.br ^bb3(%exception_ptr : !cir.ptr<!void>)
+^bb3(%0: !cir.ptr<!void>): // Specification violated
+  cir.call @__cxa_call_unexpected(%0) {noreturn} : (!cir.ptr<!void>) -> ()
+  cir.unreachable
+```
+
+In the try-catch example above, the exception thrown by `inner()` can
+reach both the catch handler of the try statement in `outer()` and the
+filter of the exception specification of `outer()`, so the landing pad
+for the call to `inner()` carries both clauses, with the filter clause
+last.
+
+```mlir
+%exception_ptr, %type_id =
+    cir.eh.inflight_exception [@_ZTIi] filter []
+```
+
+### Microsoft C++ ABI Lowering
+
+The Microsoft C++ ABI has no runtime support for dynamic exception
+specifications. As in Clang's LLVM IR codegen, no exception
+specification try operation is generated when targeting that ABI, and
+the specification has no effect on the generated code.

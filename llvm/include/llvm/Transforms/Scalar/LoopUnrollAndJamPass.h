@@ -17,13 +17,15 @@ class LPMUpdater;
 class LoopNest;
 
 /// A simple loop rotation transformation.
-class LoopUnrollAndJamPass : public PassInfoMixin<LoopUnrollAndJamPass> {
+class LoopUnrollAndJamPass
+    : public OptionalPassInfoMixin<LoopUnrollAndJamPass> {
   const int OptLevel;
 
 public:
   explicit LoopUnrollAndJamPass(int OptLevel = 2) : OptLevel(OptLevel) {}
-  PreservedAnalyses run(LoopNest &L, LoopAnalysisManager &AM,
-                        LoopStandardAnalysisResults &AR, LPMUpdater &U);
+  LLVM_ABI PreservedAnalyses run(LoopNest &L, LoopAnalysisManager &AM,
+                                 LoopStandardAnalysisResults &AR,
+                                 LPMUpdater &U);
 };
 
 } // end namespace llvm

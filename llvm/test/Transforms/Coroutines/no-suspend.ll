@@ -10,7 +10,7 @@
 ;
 define void @no_suspends(i32 %n) presplitcoroutine {
 entry:
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @no_suspends, ptr null)
   %need.dyn.alloc = call i1 @llvm.coro.alloc(token %id)
   br i1 %need.dyn.alloc, label %dyn.alloc, label %coro.begin
 dyn.alloc:
@@ -51,7 +51,7 @@ suspend:
 ;
 define void @simplify_resume(ptr %src, ptr %dst) presplitcoroutine {
 entry:
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @simplify_resume, ptr null)
   %need.dyn.alloc = call i1 @llvm.coro.alloc(token %id)
   br i1 %need.dyn.alloc, label %dyn.alloc, label %coro.begin
 dyn.alloc:
@@ -99,7 +99,7 @@ suspend:
 ;
 define void @simplify_destroy() presplitcoroutine personality i32 0 {
 entry:
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @simplify_destroy, ptr null)
   %need.dyn.alloc = call i1 @llvm.coro.alloc(token %id)
   br i1 %need.dyn.alloc, label %dyn.alloc, label %coro.begin
 dyn.alloc:
@@ -154,7 +154,7 @@ lpad:
 ;
 define void @simplify_resume_with_inlined_if(ptr %src, ptr %dst, i1 %cond) presplitcoroutine {
 entry:
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @simplify_resume_with_inlined_if, ptr null)
   %need.dyn.alloc = call i1 @llvm.coro.alloc(token %id)
   br i1 %need.dyn.alloc, label %dyn.alloc, label %coro.begin
 dyn.alloc:
@@ -209,7 +209,7 @@ suspend:
 
 define void @cannot_simplify_other_calls() presplitcoroutine {
 entry:
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @cannot_simplify_other_calls, ptr null)
   %need.dyn.alloc = call i1 @llvm.coro.alloc(token %id)
   br i1 %need.dyn.alloc, label %dyn.alloc, label %coro.begin
 dyn.alloc:
@@ -261,7 +261,7 @@ suspend:
 
 define void @cannot_simplify_calls_in_terminator() presplitcoroutine personality i32 0 {
 entry:
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @cannot_simplify_calls_in_terminator, ptr null)
   %need.dyn.alloc = call i1 @llvm.coro.alloc(token %id)
   br i1 %need.dyn.alloc, label %dyn.alloc, label %coro.begin
 dyn.alloc:
@@ -313,7 +313,7 @@ lpad:
 
 define void @cannot_simplify_not_last_instr(ptr %dst, ptr %src) presplitcoroutine {
 entry:
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @cannot_simplify_not_last_instr, ptr null)
   %need.dyn.alloc = call i1 @llvm.coro.alloc(token %id)
   br i1 %need.dyn.alloc, label %dyn.alloc, label %coro.begin
 dyn.alloc:
@@ -358,7 +358,7 @@ suspend:
 ;
 define void @cannot_simplify_final_suspend() presplitcoroutine personality i32 0 {
 entry:
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @cannot_simplify_final_suspend, ptr null)
   %need.dyn.alloc = call i1 @llvm.coro.alloc(token %id)
   br i1 %need.dyn.alloc, label %dyn.alloc, label %coro.begin
 dyn.alloc:

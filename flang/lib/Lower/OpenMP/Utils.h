@@ -11,9 +11,11 @@
 
 #include "flang/Lower/OpenMP/Clauses.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
+#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Value.h"
+#include "llvm/Frontend/OpenMP/OMPContext.h"
 #include "llvm/Support/CommandLine.h"
 #include <cstdint>
 #include <optional>
@@ -27,7 +29,11 @@ class RecordType;
 namespace Fortran {
 
 namespace semantics {
+class SemanticsContext;
 class Symbol;
+namespace omp {
+class OmpVariantMatchContext;
+} // namespace omp
 } // namespace semantics
 
 namespace parser {
@@ -123,7 +129,7 @@ void insertChildMapInfoIntoParent(
     Fortran::lower::StatementContext &stmtCtx,
     std::map<Object, OmpMapParentAndMemberData> &parentMemberIndices,
     llvm::SmallVectorImpl<mlir::Value> &mapOperands,
-    llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms);
+    llvm::SmallVectorImpl<Object> &mapObjects);
 
 void generateMemberPlacementIndices(
     const Object &object, llvm::SmallVectorImpl<int64_t> &indices,
@@ -164,6 +170,8 @@ void genObjectList(const ObjectList &objects,
 
 void lastprivateModifierNotSupported(const omp::clause::Lastprivate &lastp,
                                      mlir::Location loc);
+
+pft::Evaluation *tryGetNestedDoConstruct(pft::Evaluation &eval);
 
 pft::Evaluation *getNestedDoConstruct(pft::Evaluation &eval);
 
@@ -225,9 +233,58 @@ mlir::Value genIteratorCoordinate(Fortran::lower::AbstractConverter &converter,
                                   llvm::ArrayRef<mlir::Value> ivs,
                                   mlir::Location loc);
 
+/// Resolve the declare mapper symbol to attach to a mapped object.
+///
+/// The default mapper path first looks for a user-defined mapper. If none
+/// exists, it may synthesize a compiler-generated mapper, except for mapped
+/// members whose parent object is also mapped and for target enter data,
+/// target exit data, and target update directives.
+///
+/// \param converter The converter used to query and generate mapper symbols.
+/// \param loc The location to use when generating an implicit mapper.
+/// \param object The mapped object whose type controls mapper resolution.
+/// \param mapperIdName An explicit mapper name, `__implicit_mapper`, or an
+///        empty name.
+/// \param mapTypeBits The map flags used when deciding whether an implicit
+///        mapper should be generated.
+/// \param directive The enclosing OpenMP directive.
+/// \param hasParentObj True if a mapped parent object already owns this object.
+/// \return A symbol reference to the resolved mapper, or a null attribute when
+///         no mapper applies.
+mlir::FlatSymbolRefAttr
+resolveMapperId(Fortran::lower::AbstractConverter &converter,
+                mlir::Location loc, const omp::Object &object,
+                llvm::StringRef mapperIdName,
+                mlir::omp::ClauseMapFlags mapTypeBits,
+                llvm::omp::Directive directive, bool hasParentObj);
+
 std::optional<llvm::SmallVector<mlir::Value>> getIteratorElementIndices(
     Fortran::lower::AbstractConverter &converter, const omp::Object &object,
     Fortran::lower::StatementContext &stmtCtx, mlir::Location loc);
+
+/// Walk the already-emitted MLIR parent operations starting from \p op and
+/// collect the implied OpenMP construct traits in outermost-to-innermost
+/// order. Used by metadirective lowering and declare-variant call resolution
+/// to build the `ConstructTraits` of an `OMPContext`.
+void collectEnclosingConstructTraits(
+    mlir::Operation *op,
+    llvm::SmallVectorImpl<llvm::omp::TraitProperty> &constructTraits);
+
+/// Return true when \p module is being compiled for an AMDGPU device or all of
+/// its offload targets are AMDGPU devices.
+bool hasOnlyAMDGCNTargets(mlir::ModuleOp module);
+
+/// Return true when unified shared memory is required by either the OpenMP
+/// module attributes or a source-level `requires` directive.
+bool requiresUnifiedSharedMemory(mlir::ModuleOp module,
+                                 semantics::SemanticsContext &semaCtx);
+
+/// Build the OpenMP variant-matching context for \p module. The device flag,
+/// host triple, offload triple, and target features are read from the module;
+/// \p constructTraits seeds the enclosing-construct traits.
+semantics::omp::OmpVariantMatchContext makeVariantMatchContext(
+    mlir::ModuleOp module,
+    llvm::ArrayRef<llvm::omp::TraitProperty> constructTraits);
 
 } // namespace omp
 } // namespace lower

@@ -1096,6 +1096,169 @@ entry:
   ret void
 }
 
+; Volatile accesses are observable and must not be split into smaller copies.
+
+define void @test_volatile_sfb(ptr noalias %s1, ptr noalias %s2, i32 %x) {
+; SSE-LABEL: test_volatile_sfb:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    movl %edx, 4(%rdi)
+; SSE-NEXT:    movaps (%rdi), %xmm0
+; SSE-NEXT:    movaps %xmm0, (%rsi)
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: test_volatile_sfb:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    movl %edx, 4(%rdi)
+; AVX-NEXT:    vmovaps (%rdi), %xmm0
+; AVX-NEXT:    vmovaps %xmm0, (%rsi)
+; AVX-NEXT:    retq
+entry:
+  %b = getelementptr inbounds %struct.S, ptr %s1, i64 0, i32 1
+  store i32 %x, ptr %b, align 4
+  %v = load volatile <2 x i64>, ptr %s1, align 16
+  store volatile <2 x i64> %v, ptr %s2, align 16
+  ret void
+}
+
+define void @test_volatile_load_only(ptr noalias %s1, ptr noalias %s2, i32 %x) {
+; SSE-LABEL: test_volatile_load_only:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    movl %edx, 4(%rdi)
+; SSE-NEXT:    movaps (%rdi), %xmm0
+; SSE-NEXT:    movups %xmm0, (%rsi)
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: test_volatile_load_only:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    movl %edx, 4(%rdi)
+; AVX-NEXT:    vmovaps (%rdi), %xmm0
+; AVX-NEXT:    vmovups %xmm0, (%rsi)
+; AVX-NEXT:    retq
+entry:
+  %b = getelementptr inbounds %struct.S, ptr %s1, i64 0, i32 1
+  store i32 %x, ptr %b, align 4
+  %v = load volatile <2 x i64>, ptr %s1, align 16
+  store <2 x i64> %v, ptr %s2, align 1
+  ret void
+}
+
+define void @test_volatile_store_only(ptr noalias %s1, ptr noalias %s2, i32 %x) {
+; SSE-LABEL: test_volatile_store_only:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    movl %edx, 4(%rdi)
+; SSE-NEXT:    movups (%rdi), %xmm0
+; SSE-NEXT:    movaps %xmm0, (%rsi)
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: test_volatile_store_only:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    movl %edx, 4(%rdi)
+; AVX-NEXT:    vmovups (%rdi), %xmm0
+; AVX-NEXT:    vmovaps %xmm0, (%rsi)
+; AVX-NEXT:    retq
+entry:
+  %b = getelementptr inbounds %struct.S, ptr %s1, i64 0, i32 1
+  store i32 %x, ptr %b, align 4
+  %v = load <2 x i64>, ptr %s1, align 1
+  store volatile <2 x i64> %v, ptr %s2, align 16
+  ret void
+}
+
+; Atomic accesses must preserve their hardware atomicity and must not be split
+; into smaller copies.  On AVX targets, aligned 128-bit atomic load/store is
+; lowered to a single [V]MOVAPS/[V]MOVDQA; the SFB pass must leave that
+; instruction alone.  (On baseline x86-64 without cmpxchg16b, atomic i128
+; accesses are lowered to libcalls and never reach this pass, so the SSE check
+; lines here just document that baseline lowering.)
+
+define void @test_atomic_sfb(ptr noalias %s1, ptr noalias %s2, i32 %x) nounwind {
+; SSE-LABEL: test_atomic_sfb:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    pushq %rbx
+; SSE-NEXT:    movq %rsi, %rbx
+; SSE-NEXT:    movl %edx, 4(%rdi)
+; SSE-NEXT:    xorl %esi, %esi
+; SSE-NEXT:    callq __atomic_load_16@PLT
+; SSE-NEXT:    movq %rbx, %rdi
+; SSE-NEXT:    movq %rax, %rsi
+; SSE-NEXT:    xorl %ecx, %ecx
+; SSE-NEXT:    callq __atomic_store_16@PLT
+; SSE-NEXT:    popq %rbx
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: test_atomic_sfb:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    movl %edx, 4(%rdi)
+; AVX-NEXT:    vmovaps (%rdi), %xmm0
+; AVX-NEXT:    vmovaps %xmm0, (%rsi)
+; AVX-NEXT:    retq
+entry:
+  %b = getelementptr inbounds %struct.S, ptr %s1, i64 0, i32 1
+  store i32 %x, ptr %b, align 4
+  %v = load atomic i128, ptr %s1 unordered, align 16
+  store atomic i128 %v, ptr %s2 unordered, align 16
+  ret void
+}
+
+define void @test_atomic_load_only(ptr noalias %s1, ptr noalias %s2, i32 %x) nounwind {
+; SSE-LABEL: test_atomic_load_only:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    pushq %rbx
+; SSE-NEXT:    movq %rsi, %rbx
+; SSE-NEXT:    movl %edx, 4(%rdi)
+; SSE-NEXT:    xorl %esi, %esi
+; SSE-NEXT:    callq __atomic_load_16@PLT
+; SSE-NEXT:    movq %rdx, %xmm0
+; SSE-NEXT:    movq %rax, %xmm1
+; SSE-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; SSE-NEXT:    movdqu %xmm1, (%rbx)
+; SSE-NEXT:    popq %rbx
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: test_atomic_load_only:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    movl %edx, 4(%rdi)
+; AVX-NEXT:    vmovaps (%rdi), %xmm0
+; AVX-NEXT:    vmovups %xmm0, (%rsi)
+; AVX-NEXT:    retq
+entry:
+  %b = getelementptr inbounds %struct.S, ptr %s1, i64 0, i32 1
+  store i32 %x, ptr %b, align 4
+  %v = load atomic i128, ptr %s1 unordered, align 16
+  %vv = bitcast i128 %v to <2 x i64>
+  store <2 x i64> %vv, ptr %s2, align 1
+  ret void
+}
+
+define void @test_atomic_store_only(ptr noalias %s1, ptr noalias %s2, i32 %x) nounwind {
+; SSE-LABEL: test_atomic_store_only:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    pushq %rax
+; SSE-NEXT:    movq %rsi, %rax
+; SSE-NEXT:    movl %edx, 4(%rdi)
+; SSE-NEXT:    movq 8(%rdi), %rdx
+; SSE-NEXT:    movq (%rdi), %rsi
+; SSE-NEXT:    movq %rax, %rdi
+; SSE-NEXT:    xorl %ecx, %ecx
+; SSE-NEXT:    callq __atomic_store_16@PLT
+; SSE-NEXT:    popq %rax
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: test_atomic_store_only:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    movl %edx, 4(%rdi)
+; AVX-NEXT:    vmovups (%rdi), %xmm0
+; AVX-NEXT:    vmovaps %xmm0, (%rsi)
+; AVX-NEXT:    retq
+entry:
+  %b = getelementptr inbounds %struct.S, ptr %s1, i64 0, i32 1
+  store i32 %x, ptr %b, align 4
+  %v = load <2 x i64>, ptr %s1, align 1
+  %vv = bitcast <2 x i64> %v to i128
+  store atomic i128 %vv, ptr %s2 unordered, align 16
+  ret void
+}
+
 ; Function Attrs: argmemonly nounwind
 declare void @llvm.memcpy.p0.p0.i64(ptr nocapture writeonly, ptr nocapture readonly, i64, i32, i1) #1
 

@@ -15,7 +15,6 @@
 #ifndef LLVM_LIB_CODEGEN_SELECTIONDAG_LEGALIZETYPES_H
 #define LLVM_LIB_CODEGEN_SELECTIONDAG_LEGALIZETYPES_H
 
-#include "MatchContext.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -106,10 +105,6 @@ private:
   SmallDenseMap<TableId, TableId, 8> SoftenedFloats;
 
   /// For floating-point nodes that have a smaller precision than the smallest
-  /// supported precision, this map indicates what promoted value to use.
-  SmallDenseMap<TableId, TableId, 8> PromotedFloats;
-
-  /// For floating-point nodes that have a smaller precision than the smallest
   /// supported precision, this map indicates the converted value to use.
   SmallDenseMap<TableId, TableId, 8> SoftPromotedHalfs;
 
@@ -191,7 +186,6 @@ public:
         PromotedIntegers.erase(OldId);
         ExpandedIntegers.erase(OldId);
         SoftenedFloats.erase(OldId);
-        PromotedFloats.erase(OldId);
         SoftPromotedHalfs.erase(OldId);
         ExpandedFloats.erase(OldId);
         ScalarizedVectors.erase(OldId);
@@ -313,6 +307,7 @@ private:
   SDValue PromoteIntRes_FP_TO_XINT(SDNode *N);
   SDValue PromoteIntRes_FP_TO_XINT_SAT(SDNode *N);
   SDValue PromoteIntRes_FP_TO_FP16_BF16(SDNode *N);
+  SDValue PromoteIntRes_CONVERT_TO_ARBITRARY_FP(SDNode *N);
   SDValue PromoteIntRes_STRICT_FP_TO_FP16_BF16(SDNode *N);
   SDValue PromoteIntRes_XRINT(SDNode *N);
   SDValue PromoteIntRes_FREEZE(SDNode *N);
@@ -347,7 +342,6 @@ private:
   SDValue PromoteIntRes_VAARG(SDNode *N);
   SDValue PromoteIntRes_VSCALE(SDNode *N);
   SDValue PromoteIntRes_XMULO(SDNode *N, unsigned ResNo);
-  template <class MatchContextClass>
   SDValue PromoteIntRes_ADDSUBSHLSAT(SDNode *N);
   SDValue PromoteIntRes_MULFIX(SDNode *N);
   SDValue PromoteIntRes_DIVFIX(SDNode *N);
@@ -357,13 +351,16 @@ private:
   SDValue PromoteIntRes_ABS(SDNode *N);
   SDValue PromoteIntRes_Rotate(SDNode *N);
   SDValue PromoteIntRes_FunnelShift(SDNode *N);
-  SDValue PromoteIntRes_VPFunnelShift(SDNode *N);
   SDValue PromoteIntRes_CLMUL(SDNode *N);
+  SDValue PromoteIntRes_PEXT(SDNode *N);
+  SDValue PromoteIntRes_PDEP(SDNode *N);
+  SDValue PromoteIntRes_MULH(SDNode *N);
   SDValue PromoteIntRes_IS_FPCLASS(SDNode *N);
   SDValue PromoteIntRes_PATCHPOINT(SDNode *N);
   SDValue PromoteIntRes_READ_REGISTER(SDNode *N);
   SDValue PromoteIntRes_VECTOR_FIND_LAST_ACTIVE(SDNode *N);
   SDValue PromoteIntRes_GET_ACTIVE_LANE_MASK(SDNode *N);
+  SDValue PromoteIntRes_VECTOR_MATCH(SDNode *N);
   SDValue PromoteIntRes_PARTIAL_REDUCE_MLA(SDNode *N);
   SDValue PromoteIntRes_LOOP_DEPENDENCE_MASK(SDNode *N);
 
@@ -392,7 +389,6 @@ private:
   SDValue PromoteIntOp_CMP(SDNode *N);
   SDValue PromoteIntOp_FunnelShift(SDNode *N);
   SDValue PromoteIntOp_SIGN_EXTEND(SDNode *N);
-  SDValue PromoteIntOp_VP_SIGN_EXTEND(SDNode *N);
   SDValue PromoteIntOp_SINT_TO_FP(SDNode *N);
   SDValue PromoteIntOp_STRICT_SINT_TO_FP(SDNode *N);
   SDValue PromoteIntOp_STORE(StoreSDNode *N, unsigned OpNo);
@@ -401,7 +397,6 @@ private:
   SDValue PromoteIntOp_STRICT_UINT_TO_FP(SDNode *N);
   SDValue PromoteIntOp_CONVERT_FROM_ARBITRARY_FP(SDNode *N);
   SDValue PromoteIntOp_ZERO_EXTEND(SDNode *N);
-  SDValue PromoteIntOp_VP_ZERO_EXTEND(SDNode *N);
   SDValue PromoteIntOp_MSTORE(MaskedStoreSDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_MLOAD(MaskedLoadSDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_MSCATTER(MaskedScatterSDNode *N, unsigned OpNo);
@@ -422,8 +417,9 @@ private:
   SDValue PromoteIntOp_VECTOR_HISTOGRAM(SDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_UnaryBooleanVectorOp(SDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_GET_ACTIVE_LANE_MASK(SDNode *N);
+  SDValue PromoteIntOp_VECTOR_MATCH(SDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_PARTIAL_REDUCE_MLA(SDNode *N);
-  SDValue PromoteIntOp_LOOP_DEPENDENCE_MASK(SDNode *N, unsigned OpNo);
+  SDValue PromoteIntOp_LOOP_DEPENDENCE_MASK(SDNode *N);
   SDValue PromoteIntOp_MaskedBinOp(SDNode *N, unsigned OpNo);
 
   void SExtOrZExtPromotedOperands(SDValue &LHS, SDValue &RHS);
@@ -502,6 +498,9 @@ private:
   void ExpandIntRes_Rotate            (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_FunnelShift       (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_CLMUL(SDNode *N, SDValue &Lo, SDValue &Hi);
+  void ExpandIntRes_PEXT(SDNode *N, SDValue &Lo, SDValue &Hi);
+  void ExpandIntRes_PDEP(SDNode *N, SDValue &Lo, SDValue &Hi);
+  void ExpandIntRes_MULH(SDNode *N, SDValue &Lo, SDValue &Hi);
 
   void ExpandIntRes_VSCALE            (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_READ_REGISTER(SDNode *N, SDValue &Lo, SDValue &Hi);
@@ -559,6 +558,7 @@ private:
 
   // Convert Float Results to Integer.
   void SoftenFloatResult(SDNode *N, unsigned ResNo);
+  SDValue SoftenFloatRes_NoLibcall(SDNode *N, EVT NVT);
   SDValue SoftenFloatRes_Unary(SDNode *N, RTLIB::Libcall LC);
   bool SoftenFloatRes_UnaryWithTwoFPResults(
       SDNode *N, RTLIB::Libcall LC, std::optional<unsigned> CallRetResNo = {});
@@ -733,6 +733,7 @@ private:
   SDValue ExpandFloatOp_FCOPYSIGN(SDNode *N);
   SDValue ExpandFloatOp_FP_ROUND(SDNode *N);
   SDValue ExpandFloatOp_FP_TO_XINT(SDNode *N);
+  SDValue ExpandFloatOp_XRINT_XROUND(SDNode *N, RTLIB::Libcall LC);
   SDValue ExpandFloatOp_LROUND(SDNode *N);
   SDValue ExpandFloatOp_LLROUND(SDNode *N);
   SDValue ExpandFloatOp_LRINT(SDNode *N);
@@ -744,18 +745,6 @@ private:
   void FloatExpandSetCCOperands(SDValue &NewLHS, SDValue &NewRHS,
                                 ISD::CondCode &CCCode, const SDLoc &dl,
                                 SDValue &Chain, bool IsSignaling = false);
-
-  //===--------------------------------------------------------------------===//
-  // Float promotion support: LegalizeFloatTypes.cpp
-  //===--------------------------------------------------------------------===//
-
-  SDValue GetPromotedFloat(SDValue Op) {
-    TableId &PromotedId = PromotedFloats[getTableId(Op)];
-    SDValue PromotedOp = getSDValue(PromotedId);
-    assert(PromotedOp.getNode() && "Operand wasn't promoted?");
-    return PromotedOp;
-  }
-  void SetPromotedFloat(SDValue Op, SDValue Result);
 
   SDValue BitcastToInt_ATOMIC_SWAP(SDNode *N);
 
@@ -799,13 +788,17 @@ private:
 
   bool SoftPromoteHalfOperand(SDNode *N, unsigned OpNo);
   SDValue SoftPromoteHalfOp_BITCAST(SDNode *N);
+  SDValue SoftPromoteHalfOp_BUILD_VECTOR(SDNode *N);
+  SDValue SoftPromoteHalfOp_INSERT_VECTOR_ELT(SDNode *N, unsigned OpNo);
   SDValue SoftPromoteHalfOp_FAKE_USE(SDNode *N, unsigned OpNo);
   SDValue SoftPromoteHalfOp_FCOPYSIGN(SDNode *N, unsigned OpNo);
   SDValue SoftPromoteHalfOp_FP_EXTEND(SDNode *N);
   SDValue SoftPromoteHalfOp_Op0WithStrict(SDNode *N);
   SDValue SoftPromoteHalfOp_FP_TO_XINT_SAT(SDNode *N);
+  SDValue SoftPromoteHalfOp_CONVERT_TO_ARBITRARY_FP(SDNode *N);
   SDValue SoftPromoteHalfOp_SETCC(SDNode *N);
   SDValue SoftPromoteHalfOp_SELECT_CC(SDNode *N, unsigned OpNo);
+  SDValue SoftPromoteHalfOp_BR_CC(SDNode *N);
   SDValue SoftPromoteHalfOp_STORE(SDNode *N, unsigned OpNo);
   SDValue SoftPromoteHalfOp_ATOMIC_STORE(SDNode *N, unsigned OpNo);
   SDValue SoftPromoteHalfOp_STACKMAP(SDNode *N, unsigned OpNo);
@@ -846,11 +839,13 @@ private:
   SDValue ScalarizeVecRes_EXTRACT_SUBVECTOR(SDNode *N);
   SDValue ScalarizeVecRes_FP_ROUND(SDNode *N);
   SDValue ScalarizeVecRes_CONVERT_FROM_ARBITRARY_FP(SDNode *N);
+  SDValue ScalarizeVecRes_CONVERT_TO_ARBITRARY_FP(SDNode *N);
   SDValue ScalarizeVecRes_UnaryOpWithExtraInput(SDNode *N);
   SDValue ScalarizeVecRes_INSERT_VECTOR_ELT(SDNode *N);
   SDValue ScalarizeVecRes_LOAD(LoadSDNode *N);
   SDValue ScalarizeVecRes_ATOMIC_LOAD(AtomicSDNode *N);
   SDValue ScalarizeVecRes_SCALAR_TO_VECTOR(SDNode *N);
+  SDValue ScalarizeVecRes_VECTOR_INTERLEAVE_DEINTERLEAVE(SDNode *N);
   SDValue ScalarizeVecRes_VSELECT(SDNode *N);
   SDValue ScalarizeVecRes_SELECT(SDNode *N);
   SDValue ScalarizeVecRes_SELECT_CC(SDNode *N);
@@ -876,6 +871,7 @@ private:
   SDValue ScalarizeVecOp_VSETCC(SDNode *N);
   SDValue ScalarizeVecOp_VSTRICT_FSETCC(SDNode *N, unsigned OpNo);
   SDValue ScalarizeVecOp_STORE(StoreSDNode *N, unsigned OpNo);
+  SDValue ScalarizeVecOp_ATOMIC_STORE(AtomicSDNode *N);
   SDValue ScalarizeVecOp_FP_ROUND(SDNode *N, unsigned OpNo);
   SDValue ScalarizeVecOp_STRICT_FP_ROUND(SDNode *N, unsigned OpNo);
   SDValue ScalarizeVecOp_FP_EXTEND(SDNode *N);
@@ -886,6 +882,8 @@ private:
   SDValue ScalarizeVecOp_FAKE_USE(SDNode *N);
   SDValue ScalarizeVecOp_VECTOR_FIND_LAST_ACTIVE(SDNode *N);
   SDValue ScalarizeVecOp_CTTZ_ELTS(SDNode *N);
+  SDValue ScalarizeVecRes_VECTOR_MATCH(SDNode *N);
+  SDValue ScalarizeVecOp_VECTOR_MATCH(SDNode *N, unsigned OpNo);
   SDValue ScalarizeVecOp_MaskedBinOp(SDNode *N, unsigned OpNo);
 
   //===--------------------------------------------------------------------===//
@@ -941,6 +939,7 @@ private:
   void SplitVecRes_FPOp_MultiType(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_IS_FPCLASS(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_INSERT_VECTOR_ELT(SDNode *N, SDValue &Lo, SDValue &Hi);
+  void SplitVecRes_ATOMIC_LOAD(AtomicSDNode *LD, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_LOAD(LoadSDNode *LD, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_VP_LOAD(VPLoadSDNode *LD, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_VP_LOAD_FF(VPLoadFFSDNode *LD, SDValue &Lo, SDValue &Hi);
@@ -965,10 +964,12 @@ private:
   void SplitVecRes_VP_REVERSE(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_PARTIAL_REDUCE_MLA(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_GET_ACTIVE_LANE_MASK(SDNode *N, SDValue &Lo, SDValue &Hi);
+  void SplitVecRes_VECTOR_MATCH(SDNode *N, SDValue &Lo, SDValue &Hi);
 
   // Vector Operand Splitting: <128 x ty> -> 2 x <64 x ty>.
   bool SplitVectorOperand(SDNode *N, unsigned OpNo);
   SDValue SplitVecOp_VSELECT(SDNode *N, unsigned OpNo);
+  SDValue SplitVecOp_MaskedBinOp(SDNode *N, unsigned OpNo);
   SDValue SplitVecOp_VECREDUCE(SDNode *N, unsigned OpNo);
   SDValue SplitVecOp_VECREDUCE_SEQ(SDNode *N);
   SDValue SplitVecOp_VP_REDUCE(SDNode *N, unsigned OpNo);
@@ -983,6 +984,7 @@ private:
   SDValue SplitVecOp_ExtVecInRegOp(SDNode *N);
   SDValue SplitVecOp_FAKE_USE(SDNode *N);
   SDValue SplitVecOp_STORE(StoreSDNode *N, unsigned OpNo);
+  SDValue SplitVecOp_ATOMIC_STORE(AtomicSDNode *N);
   SDValue SplitVecOp_VP_STORE(VPStoreSDNode *N, unsigned OpNo);
   SDValue SplitVecOp_VP_STRIDED_STORE(VPStridedStoreSDNode *N, unsigned OpNo);
   SDValue SplitVecOp_MSTORE(MaskedStoreSDNode *N, unsigned OpNo);
@@ -999,6 +1001,7 @@ private:
   SDValue SplitVecOp_VECTOR_HISTOGRAM(SDNode *N);
   SDValue SplitVecOp_PARTIAL_REDUCE_MLA(SDNode *N);
   SDValue SplitVecOp_VECTOR_FIND_LAST_ACTIVE(SDNode *N);
+  SDValue SplitVecOp_VECTOR_MATCH(SDNode *N, unsigned OpNo);
 
   //===--------------------------------------------------------------------===//
   // Vector Widening Support: LegalizeVectorTypes.cpp
@@ -1067,6 +1070,9 @@ private:
   SDValue WidenVecRes_VECTOR_SHUFFLE(ShuffleVectorSDNode *N);
   SDValue WidenVecRes_VECTOR_REVERSE(SDNode *N);
   SDValue WidenVecRes_GET_ACTIVE_LANE_MASK(SDNode *N);
+  SDValue WidenVecRes_VECTOR_MATCH(SDNode *N);
+  void WidenVecRes_VECTOR_DEINTERLEAVE(SDNode *N);
+  void WidenVecRes_VECTOR_INTERLEAVE(SDNode *N);
 
   SDValue WidenVecRes_Ternary(SDNode *N);
   SDValue WidenVecRes_Binary(SDNode *N);
@@ -1086,6 +1092,7 @@ private:
   SDValue WidenVecRes_Unary(SDNode *N);
   SDValue WidenVecRes_InregOp(SDNode *N);
   SDValue WidenVecRes_UnaryOpWithTwoResults(SDNode *N, unsigned ResNo);
+  SDValue WidenVecRes_PARTIAL_REDUCE_MLA(SDNode *N);
   void ReplaceOtherWidenResults(SDNode *N, SDNode *WidenNode,
                                 unsigned WidenResNo);
 
@@ -1101,6 +1108,7 @@ private:
   SDValue WidenVecOp_EXTEND_VECTOR_INREG(SDNode *N);
   SDValue WidenVecOp_FAKE_USE(SDNode *N);
   SDValue WidenVecOp_STORE(SDNode* N);
+  SDValue WidenVecOp_ATOMIC_STORE(AtomicSDNode *ST);
   SDValue WidenVecOp_VP_STORE(SDNode *N, unsigned OpNo);
   SDValue WidenVecOp_VP_STRIDED_STORE(SDNode *N, unsigned OpNo);
   SDValue WidenVecOp_MSTORE(SDNode* N, unsigned OpNo);
@@ -1118,9 +1126,10 @@ private:
   SDValue WidenVecOp_VECREDUCE(SDNode *N);
   SDValue WidenVecOp_VECREDUCE_SEQ(SDNode *N);
   SDValue WidenVecOp_VP_REDUCE(SDNode *N);
-  SDValue WidenVecOp_ExpOp(SDNode *N);
+  SDValue WidenVecOp_CttzElements(SDNode *N);
   SDValue WidenVecOp_VP_CttzElements(SDNode *N);
   SDValue WidenVecOp_VECTOR_FIND_LAST_ACTIVE(SDNode *N);
+  SDValue WidenVecOp_VECTOR_MATCH(SDNode *N, unsigned OpNo);
 
   /// Helper function to generate a set of operations to perform
   /// a vector operation for a wider type.
@@ -1158,9 +1167,34 @@ private:
   /// By default, the vector will be widened with undefined values.
   SDValue ModifyToType(SDValue InOp, EVT NVT, bool FillWithZeroes = false);
 
+  /// Adjust element width (sign-extend/truncate) and element count
+  /// (extract/concat) of Mask to match ToMaskVT.
+  SDValue adjustMaskToType(SDValue Mask, EVT ToMaskVT);
+
+  /// Pick an intermediate VT and adjust both operands to it, minimizing
+  /// extend/truncate overhead given the final target ToVT.
+  ///
+  /// IsOpLenient flags retain information on whether the corresponding
+  /// Op can be cheaply materialized to whatever type. If one of the
+  /// operands lenient, we force cast it to match other operand's type.
+  EVT unifyMaskTypes(SDValue &Op0, bool IsOpLenient0, SDValue &Op1,
+                     bool IsOpLenient1, EVT ToVT);
+
   /// Return a mask of vector type MaskVT to replace InMask. Also adjust
   /// MaskVT to ToMaskVT if needed with vector extension or truncation.
   SDValue convertMask(SDValue InMask, EVT MaskVT, EVT ToMaskVT);
+
+  /// Recursively convert a mask expression tree to ToVT, walking through
+  /// mask-preserving operations down to SETCC leaves. Avoids redundant
+  /// extend/truncate chains that arise when each node is converted
+  /// independently. Returns SDValue() if the tree cannot be converted.
+  SDValue convertMaskTree(SDValue V, EVT ToVT);
+
+  /// Recursive implementation of convertMaskTree.
+  /// In addition to the value returns a boolean flag signifying whether the
+  /// tree can be materialized with any type.
+  std::pair<SDValue, bool> convertMaskTreeImpl(SDValue V, EVT ToVT,
+                                               unsigned Depth = 0);
 
   //===--------------------------------------------------------------------===//
   // Generic Splitting: LegalizeTypesGeneric.cpp

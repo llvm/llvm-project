@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import string
 import struct
@@ -151,7 +151,7 @@ class FileExtract:
             return fail_value
 
     def get_c_string(self):
-        """Extract a single NULL terminated C string from the binary file at the current file position, returns a single C string"""
+        """Extract a single null-terminated C string from the binary file at the current file position, returns a single C string"""
         cstr = ""
         byte = self.get_uint8()
         while byte != 0:

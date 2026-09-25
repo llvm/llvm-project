@@ -33,7 +33,7 @@ struct ArithToEmitCDialectInterface : public ConvertToEmitCPatternInterface {
   /// and mark dialect legal for the conversion target.
   void populateConvertToEmitCConversionPatterns(
       ConversionTarget &target, TypeConverter &typeConverter,
-      RewritePatternSet &patterns) const final {
+      RewritePatternSet &patterns, std::optional<bool> lowerToCpp) const final {
     populateArithToEmitCPatterns(typeConverter, patterns);
   }
 };
@@ -59,6 +59,9 @@ public:
   matchAndRewrite(arith::ConstantOp arithConst,
                   arith::ConstantOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    if (isa<MemRefType>(arithConst.getType()))
+      return rewriter.notifyMatchFailure(arithConst,
+                                         "memref constants are not supported");
     Type newTy = this->getTypeConverter()->convertType(arithConst.getType());
     if (!newTy)
       return rewriter.notifyMatchFailure(arithConst, "type conversion failed");
@@ -456,16 +459,16 @@ public:
     if (!newRetTy)
       return rewriter.notifyMatchFailure(uiBinOp,
                                          "converting result type failed");
-    if (!isa<IntegerType>(newRetTy)) {
-      return rewriter.notifyMatchFailure(uiBinOp, "expected integer type");
+    if (!isa<IntegerType, emitc::SizeTType>(newRetTy)) {
+      return rewriter.notifyMatchFailure(uiBinOp, "unsupported result type");
     }
     Type unsignedType =
         adaptIntegralTypeSignedness(newRetTy, /*needsUnsigned=*/true);
     if (!unsignedType)
       return rewriter.notifyMatchFailure(uiBinOp,
                                          "converting result type failed");
-    Value lhsAdapted = adaptValueType(uiBinOp.getLhs(), rewriter, unsignedType);
-    Value rhsAdapted = adaptValueType(uiBinOp.getRhs(), rewriter, unsignedType);
+    Value lhsAdapted = adaptValueType(adaptor.getLhs(), rewriter, unsignedType);
+    Value rhsAdapted = adaptValueType(adaptor.getRhs(), rewriter, unsignedType);
 
     auto newDivOp = EmitCOp::create(rewriter, uiBinOp.getLoc(), unsignedType,
                                     ArrayRef<Value>{lhsAdapted, rhsAdapted});
@@ -705,8 +708,9 @@ public:
                                   /*isSigned=*/false);
     }
 
-    Value result = emitc::CastOp::create(
-        rewriter, castOp.getLoc(), actualResultType, adaptor.getOperands());
+    Value result =
+        emitc::CastOp::create(rewriter, castOp.getLoc(), actualResultType,
+                              adaptor.getOperands().front(), /*pure=*/false);
 
     if (isa<arith::FPToUIOp>(castOp)) {
       result =

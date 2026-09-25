@@ -1,0 +1,91 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "layering_check",
+    ],
+)
+
+licenses(["notice"])
+
+cc_library(
+    name = "FIRCodeGen",
+    srcs = glob(
+        [
+            "*.cpp",
+            "*.h",
+        ],
+        allow_empty = True,
+    ),
+    deps = [
+        "//flang:CommonHeaders",
+        "//flang:RuntimeHeaders",
+        "//flang:SemanticsHeaders",
+        "//flang:SupportHeaders",
+        "//flang/include/flang/Optimizer/Analysis:AnalysisHeaders",
+        "//flang/include/flang/Optimizer/Builder:BuilderHeaders",
+        "//flang/include/flang/Optimizer/CodeGen:CodeGenHeaders",
+        "//flang/include/flang/Optimizer/CodeGen:FIROptCodeGenPassIncGen",
+        "//flang/include/flang/Optimizer/Dialect:DialectHeaders",
+        "//flang/include/flang/Optimizer/Dialect:FIRDialectSupportHeaders",
+        "//flang/include/flang/Optimizer/Dialect/CUF:CUFHeaders",
+        "//flang/include/flang/Optimizer/Dialect/CUF/Attributes:CUFAttrsHeaders",
+        "//flang/include/flang/Optimizer/Dialect/FIRCG:FIRCGHeaders",
+        "//flang/include/flang/Optimizer/HLFIR:HLFIRHeaders",
+        "//flang/include/flang/Optimizer/OpenACC:OpenACCHeaders",
+        "//flang/include/flang/Optimizer/OpenMP:OpenMPHeaders",
+        "//flang/include/flang/Optimizer/Support:FIRSupportHeaders",
+        "//flang/lib/Optimizer/Analysis:FIRAnalysis",
+        "//flang/lib/Optimizer/Builder:FIRBuilder",
+        "//flang/lib/Optimizer/Dialect:FIRDialect",
+        "//flang/lib/Optimizer/Dialect/CUF/Attributes:CUFAttrs",
+        "//flang/lib/Optimizer/Dialect/FIRCG:FIRCodeGenDialect",
+        "//flang/lib/Optimizer/Dialect/Support:FIRDialectSupport",
+        "//flang/lib/Optimizer/OpenACC/Support:FIROpenACCSupport",
+        "//flang/lib/Optimizer/OpenMP/Support:FIROpenMPSupport",
+        "//flang/lib/Optimizer/Support:FIRSupport",
+        "//llvm:Remarks",
+        "//llvm:Support",
+        "//llvm:TargetParser",
+        "//mlir:ArithAttrToLLVMConversion",
+        "//mlir:ArithDialect",
+        "//mlir:ArithToLLVM",
+        "//mlir:BuiltinToLLVMIRTranslation",
+        "//mlir:ComplexToLLVM",
+        "//mlir:ComplexToROCDLLibraryCalls",
+        "//mlir:ComplexToStandard",
+        "//mlir:ControlFlowDialect",
+        "//mlir:ControlFlowToLLVM",
+        "//mlir:DLTIDialect",
+        "//mlir:FromLLVMIRTranslation",
+        "//mlir:FuncToLLVM",
+        "//mlir:GPUDialect",
+        "//mlir:IR",
+        "//mlir:IndexToLLVM",
+        "//mlir:LLVMCommonConversion",
+        "//mlir:LLVMDialect",
+        "//mlir:LLVMIRTransforms",
+        "//mlir:LLVMToLLVMIRTranslation",
+        "//mlir:MathToFuncs",
+        "//mlir:MathToLLVM",
+        "//mlir:MathToLibm",
+        "//mlir:MathToNVVM",
+        "//mlir:MathToROCDL",
+        "//mlir:NVVMDialect",
+        "//mlir:OpenACCDialect",
+        "//mlir:OpenMPDialect",
+        "//mlir:OpenMPToLLVM",
+        "//mlir:Pass",
+        "//mlir:SideEffectInterfaces",
+        "//mlir:ToLLVMIRTranslation",
+        "//mlir:TransformUtils",
+        "//mlir:UBDialect",
+        "//mlir:UBToLLVM",
+        "//mlir:VectorToLLVM",
+    ],
+)

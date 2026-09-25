@@ -71,17 +71,6 @@ entry:
   ret i8 %b
 }
 
-define i1 @proveEqualityForStrip(ptr %a) {
-; CHECK-LABEL: define i1 @proveEqualityForStrip(
-; CHECK-SAME: ptr [[A:%.*]]) {
-; CHECK-NEXT:    ret i1 true
-;
-  %b1 = call ptr @llvm.strip.invariant.group.p0(ptr %a)
-  %b2 = call ptr @llvm.strip.invariant.group.p0(ptr %a)
-  %r = icmp eq ptr %b1, %b2
-  ret i1 %r
-}
-
 define i8 @unoptimizable1() {
 ; CHECK-LABEL: define i8 @unoptimizable1() {
 ; CHECK-NEXT:  entry:
@@ -222,7 +211,7 @@ define void @loadCombine1() {
 ; CHECK-NEXT:    [[PTR:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    store i8 42, ptr [[PTR]], align 1
 ; CHECK-NEXT:    call void @foo(ptr [[PTR]])
-; CHECK-NEXT:    [[C:%.*]] = load i8, ptr [[PTR]], align 1, !invariant.group [[META0]]
+; CHECK-NEXT:    [[C:%.*]] = load i8, ptr [[PTR]], align 1
 ; CHECK-NEXT:    call void @bar(i8 [[C]])
 ; CHECK-NEXT:    call void @bar(i8 [[C]])
 ; CHECK-NEXT:    ret void
@@ -582,7 +571,6 @@ declare void @_ZN1AC1Ev(ptr)
 declare void @fooBit(ptr, i1)
 
 declare ptr @llvm.launder.invariant.group.p0(ptr)
-declare ptr @llvm.strip.invariant.group.p0(ptr)
 
 ; Function Attrs: nounwind
 declare void @llvm.assume(i1 %cmp.vtables) #0

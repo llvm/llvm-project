@@ -111,9 +111,9 @@ ObjectFileSP ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp,
         // ANY data in case there is data cached in the container plug-ins
         // (like BSD archives caching the contained objects within an
         // file).
-        ObjectFileSP object_file_sp = CreateObjectFromContainer(
-            module_sp, file, file_offset, file_size,
-            extractor_sp->GetSharedDataBuffer(), data_offset);
+        ObjectFileSP object_file_sp =
+            CreateObjectFromContainer(module_sp, file, file_offset, file_size,
+                                      DataBufferSP(), data_offset);
         if (object_file_sp)
           return object_file_sp;
         // We failed to find any cached object files in the container plug-
@@ -220,22 +220,29 @@ ModuleSpecList ObjectFile::GetModuleSpecifications(
 ModuleSpecList ObjectFile::GetModuleSpecifications(
     const lldb_private::FileSpec &file, lldb::DataExtractorSP &extractor_sp,
     lldb::offset_t file_offset, lldb::offset_t file_size) {
+  ModuleSpecList specs;
+
+  // A container can be embedded in an otherwise valid object file. Preserve
+  // the object file's specifications and also query the container plug-ins.
+
   // Try the ObjectFile plug-ins
   for (auto &cbs : PluginManager::GetObjectFileCallbacks()) {
-    ModuleSpecList specs = cbs.get_module_specifications(
+    ModuleSpecList object_specs = cbs.get_module_specifications(
         file, extractor_sp, file_offset, file_size);
-    if (specs.GetSize() > 0)
-      return specs;
+    if (object_specs.GetSize() > 0) {
+      specs.Append(object_specs);
+      break;
+    }
   }
 
   // Try the ObjectContainer plug-ins
   for (auto &cbs : PluginManager::GetObjectContainerCallbacks()) {
-    ModuleSpecList specs = cbs.get_module_specifications(
+    ModuleSpecList container_specs = cbs.get_module_specifications(
         file, extractor_sp, file_offset, file_size);
-    if (specs.GetSize() > 0)
-      return specs;
+    if (container_specs.GetSize() > 0)
+      specs.Append(container_specs);
   }
-  return {};
+  return specs;
 }
 
 ObjectFile::ObjectFile(const lldb::ModuleSP &module_sp,
@@ -379,6 +386,7 @@ AddressClass ObjectFile::GetAddressClass(addr_t file_addr) {
           case eSectionTypeELFRelocationEntries:
           case eSectionTypeELFDynamicLinkInfo:
           case eSectionTypeWasmName:
+          case eSectionTypeWasmGlobal:
           case eSectionTypeOther:
             return AddressClass::eUnknown;
           case eSectionTypeAbsoluteAddress:
@@ -603,17 +611,17 @@ void ObjectFile::ClearSymtab() {
 }
 
 SectionList *ObjectFile::GetSectionList(bool update_module_section_list) {
-  if (m_sections_up == nullptr) {
-    if (update_module_section_list) {
-      ModuleSP module_sp(GetModule());
-      if (module_sp) {
-        std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
-        CreateSections(*module_sp->GetUnifiedSectionList());
-      }
-    } else {
-      SectionList unified_section_list;
-      CreateSections(unified_section_list);
+  std::lock_guard<std::recursive_mutex> guard(m_sections_mutex);
+  if (m_sections_up)
+    return m_sections_up.get();
+  if (update_module_section_list) {
+    if (ModuleSP module_sp = GetModule()) {
+      std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
+      CreateSections(*module_sp->GetUnifiedSectionList());
     }
+  } else {
+    SectionList unified_section_list;
+    CreateSections(unified_section_list);
   }
   return m_sections_up.get();
 }
@@ -814,10 +822,10 @@ uint32_t ObjectFile::GetCacheHash() {
 std::string ObjectFile::GetObjectName() const {
   if (ModuleSP module_sp = GetModule())
     if (ConstString object_name = module_sp->GetObjectName())
-      return llvm::formatv("{0}({1})", GetFileSpec().GetFilename().GetString(),
+      return llvm::formatv("{0}({1})", GetFileSpec().GetFilename(),
                            object_name.GetString())
           .str();
-  return GetFileSpec().GetFilename().GetString();
+  return GetFileSpec().GetFilename().str();
 }
 
 namespace llvm {

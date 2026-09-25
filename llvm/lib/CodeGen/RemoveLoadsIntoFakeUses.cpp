@@ -187,7 +187,8 @@ bool RemoveLoadsIntoFakeUses::run(MachineFunction &MF) {
               RegFakeUses.erase(&FakeUse);
         }
       }
-      LivePhysRegs.stepBackward(MI);
+      if (!MI.isDebugInstr())
+        LivePhysRegs.stepBackward(MI);
     }
   }
 

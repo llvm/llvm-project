@@ -194,7 +194,8 @@ static Operation *cloneOpWithOperandsAndTypes(RewriterBase &rewriter,
                                               ArrayRef<Value> operands,
                                               ArrayRef<Type> resultTypes) {
   OperationState res(loc, op->getName().getStringRef(), operands, resultTypes,
-                     op->getAttrs());
+                     op->getDiscardableAttrDictionary().getValue());
+  res.propertiesAttr = op->getPropertiesAsAttribute();
   return rewriter.create(res);
 }
 
@@ -2227,8 +2228,14 @@ struct WarpOpScfForOp : public WarpDistributionPattern {
 
     argMapping.resize(forOp.getBody()->getNumArguments());
     SmallVector<Value> yieldOperands;
-    for (Value operand : forOp.getBody()->getTerminator()->getOperands())
+    for (Value operand : forOp.getBody()->getTerminator()->getOperands()) {
+      if (BlockArgument blockArg = dyn_cast<BlockArgument>(operand);
+          blockArg && blockArg.getOwner() == forOp.getBody()) {
+        yieldOperands.push_back(argMapping[blockArg.getArgNumber()]);
+        continue;
+      }
       yieldOperands.push_back(operand);
+    }
 
     rewriter.eraseOp(forOp.getBody()->getTerminator());
     rewriter.mergeBlocks(forOp.getBody(), innerWarp.getBody(), argMapping);

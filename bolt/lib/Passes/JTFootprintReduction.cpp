@@ -32,7 +32,7 @@ static cl::opt<bool> JTFootprintOnlyPIC(
     "jt-footprint-optimize-for-icache",
     cl::desc("with jt-footprint-reduction, only process PIC jumptables and turn"
              " off other transformations that increase code size"),
-    cl::init(false), cl::ZeroOrMore, cl::cat(BoltOptCategory));
+    cl::init(false), cl::cat(BoltOptCategory));
 
 } // namespace opts
 
@@ -247,6 +247,11 @@ void JTFootprintReduction::optimizeFunction(BinaryFunction &Function,
 }
 
 Error JTFootprintReduction::runOnFunctions(BinaryContext &BC) {
+  if (!BC.isX86()) {
+    BC.errs() << "BOLT-ERROR: " << getName() << " is supported only on X86\n";
+    exit(1);
+  }
+
   if (opts::JumpTables == JTS_BASIC && BC.HasRelocations)
     return Error::success();
 

@@ -30,14 +30,14 @@ define void @double_transpose(ptr %A, ptr %B) {
 ; CHECK-LABEL: @double_transpose(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <3 x double>, ptr [[A:%.*]], align 16
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[A]], i64 3
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds double, ptr [[A]], i64 3
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <3 x double>, ptr [[VEC_GEP]], align 8
-; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr double, ptr [[A]], i64 6
+; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr inbounds double, ptr [[A]], i64 6
 ; CHECK-NEXT:    [[COL_LOAD3:%.*]] = load <3 x double>, ptr [[VEC_GEP2]], align 16
 ; CHECK-NEXT:    store <3 x double> [[COL_LOAD]], ptr [[B:%.*]], align 16
-; CHECK-NEXT:    [[VEC_GEP4:%.*]] = getelementptr double, ptr [[B]], i64 3
+; CHECK-NEXT:    [[VEC_GEP4:%.*]] = getelementptr inbounds double, ptr [[B]], i64 3
 ; CHECK-NEXT:    store <3 x double> [[COL_LOAD1]], ptr [[VEC_GEP4]], align 8
-; CHECK-NEXT:    [[VEC_GEP5:%.*]] = getelementptr double, ptr [[B]], i64 6
+; CHECK-NEXT:    [[VEC_GEP5:%.*]] = getelementptr inbounds double, ptr [[B]], i64 6
 ; CHECK-NEXT:    store <3 x double> [[COL_LOAD3]], ptr [[VEC_GEP5]], align 16
 ; CHECK-NEXT:    ret void
 ;
@@ -74,20 +74,20 @@ define void @multiply_ntt(ptr %A, ptr %B, ptr %C, ptr %R) {
 ; CHECK-LABEL: @multiply_ntt(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, ptr [[A:%.*]], align 16
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[A]], i64 2
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds double, ptr [[A]], i64 2
 ; CHECK-NEXT:    [[COL_LOAD39:%.*]] = load <2 x double>, ptr [[VEC_GEP]], align 16
-; CHECK-NEXT:    [[VEC_GEP40:%.*]] = getelementptr double, ptr [[A]], i64 4
+; CHECK-NEXT:    [[VEC_GEP40:%.*]] = getelementptr inbounds double, ptr [[A]], i64 4
 ; CHECK-NEXT:    [[COL_LOAD41:%.*]] = load <2 x double>, ptr [[VEC_GEP40]], align 16
 ; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <2 x double> [[COL_LOAD]], <2 x double> [[COL_LOAD39]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[COL_LOAD41]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[TMP0]], <4 x double> [[TMP1]], <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
 ; CHECK-NEXT:    [[COL_LOAD42:%.*]] = load <2 x double>, ptr [[B:%.*]], align 16
-; CHECK-NEXT:    [[VEC_GEP43:%.*]] = getelementptr double, ptr [[B]], i64 2
+; CHECK-NEXT:    [[VEC_GEP43:%.*]] = getelementptr inbounds double, ptr [[B]], i64 2
 ; CHECK-NEXT:    [[COL_LOAD44:%.*]] = load <2 x double>, ptr [[VEC_GEP43]], align 16
-; CHECK-NEXT:    [[VEC_GEP45:%.*]] = getelementptr double, ptr [[B]], i64 4
+; CHECK-NEXT:    [[VEC_GEP45:%.*]] = getelementptr inbounds double, ptr [[B]], i64 4
 ; CHECK-NEXT:    [[COL_LOAD46:%.*]] = load <2 x double>, ptr [[VEC_GEP45]], align 16
 ; CHECK-NEXT:    [[COL_LOAD47:%.*]] = load <4 x double>, ptr [[C:%.*]], align 16
-; CHECK-NEXT:    [[VEC_GEP48:%.*]] = getelementptr double, ptr [[C]], i64 4
+; CHECK-NEXT:    [[VEC_GEP48:%.*]] = getelementptr inbounds double, ptr [[C]], i64 4
 ; CHECK-NEXT:    [[COL_LOAD49:%.*]] = load <4 x double>, ptr [[VEC_GEP48]], align 16
 ; CHECK-NEXT:    [[BLOCK50:%.*]] = shufflevector <4 x double> [[COL_LOAD47]], <4 x double> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[COL_LOAD42]], i64 0
@@ -253,11 +253,11 @@ define void @multiply_ntt(ptr %A, ptr %B, ptr %C, ptr %R) {
 ; CHECK-NEXT:    [[TMP86:%.*]] = shufflevector <2 x double> [[TMP85]], <2 x double> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP87:%.*]] = shufflevector <2 x double> poison, <2 x double> [[TMP86]], <2 x i32> <i32 2, i32 3>
 ; CHECK-NEXT:    store <2 x double> [[TMP57]], ptr [[R:%.*]], align 16
-; CHECK-NEXT:    [[VEC_GEP86:%.*]] = getelementptr double, ptr [[R]], i64 2
+; CHECK-NEXT:    [[VEC_GEP86:%.*]] = getelementptr inbounds double, ptr [[R]], i64 2
 ; CHECK-NEXT:    store <2 x double> [[TMP67]], ptr [[VEC_GEP86]], align 16
-; CHECK-NEXT:    [[VEC_GEP87:%.*]] = getelementptr double, ptr [[R]], i64 4
+; CHECK-NEXT:    [[VEC_GEP87:%.*]] = getelementptr inbounds double, ptr [[R]], i64 4
 ; CHECK-NEXT:    store <2 x double> [[TMP77]], ptr [[VEC_GEP87]], align 16
-; CHECK-NEXT:    [[VEC_GEP88:%.*]] = getelementptr double, ptr [[R]], i64 6
+; CHECK-NEXT:    [[VEC_GEP88:%.*]] = getelementptr inbounds double, ptr [[R]], i64 6
 ; CHECK-NEXT:    store <2 x double> [[TMP87]], ptr [[VEC_GEP88]], align 16
 ; CHECK-NEXT:    ret void
 ;
@@ -296,14 +296,14 @@ define void @multiply_tt_t(ptr %A, ptr %B, ptr %C) {
 ; CHECK-LABEL: @multiply_tt_t(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <3 x double>, ptr [[A:%.*]], align 16
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[A]], i64 3
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds double, ptr [[A]], i64 3
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <3 x double>, ptr [[VEC_GEP]], align 8
-; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr double, ptr [[A]], i64 6
+; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr inbounds double, ptr [[A]], i64 6
 ; CHECK-NEXT:    [[COL_LOAD3:%.*]] = load <3 x double>, ptr [[VEC_GEP2]], align 16
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <3 x double>, ptr [[B:%.*]], align 16
-; CHECK-NEXT:    [[VEC_GEP5:%.*]] = getelementptr double, ptr [[B]], i64 3
+; CHECK-NEXT:    [[VEC_GEP5:%.*]] = getelementptr inbounds double, ptr [[B]], i64 3
 ; CHECK-NEXT:    [[COL_LOAD6:%.*]] = load <3 x double>, ptr [[VEC_GEP5]], align 8
-; CHECK-NEXT:    [[VEC_GEP7:%.*]] = getelementptr double, ptr [[B]], i64 6
+; CHECK-NEXT:    [[VEC_GEP7:%.*]] = getelementptr inbounds double, ptr [[B]], i64 6
 ; CHECK-NEXT:    [[COL_LOAD8:%.*]] = load <3 x double>, ptr [[VEC_GEP7]], align 16
 ; CHECK-NEXT:    [[BLOCK:%.*]] = shufflevector <3 x double> [[COL_LOAD4]], <3 x double> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <3 x double> [[COL_LOAD]], i64 0
@@ -420,9 +420,9 @@ define void @multiply_tt_t(ptr %A, ptr %B, ptr %C) {
 ; CHECK-NEXT:    [[TMP58:%.*]] = shufflevector <1 x double> [[TMP57]], <1 x double> poison, <3 x i32> <i32 0, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP59:%.*]] = shufflevector <3 x double> [[TMP49]], <3 x double> [[TMP58]], <3 x i32> <i32 0, i32 1, i32 3>
 ; CHECK-NEXT:    store <3 x double> [[TMP19]], ptr [[C:%.*]], align 16
-; CHECK-NEXT:    [[VEC_GEP60:%.*]] = getelementptr double, ptr [[C]], i64 3
+; CHECK-NEXT:    [[VEC_GEP60:%.*]] = getelementptr inbounds double, ptr [[C]], i64 3
 ; CHECK-NEXT:    store <3 x double> [[TMP39]], ptr [[VEC_GEP60]], align 8
-; CHECK-NEXT:    [[VEC_GEP61:%.*]] = getelementptr double, ptr [[C]], i64 6
+; CHECK-NEXT:    [[VEC_GEP61:%.*]] = getelementptr inbounds double, ptr [[C]], i64 6
 ; CHECK-NEXT:    store <3 x double> [[TMP59]], ptr [[VEC_GEP61]], align 16
 ; CHECK-NEXT:    ret void
 ;
@@ -460,17 +460,17 @@ define void @multiply_nt_t(ptr %A, ptr %B, ptr %C) {
 ; CHECK-LABEL: @multiply_nt_t(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, ptr [[A:%.*]], align 16
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[A]], i64 2
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds double, ptr [[A]], i64 2
 ; CHECK-NEXT:    [[COL_LOAD39:%.*]] = load <2 x double>, ptr [[VEC_GEP]], align 16
-; CHECK-NEXT:    [[VEC_GEP40:%.*]] = getelementptr double, ptr [[A]], i64 4
+; CHECK-NEXT:    [[VEC_GEP40:%.*]] = getelementptr inbounds double, ptr [[A]], i64 4
 ; CHECK-NEXT:    [[COL_LOAD41:%.*]] = load <2 x double>, ptr [[VEC_GEP40]], align 16
 ; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <2 x double> [[COL_LOAD]], <2 x double> [[COL_LOAD39]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[COL_LOAD41]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[TMP0]], <4 x double> [[TMP1]], <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
 ; CHECK-NEXT:    [[COL_LOAD42:%.*]] = load <4 x double>, ptr [[B:%.*]], align 16
-; CHECK-NEXT:    [[VEC_GEP43:%.*]] = getelementptr double, ptr [[B]], i64 4
+; CHECK-NEXT:    [[VEC_GEP43:%.*]] = getelementptr inbounds double, ptr [[B]], i64 4
 ; CHECK-NEXT:    [[COL_LOAD44:%.*]] = load <4 x double>, ptr [[VEC_GEP43]], align 16
-; CHECK-NEXT:    [[VEC_GEP45:%.*]] = getelementptr double, ptr [[B]], i64 8
+; CHECK-NEXT:    [[VEC_GEP45:%.*]] = getelementptr inbounds double, ptr [[B]], i64 8
 ; CHECK-NEXT:    [[COL_LOAD46:%.*]] = load <4 x double>, ptr [[VEC_GEP45]], align 16
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x double> [[COL_LOAD42]], <4 x double> [[COL_LOAD44]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x double> [[COL_LOAD46]], <4 x double> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
@@ -558,7 +558,7 @@ define void @multiply_nt_t(ptr %A, ptr %B, ptr %C) {
 ; CHECK-NEXT:    [[TMP44:%.*]] = shufflevector <2 x double> [[TMP43]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP45:%.*]] = shufflevector <4 x double> [[TMP35]], <4 x double> [[TMP44]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; CHECK-NEXT:    store <4 x double> [[TMP25]], ptr [[C:%.*]], align 16
-; CHECK-NEXT:    [[VEC_GEP47:%.*]] = getelementptr double, ptr [[C]], i64 4
+; CHECK-NEXT:    [[VEC_GEP47:%.*]] = getelementptr inbounds double, ptr [[C]], i64 4
 ; CHECK-NEXT:    store <4 x double> [[TMP45]], ptr [[VEC_GEP47]], align 16
 ; CHECK-NEXT:    ret void
 ;
@@ -597,22 +597,22 @@ define void @multiply_ntt_t(ptr %A, ptr %B, ptr %C, ptr %R) {
 ; CHECK-LABEL: @multiply_ntt_t(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <3 x double>, ptr [[A:%.*]], align 16
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[A]], i64 3
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds double, ptr [[A]], i64 3
 ; CHECK-NEXT:    [[COL_LOAD58:%.*]] = load <3 x double>, ptr [[VEC_GEP]], align 8
-; CHECK-NEXT:    [[VEC_GEP59:%.*]] = getelementptr double, ptr [[A]], i64 6
+; CHECK-NEXT:    [[VEC_GEP59:%.*]] = getelementptr inbounds double, ptr [[A]], i64 6
 ; CHECK-NEXT:    [[COL_LOAD60:%.*]] = load <3 x double>, ptr [[VEC_GEP59]], align 16
 ; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <3 x double> [[COL_LOAD]], <3 x double> [[COL_LOAD58]], <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <3 x double> [[COL_LOAD60]], <3 x double> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <6 x double> [[TMP0]], <6 x double> [[TMP1]], <9 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8>
 ; CHECK-NEXT:    [[COL_LOAD61:%.*]] = load <3 x double>, ptr [[B:%.*]], align 16
-; CHECK-NEXT:    [[VEC_GEP62:%.*]] = getelementptr double, ptr [[B]], i64 3
+; CHECK-NEXT:    [[VEC_GEP62:%.*]] = getelementptr inbounds double, ptr [[B]], i64 3
 ; CHECK-NEXT:    [[COL_LOAD63:%.*]] = load <3 x double>, ptr [[VEC_GEP62]], align 8
-; CHECK-NEXT:    [[VEC_GEP64:%.*]] = getelementptr double, ptr [[B]], i64 6
+; CHECK-NEXT:    [[VEC_GEP64:%.*]] = getelementptr inbounds double, ptr [[B]], i64 6
 ; CHECK-NEXT:    [[COL_LOAD65:%.*]] = load <3 x double>, ptr [[VEC_GEP64]], align 16
 ; CHECK-NEXT:    [[COL_LOAD66:%.*]] = load <3 x double>, ptr [[C:%.*]], align 16
-; CHECK-NEXT:    [[VEC_GEP67:%.*]] = getelementptr double, ptr [[C]], i64 3
+; CHECK-NEXT:    [[VEC_GEP67:%.*]] = getelementptr inbounds double, ptr [[C]], i64 3
 ; CHECK-NEXT:    [[COL_LOAD68:%.*]] = load <3 x double>, ptr [[VEC_GEP67]], align 8
-; CHECK-NEXT:    [[VEC_GEP69:%.*]] = getelementptr double, ptr [[C]], i64 6
+; CHECK-NEXT:    [[VEC_GEP69:%.*]] = getelementptr inbounds double, ptr [[C]], i64 6
 ; CHECK-NEXT:    [[COL_LOAD70:%.*]] = load <3 x double>, ptr [[VEC_GEP69]], align 16
 ; CHECK-NEXT:    [[BLOCK71:%.*]] = shufflevector <3 x double> [[COL_LOAD66]], <3 x double> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <3 x double> [[COL_LOAD61]], i64 0
@@ -852,9 +852,9 @@ define void @multiply_ntt_t(ptr %A, ptr %B, ptr %C, ptr %R) {
 ; CHECK-NEXT:    [[TMP124:%.*]] = shufflevector <1 x double> [[TMP123]], <1 x double> poison, <3 x i32> <i32 0, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP125:%.*]] = shufflevector <3 x double> [[TMP115]], <3 x double> [[TMP124]], <3 x i32> <i32 0, i32 1, i32 3>
 ; CHECK-NEXT:    store <3 x double> [[TMP85]], ptr [[R:%.*]], align 16
-; CHECK-NEXT:    [[VEC_GEP125:%.*]] = getelementptr double, ptr [[R]], i64 3
+; CHECK-NEXT:    [[VEC_GEP125:%.*]] = getelementptr inbounds double, ptr [[R]], i64 3
 ; CHECK-NEXT:    store <3 x double> [[TMP105]], ptr [[VEC_GEP125]], align 8
-; CHECK-NEXT:    [[VEC_GEP126:%.*]] = getelementptr double, ptr [[R]], i64 6
+; CHECK-NEXT:    [[VEC_GEP126:%.*]] = getelementptr inbounds double, ptr [[R]], i64 6
 ; CHECK-NEXT:    store <3 x double> [[TMP125]], ptr [[VEC_GEP126]], align 16
 ; CHECK-NEXT:    ret void
 ;
@@ -924,11 +924,11 @@ entry:
 define <6 x double> @transpose_of_transpose_of_non_matrix_op(ptr %a) {
 ; CHECK-LABEL: @transpose_of_transpose_of_non_matrix_op(
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, ptr [[A:%.*]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[A]], i64 4
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds double, ptr [[A]], i64 4
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x double>, ptr [[VEC_GEP]], align 8
-; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr double, ptr [[A]], i64 8
+; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr inbounds double, ptr [[A]], i64 8
 ; CHECK-NEXT:    [[COL_LOAD3:%.*]] = load <2 x double>, ptr [[VEC_GEP2]], align 8
-; CHECK-NEXT:    [[VEC_GEP4:%.*]] = getelementptr double, ptr [[A]], i64 12
+; CHECK-NEXT:    [[VEC_GEP4:%.*]] = getelementptr inbounds double, ptr [[A]], i64 12
 ; CHECK-NEXT:    [[COL_LOAD5:%.*]] = load <2 x double>, ptr [[VEC_GEP4]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[COL_LOAD]], <2 x double> [[COL_LOAD1]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[COL_LOAD3]], <2 x double> [[COL_LOAD5]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>

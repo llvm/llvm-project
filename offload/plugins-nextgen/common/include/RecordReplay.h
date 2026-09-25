@@ -11,6 +11,7 @@
 #ifndef OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_COMMON_RECORDREPLAY_H
 #define OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_COMMON_RECORDREPLAY_H
 
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
@@ -38,6 +39,7 @@ namespace plugin {
 
 struct GenericKernelTy;
 struct GenericDeviceTy;
+struct KernelLaunchArgsTy;
 
 struct RecordReplayTy {
 protected:
@@ -49,6 +51,16 @@ public:
 
   /// Describes the format of the recording and replaying.
   enum FormatTy { Native = 0 };
+
+  /// Describes the file types that can be recorded.
+  enum FileTy {
+    PrologueSnapshot = 0,
+    EpilogueSnapshot,
+    Descriptor,
+    Globals,
+    Program,
+    IRImage
+  };
 
   struct HandleTy {
     const InstanceTy *Instance = nullptr;
@@ -70,8 +82,11 @@ protected:
   /// Whether a memory snapshot should be recorded a kernel execution.
   bool SaveOutput;
 
-  /// Whether a report should be emitted afther the recording.
+  /// Whether a report should be emitted after the recording.
   bool EmitReport;
+
+  /// The name of the file where to emit the record report.
+  std::string ReportFilename;
 
   /// Reference to the corresponding device.
   GenericDeviceTy &Device;
@@ -103,17 +118,37 @@ protected:
     size_t KernelHash = 0;
     size_t LaunchConfigHash = 0;
 
+    /// When replaying, the entity requesting the replay may also need further
+    /// information about the the kernel's replay, such as the snapshot file.
+    KernelReplayOutcomeTy *ReplayOutcome = nullptr;
+
+    /// The begin and end time points of the kernel execution.
+    using ClockTy = std::chrono::steady_clock;
+    mutable std::chrono::time_point<ClockTy> BeginTime, EndTime;
+
     /// The number of occurrences during the execution.
     mutable size_t Occurrences = 0;
 
     InstanceTy(const GenericKernelTy &Kernel, uint32_t NumTeams,
-               uint32_t NumThreads, uint32_t SharedMemorySize);
+               uint32_t NumThreads, uint32_t SharedMemorySize,
+               KernelReplayOutcomeTy *ReplayOutcome);
 
     bool operator==(const InstanceTy &Other) const {
       return (KernelHash == Other.KernelHash &&
               LaunchConfigHash == Other.LaunchConfigHash &&
               NumTeams == Other.NumTeams && NumThreads == Other.NumThreads &&
               SharedMemorySize == Other.SharedMemorySize);
+    }
+
+    /// Record the begin and ending of the kernel execution.
+    void recordBeginTime() const { BeginTime = ClockTy::now(); }
+    void recordEndTime() const { EndTime = ClockTy::now(); }
+
+    /// Get the kernel execution time in nanoseconds.
+    uint64_t getRecordedTimeNs() const {
+      using DurationNsTy = std::chrono::duration<uint64_t, std::nano>;
+      return std::chrono::duration_cast<DurationNsTy>(EndTime - BeginTime)
+          .count();
     }
   };
 
@@ -127,13 +162,15 @@ protected:
 
   /// Tracker of record replay instances.
   std::unordered_set<InstanceTy, InstanceHasher> Instances;
+  SmallVector<const InstanceTy *> OrderedInstances;
   std::mutex InstancesLock;
 
 public:
   RecordReplayTy(StatusTy Status, StringRef OutputDirectoryStr, bool SaveOutput,
-                 bool EmitReport, GenericDeviceTy &Device)
+                 bool EmitReport, StringRef ReportFilename,
+                 GenericDeviceTy &Device)
       : Status(Status), SaveOutput(SaveOutput), EmitReport(EmitReport),
-        Device(Device) {
+        ReportFilename(ReportFilename.str()), Device(Device) {
     if (OutputDirectoryStr == "")
       OutputDirectory = std::filesystem::current_path();
     else
@@ -168,19 +205,20 @@ public:
   /// executing the kernel. This phase can include the recording of memory
   /// snapshot, the record descriptor and the globals. When replaying, only the
   /// instance is registered.
-  Expected<HandleTy>
-  recordPrologue(const GenericKernelTy &Kernel, const KernelArgsTy &KernelArgs,
-                 const KernelLaunchParamsTy &LaunchParams, uint32_t NumTeams[3],
-                 uint32_t NumThreads[3], uint32_t SharedMemorySize);
+  Expected<HandleTy> recordPrologue(const GenericKernelTy &Kernel,
+                                    const KernelLaunchArgsTy &LaunchArgs,
+                                    uint32_t NumTeams[3],
+                                    uint32_t NumThreads[3],
+                                    uint32_t SharedMemorySize);
 
   /// Record the epilogue if necessary, which can include the memory snapshot
   /// when recording or replaying.
   Error recordEpilogue(const GenericKernelTy &Kernel, HandleTy Handle);
 
   /// Get a string with the filename.
-  std::string getFilename(const InstanceTy &Instance, StringRef Suffix,
-                          bool IncludeDirectory = true) {
-    return getFilenameImpl(Instance, Suffix, IncludeDirectory);
+  SmallString<128> getFilename(const InstanceTy &Instance, FileTy FileType,
+                               bool IncludeDirectory = true) {
+    return getFilenameImpl(Instance, FileType, IncludeDirectory);
   }
 
   /// Allocates device memory from the record replay space.
@@ -192,13 +230,22 @@ private:
   /// as a new instance.
   std::pair<const InstanceTy &, bool>
   registerInstance(const GenericKernelTy &Kernel, uint32_t NumTeams,
-                   uint32_t NumThreads, uint32_t SharedMemorySize);
+                   uint32_t NumThreads, uint32_t SharedMemorySize,
+                   KernelReplayOutcomeTy *ReplayOutcome);
+
+  /// Unregister an instance once it has been replayed. Instances during
+  /// recording cannot be unregistered. Accessing the instance beyond this point
+  /// is invalid.
+  Error unregisterInstance(const InstanceTy &Instance);
+
+  /// Populate the replay outcome struct to forward some replay information.
+  void populateReplayOutcome(const InstanceTy &Instance,
+                             KernelReplayOutcomeTy &Outcome);
 
   /// Record the prologue data.
-  virtual Error
-  recordPrologueImpl(const GenericKernelTy &Kernel, const InstanceTy &Instance,
-                     const KernelArgsTy &KernelArgs,
-                     const KernelLaunchParamsTy &LaunchParams) = 0;
+  virtual Error recordPrologueImpl(const GenericKernelTy &Kernel,
+                                   const InstanceTy &Instance,
+                                   const KernelLaunchArgsTy &LaunchArgs) = 0;
 
   /// Record the epilogue data.
   virtual Error recordEpilogueImpl(const GenericKernelTy &Kernel,
@@ -207,47 +254,48 @@ private:
   /// Record the descriptor of the kernel.
   virtual Error recordDescImpl(const GenericKernelTy &Kernel,
                                const InstanceTy &Instance,
-                               const KernelArgsTy &KernelArgs,
-                               const KernelLaunchParamsTy &LaunchParams) = 0;
+                               const KernelLaunchArgsTy &LaunchArgs) = 0;
 
   /// Get a string with the filename.
-  virtual std::string getFilenameImpl(const InstanceTy &Instance,
-                                      StringRef Suffix,
-                                      bool IncludeDirectory) = 0;
+  virtual SmallString<128> getFilenameImpl(const InstanceTy &Instance,
+                                           FileTy FileType,
+                                           bool IncludeDirectory) = 0;
 };
 
 /// The native kernel record replay support.
 struct NativeRecordReplayTy : public RecordReplayTy {
   NativeRecordReplayTy(StatusTy Status, StringRef OutputDirectoryStr,
                        bool SaveOutput, bool EmitReport,
-                       GenericDeviceTy &Device)
+                       StringRef ReportFilename, GenericDeviceTy &Device)
       : RecordReplayTy(Status, OutputDirectoryStr, SaveOutput, EmitReport,
-                       Device) {}
+                       ReportFilename, Device) {}
 
 private:
   Error recordPrologueImpl(const GenericKernelTy &Kernel,
                            const InstanceTy &Instance,
-                           const KernelArgsTy &KernelArgs,
-                           const KernelLaunchParamsTy &LaunchParams) override;
+                           const KernelLaunchArgsTy &LaunchArgs) override;
   Error recordEpilogueImpl(const GenericKernelTy &Kernel,
                            const InstanceTy &Instance) override;
   Error recordDescImpl(const GenericKernelTy &Kernel,
                        const InstanceTy &Instance,
-                       const KernelArgsTy &KernelArgs,
-                       const KernelLaunchParamsTy &LaunchParams) override;
+                       const KernelLaunchArgsTy &LaunchArgs) override;
 
   /// Get a string with the filename.
-  std::string getFilenameImpl(const InstanceTy &Instance, StringRef Suffix,
-                              bool IncludeDirectory) override;
+  SmallString<128> getFilenameImpl(const InstanceTy &Instance, FileTy FileType,
+                                   bool IncludeDirectory) override;
+
+  /// Get the extension for a recording file type.
+  StringRef getExtension(FileTy FileType);
 
   /// Record a memory snapshot to a file.
-  Error recordSnapshot(const std::string &Filename);
+  Error recordSnapshot(StringRef Filename);
 
   /// Record the globals to a file.
-  Error recordGlobals(const std::string &Filename);
+  Error recordGlobals(StringRef Filename);
 
   /// Record the device image to a file.
-  Error recordImage(const GenericKernelTy &Kernel, const std::string &Filename);
+  Error recordImage(const GenericKernelTy &Kernel, StringRef Filename,
+                    StringRef IRImageFilename);
 };
 
 } // namespace plugin

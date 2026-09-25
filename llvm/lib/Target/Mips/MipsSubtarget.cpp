@@ -28,7 +28,7 @@
 using namespace llvm;
 
 cl::opt<CompactBranchPolicy> MipsCompactBranchPolicy(
-    "mips-compact-branches", cl::Optional, cl::init(CB_Optimal),
+    "mips-compact-branches", cl::init(CB_Optimal),
     cl::desc("MIPS Specific: Compact branch policy."),
     cl::values(clEnumValN(CB_Never, "never",
                           "Do not use compact branches if possible."),
@@ -42,19 +42,6 @@ cl::opt<CompactBranchPolicy> MipsCompactBranchPolicy(
 #define GET_SUBTARGETINFO_TARGET_DESC
 #define GET_SUBTARGETINFO_CTOR
 #include "MipsGenSubtargetInfo.inc"
-
-// FIXME: Maybe this should be on by default when Mips16 is specified
-//
-static cl::opt<bool>
-    Mixed16_32("mips-mixed-16-32", cl::init(false),
-               cl::desc("Allow for a mixture of Mips16 "
-                        "and Mips32 code in a single output file"),
-               cl::Hidden);
-
-static cl::opt<bool> Mips_Os16("mips-os16", cl::init(false),
-                               cl::desc("Compile all functions that don't use "
-                                        "floating point as Mips 16"),
-                               cl::Hidden);
 
 static cl::opt<bool> Mips16HardFloat("mips16-hard-float", cl::NotHidden,
                                      cl::desc("Enable mips16 hard float."),
@@ -74,7 +61,6 @@ bool MipsSubtarget::MSAWarningPrinted = false;
 bool MipsSubtarget::VirtWarningPrinted = false;
 bool MipsSubtarget::CRCWarningPrinted = false;
 bool MipsSubtarget::GINVWarningPrinted = false;
-bool MipsSubtarget::MIPS1WarningPrinted = false;
 
 void MipsSubtarget::anchor() {}
 
@@ -90,10 +76,9 @@ MipsSubtarget::MipsSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
       HasMips4_32(false), HasMips4_32r2(false), HasMips5_32r2(false),
       InMips16Mode(false), InMips16HardFloat(Mips16HardFloat),
       InMicroMipsMode(false), HasDSP(false), HasDSPR2(false), HasDSPR3(false),
-      AllowMixed16_32(Mixed16_32 || Mips_Os16), Os16(Mips_Os16), HasMSA(false),
-      UseTCCInDIV(false), HasSym32(false), HasEVA(false), DisableMadd4(false),
-      HasMT(false), HasCRC(false), HasVirt(false), HasGINV(false),
-      UseIndirectJumpsHazard(false), StrictAlign(false),
+      HasMSA(false), UseTCCInDIV(false), HasSym32(false), HasEVA(false),
+      DisableMadd4(false), HasMT(false), HasCRC(false), HasVirt(false),
+      HasGINV(false), UseIndirectJumpsHazard(false), StrictAlign(false),
       UseCompactBranches(MipsCompactBranchPolicy != CB_Never),
       StackAlignOverride(StackAlignOverride), TM(TM), TargetTriple(TT),
       InstrInfo(
@@ -103,12 +88,6 @@ MipsSubtarget::MipsSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
 
   if (MipsArchVersion == MipsDefault)
     MipsArchVersion = Mips32;
-
-  // MIPS-I has not been tested.
-  if (MipsArchVersion == Mips1 && !MIPS1WarningPrinted) {
-    errs() << "warning: MIPS-I support is experimental\n";
-    MIPS1WarningPrinted = true;
-  }
 
   // Don't even attempt to generate code for MIPS-V. It has not
   // been tested and currently exists for the integrated assembler only.
@@ -260,8 +239,10 @@ MipsSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS,
 
   // Parse features string.
   ParseSubtargetFeatures(CPUName, /*TuneCPU*/ CPUName, FS);
-  // Initialize scheduling itinerary for the specified CPU.
-  InstrItins = getInstrItineraryForCPU(CPUName);
+
+  // O32 uses 32-bit GPRs even when the selected CPU supports a 64-bit ISA.
+  if (isABI_O32())
+    IsGP64bit = false;
 
   if (InMips16Mode && !IsSoftFloat)
     InMips16HardFloat = true;

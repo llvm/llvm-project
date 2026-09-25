@@ -98,11 +98,15 @@ cc_library(
     srcs = [
         "source/Version/Version.cpp",
         ":vcs_version_gen",
-        ":version_inc_gen",
     ],
-    hdrs = ["include/lldb/Version/Version.h"],
+    hdrs = [
+        "include/lldb/Version/Version.h",
+    ],
     features = ["-layering_check"],  # Version.inc breaks this unintentionally
     includes = ["include"],
+    textual_hdrs = [
+        ":version_inc_gen",
+    ],
     deps = ["//clang:basic"],
 )
 
@@ -112,9 +116,6 @@ expand_template(
     substitutions = {
         "#cmakedefine01 HAVE_PTSNAME_R": "#define HAVE_PTSNAME_R 1",
         "#cmakedefine01 LLDB_ENABLE_TERMIOS": "#define LLDB_ENABLE_TERMIOS 1",
-
-        # TODO: Add LZMA support by including the library in bazel
-        "#cmakedefine01 LLDB_ENABLE_LZMA": "#define LLDB_ENABLE_LZMA 0",
 
         # TODO: lua support
         "#cmakedefine01 LLDB_ENABLE_LUA": "#define LLDB_ENABLE_LUA 0",
@@ -131,6 +132,8 @@ expand_template(
         "#cmakedefine01 LLDB_EMBED_PYTHON_HOME": "#define LLDB_EMBED_PYTHON_HOME 0",
         # Only used if LLDB_EMBED_PYTHON_HOME is true
         "#cmakedefine LLDB_PYTHON_HOME R\"(${LLDB_PYTHON_HOME})\"": "#define LLDB_PYTHON_HOME \"\"",
+        "#cmakedefine LLDB_PYTHON_RUNTIME_LIBRARY_BUILD_PATH R\"(${LLDB_PYTHON_RUNTIME_LIBRARY_BUILD_PATH})\"": "/* #undef LLDB_PYTHON_RUNTIME_LIBRARY_BUILD_PATH */",
+        "#cmakedefine01 LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS": "#define LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS 0",
 
         # Unsupported
         "#cmakedefine01 CURSES_HAVE_NCURSES_CURSES_H": "#define CURSES_HAVE_NCURSES_CURSES_H 0",
@@ -146,6 +149,7 @@ expand_template(
         "#cmakedefine01 LLDB_ENABLE_POSIX": "#define LLDB_ENABLE_POSIX 1",
         "#cmakedefine01 LLDB_ENABLE_PROTOCOL_SERVERS": "#define LLDB_ENABLE_PROTOCOL_SERVERS 1",
         "#cmakedefine LLDB_GLOBAL_INIT_DIRECTORY R\"(${LLDB_GLOBAL_INIT_DIRECTORY})\"": "#define LLDB_GLOBAL_INIT_DIRECTORY \"\"",
+        "#cmakedefine LLDB_DWO_DIAGNOSTIC_SUFFIX \"${LLDB_DWO_DIAGNOSTIC_SUFFIX}\"": "#define LLDB_DWO_DIAGNOSTIC_SUFFIX \"Debugging will be degraded.\"",
         "${LLDB_INSTALL_LIBDIR_BASENAME}": "lib",
         "${LLDB_BUG_REPORT_URL}": "",
     } | select({
@@ -155,7 +159,6 @@ expand_template(
             "#cmakedefine01 HAVE_PPOLL": "#define HAVE_PPOLL 0",
             "#cmakedefine01 HAVE_PROCESS_VM_READV": "#define HAVE_PROCESS_VM_READV 0",
             "#cmakedefine01 HAVE_SYS_EVENT_H": "#define HAVE_SYS_EVENT_H 1",
-            "#cmakedefine01 LLDB_ENABLE_LIBXML2": "#define LLDB_ENABLE_LIBXML2 1",
             "#cmakedefine01 LLDB_HAVE_EL_RFUNC_T": "#define LLDB_HAVE_EL_RFUNC_T 0",
         },
         "@platforms//os:linux": {
@@ -164,8 +167,30 @@ expand_template(
             "#cmakedefine01 HAVE_PPOLL": "#define HAVE_PPOLL 1",
             "#cmakedefine01 HAVE_PROCESS_VM_READV": "#define HAVE_PROCESS_VM_READV 1",
             "#cmakedefine01 HAVE_SYS_EVENT_H": "#define HAVE_SYS_EVENT_H 0",
-            "#cmakedefine01 LLDB_ENABLE_LIBXML2": "#define LLDB_ENABLE_LIBXML2 0",
             "#cmakedefine01 LLDB_HAVE_EL_RFUNC_T": "#define LLDB_HAVE_EL_RFUNC_T 1",
+        },
+        "@platforms//os:windows": {
+            # Self-contained dist: liblldb resolves a relative LLDB_PYTHON_HOME
+            # against its own dir when LLDB_EMBED_PYTHON_HOME=1. Inert until
+            # Python is enabled, but kept so the Windows config matches the MSDK build.
+            "#cmakedefine LLDB_PYTHON_HOME R\"(${LLDB_PYTHON_HOME})\"": "#define LLDB_PYTHON_HOME \"../python\"",
+            "#cmakedefine01 HAVE_LIBCOMPRESSION": "#define HAVE_LIBCOMPRESSION 0",
+            "#cmakedefine01 HAVE_NR_PROCESS_VM_READV": "#define HAVE_NR_PROCESS_VM_READV 0",
+            "#cmakedefine01 HAVE_PPOLL": "#define HAVE_PPOLL 0",
+            "#cmakedefine01 HAVE_PROCESS_VM_READV": "#define HAVE_PROCESS_VM_READV 0",
+            "#cmakedefine01 HAVE_PTSNAME_R": "#define HAVE_PTSNAME_R 0",
+            "#cmakedefine01 HAVE_SYS_EVENT_H": "#define HAVE_SYS_EVENT_H 0",
+            "#cmakedefine01 LLDB_EMBED_PYTHON_HOME": "#define LLDB_EMBED_PYTHON_HOME 1",
+            "#cmakedefine01 LLDB_ENABLE_POSIX": "#define LLDB_ENABLE_POSIX 0",
+            "#cmakedefine01 LLDB_ENABLE_TERMIOS": "#define LLDB_ENABLE_TERMIOS 0",
+            "#cmakedefine01 LLDB_HAVE_EL_RFUNC_T": "#define LLDB_HAVE_EL_RFUNC_T 0",
+        },
+    }) | select({
+        "//third-party:llvm_libxml2_enabled": {
+            "#cmakedefine01 LLDB_ENABLE_LIBXML2": "#define LLDB_ENABLE_LIBXML2 1",
+        },
+        "//conditions:default": {
+            "#cmakedefine01 LLDB_ENABLE_LIBXML2": "#define LLDB_ENABLE_LIBXML2 0",
         },
     }) | select({
         ":curses_enabled": {
@@ -225,11 +250,11 @@ cc_library(
     name = "API",
     srcs = glob([
         "source/API/**/*.cpp",
-        "source/API/**/*.h",
     ]),
     hdrs = glob(["include/lldb/API/**/*.h"]) + [":lldb-sbapi-dwarf-enums"],
     includes = ["include"],
     deps = [
+        ":APIPrivateHeaders",
         ":Breakpoint",
         ":Commands",
         ":Core",
@@ -264,6 +289,9 @@ cc_library(
         ],
         "@platforms//os:linux": [
             "//lldb/source/Plugins:PluginProcessLinux",
+        ],
+        "@platforms//os:windows": [
+            "//lldb/source/Plugins:PluginProcessWindowsCommon",
         ],
         "//conditions:default": [],
     }),
@@ -344,9 +372,15 @@ cc_library(
         ":Utility",
         ":Version",
         "//lldb/source/Plugins:PluginProcessGDBRemote",
-        "//lldb/source/Plugins:PluginProcessPOSIX",
         "//llvm:Support",
-    ],
+    ] + select({
+        "@platforms//os:windows": [
+            "//lldb/source/Plugins:PluginProcessWindowsCommon",
+        ],
+        "//conditions:default": [
+            "//lldb/source/Plugins:PluginProcessPOSIX",
+        ],
+    }),
 )
 
 gentbl_cc_library(
@@ -366,6 +400,16 @@ cc_library(
     hdrs = glob(["include/lldb/API/**/*.h"]),
     features = ["-parse_headers"],  # Would otherwise have circular dependencies
     includes = ["include"],
+)
+
+cc_library(
+    name = "APIPrivateHeaders",
+    hdrs = glob(["source/API/**/*.h"]),
+    features = ["-parse_headers"],  # Would otherwise have circular dependencies
+    includes = ["source"],
+    deps = [
+        ":APIHeaders",
+    ],
 )
 
 cc_library(
@@ -410,6 +454,7 @@ cc_library(
     srcs = glob(["source/Interpreter/**/*.cpp"]),
     deps = [
         ":API",
+        ":APIPrivateHeaders",
         ":Commands",
         ":Core",
         ":DataFormatters",
@@ -545,22 +590,27 @@ cc_library(
     srcs = glob(
         [
             "source/Host/common/**/*.cpp",
+            "source/Host/common/**/*.h",
         ],
-        exclude = ["source/Host/common/Editline.cpp"],
+        exclude = [
+            "source/Host/common/Editline.cpp",
+            "source/Host/common/PythonRuntimeLoader.cpp",
+        ],
     ) + select({
         "@platforms//os:linux": glob(
             [
-                "source/Host/posix/**/*.cpp",
                 "source/Host/linux/**/*.cpp",
+                "source/Host/posix/**/*.cpp",
             ],
             exclude = ["source/Host/linux/android/**/*.cpp"],
         ),
-        "@platforms//os:macos": glob(
-            [
-                "source/Host/macosx/cfcpp/*.cpp",
-                "source/Host/posix/**/*.cpp",
-            ],
-        ),
+        "@platforms//os:macos": glob([
+            "source/Host/macosx/**/*.cpp",
+            "source/Host/posix/**/*.cpp",
+        ]),
+        "@platforms//os:windows": glob([
+            "source/Host/windows/**/*.cpp",
+        ]),
     }) + select({
         ":libedit_enabled": ["source/Host/common/Editline.cpp"],
         "//conditions:default": [],
@@ -571,7 +621,9 @@ cc_library(
             "include/lldb/Host/common/*.h",
         ],
         exclude = ["include/lldb/Host/Editline.h"],
-    ) + select({
+    ) + [
+        "include/lldb/Host/windows/ConPTYUtils.h",
+    ] + select({
         "@platforms//os:macos": glob([
             "include/lldb/Host/macosx/*.h",
             "include/lldb/Host/posix/*.h",
@@ -580,6 +632,10 @@ cc_library(
             "include/lldb/Host/linux/*.h",
             "include/lldb/Host/posix/*.h",
         ]),
+        "@platforms//os:windows": glob(
+            ["include/lldb/Host/windows/*.h"],
+            exclude = ["include/lldb/Host/windows/ConPTYUtils.h"],
+        ),
     }) + select({
         ":libedit_enabled": ["include/lldb/Host/Editline.h"],
         "//conditions:default": [],
@@ -590,7 +646,6 @@ cc_library(
     linkopts = select({
         "@platforms//os:macos": [
             "-lcompression",
-            "-lxml2",
             "-Wl,-framework,CoreServices",
             "-Wl,-framework,Security",
         ],
@@ -620,6 +675,7 @@ cc_library(
         "//llvm:Support",
         "//llvm:TargetParser",
         "//llvm:config",
+        "//third-party:libxml2",
     ] + select({
         "@platforms//os:macos": [
             ":HostMacOSXObjCXX",
@@ -681,6 +737,21 @@ cc_library(
     ],
 )
 
+# SafeAutoloadPaths.inc is generated by CMake configure_file (default empty
+# LLDB_SAFE_AUTO_LOAD_PATHS); reproduce it here since Debugger.cpp includes it.
+expand_template(
+    name = "safe_autoload_paths_inc_gen",
+    out = "include/SafeAutoloadPaths.inc",
+    substitutions = {"@SAFE_PATH_ENTRIES@": ""},
+    template = "source/Core/SafeAutoloadPaths.inc.in",
+)
+
+cc_library(
+    name = "SafeAutoloadPaths",
+    includes = ["include"],
+    textual_hdrs = [":safe_autoload_paths_inc_gen"],
+)
+
 cc_library(
     name = "Core",
     srcs = glob(
@@ -710,6 +781,7 @@ cc_library(
         ":Headers",
         ":Host",
         ":InterpreterHeaders",
+        ":SafeAutoloadPaths",
         ":SymbolHeaders",
         ":TargetHeaders",
         ":Utility",
@@ -827,6 +899,7 @@ cc_library(
         ":Host",
         ":ProtocolHeaders",
         ":Utility",
+        ":Version",
         "//llvm:Support",
     ],
 )
@@ -1180,6 +1253,45 @@ cc_binary(
         "//lldb:APIHeaders",
         "//lldb:Headers",
         "//lldb:Host",
+        "//lldb:Utility",
+        "//lldb:liblldb.wrapper",
+        "//llvm:Option",
+        "//llvm:Support",
+        "//llvm:config",
+    ],
+)
+
+expand_template(
+    name = "lldb-mcp-plist",
+    out = "lldb-mcp-Info.plist",
+    substitutions = {
+        "${LLDB_VERSION}": PACKAGE_VERSION,
+    },
+    template = "tools/lldb-mcp/lldb-mcp-Info.plist.in",
+)
+
+cc_binary(
+    name = "lldb-mcp",
+    srcs = glob([
+        "tools/lldb-mcp/**/*.cpp",
+        "tools/lldb-mcp/**/*.h",
+    ]),
+    additional_linker_inputs = [
+        ":lldb-mcp-plist",
+    ],
+    includes = ["tools/lldb-mcp"],
+    linkopts = select({
+        "@platforms//os:macos": [
+            "-Wl,-sectcreate,__TEXT,__info_plist,$(location :lldb-mcp-plist)",
+        ],
+        "//conditions:default": [],
+    }),
+    deps = [
+        "//lldb:APIHeaders",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:ProtocolHeaders",
+        "//lldb:ProtocolMCP",
         "//lldb:Utility",
         "//lldb:liblldb.wrapper",
         "//llvm:Option",

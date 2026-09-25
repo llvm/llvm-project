@@ -3,7 +3,7 @@
 ; RUN: -force-vector-width=4 -disable-output 2>&1 < %s | FileCheck %s
 ; RUN: opt -passes=loop-vectorize -vplan-print-after=printOptimizedVPlan \
 ; RUN: -force-vector-width=4 -force-target-supports-masked-memory-ops \
-; RUN: -prefer-predicate-over-epilogue=predicate-dont-vectorize \
+; RUN: -tail-folding-policy=must-fold-tail \
 ; RUN: -disable-output 2>&1 < %s | FileCheck %s --check-prefix=CHECK-TF
 
 ; This function is derived from the following C program:
@@ -30,18 +30,20 @@ define i32 @simple_csa_int_select(i64 %N, ptr %data, i32 %a) {
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      EMIT vp<[[VP3:%[0-9]+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
-; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%data.phi> = phi ir<-1>, vp<[[VP9:%[0-9]+]]>
-; CHECK-NEXT:      WIDEN-PHI vp<[[VP4:%[0-9]+]]> = phi [ ir<false>, vector.ph ], [ vp<[[VP8:%[0-9]+]]>, vector.body ]
+; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%data.phi> = phi (find-last) ir<-1>, vp<[[VP10:%[0-9]+]]>
+; CHECK-NEXT:      WIDEN-PHI vp<[[VP4:%[0-9]+]]> = phi [ ir<false>, vector.ph ], [ vp<[[VP9:%[0-9]+]]>, vector.body ]
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%ld.addr> = getelementptr inbounds ir<%data>, vp<[[VP5]]>
-; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds ir<%ld.addr>
+; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds i32, ir<%ld.addr>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%ld> = load vp<[[VP6]]>
 ; CHECK-NEXT:      WIDEN ir<%select.cmp> = icmp slt ir<%a>, ir<%ld>
-; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = any-of ir<%select.cmp>
-; CHECK-NEXT:      EMIT vp<[[VP8]]> = select vp<[[VP7]]>, ir<%select.cmp>, vp<[[VP4]]>
-; CHECK-NEXT:      EMIT vp<[[VP9]]> = select vp<[[VP7]]>, ir<%ld>, ir<%data.phi>
+; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = freeze ir<%select.cmp>
+; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = any-of vp<[[VP7]]>
+; CHECK-NEXT:      EMIT vp<[[VP9]]> = select vp<[[VP8]]>, ir<%select.cmp>, vp<[[VP4]]>
+; CHECK-NEXT:      EMIT vp<[[VP10]]> = select vp<[[VP8]]>, ir<%ld>, ir<%data.phi>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:    No successors
@@ -49,18 +51,18 @@ define i32 @simple_csa_int_select(i64 %N, ptr %data, i32 %a) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = extract-last-active ir<-1>, vp<[[VP9]]>, vp<[[VP8]]>
+; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = extract-last-active ir<-1>, vp<[[VP10]]>, vp<[[VP9]]>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<%N>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<exit>:
-; CHECK-NEXT:    IR   %select.data.lcssa = phi i32 [ %select.data, %loop ] (extra operand: vp<[[VP11]]> from middle.block)
+; CHECK-NEXT:    IR   %select.data.lcssa = phi i32 [ %select.data, %loop ] (extra operand: vp<[[VP12]]> from middle.block)
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
 ; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP2]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.merge.rdx> = phi [ vp<[[VP11]]>, middle.block ], [ ir<-1>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.merge.rdx> = phi [ vp<[[VP12]]>, middle.block ], [ ir<-1>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop>:
@@ -81,7 +83,6 @@ define i32 @simple_csa_int_select(i64 %N, ptr %data, i32 %a) {
 ; CHECK-TF-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
 ; CHECK-TF-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
 ; CHECK-TF-NEXT:  Live-in vp<[[VP3:%[0-9]+]]> = backedge-taken count
-; CHECK-TF-NEXT:  Live-in ir<%N> = original trip-count
 ; CHECK-TF-EMPTY:
 ; CHECK-TF-NEXT:  ir-bb<entry>:
 ; CHECK-TF-NEXT:  Successor(s): scalar.ph, vector.ph
@@ -90,21 +91,23 @@ define i32 @simple_csa_int_select(i64 %N, ptr %data, i32 %a) {
 ; CHECK-TF-NEXT:  Successor(s): vector loop
 ; CHECK-TF-EMPTY:
 ; CHECK-TF-NEXT:  <x1> vector loop: {
+; CHECK-TF-NEXT:  vp<[[VP4:%[0-9]+]]> = CANONICAL-IV
+; CHECK-TF-EMPTY:
 ; CHECK-TF-NEXT:    vector.body:
-; CHECK-TF-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
-; CHECK-TF-NEXT:      WIDEN-REDUCTION-PHI ir<%data.phi> = phi ir<-1>, vp<[[VP13:%[0-9]+]]>
-; CHECK-TF-NEXT:      WIDEN-PHI vp<[[VP5:%[0-9]+]]> = phi [ ir<false>, vector.ph ], [ vp<[[VP12:%[0-9]+]]>, vector.body ]
-; CHECK-TF-NEXT:      vp<[[VP6:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
-; CHECK-TF-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION vp<[[VP4]]>
+; CHECK-TF-NEXT:      WIDEN-REDUCTION-PHI ir<%data.phi> = phi (find-last) ir<-1>, vp<[[VP15:%[0-9]+]]>
+; CHECK-TF-NEXT:      WIDEN-PHI vp<[[VP6:%[0-9]+]]> = phi [ ir<false>, vector.ph ], [ vp<[[VP14:%[0-9]+]]>, vector.body ]
+; CHECK-TF-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION nuw vp<[[VP4]]>
 ; CHECK-TF-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = icmp ule vp<[[VP7]]>, vp<[[VP3]]>
-; CHECK-TF-NEXT:      CLONE ir<%ld.addr> = getelementptr inbounds ir<%data>, vp<[[VP6]]>
-; CHECK-TF-NEXT:      vp<[[VP9:%[0-9]+]]> = vector-pointer inbounds ir<%ld.addr>
-; CHECK-TF-NEXT:      WIDEN ir<%ld> = load vp<[[VP9]]>, vp<[[VP8]]>
+; CHECK-TF-NEXT:      vp<[[VP9:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
+; CHECK-TF-NEXT:      CLONE ir<%ld.addr> = getelementptr inbounds ir<%data>, vp<[[VP9]]>
+; CHECK-TF-NEXT:      vp<[[VP10:%[0-9]+]]> = vector-pointer inbounds i32, ir<%ld.addr>, ir<1>
+; CHECK-TF-NEXT:      WIDEN ir<%ld> = load vp<[[VP10]]>, vp<[[VP8]]>
 ; CHECK-TF-NEXT:      WIDEN ir<%select.cmp> = icmp slt ir<%a>, ir<%ld>
-; CHECK-TF-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = logical-and vp<[[VP8]]>, ir<%select.cmp>
-; CHECK-TF-NEXT:      EMIT vp<[[VP11:%[0-9]+]]> = any-of vp<[[VP10]]>
-; CHECK-TF-NEXT:      EMIT vp<[[VP12]]> = select vp<[[VP11]]>, vp<[[VP10]]>, vp<[[VP5]]>
-; CHECK-TF-NEXT:      EMIT vp<[[VP13]]> = select vp<[[VP11]]>, ir<%ld>, ir<%data.phi>
+; CHECK-TF-NEXT:      EMIT vp<[[VP11:%[0-9]+]]> = logical-and vp<[[VP8]]>, ir<%select.cmp>
+; CHECK-TF-NEXT:      EMIT vp<[[VP12:%[0-9]+]]> = freeze vp<[[VP11]]>
+; CHECK-TF-NEXT:      EMIT vp<[[VP13:%[0-9]+]]> = any-of vp<[[VP12]]>
+; CHECK-TF-NEXT:      EMIT vp<[[VP14]]> = select vp<[[VP13]]>, vp<[[VP11]]>, vp<[[VP6]]>
+; CHECK-TF-NEXT:      EMIT vp<[[VP15]]> = select vp<[[VP13]]>, ir<%ld>, ir<%data.phi>
 ; CHECK-TF-NEXT:      EMIT vp<%index.next> = add vp<[[VP4]]>, vp<[[VP1]]>
 ; CHECK-TF-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-TF-NEXT:    No successors
@@ -112,11 +115,11 @@ define i32 @simple_csa_int_select(i64 %N, ptr %data, i32 %a) {
 ; CHECK-TF-NEXT:  Successor(s): middle.block
 ; CHECK-TF-EMPTY:
 ; CHECK-TF-NEXT:  middle.block:
-; CHECK-TF-NEXT:    EMIT vp<[[VP15:%[0-9]+]]> = extract-last-active ir<-1>, vp<[[VP13]]>, vp<[[VP12]]>
+; CHECK-TF-NEXT:    EMIT vp<[[VP17:%[0-9]+]]> = extract-last-active ir<-1>, vp<[[VP15]]>, vp<[[VP14]]>
 ; CHECK-TF-NEXT:  Successor(s): ir-bb<exit>
 ; CHECK-TF-EMPTY:
 ; CHECK-TF-NEXT:  ir-bb<exit>:
-; CHECK-TF-NEXT:    IR   %select.data.lcssa = phi i32 [ %select.data, %loop ] (extra operand: vp<[[VP15]]> from middle.block)
+; CHECK-TF-NEXT:    IR   %select.data.lcssa = phi i32 [ %select.data, %loop ] (extra operand: vp<[[VP17]]> from middle.block)
 ; CHECK-TF-NEXT:  No successors
 ; CHECK-TF-EMPTY:
 ; CHECK-TF-NEXT:  scalar.ph:
@@ -175,13 +178,14 @@ define i32 @simple_csa_int_load(ptr noalias %a, ptr noalias %b, i32 %default_val
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      EMIT vp<[[VP3:%[0-9]+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
-; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%data.phi> = phi ir<%default_val>, vp<[[VP11:%[0-9]+]]>
-; CHECK-NEXT:      WIDEN-PHI vp<[[VP4:%[0-9]+]]> = phi [ ir<false>, vector.ph ], [ vp<[[VP10:%[0-9]+]]>, if.then.0 ]
+; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%data.phi> = phi (find-last) ir<%default_val>, vp<[[VP12:%[0-9]+]]>
+; CHECK-NEXT:      WIDEN-PHI vp<[[VP4:%[0-9]+]]> = phi [ ir<false>, vector.ph ], [ vp<[[VP11:%[0-9]+]]>, if.then.0 ]
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%a.addr> = getelementptr inbounds nuw ir<%a>, vp<[[VP5]]>
-; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds nuw ir<%a.addr>
+; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds nuw i32, ir<%a.addr>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%ld.a> = load vp<[[VP6]]>
 ; CHECK-NEXT:      WIDEN ir<%if.cond> = icmp sgt ir<%ld.a>, ir<%threshold>
 ; CHECK-NEXT:    Successor(s): pred.load
@@ -204,9 +208,10 @@ define i32 @simple_csa_int_load(ptr noalias %a, ptr noalias %b, i32 %default_val
 ; CHECK-NEXT:    Successor(s): if.then.0
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    if.then.0:
-; CHECK-NEXT:      EMIT vp<[[VP9:%[0-9]+]]> = any-of ir<%if.cond>
-; CHECK-NEXT:      EMIT vp<[[VP10]]> = select vp<[[VP9]]>, ir<%if.cond>, vp<[[VP4]]>
-; CHECK-NEXT:      EMIT vp<[[VP11]]> = select vp<[[VP9]]>, vp<[[VP8]]>, ir<%data.phi>
+; CHECK-NEXT:      EMIT vp<[[VP9:%[0-9]+]]> = freeze ir<%if.cond>
+; CHECK-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = any-of vp<[[VP9]]>
+; CHECK-NEXT:      EMIT vp<[[VP11]]> = select vp<[[VP10]]>, ir<%if.cond>, vp<[[VP4]]>
+; CHECK-NEXT:      EMIT vp<[[VP12]]> = select vp<[[VP10]]>, vp<[[VP8]]>, ir<%data.phi>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:    No successors
@@ -214,18 +219,18 @@ define i32 @simple_csa_int_load(ptr noalias %a, ptr noalias %b, i32 %default_val
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = extract-last-active ir<%default_val>, vp<[[VP11]]>, vp<[[VP10]]>
+; CHECK-NEXT:    EMIT vp<[[VP14:%[0-9]+]]> = extract-last-active ir<%default_val>, vp<[[VP12]]>, vp<[[VP11]]>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<%N>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<exit>:
-; CHECK-NEXT:    IR   %select.data.lcssa = phi i32 [ %select.data, %latch ] (extra operand: vp<[[VP13]]> from middle.block)
+; CHECK-NEXT:    IR   %select.data.lcssa = phi i32 [ %select.data, %latch ] (extra operand: vp<[[VP14]]> from middle.block)
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
 ; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP2]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.merge.rdx> = phi [ vp<[[VP13]]>, middle.block ], [ ir<%default_val>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.merge.rdx> = phi [ vp<[[VP14]]>, middle.block ], [ ir<%default_val>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop>:
@@ -243,7 +248,6 @@ define i32 @simple_csa_int_load(ptr noalias %a, ptr noalias %b, i32 %default_val
 ; CHECK-TF-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
 ; CHECK-TF-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
 ; CHECK-TF-NEXT:  Live-in vp<[[VP3:%[0-9]+]]> = backedge-taken count
-; CHECK-TF-NEXT:  Live-in ir<%N> = original trip-count
 ; CHECK-TF-EMPTY:
 ; CHECK-TF-NEXT:  ir-bb<entry>:
 ; CHECK-TF-NEXT:  Successor(s): scalar.ph, vector.ph
@@ -252,24 +256,26 @@ define i32 @simple_csa_int_load(ptr noalias %a, ptr noalias %b, i32 %default_val
 ; CHECK-TF-NEXT:  Successor(s): vector loop
 ; CHECK-TF-EMPTY:
 ; CHECK-TF-NEXT:  <x1> vector loop: {
+; CHECK-TF-NEXT:  vp<[[VP4:%[0-9]+]]> = CANONICAL-IV
+; CHECK-TF-EMPTY:
 ; CHECK-TF-NEXT:    vector.body:
-; CHECK-TF-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
-; CHECK-TF-NEXT:      WIDEN-REDUCTION-PHI ir<%data.phi> = phi ir<%default_val>, vp<[[VP14:%[0-9]+]]>
-; CHECK-TF-NEXT:      WIDEN-PHI vp<[[VP5:%[0-9]+]]> = phi [ ir<false>, vector.ph ], [ vp<[[VP13:%[0-9]+]]>, vector.body ]
-; CHECK-TF-NEXT:      vp<[[VP6:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
-; CHECK-TF-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION vp<[[VP4]]>
+; CHECK-TF-NEXT:      WIDEN-REDUCTION-PHI ir<%data.phi> = phi (find-last) ir<%default_val>, vp<[[VP16:%[0-9]+]]>
+; CHECK-TF-NEXT:      WIDEN-PHI vp<[[VP6:%[0-9]+]]> = phi [ ir<false>, vector.ph ], [ vp<[[VP15:%[0-9]+]]>, vector.body ]
+; CHECK-TF-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION nuw vp<[[VP4]]>
 ; CHECK-TF-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = icmp ule vp<[[VP7]]>, vp<[[VP3]]>
-; CHECK-TF-NEXT:      CLONE ir<%a.addr> = getelementptr inbounds nuw ir<%a>, vp<[[VP6]]>
-; CHECK-TF-NEXT:      vp<[[VP9:%[0-9]+]]> = vector-pointer inbounds nuw ir<%a.addr>
-; CHECK-TF-NEXT:      WIDEN ir<%ld.a> = load vp<[[VP9]]>, vp<[[VP8]]>
+; CHECK-TF-NEXT:      vp<[[VP9:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
+; CHECK-TF-NEXT:      CLONE ir<%a.addr> = getelementptr inbounds nuw ir<%a>, vp<[[VP9]]>
+; CHECK-TF-NEXT:      vp<[[VP10:%[0-9]+]]> = vector-pointer inbounds nuw i32, ir<%a.addr>, ir<1>
+; CHECK-TF-NEXT:      WIDEN ir<%ld.a> = load vp<[[VP10]]>, vp<[[VP8]]>
 ; CHECK-TF-NEXT:      WIDEN ir<%if.cond> = icmp sgt ir<%ld.a>, ir<%threshold>
-; CHECK-TF-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = logical-and vp<[[VP8]]>, ir<%if.cond>
-; CHECK-TF-NEXT:      CLONE ir<%b.addr> = getelementptr ir<%b>, vp<[[VP6]]>
-; CHECK-TF-NEXT:      vp<[[VP11:%[0-9]+]]> = vector-pointer ir<%b.addr>
-; CHECK-TF-NEXT:      WIDEN ir<%ld.b> = load vp<[[VP11]]>, vp<[[VP10]]>
-; CHECK-TF-NEXT:      EMIT vp<[[VP12:%[0-9]+]]> = any-of vp<[[VP10]]>
-; CHECK-TF-NEXT:      EMIT vp<[[VP13]]> = select vp<[[VP12]]>, vp<[[VP10]]>, vp<[[VP5]]>
-; CHECK-TF-NEXT:      EMIT vp<[[VP14]]> = select vp<[[VP12]]>, ir<%ld.b>, ir<%data.phi>
+; CHECK-TF-NEXT:      EMIT vp<[[VP11:%[0-9]+]]> = logical-and vp<[[VP8]]>, ir<%if.cond>
+; CHECK-TF-NEXT:      CLONE ir<%b.addr> = getelementptr ir<%b>, vp<[[VP9]]>
+; CHECK-TF-NEXT:      vp<[[VP12:%[0-9]+]]> = vector-pointer i32, ir<%b.addr>, ir<1>
+; CHECK-TF-NEXT:      WIDEN ir<%ld.b> = load vp<[[VP12]]>, vp<[[VP11]]>
+; CHECK-TF-NEXT:      EMIT vp<[[VP13:%[0-9]+]]> = freeze vp<[[VP11]]>
+; CHECK-TF-NEXT:      EMIT vp<[[VP14:%[0-9]+]]> = any-of vp<[[VP13]]>
+; CHECK-TF-NEXT:      EMIT vp<[[VP15]]> = select vp<[[VP14]]>, vp<[[VP11]]>, vp<[[VP6]]>
+; CHECK-TF-NEXT:      EMIT vp<[[VP16]]> = select vp<[[VP14]]>, ir<%ld.b>, ir<%data.phi>
 ; CHECK-TF-NEXT:      EMIT vp<%index.next> = add vp<[[VP4]]>, vp<[[VP1]]>
 ; CHECK-TF-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-TF-NEXT:    No successors
@@ -277,11 +283,11 @@ define i32 @simple_csa_int_load(ptr noalias %a, ptr noalias %b, i32 %default_val
 ; CHECK-TF-NEXT:  Successor(s): middle.block
 ; CHECK-TF-EMPTY:
 ; CHECK-TF-NEXT:  middle.block:
-; CHECK-TF-NEXT:    EMIT vp<[[VP16:%[0-9]+]]> = extract-last-active ir<%default_val>, vp<[[VP14]]>, vp<[[VP13]]>
+; CHECK-TF-NEXT:    EMIT vp<[[VP18:%[0-9]+]]> = extract-last-active ir<%default_val>, vp<[[VP16]]>, vp<[[VP15]]>
 ; CHECK-TF-NEXT:  Successor(s): ir-bb<exit>
 ; CHECK-TF-EMPTY:
 ; CHECK-TF-NEXT:  ir-bb<exit>:
-; CHECK-TF-NEXT:    IR   %select.data.lcssa = phi i32 [ %select.data, %latch ] (extra operand: vp<[[VP16]]> from middle.block)
+; CHECK-TF-NEXT:    IR   %select.data.lcssa = phi i32 [ %select.data, %latch ] (extra operand: vp<[[VP18]]> from middle.block)
 ; CHECK-TF-NEXT:  No successors
 ; CHECK-TF-EMPTY:
 ; CHECK-TF-NEXT:  scalar.ph:
