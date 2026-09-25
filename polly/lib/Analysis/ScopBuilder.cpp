@@ -746,6 +746,9 @@ bool ScopBuilder::addLoopBoundsToHeaderDomain(
 
   isl::set UnionBackedgeCondition = HeaderBBDom.empty(HeaderBBDom.get_space());
 
+  // Parameter values for which a latch condition is not modeled correctly.
+  isl::set InvalidLatchCtx = isl::set::empty(HeaderBBDom.get_space().params());
+
   SmallVector<BasicBlock *, 4> LatchBlocks;
   L->getLoopLatches(LatchBlocks);
 
@@ -764,10 +767,18 @@ bool ScopBuilder::addLoopBoundsToHeaderDomain(
     else if (auto *BI = dyn_cast<CondBrInst>(TI)) {
       SmallVector<isl_set *, 8> ConditionSets;
       int idx = BI->getSuccessor(0) != HeaderBB;
-      if (!buildConditionSets(LatchBB, TI, L, LatchBBDom.get(),
-                              InvalidDomainMap, ConditionSets,
-                              /*IsInsideDomain=*/false))
+      DenseMap<BasicBlock *, isl::set> LatchInvalidDomainMap;
+      LatchInvalidDomainMap[LatchBB] = LatchBBDom.empty(LatchBBDom.get_space());
+      bool Valid = buildConditionSets(LatchBB, TI, L, LatchBBDom.get(),
+                                      LatchInvalidDomainMap, ConditionSets,
+                                      /*IsInsideDomain=*/false);
+      isl::set LatchInvalidDomain = LatchInvalidDomainMap[LatchBB];
+      InvalidDomainMap[LatchBB] =
+          InvalidDomainMap[LatchBB].unite(LatchInvalidDomain);
+      if (!Valid)
         return false;
+      InvalidLatchCtx = InvalidLatchCtx.unite(
+          LatchInvalidDomain.intersect(LatchBBDom).params());
 
       // Free the non back edge condition set as we do not need it.
       isl_set_free(ConditionSets[1 - idx]);
@@ -806,6 +817,23 @@ bool ScopBuilder::addLoopBoundsToHeaderDomain(
   bool RequiresRTC = !scop->hasNSWAddRecForLoop(L);
 
   isl::set UnboundedCtx = Parts.first.params();
+
+  // An unbounded loop only implies undefined behavior if its latch conditions
+  // are modeled correctly. Otherwise, e.g. if a zero-extended loop bound is
+  // assumed to be non-negative, the loop may just appear to be unbounded and
+  // the parameter values must be excluded by a runtime check. Assuming them
+  // to not occur would make the loop's domain empty, which also drops the
+  // restrictions that would have caught the invalid model.
+  if (!RequiresRTC) {
+    isl::set InvalidUnboundedCtx = UnboundedCtx.intersect(InvalidLatchCtx);
+    if (!InvalidUnboundedCtx.is_empty()) {
+      recordAssumption(&RecordedAssumptions, INFINITELOOP, InvalidUnboundedCtx,
+                       HeaderBB->getTerminator()->getDebugLoc(), AS_RESTRICTION,
+                       nullptr, /*RequiresRTC=*/true);
+      UnboundedCtx = UnboundedCtx.subtract(InvalidUnboundedCtx);
+    }
+  }
+
   recordAssumption(&RecordedAssumptions, INFINITELOOP, UnboundedCtx,
                    HeaderBB->getTerminator()->getDebugLoc(), AS_RESTRICTION,
                    nullptr, RequiresRTC);
@@ -1441,16 +1469,30 @@ void ScopBuilder::addUserAssumptions(
       NewParams.insert(Param);
     }
 
-    size_t NumAssumptions = RecordedAssumptions.size();
     SmallVector<isl_set *, 2> ConditionSets;
     auto *TI = InScop ? CI->getParent()->getTerminator() : nullptr;
     BasicBlock *BB = InScop ? CI->getParent() : R.getEntry();
     auto *Dom = InScop ? isl_set_copy(scop->getDomainConditions(BB).get())
                        : isl_set_copy(scop->getContext().get());
     assert(Dom && "Cannot propagate a nullptr.");
-    bool Valid = buildConditionSets(BB, Val, TI, L, Dom, InvalidDomainMap,
-                                    ConditionSets);
+
+    // Collect the invalid domain of this assumption on its own to determine
+    // whether its translation depends on preconditions (such as a truncation
+    // not overflowing). Checking for newly recorded assumptions is not
+    // sufficient: SCEVAffinator caches translated expressions, so a
+    // precondition shared with an earlier assumption is only recorded once.
+    isl::set BBInvalidDomain = InvalidDomainMap[BB];
+    assert(!BBInvalidDomain.is_null() && "Cannot propagate a nullptr.");
+    DenseMap<BasicBlock *, isl::set> AssumptionInvalidDomainMap;
+    AssumptionInvalidDomainMap[BB] =
+        isl::set::empty(BBInvalidDomain.get_space());
+    bool Valid = buildConditionSets(BB, Val, TI, L, Dom,
+                                    AssumptionInvalidDomainMap, ConditionSets);
     isl_set_free(Dom);
+
+    isl::set AssumptionInvalidDomain = AssumptionInvalidDomainMap[BB];
+    bool HasPreconditions = !AssumptionInvalidDomain.is_empty();
+    InvalidDomainMap[BB] = BBInvalidDomain.unite(AssumptionInvalidDomain);
 
     if (!Valid)
       continue;
@@ -1487,7 +1529,7 @@ void ScopBuilder::addUserAssumptions(
     // correctness of AssumptionCtx. Using DefinedBehaviorContext which does not
     // gist the other contexts.
     // TODO: Use recordAssumption() for adding context/assumptions
-    if (NumAssumptions == RecordedAssumptions.size()) {
+    if (!HasPreconditions) {
       isl::set newContext =
           scop->getContext().intersect(isl::manage(AssumptionCtx));
       scop->setContext(newContext);

@@ -26,11 +26,10 @@ namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> chmod(const char *path, mode_t mode) {
-#ifdef SYS_fchmodat
-  return syscall_checked<int>(SYS_fchmodat, AT_FDCWD, path, mode, 0);
-#elif defined(SYS_fchmodat2)
-  return syscall_checked<int>(SYS_fchmodat2, AT_FDCWD, path, mode, 0,
-                              AT_SYMLINK_NOFOLLOW);
+#if defined(SYS_fchmodat2)
+  return syscall_checked<int>(SYS_fchmodat2, AT_FDCWD, path, mode, 0);
+#elif defined(SYS_fchmodat)
+  return syscall_checked<int>(SYS_fchmodat, AT_FDCWD, path, mode);
 #elif defined(SYS_chmod)
   return syscall_checked<int>(SYS_chmod, path, mode);
 #else

@@ -51,29 +51,29 @@ define double @test(ptr %obj, ptr %arr, i32 %n) {
 ; CHECK-NEXT:    [[V40:%.*]] = sub i32 [[V36]], [[V39]]
 ; CHECK-NEXT:    [[V41:%.*]] = add nsw i32 [[V40]], 2147483647
 ; CHECK-NEXT:    [[V42:%.*]] = icmp slt i32 [[V40]], 0
-; CHECK-NEXT:    [[V45:%.*]] = zext nneg i32 [[TMP10]] to i64
-; CHECK-NEXT:    [[V46:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[ARR]], i64 [[V45]]
-; CHECK-NEXT:    [[V48:%.*]] = zext nneg i32 [[TMP11]] to i64
-; CHECK-NEXT:    [[V49:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[ARR]], i64 [[V48]]
-; CHECK-NEXT:    [[DOTNOT3_I:%.*]] = icmp eq i32 [[TMP10]], 0
-; CHECK-NEXT:    [[V54:%.*]] = add nsw i32 [[TMP10]], -1
-; CHECK-NEXT:    [[DOTSINK_I]] = select i1 [[DOTNOT3_I]], i32 16, i32 [[V54]]
-; CHECK-NEXT:    [[DOTNOT4_I:%.*]] = icmp eq i32 [[TMP11]], 0
-; CHECK-NEXT:    [[V55:%.*]] = add nsw i32 [[TMP11]], -1
-; CHECK-NEXT:    [[DOTSINK6_I]] = select i1 [[DOTNOT4_I]], i32 16, i32 [[V55]]
 ; CHECK-NEXT:    [[SPEC_SELECT_I13:%.*]] = select i1 [[V42]], i32 [[V41]], i32 [[V40]]
 ; CHECK-NEXT:    store i32 [[SPEC_SELECT_I13]], ptr [[V38]], align 4
+; CHECK-NEXT:    [[V45:%.*]] = zext nneg i32 [[TMP10]] to i64
+; CHECK-NEXT:    [[V46:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[ARR]], i64 [[V45]]
 ; CHECK-NEXT:    [[V47:%.*]] = load i32, ptr [[V46]], align 4
+; CHECK-NEXT:    [[V48:%.*]] = zext nneg i32 [[TMP11]] to i64
+; CHECK-NEXT:    [[V49:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[ARR]], i64 [[V48]]
 ; CHECK-NEXT:    [[V50:%.*]] = load i32, ptr [[V49]], align 4
 ; CHECK-NEXT:    [[V51:%.*]] = sub i32 [[V47]], [[V50]]
 ; CHECK-NEXT:    [[V52:%.*]] = add nsw i32 [[V51]], 2147483647
 ; CHECK-NEXT:    [[V53:%.*]] = icmp slt i32 [[V51]], 0
 ; CHECK-NEXT:    [[SPEC_SELECT_I:%.*]] = select i1 [[V53]], i32 [[V52]], i32 [[V51]]
 ; CHECK-NEXT:    store i32 [[SPEC_SELECT_I]], ptr [[V49]], align 4
+; CHECK-NEXT:    [[DOTNOT3_I:%.*]] = icmp eq i32 [[TMP10]], 0
+; CHECK-NEXT:    [[V54:%.*]] = add nsw i32 [[TMP10]], -1
+; CHECK-NEXT:    [[DOTSINK_I]] = select i1 [[DOTNOT3_I]], i32 16, i32 [[V54]]
 ; CHECK-NEXT:    store i32 [[DOTSINK_I]], ptr [[POS1]], align 4
+; CHECK-NEXT:    [[DOTNOT4_I:%.*]] = icmp eq i32 [[TMP11]], 0
+; CHECK-NEXT:    [[V55:%.*]] = add nsw i32 [[TMP11]], -1
+; CHECK-NEXT:    [[DOTSINK6_I]] = select i1 [[DOTNOT4_I]], i32 16, i32 [[V55]]
 ; CHECK-NEXT:    store i32 [[DOTSINK6_I]], ptr [[POS2]], align 8
-; CHECK-NEXT:    [[V56:%.*]] = sitofp i32 [[SPEC_SELECT_I]] to double
 ; CHECK-NEXT:    [[V43:%.*]] = sitofp i32 [[SPEC_SELECT_I13]] to double
+; CHECK-NEXT:    [[V56:%.*]] = sitofp i32 [[SPEC_SELECT_I]] to double
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[V43]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[V56]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul nnan <2 x double> [[TMP1]], splat (double f0x3E00000000200000)
@@ -282,29 +282,29 @@ define double @test_inloop_first(ptr %obj, ptr %arr, i32 %n) {
 ; CHECK-NEXT:    [[V40:%.*]] = sub i32 [[V36]], [[V39]]
 ; CHECK-NEXT:    [[V41:%.*]] = add nsw i32 [[V40]], 2147483647
 ; CHECK-NEXT:    [[V42:%.*]] = icmp slt i32 [[V40]], 0
-; CHECK-NEXT:    [[V45:%.*]] = zext nneg i32 [[TMP11]] to i64
-; CHECK-NEXT:    [[V46:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[ARR]], i64 [[V45]]
-; CHECK-NEXT:    [[V48:%.*]] = zext nneg i32 [[TMP12]] to i64
-; CHECK-NEXT:    [[V49:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[ARR]], i64 [[V48]]
-; CHECK-NEXT:    [[DOTNOT3_I:%.*]] = icmp eq i32 [[TMP11]], 0
-; CHECK-NEXT:    [[V54:%.*]] = add nsw i32 [[TMP11]], -1
-; CHECK-NEXT:    [[DOTSINK_I]] = select i1 [[DOTNOT3_I]], i32 16, i32 [[V54]]
-; CHECK-NEXT:    [[DOTNOT4_I:%.*]] = icmp eq i32 [[TMP12]], 0
-; CHECK-NEXT:    [[V55:%.*]] = add nsw i32 [[TMP12]], -1
-; CHECK-NEXT:    [[DOTSINK6_I]] = select i1 [[DOTNOT4_I]], i32 16, i32 [[V55]]
 ; CHECK-NEXT:    [[SPEC_SELECT_I13:%.*]] = select i1 [[V42]], i32 [[V41]], i32 [[V40]]
 ; CHECK-NEXT:    store i32 [[SPEC_SELECT_I13]], ptr [[V38]], align 4
+; CHECK-NEXT:    [[V45:%.*]] = zext nneg i32 [[TMP11]] to i64
+; CHECK-NEXT:    [[V46:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[ARR]], i64 [[V45]]
 ; CHECK-NEXT:    [[V47:%.*]] = load i32, ptr [[V46]], align 4
+; CHECK-NEXT:    [[V48:%.*]] = zext nneg i32 [[TMP12]] to i64
+; CHECK-NEXT:    [[V49:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[ARR]], i64 [[V48]]
 ; CHECK-NEXT:    [[V50:%.*]] = load i32, ptr [[V49]], align 4
 ; CHECK-NEXT:    [[V51:%.*]] = sub i32 [[V47]], [[V50]]
 ; CHECK-NEXT:    [[V52:%.*]] = add nsw i32 [[V51]], 2147483647
 ; CHECK-NEXT:    [[V53:%.*]] = icmp slt i32 [[V51]], 0
 ; CHECK-NEXT:    [[SPEC_SELECT_I:%.*]] = select i1 [[V53]], i32 [[V52]], i32 [[V51]]
 ; CHECK-NEXT:    store i32 [[SPEC_SELECT_I]], ptr [[V49]], align 4
+; CHECK-NEXT:    [[DOTNOT3_I:%.*]] = icmp eq i32 [[TMP11]], 0
+; CHECK-NEXT:    [[V54:%.*]] = add nsw i32 [[TMP11]], -1
+; CHECK-NEXT:    [[DOTSINK_I]] = select i1 [[DOTNOT3_I]], i32 16, i32 [[V54]]
 ; CHECK-NEXT:    store i32 [[DOTSINK_I]], ptr [[POS1]], align 4
+; CHECK-NEXT:    [[DOTNOT4_I:%.*]] = icmp eq i32 [[TMP12]], 0
+; CHECK-NEXT:    [[V55:%.*]] = add nsw i32 [[TMP12]], -1
+; CHECK-NEXT:    [[DOTSINK6_I]] = select i1 [[DOTNOT4_I]], i32 16, i32 [[V55]]
 ; CHECK-NEXT:    store i32 [[DOTSINK6_I]], ptr [[POS2]], align 8
-; CHECK-NEXT:    [[V56:%.*]] = sitofp i32 [[SPEC_SELECT_I]] to double
 ; CHECK-NEXT:    [[V43:%.*]] = sitofp i32 [[SPEC_SELECT_I13]] to double
+; CHECK-NEXT:    [[V56:%.*]] = sitofp i32 [[SPEC_SELECT_I]] to double
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[V43]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[V56]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul nnan <2 x double> [[TMP1]], splat (double f0x3E00000000200000)

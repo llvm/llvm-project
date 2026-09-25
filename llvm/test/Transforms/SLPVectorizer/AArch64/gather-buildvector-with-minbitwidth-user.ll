@@ -21,10 +21,10 @@ define void @h(i16 %a, i16 %b, i16 %c, i16 %d, i16 %e, i16 %f, i16 %g, i16 %h, i
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i16> [[TMP8]], i16 [[L]], i64 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x i16> poison, i16 [[I]], i64 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <2 x i16> [[TMP10]], i16 [[M]], i64 1
-; CHECK-NEXT:    [[ADD4_1:%.*]] = or i32 [[CONV3_112]], 0
 ; CHECK-NEXT:    [[SUB39_3:%.*]] = or i32 [[CONV310]], [[CONV9]]
-; CHECK-NEXT:    [[SUB44_2:%.*]] = or i32 0, [[CONV3_112]]
 ; CHECK-NEXT:    [[SUB39_2:%.*]] = or i32 [[CONV9]], [[CONV310]]
+; CHECK-NEXT:    [[ADD4_1:%.*]] = or i32 [[CONV3_112]], 0
+; CHECK-NEXT:    [[SUB44_2:%.*]] = or i32 0, [[CONV3_112]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = or <8 x i16> zeroinitializer, [[TMP7]]
 ; CHECK-NEXT:    [[CONV40_2:%.*]] = trunc i32 [[SUB39_2]] to i16
 ; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <8 x i16> poison, i16 [[CONV40_2]], i64 0

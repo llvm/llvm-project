@@ -33,7 +33,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __locale {
 
 struct __locale_guard {
-  _LIBCPP_HIDE_FROM_ABI __locale_guard(locale_t& __loc) : __old_loc_(::uselocale(__loc)) {}
+  _LIBCPP_HIDE_FROM_ABI __locale_guard(locale_t __loc) : __old_loc_(::uselocale(__loc)) {}
 
   _LIBCPP_HIDE_FROM_ABI ~__locale_guard() {
     if (__old_loc_)
@@ -63,6 +63,9 @@ inline _LIBCPP_HIDE_FROM_ABI decltype(MB_CUR_MAX) __mb_cur_max() { return MB_CUR
 
 using __locale_t _LIBCPP_NODEBUG = ::locale_t;
 
+// Forward declared for use below.
+inline __locale_t __get_c_locale();
+
 #if defined(_LIBCPP_BUILDING_LIBRARY)
 using __lconv_t _LIBCPP_NODEBUG = std::lconv;
 
@@ -86,44 +89,27 @@ inline _LIBCPP_HIDE_FROM_ABI const char* __get_locale_encoding(__locale_t __loc)
 }
 #endif // _LIBCPP_BUILDING_LIBRARY
 
-// The following structure is a quick-and-dirty workaround for routines that AIX
-// does not provide in the "_l" (locale-aware) variants.
-struct __setAndRestore {
-  explicit __setAndRestore(locale_t locale) {
-    if (locale == (locale_t)0) {
-      __cloc   = newlocale(LC_ALL_MASK, "C", /* base */ (locale_t)0);
-      __stored = uselocale(__cloc);
-    } else {
-      __stored = uselocale(locale);
-    }
-  }
-
-  ~__setAndRestore() {
-    uselocale(__stored);
-    if (__cloc)
-      freelocale(__cloc);
-  }
-
-private:
-  locale_t __stored = (locale_t)0;
-  locale_t __cloc   = (locale_t)0;
-};
-
 //
 // Strtonum functions
 //
-inline _LIBCPP_HIDE_FROM_ABI float __strtof(const char* __nptr, char** __endptr, __locale_t __loc) {
-  __setAndRestore __newloc(__loc);
+template <class _FloatT>
+_LIBCPP_HIDE_FROM_ABI _FloatT __str_to_float_c_locale(const char* __nptr, char** __endptr);
+
+template <>
+inline _LIBCPP_HIDE_FROM_ABI float __str_to_float_c_locale<float>(const char* __nptr, char** __endptr) {
+  __locale_guard __current(__get_c_locale());
   return ::strtof(__nptr, __endptr);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI double __strtod(const char* __nptr, char** __endptr, __locale_t __loc) {
-  __setAndRestore __newloc(__loc);
+template <>
+inline _LIBCPP_HIDE_FROM_ABI double __str_to_float_c_locale<double>(const char* __nptr, char** __endptr) {
+  __locale_guard __current(__get_c_locale());
   return ::strtod(__nptr, __endptr);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI long double __strtold(const char* __nptr, char** __endptr, __locale_t __loc) {
-  __setAndRestore __newloc(__loc);
+template <>
+inline _LIBCPP_HIDE_FROM_ABI long double __str_to_float_c_locale<long double>(const char* __nptr, char** __endptr) {
+  __locale_guard __current(__get_c_locale());
   return ::strtold(__nptr, __endptr);
 }
 

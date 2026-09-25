@@ -9,13 +9,20 @@ add_libc_test(
   SRCS
     chmod_test.cpp
   DEPENDS
+    libc.hdr.errno_macros
     libc.hdr.fcntl_macros
     libc.hdr.sys_stat_macros
+    libc.hdr.types.mode_t
     libc.hdr.types.struct_stat
+    libc.src.__support.CPP.scope
     libc.src.errno.errno
     libc.src.fcntl.open
     libc.src.sys.stat.chmod
+    libc.src.sys.stat.lstat
+    libc.src.sys.stat.stat
     libc.src.unistd.close
+    libc.src.unistd.symlink
+    libc.src.unistd.unlink
     libc.src.unistd.write
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
