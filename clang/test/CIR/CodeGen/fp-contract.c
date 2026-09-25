@@ -237,15 +237,20 @@ float nested_pragmas(float a, float b, float c) {
   return r * c + a;
 }
 // CIR-FAST-LABEL: cir.func {{.*}}@nested_pragmas
-// CIR-FAST: cir.fmul %{{.*}}, %{{.*}} : !cir.float{{$}}
-// CIR-FAST: cir.fadd %{{.*}}, %{{.*}} : !cir.float{{$}}
+// CIR-FAST: cir.fmul %{{.*}}, %{{.*}} : !cir.float{{( loc.*)?$}}
+// CIR-FAST: cir.fadd %{{.*}}, %{{.*}} : !cir.float{{( loc.*)?$}}
 // CIR-FAST: cir.fmul %{{.*}}, %{{.*}} : !cir.float {fastmath_flags = #cir.fastmath<contract>}
 // CIR-FAST: cir.fadd %{{.*}}, %{{.*}} : !cir.float {fastmath_flags = #cir.fastmath<contract>}
-// CIR-FAST: cir.fmul %{{.*}}, %{{.*}} : !cir.float{{$}}
-// CIR-FAST: cir.fadd %{{.*}}, %{{.*}} : !cir.float{{$}}
-// CIR-FAST: cir.fmuladd %{{.*}}, %{{.*}}, %{{.*}} : !cir.float{{$}}
+// CIR-FAST: cir.fmul %{{.*}}, %{{.*}} : !cir.float{{( loc.*)?$}}
+// CIR-FAST: cir.fadd %{{.*}}, %{{.*}} : !cir.float{{( loc.*)?$}}
+// CIR-FAST: cir.fmuladd %{{.*}}, %{{.*}}, %{{.*}} : !cir.float{{( loc.*)?$}}
 // CIR-FAST: cir.fmul %{{.*}}, %{{.*}} : !cir.float {fastmath_flags = #cir.fastmath<contract>}
 // CIR-FAST: cir.fadd %{{.*}}, %{{.*}} : !cir.float {fastmath_flags = #cir.fastmath<contract>}
+
+// float_control(precise, on) enables contraction within the statement even
+// under -ffp-contract=off.
+// CIR-OFF-LABEL: cir.func {{.*}}@nested_pragmas
+// CIR-OFF: cir.fmuladd %{{.*}}, %{{.*}}, %{{.*}} : !cir.float
 
 // LLVM-FAST-LABEL: @nested_pragmas
 // LLVM-FAST: fmul float
