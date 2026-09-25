@@ -352,8 +352,10 @@ InputArgList Driver::ParseArgStrings(ArrayRef<const char *> ArgStrings,
 
 // Determine which compilation mode we are in. We look for options which
 // affect the phase, starting with the earliest phases, and record which
-// option we used to determine the final phase.
+// option we used to determine the final phase. In absence of any explicit
+// action command line option, derive the compilation mode from the inputs.
 phases::ID Driver::getFinalPhase(const DerivedArgList &DAL,
+                                 llvm::ArrayRef<InputTy> Inputs,
                                  Arg **FinalPhaseArg) const {
   Arg *PhaseArg = nullptr;
   phases::ID FinalPhase;
@@ -401,14 +403,45 @@ phases::ID Driver::getFinalPhase(const DerivedArgList &DAL,
   } else if ((PhaseArg = DAL.getLastArg(options::OPT_emit_interface_stubs))) {
     FinalPhase = phases::IfsMerge;
 
-    // Otherwise do everything.
-  } else
-    FinalPhase = phases::Link;
+    // Otherwise autodetect from last phase triggered by input file.
+  } else {
+    FinalPhase = phases::Preprocess;
+    bool AnyPhase = false;
+    for (auto &I : Inputs) {
+      types::ID InputType = I.first;
+      const Arg *InputArg = I.second;
+
+      // Linker options should not trigger more phases.
+      if (InputArg->getOption().hasFlag(options::LinkerInput))
+        continue;
+
+      // Relies on the compilation phases being ordered.
+      auto PL = types::getCompilationPhases(InputType);
+      if (PL.empty())
+        continue;
+
+      phases::ID LastPL = PL.back();
+      if (LastPL > FinalPhase)
+        FinalPhase = LastPL;
+      AnyPhase = true;
+    }
+
+    // Fall back to "do everything" when consistency check fails.
+    if (!AnyPhase || FinalPhase > phases::Link)
+      FinalPhase = phases::Link;
+  }
 
   if (FinalPhaseArg)
     *FinalPhaseArg = PhaseArg;
 
   return FinalPhase;
+}
+
+void Driver::updateFinalPhase(Compilation &C,
+                              llvm::ArrayRef<InputTy> Inputs) const {
+  Arg *FinalPhaseArg = nullptr;
+  phases::ID FinalPhase = getFinalPhase(C.getArgs(), Inputs, &FinalPhaseArg);
+  C.setFinalPhase(FinalPhase, FinalPhaseArg);
 }
 
 llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
@@ -1847,13 +1880,17 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   // Construct the list of inputs.
   InputList Inputs;
   BuildInputs(C->getDefaultToolChain(), *TranslatedArgs, Inputs);
+  updateFinalPhase(*C, Inputs);
+  phases::ID FinalPhase = C->getFinalPhase();
+
   if (HasConfigFileTail && Inputs.size()) {
-    Arg *FinalPhaseArg;
-    if (getFinalPhase(*TranslatedArgs, &FinalPhaseArg) == phases::Link) {
+    if (FinalPhase == phases::Link) {
       DerivedArgList TranslatedLinkerIns(*CfgOptionsTail);
       for (Arg *A : *CfgOptionsTail)
         TranslatedLinkerIns.append(A);
       BuildInputs(C->getDefaultToolChain(), TranslatedLinkerIns, Inputs);
+      updateFinalPhase(*C, Inputs);
+      FinalPhase = C->getFinalPhase();
     }
   }
 
@@ -2121,6 +2158,7 @@ void Driver::generateCompilationDiagnostics(
   // Construct the list of inputs.
   InputList Inputs;
   BuildInputs(C.getDefaultToolChain(), C.getArgs(), Inputs);
+  updateFinalPhase(C, Inputs);
 
   ArgStringList IRInputs;
   for (InputList::iterator it = Inputs.begin(), ie = Inputs.end(); it != ie;) {
@@ -3433,8 +3471,8 @@ void Driver::handleArguments(Compilation &C, DerivedArgList &Args,
     YcArg = nullptr;
   }
 
-  Arg *FinalPhaseArg;
-  phases::ID FinalPhase = getFinalPhase(Args, &FinalPhaseArg);
+  phases::ID FinalPhase = C.getFinalPhase();
+  llvm::opt::Arg *FinalPhaseArg = C.getFinalPhaseArg();
 
   if (FinalPhase == phases::Link) {
     if (Args.hasArgNoClaim(options::OPT_hipstdpar)) {
@@ -3532,7 +3570,7 @@ void Driver::handleArguments(Compilation &C, DerivedArgList &Args,
         Diag(clang::diag::warn_drv_input_file_unused)
             << InputArg->getAsString(Args) << getPhaseName(InitialPhase)
             << !!FinalPhaseArg
-            << (FinalPhaseArg ? FinalPhaseArg->getOption().getName() : "");
+            << (FinalPhaseArg ? FinalPhaseArg->getSpelling() : "");
       continue;
     }
 
@@ -3609,12 +3647,12 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
   Args.ClaimAllArgs(options::OPT_no_offload_new_driver);
   Args.ClaimAllArgs(options::OPT_offload_new_driver);
 
+  phases::ID FinalPhase = C.getFinalPhase();
   bool HIPRDCDeviceOnlyFatBin =
       C.isOffloadingHostKind(Action::OFK_HIP) && offloadDeviceOnly() &&
       Args.hasArg(options::OPT_hip_link) &&
       Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false) &&
-      getFinalPhase(Args) == phases::Link &&
-      !Args.hasArg(options::OPT_emit_llvm) &&
+      FinalPhase == phases::Link && !Args.hasArg(options::OPT_emit_llvm) &&
       Args.hasFlag(options::OPT_gpu_bundle_output,
                    options::OPT_no_gpu_bundle_output, true);
 
@@ -3627,7 +3665,8 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
     types::ID InputType = I.first;
     const Arg *InputArg = I.second;
 
-    auto PL = types::getCompilationPhases(*this, Args, InputType);
+    auto PL =
+        types::getCompilationPhases(*this, Args, Inputs, InputType, FinalPhase);
     if (PL.empty())
       continue;
 
@@ -4125,7 +4164,7 @@ Driver::BuildOffloadingActions(Compilation &C, llvm::opt::DerivedArgList &Args,
   // Don't build offloading actions if we do not have a compile action. If
   // preprocessing only ignore embedding.
   if (!(isa<CompileJobAction>(HostAction) ||
-        getFinalPhase(Args) == phases::Preprocess))
+        C.getFinalPhase() == phases::Preprocess))
     return HostAction;
 
   bool UsesLLVMOffloading = Args.hasArg(
@@ -4178,7 +4217,8 @@ Driver::BuildOffloadingActions(Compilation &C, llvm::opt::DerivedArgList &Args,
             .isOSDarwin())
       HostAction->setCannotBeCollapsedWithNextDependentAction();
 
-    auto PL = types::getCompilationPhases(*this, Args, InputType);
+    auto PL = types::getCompilationPhases(*this, Args, {Input}, InputType,
+                                          C.getFinalPhase());
 
     for (phases::ID Phase : PL) {
       if (Phase == phases::Link) {
