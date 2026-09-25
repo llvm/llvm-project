@@ -473,7 +473,7 @@ private:
   /// avoid inserting an obviously redundant operation, and hoisting to an
   /// outer loop when the opportunity is there and it is safe.
   Value *InsertBinop(Instruction::BinaryOps Opcode, Value *LHS, Value *RHS,
-                     SCEV::NoWrapFlags Flags, bool IsSafeToHoist);
+                     SCEVFlags Flags, bool IsSafeToHoist);
 
   /// We want to cast \p V. What would be the best place for such a cast?
   BasicBlock::iterator GetOptimalInsertionPointForCastOf(Value *V) const;
@@ -490,7 +490,7 @@ private:
 
   /// Expand a SCEVAddExpr with a pointer type into a GEP instead of using
   /// ptrtoint+arithmetic+inttoptr.
-  Value *expandAddToGEP(SCEVUse Op, Value *V, SCEV::NoWrapFlags Flags);
+  Value *expandAddToGEP(SCEVUse Op, Value *V, SCEVFlags Flags);
 
   /// Find a previous Value in ExprValueMap for expand.
   /// DropPoisonGeneratingInsts is populated with instructions for which

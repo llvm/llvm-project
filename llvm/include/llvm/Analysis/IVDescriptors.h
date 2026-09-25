@@ -30,7 +30,7 @@ class ScalarEvolution;
 class SCEV;
 class SCEVPredicate;
 class StoreInst;
-enum class SCEVNoWrapFlags;
+enum class SCEVFlags;
 
 /// These are the kinds of recurrences that we support.
 enum class RecurKind {
@@ -515,13 +515,12 @@ public:
   const SCEV *getStepSCEV() const { return StepSCEV; }
 
   /// Returns the SCEV no-wrap flags that apply to StepInst.
-  SCEVNoWrapFlags getSCEVNoWrapFlags() const { return NoWrapFlags; }
+  SCEVFlags getSCEVNoWrapFlags() const { return NoWrapFlags; }
 
 private:
   ConditionalInductionDescriptor(PHINode *HeaderPHI, PHINode *BackedgePHI,
                                  Instruction *StepInst, const SCEV *StartSCEV,
-                                 const SCEV *StepSCEV,
-                                 SCEVNoWrapFlags NoWrapFlags)
+                                 const SCEV *StepSCEV, SCEVFlags NoWrapFlags)
       : HeaderPHI(HeaderPHI), BackedgePHI(BackedgePHI), StepInst(StepInst),
         StartSCEV(StartSCEV), StepSCEV(StepSCEV), NoWrapFlags(NoWrapFlags) {}
 
@@ -543,7 +542,7 @@ private:
   const SCEV *StepSCEV = nullptr;
 
   /// The SCEV no-wrap flags that apply to StepInst.
-  SCEVNoWrapFlags NoWrapFlags{};
+  SCEVFlags NoWrapFlags{};
 };
 
 } // end namespace llvm

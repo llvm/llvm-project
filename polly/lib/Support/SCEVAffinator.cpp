@@ -59,7 +59,7 @@ static bool isTooComplex(PWACtx PWAC) {
 }
 
 /// Return the flag describing the possible wrapping of @p Expr.
-static SCEV::NoWrapFlags getNoWrapFlags(const SCEV *Expr) {
+static SCEVFlags getNoWrapFlags(const SCEV *Expr) {
   if (auto *NAry = dyn_cast<SCEVNAryExpr>(Expr))
     return NAry->getNoWrapFlags();
   return SCEV::FlagsMask;
