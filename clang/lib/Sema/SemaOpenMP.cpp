@@ -17420,21 +17420,16 @@ SemaOpenMP::ActOnOpenMPFlattenDirective(ArrayRef<OMPClause *> Clauses,
   auto MakeDivisorInIVTy = [&](unsigned I) -> Expr * {
     Expr *N = MakeNumIterationsInIVTy(I);
     Expr *NCmp = MakeNumIterationsInIVTy(I);
-    auto MakeOne = [&]() -> ExprResult {
-      return SemaRef.PerformImplicitConversion(
-          SemaRef.ActOnIntegerConstant(CondLoc, 1).get(), IVTy,
-          AssignmentAction::Converting, /*AllowExplicit=*/true);
+    auto MakeOne = [&]() -> Expr * {
+      return IntegerLiteral::Create(Context, llvm::APInt(IVWidth, 1), IVTy,
+                                    CondLoc);
     };
-    ExprResult OneCmp = MakeOne();
-    ExprResult OneVal = MakeOne();
-    if (!OneCmp.isUsable() || !OneVal.isUsable())
-      return N;
     ExprResult TooSmall =
-        SemaRef.BuildBinOp(CurScope, CondLoc, BO_LT, NCmp, OneCmp.get());
+        SemaRef.BuildBinOp(CurScope, CondLoc, BO_LT, NCmp, MakeOne());
     if (!TooSmall.isUsable())
       return N;
     return AssertSuccess(SemaRef.ActOnConditionalOp(
-        CondLoc, CondLoc, TooSmall.get(), OneVal.get(), N));
+        CondLoc, CondLoc, TooSmall.get(), MakeOne(), N));
   };
 
   // \code{.cpp}

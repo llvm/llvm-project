@@ -6,6 +6,8 @@
 #ifndef HEADER
 #define HEADER
 
+#include <stddef.h>
+
 extern "C" void body(int, int);
 
 // CHECK-LABEL: define {{.*}}void @foo(
@@ -98,6 +100,18 @@ extern "C" void both_neg() {
   for (int i = 0; i < -1; ++i)
     for (int j = 0; j < -1; ++j)
       body(i, j);
+}
+
+// Mixed signed/unsigned trip counts: the flattened IV is unsigned, and the
+// signed inner count is converted into that type for max(1, N).
+// CHECK-LABEL: define {{.*}}void @mixed_sign(
+// CHECK:   %.flatten.iv = alloca i64
+// CHECK:   icmp ult i64
+extern "C" void mixed_sign(int n) {
+#pragma omp flatten depth(2)
+  for (size_t i = 0; i < (size_t)n; ++i)
+    for (int j = 0; j < n; ++j)
+      body((int)i, j);
 }
 
 #endif
