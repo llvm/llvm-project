@@ -142,6 +142,22 @@ bool RegisterContextUnwind::IsUnwindPlanValidForCurrentPC(
   return false;
 }
 
+bool RegisterContextUnwind::IsSignalFrameAtRawPC() {
+  ModuleSP module_sp = m_current_pc.GetModule();
+  if (!m_current_pc.IsValid() || !module_sp || !module_sp->GetObjectFile())
+    return false;
+
+  DWARFCallFrameInfo *eh_frame = module_sp->GetUnwindTable().GetEHFrameInfo();
+  if (!eh_frame)
+    return false;
+
+  AddressRange raw_pc_range(m_current_pc, 1);
+  std::unique_ptr<UnwindPlan> plan_up =
+      eh_frame->GetUnwindPlan({raw_pc_range}, m_start_pc);
+  return plan_up && plan_up->GetUnwindPlanForSignalTrap() == eLazyBoolYes &&
+         plan_up->PlanValidAtAddress(m_current_pc);
+}
+
 // Initialize a RegisterContextUnwind which is the first frame of a stack -- the
 // zeroth frame or currently executing frame.
 
@@ -228,6 +244,14 @@ void RegisterContextUnwind::InitializeZerothFrame() {
     m_current_offset = std::nullopt;
     m_current_offset_backed_up_one = std::nullopt;
   }
+
+  bool is_signal_frame = IsSignalFrameAtRawPC();
+  if (is_signal_frame && !m_current_offset) {
+    m_current_offset = 0;
+    m_current_offset_backed_up_one = 0;
+  }
+  if (is_signal_frame)
+    m_frame_type = eTrapHandlerFrame;
 
   // We've set m_frame_type and m_sym_ctx before these calls.
 
@@ -542,11 +566,26 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
                pc);
   }
 
+  // Establish the raw-PC coordinate system before deciding whether this is a
+  // call return address. Signal-frame CFI describes the interrupted PC itself.
+  if (m_sym_ctx_valid) {
+    m_start_pc = m_sym_ctx.GetFunctionOrSymbolAddress();
+    m_current_offset = pc - m_start_pc.GetLoadAddress(&process->GetTarget());
+    m_current_offset_backed_up_one = m_current_offset;
+  } else {
+    m_start_pc = m_current_pc;
+    m_current_offset = 0;
+    m_current_offset_backed_up_one = 0;
+  }
+
+  bool is_signal_frame = IsSignalFrameAtRawPC();
+
   bool decr_pc_and_recompute_addr_range;
 
   if (!m_sym_ctx_valid) {
-    // Always decrement and recompute if the symbol lookup failed
-    decr_pc_and_recompute_addr_range = true;
+    // Signal-frame CFI describes the raw PC even when symbol lookup failed.
+    // Otherwise, preserve the existing behavior of decrementing and retrying.
+    decr_pc_and_recompute_addr_range = !is_signal_frame;
   } else if (GetNextFrame()->m_frame_type == eTrapHandlerFrame ||
              GetNextFrame()->m_frame_type == eDebuggerFrame) {
     // Don't decrement if we're "above" an asynchronous event like
@@ -560,7 +599,7 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
       decr_pc_and_recompute_addr_range = false;
     else
       decr_pc_and_recompute_addr_range = true;
-  } else if (IsTrapHandlerSymbol(process, m_sym_ctx)) {
+  } else if (is_signal_frame || IsTrapHandlerSymbol(process, m_sym_ctx)) {
     // Signal dispatch may set the return address of the handler it calls to
     // point to the first byte of a return trampoline (like __kernel_rt_sigreturn),
     // so do not decrement and recompute if the symbol we already found is a trap
@@ -606,13 +645,13 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
         m_current_pc.SetLoadAddress(pc - 1, &process->GetTarget());
       }
     }
-  } else {
+  } else if (!is_signal_frame) {
     m_start_pc = m_current_pc;
     m_current_offset = std::nullopt;
     m_current_offset_backed_up_one = std::nullopt;
   }
 
-  if (IsTrapHandlerSymbol(process, m_sym_ctx)) {
+  if (is_signal_frame || IsTrapHandlerSymbol(process, m_sym_ctx)) {
     m_frame_type = eTrapHandlerFrame;
   } else {
     // FIXME:  Detect eDebuggerFrame here.
@@ -656,7 +695,9 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
     }
   }
 
-  // We've set m_frame_type and m_sym_ctx before this call.
+  // We've set m_frame_type and m_sym_ctx before this call.  A trap handler
+  // recognized by either its symbol or signal-frame CFI will not use a fast
+  // plan.
   m_fast_unwind_plan_sp = GetFastUnwindPlanForFrame();
 
   // Try to get by with just the fast UnwindPlan if possible - the full
