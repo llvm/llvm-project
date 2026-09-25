@@ -226,19 +226,22 @@ define <vscale x 8 x i64> @masked_zload_x2_8i8_8i64(ptr %a, ptr %b, <vscale x 8 
 ; CHECK-LABEL: masked_zload_x2_8i8_8i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    punpkhi p1.h, p0.b
-; CHECK-NEXT:    punpklo p0.h, p0.b
-; CHECK-NEXT:    punpkhi p2.h, p1.b
+; CHECK-NEXT:    cntw x8
+; CHECK-NEXT:    punpklo p2.h, p0.b
+; CHECK-NEXT:    add x9, x0, x8
+; CHECK-NEXT:    add x8, x1, x8
+; CHECK-NEXT:    punpkhi p0.h, p1.b
 ; CHECK-NEXT:    punpklo p1.h, p1.b
-; CHECK-NEXT:    punpkhi p3.h, p0.b
-; CHECK-NEXT:    ld1b { z3.d }, p2/z, [x0, #3, mul vl]
-; CHECK-NEXT:    ld1b { z5.d }, p2/z, [x1, #3, mul vl]
-; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    punpkhi p3.h, p2.b
+; CHECK-NEXT:    ld1b { z3.d }, p0/z, [x9, #1, mul vl]
+; CHECK-NEXT:    ld1b { z5.d }, p0/z, [x8, #1, mul vl]
+; CHECK-NEXT:    punpklo p2.h, p2.b
 ; CHECK-NEXT:    ld1b { z2.d }, p1/z, [x0, #2, mul vl]
 ; CHECK-NEXT:    ld1b { z6.d }, p1/z, [x1, #2, mul vl]
 ; CHECK-NEXT:    ld1b { z1.d }, p3/z, [x0, #1, mul vl]
 ; CHECK-NEXT:    ld1b { z7.d }, p3/z, [x1, #1, mul vl]
-; CHECK-NEXT:    ld1b { z0.d }, p0/z, [x0]
-; CHECK-NEXT:    ld1b { z4.d }, p0/z, [x1]
+; CHECK-NEXT:    ld1b { z0.d }, p2/z, [x0]
+; CHECK-NEXT:    ld1b { z4.d }, p2/z, [x1]
 ; CHECK-NEXT:    add z3.d, z3.d, z5.d
 ; CHECK-NEXT:    add z2.d, z2.d, z6.d
 ; CHECK-NEXT:    add z1.d, z1.d, z7.d

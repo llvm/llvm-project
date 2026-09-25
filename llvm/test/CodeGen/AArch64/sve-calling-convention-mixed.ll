@@ -12,13 +12,17 @@ define float @foo1(ptr %x0, ptr %x1, ptr %x2) nounwind {
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-4
 ; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov x9, sp
 ; CHECK-NEXT:    fmov s0, #1.00000000
+; CHECK-NEXT:    add x9, x9, x8
 ; CHECK-NEXT:    ld4d { z1.d - z4.d }, p0/z, [x0]
+; CHECK-NEXT:    add x8, x9, x8
 ; CHECK-NEXT:    mov x0, sp
 ; CHECK-NEXT:    ld4d { z16.d - z19.d }, p0/z, [x1]
 ; CHECK-NEXT:    ld1d { z5.d }, p0/z, [x2]
-; CHECK-NEXT:    str z19, [sp, #3, mul vl]
-; CHECK-NEXT:    str z18, [sp, #2, mul vl]
+; CHECK-NEXT:    str z19, [x8, #1, mul vl]
+; CHECK-NEXT:    str z18, [x9, #1, mul vl]
 ; CHECK-NEXT:    str z17, [sp, #1, mul vl]
 ; CHECK-NEXT:    str z16, [sp]
 ; CHECK-NEXT:    bl callee1
@@ -57,21 +61,25 @@ define float @foo2(ptr %x0, ptr %x1) nounwind {
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    addvl sp, sp, #-4
 ; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    add x9, sp, #16
+; CHECK-NEXT:    add x10, x9, x8
 ; CHECK-NEXT:    fmov s0, #1.00000000
-; CHECK-NEXT:    add x8, sp, #16
 ; CHECK-NEXT:    mov w2, #2 // =0x2
+; CHECK-NEXT:    ld4d { z1.d - z4.d }, p0/z, [x0]
+; CHECK-NEXT:    add x8, x10, x8
+; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    mov w3, #3 // =0x3
 ; CHECK-NEXT:    mov w4, #4 // =0x4
-; CHECK-NEXT:    ld4d { z1.d - z4.d }, p0/z, [x0]
-; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    mov w5, #5 // =0x5
 ; CHECK-NEXT:    mov w6, #6 // =0x6
 ; CHECK-NEXT:    mov w7, #7 // =0x7
 ; CHECK-NEXT:    ld4d { z16.d - z19.d }, p0/z, [x1]
 ; CHECK-NEXT:    mov w1, #1 // =0x1
-; CHECK-NEXT:    str x8, [sp]
-; CHECK-NEXT:    str z19, [x8, #3, mul vl]
-; CHECK-NEXT:    str z18, [x8, #2, mul vl]
+; CHECK-NEXT:    str z19, [x8, #1, mul vl]
+; CHECK-NEXT:    add x8, sp, #16
+; CHECK-NEXT:    str z18, [x10, #1, mul vl]
+; CHECK-NEXT:    str x9, [sp]
 ; CHECK-NEXT:    str z17, [x8, #1, mul vl]
 ; CHECK-NEXT:    str z16, [x8]
 ; CHECK-NEXT:    bl callee2
@@ -111,11 +119,14 @@ define float @foo3(ptr %x0, ptr %x1, ptr %x2) nounwind {
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    fmov s0, #1.00000000
 ; CHECK-NEXT:    fmov s1, #2.00000000
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov x9, sp
 ; CHECK-NEXT:    ld4d { z2.d - z5.d }, p0/z, [x0]
+; CHECK-NEXT:    add x8, x9, x8
 ; CHECK-NEXT:    mov x0, sp
 ; CHECK-NEXT:    ld3d { z16.d - z18.d }, p0/z, [x1]
 ; CHECK-NEXT:    ld1d { z6.d }, p0/z, [x2]
-; CHECK-NEXT:    str z18, [sp, #2, mul vl]
+; CHECK-NEXT:    str z18, [x8, #1, mul vl]
 ; CHECK-NEXT:    str z17, [sp, #1, mul vl]
 ; CHECK-NEXT:    str z16, [sp]
 ; CHECK-NEXT:    bl callee3
@@ -150,18 +161,24 @@ entry:
 define double @foo4(double %x0, ptr %ptr1, ptr %ptr2, ptr %ptr3, <vscale x 8 x double> %x1, <vscale x 8 x double> %x2, <vscale x 2 x double> %x3) nounwind {
 ; CHECK-LABEL: foo4:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr z6, [x3, #1, mul vl]
-; CHECK-NEXT:    ldr z7, [x3]
-; CHECK-NEXT:    ldr z24, [x3, #3, mul vl]
-; CHECK-NEXT:    ldr z25, [x3, #2, mul vl]
-; CHECK-NEXT:    str z4, [x0, #3, mul vl]
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    ldr z24, [x3, #1, mul vl]
+; CHECK-NEXT:    ldr z25, [x3]
+; CHECK-NEXT:    add x9, x3, x8
+; CHECK-NEXT:    add x8, x9, x8
+; CHECK-NEXT:    ldr z7, [x9, #1, mul vl]
+; CHECK-NEXT:    ldr z6, [x8, #1, mul vl]
+; CHECK-NEXT:    rdvl x8, #2
 ; CHECK-NEXT:    str z3, [x0, #2, mul vl]
+; CHECK-NEXT:    add x9, x0, x8
+; CHECK-NEXT:    add x8, x1, x8
 ; CHECK-NEXT:    str z2, [x0, #1, mul vl]
 ; CHECK-NEXT:    str z1, [x0]
-; CHECK-NEXT:    str z25, [x1, #2, mul vl]
-; CHECK-NEXT:    str z24, [x1, #3, mul vl]
-; CHECK-NEXT:    str z7, [x1]
-; CHECK-NEXT:    str z6, [x1, #1, mul vl]
+; CHECK-NEXT:    str z4, [x9, #1, mul vl]
+; CHECK-NEXT:    str z7, [x1, #2, mul vl]
+; CHECK-NEXT:    str z25, [x1]
+; CHECK-NEXT:    str z24, [x1, #1, mul vl]
+; CHECK-NEXT:    str z6, [x8, #1, mul vl]
 ; CHECK-NEXT:    str z5, [x2]
 ; CHECK-NEXT:    ret
 entry:
@@ -175,18 +192,24 @@ define double @foo5(i32 %i0, i32 %i1, i32 %i2, i32 %i3, i32 %i4, i32 %i5, ptr %p
 ; CHECK-LABEL: foo5:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr x8, [sp]
+; CHECK-NEXT:    rdvl x9, #1
+; CHECK-NEXT:    add x10, x8, x9
 ; CHECK-NEXT:    ldr z5, [x8, #1, mul vl]
 ; CHECK-NEXT:    ldr z6, [x8]
-; CHECK-NEXT:    ldr z7, [x8, #3, mul vl]
-; CHECK-NEXT:    ldr z24, [x8, #2, mul vl]
-; CHECK-NEXT:    str z4, [x6, #3, mul vl]
+; CHECK-NEXT:    add x9, x10, x9
+; CHECK-NEXT:    ldr z7, [x10, #1, mul vl]
+; CHECK-NEXT:    rdvl x8, #2
+; CHECK-NEXT:    ldr z24, [x9, #1, mul vl]
+; CHECK-NEXT:    add x9, x6, x8
+; CHECK-NEXT:    add x8, x7, x8
 ; CHECK-NEXT:    str z3, [x6, #2, mul vl]
 ; CHECK-NEXT:    str z2, [x6, #1, mul vl]
 ; CHECK-NEXT:    str z1, [x6]
-; CHECK-NEXT:    str z24, [x7, #2, mul vl]
-; CHECK-NEXT:    str z7, [x7, #3, mul vl]
+; CHECK-NEXT:    str z4, [x9, #1, mul vl]
+; CHECK-NEXT:    str z7, [x7, #2, mul vl]
 ; CHECK-NEXT:    str z6, [x7]
 ; CHECK-NEXT:    str z5, [x7, #1, mul vl]
+; CHECK-NEXT:    str z24, [x8, #1, mul vl]
 ; CHECK-NEXT:    ret
 entry:
   store volatile <vscale x 8 x double> %x1, ptr %ptr1
@@ -197,16 +220,21 @@ entry:
 define double @foo6(double %x0, double %x1, ptr %ptr1, ptr %ptr2, <vscale x 8 x double> %x2, <vscale x 6 x double> %x3) nounwind {
 ; CHECK-LABEL: foo6:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr z1, [x2]
-; CHECK-NEXT:    ldr z6, [x2, #2, mul vl]
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    ldr z6, [x2]
 ; CHECK-NEXT:    ldr z7, [x2, #1, mul vl]
-; CHECK-NEXT:    str z5, [x0, #3, mul vl]
+; CHECK-NEXT:    add x9, x2, x8
+; CHECK-NEXT:    add x8, x1, x8
+; CHECK-NEXT:    ldr z1, [x9, #1, mul vl]
+; CHECK-NEXT:    rdvl x9, #2
 ; CHECK-NEXT:    str z4, [x0, #2, mul vl]
+; CHECK-NEXT:    add x9, x0, x9
 ; CHECK-NEXT:    str z3, [x0, #1, mul vl]
 ; CHECK-NEXT:    str z2, [x0]
+; CHECK-NEXT:    str z5, [x9, #1, mul vl]
 ; CHECK-NEXT:    str z7, [x1, #1, mul vl]
-; CHECK-NEXT:    str z6, [x1, #2, mul vl]
-; CHECK-NEXT:    str z1, [x1]
+; CHECK-NEXT:    str z1, [x8, #1, mul vl]
+; CHECK-NEXT:    str z6, [x1]
 ; CHECK-NEXT:    ret
 entry:
   store volatile <vscale x 8 x double> %x2, ptr %ptr1

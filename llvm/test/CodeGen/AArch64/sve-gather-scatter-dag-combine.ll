@@ -79,18 +79,20 @@ define <vscale x 16 x i8> @narrow_i64_gather_index_i8_zext(ptr %out, ptr %in, <v
 ; CHECK-LABEL: narrow_i64_gather_index_i8_zext:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    add x8, x1, x2
-; CHECK-NEXT:    ld1b { z0.s }, p0/z, [x8, #3, mul vl]
-; CHECK-NEXT:    ld1b { z1.s }, p0/z, [x8, #2, mul vl]
-; CHECK-NEXT:    ld1b { z2.s }, p0/z, [x1, x2]
+; CHECK-NEXT:    cnth x8
+; CHECK-NEXT:    add x9, x1, x2
+; CHECK-NEXT:    add x8, x9, x8
+; CHECK-NEXT:    ld1b { z0.s }, p0/z, [x1, x2]
+; CHECK-NEXT:    ld1b { z1.s }, p0/z, [x9, #1, mul vl]
+; CHECK-NEXT:    ld1b { z2.s }, p0/z, [x9, #2, mul vl]
 ; CHECK-NEXT:    ld1b { z3.s }, p0/z, [x8, #1, mul vl]
 ; CHECK-NEXT:    ld1b { z0.s }, p0/z, [x1, z0.s, uxtw]
 ; CHECK-NEXT:    ld1b { z1.s }, p0/z, [x1, z1.s, uxtw]
 ; CHECK-NEXT:    ld1b { z2.s }, p0/z, [x1, z2.s, uxtw]
 ; CHECK-NEXT:    ld1b { z3.s }, p0/z, [x1, z3.s, uxtw]
-; CHECK-NEXT:    uzp1 z0.h, z1.h, z0.h
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z1.h
 ; CHECK-NEXT:    uzp1 z1.h, z2.h, z3.h
-; CHECK-NEXT:    uzp1 z0.b, z1.b, z0.b
+; CHECK-NEXT:    uzp1 z0.b, z0.b, z1.b
 ; CHECK-NEXT:    ret
   %1 = getelementptr inbounds i8, ptr %in, i64 %ptr
   %2 = bitcast ptr %1 to ptr
@@ -105,18 +107,20 @@ define <vscale x 16 x i8> @narrow_i64_gather_index_i8_sext(ptr %out, ptr %in, <v
 ; CHECK-LABEL: narrow_i64_gather_index_i8_sext:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    add x8, x1, x2
-; CHECK-NEXT:    ld1sb { z0.s }, p0/z, [x8, #3, mul vl]
-; CHECK-NEXT:    ld1sb { z1.s }, p0/z, [x8, #2, mul vl]
-; CHECK-NEXT:    ld1sb { z2.s }, p0/z, [x1, x2]
+; CHECK-NEXT:    cnth x8
+; CHECK-NEXT:    add x9, x1, x2
+; CHECK-NEXT:    add x8, x9, x8
+; CHECK-NEXT:    ld1sb { z0.s }, p0/z, [x1, x2]
+; CHECK-NEXT:    ld1sb { z1.s }, p0/z, [x9, #1, mul vl]
+; CHECK-NEXT:    ld1sb { z2.s }, p0/z, [x9, #2, mul vl]
 ; CHECK-NEXT:    ld1sb { z3.s }, p0/z, [x8, #1, mul vl]
 ; CHECK-NEXT:    ld1b { z0.s }, p0/z, [x1, z0.s, sxtw]
 ; CHECK-NEXT:    ld1b { z1.s }, p0/z, [x1, z1.s, sxtw]
 ; CHECK-NEXT:    ld1b { z2.s }, p0/z, [x1, z2.s, sxtw]
 ; CHECK-NEXT:    ld1b { z3.s }, p0/z, [x1, z3.s, sxtw]
-; CHECK-NEXT:    uzp1 z0.h, z1.h, z0.h
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z1.h
 ; CHECK-NEXT:    uzp1 z1.h, z2.h, z3.h
-; CHECK-NEXT:    uzp1 z0.b, z1.b, z0.b
+; CHECK-NEXT:    uzp1 z0.b, z0.b, z1.b
 ; CHECK-NEXT:    ret
   %1 = getelementptr inbounds i8, ptr %in, i64 %ptr
   %2 = bitcast ptr %1 to ptr

@@ -609,21 +609,29 @@ define <vscale x 20 x float> @test_ldnp_v20f32_vscale(ptr %A) {
 ; CHECK-LE-LABEL: test_ldnp_v20f32_vscale:
 ; CHECK-LE:       ; %bb.0:
 ; CHECK-LE-NEXT:    ptrue p0.s
+; CHECK-LE-NEXT:    rdvl x8, #1
+; CHECK-LE-NEXT:    add x9, x0, x8
+; CHECK-LE-NEXT:    ldnt1w { z2.s }, p0/z, [x9, #1, mul vl]
+; CHECK-LE-NEXT:    add x9, x9, x8
+; CHECK-LE-NEXT:    add x8, x9, x8
 ; CHECK-LE-NEXT:    ldnt1w { z0.s }, p0/z, [x0]
 ; CHECK-LE-NEXT:    ldnt1w { z1.s }, p0/z, [x0, #1, mul vl]
-; CHECK-LE-NEXT:    ldnt1w { z2.s }, p0/z, [x0, #2, mul vl]
-; CHECK-LE-NEXT:    ldnt1w { z3.s }, p0/z, [x0, #3, mul vl]
-; CHECK-LE-NEXT:    ldnt1w { z4.s }, p0/z, [x0, #4, mul vl]
+; CHECK-LE-NEXT:    ldnt1w { z3.s }, p0/z, [x9, #1, mul vl]
+; CHECK-LE-NEXT:    ldnt1w { z4.s }, p0/z, [x8, #1, mul vl]
 ; CHECK-LE-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: test_ldnp_v20f32_vscale:
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    ptrue p0.s
+; CHECK-BE-NEXT:    rdvl x8, #1
+; CHECK-BE-NEXT:    add x9, x0, x8
+; CHECK-BE-NEXT:    ldnt1w { z2.s }, p0/z, [x9, #1, mul vl]
+; CHECK-BE-NEXT:    add x9, x9, x8
+; CHECK-BE-NEXT:    add x8, x9, x8
 ; CHECK-BE-NEXT:    ldnt1w { z0.s }, p0/z, [x0]
 ; CHECK-BE-NEXT:    ldnt1w { z1.s }, p0/z, [x0, #1, mul vl]
-; CHECK-BE-NEXT:    ldnt1w { z2.s }, p0/z, [x0, #2, mul vl]
-; CHECK-BE-NEXT:    ldnt1w { z3.s }, p0/z, [x0, #3, mul vl]
-; CHECK-BE-NEXT:    ldnt1w { z4.s }, p0/z, [x0, #4, mul vl]
+; CHECK-BE-NEXT:    ldnt1w { z3.s }, p0/z, [x9, #1, mul vl]
+; CHECK-BE-NEXT:    ldnt1w { z4.s }, p0/z, [x8, #1, mul vl]
 ; CHECK-BE-NEXT:    ret
   %lv = load<vscale x 20 x float>, ptr %A, align 8, !nontemporal !0
   ret <vscale x 20 x float> %lv

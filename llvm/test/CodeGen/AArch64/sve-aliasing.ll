@@ -458,19 +458,21 @@ define void @triple_v16i8(ptr noalias nocapture noundef %l0) {
 ; CHECK-NEXT:    ldr z0, [x0]
 ; CHECK-NEXT:    ldr z1, [x0, #1, mul vl]
 ; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    ldr z2, [x0, #2, mul vl]
-; CHECK-NEXT:    movprfx z3, z0
-; CHECK-NEXT:    mul z3.b, p0/m, z3.b, z0.b
-; CHECK-NEXT:    movprfx z4, z1
-; CHECK-NEXT:    mul z4.b, p0/m, z4.b, z1.b
-; CHECK-NEXT:    movprfx z5, z2
-; CHECK-NEXT:    mul z5.b, p0/m, z5.b, z2.b
-; CHECK-NEXT:    eor z0.d, z3.d, z0.d
-; CHECK-NEXT:    eor z1.d, z4.d, z1.d
-; CHECK-NEXT:    eor z2.d, z5.d, z2.d
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    add x8, x0, x8
+; CHECK-NEXT:    movprfx z2, z0
+; CHECK-NEXT:    mul z2.b, p0/m, z2.b, z0.b
+; CHECK-NEXT:    movprfx z3, z1
+; CHECK-NEXT:    mul z3.b, p0/m, z3.b, z1.b
+; CHECK-NEXT:    eor z0.d, z2.d, z0.d
+; CHECK-NEXT:    eor z1.d, z3.d, z1.d
 ; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    str z1, [x0, #1, mul vl]
-; CHECK-NEXT:    str z2, [x0, #2, mul vl]
+; CHECK-NEXT:    ldr z0, [x8, #1, mul vl]
+; CHECK-NEXT:    movprfx z1, z0
+; CHECK-NEXT:    mul z1.b, p0/m, z1.b, z0.b
+; CHECK-NEXT:    eor z0.d, z1.d, z0.d
+; CHECK-NEXT:    str z0, [x8, #1, mul vl]
 ; CHECK-NEXT:    ret
   %l3 = load <vscale x 16 x i8>, ptr %l0, align 16
   %l5 = mul <vscale x 16 x i8> %l3, %l3
@@ -497,6 +499,7 @@ define void @negative_tripletooshort_v16i8(ptr noalias nocapture noundef %l0) {
 ; CHECK-NEXT:    ldr z0, [x0]
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    cntw x8
+; CHECK-NEXT:    add x9, x0, x8
 ; CHECK-NEXT:    movprfx z1, z0
 ; CHECK-NEXT:    mul z1.b, p0/m, z1.b, z0.b
 ; CHECK-NEXT:    eor z0.d, z1.d, z0.d
@@ -506,12 +509,11 @@ define void @negative_tripletooshort_v16i8(ptr noalias nocapture noundef %l0) {
 ; CHECK-NEXT:    mul z1.b, p0/m, z1.b, z0.b
 ; CHECK-NEXT:    eor z0.d, z1.d, z0.d
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0, x8]
-; CHECK-NEXT:    cnth x8
-; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0, x8]
+; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x9, x8]
 ; CHECK-NEXT:    movprfx z1, z0
 ; CHECK-NEXT:    mul z1.b, p0/m, z1.b, z0.b
 ; CHECK-NEXT:    eor z0.d, z1.d, z0.d
-; CHECK-NEXT:    st1b { z0.b }, p0, [x0, x8]
+; CHECK-NEXT:    st1b { z0.b }, p0, [x9, x8]
 ; CHECK-NEXT:    ret
   %l3 = load <vscale x 16 x i8>, ptr %l0, align 16
   %l5 = mul <vscale x 16 x i8> %l3, %l3

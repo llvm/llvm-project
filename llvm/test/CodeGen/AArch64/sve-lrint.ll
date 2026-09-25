@@ -121,77 +121,87 @@ define <vscale x 32 x i64> @lrint_v32f16(<vscale x 32 x half> %x) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    uunpkhi z4.s, z3.h
 ; CHECK-NEXT:    uunpklo z3.s, z3.h
+; CHECK-NEXT:    rdvl x10, #8
+; CHECK-NEXT:    uunpkhi z5.s, z2.h
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    uunpkhi z7.s, z2.h
+; CHECK-NEXT:    rdvl x11, #4
 ; CHECK-NEXT:    uunpklo z2.s, z2.h
-; CHECK-NEXT:    uunpkhi z24.s, z0.h
-; CHECK-NEXT:    uunpkhi z25.s, z1.h
-; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    uunpklo z1.s, z1.h
-; CHECK-NEXT:    uunpkhi z5.d, z4.s
-; CHECK-NEXT:    uunpklo z4.d, z4.s
-; CHECK-NEXT:    uunpkhi z6.d, z3.s
+; CHECK-NEXT:    uunpklo z27.s, z1.h
+; CHECK-NEXT:    rdvl x9, #2
+; CHECK-NEXT:    uunpkhi z1.s, z1.h
+; CHECK-NEXT:    uunpklo z25.s, z0.h
+; CHECK-NEXT:    add x10, x8, x10
+; CHECK-NEXT:    uunpklo z6.d, z4.s
+; CHECK-NEXT:    uunpkhi z7.d, z3.s
+; CHECK-NEXT:    add x12, x10, x11
 ; CHECK-NEXT:    uunpklo z3.d, z3.s
-; CHECK-NEXT:    uunpkhi z26.d, z7.s
-; CHECK-NEXT:    uunpklo z7.d, z7.s
-; CHECK-NEXT:    uunpkhi z27.d, z2.s
-; CHECK-NEXT:    uunpkhi z28.d, z24.s
+; CHECK-NEXT:    uunpkhi z24.d, z5.s
+; CHECK-NEXT:    add x13, x10, x9
+; CHECK-NEXT:    uunpklo z5.d, z5.s
+; CHECK-NEXT:    uunpkhi z0.s, z0.h
+; CHECK-NEXT:    uunpkhi z26.d, z2.s
 ; CHECK-NEXT:    uunpklo z2.d, z2.s
-; CHECK-NEXT:    uunpkhi z29.d, z25.s
-; CHECK-NEXT:    uunpklo z25.d, z25.s
-; CHECK-NEXT:    frintx z5.h, p0/m, z5.h
-; CHECK-NEXT:    frintx z4.h, p0/m, z4.h
-; CHECK-NEXT:    frintx z6.h, p0/m, z6.h
-; CHECK-NEXT:    frintx z3.h, p0/m, z3.h
-; CHECK-NEXT:    frintx z26.h, p0/m, z26.h
-; CHECK-NEXT:    frintx z7.h, p0/m, z7.h
-; CHECK-NEXT:    frintx z27.h, p0/m, z27.h
-; CHECK-NEXT:    frintx z2.h, p0/m, z2.h
-; CHECK-NEXT:    frintx z28.h, p0/m, z28.h
-; CHECK-NEXT:    frintx z29.h, p0/m, z29.h
-; CHECK-NEXT:    frintx z25.h, p0/m, z25.h
-; CHECK-NEXT:    fcvtzs z5.d, p0/m, z5.h
-; CHECK-NEXT:    fcvtzs z4.d, p0/m, z4.h
-; CHECK-NEXT:    fcvtzs z6.d, p0/m, z6.h
-; CHECK-NEXT:    fcvtzs z3.d, p0/m, z3.h
-; CHECK-NEXT:    fcvtzs z26.d, p0/m, z26.h
-; CHECK-NEXT:    fcvtzs z7.d, p0/m, z7.h
-; CHECK-NEXT:    fcvtzs z27.d, p0/m, z27.h
-; CHECK-NEXT:    fcvtzs z2.d, p0/m, z2.h
-; CHECK-NEXT:    fcvtzs z28.d, p0/m, z28.h
-; CHECK-NEXT:    fcvtzs z29.d, p0/m, z29.h
-; CHECK-NEXT:    fcvtzs z25.d, p0/m, z25.h
-; CHECK-NEXT:    str z5, [x8, #15, mul vl]
-; CHECK-NEXT:    uunpkhi z5.d, z1.s
+; CHECK-NEXT:    uunpkhi z29.d, z1.s
 ; CHECK-NEXT:    uunpklo z1.d, z1.s
-; CHECK-NEXT:    str z4, [x8, #14, mul vl]
-; CHECK-NEXT:    uunpkhi z4.d, z0.s
-; CHECK-NEXT:    uunpklo z0.d, z0.s
-; CHECK-NEXT:    str z3, [x8, #12, mul vl]
-; CHECK-NEXT:    uunpklo z3.d, z24.s
-; CHECK-NEXT:    str z6, [x8, #13, mul vl]
-; CHECK-NEXT:    str z26, [x8, #11, mul vl]
-; CHECK-NEXT:    frintx z5.h, p0/m, z5.h
-; CHECK-NEXT:    frintx z1.h, p0/m, z1.h
-; CHECK-NEXT:    str z7, [x8, #10, mul vl]
-; CHECK-NEXT:    frintx z4.h, p0/m, z4.h
-; CHECK-NEXT:    frintx z0.h, p0/m, z0.h
-; CHECK-NEXT:    str z27, [x8, #9, mul vl]
+; CHECK-NEXT:    frintx z6.h, p0/m, z6.h
+; CHECK-NEXT:    frintx z7.h, p0/m, z7.h
+; CHECK-NEXT:    uunpkhi z30.d, z27.s
 ; CHECK-NEXT:    frintx z3.h, p0/m, z3.h
-; CHECK-NEXT:    str z2, [x8, #8, mul vl]
-; CHECK-NEXT:    str z29, [x8, #7, mul vl]
-; CHECK-NEXT:    fcvtzs z5.d, p0/m, z5.h
-; CHECK-NEXT:    fcvtzs z1.d, p0/m, z1.h
-; CHECK-NEXT:    str z25, [x8, #6, mul vl]
-; CHECK-NEXT:    fcvtzs z4.d, p0/m, z4.h
-; CHECK-NEXT:    fcvtzs z0.d, p0/m, z0.h
-; CHECK-NEXT:    str z28, [x8, #3, mul vl]
+; CHECK-NEXT:    frintx z24.h, p0/m, z24.h
+; CHECK-NEXT:    uunpkhi z4.d, z4.s
+; CHECK-NEXT:    frintx z5.h, p0/m, z5.h
+; CHECK-NEXT:    uunpklo z28.d, z0.s
+; CHECK-NEXT:    uunpkhi z0.d, z0.s
+; CHECK-NEXT:    frintx z26.h, p0/m, z26.h
+; CHECK-NEXT:    frintx z2.h, p0/m, z2.h
+; CHECK-NEXT:    frintx z29.h, p0/m, z29.h
+; CHECK-NEXT:    fcvtzs z6.d, p0/m, z6.h
+; CHECK-NEXT:    fcvtzs z7.d, p0/m, z7.h
+; CHECK-NEXT:    frintx z1.h, p0/m, z1.h
 ; CHECK-NEXT:    fcvtzs z3.d, p0/m, z3.h
-; CHECK-NEXT:    str z5, [x8, #5, mul vl]
-; CHECK-NEXT:    str z1, [x8, #4, mul vl]
-; CHECK-NEXT:    str z3, [x8, #2, mul vl]
+; CHECK-NEXT:    fcvtzs z24.d, p0/m, z24.h
+; CHECK-NEXT:    frintx z30.h, p0/m, z30.h
+; CHECK-NEXT:    fcvtzs z5.d, p0/m, z5.h
+; CHECK-NEXT:    frintx z0.h, p0/m, z0.h
+; CHECK-NEXT:    frintx z28.h, p0/m, z28.h
+; CHECK-NEXT:    fcvtzs z26.d, p0/m, z26.h
+; CHECK-NEXT:    frintx z4.h, p0/m, z4.h
+; CHECK-NEXT:    fcvtzs z2.d, p0/m, z2.h
+; CHECK-NEXT:    str z6, [x12, #2, mul vl]
+; CHECK-NEXT:    uunpklo z6.d, z27.s
+; CHECK-NEXT:    fcvtzs z29.d, p0/m, z29.h
+; CHECK-NEXT:    str z7, [x12, #1, mul vl]
+; CHECK-NEXT:    fcvtzs z1.d, p0/m, z1.h
+; CHECK-NEXT:    fcvtzs z30.d, p0/m, z30.h
+; CHECK-NEXT:    str z3, [x10, #4, mul vl]
+; CHECK-NEXT:    uunpkhi z3.d, z25.s
+; CHECK-NEXT:    fcvtzs z0.d, p0/m, z0.h
+; CHECK-NEXT:    str z24, [x13, #1, mul vl]
+; CHECK-NEXT:    fcvtzs z28.d, p0/m, z28.h
+; CHECK-NEXT:    fcvtzs z4.d, p0/m, z4.h
+; CHECK-NEXT:    str z5, [x10, #2, mul vl]
+; CHECK-NEXT:    uunpklo z5.d, z25.s
+; CHECK-NEXT:    frintx z6.h, p0/m, z6.h
+; CHECK-NEXT:    str z26, [x10, #1, mul vl]
+; CHECK-NEXT:    add x10, x8, x11
+; CHECK-NEXT:    add x11, x10, x9
+; CHECK-NEXT:    str z2, [x8, #8, mul vl]
+; CHECK-NEXT:    frintx z3.h, p0/m, z3.h
+; CHECK-NEXT:    str z29, [x11, #1, mul vl]
+; CHECK-NEXT:    str z1, [x10, #2, mul vl]
+; CHECK-NEXT:    frintx z5.h, p0/m, z5.h
+; CHECK-NEXT:    fcvtzs z6.d, p0/m, z6.h
+; CHECK-NEXT:    str z30, [x10, #1, mul vl]
+; CHECK-NEXT:    add x10, x8, x9
+; CHECK-NEXT:    fcvtzs z3.d, p0/m, z3.h
+; CHECK-NEXT:    fcvtzs z5.d, p0/m, z5.h
+; CHECK-NEXT:    str z6, [x8, #4, mul vl]
+; CHECK-NEXT:    str z0, [x10, #1, mul vl]
+; CHECK-NEXT:    str z28, [x8, #2, mul vl]
+; CHECK-NEXT:    str z3, [x8, #1, mul vl]
+; CHECK-NEXT:    str z5, [x8]
+; CHECK-NEXT:    add x8, x12, x9
 ; CHECK-NEXT:    str z4, [x8, #1, mul vl]
-; CHECK-NEXT:    str z0, [x8]
 ; CHECK-NEXT:    ret
   %a = call <vscale x 32 x i64> @llvm.lrint.nxv32i64.nxv32f16(<vscale x 32 x half> %x)
   ret <vscale x 32 x i64> %a
@@ -312,71 +322,81 @@ define <vscale x 16 x i64> @lrint_v16f32(<vscale x 16 x float> %x) {
 define <vscale x 32 x i64> @lrint_v32f32(<vscale x 32 x float> %x) {
 ; CHECK-LABEL: lrint_v32f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uunpkhi z24.d, z7.s
-; CHECK-NEXT:    uunpkhi z25.d, z6.s
-; CHECK-NEXT:    uunpklo z6.d, z6.s
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    uunpklo z7.d, z7.s
-; CHECK-NEXT:    uunpkhi z26.d, z5.s
-; CHECK-NEXT:    uunpklo z5.d, z5.s
-; CHECK-NEXT:    uunpkhi z27.d, z4.s
-; CHECK-NEXT:    uunpkhi z28.d, z1.s
+; CHECK-NEXT:    uunpklo z24.d, z6.s
+; CHECK-NEXT:    uunpklo z25.d, z5.s
+; CHECK-NEXT:    rdvl x9, #8
+; CHECK-NEXT:    uunpkhi z26.d, z4.s
 ; CHECK-NEXT:    uunpklo z4.d, z4.s
-; CHECK-NEXT:    uunpkhi z29.d, z3.s
-; CHECK-NEXT:    uunpklo z3.d, z3.s
+; CHECK-NEXT:    add x9, x8, x9
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    uunpklo z28.d, z3.s
+; CHECK-NEXT:    rdvl x10, #4
+; CHECK-NEXT:    uunpkhi z29.d, z2.s
+; CHECK-NEXT:    uunpklo z30.d, z1.s
+; CHECK-NEXT:    rdvl x12, #2
 ; CHECK-NEXT:    frintx z24.s, p0/m, z24.s
-; CHECK-NEXT:    frintx z6.s, p0/m, z6.s
-; CHECK-NEXT:    uunpklo z1.d, z1.s
-; CHECK-NEXT:    frintx z7.s, p0/m, z7.s
 ; CHECK-NEXT:    frintx z25.s, p0/m, z25.s
+; CHECK-NEXT:    add x11, x8, x10
 ; CHECK-NEXT:    frintx z26.s, p0/m, z26.s
-; CHECK-NEXT:    frintx z5.s, p0/m, z5.s
-; CHECK-NEXT:    frintx z27.s, p0/m, z27.s
-; CHECK-NEXT:    frintx z28.s, p0/m, z28.s
 ; CHECK-NEXT:    frintx z4.s, p0/m, z4.s
-; CHECK-NEXT:    frintx z29.s, p0/m, z29.s
-; CHECK-NEXT:    frintx z3.s, p0/m, z3.s
-; CHECK-NEXT:    fcvtzs z24.d, p0/m, z24.s
-; CHECK-NEXT:    fcvtzs z6.d, p0/m, z6.s
-; CHECK-NEXT:    frintx z1.s, p0/m, z1.s
-; CHECK-NEXT:    fcvtzs z7.d, p0/m, z7.s
-; CHECK-NEXT:    fcvtzs z25.d, p0/m, z25.s
-; CHECK-NEXT:    fcvtzs z26.d, p0/m, z26.s
-; CHECK-NEXT:    fcvtzs z5.d, p0/m, z5.s
-; CHECK-NEXT:    fcvtzs z27.d, p0/m, z27.s
-; CHECK-NEXT:    fcvtzs z28.d, p0/m, z28.s
-; CHECK-NEXT:    fcvtzs z4.d, p0/m, z4.s
-; CHECK-NEXT:    fcvtzs z29.d, p0/m, z29.s
-; CHECK-NEXT:    fcvtzs z3.d, p0/m, z3.s
-; CHECK-NEXT:    str z24, [x8, #15, mul vl]
-; CHECK-NEXT:    uunpkhi z24.d, z2.s
+; CHECK-NEXT:    add x13, x8, x12
 ; CHECK-NEXT:    uunpklo z2.d, z2.s
-; CHECK-NEXT:    str z6, [x8, #12, mul vl]
-; CHECK-NEXT:    uunpkhi z6.d, z0.s
-; CHECK-NEXT:    uunpklo z0.d, z0.s
-; CHECK-NEXT:    str z7, [x8, #14, mul vl]
-; CHECK-NEXT:    fcvtzs z1.d, p0/m, z1.s
-; CHECK-NEXT:    str z25, [x8, #13, mul vl]
-; CHECK-NEXT:    str z26, [x8, #11, mul vl]
-; CHECK-NEXT:    frintx z24.s, p0/m, z24.s
-; CHECK-NEXT:    frintx z2.s, p0/m, z2.s
-; CHECK-NEXT:    str z5, [x8, #10, mul vl]
-; CHECK-NEXT:    frintx z6.s, p0/m, z6.s
-; CHECK-NEXT:    frintx z0.s, p0/m, z0.s
-; CHECK-NEXT:    str z27, [x8, #9, mul vl]
-; CHECK-NEXT:    str z4, [x8, #8, mul vl]
-; CHECK-NEXT:    str z29, [x8, #7, mul vl]
+; CHECK-NEXT:    uunpkhi z1.d, z1.s
+; CHECK-NEXT:    uunpklo z31.d, z0.s
+; CHECK-NEXT:    uunpkhi z0.d, z0.s
+; CHECK-NEXT:    uunpkhi z27.d, z7.s
+; CHECK-NEXT:    uunpkhi z6.d, z6.s
 ; CHECK-NEXT:    fcvtzs z24.d, p0/m, z24.s
+; CHECK-NEXT:    fcvtzs z25.d, p0/m, z25.s
+; CHECK-NEXT:    uunpklo z7.d, z7.s
+; CHECK-NEXT:    fcvtzs z26.d, p0/m, z26.s
+; CHECK-NEXT:    fcvtzs z4.d, p0/m, z4.s
+; CHECK-NEXT:    uunpkhi z3.d, z3.s
+; CHECK-NEXT:    frintx z28.s, p0/m, z28.s
+; CHECK-NEXT:    frintx z29.s, p0/m, z29.s
+; CHECK-NEXT:    frintx z2.s, p0/m, z2.s
+; CHECK-NEXT:    frintx z1.s, p0/m, z1.s
+; CHECK-NEXT:    frintx z30.s, p0/m, z30.s
+; CHECK-NEXT:    frintx z0.s, p0/m, z0.s
+; CHECK-NEXT:    str z24, [x9, #4, mul vl]
+; CHECK-NEXT:    frintx z31.s, p0/m, z31.s
+; CHECK-NEXT:    frintx z7.s, p0/m, z7.s
+; CHECK-NEXT:    str z25, [x9, #2, mul vl]
+; CHECK-NEXT:    frintx z6.s, p0/m, z6.s
+; CHECK-NEXT:    frintx z3.s, p0/m, z3.s
+; CHECK-NEXT:    str z26, [x9, #1, mul vl]
+; CHECK-NEXT:    frintx z27.s, p0/m, z27.s
+; CHECK-NEXT:    fcvtzs z28.d, p0/m, z28.s
+; CHECK-NEXT:    str z4, [x8, #8, mul vl]
+; CHECK-NEXT:    uunpkhi z4.d, z5.s
+; CHECK-NEXT:    fcvtzs z29.d, p0/m, z29.s
 ; CHECK-NEXT:    fcvtzs z2.d, p0/m, z2.s
-; CHECK-NEXT:    str z3, [x8, #6, mul vl]
-; CHECK-NEXT:    fcvtzs z6.d, p0/m, z6.s
+; CHECK-NEXT:    fcvtzs z1.d, p0/m, z1.s
+; CHECK-NEXT:    fcvtzs z30.d, p0/m, z30.s
 ; CHECK-NEXT:    fcvtzs z0.d, p0/m, z0.s
-; CHECK-NEXT:    str z28, [x8, #3, mul vl]
-; CHECK-NEXT:    str z1, [x8, #2, mul vl]
-; CHECK-NEXT:    str z24, [x8, #5, mul vl]
+; CHECK-NEXT:    fcvtzs z31.d, p0/m, z31.s
+; CHECK-NEXT:    fcvtzs z7.d, p0/m, z7.s
+; CHECK-NEXT:    str z28, [x11, #2, mul vl]
+; CHECK-NEXT:    fcvtzs z6.d, p0/m, z6.s
+; CHECK-NEXT:    fcvtzs z3.d, p0/m, z3.s
+; CHECK-NEXT:    str z29, [x11, #1, mul vl]
+; CHECK-NEXT:    frintx z4.s, p0/m, z4.s
+; CHECK-NEXT:    fcvtzs z27.d, p0/m, z27.s
 ; CHECK-NEXT:    str z2, [x8, #4, mul vl]
+; CHECK-NEXT:    str z1, [x13, #1, mul vl]
+; CHECK-NEXT:    str z30, [x8, #2, mul vl]
+; CHECK-NEXT:    str z0, [x8, #1, mul vl]
+; CHECK-NEXT:    fcvtzs z4.d, p0/m, z4.s
+; CHECK-NEXT:    str z31, [x8]
+; CHECK-NEXT:    add x8, x9, x10
+; CHECK-NEXT:    add x9, x9, x12
+; CHECK-NEXT:    str z7, [x8, #2, mul vl]
 ; CHECK-NEXT:    str z6, [x8, #1, mul vl]
-; CHECK-NEXT:    str z0, [x8]
+; CHECK-NEXT:    add x8, x8, x12
+; CHECK-NEXT:    str z4, [x9, #1, mul vl]
+; CHECK-NEXT:    add x9, x11, x12
+; CHECK-NEXT:    str z3, [x9, #1, mul vl]
+; CHECK-NEXT:    str z27, [x8, #1, mul vl]
 ; CHECK-NEXT:    ret
   %a = call <vscale x 32 x i64> @llvm.lrint.nxv32i64.nxv32f32(<vscale x 32 x float> %x)
   ret <vscale x 32 x i64> %a
@@ -462,71 +482,96 @@ define <vscale x 16 x i64> @lrint_v16f64(<vscale x 16 x double> %x) {
 define <vscale x 32 x i64> @lrint_v32f64(<vscale x 32 x double> %x) {
 ; CHECK-LABEL: lrint_v32f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr z0, [x0, #15, mul vl]
-; CHECK-NEXT:    ldr z1, [x0, #14, mul vl]
+; CHECK-NEXT:    rdvl x9, #1
+; CHECK-NEXT:    ldr z0, [x0, #1, mul vl]
+; CHECK-NEXT:    ldr z1, [x0]
+; CHECK-NEXT:    add x10, x0, x9
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    ldr z2, [x0, #13, mul vl]
-; CHECK-NEXT:    ldr z3, [x0, #12, mul vl]
-; CHECK-NEXT:    ldr z4, [x0, #11, mul vl]
-; CHECK-NEXT:    ldr z5, [x0, #10, mul vl]
-; CHECK-NEXT:    ldr z6, [x0, #9, mul vl]
-; CHECK-NEXT:    ldr z7, [x0, #8, mul vl]
-; CHECK-NEXT:    frintx z0.d, p0/m, z0.d
+; CHECK-NEXT:    add x11, x10, x9
+; CHECK-NEXT:    ldr z2, [x10, #1, mul vl]
+; CHECK-NEXT:    add x10, x11, x9
+; CHECK-NEXT:    ldr z3, [x11, #1, mul vl]
 ; CHECK-NEXT:    frintx z1.d, p0/m, z1.d
-; CHECK-NEXT:    ldr z24, [x0, #7, mul vl]
-; CHECK-NEXT:    ldr z25, [x0, #6, mul vl]
+; CHECK-NEXT:    ldr z4, [x10, #1, mul vl]
+; CHECK-NEXT:    add x10, x10, x9
+; CHECK-NEXT:    frintx z0.d, p0/m, z0.d
+; CHECK-NEXT:    add x11, x10, x9
+; CHECK-NEXT:    ldr z5, [x10, #1, mul vl]
 ; CHECK-NEXT:    frintx z2.d, p0/m, z2.d
+; CHECK-NEXT:    add x10, x11, x9
+; CHECK-NEXT:    ldr z6, [x11, #1, mul vl]
 ; CHECK-NEXT:    frintx z3.d, p0/m, z3.d
-; CHECK-NEXT:    ldr z26, [x0, #5, mul vl]
-; CHECK-NEXT:    ldr z27, [x0, #4, mul vl]
+; CHECK-NEXT:    ldr z7, [x10, #1, mul vl]
+; CHECK-NEXT:    add x10, x10, x9
 ; CHECK-NEXT:    frintx z4.d, p0/m, z4.d
-; CHECK-NEXT:    ldr z28, [x0, #3, mul vl]
-; CHECK-NEXT:    ldr z29, [x0, #2, mul vl]
+; CHECK-NEXT:    ldr z24, [x10, #1, mul vl]
+; CHECK-NEXT:    add x10, x10, x9
 ; CHECK-NEXT:    frintx z5.d, p0/m, z5.d
-; CHECK-NEXT:    ldr z30, [x0, #1, mul vl]
-; CHECK-NEXT:    ldr z31, [x0]
+; CHECK-NEXT:    add x11, x10, x9
+; CHECK-NEXT:    ldr z25, [x10, #1, mul vl]
 ; CHECK-NEXT:    frintx z6.d, p0/m, z6.d
+; CHECK-NEXT:    add x10, x11, x9
+; CHECK-NEXT:    ldr z26, [x11, #1, mul vl]
 ; CHECK-NEXT:    frintx z7.d, p0/m, z7.d
+; CHECK-NEXT:    ldr z27, [x10, #1, mul vl]
+; CHECK-NEXT:    add x10, x10, x9
+; CHECK-NEXT:    fcvtzs z1.d, p0/m, z1.d
+; CHECK-NEXT:    ldr z28, [x10, #1, mul vl]
+; CHECK-NEXT:    add x10, x10, x9
+; CHECK-NEXT:    fcvtzs z0.d, p0/m, z0.d
+; CHECK-NEXT:    add x11, x10, x9
 ; CHECK-NEXT:    frintx z24.d, p0/m, z24.d
+; CHECK-NEXT:    fcvtzs z3.d, p0/m, z3.d
+; CHECK-NEXT:    add x9, x11, x9
+; CHECK-NEXT:    ldr z29, [x11, #1, mul vl]
+; CHECK-NEXT:    fcvtzs z2.d, p0/m, z2.d
+; CHECK-NEXT:    ldr z31, [x10, #1, mul vl]
+; CHECK-NEXT:    ldr z30, [x9, #1, mul vl]
 ; CHECK-NEXT:    frintx z25.d, p0/m, z25.d
+; CHECK-NEXT:    fcvtzs z4.d, p0/m, z4.d
+; CHECK-NEXT:    fcvtzs z5.d, p0/m, z5.d
 ; CHECK-NEXT:    frintx z26.d, p0/m, z26.d
 ; CHECK-NEXT:    frintx z27.d, p0/m, z27.d
 ; CHECK-NEXT:    frintx z28.d, p0/m, z28.d
-; CHECK-NEXT:    frintx z29.d, p0/m, z29.d
-; CHECK-NEXT:    frintx z30.d, p0/m, z30.d
-; CHECK-NEXT:    frintx z31.d, p0/m, z31.d
-; CHECK-NEXT:    fcvtzs z0.d, p0/m, z0.d
-; CHECK-NEXT:    fcvtzs z1.d, p0/m, z1.d
-; CHECK-NEXT:    fcvtzs z2.d, p0/m, z2.d
-; CHECK-NEXT:    fcvtzs z3.d, p0/m, z3.d
-; CHECK-NEXT:    fcvtzs z4.d, p0/m, z4.d
-; CHECK-NEXT:    fcvtzs z5.d, p0/m, z5.d
+; CHECK-NEXT:    rdvl x9, #2
 ; CHECK-NEXT:    fcvtzs z6.d, p0/m, z6.d
+; CHECK-NEXT:    frintx z29.d, p0/m, z29.d
+; CHECK-NEXT:    add x10, x8, x9
 ; CHECK-NEXT:    fcvtzs z7.d, p0/m, z7.d
+; CHECK-NEXT:    frintx z31.d, p0/m, z31.d
+; CHECK-NEXT:    str z0, [x8, #1, mul vl]
+; CHECK-NEXT:    str z1, [x8]
+; CHECK-NEXT:    frintx z30.d, p0/m, z30.d
 ; CHECK-NEXT:    fcvtzs z24.d, p0/m, z24.d
+; CHECK-NEXT:    str z2, [x8, #2, mul vl]
 ; CHECK-NEXT:    fcvtzs z25.d, p0/m, z25.d
 ; CHECK-NEXT:    fcvtzs z26.d, p0/m, z26.d
+; CHECK-NEXT:    str z3, [x10, #1, mul vl]
+; CHECK-NEXT:    rdvl x10, #4
 ; CHECK-NEXT:    fcvtzs z27.d, p0/m, z27.d
+; CHECK-NEXT:    add x11, x8, x10
+; CHECK-NEXT:    str z4, [x8, #4, mul vl]
 ; CHECK-NEXT:    fcvtzs z28.d, p0/m, z28.d
-; CHECK-NEXT:    fcvtzs z29.d, p0/m, z29.d
-; CHECK-NEXT:    fcvtzs z30.d, p0/m, z30.d
+; CHECK-NEXT:    str z5, [x11, #1, mul vl]
 ; CHECK-NEXT:    fcvtzs z31.d, p0/m, z31.d
-; CHECK-NEXT:    str z0, [x8, #15, mul vl]
-; CHECK-NEXT:    str z1, [x8, #14, mul vl]
-; CHECK-NEXT:    str z2, [x8, #13, mul vl]
-; CHECK-NEXT:    str z3, [x8, #12, mul vl]
-; CHECK-NEXT:    str z4, [x8, #11, mul vl]
-; CHECK-NEXT:    str z5, [x8, #10, mul vl]
-; CHECK-NEXT:    str z6, [x8, #9, mul vl]
-; CHECK-NEXT:    str z7, [x8, #8, mul vl]
-; CHECK-NEXT:    str z24, [x8, #7, mul vl]
-; CHECK-NEXT:    str z25, [x8, #6, mul vl]
-; CHECK-NEXT:    str z26, [x8, #5, mul vl]
-; CHECK-NEXT:    str z27, [x8, #4, mul vl]
-; CHECK-NEXT:    str z28, [x8, #3, mul vl]
+; CHECK-NEXT:    fcvtzs z29.d, p0/m, z29.d
+; CHECK-NEXT:    str z6, [x11, #2, mul vl]
+; CHECK-NEXT:    add x11, x11, x9
+; CHECK-NEXT:    fcvtzs z30.d, p0/m, z30.d
+; CHECK-NEXT:    str z7, [x11, #1, mul vl]
+; CHECK-NEXT:    rdvl x11, #8
+; CHECK-NEXT:    str z24, [x8, #8, mul vl]
+; CHECK-NEXT:    add x8, x8, x11
+; CHECK-NEXT:    add x11, x8, x9
+; CHECK-NEXT:    str z25, [x8, #1, mul vl]
+; CHECK-NEXT:    str z26, [x8, #2, mul vl]
+; CHECK-NEXT:    str z27, [x11, #1, mul vl]
+; CHECK-NEXT:    str z28, [x8, #4, mul vl]
+; CHECK-NEXT:    add x8, x8, x10
+; CHECK-NEXT:    str z31, [x8, #1, mul vl]
 ; CHECK-NEXT:    str z29, [x8, #2, mul vl]
+; CHECK-NEXT:    add x8, x8, x9
 ; CHECK-NEXT:    str z30, [x8, #1, mul vl]
-; CHECK-NEXT:    str z31, [x8]
 ; CHECK-NEXT:    ret
   %a = call <vscale x 32 x i64> @llvm.lrint.nxv32i64.nxv16f64(<vscale x 32 x double> %x)
   ret <vscale x 32 x i64> %a

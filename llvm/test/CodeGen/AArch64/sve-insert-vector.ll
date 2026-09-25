@@ -138,14 +138,19 @@ define <vscale x 16 x i8> @insert_v16i8_nxv16i8_idx16(<vscale x 16 x i8> %vec, <
 define void @insert_nxv8i64_nxv16i64(<vscale x 8 x i64> %sv0, <vscale x 8 x i64> %sv1, ptr %out) {
 ; CHECK-LABEL: insert_nxv8i64_nxv16i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str z7, [x0, #7, mul vl]
-; CHECK-NEXT:    str z6, [x0, #6, mul vl]
-; CHECK-NEXT:    str z5, [x0, #5, mul vl]
+; CHECK-NEXT:    rdvl x8, #4
+; CHECK-NEXT:    rdvl x9, #2
 ; CHECK-NEXT:    str z4, [x0, #4, mul vl]
-; CHECK-NEXT:    str z3, [x0, #3, mul vl]
+; CHECK-NEXT:    add x8, x0, x8
 ; CHECK-NEXT:    str z2, [x0, #2, mul vl]
+; CHECK-NEXT:    add x10, x0, x9
 ; CHECK-NEXT:    str z1, [x0, #1, mul vl]
 ; CHECK-NEXT:    str z0, [x0]
+; CHECK-NEXT:    str z6, [x8, #2, mul vl]
+; CHECK-NEXT:    str z5, [x8, #1, mul vl]
+; CHECK-NEXT:    add x8, x8, x9
+; CHECK-NEXT:    str z3, [x10, #1, mul vl]
+; CHECK-NEXT:    str z7, [x8, #1, mul vl]
 ; CHECK-NEXT:    ret
   %v0 = call <vscale x 16 x i64> @llvm.vector.insert.nxv8i64.nxv16i64(<vscale x 16 x i64> poison, <vscale x 8 x i64> %sv0, i64 0)
   %v = call <vscale x 16 x i64> @llvm.vector.insert.nxv8i64.nxv16i64(<vscale x 16 x i64> %v0, <vscale x 8 x i64> %sv1, i64 8)
@@ -156,10 +161,12 @@ define void @insert_nxv8i64_nxv16i64(<vscale x 8 x i64> %sv0, <vscale x 8 x i64>
 define void @insert_nxv8i64_nxv16i64_lo(<vscale x 8 x i64> %sv0, ptr %out) {
 ; CHECK-LABEL: insert_nxv8i64_nxv16i64_lo:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str z3, [x0, #3, mul vl]
+; CHECK-NEXT:    rdvl x8, #2
 ; CHECK-NEXT:    str z2, [x0, #2, mul vl]
+; CHECK-NEXT:    add x8, x0, x8
 ; CHECK-NEXT:    str z1, [x0, #1, mul vl]
 ; CHECK-NEXT:    str z0, [x0]
+; CHECK-NEXT:    str z3, [x8, #1, mul vl]
 ; CHECK-NEXT:    ret
   %v = call <vscale x 16 x i64> @llvm.vector.insert.nxv8i64.nxv16i64(<vscale x 16 x i64> poison, <vscale x 8 x i64> %sv0, i64 0)
   store <vscale x 16 x i64> %v, ptr %out
@@ -169,10 +176,14 @@ define void @insert_nxv8i64_nxv16i64_lo(<vscale x 8 x i64> %sv0, ptr %out) {
 define void @insert_nxv8i64_nxv16i64_hi(<vscale x 8 x i64> %sv0, ptr %out) {
 ; CHECK-LABEL: insert_nxv8i64_nxv16i64_hi:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str z3, [x0, #7, mul vl]
-; CHECK-NEXT:    str z2, [x0, #6, mul vl]
-; CHECK-NEXT:    str z1, [x0, #5, mul vl]
+; CHECK-NEXT:    rdvl x8, #4
+; CHECK-NEXT:    rdvl x9, #2
 ; CHECK-NEXT:    str z0, [x0, #4, mul vl]
+; CHECK-NEXT:    add x8, x0, x8
+; CHECK-NEXT:    str z2, [x8, #2, mul vl]
+; CHECK-NEXT:    str z1, [x8, #1, mul vl]
+; CHECK-NEXT:    add x8, x8, x9
+; CHECK-NEXT:    str z3, [x8, #1, mul vl]
 ; CHECK-NEXT:    ret
   %v = call <vscale x 16 x i64> @llvm.vector.insert.nxv8i64.nxv16i64(<vscale x 16 x i64> poison, <vscale x 8 x i64> %sv0, i64 8)
   store <vscale x 16 x i64> %v, ptr %out
@@ -187,14 +198,18 @@ define void @insert_v2i64_nxv16i64(<2 x i64> %sv0, <2 x i64> %sv1, ptr %out) uwt
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    addvl sp, sp, #-4
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x09, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x11, 0x20, 0x1e, 0x22 // sp + 16 + 32 * VG
+; CHECK-NEXT:    rdvl x8, #2
+; CHECK-NEXT:    mov x9, sp
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    str z0, [sp]
 ; CHECK-NEXT:    str q1, [sp, #32]
-; CHECK-NEXT:    ldr z0, [sp, #3, mul vl]
+; CHECK-NEXT:    add x9, x9, x8
+; CHECK-NEXT:    add x8, x0, x8
+; CHECK-NEXT:    ldr z0, [x9, #1, mul vl]
 ; CHECK-NEXT:    ldr z1, [sp, #2, mul vl]
 ; CHECK-NEXT:    ldr z2, [sp, #1, mul vl]
 ; CHECK-NEXT:    ldr z3, [sp]
-; CHECK-NEXT:    str z0, [x0, #3, mul vl]
+; CHECK-NEXT:    str z0, [x8, #1, mul vl]
 ; CHECK-NEXT:    str z1, [x0, #2, mul vl]
 ; CHECK-NEXT:    str z2, [x0, #1, mul vl]
 ; CHECK-NEXT:    str z3, [x0]

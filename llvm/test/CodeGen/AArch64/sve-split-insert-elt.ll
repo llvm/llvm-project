@@ -71,20 +71,22 @@ define <vscale x 8 x i64> @split_insert_8i64_idx(<vscale x 8 x i64> %a, i64 %elt
 ; CHECK-NEXT:    addvl sp, sp, #-4
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x09, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x11, 0x20, 0x1e, 0x22 // sp + 16 + 32 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    cnth x8
+; CHECK-NEXT:    cnth x10
+; CHECK-NEXT:    rdvl x8, #2
 ; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    str z3, [sp, #3, mul vl]
-; CHECK-NEXT:    sub x8, x8, #1
+; CHECK-NEXT:    sub x10, x10, #1
+; CHECK-NEXT:    add x8, x9, x8
+; CHECK-NEXT:    cmp x1, x10
+; CHECK-NEXT:    str z3, [x8, #1, mul vl]
+; CHECK-NEXT:    csel x10, x1, x10, lo
 ; CHECK-NEXT:    str z2, [sp, #2, mul vl]
-; CHECK-NEXT:    cmp x1, x8
 ; CHECK-NEXT:    str z1, [sp, #1, mul vl]
-; CHECK-NEXT:    csel x8, x1, x8, lo
 ; CHECK-NEXT:    str z0, [sp]
-; CHECK-NEXT:    str x0, [x9, x8, lsl #3]
+; CHECK-NEXT:    str x0, [x9, x10, lsl #3]
 ; CHECK-NEXT:    ldr z0, [sp]
+; CHECK-NEXT:    ldr z3, [x8, #1, mul vl]
 ; CHECK-NEXT:    ldr z1, [sp, #1, mul vl]
 ; CHECK-NEXT:    ldr z2, [sp, #2, mul vl]
-; CHECK-NEXT:    ldr z3, [sp, #3, mul vl]
 ; CHECK-NEXT:    addvl sp, sp, #4
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -133,20 +135,21 @@ define <vscale x 32 x i16> @split_insert_32i16(<vscale x 32 x i16> %a, i16 %elt)
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x09, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x11, 0x20, 0x1e, 0x22 // sp + 16 + 32 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    rdvl x8, #2
-; CHECK-NEXT:    mov w9, #128 // =0x80
-; CHECK-NEXT:    str z3, [sp, #3, mul vl]
-; CHECK-NEXT:    sub x8, x8, #1
-; CHECK-NEXT:    str z2, [sp, #2, mul vl]
-; CHECK-NEXT:    cmp x8, #128
-; CHECK-NEXT:    str z1, [sp, #1, mul vl]
-; CHECK-NEXT:    csel x8, x8, x9, lo
 ; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    mov w11, #128 // =0x80
+; CHECK-NEXT:    add x10, x9, x8
+; CHECK-NEXT:    sub x8, x8, #1
+; CHECK-NEXT:    cmp x8, #128
+; CHECK-NEXT:    str z3, [x10, #1, mul vl]
+; CHECK-NEXT:    csel x8, x8, x11, lo
+; CHECK-NEXT:    str z2, [sp, #2, mul vl]
+; CHECK-NEXT:    str z1, [sp, #1, mul vl]
 ; CHECK-NEXT:    str z0, [sp]
 ; CHECK-NEXT:    strh w0, [x9, x8, lsl #1]
 ; CHECK-NEXT:    ldr z0, [sp]
+; CHECK-NEXT:    ldr z3, [x10, #1, mul vl]
 ; CHECK-NEXT:    ldr z1, [sp, #1, mul vl]
 ; CHECK-NEXT:    ldr z2, [sp, #2, mul vl]
-; CHECK-NEXT:    ldr z3, [sp, #3, mul vl]
 ; CHECK-NEXT:    addvl sp, sp, #4
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret

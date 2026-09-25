@@ -271,17 +271,19 @@ define void @foo_st4_nxv4i32_bad_mask2(<vscale x 8 x i1> %mask, <vscale x 4 x i3
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    zip2 z4.s, z1.s, z3.s
 ; CHECK-NEXT:    zip2 z5.s, z0.s, z2.s
+; CHECK-NEXT:    rdvl x8, #2
 ; CHECK-NEXT:    zip2 p1.h, p0.h, p0.h
 ; CHECK-NEXT:    zip1 z1.s, z1.s, z3.s
+; CHECK-NEXT:    add x8, x0, x8
 ; CHECK-NEXT:    zip1 z0.s, z0.s, z2.s
 ; CHECK-NEXT:    zip1 p0.h, p0.h, p0.h
-; CHECK-NEXT:    punpkhi p2.h, p1.b
 ; CHECK-NEXT:    zip2 z2.s, z5.s, z4.s
+; CHECK-NEXT:    punpkhi p2.h, p1.b
 ; CHECK-NEXT:    zip1 z3.s, z5.s, z4.s
 ; CHECK-NEXT:    punpklo p1.h, p1.b
 ; CHECK-NEXT:    zip2 z4.s, z0.s, z1.s
 ; CHECK-NEXT:    zip1 z0.s, z0.s, z1.s
-; CHECK-NEXT:    st1w { z2.s }, p2, [x0, #3, mul vl]
+; CHECK-NEXT:    st1w { z2.s }, p2, [x8, #1, mul vl]
 ; CHECK-NEXT:    punpkhi p2.h, p0.b
 ; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    st1w { z3.s }, p1, [x0, #2, mul vl]

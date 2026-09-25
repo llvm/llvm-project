@@ -10,7 +10,10 @@ define <4 x i32> @extract_v4i32_nxv16i32_12(<vscale x 16 x i32> %arg) {
 ; CHECK-NEXT:    addvl sp, sp, #-4
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x09, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x11, 0x20, 0x1e, 0x22 // sp + 16 + 32 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    str z3, [sp, #3, mul vl]
+; CHECK-NEXT:    rdvl x8, #2
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    add x8, x9, x8
+; CHECK-NEXT:    str z3, [x8, #1, mul vl]
 ; CHECK-NEXT:    str z2, [sp, #2, mul vl]
 ; CHECK-NEXT:    str z1, [sp, #1, mul vl]
 ; CHECK-NEXT:    str z0, [sp]
@@ -46,7 +49,10 @@ define <4 x i16> @extract_v4i16_nxv32i16_8(<vscale x 32 x i16> %arg) {
 ; CHECK-NEXT:    addvl sp, sp, #-4
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x09, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x11, 0x20, 0x1e, 0x22 // sp + 16 + 32 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    str z3, [sp, #3, mul vl]
+; CHECK-NEXT:    rdvl x8, #2
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    add x8, x9, x8
+; CHECK-NEXT:    str z3, [x8, #1, mul vl]
 ; CHECK-NEXT:    str z2, [sp, #2, mul vl]
 ; CHECK-NEXT:    str z1, [sp, #1, mul vl]
 ; CHECK-NEXT:    str z0, [sp]
@@ -67,19 +73,22 @@ define <2 x i16> @extract_v2i16_nxv32i16_8(<vscale x 32 x i16> %arg) {
 ; CHECK-NEXT:    addvl sp, sp, #-8
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0a, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x11, 0xc0, 0x00, 0x1e, 0x22 // sp + 16 + 64 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    str z3, [sp, #3, mul vl]
+; CHECK-NEXT:    rdvl x8, #2
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    addvl x11, sp, #4
+; CHECK-NEXT:    add x10, x9, x8
+; CHECK-NEXT:    add x8, x11, x8
+; CHECK-NEXT:    str z3, [x10, #1, mul vl]
+; CHECK-NEXT:    str z3, [x8, #1, mul vl]
+; CHECK-NEXT:    add x8, x9, #32
 ; CHECK-NEXT:    str z2, [sp, #2, mul vl]
-; CHECK-NEXT:    add x8, x8, #32
 ; CHECK-NEXT:    str z1, [sp, #1, mul vl]
 ; CHECK-NEXT:    str z0, [sp]
-; CHECK-NEXT:    str z3, [sp, #7, mul vl]
 ; CHECK-NEXT:    str z2, [sp, #6, mul vl]
 ; CHECK-NEXT:    str z1, [sp, #5, mul vl]
 ; CHECK-NEXT:    str z0, [sp, #4, mul vl]
 ; CHECK-NEXT:    ld1 { v0.h }[0], [x8]
-; CHECK-NEXT:    addvl x8, sp, #4
-; CHECK-NEXT:    add x8, x8, #34
+; CHECK-NEXT:    add x8, x11, #34
 ; CHECK-NEXT:    ld1 { v0.h }[2], [x8]
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    addvl sp, sp, #8
@@ -96,17 +105,19 @@ define <2 x i64> @extract_v2i64_nxv8i64_8(<vscale x 8 x i64> %arg) {
 ; CHECK-NEXT:    addvl sp, sp, #-4
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x09, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x11, 0x20, 0x1e, 0x22 // sp + 16 + 32 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    cnth x8
-; CHECK-NEXT:    mov w9, #8 // =0x8
-; CHECK-NEXT:    str z3, [sp, #3, mul vl]
-; CHECK-NEXT:    sub x8, x8, #2
-; CHECK-NEXT:    str z2, [sp, #2, mul vl]
-; CHECK-NEXT:    cmp x8, #8
-; CHECK-NEXT:    str z1, [sp, #1, mul vl]
-; CHECK-NEXT:    csel x8, x8, x9, lo
-; CHECK-NEXT:    str z0, [sp]
+; CHECK-NEXT:    rdvl x8, #2
 ; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    cnth x10
+; CHECK-NEXT:    add x8, x9, x8
+; CHECK-NEXT:    sub x10, x10, #2
+; CHECK-NEXT:    str z3, [x8, #1, mul vl]
+; CHECK-NEXT:    mov w8, #8 // =0x8
+; CHECK-NEXT:    cmp x10, #8
+; CHECK-NEXT:    csel x8, x10, x8, lo
+; CHECK-NEXT:    str z2, [sp, #2, mul vl]
 ; CHECK-NEXT:    lsl x8, x8, #3
+; CHECK-NEXT:    str z1, [sp, #1, mul vl]
+; CHECK-NEXT:    str z0, [sp]
 ; CHECK-NEXT:    ldr q0, [x9, x8]
 ; CHECK-NEXT:    addvl sp, sp, #4
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
@@ -122,7 +133,10 @@ define <4 x float> @extract_v4f32_nxv16f32_12(<vscale x 16 x float> %arg) {
 ; CHECK-NEXT:    addvl sp, sp, #-4
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x09, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x11, 0x20, 0x1e, 0x22 // sp + 16 + 32 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    str z3, [sp, #3, mul vl]
+; CHECK-NEXT:    rdvl x8, #2
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    add x8, x9, x8
+; CHECK-NEXT:    str z3, [x8, #1, mul vl]
 ; CHECK-NEXT:    str z2, [sp, #2, mul vl]
 ; CHECK-NEXT:    str z1, [sp, #1, mul vl]
 ; CHECK-NEXT:    str z0, [sp]
@@ -165,13 +179,16 @@ define <4 x i1> @extract_v4i1_nxv32i1_16(<vscale x 32 x i1> %arg) {
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x09, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x11, 0x20, 0x1e, 0x22 // sp + 16 + 32 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    punpkhi p2.h, p1.b
+; CHECK-NEXT:    rdvl x8, #2
+; CHECK-NEXT:    mov x9, sp
 ; CHECK-NEXT:    punpklo p1.h, p1.b
+; CHECK-NEXT:    add x8, x9, x8
 ; CHECK-NEXT:    mov z0.h, p2/z, #1 // =0x1
 ; CHECK-NEXT:    punpkhi p2.h, p0.b
 ; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    mov z1.h, p1/z, #1 // =0x1
 ; CHECK-NEXT:    mov z2.h, p2/z, #1 // =0x1
-; CHECK-NEXT:    str z0, [sp, #3, mul vl]
+; CHECK-NEXT:    str z0, [x8, #1, mul vl]
 ; CHECK-NEXT:    mov z0.h, p0/z, #1 // =0x1
 ; CHECK-NEXT:    str z1, [sp, #2, mul vl]
 ; CHECK-NEXT:    str z2, [sp, #1, mul vl]

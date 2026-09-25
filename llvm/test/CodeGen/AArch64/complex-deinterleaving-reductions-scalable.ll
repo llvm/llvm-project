@@ -186,29 +186,32 @@ define %"class.std::complex" @complex_mul_v2f64_unrolled(ptr %a, ptr %b) {
 ; CHECK-NEXT:    neg x9, x8
 ; CHECK-NEXT:    mov w10, #1000 // =0x3e8
 ; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    rdvl x11, #4
 ; CHECK-NEXT:    and x9, x9, x10
-; CHECK-NEXT:    rdvl x10, #4
+; CHECK-NEXT:    rdvl x10, #2
 ; CHECK-NEXT:  .LBB2_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    add x12, x0, x10
+; CHECK-NEXT:    add x13, x1, x10
 ; CHECK-NEXT:    ldr z4, [x0, #1, mul vl]
 ; CHECK-NEXT:    ldr z5, [x0]
-; CHECK-NEXT:    subs x9, x9, x8
-; CHECK-NEXT:    ldr z6, [x0, #3, mul vl]
-; CHECK-NEXT:    ldr z7, [x1, #1, mul vl]
+; CHECK-NEXT:    ldr z6, [x1, #1, mul vl]
+; CHECK-NEXT:    ldr z7, [x12, #1, mul vl]
 ; CHECK-NEXT:    ldr z16, [x1]
 ; CHECK-NEXT:    ldr z17, [x0, #2, mul vl]
-; CHECK-NEXT:    add x0, x0, x10
-; CHECK-NEXT:    ldr z18, [x1, #3, mul vl]
+; CHECK-NEXT:    subs x9, x9, x8
+; CHECK-NEXT:    ldr z18, [x13, #1, mul vl]
 ; CHECK-NEXT:    ldr z19, [x1, #2, mul vl]
-; CHECK-NEXT:    add x1, x1, x10
+; CHECK-NEXT:    add x1, x1, x11
+; CHECK-NEXT:    fcmla z0.d, p0/m, z6.d, z4.d, #0
+; CHECK-NEXT:    add x0, x0, x11
 ; CHECK-NEXT:    fcmla z1.d, p0/m, z16.d, z5.d, #0
-; CHECK-NEXT:    fcmla z0.d, p0/m, z7.d, z4.d, #0
-; CHECK-NEXT:    fcmla z3.d, p0/m, z18.d, z6.d, #0
 ; CHECK-NEXT:    fcmla z2.d, p0/m, z19.d, z17.d, #0
+; CHECK-NEXT:    fcmla z3.d, p0/m, z18.d, z7.d, #0
+; CHECK-NEXT:    fcmla z0.d, p0/m, z6.d, z4.d, #90
 ; CHECK-NEXT:    fcmla z1.d, p0/m, z16.d, z5.d, #90
-; CHECK-NEXT:    fcmla z0.d, p0/m, z7.d, z4.d, #90
-; CHECK-NEXT:    fcmla z3.d, p0/m, z18.d, z6.d, #90
 ; CHECK-NEXT:    fcmla z2.d, p0/m, z19.d, z17.d, #90
+; CHECK-NEXT:    fcmla z3.d, p0/m, z18.d, z7.d, #90
 ; CHECK-NEXT:    b.ne .LBB2_1
 ; CHECK-NEXT:  // %bb.2: // %exit.block
 ; CHECK-NEXT:    uzp1 z4.d, z2.d, z3.d

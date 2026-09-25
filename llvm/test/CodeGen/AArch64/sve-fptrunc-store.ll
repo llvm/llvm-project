@@ -64,18 +64,20 @@ entry:
 define void @fptrunc8_f64_f16(ptr %dst, ptr %src) {
 ; CHECK-LABEL: fptrunc8_f64_f16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr z0, [x1, #3, mul vl]
-; CHECK-NEXT:    ldr z1, [x1]
+; CHECK-NEXT:    rdvl x8, #2
+; CHECK-NEXT:    ldr z0, [x1, #1, mul vl]
+; CHECK-NEXT:    ldr z2, [x1, #2, mul vl]
+; CHECK-NEXT:    add x8, x1, x8
+; CHECK-NEXT:    ldr z3, [x1]
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    ldr z2, [x1, #1, mul vl]
-; CHECK-NEXT:    ldr z3, [x1, #2, mul vl]
+; CHECK-NEXT:    ldr z1, [x8, #1, mul vl]
 ; CHECK-NEXT:    fcvt z0.h, p0/m, z0.d
-; CHECK-NEXT:    fcvt z1.h, p0/m, z1.d
-; CHECK-NEXT:    fcvt z3.h, p0/m, z3.d
 ; CHECK-NEXT:    fcvt z2.h, p0/m, z2.d
+; CHECK-NEXT:    fcvt z3.h, p0/m, z3.d
+; CHECK-NEXT:    fcvt z1.h, p0/m, z1.d
 ; CHECK-NEXT:    uzp1 z0.s, z3.s, z0.s
-; CHECK-NEXT:    uzp1 z1.s, z1.s, z2.s
-; CHECK-NEXT:    uzp1 z0.h, z1.h, z0.h
+; CHECK-NEXT:    uzp1 z1.s, z2.s, z1.s
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z1.h
 ; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    ret
 entry:

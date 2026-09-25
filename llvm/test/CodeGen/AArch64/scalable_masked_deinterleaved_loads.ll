@@ -223,11 +223,13 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 1
 ; CHECK-LABEL: foo_ld4_nxv16i8_bad_mask2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    zip1 p2.b, p1.b, p1.b
+; CHECK-NEXT:    rdvl x8, #2
 ; CHECK-NEXT:    zip2 p1.b, p1.b, p1.b
+; CHECK-NEXT:    add x8, x0, x8
 ; CHECK-NEXT:    zip2 p3.b, p0.b, p0.b
 ; CHECK-NEXT:    ld1b { z3.b }, p2/z, [x0, #2, mul vl]
 ; CHECK-NEXT:    zip1 p0.b, p0.b, p0.b
-; CHECK-NEXT:    ld1b { z2.b }, p1/z, [x0, #3, mul vl]
+; CHECK-NEXT:    ld1b { z2.b }, p1/z, [x8, #1, mul vl]
 ; CHECK-NEXT:    ld1b { z0.b }, p3/z, [x0, #1, mul vl]
 ; CHECK-NEXT:    ld1b { z1.b }, p0/z, [x0]
 ; CHECK-NEXT:    uzp1 z4.b, z3.b, z2.b

@@ -72,10 +72,12 @@ define <vscale x 8 x i64> @zload_nxv8i16(ptr %a) {
 ; CHECK-LABEL: zload_nxv8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    cnth x8
+; CHECK-NEXT:    add x8, x0, x8
 ; CHECK-NEXT:    ld1h { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ld1h { z1.d }, p0/z, [x0, #1, mul vl]
 ; CHECK-NEXT:    ld1h { z2.d }, p0/z, [x0, #2, mul vl]
-; CHECK-NEXT:    ld1h { z3.d }, p0/z, [x0, #3, mul vl]
+; CHECK-NEXT:    ld1h { z3.d }, p0/z, [x8, #1, mul vl]
 ; CHECK-NEXT:    ret
   %load = load <vscale x 8 x i16>, ptr %a, align 2
   %ext = zext <vscale x 8 x i16> %load to <vscale x 8 x i64>
@@ -150,10 +152,12 @@ define <vscale x 8 x i64> @zload_8i8_8i64(ptr %a) {
 ; CHECK-LABEL: zload_8i8_8i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    cntw x8
+; CHECK-NEXT:    add x8, x0, x8
 ; CHECK-NEXT:    ld1b { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ld1b { z1.d }, p0/z, [x0, #1, mul vl]
 ; CHECK-NEXT:    ld1b { z2.d }, p0/z, [x0, #2, mul vl]
-; CHECK-NEXT:    ld1b { z3.d }, p0/z, [x0, #3, mul vl]
+; CHECK-NEXT:    ld1b { z3.d }, p0/z, [x8, #1, mul vl]
 ; CHECK-NEXT:    ret
   %aval = load <vscale x 8 x i8>, ptr %a, align 1
   %aext = zext <vscale x 8 x i8> %aval to <vscale x 8 x i64>
@@ -220,13 +224,16 @@ define <vscale x 8 x i32> @zload_x2_8i8_8i32(ptr %a, ptr %b) {
 define <vscale x 8 x i64> @zload_x2_8i8_8i64(ptr %a, ptr %b) {
 ; CHECK-LABEL: zload_x2_8i8_8i64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    cntw x8
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    ld1b { z3.d }, p0/z, [x0, #3, mul vl]
+; CHECK-NEXT:    add x9, x0, x8
+; CHECK-NEXT:    add x8, x1, x8
+; CHECK-NEXT:    ld1b { z3.d }, p0/z, [x9, #1, mul vl]
 ; CHECK-NEXT:    ld1b { z2.d }, p0/z, [x0, #2, mul vl]
 ; CHECK-NEXT:    ld1b { z1.d }, p0/z, [x0, #1, mul vl]
 ; CHECK-NEXT:    ld1b { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ld1b { z4.d }, p0/z, [x1]
-; CHECK-NEXT:    ld1b { z5.d }, p0/z, [x1, #3, mul vl]
+; CHECK-NEXT:    ld1b { z5.d }, p0/z, [x8, #1, mul vl]
 ; CHECK-NEXT:    ld1b { z6.d }, p0/z, [x1, #2, mul vl]
 ; CHECK-NEXT:    ld1b { z7.d }, p0/z, [x1, #1, mul vl]
 ; CHECK-NEXT:    add z0.d, z0.d, z4.d
@@ -368,21 +375,31 @@ define <vscale x 16 x i64> @load_frozen_before_zext_multiuse5_dst_illegal(ptr %s
 ; CHECK-LABEL: load_frozen_before_zext_multiuse5_dst_illegal:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    cntw x8
 ; CHECK-NEXT:    mov z24.d, #3 // =0x3
+; CHECK-NEXT:    add x9, x0, x8
+; CHECK-NEXT:    rdvl x10, #4
+; CHECK-NEXT:    ld1b { z3.d }, p0/z, [x9, #1, mul vl]
+; CHECK-NEXT:    cnth x9
 ; CHECK-NEXT:    ld1b { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    add x9, x0, x9
 ; CHECK-NEXT:    ld1b { z1.d }, p0/z, [x0, #1, mul vl]
 ; CHECK-NEXT:    ld1b { z2.d }, p0/z, [x0, #2, mul vl]
-; CHECK-NEXT:    ld1b { z3.d }, p0/z, [x0, #3, mul vl]
+; CHECK-NEXT:    add x8, x9, x8
 ; CHECK-NEXT:    ld1b { z4.d }, p0/z, [x0, #4, mul vl]
-; CHECK-NEXT:    ld1b { z5.d }, p0/z, [x0, #5, mul vl]
-; CHECK-NEXT:    ld1b { z6.d }, p0/z, [x0, #6, mul vl]
-; CHECK-NEXT:    ld1b { z7.d }, p0/z, [x0, #7, mul vl]
-; CHECK-NEXT:    str z24, [x1, #6, mul vl]
-; CHECK-NEXT:    str z24, [x1, #7, mul vl]
+; CHECK-NEXT:    ld1b { z5.d }, p0/z, [x9, #1, mul vl]
+; CHECK-NEXT:    ld1b { z6.d }, p0/z, [x9, #2, mul vl]
+; CHECK-NEXT:    add x9, x1, x10
+; CHECK-NEXT:    rdvl x10, #2
+; CHECK-NEXT:    ld1b { z7.d }, p0/z, [x8, #1, mul vl]
+; CHECK-NEXT:    add x8, x9, x10
+; CHECK-NEXT:    str z24, [x9, #2, mul vl]
+; CHECK-NEXT:    str z24, [x8, #1, mul vl]
+; CHECK-NEXT:    add x8, x1, x10
 ; CHECK-NEXT:    str z24, [x1, #4, mul vl]
-; CHECK-NEXT:    str z24, [x1, #5, mul vl]
+; CHECK-NEXT:    str z24, [x9, #1, mul vl]
 ; CHECK-NEXT:    str z24, [x1, #2, mul vl]
-; CHECK-NEXT:    str z24, [x1, #3, mul vl]
+; CHECK-NEXT:    str z24, [x8, #1, mul vl]
 ; CHECK-NEXT:    str z24, [x1]
 ; CHECK-NEXT:    str z24, [x1, #1, mul vl]
 ; CHECK-NEXT:    ret
