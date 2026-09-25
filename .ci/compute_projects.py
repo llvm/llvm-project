@@ -7,6 +7,7 @@ Does some things, spits out a list of projects.
 """
 
 from collections.abc import Set
+import json
 import pathlib
 import platform
 import sys
@@ -370,6 +371,7 @@ def get_env_variables(modified_files: list[str], platform: str) -> Set[str]:
     # to the CMake invocation and thus we need to use the CMake list separator
     # (;). We use spaces to separate the check targets as they end up getting
     # passed to ninja.
+    projects_to_build = []
     return {
         "projects_to_build": ";".join(sorted(projects_to_build)),
         "project_check_targets": " ".join(sorted(projects_check_targets)),
@@ -388,5 +390,4 @@ if __name__ == "__main__":
         current_platform = sys.argv[1]
     changed_files = [line.strip() for line in sys.stdin.readlines()]
     env_variables = get_env_variables(changed_files, current_platform)
-    for env_variable in env_variables:
-        print(f"{env_variable}='{env_variables[env_variable]}'")
+    print(json.dumps(env_variables))
