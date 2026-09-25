@@ -208,8 +208,8 @@ struct ol_context_impl_t {
     auto DeviceOrErr = Device->getDevice();
     if (!DeviceOrErr)
       return DeviceOrErr.takeError();
-    return PluginCtx->allocate(**DeviceOrErr, Size, /*HostPtr=*/nullptr,
-                               Kind, Alignment);
+    return PluginCtx->allocate(**DeviceOrErr, Size, /*HostPtr=*/nullptr, Kind,
+                               Alignment);
   }
 
   llvm::Error deallocate(void *Ptr) { return PluginCtx->deallocate(Ptr); }
