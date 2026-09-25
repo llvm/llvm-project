@@ -49,6 +49,11 @@ createSimplifyAffineStructuresPass();
 std::unique_ptr<OperationPass<func::FuncOp>>
 createAffineLoopInvariantCodeMotionPass();
 
+/// Creates a pass that reuses a one-iteration translated loop-body
+/// computation through an affine.for iter_arg.
+std::unique_ptr<OperationPass<func::FuncOp>>
+createAffineLoopCarriedComputationReusePass();
+
 /// Creates a pass to convert all parallel affine.for's into 1-d affine.parallel
 /// ops.
 std::unique_ptr<OperationPass<func::FuncOp>> createAffineParallelizePass();
