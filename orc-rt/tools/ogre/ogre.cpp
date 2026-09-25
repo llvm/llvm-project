@@ -140,7 +140,7 @@ Expected<int> runOgre(const Options &Opts) noexcept {
 
   std::promise<void> StopP;
   auto StopF = StopP.get_future();
-  S.setOnDisconnect([StopP = std::move(StopP)](Error Err) mutable {
+  S.setOnDisconnect([StopP = std::move(StopP)](Error Err) mutable noexcept {
     if (Err)
       reportError(std::move(Err));
     StopP.set_value();
