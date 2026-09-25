@@ -23266,8 +23266,10 @@ bool DAGCombiner::mergeStoresOfConstantsOrVecElts(
   assert((!UseTrunc || !UseVector) &&
          "This optimization cannot emit a vector truncating store");
 
-  // The latest Node in the DAG.
+  // Preserve the lowest-addressed store's IR order. Merge source locations for
+  // the new store only, leaving value construction unchanged.
   SDLoc DL(StoreNodes[0].MemNode);
+  SDLoc StoreDL = DL;
 
   TypeSize ElementSizeBits = MemVT.getStoreSizeInBits();
   unsigned SizeInBits = NumStores * ElementSizeBits;
@@ -23285,6 +23287,7 @@ bool DAGCombiner::mergeStoresOfConstantsOrVecElts(
     // Skip merging if there's an inconsistent flag.
     if (Flags != St->getMemOperand()->getFlags())
       return false;
+    StoreDL.mergeDebugLoc(St->getDebugLoc());
     // Concatenate AA metadata.
     AAInfo = AAInfo.concat(St->getAAInfo());
   }
@@ -23422,7 +23425,7 @@ bool DAGCombiner::mergeStoresOfConstantsOrVecElts(
   SDValue NewStore;
   if (!UseTrunc) {
     NewStore = DAG.getStore(
-        NewChain, DL, StoredVal, FirstInChain->getBasePtr(),
+        NewChain, StoreDL, StoredVal, FirstInChain->getBasePtr(),
         CanReusePtrInfo
             ? FirstInChain->getPointerInfo()
             : MachinePointerInfo(FirstInChain->getPointerInfo().getAddrSpace()),
@@ -23436,7 +23439,7 @@ bool DAGCombiner::mergeStoresOfConstantsOrVecElts(
         DAG.getConstant(C->getAPIntValue().zextOrTrunc(LegalizedStoreSize), DL,
                         LegalizedStoredValTy);
     NewStore = DAG.getTruncStore(
-        NewChain, DL, ExtendedStoreVal, FirstInChain->getBasePtr(),
+        NewChain, StoreDL, ExtendedStoreVal, FirstInChain->getBasePtr(),
         CanReusePtrInfo
             ? FirstInChain->getPointerInfo()
             : MachinePointerInfo(FirstInChain->getPointerInfo().getAddrSpace()),
@@ -24193,6 +24196,13 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
 
     SDLoc LoadDL(LoadNodes[0].MemNode);
     SDLoc StoreDL(StoreNodes[0].MemNode);
+    SDLoc ValueDL = LoadDL;
+    // Merge loads and stores independently, preserving the IR order of each
+    // group's lowest-addressed operation. Exclude candidates left unmerged.
+    for (unsigned I = 1; I != NumElem; ++I) {
+      LoadDL.mergeDebugLoc(LoadNodes[I].MemNode->getDebugLoc());
+      StoreDL.mergeDebugLoc(StoreNodes[I].MemNode->getDebugLoc());
+    }
 
     // The merged loads are required to have the same incoming chain, so
     // using the first's chain is acceptable.
@@ -24226,9 +24236,10 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
         assert(JointMemOpVT == EVT::getIntegerVT(Context, LoadWidth) &&
                "Unexpected type for rotate-able load pair");
         SDValue RotAmt =
-            DAG.getShiftAmountConstant(LoadWidth / 2, JointMemOpVT, LoadDL);
+            DAG.getShiftAmountConstant(LoadWidth / 2, JointMemOpVT, ValueDL);
         // Target can convert to the identical ROTR if it does not have ROTL.
-        StoreOp = DAG.getNode(ISD::ROTL, LoadDL, JointMemOpVT, NewLoad, RotAmt);
+        StoreOp =
+            DAG.getNode(ISD::ROTL, ValueDL, JointMemOpVT, NewLoad, RotAmt);
       }
       NewStore = DAG.getStore(
           NewStoreChain, StoreDL, StoreOp, FirstInChain->getBasePtr(),
