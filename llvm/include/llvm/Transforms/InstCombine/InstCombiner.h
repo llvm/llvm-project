@@ -21,6 +21,7 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/Analysis/DomConditionCache.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/Analysis/KnownBitsDataflow.h"
 #include "llvm/Analysis/TargetFolder.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/IRBuilder.h"
@@ -97,6 +98,7 @@ protected:
   BranchProbabilityInfo *BPI;
   ProfileSummaryInfo *PSI;
   DomConditionCache DC;
+  KnownBitsDataflow &KBD;
 
   ReversePostOrderTraversal<BasicBlock *> &RPOT;
 
@@ -119,11 +121,11 @@ protected:
 
 public:
   InstCombiner(InstructionWorklist &Worklist, Function &F, AAResults *AA,
-               AssumptionCache &AC, TargetLibraryInfo &TLI,
-               TargetTransformInfo &TTI, DominatorTree &DT,
-               OptimizationRemarkEmitter &ORE, BlockFrequencyInfo *BFI,
-               BranchProbabilityInfo *BPI, ProfileSummaryInfo *PSI,
-               const DataLayout &DL,
+               AssumptionCache &AC, KnownBitsDataflow &KBD,
+               TargetLibraryInfo &TLI, TargetTransformInfo &TTI,
+               DominatorTree &DT, OptimizationRemarkEmitter &ORE,
+               BlockFrequencyInfo *BFI, BranchProbabilityInfo *BPI,
+               ProfileSummaryInfo *PSI, const DataLayout &DL,
                ReversePostOrderTraversal<BasicBlock *> &RPOT)
       : TTIForTargetIntrinsicsOnly(TTI),
         Builder(F.getContext(), TargetFolder(DL),
@@ -132,7 +134,7 @@ public:
         TLI(TLI), DT(DT), DL(DL),
         SQ(DL, &TLI, &DT, &AC, nullptr, /*UseInstrInfo*/ true,
            /*CanUseUndef*/ true, &DC),
-        ORE(ORE), BFI(BFI), BPI(BPI), PSI(PSI), RPOT(RPOT) {}
+        ORE(ORE), BFI(BFI), BPI(BPI), PSI(PSI), KBD(KBD), RPOT(RPOT) {}
 
   virtual ~InstCombiner() = default;
 
@@ -467,12 +469,23 @@ public:
 
   void computeKnownBits(const Value *V, KnownBits &Known,
                         const Instruction *CtxI, unsigned Depth = 0) const {
+    if (auto K = KBD.lookup(V, CtxI)) {
+      Known = *K;
+      return;
+    }
     llvm::computeKnownBits(V, Known, SQ.getWithInstruction(CtxI), Depth);
+
+    // Depth is a monotonically increasing variable. Hence, earlier computations
+    // are always more refined than later ones, unless a literal hardcoded Depth
+    // variable is passed to this function, which never happens.
+    KBD.emplace_as(V, Known, CtxI);
   }
 
   KnownBits computeKnownBits(const Value *V, const Instruction *CtxI,
                              unsigned Depth = 0) const {
-    return llvm::computeKnownBits(V, SQ.getWithInstruction(CtxI), Depth);
+    KnownBits Known(KnownBitsDataflow::getBitWidth(V->getType(), SQ.DL));
+    computeKnownBits(V, Known, CtxI, Depth);
+    return Known;
   }
 
   bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero = false,

@@ -72,14 +72,14 @@ class LLVM_LIBRARY_VISIBILITY InstCombinerImpl final
       public InstVisitor<InstCombinerImpl, Instruction *> {
 public:
   InstCombinerImpl(InstructionWorklist &Worklist, Function &F, AAResults *AA,
-                   AssumptionCache &AC, TargetLibraryInfo &TLI,
-                   TargetTransformInfo &TTI, DominatorTree &DT,
-                   OptimizationRemarkEmitter &ORE, BlockFrequencyInfo *BFI,
-                   BranchProbabilityInfo *BPI, ProfileSummaryInfo *PSI,
-                   const DataLayout &DL,
+                   AssumptionCache &AC, KnownBitsDataflow &KBD,
+                   TargetLibraryInfo &TLI, TargetTransformInfo &TTI,
+                   DominatorTree &DT, OptimizationRemarkEmitter &ORE,
+                   BlockFrequencyInfo *BFI, BranchProbabilityInfo *BPI,
+                   ProfileSummaryInfo *PSI, const DataLayout &DL,
                    ReversePostOrderTraversal<BasicBlock *> &RPOT)
-      : InstCombiner(Worklist, F, AA, AC, TLI, TTI, DT, ORE, BFI, BPI, PSI, DL,
-                     RPOT) {}
+      : InstCombiner(Worklist, F, AA, AC, KBD, TLI, TTI, DT, ORE, BFI, BPI, PSI,
+                     DL, RPOT) {}
 
   ~InstCombinerImpl() override = default;
 

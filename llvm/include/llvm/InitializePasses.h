@@ -147,6 +147,8 @@ LLVM_ABI void initializeInstructionSelectLegacyPass(PassRegistry &);
 LLVM_ABI void initializeInterleavedAccessPass(PassRegistry &);
 LLVM_ABI void initializeInterleavedLoadCombinePass(PassRegistry &);
 LLVM_ABI void initializeJMCInstrumenterPass(PassRegistry &);
+LLVM_ABI void
+initializeKnownBitsDataflowAnalysisWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeMachineKCFILegacyPass(PassRegistry &);
 LLVM_ABI void initializeLCSSAVerificationPassPass(PassRegistry &);
 LLVM_ABI void initializeLCSSAWrapperPassPass(PassRegistry &);
