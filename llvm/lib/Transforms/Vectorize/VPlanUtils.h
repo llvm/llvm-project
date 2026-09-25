@@ -199,13 +199,13 @@ getEarlyExits(const VPlan &Plan, const VPBlockBase *MiddleVPBB);
 
 /// Create a scalar-iv-steps recipe over \p Plan's canonical IV for an
 /// induction of \p Kind with \p InductionOpcode / \p FPBinOp, start value \p
-/// StartV and step \p Step, truncated to \p TruncI's type if \p TruncI is
-/// non-null, inserting recipes via \p Builder.
-VPScalarIVStepsRecipe *createScalarIVSteps(
-    VPlan &Plan, InductionDescriptor::InductionKind Kind,
-    Instruction::BinaryOps InductionOpcode, FPMathOperator *FPBinOp,
-    Instruction *TruncI, VPValue *StartV, VPValue *Step, DebugLoc DL,
-    VPBuilder &Builder, const VPIRFlags::WrapFlagsTy &Flags = {});
+/// StartV and step \p Step inserting recipes via \p Builder.
+VPScalarIVStepsRecipe *
+createScalarIVSteps(VPlan &Plan, InductionDescriptor::InductionKind Kind,
+                    Instruction::BinaryOps InductionOpcode,
+                    FPMathOperator *FPBinOp, VPValue *StartV, VPValue *Step,
+                    DebugLoc DL, VPBuilder &Builder,
+                    const VPIRFlags::WrapFlagsTy &Flags = {});
 
 /// Scalarize a VPWidenPointerInductionRecipe by replacing it with a PtrAdd
 /// (IndStart, ScalarIVSteps (0, Step)). This is used when the recipe only

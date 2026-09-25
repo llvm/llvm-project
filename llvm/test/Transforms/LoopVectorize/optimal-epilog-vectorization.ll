@@ -640,12 +640,11 @@ define void @f4(ptr noalias %A, i32 signext %n) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <8 x i32> [ <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc <8 x i32> [[VEC_IND]] to <8 x i8>
+; CHECK-NEXT:    [[TMP1:%.*]] = phi <8 x i8> [ <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <8 x i8> [[TMP1]], ptr [[TMP2]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <8 x i32> [[VEC_IND]], splat (i32 8)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <8 x i8> [[TMP1]], splat (i8 8)
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
@@ -658,19 +657,18 @@ define void @f4(ptr noalias %A, i32 signext %n) {
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[N_MOD_VF2:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 3
 ; CHECK-NEXT:    [[N_VEC3:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[VEC_EPILOG_RESUME_VAL]] to i32
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP5]], i64 0
-; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i32> [[DOTSPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i32> [[DOTSPLAT]], <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[VEC_EPILOG_RESUME_VAL]] to i8
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i8> poison, i8 [[TMP5]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i8> [[BROADCAST_SPLATINSERT]], <4 x i8> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i8> [[BROADCAST_SPLAT]], <i8 0, i8 1, i8 2, i8 3>
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX6:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT9:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND7:%.*]] = phi <4 x i32> [ [[INDUCTION]], %[[VEC_EPILOG_PH]] ], [ [[VEC_IND_NEXT7:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP7:%.*]] = trunc <4 x i32> [[VEC_IND7]] to <4 x i8>
+; CHECK-NEXT:    [[TMP7:%.*]] = phi <4 x i8> [ [[INDUCTION]], %[[VEC_EPILOG_PH]] ], [ [[VEC_IND_NEXT6:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[INDEX6]]
 ; CHECK-NEXT:    store <4 x i8> [[TMP7]], ptr [[TMP8]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT9]] = add nuw i64 [[INDEX6]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT7]] = add <4 x i32> [[VEC_IND7]], splat (i32 4)
+; CHECK-NEXT:    [[VEC_IND_NEXT6]] = add <4 x i8> [[TMP7]], splat (i8 4)
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT9]], [[N_VEC3]]
 ; CHECK-NEXT:    br i1 [[TMP10]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
@@ -706,12 +704,11 @@ define void @f4(ptr noalias %A, i32 signext %n) {
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-PROFITABLE-BY-DEFAULT:       [[VECTOR_BODY]]:
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP1:%.*]] = trunc <4 x i32> [[VEC_IND]] to <4 x i8>
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP1:%.*]] = phi <4 x i8> [ <i8 0, i8 1, i8 2, i8 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[INDEX]]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    store <4 x i8> [[TMP1]], ptr [[TMP2]], align 1
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[VEC_IND_NEXT]] = add <4 x i8> [[TMP1]], splat (i8 4)
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK-PROFITABLE-BY-DEFAULT:       [[MIDDLE_BLOCK]]:
@@ -724,19 +721,18 @@ define void @f4(ptr noalias %A, i32 signext %n) {
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[N_MOD_VF2:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 1
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[N_VEC3:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF2]]
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP5:%.*]] = trunc i64 [[VEC_EPILOG_RESUME_VAL]] to i32
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[TMP5]], i64 0
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x i32> [[DOTSPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[INDUCTION:%.*]] = add <2 x i32> [[DOTSPLAT]], <i32 0, i32 1>
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP5:%.*]] = trunc i64 [[VEC_EPILOG_RESUME_VAL]] to i8
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i8> poison, i8 [[TMP5]], i64 0
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i8> [[BROADCAST_SPLATINSERT]], <2 x i8> poison, <2 x i32> zeroinitializer
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[INDUCTION:%.*]] = add <2 x i8> [[BROADCAST_SPLAT]], <i8 0, i8 1>
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK-PROFITABLE-BY-DEFAULT:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[INDEX6:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT9:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[VEC_IND7:%.*]] = phi <2 x i32> [ [[INDUCTION]], %[[VEC_EPILOG_PH]] ], [ [[VEC_IND_NEXT7:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP7:%.*]] = trunc <2 x i32> [[VEC_IND7]] to <2 x i8>
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP7:%.*]] = phi <2 x i8> [ [[INDUCTION]], %[[VEC_EPILOG_PH]] ], [ [[VEC_IND_NEXT6:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[INDEX6]]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    store <2 x i8> [[TMP7]], ptr [[TMP8]], align 1
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[INDEX_NEXT9]] = add nuw i64 [[INDEX6]], 2
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[VEC_IND_NEXT7]] = add <2 x i32> [[VEC_IND7]], splat (i32 2)
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[VEC_IND_NEXT6]] = add <2 x i8> [[TMP7]], splat (i8 2)
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT9]], [[N_VEC3]]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br i1 [[TMP10]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK-PROFITABLE-BY-DEFAULT:       [[VEC_EPILOG_MIDDLE_BLOCK]]:

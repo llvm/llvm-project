@@ -302,9 +302,9 @@ define i64 @non_unit_step_iv_live_out(ptr %dst, i64 %N) {
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP1]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 5, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[N_MOD_VF2:%.*]] = and i64 [[N]], 3
 ; CHECK-NEXT:    [[N_VEC3:%.*]] = sub i64 [[N]], [[N_MOD_VF2]]
+; CHECK-NEXT:    [[TMP9:%.*]] = trunc i64 [[BC_RESUME_VAL]] to i32
 ; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[N_VEC3]], 3
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i64 5, [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = trunc i64 [[BC_RESUME_VAL]] to i32
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP9]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i32> [[BROADCAST_SPLAT]], <i32 0, i32 3, i32 6, i32 9>

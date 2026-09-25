@@ -191,9 +191,9 @@ define void @cast_variable_step(i64 %step) {
 ; IC2:       [[VECTOR_BODY]]:
 ; IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; IC2-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
-; IC2-NEXT:    [[TMP2:%.*]] = mul i64 [[INDEX]], [[STEP]]
-; IC2-NEXT:    [[OFFSET_IDX:%.*]] = add i64 10, [[TMP2]]
-; IC2-NEXT:    [[TMP3:%.*]] = trunc i64 [[OFFSET_IDX]] to i32
+; IC2-NEXT:    [[TMP2:%.*]] = trunc i64 [[INDEX]] to i32
+; IC2-NEXT:    [[TMP9:%.*]] = mul i32 [[TMP2]], [[TMP0]]
+; IC2-NEXT:    [[TMP3:%.*]] = add i32 10, [[TMP9]]
 ; IC2-NEXT:    [[TMP4:%.*]] = mul i32 1, [[TMP0]]
 ; IC2-NEXT:    [[TMP5:%.*]] = add i32 [[TMP3]], [[TMP4]]
 ; IC2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [2048 x i32], ptr @a, i64 0, i64 [[INDEX]]
