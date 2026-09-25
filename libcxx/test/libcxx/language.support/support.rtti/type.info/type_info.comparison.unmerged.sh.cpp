@@ -18,6 +18,15 @@
 #include <typeindex>
 #include <vector>
 
+#include "test_macros.h"
+
+// Itanium ABI implementations prefix the RTTI name of a type with internal linkage with a '*',
+// which lets this implementation distinguish between two internally linked types
+#if !defined(_LIBCPP_ABI_MICROSOFT) &&                                                                                 \
+    (defined(TEST_COMPILER_GCC) || (defined(TEST_CLANG_VER) && TEST_CLANG_VER >= 2400))
+#  define INTERNAL_LINKAGE_RTTI_NAMES_ARE_MARKED
+#endif
+
 extern std::vector<std::type_index> registry;
 
 void register1();
@@ -37,9 +46,11 @@ void register2();
     register2();
 
     assert(registry.size() == 2);
+#  if defined(INTERNAL_LINKAGE_RTTI_NAMES_ARE_MARKED)
+    assert(registry[0] != registry[1]);
+#  else
     assert(registry[0] == registry[1]);
+#  endif
     return 0;
   }
-#else
-# error
 #endif

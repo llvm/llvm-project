@@ -197,19 +197,19 @@ void use_F() {
 // The anonymous struct for e has no linkage, so the vtable should have
 // internal linkage.
 // CIR-DAG: cir.global "private" constant internal dso_local @_ZTV3$_0 = #cir.vtable<{#cir.const_array<[#cir.ptr<null> : !cir.ptr<!u8i>, #cir.global_view<@_ZTI3$_0> : !cir.ptr<!u8i>, #cir.global_view<@_ZN1D1fEv> : !cir.ptr<!u8i>]> : !cir.array<!cir.ptr<!u8i> x 3>}> : !{{.*}}{alignment = 8 : i64}
-// CIR-DAG: cir.global constant internal dso_local @_ZTS3$_0 = #cir.const_array<"3$_0" : !cir.array<!s8i x 4>, trailing_zeros> : !cir.array<!s8i x 5> {alignment = 1 : i64}
+// CIR-DAG: cir.global constant internal dso_local @_ZTS3$_0 = #cir.const_array<"*3$_0" : !cir.array<!s8i x 5>, trailing_zeros> : !cir.array<!s8i x 6> {alignment = 1 : i64}
 // CIR-DAG: cir.global constant internal @_ZTI3$_0 = #cir.typeinfo<{#cir.global_view<@_ZTVN10__cxxabiv120__si_class_type_infoE, [2 : i32]> : !cir.ptr<!u8i>, #cir.global_view<@_ZTS3$_0> : !cir.ptr<!u8i>, #cir.global_view<@_ZTI1D> : !cir.ptr<!u8i>}> : !{{.*}}{alignment = 8 : i64}
-// LLVM-DAG: @"_ZTV3$_0" = internal constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr @"_ZTI3$_0", ptr @_ZN1D1fEv] }, align 8
-// LLVM-DAG: @"_ZTS3$_0" = internal constant [5 x i8] c"3$_0\00", align 1
+// LLVM-DAG: @"_ZTV3$_0" = internal constant {{.*}}{ [3 x ptr] } { [3 x ptr] [ptr null, ptr @"_ZTI3$_0", ptr @_ZN1D1fEv] }, align 8
+// LLVM-DAG: @"_ZTS3$_0" = internal constant {{.*}}[6 x i8] c"*3$_0\00", align 1
 // LLVM-DAG: @"_ZTI3$_0" = internal constant { ptr, ptr, ptr } { ptr getelementptr {{.*}}({{.*}}, ptr @_ZTVN10__cxxabiv120__si_class_type_infoE, i64 {{.*}}), ptr @"_ZTS3$_0", ptr @_ZTI1D }, align 8
 
 // The A vtable should have internal linkage since it is inside an anonymous 
 // namespace.
 // CIR-DAG: cir.global "private" constant internal dso_local @_ZTVN12_GLOBAL__N_11AE = #cir.vtable<{#cir.const_array<[#cir.ptr<null> : !cir.ptr<!u8i>, #cir.global_view<@_ZTIN12_GLOBAL__N_11AE> : !cir.ptr<!u8i>, #cir.global_view<@_ZN12_GLOBAL__N_11A1fEv> : !cir.ptr<!u8i>]> : !cir.array<!cir.ptr<!u8i> x 3>}> : !{{.*}}{alignment = 8 : i64}
-// CIR-DAG: cir.global constant internal dso_local @_ZTSN12_GLOBAL__N_11AE = #cir.const_array<"N12_GLOBAL__N_11AE" : !cir.array<!s8i x 18>, trailing_zeros> : !cir.array<!s8i x 19> {alignment = 1 : i64}
+// CIR-DAG: cir.global constant internal dso_local @_ZTSN12_GLOBAL__N_11AE = #cir.const_array<"*N12_GLOBAL__N_11AE" : !cir.array<!s8i x 19>, trailing_zeros> : !cir.array<!s8i x 20> {alignment = 1 : i64}
 // CIR-DAG: cir.global constant internal @_ZTIN12_GLOBAL__N_11AE = #cir.typeinfo<{#cir.global_view<@_ZTVN10__cxxabiv117__class_type_infoE, [2 : i32]> : !cir.ptr<!u8i>, #cir.global_view<@_ZTSN12_GLOBAL__N_11AE> : !cir.ptr<!u8i>}> : !{{.*}}{alignment = 8 : i64}
-// LLVM-DAG: @_ZTVN12_GLOBAL__N_11AE = internal constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr @_ZTIN12_GLOBAL__N_11AE, ptr @_ZN12_GLOBAL__N_11A1fEv] }, align 8
-// LLVM-DAG: @_ZTSN12_GLOBAL__N_11AE = internal constant [19 x i8] c"N12_GLOBAL__N_11AE\00", align 1
+// LLVM-DAG: @_ZTVN12_GLOBAL__N_11AE = internal constant {{.*}}{ [3 x ptr] } { [3 x ptr] [ptr null, ptr @_ZTIN12_GLOBAL__N_11AE, ptr @_ZN12_GLOBAL__N_11A1fEv] }, align 8
+// LLVM-DAG: @_ZTSN12_GLOBAL__N_11AE = internal constant {{.*}}[20 x i8] c"*N12_GLOBAL__N_11AE\00", align 1
 // LLVM-DAG: @_ZTIN12_GLOBAL__N_11AE = internal constant { ptr, ptr } { ptr getelementptr {{.*}}({{.*}}, ptr @_ZTVN10__cxxabiv117__class_type_infoE, i64 {{.*}}), ptr @_ZTSN12_GLOBAL__N_11AE }, align 8
 
 // F<char> is an explicit specialization without a key function, so
