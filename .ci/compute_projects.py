@@ -7,6 +7,7 @@ Does some things, spits out a list of projects.
 """
 
 from collections.abc import Set
+import json
 import pathlib
 import platform
 import sys
@@ -388,5 +389,4 @@ if __name__ == "__main__":
         current_platform = sys.argv[1]
     changed_files = [line.strip() for line in sys.stdin.readlines()]
     env_variables = get_env_variables(changed_files, current_platform)
-    for env_variable in env_variables:
-        print(f"{env_variable}='{env_variables[env_variable]}'")
+    print(json.dumps(env_variables))
