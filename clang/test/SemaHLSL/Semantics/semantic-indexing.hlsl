@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -finclude-default-header -x hlsl -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple spirv-pc-vulkan1.3-library -finclude-default-header -x hlsl -fsyntax-only -verify %s
 
 struct Pair {
   uint A;
@@ -21,6 +22,16 @@ void no_index(uint GI : SV_GroupIndex) {}
 // An array also derives an index per element.
 [shader("compute")][numthreads(1,1,1)]
 void array_index(uint3 ID[2] : SV_DispatchThreadID) {}
+// expected-error@-1 {{semantic 'SV_DispatchThreadID' does not allow indexing}}
+
+// Diagnose uint32_t overflow before checking whether indexing is supported.
+[shader("compute")][numthreads(1,1,1)]
+void array_index_overflow(uint3 ID[2] : SV_DispatchThreadID4294967295) {}
+// expected-error@-1 {{semantic 'SV_DispatchThreadID' index 4294967296 exceeds the maximum supported index 4294967295}}
+
+// Reaching UINT32_MAX is not overflow; the non-indexable check still applies.
+[shader("compute")][numthreads(1,1,1)]
+void array_index_ends_at_max(uint3 ID[2] : SV_DispatchThreadID4294967294) {}
 // expected-error@-1 {{semantic 'SV_DispatchThreadID' does not allow indexing}}
 
 // Inner dimensions also derive semantic indices.

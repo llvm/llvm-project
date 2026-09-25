@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -finclude-default-header -x hlsl -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple spirv-pc-vulkan1.3-library -finclude-default-header -x hlsl -fsyntax-only -verify %s
 
 // SV_Target indices select one of eight render target slots.
 [shader("pixel")]
@@ -32,6 +33,10 @@ void target_nested_array_fits(out TargetGrid T : SV_Target4) {}
 [shader("pixel")]
 void target_nested_array_overflows(out float4 T[2][2] : SV_Target5) {}
 // expected-error@-1 {{semantic 'SV_Target' index 8 exceeds the maximum supported index 7}}
+
+[shader("pixel")]
+void target_nested_array_index_overflow(out float4 T[2][2] : SV_Target4294967293) {}
+// expected-error@-1 {{semantic 'SV_Target' index 4294967296 exceeds the maximum supported index 4294967295}}
 
 struct NestedTargets {
   TargetGrid A;

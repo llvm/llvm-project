@@ -1115,7 +1115,16 @@ void SemaHLSL::diagnoseSemanticIndex(const HLSLAppliedSemanticAttr *A,
   assert(Kind != SemanticKind::Invalid && Kind != SemanticKind::Arbitrary &&
          "expected a recognized system semantic");
   assert(ElementCount > 0 && "a semantic covers at least one element");
-  uint32_t LastIndex = A->getSemanticIndex() + ElementCount - 1;
+  // The attribute stores the index in an int. Recover its unsigned value
+  // before widening the arithmetic to detect overflow of the semantic range.
+  uint32_t FirstIndex = A->getSemanticIndex();
+  uint64_t LastIndex = uint64_t(FirstIndex) + ElementCount - 1;
+  constexpr uint32_t MaxSemanticIndex = std::numeric_limits<uint32_t>::max();
+  if (LastIndex > MaxSemanticIndex) {
+    Diag(A->getLoc(), diag::err_hlsl_semantic_index_out_of_range)
+        << A->getAttrName() << LastIndex << MaxSemanticIndex;
+    return;
+  }
   if (LastIndex == 0)
     return;
 
