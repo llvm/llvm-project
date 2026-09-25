@@ -10381,7 +10381,7 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
 
   auto BuildLastIteration = [&](unsigned Bits) -> ExprResult {
     ExprResult Result;
-    for (unsigned Cnt = 0; Cnt < NestedLoopCount; ++Cnt) {
+    for (unsigned Cnt : llvm::seq<unsigned>(NestedLoopCount)) {
       Expr *N = IterSpaces[Cnt].NumIterations;
       ExprResult Count = widenIterationCount(
           Bits,
