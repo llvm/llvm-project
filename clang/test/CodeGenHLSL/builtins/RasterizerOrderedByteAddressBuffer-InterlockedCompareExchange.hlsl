@@ -8,6 +8,11 @@
 // Add a `spirv-pc-vulkan1.3-library` RUN line here when SPIR-V ROV support
 // lands.
 
+// `-disable-llvm-passes` keeps the resource method out of line. The `cmpxchg`
+// is therefore emitted in the method body, not in the test function that the
+// CHECK-LABEL names. The out parameter is named `OriginalValue` there, after
+// the method declaration in the HLSL header.
+
 RasterizerOrderedByteAddressBuffer ROVB : register(u1);
 
 // CHECK-LABEL: define void @{{.*}}test_rovb_uint
