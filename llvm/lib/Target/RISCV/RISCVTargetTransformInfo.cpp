@@ -1956,19 +1956,15 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       break;
 
     if (auto *FVT = dyn_cast<FixedVectorType>(InterleavedTy)) {
-      if (IsInterleave) {
-        unsigned VF = FVT->getNumElements() / 2;
-        auto *HalfFVT = FixedVectorType::getHalfElementsVectorType(FVT);
-        return getShuffleCost(TTI::SK_PermuteTwoSrc, FVT, HalfFVT, CostKind,
-                              createInterleaveMask(VF, 2), 0, nullptr);
-      }
-
       auto *HalfFVT = FixedVectorType::getHalfElementsVectorType(FVT);
-      unsigned VF = HalfFVT->getNumElements();
+      unsigned HalfVF = HalfFVT->getNumElements();
+      if (IsInterleave)
+        return getShuffleCost(TTI::SK_PermuteTwoSrc, FVT, HalfFVT, CostKind,
+                              createInterleaveMask(HalfVF, 2), 0, nullptr);
       InstructionCost Cost = 0;
       for (unsigned Start = 0; Start != 2; ++Start)
         Cost += getShuffleCost(TTI::SK_PermuteSingleSrc, HalfFVT, FVT, CostKind,
-                               createStrideMask(Start, 2, VF), 0, nullptr);
+                               createStrideMask(Start, 2, HalfVF), 0, nullptr);
       return Cost;
     }
 

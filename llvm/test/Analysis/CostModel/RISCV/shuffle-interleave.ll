@@ -122,8 +122,8 @@ define {<8 x i32>, <8 x i32>} @deinterleave_2_m2_dest(<16 x i32> %v) {
 }
 
 ; Fixed-length interleave2 intrinsics.
-; TODO: we not support the cost calculation of Zvzip in getShuffleCost yet, so
-; the cost of fixed vector may seems weird.
+; TODO: we haven't supported the cost calculation of Zvzip in getShuffleCost
+; yet, so the cost of fixed vector may seem weird.
 
 define <2 x i32> @interleave2_intrinsic_v2i32(<1 x i32> %a, <1 x i32> %b) {
 ; NOZVZIP-LABEL: 'interleave2_intrinsic_v2i32'
