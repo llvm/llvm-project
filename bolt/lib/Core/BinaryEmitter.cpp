@@ -146,6 +146,10 @@ private:
   /// Emit exception handling ranges for the function fragment.
   void emitLSDA(BinaryFunction &BF, const FunctionFragment &FF);
 
+  /// Emit the type table shared by the LSDAs of all fragments of the function.
+  /// Must be called after the last emitLSDA() for \p BF.
+  void emitLSDATypeTable(BinaryFunction &BF);
+
   /// Emit line number information corresponding to \p NewLoc. \p PrevLoc
   /// provides a context for de-duplication of line number info.
   /// \p FirstInstr indicates if \p NewLoc represents the first instruction
@@ -257,6 +261,10 @@ void BinaryEmitter::emitFunctions() {
           Emitted |= emitFunction(*Function, FF);
         }
       }
+
+      // The type table is shared by all fragments and is referenced by a
+      // forward offset from every LSDA header, so it has to trail them all.
+      emitLSDATypeTable(*Function);
 
       Streamer.setAllowAutoPadding(OriginalAllowAutoPadding);
 
@@ -938,7 +946,6 @@ void BinaryEmitter::emitLSDA(BinaryFunction &BF, const FunctionFragment &FF) {
   Streamer.switchSection(BC.MOFI->getLSDASection());
 
   const unsigned TTypeEncoding = BF.getLSDATypeEncoding();
-  const unsigned TTypeEncodingSize = BC.getDWARFEncodingSize(TTypeEncoding);
   const uint16_t TTypeAlignment = 4;
 
   // Type tables have to be aligned at 4 bytes.
@@ -1026,9 +1033,11 @@ void BinaryEmitter::emitLSDA(BinaryFunction &BF, const FunctionFragment &FF) {
 
   Streamer.emitIntValue(TTypeEncoding, 1); // TType format
 
-  MCSymbol *TTBaseLabel = nullptr;
   if (TTypeEncoding != dwarf::DW_EH_PE_omit) {
-    TTBaseLabel = BC.Ctx->createTempSymbol("TTBase");
+    // The type table is emitted once for the whole function, after the LSDA of
+    // every fragment. Since @TType base offset is an unsigned forward offset
+    // from this point, all fragments can share the one table.
+    MCSymbol *TTBaseLabel = BF.getOrCreateLSDATypeTableBaseSymbol();
     MCSymbol *TTBaseRefLabel = BC.Ctx->createTempSymbol("TTBaseRef");
     Streamer.emitAbsoluteSymbolDiffAsULEB128(TTBaseLabel, TTBaseRefLabel);
     Streamer.emitLabel(TTBaseRefLabel);
@@ -1068,17 +1077,30 @@ void BinaryEmitter::emitLSDA(BinaryFunction &BF, const FunctionFragment &FF) {
   }
   Streamer.emitLabel(CSTEndLabel);
 
-  // Write out action, type, and type index tables at the end.
+  // Write out the action table at the end. There's no need to change the
+  // original table format unless we are doing function splitting, in which case
+  // we can split and optimize the table.
   //
-  // For action and type index tables there's no need to change the original
-  // table format unless we are doing function splitting, in which case we can
-  // split and optimize the tables.
-  //
-  // For type table we (re-)encode the table using TTypeEncoding matching
-  // the current assembler mode.
+  // The personality routine locates the action table immediately past the call
+  // site table, so, unlike the type table, it cannot be shared by fragments.
   for (uint8_t const &Byte : BF.getLSDAActionTable())
     Streamer.emitIntValue(Byte, 1);
+}
 
+void BinaryEmitter::emitLSDATypeTable(BinaryFunction &BF) {
+  // Only emitted if an LSDA of the function references it.
+  MCSymbol *TTBaseLabel = BF.getLSDATypeTableBaseSymbol();
+  if (!TTBaseLabel)
+    return;
+
+  const unsigned TTypeEncoding = BF.getLSDATypeEncoding();
+  const unsigned TTypeEncodingSize = BC.getDWARFEncodingSize(TTypeEncoding);
+  const uint16_t TTypeAlignment = 4;
+
+  Streamer.switchSection(BC.MOFI->getLSDASection());
+
+  // For type table we (re-)encode the table using TTypeEncoding matching
+  // the current assembler mode.
   const BinaryFunction::LSDATypeTableTy &TypeTable =
       (TTypeEncoding & dwarf::DW_EH_PE_indirect) ? BF.getLSDATypeAddressTable()
                                                  : BF.getLSDATypeTable();
@@ -1113,9 +1135,10 @@ void BinaryEmitter::emitLSDA(BinaryFunction &BF, const FunctionFragment &FF) {
     }
   }
 
-  if (TTypeEncoding != dwarf::DW_EH_PE_omit)
-    Streamer.emitLabel(TTBaseLabel);
+  Streamer.emitLabel(TTBaseLabel);
 
+  // The type index table is addressed relative to @TType base as well, and is
+  // likewise shared by all fragments.
   for (uint8_t const &Byte : BF.getLSDATypeIndexTable())
     Streamer.emitIntValue(Byte, 1);
 }
