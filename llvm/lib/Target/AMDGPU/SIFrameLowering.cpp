@@ -1204,9 +1204,9 @@ void SIFrameLowering::emitCSRSpillStores(
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const AMDGPU::LaneMaskConstants &LMC = AMDGPU::LaneMaskConstants::get(ST);
 
-  // Spill Whole-Wave Mode VGPRs. Save only the inactive lanes of the scratch
-  // registers. However, save all lanes of callee-saved VGPRs. Due to this, we
-  // might end up flipping the EXEC bits twice.
+  // Spill Whole-Wave Mode vector registers. Save only the inactive lanes of
+  // the scratch registers. However, save all lanes of callee-saved registers.
+  // Due to this, we might end up flipping the EXEC bits twice.
   Register ScratchExecCopy;
   SmallVector<std::pair<Register, int>, 2> WWMCalleeSavedRegs, WWMScratchRegs;
   FuncInfo->splitWWMSpillRegisters(MF, WWMCalleeSavedRegs, WWMScratchRegs);
@@ -1218,15 +1218,15 @@ void SIFrameLowering::emitCSRSpillStores(
   auto StoreWWMRegisters =
       [&](SmallVectorImpl<std::pair<Register, int>> &WWMRegs) {
         for (const auto &Reg : WWMRegs) {
-          Register VGPR = Reg.first;
+          Register WWMReg = Reg.first;
           int FI = Reg.second;
           buildPrologSpill(ST, TRI, *FuncInfo, LiveUnits, MF, MBB, MBBI, DL,
-                           VGPR, FI, FrameReg);
+                           WWMReg, FI, FrameReg);
           if (NeedsFrameMoves) {
-            // We spill the entire VGPR, so we can get away with just cfi_offset
+            // We spill the entire register, so a cfi_offset is sufficient.
             buildCFI(MBB, MBBI, DL,
                      MCCFIInstruction::createOffset(
-                         nullptr, MCRI->getDwarfRegNum(VGPR, false),
+                         nullptr, MCRI->getDwarfRegNum(WWMReg, false),
                          MFI.getObjectOffset(FI) * ST.getWavefrontSize()));
           }
         }
@@ -1339,19 +1339,19 @@ void SIFrameLowering::emitCSRSpillRestores(
     SB.restore();
   }
 
-  // Restore Whole-Wave Mode VGPRs. Restore only the inactive lanes of the
-  // scratch registers. However, restore all lanes of callee-saved VGPRs. Due to
-  // this, we might end up flipping the EXEC bits twice.
+  // Restore Whole-Wave Mode vector registers. Restore only the inactive lanes
+  // of the scratch registers. However, restore all lanes of callee-saved
+  // registers. Due to this, we might end up flipping the EXEC bits twice.
   Register ScratchExecCopy;
   SmallVector<std::pair<Register, int>, 2> WWMCalleeSavedRegs, WWMScratchRegs;
   FuncInfo->splitWWMSpillRegisters(MF, WWMCalleeSavedRegs, WWMScratchRegs);
   auto RestoreWWMRegisters =
       [&](SmallVectorImpl<std::pair<Register, int>> &WWMRegs) {
         for (const auto &Reg : WWMRegs) {
-          Register VGPR = Reg.first;
+          Register WWMReg = Reg.first;
           int FI = Reg.second;
           buildEpilogRestore(ST, TRI, *FuncInfo, LiveUnits, MF, MBB, MBBI, DL,
-                             VGPR, FI, FrameReg);
+                             WWMReg, FI, FrameReg);
         }
       };
 
@@ -1966,11 +1966,10 @@ void SIFrameLowering::determineCalleeSaves(MachineFunction &MF,
 
   SmallVector<Register> SortedWWMVGPRs;
   for (Register Reg : MFI->getWWMReservedRegs()) {
-    // The shift-back is needed only for the VGPRs used for SGPR spills and they
-    // are of 32-bit size. SIPreAllocateWWMRegs pass can add tuples into WWM
-    // reserved registers.
+    // The shift-back supports only 32-bit VGPRs. WWM reserved registers may
+    // also contain AGPRs or tuples.
     const TargetRegisterClass *RC = TRI->getPhysRegBaseClass(Reg);
-    if (TRI->getRegSizeInBits(*RC) != 32)
+    if (!TRI->isVGPRClass(RC) || TRI->getRegSizeInBits(*RC) != 32)
       continue;
     SortedWWMVGPRs.push_back(Reg);
   }
