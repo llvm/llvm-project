@@ -28,12 +28,14 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/DataExtractor.h"
-#include "lldb/Utility/RegisterType.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/StreamString.h"
-#include "lldb/ValueObject/ValueObjectRegister.h"
+#include "lldb/ValueObject/ValueObject.h"
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/Error.h"
+
+#include <string>
+#include <vector>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -45,76 +47,6 @@ using namespace lldb_private;
 static size_t GetNameSize(const RegisterInfo *reg_info, bool use_primary_name) {
   const char *reg_name = use_primary_name ? reg_info->name : reg_info->alt_name;
   return reg_name ? strlen(reg_name) : 0;
-}
-
-// Return the exact register and an empty path, the longest register-name prefix
-// and its remaining path, or {nullptr, {}} when no register matches.
-static std::pair<const RegisterInfo *, llvm::StringRef>
-FindRegisterWithExpressionPath(RegisterContext &reg_ctx, llvm::StringRef name) {
-  if (const RegisterInfo *reg_info = reg_ctx.GetRegisterInfoByName(name))
-    return {reg_info, {}};
-
-  size_t search_end = name.size();
-  while (search_end) {
-    size_t split = name.take_front(search_end).find_last_of(".[");
-    if (split == llvm::StringRef::npos)
-      break;
-    if (const RegisterInfo *reg_info =
-            reg_ctx.GetRegisterInfoByName(name.take_front(split)))
-      return {reg_info, name.drop_front(split)};
-    search_end = split;
-  }
-  return {nullptr, {}};
-}
-
-static ValueObjectSP
-ResolveRegisterExpressionPath(ValueObjectSP value,
-                              llvm::StringRef expression_path) {
-  // Generic expression paths permit out-of-bounds synthetic array members,
-  // but register paths must stay within the bytes supplied by the target.
-  size_t search_from = 0;
-  while (true) {
-    size_t open_bracket = expression_path.find('[', search_from);
-    if (open_bracket == llvm::StringRef::npos)
-      break;
-
-    size_t close_bracket = expression_path.find(']', open_bracket + 1);
-    if (close_bracket == llvm::StringRef::npos)
-      return {};
-
-    uint32_t index;
-    if (expression_path.slice(open_bracket + 1, close_bracket)
-            .getAsInteger(0, index))
-      return {};
-
-    llvm::StringRef parent_path = expression_path.take_front(open_bracket);
-    ValueObjectSP parent = parent_path.empty()
-                               ? value
-                               : value->GetValueForExpressionPath(parent_path);
-    if (!parent)
-      return {};
-
-    llvm::Expected<uint32_t> num_children = parent->GetNumChildren();
-    if (!num_children) {
-      llvm::consumeError(num_children.takeError());
-      return {};
-    }
-    if (index >= *num_children)
-      return {};
-
-    search_from = close_bracket + 1;
-  }
-
-  ValueObject::ExpressionPathScanEndReason reason =
-      ValueObject::eExpressionPathScanEndReasonUnknown;
-  ValueObject::ExpressionPathEndResultType result_type =
-      ValueObject::eExpressionPathEndResultTypeInvalid;
-  ValueObjectSP child =
-      value->GetValueForExpressionPath(expression_path, &reason, &result_type);
-  if (reason != ValueObject::eExpressionPathScanEndReasonEndOfString ||
-      result_type != ValueObject::eExpressionPathEndResultTypePlain)
-    return {};
-  return child;
 }
 
 static size_t ComputeLongestRegisterName(RegisterContext *reg_ctx,
@@ -132,31 +64,6 @@ static size_t ComputeLongestRegisterName(RegisterContext *reg_ctx,
       if (primitive_only && reg_info->value_regs)
         continue;
 
-      name_right_align_at = std::max(name_right_align_at,
-                                     GetNameSize(reg_info, use_primary_name));
-    }
-  }
-
-  return name_right_align_at;
-}
-
-// We expect that [command] only contains register names to be printed.
-static size_t ComputeLongestRegisterName(Args &command,
-                                         RegisterContext *reg_ctx,
-                                         bool use_primary_name) {
-  size_t name_right_align_at = 0;
-
-  // Loop through all the arguments to find the longest register name.
-  for (auto &entry : command) {
-    // In most LLDB commands we accept '$<register>' as well as '<register>'
-    // for example '$rbx' for 'rbx'. However internally the name does not have
-    // '$'.
-    llvm::StringRef arg_str = entry.ref();
-    arg_str.consume_front("$");
-
-    const RegisterInfo *reg_info =
-        FindRegisterWithExpressionPath(*reg_ctx, arg_str).first;
-    if (reg_info) {
       name_right_align_at = std::max(name_right_align_at,
                                      GetNameSize(reg_info, use_primary_name));
     }
@@ -238,34 +145,12 @@ public:
     return true;
   }
 
-  bool DumpRegisterField(const ExecutionContext &exe_ctx, Stream &strm,
-                         const RegisterInfo &reg_info,
+  bool DumpRegisterField(Stream &strm, const RegisterInfo &reg_info,
+                         const ValueObjectSP &value_sp,
                          llvm::StringRef expression_path,
                          size_t reg_name_right_align_at,
                          CommandReturnObject &result) {
-    if (!llvm::isa_and_present<RegisterTypeComposite>(reg_info.register_type)) {
-      result.AppendErrorWithFormat(
-          "Register '%s' does not have a structured type", reg_info.name);
-      return false;
-    }
-
-    StackFrame *frame = exe_ctx.GetFramePtr();
-    if (!frame)
-      return false;
-    lldb::RegisterContextSP reg_ctx_sp = frame->GetRegisterContextSP();
-    ValueObjectSP register_value =
-        ValueObjectRegister::Create(frame, reg_ctx_sp, &reg_info);
-    ValueObjectSP child =
-        ResolveRegisterExpressionPath(register_value, expression_path);
-    if (!child) {
-      llvm::StringRef error_path = expression_path;
-      error_path.consume_front(".");
-      result.AppendErrorWithFormat("No field path '%s' in register '%s'",
-                                   error_path.str().c_str(), reg_info.name);
-      return false;
-    }
-
-    DumpValueObjectOptions options(*child);
+    DumpValueObjectOptions options(*value_sp);
     options.SetHideRootType(true)
         .SetHideRootName(true)
         .SetHideName(true)
@@ -274,7 +159,7 @@ public:
       options.SetFormat(m_format_options.GetFormatValue().GetCurrentValue());
 
     StreamString value_stream;
-    if (llvm::Error error = child->Dump(value_stream, options)) {
+    if (llvm::Error error = value_sp->Dump(value_stream, options)) {
       result.AppendError(toString(std::move(error)));
       return false;
     }
@@ -382,35 +267,95 @@ protected:
         result.AppendError("the --set <set> option can't be used when "
                            "registers names are supplied as arguments\n");
       } else {
-        int reg_name_right_align_at = ComputeLongestRegisterName(
-            command, reg_ctx, !m_command_options.alternate_name);
+        struct RegisterArgument {
+          const RegisterInfo *reg_info = nullptr;
+          ValueObjectSP value_sp;
+          std::string expression_path;
+          std::string error;
+        };
+
+        StackFrame *frame = m_exe_ctx.GetFramePtr();
+        if (!frame) {
+          result.AppendError("no frame");
+          return;
+        }
+        std::vector<RegisterArgument> register_arguments;
+        register_arguments.reserve(command.GetArgumentCount());
+        size_t reg_name_right_align_at = 0;
+
+        for (auto &entry : command) {
+          llvm::StringRef expression = entry.ref();
+          expression.consume_front("$");
+
+          RegisterArgument argument;
+          argument.reg_info = reg_ctx->GetRegisterInfoByName(expression);
+          if (!argument.reg_info) {
+            if (expression.find_first_of(".[") == llvm::StringRef::npos &&
+                !expression.contains("->")) {
+              argument.error =
+                  "Invalid register name '" + expression.str() + "'";
+            } else {
+              std::string variable_path = "$" + expression.str();
+              VariableSP variable_sp;
+              Status error;
+              argument.value_sp = frame->GetValueForVariableExpressionPath(
+                  variable_path, eNoDynamicValues,
+                  StackFrame::eExpressionPathOptionCheckPtrVsMember,
+                  variable_sp, error, eDILModeLegacy);
+              if (error.Fail() || !argument.value_sp) {
+                argument.error = error.AsCString("invalid register path");
+              } else if (ValueObject *root = argument.value_sp->GetRoot()) {
+                argument.reg_info = reg_ctx->GetRegisterInfoByName(
+                    root->GetName().GetStringRef());
+              }
+            }
+          }
+
+          if (!argument.reg_info) {
+            if (argument.error.empty())
+              argument.error =
+                  "Invalid register name '" + expression.str() + "'";
+          } else {
+            if (argument.value_sp) {
+              StreamString expression_stream;
+              argument.value_sp->GetExpressionPath(expression_stream);
+              llvm::StringRef expression_path = expression_stream.GetString();
+              if (!expression_path.consume_front("$") ||
+                  !expression_path.consume_front(argument.reg_info->name)) {
+                argument.error = "unable to reconstruct register path '" +
+                                 expression.str() + "'";
+              } else {
+                argument.expression_path = expression_path.str();
+              }
+            }
+            reg_name_right_align_at =
+                std::max(reg_name_right_align_at,
+                         GetNameSize(argument.reg_info,
+                                     !m_command_options.alternate_name));
+          }
+          register_arguments.push_back(std::move(argument));
+        }
+
         // Extra ident to be consistent with register sets dumping.
         strm.IndentMore();
-        for (auto &entry : command) {
-          // in most LLDB commands we accept $rbx as the name for register RBX
-          // - and here we would reject it and non-existant. we should be more
-          // consistent towards the user and allow them to say reg read $rbx -
-          // internally, however, we should be strict and not allow ourselves
-          // to call our registers $rbx in our own API
-          auto arg_str = entry.ref();
-          arg_str.consume_front("$");
+        for (const RegisterArgument &argument : register_arguments) {
+          if (!argument.error.empty()) {
+            result.AppendError(argument.error);
+            continue;
+          }
 
-          auto [reg_info, expression_path] =
-              FindRegisterWithExpressionPath(*reg_ctx, arg_str);
-
-          if (reg_info && expression_path.empty()) {
+          if (!argument.value_sp) {
             // If they have asked for a specific format don't obscure that by
             // printing a structured value afterwards.
             bool print_type = !m_format_options.GetFormatValue().OptionWasSet();
-            if (!DumpRegister(m_exe_ctx, strm, *reg_ctx, *reg_info, print_type,
-                              reg_name_right_align_at))
-              strm.Printf("%-12s = error: unavailable\n", reg_info->name);
-          } else if (reg_info) {
-            DumpRegisterField(m_exe_ctx, strm, *reg_info, expression_path,
-                              reg_name_right_align_at, result);
+            if (!DumpRegister(m_exe_ctx, strm, *reg_ctx, *argument.reg_info,
+                              print_type, reg_name_right_align_at))
+              strm.Printf("%-12s = error: unavailable\n",
+                          argument.reg_info->name);
           } else {
-            result.AppendErrorWithFormat("Invalid register name '%s'",
-                                         arg_str.str().c_str());
+            DumpRegisterField(strm, *argument.reg_info, argument.value_sp,
+                              argument.expression_path, reg_name_right_align_at,
+                              result);
           }
         }
         strm.IndentLess();

@@ -36,6 +36,7 @@
 #include "lldb/ValueObject/DILParser.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
 #include "lldb/ValueObject/ValueObjectMemory.h"
+#include "lldb/ValueObject/ValueObjectRegister.h"
 #include "lldb/ValueObject/ValueObjectVariable.h"
 
 #include "lldb/lldb-enumerations.h"
@@ -47,6 +48,33 @@ using namespace lldb_private;
 
 // LLVM RTTI support.
 char StackFrame::ID;
+
+static std::pair<const RegisterInfo *, llvm::StringRef>
+FindRegisterInExpressionPath(RegisterContext &reg_ctx,
+                             llvm::StringRef expression_path) {
+  // Register names may contain periods. Prefer an exact name, then the
+  // longest name that leaves a member or index expression as the suffix.
+  if (const RegisterInfo *reg_info =
+          reg_ctx.GetRegisterInfoByName(expression_path))
+    return {reg_info, {}};
+
+  size_t search_end = expression_path.size();
+  while (search_end) {
+    llvm::StringRef prefix = expression_path.take_front(search_end);
+    size_t split = prefix.find_last_of(".[");
+    size_t arrow = prefix.rfind("->");
+    if (arrow != llvm::StringRef::npos &&
+        (split == llvm::StringRef::npos || arrow > split))
+      split = arrow;
+    if (split == llvm::StringRef::npos)
+      break;
+    if (const RegisterInfo *reg_info =
+            reg_ctx.GetRegisterInfoByName(expression_path.take_front(split)))
+      return {reg_info, expression_path.drop_front(split)};
+    search_end = split;
+  }
+  return {nullptr, {}};
+}
 
 // The first bits in the flags are reserved for the SymbolContext::Scope bits
 // so we know if we have tried to look up information in our internal symbol
@@ -600,14 +628,6 @@ ValueObjectSP StackFrame::LegacyGetValueForVariableExpressionPath(
   bool deref = false;
   bool address_of = false;
   ValueObjectSP valobj_sp;
-  const bool get_file_globals = true;
-  // When looking up a variable for an expression, we need only consider the
-  // variables that are in scope.
-  VariableListSP var_list_sp(GetInScopeVariableList(get_file_globals));
-  VariableList *variable_list = var_list_sp.get();
-
-  if (!variable_list)
-    return ValueObjectSP();
 
   // If first character is a '*', then show pointer contents
   std::string var_expr_storage;
@@ -619,20 +639,54 @@ ValueObjectSP StackFrame::LegacyGetValueForVariableExpressionPath(
     var_expr = var_expr.drop_front(); // Skip the '&'
   }
 
+  bool is_register_path = var_expr.consume_front("$");
+  if (is_register_path)
+    var_sp.reset();
   size_t separator_idx = var_expr.find_first_of(".-[=+~|&^%#@!/?,<>{}");
   StreamString var_expr_path_strm;
 
   ConstString name_const_string(var_expr.substr(0, separator_idx));
+  VariableListSP var_list_sp;
+  VariableList *variable_list = nullptr;
 
-  var_sp = variable_list->FindVariable(name_const_string, false);
+  if (is_register_path) {
+    RegisterContextSP reg_ctx_sp = GetRegisterContextSP();
+    auto [reg_info, register_path] =
+        reg_ctx_sp
+            ? FindRegisterInExpressionPath(*reg_ctx_sp, var_expr)
+            : std::pair<const RegisterInfo *, llvm::StringRef>{nullptr, {}};
+    if (!reg_info) {
+      error = Status::FromErrorStringWithFormat(
+          "no register named '%s' found in this frame",
+          name_const_string.GetCString());
+      return ValueObjectSP();
+    }
+    valobj_sp = ValueObjectRegister::Create(this, reg_ctx_sp, reg_info);
+    if (!valobj_sp) {
+      error = Status::FromErrorStringWithFormat(
+          "unable to read register '%s' in this frame", reg_info->name);
+      return {};
+    }
+    name_const_string = ConstString(reg_info->name);
+    var_expr = register_path;
+  } else {
+    const bool get_file_globals = true;
+    // When looking up a variable for an expression, we need only consider the
+    // variables that are in scope.
+    var_list_sp = GetInScopeVariableList(get_file_globals);
+    variable_list = var_list_sp.get();
+    if (!variable_list)
+      return ValueObjectSP();
+
+    var_sp = variable_list->FindVariable(name_const_string, false);
+    if (var_sp)
+      var_expr = var_expr.drop_front(name_const_string.GetLength());
+  }
 
   bool synthetically_added_instance_object = false;
 
-  if (var_sp) {
-    var_expr = var_expr.drop_front(name_const_string.GetLength());
-  }
-
-  if (!var_sp && (options & eExpressionPathOptionsAllowDirectIVarAccess)) {
+  if (!valobj_sp && !var_sp &&
+      (options & eExpressionPathOptionsAllowDirectIVarAccess)) {
     // Check for direct ivars access which helps us with implicit access to
     // ivars using "this" or "self".
     GetSymbolContext(eSymbolContextFunction | eSymbolContextBlock);
@@ -655,7 +709,8 @@ ValueObjectSP StackFrame::LegacyGetValueForVariableExpressionPath(
     }
   }
 
-  if (!var_sp && (options & eExpressionPathOptionsInspectAnonymousUnions)) {
+  if (!valobj_sp && !var_sp &&
+      (options & eExpressionPathOptionsInspectAnonymousUnions)) {
     // Check if any anonymous unions are there which contain a variable with
     // the name we need
     for (const VariableSP &variable_sp : *variable_list) {
@@ -844,6 +899,18 @@ ValueObjectSP StackFrame::LegacyGetValueForVariableExpressionPath(
       if (index_expr.empty()) {
         // The entire index expression was a single integer.
 
+        if (valobj_sp->GetValueType() == eValueTypeRegister &&
+            !valobj_sp->IsPointerType() &&
+            (child_index < 0 ||
+             static_cast<unsigned long>(child_index) > UINT32_MAX)) {
+          valobj_sp->GetExpressionPath(var_expr_path_strm);
+          error = Status::FromErrorStringWithFormat(
+              "array index %ld is not valid for \"(%s) %s\"", child_index,
+              valobj_sp->GetTypeName().AsCString("<invalid type>"),
+              var_expr_path_strm.GetData());
+          return ValueObjectSP();
+        }
+
         if (valobj_sp->GetCompilerType().IsPointerToScalarType() && deref) {
           // what we have is *ptr[low]. the most similar C++ syntax is to deref
           // ptr and extract bit low out of it. reading array item low would be
@@ -944,7 +1011,8 @@ ValueObjectSP StackFrame::LegacyGetValueForVariableExpressionPath(
             }
           }
         } else if (valobj_sp->GetCompilerType().IsArrayType(
-                       nullptr, nullptr, &is_incomplete_array)) {
+                       nullptr, nullptr, &is_incomplete_array) ||
+                   valobj_sp->GetCompilerType().IsVectorType()) {
           // Pass false to dynamic_value here so we can tell the difference
           // between no dynamic value and no member of this type...
           child_valobj_sp = valobj_sp->GetChildAtIndex(child_index);
@@ -1041,6 +1109,19 @@ ValueObjectSP StackFrame::LegacyGetValueForVariableExpressionPath(
         long temp = child_index;
         child_index = final_index;
         final_index = temp;
+      }
+
+      if (valobj_sp->GetValueType() == eValueTypeRegister &&
+          !valobj_sp->IsPointerType() &&
+          (child_index < 0 || final_index < 0 ||
+           static_cast<unsigned long>(child_index) > UINT32_MAX ||
+           static_cast<unsigned long>(final_index) > UINT32_MAX)) {
+        valobj_sp->GetExpressionPath(var_expr_path_strm);
+        error = Status::FromErrorStringWithFormat(
+            "bitfield range %ld-%ld is not valid for \"(%s) %s\"", child_index,
+            final_index, valobj_sp->GetTypeName().AsCString("<invalid type>"),
+            var_expr_path_strm.GetData());
+        return {};
       }
 
       if (valobj_sp->GetCompilerType().IsPointerToScalarType() && deref) {
