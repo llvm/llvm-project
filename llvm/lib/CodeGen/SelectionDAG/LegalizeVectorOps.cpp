@@ -1798,11 +1798,9 @@ SDValue VectorLegalizer::ExpandMASK_BEFOREFIRST(SDNode *N) {
   // Expand to (get_active_lane_mask 0, (cttz_elts x))
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
-  EVT BoolVT = VT.changeVectorElementType(*DAG.getContext(), MVT::i1);
   EVT VecIdxVT = TLI.getVectorIdxTy(DAG.getDataLayout());
   SDValue CttzElts =
-      DAG.getNode(ISD::CTTZ_ELTS, DL, VecIdxVT,
-                  DAG.getNode(ISD::TRUNCATE, DL, BoolVT, N->getOperand(0)));
+      DAG.getNode(ISD::CTTZ_ELTS, DL, VecIdxVT, N->getOperand(0));
   return DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, DL, VT,
                      DAG.getConstant(0, DL, VecIdxVT), CttzElts);
 }

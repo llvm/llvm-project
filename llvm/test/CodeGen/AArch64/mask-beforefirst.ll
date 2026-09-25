@@ -5,94 +5,20 @@ define <16 x i1> @v16i1(<16 x i1> %m) {
 ; CHECK-LABEL: v16i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    shl v0.16b, v0.16b, #7
-; CHECK-NEXT:    mov w8, #15 // =0xf
+; CHECK-NEXT:    adrp x8, .LCPI0_0
+; CHECK-NEXT:    mov w9, #16 // =0x10
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI0_0]
 ; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
-; CHECK-NEXT:    umov w9, v0.b[1]
-; CHECK-NEXT:    umov w10, v0.b[0]
-; CHECK-NEXT:    umov w11, v0.b[2]
-; CHECK-NEXT:    tst w9, #0x1
-; CHECK-NEXT:    csel w9, w8, wzr, ne
-; CHECK-NEXT:    tst w10, #0x1
-; CHECK-NEXT:    mov w8, #16 // =0x10
-; CHECK-NEXT:    csel w10, w8, wzr, ne
-; CHECK-NEXT:    tst w11, #0x1
-; CHECK-NEXT:    fmov s1, w10
-; CHECK-NEXT:    umov w10, v0.b[3]
-; CHECK-NEXT:    mov v1.b[1], w9
-; CHECK-NEXT:    mov w9, #14 // =0xe
-; CHECK-NEXT:    csel w9, w9, wzr, ne
-; CHECK-NEXT:    tst w10, #0x1
-; CHECK-NEXT:    umov w10, v0.b[4]
-; CHECK-NEXT:    mov v1.b[2], w9
-; CHECK-NEXT:    mov w9, #13 // =0xd
-; CHECK-NEXT:    csel w9, w9, wzr, ne
-; CHECK-NEXT:    tst w10, #0x1
-; CHECK-NEXT:    umov w10, v0.b[5]
-; CHECK-NEXT:    mov v1.b[3], w9
-; CHECK-NEXT:    mov w9, #12 // =0xc
-; CHECK-NEXT:    csel w9, w9, wzr, ne
-; CHECK-NEXT:    tst w10, #0x1
-; CHECK-NEXT:    umov w10, v0.b[6]
-; CHECK-NEXT:    mov v1.b[4], w9
-; CHECK-NEXT:    mov w9, #11 // =0xb
-; CHECK-NEXT:    csel w9, w9, wzr, ne
-; CHECK-NEXT:    tst w10, #0x1
-; CHECK-NEXT:    umov w10, v0.b[7]
-; CHECK-NEXT:    mov v1.b[5], w9
-; CHECK-NEXT:    mov w9, #10 // =0xa
-; CHECK-NEXT:    csel w9, w9, wzr, ne
-; CHECK-NEXT:    tst w10, #0x1
-; CHECK-NEXT:    umov w10, v0.b[8]
-; CHECK-NEXT:    mov v1.b[6], w9
-; CHECK-NEXT:    mov w9, #9 // =0x9
-; CHECK-NEXT:    csel w9, w9, wzr, ne
-; CHECK-NEXT:    tst w10, #0x1
-; CHECK-NEXT:    umov w10, v0.b[9]
-; CHECK-NEXT:    mov v1.b[7], w9
-; CHECK-NEXT:    mov w9, #8 // =0x8
-; CHECK-NEXT:    csel w9, w9, wzr, ne
-; CHECK-NEXT:    tst w10, #0x1
-; CHECK-NEXT:    umov w10, v0.b[10]
-; CHECK-NEXT:    mov v1.b[8], w9
-; CHECK-NEXT:    mov w9, #7 // =0x7
-; CHECK-NEXT:    csel w9, w9, wzr, ne
-; CHECK-NEXT:    tst w10, #0x1
-; CHECK-NEXT:    umov w10, v0.b[11]
-; CHECK-NEXT:    mov v1.b[9], w9
-; CHECK-NEXT:    mov w9, #6 // =0x6
-; CHECK-NEXT:    csel w9, w9, wzr, ne
-; CHECK-NEXT:    tst w10, #0x1
-; CHECK-NEXT:    umov w10, v0.b[12]
-; CHECK-NEXT:    mov v1.b[10], w9
-; CHECK-NEXT:    mov w9, #5 // =0x5
-; CHECK-NEXT:    csel w9, w9, wzr, ne
-; CHECK-NEXT:    tst w10, #0x1
-; CHECK-NEXT:    umov w10, v0.b[13]
-; CHECK-NEXT:    mov v1.b[11], w9
-; CHECK-NEXT:    mov w9, #4 // =0x4
-; CHECK-NEXT:    csel w9, w9, wzr, ne
-; CHECK-NEXT:    tst w10, #0x1
-; CHECK-NEXT:    umov w10, v0.b[14]
-; CHECK-NEXT:    mov v1.b[12], w9
-; CHECK-NEXT:    mov w9, #3 // =0x3
-; CHECK-NEXT:    csel w9, w9, wzr, ne
-; CHECK-NEXT:    tst w10, #0x1
-; CHECK-NEXT:    umov w10, v0.b[15]
-; CHECK-NEXT:    mov v1.b[13], w9
-; CHECK-NEXT:    mov w9, #2 // =0x2
-; CHECK-NEXT:    csel w9, w9, wzr, ne
-; CHECK-NEXT:    mov v1.b[14], w9
-; CHECK-NEXT:    and w9, w10, #0x1
-; CHECK-NEXT:    mov v1.b[15], w9
-; CHECK-NEXT:    umaxv b0, v1.16b
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    sub w8, w8, w9, uxtb
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    umaxv b0, v0.16b
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    sub w8, w9, w8, uxtb
 ; CHECK-NEXT:    mov w9, #255 // =0xff
 ; CHECK-NEXT:    cmp x8, #255
 ; CHECK-NEXT:    csel x8, x8, x9, lo
 ; CHECK-NEXT:    dup v0.16b, w8
-; CHECK-NEXT:    adrp x8, .LCPI0_0
-; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI0_0]
+; CHECK-NEXT:    adrp x8, .LCPI0_1
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI0_1]
 ; CHECK-NEXT:    cmhi v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %x = call <16 x i1> @llvm.mask.beforefirst(<16 x i1> %m)
@@ -103,54 +29,20 @@ define <8 x i1> @v8i1(<8 x i1> %m) {
 ; CHECK-LABEL: v8i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    shl v0.8b, v0.8b, #7
-; CHECK-NEXT:    mov w8, #7 // =0x7
-; CHECK-NEXT:    cmlt v0.8b, v0.8b, #0
-; CHECK-NEXT:    umov w9, v0.b[1]
-; CHECK-NEXT:    umov w10, v0.b[0]
-; CHECK-NEXT:    umov w11, v0.b[2]
-; CHECK-NEXT:    tst w9, #0x1
+; CHECK-NEXT:    adrp x8, .LCPI1_0
 ; CHECK-NEXT:    mov w9, #8 // =0x8
-; CHECK-NEXT:    csel w8, w8, wzr, ne
-; CHECK-NEXT:    tst w10, #0x1
-; CHECK-NEXT:    csel w10, w9, wzr, ne
-; CHECK-NEXT:    tst w11, #0x1
-; CHECK-NEXT:    fmov s1, w10
-; CHECK-NEXT:    umov w10, v0.b[3]
-; CHECK-NEXT:    mov v1.b[1], w8
-; CHECK-NEXT:    mov w8, #6 // =0x6
-; CHECK-NEXT:    csel w8, w8, wzr, ne
-; CHECK-NEXT:    tst w10, #0x1
-; CHECK-NEXT:    umov w10, v0.b[4]
-; CHECK-NEXT:    mov v1.b[2], w8
-; CHECK-NEXT:    mov w8, #5 // =0x5
-; CHECK-NEXT:    csel w8, w8, wzr, ne
-; CHECK-NEXT:    tst w10, #0x1
-; CHECK-NEXT:    umov w10, v0.b[5]
-; CHECK-NEXT:    mov v1.b[3], w8
-; CHECK-NEXT:    mov w8, #4 // =0x4
-; CHECK-NEXT:    csel w8, w8, wzr, ne
-; CHECK-NEXT:    tst w10, #0x1
-; CHECK-NEXT:    umov w10, v0.b[6]
-; CHECK-NEXT:    mov v1.b[4], w8
-; CHECK-NEXT:    mov w8, #3 // =0x3
-; CHECK-NEXT:    csel w8, w8, wzr, ne
-; CHECK-NEXT:    tst w10, #0x1
-; CHECK-NEXT:    umov w10, v0.b[7]
-; CHECK-NEXT:    mov v1.b[5], w8
-; CHECK-NEXT:    mov w8, #2 // =0x2
-; CHECK-NEXT:    csel w8, w8, wzr, ne
-; CHECK-NEXT:    mov v1.b[6], w8
-; CHECK-NEXT:    and w8, w10, #0x1
-; CHECK-NEXT:    mov v1.b[7], w8
-; CHECK-NEXT:    umaxv b0, v1.8b
+; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI1_0]
+; CHECK-NEXT:    cmlt v0.8b, v0.8b, #0
+; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    umaxv b0, v0.8b
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    sub w8, w9, w8, uxtb
 ; CHECK-NEXT:    mov w9, #255 // =0xff
 ; CHECK-NEXT:    cmp x8, #255
 ; CHECK-NEXT:    csel x8, x8, x9, lo
 ; CHECK-NEXT:    dup v0.8b, w8
-; CHECK-NEXT:    adrp x8, .LCPI1_0
-; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI1_0]
+; CHECK-NEXT:    adrp x8, .LCPI1_1
+; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI1_1]
 ; CHECK-NEXT:    cmhi v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
   %x = call <8 x i1> @llvm.mask.beforefirst(<8 x i1> %m)
@@ -161,34 +53,20 @@ define <4 x i1> @v4i1(<4 x i1> %m) {
 ; CHECK-LABEL: v4i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    shl v0.4h, v0.4h, #15
-; CHECK-NEXT:    mov w8, #3 // =0x3
-; CHECK-NEXT:    cmlt v0.4h, v0.4h, #0
-; CHECK-NEXT:    umov w9, v0.h[1]
-; CHECK-NEXT:    umov w10, v0.h[0]
-; CHECK-NEXT:    umov w11, v0.h[2]
-; CHECK-NEXT:    tst w9, #0x1
+; CHECK-NEXT:    adrp x8, .LCPI2_0
 ; CHECK-NEXT:    mov w9, #4 // =0x4
-; CHECK-NEXT:    csel w8, w8, wzr, ne
-; CHECK-NEXT:    tst w10, #0x1
-; CHECK-NEXT:    csel w10, w9, wzr, ne
-; CHECK-NEXT:    tst w11, #0x1
-; CHECK-NEXT:    fmov s1, w10
-; CHECK-NEXT:    umov w10, v0.h[3]
-; CHECK-NEXT:    mov v1.h[1], w8
-; CHECK-NEXT:    mov w8, #2 // =0x2
-; CHECK-NEXT:    csel w8, w8, wzr, ne
-; CHECK-NEXT:    mov v1.h[2], w8
-; CHECK-NEXT:    and w8, w10, #0x1
-; CHECK-NEXT:    mov v1.h[3], w8
-; CHECK-NEXT:    umaxv h0, v1.4h
+; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI2_0]
+; CHECK-NEXT:    cmlt v0.4h, v0.4h, #0
+; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    umaxv h0, v0.4h
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    sub w8, w9, w8, uxth
 ; CHECK-NEXT:    mov w9, #65535 // =0xffff
 ; CHECK-NEXT:    cmp x8, x9
 ; CHECK-NEXT:    csel x8, x8, x9, lo
 ; CHECK-NEXT:    dup v0.4h, w8
-; CHECK-NEXT:    adrp x8, .LCPI2_0
-; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI2_0]
+; CHECK-NEXT:    adrp x8, .LCPI2_1
+; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI2_1]
 ; CHECK-NEXT:    cmhi v0.4h, v0.4h, v1.4h
 ; CHECK-NEXT:    ret
   %x = call <4 x i1> @llvm.mask.beforefirst(<4 x i1> %m)
@@ -199,18 +77,15 @@ define <2 x i1> @v2i1(<2 x i1> %m) {
 ; CHECK-LABEL: v2i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    shl v0.2s, v0.2s, #31
-; CHECK-NEXT:    mov w8, #2 // =0x2
+; CHECK-NEXT:    mov x8, #2 // =0x2
+; CHECK-NEXT:    mov w9, #2 // =0x2
+; CHECK-NEXT:    movk x8, #1, lsl #32
+; CHECK-NEXT:    fmov d1, x8
 ; CHECK-NEXT:    cmlt v0.2s, v0.2s, #0
-; CHECK-NEXT:    fmov w10, s0
-; CHECK-NEXT:    mov w9, v0.s[1]
-; CHECK-NEXT:    tst w10, #0x1
-; CHECK-NEXT:    csel w10, w8, wzr, ne
-; CHECK-NEXT:    and w9, w9, #0x1
-; CHECK-NEXT:    fmov s0, w10
-; CHECK-NEXT:    mov v0.s[1], w9
+; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    umaxp v0.2s, v0.2s, v0.2s
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    sub w8, w8, w9
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    sub w8, w9, w8
 ; CHECK-NEXT:    dup v0.2d, x8
 ; CHECK-NEXT:    adrp x8, .LCPI3_0
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI3_0]
