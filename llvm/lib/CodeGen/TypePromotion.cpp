@@ -148,6 +148,7 @@ class TypePromotionImpl {
   SmallPtrSet<Instruction *, 8> SafeToPromote;
   SmallPtrSet<Instruction *, 4> SafeWrap;
   SmallPtrSet<Instruction *, 4> InstsToRemove;
+  bool UseSExt;
 
   // Does V have the same size result type as TypeSize.
   bool EqualTypeSize(Value *V);
@@ -176,9 +177,8 @@ class TypePromotionImpl {
   bool isSupportedValue(Value *V);
   // Is V an instruction thats result can trivially promoted, or has safe
   // wrapping.
-  bool isLegalToPromote(Value *V, bool UseSExt = false);
-  bool TryToPromote(Value *V, unsigned PromotedWidth, const LoopInfo &LI,
-                    bool UseSExt = false);
+  bool isLegalToPromote(Value *V);
+  bool TryToPromote(Value *V, unsigned PromotedWidth, const LoopInfo &LI);
 
 public:
   bool run(Function &F, const TargetMachine *TM,
@@ -249,8 +249,7 @@ bool TypePromotionImpl::isSource(Value *V) {
   else if (isa<LoadInst>(V))
     return true;
   else if (auto *Call = dyn_cast<CallInst>(V))
-    return (Call->hasRetAttr(Attribute::AttrKind::ZExt) ||
-            Call->hasRetAttr(Attribute::AttrKind::SExt));
+    return (Call->hasRetAttr(UseSExt ? Attribute::AttrKind::SExt : Attribute::AttrKind::ZExt));
   else if (auto *Trunc = dyn_cast<TruncInst>(V))
     return EqualTypeSize(Trunc);
   return false;
@@ -826,9 +825,9 @@ bool TypePromotionImpl::isSupportedValue(Value *V) {
       // TODO We should accept calls even if they don't have zeroext, as they
       // can still be sinks.
       auto *Call = cast<CallInst>(I);
-      return isSupportedType(Call) &&
-             (Call->hasRetAttr(Attribute::AttrKind::ZExt) ||
-              Call->hasRetAttr(Attribute::AttrKind::SExt));
+      return isSupportedType(Call) && (UseSExt ?
+             Call->hasRetAttr(Attribute::AttrKind::SExt) :
+             Call->hasRetAttr(Attribute::AttrKind::ZExt));
     }
     }
   } else if (isa<Constant>(V) && !isa<ConstantExpr>(V)) {
@@ -842,7 +841,7 @@ bool TypePromotionImpl::isSupportedValue(Value *V) {
 /// Check that the type of V would be promoted and that the original type is
 /// smaller than the targeted promoted type. Check that we're not trying to
 /// promote something larger than our base 'TypeSize' type.
-bool TypePromotionImpl::isLegalToPromote(Value *V, bool UseSExt) {
+bool TypePromotionImpl::isLegalToPromote(Value *V) {
   auto *I = dyn_cast<Instruction>(V);
   if (!I)
     return true;
@@ -858,14 +857,14 @@ bool TypePromotionImpl::isLegalToPromote(Value *V, bool UseSExt) {
 }
 
 bool TypePromotionImpl::TryToPromote(Value *V, unsigned PromotedWidth,
-                                     const LoopInfo &LI, bool UseSExt) {
+                                     const LoopInfo &LI) {
   Type *OrigTy = V->getType();
   TypeSize = OrigTy->getPrimitiveSizeInBits().getFixedValue();
   SafeToPromote.clear();
   SafeWrap.clear();
 
   if (!isSupportedValue(V) || !shouldPromote(V) ||
-      !isLegalToPromote(V, UseSExt))
+      !isLegalToPromote(V))
     return false;
 
   LLVM_DEBUG(dbgs() << "IR Promotion: TryToPromote: " << *V << ", from "
@@ -890,7 +889,7 @@ bool TypePromotionImpl::TryToPromote(Value *V, unsigned PromotedWidth,
       return false;
 
     if (!isSupportedValue(V) ||
-        (shouldPromote(V) && !isLegalToPromote(V, UseSExt))) {
+        (shouldPromote(V) && !isLegalToPromote(V))) {
       LLVM_DEBUG(dbgs() << "IR Promotion: Can't handle: " << *V << "\n");
       return false;
     }
@@ -1047,6 +1046,7 @@ bool TypePromotionImpl::run(Function &F, const TargetMachine *TM,
 
   for (BasicBlock &BB : F) {
     for (Instruction &I : BB) {
+      UseSExt = false;
       if (AllVisited.count(&I))
         continue;
 
@@ -1055,7 +1055,7 @@ bool TypePromotionImpl::run(Function &F, const TargetMachine *TM,
         LLVM_DEBUG(dbgs() << "IR Promotion: Searching from: "
                           << *I.getOperand(0) << "\n");
         auto *ZExt = cast<ZExtInst>(&I);
-        bool UseSExt = ZExt->hasNonNeg();
+        UseSExt = ZExt->hasNonNeg();
         EVT ZExtVT = TLI->getValueType(DL, I.getType());
         Instruction *Phi = static_cast<Instruction *>(I.getOperand(0));
         auto PromoteWidth = ZExtVT.getFixedSizeInBits();
@@ -1064,7 +1064,7 @@ bool TypePromotionImpl::run(Function &F, const TargetMachine *TM,
                             << "register for ZExt type\n");
           continue;
         }
-        MadeChange |= TryToPromote(Phi, PromoteWidth, LI, UseSExt);
+        MadeChange |= TryToPromote(Phi, PromoteWidth, LI);
       } else if (auto *ICmp = dyn_cast<ICmpInst>(&I)) {
         // Search up from icmps to try to promote their operands.
         // Skip signed or pointer compares
