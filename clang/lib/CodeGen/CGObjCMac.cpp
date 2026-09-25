@@ -66,17 +66,12 @@ private:
   llvm::FunctionCallee getMessageSendFn() const {
     // Add the non-lazy-bind attribute, since objc_msgSend is likely to
     // be called a lot.
-    // Suppress on arm64e (inline GOT loads bypass auth stubs).
     llvm::Type *params[] = {ObjectPtrTy, SelectorPtrTy};
-    llvm::AttributeList Attrs;
-    if (!CGM.getTriple().isArm64e()) {
-      Attrs = llvm::AttributeList::get(CGM.getLLVMContext(),
-                                       llvm::AttributeList::FunctionIndex,
-                                       llvm::Attribute::NonLazyBind);
-    }
     return CGM.CreateRuntimeFunction(
         llvm::FunctionType::get(ObjectPtrTy, params, true), "objc_msgSend",
-        Attrs);
+        llvm::AttributeList::get(CGM.getLLVMContext(),
+                                 llvm::AttributeList::FunctionIndex,
+                                 llvm::Attribute::NonLazyBind));
   }
 
   /// void objc_msgSend_stret (id, SEL, ...)
@@ -559,14 +554,11 @@ public:
   llvm::FunctionCallee getSetJmpFn() {
     // This is specifically the prototype for x86.
     llvm::Type *params[] = {CGM.DefaultPtrTy};
-    llvm::AttributeList Attrs;
-    if (!CGM.getTriple().isArm64e()) {
-      Attrs = llvm::AttributeList::get(CGM.getLLVMContext(),
-                                       llvm::AttributeList::FunctionIndex,
-                                       llvm::Attribute::NonLazyBind);
-    }
     return CGM.CreateRuntimeFunction(
-        llvm::FunctionType::get(CGM.Int32Ty, params, false), "_setjmp", Attrs);
+        llvm::FunctionType::get(CGM.Int32Ty, params, false), "_setjmp",
+        llvm::AttributeList::get(CGM.getLLVMContext(),
+                                 llvm::AttributeList::FunctionIndex,
+                                 llvm::Attribute::NonLazyBind));
   }
 
 public:
@@ -711,13 +703,13 @@ public:
     // classref except by calling this function.
     llvm::Type *params[] = {Int8PtrPtrTy};
     llvm::LLVMContext &C = CGM.getLLVMContext();
-    llvm::SmallVector<llvm::Attribute, 3> AttrVec = {
-        llvm::Attribute::getWithMemoryEffects(C, llvm::MemoryEffects::none()),
-        llvm::Attribute::get(C, llvm::Attribute::NoUnwind),
-    };
-    if (!CGM.getTriple().isArm64e())
-      AttrVec.push_back(llvm::Attribute::get(C, llvm::Attribute::NonLazyBind));
-    llvm::AttributeSet AS = llvm::AttributeSet::get(C, AttrVec);
+    llvm::AttributeSet AS = llvm::AttributeSet::get(
+        C, {
+               llvm::Attribute::get(C, llvm::Attribute::NonLazyBind),
+               llvm::Attribute::getWithMemoryEffects(
+                   C, llvm::MemoryEffects::none()),
+               llvm::Attribute::get(C, llvm::Attribute::NoUnwind),
+           });
     llvm::FunctionCallee F = CGM.CreateRuntimeFunction(
         llvm::FunctionType::get(ClassnfABIPtrTy, params, false),
         "objc_loadClassref",

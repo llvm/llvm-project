@@ -10440,12 +10440,6 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   unsigned OpFlags = 0;
   if (auto *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
     CalledGlobal = G->getGlobal();
-    if (auto *F = dyn_cast<Function>(CalledGlobal))
-      if (F->hasFnAttribute(Attribute::NonLazyBind) &&
-          Subtarget->getTargetTriple().isArm64e())
-        DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
-            MF.getFunction(),
-            "nonlazybind attribute is not compatible with arm64e"));
     OpFlags = Subtarget->classifyGlobalFunctionReference(CalledGlobal,
                                                          getTargetMachine());
     if (OpFlags & AArch64II::MO_GOT) {
@@ -10456,12 +10450,9 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
       Callee = DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0, OpFlags);
     }
   } else if (auto *S = dyn_cast<ExternalSymbolSDNode>(Callee)) {
-    // Unauthenticated GOT loads are incompatible with arm64e: the
-    // resulting indirect branch (blr) bypasses pointer authentication.
     bool UseGot = (getTargetMachine().getCodeModel() == CodeModel::Large &&
                    Subtarget->isTargetMachO()) ||
-                  (MF.getFunction().getParent()->getRtLibUseGOT() &&
-                   !Subtarget->getTargetTriple().isArm64e());
+                  MF.getFunction().getParent()->getRtLibUseGOT();
     const char *Sym = S->getSymbol();
     if (UseGot) {
       Callee = DAG.getTargetExternalSymbol(Sym, PtrVT, AArch64II::MO_GOT);

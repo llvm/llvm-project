@@ -99,10 +99,6 @@ public:
 
   operator bool() const { return RTLCI != nullptr; }
 
-  const RTLIB::RuntimeLibcallsInfo *getRuntimeLibcallsInfo() const {
-    return RTLCI;
-  }
-
   LLVM_ABI bool invalidate(Module &, const PreservedAnalyses &,
                            ModuleAnalysisManager::Invalidator &);
 
