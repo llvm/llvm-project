@@ -1275,6 +1275,33 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC(MachineInstr &I) const {
     return selectWritelane(I);
   case Intrinsic::amdgcn_div_scale:
     return selectDivScale(I);
+  case Intrinsic::amdgcn_cvt_pk_f32_bf8:
+  case Intrinsic::amdgcn_cvt_pk_f32_fp8: {
+    if (!STI.hasCvtFP8ByteSel() || !STI.useRealTrue16Insts() ||
+        I.getOperand(3).getImm() != 0)
+      return selectImpl(I, *CoverageInfo);
+
+    unsigned Opc = IntrinsicID == Intrinsic::amdgcn_cvt_pk_f32_bf8
+                       ? AMDGPU::V_CVT_PK_F32_BF8_t16_e32
+                       : AMDGPU::V_CVT_PK_F32_FP8_t16_e32;
+    Register Src = I.getOperand(2).getReg();
+    Register UncopiedSrc = getSrcRegIgnoringCopies(Src, *MRI);
+    if (isSGPR(UncopiedSrc)) {
+      Src = UncopiedSrc;
+    } else {
+      Register LoSrc =
+          MRI->createVirtualRegister(&AMDGPU::VGPR_16_Lo128RegClass);
+      BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(AMDGPU::COPY), LoSrc)
+          .addReg(Src, {}, AMDGPU::lo16);
+      Src = LoSrc;
+    }
+    auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Opc),
+                       I.getOperand(0).getReg())
+                   .addReg(Src);
+    constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
+    I.eraseFromParent();
+    return true;
+  }
   case Intrinsic::amdgcn_ballot:
     return selectBallot(I);
   case Intrinsic::amdgcn_reloc_constant:
