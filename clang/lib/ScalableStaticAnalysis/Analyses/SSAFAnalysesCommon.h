@@ -38,7 +38,7 @@ std::string describeJSONValue(const llvm::json::Array &A);
 std::string describeJSONValue(const llvm::json::Object &O);
 
 template <typename NodeTy, typename... Ts>
-llvm::Error makeErrAtNode(clang::ASTContext &Ctx, const NodeTy *N,
+llvm::Error makeErrAtNode(const clang::ASTContext &Ctx, const NodeTy *N,
                           llvm::StringRef Fmt, const Ts &...Args) {
   std::string LocStr = N->getBeginLoc().printToString(Ctx.getSourceManager());
   return llvm::createStringError((Fmt + " at %s").str().c_str(), Args...,
@@ -64,6 +64,12 @@ inline bool hasPtrOrArrType(const Expr *E) {
 inline bool hasPtrOrArrType(const ValueDecl *D) {
   return llvm::isa<clang::PointerType, clang::ArrayType>(
       D->getType().getNonReferenceType().getCanonicalType());
+}
+
+///\return true iff QualType \c T has (reference-to) pointer or array type.
+inline bool hasPtrOrArrType(QualType T) {
+  return llvm::isa<clang::PointerType, clang::ArrayType>(
+      T.getNonReferenceType().getCanonicalType());
 }
 
 llvm::Error makeEntityNameErr(clang::ASTContext &Ctx,
