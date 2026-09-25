@@ -109,6 +109,18 @@ def AddOp : Toy_Op<"add"> {
 }
 
 //===----------------------------------------------------------------------===//
+// DivOp
+//===----------------------------------------------------------------------===//
+
+def DivOp : Toy_Op<"div"> {
+  let summary = "element-wise division operation";
+  let arguments = (ins F64Tensor:$lhs, F64Tensor:$rhs);
+  let results = (outs F64Tensor);
+  let builders = [OpBuilder<(ins "Value":$lhs, "Value":$rhs)>];
+  let hasCustomAssemblyFormat = 1;  
+}
+
+//===----------------------------------------------------------------------===//
 // FuncOp
 //===----------------------------------------------------------------------===//
 
