@@ -284,6 +284,7 @@ Makes programs 10x faster by doing Special New Thing.
 * Updated the canonical order of one-letter RISC-V extensions to match the
   latest specification, placing ``p`` after ``v`` and removing unused ``n``.
 * Adds experimental assembler support for the `Xqccmi` (Qualcomm 16-bit Instruction Lookup Table) vendor extension.
+* Added `-mcpu=gaisler-gr765` for the 64-bit GR765 processor.
 
 ### Changes to the WebAssembly Backend
 
