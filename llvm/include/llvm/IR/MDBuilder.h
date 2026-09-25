@@ -131,8 +131,8 @@ public:
   // Callees metadata.
   //===------------------------------------------------------------------===//
 
-  /// Return metadata indicating the possible callees of indirect
-  /// calls.
+  /// Return metadata indicating the exhaustive list of possible callees of
+  /// function calls.
   LLVM_ABI MDNode *createCallees(ArrayRef<Function *> Callees);
 
   //===------------------------------------------------------------------===//
