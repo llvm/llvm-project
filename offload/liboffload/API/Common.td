@@ -165,6 +165,7 @@ def OL_INIT_ARGS_INIT : Macro {
 
 def olInit : Function {
   let desc = "Perform initialization of the Offload library";
+  let requires_init = 0;
   let details = [
     "This must be the first API call made by a user of the Offload library",
     "Each call will increment an internal reference count that is decremented by `olShutDown`",

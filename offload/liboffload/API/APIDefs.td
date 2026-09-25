@@ -158,6 +158,10 @@ class Function : APIObject {
   // so the compiler warns if the returned result is ignored.
   bit nodiscard = 0;
 
+  // When unset, the generated entry point does not check that liboffload
+  // has been initialized before dispatching to the implementation.
+  bit requires_init = 1;
+
   list<Return> returns_with_def = !listconcat(DefaultReturns, returns);
   list<Return> all_returns = AddPointerChecksToReturns<params,
         AddHandleChecksToReturns<params, returns_with_def>.returns_out>.returns_out;

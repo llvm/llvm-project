@@ -26,4 +26,7 @@ bool loadDeviceBinary(
     const std::string &BinaryName, ol_device_handle_t Device,
     std::unique_ptr<llvm::MemoryBuffer> &BinaryOut,
     std::optional<ol_platform_backend_t> OverrideBackend = std::nullopt);
+
+bool loadAnyDeviceBinary(const std::string &BinaryName,
+                         std::unique_ptr<llvm::MemoryBuffer> &BinaryOut);
 } // namespace TestEnvironment

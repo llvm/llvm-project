@@ -230,6 +230,7 @@ public:
     return rec->getValueAsListOfStrings("analogues");
   }
   bool isNodiscard() const { return rec->getValueAsBit("nodiscard"); }
+  bool getRequiresInit() const { return rec->getValueAsBit("requires_init"); }
 
 private:
   std::vector<ReturnRec> rets;
