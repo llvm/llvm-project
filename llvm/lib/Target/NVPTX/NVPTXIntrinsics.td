@@ -3107,9 +3107,8 @@ def : Pat<(int_nvvm_f2h_rn f32:$a), (CVT_f16_f32 $a, CvtRN)>;
 foreach dst = ["e4m3x2", "e5m2x2"] in {
   foreach relu = ["", "relu"] in {
     foreach rnd = ["rn", "rz"] in {
-      defvar Relu     = !if(!empty(relu), "", "_" # relu);
-      defvar BaseMode = !cast<PatLeaf>("Cvt" # !toupper(rnd # Relu));
-      defvar Suffix   = dst # "_" # rnd # Relu;
+      defvar BaseMode = !cast<PatLeaf>("Cvt" # !toupper(StrJoin<"_", [rnd, relu]>.ret));
+      defvar Suffix   = StrJoin<"_", [dst, rnd, relu]>.ret;
       defvar F32X2    = ToCvtIntrinsics<"ff_to_" # Suffix>;
       defvar F16X2    = ToCvtIntrinsics<"f16x2_to_" # Suffix>;
       defvar BF16X2   = ToCvtIntrinsics<"bf16x2_to_" # Suffix>;
@@ -3185,9 +3184,8 @@ let Predicates = [hasS2F6X2ConversionSupport] in {
 foreach dst = ["e2m3x2", "e3m2x2"] in {
   foreach relu = ["", "relu"] in {
     foreach rnd = ["rn", "rz"] in {
-      defvar Relu     = !if(!empty(relu), "", "_" # relu);
-      defvar BaseMode = !cast<PatLeaf>("Cvt" # !toupper(rnd # Relu));
-      defvar Suffix   = dst # "_" # rnd # Relu;
+      defvar BaseMode = !cast<PatLeaf>("Cvt" # !toupper(StrJoin<"_", [rnd, relu]>.ret));
+      defvar Suffix   = StrJoin<"_", [dst, rnd, relu]>.ret;
       defvar F32X2    = ToCvtIntrinsics<"ff_to_" # Suffix>;
       defvar F16X2    = ToCvtIntrinsics<"f16x2_to_" # Suffix>;
       defvar BF16X2   = ToCvtIntrinsics<"bf16x2_to_" # Suffix>;
@@ -3237,27 +3235,38 @@ let Predicates = [hasNarrowFPToBF16x2ConversionSupport] in {
   }
 } // let Predicates = [hasNarrowFPToBF16x2ConversionSupport]
 
-let Predicates = [hasNarrowFPConversionSupport] in {
-  def : Pat<(int_nvvm_ff_to_e2m1x2_rn_satfinite f32:$a, f32:$b),
-            (CVT_e2m1x2_f32_sf $a, $b, CvtRN)>;
-  def : Pat<(int_nvvm_ff_to_e2m1x2_rn_relu_satfinite f32:$a, f32:$b),
-            (CVT_e2m1x2_f32_sf $a, $b, CvtRN_RELU)>;
+foreach relu = ["", "relu"] in {
+  foreach rnd = ["rn", "rz"] in {
+    defvar BaseMode = !cast<PatLeaf>("Cvt" # !toupper(StrJoin<"_", [rnd, relu]>.ret));
+    defvar Suffix   = StrJoin<"_", ["e2m1x2", rnd, relu]>.ret;
+    defvar F32X2    = ToCvtIntrinsics<"ff_to_" # Suffix>;
+    defvar F16X2    = ToCvtIntrinsics<"f16x2_to_" # Suffix>;
+    defvar BF16X2   = ToCvtIntrinsics<"bf16x2_to_" # Suffix>;
 
+    foreach pzo = [0, 1] in {
+      defvar PZO = !if(pzo, -1, 0);
+      defvar Mode = CvtModeWithPZO<BaseMode, pzo>.Value;
+      defvar NeedsPZOSupport = !or(!eq(rnd, "rz"), !eq(pzo, 1));
+      defvar F32X2Preds = !if(NeedsPZOSupport, [hasConvertWithPZOSupport]<Predicate>,
+                                               [hasNarrowFPConversionSupport]<Predicate>);
+      defvar FPX2Preds = !if(NeedsPZOSupport, [hasConvertWithPZOSupport]<Predicate>,
+                                              [hasFP16X2ToNarrowFPConversionSupport]<Predicate>);
+
+      def : Pat<(F32X2.sf f32:$a, f32:$b, PZO), (CVT_e2m1x2_f32_sf $a, $b, Mode)>,
+            Requires<F32X2Preds>;
+      def : Pat<(F16X2.sf v2f16:$a, PZO), (CVT_e2m1x2_f16x2_sf $a, Mode)>,
+            Requires<FPX2Preds>;
+      def : Pat<(BF16X2.sf v2bf16:$a, PZO), (CVT_e2m1x2_bf16x2_sf $a, Mode)>,
+            Requires<FPX2Preds>;
+    }
+  }
+}
+
+let Predicates = [hasNarrowFPConversionSupport] in {
   def : Pat<(int_nvvm_e2m1x2_to_f16x2_rn i16:$a),
             (CVT_f16x2_e2m1x2 $a, CvtRN)>;
   def : Pat<(int_nvvm_e2m1x2_to_f16x2_rn_relu i16:$a),
             (CVT_f16x2_e2m1x2 $a, CvtRN_RELU)>;
-}
-
-let Predicates = [hasFP16X2ToNarrowFPConversionSupport] in {
-  foreach src_type = ["f16x2", "bf16x2"] in {
-    foreach relu = ["", "_relu"] in {
-      defvar intrin = !cast<Intrinsic>("int_nvvm_" # src_type # "_to_e2m1x2_rn" # relu # "_satfinite");
-      defvar cvt_inst = !cast<NVPTXInst>("CVT_e2m1x2_" # src_type # "_sf");
-      defvar cvt_mode = !cast<PatLeaf>("CvtRN" # !toupper(relu));
-      def : Pat<(intrin B32:$a), (cvt_inst $a, cvt_mode)>;
-    }
-  }
 }
 
 let Predicates = [hasNarrowFPToBF16x2ConversionSupport] in {
