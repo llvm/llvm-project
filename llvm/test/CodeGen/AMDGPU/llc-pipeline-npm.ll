@@ -103,7 +103,7 @@
 ; GCN-O0-NEXT:       amdgpu-preload-kern-arg-prolog
 ; GCN-O0-NEXT:       stack-frame-layout
 ; GCN-O0-NEXT:       amdgpu-asm-printer
-; GCN-O0-NEXT:     free-machine-function 
+; GCN-O0-NEXT:     free-machine-function
 ; GCN-O0-NEXT: amdgpu-asm-printer-end
 
 ; GCN-O2: require<MachineModuleAnalysis>
@@ -265,7 +265,6 @@
 ; GCN-O2-NEXT:       tailduplication
 ; GCN-O2-NEXT:       machine-cp
 ; GCN-O2-NEXT:       post-ra-pseudos
-; GCN-O2-NEXT:       amdgpu-break-load-cluster-deps
 ; GCN-O2-NEXT:       si-shrink-instructions
 ; GCN-O2-NEXT:       si-post-ra-bundler
 ; GCN-O2-NEXT:       postmisched
@@ -454,7 +453,6 @@
 ; GCN-O3-NEXT:       tailduplication
 ; GCN-O3-NEXT:       machine-cp
 ; GCN-O3-NEXT:       post-ra-pseudos
-; GCN-O3-NEXT:       amdgpu-break-load-cluster-deps
 ; GCN-O3-NEXT:       si-shrink-instructions
 ; GCN-O3-NEXT:       si-post-ra-bundler
 ; GCN-O3-NEXT:       postmisched

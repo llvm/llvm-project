@@ -1928,8 +1928,8 @@ define amdgpu_kernel void @store_load_vindex_small_offset_kernel(i32 %n) {
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 15
 ; GFX9-NEXT:    scratch_store_dword v1, v2, off offset:128
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_sub_u32_e32 v0, s0, v0
-; GFX9-NEXT:    scratch_load_dword v0, v0, off offset:124 glc
+; GFX9-NEXT:    v_sub_u32_e32 v2, s0, v0
+; GFX9-NEXT:    scratch_load_dword v0, v2, off offset:124 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_endpgm
 ;
@@ -1950,8 +1950,8 @@ define amdgpu_kernel void @store_load_vindex_small_offset_kernel(i32 %n) {
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_lshl_b32 s0, s0, 7
 ; GFX10-NEXT:    s_addk_i32 s0, 0x100
-; GFX10-NEXT:    v_sub_nc_u32_e32 v0, s0, v0
-; GFX10-NEXT:    scratch_load_dword v0, v0, off offset:124 glc dlc
+; GFX10-NEXT:    v_sub_nc_u32_e32 v4, s0, v0
+; GFX10-NEXT:    scratch_load_dword v0, v4, off offset:124 glc dlc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_endpgm
 ;
@@ -2011,8 +2011,8 @@ define amdgpu_kernel void @store_load_vindex_small_offset_kernel(i32 %n) {
 ; GFX9-PAL-NEXT:    s_addk_i32 s0, 0x100
 ; GFX9-PAL-NEXT:    scratch_store_dword v1, v2, off offset:128
 ; GFX9-PAL-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-PAL-NEXT:    v_sub_u32_e32 v0, s0, v0
-; GFX9-PAL-NEXT:    scratch_load_dword v0, v0, off offset:124 glc
+; GFX9-PAL-NEXT:    v_sub_u32_e32 v2, s0, v0
+; GFX9-PAL-NEXT:    scratch_load_dword v0, v2, off offset:124 glc
 ; GFX9-PAL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-PAL-NEXT:    s_endpgm
 ;
@@ -2029,8 +2029,8 @@ define amdgpu_kernel void @store_load_vindex_small_offset_kernel(i32 %n) {
 ; GFX942-NEXT:    s_addk_i32 s0, 0x100
 ; GFX942-NEXT:    scratch_store_dword v0, v1, off offset:384 sc0 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    v_sub_u32_e32 v0, s0, v0
-; GFX942-NEXT:    scratch_load_dword v0, v0, off offset:124 sc0 sc1
+; GFX942-NEXT:    v_sub_u32_e32 v2, s0, v0
+; GFX942-NEXT:    scratch_load_dword v0, v2, off offset:124 sc0 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_endpgm
 ;
@@ -2052,13 +2052,13 @@ define amdgpu_kernel void @store_load_vindex_small_offset_kernel(i32 %n) {
 ; GFX1010-PAL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1010-PAL-NEXT:    s_lshl_b32 s0, s0, 7
 ; GFX1010-PAL-NEXT:    s_addk_i32 s0, 0x100
-; GFX1010-PAL-NEXT:    v_sub_nc_u32_e32 v0, s0, v0
+; GFX1010-PAL-NEXT:    v_sub_nc_u32_e32 v4, s0, v0
 ; GFX1010-PAL-NEXT:    s_mov_b32 s0, 0
 ; GFX1010-PAL-NEXT:    scratch_load_dword v3, off, s0 glc dlc
 ; GFX1010-PAL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1010-PAL-NEXT:    scratch_store_dword v1, v2, off offset:128
 ; GFX1010-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX1010-PAL-NEXT:    scratch_load_dword v0, v0, off offset:124 glc dlc
+; GFX1010-PAL-NEXT:    scratch_load_dword v0, v4, off offset:124 glc dlc
 ; GFX1010-PAL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1010-PAL-NEXT:    s_endpgm
 ;
@@ -2084,8 +2084,8 @@ define amdgpu_kernel void @store_load_vindex_small_offset_kernel(i32 %n) {
 ; GFX1030-PAL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1030-PAL-NEXT:    s_lshl_b32 s0, s0, 7
 ; GFX1030-PAL-NEXT:    s_addk_i32 s0, 0x100
-; GFX1030-PAL-NEXT:    v_sub_nc_u32_e32 v0, s0, v0
-; GFX1030-PAL-NEXT:    scratch_load_dword v0, v0, off offset:124 glc dlc
+; GFX1030-PAL-NEXT:    v_sub_nc_u32_e32 v4, s0, v0
+; GFX1030-PAL-NEXT:    scratch_load_dword v0, v4, off offset:124 glc dlc
 ; GFX1030-PAL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1030-PAL-NEXT:    s_endpgm
 ;
@@ -2155,8 +2155,8 @@ define void @store_load_vindex_small_offset_foo(i32 %idx) {
 ; GFX9-NEXT:    v_and_b32_e32 v0, 15, v0
 ; GFX9-NEXT:    scratch_store_dword v2, v3, off
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_lshl_add_u32 v0, v0, 2, v1
-; GFX9-NEXT:    scratch_load_dword v0, v0, off glc
+; GFX9-NEXT:    v_lshl_add_u32 v2, v0, 2, v1
+; GFX9-NEXT:    scratch_load_dword v0, v2, off glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -2223,8 +2223,8 @@ define void @store_load_vindex_small_offset_foo(i32 %idx) {
 ; GFX9-PAL-NEXT:    v_and_b32_e32 v0, 15, v0
 ; GFX9-PAL-NEXT:    scratch_store_dword v2, v3, off
 ; GFX9-PAL-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-PAL-NEXT:    v_lshl_add_u32 v0, v0, 2, v1
-; GFX9-PAL-NEXT:    scratch_load_dword v0, v0, off glc
+; GFX9-PAL-NEXT:    v_lshl_add_u32 v2, v0, 2, v1
+; GFX9-PAL-NEXT:    scratch_load_dword v0, v2, off glc
 ; GFX9-PAL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-PAL-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -2240,8 +2240,8 @@ define void @store_load_vindex_small_offset_foo(i32 %idx) {
 ; GFX942-NEXT:    v_and_b32_e32 v0, 15, v0
 ; GFX942-NEXT:    scratch_store_dword v1, v2, off sc0 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX942-NEXT:    scratch_load_dword v0, v0, s32 offset:256 sc0 sc1
+; GFX942-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
+; GFX942-NEXT:    scratch_load_dword v0, v2, s32 offset:256 sc0 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -3224,8 +3224,8 @@ define amdgpu_kernel void @store_load_vindex_large_offset_kernel(i32 %n) {
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 15
 ; GFX9-NEXT:    scratch_store_dword v1, v2, off offset:128
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_sub_u32_e32 v0, s0, v0
-; GFX9-NEXT:    scratch_load_dword v0, v0, off offset:124 glc
+; GFX9-NEXT:    v_sub_u32_e32 v2, s0, v0
+; GFX9-NEXT:    scratch_load_dword v0, v2, off offset:124 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_endpgm
 ;
@@ -3246,8 +3246,8 @@ define amdgpu_kernel void @store_load_vindex_large_offset_kernel(i32 %n) {
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_lshl_b32 s0, s0, 7
 ; GFX10-NEXT:    s_addk_i32 s0, 0x4004
-; GFX10-NEXT:    v_sub_nc_u32_e32 v0, s0, v0
-; GFX10-NEXT:    scratch_load_dword v0, v0, off offset:124 glc dlc
+; GFX10-NEXT:    v_sub_nc_u32_e32 v4, s0, v0
+; GFX10-NEXT:    scratch_load_dword v0, v4, off offset:124 glc dlc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_endpgm
 ;
@@ -3309,8 +3309,8 @@ define amdgpu_kernel void @store_load_vindex_large_offset_kernel(i32 %n) {
 ; GFX9-PAL-NEXT:    s_addk_i32 s0, 0x4004
 ; GFX9-PAL-NEXT:    scratch_store_dword v1, v2, off offset:128
 ; GFX9-PAL-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-PAL-NEXT:    v_sub_u32_e32 v0, s0, v0
-; GFX9-PAL-NEXT:    scratch_load_dword v0, v0, off offset:124 glc
+; GFX9-PAL-NEXT:    v_sub_u32_e32 v2, s0, v0
+; GFX9-PAL-NEXT:    scratch_load_dword v0, v2, off offset:124 glc
 ; GFX9-PAL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-PAL-NEXT:    s_endpgm
 ;
@@ -3328,8 +3328,8 @@ define amdgpu_kernel void @store_load_vindex_large_offset_kernel(i32 %n) {
 ; GFX942-NEXT:    s_movk_i32 s1, 0x4004
 ; GFX942-NEXT:    scratch_store_dword v0, v1, s1 offset:128 sc0 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    v_sub_u32_e32 v0, s0, v0
-; GFX942-NEXT:    scratch_load_dword v0, v0, off offset:124 sc0 sc1
+; GFX942-NEXT:    v_sub_u32_e32 v2, s0, v0
+; GFX942-NEXT:    scratch_load_dword v0, v2, off offset:124 sc0 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_endpgm
 ;
@@ -3351,13 +3351,13 @@ define amdgpu_kernel void @store_load_vindex_large_offset_kernel(i32 %n) {
 ; GFX1010-PAL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1010-PAL-NEXT:    s_lshl_b32 s0, s0, 7
 ; GFX1010-PAL-NEXT:    s_addk_i32 s0, 0x4004
-; GFX1010-PAL-NEXT:    v_sub_nc_u32_e32 v0, s0, v0
+; GFX1010-PAL-NEXT:    v_sub_nc_u32_e32 v4, s0, v0
 ; GFX1010-PAL-NEXT:    s_mov_b32 s0, 0
 ; GFX1010-PAL-NEXT:    scratch_load_dword v3, off, s0 offset:4 glc dlc
 ; GFX1010-PAL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1010-PAL-NEXT:    scratch_store_dword v1, v2, off offset:128
 ; GFX1010-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX1010-PAL-NEXT:    scratch_load_dword v0, v0, off offset:124 glc dlc
+; GFX1010-PAL-NEXT:    scratch_load_dword v0, v4, off offset:124 glc dlc
 ; GFX1010-PAL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1010-PAL-NEXT:    s_endpgm
 ;
@@ -3383,8 +3383,8 @@ define amdgpu_kernel void @store_load_vindex_large_offset_kernel(i32 %n) {
 ; GFX1030-PAL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1030-PAL-NEXT:    s_lshl_b32 s0, s0, 7
 ; GFX1030-PAL-NEXT:    s_addk_i32 s0, 0x4004
-; GFX1030-PAL-NEXT:    v_sub_nc_u32_e32 v0, s0, v0
-; GFX1030-PAL-NEXT:    scratch_load_dword v0, v0, off offset:124 glc dlc
+; GFX1030-PAL-NEXT:    v_sub_nc_u32_e32 v4, s0, v0
+; GFX1030-PAL-NEXT:    scratch_load_dword v0, v4, off offset:124 glc dlc
 ; GFX1030-PAL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1030-PAL-NEXT:    s_endpgm
 ;
@@ -3456,8 +3456,8 @@ define void @store_load_vindex_large_offset_foo(i32 %idx) {
 ; GFX9-NEXT:    v_and_b32_e32 v0, 15, v0
 ; GFX9-NEXT:    scratch_store_dword v2, v3, off
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_lshl_add_u32 v0, v0, 2, v1
-; GFX9-NEXT:    scratch_load_dword v0, v0, off glc
+; GFX9-NEXT:    v_lshl_add_u32 v2, v0, 2, v1
+; GFX9-NEXT:    scratch_load_dword v0, v2, off glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -3525,8 +3525,8 @@ define void @store_load_vindex_large_offset_foo(i32 %idx) {
 ; GFX9-PAL-NEXT:    v_and_b32_e32 v0, 15, v0
 ; GFX9-PAL-NEXT:    scratch_store_dword v2, v3, off
 ; GFX9-PAL-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-PAL-NEXT:    v_lshl_add_u32 v0, v0, 2, v1
-; GFX9-PAL-NEXT:    scratch_load_dword v0, v0, off glc
+; GFX9-PAL-NEXT:    v_lshl_add_u32 v2, v0, 2, v1
+; GFX9-PAL-NEXT:    scratch_load_dword v0, v2, off glc
 ; GFX9-PAL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-PAL-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -3542,9 +3542,9 @@ define void @store_load_vindex_large_offset_foo(i32 %idx) {
 ; GFX942-NEXT:    v_and_b32_e32 v0, 15, v0
 ; GFX942-NEXT:    scratch_store_dword v1, v2, off sc0 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX942-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
 ; GFX942-NEXT:    s_add_i32 s0, s32, 0x4004
-; GFX942-NEXT:    scratch_load_dword v0, v0, s0 sc0 sc1
+; GFX942-NEXT:    scratch_load_dword v0, v2, s0 sc0 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
 ;

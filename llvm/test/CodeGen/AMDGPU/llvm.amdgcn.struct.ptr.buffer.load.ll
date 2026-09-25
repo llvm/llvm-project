@@ -5,10 +5,10 @@
 define amdgpu_ps {<4 x float>, <4 x float>, <4 x float>} @buffer_load(ptr addrspace(8) inreg) {
 ; CHECK-LABEL: buffer_load:
 ; CHECK:       ; %bb.0: ; %main_body
-; CHECK-NEXT:    v_mov_b32_e32 v8, 0
-; CHECK-NEXT:    buffer_load_dwordx4 v[0:3], v8, s[0:3], 0 idxen
-; CHECK-NEXT:    buffer_load_dwordx4 v[4:7], v8, s[0:3], 0 idxen glc
-; CHECK-NEXT:    buffer_load_dwordx4 v[8:11], v8, s[0:3], 0 idxen slc
+; CHECK-NEXT:    v_mov_b32_e32 v12, 0
+; CHECK-NEXT:    buffer_load_dwordx4 v[0:3], v12, s[0:3], 0 idxen
+; CHECK-NEXT:    buffer_load_dwordx4 v[4:7], v12, s[0:3], 0 idxen glc
+; CHECK-NEXT:    buffer_load_dwordx4 v[8:11], v12, s[0:3], 0 idxen slc
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    ; return to shader part epilog
 main_body:
@@ -191,10 +191,10 @@ entry:
 define amdgpu_ps {<4 x float>, <2 x float>, float} @buffer_load_int(ptr addrspace(8) inreg) {
 ; CHECK-LABEL: buffer_load_int:
 ; CHECK:       ; %bb.0: ; %main_body
-; CHECK-NEXT:    v_mov_b32_e32 v6, 0
-; CHECK-NEXT:    buffer_load_dwordx4 v[0:3], v6, s[0:3], 0 idxen
-; CHECK-NEXT:    buffer_load_dwordx2 v[4:5], v6, s[0:3], 0 idxen glc
-; CHECK-NEXT:    buffer_load_dword v6, v6, s[0:3], 0 idxen slc
+; CHECK-NEXT:    v_mov_b32_e32 v7, 0
+; CHECK-NEXT:    buffer_load_dwordx4 v[0:3], v7, s[0:3], 0 idxen
+; CHECK-NEXT:    buffer_load_dwordx2 v[4:5], v7, s[0:3], 0 idxen glc
+; CHECK-NEXT:    buffer_load_dword v6, v7, s[0:3], 0 idxen slc
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    ; return to shader part epilog
 main_body:
