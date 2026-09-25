@@ -14719,6 +14719,145 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
   // If concatenating would exceed LMUL=8, we need to split.
   if ((ContainerVecVT.getSizeInBits().getKnownMinValue() * Factor) >
       (8 * RISCV::RVVBitsPerBlock)) {
+    // Fixed-length store+vlseg path: keep operands intact, spill them
+    // contiguously, then issue legal-sized vlseg at consecutive offsets.
+    // Avoids extract/concat tax from splitting operands first (#222938).
+    // Scalable keeps the shared recursive split below.
+    if (IsFixedVector) {
+      const unsigned NumElts = VecVT.getVectorNumElements();
+      MVT ElemVT = VecVT.getVectorElementType();
+
+      // Largest per-field element count with EMUL * NFIELDS <= 8.
+      // Only consider power-of-two lengths: useRVVForFixedLengthVectorVT
+      // rejects non-pow2 types, and MVT::getVectorVT may be invalid for
+      // arbitrary lengths.
+      unsigned ChunkElts = 0;
+      for (unsigned K = 1u << Log2_32(NumElts); K >= 1; K /= 2) {
+        MVT ChunkVT = MVT::getVectorVT(ElemVT, K);
+        if (!ChunkVT.isValid() || !ChunkVT.isFixedLengthVector() ||
+            !useRVVForFixedLengthVectorVT(ChunkVT))
+          continue;
+        MVT ChunkContainer = getContainerForFixedLengthVector(ChunkVT);
+        if (ChunkContainer.getSizeInBits().getKnownMinValue() * Factor <=
+            (8 * RISCV::RVVBitsPerBlock)) {
+          ChunkElts = K;
+          break;
+        }
+      }
+      assert(ChunkElts != 0 && "expected a legal fixed-length vlseg chunk");
+
+      MVT XLenVT = Subtarget.getXLenVT();
+      auto &MF = DAG.getMachineFunction();
+      SDValue Chain = DAG.getEntryNode();
+      Align Alignment = DAG.getReducedAlign(VecVT, /*UseABI=*/false);
+
+      ElementCount ActualConcatEC = VecVT.getVectorElementCount() * Factor;
+      EVT ConcatEVT =
+          EVT::getVectorVT(*DAG.getContext(), ElemVT, ActualConcatEC);
+      SDValue StackPtr =
+          DAG.CreateStackTemporary(ConcatEVT.getStoreSize(), Alignment);
+      auto FrameIndex = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
+      MachinePointerInfo PtrInfo =
+          MachinePointerInfo::getFixedStack(MF, FrameIndex);
+
+      TypeSize VecSize = VecVT.getStoreSize();
+      SDValue BasePtr = StackPtr;
+      MachinePointerInfo PI = PtrInfo;
+      SmallVector<SDValue, 8> Tokens(Factor);
+      for (auto [Idx, FieldOp] : enumerate(Op->op_values())) {
+        if (Idx) {
+          BasePtr = DAG.getObjectPtrOffset(DL, BasePtr, VecSize);
+          PI = PI.getWithOffset(VecSize);
+        }
+        Tokens[Idx] = DAG.getStore(Chain, DL, FieldOp, BasePtr, PI, Alignment);
+      }
+      Chain = DAG.getTokenFactor(DL, Tokens);
+
+      const unsigned ElemBytes = VecVT.getScalarStoreSize();
+
+      static const Intrinsic::ID VlsegIntrinsicsIds[] = {
+          Intrinsic::riscv_vlseg2_mask, Intrinsic::riscv_vlseg3_mask,
+          Intrinsic::riscv_vlseg4_mask, Intrinsic::riscv_vlseg5_mask,
+          Intrinsic::riscv_vlseg6_mask, Intrinsic::riscv_vlseg7_mask,
+          Intrinsic::riscv_vlseg8_mask};
+
+      SmallVector<SmallVector<SDValue, 4>, 8> Parts(Factor);
+      MVT ChunkVT = MVT::getVectorVT(ElemVT, ChunkElts);
+      MVT ChunkContainer = getContainerForFixedLengthVector(ChunkVT);
+      MVT WideVT =
+          MVT::getVectorVT(ElemVT, ChunkElts * PowerOf2Ceil(Factor));
+      assert(WideVT.isValid() && WideVT.isFixedLengthVector() &&
+             "expected legal wide passthru VT for chunked vlseg");
+      MVT WideContainer = getContainerForFixedLengthVector(WideVT);
+
+      for (unsigned Offset = 0; Offset < NumElts; Offset += ChunkElts) {
+        unsigned ThisChunkElts = std::min(ChunkElts, NumElts - Offset);
+
+        SDValue ChunkPtr = DAG.getObjectPtrOffset(
+            DL, StackPtr,
+            TypeSize::getFixed(static_cast<uint64_t>(Offset) * Factor *
+                               ElemBytes));
+        MachinePointerInfo ChunkPI = PtrInfo.getWithOffset(
+            static_cast<uint64_t>(Offset) * Factor * ElemBytes);
+
+        SDValue Mask, VL;
+        std::tie(Mask, VL) =
+            getDefaultVLOps(ChunkVT, ChunkContainer, DL, DAG, Subtarget);
+        // Partial final chunk: keep the legal (pow2) container, shrink VL.
+        if (ThisChunkElts != ChunkElts)
+          VL = DAG.getConstant(ThisChunkElts, DL, XLenVT);
+
+        SDValue Passthru = DAG.getUNDEF(WideContainer);
+
+        SDValue LoadOps[] = {
+            Chain,
+            DAG.getTargetConstant(VlsegIntrinsicsIds[Factor - 2], DL, XLenVT),
+            Passthru,
+            ChunkPtr,
+            Mask,
+            VL,
+            DAG.getTargetConstant(
+                RISCVVType::TAIL_AGNOSTIC | RISCVVType::MASK_AGNOSTIC, DL,
+                XLenVT),
+            DAG.getTargetConstant(Log2_64(VecVT.getScalarSizeInBits()), DL,
+                                  XLenVT)};
+
+        unsigned Sz = Factor * ChunkContainer.getVectorMinNumElements() *
+                      ChunkContainer.getScalarSizeInBits();
+        EVT VecTupTy = MVT::getRISCVVectorTupleVT(Sz, Factor);
+
+        SDValue Load = DAG.getMemIntrinsicNode(
+            ISD::INTRINSIC_W_CHAIN, DL, DAG.getVTList({VecTupTy, MVT::Other}),
+            LoadOps, ElemVT, ChunkPI, Alignment, MachineMemOperand::MOLoad,
+            LocationSize::beforeOrAfterPointer());
+        Chain = Load.getValue(1);
+
+        for (unsigned i = 0; i != Factor; ++i) {
+          SDValue FieldRes =
+              DAG.getNode(RISCVISD::TUPLE_EXTRACT, DL, ChunkContainer, Load,
+                          DAG.getTargetConstant(i, DL, MVT::i32));
+          SDValue Fixed = convertFromScalableVector(ChunkVT, FieldRes, DAG,
+                                                    Subtarget);
+          if (ThisChunkElts != ChunkElts) {
+            EVT NarrowVT =
+                EVT::getVectorVT(*DAG.getContext(), ElemVT, ThisChunkElts);
+            Fixed = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, NarrowVT, Fixed,
+                                DAG.getVectorIdxConstant(0, DL));
+          }
+          Parts[i].push_back(Fixed);
+        }
+      }
+
+      SmallVector<SDValue, 8> Res(Factor);
+      for (unsigned i = 0; i != Factor; ++i) {
+        if (Parts[i].size() == 1)
+          Res[i] = Parts[i][0];
+        else
+          Res[i] = DAG.getNode(ISD::CONCAT_VECTORS, DL, VecVT, Parts[i]);
+      }
+      return DAG.getMergeValues(Res, DL);
+    }
+
     SmallVector<SDValue, 8> Ops(Factor * 2);
     for (unsigned i = 0; i != Factor; ++i) {
       auto [OpLo, OpHi] = DAG.SplitVectorOperand(Op.getNode(), i);
