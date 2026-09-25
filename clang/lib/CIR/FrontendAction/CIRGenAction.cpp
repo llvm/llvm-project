@@ -215,6 +215,24 @@ public:
       if (C.getLangOpts().SYCLIsHost && !CGO.OffloadBinaryToEmbedFile.empty())
         embedSYCLDeviceBinary(*LLVMModule);
 
+      // CUDA, HIP and OpenMP offloading rely on host-side offload entries that
+      // are not emitted on the ClangIR path yet, so embedding their device
+      // objects would produce a host object that cannot be registered.
+      const LangOptions &LangOpts = C.getLangOpts();
+      if (!CGO.OffloadObjects.empty() &&
+          (LangOpts.CUDA || !LangOpts.OMPTargetTriples.empty())) {
+        DiagnosticsEngine &Diags = CI.getDiagnostics();
+        Diags.Report(Diags.getCustomDiagID(
+            DiagnosticsEngine::Error,
+            "ClangIR code gen Not Yet Implemented: embedding offload objects "
+            "for CUDA, HIP or OpenMP offloading"));
+        return;
+      }
+
+      // If there is device offloading code embed it in the host now.
+      EmbedObject(LLVMModule.get(), CGO, CI.getVirtualFileSystem(),
+                  CI.getDiagnostics());
+
       BackendAction BEAction = getBackendActionFromOutputType(Action);
       emitBackendOutput(CI, CI.getCodeGenOpts(), LLVMModule.get(), BEAction, FS,
                         std::move(OutputStream));
