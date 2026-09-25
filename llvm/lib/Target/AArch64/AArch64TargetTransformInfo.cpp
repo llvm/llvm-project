@@ -5530,6 +5530,11 @@ AArch64TTIImpl::getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
   case Intrinsic::masked_expandload:
   case Intrinsic::masked_compressstore:
     return getMaskedMemoryOpCost(MICA, CostKind);
+  case Intrinsic::speculative_load:
+    // Scalable speculative loads are not supported yet.
+    if (isa<ScalableVectorType>(MICA.getDataType()))
+      return InstructionCost::getInvalid();
+    break;
   }
   return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
 }
@@ -5951,20 +5956,12 @@ bool AArch64TTIImpl::isLegalSpeculativeLoad(Type *DataType,
                                             unsigned AddressSpace) const {
   // Matches AArch64TargetLowering::emitCanLoadSpeculatively: only address
   // space 0 and sizes up to the 16-byte MTE tag granule are supported.
+  // Scalable types are not supported yet.
   if (AddressSpace != 0)
     return false;
+  // TODO: Support scalable vectors.
   TypeSize Size = DL.getTypeStoreSize(DataType);
-  uint64_t MinSize = Size.getKnownMinValue();
-  // Scalable types are at least the minimum vscale times their known minimum
-  // size.
-  if (Size.isScalable()) {
-    if (!ST->isSVEorStreamingSVEAvailable())
-      return false;
-    MinSize *=
-        std::max(ST->getMinSVEVectorSizeInBits(), AArch64::SVEBitsPerBlock) /
-        AArch64::SVEBitsPerBlock;
-  }
-  return MinSize <= 16;
+  return !Size.isScalable() && Size.getFixedValue() <= 16;
 }
 
 unsigned
