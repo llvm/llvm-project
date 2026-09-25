@@ -19,6 +19,7 @@
 #include "X86Subtarget.h"
 #include "X86TargetMachine.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -4035,6 +4036,16 @@ MachineBasicBlock::iterator X86FrameLowering::eliminateCallFramePseudoInstr(
     MachineFunction &MF, MachineBasicBlock &MBB,
     MachineBasicBlock::iterator I) const {
   bool reserveCallFrame = hasReservedCallFrame(MF);
+  // Win64 funclet prologues reserve their outgoing argument space even when
+  // the parent frame has a variable-sized allocation. Their frame pointer
+  // addresses the parent frame, so additional stack adjustments cannot be
+  // described by the funclet's unwind information.
+  if (!reserveCallFrame && STI.isTargetWin64() && MF.hasEHFunclets()) {
+    auto Membership = getEHScopeMembership(MF);
+    auto Scope = Membership.find(&MBB);
+    if (Scope != Membership.end() && Scope->second != MF.front().getNumber())
+      reserveCallFrame = true;
+  }
   unsigned Opcode = I->getOpcode();
   bool isDestroy = Opcode == TII.getCallFrameDestroyOpcode();
   DebugLoc DL = I->getDebugLoc(); // copy DebugLoc as I will be erased.
