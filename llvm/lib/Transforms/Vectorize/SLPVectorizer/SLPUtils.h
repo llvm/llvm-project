@@ -387,13 +387,13 @@ bool isOnceUsedSeed(const Instruction *I);
 /// arithmetic and require an extract for each lane instead of a scalar pointer
 /// increment.
 bool isStrengthReducibleIndexBundle(ArrayRef<Value *> VL, ScalarEvolution &SE,
-                                    LoopInfo &LI, bool ReVec);
+                                    const LoopInfo &LI, bool ReVec);
 
 /// Returns true if each value in \p VL is an in-loop index computation ending
-/// at a getelementptr accepted by \p IsCandidate and used only by scalar
-/// accesses.
+/// at a getelementptr accepted by \p IsCandidate, used only by scalar accesses
+/// and computing an affine recurrence of that loop.
 bool isGEPCandidateIndexBundle(
-    ArrayRef<Value *> VL, LoopInfo &LI, bool ReVec,
+    ArrayRef<Value *> VL, ScalarEvolution &SE, const LoopInfo &LI, bool ReVec,
     function_ref<bool(GetElementPtrInst *)> IsCandidate);
 
 /// If \p V is a single-use fpext of a single-use fptrunc forming a round-trip

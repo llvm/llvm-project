@@ -1015,11 +1015,12 @@ static bool onlyFeedsScalarAccesses(Value *Ptr, bool ReVec,
   if (Ptr->use_empty() || Ptr->hasNUsesOrMore(UsesLimit))
     return false;
   return all_of(Ptr->users(), [&](User *U) {
-    if (isa<LoadInst>(U))
-      return !getValueType(U, ReVec)->isVectorTy();
-    if (auto *Store = dyn_cast<StoreInst>(U))
-      return Store->getPointerOperand() == Ptr &&
-             !getValueType(Store, ReVec)->isVectorTy();
+    if (getValueType(U, ReVec)->isVectorTy())
+      return false;
+    Value *Op;
+    if (isa<LoadInst>(U) ||
+        (match(U, m_Store(m_Value(Op), m_Specific(Ptr))) && Op != Ptr))
+      return true;
     if (auto *GEP = dyn_cast<GetElementPtrInst>(U))
       return Depth < MaxDepth && GEP->getPointerOperand() == Ptr &&
              GEP->hasAllConstantIndices() &&
@@ -1028,17 +1029,20 @@ static bool onlyFeedsScalarAccesses(Value *Ptr, bool ReVec,
   });
 }
 
-static bool collectScalarAccessGEPs(ArrayRef<Value *> VL, LoopInfo &LI,
-                                    bool ReVec,
-                                    SmallVectorImpl<GetElementPtrInst *> &GEPs,
-                                    const Loop *&L) {
+/// Collects in \p GEPs the getelementptrs that the in-loop index computations
+/// \p VL end at, if they are only used by scalar accesses. Returns the loop
+/// containing all of them, or nullptr otherwise.
+static const Loop *
+collectScalarAccessGEPs(ArrayRef<Value *> VL, const LoopInfo &LI, bool ReVec,
+                        SmallVectorImpl<GetElementPtrInst *> &GEPs) {
   constexpr unsigned MaxIndexChainLength = 3;
+  const Loop *L = nullptr;
   for (Value *V : VL) {
     Value *Cur = V;
     GetElementPtrInst *GEP = nullptr;
     for ([[maybe_unused]] unsigned _ : seq<unsigned>(MaxIndexChainLength)) {
       if (!isa<BinaryOperator, CastInst>(Cur) || !Cur->hasOneUse())
-        return false;
+        return nullptr;
       User *U = Cur->user_back();
       if ((GEP = dyn_cast<GetElementPtrInst>(U)))
         break;
@@ -1046,28 +1050,36 @@ static bool collectScalarAccessGEPs(ArrayRef<Value *> VL, LoopInfo &LI,
     }
     if (!GEP || GEP->getPointerOperand() == Cur ||
         !onlyFeedsScalarAccesses(GEP, ReVec))
-      return false;
+      return nullptr;
     // LSR only removes the arithmetic computed in the loop itself.
     const Loop *GEPLoop = LI.getLoopFor(GEP->getParent());
     if (!GEPLoop || (L && L != GEPLoop) ||
         LI.getLoopFor(cast<Instruction>(V)->getParent()) != GEPLoop)
-      return false;
+      return nullptr;
     L = GEPLoop;
     GEPs.push_back(GEP);
   }
-  return true;
+  return L;
+}
+
+/// Returns the address computed by \p GEP if it is an affine recurrence of
+/// \p L, or nullptr otherwise.
+static const SCEVAddRecExpr *
+getAffineAddress(GetElementPtrInst *GEP, const Loop *L, ScalarEvolution &SE) {
+  const auto *Addr = dyn_cast<SCEVAddRecExpr>(SE.getSCEV(GEP));
+  return Addr && Addr->getLoop() == L && Addr->isAffine() ? Addr : nullptr;
 }
 
 bool isStrengthReducibleIndexBundle(ArrayRef<Value *> VL, ScalarEvolution &SE,
-                                    LoopInfo &LI, bool ReVec) {
-  const Loop *L = nullptr;
+                                    const LoopInfo &LI, bool ReVec) {
   SmallVector<GetElementPtrInst *> GEPs;
-  if (!collectScalarAccessGEPs(VL, LI, ReVec, GEPs, L))
+  const Loop *L = collectScalarAccessGEPs(VL, LI, ReVec, GEPs);
+  if (!L)
     return false;
   const SCEV *FirstAddr = nullptr;
   for (GetElementPtrInst *GEP : GEPs) {
-    const auto *Addr = dyn_cast<SCEVAddRecExpr>(SE.getSCEV(GEP));
-    if (!Addr || Addr->getLoop() != L || !Addr->isAffine())
+    const SCEV *Addr = getAffineAddress(GEP, L, SE);
+    if (!Addr)
       return false;
     if (!FirstAddr) {
       FirstAddr = Addr;
@@ -1081,12 +1093,13 @@ bool isStrengthReducibleIndexBundle(ArrayRef<Value *> VL, ScalarEvolution &SE,
 }
 
 bool isGEPCandidateIndexBundle(
-    ArrayRef<Value *> VL, LoopInfo &LI, bool ReVec,
+    ArrayRef<Value *> VL, ScalarEvolution &SE, const LoopInfo &LI, bool ReVec,
     function_ref<bool(GetElementPtrInst *)> IsCandidate) {
-  const Loop *L = nullptr;
   SmallVector<GetElementPtrInst *> GEPs;
-  return collectScalarAccessGEPs(VL, LI, ReVec, GEPs, L) &&
-         all_of(GEPs, IsCandidate);
+  const Loop *L = collectScalarAccessGEPs(VL, LI, ReVec, GEPs);
+  return L && all_of(GEPs, [&](GetElementPtrInst *GEP) {
+           return IsCandidate(GEP) && getAffineAddress(GEP, L, SE);
+         });
 }
 
 Instruction *lookThroughCastRoundTrip(Value *V, bool MustBeElidable) {
