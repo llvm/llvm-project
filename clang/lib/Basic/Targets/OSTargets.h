@@ -38,8 +38,10 @@ void getAppleMachODefines(MacroBuilder &Builder, const LangOptions &Opts,
                           const llvm::Triple &Triple);
 
 void getDarwinDefines(MacroBuilder &Builder, const LangOptions &Opts,
-                      const llvm::Triple &Triple, StringRef &PlatformName,
-                      VersionTuple &PlatformMinVersion);
+                      const llvm::Triple &Triple, StringRef TargetVariantTriple,
+                      StringRef &PlatformName, VersionTuple &PlatformMinVersion,
+                      StringRef &TargetVariantPlatformName,
+                      VersionTuple &TargetVariantPlatform);
 
 template <typename Target>
 class LLVM_LIBRARY_VISIBILITY AppleMachOTargetInfo
@@ -77,8 +79,10 @@ class LLVM_LIBRARY_VISIBILITY DarwinTargetInfo
 protected:
   void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
                     MacroBuilder &Builder) const override {
-    getDarwinDefines(Builder, Opts, Triple, this->PlatformName,
-                     this->PlatformMinVersion);
+    getDarwinDefines(Builder, Opts, Triple, TargetVariantTriple,
+                     this->PlatformName, this->PlatformMinVersion,
+                     this->TargetVariantPlatform,
+                     this->TargetVariantPlatformMinVersion);
   }
 
 public:
@@ -87,6 +91,7 @@ public:
     // By default, no TLS, and we list permitted architecture/OS
     // combinations.
     this->TLSSupported = false;
+    TargetVariantTriple = Opts.DarwinTargetVariantTriple;
 
     if (Triple.isMacOSX())
       this->TLSSupported = !Triple.isMacOSXVersionLT(10, 7);
@@ -185,6 +190,14 @@ public:
   bool areDefaultedSMFStillPOD(const LangOptions &) const override {
     return false;
   }
+
+  /// Darwin does not support protected visibility.  Darwin's "default"
+  /// is very similar to ELF's "protected";  Darwin requires a "weak"
+  /// attribute on declarations that can be dynamically replaced.
+  bool hasProtectedVisibility() const override { return false; }
+
+private:
+  std::string TargetVariantTriple;
 };
 
 // DragonFlyBSD Target
