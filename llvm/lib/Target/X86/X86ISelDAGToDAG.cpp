@@ -4158,12 +4158,17 @@ bool X86DAGToDAGISel::matchBitExtract(SDNode *Node) {
 
   MVT NVT = Node->getSimpleValueType(0);
 
-  // Only supported for 32 and 64 bits.
-  if (NVT != MVT::i32 && NVT != MVT::i64)
+  // Only supported for 8, 16, 32 and 64 bits.
+  if (NVT != MVT::i8 && NVT != MVT::i16 && NVT != MVT::i32 && NVT != MVT::i64)
     return false;
 
   SDValue NBits;
   bool NegateNBits;
+  // The bitwidth of the value that the matched pattern operates on. This can
+  // be narrower than the node's type when the pattern was widened during type
+  // legalization, e.g. an i16 pattern that is visible as an i32 node with an
+  // explicit 0xFFFF mask.
+  unsigned MatchedBitwidth = NVT.getSizeInBits();
 
   // If we have BMI2's BZHI, we are ok with muti-use patterns.
   // Else, if we only have BMI1's BEXTR, we require one-use.
@@ -4187,9 +4192,9 @@ bool X86DAGToDAGISel::matchBitExtract(SDNode *Node) {
 
   auto peekThroughOneUseTruncation = [checkOneUse](SDValue V) {
     if (V->getOpcode() == ISD::TRUNCATE && checkOneUse(V)) {
-      assert(V.getSimpleValueType() == MVT::i32 &&
-             V.getOperand(0).getSimpleValueType() == MVT::i64 &&
-             "Expected i64 -> i32 truncation");
+      assert(V.getSimpleValueType().getSizeInBits() <
+                 V.getOperand(0).getSimpleValueType().getSizeInBits() &&
+             "Expected truncation");
       V = V.getOperand(0);
     }
     return V;
@@ -4245,8 +4250,10 @@ bool X86DAGToDAGISel::matchBitExtract(SDNode *Node) {
 
   // Try to match potentially-truncated shift amount as `(bitwidth - y)`,
   // or leave the shift amount as-is, but then we'll have to negate it.
-  auto canonicalizeShiftAmt = [&NBits, &NegateNBits](SDValue ShiftAmt,
-                                                     unsigned Bitwidth) {
+  auto canonicalizeShiftAmt = [&NBits, &NegateNBits,
+                               &MatchedBitwidth](SDValue ShiftAmt,
+                                                 unsigned Bitwidth) {
+    MatchedBitwidth = Bitwidth;
     NBits = ShiftAmt;
     NegateNBits = true;
     // Skip over a truncate of the shift amount, if any.
@@ -4300,9 +4307,20 @@ bool X86DAGToDAGISel::matchBitExtract(SDNode *Node) {
     if (Node->getOpcode() != ISD::SRL)
       return false;
     SDValue N0 = Node->getOperand(0);
+    unsigned Bitwidth = N0.getSimpleValueType().getSizeInBits();
+    if (N0->getOpcode() == ISD::AND) {
+      if (auto *C = dyn_cast<ConstantSDNode>(N0->getOperand(1))) {
+        if (C->getZExtValue() == 65535) {
+          Bitwidth = 16;
+          N0 = N0->getOperand(0);
+        } else if (C->getZExtValue() == 255) {
+          Bitwidth = 8;
+          N0 = N0->getOperand(0);
+        }
+      }
+    }
     if (N0->getOpcode() != ISD::SHL)
       return false;
-    unsigned Bitwidth = N0.getSimpleValueType().getSizeInBits();
     SDValue N1 = Node->getOperand(1);
     SDValue N01 = N0->getOperand(1);
     // Both of the shifts must be by the exact same value.
@@ -4379,10 +4397,24 @@ bool X86DAGToDAGISel::matchBitExtract(SDNode *Node) {
     insertDAGNode(*CurDAG, SDValue(Node, 0), NBits);
   }
 
+  MVT OVT = NVT;
+  if (NVT == MVT::i8 || NVT == MVT::i16) {
+    NVT = MVT::i32;
+    SDValue ImplDef = SDValue(
+        CurDAG->getMachineNode(TargetOpcode::IMPLICIT_DEF, DL, MVT::i32), 0);
+    SDValue SubRegIdx = CurDAG->getTargetConstant(
+        OVT == MVT::i8 ? X86::sub_8bit : X86::sub_16bit, DL, MVT::i32);
+    X = SDValue(CurDAG->getMachineNode(TargetOpcode::INSERT_SUBREG, DL,
+                                       MVT::i32, ImplDef, X, SubRegIdx),
+                0);
+    insertDAGNode(*CurDAG, SDValue(Node, 0), X);
+  }
+
   // We might have matched the amount of high bits to be cleared,
   // but we want the amount of low bits to be kept, so negate it then.
   if (NegateNBits) {
-    SDValue BitWidthC = CurDAG->getConstant(NVT.getSizeInBits(), DL, MVT::i32);
+    SDValue BitWidthC =
+        CurDAG->getConstant(MatchedBitwidth, DL, MVT::i32);
     insertDAGNode(*CurDAG, SDValue(Node, 0), BitWidthC);
 
     NBits = CurDAG->getNode(ISD::SUB, DL, MVT::i32, BitWidthC, NBits);
@@ -4398,8 +4430,17 @@ bool X86DAGToDAGISel::matchBitExtract(SDNode *Node) {
     }
 
     SDValue Extract = CurDAG->getNode(X86ISD::BZHI, DL, NVT, X, NBits);
+    if (OVT != NVT) {
+      SelectCode(Extract.getNode());
+      SDValue SubRegIdx = CurDAG->getTargetConstant(
+          OVT == MVT::i8 ? X86::sub_8bit : X86::sub_16bit, DL, MVT::i32);
+      Extract = SDValue(CurDAG->getMachineNode(TargetOpcode::EXTRACT_SUBREG, DL,
+                                               OVT, Extract, SubRegIdx),
+                        0);
+    }
     ReplaceNode(Node, Extract.getNode());
-    SelectCode(Extract.getNode());
+    if (OVT == NVT)
+      SelectCode(Extract.getNode());
     return true;
   }
 
@@ -4464,8 +4505,18 @@ bool X86DAGToDAGISel::matchBitExtract(SDNode *Node) {
     Extract = CurDAG->getNode(ISD::TRUNCATE, DL, NVT, Extract);
   }
 
+  if (OVT != NVT) {
+    SelectCode(Extract.getNode());
+    SDValue SubRegIdx = CurDAG->getTargetConstant(
+        OVT == MVT::i8 ? X86::sub_8bit : X86::sub_16bit, DL, MVT::i32);
+    Extract = SDValue(CurDAG->getMachineNode(TargetOpcode::EXTRACT_SUBREG, DL,
+                                             OVT, Extract, SubRegIdx),
+                      0);
+  }
+
   ReplaceNode(Node, Extract.getNode());
-  SelectCode(Extract.getNode());
+  if (OVT == NVT)
+    SelectCode(Extract.getNode());
 
   return true;
 }
