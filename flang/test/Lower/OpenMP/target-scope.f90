@@ -123,7 +123,7 @@ subroutine target_scope_allocate()
   !$omp target
     ! CHECK: omp.target kernel_type(generic) map_entries(%{{.*}} -> %[[IARG:.*]] : !fir.ref<i32>) {
     ! CHECK:   hlfir.declare %[[IARG]] {uniq_name = "_QFtarget_scope_allocateEi"}
-    ! CHECK:   omp.scope allocate(%{{.*}} : i32 -> %{{.*}}#0 : !fir.ref<i32>) private(@_QFtarget_scope_allocateEi_private_i32 %{{.*}}#0 -> %[[APRIV:.*]] : !fir.ref<i32>) {
+    ! CHECK:   omp.scope allocate(%{{.*}} : i32 -> %{{.*}}#0 : !fir.ref<i32>) allocate_private_indices([0]) private(@_QFtarget_scope_allocateEi_private_i32 %{{.*}}#0 -> %[[APRIV:.*]] : !fir.ref<i32>) {
     ! CHECK:     %[[ADECL:.*]]:2 = hlfir.declare %[[APRIV]] {uniq_name = "_QFtarget_scope_allocateEi"}
     !$omp scope private(i) allocate(i)
     ! CHECK:     hlfir.assign %{{.*}} to %[[ADECL]]#0 : i32, !fir.ref<i32>
