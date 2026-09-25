@@ -1195,7 +1195,8 @@ void SIFixSGPRCopies::fixSCCCopies(MachineFunction &MF) {
       // May already have been lowered.
       if (!MI.isCopy())
         continue;
-      Register SrcReg = MI.getOperand(1).getReg();
+      const MachineOperand &Src = MI.getOperand(1);
+      Register SrcReg = Src.getReg();
       Register DstReg = MI.getOperand(0).getReg();
       if (SrcReg == AMDGPU::SCC) {
         Register SCCCopy =
@@ -1211,13 +1212,9 @@ void SIFixSGPRCopies::fixSCCCopies(MachineFunction &MF) {
         continue;
       }
       if (DstReg == AMDGPU::SCC) {
-        // Both lowerings below read the whole of SrcReg.
-        const MachineOperand &Src = MI.getOperand(1);
-        assert(!Src.getSubReg() &&
-               "cannot lower a copy of a subregister to SCC");
         MachineBasicBlock::iterator InsPt =
             std::next(MachineBasicBlock::iterator(MI));
-        if (HasCmp && TII->isMaskedByExec(SrcReg, MI, *MRI)) {
+        if (HasCmp && !Src.getSubReg() && TII->isMaskedByExec(SrcReg, MI, *MRI)) {
           // The source already has 0 in the bits of all inactive lanes, so
           // SCC is just "source is non-zero". S_CMP computes that without
           // needing a destination register.
