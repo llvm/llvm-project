@@ -18,7 +18,7 @@
     ret void
   }
 
-  define void @call_blocks_reload_reuse() #0 {
+  define void @call_keeps_reload_reusable() #0 {
     ret void
   }
 
@@ -35,11 +35,15 @@
     ret void
   }
 
-  define void @store_without_pointer_info_blocks_reload_reuse(ptr %p) {
+  define void @store_without_pointer_info_keeps_reload_reusable(ptr %p) {
     ret void
   }
 
   define void @store_without_memoperand_blocks_reload_reuse(ptr %p) {
+    ret void
+  }
+
+  define void @store_without_memoperand_keeps_immediate_reusable(ptr %p) {
     ret void
   }
 
@@ -157,9 +161,10 @@ body:             |
 ...
 ---
 # The reload target is callee-saved and the frame register is $rbp, so neither
-# the call's regmask nor its implicit-def $rsp drops the tracked reload on its
-# own; only treating the call as a memory clobber keeps the second reload.
-name:            call_blocks_reload_reuse
+# the call's regmask nor its implicit-def $rsp drops the tracked reload. A call
+# is not a store to the caller's spill slot (mayStore is false), so the second
+# reload is removed.
+name:            call_keeps_reload_reusable
 tracksRegLiveness: true
 frameInfo:
   stackSize:       48
@@ -172,10 +177,9 @@ body:             |
   bb.0:
     liveins: $rbp
 
-    ; CHECK-LABEL: name: call_blocks_reload_reuse
+    ; CHECK-LABEL: name: call_keeps_reload_reusable
     ; CHECK:      $rbx = MOV64rm $rbp, 1, $noreg, -16, $noreg :: (load (s64) from %stack.0)
     ; CHECK-NEXT: CALL64pcrel32
-    ; CHECK-NEXT: $rbx = MOV64rm $rbp, 1, $noreg, -16, $noreg :: (load (s64) from %stack.0)
     ; CHECK-NEXT: MOV64mr $rbp, 1, $noreg, -24, $noreg, $rbx :: (store (s64) into %stack.1)
     ; CHECK-NEXT: RET64
     $rbx = MOV64rm $rbp, 1, $noreg, -16, $noreg :: (load (s64) from %stack.0)
@@ -277,8 +281,9 @@ body:             |
     RET64
 ...
 ---
-# Nothing says where this store lands, so it has to be assumed to reach the slot.
-name:            store_without_pointer_info_blocks_reload_reuse
+# The store describes its access but names no frame index, so it is not a
+# store to the tracked slot and the reload stays reusable.
+name:            store_without_pointer_info_keeps_reload_reusable
 tracksRegLiveness: true
 frameInfo:
   stackSize:       48
@@ -290,10 +295,9 @@ body:             |
   bb.0:
     liveins: $rdi, $rdx
 
-    ; CHECK-LABEL: name: store_without_pointer_info_blocks_reload_reuse
+    ; CHECK-LABEL: name: store_without_pointer_info_keeps_reload_reusable
     ; CHECK:      $rax = MOV64rm $rsp, 1, $noreg, 32, $noreg :: (load (s64) from %stack.0)
     ; CHECK-NEXT: MOV64mr $rdi, 1, $noreg, 0, $noreg, $rdx :: (store (s64))
-    ; CHECK-NEXT: $rax = MOV64rm $rsp, 1, $noreg, 32, $noreg :: (load (s64) from %stack.0)
     ; CHECK-NEXT: MOV64mr $rsp, 1, $noreg, 40, $noreg, $rax :: (store (s64) into %stack.1)
     ; CHECK-NEXT: RET64
     $rax = MOV64rm $rsp, 1, $noreg, 32, $noreg :: (load (s64) from %stack.0)
@@ -329,10 +333,31 @@ body:             |
     RET64
 ...
 ---
-# Guards the precondition of mayWriteSpillSlot(): the load reads a frame object
-# that is not a spill slot, and the store names that very object through its IR
-# value. Reusing the load here would return the value from before the store, so
-# isSingleSpillSlotAccess() must refuse to track it in the first place.
+# An empty memory operand list is conservative only for a tracked spill-slot
+# reload. An immediate is invalidated solely by modifiesRegister(), so the
+# second copy is still removed.
+name:            store_without_memoperand_keeps_immediate_reusable
+tracksRegLiveness: true
+frameInfo:
+  stackSize:       8
+  maxAlignment:    8
+body:             |
+  bb.0:
+    liveins: $rdi, $rdx
+
+    ; CHECK-LABEL: name: store_without_memoperand_keeps_immediate_reusable
+    ; CHECK:      $rcx = MOV64ri 1
+    ; CHECK-NEXT: MOV64mr $rdi, 1, $noreg, 0, $noreg, $rdx
+    ; CHECK-NEXT: RET64
+    $rcx = MOV64ri 1
+    MOV64mr $rdi, 1, $noreg, 0, $noreg, $rdx
+    $rcx = MOV64ri 1
+    RET64
+...
+---
+# The load reads a frame object that is not a spill slot, and the store names
+# that object through its IR value. Reusing the load would return the value
+# from before the store, so isSingleSpillSlotAccess() must refuse to track it.
 name:            non_spill_slot_reload_is_not_reused_across_ir_store
 tracksRegLiveness: true
 frameInfo:
