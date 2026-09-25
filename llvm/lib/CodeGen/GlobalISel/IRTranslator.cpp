@@ -4907,17 +4907,20 @@ bool IRTranslatorImpl::emitSPDescriptorParent(StackProtectorDescriptor &SPD,
   } else {
     // TODO: test using android subtarget when we support @llvm.thread.pointer.
     const Value *IRGuard = TLI->getSDagStackGuard(M, *Libcalls);
-    if (!IRGuard)
-      reportFatalUsageError("unable to lower stackguard for this backend");
+    if (IRGuard) {
+      Register GuardPtr = getOrCreateVReg(*IRGuard);
 
-    Register GuardPtr = getOrCreateVReg(*IRGuard);
-
-    Guard = CurBuilder
-                ->buildLoad(PtrMemTy, GuardPtr,
-                            MachinePointerInfo::getFixedStack(*MF, FI), Align,
-                            MachineMemOperand::MOLoad |
-                                MachineMemOperand::MOVolatile)
-                .getReg(0);
+      Guard = CurBuilder
+                  ->buildLoad(PtrMemTy, GuardPtr,
+                              MachinePointerInfo::getFixedStack(*MF, FI), Align,
+                              MachineMemOperand::MOLoad |
+                                  MachineMemOperand::MOVolatile)
+                  .getReg(0);
+    } else {
+      LLVMContext &Ctx = CurBuilder->getContext();
+      Ctx.diagnose(DiagnosticInfoGeneric("unable to lower stackguard"));
+      Guard = CurBuilder->buildUndef(PtrMemTy).getReg(0);
+    }
   }
 
   // Perform the comparison.
