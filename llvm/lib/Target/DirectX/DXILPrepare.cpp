@@ -190,6 +190,25 @@ public:
               GEP->setOperand(0, NoOpBitcast);
             continue;
           }
+          // An atomic on a float allocation exchanges the bit pattern as an
+          // integer, so the pointer element type does not match the value
+          // type. Typed pointers need a cast to keep the two in agreement.
+          if (auto *RMW = dyn_cast<AtomicRMWInst>(&I)) {
+            if (Value *NoOpBitcast = maybeGenerateBitcast(
+                    Builder, PointerTypes, I, RMW->getPointerOperand(),
+                    RMW->getValOperand()->getType()))
+              RMW->setOperand(AtomicRMWInst::getPointerOperandIndex(),
+                              NoOpBitcast);
+            continue;
+          }
+          if (auto *CmpXchg = dyn_cast<AtomicCmpXchgInst>(&I)) {
+            if (Value *NoOpBitcast = maybeGenerateBitcast(
+                    Builder, PointerTypes, I, CmpXchg->getPointerOperand(),
+                    CmpXchg->getNewValOperand()->getType()))
+              CmpXchg->setOperand(AtomicCmpXchgInst::getPointerOperandIndex(),
+                                  NoOpBitcast);
+            continue;
+          }
         }
       }
     }
