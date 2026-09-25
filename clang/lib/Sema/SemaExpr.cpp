@@ -16001,8 +16001,8 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
       auto Call = dyn_cast<CallExpr>(RHSExpr);
       assert(Call);
       Call->setType(LHSExpr->getType());
-      if (CheckCoopMatrixLoadElementType(LHSExpr->getType(), LHSExpr->getBeginLoc(),
-                                     Call))
+      if (CheckCoopMatrixLoadElementType(LHSExpr->getType(),
+                                         LHSExpr->getBeginLoc(), Call))
         return ExprError();
       if (CheckCoopMatrixMatMulOutput(Call))
         return ExprError();
