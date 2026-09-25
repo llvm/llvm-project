@@ -19568,7 +19568,7 @@ static bool foldAdjacentReversesIntoTbls(Instruction *I) {
         Builder.CreateMul(StepVector, ConstantInt::get(StepVecTy, -4));
 
     // Add the start to the stride, replace the old mask.
-    ScaledSteps = Builder.CreateNUWAdd(ScaledSteps, StartVal);
+    ScaledSteps = Builder.CreateAdd(ScaledSteps, StartVal);
     Value *RevExtMask = Builder.CreateBitCast(ScaledSteps, SrcTy);
     Tbl->setOperand(1, RevExtMask);
 
