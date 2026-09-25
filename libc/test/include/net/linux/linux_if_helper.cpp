@@ -5,17 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-///
-/// \file
-/// Definition of struct ifreq.
-///
-//===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_TYPES_STRUCT_IFREQ_H
-#define LLVM_LIBC_TYPES_STRUCT_IFREQ_H
+#include <linux/if.h>
+#include <stddef.h>
 
-#if defined(__linux__)
-#include "linux/struct_ifreq.h"
-#endif
-
-#endif // LLVM_LIBC_TYPES_STRUCT_IFREQ_H
+extern const size_t LINUX_IFMAP_SIZE = sizeof(struct ifmap);
+extern const size_t LINUX_IFMAP_ALIGN = alignof(struct ifmap);
+extern const size_t LINUX_IFREQ_SIZE = sizeof(struct ifreq);
+extern const size_t LINUX_IFREQ_ALIGN = alignof(struct ifreq);
