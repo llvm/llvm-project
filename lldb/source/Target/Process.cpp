@@ -2463,50 +2463,6 @@ size_t Process::ReadMemoryFromInferior(addr_t addr, void *buf, size_t size,
   return bytes_read;
 }
 
-lldb::offset_t Process::ReadMemoryInChunks(lldb::addr_t vm_addr, void *buf,
-                                           lldb::addr_t chunk_size,
-                                           lldb::offset_t size,
-                                           ReadMemoryChunkCallback callback) {
-  // Safety check to prevent an infinite loop.
-  if (chunk_size == 0)
-    return 0;
-
-  // Buffer for when a NULL buf is provided, initialized
-  // to 0 bytes, we set it to chunk_size and then replace buf
-  // with the new buffer.
-  DataBufferHeap data_buffer;
-  if (!buf) {
-    data_buffer.SetByteSize(chunk_size);
-    buf = data_buffer.GetBytes();
-  }
-
-  uint64_t bytes_remaining = size;
-  uint64_t bytes_read = 0;
-  Status error;
-  while (bytes_remaining > 0) {
-    // Get the next read chunk size as the minimum of the remaining bytes and
-    // the write chunk max size.
-    const lldb::addr_t bytes_to_read = std::min(bytes_remaining, chunk_size);
-    const lldb::addr_t current_addr = vm_addr + bytes_read;
-    const lldb::addr_t bytes_read_for_chunk =
-        ReadMemoryFromInferior(current_addr, buf, bytes_to_read, error);
-
-    bytes_read += bytes_read_for_chunk;
-    // If the bytes read in this chunk would cause us to overflow, something
-    // went wrong and we should fail fast.
-    if (bytes_read_for_chunk > bytes_remaining)
-      return 0;
-    else
-      bytes_remaining -= bytes_read_for_chunk;
-
-    if (callback(error, current_addr, buf, bytes_read_for_chunk) ==
-        IterationAction::Stop)
-      break;
-  }
-
-  return bytes_read;
-}
-
 uint64_t Process::ReadUnsignedIntegerFromMemory(lldb::addr_t vm_addr,
                                                 size_t integer_byte_size,
                                                 uint64_t fail_value,
@@ -5228,7 +5184,7 @@ HandleStoppedEvent(lldb::tid_t thread_id, const ThreadPlanSP &thread_plan_sp,
 ExpressionResults
 Process::RunThreadPlan(ExecutionContext &exe_ctx,
                        lldb::ThreadPlanSP &thread_plan_sp,
-                       const EvaluateExpressionOptions &options,
+                       const EvaluateExpressionOptions &requested_options,
                        DiagnosticManager &diagnostic_manager) {
   ExpressionResults return_value = eExpressionSetupError;
 
@@ -5263,6 +5219,31 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
   // Record the thread's id so we can tell when a thread we were using
   // to run the expression exits during the expression evaluation.
   lldb::tid_t expr_thread_id = thread->GetID();
+
+  // Clearing stop-others is a request to run the inferior's other threads, and
+  // it is not the default, so refuse it outright rather than quietly running
+  // single-threaded. Asking for the all-threads retry is refused the same way,
+  // since it resumes those same threads a moment later.
+  EvaluateExpressionOptions options = requested_options;
+  const Policy policy = PolicyStack::Get().Current();
+  if (!policy.capabilities.can_run_all_threads) {
+    if (!options.GetStopOthers()) {
+      diagnostic_manager.PutString(
+          lldb::eSeverityError,
+          "cannot run the process's other threads to evaluate this "
+          "expression: the current context does not allow resuming them");
+      return eExpressionSetupError;
+    }
+    options.SetTryAllThreads(false);
+  } else if (!policy.capabilities.can_try_all_threads) {
+    if (options.GetTryAllThreads()) {
+      diagnostic_manager.PutString(
+          lldb::eSeverityError,
+          "cannot retry this expression with the process's other threads "
+          "running: the current context does not allow that fallback");
+      return eExpressionSetupError;
+    }
+  }
 
   // We need to change some of the thread plan attributes for the thread plan
   // runner.  This will restore them when we are done:

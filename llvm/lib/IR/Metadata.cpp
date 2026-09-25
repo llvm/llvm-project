@@ -1332,6 +1332,18 @@ MDNode *MDNode::getMergedCalleeTypeMetadata(const MDNode *A, const MDNode *B) {
   return MDNode::get(A->getContext(), AB);
 }
 
+MDNode *MDNode::getMergedCalleesMetadata(MDNode *A, MDNode *B) {
+  // The callees of the merged call are unknown unless both calls list theirs.
+  if (!A || !B)
+    return nullptr;
+  if (A == B)
+    return A;
+  // The merged call may target any callee of either call.
+  SmallSetVector<Metadata *, 8> Callees(llvm::from_range, A->operands());
+  Callees.insert_range(B->operands());
+  return MDNode::get(A->getContext(), Callees.getArrayRef());
+}
+
 MDNode *MDNode::getMergedAllocTokenMetadata(const MDNode *A, const MDNode *B) {
   // Drop !alloc_token metadata if either instruction lacks it to avoid mis-
   // classifying unclassified allocations, where the fallback token must be

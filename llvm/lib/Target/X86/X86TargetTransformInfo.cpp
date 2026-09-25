@@ -255,7 +255,7 @@ unsigned X86TTIImpl::getMaxInterleaveFactor(ElementCount VF,
 InstructionCost X86TTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
-    ArrayRef<const Value *> Args, const Instruction *CxtI) const {
+    ArrayRef<const Value *> Args, const Instruction *CtxI) const {
 
   // vXi8 multiplications are always promoted to vXi16.
   // Sub-128-bit types can be extended/packed more efficiently.
@@ -782,7 +782,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
   // Variable divisors lower through a float divide. strictfp needs SAE
   // rounding which is 512-bit only.
   bool IsStrictFP =
-      CxtI && CxtI->getFunction()->hasFnAttribute(Attribute::StrictFP);
+      CtxI && CtxI->getFunction()->hasFnAttribute(Attribute::StrictFP);
   bool IsDivRem = ISD == ISD::UDIV || ISD == ISD::SDIV || ISD == ISD::UREM ||
                   ISD == ISD::SREM;
   bool VarDivToFP = IsDivRem && !Op2Info.isConstant() &&
@@ -824,15 +824,15 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
   // queries, so the cost cannot disagree with what codegen emits.
   bool IsSignedDiv = ISD == ISD::SDIV || ISD == ISD::SREM;
   auto OperandsFit = [&](unsigned Mantissa) {
-    if (Args.size() != 2 || !CxtI)
+    if (Args.size() != 2 || !CtxI)
       return false;
     unsigned EltBits = LT.second.getScalarSizeInBits();
-    const DataLayout &DL = CxtI->getDataLayout();
+    const DataLayout &DL = CtxI->getDataLayout();
     auto Fits = [&](const Value *V) {
       if (IsSignedDiv)
-        return ComputeNumSignBits(V, DL, /*AC=*/nullptr, CxtI) + Mantissa >
+        return ComputeNumSignBits(V, DL, /*AC=*/nullptr, CtxI) + Mantissa >
                EltBits;
-      return computeKnownBits(V, DL, /*AC=*/nullptr, CxtI)
+      return computeKnownBits(V, DL, /*AC=*/nullptr, CtxI)
                  .countMaxActiveBits() <= Mantissa;
     };
     return Fits(Args[0]) && Fits(Args[1]);
@@ -1933,7 +1933,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
 
   // Fallback to the default implementation.
   return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
-                                       Args, CxtI);
+                                       Args, CtxI);
 }
 
 InstructionCost
@@ -1945,13 +1945,11 @@ X86TTIImpl::getAltInstrCost(VectorType *VecTy, unsigned Opcode0,
   return InstructionCost::getInvalid();
 }
 
-InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
-                                           VectorType *DstTy, VectorType *SrcTy,
-                                           TTI::TargetCostKind CostKind,
-                                           ArrayRef<int> Mask, int Index,
-                                           VectorType *SubTp,
-                                           ArrayRef<const Value *> Args,
-                                           const Instruction *CxtI) const {
+InstructionCost X86TTIImpl::getShuffleCost(
+    TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+    TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
+    VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CtxI,
+    TTI::VectorInstrContext VIC) const {
   assert((Mask.empty() || DstTy->isScalableTy() ||
           Mask.size() == DstTy->getElementCount().getKnownMinValue()) &&
          "Expected the Mask to match the return size if given");
@@ -5928,9 +5926,23 @@ InstructionCost X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
       // Sandybridge.
       // Sub-32-bit loads/stores will be slower either with PINSR*/PEXTR* or
       // will be scalarized.
+      //
+      // For a vector load, each non-0th 1/2/4-byte in-lane remainder chunk is
+      // materialized by a *single* folded PINSR*(mem) that both loads and
+      // inserts the lane (1B->PINSRB, 2B->PINSRW, 4B->PINSRD; the byte and
+      // dword folds need SSE4.1, the word fold only SSE2).
+      // When that fold is available the chunk is one instruction, so it must be
+      // priced once here (as a plain load) and the separate lane-insert charge
+      // below must be skipped - otherwise the folded insert is double-counted.
+      // Stores (the symmetric PEXTR*(mem) fold) are left unchanged here.
+      bool Is0thSubVec = (NumEltDone() % LT.second.getVectorNumElements()) == 0;
+      bool FoldedInLaneInsert = IsLoad && !Is0thSubVec &&
+                                ((CurrOpSizeBytes == 1 && ST->hasSSE41()) ||
+                                 (CurrOpSizeBytes == 2 && ST->hasSSE2()) ||
+                                 (CurrOpSizeBytes == 4 && ST->hasSSE41()));
       if (CurrOpSizeBytes == 32 && ST->isUnalignedMem32Slow())
         Cost += 2;
-      else if (CurrOpSizeBytes < 4)
+      else if (CurrOpSizeBytes < 4 && !FoldedInLaneInsert)
         Cost += 2;
       else
         Cost += 1;
@@ -5939,8 +5951,6 @@ InstructionCost X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
       // loading just a single (widest) vector can be reused by all splits.
       if (IsLoad && OpInfo.isUniform())
         return Cost;
-
-      bool Is0thSubVec = (NumEltDone() % LT.second.getVectorNumElements()) == 0;
 
       // If we have fully processed the previous reg, we need to replenish it.
       if (SubVecEltsLeft == 0) {
@@ -5957,7 +5967,7 @@ InstructionCost X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
       // for smaller widths (32/16/8) we have to insert/extract them separately.
       // Again, it's free for the 0'th subreg (if op is 32/64 bit wide,
       // but let's pretend that it is also true for 16/8 bit wide ops...)
-      if (CurrOpSizeBytes <= 32 / 8 && !Is0thSubVec) {
+      if (CurrOpSizeBytes <= 32 / 8 && !Is0thSubVec && !FoldedInLaneInsert) {
         int NumEltDoneInCurrXMM = NumEltDone() % NumEltPerXMM;
         assert(NumEltDoneInCurrXMM % CurrNumEltPerOp == 0 && "");
         int CoalescedVecEltIdx = NumEltDoneInCurrXMM / CurrNumEltPerOp;
@@ -5991,6 +6001,48 @@ X86TTIImpl::getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
   case Intrinsic::masked_store:
     return getMaskedMemoryOpCost(MICA, CostKind);
   }
+
+  static const CostKindTblEntry AVX512VBMI2CostTable[] = {
+    { Intrinsic::masked_expandload,  MVT::v16i8,  { 2, 7, 1, 3 } },
+    { Intrinsic::masked_expandload,  MVT::v32i8,  { 2, 8, 1, 3 } },
+    { Intrinsic::masked_expandload,  MVT::v64i8,  { 2, 9, 1, 3 } },
+
+    { Intrinsic::masked_expandload,  MVT::v8i16,  { 2, 7, 1, 3 } },
+    { Intrinsic::masked_expandload,  MVT::v16i16, { 2, 8, 1, 3 } },
+    { Intrinsic::masked_expandload,  MVT::v32i16, { 2, 9, 1, 3 } },
+  };
+
+  static const CostKindTblEntry AVX512CostTable[] = {
+    { Intrinsic::masked_expandload,  MVT::v4i32,  { 2, 7, 1, 3 } },
+    { Intrinsic::masked_expandload,  MVT::v4f32,  { 2, 7, 1, 3 } },
+    { Intrinsic::masked_expandload,  MVT::v8i32,  { 2, 8, 1, 3 } },
+    { Intrinsic::masked_expandload,  MVT::v8f32,  { 2, 8, 1, 3 } },
+    { Intrinsic::masked_expandload,  MVT::v16i32, { 2, 9, 1, 3 } },
+    { Intrinsic::masked_expandload,  MVT::v16f32, { 2, 9, 1, 3 } },
+
+    { Intrinsic::masked_expandload,  MVT::v2i64,  { 2, 7, 1, 3 } },
+    { Intrinsic::masked_expandload,  MVT::v2f64,  { 2, 7, 1, 3 } },
+    { Intrinsic::masked_expandload,  MVT::v4i64,  { 2, 8, 1, 3 } },
+    { Intrinsic::masked_expandload,  MVT::v4f64,  { 2, 8, 1, 3 } },
+    { Intrinsic::masked_expandload,  MVT::v8i64,  { 2, 9, 1, 3 } },
+    { Intrinsic::masked_expandload,  MVT::v8f64,  { 2, 9, 1, 3 } },
+  };
+
+  std::pair<InstructionCost, MVT> LT =
+      getTypeLegalizationCost(MICA.getDataType());
+
+  if (ST->hasVBMI2())
+    if (const auto *Entry =
+            CostTableLookup(AVX512VBMI2CostTable, MICA.getID(), LT.second))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
+
+  if (ST->hasAVX512())
+    if (const auto *Entry =
+            CostTableLookup(AVX512CostTable, MICA.getID(), LT.second))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
+
   return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
 }
 
@@ -6103,13 +6155,15 @@ X86TTIImpl::getAddressComputationCost(Type *PtrTy, ScalarEvolution *SE,
   // Even in the case of (loop invariant) stride whose value is not known at
   // compile time, the address computation will not incur more than one extra
   // ADD instruction.
-  if (PtrTy->isVectorTy() && SE && !ST->hasAVX2()) {
-    // TODO: AVX2 is the current cut-off because we don't have correct
-    //       interleaving costs for prior ISA's.
-    if (!BaseT::isStridedAccess(Ptr))
-      return NumVectorInstToHideOverhead;
-    if (!BaseT::getConstantStrideStep(SE, Ptr))
+  if (PtrTy->isVectorTy() && SE) {
+    if (BaseT::isStridedAccess(Ptr) && !BaseT::getConstantStrideStep(SE, Ptr))
       return 1;
+    if (!ST->hasAVX2()) {
+      // TODO: AVX2 is the current cut-off because we don't have correct
+      //       interleaving costs for prior ISA's.
+      if (!BaseT::isStridedAccess(Ptr))
+        return NumVectorInstToHideOverhead;
+    }
   }
 
   return BaseT::getAddressComputationCost(PtrTy, SE, Ptr, CostKind);

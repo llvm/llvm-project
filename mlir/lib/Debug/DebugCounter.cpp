@@ -31,7 +31,7 @@ struct DebugCounterOptions {
       llvm::cl::CommaSeparated};
 
   llvm::cl::opt<bool> printCounterInfo{
-      "mlir-print-debug-counter", llvm::cl::init(false), llvm::cl::Optional,
+      "mlir-print-debug-counter", llvm::cl::init(false),
       llvm::cl::desc("Print out debug counter information after all counters "
                      "have been accumulated")};
 };

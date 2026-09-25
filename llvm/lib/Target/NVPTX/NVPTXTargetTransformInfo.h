@@ -54,6 +54,15 @@ public:
     return AddressSpace::ADDRESS_SPACE_GENERIC;
   }
 
+  unsigned getAddressSpaceJoin(unsigned AS1, unsigned AS2) const override {
+    if ((AS1 == AddressSpace::ADDRESS_SPACE_SHARED &&
+         AS2 == AddressSpace::ADDRESS_SPACE_SHARED_CLUSTER) ||
+        (AS2 == AddressSpace::ADDRESS_SPACE_SHARED &&
+         AS1 == AddressSpace::ADDRESS_SPACE_SHARED_CLUSTER))
+      return AddressSpace::ADDRESS_SPACE_SHARED_CLUSTER;
+    return AddressSpace::ADDRESS_SPACE_GENERIC;
+  }
+
   bool
   canHaveNonUndefGlobalInitializerInAddressSpace(unsigned AS) const override {
     return AS != AddressSpace::ADDRESS_SPACE_SHARED &&
@@ -118,7 +127,7 @@ public:
       TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
       ArrayRef<const Value *> Args = {},
-      const Instruction *CxtI = nullptr) const override;
+      const Instruction *CtxI = nullptr) const override;
 
   InstructionCost
   getScalarizationOverhead(VectorType *InTy, const APInt &DemandedElts,

@@ -23,11 +23,11 @@ func.func @_QMmPbug(%val: !fir.char<1>, %var: !fir.ref<!fir.array<10x!fir.char<1
 // CHECK-LABEL:   func.func @_QMmPbug(
 // CHECK-SAME:                        %[[VAL_0:.*]]: !fir.char<1>,
 // CHECK-SAME:                        %[[VAL_1:.*]]: !fir.ref<!fir.array<10x!fir.char<1>>>) {
-// CHECK:           %[[VAL_2:.*]] = fir.alloca !fir.char<1> {bindc_name = ".tmp"}
+// CHECK:           %[[VAL_2:.*]] = fir.alloca !fir.char<1> <{bindc_name = ".tmp"}>
 // CHECK:           %[[VAL_3:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_4:.*]] = arith.constant 10 : index
 // CHECK:           %[[VAL_5:.*]] = fir.shape %[[VAL_4]] : (index) -> !fir.shape<1>
-// CHECK:           %[[VAL_6:.*]] = fir.allocmem !fir.array<10x!fir.char<1>> {bindc_name = ".tmp.array", uniq_name = ""}
+// CHECK:           %[[VAL_6:.*]] = fir.allocmem !fir.array<10x!fir.char<1>> <{bindc_name = ".tmp.array", uniq_name = ""}>
 // CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]](%[[VAL_5]]) typeparams %[[VAL_3]] {uniq_name = ".tmp.array"} : (!fir.heap<!fir.array<10x!fir.char<1>>>, !fir.shape<1>, index) -> (!fir.heap<!fir.array<10x!fir.char<1>>>, !fir.heap<!fir.array<10x!fir.char<1>>>)
 // CHECK:           %[[VAL_9:.*]] = arith.constant 1 : index
 // CHECK:           fir.do_loop %[[VAL_10:.*]] = %[[VAL_9]] to %[[VAL_4]] step %[[VAL_9]] unordered {

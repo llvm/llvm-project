@@ -258,6 +258,8 @@ def hasSetMaxNRegSupport : PredOr<[SM90a, SM100f, SM110f, SM120f]>;
 
 def hasLdStmatrixBlackwellSupport : PredOr<[SM100f, SM110f, SM120f]>;
 
+def hasLdmatrixS8S4Support : PredAnd<[PTX94, PredOr<[SM90a, SM100f, SM110f, SM120f]>]>;
+
 def hasConvertWithStochasticRounding
   : PredAnd<[PTX87, PredOr<[SM100a, SM103a, SM107a]>]>;
 
@@ -739,13 +741,13 @@ let hasSideEffects = false in {
       BasicFlagsNVPTXInst<(outs RC:$dst),
                 (ins B32:$src1, B32:$src2, B32:$src3),
                 (ins CvtMode:$mode),
-                "cvt${mode:base}${mode:relu}${mode:pzo}." # FromName # ".f32">;
+                "cvt${mode:base}${mode:relu}." # FromName # ".f32">;
 
     def _f32_rs_sf :
       BasicFlagsNVPTXInst<(outs RC:$dst),
                 (ins B32:$src1, B32:$src2, B32:$src3),
                 (ins CvtMode:$mode),
-                "cvt${mode:base}${mode:relu}.satfinite${mode:pzo}." # FromName # ".f32">;
+                "cvt${mode:base}${mode:relu}.satfinite." # FromName # ".f32">;
   }
 
   defm CVT_f16x2 : CVT_FROM_FLOAT_V2_RS<"f16x2", B32>;
@@ -1017,7 +1019,7 @@ def : Pat<(v2f16 (build_vector (f16 (fpround_oneuse f32:$lo)),
 
 // selp instructions that don't have any pattern matches; we explicitly use
 // them within this file.
-let hasSideEffects = false in {
+let hasSideEffects = false, isSelect = 1 in {
   multiclass SELP_PATTERN<string TypeStr, RegTyInfo t> {
     defvar asm_str = "selp." # TypeStr;
     def rr :

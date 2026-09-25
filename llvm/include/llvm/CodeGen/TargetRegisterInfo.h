@@ -39,6 +39,7 @@ class DIExpression;
 class LiveRegMatrix;
 class MachineFunction;
 class MachineInstr;
+class RegisterClassInfo;
 class RegScavenger;
 class VirtRegMap;
 class LiveIntervals;
@@ -702,6 +703,13 @@ protected:
     return RCInfos[getNumRegClasses() * HwMode + RC.getID()];
   }
 
+  /// Custom reordering of the allocation order.
+  virtual void filterAndSortForAntiHintedRegs(
+      Register VirtReg, MutableArrayRef<MCPhysReg> CustomOrder,
+      const BitVector &AntiHintedRegUnits, const MachineFunction &MF,
+      const LiveRegMatrix *Matrix = nullptr,
+      const RegisterClassInfo *RegClassInfo = nullptr) const;
+
 public:
   /// Returns the register class associated with the enumeration value.
   /// See class MCOperandInfo.
@@ -843,6 +851,18 @@ public:
                                   MachineFunction &MF) const {
     // Do nothing.
   }
+
+  /// Return true if Reg overlaps one of the anti-hinted register units.
+  bool isAntiHintedReg(MCPhysReg Reg,
+                       const BitVector &AntiHintedRegUnits) const;
+
+  /// Apply anti-hints to the allocation order.
+  void applyRegAllocationAntiHints(
+      Register VirtReg, ArrayRef<MCPhysReg> Order,
+      SmallVectorImpl<MCPhysReg> &HintsAndCustomOrder, unsigned NumHints,
+      const BitVector &AntiHintedRegUnits, const MachineFunction &MF,
+      const LiveRegMatrix *Matrix = nullptr,
+      const RegisterClassInfo *RegClassInfo = nullptr) const;
 
   /// Allow the target to reverse allocation order of local live ranges. This
   /// will generally allocate shorter local live ranges first. For targets with
