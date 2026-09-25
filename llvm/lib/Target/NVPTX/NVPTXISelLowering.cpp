@@ -1962,6 +1962,16 @@ SDValue NVPTXTargetLowering::LowerBITCAST(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getBitcast(ToVT, AsInt);
 }
 
+// Replace undef with 0 as this is easier for other optimizations such as
+// known bits.
+static SDValue canonicalizePRMTInput(SDValue Op, SelectionDAG &DAG) {
+  if (!Op)
+    return SDValue();
+  if (Op.isUndef())
+    return DAG.getConstant(0, SDLoc(), MVT::i32);
+  return Op;
+}
+
 // We can init constant f16x2/v2i16/v4i8 with a single .b32 move.  Normally it
 // would get lowered as two constant loads and vector-packing move.
 // Instead we want just a constant move:
@@ -1988,6 +1998,8 @@ SDValue NVPTXTargetLowering::LowerBUILD_VECTOR(SDValue Op,
       if (Cast) {
         L = DAG.getAnyExtOrTrunc(L, DL, MVT::i32);
         R = DAG.getAnyExtOrTrunc(R, DL, MVT::i32);
+        L = canonicalizePRMTInput(L, DAG);
+        R = canonicalizePRMTInput(R, DAG);
       }
       return getPRMT(L, R, SelectionValue, DL, DAG);
     };
@@ -8065,16 +8077,6 @@ static std::pair<APInt, APInt> getPRMTDemandedBits(const APInt &SelectorVal,
   }
 
   return {DemandedLHS, DemandedRHS};
-}
-
-// Replace undef with 0 as this is easier for other optimizations such as
-// known bits.
-static SDValue canonicalizePRMTInput(SDValue Op, SelectionDAG &DAG) {
-  if (!Op)
-    return SDValue();
-  if (Op.isUndef())
-    return DAG.getConstant(0, SDLoc(), MVT::i32);
-  return Op;
 }
 
 static SDValue simplifyDemandedBitsForPRMT(SDValue PRMT,
