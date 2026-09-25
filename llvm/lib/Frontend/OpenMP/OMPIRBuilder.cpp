@@ -11700,6 +11700,38 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createAtomicCapture(
   return Builder.saveIP();
 }
 
+/// The integer type used to perform an atomic operation on a value of type
+/// \p FPTy: its allocation size, not its scalar width (x86_fp80 is 80 bits in
+/// 16 bytes, and an i80 atomic is not a legal power-of-two access).
+static IntegerType *getAtomicIntTypeForFP(Type *FPTy, const DataLayout &DL) {
+  return IntegerType::get(FPTy->getContext(), DL.getTypeAllocSizeInBits(FPTy));
+}
+
+/// Reinterpret \p V as \p IntTy, zero-filling any padding bits.
+static Value *castFPToAtomicInt(IRBuilderBase &Builder, const DataLayout &DL,
+                                Value *V, IntegerType *IntTy) {
+  unsigned ValueBits = V->getType()->getPrimitiveSizeInBits();
+  if (ValueBits == IntTy->getBitWidth())
+    return Builder.CreateBitCast(V, IntTy);
+  // zext/trunc match the memory layout only on little-endian targets, which
+  // are the only ones with padded FP types.
+  assert(DL.isLittleEndian() && "padded FP type on a big-endian target");
+  Value *Bits =
+      Builder.CreateBitCast(V, IntegerType::get(V->getContext(), ValueBits));
+  return Builder.CreateZExt(Bits, IntTy);
+}
+
+static Value *castAtomicIntToFP(IRBuilderBase &Builder, const DataLayout &DL,
+                                Value *V, Type *FPTy, const Twine &Name = "") {
+  unsigned ValueBits = FPTy->getPrimitiveSizeInBits();
+  if (ValueBits == V->getType()->getIntegerBitWidth())
+    return Builder.CreateBitCast(V, FPTy, Name);
+  assert(DL.isLittleEndian() && "padded FP type on a big-endian target");
+  Value *Bits =
+      Builder.CreateTrunc(V, IntegerType::get(V->getContext(), ValueBits));
+  return Builder.CreateBitCast(Bits, FPTy, Name);
+}
+
 OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
     const LocationDescription &Loc, AtomicOpValue &X, AtomicOpValue &V,
     AtomicOpValue &R, Value *E, Value *D, AtomicOrdering AO,
@@ -11765,16 +11797,16 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
       //     br ExitBB
       //   ExitBB:
       //     phi merge
-      IntegerType *IntCastTy =
-          IntegerType::get(M.getContext(), X.ElemTy->getScalarSizeInBits());
-      Value *EBCast = Builder.CreateBitCast(E, IntCastTy);
-      Value *DBCast = Builder.CreateBitCast(D, IntCastTy);
+      const DataLayout &DL = M.getDataLayout();
+      IntegerType *IntCastTy = getAtomicIntTypeForFP(X.ElemTy, DL);
+      Value *EBCast = castFPToAtomicInt(Builder, DL, E, IntCastTy);
+      Value *DBCast = castFPToAtomicInt(Builder, DL, D, IntCastTy);
 
       // Load X atomically.
       LoadInst *XCurr = Builder.CreateLoad(IntCastTy, X.Var,
                                            X.Var->getName() + ".atomic.load");
       XCurr->setAtomic(AtomicOrdering::Monotonic);
-      Value *XFP = Builder.CreateBitCast(XCurr, X.ElemTy);
+      Value *XFP = castAtomicIntToFP(Builder, DL, XCurr, X.ElemTy);
 
       // IEEE 754: NaN != NaN, but cmpxchg would succeed if E and X have
       // the same NaN bit pattern.  Skip cmpxchg when either is NaN.
@@ -11854,16 +11886,16 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
         Builder.SetInsertPoint(&*ExitBB->getFirstNonPHIIt());
       }
 
-      OldValue = Builder.CreateBitCast(OldIntPHI, X.ElemTy,
-                                       X.Var->getName() + ".atomic.old.fp");
+      OldValue = castAtomicIntToFP(Builder, DL, OldIntPHI, X.ElemTy,
+                                   X.Var->getName() + ".atomic.old.fp");
       SuccessOrFail = SuccessPHI;
     } else {
       AtomicCmpXchgInst *Result = nullptr;
+      const DataLayout &DL = M.getDataLayout();
       if (!IsInteger) {
-        IntegerType *IntCastTy =
-            IntegerType::get(M.getContext(), X.ElemTy->getScalarSizeInBits());
-        Value *EBCast = Builder.CreateBitCast(E, IntCastTy);
-        Value *DBCast = Builder.CreateBitCast(D, IntCastTy);
+        IntegerType *IntCastTy = getAtomicIntTypeForFP(X.ElemTy, DL);
+        Value *EBCast = castFPToAtomicInt(Builder, DL, E, IntCastTy);
+        Value *DBCast = castFPToAtomicInt(Builder, DL, D, IntCastTy);
         Result = Builder.CreateAtomicCmpXchg(X.Var, EBCast, DBCast,
                                              MaybeAlign(), AO, Failure);
       } else {
@@ -11875,7 +11907,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
       if (V.Var) {
         OldValue = Builder.CreateExtractValue(Result, /*Idxs=*/0);
         if (!IsInteger)
-          OldValue = Builder.CreateBitCast(OldValue, X.ElemTy);
+          OldValue = castAtomicIntToFP(Builder, DL, OldValue, X.ElemTy);
         assert(OldValue->getType() == V.ElemTy &&
                "OldValue and V must be of same type");
         if (IsPostfixUpdate) {

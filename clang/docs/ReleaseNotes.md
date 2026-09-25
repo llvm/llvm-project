@@ -547,6 +547,7 @@ features cannot lower the translation-unit ABI level;
 - Fixed a crash when an `asm` label names the register for a global variable of incomplete type. (#GH219746)
 - Fixed an ICE hat occurred when using `__imag int/float` as lvalue in assignment. (#GH119498)
 - Fixed an assertion failure in `-Wsign-compare` when a negated or complemented vector of unsigned integers was compared against a signed constant. (#GH203575)
+- Fixed an assertion failure when `#pragma omp atomic compare` was applied to a `long double` on x86-64, whose 80-bit value is stored in 16 bytes. (#GH140080)
 
 #### Bug Fixes to Compiler Builtins
 
