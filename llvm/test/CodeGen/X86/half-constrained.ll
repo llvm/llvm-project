@@ -320,23 +320,25 @@ define void @fp80_to_half(x86_fp80 %0) strictfp {
 define void @add() strictfp {
 ; X86-NOF16C-LABEL: add:
 ; X86-NOF16C:       # %bb.0:
-; X86-NOF16C-NEXT:    subl $12, %esp
-; X86-NOF16C-NEXT:    .cfi_def_cfa_offset 16
+; X86-NOF16C-NEXT:    subl $28, %esp
+; X86-NOF16C-NEXT:    .cfi_def_cfa_offset 32
 ; X86-NOF16C-NEXT:    movzwl a, %eax
 ; X86-NOF16C-NEXT:    movl %eax, (%esp)
 ; X86-NOF16C-NEXT:    calll __extendhfsf2
-; X86-NOF16C-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NOF16C-NEXT:    fstpt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Spill
 ; X86-NOF16C-NEXT:    wait
 ; X86-NOF16C-NEXT:    movzwl b, %eax
 ; X86-NOF16C-NEXT:    movl %eax, (%esp)
 ; X86-NOF16C-NEXT:    calll __extendhfsf2
-; X86-NOF16C-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NOF16C-NEXT:    fldt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Reload
 ; X86-NOF16C-NEXT:    faddp %st, %st(1)
+; X86-NOF16C-NEXT:    fstps {{[0-9]+}}(%esp)
+; X86-NOF16C-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NOF16C-NEXT:    fstps (%esp)
 ; X86-NOF16C-NEXT:    wait
 ; X86-NOF16C-NEXT:    calll __truncsfhf2
 ; X86-NOF16C-NEXT:    movw %ax, c
-; X86-NOF16C-NEXT:    addl $12, %esp
+; X86-NOF16C-NEXT:    addl $28, %esp
 ; X86-NOF16C-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NOF16C-NEXT:    retl
 ;
