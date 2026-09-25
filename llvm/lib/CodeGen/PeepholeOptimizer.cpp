@@ -922,17 +922,23 @@ bool PeepholeOptimizer::optimizeExtInstr(
       // %6:gprc_and_gprc_nor0 = COPY %1.sub_32:g8rc_and_g8rc_nox0
       // %3:gprc_and_gprc_nor0 = COPY %6:gprc_and_gprc_nor0
       //
-      if (UseSrcSubIdx)
-        RC = MRI->getRegClass(UseMI->getOperand(0).getReg());
+      if (UseSrcSubIdx) {
+        RC = MRI->getRegClass(UseMO->getReg());
+        if (UseMO->getSubReg())
+          RC = TRI->getSubRegisterClass(RC, UseMO->getSubReg());
+      }
 
       Register NewVR = MRI->createVirtualRegister(RC);
-      BuildMI(*UseMBB, UseMI, UseMI->getDebugLoc(),
-              TII->get(TargetOpcode::COPY), NewVR)
-          .addReg(DstReg, {}, SubIdx);
+      [[maybe_unused]] auto Copy = BuildMI(*UseMBB, UseMI, UseMI->getDebugLoc(),
+                                           TII->get(TargetOpcode::COPY), NewVR)
+                                       .addReg(DstReg, {}, SubIdx);
+      LLVM_DEBUG(dbgs() << "  Build new copy: " << *Copy);
+      LLVM_DEBUG(dbgs() << "  Changing: " << *UseMI);
       if (UseSrcSubIdx)
         UseMO->setSubReg(0);
 
       UseMO->setReg(NewVR);
+      LLVM_DEBUG(dbgs() << "        to: " << *UseMI);
       ++NumReuse;
       Changed = true;
     }
