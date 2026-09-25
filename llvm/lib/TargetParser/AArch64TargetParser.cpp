@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TargetParser/AArch64TargetParser.h"
-#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
@@ -166,14 +166,14 @@ std::optional<AArch64::ExtensionInfo>
 AArch64::parseArchExtension(StringRef ArchExt) {
   if (ArchExt.empty())
     return {};
-  static const StringMap<const ExtensionInfo *> NameToExtension = [] {
-    StringMap<const ExtensionInfo *> Map;
+  static const DenseMap<StringRef, const ExtensionInfo *> NameToExt = [] {
+    DenseMap<StringRef, const ExtensionInfo *> Map;
     for (const auto &A : Extensions)
       for (StringRef Name : {StrTab[A.UserVisibleName], StrTab[A.Alias]})
         Map.try_emplace(Name, &A);
     return Map;
   }();
-  if (const ExtensionInfo *A = NameToExtension.lookup(ArchExt))
+  if (const ExtensionInfo *A = NameToExt.lookup(ArchExt))
     return *A;
   return {};
 }
@@ -192,15 +192,15 @@ std::optional<AArch64::FMVInfo> AArch64::parseFMVExtension(StringRef FMVExt) {
 
 std::optional<AArch64::ExtensionInfo>
 AArch64::targetFeatureToExtension(StringRef TargetFeature) {
-  static const StringMap<const ExtensionInfo *> FeatureToExtension = [] {
-    StringMap<const ExtensionInfo *> Map;
+  static const DenseMap<StringRef, const ExtensionInfo *> FeatureToExt = [] {
+    DenseMap<StringRef, const ExtensionInfo *> Map;
     for (const auto &E : Extensions)
       for (StringRef Feature :
            {StrTab[E.PosTargetFeature], StrTab[E.NegTargetFeature]})
         Map.try_emplace(Feature, &E);
     return Map;
   }();
-  if (const ExtensionInfo *E = FeatureToExtension.lookup(TargetFeature))
+  if (const ExtensionInfo *E = FeatureToExt.lookup(TargetFeature))
     return *E;
   return {};
 }
