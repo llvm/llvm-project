@@ -22583,6 +22583,14 @@ public:
     if (auto *I = dyn_cast<Instruction>(Vec)) {
       R.GatherShuffleExtractSeq.insert(I);
       R.CSEBlocks.insert(I->getParent());
+      // A vectorized source scalar is erased; extract it for the bitcast.
+      ArrayRef<TreeEntry *> TEs = R.getTreeEntries(Src);
+      const auto *It = find_if_not(TEs, [&](const TreeEntry *TE) {
+        return R.TransformedToGatherNodes.contains(TE) ||
+               R.DeletedNodes.contains(TE);
+      });
+      if (It != TEs.end())
+        R.ExternalUses.emplace_back(Src, I, **It, (*It)->findLaneForValue(Src));
     }
     Vec = createShuffle(Vec, /*V2=*/nullptr, Mask);
     // The extracted fields are unsigned.
