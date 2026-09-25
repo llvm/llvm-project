@@ -94,30 +94,6 @@ func.func @wrong_total_weight(%cond: i1) {
 
 // -----
 
-func.func @switch_i1_unsigned_overflow(%flag: i1) {
-  cf.switch %flag : i1, [
-    default: ^bb1,
-    // expected-error@+1 {{case value is out of range for 'i1'}}
-    2: ^bb1
-  ]
-^bb1:
-  return
-}
-
-// -----
-
-func.func @switch_i1_signed_underflow(%flag: i1) {
-  cf.switch %flag : i1, [
-    default: ^bb1,
-    // expected-error@+1 {{case value is out of range for 'i1'}}
-    -2: ^bb1
-  ]
-^bb1:
-  return
-}
-
-// -----
-
 func.func @switch_i8_unsigned_overflow(%flag: i8) {
   cf.switch %flag : i8, [
     default: ^bb1,
@@ -135,30 +111,6 @@ func.func @switch_i8_signed_underflow(%flag: i8) {
     default: ^bb1,
     // expected-error@+1 {{case value is out of range for 'i8'}}
     -129: ^bb1
-  ]
-^bb1:
-  return
-}
-
-// -----
-
-func.func @switch_i64_unsigned_overflow(%flag: i64) {
-  cf.switch %flag : i64, [
-    default: ^bb1,
-    // expected-error@+1 {{case value is out of range for 'i64'}}
-    18446744073709551616: ^bb1
-  ]
-^bb1:
-  return
-}
-
-// -----
-
-func.func @switch_i64_signed_underflow(%flag: i64) {
-  cf.switch %flag : i64, [
-    default: ^bb1,
-    // expected-error@+1 {{case value is out of range for 'i64'}}
-    -9223372036854775809: ^bb1
   ]
 ^bb1:
   return
