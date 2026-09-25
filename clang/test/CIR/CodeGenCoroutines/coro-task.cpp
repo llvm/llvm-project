@@ -800,3 +800,19 @@ folly::coro::Task<int __complex__> complex_co_await() noexcept {
 // OGCG: [[CLEANUP_CONT:.*]]:
 // OGCG:   %[[RESUME_REAL:.*]] = load i32, ptr %[[RESUME_REAL_ADDR]], align 4
 // OGCG:   %[[RESUME_IMAG:.*]] = load i32, ptr %[[RESUME_IMAG_ADDR]], align 4
+
+void void_coroutine() {
+  co_await std::suspend_never();
+}
+
+// CIR: cir.func coroutine {{.*}} @_Z14void_coroutinev
+// CIR: cir.coroutine initialSuspend : {
+// CIR: }, exit : {
+// CIR:   cir.coro.intrinsic.end
+// CIR:   cir.return
+// CIR: }
+
+// OGCG: define {{.*}} void @_Z14void_coroutinev()
+// OGCG: coro.ret:
+// OGCG-NEXT:   call void @llvm.coro.end
+// OGCG-NEXT:   ret void
