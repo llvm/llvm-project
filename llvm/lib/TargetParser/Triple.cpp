@@ -393,7 +393,7 @@ StringRef Triple::getOSTypeName(OSType Kind) {
   switch (Kind) {
   case UnknownOS:
     return "unknown";
-#define TRIPLE_OS(Enum, Name, CMakeName)                                       \
+#define TRIPLE_OS(Enum, Name)                                                  \
   case Enum:                                                                   \
     return Name;
 #include "llvm/TargetParser/TripleName.def"
@@ -406,7 +406,7 @@ StringRef Triple::getEnvironmentTypeName(EnvironmentType Kind) {
   switch (Kind) {
   case UnknownEnvironment:
     return "unknown";
-#define TRIPLE_ENV(Enum, Name, CMakeOverride)                                  \
+#define TRIPLE_ENV(Enum, Name)                                                 \
   case Enum:                                                                   \
     return Name;
 #include "llvm/TargetParser/TripleName.def"
@@ -705,7 +705,7 @@ static Triple::VendorType parseVendor(StringRef VendorName) {
 
 static Triple::OSType parseOS(StringRef OSName) {
   return StringSwitch<Triple::OSType>(OSName)
-#define TRIPLE_OS(Enum, Name, CMakeName) .StartsWith(Name, Triple::Enum)
+#define TRIPLE_OS(Enum, Name) .StartsWith(Name, Triple::Enum)
 #define TRIPLE_OS_ALIAS(Enum, AliasName) .StartsWith(AliasName, Triple::Enum)
 #include "llvm/TargetParser/TripleName.def"
       .Default(Triple::UnknownOS);
@@ -713,7 +713,7 @@ static Triple::OSType parseOS(StringRef OSName) {
 
 static Triple::EnvironmentType parseEnvironment(StringRef EnvironmentName) {
   return StringSwitch<Triple::EnvironmentType>(EnvironmentName)
-#define TRIPLE_ENV(Enum, Name, CMakeOverride) .StartsWith(Name, Triple::Enum)
+#define TRIPLE_ENV(Enum, Name) .StartsWith(Name, Triple::Enum)
 #include "llvm/TargetParser/TripleName.def"
       .Default(Triple::UnknownEnvironment);
 }
