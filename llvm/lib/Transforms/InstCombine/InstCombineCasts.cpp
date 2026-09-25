@@ -771,6 +771,11 @@ static Instruction *foldVecExtTruncToExtElt(TruncInst &Trunc,
   auto VecElts = VecOpTy->getElementCount();
 
   uint64_t BitCastNumElts = VecElts.getKnownMinValue() * TruncRatio;
+  // Computed in 64-bit above to avoid a 32-bit overflow. Bail out if the
+  // element count exceeds IntegerType::MAX_INT_BITS, as we cannot create a
+  // wider vector type.
+  if (BitCastNumElts > IntegerType::MAX_INT_BITS)
+    return nullptr;
   // Make sure we don't overflow in the calculation of the new index.
   // (VecOpIdx + 1) * TruncRatio should not overflow.
   if (Cst->uge(std::numeric_limits<uint64_t>::max() / TruncRatio))
@@ -795,9 +800,6 @@ static Instruction *foldVecExtTruncToExtElt(TruncInst &Trunc,
     NewIdx = IC.getDataLayout().isBigEndian() ? (NewIdx - IdxOfs)
                                               : (NewIdx + IdxOfs);
   }
-
-  assert(BitCastNumElts <= std::numeric_limits<uint32_t>::max() &&
-         "overflow 32-bits");
 
   auto *BitCastTo =
       VectorType::get(DstType, BitCastNumElts, VecElts.isScalable());

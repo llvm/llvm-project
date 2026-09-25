@@ -330,3 +330,20 @@ entry:
   %trunc = trunc i32 %ext to i16
   ret i16 %trunc
 }
+
+; Do not fold if the bitcast vector's element count (NumElts * TruncRatio)
+; exceeds IntegerType::MAX_INT_BITS. Here 536870912 (2^29) * 8 = 2^32, which
+; also wraps to 0 when the product is computed in 32 bits; computing it in
+; 64 bits and bailing out avoids forming an invalid vector type.
+define i8 @test_bitcast_numelts_overflow(<536870912 x i64> %vec) {
+; ANY-LABEL: @test_bitcast_numelts_overflow(
+; ANY-NEXT:  entry:
+; ANY-NEXT:    [[EXT:%.*]] = extractelement <536870912 x i64> [[VEC:%.*]], i64 0
+; ANY-NEXT:    [[TRUNC:%.*]] = trunc i64 [[EXT]] to i8
+; ANY-NEXT:    ret i8 [[TRUNC]]
+;
+entry:
+  %ext = extractelement <536870912 x i64> %vec, i64 0
+  %trunc = trunc i64 %ext to i8
+  ret i8 %trunc
+}
