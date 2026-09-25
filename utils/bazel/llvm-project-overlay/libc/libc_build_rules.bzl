@@ -135,7 +135,7 @@ def libc_startup_library(name, **kwargs):
         name = name,
         copt_sets = ["startup_object"],
         target_compatible_with = select({
-            Label("//libc:full_build_linux"): [],
+            Label(":full_build_linux"): [],
             "//conditions:default": ["@platforms//:incompatible"],
         }),
         **kwargs

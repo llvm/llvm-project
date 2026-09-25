@@ -4562,6 +4562,28 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_threads_linux_tls",
+    srcs = selects.with_or({
+        PLATFORM_CPU_X86_64: ["src/__support/threads/linux/x86_64/tls.cpp"],
+        PLATFORM_CPU_ARM64: ["src/__support/threads/linux/aarch64/tls.cpp"],
+        PLATFORM_CPU_RISCV64: ["src/__support/threads/linux/riscv/tls.cpp"],
+    }),
+    # init_tls is called from startup objects.
+    copt_sets = ["startup_object"],
+    deps = [
+        ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_getrandom",
+        ":__support_osutil_linux_syscall_wrappers_mmap",
+        ":__support_osutil_linux_syscall_wrappers_munmap",
+        ":__support_osutil_syscall",
+        ":__support_threads_tcb",
+        ":config_app_h",
+        ":hdr_sys_mman_macros",
+        ":string_memory_utils",
+    ],
+)
+
+libc_support_library(
     name = "__support_threads_callonce",
     hdrs = ["src/__support/threads/callonce.h"],
     target_compatible_with = select({

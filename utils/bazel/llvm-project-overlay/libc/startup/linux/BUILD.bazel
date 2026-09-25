@@ -77,7 +77,7 @@ libc_startup_library(
     ] + selects.with_or({
         PLATFORM_CPU_X86_64: [
             "//libc/startup/linux/x86_64:irelative",
-            "//libc/startup/linux/x86_64:tls",
+            "//libc:__support_threads_linux_tls",
         ],
         "//conditions:default": [],
     }),
@@ -92,7 +92,6 @@ merge_relocatable_object(
         PLATFORM_CPU_X86_64: [
             "//libc/startup/linux/x86_64:irelative",
             "//libc/startup/linux/x86_64:start",
-            "//libc/startup/linux/x86_64:tls",
         ],
         "//conditions:default": [],
     }),
