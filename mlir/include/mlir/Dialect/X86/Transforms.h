@@ -115,6 +115,11 @@ void populateVectorContractToAMXDotProductPatterns(RewritePatternSet &patterns);
 void populateMoveAccumulatorForContractLoopPatterns(
     RewritePatternSet &patterns);
 
+// A set of patterns that tile and unroll contractions in order to prepare them
+// for the nanokernel lowerings.
+void populateVectorContractMultiLevelUnrollPatterns(RewritePatternSet &patterns,
+                                                    StringRef target);
+
 //===----------------------------------------------------------------------===//
 /// Helpers extracted from:
 ///   - clang/lib/Headers/avxintrin.h

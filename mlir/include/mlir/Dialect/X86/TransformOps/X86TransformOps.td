@@ -93,4 +93,17 @@ def ApplyMoveAccumulatorForContractLoopPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
+def ApplyVectorContractMultiLevelUnrollPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.x86.vector_contract_multi_level_unroll",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Collect patterns that tile and unroll contractions in order to prepare them
+    for the nanokernel lowerings.
+  }];
+
+  let arguments = (ins StrAttr:$target);
+
+  let assemblyFormat = "`target` `=` $target attr-dict";
+}
+
 #endif // X86_TRANSFORM_OPS
