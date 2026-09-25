@@ -1901,7 +1901,7 @@ def FortifySource : DiagGroup<"fortify-source", [FormatOverflow, FormatTruncatio
   code Documentation = [{
 Warns at compile time when calls to standard C library or POSIX functions have
 provably out-of-bounds destination buffers or invalid constant arguments,
-modeled after [`_FORTIFY_SOURCE`](https://www.gnu.org/software/libc/manual/html_node/Source-Fortification.html)
+modeled after [`_FORTIFY_SOURCE`](https://sourceware.org/glibc/manual/latest/html_node/Source-Fortification.html)
 compile-time checks.
 
 This diagnostic group checks:
