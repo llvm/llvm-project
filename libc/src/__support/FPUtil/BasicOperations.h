@@ -59,7 +59,8 @@ template <> LIBC_INLINE constexpr float16 max(float16 x, float16 y) {
     return constexpr_max(x, y);
   return __builtin_fmaxf16(x, y);
 }
-#elif !defined(LIBC_TARGET_ARCH_IS_AARCH64)
+#elif !defined(LIBC_TARGET_ARCH_IS_AARCH64) &&                                 \
+    !defined(LIBC_TARGET_ARCH_IS_ARM64EC)
 template <> LIBC_INLINE constexpr float16 max(float16 x, float16 y) {
   FPBits<float16> x_bits(x);
   FPBits<float16> y_bits(y);
@@ -112,7 +113,8 @@ template <> LIBC_INLINE constexpr float16 min(float16 x, float16 y) {
     return constexpr_min(x, y);
   return __builtin_fminf16(x, y);
 }
-#elif !defined(LIBC_TARGET_ARCH_IS_AARCH64)
+#elif !defined(LIBC_TARGET_ARCH_IS_AARCH64) &&                                 \
+    !defined(LIBC_TARGET_ARCH_IS_ARM64EC)
 template <> LIBC_INLINE constexpr float16 min(float16 x, float16 y) {
   FPBits<float16> x_bits(x);
   FPBits<float16> y_bits(y);

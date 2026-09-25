@@ -215,7 +215,7 @@ using BcmpImplementations = testing::TypeList<
 #endif // __AVX512BW__
 
 #endif // LIBC_TARGET_ARCH_IS_X86_64
-#ifdef LIBC_TARGET_ARCH_IS_AARCH64
+#if defined(LIBC_TARGET_ARCH_IS_AARCH64) || defined(LIBC_TARGET_ARCH_IS_ARM64EC)
     aarch64::Bcmp<16>, //
     aarch64::Bcmp<32>,
 #endif
@@ -309,7 +309,7 @@ using MemcmpImplementations = testing::TypeList<
     generic::Memcmp<__m512i>, //
 #endif
 #endif // LIBC_TARGET_ARCH_IS_X86_64
-#ifdef LIBC_TARGET_ARCH_IS_AARCH64
+#if defined(LIBC_TARGET_ARCH_IS_AARCH64) || defined(LIBC_TARGET_ARCH_IS_ARM64EC)
     generic::Memcmp<uint8x16_t>, //
     generic::Memcmp<uint8x16x2_t>,
 #endif

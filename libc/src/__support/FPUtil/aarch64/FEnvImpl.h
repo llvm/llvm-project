@@ -13,7 +13,9 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
 
-#if !defined(LIBC_TARGET_ARCH_IS_AARCH64) || defined(__APPLE__)
+#if (!defined(LIBC_TARGET_ARCH_IS_AARCH64) &&                                  \
+     !defined(LIBC_TARGET_ARCH_IS_ARM64EC)) ||                                 \
+    defined(__APPLE__)
 #error "Invalid include"
 #endif
 

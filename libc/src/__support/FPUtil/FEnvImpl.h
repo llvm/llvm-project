@@ -101,7 +101,9 @@ LIBC_INLINE int set_env(const fenv_t *env) {
 
 #else // !LIBC_MATH_USE_SYSTEM_FENV
 
-#if defined(LIBC_TARGET_ARCH_IS_AARCH64) && defined(__ARM_FP)
+#if (defined(LIBC_TARGET_ARCH_IS_AARCH64) ||                                   \
+     defined(LIBC_TARGET_ARCH_IS_ARM64EC)) &&                                  \
+    defined(__ARM_FP)
 #if defined(__APPLE__)
 #include "aarch64/fenv_darwin_impl.h"
 #else
