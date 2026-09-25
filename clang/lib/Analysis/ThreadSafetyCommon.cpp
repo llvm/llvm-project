@@ -542,12 +542,14 @@ til::SExpr *SExprBuilder::translateCallExpr(const CallExpr *CE,
                                             CallingContext *Ctx,
                                             const Expr *SelfE) {
   if (CapabilityExprMode) {
-    // Handle LOCK_RETURNED
-    if (const FunctionDecl *FD = CE->getDirectCallee()) {
-      FD = FD->getMostRecentDecl();
-      if (LockReturnedAttr *At = FD->getAttr<LockReturnedAttr>()) {
+    // Handle LOCK_RETURNED, on a function or a function pointer.
+    if (const auto *D = dyn_cast_or_null<NamedDecl>(CE->getCalleeDecl())) {
+      const auto *AttrD = D;
+      if (const auto *FD = dyn_cast<FunctionDecl>(D))
+        AttrD = FD->getMostRecentDecl();
+      if (const auto *At = AttrD->getAttr<LockReturnedAttr>()) {
         CallingContext LRCallCtx(Ctx);
-        LRCallCtx.AttrDecl = CE->getDirectCallee();
+        LRCallCtx.AttrDecl = D;
         LRCallCtx.SelfArg = SelfE;
         LRCallCtx.NumArgs = CE->getNumArgs();
         LRCallCtx.FunArgs = CE->getArgs();
